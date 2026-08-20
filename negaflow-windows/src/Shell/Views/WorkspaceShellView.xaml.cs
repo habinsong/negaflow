@@ -20,6 +20,11 @@ public sealed partial class WorkspaceShellView : UserControl
     private Microsoft.UI.WindowId? hostWindowId;
     private bool isInitialized;
 
+    /// <summary>
+    /// macOS <c>AppModel</c> 의 스캐너 자리입니다. 라이브러리뷰와 현상뷰 좌측탭이 나눠 씁니다.
+    /// </summary>
+    private readonly Library.Scanner.ScanSessionHost scanSessionHost = new();
+
     public WorkspaceShellView()
     {
         InitializeComponent();
@@ -65,6 +70,11 @@ public sealed partial class WorkspaceShellView : UserControl
         NativeEngineStatus nativeEngineStatus = nativeEngineStatusService.Probe();
         Toolbar.Initialize(state, libraryHost);
         LibraryWorkspace.Initialize(state);
+        // macOS 는 `AppModel` 하나가 `showScannerControls` 와 스캐너 세션을 들고 라이브러리·
+        // 현상 사이드바가 같은 `LibrarySourceSection` 을 냅니다. 두 벌을 만들면 현상뷰 쪽은
+        // 아무도 열어 주지 않아 스캔 자리가 늘 비어 있습니다.
+        LibraryWorkspace.AttachScanSessionHost(scanSessionHost);
+        DevelopWorkspace.AttachScanSessionHost(scanSessionHost);
         if (thumbnails is not null)
         {
             // 카드가 만들어지기 전에 붙여야 첫 화면부터 썸네일이 채워집니다.
@@ -80,6 +90,7 @@ public sealed partial class WorkspaceShellView : UserControl
         }
         DevelopWorkspace.Initialize(state, nativeEngineStatus);
         LibraryWorkspace.FrameOpenRequested += OnLibraryFrameOpenRequested;
+        LibraryWorkspace.FolderDevelopmentApplied += OnFolderDevelopmentApplied;
         DevelopWorkspace.ScannerSetupRequested += OnDevelopScannerSetupRequested;
         Toolbar.QuickExportRequested += OnToolbarQuickExportRequested;
         DevelopWorkspace.QuickExportAvailabilityChanged += OnQuickExportAvailabilityChanged;
@@ -113,6 +124,22 @@ public sealed partial class WorkspaceShellView : UserControl
         {
             // 인화는 라이브러리의 선택을 그대로 봅니다 — macOS 도 같은 선택을 씁니다.
             PrintWorkspace.ShowLibrary(libraryHost);
+            // 인화뷰 좌측 내보내기 탭은 현상뷰와 같은 패널이라 같은 것을 물려야 삽니다.
+            if (windowId is { } printExportWindowId && nativeEngineStatus.IsAvailable)
+            {
+                try
+                {
+                    PrintWorkspace.BindExport(
+                        libraryHost,
+                        ToneLimits.Read(),
+                        NegativeLimits.Read(),
+                        printExportWindowId,
+                        nativeEngineStatus.BuildInfo?.AbiVersion.ToString() ?? "unknown");
+                }
+                catch (NativeBootstrapException)
+                {
+                }
+            }
         }
         Toolbar.SettingsRequested += OnToolbarSettingsRequested;
         AppMenu.AboutRequested += OnAppMenuAboutRequested;
@@ -127,265 +154,6 @@ public sealed partial class WorkspaceShellView : UserControl
         SyncExportMenu();
         UpdateWorkspace(state.Current.SelectedWorkspace);
         Unloaded += OnUnloaded;
-    }
-
-    /// <summary>
-    /// 작업 흐름 단축키입니다. macOS 는 메뉴 막대가 이 일을 합니다. Windows 는 창 안
-    /// 메뉴와 이 키 처리가 같이 받습니다.
-    /// </summary>
-    /// <remarks>
-    /// **글자를 입력하는 중이면 손대지 않습니다.** 이름 상자에 "p" 를 치는 것이 사진을 선택으로
-    /// 표시하면 안 됩니다. 조합 키가 붙은 단축키는 입력 중에도 살려 둡니다 — Ctrl+E 는 어디서
-    /// 눌러도 내보내기입니다.
-    /// </remarks>
-    private void OnShellPreviewKeyDown(object sender, KeyRoutedEventArgs args)
-    {
-        _ = sender;
-        if (workspaceState is null || args.Handled)
-        {
-            return;
-        }
-        WorkflowShortcutModifiers modifiers = PressedModifiers();
-        if (modifiers == WorkflowShortcutModifiers.None && IsTypingTarget(FocusManager.GetFocusedElement(XamlRoot)))
-        {
-            return;
-        }
-        if (KeyName(args.Key) is not { } key ||
-            workspaceState.Current.Shortcuts.Resolve(key, modifiers) is not { } action)
-        {
-            return;
-        }
-        args.Handled = Invoke(action);
-    }
-
-    private static WorkflowShortcutModifiers PressedModifiers()
-    {
-        WorkflowShortcutModifiers modifiers = WorkflowShortcutModifiers.None;
-        if (IsDown(VirtualKey.Control))
-        {
-            modifiers |= WorkflowShortcutModifiers.Control;
-        }
-        if (IsDown(VirtualKey.Menu))
-        {
-            modifiers |= WorkflowShortcutModifiers.Alt;
-        }
-        if (IsDown(VirtualKey.Shift))
-        {
-            modifiers |= WorkflowShortcutModifiers.Shift;
-        }
-        return modifiers;
-    }
-
-    private static bool IsDown(VirtualKey key) =>
-        InputKeyboardSource.GetKeyStateForCurrentThread(key)
-            .HasFlag(CoreVirtualKeyStates.Down);
-
-    private static bool IsTypingTarget(object? focused) =>
-        focused is TextBox or RichEditBox or AutoSuggestBox or PasswordBox;
-
-    /// <summary>
-    /// 눌린 키를 단축키 표가 쓰는 이름으로 바꿉니다. 모르는 키는 null 이며, 그 경우 아무 명령도
-    /// 부르지 않습니다.
-    /// </summary>
-    private static string? KeyName(VirtualKey key) => key switch
-    {
-        >= VirtualKey.A and <= VirtualKey.Z => ((char)('a' + (key - VirtualKey.A))).ToString(),
-        >= VirtualKey.Number0 and <= VirtualKey.Number9 =>
-            ((char)('0' + (key - VirtualKey.Number0))).ToString(),
-        >= VirtualKey.NumberPad0 and <= VirtualKey.NumberPad9 =>
-            ((char)('0' + (key - VirtualKey.NumberPad0))).ToString(),
-        VirtualKey.Delete => "delete",
-        // 미국 자판의 [ ] \ 입니다. 다른 자판에서는 같은 자리의 글쇠가 잡힙니다 — macOS 도
-        // 키 코드가 아니라 글쇠 자리로 답니다.
-        (VirtualKey)219 => "[",
-        (VirtualKey)221 => "]",
-        (VirtualKey)220 => "\\",
-        (VirtualKey)222 => "'",
-        _ => null,
-    };
-
-    private bool Invoke(WorkflowShortcutAction action)
-    {
-        if (workspaceState is not { } state)
-        {
-            return false;
-        }
-        switch (action)
-        {
-            case WorkflowShortcutAction.OpenLibraryWorkspace:
-                state.SelectWorkspace(WorkspaceModule.Library);
-                return true;
-            case WorkflowShortcutAction.OpenDevelopWorkspace:
-                state.SelectWorkspace(WorkspaceModule.Develop);
-                return true;
-            case WorkflowShortcutAction.OpenPrintWorkspace:
-                state.SelectWorkspace(WorkspaceModule.Print);
-                return true;
-            case WorkflowShortcutAction.ShowHideSidebar:
-                state.ToggleSidebar();
-                return true;
-            case WorkflowShortcutAction.ShowHideInspector:
-                state.ToggleInspector();
-                return true;
-            case WorkflowShortcutAction.ShowHideFilmstrip:
-                state.ToggleFilmstrip();
-                return true;
-            case WorkflowShortcutAction.ToggleFullScreen:
-                ToggleFullScreen();
-                return true;
-            case WorkflowShortcutAction.ImportImages:
-                LibraryWorkspace.OnImportClicked(LibraryWorkspace, new RoutedEventArgs());
-                return true;
-            case WorkflowShortcutAction.ImportFolder:
-                LibraryWorkspace.OnImportFoldersClicked(LibraryWorkspace, new RoutedEventArgs());
-                return true;
-            case WorkflowShortcutAction.RefreshLibrary:
-                return LibraryWorkspace.InvokeShortcut(action);
-            case WorkflowShortcutAction.LoadScanner:
-                state.SelectWorkspace(WorkspaceModule.Library);
-                LibraryWorkspace.PresentScannerSetup();
-                return true;
-            case WorkflowShortcutAction.LibraryGrid:
-            case WorkflowShortcutAction.LibraryCompare:
-            case WorkflowShortcutAction.LibrarySurvey:
-                // macOS AppModel+WorkflowShortcuts: libraryCullingMode + activeWorkspaceModule = .library
-                state.SelectWorkspace(WorkspaceModule.Library);
-                return LibraryWorkspace.InvokeShortcut(action);
-            case WorkflowShortcutAction.QuickExport:
-                _ = DevelopWorkspace.QuickExportAsync();
-                return true;
-            case WorkflowShortcutAction.ExportPhoto:
-                if (state.Current.SelectedWorkspace == WorkspaceModule.Print)
-                {
-                    PrintWorkspace.ExportFromMenu();
-                }
-                else
-                {
-                    _ = DevelopWorkspace.ExportPhotoAsync();
-                }
-                return true;
-            case WorkflowShortcutAction.Undo:
-            case WorkflowShortcutAction.Redo:
-                return LibraryWorkspace.InvokeShortcut(action);
-            case WorkflowShortcutAction.ToggleBeforeAfter:
-                DevelopWorkspace.ToggleBeforeAfterFromMenu();
-                return true;
-            case WorkflowShortcutAction.ResetAdjustments:
-                DevelopWorkspace.ResetAllAdjustmentsFromMenu();
-                return true;
-            case WorkflowShortcutAction.CopyDevelopSettings:
-                DevelopWorkspace.CopyDevelopSettingsFromMenu();
-                return true;
-            case WorkflowShortcutAction.PasteDevelopSettings:
-                DevelopWorkspace.PasteDevelopSettingsFromMenu();
-                return true;
-            case WorkflowShortcutAction.PickPhoto:
-            case WorkflowShortcutAction.RejectPhoto:
-            case WorkflowShortcutAction.DeletePhoto:
-            case WorkflowShortcutAction.PreviousPhoto:
-            case WorkflowShortcutAction.NextPhoto:
-            case WorkflowShortcutAction.ClearPick:
-            case WorkflowShortcutAction.RateZero:
-            case WorkflowShortcutAction.RateOne:
-            case WorkflowShortcutAction.RateTwo:
-            case WorkflowShortcutAction.RateThree:
-            case WorkflowShortcutAction.RateFour:
-            case WorkflowShortcutAction.RateFive:
-            case WorkflowShortcutAction.CreateVirtualCopy:
-                return LibraryWorkspace.InvokeShortcut(action);
-            case WorkflowShortcutAction.RotateLeft:
-                DevelopWorkspace.UpdateImageTransform(state => state.Rotate(clockwise: false));
-                return true;
-            case WorkflowShortcutAction.RotateRight:
-                DevelopWorkspace.UpdateImageTransform(state => state.Rotate(clockwise: true));
-                return true;
-            case WorkflowShortcutAction.FlipHorizontal:
-                DevelopWorkspace.UpdateImageTransform(state => state.FlipHorizontally());
-                return true;
-            case WorkflowShortcutAction.FlipVertical:
-                DevelopWorkspace.UpdateImageTransform(state => state.FlipVertically());
-                return true;
-            case WorkflowShortcutAction.AutoTone:
-                DevelopWorkspace.RunAutoToneFromMenu();
-                return true;
-            case WorkflowShortcutAction.AutoWhiteBalance:
-                DevelopWorkspace.RunAutoWhiteBalanceFromMenu();
-                return true;
-            case WorkflowShortcutAction.ToggleAutoColor:
-                DevelopWorkspace.ToggleAutoColorFromMenu();
-                return true;
-            case WorkflowShortcutAction.ToggleAutoLevels:
-                DevelopWorkspace.ToggleAutoLevelsFromMenu();
-                return true;
-            case WorkflowShortcutAction.ToggleNoiseReduction:
-                DevelopWorkspace.ToggleNoiseReductionFromMenu();
-                return true;
-            case WorkflowShortcutAction.ProcessColorNegative:
-            case WorkflowShortcutAction.ProcessColorPositive:
-            case WorkflowShortcutAction.ProcessBwNegative:
-            case WorkflowShortcutAction.ProcessBwPositive:
-            case WorkflowShortcutAction.TargetMain:
-            case WorkflowShortcutAction.TargetPrint:
-            case WorkflowShortcutAction.TargetNoritsu:
-            case WorkflowShortcutAction.TargetSp3000:
-            case WorkflowShortcutAction.TargetF135:
-            case WorkflowShortcutAction.TargetHr:
-            case WorkflowShortcutAction.TargetExpired:
-                return LibraryWorkspace.InvokeShortcut(action);
-            case WorkflowShortcutAction.OpenHelp:
-                QuickStartHelpRequested?.Invoke(this, EventArgs.Empty);
-                return true;
-            case WorkflowShortcutAction.DetectScanners:
-            case WorkflowShortcutAction.ToggleScannerSimulator:
-            case WorkflowShortcutAction.PreviewScan:
-            case WorkflowShortcutAction.ScanFrame:
-            case WorkflowShortcutAction.AddFlatbedFrame:
-            case WorkflowShortcutAction.RemoveFlatbedFrame:
-                // macOS 는 스캐너 명령으로 작업공간을 바꾸지 않습니다.
-                return LibraryWorkspace.InvokeScannerShortcut(action);
-            case WorkflowShortcutAction.CropTool:
-                state.SelectWorkspace(WorkspaceModule.Develop);
-                DevelopWorkspace.ToggleCropFromMenu();
-                return true;
-            case WorkflowShortcutAction.BasePickerTool:
-                state.SelectWorkspace(WorkspaceModule.Develop);
-                DevelopWorkspace.ToggleBasePickerFromMenu();
-                return true;
-            case WorkflowShortcutAction.AutoDefectTool:
-                state.SelectWorkspace(WorkspaceModule.Develop);
-                DevelopWorkspace.RunAutoDefectFromMenu();
-                return true;
-            case WorkflowShortcutAction.GuidedDefectTool:
-                state.SelectWorkspace(WorkspaceModule.Develop);
-                DevelopWorkspace.ToggleGuidedDefectFromMenu();
-                return true;
-            case WorkflowShortcutAction.BrushDefectTool:
-                state.SelectWorkspace(WorkspaceModule.Develop);
-                DevelopWorkspace.ToggleBrushDefectFromMenu();
-                return true;
-            case WorkflowShortcutAction.CloneStampTool:
-                state.SelectWorkspace(WorkspaceModule.Develop);
-                DevelopWorkspace.ToggleCloneStampFromMenu();
-                return true;
-        }
-        // 나머지는 지금 보이는 화면이 맡습니다. 보이지 않는 화면이 조용히 사진을 바꾸면
-        // 사용자는 무엇이 일어났는지 볼 수 없습니다.
-        return state.Current.SelectedWorkspace == WorkspaceModule.Library &&
-            LibraryWorkspace.InvokeShortcut(action);
-    }
-
-    /// <summary>macOS <c>NSApp.keyWindow?.toggleFullScreen</c> — WinUI FullScreen presenter.</summary>
-    private void ToggleFullScreen()
-    {
-        if (hostWindowId is not { } id)
-        {
-            return;
-        }
-        AppWindow appWindow = AppWindow.GetFromWindowId(id);
-        appWindow.SetPresenter(
-            appWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen
-                ? AppWindowPresenterKind.Overlapped
-                : AppWindowPresenterKind.FullScreen);
     }
 
     private void OnLibraryFrameOpenRequested(object? sender, LibraryFrameListItem item)
@@ -416,6 +184,24 @@ public sealed partial class WorkspaceShellView : UserControl
         _ = sender;
         _ = args;
         SyncDevelopMenu();
+    }
+
+    /// <summary>
+    /// 폴더 머리줄의 적용이 그 폴더의 사진을 통째로 바꾼 뒤입니다. macOS 는 프레임 관찰로
+    /// 현상뷰·인화뷰가 저절로 따라오지만 WinUI 는 열릴 때 읽은 스냅샷에 머무르므로 여기서
+    /// 두 화면을 다시 맞춥니다.
+    /// </summary>
+    private void OnFolderDevelopmentApplied(object? sender, IReadOnlyList<string> frameIds)
+    {
+        _ = sender;
+        _ = frameIds;
+        DevelopWorkspace.ReloadFrames();
+        if (libraryHost is { } host)
+        {
+            PrintWorkspace.ShowLibrary(host);
+        }
+        SyncDevelopMenu();
+        SyncExportMenu();
     }
 
     /// <summary>
@@ -553,6 +339,7 @@ public sealed partial class WorkspaceShellView : UserControl
         Toolbar.QuickExportRequested -= OnToolbarQuickExportRequested;
         DevelopWorkspace.QuickExportAvailabilityChanged -= OnQuickExportAvailabilityChanged;
         DevelopWorkspace.ScannerSetupRequested -= OnDevelopScannerSetupRequested;
+        LibraryWorkspace.FolderDevelopmentApplied -= OnFolderDevelopmentApplied;
         if (workspaceState is not null)
         {
             workspaceState.Changed -= OnStateChanged;

@@ -223,6 +223,12 @@ internal sealed class LibraryFrameActions
             AppResources.Get("libraryStackGroup", "Content"),
         LibraryHostService.UndoActions.UngroupStack =>
             AppResources.Get("libraryStackUngroup", "Content"),
+        LibraryHostService.UndoActions.ResetAdjustments =>
+            AppResources.Get("shortcutResetAdjustments", "Text"),
+        LibraryHostService.UndoActions.DevelopAdjustment =>
+            AppResources.Get("developAdjustment", "Text"),
+        LibraryHostService.UndoActions.DefectEdit =>
+            AppResources.Get("developGrainMend", "Text"),
         _ => AppResources.Get("libraryStackCollapse", "Content"),
     };
 

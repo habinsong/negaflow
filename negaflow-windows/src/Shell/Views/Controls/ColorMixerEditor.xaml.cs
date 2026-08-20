@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Negaflow.Catalog;
 using Negaflow.Shell.Localization;
 
@@ -10,19 +11,23 @@ public sealed partial class ColorMixerEditor : UserControl
 {
     /// <summary>
     /// macOS 와 같은 여덟 밴드입니다. <c>Id</c> 는 automation id 에 쓰는 안정된 이름이고
-    /// 화면에 나가는 이름은 리소스에서 옵니다.
+    /// 화면에 나가는 이름은 리소스에서 옵니다. 색은 Swift 의 `Color(red:green:blue:)` 를
+    /// 가장 가까운 바이트로 옮긴 값입니다 — 예를 들어 초록 `0.25, 0.72, 0.34` 는 64, 184, 87.
     /// </summary>
     private static readonly (string Id, string ResourceKey, string Color)[] Bands =
     [
         ("red", "developRed", "#FFE63333"),
         ("orange", "developBandOrange", "#FFED8C2E"),
         ("yellow", "developBandYellow", "#FFE0D133"),
-        ("green", "developGreen", "#FF40B85C"),
+        ("green", "developGreen", "#FF40B857"),
         ("aqua", "developBandAqua", "#FF33C2C7"),
-        ("blue", "developBlue", "#FF3D6EE6"),
+        ("blue", "developBlue", "#FF3D6BE6"),
         ("purple", "developBandPurple", "#FF8C4DDB"),
         ("magenta", "developBandMagenta", "#FFE047A8"),
     ];
+
+    /// <summary>macOS `swatchSlider` 의 `EditableSliderValueText(width: 44)` 입니다.</summary>
+    private const double BandValueWidth = 44;
 
     private ColorMixerProperty property = ColorMixerProperty.Hue;
     private bool isSynchronizing;
@@ -84,6 +89,11 @@ public sealed partial class ColorMixerEditor : UserControl
         RebuildBands();
     }
 
+    /// <summary>
+    /// macOS 는 "모두" 일 때만 밴드 이름 줄을 따로 내고 그 아래 H·S·L 촘촘 슬라이더 셋을
+    /// 붙입니다. 나머지 세 모드는 색 동그라미와 이름이 슬라이더 자신의 이름 줄에 들어가므로
+    /// 이름이 두 번 나오지 않습니다.
+    /// </summary>
     private void RebuildBands()
     {
         if (BandsPanel is null)
@@ -94,39 +104,72 @@ public sealed partial class ColorMixerEditor : UserControl
         BandsPanel.Children.Clear();
         for (int index = 0; index < ColorMixerRecipe.BandCount; index++)
         {
-            StackPanel row = new() { Spacing = 3 };
-            StackPanel heading = new() { Orientation = Orientation.Horizontal, Spacing = 6 };
-            heading.Children.Add(new Border
-            {
-                Width = 12,
-                Height = 12,
-                CornerRadius = new CornerRadius(6),
-                Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                    Windows.UI.Color.FromArgb(
-                        255,
-                        Convert.ToByte(Bands[index].Color[1..3], 16),
-                        Convert.ToByte(Bands[index].Color[3..5], 16),
-                        Convert.ToByte(Bands[index].Color[5..7], 16))),
-            });
-            heading.Children.Add(new TextBlock { Text = BandName(index), FontSize = 12 });
-            row.Children.Add(heading);
-
-            if (property == ColorMixerProperty.All)
-            {
-                AddSlider(row, index, ColorMixerProperty.Hue, "H");
-                AddSlider(row, index, ColorMixerProperty.Saturation, "S");
-                AddSlider(row, index, ColorMixerProperty.Luminance, "L");
-            }
-            else
-            {
-                AddSlider(row, index, property, BandName(index));
-            }
-            BandsPanel.Children.Add(row);
+            BandsPanel.Children.Add(property == ColorMixerProperty.All
+                ? BuildAllBand(index)
+                : BuildSwatchSlider(index, property));
         }
         isSynchronizing = false;
     }
 
-    private void AddSlider(StackPanel row, int index, ColorMixerProperty channel, string label)
+    /// <summary>macOS `swatchSlider(_:_:)` — 색 동그라미 + 이름 + 값, 그 아래 슬라이더.</summary>
+    private InspectorSlider BuildSwatchSlider(int index, ColorMixerProperty channel)
+    {
+        InspectorSlider slider = CreateSlider(index, channel, BandName(index));
+        slider.Swatch = BandBrush(index);
+        slider.ValueWidth = BandValueWidth;
+        slider.LabelSpacing = 3;
+        return slider;
+    }
+
+    /// <summary>macOS "모두" 밴드 — `VStack(spacing: 3)` 에 이름 줄과 H·S·L 세 줄.</summary>
+    private StackPanel BuildAllBand(int index)
+    {
+        StackPanel band = new() { Spacing = 3, Margin = new Thickness(0, 0, 0, 2) };
+        StackPanel heading = new() { Orientation = Orientation.Horizontal, Spacing = 6 };
+        heading.Children.Add(BuildSwatchDot(index));
+        heading.Children.Add(new TextBlock
+        {
+            Text = BandName(index),
+            FontSize = 12,
+            FontWeight = Microsoft.UI.Text.FontWeights.Medium,
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        band.Children.Add(heading);
+
+        band.Children.Add(CreateMiniSlider(index, ColorMixerProperty.Hue, "H"));
+        band.Children.Add(CreateMiniSlider(index, ColorMixerProperty.Saturation, "S"));
+        band.Children.Add(CreateMiniSlider(index, ColorMixerProperty.Luminance, "L"));
+        return band;
+    }
+
+    /// <summary>macOS `swatch(_:)` — 12pt 원에 흰색 30% 0.5pt 테두리.</summary>
+    private static Border BuildSwatchDot(int index) => new()
+    {
+        Width = 12,
+        Height = 12,
+        CornerRadius = new CornerRadius(6),
+        VerticalAlignment = VerticalAlignment.Center,
+        BorderThickness = new Thickness(0.5),
+        BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 255, 255)) { Opacity = 0.3 },
+        Background = BandBrush(index),
+    };
+
+    private static SolidColorBrush BandBrush(int index) => new(
+        Windows.UI.Color.FromArgb(
+            255,
+            Convert.ToByte(Bands[index].Color[3..5], 16),
+            Convert.ToByte(Bands[index].Color[5..7], 16),
+            Convert.ToByte(Bands[index].Color[7..9], 16)));
+
+    /// <summary>macOS `miniSlider(_:_:)` — 태그·슬라이더·값이 한 줄입니다.</summary>
+    private InspectorSlider CreateMiniSlider(int index, ColorMixerProperty channel, string tag)
+    {
+        InspectorSlider slider = CreateSlider(index, channel, tag);
+        slider.Compact = true;
+        return slider;
+    }
+
+    private InspectorSlider CreateSlider(int index, ColorMixerProperty channel, string label)
     {
         InspectorSlider slider = new()
         {
@@ -138,7 +181,7 @@ public sealed partial class ColorMixerEditor : UserControl
             SliderAutomationId = $"negaflow.develop.color-mixer.{ChannelName(channel)}.{ChannelNameForBand(index)}",
         };
         slider.ValueChanged += (_, args) => OnSliderChanged(index, channel, args.Value);
-        row.Children.Add(slider);
+        return slider;
     }
 
     private void OnSliderChanged(int index, ColorMixerProperty channel, double value)

@@ -14,52 +14,90 @@
             <Setter Property="Foreground" Value="{ThemeResource TextFillColorCriticalBrush}" />
         </Style>
     </UserControl.Resources>
-    <StackPanel Spacing="4">
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="54" />
-            </Grid.ColumnDefinitions>
+    <!-- macOS 에는 같은 슬라이더가 두 모양으로 나옵니다.
+           ① 기본  — `VStack { HStack { 이름, Spacer, 값 }, ResettableSlider }`
+                     이름 줄이 위, 슬라이더가 아래. 대부분의 인스펙터 항목이 이 모양입니다.
+           ② 촘촘  — `HStack(spacing: 6) { Text(태그).frame(width: 12), 슬라이더, 값(width: 38) }`
+                     한 줄짜리. 컬러 믹서 "모두" 의 H·S·L 이 이 모양입니다.
+         두 모양이 값 편집·되돌리기·키보드 조작을 똑같이 쓰므로 요소는 하나만 두고
+         `Compact` 에 따라 `Grid` 의 행·열만 옮깁니다. -->
+    <Grid x:Name="Root" RowSpacing="4">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="LeadColumn" Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition x:Name="ValueColumn" Width="54" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <StackPanel
+            x:Name="LabelPanel"
+            Grid.Row="0"
+            Grid.Column="0"
+            Grid.ColumnSpan="2"
+            Orientation="Horizontal"
+            VerticalAlignment="Center"
+            Spacing="6">
+            <!-- macOS `Circle().fill(색).frame(width: 12, height: 12)
+                 .overlay(Circle().stroke(.white.opacity(0.3), lineWidth: 0.5))` -->
+            <Border
+                x:Name="SwatchDot"
+                Width="12"
+                Height="12"
+                VerticalAlignment="Center"
+                BorderThickness="0.5"
+                CornerRadius="6"
+                Visibility="Collapsed">
+                <Border.BorderBrush>
+                    <SolidColorBrush Color="#FFFFFFFF" Opacity="0.3" />
+                </Border.BorderBrush>
+            </Border>
             <TextBlock
                 x:Name="LabelText"
-                Grid.Column="0"
                 VerticalAlignment="Center"
                 FontSize="12" />
-            <Button
-                x:Name="ValueButton"
-                Grid.Column="1"
-                IsTabStop="False"
-                Padding="0"
-                HorizontalContentAlignment="Right"
-                VerticalContentAlignment="Center"
-                Background="Transparent"
-                BorderThickness="0"
-                Click="OnValueButtonClicked">
-                <TextBlock
-                    x:Name="ValueText"
-                    FontFamily="Consolas"
-                    FontSize="11"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    TextAlignment="Right" />
-            </Button>
-            <!-- 보일 때는 탭으로도 닿아야 합니다. 접혀 있으면 어차피 탭 순서에서 빠지므로
-                 `IsTabStop="False"` 는 얻는 것 없이 포커스만 막습니다. -->
-            <TextBox
-                x:Name="ValueEditor"
-                Grid.Column="1"
-                Padding="3,1"
-                HorizontalContentAlignment="Right"
-                VerticalContentAlignment="Center"
+        </StackPanel>
+        <Button
+            x:Name="ValueButton"
+            Grid.Row="0"
+            Grid.Column="2"
+            IsTabStop="False"
+            Padding="0"
+            HorizontalContentAlignment="Right"
+            VerticalContentAlignment="Center"
+            Background="Transparent"
+            BorderThickness="0"
+            Click="OnValueButtonClicked">
+            <TextBlock
+                x:Name="ValueText"
                 FontFamily="Consolas"
                 FontSize="11"
-                Style="{StaticResource InspectorSliderValueEditorStyle}"
-                TextAlignment="Right"
-                Visibility="Collapsed"
-                KeyDown="OnEditorKeyDown"
-                LostFocus="OnEditorLostFocus"
-                TextChanging="OnEditorTextChanging" />
-        </Grid>
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                TextAlignment="Right" />
+        </Button>
+        <!-- 보일 때는 탭으로도 닿아야 합니다. 접혀 있으면 어차피 탭 순서에서 빠지므로
+             `IsTabStop="False"` 는 얻는 것 없이 포커스만 막습니다. -->
+        <TextBox
+            x:Name="ValueEditor"
+            Grid.Row="0"
+            Grid.Column="2"
+            Padding="3,1"
+            HorizontalContentAlignment="Right"
+            VerticalContentAlignment="Center"
+            FontFamily="Consolas"
+            FontSize="11"
+            Style="{StaticResource InspectorSliderValueEditorStyle}"
+            TextAlignment="Right"
+            Visibility="Collapsed"
+            KeyDown="OnEditorKeyDown"
+            LostFocus="OnEditorLostFocus"
+            TextChanging="OnEditorTextChanging" />
         <Grid
+            x:Name="SliderHost"
+            Grid.Row="1"
+            Grid.Column="0"
+            Grid.ColumnSpan="3"
             Margin="-8"
             Padding="8"
             Background="Transparent"
@@ -76,5 +114,5 @@
                 KeyDown="OnSliderKeyDown"
                 ValueChanged="OnSliderValueChanged" />
         </Grid>
-    </StackPanel>
+    </Grid>
 </UserControl>

@@ -161,6 +161,31 @@ public sealed record QuickExportSettings
         OutputSharpening = 0,
         OutputSharpeningMedium = OutputSharpeningMedium.Screen,
     };
+
+    /// <summary>
+    /// 배치 계획에 넘길 <see cref="ExportSettings"/> 모양입니다.
+    /// </summary>
+    /// <remarks>
+    /// macOS <c>quickExportSelection()</c> 은 본 내보내기와 <b>같은</b> <c>startExportBatch</c> 를
+    /// 부르되 <c>writeSidecar</c>·<c>writeMainFlatMaster</c>·<c>writeOriginalRaw</c> 를 모두
+    /// <c>false</c> 로, 이름 규칙을 <c>defaultPattern</c> 으로 고정합니다. 빠른 내보내기는 화면
+    /// 공유용 한 벌이라 보관용 부산물을 남기지 않습니다.
+    /// </remarks>
+    public ExportSettings ToBatchSettings() => new()
+    {
+        Format = Format,
+        Dpi = Dpi,
+        LongEdge = LongEdge,
+        JpegQuality = JpegQuality,
+        TiffCompression = DevelopTiffCompression.None,
+        OutputSharpening = 0,
+        OutputSharpeningMedium = OutputSharpeningMedium.Screen,
+        WriteMainFlatMaster = false,
+        WriteOriginalRaw = false,
+        WriteSidecar = false,
+        FolderPath = FolderPath,
+        NamingTemplate = ExportNamingTemplate.DefaultPattern,
+    };
 }
 
 /// <summary>

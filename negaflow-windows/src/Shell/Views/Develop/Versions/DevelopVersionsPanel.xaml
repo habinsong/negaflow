@@ -3,80 +3,131 @@
     x:Class="Negaflow.Shell.Views.Develop.Versions.DevelopVersionsPanel"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- macOS `WorkflowSidebar` 의 versions 탭 (`현상뷰_좌측탭_세로탭_버전.png`):
+         `VirtualCopySection` · `DevelopHistorySection` · `SnapshotSection` 세 구획입니다.
+         구획마다 아이콘+제목이 카드 위에 서고, 카드 안은 고르개 한 줄 + 단추 한 줄입니다. -->
     <ScrollViewer>
-        <StackPanel Padding="12,14" Spacing="10">
-            <Grid ColumnSpacing="8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <TextBox
-                    x:Name="VersionNameBox"
-                    x:FieldModifier="internal"
-                    AutomationProperties.AutomationId="negaflow.develop.versions.name"
-                    TextChanged="OnVersionNameChanged" />
-                <Button
-                    x:Name="CaptureVersionButton"
-                    x:FieldModifier="internal"
-                    Grid.Column="1"
-                    AutomationProperties.AutomationId="negaflow.develop.versions.capture"
-                    Click="OnCaptureVersionClicked"
-                    Style="{StaticResource AccentButtonStyle}" />
-            </Grid>
+        <StackPanel Padding="12,14" Spacing="14">
+
+            <!-- ① 가상 사본 -->
+            <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon FontSize="12" Glyph="&#xE8C8;" />
+                    <TextBlock x:Name="VirtualCopySectionText" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
+                </StackPanel>
+                <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
+                    <Button
+                        x:Name="CreateVirtualCopyButton" x:FieldModifier="internal"
+                        HorizontalAlignment="Stretch"
+                        AutomationProperties.AutomationId="negaflow.develop.versions.virtual-copy"
+                        Click="OnCreateVirtualCopyClicked"
+                        FontSize="12" />
+                </Border>
+            </StackPanel>
+
+            <!-- ② 기록 -->
+            <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon FontSize="12" Glyph="&#xE823;" />
+                    <TextBlock x:Name="HistorySectionText" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
+                </StackPanel>
+                <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
+                    <StackPanel Spacing="9">
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="HistoryLabel" x:FieldModifier="internal" VerticalAlignment="Center" FontSize="12" />
+                            <ComboBox
+                                x:Name="HistorySelector" x:FieldModifier="internal"
+                                Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                AutomationProperties.AutomationId="negaflow.develop.versions.history"
+                                DisplayMemberPath="Label"
+                                FontSize="12" />
+                        </Grid>
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button
+                                x:Name="RecordHistoryButton" x:FieldModifier="internal"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.develop.versions.history-record"
+                                Click="OnRecordHistoryClicked"
+                                FontSize="12" />
+                            <Button
+                                x:Name="ApplyHistoryButton" x:FieldModifier="internal"
+                                Grid.Column="1"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.develop.versions.history-apply"
+                                Click="OnApplyHistoryClicked"
+                                FontSize="12" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- ③ 스냅샷 -->
+            <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon FontSize="12" Glyph="&#xE722;" />
+                    <TextBlock x:Name="SnapshotSectionText" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
+                </StackPanel>
+                <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
+                    <StackPanel Spacing="9">
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="SnapshotLabel" x:FieldModifier="internal" VerticalAlignment="Center" FontSize="12" />
+                            <ComboBox
+                                x:Name="SnapshotSelector" x:FieldModifier="internal"
+                                Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                AutomationProperties.AutomationId="negaflow.develop.versions.snapshot"
+                                DisplayMemberPath="Label"
+                                FontSize="12" />
+                        </Grid>
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button
+                                x:Name="SaveSnapshotButton" x:FieldModifier="internal"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.develop.versions.snapshot-save"
+                                Click="OnSaveSnapshotClicked"
+                                FontSize="12" />
+                            <Button
+                                x:Name="ApplySnapshotButton" x:FieldModifier="internal"
+                                Grid.Column="1"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.develop.versions.snapshot-apply"
+                                Click="OnApplySnapshotClicked"
+                                FontSize="12" />
+                            <Button
+                                x:Name="DeleteSnapshotButton" x:FieldModifier="internal"
+                                Grid.Column="2"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.develop.versions.snapshot-delete"
+                                Click="OnDeleteSnapshotClicked"
+                                FontSize="12" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
             <TextBlock
-                x:Name="VersionsEmptyText"
-                x:FieldModifier="internal"
-                FontSize="12"
+                x:Name="VersionsStatusText" x:FieldModifier="internal"
+                FontSize="11"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 TextWrapping="Wrap" />
-            <ItemsControl x:Name="VersionsList" x:FieldModifier="internal">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border
-                            Margin="0,0,0,6"
-                            Padding="10,8"
-                            Background="{ThemeResource NegaflowCardBrush}"
-                            CornerRadius="8">
-                            <Grid ColumnSpacing="6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Spacing="1">
-                                    <TextBlock
-                                        FontSize="12"
-                                        FontWeight="SemiBold"
-                                        Text="{Binding Name}"
-                                        TextTrimming="CharacterEllipsis" />
-                                    <TextBlock
-                                        FontSize="10"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Text="{Binding CreatedText}" />
-                                </StackPanel>
-                                <Button
-                                    Grid.Column="1"
-                                    Padding="8,2"
-                                    AutomationProperties.AutomationId="negaflow.develop.versions.restore"
-                                    Click="OnRestoreVersionClicked"
-                                    Content="{Binding RestoreText}"
-                                    FontSize="11"
-                                    Tag="{Binding Id}" />
-                                <Button
-                                    Grid.Column="2"
-                                    Padding="8,2"
-                                    AutomationProperties.AutomationId="negaflow.develop.versions.delete"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Click="OnDeleteVersionClicked"
-                                    Content="{Binding DeleteText}"
-                                    FontSize="11"
-                                    Tag="{Binding Id}" />
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

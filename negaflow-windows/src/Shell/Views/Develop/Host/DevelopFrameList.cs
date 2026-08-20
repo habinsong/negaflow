@@ -147,7 +147,31 @@ internal sealed class DevelopFrameList
     private void OnFilmstripFrameSelected(object? sender, LibraryFrameListItem item)
     {
         _ = sender;
-        Select(item.Id);
+        if (view.FrameSelector.ItemsSource is not IReadOnlyList<LibraryFrameListItem> items)
+        {
+            Select(item.Id);
+            return;
+        }
+        int index = IndexOf(items, item.Id);
+        if (index < 0)
+        {
+            return;
+        }
+        // FrameSelector.SelectedIndex 만 바꾸면, 이미 그 칸이거나 SelectionChanged 가
+        // 빠른 클릭을 건너뛸 때 Activate 가 안 불립니다. 스트립 클릭은 항상 이 장을 엽니다.
+        view.isSynchronizingFrameSelection = true;
+        try
+        {
+            if (view.FrameSelector.SelectedIndex != index)
+            {
+                view.FrameSelector.SelectedIndex = index;
+            }
+        }
+        finally
+        {
+            view.isSynchronizingFrameSelection = false;
+        }
+        Activate(item, index, publishSelection: true);
     }
 
     private void OnSourceFrameSelected(object? sender, string frameId)
@@ -158,6 +182,10 @@ internal sealed class DevelopFrameList
             return;
         }
         view.panel.Select(frameId);
+        if (InfraredCleanStatusText.For(view.panel.LastInfraredClean) is { Length: > 0 } infrared)
+        {
+            view.ExportStatusText.Text = infrared;
+        }
         view.SynchronizeInspectorValues();
         view.RequestPreview();
         view.LeftPanel.RebuildLibraryTree();
@@ -190,6 +218,28 @@ internal sealed class DevelopFrameList
         Activate(item, view.FrameSelector.SelectedIndex, publishSelection: true);
     }
 
+    /// <summary>
+    /// macOS 는 스포이드를 <c>basePickerFrameID == frame.id</c> 로, 비교 모드를
+    /// <c>frame.showDeveloped</c> 로 **프레임마다** 답니다. 이쪽은 작업공간에 한 벌뿐이라
+    /// 프레임을 옮길 때 새 프레임 기준으로 다시 걸어 줘야 합니다.
+    ///
+    /// ☠️ 안 걸면 <c>PreviewCoordinator.UninvertedSource</c> 가 켜진 채 남아
+    ///    <c>FilmPolarity = Positive</c> 로 현상 요청이 나갑니다 — 한 프레임에서 `원본` 을
+    ///    켜거나 베이스 스포이드를 켠 뒤로는 **여는 사진마다** 반전 전 네거티브(주황 베이스에
+    ///    반전 전 그레인)가 나와 "전부 노이즈투성이에 베이스가 이상하다" 로 보입니다.
+    /// </summary>
+    private void RebindPerFrameCanvasTools()
+    {
+        view.BaseCard.CancelBasePicker();
+        if (view.previewCoordinator is not null)
+        {
+            view.previewCoordinator.UninvertedSource =
+                view.BaseCard.IsBasePickerActive ||
+                view.panel?.Compare.ActiveMode == CanvasCompareMode.Raw;
+        }
+        view.PreviewCanvas.RefreshCompare();
+    }
+
     private void Activate(
         LibraryFrameListItem item,
         int selectedIndex,
@@ -205,10 +255,18 @@ internal sealed class DevelopFrameList
         {
             view.libraryHost?.SetSelection([item.Id], item.Id);
         }
-        view.panel.Select(item.Id);
+        if (!view.panel.Select(item.Id))
+        {
+            return;
+        }
         view.Filmstrip.SynchronizeSelection(selectedIndex);
         view.LeftPanel.SetHeaderTitle(item.DisplayName);
         UpdateSelectedFrameText();
+        RebindPerFrameCanvasTools();
+        // 좌측탭의 프로세스·타깃·필름 프로파일·룩은 선택된 프레임을 따라갑니다.
+        view.LeftPanel.SynchronizeDevelopDefaults();
+        // 인스펙터 동기화보다 먼저 렌더를 겁니다. 안 그러면 전환이 한 박자 늦습니다.
+        view.RequestPreviewNow();
         view.SynchronizeInspectorValues();
         view.SyncBaseControls();
         view.SyncToneControls();
@@ -220,7 +278,12 @@ internal sealed class DevelopFrameList
                 null,
                 DevelopWorkspaceView.RefusalFor(item.Frame),
                 null));
-        view.RequestPreview();
+        // IR 결함 제거는 프레임을 고르는 것만으로 돕니다(macOS `runInfraredCleanIfNeeded`).
+        // 할 말이 있을 때만 덮어씁니다 — 현상 불가 안내를 지우면 안 됩니다.
+        if (InfraredCleanStatusText.For(view.panel.LastInfraredClean) is { Length: > 0 } infrared)
+        {
+            view.ExportStatusText.Text = infrared;
+        }
     }
 
     private void SynchronizeSharedSelection()

@@ -64,6 +64,14 @@ struct WicTiffDecodeControl final {
     std::uint32_t rows_per_copy{0};
     std::stop_token stop_token{};
     WicTiffDecodeProgressObserver* progress_observer{nullptr};
+    // 둘 다 0 이 아니면 원본보다 클 때 IWICBitmapScaler 로 맞춘 뒤 디코드합니다.
+    // 미리보기는 5088 전체를 float 로 만들지 않습니다. 0 은 원본 치수.
+    // https://learn.microsoft.com/en-us/windows/win32/wic/-wic-imp-iwicbitmapsourcetransform
+    std::uint32_t max_output_width{0};
+    std::uint32_t max_output_height{0};
+    // 미리보기는 WIC 가 한 번 더 풉니다. LZW/Deflate 전체 검증을 앞에 또 하면
+    // compression=5 파일에서 디코드가 2초대입니다(frame_15 실측).
+    bool validate_compressed_streams{true};
 };
 
 struct WicTiffFrameView final {

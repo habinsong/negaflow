@@ -46,18 +46,27 @@
                     <FontIcon FontSize="12" Glyph="&#xE777;" />
                 </Button>
             </Grid>
-            <StackPanel x:Name="CalibrationControls" HorizontalAlignment="Stretch" Spacing="10" Visibility="Collapsed">
-                <TextBlock x:Name="RedPrimaryText" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                <controls:InspectorSlider x:Name="RedPrimaryHueControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.red.hue" ValueChanged="OnPrimaryCalibrationChanged" />
-                <controls:InspectorSlider x:Name="RedPrimarySaturationControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.red.saturation" ValueChanged="OnPrimaryCalibrationChanged" />
-                <Border Height="1" HorizontalAlignment="Stretch" Background="{ThemeResource NegaflowDividerBrush}" />
-                <TextBlock x:Name="GreenPrimaryText" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                <controls:InspectorSlider x:Name="GreenPrimaryHueControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.green.hue" ValueChanged="OnPrimaryCalibrationChanged" />
-                <controls:InspectorSlider x:Name="GreenPrimarySaturationControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.green.saturation" ValueChanged="OnPrimaryCalibrationChanged" />
-                <Border Height="1" HorizontalAlignment="Stretch" Background="{ThemeResource NegaflowDividerBrush}" />
-                <TextBlock x:Name="BluePrimaryText" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                <controls:InspectorSlider x:Name="BluePrimaryHueControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.blue.hue" ValueChanged="OnPrimaryCalibrationChanged" />
-                <controls:InspectorSlider x:Name="BluePrimarySaturationControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.blue.saturation" ValueChanged="OnPrimaryCalibrationChanged" />
+            <!-- macOS `calibrationPrimary` — 원색 하나가 `VStack(alignment: .leading, spacing: 4)`
+                 { 이름(.caption.weight(.medium), secondary); 색조; 채도 } 이고, 원색 사이는
+                 `InspectorCard` 의 12 간격에 `Divider().opacity(0.35)` 하나가 놓입니다. -->
+            <StackPanel x:Name="CalibrationControls" HorizontalAlignment="Stretch" Spacing="12" Visibility="Collapsed">
+                <StackPanel HorizontalAlignment="Stretch" Spacing="4">
+                    <TextBlock x:Name="RedPrimaryText" FontSize="12" FontWeight="Medium" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <controls:InspectorSlider x:Name="RedPrimaryHueControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.red.hue" ValueChanged="OnPrimaryCalibrationChanged" />
+                    <controls:InspectorSlider x:Name="RedPrimarySaturationControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.red.saturation" ValueChanged="OnPrimaryCalibrationChanged" />
+                </StackPanel>
+                <Border Height="1" HorizontalAlignment="Stretch" Opacity="0.35" Background="{ThemeResource NegaflowDividerBrush}" />
+                <StackPanel HorizontalAlignment="Stretch" Spacing="4">
+                    <TextBlock x:Name="GreenPrimaryText" FontSize="12" FontWeight="Medium" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <controls:InspectorSlider x:Name="GreenPrimaryHueControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.green.hue" ValueChanged="OnPrimaryCalibrationChanged" />
+                    <controls:InspectorSlider x:Name="GreenPrimarySaturationControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.green.saturation" ValueChanged="OnPrimaryCalibrationChanged" />
+                </StackPanel>
+                <Border Height="1" HorizontalAlignment="Stretch" Opacity="0.35" Background="{ThemeResource NegaflowDividerBrush}" />
+                <StackPanel HorizontalAlignment="Stretch" Spacing="4">
+                    <TextBlock x:Name="BluePrimaryText" FontSize="12" FontWeight="Medium" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <controls:InspectorSlider x:Name="BluePrimaryHueControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.blue.hue" ValueChanged="OnPrimaryCalibrationChanged" />
+                    <controls:InspectorSlider x:Name="BluePrimarySaturationControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.blue.saturation" ValueChanged="OnPrimaryCalibrationChanged" />
+                </StackPanel>
             </StackPanel>
         </StackPanel>
     </Border>

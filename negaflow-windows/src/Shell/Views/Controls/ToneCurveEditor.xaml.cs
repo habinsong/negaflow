@@ -66,22 +66,23 @@ public sealed partial class ToneCurveEditor : UserControl
         AutomationProperties.SetHelpText(
             CurveCanvas,
             AppResources.Get("developPointCurveCanvasHelp", "Value"));
-        // 채널과 축 이름은 리소스에서 옵니다. RGB 는 어느 언어에서도 RGB 입니다.
+        // 채널 이름은 리소스에서 옵니다.
+        //
+        // ☠️ 합성 채널의 이름은 **DR** 입니다 — macOS `ToneCurveEditor.Channel.rgb` 가
+        //    `dynamicRangeChannel` 을 쓰고, 영어·한국어 표 모두 "DR" 입니다. 여기에 "RGB" 를
+        //    박아 두면 화면에 없는 이름을 지어내는 것입니다.
         SetChannelText(RedChannelButton, AppResources.Get("developRed", "Text"));
         SetChannelText(GreenChannelButton, AppResources.Get("developGreen", "Text"));
         SetChannelText(BlueChannelButton, AppResources.Get("developBlue", "Text"));
-        SetChannelText(RgbChannelButton, "RGB");
-        SetChannelText(AddPointButton, AppResources.Get("developAddPoint", "Content"));
-        SetChannelText(DeletePointButton, AppResources.Get("developDeletePoint", "Content"));
+        SetChannelText(RgbChannelButton, AppResources.Get("developDynamicRangeChannel", "Text"));
         SetChannelText(ResetChannelButton, AppResources.Get("developResetChannel", "Content"));
+        CurveHelpText.Text = AppResources.Get("developToneCurveHelp", "Text");
         CurveInputLabel.Text = AppResources.Get("developCurveInput", "Text");
         CurveOutputLabel.Text = AppResources.Get("developCurveOutput", "Text");
         AutomationProperties.SetAutomationId(RgbChannelButton, "negaflow.develop.point-curve.rgb");
         AutomationProperties.SetAutomationId(RedChannelButton, "negaflow.develop.point-curve.red");
         AutomationProperties.SetAutomationId(GreenChannelButton, "negaflow.develop.point-curve.green");
         AutomationProperties.SetAutomationId(BlueChannelButton, "negaflow.develop.point-curve.blue");
-        AutomationProperties.SetAutomationId(AddPointButton, "negaflow.develop.point-curve.add");
-        AutomationProperties.SetAutomationId(DeletePointButton, "negaflow.develop.point-curve.delete");
         AutomationProperties.SetAutomationId(ResetChannelButton, "negaflow.develop.point-curve.reset");
     }
 
@@ -179,8 +180,6 @@ public sealed partial class ToneCurveEditor : UserControl
         bool hasSelection = editing.SelectedIndex >= 0 && editing.SelectedIndex < editing.Points.Count;
         PointFields.Opacity = hasSelection ? 1.0 : 0.55;
         OutputEditor.IsEnabled = hasSelection;
-        DeletePointButton.IsEnabled = hasSelection &&
-            editing.Points[editing.SelectedIndex].X is > 1.0e-9 and < 1.0 - 1.0e-9;
         if (hasSelection)
         {
             PointCurvePoint selected = editing.Points[editing.SelectedIndex];
@@ -308,26 +307,6 @@ public sealed partial class ToneCurveEditor : UserControl
     {
         editing.SetChannel(channel);
         Render();
-    }
-
-    private void OnAddPointClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (IsEnabled && editing.AddLargestGap())
-        {
-            PublishChange();
-        }
-    }
-
-    private void OnDeletePointClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (IsEnabled && editing.DeleteSelected())
-        {
-            PublishChange();
-        }
     }
 
     private void OnResetChannelClicked(object sender, RoutedEventArgs args)

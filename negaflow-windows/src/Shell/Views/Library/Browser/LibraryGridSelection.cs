@@ -65,7 +65,6 @@ internal sealed class LibraryGridSelection
             }
             host.SetSelection(next, added.LastOrDefault()?.Id);
         }
-        view.DevelopDefaultsPanel.Synchronize();
     }
 
     internal LibraryFrameSnapshot? ActionableFrame() =>

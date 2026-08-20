@@ -17,6 +17,39 @@ internal sealed class DevelopAutoAdjustActions
         view.Adjustments.AutoLevelsToggled += OnAutoLevelsToggled;
         view.Adjustments.AutoToneClicked += OnAutoToneClicked;
         view.Adjustments.AutoWhiteBalanceClicked += OnAutoWhiteBalanceClicked;
+        view.Adjustments.AutoToneResetClicked += OnAutoToneResetClicked;
+        view.Adjustments.AutoWhiteBalanceResetClicked += OnAutoWhiteBalanceResetClicked;
+    }
+
+    /// <summary>macOS <c>resetAutoTone</c> — 톤 일곱 값과 생동감·채도를 0 으로.</summary>
+    private void OnAutoToneResetClicked(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        Apply(state => state.Tone.ResetAutoTone());
+    }
+
+    /// <summary>macOS <c>resetAutoWhiteBalance</c> — 온도·색조만 0 으로.</summary>
+    private void OnAutoWhiteBalanceResetClicked(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        Apply(state => state.Tone.ResetAutoWhiteBalance());
+    }
+
+    /// <summary>
+    /// macOS 는 두 되돌리기 뒤에 <c>developFrame</c> 을 겁니다 — 값만 지우고 화면을 두면
+    /// 사용자는 아무 일도 안 일어난 줄 압니다.
+    /// </summary>
+    private void Apply(Func<DevelopPanelState, LibraryFrameError> edit)
+    {
+        if (view.panel is null || edit(view.panel) != LibraryFrameError.None)
+        {
+            return;
+        }
+        view.SynchronizeInspectorValues();
+        view.SyncToneControls();
+        view.RequestPreview();
     }
 
     private void OnAutoColorToggled(object? sender, EventArgs args)
@@ -41,6 +74,11 @@ internal sealed class DevelopAutoAdjustActions
         }
         view.UpdateImageTransform(state => state.SetAutoLevels(view.Adjustments.AutoLevelsIsOn));
     }
+
+    internal void RunToneFromMenu() => _ = RunAsync(AutoAdjustOperation.Tone);
+
+    internal void RunWhiteBalanceFromMenu() =>
+        _ = RunAsync(AutoAdjustOperation.WhiteBalance);
 
     private async void OnAutoToneClicked(object? sender, EventArgs args)
     {

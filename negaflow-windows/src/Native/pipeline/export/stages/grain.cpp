@@ -4,6 +4,7 @@
 
 #include "negaflow/core/cancel_flag.h"
 #include "negaflow/core/pixel.h"
+#include "negaflow/pipeline/gpu_accelerator.h"
 
 #include <cstring>
 #include <utility>
@@ -79,6 +80,26 @@ std::optional<DevelopExportOutcome> apply_grain_stage(
 
     // The one stage long enough that a stage-boundary check is not good enough. It gets
     // the caller's latch directly and stops between its own internal passes.
+    const bool identity = request.grain_mend.strength <=
+            negaflow::imaging::grain_mend_identity_threshold ||
+        image.width <= 8U || image.height <= 8U;
+    const float* const resident_pixels =
+        reinterpret_cast<const float*>(image.pixels.data());
+    if (identity &&
+        GpuAccelerator::shared().has_resident_image(
+            resident_pixels, image.width, image.height)) {
+        out.applied.status = negaflow::imaging::GrainMendStatus::ok;
+        out.applied.info.kernel_status = negaflow::core::KernelStatus::ok;
+        out.applied.image = std::move(image);
+        tracker.finish();
+        if (tracker.cancelled()) {
+            return cancelled_outcome(DevelopExportStage::grain_mend);
+        }
+        return std::nullopt;
+    }
+    if (!identity) {
+        GpuAccelerator::shared().flush_resident();
+    }
     auto grain_mend = negaflow::imaging::apply_grain_mend(
         std::move(image),
         request.grain_mend,

@@ -31,9 +31,9 @@ internal sealed class DevelopGrainMendLayers
             view.panel.SelectedFrame,
             DefectLayerTextFactory.Create(),
             view.panel.DefectLayers.MaskPreviewId,
-            // 검토 완료 기록은 아직 카탈로그에 없습니다. 없는 것을 있는 것처럼 내지 않고,
-            // 언제나 "아직 완료하지 않음"으로 냅니다.
-            reviewed: null,
+            // macOS `libraryWorkflowTrackingState.defectReviewTracking` — 카탈로그에 적힌
+            // 검토 완료 판입니다. 지금 recipe 와 세 값이 다르면 저절로 "아직"이 됩니다.
+            Reviewed(view.panel.SelectedFrame),
             view.grainMend.IsDetecting);
         view.DefectLayers.Update(state, DefectLayerTextFactory.Create(), view.grainMend.IsDetecting);
         ShowMaskOverlay();
@@ -62,7 +62,12 @@ internal sealed class DevelopGrainMendLayers
                 SetLayerStrength(args);
                 break;
             case DefectLayerCommand.MarkReviewed:
-                // 저장할 자리가 아직 없습니다. 되는 척하지 않고 아무 일도 하지 않습니다.
+                // macOS `markDefectRecipeReviewed`. 현상 결과는 바뀌지 않으므로 미리보기를
+                // 다시 걸지 않고 목록만 다시 그립니다.
+                if (view.panel.MarkDefectRecipeReviewed() == LibraryFrameError.None)
+                {
+                    Update();
+                }
                 break;
             default:
                 break;
@@ -119,6 +124,18 @@ internal sealed class DevelopGrainMendLayers
         }
         view.canvas.ShowDefectPixels(bgra, width, height);
     }
+
+    /// <summary>
+    /// 카탈로그에 적힌 검토 완료 판입니다. 투영이 지금 recipe 와 대조해 완료 여부를 냅니다 —
+    /// 여기서 대조하면 판정이 두 벌이 됩니다.
+    /// </summary>
+    private static DefectReviewMark? Reviewed(LibraryFrameSnapshot? frame) =>
+        frame?.DefectReviewMark is { } mark
+            ? new DefectReviewMark(
+                mark.RecipeRevision,
+                mark.RecipeSha256,
+                mark.SourceIdentitySha256)
+            : null;
 
     private bool IsLayerEnabled(Guid id) =>
         view.panel?.DefectLayers.Items.FirstOrDefault(item => item.Id == id)?.Enabled == true;

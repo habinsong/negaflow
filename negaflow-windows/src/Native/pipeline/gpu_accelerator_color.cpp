@@ -29,7 +29,7 @@ bool GpuAccelerator::apply_muted_scene_vibrance(
     if (width == 0U || height == 0U || stride_pixels < width) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->vibrance_ready) {
         return false;
     }
@@ -38,15 +38,29 @@ bool GpuAccelerator::apply_muted_scene_vibrance(
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();
     auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
-    if (pool[0].upload_into(state_->device, rgba, stride_pixels) != gpu::GpuImageStatus::ok) {
+    int read_slot = 0;
+    int write_slot = 1;
+    if (state_->resident_matches(pixels, width, height)) {
+        read_slot = state_->resident.read_slot;
+        write_slot = 1 - read_slot;
+    } else if (
+        pool[0].upload_into(state_->device, rgba, stride_pixels) != gpu::GpuImageStatus::ok) {
         return false;
     }
     if (state_->muted_vibrance.dispatch(
-            state_->device, state_->vibrance_table, pool[0], pool[1], amount) !=
-        gpu::GpuKernelStatus::ok) {
+            state_->device,
+            state_->vibrance_table,
+            pool[read_slot],
+            pool[write_slot],
+            amount) != gpu::GpuKernelStatus::ok) {
         return false;
     }
-    return pool[1].download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
+    if (state_->resident.scope_depth > 0) {
+        state_->bind_resident(pixels, width, height, stride_pixels, write_slot);
+        return true;
+    }
+    return pool[write_slot].download(state_->device, rgba, stride_pixels) ==
+        gpu::GpuImageStatus::ok;
 }
 
 bool GpuAccelerator::apply_color_model(
@@ -61,7 +75,7 @@ bool GpuAccelerator::apply_color_model(
     if (width == 0U || height == 0U || stride_pixels < width) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->vibrance_ready) {
         return false;
     }
@@ -70,15 +84,29 @@ bool GpuAccelerator::apply_color_model(
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();
     auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
-    if (pool[0].upload_into(state_->device, rgba, stride_pixels) != gpu::GpuImageStatus::ok) {
+    int read_slot = 0;
+    int write_slot = 1;
+    if (state_->resident_matches(pixels, width, height)) {
+        read_slot = state_->resident.read_slot;
+        write_slot = 1 - read_slot;
+    } else if (
+        pool[0].upload_into(state_->device, rgba, stride_pixels) != gpu::GpuImageStatus::ok) {
         return false;
     }
     if (state_->color_model.dispatch(
-            state_->device, state_->vibrance_table, pool[0], pool[1], *parameters) !=
-        gpu::GpuKernelStatus::ok) {
+            state_->device,
+            state_->vibrance_table,
+            pool[read_slot],
+            pool[write_slot],
+            *parameters) != gpu::GpuKernelStatus::ok) {
         return false;
     }
-    return pool[1].download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
+    if (state_->resident.scope_depth > 0) {
+        state_->bind_resident(pixels, width, height, stride_pixels, write_slot);
+        return true;
+    }
+    return pool[write_slot].download(state_->device, rgba, stride_pixels) ==
+        gpu::GpuImageStatus::ok;
 }
 
 bool GpuAccelerator::apply_scanner_target_grade(
@@ -93,7 +121,7 @@ bool GpuAccelerator::apply_scanner_target_grade(
     if (width == 0U || height == 0U || stride_pixels < width) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->target_grade_ready) {
         return false;
     }
@@ -124,7 +152,7 @@ bool GpuAccelerator::apply_noritsu_texture(
     if (width == 0U || height == 0U || stride_pixels < width) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->noritsu_texture_ready) {
         return false;
     }
@@ -159,7 +187,7 @@ bool GpuAccelerator::apply_texture_grain(
     if (width == 0U || height == 0U || stride_pixels < width || !std::isfinite(amount)) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->texture_grain_ready) {
         return false;
     }
@@ -192,7 +220,7 @@ bool GpuAccelerator::apply_channel_clipping_overlay(
         destination_stride_pixels < width) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->clipping_overlay_ready) {
         return false;
     }
@@ -231,7 +259,7 @@ bool GpuAccelerator::apply_area_average(
     if (width == 0U || height == 0U || stride_pixels < width) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->area_average_ready) {
         return false;
     }
@@ -291,7 +319,7 @@ bool GpuAccelerator::apply_mip_halve_levels(
     if (width == 0U || height == 0U || stride_pixels < width || wanted_levels <= 0) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->mip_halve_ready) {
         return false;
     }
@@ -299,12 +327,16 @@ bool GpuAccelerator::apply_mip_halve_levels(
         return false;
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();
-    const auto* const rgba = reinterpret_cast<const core::Rgba32F*>(source);
-    if (pool[0].upload_into(state_->device, rgba, stride_pixels) != gpu::GpuImageStatus::ok) {
-        return false;
-    }
-
     const gpu::GpuWorkingImage* current = &pool[0];
+    if (state_->resident_matches(source, width, height)) {
+        current = &pool[state_->resident.read_slot];
+    } else {
+        const auto* const rgba = reinterpret_cast<const core::Rgba32F*>(source);
+        if (pool[0].upload_into(state_->device, rgba, stride_pixels) !=
+            gpu::GpuImageStatus::ok) {
+            return false;
+        }
+    }
     gpu::GpuWorkingImage* scratch[2] = {&state_->mip_a, &state_->mip_b};
     int scratch_index = 0;
     std::uint32_t current_width = width;

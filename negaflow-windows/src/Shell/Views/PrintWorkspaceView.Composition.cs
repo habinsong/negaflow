@@ -1,7 +1,10 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI;
 using Negaflow.Catalog;
+using Microsoft.UI.Xaml.Automation;
+using Negaflow.Shell.Localization;
 using Negaflow.Shell.Print;
 using Negaflow.Shell.Views.Print.Export;
 using Negaflow.Shell.Views.Print.Preview;
@@ -30,6 +33,11 @@ public sealed partial class PrintWorkspaceView
                 RightHeader = NoFrameRightHeaderText,
                 NoFrameLeftPanel = NoFrameLeftPanel,
                 Filmstrip = Filmstrip,
+                ApplySourcePane = frames =>
+                {
+                    hasPrintFrames = frames;
+                    ShowPrintSource(printSourceIsExport);
+                },
             },
             SynchronizePrint);
         printInspector = new PrintInspectorBinder(
@@ -71,6 +79,10 @@ public sealed partial class PrintWorkspaceView
                 RulersToggle = RulersToggle,
                 RulerUnitText = RulerUnitText,
                 RulerUnitSelector = RulerUnitSelector,
+                OutputProcessSelector = OutputProcessSelector,
+                CprintLabBox = CprintLabBox,
+                CprintPaperBox = CprintPaperBox,
+                PrintProofPreviewSelector = PrintProofPreviewSelector,
                 CustomCard = CustomCard,
                 CustomHintText = CustomHintText,
                 OutputSectionText = OutputSectionText,
@@ -116,7 +128,198 @@ public sealed partial class PrintWorkspaceView
     private void OnPrintFilmstripFrameSelected(object? sender, LibraryFrameListItem item) =>
         printSources?.HandleFilmstripSelected(sender, item);
 
-    private void LocalizePrintInspector() => printInspector?.Localize();
+    private void LocalizePrintInspector()
+    {
+        printInspector?.Localize();
+        LocalizeCprint();
+        LocalizeLayoutTemplates();
+    }
+
+    /// <summary>
+    /// 세그먼트는 XAML 에서 `SelectionChanged` 를 걸 수 없어(이벤트가 컨트롤 것이라) 여기서
+    /// 겁니다. 안 걸면 눌러도 값이 안 바뀌는 가짜가 됩니다.
+    /// </summary>
+    private void HookPrintSegments()
+    {
+        OrientationSelector.SelectionChanged += OnPrintSegmentChanged;
+        SheetBackgroundSelector.SelectionChanged += OnPrintSegmentChanged;
+        RulerUnitSelector.SelectionChanged += OnPrintSegmentChanged;
+        OutputProcessSelector.SelectionChanged += OnPrintSegmentChanged;
+        PrintProofPreviewSelector.SelectionChanged += OnPrintSegmentChanged;
+    }
+
+    /// <summary>
+    /// C-print 를 골랐을 때만 인화소·인화지·인화 프로파일이 나옵니다. macOS 도 일반 출력에서는
+    /// 그 카드들을 내리므로, 여기서도 같은 자리에서 감춥니다.
+    /// </summary>
+    internal void ApplyCprintVisibility(PrintPreferences print)
+    {
+        ArgumentNullException.ThrowIfNull(print);
+        bool cprint = print.OutputProcess == PrintOutputProcess.CPrint;
+        CprintCard.Visibility = cprint ? Visibility.Visible : Visibility.Collapsed;
+        PrintProofCard.Visibility = CprintCard.Visibility;
+        PrintProofProfileText.Text = print.CPrintProofProfileName;
+        PrintProofClearButton.IsEnabled = !string.IsNullOrWhiteSpace(print.CPrintProofProfilePath);
+        // 프로파일이 없으면 미리보기를 켤 수 없습니다 — 흉내 낼 대상이 없습니다.
+        PrintProofPreviewSelector.IsEnabled = PrintProofClearButton.IsEnabled;
+    }
+
+    /// <summary>
+    /// macOS <c>PrintLayoutTemplateStore</c> 자리입니다. 앱 데이터 폴더에 한 파일로 삽니다 —
+    /// macOS 도 `Application Support/negaflow/print-layout-templates.json` 한 장입니다.
+    /// </summary>
+    private PrintLayoutTemplateStore? layoutTemplates;
+
+    private PrintLayoutTemplateStore Templates => layoutTemplates ??= new PrintLayoutTemplateStore(
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Negaflow",
+            "print-layout-templates.json"));
+
+    internal void LocalizeLayoutTemplates()
+    {
+        LayoutTemplateSectionText.Text = AppResources.Get("printLayoutTemplateSection", "Text");
+        LayoutTemplateNameLabel.Text = AppResources.Get("printLayoutTemplateName", "Text");
+        LayoutTemplateNameBox.PlaceholderText = LayoutTemplateNameLabel.Text;
+        AutomationProperties.SetName(LayoutTemplateNameBox, LayoutTemplateNameLabel.Text);
+        LayoutTemplateSaveButton.Content = AppResources.Get("printLayoutTemplateSave", "Content");
+        LayoutTemplateApplyButton.Content = AppResources.Get("printLayoutTemplateApply", "Content");
+        LayoutTemplateDeleteButton.Content = AppResources.Get("printLayoutTemplateDelete", "Content");
+        RefreshLayoutTemplates();
+    }
+
+    private void RefreshLayoutTemplates()
+    {
+        LayoutTemplateSelector.ItemsSource = Templates.Templates;
+        bool hasTemplates = Templates.Templates.Count > 0;
+        LayoutTemplateAppliedRow.Visibility =
+            hasTemplates ? Visibility.Visible : Visibility.Collapsed;
+        if (hasTemplates && LayoutTemplateSelector.SelectedIndex < 0)
+        {
+            LayoutTemplateSelector.SelectedIndex = 0;
+        }
+        LayoutTemplateSaveButton.IsEnabled = Templates.CanModify &&
+            !string.IsNullOrWhiteSpace(LayoutTemplateNameBox.Text) &&
+            Templates.Templates.Count < PrintLayoutTemplateStore.MaximumTemplateCount;
+        LayoutTemplateStatusText.Text = Templates.CanModify
+            ? string.Empty
+            : AppResources.Get("printLayoutTemplateLocked", "Text");
+    }
+
+    private void OnLayoutTemplateNameChanged(object sender, TextChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        LayoutTemplateSaveButton.IsEnabled = Templates.CanModify &&
+            !string.IsNullOrWhiteSpace(LayoutTemplateNameBox.Text) &&
+            Templates.Templates.Count < PrintLayoutTemplateStore.MaximumTemplateCount;
+    }
+
+    private void OnLayoutTemplateSaveClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (workspaceState is not { } state)
+        {
+            return;
+        }
+        if (Templates.Templates.Count >= PrintLayoutTemplateStore.MaximumTemplateCount)
+        {
+            LayoutTemplateStatusText.Text = AppResources.Get("printLayoutTemplateFull", "Text");
+            return;
+        }
+        if (Templates.Add(
+                LayoutTemplateNameBox.Text,
+                PrintLayoutTemplateSettings.From(state.Current.Print)) is null)
+        {
+            LayoutTemplateStatusText.Text = Templates.CanModify
+                ? AppResources.Get("printLayoutTemplateDuplicate", "Text")
+                : AppResources.Get("printLayoutTemplateLocked", "Text");
+            return;
+        }
+        LayoutTemplateNameBox.Text = string.Empty;
+        RefreshLayoutTemplates();
+    }
+
+    private void OnLayoutTemplateApplyClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (workspaceState is null ||
+            LayoutTemplateSelector.SelectedItem is not PrintLayoutTemplate template)
+        {
+            return;
+        }
+        workspaceState.UpdatePrint(current => template.Settings.ApplyTo(current));
+    }
+
+    private void OnLayoutTemplateDeleteClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (LayoutTemplateSelector.SelectedItem is PrintLayoutTemplate template &&
+            Templates.Delete(template.Id))
+        {
+            RefreshLayoutTemplates();
+        }
+    }
+
+    private void OnCprintTextChanged(object sender, TextChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        CommitPrintSettings();
+    }
+
+    /// <summary>
+    /// 인화소가 준 ICC 를 고릅니다. macOS <c>selectCPrintProofICCProfile</c> — 고르면 미리보기가
+    /// 함께 켜집니다.
+    /// </summary>
+    private async void OnPrintProofChooseClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (workspaceState is null || printExport?.WindowId is not { } windowId)
+        {
+            return;
+        }
+        Windows.Storage.Pickers.FileOpenPicker picker = new();
+        picker.FileTypeFilter.Add(".icc");
+        picker.FileTypeFilter.Add(".icm");
+        WinRT.Interop.InitializeWithWindow.Initialize(
+            picker,
+            Win32Interop.GetWindowFromWindowId(windowId));
+        if (await picker.PickSingleFileAsync() is not { } file)
+        {
+            return;
+        }
+        workspaceState.UpdatePrint(current => current with
+        {
+            CPrintProofProfilePath = file.Path,
+            CPrintProofProfileName = Path.GetFileNameWithoutExtension(file.Path),
+            CPrintPreviewEnabled = true,
+        });
+    }
+
+    /// <summary>macOS <c>clearCPrintProofICCProfile</c> — 지우면 미리보기도 함께 꺼집니다.</summary>
+    private void OnPrintProofClearClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        workspaceState?.UpdatePrint(current => current with
+        {
+            CPrintProofProfilePath = string.Empty,
+            CPrintProofProfileName = string.Empty,
+            CPrintPreviewEnabled = false,
+        });
+    }
+
+    private void OnPrintSegmentChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        CommitPrintSettings();
+    }
 
     private void OnPrintSettingChanged(object sender, SelectionChangedEventArgs args)
     {
@@ -166,6 +369,8 @@ public sealed partial class PrintWorkspaceView
             return;
         }
         printInspector.Apply(state.Current.Print);
+        ApplyCprintVisibility(state.Current.Print);
+        SynchronizeExportSelection();
         SeedCustomLayoutIfEmpty();
         printPreview?.Draw();
     }

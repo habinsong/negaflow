@@ -27,6 +27,9 @@ internal sealed class PrintExportWorkflow
     /// <summary>폴더 선택기는 자기가 어느 창에 붙을지 알아야 합니다.</summary>
     internal void AttachWindow(Microsoft.UI.WindowId id) => windowId = id;
 
+    /// <summary>인화 프로파일 고르기 대화상자를 이 창에 답니다.</summary>
+    internal Microsoft.UI.WindowId? WindowId => windowId;
+
     internal async void Export(
         WorkspacePresentationState? state,
         IReadOnlyList<LibraryFrameSnapshot> sources)

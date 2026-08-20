@@ -163,6 +163,28 @@
                     VerticalAlignment="Center"
                     Background="{ThemeResource NegaflowDividerBrush}"
                     Visibility="Collapsed" />
+                <!--
+                    macOS RegionDefectOverlay 의 대기 상태 되돌리기입니다:
+                    `if frame.canUndoDefects { Divider(); Button { Label(undo, "arrow.uturn.backward") } }`.
+                    브러시·복제 되돌리기와 같은 E7A7 글리프이고, 마지막 결함 편집 한 칸을
+                    되돌립니다(도구가 무엇이었든 히스토리를 공유합니다).
+                -->
+                <Border
+                    x:Name="RegionUndoDivider"
+                    Width="1"
+                    Height="16"
+                    VerticalAlignment="Center"
+                    Background="{ThemeResource NegaflowDividerBrush}"
+                    Visibility="Collapsed" />
+                <Button
+                    x:Name="RegionUndoButton"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="negaflow.canvas.grainmend.undo"
+                    Click="OnRegionUndoClicked"
+                    Style="{StaticResource NegaflowHudGlyphButtonStyle}"
+                    Visibility="Collapsed">
+                    <FontIcon FontSize="12" Glyph="&#xE7A7;" />
+                </Button>
                 <!-- macOS Button { Image(systemName: "xmark") } -->
                 <Button
                     x:Name="CancelButton"

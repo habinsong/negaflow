@@ -1296,4 +1296,23 @@
   <data name="developAutoToneHelp.Text" xml:space="preserve"><value>自动色调 Command-U — 依据直方图调整曝光度、对比度、高光、阴影、白色色阶、黑色色阶和鲜艳度。</value><comment>AppLocalizedPhrase.autoToneHelp</comment></data>
   <data name="developAutoWhiteBalanceHelp.Text" xml:space="preserve"><value>自动白平衡 Shift-Command-U — 使用灰度世界算法中和色温与色调。</value><comment>AppLocalizedPhrase.autoWhiteBalanceHelp</comment></data>
   <data name="libraryFolderApply.Content" xml:space="preserve"><value>应用</value><comment>AppLocalizedPhrase.apply</comment></data>
+  <data name="developLocalTitle.Text" xml:space="preserve"><value>局部调整</value><comment>LocalAdjustmentLocalizedText[0]</comment></data>
+  <data name="developLocalAdd.Text" xml:space="preserve"><value>添加局部调整</value><comment>LocalAdjustmentLocalizedText[1]</comment></data>
+  <data name="developLocalEdit.Text" xml:space="preserve"><value>编辑局部调整</value><comment>LocalAdjustmentLocalizedText[2]</comment></data>
+  <data name="developLocalDelete.Text" xml:space="preserve"><value>删除</value><comment>LocalAdjustmentLocalizedText[3]</comment></data>
+  <data name="developLocalCopy.Text" xml:space="preserve"><value>复制</value><comment>LocalAdjustmentLocalizedText[4]</comment></data>
+  <data name="developLocalPaste.Text" xml:space="preserve"><value>粘贴</value><comment>LocalAdjustmentLocalizedText[5]</comment></data>
+  <data name="developLocalDodge.Text" xml:space="preserve"><value>减淡</value><comment>LocalAdjustmentLocalizedText[6]</comment></data>
+  <data name="developLocalBurn.Text" xml:space="preserve"><value>加深</value><comment>LocalAdjustmentLocalizedText[7]</comment></data>
+  <data name="developLocalAmount.Text" xml:space="preserve"><value>数量</value><comment>LocalAdjustmentLocalizedText[8]</comment></data>
+  <data name="developLocalFeather.Text" xml:space="preserve"><value>羽化</value><comment>LocalAdjustmentLocalizedText[9]</comment></data>
+  <data name="developLocalSize.Text" xml:space="preserve"><value>大小</value><comment>LocalAdjustmentLocalizedText[10]</comment></data>
+  <data name="developLocalBrush.Text" xml:space="preserve"><value>画笔</value><comment>LocalAdjustmentLocalizedText[11]</comment></data>
+  <data name="developLocalRadial.Text" xml:space="preserve"><value>径向</value><comment>LocalAdjustmentLocalizedText[12]</comment></data>
+  <data name="developLocalLinear.Text" xml:space="preserve"><value>线性</value><comment>LocalAdjustmentLocalizedText[13]</comment></data>
+  <data name="developLocalPolygon.Text" xml:space="preserve"><value>多边形</value><comment>LocalAdjustmentLocalizedText[14]</comment></data>
+  <data name="developLocalFinishPolygon.Text" xml:space="preserve"><value>完成多边形</value><comment>LocalAdjustmentLocalizedText[15]</comment></data>
+  <data name="developLocalDrawPrompt.Text" xml:space="preserve"><value>在照片上绘制</value><comment>LocalAdjustmentLocalizedText[16]</comment></data>
+  <data name="developLocalEmpty.Text" xml:space="preserve"><value>无局部调整</value><comment>LocalAdjustmentLocalizedText[17]</comment></data>
+  <data name="developLocalVisibility.Text" xml:space="preserve"><value>可见性</value><comment>LocalAdjustmentLocalizedText[18]</comment></data>
 </root>

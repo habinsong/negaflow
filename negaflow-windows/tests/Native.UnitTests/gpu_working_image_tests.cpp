@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "negaflow/gpu/gpu_device.h"
+#include "negaflow/gpu/gpu_image_pool.h"
 
 namespace {
 
@@ -198,6 +199,51 @@ void status_names_are_stable() {
 }
 
 // 장치가 없으면 조용히 성공하면 안 됩니다 — 호출부가 CPU 로 가야 하기 때문입니다.
+void same_size_upload_keeps_the_texture(const GpuDevice& device) {
+    constexpr std::uint32_t width = 32U;
+    constexpr std::uint32_t height = 24U;
+    const std::vector<Rgba32F> first = make_pattern(width, height, width);
+    const std::vector<Rgba32F> second = make_pattern(width, height, width);
+    GpuWorkingImage image{};
+    expect(
+        GpuWorkingImage::upload(device, first.data(), width, height, width, image) ==
+            GpuImageStatus::ok,
+        "first upload succeeds");
+    ID3D11Texture2D* const kept = image.texture();
+    expect(kept != nullptr, "first upload created a texture");
+    expect(
+        GpuWorkingImage::upload(device, second.data(), width, height, width, image) ==
+            GpuImageStatus::ok,
+        "second same-size upload succeeds");
+    expect(image.texture() == kept, "same-size upload must not recreate the texture");
+
+    const std::vector<Rgba32F> smaller = make_pattern(16U, 16U, 16U);
+    expect(
+        GpuWorkingImage::upload(device, smaller.data(), 16U, 16U, 16U, image) ==
+            GpuImageStatus::ok,
+        "resized upload succeeds");
+    expect(image.texture() != kept, "a new size must allocate a new texture");
+}
+
+void pool_reuses_the_previous_size(const GpuDevice& device) {
+    using negaflow::gpu::GpuImagePool;
+    GpuImagePool pool{};
+    expect(pool.ensure(device, 64U, 48U), "first pool size");
+    ID3D11Texture2D* const first = pool.images()[0].texture();
+    expect(first != nullptr, "pool created textures");
+    expect(pool.ensure(device, 32U, 24U), "second pool size");
+    ID3D11Texture2D* const second = pool.images()[0].texture();
+    expect(second != nullptr && second != first, "new size is a different texture");
+    expect(pool.ensure(device, 64U, 48U), "return to first size");
+    expect(
+        pool.images()[0].texture() == first,
+        "returning to the previous size must reuse the retained textures");
+    expect(pool.ensure(device, 32U, 24U), "return to second size");
+    expect(
+        pool.images()[0].texture() == second,
+        "returning to the other retained size must reuse those textures");
+}
+
 void unusable_device_is_reported() {
     const GpuDevice empty{};
     expect(!empty.is_usable(), "default-constructed device is unusable");
@@ -219,6 +265,8 @@ int main() {
     round_trip_is_lossless(warp, "warp");
     rejects_bad_input(warp);
     staging_ring_defers_the_first_frame(warp);
+    same_size_upload_keeps_the_texture(warp);
+    pool_reuses_the_previous_size(warp);
 
     // 하드웨어가 있으면 같은 것을 하드웨어에서도 봅니다. 없으면 건너뜁니다 —
     // 이 시험은 GPU 유무가 아니라 왕복의 정확성을 봅니다.
@@ -229,6 +277,8 @@ int main() {
         round_trip_is_lossless(hardware, "hardware");
         rejects_bad_input(hardware);
         staging_ring_defers_the_first_frame(hardware);
+        same_size_upload_keeps_the_texture(hardware);
+        pool_reuses_the_previous_size(hardware);
     } else {
         std::cout << "[gpu] hardware absent, WARP only\n";
     }

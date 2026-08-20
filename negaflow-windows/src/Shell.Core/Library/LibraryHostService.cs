@@ -347,6 +347,13 @@ public sealed class LibraryHostService : IDisposable
         public const string ToggleStack = "libraryStackCollapse";
         public const string ResetAdjustments = "commandResetAdjustments";
         public const string DevelopAdjustment = "developAdjustment";
+
+        /// <summary>
+        /// GrainMend 편집 한 칸입니다 — macOS <c>recordDefectHistory</c>. 브러시 한 획,
+        /// 복제 한 획, 가이드·자동 한 번, 레이어 켜기·강도·삭제, IR 적용이 전부 이 이름으로
+        /// 한 칸씩 쌓입니다.
+        /// </summary>
+        public const string DefectEdit = LibraryDefectEditor.UndoActionName;
     }
 
     public bool CanUndo => document?.CanUndo == true;

@@ -1296,4 +1296,23 @@ Load a scanner from Library to scan film.</value>
   <data name="developAutoToneHelp.Text" xml:space="preserve"><value>Auto Tone Command-U — use the histogram to adjust exposure, contrast, highlights, shadows, whites, blacks, and vibrance.</value><comment>AppLocalizedPhrase.autoToneHelp</comment></data>
   <data name="developAutoWhiteBalanceHelp.Text" xml:space="preserve"><value>Auto White Balance Shift-Command-U — neutralize Warmth and Tint using gray-world.</value><comment>AppLocalizedPhrase.autoWhiteBalanceHelp</comment></data>
   <data name="libraryFolderApply.Content" xml:space="preserve"><value>Apply</value><comment>AppLocalizedPhrase.apply</comment></data>
+  <data name="developLocalTitle.Text" xml:space="preserve"><value>Local</value><comment>LocalAdjustmentLocalizedText[0]</comment></data>
+  <data name="developLocalAdd.Text" xml:space="preserve"><value>Add Local Adjustment</value><comment>LocalAdjustmentLocalizedText[1]</comment></data>
+  <data name="developLocalEdit.Text" xml:space="preserve"><value>Edit Local Adjustment</value><comment>LocalAdjustmentLocalizedText[2]</comment></data>
+  <data name="developLocalDelete.Text" xml:space="preserve"><value>Delete</value><comment>LocalAdjustmentLocalizedText[3]</comment></data>
+  <data name="developLocalCopy.Text" xml:space="preserve"><value>Copy</value><comment>LocalAdjustmentLocalizedText[4]</comment></data>
+  <data name="developLocalPaste.Text" xml:space="preserve"><value>Paste</value><comment>LocalAdjustmentLocalizedText[5]</comment></data>
+  <data name="developLocalDodge.Text" xml:space="preserve"><value>Dodge</value><comment>LocalAdjustmentLocalizedText[6]</comment></data>
+  <data name="developLocalBurn.Text" xml:space="preserve"><value>Burn</value><comment>LocalAdjustmentLocalizedText[7]</comment></data>
+  <data name="developLocalAmount.Text" xml:space="preserve"><value>Amount</value><comment>LocalAdjustmentLocalizedText[8]</comment></data>
+  <data name="developLocalFeather.Text" xml:space="preserve"><value>Feather</value><comment>LocalAdjustmentLocalizedText[9]</comment></data>
+  <data name="developLocalSize.Text" xml:space="preserve"><value>Size</value><comment>LocalAdjustmentLocalizedText[10]</comment></data>
+  <data name="developLocalBrush.Text" xml:space="preserve"><value>Brush</value><comment>LocalAdjustmentLocalizedText[11]</comment></data>
+  <data name="developLocalRadial.Text" xml:space="preserve"><value>Radial</value><comment>LocalAdjustmentLocalizedText[12]</comment></data>
+  <data name="developLocalLinear.Text" xml:space="preserve"><value>Linear</value><comment>LocalAdjustmentLocalizedText[13]</comment></data>
+  <data name="developLocalPolygon.Text" xml:space="preserve"><value>Polygon</value><comment>LocalAdjustmentLocalizedText[14]</comment></data>
+  <data name="developLocalFinishPolygon.Text" xml:space="preserve"><value>Finish Polygon</value><comment>LocalAdjustmentLocalizedText[15]</comment></data>
+  <data name="developLocalDrawPrompt.Text" xml:space="preserve"><value>Draw on the photo</value><comment>LocalAdjustmentLocalizedText[16]</comment></data>
+  <data name="developLocalEmpty.Text" xml:space="preserve"><value>No local adjustments</value><comment>LocalAdjustmentLocalizedText[17]</comment></data>
+  <data name="developLocalVisibility.Text" xml:space="preserve"><value>Visibility</value><comment>LocalAdjustmentLocalizedText[18]</comment></data>
 </root>

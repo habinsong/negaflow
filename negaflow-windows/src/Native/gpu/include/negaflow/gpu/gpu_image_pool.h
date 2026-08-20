@@ -37,10 +37,18 @@ public:
     [[nodiscard]] GpuWorkingImage* images() noexcept { return images_; }
     [[nodiscard]] const GpuWorkingImage* images() const noexcept { return images_; }
 
+    [[nodiscard]] std::uint32_t width() const noexcept { return width_; }
+    [[nodiscard]] std::uint32_t height() const noexcept { return height_; }
+
 private:
     GpuWorkingImage images_[size]{};
     std::uint32_t width_{0U};
     std::uint32_t height_{0U};
+    // 인터랙티브 상자와 정착 3600 이 번갈아 오면 치수가 두 개입니다.
+    // 직전 치수 한 벌을 남겨 두면 CreateTexture2D 가 슬라이더마다 6장씩 돌지 않습니다.
+    GpuWorkingImage retained_[size]{};
+    std::uint32_t retained_width_{0U};
+    std::uint32_t retained_height_{0U};
 };
 
 }  // namespace negaflow::gpu

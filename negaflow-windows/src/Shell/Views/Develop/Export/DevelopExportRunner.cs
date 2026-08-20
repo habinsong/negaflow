@@ -155,6 +155,59 @@ internal sealed class DevelopExportRunner
     }
 
     /// <summary>
+    /// 빠른 내보내기입니다. macOS <c>quickExportSelection()</c> 과 같습니다.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// macOS 는 본 내보내기와 <b>같은</b> <c>startExportBatch</c> 를 부르되 사이드카·무보정본·
+    /// 원본 사본을 남기지 않고 이름 규칙을 기본값으로 고정합니다. 고른 사진이 여럿이면 그
+    /// 전부가 나갑니다.
+    /// </para>
+    /// <para>
+    /// ☠️ 이 함수가 없어서 <c>RunQuickExport</c> 대리자를 꽂지 않은 화면 — <b>인화뷰 좌측
+    /// 내보내기 탭</b> — 의 빠른 내보내기 단추는 눌러도 아무 일이 없었습니다. 기본 동작을
+    /// 패널이 스스로 들고 있어야 두 화면이 같이 삽니다.
+    /// </para>
+    /// </remarks>
+    internal async Task RunQuickExportAsync()
+    {
+        if (view.panel?.SelectedFrame is not { } frame)
+        {
+            return;
+        }
+        // 편집은 메모리에만 있었으므로, 현상하기 전에 저장해 파일과 catalog 가 어긋나지 않게 합니다.
+        if (view.panel.Save() != CatalogStoreError.None)
+        {
+            view.OutputStatusText.Text = AppResources.Get("developExportSaveFailed", "Text");
+            return;
+        }
+
+        view.QuickExportButton.IsEnabled = false;
+        view.OutputStatusText.Text = AppResources.Get("developExportRunning", "Text");
+        try
+        {
+            IReadOnlyList<LibraryFrameSnapshot> selection = SelectedExportFrames(frame);
+            if (selection.Count > 1)
+            {
+                await RunExportBatchAsync(
+                    selection,
+                    view.quickExportSettings.ToBatchSettings(),
+                    view.quickExportSettings.Encoding);
+                return;
+            }
+            _ = await view.panel.ExportAsync(
+                view.quickExportSettings.Destination.PathFor(frame.SourcePath),
+                view.quickExportSettings.Format,
+                outcome => view.OutputStatusText.Text = DevelopPanelState.Describe(outcome),
+                view.quickExportSettings.Encoding);
+        }
+        finally
+        {
+            view.RefreshPreview();
+        }
+    }
+
+    /// <summary>
     /// 같은 원본을 조정 없이 MAIN 으로 한 번 더 현상합니다. 인코딩은 본 산출물과 같게 두어
     /// 두 파일이 같은 형식·같은 크기로 나란히 놓이게 합니다.
     /// </summary>
@@ -192,7 +245,20 @@ internal sealed class DevelopExportRunner
     /// 여러 장을 차례로 내보내며 진행을 한 줄로 보여 줍니다. 계획은 먼저 전부 세우므로 같은
     /// 경로가 두 번 나오지 않고, 한 장이 실패해도 나머지는 계속 나갑니다.
     /// </summary>
-    internal async Task RunExportBatchAsync(IReadOnlyList<LibraryFrameSnapshot> frames)
+    internal Task RunExportBatchAsync(IReadOnlyList<LibraryFrameSnapshot> frames) =>
+        RunExportBatchAsync(
+            frames,
+            view.exportSettings,
+            view.exportSettings.ToEncodingOptions());
+
+    /// <summary>
+    /// 본 내보내기와 빠른 내보내기가 같이 쓰는 배치입니다. macOS 도 <c>startExportBatch</c>
+    /// 하나를 값만 달리해서 부릅니다.
+    /// </summary>
+    internal async Task RunExportBatchAsync(
+        IReadOnlyList<LibraryFrameSnapshot> frames,
+        ExportSettings settings,
+        ExportEncodingOptions encoding)
     {
         if (view.libraryHost is null)
         {
@@ -200,7 +266,7 @@ internal sealed class DevelopExportRunner
         }
         IReadOnlyList<ExportBatchPlan> plans = ExportBatchCoordinator.Plan(
             frames,
-            view.exportSettings,
+            settings,
             frame => view.libraryHost.RollFor(frame.Id));
         var coordinator = new ExportBatchCoordinator(view.libraryHost);
         int finished = 0;
@@ -217,9 +283,7 @@ internal sealed class DevelopExportRunner
                 finished,
                 plans.Count);
         };
-        ExportBatchSummary summary = await coordinator.RunAsync(
-            plans,
-            view.exportSettings.ToEncodingOptions());
+        ExportBatchSummary summary = await coordinator.RunAsync(plans, encoding);
         view.OutputStatusText.Text = AppResources.FormatIntegers(
             "exportBatchFrameProgress",
             "Text",

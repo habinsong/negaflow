@@ -52,7 +52,25 @@ public sealed partial class DevelopSourceSidebar : UserControl
         PresetsPanel.Bind(hostPanel);
         FilmLookPanel.Bind(hostPanel);
         FilesPanel.Bind(host);
-        LibraryPanel.Bind(host, windowId);
+        // 현상 기본값은 "지금 손대는 프레임"을 따라갑니다 — macOS `model.actionableFrame` 자리입니다.
+        LibraryPanel.Bind(host, windowId, () => hostPanel.SelectedFrame);
+    }
+
+    /// <summary>선택이 바뀌면 프로세스·타깃·필름 프로파일·룩 표시를 새 프레임에 맞춥니다.</summary>
+    public void SynchronizeDevelopDefaults() => LibraryPanel.SynchronizeDevelopDefaults();
+
+    /// <summary>라이브러리뷰와 같은 스캐너 세션을 씁니다. macOS 도 상태가 한 벌입니다.</summary>
+    public void AttachScanSessionHost(Library.Scanner.ScanSessionHost host) =>
+        LibraryPanel.AttachScanSessionHost(host);
+
+    /// <summary>macOS 워크플로 메뉴의 프로세스·타깃 명령이 닿는 자리입니다.</summary>
+    internal Library.Defaults.LibraryDevelopDefaultsPanel DevelopDefaults => LibraryPanel.Defaults;
+
+    /// <summary>현상 기본값이 카탈로그를 고쳤을 때 올립니다.</summary>
+    public event EventHandler? DevelopDefaultsChanged
+    {
+        add => LibraryPanel.DevelopDefaultsChanged += value;
+        remove => LibraryPanel.DevelopDefaultsChanged -= value;
     }
 
     public void Localize()

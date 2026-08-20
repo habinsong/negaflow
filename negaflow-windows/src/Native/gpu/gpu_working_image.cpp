@@ -2,6 +2,7 @@
 
 #include <d3d11.h>
 
+#include <atomic>
 #include <cstring>
 #include <utility>
 
@@ -9,6 +10,57 @@
 #include "negaflow/gpu/gpu_device.h"
 
 namespace negaflow::gpu {
+namespace {
+
+std::atomic<std::uint64_t> g_uploads{0};
+std::atomic<std::uint64_t> g_downloads{0};
+std::atomic<std::uint64_t> g_uploaded_pixels{0};
+std::atomic<std::uint64_t> g_downloaded_pixels{0};
+std::atomic<std::uint64_t> g_downloaded_bytes{0};
+
+void note_upload(const std::uint32_t width, const std::uint32_t height) noexcept {
+    g_uploads.fetch_add(1U, std::memory_order_relaxed);
+    g_uploaded_pixels.fetch_add(
+        static_cast<std::uint64_t>(width) * static_cast<std::uint64_t>(height),
+        std::memory_order_relaxed);
+}
+
+void note_download(const std::uint32_t width, const std::uint32_t height) noexcept {
+    g_downloads.fetch_add(1U, std::memory_order_relaxed);
+    const std::uint64_t pixels =
+        static_cast<std::uint64_t>(width) * static_cast<std::uint64_t>(height);
+    g_downloaded_pixels.fetch_add(pixels, std::memory_order_relaxed);
+    g_downloaded_bytes.fetch_add(pixels * 16ULL, std::memory_order_relaxed);
+}
+
+}  // namespace
+
+void reset_gpu_host_transfer_stats() noexcept {
+    g_uploads.store(0U, std::memory_order_relaxed);
+    g_downloads.store(0U, std::memory_order_relaxed);
+    g_uploaded_pixels.store(0U, std::memory_order_relaxed);
+    g_downloaded_pixels.store(0U, std::memory_order_relaxed);
+    g_downloaded_bytes.store(0U, std::memory_order_relaxed);
+}
+
+GpuHostTransferStats gpu_host_transfer_stats() noexcept {
+    GpuHostTransferStats stats{};
+    stats.uploads = g_uploads.load(std::memory_order_relaxed);
+    stats.downloads = g_downloads.load(std::memory_order_relaxed);
+    stats.uploaded_pixels = g_uploaded_pixels.load(std::memory_order_relaxed);
+    stats.downloaded_pixels = g_downloaded_pixels.load(std::memory_order_relaxed);
+    stats.downloaded_bytes = g_downloaded_bytes.load(std::memory_order_relaxed);
+    return stats;
+}
+
+void record_gpu_bgra_download(const std::uint32_t width, const std::uint32_t height) noexcept {
+    g_downloads.fetch_add(1U, std::memory_order_relaxed);
+    const std::uint64_t pixels =
+        static_cast<std::uint64_t>(width) * static_cast<std::uint64_t>(height);
+    g_downloaded_pixels.fetch_add(pixels, std::memory_order_relaxed);
+    g_downloaded_bytes.fetch_add(pixels * 4ULL, std::memory_order_relaxed);
+}
+
 namespace {
 
 // macOS 의 Core Image 는 half float 로 돌지만, Windows CPU 파이프라인이 float32 이므로
@@ -210,7 +262,9 @@ GpuImageStatus GpuWorkingImage::create(
     const std::uint32_t width,
     const std::uint32_t height,
     GpuWorkingImage& image) noexcept {
-    image.reset();
+    // 옛 텍스처를 먼저 놓으면 드라이버가 같은 COM 주소를 재사용할 수 있습니다.
+    // 새 자원을 잡은 뒤에 갈아끼워 포인터가 반드시 달라지게 합니다.
+    GpuWorkingImage created{};
     const GpuImageStatus extent = validate_extent(device, width, height);
     if (extent != GpuImageStatus::ok) {
         return extent;
@@ -244,11 +298,12 @@ GpuImageStatus GpuWorkingImage::create(
         return GpuImageStatus::allocation_failed;
     }
 
-    image.texture_ = texture;
-    image.srv_ = srv;
-    image.uav_ = uav;
-    image.width_ = width;
-    image.height_ = height;
+    created.texture_ = texture;
+    created.srv_ = srv;
+    created.uav_ = uav;
+    created.width_ = width;
+    created.height_ = height;
+    image = std::move(created);
     return GpuImageStatus::ok;
 }
 
@@ -265,16 +320,19 @@ GpuImageStatus GpuWorkingImage::upload(
     if (stride_pixels < width) {
         return GpuImageStatus::invalid_dimensions;
     }
+    // 같은 치수면 자원을 다시 만들지 않습니다. CreateTexture2D + Release 를 매
+    // 렌더마다 하면 D3D11 이 옛 DEFAULT/STAGING 을 GPU 가 끝날 때까지 붙들고,
+    // UpdateSubresource 는 경합 시 명령 버퍼에 한 번 더 복사합니다.
+    // https://learn.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11devicecontext-updatesubresource
+    // https://learn.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_usage
+    if (image.is_valid() && image.width() == width && image.height() == height) {
+        return image.upload_into(device, pixels, stride_pixels);
+    }
     const GpuImageStatus created = create(device, width, height, image);
     if (created != GpuImageStatus::ok) {
         return created;
     }
-
-    const UINT source_pitch =
-        static_cast<UINT>(static_cast<std::size_t>(stride_pixels) * sizeof(core::Rgba32F));
-    device.context()->UpdateSubresource(
-        image.texture_, 0U, nullptr, pixels, source_pitch, 0U);
-    return GpuImageStatus::ok;
+    return image.upload_into(device, pixels, stride_pixels);
 }
 
 GpuImageStatus GpuWorkingImage::upload_into(
@@ -310,6 +368,7 @@ GpuImageStatus GpuWorkingImage::upload_into(
                 height_);
             device.context()->Unmap(upload_staging_, 0U);
             device.context()->CopyResource(texture_, upload_staging_);
+            note_upload(width_, height_);
             return GpuImageStatus::ok;
         }
     }
@@ -317,6 +376,7 @@ GpuImageStatus GpuWorkingImage::upload_into(
     const UINT source_pitch =
         static_cast<UINT>(static_cast<std::size_t>(stride_pixels) * sizeof(core::Rgba32F));
     device.context()->UpdateSubresource(texture_, 0U, nullptr, pixels, source_pitch, 0U);
+    note_upload(width_, height_);
     return GpuImageStatus::ok;
 }
 
@@ -337,7 +397,12 @@ GpuImageStatus GpuWorkingImage::download(
         }
     }
     device.context()->CopyResource(staging_, texture_);
-    return read_staging(device, staging_, pixels, width_, height_, stride_pixels);
+    const GpuImageStatus status =
+        read_staging(device, staging_, pixels, width_, height_, stride_pixels);
+    if (status == GpuImageStatus::ok) {
+        note_download(width_, height_);
+    }
+    return status;
 }
 
 GpuImageStatus GpuWorkingImage::copy_from(

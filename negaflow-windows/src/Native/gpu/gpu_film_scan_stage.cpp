@@ -215,13 +215,8 @@ GpuFilmScanDenoiseResult GpuFilmScanDenoiseStage::apply(
                     destination_row[x] = row[tile.source_x + x];
                 }
             }
-            if (GpuWorkingImage::upload(
-                    device,
-                    state_->host_tile.data(),
-                    tile.width,
-                    tile.height,
-                    tile.width,
-                    state_->source) != GpuImageStatus::ok) {
+            if (state_->source.upload_into(
+                    device, state_->host_tile.data(), tile.width) != GpuImageStatus::ok) {
                 return result;
             }
 

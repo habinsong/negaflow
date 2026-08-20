@@ -38,6 +38,26 @@ internal sealed class DevelopVersionPresetController
     public DevelopEditResult DeleteVersion(LibraryFrameSnapshot? frame, string versionId) =>
         EditFrameRecord(frame, record => LibraryVersions.Delete(record, versionId));
 
+    /// <summary>
+    /// macOS <c>AppModel.recordDevelopHistory</c> — 지금 recipe 를 기록 목록 끝에 더합니다.
+    /// 이름은 macOS 처럼 순번입니다(`기록 1`, `기록 2`…). 스냅샷과 같은 기계를 쓰되 목록만
+    /// <c>developHistory</c> 로 다릅니다.
+    /// </summary>
+    public DevelopEditResult RecordHistory(LibraryFrameSnapshot? frame, string label) =>
+        EditFrameRecord(frame, record => LibraryVersions.Capture(
+            record,
+            Guid.NewGuid().ToString("D"),
+            label,
+            DateTimeOffset.UtcNow,
+            LibraryVersions.HistoryListName));
+
+    /// <summary>macOS <c>applyDevelopHistory</c> — 골라 둔 기록의 recipe 로 되돌립니다.</summary>
+    public DevelopEditResult ApplyHistory(LibraryFrameSnapshot? frame, string entryId) =>
+        EditFrameRecord(frame, record => LibraryVersions.Restore(
+            record,
+            entryId,
+            LibraryVersions.HistoryListName));
+
     public DevelopEditResult SetAppMetadata(
         LibraryFrameSnapshot? frame,
         Func<AppMetadataOverlay, AppMetadataOverlay> update)

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- macOS CanvasCompareLabels — 분할 위 Before 메뉴 + Current Image. -->
+<UserControl
+    x:Class="Negaflow.Shell.Views.Develop.Canvas.CanvasCompareLabels"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    IsHitTestVisible="True">
+    <Grid>
+        <Button
+            x:Name="BeforeButton"
+            MaxWidth="112"
+            MinWidth="0"
+            MinHeight="0"
+            Padding="7,3"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Top"
+            Background="#CC2A2A2A"
+            BorderBrush="#38F7F7F7"
+            BorderThickness="1"
+            Click="OnBeforeClicked"
+            CornerRadius="6">
+            <Button.Flyout>
+                <MenuFlyout x:Name="BeforeMenu" />
+            </Button.Flyout>
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock
+                    x:Name="BeforeText"
+                    MaxWidth="92"
+                    FontSize="11"
+                    FontWeight="SemiBold"
+                    Foreground="#FFF7F7F7"
+                    TextTrimming="CharacterEllipsis" />
+                <FontIcon
+                    FontSize="8"
+                    Foreground="#B3F7F7F7"
+                    Glyph="&#xE70D;" />
+            </StackPanel>
+        </Button>
+        <Button
+            x:Name="AfterButton"
+            MinWidth="0"
+            MinHeight="0"
+            Padding="7,3"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Top"
+            Background="#CC2A2A2A"
+            BorderBrush="#38F7F7F7"
+            BorderThickness="1"
+            Click="OnAfterClicked"
+            CornerRadius="6">
+            <TextBlock
+                x:Name="AfterText"
+                FontSize="11"
+                FontWeight="SemiBold"
+                Foreground="#FFF7F7F7" />
+        </Button>
+    </Grid>
+</UserControl>

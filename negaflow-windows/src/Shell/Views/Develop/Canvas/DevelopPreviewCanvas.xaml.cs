@@ -319,12 +319,48 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         BasePickerPrompt.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>다각형 완료를 눌렀을 때입니다.</summary>
+    public event EventHandler? LocalAdjustmentFinishPolygonRequested;
+
+    /// <summary>안내 캡슐의 ✕ 를 눌렀을 때입니다. macOS 는 그리기를 끕니다.</summary>
+    public event EventHandler? LocalAdjustmentCloseRequested;
+
+    /// <summary>
+    /// macOS `promptBar` — 그리는 동안만 뜨고, 다각형 꼭짓점이 셋 이상이면 완료 단추가 섭니다.
+    /// </summary>
+    public void ShowLocalAdjustmentPrompt(bool visible, string glyph, bool canFinishPolygon)
+    {
+        LocalAdjustmentPrompt.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        LocalAdjustmentPromptIcon.Glyph = glyph;
+        LocalAdjustmentFinishPolygonButton.Visibility = visible && canFinishPolygon
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void OnLocalAdjustmentFinishPolygonClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        LocalAdjustmentFinishPolygonRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnLocalAdjustmentCloseClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        LocalAdjustmentCloseRequested?.Invoke(this, EventArgs.Empty);
+    }
+
     public void Localize()
     {
         EmptyCanvasTitleLocalized.Text = AppResources.Get("emptyCanvasTitle", "Text");
         EmptyCanvasDescriptionLocalized.Text =
             AppResources.Get("emptyCanvasDescription", "Text");
         BasePickerPromptText.Text = AppResources.Get("developBasePickerPrompt", "Text");
+        LocalAdjustmentPromptText.Text = AppResources.Get("developLocalDrawPrompt", "Text");
+        SetButtonText(
+            LocalAdjustmentFinishPolygonButton,
+            AppResources.Get("developLocalFinishPolygon", "Text"));
         ZoomHud.Localize();
         CompareHud.Localize();
         CompareLabels.Localize();
@@ -360,380 +396,6 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         PositionSurface(DefectOverlayImage, frame);
         ApplyCompareLayout(frame);
         ApplyHudLayout();
-    }
-
-    private void ApplyHudLayout()
-    {
-        if (CanvasHost.ActualWidth <= 0 || CanvasHost.ActualHeight <= 0)
-        {
-            return;
-        }
-
-        if (CompareHud.ActualWidth > 0 && CompareHud.ActualHeight > 0)
-        {
-            hudInteraction.SetMeasuredSize(
-                CanvasHudKind.Compare,
-                CompareHud.ActualWidth,
-                CompareHud.ActualHeight);
-        }
-
-        if (ZoomHud.ActualWidth > 0 && ZoomHud.ActualHeight > 0)
-        {
-            hudInteraction.SetMeasuredSize(
-                CanvasHudKind.Zoom,
-                ZoomHud.ActualWidth,
-                ZoomHud.ActualHeight);
-        }
-
-        CanvasHudOrigins origins = hudInteraction.Resolve(CanvasHost.ActualWidth, CanvasHost.ActualHeight);
-        CompareHud.Margin = new Thickness(origins.CompareX, origins.CompareY, 0, 0);
-        ZoomHud.Margin = new Thickness(origins.ZoomX, origins.ZoomY, 0, 0);
-    }
-
-    private void OnCompareHudSizeChanged(object sender, SizeChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        ApplyHudLayout();
-    }
-
-    private void OnZoomHudSizeChanged(object sender, SizeChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        ApplyHudLayout();
-    }
-
-    private void OnCompareHudPointerPressed(object sender, PointerRoutedEventArgs args) =>
-        BeginHudPress(CanvasHudKind.Compare, args);
-
-    private void OnZoomHudPointerPressed(object sender, PointerRoutedEventArgs args) =>
-        BeginHudPress(CanvasHudKind.Zoom, args);
-
-    private void BeginHudPress(CanvasHudKind kind, PointerRoutedEventArgs args)
-    {
-        if (IsHudInteractiveSource(args.OriginalSource))
-        {
-            return;
-        }
-
-        Windows.Foundation.Point point = args.GetCurrentPoint(CanvasHost).Position;
-        CanvasHudOrigins origins = hudInteraction.Resolve(CanvasHost.ActualWidth, CanvasHost.ActualHeight);
-        hudPressKind = kind;
-        hudPressX = point.X;
-        hudPressY = point.Y;
-        hudPressOriginX = kind == CanvasHudKind.Compare ? origins.CompareX : origins.ZoomX;
-        hudPressOriginY = kind == CanvasHudKind.Compare ? origins.CompareY : origins.ZoomY;
-        hudDragging = false;
-    }
-
-    private void OnHudPointerMoved(object sender, PointerRoutedEventArgs args)
-    {
-        _ = sender;
-        if (hudPressKind is not { } kind)
-        {
-            return;
-        }
-
-        Windows.Foundation.Point point = args.GetCurrentPoint(CanvasHost).Position;
-        double translationX = point.X - hudPressX;
-        double translationY = point.Y - hudPressY;
-        if (!hudDragging)
-        {
-            if ((translationX * translationX) + (translationY * translationY) <
-                CanvasHudInteractionState.MinimumDragDistance * CanvasHudInteractionState.MinimumDragDistance)
-            {
-                return;
-            }
-
-            hudDragging = true;
-            CaptureHost(args.Pointer);
-        }
-
-        hudInteraction.BeginOrUpdateDrag(
-            kind,
-            translationX,
-            translationY,
-            hudPressOriginX,
-            hudPressOriginY,
-            CanvasHost.ActualWidth,
-            CanvasHost.ActualHeight);
-        ApplyHudLayout();
-        args.Handled = true;
-    }
-
-    private void OnHudPointerReleased(object sender, PointerRoutedEventArgs args)
-    {
-        _ = sender;
-        EndHudDrag(args);
-    }
-
-    private void OnHudPointerCanceled(object sender, PointerRoutedEventArgs args)
-    {
-        _ = sender;
-        EndHudDrag(args);
-    }
-
-    private void EndHudDrag(PointerRoutedEventArgs args)
-    {
-        if (hudPressKind is not { } kind)
-        {
-            return;
-        }
-
-        if (hudDragging)
-        {
-            hudInteraction.EndDrag(kind);
-            ReleaseHost(args.Pointer);
-            args.Handled = true;
-        }
-
-        hudPressKind = null;
-        hudDragging = false;
-    }
-
-    private static bool IsHudInteractiveSource(object source)
-    {
-        DependencyObject? current = source as DependencyObject;
-        while (current is not null)
-        {
-            if (current is Button or TextBox)
-            {
-                return true;
-            }
-
-            current = VisualTreeHelper.GetParent(current);
-        }
-
-        return false;
-    }
-
-    private void ApplyCompareLayout(PreviewFrame frame)
-    {
-        CanvasCompareOrientation? split = compare is null
-            ? null
-            : CanvasCompareHudPolicy.SplitOrientation(compare.ActiveMode);
-        bool showSplit = split is not null && compareBeforeBitmap is not null;
-        CompareBeforeImage.Visibility = showSplit ? Visibility.Visible : Visibility.Collapsed;
-        CompareDividerLayer.Visibility = showSplit ? Visibility.Visible : Visibility.Collapsed;
-        CompareLabels.Visibility = showSplit ? Visibility.Visible : Visibility.Collapsed;
-        if (showSplit && split is { } labelOrientation)
-        {
-            CompareLabels.Place(frame, labelOrientation);
-            CompareLabels.Refresh();
-        }
-        if (!showSplit || compare is null || split is not { } orientation)
-        {
-            CompareBeforeImage.Clip = null;
-            return;
-        }
-
-        PositionSurface(CompareBeforeImage, frame);
-        double fraction = compare.Divider.Fraction(orientation);
-        (double clipX, double clipY, double clipW, double clipH) = CanvasCompareDividerState.BeforeClip(
-            0,
-            0,
-            frame.Width,
-            frame.Height,
-            orientation,
-            fraction);
-        CompareBeforeImage.Clip = new RectangleGeometry
-        {
-            Rect = new Windows.Foundation.Rect(clipX, clipY, clipW, clipH),
-        };
-
-        double line = compare.Divider.LinePosition(
-            orientation == CanvasCompareOrientation.Vertical ? frame.Left : frame.Top,
-            orientation == CanvasCompareOrientation.Vertical ? frame.Width : frame.Height,
-            orientation);
-        if (orientation == CanvasCompareOrientation.Vertical)
-        {
-            CompareDividerLine.Width = 1;
-            CompareDividerLine.Height = frame.Height;
-            Microsoft.UI.Xaml.Controls.Canvas.SetLeft(CompareDividerLine, line - 0.5);
-            Microsoft.UI.Xaml.Controls.Canvas.SetTop(CompareDividerLine, frame.Top);
-            CompareDividerHandle.Width = CanvasCompareDividerState.HandleShort;
-            CompareDividerHandle.Height = CanvasCompareDividerState.HandleLong;
-            Microsoft.UI.Xaml.Controls.Canvas.SetLeft(CompareDividerHandle, line - (CanvasCompareDividerState.HandleShort / 2));
-            Microsoft.UI.Xaml.Controls.Canvas.SetTop(CompareDividerHandle, frame.Top + (frame.Height / 2) - (CanvasCompareDividerState.HandleLong / 2));
-        }
-        else
-        {
-            CompareDividerLine.Width = frame.Width;
-            CompareDividerLine.Height = 1;
-            Microsoft.UI.Xaml.Controls.Canvas.SetLeft(CompareDividerLine, frame.Left);
-            Microsoft.UI.Xaml.Controls.Canvas.SetTop(CompareDividerLine, line - 0.5);
-            CompareDividerHandle.Width = CanvasCompareDividerState.HandleLong;
-            CompareDividerHandle.Height = CanvasCompareDividerState.HandleShort;
-            Microsoft.UI.Xaml.Controls.Canvas.SetLeft(CompareDividerHandle, frame.Left + (frame.Width / 2) - (CanvasCompareDividerState.HandleLong / 2));
-            Microsoft.UI.Xaml.Controls.Canvas.SetTop(CompareDividerHandle, line - (CanvasCompareDividerState.HandleShort / 2));
-        }
-    }
-
-    private static void PositionSurface(FrameworkElement element, PreviewFrame frame)
-    {
-        element.HorizontalAlignment = HorizontalAlignment.Left;
-        element.VerticalAlignment = VerticalAlignment.Top;
-        element.Margin = new Thickness(frame.Left, frame.Top, 0, 0);
-        element.Width = frame.Width;
-        element.Height = frame.Height;
-    }
-
-    private void OnCanvasPointerPressed(object sender, PointerRoutedEventArgs args)
-    {
-        _ = sender;
-        if (TryBeginCompareDivider(args))
-        {
-            return;
-        }
-        if (TryHandlePointerPressed?.Invoke(args) == true)
-        {
-            return;
-        }
-        if (crop is not null)
-        {
-            cropInteraction.TryBeginDrag(args, crop);
-        }
-    }
-
-    private void OnCanvasPointerMoved(object sender, PointerRoutedEventArgs args)
-    {
-        _ = sender;
-        // 샘플러는 다른 도구를 막지 않습니다 — 값을 읽기만 하므로 크롭이나 브러시와 함께
-        // 돌아도 서로 방해하지 않습니다.
-        sampler.Update(args);
-        if (TryContinueCompareDivider(args))
-        {
-            return;
-        }
-        if (TryHandlePointerMoved?.Invoke(args) == true)
-        {
-            return;
-        }
-        if (crop is not null)
-        {
-            cropInteraction.TryContinueDrag(args, crop);
-        }
-    }
-
-    private void OnCanvasPointerReleased(object sender, PointerRoutedEventArgs args)
-    {
-        _ = sender;
-        if (EndCompareDivider(args))
-        {
-            return;
-        }
-        if (TryHandlePointerReleased?.Invoke(args) == true)
-        {
-            return;
-        }
-        if (crop is not null)
-        {
-            cropInteraction.EndDrag(args, crop);
-        }
-    }
-
-    private void OnCanvasPointerCancelled(object sender, PointerRoutedEventArgs args)
-    {
-        _ = sender;
-        EndCompareDivider(args);
-        HandlePointerCancelled?.Invoke(args);
-        if (crop is not null)
-        {
-            cropInteraction.EndDrag(args, crop);
-        }
-    }
-
-    private void OnCanvasPointerCaptureLost(object sender, PointerRoutedEventArgs args)
-    {
-        _ = sender;
-        EndCompareDivider(args);
-        HandlePointerCancelled?.Invoke(args);
-        if (crop is not null)
-        {
-            cropInteraction.EndDrag(args, crop);
-        }
-    }
-
-    private bool TryBeginCompareDivider(PointerRoutedEventArgs args)
-    {
-        if (compare is null ||
-            CanvasCompareHudPolicy.SplitOrientation(compare.ActiveMode) is not { } orientation ||
-            compareBeforeBitmap is null ||
-            !TryGetPreviewFrame(out PreviewFrame frame))
-        {
-            return false;
-        }
-
-        Windows.Foundation.Point point = args.GetCurrentPoint(CanvasHost).Position;
-        if (!compare.Divider.HitTest(
-                point.X,
-                point.Y,
-                frame.Left,
-                frame.Top,
-                frame.Width,
-                frame.Height,
-                orientation))
-        {
-            return false;
-        }
-
-        draggingCompareDivider = true;
-        double pointer = orientation == CanvasCompareOrientation.Vertical ? point.X : point.Y;
-        double origin = orientation == CanvasCompareOrientation.Vertical ? frame.Left : frame.Top;
-        double length = orientation == CanvasCompareOrientation.Vertical ? frame.Width : frame.Height;
-        compare.Divider.BeginOrUpdateDrag(pointer, 0, origin, length, orientation);
-        CaptureHost(args.Pointer);
-        args.Handled = true;
-        ApplyImageFrame();
-        return true;
-    }
-
-    private bool TryContinueCompareDivider(PointerRoutedEventArgs args)
-    {
-        if (!draggingCompareDivider ||
-            compare is null ||
-            CanvasCompareHudPolicy.SplitOrientation(compare.ActiveMode) is not { } orientation ||
-            !TryGetPreviewFrame(out PreviewFrame frame))
-        {
-            return false;
-        }
-
-        Windows.Foundation.Point point = args.GetCurrentPoint(CanvasHost).Position;
-        double pointer = orientation == CanvasCompareOrientation.Vertical ? point.X : point.Y;
-        double origin = orientation == CanvasCompareOrientation.Vertical ? frame.Left : frame.Top;
-        double length = orientation == CanvasCompareOrientation.Vertical ? frame.Width : frame.Height;
-        compare.Divider.BeginOrUpdateDrag(pointer, 1, origin, length, orientation);
-        args.Handled = true;
-        ApplyImageFrame();
-        return true;
-    }
-
-    private bool EndCompareDivider(PointerRoutedEventArgs args)
-    {
-        if (!draggingCompareDivider)
-        {
-            return false;
-        }
-
-        draggingCompareDivider = false;
-        compare?.Divider.EndDrag();
-        ReleaseHost(args.Pointer);
-        args.Handled = true;
-        return true;
-    }
-
-    private void OnCanvasKeyDown(object sender, KeyRoutedEventArgs args)
-    {
-        _ = sender;
-        if (TryHandleKeyDown?.Invoke(args) == true)
-        {
-            return;
-        }
-        if (crop is not null)
-        {
-            cropInteraction.TryHandleKey(args, crop);
-        }
     }
 
     private void OnCropApplyClicked(object sender, RoutedEventArgs args)

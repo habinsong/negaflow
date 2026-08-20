@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Negaflow.Catalog;
 using Negaflow.Shell.Localization;
 
 namespace Negaflow.Shell.Views.Develop.Sources;
@@ -12,6 +13,7 @@ public sealed partial class DevelopLibrarySourcePanel : UserControl
 {
     internal LibraryHostService? libraryHost;
     internal Microsoft.UI.WindowId? importWindowId;
+    internal Library.Scanner.ScanSessionHost? scanSessionHost;
     internal readonly DevelopSourceImport import;
 
     public DevelopLibrarySourcePanel()
@@ -29,15 +31,37 @@ public sealed partial class DevelopLibrarySourcePanel : UserControl
     /// <summary>스캐너 가져오기는 공유 Library 소스에 맡깁니다.</summary>
     public event EventHandler? ScannerSetupRequested;
 
-    public void Bind(LibraryHostService host, Microsoft.UI.WindowId windowId)
+    /// <summary>현상 기본값(프로세스·타깃·필름 프로파일·룩)이 카탈로그를 고쳤을 때 올립니다.</summary>
+    public event EventHandler? DevelopDefaultsChanged;
+
+    /// <summary>단축키가 프로세스·타깃을 바꿀 때 씁니다. macOS 메뉴 명령과 같은 자리입니다.</summary>
+    internal Library.Defaults.LibraryDevelopDefaultsPanel Defaults => DevelopDefaultsPanel;
+
+    public void Bind(
+        LibraryHostService host,
+        Microsoft.UI.WindowId windowId,
+        Func<LibraryFrameSnapshot?> actionable)
     {
         ArgumentNullException.ThrowIfNull(host);
+        ArgumentNullException.ThrowIfNull(actionable);
         libraryHost = host;
         importWindowId = windowId;
+        ScanPanel.Bind(host);
+        ScanPanel.WindowId = windowId;
+        ScanPanel.LibraryChanged += (_, _) =>
+            DevelopDefaultsChanged?.Invoke(this, EventArgs.Empty);
+        DevelopDefaultsPanel.Bind(host, actionable);
+        DevelopDefaultsPanel.LibraryChanged += (_, _) =>
+            DevelopDefaultsChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>선택이 바뀌면 프로세스·타깃·룩 표시를 새 프레임에 맞춥니다.</summary>
+    public void SynchronizeDevelopDefaults() => DevelopDefaultsPanel.Synchronize();
 
     public void Localize()
     {
+        ScanPanel.Localize();
+        DevelopDefaultsPanel.Localize();
         LibraryImportSectionText.Text = AppResources.Get("importSection", "Text");
         ImportImageText.Text = AppResources.Get("libraryImportImageShort", "Content");
         ImportFolderText.Text = AppResources.Get("libraryImportFolderShort", "Content");
@@ -89,11 +113,30 @@ public sealed partial class DevelopLibrarySourcePanel : UserControl
     private void OnImportFolderClicked(object sender, RoutedEventArgs args) =>
         import.OnImportFolderClicked(sender, args);
 
+    /// <summary>
+    /// macOS 는 현상 사이드바의 스캐너 단추도 <c>presentScannerSetup()</c> 하나만 부릅니다 —
+    /// 라이브러리로 넘어가지 않고 <b>이 자리에서</b> 스캔 구획이 펼쳐집니다. 그러려면 두
+    /// 사이드바가 같은 세션을 봐야 하므로 공유 자리를 받습니다.
+    /// </summary>
+    public void AttachScanSessionHost(Library.Scanner.ScanSessionHost host)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        scanSessionHost = host;
+        ScanPanel.IsWanted = () => host.ShowScannerControls;
+        ScanPanel.AttachSessionHost(host);
+    }
+
     private void OnImportScannerClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        ScannerSetupRequested?.Invoke(this, EventArgs.Empty);
+        if (scanSessionHost is null)
+        {
+            ScannerSetupRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+        scanSessionHost.PresentScannerSetup();
+        _ = ScanPanel.OpenAsync();
     }
 
     private void OnLibraryTreeItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)

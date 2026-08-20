@@ -19,6 +19,8 @@ internal static class Program
         LibraryFrameTests.RunAppMetadataPersistence();
         CatalogStorageTests.Run();
         LibraryFrameTests.RunFrameBehavior();
+        DefectReviewTrackingTests.Run();
+        LibraryDevelopHistoryTests.Run();
 
         var report = new
         {

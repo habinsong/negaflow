@@ -46,6 +46,40 @@ public readonly record struct PreviewFrame(double Left, double Top, double Width
         return true;
     }
 
+    /// <summary>macOS <c>canvasFittedImageFrame</c> — 줌·팬이 붙은 표시 사각형.</summary>
+    public static bool TryFromViewport(
+        double canvasWidth,
+        double canvasHeight,
+        int pixelWidth,
+        int pixelHeight,
+        double scale,
+        double offsetX,
+        double offsetY,
+        out PreviewFrame frame)
+    {
+        frame = default;
+        if (pixelWidth <= 0 || pixelHeight <= 0 || canvasWidth <= 0.0 || canvasHeight <= 0.0)
+        {
+            return false;
+        }
+
+        (double left, double top, double width, double height) = CanvasViewportGeometry.FittedImageFrame(
+            pixelWidth,
+            pixelHeight,
+            canvasWidth,
+            canvasHeight,
+            scale,
+            offsetX,
+            offsetY);
+        if (width <= 0.0 || height <= 0.0)
+        {
+            return false;
+        }
+
+        frame = new PreviewFrame(left, top, width, height);
+        return true;
+    }
+
     public bool Contains(double x, double y) =>
         x >= Left && x <= Right && y >= Top && y <= Bottom;
 

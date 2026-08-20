@@ -15,10 +15,20 @@ internal sealed class LibraryWorkspaceCopy
     internal void Localize()
     {
         view.ImportHintLocalized.Text = AppResources.Get("importHint", "Text");
+        // 폴더 머리줄의 "N장" 입니다. 리소스는 `%d장` 형식이라 .NET 자리표시자로 바꿔 겁니다.
+        LibraryBrowserFolderSection.FrameCountFormat =
+            AppResources.Get("libraryFolderFrameCount", "Text").Replace("%d", "{0}", StringComparison.Ordinal);
         view.LibraryAllPhotosLocalized.Text = AppResources.Get("libraryAllPhotos", "Text");
         view.NoImagesLocalized.Text = AppResources.Get("noImages", "Text");
         view.LibrarySearchBox.PlaceholderText =
             AppResources.Get("librarySearchPlaceholder", "PlaceholderText");
+        string clearSearch = AppResources.Get("libraryClearSearch", "Text");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
+            view.LibraryClearSearchButton,
+            clearSearch);
+        Microsoft.UI.Xaml.Controls.ToolTipService.SetToolTip(
+            view.LibraryClearSearchButton,
+            clearSearch);
         // 사진 이름은 Shell.Core 가 짓지만 문구는 여기에 있습니다. 꽂아 두지 않으면 카드가
         // 영어 기본값으로 불립니다.
         LibraryFrameNaming.NumberFormat = static number =>
@@ -37,7 +47,6 @@ internal sealed class LibraryWorkspaceCopy
         view.ImportHeaderText.Text = import;
         view.ImportSectionText.Text = import;
         view.CollectionsPanel.Localize();
-        view.DevelopDefaultsPanel.Localize();
         view.CullingSurface.Localize();
         view.rail.Update();
         string importImages = AppResources.Get("importImages", "Content");

@@ -89,7 +89,23 @@ public sealed partial class DevelopGrainMendPanel : UserControl
         hud.BrushApplyRequested += OnHudBrushApplyRequested;
         hud.CloneDiameterChanged += OnHudCloneDiameterChanged;
         hud.CloneHardnessChanged += OnHudCloneHardnessChanged;
-        hud.CloneUndoRequested += () => review.RemoveEdits(DefectEditKind.Clone);
+        hud.CloneUndoRequested += OnHudUndoRequested;
+        hud.RegionUndoRequested += OnHudUndoRequested;
+    }
+
+    /// <summary>
+    /// macOS <c>CloneStampOverlay</c> · <c>RegionDefectOverlay</c> 의 되돌리기 단추는
+    /// <c>model.performUndo()</c> 입니다 — <b>한 획</b>만 되돌립니다. 도구별 편집을 통째로
+    /// 지우는 것은 카드의 초기화 단추(<c>reset</c>)가 하는 다른 일입니다.
+    /// </summary>
+    private void OnHudUndoRequested()
+    {
+        if (panel is null || !panel.UndoDefectEdit())
+        {
+            return;
+        }
+        chrome.Update();
+        RequestPreview();
     }
 
     /// <summary>크기가 바뀌면 커서 원도 곧바로 그 크기가 됩니다(macOS <c>screenDiameter</c>).</summary>

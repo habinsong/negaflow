@@ -117,6 +117,10 @@ struct GpuToneStage::State final {
     mutable GpuWorkingImage back{};
     mutable std::uint32_t width{0U};
     mutable std::uint32_t height{0U};
+    mutable GpuWorkingImage retained_front{};
+    mutable GpuWorkingImage retained_back{};
+    mutable std::uint32_t retained_width{0U};
+    mutable std::uint32_t retained_height{0U};
     // ☠️ 측정 스냅숏은 **호출부 이미지가 아니라** 여기로 내립니다. 호출부 이미지에 쓰면,
     //    그 뒤 한 걸음이라도 실패해 CPU 로 되돌아갈 때 CPU 가 **반쯤 처리된 화소**를
     //    다시 처리하게 됩니다. 그 순간 값이 조용히 틀어집니다.
@@ -131,14 +135,34 @@ struct GpuToneStage::State final {
         if (front.is_valid() && width == needed_width && height == needed_height) {
             return true;
         }
+        if (retained_front.is_valid() && retained_width == needed_width &&
+            retained_height == needed_height) {
+            GpuWorkingImage swap_front = std::move(front);
+            GpuWorkingImage swap_back = std::move(back);
+            front = std::move(retained_front);
+            back = std::move(retained_back);
+            retained_front = std::move(swap_front);
+            retained_back = std::move(swap_back);
+            std::swap(width, retained_width);
+            std::swap(height, retained_height);
+            return true;
+        }
+        retained_front = std::move(front);
+        retained_back = std::move(back);
+        retained_width = width;
+        retained_height = height;
         if (GpuWorkingImage::create(device, needed_width, needed_height, front) !=
                 GpuImageStatus::ok ||
             GpuWorkingImage::create(device, needed_width, needed_height, back) !=
                 GpuImageStatus::ok) {
             front = GpuWorkingImage{};
             back = GpuWorkingImage{};
+            retained_front = GpuWorkingImage{};
+            retained_back = GpuWorkingImage{};
             width = 0U;
             height = 0U;
+            retained_width = 0U;
+            retained_height = 0U;
             return false;
         }
         width = needed_width;
@@ -231,19 +255,58 @@ GpuToneStageResult GpuToneStage::apply(
     if (!state_->ensure_images(device, image.width, image.height)) {
         return result;
     }
-    if (GpuWorkingImage::upload(
-            device,
-            image.pixels.data(),
-            image.width,
-            image.height,
-            image.stride_pixels,
-            state_->front) != GpuImageStatus::ok) {
+    // ensure 가 이미 front/back 을 들고 있습니다. 정적 upload() 는 create() 를
+    // 다시 불러 138 MB DEFAULT+스테이징을 렌더마다 버렸습니다.
+    if (state_->front.upload_into(
+            device, image.pixels.data(), image.stride_pixels) != GpuImageStatus::ok) {
+        return result;
+    }
+    return apply_on(
+        device, state_->front, state_->back, image, parameters, measurement_limits, true);
+}
+
+GpuToneStageResult GpuToneStage::apply_on(
+    const GpuDevice& device,
+    GpuWorkingImage& input,
+    GpuWorkingImage& scratch,
+    imaging::WorkingImage& image,
+    const imaging::WorkingToneAdjustParameters& parameters,
+    const imaging::ToneCurveMeasurementLimits& measurement_limits,
+    const bool download) const noexcept {
+    GpuToneStageResult result{};
+    result.info.kernel_status = negaflow::core::KernelStatus::ok;
+    if (state_ == nullptr || !device.is_usable() || !input.is_valid() || !scratch.is_valid()) {
+        return result;
+    }
+    if (!imaging::valid_working_tone_adjust_parameters(parameters)) {
+        return result;
+    }
+    const bool exposure_changes =
+        std::abs(parameters.exposure_stops) > imaging::tone_change_threshold;
+    const bool basic_changes = imaging::has_basic_tone_change(parameters.basic);
+    const bool curve_changes = imaging::has_parametric_tone_curve_change(parameters.curve);
+    const bool point_curve_changes = imaging::has_point_curve_change(parameters.point_curves);
+    const bool mixer_changes = imaging::has_color_mixer_change(parameters.color_mixer);
+    const bool grading_changes = imaging::has_color_grading_change(parameters.color_grading);
+    const bool primary_changes =
+        imaging::has_primary_calibration_change(parameters.primary_calibration);
+    if (!exposure_changes && !basic_changes && !curve_changes && !point_curve_changes &&
+        !mixer_changes && !grading_changes && !primary_changes) {
+        if (download &&
+            input.download(device, image.pixels.data(), image.stride_pixels) !=
+                GpuImageStatus::ok) {
+            return result;
+        }
+        result.handled = true;
+        result.status = WorkingToneAdjustStatus::ok;
+        result.info.measurement.status = ToneCurveMeasurementStatus::ok;
+        result.info.measurement.kernel_status = negaflow::core::KernelStatus::ok;
         return result;
     }
 
     // 핑퐁. `read` 가 현재 결과이고 `write` 가 다음 목적지입니다.
-    GpuWorkingImage* read = &state_->front;
-    GpuWorkingImage* write = &state_->back;
+    GpuWorkingImage* read = &input;
+    GpuWorkingImage* write = &scratch;
     const auto swap_after = [&](const GpuKernelStatus status) noexcept {
         if (status == GpuKernelStatus::ok) {
             std::swap(read, write);
@@ -270,6 +333,11 @@ GpuToneStageResult GpuToneStage::apply(
     if (curve_changes) {
         // ⚠️ 여기서 한 번 내립니다. 측정이 전 화소를 `double` 로 훑기 때문입니다 —
         //    헤더의 설명 참고. 커브가 꺼져 있으면 이 왕복이 없습니다.
+        //
+        // 실측 2026-08-19: 있는 `GpuMipHalve` 로 ≤256 프록시를 만들어 재면
+        // GPU/CPU 최대 오차가 **2.55e-04** (허용 1e-5). 밴드 오차 2.48e-04.
+        // 값을 바꾸므로 쓰지 않습니다. `GpuAreaAverage` 는 영역 평균 하나라
+        // 백분위 격자를 대체하지 못합니다.
         const std::size_t needed =
             static_cast<std::size_t>(image.width) * static_cast<std::size_t>(image.height);
         if (state_->measurement_pixels.size() != needed) {
@@ -285,9 +353,6 @@ GpuToneStageResult GpuToneStage::apply(
             image.width,
             image.height,
             image.width};
-        // ☠️ 유한성은 **GPU 에서** 봤습니다 — 전 화소를 CPU 로 한 번 더 훑지 않습니다.
-        //    플래그가 서면(비유한 화소가 있으면) 확인을 CPU 판에 맡깁니다: 어느 행이
-        //    처음 실패했는지는 그쪽만 압니다.
         bool all_finite = false;
         if (state_->finite.dispatch(device, *read, all_finite) != GpuKernelStatus::ok) {
             all_finite = false;
@@ -356,8 +421,9 @@ GpuToneStageResult GpuToneStage::apply(
         result.info.primary_calibration_applied = true;
     }
 
-    if (read->download(device, image.pixels.data(), image.stride_pixels) !=
-        GpuImageStatus::ok) {
+    if (download &&
+        read->download(device, image.pixels.data(), image.stride_pixels) !=
+            GpuImageStatus::ok) {
         return result;
     }
 

@@ -49,12 +49,14 @@ internal sealed class PrintInspectorBinder
         surface.PaperSizeSelector.ItemsSource = PrintPaper.All
             .Select(size => new PrintChoice<PrintPaperSize>(size, PrintPaper.Label(size)))
             .ToArray();
-        surface.OrientationSelector.ItemsSource = new[]
-        {
+        PrintChoice<PrintPaperOrientation>.Fill(
+            surface.OrientationSelector,
+            [
             PrintChoice<PrintPaperOrientation>.FromResource(PrintPaperOrientation.Automatic, "printOrientationAuto"),
             PrintChoice<PrintPaperOrientation>.FromResource(PrintPaperOrientation.Portrait, "printOrientationPortrait"),
             PrintChoice<PrintPaperOrientation>.FromResource(PrintPaperOrientation.Landscape, "printOrientationLandscape"),
-        };
+            ],
+            PrintPaperOrientation.Automatic);
         surface.PerforationSelector.ItemsSource = new[]
         {
             PrintChoice<PrintPerforationStyle>.FromResource(PrintPerforationStyle.None, "printPerforationNone"),
@@ -70,12 +72,14 @@ internal sealed class PrintInspectorBinder
             PrintChoice<PrintPackageContentMode>.FromResource(PrintPackageContentMode.Fit, "printFit"),
             PrintChoice<PrintPackageContentMode>.FromResource(PrintPackageContentMode.Fill, "printFill"),
         };
-        surface.SheetBackgroundSelector.ItemsSource = new[]
-        {
+        PrintChoice<PrintSheetBackground>.Fill(
+            surface.SheetBackgroundSelector,
+            [
             PrintChoice<PrintSheetBackground>.FromResource(PrintSheetBackground.White, "printBackgroundWhite"),
             PrintChoice<PrintSheetBackground>.FromResource(PrintSheetBackground.Gray, "printBackgroundGray"),
             PrintChoice<PrintSheetBackground>.FromResource(PrintSheetBackground.Black, "printBackgroundBlack"),
-        };
+            ],
+            PrintSheetBackground.Black);
         surface.TemplateText.Text = AppResources.Get("printTemplate", "Text");
         surface.TemplateSelector.ItemsSource = new[]
         {
@@ -101,11 +105,13 @@ internal sealed class PrintInspectorBinder
         PrintChoice<bool>.SetToggleLabel(
             surface.RulersToggle, AppResources.Get("printRulers", "Text"));
         surface.RulerUnitText.Text = AppResources.Get("printRulerUnit", "Text");
-        surface.RulerUnitSelector.ItemsSource = new[]
-        {
+        PrintChoice<PrintRulerUnit>.Fill(
+            surface.RulerUnitSelector,
+            [
             PrintChoice<PrintRulerUnit>.FromResource(PrintRulerUnit.Centimeters, "printRulerCentimeters"),
             PrintChoice<PrintRulerUnit>.FromResource(PrintRulerUnit.Inches, "printRulerInches"),
-        };
+            ],
+            PrintRulerUnit.Inches);
     }
 
     /// <summary>고른 값을 설정에 담습니다. 담긴 값이 곧 미리보기와 파일을 정합니다.</summary>
@@ -144,6 +150,12 @@ internal sealed class PrintInspectorBinder
             ShowsCropMarks = surface.CropMarksToggle.IsOn,
             ShowsRulers = surface.RulersToggle.IsOn,
             RulerUnit = PrintChoice<PrintRulerUnit>.Selected(surface.RulerUnitSelector, current.RulerUnit),
+            OutputProcess = PrintChoice<PrintOutputProcess>.Selected(
+                surface.OutputProcessSelector, current.OutputProcess),
+            CPrintLabName = surface.CprintLabBox.Text,
+            CPrintPaperName = surface.CprintPaperBox.Text,
+            CPrintPreviewEnabled =
+                surface.PrintProofPreviewSelector.SelectedValue is bool on && on,
         });
     }
 
@@ -167,6 +179,10 @@ internal sealed class PrintInspectorBinder
             surface.ColumnsBox.Value = print.ContactColumns;
             surface.SpacingSlider.Value = print.HorizontalSpacingMm;
             PrintChoice<PrintPackageContentMode>.Select(surface.ContentModeSelector, print.ContentMode);
+            PrintChoice<PrintOutputProcess>.Select(surface.OutputProcessSelector, print.OutputProcess);
+            surface.CprintLabBox.Text = print.CPrintLabName;
+            surface.CprintPaperBox.Text = print.CPrintPaperName;
+            surface.PrintProofPreviewSelector.SetSelected(print.CPrintPreviewEnabled);
             surface.RotateToFitToggle.IsOn = print.RotateToFit;
             surface.RepeatToggle.IsOn = print.RepeatOnePhotoPerPage;
             PrintChoice<PrintSheetBackground>.Select(surface.SheetBackgroundSelector, print.SheetBackground);

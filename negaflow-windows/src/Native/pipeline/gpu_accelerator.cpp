@@ -100,6 +100,13 @@ GpuAccelerator::GpuAccelerator() noexcept {
         state->scratch_angle_ready =
             gpu::GpuScratchAngle::create(state->device, state->scratch_angle) ==
             gpu::GpuKernelStatus::ok;
+        state->finite_ready =
+            gpu::GpuFiniteCheck::create(state->device, state->finite) ==
+            gpu::GpuKernelStatus::ok;
+        state->preview_encode_ready =
+            gpu::GpuPreviewDisplayEncode::create(
+                state->device, state->preview_encode) ==
+            gpu::GpuKernelStatus::ok;
     }
     state_ = state;
 }
@@ -132,9 +139,51 @@ GpuToneOutcome GpuAccelerator::apply_working_tone_adjustments(
     if (policy != GpuUsePolicy::allowed || !available()) {
         return outcome;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
-    const gpu::GpuToneStageResult result =
-        state_->tone.apply(state_->device, image, parameters, measurement_limits);
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
+    gpu::GpuToneStageResult result{};
+    if (state_->resident_matches(image.pixels.data(), image.width, image.height) &&
+        state_->pool.images()[0].is_valid() && state_->pool.images()[1].is_valid()) {
+        gpu::GpuWorkingImage* const pool = state_->pool.images();
+        const int read = state_->resident.read_slot;
+        const int write = 1 - read;
+        result = state_->tone.apply_on(
+            state_->device,
+            pool[read],
+            pool[write],
+            image,
+            parameters,
+            measurement_limits,
+            false);
+        if (result.handled) {
+            int applied = 0;
+            if (result.info.exposure_applied) {
+                ++applied;
+            }
+            if (result.info.basic_tone_applied) {
+                ++applied;
+            }
+            if (result.info.parametric_curve_applied) {
+                ++applied;
+            }
+            if (result.info.point_curve_applied) {
+                ++applied;
+            }
+            if (result.info.color_mixer_applied) {
+                ++applied;
+            }
+            if (result.info.color_grading_applied) {
+                ++applied;
+            }
+            if (result.info.primary_calibration_applied) {
+                ++applied;
+            }
+            const int slot = (applied % 2 == 0) ? read : write;
+            state_->bind_resident(
+                image.pixels.data(), image.width, image.height, image.stride_pixels, slot);
+        }
+    } else {
+        result = state_->tone.apply(state_->device, image, parameters, measurement_limits);
+    }
     if (!result.handled || result.status != imaging::WorkingToneAdjustStatus::ok) {
         return outcome;
     }
@@ -151,7 +200,7 @@ GpuDenoiseOutcome GpuAccelerator::apply_film_scan_denoise(
     if (policy != GpuUsePolicy::allowed || !available()) {
         return outcome;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     const gpu::GpuFilmScanDenoiseResult result =
         state_->denoise.apply(state_->device, image, parameters);
     if (!result.handled || result.status != imaging::FilmScanDenoiseStatus::ok) {
@@ -175,7 +224,7 @@ bool GpuAccelerator::apply_morphology_plane(
     if (width == 0U || height == 0U) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->morphology_ready) {
         return false;
     }
@@ -241,7 +290,7 @@ bool GpuAccelerator::apply_morphology_rgb(
     if (width == 0U || height == 0U) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->morphology_ready) {
         return false;
     }
@@ -326,7 +375,7 @@ bool GpuAccelerator::apply_negative_inversion(
     if (width == 0U || height == 0U || stride_pixels < width) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->invert_ready) {
         return false;
     }
@@ -336,9 +385,13 @@ bool GpuAccelerator::apply_negative_inversion(
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();
     auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
-    gpu::GpuWorkingImage& input = pool[0];
-    gpu::GpuWorkingImage& output = pool[1];
-    if (input.upload_into(state_->device, rgba, stride_pixels) != gpu::GpuImageStatus::ok) {
+    int read_slot = 0;
+    int write_slot = 1;
+    if (state_->resident_matches(pixels, width, height) && !state_->resident.host_stale) {
+        read_slot = state_->resident.read_slot;
+        write_slot = 1 - read_slot;
+    } else if (
+        pool[0].upload_into(state_->device, rgba, stride_pixels) != gpu::GpuImageStatus::ok) {
         return false;
     }
 
@@ -352,11 +405,17 @@ bool GpuAccelerator::apply_negative_inversion(
     parameters.response_rate = response[2];
     parameters.response_shape = response[3];
 
-    if (state_->invert.dispatch(state_->device, input, output, parameters) !=
+    if (state_->invert.dispatch(
+            state_->device, pool[read_slot], pool[write_slot], parameters) !=
         gpu::GpuKernelStatus::ok) {
         return false;
     }
-    return output.download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
+    if (state_->resident.scope_depth > 0) {
+        state_->bind_resident(pixels, width, height, stride_pixels, write_slot);
+        return true;
+    }
+    return pool[write_slot].download(state_->device, rgba, stride_pixels) ==
+        gpu::GpuImageStatus::ok;
 }
 
 }  // namespace negaflow::pipeline

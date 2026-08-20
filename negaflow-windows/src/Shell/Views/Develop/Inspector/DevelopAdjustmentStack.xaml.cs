@@ -59,7 +59,16 @@ public sealed partial class DevelopAdjustmentStack : UserControl
         QuickActions.AutoToneClicked += (_, _) => AutoToneClicked?.Invoke(this, EventArgs.Empty);
         QuickActions.AutoWhiteBalanceClicked += (_, _) =>
             AutoWhiteBalanceClicked?.Invoke(this, EventArgs.Empty);
+        QuickActions.AutoToneResetClicked += (_, _) =>
+            AutoToneResetClicked?.Invoke(this, EventArgs.Empty);
+        QuickActions.AutoWhiteBalanceResetClicked += (_, _) =>
+            AutoWhiteBalanceResetClicked?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>macOS QuickActionPill 의 되돌리기 단추입니다.</summary>
+    public event EventHandler? AutoToneResetClicked;
+
+    public event EventHandler? AutoWhiteBalanceResetClicked;
 
     public event EventHandler? PreviewRequested;
 

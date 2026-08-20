@@ -21,9 +21,21 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <FontIcon Grid.Column="0" Width="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE7A8;" />
             <TextBlock x:Name="GeometrySectionTitleText" Grid.Column="1" Margin="8,0,0,0" FontSize="14" FontWeight="SemiBold" />
+            <!-- macOS `InspectorCardHeader(… trailing: frame.imageTransform.displayName)` —
+                 지금 걸린 회전과 뒤집기를 `.caption2.monospacedDigit()` 로 오른쪽 끝에 적습니다
+                 (스크린샷 `현상뷰_우측탭_아이콘6탭바_편집.png` 의 "180"). -->
+            <TextBlock
+                x:Name="GeometryTransformText"
+                Grid.Column="2"
+                Margin="8,0,0,0"
+                VerticalAlignment="Center"
+                FontFamily="Consolas"
+                FontSize="11"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </Grid>
         <Grid ColumnSpacing="6">
             <Grid.ColumnDefinitions>

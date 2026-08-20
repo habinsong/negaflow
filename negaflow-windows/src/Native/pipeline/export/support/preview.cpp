@@ -8,6 +8,7 @@
 #include "negaflow/core/pointwise.h"
 #include "negaflow/imaging/channel_clipping_overlay.h"
 #include "negaflow/imaging/display_gamut_map.h"
+#include "negaflow/pipeline/gpu_accelerator.h"
 
 #include <algorithm>
 #include <atomic>
@@ -91,6 +92,28 @@ DevelopExportOutcome write_preview(
     // exactly 1 and 0, so the arithmetic is an identity rather than a second code path
     // that could drift from this one.
     const negaflow::color::SoftProofTransfer proof = target.proof;
+
+    // macOS `renderDisplayCGImage` 는 `createCGImage(..., format: .RGBA8)` 한 번으로
+    // 평가합니다. 상주 화상이 이미 상자 크기이면 GPU 에서 BGRA8 로 내립니다.
+    if (width == source_width && height == source_height && !target.clipping_overlay) {
+        if (GpuAccelerator::shared().try_encode_preview_bgra(
+                reinterpret_cast<const float*>(image.pixels.data()),
+                source_width,
+                source_height,
+                target.pixels,
+                width * 4U,
+                proof.scale.data(),
+                proof.bias.data())) {
+            outcome.image_width = width;
+            outcome.image_height = height;
+            outcome.output_file_bytes = required;
+            outcome.succeeded = true;
+            outcome.failure_name = "ok";
+            return outcome;
+        }
+    }
+    // GPU 경로가 아니면 호스트가 최신이어야 CPU 상자 평균이 옛 화소를 쓰지 않습니다.
+    GpuAccelerator::shared().flush_resident();
 
     // Converted straight from the working image rather than through a full-resolution
     // 16-bit copy. On a 17 MP scan that copy was about 104 MB allocated only to be

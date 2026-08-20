@@ -245,11 +245,17 @@ internal sealed class LibraryBrowserFilters
         },
         "Text");
 
+    /// <summary>
+    /// macOS `modeLabel` — 고른 칸만 바탕이 서고 글자가 진해집니다. 파란 선택색이 아니라
+    /// 세그먼트와 같은 중립 바탕입니다.
+    /// </summary>
     private static void SetModeAppearance(Control control, bool selected)
     {
         control.Background = selected
-            ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSelectionBrush"]
-            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSubtleFillBrush"];
+            ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSegmentThumbBrush"]
+            : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        control.Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources[
+            selected ? "TextFillColorPrimaryBrush" : "TextFillColorSecondaryBrush"];
         AutomationProperties.SetItemStatus(
             control,
             AppResources.Get(selected ? "selected" : "notSelected", "Value"));

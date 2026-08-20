@@ -67,6 +67,20 @@ internal static class LibraryFrameProjectionTests
                 1.5,
                 1.5),
             "library_frame_image_transform_projection");
+        // macOS `ImageTransform.displayName` — 편집 카드 머리줄 오른쪽에 그대로 나갑니다.
+        Check(
+            frame.ImageTransform.DisplayName == "90 H",
+            "image_transform_display_name_adds_flip_letters");
+        Check(
+            ImageTransformRecipe.Identity.DisplayName == "0",
+            "image_transform_display_name_is_zero_when_untouched");
+        Check(
+            (ImageTransformRecipe.Identity with
+            {
+                Rotation = ImageRotation.Degrees180,
+                FlipVertical = true,
+            }).DisplayName == "180 V",
+            "image_transform_display_name_reads_180_v");
         Check(frame.Texture == new TextureRecipe(0.35, 0.45, 0.20, -0.15, 0.25),
             "library_frame_texture_projection");
         Check(frame.NoiseReduction == new NoiseReductionRecipe(0.60, 0.70, 0.40, 0.55, 0.65, 0.30),

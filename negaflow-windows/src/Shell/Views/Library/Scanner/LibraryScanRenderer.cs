@@ -26,8 +26,8 @@ internal sealed class LibraryScanRenderer
         }
         bool wanted = view.Wanted;
         ScanSessionState state = view.scanSession?.State ?? ScanSessionState.NoPlugin;
-        view.ScanSectionText.Visibility = wanted ? Visibility.Visible : Visibility.Collapsed;
-        view.ScanSectionCard.Visibility = view.ScanSectionText.Visibility;
+        view.ScanSectionHeader.Visibility = wanted ? Visibility.Visible : Visibility.Collapsed;
+        view.ScanSectionCard.Visibility = view.ScanSectionHeader.Visibility;
         if (!wanted || view.scanSession is null)
         {
             return;
@@ -38,6 +38,12 @@ internal sealed class LibraryScanRenderer
         view.ScanApprovePluginButton.Visibility = state == ScanSessionState.NeedsApproval
             ? Visibility.Visible
             : Visibility.Collapsed;
+        // macOS 는 [스캐너 찾기] 와 시뮬레이터 스위치를 `unavailableState` 에만 둡니다.
+        // 쓸 수 있는 상태에서 이 둘을 계속 내면 macOS 에 없는 화면이 됩니다.
+        Visibility unavailable = ready ? Visibility.Collapsed : Visibility.Visible;
+        view.ScanDetectButton.Visibility = unavailable;
+        view.ScanDetectButton.IsEnabled = !view.scanSession.IsDetecting;
+        view.ScanSimulatorRow.Visibility = unavailable;
         view.ScanStateText.Text = state switch
         {
             ScanSessionState.NoPlugin => AppResources.Get("scanPluginMissingTitle", "Text") + "\n" +
@@ -143,26 +149,68 @@ internal sealed class LibraryScanRenderer
         view.ScanBitDepthUnavailableText.Visibility = hasDepths
             ? Visibility.Collapsed
             : Visibility.Visible;
-        view.ScanInfraredToggle.Visibility = view.scanSession.Capabilities?.SupportsInfrared == true
+        // macOS `if model.capabilities?.supportsInfrared == true` — IR 채널을 실제로 내놓는
+        // 기기에서만 줄이 섭니다(OpticFilm "i" 계열).
+        view.ScanInfraredRow.Visibility = view.scanSession.Capabilities?.SupportsInfrared == true
             ? Visibility.Visible
             : Visibility.Collapsed;
         view.ScanInfraredToggle.IsEnabled = view.scanSession.CanUseInfrared;
+        view.ScanInfraredLabel.Opacity = view.scanSession.CanUseInfrared ? 1.0 : 0.5;
         view.ScanPreviewButton.Visibility = view.scanSession.Capabilities?.SupportsPreview == true
             ? Visibility.Visible
             : Visibility.Collapsed;
         view.ScanPreviewButton.IsEnabled = view.scanSession.CanPreview;
         view.ScanStartButton.IsEnabled = view.scanSession.CanScan;
         view.ScanRescanButton.IsEnabled = !view.scanSession.IsDetecting && !view.scanSession.IsScanning;
-        view.ScanControls.IsHitTestVisible = !view.scanSession.IsScanning;
-        LibraryScanCopy.SetButtonText(
-            view.ScanStartButton,
-            view.scanSession.Options.BatchCount > 1
-                ? AppResources.FormatInteger("scanCountFormat", "Text", view.scanSession.Options.BatchCount)
-                : AppResources.Get("scanStart", "Content"));
+        // macOS 는 스캔 중이면 스캔 단추 자리를 취소로 바꿉니다.
+        view.ScanStartButton.Visibility = view.scanSession.IsScanning
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        view.ScanCancelButton.Visibility = view.scanSession.IsScanning
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        // macOS `.disabled(model.isScanning)` 은 옵션 Section 에만 걸립니다. 단추 줄까지 잠그면
+        // 스캔을 멈출 방법이 없어집니다.
+        view.ScanControls.IsHitTestVisible = true;
+        foreach (Microsoft.UI.Xaml.UIElement child in view.ScanControls.Children)
+        {
+            if (ReferenceEquals(child, view.ScanActionRow))
+            {
+                continue;
+            }
+            child.IsHitTestVisible = !view.scanSession.IsScanning;
+            child.Opacity = view.scanSession.IsScanning ? 0.5 : 1.0;
+        }
+        LibraryScanCopy.SetButtonText(view.ScanStartButton, ScanButtonTitle(view));
         view.ScanFrameCountLabel.Text = AppResources.FormatInteger(
             "scanFramesFormat",
             "Text",
             view.scanSession.Options.BatchCount);
+    }
+
+    /// <summary>
+    /// macOS <c>scanButtonTitle</c> 그대로입니다 — 평판이면 판 위의 프레임 수, 아니면 배치가
+    /// 여럿일 때 그 수, 둘 다 아니면 손대는 사진이 없으면 "스캔" 있으면 "다음 스캔" 입니다.
+    /// </summary>
+    private static string ScanButtonTitle(LibraryScanPanel view)
+    {
+        if (view.scanSession is not { } session)
+        {
+            return AppResources.Get("scanStart", "Content");
+        }
+        if (session.UsesFlatbedRegionWorkflow)
+        {
+            return session.Regions.Count > 0
+                ? AppResources.FormatInteger("scanCountFormat", "Text", session.Regions.Count)
+                : AppResources.Get("scanStart", "Content");
+        }
+        if (session.Options.BatchCount > 1)
+        {
+            return AppResources.FormatInteger("scanCountFormat", "Text", session.Options.BatchCount);
+        }
+        return view.libraryHost?.ActiveFrameId is null
+            ? AppResources.Get("scanStart", "Content")
+            : AppResources.Get("scanNext", "Content");
     }
 
     /// <summary>macOS 스캔 절의 필름 목록 순서입니다.</summary>

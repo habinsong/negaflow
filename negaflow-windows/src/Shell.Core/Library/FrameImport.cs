@@ -21,7 +21,8 @@ public sealed record FrameImportRejection(string Path, FrameImportRefusal Refusa
 
 /// <summary>
 /// scanner host가 RGB artifact를 안전하게 publish한 뒤 library에 넘기는 한 프레임입니다.
-/// IR은 scanner 결과에만 붙으며, 일반 import와 섞어 추측하지 않습니다.
+/// 스캐너 publish 는 RGB/IR 쌍을 이미 알고 넘긴다. 일반 가져오기는
+/// macOS <c>InfraredImportPairing</c> 과 같은 파일명 규칙으로만 짝을 붙인다.
 /// </summary>
 public sealed record ScannerFrameImport(
     string VisiblePath,
@@ -75,12 +76,24 @@ public static class FrameImport
             ++nextScanIndex;
         }
 
+        InfraredImportPairing.Resolution pairing = InfraredImportPairing.Resolve(
+            filePaths,
+            [.. existingFrames.Select(frame => frame.SourcePath)]);
+        HashSet<string> pairedInfrared = new(
+            pairing.PairedInfraredPaths.Select(InfraredImportPairing.ImportIdentity),
+            StringComparer.OrdinalIgnoreCase);
+
         List<CatalogEntityRow> rows = [];
         List<FrameImportRejection> rejected = [];
         DevelopRouteSelection selection = DevelopRouteSelection.FromProcess(process);
 
         foreach (string path in filePaths)
         {
+            if (pairedInfrared.Contains(InfraredImportPairing.ImportIdentity(path)))
+            {
+                continue;
+            }
+
             if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path))
             {
                 rejected.Add(new FrameImportRejection(path ?? string.Empty,
@@ -110,7 +123,10 @@ public static class FrameImport
             {
                 ["id"] = nextId(),
                 ["rawScanPath"] = path,
-                ["customDisplayName"] = Path.GetFileName(path),
+                // macOS 는 가져오기에서 `customDisplayName` 을 **쓰지 않습니다**. 비워 두면
+                // `sourceFileBaseName`(확장자 뗀 파일 이름)으로 물러납니다.
+                // ☠️ 여기에 `Path.GetFileName` 을 박아 두면 카드·필름스트립·창 제목이 모두
+                //    `이름.tiff` 가 되고, 내보내기 파일명까지 `이름.tiff.jpg` 로 나옵니다.
                 ["scanIndex"] = nextScanIndex,
                 ["sourceKind"] = "imported",
                 ["params"] = new JsonObject(),
@@ -118,6 +134,12 @@ public static class FrameImport
             if (sourceMetadata is { } metadata)
             {
                 record[LibraryFrameReader.SourceMetadataName] = WriteSourceMetadata(metadata);
+            }
+            if (pairing.InfraredByBaseIdentity.TryGetValue(
+                    InfraredImportPairing.ImportIdentity(path),
+                    out string? infraredPath))
+            {
+                record[LibraryFrameReader.InfraredPathName] = infraredPath;
             }
 
             DevelopRouteWriteResult written = DevelopRouteWriter.Apply(record, selection);
@@ -201,7 +223,7 @@ public static class FrameImport
         {
             ["id"] = nextId(),
             ["rawScanPath"] = scan.VisiblePath,
-            ["customDisplayName"] = Path.GetFileName(scan.VisiblePath),
+            // 스캐너로 들어온 것도 같습니다 — 이름은 파일 이름에서 파생합니다.
             ["scanIndex"] = nextScanIndex,
             ["sourceKind"] = "scanner",
             ["params"] = RotationParameters(scan.Rotation),

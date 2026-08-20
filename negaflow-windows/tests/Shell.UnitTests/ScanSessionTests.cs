@@ -18,6 +18,72 @@ internal static class ScanSessionTests
     {
         VerifyScanSession();
         VerifyFrameFormatAvailability();
+        VerifyFlatbedVersusFilmScannerUi();
+    }
+
+    /// <summary>
+    /// 평판(Epson V700·GT-X900)과 35mm 필름 스캐너(OpticFilm 8100)는 스캔 구획이 다릅니다 —
+    /// 차이는 <b>프레임 관련 UI 의 유무</b> 하나입니다.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 평판: 프레임 규격 · 프레임 찾기(자동/수동) · 선택: N 과 복사·붙여넣기·추가·삭제가 있고,
+    /// 판 위에 놓인 프레임 수가 곧 스캔 장수이므로 "사진 수" 줄이 <b>없습니다.</b>
+    /// </para>
+    /// <para>
+    /// 필름 스캐너: 위의 프레임 UI 가 통째로 없고 대신 "사진 수"(1...12) 줄이 섭니다.
+    /// </para>
+    /// <para>
+    /// 화면은 이 두 값(<c>UsesFlatbedRegionWorkflow</c>·<c>AvailableFrameFormats</c>)만 보고
+    /// 줄을 켜고 끄므로, 여기서 두 값이 갈리는 것을 확인하면 두 기기의 UI 차이가 지켜집니다.
+    /// </para>
+    /// </remarks>
+    private static void VerifyFlatbedVersusFilmScannerUi()
+    {
+        static ScannerPluginCapabilities Device(
+            double? width,
+            double? height,
+            bool positioned,
+            bool preview) =>
+            new(
+                [300, 600],
+                ["color"],
+                [8, 16],
+                SupportsPreview: preview,
+                SupportsTransparency: true,
+                SupportsInfrared: false,
+                SupportsMultiExposure: false,
+                SupportsScanArea: true,
+                SupportsPositionedScanArea: positioned,
+                ["tiff"],
+                "token")
+            {
+                MaxScanWidthMm = width,
+                MaxScanHeightMm = height,
+            };
+
+        // Epson GT-X900 / V700 — A4 판, 프리뷰 있음, 영역 지정 가능.
+        ScannerPluginCapabilities flatbed = Device(216, 297, positioned: true, preview: true);
+        Check(
+            ScanOptionPolicy.UsesFlatbedRegionWorkflow(flatbed),
+            "flatbed_uses_the_region_workflow");
+        Check(
+            ScanOptionPolicy.AvailableFrameFormats(flatbed).Count > 0,
+            "flatbed_shows_the_frame_format_row");
+
+        // OpticFilm 8100 — 35mm 전용이라 판 크기를 내지 않고 영역도 못 잡습니다.
+        ScannerPluginCapabilities filmScanner = Device(null, null, positioned: false, preview: true);
+        Check(
+            !ScanOptionPolicy.UsesFlatbedRegionWorkflow(filmScanner),
+            "film_scanner_has_no_region_workflow");
+        Check(
+            ScanOptionPolicy.AvailableFrameFormats(filmScanner).Count == 0,
+            "film_scanner_hides_the_frame_format_row");
+
+        // 붙은 기기가 없을 때도 프레임 UI 는 서지 않습니다.
+        Check(
+            !ScanOptionPolicy.UsesFlatbedRegionWorkflow(null),
+            "no_device_has_no_region_workflow");
     }
 
     /// <summary>

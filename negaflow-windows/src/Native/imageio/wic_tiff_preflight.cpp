@@ -62,7 +62,8 @@ WicTiffDecodeStatus preflight_tiff_source(
         return WicTiffDecodeStatus::memory_limit_exceeded;
     }
 
-    if (probe.info.compression == 5U || probe.info.compression == 8U) {
+    if (control.validate_compressed_streams &&
+        (probe.info.compression == 5U || probe.info.compression == 8U)) {
         negaflow::core::TiffProbeControl semantic_control{};
         semantic_control.validate_lzw_code_streams = probe.info.compression == 5U;
         semantic_control.validate_deflate_streams = probe.info.compression == 8U;

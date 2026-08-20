@@ -428,11 +428,14 @@ bool accelerate_mip_halve_levels(
     const std::uint32_t destination_capacity,
     std::uint32_t* const out_width,
     std::uint32_t* const out_height) noexcept {
-    if (!mip_halve_enabled_by_environment()) {
-        return false;
-    }
     GpuAccelerator& accelerator = GpuAccelerator::shared();
     if (!accelerator.available() || out_width == nullptr || out_height == nullptr) {
+        return false;
+    }
+    // 상주가 아니면 올리기가 비싸 기본 끔(`NEGA_GPU_MIP_HALVE=1`).
+    // 상주면 올리기가 없어서 켭니다 — 호스트가 낡은 채로 CPU 축소를 하면 안 됩니다.
+    if (!accelerator.has_resident_image(source, width, height) &&
+        !mip_halve_enabled_by_environment()) {
         return false;
     }
     return accelerator.apply_mip_halve_levels(
@@ -445,6 +448,20 @@ bool accelerate_mip_halve_levels(
         destination_capacity,
         out_width,
         out_height);
+}
+
+bool accelerate_resident_finite(
+    const float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    bool* const all_finite) noexcept {
+    GpuAccelerator& accelerator = GpuAccelerator::shared();
+    if (!accelerator.available()) {
+        return false;
+    }
+    return accelerator.check_resident_finite(
+        pixels, width, height, stride_pixels, all_finite);
 }
 
 // 프로세스 수명 동안 살아 있어야 합니다 — `install_kernel_accelerator` 는 포인터만 갖습니다.
@@ -473,6 +490,7 @@ const imaging::KernelAccelerator kernel_table{
     accelerate_channel_clipping_overlay,
     accelerate_area_average,
     accelerate_mip_halve_levels,
+    accelerate_resident_finite,
 };
 
 }  // namespace

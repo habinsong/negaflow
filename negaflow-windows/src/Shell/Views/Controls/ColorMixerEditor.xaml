@@ -3,19 +3,44 @@
     x:Class="Negaflow.Shell.Views.Controls.ColorMixerEditor"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <StackPanel Spacing="8">
-        <Grid ColumnSpacing="4">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <RadioButton x:Name="HueButton" Grid.Column="0" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
-            <RadioButton x:Name="SaturationButton" Grid.Column="1" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
-            <RadioButton x:Name="LuminanceButton" Grid.Column="2" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
-            <RadioButton x:Name="AllButton" Grid.Column="3" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
-        </Grid>
-        <StackPanel x:Name="BandsPanel" Spacing="8" />
+    <!-- macOS `ColorMixerSection` — `VStack(spacing: 10) { CapsuleSegmented(...); 여덟 밴드 }`.
+         캡슐은 `SegmentedPicker` 와 값이 다릅니다(칸 높이 24 · 사이 2 · 여백 2 · 캡슐 라운딩). -->
+    <StackPanel Spacing="10">
+        <Border Style="{StaticResource NegaflowCapsuleSegmentTrackStyle}">
+            <Grid ColumnSpacing="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <RadioButton
+                    x:Name="HueButton"
+                    Grid.Column="0"
+                    Style="{StaticResource NegaflowCapsuleSegmentStyle}"
+                    GroupName="ColorMixerProperty"
+                    Checked="OnPropertyChecked" />
+                <RadioButton
+                    x:Name="SaturationButton"
+                    Grid.Column="1"
+                    Style="{StaticResource NegaflowCapsuleSegmentStyle}"
+                    GroupName="ColorMixerProperty"
+                    Checked="OnPropertyChecked" />
+                <RadioButton
+                    x:Name="LuminanceButton"
+                    Grid.Column="2"
+                    Style="{StaticResource NegaflowCapsuleSegmentStyle}"
+                    GroupName="ColorMixerProperty"
+                    Checked="OnPropertyChecked" />
+                <RadioButton
+                    x:Name="AllButton"
+                    Grid.Column="3"
+                    Style="{StaticResource NegaflowCapsuleSegmentStyle}"
+                    GroupName="ColorMixerProperty"
+                    Checked="OnPropertyChecked" />
+            </Grid>
+        </Border>
+        <!-- 밴드도 바깥 `VStack(spacing: 10)` 의 형제이므로 간격이 같습니다. -->
+        <StackPanel x:Name="BandsPanel" Spacing="10" />
     </StackPanel>
 </UserControl>

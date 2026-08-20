@@ -55,6 +55,8 @@ public sealed partial class DevelopGeometryCard : UserControl
         {
             StraightenAngleControl.Value = hostPanel.ImageTransform.StraightenAngle;
             CropAngleDialControl.Angle = hostPanel.ImageTransform.StraightenAngle;
+            // macOS 는 머리줄 오른쪽에 지금 걸린 회전·뒤집기를 그대로 적습니다.
+            GeometryTransformText.Text = hostPanel.ImageTransform.DisplayName;
         }
         finally
         {

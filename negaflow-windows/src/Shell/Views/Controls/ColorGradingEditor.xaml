@@ -4,17 +4,36 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Negaflow.Shell.Views.Controls">
-    <StackPanel Spacing="8">
-        <Grid ColumnSpacing="4">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <RadioButton x:Name="ShadowsButton" Grid.Column="0" GroupName="ColorGradingRange" Checked="OnRangeChecked" />
-            <RadioButton x:Name="MidtonesButton" Grid.Column="1" GroupName="ColorGradingRange" Checked="OnRangeChecked" />
-            <RadioButton x:Name="HighlightsButton" Grid.Column="2" GroupName="ColorGradingRange" Checked="OnRangeChecked" />
-        </Grid>
+    <!-- macOS `ColorGradingSection` — `VStack(spacing: 12)` 에 캡슐 · 색상환 · 읽기 줄 ·
+         광도 · 옅은 구분선 · 혼합 · 균형 순입니다. -->
+    <StackPanel Spacing="12">
+        <Border Style="{StaticResource NegaflowCapsuleSegmentTrackStyle}">
+            <Grid ColumnSpacing="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <RadioButton
+                    x:Name="ShadowsButton"
+                    Grid.Column="0"
+                    Style="{StaticResource NegaflowCapsuleSegmentStyle}"
+                    GroupName="ColorGradingRange"
+                    Checked="OnRangeChecked" />
+                <RadioButton
+                    x:Name="MidtonesButton"
+                    Grid.Column="1"
+                    Style="{StaticResource NegaflowCapsuleSegmentStyle}"
+                    GroupName="ColorGradingRange"
+                    Checked="OnRangeChecked" />
+                <RadioButton
+                    x:Name="HighlightsButton"
+                    Grid.Column="2"
+                    Style="{StaticResource NegaflowCapsuleSegmentStyle}"
+                    GroupName="ColorGradingRange"
+                    Checked="OnRangeChecked" />
+            </Grid>
+        </Border>
         <Canvas
             x:Name="WheelCanvas"
             Width="150"
@@ -28,16 +47,67 @@
             PointerReleased="OnWheelPointerReleased"
             PointerCanceled="OnWheelPointerCanceled"
             KeyDown="OnWheelKeyDown" />
+        <!-- macOS `HStack { Text(색조).caption.frame(width: 64, .leading); Text("…°").caption2
+             .monospacedDigit().secondary; Spacer(); Text(채도).caption; Text("…%")… }`.
+             `HStack` 의 기본 사이는 8 입니다. -->
         <Grid ColumnSpacing="8">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="64" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock x:Name="HueReadout" Grid.Column="0" FontFamily="Consolas" FontSize="11" />
-            <TextBlock x:Name="SaturationReadout" Grid.Column="1" FontFamily="Consolas" FontSize="11" TextAlignment="Right" />
+            <TextBlock
+                x:Name="HueLabel"
+                Grid.Column="0"
+                VerticalAlignment="Center"
+                FontSize="12" />
+            <TextBlock
+                x:Name="HueReadout"
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                FontFamily="Consolas"
+                FontSize="11"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <TextBlock
+                x:Name="SaturationLabel"
+                Grid.Column="3"
+                VerticalAlignment="Center"
+                FontSize="12" />
+            <TextBlock
+                x:Name="SaturationReadout"
+                Grid.Column="4"
+                VerticalAlignment="Center"
+                FontFamily="Consolas"
+                FontSize="11"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </Grid>
-        <controls:InspectorSlider x:Name="LuminanceControl" Minimum="-1" Maximum="1" ResetValue="0" SliderAutomationId="negaflow.develop.color-grading.luminance" ValueChanged="OnLuminanceChanged" />
-        <controls:InspectorSlider x:Name="BlendingControl" Minimum="0" Maximum="1" ResetValue="0" SliderAutomationId="negaflow.develop.color-grading.blending" ValueChanged="OnBlendingChanged" />
-        <controls:InspectorSlider x:Name="BalanceControl" Minimum="-1" Maximum="1" ResetValue="0" SliderAutomationId="negaflow.develop.color-grading.balance" ValueChanged="OnBalanceChanged" />
+        <controls:InspectorSlider
+            x:Name="LuminanceControl"
+            Minimum="-1"
+            Maximum="1"
+            ResetValue="0"
+            LabelSpacing="3"
+            SliderAutomationId="negaflow.develop.color-grading.luminance"
+            ValueChanged="OnLuminanceChanged" />
+        <!-- macOS `Divider().opacity(0.4)` -->
+        <Border Height="1" Opacity="0.4" Background="{ThemeResource NegaflowDividerBrush}" />
+        <controls:InspectorSlider
+            x:Name="BlendingControl"
+            Minimum="0"
+            Maximum="1"
+            ResetValue="0"
+            LabelSpacing="3"
+            SliderAutomationId="negaflow.develop.color-grading.blending"
+            ValueChanged="OnBlendingChanged" />
+        <controls:InspectorSlider
+            x:Name="BalanceControl"
+            Minimum="-1"
+            Maximum="1"
+            ResetValue="0"
+            LabelSpacing="3"
+            SliderAutomationId="negaflow.develop.color-grading.balance"
+            ValueChanged="OnBalanceChanged" />
     </StackPanel>
 </UserControl>

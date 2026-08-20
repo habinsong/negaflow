@@ -294,6 +294,13 @@ using ScratchAngleStackFunction = bool (*)(
     int angle_count,
     float balance_limit) noexcept;
 
+using ResidentFiniteFunction = bool (*)(
+    const float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    bool* all_finite) noexcept;
+
 using MipHalveLevelsFunction = bool (*)(
     const float* source,
     std::uint32_t width,
@@ -333,6 +340,7 @@ struct KernelAccelerator final {
     ChannelClippingOverlayFunction channel_clipping_overlay{nullptr};
     AreaAverageFunction area_average{nullptr};
     MipHalveLevelsFunction mip_halve_levels{nullptr};
+    ResidentFiniteFunction resident_finite_check{nullptr};
 };
 
 // 프로세스 시작에 한 번 설치합니다. `nullptr` 을 주면 해제합니다.

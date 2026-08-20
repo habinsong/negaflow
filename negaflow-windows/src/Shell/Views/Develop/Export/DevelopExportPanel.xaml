@@ -2,42 +2,58 @@
 <UserControl
     x:Class="Negaflow.Shell.Views.Develop.Export.DevelopExportPanel"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
     <ScrollViewer>
                     <StackPanel Padding="12,14" Spacing="12">
-                        <TextBlock x:Name="ExportSectionText" FontSize="13" FontWeight="SemiBold"  x:FieldModifier="internal" />
+                        <!-- macOS `sectionHeader(내보내기, systemImage: "square.and.arrow.up")` -->
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon FontSize="12" Glyph="&#xE72D;" />
+                            <TextBlock x:Name="ExportSectionText" FontSize="13" FontWeight="SemiBold"  x:FieldModifier="internal" />
+                        </StackPanel>
                         <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
                             <StackPanel Spacing="9">
-                                <!-- 파일·품질·소스. macOS 는 같은 카드 안에서 이 셋을 갈아 끼웁니다. -->
-                                <Grid
+                                <!-- 파일·품질·소스. macOS `SegmentedPicker` — 셋이 **붙어 있는
+                                     한 덩어리**입니다(스크린샷 `현상뷰_좌측탭_세로탭_내보내기.png`).
+                                     라디오 동그라미 3개를 간격 4로 떼어 놓으면 모양이 다릅니다.
+                                     베이스 카드가 쓰는 것과 같은 캡슐을 그대로 씁니다. -->
+                                <Border
                                     x:Name="ExportDetailTabs" x:FieldModifier="internal"
                                     AutomationProperties.AutomationId="negaflow.develop.output.tabs"
-                                    ColumnSpacing="4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <RadioButton
-                                        x:Name="ExportFileTabButton" x:FieldModifier="internal"
-                                        Grid.Column="0"
-                                        AutomationProperties.AutomationId="negaflow.develop.output.tab.file"
-                                        Checked="OnExportDetailTabChecked"
-                                        GroupName="ExportDetailPage"
-                                        IsChecked="True" />
-                                    <RadioButton
-                                        x:Name="ExportQualityTabButton" x:FieldModifier="internal"
-                                        Grid.Column="1"
-                                        AutomationProperties.AutomationId="negaflow.develop.output.tab.quality"
-                                        Checked="OnExportDetailTabChecked"
-                                        GroupName="ExportDetailPage" />
-                                    <RadioButton
-                                        x:Name="ExportSourceTabButton" x:FieldModifier="internal"
-                                        Grid.Column="2"
-                                        AutomationProperties.AutomationId="negaflow.develop.output.tab.source"
-                                        Checked="OnExportDetailTabChecked"
-                                        GroupName="ExportDetailPage" />
-                                </Grid>
+                                    BorderBrush="{ThemeResource NegaflowDividerBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="7"
+                                    Padding="1">
+                                    <Grid ColumnSpacing="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <RadioButton
+                                            x:Name="ExportFileTabButton" x:FieldModifier="internal"
+                                            Grid.Column="0"
+                                            Style="{StaticResource NegaflowSegmentStyle}"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.tab.file"
+                                            Checked="OnExportDetailTabChecked"
+                                            GroupName="ExportDetailPage"
+                                            IsChecked="True" />
+                                        <RadioButton
+                                            x:Name="ExportQualityTabButton" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            Style="{StaticResource NegaflowSegmentStyle}"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.tab.quality"
+                                            Checked="OnExportDetailTabChecked"
+                                            GroupName="ExportDetailPage" />
+                                        <RadioButton
+                                            x:Name="ExportSourceTabButton" x:FieldModifier="internal"
+                                            Grid.Column="2"
+                                            Style="{StaticResource NegaflowSegmentStyle}"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.tab.source"
+                                            Checked="OnExportDetailTabChecked"
+                                            GroupName="ExportDetailPage" />
+                                    </Grid>
+                                </Border>
 
                                 <!-- 내보내기 설정: 담아 둔 값을 골라 얹습니다. 목적지와 파일명
                                      패턴은 지금 것을 지킵니다. -->
@@ -87,25 +103,31 @@
                                             <ComboBoxItem Content="TIFF" Tag="Tiff16" />
                                         </ComboBox>
                                     </Grid>
-                                    <Grid ColumnSpacing="8">
+                                    <!-- macOS `LabeledContent(폴더) { HStack(spacing: 6) { 경로, [변경] } }` —
+                                         한 줄입니다. 경로를 아래로 내리면 macOS 와 줄 수가 달라집니다. -->
+                                    <Grid ColumnSpacing="6">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock x:Name="ExportFolderLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                        <TextBlock
+                                            x:Name="ExportFolderPathText" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            FontSize="11"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            TextAlignment="Right"
+                                            TextTrimming="CharacterEllipsis" />
                                         <Button
                                             x:Name="ExportFolderButton" x:FieldModifier="internal"
-                                            Grid.Column="1"
+                                            Grid.Column="2"
                                             Padding="8,2"
                                             AutomationProperties.AutomationId="negaflow.develop.output.folder"
                                             Click="OnExportFolderClicked"
                                             FontSize="11" />
                                     </Grid>
-                                    <TextBlock
-                                        x:Name="ExportFolderPathText" x:FieldModifier="internal"
-                                        FontSize="11"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        TextTrimming="CharacterEllipsis" />
                                     <TextBlock x:Name="ExportNamePatternLabel" FontSize="12"  x:FieldModifier="internal" />
                                     <Grid ColumnSpacing="6">
                                         <Grid.ColumnDefinitions>
@@ -306,17 +328,33 @@
                                         TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
 
-                                <TextBlock
-                                    x:Name="ExportPreviewText" x:FieldModifier="internal"
-                                    FontSize="11"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    TextTrimming="CharacterEllipsis" />
-                                <Button
+                                <!-- macOS `LabeledContent(미리보기) { Text(파일명).secondary }` -->
+                                <Grid ColumnSpacing="6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="ExportPreviewLabel" x:FieldModifier="internal" VerticalAlignment="Center" FontSize="12" />
+                                    <TextBlock
+                                        x:Name="ExportPreviewText" x:FieldModifier="internal"
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        TextAlignment="Right"
+                                        TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                                <!-- macOS `ExportActionPill(isProminent: true)` — 강조색으로 꽉 채운
+                                     단추가 아니라 강조색 20% 바탕에 강조색 글자이고, 오른쪽에
+                                     폴더 열기가 같은 덩어리로 붙습니다. -->
+                                <controls:ExportActionPill
                                     x:Name="ExportButton" x:FieldModifier="internal"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.AutomationId="negaflow.develop.output.export"
-                                    Click="OnExportClicked"
-                                    Style="{StaticResource AccentButtonStyle}" />
+                                    Glyph="&#xE72D;"
+                                    IsProminent="True"
+                                    ActionAutomationId="negaflow.develop.output.export"
+                                    RevealAutomationId="negaflow.develop.output.export.reveal"
+                                    Invoked="OnExportClicked"
+                                    RevealRequested="OnExportRevealClicked" />
                                 <TextBlock
                                     x:Name="OutputStatusText" x:FieldModifier="internal"
                                     FontSize="11"
@@ -327,7 +365,11 @@
 
                         <!-- 빠른 내보내기: macOS 와 같은 두 번째 절입니다. 형식이 JPEG·PNG 로 좁고
                              파일명은 원본 이름 그대로입니다. -->
-                        <TextBlock x:Name="QuickExportSectionText" FontSize="13" FontWeight="SemiBold"  x:FieldModifier="internal" />
+                        <!-- macOS `sectionHeader(빠른 내보내기, systemImage: "bolt")` -->
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon FontSize="12" Glyph="&#xE945;" />
+                            <TextBlock x:Name="QuickExportSectionText" FontSize="13" FontWeight="SemiBold"  x:FieldModifier="internal" />
+                        </StackPanel>
                         <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
                             <StackPanel Spacing="9">
                                 <Grid ColumnSpacing="8">
@@ -396,25 +438,30 @@
                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                         TextAlignment="Right" />
                                 </Grid>
-                                <Grid ColumnSpacing="8">
+                                <!-- 내보내기 절과 같은 한 줄입니다. -->
+                                <Grid ColumnSpacing="6">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock x:Name="QuickExportFolderLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                    <TextBlock
+                                        x:Name="QuickExportFolderPathText" x:FieldModifier="internal"
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        TextAlignment="Right"
+                                        TextTrimming="CharacterEllipsis" />
                                     <Button
                                         x:Name="QuickExportFolderButton" x:FieldModifier="internal"
-                                        Grid.Column="1"
+                                        Grid.Column="2"
                                         Padding="8,2"
                                         AutomationProperties.AutomationId="negaflow.develop.quick-export.folder"
                                         Click="OnQuickExportFolderClicked"
                                         FontSize="11" />
                                 </Grid>
-                                <TextBlock
-                                    x:Name="QuickExportFolderPathText" x:FieldModifier="internal"
-                                    FontSize="11"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    TextTrimming="CharacterEllipsis" />
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
@@ -430,11 +477,15 @@
                                         TextAlignment="Right"
                                         TextTrimming="CharacterEllipsis" />
                                 </Grid>
-                                <Button
+                                <!-- macOS `ExportActionPill` — 강조가 아니므로 바탕이 비어 있고
+                                     글자는 기본색입니다. 오른쪽 폴더 열기는 같습니다. -->
+                                <controls:ExportActionPill
                                     x:Name="QuickExportButton" x:FieldModifier="internal"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.AutomationId="negaflow.develop.quick-export.run"
-                                    Click="OnQuickExportClicked" />
+                                    Glyph="&#xE945;"
+                                    ActionAutomationId="negaflow.develop.quick-export.run"
+                                    RevealAutomationId="negaflow.develop.quick-export.reveal"
+                                    Invoked="OnQuickExportClicked"
+                                    RevealRequested="OnQuickExportRevealClicked" />
                             </StackPanel>
                         </Border>
                     </StackPanel>

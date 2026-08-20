@@ -35,7 +35,10 @@ public sealed record GrainMendHudState(
     IReadOnlyList<GrainMendClassSummary> Chips,
     // macOS <c>detectSummary</c> 는 이 플래그가 서면 개수 대신 경고 문구를 냅니다. 결과를
     // 줄이지는 않습니다 — 제외는 사용자가 클릭으로 합니다.
-    bool FalsePositiveRisk = false)
+    bool FalsePositiveRisk = false,
+    // macOS <c>RegionDefectOverlay</c> 의 `if frame.canUndoDefects` — 기다리는 상태에서만
+    // 되돌리기 단추가 섭니다.
+    bool CanUndo = false)
 {
     public bool IsVisible => Mode != GrainMendHudMode.Hidden;
 
@@ -54,12 +57,16 @@ public static class GrainMendHudProjection
     /// <param name="pendingLabel">아직 받아들이지 않은 검출의 이름표. 없으면 검토 중이 아닙니다.</param>
     /// <param name="review">검토 세션. 성분 수·제외·종류별 요약이 여기서 나옵니다.</param>
     /// <param name="tool">지금 캔버스를 잡고 있는 도구.</param>
+    /// <param name="canUndo">
+    /// 되돌릴 결함 편집이 남아 있는지. macOS <c>frame.canUndoDefects</c> 자리입니다.
+    /// </param>
     public static GrainMendHudState Create(
         bool hasFrame,
         bool isDetecting,
         DefectEditLabelKind? pendingLabel,
         GrainMendReviewSession? review,
-        GrainMendTool tool)
+        GrainMendTool tool,
+        bool canUndo = false)
     {
         bool reviewing = pendingLabel is not null;
         bool automatic = pendingLabel == DefectEditLabelKind.Automatic;
@@ -103,7 +110,9 @@ public static class GrainMendHudProjection
                 Excluded: 0,
                 RemoveEnabled: false,
                 TuningEnabled: false,
-                Chips: [])
+                Chips: [],
+                FalsePositiveRisk: false,
+                CanUndo: canUndo)
             : Empty;
     }
 

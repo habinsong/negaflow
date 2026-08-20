@@ -19,16 +19,18 @@ internal sealed class LibraryScanCopy
         AutomationProperties.SetName(view.ScanDeviceSelector, view.ScanDeviceLabel.Text);
         SetButtonText(view.ScanApprovePluginButton, AppResources.Get("scanPluginApprove", "Content"));
         string simulator = AppResources.Get("scanSimulator", "Content");
-        view.ScanSimulatorToggle.Header = simulator;
-        view.ScanSimulatorToggle.OnContent = simulator;
-        view.ScanSimulatorToggle.OffContent = simulator;
+        view.ScanSimulatorLabel.Text = simulator;
         AutomationProperties.SetName(view.ScanSimulatorToggle, simulator);
         ToolTipService.SetToolTip(
-            view.ScanSimulatorToggle,
+            view.ScanSimulatorRow,
             AppResources.Get("scanSimulatorHelp", "Text"));
         string rescan = AppResources.Get("scanDetectScanners", "Text");
         AutomationProperties.SetName(view.ScanRescanButton, rescan);
         ToolTipService.SetToolTip(view.ScanRescanButton, rescan);
+        // macOS `unavailableState` 의 전폭 [스캐너 찾기] 단추입니다.
+        SetButtonText(view.ScanDetectButton, rescan);
+        SetIconButtonName(view.ScanChooseFolderButton, "scanChooseFolder");
+        SetButtonText(view.ScanCancelButton, AppResources.Get("scanCancel", "Content"));
         view.ScanFilmLabel.Text = AppResources.Get("scanFilm", "Text");
         AutomationProperties.SetName(view.ScanFilmSelector, view.ScanFilmLabel.Text);
         view.ScanFolderNameLabel.Text = AppResources.Get("scanFolderName", "Text");
@@ -60,9 +62,7 @@ internal sealed class LibraryScanCopy
         view.ScanFrameCountLabel.Text = AppResources.FormatInteger("scanFramesFormat", "Text", 1);
         AutomationProperties.SetName(view.ScanFrameCountBox, view.ScanFrameCountLabel.Text);
         string infrared = AppResources.Get("scanInfrared", "Content");
-        view.ScanInfraredToggle.Header = infrared;
-        view.ScanInfraredToggle.OnContent = infrared;
-        view.ScanInfraredToggle.OffContent = infrared;
+        view.ScanInfraredLabel.Text = infrared;
         AutomationProperties.SetName(view.ScanInfraredToggle, infrared);
         SetButtonText(view.ScanPreviewButton, AppResources.Get("scanPreview", "Content"));
         SetButtonText(view.ScanStartButton, AppResources.Get("scanStart", "Content"));

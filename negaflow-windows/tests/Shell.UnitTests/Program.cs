@@ -66,6 +66,7 @@ internal static class Program
         PrintOutputTests.Run();
         FilmBaseSidecarTests.Run();
         ScanSessionTests.Run();
+        LocalAdjustmentTests.Run();
         PrintLayoutTemplateTests.Run();
 
         var report = new

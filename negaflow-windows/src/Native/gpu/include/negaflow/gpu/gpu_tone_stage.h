@@ -19,6 +19,7 @@
 //    커브가 꺼져 있으면(대부분의 슬라이더 조작) 왕복이 없습니다.
 
 #include "negaflow/gpu/gpu_pointwise.h"
+#include "negaflow/gpu/gpu_working_image.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
 
 namespace negaflow::gpu {
@@ -56,6 +57,17 @@ public:
         imaging::WorkingImage& image,
         const imaging::WorkingToneAdjustParameters& parameters,
         const imaging::ToneCurveMeasurementLimits& measurement_limits) const noexcept;
+
+    // 이미 GPU 에 있는 텍스처에서 돌립니다. 올리지 않습니다.
+    // `download` 가 참이면 마지막 결과를 `image` 로 내립니다.
+    [[nodiscard]] GpuToneStageResult apply_on(
+        const GpuDevice& device,
+        GpuWorkingImage& input,
+        GpuWorkingImage& scratch,
+        imaging::WorkingImage& image,
+        const imaging::WorkingToneAdjustParameters& parameters,
+        const imaging::ToneCurveMeasurementLimits& measurement_limits,
+        bool download) const noexcept;
 
     [[nodiscard]] bool is_valid() const noexcept;
 

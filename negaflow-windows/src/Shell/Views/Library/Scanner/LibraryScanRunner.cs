@@ -9,7 +9,12 @@ internal sealed class LibraryScanRunner
 {
     private readonly LibraryScanPanel view;
 
+    private CancellationTokenSource? running;
+
     internal LibraryScanRunner(LibraryScanPanel view) => this.view = view;
+
+    /// <summary>macOS <c>cancelScan()</c> — 스캔 중에만 뜨는 취소 단추가 부릅니다.</summary>
+    internal void Cancel() => running?.Cancel();
 
     /// <summary>
     /// 스캔해서 카탈로그에 게시하고 격자를 다시 그립니다. 목적지는 매 장마다 새로 고르므로
@@ -35,8 +40,11 @@ internal sealed class LibraryScanRunner
         string directory;
         try
         {
+            // macOS `diskStorage.scansPath` — 사용자가 고른 폴더가 있으면 그것을 씁니다.
             directory = ScanStorageLayout.EnsureRollDirectory(
-                Path.Combine(roots.LibraryRoot, "Scans"),
+                view.scanSession.ScanStorageRoot is { Length: > 0 } chosen
+                    ? chosen
+                    : Path.Combine(roots.LibraryRoot, "Scans"),
                 view.scanSession.Options.FilmType,
                 rollName,
                 DateTime.Now);
@@ -48,10 +56,31 @@ internal sealed class LibraryScanRunner
         }
 
         view.ScanStatusText.Text = AppResources.Get("scanSection", "Text");
-        ScanRunOutcome outcome = await view.scanSession.RunAsync(
-            view.libraryHost,
-            _ => ScanStorageLayout.NextAvailablePath(directory, stem),
-            preview);
+        using CancellationTokenSource cancellation = new();
+        running?.Cancel();
+        running = cancellation;
+        ScanRunOutcome outcome;
+        try
+        {
+            outcome = await view.scanSession.RunAsync(
+                view.libraryHost,
+                _ => ScanStorageLayout.NextAvailablePath(directory, stem),
+                preview,
+                cancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // macOS 도 취소를 실패로 적지 않습니다 — 사용자가 멈춘 것입니다.
+            view.ScanStatusText.Text = string.Empty;
+            return;
+        }
+        finally
+        {
+            if (ReferenceEquals(running, cancellation))
+            {
+                running = null;
+            }
+        }
         view.ScanStatusText.Text = Describe(outcome);
         if (preview)
         {

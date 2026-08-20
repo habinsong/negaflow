@@ -64,6 +64,12 @@ public sealed class ScanSessionController
 
     public bool IsScanning { get; private set; }
 
+    /// <summary>
+    /// macOS <c>selectScanStorageRoot(_:)</c> — 스캔 원본을 둘 폴더입니다.
+    /// <see langword="null"/> 이면 라이브러리 아래 <c>Scans</c> 를 씁니다.
+    /// </summary>
+    public string? ScanStorageRoot { get; set; }
+
     /// <summary>마지막 실패의 이유입니다. 성공하면 지웁니다.</summary>
     public string? LastFailureName { get; private set; }
 

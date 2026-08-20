@@ -56,6 +56,11 @@ internal sealed class DevelopInspectorChrome
         view.GeometryCard.Visibility = view.inspectorPresentation.SelectedTab == DevelopInspectorTab.Edit
             ? Visibility.Visible
             : Visibility.Collapsed;
+        view.LocalAdjustmentCard.Visibility = view.GeometryCard.Visibility;
+        if (view.GeometryCard.Visibility == Visibility.Visible)
+        {
+            view.LocalAdjustmentCard.Show();
+        }
         // macOS resetToolContent — 초기화 탭은 ResetControlsSection 하나를 냅니다.
         view.ResetCard.Visibility = view.inspectorPresentation.SelectedTab == DevelopInspectorTab.Reset
             ? Visibility.Visible

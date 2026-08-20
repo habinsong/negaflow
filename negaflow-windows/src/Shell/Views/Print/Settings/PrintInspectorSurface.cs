@@ -1,6 +1,8 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
+using Negaflow.Shell.Views;
+
 namespace Negaflow.Shell.Views.Print.Settings;
 
 /// <summary>인화 검사기 카드가 쓰는 컨트롤입니다.</summary>
@@ -11,7 +13,7 @@ internal sealed class PrintInspectorSurface
     public required TextBlock PaperSizeText { get; init; }
     public required ComboBox PaperSizeSelector { get; init; }
     public required TextBlock OrientationText { get; init; }
-    public required ComboBox OrientationSelector { get; init; }
+    public required Controls.NegaflowSegmentedPicker OrientationSelector { get; init; }
     public required TextBlock PerforationText { get; init; }
     public required ComboBox PerforationSelector { get; init; }
     public required TextBlock DpiText { get; init; }
@@ -31,7 +33,7 @@ internal sealed class PrintInspectorSurface
     public required ToggleSwitch RotateToFitToggle { get; init; }
     public required ToggleSwitch RepeatToggle { get; init; }
     public required TextBlock SheetBackgroundText { get; init; }
-    public required ComboBox SheetBackgroundSelector { get; init; }
+    public required Controls.NegaflowSegmentedPicker SheetBackgroundSelector { get; init; }
     public required FrameworkElement TemplatePanel { get; init; }
     public required TextBlock TemplateText { get; init; }
     public required ComboBox TemplateSelector { get; init; }
@@ -41,7 +43,15 @@ internal sealed class PrintInspectorSurface
     public required TextBlock ViewSectionText { get; init; }
     public required ToggleSwitch RulersToggle { get; init; }
     public required TextBlock RulerUnitText { get; init; }
-    public required ComboBox RulerUnitSelector { get; init; }
+    public required Controls.NegaflowSegmentedPicker RulerUnitSelector { get; init; }
+
+    public required Controls.NegaflowSegmentedPicker OutputProcessSelector { get; init; }
+
+    public required TextBox CprintLabBox { get; init; }
+
+    public required TextBox CprintPaperBox { get; init; }
+
+    public required Controls.NegaflowSegmentedPicker PrintProofPreviewSelector { get; init; }
     public required FrameworkElement CustomCard { get; init; }
     public required TextBlock CustomHintText { get; init; }
     public required TextBlock OutputSectionText { get; init; }

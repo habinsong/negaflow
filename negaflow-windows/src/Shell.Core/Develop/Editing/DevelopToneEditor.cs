@@ -127,6 +127,48 @@ internal sealed class DevelopToneEditor
                 PointCurves: PointCurveRecipe.Identity));
     }
 
+    /// <summary>
+    /// macOS <c>AppModel.resetAutoTone</c>(`AppModel+AutoAdjust.swift:125-138`) — 노출·대비·
+    /// 농도·밝은 영역·어두운 영역·흰색·검정과 <b>생동감·채도</b>를 0 으로 돌립니다.
+    /// 커브·베이스·기하는 건드리지 않습니다.
+    /// </summary>
+    public DevelopEditResult ResetAutoTone(LibraryFrameSnapshot? frame)
+    {
+        if (frame is null)
+        {
+            return new(LibraryFrameError.MissingId, false);
+        }
+        ToneAdjustment tone = frame.Tone with
+        {
+            Exposure = 0,
+            Contrast = 0,
+            Density = 0,
+            Highlight = 0,
+            Shadow = 0,
+            Whites = 0,
+            Blacks = 0,
+        };
+        return Edit(
+            frame,
+            new LibraryFrameEdit(
+                tone,
+                frame.ManualBase,
+                ColorModel: frame.ColorModel with { Vibrance = 0, Saturation = 0 }));
+    }
+
+    /// <summary>
+    /// macOS <c>AppModel.resetAutoWhiteBalance</c>(`:140-146`) — 온도와 색조만 0 입니다.
+    /// </summary>
+    public DevelopEditResult ResetAutoWhiteBalance(LibraryFrameSnapshot? frame) =>
+        frame is null
+            ? new(LibraryFrameError.MissingId, false)
+            : Edit(
+                frame,
+                new LibraryFrameEdit(
+                    frame.Tone,
+                    frame.ManualBase,
+                    ColorModel: frame.ColorModel with { Warmth = 0, Tint = 0 }));
+
     private DevelopEditResult ApplyAutoAdjusted(LibraryFrameSnapshot adjusted) =>
         Edit(
             adjusted,

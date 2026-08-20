@@ -155,15 +155,21 @@ public static class InfraredDefectRecipeCoordinator
             return Result(InfraredDefectApplyStatus.PersistenceFailed, detection);
         }
 
+        // macOS `applyInfraredDetection` 도 `appendDefectEdit` 을 지나 히스토리 한 칸을
+        // 남깁니다 — IR 레이어도 Ctrl+Z 로 되돌아가야 합니다. 실패하면 담은 칸을 도로 뺍니다.
+        document.CaptureUndo(LibraryDefectEditor.UndoActionName);
         LibraryDefectRecipeWriteResult written = document.WriteDefectRecipe(frame.Id, recipe);
-        return written.IsSuccess
-            ? Result(InfraredDefectApplyStatus.Applied, detection, written.Recipe)
-            : new InfraredDefectApplyResult(
+        if (!written.IsSuccess)
+        {
+            _ = document.Undo();
+            return new InfraredDefectApplyResult(
                 InfraredDefectApplyStatus.PersistenceFailed,
                 detection,
                 null,
                 written.SidecarError,
                 written.CatalogError);
+        }
+        return Result(InfraredDefectApplyStatus.Applied, detection, written.Recipe);
     }
 
     internal static DefectRecipeSnapshot CreateRecipe(

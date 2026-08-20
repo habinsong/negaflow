@@ -63,7 +63,7 @@ bool GpuAccelerator::apply_scratch_angle_maps(
     if (width == 0U || height == 0U) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->scratch_angle_ready) {
         return false;
     }
@@ -115,7 +115,7 @@ bool GpuAccelerator::apply_scratch_angle_stack(
     if (width == 0U || height == 0U) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->scratch_angle_ready) {
         return false;
     }

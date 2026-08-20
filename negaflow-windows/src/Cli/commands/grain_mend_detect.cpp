@@ -1,5 +1,7 @@
 #include "grain_mend_detect.h"
 
+#include "grain_mend_detect_pipeline.h"
+
 #include "negaflow/imaging/grain_mend.h"
 #include "negaflow/imaging/scanner_tiff_to_working.h"
 #include "negaflow/pipeline/gpu_accelerator.h"
@@ -78,6 +80,59 @@ void write_component_dump(
     }
 }
 
+/// 앱이 지나는 길로 한 번 돌고 같은 모양으로 냅니다. 직접 호출과 이 줄을 나란히 놓으면
+/// 검출기가 문제인지, 그 앞의 디코드·recipe 적용이 문제인지 화면 없이 갈립니다.
+int report_pipeline_detect(
+    const std::filesystem::path& source,
+    const negaflow::imaging::GrainMendParameters& parameters,
+    const negaflow::imaging::GrainMendRoi& roi) {
+    const auto started = std::chrono::steady_clock::now();
+    const PipelineDetectSummary summary =
+        run_pipeline_detect(source, parameters, roi);
+    const auto finished = std::chrono::steady_clock::now();
+    std::array<std::size_t, 7U> by_class{};
+    for (const auto& component : summary.components) {
+        const auto index = static_cast<std::size_t>(component.classification);
+        if (index < by_class.size()) {
+            ++by_class[index];
+        }
+    }
+    std::cout << "{\"schema_version\":1,\"status\":\""
+              << (summary.succeeded ? "ok" : "failed")
+              << "\",\"operation\":\"grain_mend_detect\",\"path\":\"pipeline\""
+              << ",\"failed_stage\":\"" << summary.failure_stage << '"'
+              << ",\"failure_name\":\"" << summary.failure_name << '"'
+              << ",\"source_width\":" << summary.source_width
+              << ",\"source_height\":" << summary.source_height
+              << ",\"detection_width\":" << summary.width
+              << ",\"detection_height\":" << summary.height
+              << ",\"roi_x\":" << summary.roi_x
+              << ",\"roi_y\":" << summary.roi_y
+              << ",\"roi_width\":" << summary.roi_width
+              << ",\"roi_height\":" << summary.roi_height
+              << ",\"accepted_pixels\":" << summary.accepted_pixels
+              << ",\"mask_byte_count\":" << summary.mask_byte_count
+              << ",\"marked_mask_bytes\":" << summary.marked_mask_bytes
+              << ",\"automatic_false_positive_risk\":"
+              << (summary.automatic_false_positive_risk ? "true" : "false")
+              << ",\"automatic_candidate_pixel_fraction\":"
+              << summary.automatic_candidate_pixel_fraction
+              << ",\"component_count\":" << summary.components.size()
+              << ",\"by_class\":{\"dust\":" << by_class[0]
+              << ",\"pinhole\":" << by_class[1]
+              << ",\"scratch_horizontal\":" << by_class[2]
+              << ",\"scratch_vertical\":" << by_class[3]
+              << ",\"scratch_diagonal\":" << by_class[4]
+              << ",\"emulsion\":" << by_class[5]
+              << ",\"micro_speck\":" << by_class[6] << '}'
+              << ",\"total_microseconds\":"
+              << static_cast<std::uint64_t>(
+                     std::chrono::duration_cast<std::chrono::microseconds>(
+                         finished - started).count())
+              << "}\n";
+    return summary.succeeded ? 0 : 1;
+}
+
 }  // namespace
 
 int run_grain_mend_detect(
@@ -86,6 +141,15 @@ int run_grain_mend_detect(
     // 마지막 인자가 `dump=<경로>` 면 계측 출력이며 나머지 파싱에서 뺍니다.
     std::filesystem::path dump_path{};
     int argument_count = input_argument_count;
+    // 마지막(또는 `dump=` 바로 앞) 인자가 `pipeline` 이면 앱이 지나는 길
+    // (`pipeline::develop_detect_grain_mend`)로 돕니다. `dump=` 와 같은 자리 규칙이라
+    // 기존 인자 파싱을 건드리지 않습니다.
+    bool through_pipeline = false;
+    if (argument_count >= 4 &&
+        std::wstring_view{arguments[argument_count - 1]} == L"pipeline") {
+        through_pipeline = true;
+        --argument_count;
+    }
     if (argument_count >= 4) {
         const std::wstring_view last{arguments[argument_count - 1]};
         if (last.size() > dump_prefix.size() &&
@@ -161,6 +225,10 @@ int run_grain_mend_detect(
         roi.y = 0.25;
         roi.width = 0.5;
         roi.height = 0.5;
+    }
+    if (through_pipeline) {
+        return report_pipeline_detect(
+            std::filesystem::path{arguments[2]}, parameters, roi);
     }
     // 검출 안쪽의 형태학이 GPU 를 쓰게 표를 겁니다. 여러 번 불러도 한 번만 겁니다.
     // `NEGA_GPU=0` 이면 장치를 안 열므로 표도 안 걸리고 CPU 그대로 돕니다.

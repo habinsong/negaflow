@@ -287,6 +287,9 @@
 
                         <inspector:DevelopBaseCard x:Name="BaseCard" x:FieldModifier="internal" Visibility="Collapsed" />
                         <inspector:DevelopGeometryCard x:Name="GeometryCard" x:FieldModifier="internal" Visibility="Collapsed" />
+                        <!-- macOS `editToolContent` 는 편집 탭에 GeometryToolSection 다음으로
+                             LocalAdjustmentSection 을 냅니다. -->
+                        <inspector:DevelopLocalAdjustmentSection x:Name="LocalAdjustmentCard" x:FieldModifier="internal" Visibility="Collapsed" />
                         <inspector:DevelopResetCard x:Name="ResetCard" x:FieldModifier="internal" Visibility="Collapsed" />
 
                         <inspector:DevelopAdjustmentStack x:Name="Adjustments" x:FieldModifier="internal" />

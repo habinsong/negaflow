@@ -49,6 +49,14 @@ public sealed partial class DevelopBaseCard : UserControl
         BasePickerModeChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>macOS 메뉴 <c>basePickerTool</c> — 스포이드 단추와 같은 토글입니다.</summary>
+    public void ToggleBasePickerFromMenu()
+    {
+        IsBasePickerActive = !IsBasePickerActive;
+        ApplyBasePickerVisual();
+        BasePickerModeChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public void Bind(DevelopPanelState hostPanel)
     {
         ArgumentNullException.ThrowIfNull(hostPanel);

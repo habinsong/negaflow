@@ -38,6 +38,8 @@ public sealed partial class ColorGradingEditor : UserControl
         LuminanceControl.Label = AppResources.Get("developLuminance", "Text");
         BlendingControl.Label = AppResources.Get("developBlending", "Text");
         BalanceControl.Label = AppResources.Get("developBalance", "Text");
+        HueLabel.Text = AppResources.Get("developHue", "Text");
+        SaturationLabel.Text = AppResources.Get("developSaturationAbbrev", "Text");
         AutomationProperties.SetName(
             WheelCanvas,
             AppResources.Get("developColorGradingWheel", "Value"));
@@ -158,8 +160,11 @@ public sealed partial class ColorGradingEditor : UserControl
         Canvas.SetLeft(marker, handle.X - 8);
         Canvas.SetTop(marker, handle.Y - 8);
         WheelCanvas.Children.Add(marker);
-        HueReadout.Text = $"{AppResources.Get("developHue", "Text")} {region.Hue:F0}°";
-        SaturationReadout.Text = $"{AppResources.Get("developSaturation", "Text")} {region.Saturation:P0}";
+        // macOS 은 이름과 숫자를 따로 적습니다 — 이름은 `.caption`, 숫자는 `.caption2` 에
+        // 고정폭 숫자이고 흐림입니다. `%.0f%%` 라 문화권별 백분율 기호 앞에
+        // 띄우기를 넣지 않습니다.
+        HueReadout.Text = $"{region.Hue:F0}°";
+        SaturationReadout.Text = FormattableString.Invariant($"{region.Saturation * 100:F0}%");
         LuminanceControl.Value = region.Luminance;
         BlendingControl.Value = Grading.Blending;
         BalanceControl.Value = Grading.Balance;

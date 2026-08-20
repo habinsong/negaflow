@@ -48,6 +48,15 @@ public sealed class ThumbnailService : IAsyncDisposable
     private readonly ConcurrentDictionary<string, DevelopedPreview> developed = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, Task> developedInFlight = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// macOS <c>FrameCacheManager.residentDevelopedIDs</c>. 이것이 없어서
+    /// <see cref="developed"/> 가 한 번 방문한 프레임의 전체 해상도 BGRA 를 <b>영구히</b>
+    /// 들고 있었습니다 — 3600×2406 이면 프레임당 34.6MB 라, 사진을 옮겨 다니면 그대로 쌓여
+    /// 네이티브 할당이 실패하고 앱이 죽었습니다.
+    /// </summary>
+    private readonly FrameResidency developedResidency = new(
+        FrameCacheBudget.AutomaticLimits(InstalledMemoryBytes()).Developed);
+
     /// <summary>현상 미리보기 화소입니다. 인화 판은 360 JPEG 가 아니라 이것을 먼저 씁니다.</summary>
     public readonly record struct DevelopedPreview(byte[] Pixels, int Width, int Height);
 
@@ -97,6 +106,66 @@ public sealed class ThumbnailService : IAsyncDisposable
         }
 
         developed[frameId] = new DevelopedPreview(bgra[..bytes].ToArray(), width, height);
+        // macOS `markDevelopedResident` — FIFO 재등록 뒤 한도 초과분을 내려놓습니다.
+        developedResidency.MarkResident(frameId, EvictDeveloped);
+    }
+
+    /// <summary>macOS <c>selectedFrameID</c> — 보고 있는 사진은 축출하지 않습니다.</summary>
+    public string? SelectedFrameId
+    {
+        get => developedResidency.SelectedFrameId;
+        set => developedResidency.SelectedFrameId = value;
+    }
+
+    /// <summary>지금 상주 중인 현상본 화소 바이트입니다. 시험이 축출을 확인하는 자리입니다.</summary>
+    public long DevelopedResidentBytes()
+    {
+        long total = 0;
+        foreach (DevelopedPreview preview in developed.Values)
+        {
+            total += preview.Pixels.LongLength;
+        }
+        return total;
+    }
+
+    /// <summary>
+    /// <see cref="RememberDeveloped"/> 가 이미 만든 <b>사본</b>에서 썸네일을 만듭니다.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Publish"/> 는 호출자(UI 스레드)의 공유 버퍼를 읽어야 해서 866만 화소
+    /// 축소를 UI 스레드에서 했습니다. 사본은 우리 것이므로 축소까지 워커로 넘길 수 있습니다.
+    /// </remarks>
+    public void PublishFromDeveloped(string frameId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(frameId);
+        if (!developed.TryGetValue(frameId, out DevelopedPreview preview))
+        {
+            return;
+        }
+        _ = Task.Run(() =>
+        {
+            byte[] reduced = ThumbnailScaler.Reduce(
+                preview.Pixels,
+                preview.Width,
+                preview.Height,
+                MaximumDimension,
+                out int reducedWidth,
+                out int reducedHeight);
+            if (codec.EncodeJpeg(reduced, reducedWidth, reducedHeight) is not { } jpeg)
+            {
+                return;
+            }
+            Store(frameId, jpeg);
+            RaiseReady(frameId);
+        });
+    }
+
+    private void EvictDeveloped(string frameId) => developed.TryRemove(frameId, out _);
+
+    private static ulong InstalledMemoryBytes()
+    {
+        long installed = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+        return installed > 0 ? (ulong)installed : 0UL;
     }
 
     /// <summary>
@@ -184,12 +253,65 @@ public sealed class ThumbnailService : IAsyncDisposable
         });
     }
 
+    /// <summary>
+    /// macOS <c>developFrame(frame, preserveThumbnail: false)</c> — 현상 설정이 바뀐 프레임을
+    /// 다시 현상해 썸네일을 갈아 끼웁니다.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <see cref="Request"/> 와 다른 점이 둘입니다. 첫째, 이미 들고 있어도 그냥 지나가지 않고
+    /// <b>반드시</b> 다시 그립니다 — 폴더 일괄 적용 뒤에도 썸네일이 옛 그림 그대로였던 원인이
+    /// 여기였습니다. 둘째, 디스크에 남은 예전 정착본을 <b>읽지 않습니다.</b> 그것도 옛 설정으로
+    /// 만든 그림이기 때문입니다.
+    /// </para>
+    /// <para>
+    /// 메모리에 있는 옛 썸네일은 새 것이 나올 때까지 그대로 둡니다. macOS 도 카드를 비우지 않고
+    /// 결과가 오면 덮어씁니다. 다 만든 뒤 <see cref="Store"/> 가 메모리와 디스크를 함께 갈아
+    /// 끼우므로 디스크 큐에서도 지우기·쓰기가 순서대로 처리됩니다.
+    /// </para>
+    /// <para>
+    /// 기다릴 수 있게 열어 둔 이유는 폴더 일괄 적용이 macOS 처럼 <b>실제 현상</b>에 맞춰 진행률을
+    /// 내야 하기 때문입니다. 동시 개수는 <see cref="MaximumConcurrentRenders"/> 로 묶여 있어
+    /// macOS <c>maxConcurrentDevelopments</c> 와 같습니다.
+    /// </para>
+    /// </remarks>
+    public async Task RerenderAsync(
+        LibraryFrameSnapshot frame,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(frame);
+        // 전체 해상도 현상본은 옛 설정으로 만든 것이라 인화 미리보기가 다시 뜨게 버립니다.
+        developed.TryRemove(frame.Id, out _);
+        developedResidency.Remove(frame.Id);
+        if (!frame.CanDevelop)
+        {
+            return;
+        }
+
+        await renderSlots.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (Render(frame) is not { } jpeg)
+            {
+                return;
+            }
+            Store(frame.Id, jpeg);
+            RaiseReady(frame.Id);
+        }
+        finally
+        {
+            renderSlots.Release();
+        }
+    }
+
     /// <summary>프레임이 라이브러리에서 사라질 때 메모리와 디스크 양쪽에서 지웁니다.</summary>
     public void Invalidate(string frameId)
     {
         ArgumentException.ThrowIfNullOrEmpty(frameId);
         memory.TryRemove(frameId, out _);
         developed.TryRemove(frameId, out _);
+        // macOS `removeDevelopedResident`.
+        developedResidency.Remove(frameId);
         disk.Remove(frameId, PathFor(frameId));
     }
 

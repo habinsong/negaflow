@@ -16,6 +16,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
     internal WorkspacePresentationState? workspaceState;
     internal LibraryHostService? libraryHost;
     internal ThumbnailService? thumbnails;
+    internal Views.Library.Scanner.ScanSessionHost? scanSessionHost;
     internal Microsoft.UI.WindowId? importWindowId;
     internal bool isResizing;
     internal double liveWidth = ShellLayoutMetrics.LibraryControlsDefaultWidth;
@@ -56,8 +57,9 @@ public sealed partial class LibraryWorkspaceView : UserControl
         layout = new LibraryWorkspaceLayout(this);
         ScanPanel.IsWanted = () => ImportScannerButton.IsChecked == true;
         ScanPanel.ExpandRequested += (_, _) => ImportScannerButton.IsChecked = true;
+        ImportScannerButton.Checked += OnImportScannerToggled;
+        ImportScannerButton.Unchecked += OnImportScannerToggled;
         ScanPanel.LibraryChanged += OnEmbeddedLibraryChanged;
-        DevelopDefaultsPanel.LibraryChanged += OnEmbeddedLibraryChanged;
         CullingSurface.AttachChrome(
             CullingGridButton,
             CullingSurveyButton,
@@ -77,12 +79,43 @@ public sealed partial class LibraryWorkspaceView : UserControl
         Loaded += OnLoaded;
     }
 
+    /// <summary>
+    /// macOS 워크플로 메뉴의 프로세스 명령입니다. 좌측탭에는 이 구획이 없고(폴더 머리줄이
+    /// 그 일을 합니다) 명령은 모델을 직접 고칩니다 — <c>AppModel.applyDevelopmentProcess</c>.
+    /// </summary>
+    internal void ApplyDevelopProcessShortcut(WorkflowShortcutAction action)
+    {
+        if (libraryHost is not { } host || selection.ActionableFrame() is not { } frame)
+        {
+            return;
+        }
+        if (DevelopDefaultsCommands.ApplyProcess(
+                host,
+                frame,
+                DevelopDefaultsCommands.ProcessFor(action)) == LibraryFrameError.None)
+        {
+            OnEmbeddedLibraryChanged(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>macOS <c>AppModel.applyDevelopTarget</c> — 메뉴·단축키의 타깃 전환입니다.</summary>
+    internal void ApplyDevelopTargetShortcut(DevelopTarget target)
+    {
+        if (libraryHost is not { } host || selection.ActionableFrame() is not { } frame)
+        {
+            return;
+        }
+        if (DevelopDefaultsCommands.ApplyTarget(host, frame, target) == LibraryFrameError.None)
+        {
+            OnEmbeddedLibraryChanged(this, EventArgs.Empty);
+        }
+    }
+
     /// <summary>언어가 바뀌면 문구를 다시 겁니다. macOS 는 model.appLanguage 하나로 됩니다.</summary>
     public void Localize()
     {
         copy.Localize();
         ScanPanel.Localize();
-        DevelopDefaultsPanel.Localize();
         CollectionsPanel.Localize();
         CullingSurface.Localize();
     }
@@ -123,7 +156,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         libraryHost = host;
         importWindowId = windowId;
         ScanPanel.Bind(host);
-        DevelopDefaultsPanel.Bind(host, selection.ActionableFrame);
+        ScanPanel.WindowId = windowId;
         FilesSourceTree.Bind(host);
         CollectionsPanel.Bind(
             host,
@@ -158,6 +191,18 @@ public sealed partial class LibraryWorkspaceView : UserControl
 
     internal void RaiseFrameOpenRequested(LibraryFrameListItem item) =>
         FrameOpenRequested?.Invoke(this, item);
+
+    /// <summary>
+    /// 폴더 머리줄의 적용 단추가 그 폴더의 사진을 통째로 바꿔 놓았을 때입니다.
+    /// </summary>
+    /// <remarks>
+    /// macOS 는 <c>ScanFrame</c> 관찰로 현상뷰와 인화뷰가 저절로 따라오지만,
+    /// WinUI 는 그런 관찰이 없어 바뀌었다는 것을 직접 알려 줘야 합니다.
+    /// </remarks>
+    public event EventHandler<IReadOnlyList<string>>? FolderDevelopmentApplied;
+
+    internal void RaiseFolderDevelopmentApplied(IReadOnlyList<string> frameIds) =>
+        FolderDevelopmentApplied?.Invoke(this, frameIds);
 
     public void PresentScannerSetup() => rail.PresentScanner();
 
@@ -217,7 +262,19 @@ public sealed partial class LibraryWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
+        // macOS `if !searchText.isEmpty` — 글자가 있을 때만 지우기가 나옵니다.
+        LibraryClearSearchButton.Visibility = LibrarySearchBox.Text.Length == 0
+            ? Visibility.Collapsed
+            : Visibility.Visible;
         ShowFilteredItems();
+    }
+
+    /// <summary>macOS `onClearSearch` — 검색어를 지우고 목록을 되돌립니다.</summary>
+    private void OnLibraryClearSearchClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        LibrarySearchBox.Text = string.Empty;
     }
 
     private void OnSourceRailClicked(object sender, RoutedEventArgs args) =>
@@ -228,6 +285,15 @@ public sealed partial class LibraryWorkspaceView : UserControl
 
     private void OnFolderProcessChanged(object sender, SelectionChangedEventArgs args) =>
         rail.OnFolderProcessChanged(sender, args);
+
+    private void OnFolderTargetChanged(object sender, SelectionChangedEventArgs args) =>
+        rail.OnFolderTargetChanged(sender, args);
+
+    private void OnFolderApplyClicked(object sender, RoutedEventArgs args) =>
+        rail.OnFolderApplyClicked(sender, args);
+
+    private void OnFolderDisclosureClicked(object sender, RoutedEventArgs args) =>
+        rail.OnFolderDisclosureClicked(sender, args);
 
     private void OnFiltersToggled(object sender, RoutedEventArgs args) =>
         filters.OnFiltersToggled(sender, args);
@@ -342,6 +408,35 @@ public sealed partial class LibraryWorkspaceView : UserControl
         _ = sender;
         _ = args;
         _ = ScanPanel.OpenAsync();
+    }
+
+    /// <summary>
+    /// macOS <c>presentScannerSetup()</c> 은 <c>showScannerControls</c> 하나만 켭니다. 그 값을
+    /// 라이브러리뷰와 현상뷰가 함께 보므로 여기서 공유 자리에 옮겨 적습니다.
+    /// </summary>
+    private void OnImportScannerToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        scanSessionHost?.SetShowScannerControls(ImportScannerButton.IsChecked == true);
+    }
+
+    /// <summary>
+    /// 라이브러리뷰와 현상뷰가 같은 스캐너 세션을 보게 합니다. macOS 는 <c>AppModel</c> 하나가
+    /// 그 상태를 들고 두 사이드바가 같은 구획을 냅니다.
+    /// </summary>
+    public void AttachScanSessionHost(Views.Library.Scanner.ScanSessionHost host)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        scanSessionHost = host;
+        ScanPanel.AttachSessionHost(host);
+        host.ShowScannerControlsChanged += (_, _) =>
+        {
+            if (ImportScannerButton.IsChecked != host.ShowScannerControls)
+            {
+                ImportScannerButton.IsChecked = host.ShowScannerControls;
+            }
+        };
     }
 
     /// <summary>저장한 조건을 검색어와 빠른 필터에 되돌립니다.</summary>

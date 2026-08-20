@@ -30,6 +30,7 @@
 #include "negaflow/gpu/gpu_scanner_target_grade.h"
 #include "negaflow/gpu/gpu_texture_grain.h"
 #include "negaflow/gpu/gpu_vibrance.h"
+#include "negaflow/gpu/gpu_preview_display_encode.h"
 #include "negaflow/gpu/gpu_working_image.h"
 #include "negaflow/pipeline/gpu_accelerator.h"
 
@@ -38,7 +39,9 @@ namespace negaflow::pipeline {
 struct GpuAccelerator::State final {
     // ☠️ D3D11 즉시 컨텍스트는 스레드 안전하지 않습니다. 모든 GPU 호출이 이 자물쇠
     //    안에서 돕니다 — 빼면 두 현상이 겹칠 때 조용히 깨집니다.
-    std::mutex lock{};
+    //    `recursive` 인 이유: `GpuResidentScope` 가 사슬 동안 자물쇠를 들고,
+    //    그 안의 invert/tone 이 같은 스레드에서 다시 잡습니다.
+    std::recursive_mutex lock{};
     gpu::GpuDevice device{};
     gpu::GpuToneStage tone{};
     gpu::GpuFilmScanDenoiseStage denoise{};
@@ -89,6 +92,47 @@ struct GpuAccelerator::State final {
     //    24MP 에서 264 MB 텍스처를 호출마다 할당·해제하고, 실측으로 그 할당이
     //    다운로드 시간의 큰 몫이었습니다. 필름 룩 오케스트레이터도 이 묶음을 받습니다.
     gpu::GpuImagePool pool{};
+    gpu::GpuFiniteCheck finite{};
+    bool finite_ready{false};
+    gpu::GpuPreviewDisplayEncode preview_encode{};
+    bool preview_encode_ready{false};
+
+    // 프리뷰 사슬이 GPU 에 머무는 동안의 호스트 별칭.
+    // macOS `CIImage` 가 마지막에 한 번 평가되는 것과 같은 자리입니다
+    // (`DevelopFrameRenderer.sharedRenderContext`).
+    struct ResidentFrame final {
+        int scope_depth{0};
+        const void* host{nullptr};
+        std::uint32_t width{0U};
+        std::uint32_t height{0U};
+        std::uint32_t stride{0U};
+        int read_slot{0};
+        bool host_stale{false};
+    };
+    ResidentFrame resident{};
+
+    [[nodiscard]] bool resident_matches(
+        const void* const pixels,
+        const std::uint32_t width,
+        const std::uint32_t height) const noexcept {
+        return resident.scope_depth > 0 && resident.host == pixels &&
+            resident.width == width && resident.height == height &&
+            pool.images()[resident.read_slot].is_valid();
+    }
+
+    void bind_resident(
+        const void* const pixels,
+        const std::uint32_t width,
+        const std::uint32_t height,
+        const std::uint32_t stride,
+        const int slot) noexcept {
+        resident.host = pixels;
+        resident.width = width;
+        resident.height = height;
+        resident.stride = stride;
+        resident.read_slot = slot;
+        resident.host_stale = true;
+    }
 
     // 평면 ↔ RGBA 변환용. 매 호출 할당하지 않으려고 들고 있습니다.
     std::vector<core::Rgba32F> morphology_staging{};

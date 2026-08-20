@@ -3,6 +3,7 @@
 #include "negaflow/pipeline/develop_export.h"
 
 #include "export/stages/observe.h"
+#include "export/support/preview.h"
 #include "export/support/progress.h"
 #include "negaflow/imaging/scanner_to_working.h"
 
@@ -17,6 +18,12 @@ namespace negaflow::pipeline::develop_export_detail {
     RunTracker& tracker,
     std::stop_source& stop,
     const ObservedSource& observed,
-    negaflow::imaging::WorkingImage& image) noexcept;
+    negaflow::imaging::WorkingImage& image,
+    const PreviewTarget* preview = nullptr) noexcept;
+
+// 디코드 상주 캐시(macOS `residentCleanedRawIDs`). 시험이 비우고 재는 자리입니다.
+void decoded_source_store_reset() noexcept;
+
+[[nodiscard]] std::uint64_t decoded_source_store_resident_bytes() noexcept;
 
 }  // namespace negaflow::pipeline::develop_export_detail

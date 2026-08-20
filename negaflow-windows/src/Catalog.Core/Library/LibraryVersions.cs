@@ -22,6 +22,12 @@ public sealed record LibraryVersionSnapshot(
 public static class LibraryVersions
 {
     internal const string VersionsName = "developSnapshots";
+
+    /// <summary>macOS `Sidecar.developHistory` — 스냅샷과 같은 모양의 두 번째 목록입니다.</summary>
+    public const string HistoryListName = "developHistory";
+
+    /// <summary>macOS `Sidecar.developSnapshots`.</summary>
+    public const string SnapshotListName = VersionsName;
     internal const string VersionIdName = "id";
     internal const string VersionNameName = "name";
     internal const string VersionCreatedAtName = "createdAt";
@@ -31,10 +37,13 @@ public static class LibraryVersions
     /// <summary>macOS 와 같이 이름은 비어 있을 수 없고 지나치게 길지도 않습니다.</summary>
     public const int MaximumNameLength = 120;
 
-    public static bool TryRead(JsonElement frameRecord, out IReadOnlyList<LibraryVersionSnapshot> versions)
+    public static bool TryRead(
+        JsonElement frameRecord,
+        out IReadOnlyList<LibraryVersionSnapshot> versions,
+        string listName = VersionsName)
     {
         versions = [];
-        if (!frameRecord.TryGetProperty(VersionsName, out JsonElement element) ||
+        if (!frameRecord.TryGetProperty(listName, out JsonElement element) ||
             element.ValueKind == JsonValueKind.Null)
         {
             return true;
@@ -83,7 +92,8 @@ public static class LibraryVersions
         JsonObject frameRecord,
         string versionId,
         string name,
-        DateTimeOffset createdAt)
+        DateTimeOffset createdAt,
+        string listName = VersionsName)
     {
         ArgumentNullException.ThrowIfNull(frameRecord);
         if (string.IsNullOrWhiteSpace(versionId) ||
@@ -98,7 +108,7 @@ public static class LibraryVersions
         }
 
         JsonObject updated = frameRecord.DeepClone().AsObject();
-        JsonArray versions = ExistingVersions(updated);
+        JsonArray versions = ExistingVersions(updated, listName);
         foreach (JsonNode? existing in versions)
         {
             if (existing is JsonObject entry &&
@@ -116,7 +126,7 @@ public static class LibraryVersions
             [VersionPresetIdName] = updated["presetID"]?.DeepClone(),
             [VersionParametersName] = parameters.DeepClone(),
         });
-        updated[VersionsName] = versions;
+        updated[listName] = versions;
         return LibraryFrameWriteResult.Success(updated);
     }
 
@@ -124,7 +134,10 @@ public static class LibraryVersions
     /// 담아 둔 recipe 를 그대로 되돌립니다. 버전 목록 자체는 남으므로 되돌린 뒤에도 다른
     /// 버전으로 다시 갈 수 있습니다.
     /// </summary>
-    public static LibraryFrameWriteResult Restore(JsonObject frameRecord, string versionId)
+    public static LibraryFrameWriteResult Restore(
+        JsonObject frameRecord,
+        string versionId,
+        string listName = VersionsName)
     {
         ArgumentNullException.ThrowIfNull(frameRecord);
         if (string.IsNullOrWhiteSpace(versionId))
@@ -134,7 +147,7 @@ public static class LibraryVersions
 
         JsonObject updated = frameRecord.DeepClone().AsObject();
         // 되돌리기는 목록을 읽기만 합니다. 떼어내면 되돌린 뒤 버전이 사라집니다.
-        if (updated[VersionsName] is not JsonArray stored_versions)
+        if (updated[listName] is not JsonArray stored_versions)
         {
             return LibraryFrameWriteResult.Failure(LibraryFrameError.MissingVersion);
         }
@@ -156,30 +169,33 @@ public static class LibraryVersions
         return LibraryFrameWriteResult.Failure(LibraryFrameError.MissingVersion);
     }
 
-    public static LibraryFrameWriteResult Delete(JsonObject frameRecord, string versionId)
+    public static LibraryFrameWriteResult Delete(
+        JsonObject frameRecord,
+        string versionId,
+        string listName = VersionsName)
     {
         ArgumentNullException.ThrowIfNull(frameRecord);
         JsonObject updated = frameRecord.DeepClone().AsObject();
-        JsonArray versions = ExistingVersions(updated);
+        JsonArray versions = ExistingVersions(updated, listName);
         for (int index = 0; index < versions.Count; ++index)
         {
             if (versions[index] is JsonObject entry &&
                 entry[VersionIdName]?.GetValue<string>() == versionId)
             {
                 versions.RemoveAt(index);
-                updated[VersionsName] = versions;
+                updated[listName] = versions;
                 return LibraryFrameWriteResult.Success(updated);
             }
         }
         return LibraryFrameWriteResult.Failure(LibraryFrameError.MissingVersion);
     }
 
-    private static JsonArray ExistingVersions(JsonObject frameRecord)
+    private static JsonArray ExistingVersions(JsonObject frameRecord, string listName)
     {
-        if (frameRecord[VersionsName] is JsonArray existing)
+        if (frameRecord[listName] is JsonArray existing)
         {
             // 원본에서 떼어내야 다른 노드의 부모로 다시 붙일 수 있습니다.
-            frameRecord.Remove(VersionsName);
+            frameRecord.Remove(listName);
             return existing;
         }
         return [];

@@ -105,7 +105,11 @@ internal sealed class DevelopExportCopy
             view.QuickExportFolderButton,
             AppResources.Get("developExportFolderChange", "Content"));
         view.QuickExportFilenameLabel.Text = AppResources.Get("developExportFilename", "Text");
-        SetButtonText(view.QuickExportButton, AppResources.Get("commandQuickExport", "Text"));
+        string reveal = AppResources.Get("libraryShowInExplorer", "Content");
+        view.QuickExportButton.Title = AppResources.Get("commandQuickExport", "Text");
+        view.QuickExportButton.RevealHelp = reveal;
+        view.ExportButton.RevealHelp = reveal;
+        view.ExportPreviewLabel.Text = AppResources.Get("developExportPreview", "Text");
         FillDpiSelector(view.QuickExportDpiSelector);
         FillSizeSelector(view.QuickExportSizeSelector);
 

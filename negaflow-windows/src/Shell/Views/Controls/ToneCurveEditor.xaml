@@ -42,15 +42,27 @@
                 <TextBox x:Name="OutputEditor" AutomationProperties.Name="Point Curve output percentage" KeyDown="OnPointEditorKeyDown" LostFocus="OnPointEditorLostFocus" />
             </StackPanel>
         </Grid>
+        <!-- macOS `ToneCurveEditor` 의 마지막 줄: 왼쪽에 조작 안내, 오른쪽에 초기화 하나뿐입니다.
+             점 추가·삭제는 **캔버스에서** 합니다(클릭·더블클릭) — 단추를 따로 두면 macOS 에
+             없는 것을 지어내는 것이고, 안내문이 없으면 조작법을 알 길이 없습니다. -->
         <Grid ColumnSpacing="6">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Button x:Name="AddPointButton" Grid.Column="0" Click="OnAddPointClicked" />
-            <Button x:Name="DeletePointButton" Grid.Column="1" Click="OnDeletePointClicked" />
-            <Button x:Name="ResetChannelButton" Grid.Column="2" Click="OnResetChannelClicked" />
+            <TextBlock
+                x:Name="CurveHelpText"
+                VerticalAlignment="Center"
+                FontSize="11"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                TextWrapping="Wrap" />
+            <Button
+                x:Name="ResetChannelButton"
+                Grid.Column="1"
+                Background="Transparent"
+                BorderThickness="0"
+                Click="OnResetChannelClicked"
+                FontSize="11" />
         </Grid>
     </StackPanel>
 </UserControl>

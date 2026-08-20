@@ -173,9 +173,7 @@ internal sealed class PrintSourceController
         ToolTipService.SetToolTip(surface.LeftHeader, title);
         ToolTipService.SetToolTip(surface.RightHeader, title);
 
-        bool hasFrames = libraryHost?.Frames.Count > 0;
-        surface.FilesTree.Visibility = hasFrames ? Visibility.Visible : Visibility.Collapsed;
-        surface.NoFrameLeftPanel.Visibility = hasFrames ? Visibility.Collapsed : Visibility.Visible;
+        surface.ApplySourcePane(libraryHost?.Frames.Count > 0);
         if (activeFrameId is not null &&
             nodesByFrameId.TryGetValue(activeFrameId, out TreeViewNode? selectedNode))
         {

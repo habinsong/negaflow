@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
+    <controls:ThicknessTextConverter x:Key="ThicknessTextConverter" />
+    <!-- macOS `folderSectionHeader`(`LibraryWorkspaceView+Grid.swift`) 와
+         `LibraryFolderDevelopmentControls` 입니다. 격자 XAML 이 500줄을 넘겨 여기로 뺐습니다 —
+         머리줄은 격자 항목과 다른 이유로 바뀌므로 자리도 따로 둡니다. -->
+    <DataTemplate x:Key="LibraryFolderHeaderTemplate">
+        <!-- macOS `LibraryFolderDevelopmentControls` + 폴더 머리줄
+             (스크린샷 `라이브러리뷰_폴더별_폴더 프레임 사진뷰 접기.png`):
+             [화살표][폴더][이름][N장][프로세스 98][타깃 84][적용] 이
+             **왼쪽부터 차례로** 붙고 남는 폭은 오른쪽에 남깁니다.
+             사이 7 · 높이 30 · 라운딩 8. -->
+        <Grid Margin="{Binding HeaderMargin, Converter={StaticResource ThicknessTextConverter}}" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <!-- 접기/펼치기. macOS 는 펼침 ⌄ · 접힘 > 입니다. -->
+            <Button
+                Width="20"
+                Height="20"
+                Padding="0"
+                VerticalAlignment="Center"
+                AutomationProperties.AutomationId="negaflow.library.folder.disclosure"
+                Background="Transparent"
+                BorderThickness="0"
+                Click="OnFolderDisclosureClicked"
+                Tag="{Binding}">
+                <FontIcon
+                    FontSize="10"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Glyph="{Binding DisclosureGlyph}" />
+            </Button>
+            <FontIcon
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                FontSize="13"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Glyph="&#xE8B7;" />
+            <!-- macOS `.font(.headline.weight(.semibold))` -->
+            <TextBlock
+                Grid.Column="2"
+                VerticalAlignment="Center"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Text="{Binding Title}"
+                TextTrimming="CharacterEllipsis" />
+            <!-- macOS `.font(.caption.monospacedDigit()).foregroundStyle(.secondary)` -->
+            <TextBlock
+                Grid.Column="3"
+                VerticalAlignment="Center"
+                FontFamily="Consolas"
+                FontSize="12"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="{Binding FrameCountLabel}" />
+            <!-- macOS `LibraryFolderDevelopmentControls` — 이 셋만 `HStack(spacing: 7)` 입니다. -->
+            <ComboBox
+                Grid.Column="4"
+                Margin="0,0,-1,0"
+                Width="98"
+                Height="30"
+                CornerRadius="8"
+                AutomationProperties.AutomationId="negaflow.library.folder.process"
+                DisplayMemberPath="Name"
+                FontSize="12"
+                ItemsSource="{Binding ProcessChoices}"
+                SelectedIndex="{Binding ProcessIndex, Mode=OneWay}"
+                SelectionChanged="OnFolderProcessChanged"
+                Tag="{Binding}" />
+            <ComboBox
+                Grid.Column="5"
+                Margin="0,0,-1,0"
+                Width="84"
+                Height="30"
+                CornerRadius="8"
+                AutomationProperties.AutomationId="negaflow.library.folder.target"
+                DisplayMemberPath="Name"
+                FontSize="12"
+                ItemsSource="{Binding TargetChoices}"
+                SelectedIndex="{Binding TargetIndex, Mode=OneWay}"
+                SelectionChanged="OnFolderTargetChanged"
+                Tag="{Binding}" />
+            <Button x:Uid="libraryFolderApply"
+                Grid.Column="6"
+                Height="30"
+                Padding="10,0"
+                AutomationProperties.AutomationId="negaflow.library.folder-develop-apply"
+                Click="OnFolderApplyClicked"
+                CornerRadius="8"
+                FontSize="12"
+                FontWeight="SemiBold"
+                Tag="{Binding}" />
+            <TextBlock
+                Grid.Column="7"
+                VerticalAlignment="Center"
+                FontSize="11"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Tag="{Binding}"
+                Text="" />
+            <Button x:Uid="libraryLocateFolder"
+                Grid.Column="8"
+                Margin="8,0,0,0"
+                Tag="{Binding}"
+                Padding="4,0"
+                AutomationProperties.AutomationId="negaflow.library.relink-folder"
+                Background="Transparent"
+                BorderThickness="0"
+                Click="OnLocateFolderClicked"
+                Visibility="{Binding IsRegistered, Converter={StaticResource BooleanToVisibilityConverter}}" />
+        </Grid>
+    </DataTemplate>
+</ResourceDictionary>

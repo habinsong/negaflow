@@ -8,7 +8,7 @@ namespace Negaflow.Shell;
 /// Develop 패널이 들고 있는 것 전부입니다. XAML 코드비하인드가 아니라 여기 두어야 슬라이더의
 /// clamp 와 결과 문구가 UI 없이 시험됩니다.
 /// </summary>
-public sealed class DevelopPanelState
+public sealed partial class DevelopPanelState
 {
     private readonly LibraryHostService host;
     private readonly DevelopBaseEditor baseEditor;
@@ -161,6 +161,14 @@ public sealed class DevelopPanelState
 
     public bool CanExport => SelectedFrame is { CanDevelop: true } && !host.IsExporting;
 
+    /// <summary>
+    /// 이 프레임을 고를 때 IR 결함 제거가 낸 결과입니다. macOS <c>statusMessage</c> 자리이며,
+    /// 화면이 읽어 문구로 바꿉니다. IR 이 돌지 않았으면 <see cref="InfraredCleanMessage.None"/>
+    /// 입니다.
+    /// </summary>
+    public InfraredCleanStatus LastInfraredClean { get; private set; } =
+        InfraredCleanStatus.Silent;
+
     public bool Select(string frameId)
     {
         ArgumentNullException.ThrowIfNull(frameId);
@@ -170,7 +178,10 @@ public sealed class DevelopPanelState
             {
                 SelectedFrame = frame;
                 LastAppliedBase = frame.AppliedBase;
-                _ = host.TryInfraredCleanIfNeeded(frame.Id);
+                // macOS 는 이 결과를 `statusMessage` 로 냅니다. 버리면 IR 이 왜 건너뛰었는지
+                // (은염 흑백·마스크 과대) 사용자가 알 방법이 없습니다.
+                LastInfraredClean = InfraredCleanStatus.From(
+                    host.TryInfraredCleanIfNeeded(frame.Id));
                 foreach (LibraryFrameSnapshot updated in host.Frames)
                 {
                     if (string.Equals(updated.Id, frame.Id, StringComparison.Ordinal))
@@ -180,136 +191,17 @@ public sealed class DevelopPanelState
                         break;
                     }
                 }
+                // macOS 는 `showDeveloped` 가 프레임 객체에 붙어 있어 프레임을 옮기면 그
+                // 프레임의 비교 모드가 따라옵니다. 여기가 그 자리입니다.
+                Compare.BindFrame(frame.Id);
                 return true;
             }
         }
         SelectedFrame = null;
         LastAppliedBase = null;
+        LastInfraredClean = InfraredCleanStatus.Silent;
+        Compare.BindFrame(null);
         return false;
-    }
-    /// <summary>
-    /// macOS GrainMend 브러시의 기본 굵기입니다. 짧은 변에 대한 비율입니다.
-    /// </summary>
-    public const double DefaultBrushThickness = 0.01;
-
-    /// <summary>macOS 복제 도장의 기본 지름입니다. 원본 raw 화소 단위입니다.</summary>
-    public const double DefaultCloneDiameterPixels = 48.0;
-
-    public const double MinimumCloneDiameterPixels = 4.0;
-
-    public const double MaximumCloneDiameterPixels = 512.0;
-
-    /// <summary>
-    /// 캔버스에서 그은 치유 브러시 획 하나를 남깁니다. 점은 <b>표시 좌표</b>로 받고 여기서
-    /// 원본 좌표로 되돌립니다 — 호출부가 좌표계를 알 필요가 없어야 어긋날 자리가 줄어듭니다.
-    /// </summary>
-    public LibraryFrameError AddBrushStroke(
-        IReadOnlyList<DefectPoint> displayPoints,
-        double thickness = DefaultBrushThickness)
-    {
-        DevelopDefectEditResult result = defectEditor.AddBrushStroke(
-            SelectedFrame,
-            displayPoints,
-            thickness);
-        return RefreshAfterDefectEdit(result);
-    }
-
-    /// <summary>
-    /// 복제 도장 획 하나입니다. 원본 점은 표시 좌표로 받으며, 변위는 원본 공간에서 계산합니다 —
-    /// 표시 공간에서 뺀 변위는 회전·수평보정이 걸린 프레임에서 방향이 틀어집니다.
-    /// </summary>
-    public LibraryFrameError AddCloneStroke(
-        IReadOnlyList<DefectPoint> displayPoints,
-        DefectPoint displaySourceAnchor,
-        double diameter = DefaultCloneDiameterPixels) =>
-        AddCloneStroke(
-            displayPoints,
-            displaySourceAnchor,
-            alignedRawOffset: null,
-            out _,
-            diameter,
-            DefectStrokeRecipeBuilder.DefaultCloneHardness);
-
-    /// <summary>
-    /// 첫 획에서 확정한 원본 공간 오프셋을 이후 획에도 그대로 씁니다. macOS 복제 도장은
-    /// 소스가 브러시를 따라 움직이므로, 새 획의 시작점마다 소스 앵커와의 변위를 다시 계산하면
-    /// 복제 위치가 튑니다.
-    /// </summary>
-    public LibraryFrameError AddCloneStroke(
-        IReadOnlyList<DefectPoint> displayPoints,
-        DefectPoint displaySourceAnchor,
-        DefectPoint? alignedRawOffset,
-        out DefectPoint usedRawOffset,
-        double diameter = DefaultCloneDiameterPixels,
-        double hardness = DefectStrokeRecipeBuilder.DefaultCloneHardness)
-    {
-        DevelopDefectEditResult result = defectEditor.AddCloneStroke(
-            SelectedFrame,
-            displayPoints,
-            displaySourceAnchor,
-            alignedRawOffset,
-            out usedRawOffset,
-            diameter,
-            hardness,
-            MinimumCloneDiameterPixels,
-            MaximumCloneDiameterPixels);
-        return RefreshAfterDefectEdit(result);
-    }
-
-    /// <summary>
-    /// 검토를 마친 검출 결과를 recipe 에 담습니다. 자동·가이드는 이 호출 전까지 사진을
-    /// 바꾸지 않습니다 — macOS 와 같은 상태 전환입니다.
-    /// </summary>
-    public LibraryFrameError AcceptDefectRegion(DefectEditItem edit)
-    {
-        DevelopDefectEditResult result = defectEditor.AcceptRegion(SelectedFrame, edit);
-        return RefreshAfterDefectEdit(result);
-    }
-
-    public bool HasDefectEdits(DefectEditKind kind) =>
-        DevelopDefectEditor.HasEdits(SelectedFrame, kind);
-
-    public bool HasDefectEdits(DefectEditLabelKind label) =>
-        DevelopDefectEditor.HasEdits(SelectedFrame, label);
-
-    /// <summary>
-    /// 한 도구가 남긴 편집만 지웁니다. 다른 도구의 편집과 자동 검출 결과는 남습니다 — macOS 의
-    /// 도구별 초기화와 같습니다.
-    /// </summary>
-    public LibraryFrameError RemoveDefectEdits(DefectEditKind kind)
-    {
-        DevelopDefectEditResult result = defectEditor.RemoveEdits(SelectedFrame, kind);
-        return RefreshAfterDefectEdit(result);
-    }
-
-    /// <summary>Resets just one visible GrainMend tool without discarding its siblings.</summary>
-    public LibraryFrameError RemoveDefectEdits(DefectEditLabelKind label)
-    {
-        DevelopDefectEditResult result = defectEditor.RemoveEdits(SelectedFrame, label);
-        return RefreshAfterDefectEdit(result);
-    }
-
-    /// <summary>
-    /// Maps a display-space, top-first normalized rectangle to the smallest axis-aligned
-    /// raw rectangle that contains all four inverse-transformed corners. Region defect
-    /// recipes are raw-space data, so persisting the display rectangle directly would
-    /// repair the wrong pixels after rotation, crop, or straighten.
-    /// </summary>
-    public bool TryMapDisplayRectToRaw(DefectRect displayRect, out DefectRect rawRect)
-    {
-        return DevelopDefectEditor.TryMapDisplayRectToRaw(
-            SelectedFrame,
-            displayRect,
-            out rawRect);
-    }
-
-    internal LibraryFrameError RefreshAfterDefectEdit(DevelopDefectEditResult result)
-    {
-        if (result.Changed && SelectedFrame is { } frame)
-        {
-            Select(frame.Id);
-        }
-        return result.Error;
     }
 
     /// <summary>
@@ -450,6 +342,34 @@ public sealed class DevelopPanelState
 
     public LibraryFrameError DeleteVersion(string versionId) =>
         RefreshAfterEdit(versionPresets.DeleteVersion(SelectedFrame, versionId));
+
+    /// <summary>macOS <c>frame.developHistory</c> — 오래된 것이 앞입니다.</summary>
+    public IReadOnlyList<LibraryVersionSnapshot> History => SelectedFrame?.History ?? [];
+
+    /// <summary>
+    /// macOS <c>AppModel.createVirtualCopy(from:)</c> — 같은 원본을 가리키는 사본을 하나
+    /// 만듭니다. 원본의 recipe·기록·스냅샷을 그대로 물려받되 파일은 복사하지 않습니다.
+    /// </summary>
+    public bool CreateVirtualCopy() =>
+        SelectedFrame is { } frame && host.CreateVirtualCopy(frame.Id) is { Length: > 0 };
+
+    /// <summary>
+    /// 지금 recipe 를 기록으로 남깁니다. macOS 는 이름을 순번으로 붙이므로(`기록 N`) 다음
+    /// 번호는 지금 목록 길이 + 1 입니다.
+    /// </summary>
+    public LibraryFrameError RecordHistory(string labelFormat)
+    {
+        ArgumentNullException.ThrowIfNull(labelFormat);
+        string label = string.Format(
+            System.Globalization.CultureInfo.CurrentCulture,
+            labelFormat,
+            History.Count + 1);
+        return RefreshAfterEdit(versionPresets.RecordHistory(SelectedFrame, label));
+    }
+
+    /// <summary>골라 둔 기록의 recipe 로 되돌립니다. 기록 목록은 남습니다.</summary>
+    public LibraryFrameError ApplyHistory(string entryId) =>
+        RefreshAfterEdit(versionPresets.ApplyHistory(SelectedFrame, entryId));
 
     /// <summary>
     /// 적어 둔 메타데이터를 바꿉니다. 레시피가 아니므로 미리보기를 다시 돌리지 않습니다 —

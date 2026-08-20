@@ -18,6 +18,7 @@ public sealed partial class InspectorSlider : UserControl
     public InspectorSlider()
     {
         InitializeComponent();
+        ApplyLayout();
         SynchronizeControls();
     }
 

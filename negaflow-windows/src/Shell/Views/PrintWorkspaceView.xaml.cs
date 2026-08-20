@@ -2,6 +2,9 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI;
+using Negaflow.Interop;
+using Negaflow.Shell.Print;
 using Negaflow.Shell.Localization;
 using Negaflow.Shell.Views.Layout;
 
@@ -19,6 +22,7 @@ public sealed partial class PrintWorkspaceView : UserControl
         LocalizeControls();
         LocalizePrintInspector();
         LocalizeCustomEditor();
+        HookPrintSegments();
     }
 
     public void Initialize(WorkspacePresentationState state, NativeEngineStatus nativeEngineStatus)
@@ -27,6 +31,9 @@ public sealed partial class PrintWorkspaceView : UserControl
         ArgumentNullException.ThrowIfNull(nativeEngineStatus);
         workspaceState = state;
         state.Changed += OnStateChanged;
+        // macOS 인화 사이드바도 현상과 **같은** `ExportSection` 이므로 같은 설정을 봅니다.
+        // 붙이지 않으면 이 탭에서 고친 값이 저장되지 않고 현상뷰와 따로 놀게 됩니다.
+        PrintExportPanel.Attach(state);
         Filmstrip.Initialize(state);
         Filmstrip.FrameSelected += OnPrintFilmstripFrameSelected;
         StatusBar.Initialize(nativeEngineStatus);
@@ -102,6 +109,15 @@ public sealed partial class PrintWorkspaceView : UserControl
         RightResizeThumb.Visibility = RightPanel.Visibility;
         Filmstrip.Visibility = preferences.IsFilmstripVisible ? Visibility.Visible : Visibility.Collapsed;
         SynchronizeWidths(preferences);
+        if (PrintExportPanel.Settings != preferences.Export ||
+            PrintExportPanel.QuickSettings != preferences.QuickExport ||
+            PrintExportPanel.Recipes != preferences.ExportRecipes)
+        {
+            PrintExportPanel.ApplyPreferences(
+                preferences.Export,
+                preferences.QuickExport,
+                preferences.ExportRecipes);
+        }
     }
 
     private void SynchronizeWidths(ShellPreferences preferences)
@@ -130,8 +146,10 @@ public sealed partial class PrintWorkspaceView : UserControl
 
     private void LocalizeControls()
     {
-        PrintContentSectionLocalized.Content = AppResources.Get("printContentSection", "Content");
         PrintOutputSectionLocalized.Content = AppResources.Get("printOutputSection", "Content");
+        AutomationProperties.SetName(
+            PrintOutputSectionLocalized,
+            AppResources.Get("printOutputSection", "Content"));
         PrintLayoutSectionLocalized.Text = AppResources.Get("printLayoutSection", "Text");
         SetNameAndTooltip(FilesRailButton, "libraryFiles");
         SetNameAndTooltip(ExportRailButton, "exportSection");
@@ -146,6 +164,154 @@ public sealed partial class PrintWorkspaceView : UserControl
         LayoutTabButton.Content = layout;
         AutomationProperties.SetName(LayoutTabButton, layout);
         LayoutModeText.Text = AppResources.Get("printLayoutMode", "Text");
+    }
+
+    /// <summary>
+    /// macOS 출력 탭의 C-print 갈래입니다. 출력 방식·인화소·인화지·인화 프로파일·인화
+    /// 미리보기가 모두 여기 붙습니다.
+    /// </summary>
+    private void LocalizeCprint()
+    {
+        OutputProcessText.Text = AppResources.Get("printOutputProcess", "Text");
+        CprintSectionText.Text = AppResources.Get("printCprintSection", "Text");
+        CprintLabText.Text = AppResources.Get("printCprintLab", "Text");
+        CprintPaperText.Text = AppResources.Get("printCprintPaper", "Text");
+        string custom = AppResources.Get("printCprintCustom", "Text");
+        CprintLabBox.PlaceholderText = custom;
+        CprintPaperBox.PlaceholderText = custom;
+        AutomationProperties.SetName(CprintLabBox, CprintLabText.Text);
+        AutomationProperties.SetName(CprintPaperBox, CprintPaperText.Text);
+        PrintProofSectionText.Text = AppResources.Get("printProofSection", "Text");
+        PrintProofProfileLabel.Text = AppResources.Get("printProofProfile", "Text");
+        PrintProofPreviewLabel.Text = AppResources.Get("printProofPreview", "Text");
+        OutputProcessSelector.SetOptions(
+            [
+                new Views.Controls.SegmentOption(
+                    PrintOutputProcess.Standard,
+                    AppResources.Get("printOutputStandard", "Text")),
+                new Views.Controls.SegmentOption(
+                    PrintOutputProcess.CPrint,
+                    AppResources.Get("printOutputCprint", "Text")),
+            ],
+            PrintOutputProcess.Standard);
+        PrintProofPreviewSelector.SetOptions(
+            [
+                new Views.Controls.SegmentOption(false, AppResources.Get("printProofOff", "Text")),
+                new Views.Controls.SegmentOption(true, AppResources.Get("printProofOn", "Text")),
+            ],
+            false);
+    }
+
+    /// <summary>
+    /// macOS 인화뷰 좌측 레일의 **파일 / 내보내기** 입니다. 둘 다 눌리며 같은 자리를 나눠 씁니다.
+    /// </summary>
+    private void OnPrintSourceRailClicked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (sender is not Button { Tag: string tag })
+        {
+            return;
+        }
+        ShowPrintSource(string.Equals(tag, "Export", StringComparison.Ordinal));
+    }
+
+    private bool printSourceIsExport;
+
+    private void ShowPrintSource(bool export)
+    {
+        printSourceIsExport = export;
+        PrintExportPanel.Visibility = export ? Visibility.Visible : Visibility.Collapsed;
+        PrintFilesSourceTree.Visibility =
+            export || !hasPrintFrames ? Visibility.Collapsed : Visibility.Visible;
+        NoFrameLeftPanel.Visibility =
+            !export && !hasPrintFrames ? Visibility.Visible : Visibility.Collapsed;
+        Microsoft.UI.Xaml.Media.Brush selected =
+            (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSelectionBrush"];
+        Microsoft.UI.Xaml.Media.Brush clear =
+            new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        Microsoft.UI.Xaml.Media.Brush accent =
+            (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"];
+        Microsoft.UI.Xaml.Media.Brush primary =
+            (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
+        FilesRailButton.Background = export ? clear : selected;
+        ExportRailButton.Background = export ? selected : clear;
+        FilesRailIcon.Foreground = export ? primary : accent;
+        ExportRailIcon.Foreground = export ? accent : primary;
+        FilesHeaderText.Text = AppResources.Get(export ? "exportSection" : "libraryFiles", "Text");
+    }
+
+    /// <summary>파일 탭이 트리를 보일지 "사진 없음" 을 보일지 정하는 값입니다.</summary>
+    private bool hasPrintFrames;
+
+    /// <summary>
+    /// 인화뷰 좌측 내보내기 탭을 실제로 동작하게 겁니다. macOS 도 현상뷰와 **같은
+    /// `ExportSection`** 이므로 같은 컨트롤에 같은 상태를 물립니다.
+    ///
+    /// ☠️ 이것을 안 부르면 탭은 열리지만 안이 죽어 있습니다 — 눌러도 아무 일이 없는 UI 입니다.
+    /// </summary>
+    public void BindExport(
+        LibraryHostService host,
+        ToneLimits limits,
+        NegativeLimits negativeLimits,
+        Microsoft.UI.WindowId windowId,
+        string engineVersion)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        ArgumentNullException.ThrowIfNull(limits);
+        ArgumentNullException.ThrowIfNull(negativeLimits);
+        ArgumentNullException.ThrowIfNull(engineVersion);
+        printExportHost = host;
+        exportPanelState = new DevelopPanelState(host, limits, negativeLimits);
+        PrintExportPanel.Bind(exportPanelState, host, windowId, engineVersion);
+        PrintExportPanel.Localize();
+        SynchronizeExportSelection();
+    }
+
+    private DevelopPanelState? exportPanelState;
+    private LibraryHostService? printExportHost;
+
+    /// <summary>인화뷰가 보고 있는 사진이 곧 내보낼 사진입니다.</summary>
+    internal void SynchronizeExportSelection()
+    {
+        if (exportPanelState is null || printExportHost?.ActiveFrameId is not { Length: > 0 } frameId)
+        {
+            return;
+        }
+        _ = exportPanelState.Select(frameId);
+        PrintExportPanel.SynchronizeExportControls();
+        PrintExportPanel.RefreshPreview();
+    }
+
+    /// <summary>
+    /// macOS 인화 인스펙터의 **레이아웃 / 출력** 두 탭입니다. 카드를 두 묶음으로 갈라 두고
+    /// 여기서 한 묶음만 보입니다 — macOS 도 같은 자리에서 갈아 끼웁니다.
+    /// </summary>
+    private void OnPrintTabClicked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (sender is not Button { Tag: string tag })
+        {
+            return;
+        }
+        ShowPrintTab(string.Equals(tag, "Output", StringComparison.Ordinal));
+    }
+
+    private void ShowPrintTab(bool output)
+    {
+        PrintLayoutTabPanel.Visibility = output ? Visibility.Collapsed : Visibility.Visible;
+        PrintOutputTabPanel.Visibility = output ? Visibility.Visible : Visibility.Collapsed;
+        Microsoft.UI.Xaml.Media.Brush selected =
+            (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSelectionBrush"];
+        Microsoft.UI.Xaml.Media.Brush clear =
+            new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        LayoutTabButton.Background = output ? clear : selected;
+        PrintOutputSectionLocalized.Background = output ? selected : clear;
+        AutomationProperties.SetItemStatus(
+            LayoutTabButton,
+            AppResources.Get(output ? "notSelected" : "selected", "Value"));
+        AutomationProperties.SetItemStatus(
+            PrintOutputSectionLocalized,
+            AppResources.Get(output ? "selected" : "notSelected", "Value"));
     }
 
     private static void SetNameAndTooltip(Button button, string resourceKey)

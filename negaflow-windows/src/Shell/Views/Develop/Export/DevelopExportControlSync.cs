@@ -142,8 +142,8 @@ internal sealed class DevelopExportControlSync
         view.ExportPreviewText.Text = projected.ExportFileNamePreview;
         view.QuickExportFilenameText.Text = projected.QuickExportFileName;
         view.ExportSourceSummaryText.Text = projected.SourceSummary;
-        view.ExportButton.IsEnabled = projected.CanExport;
-        view.QuickExportButton.IsEnabled = projected.CanExport;
-        DevelopExportCopy.SetButtonText(view.ExportButton, projected.ExportButtonText);
+        view.ExportButton.IsActionEnabled = projected.CanExport;
+        view.QuickExportButton.IsActionEnabled = projected.CanExport;
+        view.ExportButton.Title = projected.ExportButtonText;
     }
 }

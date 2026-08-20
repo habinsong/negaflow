@@ -47,8 +47,12 @@ public sealed class PresentationSettingsStore
                 return new ShellPreferences();
             }
 
-            return (JsonSerializer.Deserialize<ShellPreferences>(File.ReadAllText(path), JsonOptions)
-                ?? new ShellPreferences()).Normalize();
+            ShellPreferences stored =
+                (JsonSerializer.Deserialize<ShellPreferences>(File.ReadAllText(path), JsonOptions)
+                    ?? new ShellPreferences()).Normalize();
+            // macOS 는 인화 출력 방식만 기억하지 않습니다 — 켜 둔 채 다음 실행에서 일반 출력인
+            // 줄 알고 C-print 프루프가 걸린 결과를 받는 일을 막습니다.
+            return stored with { Print = stored.Print.Restored() };
         }
         catch (JsonException)
         {

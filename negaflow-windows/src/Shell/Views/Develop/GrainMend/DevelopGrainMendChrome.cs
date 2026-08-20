@@ -82,13 +82,17 @@ internal sealed class DevelopGrainMendChrome
         // 검토 중이 아니면 캡슐이 남아 있는 것은 가이드를 켜 둔 때뿐이고, 가이드는 자동이
         // 아닙니다 — 두 모드는 민감도도 미세 입자도 나눠 씁니다.
         bool automatic = card.Reviewing && card.ReviewingAutomatic;
+        // macOS `frame.canUndoDefects` — 되돌릴 결함 편집이 남아 있을 때만 캡슐과 복제 바의
+        // 되돌리기가 섭니다. 두 바가 같은 히스토리를 보므로 판정도 한 곳에서 옵니다.
+        bool canUndoDefectEdit = view.panel?.CanUndoDefectEdit == true;
         hud.Update(
             GrainMendHudProjection.Create(
                 view.panel?.SelectedFrame is not null,
                 view.grainMend.IsDetecting,
                 view.grainMend.PendingEdit?.Label.Kind,
                 view.grainMend.PendingReview,
-                view.grainMend.Strokes.Tool),
+                view.grainMend.Strokes.Tool,
+                canUndoDefectEdit),
             view.options.GetSensitivity(automatic),
             view.options.GetMicroSpecks(automatic),
             view.isRemovingDefects,
@@ -106,7 +110,9 @@ internal sealed class DevelopGrainMendChrome
             view.grainMend.Strokes.CloneSourceAnchor is not null,
             view.grainMend.Strokes.CloneDiameterPixels,
             view.grainMend.Strokes.CloneHardness,
-            card.CloneResetEnabled,
+            // macOS `disabled(!frame.canUndoDefects || frame.isRemovingDefects)` — 복제
+            // 편집이 있느냐가 아니라 **되돌릴 히스토리가 있느냐**입니다.
+            canUndoDefectEdit,
             view.isRemovingDefects);
     }
 

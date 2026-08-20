@@ -425,25 +425,64 @@ public sealed partial class DevelopExportPanel : UserControl
     }
 
     private void UpdateExportPreview() => sync.UpdateExportPreview();
+    /// <summary>macOS `reveal` — 산출물이 놓인 폴더를 탐색기로 엽니다.</summary>
+    private void OnExportRevealClicked(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        RevealFolder(exportSettings.FolderPath);
+    }
 
-    private async void OnExportClicked(object sender, RoutedEventArgs args)
+    private void OnQuickExportRevealClicked(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        RevealFolder(quickExportSettings.FolderPath);
+    }
+
+    /// <summary>
+    /// 폴더가 아직 없으면 만들고 엽니다. macOS `revealExportFolder` 도 같은 순서입니다 —
+    /// 한 번도 내보내지 않았어도 어디로 나갈지 볼 수 있어야 합니다.
+    /// </summary>
+    private void RevealFolder(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath))
+        {
+            return;
+        }
+        try
+        {
+            _ = Directory.CreateDirectory(folderPath);
+            using System.Diagnostics.Process? opened = System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo(folderPath) { UseShellExecute = true });
+            _ = opened;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
+            NotSupportedException or ArgumentException or
+            System.ComponentModel.Win32Exception)
+        {
+            OutputStatusText.Text = AppResources.Get("developExportFolderFailed", "Text");
+        }
+    }
+
+    private async void OnExportClicked(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
         await runner.RunExportAsync();
     }
 
-    private async void OnQuickExportClicked(object sender, RoutedEventArgs args)
+    private async void OnQuickExportClicked(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
+        // macOS `onQuickExport ?? model.quickExportSelection` — 화면이 따로 꽂아 준 것이
+        // 없으면 패널이 자기 기본 동작을 합니다. 이것이 없어서 인화뷰의 빠른 내보내기가
+        // 눌러도 아무 일이 없었습니다.
         QuickExportButton.IsEnabled = false;
         try
         {
-            if (RunQuickExport is { } run)
-            {
-                await run();
-            }
+            await (RunQuickExport is { } run ? run() : runner.RunQuickExportAsync());
         }
         finally
         {

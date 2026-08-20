@@ -239,6 +239,13 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidVersion);
         }
+        if (!LibraryVersions.TryRead(
+                frameRecord,
+                out IReadOnlyList<LibraryVersionSnapshot> history,
+                LibraryVersions.HistoryListName))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidVersion);
+        }
         if (!TryReadPickState(frameRecord, out FramePickState pickState))
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidPickState);
@@ -367,11 +374,14 @@ public static class LibraryFrameReader
             PickState = pickState,
             ScannedAt = scannedAt,
             Versions = versions,
+            History = history,
             ScanIndex = ReadScanIndex(frameRecord),
             SourceKind = ReadSourceKind(frameRecord),
             SourceFrameDisplayName = ReadOptionalText(frameRecord, SourceFrameDisplayNameName),
             SourceFrameId = ReadOptionalText(frameRecord, SourceFrameIdName),
             VirtualCopyNumber = ReadOptionalPositiveInt(frameRecord, VirtualCopyNumberName),
+            // macOS `libraryWorkflowTrackingState.defectReviewTracking` 과 같은 자리·같은 키.
+            DefectReviewMark = DefectReviewTrackingCodec.Read(frameRecord),
         });
     }
 

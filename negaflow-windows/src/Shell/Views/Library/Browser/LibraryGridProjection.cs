@@ -43,7 +43,9 @@ internal sealed class LibraryGridProjection
             view.libraryHost.Folders,
             view.libraryHost.FolderAvailabilityById,
             view.viewMode,
-            view.selectedFilmType);
+            view.selectedFilmType,
+            view.rail.folderDrafts,
+            view.rail.collapsedFolders);
         view.isSynchronizingFrameSelection = true;
         try
         {
@@ -65,7 +67,6 @@ internal sealed class LibraryGridProjection
             view.isSynchronizingFrameSelection = false;
         }
         view.filters.UpdateViewModeControls();
-        view.DevelopDefaultsPanel.Synchronize();
         SynchronizeCulling(items);
         if (view.sourceKind == LibrarySourceKind.Files)
         {

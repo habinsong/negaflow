@@ -78,6 +78,8 @@ internal sealed class DevelopCropSession
         }
     }
 
+    internal void ToggleFromMenu() => Toggle();
+
     private void OnGeometryCropClicked(object? sender, EventArgs args)
     {
         _ = sender;
@@ -121,6 +123,8 @@ internal sealed class DevelopCropSession
         {
             return;
         }
+        // macOS `applyCrop` → `resetViewport()`.
+        view.panel.Viewport.Reset();
         End();
         view.RequestPreview();
     }

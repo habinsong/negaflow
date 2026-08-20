@@ -148,6 +148,39 @@ public static class DevelopRequestFactory
             ? frame.ColorModel
             : LookPresetComposition.Compose(preset, frame.ColorModel);
 
+        // macOS `DevelopFrameRenderer.renderRawPreview` 는 원본 CIImage 에 기하 변환만 걸어
+        // 그립니다 — 톤도, 커브도, 스캐너 타깃도, 필름 룩도 얹지 않습니다.
+        //
+        // ☠️ 여기서 레시피를 남겨 두면 `원본` 탭이 **반전만 빠진 현상본**이 됩니다. 자동 레벨이
+        //    채널을 각각 끝까지 늘려 네거티브의 주황 마스크를 탈색시키고, NORITSU 타깃의 루마
+        //    USM 이 그레인을 깎아 세웁니다 — 사진앱으로 본 원본과 전혀 다른 그림이 되고,
+        //    "원본부터 베이스 색이 이상하고 컬러 노이즈 범벅" 으로 보입니다.
+        //
+        // 결함 제거는 남깁니다. macOS 도 raw 프리뷰에 cleaned raw 를 넘깁니다.
+        if (uninvertedSource)
+        {
+            tone = default;
+            texture = TextureRecipe.Identity;
+            colorModel = ColorModelRecipe.Identity;
+        }
+        PointCurveRecipe pointCurves =
+            uninvertedSource ? PointCurveRecipe.Identity : frame.PointCurves;
+        ColorMixerRecipe colorMixer =
+            uninvertedSource ? ColorMixerRecipe.Identity : frame.ColorMixer;
+        ColorGradingRecipe colorGrading =
+            uninvertedSource ? ColorGradingRecipe.Identity : frame.ColorGrading;
+        PrimaryCalibrationRecipe calibration =
+            uninvertedSource ? PrimaryCalibrationRecipe.Identity : frame.PrimaryCalibration;
+        NoiseReductionRecipe noiseReduction =
+            uninvertedSource ? NoiseReductionRecipe.Identity : frame.NoiseReduction;
+        BwToningRecipe bwToning = uninvertedSource ? default : frame.BwToning;
+        IReadOnlyList<LocalDodgeBurnAdjustment> dodgeBurn =
+            uninvertedSource ? [] : frame.LocalDodgeBurn;
+        DevelopTarget developTarget =
+            uninvertedSource ? DevelopTarget.Main : frame.DevelopTarget;
+        FilmEmulation filmEmulation =
+            uninvertedSource ? FilmEmulation.None : frame.Route.FilmEmulation;
+
         DevelopDefectSourceIdentity? defectSourceIdentity = null;
         if (defectEditOrder.Count != 0)
         {
@@ -189,7 +222,7 @@ public static class DevelopRequestFactory
             DminBlue = (float)manualBase.Blue,
             FilmStockDminId = filmStockDminId,
             LightSourceProfileId = lightSourceProfileId,
-            ScannerProfileId = frame.Base.ScannerProfileId,
+            ScannerProfileId = uninvertedSource ? null : frame.Base.ScannerProfileId,
             ExposureStops = (float)tone.Exposure,
             Contrast = (float)tone.Contrast,
             Density = (float)tone.Density,
@@ -209,9 +242,9 @@ public static class DevelopRequestFactory
             RedPrimary = (float)colorModel.RedPrimary,
             GreenPrimary = (float)colorModel.GreenPrimary,
             BluePrimary = (float)colorModel.BluePrimary,
-            AutoLevels = frame.AutoLevels,
-            AutoNeutralBalance = frame.AutoNeutralBalance,
-            DevelopTarget = frame.DevelopTarget switch
+            AutoLevels = !uninvertedSource && frame.AutoLevels,
+            AutoNeutralBalance = !uninvertedSource && frame.AutoNeutralBalance,
+            DevelopTarget = developTarget switch
             {
                 DevelopTarget.Main => DevelopTargetMode.Main,
                 DevelopTarget.Print => DevelopTargetMode.Print,
@@ -220,77 +253,77 @@ public static class DevelopRequestFactory
                 DevelopTarget.F135 => DevelopTargetMode.F135,
                 DevelopTarget.Hr => DevelopTargetMode.Hr,
                 DevelopTarget.Rescue => DevelopTargetMode.Rescue,
-                _ => throw new ArgumentOutOfRangeException(nameof(frame.DevelopTarget)),
+                _ => throw new ArgumentOutOfRangeException(nameof(frame)),
             },
             PointCurves = new DevelopPointCurves
             {
-                Rgb = frame.PointCurves.Rgb.Select(point =>
+                Rgb = pointCurves.Rgb.Select(point =>
                     new DevelopPointCurvePoint(point.X, point.Y)).ToArray(),
-                Red = frame.PointCurves.Red.Select(point =>
+                Red = pointCurves.Red.Select(point =>
                     new DevelopPointCurvePoint(point.X, point.Y)).ToArray(),
-                Green = frame.PointCurves.Green.Select(point =>
+                Green = pointCurves.Green.Select(point =>
                     new DevelopPointCurvePoint(point.X, point.Y)).ToArray(),
-                Blue = frame.PointCurves.Blue.Select(point =>
+                Blue = pointCurves.Blue.Select(point =>
                     new DevelopPointCurvePoint(point.X, point.Y)).ToArray(),
             },
             ColorMixer = new DevelopColorMixer
             {
-                Hue = frame.ColorMixer.Hue.Select(value => (float)value).ToArray(),
-                Saturation = frame.ColorMixer.Saturation.Select(value => (float)value).ToArray(),
-                Luminance = frame.ColorMixer.Luminance.Select(value => (float)value).ToArray(),
+                Hue = colorMixer.Hue.Select(value => (float)value).ToArray(),
+                Saturation = colorMixer.Saturation.Select(value => (float)value).ToArray(),
+                Luminance = colorMixer.Luminance.Select(value => (float)value).ToArray(),
             },
             ColorGrading = new DevelopColorGrading
             {
-                Shadows = MapColorGradeRegion(frame.ColorGrading.Shadows),
-                Midtones = MapColorGradeRegion(frame.ColorGrading.Midtones),
-                Highlights = MapColorGradeRegion(frame.ColorGrading.Highlights),
-                Blending = (float)frame.ColorGrading.Blending,
-                Balance = (float)frame.ColorGrading.Balance,
+                Shadows = MapColorGradeRegion(colorGrading.Shadows),
+                Midtones = MapColorGradeRegion(colorGrading.Midtones),
+                Highlights = MapColorGradeRegion(colorGrading.Highlights),
+                Blending = (float)colorGrading.Blending,
+                Balance = (float)colorGrading.Balance,
             },
             PrimaryCalibration = new DevelopPrimaryCalibration
             {
-                RedHue = (float)frame.PrimaryCalibration.RedHue,
-                RedSaturation = (float)frame.PrimaryCalibration.RedSaturation,
-                GreenHue = (float)frame.PrimaryCalibration.GreenHue,
-                GreenSaturation = (float)frame.PrimaryCalibration.GreenSaturation,
-                BlueHue = (float)frame.PrimaryCalibration.BlueHue,
-                BlueSaturation = (float)frame.PrimaryCalibration.BlueSaturation,
+                RedHue = (float)calibration.RedHue,
+                RedSaturation = (float)calibration.RedSaturation,
+                GreenHue = (float)calibration.GreenHue,
+                GreenSaturation = (float)calibration.GreenSaturation,
+                BlueHue = (float)calibration.BlueHue,
+                BlueSaturation = (float)calibration.BlueSaturation,
             },
             FilmLookSourceKind = renderedDigital
                 ? DevelopSourceKind.RenderedDigital
                 : DevelopSourceKind.FilmScan,
-            FilmEmulation = MapFilmEmulation(frame.Route.FilmEmulation),
-            FilmEmulationIntensity = frame.Route.FilmEmulationIntensity,
+            FilmEmulation = MapFilmEmulation(filmEmulation),
+            FilmEmulationIntensity = uninvertedSource ? 0.0f : frame.Route.FilmEmulationIntensity,
             ImageTransform = MapImageTransform(frame.ImageTransform),
             Grain = (float)texture.Grain,
             Sharpness = (float)texture.Sharpness,
             Halation = (float)texture.Halation,
             Clarity = (float)texture.Clarity,
             Vignette = (float)texture.Vignette,
-            NoiseReductionStrength = (float)frame.NoiseReduction.Strength,
-            NoiseReductionLuma = (float)frame.NoiseReduction.Luma,
-            NoiseReductionChroma = (float)frame.NoiseReduction.Chroma,
-            NoiseReductionDarkTone = (float)frame.NoiseReduction.DarkTone,
-            NoiseReductionDetail = (float)frame.NoiseReduction.Detail,
-            NoiseReductionGrainProtect = (float)frame.NoiseReduction.GrainProtect,
+            NoiseReductionStrength = (float)noiseReduction.Strength,
+            NoiseReductionLuma = (float)noiseReduction.Luma,
+            NoiseReductionChroma = (float)noiseReduction.Chroma,
+            NoiseReductionDarkTone = (float)noiseReduction.DarkTone,
+            NoiseReductionDetail = (float)noiseReduction.Detail,
+            NoiseReductionGrainProtect = (float)noiseReduction.GrainProtect,
             NoiseReductionFilmProfile = MapNoiseReductionFilmProfile(frame.Route.FilmType),
-            BwToningMode = frame.BwToning.Mode switch
+            BwToningMode = bwToning.Mode switch
             {
                 Catalog.BwToningMode.Selenium => Interop.BwToningMode.Selenium,
                 Catalog.BwToningMode.Sepia => Interop.BwToningMode.Sepia,
                 _ => Interop.BwToningMode.None,
             },
             DefectRemovalStrength = frame.DefectRemovalStrength,
-            BwToningShadowHue = frame.BwToning.ShadowHue,
-            BwToningHighlightHue = frame.BwToning.HighlightHue,
-            BwToningStrength = frame.BwToning.ClampedStrength,
+            BwToningShadowHue = bwToning.ShadowHue,
+            BwToningHighlightHue = bwToning.HighlightHue,
+            BwToningStrength = bwToning.ClampedStrength,
             DefectRegions = defectRegions,
             DefectInfrared = defectInfrared,
             DefectClones = defectClones,
             DefectBrushes = defectBrushes,
             DefectEditOrder = defectEditOrder,
             DefectSourceIdentity = defectSourceIdentity,
-            LocalDodgeBurn = frame.LocalDodgeBurn.Select(MapLocalDodgeBurn).ToArray(),
+            LocalDodgeBurn = dodgeBurn.Select(MapLocalDodgeBurn).ToArray(),
         });
     }
 

@@ -24,7 +24,30 @@ public sealed record PrintPreferences
 
     public PrintRulerUnit RulerUnit { get; init; } = PrintRulerUnit.Centimeters;
 
+    /// <summary>
+    /// 일반 출력인지 C-print 인지입니다.
+    ///
+    /// ☠️ macOS 는 이 값을 **기억하지 않습니다**(`PrintWorkspaceSettingsStore` 주석 원문:
+    ///    "C-Print 는 랩에 넘길 때만 켜는 특수 경로인데, 한 번 켠 뒤 다음 실행에서도 켜져
+    ///    있으면 일반 출력인 줄 알고 프루프가 걸린 결과를 받게 된다"). 불러올 때 항상
+    ///    <see cref="PrintOutputProcess.Standard"/> 로 되돌립니다 — <see cref="Restored"/>.
+    /// </summary>
     public PrintOutputProcess OutputProcess { get; init; } = PrintOutputProcess.Standard;
+
+    /// <summary>C-print 를 맡길 인화소입니다. macOS <c>cPrintLabName</c>.</summary>
+    public string CPrintLabName { get; init; } = string.Empty;
+
+    /// <summary>C-print 인화지입니다. macOS <c>cPrintPaperName</c>.</summary>
+    public string CPrintPaperName { get; init; } = string.Empty;
+
+    /// <summary>인화소가 준 ICC 프로파일의 자리입니다. macOS <c>cPrintProofICCProfileData</c>.</summary>
+    public string CPrintProofProfilePath { get; init; } = string.Empty;
+
+    /// <summary>그 프로파일의 이름입니다. 화면에 그대로 보입니다.</summary>
+    public string CPrintProofProfileName { get; init; } = string.Empty;
+
+    /// <summary>인화 미리보기(소프트 프루프)를 켤지입니다. macOS <c>cPrintPreviewEnabled</c>.</summary>
+    public bool CPrintPreviewEnabled { get; init; }
 
     public PrintSheetBackground SheetBackground { get; init; } = PrintSheetBackground.White;
 
@@ -119,8 +142,22 @@ public sealed record PrintPreferences
     /// 설정 파일에서 읽은 값이 범위를 벗어났으면 되돌립니다. 손으로 고친 파일이 여백 900mm 를
     /// 담고 있으면 판 계산이 통째로 실패해 화면이 빕니다.
     /// </summary>
+    /// <summary>
+    /// 디스크에서 읽어 온 값에 적용합니다. macOS 처럼 **출력 방식만 되돌립니다** — 나머지는
+    /// 그대로 기억합니다.
+    /// </summary>
+    public PrintPreferences Restored() =>
+        Normalize() with { OutputProcess = PrintOutputProcess.Standard };
+
     public PrintPreferences Normalize() => this with
     {
+        CPrintLabName = (CPrintLabName ?? string.Empty).Trim(),
+        CPrintPaperName = (CPrintPaperName ?? string.Empty).Trim(),
+        CPrintProofProfilePath = (CPrintProofProfilePath ?? string.Empty).Trim(),
+        CPrintProofProfileName = (CPrintProofProfileName ?? string.Empty).Trim(),
+        // 프로파일이 없으면 미리보기도 의미가 없습니다.
+        CPrintPreviewEnabled = CPrintPreviewEnabled &&
+            !string.IsNullOrWhiteSpace(CPrintProofProfilePath),
         LayoutMode = Enum.IsDefined(LayoutMode) ? LayoutMode : PrintLayoutMode.SingleImage,
         PaperSize = Enum.IsDefined(PaperSize) ? PaperSize : PrintPaperSize.A4,
         Orientation = Enum.IsDefined(Orientation) ? Orientation : PrintPaperOrientation.Automatic,

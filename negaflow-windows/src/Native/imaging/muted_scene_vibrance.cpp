@@ -106,9 +106,32 @@ MutedSceneVibranceResult apply_muted_scene_vibrance(
         image.height,
         image.stride_pixels,
     };
-    result.status = negaflow::core::validate_finite_pixels(input);
-    if (result.status != negaflow::core::KernelStatus::ok) {
-        return result;
+    bool gpu_finite = false;
+    if (approximate_acceleration_allowed()) {
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->resident_finite_check != nullptr) {
+            bool all_finite = false;
+            if (table->resident_finite_check(
+                    reinterpret_cast<const float*>(image.pixels),
+                    image.width,
+                    image.height,
+                    static_cast<std::uint32_t>(image.stride_pixels),
+                    &all_finite)) {
+                if (!all_finite) {
+                    result.status = negaflow::core::KernelStatus::non_finite_output;
+                    return result;
+                }
+                gpu_finite = true;
+            }
+        }
+    }
+    if (!gpu_finite) {
+        result.status = negaflow::core::validate_finite_pixels(input);
+        if (result.status != negaflow::core::KernelStatus::ok) {
+            return result;
+        }
+    } else {
+        result.status = negaflow::core::KernelStatus::ok;
     }
 
     result.info.mean_saturation = scene_mean_saturation(image);
@@ -140,12 +163,27 @@ MutedSceneVibranceResult apply_muted_scene_vibrance(
                     image.height,
                     static_cast<std::uint32_t>(image.stride_pixels),
                     amount)) {
-                result.status = negaflow::core::validate_finite_pixels(input);
-                if (result.status != negaflow::core::KernelStatus::ok) {
-                    result.status = negaflow::core::KernelStatus::non_finite_output;
-                    return result;
+                bool all_finite = false;
+                if (table->resident_finite_check != nullptr &&
+                    table->resident_finite_check(
+                        reinterpret_cast<const float*>(image.pixels),
+                        image.width,
+                        image.height,
+                        static_cast<std::uint32_t>(image.stride_pixels),
+                        &all_finite)) {
+                    if (!all_finite) {
+                        result.status = negaflow::core::KernelStatus::non_finite_output;
+                        return result;
+                    }
+                } else {
+                    result.status = negaflow::core::validate_finite_pixels(input);
+                    if (result.status != negaflow::core::KernelStatus::ok) {
+                        result.status = negaflow::core::KernelStatus::non_finite_output;
+                        return result;
+                    }
                 }
                 result.info.applied = true;
+                result.status = negaflow::core::KernelStatus::ok;
                 return result;
             }
         }

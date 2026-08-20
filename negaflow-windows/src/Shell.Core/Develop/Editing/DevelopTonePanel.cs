@@ -97,6 +97,14 @@ public sealed class DevelopTonePanel
     public LibraryFrameError ResetToneCurve() =>
         panel.RefreshAfterEdit(editor.ResetToneCurve(panel.SelectedFrame));
 
+    /// <summary>macOS <c>resetAutoTone</c>.</summary>
+    public LibraryFrameError ResetAutoTone() =>
+        panel.RefreshAfterEdit(editor.ResetAutoTone(panel.SelectedFrame));
+
+    /// <summary>macOS <c>resetAutoWhiteBalance</c>.</summary>
+    public LibraryFrameError ResetAutoWhiteBalance() =>
+        panel.RefreshAfterEdit(editor.ResetAutoWhiteBalance(panel.SelectedFrame));
+
     public LibraryFrameError ApplyAutoTone(AutoAdjustSettings settings) =>
         panel.RefreshAfterEdit(editor.ApplyAutoTone(panel.SelectedFrame, settings));
 

@@ -2,7 +2,9 @@
 <UserControl
     x:Class="Negaflow.Shell.Views.Develop.Sources.DevelopLibrarySourcePanel"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:defaults="using:Negaflow.Shell.Views.Library.Defaults"
+    xmlns:scanner="using:Negaflow.Shell.Views.Library.Scanner">
     <UserControl.Resources>
         <!-- macOS ImportGlassAction: 한 줄, 24 high, horizontal padding 6,
              hover surface radius 12. 긴 번역은 내부 Viewbox가 아래로만 줄입니다. -->
@@ -94,6 +96,16 @@
                 FontSize="11"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 TextWrapping="Wrap" />
+            <!-- macOS 좌측탭은 가져오기 다음에 스캔이 옵니다(`현상뷰_기본.png`).
+                 라이브러리뷰와 같은 컨트롤을 씁니다 — 스캐너 상태를 두 벌로 들면 갈라집니다. -->
+            <scanner:LibraryScanPanel x:Name="ScanPanel" x:FieldModifier="internal" />
+            <!-- macOS `WorkflowSidebar` 의 library 탭은 `LibrarySourceSection` 을
+                 `showsDevelopDefaults: true` 로 띄웁니다 — 프로세스·타깃·필름 프로파일·룩이
+                 라이브러리뷰뿐 아니라 **현상뷰 좌측탭에도** 같이 옵니다. 라이브러리뷰가 쓰는
+                 것과 같은 컨트롤을 그대로 씁니다. 두 벌을 만들면 갈라집니다. -->
+            <defaults:LibraryDevelopDefaultsPanel
+                x:Name="DevelopDefaultsPanel"
+                x:FieldModifier="internal" />
             <TreeView
                 x:Name="LibraryTree"
                 x:FieldModifier="internal"

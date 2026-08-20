@@ -369,9 +369,16 @@ internal sealed class PrintPreviewRenderer
         }
 
         double displayPixels = Math.Max(rect.Width, rect.Height) * scale * dpi;
-        int current = cache.TryGetDeveloped(frame.Id, out ThumbnailService.DevelopedPreview developed)
+        // macOS `printPackageDisplayImage` — developed ∪ packagePreview ∪ thumbnail ∪ raw.
+        // 현상본이 없다고 current=0 으로 두면 콘택트 칸(360보다 작음)마다 develop_preview 가
+        // 돕니다. 썸네일이 있으면 긴 변 360 으로 칩니다(`ThumbnailService.MaximumDimension`).
+        int? developedEdge = cache.TryGetDeveloped(frame.Id, out ThumbnailService.DevelopedPreview developed)
             ? (int)PrintPreviewResolution.PixelDimension(developed.Width, developed.Height)
-            : 0;
+            : null;
+        int? thumbnailEdge = cache.TryGet(frame.Id) is not null
+            ? ThumbnailService.MaximumDimension
+            : null;
+        int current = PrintPreviewResolution.BestLongEdge(developedEdge, null, thumbnailEdge, null) ?? 0;
         if (!PrintPreviewResolution.NeedsUpgrade(current, displayPixels))
         {
             return;

@@ -61,6 +61,12 @@ public sealed partial class DevelopGrainMendHud : UserControl
     public event Action? CloneUndoRequested;
 
     /// <summary>
+    /// 검출 캡슐의 되돌리기입니다. macOS <c>RegionDefectOverlay</c> 도 같은 통합 undo 를
+    /// 부릅니다 — 마지막 편집이 브러시든 가이드든 한 칸 되돌아갑니다.
+    /// </summary>
+    public event Action? RegionUndoRequested;
+
+    /// <summary>
     /// 지금 상태를 화면에 옮깁니다. 여는 순서와 여백은 macOS 컨트롤 바와 같습니다.
     /// </summary>
     /// <param name="state">무엇을 낼지.</param>
@@ -94,6 +100,11 @@ public sealed partial class DevelopGrainMendHud : UserControl
         SecondDivider.Visibility = Show(reviewing);
         CancelButton.Visibility = Show(reviewing);
         RemoveButton.Visibility = Show(reviewing);
+        // macOS 는 기다리는 상태에서만, 그리고 되돌릴 것이 있을 때만 이 단추를 냅니다.
+        bool showUndo = state.Mode == GrainMendHudMode.Waiting && state.CanUndo;
+        RegionUndoDivider.Visibility = Show(showUndo);
+        RegionUndoButton.Visibility = Show(showUndo);
+        RegionUndoButton.IsEnabled = !isRemoving;
         // macOS 는 검출 중에만 컨트롤을 숨깁니다 — 기다리는 중에도 미세 입자는 바꿀 수 있습니다.
         MicroSpecksCheck.Visibility = Show(!detecting);
 
@@ -216,6 +227,13 @@ public sealed partial class DevelopGrainMendHud : UserControl
         _ = sender;
         _ = args;
         CloneUndoRequested?.Invoke();
+    }
+
+    private void OnRegionUndoClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        RegionUndoRequested?.Invoke();
     }
 
     private void OnBrushThicknessChanged(

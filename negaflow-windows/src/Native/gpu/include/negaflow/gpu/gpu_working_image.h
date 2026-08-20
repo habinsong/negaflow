@@ -44,6 +44,21 @@ enum class GpuImageStatus : std::uint8_t {
 
 [[nodiscard]] const char* gpu_image_status_name(GpuImageStatus status) noexcept;
 
+// 호스트 왕복 횟수. 단계마다 올렸다 내리는 것을 시험이 잡습니다.
+// macOS `CIImage` 는 마지막에 한 번만 평가합니다 — 풀해상도 올리기/내리기가
+// 프리뷰 사슬에서 한 번씩이어야 그 계약을 지킨 것입니다.
+struct GpuHostTransferStats final {
+    std::uint64_t uploads{0};
+    std::uint64_t downloads{0};
+    std::uint64_t uploaded_pixels{0};
+    std::uint64_t downloaded_pixels{0};
+    std::uint64_t downloaded_bytes{0};
+};
+
+void reset_gpu_host_transfer_stats() noexcept;
+[[nodiscard]] GpuHostTransferStats gpu_host_transfer_stats() noexcept;
+void record_gpu_bgra_download(std::uint32_t width, std::uint32_t height) noexcept;
+
 // SRV(읽기) 와 UAV(쓰기) 를 함께 가진 float32 RGBA 텍스처 한 장입니다.
 // 컴퓨트 패스는 한 장을 읽고 다른 장에 씁니다 — 같은 자원을 SRV·UAV 로 동시에 묶을 수 없습니다.
 class GpuWorkingImage final {

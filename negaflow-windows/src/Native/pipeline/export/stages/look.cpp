@@ -51,6 +51,7 @@ std::optional<DevelopExportOutcome> apply_look_stages(
         adjusted.info = accelerated.info;
         adjusted.image = std::move(developed_image);
     } else {
+        GpuAccelerator::shared().flush_resident();
         adjusted = negaflow::imaging::apply_working_tone_adjustments(
             std::move(developed_image),
             request.tone);
@@ -85,6 +86,38 @@ std::optional<DevelopExportOutcome> apply_look_stages(
             film_look_cost,
             request.film_look.source_kind !=
                 negaflow::imaging::DevelopSourceKind::film_scan));
+
+    negaflow::imaging::FilmLookRoute route = negaflow::imaging::FilmLookRoute::invalid;
+    const bool resolved = negaflow::imaging::try_resolve_film_look_route(
+        workspace.parameters, route);
+    const float* const resident_pixels =
+        reinterpret_cast<const float*>(adjusted.image.pixels.data());
+    if (resolved && route == negaflow::imaging::FilmLookRoute::identity &&
+        GpuAccelerator::shared().has_resident_image(
+            resident_pixels, adjusted.image.width, adjusted.image.height)) {
+        bool finite = false;
+        if (GpuAccelerator::shared().check_resident_finite(
+                resident_pixels,
+                adjusted.image.width,
+                adjusted.image.height,
+                adjusted.image.stride_pixels,
+                &finite) &&
+            finite) {
+            tracker.finish();
+            if (tracker.cancelled()) {
+                return cancelled_outcome(DevelopExportStage::film_look);
+            }
+            out.image = std::move(adjusted.image);
+            out.workspace_bytes = workspace.workspace_bytes;
+            out.info.route = negaflow::imaging::FilmLookRoute::identity;
+            out.info.kernel_status = negaflow::core::KernelStatus::ok;
+            return std::nullopt;
+        }
+        GpuAccelerator::shared().flush_resident();
+    } else if (!resolved || route != negaflow::imaging::FilmLookRoute::identity) {
+        GpuAccelerator::shared().flush_resident();
+    }
+
     auto film_look = negaflow::imaging::apply_working_film_look(
         std::move(adjusted.image),
         workspace.parameters,

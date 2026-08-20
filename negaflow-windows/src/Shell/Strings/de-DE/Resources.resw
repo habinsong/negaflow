@@ -1296,4 +1296,23 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developAutoToneHelp.Text" xml:space="preserve"><value>Automatische Tonwerte Befehl-U — passt Belichtung, Kontrast, Lichter, Tiefen, Weiß, Schwarz und Dynamik anhand des Histogramms an.</value><comment>AppLocalizedPhrase.autoToneHelp</comment></data>
   <data name="developAutoWhiteBalanceHelp.Text" xml:space="preserve"><value>Automatischer Weißabgleich Umschalt-Befehl-U — neutralisiert Temperatur und Tonung nach der Grauwelt-Methode.</value><comment>AppLocalizedPhrase.autoWhiteBalanceHelp</comment></data>
   <data name="libraryFolderApply.Content" xml:space="preserve"><value>Anwenden</value><comment>AppLocalizedPhrase.apply</comment></data>
+  <data name="developLocalTitle.Text" xml:space="preserve"><value>Lokal</value><comment>LocalAdjustmentLocalizedText[0]</comment></data>
+  <data name="developLocalAdd.Text" xml:space="preserve"><value>Lokale Anpassung hinzufügen</value><comment>LocalAdjustmentLocalizedText[1]</comment></data>
+  <data name="developLocalEdit.Text" xml:space="preserve"><value>Lokale Anpassung bearbeiten</value><comment>LocalAdjustmentLocalizedText[2]</comment></data>
+  <data name="developLocalDelete.Text" xml:space="preserve"><value>Löschen</value><comment>LocalAdjustmentLocalizedText[3]</comment></data>
+  <data name="developLocalCopy.Text" xml:space="preserve"><value>Kopieren</value><comment>LocalAdjustmentLocalizedText[4]</comment></data>
+  <data name="developLocalPaste.Text" xml:space="preserve"><value>Einfügen</value><comment>LocalAdjustmentLocalizedText[5]</comment></data>
+  <data name="developLocalDodge.Text" xml:space="preserve"><value>Abwedeln</value><comment>LocalAdjustmentLocalizedText[6]</comment></data>
+  <data name="developLocalBurn.Text" xml:space="preserve"><value>Nachbelichten</value><comment>LocalAdjustmentLocalizedText[7]</comment></data>
+  <data name="developLocalAmount.Text" xml:space="preserve"><value>Stärke</value><comment>LocalAdjustmentLocalizedText[8]</comment></data>
+  <data name="developLocalFeather.Text" xml:space="preserve"><value>Weiche Kante</value><comment>LocalAdjustmentLocalizedText[9]</comment></data>
+  <data name="developLocalSize.Text" xml:space="preserve"><value>Größe</value><comment>LocalAdjustmentLocalizedText[10]</comment></data>
+  <data name="developLocalBrush.Text" xml:space="preserve"><value>Pinsel</value><comment>LocalAdjustmentLocalizedText[11]</comment></data>
+  <data name="developLocalRadial.Text" xml:space="preserve"><value>Radial</value><comment>LocalAdjustmentLocalizedText[12]</comment></data>
+  <data name="developLocalLinear.Text" xml:space="preserve"><value>Linear</value><comment>LocalAdjustmentLocalizedText[13]</comment></data>
+  <data name="developLocalPolygon.Text" xml:space="preserve"><value>Polygon</value><comment>LocalAdjustmentLocalizedText[14]</comment></data>
+  <data name="developLocalFinishPolygon.Text" xml:space="preserve"><value>Polygon abschließen</value><comment>LocalAdjustmentLocalizedText[15]</comment></data>
+  <data name="developLocalDrawPrompt.Text" xml:space="preserve"><value>Auf dem Foto zeichnen</value><comment>LocalAdjustmentLocalizedText[16]</comment></data>
+  <data name="developLocalEmpty.Text" xml:space="preserve"><value>Keine lokalen Anpassungen</value><comment>LocalAdjustmentLocalizedText[17]</comment></data>
+  <data name="developLocalVisibility.Text" xml:space="preserve"><value>Sichtbarkeit</value><comment>LocalAdjustmentLocalizedText[18]</comment></data>
 </root>

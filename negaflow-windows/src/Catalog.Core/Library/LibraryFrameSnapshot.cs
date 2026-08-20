@@ -8,53 +8,6 @@ namespace Negaflow.Catalog;
 public readonly record struct ManualBaseRgb(double Red, double Green, double Blue);
 
 /// <summary>
-/// macOS <c>ImageTransform</c>와 같은 회전 값입니다. 저장값은 Swift recipe의 raw value와
-/// 같고, crop 좌표는 y-up 정규화 좌표를 사용합니다.
-/// </summary>
-public enum ImageRotation
-{
-    Degrees0 = 0,
-    Degrees90 = 1,
-    Degrees180 = 2,
-    Degrees270 = 3,
-}
-
-public readonly record struct ImageCropRect(double X, double Y, double Width, double Height)
-{
-    public bool IsValid =>
-        double.IsFinite(X) && double.IsFinite(Y) &&
-        double.IsFinite(Width) && double.IsFinite(Height) &&
-        X >= 0.0 && Y >= 0.0 && Width > 0.0 && Height > 0.0 &&
-        X + Width <= 1.0 && Y + Height <= 1.0;
-}
-
-/// <summary>
-/// 현상과 내보내기에 공통으로 적용되는 macOS 호환 기하 보정 recipe입니다.
-/// </summary>
-public sealed record ImageTransformRecipe(
-    ImageRotation Rotation,
-    bool FlipHorizontal,
-    bool FlipVertical,
-    ImageCropRect? Crop,
-    double StraightenAngle,
-    double? CropAspect)
-{
-    public static ImageTransformRecipe Identity { get; } = new(
-        ImageRotation.Degrees0,
-        false,
-        false,
-        null,
-        0.0,
-        null);
-
-    public bool IsValid =>
-        Enum.IsDefined(Rotation) &&
-        (Crop is null || Crop.Value.IsValid) &&
-        double.IsFinite(StraightenAngle) && StraightenAngle is >= -45.0 and <= 45.0 &&
-        (CropAspect is null || (double.IsFinite(CropAspect.Value) && CropAspect.Value > 0.0));
-}
-
-/// <summary>
 /// macOS의 Texture controls입니다. grain, sharpness, halation은 0...1이고 clarity와
 /// vignette는 부호 있는 조절값입니다.
 /// </summary>
@@ -226,6 +179,13 @@ public sealed record LibraryFrameSnapshot(
     public ManualBaseRgb? AppliedBase { get; init; }
 
     /// <summary>
+    /// 결함 검토를 마쳤을 때의 recipe 판입니다. macOS
+    /// <c>LibraryDefectReviewTracking.reviewed*</c> 셋과 같습니다. 지금 recipe 와 세 값이
+    /// 모두 같아야 "검토 완료"입니다.
+    /// </summary>
+    public DefectReviewMarkRecord? DefectReviewMark { get; init; }
+
+    /// <summary>
     /// macOS-compatible base mode and preset identifiers. This is persisted independently
     /// from <see cref="ManualBase"/> because changing modes does not erase a manual sample.
     /// </summary>
@@ -275,6 +235,12 @@ public sealed record LibraryFrameSnapshot(
 
     /// <summary>이 frame 에 저장된 현상 버전입니다. macOS <c>developSnapshots</c> 와 같습니다.</summary>
     public IReadOnlyList<LibraryVersionSnapshot> Versions { get; init; } = [];
+
+    /// <summary>
+    /// 현상 기록입니다. macOS <c>ScanFrame.developHistory</c> · 사이드카 <c>developHistory</c> 와
+    /// 같은 자리이며 스냅샷과 모양이 같습니다 — 다른 것은 목록 이름과 쓰임뿐입니다.
+    /// </summary>
+    public IReadOnlyList<LibraryVersionSnapshot> History { get; init; } = [];
 
     public TextureRecipe Texture { get; init; } = TextureRecipe.Identity;
 
@@ -410,11 +376,27 @@ public sealed record LibraryFrameSnapshot(
     /// 그 문구는 언어마다 다르므로 셸이 만듭니다.
     /// </summary>
     public string? PreferredBaseDisplayName =>
-        LiteralDisplayName
+        UsableLiteralDisplayName
             ?? (string.IsNullOrWhiteSpace(SourceFrameDisplayName)
                 ? null
                 : SourceFrameDisplayName.Trim())
             ?? (SourceKind == FrameSourceKind.ImportedFile ? SourceFileBaseName : null);
+
+    /// <summary>
+    /// 사용자가 붙인 이름입니다. 단, **예전 Windows 가져오기가 남긴 `이름.확장자`** 는 이름이
+    /// 아니라 버그의 흔적이므로 무시합니다.
+    ///
+    /// ☠️ macOS 는 가져오기에서 `customDisplayName` 을 아예 쓰지 않고 확장자를 뗀 파일 이름으로
+    ///    물러납니다. Windows 가 한때 `Path.GetFileName` 을 그대로 적어 넣어서, 카드·필름스트립·
+    ///    창 제목이 `이름.tiff` 가 되고 내보내기 파일명이 `이름.tiff.jpg` 로 나왔습니다.
+    ///    가져오기는 고쳤지만 이미 적힌 줄은 남아 있으므로, **원본 파일 이름과 글자까지 같은**
+    ///    값일 때만 물러납니다 — 사용자가 직접 붙인 다른 이름은 그대로 지킵니다.
+    /// </summary>
+    private string? UsableLiteralDisplayName =>
+        LiteralDisplayName is { } literal &&
+        !string.Equals(literal, Path.GetFileName(SourcePath), StringComparison.Ordinal)
+            ? literal
+            : null;
 
     /// <summary>확장자를 뗀 원본 파일 이름입니다. macOS <c>sourceFileBaseName</c> 과 같습니다.</summary>
     public string? SourceFileBaseName =>

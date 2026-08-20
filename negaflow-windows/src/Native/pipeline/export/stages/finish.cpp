@@ -12,6 +12,24 @@
 #include <utility>
 
 namespace negaflow::pipeline::develop_export_detail {
+namespace {
+
+[[nodiscard]] bool texture_stage_is_identity(
+    const negaflow::imaging::TextureStageParameters& parameters) noexcept {
+    const float threshold = negaflow::imaging::texture_stage_identity_threshold;
+    return parameters.sharpness <= threshold && parameters.grain <= threshold &&
+        std::abs(parameters.clarity) <= threshold && parameters.halation <= threshold &&
+        std::abs(parameters.vignette) <= threshold;
+}
+
+[[nodiscard]] bool image_transform_is_identity(
+    const negaflow::imaging::ImageTransformParameters& parameters) noexcept {
+    return parameters.rotation == negaflow::imaging::ImageRotation::degrees_0 &&
+        !parameters.flip_horizontal && !parameters.flip_vertical && !parameters.has_crop &&
+        std::abs(parameters.straighten_angle) <= 1.0e-4;
+}
+
+}  // namespace
 
 std::optional<DevelopExportOutcome> apply_finish_stages(
     const DevelopExportRequest& request,
@@ -24,6 +42,49 @@ std::optional<DevelopExportOutcome> apply_finish_stages(
     negaflow::imaging::WorkingImage grain_image,
     FinishStageOutput& out) noexcept {
     const auto& negative = invert.negative;
+
+    negaflow::imaging::TextureStageParameters texture_parameters = request.texture;
+    if (film_look_info.route ==
+        negaflow::imaging::FilmLookRoute::digital_film_look) {
+        texture_parameters.grain = 0.0F;
+        texture_parameters.halation = 0.0F;
+    }
+    const bool identity_finish =
+        request.film_scan_denoise.strength <=
+            negaflow::imaging::film_scan_denoise_identity_threshold &&
+        request.local_dodge_burn.adjustments.empty() &&
+        texture_stage_is_identity(texture_parameters) &&
+        negative.film_type != negaflow::imaging::NegativeFilmType::black_and_white &&
+        image_transform_is_identity(request.image_transform) &&
+        !(preview == nullptr && detect == nullptr && request.output_long_edge != 0U) &&
+        request.output_sharpening.strength <=
+            negaflow::imaging::texture_stage_identity_threshold;
+    const float* const resident_pixels =
+        reinterpret_cast<const float*>(grain_image.pixels.data());
+    const bool resident = GpuAccelerator::shared().has_resident_image(
+        resident_pixels, grain_image.width, grain_image.height);
+    if (resident && identity_finish) {
+        tracker.begin(
+            DevelopExportStage::film_scan_denoise, cost_of(denoise_cost, false));
+        tracker.finish();
+        tracker.begin(
+            DevelopExportStage::local_dodge_burn, cost_of(dodge_burn_cost, false));
+        tracker.finish();
+        tracker.begin(DevelopExportStage::texture, cost_of(texture_cost, false));
+        tracker.finish();
+        tracker.begin(
+            DevelopExportStage::black_and_white, cost_of(black_and_white_cost, false));
+        tracker.finish();
+        tracker.begin(DevelopExportStage::image_transform, cost_of(transform_cost, false));
+        tracker.finish();
+        out.sharpening.status = negaflow::imaging::TextureStageStatus::ok;
+        out.sharpening.info.kernel_status = negaflow::core::KernelStatus::ok;
+        out.sharpening.image = std::move(grain_image);
+        return std::nullopt;
+    }
+    if (resident) {
+        GpuAccelerator::shared().flush_resident();
+    }
 
     tracker.begin(
         DevelopExportStage::film_scan_denoise,
@@ -100,13 +161,6 @@ std::optional<DevelopExportOutcome> apply_finish_stages(
     }
 
     tracker.begin(DevelopExportStage::texture, cost_of(texture_cost, true));
-    negaflow::imaging::TextureStageParameters texture_parameters =
-        request.texture;
-    if (film_look_info.route ==
-        negaflow::imaging::FilmLookRoute::digital_film_look) {
-        texture_parameters.grain = 0.0F;
-        texture_parameters.halation = 0.0F;
-    }
     auto texture = negaflow::imaging::apply_texture_stage(
         std::move(local_dodge_burn.image),
         texture_parameters);

@@ -8,6 +8,7 @@
 #include "negaflow/imaging/scanner_profile_grade.h"
 #include "negaflow/imaging/scanner_target_grade.h"
 #include "negaflow/imaging/scene_correction.h"
+#include "negaflow/pipeline/gpu_accelerator.h"
 
 namespace negaflow::pipeline::develop_export_detail {
 
@@ -25,22 +26,28 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
     negaflow::imaging::SceneCorrectionParameters scene_correction =
         request.scene_correction;
     scene_correction.negative_source = negative_source;
-    negaflow::imaging::SceneCorrectionInfo scene_correction_info{};
-    const negaflow::core::KernelStatus scene_correction_status =
-        negaflow::imaging::apply_scene_correction(
-            {
-                developed_image.pixels.data(),
-                developed_image.pixels.size(),
-                developed_image.width,
-                developed_image.height,
-                developed_image.stride_pixels,
-            },
-            scene_correction,
-            scene_correction_info);
-    if (scene_correction_status != negaflow::core::KernelStatus::ok) {
-        return fail(
-            DevelopExportStage::scene_correction,
-            negaflow::core::kernel_status_name(scene_correction_status));
+    const bool scene_active =
+        scene_correction.auto_levels ||
+        (scene_correction.auto_neutral_balance && negative_source);
+    if (scene_active) {
+        GpuAccelerator::shared().flush_resident();
+        negaflow::imaging::SceneCorrectionInfo scene_correction_info{};
+        const negaflow::core::KernelStatus scene_correction_status =
+            negaflow::imaging::apply_scene_correction(
+                {
+                    developed_image.pixels.data(),
+                    developed_image.pixels.size(),
+                    developed_image.width,
+                    developed_image.height,
+                    developed_image.stride_pixels,
+                },
+                scene_correction,
+                scene_correction_info);
+        if (scene_correction_status != negaflow::core::KernelStatus::ok) {
+            return fail(
+                DevelopExportStage::scene_correction,
+                negaflow::core::kernel_status_name(scene_correction_status));
+        }
     }
 
     tracker.finish();
@@ -54,6 +61,18 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
             target_grade_cost,
             request.develop_target != DevelopTarget::main ||
                 !request.scanner_profile_id.empty()));
+    const bool target_active =
+        request.develop_target == DevelopTarget::noritsu ||
+        request.develop_target == DevelopTarget::sp3000 ||
+        request.develop_target == DevelopTarget::f135 ||
+        request.develop_target == DevelopTarget::hr ||
+        request.develop_target == DevelopTarget::rescue ||
+        ((request.develop_target == DevelopTarget::main ||
+          request.develop_target == DevelopTarget::print) &&
+         !request.scanner_profile_id.empty());
+    if (target_active) {
+        GpuAccelerator::shared().flush_resident();
+    }
     if (request.develop_target == DevelopTarget::noritsu ||
         request.develop_target == DevelopTarget::sp3000 ||
         request.develop_target == DevelopTarget::f135 ||
@@ -141,27 +160,29 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
     }
 
     tracker.begin(DevelopExportStage::color_model, cost_of(color_model_cost, true));
-    const negaflow::core::KernelStatus color_model_status =
-        negaflow::imaging::apply_color_model(
-            {
-                developed_image.pixels.data(),
-                developed_image.pixels.size(),
-                developed_image.width,
-                developed_image.height,
-                developed_image.stride_pixels,
-            },
-            {
-                developed_image.pixels.data(),
-                developed_image.pixels.size(),
-                developed_image.width,
-                developed_image.height,
-                developed_image.stride_pixels,
-            },
-            request.color_model);
-    if (color_model_status != negaflow::core::KernelStatus::ok) {
-        return fail(
-            DevelopExportStage::color_model,
-            negaflow::core::kernel_status_name(color_model_status));
+    if (negaflow::imaging::has_color_model_change(request.color_model)) {
+        const negaflow::core::KernelStatus color_model_status =
+            negaflow::imaging::apply_color_model(
+                {
+                    developed_image.pixels.data(),
+                    developed_image.pixels.size(),
+                    developed_image.width,
+                    developed_image.height,
+                    developed_image.stride_pixels,
+                },
+                {
+                    developed_image.pixels.data(),
+                    developed_image.pixels.size(),
+                    developed_image.width,
+                    developed_image.height,
+                    developed_image.stride_pixels,
+                },
+                request.color_model);
+        if (color_model_status != negaflow::core::KernelStatus::ok) {
+            return fail(
+                DevelopExportStage::color_model,
+                negaflow::core::kernel_status_name(color_model_status));
+        }
     }
 
     tracker.finish();

@@ -47,7 +47,7 @@ bool GpuAccelerator::apply_digital_halation(
         return true;
     }
 
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->halation_ready) {
         return false;
     }
@@ -85,7 +85,7 @@ bool GpuAccelerator::apply_digital_film_grain(
     if (width == 0U || height == 0U || stride_pixels < width) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->grain_ready) {
         return false;
     }
@@ -126,7 +126,7 @@ bool GpuAccelerator::apply_digital_film_color_preset(
     if (width == 0U || height == 0U || stride_pixels < width) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->preset_ready) {
         return false;
     }
@@ -164,7 +164,7 @@ bool GpuAccelerator::apply_film_emulation_cube(
     if (width == 0U || height == 0U || stride_pixels < width) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->cube_ready) {
         return false;
     }
@@ -195,7 +195,7 @@ bool GpuAccelerator::apply_film_emulation_acutance(
     if (width == 0U || height == 0U || stride_pixels < width) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->acutance_ready) {
         return false;
     }
@@ -231,7 +231,7 @@ bool GpuAccelerator::apply_digital_film_look(
     if (width == 0U || height == 0U || stride_pixels < width) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->film_look_ready) {
         return false;
     }
@@ -257,7 +257,7 @@ bool GpuAccelerator::apply_digital_bw_film_look(
     if (width == 0U || height == 0U || stride_pixels < width) {
         return false;
     }
-    const std::lock_guard<std::mutex> guard{state_->lock};
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->film_look_ready) {
         return false;
     }

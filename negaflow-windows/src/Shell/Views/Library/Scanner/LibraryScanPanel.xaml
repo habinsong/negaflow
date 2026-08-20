@@ -4,11 +4,20 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <StackPanel Spacing="12">
-                        <TextBlock
-                            x:Name="ScanSectionText" x:FieldModifier="internal"
-                            FontSize="13"
-                            FontWeight="SemiBold"
-                            Visibility="Collapsed" />
+                        <!-- macOS `scanSectionHeader` = `Label(스캔, systemImage: "scanner")`
+                             `.font(.subheadline.weight(.semibold))`. 아이콘 없이 글자만 내면
+                             가져오기·현상 머리글과 모양이 달라집니다. -->
+                        <StackPanel
+                            x:Name="ScanSectionHeader" x:FieldModifier="internal"
+                            Orientation="Horizontal"
+                            Spacing="6"
+                            Visibility="Collapsed">
+                            <FontIcon FontSize="12" Glyph="&#xE8FE;" />
+                            <TextBlock
+                                x:Name="ScanSectionText" x:FieldModifier="internal"
+                                FontSize="13"
+                                FontWeight="SemiBold" />
+                        </StackPanel>
                         <Border
                             x:Name="ScanSectionCard" x:FieldModifier="internal"
                             Padding="12"
@@ -27,10 +36,28 @@
                                     AutomationProperties.AutomationId="negaflow.library.scan.approve"
                                     Click="OnScanApprovePluginClicked"
                                     Visibility="Collapsed" />
-                                <ToggleSwitch
-                                    x:Name="ScanSimulatorToggle" x:FieldModifier="internal"
-                                    AutomationProperties.AutomationId="negaflow.library.scan.simulator"
-                                    Toggled="OnScanSimulatorToggled" />
+                                <!-- macOS `unavailableState` 의 두 줄입니다 — 스캐너를 찾지 못했을 때만
+                                     [스캐너 찾기] 와 시뮬레이터 스위치를 냅니다. 쓸 수 있는 상태에서는
+                                     macOS 에 이 둘이 없습니다. -->
+                                <Button
+                                    x:Name="ScanDetectButton" x:FieldModifier="internal"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.library.scan.detect"
+                                    Click="OnScanRescanClicked"
+                                    Visibility="Collapsed" />
+                                <Grid x:Name="ScanSimulatorRow" x:FieldModifier="internal" ColumnSpacing="8" Visibility="Collapsed">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="ScanSimulatorLabel" x:FieldModifier="internal" VerticalAlignment="Center" FontSize="12" TextWrapping="Wrap" />
+                                    <ToggleSwitch
+                                        x:Name="ScanSimulatorToggle" x:FieldModifier="internal"
+                                        Grid.Column="1"
+                                        MinWidth="0"
+                                        AutomationProperties.AutomationId="negaflow.library.scan.simulator"
+                                        Toggled="OnScanSimulatorToggled" />
+                                </Grid>
 
                                 <StackPanel x:Name="ScanControls" x:FieldModifier="internal" Spacing="9" Visibility="Collapsed">
                                     <Grid ColumnSpacing="6">
@@ -69,18 +96,30 @@
                                             AutomationProperties.AutomationId="negaflow.library.scan.film"
                                             SelectionChanged="OnScanFilmChanged" />
                                     </Grid>
+                                    <!-- macOS `LabeledContent(스캔 폴더 이름) { HStack(spacing: 6) { TextField, 폴더 단추 } }` -->
                                     <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock x:Name="ScanFolderNameLabel" x:FieldModifier="internal" VerticalAlignment="Center" FontSize="12" />
                                         <TextBox
                                             x:Name="ScanFolderNameBox" x:FieldModifier="internal"
                                             Grid.Column="1"
+                                            Margin="0,0,6,0"
                                             AutomationProperties.AutomationId="negaflow.library.scan.folder-name"
                                             TextAlignment="Right"
                                             TextChanged="OnScanFolderNameChanged" />
+                                        <Button
+                                            x:Name="ScanChooseFolderButton" x:FieldModifier="internal"
+                                            Grid.Column="2"
+                                            Padding="7,4"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.choose-folder"
+                                            Click="OnScanChooseFolderClicked"
+                                            Content="&#xE8B7;"
+                                            FontFamily="{ThemeResource SymbolThemeFontFamily}"
+                                            FontSize="12" />
                                     </Grid>
                                     <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
@@ -146,19 +185,34 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock x:Name="ScanDetectionModeLabel" x:FieldModifier="internal" VerticalAlignment="Center" FontSize="12" />
-                                        <RadioButton
-                                            x:Name="ScanDetectionAutomaticButton" x:FieldModifier="internal"
+                                        <!-- macOS `.pickerStyle(.segmented).fixedSize()` — 동그라미 두 개가 아니라
+                                             붙은 칸 두 개입니다. -->
+                                        <Border
                                             Grid.Column="1"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.detection.automatic"
-                                            Checked="OnScanDetectionModeChecked"
-                                            GroupName="FlatbedDetectionMode"
-                                            IsChecked="True" />
-                                        <RadioButton
-                                            x:Name="ScanDetectionManualButton" x:FieldModifier="internal"
-                                            Grid.Column="2"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.detection.manual"
-                                            Checked="OnScanDetectionModeChecked"
-                                            GroupName="FlatbedDetectionMode" />
+                                            Grid.ColumnSpan="2"
+                                            HorizontalAlignment="Right"
+                                            Style="{StaticResource NegaflowSegmentTrackStyle}">
+                                            <Grid ColumnSpacing="3">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <RadioButton
+                                                    x:Name="ScanDetectionAutomaticButton" x:FieldModifier="internal"
+                                                    Style="{StaticResource NegaflowAccentSegmentStyle}"
+                                                    AutomationProperties.AutomationId="negaflow.library.scan.detection.automatic"
+                                                    Checked="OnScanDetectionModeChecked"
+                                                    GroupName="FlatbedDetectionMode"
+                                                    IsChecked="True" />
+                                                <RadioButton
+                                                    x:Name="ScanDetectionManualButton" x:FieldModifier="internal"
+                                                    Grid.Column="1"
+                                                    Style="{StaticResource NegaflowAccentSegmentStyle}"
+                                                    AutomationProperties.AutomationId="negaflow.library.scan.detection.manual"
+                                                    Checked="OnScanDetectionModeChecked"
+                                                    GroupName="FlatbedDetectionMode" />
+                                            </Grid>
+                                        </Border>
                                         <Button
                                             x:Name="ScanRefreshFramesButton" x:FieldModifier="internal"
                                             Grid.Column="3"
@@ -199,11 +253,26 @@
                                             SpinButtonPlacementMode="Compact"
                                             ValueChanged="OnScanFrameCountChanged" />
                                     </Grid>
-                                    <ToggleSwitch
-                                        x:Name="ScanInfraredToggle" x:FieldModifier="internal"
-                                        AutomationProperties.AutomationId="negaflow.library.scan.infrared"
-                                        Toggled="OnScanInfraredToggled" />
-                                    <Grid ColumnSpacing="8">
+                                    <!-- macOS `Toggle(model.text(.infrared), isOn: $model.infraredEnabled)` —
+                                         Form 안의 Toggle 은 이름이 왼쪽, 스위치가 오른쪽 한 줄입니다.
+                                         머리글·켬/끔 글자를 따로 내면 macOS 에 없는 줄이 생깁니다. -->
+                                    <Grid x:Name="ScanInfraredRow" x:FieldModifier="internal" ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ScanInfraredLabel" x:FieldModifier="internal" VerticalAlignment="Center" FontSize="12" />
+                                        <ToggleSwitch
+                                            x:Name="ScanInfraredToggle" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            MinWidth="0"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.infrared"
+                                            Toggled="OnScanInfraredToggled" />
+                                    </Grid>
+                                    <!-- macOS 는 옵션 Section 에만 `.disabled(model.isScanning)` 을 걸고
+                                         단추 Section 은 살려 둡니다 — 스캔 중에 취소를 눌러야 하기
+                                         때문입니다. 그래서 이 줄만 따로 이름을 답니다. -->
+                                    <Grid x:Name="ScanActionRow" x:FieldModifier="internal" ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="*" />
@@ -220,6 +289,15 @@
                                             AutomationProperties.AutomationId="negaflow.library.scan.start"
                                             Click="OnScanStartClicked"
                                             Style="{StaticResource AccentButtonStyle}" />
+                                        <!-- macOS `if model.isScanning { Button(role: .destructive) … }` —
+                                             스캔 중에는 같은 자리에 취소가 들어섭니다. -->
+                                        <Button
+                                            x:Name="ScanCancelButton" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            HorizontalAlignment="Stretch"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.cancel"
+                                            Click="OnScanCancelClicked"
+                                            Visibility="Collapsed" />
                                     </Grid>
                                 </StackPanel>
                                 <TextBlock
