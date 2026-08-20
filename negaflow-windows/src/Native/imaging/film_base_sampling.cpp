@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <string_view>
 #include <limits>
 #include <utility>
 
@@ -378,6 +379,58 @@ namespace {
         image.height,
         image.stride_pixels,
     };
+    // ☠️ 실험용 갈래(NEGA_BASE_SAMPLING=point). macOS 는 `CGAffineTransform(scaleX:)` 로
+    //    줄인 뒤 렌더하므로 **저역통과 없는 이중선형 점 표본**입니다. 우리는 밉맵 박스
+    //    평균을 씁니다. 어느 쪽이 맥의 dmin 을 재현하는지 재기 위한 임시 갈래입니다.
+    char sampling_mode[16]{};
+    std::size_t sampling_length = 0U;
+    const bool point_sampling =
+        getenv_s(&sampling_length, sampling_mode, sizeof(sampling_mode), "NEGA_BASE_SAMPLING") == 0 &&
+        sampling_length > 0U && std::string_view{sampling_mode} == "point";
+    if (point_sampling) {
+        const double scale_x =
+            static_cast<double>(image.width) / static_cast<double>(grid.width);
+        const double scale_y =
+            static_cast<double>(image.height) / static_cast<double>(grid.height);
+        for (std::uint32_t y = 0U; y < grid.height; ++y) {
+            for (std::uint32_t x = 0U; x < grid.width; ++x) {
+                const double sx = std::clamp(
+                    ((static_cast<double>(x) + 0.5) * scale_x) - 0.5, 0.0,
+                    static_cast<double>(image.width) - 1.0001);
+                const double sy = std::clamp(
+                    ((static_cast<double>(y) + 0.5) * scale_y) - 0.5, 0.0,
+                    static_cast<double>(image.height) - 1.0001);
+                const std::uint32_t x0 = static_cast<std::uint32_t>(sx);
+                const std::uint32_t y0 = static_cast<std::uint32_t>(sy);
+                const std::uint32_t x1 = std::min(x0 + 1U, image.width - 1U);
+                const std::uint32_t y1 = std::min(y0 + 1U, image.height - 1U);
+                const double fx = sx - x0;
+                const double fy = sy - y0;
+                const auto at = [&image](const std::uint32_t px, const std::uint32_t py) {
+                    return image.pixels[(static_cast<std::size_t>(py) * image.stride_pixels) + px];
+                };
+                const negaflow::core::Rgba32F a = at(x0, y0);
+                const negaflow::core::Rgba32F b = at(x1, y0);
+                const negaflow::core::Rgba32F c = at(x0, y1);
+                const negaflow::core::Rgba32F d = at(x1, y1);
+                const auto mix = [fx, fy](const float p00, const float p10, const float p01,
+                                          const float p11) {
+                    const double top = (p00 * (1.0 - fx)) + (p10 * fx);
+                    const double bottom = (p01 * (1.0 - fx)) + (p11 * fx);
+                    return static_cast<float>((top * (1.0 - fy)) + (bottom * fy));
+                };
+                const std::size_t index = (static_cast<std::size_t>(y) * grid.width) + x;
+                grid.pixels[index] = {
+                    mix(a.red, b.red, c.red, d.red),
+                    mix(a.green, b.green, c.green, d.green),
+                    mix(a.blue, b.blue, c.blue, d.blue),
+                    1.0F,
+                };
+                grid.lumas[index] = luma_of(grid.pixels[index]);
+            }
+        }
+        return grid;
+    }
     const DownsampledProxy proxy =
         downsample_for_statistics(source, grid.width, grid.height);
     if (proxy.pixels.empty()) {
