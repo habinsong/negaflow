@@ -199,6 +199,29 @@ namespace {
     };
 }
 
+
+// 성분의 **상위 절반 luma** 채널 중앙값 — 최종 선택이 쓰는 통계와 같습니다.
+// 맥의 베이스와 어느 성분이 맞는지 이 값으로 바로 댈 수 있습니다(진단 전용).
+[[nodiscard]] double component_channel_median(
+    const SampleGrid& grid,
+    const std::vector<std::size_t>& cells,
+    const int channel) {
+    std::vector<std::size_t> ordered = cells;
+    std::sort(ordered.begin(), ordered.end(),
+              [&grid](const std::size_t left, const std::size_t right) {
+                  return grid.lumas[left] > grid.lumas[right];
+              });
+    ordered.resize(std::max(ordered.size() / 2U, std::min(ordered.size(), std::size_t{24U})));
+    std::vector<double> values;
+    values.reserve(ordered.size());
+    for (const std::size_t cell : ordered) {
+        const negaflow::core::Rgba32F& pixel = grid.pixels[cell];
+        values.push_back(static_cast<double>(
+            channel == 0 ? pixel.red : (channel == 1 ? pixel.green : pixel.blue)));
+    }
+    return median(std::move(values));
+}
+
 [[nodiscard]] std::optional<FilmBaseMeasurement> connected_component_base(
     const SampleGrid& grid,
     const NegativeFilmType film_type) {
@@ -305,10 +328,13 @@ namespace {
         for (std::size_t index = 0U; index < components.size() && index < 8U; ++index) {
             std::fprintf(
                 stderr,
-                "[base-cc]   #%zu cells=%zu p75=%.6f\n",
+                "[base-cc]   #%zu cells=%zu p75=%.6f topHalf=(%.5f,%.5f,%.5f)\n",
                 index,
                 components[index].cells.size(),
-                components[index].p75);
+                components[index].p75,
+                component_channel_median(grid, components[index].cells, 0),
+                component_channel_median(grid, components[index].cells, 1),
+                component_channel_median(grid, components[index].cells, 2));
         }
     }
     std::size_t selected_index = 0U;
@@ -396,9 +422,11 @@ namespace {
             box_side = 1;
         } else if (mode.starts_with("box")) {
             box_side = std::atoi(sampling_mode + 3);
+        } else if (mode == "area") {
+            box_side = -1;  // 정확한 면적 평균(축소 배율만큼의 상자, 부분 화소 가중).
         }
     }
-    if (box_side > 0) {
+    if (box_side != 0) {
         const double scale_x =
             static_cast<double>(image.width) / static_cast<double>(grid.width);
         const double scale_y =
@@ -421,8 +449,44 @@ namespace {
                     return image.pixels[(static_cast<std::size_t>(py) * image.stride_pixels) + px];
                 };
                 double sums[3]{0.0, 0.0, 0.0};
+                double weight_total = 0.0;
                 std::size_t taps = 0U;
-                if (box_side <= 1) {
+                if (box_side < 0) {
+                    // 목표 셀 하나가 덮는 원본 영역을 그대로 평균합니다(부분 화소 포함).
+                    const double left = static_cast<double>(x) * scale_x;
+                    const double right = left + scale_x;
+                    const double top = static_cast<double>(y) * scale_y;
+                    const double bottom = top + scale_y;
+                    const std::uint32_t first_x = static_cast<std::uint32_t>(std::floor(left));
+                    const std::uint32_t last_x = std::min(
+                        image.width - 1U, static_cast<std::uint32_t>(std::ceil(right)) - 1U);
+                    const std::uint32_t first_y = static_cast<std::uint32_t>(std::floor(top));
+                    const std::uint32_t last_y = std::min(
+                        image.height - 1U, static_cast<std::uint32_t>(std::ceil(bottom)) - 1U);
+                    for (std::uint32_t py = first_y; py <= last_y; ++py) {
+                        const double covered_y =
+                            std::min(bottom, static_cast<double>(py) + 1.0) -
+                            std::max(top, static_cast<double>(py));
+                        if (covered_y <= 0.0) {
+                            continue;
+                        }
+                        for (std::uint32_t px = first_x; px <= last_x; ++px) {
+                            const double covered_x =
+                                std::min(right, static_cast<double>(px) + 1.0) -
+                                std::max(left, static_cast<double>(px));
+                            if (covered_x <= 0.0) {
+                                continue;
+                            }
+                            const double weight = covered_x * covered_y;
+                            const negaflow::core::Rgba32F sample = at(px, py);
+                            sums[0] += sample.red * weight;
+                            sums[1] += sample.green * weight;
+                            sums[2] += sample.blue * weight;
+                            weight_total += weight;
+                        }
+                    }
+                    taps = 1U;
+                } else if (box_side <= 1) {
                     const negaflow::core::Rgba32F a = at(x0, y0);
                     const negaflow::core::Rgba32F b = at(x1, y0);
                     const negaflow::core::Rgba32F c = at(x0, y1);
@@ -455,11 +519,14 @@ namespace {
                         }
                     }
                 }
+                const double divisor = box_side < 0
+                    ? std::max(weight_total, 1.0e-9)
+                    : static_cast<double>(taps);
                 const std::size_t index = (static_cast<std::size_t>(y) * grid.width) + x;
                 grid.pixels[index] = {
-                    static_cast<float>(sums[0] / static_cast<double>(taps)),
-                    static_cast<float>(sums[1] / static_cast<double>(taps)),
-                    static_cast<float>(sums[2] / static_cast<double>(taps)),
+                    static_cast<float>(sums[0] / divisor),
+                    static_cast<float>(sums[1] / divisor),
+                    static_cast<float>(sums[2] / divisor),
                     1.0F,
                 };
                 grid.lumas[index] = luma_of(grid.pixels[index]);
