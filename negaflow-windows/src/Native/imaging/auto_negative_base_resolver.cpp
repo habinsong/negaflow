@@ -106,8 +106,13 @@ AutoNegativeBaseResult resolve_auto_negative_base(
             result.source = source;
             result.diagnostics = measurement.diagnostics;
         };
+        // 실험 knob: NEGA_BASE_SKIP_CC=1 이면 연결 성분을 건너뛰고 폴백 경로를 봅니다.
+        // macOS 표본 그리드에서 성분이 최소 크기를 못 넘겨 폴백으로 갔는지 재기 위한 자리입니다.
+        std::size_t skip_length = 0U;
+        const bool skip_component =
+            getenv_s(&skip_length, nullptr, 0U, "NEGA_BASE_SKIP_CC") == 0 && skip_length > 0U;
         if (const std::optional<FilmBaseMeasurement> component =
-                connected_component_base(*grid, film_type)) {
+                skip_component ? std::nullopt : connected_component_base(*grid, film_type)) {
             apply(*component, AutoNegativeBaseSource::connected_component);
             return with_chromogenic_fallback(result);
         }

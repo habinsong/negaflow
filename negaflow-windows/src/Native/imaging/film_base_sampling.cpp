@@ -382,12 +382,23 @@ namespace {
     // ☠️ 실험용 갈래(NEGA_BASE_SAMPLING=point). macOS 는 `CGAffineTransform(scaleX:)` 로
     //    줄인 뒤 렌더하므로 **저역통과 없는 이중선형 점 표본**입니다. 우리는 밉맵 박스
     //    평균을 씁니다. 어느 쪽이 맥의 dmin 을 재현하는지 재기 위한 임시 갈래입니다.
+    // 실험 knob: NEGA_BASE_SAMPLING=box<N> — 원본에서 N×N 블록 평균을 뽑습니다.
+    //   box1 = 점 표본(저역통과 없음, macOS affine 의 하한)
+    //   box16~20 = 지금의 밉맵 박스 평균과 비슷(상한)
+    // macOS Core Image 의 affine 축소가 그 사이 어디인지 실측으로 찾기 위한 자리입니다.
     char sampling_mode[16]{};
     std::size_t sampling_length = 0U;
-    const bool point_sampling =
-        getenv_s(&sampling_length, sampling_mode, sizeof(sampling_mode), "NEGA_BASE_SAMPLING") == 0 &&
-        sampling_length > 0U && std::string_view{sampling_mode} == "point";
-    if (point_sampling) {
+    int box_side = 0;
+    if (getenv_s(&sampling_length, sampling_mode, sizeof(sampling_mode), "NEGA_BASE_SAMPLING") == 0 &&
+        sampling_length > 0U) {
+        const std::string_view mode{sampling_mode};
+        if (mode == "point") {
+            box_side = 1;
+        } else if (mode.starts_with("box")) {
+            box_side = std::atoi(sampling_mode + 3);
+        }
+    }
+    if (box_side > 0) {
         const double scale_x =
             static_cast<double>(image.width) / static_cast<double>(grid.width);
         const double scale_y =
@@ -409,21 +420,46 @@ namespace {
                 const auto at = [&image](const std::uint32_t px, const std::uint32_t py) {
                     return image.pixels[(static_cast<std::size_t>(py) * image.stride_pixels) + px];
                 };
-                const negaflow::core::Rgba32F a = at(x0, y0);
-                const negaflow::core::Rgba32F b = at(x1, y0);
-                const negaflow::core::Rgba32F c = at(x0, y1);
-                const negaflow::core::Rgba32F d = at(x1, y1);
-                const auto mix = [fx, fy](const float p00, const float p10, const float p01,
-                                          const float p11) {
-                    const double top = (p00 * (1.0 - fx)) + (p10 * fx);
-                    const double bottom = (p01 * (1.0 - fx)) + (p11 * fx);
-                    return static_cast<float>((top * (1.0 - fy)) + (bottom * fy));
-                };
+                double sums[3]{0.0, 0.0, 0.0};
+                std::size_t taps = 0U;
+                if (box_side <= 1) {
+                    const negaflow::core::Rgba32F a = at(x0, y0);
+                    const negaflow::core::Rgba32F b = at(x1, y0);
+                    const negaflow::core::Rgba32F c = at(x0, y1);
+                    const negaflow::core::Rgba32F d = at(x1, y1);
+                    const auto mix = [fx, fy](const float p00, const float p10, const float p01,
+                                              const float p11) {
+                        const double top = (p00 * (1.0 - fx)) + (p10 * fx);
+                        const double bottom = (p01 * (1.0 - fx)) + (p11 * fx);
+                        return (top * (1.0 - fy)) + (bottom * fy);
+                    };
+                    sums[0] = mix(a.red, b.red, c.red, d.red);
+                    sums[1] = mix(a.green, b.green, c.green, d.green);
+                    sums[2] = mix(a.blue, b.blue, c.blue, d.blue);
+                    taps = 1U;
+                } else {
+                    const int half = box_side / 2;
+                    for (int dy = -half; dy <= half; ++dy) {
+                        for (int dx = -half; dx <= half; ++dx) {
+                            const std::int64_t px = static_cast<std::int64_t>(x0) + dx;
+                            const std::int64_t py = static_cast<std::int64_t>(y0) + dy;
+                            const std::uint32_t cx = static_cast<std::uint32_t>(
+                                std::clamp<std::int64_t>(px, 0, image.width - 1));
+                            const std::uint32_t cy = static_cast<std::uint32_t>(
+                                std::clamp<std::int64_t>(py, 0, image.height - 1));
+                            const negaflow::core::Rgba32F sample = at(cx, cy);
+                            sums[0] += sample.red;
+                            sums[1] += sample.green;
+                            sums[2] += sample.blue;
+                            ++taps;
+                        }
+                    }
+                }
                 const std::size_t index = (static_cast<std::size_t>(y) * grid.width) + x;
                 grid.pixels[index] = {
-                    mix(a.red, b.red, c.red, d.red),
-                    mix(a.green, b.green, c.green, d.green),
-                    mix(a.blue, b.blue, c.blue, d.blue),
+                    static_cast<float>(sums[0] / static_cast<double>(taps)),
+                    static_cast<float>(sums[1] / static_cast<double>(taps)),
+                    static_cast<float>(sums[2] / static_cast<double>(taps)),
                     1.0F,
                 };
                 grid.lumas[index] = luma_of(grid.pixels[index]);
