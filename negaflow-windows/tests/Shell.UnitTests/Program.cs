@@ -20,6 +20,7 @@ internal static class Program
         {
             return diagnosticExitCode;
         }
+        ResourceFileTests.Run();
         ShellPreferencesTests.Run();
         LibraryBrowsingTests.Run();
         ExportConfigurationTests.Run();
@@ -41,10 +42,12 @@ internal static class Program
         DevelopMetadataTests.Run();
         DevelopMenuStateTests.Run();
         ScannerMenuStateTests.Run();
+        LibraryFolderDevelopmentTests.Run();
         ExportPanelProjectionTests.Run();
         FilmLookMenuProjectionTests.Run();
         GrainMendCardProjectionTests.Run();
         DefectLayerSectionTests.Run();
+        InfraredCleanStatusTests.Run();
         VersionListProjectionTests.Run();
         PasteScopeSummaryTests.Run();
         ScanRotationDefaultTests.Run();
@@ -63,6 +66,7 @@ internal static class Program
         PrintOutputTests.Run();
         FilmBaseSidecarTests.Run();
         ScanSessionTests.Run();
+        PrintLayoutTemplateTests.Run();
 
         var report = new
         {

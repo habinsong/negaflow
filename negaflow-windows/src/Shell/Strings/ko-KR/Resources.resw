@@ -336,6 +336,7 @@
     <value>사진 검색</value>
     <comment>AppLocalizedPhrase.librarySearchPlaceholder</comment>
   </data>
+  <data name="libraryClearSearch.Text" xml:space="preserve"><value>검색 지우기</value><comment>AppLocalizedPhrase.libraryClearSearch</comment></data>
   <data name="menuDevelop.Content" xml:space="preserve">
     <value>현상</value>
     <comment>AppLocalizedText.menuDevelop</comment>
@@ -824,6 +825,7 @@
   <data name="developBalance.Text" xml:space="preserve"><value>균형</value><comment>AppLocalizedPhrase.balance</comment></data>
   <data name="developHue.Text" xml:space="preserve"><value>색조</value><comment>AppLocalizedPhrase.hue</comment></data>
   <data name="developSaturation.Text" xml:space="preserve"><value>채도</value><comment>AppLocalizedPhrase.saturation</comment></data>
+  <data name="developSaturationAbbrev.Text" xml:space="preserve"><value>채도</value><comment>AppLocalizedPhrase.saturationAbbrev</comment></data>
   <data name="developColorGradingWheel.Value" xml:space="preserve"><value>컬러 그레이딩 휠</value></data>
   <data name="developColorGradingWheelHelp.Value" xml:space="preserve"><value>화살표 키로 색조와 채도를 조정합니다. Shift 를 누르면 더 크게 움직입니다.</value></data>
   <data name="developAll.Text" xml:space="preserve"><value>모두</value><comment>AppLocalizedPhrase.all</comment></data>
@@ -965,6 +967,7 @@
   <data name="developExportCompressionNone.Content" xml:space="preserve"><value>없음</value><comment>ExportEncoding.none</comment></data>
   <data name="developExportDpi.Text" xml:space="preserve"><value>DPI</value><comment>AppLocalizedText.exportDPILabel</comment></data>
   <data name="developExportFilename.Text" xml:space="preserve"><value>파일명</value><comment>ExportNaming.filename</comment></data>
+  <data name="developExportPreview.Text" xml:space="preserve"><value>미리보기</value><comment>ExportNamingLocalizedText.preview</comment></data>
   <data name="developExportJpegQuality.Text" xml:space="preserve"><value>JPEG 품질</value><comment>ExportEncoding.jpegQuality</comment></data>
   <data name="developExportLongEdgeSuffix.Text" xml:space="preserve"><value>px (긴 변)</value><comment>AppLocalizedText.exportLongEdgeSuffix</comment></data>
   <data name="developExportNamingOptions.Text" xml:space="preserve"><value>파일명 옵션</value><comment>ExportNaming.namingOptions</comment></data>
@@ -996,6 +999,7 @@
   <data name="scanDetectScanners.Text" xml:space="preserve"><value>스캐너 다시 찾기</value><comment>AppLocalizedText.commandDetectScanners</comment></data>
   <data name="scanFilm.Text" xml:space="preserve"><value>필름</value><comment>AppLocalizedPhrase.film</comment></data>
   <data name="scanFolderName.Text" xml:space="preserve"><value>폴더명</value><comment>AppLocalizedPhrase.scanFolderName</comment></data>
+  <data name="scanChooseFolder.Text" xml:space="preserve"><value>스캔 폴더 선택</value><comment>AppLocalizedPhrase.chooseScanFolder</comment></data>
   <data name="scanFramesFormat.Text" xml:space="preserve"><value>사진: %d</value><comment>AppLocalizedPhrase.framesFormat</comment></data>
   <data name="scanInfrared.Content" xml:space="preserve"><value>적외선(IR)</value><comment>AppLocalizedPhrase.infrared</comment></data>
   <data name="scanNext.Content" xml:space="preserve"><value>다음 스캔</value><comment>AppLocalizedPhrase.scanNext</comment></data>

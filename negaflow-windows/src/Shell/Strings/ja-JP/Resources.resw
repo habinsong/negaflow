@@ -336,6 +336,7 @@
     <value>写真を検索</value>
     <comment>AppLocalizedPhrase.librarySearchPlaceholder</comment>
   </data>
+  <data name="libraryClearSearch.Text" xml:space="preserve"><value>検索を消去</value><comment>AppLocalizedPhrase.libraryClearSearch</comment></data>
   <data name="menuDevelop.Content" xml:space="preserve">
     <value>現像</value>
     <comment>AppLocalizedText.menuDevelop</comment>
@@ -824,6 +825,7 @@
   <data name="developBalance.Text" xml:space="preserve"><value>バランス</value><comment>AppLocalizedPhrase.balance</comment></data>
   <data name="developHue.Text" xml:space="preserve"><value>色相</value><comment>AppLocalizedPhrase.hue</comment></data>
   <data name="developSaturation.Text" xml:space="preserve"><value>彩度</value><comment>AppLocalizedPhrase.saturation</comment></data>
+  <data name="developSaturationAbbrev.Text" xml:space="preserve"><value>彩度</value><comment>AppLocalizedPhrase.saturationAbbrev</comment></data>
   <data name="developColorGradingWheel.Value" xml:space="preserve"><value>カラーグレーディングホイール</value></data>
   <data name="developColorGradingWheelHelp.Value" xml:space="preserve"><value>矢印キーで色相と彩度を調整します。Shift を押すと大きく動きます。</value></data>
   <data name="developAll.Text" xml:space="preserve"><value>すべて</value><comment>AppLocalizedPhrase.all</comment></data>
@@ -965,6 +967,7 @@
   <data name="developExportCompressionNone.Content" xml:space="preserve"><value>なし</value><comment>ExportEncoding.none</comment></data>
   <data name="developExportDpi.Text" xml:space="preserve"><value>DPI</value><comment>AppLocalizedText.exportDPILabel</comment></data>
   <data name="developExportFilename.Text" xml:space="preserve"><value>ファイル名</value><comment>ExportNaming.filename</comment></data>
+  <data name="developExportPreview.Text" xml:space="preserve"><value>プレビュー</value><comment>ExportNamingLocalizedText.preview</comment></data>
   <data name="developExportJpegQuality.Text" xml:space="preserve"><value>JPEG品質</value><comment>ExportEncoding.jpegQuality</comment></data>
   <data name="developExportLongEdgeSuffix.Text" xml:space="preserve"><value>px（長辺）</value><comment>AppLocalizedText.exportLongEdgeSuffix</comment></data>
   <data name="developExportNamingOptions.Text" xml:space="preserve"><value>ファイル名オプション</value><comment>ExportNaming.namingOptions</comment></data>
@@ -996,6 +999,7 @@
   <data name="scanDetectScanners.Text" xml:space="preserve"><value>スキャナーを再検出</value><comment>AppLocalizedText.commandDetectScanners</comment></data>
   <data name="scanFilm.Text" xml:space="preserve"><value>フィルム</value><comment>AppLocalizedPhrase.film</comment></data>
   <data name="scanFolderName.Text" xml:space="preserve"><value>フォルダ名</value><comment>AppLocalizedPhrase.scanFolderName</comment></data>
+  <data name="scanChooseFolder.Text" xml:space="preserve"><value>スキャンフォルダを選択</value><comment>AppLocalizedPhrase.chooseScanFolder</comment></data>
   <data name="scanFramesFormat.Text" xml:space="preserve"><value>コマ数: %d</value><comment>AppLocalizedPhrase.framesFormat</comment></data>
   <data name="scanInfrared.Content" xml:space="preserve"><value>赤外線 (IR)</value><comment>AppLocalizedPhrase.infrared</comment></data>
   <data name="scanNext.Content" xml:space="preserve"><value>次をスキャン</value><comment>AppLocalizedPhrase.scanNext</comment></data>

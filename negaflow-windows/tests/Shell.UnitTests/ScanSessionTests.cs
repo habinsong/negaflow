@@ -17,6 +17,57 @@ internal static class ScanSessionTests
     public static void Run()
     {
         VerifyScanSession();
+        VerifyFrameFormatAvailability();
+    }
+
+    /// <summary>
+    /// macOS `AppModel.availableScanFrameFormats` — 목록이 비면 프레임 규격·프레임 찾기·선택
+    /// 줄이 통째로 사라집니다. OpticFilm 8100 같은 35mm 전용기가 그 경우이고, 평판은 반대입니다.
+    /// </summary>
+    private static void VerifyFrameFormatAvailability()
+    {
+        static ScannerPluginCapabilities Caps(
+            double? width,
+            double? height,
+            bool positioned,
+            bool preview) =>
+            new(
+                [300, 600],
+                ["color"],
+                [8, 16],
+                SupportsPreview: preview,
+                SupportsTransparency: true,
+                SupportsInfrared: false,
+                SupportsMultiExposure: false,
+                SupportsScanArea: true,
+                SupportsPositionedScanArea: positioned,
+                ["tiff"],
+                "token")
+            {
+                MaxScanWidthMm = width,
+                MaxScanHeightMm = height,
+            };
+
+        // 평판(예: Epson) — 판이 크고 프리뷰가 있으므로 프레임 규격이 나옵니다.
+        Check(
+            ScanOptionPolicy.AvailableFrameFormats(Caps(216, 297, positioned: true, preview: true)).Count > 0,
+            "flatbed_offers_frame_formats");
+
+        // 영역은 지정할 수 있는데 프리뷰가 없는 장치 — 판 위를 볼 수 없으니 macOS 는 목록을 비웁니다.
+        Check(
+            ScanOptionPolicy.AvailableFrameFormats(Caps(216, 297, positioned: true, preview: false)).Count == 0,
+            "positioned_without_preview_hides_frame_formats");
+
+        // 35mm 전용 필름 스캐너 — 판 크기를 안 냅니다. macOS 는 그때 빈 목록이라
+        // 프레임 규격 줄이 통째로 사라집니다.
+        Check(
+            ScanOptionPolicy.AvailableFrameFormats(
+                Caps(null, null, positioned: false, preview: true)).Count == 0,
+            "film_scanner_without_bed_bounds_has_no_frame_formats");
+
+        Check(
+            ScanOptionPolicy.AvailableFrameFormats(null).Count == 0,
+            "no_capabilities_means_no_frame_formats");
     }
 
     private static void VerifyScanSession()

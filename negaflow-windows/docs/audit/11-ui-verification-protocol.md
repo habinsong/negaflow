@@ -422,7 +422,8 @@ $make = 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.26100.0/x64/makepri.exe
 Select-String -Path dump.xml -Pattern '"printOutputProcess"'
 ```
 
-빠른 자동 검사(중첩된 `<data>` 는 0이어야 합니다):
+**이제 ci-gate 가 잡습니다** — `tests/Shell.UnitTests/ResourceFileTests.cs`
+(중첩·이름 중복·언어별 항목 수·빈 값). 원리는 아래와 같습니다:
 
 ```python
 import xml.etree.ElementTree as ET

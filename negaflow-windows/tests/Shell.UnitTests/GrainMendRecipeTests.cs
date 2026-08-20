@@ -155,6 +155,17 @@ internal static class GrainMendRecipeTests
         Check(detecting is { Mode: GrainMendHudMode.Detecting, RemoveEnabled: false } &&
             detecting.Chips.Count == 0,
             "grain_mend_hud_offers_nothing_while_detecting");
+        // macOS RegionDefectOverlay 는 기다리는 상태에서만, 그리고 되돌릴 것이 있을 때만
+        // 되돌리기를 냅니다. 검출·검토 중에는 취소와 제거가 그 자리를 씁니다.
+        Check(!GrainMendHudProjection
+                .Create(true, false, null, null, GrainMendTool.Guided, canUndo: false).CanUndo &&
+            GrainMendHudProjection
+                .Create(true, false, null, null, GrainMendTool.Guided, canUndo: true).CanUndo,
+            "grain_mend_hud_undo_follows_the_history");
+        Check(!GrainMendHudProjection
+                .Create(true, true, DefectEditLabelKind.Automatic, null,
+                    GrainMendTool.None, canUndo: true).CanUndo,
+            "grain_mend_hud_hides_undo_while_detecting");
     }
 
     private static void VerifyGrainMendRegionEdit()

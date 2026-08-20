@@ -336,6 +336,7 @@ Load a scanner from Library to scan film.</value>
     <value>Search Photos</value>
     <comment>AppLocalizedPhrase.librarySearchPlaceholder</comment>
   </data>
+  <data name="libraryClearSearch.Text" xml:space="preserve"><value>Clear Search</value><comment>AppLocalizedPhrase.libraryClearSearch</comment></data>
   <data name="menuDevelop.Content" xml:space="preserve">
     <value>Develop</value>
     <comment>AppLocalizedText.menuDevelop</comment>
@@ -824,6 +825,7 @@ Load a scanner from Library to scan film.</value>
   <data name="developBalance.Text" xml:space="preserve"><value>Balance</value><comment>AppLocalizedPhrase.balance</comment></data>
   <data name="developHue.Text" xml:space="preserve"><value>Hue</value><comment>AppLocalizedPhrase.hue</comment></data>
   <data name="developSaturation.Text" xml:space="preserve"><value>Saturation</value><comment>AppLocalizedPhrase.saturation</comment></data>
+  <data name="developSaturationAbbrev.Text" xml:space="preserve"><value>Sat</value><comment>AppLocalizedPhrase.saturationAbbrev</comment></data>
   <data name="developColorGradingWheel.Value" xml:space="preserve"><value>Color grading wheel</value></data>
   <data name="developColorGradingWheelHelp.Value" xml:space="preserve"><value>Arrow keys adjust hue and saturation. Hold Shift for larger changes.</value></data>
   <data name="developAll.Text" xml:space="preserve"><value>All</value><comment>AppLocalizedPhrase.all</comment></data>
@@ -965,6 +967,7 @@ Load a scanner from Library to scan film.</value>
   <data name="developExportCompressionNone.Content" xml:space="preserve"><value>None</value><comment>ExportEncoding.none</comment></data>
   <data name="developExportDpi.Text" xml:space="preserve"><value>DPI</value><comment>AppLocalizedText.exportDPILabel</comment></data>
   <data name="developExportFilename.Text" xml:space="preserve"><value>Filename</value><comment>ExportNaming.filename</comment></data>
+  <data name="developExportPreview.Text" xml:space="preserve"><value>Preview</value><comment>ExportNamingLocalizedText.preview</comment></data>
   <data name="developExportJpegQuality.Text" xml:space="preserve"><value>JPEG Quality</value><comment>ExportEncoding.jpegQuality</comment></data>
   <data name="developExportLongEdgeSuffix.Text" xml:space="preserve"><value>px (long edge)</value><comment>AppLocalizedText.exportLongEdgeSuffix</comment></data>
   <data name="developExportNamingOptions.Text" xml:space="preserve"><value>Naming Options</value><comment>ExportNaming.namingOptions</comment></data>
@@ -996,6 +999,7 @@ Load a scanner from Library to scan film.</value>
   <data name="scanDetectScanners.Text" xml:space="preserve"><value>Detect Scanners</value><comment>AppLocalizedText.commandDetectScanners</comment></data>
   <data name="scanFilm.Text" xml:space="preserve"><value>Film</value><comment>AppLocalizedPhrase.film</comment></data>
   <data name="scanFolderName.Text" xml:space="preserve"><value>Folder Name</value><comment>AppLocalizedPhrase.scanFolderName</comment></data>
+  <data name="scanChooseFolder.Text" xml:space="preserve"><value>Choose Scan Folder</value><comment>AppLocalizedPhrase.chooseScanFolder</comment></data>
   <data name="scanFramesFormat.Text" xml:space="preserve"><value>Frames: %d</value><comment>AppLocalizedPhrase.framesFormat</comment></data>
   <data name="scanInfrared.Content" xml:space="preserve"><value>Infrared (IR)</value><comment>AppLocalizedPhrase.infrared</comment></data>
   <data name="scanNext.Content" xml:space="preserve"><value>Scan Next</value><comment>AppLocalizedPhrase.scanNext</comment></data>

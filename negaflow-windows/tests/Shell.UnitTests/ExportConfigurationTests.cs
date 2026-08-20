@@ -18,6 +18,47 @@ internal static class ExportConfigurationTests
     {
         VerifyExportDestination();
         VerifyExportSettingsReachTheRequest();
+        VerifyQuickExportBatchSettings();
+    }
+
+    /// <summary>
+    /// macOS <c>quickExportSelection()</c> 은 본 내보내기와 같은 배치를 부르되 사이드카·
+    /// 무보정본·원본 사본을 남기지 않고 이름 규칙을 기본값으로 둡니다. 화면 공유용 한 벌이라
+    /// 보관용 부산물이 따라 나가면 안 됩니다.
+    /// </summary>
+    private static void VerifyQuickExportBatchSettings()
+    {
+        QuickExportSettings quick = new()
+        {
+            Format = DevelopExportFormat.Png16,
+            Dpi = 300,
+            LongEdge = 4096,
+            JpegQuality = 0.5,
+            FolderPath = @"D:\Quick Export",
+        };
+
+        ExportSettings batch = quick.ToBatchSettings();
+        Check(
+            batch.Format == DevelopExportFormat.Png16 &&
+            batch.Dpi == 300 &&
+            batch.LongEdge == 4096 &&
+            batch.FolderPath == @"D:\Quick Export",
+            "quick_export_batch_carries_chosen_values");
+        Check(
+            !batch.WriteSidecar && !batch.WriteMainFlatMaster && !batch.WriteOriginalRaw,
+            "quick_export_batch_writes_no_extra_files");
+        Check(
+            batch.NamingTemplate == ExportNamingTemplate.DefaultPattern,
+            "quick_export_batch_uses_default_naming");
+        // 배치 계획이 실제로 그 폴더·그 이름으로 내려가는지까지 봅니다.
+        Check(
+            batch.Destination.PathFor(@"C:\scans\IMG_0007.tif") ==
+                @"D:\Quick Export\IMG_0007.png",
+            "quick_export_batch_destination_matches_quick_folder");
+        // 인코딩은 고른 값 그대로여야 합니다 — DPI·긴 변을 잃으면 원본 크기가 나갑니다.
+        Check(
+            quick.Encoding.Dpi == 300 && quick.Encoding.LongEdge == 4096,
+            "quick_export_encoding_carries_size_and_dpi");
     }
 
     private static void VerifyExportDestination()

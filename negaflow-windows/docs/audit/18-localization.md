@@ -121,3 +121,21 @@ for f in scripts/*.ps1; do echo "$(head -c 3 "$f" | od -An -tx1 | tr -d '
 (`<value>`/`<comment>` 가 다음 줄에 있는 것) 바로 뒤에 끼워 넣다가 이렇게 됩니다.
 
 검사와 되돌리는 법은 [`11`](11-ui-verification-protocol.md) 6.5.
+
+### 8.1 같은 날 **또 났습니다** — 그래서 게이트에 넣었습니다
+
+몇 시간 뒤 `libraryClearSearch.Text` 가 `librarySearchPlaceholder.PlaceholderText` 안쪽에
+들어가 **앱이 또 안 떴습니다**(`Cannot create instance of LibraryWorkspaceView`).
+사람 눈으로 잡을 수 있는 실수가 아닙니다.
+
+`tests/Shell.UnitTests/ResourceFileTests.cs` 를 새로 두어 ci-gate 가 잡습니다:
+
+| 검사 | 왜 |
+|---|---|
+| 중첩된 `<data>` 0개 | MakePri 가 무시 → 앱이 시작하다 죽음 |
+| 이름 중복 0개(대소문자 무시) | MRT 이름은 대소문자를 안 가림 |
+| 언어마다 항목 수 동일 | 한 언어에만 있는 문구는 화면에서 빔 |
+| 모든 항목에 값이 있음 | 빈 값은 빈 화면 |
+
+**시험이 진짜 잡는지 확인했습니다** — 일부러 한 줄을 중첩시켰더니 shell 시험이 실패했고,
+되돌리니 통과했습니다(1,456 assertions).

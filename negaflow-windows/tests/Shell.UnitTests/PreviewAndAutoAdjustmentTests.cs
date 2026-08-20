@@ -140,8 +140,8 @@ internal static class PreviewAndAutoAdjustmentTests
         }
         Check(coordinator.IsRendering, "preview_reports_rendering");
 
-        // 슬라이더 한 번에 요청이 여러 번 옵니다. 중간 것은 이미 지나간 상태이므로 버리되,
-        // **마지막 것은 반드시 그려져야** 사용자가 방금 한 조작이 화면에 남습니다.
+        // 슬라이더 한 번에 요청이 여러 번 옵니다. 대기 자리는 하나이므로 중간 요청은
+        // 합쳐지되, **마지막 것은 반드시 그려져야** 사용자가 방금 한 조작이 화면에 남습니다.
         coordinator.RequestAsync(first, outcome => delivered.Add(outcome.Width));
         coordinator.RequestAsync(first, outcome => delivered.Add(outcome.Width));
         coordinator.RequestAsync(first, outcome => delivered.Add(outcome.Width));
@@ -150,11 +150,13 @@ internal static class PreviewAndAutoAdjustmentTests
         started.GetAwaiter().GetResult();
 
         Check(exporter.CallCount == 2, "preview_coalesces_to_one_pending");
-        // 겹친 요청은 돌고 있던 렌더를 취소합니다. 그 결과는 이미 지나간 상태이고 픽셀도
-        // 없으므로 화면에 배달하지 않습니다. 사용자에게 중요한 계약 — **마지막 요청은 반드시
-        // 그려진다** — 은 그대로입니다.
-        Check(exporter.CancelledCount == 1, "preview_cancels_the_superseded_render");
-        Check(delivered.Count == 1, "preview_delivers_only_the_last_request");
+        // ☠️ **돌고 있던 인터랙티브 렌더는 취소하지 않습니다.**
+        //    앞 판은 새 요청마다 취소했고 취소된 결과는 버려졌습니다. 그래서 슬라이더를
+        //    계속 끄는 동안에는 어떤 렌더도 완주하지 못해 **화면이 한 장도 안 바뀌었습니다**
+        //    — 사용자가 "사진이 바로 반영이 안 된다"고 본 것이 이것입니다. 인터랙티브 한
+        //    장은 짧으므로 끝까지 그려서 배달하고, 곧바로 최신 값으로 다음 장을 그립니다.
+        Check(exporter.CancelledCount == 0, "preview_lets_the_interactive_render_finish");
+        Check(delivered.Count == 2, "preview_delivers_every_finished_interactive_render");
         Check(!coordinator.IsRendering, "preview_clears_rendering_flag");
 
         // 요청이 겹치지 않으면 그냥 매번 그립니다.

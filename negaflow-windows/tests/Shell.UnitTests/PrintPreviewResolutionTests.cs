@@ -42,6 +42,19 @@ internal static class PrintPreviewResolutionTests
             PrintPreviewResolution.RenderDimension(4000) ==
                 DevelopPreviewProxy.InteractiveMaxDimension,
             "print_preview_render_dimension_caps_at_interactive_max");
+
+        // macOS preparePrintPackagePreviews: 썸네일·현상본이 있으면 작은 칸은 재현상하지 않음.
+        int contactCurrent = PrintPreviewResolution.BestLongEdge(
+            null, null, ThumbnailService.MaximumDimension, null) ?? 0;
+        Check(
+            !PrintPreviewResolution.NeedsUpgrade(contactCurrent, 220),
+            "print_preview_keeps_thumbnail_on_contact_cell");
+        Check(
+            PrintPreviewResolution.NeedsUpgrade(contactCurrent, 900),
+            "print_preview_still_upgrades_thumbnail_when_cell_is_larger");
+        Check(
+            PrintPreviewResolution.NeedsUpgrade(0, 220),
+            "print_preview_requests_when_no_raster_exists");
     }
 
     private static void VerifyDevelopedPreviewCache()

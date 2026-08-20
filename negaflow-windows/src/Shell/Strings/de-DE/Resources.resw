@@ -336,6 +336,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
     <value>Fotos suchen</value>
     <comment>AppLocalizedPhrase.librarySearchPlaceholder</comment>
   </data>
+  <data name="libraryClearSearch.Text" xml:space="preserve"><value>Suche löschen</value><comment>AppLocalizedPhrase.libraryClearSearch</comment></data>
   <data name="menuDevelop.Content" xml:space="preserve">
     <value>Entwickeln</value>
     <comment>AppLocalizedText.menuDevelop</comment>
@@ -824,6 +825,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developBalance.Text" xml:space="preserve"><value>Balance</value><comment>AppLocalizedPhrase.balance</comment></data>
   <data name="developHue.Text" xml:space="preserve"><value>Farbton</value><comment>AppLocalizedPhrase.hue</comment></data>
   <data name="developSaturation.Text" xml:space="preserve"><value>Sättigung</value><comment>AppLocalizedPhrase.saturation</comment></data>
+  <data name="developSaturationAbbrev.Text" xml:space="preserve"><value>Sätt.</value><comment>AppLocalizedPhrase.saturationAbbrev</comment></data>
   <data name="developColorGradingWheel.Value" xml:space="preserve"><value>Farbkorrekturrad</value></data>
   <data name="developColorGradingWheelHelp.Value" xml:space="preserve"><value>Pfeiltasten ändern Farbton und Sättigung. Umschalt für größere Schritte.</value></data>
   <data name="developAll.Text" xml:space="preserve"><value>Alle</value><comment>AppLocalizedPhrase.all</comment></data>
@@ -965,6 +967,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developExportCompressionNone.Content" xml:space="preserve"><value>Keine</value><comment>ExportEncoding.none</comment></data>
   <data name="developExportDpi.Text" xml:space="preserve"><value>DPI</value><comment>AppLocalizedText.exportDPILabel</comment></data>
   <data name="developExportFilename.Text" xml:space="preserve"><value>Dateiname</value><comment>ExportNaming.filename</comment></data>
+  <data name="developExportPreview.Text" xml:space="preserve"><value>Vorschau</value><comment>ExportNamingLocalizedText.preview</comment></data>
   <data name="developExportJpegQuality.Text" xml:space="preserve"><value>JPEG-Qualität</value><comment>ExportEncoding.jpegQuality</comment></data>
   <data name="developExportLongEdgeSuffix.Text" xml:space="preserve"><value>px (lange Kante)</value><comment>AppLocalizedText.exportLongEdgeSuffix</comment></data>
   <data name="developExportNamingOptions.Text" xml:space="preserve"><value>Benennungsoptionen</value><comment>ExportNaming.namingOptions</comment></data>
@@ -996,6 +999,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="scanDetectScanners.Text" xml:space="preserve"><value>Scanner erneut suchen</value><comment>AppLocalizedText.commandDetectScanners</comment></data>
   <data name="scanFilm.Text" xml:space="preserve"><value>Film</value><comment>AppLocalizedPhrase.film</comment></data>
   <data name="scanFolderName.Text" xml:space="preserve"><value>Ordnername</value><comment>AppLocalizedPhrase.scanFolderName</comment></data>
+  <data name="scanChooseFolder.Text" xml:space="preserve"><value>Scanordner auswählen</value><comment>AppLocalizedPhrase.chooseScanFolder</comment></data>
   <data name="scanFramesFormat.Text" xml:space="preserve"><value>Bilder: %d</value><comment>AppLocalizedPhrase.framesFormat</comment></data>
   <data name="scanInfrared.Content" xml:space="preserve"><value>Infrarot (IR)</value><comment>AppLocalizedPhrase.infrared</comment></data>
   <data name="scanNext.Content" xml:space="preserve"><value>Nächstes Bild scannen</value><comment>AppLocalizedPhrase.scanNext</comment></data>

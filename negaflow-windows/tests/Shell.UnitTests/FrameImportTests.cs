@@ -42,9 +42,14 @@ internal static class FrameImportTests
         Check(
             plan.Rows[0].Payload["sourceKind"]!.GetValue<string>() == "imported",
             "import_records_transport");
+        // macOS 는 가져오기에서 `customDisplayName` 을 쓰지 않습니다 — 이름은 확장자를 뗀 파일
+        // 이름에서 파생합니다(`sourceFileBaseName`).
+        //
+        // ☠️ 예전에는 `Path.GetFileName` 을 그대로 적어 카드·필름스트립·창 제목이 `a.tif` 가
+        //    되고 내보내기 파일명이 `a.tif.jpg` 로 나왔습니다.
         Check(
-            plan.Rows[0].Payload["customDisplayName"]!.GetValue<string>() == "a.tif",
-            "import_records_display_name");
+            !plan.Rows[0].Payload.ContainsKey("customDisplayName"),
+            "import_leaves_display_name_to_the_file_name");
         Check(plan.Rows[0].Payload["scanIndex"]!.GetValue<int>() == 0, "import_first_scan_index");
         Check(plan.Rows[1].Payload["scanIndex"]!.GetValue<int>() == 1, "import_second_scan_index");
         // route 는 DevelopRouteWriter 가 씁니다. 여기서 직접 쓰면 legacy marker 규칙이 갈라집니다.
@@ -203,8 +208,8 @@ internal static class FrameImportTests
                       imported.AddedFrameCount == 5 && imported.Plan.Rejected.Count == 0,
                     "folder_import_registers_folder_standard_and_raw_images_atomically");
                 Check(host.Folders.Single().SourcePath == Path.GetFullPath(source) &&
-                      string.Join(',', host.Frames.Select(frame => frame.DisplayName)) ==
-                          "A.tif,B.tiff,C.jpg,D.dng,E.arw",
+                      string.Join(',', host.Frames.Select(frame => frame.EffectiveDisplayName)) ==
+                          "A,B,C,D,E",
                     "folder_import_preserves_standard_and_raw_file_order");
 
                 FolderImportResult emptyImport = host.ImportFolders([empty], DevelopmentProcess.C41);

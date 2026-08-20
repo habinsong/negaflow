@@ -322,6 +322,66 @@ internal static class LibraryHostTests
         Check(
             offlineProjection.Items.Single().Id == "two" && offlineProjection.FolderSections.Count == 0,
             "library_browser_offline_uses_availability_snapshot");
+
+        RunFolderDevelopmentDrafts(items, folders, availability);
+    }
+
+    /// <summary>
+    /// 폴더 머리줄에서 고른 프로세스·타깃은 <b>적용을 누르기 전까지</b> 살아 있어야 합니다.
+    ///
+    /// ☠️ 예전에는 고르개가 프레임의 **현재** 값에 묶여 있어, 썸네일 한 장만 도착해 격자가 다시
+    ///    투영돼도 고른 값이 되돌아갔습니다 — 사용자에게는 "고르고 적용을 눌러도 아무 일이
+    ///    없다" 로 보입니다. macOS 는 그 값을 컨트롤의 `@State` 로 들고 프레임이 실제로 달라질
+    ///    때만 다시 맞춥니다(`onChange(of: referenceSelection)`).
+    /// </summary>
+    private static void RunFolderDevelopmentDrafts(
+        IReadOnlyList<LibraryFrameListItem> items,
+        IReadOnlyList<LibraryFolderSnapshot> folders,
+        IReadOnlyDictionary<string, bool> availability)
+    {
+        LibraryFolderDevelopmentDrafts drafts = new();
+        LibraryBrowserProjection first = LibraryBrowserProjector.Create(
+            items, folders, availability, LibraryBrowserViewMode.Folders, FilmType.ColorNegative, drafts);
+        LibraryBrowserFolderSection section = first.FolderSections[0];
+        (DevelopmentProcess beforeProcess, DevelopTarget beforeTarget) = section.Selection;
+        Check(beforeTarget == DevelopTarget.Main, "folder_draft_starts_at_frame_value");
+
+        // macOS `.padding(6).padding(.top, isFirst ? 0 : 16)` — 첫 폴더만 위가 붙습니다.
+        Check(section.IsFirst && section.HeaderMargin == "6", "folder_header_first_has_no_top_gap");
+        Check(
+            first.FolderSections.Skip(1).All(other => !other.IsFirst && other.HeaderMargin == "6,22,6,6"),
+            "folder_header_later_folders_keep_the_16_gap");
+
+        drafts.SetTarget(section.Id, DevelopTarget.Hr, beforeProcess, beforeTarget);
+        drafts.SetProcess(section.Id, DevelopmentProcess.E6, beforeProcess, beforeTarget);
+
+        // 격자를 다시 투영합니다 — 썸네일 도착·선택 변경 등으로 실제로 매번 일어나는 일입니다.
+        LibraryBrowserProjection second = LibraryBrowserProjector.Create(
+            items, folders, availability, LibraryBrowserViewMode.Folders, FilmType.ColorNegative, drafts);
+        LibraryBrowserFolderSection reprojected = second.FolderSections[0];
+        (DevelopmentProcess keptProcess, DevelopTarget keptTarget) = reprojected.Selection;
+        Check(
+            keptTarget == DevelopTarget.Hr && keptProcess == DevelopmentProcess.E6,
+            "folder_draft_survives_reprojection");
+        Check(
+            reprojected.TargetChoices[reprojected.TargetIndex].Target == DevelopTarget.Hr,
+            "folder_draft_drives_the_target_picker");
+        Check(
+            reprojected.ProcessChoices[reprojected.ProcessIndex].Process == DevelopmentProcess.E6,
+            "folder_draft_drives_the_process_picker");
+
+        // 프레임이 실제로 다른 값이 되면 macOS 처럼 초안을 버리고 새 값을 보입니다.
+        (DevelopmentProcess resolvedProcess, DevelopTarget resolvedTarget) =
+            drafts.Resolve(section.Id, DevelopmentProcess.D76, DevelopTarget.Sp3000);
+        Check(
+            resolvedProcess == DevelopmentProcess.D76 && resolvedTarget == DevelopTarget.Sp3000,
+            "folder_draft_yields_when_the_frame_actually_changed");
+
+        drafts.SetTarget(section.Id, DevelopTarget.F135, beforeProcess, beforeTarget);
+        drafts.Clear(section.Id);
+        Check(
+            drafts.Resolve(section.Id, beforeProcess, beforeTarget) == (beforeProcess, beforeTarget),
+            "folder_draft_clears_after_apply");
     }
 
 }
