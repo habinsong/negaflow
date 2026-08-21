@@ -92,6 +92,13 @@ extension AppModel {
            !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return name
         }
-        return frame.storageGroupName ?? "unassigned"
+        // 롤에 속하지 않은 프레임은 출처 폴더명으로 부른다. 저장 폴더와 같은 규칙을 써야
+        // 파일명의 {roll} 과 실제로 저장되는 폴더가 어긋나지 않는다.
+        return frame.storageGroupName.map {
+            FrameStorageNaming.resolvedGroupName(
+                storedGroup: $0,
+                sourceURL: frame.rawScanURL
+            )
+        } ?? "unassigned"
     }
 }

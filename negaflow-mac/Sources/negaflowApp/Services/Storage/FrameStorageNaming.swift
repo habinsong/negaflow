@@ -7,8 +7,30 @@ import Chromabase
 // "<날짜(yyyyMMdd)>/<출처>" 구조를 공유한다 — 출처는 이미지 가져오기=default, 폴더 가져오기=
 // 폴더명이다. 스캔 원본은 "<날짜>/<필름 타입>/<필름명>" 구조를 쓴다.
 enum FrameStorageNaming {
-    /// 이미지 가져오기(개별 파일)의 기본 출처 폴더명.
+    /// 출처를 알 수 없을 때만 쓰는 출처 폴더명.
     static let defaultImportGroup = "default"
+
+    /// 가져온 파일의 출처 폴더명 = 원본이 놓여 있던 폴더 이름.
+    ///
+    /// 예전에는 개별 파일 가져오기를 전부 `default` 로 묶었다. 그래서 한 폴더의 사진이라도
+    /// 파일로 먼저 가져온 것만 `default/` 로, 나중에 폴더째 가져온 나머지는 폴더명으로 갈라져
+    /// 내보내기 결과가 두 곳에 나뉘었다. 출처는 가져온 방식이 아니라 원본이 있던 자리로 정한다.
+    static func importGroupName(forSourceURL url: URL) -> String {
+        let parent = url.resolvingSymlinksInPath()
+            .standardizedFileURL
+            .deletingLastPathComponent()
+            .lastPathComponent
+        let sanitized = sanitizeComponent(parent)
+        return sanitized.isEmpty ? defaultImportGroup : sanitized
+    }
+
+    /// 저장에 쓸 출처 폴더명. `default` 로만 남아 있는 예전 프레임(출처 미상 sentinel)은 원본이
+    /// 놓여 있던 폴더로 해석한다 — 카탈로그를 고쳐 쓰지 않고도 같은 폴더의 사진이 한곳으로 모인다.
+    static func resolvedGroupName(storedGroup: String?, sourceURL: URL) -> String {
+        let sanitized = sanitizeComponent(storedGroup ?? "")
+        if !sanitized.isEmpty, sanitized != defaultImportGroup { return sanitized }
+        return importGroupName(forSourceURL: sourceURL)
+    }
 
     /// 저장 폴더용 날짜 이름(예: 20260709). 사용자의 현재 캘린더/타임존 기준.
     static func dateFolderName(for date: Date = Date(), calendar: Calendar = .current) -> String {

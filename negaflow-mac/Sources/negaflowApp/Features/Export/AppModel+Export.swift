@@ -105,16 +105,11 @@ extension AppModel {
     }
 
     /// 내보내기 대상 폴더: <루트>/<오늘 날짜>/<출처 폴더>. 사용 시점에 생성한다.
-    /// 출처 폴더 = 가져오기 default / 가져온 폴더명 / 스캐너 축약명(썸네일 규칙과 동일).
+    /// 출처 폴더 = 원본이 있던 폴더명 / 스캐너 축약명.
     func exportDestinationFolder(root: URL, frame: ScanFrame, date: Date = Date()) -> URL {
-        let group = FrameStorageNaming.sanitizeComponent(
-            frame.storageGroupName ?? FrameStorageNaming.defaultImportGroup
-        )
         let folder = root
             .appendingPathComponent(FrameStorageNaming.dateFolderName(for: date), isDirectory: true)
-            .appendingPathComponent(
-                group.isEmpty ? FrameStorageNaming.defaultImportGroup : group, isDirectory: true
-            )
+            .appendingPathComponent(exportStorageGroupName(for: frame), isDirectory: true)
         // 폴더를 못 만들면 그대로 진행해봐야 한참 뒤 엉뚱한 오류로 나타난다. 외장 디스크가 빠졌거나
         // 쓰기 권한이 없는 경우가 여기서 걸리므로, 경로와 시스템 오류를 그 자리에서 보고한다.
         do {
@@ -127,6 +122,15 @@ extension AppModel {
             ) + " " + Self.exportVolumeDiagnostic(for: folder)
         }
         return folder
+    }
+
+    /// 내보내기·Finder 열기가 함께 쓰는 출처 폴더명. 예전 가져오기가 `default` 로 묶어 둔
+    /// 프레임도 원본이 있던 폴더로 해석해, 같은 폴더의 사진이 두 곳으로 갈라지지 않게 한다.
+    func exportStorageGroupName(for frame: ScanFrame) -> String {
+        FrameStorageNaming.resolvedGroupName(
+            storedGroup: frame.storageGroupName,
+            sourceURL: frame.rawScanURL
+        )
     }
 
     /// 스캔 당시 영속 세션에 고정된 장치/백엔드만 내보내기 provenance로 사용한다.

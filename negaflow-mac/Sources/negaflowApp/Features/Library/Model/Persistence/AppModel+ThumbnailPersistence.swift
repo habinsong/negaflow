@@ -27,6 +27,9 @@ extension AppModel {
             .appendingPathComponent("\(frame.id.uuidString).jpg")
     }
 
+    /// 썸네일 캐시 경로는 저장된 그룹명을 그대로 쓴다. 내보내기 폴더처럼 `default` 를 원본
+    /// 폴더로 다시 해석하면 예전 프레임의 캐시 파일을 못 찾아 전부 다시 만들게 된다 —
+    /// 사용자에게 보이지 않는 내부 캐시 위치라 옛 경로를 유지하는 편이 이득이다.
     private func thumbnailDirectoryURL(for frame: ScanFrame) -> URL {
         let group = FrameStorageNaming.sanitizeComponent(
             frame.storageGroupName ?? FrameStorageNaming.defaultImportGroup

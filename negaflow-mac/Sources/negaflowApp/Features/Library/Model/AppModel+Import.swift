@@ -54,11 +54,12 @@ extension AppModel {
 
     /// URL 목록을 프레임으로 가져온다(다중·연속 지원). 현상은 사용자 기본값이 켜져 있을 때만
     /// 백그라운드로 시작하며, 기본값은 원본 썸네일만 만드는 OFF다.
-    /// groupName = 디스크 저장 폴더 규칙의 출처 폴더명(개별 파일 가져오기는 default,
-    /// 폴더 가져오기는 폴더명).
+    /// groupName = 디스크 저장 폴더 규칙의 출처 폴더명(폴더 가져오기는 폴더명). nil 이면
+    /// 파일마다 원본이 있던 폴더 이름을 쓴다 — 같은 폴더의 사진이 가져온 방식에 따라 서로
+    /// 다른 내보내기 폴더로 갈라지지 않게.
     func importImages(
         urls: [URL],
-        groupName: String = FrameStorageNaming.defaultImportGroup,
+        groupName: String? = nil,
         preloadedImports: [String: PreloadedImageImport] = [:]
     ) {
         guard allowsLibraryMutation else { return }
@@ -116,6 +117,7 @@ extension AppModel {
             let metadata = metadataByIndex[offset]
             let storageGroupName = preloadedImports[identities[offset]]?.groupName
                 ?? groupName
+                ?? FrameStorageNaming.importGroupName(forSourceURL: url)
             let frame = ScanFrame(
                 scanIndex: firstScanIndex + offset,
                 rawScanURL: url,
@@ -173,7 +175,7 @@ extension AppModel {
     /// 늘리지 않는다.
     func importImagesWithProgress(
         urls: [URL],
-        groupName: String = FrameStorageNaming.defaultImportGroup,
+        groupName: String? = nil,
         groupNamesByIdentity: [String: String] = [:]
     ) async {
         guard allowsLibraryMutation else { return }
@@ -240,7 +242,9 @@ extension AppModel {
             let identity = Self.importIdentity(url)
             preloadedImports[identity] = PreloadedImageImport(
                 metadata: snapshot,
-                groupName: groupNamesByIdentity[identity] ?? groupName
+                groupName: groupNamesByIdentity[identity]
+                    ?? groupName
+                    ?? FrameStorageNaming.importGroupName(forSourceURL: url)
             )
         }
         importImages(

@@ -79,7 +79,7 @@ final class MacGoldenExportNamingHarnessTests: XCTestCase {
             ],
             "tokenSources": [
                 "{date}": "FrameStorageNaming.dateFolderName(exportDate, gregorian/en_US_POSIX/TZ)",
-                "{roll}": "롤 이름(단일 소속일 때) 또는 frame.storageGroupName ?? \"unassigned\"",
+                "{roll}": "롤 이름(단일 소속일 때) 또는 출처 폴더명(저장 폴더와 같은 규칙) ?? \"unassigned\"",
                 "{frame}": "frame.presentationIndex, %04d",
                 "{name}": "frame.displayName(language:) — 카드 표시 이름",
                 "{preset}": "recipeIdentity?.presetName ?? frame.preset?.id ?? \"manual\"",

@@ -304,7 +304,10 @@ struct ExportSection: View {
     /// 사진이 실제로 저장되는 세부 폴더(`<루트>/<날짜>/<출처 폴더>`)를 Finder 로 연다.
     private func revealExportFolder(root: URL) {
         NSWorkspace.shared.open(
-            ExportRevealLocator.folder(root: root, group: model.actionableFrame?.storageGroupName)
+            ExportRevealLocator.folder(
+                root: root,
+                group: model.actionableFrame.map { model.exportStorageGroupName(for: $0) }
+            )
         )
     }
 
