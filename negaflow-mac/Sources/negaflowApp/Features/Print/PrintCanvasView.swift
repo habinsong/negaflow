@@ -162,8 +162,9 @@ private struct PrintSingleImagePageView: View {
 
     var body: some View {
         GeometryReader { proxy in
+            // 인화 지면에도 반전 전 원본을 올리지 않는다(캔버스와 같은 규칙) — 네거티브의
+            // 썸네일은 현상 결과이므로 풀해상도를 기다리는 동안의 자리만 메운다.
             if let image = frame.developedImage
-                ?? frame.rawPreviewImage
                 ?? frame.thumbnailImage,
                let layout = previewLayout(for: image) {
                 let paperInset: CGFloat = settingsStore.showsRulers ? 54 : 30

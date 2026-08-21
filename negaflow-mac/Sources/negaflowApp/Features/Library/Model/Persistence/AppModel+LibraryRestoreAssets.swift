@@ -48,15 +48,18 @@ extension AppModel {
                 let developed = ThumbnailDiskCache.load(at: job.developedURL)
                 let cachedRaw = ThumbnailDiskCache.load(at: job.rawCacheURL)
                 let legacy = ThumbnailDiskCache.load(at: job.legacyURL)
+                // 디스크 캐시가 **어떤 방향으로** 그려졌는지는 파일만 봐서는 알 수 없다.
+                // 여기서 현재 imageTransform 을 태그로 붙이면 "이미 맞는 방향"으로 간주돼
+                // 다음 정착 현상이 다시 그리지 않고, 회전·플립한 사진의 썸네일이 영영 옛
+                // 방향으로 남는다. transform 을 비워 두는 것이 ScanFrame.thumbnailTransform
+                // 의 계약(nil = 이전 세션 캐시라 알 수 없음)이고, 그래야 스스로 복구된다.
                 await MainActor.run {
                     guard self.ownsFrame(job.frame) else { return }
                     if let cachedRaw, job.frame.rawPreviewImage == nil {
                         job.frame.rawPreviewImage = cachedRaw
-                        job.frame.rawPreviewTransform = job.transform
                     }
                     if let developed, job.frame.thumbnailImage == nil {
                         job.frame.thumbnailImage = developed
-                        job.frame.thumbnailTransform = job.transform
                     } else if job.hasDevelopedOnce,
                               let legacy,
                               job.frame.thumbnailImage == nil {
@@ -64,21 +67,19 @@ extension AppModel {
                         // 라이브러리를 빈칸으로 만들면 안 된다. 마지막으로 보이던 썸네일을
                         // 유지한 채 아래에서 저장된 params로 새 현상 캐시를 다시 만든다.
                         job.frame.thumbnailImage = legacy
-                        job.frame.thumbnailTransform = job.transform
                     } else if !job.requiresInversion,
                               let fallback = legacy ?? cachedRaw,
                               job.frame.thumbnailImage == nil {
                         // 포지티브의 legacy 원본/현상본은 모두 포지티브다. 새 분리 캐시가
                         // 생길 때까지 표시 폴백으로 안전하게 사용할 수 있다.
                         job.frame.thumbnailImage = fallback
-                        job.frame.thumbnailTransform = job.transform
                     } else if job.requiresInversion,
                               !job.hasDevelopedOnce,
                               let legacy,
                               job.frame.rawPreviewImage == nil {
                         // 한 번도 현상하지 않은 네거티브의 legacy 캐시는 원본 시드임이 확실하다.
+                        // (방향은 위와 같은 이유로 태그하지 않는다 — 파일만 봐서는 알 수 없다.)
                         job.frame.rawPreviewImage = legacy
-                        job.frame.rawPreviewTransform = job.transform
                     }
                 }
 

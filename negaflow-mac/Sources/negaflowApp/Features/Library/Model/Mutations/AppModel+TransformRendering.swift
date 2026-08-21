@@ -153,6 +153,12 @@ extension AppModel {
                 frame.developedPreviewTransform = settledTransform
                 if let thumbnail = settled.thumbnail {
                     frame.thumbnailImage = NSImage(cgImage: thumbnail, size: NSSize(width: thumbnail.width, height: thumbnail.height))
+                    // 변형이 반영된 세대를 기록하고 디스크 캐시까지 덮어쓴다. 예전에는 둘 다
+                    // 빠져 있어서, 회전·플립한 사진의 썸네일이 화면에서는 돌아간 채 디스크에는
+                    // 옛 방향으로 남았다 — 앱을 다시 켜면 그 옛 썸네일이 복원돼 필름스트립만
+                    // 본 이미지와 다른 방향으로 보였다.
+                    frame.thumbnailTransform = settledTransform
+                    persistThumbnail(for: frame, cgImage: thumbnail)
                 }
                 if let raw = settled.raw {
                     frame.rawPreviewImage = NSImage(

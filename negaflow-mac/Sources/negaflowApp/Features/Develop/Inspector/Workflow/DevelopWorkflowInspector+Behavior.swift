@@ -7,8 +7,10 @@ extension DevelopWorkflowInspector {
         model.resetPhotoAngle(frame)
     }
 
+    /// 히스토그램은 지금 화면에 보이는 픽셀의 분포여야 한다. 현상본을 기다리는 동안 원본으로
+    /// 폴백하면 네거티브에서 반전 전 분포가 잠깐 그려져, 그 위에서 누른 Auto 조정까지 어긋난다.
     var displayedImage: NSImage? {
-        frame.showDeveloped ? (frame.developedImage ?? frame.rawPreviewImage)
+        frame.showDeveloped ? (frame.developedImage ?? frame.thumbnailImage)
                             : (frame.rawPreviewImage ?? frame.developedImage)
     }
 

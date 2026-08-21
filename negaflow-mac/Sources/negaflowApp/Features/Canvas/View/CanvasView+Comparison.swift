@@ -76,9 +76,17 @@ extension CanvasView {
         case .raw:
             return frame.rawPreviewImage ?? frame.developedImage ?? frame.thumbnailImage
         case .developed, .splitVertical, .splitHorizontal:
-            // 메모리 FIFO로 풀해상도가 내려간 프레임을 재진입하면 재현상이 끝나기 전까지 썸네일을 보여준다.
-            return frame.developedImage ?? frame.rawPreviewImage ?? frame.thumbnailImage
+            return developedDisplayImage
         }
+    }
+
+    /// 현상 결과를 보여주는 자리에 원본 픽셀을 절대 올리지 않는다. 프리뷰를 만드는 동안
+    /// rawPreviewImage 로 폴백하던 예전 동작은, 컬러 네거티브에서 반전 전 오렌지 원본이
+    /// 한 순간 그대로 보였다. 풀해상도가 메모리 FIFO 로 내려간 프레임의 재진입은 썸네일이
+    /// 그대로 메워 준다 — 네거티브의 썸네일은 현상 결과만 담고(원본 시드는 rawPreviewImage
+    /// 로만 발행된다), 아직 아무 현상본도 없으면 캔버스는 비워 둔 채 현상을 기다린다.
+    var developedDisplayImage: NSImage? {
+        frame.developedImage ?? frame.thumbnailImage
     }
 
     var isDebugPreviewActive: Bool {
@@ -117,7 +125,7 @@ extension CanvasView {
                         .onTapGesture(count: 2) { resetViewport() }
                 }
             case .developed:
-                if let image = frame.developedImage ?? frame.rawPreviewImage ?? frame.thumbnailImage {
+                if let image = developedDisplayImage {
                     fittedImage(image, in: imageFrame, straightenDelta: straightenDelta(from: frame.developedPreviewTransform))
                         .onTapGesture(count: 2) { resetViewport() }
                     if let overlay = visibleDestinationGamutOverlay {

@@ -44,11 +44,14 @@ final class SoftProofRefreshTests: XCTestCase {
         XCTAssertTrue(source.contains("@ObservedObject var frame: ScanFrame"))
         XCTAssertTrue(source.contains("frame: activeFrame"))
         XCTAssertFalse(source.contains("ForEach(displayedFrames)"))
+        // 현상 결과를 먼저 보고, 없으면 썸네일(=현상 결과의 축소본)로만 자리를 메운다.
+        // 예전에는 rawPreviewImage 로 떨어져 네거티브의 반전 전 원본이 인화 지면에 잠깐 그려졌다.
         XCTAssertTrue(
             source.contains(
-                "frame.developedImage\n                ?? frame.rawPreviewImage"
+                "frame.developedImage\n                ?? frame.thumbnailImage"
             )
         )
+        XCTAssertFalse(source.contains("?? frame.rawPreviewImage"))
     }
 
     func testPrintPackageShowsOnePageWhileEveryItemObservesItsOwnFrame() throws {
