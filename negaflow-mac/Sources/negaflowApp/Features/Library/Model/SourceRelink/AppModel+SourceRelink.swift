@@ -8,6 +8,17 @@ extension AppModel {
         return librarySourceAvailability(for: frame) == .online
     }
 
+    /// 원본 존재 확인이 끝나 모든 프레임의 온/오프라인이 정해졌는가.
+    ///
+    /// 확인은 외장·네트워크 볼륨에서 오래 걸릴 수 있어 백그라운드에서 돈다. 그 사이 프레임은
+    /// `.unknown`(= 사용 불가로 취급)이므로, "쓸 수 있는 사진이 없다"와 "아직 모른다"를
+    /// 구분해야 하는 시작 선택 경로가 이 값을 본다.
+    var hasResolvedSourceAvailability: Bool {
+        _ = sourceAvailabilityRevision
+        guard let cache = librarySourceAvailabilityCache else { return false }
+        return frames.allSatisfy { cache[$0.id].map { $0 != .unknown } ?? false }
+    }
+
     func isLibraryFolderAvailable(_ folder: LibraryFolder) -> Bool {
         _ = sourceAvailabilityRevision
         return libraryFolderAvailabilityCache[folder.id] ?? false

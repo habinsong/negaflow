@@ -72,6 +72,55 @@ final class LastActiveFrameRestoreTests: XCTestCase {
         XCTAssertEqual(model.selectedFrameID, newest.id)
     }
 
+    /// 원본 존재 확인이 아직 백그라운드에서 도는 동안에는 기억을 소비하지 않는다.
+    ///
+    /// 라이브러리가 256장을 넘으면 그 확인이 비동기로 바뀌고, 끝나기 전에는 모든 사진이
+    /// `.unknown`(= 사용 불가)으로 보인다. 예전에는 그 순간 기억을 버려서, 판정이 끝난 뒤에도
+    /// 돌아갈 사진이 남지 않았다 — 앱을 켜면 아무 사진도 뜨지 않았고, 종료할 때 그 빈 선택이
+    /// 카탈로그에 기록돼 기억 자체가 사라졌다(실기 재현: 268장 라이브러리).
+    func testRememberedFrameSurvivesWhileSourceAvailabilityIsStillResolving() throws {
+        let model = try makeModel()
+        let older = try makeFrame(index: 1, scannedAt: Date(timeIntervalSince1970: 1_000))
+        let newest = try makeFrame(index: 2, scannedAt: Date(timeIntervalSince1970: 9_000))
+        model.frames = [older, newest]
+        model.updateInteractionScope([older.id, newest.id])
+        model.restoredLastActiveFrameID = older.id
+
+        // 아직 판정 전: 전부 unknown.
+        model.librarySourceAvailabilityCache = [older.id: .unknown, newest.id: .unknown]
+        XCTAssertFalse(model.hasResolvedSourceAvailability)
+        XCTAssertFalse(model.selectMostRecentAvailableFrameIfNeeded())
+        XCTAssertNil(model.selectedFrameID, "판정 전에는 아무 사진도 고르지 않는다")
+        XCTAssertEqual(
+            model.restoredLastActiveFrameID, older.id,
+            "판정 전에 기억을 버리면 복원할 기회가 영영 사라진다"
+        )
+
+        // 판정 완료 → 기억해 둔 사진으로 돌아간다.
+        model.librarySourceAvailabilityCache = [older.id: .online, newest.id: .online]
+        model.advanceSourceAvailabilityRevision()
+        XCTAssertTrue(model.hasResolvedSourceAvailability)
+        XCTAssertTrue(model.selectMostRecentAvailableFrameIfNeeded())
+        XCTAssertEqual(model.selectedFrameID, older.id)
+        XCTAssertNil(model.restoredLastActiveFrameID, "성공했으면 한 번 쓰고 비운다")
+    }
+
+    /// 판정이 끝났는데 기억해 둔 사진을 쓸 수 없으면 그때는 기억을 버리고 폴백한다.
+    func testRememberedFrameIsDiscardedOnlyAfterAvailabilityIsKnown() throws {
+        let model = try makeModel()
+        let older = try makeFrame(index: 1, scannedAt: Date(timeIntervalSince1970: 1_000))
+        let newest = try makeFrame(index: 2, scannedAt: Date(timeIntervalSince1970: 9_000))
+        model.frames = [older, newest]
+        model.updateInteractionScope([older.id, newest.id])
+        model.restoredLastActiveFrameID = older.id
+
+        model.librarySourceAvailabilityCache = [older.id: .offline, newest.id: .online]
+        model.advanceSourceAvailabilityRevision()
+        XCTAssertTrue(model.selectMostRecentAvailableFrameIfNeeded())
+        XCTAssertEqual(model.selectedFrameID, newest.id, "쓸 수 없는 사진 대신 최신으로 폴백한다")
+        XCTAssertNil(model.restoredLastActiveFrameID)
+    }
+
     // MARK: 하네스
 
     private func makeModel() throws -> AppModel {

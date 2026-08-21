@@ -164,6 +164,12 @@ struct ContentView: View {
         .onChange(of: model.libraryLifecycleState) { _, _ in
             restoreWorkspaceActiveFrameIfReady()
         }
+        // 원본 존재 확인은 라이브러리가 ready 가 된 뒤에도 백그라운드에서 이어진다. 그 판정이
+        // 끝나기 전에는 모든 사진이 "쓸 수 없음"으로 보여 시작 선택이 빈손으로 끝나므로,
+        // 판정 세대가 올라올 때 한 번 더 고른다(이미 고른 사진이 있으면 아무 일도 하지 않는다).
+        .onChange(of: model.sourceAvailabilityRevision) { _, _ in
+            selectMostRecentDevelopFrameIfNeeded()
+        }
         .onChange(of: model.selectedFrameID) { _, frameID in
             // 범위가 활성 사진 기준이라 사진이 바뀌면 보여줄 목록도 다시 맞춘다.
             if bottomFilmstripScope != .all {

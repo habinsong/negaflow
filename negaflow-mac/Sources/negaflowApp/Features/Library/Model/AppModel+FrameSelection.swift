@@ -101,16 +101,26 @@ extension AppModel {
     func selectMostRecentAvailableFrameIfNeeded() -> Bool {
         guard actionableFrame == nil else { return false }
         let scope = Set(interactionFrameIDs)
-        // 다시 켠 직후라면 마지막으로 작업하던 사진이 우선이다. 한 번 쓰고 비운다.
+        // 다시 켠 직후라면 마지막으로 작업하던 사진이 우선이다.
+        //
+        // 성공했을 때만 기억을 비운다. 시작 직후에는 원본 존재 확인이 아직 백그라운드에서
+        // 도는 중이라 모든 프레임이 잠깐 `.unknown`(= 사용 불가)으로 보이고, 필름스트립 범위도
+        // 아직 비어 있을 수 있다. 예전에는 그 순간 기억을 소비해 버려서, 판정이 끝난 뒤에는
+        // 되돌아갈 사진이 남지 않았다 — 앱을 켤 때마다 아무 사진도 뜨지 않았고 종료 시
+        // 그 빈 선택이 카탈로그에 다시 기록됐다.
         if let remembered = restoredLastActiveFrameID {
-            restoredLastActiveFrameID = nil
             if scope.contains(remembered),
                let frame = frames.first(where: { $0.id == remembered }),
                !frame.isPreviewScan,
                isSourceAvailable(frame) {
+                restoredLastActiveFrameID = nil
                 selectedFrameID = remembered
                 return true
             }
+            // 아직 판정할 수 없는 구간이면 기억을 지키고 물러난다. 판정이 끝나면
+            // (sourceAvailabilityRevision 변화) 호출측이 다시 부른다.
+            if !hasResolvedSourceAvailability { return false }
+            restoredLastActiveFrameID = nil
         }
         let candidate = frames.enumerated()
             .filter { _, frame in
