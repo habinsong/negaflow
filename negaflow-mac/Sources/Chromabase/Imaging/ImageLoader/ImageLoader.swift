@@ -18,14 +18,83 @@ public enum ImageLoader {
     /// context마다 다시 풀 수 있다. 풀해상도 현상/내보내기는 생성 시 한 번 디코드해 캐시한
     /// 픽셀을 공유한다. 비트 깊이·색공간·픽셀 치수는 바꾸지 않는다.
     static func createFullyDecodedImage(_ source: CGImageSource) -> CGImage? {
-        CGImageSourceCreateImageAtIndex(
+        guard let decoded = CGImageSourceCreateImageAtIndex(
             source,
             0,
             [
                 kCGImageSourceShouldCache: true,
                 kCGImageSourceShouldCacheImmediately: true,
             ] as CFDictionary
+        ) else { return nil }
+        return renderReadyImage(decoded)
+    }
+
+    /// Core Image 가 Image I/O 백킹 CGImage 를 소비할 때, **알파 채널이 있는 이미지**는 픽셀을
+    /// 반복해서 다시 읽는 경로로 떨어진다. 5088×3401 16bit RGBA TIFF 실측: 풀해상도 렌더가
+    /// LZW 압축본 9.5초 / 비압축본 1.1초 — 같은 크기의 알파 없는 TIFF 는 35ms 다. 압축본이
+    /// 특히 느린 것은 반복 접근마다 스트립을 다시 푸는 비용이 겹치기 때문이다.
+    ///
+    /// 디코드 결과를 메모리 비트맵으로 한 번 옮겨 그 경로를 끊는다(실측 23ms, 이후 렌더 48ms).
+    /// 픽셀 값·비트 깊이·색공간·알파 의미론은 그대로 유지하며, 알파가 없는 이미지는 손대지
+    /// 않으므로 기존 입력에는 비용이 붙지 않는다.
+    static func renderReadyImage(_ image: CGImage) -> CGImage {
+        // 알파 의미론은 그대로 둔다 — 읽기는 임의의 사용자 파일(투명 PNG 등)을 다룬다.
+        redrawnInMemory(image, alpha: .premultipliedLast) ?? image
+    }
+
+    /// 스캐너 raw 도메인에는 알파가 없다. 그런데 Core Image 그래프는 회전·크롭·합성에서 알파를
+    /// 붙이고(실측: 회전+크롭한 뒤 RGBA16 으로 렌더하면 premultipliedLast 가 나온다), 그대로
+    /// 저장하면 4채널 TIFF 가 된다. 그 파일은 같은 픽셀인데도 99MB → 121MB 로 커지고, 다시
+    /// 읽을 때 `renderReadyImage` 가 막아 주는 느린 경로에 애초에 걸리며, 한 번 4채널이 되면
+    /// 다시 구울 때마다 그 상태가 유지된다. 저장 직전에 벗겨 그 순환을 끊는다.
+    static func opaqueRawImage(_ image: CGImage) -> CGImage {
+        redrawnInMemory(image, alpha: .noneSkipLast) ?? image
+    }
+
+    /// 같은 픽셀을 메모리 비트맵으로 옮겨 그린다. 알파가 없는 이미지는 손대지 않으므로
+    /// 기존 입력에는 비용이 붙지 않는다. 색공간·비트 깊이·픽셀 치수는 바꾸지 않는다.
+    private static func redrawnInMemory(
+        _ image: CGImage,
+        alpha: CGImageAlphaInfo
+    ) -> CGImage? {
+        guard carriesAlpha(image),
+              let space = image.colorSpace,
+              space.model == .rgb,
+              let context = CGContext(
+                data: nil,
+                width: image.width,
+                height: image.height,
+                bitsPerComponent: image.bitsPerComponent,
+                bytesPerRow: 0,
+                space: space,
+                bitmapInfo: bitmapInfo(alpha: alpha, bitsPerComponent: image.bitsPerComponent)
+              ) else { return nil }
+        context.draw(
+            image,
+            in: CGRect(x: 0, y: 0, width: image.width, height: image.height)
         )
+        return context.makeImage()
+    }
+
+    /// 알파를 담고 있으면서 부동소수가 아닌 이미지만 대상이다. 부동소수 비트맵은 CGContext
+    /// 조합 제약이 달라 원본을 그대로 둔다(해당 경로는 실측 병목이 아니다).
+    private static func carriesAlpha(_ image: CGImage) -> Bool {
+        guard !image.bitmapInfo.contains(.floatComponents) else { return false }
+        switch image.alphaInfo {
+        case .premultipliedLast, .premultipliedFirst, .last, .first:
+            return true
+        case .none, .noneSkipLast, .noneSkipFirst, .alphaOnly:
+            return false
+        @unknown default:
+            return false
+        }
+    }
+
+    /// CGBitmapContext 는 straight alpha 를 지원하지 않으므로 premultiplied 로 통일한다.
+    /// 16bit 는 호스트 바이트 순서를 명시해야 채널이 뒤집히지 않는다.
+    private static func bitmapInfo(alpha: CGImageAlphaInfo, bitsPerComponent: Int) -> UInt32 {
+        guard bitsPerComponent == 16 else { return alpha.rawValue }
+        return alpha.rawValue | CGBitmapInfo.byteOrder16Little.rawValue
     }
 
     public enum Decoder: String, Codable, Sendable {
