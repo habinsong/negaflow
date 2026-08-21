@@ -145,8 +145,8 @@ int main() {
     }
     std::cout << "adapter: " << GpuAccelerator::shared().adapter_description() << '\n';
 
-    check_one(97U, 53U, 20U, 11U);
-    check_one(61U, 37U, 12U, 8U);
+    check_one(97U, 53U, 20U, 10U);
+    check_one(61U, 37U, 12U, 7U);
 
     if (failures != 0) {
         std::cerr << failures << " failure(s)\n";

@@ -3,6 +3,7 @@
 #include "negaflow/core/negative_inversion.h"
 #include "negaflow/imaging/auto_negative_base_resolver.h"
 #include "negaflow/imaging/film_stock_base_resolver.h"
+#include "negaflow/imaging/mipmap_downsampler.h"
 
 #include <algorithm>
 #include <array>
@@ -17,6 +18,24 @@
 namespace manual_negative_tests {
 
 void test_manual_negative_development() {
+    std::vector<negaflow::core::Rgba32F> affine_source(8U * 7U);
+    for (std::uint32_t y = 0U; y < 7U; ++y) {
+        const float value = y < 2U ? 0.125F : (y < 4U ? 0.375F : 0.625F);
+        for (std::uint32_t x = 0U; x < 8U; ++x) {
+            affine_source[static_cast<std::size_t>(y) * 8U + x] =
+                {value, value, value, 1.0F};
+        }
+    }
+    const auto affine_proxy = negaflow::imaging::downsample_for_statistics(
+        {affine_source.data(), affine_source.size(), 8U, 7U, 8U}, 4U, 3U);
+    expect(
+        affine_proxy.width == 4U && affine_proxy.height == 3U &&
+            affine_proxy.pixels.size() == 12U &&
+            affine_proxy.pixels[0].red == 0.25F &&
+            affine_proxy.pixels[4].red == 0.50F &&
+            affine_proxy.pixels[8].red == 0.625F,
+        "statistics proxy keeps the macOS uniform affine scale and y-down top crop");
+
     negaflow::imaging::WorkingImage source = make_working_image();
     std::array<negaflow::core::Rgba32F, 2> expected{};
     const negaflow::core::NegativeInversionParameters reference_parameters{

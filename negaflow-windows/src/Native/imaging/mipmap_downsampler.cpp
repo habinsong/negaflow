@@ -49,17 +49,17 @@ struct Level final {
     return level;
 }
 
-[[nodiscard]] negaflow::core::Rgba32F bilinear(
+[[nodiscard]] negaflow::core::Rgba32F bilinear_at(
     const negaflow::core::Rgba32F* pixels,
     const std::uint32_t width,
     const std::uint32_t height,
     const std::size_t stride,
-    const double u,
-    const double v) noexcept {
+    const double source_x,
+    const double source_y) noexcept {
     const double fx = std::clamp(
-        (u * static_cast<double>(width)) - 0.5, 0.0, static_cast<double>(width) - 1.0001);
+        source_x, 0.0, static_cast<double>(width - 1U));
     const double fy = std::clamp(
-        (v * static_cast<double>(height)) - 0.5, 0.0, static_cast<double>(height) - 1.0001);
+        source_y, 0.0, static_cast<double>(height - 1U));
     const auto x0 = static_cast<std::uint32_t>(fx);
     const auto y0 = static_cast<std::uint32_t>(fy);
     const std::uint32_t x1 = std::min(x0 + 1U, width - 1U);
@@ -109,6 +109,7 @@ DownsampledProxy downsample_for_statistics(
     std::uint32_t current_width = source.width;
     std::uint32_t current_height = source.height;
     std::size_t current_stride = source.stride_pixels;
+    int applied_levels = 0;
 
     // 큰 축소만 GPU. 마지막 이중선형은 CPU `double` 그대로.
     // GenerateMips 는 필터가 규정되지 않아 쓰지 않습니다.
@@ -151,6 +152,7 @@ DownsampledProxy downsample_for_statistics(
                     current_width = levels.back().width;
                     current_height = levels.back().height;
                     current_stride = levels.back().width;
+                    applied_levels = steps;
                     used_gpu = true;
                 }
             }
@@ -167,17 +169,38 @@ DownsampledProxy downsample_for_statistics(
             current_width = levels.back().width;
             current_height = levels.back().height;
             current_stride = levels.back().width;
+            ++applied_levels;
         }
     }
 
+    // macOS 는 폭으로 구한 배율 하나를 양 축에 적용하고, 소수 높이를 버린 정수 bounds에
+    // 렌더합니다. Core Image 좌표는 y-up이므로 그 소수 나머지는 y-down 버퍼의 위쪽에서
+    // 잘립니다. 종전 코드는 target_height로 v를 다시 정규화해 전체 높이를 늘였고, 그 한 칸
+    // 미만의 위상 오차가 얇은 필름 베이스 성분을 살려 Dmin과 장면 대비를 바꿨습니다.
+    const double uniform_scale =
+        static_cast<double>(target_width) / static_cast<double>(source.width);
+    const double level_factor = std::ldexp(1.0, applied_levels);
+    const double effective_scale = uniform_scale * level_factor;
+    const double source_height_remainder =
+        static_cast<double>(source.height) -
+        (static_cast<double>(target_height) / uniform_scale);
+    const double current_top_crop = source_height_remainder / level_factor;
+
     for (std::uint32_t y = 0U; y < target_height; ++y) {
-        const double v =
-            (static_cast<double>(y) + 0.5) / static_cast<double>(target_height);
+        const double source_y =
+            ((static_cast<double>(y) + 0.5) / effective_scale) - 0.5 +
+            current_top_crop;
         for (std::uint32_t x = 0U; x < target_width; ++x) {
-            const double u =
-                (static_cast<double>(x) + 0.5) / static_cast<double>(target_width);
+            const double source_x =
+                ((static_cast<double>(x) + 0.5) / effective_scale) - 0.5;
             proxy.pixels[(static_cast<std::size_t>(y) * target_width) + x] =
-                bilinear(current, current_width, current_height, current_stride, u, v);
+                bilinear_at(
+                    current,
+                    current_width,
+                    current_height,
+                    current_stride,
+                    source_x,
+                    source_y);
         }
     }
     return proxy;

@@ -1,6 +1,6 @@
 # 구현·검증 상태
 
-기준일: 2026-08-17
+기준일: 2026-08-21
 
 ## 현재 목표 단계 (축약 없음)
 
@@ -9,6 +9,24 @@
 3. 깃허브 CI 테스트 통과하게 만들것. 지금 계속 실패함.
 
 고정 요구: UI/UX 창작 금지. macOS가 유일한 권위. Library/Develop/Print는 하나의 워크플로. 다국어 텍스트가 길어져도 잘리지 않게 할 것. 브랜치를 만들지 않고 `main`에서만 작업. 로컬 CI를 만들고 의미 있는 체크포인트마다 문서·메모리를 최신화한 뒤 `main`에 커밋·푸시. 검증하지 않은 항목은 완성했다고 쓰지 않는다.
+
+## 2026-08-21 Frame 4 Auto FilmBase 좌표 결함과 컬러 노이즈 대조
+
+- `downsample_for_statistics`가 목표 높이로 Y를 별도 정규화해, macOS가 폭의 단일 scale 뒤
+  정수 bounds에서 버리는 소수 높이를 다시 늘이고 있었습니다. 단일 X/Y scale과 Core Image
+  y-up에 대응하는 y-down 위쪽 절삭으로 수정했습니다.
+- 저장된 macOS `GT-X900_frame_4-proxy-320x488.f32` 대비 RGB MAE가
+  `0.004653/0.003978/0.003222 → 0.0000616/0.0000372/0.0000251`로 76~128배 줄었습니다.
+- `negaflow_test` 원본 TIFF 15장을 수정 전/후로 전수 측정했습니다. frame_4만 Dmin이
+  `−6.12%/−8.74%/−9.59%` 움직였고 나머지 14장은 최대 절대 1.27%, frame_5는 0.09% 이내였습니다.
+  LZW RGBA 6장은 모두 A=`65535`; frame_4의 독립 LZW/WIC 69,217,152개 샘플은 전부 같았습니다.
+- 새 TIFF16을 macOS 내보내기와 공통 sRGB에서 비교한 opponent chroma 고주파 비는 frame_4
+  `1.012`, frame_5 `0.997`입니다. 별도 blur/기본 NR 없이 macOS 수준이며, 확인된 가시 차이는
+  잘못된 Dmin이 만든 톤·색 대비였습니다.
+- x64 Debug와 Release native CTest 각각 **102/102 통과**. Release 관리 검증은 Catalog
+  **750 assertions**, Shell **1499 assertions**, 경고/오류 0입니다. ARM64 native·managed 전체
+  교차 빌드도 통과했지만 실행 증거는 아닙니다. 상세 수치와 배제한 실험은
+  `docs/audit/19-image-pipeline-frame4-frame5.md` 6.8절에 있습니다.
 
 ## 2026-08-17 God Object 진행
 
@@ -1599,8 +1617,8 @@ Grading·Primary Calibration·ColorModel·sRGB16 변환·픽셀 검증에 적용
 | 배포 payload 제3자 native | 최초 도입·범위 축소 | `e_sqlite3.dll` 2종. 네이티브 엔진의 제3자 0개는 유지되나 제품 payload 는 더 이상 0개가 아님. 비Windows RID 28종 제외로 53,571,344→3,788,288 바이트 |
 | scalar negative inversion | 부분 구현 | color/B&W `shoulder-print-response-v4`, 고정 float bits와 합성 anchor test |
 | 수동 negative develop | 첫 수직 경로 통과 | 채널별 Dmin, color/B&W 고정 response, macOS와 같은 uniform pixel-center bilinear 장면 범위 proxy, working buffer 제자리 변환과 scalar exact 일치 |
-| Auto negative FilmBase | sampled-grid·선택·통계 계약 정렬 | 폭 32...256, 가로축 단일 scale, pixel-center bilinear와 transparent-black 경계로 만든 한 격자를 연결 성분·비필름 제외·continuous/distributed/strip 경로가 공유. 첫 하위 성분 강등, 상위 R−B 중앙값, Double edge/coverage와 affine scene-edge를 정렬. Float RGB 뒤 luma·percentile·MAD·threshold·채널 통계는 Double이고 최종 공개 Dmin만 Float. 같은 입력의 macOS Core Image float golden은 미검증 |
-| 실촬영 15장 batch | 통과 | OpticFilm 8100 전체 15장이 현상·게시까지 통과. 합계 78,103ms, 장당 평균 5,207ms(17.3MP), peak working set 389.46MiB, 원본 15개 SHA-256 불변. 동시 batch 와 공간 필터 켠 batch 는 미측정 |
+| Auto negative FilmBase | sampled-grid·선택·통계·세로 위상 정렬 | 폭 32...256, 폭의 단일 X/Y scale, pixel-center bilinear와 y-down 위쪽 절삭으로 만든 한 격자를 연결 성분·비필름 제외·continuous/distributed/strip 경로가 공유. 저장된 macOS float golden에서 RGB MAE 76~128배 개선. 첫 하위 성분 강등, 상위 R−B 중앙값, Double edge/coverage와 독립 scene-edge fallback 유지. 최종 공개 Dmin만 Float. frame_4 원본 전용 macOS float proxy golden은 없음 |
+| 실촬영 15장 batch | 통과·Frame 4 민감도 분리 | OpticFilm 8100 전체 15장이 decode·Auto FilmBase 측정에 통과. 좌표 수정 전후 frame_4만 Dmin −6.12/−8.74/−9.59%, 나머지 14장은 최대 절대 1.27%. LZW RGBA 6장 A는 전부 65535. 종전 성능 batch의 합계 78,103ms·peak 389.46MiB와 동시/공간필터 batch 미측정 범위는 그대로 |
 | 8비트 TIFF 입력 | 통과 | 레이아웃 게이트만 넓히고 하위 경로는 무변경. WIC 바이트 복제(`v * 257`)가 working 변환 뒤 `v / 255` 와 정확히 일치함을 실제 파일 채널 극값과 합성 전체 픽셀 회귀로 확인 |
 | 다중 IFD TIFF | 수직 경로 통과 | `NewSubfileType` 으로 축소 미리보기·투명도 마스크 동반 페이지를 구분하고 전체 이미지가 정확히 하나일 때만 진행. 다중 페이지 문서는 계속 거부. 디코더는 프레임 번호를 디렉터리 번호로 가정하지 않고 probe 치수와 일치하는 프레임을 고름(WIC 는 축소 페이지를 프레임으로 노출하지 않음). 종전 거부되던 Photoshop 5100×3408 파일이 게시까지 통과하고 단일 IFD 결과는 byte-exact |
 | TIFF bounded probe | 부분 구현 | Classic/BigTIFF, endian 양쪽, strip/tile bounds, compressed-byte 합계, 선택형 LZW code-stream 의미 검사·작업량 상한·취소, Unicode read-only CLI, 손상 합성 corpus |

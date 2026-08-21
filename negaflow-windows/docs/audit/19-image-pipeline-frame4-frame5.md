@@ -700,20 +700,95 @@ macOS 불변량 A: *반경 2셀 안에 자기보다 1.15× 밝은 셀이 있으�
 3. 그 근거로 표본 그리드를 맞추고, `compare16` 으로 두 프레임 모두 전달곡선 차이가 0 으로
    가는지 확인합니다. **frame_5 를 회귀시키면 실패입니다.**
 
+## 6.8 원인을 수정하고 15장을 전수 검증했습니다 (2026-08-21)
+
+### ① 확정 원인 — 필터 종류가 아니라 **세로 좌표의 별도 정규화**
+
+macOS는 폭으로 얻은 단일 scale을 X/Y에 같이 적용한 뒤 소수 높이를 버린 정수 bounds에
+렌더합니다. Windows `downsample_for_statistics`는 목표 높이 자체로 `v`를 다시 정규화했습니다.
+따라서 macOS가 버린 소수 높이를 되살려 원본 전체 높이를 목표 격자에 늘였고, y-up Core Image를
+y-down 버퍼로 옮길 때 위쪽에서 잘려야 할 1칸 미만의 위상도 사라졌습니다. frame_4의 얇은
+베이스 성분 #0·#1은 이 작은 위상 차이로 살아남아 잘못 선택됐습니다.
+
+실제 macOS float proxy golden(`GT-X900_frame_4-proxy-320x488.f32`)과 같은 원본을 비교했습니다.
+
+| RGB MAE | 종전(축별 정규화) | 수정(단일 scale + y-down 위쪽 절삭) | 개선 |
+|---|---:|---:|---:|
+| R | 0.004652644 | **0.000061564** | 76배 |
+| G | 0.003978401 | **0.000037188** | 107배 |
+| B | 0.003221721 | **0.000025089** | 128배 |
+
+Apple 문서도 `highQualityDownsample`이 affine 축소를 여러 패스로 수행하며 macOS 기본값이
+`true`라고 명시합니다. 다만 커널을 문서에서 추정하지 않고, 위 저장된 macOS float golden을
+판정 기준으로 썼습니다([Apple `highQualityDownsample`](https://developer.apple.com/documentation/coreimage/cicontextoption/highqualitydownsample)).
+
+수정은 `mipmap_downsampler.cpp` 한 경로에만 넣었습니다. CPU/GPU가 실제 수행한 mip 단계 수를
+기록하고, 남은 affine 표본에서 X/Y 모두 폭의 단일 scale을 쓰며, 소수 높이는 y-down 위쪽
+절삭으로 반영합니다. 임시 `NEGA_BASE_SAMPLING=point/box/area` 갈래는 제거했습니다.
+scene-edge fallback까지 이 proxy로 바꾸는 실험은 흑백 macOS golden을 크게 깨뜨려 즉시
+되돌렸습니다. 그 경로는 원래 직접 affine 표본을 그대로 유지합니다.
+
+### ② 폴더의 원본 TIFF 15장 전수 비교
+
+수정 전 Release와 수정 후 Debug를 같은 `--auto-base-probe` 요청으로 각각 실행했습니다.
+
+- frame_4: Dmin 변화 **−6.12% / −8.74% / −9.59%**.
+- 나머지 14장: 최대 절대 변화는 frame_7 B의 **1.27%**이고 나머지는 모두 그 이하.
+- frame_5: **+0.05% / −0.09% / −0.02%**로 사실상 불변.
+- 15장 모두 decode와 connected-component 측정이 성공했습니다.
+
+즉 frame_4는 파일이 손상된 것이 아니라, 15장 중 유일하게 얇은 베이스 네트워크가 기존
+좌표 결함을 크게 드러낸 입력입니다. 일반 입력을 흔드는 image-specific threshold는 넣지 않았습니다.
+
+### ③ LZW·RGBA·알파는 원인이 아닙니다
+
+15장은 무압축 RGB 9장과 LZW RGBA 6장(frame 4·6·7·12·14·15)입니다. LZW RGBA 6장 모두
+알파의 최소/최대가 `65535/65535`라 unpremultiply는 RGB에 아무 변화도 주지 않습니다. 같은
+LZW+RGBA인 5장은 위 좌표 수정 전후 변화가 최대 1.27%라 frame_4 현상을 재현하지 않았습니다.
+
+frame_4는 독립 LZW 디코더와 WIC가 풀어낸 **69,217,152개 샘플이 전부 일치**했고
+최대 차이도 0입니다. LZW는 무손실이며 이 파일에서는 decode 지연만 늘립니다. macOS가 16bit
+출력에서 LZW를 빼는 것은 성능상 타당하지만, 컬러 노이즈나 Dmin의 원인은 아닙니다. Windows는
+기존 LZW 원본을 읽어야 하므로 decode 지원은 유지합니다.
+
+폴더의 JPEG 5개도 제품용 standard-image WIC decoder로 전부 정상 decode됐고, JSON 3개와 XMP
+3개도 각각 JSON/XML 구문 검사를 통과했습니다.
+
+### ④ 수정본을 macOS 내보내기와 다시 화소 비교
+
+MAIN·자동 보정 끔·현상만·TIFF16으로 다시 내보내고 macOS Display P3를 sRGB로 변환한 뒤
+비교했습니다.
+
+| | frame_4 | frame_5 |
+|---|---:|---:|
+| Windows Dmin | 0.209234 / 0.118838 / 0.060916 | 0.227472 / 0.134269 / 0.071048 |
+| macOS 토우 직접 Dmin | 0.20331 / 0.11626 / 0.05926 | 0.22266 / 0.13347 / 0.07079 |
+| 전체 평균 절대차 RGB16 | **381 / 309 / 386** | **88 / 56 / 59** |
+| 평탄부 RGB 고주파 σ 비(Win/Mac) | **1.004 / 1.001 / 1.002** | **0.996 / 0.994 / 1.001** |
+| opponent chroma 고주파 비 | **1.012** | **0.997** |
+
+frame_4의 종전 전체 평균 절대차 `1850/1817/1624`는 `381/309/386`으로 4.8~5.9배
+줄었습니다. 컬러 노이즈는 frame_4가 macOS보다 1.2% 높고 frame_5는 0.3% 낮아 같은 수준입니다.
+노이즈 제거를 기본으로 켜거나 별도 blur를 넣으면 macOS에 없는 디테일 손실을 만들므로 하지
+않았습니다. 확인된 해결은 잘못된 Dmin이 만든 톤·색 대비를 바로잡는 것입니다.
+
+### ⑤ 회귀 검증
+
+- 합성 `8x7 → 4x3` 회귀로 단일 affine scale과 y-down 위쪽 절삭을 고정했습니다.
+- GPU 제품 경로 `97x53 → 20x10`, `61x37 → 12x7`이 CPU와 bit-exact였습니다.
+- `scripts/test.ps1 -Preset x64-debug`: **102/102 통과**. 흑백/슬라이드 macOS golden과
+  `native.gpu_mip_halve_product`를 포함합니다.
+- `scripts/ci-gate.ps1 -Preset x64-release -IncludeArm64Cross`: x64 Release native
+  **102/102**, Catalog **750 assertions**, Shell **1499 assertions**, 관리 빌드 경고/오류 0,
+  ARM64 native·managed 전체 교차 빌드 통과. ARM64는 실행하지 않았으므로 runtime 증거가 아닙니다.
+
 ### 다음 사람이 할 일
 
-1. ~~macOS 내보내기와 화소 비교~~ — **2026-08-20 했습니다(6.4절).** 노이즈는 무죄,
-   톤 차이의 원인은 **필름 베이스(dmin)가 맥보다 7~11% 높은 것**으로 확정.
-2. ~~`FilmBaseEstimator` 를 줄 단위로 대조~~ — **했습니다(6.5 ②).** 로직은 전부 1:1 이고
-   **표본 그리드의 축소 필터만 다릅니다.**
-3. **맥 그리드의 성분 목록을 받기** (6.7 ⑥). 맥의 dmin 은 토우 화소로 **이미 실측**했고
-   (frame_4 `0.20331/0.11626/0.05926`), 어느 성분인지도 특정했습니다(우리 #2). 남은 것은
-   **왜 맥 그리드에는 #0·#1 이 없는가** 이고, 그건 맥 쪽 성분 목록이 있어야 닫힙니다.
-4. 받은 값으로 표본 그리드 축소를 맞추고, `compare16` 으로 전달곡선 차이가 0 으로 가는지 확인.
-5. frame_5 는 이미 맞습니다 — 회귀시키지 마십시오.
-2. 밝기 맞춘 평탄 구역(하늘)에서 고주파 σ 재측정 — 프레임 간 비교가 성립하도록.
-3. 갈래 D(ICM 왕복 제거) 구현.
-4. 3절 고침이 적용된 빌드에서 사용자 재확인 — 원본 뷰의 베이스 색·그레인이 잡혔는지.
+1. 같은 앱 빌드로 frame_4를 다시 열어 새 Dmin과 화면 톤을 확인합니다. 16bit 결과의 RGB/컬러
+   노이즈는 위 화소 비교로 macOS 수준임을 검증했습니다.
+2. frame_4의 남은 Dmin 2~3%까지 pixel-exact로 좁히려면 이 원본의 macOS float proxy golden을
+   추가로 받아야 합니다. 현재 저장된 GT-X900 golden에는 수정 경로가 76~128배 가까워졌습니다.
+   한 장에만 맞는 threshold나 임의 필터로 남은 차이를 숨기지 마십시오.
 
 ---
 

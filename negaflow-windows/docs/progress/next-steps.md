@@ -497,18 +497,22 @@ Color/B&W positive film scan은 catalog `CanDevelop` 게이트까지 열어 Dmin
    않으며, 동일 입력 macOS pixel golden 전에는 복원 코어를 대체하지 않습니다.
 3. 컬러 네거티브 비프리셋 경로의 muted-scene vibrance 장면 측정·gate·Windows 저채도 우선
    pixel 수학을 preview/export 공통 경로에 추가했습니다. preset/B&W/고채도/tiny identity와
-   x64 Debug/Release, ARM64 교차 빌드를 고정했습니다. Auto FilmBase도 가로축 단일 scale의
-   pixel-center bilinear 격자 하나를 모든 측정 경로가 공유하도록 정렬했습니다. **남은 일은 같은 입력의
-   macOS Core Image sampled-grid와 `CIVibrance` 관측 fixture로 허용오차를 확정하는 것**입니다. preset의 confident measured Dmin
+   x64 Debug/Release, ARM64 교차 빌드를 고정했습니다. Auto FilmBase의 종전 Y 별도 정규화를
+   폭의 단일 X/Y scale과 y-down 위쪽 절삭으로 고쳤고, 저장된 macOS Core Image float proxy
+   golden에서 RGB MAE가 76~128배 줄었습니다. OpticFilm 15장 중 frame_4만 Dmin이 크게 움직이고
+   나머지 14장은 최대 1.27%여서 특정 파일에 맞춘 threshold가 아님도 확인했습니다. **남은 수치 일은
+   `CIVibrance` 관측 fixture와 frame_4 원본 자체의 macOS float proxy golden으로 마지막 허용오차를
+   확정하는 것**입니다. preset의 confident measured Dmin
    선택도 수정됐고, Auto base 연결 성분은 macOS와 같은 luma MAD 이상치 제거 뒤 채널 중앙값을
    사용합니다. grid 추정이 모두 실패하면 sparse scene-edge 후보의 채널 p90을 측정한 뒤에만 상수
    Dmin으로 떨어집니다. 실제 5088×3401 TIFF의 Film request는 `preset_measured`로 검증·게시까지 통과했습니다.
    반전 직전 scene-range proxy와 Auto FilmBase sampled-grid를 macOS 소스의 uniform pixel-center bilinear
    affine 계약으로 맞췄습니다. 연결 성분 첫 하위 모드·상위 R−B 중앙값, Double edge/coverage와 마지막
    scene-edge affine fallback도 정렬했습니다. FilmBase의 luma·percentile·median·MAD·threshold·채널 통계는
-   macOS처럼 Float RGB를 Double로 승격해 계산하고 최종 공개 Dmin에서만 Float로 내립니다. **다음 수치
-   작업은 같은 입력의 macOS Core Image sampled-grid와 `CIVibrance` pixel golden으로 실제 허용오차를
-   고정하는 것**입니다. 최종 촬영 TIFF pixel golden은 아직 없습니다.
+   macOS처럼 Float RGB를 Double로 승격해 계산하고 최종 공개 Dmin에서만 Float로 내립니다. frame_4/5
+   macOS TIFF16 최종 pixel 대조는 완료했고 opponent chroma 고주파 비가 각각 1.012/0.997이었습니다.
+   **다음 수치 작업은 `CIVibrance` pixel golden과 frame_4 전용 중간 proxy golden으로 남은 2~3% Dmin
+   허용오차를 고정하는 것**입니다.
 4. rendered digital B&W 15종과 color/motion 27종은 registry→catalog/ABI→preview/export 공통 그래프까지
    완료했습니다. **다음 Film Emulation 작업은 새 color/motion 16종의 macOS Core Image pixel golden과
    실제 촬영 TIFF 비교**입니다. B&W acutance sigma·grain 통계 허용오차도 같은 hosted macOS
