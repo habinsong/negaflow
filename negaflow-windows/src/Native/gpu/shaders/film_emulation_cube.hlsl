@@ -1,12 +1,12 @@
 // 필름 스톡 색 큐브(33³ 3D LUT)입니다.
 //
-// macOS  : `FilmEmulationStage` 의 `CIColorCube`
+// macOS : `FilmEmulationStage` 의 `CIColorCube`
 // CPU 판 : `imaging/film_emulation_color.cpp` `apply_film_emulation_color_cube` / `sample_cube`
 //
-// ☠️ **하드웨어 삼선형(`Texture3D` + `SampleLevel`)을 쓰지 않습니다.** D3D11 은 필터
-//    가중치의 서브텍셀 정밀도를 **8비트만** 보장합니다. 33³ 큐브의 이웃 간격이 값으로
-//    1/32 쯤이라 그 양자화가 출력에 6e-05 대로 실려 `1e-5` 동치를 못 지킵니다.
-//    표를 구조화 버퍼로 받고 보간을 **CPU 와 같은 순서의 float 연산으로** 직접 합니다.
+// **하드웨어 삼선형(`Texture3D` + `SampleLevel`)을 쓰지 않습니다.** D3D11 은 필터
+// 가중치의 서브텍셀 정밀도를 **8비트만** 보장합니다. 33³ 큐브의 이웃 간격이 값으로
+// 1/32 쯤이라 그 양자화가 출력에 6e-05 대로 실려 `1e-5` 동치를 못 지킵니다.
+// 표를 구조화 버퍼로 받고 보간을 **CPU 와 같은 순서의 float 연산으로** 직접 합니다.
 //
 // 도메인: 입력은 확장 선형 sRGB, 큐브는 sRGB 코드 좌표 [0,1] 입니다. 인코딩 → 클램프 →
 // 삼선형 → 디코딩. **클램프를 빼지 마십시오** — 측정되지 않은 영역을 외삽하게 됩니다.

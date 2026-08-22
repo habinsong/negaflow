@@ -149,7 +149,7 @@ static_assert(sizeof(DigitalBwFilmConstants) == 64U, "four constant registers");
         std::isfinite(setup.white) && std::isfinite(setup.intensity);
 }
 
-}  // namespace
+} // namespace
 
 GpuKernelStatus GpuDigitalBwFilm::create(
     const GpuDevice& device,
@@ -208,9 +208,9 @@ GpuKernelStatus GpuBwToning::dispatch(
     if (!finite_bw(setup)) {
         return GpuKernelStatus::non_finite_parameter;
     }
-    // ☠️ `tone` 이 거짓이어도 **복사로 건너뛰지 않습니다.** CPU 판은 그때도 흑백 중성화를
-    //    합니다(`bw_toning.cpp` 의 `pixel.red = pixel.green = pixel.blue = neutral`).
-    //    여기서 복사하면 사진이 컬러로 남습니다.
+    // `tone` 이 거짓이어도 **복사로 건너뛰지 않습니다.** CPU 판은 그때도 흑백 중성화를
+    // 합니다(`bw_toning.cpp` 의 `pixel.red = pixel.green = pixel.blue = neutral`).
+    // 여기서 복사하면 사진이 컬러로 남습니다.
     BwToningConstants payload{};
     for (int index = 0; index < 3; ++index) {
         payload.shadow_tint[index] = setup.shadow_tint[index];
@@ -276,10 +276,10 @@ GpuKernelStatus GpuColorMixer::dispatch(
         return GpuKernelStatus::non_finite_parameter;
     }
     if (!mixer_changes(parameters)) {
-        // ☠️ CPU 판 `apply_color_mixer` 는 변화가 없으면 `copy_validated_rows` 로 **원본을
-        //    그대로** 내보냅니다(`color_mixer.cpp:227`). 여기서 커널을 돌리면 HSL 왕복이
-        //    [0,1] 밖 값을 클램프해 CPU 와 갈립니다 — 작업 이미지는 그 범위 밖 값을
-        //    일부러 남기므로 실제로 갈립니다(실측: 최대 0.1).
+        // CPU 판 `apply_color_mixer` 는 변화가 없으면 `copy_validated_rows` 로 **원본을
+        // 그대로** 내보냅니다(`color_mixer.cpp:227`). 여기서 커널을 돌리면 HSL 왕복이
+        // [0,1] 밖 값을 클램프해 CPU 와 갈립니다 — 작업 이미지는 그 범위 밖 값을
+        // 일부러 남기므로 실제로 갈립니다(실측: 최대 0.1).
         const GpuImageStatus copied = destination.copy_from(device, source);
         return copied == GpuImageStatus::ok ? GpuKernelStatus::ok
                                             : GpuKernelStatus::invalid_arguments;
@@ -327,4 +327,4 @@ GpuKernelStatus GpuColorGrade::dispatch(
     return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
 }
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

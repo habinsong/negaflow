@@ -34,6 +34,8 @@ public sealed partial class WorkspaceShellView : UserControl
 
     public event EventHandler? SettingsRequested;
 
+    public event EventHandler? DiagnosticsRequested;
+
     /// <summary>macOS <c>QuickStartHelpScene</c> 창을 여는 요청입니다.</summary>
     public event EventHandler? QuickStartHelpRequested;
 
@@ -142,6 +144,7 @@ public sealed partial class WorkspaceShellView : UserControl
             }
         }
         Toolbar.SettingsRequested += OnToolbarSettingsRequested;
+        Toolbar.DiagnosticsRequested += OnToolbarDiagnosticsRequested;
         AppMenu.AboutRequested += OnAppMenuAboutRequested;
         AppMenu.SettingsRequested += OnToolbarSettingsRequested;
         AppMenu.KeyboardShortcutsRequested += OnKeyboardShortcutsRequested;
@@ -252,6 +255,13 @@ public sealed partial class WorkspaceShellView : UserControl
             ? null
             : host.Frames.FirstOrDefault(candidate => candidate.Id == activeId);
         AppMenu.SyncDevelopState(DevelopMenuState.From(frame));
+    }
+
+    private void OnToolbarDiagnosticsRequested(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        DiagnosticsRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnToolbarSettingsRequested(object? sender, EventArgs args)

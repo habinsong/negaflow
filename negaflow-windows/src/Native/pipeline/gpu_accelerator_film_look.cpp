@@ -5,10 +5,10 @@
 // (`imaging/working_film_look.cpp`) — 스캔본에는 이미 유제를 통과한 신호가 들어 있어
 // 같은 물리를 두 번 얹지 않기 때문입니다.
 //
-// ☠️ 다섯 다 **근사**입니다. 호출부가 `ApproximateAcceleratorScope` 안에서만 부릅니다.
+// 다섯 다 **근사**입니다. 호출부가 `ApproximateAcceleratorScope` 안에서만 부릅니다.
 //
-// ⚠️ 지금은 재료마다 올렸다 내립니다. 사슬 전체를 GPU 에 머무르게 하는 오케스트레이터가
-//    다음 단계이고, 그러면 왕복이 다섯에서 하나로 줍니다.
+// 주의 지금은 재료마다 올렸다 내립니다. 사슬 전체를 GPU 에 머무르게 하는 오케스트레이터가
+// 다음 단계이고, 그러면 왕복이 다섯에서 하나로 줍니다.
 
 #include "gpu_accelerator_state.h"
 
@@ -270,4 +270,4 @@ bool GpuAccelerator::apply_digital_bw_film_look(
     return true;
 }
 
-}  // namespace negaflow::pipeline
+} // namespace negaflow::pipeline

@@ -186,6 +186,9 @@ internal sealed class LibraryScanRenderer
             "scanFramesFormat",
             "Text",
             view.scanSession.Options.BatchCount);
+        // 찾은 프레임을 눈으로 볼 자리는 라이브러리 쪽 오버레이입니다. 개수만 적고
+        // 그림을 그리지 않으면 "선택: 12" 가 어디를 가리키는지 알 수 없습니다.
+        view.RaiseFlatbedPreviewChanged();
     }
 
     /// <summary>

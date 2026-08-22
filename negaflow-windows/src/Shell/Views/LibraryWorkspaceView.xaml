@@ -12,9 +12,6 @@
     xmlns:browser="using:Negaflow.Shell.Views.Library.Browser">
     <UserControl.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="ms-appx:///Views/Library/Browser/LibraryFolderHeader.xaml" />
-            </ResourceDictionary.MergedDictionaries>
             <!-- ItemsPath 가 없으면 그룹 자체를 열거해 그리드가 항목을 전부 realize 합니다.
                  200장에서 200개가 모두 만들어지는 것을 계측으로 확인했습니다. -->
             <CollectionViewSource
@@ -92,37 +89,65 @@
                 <ScrollViewer x:Name="ImportSourcePanel" x:FieldModifier="internal" Grid.Row="2">
                     <StackPanel Padding="12,14" Spacing="12">
                         <TextBlock x:Name="ImportSectionText" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
-                        <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
-                            <StackPanel Spacing="9">
-                                <TextBlock x:Name="ImportHintLocalized" x:FieldModifier="internal" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                                <!-- macOS 의 가져오기 막대입니다. 세 방법이 같은 자리를 나눠 씁니다. -->
-                                <Grid ColumnSpacing="4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Button
-                                        x:Name="ImportImagesButton" x:FieldModifier="internal"
-                                        HorizontalAlignment="Stretch"
-                                        AutomationProperties.AutomationId="negaflow.library.import.images"
-                                        Click="OnImportClicked" />
-                                    <Button
-                                        x:Name="ImportFoldersButton" x:FieldModifier="internal"
-                                        Grid.Column="1"
-                                        HorizontalAlignment="Stretch"
-                                        AutomationProperties.AutomationId="negaflow.library.import.folders"
-                                        Click="OnImportFoldersClicked" />
-                                    <ToggleButton
-                                        x:Name="ImportScannerButton" x:FieldModifier="internal"
-                                        Grid.Column="2"
-                                        HorizontalAlignment="Stretch"
-                                        AutomationProperties.AutomationId="negaflow.library.import.scanner"
-                                        Click="OnImportScannerClicked" />
-                                </Grid>
-                                <TextBlock x:Name="ImportStatusText" x:FieldModifier="internal" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                            </StackPanel>
+                        <!-- macOS 가져오기 막대입니다. 세 방법이 <b>하나의 캡슐</b>을 나눠
+                             쓰며 사이에 얇은 세로선이 들어갑니다. 현상 좌측탭
+                             (`DevelopLibrarySourcePanel`)과 같은 모양이어야 두 화면이
+                             갈라지지 않습니다. 안내 문구와 낱개 단추 셋은 macOS 에 없습니다. -->
+                        <Border
+                            Padding="2"
+                            Background="{ThemeResource NegaflowSubtleFillBrush}"
+                            CornerRadius="16">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="1" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="1" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button
+                                    x:Name="ImportImagesButton" x:FieldModifier="internal"
+                                    AutomationProperties.AutomationId="negaflow.library.import.images"
+                                    Click="OnImportClicked"
+                                    Style="{StaticResource NegaflowImportActionStyle}">
+                                    <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <FontIcon FontSize="12" Glyph="&#xE91B;" />
+                                            <TextBlock x:Name="ImportImagesText" x:FieldModifier="internal" />
+                                        </StackPanel>
+                                    </Viewbox>
+                                </Button>
+                                <Border Grid.Column="1" Height="16" VerticalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
+                                <Button
+                                    x:Name="ImportFoldersButton" x:FieldModifier="internal"
+                                    Grid.Column="2"
+                                    AutomationProperties.AutomationId="negaflow.library.import.folders"
+                                    Click="OnImportFoldersClicked"
+                                    Style="{StaticResource NegaflowImportActionStyle}">
+                                    <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <FontIcon FontSize="12" Glyph="&#xE8B7;" />
+                                            <TextBlock x:Name="ImportFoldersText" x:FieldModifier="internal" />
+                                        </StackPanel>
+                                    </Viewbox>
+                                </Button>
+                                <Border Grid.Column="3" Height="16" VerticalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
+                                <ToggleButton
+                                    x:Name="ImportScannerButton" x:FieldModifier="internal"
+                                    Grid.Column="4"
+                                    AutomationProperties.AutomationId="negaflow.library.import.scanner"
+                                    Click="OnImportScannerClicked"
+                                    Style="{StaticResource NegaflowImportToggleStyle}">
+                                    <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <FontIcon FontSize="12" Glyph="&#xE950;" />
+                                            <TextBlock x:Name="ImportScannerText" x:FieldModifier="internal" />
+                                        </StackPanel>
+                                    </Viewbox>
+                                </ToggleButton>
+                            </Grid>
                         </Border>
+                        <TextBlock x:Name="ImportStatusText" x:FieldModifier="internal" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
 
                         <scanner:LibraryScanPanel x:Name="ScanPanel" x:FieldModifier="internal" />
                     </StackPanel>
@@ -221,7 +246,7 @@
                             Click="OnCullingModeClicked"
                             CornerRadius="6"
                             Tag="Grid">
-                            <FontIcon FontSize="12" Glyph="&#xE80A;" />
+                            <controls:VectorIcon IconSize="12" Kind="GridTwoByTwo" />
                         </Button>
                         <Button
                             x:Name="CullingSurveyButton" x:FieldModifier="internal"
@@ -234,7 +259,7 @@
                             Click="OnCullingModeClicked"
                             CornerRadius="6"
                             Tag="Survey">
-                            <FontIcon FontSize="12" Glyph="&#xF0E2;" />
+                            <controls:VectorIcon IconSize="12" Kind="SurveyGrid" />
                         </Button>
                         <Button
                             x:Name="CullingCompareButton" x:FieldModifier="internal"
@@ -247,7 +272,7 @@
                             Click="OnCullingModeClicked"
                             CornerRadius="6"
                             Tag="Compare">
-                            <FontIcon FontSize="12" Glyph="&#xE8B3;" />
+                            <controls:VectorIcon IconSize="12" Kind="CompareSplit" />
                         </Button>
                         <TextBlock
                             x:Name="CullingSelectionCountText" x:FieldModifier="internal"
@@ -371,8 +396,22 @@
                         IsItemClickEnabled="False"
                         SelectionChanged="OnFrameSelectionChanged"
                         SelectionMode="Extended">
+                        <!-- 머리줄은 `LibraryFolderHeader` UserControl 입니다. 여기 적은
+                             이벤트가 이 페이지의 커넥터에 연결되므로 실제로 동작합니다 —
+                             `x:Class` 없는 ResourceDictionary 의 DataTemplate 에 적으면
+                             한 개도 연결되지 않습니다. -->
                         <GridView.GroupStyle>
-                            <GroupStyle HeaderTemplate="{StaticResource LibraryFolderHeaderTemplate}" />
+                            <GroupStyle>
+                                <GroupStyle.HeaderTemplate>
+                                    <DataTemplate>
+                                        <browser:LibraryFolderHeader
+                                            ApplyClicked="OnFolderApplyClicked"
+                                            DisclosureClicked="OnFolderDisclosureClicked"
+                                            ProcessChanged="OnFolderProcessChanged"
+                                            TargetChanged="OnFolderTargetChanged" />
+                                    </DataTemplate>
+                                </GroupStyle.HeaderTemplate>
+                            </GroupStyle>
                         </GridView.GroupStyle>
                         <GridView.ItemTemplate>
                             <DataTemplate>
@@ -388,9 +427,19 @@
                         x:Name="CullingSurface" x:FieldModifier="internal"
                         Grid.Row="1"
                         Visibility="Collapsed" />
+
+                    <!-- 평판 프리뷰가 살아 있는 동안 격자 대신 이것이 보입니다. macOS 는
+                         캔버스 위에 얹지만 Windows 라이브러리에는 한 장을 크게 띄우는
+                         캔버스가 없어, 찾은 프레임을 눈으로 보고 손으로 고칠 자리를
+                         여기서 냅니다. -->
+                    <scanner:FlatbedScanAreaOverlay
+                        x:Name="FlatbedOverlay" x:FieldModifier="internal"
+                        Grid.Row="1"
+                        Visibility="Collapsed" />
                 </Grid>
 
                 <StackPanel
+                    x:Name="LibraryBottomBar" x:FieldModifier="internal"
                     Margin="0,0,0,14"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Bottom"

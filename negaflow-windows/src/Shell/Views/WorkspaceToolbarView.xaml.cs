@@ -20,6 +20,9 @@ public sealed partial class WorkspaceToolbarView : UserControl
 
     public event EventHandler? SettingsRequested;
 
+    /// <summary>작업 옵션 · 진단입니다. macOS 유틸리티 메뉴의 같은 자리입니다.</summary>
+    public event EventHandler? DiagnosticsRequested;
+
     public event EventHandler? QuickExportRequested;
 
     public UIElement TitleBarElement => TitleBarRoot;
@@ -138,6 +141,13 @@ public sealed partial class WorkspaceToolbarView : UserControl
         workspaceState?.SetAppearance(AppearanceMode.Light);
     }
 
+    private void OnDiagnosticsClick(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        DiagnosticsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
     private void OnSettingsClick(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -159,6 +169,7 @@ public sealed partial class WorkspaceToolbarView : UserControl
         SetPanelState(SidebarButton, preferences.IsSidebarVisible);
         SetPanelState(FilmstripButton, preferences.IsFilmstripVisible);
         SetPanelState(InspectorButton, preferences.IsInspectorVisible);
+        ApplyAppearanceIcon(preferences.Appearance);
     }
 
     private static void SetWorkspaceSelection(Button button, bool selected)
@@ -215,6 +226,21 @@ public sealed partial class WorkspaceToolbarView : UserControl
         SettingsItem.Text = AppResources.Get("commandSettings", "Text");
         DiagnosticsItem.Text = AppResources.Get("commandDiagnostics", "Text");
     }
+
+    /// <summary>
+    /// 화면 모드 아이콘입니다. macOS <c>AppAppearanceMode.systemImage</c> 와 같은 뜻으로
+    /// 고른 값을 그림으로 보여 줍니다 - 셋 다 해 하나면 무엇이 걸려 있는지 알 수 없습니다.
+    /// </summary>
+    private void ApplyAppearanceIcon(AppearanceMode appearance) =>
+        AppearanceIcon.Glyph = appearance switch
+        {
+            // macOS `moon.fill` 자리입니다. Segoe QuietHours 가 같은 초승달입니다.
+            AppearanceMode.Dark => "\uE708",
+            // macOS `sun.max.fill` 자리입니다.
+            AppearanceMode.Light => "\uE706",
+            // macOS `circle.lefthalf.filled` 자리입니다. Segoe Contrast 가 반쪽 채운 원입니다.
+            _ => "\uE7A1",
+        };
 
     private static void SetNameAndTooltip(Button button, string text)
     {

@@ -9,13 +9,48 @@ Texture2D<float4> Source : register(t0);
 RWTexture2D<unorm float4> DestBgra : register(u0);
 
 cbuffer PreviewDisplayEncodeConstants : register(b0) {
+    // 목표(=변환 뒤) 크기입니다. 변환이 없으면 원본 크기와 같습니다.
     uint2 Extent;
     uint2 Padding0;
     float3 ProofScale;
     float Padding1;
     float3 ProofBias;
     float Padding2;
+    // ── 미룬 기하 변환 ────────────────────────────────────────────────────────
+    // 회전·뒤집기·자르기는 **정수 자리 옮김뿐**이라 여기서 읽는 자리만 바꾸면 됩니다.
+    // CPU `image_transform.cpp` 의 `orient` + `crop_image` 와 같은 식입니다.
+    // `Rotation` 0/1/2/3 = 0°/90°/180°/270°, `Flips` 비트 1=수평 2=수직.
+    uint2 SourceExtent;
+    uint2 CropOrigin;
+    uint Rotation;
+    uint Flips;
+    uint2 Padding3;
 };
+
+// 목표 화소가 읽어야 할 원본 자리입니다. CPU `orient` 은 **출력에서 원본으로** 매핑하므로
+// 여기서도 같은 방향으로 씁니다.
+uint2 SourceCoordinate(uint2 destination) {
+    uint2 oriented = destination + CropOrigin;
+    uint ox = oriented.x;
+    uint oy = oriented.y;
+    if (Rotation == 1u) {
+        ox = oriented.y;
+        oy = SourceExtent.y - 1u - oriented.x;
+    } else if (Rotation == 2u) {
+        ox = SourceExtent.x - 1u - oriented.x;
+        oy = SourceExtent.y - 1u - oriented.y;
+    } else if (Rotation == 3u) {
+        ox = SourceExtent.x - 1u - oriented.y;
+        oy = oriented.x;
+    }
+    if ((Flips & 1u) != 0u) {
+        ox = SourceExtent.x - 1u - ox;
+    }
+    if ((Flips & 2u) != 0u) {
+        oy = SourceExtent.y - 1u - oy;
+    }
+    return uint2(ox, oy);
+}
 
 float3 ToneSafeUnitRGB(float3 rgb) {
     float y = clamp(dot(rgb, float3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
@@ -50,7 +85,9 @@ void PreviewDisplayEncodeMain(uint3 id : SV_DispatchThreadID) {
     if (id.x >= Extent.x || id.y >= Extent.y) {
         return;
     }
-    float4 source = Source[id.xy];
+    // 디더는 **목표 좌표**로 뽑습니다(`write_preview` 와 같음). 읽는 자리만 바뀌고
+    // 디더 무늬는 화면 좌표에 붙어 있어야 합니다.
+    float4 source = Source[SourceCoordinate(id.xy)];
     float3 folded = ToneSafeUnitRGB(source.rgb);
     float encodedR = LinearToSrgbEncoded((folded.r * ProofScale.x) + ProofBias.x);
     float encodedG = LinearToSrgbEncoded((folded.g * ProofScale.y) + ProofBias.y);

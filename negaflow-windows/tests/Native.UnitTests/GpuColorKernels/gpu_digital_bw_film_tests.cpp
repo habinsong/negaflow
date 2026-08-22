@@ -40,7 +40,7 @@ const DigitalBwCase digital_bw_cases[] = {
     {"dbw_tmax", {negaflow::imaging::FilmEmulation::tmax_100, 0.65}},
 };
 
-}  // namespace
+} // namespace
 
 void digital_bw_matches_cpu(const GpuDevice& device, const char* const label) {
     negaflow::gpu::GpuDigitalBwFilm kernel{};
@@ -63,7 +63,7 @@ void digital_bw_matches_cpu(const GpuDevice& device, const char* const label) {
     }
 
     for (const DigitalBwCase& scenario : digital_bw_cases) {
-        // ☠️ 응답 계수를 시험에서 다시 만들지 않습니다 — CPU 와 같은 함수를 씁니다.
+        // 응답 계수를 시험에서 다시 만들지 않습니다 — CPU 와 같은 함수를 씁니다.
         const negaflow::imaging::DigitalBwEmulsionSetup cpu_setup =
             negaflow::imaging::prepare_digital_bw_emulsion_response(scenario.parameters);
         negaflow::gpu::GpuDigitalBwFilmSetup gpu_setup{};
@@ -128,4 +128,4 @@ void digital_bw_matches_cpu(const GpuDevice& device, const char* const label) {
     }
 }
 
-}  // namespace gpu_color_kernel_tests
+} // namespace gpu_color_kernel_tests

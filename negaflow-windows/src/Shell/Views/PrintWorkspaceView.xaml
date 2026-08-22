@@ -3,6 +3,7 @@
     x:Class="Negaflow.Shell.Views.PrintWorkspaceView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sources="using:Negaflow.Shell.Views.Library.Sources"
     xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives"
     xmlns:views="using:Negaflow.Shell.Views"
     xmlns:export="using:Negaflow.Shell.Views.Develop.Export"
@@ -65,46 +66,13 @@
                 </Grid>
                 <Border Grid.Row="1" Background="{ThemeResource NegaflowDividerBrush}" />
                 <Grid Grid.Row="2">
-                    <TreeView
+                    <!-- macOS `PrintWorkspaceSidebar` 의 파일 탭 — 사진을 담고 있는 폴더와
+                         그 사진만 냅니다. 라이브러리·현상과 같은 컨트롤입니다. -->
+                    <sources:LibraryFolderTreeView
                         x:Name="PrintFilesSourceTree"
                         Padding="4,6"
                         AutomationProperties.AutomationId="negaflow.print.sources.files"
-                        CanDragItems="False"
-                        CanReorderItems="False"
-                        ItemInvoked="OnPrintFilesTreeItemInvoked"
-                        SelectionMode="Single"
-                        Visibility="Collapsed">
-                        <TreeView.ItemTemplate>
-                            <DataTemplate x:DataType="TreeViewNode">
-                                <TreeViewItem
-                                    AutomationProperties.Name="{Binding Content.Title, Mode=OneWay}"
-                                    IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
-                                    ItemsSource="{Binding Children}">
-                                    <Grid ColumnSpacing="6">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <FontIcon
-                                            FontSize="12"
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                            Glyph="{Binding Content.Glyph, Mode=OneWay}" />
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            FontSize="12"
-                                            Text="{Binding Content.Title, Mode=OneWay}"
-                                            TextTrimming="CharacterEllipsis" />
-                                        <TextBlock
-                                            Grid.Column="2"
-                                            FontSize="11"
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                            Text="{Binding Content.Detail, Mode=OneWay}" />
-                                    </Grid>
-                                </TreeViewItem>
-                            </DataTemplate>
-                        </TreeView.ItemTemplate>
-                    </TreeView>
+                        Visibility="Collapsed" />
                     <StackPanel
                         x:Name="NoFrameLeftPanel"
                         Margin="14"
@@ -148,7 +116,6 @@
                 x:Name="CanvasHost"
                 Grid.Row="0"
                 AutomationProperties.AutomationId="negaflow.print.canvas"
-                Background="#FF282828"
                 SizeChanged="OnCanvasHostSizeChanged">
                 <!-- 판 한 장입니다. 화면과 내보내기가 같은 layout 값을 쓰므로, 여기 보이는
                      비율이 곧 나올 파일의 비율입니다. -->
@@ -421,7 +388,7 @@
                     <Border Padding="14" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="9">
                         <StackPanel Spacing="10">
                             <StackPanel Orientation="Horizontal" Spacing="7">
-                                <FontIcon FontSize="13" Glyph="&#xE1A6;" />
+                                <FontIcon FontSize="13" Glyph="&#xED5E;" />
                                 <TextBlock x:Name="ViewSectionText" FontSize="13" FontWeight="SemiBold" />
                             </StackPanel>
                             <ToggleSwitch
@@ -473,7 +440,7 @@
                     <Border Padding="14" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="9">
                         <StackPanel Spacing="10">
                             <StackPanel Orientation="Horizontal" Spacing="7">
-                                <FontIcon FontSize="13" Glyph="&#xE8F1;" />
+                                <FontIcon FontSize="13" Glyph="&#xE81E;" />
                                 <TextBlock x:Name="LayoutTemplateSectionText" FontSize="13" FontWeight="SemiBold" />
                             </StackPanel>
                             <Grid ColumnSpacing="6">

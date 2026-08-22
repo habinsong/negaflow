@@ -115,5 +115,6 @@ internal sealed class LibraryGridProjection
         view.FrameListView.Visibility = view.CullingSurface.IsGrid
             ? Visibility.Visible
             : Visibility.Collapsed;
+        view.SyncFlatbedOverlay();
     }
 }

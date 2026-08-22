@@ -58,6 +58,11 @@ struct WicTiffExportLimits final {
     // 파일에 적을 메타데이터. 정책이 무엇을 적을지 가른다.
     ExportMetadataPolicy metadata_policy{ExportMetadataPolicy::minimal};
     ExportMetadataFields metadata{};
+    // 쓴 파일을 다시 열어 화소를 전수 대조할지입니다. 기본은 끔 — macOS 는 이 대조를
+    // 하지 않고(`ExportEngine.writeTIFF`), 실측 5088×3401 16bit 한 장에서 736ms,
+    // 내보내기 전체의 36% 였습니다. 구조·메타데이터·해상도·ICC 검사는 끄더라도 그대로
+    // 돕니다. 인코더가 맞다는 증명은 단위 시험이 이 값을 켜서 들고 있습니다.
+    bool verify_pixel_readback{false};
 };
 
 struct WicTiffExportInfo final {

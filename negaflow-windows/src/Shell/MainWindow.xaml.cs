@@ -7,7 +7,10 @@ public sealed partial class MainWindow : Window
 {
     private readonly PresentationSettingsStore settingsStore;
     private readonly WorkspacePresentationState workspaceState;
+    private readonly LibraryHostService? libraryHost;
+    private readonly Negaflow.Shell.Library.ThumbnailService? thumbnails;
     private SettingsWindow? settingsWindow;
+    private DiagnosticsWindow? diagnosticsWindow;
     private AboutNegaflowWindow? aboutWindow;
     private QuickStartHelpWindow? quickStartHelpWindow;
 
@@ -20,6 +23,8 @@ public sealed partial class MainWindow : Window
     {
         this.settingsStore = settingsStore;
         this.workspaceState = workspaceState;
+        this.libraryHost = libraryHost;
+        this.thumbnails = thumbnails;
         InitializeComponent();
         WindowIcon.Apply(AppWindow);
 
@@ -30,10 +35,21 @@ public sealed partial class MainWindow : Window
             AppWindow.Id,
             thumbnails);
         ShellView.SettingsRequested += OnSettingsRequested;
+        ShellView.DiagnosticsRequested += OnDiagnosticsRequested;
         ShellView.QuickStartHelpRequested += OnQuickStartHelpRequested;
         ShellView.AboutRequested += OnAboutRequested;
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(ShellView.TitleBarElement);
+        // 창 뿌리에서 키를 한 번 봅니다. 여기까지도 안 오면 키가 앱에 들어오지 않은
+        // 것이고, 여기는 오는데 셸이 못 받으면 라우팅이 끊긴 것입니다.
+        WindowRoot.AddHandler(
+            UIElement.KeyDownEvent,
+            new Microsoft.UI.Xaml.Input.KeyEventHandler(OnWindowRootKeyDown),
+            handledEventsToo: true);
+        WindowRoot.AddHandler(
+            UIElement.PreviewKeyDownEvent,
+            new Microsoft.UI.Xaml.Input.KeyEventHandler(OnWindowRootPreviewKeyDown),
+            handledEventsToo: true);
         ShellView.Loaded += OnShellLoaded;
         ShellView.SizeChanged += OnShellSizeChanged;
 
@@ -53,6 +69,33 @@ public sealed partial class MainWindow : Window
         ApplyAppearance(settingsStore.Current.Appearance);
         settingsStore.Changed += OnSettingsChanged;
         Closed += OnClosed;
+    }
+
+    /// <summary>
+    /// 버블 단계입니다. 터널에서 이미 처리했으면 아무 것도 하지 않습니다 - 포커스가 어디에
+    /// 있든 한 번은 들어오게 하려고 두 단계 모두 겁니다.
+    /// </summary>
+    private void OnWindowRootKeyDown(
+        object sender,
+        Microsoft.UI.Xaml.Input.KeyRoutedEventArgs args)
+    {
+        _ = sender;
+        if (!args.Handled)
+        {
+            ShellView.HandleWindowKey(args);
+        }
+    }
+
+    /// <summary>
+    /// 터널 단계입니다. 키는 이 자리까지 옵니다(측정 확인). 셸의 UserControl 까지는
+    /// 포커스가 그 안에 있을 때만 내려오므로, 여기서 넘겨 줍니다.
+    /// </summary>
+    private void OnWindowRootPreviewKeyDown(
+        object sender,
+        Microsoft.UI.Xaml.Input.KeyRoutedEventArgs args)
+    {
+        _ = sender;
+        ShellView.HandleWindowKey(args);
     }
 
     private void OnShellLoaded(object sender, RoutedEventArgs args)
@@ -82,13 +125,53 @@ public sealed partial class MainWindow : Window
             AppWindow.TitleBar.RightInset / scale);
     }
 
+    /// <summary>
+    /// 작업 옵션 · 진단입니다. macOS 는 <c>runDiagnostics()</c> 를 부르고 팝오버를 엽니다 -
+    /// 여는 순간 보고서를 만들고, 새로고침 단추로 다시 만듭니다.
+    /// </summary>
+    private void OnDiagnosticsRequested(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (diagnosticsWindow is null)
+        {
+            diagnosticsWindow = new DiagnosticsWindow(settingsStore, CollectDiagnosticsAsync);
+            diagnosticsWindow.Closed += OnDiagnosticsWindowClosed;
+        }
+        diagnosticsWindow.Activate();
+    }
+
+    /// <summary>
+    /// 진단에 담을 값을 모읍니다. 디스크를 읽는 부분은 워커로 넘깁니다 - macOS 도 같은
+    /// 이유로 <c>runDiagnostics</c> 가 비동기입니다.
+    /// </summary>
+    private Task<Negaflow.Shell.Diagnostics.DiagnosticsReport> CollectDiagnosticsAsync()
+    {
+        Negaflow.Shell.Diagnostics.DiagnosticsInputs inputs = ShellView.CollectDiagnostics(
+            libraryHost);
+        DateTimeOffset now = DateTimeOffset.Now;
+        return Task.Run(() =>
+            Negaflow.Shell.Diagnostics.DiagnosticsCollector.Collect(inputs, now));
+    }
+
+    private void OnDiagnosticsWindowClosed(object sender, WindowEventArgs args)
+    {
+        _ = args;
+        if (sender is DiagnosticsWindow closed)
+        {
+            closed.Closed -= OnDiagnosticsWindowClosed;
+        }
+        diagnosticsWindow = null;
+    }
+
     private void OnSettingsRequested(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
         if (settingsWindow is null)
         {
-            settingsWindow = new SettingsWindow(settingsStore, workspaceState);
+            settingsWindow = new SettingsWindow(
+                settingsStore, workspaceState, libraryHost, thumbnails);
             settingsWindow.Closed += OnSettingsWindowClosed;
         }
 

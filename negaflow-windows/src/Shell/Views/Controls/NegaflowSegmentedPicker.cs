@@ -17,11 +17,11 @@ public sealed record SegmentOption(object Value, string Label);
 /// 수치도 그대로입니다 — 트랙 라운딩 11 · 안쪽 여백 3 · 칸 사이 3 · 칸 높이 28 ·
 /// 선택 칸 라운딩 8 · 칸은 폭을 **똑같이 나눠 가짐** · 선택 글자만 SemiBold.
 ///
-/// ☠️ 이 자리에 <c>ComboBox</c> 나 라디오 동그라미를 두면 macOS 와 모양이 다릅니다.
-///    같은 컨트롤이 인화 방향·눈금자·시트 색상, 스캔 프레임 찾기, 출력 방식 등 여러 곳에
-///    나오므로 한 벌만 두고 씁니다.
+/// 이 자리에 <c>ComboBox</c> 나 라디오 동그라미를 두면 macOS 와 모양이 다릅니다.
+/// 같은 컨트롤이 인화 방향·눈금자·시트 색상, 스캔 프레임 찾기, 출력 방식 등 여러 곳에
+/// 나오므로 한 벌만 두고 씁니다.
 /// </summary>
-public sealed class NegaflowSegmentedPicker : ContentControl
+public sealed class NegaflowSegmentedPicker : ContentControl, IThemedSettingsControl
 {
     private readonly Grid track = new() { ColumnSpacing = 3 };
     private readonly List<Button> buttons = [];
@@ -33,7 +33,6 @@ public sealed class NegaflowSegmentedPicker : ContentControl
         CornerRadius = new CornerRadius(11);
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
         HorizontalAlignment = HorizontalAlignment.Stretch;
-        Background = TrackBrush();
         Content = track;
     }
 
@@ -86,14 +85,19 @@ public sealed class NegaflowSegmentedPicker : ContentControl
         }
     }
 
+    /// <summary>Style 세터가 색을 넣어 주면 트랙과 칸을 다시 칠합니다.</summary>
+    public void ApplyBrushes() => Select(SelectedValue, raise: false);
+
     private void Select(object? value, bool raise)
     {
         bool changed = !Equals(SelectedValue, value);
         SelectedValue = value;
-        Brush thumb = (Brush)Application.Current.Resources["NegaflowCardBrush"];
+        Background = SettingsBrushes.GetTrackBrush(this);
+        Brush thumb = SettingsBrushes.GetThumbBrush(this) ??
+            new SolidColorBrush(Microsoft.UI.Colors.Transparent);
         Brush clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        Brush primary = (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
-        Brush secondary = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+        Brush primary = Foreground;
+        Brush secondary = SettingsBrushes.GetSecondaryForeground(this) ?? Foreground;
         for (int index = 0; index < buttons.Count; ++index)
         {
             bool selected = index < options.Count && Equals(options[index].Value, value);
@@ -113,7 +117,4 @@ public sealed class NegaflowSegmentedPicker : ContentControl
         }
     }
 
-    /// <summary>macOS 트랙은 primary 7% 입니다. 테마 자원 중 같은 뜻의 것을 씁니다.</summary>
-    private static Brush TrackBrush() =>
-        (Brush)Application.Current.Resources["NegaflowSubtleFillBrush"];
 }

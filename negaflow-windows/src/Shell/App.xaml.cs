@@ -12,6 +12,7 @@ public partial class App : Application
     private Window? mainWindow;
     private LibraryHostService? libraryHost;
     private ThumbnailService? thumbnails;
+    private WindowsMemoryPressureMonitor? memoryPressureMonitor;
     private RestoreSignalWindow? restoreSignal;
 
     public App()
@@ -97,6 +98,7 @@ public partial class App : Application
         // 그 뒤에 읽으면 처음 몇 장만 프리셋 없이 현상됩니다.
         LookPresetLibrary.Load(Path.Combine(AppContext.BaseDirectory, "presets"));
         var settingsStore = new PresentationSettingsStore();
+        presentationSettings = settingsStore;
         var workspaceState = new WorkspacePresentationState(settingsStore);
         try
         {
@@ -173,6 +175,9 @@ public partial class App : Application
     /// 카탈로그를 여는 곳입니다. 열기에 실패해도 던지지 않습니다. 셸은 상태를 보여 줄 뿐이며,
     /// **실패를 빈 라이브러리로 착각하지 않습니다.**
     /// </summary>
+    /// <summary>저장된 설정입니다. 캐시를 만든 뒤 상주 한도를 한 번 걸어 주려고 붙듭니다.</summary>
+    private PresentationSettingsStore? presentationSettings;
+
     private LibraryHostService? OpenLibrary()
     {
         // dispatcher 는 반드시 UI 스레드에서 잡아야 합니다. 워커에서는 null 입니다.
@@ -189,11 +194,24 @@ public partial class App : Application
 
         libraryHost = new LibraryHostService(dispatcher);
         libraryHost.Open(resolved);
+        // 썸네일도 설정 · 디스크 탭에서 고른 자리에 둡니다. 고른 적 없으면 기본 자리이며,
+        // 그 기본 자리는 OneDrive\negaflow\Thumbnails 입니다.
+        string thumbnailRoot = new Negaflow.Shell.Storage.DiskStorageLocations(
+            (presentationSettings?.Current ?? new ShellPreferences()).Disk).Thumbnails;
         thumbnails = new ThumbnailService(
             new NativeDevelopExporterAdapter(),
             new WicThumbnailCodec(),
             dispatcher,
-            resolved.ThumbnailRoot);
+            thumbnailRoot,
+            Path.Combine(resolved.CacheRoot, "DevelopedPreviews"));
+        // 설정창에서 상주 한도를 바꾸면 지금 도는 캐시에 바로 걸립니다. 캐시는 상태를 만든
+        // 뒤에 생기므로, 걸어 두는 것만으로는 **저장돼 있던 값이 한 번도 적용되지 않습니다.**
+        ThumbnailService cache = thumbnails;
+        WorkspacePresentationState.FrameCacheLimitsChanged = cache.ApplyResidencySettings;
+        cache.ApplyResidencySettings(
+            (presentationSettings?.Current ?? new ShellPreferences()).FrameCache);
+        memoryPressureMonitor = WindowsMemoryPressureMonitor.TryStart(
+            thumbnails.ApplyMemoryPressure);
         return libraryHost;
     }
 
@@ -205,6 +223,8 @@ public partial class App : Application
         AppInstance.GetCurrent().UnregisterKey();
         restoreSignal?.Dispose();
         restoreSignal = null;
+        memoryPressureMonitor?.Dispose();
+        memoryPressureMonitor = null;
         // 세션을 놓아야 다음 실행이 카탈로그의 작성자가 될 수 있습니다.
         libraryHost?.Dispose();
         libraryHost = null;

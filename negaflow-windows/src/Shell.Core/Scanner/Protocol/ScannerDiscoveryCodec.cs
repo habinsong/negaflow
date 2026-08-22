@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -14,10 +15,30 @@ internal static class ScannerDiscoveryCodec
     // 실측: OpticFilm 8100 은 4,148자, Epson GT-X900 은 5,012자다. 상한은 전송 계층이
     // 이미 보장하는 stdout 줄 한 개 크기(256 KiB)에 맞춘다.
     private const int MaximumTokenLength = 256 * 1024;
+    /// <summary>
+    /// 플러그인과 주고받는 JSON 입니다.
+    /// </summary>
+    /// <remarks>
+    /// <b>인코더를 기본값으로 두면 안 됩니다.</b> <c>JavaScriptEncoder.Default</c> 는 ASCII
+    /// 밖의 모든 글자를 <c>\uXXXX</c> 로 이스케이프합니다. macOS 의 <c>JSONEncoder</c> 는
+    /// 그러지 않고 원시 UTF-8 로 냅니다 — 즉 같은 요청이 두 플랫폼에서 <b>다른 바이트</b>로
+    /// 나갔습니다.
+    ///
+    /// 실측(2026-08-22): 스캔 목적지의 기본 롤 폴더가 한국어 "무제 필름" 이라
+    /// <c>outputPath</c> 에 한글이 들어갑니다. 같은 경로를 원시 UTF-8 로 보내면 스캔이 정상
+    /// 완료(exit 0, 3,030,480 bytes)되고, <c>\uXXXX</c> 로 보내면 플러그인이
+    /// <c>0xC0000409</c>(STATUS_STACK_BUFFER_OVERRUN)로 죽었습니다. 화면에는
+    /// "ProcessFailed" 한 줄만 나오고, 폴더 이름이 ASCII 인 언어에서는 재현되지 않습니다.
+    ///
+    /// 이스케이프를 받아 죽는 것은 플러그인 쪽 결함이기도 하지만, 호스트가 macOS 와 다른
+    /// 바이트를 내는 것 자체가 파리티 위반입니다. 여기서 macOS 와 같은 모양으로 맞춥니다.
+    /// </remarks>
     private static readonly JsonSerializerOptions Json = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = false,
+        // macOS `JSONEncoder` 와 같은 규칙: 따옴표·역슬래시·제어 문자만 이스케이프합니다.
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
     internal static string BuildCapabilitiesRequest(ScannerPluginDevice device) =>
@@ -90,6 +111,32 @@ internal static class ScannerDiscoveryCodec
                 return false;
             }
 
+            // macOS `ExternalScannerBackend.capabilities(for:)` 와 같은 판정입니다.
+            // 단위를 보고했는데 우리가 모르는 단위면 영역 지정을 쓰지 않습니다 — mm 로 읽고
+            // 엉뚱한 자리를 스캔하는 것보다 낫습니다.
+            string? scanAreaUnit = string.IsNullOrWhiteSpace(decoded.ScanAreaUnit)
+                ? null
+                : decoded.ScanAreaUnit;
+            bool knownUnit = scanAreaUnit is null or "millimeter" or "inch" or "pixel";
+            bool supportsScanArea = (decoded.SupportsScanArea ?? false) && knownUnit;
+            ScannerOptionRange? originX = Range(decoded.ScanOriginXRange);
+            ScannerOptionRange? originY = Range(decoded.ScanOriginYRange);
+            ScannerOptionRange? widthRange = Range(decoded.ScanWidthRange);
+            ScannerOptionRange? heightRange = Range(decoded.ScanHeightRange);
+            bool supportsPositionedScanArea = supportsScanArea &&
+                decoded.SupportsPositionedScanArea == true &&
+                originX is not null && originY is not null &&
+                widthRange is not null && heightRange is not null;
+            ScannerPluginScanArea maximumArea = new(
+                decoded.MaxScanAreaOriginXMm ?? 0.0,
+                decoded.MaxScanAreaOriginYMm ?? 0.0,
+                decoded.MaxScanAreaWidthMm ?? 0.0,
+                decoded.MaxScanAreaHeightMm ?? 0.0);
+            ScannerPluginScanArea minimumArea = new(
+                decoded.MinScanAreaOriginXMm ?? decoded.MaxScanAreaOriginXMm ?? 0.0,
+                decoded.MinScanAreaOriginYMm ?? decoded.MaxScanAreaOriginYMm ?? 0.0,
+                decoded.MinScanAreaWidthMm ?? 0.0,
+                decoded.MinScanAreaHeightMm ?? 0.0);
             capabilities = new ScannerPluginCapabilities(
                 decoded.ResolutionsDpi!,
                 decoded.Modes!,
@@ -98,12 +145,22 @@ internal static class ScannerDiscoveryCodec
                 decoded.SupportsTransparency ?? false,
                 decoded.SupportsInfrared ?? false,
                 decoded.SupportsMultiExposure ?? false,
-                decoded.SupportsScanArea ?? false,
-                decoded.SupportsPositionedScanArea ?? false,
+                supportsScanArea,
+                supportsPositionedScanArea,
                 decoded.OutputFormats!,
                 string.IsNullOrWhiteSpace(decoded.CapabilityToken) ? null : decoded.CapabilityToken,
-                Positive(decoded.MaxScanWidthMm),
-                Positive(decoded.MaxScanHeightMm));
+                Positive(decoded.MaxScanAreaWidthMm),
+                Positive(decoded.MaxScanAreaHeightMm),
+                minimumArea,
+                maximumArea,
+                scanAreaUnit,
+                Range(decoded.BrightnessRange),
+                Range(decoded.ContrastRange),
+                Range(decoded.HardwareExposureRange),
+                originX,
+                originY,
+                widthRange,
+                heightRange);
             return true;
         }
         catch (JsonException)
@@ -114,6 +171,19 @@ internal static class ScannerDiscoveryCodec
 
     private static double? Positive(double? value) =>
         value is { } number && double.IsFinite(number) && number > 0.0 ? number : null;
+
+    /// <summary>
+    /// macOS 는 <c>ScannerOptionRange</c> 를 그대로 디코딩합니다. 유한하지 않거나 뒤집힌
+    /// 범위는 없는 것으로 둡니다 — 그런 범위로 격자를 맞추면 값이 튑니다.
+    /// </summary>
+    private static ScannerOptionRange? Range(OptionRangeResponse? value) =>
+        value is { Minimum: { } minimum, Maximum: { } maximum } &&
+        double.IsFinite(minimum) && double.IsFinite(maximum) && maximum >= minimum
+            ? new ScannerOptionRange(
+                minimum,
+                maximum,
+                value.Step is { } step && double.IsFinite(step) && step > 0.0 ? step : null)
+            : null;
 
     private static bool IsRequiredText(string? value) =>
         !string.IsNullOrWhiteSpace(value) && IsOptionalText(value);
@@ -158,6 +228,11 @@ internal static class ScannerDiscoveryCodec
         string Vendor,
         string Model);
 
+    private sealed record OptionRangeResponse(double? Minimum, double? Maximum, double? Step);
+
+    // 키 이름은 플러그인 wire 계약(protocol v2)이 정합니다. macOS `PluginCapabilities` 가 읽는
+    // 것과 같은 이름이어야 하며, `maxScanWidthMM` 처럼 비슷하지만 다른 이름을 읽으면 값이
+    // 조용히 null 이 되어 평판 영역 워크플로가 통째로 사라집니다.
     private sealed record CapabilitiesResponse(
         [property: JsonPropertyName("resolutionsDPI")] List<int>? ResolutionsDpi,
         List<string>? Modes,
@@ -170,6 +245,20 @@ internal static class ScannerDiscoveryCodec
         bool? SupportsPositionedScanArea,
         List<string>? OutputFormats,
         string? CapabilityToken,
-        [property: JsonPropertyName("maxScanWidthMM")] double? MaxScanWidthMm,
-        [property: JsonPropertyName("maxScanHeightMM")] double? MaxScanHeightMm);
+        [property: JsonPropertyName("minScanAreaWidthMM")] double? MinScanAreaWidthMm,
+        [property: JsonPropertyName("minScanAreaHeightMM")] double? MinScanAreaHeightMm,
+        [property: JsonPropertyName("minScanAreaOriginXMM")] double? MinScanAreaOriginXMm,
+        [property: JsonPropertyName("minScanAreaOriginYMM")] double? MinScanAreaOriginYMm,
+        [property: JsonPropertyName("maxScanAreaWidthMM")] double? MaxScanAreaWidthMm,
+        [property: JsonPropertyName("maxScanAreaHeightMM")] double? MaxScanAreaHeightMm,
+        [property: JsonPropertyName("maxScanAreaOriginXMM")] double? MaxScanAreaOriginXMm,
+        [property: JsonPropertyName("maxScanAreaOriginYMM")] double? MaxScanAreaOriginYMm,
+        string? ScanAreaUnit,
+        OptionRangeResponse? BrightnessRange,
+        OptionRangeResponse? ContrastRange,
+        OptionRangeResponse? HardwareExposureRange,
+        OptionRangeResponse? ScanOriginXRange,
+        OptionRangeResponse? ScanOriginYRange,
+        OptionRangeResponse? ScanWidthRange,
+        OptionRangeResponse? ScanHeightRange);
 }

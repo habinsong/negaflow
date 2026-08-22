@@ -2,6 +2,7 @@
 
 #include "negaflow/imaging/manual_negative_developer.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
+#include "negaflow/pipeline/frame_cache_limits.h"
 
 #include <cstdint>
 
@@ -38,5 +39,24 @@ nf_status_t NF_CALL nf_get_negative_limits_v1(nf_negative_limits_v1* const outpu
     output->minimum_manual_dmin = negaflow::imaging::minimum_manual_dmin;
     output->maximum_manual_dmin = negaflow::imaging::maximum_manual_dmin;
     output->struct_size = declared_size;
+    return NF_STATUS_OK;
+}
+
+// 설정 창이 고른 상주 한도를 엔진 캐시에 겁니다. macOS
+// `FrameCacheResidencyStore.onLimitsChange` → `FrameCacheManager` 와 같은 자리입니다.
+nf_status_t NF_CALL nf_set_frame_cache_limits_v1(
+    const nf_frame_cache_limits_v1* const limits) {
+    if (limits == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    if (limits->struct_size < static_cast<std::uint32_t>(sizeof(*limits))) {
+        return NF_STATUS_STRUCT_TOO_SMALL;
+    }
+
+    negaflow::pipeline::set_frame_cache_residency_limits(
+        negaflow::pipeline::FrameCacheResidencyLimits{
+            limits->cleaned_raw_frames,
+            limits->developed_frames,
+        });
     return NF_STATUS_OK;
 }

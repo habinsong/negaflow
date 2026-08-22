@@ -20,6 +20,7 @@
 
 struct ID3D11Device;
 struct ID3D11DeviceContext;
+struct IDXGIAdapter3;
 
 namespace negaflow::gpu {
 
@@ -79,6 +80,15 @@ struct GpuCapability final {
     GpuAdapterInfo adapter{};
 };
 
+/// DXGI가 현재 프로세스에 부여한 로컬 GPU 메모리 상태입니다.
+/// 정적 VRAM 용량이 아니라 다른 앱의 사용량에 따라 바뀌는 실제 residency 예산입니다.
+struct GpuVideoMemoryInfo final {
+    std::uint64_t budget{0};
+    std::uint64_t current_usage{0};
+    std::uint64_t available_for_reservation{0};
+    std::uint64_t current_reservation{0};
+};
+
 // D3D11 장치와 즉시 컨텍스트를 소유합니다. 복사 불가, 이동 가능.
 class GpuDevice final {
 public:
@@ -108,11 +118,20 @@ public:
     [[nodiscard]] ID3D11Device* device() const noexcept { return device_; }
     [[nodiscard]] ID3D11DeviceContext* context() const noexcept { return context_; }
 
+    /// `IDXGIAdapter3::QueryVideoMemoryInfo(LOCAL)` 결과를 읽습니다. 지원하지 않거나 장치가
+    /// 사라졌으면 false이며, 호출자는 캐시를 보존하지 않는 쪽으로 닫아야 합니다.
+    [[nodiscard]] bool query_local_video_memory_info(
+        GpuVideoMemoryInfo& info) const noexcept;
+
+    /// 유휴 진입 전에 D3D11 runtime/driver의 재생성 가능한 내부 버퍼를 폐기합니다.
+    [[nodiscard]] bool trim_idle() const noexcept;
+
 private:
     void reset() noexcept;
 
     ID3D11Device* device_{nullptr};
     ID3D11DeviceContext* context_{nullptr};
+    IDXGIAdapter3* adapter3_{nullptr};
     GpuCapability capability_{};
     GpuDeviceStatus status_{GpuDeviceStatus::dxgi_unavailable};
 };

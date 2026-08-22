@@ -177,6 +177,11 @@ void write_outcome_v2(
     nf_develop_export_result_v3* const result,
     nf_status_t& status) noexcept;
 
+[[nodiscard]] bool prepare_result_v35(
+    const nf_develop_export_request_v35* const request,
+    nf_develop_export_result_v3* const result,
+    nf_status_t& status) noexcept;
+
 [[nodiscard]] bool prepare_result_v32(
     const nf_develop_export_request_v32* const request,
     nf_develop_export_result_v3* const result,

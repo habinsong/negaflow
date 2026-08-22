@@ -1,13 +1,13 @@
 // CPU/GPU 동치 시험 — 형태학(열기·닫기·양극 톱햇).
 //
-// ☠️ **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `grain_mend_detail::opening` ·
-//    `closing` · `bipolar_top_hat` 을 그대로 부르고 그 결과와 겨룹니다.
-//    (`grain_mend_morphology.h` 는 private 헤더라 시험 대상에 그 경로를 답니다.)
+// **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `grain_mend_detail::opening` ·
+// `closing` · `bipolar_top_hat` 을 그대로 부르고 그 결과와 겨룹니다.
+// (`grain_mend_morphology.h` 는 private 헤더라 시험 대상에 그 경로를 답니다.)
 //
-// ☠️ 여기는 **허용 오차가 아니라 0 을 요구합니다.** min/max 는 창 안에서 하나를 고르는
-//    일이라 부동소수 산술이 없습니다 — CPU 의 단조 덱(vHGW)과 GPU 의 직접 훑기가
-//    같은 값을 골라야 합니다. 1 ulp 라도 다르면 그것은 반올림이 아니라 **다른 값을 고른
-//    것**이고, 이식이 틀린 것입니다.
+// 여기는 **허용 오차가 아니라 0 을 요구합니다.** min/max 는 창 안에서 하나를 고르는
+// 일이라 부동소수 산술이 없습니다 — CPU 의 단조 덱(vHGW)과 GPU 의 직접 훑기가
+// 같은 값을 골라야 합니다. 1 ulp 라도 다르면 그것은 반올림이 아니라 **다른 값을 고른
+// 것**이고, 이식이 틀린 것입니다.
 //
 // GPU 는 네 채널을 독립으로 돌리므로, CPU 판 넷을 한 텍스처에 담아 한 번에 겨룹니다 —
 // 검출이 채널 셋 + 휘도를 다루는 실제 모양과 같습니다.
@@ -187,7 +187,7 @@ void morphology_matches_cpu(const GpuDevice& device, const char* const label) {
             }
 
             const float worst = compare(reference, gpu_pixels);
-            // ☠️ 선택 연산이므로 **정확히 0** 이어야 합니다.
+            // 선택 연산이므로 **정확히 0** 이어야 합니다.
             if (worst != 0.0F) {
                 std::cerr << "FAIL: " << label << ' ' << operation_name(operation) << " radius "
                           << radius << " max delta " << worst << " (must be exactly 0)\n";
@@ -210,7 +210,7 @@ void morphology_matches_cpu(const GpuDevice& device, const char* const label) {
         "a null scratch array is rejected");
 }
 
-}  // namespace
+} // namespace
 
 int main() {
     const GpuDevice warp = GpuDevice::create(GpuDevicePreference::warp_only);

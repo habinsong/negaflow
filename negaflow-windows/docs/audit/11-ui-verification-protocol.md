@@ -1,7 +1,7 @@
-> # ☠️ 하드코딩 · 가짜 구현 · 창작 · 병신 백엔드 · 병신 프론트엔드 = 죽음 ☠️
+> # 하드코딩 · 가짜 구현 · 창작 · 병신 백엔드 · 병신 프론트엔드 = 죽음
 >
-> **🔬 추측·가설 금지.** 재현하고 스택을 잡고 계측해서 **원인을 확정**한 뒤 고칩니다.
-> **🌐 모르면 웹 검색을 적극적으로** 하십시오 — WinUI 3 속성 하나를 몰라서
+> ** 추측·가설 금지.** 재현하고 스택을 잡고 계측해서 **원인을 확정**한 뒤 고칩니다.
+> ** 모르면 웹 검색을 적극적으로** 하십시오 — WinUI 3 속성 하나를 몰라서
 > 슬라이더가 정수로 스냅됐습니다(`Slider.StepFrequency` 기본값 **1**).
 >
 > **저장소**: 본체 `C:\Users\habin\negaflow\`(Apache 2.0) · 스캐너 `C:\Users\habin\negaflow-scanner-sane\`(GPL).
@@ -9,7 +9,7 @@
 
 ---
 
-> # ⛔⛔⛔ 창작 금지 · 가짜 UI 금지 ⛔⛔⛔
+> # NGNGNG 창작 금지 · 가짜 UI 금지 NGNGNG
 >
 > # **눈으로 보지 않은 UI 는 "됐다" 고 적지 마십시오.**
 >
@@ -40,7 +40,7 @@
 > - **백엔드 없는 껍데기 UI 금지.** 눌러서 값이 바뀌지 않으면 그것은 **가짜**입니다.
 > - **Segoe 글리프로 대충 때우기 금지.** SF Symbols 와 그림이 다르면 SVG 로 그리십시오.
 >
-> # ⛔ 화면 도구
+> # NG 화면 도구
 >
 > ## windows-mcp · windows-gui MCP — **절대 금지**
 >
@@ -90,10 +90,10 @@ computer-use 는 토큰을 많이 씁니다. 위 「화면 도구」절의 **씁
 필요할 때만:
 
 ```
-1. 앱을 띄운다        scripts\run-app.ps1 -Architecture x64 -Configuration Release
-2. request_access     negaflow.shell.exe  ← 창을 소유한 프로세스 이름
-3. screenshot         전체 화면은 한 번만
-4. zoom               구역별로 크롭해서 확대   ← 여기서 판정
+1. 앱을 띄운다 scripts\run-app.ps1 -Architecture x64 -Configuration Release
+2. request_access negaflow.shell.exe ← 창을 소유한 프로세스 이름
+3. screenshot 전체 화면은 한 번만
+4. zoom 구역별로 크롭해서 확대 ← 여기서 판정
 ```
 
 **`zoom` 없이 전체 스크린샷만 보고 판정하지 마십시오.** 1456×819 로 줄어든 그림에서는
@@ -114,11 +114,11 @@ computer-use 는 토큰을 많이 씁니다. 위 「화면 도구」절의 **씁
 
 ```
 C:\Users\habin\맥negaflow 스크린샷\
-├── 라이브러리뷰\     4
-├── 현상뷰\           22
-├── 인화뷰\           4
-├── 메뉴막대\         10
-└── 설정\             10
+├── 라이브러리뷰\ 4
+├── 현상뷰\ 22
+├── 인화뷰\ 4
+├── 메뉴막대\ 10
+└── 설정\ 10
 ```
 
 **파일을 빼먹고 판정하면 창작입니다.** 아래 50행이 전부입니다. 파일명은 디스크와
@@ -305,16 +305,16 @@ C:\Users\habin\맥negaflow 스크린샷\
 
 ```
 구역: 라이브러리 하단 필터 캡슐
-기준: C:\Users\habin\맥negaflow 스크린샷\라이브러리뷰\라이브러리뷰_기본.png  +  Parsec 실화면
+기준: C:\Users\habin\맥negaflow 스크린샷\라이브러리뷰\라이브러리뷰_기본.png + Parsec 실화면
 Windows: computer-use zoom [x0,y0,x1,y1]
 
-  모양   ☐ 맞음  ☒ 다름 — 모서리 13 vs macOS ○○
-  크기   ☐ 맞음  ☒ 다름 — 높이 26 vs ○○
-  위치   ☐ 맞음  ☒ 다름 — 뷰모드 바와 분리돼 다른 줄에 있음
-  정렬   ☐ 맞음  ☒ 다름
-  색상   ☐ 맞음  ☐ 다름
-  내용   ☐ 맞음  ☒ 다름 — 순서가 macOS 와 다름
-  잘림   ☒ 잘림 — 글자가 잘려 보임
+  모양 [ ] 맞음 [x] 다름 — 모서리 13 vs macOS ○○
+  크기 [ ] 맞음 [x] 다름 — 높이 26 vs ○○
+  위치 [ ] 맞음 [x] 다름 — 뷰모드 바와 분리돼 다른 줄에 있음
+  정렬 [ ] 맞음 [x] 다름
+  색상 [ ] 맞음 [ ] 다름
+  내용 [ ] 맞음 [x] 다름 — 순서가 macOS 와 다름
+  잘림 [x] 잘림 — 글자가 잘려 보임
 
 판정: 다름 (7개 중 5개 불일치)
 ```
@@ -366,8 +366,8 @@ computer-use 를 아끼려면 **자동화로 잴 수 있는 것은 자동화로*
 ```powershell
 # 창 찾기 → AutomationId 로 요소 찾기 → BoundingRectangle / ToggleState
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
-$root   = [System.Windows.Automation.AutomationElement]::RootElement
-$cond   = New-Object System.Windows.Automation.PropertyCondition(
+$root = [System.Windows.Automation.AutomationElement]::RootElement
+$cond = New-Object System.Windows.Automation.PropertyCondition(
               [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $pid)
 $window = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $cond)
 ```
@@ -383,7 +383,7 @@ $window = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $cond
 DPI 를 알아야** 합니다 — `SetProcessDPIAware()` 를 안 부르면 `GetWindowRect` 가 논리
 좌표를 줘서 창의 일부만 찍힙니다(3862 → 2575 로 잘렸습니다).
 
-### 6.3 ☠️ 맥 스크린샷의 화소값을 색 사양으로 쓰지 마십시오
+### 6.3 맥 스크린샷의 화소값을 색 사양으로 쓰지 마십시오
 
 `현상뷰_우측탭_자동색상+자동레벨.png` 의 `iCCP` 청크에는 **모니터 프로파일**
 (`TFG24F07W`)이 들어 있습니다. 즉 그 PNG 의 숫자는 sRGB 도 Display P3 도 아니라

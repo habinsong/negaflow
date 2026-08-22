@@ -3,17 +3,17 @@
 // `ScannerNoiseReduction+Color.swift:19`. Windows 에는 그 내장 필터가 없어 **우리가 만듭니다.**
 //
 // Windows CPU 판은 두 곳에 있고 **수식과 누적 순서가 같습니다**:
-//   `imaging/film_scan_denoise_filters.cpp:13` `gaussian_blur`      (Rgb, 가장자리 클램프)
-//   `imaging/texture_stage_gaussian.h:22`      `gaussian_transform` (Rgba, 세 가지 가장자리)
+// `imaging/film_scan_denoise_filters.cpp:13` `gaussian_blur` (Rgb, 가장자리 클램프)
+// `imaging/texture_stage_gaussian.h:22` `gaussian_transform` (Rgba, 세 가지 가장자리)
 //
-// ☠️ **가중치를 셰이더에서 만들지 마십시오.** 호스트가 CPU 와 **같은 코드로** 계산해
-//    넘깁니다(`GpuGaussianBlur::create_weights`). `exp` 는 CPU 와 GPU 의 구현이 달라
-//    마지막 비트가 갈리고, 그 차이가 전 화소에 곱해집니다. 실제로 값을 옮기는 것은
-//    `coreimage_gaussian_effective_sigma` 의 분산 보정 0.08 이며 그것도 호스트 상수입니다.
+// **가중치를 셰이더에서 만들지 마십시오.** 호스트가 CPU 와 **같은 코드로** 계산해
+// 넘깁니다(`GpuGaussianBlur::create_weights`). `exp` 는 CPU 와 GPU 의 구현이 달라
+// 마지막 비트가 갈리고, 그 차이가 전 화소에 곱해집니다. 실제로 값을 옮기는 것은
+// `coreimage_gaussian_effective_sigma` 의 분산 보정 0.08 이며 그것도 호스트 상수입니다.
 //
-// ☠️ **누적 순서를 바꾸지 마십시오.** CPU 는 `value = value + sample * weight` 를
-//    offset `-R`→`+R` 로 돕니다. `/fp:precise` 의 MSVC 는 FMA 를 만들지 않으므로 곱과 합이
-//    따로 반올림됩니다. HLSL 은 `precise` 로 fxc 의 FMA 축약을 막아 같게 둡니다.
+// **누적 순서를 바꾸지 마십시오.** CPU 는 `value = value + sample * weight` 를
+// offset `-R`→`+R` 로 돕니다. `/fp:precise` 의 MSVC 는 FMA 를 만들지 않으므로 곱과 합이
+// 따로 반올림됩니다. HLSL 은 `precise` 로 fxc 의 FMA 축약을 막아 같게 둡니다.
 //
 // 박스 블러와 달리 러닝 섬이 아니라 화소마다 독립이므로 **2D 8×8 그룹**을 씁니다.
 
@@ -21,8 +21,8 @@ Texture2D<float4> Source : register(t0);
 StructuredBuffer<float> Weights : register(t1);
 RWTexture2D<float4> Destination : register(u0);
 
-// ☠️ 앞 16바이트는 화소별 커널과 같은 `GpuPointwiseExtent` 자리입니다 — `uint2` 뒤의
-//    `float2` 를 빼면 뒤 필드가 8바이트 앞에서 읽혀 조용히 틀린 값이 들어옵니다.
+// 앞 16바이트는 화소별 커널과 같은 `GpuPointwiseExtent` 자리입니다 — `uint2` 뒤의
+// `float2` 를 빼면 뒤 필드가 8바이트 앞에서 읽혀 조용히 틀린 값이 들어옵니다.
 cbuffer GaussianConstants : register(b0) {
     uint2 Extent;
     float2 Padding0;

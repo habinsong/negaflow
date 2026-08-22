@@ -74,7 +74,7 @@ struct RowBlock final {
     return RowBlock{first_row, row_count};
 }
 
-}  // namespace
+} // namespace
 
 std::uint32_t active_row_block_threads() noexcept {
     return g_active_extra_threads.load(std::memory_order_relaxed);
@@ -126,9 +126,9 @@ void run_row_blocks(
     // 실측으로 256×171 표본 격자에서 25 ms 손해였습니다
     // (`docs/audit/13-performance-playbook.md` 19절).
     //
-    // ☠️ 예약(`reserve_extra_threads`)이 풀 크기와 같은 예산을 쓰므로, 예약이 K 개
-    //    잡혔다는 것은 **놀고 있는 워커가 K 개 있다는 뜻**입니다. 워커 안에서 다시 이 함수를
-    //    불러도 예약이 0 이 되어 직접 돌 뿐, 자기가 낸 일을 기다리며 멈추지 않습니다.
+    // 예약(`reserve_extra_threads`)이 풀 크기와 같은 예산을 쓰므로, 예약이 K 개
+    // 잡혔다는 것은 **놀고 있는 워커가 K 개 있다는 뜻**입니다. 워커 안에서 다시 이 함수를
+    // 불러도 예약이 0 이 되어 직접 돌 뿐, 자기가 낸 일을 기다리며 멈추지 않습니다.
     row_block_pool_detail::PendingCounter pending{};
     for (std::uint32_t index = 1U; index < block_count; ++index) {
         const RowBlock block = block_at(height, block_count, index);
@@ -151,4 +151,4 @@ void run_row_blocks(
     release_extra_threads(reserved);
 }
 
-}  // namespace negaflow::core
+} // namespace negaflow::core

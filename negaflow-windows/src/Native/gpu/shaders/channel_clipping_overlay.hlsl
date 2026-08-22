@@ -1,10 +1,10 @@
 // 프리뷰 전용 채널 클리핑 오버레이.
 //
-// macOS  : `ChromabaseMetalKernels.swift:604` `channelClippingOverlay`
+// macOS : `ChromabaseMetalKernels.swift:604` `channelClippingOverlay`
 // CPU 판 : `imaging/channel_clipping_overlay.h` `channel_clipping_overlay_pixel`
 //
-// ☠️ Windows 작업 이미지는 프리멀티가 아닙니다. `rgb / src.a` 를 하지 마십시오.
-// ☠️ 경계는 `<= 0` / `>= 1` 입니다.
+// Windows 작업 이미지는 프리멀티가 아닙니다. `rgb / src.a` 를 하지 마십시오.
+// 경계는 `<= 0` / `>= 1` 입니다.
 
 #include "tone_shared.hlsli"
 

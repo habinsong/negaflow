@@ -51,7 +51,7 @@ public sealed record NoiseReductionRecipe(
 }
 
 /// <summary>
-/// Immutable source traits recorded when a TIFF enters the catalog.  They make a relink
+/// Immutable source traits recorded when a TIFF enters the catalog. They make a relink
 /// refuse a different scan before its path can replace the original recipe input.
 /// </summary>
 public readonly record struct LibrarySourceMetadata(
@@ -224,6 +224,15 @@ public sealed record LibraryFrameSnapshot(
     /// <summary>회전, 반전, 수평 및 crop은 preview와 export가 같은 recipe로 사용합니다.</summary>
     public ImageTransformRecipe ImageTransform { get; init; } = ImageTransformRecipe.Identity;
 
+    /// <summary>
+    /// 평판 프리뷰 스캔입니다. macOS <c>ScanFrame.isPreviewScan</c> 과 같은 자리입니다.
+    /// </summary>
+    /// <remarks>
+    /// 프리뷰는 <b>프레임 찾기를 위한 임시 그림</b>입니다. 화면에는 보여야 하지만 장수 세기·
+    /// 내보내기·백업에는 들어가지 않습니다. 다음 프리뷰가 오면 이전 것은 사라집니다.
+    /// </remarks>
+    public bool IsPreviewScan { get; init; }
+
     /// <summary>macOS 와 같은 0...5 별점입니다. 현상에 쓰이지 않고 라이브러리 표시·정렬·필터에만 씁니다.</summary>
     public int Rating { get; init; }
 
@@ -386,11 +395,11 @@ public sealed record LibraryFrameSnapshot(
     /// 사용자가 붙인 이름입니다. 단, **예전 Windows 가져오기가 남긴 `이름.확장자`** 는 이름이
     /// 아니라 버그의 흔적이므로 무시합니다.
     ///
-    /// ☠️ macOS 는 가져오기에서 `customDisplayName` 을 아예 쓰지 않고 확장자를 뗀 파일 이름으로
-    ///    물러납니다. Windows 가 한때 `Path.GetFileName` 을 그대로 적어 넣어서, 카드·필름스트립·
-    ///    창 제목이 `이름.tiff` 가 되고 내보내기 파일명이 `이름.tiff.jpg` 로 나왔습니다.
-    ///    가져오기는 고쳤지만 이미 적힌 줄은 남아 있으므로, **원본 파일 이름과 글자까지 같은**
-    ///    값일 때만 물러납니다 — 사용자가 직접 붙인 다른 이름은 그대로 지킵니다.
+    /// macOS 는 가져오기에서 `customDisplayName` 을 아예 쓰지 않고 확장자를 뗀 파일 이름으로
+    /// 물러납니다. Windows 가 한때 `Path.GetFileName` 을 그대로 적어 넣어서, 카드·필름스트립·
+    /// 창 제목이 `이름.tiff` 가 되고 내보내기 파일명이 `이름.tiff.jpg` 로 나왔습니다.
+    /// 가져오기는 고쳤지만 이미 적힌 줄은 남아 있으므로, **원본 파일 이름과 글자까지 같은**
+    /// 값일 때만 물러납니다 — 사용자가 직접 붙인 다른 이름은 그대로 지킵니다.
     /// </summary>
     private string? UsableLiteralDisplayName =>
         LiteralDisplayName is { } literal &&

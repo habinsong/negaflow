@@ -82,7 +82,7 @@ void discard_pixels(WorkingImage& image) noexcept {
     return 0.18F * std::pow(10.0F, -(density + noise * amount));
 }
 
-}  // namespace
+} // namespace
 
 bool valid_digital_film_grain_parameters(
     const DigitalFilmGrainParameters& parameters) noexcept {
@@ -136,9 +136,9 @@ DigitalFilmGrainResult apply_digital_film_grain_material(
     }
     const double amplitude = profile.amplitude * bounded_strength;
     const float chroma = static_cast<float>(profile.chroma_ratio);
-    // ☠️ **근사입니다**(밀도 응답이 `log10`·`sqrt`·`exp`·`pow`). 좌표 해시 자체는
-    //    uint32 라 GPU 와 비트 단위로 같고, 사슬 전체 실측 오차는 4.2e-07 입니다.
-    //    `ApproximateAcceleratorScope` 안에서만 돕니다 — 내보내기·골든은 CPU 그대로입니다.
+    // **근사입니다**(밀도 응답이 `log10`·`sqrt`·`exp`·`pow`). 좌표 해시 자체는
+    // uint32 라 GPU 와 비트 단위로 같고, 사슬 전체 실측 오차는 4.2e-07 입니다.
+    // `ApproximateAcceleratorScope` 안에서만 돕니다 — 내보내기·골든은 CPU 그대로입니다.
     if (approximate_acceleration_allowed()) {
         if (const KernelAccelerator* const table = kernel_accelerator();
             table != nullptr && table->digital_film_grain != nullptr) {
@@ -203,4 +203,4 @@ const char* digital_film_grain_status_name(
     return "unknown_status";
 }
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

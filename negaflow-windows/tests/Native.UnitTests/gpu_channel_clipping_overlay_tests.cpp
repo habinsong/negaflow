@@ -1,6 +1,6 @@
 // CPU/GPU 동치 — 프리뷰 전용 채널 클리핑 오버레이.
 //
-// ☠️ GPU 가 안 돌면 실패합니다. 현상 결과는 바꾸지 않고 오버레이만 겨룹니다.
+// GPU 가 안 돌면 실패합니다. 현상 결과는 바꾸지 않고 오버레이만 겨룹니다.
 
 #include <cmath>
 #include <cstdint>
@@ -68,7 +68,7 @@ constexpr std::uint32_t height = 8U;
         left.alpha == right.alpha;
 }
 
-}  // namespace
+} // namespace
 
 int main() {
     const WorkingImage source = make_source();

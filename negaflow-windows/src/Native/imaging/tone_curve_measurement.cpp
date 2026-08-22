@@ -119,7 +119,7 @@ void set_fallback(ToneCurveMeasurementResult& result) noexcept {
     };
 }
 
-}  // namespace
+} // namespace
 
 ToneCurveMeasurementResult measure_parametric_tone_curve_bands(
     const negaflow::core::ConstImageView image,
@@ -189,24 +189,24 @@ ToneCurveMeasurementResult measure_parametric_tone_curve_bands(
     }
 
     try {
-        // ☠️ 이 표본 추출은 **GPU 로 옮길 수 없습니다.** `sampled_luma` 가 가중치와 누적을
-        //    `double` 로 하는데 D3D11 의 double 은 **선택 기능**이라 벤더에 따라 없습니다
-        //    (`docs/audit/13-performance-playbook.md` 18절). float 로 낮추면 백분위가 달라지고
-        //    밴드가 달라져 **출력 화소가 달라집니다.**
+        // 이 표본 추출은 **GPU 로 옮길 수 없습니다.** `sampled_luma` 가 가중치와 누적을
+        // `double` 로 하는데 D3D11 의 double 은 **선택 기능**이라 벤더에 따라 없습니다
+        // (`docs/audit/13-performance-playbook.md` 18절). float 로 낮추면 백분위가 달라지고
+        // 밴드가 달라져 **출력 화소가 달라집니다.**
         //
-        // ☠️ **`work_units` 에 표본 격자 크기를 넘기면 안 됩니다.**
-        //    격자는 236×162 = 38,232 밖에 안 되는데 `run_row_blocks` 는
-        //    100만(`minimum_parallel_row_work_units`) 미만이면 **쪼개지 않고 통째로 직렬 실행**합니다.
-        //    격자 크기를 넘기면 병렬화가 **조용히 꺼진 채** 돕니다 — 경고도 실패도 없습니다.
+        // **`work_units` 에 표본 격자 크기를 넘기면 안 됩니다.**
+        // 격자는 236×162 = 38,232 밖에 안 되는데 `run_row_blocks` 는
+        // 100만(`minimum_parallel_row_work_units`) 미만이면 **쪼개지 않고 통째로 직렬 실행**합니다.
+        // 격자 크기를 넘기면 병렬화가 **조용히 꺼진 채** 돕니다 — 경고도 실패도 없습니다.
         //
-        //    표본 하나가 원본에서 `inverse_scale` 변의 정사각형을 읽으므로, 진짜 작업량은
-        //    격자 × `ceil(inverse_scale)²` 입니다. 5100 폭이면 38,232 × 400 ≈ **1,686만**.
+        // 표본 하나가 원본에서 `inverse_scale` 변의 정사각형을 읽으므로, 진짜 작업량은
+        // 격자 × `ceil(inverse_scale)²` 입니다. 5100 폭이면 38,232 × 400 ≈ **1,686만**.
         //
-        //    ☠️ 앞서 두 번 "병렬화해도 이득이 없다" 고 적었던 것은 **이 문턱에 걸려
-        //       스레드가 하나도 안 뜬 상태를 잰 것**이었습니다. 그리고 그 결과에
-        //       "메모리 대역폭에 묶였다" 는, **재지 않은 설명**을 붙였습니다.
-        //       실제로는 이 루프만 떼어 재면 **32.0 ms → 5.0 ms (6.4배)** 입니다
-        //       (`docs/audit/13-performance-playbook.md` 21절).
+        // 앞서 두 번 "병렬화해도 이득이 없다" 고 적었던 것은 **이 문턱에 걸려
+        // 스레드가 하나도 안 뜬 상태를 잰 것**이었습니다. 그리고 그 결과에
+        // "메모리 대역폭에 묶였다" 는, **재지 않은 설명**을 붙였습니다.
+        // 실제로는 이 루프만 떼어 재면 **32.0 ms → 5.0 ms (6.4배)** 입니다
+        // (`docs/audit/13-performance-playbook.md` 21절).
         //
         // 결과는 직렬과 **비트 단위로 같습니다** — 표본끼리 독립이고, 각 블록이 자기 행의
         // 자리에만 적으며, 뒤에서 어차피 정렬합니다.
@@ -299,4 +299,4 @@ const char* tone_curve_measurement_status_name(
     return "unknown";
 }
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

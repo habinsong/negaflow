@@ -19,6 +19,62 @@ internal static class CropAndLookTests
         VerifyCropSession();
         VerifyLookPresetReachesTheEngine();
         VerifyDisplayToRawMapping();
+        VerifyDevelopedPixelSizeFollowsTheTransform();
+    }
+
+    /// <summary>
+    /// 인화 판이 칸을 만들 때 쓰는 크기입니다 — <b>변형 뒤</b> 크기여야 합니다.
+    /// </summary>
+    /// <remarks>
+    /// 세로로 돌린 사진에 가로 칸을 만들고 그 칸에 사진을 눌러 넣던 고장을 고정합니다. macOS
+    /// <c>transformedPrintPackageSize(_:transform:)</c> 와 같은 갈래입니다 — 90°·270° 는
+    /// 가로세로를 맞바꾸고, 크롭은 그 위에서 잘립니다.
+    /// </remarks>
+    private static void VerifyDevelopedPixelSizeFollowsTheTransform()
+    {
+        const uint width = 5088U;
+        const uint height = 3401U;
+
+        static bool Size(
+            ImageTransformRecipe transform,
+            out double developedWidth,
+            out double developedHeight) =>
+            DevelopDisplayGeometry.TryDevelopedPixelSize(
+                transform, width, height, out developedWidth, out developedHeight);
+
+        Check(Size(ImageTransformRecipe.Identity, out double w, out double h) &&
+            Near(w, width) && Near(h, height),
+            "developed_pixel_size_identity_is_the_source_size");
+
+        // 가로 스캔을 90° 돌리면 세로가 됩니다. 여기가 어긋나면 인화가 가로 칸을 만듭니다.
+        ImageTransformRecipe turned =
+            ImageTransformRecipe.Identity with { Rotation = ImageRotation.Degrees90 };
+        Check(Size(turned, out w, out h) && Near(w, height) && Near(h, width) && w < h,
+            "developed_pixel_size_swaps_axes_on_quarter_turn");
+        ImageTransformRecipe turnedBack =
+            ImageTransformRecipe.Identity with { Rotation = ImageRotation.Degrees270 };
+        Check(Size(turnedBack, out w, out h) && Near(w, height) && Near(h, width),
+            "developed_pixel_size_swaps_axes_on_three_quarter_turn");
+
+        // 180° 는 크기를 바꾸지 않습니다.
+        Check(Size(ImageTransformRecipe.Identity with { Rotation = ImageRotation.Degrees180 },
+                out w, out h) && Near(w, width) && Near(h, height),
+            "developed_pixel_size_half_turn_keeps_the_size");
+
+        // 크롭은 회전 뒤 크기 위에서 잘립니다 — 돌린 사진의 절반은 세로의 절반입니다.
+        ImageTransformRecipe turnedAndCropped = turned with
+        {
+            Crop = new ImageCropRect(0.25, 0.25, 0.5, 0.5),
+        };
+        Check(Size(turnedAndCropped, out w, out h) &&
+            Math.Abs(w - (height * 0.5)) <= 2.0 &&
+            Math.Abs(h - (width * 0.5)) <= 2.0,
+            "developed_pixel_size_crops_after_the_turn");
+
+        // 세로 사진의 비율이 원본 가로 비율과 같아지면 인화가 다시 눌러 버립니다.
+        Check(Size(turned, out w, out h) &&
+            Math.Abs((w / h) - ((double)height / width)) < 1e-9,
+            "developed_pixel_size_aspect_is_the_turned_aspect");
     }
 
     private static void VerifyCropSession()

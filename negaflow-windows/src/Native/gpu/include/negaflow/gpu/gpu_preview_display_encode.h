@@ -4,6 +4,7 @@
 // CPU 판은 `write_preview` 1:1 화소 경로. 마지막 회수는 BGRA8 입니다.
 
 #include "negaflow/gpu/gpu_pointwise.h"
+#include "negaflow/imaging/image_transform.h"
 
 #include <cstdint>
 
@@ -27,14 +28,19 @@ public:
         const GpuDevice& device,
         GpuPreviewDisplayEncode& kernel) noexcept;
 
-    // `destination` 은 width*height*4 BGRA8. 상자 평균 없이 1:1 일 때만 부릅니다.
+    // `destination` 은 목표 크기 × 4 BGRA8. 상자 평균 없이 1:1 일 때만 부릅니다.
+    //
+    // `gather` 가 있으면 회전·뒤집기·자르기를 **여기서** 처리합니다 — 화소를 옮겨 담은
+    // 호스트 버퍼를 만들지 않아도 되므로 사슬이 GPU 에 머뭅니다. 정수 자리 옮김뿐이라
+    // CPU `apply_image_transform` 과 비트 단위로 같습니다. null 이면 1:1 입니다.
     [[nodiscard]] GpuKernelStatus encode(
         const GpuDevice& device,
         const GpuWorkingImage& source,
         std::uint8_t* destination,
         std::uint32_t destination_stride_bytes,
         const float proof_scale[3],
-        const float proof_bias[3]) const noexcept;
+        const float proof_bias[3],
+        const imaging::ImageTransformGather* gather = nullptr) const noexcept;
 
     [[nodiscard]] bool is_valid() const noexcept { return shader_ != nullptr; }
 

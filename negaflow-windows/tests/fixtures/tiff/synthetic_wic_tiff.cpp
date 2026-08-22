@@ -122,6 +122,57 @@ void append_entry(
     return bytes;
 }
 
+/// 실제 OpticFilm8100_frame_7 처럼 알파가 붙은 16-bit RGBA 스캔입니다. 3채널 경로와 달리
+/// 이 형식은 WIC 스케일러가 실제로 돌기 때문에, 프리뷰 축소가 걸리는 회귀를 여기서만 잡을 수
+/// 있습니다. 태그는 오름차순이어야 하므로 ExtraSamples(338) 를 SampleFormat(339) 앞에 둡니다.
+[[nodiscard]] std::vector<std::uint8_t> make_rgba16_tiff(
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::vector<std::uint8_t>& pixels) {
+    constexpr std::uint16_t entry_count = 13U;
+    constexpr std::uint16_t samples = 4U;
+    // 12바이트 항목 뒤에 다음 IFD 오프셋 4바이트, 그 뒤 BitsPerSample·SampleFormat 배열입니다.
+    const std::uint32_t directory_end =
+        8U + 2U + static_cast<std::uint32_t>(entry_count) * 12U + 4U;
+    const std::uint32_t bits_array = directory_end;
+    const std::uint32_t sample_format_array = bits_array + samples * 2U;
+    const std::uint32_t pixels_at = sample_format_array + samples * 2U;
+
+    std::vector<std::uint8_t> bytes{};
+    bytes.push_back('I');
+    bytes.push_back('I');
+    append_u16(bytes, 42U);
+    append_u32(bytes, 8U);
+    append_u16(bytes, entry_count);
+    append_entry(bytes, 256U, 4U, 1U, width);
+    append_entry(bytes, 257U, 4U, 1U, height);
+    append_entry(bytes, 258U, 3U, samples, bits_array);
+    append_entry(bytes, 259U, 3U, 1U, 1U);
+    append_entry(bytes, 262U, 3U, 1U, 2U);
+    append_entry(bytes, 273U, 4U, 1U, pixels_at);
+    append_entry(bytes, 274U, 3U, 1U, 1U);
+    append_entry(bytes, 277U, 3U, 1U, samples);
+    append_entry(bytes, 278U, 4U, 1U, height);
+    append_entry(
+        bytes,
+        279U,
+        4U,
+        1U,
+        static_cast<std::uint32_t>(pixels.size()));
+    append_entry(bytes, 284U, 3U, 1U, 1U);
+    append_entry(bytes, 338U, 3U, 1U, 2U);
+    append_entry(bytes, 339U, 3U, samples, sample_format_array);
+    append_u32(bytes, 0U);
+    for (std::uint32_t index = 0U; index < samples; ++index) {
+        append_u16(bytes, 16U);
+    }
+    for (std::uint32_t index = 0U; index < samples; ++index) {
+        append_u16(bytes, 1U);
+    }
+    bytes.insert(bytes.end(), pixels.begin(), pixels.end());
+    return bytes;
+}
+
 [[nodiscard]] std::vector<std::uint8_t> make_lzw_tiff(
     const std::uint32_t width,
     const std::uint32_t height,
@@ -392,6 +443,43 @@ std::vector<std::uint8_t> make_uncompressed_rgb16_defect_tiff(
         }
     }
     return make_tiff(width, height, 1U, pixels);
+}
+
+std::vector<std::uint8_t> make_uncompressed_rgba16_defect_tiff(
+    const std::uint32_t width,
+    const std::uint32_t height) {
+    if (width < 16U || height < 16U) {
+        return {};
+    }
+    std::vector<std::uint8_t> pixels{};
+    pixels.reserve(
+        static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 8U);
+    const std::uint32_t scratch_x = width / 2U;
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            const bool scratch =
+                (x == scratch_x || x + 1U == scratch_x) &&
+                y >= (height * 5U) / 8U && y < (height * 7U) / 8U;
+            const std::uint16_t red = scratch
+                ? 0xffffU
+                : static_cast<std::uint16_t>(
+                      9'000U + (x * 24'000U) / (width - 1U));
+            const std::uint16_t green = scratch
+                ? 0xffffU
+                : static_cast<std::uint16_t>(
+                      12'000U + (y * 20'000U) / (height - 1U));
+            const std::uint16_t blue = scratch
+                ? 0xffffU
+                : static_cast<std::uint16_t>(
+                      10'000U + ((x + y) * 16'000U) /
+                          (width + height - 2U));
+            append_u16(pixels, red);
+            append_u16(pixels, green);
+            append_u16(pixels, blue);
+            append_u16(pixels, 0xffffU);
+        }
+    }
+    return make_rgba16_tiff(width, height, pixels);
 }
 
 std::vector<std::uint8_t> make_uncompressed_rgb8_tiff(

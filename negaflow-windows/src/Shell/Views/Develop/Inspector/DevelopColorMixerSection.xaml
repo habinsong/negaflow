@@ -37,7 +37,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <FontIcon Grid.Column="0" Width="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE790;" />
+                        <controls:VectorIcon Grid.Column="0" Width="20" IconSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Kind="ColorMixer" />
                         <TextBlock x:Name="ColorMixerSectionTitleText" Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
                         <FontIcon x:Name="ColorMixerChevron" Grid.Column="2" Margin="8,0,0,0" FontSize="12" Glyph="&#xE76C;" />
                     </Grid>

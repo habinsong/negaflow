@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Negaflow.Catalog;
@@ -22,10 +23,30 @@ internal static class ScannerScanCodec
         "contrastAdjustment",
         "outputRawTIFF",
     ];
+    /// <summary>
+    /// 플러그인과 주고받는 JSON 입니다.
+    /// </summary>
+    /// <remarks>
+    /// <b>인코더를 기본값으로 두면 안 됩니다.</b> <c>JavaScriptEncoder.Default</c> 는 ASCII
+    /// 밖의 모든 글자를 <c>\uXXXX</c> 로 이스케이프합니다. macOS 의 <c>JSONEncoder</c> 는
+    /// 그러지 않고 원시 UTF-8 로 냅니다 — 즉 같은 요청이 두 플랫폼에서 <b>다른 바이트</b>로
+    /// 나갔습니다.
+    ///
+    /// 실측(2026-08-22): 스캔 목적지의 기본 롤 폴더가 한국어 "무제 필름" 이라
+    /// <c>outputPath</c> 에 한글이 들어갑니다. 같은 경로를 원시 UTF-8 로 보내면 스캔이 정상
+    /// 완료(exit 0, 3,030,480 bytes)되고, <c>\uXXXX</c> 로 보내면 플러그인이
+    /// <c>0xC0000409</c>(STATUS_STACK_BUFFER_OVERRUN)로 죽었습니다. 화면에는
+    /// "ProcessFailed" 한 줄만 나오고, 폴더 이름이 ASCII 인 언어에서는 재현되지 않습니다.
+    ///
+    /// 이스케이프를 받아 죽는 것은 플러그인 쪽 결함이기도 하지만, 호스트가 macOS 와 다른
+    /// 바이트를 내는 것 자체가 파리티 위반입니다. 여기서 macOS 와 같은 모양으로 맞춥니다.
+    /// </remarks>
     private static readonly JsonSerializerOptions Json = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = false,
+        // macOS `JSONEncoder` 와 같은 규칙: 따옴표·역슬래시·제어 문자만 이스케이프합니다.
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
     internal static string Serialize(ScannerPluginClient.ScanWire wire) =>
@@ -39,23 +60,33 @@ internal static class ScannerScanCodec
         ArgumentNullException.ThrowIfNull(request);
         wire = null;
         stagingDirectory = null;
-        if (!IsRequiredText(request.Device.Id) || !IsRequiredText(request.ColorMode) ||
+        // 플러그인 protocol v2 의 상호 배타 계약입니다.
+        // preview=true dpi 0 · outputRawTIFF=false · IR/다중노출/노출시간 없음
+        // preview=false dpi > 0 · outputRawTIFF=true
+        // dpi 0 은 해상도가 아니라 **프리뷰 표식**이라 장치 해상도 목록에는 절대 없습니다.
+        // 목록 대조를 프리뷰에도 걸면 모든 프리뷰가 CapabilityMismatch 로 떨어집니다.
+        bool previewContract = request.Preview
+            ? request.ResolutionDpi == 0 && !request.OutputRawTiff && !request.Infrared &&
+              !request.MultiExposure && request.HardwareExposureTime is null
+            : request.ResolutionDpi > 0 && request.OutputRawTiff;
+        // scanArea 는 protocol v2 의 **필수** 필드입니다. macOS 의 `ScanOptions.scanArea` 도
+        // 옵셔널이 아닙니다. 비우면 요청 JSON 이 파싱에서 떨어져 ProcessFailed 로 보입니다.
+        if (!previewContract ||
+            request.ScanArea is not { } area || !IsValidScanArea(area) ||
+            !IsRequiredText(request.Device.Id) || !IsRequiredText(request.ColorMode) ||
             !Path.IsPathFullyQualified(request.DestinationVisiblePath) ||
-            request.ResolutionDpi < 0 ||
             request.BitDepth is not (8 or 16) ||
-            request.Preview != (request.ResolutionDpi == 0) ||
             request.HardwareExposureTime is <= 0 ||
             request.BrightnessAdjustment is { } brightness && !double.IsFinite(brightness) ||
             request.ContrastAdjustment is { } contrast && !double.IsFinite(contrast) ||
-            request.ScanArea is { } area && !IsValidScanArea(area) ||
-            !request.Capabilities.ResolutionsDpi.Contains(request.ResolutionDpi) ||
+            (request.ResolutionDpi != 0 &&
+                !request.Capabilities.ResolutionsDpi.Contains(request.ResolutionDpi)) ||
             !request.Capabilities.BitDepths.Contains(request.BitDepth) ||
             !request.Capabilities.Modes.Contains(request.ColorMode, StringComparer.Ordinal) ||
             !request.Capabilities.OutputFormats.Contains("tiff", StringComparer.OrdinalIgnoreCase) ||
             request.Preview && !request.Capabilities.SupportsPreview ||
             request.Infrared && !request.Capabilities.SupportsInfrared ||
-            request.MultiExposure && !request.Capabilities.SupportsMultiExposure ||
-            request.ScanArea is not null && !request.Capabilities.SupportsScanArea)
+            request.MultiExposure && !request.Capabilities.SupportsMultiExposure)
         {
             return false;
         }

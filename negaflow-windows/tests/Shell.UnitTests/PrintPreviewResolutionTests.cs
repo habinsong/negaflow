@@ -70,15 +70,17 @@ internal static class PrintPreviewResolutionTests
                 exporter,
                 new PassThroughThumbnailCodec(),
                 new FakeDispatcher(accepts: true),
-                root);
+                root,
+                Path.Combine(root, "developed"));
             byte[] pixels = new byte[8 * 6 * 4];
             pixels[0] = 0x11;
-            service.RememberDeveloped("frame-a", pixels, 8, 6);
+            service.RememberDeveloped("frame-a", pixels, 8, 6, settled: true);
             Check(
                 service.TryGetDeveloped("frame-a", out ThumbnailService.DevelopedPreview stored) &&
                     stored.Width == 8 &&
                     stored.Height == 6 &&
-                    stored.Pixels[0] == 0x11,
+                    stored.Pixels[0] == 0x11 &&
+                    stored.Settled,
                 "print_preview_remembers_developed_pixels");
 
             service.Invalidate("frame-a");
@@ -97,7 +99,8 @@ internal static class PrintPreviewResolutionTests
             Check(
                 service.TryGetDeveloped(frame.Id, out ThumbnailService.DevelopedPreview rendered) &&
                     rendered.Width == 100 &&
-                    rendered.Height == 50,
+                    rendered.Height == 50 &&
+                    !rendered.Settled,
                 "print_preview_renders_developed_when_asked");
         }
         finally

@@ -11,7 +11,8 @@
 <UserControl
     x:Class="Negaflow.Shell.Views.Develop.GrainMend.DevelopGrainMendHud"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
     <UserControl.Resources>
         <!-- macOS .buttonStyle(.plain) 아이콘 단추 -->
         <Style x:Key="NegaflowHudGlyphButtonStyle" TargetType="Button">
@@ -94,11 +95,11 @@
             <!-- macOS HStack(spacing: 10) -->
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                 <!-- macOS Image(systemName: "scope").foregroundStyle(.red) -->
-                <FontIcon
+                <controls:VectorIcon
                     VerticalAlignment="Center"
-                    FontSize="14"
+                    IconSize="14"
                     Foreground="#FFFF3B30"
-                    Glyph="&#xE7A8;" />
+                    Kind="Scope" />
                 <ProgressRing
                     x:Name="DetectingRing"
                     Width="16"
@@ -207,12 +208,12 @@
                     Style="{StaticResource AccentButtonStyle}"
                     Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon
+                        <controls:VectorIcon
                             x:Name="RemoveIcon"
                             VerticalAlignment="Center"
-                            FontSize="12"
-                            Glyph="&#xE90F;"
-                            Visibility="Visible" />
+                            IconSize="12"
+                            Visibility="Visible"
+                            Kind="Bandage" />
                         <TextBlock
                             x:Name="RemoveText"
                             VerticalAlignment="Center"
@@ -318,7 +319,7 @@
                     CornerRadius="14"
                     Style="{StaticResource AccentButtonStyle}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon VerticalAlignment="Center" FontSize="12" Glyph="&#xE90F;" />
+                        <controls:VectorIcon VerticalAlignment="Center" IconSize="12" Kind="Bandage" />
                         <TextBlock
                             x:Name="BrushApplyText"
                             VerticalAlignment="Center"
@@ -348,11 +349,11 @@
             Visibility="Collapsed">
             <!-- macOS HStack(spacing: 10) -->
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <FontIcon
+                <controls:VectorIcon
                     VerticalAlignment="Center"
-                    FontSize="14"
+                    IconSize="14"
                     Foreground="#FFFF3B30"
-                    Glyph="&#xE7C4;" />
+                    Kind="CloneStamp" />
                 <!-- macOS: sourceBase == nil 일 때만 안내 + 구분선 -->
                 <TextBlock
                     x:Name="CloneSourceHint"
@@ -376,7 +377,6 @@
                         x:Name="CloneSizeSlider"
                         Width="96"
                         VerticalAlignment="Center"
-                        Minimum="4"
                         Maximum="512"
                         StepFrequency="1"
                         SmallChange="1"

@@ -60,6 +60,13 @@ internal static class ScanSessionTests
             {
                 MaxScanWidthMm = width,
                 MaxScanHeightMm = height,
+                MinScanArea = width.HasValue && height.HasValue
+                    ? new ScannerPluginScanArea(0.0, 0.0, 36.0, 24.0)
+                    : null,
+                MaxScanArea = width.HasValue && height.HasValue
+                    ? new ScannerPluginScanArea(0.0, 0.0, width.Value, height.Value)
+                    : null,
+                ScanAreaUnit = width.HasValue && height.HasValue ? "millimeter" : null,
             };
 
         // Epson GT-X900 / V700 — A4 판, 프리뷰 있음, 영역 지정 가능.
@@ -112,6 +119,13 @@ internal static class ScanSessionTests
             {
                 MaxScanWidthMm = width,
                 MaxScanHeightMm = height,
+                MinScanArea = width.HasValue && height.HasValue
+                    ? new ScannerPluginScanArea(0.0, 0.0, 36.0, 24.0)
+                    : null,
+                MaxScanArea = width.HasValue && height.HasValue
+                    ? new ScannerPluginScanArea(0.0, 0.0, width.Value, height.Value)
+                    : null,
+                ScanAreaUnit = width.HasValue && height.HasValue ? "millimeter" : null,
             };
 
         // 평판(예: Epson) — 판이 크고 프리뷰가 있으므로 프레임 규격이 나옵니다.
@@ -182,8 +196,8 @@ internal static class ScanSessionTests
                 "scan_session_hides_preview_resolutions");
             // color 와 gray 만 냅니다.
             Check(session.ColorModes.SequenceEqual(["color", "gray"]), "scan_session_color_modes");
-            // 고르지 않은 값은 장치가 내는 가장 높은 값으로 접힙니다.
-            Check(session.Options.ResolutionDpi == 7200, "scan_session_clamps_resolution");
+            // 고르지 않은 값은 macOS의 필름 스캔 목표값에 가장 가까운 값으로 접힙니다.
+            Check(session.Options.ResolutionDpi == 3600, "scan_session_clamps_resolution");
             Check(session.Options.BitDepth == 16, "scan_session_clamps_bit_depth");
 
             session.UpdateOptions(options => options with { ResolutionDpi = 3600, Infrared = true });
@@ -200,7 +214,7 @@ internal static class ScanSessionTests
 
             // 장치가 내지 못하는 값을 고르면 요청이 만들어지기 전에 접힙니다.
             session.UpdateOptions(options => options with { ResolutionDpi = 12000 });
-            Check(session.Options.ResolutionDpi == 7200, "scan_session_refuses_unsupported_dpi");
+            Check(session.Options.ResolutionDpi == 3600, "scan_session_refuses_unsupported_dpi");
 
             session.UpdateOptions(options => options with
             {

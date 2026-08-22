@@ -94,6 +94,7 @@ internal sealed class LibraryImportActions
                 imported.AddedFrameCount,
                 imported.AddedFolderCount);
             view.ShowLibrary(view.libraryHost, view.importWindowId.Value);
+            DevelopImportedFrames(imported.AddedFrameCount);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or
             NotSupportedException or ArgumentException or PathTooLongException)
@@ -103,6 +104,28 @@ internal sealed class LibraryImportActions
         finally
         {
             SetBusy(true);
+        }
+    }
+
+    /// <summary>
+    /// macOS <c>developImportedFramesSequentially</c> 자리입니다. 설정 · 워크플로의
+    /// "새로 가져온 사진 자동 현상" 이 켜져 있으면, 방금 들어온 프레임을 사용자가 열기
+    /// 전에 미리 현상해 둡니다. 꺼져 있으면 예전처럼 열 때 현상합니다.
+    /// </summary>
+    private void DevelopImportedFrames(int addedFrameCount)
+    {
+        if (addedFrameCount <= 0 ||
+            view.workspaceState is not { } state ||
+            !state.Current.DevelopsImportsAutomatically ||
+            view.thumbnails is not { } cache ||
+            view.libraryHost is not { } host)
+        {
+            return;
+        }
+        // 방금 들어온 것은 목록의 끝입니다. 카탈로그 전체를 다시 현상하지 않습니다.
+        foreach (LibraryFrameSnapshot frame in host.Frames.TakeLast(addedFrameCount))
+        {
+            cache.Request(frame);
         }
     }
 
@@ -146,11 +169,14 @@ internal sealed class LibraryImportActions
         }
     }
 
-    internal async void OnLocateFolderClicked(object sender, RoutedEventArgs args)
+    /// <summary>
+    /// macOS <c>presentRelinkFolderPanel(_:)</c> — 사라진 폴더를 새 자리로 다시 잇습니다.
+    /// 좌측 폴더 트리의 우클릭 메뉴에서만 부릅니다(격자 머리줄에는 macOS 에도 없습니다).
+    /// </summary>
+    internal async void LocateFolder(string folderPath)
     {
-        _ = args;
         if (view.libraryHost is null || view.importWindowId is null ||
-            sender is not Button { Tag: LibraryBrowserFolderSection { IsRegistered: true } section })
+            string.IsNullOrWhiteSpace(folderPath))
         {
             return;
         }
@@ -169,7 +195,7 @@ internal sealed class LibraryImportActions
             }
 
             SourceRelinkPlan plan = SourceRelinkPlanner.FolderPlan(
-                section.Id,
+                folderPath,
                 picked.Path,
                 view.libraryHost.Frames);
             if (!view.libraryHost.Relink(plan).IsSuccess)

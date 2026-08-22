@@ -71,7 +71,7 @@ constexpr double activation_threshold = 0.01;
     return sum / std::max(sample_count, 1.0);
 }
 
-}  // namespace
+} // namespace
 
 VibrancePlaneSelection select_vibrance_planes(const float amount) noexcept {
     // −0.05보다 낮은 쪽은 측정상 같은 음수 slope 를 쓰고, 나머지 표 밖은 양끝 slope 를
@@ -152,8 +152,8 @@ MutedSceneVibranceResult apply_muted_scene_vibrance(
     }
 
     const float amount = static_cast<float>(result.info.amount);
-    // ☠️ **근사입니다**(33³ 표의 삼선형 + 곱셈). `ApproximateAcceleratorScope` 안에서만
-    //    돕니다 — 내보내기·골든은 CPU 그대로입니다. 세기는 위에서 이미 정해졌습니다.
+    // **근사입니다**(33³ 표의 삼선형 + 곱셈). `ApproximateAcceleratorScope` 안에서만
+    // 돕니다 — 내보내기·골든은 CPU 그대로입니다. 세기는 위에서 이미 정해졌습니다.
     if (approximate_acceleration_allowed() && image.stride_pixels <= 0xFFFFFFFFULL) {
         if (const KernelAccelerator* const table = kernel_accelerator();
             table != nullptr && table->muted_scene_vibrance != nullptr) {
@@ -210,4 +210,4 @@ MutedSceneVibranceResult apply_muted_scene_vibrance(
     return result;
 }
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

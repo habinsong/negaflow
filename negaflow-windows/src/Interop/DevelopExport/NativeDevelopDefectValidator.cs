@@ -353,4 +353,32 @@ internal static class NativeDevelopDefectValidator
                 nameof(identity));
         }
     }
+
+    internal static void ValidateDefectRecipeIdentity(int editCount, string? sha256)
+    {
+        if (editCount == 0)
+        {
+            if (sha256 is not null)
+            {
+                throw new ArgumentException(
+                    "A defect-free request cannot carry a Defects recipe identity.",
+                    nameof(sha256));
+            }
+            return;
+        }
+        // Direct callers built before ABI v35 do not have this identity. They remain on
+        // v34, where Defects raw-proxy caching stays disabled.
+        if (sha256 is null)
+        {
+            return;
+        }
+        if (sha256 is not { Length: 64 } ||
+            sha256.Any(character => character is not
+                (>= '0' and <= '9') and not (>= 'a' and <= 'f')))
+        {
+            throw new ArgumentException(
+                "A Defects recipe requires a lowercase SHA-256 identity.",
+                nameof(sha256));
+        }
+    }
 }

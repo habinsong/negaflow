@@ -1,17 +1,17 @@
 // CPU/GPU 동치 시험 — 디지털 원본 전용 스톡 색 프리셋.
 //
-// ☠️ **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `apply_digital_film_color_preset` 을
-//    그대로 부르고 그 결과와 겨룹니다.
+// **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `apply_digital_film_color_preset` 을
+// 그대로 부르고 그 결과와 겨룹니다.
 //
-// ☠️ **macOS 의 `digitalFilmColor` 커널(`ChromabaseMetalKernels.swift:774`)이 아닙니다.**
-//    그 커널은 `DigitalFilmColor.apply` 만 부르고, 그 함수는 macOS 트리 어디에서도
-//    불리지 않습니다. 살아 있는 것은 `DigitalFilmColorPresetStage` 이고 이 시험이 그것입니다.
+// **macOS 의 `digitalFilmColor` 커널(`ChromabaseMetalKernels.swift:774`)이 아닙니다.**
+// 그 커널은 `DigitalFilmColor.apply` 만 부르고, 그 함수는 macOS 트리 어디에서도
+// 불리지 않습니다. 살아 있는 것은 `DigitalFilmColorPresetStage` 이고 이 시험이 그것입니다.
 //
 // 겨루는 자리가 둘입니다:
-//   ① 프리셋이 셋 다 바꾸는 스톡 — 감마 인코딩 → 믹서 → 그레이딩 → 캘리브레이션 →
-//      감마 디코딩 → 강도 혼합, 전 경로.
-//   ② **조기 반환** — 프리셋이 안 바꾸는 커널은 CPU 가 커널을 안 돌리고 복사합니다.
-//      GPU 가 그 자리에서 디스패치를 건너뛰지 않으면 HSL 왕복의 반올림이 붙습니다.
+// ① 프리셋이 셋 다 바꾸는 스톡 — 감마 인코딩 → 믹서 → 그레이딩 → 캘리브레이션 →
+// 감마 디코딩 → 강도 혼합, 전 경로.
+// ② **조기 반환** — 프리셋이 안 바꾸는 커널은 CPU 가 커널을 안 돌리고 복사합니다.
+// GPU 가 그 자리에서 디스패치를 건너뛰지 않으면 HSL 왕복의 반올림이 붙습니다.
 
 #include <algorithm>
 #include <cmath>
@@ -175,7 +175,7 @@ void run_all(const GpuDevice& device, const char* const label) {
     preset_matches_cpu(device, label, FilmEmulation::portra_400, 0.01);
 }
 
-}  // namespace
+} // namespace
 
 int main() {
     const GpuDevice warp = GpuDevice::create(GpuDevicePreference::warp_only);

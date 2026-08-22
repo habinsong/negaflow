@@ -124,12 +124,123 @@ void test_positive_straighten_rotates_clockwise() {
         "positive straighten rotates a right-side marker clockwise");
 }
 
-}  // namespace
+// 프리뷰 발행은 회전·뒤집기·자르기를 **화소를 옮겨 담지 않고** 읽는 자리만 바꿔
+// 처리합니다(`plan_image_transform_gather` → `shaders/preview_display_encode.hlsl`).
+// 그 자리 계산이 `apply_image_transform` 과 **한 화소라도** 다르면 자른 자리가 어긋난
+// 사진이 나옵니다. 회전 넷 × 뒤집기 넷 × 자르기 유무를 전부 대조합니다.
+void test_gather_matches_apply_for_every_orientation() {
+    const negaflow::imaging::WorkingImage source = marker_image();
+    const negaflow::imaging::ImageRotation rotations[] = {
+        negaflow::imaging::ImageRotation::degrees_0,
+        negaflow::imaging::ImageRotation::degrees_90,
+        negaflow::imaging::ImageRotation::degrees_180,
+        negaflow::imaging::ImageRotation::degrees_270,
+    };
+    const negaflow::imaging::NormalizedCropRect crops[] = {
+        {0.0, 0.0, 1.0, 1.0},
+        {0.25, 0.0, 0.5, 1.0},
+        {0.0, 0.34, 1.0, 0.66},
+        {0.25, 0.25, 0.5, 0.5},
+    };
+    for (const negaflow::imaging::ImageRotation rotation : rotations) {
+        for (int flips = 0; flips < 4; ++flips) {
+            for (int crop_index = 0; crop_index < 5; ++crop_index) {
+                negaflow::imaging::ImageTransformParameters parameters{};
+                parameters.rotation = rotation;
+                parameters.flip_horizontal = (flips & 1) != 0;
+                parameters.flip_vertical = (flips & 2) != 0;
+                parameters.has_crop = crop_index > 0;
+                if (parameters.has_crop) {
+                    parameters.crop = crops[crop_index - 1];
+                }
+                negaflow::imaging::ImageTransformGather gather{};
+                if (!negaflow::imaging::plan_image_transform_gather(
+                        parameters, source.width, source.height, gather)) {
+                    expect(false, "a straighten-free transform must plan a gather");
+                    continue;
+                }
+                const auto applied =
+                    negaflow::imaging::apply_image_transform(source, parameters);
+                expect(
+                    applied.status == negaflow::imaging::ImageTransformStatus::ok,
+                    "the CPU transform must succeed");
+                expect(
+                    gather.output_width == applied.image.width &&
+                        gather.output_height == applied.image.height,
+                    "the gather plan must agree on the output extent");
+                if (gather.output_width != applied.image.width ||
+                    gather.output_height != applied.image.height) {
+                    continue;
+                }
+                // 셰이더 `SourceCoordinate` 와 같은 식입니다.
+                bool same = true;
+                for (std::uint32_t y = 0U; y < gather.output_height && same; ++y) {
+                    for (std::uint32_t x = 0U; x < gather.output_width; ++x) {
+                        const std::uint32_t ox_o = x + gather.crop_left;
+                        const std::uint32_t oy_o = y + gather.crop_top;
+                        std::uint32_t ox = ox_o;
+                        std::uint32_t oy = oy_o;
+                        switch (gather.rotation) {
+                            case negaflow::imaging::ImageRotation::degrees_0:
+                                break;
+                            case negaflow::imaging::ImageRotation::degrees_90:
+                                ox = oy_o;
+                                oy = source.height - 1U - ox_o;
+                                break;
+                            case negaflow::imaging::ImageRotation::degrees_180:
+                                ox = source.width - 1U - ox_o;
+                                oy = source.height - 1U - oy_o;
+                                break;
+                            case negaflow::imaging::ImageRotation::degrees_270:
+                                ox = source.width - 1U - oy_o;
+                                oy = ox_o;
+                                break;
+                        }
+                        if (gather.flip_horizontal) {
+                            ox = source.width - 1U - ox;
+                        }
+                        if (gather.flip_vertical) {
+                            oy = source.height - 1U - oy;
+                        }
+                        const negaflow::core::Rgba32F gathered = source.pixels[
+                            static_cast<std::size_t>(oy) * source.stride_pixels + ox];
+                        const negaflow::core::Rgba32F expected = applied.image.pixels[
+                            static_cast<std::size_t>(y) * applied.image.stride_pixels + x];
+                        if (gathered.red != expected.red ||
+                            gathered.green != expected.green ||
+                            gathered.blue != expected.blue ||
+                            gathered.alpha != expected.alpha) {
+                            same = false;
+                            break;
+                        }
+                    }
+                }
+                expect(same, "the gather must read the same pixel the CPU transform wrote");
+            }
+        }
+    }
+}
+
+void test_gather_refuses_straighten() {
+    negaflow::imaging::ImageTransformParameters parameters{};
+    parameters.straighten_angle = 3.0;
+    negaflow::imaging::ImageTransformGather gather{};
+    expect(
+        !negaflow::imaging::plan_image_transform_gather(parameters, 64U, 48U, gather),
+        "straighten is bilinear and must fall back to the CPU transform");
+}
+
+} // namespace
 
 int main() {
     test_identity_and_quarter_turn();
     test_flip_then_crop_uses_y_up_recipe();
     test_straighten_preserves_alpha_and_fails_closed();
     test_positive_straighten_rotates_clockwise();
+    test_gather_matches_apply_for_every_orientation();
+    test_gather_refuses_straighten();
+    if (failures == 0) {
+        std::cout << "image transform tests passed\n";
+    }
     return failures == 0 ? 0 : 1;
 }

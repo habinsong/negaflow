@@ -45,8 +45,8 @@ internal static class FrameImportTests
         // macOS 는 가져오기에서 `customDisplayName` 을 쓰지 않습니다 — 이름은 확장자를 뗀 파일
         // 이름에서 파생합니다(`sourceFileBaseName`).
         //
-        // ☠️ 예전에는 `Path.GetFileName` 을 그대로 적어 카드·필름스트립·창 제목이 `a.tif` 가
-        //    되고 내보내기 파일명이 `a.tif.jpg` 로 나왔습니다.
+        // 예전에는 `Path.GetFileName` 을 그대로 적어 카드·필름스트립·창 제목이 `a.tif` 가
+        // 되고 내보내기 파일명이 `a.tif.jpg` 로 나왔습니다.
         Check(
             !plan.Rows[0].Payload.ContainsKey("customDisplayName"),
             "import_leaves_display_name_to_the_file_name");

@@ -40,6 +40,8 @@ public sealed partial class PrintWorkspaceView
                 },
             },
             SynchronizePrint);
+        PrintFilesSourceTree.FrameInvoked += (sender, frameId) =>
+            printSources?.HandleTreeInvoked(sender, frameId);
         printInspector = new PrintInspectorBinder(
             new PrintInspectorSurface
             {
@@ -122,8 +124,7 @@ public sealed partial class PrintWorkspaceView
     public void AttachWindow(Microsoft.UI.WindowId windowId) =>
         printExport?.AttachWindow(windowId);
 
-    private void OnPrintFilesTreeItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args) =>
-        printSources?.HandleTreeInvoked(sender, args);
+
 
     private void OnPrintFilmstripFrameSelected(object? sender, LibraryFrameListItem item) =>
         printSources?.HandleFilmstripSelected(sender, item);

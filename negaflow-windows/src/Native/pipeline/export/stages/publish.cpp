@@ -64,13 +64,25 @@ DevelopExportOutcome publish_developed(
     outcome.image_transform_applied = finish.transform.applied || finish.output_resized;
     outcome.output_sharpening_applied = output_sharpening.info.applied;
     outcome.applied_dmin = invert.developed_info.applied_dmin;
+    outcome.dmax_normalized = invert.developed_info.dmax_normalized;
+    outcome.black_input = invert.developed_info.black_input;
+    outcome.debug_metrics_present =
+        invert.developed_info.kernel_status == negaflow::core::KernelStatus::ok;
     outcome.base_source = invert.base_source;
     outcome.measurement_method = invert.measurement_method;
     outcome.measurement_diagnostics = invert.diagnostics;
 
     if (preview != nullptr) {
-        DevelopExportOutcome preview_outcome =
-            write_preview(output_sharpening.image, *preview, outcome);
+        // 기하 변환을 미뤘으면 보고하는 치수도 **변환 뒤** 치수입니다.
+        if (finish.transform_deferred) {
+            outcome.image_width = finish.deferred_transform.output_width;
+            outcome.image_height = finish.deferred_transform.output_height;
+        }
+        DevelopExportOutcome preview_outcome = write_preview(
+            output_sharpening.image,
+            *preview,
+            outcome,
+            finish.transform_deferred ? &finish.deferred_transform : nullptr);
         if (preview_outcome.succeeded) {
             tracker.finish();
             tracker.complete();

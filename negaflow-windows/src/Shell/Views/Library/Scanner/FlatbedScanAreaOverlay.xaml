@@ -1,0 +1,24 @@
+<UserControl
+    x:Class="Negaflow.Shell.Views.Library.Scanner.FlatbedScanAreaOverlay"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    IsTabStop="True"
+    mc:Ignorable="d">
+
+    <!-- macOS FlatbedScanAreaOverlay - 프리뷰 그림 위에 프레임 사각형을 얹습니다.
+         배경을 칠해야 빈 자리에서 끌어 새 프레임을 그릴 수 있습니다. WinUI 는 배경이
+         null 인 Grid 를 아예 집지 않습니다. -->
+    <Grid x:Name="Host" x:FieldModifier="internal" Background="Transparent" SizeChanged="OnHostSizeChanged">
+        <Image
+            x:Name="PreviewImage" x:FieldModifier="internal"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            AutomationProperties.AutomationId="negaflow.library.scan.preview.image"
+            Stretch="Uniform" />
+
+        <!-- 프레임 사각형과 손잡이는 여기에 절대 좌표로 붙습니다. -->
+        <Canvas x:Name="RegionLayer" x:FieldModifier="internal" IsHitTestVisible="True" />
+    </Grid>
+</UserControl>

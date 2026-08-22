@@ -8,9 +8,9 @@ namespace negaflow::imaging::film_scan_denoise_detail {
 
 // 필름 스캔 잡음 제거 전체가 공유하는 조율값 한 표입니다.
 //
-// ☠️ 값은 **공개 헤더 한 곳**(`negaflow/imaging/film_scan_denoise.h`)에 있습니다. GPU 이식이
-//    같은 값을 필요로 해서 그리로 올렸습니다. 여기 있는 것은 짧은 이름 별칭뿐이고,
-//    **숫자를 다시 적지 마십시오** — 두 벌이 되면 한쪽만 고쳐도 조용히 갈립니다.
+// 값은 **공개 헤더 한 곳**(`negaflow/imaging/film_scan_denoise.h`)에 있습니다. GPU 이식이
+// 같은 값을 필요로 해서 그리로 올렸습니다. 여기 있는 것은 짧은 이름 별칭뿐이고,
+// **숫자를 다시 적지 마십시오** — 두 벌이 되면 한쪽만 고쳐도 조용히 갈립니다.
 inline constexpr float gamma_lift_power = film_scan_denoise_gamma_lift_power;
 inline constexpr float inverse_gamma_lift_power = film_scan_denoise_inverse_gamma_lift_power;
 inline constexpr float guided_epsilon = film_scan_denoise_guided_epsilon;
@@ -39,4 +39,4 @@ struct Tile final {
     std::uint32_t core_height{0U};
 };
 
-}  // namespace negaflow::imaging::film_scan_denoise_detail
+} // namespace negaflow::imaging::film_scan_denoise_detail

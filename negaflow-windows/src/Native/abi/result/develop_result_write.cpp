@@ -164,6 +164,17 @@ void write_outcome_v3(
     result.cancelled = outcome.cancelled ? 1U : 0U;
     result.reserved = 0U;
     result.struct_size = declared_size;
+    // v5 는 v4 뒤에 디버그 지표를 답니다. 부르는 쪽이 그만큼의 자리를 준 경우에만 씁니다.
+    if (declared_size >= static_cast<std::uint32_t>(sizeof(nf_develop_export_result_v5))) {
+        auto& metrics = reinterpret_cast<nf_develop_export_result_v5&>(result).debug_metrics;
+        std::memset(&metrics, 0, sizeof(metrics));
+        metrics.present = outcome.debug_metrics_present ? 1U : 0U;
+        for (std::size_t channel = 0U; channel < 3U; ++channel) {
+            metrics.dmin[channel] = outcome.applied_dmin[channel];
+            metrics.dmax_normalized[channel] = outcome.dmax_normalized[channel];
+            metrics.black_input[channel] = outcome.black_input[channel];
+        }
+    }
     if (declared_size >= static_cast<std::uint32_t>(sizeof(nf_develop_export_result_v4))) {
         auto& packed = reinterpret_cast<nf_develop_export_result_v4&>(result).measurement;
         std::memset(&packed, 0, sizeof(packed));

@@ -4,25 +4,25 @@
 // 에멀전 내부 산란(작은 반경)과 베이스 반사(큰 반경 둘)를 나눠 합성합니다.
 // **더하지 않고 원본에서 덜어내 재분배**하므로 총 광량이 늘지 않습니다.
 //
-// ☠️ **묶는 순서가 macOS 와 Windows 가 다릅니다. Windows 를 따릅니다.**
+// **묶는 순서가 macOS 와 Windows 가 다릅니다. Windows 를 따릅니다.**
 //
-//     macOS  : far = fb*0.68 + wb*0.32;  src*keep + nb*s + far*h
-//     Windows: acc  = src*keep
-//              acc += nb * s
-//              acc += fb * (h*0.68)
-//              acc += wb * (h*0.32)
+// macOS : far = fb*0.68 + wb*0.32; src*keep + nb*s + far*h
+// Windows: acc = src*keep
+// acc += nb * s
+// acc += fb * (h*0.68)
+// acc += wb * (h*0.32)
 //
-//    수학은 같고 부동소수 결합이 다릅니다. 동치 시험의 기준은 Windows CPU 이므로
-//    **네 번에 나눠 더하는 쪽**을 그대로 옮깁니다.
+// 수학은 같고 부동소수 결합이 다릅니다. 동치 시험의 기준은 Windows CPU 이므로
+// **네 번에 나눠 더하는 쪽**을 그대로 옮깁니다.
 //
-// ☠️ 블러 셋은 전부 **원본**을 흐린 것입니다. 누적본을 흐리면 안 됩니다 —
-//    CPU `accumulate_blur` 가 매번 `result.image`(손대지 않은 원본)를 읽습니다.
+// 블러 셋은 전부 **원본**을 흐린 것입니다. 누적본을 흐리면 안 됩니다 —
+// CPU `accumulate_blur` 가 매번 `result.image`(손대지 않은 원본)를 읽습니다.
 
 Texture2D<float4> Accumulator : register(t0);
 Texture2D<float4> Blurred : register(t1);
 RWTexture2D<float4> Destination : register(u0);
 
-// ☠️ 앞 16바이트는 화소별 커널과 같은 `GpuPointwiseExtent` 자리입니다.
+// 앞 16바이트는 화소별 커널과 같은 `GpuPointwiseExtent` 자리입니다.
 cbuffer HalationConstants : register(b0) {
     uint2 Extent;
     float2 Padding0;

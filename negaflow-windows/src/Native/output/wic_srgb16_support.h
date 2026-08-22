@@ -81,6 +81,16 @@ enum class WicSrgb16FrameStatus : std::uint8_t {
     WorkingToSrgb16Status& conversion_status,
     std::uint32_t& native_error_code) noexcept;
 
+// 쓴 파일을 다시 열어 치수·화소형식·해상도·ICC 프로파일이 의도대로인지 봅니다.
+//
+// `compare_pixels` 는 그 위에 **화소 전수 대조**를 더합니다. 파일을 통째로 디코드하고,
+// working 이미지를 sRGB16 으로 **한 번 더** 변환해 바이트 단위로 맞춰 봅니다. 인코더가
+// 조용히 다른 것을 쓰지 않았음을 증명하지만 값이 큽니다 — 5088×3401 16bit 한 장에서
+// 실측 736ms 로, 내보내기 전체의 36% 였습니다.
+//
+// macOS 는 이 대조를 하지 않습니다(`ExportEngine.writeTIFF` 는
+// `CGImageDestinationFinalize` 의 성공 여부만 봅니다). 그래서 기본은 끔이고, 인코더가
+// 맞다는 증명은 `wic_tiff_export_tests` · `wic_png_export_tests` 가 켜서 들고 있습니다.
 [[nodiscard]] WicSrgb16FrameStatus verify_working_srgb16_frame(
     IWICImagingFactory* factory,
     IWICBitmapFrameDecode* frame,
@@ -90,6 +100,7 @@ enum class WicSrgb16FrameStatus : std::uint8_t {
     const std::vector<std::uint8_t>& expected_profile,
     std::uint32_t output_dpi,
     std::uint32_t readback_buffer_bytes,
+    bool compare_pixels,
     WorkingToSrgb16Status& conversion_status,
     std::uint32_t& native_error_code);
 

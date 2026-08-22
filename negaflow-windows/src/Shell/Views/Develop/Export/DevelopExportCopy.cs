@@ -39,14 +39,13 @@ internal sealed class DevelopExportCopy
         AutomationProperties.SetName(
             view.ExportTiffCompressionSelector,
             view.ExportTiffCompressionLabel.Text);
-        FillSelector(view.ExportTiffCompressionSelector, [
-            (AppResources.Get("developExportCompressionNone", "Content"),
-                DevelopTiffCompression.None.ToString()),
-            (AppResources.Get("developExportCompressionLzw", "Content"),
-                DevelopTiffCompression.Lzw.ToString()),
-            (AppResources.Get("developExportCompressionDeflate", "Content"),
-                DevelopTiffCompression.Deflate.ToString()),
-        ]);
+        // LZW 는 고르는 자리에서 뺐습니다 — 이유는 `ExportSettings.TiffCompressionOptions`
+        // 에 적어 두었습니다. 그 목록과 여기가 어긋나면 고를 수 없는 값이 남으므로 목록을
+        // 따라 돌면서 이름만 붙입니다.
+        FillSelector(
+            view.ExportTiffCompressionSelector,
+            [.. ExportSettings.TiffCompressionOptions.Select(
+                compression => (TiffCompressionText(compression), compression.ToString()))]);
 
         view.ExportDpiLabel.Text = AppResources.Get("developExportDpi", "Text");
         AutomationProperties.SetName(view.ExportDpiSelector, view.ExportDpiLabel.Text);
@@ -158,6 +157,12 @@ internal sealed class DevelopExportCopy
         toggle.OffContent = text;
         AutomationProperties.SetName(toggle, text);
     }
+
+    /// <summary>TIFF 압축 이름입니다. 고를 수 있는 것은 없음과 Deflate 둘뿐입니다.</summary>
+    private static string TiffCompressionText(DevelopTiffCompression compression) =>
+        compression == DevelopTiffCompression.Deflate
+            ? AppResources.Get("developExportCompressionDeflate", "Content")
+            : AppResources.Get("developExportCompressionNone", "Content");
 
     internal static void FillSelector(
         ComboBox selector,

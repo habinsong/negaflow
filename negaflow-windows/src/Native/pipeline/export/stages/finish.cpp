@@ -29,7 +29,7 @@ namespace {
         std::abs(parameters.straighten_angle) <= 1.0e-4;
 }
 
-}  // namespace
+} // namespace
 
 std::optional<DevelopExportOutcome> apply_finish_stages(
     const DevelopExportRequest& request,
@@ -49,16 +49,29 @@ std::optional<DevelopExportOutcome> apply_finish_stages(
         texture_parameters.grain = 0.0F;
         texture_parameters.halation = 0.0F;
     }
+    // 프리뷰에서만, 그리고 **뒤에 아무 단계도 없을 때만** 기하 변환을 발행으로 미룹니다.
+    // 샤픈이나 긴 변 캡이 걸려 있으면 순서가 달라져 다른 사진이 됩니다.
+    // 기울이기는 이중선형이라 `plan_image_transform_gather` 가 거부합니다.
+    const bool sharpen_identity =
+        request.output_sharpening.strength <=
+        negaflow::imaging::texture_stage_identity_threshold;
+    const bool can_defer_transform =
+        preview != nullptr && detect == nullptr && sharpen_identity &&
+        !image_transform_is_identity(request.image_transform) &&
+        negaflow::imaging::plan_image_transform_gather(
+            request.image_transform,
+            grain_image.width,
+            grain_image.height,
+            out.deferred_transform);
     const bool identity_finish =
         request.film_scan_denoise.strength <=
             negaflow::imaging::film_scan_denoise_identity_threshold &&
         request.local_dodge_burn.adjustments.empty() &&
         texture_stage_is_identity(texture_parameters) &&
         negative.film_type != negaflow::imaging::NegativeFilmType::black_and_white &&
-        image_transform_is_identity(request.image_transform) &&
+        (image_transform_is_identity(request.image_transform) || can_defer_transform) &&
         !(preview == nullptr && detect == nullptr && request.output_long_edge != 0U) &&
-        request.output_sharpening.strength <=
-            negaflow::imaging::texture_stage_identity_threshold;
+        sharpen_identity;
     const float* const resident_pixels =
         reinterpret_cast<const float*>(grain_image.pixels.data());
     const bool resident = GpuAccelerator::shared().has_resident_image(
@@ -77,6 +90,13 @@ std::optional<DevelopExportOutcome> apply_finish_stages(
         tracker.finish();
         tracker.begin(DevelopExportStage::image_transform, cost_of(transform_cost, false));
         tracker.finish();
+        // **여기서만** 미룸을 확정합니다. 상주 갈래로 안 들어왔으면 아래 CPU 사슬이
+        // 변환을 그대로 겁니다 — 그때 미룸 표시가 남아 있으면 발행이 **두 번** 겁니다.
+        if (can_defer_transform) {
+            out.transform_deferred = true;
+            out.transform.applied = true;
+            out.transform.resampled = false;
+        }
         out.sharpening.status = negaflow::imaging::TextureStageStatus::ok;
         out.sharpening.info.kernel_status = negaflow::core::KernelStatus::ok;
         out.sharpening.image = std::move(grain_image);
@@ -89,10 +109,10 @@ std::optional<DevelopExportOutcome> apply_finish_stages(
     tracker.begin(
         DevelopExportStage::film_scan_denoise,
         cost_of(denoise_cost, request.film_scan_denoise.strength > 0.0F));
-    // ☠️ **GPU 를 먼저 시도하고, 처리하지 못했으면 CPU 로 갑니다.**
-    //    CPU 판의 주석 원문 — *"On a 17 MP scan this stage was by far the most expensive
-    //    in the whole develop."* 그래서 프리뷰·검출에서 이것이 가장 크게 체감됩니다.
-    //    내보내기는 `cpu_only` 라 값이 그대로입니다.
+    // **GPU 를 먼저 시도하고, 처리하지 못했으면 CPU 로 갑니다.**
+    // CPU 판의 주석 원문 — *"On a 17 MP scan this stage was by far the most expensive
+    // in the whole develop."* 그래서 프리뷰·검출에서 이것이 가장 크게 체감됩니다.
+    // 내보내기는 `cpu_only` 라 값이 그대로입니다.
     const GpuUsePolicy gpu_policy = (preview != nullptr || detect != nullptr)
         ? GpuUsePolicy::allowed
         : GpuUsePolicy::cpu_only;
@@ -277,4 +297,4 @@ std::optional<DevelopExportOutcome> apply_finish_stages(
     return std::nullopt;
 }
 
-}  // namespace negaflow::pipeline::develop_export_detail
+} // namespace negaflow::pipeline::develop_export_detail

@@ -2,48 +2,12 @@
 <UserControl
     x:Class="Negaflow.Shell.Views.Library.Sources.LibraryFilesSourceTree"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- 파일 소스: 폴더를 펼쳐 그 안의 frame 이름까지 보이는 macOS 트리입니다. -->
-    <TreeView
-        x:Name="FilesTree" x:FieldModifier="internal"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sources="using:Negaflow.Shell.Views.Library.Sources">
+    <!-- macOS `LibraryFolderTreeView` — 사진을 담고 있는 폴더와 그 폴더의 사진만 냅니다. -->
+    <sources:LibraryFolderTreeView
+        x:Name="FilesTree"
+        x:FieldModifier="internal"
         Padding="4,6"
-        AutomationProperties.AutomationId="negaflow.library.sources.files"
-        CanDragItems="False"
-        CanReorderItems="False"
-        ItemInvoked="OnSourceTreeItemInvoked"
-        SelectionMode="Single">
-        <TreeView.ItemTemplate>
-            <DataTemplate x:DataType="TreeViewNode">
-                <TreeViewItem
-                    AllowDrop="True"
-                    AutomationProperties.Name="{Binding Content.Title, Mode=OneWay}"
-                    DragOver="OnFolderDragOver"
-                    Drop="OnFolderDrop"
-                    IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
-                    ItemsSource="{Binding Children}">
-                    <Grid ColumnSpacing="6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <FontIcon
-                            FontSize="12"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            Glyph="{Binding Content.Glyph, Mode=OneWay}" />
-                        <TextBlock
-                            Grid.Column="1"
-                            FontSize="12"
-                            Text="{Binding Content.Title, Mode=OneWay}"
-                            TextTrimming="CharacterEllipsis" />
-                        <TextBlock
-                            Grid.Column="2"
-                            FontSize="11"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            Text="{Binding Content.Detail, Mode=OneWay}" />
-                    </Grid>
-                </TreeViewItem>
-            </DataTemplate>
-        </TreeView.ItemTemplate>
-    </TreeView>
+        AutomationProperties.AutomationId="negaflow.library.sources.files" />
 </UserControl>

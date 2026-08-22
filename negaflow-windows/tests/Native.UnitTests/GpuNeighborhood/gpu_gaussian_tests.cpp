@@ -5,9 +5,9 @@
 // 두 CPU 판은 수식과 누적 순서가 같고 **가장자리 처리와 지원 반경 하한만** 다릅니다.
 // 아래 참조는 그 둘을 매개변수로 받아 한 벌로 둡니다.
 //
-// ☠️ 가중치를 시험이 따로 만들지 않고 `GpuGaussianBlur::weights_for_sigma` 가 준 것을
-//    씁니다. 그것이 곧 CPU 와 같은 코드이고, 두 벌을 두면 시험이 자기 자신을 검증하게
-//    됩니다 — 앞서 박스 블러에서 그렇게 틀린 참조가 통과했습니다.
+// 가중치를 시험이 따로 만들지 않고 `GpuGaussianBlur::weights_for_sigma` 가 준 것을
+// 씁니다. 그것이 곧 CPU 와 같은 코드이고, 두 벌을 두면 시험이 자기 자신을 검증하게
+// 됩니다 — 앞서 박스 블러에서 그렇게 틀린 참조가 통과했습니다.
 
 #include "gpu_gaussian_tests.h"
 
@@ -80,7 +80,7 @@ using negaflow::gpu::GpuGaussianEdgeMode;
     return result;
 }
 
-}  // namespace
+} // namespace
 
 std::vector<Rgba32F> reference_gaussian(
     const std::vector<Rgba32F>& source,
@@ -201,4 +201,4 @@ void gaussian_matches_reference(
     }
 }
 
-}  // namespace gpu_neighborhood_tests
+} // namespace gpu_neighborhood_tests

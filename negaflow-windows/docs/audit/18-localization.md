@@ -1,4 +1,4 @@
-> # ☠️ 하드코딩 · 가짜 구현 · 창작 · 병신 백엔드 · 병신 프론트엔드 = 죽음 ☠️
+> # 하드코딩 · 가짜 구현 · 창작 · 병신 백엔드 · 병신 프론트엔드 = 죽음
 >
 > **문구는 손으로 옮기지 마십시오.** 이 문서의 대조기로 macOS 표에서 기계로 가져옵니다.
 > 손으로 옮기면 오타가 납니다 — 실제로 났습니다(4절).
@@ -33,8 +33,8 @@
 `Localization/Phrases/Tables/AppLocalizedPhrase+<언어>.swift`)에서 값을 찾아 비교합니다.
 
 ```
-py stringdiff.py           # 다른 것만 보고서로
-py stringdiff.py --apply   # macOS 값으로 덮어쓰기
+py stringdiff.py # 다른 것만 보고서로
+py stringdiff.py --apply # macOS 값으로 덮어쓰기
 ```
 
 **2026-08-20 결과: 대조 2,640건 · 다른 것 0건 · OS 강제 예외 24건 · 심볼 못 찾음 180건.**
@@ -93,8 +93,8 @@ Windows PowerShell 5.1 은 **BOM 이 없는 파일을 ANSI(이 기계는 cp949)�
 확인법:
 
 ```bash
-for f in scripts/*.ps1; do echo "$(head -c 3 "$f" | od -An -tx1 | tr -d ' 
-')  $f"; done
+for f in scripts/*.ps1; do echo "$(head -c 3 "$f" | od -An -tx1 | tr -d '
+') $f"; done
 # efbbbf = BOM 있음
 ```
 
@@ -108,7 +108,7 @@ for f in scripts/*.ps1; do echo "$(head -c 3 "$f" | od -An -tx1 | tr -d '
 
 ---
 
-## 8. ☠️ resw 를 손으로 고칠 때의 함정 (2026-08-20)
+## 8. resw 를 손으로 고칠 때의 함정 (2026-08-20)
 
 새 항목 20개가 `<data name="printOutputSection.Content" ...>` **안쪽에** 들어갔습니다.
 

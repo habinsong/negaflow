@@ -1,9 +1,18 @@
 namespace Negaflow.Shell;
 
+/// <param name="PreviewFrameId">
+/// 백엔드가 프리뷰를 카탈로그 프레임으로 표현할 때의 선택적 식별자입니다. Windows의
+/// 기본 프리뷰 경로는 카탈로그에 넣지 않고 파일만 남깁니다.
+/// </param>
+/// <param name="PreviewScanArea">
+/// 프리뷰를 찍을 때 스캐너에 보낸 영역입니다. 프리뷰 안의 비율을 밀리미터로 되돌리는 자입니다.
+/// </param>
 internal sealed record ScanRunExecution(
     ScanRunOutcome Outcome,
     string? FailureName,
-    string? PreviewPath);
+    string? PreviewPath,
+    string? PreviewFrameId = null,
+    ScannerPluginScanArea? PreviewScanArea = null);
 
 internal static class ScanRunCoordinator
 {
@@ -20,6 +29,8 @@ internal static class ScanRunCoordinator
         int published = 0;
         string? failureName = null;
         string? previewPath = null;
+        string? previewFrameId = null;
+        ScannerPluginScanArea? previewScanArea = null;
         ScannerPluginLibraryScanStatus? lastStatus = null;
         ScannerPluginScanStatus? lastScanStatus = null;
         for (int index = 0; index < requested; ++index)
@@ -36,6 +47,8 @@ internal static class ScanRunCoordinator
             }
             if (preview)
             {
+                // 프리뷰는 프레임 찾기용 임시 그림이라 카탈로그에 게시하지 않습니다. 파일은
+                // 그대로 남겨 오버레이가 읽고, 평판 영역의 실제 자는 요청에서 보존합니다.
                 ScannerPluginScanResult scanned = await gateway
                     .ScanAsync(plugin, identity, request, cancellationToken)
                     .ConfigureAwait(false);
@@ -46,12 +59,13 @@ internal static class ScanRunCoordinator
                     break;
                 }
                 previewPath = scanned.ArtifactCommit?.Artifacts?.VisiblePath;
+                previewScanArea = request.ScanArea;
                 ++published;
                 continue;
             }
 
             ScannerPluginLibraryScanResult result = await gateway
-                .ScanAndPublishAsync(plugin, identity, request, library, cancellationToken)
+                .ScanAndPublishAsync(plugin, identity, request, library, false, cancellationToken)
                 .ConfigureAwait(false);
             lastStatus = result.Status;
             lastScanStatus = result.Scan.Status;
@@ -68,6 +82,8 @@ internal static class ScanRunCoordinator
         return new ScanRunExecution(
             new ScanRunOutcome(requested, published, lastStatus, lastScanStatus),
             failureName,
-            previewPath);
+            previewPath,
+            previewFrameId,
+            previewScanArea);
     }
 }

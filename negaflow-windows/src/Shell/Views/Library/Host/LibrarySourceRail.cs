@@ -5,6 +5,7 @@ using Negaflow.Catalog;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
+using Negaflow.Shell.Views.Library.Browser;
 
 namespace Negaflow.Shell.Views.Library.Host;
 
@@ -107,7 +108,7 @@ internal sealed class LibrarySourceRail
     internal readonly HashSet<string> collapsedFolders = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>폴더 머리줄의 화살표입니다.</summary>
-    internal void OnFolderDisclosureClicked(object sender, RoutedEventArgs args)
+    internal void OnFolderDisclosureClicked(object? sender, RoutedEventArgs args)
     {
         _ = args;
         if (view.libraryHost is not { } host || SectionOf(sender) is not { } section)
@@ -122,39 +123,24 @@ internal sealed class LibrarySourceRail
     }
 
     /// <summary>
-    /// 폴더 머리줄 컨트롤이 어느 폴더의 것인지 찾습니다.
-    ///
-    /// ☠️ `Tag="{Binding}"` 하나만 믿으면 안 됩니다. <c>GroupStyle.HeaderTemplate</c> 의
-    ///    DataContext 가 **원본 그룹 객체일 때도 있고 <c>ICollectionViewGroup</c> 껍데기일 때도
-    ///    있습니다**(WinUI 판·`ItemsPath` 유무에 따라 갈립니다). 껍데기가 오면 패턴 맞추기가
-    ///    조용히 실패해 **눌러도 아무 일이 없습니다** — 단추는 보이는데 안 먹는 정확히 그 증상.
-    ///    그래서 세 자리를 다 봅니다: Tag · DataContext · 껍데기의 <c>Group</c>.
+    /// 폴더 머리줄이 어느 폴더의 것인지 찾습니다. 머리줄은 <see cref="LibraryFolderHeader"/>
+    /// 이므로 그 컨트롤이 들고 있는 <c>DataContext</c> 가 곧 폴더입니다.
     /// </summary>
-    private static LibraryBrowserFolderSection? SectionOf(object sender)
+    private static LibraryBrowserFolderSection? SectionOf(object? sender) => sender switch
     {
-        if (sender is not FrameworkElement element)
-        {
-            return null;
-        }
-        if (element.Tag is LibraryBrowserFolderSection tagged)
-        {
-            return tagged;
-        }
-        if (element.DataContext is LibraryBrowserFolderSection bound)
-        {
-            return bound;
-        }
-        return element.DataContext is Microsoft.UI.Xaml.Data.ICollectionViewGroup group
-            ? group.Group as LibraryBrowserFolderSection
-            : null;
-    }
+        LibraryFolderHeader header => header.Section,
+        FrameworkElement { Tag: LibraryBrowserFolderSection tagged } => tagged,
+        FrameworkElement { DataContext: LibraryBrowserFolderSection bound } => bound,
+        _ => null,
+    };
 
     /// <summary>폴더 머리줄에서 프로세스를 고릅니다. 쓰지 않고 초안만 남깁니다.</summary>
-    internal void OnFolderProcessChanged(object sender, SelectionChangedEventArgs args)
+    internal void OnFolderProcessChanged(object? sender, RoutedEventArgs args)
     {
         _ = args;
-        if (SectionOf(sender) is not { } section ||
-            sender is not ComboBox { SelectedItem: DevelopProcessChoice choice })
+        if (sender is not LibraryFolderHeader header ||
+            header.Section is not { } section ||
+            header.SelectedProcess is not { } choice)
         {
             return;
         }
@@ -163,11 +149,12 @@ internal sealed class LibrarySourceRail
     }
 
     /// <summary>폴더 머리줄에서 타깃을 고릅니다. 이것도 초안입니다.</summary>
-    internal void OnFolderTargetChanged(object sender, SelectionChangedEventArgs args)
+    internal void OnFolderTargetChanged(object? sender, RoutedEventArgs args)
     {
         _ = args;
-        if (SectionOf(sender) is not { } section ||
-            sender is not ComboBox { SelectedItem: DevelopTargetChoice choice })
+        if (sender is not LibraryFolderHeader header ||
+            header.Section is not { } section ||
+            header.SelectedTarget is not { } choice)
         {
             return;
         }
@@ -177,14 +164,14 @@ internal sealed class LibrarySourceRail
 
     /// <summary>
     /// macOS <c>LibraryFolderApplyButton</c> — 눌러야 폴더의 모든 사진에 프로세스와 타깃이
-    /// 써집니다. 진행률은 옆 자리에 "n/N" 으로 냅니다.
+    /// 써집니다. 진행률은 옆 자리에 막대와 "%" · "n/N" 으로 냅니다.
     /// </summary>
-    internal async void OnFolderApplyClicked(object sender, RoutedEventArgs args)
+    internal async void OnFolderApplyClicked(object? sender, RoutedEventArgs args)
     {
         _ = args;
         if (view.libraryHost is not { } host ||
-            sender is not Button button ||
-            SectionOf(sender) is not { } section ||
+            sender is not LibraryFolderHeader header ||
+            header.Section is not { } section ||
             section.Items.Count == 0)
         {
             return;
@@ -193,8 +180,8 @@ internal sealed class LibrarySourceRail
         (DevelopmentProcess process, DevelopTarget target) = section.Selection;
         string sectionId = section.Id;
         string[] frameIds = [.. section.Items.Select(item => item.Frame.Id)];
-        TextBlock? progressText = ProgressTextFor(button);
-        button.IsEnabled = false;
+        header.ApplyButton.IsEnabled = false;
+        header.ShowProgress(new LibraryFolderDevelopmentProgress(0, section.Items.Count));
         int changed;
         try
         {
@@ -206,11 +193,11 @@ internal sealed class LibrarySourceRail
                 process,
                 target,
                 view.thumbnails,
-                update => ReportFolderProgress(progressText, update));
+                update => ReportFolderProgress(header, update));
         }
         finally
         {
-            button.IsEnabled = true;
+            header.ApplyButton.IsEnabled = true;
         }
         if (changed > 0 && host.Save() != CatalogStoreError.None)
         {
@@ -223,6 +210,9 @@ internal sealed class LibrarySourceRail
             // 현상뷰·인화뷰는 열릴 때 읽은 스냅샷을 들고 있으므로 직접 알려 줘야 합니다.
             view.RaiseFolderDevelopmentApplied(frameIds);
         }
+        // macOS 는 다 끝난 진행률을 1.2초 남겼다가 지웁니다.
+        await Task.Delay(TimeSpan.FromSeconds(1.2));
+        header.ClearProgress();
     }
 
     /// <summary>
@@ -230,20 +220,15 @@ internal sealed class LibrarySourceRail
     /// 잘못된 스레드라고 던집니다.
     /// </summary>
     private void ReportFolderProgress(
-        TextBlock? progressText,
+        LibraryFolderHeader header,
         LibraryFolderDevelopmentProgress update)
     {
-        if (progressText is null)
-        {
-            return;
-        }
-        string text = $"{update.Percent}% {update.CompletedCount}/{update.TotalCount}";
         if (view.DispatcherQueue is not { } queue || queue.HasThreadAccess)
         {
-            progressText.Text = text;
+            header.ShowProgress(update);
             return;
         }
-        _ = queue.TryEnqueue(() => progressText.Text = text);
+        _ = queue.TryEnqueue(() => header.ShowProgress(update));
     }
 
     /// <summary>
@@ -262,15 +247,6 @@ internal sealed class LibrarySourceRail
             DevelopProcesses.From(frame.Route.FilmType, frame.Route.IsDigitalSource),
             frame.DevelopTarget);
     }
-
-    /// <summary>
-    /// 진행률 자리는 DataTemplate 안이라 이름으로 잡을 수 없습니다. 같은 격자에서 단추
-    /// 다음 칸을 찾습니다.
-    /// </summary>
-    private static TextBlock? ProgressTextFor(Button button) =>
-        button.Parent is Grid grid
-            ? grid.Children.OfType<TextBlock>().LastOrDefault()
-            : null;
 
     /// <summary>
     /// 공유 현상 사이드바의 스캐너 명령이 이 화면의 실제 스캔 세션을 엽니다. 별도 스캔 상태를

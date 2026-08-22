@@ -94,6 +94,9 @@ GpuAccelerator::GpuAccelerator() noexcept {
         state->area_average_ready =
             gpu::GpuAreaAverage::create(state->device, state->area_average) ==
             gpu::GpuKernelStatus::ok;
+        state->scene_correction_ready =
+            gpu::GpuSceneCorrection::create(state->device, state->scene_correction) ==
+            gpu::GpuKernelStatus::ok;
         state->mip_halve_ready =
             gpu::GpuMipHalve::create(state->device, state->mip_halve) ==
             gpu::GpuKernelStatus::ok;

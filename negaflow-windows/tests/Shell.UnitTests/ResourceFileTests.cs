@@ -6,7 +6,7 @@ namespace Negaflow.Shell.UnitTests;
 /// <summary>
 /// resw 파일의 모양을 지킵니다.
 ///
-/// ☠️ 왜 있나 — 2026-08-20 에 **같은 실수로 앱이 두 번 안 떴습니다.** 새 항목을 여러 줄짜리
+/// 왜 있나 — 2026-08-20 에 **같은 실수로 앱이 두 번 안 떴습니다.** 새 항목을 여러 줄짜리
 /// 항목 바로 뒤에 끼워 넣다가 그 항목 <b>안쪽에</b> 들어갔습니다. XML 로는 올바르므로
 /// 파서도 정규식 검사도 통과하지만, <b>MakePri 는 중첩된 <c>&lt;data&gt;</c> 를 세지 않습니다.</b>
 /// 그래서 PRI 에서 통째로 빠지고, 앱은 <c>Missing localized resource</c> 로 창을 열지 못합니다
@@ -16,6 +16,10 @@ namespace Negaflow.Shell.UnitTests;
 /// </summary>
 internal static class ResourceFileTests
 {
+    /// <summary>부르는 자리를 찾는 무늬입니다. 열쇠와 속성 두 조각을 잡습니다.</summary>
+    private const string RawPattern =
+        """AppResources\.(?:Get|FormatInteger|FormatIntegers)\(\s*"([^"]+)"\s*,\s*"([^"]+)""";
+
     private static readonly string[] Languages =
         ["en-US", "ko-KR", "ja-JP", "de-DE", "fr-FR", "zh-Hans"];
 
@@ -63,6 +67,62 @@ internal static class ResourceFileTests
             bool allValued = entries.All(entry =>
                 !string.IsNullOrEmpty((string?)entry.Element("value")));
             Check(allValued, "resw_every_entry_has_a_value_" + language);
+        }
+
+        CheckEveryCalledKeyExists(root);
+    }
+
+    /// <summary>
+    /// 코드가 부르는 문구가 resw 에 다 있는지 봅니다.
+    /// </summary>
+    /// <remarks>
+    /// <c>AppResources.Get</c> 은 없는 열쇠에 <see cref="InvalidOperationException"/> 을 던집니다.
+    /// 그 던짐이 창을 만드는 도중에 나면 <b>앱이 아예 뜨지 않습니다</b> - 2026-08-22 에
+    /// <c>canvasBackgroundMenu.Text</c> 하나로 그렇게 됐습니다. 새 문구를 코드에만 적고
+    /// resw 에 안 넣는 실수는 눈으로 못 잡으므로 여기서 잡습니다.
+    /// </remarks>
+    private static void CheckEveryCalledKeyExists(string stringsRoot)
+    {
+        if (Path.GetDirectoryName(Path.GetDirectoryName(stringsRoot)) is not { } shellRoot)
+        {
+            return;
+        }
+        HashSet<string> available = [];
+        foreach (string language in Languages)
+        {
+            string path = Path.Combine(stringsRoot, language, "Resources.resw");
+            if (!File.Exists(path))
+            {
+                continue;
+            }
+            foreach (XElement entry in XElement.Load(path).Elements("data"))
+            {
+                if ((string?)entry.Attribute("name") is { Length: > 0 } name)
+                {
+                    available.Add(name);
+                }
+            }
+        }
+
+        System.Text.RegularExpressions.Regex call = new(
+            RawPattern,
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        List<string> missing = [];
+        foreach (string file in Directory.EnumerateFiles(shellRoot, "*.cs", SearchOption.AllDirectories))
+        {
+            foreach (System.Text.RegularExpressions.Match match in call.Matches(File.ReadAllText(file)))
+            {
+                string name = match.Groups[1].Value + "." + match.Groups[2].Value;
+                if (!available.Contains(name))
+                {
+                    missing.Add(name);
+                }
+            }
+        }
+        Check(missing.Count == 0, "resw_has_every_key_the_code_asks_for");
+        foreach (string name in missing.Distinct().Order(StringComparer.Ordinal))
+        {
+            Check(false, "resw_missing_" + name);
         }
     }
 

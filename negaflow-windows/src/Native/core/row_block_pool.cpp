@@ -97,15 +97,15 @@ private:
                 queue_.pop_front();
             }
             task.function(task.context, task.first_row, task.row_count);
-            // ☠️ **여기가 호출부 계수기를 만지는 마지막 순간입니다.**
-            //    원자값 하나만 줄이고, 그 뒤로는 계수기를 두 번 다시 만지지 않습니다.
-            //    알림에 쓰는 뮤텍스·조건변수는 **풀의 것**이라 프로세스가 끝날 때까지
-            //    살아 있습니다. 그래서 대기자가 0 을 보고 곧바로 스택의 계수기를
-            //    없애도 워커가 사라진 객체를 만질 일이 없습니다.
+            // **여기가 호출부 계수기를 만지는 마지막 순간입니다.**
+            // 원자값 하나만 줄이고, 그 뒤로는 계수기를 두 번 다시 만지지 않습니다.
+            // 알림에 쓰는 뮤텍스·조건변수는 **풀의 것**이라 프로세스가 끝날 때까지
+            // 살아 있습니다. 그래서 대기자가 0 을 보고 곧바로 스택의 계수기를
+            // 없애도 워커가 사라진 객체를 만질 일이 없습니다.
             //
-            //    예전에는 계수기 안에 뮤텍스·조건변수가 있었고, 그것이
-            //    `native.gpu_film_scan` 이 27회 중 3회 SegFault 로 죽던 자리였습니다
-            //    (docs/audit/01-backend-gaps.md 9.4).
+            // 예전에는 계수기 안에 뮤텍스·조건변수가 있었고, 그것이
+            // `native.gpu_film_scan` 이 27회 중 3회 SegFault 로 죽던 자리였습니다
+            // (docs/audit/01-backend-gaps.md 9.4).
             task.pending->remaining.fetch_sub(1U, std::memory_order_acq_rel);
             notify_completed();
         }
@@ -147,14 +147,14 @@ private:
 
 // 프로세스 수명 동안 하나입니다. 첫 사용에서 만들어집니다.
 //
-// ☠️ **일부러 지우지 않습니다.** 정적 소멸 순서에서 워커가 이미 정리된 다른 정적을 만지면
-//    종료가 깨집니다. 프로세스가 끝나면 OS 가 회수합니다.
+// **일부러 지우지 않습니다.** 정적 소멸 순서에서 워커가 이미 정리된 다른 정적을 만지면
+// 종료가 깨집니다. 프로세스가 끝나면 OS 가 회수합니다.
 [[nodiscard]] Pool& pool() noexcept {
     static Pool* const instance = new Pool{};
     return *instance;
 }
 
-}  // namespace
+} // namespace
 
 bool submit(
     const BlockFunction function,
@@ -180,4 +180,4 @@ void wait_for(PendingCounter& pending) noexcept { pool().wait_until_zero(pending
 
 std::uint32_t worker_count() noexcept { return pool().size(); }
 
-}  // namespace negaflow::core::row_block_pool_detail
+} // namespace negaflow::core::row_block_pool_detail

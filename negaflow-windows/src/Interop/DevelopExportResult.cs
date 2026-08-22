@@ -23,7 +23,8 @@ public sealed class DevelopExportResult
         DevelopBaseSource baseSource = DevelopBaseSource.Manual,
         bool cancelled = false,
         FilmBaseMeasurementSnapshot? measurement = null,
-        string? measurementMethod = null)
+        string? measurementMethod = null,
+        DevelopDebugMetrics? debugMetrics = null)
     {
         Cancelled = cancelled;
         Succeeded = succeeded;
@@ -46,7 +47,13 @@ public sealed class DevelopExportResult
         BaseSource = baseSource;
         Measurement = measurement;
         MeasurementMethod = measurementMethod;
+        DebugMetrics = debugMetrics;
     }
+
+    /// <summary>
+    /// 개발자 디버그 화면이 읽는 실측값입니다. 재지 않은 호출에서는 <c>null</c> 입니다.
+    /// </summary>
+    public DevelopDebugMetrics? DebugMetrics { get; }
 
     public bool Succeeded { get; }
 

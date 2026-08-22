@@ -2,11 +2,13 @@
 
 #include "icm_rgb16_transform.h"
 #include "negaflow/color/srgb_transfer.h"
+#include "negaflow/core/parallel_rows.h"
 #include "scanner_to_working_detail.h"
 
 #include <Windows.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -215,40 +217,60 @@ private:
             : 1.0F;
     }
 
+    /// 행끼리 독립이므로 화소당 계산은 그대로 두고 행 블록으로만 나눕니다. 화소당 하던
+    /// layout/alpha 판정은 루프 밖으로 뺐습니다. 결과 화소는 직렬판과 같습니다.
     [[nodiscard]] ScannerToWorkingStatus convert_linear_rows(
         const negaflow::imageio::WicTiffRowChunk& rows) noexcept {
         constexpr float u16_scale = 1.0F / 65'535.0F;
         const std::size_t channels = negaflow::imageio::channel_count(layout_);
         const std::size_t source_stride =
             source_stride_bytes_ / sizeof(std::uint16_t);
-        for (std::uint32_t row = 0U; row < rows.row_count; ++row) {
-            if (stop_token_.stop_requested()) {
-                return ScannerToWorkingStatus::cancelled;
-            }
-            const std::uint16_t* const source =
-                rows.samples.data() + static_cast<std::size_t>(row) * source_stride;
-            negaflow::core::Rgba32F* const destination =
-                result_.image.pixels.data() +
-                static_cast<std::size_t>(rows.first_row + row) * width_;
-            for (std::uint32_t column = 0U; column < width_; ++column) {
-                const std::size_t offset = static_cast<std::size_t>(column) * channels;
-                const bool associated =
-                    alpha_mode_ == negaflow::imageio::AlphaMode::associated;
-                const std::uint16_t alpha16 = layout_ == negaflow::imageio::DecodedPixelLayout::rgba16
-                    ? source[offset + 3U]
-                    : 65'535U;
-                destination[column] = {
-                    associated ? static_cast<float>(unassociate_component(source[offset], alpha16)) * u16_scale
-                               : static_cast<float>(source[offset]) * u16_scale,
-                    associated ? static_cast<float>(unassociate_component(source[offset + 1U], alpha16)) * u16_scale
-                               : static_cast<float>(source[offset + 1U]) * u16_scale,
-                    associated ? static_cast<float>(unassociate_component(source[offset + 2U], alpha16)) * u16_scale
-                               : static_cast<float>(source[offset + 2U]) * u16_scale,
-                    row_alpha(source, offset),
-                };
-            }
-        }
-        return ScannerToWorkingStatus::ok;
+        const bool has_alpha =
+            layout_ == negaflow::imageio::DecodedPixelLayout::rgba16;
+        const bool associated =
+            alpha_mode_ == negaflow::imageio::AlphaMode::associated;
+        std::atomic<bool> cancelled{false};
+        negaflow::core::for_each_row_block(
+            rows.row_count,
+            row_block_work_units(rows.row_count, channels),
+            [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+                if (stop_token_.stop_requested()) {
+                    cancelled.store(true, std::memory_order_relaxed);
+                    return;
+                }
+                for (std::uint32_t row = first_row; row < first_row + row_count; ++row) {
+                    const std::uint16_t* const source =
+                        rows.samples.data() + static_cast<std::size_t>(row) * source_stride;
+                    negaflow::core::Rgba32F* const destination =
+                        result_.image.pixels.data() +
+                        static_cast<std::size_t>(rows.first_row + row) * width_;
+                    for (std::uint32_t column = 0U; column < width_; ++column) {
+                        const std::size_t offset = static_cast<std::size_t>(column) * channels;
+                        const std::uint16_t alpha16 = has_alpha ? source[offset + 3U] : 65'535U;
+                        destination[column] = {
+                            associated ? static_cast<float>(unassociate_component(source[offset], alpha16)) * u16_scale
+                                       : static_cast<float>(source[offset]) * u16_scale,
+                            associated ? static_cast<float>(unassociate_component(source[offset + 1U], alpha16)) * u16_scale
+                                       : static_cast<float>(source[offset + 1U]) * u16_scale,
+                            associated ? static_cast<float>(unassociate_component(source[offset + 2U], alpha16)) * u16_scale
+                                       : static_cast<float>(source[offset + 2U]) * u16_scale,
+                            has_alpha ? static_cast<float>(source[offset + 3U]) * u16_scale : 1.0F,
+                        };
+                    }
+                }
+            });
+        return cancelled.load(std::memory_order_relaxed)
+            ? ScannerToWorkingStatus::cancelled
+            : ScannerToWorkingStatus::ok;
+    }
+
+    /// `parallel_rows.h` 가 경고하는 대로 출력 행 수가 아니라 실제로 읽고 쓰는 바이트를
+    /// 넘깁니다. 화소당 원본 `channels` 개의 16-bit 표본을 읽고 16바이트를 씁니다.
+    [[nodiscard]] std::uint64_t row_block_work_units(
+        const std::uint32_t row_count,
+        const std::size_t channels) const noexcept {
+        return static_cast<std::uint64_t>(width_) * row_count *
+            (channels * sizeof(std::uint16_t) + sizeof(negaflow::core::Rgba32F));
     }
 
     [[nodiscard]] ScannerToWorkingStatus convert_icc_rows(
@@ -280,29 +302,34 @@ private:
                 static_cast<std::size_t>(rgb_chunk_bytes / sizeof(std::uint16_t)));
             const std::size_t source_stride =
                 source_stride_bytes_ / sizeof(std::uint16_t);
-            for (std::uint32_t row = 0U; row < rows.row_count; ++row) {
-                const std::uint16_t* const source_row =
-                    rows.samples.data() + static_cast<std::size_t>(row) * source_stride;
-                std::uint16_t* const destination_row =
-                    packed_rgb_.data() + static_cast<std::size_t>(row) * width_ * 3U;
-                for (std::uint32_t column = 0U; column < width_; ++column) {
-                    const std::size_t source_offset = static_cast<std::size_t>(column) * 4U;
-                    const std::size_t destination_offset =
-                        static_cast<std::size_t>(column) * 3U;
-                    const bool associated =
-                        alpha_mode_ == negaflow::imageio::AlphaMode::associated;
-                    const std::uint16_t alpha = source_row[source_offset + 3U];
-                    destination_row[destination_offset] = associated
-                        ? unassociate_component(source_row[source_offset], alpha)
-                        : source_row[source_offset];
-                    destination_row[destination_offset + 1U] = associated
-                        ? unassociate_component(source_row[source_offset + 1U], alpha)
-                        : source_row[source_offset + 1U];
-                    destination_row[destination_offset + 2U] = associated
-                        ? unassociate_component(source_row[source_offset + 2U], alpha)
-                        : source_row[source_offset + 2U];
-                }
-            }
+            const bool associated =
+                alpha_mode_ == negaflow::imageio::AlphaMode::associated;
+            negaflow::core::for_each_row_block(
+                rows.row_count,
+                row_block_work_units(rows.row_count, 4U),
+                [&](const std::uint32_t first_row, const std::uint32_t block_rows) noexcept {
+                    for (std::uint32_t row = first_row; row < first_row + block_rows; ++row) {
+                        const std::uint16_t* const source_row =
+                            rows.samples.data() + static_cast<std::size_t>(row) * source_stride;
+                        std::uint16_t* const destination_row =
+                            packed_rgb_.data() + static_cast<std::size_t>(row) * width_ * 3U;
+                        for (std::uint32_t column = 0U; column < width_; ++column) {
+                            const std::size_t source_offset = static_cast<std::size_t>(column) * 4U;
+                            const std::size_t destination_offset =
+                                static_cast<std::size_t>(column) * 3U;
+                            const std::uint16_t alpha = source_row[source_offset + 3U];
+                            destination_row[destination_offset] = associated
+                                ? unassociate_component(source_row[source_offset], alpha)
+                                : source_row[source_offset];
+                            destination_row[destination_offset + 1U] = associated
+                                ? unassociate_component(source_row[source_offset + 1U], alpha)
+                                : source_row[source_offset + 1U];
+                            destination_row[destination_offset + 2U] = associated
+                                ? unassociate_component(source_row[source_offset + 2U], alpha)
+                                : source_row[source_offset + 2U];
+                        }
+                    }
+                });
             source = packed_rgb_.data();
             source_stride_bytes = static_cast<std::uint32_t>(rgb_stride_bytes);
         }
@@ -325,33 +352,48 @@ private:
 
         constexpr float u16_scale = 1.0F / 65'535.0F;
         const std::size_t encoded_stride = static_cast<std::size_t>(width_) * 3U;
-        for (std::uint32_t row = 0U; row < rows.row_count; ++row) {
-            if (stop_token_.stop_requested()) {
-                return ScannerToWorkingStatus::cancelled;
-            }
-            const std::uint16_t* const source_row =
-                encoded_srgb_.data() + static_cast<std::size_t>(row) * encoded_stride;
-            negaflow::core::Rgba32F* const destination =
-                result_.image.pixels.data() +
-                static_cast<std::size_t>(rows.first_row + row) * width_;
-            for (std::uint32_t column = 0U; column < width_; ++column) {
-                const std::size_t offset = static_cast<std::size_t>(column) * 3U;
-                const std::size_t input_offset = static_cast<std::size_t>(column) *
-                    negaflow::imageio::channel_count(layout_);
-                const std::uint16_t* const input_row = rows.samples.data() +
-                    static_cast<std::size_t>(row) * (source_stride_bytes_ / sizeof(std::uint16_t));
-                destination[column] = {
-                    negaflow::color::srgb_encoded_to_linear(
-                        static_cast<float>(source_row[offset]) * u16_scale),
-                    negaflow::color::srgb_encoded_to_linear(
-                        static_cast<float>(source_row[offset + 1U]) * u16_scale),
-                    negaflow::color::srgb_encoded_to_linear(
-                        static_cast<float>(source_row[offset + 2U]) * u16_scale),
-                    row_alpha(input_row, input_offset),
-                };
-            }
-        }
-        return ScannerToWorkingStatus::ok;
+        const std::size_t channels = negaflow::imageio::channel_count(layout_);
+        const std::size_t input_stride = source_stride_bytes_ / sizeof(std::uint16_t);
+        const bool has_alpha =
+            layout_ == negaflow::imageio::DecodedPixelLayout::rgba16;
+        std::atomic<bool> cancelled{false};
+        negaflow::core::for_each_row_block(
+            rows.row_count,
+            row_block_work_units(rows.row_count, channels),
+            [&](const std::uint32_t first_row, const std::uint32_t block_rows) noexcept {
+                if (stop_token_.stop_requested()) {
+                    cancelled.store(true, std::memory_order_relaxed);
+                    return;
+                }
+                for (std::uint32_t row = first_row; row < first_row + block_rows; ++row) {
+                    const std::uint16_t* const source_row =
+                        encoded_srgb_.data() + static_cast<std::size_t>(row) * encoded_stride;
+                    const std::uint16_t* const input_row =
+                        rows.samples.data() + static_cast<std::size_t>(row) * input_stride;
+                    negaflow::core::Rgba32F* const destination =
+                        result_.image.pixels.data() +
+                        static_cast<std::size_t>(rows.first_row + row) * width_;
+                    for (std::uint32_t column = 0U; column < width_; ++column) {
+                        const std::size_t offset = static_cast<std::size_t>(column) * 3U;
+                        const std::size_t input_offset =
+                            static_cast<std::size_t>(column) * channels;
+                        destination[column] = {
+                            negaflow::color::srgb_encoded_to_linear(
+                                static_cast<float>(source_row[offset]) * u16_scale),
+                            negaflow::color::srgb_encoded_to_linear(
+                                static_cast<float>(source_row[offset + 1U]) * u16_scale),
+                            negaflow::color::srgb_encoded_to_linear(
+                                static_cast<float>(source_row[offset + 2U]) * u16_scale),
+                            has_alpha
+                                ? static_cast<float>(input_row[input_offset + 3U]) * u16_scale
+                                : 1.0F,
+                        };
+                    }
+                }
+            });
+        return cancelled.load(std::memory_order_relaxed)
+            ? ScannerToWorkingStatus::cancelled
+            : ScannerToWorkingStatus::ok;
     }
 
     ScannerToWorkingLimits limits_{};

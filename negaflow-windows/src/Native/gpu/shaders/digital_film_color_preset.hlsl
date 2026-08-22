@@ -1,7 +1,7 @@
 // 디지털 원본 전용 스톡 색 프리셋의 도메인 왕복입니다.
 //
-// macOS  : `digitalToDisplayGamma`(`:738`) · `digitalToLinearLight`(`:742`) 와
-//          `DigitalFilmColorPresetStage.swift` 의 `CIMix`
+// macOS : `digitalToDisplayGamma`(`:738`) · `digitalToLinearLight`(`:742`) 와
+// `DigitalFilmColorPresetStage.swift` 의 `CIMix`
 // CPU 판 : `imaging/digital_film_color_preset.cpp` `apply_digital_film_color_preset`
 //
 // 색 조정 셋(믹서·그레이딩·캘리브레이션)은 **표시 도메인 0…1 을 전제로** 만들어졌습니다.
@@ -9,11 +9,11 @@
 // 있으므로(`color_mixer.hlsl`·`color_grade.hlsl`·`primary_calibration.hlsl`) 여기서
 // 만드는 것은 **도메인 왕복과 강도 혼합** 둘뿐입니다.
 //
-// ☠️ **`tone_shared.hlsli` 의 `LinearToSrgbEncoded` 를 쓰지 마십시오.** 그것은 부호를
-//    보존합니다(작업 이미지가 0 아래 값을 일부러 남기기 때문). 이 자리의 CPU 판
-//    (`digital_film_color_preset.cpp:31-40`)과 macOS `digitalLinearToSRGB` 는 **부호를
-//    보존하지 않고** 음수를 `value * 12.92` 로 그대로 통과시킵니다. 둘을 섞으면
-//    음수 화소에서 값이 갈립니다.
+// **`tone_shared.hlsli` 의 `LinearToSrgbEncoded` 를 쓰지 마십시오.** 그것은 부호를
+// 보존합니다(작업 이미지가 0 아래 값을 일부러 남기기 때문). 이 자리의 CPU 판
+// (`digital_film_color_preset.cpp:31-40`)과 macOS `digitalLinearToSRGB` 는 **부호를
+// 보존하지 않고** 음수를 `value * 12.92` 로 그대로 통과시킵니다. 둘을 섞으면
+// 음수 화소에서 값이 갈립니다.
 
 #include "tone_shared.hlsli"
 

@@ -5,9 +5,9 @@
 // macOS : `Imaging/ChannelClippingOverlay.swift` + `channelClippingOverlay` 커널
 // 원본·현상·내보내기 화소는 바꾸지 않습니다. 투명 레이어만 냅니다.
 //
-// ☠️ Windows 작업 이미지는 프리멀티가 **아닙니다.** macOS 커널의 `rgb / src.a` 는
-//    빼야 합니다 — 나누면 알파가 1이 아닌 화소의 경계가 틀어집니다.
-// ☠️ 경계는 `<= 0` / `>= 1` 입니다. `< 0` / `> 1` 로 바꾸면 정확히 0/1 이 빠집니다.
+// Windows 작업 이미지는 프리멀티가 **아닙니다.** macOS 커널의 `rgb / src.a` 는
+// 빼야 합니다 — 나누면 알파가 1이 아닌 화소의 경계가 틀어집니다.
+// 경계는 `<= 0` / `>= 1` 입니다. `< 0` / `> 1` 로 바꾸면 정확히 0/1 이 빠집니다.
 
 #include "negaflow/core/pixel.h"
 #include "negaflow/imaging/scanner_to_working.h"
@@ -60,4 +60,4 @@ struct ChannelClippingOverlayPixel final {
     const WorkingImage& source,
     WorkingImage& destination) noexcept;
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

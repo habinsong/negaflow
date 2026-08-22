@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Develop.Inspector.DevelopDebugSection"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
+
+    <!--
+        macOS DevelopAdjustmentSections.debugSection 자리입니다. 개발자 모드가 켜져 있을
+        때만 나옵니다(`if model.developerMode { debugSection }`).
+        안에 든 것도 같습니다 - 디버그 오버레이 스위치, 스테이지 고르개, 메트릭 글자.
+    -->
+    <Border
+        x:Name="DebugSection"
+        HorizontalAlignment="Stretch"
+        Padding="14"
+        AutomationProperties.AutomationId="negaflow.develop.section.debug"
+        Background="{ThemeResource NegaflowCardBrush}"
+        CornerRadius="14"
+        Visibility="Collapsed">
+        <StackPanel HorizontalAlignment="Stretch" Spacing="12">
+            <Grid HorizontalAlignment="Stretch">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <controls:DisclosureButton
+                    x:Name="DebugHeaderButton"
+                    Grid.Column="0"
+                    MinHeight="26"
+                    Padding="0"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch"
+                    AutomationProperties.AutomationId="negaflow.develop.section.debug.header"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Click="OnHeaderClicked"
+                    ExpansionRequested="OnExpansionRequested"
+                    Tag="Debug">
+                    <Grid HorizontalAlignment="Stretch">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <!-- macOS "waveform.path.ecg.rectangle" 과 같은 뜻입니다. -->
+                        <FontIcon Grid.Column="0" Width="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE9D9;" />
+                        <TextBlock x:Name="DebugTitleText" Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
+                        <FontIcon x:Name="DebugChevron" Grid.Column="2" Margin="8,0,0,0" FontSize="12" Glyph="&#xE76C;" />
+                    </Grid>
+                </controls:DisclosureButton>
+            </Grid>
+            <StackPanel x:Name="DebugControls" HorizontalAlignment="Stretch" Spacing="10" Visibility="Collapsed">
+                <Grid HorizontalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="OverlayLabelText" Grid.Column="0" VerticalAlignment="Center" FontSize="13" />
+                    <ToggleSwitch
+                        x:Name="OverlayToggle"
+                        Grid.Column="1"
+                        MinWidth="44"
+                        OnContent=""
+                        OffContent=""
+                        AutomationProperties.AutomationId="negaflow.develop.debug.overlay"
+                        Toggled="OnOverlayToggled" />
+                </Grid>
+                <Grid HorizontalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="StageLabelText" Grid.Column="0" VerticalAlignment="Center" FontSize="13" />
+                    <ComboBox
+                        x:Name="StageComboBox"
+                        Grid.Column="1"
+                        Margin="8,0,0,0"
+                        HorizontalAlignment="Stretch"
+                        AutomationProperties.AutomationId="negaflow.develop.debug.stage"
+                        SelectionChanged="OnStageChanged" />
+                </Grid>
+                <TextBlock
+                    x:Name="MetricsText"
+                    FontSize="11"
+                    FontFamily="Consolas"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    IsTextSelectionEnabled="True"
+                    TextWrapping="Wrap" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

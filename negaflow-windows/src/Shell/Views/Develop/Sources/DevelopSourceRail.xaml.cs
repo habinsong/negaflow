@@ -39,13 +39,13 @@ public sealed partial class DevelopSourceRail : UserControl
         var accent = (Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"];
         var normal = (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
         var selection = (Brush)Application.Current.Resources["NegaflowSelectionBrush"];
-        foreach ((Button button, FontIcon icon, WorkflowSidebarTab kind) in Buttons())
+        foreach ((Button button, FrameworkElement icon, WorkflowSidebarTab kind) in Buttons())
         {
             bool isSelected = kind == selected;
             button.Background = isSelected
                 ? selection
                 : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-            icon.Foreground = isSelected ? accent : normal;
+            SetIconForeground(icon, isSelected ? accent : normal);
             AutomationProperties.SetItemStatus(
                 button,
                 AppResources.Get(isSelected ? "selected" : "notSelected", "Value"));
@@ -63,7 +63,25 @@ public sealed partial class DevelopSourceRail : UserControl
         TabClicked?.Invoke(this, kind);
     }
 
-    private IEnumerable<(Button Button, FontIcon Icon, WorkflowSidebarTab Kind)> Buttons()
+    // 아이콘 형식을 `Control` 로 둡니다. Segoe 에 뜻이 맞는 글리프가 없는 자리는
+    // 직접 그린 `VectorIcon` 이라 `FontIcon` 으로 묶으면 컴파일이 안 됩니다.
+    // 여기서 쓰는 것은 `Foreground` 하나뿐이라 공통 기반형으로 충분합니다.
+    // `FontIcon` 은 `IconElement`, 직접 그린 `VectorIcon` 은 `Control` 이라 공통 기반이
+    // `FrameworkElement` 뿐입니다. 거기에는 `Foreground` 가 없어 형식을 갈라 넣습니다.
+    private static void SetIconForeground(FrameworkElement icon, Brush brush)
+    {
+        switch (icon)
+        {
+            case FontIcon font:
+                font.Foreground = brush;
+                break;
+            case Control control:
+                control.Foreground = brush;
+                break;
+        }
+    }
+
+    private IEnumerable<(Button Button, FrameworkElement Icon, WorkflowSidebarTab Kind)> Buttons()
     {
         yield return (LibraryRailButton, LibraryRailIcon, WorkflowSidebarTab.Library);
         yield return (FilesRailButton, FilesRailIcon, WorkflowSidebarTab.Files);

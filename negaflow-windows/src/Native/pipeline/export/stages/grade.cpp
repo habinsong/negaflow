@@ -15,6 +15,7 @@ namespace negaflow::pipeline::develop_export_detail {
 std::optional<DevelopExportOutcome> apply_grade_stages(
     const DevelopExportRequest& request,
     RunTracker& tracker,
+    const GpuUsePolicy gpu_policy,
     InvertStageOutput& invert) noexcept {
     negaflow::imaging::WorkingImage& developed_image = invert.image;
     const bool negative_source = invert.negative_source;
@@ -30,23 +31,31 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
         scene_correction.auto_levels ||
         (scene_correction.auto_neutral_balance && negative_source);
     if (scene_active) {
-        GpuAccelerator::shared().flush_resident();
+        // **GPU 를 먼저 시도합니다.** 예전에는 여기서 무조건 `flush_resident()` 를 불러
+        // 화소를 호스트로 내렸고, 그 한 번 때문에 뒤따르는 톤·필름룩·마무리·발행이
+        // 전부 CPU 경로였습니다. 실측(1536x1026 슬라이더 8틱): 다운로드 1,374 MB,
+        // 이 단계만 틱당 150ms.
+        // 가속기는 실패할 때 화소를 손대지 않으므로, 못 하면 그대로 CPU 판으로 갑니다.
         negaflow::imaging::SceneCorrectionInfo scene_correction_info{};
-        const negaflow::core::KernelStatus scene_correction_status =
-            negaflow::imaging::apply_scene_correction(
-                {
-                    developed_image.pixels.data(),
-                    developed_image.pixels.size(),
-                    developed_image.width,
-                    developed_image.height,
-                    developed_image.stride_pixels,
-                },
-                scene_correction,
-                scene_correction_info);
-        if (scene_correction_status != negaflow::core::KernelStatus::ok) {
-            return fail(
-                DevelopExportStage::scene_correction,
-                negaflow::core::kernel_status_name(scene_correction_status));
+        if (!GpuAccelerator::shared().apply_scene_correction(
+                gpu_policy, developed_image, scene_correction, scene_correction_info)) {
+            GpuAccelerator::shared().flush_resident();
+            const negaflow::core::KernelStatus scene_correction_status =
+                negaflow::imaging::apply_scene_correction(
+                    {
+                        developed_image.pixels.data(),
+                        developed_image.pixels.size(),
+                        developed_image.width,
+                        developed_image.height,
+                        developed_image.stride_pixels,
+                    },
+                    scene_correction,
+                    scene_correction_info);
+            if (scene_correction_status != negaflow::core::KernelStatus::ok) {
+                return fail(
+                    DevelopExportStage::scene_correction,
+                    negaflow::core::kernel_status_name(scene_correction_status));
+            }
         }
     }
 
@@ -192,4 +201,4 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
     return std::nullopt;
 }
 
-}  // namespace negaflow::pipeline::develop_export_detail
+} // namespace negaflow::pipeline::develop_export_detail

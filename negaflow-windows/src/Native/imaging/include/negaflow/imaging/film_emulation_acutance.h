@@ -40,9 +40,9 @@ struct FilmEmulationAcutanceScratch final {
 // 화소 루프 **밖에서** 한 번 정해지는 것들입니다. 분리형 11탭 가우시안의 가중치와
 // 언샤프 세기.
 //
-// ☠️ **GPU 판이 이것을 그대로 씁니다.** 가중치를 두 곳에서 만들면 그 순간 두 벌이 되고,
-//    `exp` 구현 차이가 화소마다 실립니다. `prepare_color_grading` 과 같은 이유로
-//    준비 계산을 한 곳에만 둡니다.
+// **GPU 판이 이것을 그대로 씁니다.** 가중치를 두 곳에서 만들면 그 순간 두 벌이 되고,
+// `exp` 구현 차이가 화소마다 실립니다. `prepare_color_grading` 과 같은 이유로
+// 준비 계산을 한 곳에만 둡니다.
 struct FilmEmulationAcutanceSetup final {
     float weights[film_emulation_acutance_scratch_rows]{};
     float amount{0.0F};
@@ -78,4 +78,4 @@ struct FilmEmulationAcutanceSetup final {
     const FilmEmulationAcutanceParameters& parameters,
     FilmEmulationAcutanceScratch scratch) noexcept;
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

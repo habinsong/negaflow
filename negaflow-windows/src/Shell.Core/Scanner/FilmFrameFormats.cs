@@ -94,11 +94,14 @@ public enum FlatbedFrameDetectionMode
 }
 
 /// <summary>
-/// 평판 위에서 한 프레임이 차지하는 자리입니다. 좌표는 유리판 좌상단 원점의 밀리미터입니다 —
-/// 픽셀로 두면 프리뷰 해상도가 바뀔 때마다 사용자가 놓은 자리가 움직입니다.
+/// 프리뷰가 담은 실제 영역입니다. 프레임 자리를 밀리미터로 되돌릴 때 쓰는 자입니다.
 /// </summary>
-public sealed record FlatbedScanRegion(
-    string Id,
+/// <remarks>
+/// macOS <c>AppModel.flatbedPreviewScanArea</c> 자리입니다. 프리뷰를 찍을 때 스캐너에
+/// 보낸 영역을 그대로 들고 있다가, 사용자가 프리뷰 위에 그린 자리를 이 자로 재어
+/// 본 스캔 영역으로 바꿉니다.
+/// </remarks>
+public readonly record struct FlatbedPreviewArea(
     double OriginXmm,
     double OriginYmm,
     double WidthMm,
@@ -109,14 +112,79 @@ public sealed record FlatbedScanRegion(
         double.IsFinite(WidthMm) && double.IsFinite(HeightMm) &&
         OriginXmm >= 0.0 && OriginYmm >= 0.0 && WidthMm > 0.0 && HeightMm > 0.0;
 
-    public static FlatbedScanRegion Create(
-        double originXmm,
-        double originYmm,
-        double widthMm,
-        double heightMm) =>
-        new(Guid.NewGuid().ToString("D"), originXmm, originYmm, widthMm, heightMm);
+    public static FlatbedPreviewArea None => default;
 
-    /// <summary>플러그인에 넘길 스캔 영역입니다.</summary>
-    public ScannerPluginScanArea ToScanArea() =>
-        new(OriginXmm, OriginYmm, WidthMm, HeightMm);
+    public static FlatbedPreviewArea From(ScannerPluginScanArea area) =>
+        new(area.OriginXmm, area.OriginYmm, area.WidthMm, area.HeightMm);
+}
+
+/// <summary>
+/// 평판 프리뷰 위에서 한 프레임이 차지하는 자리입니다. 좌표는 <b>프리뷰 안의 비율</b>(0~1)
+/// 이며, 프리뷰 왼쪽 위가 원점입니다.
+/// </summary>
+/// <remarks>
+/// macOS <c>FlatbedScanRegion.unitRect</c> 와 같은 좌표계입니다. 밀리미터로 들고 있으면
+/// 프리뷰 그림 위에 그릴 때마다 프리뷰가 판의 어디를 담았는지를 되물어야 하고, 프리뷰
+/// 영역이 판 전체가 아닐 때 그린 자리와 스캔되는 자리가 어긋납니다.
+/// </remarks>
+public sealed record FlatbedScanRegion(
+    string Id,
+    double UnitX,
+    double UnitY,
+    double UnitWidth,
+    double UnitHeight)
+{
+    public bool IsValid =>
+        double.IsFinite(UnitX) && double.IsFinite(UnitY) &&
+        double.IsFinite(UnitWidth) && double.IsFinite(UnitHeight) &&
+        UnitX >= 0.0 && UnitY >= 0.0 && UnitWidth > 0.0 && UnitHeight > 0.0 &&
+        UnitX + UnitWidth <= 1.000_001 && UnitY + UnitHeight <= 1.000_001;
+
+    public double UnitMaxX => UnitX + UnitWidth;
+
+    public double UnitMaxY => UnitY + UnitHeight;
+
+    public static FlatbedScanRegion Create(
+        double unitX,
+        double unitY,
+        double unitWidth,
+        double unitHeight) =>
+        new(Guid.NewGuid().ToString("D"), unitX, unitY, unitWidth, unitHeight);
+
+    /// <summary>비율을 0~1 안으로 접습니다. 프리뷰 밖은 스캔할 수 없습니다.</summary>
+    public FlatbedScanRegion Clamped()
+    {
+        if (!double.IsFinite(UnitX) || !double.IsFinite(UnitY) ||
+            !double.IsFinite(UnitWidth) || !double.IsFinite(UnitHeight))
+        {
+            return this;
+        }
+        double width = Math.Clamp(UnitWidth, 0.0, 1.0);
+        double height = Math.Clamp(UnitHeight, 0.0, 1.0);
+        return this with
+        {
+            UnitX = Math.Clamp(UnitX, 0.0, 1.0 - width),
+            UnitY = Math.Clamp(UnitY, 0.0, 1.0 - height),
+            UnitWidth = width,
+            UnitHeight = height,
+        };
+    }
+
+    /// <summary>비율만큼 밉니다. 크기는 그대로입니다.</summary>
+    public FlatbedScanRegion OffsetBy(double deltaX, double deltaY) =>
+        (this with { UnitX = UnitX + deltaX, UnitY = UnitY + deltaY }).Clamped();
+
+    /// <summary>플러그인에 넘길 스캔 영역입니다. 프리뷰가 담은 영역을 자로 씁니다.</summary>
+    public ScannerPluginScanArea? ToScanArea(FlatbedPreviewArea previewArea)
+    {
+        if (!previewArea.IsValid || !IsValid)
+        {
+            return null;
+        }
+        return new ScannerPluginScanArea(
+            previewArea.OriginXmm + (UnitX * previewArea.WidthMm),
+            previewArea.OriginYmm + (UnitY * previewArea.HeightMm),
+            UnitWidth * previewArea.WidthMm,
+            UnitHeight * previewArea.HeightMm);
+    }
 }

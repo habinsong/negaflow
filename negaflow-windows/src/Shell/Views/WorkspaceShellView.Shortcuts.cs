@@ -28,24 +28,124 @@ public sealed partial class WorkspaceShellView
     /// 표시하면 안 됩니다. 조합 키가 붙은 단축키는 입력 중에도 살려 둡니다 — Ctrl+E 는 어디서
     /// 눌러도 내보내기입니다.
     /// </remarks>
+    /// <summary>
+    /// 창이 뜨자마자 단축키가 듣게 합니다.
+    /// </summary>
+    /// <remarks>
+    /// WinUI 의 키 이벤트는 <b>포커스가 있는 요소</b>에서 출발합니다. 창을 열었을 때 아무
+    /// 것도 포커스를 갖지 않으면 <c>PreviewKeyDown</c> 은 이 트리로 내려오지도 않아, 사용자는
+    /// "단축키가 안 먹는다" 고 느낍니다. 그래서 셸 자신이 먼저 포커스를 받습니다 — 탭 스톱을
+    /// 켜 두었으므로 사용자가 Tab 을 누르면 곧바로 다음 컨트롤로 넘어갑니다.
+    /// </remarks>
+    private void OnShellLoadedForShortcuts(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (FocusManager.GetFocusedElement(XamlRoot) is null)
+        {
+            _ = Focus(FocusState.Programmatic);
+        }
+        Trace($"shell loaded: focus={FocusManager.GetFocusedElement(XamlRoot)?.GetType().Name}");
+        if (keyFallbackInstalled)
+        {
+            return;
+        }
+        keyFallbackInstalled = true;
+        // 터널(PreviewKeyDown)은 포커스가 이 트리 안에 있을 때만 내려옵니다. 포커스가 메뉴
+        // 막대나 팝업처럼 다른 곳에 있으면 한 번도 오지 않습니다. 버블 단계에서 한 번 더
+        // 받아 두면 그 경우에도 단축키가 듣습니다 - 이미 처리된 이벤트는 건드리지 않으므로
+        // 두 번 실행되지 않습니다.
+        AddHandler(
+            UIElement.KeyDownEvent,
+            new KeyEventHandler(OnShellKeyDown),
+            handledEventsToo: false);
+    }
+
+    private bool keyFallbackInstalled;
+
+    private void OnShellKeyDown(object sender, KeyRoutedEventArgs args)
+    {
+        Trace($"bubble key={args.Key} handled={args.Handled}");
+        OnShellPreviewKeyDown(sender, args);
+    }
+
+    /// <summary>
+    /// 단축키 처리 흔적입니다. <c>NEGAFLOW_SHORTCUT_TRACE=1</c> 일 때만 남깁니다 —
+    /// "안 먹는다" 를 추측으로 고치지 않기 위해, 어느 단계에서 끊겼는지 파일로 봅니다.
+    /// </summary>
+    /// <remarks>
+    /// 늘 켭니다. 사람이 누르는 키는 초당 수천 번이 아니라 값이 싸고, 대신 "안 먹는다" 를
+    /// 추측 없이 가릅니다. 파일이 64KB 를 넘으면 앞을 버립니다.
+    /// </remarks>
+    private const bool TraceShortcuts = true;
+
+    /// <summary>다른 층에서도 같은 파일에 남깁니다.</summary>
+    internal static void TraceKey(string message) => Trace(message);
+
+    private static void Trace(string message)
+    {
+        try
+        {
+            string path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Negaflow", "Logs", "shortcut-trace.txt");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            if (File.Exists(path) && new FileInfo(path).Length > 64 * 1024)
+            {
+                File.Delete(path);
+            }
+            File.AppendAllText(
+                path,
+                $"{DateTimeOffset.Now:HH:mm:ss.fff} {message}{Environment.NewLine}");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            // 진단이 입력을 막아서는 안 됩니다.
+        }
+    }
+
+    /// <summary>
+    /// 창 뿌리가 받은 키를 넘겨받습니다.
+    /// </summary>
+    /// <remarks>
+    /// 포커스가 이 UserControl 안에 없으면 <c>PreviewKeyDown</c> 은 여기까지 내려오지
+    /// 않습니다(측정으로 확인). 그래서 창이 받아서 넘겨 줍니다 - 단축키는 포커스가 어디에
+    /// 있든 들어야 합니다.
+    /// </remarks>
+    internal void HandleWindowKey(KeyRoutedEventArgs args)
+    {
+        ArgumentNullException.ThrowIfNull(args);
+        OnShellPreviewKeyDown(this, args);
+    }
+
     private void OnShellPreviewKeyDown(object sender, KeyRoutedEventArgs args)
     {
         _ = sender;
+        Trace($"enter key={args.Key} handled={args.Handled}");
         if (workspaceState is null || args.Handled)
         {
+            Trace($"skip key={args.Key} handled={args.Handled} state={workspaceState is not null}");
             return;
         }
         WorkflowShortcutModifiers modifiers = PressedModifiers();
-        if (modifiers == WorkflowShortcutModifiers.None && IsTypingTarget(FocusManager.GetFocusedElement(XamlRoot)))
+        object? focused = FocusManager.GetFocusedElement(XamlRoot);
+        if (modifiers == WorkflowShortcutModifiers.None && IsTypingTarget(focused))
         {
+            Trace($"typing key={args.Key} focus={focused?.GetType().Name}");
             return;
         }
-        if (KeyName(args.Key) is not { } key ||
-            workspaceState.Current.Shortcuts.Resolve(key, modifiers) is not { } action)
+        if (KeyName(args.Key) is not { } key)
         {
+            Trace($"unmapped key={args.Key} modifiers={modifiers}");
+            return;
+        }
+        if (workspaceState.Current.Shortcuts.Resolve(key, modifiers) is not { } action)
+        {
+            Trace($"unbound key={key} modifiers={modifiers}");
             return;
         }
         args.Handled = Invoke(action);
+        Trace($"invoke key={key} modifiers={modifiers} action={action} handled={args.Handled}");
     }
 
     private static WorkflowShortcutModifiers PressedModifiers()

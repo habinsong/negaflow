@@ -285,8 +285,9 @@ int print_developed_png_success(
               << ",\"color_profile_bytes\":" << exported.info.color_profile_bytes
               << ",\"clipped_color_components\":"
               << exported.info.clipped_color_components
-              << ",\"structure_verified\":true,\"pixels_verified\":true,"
-                 "\"profile_verified\":true,\"published\":true,"
+              << ",\"structure_verified\":true,\"pixels_verified\":"
+              << (exported.info.pixels_verified ? "true" : "false")
+              << ",\"profile_verified\":true,\"published\":true,"
                  "\"publish_mode\":\"same_directory_create_new_move\"";
     print_pipeline_report_suffix(context);
     return 0;
@@ -319,7 +320,9 @@ int print_developed_tiff_success(
               << ",\"ifd_entry_count\":" << exported.info.ifd_entry_count
               << ",\"metadata_policy\":\"minimal\","
                  "\"structure_verified\":true,\"metadata_verified\":true,"
-                 "\"pixels_verified\":true,\"profile_verified\":true,"
+                 "\"pixels_verified\":"
+              << (exported.info.pixels_verified ? "true" : "false")
+              << ",\"profile_verified\":true,"
                  "\"published\":true,"
                  "\"publish_mode\":\"same_directory_create_new_move\"";
     print_pipeline_report_suffix(context);

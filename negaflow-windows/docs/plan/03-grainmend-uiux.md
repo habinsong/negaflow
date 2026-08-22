@@ -16,7 +16,7 @@ macOS 원본: `Sources/negaflowApp/Features/Defects/` (46개 파일, 6,417줄).
 
 ## 1. 인스펙터 카드 — 맞음
 
-스크린샷과 대조 완료. 도구 4개 + ↺, 검토 줄 없음. Windows 도 같습니다(`a611ebf` 에서
+스크린샷과 대조 완료. 도구 4개 + , 검토 줄 없음. Windows 도 같습니다(`a611ebf` 에서
 민감도·미세입자·제거·취소를 카드에서 캔버스 캡슐로 옮김).
 
 ## 2. 캔버스 캡슐 — `RegionDefectOverlay.swift` (302줄)
@@ -25,12 +25,12 @@ macOS 원본: `Sources/negaflowApp/Features/Defects/` (46개 파일, 6,417줄).
 
 ```
 ZStack {
-  RegionPreviewCanvas(...)          // 분류색 점
-  RegionROIGestureLayer(...)        // ROI 드래그 + 탭 토글
+  RegionPreviewCanvas(...) // 분류색 점
+  RegionROIGestureLayer(...) // ROI 드래그 + 탭 토글
   VStack {
-    controlBar                       // 위 가운데
+    controlBar // 위 가운데
     Spacer()
-    if defectActive && !isDetecting && !preview.isEmpty { classChipsBar }   // 아래 가운데
+    if defectActive && !isDetecting && !preview.isEmpty { classChipsBar } // 아래 가운데
   }.padding(.vertical, 12)
 }
 ```
@@ -55,10 +55,10 @@ ZStack {
 `detectSummary` 규칙(macOS 그대로, Windows 구현됨):
 
 ```
-automaticFalsePositiveRisk → automaticDefectFalsePositiveRiskStatus   ← Windows 에 아직 없음(01/2.4)
-total == 0                 → noDefectsStatus                          "결함 없음"
-excluded > 0               → defectsCountExcludedFormat                "결함 %d개 (제외 %d)"
-그 외                       → defectsCountFormat                       "결함 %d개"
+automaticFalsePositiveRisk → automaticDefectFalsePositiveRiskStatus ← Windows 에 아직 없음(01/2.4)
+total == 0 → noDefectsStatus "결함 없음"
+excluded > 0 → defectsCountExcludedFormat "결함 %d개 (제외 %d)"
+그 외 → defectsCountFormat "결함 %d개"
 ```
 
 ### 2.3 종류별 칩 (`DefectClassChip`) — 구현됨, 모양 확인 필요

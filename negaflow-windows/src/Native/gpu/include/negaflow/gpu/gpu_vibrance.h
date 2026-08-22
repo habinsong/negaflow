@@ -7,12 +7,12 @@
 // | 흐린 장면 vibrance | `ColorModel.swift` 의 `CIVibrance` | `imaging/muted_scene_vibrance.cpp` | `shaders/muted_scene_vibrance.hlsl` |
 // | 컬러 모델(우측 슬라이더) | 〃 + 온도·틴트·채도·원색 | `imaging/color_model.cpp` `apply_color_model` | `shaders/color_model.hlsl` |
 //
-// ☠️ **표는 한 벌만 올립니다.** 33³ × amount 판 6장 = 215,622 칸이고, 두 커널이 같은
-//    `GpuLookupTable` 을 공유합니다. 커널마다 올리면 1.7 MB 가 두 벌이 됩니다.
+// **표는 한 벌만 올립니다.** 33³ × amount 판 6장 = 215,622 칸이고, 두 커널이 같은
+// `GpuLookupTable` 을 공유합니다. 커널마다 올리면 1.7 MB 가 두 벌이 됩니다.
 //
-// ☠️ **amount 판 두 장의 선택은 CPU 의 `select_vibrance_planes` 가 합니다.**
-//    화소마다 같은 값이고, 두 곳에서 고르면 판이 어긋나는 순간 색이 통째로 달라집니다 —
-//    그때는 오차가 1e-5 가 아니라 0.0x 로 나옵니다.
+// **amount 판 두 장의 선택은 CPU 의 `select_vibrance_planes` 가 합니다.**
+// 화소마다 같은 값이고, 두 곳에서 고르면 판이 어긋나는 순간 색이 통째로 달라집니다 —
+// 그때는 오차가 1e-5 가 아니라 0.0x 로 나옵니다.
 
 #include "negaflow/gpu/gpu_lookup_table.h"
 #include "negaflow/gpu/gpu_pointwise.h"
@@ -76,4 +76,4 @@ private:
     GpuPointwiseKernel kernel_{};
 };
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

@@ -24,7 +24,7 @@ namespace {
     return source <= maximum ? source : maximum;
 }
 
-}  // namespace
+} // namespace
 
 void preview_fit_size(
     const std::uint32_t source_width,
@@ -53,18 +53,58 @@ void preview_fit_size(
     }
 }
 
+namespace {
+
+// `deferred` 가 이미 정수 경계로 풀어 둔 자르기입니다. 정규화 사각형을 다시 풀면 식이
+// 두 벌이 되므로 그 경계를 그대로 씁니다. 실패하면 폭 0 을 돌려줍니다.
+[[nodiscard]] negaflow::imaging::WorkingImage crop_working_image(
+    const negaflow::imaging::WorkingImage& source,
+    const std::uint32_t left,
+    const std::uint32_t top,
+    const std::uint32_t width,
+    const std::uint32_t height) noexcept {
+    negaflow::imaging::WorkingImage output{};
+    if (width == 0U || height == 0U || left + width > source.width ||
+        top + height > source.height) {
+        return output;
+    }
+    try {
+        output.width = width;
+        output.height = height;
+        output.stride_pixels = width;
+        output.pixels.resize(static_cast<std::size_t>(width) * height);
+    } catch (...) {
+        return negaflow::imaging::WorkingImage{};
+    }
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        const negaflow::core::Rgba32F* const row =
+            source.pixels.data() +
+            (static_cast<std::size_t>(y + top) * source.stride_pixels) + left;
+        std::copy_n(
+            row, width, output.pixels.data() + (static_cast<std::size_t>(y) * width));
+    }
+    return output;
+}
+
+} // namespace
+
 DevelopExportOutcome write_preview(
     const negaflow::imaging::WorkingImage& image,
     const PreviewTarget& target,
-    DevelopExportOutcome outcome) noexcept {
+    DevelopExportOutcome outcome,
+    const negaflow::imaging::ImageTransformGather* const deferred) noexcept {
     if (target.pixels == nullptr || target.maximum_width == 0U ||
         target.maximum_height == 0U) {
         return fail(DevelopExportStage::output, "invalid_preview_target");
     }
 
-    const std::uint32_t source_width = image.width;
-    const std::uint32_t source_height = image.height;
-    if (source_width == 0U || source_height == 0U || image.stride_pixels < source_width) {
+    // 미룬 기하 변환이 있으면 상자 맞춤은 **변환 뒤 크기**로 합니다.
+    const std::uint32_t source_width =
+        deferred != nullptr ? deferred->output_width : image.width;
+    const std::uint32_t source_height =
+        deferred != nullptr ? deferred->output_height : image.height;
+    if (source_width == 0U || source_height == 0U || image.width == 0U ||
+        image.height == 0U || image.stride_pixels < image.width) {
         return fail(DevelopExportStage::output, "empty_preview_source");
     }
 
@@ -98,12 +138,13 @@ DevelopExportOutcome write_preview(
     if (width == source_width && height == source_height && !target.clipping_overlay) {
         if (GpuAccelerator::shared().try_encode_preview_bgra(
                 reinterpret_cast<const float*>(image.pixels.data()),
-                source_width,
-                source_height,
+                image.width,
+                image.height,
                 target.pixels,
                 width * 4U,
                 proof.scale.data(),
-                proof.bias.data())) {
+                proof.bias.data(),
+                deferred)) {
             outcome.image_width = width;
             outcome.image_height = height;
             outcome.output_file_bytes = required;
@@ -114,6 +155,33 @@ DevelopExportOutcome write_preview(
     }
     // GPU 경로가 아니면 호스트가 최신이어야 CPU 상자 평균이 옛 화소를 쓰지 않습니다.
     GpuAccelerator::shared().flush_resident();
+
+    // 미룬 변환을 GPU 가 못 받았습니다. 여기서 CPU 로 걸어 줘야 자른 자리가 화면에
+    // 나옵니다 — 안 걸면 자르기가 통째로 사라집니다. 드문 갈래이므로 사본 한 장을
+    // 감수합니다.
+    if (deferred != nullptr) {
+        negaflow::imaging::ImageTransformParameters parameters{};
+        parameters.rotation = deferred->rotation;
+        parameters.flip_horizontal = deferred->flip_horizontal;
+        parameters.flip_vertical = deferred->flip_vertical;
+        parameters.has_crop = false;
+        auto transformed = negaflow::imaging::apply_image_transform(image, parameters);
+        if (transformed.status != negaflow::imaging::ImageTransformStatus::ok) {
+            return fail(
+                DevelopExportStage::output,
+                negaflow::imaging::image_transform_status_name(transformed.status));
+        }
+        negaflow::imaging::WorkingImage cropped = crop_working_image(
+            transformed.image,
+            deferred->crop_left,
+            deferred->crop_top,
+            deferred->output_width,
+            deferred->output_height);
+        if (cropped.width == 0U) {
+            return fail(DevelopExportStage::output, "empty_preview_source");
+        }
+        return write_preview(cropped, target, outcome, nullptr);
+    }
 
     // Converted straight from the working image rather than through a full-resolution
     // 16-bit copy. On a 17 MP scan that copy was about 104 MB allocated only to be
@@ -243,4 +311,4 @@ DevelopExportOutcome write_preview(
     return outcome;
 }
 
-}  // namespace negaflow::pipeline::develop_export_detail
+} // namespace negaflow::pipeline::develop_export_detail

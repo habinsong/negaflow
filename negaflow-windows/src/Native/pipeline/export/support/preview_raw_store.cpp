@@ -39,10 +39,9 @@ struct PreviewRawEntry final {
 std::vector<PreviewRawEntry> g_entries{};
 std::mutex g_mutex{};
 
-// 예산은 한 번만 묻습니다. 설치 메모리는 실행 중에 바뀌지 않습니다.
 [[nodiscard]] std::uint64_t budget_bytes() noexcept {
-    static const std::uint64_t budget = preview_proxy_budget_bytes();
-    return budget;
+    // 설치 메모리는 고정이지만 Windows 저메모리 상태는 실행 중 바뀝니다.
+    return preview_proxy_budget_bytes();
 }
 
 // macOS `trimDeveloped` — 한도를 넘으면 **오래된 것부터** 내려놓습니다.
@@ -99,7 +98,8 @@ bool same_preview_raw_key(
         left.base_mode != right.base_mode ||
         left.film_type != right.film_type ||
         left.polarity != right.polarity ||
-        left.has_preset != right.has_preset) {
+        left.has_preset != right.has_preset ||
+        left.defect_recipe_sha256 != right.defect_recipe_sha256) {
         return false;
     }
     if (!left.has_preset) {
@@ -115,6 +115,7 @@ bool preview_raw_take_settled(
     PreviewRawImage& image,
     PreviewProxyHint& hint) noexcept {
     const std::lock_guard<std::mutex> guard{g_mutex};
+    trim_locked();
     PreviewRawEntry* const entry = find_locked(key);
     if (entry == nullptr || entry->settled.image == nullptr) {
         return false;
@@ -131,6 +132,7 @@ bool preview_raw_take_interactive(
     PreviewRawImage& image,
     PreviewProxyHint& hint) noexcept {
     const std::lock_guard<std::mutex> guard{g_mutex};
+    trim_locked();
     PreviewRawEntry* const entry = find_locked(key);
     if (entry == nullptr || entry->interactive.image == nullptr ||
         entry->interactive.box_width != box_width ||

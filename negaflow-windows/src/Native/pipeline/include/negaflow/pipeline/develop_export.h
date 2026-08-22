@@ -95,6 +95,9 @@ struct DevelopExportRequest final {
     negaflow::imaging::WorkingToneAdjustParameters tone{};
     negaflow::imaging::WorkingFilmLookParameters film_look{};
     DefectRecipeParameters defect_recipe{};
+    // Present only when the ordered Defects payload is non-empty. It keys rebuildable
+    // cleaned/proxy caches; the edit payload above remains the source of rendered pixels.
+    std::optional<std::array<std::uint8_t, 32U>> defect_recipe_sha256{};
     // Present only for source-bound Defects recipes. Ordinary renders do not hash
     // the source and retain the default low-I/O path.
     std::optional<ExpectedSourceIdentity> expected_defect_source_identity{};
@@ -126,6 +129,10 @@ struct DevelopExportRequest final {
     // they never upscale and do not alter previews or GrainMend detection.
     std::uint32_t output_long_edge{0U};
     std::uint32_t rows_per_copy{64U};
+    // Background developed-cache generation writes the final BGRA result to disk and
+    // must not also retain a full Rgba32F proxy for every catalog frame. Foreground
+    // previews keep the macOS-compatible raw reuse path by default.
+    bool retain_preview_raw{true};
 };
 
 // Cooperative cancellation and progress for one develop run.
@@ -233,6 +240,10 @@ struct DevelopExportOutcome final {
     bool output_sharpening_applied{false};
     std::uint64_t output_file_bytes{0U};
     std::array<float, 3> applied_dmin{};
+    // 개발자 디버그 화면이 읽는 지표입니다. 네거티브 반전이 돈 호출에서만 채워집니다.
+    std::array<float, 3> dmax_normalized{};
+    std::array<float, 3> black_input{};
+    bool debug_metrics_present{false};
     DevelopBaseSource base_source{DevelopBaseSource::manual};
     std::optional<negaflow::imaging::FilmBaseMeasurementMethod> measurement_method{};
     std::optional<negaflow::imaging::FilmBaseMeasurementDiagnostics> measurement_diagnostics{};

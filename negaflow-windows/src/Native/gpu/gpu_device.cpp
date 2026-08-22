@@ -128,6 +128,29 @@ struct CreatedDevice final {
     return options.ComputeShaders_Plus_RawAndStructuredBuffers_Via_Shader_4_x != FALSE;
 }
 
+[[nodiscard]] IDXGIAdapter3* adapter3_for_device(ID3D11Device* const device) noexcept {
+    if (device == nullptr) {
+        return nullptr;
+    }
+    IDXGIDevice* dxgi_device = nullptr;
+    if (FAILED(device->QueryInterface(
+            __uuidof(IDXGIDevice), reinterpret_cast<void**>(&dxgi_device))) ||
+        dxgi_device == nullptr) {
+        return nullptr;
+    }
+    IDXGIAdapter* adapter = nullptr;
+    const HRESULT got_adapter = dxgi_device->GetAdapter(&adapter);
+    dxgi_device->Release();
+    if (FAILED(got_adapter) || adapter == nullptr) {
+        return nullptr;
+    }
+    IDXGIAdapter3* adapter3 = nullptr;
+    (void)adapter->QueryInterface(
+        __uuidof(IDXGIAdapter3), reinterpret_cast<void**>(&adapter3));
+    adapter->Release();
+    return adapter3;
+}
+
 // DXGI 어댑터를 훑습니다. `IDXGIFactory6` 가 있으면 OS 의 고성능 선호 순서를 그대로 받고,
 // 없으면 열거 순서를 씁니다. **어느 경로에서도 벤더로 거르지 않습니다.**
 [[nodiscard]] bool create_hardware(CreatedDevice& created, GpuAdapterInfo& info) noexcept {
@@ -216,10 +239,12 @@ GpuDevice::~GpuDevice() { reset(); }
 GpuDevice::GpuDevice(GpuDevice&& other) noexcept
     : device_(other.device_),
       context_(other.context_),
+      adapter3_(other.adapter3_),
       capability_(other.capability_),
       status_(other.status_) {
     other.device_ = nullptr;
     other.context_ = nullptr;
+    other.adapter3_ = nullptr;
     other.capability_ = GpuCapability{};
     other.status_ = GpuDeviceStatus::dxgi_unavailable;
 }
@@ -229,10 +254,12 @@ GpuDevice& GpuDevice::operator=(GpuDevice&& other) noexcept {
         reset();
         device_ = other.device_;
         context_ = other.context_;
+        adapter3_ = other.adapter3_;
         capability_ = other.capability_;
         status_ = other.status_;
         other.device_ = nullptr;
         other.context_ = nullptr;
+        other.adapter3_ = nullptr;
         other.capability_ = GpuCapability{};
         other.status_ = GpuDeviceStatus::dxgi_unavailable;
     }
@@ -248,6 +275,10 @@ void GpuDevice::reset() noexcept {
     if (device_ != nullptr) {
         device_->Release();
         device_ = nullptr;
+    }
+    if (adapter3_ != nullptr) {
+        adapter3_->Release();
+        adapter3_ = nullptr;
     }
     capability_ = GpuCapability{};
     status_ = GpuDeviceStatus::dxgi_unavailable;
@@ -283,6 +314,7 @@ GpuDevice GpuDevice::create(const GpuDevicePreference preference) noexcept {
 
     made.device_ = created.device;
     made.context_ = created.context;
+    made.adapter3_ = adapter3_for_device(created.device);
     made.capability_.driver = kind;
     made.capability_.feature_level = static_cast<std::uint32_t>(created.level);
     made.capability_.compute_shaders = true;
@@ -297,6 +329,44 @@ const GpuDevice& GpuDevice::shared() noexcept {
     // 실패해도 다시 시도하지 않습니다 — 장치가 없는 기계에서 매 프레임 수십 ms 를 태우지 않기 위해서입니다.
     static GpuDevice instance = GpuDevice::create(GpuDevicePreference::automatic);
     return instance;
+}
+
+bool GpuDevice::query_local_video_memory_info(GpuVideoMemoryInfo& info) const noexcept {
+    info = GpuVideoMemoryInfo{};
+    if (!is_usable() || adapter3_ == nullptr) {
+        return false;
+    }
+
+    DXGI_QUERY_VIDEO_MEMORY_INFO queried{};
+    const HRESULT result = adapter3_->QueryVideoMemoryInfo(
+        0U, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &queried);
+    if (FAILED(result) || queried.Budget == 0U) {
+        return false;
+    }
+
+    info.budget = queried.Budget;
+    info.current_usage = queried.CurrentUsage;
+    info.available_for_reservation = queried.AvailableForReservation;
+    info.current_reservation = queried.CurrentReservation;
+    return true;
+}
+
+bool GpuDevice::trim_idle() const noexcept {
+    if (!is_usable() || context_ == nullptr || device_ == nullptr) {
+        return false;
+    }
+    IDXGIDevice3* dxgi_device = nullptr;
+    if (FAILED(device_->QueryInterface(
+            __uuidof(IDXGIDevice3),
+            reinterpret_cast<void**>(&dxgi_device))) ||
+        dxgi_device == nullptr) {
+        return false;
+    }
+    context_->ClearState();
+    context_->Flush();
+    dxgi_device->Trim();
+    dxgi_device->Release();
+    return true;
 }
 
 }  // namespace negaflow::gpu

@@ -231,4 +231,51 @@ void test_v34_contract() {
         "v34 rejects an invalid alpha flag");
 }
 
+void test_v35_contract() {
+    expect(sizeof(nf_develop_export_request_v35) == 5120U,
+           "v35 request layout is fixed");
+    expect(offsetof(nf_develop_export_request_v35, defect_recipe_sha256) == 5104U,
+           "v35 recipe identity offset is fixed");
+
+    nf_develop_export_request_v35 request;
+    std::memset(&request, 0, sizeof(request));
+    request.v34.v33.v32.v31.v30 = make_request_v30(L"a.tif", L"b.tif");
+    request.v34.v33.v32.v31.output_bit_depth = 16U;
+    auto& base = request.v34.v33.v32.v31.v30.v29.v28.v27.v26.v25.v24.v21.v20.v19.v18
+                     .v17.v16.v15.v14.v13.v12.v11.v10.v9.v8;
+    base.struct_size = static_cast<std::uint32_t>(sizeof(request));
+    base.output_format = NF_EXPORT_FORMAT_TIFF16;
+    nf_develop_export_result_v3 result = make_result_v3();
+    expect(
+        nf_develop_export_v35(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v35 defect-free request reaches source observation");
+
+    std::array<std::uint8_t, 32U> digest{};
+    request.defect_recipe_sha256 = digest.data();
+    request.defect_recipe_sha256_size = static_cast<std::uint32_t>(digest.size());
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v35(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_defect_recipe_identity") == 0,
+        "v35 rejects a recipe identity without a recipe");
+
+    request.defect_recipe_sha256 = nullptr;
+    request.defect_recipe_sha256_size = 0U;
+    std::array<std::uint8_t, 16U> pixels{};
+    result = make_result_v3();
+    expect(
+        nf_develop_preview_background_v1(
+            &request,
+            2U,
+            2U,
+            pixels.data(),
+            static_cast<std::uint32_t>(pixels.size()),
+            nullptr,
+            &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "background preview entry reaches source observation without a raw-cache flag in recipe");
+}
+
 }  // namespace negaflow::develop_export_abi_tests

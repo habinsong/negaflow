@@ -99,6 +99,9 @@ negaflow::imaging::WorkingImage make_image() {
 void test_round_trip_and_publish(const std::filesystem::path& root) {
     const std::filesystem::path destination = root / L"round-trip.tif";
     negaflow::output::WicTiffExportLimits limits{};
+    // 인코더가 쓴 화소가 의도한 화소와 같다는 증명은 여기서 듭니다 —
+    // 내보내기 경로는 macOS 처럼 이 대조를 하지 않습니다.
+    limits.verify_pixel_readback = true;
     limits.write_buffer_bytes = 18U;
     limits.readback_buffer_bytes = 18U;
     const auto result = negaflow::output::export_working_to_srgb16_tiff(
@@ -165,6 +168,9 @@ void test_compression_and_dpi(const std::filesystem::path& root) {
     }};
     for (const CompressionCase& entry : cases) {
         negaflow::output::WicTiffExportLimits limits{};
+        // 인코더가 쓴 화소가 의도한 화소와 같다는 증명은 여기서 듭니다 —
+        // 내보내기 경로는 macOS 처럼 이 대조를 하지 않습니다.
+        limits.verify_pixel_readback = true;
         limits.compression = entry.requested;
         limits.output_dpi = 300U;
         const auto result = negaflow::output::export_working_to_srgb16_tiff(
@@ -188,6 +194,9 @@ void test_failures_leave_no_file(const std::filesystem::path& root) {
     image.pixels[0].alpha = 0.5F;
     const std::filesystem::path alpha_destination = root / L"alpha-preserved.tif";
     negaflow::output::WicTiffExportLimits alpha_limits{};
+    // 인코더가 쓴 화소가 의도한 화소와 같다는 증명은 여기서 듭니다 —
+    // 내보내기 경로는 macOS 처럼 이 대조를 하지 않습니다.
+    alpha_limits.verify_pixel_readback = true;
     alpha_limits.conversion.preserve_alpha = true;
     const auto alpha_result = negaflow::output::export_working_to_srgb16_tiff(
         image, alpha_destination, alpha_limits);
@@ -223,6 +232,9 @@ void test_failures_leave_no_file(const std::filesystem::path& root) {
         "8-bit TIFF declares one unassociated ExtraSamples alpha channel");
 
     negaflow::output::WicTiffExportLimits limits{};
+    // 인코더가 쓴 화소가 의도한 화소와 같다는 증명은 여기서 듭니다 —
+    // 내보내기 경로는 macOS 처럼 이 대조를 하지 않습니다.
+    limits.verify_pixel_readback = true;
     limits.max_artifact_bytes = 64U;
     const std::filesystem::path artifact_destination = root / L"artifact-limit.tif";
     const auto artifact_result = negaflow::output::export_working_to_srgb16_tiff(

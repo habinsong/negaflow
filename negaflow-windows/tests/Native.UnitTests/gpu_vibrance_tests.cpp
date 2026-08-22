@@ -1,12 +1,12 @@
 // CPU/GPU 동치 시험 — 실측 `CIVibrance` 표를 쓰는 커널 둘.
 //
-// ☠️ **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `apply_muted_scene_vibrance` ·
-//    `apply_color_model` 을 그대로 부르고 그 결과와 겨룹니다.
+// **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `apply_muted_scene_vibrance` ·
+// `apply_color_model` 을 그대로 부르고 그 결과와 겨룹니다.
 //
-// ☠️ **amount 판이 어긋나면 오차가 1e-5 가 아니라 0.0x 로 나옵니다.** 표는 amount 판
-//    여섯 장이고 화소마다 두 장을 섞습니다. 판 선택을 GPU 가 따로 하면 어느 구간에서
-//    한 장씩 밀리고, 그러면 색이 통째로 달라집니다. 그래서 amount 를 판 경계
-//    (−0.05·0.05·0.25·0.50·0.60·0.80) 안팎으로 여러 개 시험합니다.
+// **amount 판이 어긋나면 오차가 1e-5 가 아니라 0.0x 로 나옵니다.** 표는 amount 판
+// 여섯 장이고 화소마다 두 장을 섞습니다. 판 선택을 GPU 가 따로 하면 어느 구간에서
+// 한 장씩 밀리고, 그러면 색이 통째로 달라집니다. 그래서 amount 를 판 경계
+// (−0.05·0.05·0.25·0.50·0.60·0.80) 안팎으로 여러 개 시험합니다.
 
 #include <algorithm>
 #include <cmath>
@@ -241,7 +241,7 @@ void run_all(const GpuDevice& device, const char* const label) {
     color_model_matches_cpu(device, table, label, below, "color model (below threshold)");
 }
 
-}  // namespace
+} // namespace
 
 int main() {
     const GpuDevice warp = GpuDevice::create(GpuDevicePreference::warp_only);

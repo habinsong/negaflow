@@ -1,9 +1,9 @@
 // TextureStage 그레인 — macOS `filmGrain` (`ChromabaseMetalKernels.swift:281`).
 // CPU 판 : `imaging/texture_stage_effects.cpp` `apply_grain`
 //
-// ☠️ 맞춰야 할 상대는 Apple `CIRandomGenerator` 가 아니라 Windows CPU 좌표 해시입니다.
-//    해시·`>> 8`·16777215 나눗셈은 uint32 이라 **비트 단위로 같아야** 합니다.
-//    루마·smoothstep·클램프는 부동소수라 마지막 비트가 갈릴 수 있습니다.
+// 맞춰야 할 상대는 Apple `CIRandomGenerator` 가 아니라 Windows CPU 좌표 해시입니다.
+// 해시·`>> 8`·16777215 나눗셈은 uint32 이라 **비트 단위로 같아야** 합니다.
+// 루마·smoothstep·클램프는 부동소수라 마지막 비트가 갈릴 수 있습니다.
 
 #include "tone_shared.hlsli"
 

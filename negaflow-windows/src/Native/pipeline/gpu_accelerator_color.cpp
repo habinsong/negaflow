@@ -6,7 +6,7 @@
 // (`gpu_accelerator_film_look.cpp`)이 이미 각자 자리를 채웠고, 500줄 규칙이 있습니다.
 // 이 둘은 **같은 표를 나눠 쓰는** 한 묶음이라 같은 자리에 둡니다.
 //
-// ☠️ 둘 다 **근사**입니다. 호출부가 `ApproximateAcceleratorScope` 안에서만 부릅니다.
+// 둘 다 **근사**입니다. 호출부가 `ApproximateAcceleratorScope` 안에서만 부릅니다.
 
 #include "gpu_accelerator_state.h"
 
@@ -300,7 +300,7 @@ namespace {
     return true;
 }
 
-}  // namespace
+} // namespace
 
 bool GpuAccelerator::apply_mip_halve_levels(
     const float* const source,
@@ -377,4 +377,4 @@ bool GpuAccelerator::apply_mip_halve_levels(
     return true;
 }
 
-}  // namespace negaflow::pipeline
+} // namespace negaflow::pipeline

@@ -18,17 +18,17 @@ public sealed class DefectLayerRowView
     /// <summary>macOS <c>eye.slash</c> — Segoe Fluent Hide.</summary>
     private const string EyeSlashGlyph = "";
 
-    /// <summary>macOS <c>paintbrush.pointed.fill</c> — Segoe Fluent Edit.</summary>
-    private const string BrushGlyph = "";
+    /// <summary>macOS <c>paintbrush.pointed.fill</c> — 직접 그린 붓.</summary>
+    private const VectorIconKind BrushIcon = VectorIconKind.Paintbrush;
 
-    /// <summary>macOS <c>rectangle.on.rectangle</c> — Segoe Fluent Copy.</summary>
-    private const string CloneGlyph = "";
+    /// <summary>macOS <c>rectangle.on.rectangle</c> — 직접 그린 겹친 사각형.</summary>
+    private const VectorIconKind CloneIcon = VectorIconKind.CloneStamp;
 
     /// <summary>
-    /// macOS <c>scope</c> — 자동·가이드·IR 이 모두 이것입니다. GrainMend 카드 머리와 같은
-    /// 글리프를 씁니다. 이 줄들이 곧 그 카드가 찾아낸 것이기 때문입니다.
+    /// macOS <c>scope</c> — 자동·가이드·IR 이 모두 이것입니다. Segoe 에는 조준 모양이
+    /// 없어 자르기 표식을 대신 쓰고 있었습니다. 직접 그린 조준으로 바꿨습니다.
     /// </summary>
-    private const string RegionGlyph = "";
+    private const VectorIconKind RegionIcon = VectorIconKind.Scope;
 
     /// <summary>macOS <c>rectangle.dashed</c> — Segoe Fluent SelectAll.</summary>
     private const string MaskGlyph = "";
@@ -52,11 +52,11 @@ public sealed class DefectLayerRowView
         EnabledTooltip = row.Enabled ? text.DisableLayer : text.EnableLayer;
         MaskTooltip = row.MaskShown ? text.HideMask : text.ShowMask;
         DeleteTooltip = text.DeleteLayer;
-        KindGlyph = row.Icon switch
+        KindIcon = row.Icon switch
         {
-            DefectLayerIcon.Brush => BrushGlyph,
-            DefectLayerIcon.Clone => CloneGlyph,
-            _ => RegionGlyph,
+            DefectLayerIcon.Brush => BrushIcon,
+            DefectLayerIcon.Clone => CloneIcon,
+            _ => RegionIcon,
         };
         // macOS: .opacity(item.enabled ? 1 : 0.55)
         RowOpacity = row.Enabled ? 1.0 : 0.55;
@@ -85,7 +85,7 @@ public sealed class DefectLayerRowView
 
     public string EnabledGlyph { get; }
 
-    public string KindGlyph { get; }
+    public VectorIconKind KindIcon { get; }
 
     public string MaskGlyphValue => MaskGlyph;
 

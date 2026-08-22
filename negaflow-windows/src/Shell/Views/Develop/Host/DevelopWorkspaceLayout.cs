@@ -34,13 +34,23 @@ internal sealed class DevelopWorkspaceLayout
         view.Filmstrip.Visibility = preferences.IsFilmstripVisible ? Visibility.Visible : Visibility.Collapsed;
         SynchronizeWidths(preferences);
         view.LeftPanel.SynchronizeTab(preferences.SelectedDevelopSidebarTab);
-        if (view.LeftPanel.ExportPanel.Settings != preferences.Export ||
-            view.LeftPanel.ExportPanel.QuickSettings != preferences.QuickExport ||
+        // macOS: `if model.developerMode { debugSection }`
+        view.Adjustments.SetDeveloperMode(preferences.DeveloperMode);
+        view.PreviewCanvas.CanvasBackgroundPicked ??= view.workspaceState is { } canvasState
+            ? canvasState.SetCanvasBackground
+            : null;
+        view.PreviewCanvas.ApplyCanvasBackground(preferences.CanvasBackground);
+        // 폴더를 따로 고르지 않았으면 디스크 탭의 자리를 씁니다 — 빈 경로로 내보내면
+        // 파일이 어디에도 남지 않습니다.
+        ExportSettings export = preferences.ResolvedExport;
+        QuickExportSettings quick = preferences.ResolvedQuickExport;
+        if (view.LeftPanel.ExportPanel.Settings != export ||
+            view.LeftPanel.ExportPanel.QuickSettings != quick ||
             view.LeftPanel.ExportPanel.Recipes != preferences.ExportRecipes)
         {
             view.LeftPanel.ExportPanel.ApplyPreferences(
-                preferences.Export,
-                preferences.QuickExport,
+                export,
+                quick,
                 preferences.ExportRecipes);
         }
 

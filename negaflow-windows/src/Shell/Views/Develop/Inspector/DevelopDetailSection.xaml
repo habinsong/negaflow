@@ -37,7 +37,11 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <FontIcon Grid.Column="0" Width="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE7C4;" />
+                        <!--
+                            macOS detailSection 은 `camera.macro` 입니다 - 꽃잎 모양이지
+                            반짝이가 아닙니다. Segoe 에 같은 뜻이 없어 직접 그린 것을 씁니다.
+                        -->
+                        <controls:VectorIcon Grid.Column="0" Width="20" Kind="CameraMacro" IconSize="18" />
                         <TextBlock x:Name="DetailAndEffectsSectionTitleText" Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
                         <FontIcon x:Name="DetailAndEffectsChevron" Grid.Column="2" Margin="8,0,0,0" FontSize="12" Glyph="&#xE76C;" />
                     </Grid>

@@ -164,7 +164,7 @@ internal sealed class DevelopExportRunner
     /// 전부가 나갑니다.
     /// </para>
     /// <para>
-    /// ☠️ 이 함수가 없어서 <c>RunQuickExport</c> 대리자를 꽂지 않은 화면 — <b>인화뷰 좌측
+    /// 이 함수가 없어서 <c>RunQuickExport</c> 대리자를 꽂지 않은 화면 — <b>인화뷰 좌측
     /// 내보내기 탭</b> — 의 빠른 내보내기 단추는 눌러도 아무 일이 없었습니다. 기본 동작을
     /// 패널이 스스로 들고 있어야 두 화면이 같이 삽니다.
     /// </para>

@@ -1,10 +1,10 @@
-> # ☠️ 하드코딩 · 가짜 구현 · 창작 · 병신 백엔드 · 병신 프론트엔드 = 죽음 ☠️
+> # 하드코딩 · 가짜 구현 · 창작 · 병신 백엔드 · 병신 프론트엔드 = 죽음
 >
-> **🔬 추측·가설 금지.** "냄새난다" 고 덮지 말고 **냄새의 원인을 찾아 없애십시오.**
+> ** 추측·가설 금지.** "냄새난다" 고 덮지 말고 **냄새의 원인을 찾아 없애십시오.**
 > 재현하고, 스택을 잡고, 계측해서 원인을 **확정**한 뒤에 고칩니다.
 > 원인을 못 잡았으면 **"못 잡았다" 고 적으십시오** — 추측으로 고친 것은 다음 사람의 함정입니다.
 >
-> **🌐 모르면 웹 검색을 적극적으로** 하십시오 — 특히 GPU·최적화·UI/UX 구현. 찾은 것은 출처를 남기십시오.
+> ** 모르면 웹 검색을 적극적으로** 하십시오 — 특히 GPU·최적화·UI/UX 구현. 찾은 것은 출처를 남기십시오.
 >
 > **백엔드**: macOS Swift 파일을 **먼저 열고** 코드를 1:1 로 그대로 옮깁니다.
 > 상수 하나, 임계 하나, 게이트 순서 하나도 지어내지 마십시오.
@@ -153,7 +153,7 @@ macOS `Film/` 4파일 + `ChromabaseEngine+NegativePipeline.resolveFilmBase` +
 ```cpp
 const double candidate_peak = floor * 10.0;
 if (selected_index == 0U && candidate_peak > 0.0 && selected_p75 < candidate_peak * 0.5) {
-    return std::nullopt;   // ← macOS 에 이런 판정이 없습니다
+    return std::nullopt; // ← macOS 에 이런 판정이 없습니다
 }
 ```
 
@@ -179,7 +179,7 @@ macOS `connectedBaseComponent` 가 nil 을 내는 조건은 **① 셀 0개 ② �
 
 ```bash
 negaflow-cli --auto-base-probe <source.tiff> [color|bw]
-NEGA_DEBUG=1 negaflow-cli --auto-base-probe <source.tiff>   # 성분 목록까지
+NEGA_DEBUG=1 negaflow-cli --auto-base-probe <source.tiff> # 성분 목록까지
 ```
 
 ### C1.2 필름 베이스 **UI/UX** 대조 — `BaseControlSection.swift` ↔ `DevelopBaseCard.xaml`
@@ -485,10 +485,10 @@ macOS `Features/Library/Views/LibraryFolderDevelopmentControls.swift` **224줄**
 Windows `Views/Library/Defaults/LibraryDevelopDefaultsPanel.xaml` 의 요소 전부:
 
 ```
-DevelopDefaultsText  DevelopProcessLabel  DevelopProcessSelector
-DevelopTargetLabel   DevelopTargetBar
-DevelopFilmProfileLabel  DevelopFilmProfileSelector
-DevelopLookLabel         DevelopLookSelector
+DevelopDefaultsText DevelopProcessLabel DevelopProcessSelector
+DevelopTargetLabel DevelopTargetBar
+DevelopFilmProfileLabel DevelopFilmProfileSelector
+DevelopLookLabel DevelopLookSelector
 ```
 
 **적용 단추가 없습니다.** `ApplyButton`·`applyLibraryFolder`·`ApplyToFolder` 히트 0
@@ -579,7 +579,7 @@ C++ 는 선언의 **역순**으로 지웁니다. 상주 범위가 먼저 죽으�
 
 **재현으로 확인:** 같은 조작 160회 + UIA 토글 24회, 죽지 않음. `native-crash.txt` 새 줄 없음.
 
-### J2.1 ☠️ 그 고침은 **절반이었습니다** (같은 날 다시 죽음)
+### J2.1 그 고침은 **절반이었습니다** (같은 날 다시 죽음)
 
 현상 좌측탭에서 타깃(MAIN/HS/SP/F135/HR)을 잇달아 누르니 **또 죽었습니다.** 이번에는
 `crash_log.cpp` 가 남겼고, `symbolize-rva.ps1` 로 스택 전체를 되돌렸습니다:
@@ -726,9 +726,9 @@ Windows 이벤트 로그 `Application Error`:
 `+0xf4969` 를 `dumpbin /disasm` 으로 풀었습니다:
 
 ```
-sub rsp,28h ; call ... ; mov ecx,16h ; call raise      ← SIGABRT
-mov ecx,17h ; call IsProcessorFeaturePresent           ← PF_FASTFAIL_AVAILABLE
-mov ecx,7   ; int 29h                                  ← __fastfail(FAST_FAIL_FATAL_APP_EXIT)
+sub rsp,28h ; call ... ; mov ecx,16h ; call raise ← SIGABRT
+mov ecx,17h ; call IsProcessorFeaturePresent ← PF_FASTFAIL_AVAILABLE
+mov ecx,7 ; int 29h ← __fastfail(FAST_FAIL_FATAL_APP_EXIT)
 ```
 
 **CRT `abort()`** 입니다. 곧 `noexcept` 함수에서 예외가 새어 `std::terminate` 로 간 것입니다.

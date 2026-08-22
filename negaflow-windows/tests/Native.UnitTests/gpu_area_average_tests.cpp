@@ -1,8 +1,8 @@
 // CPU/GPU 동치 — CIAreaAverage 대응 면적 평균.
 //
-// ☠️ 참조를 옮겨 적지 않습니다. CPU 는 스코프 밖 `area_average`,
-//    GPU 는 `GpuAccelerator::apply_area_average` 가 true 일 때만 겨룹니다.
-//    제품 경로는 스코프 안에서 같은 `area_average` 를 부릅니다.
+// 참조를 옮겨 적지 않습니다. CPU 는 스코프 밖 `area_average`,
+// GPU 는 `GpuAccelerator::apply_area_average` 가 true 일 때만 겨룹니다.
+// 제품 경로는 스코프 안에서 같은 `area_average` 를 부릅니다.
 
 #include <algorithm>
 #include <cmath>
@@ -76,7 +76,7 @@ void compare_mean(
     }
 }
 
-}  // namespace
+} // namespace
 
 int main() {
     _putenv_s("NEGA_GPU_AREA_AVERAGE", "1");

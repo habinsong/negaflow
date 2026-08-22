@@ -239,6 +239,36 @@ internal static partial class NativeDevelopRun
         NativeDevelopRunStateV1* runState,
         NativeDevelopExportResultV3* result);
 
+    [LibraryImport(LibraryName, EntryPoint = "nf_develop_export_v35")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_develop_export_v35(
+        NativeDevelopExportRequestV35* request,
+        NativeDevelopRunStateV1* runState,
+        NativeDevelopExportResultV3* result);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_develop_preview_v35")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_develop_preview_v35(
+        NativeDevelopExportRequestV35* request,
+        NativeSoftProofV1* softProof,
+        uint maximumWidth,
+        uint maximumHeight,
+        byte* pixels,
+        uint pixelCapacityBytes,
+        NativeDevelopRunStateV1* runState,
+        NativeDevelopExportResultV3* result);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_develop_preview_background_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_develop_preview_background_v1(
+        NativeDevelopExportRequestV35* request,
+        uint maximumWidth,
+        uint maximumHeight,
+        byte* pixels,
+        uint pixelCapacityBytes,
+        NativeDevelopRunStateV1* runState,
+        NativeDevelopExportResultV3* result);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_develop_preview_v32")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static unsafe partial uint nf_develop_preview_v32(

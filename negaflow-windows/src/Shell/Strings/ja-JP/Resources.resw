@@ -1060,6 +1060,7 @@
   <data name="scanDetectionManual.Content" xml:space="preserve"><value>手動</value><comment>AppLocalizedPhrase.flatbedDetectionManual</comment></data>
   <data name="scanDetectionMode.Text" xml:space="preserve"><value>コマ検出</value><comment>AppLocalizedPhrase.flatbedDetectionMode</comment></data>
   <data name="scanFlatbedFramesFormat.Text" xml:space="preserve"><value>選択中: %d</value><comment>AppLocalizedPhrase.flatbedFramesFormat</comment></data>
+  <data name="scanFlatbedFrameFormat.Text" xml:space="preserve"><value>コマ %d</value><comment>AppLocalizedPhrase.flatbedFrameFormat</comment></data>
   <data name="scanFrameFormat.Text" xml:space="preserve"><value>フレーム形式</value><comment>AppLocalizedPhrase.filmFrameFormat</comment></data>
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>コマをペースト</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>コマを検出し直す</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
@@ -1315,4 +1316,124 @@
   <data name="developLocalDrawPrompt.Text" xml:space="preserve"><value>写真上に描画</value><comment>LocalAdjustmentLocalizedText[16]</comment></data>
   <data name="developLocalEmpty.Text" xml:space="preserve"><value>部分補正なし</value><comment>LocalAdjustmentLocalizedText[17]</comment></data>
   <data name="developLocalVisibility.Text" xml:space="preserve"><value>表示</value><comment>LocalAdjustmentLocalizedText[18]</comment></data>
+  <data name="settingsMemoryCacheSection.Text" xml:space="preserve"><value>メモリキャッシュ</value><comment>AppLocalizedPhrase.settingsMemoryCacheSection</comment></data>
+  <data name="settingsMemoryCacheModeAutomatic.Content" xml:space="preserve"><value>自動</value><comment>AppLocalizedPhrase.settingsMemoryCacheModeAutomatic</comment></data>
+  <data name="settingsMemoryCacheModeManual.Content" xml:space="preserve"><value>手動</value><comment>AppLocalizedPhrase.settingsMemoryCacheModeManual</comment></data>
+  <data name="settingsMemoryCacheInstalledMemoryFormat.Text" xml:space="preserve"><value>この PC のメモリ {0}</value><comment>AppLocalizedPhrase.settingsMemoryCacheInstalledMemoryFormat</comment></data>
+  <data name="settingsMemoryCacheCleanedRawLabel.Text" xml:space="preserve"><value>傷除去済みオリジナル</value><comment>AppLocalizedPhrase.settingsMemoryCacheCleanedRawLabel</comment></data>
+  <data name="settingsMemoryCacheDevelopedLabel.Text" xml:space="preserve"><value>現像結果</value><comment>AppLocalizedPhrase.settingsMemoryCacheDevelopedLabel</comment></data>
+  <data name="settingsMemoryCacheFramesFormat.Text" xml:space="preserve"><value>{0} 枚</value><comment>AppLocalizedPhrase.settingsMemoryCacheFramesFormat</comment></data>
+  <data name="settingsMemoryCacheEstimateFormat.Text" xml:space="preserve"><value>最大約 {0} 常駐 · メモリの {1}%</value><comment>AppLocalizedPhrase.settingsMemoryCacheEstimateFormat</comment></data>
+  <data name="settingsMemoryCacheAutomaticHelp.Text" xml:space="preserve"><value>搭載メモリに合わせて上限を決めます。上限を超えたフレームは古いものから解放し、再度開いたときに再現像します。</value><comment>AppLocalizedPhrase.settingsMemoryCacheAutomaticHelp</comment></data>
+  <data name="settingsMemoryCacheManualHelp.Text" xml:space="preserve"><value>指定した値を使います。上限は搭載メモリの 70% です。</value><comment>AppLocalizedPhrase.settingsMemoryCacheManualHelp</comment></data>
+  <data name="settingsMemoryCacheResetToAutomatic.Content" xml:space="preserve"><value>自動値に戻す</value><comment>AppLocalizedPhrase.settingsMemoryCacheResetToAutomatic</comment></data>
+  <data name="supportBundleTitle.Text" xml:space="preserve"><value>サポートバンドル</value><comment>SupportBundleLocalizedText.title</comment></data>
+  <data name="supportBundleExport.Content" xml:space="preserve"><value>書き出す</value><comment>SupportBundleLocalizedText.export</comment></data>
+  <data name="supportBundleCreating.Content" xml:space="preserve"><value>作成中</value><comment>SupportBundleLocalizedText.creating</comment></data>
+  <data name="supportBundleComplete.Text" xml:space="preserve"><value>サポートバンドルを作成しました</value><comment>SupportBundleLocalizedText.complete</comment></data>
+  <data name="supportBundleFailed.Text" xml:space="preserve"><value>サポートバンドルを作成できませんでした</value><comment>SupportBundleLocalizedText.failed</comment></data>
+  <data name="defaultDefectMicroSpecks.Text" xml:space="preserve"><value>微細粒子を既定で検出</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
+  <data name="defaultDefectMicroSpecksHelp.Text" xml:space="preserve"><value>新しいコマの初期値で、自動とガイドを別々に覚えます。コマごとにチェックボックスがあるので、写真ごとに切り替えられます。</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
+  <data name="autoDefect.Text" xml:space="preserve"><value>自動</value><comment>AppLocalizedPhrase.autoDefect</comment></data>
+  <data name="guidedDefect.Text" xml:space="preserve"><value>ガイド</value><comment>AppLocalizedPhrase.guidedDefect</comment></data>
+  <data name="diskLocationCloud.Content" xml:space="preserve"><value>OneDrive</value><comment>AppLocalizedPhrase.diskLocationICloud (Windows: OneDrive)</comment></data>
+  <data name="diskLocationDesktop.Content" xml:space="preserve"><value>デスクトップ</value><comment>AppLocalizedPhrase.diskLocationDesktop</comment></data>
+  <data name="diskLocationSpecificFolder.Content" xml:space="preserve"><value>フォルダー</value><comment>AppLocalizedPhrase.diskLocationSpecificFolder</comment></data>
+  <data name="diskLocationCustom.Content" xml:space="preserve"><value>カスタム</value><comment>AppLocalizedPhrase.diskLocationCustom</comment></data>
+  <data name="diskRootFolderLabel.Text" xml:space="preserve"><value>negaflowフォルダー</value><comment>AppLocalizedPhrase.diskRootFolderLabel</comment></data>
+  <data name="diskThumbnailsFolderLabel.Text" xml:space="preserve"><value>サムネイルフォルダー</value><comment>AppLocalizedPhrase.diskThumbnailsFolderLabel</comment></data>
+  <data name="diskImportedSourcesFolderLabel.Text" xml:space="preserve"><value>読み込んだ元ファイルの移動先</value><comment>AppLocalizedPhrase.diskImportedSourcesFolderLabel</comment></data>
+  <data name="diskCleanedRawFolderLabel.Text" xml:space="preserve"><value>補正画像キャッシュフォルダー</value><comment>AppLocalizedPhrase.diskCleanedRawFolderLabel</comment></data>
+  <data name="diskScanPreviewFolderLabel.Text" xml:space="preserve"><value>スキャンプレビューキャッシュフォルダー</value><comment>AppLocalizedPhrase.diskScanPreviewFolderLabel</comment></data>
+  <data name="diskExportFolderLabel.Text" xml:space="preserve"><value>書き出しフォルダー</value><comment>AppLocalizedPhrase.diskExportFolderLabel</comment></data>
+  <data name="diskResetPathsButton.Content" xml:space="preserve"><value>パスをデフォルトに戻す</value><comment>AppLocalizedPhrase.diskResetPathsButton</comment></data>
+  <data name="diskThumbnailCacheLabel.Text" xml:space="preserve"><value>サムネイルキャッシュ</value><comment>AppLocalizedPhrase.diskThumbnailCacheLabel</comment></data>
+  <data name="diskClearThumbnailCache.Content" xml:space="preserve"><value>サムネイルキャッシュを消去</value><comment>AppLocalizedPhrase.diskClearThumbnailCache</comment></data>
+  <data name="diskCacheSizeCalculating.Text" xml:space="preserve"><value>計算中</value><comment>AppLocalizedPhrase.diskCacheSizeCalculating</comment></data>
+  <data name="diskLibraryBackupLabel.Text" xml:space="preserve"><value>カタログのバックアップ</value><comment>AppLocalizedPhrase.diskLibraryBackupLabel</comment></data>
+  <data name="diskLibraryBackupNow.Content" xml:space="preserve"><value>今すぐライブラリをバックアップ</value><comment>AppLocalizedPhrase.diskLibraryBackupNow</comment></data>
+  <data name="diskLibraryBackupBrowse.Content" xml:space="preserve"><value>バックアップを表示</value><comment>AppLocalizedPhrase.diskLibraryBackupBrowse</comment></data>
+  <data name="libraryArchiveCreate.Content" xml:space="preserve"><value>保存アーカイブを作成</value><comment>AppArchiveText.create</comment></data>
+  <data name="showInExplorer.Value" xml:space="preserve"><value>エクスプローラーで表示</value><comment>AppLocalizedPhrase.showInFinder (Windows: File Explorer)</comment></data>
+  <data name="scanStorageOriginals.Text" xml:space="preserve"><value>スキャン原本</value><comment>ScanStorageLocalizedText.originals</comment></data>
+  <data name="scanStorageChange.Value" xml:space="preserve"><value>変更</value><comment>ScanStorageLocalizedText.change</comment></data>
+  <data name="scanStorageEstimatedAvailable.Text" xml:space="preserve"><value>推定空き容量</value><comment>ScanStorageLocalizedText.estimatedAvailable</comment></data>
+  <data name="scanStorageStorage.Text" xml:space="preserve"><value>ストレージ</value><comment>ScanStorageLocalizedText.storage</comment></data>
+  <data name="scanStorageLocal.Text" xml:space="preserve"><value>ローカル</value><comment>ScanStorageLocalizedText.local</comment></data>
+  <data name="scanStorageCloudManaged.Text" xml:space="preserve"><value>クラウド管理</value><comment>ScanStorageLocalizedText.cloudManaged</comment></data>
+  <data name="scanStorageUnavailable.Text" xml:space="preserve"><value>確認不可</value><comment>ScanStorageLocalizedText.unavailable</comment></data>
+  <data name="externalBackupTitle.Text" xml:space="preserve"><value>外部バックアップ</value><comment>ExternalBackupLocalizedText.title</comment></data>
+  <data name="externalBackupChoose.Content" xml:space="preserve"><value>選択</value><comment>ExternalBackupLocalizedText.choose</comment></data>
+  <data name="externalBackupChange.Content" xml:space="preserve"><value>変更</value><comment>ExternalBackupLocalizedText.change</comment></data>
+  <data name="externalBackupRemove.Content" xml:space="preserve"><value>削除</value><comment>ExternalBackupLocalizedText.remove</comment></data>
+  <data name="externalBackupNotConfigured.Text" xml:space="preserve"><value>未設定</value><comment>ExternalBackupLocalizedText.notConfigured</comment></data>
+  <data name="externalBackupDisconnected.Text" xml:space="preserve"><value>未接続</value><comment>ExternalBackupLocalizedText.disconnected</comment></data>
+  <data name="externalBackupSameVolume.Text" xml:space="preserve"><value>カタログと同じボリューム</value><comment>ExternalBackupLocalizedText.sameVolume</comment></data>
+  <data name="externalBackupReadOnly.Text" xml:space="preserve"><value>読み取り専用</value><comment>ExternalBackupLocalizedText.readOnly</comment></data>
+  <data name="externalBackupInsufficient.Text" xml:space="preserve"><value>空き容量不足</value><comment>ExternalBackupLocalizedText.insufficient</comment></data>
+  <data name="externalBackupReady.Text" xml:space="preserve"><value>接続済み</value><comment>ExternalBackupLocalizedText.ready</comment></data>
+  <data name="externalBackupCapacity.Text" xml:space="preserve"><value>利用可能</value><comment>ExternalBackupLocalizedText.capacity</comment></data>
+  <data name="externalBackupLastSuccess.Text" xml:space="preserve"><value>最終成功バックアップ</value><comment>ExternalBackupLocalizedText.lastSuccess</comment></data>
+  <data name="backupScheduleLabel.Text" xml:space="preserve"><value>バックアップ予定</value><comment>BackupScheduleLocalizedText.schedule</comment></data>
+  <data name="backupScheduleManual.Content" xml:space="preserve"><value>手動</value><comment>BackupScheduleLocalizedText.manual</comment></data>
+  <data name="backupScheduleTermination.Content" xml:space="preserve"><value>終了時</value><comment>BackupScheduleLocalizedText.termination</comment></data>
+  <data name="backupScheduleDaily.Content" xml:space="preserve"><value>毎日</value><comment>BackupScheduleLocalizedText.daily</comment></data>
+  <data name="backupScheduleWeekly.Content" xml:space="preserve"><value>毎週</value><comment>BackupScheduleLocalizedText.weekly</comment></data>
+  <data name="backupLastAttempt.Text" xml:space="preserve"><value>最終試行</value><comment>BackupScheduleLocalizedText.lastAttempt</comment></data>
+  <data name="backupLastSuccess.Text" xml:space="preserve"><value>最終成功</value><comment>BackupScheduleLocalizedText.lastSuccess</comment></data>
+  <data name="backupVerification.Text" xml:space="preserve"><value>復元検証</value><comment>BackupScheduleLocalizedText.verification</comment></data>
+  <data name="backupPassed.Text" xml:space="preserve"><value>合格</value><comment>BackupScheduleLocalizedText.passed</comment></data>
+  <data name="backupFailed.Text" xml:space="preserve"><value>失敗</value><comment>BackupScheduleLocalizedText.failed</comment></data>
+  <data name="backupNever.Text" xml:space="preserve"><value>なし</value><comment>BackupScheduleLocalizedText.never</comment></data>
+  <data name="backupGeneration.Text" xml:space="preserve"><value>世代</value><comment>BackupScheduleLocalizedText.generation</comment></data>
+  <data name="settingsExportVerification.Text" xml:space="preserve"><value>書き出しの整合性チェック</value><comment>AppLocalizedText.settingsExportVerification</comment></data>
+  <data name="settingsExportVerificationStandard.Content" xml:space="preserve"><value>標準</value><comment>AppLocalizedText.settingsExportVerificationStandard</comment></data>
+  <data name="settingsExportVerificationStrict.Content" xml:space="preserve"><value>厳格（低速）</value><comment>AppLocalizedText.settingsExportVerificationStrict</comment></data>
+  <data name="settingsExportVerificationHelp.Text" xml:space="preserve"><value>標準はファイルごとにハッシュを一度だけ計算し、以降はファイル識別子で再確認します。厳格は確認のたびに全バイトを再ハッシュします。クラッシュ復旧の保証はどちらも同じです。</value><comment>AppLocalizedText.settingsExportVerificationHelp</comment></data>
+  <data name="exportLongEdgeSuffix.Text" xml:space="preserve"><value>px（長辺）</value><comment>AppLocalizedText.exportLongEdgeSuffix</comment></data>
+  <data name="settingsColorProfile.Text" xml:space="preserve"><value>プロファイル</value><comment>AppLocalizedPhrase.profile</comment></data>
+  <data name="settingsColorPrinterProfile.Text" xml:space="preserve"><value>プリント出力プロファイル</value><comment>Windows 전용 — 인화 출력 프로파일(SoftProofPreferences.PrinterProfilePath)</comment></data>
+  <data name="resolution.Text" xml:space="preserve"><value>解像度</value><comment>AppLocalizedPhrase.resolution</comment></data>
+  <data name="bitDepth.Text" xml:space="preserve"><value>ビット深度</value><comment>AppLocalizedPhrase.bitDepth</comment></data>
+  <data name="transparency.Text" xml:space="preserve"><value>透過原稿</value><comment>AppLocalizedPhrase.transparency</comment></data>
+  <data name="brightness.Text" xml:space="preserve"><value>明るさ</value><comment>AppLocalizedPhrase.brightness</comment></data>
+  <data name="contrast.Text" xml:space="preserve"><value>コントラスト</value><comment>AppLocalizedPhrase.contrast</comment></data>
+  <data name="infrared.Text" xml:space="preserve"><value>赤外線 (IR)</value><comment>AppLocalizedPhrase.infrared</comment></data>
+  <data name="capabilityAvailable.Value" xml:space="preserve"><value>対応</value><comment>AppLocalizedPhrase.capabilityAvailable</comment></data>
+  <data name="settingsScannerPluginApproval.Text" xml:space="preserve"><value>スキャナープラグインの承認</value><comment>AppLocalizedPhrase.scannerPluginApprovalTitle</comment></data>
+  <data name="scannerPluginApproved.Text" xml:space="preserve"><value>承認済み</value><comment>AppLocalizedPhrase.scannerPluginApproved</comment></data>
+  <data name="scannerPluginChanged.Text" xml:space="preserve"><value>変更済み · 再承認が必要</value><comment>AppLocalizedPhrase.scannerPluginChangedApprovalRequired</comment></data>
+  <data name="scannerPluginApprovalRequired.Text" xml:space="preserve"><value>承認が必要</value><comment>AppLocalizedPhrase.scannerPluginApprovalRequired</comment></data>
+  <data name="scannerPluginVersion.Text" xml:space="preserve"><value>バージョン</value><comment>AppLocalizedPhrase.scannerPluginVersion</comment></data>
+  <data name="scannerPluginLicense.Text" xml:space="preserve"><value>ライセンス</value><comment>AppLocalizedPhrase.scannerPluginLicense</comment></data>
+  <data name="scannerPluginManifestPath.Text" xml:space="preserve"><value>Manifestのパス</value><comment>AppLocalizedPhrase.scannerPluginManifestPath</comment></data>
+  <data name="scannerPluginManifestHash.Text" xml:space="preserve"><value>Manifest SHA-256</value><comment>AppLocalizedPhrase.scannerPluginManifestHash</comment></data>
+  <data name="scannerPluginExecutableHash.Text" xml:space="preserve"><value>実行ファイル SHA-256</value><comment>AppLocalizedPhrase.scannerPluginExecutableHash</comment></data>
+  <data name="scannerPluginNotReported.Text" xml:space="preserve"><value>報告なし</value><comment>AppLocalizedPhrase.scannerPluginNotReported</comment></data>
+  <data name="diagnosticsReportProblemsSection.Text" xml:space="preserve"><value>最近の問題</value><comment>AppLocalizedText.diagnosticsReportProblemsSection</comment></data>
+  <data name="diagnosticsReportEventsSection.Text" xml:space="preserve"><value>最近の失敗イベント</value><comment>AppLocalizedText.diagnosticsReportEventsSection</comment></data>
+  <data name="diagnosticsReportLibrarySection.Text" xml:space="preserve"><value>ライブラリの状態</value><comment>AppLocalizedText.diagnosticsReportLibrarySection</comment></data>
+  <data name="diagnosticsReportScannerSection.Text" xml:space="preserve"><value>スキャナー</value><comment>AppLocalizedText.diagnosticsReportScannerSection</comment></data>
+  <data name="diagnosticsNoProblems.Text" xml:space="preserve"><value>問題なし</value><comment>AppLocalizedText.diagnosticsNoProblems</comment></data>
+  <data name="diagnosticsGeneratedAt.Text" xml:space="preserve"><value>生成時刻</value><comment>AppLocalizedText.diagnosticsGeneratedAt</comment></data>
+  <data name="diagnosticsStatSaveError.Text" xml:space="preserve"><value>保存エラー</value><comment>AppLocalizedText.diagnosticsStatSaveError</comment></data>
+  <data name="noActiveScanner.Text" xml:space="preserve"><value>使用中のスキャナーがありません。</value><comment>AppLocalizedText.noActiveScanner</comment></data>
+  <data name="copyAll.Content" xml:space="preserve"><value>すべてコピー</value><comment>AppLocalizedText.copyAll</comment></data>
+  <data name="copy.Content" xml:space="preserve"><value>コピー</value><comment>AppLocalizedText.copy</comment></data>
+  <data name="closePanel.Value" xml:space="preserve"><value>閉じる</value><comment>AppLocalizedText.closePanel</comment></data>
+  <data name="diagnosticsValueYes.Value" xml:space="preserve"><value>はい</value><comment>AppLocalizedText.diagnosticsValueYes</comment></data>
+  <data name="diagnosticsValueNo.Value" xml:space="preserve"><value>いいえ</value><comment>AppLocalizedText.diagnosticsValueNo</comment></data>
+  <data name="diagnosticsStatFrames.Text" xml:space="preserve"><value>フレーム</value><comment>AppLocalizedText.diagnosticsStatFrames</comment></data>
+  <data name="diagnosticsStatUnsaved.Text" xml:space="preserve"><value>未保存の変更</value><comment>AppLocalizedText.diagnosticsStatUnsaved</comment></data>
+  <data name="diagnosticsStatLifecycle.Text" xml:space="preserve"><value>ライフサイクル</value><comment>AppLocalizedText.diagnosticsStatLifecycle</comment></data>
+  <data name="diagnosticsScannerBackend.Text" xml:space="preserve"><value>バックエンド</value><comment>AppLocalizedText.diagnosticsScannerBackend</comment></data>
+  <data name="diagnosticsScannerPlugins.Text" xml:space="preserve"><value>プラグイン</value><comment>AppLocalizedText.diagnosticsScannerPlugins</comment></data>
+  <data name="scannerLabel.Text" xml:space="preserve"><value>スキャナー</value><comment>AppLocalizedText.scannerLabel</comment></data>
+  <data name="colorMode.Text" xml:space="preserve"><value>モード</value><comment>AppLocalizedText.colorMode</comment></data>
+  <data name="noInstalledPlugins.Text" xml:space="preserve"><value>（インストール済みのプラグインなし）</value><comment>AppLocalizedText.noInstalledPlugins</comment></data>
+  <data name="diagnosticsRefresh.Value" xml:space="preserve"><value>更新</value><comment>DiagnosticsReportView refresh button (macOS arrow.clockwise)</comment></data>
+  <data name="canvasBackgroundMenu.Text" xml:space="preserve"><value>背景色</value><comment>AppLocalizedPhrase.canvasBackgroundMenu</comment></data>
+  <data name="developerDebug.Text" xml:space="preserve"><value>開発者向けデバッグ</value><comment>AppLocalizedPhrase.developerDebug</comment></data>
+  <data name="debugOverlay.Text" xml:space="preserve"><value>デバッグオーバーレイ</value><comment>AppLocalizedPhrase.debugOverlay</comment></data>
+  <data name="developerDebugStage.Text" xml:space="preserve"><value>ステージ</value><comment>AppLocalizedPhrase.stage</comment></data>
 </root>

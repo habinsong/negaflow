@@ -205,6 +205,24 @@ namespace negaflow::abi::detail {
     return true;
 }
 
+[[nodiscard]] bool prepare_result_v35(
+    const nf_develop_export_request_v35* const request,
+    nf_develop_export_result_v3* const result,
+    nf_status_t& status) noexcept {
+    if (request == nullptr || result == nullptr) {
+        status = NF_STATUS_INVALID_ARGUMENT;
+        return false;
+    }
+    if (request->v34.v33.v32.v31.v30.v29.v28.v27.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15
+                .v14.v13.v12.v11.v10.v9.v8.struct_size <
+            static_cast<std::uint32_t>(sizeof(*request)) ||
+        result->struct_size < static_cast<std::uint32_t>(sizeof(*result))) {
+        status = NF_STATUS_STRUCT_TOO_SMALL;
+        return false;
+    }
+    return true;
+}
+
 [[nodiscard]] bool prepare_result_v32(
     const nf_develop_export_request_v32* const request,
     nf_develop_export_result_v3* const result,

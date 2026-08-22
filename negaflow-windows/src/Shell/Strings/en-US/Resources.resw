@@ -1060,6 +1060,7 @@ Load a scanner from Library to scan film.</value>
   <data name="scanDetectionManual.Content" xml:space="preserve"><value>Manual</value><comment>AppLocalizedPhrase.flatbedDetectionManual</comment></data>
   <data name="scanDetectionMode.Text" xml:space="preserve"><value>Find Frames</value><comment>AppLocalizedPhrase.flatbedDetectionMode</comment></data>
   <data name="scanFlatbedFramesFormat.Text" xml:space="preserve"><value>Selected: %d</value><comment>AppLocalizedPhrase.flatbedFramesFormat</comment></data>
+  <data name="scanFlatbedFrameFormat.Text" xml:space="preserve"><value>Frame %d</value><comment>AppLocalizedPhrase.flatbedFrameFormat</comment></data>
   <data name="scanFrameFormat.Text" xml:space="preserve"><value>Frame Format</value><comment>AppLocalizedPhrase.filmFrameFormat</comment></data>
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>Paste Frame</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>Find Frames Again</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
@@ -1315,4 +1316,124 @@ Load a scanner from Library to scan film.</value>
   <data name="developLocalDrawPrompt.Text" xml:space="preserve"><value>Draw on the photo</value><comment>LocalAdjustmentLocalizedText[16]</comment></data>
   <data name="developLocalEmpty.Text" xml:space="preserve"><value>No local adjustments</value><comment>LocalAdjustmentLocalizedText[17]</comment></data>
   <data name="developLocalVisibility.Text" xml:space="preserve"><value>Visibility</value><comment>LocalAdjustmentLocalizedText[18]</comment></data>
+  <data name="settingsMemoryCacheSection.Text" xml:space="preserve"><value>Memory cache</value><comment>AppLocalizedPhrase.settingsMemoryCacheSection</comment></data>
+  <data name="settingsMemoryCacheModeAutomatic.Content" xml:space="preserve"><value>Automatic</value><comment>AppLocalizedPhrase.settingsMemoryCacheModeAutomatic</comment></data>
+  <data name="settingsMemoryCacheModeManual.Content" xml:space="preserve"><value>Manual</value><comment>AppLocalizedPhrase.settingsMemoryCacheModeManual</comment></data>
+  <data name="settingsMemoryCacheInstalledMemoryFormat.Text" xml:space="preserve"><value>This PC has {0} of memory</value><comment>AppLocalizedPhrase.settingsMemoryCacheInstalledMemoryFormat</comment></data>
+  <data name="settingsMemoryCacheCleanedRawLabel.Text" xml:space="preserve"><value>Defect-cleaned originals</value><comment>AppLocalizedPhrase.settingsMemoryCacheCleanedRawLabel</comment></data>
+  <data name="settingsMemoryCacheDevelopedLabel.Text" xml:space="preserve"><value>Developed results</value><comment>AppLocalizedPhrase.settingsMemoryCacheDevelopedLabel</comment></data>
+  <data name="settingsMemoryCacheFramesFormat.Text" xml:space="preserve"><value>{0} frames</value><comment>AppLocalizedPhrase.settingsMemoryCacheFramesFormat</comment></data>
+  <data name="settingsMemoryCacheEstimateFormat.Text" xml:space="preserve"><value>Up to about {0} resident · {1}% of memory</value><comment>AppLocalizedPhrase.settingsMemoryCacheEstimateFormat</comment></data>
+  <data name="settingsMemoryCacheAutomaticHelp.Text" xml:space="preserve"><value>Sizes the limit to your installed memory. Frames beyond the limit are released oldest first and re-developed when reopened.</value><comment>AppLocalizedPhrase.settingsMemoryCacheAutomaticHelp</comment></data>
+  <data name="settingsMemoryCacheManualHelp.Text" xml:space="preserve"><value>Uses the values you set. The ceiling is 70% of installed memory.</value><comment>AppLocalizedPhrase.settingsMemoryCacheManualHelp</comment></data>
+  <data name="settingsMemoryCacheResetToAutomatic.Content" xml:space="preserve"><value>Reset to automatic</value><comment>AppLocalizedPhrase.settingsMemoryCacheResetToAutomatic</comment></data>
+  <data name="supportBundleTitle.Text" xml:space="preserve"><value>Support Bundle</value><comment>SupportBundleLocalizedText.title</comment></data>
+  <data name="supportBundleExport.Content" xml:space="preserve"><value>Export</value><comment>SupportBundleLocalizedText.export</comment></data>
+  <data name="supportBundleCreating.Content" xml:space="preserve"><value>Creating</value><comment>SupportBundleLocalizedText.creating</comment></data>
+  <data name="supportBundleComplete.Text" xml:space="preserve"><value>Support bundle created</value><comment>SupportBundleLocalizedText.complete</comment></data>
+  <data name="supportBundleFailed.Text" xml:space="preserve"><value>Could not create support bundle</value><comment>SupportBundleLocalizedText.failed</comment></data>
+  <data name="defaultDefectMicroSpecks.Text" xml:space="preserve"><value>Detect micro specks by default</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
+  <data name="defaultDefectMicroSpecksHelp.Text" xml:space="preserve"><value>Starting value for new frames, kept separately for auto and guided. Each frame keeps its own checkbox, so you can still turn it on or off per photo.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
+  <data name="autoDefect.Text" xml:space="preserve"><value>Auto</value><comment>AppLocalizedPhrase.autoDefect</comment></data>
+  <data name="guidedDefect.Text" xml:space="preserve"><value>Guided</value><comment>AppLocalizedPhrase.guidedDefect</comment></data>
+  <data name="diskLocationCloud.Content" xml:space="preserve"><value>OneDrive</value><comment>AppLocalizedPhrase.diskLocationICloud (Windows: OneDrive)</comment></data>
+  <data name="diskLocationDesktop.Content" xml:space="preserve"><value>Desktop</value><comment>AppLocalizedPhrase.diskLocationDesktop</comment></data>
+  <data name="diskLocationSpecificFolder.Content" xml:space="preserve"><value>Folder</value><comment>AppLocalizedPhrase.diskLocationSpecificFolder</comment></data>
+  <data name="diskLocationCustom.Content" xml:space="preserve"><value>Custom</value><comment>AppLocalizedPhrase.diskLocationCustom</comment></data>
+  <data name="diskRootFolderLabel.Text" xml:space="preserve"><value>negaflow Folder</value><comment>AppLocalizedPhrase.diskRootFolderLabel</comment></data>
+  <data name="diskThumbnailsFolderLabel.Text" xml:space="preserve"><value>Thumbnail Folder</value><comment>AppLocalizedPhrase.diskThumbnailsFolderLabel</comment></data>
+  <data name="diskImportedSourcesFolderLabel.Text" xml:space="preserve"><value>Imported Source Move Folder</value><comment>AppLocalizedPhrase.diskImportedSourcesFolderLabel</comment></data>
+  <data name="diskCleanedRawFolderLabel.Text" xml:space="preserve"><value>Corrected Image Cache Folder</value><comment>AppLocalizedPhrase.diskCleanedRawFolderLabel</comment></data>
+  <data name="diskScanPreviewFolderLabel.Text" xml:space="preserve"><value>Scan Preview Cache Folder</value><comment>AppLocalizedPhrase.diskScanPreviewFolderLabel</comment></data>
+  <data name="diskExportFolderLabel.Text" xml:space="preserve"><value>Export Folder</value><comment>AppLocalizedPhrase.diskExportFolderLabel</comment></data>
+  <data name="diskResetPathsButton.Content" xml:space="preserve"><value>Reset Paths to Defaults</value><comment>AppLocalizedPhrase.diskResetPathsButton</comment></data>
+  <data name="diskThumbnailCacheLabel.Text" xml:space="preserve"><value>Thumbnail Cache</value><comment>AppLocalizedPhrase.diskThumbnailCacheLabel</comment></data>
+  <data name="diskClearThumbnailCache.Content" xml:space="preserve"><value>Clear Thumbnail Cache</value><comment>AppLocalizedPhrase.diskClearThumbnailCache</comment></data>
+  <data name="diskCacheSizeCalculating.Text" xml:space="preserve"><value>Calculating</value><comment>AppLocalizedPhrase.diskCacheSizeCalculating</comment></data>
+  <data name="diskLibraryBackupLabel.Text" xml:space="preserve"><value>Catalog Backups</value><comment>AppLocalizedPhrase.diskLibraryBackupLabel</comment></data>
+  <data name="diskLibraryBackupNow.Content" xml:space="preserve"><value>Back Up Library Now</value><comment>AppLocalizedPhrase.diskLibraryBackupNow</comment></data>
+  <data name="diskLibraryBackupBrowse.Content" xml:space="preserve"><value>Browse Backups</value><comment>AppLocalizedPhrase.diskLibraryBackupBrowse</comment></data>
+  <data name="libraryArchiveCreate.Content" xml:space="preserve"><value>Create Preservation Archive</value><comment>AppArchiveText.create</comment></data>
+  <data name="showInExplorer.Value" xml:space="preserve"><value>Show in File Explorer</value><comment>AppLocalizedPhrase.showInFinder (Windows: File Explorer)</comment></data>
+  <data name="scanStorageOriginals.Text" xml:space="preserve"><value>Scan Originals</value><comment>ScanStorageLocalizedText.originals</comment></data>
+  <data name="scanStorageChange.Value" xml:space="preserve"><value>Change</value><comment>ScanStorageLocalizedText.change</comment></data>
+  <data name="scanStorageEstimatedAvailable.Text" xml:space="preserve"><value>Estimated available</value><comment>ScanStorageLocalizedText.estimatedAvailable</comment></data>
+  <data name="scanStorageStorage.Text" xml:space="preserve"><value>Storage</value><comment>ScanStorageLocalizedText.storage</comment></data>
+  <data name="scanStorageLocal.Text" xml:space="preserve"><value>Local</value><comment>ScanStorageLocalizedText.local</comment></data>
+  <data name="scanStorageCloudManaged.Text" xml:space="preserve"><value>Cloud-managed</value><comment>ScanStorageLocalizedText.cloudManaged</comment></data>
+  <data name="scanStorageUnavailable.Text" xml:space="preserve"><value>Unavailable</value><comment>ScanStorageLocalizedText.unavailable</comment></data>
+  <data name="externalBackupTitle.Text" xml:space="preserve"><value>External Backup</value><comment>ExternalBackupLocalizedText.title</comment></data>
+  <data name="externalBackupChoose.Content" xml:space="preserve"><value>Choose</value><comment>ExternalBackupLocalizedText.choose</comment></data>
+  <data name="externalBackupChange.Content" xml:space="preserve"><value>Change</value><comment>ExternalBackupLocalizedText.change</comment></data>
+  <data name="externalBackupRemove.Content" xml:space="preserve"><value>Remove</value><comment>ExternalBackupLocalizedText.remove</comment></data>
+  <data name="externalBackupNotConfigured.Text" xml:space="preserve"><value>Not configured</value><comment>ExternalBackupLocalizedText.notConfigured</comment></data>
+  <data name="externalBackupDisconnected.Text" xml:space="preserve"><value>Disconnected</value><comment>ExternalBackupLocalizedText.disconnected</comment></data>
+  <data name="externalBackupSameVolume.Text" xml:space="preserve"><value>Same volume as catalog</value><comment>ExternalBackupLocalizedText.sameVolume</comment></data>
+  <data name="externalBackupReadOnly.Text" xml:space="preserve"><value>Read-only destination</value><comment>ExternalBackupLocalizedText.readOnly</comment></data>
+  <data name="externalBackupInsufficient.Text" xml:space="preserve"><value>Not enough space</value><comment>ExternalBackupLocalizedText.insufficient</comment></data>
+  <data name="externalBackupReady.Text" xml:space="preserve"><value>Connected</value><comment>ExternalBackupLocalizedText.ready</comment></data>
+  <data name="externalBackupCapacity.Text" xml:space="preserve"><value>Available</value><comment>ExternalBackupLocalizedText.capacity</comment></data>
+  <data name="externalBackupLastSuccess.Text" xml:space="preserve"><value>Last successful backup</value><comment>ExternalBackupLocalizedText.lastSuccess</comment></data>
+  <data name="backupScheduleLabel.Text" xml:space="preserve"><value>Backup Schedule</value><comment>BackupScheduleLocalizedText.schedule</comment></data>
+  <data name="backupScheduleManual.Content" xml:space="preserve"><value>Manual</value><comment>BackupScheduleLocalizedText.manual</comment></data>
+  <data name="backupScheduleTermination.Content" xml:space="preserve"><value>When Quitting</value><comment>BackupScheduleLocalizedText.termination</comment></data>
+  <data name="backupScheduleDaily.Content" xml:space="preserve"><value>Daily</value><comment>BackupScheduleLocalizedText.daily</comment></data>
+  <data name="backupScheduleWeekly.Content" xml:space="preserve"><value>Weekly</value><comment>BackupScheduleLocalizedText.weekly</comment></data>
+  <data name="backupLastAttempt.Text" xml:space="preserve"><value>Last attempt</value><comment>BackupScheduleLocalizedText.lastAttempt</comment></data>
+  <data name="backupLastSuccess.Text" xml:space="preserve"><value>Last success</value><comment>BackupScheduleLocalizedText.lastSuccess</comment></data>
+  <data name="backupVerification.Text" xml:space="preserve"><value>Restore verification</value><comment>BackupScheduleLocalizedText.verification</comment></data>
+  <data name="backupPassed.Text" xml:space="preserve"><value>Passed</value><comment>BackupScheduleLocalizedText.passed</comment></data>
+  <data name="backupFailed.Text" xml:space="preserve"><value>Failed</value><comment>BackupScheduleLocalizedText.failed</comment></data>
+  <data name="backupNever.Text" xml:space="preserve"><value>Never</value><comment>BackupScheduleLocalizedText.never</comment></data>
+  <data name="backupGeneration.Text" xml:space="preserve"><value>Generation</value><comment>BackupScheduleLocalizedText.generation</comment></data>
+  <data name="settingsExportVerification.Text" xml:space="preserve"><value>Export Integrity Check</value><comment>AppLocalizedText.settingsExportVerification</comment></data>
+  <data name="settingsExportVerificationStandard.Content" xml:space="preserve"><value>Standard</value><comment>AppLocalizedText.settingsExportVerificationStandard</comment></data>
+  <data name="settingsExportVerificationStrict.Content" xml:space="preserve"><value>Strict (slower)</value><comment>AppLocalizedText.settingsExportVerificationStrict</comment></data>
+  <data name="settingsExportVerificationHelp.Text" xml:space="preserve"><value>Standard hashes each file once and re-checks it by file identity. Strict re-hashes every byte at each checkpoint. Crash recovery keeps the same guarantees either way.</value><comment>AppLocalizedText.settingsExportVerificationHelp</comment></data>
+  <data name="exportLongEdgeSuffix.Text" xml:space="preserve"><value>px (long edge)</value><comment>AppLocalizedText.exportLongEdgeSuffix</comment></data>
+  <data name="settingsColorProfile.Text" xml:space="preserve"><value>Profile</value><comment>AppLocalizedPhrase.profile</comment></data>
+  <data name="settingsColorPrinterProfile.Text" xml:space="preserve"><value>Print output profile</value><comment>Windows 전용 — 인화 출력 프로파일(SoftProofPreferences.PrinterProfilePath)</comment></data>
+  <data name="resolution.Text" xml:space="preserve"><value>Resolution</value><comment>AppLocalizedPhrase.resolution</comment></data>
+  <data name="bitDepth.Text" xml:space="preserve"><value>Bit Depth</value><comment>AppLocalizedPhrase.bitDepth</comment></data>
+  <data name="transparency.Text" xml:space="preserve"><value>Transparency</value><comment>AppLocalizedPhrase.transparency</comment></data>
+  <data name="brightness.Text" xml:space="preserve"><value>Brightness</value><comment>AppLocalizedPhrase.brightness</comment></data>
+  <data name="contrast.Text" xml:space="preserve"><value>Contrast</value><comment>AppLocalizedPhrase.contrast</comment></data>
+  <data name="infrared.Text" xml:space="preserve"><value>Infrared (IR)</value><comment>AppLocalizedPhrase.infrared</comment></data>
+  <data name="capabilityAvailable.Value" xml:space="preserve"><value>Available</value><comment>AppLocalizedPhrase.capabilityAvailable</comment></data>
+  <data name="settingsScannerPluginApproval.Text" xml:space="preserve"><value>Scanner Plug-in Approval</value><comment>AppLocalizedPhrase.scannerPluginApprovalTitle</comment></data>
+  <data name="scannerPluginApproved.Text" xml:space="preserve"><value>Approved</value><comment>AppLocalizedPhrase.scannerPluginApproved</comment></data>
+  <data name="scannerPluginChanged.Text" xml:space="preserve"><value>Changed · Approval Required</value><comment>AppLocalizedPhrase.scannerPluginChangedApprovalRequired</comment></data>
+  <data name="scannerPluginApprovalRequired.Text" xml:space="preserve"><value>Approval Required</value><comment>AppLocalizedPhrase.scannerPluginApprovalRequired</comment></data>
+  <data name="scannerPluginVersion.Text" xml:space="preserve"><value>Version</value><comment>AppLocalizedPhrase.scannerPluginVersion</comment></data>
+  <data name="scannerPluginLicense.Text" xml:space="preserve"><value>License</value><comment>AppLocalizedPhrase.scannerPluginLicense</comment></data>
+  <data name="scannerPluginManifestPath.Text" xml:space="preserve"><value>Manifest Path</value><comment>AppLocalizedPhrase.scannerPluginManifestPath</comment></data>
+  <data name="scannerPluginManifestHash.Text" xml:space="preserve"><value>Manifest SHA-256</value><comment>AppLocalizedPhrase.scannerPluginManifestHash</comment></data>
+  <data name="scannerPluginExecutableHash.Text" xml:space="preserve"><value>Executable SHA-256</value><comment>AppLocalizedPhrase.scannerPluginExecutableHash</comment></data>
+  <data name="scannerPluginNotReported.Text" xml:space="preserve"><value>Not Reported</value><comment>AppLocalizedPhrase.scannerPluginNotReported</comment></data>
+  <data name="diagnosticsReportProblemsSection.Text" xml:space="preserve"><value>Recent problems</value><comment>AppLocalizedText.diagnosticsReportProblemsSection</comment></data>
+  <data name="diagnosticsReportEventsSection.Text" xml:space="preserve"><value>Recent failure events</value><comment>AppLocalizedText.diagnosticsReportEventsSection</comment></data>
+  <data name="diagnosticsReportLibrarySection.Text" xml:space="preserve"><value>Library status</value><comment>AppLocalizedText.diagnosticsReportLibrarySection</comment></data>
+  <data name="diagnosticsReportScannerSection.Text" xml:space="preserve"><value>Scanner</value><comment>AppLocalizedText.diagnosticsReportScannerSection</comment></data>
+  <data name="diagnosticsNoProblems.Text" xml:space="preserve"><value>No problems</value><comment>AppLocalizedText.diagnosticsNoProblems</comment></data>
+  <data name="diagnosticsGeneratedAt.Text" xml:space="preserve"><value>Generated</value><comment>AppLocalizedText.diagnosticsGeneratedAt</comment></data>
+  <data name="diagnosticsStatSaveError.Text" xml:space="preserve"><value>Save error</value><comment>AppLocalizedText.diagnosticsStatSaveError</comment></data>
+  <data name="noActiveScanner.Text" xml:space="preserve"><value>No active scanner.</value><comment>AppLocalizedText.noActiveScanner</comment></data>
+  <data name="copyAll.Content" xml:space="preserve"><value>Copy all</value><comment>AppLocalizedText.copyAll</comment></data>
+  <data name="copy.Content" xml:space="preserve"><value>Copy</value><comment>AppLocalizedText.copy</comment></data>
+  <data name="closePanel.Value" xml:space="preserve"><value>Close</value><comment>AppLocalizedText.closePanel</comment></data>
+  <data name="diagnosticsValueYes.Value" xml:space="preserve"><value>Yes</value><comment>AppLocalizedText.diagnosticsValueYes</comment></data>
+  <data name="diagnosticsValueNo.Value" xml:space="preserve"><value>No</value><comment>AppLocalizedText.diagnosticsValueNo</comment></data>
+  <data name="diagnosticsStatFrames.Text" xml:space="preserve"><value>Frames</value><comment>AppLocalizedText.diagnosticsStatFrames</comment></data>
+  <data name="diagnosticsStatUnsaved.Text" xml:space="preserve"><value>Unsaved changes</value><comment>AppLocalizedText.diagnosticsStatUnsaved</comment></data>
+  <data name="diagnosticsStatLifecycle.Text" xml:space="preserve"><value>Lifecycle</value><comment>AppLocalizedText.diagnosticsStatLifecycle</comment></data>
+  <data name="diagnosticsScannerBackend.Text" xml:space="preserve"><value>Backend</value><comment>AppLocalizedText.diagnosticsScannerBackend</comment></data>
+  <data name="diagnosticsScannerPlugins.Text" xml:space="preserve"><value>Plug-ins</value><comment>AppLocalizedText.diagnosticsScannerPlugins</comment></data>
+  <data name="scannerLabel.Text" xml:space="preserve"><value>Scanner</value><comment>AppLocalizedText.scannerLabel</comment></data>
+  <data name="colorMode.Text" xml:space="preserve"><value>Mode</value><comment>AppLocalizedText.colorMode</comment></data>
+  <data name="noInstalledPlugins.Text" xml:space="preserve"><value>(no installed plug-ins)</value><comment>AppLocalizedText.noInstalledPlugins</comment></data>
+  <data name="diagnosticsRefresh.Value" xml:space="preserve"><value>Refresh</value><comment>DiagnosticsReportView refresh button (macOS arrow.clockwise)</comment></data>
+  <data name="canvasBackgroundMenu.Text" xml:space="preserve"><value>Background Color</value><comment>AppLocalizedPhrase.canvasBackgroundMenu</comment></data>
+  <data name="developerDebug.Text" xml:space="preserve"><value>Developer Debug</value><comment>AppLocalizedPhrase.developerDebug</comment></data>
+  <data name="debugOverlay.Text" xml:space="preserve"><value>Debug Overlay</value><comment>AppLocalizedPhrase.debugOverlay</comment></data>
+  <data name="developerDebugStage.Text" xml:space="preserve"><value>Stage</value><comment>AppLocalizedPhrase.stage</comment></data>
 </root>

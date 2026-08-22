@@ -206,6 +206,7 @@ void test_v29_contract();
 void test_v30_contract();
 void test_v32_contract();
 void test_v34_contract();
+void test_v35_contract();
 void test_missing_source_is_not_a_validation_error();
 void test_v2_missing_source_is_not_a_validation_error();
 void test_full_develop(const std::filesystem::path& source);
@@ -234,6 +235,8 @@ void test_v22_run_state();
 void test_v22_cancel_during_run(const std::filesystem::path& source);
 void test_auto_adjust_on_a_real_scan(const std::filesystem::path& source);
 void test_v18_defect_region_preview_and_export();
+
+void test_defect_region_preview_keeps_source_coordinates();
 void test_v23_soft_proof_preview();
 void test_read_soft_proof_media();
 void test_tiff_source_probe(const std::filesystem::path& source);

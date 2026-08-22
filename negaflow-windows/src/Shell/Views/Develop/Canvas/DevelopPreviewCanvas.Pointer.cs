@@ -89,6 +89,8 @@ public sealed partial class DevelopPreviewCanvas
 
     private void OnCanvasKeyDown(object sender, KeyRoutedEventArgs args)
     {
+        Negaflow.Shell.Views.WorkspaceShellView.TraceKey(
+            $"canvas keydown: key={args.Key} handled={args.Handled}");
         _ = sender;
         if (TryHandleKeyDown?.Invoke(args) == true)
         {

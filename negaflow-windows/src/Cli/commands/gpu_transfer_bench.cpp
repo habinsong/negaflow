@@ -50,11 +50,11 @@ using negaflow::gpu::GpuWorkingImage;
 
 int usage() {
     std::cerr << "usage: negaflow-cli --gpu-transfer-bench [width] [height] [repeats]\n"
-                 "  기본은 5088x3401 (실제 OpticFilm 스캔 크기), 5회입니다.\n";
+                 " 기본은 5088x3401 (실제 OpticFilm 스캔 크기), 5회입니다.\n";
     return 2;
 }
 
-}  // namespace
+} // namespace
 
 int run_gpu_transfer_bench(const int argument_count, const wchar_t* const arguments[]) {
     if (argument_count > 5) {
@@ -120,8 +120,8 @@ int run_gpu_transfer_bench(const int argument_count, const wchar_t* const argume
             std::cerr << "upload failed\n";
             return 1;
         }
-        // ☠️ `UpdateSubresource` 는 비동기입니다. 바로 뒤 시각을 재면 드라이버 큐에 넣는
-        //    시간만 재게 됩니다. 그래서 커널과 회수까지 묶어서 재고, 그 합을 나눠 봅니다.
+        // `UpdateSubresource` 는 비동기입니다. 바로 뒤 시각을 재면 드라이버 큐에 넣는
+        // 시간만 재게 됩니다. 그래서 커널과 회수까지 묶어서 재고, 그 합을 나눠 봅니다.
         const double upload_ms = milliseconds_since(upload_started);
 
         double kernel_ms = 0.0;
@@ -158,4 +158,4 @@ int run_gpu_transfer_bench(const int argument_count, const wchar_t* const argume
     return 0;
 }
 
-}  // namespace negaflow::cli
+} // namespace negaflow::cli

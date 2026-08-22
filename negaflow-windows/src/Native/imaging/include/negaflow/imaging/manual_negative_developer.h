@@ -38,6 +38,9 @@ struct ManualNegativeDevelopParameters final {
 struct ManualNegativeDevelopInfo final {
     std::array<float, 3> applied_dmin{};
     std::array<float, 3> dmax_normalized{};
+    // macOS DevelopDebugMetrics.blackInput - 장면 어두운 부분(p90 투과율)입니다.
+    // 반전 수식에 들어가지 않는 지표 전용 값이며, 개발자 디버그 화면이 읽습니다.
+    std::array<float, 3> black_input{};
     MutedSceneVibranceInfo muted_scene_vibrance{};
     negaflow::core::KernelStatus kernel_status{
         negaflow::core::KernelStatus::invalid_argument};

@@ -19,7 +19,12 @@ public sealed partial class DevelopGrainMendHud : UserControl
     private bool updatingBrushThickness;
     private bool updatingClone;
 
-    public DevelopGrainMendHud() => InitializeComponent();
+    public DevelopGrainMendHud()
+    {
+        InitializeComponent();
+        CloneSizeSlider.Value = 4;
+        CloneSizeSlider.Minimum = 4;
+    }
 
     /// <summary>슬라이더를 끄는 동안 계속 옵니다. 값만 저장하고 재검출하지 않습니다.</summary>
     public event Action<double>? SensitivityChanged;

@@ -100,8 +100,8 @@ public:
         std::uint32_t stride_pixels) const noexcept;
 
     // GPU → 호스트. 스테이징 텍스처를 거칩니다(D3D11 은 이것 말고 읽는 길이 없습니다).
-    // ☠️ D3D11 의 `Map` 은 **동기화합니다** — 밀린 GPU 작업이 끝날 때까지 CPU 가 멈춥니다.
-    //    매 프레임 내리는 경로에서는 `GpuStagingRing` 을 쓰십시오.
+    // D3D11 의 `Map` 은 **동기화합니다** — 밀린 GPU 작업이 끝날 때까지 CPU 가 멈춥니다.
+    // 매 프레임 내리는 경로에서는 `GpuStagingRing` 을 쓰십시오.
     [[nodiscard]] GpuImageStatus download(
         const GpuDevice& device,
         core::Rgba32F* pixels,
@@ -128,10 +128,10 @@ private:
     ID3D11Texture2D* texture_{nullptr};
     ID3D11ShaderResourceView* srv_{nullptr};
     ID3D11UnorderedAccessView* uav_{nullptr};
-    // ☠️ 회수용 스테이징을 **들고 있습니다.** 앞 판은 `download` 마다 만들고 지웠는데,
-    //    24MP 에서 그것이 264 MB 할당·해제입니다. 실측으로 다운로드가 76~133 ms 였고
-    //    업로드는 45 ms 였습니다 — 그 차이의 큰 몫이 이 할당이었습니다.
-    //    `mutable` 인 이유는 `download` 가 `const` 이기 때문입니다(이미지 내용은 안 바뀝니다).
+    // 회수용 스테이징을 **들고 있습니다.** 앞 판은 `download` 마다 만들고 지웠는데,
+    // 24MP 에서 그것이 264 MB 할당·해제입니다. 실측으로 다운로드가 76~133 ms 였고
+    // 업로드는 45 ms 였습니다 — 그 차이의 큰 몫이 이 할당이었습니다.
+    // `mutable` 인 이유는 `download` 가 `const` 이기 때문입니다(이미지 내용은 안 바뀝니다).
     mutable ID3D11Texture2D* staging_{nullptr};
     // 올리기용 스테이징. 읽기용과 나눠 두는 이유는 CPU 접근 플래그가 반대이고,
     // 한 텍스처에 READ|WRITE 를 같이 주면 드라이버가 읽기 쪽 캐시 정책을 낮추기 때문입니다.
@@ -183,4 +183,4 @@ private:
     std::uint32_t height_{0};
 };
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

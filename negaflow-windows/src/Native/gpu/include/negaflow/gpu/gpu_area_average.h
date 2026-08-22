@@ -7,7 +7,7 @@
 //
 // cs_5_0 `groupshared` 트리만 씁니다. Wave 내장은 벤더마다 크기가 달라 쓰지 않습니다.
 //
-// ☠️ **근사입니다.** CPU 는 행 우선 double, GPU 는 float 트리. 평균 1e-5.
+// **근사입니다.** CPU 는 행 우선 double, GPU 는 float 트리. 평균 1e-5.
 
 #include "negaflow/gpu/gpu_pointwise.h"
 
@@ -66,4 +66,4 @@ private:
     std::uint32_t capacity_{0};
 };
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

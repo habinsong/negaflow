@@ -7,33 +7,33 @@
 // 가이드 필터(`gfProduct`/`gfCoeffA`/`gfCoeffB`/`gfApply`)와 `filmScanShrink` 가 이것에
 // 물려 있습니다. 그래서 커널보다 이것이 먼저입니다.
 //
-// ☠️ **연산 순서를 바꾸지 마십시오.** CPU 판은 러닝 섬(슬라이딩 윈도우)이라 화소당 O(1)
-//    이고, 부동소수 누적 순서가 결과에 남습니다. GPU 도 **행 하나에 스레드 하나**를 두어
-//    같은 순서로 누적합니다. 반경만큼 다시 더하는 순진한 방식으로 바꾸면 값이 갈립니다.
+// **연산 순서를 바꾸지 마십시오.** CPU 판은 러닝 섬(슬라이딩 윈도우)이라 화소당 O(1)
+// 이고, 부동소수 누적 순서가 결과에 남습니다. GPU 도 **행 하나에 스레드 하나**를 두어
+// 같은 순서로 누적합니다. 반경만큼 다시 더하는 순진한 방식으로 바꾸면 값이 갈립니다.
 //
-// ☠️ **RGB 와 알파의 누적 순서가 다릅니다. 통일하지 마십시오.**
-//    CPU 는 `box_blur` 를 **두 벌** 갖고 있고 둘의 괄호가 다릅니다:
+// **RGB 와 알파의 누적 순서가 다릅니다. 통일하지 마십시오.**
+// CPU 는 `box_blur` 를 **두 벌** 갖고 있고 둘의 괄호가 다릅니다:
 //
-//      box_blur(std::vector<float>&) `:145`  sum += a - b       →  sum + (a - b)
-//      box_blur(std::vector<Rgb>&)   `:203`  sum = sum + a - b  → (sum + a) - b
+// box_blur(std::vector<float>&) `:145` sum += a - b → sum + (a - b)
+// box_blur(std::vector<Rgb>&) `:203` sum = sum + a - b → (sum + a) - b
 //
-//    `Rgb` 판은 `operator+`·`operator-` 가 각각 따로 도는 이항 연산이라 **왼쪽부터** 묶입니다.
-//    `guided_base` 는 이 둘을 섞어 씁니다 — guide·guide² 는 float 판, source·guide×source·
-//    a·b 는 Rgb 판. 우리는 네 스칼라를 한 텍스처에 담으므로 **채널마다 그 순서를 그대로**
-//    따릅니다: **RGB = Rgb 판, 알파 = float 판.**
+// `Rgb` 판은 `operator+`·`operator-` 가 각각 따로 도는 이항 연산이라 **왼쪽부터** 묶입니다.
+// `guided_base` 는 이 둘을 섞어 씁니다 — guide·guide² 는 float 판, source·guide×source·
+// a·b 는 Rgb 판. 우리는 네 스칼라를 한 텍스처에 담으므로 **채널마다 그 순서를 그대로**
+// 따릅니다: **RGB = Rgb 판, 알파 = float 판.**
 //
-//    실측(`scratchpad` 순서 프로브, 61×37): 한 순서로 통일하면 가이드 필터 결과가 반경 1 에서
-//    **3.8e-05** 까지 벌어집니다 — 허용치 `1e-5` 의 네 배입니다. `1/(variance + 0.001)` 이
-//    러닝 섬의 마지막 비트 차이를 최대 1000배로 키우기 때문입니다.
+// 실측(`scratchpad` 순서 프로브, 61×37): 한 순서로 통일하면 가이드 필터 결과가 반경 1 에서
+// **3.8e-05** 까지 벌어집니다 — 허용치 `1e-5` 의 네 배입니다. `1/(variance + 0.001)` 이
+// 러닝 섬의 마지막 비트 차이를 최대 1000배로 키우기 때문입니다.
 //
 // 가장자리는 CPU 와 같이 **좌표를 클램프**합니다(값을 0 으로 보지 않습니다).
 
 Texture2D<float4> Source : register(t0);
 RWTexture2D<float4> Destination : register(u0);
 
-// ☠️ 앞 16바이트는 화소별 커널과 같은 `GpuPointwiseExtent` 자리입니다 — `uint2` 뒤의
-//    `float2` 를 빼면 뒤 필드가 8바이트 앞에서 읽혀 조용히 틀린 값이 들어옵니다.
-//    (실제로 그렇게 만들었다가 동치 시험이 delta 0.38 로 잡았습니다.)
+// 앞 16바이트는 화소별 커널과 같은 `GpuPointwiseExtent` 자리입니다 — `uint2` 뒤의
+// `float2` 를 빼면 뒤 필드가 8바이트 앞에서 읽혀 조용히 틀린 값이 들어옵니다.
+// (실제로 그렇게 만들었다가 동치 시험이 delta 0.38 로 잡았습니다.)
 cbuffer BoxBlurConstants : register(b0) {
     uint2 Extent;
     float2 Padding0;

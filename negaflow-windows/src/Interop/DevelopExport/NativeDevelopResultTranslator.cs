@@ -5,6 +5,21 @@ using static NativeDevelopExportLimits;
 /// <summary>네이티브 결과를 managed 결과로 바꿉니다.</summary>
 internal static class NativeDevelopResultTranslator
 {
+    /// <summary>재지 않은 호출에서는 아무 것도 만들지 않습니다.</summary>
+    private static DevelopDebugMetrics? ReadDebugMetrics(NativeDevelopDebugMetricsV1 raw) =>
+        raw.Present == 0
+            ? null
+            : new DevelopDebugMetrics(
+                raw.DminRed,
+                raw.DminGreen,
+                raw.DminBlue,
+                raw.DmaxNormalizedRed,
+                raw.DmaxNormalizedGreen,
+                raw.DmaxNormalizedBlue,
+                raw.BlackInputRed,
+                raw.BlackInputGreen,
+                raw.BlackInputBlue);
+
     internal static DevelopExportResult Translate(
         uint status,
         NativeDevelopExportResultV4 raw,
@@ -55,7 +70,8 @@ internal static class NativeDevelopResultTranslator
             baseSource,
             raw.Cancelled != 0,
             ReadMeasurement(raw.Measurement),
-            FilmBaseMeasurementSnapshot.MethodName(raw.Measurement.Method));
+            FilmBaseMeasurementSnapshot.MethodName(raw.Measurement.Method),
+            ReadDebugMetrics(raw.DebugMetrics));
     }
 
     internal static DevelopExportResult Translate(

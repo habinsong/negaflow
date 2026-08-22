@@ -24,7 +24,7 @@ struct alignas(16) DigitalFilmGrainConstants final {
 
 static_assert(sizeof(DigitalFilmGrainConstants) == 32U, "two constant registers");
 
-}  // namespace
+} // namespace
 
 GpuDigitalFilmGrain::Parameters GpuDigitalFilmGrain::resolve(
     const imaging::DigitalFilmGrainProfile& profile,
@@ -38,8 +38,8 @@ GpuDigitalFilmGrain::Parameters GpuDigitalFilmGrain::resolve(
         return parameters;
     }
     const double bounded = std::clamp(strength, 0.0, 1.0);
-    // ☠️ 조기 반환을 그대로 옮깁니다(`:130-133`). 여기서 커널을 돌리면 CPU 가 손대지 않는
-    //    화소에 반올림이 붙습니다 — `colorMixerHSL` 이 delta 0.1 로 깨졌던 것과 같은 함정입니다.
+    // 조기 반환을 그대로 옮깁니다(`:130-133`). 여기서 커널을 돌리면 CPU 가 손대지 않는
+    // 화소에 반올림이 붙습니다 — `colorMixerHSL` 이 delta 0.1 로 깨졌던 것과 같은 함정입니다.
     if (profile.amplitude <= 0.0 || bounded <= 1.0e-3) {
         return parameters;
     }
@@ -77,4 +77,4 @@ GpuKernelStatus GpuDigitalFilmGrain::dispatch(
     return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
 }
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

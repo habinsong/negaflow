@@ -18,7 +18,7 @@ namespace {
 
 constexpr int scratch_first = GpuImagePool::scratch_first;
 
-}  // namespace
+} // namespace
 
 struct GpuFilmLookStage::State final {
     GpuGaussianBlur gaussian{};
@@ -137,8 +137,8 @@ GpuFilmLookResult GpuFilmLookStage::apply(
     }
 
     if (plan.preset != nullptr) {
-        // ☠️ 결과가 스크래치 두 칸 중 어디에 들어가는지는 프리셋이 무엇을 바꾸는지에
-        //    따라 달라집니다. 그래서 어느 칸인지 돌려받아 그것을 다음 입력으로 씁니다.
+        // 결과가 스크래치 두 칸 중 어디에 들어가는지는 프리셋이 무엇을 바꾸는지에
+        // 따라 달라집니다. 그래서 어느 칸인지 돌려받아 그것을 다음 입력으로 씁니다.
         const GpuWorkingImage* preset_result = nullptr;
         if (state_->preset.dispatch(
                 device,
@@ -282,4 +282,4 @@ GpuFilmLookStage::BwResult GpuFilmLookStage::apply_bw(
     return result;
 }
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

@@ -141,6 +141,9 @@ negaflow::imaging::WorkingImage make_image() {
 void test_round_trip_and_publish(const std::filesystem::path& root) {
     const std::filesystem::path destination = root / L"round-trip.png";
     negaflow::output::WicPngExportLimits limits{};
+    // 인코더가 쓴 화소가 의도한 화소와 같다는 증명은 여기서 듭니다 —
+    // 내보내기 경로는 macOS 처럼 이 대조를 하지 않습니다.
+    limits.verify_pixel_readback = true;
     limits.write_buffer_bytes = 18U;
     limits.readback_buffer_bytes = 18U;
     const auto result = negaflow::output::export_working_to_srgb16_png(
@@ -247,6 +250,9 @@ void test_jpeg_standard_image_decode(const std::filesystem::path& root) {
 
 void test_dpi_metadata(const std::filesystem::path& root) {
     negaflow::output::WicPngExportLimits limits{};
+    // 인코더가 쓴 화소가 의도한 화소와 같다는 증명은 여기서 듭니다 —
+    // 내보내기 경로는 macOS 처럼 이 대조를 하지 않습니다.
+    limits.verify_pixel_readback = true;
     limits.output_dpi = 300U;
     const auto result = negaflow::output::export_working_to_srgb16_png(
         make_image(),
@@ -285,6 +291,9 @@ void test_preflight_failures_leave_no_file(const std::filesystem::path& root) {
     image.pixels[0].alpha = 0.5F;
     const std::filesystem::path alpha_destination = root / L"alpha-preserved.png";
     negaflow::output::WicPngExportLimits alpha_limits{};
+    // 인코더가 쓴 화소가 의도한 화소와 같다는 증명은 여기서 듭니다 —
+    // 내보내기 경로는 macOS 처럼 이 대조를 하지 않습니다.
+    alpha_limits.verify_pixel_readback = true;
     alpha_limits.conversion.preserve_alpha = true;
     const auto alpha_result = negaflow::output::export_working_to_srgb16_png(
         image, alpha_destination, alpha_limits);
@@ -319,6 +328,9 @@ void test_preflight_failures_leave_no_file(const std::filesystem::path& root) {
         "8-bit PNG expands the straight 128 alpha sample without gamma conversion");
 
     negaflow::output::WicPngExportLimits limits{};
+    // 인코더가 쓴 화소가 의도한 화소와 같다는 증명은 여기서 듭니다 —
+    // 내보내기 경로는 macOS 처럼 이 대조를 하지 않습니다.
+    limits.verify_pixel_readback = true;
     limits.conversion.max_encoded_pixel_bytes = 35U;
     const std::filesystem::path budget_destination = root / L"budget-rejected.png";
     const auto budget_result = negaflow::output::export_working_to_srgb16_png(
@@ -337,6 +349,9 @@ void test_preflight_failures_leave_no_file(const std::filesystem::path& root) {
 
 void test_failed_verification_discards_staging(const std::filesystem::path& root) {
     negaflow::output::WicPngExportLimits limits{};
+    // 인코더가 쓴 화소가 의도한 화소와 같다는 증명은 여기서 듭니다 —
+    // 내보내기 경로는 macOS 처럼 이 대조를 하지 않습니다.
+    limits.verify_pixel_readback = true;
     limits.max_artifact_bytes = 64U;
     const std::filesystem::path destination = root / L"artifact-limit.png";
     const auto result = negaflow::output::export_working_to_srgb16_png(

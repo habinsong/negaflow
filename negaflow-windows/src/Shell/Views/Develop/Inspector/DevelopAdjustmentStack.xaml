@@ -14,5 +14,7 @@
         <inspector:DevelopBwToningSection x:Name="BwToning" x:FieldModifier="internal" />
         <inspector:DevelopCalibrationSection x:Name="Calibration" x:FieldModifier="internal" />
         <inspector:DevelopDetailSection x:Name="Detail" x:FieldModifier="internal" />
+        <!-- macOS: `if model.developerMode { debugSection }` - 켜져 있을 때만 보입니다. -->
+        <inspector:DevelopDebugSection x:Name="Debug" x:FieldModifier="internal" />
     </StackPanel>
 </UserControl>

@@ -10,11 +10,11 @@ GPU 3.1–3.8은 닫혔다(docs/audit/15). 단축키 열거자 결손은 0이다
 FIFO 캐시는 있다(docs/audit/10). God object 생산 6개가 다시 500줄을 넘는다(docs/audit/05).
 다시 커널을 이식하지 마라. 새로 넘은 생산 파일은 나누거나 사유를 적어라.
 04·15 는 GPU 로 *무엇을* 옮겼고 무엇이 남았는지, 13 은 *어떻게* 빠르게 만들지다.
-참고로 프리뷰 이미지나 이미지를 보정/현상하는것과 이미지간 전환은 이미 구현했다. 
+참고로 프리뷰 이미지나 이미지를 보정/현상하는것과 이미지간 전환은 이미 구현했다.
 06 8절·16절에는 이 감사 자신이 틀렸던 것들이 적혀 있다 — 같은 실수를 반복하지 마라.
 그 문서의 맨 위 경고를 매 작업마다 다시 읽어라.
 
-문서가 낡아서 오래되거나 잘못된 내용이 있을수 있다. 비판적으로 확인해라. 
+문서가 낡아서 오래되거나 잘못된 내용이 있을수 있다. 비판적으로 확인해라.
 
  절대 하지 마라 (하면 죽는다)
 1. 하드코딩 — 값을 박아 증상만 가리는 것
@@ -63,10 +63,10 @@ XAML 에 요소가 있다고 "있음" 이 아니다 — 화면에 보여야 있�
 눌러서 값이 안 바뀌면 가짜다. 고칠 때까지 비활성으로 둬라. 되는 것처럼 보이게 두지 마라.
 
 ■ 저장소와 라이선스
-본체: C:\Users\habin\negaflow\  (Apache License 2.0)
-  negaflow-mac\      macOS 원본 Swift — 정답. 읽기만. 절대 고치지 마라
-  negaflow-windows\  여기를 고친다
-스캐너 플러그인: C:\Users\habin\negaflow-scanner-sane\  (GPL)
+본체: C:\Users\habin\negaflow\ (Apache License 2.0)
+  negaflow-mac\ macOS 원본 Swift — 정답. 읽기만. 절대 고치지 마라
+  negaflow-windows\ 여기를 고친다
+스캐너 플러그인: C:\Users\habin\negaflow-scanner-sane\ (GPL)
   negaflow-mac\ 와 negaflow-windows\ 로 나뉜다. macOS 쪽은 절대 고치지 마라
 SANE 이 GPL 이라 Apache 2.0 본체에 링크하면 배포가 불가능해진다. 그래서 별도 저장소·
 별도 프로세스·프로토콜 통신으로 뗀 것이다. 그 경계를 무너뜨리지 마라.
@@ -87,7 +87,7 @@ GPL/LGPL/AGPL 코드를 본체에 넣지 마라. 특허·저작권 확인해라.
 - UI 자동화(UIAutomationClient)로 AutomationId → BoundingRectangle·ToggleState 를 재라.
   이 기계는 150% 배율이라 UIA 값은 물리 화소다. **1.5 로 나눠서** macOS 스크린샷과 견줘라.
 - 창을 찍을 때는 PrintWindow + PW_RENDERFULLCONTENT(2) + SetProcessDPIAware().
-- ☠️ 맥 스크린샷 PNG 의 화소값을 색 사양으로 쓰지 마라. iCCP 에 모니터 프로파일이 박혀 있어
+- 맥 스크린샷 PNG 의 화소값을 색 사양으로 쓰지 마라. iCCP 에 모니터 프로파일이 박혀 있어
   그 숫자는 그 모니터의 장치값이다. **색은 Swift 원본에서, 자리·크기만 스크린샷에서.** (11 6.3)
 - 새로 만드는 .ps1 은 **UTF-8 BOM** 으로 저장해라. PowerShell 5.1 은 BOM 이 없으면 cp949 로
   읽어 한글이 다 깨지고 파싱까지 무너진다. (11 6.4)
@@ -132,9 +132,9 @@ GPU 남은 확인만: 내장 GPU, GpuImagePool 내장 메모리, 64³ 큐브는 
 - 주의: .gitignore 112행에 /negaflow-windows/docs/ 가 있어서 새 문서는 git add -f 해야 한다
 
 ■ 빌드·시험
-scripts\build.ps1 -Preset x64-release            네이티브
-scripts\build-managed.ps1 -Preset x64-release    관리
-scripts\ci-gate.ps1 -Preset x64-release          로컬 게이트 전체
+scripts\build.ps1 -Preset x64-release 네이티브
+scripts\build-managed.ps1 -Preset x64-release 관리
+scripts\ci-gate.ps1 -Preset x64-release 로컬 게이트 전체
 현재 기준(2026-08-20 x64-release 실측): native **102/102**, catalog **737**,
 shell **1384** assertions, 경고 0. 이 숫자가 줄면 안 된다.
 native.gpu_film_scan 간헐 SEGFAULT 는 원인을 확정하고 닫았다 — GPU 가 아니라

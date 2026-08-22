@@ -2,9 +2,9 @@
 // Windows CPU 판은 `imaging/digital_bw_emulsion_response.cpp`
 // `apply_digital_bw_emulsion_response` 이고, 이 셰이더는 그것과 화소값이 같아야 합니다.
 //
-// ⚠️ CPU 판은 화소 계산을 **`double`** 로 합니다. 이 셰이더는 float32 입니다.
-//    값이 전부 [0,1] 안의 다항식이라 오차가 작을 것으로 보지만, **그것은 시험이 판정합니다.**
-//    허용치를 늘리지 말고, 넘으면 원인을 찾으십시오.
+// 주의 CPU 판은 화소 계산을 **`double`** 로 합니다. 이 셰이더는 float32 입니다.
+// 값이 전부 [0,1] 안의 다항식이라 오차가 작을 것으로 보지만, **그것은 시험이 판정합니다.**
+// 허용치를 늘리지 말고, 넘으면 원인을 찾으십시오.
 //
 // 응답 계수(가중·대비·토·숄더·deepen·흑점·백점·강도)는
 // `imaging::prepare_digital_bw_emulsion_response` 가 만든 것을 받습니다. 여기서 다시
@@ -15,7 +15,7 @@
 cbuffer DigitalBwFilmConstants : register(b0) {
     uint2 Extent;
     float2 Padding0;
-    float3 Weights;      // 분광 RGB→그레이 가중
+    float3 Weights; // 분광 RGB→그레이 가중
     float Contrast;
     float Toe;
     float Shoulder;

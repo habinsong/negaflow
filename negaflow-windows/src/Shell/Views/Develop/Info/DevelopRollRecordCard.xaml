@@ -19,7 +19,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <FontIcon VerticalAlignment="Center" FontSize="14" Glyph="&#xE7C1;" />
+                <FontIcon VerticalAlignment="Center" FontSize="14" Glyph="&#xE7AA;" />
                 <TextBlock
                     x:Name="TitleText"
                     x:FieldModifier="internal"

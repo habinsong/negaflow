@@ -42,7 +42,7 @@ const BwCase bw_cases[] = {
     {"bw_custom_hues", {negaflow::imaging::BwToningMode::sepia, 200.0, 90.0, 0.8}},
 };
 
-}  // namespace
+} // namespace
 
 void bw_matches_cpu(const GpuDevice& device, const char* const label) {
     negaflow::gpu::GpuBwToning kernel{};
@@ -65,7 +65,7 @@ void bw_matches_cpu(const GpuDevice& device, const char* const label) {
     }
 
     for (const BwCase& scenario : bw_cases) {
-        // ☠️ 색조 계산을 시험에서 다시 구현하지 않습니다 — CPU 와 같은 함수를 씁니다.
+        // 색조 계산을 시험에서 다시 구현하지 않습니다 — CPU 와 같은 함수를 씁니다.
         const negaflow::imaging::BwToningSetup cpu_setup =
             negaflow::imaging::prepare_bw_toning(scenario.parameters);
         negaflow::gpu::GpuBwToningSetup gpu_setup{};
@@ -124,4 +124,4 @@ void bw_matches_cpu(const GpuDevice& device, const char* const label) {
 // 디지털 흑백 유제 — macOS `digitalBWFilm`. CPU 판이 화소 계산을 `double` 로 하므로
 // float32 GPU 와의 오차가 다른 커널보다 클 수 있습니다. 허용치는 그대로 `1e-5` 입니다.
 
-}  // namespace gpu_color_kernel_tests
+} // namespace gpu_color_kernel_tests

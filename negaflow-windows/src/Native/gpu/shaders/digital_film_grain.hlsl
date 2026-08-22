@@ -1,11 +1,11 @@
 // 밀도 의존 그레인입니다. macOS `digitalFilmGrainDensity`(`ChromabaseMetalKernels.swift:800`),
 // Windows CPU 판은 `imaging/digital_film_grain.cpp` `apply_digital_film_grain_material` 입니다.
 //
-// ☠️ **맞춰야 할 상대는 Apple 의 `CIRandomGenerator` 가 아니라 Windows CPU 필드입니다.**
-//    macOS 는 `CIRandomGenerator` 출력을 노이즈로 받는데 그 수열은 비공개입니다
-//    (공식 문서에 파라미터만 있고 알고리즘이 없습니다). 그래서 `digital_film_grain.h:41-44`
-//    가 *"statistical, not pixel-exact"* 계약을 이미 적어 두었고, Windows 는 좌표 해시
-//    필드를 씁니다 — 재시도·타일이 값을 흔들 수 없는 결정적 필드입니다.
+// **맞춰야 할 상대는 Apple 의 `CIRandomGenerator` 가 아니라 Windows CPU 필드입니다.**
+// macOS 는 `CIRandomGenerator` 출력을 노이즈로 받는데 그 수열은 비공개입니다
+// (공식 문서에 파라미터만 있고 알고리즘이 없습니다). 그래서 `digital_film_grain.h:41-44`
+// 가 *"statistical, not pixel-exact"* 계약을 이미 적어 두었고, Windows 는 좌표 해시
+// 필드를 씁니다 — 재시도·타일이 값을 흔들 수 없는 결정적 필드입니다.
 //
 // 해시는 **전부 uint32 정수 연산**이라 CPU 와 **비트 단위로 같아야 합니다.**
 // 다르면 옮겨 적은 것이 틀린 것입니다.

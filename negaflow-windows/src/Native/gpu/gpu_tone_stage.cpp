@@ -101,7 +101,7 @@ using negaflow::imaging::WorkingToneAdjustStatus;
         image.stride_pixels};
 }
 
-}  // namespace
+} // namespace
 
 // 커널 일곱과 핑퐁 두 장입니다. 텍스처는 크기가 바뀔 때만 다시 만듭니다.
 struct GpuToneStage::State final {
@@ -121,9 +121,9 @@ struct GpuToneStage::State final {
     mutable GpuWorkingImage retained_back{};
     mutable std::uint32_t retained_width{0U};
     mutable std::uint32_t retained_height{0U};
-    // ☠️ 측정 스냅숏은 **호출부 이미지가 아니라** 여기로 내립니다. 호출부 이미지에 쓰면,
-    //    그 뒤 한 걸음이라도 실패해 CPU 로 되돌아갈 때 CPU 가 **반쯤 처리된 화소**를
-    //    다시 처리하게 됩니다. 그 순간 값이 조용히 틀어집니다.
+    // 측정 스냅숏은 **호출부 이미지가 아니라** 여기로 내립니다. 호출부 이미지에 쓰면,
+    // 그 뒤 한 걸음이라도 실패해 CPU 로 되돌아갈 때 CPU 가 **반쯤 처리된 화소**를
+    // 다시 처리하게 됩니다. 그 순간 값이 조용히 틀어집니다.
     mutable std::vector<negaflow::core::Rgba32F> measurement_pixels{};
     // 밴드 측정 앞의 전 화소 유한성 확인을 GPU 에서 합니다. 4바이트만 회수합니다.
     GpuFiniteCheck finite{};
@@ -215,7 +215,7 @@ GpuToneStageResult GpuToneStage::apply(
     result.info.kernel_status = negaflow::core::KernelStatus::ok;
 
     if (state_ == nullptr || !device.is_usable()) {
-        return result;  // handled == false — 호출부가 CPU 로 갑니다.
+        return result; // handled == false — 호출부가 CPU 로 갑니다.
     }
     // 검증은 CPU 판과 **같은 함수**를 씁니다. 여기서 다시 쓰면 두 벌이 됩니다.
     if (!imaging::valid_working_tone_adjust_parameters(parameters)) {
@@ -232,7 +232,7 @@ GpuToneStageResult GpuToneStage::apply(
         return result;
     }
 
-    // ☠️ CPU 판(`working_tone_adjuster.cpp:84-102`)의 게이트를 그대로 옮깁니다.
+    // CPU 판(`working_tone_adjuster.cpp:84-102`)의 게이트를 그대로 옮깁니다.
     const bool exposure_changes =
         std::abs(parameters.exposure_stops) > imaging::tone_change_threshold;
     const bool basic_changes = imaging::has_basic_tone_change(parameters.basic);
@@ -331,8 +331,8 @@ GpuToneStageResult GpuToneStage::apply_on(
     }
 
     if (curve_changes) {
-        // ⚠️ 여기서 한 번 내립니다. 측정이 전 화소를 `double` 로 훑기 때문입니다 —
-        //    헤더의 설명 참고. 커브가 꺼져 있으면 이 왕복이 없습니다.
+        // 주의 여기서 한 번 내립니다. 측정이 전 화소를 `double` 로 훑기 때문입니다 —
+        // 헤더의 설명 참고. 커브가 꺼져 있으면 이 왕복이 없습니다.
         //
         // 실측 2026-08-19: 있는 `GpuMipHalve` 로 ≤256 프록시를 만들어 재면
         // GPU/CPU 최대 오차가 **2.55e-04** (허용 1e-5). 밴드 오차 2.48e-04.
@@ -433,4 +433,4 @@ GpuToneStageResult GpuToneStage::apply_on(
     return result;
 }
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

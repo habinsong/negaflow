@@ -55,19 +55,19 @@ namespace {
 int usage() {
     std::cerr << "usage: negaflow-cli --develop-timing <source> "
                  "[<dmin-r> <dmin-g> <dmin-b>] [repeats] [nocurve] [filmlook]\n"
-                 "  NEGA_GPU=0 으로 CPU 만, 기본은 GPU 허용입니다.\n"
-                 "  filmlook — 디지털 원본 필름 룩(헐레이션·색 큐브·아큐턴스·색 "
+                 " NEGA_GPU=0 으로 CPU 만, 기본은 GPU 허용입니다.\n"
+                 " filmlook — 디지털 원본 필름 룩(헐레이션·색 큐브·아큐턴스·색 "
                  "프리셋·그레인)까지 켭니다.\n"
-                 "             필름 스캔 경로는 이 사슬을 지나지 않으므로, 그 다섯 "
+                 " 필름 스캔 경로는 이 사슬을 지나지 않으므로, 그 다섯 "
                  "단계를 재려면 이것이 있어야 합니다.\n"
-                 "  bwlook — 디지털 원본 흑백 룩(헐레이션·유제·아큐턴스·그레인)을 켭니다.\n"
-                 "  grain — TextureStage filmGrain 을 0.40 으로 켭니다(기본 0 이면 단계가 비어 있음).\n"
-                 "  areaavg — 디코드된 working 이미지에 CIAreaAverage 대응 면적 평균을 재어 stderr 에 찍습니다.\n"
-                 "             GPU 면적평균은 기본 끔. NEGA_GPU_AREA_AVERAGE=1 로만 켭니다.\n";
+                 " bwlook — 디지털 원본 흑백 룩(헐레이션·유제·아큐턴스·그레인)을 켭니다.\n"
+                 " grain — TextureStage filmGrain 을 0.40 으로 켭니다(기본 0 이면 단계가 비어 있음).\n"
+                 " areaavg — 디코드된 working 이미지에 CIAreaAverage 대응 면적 평균을 재어 stderr 에 찍습니다.\n"
+                 " GPU 면적평균은 기본 끔. NEGA_GPU_AREA_AVERAGE=1 로만 켭니다.\n";
     return 2;
 }
 
-}  // namespace
+} // namespace
 
 int run_develop_timing(const int argument_count, const wchar_t* const arguments[]) {
     if (argument_count < 3 || argument_count > 8) {
@@ -121,10 +121,10 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
     request.tone.basic.shadows = 0.2F;
     request.tone.basic.highlights = -0.2F;
 
-    // ☠️ 파라메트릭 커브는 **GPU 경로 한가운데서 한 번 내립니다.** 밴드 측정
-    //    (`measure_parametric_tone_curve_bands`)이 전 화소를 CPU `double` 로 훑기 때문입니다.
-    //    커브를 끄고 켜면서 재면 그 왕복 비용이 그대로 드러납니다 —
-    //    마지막 인자에 `nocurve` 를 주면 끕니다.
+    // 파라메트릭 커브는 **GPU 경로 한가운데서 한 번 내립니다.** 밴드 측정
+    // (`measure_parametric_tone_curve_bands`)이 전 화소를 CPU `double` 로 훑기 때문입니다.
+    // 커브를 끄고 켜면서 재면 그 왕복 비용이 그대로 드러납니다 —
+    // 마지막 인자에 `nocurve` 를 주면 끕니다.
     bool curve = true;
     for (int index = 2; index < argument_count; ++index) {
         if (std::wstring_view{arguments[index]} == L"nocurve") {
@@ -152,10 +152,10 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
         }
     }
 
-    // ☠️ 디지털 필름 룩은 **필름 스캔 경로가 지나지 않습니다**(`working_film_look.cpp`).
-    //    스캔본에는 이미 유제를 통과한 신호가 들어 있어 같은 물리를 두 번 얹지 않기
-    //    때문입니다. 그래서 헐레이션·그레인을 재려면 원본 종류를 바꿔야 하고,
-    //    그렇게 재야 **실제로 도는 자리**와 같은 것을 재는 것입니다.
+    // 디지털 필름 룩은 **필름 스캔 경로가 지나지 않습니다**(`working_film_look.cpp`).
+    // 스캔본에는 이미 유제를 통과한 신호가 들어 있어 같은 물리를 두 번 얹지 않기
+    // 때문입니다. 그래서 헐레이션·그레인을 재려면 원본 종류를 바꿔야 하고,
+    // 그렇게 재야 **실제로 도는 자리**와 같은 것을 재는 것입니다.
     for (int index = 2; index < argument_count; ++index) {
         if (std::wstring_view{arguments[index]} == L"filmlook") {
             request.film_look.source_kind =
@@ -271,4 +271,4 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
     return 0;
 }
 
-}  // namespace negaflow::cli
+} // namespace negaflow::cli

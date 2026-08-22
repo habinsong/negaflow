@@ -1,6 +1,6 @@
 // 제품 경로 형태학 — 풀 재사용 + RGB 톱햇 오케스트레이터.
 //
-// ☠️ GPU 가 안 돌면 실패합니다. 폴백이면 CPU 와 같아서 시험이 비게 됩니다.
+// GPU 가 안 돌면 실패합니다. 폴백이면 CPU 와 같아서 시험이 비게 됩니다.
 
 #include "grain_mend_morphology.h"
 
@@ -60,7 +60,7 @@ constexpr std::uint32_t height = 53U;
     return true;
 }
 
-}  // namespace
+} // namespace
 
 int main() {
     const std::vector<float> red = make_plane(0U);

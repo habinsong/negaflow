@@ -31,9 +31,9 @@
 열거 결과를 그대로 찍어 보고서야 드러났습니다.
 
 ```
-/ifd/{ushort=33723}  <블록 iptc>
-/ifd/{ushort=34665}  <블록 exif>
-/ifd/{ushort=34853}  <블록 gps>
+/ifd/{ushort=33723} <블록 iptc>
+/ifd/{ushort=34665} <블록 exif>
+/ifd/{ushort=34853} <블록 gps>
 ```
 
 **2. IPTC 항목은 `/{str=By-line}` 로 나옵니다.** 이름을 통째로 정규화하면 `strbyline` 이
@@ -53,16 +53,16 @@
 
 | 항목 | minimal | copyrightOnly | removeLocation | all |
 | --- | :-: | :-: | :-: | :-: |
-| TIFF ImageDescription | | | ✓ | ✓ |
-| TIFF Artist / Copyright | | ✓ | ✓ | ✓ |
-| TIFF Make / Model (앱) | ✓ | | ✓ | ✓ |
-| TIFF Software / DateTime (앱) | ✓ | | ✓ | ✓ |
-| EXIF LensModel / ISO | | | ✓ | ✓ |
+| TIFF ImageDescription | | | OK | OK |
+| TIFF Artist / Copyright | | OK | OK | OK |
+| TIFF Make / Model (앱) | OK | | OK | OK |
+| TIFF Software / DateTime (앱) | OK | | OK | OK |
+| EXIF LensModel / ISO | | | OK | OK |
 | EXIF UserComment | FilmType 만 | | FilmType + FilmStock | 〃 |
-| IPTC By-line / CopyrightNotice | | ✓ | ✓ | ✓ |
-| IPTC Headline | | | ✓ | ✓ |
-| IPTC City | | | | ✓ |
-| GPS | | | | ✓ |
+| IPTC By-line / CopyrightNotice | | OK | OK | OK |
+| IPTC Headline | | | OK | OK |
+| IPTC City | | | | OK |
+| GPS | | | | OK |
 
 macOS task6 골든(`docs/verification/macos-golden/task6-metadata-policy/tiff-tags.json`)의
 정책별 태그 구성과 같은 규칙입니다.

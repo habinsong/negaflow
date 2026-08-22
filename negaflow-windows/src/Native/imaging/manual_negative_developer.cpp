@@ -53,7 +53,8 @@ void discard_pixels(WorkingImage& image) noexcept {
     const WorkingImage& image,
     const std::array<float, 3>& dmin,
     const negaflow::core::PrintResponse& response,
-    const NegativeFilmType film_type) noexcept {
+    const NegativeFilmType film_type,
+    std::array<float, 3>* out_black_input = nullptr) noexcept {
     if (!has_compatible_layout(image)) {
         return std::nullopt;
     }
@@ -209,14 +210,21 @@ void discard_pixels(WorkingImage& image) noexcept {
                     (1.0F + ((measured[channel] / geometric_mean) - 1.0F) * confidence);
             }
         }
+        // blackInput 은 지표 전용이라 반전 수식에 들어가지 않습니다. 채널이 이미
+        // 정렬돼 있어 백분위 한 번이면 되므로 늘 담습니다 - 개발자 디버그 화면이 읽습니다.
+        std::array<double, 3> black_input{};
+        for (std::size_t channel = 0U; channel < 3U; ++channel) {
+            black_input[channel] =
+                static_cast<double>(percentile(channels[channel], 0.90)) * 0.97;
+        }
+        if (out_black_input != nullptr) {
+            for (std::size_t channel = 0U; channel < 3U; ++channel) {
+                (*out_black_input)[channel] = static_cast<float>(black_input[channel]);
+            }
+        }
         if (debug_enabled()) {
-            // blackInput 과 midDensity 는 macOS 에서도 지표 전용이라 반전 수식에 들어가지
-            // 않습니다. 대조에만 쓰므로 진단이 켜졌을 때만 계산합니다.
-            std::array<double, 3> black_input{};
             double mid_density = 0.0;
             for (std::size_t channel = 0U; channel < 3U; ++channel) {
-                black_input[channel] =
-                    static_cast<double>(percentile(channels[channel], 0.90)) * 0.97;
                 mid_density += std::log10(
                     static_cast<double>(dmin[channel]) /
                     std::max(static_cast<double>(percentile(channels[channel], 0.5)), 1.0e-5));
@@ -237,7 +245,7 @@ void discard_pixels(WorkingImage& image) noexcept {
     }
 }
 
-}  // namespace
+} // namespace
 
 ManualNegativeDevelopResult develop_manual_negative(
     WorkingImage image,
@@ -271,7 +279,8 @@ ManualNegativeDevelopResult develop_manual_negative(
         result.image,
         result.info.applied_dmin,
         response,
-        parameters.film_type);
+        parameters.film_type,
+        &result.info.black_input);
     if (!parameters.use_preset_response) {
         if (adaptive) {
             result.info.dmax_normalized = *adaptive;
@@ -322,9 +331,9 @@ ManualNegativeDevelopResult develop_manual_negative(
     // 현상 전체에서 가장 비싼 단계입니다 — 실측으로 프리뷰 856 ms 중 **353 ms(41%)**.
     // 화소마다 채널별 `log10`·`pow`·`exp` 가 돌기 때문입니다.
     //
-    // ☠️ 형태학과 달리 **근사**입니다(곱셈·초월함수). `ApproximateAcceleratorScope`
-    //    안에서만 돕니다 — 프리뷰·검출만 그 스코프를 엽니다. 내보내기·골든은 CPU 그대로입니다.
-    //    그리고 형태학과 달리 **한 번만** 불리므로 왕복이 1회입니다.
+    // 형태학과 달리 **근사**입니다(곱셈·초월함수). `ApproximateAcceleratorScope`
+    // 안에서만 돕니다 — 프리뷰·검출만 그 스코프를 엽니다. 내보내기·골든은 CPU 그대로입니다.
+    // 그리고 형태학과 달리 **한 번만** 불리므로 왕복이 1회입니다.
     bool accelerated = false;
     if (approximate_acceleration_allowed()) {
         if (const KernelAccelerator* const table = kernel_accelerator();
@@ -394,4 +403,4 @@ const char* negative_film_type_name(const NegativeFilmType film_type) noexcept {
     return "unknown";
 }
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

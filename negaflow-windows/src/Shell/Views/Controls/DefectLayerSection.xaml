@@ -57,12 +57,12 @@
                             Foreground="{Binding Enabled, Converter={StaticResource LayerBrush}}"
                             Glyph="{Binding EnabledGlyph}" />
                     </Button>
-                    <FontIcon
+                    <controls:VectorIcon
                         Grid.Column="2"
                         VerticalAlignment="Center"
-                        FontSize="12"
+                        IconSize="12"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        Glyph="{Binding KindGlyph}" />
+                        Kind="{Binding KindIcon}" />
                     <!-- macOS .font(.callout).lineLimit(1) -->
                     <TextBlock
                         Grid.Column="3"
@@ -155,11 +155,11 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <FontIcon
+                <controls:VectorIcon
                     Grid.Column="0"
                     VerticalAlignment="Center"
-                    FontSize="14"
-                    Glyph="&#xE90F;" />
+                    IconSize="14"
+                    Kind="Bandage" />
                 <TextBlock
                     x:Name="TitleText"
                     Grid.Column="1"

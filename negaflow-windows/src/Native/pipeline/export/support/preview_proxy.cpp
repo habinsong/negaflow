@@ -25,7 +25,10 @@ constexpr double full_max_dimension = 3600.0;
 }
 
 [[nodiscard]] bool recipe_blocks_proxy(const DevelopExportRequest& request) noexcept {
-    return !request.defect_recipe.order.empty();
+    // ABI v34 이하 호출자는 recipe fingerprint가 없어 안전하게 무효화할 수 없습니다.
+    // v35는 ordered recipe SHA-256을 주므로 결함 제거 raw proxy도 정확히 재사용합니다.
+    return !request.defect_recipe.order.empty() &&
+        !request.defect_recipe_sha256.has_value();
 }
 
 [[nodiscard]] PreviewRawKey key_for(
@@ -37,6 +40,7 @@ constexpr double full_max_dimension = 3600.0;
     key.base_mode = request.base_estimation_mode;
     key.film_type = request.negative.film_type;
     key.polarity = request.film_polarity;
+    key.defect_recipe_sha256 = request.defect_recipe_sha256;
     key.has_preset = request.film_stock_preset.has_value() &&
         request.base_estimation_mode == NegativeBaseEstimationMode::preset;
     if (key.has_preset) {
@@ -188,7 +192,7 @@ std::optional<DevelopExportOutcome> preview_proxy_materialize(
     }
 
     hint.image_is_proxy = true;
-    if (recipe_blocks_proxy(request)) {
+    if (recipe_blocks_proxy(request) || !request.retain_preview_raw) {
         return std::nullopt;
     }
 

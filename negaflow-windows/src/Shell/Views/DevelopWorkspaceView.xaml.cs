@@ -194,6 +194,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         LeftPanel.Bind(panel, host, windowId, engineVersion);
         InfoCards.Bind(panel, host);
         Adjustments.Bind(panel);
+        Adjustments.DebugStateChanged += OnDebugStateChanged;
         BaseCard.Bind(panel);
         LocalAdjustmentCard.Bind(panel);
         LocalAdjustmentCard.AdjustmentsChanged += (_, _) => RequestPreview();

@@ -50,6 +50,54 @@ public sealed partial class DevelopPreviewCanvas : UserControl
     }
 
     /// <summary>적용 단추입니다. 카탈로그 쓰기는 뷰가 맡습니다.</summary>
+    /// <summary>
+    /// 설정 · 인터페이스의 "캔버스 배경" 입니다. 바탕색과 <b>캔버스 위 컨트롤의 글자색</b>이
+    /// 함께 바뀝니다 — 흰 바탕에 흰 글자가 얹히면 컨트롤이 통째로 사라집니다(macOS 주석).
+    /// </summary>
+    public void ApplyCanvasBackground(CanvasBackgroundKind background)
+    {
+        if (canvasBackground == background && CanvasHost.Background is not null)
+        {
+            return;
+        }
+        canvasBackground = background;
+        byte level = CanvasBackgroundColors.Byte(background);
+        // 안쪽 Grid 에 칠합니다. UserControl 의 Background 는 기본 서식에 그것을 그리는
+        // 요소가 없어 화면에 나오지 않고, Background 가 없는 Grid 는 히트 테스트도 되지
+        // 않아 오른쪽 클릭이 아무 데도 닿지 않습니다 - 배경색과 우클릭 메뉴가 함께 죽어
+        // 있던 이유가 이 하나입니다.
+        CanvasHost.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+            Microsoft.UI.ColorHelper.FromArgb(255, level, level, level));
+        CanvasHudChrome chrome = CanvasHudChrome.For(background);
+        ZoomHud.ApplyChrome(chrome);
+        CompareHud.ApplyChrome(chrome);
+        Negaflow.Shell.Diagnostics.SettingsChangeLog.Write(
+            $"canvas paint: {background} level={level} host={CanvasHost.Background is not null}");
+    }
+
+    private CanvasBackgroundKind canvasBackground = CanvasBackgroundKind.Black;
+
+    /// <summary>
+    /// 오른쪽 클릭 메뉴가 고른 배경색을 저장하는 자리입니다. macOS 는 캔버스를 오른쪽
+    /// 클릭하면 "배경색" 메뉴가 뜨고, 고른 값이 설정과 같은 곳에 저장됩니다.
+    /// </summary>
+    public Action<CanvasBackgroundKind>? CanvasBackgroundPicked
+    {
+        get => canvasBackgroundPicked;
+        set
+        {
+            canvasBackgroundPicked = value;
+            // 메뉴도 안쪽 Grid 에 답니다. UserControl 에 달면 히트 테스트가 닿지 않습니다.
+            CanvasHost.ContextFlyout = value is null
+                ? null
+                : Controls.CanvasBackgroundFlyout.Create(
+                    () => canvasBackground,
+                    kind => canvasBackgroundPicked?.Invoke(kind));
+        }
+    }
+
+    private Action<CanvasBackgroundKind>? canvasBackgroundPicked;
+
     public event EventHandler? CropApplyRequested;
 
     /// <summary>취소 단추와 Esc 입니다. 세션 종료는 뷰가 맡습니다.</summary>
@@ -191,10 +239,10 @@ public sealed partial class DevelopPreviewCanvas : UserControl
     {
         // 크기가 바뀔 때만 새로 만듭니다. 슬라이더를 끄는 동안 매 프레임 할당하지 않기 위해서입니다.
         //
-        // ☠️ 두 벌을 들고 있는 이유: 한 번의 편집이 **인터랙티브 패스와 정착 패스** 두 그림을
-        //    보내고 둘의 치수가 다릅니다(예 2304 상자 → 2304×1540, 정착 3600 → 3600×2406).
-        //    한 벌만 들면 두 패스가 서로를 밀어내 **슬라이더 한 칸마다 두 번** 새 비트맵을
-        //    할당했습니다 — 정착본 하나가 34.6MB 라 UI 스레드에 그대로 얹혔습니다.
+        // 두 벌을 들고 있는 이유: 한 번의 편집이 **인터랙티브 패스와 정착 패스** 두 그림을
+        // 보내고 둘의 치수가 다릅니다(예 2304 상자 → 2304×1540, 정착 3600 → 3600×2406).
+        // 한 벌만 들면 두 패스가 서로를 밀어내 **슬라이더 한 칸마다 두 번** 새 비트맵을
+        // 할당했습니다 — 정착본 하나가 34.6MB 라 UI 스레드에 그대로 얹혔습니다.
         if (previewBitmap is null ||
             previewBitmap.PixelWidth != width ||
             previewBitmap.PixelHeight != height)
@@ -322,7 +370,7 @@ public sealed partial class DevelopPreviewCanvas : UserControl
     /// <summary>다각형 완료를 눌렀을 때입니다.</summary>
     public event EventHandler? LocalAdjustmentFinishPolygonRequested;
 
-    /// <summary>안내 캡슐의 ✕ 를 눌렀을 때입니다. macOS 는 그리기를 끕니다.</summary>
+    /// <summary>안내 캡슐의 를 눌렀을 때입니다. macOS 는 그리기를 끕니다.</summary>
     public event EventHandler? LocalAdjustmentCloseRequested;
 
     /// <summary>

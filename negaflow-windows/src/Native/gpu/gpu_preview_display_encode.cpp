@@ -17,9 +17,17 @@ struct alignas(16) PreviewDisplayEncodeConstants final {
     float padding0{0.0F};
     float proof_bias[3]{0.0F, 0.0F, 0.0F};
     float padding1{0.0F};
+    // 미룬 기하 변환. 항등이면 원본 크기와 0 자리 옮김입니다.
+    std::uint32_t source_width{0};
+    std::uint32_t source_height{0};
+    std::uint32_t crop_left{0};
+    std::uint32_t crop_top{0};
+    std::uint32_t rotation{0};
+    std::uint32_t flips{0};
+    std::uint32_t padding2[2]{};
 };
 
-static_assert(sizeof(PreviewDisplayEncodeConstants) == 48U, "three constant registers");
+static_assert(sizeof(PreviewDisplayEncodeConstants) == 80U, "five constant registers");
 
 [[nodiscard]] std::uint32_t group_count(
     const std::uint32_t extent,
@@ -150,7 +158,8 @@ GpuKernelStatus GpuPreviewDisplayEncode::encode(
     std::uint8_t* const destination,
     const std::uint32_t destination_stride_bytes,
     const float proof_scale[3],
-    const float proof_bias[3]) const noexcept {
+    const float proof_bias[3],
+    const imaging::ImageTransformGather* const gather) const noexcept {
     if (!device.is_usable() || shader_ == nullptr || constants_ == nullptr) {
         return GpuKernelStatus::device_unavailable;
     }
@@ -158,9 +167,12 @@ GpuKernelStatus GpuPreviewDisplayEncode::encode(
         proof_bias == nullptr) {
         return GpuKernelStatus::invalid_arguments;
     }
-    const std::uint32_t width = source.width();
-    const std::uint32_t height = source.height();
-    if (destination_stride_bytes < width * 4U) {
+    // 목표 크기는 **변환 뒤** 크기입니다. 변환이 없으면 원본과 같습니다.
+    const bool has_gather = gather != nullptr && gather->output_width != 0U &&
+        gather->output_height != 0U;
+    const std::uint32_t width = has_gather ? gather->output_width : source.width();
+    const std::uint32_t height = has_gather ? gather->output_height : source.height();
+    if (width == 0U || height == 0U || destination_stride_bytes < width * 4U) {
         return GpuKernelStatus::invalid_arguments;
     }
     if (!ensure_target(device, width, height)) {
@@ -170,6 +182,15 @@ GpuKernelStatus GpuPreviewDisplayEncode::encode(
     PreviewDisplayEncodeConstants payload{};
     payload.extent.width = width;
     payload.extent.height = height;
+    payload.source_width = source.width();
+    payload.source_height = source.height();
+    if (has_gather) {
+        payload.crop_left = gather->crop_left;
+        payload.crop_top = gather->crop_top;
+        payload.rotation = static_cast<std::uint32_t>(gather->rotation);
+        payload.flips = (gather->flip_horizontal ? 1U : 0U) |
+            (gather->flip_vertical ? 2U : 0U);
+    }
     payload.proof_scale[0] = proof_scale[0];
     payload.proof_scale[1] = proof_scale[1];
     payload.proof_scale[2] = proof_scale[2];

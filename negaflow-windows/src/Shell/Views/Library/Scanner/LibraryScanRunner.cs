@@ -40,11 +40,21 @@ internal sealed class LibraryScanRunner
         string directory;
         try
         {
-            // macOS `diskStorage.scansPath` — 사용자가 고른 폴더가 있으면 그것을 씁니다.
-            directory = ScanStorageLayout.EnsureRollDirectory(
-                view.scanSession.ScanStorageRoot is { Length: > 0 } chosen
+            // macOS `diskStorage.scansPath` — 스캔 패널에서 고른 자리가 우선이고, 없으면
+            // 설정 · 디스크 탭의 "스캔 원본" 폴더입니다. 둘 다 없을 때만 카탈로그 옆으로
+            // 갑니다 — 원본을 사용자가 모르는 곳에 두지 않기 위해서입니다.
+            // 프리뷰는 원본이 아니라 프레임 찾기용 임시 그림입니다. macOS 도 스캔 원본과
+            // 다른 자리(스캔 프리뷰 캐시)에 둡니다 - 원본 폴더에 섞이면 사용자가 지운 뒤에도
+            // 남아 장수가 어긋납니다.
+            string scanRoot = preview && view.diskScanPreviewRoot is { Length: > 0 } previewRoot
+                ? previewRoot
+                : view.scanSession.ScanStorageRoot is { Length: > 0 } chosen
                     ? chosen
-                    : Path.Combine(roots.LibraryRoot, "Scans"),
+                    : view.diskScanRoot is { Length: > 0 } configured
+                        ? configured
+                        : Path.Combine(roots.LibraryRoot, "Scans");
+            directory = ScanStorageLayout.EnsureRollDirectory(
+                scanRoot,
                 view.scanSession.Options.FilmType,
                 rollName,
                 DateTime.Now);
@@ -84,6 +94,7 @@ internal sealed class LibraryScanRunner
         view.ScanStatusText.Text = Describe(outcome);
         if (preview)
         {
+            RemoveStalePreviewFrames();
             // 프리뷰는 카탈로그에 올리지 않습니다. 그림만 읽어 두었다가 프레임 찾기에 넘깁니다.
             view.flatbedPreview = view.scanSession.LastPreviewPath is { } previewPath
                 ? await PreviewLuminanceReader.ReadAsync(previewPath)
@@ -94,12 +105,34 @@ internal sealed class LibraryScanRunner
                 _ = view.scanSession.RefreshRegions(
                     view.flatbedPreview.Values,
                     view.flatbedPreview.Width,
-                    view.flatbedPreview.Height);
+                    view.flatbedPreview.Height,
+                    view.flatbedPreview.PhysicalWidthMm,
+                    view.flatbedPreview.PhysicalHeightMm);
             }
             view.renderer.Render();
             return;
         }
         view.RequestLibraryReload();
+    }
+
+    /// <summary>
+    /// 지난 프리뷰 프레임을 걷어냅니다. macOS <c>removeEphemeralPreviewFrames(keeping:)</c>
+    /// 자리이며, 남겨 두면 프리뷰를 누를 때마다 임시 그림이 쌓입니다.
+    /// </summary>
+    private void RemoveStalePreviewFrames()
+    {
+        if (view.libraryHost is not { } host)
+        {
+            return;
+        }
+        string? keep = host.ActiveFrameId;
+        List<string> stale = [.. host.Frames
+            .Where(frame => frame.IsPreviewScan && frame.Id != keep)
+            .Select(frame => frame.Id)];
+        if (stale.Count != 0)
+        {
+            _ = host.RemoveFrames(stale);
+        }
     }
 
     private string Describe(ScanRunOutcome outcome)

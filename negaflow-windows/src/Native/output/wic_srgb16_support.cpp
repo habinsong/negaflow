@@ -306,6 +306,7 @@ WicSrgb16FrameStatus verify_working_srgb16_frame(
     const std::vector<std::uint8_t>& expected_profile,
     const std::uint32_t output_dpi,
     const std::uint32_t readback_buffer_bytes,
+    const bool compare_pixels,
     WorkingToSrgb16Status& conversion_status,
     std::uint32_t& native_error_code) {
     UINT width = 0U;
@@ -340,6 +341,11 @@ WicSrgb16FrameStatus verify_working_srgb16_frame(
     if (expected.width == 0U || expected.height == 0U || expected.stride_bytes == 0U ||
         readback_buffer_bytes < expected.stride_bytes) {
         return WicSrgb16FrameStatus::readback_failed;
+    }
+    // 화소 전수 대조를 끄면 여기서 끝냅니다 — 위의 치수·화소형식·해상도 검사는 이미 했고,
+    // 아래 되읽기 고리가 파일 전체 디코드와 두 번째 변환을 지고 있습니다.
+    if (!compare_pixels) {
+        return verify_profile(factory, frame, expected_profile, native_error_code);
     }
     const std::uint32_t rows_per_copy =
         readback_buffer_bytes / expected.stride_bytes;

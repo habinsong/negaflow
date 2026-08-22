@@ -54,6 +54,10 @@ public sealed partial class DevelopAdjustmentStack : UserControl
         Detail.PreviewRequested += OnChildPreview;
         Detail.RefreshRequested += OnChildRefresh;
         Detail.ResetRequested += OnReset;
+        Debug.ToggleRequested += (_, _) => RaiseToggle(DevelopInspectorSection.Debug);
+        Debug.ExpansionRequested += (_, args) =>
+            RaiseExpansion(DevelopInspectorSection.Debug, args);
+        Debug.DebugStateChanged += (_, _) => DebugStateChanged?.Invoke(this, EventArgs.Empty);
         QuickActions.AutoColorToggled += (_, _) => AutoColorToggled?.Invoke(this, EventArgs.Empty);
         QuickActions.AutoLevelsToggled += (_, _) => AutoLevelsToggled?.Invoke(this, EventArgs.Empty);
         QuickActions.AutoToneClicked += (_, _) => AutoToneClicked?.Invoke(this, EventArgs.Empty);
@@ -64,6 +68,22 @@ public sealed partial class DevelopAdjustmentStack : UserControl
         QuickActions.AutoWhiteBalanceResetClicked += (_, _) =>
             AutoWhiteBalanceResetClicked?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>디버그 오버레이나 단계가 바뀌었습니다. 미리보기를 다시 그려야 합니다.</summary>
+    public event EventHandler? DebugStateChanged;
+
+    /// <summary>지금 오버레이 상태입니다. 미리보기가 읽습니다.</summary>
+    public Negaflow.Shell.Develop.DevelopDebugState DebugState => Debug.State;
+
+    /// <summary>설정 · 일반의 개발자 모드를 구역에 겁니다.</summary>
+    public void SetDeveloperMode(bool enabled) => Debug.SetDeveloperMode(enabled);
+
+    /// <summary>마지막 현상이 실제로 쓴 값을 적습니다.</summary>
+    public void ShowDebugMetrics(
+        Negaflow.Catalog.ManualBaseRgb? appliedBase,
+        Negaflow.Interop.DevelopDebugMetrics? metrics,
+        int width,
+        int height) => Debug.ShowMetrics(appliedBase, metrics, width, height);
 
     /// <summary>macOS QuickActionPill 의 되돌리기 단추입니다.</summary>
     public event EventHandler? AutoToneResetClicked;
@@ -127,6 +147,7 @@ public sealed partial class DevelopAdjustmentStack : UserControl
         BwToning.Localize();
         Calibration.Localize();
         Detail.Localize();
+        Debug.Localize();
     }
 
     public void Show(DevelopPanelState hostPanel)
@@ -167,6 +188,7 @@ public sealed partial class DevelopAdjustmentStack : UserControl
             presentation.ExpandedSection == DevelopInspectorSection.BlackAndWhiteToning);
         Calibration.ApplyExpanded(presentation.ExpandedSection == DevelopInspectorSection.Calibration);
         Detail.ApplyExpanded(presentation.ExpandedSection == DevelopInspectorSection.DetailAndEffects);
+        Debug.SetExpanded(presentation.ExpandedSection == DevelopInspectorSection.Debug);
     }
 
     public void SetAutoAdjustStatus(string text) => QuickActions.SetStatus(text);

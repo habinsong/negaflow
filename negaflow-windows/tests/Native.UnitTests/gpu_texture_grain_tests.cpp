@@ -1,8 +1,8 @@
 // CPU/GPU 동치 — TextureStage `filmGrain`.
 //
-// ☠️ 참조를 옮겨 적지 않습니다. CPU 는 `apply_texture_stage`(스코프 밖),
-//    GPU 는 `GpuAccelerator::apply_texture_grain` 이 true 일 때만 겨룹니다.
-//    제품 경로는 스코프 안에서 같은 `apply_texture_stage` 를 부릅니다.
+// 참조를 옮겨 적지 않습니다. CPU 는 `apply_texture_stage`(스코프 밖),
+// GPU 는 `GpuAccelerator::apply_texture_grain` 이 true 일 때만 겨룹니다.
+// 제품 경로는 스코프 안에서 같은 `apply_texture_stage` 를 부릅니다.
 
 #include <algorithm>
 #include <cmath>
@@ -140,7 +140,7 @@ void warp_matches_cpu(const std::vector<Rgba32F>& source, const std::vector<Rgba
     compare("WARP", source, cpu, gpu);
 }
 
-}  // namespace
+} // namespace
 
 int main() {
     _putenv_s("NEGA_GPU_TEXTURE_GRAIN", "1");

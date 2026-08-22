@@ -58,13 +58,24 @@ public static class LibraryFolderDevelopment
         // 부르는 쪽이 host.Frames 같은 살아 있는 목록을 넘길 수 있습니다. 편집이 그 목록을
         // 다시 만들면 훑던 중에 깨지므로 먼저 사본을 뜹니다.
         LibraryFrameSnapshot[] targets = [.. frames];
-        DevelopRouteSelection selection = DevelopRouteSelection.FromProcess(process);
-        FilmType filmType = selection.FilmType;
+        FilmType filmType = DevelopRouteSelection.FromProcess(process).FilmType;
         List<LibraryFrameSnapshot> configured = new(targets.Length);
         foreach (LibraryFrameSnapshot frame in targets)
         {
-            if (host.EditRoute(frame.Id, selection) != LibraryFrameError.None)
+            // 필름 룩은 프레임마다 다릅니다. `FromProcess(process)` 만 쓰면 기본값
+            // `FilmEmulation.None` 이 실려 나가 **폴더 일괄 적용이 사용자의 필름 룩을
+            // 통째로 지웁니다.** macOS `configureLibraryFolderDevelopment` 는 filmType ·
+            // isDigitalSource · developTarget · scannerProfileID 만 건드리고 룩은 손대지
+            // 않습니다. 현상뷰의 `DevelopRouteEditor.SetProcess` 도 프레임의 룩을 그대로
+            // 실어 보냅니다 — 같은 규칙이어야 합니다.
+            DevelopRouteSelection selection = DevelopRouteSelection.FromProcess(
+                process,
+                frame.Route.FilmEmulation,
+                frame.Route.FilmEmulationIntensity);
+            LibraryFrameError routeError = host.EditRoute(frame.Id, selection);
+            if (routeError != LibraryFrameError.None)
             {
+                ThumbnailTrace.Write($"configure ROUTE-FAIL {routeError} {frame.Id}");
                 continue;
             }
 
@@ -74,14 +85,16 @@ public static class LibraryFolderDevelopment
                 target,
                 filmType,
                 current.Base.ScannerProfileId);
-            if (host.Edit(
-                    current.Id,
-                    new LibraryFrameEdit(
-                        current.Tone,
-                        current.ManualBase,
-                        current.Base with { ScannerProfileId = profileId },
-                        DevelopTarget: target)) != LibraryFrameError.None)
+            LibraryFrameError editError = host.Edit(
+                current.Id,
+                new LibraryFrameEdit(
+                    current.Tone,
+                    current.ManualBase,
+                    current.Base with { ScannerProfileId = profileId },
+                    DevelopTarget: target));
+            if (editError != LibraryFrameError.None)
             {
+                ThumbnailTrace.Write($"configure EDIT-FAIL {editError} {current.Id}");
                 continue;
             }
 
@@ -136,6 +149,9 @@ public static class LibraryFolderDevelopment
         // 사용자가 적용을 누른 시점에 선택을 먼저 기록합니다. 렌더를 기다린 뒤 기록하면 그
         // 사이 현상뷰에서 더 최근에 고른 값을 오래된 폴더 작업이 덮어씁니다.
         IReadOnlyList<LibraryFrameSnapshot> configured = Configure(host, frames, process, target);
+        ThumbnailTrace.Write(
+            $"apply begin process={process} target={target} " +
+            $"configured={configured.Count}/{total}");
         progress?.Invoke(new LibraryFolderDevelopmentProgress(0, total));
         if (thumbnails is null || configured.Count == 0)
         {

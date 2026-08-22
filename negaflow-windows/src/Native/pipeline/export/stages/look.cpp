@@ -39,9 +39,9 @@ std::optional<DevelopExportOutcome> apply_look_stages(
     LookStageOutput& out) noexcept {
     tracker.begin(DevelopExportStage::tone_adjust, cost_of(tone_cost, true));
 
-    // ☠️ **GPU 를 먼저 시도하고, 처리하지 못했으면 CPU 로 갑니다.**
-    //    가속기는 실패할 때 이미지를 손대지 않으므로(`gpu_accelerator.h`) 그대로 이어서
-    //    CPU 판을 부르면 됩니다. 두 경로의 화소는 동치 시험이 `1e-5` 로 묶습니다.
+    // **GPU 를 먼저 시도하고, 처리하지 못했으면 CPU 로 갑니다.**
+    // 가속기는 실패할 때 이미지를 손대지 않으므로(`gpu_accelerator.h`) 그대로 이어서
+    // CPU 판을 부르면 됩니다. 두 경로의 화소는 동치 시험이 `1e-5` 로 묶습니다.
     negaflow::imaging::WorkingToneAdjustResult adjusted{};
     const GpuToneOutcome accelerated =
         GpuAccelerator::shared().apply_working_tone_adjustments(
@@ -57,27 +57,30 @@ std::optional<DevelopExportOutcome> apply_look_stages(
             request.tone);
     }
     if (adjusted.status != negaflow::imaging::WorkingToneAdjustStatus::ok) {
+        // 여기서 돌아가면 `adjusted.image` 는 반환 뒤 사라집니다. 상주로 묶여 있으면
+        // 지금 풀어야 합니다 — 이유는 `outcome.h` 의 `unbind_resident_and` 설명.
         if (adjusted.status ==
             negaflow::imaging::WorkingToneAdjustStatus::kernel_failed) {
-            return fail(
+            return unbind_resident_and(adjusted.image, fail(
                 DevelopExportStage::tone_adjust,
-                negaflow::core::kernel_status_name(adjusted.info.kernel_status));
+                negaflow::core::kernel_status_name(adjusted.info.kernel_status)));
         }
         if (adjusted.status ==
             negaflow::imaging::WorkingToneAdjustStatus::measurement_failed) {
-            return fail(
+            return unbind_resident_and(adjusted.image, fail(
                 DevelopExportStage::tone_adjust,
                 negaflow::imaging::tone_curve_measurement_status_name(
-                    adjusted.info.measurement.status));
+                    adjusted.info.measurement.status)));
         }
-        return fail(
+        return unbind_resident_and(adjusted.image, fail(
             DevelopExportStage::tone_adjust,
-            negaflow::imaging::working_tone_adjust_status_name(adjusted.status));
+            negaflow::imaging::working_tone_adjust_status_name(adjusted.status)));
     }
 
     tracker.finish();
     if (tracker.cancelled()) {
-        return cancelled_outcome(DevelopExportStage::tone_adjust);
+        return unbind_resident_and(
+            adjusted.image, cancelled_outcome(DevelopExportStage::tone_adjust));
     }
 
     tracker.begin(
@@ -105,7 +108,8 @@ std::optional<DevelopExportOutcome> apply_look_stages(
             finite) {
             tracker.finish();
             if (tracker.cancelled()) {
-                return cancelled_outcome(DevelopExportStage::film_look);
+                return unbind_resident_and(
+                    adjusted.image, cancelled_outcome(DevelopExportStage::film_look));
             }
             out.image = std::move(adjusted.image);
             out.workspace_bytes = workspace.workspace_bytes;
@@ -136,7 +140,8 @@ std::optional<DevelopExportOutcome> apply_look_stages(
 
     tracker.finish();
     if (tracker.cancelled()) {
-        return cancelled_outcome(DevelopExportStage::film_look);
+        return unbind_resident_and(
+            film_look.image, cancelled_outcome(DevelopExportStage::film_look));
     }
 
     out.image = std::move(film_look.image);
@@ -145,4 +150,4 @@ std::optional<DevelopExportOutcome> apply_look_stages(
     return std::nullopt;
 }
 
-}  // namespace negaflow::pipeline::develop_export_detail
+} // namespace negaflow::pipeline::develop_export_detail

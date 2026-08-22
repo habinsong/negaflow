@@ -43,7 +43,7 @@ void discard_pixels(WorkingImage& image) noexcept {
         : std::pow(std::max((value + 0.055F) / 1.055F, 0.0F), 2.4F);
 }
 
-}  // namespace
+} // namespace
 
 bool valid_digital_film_color_preset_parameters(
     const DigitalFilmColorPresetParameters& parameters) noexcept {
@@ -76,10 +76,10 @@ DigitalFilmColorPresetResult apply_digital_film_color_preset(
         result.status = DigitalFilmColorPresetStatus::ok;
         return result;
     }
-    // ☠️ **근사입니다**(감마 왕복의 `pow`, 색 커널 셋의 HSL 왕복).
-    //    `ApproximateAcceleratorScope` 안에서만 돕니다 — 내보내기·골든은 CPU 그대로입니다.
-    //    GPU 판은 타일을 쓰지 않으므로 `scratch_peak_bytes` 는 0 입니다. 셋 다 화소별이라
-    //    타일이 값의 조건이 아니고(러닝 섬이 없습니다), 호스트 스크래치도 필요 없습니다.
+    // **근사입니다**(감마 왕복의 `pow`, 색 커널 셋의 HSL 왕복).
+    // `ApproximateAcceleratorScope` 안에서만 돕니다 — 내보내기·골든은 CPU 그대로입니다.
+    // GPU 판은 타일을 쓰지 않으므로 `scratch_peak_bytes` 는 0 입니다. 셋 다 화소별이라
+    // 타일이 값의 조건이 아니고(러닝 섬이 없습니다), 호스트 스크래치도 필요 없습니다.
     if (approximate_acceleration_allowed()) {
         if (const KernelAccelerator* const table = kernel_accelerator();
             table != nullptr && table->digital_film_color_preset != nullptr) {
@@ -195,4 +195,4 @@ const char* digital_film_color_preset_status_name(
     return "unknown_status";
 }
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

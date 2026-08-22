@@ -18,8 +18,26 @@ internal static class FrameResidencyTests
     public static void Run()
     {
         VerifyFifoEviction();
+        VerifyByteBudgetEviction();
         VerifySelectedFrameIsNeverEvicted();
         VerifyBudgetMatchesMacOS();
+    }
+
+    private static void VerifyByteBudgetEviction()
+    {
+        List<string> evicted = [];
+        FrameResidency residency = new(limit: 10, byteLimit: 100L);
+        residency.MarkResident("a", 40L, evicted.Add);
+        residency.MarkResident("b", 40L, evicted.Add);
+        residency.MarkResident("c", 40L, evicted.Add);
+        Check(
+            evicted.SequenceEqual(["a"]) && residency.ResidentBytes == 80L,
+            "frame_residency_evicts_by_actual_bytes");
+
+        residency.MarkResident("b", 70L, evicted.Add);
+        Check(
+            evicted.SequenceEqual(["a", "c"]) && residency.ResidentBytes == 70L,
+            "frame_residency_replacement_updates_actual_bytes");
     }
 
     private static void VerifyFifoEviction()
@@ -87,6 +105,22 @@ internal static class FrameResidencyTests
                 FrameCacheBudget.AutomaticMemoryFraction(128UL * 1024UL * 1024UL * 1024UL) -
                     FrameCacheBudget.AutomaticMaximumFraction) < 1e-9,
             "frame_cache_budget_fraction_is_capped_above_96gb");
+
+        long displayBudget = FrameCacheBudget.AutomaticDevelopedDisplayBudgetBytes(
+            32UL * 1024UL * 1024UL * 1024UL);
+        double totalBudget = 32.0 * 1024.0 *
+            FrameCacheBudget.AutomaticMemoryFraction(32UL * 1024UL * 1024UL * 1024UL);
+        double developedShare =
+            (FrameCacheBudget.DevelopedPerCleanedRaw *
+                FrameCacheBudget.DevelopedMegabytesPerFrame) /
+            (FrameCacheBudget.CleanedRawMegabytesPerFrame +
+                (FrameCacheBudget.DevelopedPerCleanedRaw *
+                    FrameCacheBudget.DevelopedMegabytesPerFrame));
+        long expectedDisplayBudget = (long)(
+            totalBudget * developedShare * (4.0 / 20.0) * 1024.0 * 1024.0);
+        Check(
+            Math.Abs(displayBudget - expectedDisplayBudget) <= 1L,
+            "frame_cache_budget_splits_native_raw_and_managed_bgra");
 
         // macOS FrameCachePolicy 의 압력 단계별 한도.
         FrameCachePolicy policy = new(new FrameCacheLimits(cleanedRaw: 6, developed: 12));

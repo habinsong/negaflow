@@ -102,7 +102,7 @@ struct Rgb final {
     return color;
 }
 
-}  // namespace
+} // namespace
 
 bool has_color_model_change(
     const ColorModelParameters& parameters) noexcept {
@@ -149,8 +149,8 @@ negaflow::core::KernelStatus apply_color_model(
     }
 
     const bool active = has_color_model_change(parameters);
-    // ☠️ **근사입니다**(33³ 표의 삼선형 + 곱셈). 입출력이 같은 버퍼일 때만 GPU 로
-    //    보냅니다 — GPU 판은 텍스처 두 장을 오가므로 겹침이 없습니다.
+    // **근사입니다**(33³ 표의 삼선형 + 곱셈). 입출력이 같은 버퍼일 때만 GPU 로
+    // 보냅니다 — GPU 판은 텍스처 두 장을 오가므로 겹침이 없습니다.
     if (active && approximate_acceleration_allowed() &&
         input.pixels == output.pixels && input.stride_pixels == output.stride_pixels &&
         output.stride_pixels <= 0xFFFFFFFFULL) {
@@ -182,4 +182,4 @@ negaflow::core::KernelStatus apply_color_model(
         });
 }
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

@@ -44,6 +44,11 @@ struct WicPngExportLimits final {
     std::uint32_t max_color_profile_bytes{4U * 1024U * 1024U};
     std::uint32_t write_buffer_bytes{16U * 1024U * 1024U};
     std::uint32_t readback_buffer_bytes{16U * 1024U * 1024U};
+    // 쓴 파일을 다시 열어 화소를 전수 대조할지입니다. 기본은 끔 — macOS 는 이 대조를
+    // 하지 않고(`ExportEngine.writePNG`), 파일 전체 디코드와 두 번째 sRGB16 변환을 집니다.
+    // 구조·해상도·ICC 검사는 끄더라도 그대로 돕니다. 인코더가 맞다는 증명은 단위 시험이
+    // 이 값을 켜서 들고 있습니다.
+    bool verify_pixel_readback{false};
 };
 
 struct WicPngExportInfo final {

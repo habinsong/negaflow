@@ -67,9 +67,9 @@ void fail_kernel(
 
 // GPU 오케스트레이터에 넘길 계획을 만듭니다.
 //
-// ☠️ **여기가 게이트를 판정하는 유일한 자리입니다.** 아래 CPU 사슬의 조건과 한 글자도
-//    달라선 안 됩니다 — 다르면 GPU 와 CPU 가 다른 것을 하고, 그 차이는 값으로만 드러납니다.
-//    비어 있는 칸(널 포인터·`applied=false`·`requested=false`)이 곧 CPU 의 조기 반환입니다.
+// **여기가 게이트를 판정하는 유일한 자리입니다.** 아래 CPU 사슬의 조건과 한 글자도
+// 달라선 안 됩니다 — 다르면 GPU 와 CPU 가 다른 것을 하고, 그 차이는 값으로만 드러납니다.
+// 비어 있는 칸(널 포인터·`applied=false`·`requested=false`)이 곧 CPU 의 조기 반환입니다.
 [[nodiscard]] bool try_plan_digital_film_look(
     const WorkingFilmLookParameters& parameters,
     const FilmEmulationColorParameters& color,
@@ -120,7 +120,7 @@ void fail_kernel(
     return true;
 }
 
-}  // namespace
+} // namespace
 
 bool valid_working_film_look_parameters(
     const WorkingFilmLookParameters& parameters) noexcept {
@@ -304,10 +304,10 @@ WorkingFilmLookResult apply_working_film_look(
         }
     }
 
-    // ☠️ 사슬 전체를 GPU 에 머무르게 하는 자리입니다. 재료마다 올렸다 내리면 24MP 에서
-    //    왕복이 다섯 번(277 MB × 10)이고, 실측으로 그 전송이 커널보다 컸습니다.
-    //    **게이트 판정은 여기서 합니다** — GPU 는 계획대로 돌리기만 합니다. 실패하면
-    //    이미지를 손대지 않으므로 아래 CPU 사슬이 그대로 이어집니다.
+    // 사슬 전체를 GPU 에 머무르게 하는 자리입니다. 재료마다 올렸다 내리면 24MP 에서
+    // 왕복이 다섯 번(277 MB × 10)이고, 실측으로 그 전송이 커널보다 컸습니다.
+    // **게이트 판정은 여기서 합니다** — GPU 는 계획대로 돌리기만 합니다. 실패하면
+    // 이미지를 손대지 않으므로 아래 CPU 사슬이 그대로 이어집니다.
     if (digital && approximate_acceleration_allowed()) {
         if (const KernelAccelerator* const table = kernel_accelerator();
             table != nullptr && table->digital_film_look != nullptr) {
@@ -468,4 +468,4 @@ const char* working_film_look_status_name(
     return "unknown";
 }
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

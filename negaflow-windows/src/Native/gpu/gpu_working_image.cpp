@@ -33,7 +33,7 @@ void note_download(const std::uint32_t width, const std::uint32_t height) noexce
     g_downloaded_bytes.fetch_add(pixels * 16ULL, std::memory_order_relaxed);
 }
 
-}  // namespace
+} // namespace
 
 void reset_gpu_host_transfer_stats() noexcept {
     g_uploads.store(0U, std::memory_order_relaxed);
@@ -89,13 +89,13 @@ constexpr DXGI_FORMAT working_format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 // (256바이트 정렬이 흔합니다) — 절대 `width * 16` 이라고 가정하지 마십시오.
 // 회수한 화소를 호스트 버퍼로 옮깁니다.
 //
-// ☠️ **행 블록으로 쪼갭니다.** 24MP RGBA float32 는 264 MB 이고, 한 스레드 `memcpy` 로는
-//    수십 ms 가 그대로 나갑니다. 행이 서로 독립이라 쪼개도 값이 같습니다 —
-//    `parallel_rows.h` 의 계약이 그것입니다.
+// **행 블록으로 쪼갭니다.** 24MP RGBA float32 는 264 MB 이고, 한 스레드 `memcpy` 로는
+// 수십 ms 가 그대로 나갑니다. 행이 서로 독립이라 쪼개도 값이 같습니다 —
+// `parallel_rows.h` 의 계약이 그것입니다.
 //
-// ☠️ `work_units` 에 **행 수가 아니라 바이트 수**를 넘깁니다. 행 수만 넘기면 24MP 에서도
-//    3,401 이라 문턱(1M)을 못 넘어 **병렬화가 조용히 꺼집니다** — 플레이북 21절이 적은
-//    바로 그 함정입니다.
+// `work_units` 에 **행 수가 아니라 바이트 수**를 넘깁니다. 행 수만 넘기면 24MP 에서도
+// 3,401 이라 문턱(1M)을 못 넘어 **병렬화가 조용히 꺼집니다** — 플레이북 21절이 적은
+// 바로 그 함정입니다.
 void copy_rows(
     std::byte* const destination,
     const std::size_t destination_pitch,
@@ -170,7 +170,7 @@ void copy_rows(
     return GpuImageStatus::ok;
 }
 
-}  // namespace
+} // namespace
 
 const char* gpu_image_status_name(const GpuImageStatus status) noexcept {
     switch (status) {
@@ -349,10 +349,10 @@ GpuImageStatus GpuWorkingImage::upload_into(
         return GpuImageStatus::invalid_dimensions;
     }
 
-    // ☠️ `UpdateSubresource` 는 드라이버가 **한 스레드로** 우리 버퍼를 자기 영역에
-    //    복사합니다. 24MP(264 MB)에서 실측 44 ms 였습니다. 쓰기 스테이징에 직접
-    //    `Map` 해서 **행 블록으로 나눠** 채우면 그 복사가 코어를 나눠 씁니다.
-    //    스테이징을 못 만들면 `UpdateSubresource` 로 돌아갑니다 — 값은 같습니다.
+    // `UpdateSubresource` 는 드라이버가 **한 스레드로** 우리 버퍼를 자기 영역에
+    // 복사합니다. 24MP(264 MB)에서 실측 44 ms 였습니다. 쓰기 스테이징에 직접
+    // `Map` 해서 **행 블록으로 나눠** 채우면 그 복사가 코어를 나눠 씁니다.
+    // 스테이징을 못 만들면 `UpdateSubresource` 로 돌아갑니다 — 값은 같습니다.
     if (upload_staging_ == nullptr) {
         upload_staging_ = make_staging(device, width_, height_, D3D11_CPU_ACCESS_WRITE);
     }
@@ -539,4 +539,4 @@ GpuImageStatus GpuStagingRing::rotate(
     return GpuImageStatus::ok;
 }
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

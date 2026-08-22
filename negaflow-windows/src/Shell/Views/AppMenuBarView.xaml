@@ -55,7 +55,7 @@
                 Click="OnQuickExportClick" />
             <MenuFlyoutItem
                 x:Name="ExportItem"
-                AutomationProperties.AutomationId="negaflow.menu.export"
+                AutomationProperties.AutomationId="negaflow.menu.file.export"
                 Click="OnExportClick" />
         </MenuBarItem>
         <!--

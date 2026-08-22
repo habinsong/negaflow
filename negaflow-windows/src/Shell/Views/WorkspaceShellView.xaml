@@ -5,6 +5,9 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:views="using:Negaflow.Shell.Views"
     AutomationProperties.AutomationId="negaflow.main"
+    IsTabStop="True"
+    UseSystemFocusVisuals="False"
+    Loaded="OnShellLoadedForShortcuts"
     PreviewKeyDown="OnShellPreviewKeyDown">
     <Grid Background="{ThemeResource NegaflowWindowBrush}">
         <Grid.RowDefinitions>

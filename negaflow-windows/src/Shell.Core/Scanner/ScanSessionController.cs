@@ -110,19 +110,49 @@ public sealed class ScanSessionController
 
     public void SelectRegion(string? regionId) => regionEditor.Select(regionId);
 
-    public string? AddRegion() => regionEditor.Add(Capabilities, Options);
+    public string? AddRegion(FlatbedScanRegion? unitRect = null) =>
+        regionEditor.Add(Capabilities, Options, unitRect);
+
+    /// <summary>프레임 하나를 새 자리로 옮깁니다. 오버레이의 끌기가 이것으로 들어옵니다.</summary>
+    public bool UpdateRegion(string regionId, FlatbedScanRegion moved) =>
+        regionEditor.Update(regionId, moved);
+
+    /// <summary>선택한 프레임을 방향키 한 칸만큼 밉니다.</summary>
+    public bool NudgeSelectedRegion(double deltaX, double deltaY, bool coarse = false) =>
+        regionEditor.NudgeSelected(Capabilities, deltaX, deltaY, coarse);
+
+    /// <summary>프리뷰가 담은 실제 영역입니다. 비율을 밀리미터로 되돌리는 자입니다.</summary>
+    public FlatbedPreviewArea PreviewArea => regionEditor.ResolvePreviewArea(Capabilities);
+
+    /// <summary>화면에 걸린 프리뷰 프레임의 카탈로그 식별자입니다.</summary>
+    public string? PreviewFrameId => regionEditor.PreviewFrameId;
+
+    /// <summary>새 프리뷰를 받았습니다. macOS <c>prepareFlatbedPreview</c> 자리입니다.</summary>
+    public void PrepareForPreview(string? previewFrameId, ScannerPluginScanArea? scanArea) =>
+        regionEditor.PrepareForPreview(previewFrameId, scanArea);
+
+    public void ClearPreview() => regionEditor.ClearPreview();
 
     public bool DeleteSelectedRegion() => regionEditor.DeleteSelected();
 
     public bool CopySelectedRegion() => regionEditor.CopySelected();
 
-    public bool PasteRegion() => regionEditor.Paste(Capabilities);
+    public bool PasteRegion() => regionEditor.Paste(Capabilities, Options);
 
     public FlatbedFrameGridStatus RefreshRegions(
         ReadOnlySpan<float> previewLuminance,
         uint previewWidth,
-        uint previewHeight) =>
-        regionEditor.Refresh(Capabilities, Options, previewLuminance, previewWidth, previewHeight);
+        uint previewHeight,
+        double previewPhysicalWidthMm = 0,
+        double previewPhysicalHeightMm = 0) =>
+        regionEditor.Refresh(
+            Capabilities,
+            Options,
+            previewLuminance,
+            previewWidth,
+            previewHeight,
+            previewPhysicalWidthMm,
+            previewPhysicalHeightMm);
 
     public ScanSessionState State
     {
@@ -332,6 +362,7 @@ public sealed class ScanSessionController
             preview,
             destinationVisiblePath,
             UsesFlatbedRegionWorkflow ? regionEditor.RegionAt(regionIndex) : null,
+            regionEditor.ResolvePreviewArea(Capabilities),
             DefaultRotation);
 
     /// <summary>
@@ -378,6 +409,12 @@ public sealed class ScanSessionController
             if (execution.PreviewPath is not null)
             {
                 LastPreviewPath = execution.PreviewPath;
+            }
+            if (preview && UsesFlatbedRegionWorkflow && execution.PreviewScanArea is not null)
+            {
+                // 이 프리뷰가 담은 영역이 앞으로 프레임 비율을 밀리미터로 되돌리는 자입니다.
+                regionEditor.PrepareForPreview(
+                    execution.PreviewFrameId, execution.PreviewScanArea);
             }
             return execution.Outcome;
         }

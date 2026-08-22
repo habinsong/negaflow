@@ -93,7 +93,10 @@ std::optional<DevelopExportOutcome> apply_grain_stage(
         out.applied.image = std::move(image);
         tracker.finish();
         if (tracker.cancelled()) {
-            return cancelled_outcome(DevelopExportStage::grain_mend);
+            // `out.applied.image` 는 실패 반환에서 호출부가 쓰지 않고 사라집니다.
+            // 상주로 묶여 있으면 지금 풀어야 합니다 — `outcome.h` 의 설명.
+            return unbind_resident_and(
+                out.applied.image, cancelled_outcome(DevelopExportStage::grain_mend));
         }
         return std::nullopt;
     }
@@ -128,4 +131,4 @@ std::optional<DevelopExportOutcome> apply_grain_stage(
     return std::nullopt;
 }
 
-}  // namespace negaflow::pipeline::develop_export_detail
+} // namespace negaflow::pipeline::develop_export_detail

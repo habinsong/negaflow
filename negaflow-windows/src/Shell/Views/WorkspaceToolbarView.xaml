@@ -109,21 +109,21 @@
                         AutomationProperties.AutomationId="negaflow.panel.sidebar"
                         Click="OnSidebarClick"
                         Style="{StaticResource NegaflowToolbarIconButtonStyle}">
-                        <FontIcon FontSize="13" Glyph="&#xE700;" />
+                        <FontIcon FontSize="13" Glyph="&#xE90C;" />
                     </Button>
                     <Button
                         x:Name="FilmstripButton"
                         AutomationProperties.AutomationId="negaflow.panel.filmstrip"
                         Click="OnFilmstripClick"
                         Style="{StaticResource NegaflowToolbarIconButtonStyle}">
-                        <FontIcon FontSize="13" Glyph="&#xE8A9;" />
+                        <FontIcon FontSize="13" Glyph="&#xE90E;" />
                     </Button>
                     <Button
                         x:Name="InspectorButton"
                         AutomationProperties.AutomationId="negaflow.panel.inspector"
                         Click="OnInspectorClick"
                         Style="{StaticResource NegaflowToolbarIconButtonStyle}">
-                        <FontIcon FontSize="13" Glyph="&#xE701;" />
+                        <FontIcon FontSize="13" Glyph="&#xE90D;" />
                     </Button>
                 </StackPanel>
             </Border>
@@ -132,7 +132,12 @@
                 x:Name="AppearanceButton"
                 Grid.Column="3"
                 Style="{StaticResource NegaflowToolbarIconButtonStyle}">
-                <FontIcon FontSize="14" Glyph="&#xE706;" />
+                <!--
+                    macOS AppAppearanceMode.systemImage 와 같은 셋입니다 -
+                    시스템 `circle.lefthalf.filled` · 밝게 `sun.max.fill` · 어둡게 `moon.fill`.
+                    고른 값에 따라 코드에서 글리프를 바꿉니다.
+                -->
+                <FontIcon x:Name="AppearanceIcon" FontSize="14" Glyph="&#xE706;" />
                 <Button.Flyout>
                     <MenuFlyout>
                         <MenuFlyoutItem x:Name="SystemAppearanceItem" Click="OnSystemAppearanceClick" />
@@ -151,7 +156,10 @@
                     <MenuFlyout>
                         <MenuFlyoutItem x:Name="SettingsItem" Click="OnSettingsClick" Icon="Setting" />
                         <MenuFlyoutSeparator />
-                        <MenuFlyoutItem x:Name="DiagnosticsItem" IsEnabled="False" />
+                        <MenuFlyoutItem
+                            x:Name="DiagnosticsItem"
+                            AutomationProperties.AutomationId="negaflow.menu.diagnostics"
+                            Click="OnDiagnosticsClick" />
                     </MenuFlyout>
                 </Button.Flyout>
             </Button>

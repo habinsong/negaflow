@@ -1,5 +1,7 @@
 using Negaflow.Catalog;
 using Negaflow.Interop;
+using Negaflow.Shell.Develop;
+using Negaflow.Shell.Library;
 
 namespace Negaflow.Shell;
 
@@ -21,14 +23,16 @@ public sealed record PreviewOutcome(
     /// 이 그림이 어느 편집 상태의 것인지입니다. 요청마다 하나씩 올라갑니다.
     /// </summary>
     /// <remarks>
-    /// ☠️ 화면은 <b>자기가 그린 것보다 낮은 리비전을 버려야</b> 합니다. 배달은
+    /// 화면은 <b>자기가 그린 것보다 낮은 리비전을 버려야</b> 합니다. 배달은
     /// <c>dispatcher.TryEnqueue</c> 로 UI 큐에 실리므로 두 장이 연달아 실릴 수 있고,
     /// 그러면 나중에 처리되는 쪽이 <b>더 옛 그림</b>일 수 있습니다. 실제로 그 때문에
     /// 노출을 올렸다 내리면 내려간 그림이 화면에 안 남았습니다.
     /// </remarks>
     int Revision = 0,
     /// <summary>이 그림이 어느 프레임의 것인지입니다. 사진 전환 뒤 옛 장 배달을 버립니다.</summary>
-    string? FrameId = null)
+    string? FrameId = null,
+    /// <summary>정상 보기의 원본·레시피·엔진이 렌더 전과 같은지 확인하는 cache identity입니다.</summary>
+    DevelopedPreviewCacheIdentity? CacheIdentity = null)
 {
     internal static PreviewOutcome Refused(DevelopRequestRefusal refusal, int revision) =>
         new(DevelopExportOutcomeKind.Refused, null, 0, 0, null, refusal, null, false, revision);
@@ -83,7 +87,7 @@ public sealed class PreviewCoordinator
     /// 못합니다.
     /// </summary>
     /// <remarks>
-    /// ☠️ 이것이 없으면 버퍼가 두 장이라도 렌더 N+2 가 배달 N 이 아직 큐에 있는 버퍼를
+    /// 이것이 없으면 버퍼가 두 장이라도 렌더 N+2 가 배달 N 이 아직 큐에 있는 버퍼를
     /// 덮어씁니다. 그러면 화면에 그려지는 화소가 배달의 리비전과 어긋나, 리비전 검사를
     /// 통과한 그림조차 <b>다른 상태의 화소</b>가 됩니다. 임대와 리비전은 둘 다 있어야
     /// 뜻이 있습니다.
@@ -233,6 +237,30 @@ public sealed class PreviewCoordinator
     }
 
     /// <summary>
+    /// 개발자 디버그 오버레이가 보여 줄 단계입니다. <c>null</c> 이면 평소처럼 최종 결과를
+    /// 그립니다. macOS <c>ScanFrame.debugOverlayStage</c> 자리이며 다음 렌더부터 적용됩니다.
+    /// </summary>
+    public DevelopDebugStage? DebugStage
+    {
+        get
+        {
+            lock (gate)
+            {
+                return debugStage;
+            }
+        }
+        set
+        {
+            lock (gate)
+            {
+                debugStage = value;
+            }
+        }
+    }
+
+    private DevelopDebugStage? debugStage;
+
+    /// <summary>
     /// macOS <c>clippingOverlayEnabled</c>. 다음 렌더부터 적용됩니다.
     /// </summary>
     public bool ClippingOverlayEnabled
@@ -280,23 +308,23 @@ public sealed class PreviewCoordinator
             if (isRunning)
             {
                 pending = request;
-                // ☠️ **같은 사진의 인터랙티브 패스는 취소하지 않습니다.**
-                //    앞 판은 새 요청마다 돌고 있던 렌더를 취소했고, `RunLoopAsync` 는
-                //    취소된 결과를 버립니다. 그래서 슬라이더를 **계속 끄는 동안에는 어떤
-                //    렌더도 완주하지 못해 화면이 한 장도 안 바뀌었습니다** — 손을 멈춰야
-                //    비로소 한 장이 나왔습니다. 사용자가 "사진이 바로 반영이 안 된다"고
-                //    본 것이 이것입니다.
+                // **같은 사진의 인터랙티브 패스는 취소하지 않습니다.**
+                // 앞 판은 새 요청마다 돌고 있던 렌더를 취소했고, `RunLoopAsync` 는
+                // 취소된 결과를 버립니다. 그래서 슬라이더를 **계속 끄는 동안에는 어떤
+                // 렌더도 완주하지 못해 화면이 한 장도 안 바뀌었습니다** — 손을 멈춰야
+                // 비로소 한 장이 나왔습니다. 사용자가 "사진이 바로 반영이 안 된다"고
+                // 본 것이 이것입니다.
                 //
-                //    인터랙티브 한 장은 짧으므로(이 기계 실측 45.9 ms, 상자는 실측
-                //    처리량으로 접습니다) 끝까지 그려서 **배달하고** 곧바로 최신 값으로
-                //    다음 장을 그립니다. 그러면 끄는 내내 그림이 따라옵니다.
+                // 인터랙티브 한 장은 짧으므로(이 기계 실측 45.9 ms, 상자는 실측
+                // 처리량으로 접습니다) 끝까지 그려서 **배달하고** 곧바로 최신 값으로
+                // 다음 장을 그립니다. 그러면 끄는 내내 그림이 따라옵니다.
                 //
-                //    정착 패스(3600)는 반대입니다. 길고 그 결과는 이미 지나간 상태이므로
-                //    새 편집이 오면 즉시 끊습니다.
+                // 정착 패스(3600)는 반대입니다. 길고 그 결과는 이미 지나간 상태이므로
+                // 새 편집이 오면 즉시 끊습니다.
                 //
-                //    사진을 바꾸면 이전 장의 인터랙티브도 끊습니다. 안 끊으면 새 장이
-                //    이전 렌더가 끝날 때까지 줄 서서, 캐시 현상본을 올려 둬도 곧 옛 그림이
-                //    덮거나 전환이 한 장만큼 늦습니다.
+                // 사진을 바꾸면 이전 장의 인터랙티브도 끊습니다. 안 끊으면 새 장이
+                // 이전 렌더가 끝날 때까지 줄 서서, 캐시 현상본을 올려 둬도 곧 옛 그림이
+                // 덮거나 전환이 한 장만큼 늦습니다.
                 bool differentFrame = activeFrameId is not null &&
                     !string.Equals(activeFrameId, frame.Id, StringComparison.Ordinal);
                 if (activeRunIsSettled || differentFrame)
@@ -414,12 +442,19 @@ public sealed class PreviewCoordinator
         // 자리이므로 frame 옆의 이름을 넣어 두고, 실제로는 아무것도 만들어지지 않습니다.
         string unusedDestination = Path.ChangeExtension(frame.SourcePath, ".preview.png");
         bool rawSource;
+        DevelopDebugStage? stage;
         lock (gate)
         {
             rawSource = uninvertedSource;
+            stage = debugStage;
         }
+        // 디버그 오버레이는 뒤 단계를 끈 요청으로 그 지점의 그림을 얻습니다. 지어낸 그림이
+        // 아니라 같은 엔진이 낸 결과입니다.
+        LibraryFrameSnapshot rendered = stage is { } wanted
+            ? DevelopDebugFrames.Prepare(frame, wanted)
+            : frame;
         DevelopRequestResult built = DevelopRequestFactory.Create(
-            frame,
+            rendered,
             unusedDestination,
             uninvertedSource: rawSource);
         if (built.Request is not { } developRequest)
@@ -432,6 +467,13 @@ public sealed class PreviewCoordinator
         // changes while it is inside the engine. That render is superseded anyway.
         SoftProofSettings? proof = SoftProof;
         bool clippingOverlay = ClippingOverlayEnabled;
+        // 단계 그림은 최종 결과가 아니므로 정착본 캐시에 넣지 않습니다 - 넣으면 오버레이를
+        // 끈 뒤에도 그 그림이 나옵니다.
+        DevelopedPreviewCacheIdentity? cacheIdentity =
+            stage is null && !rawSource && proof is not { IsEnabled: true } && !clippingOverlay &&
+            DevelopedPreviewCacheIdentityFactory.TryCreate(frame, out var createdIdentity)
+                ? createdIdentity
+                : null;
 
         try
         {
@@ -454,7 +496,8 @@ public sealed class PreviewCoordinator
                 proof,
                 clippingOverlay,
                 settled: interactiveIsFinal,
-                revision: revision).ConfigureAwait(false);
+                revision: revision,
+                cacheIdentity: cacheIdentity).ConfigureAwait(false);
             PreviewTrace.Write(
                 "RenderAsync interactive kind=" + interactive.Outcome.Kind +
                 " final=" + interactiveIsFinal +
@@ -468,23 +511,20 @@ public sealed class PreviewCoordinator
                 return interactive;
             }
 
-            // 이미 더 새 요청이 있으면 이 장(옛 노출·옛 사진)을 화면에 올리지 않습니다.
-            // 올리면 마지막 값이 한 박자 늦게 오거나, 정착이 그 위에 덮어 안 바뀐 것처럼 보입니다.
-            lock (gate)
-            {
-                if (pending is not null)
-                {
-                    PreviewTrace.Write("RenderAsync skip stale pending rev=" + revision);
-                    ReleaseLease(interactive.Lease);
-                    return new LeasedOutcome(PreviewOutcome.Cancelled(), -1);
-                }
-            }
-
-            // ☠️ 인터랙티브를 **여기서 곧바로 배달합니다.** macOS 도 인터랙티브 패스가
-            //    끝나면 그 자리에서 `frame.developedImage` 를 갈아 끼웁니다
-            //    (`AppModel+DevelopRendering.swift:81-84`). 앞 판은 결과를 하나만
-            //    돌려줬기 때문에, 손을 멈춰 정착이 성립하면 인터랙티브 그림은 버려지고
-            //    정착본이 나올 때까지(이 기계 3600 에서 약 300 ms) 화면이 옛 그림이었습니다.
+            // 인터랙티브를 **여기서 곧바로 배달합니다.** macOS 도 인터랙티브 패스가
+            // 끝나면 그 자리에서 `frame.developedImage` 를 갈아 끼웁니다
+            // (`AppModel+DevelopRendering.swift:81-84`). 앞 판은 결과를 하나만
+            // 돌려줬기 때문에, 손을 멈춰 정착이 성립하면 인터랙티브 그림은 버려지고
+            // 정착본이 나올 때까지(이 기계 3600 에서 약 300 ms) 화면이 옛 그림이었습니다.
+            //
+            // **더 새 요청이 대기 중이어도 배달합니다.** 한때 여기서 `pending is not null`
+            // 이면 다 그린 장을 버렸는데, 슬라이더를 끄는 동안에는 대기가 **항상** 있으므로
+            // 끄는 내내 단 한 장도 화면에 오르지 않았습니다. 실측: 8ms 간격 60틱(480ms)
+            // 드래그에서 렌더 4장이 끝났는데 배달은 0장, 첫 장이 손을 뗀 뒤 428ms 만에
+            // 나왔습니다. 사용자가 "맨 마지막 위치의 값으로만 보인다"고 한 것이 이것입니다.
+            // 지금 이 장은 화면에 있는 것보다 **분명히 새것**이고, 더 새 장이 오면
+            // `ShowPreview` 의 리비전 검사가 이 장을 밀어냅니다 — 옛 그림이 남을 길은
+            // 없습니다.
             Deliver(interactive, request.OnCompleted);
 
             if (!await WaitForSettleAsync(revision, run).ConfigureAwait(false))
@@ -513,7 +553,8 @@ public sealed class PreviewCoordinator
                 proof,
                 clippingOverlay,
                 settled: true,
-                revision: revision).ConfigureAwait(false);
+                revision: revision,
+                cacheIdentity: cacheIdentity).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -534,7 +575,7 @@ public sealed class PreviewCoordinator
     /// macOS <c>interactiveProxyDimension(displayTargetPixels:)</c> 그대로입니다.
     /// </summary>
     /// <remarks>
-    /// ☠️ 한때 여기서 실측 처리량으로 상자를 접었습니다. 속도는 붙었지만 **끄는 동안 그림이
+    /// 한때 여기서 실측 처리량으로 상자를 접었습니다. 속도는 붙었지만 **끄는 동안 그림이
     /// 뭉개져 보였고**, 사용자가 그것을 바로 잡아냈습니다. 해상도를 깎아 얻는 속도는 답이
     /// 아닙니다 — 캔버스가 쓰는 디바이스 픽셀 그대로 그리고, 속도는 파이프라인에서 냅니다.
     /// </remarks>
@@ -543,14 +584,44 @@ public sealed class PreviewCoordinator
         // 두 번째 렌더는 RunLoop 가 워커에서 이어집니다. 캔버스 ActualWidth 를
         // 그 스레드에서 읽으면 WinUI 가 던지고, 성공한 첫 장을 skip stale 한 뒤
         // 빈 Faulted 가 화면에 남았습니다(preview-trace 실측).
+        //
+        // 그래서 워커에서는 상수 2560 으로 떨어졌는데, 슬라이더를 끄는 동안의 렌더는
+        // **전부 워커**입니다. 실제 preview-trace 에서 UI 스레드 렌더는 1280·1536·1792
+        // 였고 워커 렌더 3,695 회가 2560 이었습니다. 캔버스가 1280 인데 2560 을 그리면
+        // 화소가 네 배이고, 그 여분은 캔버스에 내려놓으며 그대로 버려집니다. 게다가
+        // 장마다 치수가 오가면 raw 프록시와 표시 비트맵이 매번 다시 만들어집니다.
+        //
+        // UI 스레드에서 본 마지막 값을 기억해 워커가 그대로 씁니다. 창 크기가 바뀌면
+        // 다음 UI 스레드 렌더가 갱신하므로 캔버스보다 작게 그리는 일은 없습니다.
         double display = DevelopPreviewProxy.InteractiveMaxDimension;
-        if (displayTargetPixels is not null && dispatcher.HasThreadAccess)
+        if (displayTargetPixels is not null)
         {
-            display = displayTargetPixels();
+            if (dispatcher.HasThreadAccess)
+            {
+                double measured = displayTargetPixels();
+                if (measured > 0)
+                {
+                    display = measured;
+                    Interlocked.Exchange(
+                        ref lastDisplayTargetBits, BitConverter.DoubleToInt64Bits(measured));
+                }
+            }
+            else
+            {
+                double remembered = BitConverter.Int64BitsToDouble(
+                    Interlocked.Read(ref lastDisplayTargetBits));
+                if (remembered > 0)
+                {
+                    display = remembered;
+                }
+            }
         }
         return DevelopPreviewProxy.BufferEdge(
             DevelopPreviewProxy.InteractiveProxyDimension(display));
     }
+
+    /// <summary>UI 스레드에서 마지막으로 읽은 캔버스 표시 화소입니다.</summary>
+    private long lastDisplayTargetBits;
 
     /// <summary>macOS <c>waitForDevelopSettle</c> — 0.14초 동안 새 요청이 없으면 true.</summary>
     private async Task<bool> WaitForSettleAsync(int revision, DevelopRun run)
@@ -596,7 +667,8 @@ public sealed class PreviewCoordinator
         SoftProofSettings? proof,
         bool clippingOverlay,
         bool settled,
-        int revision)
+        int revision,
+        DevelopedPreviewCacheIdentity? cacheIdentity)
     {
         // 배달된 버퍼는 UI 스레드가 다 쓸 때까지 임대 중입니다. 여기서 기다리는 것이
         // "그리는 화소"와 "배달한 리비전"이 어긋나지 않게 하는 유일한 방법입니다.
@@ -658,7 +730,8 @@ public sealed class PreviewCoordinator
                 null,
                 settled,
                 revision,
-                frameId),
+                frameId,
+                cacheIdentity),
             lease);
     }
 

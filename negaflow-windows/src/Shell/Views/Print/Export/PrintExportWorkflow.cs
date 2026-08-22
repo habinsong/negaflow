@@ -42,7 +42,12 @@ internal sealed class PrintExportWorkflow
         {
             return;
         }
-        Microsoft.Windows.Storage.Pickers.FolderPicker picker = new(id);
+        // 디스크 탭의 "내보내기 폴더"에서 시작합니다 — 매번 처음부터 찾아 들어가지 않도록.
+        Microsoft.Windows.Storage.Pickers.FolderPicker picker = new(id)
+        {
+            SuggestedStartLocation =
+                Microsoft.Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary,
+        };
         if (await picker.PickSingleFolderAsync() is not { } folder)
         {
             return;

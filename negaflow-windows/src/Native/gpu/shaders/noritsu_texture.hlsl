@@ -1,23 +1,23 @@
 // NORITSU 장치 질감 — 감마 도메인 luminance USM.
 //
-// macOS  : `ChromabaseMetalKernels.swift:505` `noritsuTexture`
-//          + `ScannerTargetGrade+Texture.swift` (`noritsuSharpenRadius = 0.9`)
+// macOS : `ChromabaseMetalKernels.swift:505` `noritsuTexture`
+// + `ScannerTargetGrade+Texture.swift` (`noritsuSharpenRadius = 0.9`)
 // CPU 판 : `imaging/scanner_target_grade.cpp` `apply_noritsu_texture`
 //
 // 모양은 아큐턴스와 같습니다 — 수평 5탭 저역을 중간 텍스처에 쓰고,
 // 수직 저역과 언샤프를 한 번에 합니다. 가우시안은 호스트가 만든 5탭입니다
 // (σ ≈ 0.9). 셰이더에서 `exp` 로 다시 만들지 마십시오.
 //
-// ☠️ 게이트 둘은 **순서까지** CPU/macOS 와 같습니다.
-//    ① `lo < 0 || hi > 1` → 원본 통과 (확장값 보존)
-//    ② `lumaO <= luma_gate` → 원본 통과
-//    플로어 `max(yO * floor_ratio, min(yO, floor_absolute))` 의 상수 둘도
-//    호스트 `ScannerTargetTextureSetup` 에서 옵니다.
-//    마지막 `mx > 1` 공통 축소는 hue 보존입니다 — 채널별 클립으로 바꾸면 색이 틀어집니다.
+// 게이트 둘은 **순서까지** CPU/macOS 와 같습니다.
+// ① `lo < 0 || hi > 1` → 원본 통과 (확장값 보존)
+// ② `lumaO <= luma_gate` → 원본 통과
+// 플로어 `max(yO * floor_ratio, min(yO, floor_absolute))` 의 상수 둘도
+// 호스트 `ScannerTargetTextureSetup` 에서 옵니다.
+// 마지막 `mx > 1` 공통 축소는 hue 보존입니다 — 채널별 클립으로 바꾸면 색이 틀어집니다.
 //
-// ☠️ 하드 게이트가 있어 오차의 성격이 다릅니다. 경계에 앉은 화소는 1ulp 로
-//    결과가 통째로 갈리고, 그때 최대 오차는 누적이 아니라 질감의 크기입니다.
-//    시험은 최대 오차 + 이탈 화소 비율을 같이 겁니다.
+// 하드 게이트가 있어 오차의 성격이 다릅니다. 경계에 앉은 화소는 1ulp 로
+// 결과가 통째로 갈리고, 그때 최대 오차는 누적이 아니라 질감의 크기입니다.
+// 시험은 최대 오차 + 이탈 화소 비율을 같이 겁니다.
 
 #include "tone_shared.hlsli"
 

@@ -22,14 +22,14 @@ using RowBlockFunction = void (*)(
 // Below this much estimated work the split is not worth the thread hand-off and the body
 // runs inline on the calling thread.
 //
-// ☠️ **`work_units` 를 적게 넘기면 병렬화가 조용히 꺼집니다.** 경고도, 실패도, 로그도
-//    없습니다 — 그냥 호출한 스레드에서 통째로 돕니다. 출력행 수만 넘기고 각 행이 원본을
-//    수십 배로 읽는 단계라면 문턱을 못 넘어 **직렬로 돌면서 "병렬화해도 안 빨라진다" 는
-//    거짓 결론**을 냅니다. 실제로 `tone_curve_measurement.cpp` 에서 두 번 그랬습니다
-//    (`docs/audit/13-performance-playbook.md` 21절).
+// **`work_units` 를 적게 넘기면 병렬화가 조용히 꺼집니다.** 경고도, 실패도, 로그도
+// 없습니다 — 그냥 호출한 스레드에서 통째로 돕니다. 출력행 수만 넘기고 각 행이 원본을
+// 수십 배로 읽는 단계라면 문턱을 못 넘어 **직렬로 돌면서 "병렬화해도 안 빨라진다" 는
+// 거짓 결론**을 냅니다. 실제로 `tone_curve_measurement.cpp` 에서 두 번 그랬습니다
+// (`docs/audit/13-performance-playbook.md` 21절).
 //
-//    **넘기는 값은 출력 크기가 아니라 실제로 읽고 쓰는 양이어야 합니다.**
-//    쪼개졌는지 확인하려면 `parallel_rows.cpp` 의 `NEGA_ROW_BLOCK_TRACE` 를 켜십시오.
+// **넘기는 값은 출력 크기가 아니라 실제로 읽고 쓰는 양이어야 합니다.**
+// 쪼개졌는지 확인하려면 `parallel_rows.cpp` 의 `NEGA_ROW_BLOCK_TRACE` 를 켜십시오.
 inline constexpr std::uint64_t minimum_parallel_row_work_units = 1ULL << 20U;
 
 // Upper bound on blocks per call, independent of core count. A wider split only adds
@@ -113,4 +113,4 @@ void record_row_failure(
     return static_cast<std::uint32_t>(packed & 0xFFFFFFFFULL);
 }
 
-}  // namespace negaflow::core
+} // namespace negaflow::core

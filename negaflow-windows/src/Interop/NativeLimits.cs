@@ -15,4 +15,9 @@ internal static partial class NativeLimits
     [LibraryImport(LibraryName, EntryPoint = "nf_get_tone_limits_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial uint nf_get_tone_limits_v1(ref NativeToneLimitsV1 output);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_set_frame_cache_limits_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial uint nf_set_frame_cache_limits_v1(
+        ref NativeFrameCacheLimitsV1 limits);
 }

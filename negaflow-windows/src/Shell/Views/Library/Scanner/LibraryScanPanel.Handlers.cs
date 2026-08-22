@@ -41,6 +41,7 @@ public sealed partial class LibraryScanPanel
             return;
         }
         scanSession.SetSimulatorEnabled(ScanSimulatorToggle.IsOn);
+        SimulatorPublisher?.Invoke(ScanSimulatorToggle.IsOn);
         if (scanSession.State is ScanSessionState.NoDevice)
         {
             await scanSession.RefreshDevicesAsync();
@@ -194,7 +195,9 @@ public sealed partial class LibraryScanPanel
         _ = scanSession.RefreshRegions(
             flatbedPreview.Values,
             flatbedPreview.Width,
-            flatbedPreview.Height);
+            flatbedPreview.Height,
+            flatbedPreview.PhysicalWidthMm,
+            flatbedPreview.PhysicalHeightMm);
         renderer.Render();
     }
 

@@ -44,6 +44,7 @@ void warp_device_is_always_available() {
     expect(device.capability().adapter.is_integrated, "warp counts as integrated memory");
     expect(device.device() != nullptr, "warp exposes a device");
     expect(device.context() != nullptr, "warp exposes an immediate context");
+    expect(device.trim_idle(), "warp exposes DXGI idle trim");
 }
 
 // 하드웨어가 있으면 규격을 지켜야 하고, 없으면 그 사실을 상태로 말해야 합니다.
@@ -70,11 +71,21 @@ void hardware_device_is_consistent_when_present() {
         "hardware adapter reports a description");
 
     const auto& adapter = device.capability().adapter;
+    negaflow::gpu::GpuVideoMemoryInfo memory{};
+    expect(
+        device.query_local_video_memory_info(memory),
+        "hardware exposes a DXGI local memory budget");
+    if (memory.budget > 0U) {
+        expect(memory.current_usage <= memory.budget, "hardware starts within its DXGI budget");
+    }
+    expect(device.trim_idle(), "hardware exposes DXGI idle trim");
     std::cout << "[gpu] hardware: " << adapter.description.data() << " vendor=0x" << std::hex
               << adapter.vendor_id << " device=0x" << adapter.device_id << std::dec
               << " fl=0x" << std::hex << device.capability().feature_level << std::dec
               << (adapter.is_integrated ? " integrated" : " discrete") << " vram="
-              << (adapter.dedicated_video_memory / (1024ULL * 1024ULL)) << "MB\n";
+              << (adapter.dedicated_video_memory / (1024ULL * 1024ULL)) << "MB budget="
+              << (memory.budget / (1024ULL * 1024ULL)) << "MB usage="
+              << (memory.current_usage / (1024ULL * 1024ULL)) << "MB\n";
 }
 
 // 앱이 쓰는 경로입니다. 하드웨어가 없어도 WARP 로 떨어지므로 **항상** 쓸 수 있어야 합니다.

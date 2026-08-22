@@ -76,6 +76,7 @@ public static class ScannerPluginClient
         LibraryHostService library,
         InfraredDetectorParameters? infraredParameters = null,
         DevelopRun? run = null,
+        bool isPreviewScan = false,
         CancellationToken cancellationToken = default) =>
         ScannerScanPublisher.ScanAndPublishAsync(
             plugin,
@@ -84,6 +85,7 @@ public static class ScannerPluginClient
             library,
             infraredParameters,
             run,
+            isPreviewScan,
             cancellationToken);
 
     public static bool TryBuildScanWire(

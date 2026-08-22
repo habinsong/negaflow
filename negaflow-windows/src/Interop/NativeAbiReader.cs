@@ -32,9 +32,9 @@ internal static unsafe class NativeAbiReader
       // 42 for GrainMend review detector tuning, 43 for its optional micro-speck pass,
       // 44 for TIFF compression plus PNG/TIFF DPI output metadata, and 45 for
       // eight-bit PNG/TIFF publication with output dither, 46 for output colour space, 47 for the export metadata policy,
-      // and 48 for preserve-alpha export.
+      // and 48 for preserve-alpha export, and 49 for transient background preview caching.
     // An engine below this is refused at load, not at the call.
-    internal const ushort MinimumMinor = 48;
+    internal const ushort MinimumMinor = 49;
 
     private const uint StatusOk = 0;
 

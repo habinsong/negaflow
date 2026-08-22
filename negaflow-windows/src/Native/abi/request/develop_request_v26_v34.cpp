@@ -16,7 +16,7 @@
 
 namespace negaflow::abi::detail {
 
-// v26–v34: 출력 샤픈·캘리브레이션·JPEG/TIFF·색공간·메타데이터·알파.
+// v26–v35: 출력 샤픈·캘리브레이션·JPEG/TIFF·색공간·메타데이터·알파·recipe identity.
 
 [[nodiscard]] bool map_request_v26(
     const nf_develop_export_request_v26& request,
@@ -236,6 +236,37 @@ namespace negaflow::abi::detail {
         return false;
     }
     pipeline_request.preserve_alpha = request.preserve_alpha != 0U;
+    return true;
+}
+
+[[nodiscard]] bool map_request_v35(
+    const nf_develop_export_request_v35& request,
+    const bool require_destination,
+    negaflow::pipeline::DevelopExportRequest& pipeline_request,
+    nf_develop_export_result_v2& result) noexcept {
+    if (request.defect_recipe_identity_reserved != 0U ||
+        !map_request_v34(request.v34, require_destination, pipeline_request, result)) {
+        if (request.defect_recipe_identity_reserved != 0U) {
+            fail_defect_region_request(result, "invalid_defect_recipe_identity");
+        }
+        return false;
+    }
+
+    const bool has_recipe = !pipeline_request.defect_recipe.order.empty();
+    if ((has_recipe &&
+         (request.defect_recipe_sha256 == nullptr ||
+          request.defect_recipe_sha256_size != 32U)) ||
+        (!has_recipe &&
+         (request.defect_recipe_sha256 != nullptr ||
+          request.defect_recipe_sha256_size != 0U))) {
+        fail_defect_region_request(result, "invalid_defect_recipe_identity");
+        return false;
+    }
+    if (has_recipe) {
+        std::array<std::uint8_t, 32U> digest{};
+        std::memcpy(digest.data(), request.defect_recipe_sha256, digest.size());
+        pipeline_request.defect_recipe_sha256 = digest;
+    }
     return true;
 }
 

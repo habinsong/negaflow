@@ -24,8 +24,8 @@ using negaflow::gpu::GpuWorkingImage;
 // `imaging/mipmap_downsampler.cpp` 의 `halve` 를 그대로 옮긴 참조입니다.
 // 그 함수는 내부라 여기서 직접 부를 수 없습니다 — 그 파일이 바뀌면 여기도 같이 바꾸십시오.
 //
-// ☠️ 이 축소의 결과가 파라메트릭 톤 커브의 밴드 백분위로 가므로 **비트 단위로** 같아야 합니다.
-//    허용 오차가 아니라 **완전 일치**를 봅니다.
+// 이 축소의 결과가 파라메트릭 톤 커브의 밴드 백분위로 가므로 **비트 단위로** 같아야 합니다.
+// 허용 오차가 아니라 **완전 일치**를 봅니다.
 [[nodiscard]] std::vector<Rgba32F> reference_halve(
     const std::vector<Rgba32F>& parent,
     const std::uint32_t parent_width,
@@ -139,7 +139,7 @@ void check_one(
     }
 }
 
-}  // namespace
+} // namespace
 
 void mip_halve_matches_reference(const GpuDevice& device, const char* const label) {
     // 짝수·홀수 변을 모두 봅니다 — 홀수에서 마지막 화소를 두 번 읽는 것이 CPU 와 같아야 합니다.
@@ -155,4 +155,4 @@ void mip_halve_matches_reference(const GpuDevice& device, const char* const labe
     expect(GpuMipHalve::wanted_level_count(0U, 320U) == 0, "zero width yields no levels");
 }
 
-}  // namespace gpu_neighborhood_tests
+} // namespace gpu_neighborhood_tests

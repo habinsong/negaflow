@@ -26,6 +26,17 @@ struct FinishStageOutput final {
     negaflow::imaging::TextureStageInfo texture{};
     negaflow::imaging::BwToningInfo bw{};
     negaflow::imaging::ImageTransformInfo transform{};
+    // 프리뷰에서 회전·뒤집기·자르기를 **발행까지 미뤘다**는 표시입니다.
+    //
+    // 왜 미루나 — `apply_image_transform` 은 호스트 버퍼를 새로 만듭니다. 그 한 자리
+    // 때문에 GPU 상주 사슬이 끊기고, 그러면 발행도 CPU 로 떨어집니다. 실측(frame_12):
+    // 자르기가 없는 사진은 33fps 인데 자르기가 있으면 15fps 였습니다.
+    //
+    // 자리 옮김뿐이라 발행 커널이 읽는 자리만 바꾸면 되고, 결과는 CPU 판과 비트 단위로
+    // 같습니다. 기울이기가 있거나 샤픈이 걸려 있으면 미루지 않습니다 — 그때는 순서가
+    // 달라져 다른 사진이 됩니다.
+    bool transform_deferred{false};
+    negaflow::imaging::ImageTransformGather deferred_transform{};
 };
 
 [[nodiscard]] std::optional<DevelopExportOutcome> apply_finish_stages(
@@ -39,4 +50,4 @@ struct FinishStageOutput final {
     negaflow::imaging::WorkingImage grain_image,
     FinishStageOutput& out) noexcept;
 
-}  // namespace negaflow::pipeline::develop_export_detail
+} // namespace negaflow::pipeline::develop_export_detail

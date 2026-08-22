@@ -10,10 +10,10 @@ namespace Negaflow.Shell.Library;
 /// 화면이 다시 그려져도 유지하다가 <c>onChange(of: referenceSelection)</c> — 즉 그 폴더의
 /// 프레임이 실제로 다른 값이 되었을 때 — 만 다시 맞춥니다.
 ///
-/// ☠️ Windows 는 고르개가 <c>SelectedIndex="{Binding ProcessIndex}"</c> 로 프레임의 **현재**
-///    값에 묶여 있었습니다. 썸네일 한 장만 도착해도 격자가 다시 투영되고, 그때마다 고른 값이
-///    프레임 값으로 되돌아갔습니다 — 사용자에게는 **"고르고 적용을 눌러도 아무 일이 없다"** 로
-///    보입니다. 초안을 투영 바깥에 두고 고르개가 초안을 보게 해야 macOS 와 같아집니다.
+/// Windows 는 고르개가 <c>SelectedIndex="{Binding ProcessIndex}"</c> 로 프레임의 **현재**
+/// 값에 묶여 있었습니다. 썸네일 한 장만 도착해도 격자가 다시 투영되고, 그때마다 고른 값이
+/// 프레임 값으로 되돌아갔습니다 — 사용자에게는 **"고르고 적용을 눌러도 아무 일이 없다"** 로
+/// 보입니다. 초안을 투영 바깥에 두고 고르개가 초안을 보게 해야 macOS 와 같아집니다.
 /// </summary>
 public sealed class LibraryFolderDevelopmentDrafts
 {

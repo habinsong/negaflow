@@ -1,11 +1,11 @@
 // CPU/GPU 동치 시험 — 필름 스톡 아큐턴스(분리형 11탭 가우시안 언샤프).
 //
-// ☠️ **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `apply_film_emulation_acutance` 를
-//    그대로 부르고 그 결과와 겨룹니다. 가중치도 진짜
-//    `prepare_film_emulation_acutance` 가 만든 것을 씁니다.
+// **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `apply_film_emulation_acutance` 를
+// 그대로 부르고 그 결과와 겨룹니다. 가중치도 진짜
+// `prepare_film_emulation_acutance` 가 만든 것을 씁니다.
 //
-// ⚠️ CPU 는 두 패스를 `double` 로 누적하고 GPU 는 float 입니다. 11항이라 누적 오차가
-//    1e-6 대이고, 언샤프 세기가 다시 눌러 출력에서는 더 작아집니다.
+// 주의 CPU 는 두 패스를 `double` 로 누적하고 GPU 는 float 입니다. 11항이라 누적 오차가
+// 1e-6 대이고, 언샤프 세기가 다시 눌러 출력에서는 더 작아집니다.
 //
 // 가장자리를 반드시 지나가게 폭·높이를 작게 잡습니다 — 지지 반경이 5 라 `clamp` 경계가
 // 이미지의 5%대를 차지합니다. 큰 이미지만 시험하면 그 경로가 안 돌아갑니다.
@@ -145,7 +145,7 @@ void run_all(const GpuDevice& device, const char* const label) {
     acutance_matches_cpu(device, label, FilmEmulation::vision3_500t, 0.25);
 }
 
-}  // namespace
+} // namespace
 
 int main() {
     const GpuDevice warp = GpuDevice::create(GpuDevicePreference::warp_only);

@@ -1,6 +1,6 @@
-> # ☠️ 하드코딩 · 가짜 구현 · 창작 · 병신 백엔드 · 병신 프론트엔드 = 죽음 ☠️
+> # 하드코딩 · 가짜 구현 · 창작 · 병신 백엔드 · 병신 프론트엔드 = 죽음
 >
-> **🔬 추측·가설 금지.** 재현하고, 계측해서 원인을 **확정**한 뒤에 고칩니다.
+> ** 추측·가설 금지.** 재현하고, 계측해서 원인을 **확정**한 뒤에 고칩니다.
 > 원인을 못 잡았으면 **"못 잡았다" 고 적으십시오.**
 >
 > **백엔드**: macOS Swift 파일을 **먼저 열고** 코드를 1:1 로 그대로 옮깁니다.
@@ -39,7 +39,7 @@
 
 ---
 
-## 1. ☠️ 다음 사람이 반드시 지킬 규칙 일곱
+## 1. 다음 사람이 반드시 지킬 규칙 일곱
 
 이번 세션에서 **실제로 틀렸던 것**에서 나온 규칙만 적습니다.
 
@@ -52,8 +52,8 @@
 했습니다 — **죽은 커널과 산 커널을 견준 것**이었습니다([`06`](06-false-claims.md) 11절).
 
 ```
-grep -rn --include=*.swift '"커널이름"' negaflow-mac/     # 커널을 부르는 함수를 찾고
-grep -rn --include=*.swift 'ThatFunction'   negaflow-mac/  # 그 함수를 부르는 곳을 다시 찾고
+grep -rn --include=*.swift '"커널이름"' negaflow-mac/ # 커널을 부르는 함수를 찾고
+grep -rn --include=*.swift 'ThatFunction' negaflow-mac/ # 그 함수를 부르는 곳을 다시 찾고
 # ... 살아 있는 진입점(앱 화면·파이프라인)에 닿을 때까지 반복
 ```
 
@@ -116,16 +116,16 @@ negaflow-cli --develop-timing <원본> [dmin r g b] [xN] [nocurve] [filmlook]
 
 ```powershell
 # ① 지금 빌드의 지문
-negaflow-cli --develop-timing <원본> noritsu     # pixel_fingerprint 를 읽는다
+negaflow-cli --develop-timing <원본> noritsu # pixel_fingerprint 를 읽는다
 # ② core/include/negaflow/core/parallel_rows.h 의
-#    minimum_parallel_row_work_units 를 1ULL << 62U 로 올려 다시 빌드 → 전부 인라인
+# minimum_parallel_row_work_units 를 1ULL << 62U 로 올려 다시 빌드 → 전부 인라인
 # ③ 같은 명령으로 지문을 다시 읽어 ①과 비교
 ```
 
 이번에는 둘 다 `cfe1f1b11f1cc9a3` 였습니다(직렬 58.9s / 병렬 9.6s).
 **"타일이 겹치지 않는다" 는 이유이지 증거가 아닙니다.**
 
-☠️ 그리고 `work_units` 에 **출력 행 수를 넘기지 마십시오.** 문턱(1M)을 못 넘으면
+ 그리고 `work_units` 에 **출력 행 수를 넘기지 마십시오.** 문턱(1M)을 못 넘으면
 병렬화가 **경고도 없이 꺼지고**, 그 상태를 재면서 "병렬화해도 안 빨라진다" 는
 거짓 결론을 냅니다([`13`](13-performance-playbook.md) 21절).
 **실제로 읽고 쓰는 양**(화소 수 × 화소당 무게, 또는 바이트 수)을 넘기십시오.
@@ -151,7 +151,7 @@ CPU 커널은 "변화 없음" 이면 커널을 안 돌리고 **원본을 복사*
 | `film_scan_denoise` 사슬 | `stages/finish.cpp` | 2.1e-05 ~ 6.2e-05 |
 | 네거티브 반전 | `manual_negative_developer.cpp` | 1.8e-07 |
 | 디지털 필름 룩 **사슬 전체** | `working_film_look.cpp` → `GpuFilmLookStage` | 1.13e-06 |
-| ↳ 헐레이션 · 색 큐브 · 아큐턴스 · 색 프리셋 · 그레인 | 각자 진입점도 남아 있음(흑백 룩이 씀) | 4.5e-06 이하 |
+| 헐레이션 · 색 큐브 · 아큐턴스 · 색 프리셋 · 그레인 | 각자 진입점도 남아 있음(흑백 룩이 씀) | 4.5e-06 이하 |
 | 흐린 장면 vibrance · 컬러 모델 | `muted_scene_vibrance.cpp` · `color_model.cpp` | **WARP 0**, NVIDIA 1.2e-07 |
 | 스캐너 타겟 그레이드 | `scanner_target_grade.cpp` | 1e-4 (노리츠 합성은 게이트 뒤집힘 5e-3) |
 | NORITSU 장치 질감 | `apply_noritsu_texture` → `GpuNoritsuTexture` | NVIDIA **7.15e-07**, WARP **5.96e-07**. 게이트 화소는 원본과 비트 일치 |
@@ -373,7 +373,7 @@ GPU 가 안 돌면 시험이 실패합니다.
 
 ---
 
-## 4. ☠️ 확인 못 한 것 (정직하게)
+## 4. 확인 못 한 것 (정직하게)
 
 1. **내장 GPU 실기.** 이 기계에 Intel/AMD 내장이 없습니다. 범용성은 **코드 구조로만**
    보장돼 있습니다 — 벤더 ID 로 거르는 코드 0줄, FL 11_0 공통 하한, WARP 폴백.
@@ -399,12 +399,12 @@ negaflow-cli --develop-timing $src x3 [noritsu|filmlook]
 # 2) 고친다. CPU 판을 먼저 읽고, 게이트·조기 반환·상수를 그대로 옮긴다.
 
 # 3) 동치 시험을 **신설**한다 — 진짜 CPU 함수를 부르고 겨룬다.
-#    참조를 옮겨 적으면 시험이 아무것도 증명하지 않는다.
+# 참조를 옮겨 적으면 시험이 아무것도 증명하지 않는다.
 cmake --build --preset x64-release --target <새 시험>
 .\out\build\native\x64-release\Release\<새 시험>.exe
 
 # 4) 전체 시험
-ctest --preset x64-release          # 기준 native 102/102 (2026-08-20). 줄면 안 됨
+ctest --preset x64-release # 기준 native 102/102 (2026-08-20). 줄면 안 됨
 
 # 5) 다시 잰다. 커밋 메시지에 **전후 숫자와 실측 오차**를 적는다.
 ```

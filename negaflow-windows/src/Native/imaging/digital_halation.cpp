@@ -162,7 +162,7 @@ void accumulate_blur(
     }
 }
 
-}  // namespace
+} // namespace
 
 bool valid_digital_halation_parameters(
     const DigitalHalationParameters& parameters) noexcept {
@@ -228,9 +228,9 @@ DigitalHalationResult apply_digital_halation_material(
         return result;
     }
 
-    // ☠️ **근사입니다**(가우시안 가중치의 곱셈·합). 실측 오차는 delta 0 이지만 그것은
-    //    이 가우시안이 직접 컨볼루션이라 러닝 섬의 누적 이력이 없기 때문이고, 산술 자체는
-    //    근사 분류입니다. `ApproximateAcceleratorScope` 안에서만 돕니다.
+    // **근사입니다**(가우시안 가중치의 곱셈·합). 실측 오차는 delta 0 이지만 그것은
+    // 이 가우시안이 직접 컨볼루션이라 러닝 섬의 누적 이력이 없기 때문이고, 산술 자체는
+    // 근사 분류입니다. `ApproximateAcceleratorScope` 안에서만 돕니다.
     if (approximate_acceleration_allowed()) {
         if (const KernelAccelerator* const table = kernel_accelerator();
             table != nullptr && table->digital_halation != nullptr) {
@@ -328,4 +328,4 @@ const char* digital_halation_status_name(
     return "unknown_status";
 }
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

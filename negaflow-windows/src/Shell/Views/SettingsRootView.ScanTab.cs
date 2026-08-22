@@ -1,22 +1,22 @@
-using Microsoft.UI.Text;
+using System.Runtime.InteropServices;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Negaflow.Catalog;
 using Negaflow.Shell.Localization;
-using System.Runtime.InteropServices;
+using Negaflow.Shell.Views.Controls;
 
 namespace Negaflow.Shell.Views;
 
 /// <summary>
-/// 설정의 스캔 탭과 워크플로 탭에서 macOS 에 있고 여기 없던 항목들입니다.
+/// 설정창 "스캔" 탭입니다. macOS <c>AppSettingsView.scanPane</c> +
+/// <c>ScannerTruthSettingsSection</c> + <c>ScannerPluginTrustRows</c> 자리입니다.
 /// </summary>
 public sealed partial class SettingsRootView
 {
     private ScannerPluginCapabilities? scannerCapabilities;
 
     /// <summary>
-    /// 스캐너가 보고한 성능을 보여 줍니다. **장치가 말한 것만** 적습니다 — 앱이 지어낸 값을
+    /// 스캐너가 보고한 성능을 보여 줍니다. <b>장치가 말한 것만</b> 적습니다 — 앱이 지어낸 값을
     /// 여기 두면 사용자는 그것을 장치의 사양으로 읽습니다.
     /// </summary>
     public void ShowScannerCapabilities(ScannerPluginCapabilities? capabilities)
@@ -25,69 +25,100 @@ public sealed partial class SettingsRootView
         BuildScannerTruth();
     }
 
-    private void BuildScannerTruth()
+    private void OnScannerCapabilitiesChanged(object? sender, EventArgs args)
     {
-        if (ScannerTruthRows is null)
+        _ = args;
+        if (sender is WorkspacePresentationState state)
         {
-            return;
-        }
-        ScannerTruthRows.Children.Clear();
-        if (scannerCapabilities is not { } caps)
-        {
-            ScannerTruthEmpty.Visibility = Visibility.Visible;
-            return;
-        }
-        ScannerTruthEmpty.Visibility = Visibility.Collapsed;
-
-        AddTruthRow("resolution", Join(caps.ResolutionsDpi.Select(dpi => $"{dpi} dpi")));
-        AddTruthRow("bitDepth", Join(caps.BitDepths.Select(bits => $"{bits}-bit")));
-        AddTruthRow("scanMode", Join(caps.Modes));
-        AddTruthRow("transparency", YesNo(caps.SupportsTransparency));
-        AddTruthRow("filterInfrared", YesNo(caps.SupportsInfrared));
-        AddTruthRow("scanPreview", YesNo(caps.SupportsPreview));
-        if (caps.MaxScanWidthMm is { } width && caps.MaxScanHeightMm is { } height)
-        {
-            AddTruthRow(
-                "scanArea",
-                $"{width:0.#} × {height:0.#} mm",
-                translateKey: false);
+            ShowScannerCapabilities(state.ScannerCapabilities);
         }
     }
 
-    /// <summary>
-    /// 한 줄입니다. 이름은 리소스에서 오고, 값은 장치가 보고한 그대로입니다.
-    /// </summary>
-    private void AddTruthRow(string labelKey, string value, bool translateKey = true)
+    private void BuildScannerTruth()
     {
-        Grid row = new() { ColumnSpacing = 16 };
-        row.ColumnDefinitions.Add(
-            new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(230) });
-        row.Children.Add(new TextBlock
+        if (ScannerTruthSection is null)
         {
-            Text = translateKey ? TryResource(labelKey) : labelKey,
-            FontSize = 12,
-            VerticalAlignment = VerticalAlignment.Center,
+            return;
+        }
+        ScannerTruthSection.Rows.Clear();
+        ScannerTruthSection.HeaderText = AppResources.Get("settingsScannerTruth", "Text");
+        if (scannerCapabilities is not { } caps)
+        {
+            ScannerTruthSection.Rows.Add(new SettingsFootnote
+            {
+                Text = AppResources.Get("settingsScannerTruthNone", "Text"),
+            });
+            ScannerTruthSection.Apply();
+            return;
+        }
+
+        // macOS ScannerTruthSettingsSection 과 같은 차례입니다.
+        AddTruthRow("resolution", ResolutionSummary(caps));
+        AddTruthRow("bitDepth", BitDepthSummary(caps));
+        AddTruthRow(
+            "transparency",
+            TransparencySummary(caps),
+            caps.SupportsTransparency);
+        AddTruthRow(
+            "brightness",
+            AppResources.Get("capabilityUnavailable", "Value"),
+            supported: false);
+        AddTruthRow(
+            "contrast",
+            AppResources.Get("capabilityUnavailable", "Value"),
+            supported: false);
+        AddTruthRow(
+            "infrared",
+            AppResources.Get(
+                caps.SupportsInfrared ? "capabilityAvailable" : "capabilityUnavailable",
+                "Value"),
+            caps.SupportsInfrared);
+        ScannerTruthSection.Apply();
+    }
+
+    /// <summary>한 줄입니다. 이름은 리소스에서 오고, 값은 장치가 보고한 그대로입니다.</summary>
+    private void AddTruthRow(string labelKey, string value, bool supported = true)
+    {
+        ScannerTruthSection.Rows.Add(new SettingsValueRow
+        {
+            Label = TryResource(labelKey),
+            ValueText = value,
+            Kind = supported ? SettingsRowValueKind.Primary : SettingsRowValueKind.Secondary,
         });
-        TextBlock right = new()
+    }
+
+    private static string ResolutionSummary(ScannerPluginCapabilities caps)
+    {
+        string joined = string.Join(", ", caps.ResolutionsDpi.Where(dpi => dpi > 0));
+        return joined.Length == 0
+            ? AppResources.Get("capabilityUnavailable", "Value")
+            : joined + " dpi";
+    }
+
+    private static string BitDepthSummary(ScannerPluginCapabilities caps)
+    {
+        string joined = string.Join(", ", caps.BitDepths.Select(bits => $"{bits}-bit/ch"));
+        return joined.Length == 0
+            ? AppResources.Get("capabilityUnavailable", "Value")
+            : joined;
+    }
+
+    private static string TransparencySummary(ScannerPluginCapabilities caps)
+    {
+        string joined = string.Join(", ", caps.Modes);
+        if (joined.Length != 0)
         {
-            Text = value,
-            FontSize = 12,
-            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources[
-                "TextFillColorSecondaryBrush"],
-            TextTrimming = TextTrimming.CharacterEllipsis,
-        };
-        Grid.SetColumn(right, 1);
-        row.Children.Add(right);
-        ScannerTruthRows.Children.Add(row);
+            return joined;
+        }
+        return AppResources.Get(
+            caps.SupportsTransparency ? "capabilityAvailable" : "capabilityUnavailable", "Value");
     }
 
     /// <summary>
     /// 이름이 리소스에 없으면 키를 그대로 씁니다. 성능 항목 하나 때문에 설정 창이 터지는 것이
     /// 더 나쁩니다.
     /// </summary>
-    private static string TryResource(string key)
-        => TryResource(key, "Text");
+    private static string TryResource(string key) => TryResource(key, "Text");
 
     private static string TryResource(string key, string property)
     {
@@ -102,39 +133,91 @@ public sealed partial class SettingsRootView
         }
     }
 
-    private static string Join<T>(IEnumerable<T> values)
+    /// <summary>
+    /// 설치된 스캐너 플러그인과 그 승인 상태입니다. macOS <c>ScannerPluginTrustRows</c> 자리 —
+    /// 플러그인이 없으면 구역 자체가 나오지 않습니다.
+    /// </summary>
+    private void BuildScannerPluginRows()
     {
-        string joined = string.Join(", ", values);
-        return joined.Length == 0 ? "—" : joined;
+        if (ScannerPluginSection is null)
+        {
+            return;
+        }
+        ScannerPluginSection.Rows.Clear();
+        IReadOnlyList<InstalledScannerPlugin> plugins = ScannerPluginDiscovery.Discover(
+            library?.StorageRoots?.PluginRoot);
+        if (plugins.Count == 0)
+        {
+            ScannerPluginSection.Visibility = Visibility.Collapsed;
+            return;
+        }
+        ScannerPluginSection.Visibility = Visibility.Visible;
+        ScannerPluginSection.HeaderText =
+            AppResources.Get("settingsScannerPluginApproval", "Text");
+        ScannerPluginTrustStore trust = new();
+        foreach (InstalledScannerPlugin plugin in plugins)
+        {
+            ScannerPluginApprovalState state = trust.StateFor(plugin);
+            ScannerPluginSection.Rows.Add(new SettingsValueRow
+            {
+                Label = plugin.Manifest.Name,
+                ValueText = AppResources.Get(state switch
+                {
+                    ScannerPluginApprovalState.Approved => "scannerPluginApproved",
+                    ScannerPluginApprovalState.Changed => "scannerPluginChanged",
+                    _ => "scannerPluginApprovalRequired",
+                }, "Text"),
+                Kind = state == ScannerPluginApprovalState.Approved
+                    ? SettingsRowValueKind.Primary
+                    : SettingsRowValueKind.Secondary,
+            });
+            ScannerPluginSection.Rows.Add(new SettingsValueRow
+            {
+                Label = AppResources.Get("scannerPluginVersion", "Text"),
+                ValueText = plugin.Manifest.PluginVersion ??
+                    AppResources.Get("scannerPluginNotReported", "Text"),
+            });
+            ScannerPluginSection.Rows.Add(new SettingsValueRow
+            {
+                Label = AppResources.Get("scannerPluginLicense", "Text"),
+                ValueText = plugin.Manifest.License ??
+                    AppResources.Get("scannerPluginNotReported", "Text"),
+            });
+            // 매니페스트 경로와 해시는 승인이 **어느 바이트**에 붙어 있는지를 말합니다.
+            ScannerPluginSection.Rows.Add(new SettingsValueRow
+            {
+                Label = AppResources.Get("scannerPluginManifestPath", "Text"),
+                ValueText = Negaflow.Shell.Storage.DiskStorageLocations.Abbreviate(
+                    plugin.ManifestPath),
+                Kind = SettingsRowValueKind.Secondary,
+            });
+            ScannerPluginSection.Rows.Add(new SettingsValueRow
+            {
+                Label = AppResources.Get("scannerPluginManifestHash", "Text"),
+                ValueText = plugin.TrustIdentity.ManifestSha256,
+                Kind = SettingsRowValueKind.Secondary,
+            });
+            ScannerPluginSection.Rows.Add(new SettingsValueRow
+            {
+                Label = AppResources.Get("scannerPluginExecutableHash", "Text"),
+                ValueText = plugin.TrustIdentity.ExecutableSha256,
+                Kind = SettingsRowValueKind.Secondary,
+            });
+        }
+        ScannerPluginSection.Apply();
     }
-
-    private static string YesNo(bool value) =>
-        AppResources.Get(value ? "selected" : "notSelected", "Value");
 
     private void LocalizeScanTab()
     {
-        ScanRotationLabel.Text = AppResources.Get("settingsDefaultScanRotation", "Text");
-        AutomationProperties.SetName(ScanRotationComboBox, ScanRotationLabel.Text);
+        ScanSection.HeaderText = AppResources.Get("settingsScanTab", "Text");
+        ScanRotationRow.Label = AppResources.Get("settingsDefaultScanRotation", "Text");
         ScanRotationHelp.Text = AppResources.Get("settingsDefaultScanRotationHelp", "Text");
         ScanRotation0Item.Content = AppResources.Get("settingsRotation0", "Text");
         ScanRotation90Item.Content = AppResources.Get("settingsRotation90", "Text");
         ScanRotation180Item.Content = AppResources.Get("settingsRotation180", "Text");
         ScanRotation270Item.Content = AppResources.Get("settingsRotation270", "Text");
-        ScannerTruthHeading.Text = AppResources.Get("settingsScannerTruth", "Text");
-        ScannerTruthEmpty.Text = AppResources.Get("settingsScannerTruthNone", "Text");
-        MicroSpecksHeading.Text = AppResources.Get("settingsMicroSpecksSection", "Text");
-        MicroSpecksHelp.Text = AppResources.Get("settingsMicroSpecksHelp", "Text");
-        // macOS AppLocalizedPhrase.autoDefect / guidedDefect
-        SetSwitchHeader(AutoDefectMicroSpecksToggle, "developGrainMendAuto", "Content");
-        SetSwitchHeader(GuidedDefectMicroSpecksToggle, "developGrainMendGuided", "Content");
         BuildScannerTruth();
-    }
-
-    private static void SetSwitchHeader(ToggleSwitch toggle, string key, string property = "Text")
-    {
-        string text = TryResource(key, property);
-        toggle.Header = text;
-        AutomationProperties.SetName(toggle, text);
+        BuildScannerPluginRows();
     }
 
     private void OnScanRotationChanged(object sender, SelectionChangedEventArgs args)
@@ -154,26 +237,6 @@ public sealed partial class SettingsRootView
         });
     }
 
-    private void OnAutoDefectMicroSpecksToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (!isUpdating)
-        {
-            workspaceState?.SetAutoDefectMicroSpecks(AutoDefectMicroSpecksToggle.IsOn);
-        }
-    }
-
-    private void OnGuidedDefectMicroSpecksToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (!isUpdating)
-        {
-            workspaceState?.SetGuidedDefectMicroSpecks(GuidedDefectMicroSpecksToggle.IsOn);
-        }
-    }
-
     private void SynchronizeScanTab(ShellPreferences preferences)
     {
         ScanRotationComboBox.SelectedIndex = preferences.DefaultScanRotation switch
@@ -183,7 +246,19 @@ public sealed partial class SettingsRootView
             ImageRotation.Degrees270 => 3,
             _ => 0,
         };
-        AutoDefectMicroSpecksToggle.IsOn = preferences.AutoDefectDetectsMicroSpecks;
-        GuidedDefectMicroSpecksToggle.IsOn = preferences.GuidedDefectDetectsMicroSpecks;
+    }
+
+    private void LocalizeLegalTab()
+    {
+        LegalLicenseSection.HeaderText = AppResources.Get("legalLicenseTitle", "Text");
+        LegalLicenseBody.Text = AppResources.Get("legalLicenseBody", "Text");
+        LegalTrademarkSection.HeaderText = AppResources.Get("legalTrademarkTitle", "Text");
+        LegalTrademarkBody.Text = AppResources.Get("legalTrademarkBody", "Text");
+        LegalNamesSection.HeaderText = AppResources.Get("legalNamesTitle", "Text");
+        LegalNamesBody.Text = AppResources.Get("legalNamesBody", "Text");
+        LegalProfilesSection.HeaderText = AppResources.Get("legalProfilesTitle", "Text");
+        LegalProfilesBody.Text = AppResources.Get("legalProfilesBody", "Text");
+        LegalAffiliationSection.HeaderText = AppResources.Get("legalAffiliationTitle", "Text");
+        LegalAffiliationBody.Text = AppResources.Get("legalAffiliationBody", "Text");
     }
 }

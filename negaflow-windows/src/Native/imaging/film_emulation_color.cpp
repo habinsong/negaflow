@@ -273,7 +273,7 @@ using detail::FilmToneCurve;
         });
 }
 
-}  // namespace
+} // namespace
 
 bool valid_film_emulation_color_parameters(
     const FilmEmulationColorParameters& parameters) noexcept {
@@ -402,9 +402,9 @@ negaflow::core::KernelStatus apply_film_emulation_color_cube(
         return negaflow::core::KernelStatus::invalid_parameter;
     }
 
-    // ☠️ **근사입니다**(sRGB 왕복의 `pow`). 표와 삼선형 보간은 CPU 와 같은 float
-    //    연산이라 그 자리에서는 오차가 안 생깁니다.
-    //    입출력이 별칭이어도 됩니다 — GPU 판은 텍스처 두 장을 오가므로 겹침이 없습니다.
+    // **근사입니다**(sRGB 왕복의 `pow`). 표와 삼선형 보간은 CPU 와 같은 float
+    // 연산이라 그 자리에서는 오차가 안 생깁니다.
+    // 입출력이 별칭이어도 됩니다 — GPU 판은 텍스처 두 장을 오가므로 겹침이 없습니다.
     if (approximate_acceleration_allowed()) {
         if (const KernelAccelerator* const table = kernel_accelerator();
             table != nullptr && table->film_emulation_cube != nullptr &&
@@ -459,4 +459,4 @@ negaflow::core::KernelStatus apply_film_emulation_color_cube(
     return negaflow::core::KernelStatus::ok;
 }
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

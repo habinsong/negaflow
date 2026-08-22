@@ -50,6 +50,8 @@ internal static unsafe class NativeDevelopRequestValidator
             sizeof(NativeDevelopExportRequestV31) != RequestV31Size ||
             sizeof(NativeDevelopExportRequestV32) != RequestV32Size ||
             sizeof(NativeDevelopExportRequestV33) != RequestV33Size ||
+            sizeof(NativeDevelopExportRequestV34) != RequestV34Size ||
+            sizeof(NativeDevelopExportRequestV35) != RequestV35Size ||
             sizeof(NativeDevelopExportResultV2) != ResultV2Size ||
             sizeof(NativeDevelopExportResultV3) != ResultV3Size ||
             sizeof(NativeFilmBaseMeasurementV1) != FilmBaseMeasurementV1Size ||
@@ -101,6 +103,9 @@ internal static unsafe class NativeDevelopRequestValidator
                 request.DefectClones.Count +
                 request.DefectBrushes.Count,
             request.DefectSourceIdentity);
+        ValidateDefectRecipeIdentity(
+            request.DefectEditOrder.Count,
+            request.DefectRecipeSha256);
         if (!SignedNormalized(request.Warmth) ||
             !SignedNormalized(request.Tint) ||
             !SignedNormalized(request.ColorDepth) ||

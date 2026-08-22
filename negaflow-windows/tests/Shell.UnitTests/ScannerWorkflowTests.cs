@@ -240,9 +240,16 @@ internal static class ScannerWorkflowTests
         string? second = session.AddRegion();
         Check(first is not null && second is not null, "flatbed_adds_frames");
         Check(session.Regions.Count == 2, "flatbed_frame_count");
+        if (session.Regions.Count < 2)
+        {
+            // 앞 단언이 이미 실패를 적었습니다. 여기서 색인을 그대로 밀면 예외가 나서
+            // **뒤에 오는 시험 무리가 통째로 돌지 못합니다** — 실패 하나가 보고서를 지웁니다.
+            return;
+        }
+        // 좌표는 프리뷰 안의 비율입니다(macOS `unitRect`). 시뮬레이터 평판은 세로가 길어
+        // 스트립이 아래로 진행하므로 두 번째 프레임은 첫 번째 아래에 붙습니다.
         Check(
-            session.Regions[1].OriginYmm >=
-                session.Regions[0].OriginYmm + session.Regions[0].HeightMm,
+            session.Regions[1].UnitY >= session.Regions[0].UnitMaxY,
             "flatbed_frames_do_not_overlap");
 
         Check(session.CopySelectedRegion() && session.PasteRegion(), "flatbed_copy_paste");
@@ -255,14 +262,24 @@ internal static class ScannerWorkflowTests
             false,
             Path.Combine(isolatedBase, "a.tif"),
             1);
+        // 요청에는 비율이 아니라 밀리미터가 실립니다. 프리뷰가 담은 영역이 그 자입니다.
+        ScannerPluginScanArea? expected = session.Regions[1].ToScanArea(session.PreviewArea);
         Check(
-            request?.ScanArea is { } area &&
-            Math.Abs(area.HeightMm - session.Regions[1].HeightMm) < 1e-9 &&
-            Math.Abs(area.OriginYmm - session.Regions[1].OriginYmm) < 1e-9,
+            request?.ScanArea is { } area && expected is { } want &&
+            Math.Abs(area.HeightMm - want.HeightMm) < 1e-9 &&
+            Math.Abs(area.OriginYmm - want.OriginYmm) < 1e-9,
             "flatbed_request_carries_the_region");
         // 프리뷰는 판 전체를 훑습니다 — 프레임을 찾으려면 판이 다 보여야 합니다.
+        ScannerPluginScanRequest? previewRequest = session.BuildRequest(
+            true,
+            Path.Combine(isolatedBase, "p.tif"),
+            0);
         Check(
-            session.BuildRequest(true, Path.Combine(isolatedBase, "p.tif"), 0)?.ScanArea is null,
+            previewRequest?.ScanArea is { } previewArea &&
+            Math.Abs(previewArea.OriginXmm - session.PreviewArea.OriginXmm) < 1e-9 &&
+            Math.Abs(previewArea.OriginYmm - session.PreviewArea.OriginYmm) < 1e-9 &&
+            Math.Abs(previewArea.WidthMm - session.PreviewArea.WidthMm) < 1e-9 &&
+            Math.Abs(previewArea.HeightMm - session.PreviewArea.HeightMm) < 1e-9,
             "flatbed_preview_scans_the_whole_plate");
 
         // 프리뷰 픽셀이 없으면 자동으로 찾은 척하지 않습니다.

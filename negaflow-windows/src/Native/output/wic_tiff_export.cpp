@@ -221,7 +221,7 @@ WicTiffExportResult export_working_to_srgb16_tiff(
             discard_staging(output.get(), result);
             return result;
         }
-        result.info.pixels_verified = true;
+        result.info.pixels_verified = limits.verify_pixel_readback;
         result.info.profile_verified = true;
         result.info.resolution_verified = limits.output_dpi != 0U;
 

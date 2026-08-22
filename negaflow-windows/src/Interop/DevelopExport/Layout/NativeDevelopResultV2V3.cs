@@ -117,7 +117,8 @@ internal struct NativeFilmBaseMeasurementV1
 }
 
 /// <summary>
-/// v3 의 모든 필드를 같은 offset 으로 유지하고 필름 베이스 실측만 덧붙인 결과입니다.
+/// v3 의 모든 필드를 같은 offset 으로 유지하고 필름 베이스 실측과 디버그 지표를 덧붙인
+/// 결과입니다(네이티브 v5).
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeDevelopExportResultV4
@@ -146,6 +147,10 @@ internal unsafe struct NativeDevelopExportResultV4
     internal uint Cancelled;
     internal uint Reserved;
     internal NativeFilmBaseMeasurementV1 Measurement;
+    /// <summary>
+    /// macOS <c>DevelopDebugMetrics</c> 와 같은 네 값입니다. 개발자 디버그 화면이 읽습니다.
+    /// </summary>
+    internal NativeDevelopDebugMetricsV1 DebugMetrics;
 
     internal string GetFailureName()
     {
@@ -157,4 +162,24 @@ internal unsafe struct NativeDevelopExportResultV4
                 terminator < 0 ? bytes : bytes[..terminator]);
         }
     }
+}
+
+/// <summary>
+/// macOS <c>DevelopDebugMetrics</c> 이식본입니다. <c>Present</c> 는 네거티브 반전이 실제로
+/// 돌아 값을 잰 호출에서만 1 입니다 - 포지티브·디지털 경로는 재지 않습니다.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeDevelopDebugMetricsV1
+{
+    internal uint Present;
+    internal uint Reserved;
+    internal float DminRed;
+    internal float DminGreen;
+    internal float DminBlue;
+    internal float DmaxNormalizedRed;
+    internal float DmaxNormalizedGreen;
+    internal float DmaxNormalizedBlue;
+    internal float BlackInputRed;
+    internal float BlackInputGreen;
+    internal float BlackInputBlue;
 }

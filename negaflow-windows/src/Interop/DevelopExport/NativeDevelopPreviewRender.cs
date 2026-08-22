@@ -39,9 +39,17 @@ internal static unsafe class NativeDevelopPreviewRender
         // macOS `applyingWholeFrameAutomaticRiskFlag` 의 결과입니다. 자동에서만 채워집니다.
         bool* automaticRisk = null,
         double* automaticCandidateFraction = null,
-        bool clippingOverlay = false)
+        bool clippingOverlay = false,
+        bool retainPreviewRaw = true)
     {
         ValidateLayoutAndEnums(request);
+        if (!retainPreviewRaw &&
+            (detection is not null || softProof is not null || clippingOverlay))
+        {
+            throw new ArgumentException(
+                "Background preview caching only supports the normal developed view.",
+                nameof(retainPreviewRaw));
+        }
         GrainMendDetectionOptions effectiveDetectionOptions =
             detectionOptions ?? GrainMendDetectionOptions.LegacyDefault;
         if (detection is not null &&
@@ -59,16 +67,20 @@ internal static unsafe class NativeDevelopPreviewRender
         NativeLocalDodgeBurnPayload local = BuildLocalDodgeBurnPayload(
             request.LocalDodgeBurn);
         NativeDefectRegionPayload defects = BuildDefectRegionPayload(
-            request.DefectRegions, request.DefectInfrared);
+            request.DefectRegions, request.DefectInfrared, request.DefectRecipeSha256);
         NativeDefectClonePayload clones = BuildDefectClonePayload(
             request.DefectClones);
         NativeDefectBrushPayload brushes = BuildDefectBrushPayload(
             request.DefectBrushes);
         NativeDefectRecipeEditRefV1[] defectEditOrder = BuildDefectEditOrder(request);
         byte[] defectSourceSha256 = BuildDefectSourceSha256(request);
+        byte[] defectRecipeSha256 = BuildDefectRecipeSha256(request);
 
-        NativeDevelopExportResultV3 raw = default;
-        raw.StructSize = (uint)sizeof(NativeDevelopExportResultV3);
+        // 미리보기도 v4 자리를 줍니다. 네이티브는 struct_size 를 보고 채우므로, 작게 주면
+        // 필름 베이스 실측과 개발자 디버그 지표가 통째로 빠집니다 - 현상 화면에서 dmin·
+        // dmaxNorm 이 비어 있던 이유가 이것이었습니다.
+        NativeDevelopExportResultV4 raw = default;
+        raw.StructSize = (uint)sizeof(NativeDevelopExportResultV4);
         uint status;
 
         // A null run state is the pre-v22 behaviour: the call simply runs to the end.
@@ -107,6 +119,7 @@ internal static unsafe class NativeDevelopPreviewRender
         fixed (NativeDefectRegionEditV1* defectRegionEdits = defects.Edits)
         fixed (byte* defectMaskBytes = defects.MaskBytes)
         fixed (byte* defectSourceDigest = defectSourceSha256)
+        fixed (byte* defectRecipeDigest = defectRecipeSha256)
         fixed (NativeDefectCloneEditV1* defectCloneEdits = clones.Edits)
         fixed (NativeDefectCloneStrokeV1* defectCloneStrokes = clones.Strokes)
         fixed (NativeDefectClonePointV1* defectClonePoints = clones.Points)
@@ -203,7 +216,7 @@ internal static unsafe class NativeDevelopPreviewRender
                     previewPointCapacity,
                     runState,
                     &detectionV4,
-                    &raw);
+                    (NativeDevelopExportResultV3*)&raw);
                 *detection = detectionV4.V3.V2;
                 detection->StructSize = (uint)sizeof(NativeGrainMendDetectionV2);
                 if (componentCount is not null)
@@ -228,21 +241,36 @@ internal static unsafe class NativeDevelopPreviewRender
             {
                 NativeDevelopExportRequestV28 v28 = BuildRequestV28(v27, request);
                 NativeDevelopExportRequestV29 v29 = BuildRequestV29(v28, request);
-                NativeDevelopExportRequestV34 native = BuildRequestV34(BuildRequestV33(
-                    BuildRequestV32(
-                        BuildRequestV31(BuildRequestV30(v29, request), request),
-                        request),
-                    request,
-                    null, null, null, null, null, null, null, null), request);
-                status = NativeDevelopRun.nf_develop_preview_v34(
-                    &native,
-                    proofPointer,
-                    maximumWidth,
-                    maximumHeight,
-                    pixelBuffer,
-                    (uint)Math.Min(pixels.Length, int.MaxValue),
-                    runState,
-                    &raw);
+                NativeDevelopExportRequestV34 v34 = BuildRequestV34(
+                    BuildRequestV33(
+                        BuildRequestV32(
+                            BuildRequestV31(BuildRequestV30(v29, request), request),
+                            request),
+                        request,
+                        null, null, null, null, null, null, null, null),
+                    request);
+                if (!retainPreviewRaw)
+                {
+                    NativeDevelopExportRequestV35 v35 = BuildRequestV35(
+                        v34, defectRecipeDigest, checked((uint)defectRecipeSha256.Length));
+                    status = NativeDevelopRun.nf_develop_preview_background_v1(
+                        &v35, maximumWidth, maximumHeight, pixelBuffer,
+                        (uint)Math.Min(pixels.Length, int.MaxValue), runState, (NativeDevelopExportResultV3*)&raw);
+                }
+                else if (defectRecipeSha256.Length == 0)
+                {
+                    status = NativeDevelopRun.nf_develop_preview_v34(
+                        &v34, proofPointer, maximumWidth, maximumHeight, pixelBuffer,
+                        (uint)Math.Min(pixels.Length, int.MaxValue), runState, (NativeDevelopExportResultV3*)&raw);
+                }
+                else
+                {
+                    NativeDevelopExportRequestV35 v35 = BuildRequestV35(
+                        v34, defectRecipeDigest, checked((uint)defectRecipeSha256.Length));
+                    status = NativeDevelopRun.nf_develop_preview_v35(
+                        &v35, proofPointer, maximumWidth, maximumHeight, pixelBuffer,
+                        (uint)Math.Min(pixels.Length, int.MaxValue), runState, (NativeDevelopExportResultV3*)&raw);
+                }
             }
         }
 
@@ -251,6 +279,10 @@ internal static unsafe class NativeDevelopPreviewRender
             raw,
             detection is not null
                 ? "nf_develop_detect_grain_mend_v4"
-                : "nf_develop_preview_v34"));
+                : !retainPreviewRaw
+                    ? "nf_develop_preview_background_v1"
+                : defectRecipeSha256.Length == 0
+                    ? "nf_develop_preview_v34"
+                    : "nf_develop_preview_v35"));
     }
 }

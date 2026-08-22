@@ -14,7 +14,6 @@ internal sealed class LibraryWorkspaceCopy
 
     internal void Localize()
     {
-        view.ImportHintLocalized.Text = AppResources.Get("importHint", "Text");
         // 폴더 머리줄의 "N장" 입니다. 리소스는 `%d장` 형식이라 .NET 자리표시자로 바꿔 겁니다.
         LibraryBrowserFolderSection.FrameCountFormat =
             AppResources.Get("libraryFolderFrameCount", "Text").Replace("%d", "{0}", StringComparison.Ordinal);
@@ -50,7 +49,6 @@ internal sealed class LibraryWorkspaceCopy
         view.CullingSurface.Localize();
         view.rail.Update();
         string importImages = AppResources.Get("importImages", "Content");
-        SetButtonText(view.ImportImagesButton, importImages);
         SetButtonText(view.EmptyImportImagesButton, importImages);
         LocalizeScanSection();
         SetButtonText(view.AllModeButton, AppResources.Get("libraryAllShort", "Text"));
@@ -118,14 +116,35 @@ internal sealed class LibraryWorkspaceCopy
             0);
     }
 
+    /// <summary>
+    /// 가져오기 막대의 세 칸입니다. 칸마다 아이콘과 글자가 함께 들어가 있으므로
+    /// <c>Content</c> 를 갈아 끼우면 아이콘이 사라집니다 — 글자 자리만 채웁니다.
+    /// </summary>
     private void LocalizeScanSection()
     {
-        SetButtonText(view.ImportImagesButton, AppResources.Get("libraryImportImageShort", "Content"));
-        SetButtonText(view.ImportFoldersButton, AppResources.Get("libraryImportFolderShort", "Content"));
-        SetToggleButtonText(
+        SetSegmentText(
+            view.ImportImagesButton,
+            view.ImportImagesText,
+            AppResources.Get("libraryImportImageShort", "Content"));
+        SetSegmentText(
+            view.ImportFoldersButton,
+            view.ImportFoldersText,
+            AppResources.Get("libraryImportFolderShort", "Content"));
+        SetSegmentText(
             view.ImportScannerButton,
+            view.ImportScannerText,
             AppResources.Get("libraryScannerLabel", "Content"));
         view.ScanPanel.Localize();
+    }
+
+    private static void SetSegmentText(
+        Microsoft.UI.Xaml.Controls.Control segment,
+        TextBlock label,
+        string text)
+    {
+        label.Text = text;
+        AutomationProperties.SetName(segment, text);
+        ToolTipService.SetToolTip(segment, text);
     }
 
     private MenuFlyoutItem RatingFilterItem(int rating) => rating switch

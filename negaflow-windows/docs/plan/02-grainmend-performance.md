@@ -135,13 +135,13 @@ macOS 는 이 전부가 CoreImage 그래프입니다. Windows 도 같은 구조�
 
 ```
 src/Native/gpu/
-  gpu_device.{h,cpp}        D3D11 장치 생성·기능 확인·WARP 폴백. 실패하면 CPU 경로로.
-  gpu_buffer.{h,cpp}        structured buffer 올리기/내리기, 스테이징 링
-  gpu_kernel.{h,cpp}        컴파일된 셰이더 바이트코드 캐시, 디스패치
-  shaders/morphology.hlsl   vHGW 가로/세로 × min/max
-  shaders/tone.hlsl         기본 톤 + 곡선 LUT + 믹서 + 그레이딩
-  shaders/develop.hlsl      네거티브 반전 + dmin/dmax
-  shaders/resample.hlsl     프리뷰 축소
+  gpu_device.{h,cpp} D3D11 장치 생성·기능 확인·WARP 폴백. 실패하면 CPU 경로로.
+  gpu_buffer.{h,cpp} structured buffer 올리기/내리기, 스테이징 링
+  gpu_kernel.{h,cpp} 컴파일된 셰이더 바이트코드 캐시, 디스패치
+  shaders/morphology.hlsl vHGW 가로/세로 × min/max
+  shaders/tone.hlsl 기본 톤 + 곡선 LUT + 믹서 + 그레이딩
+  shaders/develop.hlsl 네거티브 반전 + dmin/dmax
+  shaders/resample.hlsl 프리뷰 축소
 ```
 
 규칙:
@@ -201,7 +201,7 @@ src/Native/gpu/
 |---|---|
 | GPU 구현 | **여전히 0줄.** 10개 키워드 히트 0, `.hlsl` 0개 |
 | GPU 이식 대상 | macOS `ChromabaseMetalKernels.swift` 의 `[[stitchable]]` 커널 **32개**(전부 화소별). 목록은 [`../audit/04-gpu-plan.md`](../audit/04-gpu-plan.md) 1.3 |
-| ☠️ 주의 | 그중 **3개는 macOS 가 부르지 않습니다** — `scannerLowSatChroma`/`scannerMidtoneChroma`·`gamutSoftClip`·`highlightDesaturate`. 옮기면 없는 효과를 만듭니다 |
+| 주의 | 그중 **3개는 macOS 가 부르지 않습니다** — `scannerLowSatChroma`/`scannerMidtoneChroma`·`gamutSoftClip`·`highlightDesaturate`. 옮기면 없는 효과를 만듭니다 |
 | 이웃 연산 | macOS 는 Apple 내장 필터(`CIGaussianBlur`·`CIBoxBlur`·`CIMedianFilter`·`CIAreaAverage`)로 처리. **Windows 는 직접 만들어야 합니다** |
 | 형태학 47%(미세 입자까지 82%) | **van Herk / Gil-Werman** 으로 구조 요소 크기와 **무관한 O(1)**. 침식·팽창은 분리 가능 → 수평·수직 2패스. 방법은 [`../audit/13-performance-playbook.md`](../audit/13-performance-playbook.md) 4.3 |
 | API | D3D11 컴퓨트, 하한 **FL 11_0**, 포맷 `R32G32B32A32_FLOAT` |

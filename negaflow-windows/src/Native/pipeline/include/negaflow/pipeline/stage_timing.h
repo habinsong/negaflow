@@ -8,17 +8,17 @@
 // 재지 않으면 알 수 없습니다.
 //
 // 켜는 법 — 둘 다 됩니다:
-//   · 환경 변수 `NEGA_TIMING=1` — 실행이 끝날 때 표를 stderr 로 찍습니다.
-//     릴리스에서도 됩니다. 사용자 기계의 느림을 잡으려면 그래야 합니다.
-//   · `stage_timings()` 를 직접 읽습니다. CLI 가 그렇게 씁니다.
+// · 환경 변수 `NEGA_TIMING=1` — 실행이 끝날 때 표를 stderr 로 찍습니다.
+// 릴리스에서도 됩니다. 사용자 기계의 느림을 잡으려면 그래야 합니다.
+// · `stage_timings()` 를 직접 읽습니다. CLI 가 그렇게 씁니다.
 //
-// ☠️ **계측이 결과 화소를 바꾸면 안 됩니다.** 여기서 하는 일은 `QueryPerformanceCounter`
-//    두 번과 덧셈뿐이고, 단계 안쪽에는 손대지 않습니다.
+// **계측이 결과 화소를 바꾸면 안 됩니다.** 여기서 하는 일은 `QueryPerformanceCounter`
+// 두 번과 덧셈뿐이고, 단계 안쪽에는 손대지 않습니다.
 //
-// ⚠️ 이것은 **CPU 벽시계**입니다. GPU 디스패치는 비동기라 커널이 실제로 GPU 에서
-//    얼마나 걸렸는지는 이 숫자에 안 나옵니다. 그것은 `ID3D11Query` 의
-//    `D3D11_QUERY_TIMESTAMP` 로 따로 재야 합니다(13 2.2절). 다만 **파이프라인이
-//    다운로드에서 기다리므로**, 벽시계도 실제 체감과 크게 어긋나지 않습니다.
+// 주의 이것은 **CPU 벽시계**입니다. GPU 디스패치는 비동기라 커널이 실제로 GPU 에서
+// 얼마나 걸렸는지는 이 숫자에 안 나옵니다. 그것은 `ID3D11Query` 의
+// `D3D11_QUERY_TIMESTAMP` 로 따로 재야 합니다(13 2.2절). 다만 **파이프라인이
+// 다운로드에서 기다리므로**, 벽시계도 실제 체감과 크게 어긋나지 않습니다.
 
 #include <cstdint>
 
@@ -57,4 +57,4 @@ void dump_stage_timings() noexcept;
 // `NEGA_TIMING` 이 켜져 있는지.
 [[nodiscard]] bool stage_timing_enabled() noexcept;
 
-}  // namespace negaflow::pipeline
+} // namespace negaflow::pipeline

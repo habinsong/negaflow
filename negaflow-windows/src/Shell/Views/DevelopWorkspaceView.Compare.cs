@@ -1,6 +1,7 @@
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
+using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
 
 namespace Negaflow.Shell.Views;
@@ -14,6 +15,7 @@ namespace Negaflow.Shell.Views;
 /// </remarks>
 public sealed partial class DevelopWorkspaceView
 {
+    private DevelopRun? neighborWarmRun;
     private bool compareBeforeNeeded;
     private bool compareBeforeInFlight;
 
@@ -171,10 +173,10 @@ public sealed partial class DevelopWorkspaceView
     }
 
     /// <summary>
-    /// 이웃 장의 TIFF 를 디코드 캐시에 올려 둡니다. 같은 세션 로그에서 첫 방문
-    /// PreviewOnce 가 400ms(캐시 있음) 또는 3000ms(캐시 없음)로 갈렸습니다.
+    /// 현재 장의 정착 뒤 이웃 장의 3600px raw 프록시를 채웁니다. 새 선택이 오면 취소하며,
+    /// 선택된 장은 이 정착 슬롯에서 표시 크기 프록시를 파생하고 뒤따르는 정착에도 재사용합니다.
     /// </summary>
-    private void WarmNeighborDecodes(LibraryFrameSnapshot current)
+    private void WarmNeighborSettledPreviews(LibraryFrameSnapshot current)
     {
         if (libraryHost is null)
         {
@@ -194,16 +196,78 @@ public sealed partial class DevelopWorkspaceView
         {
             return;
         }
-        LibraryFrameSnapshot? left = index > 0 ? all[index - 1] : null;
-        LibraryFrameSnapshot? right = index + 1 < all.Count ? all[index + 1] : null;
+        List<LibraryFrameSnapshot> warmOrder = [];
+        for (int distance = 1; warmOrder.Count + 1 < all.Count; ++distance)
+        {
+            if (index - distance >= 0)
+            {
+                warmOrder.Add(all[index - distance]);
+            }
+            if (index + distance < all.Count)
+            {
+                warmOrder.Add(all[index + distance]);
+            }
+        }
+        uint edge = DevelopPreviewProxy.BufferEdge(DevelopPreviewProxy.FullMaxDimension);
+        DevelopRun run = new();
+        System.Threading.Interlocked.Exchange(ref neighborWarmRun, run)?.Cancel();
         _ = System.Threading.Tasks.Task.Run(() =>
         {
-            WarmDecode(left);
-            WarmDecode(right);
+            ThreadPriority previousPriority = Thread.CurrentThread.Priority;
+            bool priorityChanged = false;
+            try
+            {
+                try
+                {
+                    Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
+                    priorityChanged = true;
+                }
+                catch (Exception error) when (error is ThreadStateException or
+                    System.Security.SecurityException)
+                {
+                }
+                int pixelBytes = checked((int)((ulong)edge * edge * 4UL));
+                byte[] pixels = new byte[pixelBytes];
+                for (int warmIndex = 0;
+                    warmIndex < warmOrder.Count && !run.IsCancelRequested;
+                    ++warmIndex)
+                {
+                    bool keepResident = warmIndex < 2;
+                    WarmSettledPreview(
+                        warmOrder[warmIndex], edge, pixels, run, keepResident);
+                    // 바로 이웃 두 장 뒤부터는 foreground 선택·조정을 위한 IO/GPU 유휴 구간을 둡니다.
+                    if (warmIndex >= 1 && !WaitForBackground(run, milliseconds: 1000))
+                    {
+                        break;
+                    }
+                }
+            }
+            finally
+            {
+                if (priorityChanged)
+                {
+                    try
+                    {
+                        Thread.CurrentThread.Priority = previousPriority;
+                    }
+                    catch (Exception error) when (error is ThreadStateException or
+                        System.Security.SecurityException)
+                    {
+                    }
+                }
+                _ = System.Threading.Interlocked.CompareExchange(
+                    ref neighborWarmRun, null, run);
+                run.Dispose();
+            }
         });
     }
 
-    private static void WarmDecode(LibraryFrameSnapshot? frame)
+    private void WarmSettledPreview(
+        LibraryFrameSnapshot? frame,
+        uint edge,
+        byte[] pixels,
+        DevelopRun run,
+        bool keepResident)
     {
         if (frame is null || frame.SourcePath is not { Length: > 0 } path)
         {
@@ -211,23 +275,74 @@ public sealed partial class DevelopWorkspaceView
         }
         try
         {
+            if (keepResident &&
+                thumbnails?.TryGetDeveloped(frame, out var cached) == true && cached.Settled)
+            {
+                PreviewTrace.Write(
+                    "warm preview cache HIT " + cached.Width + "x" + cached.Height + " " + path);
+                return;
+            }
+            if (!keepResident && thumbnails?.HasSettledDeveloped(frame) == true)
+            {
+                PreviewTrace.Write("warm preview disk HIT " + path);
+                return;
+            }
             string unused = Path.ChangeExtension(path, ".warm-decode.png");
             if (DevelopRequestFactory.Create(frame, unused).Request is not { } request)
             {
                 return;
             }
-            const uint edge = 360;
-            byte[] pixels = new byte[edge * edge * 4];
-            PreviewTrace.Write("warm decode start " + path);
-            DevelopExportResult result = new NativeDevelopExporterAdapter().Preview(
-                request, edge, edge, pixels);
+            DevelopedPreviewCacheIdentity? identity =
+                ThumbnailService.CaptureDevelopedCacheIdentity(frame);
             PreviewTrace.Write(
-                "warm decode end ok=" + result.Succeeded +
+                "warm preview start edge=" + edge +
+                " resident=" + keepResident + " " + path);
+            NativeDevelopExporterAdapter exporter = new();
+            DevelopExportResult result = keepResident
+                ? exporter.Preview(request, edge, edge, pixels, run)
+                : exporter.PreviewBackground(request, edge, edge, pixels, run);
+            PreviewTrace.Write(
+                "warm preview end ok=" + result.Succeeded +
+                " cancel=" + result.Cancelled +
                 " fail=" + (result.FailureName ?? ""));
+            if (result.Succeeded && result.ImageWidth > 0U && result.ImageHeight > 0U)
+            {
+                if (keepResident)
+                {
+                    thumbnails?.RememberDeveloped(
+                        frame,
+                        pixels,
+                        (int)result.ImageWidth,
+                        (int)result.ImageHeight,
+                        settled: true,
+                        identity);
+                }
+                else
+                {
+                    thumbnails?.StoreDevelopedOnDisk(
+                        frame,
+                        pixels,
+                        (int)result.ImageWidth,
+                        (int)result.ImageHeight,
+                        identity);
+                }
+            }
         }
         catch (Exception error)
         {
-            PreviewTrace.Write("warm decode fault " + error.GetType().Name);
+            PreviewTrace.Write("warm preview fault " + error.GetType().Name);
         }
+    }
+
+    private static bool WaitForBackground(DevelopRun run, int milliseconds)
+    {
+        int remaining = milliseconds;
+        while (remaining > 0 && !run.IsCancelRequested)
+        {
+            int slice = Math.Min(50, remaining);
+            Thread.Sleep(slice);
+            remaining -= slice;
+        }
+        return !run.IsCancelRequested;
     }
 }

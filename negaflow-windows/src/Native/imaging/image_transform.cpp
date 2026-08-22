@@ -1,5 +1,7 @@
 #include "negaflow/imaging/image_transform.h"
 
+#include "negaflow/core/parallel_rows.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -84,7 +86,14 @@ namespace {
     WorkingImage output = packed_image(
         swap_dimensions ? source.height : source.width,
         swap_dimensions ? source.width : source.height);
-    for (std::uint32_t y = 0U; y < output.height; ++y) {
+    // 화소마다 하는 일은 자리 옮김뿐이고 행끼리 완전히 독립입니다. 계산은 그대로 두고
+    // 행 블록으로만 나눕니다. work_units 는 읽고 쓰는 바이트입니다(`parallel_rows.h` 경고).
+    negaflow::core::for_each_row_block(
+        output.height,
+        static_cast<std::uint64_t>(output.width) * output.height *
+            sizeof(negaflow::core::Rgba32F) * 2U,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+    for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
         for (std::uint32_t x = 0U; x < output.width; ++x) {
             std::uint32_t ox = x;
             std::uint32_t oy = y;
@@ -115,6 +124,7 @@ namespace {
                     static_cast<std::size_t>(oy) * source.stride_pixels + ox];
         }
     }
+        });
     return output;
 }
 
@@ -139,7 +149,13 @@ namespace {
     const double output_cy = (out_height - 1.0) * 0.5;
     const double cos_theta = std::cos(theta);
     const double sin_theta = std::sin(theta);
-    for (std::uint32_t y = 0U; y < out_height; ++y) {
+    // 목표 행 하나가 원본을 이중선형으로 네 화소씩 읽습니다. 행끼리 독립입니다.
+    negaflow::core::for_each_row_block(
+        out_height,
+        static_cast<std::uint64_t>(out_width) * out_height *
+            sizeof(negaflow::core::Rgba32F) * 5U,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+    for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
         for (std::uint32_t x = 0U; x < out_width; ++x) {
             const double dx = static_cast<double>(x) - output_cx;
             const double dy = static_cast<double>(y) - output_cy;
@@ -151,6 +167,7 @@ namespace {
                 sample_bilinear_clamped(source, source_x, source_y);
         }
     }
+        });
     return output;
 }
 
@@ -174,19 +191,81 @@ namespace {
     WorkingImage output = packed_image(
         clamped_right - clamped_left,
         clamped_bottom - clamped_top);
-    for (std::uint32_t y = 0U; y < output.height; ++y) {
-        for (std::uint32_t x = 0U; x < output.width; ++x) {
-            output.pixels[static_cast<std::size_t>(y) * output.width + x] =
-                source.pixels[
-                    static_cast<std::size_t>(y + clamped_top) *
-                        source.stride_pixels +
-                    x + clamped_left];
-        }
-    }
+    // 잘라 내기는 행 단위 연속 복사입니다. 행끼리 독립이므로 블록으로 나눕니다.
+    negaflow::core::for_each_row_block(
+        output.height,
+        static_cast<std::uint64_t>(output.width) * output.height *
+            sizeof(negaflow::core::Rgba32F) * 2U,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
+                const negaflow::core::Rgba32F* const source_row =
+                    source.pixels.data() +
+                    (static_cast<std::size_t>(y + clamped_top) * source.stride_pixels) +
+                    clamped_left;
+                negaflow::core::Rgba32F* const output_row =
+                    output.pixels.data() +
+                    (static_cast<std::size_t>(y) * output.width);
+                std::copy_n(source_row, output.width, output_row);
+            }
+        });
     return output;
 }
 
-}  // namespace
+} // namespace
+
+bool plan_image_transform_gather(
+    const ImageTransformParameters& parameters,
+    const std::uint32_t source_width,
+    const std::uint32_t source_height,
+    ImageTransformGather& out) noexcept {
+    out = {};
+    if (!valid_image_transform_parameters(parameters) || source_width == 0U ||
+        source_height == 0U) {
+        return false;
+    }
+    // 기울이기는 이중선형이라 자리 옮김으로 적을 수 없습니다.
+    if (std::abs(parameters.straighten_angle) > 1.0e-4) {
+        return false;
+    }
+    const bool swap_dimensions =
+        parameters.rotation == ImageRotation::degrees_90 ||
+        parameters.rotation == ImageRotation::degrees_270;
+    const std::uint32_t oriented_width =
+        swap_dimensions ? source_height : source_width;
+    const std::uint32_t oriented_height =
+        swap_dimensions ? source_width : source_height;
+
+    out.rotation = parameters.rotation;
+    out.flip_horizontal = parameters.flip_horizontal;
+    out.flip_vertical = parameters.flip_vertical;
+    out.output_width = oriented_width;
+    out.output_height = oriented_height;
+    if (!parameters.has_crop) {
+        return true;
+    }
+    // `crop_image` 와 **같은 식**이어야 합니다. 여기서 한 자리라도 다르면 프리뷰와
+    // 내보내기가 다른 자리를 자릅니다.
+    const double width = oriented_width;
+    const double height = oriented_height;
+    const auto left = static_cast<std::uint32_t>(std::floor(parameters.crop.x * width));
+    const auto right = static_cast<std::uint32_t>(std::ceil(
+        (parameters.crop.x + parameters.crop.width) * width));
+    const auto top = static_cast<std::uint32_t>(std::floor(
+        (1.0 - parameters.crop.y - parameters.crop.height) * height));
+    const auto bottom = static_cast<std::uint32_t>(std::ceil(
+        (1.0 - parameters.crop.y) * height));
+    const std::uint32_t clamped_left = std::min(left, oriented_width - 1U);
+    const std::uint32_t clamped_top = std::min(top, oriented_height - 1U);
+    const std::uint32_t clamped_right =
+        std::clamp(right, clamped_left + 1U, oriented_width);
+    const std::uint32_t clamped_bottom =
+        std::clamp(bottom, clamped_top + 1U, oriented_height);
+    out.crop_left = clamped_left;
+    out.crop_top = clamped_top;
+    out.output_width = clamped_right - clamped_left;
+    out.output_height = clamped_bottom - clamped_top;
+    return true;
+}
 
 bool valid_image_transform_parameters(
     const ImageTransformParameters& parameters) noexcept {
@@ -268,4 +347,4 @@ const char* image_transform_status_name(
     return "unknown_status";
 }
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

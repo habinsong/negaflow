@@ -45,8 +45,8 @@ Negaflow.Shell.UnitTests.exe --defect-tools <storageRoot> <frameId> [irPath]
 또는 개별:
 
 ```powershell
-.\scripts\build.ps1 -Preset x64-release            # 네이티브
-.\scripts\build-managed.ps1 -Preset x64-release    # 관리
+.\scripts\build.ps1 -Preset x64-release # 네이티브
+.\scripts\build-managed.ps1 -Preset x64-release # 관리
 .\out\build\managed\Negaflow.Shell.UnitTests\x64\Release\net10.0\win-x64\Negaflow.Shell.UnitTests.exe
 ```
 
@@ -79,7 +79,7 @@ Negaflow.Shell.UnitTests.exe --defect-tools <storageRoot> <frameId> [irPath]
 |---|---|---|
 | 1 | 라이브러리 사진 수 | 17장 |
 | 2 | 현상 뷰 좌측 레일 | macOS 와 아이콘·순서·선택 표시 같음 |
-| 3 | GrainMend 카드 | 도구 4개 + ↺, 검토 줄 없음 |
+| 3 | GrainMend 카드 | 도구 4개 + , 검토 줄 없음 |
 | 4 | 자동 클릭 → 결과 | **5초 미만**, 캡슐에 "결함 N개" |
 | 5 | 종류별 칩 | 먼지·핀홀·스크래치·미세입자가 실제 색과 개수로 |
 | 6 | 칩 클릭 | 그 종류 전체가 회색으로 바뀜, 개수 갱신 |

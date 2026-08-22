@@ -6,10 +6,10 @@
 // `CIMedianFilter` · `CIAreaAverage`. Windows 에는 없어서 우리가 만들어야 하고,
 // 가이드 필터 4커널과 `filmScanShrink` 가 여기 물려 있습니다.
 //
-// ⚠️ CPU 판(`imaging/film_scan_denoise_filters.cpp`)의 필터들은 전부 내부 함수라 여기서
-//    직접 부를 수 없습니다. 그래서 **CPU 판과 같은 순서로 도는 참조 구현**을 시험 안에 두고
-//    비교합니다. 두 벌이라는 것을 알고 두는 것이고, 그 파일이 바뀌면 여기도 같이 바꿔야
-//    합니다. 필터가 공개되면 참조를 지우고 그것을 부르십시오.
+// 주의 CPU 판(`imaging/film_scan_denoise_filters.cpp`)의 필터들은 전부 내부 함수라 여기서
+// 직접 부를 수 없습니다. 그래서 **CPU 판과 같은 순서로 도는 참조 구현**을 시험 안에 두고
+// 비교합니다. 두 벌이라는 것을 알고 두는 것이고, 그 파일이 바뀌면 여기도 같이 바꿔야
+// 합니다. 필터가 공개되면 참조를 지우고 그것을 부르십시오.
 
 #include <cstddef>
 #include <cstdint>
@@ -53,4 +53,4 @@ inline constexpr std::uint32_t height = 37U;
 // 한 줄 보고. 허용치를 넘으면 실패로 셉니다.
 void report(const char* label, const char* what, int radius, float worst);
 
-}  // namespace gpu_neighborhood_tests
+} // namespace gpu_neighborhood_tests

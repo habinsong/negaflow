@@ -3,7 +3,8 @@
     x:Class="Negaflow.Shell.Views.Develop.Inspector.DevelopQuickActionsCard"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives">
+    xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
 
 <!--
     macOS DevelopQuickActionsSection — LazyVGrid 두 칸, 칸 사이 8, 줄 사이 8.
@@ -47,7 +48,7 @@
                 HorizontalAlignment="Center"
                 Orientation="Horizontal"
                 Spacing="6">
-                <FontIcon FontSize="13" Glyph="&#xE790;" />
+                <controls:VectorIcon IconSize="13" Kind="CameraFilters" />
                 <TextBlock x:Name="AutoColorText" TextTrimming="CharacterEllipsis" />
             </StackPanel>
         </primitives:ToggleButton>
@@ -69,7 +70,7 @@
                 HorizontalAlignment="Center"
                 Orientation="Horizontal"
                 Spacing="6">
-                <FontIcon FontSize="13" Glyph="&#xE9D2;" />
+                <controls:VectorIcon IconSize="13" Kind="LevelsChart" />
                 <TextBlock x:Name="AutoLevelsText" TextTrimming="CharacterEllipsis" />
             </StackPanel>
         </primitives:ToggleButton>
@@ -131,7 +132,7 @@
                     HorizontalAlignment="Center"
                     Orientation="Horizontal"
                     Spacing="6">
-                    <FontIcon FontSize="13" Glyph="&#xE793;" />
+                    <controls:VectorIcon IconSize="13" Kind="Thermometer" />
                     <TextBlock x:Name="AutoWhiteBalanceText" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </Button>

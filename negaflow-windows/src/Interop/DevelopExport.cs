@@ -100,6 +100,12 @@ public sealed class DevelopExportRequest
 
     public DevelopDefectSourceIdentity? DefectSourceIdentity { get; init; }
 
+    /// <summary>
+    /// Ordered render-affecting Defects recipe SHA-256. Native preview caches use it only
+    /// as an exact invalidation identity; the projected recipe remains authoritative.
+    /// </summary>
+    public string? DefectRecipeSha256 { get; init; }
+
     /// <summary>FilmScanDenoise master strength from zero through one.</summary>
     public float NoiseReductionStrength { get; init; }
 

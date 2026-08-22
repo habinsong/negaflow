@@ -329,10 +329,10 @@ internal static class LibraryHostTests
     /// <summary>
     /// 폴더 머리줄에서 고른 프로세스·타깃은 <b>적용을 누르기 전까지</b> 살아 있어야 합니다.
     ///
-    /// ☠️ 예전에는 고르개가 프레임의 **현재** 값에 묶여 있어, 썸네일 한 장만 도착해 격자가 다시
-    ///    투영돼도 고른 값이 되돌아갔습니다 — 사용자에게는 "고르고 적용을 눌러도 아무 일이
-    ///    없다" 로 보입니다. macOS 는 그 값을 컨트롤의 `@State` 로 들고 프레임이 실제로 달라질
-    ///    때만 다시 맞춥니다(`onChange(of: referenceSelection)`).
+    /// 예전에는 고르개가 프레임의 **현재** 값에 묶여 있어, 썸네일 한 장만 도착해 격자가 다시
+    /// 투영돼도 고른 값이 되돌아갔습니다 — 사용자에게는 "고르고 적용을 눌러도 아무 일이
+    /// 없다" 로 보입니다. macOS 는 그 값을 컨트롤의 `@State` 로 들고 프레임이 실제로 달라질
+    /// 때만 다시 맞춥니다(`onChange(of: referenceSelection)`).
     /// </summary>
     private static void RunFolderDevelopmentDrafts(
         IReadOnlyList<LibraryFrameListItem> items,

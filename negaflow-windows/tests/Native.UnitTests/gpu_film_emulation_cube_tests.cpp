@@ -1,12 +1,12 @@
 // CPU/GPU 동치 시험 — 필름 스톡 색 큐브(33³ 3D LUT).
 //
-// ☠️ **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `apply_film_emulation_color_cube` 를
-//    그대로 부르고 그 결과와 겨룹니다. 큐브도 진짜 `build_film_emulation_color_cube` 로
-//    만듭니다 — 표를 지어내면 시험이 아무것도 증명하지 않습니다.
+// **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `apply_film_emulation_color_cube` 를
+// 그대로 부르고 그 결과와 겨룹니다. 큐브도 진짜 `build_film_emulation_color_cube` 로
+// 만듭니다 — 표를 지어내면 시험이 아무것도 증명하지 않습니다.
 //
-// ☠️ **하드웨어 삼선형을 쓰지 않는다는 것을 이 시험이 지킵니다.** `Texture3D` +
-//    `SampleLevel` 로 바꾸면 필터 가중치가 8비트로 양자화돼 오차가 1e-5 를 넘습니다.
-//    이 시험이 깨지면 먼저 그것부터 의심하십시오.
+// **하드웨어 삼선형을 쓰지 않는다는 것을 이 시험이 지킵니다.** `Texture3D` +
+// `SampleLevel` 로 바꾸면 필터 가중치가 8비트로 양자화돼 오차가 1e-5 를 넘습니다.
+// 이 시험이 깨지면 먼저 그것부터 의심하십시오.
 
 #include <algorithm>
 #include <cmath>
@@ -132,7 +132,7 @@ void run_all(const GpuDevice& device, const char* const label) {
     cube_matches_cpu(device, label, FilmEmulation::vision3_500t, 0.35);
 }
 
-}  // namespace
+} // namespace
 
 int main() {
     const GpuDevice warp = GpuDevice::create(GpuDevicePreference::warp_only);

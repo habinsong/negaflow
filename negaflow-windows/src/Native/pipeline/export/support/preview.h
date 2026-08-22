@@ -4,6 +4,7 @@
 
 #include "negaflow/color/soft_proof.h"
 #include "negaflow/imaging/grain_mend.h"
+#include "negaflow/imaging/image_transform.h"
 #include "negaflow/imaging/scanner_to_working.h"
 
 #include <cstddef>
@@ -40,9 +41,14 @@ void preview_fit_size(
     std::uint32_t& height) noexcept;
 
 // 작업 화상을 표시용 BGRA8 로 상자 평균 축소해 쓴다. 게시 파일 경로와는 무관하다.
+//
+// `deferred` 가 있으면 회전·뒤집기·자르기가 **아직 안 걸린** 화상을 받습니다. 상주 GPU
+// 인코드가 그 자리 옮김을 함께 처리하므로 호스트 버퍼를 새로 만들지 않습니다. GPU 갈래를
+// 못 타면 여기서 CPU `apply_image_transform` 을 걸고 평소 경로로 갑니다 — 결과는 같습니다.
 [[nodiscard]] DevelopExportOutcome write_preview(
     const negaflow::imaging::WorkingImage& image,
     const PreviewTarget& target,
-    DevelopExportOutcome outcome) noexcept;
+    DevelopExportOutcome outcome,
+    const negaflow::imaging::ImageTransformGather* deferred = nullptr) noexcept;
 
 }  // namespace negaflow::pipeline::develop_export_detail

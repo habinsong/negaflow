@@ -36,8 +36,8 @@ internal sealed class DevelopInspectorSync
     /// 곧바로 <c>developFrame</c> 을 겁니다. 여기서도 프레임을 카탈로그에서 다시 읽고,
     /// 인스펙터를 맞추고, 프리뷰를 다시 겁니다.
     ///
-    /// ☠️ 이것이 없으면 카탈로그만 바뀌고 화면은 옛 값에 머뭅니다 — 실제로 타깃을 눌러도
-    ///    필름 프로파일이 안 따라오고 사진도 다시 그려지지 않았습니다.
+    /// 이것이 없으면 카탈로그만 바뀌고 화면은 옛 값에 머뭅니다 — 실제로 타깃을 눌러도
+    /// 필름 프로파일이 안 따라오고 사진도 다시 그려지지 않았습니다.
     /// </summary>
     private void OnDevelopDefaultsChanged(object? sender, EventArgs args)
     {

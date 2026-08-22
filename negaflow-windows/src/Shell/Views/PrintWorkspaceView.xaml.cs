@@ -109,16 +109,38 @@ public sealed partial class PrintWorkspaceView : UserControl
         RightResizeThumb.Visibility = RightPanel.Visibility;
         Filmstrip.Visibility = preferences.IsFilmstripVisible ? Visibility.Visible : Visibility.Collapsed;
         SynchronizeWidths(preferences);
-        if (PrintExportPanel.Settings != preferences.Export ||
-            PrintExportPanel.QuickSettings != preferences.QuickExport ||
+        ApplyCanvasBackground(preferences.CanvasBackground);
+        // 인화 내보내기도 현상과 같은 자리를 씁니다(디스크 탭의 내보내기/빠른 내보내기 폴더).
+        Negaflow.Shell.Develop.ExportSettings export = preferences.ResolvedExport;
+        Negaflow.Shell.Develop.QuickExportSettings quick = preferences.ResolvedQuickExport;
+        if (PrintExportPanel.Settings != export ||
+            PrintExportPanel.QuickSettings != quick ||
             PrintExportPanel.Recipes != preferences.ExportRecipes)
         {
             PrintExportPanel.ApplyPreferences(
-                preferences.Export,
-                preferences.QuickExport,
+                export,
+                quick,
                 preferences.ExportRecipes);
         }
     }
+
+    /// <summary>
+    /// 설정 · 인터페이스의 캔버스 배경입니다. macOS 는 인화 캔버스도 같은 값을 씁니다
+    /// (<c>PrintCanvasView</c> 의 <c>CanvasBackgroundMenu</c>).
+    /// </summary>
+    private void ApplyCanvasBackground(Negaflow.Shell.Develop.CanvasBackgroundKind background)
+    {
+        byte level = Negaflow.Shell.Develop.CanvasBackgroundColors.Byte(background);
+        CanvasHost.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+            Microsoft.UI.ColorHelper.FromArgb(255, level, level, level));
+        printCanvasBackground = background;
+        CanvasHost.ContextFlyout ??= Views.Controls.CanvasBackgroundFlyout.Create(
+            () => printCanvasBackground,
+            kind => workspaceState?.SetCanvasBackground(kind));
+    }
+
+    private Negaflow.Shell.Develop.CanvasBackgroundKind printCanvasBackground =
+        Negaflow.Shell.Develop.CanvasBackgroundKind.Black;
 
     private void SynchronizeWidths(ShellPreferences preferences)
     {
@@ -247,7 +269,7 @@ public sealed partial class PrintWorkspaceView : UserControl
     /// 인화뷰 좌측 내보내기 탭을 실제로 동작하게 겁니다. macOS 도 현상뷰와 **같은
     /// `ExportSection`** 이므로 같은 컨트롤에 같은 상태를 물립니다.
     ///
-    /// ☠️ 이것을 안 부르면 탭은 열리지만 안이 죽어 있습니다 — 눌러도 아무 일이 없는 UI 입니다.
+    /// 이것을 안 부르면 탭은 열리지만 안이 죽어 있습니다 — 눌러도 아무 일이 없는 UI 입니다.
     /// </summary>
     public void BindExport(
         LibraryHostService host,

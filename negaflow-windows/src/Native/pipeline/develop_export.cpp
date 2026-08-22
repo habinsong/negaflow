@@ -111,7 +111,7 @@ using develop_export_detail::validate_request;
 
 // 공개 진입점은 여기로 모인다. 단계 본문은 export/ 아래 번역 단위가 소유한다.
 //
-// ☠️ **`noexcept` 가 아닙니다.** 아래 `run_develop` 이 감쌉니다 — 이유는 그쪽 주석에.
+// **`noexcept` 가 아닙니다.** 아래 `run_develop` 이 감쌉니다 — 이유는 그쪽 주석에.
 [[nodiscard]] DevelopExportOutcome run_develop_unguarded(
     const DevelopExportRequest& request,
     const PreviewTarget* const preview,
@@ -123,9 +123,9 @@ using develop_export_detail::validate_request;
     // 값이 바이트까지 같아야 하는 경로(내보내기·골든)는 CPU 로 둡니다. 사용자가 기다리는
     // 프리뷰·검출에서만 GPU 를 켭니다 — `gpu_accelerator.h` 의 정책표.
     //
-    // ☠️ 이 판정을 **여기서** 합니다. 반전 단계가 아래에서 도는데, 그 단계 안의 GPU 가속은
-    //    `ApproximateAcceleratorScope` 를 보고 켜지므로 스코프가 먼저 열려 있어야 합니다.
-    //    스코프는 스레드마다 따로라 다른 스레드의 내보내기는 영향을 안 받습니다.
+    // 이 판정을 **여기서** 합니다. 반전 단계가 아래에서 도는데, 그 단계 안의 GPU 가속은
+    // `ApproximateAcceleratorScope` 를 보고 켜지므로 스코프가 먼저 열려 있어야 합니다.
+    // 스코프는 스레드마다 따로라 다른 스레드의 내보내기는 영향을 안 받습니다.
     const GpuUsePolicy gpu_policy = (preview != nullptr || detect != nullptr)
         ? GpuUsePolicy::allowed
         : GpuUsePolicy::cpu_only;
@@ -207,13 +207,13 @@ using develop_export_detail::validate_request;
     // (`sharedRenderContext`). 디코드는 묶지 않습니다 — 썸네일과 현상이
     // 직렬화됩니다. 항등 finish 는 호스트를 만지지 않고, `write_preview` 가
     // BGRA8 로 내립니다.
-    // ☠️ **선언 차례가 곧 파괴 차례입니다.** 상주 스코프의 소멸자는 GPU 에 머문 화소를
-    //    호스트로 내리는데, 그 대상은 아래 단계 출력이 들고 있는 버퍼입니다. 스코프를
-    //    이 자리보다 **먼저** 선언하면 함수가 끝날 때 이미지가 먼저 사라지고, 그 뒤에
-    //    소멸자가 **해제된 메모리에 씁니다.** 2026-08-20 자동 레벨/자동 색상 단추를
-    //    여러 번 누르면 앱이 죽던 원인이 이것이었습니다 — 크래시는 언제나
-    //    `gpu_working_image.cpp` `copy_rows` 안의 memcpy 였습니다(0xc0000005 쓰기).
-    //    그래서 단계 출력들을 먼저 선언하고, 스코프를 **마지막에** 선언합니다.
+    // **선언 차례가 곧 파괴 차례입니다.** 상주 스코프의 소멸자는 GPU 에 머문 화소를
+    // 호스트로 내리는데, 그 대상은 아래 단계 출력이 들고 있는 버퍼입니다. 스코프를
+    // 이 자리보다 **먼저** 선언하면 함수가 끝날 때 이미지가 먼저 사라지고, 그 뒤에
+    // 소멸자가 **해제된 메모리에 씁니다.** 2026-08-20 자동 레벨/자동 색상 단추를
+    // 여러 번 누르면 앱이 죽던 원인이 이것이었습니다 — 크래시는 언제나
+    // `gpu_working_image.cpp` `copy_rows` 안의 memcpy 였습니다(0xc0000005 쓰기).
+    // 그래서 단계 출력들을 먼저 선언하고, 스코프를 **마지막에** 선언합니다.
     InvertStageOutput invert{};
     LookStageOutput look{};
     GrainStageOutput grain{};
@@ -233,14 +233,20 @@ using develop_export_detail::validate_request;
         return *failed;
     }
 
-    if (auto failed = apply_grade_stages(request, tracker, invert)) {
+    if (auto failed = apply_grade_stages(request, tracker, gpu_policy, invert)) {
         return *failed;
     }
 
-    // ☠️ 아래 단계들은 이미지를 **값으로 받아 다 쓰고 버립니다.** 그 버퍼가 상주로
-    //    묶여 있으면 단계가 끝나며 사라지고, 스코프가 끝날 때 해제된 메모리에 씁니다.
-    //    그래서 넘기기 직전에 그 버퍼만 내리고 묶음을 풉니다.
-    GpuAccelerator::shared().flush_resident_if(invert.image.pixels.data());
+    // **상주 해제는 단계 안에서 합니다.** 예전에는 여기서 넘기기 직전에 무조건 내렸는데,
+    // `std::vector` 이동은 버퍼 주소를 그대로 두므로 항등 단계를 지나는 흔한 경우에도
+    // 매번 내렸다가 다시 올렸습니다. 실측(1536 한 틱): 업로드 2회 + 다운로드 3회 =
+    // 약 125 MB. 그리고 그 때문에 grain·finish·publish 의 **상주 갈래가 한 번도
+    // 안 돌았습니다** — `try_encode_preview_bgra` 가 항상 실패한 이유가 이것입니다.
+    //
+    // 지금 규칙은 `outcome.h` 의 `unbind_resident_and` 에 적혀 있습니다: 버퍼를
+    // **실제로 소비해 버리는 자리**(비항등 갈래, 실패·취소 반환)에서만 내립니다.
+    // 함수 끝의 `resident_scope` 는 아래 단계 출력들보다 **먼저** 소멸하므로, 살아 있는
+    // 버퍼를 가리킨 채 스코프가 끝나는 것은 안전합니다(선언 차례가 곧 파괴 차례).
     if (auto failed = apply_look_stages(
             request,
             tracker,
@@ -251,7 +257,6 @@ using develop_export_detail::validate_request;
         return *failed;
     }
 
-    GpuAccelerator::shared().flush_resident_if(look.image.pixels.data());
     if (auto failed = apply_grain_stage(
             request, control, detect, tracker, std::move(look.image), grain)) {
         return *failed;
@@ -260,7 +265,6 @@ using develop_export_detail::validate_request;
         return grain.detect_outcome;
     }
 
-    GpuAccelerator::shared().flush_resident_if(grain.applied.image.pixels.data());
     if (auto failed = apply_finish_stages(
             request,
             control,
@@ -274,9 +278,9 @@ using develop_export_detail::validate_request;
         return *failed;
     }
 
-    // 마무리 단계의 화소는 `finish.sharpening.image` 가 들고 있습니다. publish 가
-    // 그것을 읽고 내보내므로 여기서 한 번 내려 두면 스코프가 끝날 때 할 일이 없습니다.
-    GpuAccelerator::shared().flush_resident_if(finish.sharpening.image.pixels.data());
+    // 마무리 화소는 `finish.sharpening.image` 가 들고 있습니다. `write_preview` 가
+    // 상주면 GPU 로 BGRA8 을 내리고, 아니면 스스로 `flush_resident()` 합니다 —
+    // 여기서 미리 내리면 그 GPU 갈래가 영영 안 돕니다.
     return publish_developed(
         request,
         preview,
@@ -289,16 +293,16 @@ using develop_export_detail::validate_request;
         finish);
 }
 
-// ☠️ 예외 차단막입니다. 이 파이프라인은 화소 버퍼를 통째로 들고 다니고
-//    (5088×3401 `Rgba32F` = 277MB 한 장), 그 할당은 실패할 수 있습니다. 그런데 공개
-//    진입점 셋이 전부 `noexcept` 이므로, 예외가 여기까지 올라오면 C++ 는
-//    `std::terminate` → `abort()` 로 **프로세스를 죽입니다.**
+// 예외 차단막입니다. 이 파이프라인은 화소 버퍼를 통째로 들고 다니고
+// (5088×3401 `Rgba32F` = 277MB 한 장), 그 할당은 실패할 수 있습니다. 그런데 공개
+// 진입점 셋이 전부 `noexcept` 이므로, 예외가 여기까지 올라오면 C++ 는
+// `std::terminate` → `abort()` 로 **프로세스를 죽입니다.**
 //
-//    실제로 죽고 있었습니다 — Windows 이벤트 로그의 `0xc0000409` 세 건이 전부
-//    `Negaflow.Native.dll +0xf4969` 이고, 그 자리를 디스어셈블하면
-//    `raise(SIGABRT)` → `IsProcessorFeaturePresent(23)` → `int 29h`, 곧 CRT `abort()`
-//    입니다. 메모리가 모자란 것은 앱이 죽을 이유가 아니라 **이 렌더가 실패할 이유**이므로,
-//    호출자가 읽을 수 있는 outcome 으로 바꿔 돌려줍니다.
+// 실제로 죽고 있었습니다 — Windows 이벤트 로그의 `0xc0000409` 세 건이 전부
+// `Negaflow.Native.dll +0xf4969` 이고, 그 자리를 디스어셈블하면
+// `raise(SIGABRT)` → `IsProcessorFeaturePresent(23)` → `int 29h`, 곧 CRT `abort()`
+// 입니다. 메모리가 모자란 것은 앱이 죽을 이유가 아니라 **이 렌더가 실패할 이유**이므로,
+// 호출자가 읽을 수 있는 outcome 으로 바꿔 돌려줍니다.
 [[nodiscard]] DevelopExportOutcome run_develop(
     const DevelopExportRequest& request,
     const PreviewTarget* const preview,
@@ -313,7 +317,7 @@ using develop_export_detail::validate_request;
     }
 }
 
-}  // namespace
+} // namespace
 
 DevelopExportOutcome develop_and_export(
     const DevelopExportRequest& request,
@@ -361,7 +365,10 @@ DevelopExportOutcome develop_preview(
             outcome.image_height,
             request.output_color_space);
     }
+    if (!request.retain_preview_raw) {
+        (void)GpuAccelerator::shared().trim_idle();
+    }
     return outcome;
 }
 
-}  // namespace negaflow::pipeline
+} // namespace negaflow::pipeline

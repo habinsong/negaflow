@@ -55,7 +55,7 @@ void accumulate_cpu(
     average.count = count;
 }
 
-}  // namespace
+} // namespace
 
 bool area_average(
     const WorkingImage& image,
@@ -97,7 +97,7 @@ bool area_average(
         return false;
     }
 
-    // ☠️ **근사입니다**(GPU 트리 vs CPU 행 우선 double). 프리뷰·검출 스코프에서만 GPU.
+    // **근사입니다**(GPU 트리 vs CPU 행 우선 double). 프리뷰·검출 스코프에서만 GPU.
     if (approximate_acceleration_allowed()) {
         if (const KernelAccelerator* const table = kernel_accelerator();
             table != nullptr && table->area_average != nullptr) {
@@ -135,4 +135,4 @@ bool area_average(
     return true;
 }
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

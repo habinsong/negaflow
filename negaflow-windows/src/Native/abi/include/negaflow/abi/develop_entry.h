@@ -1,6 +1,6 @@
 #pragma once
 
-/* Develop export and preview entry points, v1 through v34. */
+/* Develop export and preview entry points, v1 through v35. */
 
 #include "negaflow/abi/develop_output.h"
 #include "negaflow/abi/develop_result.h"
@@ -386,6 +386,30 @@ NF_API nf_status_t NF_CALL nf_develop_export_v34(
 NF_API nf_status_t NF_CALL nf_develop_preview_v34(
     const nf_develop_export_request_v34* request,
     const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v35(
+    const nf_develop_export_request_v35* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v35(
+    const nf_develop_export_request_v35* request,
+    const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+/* Builds the same BGRA preview as v35 without retaining its rebuildable Rgba32F raw
+   proxy. This is for serialized background population of the persistent developed
+   cache; foreground preview calls must continue to use nf_develop_preview_v35. */
+NF_API nf_status_t NF_CALL nf_develop_preview_background_v1(
+    const nf_develop_export_request_v35* request,
     uint32_t maximum_width,
     uint32_t maximum_height,
     uint8_t* pixels,

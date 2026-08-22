@@ -112,6 +112,23 @@ typedef struct nf_develop_export_result_v4 {
     nf_film_base_measurement_v1 measurement;
 } nf_develop_export_result_v4;
 
+/* macOS `DevelopDebugMetrics` 와 같은 네 값입니다. `present` 는 네거티브 반전이 실제로
+   돌아 값을 잰 호출에서만 1 입니다 - 포지티브·디지털 경로는 재지 않으므로 0 입니다.
+   `dmin` 은 v3 의 `applied_dmin` 과 같은 값이며, 지표를 한 덩어리로 읽게 하려고 함께 둡니다. */
+typedef struct nf_develop_debug_metrics_v1 {
+    uint32_t present;
+    uint32_t reserved;
+    float dmin[3];
+    float dmax_normalized[3];
+    float black_input[3];
+} nf_develop_debug_metrics_v1;
+
+/* v5 keeps every v4 field at the same offset and appends the debug metrics. */
+typedef struct nf_develop_export_result_v5 {
+    nf_develop_export_result_v4 v4;
+    nf_develop_debug_metrics_v1 debug_metrics;
+} nf_develop_export_result_v5;
+
 #define NF_DEVELOP_PROGRESS_COMPLETE 1000U
 
 /* Shared, caller-owned run state for one develop call.

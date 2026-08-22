@@ -9,18 +9,19 @@
 #include <cstdint>
 #include <filesystem>
 #include <memory>
+#include <optional>
 
 namespace negaflow::pipeline::develop_export_detail {
 
 // macOS `ScanFrame.cachedInteractivePreviewRaw` / `cachedSettledPreviewRaw` 자리입니다.
 //
-// ☠️ macOS 는 이 두 슬롯을 **프레임(`ScanFrame`)에 붙여** 둡니다. Windows 앞 판은
-//    번역 단위의 **프로세스 전역 두 개**로 옮겼는데, 그 순간 두 가지가 깨졌습니다.
-//    ① 썸네일 렌더(`ThumbnailService`, 상자 360)도 같은 `develop_preview` 를 지나므로
-//       현상 슬라이더가 쓰는 슬롯을 계속 덮어썼습니다 — 캐시가 매번 빗나가 슬라이더 한
-//       칸마다 원본 재디코드 + 원본 해상도 베이스 해석 + Lanczos 를 다시 했습니다.
-//    ② 그 전역에 잠금이 없어, 썸네일 스레드의 슬롯 교체와 프리뷰 스레드의 읽기가 겹쳐
-//       use-after-free 가 났습니다(이벤트 로그 0xc0000374 힙 손상 · 0xc0000409 abort).
+// macOS 는 이 두 슬롯을 **프레임(`ScanFrame`)에 붙여** 둡니다. Windows 앞 판은
+// 번역 단위의 **프로세스 전역 두 개**로 옮겼는데, 그 순간 두 가지가 깨졌습니다.
+// ① 썸네일 렌더(`ThumbnailService`, 상자 360)도 같은 `develop_preview` 를 지나므로
+// 현상 슬라이더가 쓰는 슬롯을 계속 덮어썼습니다 — 캐시가 매번 빗나가 슬라이더 한
+// 칸마다 원본 재디코드 + 원본 해상도 베이스 해석 + Lanczos 를 다시 했습니다.
+// ② 그 전역에 잠금이 없어, 썸네일 스레드의 슬롯 교체와 프리뷰 스레드의 읽기가 겹쳐
+// use-after-free 가 났습니다(이벤트 로그 0xc0000374 힙 손상 · 0xc0000409 abort).
 //
 // 그래서 프레임 키로 나누고, 잠금을 걸고, 화상은 `shared_ptr<const>` 로 넘깁니다 —
 // 꺼내 간 쪽이 참조를 들고 있는 동안 그 버퍼는 절대 해제되지 않습니다.
@@ -39,6 +40,7 @@ struct PreviewRawKey final {
     std::array<float, 3> preset_dmin{};
     std::array<float, 3> preset_dmax{};
     std::array<float, 3> preset_light_gain{};
+    std::optional<std::array<std::uint8_t, 32U>> defect_recipe_sha256{};
 };
 
 [[nodiscard]] bool same_preview_raw_key(
@@ -79,4 +81,4 @@ void preview_raw_store_reset() noexcept;
 // 지금 상주 중인 바이트. 예산이 지켜지는지 시험이 확인합니다.
 [[nodiscard]] std::uint64_t preview_raw_store_resident_bytes() noexcept;
 
-}  // namespace negaflow::pipeline::develop_export_detail
+} // namespace negaflow::pipeline::develop_export_detail

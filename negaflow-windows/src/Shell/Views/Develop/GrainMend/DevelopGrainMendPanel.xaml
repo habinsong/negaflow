@@ -36,7 +36,7 @@
             CornerRadius="14">
             <StackPanel HorizontalAlignment="Stretch" Spacing="12">
                 <StackPanel Orientation="Horizontal" Spacing="7">
-                    <FontIcon FontSize="14" Glyph="&#xE7A8;" VerticalAlignment="Center" />
+                    <controls:VectorIcon IconSize="14" Kind="Scope" VerticalAlignment="Center" />
                     <TextBlock x:Name="GrainMendTitleText" x:FieldModifier="internal" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
                 </StackPanel>
                 <Grid ColumnSpacing="8">

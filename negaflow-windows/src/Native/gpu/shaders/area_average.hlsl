@@ -4,7 +4,7 @@
 // 여기는 cs_5_0 `groupshared` 트리입니다. Wave 내장은 쓰지 않습니다 —
 // wave 크기가 벤더마다 달라 내장/외장 공통 하한과 충돌합니다.
 //
-// ☠️ 덧셈 순서가 CPU 와 다릅니다. 평균 허용 오차는 1e-5 입니다.
+// 덧셈 순서가 CPU 와 다릅니다. 평균 허용 오차는 1e-5 입니다.
 
 #define NEGAFLOW_REDUCE_GROUP 16u
 #define NEGAFLOW_REDUCE_THREADS 256u

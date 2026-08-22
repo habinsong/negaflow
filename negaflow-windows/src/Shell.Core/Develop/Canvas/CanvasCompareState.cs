@@ -27,9 +27,9 @@ public sealed class CanvasCompareState
 {
     /// <summary>
     /// macOS <c>ScanFrame.showDeveloped</c> 는 프레임마다 따로 삽니다. 여기 한 벌만 두면
-    /// ☠️ 한 프레임에서 `원본` 을 켠 뒤 다른 프레임으로 가도 그대로 원본이 남고,
-    ///    <c>UninvertedSource</c> 가 켜진 채 현상 요청이 나가 **모든 사진이 반전 전
-    ///    네거티브(주황 베이스 + 반전 전 그레인)로 그려집니다.** 프레임별로 기억합니다.
+    /// 한 프레임에서 `원본` 을 켠 뒤 다른 프레임으로 가도 그대로 원본이 남고,
+    /// <c>UninvertedSource</c> 가 켜진 채 현상 요청이 나가 **모든 사진이 반전 전
+    /// 네거티브(주황 베이스 + 반전 전 그레인)로 그려집니다.** 프레임별로 기억합니다.
     /// </summary>
     private readonly Dictionary<string, bool> showDevelopedByFrame = new(StringComparer.Ordinal);
 

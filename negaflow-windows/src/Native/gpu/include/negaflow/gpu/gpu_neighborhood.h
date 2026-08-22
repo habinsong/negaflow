@@ -29,9 +29,9 @@ class GpuWorkingImage;
 
 // 분리형(수평 → 수직) 박스 블러입니다.
 //
-// ☠️ CPU 판은 러닝 섬이라 부동소수 누적 **순서**가 결과에 남습니다. 이 구현은 행/열마다
-//    스레드 하나를 두어 같은 순서로 누적합니다. 순진한 "반경만큼 다시 더하기" 로 바꾸면
-//    화소당 O(r) 로 느려질 뿐 아니라 값도 갈립니다.
+// CPU 판은 러닝 섬이라 부동소수 누적 **순서**가 결과에 남습니다. 이 구현은 행/열마다
+// 스레드 하나를 두어 같은 순서로 누적합니다. 순진한 "반경만큼 다시 더하기" 로 바꾸면
+// 화소당 O(r) 로 느려질 뿐 아니라 값도 갈립니다.
 class GpuBoxBlur final {
 public:
     GpuBoxBlur() noexcept = default;
@@ -49,13 +49,13 @@ public:
     //
     // `radius` 가 0 이면 CPU 판과 같이 원본을 그대로 내보냅니다(창 크기 1).
     //
-    // ☠️ **RGB 와 알파의 누적 순서가 다릅니다.** CPU 의 `box_blur` 가 두 벌이고 괄호가
-    //    다르기 때문입니다 — `std::vector<Rgb>` 판은 `(sum + a) - b`,
-    //    `std::vector<float>` 판은 `sum + (a - b)`. 이 커널은 **RGB 에 Rgb 판, 알파에
-    //    float 판**을 적용합니다. `box_blur` 를 부르는 곳은 `guided_base` 뿐이고
-    //    (`film_scan_denoise_tile.cpp:79,81`), 거기서 RGB 자리에 오는 것은 항상 `Rgb`,
-    //    알파 자리에 오는 것은 항상 스칼라(guide·guide²)입니다.
-    //    **알파에 Rgb 의미의 스칼라를 담아 넘기지 마십시오 — 순서가 어긋납니다.**
+    // **RGB 와 알파의 누적 순서가 다릅니다.** CPU 의 `box_blur` 가 두 벌이고 괄호가
+    // 다르기 때문입니다 — `std::vector<Rgb>` 판은 `(sum + a) - b`,
+    // `std::vector<float>` 판은 `sum + (a - b)`. 이 커널은 **RGB 에 Rgb 판, 알파에
+    // float 판**을 적용합니다. `box_blur` 를 부르는 곳은 `guided_base` 뿐이고
+    // (`film_scan_denoise_tile.cpp:79,81`), 거기서 RGB 자리에 오는 것은 항상 `Rgb`,
+    // 알파 자리에 오는 것은 항상 스칼라(guide·guide²)입니다.
+    // **알파에 Rgb 의미의 스칼라를 담아 넘기지 마십시오 — 순서가 어긋납니다.**
     [[nodiscard]] GpuKernelStatus dispatch(
         const GpuDevice& device,
         const GpuWorkingImage& source,
@@ -79,9 +79,9 @@ private:
 // 3×3 중앙값입니다. macOS `CIMedianFilter`(`FilmScanDenoise.swift:171`),
 // Windows CPU `imaging/film_scan_denoise_filters.cpp:77` `median3`.
 //
-// ☠️ **여기에는 부동소수 산술이 없습니다.** 중앙값은 아홉 개 중 하나를 고르는 일이라
-//    고르는 방법이 달라도 고른 값은 같습니다 — CPU 의 `nth_element` 와 셰이더의 정렬
-//    네트워크는 **비트 단위로 같은 값**을 냅니다. 평균·보간을 넣으면 그 성질이 깨집니다.
+// **여기에는 부동소수 산술이 없습니다.** 중앙값은 아홉 개 중 하나를 고르는 일이라
+// 고르는 방법이 달라도 고른 값은 같습니다 — CPU 의 `nth_element` 와 셰이더의 정렬
+// 네트워크는 **비트 단위로 같은 값**을 냅니다. 평균·보간을 넣으면 그 성질이 깨집니다.
 //
 // 알파는 원본을 그대로 씁니다. CPU 의 `Rgb` 가 알파를 들고 다니지 않습니다.
 class GpuMedian3 final {
@@ -123,8 +123,8 @@ enum class GpuGaussianEdgeMode : std::int32_t {
 
 // 분리형(수평 → 수직) 가우시안입니다.
 //
-// ☠️ 가중치는 **호스트가 CPU 와 같은 코드로** 계산합니다(`weights_for_sigma`). 셰이더에서
-//    `exp` 를 부르면 CPU 와 마지막 비트가 갈리고 그 차이가 전 화소에 곱해집니다.
+// 가중치는 **호스트가 CPU 와 같은 코드로** 계산합니다(`weights_for_sigma`). 셰이더에서
+// `exp` 를 부르면 CPU 와 마지막 비트가 갈리고 그 차이가 전 화소에 곱해집니다.
 class GpuGaussianBlur final {
 public:
     GpuGaussianBlur() noexcept = default;
@@ -143,17 +143,17 @@ public:
     // `-support…+support` 의 정규화 가중치를 만듭니다. CPU 두 판과 **같은 계산**입니다:
     // `film_scan_denoise_filters.cpp:19-31` · `texture_stage_gaussian.h:31-42`.
     //
-    // ⚠️ 지원 반경 하한이 CPU 두 판에서 다릅니다 — `texture_stage` 는 `max(1, …)` 로 1 을
-    //    보장하고 `film_scan_denoise` 는 그러지 않습니다. `minimum_support` 로 부르는 쪽이
-    //    자기 판을 고릅니다. **여기서 한쪽으로 통일하지 마십시오.**
+    // 주의 지원 반경 하한이 CPU 두 판에서 다릅니다 — `texture_stage` 는 `max(1, …)` 로 1 을
+    // 보장하고 `film_scan_denoise` 는 그러지 않습니다. `minimum_support` 로 부르는 쪽이
+    // 자기 판을 고릅니다. **여기서 한쪽으로 통일하지 마십시오.**
     [[nodiscard]] static std::vector<float> weights_for_sigma(float sigma, int minimum_support);
 
-    // ☠️ **CPU 에 가우시안 가중치를 만드는 식이 두 가지 있습니다. 합치지 마십시오.**
-    //    `imaging/digital_halation.cpp:51` `gaussian_weights` 는 위와 다릅니다:
-    //      · Core Image 분산 보정 **0.08 이 없습니다** — 지수도 반경도 생 σ 를 씁니다.
-    //      · 지수와 합계를 **`double` 로** 굴리고 마지막에 float 로 내립니다.
-    //      · 지원 반경은 `max(1, ceil(3σ))`.
-    //    같은 "가우시안" 이라도 값이 다르므로 **부르는 쪽이 자기 것을 고릅니다.**
+    // **CPU 에 가우시안 가중치를 만드는 식이 두 가지 있습니다. 합치지 마십시오.**
+    // `imaging/digital_halation.cpp:51` `gaussian_weights` 는 위와 다릅니다:
+    // · Core Image 분산 보정 **0.08 이 없습니다** — 지수도 반경도 생 σ 를 씁니다.
+    // · 지수와 합계를 **`double` 로** 굴리고 마지막에 float 로 내립니다.
+    // · 지원 반경은 `max(1, ceil(3σ))`.
+    // 같은 "가우시안" 이라도 값이 다르므로 **부르는 쪽이 자기 것을 고릅니다.**
     [[nodiscard]] static std::vector<float> weights_for_halation_sigma(float sigma);
 
     // `source` → `scratch`(수평) → `destination`(수직). 세 장이 모두 같은 크기여야 하고
@@ -276,9 +276,9 @@ private:
 
 // 전 화소 유한성 확인입니다. CPU 판은 `core/pixel.cpp` `validate_finite_pixels`.
 //
-// ☠️ **"있다/없다" 만 말합니다.** CPU 판은 어느 행이 처음 실패했는지까지 돌려주므로,
-//    플래그가 서면 호출부가 CPU 판을 그대로 부릅니다. 실패는 드물고, 드문 쪽에 비용을
-//    몰아주는 것이 맞습니다.
+// **"있다/없다" 만 말합니다.** CPU 판은 어느 행이 처음 실패했는지까지 돌려주므로,
+// 플래그가 서면 호출부가 CPU 판을 그대로 부릅니다. 실패는 드물고, 드문 쪽에 비용을
+// 몰아주는 것이 맞습니다.
 class GpuFiniteCheck final {
 public:
     GpuFiniteCheck() noexcept = default;
@@ -312,4 +312,4 @@ private:
     ID3D11Buffer* readback_{nullptr};
 };
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

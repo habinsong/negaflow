@@ -31,9 +31,11 @@ int main(const int argument_count, const char* const arguments[]) {
     test_v30_contract();
     test_v32_contract();
     test_v34_contract();
+    test_v35_contract();
     test_missing_source_is_not_a_validation_error();
     test_v2_missing_source_is_not_a_validation_error();
     test_v18_defect_region_preview_and_export();
+    test_defect_region_preview_keeps_source_coordinates();
     test_v22_run_state();
     test_v23_soft_proof_preview();
     test_read_soft_proof_media();

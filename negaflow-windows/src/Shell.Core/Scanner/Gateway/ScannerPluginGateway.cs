@@ -32,12 +32,14 @@ public sealed class ScannerPluginGateway : IScannerPluginGateway
         ScannerPluginTrustIdentity approvedIdentity,
         ScannerPluginScanRequest request,
         LibraryHostService library,
+        bool isPreviewScan,
         CancellationToken cancellationToken) =>
         ScannerPluginClient.ScanAndPublishAsync(
             plugin,
             approvedIdentity,
             request,
             library,
+            isPreviewScan: isPreviewScan,
             cancellationToken: cancellationToken);
 
     public Task<ScannerPluginScanResult> ScanAsync(

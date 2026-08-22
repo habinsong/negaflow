@@ -1,5 +1,9 @@
 #include "outcome.h"
 
+#include "negaflow/pipeline/gpu_accelerator.h"
+
+#include <utility>
+
 namespace negaflow::pipeline::develop_export_detail {
 
 DevelopExportOutcome fail(
@@ -19,6 +23,13 @@ DevelopExportOutcome fail(
 DevelopExportOutcome cancelled_outcome(const DevelopExportStage stage) noexcept {
     DevelopExportOutcome outcome = fail(stage, "cancelled");
     outcome.cancelled = true;
+    return outcome;
+}
+
+std::optional<DevelopExportOutcome> unbind_resident_and(
+    const negaflow::imaging::WorkingImage& image,
+    std::optional<DevelopExportOutcome> outcome) noexcept {
+    GpuAccelerator::shared().flush_resident_if(image.pixels.data());
     return outcome;
 }
 

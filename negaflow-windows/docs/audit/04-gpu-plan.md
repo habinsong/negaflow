@@ -1,10 +1,10 @@
-> # ☠️ 하드코딩 · 가짜 구현 · 창작 · 병신 백엔드 · 병신 프론트엔드 = 죽음 ☠️
+> # 하드코딩 · 가짜 구현 · 창작 · 병신 백엔드 · 병신 프론트엔드 = 죽음
 >
-> **🔬 추측·가설 금지.** "냄새난다" 고 덮지 말고 **냄새의 원인을 찾아 없애십시오.**
+> ** 추측·가설 금지.** "냄새난다" 고 덮지 말고 **냄새의 원인을 찾아 없애십시오.**
 > 재현하고, 스택을 잡고, 계측해서 원인을 **확정**한 뒤에 고칩니다.
 > 원인을 못 잡았으면 **"못 잡았다" 고 적으십시오** — 추측으로 고친 것은 다음 사람의 함정입니다.
 >
-> **🌐 모르면 웹 검색을 적극적으로** 하십시오 — 특히 GPU·최적화·UI/UX 구현. 찾은 것은 출처를 남기십시오.
+> ** 모르면 웹 검색을 적극적으로** 하십시오 — 특히 GPU·최적화·UI/UX 구현. 찾은 것은 출처를 남기십시오.
 >
 > **백엔드**: macOS Swift 파일을 **먼저 열고** 코드를 1:1 로 그대로 옮깁니다.
 > 상수 하나, 임계 하나, 게이트 순서 하나도 지어내지 마십시오.
@@ -83,7 +83,7 @@
 > **필름 스캔 경로**(사용자 실사용 경로)는 이 사슬을 지나지 않습니다. 그쪽 실측은
 > 전체 **753 ms** 이고 내역은 `develop` 306.79 · `tone_adjust` 239.10 · `output` 106.97 입니다.
 >
-> ### ☠️ 2026-08-19 — **가장 비싼 단계를 못 보고 있었습니다: `target_grade` 58,995 ms**
+> ### 2026-08-19 — **가장 비싼 단계를 못 보고 있었습니다: `target_grade` 58,995 ms**
 >
 > 계측 CLI 가 기본값(`develop_target = main`)으로만 재고 있었고, 그 값에서는 이 단계가
 > **아예 안 돕니다.** 표에 찍힌 `0.00 ms` 는 "빠르다" 가 아니라 "안 돌았다" 였습니다.
@@ -126,7 +126,7 @@
 > 노리츠 프리뷰 전체(그레이드 GPU 직후) **60,536 → 2,038 ms**. 병렬화가 값을 안 바꿨다는 것은
 > 프리뷰 지문으로 증명했습니다(직렬·병렬 둘 다 `cfe1f1b11f1cc9a3`).
 >
-> ☠️ **macOS 는 같은 수식을 64³ 큐브로 262,144번만 풉니다**
+> **macOS 는 같은 수식을 64³ 큐브로 262,144번만 풉니다**
 > (`ScannerTargetGrade+Apply.swift` 의 `CIColorCubeWithColorSpace`).
 > Windows 는 화소마다 풉니다 — 24MP 에서 **66배**입니다. 이번 작업은 Windows 의 셈을
 > 옮긴 것이고, **큐브로 바꾸는 것은 값이 달라지는 별건**입니다.
@@ -158,7 +158,7 @@
 
 #### 진척률 — 세는 방법을 먼저 밝힙니다
 
-☠️ **"몇 %" 는 세는 기준을 안 밝히면 거짓말입니다.** 세 가지로 나눠 셉니다.
+ **"몇 %" 는 세는 기준을 안 밝히면 거짓말입니다.** 세 가지로 나눠 셉니다.
 
 macOS `ChromabaseMetalKernels.swift` 의 `[[stitchable]]` 커널은 **정확히 32개**입니다
 (`grep -c stitchable`). 그중 4개는 **macOS 활성 파이프라인이 부르지 않으므로 이식 대상이 아닙니다** —
@@ -167,7 +167,7 @@ macOS `ChromabaseMetalKernels.swift` 의 `[[stitchable]]` 커널은 **정확히 
 | 기준 | 진척 | 근거 |
 |---|---|---|
 | **① 커널 이식** (28개 중) | **14 / 28 = 50%** | 0.1절 표. 전부 CPU/GPU 동치 시험으로 고정(`1e-5`) |
-| **② 커널 중 *GPU 자체가 막혀 있지 않은* 것** | **14 / 14 = 100%** | ☠️ **2026-08-18 정정.** 남은 14개 중 **GPU 쪽 장애물이 있는 것은 `boundedRelativeGrade` 하나뿐**입니다(CPU 가 `double`). 나머지 13개는 **CPU 이식·기능 이식·이식 정확성** 문제이지 GPU 문제가 아닙니다. "3D LUT 필요"·"이웃 접근"·"씨앗 규칙 대조" 는 셋 다 **제 오판이었습니다** → [`14`](14-remaining-gpu-methodology.md) 0절 |
+| **② 커널 중 *GPU 자체가 막혀 있지 않은* 것** | **14 / 14 = 100%** | **2026-08-18 정정.** 남은 14개 중 **GPU 쪽 장애물이 있는 것은 `boundedRelativeGrade` 하나뿐**입니다(CPU 가 `double`). 나머지 13개는 **CPU 이식·기능 이식·이식 정확성** 문제이지 GPU 문제가 아닙니다. "3D LUT 필요"·"이웃 접근"·"씨앗 규칙 대조" 는 셋 다 **제 오판이었습니다** → [`14`](14-remaining-gpu-methodology.md) 0절 |
 | **③ 제품 경로 반영** | **부분** | 톤 7단계 · 반전 · 유한성 확인은 **붙었습니다**. `film_scan_denoise` 오케스트레이터 **없음**, 형태학 **기본 꺼짐**, `GpuMipHalve` **미배선** — 0.4절 |
 
 **커널 외에 만든 것**(분자에 안 셌습니다): 이웃 원시연산 5개(박스·가우시안·중앙값·형태학·밉축소) ·
@@ -177,7 +177,7 @@ macOS `ChromabaseMetalKernels.swift` 의 `[[stitchable]]` 커널은 **정확히 
 CPU **911.35 ms** → 지금 **약 720 ms**. `develop` 348.56 → 261.49(−25%),
 `tone_adjust` 356.43 → 276.1(−22%).
 
-☠️ **①이 50% 라고 "절반 남았다" 로 읽지 마십시오.** 남은 14개 중 13개는
+ **①이 50% 라고 "절반 남았다" 로 읽지 마십시오.** 남은 14개 중 13개는
 **GPU 작업이 아니라 CPU 이식·기능 이식·선행 조사**입니다. 0.3절이 하나하나 이유를 답니다.
 
 ### 0.1 이식 완료 — macOS 커널 **14개** + 이웃 원시연산 5개 + Windows 전용 3개
@@ -243,25 +243,25 @@ CPU **911.35 ms** → 지금 **약 720 ms**. `develop` 348.56 → 261.49(−25%)
 
 | 상태 | 커널 | 왜 |
 |---|---|---|
-| ☠️ **옮기지 말 것** (4) | `scannerLowSatChroma`·`scannerMidtoneChroma`·`gamutSoftClip`·`highlightDesaturate` | **macOS 활성 파이프라인이 부르지 않습니다.** 옮기면 없는 효과를 만듭니다 |
+| **옮기지 말 것** (4) | `scannerLowSatChroma`·`scannerMidtoneChroma`·`gamutSoftClip`·`highlightDesaturate` | **macOS 활성 파이프라인이 부르지 않습니다.** 옮기면 없는 효과를 만듭니다 |
 | **CPU 판부터 없음** (7) | `digitalSceneReconstruct`·`digitalFilmDensity`·`digitalInterImage`·`digitalPrintPaper`·`digitalReversalTransmit`·`digitalToDisplayGamma`·`digitalToLinearLight` | Windows 히트 **0**. GPU 이전에 **CPU 이식이 먼저** |
 | **Windows 기능 자체가 없음** (2) | `ditherAdd`·`channelClippingOverlay` | `OutputDither.swift`·`ChannelClippingOverlay.swift` 미이식 |
 | **정밀도 확인 필요** (1) | `boundedRelativeGrade` | `scanner_target_grade.cpp:62-64` 안에 박혀 있고 그 안이 **전부 `double`**. float32 로 옮기면 `1e-5` 를 못 지킬 수 있음 |
-| ~~선행 조건 남음~~ **막혀 있지 않음** | `filmGrain`·`digitalFilmGrainDensity` | ☠️ **앞 판정 틀림.** 씨앗 규칙은 **이미 정해져 있습니다** — Windows CPU 가 좌표 해시 필드를 쓰고(`digital_film_grain.cpp:25-36`, 전부 uint32) 헤더가 *"statistical, not pixel-exact"* 계약을 명시합니다. 맞출 상대는 Apple 이 아니라 **Windows CPU 필드**입니다 → [`14`](14-remaining-gpu-methodology.md) 0.3·1절 |
-| 〃 | `digitalFilmColor` | ☠️ **앞 판정 틀림. 3D LUT 가 필요 없습니다** — `:774` 에 텍스처 샘플링이 **한 줄도 없습니다**(행렬+틴트+hue 6앵커 보간, 완전 화소별). 3D LUT 는 `ScannerTargetGrade` 의 `CIColorCube` 이고 **다른 얘기**였습니다. 진짜 문제는 **Windows 가 다른 알고리즘**이라는 것 → [`14`](14-remaining-gpu-methodology.md) 0.1·2절 |
-| 〃 | `noritsuTexture` | ☠️ **앞 판정 틀림.** 이웃 접근은 **이미 해결돼 있습니다** — 입력이 `src`+`blurred` 두 장인 **화소별** 커널이고 `GpuGaussianBlur` 는 delta 0 입니다. 이식한 `digitalHalation` 과 **같은 모양**입니다. CPU 판이 없는 것뿐 → [`14`](14-remaining-gpu-methodology.md) 0.2·3절 |
+| ~~선행 조건 남음~~ **막혀 있지 않음** | `filmGrain`·`digitalFilmGrainDensity` | **앞 판정 틀림.** 씨앗 규칙은 **이미 정해져 있습니다** — Windows CPU 가 좌표 해시 필드를 쓰고(`digital_film_grain.cpp:25-36`, 전부 uint32) 헤더가 *"statistical, not pixel-exact"* 계약을 명시합니다. 맞출 상대는 Apple 이 아니라 **Windows CPU 필드**입니다 → [`14`](14-remaining-gpu-methodology.md) 0.3·1절 |
+| 〃 | `digitalFilmColor` | **앞 판정 틀림. 3D LUT 가 필요 없습니다** — `:774` 에 텍스처 샘플링이 **한 줄도 없습니다**(행렬+틴트+hue 6앵커 보간, 완전 화소별). 3D LUT 는 `ScannerTargetGrade` 의 `CIColorCube` 이고 **다른 얘기**였습니다. 진짜 문제는 **Windows 가 다른 알고리즘**이라는 것 → [`14`](14-remaining-gpu-methodology.md) 0.1·2절 |
+| 〃 | `noritsuTexture` | **앞 판정 틀림.** 이웃 접근은 **이미 해결돼 있습니다** — 입력이 `src`+`blurred` 두 장인 **화소별** 커널이고 `GpuGaussianBlur` 는 delta 0 입니다. 이식한 `digitalHalation` 과 **같은 모양**입니다. CPU 판이 없는 것뿐 → [`14`](14-remaining-gpu-methodology.md) 0.2·3절 |
 | **원시연산 남음** | `CIAreaAverage` 대응 | 병렬 리덕션. 히스토그램·자동 보정용 |
 | **정밀도 확인 필요** (2) | `grain_mend_morphology.cpp` `box_mean` | 적분영상을 **`double` 로** 누적합니다(`:240`). float32 GPU 로는 그 값을 못 냅니다. D3D11 의 double 은 **선택 기능**(`D3D11_FEATURE_DOUBLES`)이라 내장 GPU 범용성도 보장되지 않습니다. **CPU 를 float 로 내려도 골든이 안 바뀌는지 먼저 재십시오** |
 
 ### 0.4 지금 GPU 가 **실제로 도는 곳**과 아직 아닌 것
 
-> #### ✅ 파이프라인에 붙었습니다 (`cb3c9cf`, 형태학은 그 뒤)
+> #### OK 파이프라인에 붙었습니다 (`cb3c9cf`, 형태학은 그 뒤)
 >
 > | 어디 | 무엇이 GPU 로 | 정책 |
 > |---|---|---|
 > | `stages/look.cpp` | 톤 7단계(노출·기본 톤·파라메트릭 커브·포인트 커브·믹서·그레이딩·원색 보정) | `GpuUsePolicy::allowed` — **프리뷰·검출만** |
 > | `stages/finish.cpp` | `film_scan_denoise` 사슬 | 〃 |
-> | GrainMend 검출 안쪽 | **형태학** | ☠️ **기본 꺼짐** — 실측이 더 느렸습니다(아래) |
+> | GrainMend 검출 안쪽 | **형태학** | **기본 꺼짐** — 실측이 더 느렸습니다(아래) |
 >
 > **형태학만 정책이 없는 이유**: 창 안에서 **하나를 고르는** 일이라 부동소수 산술이 없습니다.
 > 창과 가장자리 처리가 같으면 고른 값도 같으므로 CPU 와 **비트 단위로 일치**하고,
@@ -271,7 +271,7 @@ CPU **911.35 ms** → 지금 **약 720 ms**. `develop` 348.56 → 261.49(−25%)
 > 이라 `imaging` 은 `gpu` 를 링크할 수 없어(순환) 표만 알고, 둘 다 링크하는 `pipeline` 이
 > `install_gpu_kernel_accelerator()` 로 채웁니다.
 >
-> ☠️ **표에 곱셈·덧셈이 들어가는 커널을 넣지 마십시오.** 그런 것은 헤더의 "근사한 것" 칸과
+> **표에 곱셈·덧셈이 들어가는 커널을 넣지 마십시오.** 그런 것은 헤더의 "근사한 것" 칸과
 > `ApproximateAcceleratorScope` 를 씁니다 — 프리뷰·검출만 그 스코프를 엽니다.
 
 **2026-08-19 이후 — 아래 1·5번은 닫혔습니다.** 형태학+스크래치 각도 기본 켬(검출 4.66s).
@@ -281,22 +281,22 @@ CPU **911.35 ms** → 지금 **약 720 ms**. `develop` 348.56 → 261.49(−25%)
 옛 판(2026-08-18)이 "아직 아님"으로 적었던 것 — 역사:
 
 1. ~~GPU 형태학 기본 끔~~ → **기본 켬.** RGB 오케스트레이터. [`15`](15-gpu-handoff.md) 3.2
-2. ✅ **프리뷰 경로를 쟀고, 최대 단계였던 반전을 붙였습니다.**
+2. OK **프리뷰 경로를 쟀고, 최대 단계였던 반전을 붙였습니다.**
    `negaflow-cli --develop-timing` 신설. 5100×3408 실제 스캔:
    `develop`(반전) **353.61 → 261.49 ms(−26%)**, 전체 **856.45 → 782.59 ms(−9%)**.
    반전은 **근사**라 `ApproximateAcceleratorScope`(프리뷰·검출) 안에서만 돕니다 —
    내보내기·골든은 CPU 그대로이고 native 83/83 이 그것을 지킵니다.
    형태학과 반대 결과가 난 이유는 [`13`](13-performance-playbook.md) 16절.
-3. ✅ **`tone_adjust` 를 갈라서 뺄 수 있는 것을 뺐습니다** — [`13`](13-performance-playbook.md) 17·18절.
+3. OK **`tone_adjust` 를 갈라서 뺄 수 있는 것을 뺐습니다** — [`13`](13-performance-playbook.md) 17·18절.
    범인은 다운로드(4 ms)가 아니라 **밴드 측정**이었습니다. 그중 `validate_finite_pixels` 를
    `GpuFiniteCheck`(원자 플래그 + 4바이트 회수)로 옮겨 **tone_adjust 296.88 → 257.95 ms(−13%)**,
    전체 **782.59 → 735.20 ms**. CPU 기준으로는 911.35 → 735.20 = **−19%**.
-   ☠️ 18절에 **제 앞 판정이 틀렸던 것**도 적었습니다 — 밴드 측정은 `downsample_for_statistics` 를
+    18절에 **제 앞 판정이 틀렸던 것**도 적었습니다 — 밴드 측정은 `downsample_for_statistics` 를
    부르지 않고 `double` 면적평균을 직접 돕니다. `GpuMipHalve` 는 자동 베이스·장면밀도·
    바이브런스 쪽 원시연산이고, 비트 단위 일치는 그대로 유효합니다.
    남은 `double` 면적평균은 **옮길 수 없습니다** — D3D11 의 double 은 선택 기능입니다.
 4. 4방향 실측(CPU/GPU × 커브 켬/끔) 전체 표도 17절에 있습니다.
-5. ☠️ **밴드 표본 루프 — 앞서 두 번 "병렬화해도 이득 없음" 이라고 적은 것이 틀렸습니다.**
+5. **밴드 표본 루프 — 앞서 두 번 "병렬화해도 이득 없음" 이라고 적은 것이 틀렸습니다.**
    `work_units` 에 표본 격자 크기(38,232)를 넘겨 `minimum_parallel_row_work_units`(100만)
    문턱에 걸렸고, **병렬화가 아예 안 걸린 상태**를 "병렬" 이라고 부르며 쟀습니다.
    진짜 작업량(격자 × `ceil(inverse_scale)²` ≈ **1,686만**)을 넘기니 16블록으로 쪼개지고
@@ -313,7 +313,7 @@ CPU **911.35 ms** → 지금 **약 720 ms**. `develop` 348.56 → 261.49(−25%)
 5. ~~`film_scan_denoise` 오케스트레이터가 시험 안에만~~ → **제품 경로에 있음.**
    `gpu_film_scan_stage.cpp` → `gpu_accelerator.cpp` → `stages/finish.cpp`
 
-### 0.5 ☠️ GPU 도 CPU 와 **같은 타일**로 나눠야 값이 같습니다 (2026-08-18 실측)
+### 0.5 GPU 도 CPU 와 **같은 타일**로 나눠야 값이 같습니다 (2026-08-18 실측)
 
 `film_scan_denoise` 를 이식하며 **재서** 확정한 것입니다. 이것은 성능 선택이 아니라
 **값의 조건**입니다.
@@ -335,7 +335,7 @@ CPU **911.35 ms** → 지금 **약 720 ms**. `develop` 348.56 → 261.49(−25%)
 **5 GB** 인데, 530×530 타일이면 **58 MB** 입니다. 8절의 "타일 분할 필수" 와 같은 결론에
 **다른 이유로** 도착한 것입니다.
 
-### 0.6 ☠️ `pow` 는 CPU 와 마지막 비트가 같을 수 없고, 이 사슬이 그것을 키웁니다
+### 0.6 `pow` 는 CPU 와 마지막 비트가 같을 수 없고, 이 사슬이 그것을 키웁니다
 
 CPU 가 계산한 감마 리프트를 그대로 올리면 나머지 사슬 전체가 **1.2e-07** 로 맞습니다.
 GPU `pow` 를 쓰면 **2.1e-05 ~ 6.2e-05** 가 됩니다. 리프트 자체의 차이는
@@ -391,11 +391,11 @@ HLSL `pow` 는 `exp2(y * log2(x))` 이고 D3D11 은 그 둘에 각각 상대오�
 
 ```swift
 static let metalDevice = MTLCreateSystemDefaultDevice()
-static let metalQueue  = metalDevice?.makeCommandQueue()
+static let metalQueue = metalDevice?.makeCommandQueue()
 static let sharedRenderContext: CIContext = {
     let options: [CIContextOption: Any] = [
         .workingColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB) as Any,
-        .outputColorSpace:  CGColorSpace(name: CGColorSpace.sRGB) as Any,
+        .outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB) as Any,
     ]
     if let queue = metalQueue { return CIContext(mtlCommandQueue: queue, options: options) }
     …
@@ -480,7 +480,7 @@ Core Image 의 기본 작업 형식은 **half float** 입니다. Windows 는 `Rg
 > | 5 | `basicTone` | `tone_mapping.cpp` `apply_basic_tone` | **이식함** |
 > | 6 | `parametricToneCurve` | `tone_mapping.cpp` `apply_parametric_tone_curve` | **이식함** |
 > | 18 | `negativeInvert` | **`core/negative_inversion.cpp`** (imaging 아님) | **이식함** |
-> | 17 | `boundedRelativeGrade` | `rescue_grade.cpp` 아님 — **`scanner_target_grade.cpp:62-64`** 안에 박혀 있음 | ☠️ **단순 이식 불가** (아래) |
+> | 17 | `boundedRelativeGrade` | `rescue_grade.cpp` 아님 — **`scanner_target_grade.cpp:62-64`** 안에 박혀 있음 | **단순 이식 불가** (아래) |
 > | 22 | `digitalSceneReconstruct` | **없음** | CPU 부터 없음 |
 > | 23 | `digitalFilmDensity` | **없음** | 〃 |
 > | 24 | `digitalInterImage` | **없음** | 〃 |
@@ -495,25 +495,25 @@ Core Image 의 기본 작업 형식은 **half float** 입니다. Windows 는 `Rg
 > [`01-backend-gaps.md`](01-backend-gaps.md) 가 적은 `DigitalFilmDevelop`·`SceneReconstruct` 결손과
 > 같은 것입니다. **GPU 이전에 CPU 이식이 먼저입니다.**
 >
-> ☠️ **17 `boundedRelativeGrade` 는 화소별 옮겨쓰기가 아닙니다.** Windows 는 그 혼합을
+> **17 `boundedRelativeGrade` 는 화소별 옮겨쓰기가 아닙니다.** Windows 는 그 혼합을
 > `scanner_target_grade.cpp` 의 화소 루프 안에서 하고, 그 안의 `transformed_srgb`·`gamut_scale`
 > 이 **전부 `double`** 입니다. float32 GPU 로 옮기면 `1e-5` 를 못 지킬 수 있습니다.
 > 옮기려면 먼저 **CPU 를 float 로 내려도 골든이 안 바뀌는지** 재야 합니다. 재기 전에는 손대지 마십시오.
 >
-> ⚠️ **먼저 [`../verification/2026-08-10-macos-kernel-audit.md`](../verification/2026-08-10-macos-kernel-audit.md) 를 읽으십시오.**
+> 주의 **먼저 [`../verification/2026-08-10-macos-kernel-audit.md`](../verification/2026-08-10-macos-kernel-audit.md) 를 읽으십시오.**
 > 그 문서가 **이미 수식 1:1 대조를 했습니다**(2026-08-10 기준):
 > `basicTone`·`parametricToneCurve`·`negativeInvert`·`colorMixerHSL`·`colorGrade`·
 > `calibrationPrimaries`·`bwToning`·텍스처 = **일치**, `filmGrain` = 수식 일치·잡음원만 다름.
 > **이 9개는 GPU 이식 시 CPU 코드를 그대로 HLSL 로 옮기면 됩니다.**
 >
-> ☠️ **그리고 아래 세 커널은 macOS 활성 파이프라인이 부르지 않습니다** (같은 문서 "없어서 맞는 것들"):
+> **그리고 아래 세 커널은 macOS 활성 파이프라인이 부르지 않습니다** (같은 문서 "없어서 맞는 것들"):
 > **8·9 `scannerLowSatChroma`/`scannerMidtoneChroma`, 15 `gamutSoftClip`, 19 `highlightDesaturate`.**
 > 정의만 남아 있고 호출부가 **없습니다.** PostPipeline 주석의 *"타겟 프로파일 밖의 고정 NR·명부
 > 탈채도·추가 gamut 압축은 적용하지 않는다"* 와 일치합니다.
 > **소스에 있다는 이유로 GPU 로 옮기면 macOS 에 없는 효과를 만들어 냅니다. 옮기지 마십시오.**
 > 나머지 커널도 **옮기기 전에 호출부가 살아 있는지부터** 확인하십시오.
 >
-> ⚠️ 위 대조는 **2026-08-10 기준**입니다. 그 뒤 바뀐 곳은 다시 봐야 합니다.
+> 주의 위 대조는 **2026-08-10 기준**입니다. 그 뒤 바뀐 곳은 다시 봐야 합니다.
 > 나머지 열은 파일명으로 짐작한 것입니다. **그 파일을 열어 수식이 같은지 확인**하십시오.
 > 다르면 **CPU 쪽이 이미 틀린 것**이고, GPU 이식보다 그것을 먼저 고쳐야 합니다.
 > 20·21 은 macOS 에 있고 Windows 에 **없는 기능**입니다 — GPU 이전에 **CPU 이식이 먼저**입니다.
@@ -525,12 +525,12 @@ Windows 에는 그 내장 필터가 없습니다. **여기가 실제 작업량�
 
 | macOS 내장 필터 | 쓰이는 곳 | Windows 에서 만들 것 | 상태 |
 |---|---|---|---|
-| `CIGaussianBlur` | `ColorModel.swift:128,166` · `FilmScanDenoise.swift:96` · `LocalDodgeBurnStage.swift:169` · `ScannerNoiseReduction+Color.swift:19` | **분리형 가우시안** — 수평 1D + 수직 1D | ✅ `gaussian_blur.hlsl`. **delta 0**. `groupshared` 타일 캐시는 아직 — 재고 나서 |
-| `CIBoxBlur` | `FilmScanDenoise.swift:154` | **분리형 박스** — 슬라이딩 윈도우로 화소당 O(1) | ✅ `box_blur.hlsl`. **delta 0** |
-| `CIMedianFilter` (3×3) | `FilmScanDenoise.swift:171` | **3×3 중앙값** — 9원소 정렬 네트워크 | ✅ `median3.hlsl`. **delta 0** — 부동소수 산술이 없어 고른 값이 같습니다 |
-| `CIAreaAverage` | 히스토그램·자동 보정 | **병렬 리덕션** | ❌ 아직 |
-| `CIRandomGenerator` | 그레인·디더 노이즈 | **결정적 해시 노이즈.** macOS 와 화소값까지 맞춰야 하면 **씨앗 규칙부터 대조** | ❌ 아직 |
-| `CIVibrance` | `ColorModel` | **이미 CPU 로 이식돼 있음** — Apple 비공개 커널이라 33³ LUT 로 측정 이식(`muted_scene_vibrance_table.cpp` 9,003줄). GPU 에서는 `Texture3D` + `SampleLevel` **한 번**. **GPU 이득이 가장 큰 곳 중 하나** | ❌ 아직 |
+| `CIGaussianBlur` | `ColorModel.swift:128,166` · `FilmScanDenoise.swift:96` · `LocalDodgeBurnStage.swift:169` · `ScannerNoiseReduction+Color.swift:19` | **분리형 가우시안** — 수평 1D + 수직 1D | OK `gaussian_blur.hlsl`. **delta 0**. `groupshared` 타일 캐시는 아직 — 재고 나서 |
+| `CIBoxBlur` | `FilmScanDenoise.swift:154` | **분리형 박스** — 슬라이딩 윈도우로 화소당 O(1) | OK `box_blur.hlsl`. **delta 0** |
+| `CIMedianFilter` (3×3) | `FilmScanDenoise.swift:171` | **3×3 중앙값** — 9원소 정렬 네트워크 | OK `median3.hlsl`. **delta 0** — 부동소수 산술이 없어 고른 값이 같습니다 |
+| `CIAreaAverage` | 히스토그램·자동 보정 | **병렬 리덕션** | NG 아직 |
+| `CIRandomGenerator` | 그레인·디더 노이즈 | **결정적 해시 노이즈.** macOS 와 화소값까지 맞춰야 하면 **씨앗 규칙부터 대조** | NG 아직 |
+| `CIVibrance` | `ColorModel` | **이미 CPU 로 이식돼 있음** — Apple 비공개 커널이라 33³ LUT 로 측정 이식(`muted_scene_vibrance_table.cpp` 9,003줄). GPU 에서는 `Texture3D` + `SampleLevel` **한 번**. **GPU 이득이 가장 큰 곳 중 하나** | NG 아직 |
 
 ---
 
@@ -556,7 +556,7 @@ struct WorkingImage final {
     std::uint32_t width{0};
     std::uint32_t height{0};
     std::uint32_t stride_pixels{0};
-    std::vector<negaflow::core::Rgba32F> pixels{};   // 호스트 메모리
+    std::vector<negaflow::core::Rgba32F> pixels{}; // 호스트 메모리
 };
 ```
 
@@ -581,7 +581,7 @@ Core Image 는 `CIImage` 체인을 **지연 합성**하고 `CIContext` 가 **마
 
 커널이 아무리 빨라도 **전송이 지배**합니다. 한 번 올리고 한 번 내리면 **왕복 1회**입니다.
 
-> ### ✅ 2026-08-19 — **쟀습니다.** `negaflow-cli --gpu-transfer-bench` 신설
+> ### OK 2026-08-19 — **쟀습니다.** `negaflow-cli --gpu-transfer-bench` 신설
 >
 > 5088×3401(264 MB), RTX 4060 Ti, 6회 중앙값. 같은 이미지에 반전 커널을 한 번 얹어
 > **전송 대 커널** 비율도 같이 봤습니다.
@@ -594,7 +594,7 @@ Core Image 는 `CIImage` 체인을 **지연 합성**하고 `CIContext` 가 **마
 > | 왕복 | 145.0 ms | 122.0 | 105.9 | **63.5 ms** |
 > | 실효 대역폭 | 3.5 GB/s | 4.2 | 4.9 | **8.1 GB/s** |
 >
-> ☠️ **커널 디스패치가 0.01 ms 입니다.** 24MP 반전은 화소마다 `log10`·`pow`·`exp` 를
+> **커널 디스패치가 0.01 ms 입니다.** 24MP 반전은 화소마다 `log10`·`pow`·`exp` 를
 > 도는 가장 비싼 화소별 커널인데도 그렇습니다(디스패치는 비동기라 이 숫자는 큐에 넣는
 > 시간이고, 실제 계산은 다운로드의 동기화 대기에 섞여 있습니다). **이 문서가 "전송이
 > 지배한다" 고 적은 것은 맞았고, 그 정도가 예상보다 큽니다.**
@@ -667,13 +667,13 @@ Intel 내장은 **HD 4000(Ivy Bridge, 2012)** 부터, AMD 내장·외장은 그�
 
 ```
 src/Native/gpu/
-  gpu_device.h/.cpp        D3D11 장치·컨텍스트 1개 (macOS sharedRenderContext 대응)
-  gpu_capability.h/.cpp    CheckFeatureSupport → 11_0 인지 / WARP 인지 / CPU 폴백인지
+  gpu_device.h/.cpp D3D11 장치·컨텍스트 1개 (macOS sharedRenderContext 대응)
+  gpu_capability.h/.cpp CheckFeatureSupport → 11_0 인지 / WARP 인지 / CPU 폴백인지
   gpu_working_image.h/.cpp WorkingImage ↔ GPU 텍스처, 핑퐁 2장, 스테이징 다운로드
-  gpu_dispatch.h/.cpp      디스패치 + 상수 버퍼 바인딩
-  gpu_neighborhood.h/.cpp  가우시안·박스·중앙값·리덕션 (1.4절)
-  shaders/*.hlsl           커널
-  shaders/compiled/*.h     빌드 시 fxc 로 컴파일해 임베드
+  gpu_dispatch.h/.cpp 디스패치 + 상수 버퍼 바인딩
+  gpu_neighborhood.h/.cpp 가우시안·박스·중앙값·리덕션 (1.4절)
+  shaders/*.hlsl 커널
+  shaders/compiled/*.h 빌드 시 fxc 로 컴파일해 임베드
 ```
 
 - **God object 금지 규칙(500줄)은 여기에도 적용됩니다.** 커널 32개를 한 파일에 넣지 마십시오
@@ -746,10 +746,10 @@ macOS 대응 상수:
 > 검출 17.3s → **4.66s**, 610/9331. 끄려면 `NEGA_GPU_MORPHOLOGY=0` / `NEGA_GPU=0`.
 > 상세 [`15`](15-gpu-handoff.md) 3.2.
 >
-> ⚠️ GPU 셰이더는 화소당 **O(r)** 로 창을 직접 훑습니다. 반경이 12 이하라 고른 선택이고,
+> 주의 GPU 셰이더는 화소당 **O(r)** 로 창을 직접 훑습니다. 반경이 12 이하라 고른 선택이고,
 > 반경 무관 O(1) 로 바꾸는 것은 성능 작업입니다 — **재고 나서** 하십시오.
 >
-> ☠️ `box_mean` 은 **옮기지 않았습니다.** 적분영상을 `double` 로 누적합니다(`:240`).
+> `box_mean` 은 **옮기지 않았습니다.** 적분영상을 `double` 로 누적합니다(`:240`).
 > D3D11 의 double 은 선택 기능이라 내장 GPU 범용성이 보장되지 않습니다.
 
 ---
@@ -777,7 +777,7 @@ macOS 대응 상수:
 | **드라이버별 부동소수** | 최적화 재배열로 벤더마다 값이 갈릴 수 있음 | `/Gis` + `precise`. 동치 시험이 벤더별로 다르게 깨지면 **여기부터** 봅니다 |
 | **노이즈 재현성** | `CIRandomGenerator` 를 대체하면 그레인 무늬가 macOS 와 달라짐 | 씨앗 규칙을 먼저 대조. 못 맞추면 **"다르다" 고 적을 것** |
 | **half vs float** | 1.2절 — macOS 는 half, 우리는 float32 | 이번 작업에서 건드리지 않음. **별건으로 남김** |
-| ☠️ **상주 범위 수명** | `GpuResidentScope` 는 소멸자에서 `flush_resident()` 로 **호스트 버퍼에 내려씁니다.** 그 버퍼보다 **뒤에 선언**하면 C++ 소멸 역순 때문에 **이미 죽은 메모리**에 씁니다 — 2026-08-20 앱 강제 종료의 원인이 이것이었습니다(`develop_export.cpp`) | **① 상주 범위는 그것이 채우는 출력보다 먼저 선언합니다. ② 버퍼를 단계에 넘겨 버릴 때는 넘기기 직전에 `flush_resident_if(host)` 를 부릅니다** — 단계 안에서 죽는 중간 버퍼는 ①로 막히지 않습니다. [`01`](01-backend-gaps.md) 9.1 · 9.1.1 |
+| **상주 범위 수명** | `GpuResidentScope` 는 소멸자에서 `flush_resident()` 로 **호스트 버퍼에 내려씁니다.** 그 버퍼보다 **뒤에 선언**하면 C++ 소멸 역순 때문에 **이미 죽은 메모리**에 씁니다 — 2026-08-20 앱 강제 종료의 원인이 이것이었습니다(`develop_export.cpp`) | **① 상주 범위는 그것이 채우는 출력보다 먼저 선언합니다. ② 버퍼를 단계에 넘겨 버릴 때는 넘기기 직전에 `flush_resident_if(host)` 를 부릅니다** — 단계 안에서 죽는 중간 버퍼는 ①로 막히지 않습니다. [`01`](01-backend-gaps.md) 9.1 · 9.1.1 |
 
 ---
 

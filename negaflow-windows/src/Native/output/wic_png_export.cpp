@@ -177,6 +177,7 @@ using Microsoft::WRL::ComPtr;
         expected_profile,
         limits.output_dpi,
         limits.readback_buffer_bytes,
+        limits.verify_pixel_readback,
         conversion_status,
         native_error_code)) {
         case detail::WicSrgb16FrameStatus::ok:
@@ -364,7 +365,7 @@ WicPngExportResult export_working_to_srgb16_png(
             discard_staging(output.get(), result);
             return result;
         }
-        result.info.pixels_verified = true;
+        result.info.pixels_verified = limits.verify_pixel_readback;
         result.info.profile_verified = true;
         result.info.resolution_verified = limits.output_dpi != 0U;
 

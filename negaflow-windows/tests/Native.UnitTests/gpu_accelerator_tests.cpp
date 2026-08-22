@@ -4,10 +4,10 @@
 // 도는지**를 봅니다 — 앞 판의 가장 큰 구멍이 "커널은 정확한데 아무도 안 부른다" 였습니다.
 //
 // 보는 것 셋:
-//  ① 정책이 `cpu_only` 면 GPU 가 **손대지 않습니다.** 내보내기·골든이 여기 걸려 있습니다.
-//  ② 정책이 `allowed` 면 **실제로 처리합니다**(`handled == true`). 안 돌면 이 시험이 실패합니다.
-//  ③ 처리한 결과가 CPU 판과 허용 오차 안입니다. 적용 플래그도 CPU 와 같아야 합니다 —
-//     게이트를 하나라도 빠뜨리면 여기서 걸립니다.
+// ① 정책이 `cpu_only` 면 GPU 가 **손대지 않습니다.** 내보내기·골든이 여기 걸려 있습니다.
+// ② 정책이 `allowed` 면 **실제로 처리합니다**(`handled == true`). 안 돌면 이 시험이 실패합니다.
+// ③ 처리한 결과가 CPU 판과 허용 오차 안입니다. 적용 플래그도 CPU 와 같아야 합니다 —
+// 게이트를 하나라도 빠뜨리면 여기서 걸립니다.
 
 #include <algorithm>
 #include <cmath>
@@ -21,7 +21,9 @@
 
 #include "negaflow/core/negative_inversion.h"
 #include "negaflow/imaging/film_scan_denoise.h"
+#include "negaflow/imaging/image_transform.h"
 #include "negaflow/imaging/kernel_accelerator.h"
+#include "negaflow/imaging/scene_correction.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
 #include "negaflow/pipeline/gpu_accelerator.h"
 
@@ -47,6 +49,9 @@ void expect(const bool condition, const char* const message) {
 // (`gpu_film_scan_stage.h` 의 설명). 두 상한을 따로 둡니다.
 constexpr float tone_tolerance = 1.0e-5F;
 constexpr float denoise_tolerance = 1.0e-4F;
+// 장면 보정은 표본 누적이 CPU double / GPU float 이라 계수가 마지막 자리에서 갈립니다.
+// 8비트 출력 한 칸이 1/255 = 3.9e-3 이므로 그보다 훨씬 아래여야 "눈에 안 보인다" 입니다.
+constexpr float scene_tolerance = 5.0e-4F;
 
 // 타일 한 변(512)을 지나가게 잡습니다 — 디노이즈가 타일 경계를 실제로 지나야 의미가 있습니다.
 constexpr std::uint32_t width = 600U;
@@ -75,6 +80,17 @@ constexpr std::uint32_t height = 96U;
     return image;
 }
 
+// 색이 치우친 화상입니다. 채널 중앙값이 서로 달라야 중성 균형 게이트를 지납니다.
+[[nodiscard]] WorkingImage make_cast_image() {
+    WorkingImage image = make_image();
+    for (Rgba32F& pixel : image.pixels) {
+        pixel.red = std::clamp((pixel.red * 0.55F) + 0.30F, 0.0F, 1.0F);
+        pixel.green = std::clamp((pixel.green * 0.55F) + 0.42F, 0.0F, 1.0F);
+        pixel.blue = std::clamp((pixel.blue * 0.55F) + 0.18F, 0.0F, 1.0F);
+    }
+    return image;
+}
+
 [[nodiscard]] float worst_delta(
     const std::vector<Rgba32F>& reference,
     const std::vector<Rgba32F>& measured) noexcept {
@@ -96,7 +112,7 @@ void tone_path_runs_on_gpu() {
     parameters.exposure_stops = 0.6F;
     parameters.basic.contrast = 0.35F;
     parameters.basic.shadows = -0.20F;
-    parameters.basic.whites = 1.4F;  // ±1 을 넘는 값 — 엔진이 받아야 합니다.
+    parameters.basic.whites = 1.4F; // ±1 을 넘는 값 — 엔진이 받아야 합니다.
     parameters.curve.lights = 0.30F;
     parameters.curve.darks = -0.25F;
     parameters.color_mixer.saturation[2] = 0.4F;
@@ -408,9 +424,113 @@ void invert_then_tone_preview_is_one_bgra_download() {
     }
 }
 
+// 자르기가 걸린 사진은 발행 커널이 **읽는 자리를 바꿔** 변환을 함께 처리합니다
+// (`preview_display_encode.hlsl` `SourceCoordinate`). 그 식이 CPU
+// `apply_image_transform` 과 어긋나면 **엉뚱한 자리가 잘린 사진**이 나옵니다.
+// 호스트 쪽 식은 `image_transform_tests` 가 고정하고, 여기서는 **셰이더**가 같은
+// 자리를 읽는지를 봅니다.
+void deferred_transform_preview_matches_cpu() {
+    if (!GpuAccelerator::shared().available()) {
+        return;
+    }
+    negaflow::imaging::ImageTransformParameters parameters{};
+    parameters.rotation = negaflow::imaging::ImageRotation::degrees_90;
+    parameters.flip_horizontal = true;
+    parameters.has_crop = true;
+    parameters.crop = {0.2, 0.15, 0.55, 0.6};
+
+    negaflow::imaging::ImageTransformGather gather{};
+    expect(
+        negaflow::imaging::plan_image_transform_gather(
+            parameters, width, height, gather),
+        "the fixture transform must plan a gather");
+
+    // CPU 기준: 변환을 걸고 평소 발행 경로로 갑니다.
+    const auto applied =
+        negaflow::imaging::apply_image_transform(make_image(), parameters);
+    expect(
+        applied.status == negaflow::imaging::ImageTransformStatus::ok,
+        "the CPU transform must succeed");
+    std::vector<std::uint8_t> cpu_bgra(
+        static_cast<std::size_t>(gather.output_width) * gather.output_height * 4U, 0U);
+    negaflow::pipeline::develop_export_detail::PreviewTarget cpu_target{
+        gather.output_width, gather.output_height,
+        cpu_bgra.data(), cpu_bgra.size(), {}, false};
+    negaflow::pipeline::DevelopExportOutcome cpu_preview{};
+    cpu_preview = negaflow::pipeline::develop_export_detail::write_preview(
+        applied.image, cpu_target, cpu_preview);
+    expect(cpu_preview.succeeded, "CPU deferred-transform reference must succeed");
+
+    // GPU 기준: 변환을 걸지 않은 상주 화상에 gather 를 넘깁니다.
+    WorkingImage resident_image = make_image();
+    std::vector<std::uint8_t> gpu_bgra(cpu_bgra.size(), 0U);
+    {
+        negaflow::imaging::ApproximateAcceleratorScope approximate{};
+        negaflow::pipeline::GpuResidentScope resident{};
+        WorkingToneAdjustParameters tone{};
+        tone.exposure_stops = 0.0F;
+        // 상주로 묶으려면 GPU 커널이 한 번 돌아야 합니다. 항등 톤은 올리지도 않으므로
+        // 아주 작은 노출을 걸어 실제로 상주 이미지를 만듭니다.
+        tone.basic.contrast = 0.05F;
+        const auto outcome = GpuAccelerator::shared().apply_working_tone_adjustments(
+            GpuUsePolicy::allowed, resident_image, tone, {});
+        expect(outcome.handled, "the fixture needs a resident GPU image");
+        if (!outcome.handled) {
+            return;
+        }
+        negaflow::pipeline::develop_export_detail::PreviewTarget gpu_target{
+            gather.output_width, gather.output_height,
+            gpu_bgra.data(), gpu_bgra.size(), {}, false};
+        negaflow::pipeline::DevelopExportOutcome gpu_preview{};
+        gpu_preview = negaflow::pipeline::develop_export_detail::write_preview(
+            resident_image, gpu_target, gpu_preview, &gather);
+        expect(
+            gpu_preview.succeeded &&
+                gpu_preview.image_width == gather.output_width &&
+                gpu_preview.image_height == gather.output_height,
+            "the deferred-transform publish must report the transformed extent");
+    }
+
+    // CPU 기준은 톤을 안 걸었으므로 화소 값 자체는 다릅니다. 여기서 보는 것은
+    // **어느 자리를 읽었는가** 이므로, 같은 톤을 건 CPU 판으로 다시 맞춥니다.
+    WorkingImage toned = make_image();
+    WorkingToneAdjustParameters tone{};
+    tone.basic.contrast = 0.05F;
+    auto cpu_toned = negaflow::imaging::apply_working_tone_adjustments(
+        std::move(toned), tone);
+    expect(
+        cpu_toned.status == negaflow::imaging::WorkingToneAdjustStatus::ok,
+        "the CPU tone reference must succeed");
+    const auto cpu_applied =
+        negaflow::imaging::apply_image_transform(std::move(cpu_toned.image), parameters);
+    negaflow::pipeline::develop_export_detail::PreviewTarget ref_target{
+        gather.output_width, gather.output_height,
+        cpu_bgra.data(), cpu_bgra.size(), {}, false};
+    negaflow::pipeline::DevelopExportOutcome ref_preview{};
+    ref_preview = negaflow::pipeline::develop_export_detail::write_preview(
+        cpu_applied.image, ref_target, ref_preview);
+    expect(ref_preview.succeeded, "the CPU reference publish must succeed");
+
+    int worst = 0;
+    for (std::size_t index = 0U; index < cpu_bgra.size(); ++index) {
+        worst = std::max(
+            worst,
+            std::abs(static_cast<int>(cpu_bgra[index]) -
+                     static_cast<int>(gpu_bgra[index])));
+    }
+    if (worst > 1) {
+        std::cerr << "FAIL: deferred transform BGRA max code delta " << worst << '\n';
+        ++failures;
+    } else {
+        std::cout << "[gpu] deferred transform BGRA max code delta " << worst
+                  << " extent " << gather.output_width << "x" << gather.output_height
+                  << '\n';
+    }
+}
+
 void denoise_below_threshold_is_a_pass_through() {
     FilmScanDenoiseParameters parameters{};
-    parameters.strength = 0.0005F;  // 임계 1e-3 아래.
+    parameters.strength = 0.0005F; // 임계 1e-3 아래.
     WorkingImage image = make_image();
     const std::vector<Rgba32F> before = image.pixels;
     const auto outcome = GpuAccelerator::shared().apply_film_scan_denoise(
@@ -423,7 +543,131 @@ void denoise_below_threshold_is_a_pass_through() {
     expect(worst_delta(before, image.pixels) == 0.0F, "a below-threshold request copies nothing");
 }
 
-}  // namespace
+// 자동 레벨 · 자동 중성 균형이 **파이프라인에서 GPU 로 도는지**, 그리고 그 결과가 CPU 판과
+// 눈에 안 보일 만큼 같은지입니다.
+//
+// 이 시험이 있어야 하는 이유 — 이 단계가 GPU 를 못 타면 `grade.cpp` 가 `flush_resident()` 로
+// 화소를 내리고, 그 뒤 톤·필름룩·마무리·발행이 **전부 호스트**로 돌아갑니다. 커널이
+// 조용히 빠지면 "왜 다시 느려졌는지" 를 아무도 모릅니다.
+void scene_correction_path_runs_on_gpu() {
+    negaflow::imaging::SceneCorrectionParameters parameters{};
+    parameters.auto_levels = true;
+    parameters.auto_neutral_balance = true;
+    parameters.negative_source = true;
+
+    // ① `cpu_only` 는 손대지 않습니다.
+    {
+        WorkingImage image = make_image();
+        const std::vector<Rgba32F> before = image.pixels;
+        negaflow::imaging::SceneCorrectionInfo info{};
+        expect(
+            !GpuAccelerator::shared().apply_scene_correction(
+                GpuUsePolicy::cpu_only, image, parameters, info),
+            "cpu_only must not use the GPU for scene correction");
+        expect(
+            worst_delta(before, image.pixels) == 0.0F,
+            "cpu_only scene correction must leave pixels alone");
+    }
+
+    // CPU 기준값.
+    WorkingImage reference = make_image();
+    negaflow::imaging::SceneCorrectionInfo cpu_info{};
+    const negaflow::core::KernelStatus cpu_status =
+        negaflow::imaging::apply_scene_correction(
+            {
+                reference.pixels.data(),
+                reference.pixels.size(),
+                reference.width,
+                reference.height,
+                reference.stride_pixels,
+            },
+            parameters,
+            cpu_info);
+    expect(
+        cpu_status == negaflow::core::KernelStatus::ok,
+        "the CPU scene correction path must succeed");
+
+    WorkingImage image = make_image();
+    negaflow::imaging::SceneCorrectionInfo gpu_info{};
+    const bool handled = GpuAccelerator::shared().apply_scene_correction(
+        GpuUsePolicy::allowed, image, parameters, gpu_info);
+    if (!GpuAccelerator::shared().available()) {
+        return;
+    }
+    expect(handled, "the scene correction path must run on the GPU");
+    if (!handled) {
+        return;
+    }
+    // 적용 여부 판정은 CPU 의 공개 함수 한 벌을 두 경로가 같이 씁니다 — 어긋나면 규칙이
+    // 두 벌이 됐다는 뜻입니다.
+    expect(
+        gpu_info.auto_levels_applied == cpu_info.auto_levels_applied,
+        "GPU and CPU must agree on whether auto levels applied");
+    expect(
+        gpu_info.neutral_balance_applied == cpu_info.neutral_balance_applied,
+        "GPU and CPU must agree on whether neutral balance applied");
+    // 표본 누적이 CPU 는 double, GPU 는 float 입니다. 백분위·중앙값을 지나면 계수 차이는
+    // 아주 작지만 바이트 일치는 아닙니다.
+    const float worst = worst_delta(reference.pixels, image.pixels);
+    if (worst > scene_tolerance) {
+        std::cerr << "FAIL: scene correction gpu/cpu max delta " << worst << '\n';
+        ++failures;
+    } else {
+        std::cout << "[gpu] pipeline scene correction max delta " << worst
+                  << " levels=" << (gpu_info.auto_levels_applied ? 1 : 0)
+                  << " balance=" << (gpu_info.neutral_balance_applied ? 1 : 0) << '\n';
+    }
+}
+
+// 위 시험의 합성 화상은 중앙값 게이트에 걸려 **중성 균형이 적용되지 않습니다.** 그러면
+// 32칸 큐브 커널이 한 번도 안 돕니다. 색이 확실히 치우친 화상으로 그 갈래를 따로 덮습니다.
+void scene_neutral_balance_runs_on_gpu() {
+    negaflow::imaging::SceneCorrectionParameters parameters{};
+    parameters.auto_neutral_balance = true;
+    parameters.negative_source = true;
+
+    WorkingImage reference = make_cast_image();
+    negaflow::imaging::SceneCorrectionInfo cpu_info{};
+    expect(
+        negaflow::imaging::apply_scene_correction(
+            {
+                reference.pixels.data(),
+                reference.pixels.size(),
+                reference.width,
+                reference.height,
+                reference.stride_pixels,
+            },
+            parameters,
+            cpu_info) == negaflow::core::KernelStatus::ok,
+        "the CPU neutral balance path must succeed");
+    expect(
+        cpu_info.neutral_balance_applied,
+        "the cast fixture must actually trigger neutral balance on the CPU");
+
+    WorkingImage image = make_cast_image();
+    negaflow::imaging::SceneCorrectionInfo gpu_info{};
+    const bool handled = GpuAccelerator::shared().apply_scene_correction(
+        GpuUsePolicy::allowed, image, parameters, gpu_info);
+    if (!GpuAccelerator::shared().available()) {
+        return;
+    }
+    expect(handled, "the neutral balance path must run on the GPU");
+    expect(
+        gpu_info.neutral_balance_applied == cpu_info.neutral_balance_applied,
+        "GPU and CPU must agree on whether neutral balance applied");
+    if (!handled) {
+        return;
+    }
+    const float worst = worst_delta(reference.pixels, image.pixels);
+    if (worst > scene_tolerance) {
+        std::cerr << "FAIL: neutral balance gpu/cpu max delta " << worst << '\n';
+        ++failures;
+    } else {
+        std::cout << "[gpu] pipeline neutral balance max delta " << worst << '\n';
+    }
+}
+
+} // namespace
 
 int main() {
     std::cout << "[gpu] accelerator: "
@@ -437,6 +681,9 @@ int main() {
     invert_then_tone_preview_is_one_bgra_download();
     denoise_path_runs_on_gpu();
     denoise_below_threshold_is_a_pass_through();
+    scene_correction_path_runs_on_gpu();
+    scene_neutral_balance_runs_on_gpu();
+    deferred_transform_preview_matches_cpu();
 
     if (failures != 0) {
         std::cerr << failures << " gpu accelerator check(s) failed\n";

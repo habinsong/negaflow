@@ -7,10 +7,10 @@ namespace Negaflow.Shell;
 /// 프로세스·타깃 전환의 단 하나의 구현입니다. macOS <c>AppModel.applyDevelopmentProcess</c> ·
 /// <c>applyDevelopTarget</c> 자리이며, 그쪽도 화면이 아니라 모델이 들고 있습니다.
 ///
-/// ☠️ 예전에는 이 로직이 라이브러리 좌측탭의 <c>LibraryDevelopDefaultsPanel</c> 안에만 있어
-///    단축키가 **그 컨트롤이 화면에 있어야만** 동작했습니다. macOS 좌측탭에는 그 구획이 아예
-///    없으므로(폴더 머리줄이 그 일을 합니다) 컨트롤을 떼면 단축키가 통째로 죽습니다.
-///    그래서 카탈로그를 고치는 부분만 여기로 내려 두 곳이 같은 길을 타게 합니다.
+/// 예전에는 이 로직이 라이브러리 좌측탭의 <c>LibraryDevelopDefaultsPanel</c> 안에만 있어
+/// 단축키가 **그 컨트롤이 화면에 있어야만** 동작했습니다. macOS 좌측탭에는 그 구획이 아예
+/// 없으므로(폴더 머리줄이 그 일을 합니다) 컨트롤을 떼면 단축키가 통째로 죽습니다.
+/// 그래서 카탈로그를 고치는 부분만 여기로 내려 두 곳이 같은 길을 타게 합니다.
 /// </summary>
 public static class DevelopDefaultsCommands
 {

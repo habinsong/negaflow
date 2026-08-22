@@ -27,10 +27,10 @@ public sealed record PrintPreferences
     /// <summary>
     /// 일반 출력인지 C-print 인지입니다.
     ///
-    /// ☠️ macOS 는 이 값을 **기억하지 않습니다**(`PrintWorkspaceSettingsStore` 주석 원문:
-    ///    "C-Print 는 랩에 넘길 때만 켜는 특수 경로인데, 한 번 켠 뒤 다음 실행에서도 켜져
-    ///    있으면 일반 출력인 줄 알고 프루프가 걸린 결과를 받게 된다"). 불러올 때 항상
-    ///    <see cref="PrintOutputProcess.Standard"/> 로 되돌립니다 — <see cref="Restored"/>.
+    /// macOS 는 이 값을 **기억하지 않습니다**(`PrintWorkspaceSettingsStore` 주석 원문:
+    /// "C-Print 는 랩에 넘길 때만 켜는 특수 경로인데, 한 번 켠 뒤 다음 실행에서도 켜져
+    /// 있으면 일반 출력인 줄 알고 프루프가 걸린 결과를 받게 된다"). 불러올 때 항상
+    /// <see cref="PrintOutputProcess.Standard"/> 로 되돌립니다 — <see cref="Restored"/>.
     /// </summary>
     public PrintOutputProcess OutputProcess { get; init; } = PrintOutputProcess.Standard;
 

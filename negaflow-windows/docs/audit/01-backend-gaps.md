@@ -1,10 +1,10 @@
-> # ☠️ 하드코딩 · 가짜 구현 · 창작 · 병신 백엔드 · 병신 프론트엔드 = 죽음 ☠️
+> # 하드코딩 · 가짜 구현 · 창작 · 병신 백엔드 · 병신 프론트엔드 = 죽음
 >
-> **🔬 추측·가설 금지.** "냄새난다" 고 덮지 말고 **냄새의 원인을 찾아 없애십시오.**
+> ** 추측·가설 금지.** "냄새난다" 고 덮지 말고 **냄새의 원인을 찾아 없애십시오.**
 > 재현하고, 스택을 잡고, 계측해서 원인을 **확정**한 뒤에 고칩니다.
 > 원인을 못 잡았으면 **"못 잡았다" 고 적으십시오** — 추측으로 고친 것은 다음 사람의 함정입니다.
 >
-> **🌐 모르면 웹 검색을 적극적으로** 하십시오 — 특히 GPU·최적화·UI/UX 구현. 찾은 것은 출처를 남기십시오.
+> ** 모르면 웹 검색을 적극적으로** 하십시오 — 특히 GPU·최적화·UI/UX 구현. 찾은 것은 출처를 남기십시오.
 >
 > **백엔드**: macOS Swift 파일을 **먼저 열고** 코드를 1:1 로 그대로 옮깁니다.
 > 상수 하나, 임계 하나, 게이트 순서 하나도 지어내지 마십시오.
@@ -139,8 +139,8 @@ macOS `Sources/Chromabase/` **159파일**을 개념 키워드로 Windows 전 트
 ```
 run_develop()
   → validate_request
-  → observe_source_before   ← 파일 관찰·해시
-  → decode_source           ← 5088×3401 16bit TIFF 디코드 (실측 2,695 ms)
+  → observe_source_before ← 파일 관찰·해시
+  → decode_source ← 5088×3401 16bit TIFF 디코드 (실측 2,695 ms)
   → apply_defect_stage → ... → publish_developed
 ```
 
@@ -157,8 +157,8 @@ run_develop()
 **macOS 는 정반대입니다** (`DevelopFrameRenderer+Input.swift:48-66`):
 
 ```swift
-if let cached = snapshot.preloadedPreviewRaw { return ... }   // 디코드 0회
-if let full = snapshot.preloadedFullPreviewRaw { ... }        // GPU Lanczos 축소만
+if let cached = snapshot.preloadedPreviewRaw { return ... } // 디코드 0회
+if let full = snapshot.preloadedFullPreviewRaw { ... } // GPU Lanczos 축소만
 ```
 
 주석 원문: *"수십 MP 원본을 디스크에서 재디코딩(수백 ms)하는 대신 한 번의 Lanczos 축소로 끝난다."*

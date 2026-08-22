@@ -72,6 +72,7 @@ internal sealed class LibraryThumbnails
     {
         if (view.thumbnails?.TryGet(frameId) is not { } jpeg)
         {
+            ThumbnailTrace.Write($"lib.ready NO-BYTES {frameId}");
             return;
         }
         foreach (LibraryFrameListItem item in view.allItems)
@@ -81,8 +82,10 @@ internal sealed class LibraryThumbnails
                 continue;
             }
             item.Thumbnail = Decode(jpeg);
+            ThumbnailTrace.Write($"lib.ready applied  {frameId}");
             return;
         }
+        ThumbnailTrace.Write($"lib.ready NOT-IN-LIST {frameId} allItems={view.allItems.Count}");
     }
 
     /// <summary>

@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Media;
 using Negaflow.Catalog;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
+using Negaflow.Shell.Views.Controls;
 
 namespace Negaflow.Shell.Views.Develop.Inspector;
 
@@ -66,7 +67,7 @@ internal sealed class DevelopLocalAdjustmentRows
         };
         head.Children.Add(title);
 
-        Button visibility = IconButton(adjustment.IsEnabled ? "" : "");
+        Button visibility = IconButton(adjustment.IsEnabled ? VectorIconKind.Eye : VectorIconKind.EyeSlash);
         string visibilityName = AppResources.Get("developLocalVisibility", "Text");
         AutomationProperties.SetName(visibility, visibilityName);
         ToolTipService.SetToolTip(visibility, visibilityName);
@@ -157,18 +158,26 @@ internal sealed class DevelopLocalAdjustmentRows
         return button;
     }
 
-    private static Button IconButton(string glyph) => new()
+    /// <summary>
+    /// 직접 그린 아이콘을 다는 판입니다. Segoe 에 뜻이 맞는 글리프가 없는 자리에 씁니다.
+    /// </summary>
+    /// <remarks>
+    /// 숨김 상태에 쓰던 <c>U+E7B2</c> 는 **Segoe Fluent Icons 에 없는 코드포인트**라
+    /// 화면에 빈 네모가 나왔습니다. 구 Segoe MDL2 에는 있었지만 WinUI 3 가 쓰는 글꼴에서
+    /// 빠졌습니다 — <c>docs/audit/08a-icon-inventory.md</c> 1절.
+    /// </remarks>
+    private static Button IconButton(VectorIconKind kind) => new()
     {
         Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
         BorderThickness = new Thickness(0),
         Padding = new Thickness(4, 0, 4, 0),
-        Content = new FontIcon { FontSize = 12, Glyph = glyph },
+        Content = new VectorIcon { IconSize = 12, Kind = kind },
     };
 
     private static StackPanel TitleContent(LocalDodgeBurnAdjustment adjustment, int index)
     {
         StackPanel content = new() { Orientation = Orientation.Horizontal, Spacing = 6 };
-        content.Children.Add(new FontIcon { FontSize = 12, Glyph = KindGlyph(adjustment.Mask.Kind) });
+        content.Children.Add(new VectorIcon { IconSize = 12, Kind = KindIcon(adjustment.Mask.Kind) });
         content.Children.Add(new TextBlock
         {
             FontSize = 12,
@@ -233,11 +242,10 @@ internal sealed class DevelopLocalAdjustmentRows
         },
         "Text");
 
-    private static string KindGlyph(LocalDodgeBurnMaskKind kind) => kind switch
+    private static VectorIconKind KindIcon(LocalDodgeBurnMaskKind kind) => kind switch
     {
-        LocalDodgeBurnMaskKind.Radial => "",
-        LocalDodgeBurnMaskKind.Linear => "",
-        LocalDodgeBurnMaskKind.Polygon => "",
-        _ => "",
-    };
-}
+        LocalDodgeBurnMaskKind.Radial => VectorIconKind.RadialMask,
+        LocalDodgeBurnMaskKind.Linear => VectorIconKind.LinearMask,
+        LocalDodgeBurnMaskKind.Polygon => VectorIconKind.PolygonMask,
+        _ => VectorIconKind.Paintbrush,
+    };}

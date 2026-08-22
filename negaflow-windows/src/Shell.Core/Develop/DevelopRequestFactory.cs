@@ -53,6 +53,32 @@ public readonly record struct DevelopRequestResult(
 /// </summary>
 public static class DevelopRequestFactory
 {
+    /// <summary>
+    /// 결함 편집이 걸린 사진을 현상할 때 **원본 파일 내용을 SHA-256 으로 검증**할지입니다.
+    /// 설정의 <c>이미지 내용 해시</c>(<see cref="ImageContentHashMode"/>)가 그대로 옵니다.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 켜면 <b>렌더마다 원본 전체를 다시 읽어 해시합니다.</b> frame_1(104MB) 실측으로
+    /// 슬라이더 틱당 약 140ms 였고, 단계 표 어디에도 안 잡히는 시간이었습니다. 그런데
+    /// 설정의 기본값은 <c>Off</c> 인데도 그 검사가 무조건 돌고 있었습니다 — 설정을 저장만
+    /// 하고 아무도 읽지 않았기 때문입니다.
+    /// </para>
+    /// <para>
+    /// 정적인 이유 — <see cref="Create"/> 를 부르는 자리가 60곳이 넘고 전부 같은 사용자
+    /// 설정 하나를 따릅니다. 인자로 나르면 한 곳만 빠뜨려도 경로마다 정책이 갈립니다.
+    /// 값을 넣는 곳은 셸의 설정 적용 지점 한 곳뿐입니다.
+    /// </para>
+    /// </remarks>
+    public static bool VerifyDefectSourceContent { get; set; }
+
+    /// <summary>
+    /// 내용 해시를 끈 상태에서 보내는 자리표시자 sha 입니다. 전부 0 이면 네이티브가
+    /// "바이트 수만 확인" 으로 읽습니다 — 실제 파일의 SHA-256 이 64자리 0 일 수는 없습니다.
+    /// </summary>
+    private const string DefectSourceContentCheckOnly =
+        "0000000000000000000000000000000000000000000000000000000000000000";
+
     public static DevelopRequestResult Create(
         LibraryFrameSnapshot frame,
         string destinationPath,
@@ -151,10 +177,10 @@ public static class DevelopRequestFactory
         // macOS `DevelopFrameRenderer.renderRawPreview` 는 원본 CIImage 에 기하 변환만 걸어
         // 그립니다 — 톤도, 커브도, 스캐너 타깃도, 필름 룩도 얹지 않습니다.
         //
-        // ☠️ 여기서 레시피를 남겨 두면 `원본` 탭이 **반전만 빠진 현상본**이 됩니다. 자동 레벨이
-        //    채널을 각각 끝까지 늘려 네거티브의 주황 마스크를 탈색시키고, NORITSU 타깃의 루마
-        //    USM 이 그레인을 깎아 세웁니다 — 사진앱으로 본 원본과 전혀 다른 그림이 되고,
-        //    "원본부터 베이스 색이 이상하고 컬러 노이즈 범벅" 으로 보입니다.
+        // 여기서 레시피를 남겨 두면 `원본` 탭이 **반전만 빠진 현상본**이 됩니다. 자동 레벨이
+        // 채널을 각각 끝까지 늘려 네거티브의 주황 마스크를 탈색시키고, NORITSU 타깃의 루마
+        // USM 이 그레인을 깎아 세웁니다 — 사진앱으로 본 원본과 전혀 다른 그림이 되고,
+        // "원본부터 베이스 색이 이상하고 컬러 노이즈 범벅" 으로 보입니다.
         //
         // 결함 제거는 남깁니다. macOS 도 raw 프리뷰에 cleaned raw 를 넘깁니다.
         if (uninvertedSource)
@@ -189,9 +215,21 @@ public static class DevelopRequestFactory
                 return DevelopRequestResult.Failure(
                     DevelopRequestRefusal.InvalidDefectRecipe);
             }
+            // 여기 실린 sha 는 네이티브 `observe_source_before` 가 **렌더마다 원본 파일
+            // 전체를 다시 읽어 SHA-256 하게** 만듭니다. frame_1(104MB) 실측으로 슬라이더
+            // 틱당 약 140ms 이고, 설정 `이미지 내용 해시` 의 기본값이 **끔**인데도 돌고
+            // 있었습니다 — 그 설정을 아무도 읽지 않았기 때문입니다.
+            //
+            // ABI 는 결함 편집이 있으면 identity 를 **요구**하므로(`has_edits ==
+            // has_identity`) 빼지 못합니다. 대신 sha 를 0 으로 채워 보냅니다 —
+            // 네이티브가 그것을 "바이트 수만 확인" 으로 읽습니다
+            // (`export/stages/observe.cpp`). 파일이 바뀌면 크기·수정 시각이 먼저
+            // 달라지므로 값싼 검사만으로도 마스크를 엉뚱한 사진에 걸 일은 없습니다.
             defectSourceIdentity = new DevelopDefectSourceIdentity(
                 sourceIdentity.ByteCount,
-                sourceIdentity.Sha256);
+                VerifyDefectSourceContent
+                    ? sourceIdentity.Sha256
+                    : DefectSourceContentCheckOnly);
         }
 
         return DevelopRequestResult.Success(new DevelopExportRequest
@@ -323,6 +361,9 @@ public static class DevelopRequestFactory
             DefectBrushes = defectBrushes,
             DefectEditOrder = defectEditOrder,
             DefectSourceIdentity = defectSourceIdentity,
+            DefectRecipeSha256 = defectEditOrder.Count == 0
+                ? null
+                : frame.DefectRecipe!.RecipeSha256,
             LocalDodgeBurn = dodgeBurn.Select(MapLocalDodgeBurn).ToArray(),
         });
     }

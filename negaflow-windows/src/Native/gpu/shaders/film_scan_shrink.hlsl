@@ -2,19 +2,19 @@
 // Windows CPU `imaging/film_scan_denoise_tile.cpp:103-228` `process_tile` 의 화소 루프입니다.
 //
 // 입력 여섯 장은 전부 **감마 리프트된 도메인**(x^0.45)입니다:
-//   Source  = 리프트한 원본            (`extract_lifted_tile`)
-//   Median3 = 3×3 중앙값               (`median3(source)`)
-//   Median5 = 중앙값 두 번(≈5×5)       (`median3(med3)`)
-//   Fine    = 가우시안 σ 1.3           (`gaussian_blur(source)`)
-//   Middle  = 가이드 필터 반경 3        (`guided_base(source, guide, 3)`)
-//   Coarse  = 가이드 필터 반경 7        (`guided_base(source, guide, 7)`)
+// Source = 리프트한 원본 (`extract_lifted_tile`)
+// Median3 = 3×3 중앙값 (`median3(source)`)
+// Median5 = 중앙값 두 번(≈5×5) (`median3(med3)`)
+// Fine = 가우시안 σ 1.3 (`gaussian_blur(source)`)
+// Middle = 가이드 필터 반경 3 (`guided_base(source, guide, 3)`)
+// Coarse = 가이드 필터 반경 7 (`guided_base(source, guide, 7)`)
 //
 // 마지막에 CPU 와 같이 되돌립니다(`pow(lifted, 1/0.45)`). 알파는 CPU 가 쓰지 않으므로
 // 원본을 그대로 둡니다(`film_scan_denoise.cpp:156` 는 red/green/blue 만 씁니다).
 //
-// ☠️ 임계 계산의 상수는 **하나도 여기서 만들지 않습니다.** `process_tile:85-101` 이
-//    이미지마다 한 번 계산하는 값들이고, 호스트가 CPU 와 같은 코드로 계산해 넘깁니다
-//    (`GpuFilmScanShrink::resolve`). 여기에 숫자를 적으면 두 벌이 되어 어긋납니다.
+// 임계 계산의 상수는 **하나도 여기서 만들지 않습니다.** `process_tile:85-101` 이
+// 이미지마다 한 번 계산하는 값들이고, 호스트가 CPU 와 같은 코드로 계산해 넘깁니다
+// (`GpuFilmScanShrink::resolve`). 여기에 숫자를 적으면 두 벌이 되어 어긋납니다.
 
 #include "film_scan_shared.hlsli"
 
@@ -26,7 +26,7 @@ Texture2D<float4> Middle : register(t4);
 Texture2D<float4> Coarse : register(t5);
 RWTexture2D<float4> Destination : register(u0);
 
-// ☠️ 앞 16바이트는 화소별 커널과 같은 `GpuPointwiseExtent` 자리입니다.
+// 앞 16바이트는 화소별 커널과 같은 `GpuPointwiseExtent` 자리입니다.
 cbuffer FilmScanShrinkConstants : register(b0) {
     uint2 Extent;
     float2 Padding0;

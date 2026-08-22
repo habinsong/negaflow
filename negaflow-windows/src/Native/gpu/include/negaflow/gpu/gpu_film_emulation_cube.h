@@ -2,7 +2,7 @@
 
 // 필름 스톡 색 큐브(33³ 3D LUT)의 GPU 판입니다.
 //
-// macOS  : `FilmEmulationStage` 의 `CIColorCube`
+// macOS : `FilmEmulationStage` 의 `CIColorCube`
 // CPU 판 : `imaging/film_emulation_color.cpp` `apply_film_emulation_color_cube`
 // 셰이더 : `shaders/film_emulation_cube.hlsl`
 //
@@ -10,8 +10,8 @@
 // 35,937 칸이고 프리셋·세기가 바뀔 때만 다시 만들어지므로 GPU 로 옮길 이유가 없고,
 // 옮기면 두 벌이 되어 갈라집니다. 이 클래스는 **만들어진 표를 올리고 적용만** 합니다.
 //
-// ☠️ **근사한 것입니다**(sRGB 왕복의 `pow`). 표 자체와 보간은 CPU 와 같은 float
-//    연산이라 그 자리에서는 오차가 안 생깁니다.
+// **근사한 것입니다**(sRGB 왕복의 `pow`). 표 자체와 보간은 CPU 와 같은 float
+// 연산이라 그 자리에서는 오차가 안 생깁니다.
 
 #include "negaflow/gpu/gpu_lookup_table.h"
 #include "negaflow/gpu/gpu_pointwise.h"
@@ -49,4 +49,4 @@ private:
     bool loaded_{false};
 };
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

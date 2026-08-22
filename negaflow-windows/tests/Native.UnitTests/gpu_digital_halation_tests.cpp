@@ -1,15 +1,15 @@
 // CPU/GPU 동치 시험 — `digitalHalation`.
 //
-// ☠️ **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `apply_digital_halation_material` 을
-//    그대로 부르고 그 결과와 겨룹니다.
+// **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `apply_digital_halation_material` 을
+// 그대로 부르고 그 결과와 겨룹니다.
 //
-// ⚠️ CPU 는 512px 타일로 돌지만 GPU 는 전체를 한 번에 돕니다. `film_scan_denoise` 와 달리
-//    **여기는 그래도 됩니다** — 이 가우시안은 직접 컨볼루션이라 러닝 섬의 누적 이력이
-//    없습니다. 그 주장을 시험하려고 폭을 타일 한 변(512)보다 크게 잡습니다.
+// 주의 CPU 는 512px 타일로 돌지만 GPU 는 전체를 한 번에 돕니다. `film_scan_denoise` 와 달리
+// **여기는 그래도 됩니다** — 이 가우시안은 직접 컨볼루션이라 러닝 섬의 누적 이력이
+// 없습니다. 그 주장을 시험하려고 폭을 타일 한 변(512)보다 크게 잡습니다.
 //
-// ⚠️ 가중치 식이 `film_scan_denoise` 와 **다릅니다.** Core Image 분산 보정 0.08 이 없고
-//    지수·합계를 `double` 로 굴립니다(`digital_halation.cpp:51`). GPU 도 그 식을 씁니다
-//    (`GpuGaussianBlur::weights_for_halation_sigma`). 섞으면 값이 갈립니다.
+// 주의 가중치 식이 `film_scan_denoise` 와 **다릅니다.** Core Image 분산 보정 0.08 이 없고
+// 지수·합계를 `double` 로 굴립니다(`digital_halation.cpp:51`). GPU 도 그 식을 씁니다
+// (`GpuGaussianBlur::weights_for_halation_sigma`). 섞으면 값이 갈립니다.
 
 #include <algorithm>
 #include <cmath>
@@ -185,7 +185,7 @@ void halation_matches_cpu(const GpuDevice& device, const char* const label) {
     }
 }
 
-}  // namespace
+} // namespace
 
 int main() {
     const GpuDevice warp = GpuDevice::create(GpuDevicePreference::warp_only);

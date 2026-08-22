@@ -1,7 +1,9 @@
 using Negaflow.Catalog;
 using Negaflow.Shell.Develop;
+using Negaflow.Shell.Library;
 using Negaflow.Shell.Print;
 using Negaflow.Shell.Shortcuts;
+using Negaflow.Shell.Storage;
 
 namespace Negaflow.Shell;
 
@@ -70,6 +72,24 @@ public sealed record ShellPreferences
     public PrintPreferences Print { get; init; } = new();
 
     /// <summary>
+    /// 썸네일·내보내기·스캔 원본이 놓일 자리입니다. macOS <c>DiskStorageStore</c> 가
+    /// UserDefaults 에 두는 값과 같은 자리입니다.
+    /// </summary>
+    public DiskStorageSettings Disk { get; init; } = new();
+
+    /// <summary>
+    /// 카탈로그 백업 일정과 최근 결과입니다. macOS <c>LibraryBackupScheduleStore</c> /
+    /// <c>LibraryBackupDestinationStore</c> 자리입니다.
+    /// </summary>
+    public LibraryBackupSettings Backup { get; init; } = new();
+
+    /// <summary>
+    /// 상주 프레임 캐시 한도입니다. macOS <c>FrameCacheResidencyStore</c> 가 UserDefaults 에
+    /// 두는 값과 같은 자리입니다.
+    /// </summary>
+    public FrameCacheResidencySettings FrameCache { get; init; } = new();
+
+    /// <summary>
     /// 자동 결함 도구가 미세 반점까지 찾을지의 **기본값**입니다. 프레임마다 따로 끄고 켜는
     /// 것과 별개로, 새로 여는 도구가 무엇으로 시작할지를 정합니다.
     /// </summary>
@@ -79,10 +99,34 @@ public sealed record ShellPreferences
     public bool GuidedDefectDetectsMicroSpecks { get; init; } = true;
 
     /// <summary>
+    /// macOS <c>PresentationPreferencesStore.developerMode</c>. 현상 인스펙터의 "개발자 디버그"
+    /// 구역을 열어 줍니다 — 켜고 끄는 것 말고 현상 결과를 바꾸지 않습니다.
+    /// </summary>
+    public bool DeveloperMode { get; init; }
+
+    /// <summary>
     /// 캔버스에서 포인터 아래 화소의 값을 읽어 보여 줄지입니다. 끄면 읽지도 않습니다 —
     /// 보이지 않는 값을 계산하느라 포인터가 무거워지지 않게.
     /// </summary>
     public bool PixelSamplerEnabled { get; init; }
+
+    /// <summary>
+    /// macOS <c>PresentationPreferencesStore.canvasBackground</c>. 현상 캔버스의 바탕색이며
+    /// 캔버스 위 컨트롤의 글자색도 여기서 갈립니다.
+    /// </summary>
+    public CanvasBackgroundKind CanvasBackground { get; init; } = CanvasBackgroundKind.Black;
+
+    /// <summary>
+    /// macOS <c>developsImportsAutomatically</c>. 가져온 사진을 곧바로 현상할지입니다.
+    /// </summary>
+    public bool DevelopsImportsAutomatically { get; init; } = true;
+
+    /// <summary>
+    /// macOS <c>model.demoMode</c>. <b>다음 실행까지 남지 않습니다</b> — macOS 도
+    /// <c>@Published var demoMode = false</c> 로 세션 값이며, 켜 둔 채 다시 켰을 때
+    /// 진짜 스캐너 대신 시뮬레이터가 조용히 도는 일을 막습니다.
+    /// </summary>
+    public bool ScannerSimulatorEnabled { get; init; }
 
     /// <summary>
     /// macOS <c>clippingOverlayEnabled</c>. 현상 결과는 바꾸지 않고 미리보기에만 경계를 표시합니다.
@@ -101,6 +145,23 @@ public sealed record ShellPreferences
     /// </summary>
     public ImageRotation DefaultScanRotation { get; init; } = ImageRotation.Degrees0;
 
+    /// <summary>
+    /// 현상·인화 내보내기가 <b>실제로 쓸</b> 설정입니다. 출력 패널에서 따로 고른 폴더가
+    /// 없으면 디스크 탭의 "내보내기 폴더"를 씁니다.
+    /// </summary>
+    /// <remarks>
+    /// 여기를 거치지 않고 <see cref="Export"/> 를 바로 쓰면 폴더가 빈 문자열이라 파일이
+    /// 어디에도 저장되지 않습니다 — 디스크 탭이 생기기 전의 상태가 정확히 그랬습니다.
+    /// </remarks>
+    public ExportSettings ResolvedExport => Export.FolderPath.Length != 0
+        ? Export
+        : Export with { FolderPath = new DiskStorageLocations(Disk).Export };
+
+    /// <summary>빠른 내보내기의 같은 자리입니다 — 디스크 탭의 "빠른 내보내기 폴더".</summary>
+    public QuickExportSettings ResolvedQuickExport => QuickExport.FolderPath.Length != 0
+        ? QuickExport
+        : QuickExport with { FolderPath = new DiskStorageLocations(Disk).QuickExport };
+
     public ShellPreferences Normalize()
     {
         return this with
@@ -111,7 +172,13 @@ public sealed record ShellPreferences
             ExportRecipes = (ExportRecipes ?? new ExportRecipeLibrary()).Normalize(),
             Shortcuts = (Shortcuts ?? new WorkflowShortcutMap()).Normalize(),
             Print = (Print ?? new PrintPreferences()).Normalize(),
+            FrameCache = (FrameCache ?? new FrameCacheResidencySettings()).Normalize(),
+            Disk = (Disk ?? new DiskStorageSettings()).Normalize(),
+            Backup = (Backup ?? new LibraryBackupSettings()).Normalize(),
             Language = AppLanguages.Normalize(Language),
+            CanvasBackground = Enum.IsDefined(CanvasBackground)
+                ? CanvasBackground
+                : CanvasBackgroundKind.Black,
             DefaultScanRotation = Enum.IsDefined(DefaultScanRotation)
                 ? DefaultScanRotation
                 : ImageRotation.Degrees0,

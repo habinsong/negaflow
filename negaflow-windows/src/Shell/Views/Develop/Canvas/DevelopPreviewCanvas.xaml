@@ -9,7 +9,6 @@
         x:Name="CanvasHost"
         x:FieldModifier="internal"
         AutomationProperties.AutomationId="negaflow.canvas"
-    Background="{ThemeResource NegaflowCanvasBrush}"
     IsTabStop="True"
     KeyDown="OnCanvasKeyDown"
     PointerCanceled="OnCanvasPointerCancelled"
@@ -145,7 +144,7 @@
 
     <!-- macOS `LocalAdjustmentOverlay.promptBar` — 그리는 동안 사진 위에 뜹니다.
          `HStack(spacing: 8) { 종류 아이콘, "사진 위에 그리세요", (다각형이고 꼭짓점 3개 이상이면)
-         [다각형 완료], [✕] }` 에 가로 여백 11 · 세로 6 · 라운딩 9 · 위 12 입니다.
+         [다각형 완료], [] }` 에 가로 여백 11 · 세로 6 · 라운딩 9 · 위 12 입니다.
          베이스 스포이드 안내와 달리 단추가 있으므로 클릭을 받습니다. -->
     <Border
         x:Name="LocalAdjustmentPrompt" x:FieldModifier="internal"

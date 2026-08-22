@@ -32,6 +32,19 @@ public sealed partial class ColorMixerEditor : UserControl
     private ColorMixerProperty property = ColorMixerProperty.Hue;
     private bool isSynchronizing;
 
+    /// <summary>
+    /// 지금 화면에 놓인 슬라이더입니다. 값이 바뀔 때 <b>이것들의 값만</b> 갱신합니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 값이 바뀔 때마다 <c>RebuildBands</c> 로 밴드를 전부 새로 만들었습니다. 그
+    /// 호출은 <see cref="InspectorSlider.ValueChanged"/> 안에서 일어나므로 <b>끌고 있던
+    /// 슬라이더 자신이 트리에서 빠졌고</b>, 포인터 캡처가 함께 사라져 손을 떼기 전까지
+    /// 더 움직이지 않았습니다. macOS 는 SwiftUI 가 같은 뷰를 유지한 채 값만 다시 읽습니다 —
+    /// 같은 파일의 <c>ColorGradingEditor.RenderEditor</c> 도 XAML 로 선언한 슬라이더의
+    /// <c>Value</c> 만 다시 넣습니다.
+    /// </remarks>
+    private readonly List<(int Index, ColorMixerProperty Channel, InspectorSlider Slider)> bandSliders = [];
+
     public ColorMixerEditor()
     {
         InitializeComponent();
@@ -72,7 +85,7 @@ public sealed partial class ColorMixerEditor : UserControl
     private static void OnMixerChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
     {
         _ = args;
-        ((ColorMixerEditor)sender).RebuildBands();
+        ((ColorMixerEditor)sender).SynchronizeBandValues();
     }
 
     private void OnPropertyChecked(object sender, RoutedEventArgs args)
@@ -102,11 +115,39 @@ public sealed partial class ColorMixerEditor : UserControl
         }
         isSynchronizing = true;
         BandsPanel.Children.Clear();
+        bandSliders.Clear();
         for (int index = 0; index < ColorMixerRecipe.BandCount; index++)
         {
             BandsPanel.Children.Add(property == ColorMixerProperty.All
                 ? BuildAllBand(index)
                 : BuildSwatchSlider(index, property));
+        }
+        isSynchronizing = false;
+    }
+
+    /// <summary>
+    /// 이미 놓인 슬라이더의 값만 다시 넣습니다. 요소를 만들거나 지우지 않으므로 끌고 있던
+    /// 슬라이더의 포인터 캡처가 살아 있습니다.
+    /// </summary>
+    /// <remarks>
+    /// 밴드 구성이 바뀌는 것은 위 캡슐(색조·채도·광도·모두)을 눌렀을 때뿐이며, 그때만
+    /// <see cref="RebuildBands"/> 가 다시 만듭니다.
+    /// </remarks>
+    private void SynchronizeBandValues()
+    {
+        if (BandsPanel is null)
+        {
+            return;
+        }
+        if (bandSliders.Count == 0)
+        {
+            RebuildBands();
+            return;
+        }
+        isSynchronizing = true;
+        foreach ((int index, ColorMixerProperty channel, InspectorSlider slider) in bandSliders)
+        {
+            slider.Value = GetValue(channel, index);
         }
         isSynchronizing = false;
     }
@@ -181,6 +222,7 @@ public sealed partial class ColorMixerEditor : UserControl
             SliderAutomationId = $"negaflow.develop.color-mixer.{ChannelName(channel)}.{ChannelNameForBand(index)}",
         };
         slider.ValueChanged += (_, args) => OnSliderChanged(index, channel, args.Value);
+        bandSliders.Add((index, channel, slider));
         return slider;
     }
 

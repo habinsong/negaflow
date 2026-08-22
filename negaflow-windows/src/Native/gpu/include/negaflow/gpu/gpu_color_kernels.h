@@ -22,8 +22,8 @@ class GpuWorkingImage;
 // `imaging::ColorGradingSetup` 과 같은 값입니다. gpu 라이브러리가 imaging 에 의존하지 않도록
 // (의존 방향이 반대여야 합니다) 같은 모양으로 여기 둡니다.
 //
-// ☠️ 이 값들을 **여기서 계산하지 마십시오.** `imaging::prepare_color_grading` 이 만든 것을
-//    그대로 옮겨 담으십시오. 두 벌이 되면 CPU 와 GPU 가 조용히 갈라집니다.
+// 이 값들을 **여기서 계산하지 마십시오.** `imaging::prepare_color_grading` 이 만든 것을
+// 그대로 옮겨 담으십시오. 두 벌이 되면 CPU 와 GPU 가 조용히 갈라집니다.
 struct GpuColorGradeSetup final {
     float shadow_offset[3]{0.0F, 0.0F, 0.0F};
     float midtone_offset[3]{0.0F, 0.0F, 0.0F};
@@ -90,8 +90,8 @@ private:
 
 // `imaging::BwToningSetup` 과 같은 값입니다.
 //
-// ☠️ 색조를 **여기서 계산하지 마십시오.** `imaging::prepare_bw_toning` 이 만든 것을 그대로
-//    옮겨 담으십시오(채도 0.78 고정의 HSV 변환입니다).
+// 색조를 **여기서 계산하지 마십시오.** `imaging::prepare_bw_toning` 이 만든 것을 그대로
+// 옮겨 담으십시오(채도 0.78 고정의 HSV 변환입니다).
 struct GpuBwToningSetup final {
     float shadow_tint[3]{1.0F, 1.0F, 1.0F};
     float highlight_tint[3]{1.0F, 1.0F, 1.0F};
@@ -121,8 +121,8 @@ private:
 
 // `imaging::DigitalBwEmulsionSetup` 과 같은 값입니다.
 //
-// ☠️ **여기서 계산하지 마십시오.** `imaging::prepare_digital_bw_emulsion_response` 가 만든 것을
-//    그대로 옮겨 담으십시오 — 필름 프로파일 표가 CPU 쪽에 있습니다.
+// **여기서 계산하지 마십시오.** `imaging::prepare_digital_bw_emulsion_response` 가 만든 것을
+// 그대로 옮겨 담으십시오 — 필름 프로파일 표가 CPU 쪽에 있습니다.
 struct GpuDigitalBwFilmSetup final {
     float weights[3]{0.2126F, 0.7152F, 0.0722F};
     float contrast{0.0F};
@@ -172,4 +172,4 @@ private:
     GpuPointwiseKernel kernel_{};
 };
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

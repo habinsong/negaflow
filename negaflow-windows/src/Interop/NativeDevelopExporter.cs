@@ -82,6 +82,15 @@ public static unsafe class NativeDevelopExporter
         NativeDevelopExportCommand.Preview(
             request, maximumWidth, maximumHeight, pixels, run, softProof, clippingOverlay);
 
+    public static DevelopExportResult PreviewBackground(
+        DevelopExportRequest request,
+        uint maximumWidth,
+        uint maximumHeight,
+        Span<byte> pixels,
+        DevelopRun? run = null) =>
+        NativeDevelopExportCommand.PreviewBackground(
+            request, maximumWidth, maximumHeight, pixels, run);
+
     public static GrainMendDetectionResult DetectGrainMend(
         DevelopExportRequest request,
         Span<byte> mask,

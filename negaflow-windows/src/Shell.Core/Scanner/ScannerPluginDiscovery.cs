@@ -117,9 +117,21 @@ public static class ScannerPluginDiscovery
     {
         ArgumentNullException.ThrowIfNull(plugin);
         ArgumentNullException.ThrowIfNull(approvedIdentity);
+        return string.Equals(
+                plugin.Manifest.Id,
+                approvedIdentity.PluginId,
+                StringComparison.Ordinal) &&
+            CurrentTrustIdentity(plugin) == approvedIdentity;
+    }
 
-        if (!string.Equals(plugin.Manifest.Id, approvedIdentity.PluginId, StringComparison.Ordinal) ||
-            !TryReadManifest(
+    /// <summary>
+    /// 지금 디스크에 있는 파일이 내는 신뢰 identity 입니다. 읽지 못하면
+    /// <see langword="null"/> 이며, 진단이 "무엇이 달라졌는지" 를 말할 수 있게 공개합니다.
+    /// </summary>
+    public static ScannerPluginTrustIdentity? CurrentTrustIdentity(InstalledScannerPlugin plugin)
+    {
+        ArgumentNullException.ThrowIfNull(plugin);
+        if (!TryReadManifest(
                 Path.GetDirectoryName(plugin.ManifestPath)!,
                 out ScannerPluginManifest? manifest,
                 out string manifestPath) ||
@@ -132,15 +144,13 @@ public static class ScannerPluginDiscovery
             !TryHashFile(manifestPath, out string manifestHash) ||
             !TryHashFile(executablePath, out string executableHash))
         {
-            return false;
+            return null;
         }
-
-        ScannerPluginTrustIdentity current = new(
+        return new ScannerPluginTrustIdentity(
             manifest.Id,
             manifest.PluginVersion,
             manifestHash,
             executableHash);
-        return current == approvedIdentity;
     }
 
     private static bool TryReadManifest(

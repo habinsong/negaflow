@@ -63,8 +63,12 @@ internal static class DevelopRequestDefectTests
               [
                   new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Region, 0),
               ]) &&
+              // 내용 해시가 꺼져 있으면(기본값) sha 자리는 0 입니다 — 네이티브가 그것을
+              // "바이트 수만 확인" 으로 읽습니다. ABI 가 identity 자체는 요구하므로 자리는
+              // 그대로 채워 보냅니다.
               defectRequest.Request.DefectSourceIdentity ==
-                  new DevelopDefectSourceIdentity(123, new string('d', 64)),
+                  new DevelopDefectSourceIdentity(123, new string(char.Parse("0"), 64)) &&
+              defectRequest.Request.DefectRecipeSha256 == defectRecipe.RecipeSha256,
             "develop_request_projects_persisted_region_defect");
 
         byte[] infraredCoreRgba = new byte[4 * 4 * 4];
@@ -158,7 +162,9 @@ internal static class DevelopRequestDefectTests
                 new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Infrared, 0),
                 new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Clone, 0),
                 new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Region, 1),
-            ]),
+            ]) &&
+            orderedDefectRequest.Request.DefectRecipeSha256 ==
+                orderedDefectRecipe.RecipeSha256,
             "develop_request_preserves_interleaved_region_infrared_clone_order");
 
         DefectEditItem legacyInfraredEdit = infraredEdit with
@@ -275,8 +281,30 @@ internal static class DevelopRequestDefectTests
                 new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Brush, 0),
             ]) &&
             brushDefectRequest.Request.DefectSourceIdentity ==
-                new DevelopDefectSourceIdentity(123, new string('d', 64)),
+                new DevelopDefectSourceIdentity(123, new string(char.Parse("0"), 64)),
             "develop_request_projects_brush_and_preserves_order");
+
+        // 설정 `이미지 내용 해시` 를 켜면 **원본 sha 가 실려야** 합니다. 이것이 빠지면
+        // 네이티브가 내용 검증을 영영 건너뛰고, 설정이 다시 죽은 값이 됩니다.
+        // 끄면 sha 자리가 0 이고 네이티브는 바이트 수만 확인합니다 — 그래야 결함 편집이
+        // 걸린 사진의 슬라이더가 렌더마다 원본 전체를 다시 읽지 않습니다.
+        try
+        {
+            DevelopRequestFactory.VerifyDefectSourceContent = true;
+            Check(
+                DevelopRequestFactory.Create(
+                    Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
+                    {
+                        DefectRecipe = defectRecipe,
+                    },
+                    destination).Request?.DefectSourceIdentity ==
+                        new DevelopDefectSourceIdentity(123, new string('d', 64)),
+                "develop_request_carries_source_sha_when_content_hash_is_on");
+        }
+        finally
+        {
+            DevelopRequestFactory.VerifyDefectSourceContent = false;
+        }
 
         DefectEditItem invalidBrushEdit = brushEdit with
         {

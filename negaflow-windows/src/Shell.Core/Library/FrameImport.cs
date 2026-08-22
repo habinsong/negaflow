@@ -34,6 +34,12 @@ public sealed record ScannerFrameImport(
     /// 않도록 설정에서 정합니다. <b>원본은 건드리지 않습니다</b> — recipe 에만 적힙니다.
     /// </summary>
     public ImageRotation Rotation { get; init; } = ImageRotation.Degrees0;
+
+    /// <summary>
+    /// 평판 프리뷰 스캔입니다. macOS <c>isPreviewScan: preview</c> 와 같은 뜻이며, 이 표시가
+    /// 붙은 프레임은 장수 세기와 내보내기에서 빠집니다.
+    /// </summary>
+    public bool IsPreviewScan { get; init; }
 }
 
 public sealed record FrameImportPlan(
@@ -125,8 +131,8 @@ public static class FrameImport
                 ["rawScanPath"] = path,
                 // macOS 는 가져오기에서 `customDisplayName` 을 **쓰지 않습니다**. 비워 두면
                 // `sourceFileBaseName`(확장자 뗀 파일 이름)으로 물러납니다.
-                // ☠️ 여기에 `Path.GetFileName` 을 박아 두면 카드·필름스트립·창 제목이 모두
-                //    `이름.tiff` 가 되고, 내보내기 파일명까지 `이름.tiff.jpg` 로 나옵니다.
+                // 여기에 `Path.GetFileName` 을 박아 두면 카드·필름스트립·창 제목이 모두
+                // `이름.tiff` 가 되고, 내보내기 파일명까지 `이름.tiff.jpg` 로 나옵니다.
                 ["scanIndex"] = nextScanIndex,
                 ["sourceKind"] = "imported",
                 ["params"] = new JsonObject(),
@@ -228,6 +234,11 @@ public static class FrameImport
             ["sourceKind"] = "scanner",
             ["params"] = RotationParameters(scan.Rotation),
         };
+        if (scan.IsPreviewScan)
+        {
+            // 프리뷰는 프레임 찾기용 임시 그림입니다. 장수 세기와 내보내기에서 빠집니다.
+            record[LibraryFrameReader.IsPreviewScanName] = true;
+        }
         if (scan.InfraredPath is { } validInfrared)
         {
             record[LibraryFrameReader.InfraredPathName] = validInfrared;

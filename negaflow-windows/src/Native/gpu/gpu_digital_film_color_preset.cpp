@@ -59,7 +59,7 @@ static_assert(sizeof(PresetConstants) == 32U, "two constant registers");
         parameters.blue_saturation};
 }
 
-}  // namespace
+} // namespace
 
 GpuKernelStatus GpuDigitalFilmColorPreset::create(
     const GpuDevice& device,
@@ -116,8 +116,8 @@ GpuKernelStatus GpuDigitalFilmColorPreset::dispatch(
     GpuWorkingImage* read = &scratch[0];
     GpuWorkingImage* write = &scratch[1];
 
-    // ☠️ CPU 판이 "변화 없음" 이면 커널을 안 돌리고 복사합니다. 여기서는 디스패치를
-    //    건너뛰는 것이 곧 그 복사입니다 — 돌리면 반올림이 붙어 값이 갈립니다.
+    // CPU 판이 "변화 없음" 이면 커널을 안 돌리고 복사합니다. 여기서는 디스패치를
+    // 건너뛰는 것이 곧 그 복사입니다 — 돌리면 반올림이 붙어 값이 갈립니다.
     if (imaging::has_color_mixer_change(preset.mixer)) {
         if (mixer_.dispatch(device, *read, *write, to_gpu(preset.mixer)) !=
             GpuKernelStatus::ok) {
@@ -150,4 +150,4 @@ GpuKernelStatus GpuDigitalFilmColorPreset::dispatch(
     return GpuKernelStatus::ok;
 }
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

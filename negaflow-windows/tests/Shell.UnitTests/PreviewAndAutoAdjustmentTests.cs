@@ -150,11 +150,11 @@ internal static class PreviewAndAutoAdjustmentTests
         started.GetAwaiter().GetResult();
 
         Check(exporter.CallCount == 2, "preview_coalesces_to_one_pending");
-        // ☠️ **돌고 있던 인터랙티브 렌더는 취소하지 않습니다.**
-        //    앞 판은 새 요청마다 취소했고 취소된 결과는 버려졌습니다. 그래서 슬라이더를
-        //    계속 끄는 동안에는 어떤 렌더도 완주하지 못해 **화면이 한 장도 안 바뀌었습니다**
-        //    — 사용자가 "사진이 바로 반영이 안 된다"고 본 것이 이것입니다. 인터랙티브 한
-        //    장은 짧으므로 끝까지 그려서 배달하고, 곧바로 최신 값으로 다음 장을 그립니다.
+        // **돌고 있던 인터랙티브 렌더는 취소하지 않습니다.**
+        // 앞 판은 새 요청마다 취소했고 취소된 결과는 버려졌습니다. 그래서 슬라이더를
+        // 계속 끄는 동안에는 어떤 렌더도 완주하지 못해 **화면이 한 장도 안 바뀌었습니다**
+        // — 사용자가 "사진이 바로 반영이 안 된다"고 본 것이 이것입니다. 인터랙티브 한
+        // 장은 짧으므로 끝까지 그려서 배달하고, 곧바로 최신 값으로 다음 장을 그립니다.
         Check(exporter.CancelledCount == 0, "preview_lets_the_interactive_render_finish");
         Check(delivered.Count == 2, "preview_delivers_every_finished_interactive_render");
         Check(!coordinator.IsRendering, "preview_clears_rendering_flag");

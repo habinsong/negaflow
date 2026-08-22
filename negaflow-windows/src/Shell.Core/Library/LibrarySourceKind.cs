@@ -29,11 +29,22 @@ public sealed record LibrarySourceNode(string Title, string Detail, string Glyph
     private const string FolderGlyph = "";
     private const string FrameGlyph = "";
 
+    /// <summary>
+    /// 이 폴더를 다시 연결할 수 있는가. macOS <c>LibraryFolderTreeView</c> 는 등록된 폴더가
+    /// <b>실제로 사라졌을 때만</b> 우클릭 메뉴에 "누락 폴더 찾기" 를 냅니다.
+    /// </summary>
+    public bool CanRelink { get; init; }
+
     public static LibrarySourceNode Folder(
         string title,
         string countText,
-        string? folderPath = null) =>
-        new(title, countText, FolderGlyph, null) { FolderPath = folderPath };
+        string? folderPath = null,
+        bool canRelink = false) =>
+        new(title, countText, FolderGlyph, null)
+        {
+            FolderPath = folderPath,
+            CanRelink = canRelink,
+        };
 
     public static LibrarySourceNode Frame(string title, string frameId) =>
         new(title, string.Empty, FrameGlyph, frameId);

@@ -21,13 +21,14 @@ internal static unsafe class NativeDevelopExportCommand
         NativeLocalDodgeBurnPayload local = BuildLocalDodgeBurnPayload(
             request.LocalDodgeBurn);
         NativeDefectRegionPayload defects = BuildDefectRegionPayload(
-            request.DefectRegions, request.DefectInfrared);
+            request.DefectRegions, request.DefectInfrared, request.DefectRecipeSha256);
         NativeDefectClonePayload clones = BuildDefectClonePayload(
             request.DefectClones);
         NativeDefectBrushPayload brushes = BuildDefectBrushPayload(
             request.DefectBrushes);
         NativeDefectRecipeEditRefV1[] defectEditOrder = BuildDefectEditOrder(request);
         byte[] defectSourceSha256 = BuildDefectSourceSha256(request);
+        byte[] defectRecipeSha256 = BuildDefectRecipeSha256(request);
 
         NativeDevelopExportResultV4 raw = default;
         raw.StructSize = (uint)sizeof(NativeDevelopExportResultV4);
@@ -49,6 +50,7 @@ internal static unsafe class NativeDevelopExportCommand
         fixed (NativeDefectRegionEditV1* defectRegionEdits = defects.Edits)
         fixed (byte* defectMaskBytes = defects.MaskBytes)
         fixed (byte* defectSourceDigest = defectSourceSha256)
+        fixed (byte* defectRecipeDigest = defectRecipeSha256)
         fixed (NativeDefectCloneEditV1* defectCloneEdits = clones.Edits)
         fixed (NativeDefectCloneStrokeV1* defectCloneStrokes = clones.Strokes)
         fixed (NativeDefectClonePointV1* defectClonePoints = clones.Points)
@@ -124,17 +126,32 @@ internal static unsafe class NativeDevelopExportCommand
             fixed (char* filmStock = values.FilmStock)
             fixed (char* capturedAt = values.CapturedAt)
             {
-                NativeDevelopExportRequestV34 native = BuildRequestV34(BuildRequestV33(
-                    v32, request, make, model, software, artist, copyright, filmType,
-                    filmStock, capturedAt), request);
-                status = NativeDevelopRun.nf_develop_export_v34(
-                    &native,
-                    runState,
-                    (NativeDevelopExportResultV3*)&raw);
+                NativeDevelopExportRequestV34 v34 = BuildRequestV34(
+                    BuildRequestV33(
+                        v32, request, make, model, software, artist, copyright, filmType,
+                        filmStock, capturedAt),
+                    request);
+                if (defectRecipeSha256.Length == 0)
+                {
+                    status = NativeDevelopRun.nf_develop_export_v34(
+                        &v34, runState, (NativeDevelopExportResultV3*)&raw);
+                }
+                else
+                {
+                    NativeDevelopExportRequestV35 v35 = BuildRequestV35(
+                        v34, defectRecipeDigest, checked((uint)defectRecipeSha256.Length));
+                    status = NativeDevelopRun.nf_develop_export_v35(
+                        &v35, runState, (NativeDevelopExportResultV3*)&raw);
+                }
             }
         }
 
-        return Translate(status, raw, "nf_develop_export_v34");
+        return Translate(
+            status,
+            raw,
+            defectRecipeSha256.Length == 0
+                ? "nf_develop_export_v34"
+                : "nf_develop_export_v35");
     }
 
     /// <summary>
@@ -174,6 +191,36 @@ internal static unsafe class NativeDevelopExportCommand
             softProof,
             null,
             clippingOverlay: clippingOverlay)
+            .Result;
+    }
+
+    /// <summary>
+    /// Persistent developed-cache background 채움용입니다. 표시 화소는 일반 preview와 같지만
+    /// 재생성 가능한 native Rgba32F raw proxy를 카탈로그 전체에 남기지 않습니다.
+    /// </summary>
+    public static DevelopExportResult PreviewBackground(
+        DevelopExportRequest request,
+        uint maximumWidth,
+        uint maximumHeight,
+        Span<byte> pixels,
+        DevelopRun? run = null)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentOutOfRangeException.ThrowIfZero(maximumWidth);
+        ArgumentOutOfRangeException.ThrowIfZero(maximumHeight);
+        if (pixels.IsEmpty)
+        {
+            throw new ArgumentException("The preview buffer is empty.", nameof(pixels));
+        }
+        return Render(
+            request,
+            maximumWidth,
+            maximumHeight,
+            pixels,
+            run,
+            softProof: null,
+            detection: null,
+            retainPreviewRaw: false)
             .Result;
     }
 }

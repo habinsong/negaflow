@@ -44,6 +44,9 @@ public sealed record ScannerPluginProcessLimits(
 // child tree rather than leaving a driver helper attached to the session.
 public static class ScannerPluginProcessHost
 {
+    /// <summary>BOM 없는 UTF-8. 플러그인 wire 계약의 인코딩입니다.</summary>
+    private static readonly Encoding Utf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+
     public static async Task<ScannerPluginProcessResult> RunAsync(
         InstalledScannerPlugin plugin,
         ScannerPluginTrustIdentity approvedIdentity,
@@ -59,6 +62,17 @@ public static class ScannerPluginProcessHost
         ArgumentNullException.ThrowIfNull(arguments);
         if (!ScannerPluginDiscovery.HasCurrentTrustIdentity(plugin, approvedIdentity))
         {
+            // 실행 직전에 파일 바이트를 다시 확인합니다. 여기서 막히면 화면에는
+            // ProcessFailed 로만 보이므로, 무엇이 달라졌는지 여기서만 알 수 있습니다.
+            ScannerPluginTrustIdentity? current = ScannerPluginDiscovery.CurrentTrustIdentity(plugin);
+            ScannerDiagnosticsLog.Write(
+                $"plugin UNTRUSTED operation={operation} id={plugin.Manifest.Id} " +
+                $"approvedVersion={approvedIdentity.PluginVersion ?? "-"} " +
+                $"currentVersion={current?.PluginVersion ?? "-"} " +
+                $"manifestSha approved={Short(approvedIdentity.ManifestSha256)} " +
+                $"current={Short(current?.ManifestSha256)} " +
+                $"exeSha approved={Short(approvedIdentity.ExecutableSha256)} " +
+                $"current={Short(current?.ExecutableSha256)}");
             return new(ScannerPluginProcessStatus.Untrusted, null, [], string.Empty);
         }
 
@@ -83,6 +97,15 @@ public static class ScannerPluginProcessHost
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             WorkingDirectory = Path.GetDirectoryName(plugin.ExecutablePath)!,
+            // **셋 다 UTF-8 로 못 박습니다.** 지정하지 않으면 .NET 이 콘솔 코드 페이지를
+            // 씁니다 — 이 기기에서는 CP949 입니다. 플러그인 wire 계약은 UTF-8 JSON 이므로,
+            // 스캔 목적지에 비ASCII 가 들어가는 순간(기본 롤 폴더가 한국어 "무제 필름")
+            // 요청이 UTF-8 이 아닌 바이트로 나갑니다. 받는 쪽은 그것을 UTF-8 로 읽습니다.
+            // 응답도 마찬가지로 UTF-8 이라, 읽는 인코딩이 다르면 진단 문구가 깨집니다.
+            // macOS 는 `Data` 를 그대로 파이프에 쓰므로 이 문제가 없습니다.
+            StandardInputEncoding = standardInput is null ? null : Utf8,
+            StandardOutputEncoding = Utf8,
+            StandardErrorEncoding = Utf8,
         };
         startInfo.ArgumentList.Add(operation);
         foreach (string argument in arguments)
@@ -102,12 +125,18 @@ public static class ScannerPluginProcessHost
                 return new(ScannerPluginProcessStatus.LaunchFailed, null, [], string.Empty);
             }
         }
-        catch (Win32Exception)
+        catch (Win32Exception error)
         {
+            ScannerDiagnosticsLog.Write(
+                $"plugin LAUNCH-FAILED operation={operation} {plugin.ExecutablePath} " +
+                $"Win32 0x{error.NativeErrorCode:X8} {error.Message}");
             return new(ScannerPluginProcessStatus.LaunchFailed, null, [], string.Empty);
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException error)
         {
+            ScannerDiagnosticsLog.Write(
+                $"plugin LAUNCH-FAILED operation={operation} {plugin.ExecutablePath} " +
+                $"{error.GetType().Name} {error.Message}");
             return new(ScannerPluginProcessStatus.LaunchFailed, null, [], string.Empty);
         }
 
@@ -180,6 +209,9 @@ public static class ScannerPluginProcessHost
             return new(ScannerPluginProcessStatus.Failed, ExitCode(process), [], string.Empty);
         }
     }
+
+    private static string Short(string? sha) =>
+        string.IsNullOrEmpty(sha) ? "-" : sha[..Math.Min(12, sha.Length)];
 
     private static async Task<StandardOutput> ReadStandardOutputAsync(
         StreamReader reader,

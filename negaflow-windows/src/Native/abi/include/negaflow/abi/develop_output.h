@@ -118,6 +118,15 @@ typedef struct nf_develop_export_request_v34 {
     uint32_t alpha_reserved2;
 } nf_develop_export_request_v34;
 
+/* v35 appends the validated fingerprint of the ordered render-affecting Defects recipe.
+   It is a cache invalidation identity only; the projected edit payload remains authoritative. */
+typedef struct nf_develop_export_request_v35 {
+    nf_develop_export_request_v34 v34;
+    const uint8_t* defect_recipe_sha256;
+    uint32_t defect_recipe_sha256_size;
+    uint32_t defect_recipe_identity_reserved;
+} nf_develop_export_request_v35;
+
 #ifdef __cplusplus
 }
 #endif

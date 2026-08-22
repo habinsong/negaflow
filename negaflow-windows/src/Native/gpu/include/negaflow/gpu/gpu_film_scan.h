@@ -7,14 +7,14 @@
 // `gpu_neighborhood.h` 에 있습니다 — 가우시안(fine) · 가이드 필터(middle·coarse) ·
 // 3×3 중앙값(med3·med5). 그 순서와 반경은 `film_scan_denoise_tile.cpp:72-83` 입니다.
 //
-// ☠️ **전체 이미지를 한 번에 도는 오케스트레이터는 아직 없습니다.** CPU 는 512px 타일에
-//    18px 에이프런으로 도는데, 그 에이프런이 필터 지원(가우시안 4 + 가이드 7 + 7)과
-//    **정확히 같아서** 타일 결과와 전체 이미지 결과가 같습니다
-//    (`film_scan_denoise.h:17-19` 의 주석이 그 계산입니다).
-//    그러나 GPU 에서 전체를 한 번에 돌면 중간 텍스처가 13장 필요하고, 24MP float32 RGBA
-//    에서는 **5 GB** 입니다. 타일이 GPU 에서도 필요합니다 —
-//    [`04-gpu-plan.md`](../../../../docs/audit/04-gpu-plan.md) 8절의 위험 표와 같은 자리입니다.
-//    **재기 전에는 타일 크기를 정하지 마십시오.**
+// **전체 이미지를 한 번에 도는 오케스트레이터는 아직 없습니다.** CPU 는 512px 타일에
+// 18px 에이프런으로 도는데, 그 에이프런이 필터 지원(가우시안 4 + 가이드 7 + 7)과
+// **정확히 같아서** 타일 결과와 전체 이미지 결과가 같습니다
+// (`film_scan_denoise.h:17-19` 의 주석이 그 계산입니다).
+// 그러나 GPU 에서 전체를 한 번에 돌면 중간 텍스처가 13장 필요하고, 24MP float32 RGBA
+// 에서는 **5 GB** 입니다. 타일이 GPU 에서도 필요합니다 —
+// [`04-gpu-plan.md`](../../../../docs/audit/04-gpu-plan.md) 8절의 위험 표와 같은 자리입니다.
+// **재기 전에는 타일 크기를 정하지 마십시오.**
 
 #include <cstdint>
 
@@ -52,7 +52,7 @@ private:
 // `film_scan_denoise_tile.cpp:74-77` 입니다 — `guide = luminance(fine)` 를 만들고
 // 가이드 필터가 요구하는 묶음 `(source.rgb, guide)` 로 담습니다.
 //
-// ☠️ 이 커널이 없으면 이 한 걸음 때문에 타일마다 다운로드 2회 + 업로드 1회가 붙습니다.
+// 이 커널이 없으면 이 한 걸음 때문에 타일마다 다운로드 2회 + 업로드 1회가 붙습니다.
 class GpuGuidePack final {
 public:
     GpuGuidePack() noexcept = default;
@@ -140,4 +140,4 @@ private:
     ID3D11Buffer* constants_{nullptr};
 };
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

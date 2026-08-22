@@ -129,6 +129,15 @@ public sealed class LibraryDocument : IDisposable
     }
 
     /// <summary>
+    /// 카탈로그 백업 세대를 하나 만듭니다. macOS <c>createLibraryBackupNow()</c> 자리입니다.
+    /// </summary>
+    /// <remarks>
+    /// 되돌릴 수 없는 손실을 막는 유일한 장치이므로 <b>편집이 막혀 있으면 만들지 않습니다</b> —
+    /// <see cref="CatalogSession.CreateBackup"/> 이 그 판정을 합니다.
+    /// </remarks>
+    public CatalogBackupCreateResult CreateBackup() => session.CreateBackup();
+
+    /// <summary>
     /// 마지막 저장 뒤에 바뀐 것이 있는지. 편집은 메모리에서 먼저 일어나므로 이 표시가 없으면
     /// 셸은 무엇을 저장해야 하는지 알 수 없고, 창을 닫을 때 조용히 잃습니다.
     /// </summary>

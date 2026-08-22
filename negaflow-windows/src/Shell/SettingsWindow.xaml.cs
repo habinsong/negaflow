@@ -10,7 +10,9 @@ public sealed partial class SettingsWindow : Window
 
     public SettingsWindow(
         PresentationSettingsStore settingsStore,
-        WorkspacePresentationState workspaceState)
+        WorkspacePresentationState workspaceState,
+        LibraryHostService? libraryHost = null,
+        Negaflow.Shell.Library.ThumbnailService? thumbnails = null)
     {
         ArgumentNullException.ThrowIfNull(settingsStore);
         ArgumentNullException.ThrowIfNull(workspaceState);
@@ -19,7 +21,7 @@ public sealed partial class SettingsWindow : Window
         WindowIcon.Apply(AppWindow);
         Title = AppResources.Get("commandSettings", "Value");
 
-        SettingsView.Initialize(workspaceState, AppWindow.Id);
+        SettingsView.Initialize(workspaceState, AppWindow.Id, libraryHost, thumbnails);
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {
             presenter.IsResizable = false;

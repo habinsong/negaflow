@@ -98,6 +98,8 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
         ArgumentNullException.ThrowIfNull(device);
         // macOS 의 mock 과 같은 값입니다. 평판은 7200 을 내지 않습니다.
         bool flatbed = string.Equals(device.Id, FlatbedScannerId, StringComparison.Ordinal);
+        double maxWidth = flatbed ? 210.0 : 36.0;
+        double maxHeight = flatbed ? 297.0 : 24.0;
         return Task.FromResult(new ScannerPluginCapabilitiesResult(
             Succeeded(),
             new ScannerPluginCapabilities(
@@ -113,8 +115,11 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
                 ["tiff"],
                 "simulator",
                 // macOS mock 과 같은 크기입니다. 필름 스캐너는 35mm 한 컷, 평판은 A4 입니다.
-                flatbed ? 210.0 : 36.0,
-                flatbed ? 297.0 : 24.0),
+                maxWidth,
+                maxHeight,
+                new ScannerPluginScanArea(0.0, 0.0, 36.0, 24.0),
+                new ScannerPluginScanArea(0.0, 0.0, maxWidth, maxHeight),
+                "millimeter"),
             false));
     }
 
@@ -126,6 +131,7 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
         ScannerPluginTrustIdentity approvedIdentity,
         ScannerPluginScanRequest request,
         LibraryHostService library,
+        bool isPreviewScan,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -151,8 +157,11 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
         ScannerFramePublishResult published = library.PublishScannerFrame(
             new ScannerFrameImport(
                 commit.Artifacts!.VisiblePath,
-                commit.Artifacts.InfraredPath,
-                request.Process),
+                isPreviewScan ? null : commit.Artifacts.InfraredPath,
+                request.Process)
+            {
+                IsPreviewScan = isPreviewScan,
+            },
             null,
             null);
         return Task.FromResult(new ScannerPluginLibraryScanResult(

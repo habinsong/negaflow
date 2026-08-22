@@ -203,8 +203,8 @@ void point_curve_matches_cpu(const GpuDevice& device, const char* const label) {
     }
 
     for (const CurveCase& scenario : scenarios) {
-        // ☠️ LUT 를 시험에서 다시 만들지 않습니다 — CPU 와 같은 함수를 씁니다.
-        //    여기서 베껴 쓰면 셰이더가 틀려도 시험이 같이 틀려 통과합니다.
+        // LUT 를 시험에서 다시 만들지 않습니다 — CPU 와 같은 함수를 씁니다.
+        // 여기서 베껴 쓰면 셰이더가 틀려도 시험이 같이 틀려 통과합니다.
         negaflow::imaging::PointCurveLuts cpu_luts{};
         if (negaflow::imaging::build_point_curve_luts(scenario.curves, cpu_luts) !=
             negaflow::core::KernelStatus::ok) {
@@ -257,7 +257,7 @@ void point_curve_matches_cpu(const GpuDevice& device, const char* const label) {
         "a NaN lut sample is rejected");
 }
 
-}  // namespace
+} // namespace
 
 int main() {
     const GpuDevice warp = GpuDevice::create(GpuDevicePreference::warp_only);

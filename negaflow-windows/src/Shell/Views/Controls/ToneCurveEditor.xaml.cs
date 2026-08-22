@@ -68,9 +68,9 @@ public sealed partial class ToneCurveEditor : UserControl
             AppResources.Get("developPointCurveCanvasHelp", "Value"));
         // 채널 이름은 리소스에서 옵니다.
         //
-        // ☠️ 합성 채널의 이름은 **DR** 입니다 — macOS `ToneCurveEditor.Channel.rgb` 가
-        //    `dynamicRangeChannel` 을 쓰고, 영어·한국어 표 모두 "DR" 입니다. 여기에 "RGB" 를
-        //    박아 두면 화면에 없는 이름을 지어내는 것입니다.
+        // 합성 채널의 이름은 **DR** 입니다 — macOS `ToneCurveEditor.Channel.rgb` 가
+        // `dynamicRangeChannel` 을 쓰고, 영어·한국어 표 모두 "DR" 입니다. 여기에 "RGB" 를
+        // 박아 두면 화면에 없는 이름을 지어내는 것입니다.
         SetChannelText(RedChannelButton, AppResources.Get("developRed", "Text"));
         SetChannelText(GreenChannelButton, AppResources.Get("developGreen", "Text"));
         SetChannelText(BlueChannelButton, AppResources.Get("developBlue", "Text"));

@@ -19,6 +19,15 @@ public sealed partial class LibraryScanPanel : UserControl
     /// <summary>마지막 프리뷰 스캔의 밝기 값입니다. 자동 프레임 찾기가 이것으로 셉니다.</summary>
     internal PreviewLuminance flatbedPreview = PreviewLuminance.None;
     internal ImageRotation defaultRotation = ImageRotation.Degrees0;
+
+    /// <summary>
+    /// 설정 · 디스크 탭에서 고른 "스캔 원본" 폴더입니다. 스캔 패널에서 따로 고른 자리가
+    /// 없을 때 여기에 씁니다 — 예전에는 <c>%LOCALAPPDATA%</c> 아래로만 갔습니다.
+    /// </summary>
+    internal string diskScanRoot = string.Empty;
+
+    /// <summary>설정 · 디스크 탭의 "스캔 프리뷰 캐시 폴더" 입니다.</summary>
+    internal string diskScanPreviewRoot = string.Empty;
     internal readonly LibraryScanRenderer renderer;
     internal readonly LibraryScanRunner runner;
     internal readonly LibraryScanCopy copy;
@@ -42,6 +51,12 @@ public sealed partial class LibraryScanPanel : UserControl
 
     /// <summary>카탈로그에 올린 뒤 격자를 다시 그릴 때 올립니다.</summary>
     public event EventHandler? LibraryChanged;
+
+    /// <summary>
+    /// 평판 프리뷰나 그 위의 프레임이 바뀌었습니다. 라이브러리 화면이 오버레이를 다시
+    /// 그립니다 - macOS 는 프리뷰 프레임이 곧 캔버스라 이 알림이 필요 없습니다.
+    /// </summary>
+    public event EventHandler? FlatbedPreviewChanged;
 
     /// <summary>
     /// 세션 값이 화면에 반영될 때마다 올립니다. 창 안 메뉴막대가 macOS 스캐너 메뉴처럼
@@ -80,6 +95,7 @@ public sealed partial class LibraryScanPanel : UserControl
             return;
         }
         session.SetSimulatorEnabled(!session.SimulatorEnabled);
+        SimulatorPublisher?.Invoke(session.SimulatorEnabled);
         RaiseMenuStateChanged();
         if (session.State is ScanSessionState.NoDevice)
         {
@@ -107,12 +123,61 @@ public sealed partial class LibraryScanPanel : UserControl
         renderer.Render();
     }
 
-    internal void RaiseMenuStateChanged() => MenuStateChanged?.Invoke(this, EventArgs.Empty);
+    internal void RaiseMenuStateChanged()
+    {
+        PublishCapabilities();
+        MenuStateChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     public void Bind(LibraryHostService host)
     {
         ArgumentNullException.ThrowIfNull(host);
         libraryHost = host;
+    }
+
+    /// <summary>
+    /// 설정 창이 "스캐너 정보" 를 읽어 갈 자리입니다. 세션이 성능을 새로 받을 때마다
+    /// 여기로 올립니다.
+    /// </summary>
+    public Action<ScannerPluginCapabilities?>? CapabilitiesPublisher { get; set; }
+
+    /// <summary>
+    /// 설정 · 워크플로의 "스캐너 시뮬레이터" 입니다. macOS <c>model.demoMode</c> 와 같은
+    /// 자리이며, 켜면 세션이 진짜 플러그인 대신 <c>SimulatedScannerGateway</c> 를 씁니다.
+    /// </summary>
+    /// <remarks>
+    /// 설정 창과 패널의 스위치와 메뉴 명령이 <b>같은 값 하나</b>를 봐야 합니다. 각자 따로
+    /// 들고 있으면 설정에서 켜도 스캔 화면은 진짜 장치를 찾습니다 - 지금까지 그랬습니다.
+    /// </remarks>
+    public async Task ApplySimulatorEnabledAsync(bool enabled)
+    {
+        if (scanSession is not { } session || session.SimulatorEnabled == enabled)
+        {
+            pendingSimulatorEnabled = enabled;
+            return;
+        }
+        pendingSimulatorEnabled = enabled;
+        session.SetSimulatorEnabled(enabled);
+        Render();
+        RaiseMenuStateChanged();
+        if (session.State is ScanSessionState.NoDevice)
+        {
+            await session.RefreshDevicesAsync();
+            Render();
+        }
+    }
+
+    /// <summary>세션이 아직 없을 때 받아 둔 값입니다. 세션이 생기면 그때 겁니다.</summary>
+    internal bool pendingSimulatorEnabled;
+
+    /// <summary>패널이나 메뉴에서 스위치를 움직이면 설정에도 적어 둡니다.</summary>
+    public Action<bool>? SimulatorPublisher { get; set; }
+
+    /// <summary>설정 · 디스크 탭의 스캔 원본 자리를 겁니다.</summary>    /// <summary>설정 · 디스크 탭의 스캔 원본 자리를 겁니다.</summary>
+    public void ApplyScanStorageRoot(string root, string previewRoot)
+    {
+        diskScanRoot = root ?? string.Empty;
+        diskScanPreviewRoot = previewRoot ?? string.Empty;
     }
 
     /// <summary>설정에서 고른 기본 스캔 회전입니다. 세션이 아직 없어도 기억해 둡니다.</summary>
@@ -126,9 +191,26 @@ public sealed partial class LibraryScanPanel : UserControl
         }
     }
 
+    /// <summary>세션이 성능을 새로 받았습니다. 설정 창에 그대로 넘깁니다.</summary>
+    internal void PublishCapabilities() =>
+        CapabilitiesPublisher?.Invoke(scanSession?.Capabilities);
+
+    /// <summary>진단이 읽는 값들입니다. 세션이 없으면 비어 있습니다.</summary>
+    internal bool SimulatorEnabledForDiagnostics => scanSession?.SimulatorEnabled ?? false;
+
+    internal string SelectedDeviceNameForDiagnostics =>
+        scanSession?.SelectedDevice?.DisplayName ?? string.Empty;
+
+    internal IReadOnlyList<InstalledScannerPlugin> PluginsForDiagnostics =>
+        scanSession?.Plugins ?? [];
+
     public void Localize() => copy.Localize();
 
-    public void Render() => renderer.Render();
+    public void Render()
+    {
+        renderer.Render();
+        PublishCapabilities();
+    }
 
     /// <summary>공유 현상 사이드바의 스캐너 명령이 이 세션을 엽니다.</summary>
     public async void Open()
@@ -249,6 +331,22 @@ public sealed partial class LibraryScanPanel : UserControl
     internal bool Wanted => IsWanted?.Invoke() == true;
 
     internal void RequestLibraryReload() => LibraryChanged?.Invoke(this, EventArgs.Empty);
+
+    internal void RaiseFlatbedPreviewChanged() =>
+        FlatbedPreviewChanged?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>오버레이가 그릴 프리뷰 파일입니다. 없으면 null 입니다.</summary>
+    internal string? FlatbedPreviewPath =>
+        scanSession is { UsesFlatbedRegionWorkflow: true } &&
+            !string.IsNullOrWhiteSpace(scanSession.LastPreviewPath)
+            ? scanSession.LastPreviewPath
+            : null;
+
+    /// <summary>오버레이가 붙잡을 세션입니다.</summary>
+    internal ScanSessionController? SessionForOverlay => scanSession;
+
+    /// <summary>오버레이가 프레임을 고쳤습니다. 개수 표시와 단추를 다시 그립니다.</summary>
+    internal void OnOverlayRegionsChanged() => renderer.Render();
 
     internal async Task OpenAsync()
     {

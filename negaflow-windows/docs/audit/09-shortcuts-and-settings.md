@@ -1,10 +1,10 @@
-> # ☠️ 하드코딩 · 가짜 구현 · 창작 · 병신 백엔드 · 병신 프론트엔드 = 죽음 ☠️
+> # 하드코딩 · 가짜 구현 · 창작 · 병신 백엔드 · 병신 프론트엔드 = 죽음
 >
-> **🔬 추측·가설 금지.** "냄새난다" 고 덮지 말고 **냄새의 원인을 찾아 없애십시오.**
+> ** 추측·가설 금지.** "냄새난다" 고 덮지 말고 **냄새의 원인을 찾아 없애십시오.**
 > 재현하고, 스택을 잡고, 계측해서 원인을 **확정**한 뒤에 고칩니다.
 > 원인을 못 잡았으면 **"못 잡았다" 고 적으십시오** — 추측으로 고친 것은 다음 사람의 함정입니다.
 >
-> **🌐 모르면 웹 검색을 적극적으로** 하십시오 — 특히 GPU·최적화·UI/UX 구현. 찾은 것은 출처를 남기십시오.
+> ** 모르면 웹 검색을 적극적으로** 하십시오 — 특히 GPU·최적화·UI/UX 구현. 찾은 것은 출처를 남기십시오.
 >
 > **백엔드**: macOS Swift 파일을 **먼저 열고** 코드를 1:1 로 그대로 옮깁니다.
 > 상수 하나, 임계 하나, 게이트 순서 하나도 지어내지 마십시오.
@@ -85,14 +85,14 @@ Windows 에만 있는 둘은 `Undo` · `Redo` 입니다(66 + 2 = 68) — macOS �
 
 | macOS `AppSettingsTab` | 아이콘 | Windows `SettingsCategory` |
 |---|---|---|
-| `general` | `gearshape` | `General` ✔ |
-| `interface` | `sidebar.left` | `Interface` ✔ |
-| `workflow` | `rectangle.stack` | `Workflow` ✔ |
-| `scan` | `scanner` | `Scan` ✔ |
-| `disk` | `externaldrive` | `Disk` ✔ |
-| `export` | `square.and.arrow.up` | `Export` ✔ |
-| `shortcuts` | `keyboard` | `Shortcuts` ✔ |
-| `legal` | `doc.text.magnifyingglass` | `Legal` ✔ |
+| `general` | `gearshape` | `General` OK |
+| `interface` | `sidebar.left` | `Interface` OK |
+| `workflow` | `rectangle.stack` | `Workflow` OK |
+| `scan` | `scanner` | `Scan` OK |
+| `disk` | `externaldrive` | `Disk` OK |
+| `export` | `square.and.arrow.up` | `Export` OK |
+| `shortcuts` | `keyboard` | `Shortcuts` OK |
+| `legal` | `doc.text.magnifyingglass` | `Legal` OK |
 
 **탭 이름과 순서는 맞습니다. 아이콘은 SF Symbols 라 Segoe 로는 같은 그림이 안 나옵니다**
 ([`08`](08-icons-and-chrome.md)).
@@ -101,19 +101,19 @@ Windows 에만 있는 둘은 `Undo` · `Redo` 입니다(66 + 2 = 68) — macOS �
 
 | 탭 | 줄 | macOS 내용 | Windows |
 |---|---:|---|---|
-| **일반** | 89 | `settingsLanguagePicker` 언어 | `LanguageComboBox` ✔ |
-| | 99 | `settingsAppearancePicker` 모양(시스템/어둡게/밝게) | `AppearanceComboBox` ✔ |
-| | 109 | `developerMode` 토글 | `DeveloperModeToggle` ✔ (켜도 나오는 게 없음 — [`10`](10-cache-and-optimization.md) 3절) |
+| **일반** | 89 | `settingsLanguagePicker` 언어 | `LanguageComboBox` OK |
+| | 99 | `settingsAppearancePicker` 모양(시스템/어둡게/밝게) | `AppearanceComboBox` OK |
+| | 109 | `developerMode` 토글 | `DeveloperModeToggle` OK (켜도 나오는 게 없음 — [`10`](10-cache-and-optimization.md) 3절) |
 | | 115 | **`MemoryCacheSettingsSection`(111줄)** — 자동/수동 · 결함제거원본 슬라이더 · 현상결과 슬라이더 · 자동복귀 단추 · 도움말 3줄 | **없음** |
 | | 116 | **`SupportBundleSettingsSection`(61줄)** — 지원 번들(진단) | **없음** |
-| **인터페이스** | 123 | `settingsCanvasBackgroundPicker` 배경(검정/회색/흰색) | `CanvasBackgroundComboBox` ✔ (그러나 macOS 는 **캔버스 우클릭**에도 있음) |
-| | 133 | 토글 — 클리핑 오버레이 | `ClippingOverlayToggle` ✔ |
+| **인터페이스** | 123 | `settingsCanvasBackgroundPicker` 배경(검정/회색/흰색) | `CanvasBackgroundComboBox` OK (그러나 macOS 는 **캔버스 우클릭**에도 있음) |
+| | 133 | 토글 — 클리핑 오버레이 | `ClippingOverlayToggle` OK |
 | | — | `PixelSamplerSettingsRow`(24줄) | `PixelSamplerToggle` (별도 행 구조 아님) |
-| **워크플로** | 152 | 토글 — 스캐너 시뮬레이터 | `ScannerSimulatorToggle` ✔ |
-| | 159 | 토글 — 현상 임포트 | `DevelopImportsToggle` ✔ |
-| | 165-172 | 미세 입자 섹션 — 자동/가이드 토글 2 | `AutoDefectMicroSpecksToggle` · `GuidedDefectMicroSpecksToggle` ✔ |
-| **스캔** | 185-188 | 스캔 기본 방향 | `ScanRotationComboBox` ✔ |
-| | 203 | `ScannerTruthSettingsSection` 스캐너 정보 | `ScannerTruthRows` ✔ |
+| **워크플로** | 152 | 토글 — 스캐너 시뮬레이터 | `ScannerSimulatorToggle` OK |
+| | 159 | 토글 — 현상 임포트 | `DevelopImportsToggle` OK |
+| | 165-172 | 미세 입자 섹션 — 자동/가이드 토글 2 | `AutoDefectMicroSpecksToggle` · `GuidedDefectMicroSpecksToggle` OK |
+| **스캔** | 185-188 | 스캔 기본 방향 | `ScanRotationComboBox` OK |
+| | 203 | `ScannerTruthSettingsSection` 스캐너 정보 | `ScannerTruthRows` OK |
 | | — | **`ScanStorageLocationView`(89줄)** 스캔 저장 위치 | **없음** |
 | **디스크** | 209 | **`DiskStorageSettingsSection`(317줄)** — 저장 위치 Picker · 루트/썸네일/내보내기 폴더 3 · 경로 초기화 단추 · **썸네일 캐시 크기 + 비우기** · **라이브러리 백업(지금 백업/찾아보기)** · `LibraryArchiveButton`(36줄) | **`ImageHashToggle` 하나** |
 | | — | `LibraryBackupScheduleView`(63줄) 백업 일정 | **없음** |
@@ -130,7 +130,7 @@ macOS 처럼 **켜져 있을 때만** 내도록 2026-08-20 에 맞췄습니다(`
 남은 큰 구멍은 **디스크 탭**(저장 위치·백업·복원·보관), **메모리 캐시 섹션**,
 **지원 번들**, **스캔 저장 위치**입니다.
 
-### 2.2 탭 안의 섹션 — ☠️ "11개 히트 0" 은 **틀렸습니다**(2026-08-20 정정)
+### 2.2 탭 안의 섹션 — "11개 히트 0" 은 **틀렸습니다**(2026-08-20 정정)
 
 타입 이름으로 찾아 낸 판정이었습니다. 화면을 열어 보니 **법적 고지**와 **색 관리**는
 이미 있습니다(위 표 참조). 아래 표에서 그 둘은 무효입니다.

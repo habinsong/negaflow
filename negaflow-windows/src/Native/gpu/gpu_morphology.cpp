@@ -96,7 +96,7 @@ void run_pass(
     return true;
 }
 
-}  // namespace
+} // namespace
 
 GpuMorphology::~GpuMorphology() { reset(); }
 
@@ -303,9 +303,9 @@ GpuKernelStatus GpuMorphology::bipolar_top_hat(
     GpuWorkingImage& closed = scratch[3];
 
     if (radius == 0U) {
-        // ☠️ CPU 는 여기서 **원본이 아니라 0** 을 냅니다(`grain_mend_morphology.cpp:183`).
-        //    `opening`·`closing` 의 조기 반환과 다릅니다.
-        //    열기·닫기가 원본과 같아지므로 톱햇이 0 이 되는 것과 값이 같습니다.
+        // CPU 는 여기서 **원본이 아니라 0** 을 냅니다(`grain_mend_morphology.cpp:183`).
+        // `opening`·`closing` 의 조기 반환과 다릅니다.
+        // 열기·닫기가 원본과 같아지므로 톱햇이 0 이 되는 것과 값이 같습니다.
         const GpuKernelStatus copied_open = opening(device, source, scratch, opened, 0U);
         if (copied_open != GpuKernelStatus::ok) {
             return copied_open;
@@ -341,4 +341,4 @@ GpuKernelStatus GpuMorphology::bipolar_top_hat(
     return GpuKernelStatus::ok;
 }
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

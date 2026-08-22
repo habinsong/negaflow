@@ -78,6 +78,7 @@ using Microsoft::WRL::ComPtr;
         expected_profile,
         limits.output_dpi,
         limits.readback_buffer_bytes,
+        limits.verify_pixel_readback,
         conversion_status,
         native_error_code)) {
         case detail::WicSrgb16FrameStatus::ok:

@@ -6,12 +6,12 @@
 // 원본을 세 반경으로 흐려 산란·헐레이션을 재분배합니다. 블러는 `GpuGaussianBlur` 가
 // 하고, 이 클래스는 **덜어내기와 누적**만 합니다 — macOS 도 그렇게 나눠 놓았습니다.
 //
-// ☠️ 가중치는 `GpuGaussianBlur::weights_for_halation_sigma` 로 만듭니다.
-//    `weights_for_sigma`(Core Image 판)와 **다른 식**입니다. 섞으면 값이 갈립니다.
+// 가중치는 `GpuGaussianBlur::weights_for_halation_sigma` 로 만듭니다.
+// `weights_for_sigma`(Core Image 판)와 **다른 식**입니다. 섞으면 값이 갈립니다.
 //
-// ⚠️ CPU 는 512px 타일로 돌지만 여기는 전체를 한 번에 돌아도 됩니다 —
-//    이 가우시안은 **직접 컨볼루션이라 누적 이력이 없습니다.**
-//    (러닝 섬을 쓰는 `film_scan_denoise` 와 다릅니다. `gpu_film_scan.h` 의 경고 참고.)
+// 주의 CPU 는 512px 타일로 돌지만 여기는 전체를 한 번에 돌아도 됩니다 —
+// 이 가우시안은 **직접 컨볼루션이라 누적 이력이 없습니다.**
+// (러닝 섬을 쓰는 `film_scan_denoise` 와 다릅니다. `gpu_film_scan.h` 의 경고 참고.)
 
 #include <array>
 #include <cstdint>
@@ -84,4 +84,4 @@ private:
     ID3D11Buffer* constants_{nullptr};
 };
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

@@ -50,7 +50,7 @@ internal sealed class DevelopExportRecipes
         TextBox field = new()
         {
             Text = recipe.Name,
-            PlaceholderText = AppResources.Get("developExportRecipe", "Text"),
+            PlaceholderText = AppResources.Get("developExportRecipeName", "Text"),
         };
         AutomationProperties.SetName(field, field.PlaceholderText);
         AutomationProperties.SetAutomationId(field, "negaflow.develop.export.recipe-name");

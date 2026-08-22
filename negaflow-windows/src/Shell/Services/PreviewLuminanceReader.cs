@@ -5,9 +5,24 @@ using Windows.Storage.Streams;
 namespace Negaflow.Shell;
 
 /// <summary>프리뷰 한 장의 밝기 값입니다. 자동 프레임 찾기가 이것으로 프레임을 셉니다.</summary>
-public readonly record struct PreviewLuminance(float[] Values, uint Width, uint Height)
+/// <param name="PhysicalWidthMm">
+/// 파일이 밝히는 가로 실제 크기(원본 픽셀 / 해상도 * 25.4)입니다. 해상도를 모르면 0 입니다.
+/// macOS <c>FlatbedFrameGridDetector.physicalSizeMM(url:)</c> 자리이며, 프레임 찾기가
+/// "36x24mm 가 몇 px 인가" 를 이 값으로 셉니다.
+/// </param>
+public readonly record struct PreviewLuminance(
+    float[] Values,
+    uint Width,
+    uint Height,
+    double PhysicalWidthMm = 0,
+    double PhysicalHeightMm = 0)
 {
     public bool IsEmpty => Values.Length == 0 || Width == 0U || Height == 0U;
+
+    /// <summary>파일이 실제 크기를 밝혔는지입니다. 아니면 검출이 다른 단서로 물러납니다.</summary>
+    public bool HasPhysicalSize =>
+        double.IsFinite(PhysicalWidthMm) && double.IsFinite(PhysicalHeightMm) &&
+        PhysicalWidthMm > 0 && PhysicalHeightMm > 0;
 
     public static PreviewLuminance None => new([], 0U, 0U);
 }
@@ -40,6 +55,21 @@ public static class PreviewLuminanceReader
             {
                 return PreviewLuminance.None;
             }
+            // 실제 크기는 **줄이기 전** 픽셀과 해상도로 셉니다. 줄인 뒤 값으로 세면 같은
+            // 그림이 갑자기 작아진 것처럼 보여 프레임 크기 후보가 통째로 어긋납니다.
+            //
+            // 1 dpi 같은 자리표시자는 크기를 모르는 것으로 봅니다 - macOS
+            // `physicalSizeMM(url:)` 도 `dpiX > 1, dpiY > 1` 을 요구합니다. 96 은 WIC 이
+            // 해상도 태그가 없을 때 넣는 기본값이라 함께 버립니다.
+            double physicalWidthMm = decoder.DpiX > 1 && decoder.DpiX != 96
+                ? width / decoder.DpiX * 25.4
+                : 0;
+            double physicalHeightMm = decoder.DpiY > 1 && decoder.DpiY != 96
+                ? height / decoder.DpiY * 25.4
+                : 0;
+            PreviewTrace.Write(
+                $"preview luminance {width}x{height} dpi={decoder.DpiX:F1}x{decoder.DpiY:F1} " +
+                $"mm={physicalWidthMm:F1}x{physicalHeightMm:F1}");
             uint longEdge = Math.Max(width, height);
             if (longEdge > MaximumLongEdge)
             {
@@ -51,7 +81,18 @@ public static class PreviewLuminanceReader
             PixelDataProvider pixels = await decoder.GetPixelDataAsync(
                 BitmapPixelFormat.Bgra8,
                 BitmapAlphaMode.Ignore,
-                new BitmapTransform { ScaledWidth = width, ScaledHeight = height },
+                new BitmapTransform
+                {
+                    ScaledWidth = width,
+                    ScaledHeight = height,
+                    // WIC 의 기본 보간은 **최근접**입니다. 그대로 두면 줄일 때 화소를 골라
+                    // 버려서 35mm 프레임 사이 2mm 여백이 통째로 사라집니다 - 실측(V700,
+                    // 3슬롯 홀더 2906 -> 2048): 최근접 12컷(가운데 줄 전멸), Fant 18컷.
+                    //
+                    // macOS 는 `CGImageSourceCreateThumbnailAtIndex` 로 줄이며 그쪽도
+                    // 필터를 겁니다. Fant 는 WIC 에서 축소용으로 가장 좋은 필터입니다.
+                    InterpolationMode = BitmapInterpolationMode.Fant,
+                },
                 ExifOrientationMode.IgnoreExifOrientation,
                 ColorManagementMode.DoNotColorManage);
             byte[] bgra = pixels.DetachPixelData();
@@ -71,7 +112,8 @@ public static class PreviewLuminanceReader
                      (0.7152f * bgra[at + 1]) +
                      (0.2126f * bgra[at + 2])) / 255.0f;
             }
-            return new PreviewLuminance(luminance, width, height);
+            return new PreviewLuminance(
+                luminance, width, height, physicalWidthMm, physicalHeightMm);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or
             ArgumentException or NotSupportedException or

@@ -14,11 +14,11 @@ namespace {
 // `imaging` 안쪽 커널을 GPU 로 보내는 표입니다. `imaging` 은 `gpu` 를 링크할 수 없으므로
 // (링크하면 순환) 함수 표만 알고, 둘 다 링크하는 이 층이 채웁니다.
 //
-// ☠️ **형태학만 넣습니다.** 창 안에서 하나를 고르는 일이라 부동소수 산술이 없고, 창과
-//    가장자리 처리가 같으면 고른 값도 같습니다 — 시험이 전 반경에서 **비트 단위 일치**로
-//    고정해 두었습니다. 그래서 내보내기·골든 경로에서도 켭니다.
-//    곱셈·덧셈이 들어가는 커널은 여기 넣지 마십시오. `KernelAccelerator` 헤더의
-//    "근사한 것" 칸과 `ApproximateAcceleratorScope` 를 쓰십시오.
+// **형태학만 넣습니다.** 창 안에서 하나를 고르는 일이라 부동소수 산술이 없고, 창과
+// 가장자리 처리가 같으면 고른 값도 같습니다 — 시험이 전 반경에서 **비트 단위 일치**로
+// 고정해 두었습니다. 그래서 내보내기·골든 경로에서도 켭니다.
+// 곱셈·덧셈이 들어가는 커널은 여기 넣지 마십시오. `KernelAccelerator` 헤더의
+// "근사한 것" 칸과 `ApproximateAcceleratorScope` 를 쓰십시오.
 
 [[nodiscard]] bool run_morphology(
     const float* const source,
@@ -314,8 +314,8 @@ bool accelerate_noritsu_texture(
 }
 
 // 2026-08-19 실측(5088×3401 프리뷰, grain 0.40, RTX 4060 Ti):
-//   texture 단계 CPU 26.84 ms / GPU 69.52 ms. 커널은 맞지만 왕복이 집니다.
-//   기본은 끕니다. `NEGA_GPU_TEXTURE_GRAIN=1` 로만 켭니다.
+// texture 단계 CPU 26.84 ms / GPU 69.52 ms. 커널은 맞지만 왕복이 집니다.
+// 기본은 끕니다. `NEGA_GPU_TEXTURE_GRAIN=1` 로만 켭니다.
 [[nodiscard]] bool texture_grain_enabled_by_environment() noexcept {
     char value[8]{};
     std::size_t length = 0U;
@@ -323,7 +323,7 @@ bool accelerate_noritsu_texture(
         length == 0U) {
         return false;
     }
-    return value[0] == 49;  // 49 == '1'
+    return value[0] == 49; // 49 == '1'
 }
 
 bool accelerate_texture_grain(
@@ -363,8 +363,8 @@ bool accelerate_channel_clipping_overlay(
 }
 
 // 2026-08-19 실측(5088×3401 전체 프레임, RTX 4060 Ti, x2 마지막 회차):
-//   CPU 25.109 ms / GPU 33.397 ms. 리덕션은 맞지만 업로드가 집니다.
-//   기본은 끕니다. `NEGA_GPU_AREA_AVERAGE=1` 로만 켭니다.
+// CPU 25.109 ms / GPU 33.397 ms. 리덕션은 맞지만 업로드가 집니다.
+// 기본은 끕니다. `NEGA_GPU_AREA_AVERAGE=1` 로만 켭니다.
 [[nodiscard]] bool area_average_enabled_by_environment() noexcept {
     char value[8]{};
     std::size_t length = 0U;
@@ -372,7 +372,7 @@ bool accelerate_channel_clipping_overlay(
         length == 0U) {
         return false;
     }
-    return value[0] == 49;  // 49 == '1'
+    return value[0] == 49; // 49 == '1'
 }
 
 bool accelerate_area_average(
@@ -415,7 +415,7 @@ bool accelerate_area_average(
         length == 0U) {
         return false;
     }
-    return value[0] == 49;  // 49 == '1'
+    return value[0] == 49; // 49 == '1'
 }
 
 bool accelerate_mip_halve_levels(
@@ -493,16 +493,16 @@ const imaging::KernelAccelerator kernel_table{
     accelerate_resident_finite,
 };
 
-}  // namespace
+} // namespace
 
 namespace {
 
 // 2026-08-19 재측정(5088×3401, RTX 4060 Ti, 전송 경로 개선 뒤, 각 3회):
 //
-//   | 검출 벽시계 | 중앙값 |
-//   |---|---:|
-//   | CPU (`NEGA_GPU=0`) | **18,052 ms** |
-//   | GPU 형태학(호출마다 왕복) | **15,383 ms** |
+// | 검출 벽시계 | 중앙값 |
+// |---|---:|
+// | CPU (`NEGA_GPU=0`) | **18,052 ms** |
+// | GPU 형태학(호출마다 왕복) | **15,383 ms** |
 //
 // 결과는 같습니다(성분 610, 채택 9,331). 전송이 줄어든 뒤에는 호출마다 왕복해도
 // CPU 보다 빠릅니다. **기본은 켭니다.** `NEGA_GPU_MORPHOLOGY=0` 으로만 끕니다.
@@ -512,10 +512,10 @@ namespace {
     if (getenv_s(&length, value, sizeof(value), "NEGA_GPU_MORPHOLOGY") != 0 || length == 0U) {
         return true;
     }
-    return value[0] != 48;  // 48 == '0'
+    return value[0] != 48; // 48 == '0'
 }
 
-}  // namespace
+} // namespace
 
 void install_gpu_kernel_accelerator() noexcept {
     // 여러 번 불려도 한 번만 겁니다. 검출이 돌 때마다 부르는 자리라 필요합니다.
@@ -526,7 +526,7 @@ void install_gpu_kernel_accelerator() noexcept {
             return;
         }
         // 형태학은 2026-08-19 재측정에서 CPU 보다 빨라 기본으로 켭니다. 끄려면
-        //    `NEGA_GPU_MORPHOLOGY=0`. 값은 비트 단위로 같습니다.
+        // `NEGA_GPU_MORPHOLOGY=0`. 값은 비트 단위로 같습니다.
         static imaging::KernelAccelerator effective = kernel_table;
         if (!morphology_enabled_by_environment()) {
             effective.opening = nullptr;
@@ -540,4 +540,4 @@ void install_gpu_kernel_accelerator() noexcept {
     });
 }
 
-}  // namespace negaflow::pipeline
+} // namespace negaflow::pipeline

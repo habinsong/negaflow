@@ -40,8 +40,8 @@ private:
 
 // `imaging::PointCurveLuts` 와 같은 값입니다.
 //
-// ☠️ 커브에서 LUT 를 만드는 것은 **CPU 가 합니다**(`imaging::build_point_curve_luts`).
-//    화소마다 같은 값이라 GPU 로 옮길 이유가 없고, 옮기면 두 벌이 되어 갈라집니다.
+// 커브에서 LUT 를 만드는 것은 **CPU 가 합니다**(`imaging::build_point_curve_luts`).
+// 화소마다 같은 값이라 GPU 로 옮길 이유가 없고, 옮기면 두 벌이 되어 갈라집니다.
 struct GpuPointCurveLuts final {
     static constexpr std::size_t lut_size = 64U;
     float red[lut_size]{};
@@ -67,4 +67,4 @@ private:
     GpuPointwiseKernel kernel_{};
 };
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

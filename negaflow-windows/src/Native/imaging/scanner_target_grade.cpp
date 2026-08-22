@@ -81,12 +81,12 @@ void apply_profile_grade(
     setup.chroma_keep = static_cast<float>(chroma_keep);
     setup.monochrome = monochrome;
 
-    // ☠️ **엔진에서 가장 비싼 화소별 커널입니다** — 노리츠 프리뷰 실측 58,995 ms
-    //    (병렬화 뒤 16,201 ms)로 전체의 90% 를 넘었습니다. 화소마다 `transformed_srgb`
-    //    를 두 번 돌리고 그 안에 Lab 왕복·`atan2`·`log`·`exp`·`pow` 가 줄줄이 있습니다.
+    // **엔진에서 가장 비싼 화소별 커널입니다** — 노리츠 프리뷰 실측 58,995 ms
+    // (병렬화 뒤 16,201 ms)로 전체의 90% 를 넘었습니다. 화소마다 `transformed_srgb`
+    // 를 두 번 돌리고 그 안에 Lab 왕복·`atan2`·`log`·`exp`·`pow` 가 줄줄이 있습니다.
     //
-    // ☠️ **근사입니다**(CPU 는 Lab 왕복이 `double`). `ApproximateAcceleratorScope`
-    //    안에서만 돕니다 — 내보내기·골든은 CPU 그대로입니다.
+    // **근사입니다**(CPU 는 Lab 왕복이 `double`). `ApproximateAcceleratorScope`
+    // 안에서만 돕니다 — 내보내기·골든은 CPU 그대로입니다.
     if (approximate_acceleration_allowed() && image.stride_pixels <= 0xFFFFFFFFULL) {
         if (const KernelAccelerator* const table = kernel_accelerator();
             table != nullptr && table->scanner_target_grade != nullptr) {
@@ -101,14 +101,14 @@ void apply_profile_grade(
         }
     }
 
-    // ☠️ **행마다 독립입니다.** 화소는 자기 값만 읽고 자기 자리에만 씁니다 —
-    //    쪼개도 값이 비트 단위로 같습니다. 앞 판은 직렬이었고, 실측으로 이 단계가
-    //    엔진에서 가장 비쌌습니다(노리츠 프리뷰 58,995 ms, 전체의 97.5%).
+    // **행마다 독립입니다.** 화소는 자기 값만 읽고 자기 자리에만 씁니다 —
+    // 쪼개도 값이 비트 단위로 같습니다. 앞 판은 직렬이었고, 실측으로 이 단계가
+    // 엔진에서 가장 비쌌습니다(노리츠 프리뷰 58,995 ms, 전체의 97.5%).
     //
-    // ☠️ `work_units` 에 **행 수가 아니라 화소 수 × 화소당 무게**를 넘깁니다.
-    //    행 수(3,401)만 넘기면 문턱(1M)을 못 넘어 병렬화가 **조용히 꺼집니다** —
-    //    플레이북 21절이 적은 함정입니다. 화소마다 `transformed_srgb` 를 두 번
-    //    돌리므로 무게를 2 로 둡니다.
+    // `work_units` 에 **행 수가 아니라 화소 수 × 화소당 무게**를 넘깁니다.
+    // 행 수(3,401)만 넘기면 문턱(1M)을 못 넘어 병렬화가 **조용히 꺼집니다** —
+    // 플레이북 21절이 적은 함정입니다. 화소마다 `transformed_srgb` 를 두 번
+    // 돌리므로 무게를 2 로 둡니다.
     const std::uint64_t work_units =
         static_cast<std::uint64_t>(image.width) * image.height * 2ULL;
     negaflow::core::for_each_row_block(
@@ -233,7 +233,7 @@ void apply_noritsu_texture_cpu(
         });
 }
 
-}  // namespace
+} // namespace
 
 ScannerTargetTextureSetup scanner_target_texture_setup() noexcept {
     // σ ≈ 0.9 의 이산 가우시안 5탭과 감마 도메인 USM 게인입니다
@@ -345,4 +345,4 @@ negaflow::core::KernelStatus apply_scanner_target_grade(
     return negaflow::core::KernelStatus::ok;
 }
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

@@ -23,6 +23,16 @@ $managedPreset = $Preset
 
 Push-Location $projectRoot
 try {
+    # AppResources.Get 로 부르는 키가 여섯 언어 resw 에 모두 있는지 먼저 봅니다.
+    # 없는 키는 빌드를 통과하고 **실행 중에** InvalidOperationException 으로 창을 죽입니다 —
+    # 2026-08-22 에 `libraryRemove` 하나로 파일 탭이 앱을 통째로 내렸습니다. 빌드보다 앞에
+    # 두는 이유는 이것이 1 초도 안 걸리기 때문입니다.
+    Write-Host '[windows-ci-gate] localized keys' -ForegroundColor Cyan
+    & py -3 (Join-Path $PSScriptRoot 'check-localized-keys.py')
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Localized key gate failed - a key used in code is missing from Resources.resw.'
+    }
+
     Write-Host "[windows-ci-gate] native: $Preset" -ForegroundColor Cyan
     & (Join-Path $PSScriptRoot 'test.ps1') -Preset $Preset
     if ($LASTEXITCODE -ne 0) {

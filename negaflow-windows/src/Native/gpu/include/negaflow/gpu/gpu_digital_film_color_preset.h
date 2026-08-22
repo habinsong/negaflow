@@ -2,20 +2,20 @@
 
 // 디지털 원본 전용 스톡 색 프리셋의 GPU 판입니다.
 //
-// macOS  : `DigitalFilmColorPresetStage.swift` — `digitalToDisplayGamma` →
-//          `ColorMixerStage` → `ColorGradingStage` → `CalibrationStage` →
-//          `digitalToLinearLight` → `CIMix`
+// macOS : `DigitalFilmColorPresetStage.swift` — `digitalToDisplayGamma` →
+// `ColorMixerStage` → `ColorGradingStage` → `CalibrationStage` →
+// `digitalToLinearLight` → `CIMix`
 // CPU 판 : `imaging/digital_film_color_preset.cpp` `apply_digital_film_color_preset`
 // 셰이더 : `shaders/digital_film_color_preset.hlsl` + 이미 있는 색 커널 셋
 //
-// ☠️ **macOS 의 `digitalFilmColor` 커널(`:774`)을 옮기는 것이 아닙니다.**
-//    그 커널은 `DigitalFilmColor.apply` 만 부르고, 그 함수는 macOS 트리 어디에서도
-//    **불리지 않습니다**(전 `.swift` grep 확인). 살아 있는 것은 이 프리셋 스테이지이고,
-//    Windows CPU 가 이미 그것을 옮겨 두었습니다. 04·14 문서가 "Windows 가 다른
-//    알고리즘" 이라고 적은 것은 **죽은 커널과 산 커널을 견준 것**이었습니다.
+// **macOS 의 `digitalFilmColor` 커널(`:774`)을 옮기는 것이 아닙니다.**
+// 그 커널은 `DigitalFilmColor.apply` 만 부르고, 그 함수는 macOS 트리 어디에서도
+// **불리지 않습니다**(전 `.swift` grep 확인). 살아 있는 것은 이 프리셋 스테이지이고,
+// Windows CPU 가 이미 그것을 옮겨 두었습니다. 04·14 문서가 "Windows 가 다른
+// 알고리즘" 이라고 적은 것은 **죽은 커널과 산 커널을 견준 것**이었습니다.
 //
-// ☠️ **근사한 것입니다**(감마 왕복의 `pow`, 색 커널 셋의 곱셈·HSL 왕복).
-//    `ApproximateAcceleratorScope` 안에서만 도는 자리에 배선하십시오.
+// **근사한 것입니다**(감마 왕복의 `pow`, 색 커널 셋의 곱셈·HSL 왕복).
+// `ApproximateAcceleratorScope` 안에서만 도는 자리에 배선하십시오.
 //
 // 값이 같으려면 **CPU 의 조기 반환을 그대로** 따라야 합니다. 세 색 커널은 각자
 // "변화 없음" 이면 커널을 안 돌리고 원본을 복사합니다. GPU 도 그 자리에서 디스패치를
@@ -65,4 +65,4 @@ private:
     GpuPrimaryCalibration calibration_{};
 };
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

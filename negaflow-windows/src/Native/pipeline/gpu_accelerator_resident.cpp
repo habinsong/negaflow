@@ -93,6 +93,16 @@ void GpuAccelerator::flush_resident() noexcept {
     state_->resident.host_stale = false;
 }
 
+bool GpuAccelerator::trim_idle() noexcept {
+    if (!available()) {
+        return false;
+    }
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
+    flush_unlocked();
+    state_->resident = State::ResidentFrame{};
+    return state_->device.trim_idle();
+}
+
 bool GpuAccelerator::has_resident_image(
     const float* const pixels,
     const std::uint32_t width,
@@ -111,12 +121,18 @@ bool GpuAccelerator::try_encode_preview_bgra(
     std::uint8_t* const destination,
     const std::uint32_t destination_stride_bytes,
     const float proof_scale[3],
-    const float proof_bias[3]) noexcept {
+    const float proof_bias[3],
+    const imaging::ImageTransformGather* const gather) noexcept {
     if (!available() || pixels == nullptr || destination == nullptr ||
         proof_scale == nullptr || proof_bias == nullptr) {
         return false;
     }
-    if (width == 0U || height == 0U || destination_stride_bytes < width * 4U) {
+    // `width`/`height` 는 **상주 이미지**의 크기입니다. 목표 폭은 변환 뒤 크기이므로
+    // 스트라이드는 그쪽으로 확인합니다.
+    const std::uint32_t destination_width =
+        gather != nullptr && gather->output_width != 0U ? gather->output_width : width;
+    if (width == 0U || height == 0U ||
+        destination_stride_bytes < destination_width * 4U) {
         return false;
     }
     const std::lock_guard<std::recursive_mutex> guard{state_->lock};
@@ -139,7 +155,8 @@ bool GpuAccelerator::try_encode_preview_bgra(
             destination,
             destination_stride_bytes,
             proof_scale,
-            proof_bias) != gpu::GpuKernelStatus::ok) {
+            proof_bias,
+            gather) != gpu::GpuKernelStatus::ok) {
         return false;
     }
     // macOS `createCGImage(.RGBA8)` 가 그래프를 평가한 것과 같습니다. 호스트

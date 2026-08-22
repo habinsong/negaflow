@@ -14,6 +14,26 @@ public sealed record ExportSettings
     /// <summary>macOS 의 긴 변 목록입니다. 0 은 원본 크기입니다.</summary>
     public static IReadOnlyList<int> LongEdgeOptions { get; } = [0, 1024, 2048, 4096, 6000];
 
+    /// <summary>
+    /// TIFF 압축으로 고를 수 있는 것입니다. <b>LZW 는 빠졌습니다.</b>
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LZW 는 사전 기반 바이트 부호라 16bit 표본에서는 되풀이가 거의 안 잡힙니다. 압축은 거의
+    /// 안 되면서 부호화에는 시간이 다 들고, 다시 읽을 때도 마찬가지입니다 — macOS
+    /// <c>ImageLoader.swift:34</c> 가 같은 원본을 두고 "LZW 압축본 9.5초 / 비압축본 1.1초" 라고
+    /// 적어 둔 것이 그 대가입니다.
+    /// </para>
+    /// <para>
+    /// 같은 자리를 <see cref="DevelopTiffCompression.Deflate"/> 가 더 작게, 더 빠르게 냅니다.
+    /// 그래서 고르는 자리에서는 없애고, 예전에 저장된 값은 <see cref="Normalize"/> 가
+    /// Deflate 로 옮깁니다. 열거자와 ABI 는 그대로 둡니다 — 스캐너가 내놓는 LZW TIFF 를
+    /// <b>읽는</b> 경로와 이미 나간 사이드카가 그 값을 씁니다.
+    /// </para>
+    /// </remarks>
+    public static IReadOnlyList<DevelopTiffCompression> TiffCompressionOptions { get; } =
+        [DevelopTiffCompression.None, DevelopTiffCompression.Deflate];
+
     public const double DefaultJpegQuality = 1.0;
 
     public DevelopExportFormat Format { get; init; } = DevelopExportFormat.Jpeg8;
@@ -91,9 +111,13 @@ public sealed record ExportSettings
         Dpi = DpiOptions.Contains(Dpi) ? Dpi : Math.Max(0, Dpi),
         LongEdge = Math.Max(0, LongEdge),
         JpegQuality = ClampUnit(JpegQuality, DefaultJpegQuality),
-        TiffCompression = Enum.IsDefined(TiffCompression)
+        // 예전 설정에 남은 LZW 는 Deflate 로 옮깁니다. 그대로 두면 목록에 없는 값이 골라져
+        // 있어 선택 상자가 비어 보이고, 사용자가 만지기 전까지 느린 부호화가 계속됩니다.
+        TiffCompression = TiffCompressionOptions.Contains(TiffCompression)
             ? TiffCompression
-            : DevelopTiffCompression.None,
+            : TiffCompression == DevelopTiffCompression.Lzw
+                ? DevelopTiffCompression.Deflate
+                : DevelopTiffCompression.None,
         ColorSpace = Enum.IsDefined(ColorSpace) ? ColorSpace : ExportColorSpace.Srgb,
         MetadataPolicy =
             Enum.IsDefined(MetadataPolicy) ? MetadataPolicy : ExportMetadataPolicy.Minimal,
@@ -256,9 +280,13 @@ public static class ExportSettingsExtensions
         JpegQuality = ExportSettings.ClampUnit(
             encoding.JpegQuality,
             ExportSettings.DefaultJpegQuality),
-        TiffCompression = Enum.IsDefined(encoding.TiffCompression)
+        // 고르는 자리에서 뺀 LZW 가 사이드카·레시피를 거쳐 다시 들어오지 못하게 여기서도
+        // Deflate 로 옮깁니다 — `ExportSettings.TiffCompressionOptions` 참고.
+        TiffCompression = ExportSettings.TiffCompressionOptions.Contains(encoding.TiffCompression)
             ? encoding.TiffCompression
-            : DevelopTiffCompression.None,
+            : encoding.TiffCompression == DevelopTiffCompression.Lzw
+                ? DevelopTiffCompression.Deflate
+                : DevelopTiffCompression.None,
         BitDepth = encoding.BitDepth == 8 ? 8 : 16,
         ColorSpace = Enum.IsDefined(encoding.ColorSpace) ? encoding.ColorSpace : ExportColorSpace.Srgb,
         MetadataPolicy = Enum.IsDefined(encoding.MetadataPolicy)

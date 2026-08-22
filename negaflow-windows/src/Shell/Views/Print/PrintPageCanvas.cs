@@ -160,11 +160,15 @@ internal static class PrintPageCanvas
             ScaledWidth = (uint)(turned ? height : width),
             ScaledHeight = (uint)(turned ? width : height),
             InterpolationMode = BitmapInterpolationMode.Fant,
+            // macOS `PrintPackageRenderer.placedImage` 는 `CGAffineTransform(a:0,b:1,c:-1,d:0)`
+            // 을 turns 번 겹칩니다 — Core Image 의 y-up 에서 <b>반시계</b> 90° 입니다. WIC 은
+            // 시계 방향으로만 셈하므로 같은 결과가 되는 각을 씁니다(반시계 90° = 시계 270°).
+            // 앞 판은 시계 방향으로 돌려 macOS 와 정확히 180° 어긋난 사진을 냈습니다.
             Rotation = (quarterTurns % 4) switch
             {
-                1 => BitmapRotation.Clockwise90Degrees,
+                1 => BitmapRotation.Clockwise270Degrees,
                 2 => BitmapRotation.Clockwise180Degrees,
-                3 => BitmapRotation.Clockwise270Degrees,
+                3 => BitmapRotation.Clockwise90Degrees,
                 _ => BitmapRotation.None,
             },
         };

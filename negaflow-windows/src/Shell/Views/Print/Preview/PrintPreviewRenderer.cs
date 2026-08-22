@@ -39,13 +39,38 @@ internal sealed class PrintPreviewRenderer
     }
 
     /// <summary>
-    /// 원본의 화소 크기입니다. 아직 읽지 못했으면 3:2 로 둡니다 — macOS 도 모르는 비율을
-    /// 그렇게 다룹니다.
+    /// 판에 놓일 사진의 화소 크기입니다. 아직 읽지 못했으면 3:2 로 둡니다 — macOS 도 모르는
+    /// 비율을 그렇게 다룹니다.
     /// </summary>
-    internal static PrintSizeMm SourcePixelSize(LibraryFrameSnapshot frame) =>
-        frame.SourceMetadata is { PixelWidth: > 0, PixelHeight: > 0 } metadata
-            ? new PrintSizeMm(metadata.PixelWidth, metadata.PixelHeight)
-            : new PrintSizeMm(3000, 2000);
+    /// <remarks>
+    /// <para>
+    /// <b>원본 파일의 크기가 아니라 변형을 적용한 뒤의 크기입니다.</b> 앞 판은
+    /// <c>SourceMetadata.PixelWidth/PixelHeight</c> 를 그대로 썼습니다. 그래서 가로로 스캔한
+    /// 필름을 현상에서 90° 돌려 세로로 만들어도 인화는 여전히 <b>가로 칸</b>을 만들었고,
+    /// 그 칸에 세로 사진을 <c>Stretch.Fill</c> 로 끼워 넣어 눌러 버렸습니다.
+    /// </para>
+    /// <para>
+    /// 실제로 판에 쓰이는 <see cref="PrintSheetWriter"/> 는 현상한 PNG 를 열어 그 화소 크기로
+    /// 배치합니다. 즉 미리보기만 다른 크기를 쓰고 있었습니다. macOS 는 같은 자리에서
+    /// <c>printPackageLayoutSize(for:)</c> → <c>transformedPrintPackageSize(_:transform:)</c>
+    /// 로 회전·수평보정·크롭을 반영합니다.
+    /// </para>
+    /// </remarks>
+    internal static PrintSizeMm SourcePixelSize(LibraryFrameSnapshot frame)
+    {
+        if (frame.SourceMetadata is not { PixelWidth: > 0, PixelHeight: > 0 } metadata)
+        {
+            return new PrintSizeMm(3000, 2000);
+        }
+        return DevelopDisplayGeometry.TryDevelopedPixelSize(
+            frame.ImageTransform,
+            metadata.PixelWidth,
+            metadata.PixelHeight,
+            out double width,
+            out double height)
+            ? new PrintSizeMm(width, height)
+            : new PrintSizeMm(metadata.PixelWidth, metadata.PixelHeight);
+    }
 
     internal double PreviewScale(PrintSizeMm canvas)
     {
@@ -316,16 +341,26 @@ internal sealed class PrintPreviewRenderer
         double scale,
         int quarterTurns)
     {
+        // macOS `packageImage(_:)` — 홀수 번 돌면 그리는 상자의 가로세로가 바뀝니다.
+        // `ImageRect` 는 이미 <b>돌린 뒤</b>의 자리이므로, 돌리기 전 상자는 가로세로를 맞바꾼
+        // 크기여야 합니다. 그러지 않으면 세로 사진이 가로 상자에 눌려 들어갑니다.
+        bool swapsAxes = quarterTurns % 2 != 0;
+        double destinationWidth = Math.Max(1, rect.Width * scale);
+        double destinationHeight = Math.Max(1, rect.Height * scale);
+        double boxWidth = swapsAxes ? destinationHeight : destinationWidth;
+        double boxHeight = swapsAxes ? destinationWidth : destinationHeight;
         Image image = new()
         {
-            Width = Math.Max(1, rect.Width * scale),
-            Height = Math.Max(1, rect.Height * scale),
-            Stretch = Stretch.Fill,
+            Width = boxWidth,
+            Height = boxHeight,
+            // macOS `.aspectRatio(contentMode: .fit)`. `ImageRect` 는 원본 비율을 지켜 만든
+            // 자리라 여백이 남지 않으며, 아직 썸네일뿐인 칸에서도 비율이 망가지지 않습니다.
+            Stretch = Stretch.Uniform,
         };
         ThumbnailService? cache = thumbnails();
         // macOS PrintSingleImagePageView: developedImage ?? rawPreviewImage ?? thumbnailImage.
         // 현상본이 있으면 그것을 쓰고, 칸이 더 크면 표시 크기로 올립니다.
-        if (cache?.TryGetDeveloped(frame.Id, out ThumbnailService.DevelopedPreview developed) == true)
+        if (cache?.TryGetDeveloped(frame, out ThumbnailService.DevelopedPreview developed) == true)
         {
             image.Source = BgraBitmap(developed);
         }
@@ -336,18 +371,22 @@ internal sealed class PrintPreviewRenderer
         RequestDevelopedIfNeeded(cache, frame, rect, scale);
         Border host = new()
         {
-            Width = image.Width,
-            Height = image.Height,
+            Width = boxWidth,
+            Height = boxHeight,
             Background = new SolidColorBrush(Windows.UI.Color.FromArgb(0x33, 0x80, 0x80, 0x80)),
             Child = image,
         };
         if (quarterTurns % 4 != 0)
         {
             host.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
-            host.RenderTransform = new RotateTransform { Angle = 90 * (quarterTurns % 4) };
+            // macOS `.rotationEffect(.degrees(-90 * turns))` — 반시계입니다. XAML 은 양수가
+            // 시계 방향이므로 부호를 뒤집습니다.
+            host.RenderTransform = new RotateTransform { Angle = -90 * (quarterTurns % 4) };
         }
-        Canvas.SetLeft(host, rect.X * scale);
-        Canvas.SetTop(host, rect.Y * scale);
+        // macOS `.position(x: destination.midX, y: destination.midY)` — 돌린 결과의 가운데를
+        // 칸 가운데에 놓습니다. 왼쪽·위를 그대로 두면 돌아간 만큼 칸 밖으로 밀려납니다.
+        Canvas.SetLeft(host, ((rect.X + (rect.Width / 2)) * scale) - (boxWidth / 2));
+        Canvas.SetTop(host, ((rect.Y + (rect.Height / 2)) * scale) - (boxHeight / 2));
         return host;
     }
 
@@ -372,7 +411,7 @@ internal sealed class PrintPreviewRenderer
         // macOS `printPackageDisplayImage` — developed ∪ packagePreview ∪ thumbnail ∪ raw.
         // 현상본이 없다고 current=0 으로 두면 콘택트 칸(360보다 작음)마다 develop_preview 가
         // 돕니다. 썸네일이 있으면 긴 변 360 으로 칩니다(`ThumbnailService.MaximumDimension`).
-        int? developedEdge = cache.TryGetDeveloped(frame.Id, out ThumbnailService.DevelopedPreview developed)
+        int? developedEdge = cache.TryGetDeveloped(frame, out ThumbnailService.DevelopedPreview developed)
             ? (int)PrintPreviewResolution.PixelDimension(developed.Width, developed.Height)
             : null;
         int? thumbnailEdge = cache.TryGet(frame.Id) is not null

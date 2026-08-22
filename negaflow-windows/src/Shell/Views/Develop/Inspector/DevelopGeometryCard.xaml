@@ -46,10 +46,10 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Button x:Name="CropButton" Grid.Column="0" AutomationProperties.AutomationId="negaflow.develop.geometry.crop" Click="OnCropClicked"><FontIcon Glyph="&#xE7A8;" /></Button>
-            <Button x:Name="RotateLeftButton" Grid.Column="1" AutomationProperties.AutomationId="negaflow.develop.geometry.rotate-left" Click="OnRotateLeftClicked"><FontIcon Glyph="&#xE7AD;" /></Button>
-            <Button x:Name="RotateRightButton" Grid.Column="2" AutomationProperties.AutomationId="negaflow.develop.geometry.rotate-right" Click="OnRotateRightClicked"><FontIcon Glyph="&#xE7AE;" /></Button>
-            <Button x:Name="FlipHorizontalButton" Grid.Column="3" AutomationProperties.AutomationId="negaflow.develop.geometry.flip-horizontal" Click="OnFlipHorizontalClicked"><FontIcon Glyph="&#xE7B7;" /></Button>
-            <Button x:Name="FlipVerticalButton" Grid.Column="4" AutomationProperties.AutomationId="negaflow.develop.geometry.flip-vertical" Click="OnFlipVerticalClicked"><FontIcon Glyph="&#xE7B8;" /></Button>
+            <Button x:Name="RotateLeftButton" Grid.Column="1" AutomationProperties.AutomationId="negaflow.develop.geometry.rotate-left" Click="OnRotateLeftClicked"><controls:VectorIcon Kind="RotateLeft" IconSize="16" /></Button>
+            <Button x:Name="RotateRightButton" Grid.Column="2" AutomationProperties.AutomationId="negaflow.develop.geometry.rotate-right" Click="OnRotateRightClicked"><controls:VectorIcon Kind="RotateRight" IconSize="16" /></Button>
+            <Button x:Name="FlipHorizontalButton" Grid.Column="3" AutomationProperties.AutomationId="negaflow.develop.geometry.flip-horizontal" Click="OnFlipHorizontalClicked"><controls:VectorIcon Kind="FlipHorizontal" IconSize="16" /></Button>
+            <Button x:Name="FlipVerticalButton" Grid.Column="4" AutomationProperties.AutomationId="negaflow.develop.geometry.flip-vertical" Click="OnFlipVerticalClicked"><controls:VectorIcon Kind="FlipVertical" IconSize="16" /></Button>
         </Grid>
         <!-- macOS 는 crop 모드에서만 다이얼을 내놓습니다. -->
         <controls:CropAngleDial

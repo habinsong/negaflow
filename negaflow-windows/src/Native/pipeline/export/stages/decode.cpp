@@ -24,12 +24,12 @@ namespace {
 // macOS `ScanFrame.cleanedRawImage` 상주 자리(`FrameCacheManager.residentCleanedRawIDs`)에
 // 해당합니다. 같은 파일·같은 관측이면 디스크 TIFF 를 다시 읽지 않습니다.
 //
-// ☠️ 앞 판은 **단일 슬롯 + 잠금 없음**이었습니다. 그런데 이 캐시를 지나는 것은 현상
-//    프리뷰만이 아닙니다 — `ThumbnailService` 가 프레임마다 `develop_preview` 를 부르고
-//    (동시 3개), 자동 조정·검출·내보내기도 각자 스레드에서 들어옵니다. 그래서
-//    ① 썸네일이 다른 프레임을 디코드할 때마다 현상 중인 프레임의 디코드가 날아갔고
-//    ② 한쪽이 `image` 를 갈아 끼우는 동안 다른 쪽이 그것을 복사해 use-after-free 가 났습니다.
-//    프레임별로 나누고, 잠그고, `shared_ptr<const>` 로 넘깁니다.
+// 앞 판은 **단일 슬롯 + 잠금 없음**이었습니다. 그런데 이 캐시를 지나는 것은 현상
+// 프리뷰만이 아닙니다 — `ThumbnailService` 가 프레임마다 `develop_preview` 를 부르고
+// (동시 3개), 자동 조정·검출·내보내기도 각자 스레드에서 들어옵니다. 그래서
+// ① 썸네일이 다른 프레임을 디코드할 때마다 현상 중인 프레임의 디코드가 날아갔고
+// ② 한쪽이 `image` 를 갈아 끼우는 동안 다른 쪽이 그것을 복사해 use-after-free 가 났습니다.
+// 프레임별로 나누고, 잠그고, `shared_ptr<const>` 로 넘깁니다.
 struct DecodedSourceEntry final {
     std::filesystem::path path{};
     negaflow::imageio::ImageFileObservation observation{};
@@ -49,8 +49,7 @@ std::mutex g_decoded_mutex{};
 }
 
 [[nodiscard]] std::uint64_t decoded_budget_bytes() noexcept {
-    static const std::uint64_t budget = decoded_source_budget_bytes();
-    return budget;
+    return decoded_source_budget_bytes();
 }
 
 // macOS `trimCleanedRaw` — 한도를 넘으면 오래된 것부터 내려놓습니다.
@@ -73,6 +72,8 @@ void trim_decoded_locked() noexcept {
     const std::filesystem::path& path,
     const negaflow::imageio::ImageFileObservation& observation) noexcept {
     const std::lock_guard<std::mutex> guard{g_decoded_mutex};
+    // 새 할당이 없어도 시스템이 저메모리로 바뀌었으면 첫 재사용에서 과거 프레임을 내립니다.
+    trim_decoded_locked();
     for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
         DecodedSourceEntry& entry = g_decoded_sources[index];
         if (entry.path != path ||
@@ -120,7 +121,7 @@ void put_decoded(
     }
 }
 
-}  // namespace
+} // namespace
 
 void decoded_source_store_reset() noexcept {
     const std::lock_guard<std::mutex> guard{g_decoded_mutex};
@@ -166,8 +167,17 @@ std::optional<DevelopExportOutcome> decode_source(
     decode_control.stop_token = stop.get_token();
     decode_control.progress_observer = &decode_progress;
     if (preview != nullptr) {
-        decode_control.max_output_width = preview->maximum_width;
-        decode_control.max_output_height = preview->maximum_height;
+        // region 과 infrared 편집의 ROI·마스크는 원본 화소 좌표입니다. 디코드가 프리뷰 크기로
+        // 줄면 그 좌표가 작아진 이미지 밖으로 나가 defect 단계 전체가 invalid_argument 로
+        // 끝납니다(실제 OpticFilm8100_frame_7: 5088x3401 기준 roi (1332,3340) 52x36 을
+        // 1536x1026 이미지에 적용). brush 와 clone 은 정규화 좌표라 크기와 무관합니다.
+        const bool source_pixel_defects =
+            !request.defect_recipe.regions.edits.empty() ||
+            !request.defect_recipe.infrared.empty();
+        if (!source_pixel_defects) {
+            decode_control.max_output_width = preview->maximum_width;
+            decode_control.max_output_height = preview->maximum_height;
+        }
         decode_control.validate_compressed_streams = false;
     }
     if (is_tiff_source(request.source)) {
@@ -273,4 +283,4 @@ std::optional<DevelopExportOutcome> decode_source(
     return std::nullopt;
 }
 
-}  // namespace negaflow::pipeline::develop_export_detail
+} // namespace negaflow::pipeline::develop_export_detail

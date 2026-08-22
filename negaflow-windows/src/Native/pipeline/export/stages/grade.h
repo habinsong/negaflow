@@ -5,6 +5,8 @@
 #include "export/stages/invert.h"
 #include "export/support/progress.h"
 
+#include "negaflow/pipeline/gpu_accelerator.h"
+
 #include <optional>
 
 namespace negaflow::pipeline::develop_export_detail {
@@ -13,6 +15,7 @@ namespace negaflow::pipeline::develop_export_detail {
 [[nodiscard]] std::optional<DevelopExportOutcome> apply_grade_stages(
     const DevelopExportRequest& request,
     RunTracker& tracker,
+    GpuUsePolicy gpu_policy,
     InvertStageOutput& invert) noexcept;
 
 }  // namespace negaflow::pipeline::develop_export_detail

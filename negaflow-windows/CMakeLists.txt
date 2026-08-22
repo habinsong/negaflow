@@ -363,6 +363,27 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/scene_sample_grid.hlsl"
+    SceneSampleGridMain
+    negaflow_scene_sample_grid_cs
+    NEGAFLOW_SCENE_SAMPLE_GRID_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/scene_correction.hlsl"
+    SceneAutoLevelsMain
+    negaflow_scene_auto_levels_cs
+    NEGAFLOW_SCENE_AUTO_LEVELS_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/scene_correction.hlsl"
+    SceneNeutralBalanceMain
+    negaflow_scene_neutral_balance_cs
+    NEGAFLOW_SCENE_NEUTRAL_BALANCE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/scratch_angle.hlsl"
     RidgeMain
     negaflow_scratch_angle_ridge_cs
@@ -466,6 +487,9 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_CHANNEL_CLIPPING_OVERLAY_HEADER}"
     "${NEGAFLOW_AREA_AVERAGE_IMAGE_HEADER}"
     "${NEGAFLOW_AREA_AVERAGE_PARTIALS_HEADER}"
+    "${NEGAFLOW_SCENE_SAMPLE_GRID_HEADER}"
+    "${NEGAFLOW_SCENE_AUTO_LEVELS_HEADER}"
+    "${NEGAFLOW_SCENE_NEUTRAL_BALANCE_HEADER}"
     "${NEGAFLOW_SCRATCH_ANGLE_RIDGE_HEADER}"
     "${NEGAFLOW_SCRATCH_ANGLE_INTEGRATE_HEADER}"
     "${NEGAFLOW_SCRATCH_ANGLE_MAX_HEADER}"
@@ -492,6 +516,7 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_texture_grain.cpp
     src/Native/gpu/gpu_channel_clipping_overlay.cpp
     src/Native/gpu/gpu_area_average.cpp
+    src/Native/gpu/gpu_scene_correction.cpp
     src/Native/gpu/gpu_scratch_angle.cpp
     src/Native/gpu/gpu_lookup_table.cpp
     src/Native/gpu/gpu_image_pool.cpp
@@ -723,6 +748,7 @@ add_library(negaflow_pipeline STATIC
     src/Native/pipeline/film_look_workspace.cpp
     src/Native/pipeline/gpu_accelerator.cpp
     src/Native/pipeline/gpu_accelerator_resident.cpp
+    src/Native/pipeline/gpu_accelerator_scene.cpp
     src/Native/pipeline/gpu_accelerator_film_look.cpp
     src/Native/pipeline/gpu_accelerator_color.cpp
     src/Native/pipeline/gpu_accelerator_scratch.cpp
@@ -865,6 +891,7 @@ if(BUILD_TESTING)
         tests/Native.UnitTests/DevelopExportAbi/run_state.cpp
         tests/Native.UnitTests/DevelopExportAbi/auto_adjust.cpp
         tests/Native.UnitTests/DevelopExportAbi/defect_region.cpp
+        tests/Native.UnitTests/DevelopExportAbi/defect_region_preview_scale.cpp
         tests/Native.UnitTests/DevelopExportAbi/soft_proof.cpp
         tests/Native.UnitTests/DevelopExportAbi/probe.cpp
         tests/fixtures/tiff/synthetic_wic_tiff.cpp
@@ -1093,7 +1120,7 @@ if(BUILD_TESTING)
     )
     add_test(NAME native.wic_tiff_export COMMAND negaflow_wic_tiff_export_tests)
 
-    # ??臾띠쓬? `aaedfe7` ?먯꽌 God object 瑜?履쇨컻硫?`ManualNegative/` 濡??섎돇?덈뒗???ш린??    # ?깅줉?섏? ?딆븘 洹몃븣遺??留곹겕媛 源⑥졇 ?덉뿀?듬땲?? ?ㅻⅨ 遺꾪븷 臾띠쓬怨?媛숈? 諛⑹떇?쇰줈 ?듬땲??
+    # ??臾띠쓬? `aaedfe7` ?먯꽌 God object 瑜?履쇨컻硫?`ManualNegative/` 濡??섎돇?덈뒗???ш린?? # ?깅줉?섏? ?딆븘 洹몃븣遺??留곹겕媛 源⑥졇 ?덉뿀?듬땲?? ?ㅻⅨ 遺꾪븷 臾띠쓬怨?媛숈? 諛⑹떇?쇰줈 ?듬땲??
     add_executable(negaflow_manual_negative_developer_tests
         tests/Native.UnitTests/manual_negative_developer_tests.cpp
         tests/Native.UnitTests/ManualNegative/manual_negative_test_support.cpp
@@ -1224,11 +1251,11 @@ if(BUILD_TESTING)
     )
     add_test(NAME native.gpu_neighborhood COMMAND negaflow_gpu_neighborhood_tests)
 
-    # ☠️ 크래시 기록기를 같이 넣습니다. 이 시험은 2026-08-19 에 27회 중 3회
-    #    SegFault 로 죽었는데, 시험 실행 파일은 `negaflow_native` 를 링크하지 않아
-    #    DLL 안의 VEH 기록기가 없었습니다. 그래서 스택을 한 번도 못 잡았습니다.
-    #    다시 죽으면 이번에는 `%LOCALAPPDATA%/Negaflow/Logs/native-crash.txt` 에
-    #    남고, `scripts/symbolize-rva.ps1 -Module <이 exe>` 로 함수·줄을 봅니다.
+    # 크래시 기록기를 같이 넣습니다. 이 시험은 2026-08-19 에 27회 중 3회
+    # SegFault 로 죽었는데, 시험 실행 파일은 `negaflow_native` 를 링크하지 않아
+    # DLL 안의 VEH 기록기가 없었습니다. 그래서 스택을 한 번도 못 잡았습니다.
+    # 다시 죽으면 이번에는 `%LOCALAPPDATA%/Negaflow/Logs/native-crash.txt` 에
+    # 남고, `scripts/symbolize-rva.ps1 -Module <이 exe>` 로 함수·줄을 봅니다.
     add_executable(negaflow_gpu_film_scan_tests
         tests/Native.UnitTests/gpu_film_scan_tests.cpp
         tests/Native.UnitTests/GpuFilmScan/gpu_film_scan_chain.cpp

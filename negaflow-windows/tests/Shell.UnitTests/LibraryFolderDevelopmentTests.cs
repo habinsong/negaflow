@@ -139,7 +139,12 @@ internal static class LibraryFolderDevelopmentTests
             using LibraryHostService host = new(dispatcher, exporter);
             host.Open(roots);
             CountingThumbnailCodec codec = new();
-            ThumbnailService thumbnails = new(exporter, codec, dispatcher, thumbnailRoot);
+            ThumbnailService thumbnails = new(
+                exporter,
+                codec,
+                dispatcher,
+                thumbnailRoot,
+                Path.Combine(isolatedBase, "developed-previews"));
 
             // 적용 전에 이미 썸네일을 들고 있는 상태를 만듭니다. 예전 코드라면 여기서 멈춰
             // 그림이 바뀌지 않았습니다.

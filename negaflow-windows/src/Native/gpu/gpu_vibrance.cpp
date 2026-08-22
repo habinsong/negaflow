@@ -56,7 +56,7 @@ struct alignas(16) ColorModelConstants final {
 
 static_assert(sizeof(ColorModelConstants) == 80U, "five constant registers");
 
-}  // namespace
+} // namespace
 
 GpuKernelStatus GpuVibranceTable::create(
     const GpuDevice& device,
@@ -66,9 +66,9 @@ GpuKernelStatus GpuVibranceTable::create(
         GpuKernelStatus::ok) {
         return GpuKernelStatus::resource_creation_failed;
     }
-    // ☠️ 표는 `uint16` 이고 CPU 는 읽을 때마다 `static_cast<float>` 합니다. 셰이더에서
-    //    언패킹하면 화소마다 비트 연산이 붙으므로 **한 번 펴서** 올립니다. 값은 같습니다 —
-    //    `uint16` 은 float 로 정확히 표현됩니다.
+    // 표는 `uint16` 이고 CPU 는 읽을 때마다 `static_cast<float>` 합니다. 셰이더에서
+    // 언패킹하면 화소마다 비트 연산이 붙으므로 **한 번 펴서** 올립니다. 값은 같습니다 —
+    // `uint16` 은 float 로 정확히 표현됩니다.
     std::vector<float> flattened;
     try {
         flattened.resize(vibrance_table_entry_count);
@@ -108,7 +108,7 @@ GpuKernelStatus GpuMutedSceneVibrance::dispatch(
     if (!std::isfinite(amount)) {
         return GpuKernelStatus::non_finite_parameter;
     }
-    // ☠️ 판 선택은 **CPU 의 공개 함수**를 그대로 부릅니다. 여기서 다시 고르면 두 벌입니다.
+    // 판 선택은 **CPU 의 공개 함수**를 그대로 부릅니다. 여기서 다시 고르면 두 벌입니다.
     const imaging::VibrancePlaneSelection selection =
         imaging::select_vibrance_planes(amount);
 
@@ -155,8 +155,8 @@ GpuKernelStatus GpuColorModel::dispatch(
     payload.green_primary = parameters.green_primary;
     payload.blue_primary = parameters.blue_primary;
 
-    // ☠️ 게이트는 **호스트가** 판정합니다. CPU 판(`apply_pixel`)의 조건과 같아야 합니다 —
-    //    임계 이하이면 그 항목을 아예 건너뜁니다. 돌리면 `1 + 0` 곱셈의 반올림이 붙습니다.
+    // 게이트는 **호스트가** 판정합니다. CPU 판(`apply_pixel`)의 조건과 같아야 합니다 —
+    // 임계 이하이면 그 항목을 아예 건너뜁니다. 돌리면 `1 + 0` 곱셈의 반올림이 붙습니다.
     std::uint32_t gates = 0U;
     if (std::abs(parameters.warmth) > identity_threshold) gates |= 1U;
     if (std::abs(parameters.tint) > identity_threshold) gates |= 2U;
@@ -183,4 +183,4 @@ GpuKernelStatus GpuColorModel::dispatch(
         device, source, table.lookup().srv(), destination, &payload, sizeof(payload));
 }
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

@@ -1,16 +1,16 @@
 // CPU/GPU 동치 시험 — `digitalFilmGrainDensity`.
 //
-// ☠️ **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `apply_digital_film_grain_material` 을
-//    그대로 부르고 그 결과와 겨룹니다.
+// **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `apply_digital_film_grain_material` 을
+// 그대로 부르고 그 결과와 겨룹니다.
 //
 // 시험 셋입니다:
-//   ① **해시 단독** — 좌표 해시는 전부 uint32 정수 연산이라 **delta 0** 을 요구합니다.
-//      float 오차가 낄 자리가 없으므로, 어긋나면 옮겨 적은 것이 틀린 것입니다.
-//      (`size <= 1.01` 로 두면 커널이 보간을 건너뛰고 해시를 그대로 냅니다. 진폭을 크게
-//      주고 밝기를 0.18 로 고정하면 출력이 노이즈의 단조 함수라 해시를 되짚을 수 있습니다.)
-//   ② **전체 사슬** — 제품이 실제로 쓰는 `size`(1.10~1.60)로 보간 경로까지 돌려 `1e-5`.
-//   ③ **통계** — 노이즈 필드의 평균이 0 인지(DC 바이어스가 없는지). macOS 와 화소로
-//      맞출 수 없다는 것이 1절의 결론이므로, 대조 항목은 화소가 아니라 이 통계입니다.
+// ① **해시 단독** — 좌표 해시는 전부 uint32 정수 연산이라 **delta 0** 을 요구합니다.
+// float 오차가 낄 자리가 없으므로, 어긋나면 옮겨 적은 것이 틀린 것입니다.
+// (`size <= 1.01` 로 두면 커널이 보간을 건너뛰고 해시를 그대로 냅니다. 진폭을 크게
+// 주고 밝기를 0.18 로 고정하면 출력이 노이즈의 단조 함수라 해시를 되짚을 수 있습니다.)
+// ② **전체 사슬** — 제품이 실제로 쓰는 `size`(1.10~1.60)로 보간 경로까지 돌려 `1e-5`.
+// ③ **통계** — 노이즈 필드의 평균이 0 인지(DC 바이어스가 없는지). macOS 와 화소로
+// 맞출 수 없다는 것이 1절의 결론이므로, 대조 항목은 화소가 아니라 이 통계입니다.
 
 #include <algorithm>
 #include <cmath>
@@ -159,8 +159,8 @@ void grain_matches_cpu(
 }
 
 // ① 해시 단독. `size <= 1.01` 이면 보간을 건너뛰므로 부동소수가 낄 자리가 해시 뒤
-//    밀도 응답뿐입니다. 밝기를 정확히 0.18 로 두면 밀도가 0 이라 응답이 노이즈에만
-//    의존하고, CPU 와 **같은 초월함수 입력**을 받습니다.
+// 밀도 응답뿐입니다. 밝기를 정확히 0.18 로 두면 밀도가 0 이라 응답이 노이즈에만
+// 의존하고, CPU 와 **같은 초월함수 입력**을 받습니다.
 void hash_field_matches_cpu_exactly(const GpuDevice& device, const char* const label) {
     std::vector<Rgba32F> pixels(static_cast<std::size_t>(width) * height);
     for (Rgba32F& pixel : pixels) {
@@ -193,8 +193,8 @@ void hash_field_matches_cpu_exactly(const GpuDevice& device, const char* const l
 }
 
 // ③ 노이즈 필드의 평균이 0 인가. 진폭을 0 으로 두면 출력이 입력과 같아야 하고,
-//    진폭을 켜면 밀도 변화의 평균이 0 근처여야 합니다 — DC 바이어스가 있으면
-//    그레인을 켤 때마다 이미지가 밝아지거나 어두워집니다.
+// 진폭을 켜면 밀도 변화의 평균이 0 근처여야 합니다 — DC 바이어스가 있으면
+// 그레인을 켤 때마다 이미지가 밝아지거나 어두워집니다.
 void grain_has_no_dc_bias(const GpuDevice& device, const char* const label) {
     std::vector<Rgba32F> pixels(static_cast<std::size_t>(width) * height);
     for (Rgba32F& pixel : pixels) {
@@ -232,7 +232,7 @@ void run_all(const GpuDevice& device, const char* const label) {
     grain_has_no_dc_bias(device, label);
 }
 
-}  // namespace
+} // namespace
 
 int main() {
     const GpuDevice warp = GpuDevice::create(GpuDevicePreference::warp_only);

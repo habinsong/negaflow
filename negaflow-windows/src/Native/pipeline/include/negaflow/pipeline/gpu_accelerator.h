@@ -5,19 +5,19 @@
 // 왜 여기인가 — 의존 방향이 `gpu → imaging` 이라 `imaging` 안에서는 GPU 를 부를 수 없습니다.
 // `pipeline` 은 둘 다 링크하므로 여기가 이음매입니다.
 //
-// ☠️ **정책: GPU 는 값이 CPU 와 다를 수 있으므로 골든이 걸린 경로에 쓰지 않습니다.**
+// **정책: GPU 는 값이 CPU 와 다를 수 있으므로 골든이 걸린 경로에 쓰지 않습니다.**
 //
-//    | 커널 | CPU 와의 최대 오차(실측) |
-//    |---|---:|
-//    | 톤 7단계 | 6.0e-07 ~ 1.4e-06 |
-//    | `film_scan_denoise` 사슬 | 2.1e-05 ~ 6.2e-05 (감마 리프트 `pow` 때문) |
+// | 커널 | CPU 와의 최대 오차(실측) |
+// |---|---:|
+// | 톤 7단계 | 6.0e-07 ~ 1.4e-06 |
+// | `film_scan_denoise` 사슬 | 2.1e-05 ~ 6.2e-05 (감마 리프트 `pow` 때문) |
 //
-//    바이트 일치가 아닙니다. 내보내기·골든 시험은 **CPU 그대로** 두고, 사용자가 기다리는
-//    **프리뷰와 검출**에서만 켭니다. 켜고 끄는 것은 호출부가 `GpuUsePolicy` 로 정합니다.
-//    자세한 근거는 `docs/audit/04-gpu-plan.md` 0.5·0.6절.
+// 바이트 일치가 아닙니다. 내보내기·골든 시험은 **CPU 그대로** 두고, 사용자가 기다리는
+// **프리뷰와 검출**에서만 켭니다. 켜고 끄는 것은 호출부가 `GpuUsePolicy` 로 정합니다.
+// 자세한 근거는 `docs/audit/04-gpu-plan.md` 0.5·0.6절.
 //
-// ☠️ **D3D11 즉시 컨텍스트는 스레드 안전하지 않습니다.** 이 클래스가 자물쇠를 하나 들고
-//    있고, 모든 GPU 호출이 그 안에서 돕니다. 자물쇠를 빼지 마십시오.
+// **D3D11 즉시 컨텍스트는 스레드 안전하지 않습니다.** 이 클래스가 자물쇠를 하나 들고
+// 있고, 모든 GPU 호출이 그 안에서 돕니다. 자물쇠를 빼지 마십시오.
 
 #include <cstdint>
 
@@ -26,7 +26,9 @@
 #include "negaflow/imaging/film_emulation_acutance.h"
 #include "negaflow/imaging/film_emulation_color.h"
 #include "negaflow/imaging/film_scan_denoise.h"
+#include "negaflow/imaging/image_transform.h"
 #include "negaflow/imaging/scanner_target_grade.h"
+#include "negaflow/imaging/scene_correction.h"
 #include "negaflow/imaging/working_film_look.h"
 #include "negaflow/imaging/kernel_accelerator.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
@@ -70,6 +72,8 @@ public:
     // 곧 사라질 버퍼를 넘겨받은 자리에서 부릅니다 — 그대로 두면 상주 스코프가
     // 나중에 **해제된 메모리에 씁니다**(2026-08-20 크래시).
     void flush_resident_if(const void* host) noexcept;
+    /// background preview가 유휴로 들어갈 때 driver 내부 임시 버퍼를 반환합니다.
+    [[nodiscard]] bool trim_idle() noexcept;
     [[nodiscard]] bool has_resident_image(
         const float* pixels,
         std::uint32_t width,
@@ -83,6 +87,9 @@ public:
     // 상주 작업 화상을 표시용 BGRA8 로 내립니다. macOS
     // `createCGImage(..., format: .RGBA8)`. 상자 평균·클리핑 오버레이가 없을 때만
     // 호출부가 부릅니다. 성공하면 호스트 float 을 다시 내리지 않습니다.
+    // `gather` 가 있으면 회전·뒤집기·자르기를 이 커널이 함께 처리합니다. 그래야 자르기가
+    // 걸린 사진도 사슬이 GPU 에 머뭅니다 — 예전에는 `image_transform` 이 호스트 버퍼를
+    // 새로 만들어 그 자리에서 사슬이 끊겼습니다.
     [[nodiscard]] bool try_encode_preview_bgra(
         const float* pixels,
         std::uint32_t width,
@@ -90,7 +97,8 @@ public:
         std::uint8_t* destination,
         std::uint32_t destination_stride_bytes,
         const float proof_scale[3],
-        const float proof_bias[3]) noexcept;
+        const float proof_bias[3],
+        const imaging::ImageTransformGather* gather = nullptr) noexcept;
     // 어떤 장치를 잡았는지. 없으면 빈 문자열입니다. 진단·로그용입니다.
     [[nodiscard]] const char* adapter_description() const noexcept;
 
@@ -109,18 +117,18 @@ public:
 
     // 단일 채널 평면 형태학입니다. GrainMend 검출 안쪽에서 불립니다.
     //
-    // ☠️ 여기에는 `GpuUsePolicy` 가 **없습니다.** 형태학은 창 안에서 하나를 고르는 일이라
-    //    부동소수 산술이 없고 CPU 와 **비트 단위로 같습니다**(시험이 전 반경에서 고정).
-    //    그래서 내보내기·골든 경로에서도 켭니다 — 값이 안 바뀌므로 막을 이유가 없습니다.
-    //    곱셈·덧셈이 들어가는 커널을 이 방식으로 붙이지 마십시오.
+    // 여기에는 `GpuUsePolicy` 가 **없습니다.** 형태학은 창 안에서 하나를 고르는 일이라
+    // 부동소수 산술이 없고 CPU 와 **비트 단위로 같습니다**(시험이 전 반경에서 고정).
+    // 그래서 내보내기·골든 경로에서도 켭니다 — 값이 안 바뀌므로 막을 이유가 없습니다.
+    // 곱셈·덧셈이 들어가는 커널을 이 방식으로 붙이지 마십시오.
     //
     // `source` 와 `destination` 은 `width * height` 개이고 겹치지 않아야 합니다.
     // 처리했으면 `true`. `false` 면 호출부가 CPU 로 갑니다.
     // 네거티브 반전입니다. 현상에서 가장 비싼 단계입니다(실측 프리뷰 856ms 중 353ms).
     //
-    // ☠️ **근사입니다**(곱셈·초월함수, 실측 오차 1.8e-07). 호출부가
-    //    `ApproximateAcceleratorScope` 안에서만 부릅니다 — 내보내기·골든은 CPU 그대로입니다.
-    //    `response` 는 `{yCeil, amplitude, rate, shape}` 넷입니다.
+    // **근사입니다**(곱셈·초월함수, 실측 오차 1.8e-07). 호출부가
+    // `ApproximateAcceleratorScope` 안에서만 부릅니다 — 내보내기·골든은 CPU 그대로입니다.
+    // `response` 는 `{yCeil, amplitude, rate, shape}` 넷입니다.
     [[nodiscard]] bool apply_negative_inversion(
         float* pixels,
         std::uint32_t width,
@@ -133,9 +141,9 @@ public:
     // 디지털 필름 룩의 재료 커널 둘입니다. 필름 스캔이 아니라 **디지털 원본** 경로에서만
     // 돕니다 — 스캔본에는 이미 유제를 통과한 신호가 있어 같은 물리를 두 번 얹지 않습니다.
     //
-    // ☠️ 둘 다 **근사**입니다. 호출부(`imaging/digital_halation.cpp`·`digital_film_grain.cpp`)가
-    //    `ApproximateAcceleratorScope` 안에서만 부릅니다.
-    //    `amplitude` 는 **이미 세기가 곱해진** 값입니다 — 여기서 다시 곱하지 마십시오.
+    // 둘 다 **근사**입니다. 호출부(`imaging/digital_halation.cpp`·`digital_film_grain.cpp`)가
+    // `ApproximateAcceleratorScope` 안에서만 부릅니다.
+    // `amplitude` 는 **이미 세기가 곱해진** 값입니다 — 여기서 다시 곱하지 마십시오.
     [[nodiscard]] bool apply_digital_halation(
         float* pixels,
         std::uint32_t width,
@@ -209,6 +217,24 @@ public:
         std::uint32_t height,
         std::uint32_t stride_pixels,
         const imaging::ColorModelParameters* parameters) noexcept;
+
+    // 자동 레벨 · 자동 중성 균형입니다(`gpu_accelerator_scene.cpp`).
+    //
+    // **이 진입점이 실패하면 반전 뒤 사슬이 통째로 호스트로 내려옵니다.** 예전에는
+    // `grade.cpp` 가 무조건 `flush_resident()` 를 불렀고, 그 한 번 때문에 톤·필름룩·
+    // 마무리·발행이 전부 CPU 였습니다(실측 8틱 드래그에 다운로드 1,374 MB).
+    //
+    // **근사입니다** — 표본 누적이 CPU 는 double, GPU 는 float 입니다. 판정 규칙은
+    // `imaging::plan_scene_*` 한 벌을 그대로 씁니다.
+    //
+    // `false` 면 **화소를 손대지 않았거나**(대개) 자동 레벨만 걸린 채 균형을 포기한
+    // 상태가 아닙니다 — 후자는 `true` 로 답합니다. 호출부는 `false` 일 때만 CPU 판을
+    // 부르십시오.
+    [[nodiscard]] bool apply_scene_correction(
+        GpuUsePolicy policy,
+        imaging::WorkingImage& image,
+        const imaging::SceneCorrectionParameters& parameters,
+        imaging::SceneCorrectionInfo& info) noexcept;
 
     // 엔진에서 가장 비싼 화소별 커널입니다 — 노리츠 프리뷰 실측으로 병렬화 뒤에도
     // 16,201 ms 이고 전체의 90% 를 넘습니다.
@@ -383,4 +409,4 @@ bool accelerate_scratch_angle_stack(
     int angle_count,
     float balance_limit) noexcept;
 
-}  // namespace negaflow::pipeline
+} // namespace negaflow::pipeline

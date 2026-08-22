@@ -46,6 +46,42 @@ public static class DevelopDisplayGeometry
         double CroppedWidth,
         double CroppedHeight);
 
+    /// <summary>
+    /// 변형을 모두 적용한 뒤 <b>실제로 나오는</b> 화소 크기입니다. 회전 90°·270° 는 가로세로를
+    /// 맞바꾸고, 수평보정은 안쪽 사각형으로 줄이며, 크롭은 그 위에서 잘립니다.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 인화 판이 원본 파일의 화소 크기를 그대로 쓰면 세로로 돌린 사진에 <b>가로 칸</b>을 만들고,
+    /// 그 칸에 세로 사진을 끼워 넣느라 눌러 버립니다. macOS 는 같은 자리에서
+    /// <c>transformedPrintPackageSize(_:transform:)</c> 로 변형 뒤 크기를 씁니다.
+    /// </para>
+    /// <para>
+    /// 여기서는 <see cref="TryStages"/> 를 그대로 씁니다 — 그 계산이 네이티브
+    /// <c>image_transform.cpp</c> 의 floor/ceil·clamp 와 같은 수를 내므로, 인화 칸의 비율이
+    /// 실제로 내보내지는 파일의 비율과 어긋나지 않습니다.
+    /// </para>
+    /// </remarks>
+    /// <returns>변형을 적용할 수 없으면 <see langword="false"/> — 호출부가 원본 크기를 씁니다.</returns>
+    public static bool TryDevelopedPixelSize(
+        ImageTransformRecipe transform,
+        uint sourceWidth,
+        uint sourceHeight,
+        out double width,
+        out double height)
+    {
+        ArgumentNullException.ThrowIfNull(transform);
+        width = 0.0;
+        height = 0.0;
+        if (!TryStages(transform, sourceWidth, sourceHeight, out TransformStages stages))
+        {
+            return false;
+        }
+        width = stages.CroppedWidth;
+        height = stages.CroppedHeight;
+        return true;
+    }
+
     public static bool TryMapDisplayToRaw(
         ImageTransformRecipe transform,
         uint sourceWidth,

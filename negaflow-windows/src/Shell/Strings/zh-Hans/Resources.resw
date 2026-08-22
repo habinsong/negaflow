@@ -1060,6 +1060,7 @@
   <data name="scanDetectionManual.Content" xml:space="preserve"><value>手动</value><comment>AppLocalizedPhrase.flatbedDetectionManual</comment></data>
   <data name="scanDetectionMode.Text" xml:space="preserve"><value>查找画幅</value><comment>AppLocalizedPhrase.flatbedDetectionMode</comment></data>
   <data name="scanFlatbedFramesFormat.Text" xml:space="preserve"><value>已选择：%d</value><comment>AppLocalizedPhrase.flatbedFramesFormat</comment></data>
+  <data name="scanFlatbedFrameFormat.Text" xml:space="preserve"><value>画幅 %d</value><comment>AppLocalizedPhrase.flatbedFrameFormat</comment></data>
   <data name="scanFrameFormat.Text" xml:space="preserve"><value>画幅格式</value><comment>AppLocalizedPhrase.filmFrameFormat</comment></data>
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>粘贴画幅</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>重新查找画幅</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
@@ -1315,4 +1316,124 @@
   <data name="developLocalDrawPrompt.Text" xml:space="preserve"><value>在照片上绘制</value><comment>LocalAdjustmentLocalizedText[16]</comment></data>
   <data name="developLocalEmpty.Text" xml:space="preserve"><value>无局部调整</value><comment>LocalAdjustmentLocalizedText[17]</comment></data>
   <data name="developLocalVisibility.Text" xml:space="preserve"><value>可见性</value><comment>LocalAdjustmentLocalizedText[18]</comment></data>
+  <data name="settingsMemoryCacheSection.Text" xml:space="preserve"><value>内存缓存</value><comment>AppLocalizedPhrase.settingsMemoryCacheSection</comment></data>
+  <data name="settingsMemoryCacheModeAutomatic.Content" xml:space="preserve"><value>自动</value><comment>AppLocalizedPhrase.settingsMemoryCacheModeAutomatic</comment></data>
+  <data name="settingsMemoryCacheModeManual.Content" xml:space="preserve"><value>手动</value><comment>AppLocalizedPhrase.settingsMemoryCacheModeManual</comment></data>
+  <data name="settingsMemoryCacheInstalledMemoryFormat.Text" xml:space="preserve"><value>本机内存 {0}</value><comment>AppLocalizedPhrase.settingsMemoryCacheInstalledMemoryFormat</comment></data>
+  <data name="settingsMemoryCacheCleanedRawLabel.Text" xml:space="preserve"><value>去瑕疵原片</value><comment>AppLocalizedPhrase.settingsMemoryCacheCleanedRawLabel</comment></data>
+  <data name="settingsMemoryCacheDevelopedLabel.Text" xml:space="preserve"><value>冲洗结果</value><comment>AppLocalizedPhrase.settingsMemoryCacheDevelopedLabel</comment></data>
+  <data name="settingsMemoryCacheFramesFormat.Text" xml:space="preserve"><value>{0} 张</value><comment>AppLocalizedPhrase.settingsMemoryCacheFramesFormat</comment></data>
+  <data name="settingsMemoryCacheEstimateFormat.Text" xml:space="preserve"><value>最多常驻约 {0} · 占内存 {1}%</value><comment>AppLocalizedPhrase.settingsMemoryCacheEstimateFormat</comment></data>
+  <data name="settingsMemoryCacheAutomaticHelp.Text" xml:space="preserve"><value>根据已安装内存自动确定上限。超出上限的帧会从最旧的开始释放，重新打开时再次冲洗。</value><comment>AppLocalizedPhrase.settingsMemoryCacheAutomaticHelp</comment></data>
+  <data name="settingsMemoryCacheManualHelp.Text" xml:space="preserve"><value>使用你设定的数值。上限为已安装内存的 70%。</value><comment>AppLocalizedPhrase.settingsMemoryCacheManualHelp</comment></data>
+  <data name="settingsMemoryCacheResetToAutomatic.Content" xml:space="preserve"><value>恢复为自动值</value><comment>AppLocalizedPhrase.settingsMemoryCacheResetToAutomatic</comment></data>
+  <data name="supportBundleTitle.Text" xml:space="preserve"><value>支持包</value><comment>SupportBundleLocalizedText.title</comment></data>
+  <data name="supportBundleExport.Content" xml:space="preserve"><value>导出</value><comment>SupportBundleLocalizedText.export</comment></data>
+  <data name="supportBundleCreating.Content" xml:space="preserve"><value>正在创建</value><comment>SupportBundleLocalizedText.creating</comment></data>
+  <data name="supportBundleComplete.Text" xml:space="preserve"><value>支持包已创建</value><comment>SupportBundleLocalizedText.complete</comment></data>
+  <data name="supportBundleFailed.Text" xml:space="preserve"><value>无法创建支持包</value><comment>SupportBundleLocalizedText.failed</comment></data>
+  <data name="defaultDefectMicroSpecks.Text" xml:space="preserve"><value>默认检测微小颗粒</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
+  <data name="defaultDefectMicroSpecksHelp.Text" xml:space="preserve"><value>新照片的初始值，自动与引导分别记住。每张照片都有各自的复选框，仍可单独开启或关闭。</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
+  <data name="autoDefect.Text" xml:space="preserve"><value>自动</value><comment>AppLocalizedPhrase.autoDefect</comment></data>
+  <data name="guidedDefect.Text" xml:space="preserve"><value>引导</value><comment>AppLocalizedPhrase.guidedDefect</comment></data>
+  <data name="diskLocationCloud.Content" xml:space="preserve"><value>OneDrive</value><comment>AppLocalizedPhrase.diskLocationICloud (Windows: OneDrive)</comment></data>
+  <data name="diskLocationDesktop.Content" xml:space="preserve"><value>桌面</value><comment>AppLocalizedPhrase.diskLocationDesktop</comment></data>
+  <data name="diskLocationSpecificFolder.Content" xml:space="preserve"><value>文件夹</value><comment>AppLocalizedPhrase.diskLocationSpecificFolder</comment></data>
+  <data name="diskLocationCustom.Content" xml:space="preserve"><value>自定义</value><comment>AppLocalizedPhrase.diskLocationCustom</comment></data>
+  <data name="diskRootFolderLabel.Text" xml:space="preserve"><value>negaflow 文件夹</value><comment>AppLocalizedPhrase.diskRootFolderLabel</comment></data>
+  <data name="diskThumbnailsFolderLabel.Text" xml:space="preserve"><value>缩略图文件夹</value><comment>AppLocalizedPhrase.diskThumbnailsFolderLabel</comment></data>
+  <data name="diskImportedSourcesFolderLabel.Text" xml:space="preserve"><value>导入原片默认移动文件夹</value><comment>AppLocalizedPhrase.diskImportedSourcesFolderLabel</comment></data>
+  <data name="diskCleanedRawFolderLabel.Text" xml:space="preserve"><value>校正图像缓存文件夹</value><comment>AppLocalizedPhrase.diskCleanedRawFolderLabel</comment></data>
+  <data name="diskScanPreviewFolderLabel.Text" xml:space="preserve"><value>扫描预览缓存文件夹</value><comment>AppLocalizedPhrase.diskScanPreviewFolderLabel</comment></data>
+  <data name="diskExportFolderLabel.Text" xml:space="preserve"><value>导出文件夹</value><comment>AppLocalizedPhrase.diskExportFolderLabel</comment></data>
+  <data name="diskResetPathsButton.Content" xml:space="preserve"><value>将路径重置为默认值</value><comment>AppLocalizedPhrase.diskResetPathsButton</comment></data>
+  <data name="diskThumbnailCacheLabel.Text" xml:space="preserve"><value>缩略图缓存</value><comment>AppLocalizedPhrase.diskThumbnailCacheLabel</comment></data>
+  <data name="diskClearThumbnailCache.Content" xml:space="preserve"><value>清除缩略图缓存</value><comment>AppLocalizedPhrase.diskClearThumbnailCache</comment></data>
+  <data name="diskCacheSizeCalculating.Text" xml:space="preserve"><value>计算中</value><comment>AppLocalizedPhrase.diskCacheSizeCalculating</comment></data>
+  <data name="diskLibraryBackupLabel.Text" xml:space="preserve"><value>目录备份</value><comment>AppLocalizedPhrase.diskLibraryBackupLabel</comment></data>
+  <data name="diskLibraryBackupNow.Content" xml:space="preserve"><value>立即备份图库</value><comment>AppLocalizedPhrase.diskLibraryBackupNow</comment></data>
+  <data name="diskLibraryBackupBrowse.Content" xml:space="preserve"><value>查看备份</value><comment>AppLocalizedPhrase.diskLibraryBackupBrowse</comment></data>
+  <data name="libraryArchiveCreate.Content" xml:space="preserve"><value>创建保存归档</value><comment>AppArchiveText.create</comment></data>
+  <data name="showInExplorer.Value" xml:space="preserve"><value>在文件资源管理器中显示</value><comment>AppLocalizedPhrase.showInFinder (Windows: File Explorer)</comment></data>
+  <data name="scanStorageOriginals.Text" xml:space="preserve"><value>扫描原件</value><comment>ScanStorageLocalizedText.originals</comment></data>
+  <data name="scanStorageChange.Value" xml:space="preserve"><value>更改</value><comment>ScanStorageLocalizedText.change</comment></data>
+  <data name="scanStorageEstimatedAvailable.Text" xml:space="preserve"><value>预计可用空间</value><comment>ScanStorageLocalizedText.estimatedAvailable</comment></data>
+  <data name="scanStorageStorage.Text" xml:space="preserve"><value>存储</value><comment>ScanStorageLocalizedText.storage</comment></data>
+  <data name="scanStorageLocal.Text" xml:space="preserve"><value>本地</value><comment>ScanStorageLocalizedText.local</comment></data>
+  <data name="scanStorageCloudManaged.Text" xml:space="preserve"><value>云管理</value><comment>ScanStorageLocalizedText.cloudManaged</comment></data>
+  <data name="scanStorageUnavailable.Text" xml:space="preserve"><value>不可用</value><comment>ScanStorageLocalizedText.unavailable</comment></data>
+  <data name="externalBackupTitle.Text" xml:space="preserve"><value>外部备份</value><comment>ExternalBackupLocalizedText.title</comment></data>
+  <data name="externalBackupChoose.Content" xml:space="preserve"><value>选择</value><comment>ExternalBackupLocalizedText.choose</comment></data>
+  <data name="externalBackupChange.Content" xml:space="preserve"><value>更改</value><comment>ExternalBackupLocalizedText.change</comment></data>
+  <data name="externalBackupRemove.Content" xml:space="preserve"><value>移除</value><comment>ExternalBackupLocalizedText.remove</comment></data>
+  <data name="externalBackupNotConfigured.Text" xml:space="preserve"><value>未配置</value><comment>ExternalBackupLocalizedText.notConfigured</comment></data>
+  <data name="externalBackupDisconnected.Text" xml:space="preserve"><value>已断开</value><comment>ExternalBackupLocalizedText.disconnected</comment></data>
+  <data name="externalBackupSameVolume.Text" xml:space="preserve"><value>与目录位于同一卷</value><comment>ExternalBackupLocalizedText.sameVolume</comment></data>
+  <data name="externalBackupReadOnly.Text" xml:space="preserve"><value>只读目标</value><comment>ExternalBackupLocalizedText.readOnly</comment></data>
+  <data name="externalBackupInsufficient.Text" xml:space="preserve"><value>空间不足</value><comment>ExternalBackupLocalizedText.insufficient</comment></data>
+  <data name="externalBackupReady.Text" xml:space="preserve"><value>已连接</value><comment>ExternalBackupLocalizedText.ready</comment></data>
+  <data name="externalBackupCapacity.Text" xml:space="preserve"><value>可用</value><comment>ExternalBackupLocalizedText.capacity</comment></data>
+  <data name="externalBackupLastSuccess.Text" xml:space="preserve"><value>上次成功备份</value><comment>ExternalBackupLocalizedText.lastSuccess</comment></data>
+  <data name="backupScheduleLabel.Text" xml:space="preserve"><value>备份计划</value><comment>BackupScheduleLocalizedText.schedule</comment></data>
+  <data name="backupScheduleManual.Content" xml:space="preserve"><value>手动</value><comment>BackupScheduleLocalizedText.manual</comment></data>
+  <data name="backupScheduleTermination.Content" xml:space="preserve"><value>退出时</value><comment>BackupScheduleLocalizedText.termination</comment></data>
+  <data name="backupScheduleDaily.Content" xml:space="preserve"><value>每天</value><comment>BackupScheduleLocalizedText.daily</comment></data>
+  <data name="backupScheduleWeekly.Content" xml:space="preserve"><value>每周</value><comment>BackupScheduleLocalizedText.weekly</comment></data>
+  <data name="backupLastAttempt.Text" xml:space="preserve"><value>上次尝试</value><comment>BackupScheduleLocalizedText.lastAttempt</comment></data>
+  <data name="backupLastSuccess.Text" xml:space="preserve"><value>上次成功</value><comment>BackupScheduleLocalizedText.lastSuccess</comment></data>
+  <data name="backupVerification.Text" xml:space="preserve"><value>恢复验证</value><comment>BackupScheduleLocalizedText.verification</comment></data>
+  <data name="backupPassed.Text" xml:space="preserve"><value>通过</value><comment>BackupScheduleLocalizedText.passed</comment></data>
+  <data name="backupFailed.Text" xml:space="preserve"><value>失败</value><comment>BackupScheduleLocalizedText.failed</comment></data>
+  <data name="backupNever.Text" xml:space="preserve"><value>从未</value><comment>BackupScheduleLocalizedText.never</comment></data>
+  <data name="backupGeneration.Text" xml:space="preserve"><value>代</value><comment>BackupScheduleLocalizedText.generation</comment></data>
+  <data name="settingsExportVerification.Text" xml:space="preserve"><value>导出完整性校验</value><comment>AppLocalizedText.settingsExportVerification</comment></data>
+  <data name="settingsExportVerificationStandard.Content" xml:space="preserve"><value>标准</value><comment>AppLocalizedText.settingsExportVerificationStandard</comment></data>
+  <data name="settingsExportVerificationStrict.Content" xml:space="preserve"><value>严格（较慢）</value><comment>AppLocalizedText.settingsExportVerificationStrict</comment></data>
+  <data name="settingsExportVerificationHelp.Text" xml:space="preserve"><value>标准模式对每个文件只计算一次哈希，之后通过文件标识重新确认。严格模式在每个检查点重新哈希全部字节。两种模式的崩溃恢复保证相同。</value><comment>AppLocalizedText.settingsExportVerificationHelp</comment></data>
+  <data name="exportLongEdgeSuffix.Text" xml:space="preserve"><value>px（长边）</value><comment>AppLocalizedText.exportLongEdgeSuffix</comment></data>
+  <data name="settingsColorProfile.Text" xml:space="preserve"><value>配置文件</value><comment>AppLocalizedPhrase.profile</comment></data>
+  <data name="settingsColorPrinterProfile.Text" xml:space="preserve"><value>打印输出配置文件</value><comment>Windows 전용 — 인화 출력 프로파일(SoftProofPreferences.PrinterProfilePath)</comment></data>
+  <data name="resolution.Text" xml:space="preserve"><value>分辨率</value><comment>AppLocalizedPhrase.resolution</comment></data>
+  <data name="bitDepth.Text" xml:space="preserve"><value>位深度</value><comment>AppLocalizedPhrase.bitDepth</comment></data>
+  <data name="transparency.Text" xml:space="preserve"><value>透射稿</value><comment>AppLocalizedPhrase.transparency</comment></data>
+  <data name="brightness.Text" xml:space="preserve"><value>亮度</value><comment>AppLocalizedPhrase.brightness</comment></data>
+  <data name="contrast.Text" xml:space="preserve"><value>对比度</value><comment>AppLocalizedPhrase.contrast</comment></data>
+  <data name="infrared.Text" xml:space="preserve"><value>红外 (IR)</value><comment>AppLocalizedPhrase.infrared</comment></data>
+  <data name="capabilityAvailable.Value" xml:space="preserve"><value>可用</value><comment>AppLocalizedPhrase.capabilityAvailable</comment></data>
+  <data name="settingsScannerPluginApproval.Text" xml:space="preserve"><value>扫描仪插件批准</value><comment>AppLocalizedPhrase.scannerPluginApprovalTitle</comment></data>
+  <data name="scannerPluginApproved.Text" xml:space="preserve"><value>已批准</value><comment>AppLocalizedPhrase.scannerPluginApproved</comment></data>
+  <data name="scannerPluginChanged.Text" xml:space="preserve"><value>已更改 · 需要重新批准</value><comment>AppLocalizedPhrase.scannerPluginChangedApprovalRequired</comment></data>
+  <data name="scannerPluginApprovalRequired.Text" xml:space="preserve"><value>需要批准</value><comment>AppLocalizedPhrase.scannerPluginApprovalRequired</comment></data>
+  <data name="scannerPluginVersion.Text" xml:space="preserve"><value>版本</value><comment>AppLocalizedPhrase.scannerPluginVersion</comment></data>
+  <data name="scannerPluginLicense.Text" xml:space="preserve"><value>许可证</value><comment>AppLocalizedPhrase.scannerPluginLicense</comment></data>
+  <data name="scannerPluginManifestPath.Text" xml:space="preserve"><value>Manifest 路径</value><comment>AppLocalizedPhrase.scannerPluginManifestPath</comment></data>
+  <data name="scannerPluginManifestHash.Text" xml:space="preserve"><value>Manifest SHA-256</value><comment>AppLocalizedPhrase.scannerPluginManifestHash</comment></data>
+  <data name="scannerPluginExecutableHash.Text" xml:space="preserve"><value>可执行文件 SHA-256</value><comment>AppLocalizedPhrase.scannerPluginExecutableHash</comment></data>
+  <data name="scannerPluginNotReported.Text" xml:space="preserve"><value>未报告</value><comment>AppLocalizedPhrase.scannerPluginNotReported</comment></data>
+  <data name="diagnosticsReportProblemsSection.Text" xml:space="preserve"><value>最近的问题</value><comment>AppLocalizedText.diagnosticsReportProblemsSection</comment></data>
+  <data name="diagnosticsReportEventsSection.Text" xml:space="preserve"><value>最近的失败事件</value><comment>AppLocalizedText.diagnosticsReportEventsSection</comment></data>
+  <data name="diagnosticsReportLibrarySection.Text" xml:space="preserve"><value>库状态</value><comment>AppLocalizedText.diagnosticsReportLibrarySection</comment></data>
+  <data name="diagnosticsReportScannerSection.Text" xml:space="preserve"><value>扫描仪</value><comment>AppLocalizedText.diagnosticsReportScannerSection</comment></data>
+  <data name="diagnosticsNoProblems.Text" xml:space="preserve"><value>无问题</value><comment>AppLocalizedText.diagnosticsNoProblems</comment></data>
+  <data name="diagnosticsGeneratedAt.Text" xml:space="preserve"><value>生成时间</value><comment>AppLocalizedText.diagnosticsGeneratedAt</comment></data>
+  <data name="diagnosticsStatSaveError.Text" xml:space="preserve"><value>保存错误</value><comment>AppLocalizedText.diagnosticsStatSaveError</comment></data>
+  <data name="noActiveScanner.Text" xml:space="preserve"><value>没有正在使用的扫描仪。</value><comment>AppLocalizedText.noActiveScanner</comment></data>
+  <data name="copyAll.Content" xml:space="preserve"><value>全部拷贝</value><comment>AppLocalizedText.copyAll</comment></data>
+  <data name="copy.Content" xml:space="preserve"><value>拷贝</value><comment>AppLocalizedText.copy</comment></data>
+  <data name="closePanel.Value" xml:space="preserve"><value>关闭</value><comment>AppLocalizedText.closePanel</comment></data>
+  <data name="diagnosticsValueYes.Value" xml:space="preserve"><value>是</value><comment>AppLocalizedText.diagnosticsValueYes</comment></data>
+  <data name="diagnosticsValueNo.Value" xml:space="preserve"><value>否</value><comment>AppLocalizedText.diagnosticsValueNo</comment></data>
+  <data name="diagnosticsStatFrames.Text" xml:space="preserve"><value>帧</value><comment>AppLocalizedText.diagnosticsStatFrames</comment></data>
+  <data name="diagnosticsStatUnsaved.Text" xml:space="preserve"><value>未保存的更改</value><comment>AppLocalizedText.diagnosticsStatUnsaved</comment></data>
+  <data name="diagnosticsStatLifecycle.Text" xml:space="preserve"><value>生命周期</value><comment>AppLocalizedText.diagnosticsStatLifecycle</comment></data>
+  <data name="diagnosticsScannerBackend.Text" xml:space="preserve"><value>后端</value><comment>AppLocalizedText.diagnosticsScannerBackend</comment></data>
+  <data name="diagnosticsScannerPlugins.Text" xml:space="preserve"><value>插件</value><comment>AppLocalizedText.diagnosticsScannerPlugins</comment></data>
+  <data name="scannerLabel.Text" xml:space="preserve"><value>扫描仪</value><comment>AppLocalizedText.scannerLabel</comment></data>
+  <data name="colorMode.Text" xml:space="preserve"><value>模式</value><comment>AppLocalizedText.colorMode</comment></data>
+  <data name="noInstalledPlugins.Text" xml:space="preserve"><value>（未安装任何插件）</value><comment>AppLocalizedText.noInstalledPlugins</comment></data>
+  <data name="diagnosticsRefresh.Value" xml:space="preserve"><value>刷新</value><comment>DiagnosticsReportView refresh button (macOS arrow.clockwise)</comment></data>
+  <data name="canvasBackgroundMenu.Text" xml:space="preserve"><value>背景颜色</value><comment>AppLocalizedPhrase.canvasBackgroundMenu</comment></data>
+  <data name="developerDebug.Text" xml:space="preserve"><value>开发者调试</value><comment>AppLocalizedPhrase.developerDebug</comment></data>
+  <data name="debugOverlay.Text" xml:space="preserve"><value>调试叠加</value><comment>AppLocalizedPhrase.debugOverlay</comment></data>
+  <data name="developerDebugStage.Text" xml:space="preserve"><value>阶段</value><comment>AppLocalizedPhrase.stage</comment></data>
 </root>

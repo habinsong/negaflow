@@ -278,3 +278,12 @@ internal unsafe struct NativeDevelopExportRequestV34
     internal uint AlphaReserved1;
     internal uint AlphaReserved2;
 }
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV35
+{
+    internal NativeDevelopExportRequestV34 V34;
+    internal byte* DefectRecipeSha256;
+    internal uint DefectRecipeSha256Size;
+    internal uint DefectRecipeIdentityReserved;
+}

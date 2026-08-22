@@ -49,10 +49,12 @@ internal static class NativeDevelopAbiSizes
     internal const int RequestV31Size = 4992;
     internal const int RequestV32Size = 5008;
     internal const int RequestV33Size = 5088;
+    internal const int RequestV34Size = 5104;
+    internal const int RequestV35Size = 5120;
     internal const int ResultV2Size = 152;
     internal const int ResultV3Size = 160;
     internal const int FilmBaseMeasurementV1Size = 184;
-    internal const int ResultV4Size = 344;
+    internal const int ResultV4Size = 392;
     internal const int RunStateV1Size = 16;
     internal const int AutoAdjustResultV1Size = 88;
     internal const int SoftProofMediaV1Size = 40;

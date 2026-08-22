@@ -51,6 +51,8 @@ public static class LibraryFrameReader
         new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
     internal const string DisplayNameName = "customDisplayName";
     internal const string ScanIndexName = "scanIndex";
+    /// <summary>macOS <c>ScanFrame.isPreviewScan</c> 과 같은 키입니다.</summary>
+    public const string IsPreviewScanName = "isPreviewScan";
     internal const string SourceKindName = "sourceKind";
     internal const string SourceFrameDisplayNameName = "sourceFrameDisplayName";
     internal const string SourceFrameIdName = "sourceFrameID";
@@ -376,6 +378,9 @@ public static class LibraryFrameReader
             Versions = versions,
             History = history,
             ScanIndex = ReadScanIndex(frameRecord),
+            IsPreviewScan = frameRecord.TryGetProperty(
+                    IsPreviewScanName, out JsonElement previewScan) &&
+                previewScan.ValueKind == JsonValueKind.True,
             SourceKind = ReadSourceKind(frameRecord),
             SourceFrameDisplayName = ReadOptionalText(frameRecord, SourceFrameDisplayNameName),
             SourceFrameId = ReadOptionalText(frameRecord, SourceFrameIdName),

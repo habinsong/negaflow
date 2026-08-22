@@ -2,7 +2,8 @@
 <UserControl
     x:Class="Negaflow.Shell.Views.Develop.Inspector.DevelopLocalAdjustmentSection"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
     <!-- macOS `LocalAdjustmentSection` — `InspectorCard { VStack(spacing: 9) {
              InspectorCardHeader; maskPicker; modePicker; newMaskControls; adjustmentList } }`
          (스크린샷 `현상뷰_우측탭_아이콘6탭바_편집.png`). -->
@@ -19,11 +20,12 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <FontIcon
+                <controls:VectorIcon
                     Grid.Column="0"
                     Width="20"
+                    IconSize="16"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Glyph="&#xE793;" />
+                    Kind="HalfCircleStriped" />
                 <TextBlock
                     x:Name="LocalSectionTitleText" x:FieldModifier="internal"
                     Grid.Column="1"
@@ -53,7 +55,7 @@
                     Click="OnMaskKindClicked"
                     CornerRadius="6"
                     Tag="Brush">
-                    <FontIcon FontSize="14" Glyph="&#xE790;" />
+                    <controls:VectorIcon IconSize="14" Kind="Paintbrush" />
                 </Button>
                 <Button
                     x:Name="LocalRadialButton" x:FieldModifier="internal"
@@ -66,7 +68,7 @@
                     Click="OnMaskKindClicked"
                     CornerRadius="6"
                     Tag="Radial">
-                    <FontIcon FontSize="14" Glyph="&#xECCA;" />
+                    <controls:VectorIcon IconSize="14" Kind="RadialMask" />
                 </Button>
                 <Button
                     x:Name="LocalLinearButton" x:FieldModifier="internal"
@@ -79,7 +81,7 @@
                     Click="OnMaskKindClicked"
                     CornerRadius="6"
                     Tag="Linear">
-                    <FontIcon FontSize="14" Glyph="&#xF246;" />
+                    <controls:VectorIcon IconSize="14" Kind="LinearMask" />
                 </Button>
                 <Button
                     x:Name="LocalPolygonButton" x:FieldModifier="internal"
@@ -92,7 +94,7 @@
                     Click="OnMaskKindClicked"
                     CornerRadius="6"
                     Tag="Polygon">
-                    <FontIcon FontSize="14" Glyph="&#xE754;" />
+                    <controls:VectorIcon IconSize="14" Kind="PolygonMask" />
                 </Button>
             </Grid>
 
@@ -210,7 +212,6 @@
                         Grid.Column="1"
                         AutomationProperties.AutomationId="negaflow.develop.local.size"
                         Maximum="0.25"
-                        Minimum="0.005"
                         StepFrequency="0.005"
                         ThumbToolTipValueConverter="{x:Null}"
                         ValueChanged="OnSizeChanged" />

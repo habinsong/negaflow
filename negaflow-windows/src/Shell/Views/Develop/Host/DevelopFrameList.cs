@@ -4,6 +4,7 @@ using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
+using Negaflow.Shell.Views.Library.Browser;
 
 namespace Negaflow.Shell.Views.Develop.Host;
 
@@ -70,14 +71,11 @@ internal sealed class DevelopFrameList
             view.isSynchronizingFrameSelection = false;
         }
         Activate(items[selectedIndex], selectedIndex, publishSelection: false);
-        foreach (LibraryFrameListItem item in items)
-        {
-            if (view.thumbnails?.TryGet(item.Id) is not null)
-            {
-                continue;
-            }
-            view.thumbnails?.Request(item.Frame);
-        }
+        // 예전에는 캐시에 있는 프레임을 **건너뛰기만** 했습니다. `Request` 는 이미 들고 있는
+        // 프레임에 아무 일도 하지 않으므로 `ThumbnailReady` 가 오지 않고, 방금 새로 만든
+        // 항목의 `Thumbnail` 은 영원히 null 로 남습니다 — 폴더 일괄 적용이 모든 프레임을
+        // 캐시에 넣은 직후 필름스트립이 통째로 비던 원인이 이것입니다.
+        _ = LibraryThumbnailBinder.Hydrate(view.thumbnails, items, "develop");
     }
 
     /// <summary>
@@ -223,10 +221,10 @@ internal sealed class DevelopFrameList
     /// <c>frame.showDeveloped</c> 로 **프레임마다** 답니다. 이쪽은 작업공간에 한 벌뿐이라
     /// 프레임을 옮길 때 새 프레임 기준으로 다시 걸어 줘야 합니다.
     ///
-    /// ☠️ 안 걸면 <c>PreviewCoordinator.UninvertedSource</c> 가 켜진 채 남아
-    ///    <c>FilmPolarity = Positive</c> 로 현상 요청이 나갑니다 — 한 프레임에서 `원본` 을
-    ///    켜거나 베이스 스포이드를 켠 뒤로는 **여는 사진마다** 반전 전 네거티브(주황 베이스에
-    ///    반전 전 그레인)가 나와 "전부 노이즈투성이에 베이스가 이상하다" 로 보입니다.
+    /// 안 걸면 <c>PreviewCoordinator.UninvertedSource</c> 가 켜진 채 남아
+    /// <c>FilmPolarity = Positive</c> 로 현상 요청이 나갑니다 — 한 프레임에서 `원본` 을
+    /// 켜거나 베이스 스포이드를 켠 뒤로는 **여는 사진마다** 반전 전 네거티브(주황 베이스에
+    /// 반전 전 그레인)가 나와 "전부 노이즈투성이에 베이스가 이상하다" 로 보입니다.
     /// </summary>
     private void RebindPerFrameCanvasTools()
     {

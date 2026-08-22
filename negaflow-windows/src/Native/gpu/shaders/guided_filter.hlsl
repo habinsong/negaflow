@@ -7,19 +7,19 @@
 // 그래서 박스 블러가 이 커널들보다 먼저였습니다.
 //
 // 순서 (CPU `guided_base` 와 같습니다):
-//   1. guide² 와 source×guide 를 만든다                      ← Prepare
-//   2. guide · source · guide² · (source×guide) 의 박스 평균   ← GpuBoxBlur ×2
-//   3. variance = max(0, meanI² 평균 − 평균 meanI²)
-//      covariance = 평균(source×guide) − 평균source × 평균guide
-//      a = cov / (var + ε),  b = 평균source − a × 평균guide   ← Coefficients
-//   4. a 와 b 의 박스 평균                                    ← GpuBoxBlur ×2
-//   5. clamp01(평균a × guide + 평균b)                         ← Apply
+// 1. guide² 와 source×guide 를 만든다 ← Prepare
+// 2. guide · source · guide² · (source×guide) 의 박스 평균 ← GpuBoxBlur ×2
+// 3. variance = max(0, meanI² 평균 − 평균 meanI²)
+// covariance = 평균(source×guide) − 평균source × 평균guide
+// a = cov / (var + ε), b = 평균source − a × 평균guide ← Coefficients
+// 4. a 와 b 의 박스 평균 ← GpuBoxBlur ×2
+// 5. clamp01(평균a × guide + 평균b) ← Apply
 //
-// ☠️ **채널 묶음 규칙** — 박스 블러를 6번이 아니라 4번만 돌리려고 네 스칼라를 한 텍스처에
-//    담습니다. 이 배치를 바꾸면 전부 어긋납니다:
-//      Packed  = (source.r, source.g, source.b, guide)
-//      Product = (source.r×guide, source.g×guide, source.b×guide, guide²)
-//    이때 박스 블러는 **알파까지 흘려야** 합니다(`blur_alpha = true`).
+// **채널 묶음 규칙** — 박스 블러를 6번이 아니라 4번만 돌리려고 네 스칼라를 한 텍스처에
+// 담습니다. 이 배치를 바꾸면 전부 어긋납니다:
+// Packed = (source.r, source.g, source.b, guide)
+// Product = (source.r×guide, source.g×guide, source.b×guide, guide²)
+// 이때 박스 블러는 **알파까지 흘려야** 합니다(`blur_alpha = true`).
 
 Texture2D<float4> SourceA : register(t0);
 Texture2D<float4> SourceB : register(t1);
@@ -67,23 +67,23 @@ void GuidedCoefficientsMain(uint3 id : SV_DispatchThreadID) {
     float3 meanGuideProduct = meanProduct.rgb;
     float meanGuideSquared = meanProduct.a;
 
-    // ☠️ 이 다섯 줄의 `precise` 를 빼지 마십시오. **여기가 증폭기입니다.**
+    // 이 다섯 줄의 `precise` 를 빼지 마십시오. **여기가 증폭기입니다.**
     //
-    //    `variance` 는 평탄한 영역에서 **0 에 아주 가깝습니다.** 그런데 `eps` 가 0.001 이라
-    //    `1/(variance + eps)` 가 앞 단계의 마지막 비트 차이를 최대 **1000배로** 키웁니다.
-    //    박스 블러 러닝 섬의 1 ulp 가 여기서 `2e-05`~`3.8e-05` 로 자랍니다 — 허용치 `1e-5`
-    //    의 네 배입니다. 이 커널이 아니라 **박스 블러의 누적 순서**가 원인이었고
-    //    (`box_blur.hlsl` 의 RGB/알파 주석), 그것을 고치니 WARP 에서 **delta 0** 입니다.
+    // `variance` 는 평탄한 영역에서 **0 에 아주 가깝습니다.** 그런데 `eps` 가 0.001 이라
+    // `1/(variance + eps)` 가 앞 단계의 마지막 비트 차이를 최대 **1000배로** 키웁니다.
+    // 박스 블러 러닝 섬의 1 ulp 가 여기서 `2e-05`~`3.8e-05` 로 자랍니다 — 허용치 `1e-5`
+    // 의 네 배입니다. 이 커널이 아니라 **박스 블러의 누적 순서**가 원인이었고
+    // (`box_blur.hlsl` 의 RGB/알파 주석), 그것을 고치니 WARP 에서 **delta 0** 입니다.
     //
-    //    `precise` 는 fxc 의 FMA 축약·재배열을 막아 CPU 의 연산 순서를 지킵니다. `/Gis` 와
-    //    겹치지만 둘 다 둡니다 — 플래그는 빠질 수 있고 이 표시는 소스에 남습니다.
+    // `precise` 는 fxc 의 FMA 축약·재배열을 막아 CPU 의 연산 순서를 지킵니다. `/Gis` 와
+    // 겹치지만 둘 다 둡니다 — 플래그는 빠질 수 있고 이 표시는 소스에 남습니다.
     //
-    // ⚠️ **`div` 하나만은 벤더가 갈릴 수 있고, 그것이 남은 오차의 전부입니다.**
-    //    D3D11 은 add·sub·mul 에 **0.5 ULP**(정확 반올림)를 요구하지만 역수/나눗셈에는
-    //    **1.0 ULP** 만 요구합니다. 이 체인에서 그 예외는 아래 `1.0 / (...)` 하나뿐입니다.
-    //    실측: WARP **0**, RTX 4060 Ti **1.4e-06 ~ 4.1e-06**. 허용치 안이지만 **0 은 아니고**,
-    //    다른 벤더에서도 0 이 될 것이라고 적지 마십시오.
-    //    출처: https://learn.microsoft.com/en-us/windows/win32/direct3d11/floating-point-rules
+    // 주의 **`div` 하나만은 벤더가 갈릴 수 있고, 그것이 남은 오차의 전부입니다.**
+    // D3D11 은 add·sub·mul 에 **0.5 ULP**(정확 반올림)를 요구하지만 역수/나눗셈에는
+    // **1.0 ULP** 만 요구합니다. 이 체인에서 그 예외는 아래 `1.0 / (...)` 하나뿐입니다.
+    // 실측: WARP **0**, RTX 4060 Ti **1.4e-06 ~ 4.1e-06**. 허용치 안이지만 **0 은 아니고**,
+    // 다른 벤더에서도 0 이 될 것이라고 적지 마십시오.
+    // 출처: https://learn.microsoft.com/en-us/windows/win32/direct3d11/floating-point-rules
     precise float variance = max(0.0, meanGuideSquared - (meanGuide * meanGuide));
     precise float3 covariance = meanGuideProduct - (meanSource * meanGuide);
     precise float reciprocal = 1.0 / (variance + Epsilon);

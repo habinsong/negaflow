@@ -1,21 +1,21 @@
 // 스캐너 타겟 프로파일 그레이드입니다. **엔진에서 가장 비싼 화소별 커널**입니다.
 //
-// macOS  : `ScannerTargetGrade+Apply.swift` — 64³ `CIColorCubeWithColorSpace` +
-//          `boundedRelativeGrade`(`ChromabaseMetalKernels.swift:531`)
+// macOS : `ScannerTargetGrade+Apply.swift` — 64³ `CIColorCubeWithColorSpace` +
+// `boundedRelativeGrade`(`ChromabaseMetalKernels.swift:531`)
 // CPU 판 : `imaging/scanner_target_grade.cpp` `apply_profile_grade` +
-//          `scanner_target_response.cpp` `transformed_srgb` / `gamut_scale`
+// `scanner_target_response.cpp` `transformed_srgb` / `gamut_scale`
 //
-// ☠️ **macOS 와 알고리즘이 다릅니다.** macOS 는 같은 수식을 64³ 격자에서 **262,144번**
-//    풀어 큐브를 만들고 그것을 보간해 씁니다. Windows 는 **화소마다** 풉니다 —
-//    24MP 에서 17,300,000번, macOS 의 **66배**입니다. 이 셰이더는 Windows 의 셈을
-//    그대로 옮긴 것이고, 큐브로 바꾸는 것은 값이 달라지는 **별건**입니다.
+// **macOS 와 알고리즘이 다릅니다.** macOS 는 같은 수식을 64³ 격자에서 **262,144번**
+// 풀어 큐브를 만들고 그것을 보간해 씁니다. Windows 는 **화소마다** 풉니다 —
+// 24MP 에서 17,300,000번, macOS 의 **66배**입니다. 이 셰이더는 Windows 의 셈을
+// 그대로 옮긴 것이고, 큐브로 바꾸는 것은 값이 달라지는 **별건**입니다.
 //
-// ☠️ **CPU 는 `double` 이고 이것은 float 입니다.** sRGB 왕복은 CPU 도 이미 float 로
-//    내려서 돌지만(`scanner_target_color.cpp:23-29` 가 `static_cast<float>` 합니다),
-//    Lab 왕복과 hue/chroma 응답은 `double` 입니다. 오차는 시험이 재서 적습니다.
+// **CPU 는 `double` 이고 이것은 float 입니다.** sRGB 왕복은 CPU 도 이미 float 로
+// 내려서 돌지만(`scanner_target_color.cpp:23-29` 가 `static_cast<float>` 합니다),
+// Lab 왕복과 hue/chroma 응답은 `double` 입니다. 오차는 시험이 재서 적습니다.
 //
-// ☠️ `domainWeight` 는 **sRGB 코드 좌표**에서 계산합니다. working-linear 에서 계산하면
-//    linear 0.01(sRGB ≈ 0.10)이 잘못 반감됩니다 — macOS 커널 주석이 못박은 자리입니다.
+// `domainWeight` 는 **sRGB 코드 좌표**에서 계산합니다. working-linear 에서 계산하면
+// linear 0.01(sRGB ≈ 0.10)이 잘못 반감됩니다 — macOS 커널 주석이 못박은 자리입니다.
 
 #include "tone_shared.hlsli"
 
@@ -28,7 +28,7 @@ cbuffer ScannerTargetGradeConstants : register(b0) {
     uint2 Extent;
     float2 Padding0;
     // 톤 매듭의 입력 위치와, 호스트가 이미 세기·앵커까지 반영해 만든 출력값입니다.
-    // ⚠️ 상수 버퍼의 배열은 원소마다 16바이트라 `float4[3]` 으로 묶고 `[i>>2][i&3]` 로 읽습니다.
+    // 주의 상수 버퍼의 배열은 원소마다 16바이트라 `float4[3]` 으로 묶고 `[i>>2][i&3]` 로 읽습니다.
     float4 ToneXs[3];
     float4 ToneYs[3];
     // (luma, a, b, _)
@@ -244,9 +244,9 @@ float3 TransformedSrgb(float3 input, bool reciprocal) {
         }
         float taper = Smoothstep2(0.03, 0.10, inputLuma) *
             (1.0 - Smoothstep2(0.90, 0.97, inputLuma));
-        // ☠️ 게이트가 쓰는 `chroma` 는 **hue 응답을 얹기 전** 값입니다
-        //    (`scanner_target_response.cpp:139` 에서 잰 뒤 `:160` 에서 그대로 씁니다).
-        //    얹은 뒤 값으로 게이트하면 채도가 커진 화소에서 중성 드리프트가 잘못 닫힙니다.
+        // 게이트가 쓰는 `chroma` 는 **hue 응답을 얹기 전** 값입니다
+        // (`scanner_target_response.cpp:139` 에서 잰 뒤 `:160` 에서 그대로 씁니다).
+        // 얹은 뒤 값으로 게이트하면 채도가 커진 화소에서 중성 드리프트가 잘못 닫힙니다.
         float neutralGate = 1.0 - Smoothstep2(8.0, 28.0, chroma);
         float warmGate = Smoothstep2(0.22, 0.52, inputLuma);
         drift.x = clamp(drift.x, -4.0, 4.0);

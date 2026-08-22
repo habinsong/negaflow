@@ -17,6 +17,11 @@
     <windowsSettings>
       <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
       <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+      <!-- 이 프로세스의 ANSI 코드 페이지를 UTF-8 로 고정합니다. 없으면 시스템 ACP 가 쓰이고,
+           한국어 Windows 에서는 CP949 입니다. 그 값은 리다이렉트한 자식 프로세스 파이프의
+           기본 인코딩까지 정하므로, 스캐너 플러그인처럼 UTF-8 을 계약으로 하는 상대와
+           주고받는 바이트가 조용히 어긋납니다. -->
+      <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
     </windowsSettings>
   </application>
 </assembly>

@@ -50,7 +50,7 @@ struct TileRect final {
         core_height};
 }
 
-}  // namespace
+} // namespace
 
 // 커널 한 벌과 타일 크기의 중간 텍스처들입니다. 타일 크기는 이미지마다 최대 네 가지
 // (안쪽·오른쪽 끝·아래쪽 끝·모서리)뿐이라, 크기가 바뀔 때만 다시 만듭니다.
@@ -180,8 +180,8 @@ GpuFilmScanDenoiseResult GpuFilmScanDenoiseStage::apply(
     const float epsilon = imaging::film_scan_denoise_guided_epsilon;
     const float lift_power = imaging::film_scan_denoise_gamma_lift_power;
 
-    // ☠️ 결과는 **원본과 따로** 모읍니다. CPU 도 그렇게 합니다 — 타일이 원본을 읽는
-    //    동안 다른 타일이 그 자리를 덮으면 에이프런이 오염됩니다.
+    // 결과는 **원본과 따로** 모읍니다. CPU 도 그렇게 합니다 — 타일이 원본을 읽는
+    // 동안 다른 타일이 그 자리를 덮으면 에이프런이 오염됩니다.
     std::vector<Rgba32F> output{};
     try {
         output.assign(
@@ -318,4 +318,4 @@ GpuFilmScanDenoiseResult GpuFilmScanDenoiseStage::apply(
     return result;
 }
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

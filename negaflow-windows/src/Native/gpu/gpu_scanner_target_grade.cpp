@@ -17,8 +17,8 @@ using Setup = imaging::ScannerTargetGradeSetup;
 
 // HLSL `cbuffer ScannerTargetGradeConstants` 와 같은 배치여야 합니다.
 //
-// ⚠️ 상수 버퍼의 배열은 원소마다 **16바이트**입니다. 9개짜리 톤 배열을 `float[9]` 로 두면
-//    144바이트를 먹고 인덱싱도 어긋납니다 — `float4[3]` 으로 묶습니다.
+// 주의 상수 버퍼의 배열은 원소마다 **16바이트**입니다. 9개짜리 톤 배열을 `float[9]` 로 두면
+// 144바이트를 먹고 인덱싱도 어긋납니다 — `float4[3]` 으로 묶습니다.
 struct alignas(16) ScannerTargetGradeConstants final {
     GpuPointwiseExtent extent{};
     float tone_xs[3][4]{};
@@ -68,7 +68,7 @@ static_assert((sizeof(ScannerTargetGradeConstants) % 16U) == 0U, "16-byte regist
     return std::isfinite(setup.strength) && std::isfinite(setup.chroma_keep);
 }
 
-}  // namespace
+} // namespace
 
 GpuKernelStatus GpuScannerTargetGrade::create(
     const GpuDevice& device,
@@ -89,9 +89,9 @@ GpuKernelStatus GpuScannerTargetGrade::dispatch(
     if (!finite_setup(setup)) {
         return GpuKernelStatus::non_finite_parameter;
     }
-    // ☠️ 색상 앵커의 로그 보간은 이득이 양수여야 합니다. 0 이나 음수가 들어오면
-    //    `log` 가 −inf/NaN 을 내고 전 화소가 망가집니다 — CPU 표에는 없는 값이지만
-    //    여기서 막아 두면 표가 바뀌어도 조용히 깨지지 않습니다.
+    // 색상 앵커의 로그 보간은 이득이 양수여야 합니다. 0 이나 음수가 들어오면
+    // `log` 가 −inf/NaN 을 내고 전 화소가 망가집니다 — CPU 표에는 없는 값이지만
+    // 여기서 막아 두면 표가 바뀌어도 조용히 깨지지 않습니다.
     for (std::uint32_t i = 0U; i < setup.hue_count; ++i) {
         if (!(setup.hue_anchors[i][1] > 0.0F)) {
             return GpuKernelStatus::non_finite_parameter;
@@ -135,4 +135,4 @@ GpuKernelStatus GpuScannerTargetGrade::dispatch(
     return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
 }
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

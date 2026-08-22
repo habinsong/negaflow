@@ -1,3 +1,4 @@
+using System.IO;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -14,6 +15,9 @@ namespace Negaflow.Shell.Views;
 public sealed partial class LibraryWorkspaceView : UserControl
 {
     internal WorkspacePresentationState? workspaceState;
+
+    /// <summary>진단이 스캔 상태를 읽어 가는 자리입니다.</summary>
+    internal Library.Scanner.LibraryScanPanel ScanPanelForDiagnostics => ScanPanel;
     internal LibraryHostService? libraryHost;
     internal ThumbnailService? thumbnails;
     internal Views.Library.Scanner.ScanSessionHost? scanSessionHost;
@@ -60,6 +64,8 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ImportScannerButton.Checked += OnImportScannerToggled;
         ImportScannerButton.Unchecked += OnImportScannerToggled;
         ScanPanel.LibraryChanged += OnEmbeddedLibraryChanged;
+        ScanPanel.FlatbedPreviewChanged += (_, _) => SyncFlatbedOverlay();
+        FlatbedOverlay.RegionsChanged += (_, _) => ScanPanel.OnOverlayRegionsChanged();
         CullingSurface.AttachChrome(
             CullingGridButton,
             CullingSurveyButton,
@@ -73,10 +79,33 @@ public sealed partial class LibraryWorkspaceView : UserControl
         FilesSourceTree.FrameSelected += (_, frameId) => selection.SelectFrame(frameId);
         FilesSourceTree.LibraryChanged += OnEmbeddedLibraryChanged;
         FilesSourceTree.StatusChanged += (_, text) => ImportStatusText.Text = text;
+        FilesSourceTree.LocateFolderRequested += (_, folderPath) =>
+            import.LocateFolder(folderPath);
+        FilesSourceTree.FolderRemoveRequested += OnFolderRemoveRequested;
         CollectionsPanel.FilterChanged += (_, _) => ShowFilteredItems();
         CollectionsPanel.StoredQueryApplied += (_, query) => ApplyStoredQuery(query);
         copy.Localize();
         Loaded += OnLoaded;
+    }
+
+    /// <summary>
+    /// 폴더 머리줄의 ✕ 입니다. macOS <c>removeLibraryFolderSection</c> 과 같은 뜻 — 그 폴더의
+    /// 사진을 라이브러리에서 뺍니다. <b>파일은 지우지 않습니다.</b>
+    /// </summary>
+    private void OnFolderRemoveRequested(object? sender, string folderPath)
+    {
+        _ = sender;
+        if (libraryHost is not { } host)
+        {
+            return;
+        }
+        IReadOnlyList<LibraryFrameListItem> inFolder =
+            [.. allItems.Where(item => string.Equals(
+                Path.GetDirectoryName(item.Frame.SourcePath),
+                Path.TrimEndingDirectorySeparator(folderPath),
+                StringComparison.OrdinalIgnoreCase))];
+        _ = host;
+        actions.RemoveFromLibrary(inFolder);
     }
 
     /// <summary>
@@ -283,16 +312,16 @@ public sealed partial class LibraryWorkspaceView : UserControl
     private void OnFrameDragStarting(object sender, DragItemsStartingEventArgs args) =>
         selection.OnDragStarting(sender, args);
 
-    private void OnFolderProcessChanged(object sender, SelectionChangedEventArgs args) =>
+    private void OnFolderProcessChanged(object? sender, RoutedEventArgs args) =>
         rail.OnFolderProcessChanged(sender, args);
 
-    private void OnFolderTargetChanged(object sender, SelectionChangedEventArgs args) =>
+    private void OnFolderTargetChanged(object? sender, RoutedEventArgs args) =>
         rail.OnFolderTargetChanged(sender, args);
 
-    private void OnFolderApplyClicked(object sender, RoutedEventArgs args) =>
+    private void OnFolderApplyClicked(object? sender, RoutedEventArgs args) =>
         rail.OnFolderApplyClicked(sender, args);
 
-    private void OnFolderDisclosureClicked(object sender, RoutedEventArgs args) =>
+    private void OnFolderDisclosureClicked(object? sender, RoutedEventArgs args) =>
         rail.OnFolderDisclosureClicked(sender, args);
 
     private void OnFiltersToggled(object sender, RoutedEventArgs args) =>
@@ -342,9 +371,6 @@ public sealed partial class LibraryWorkspaceView : UserControl
 
     private void OnLocateOriginalClicked(object sender, RoutedEventArgs args) =>
         import.OnLocateOriginalClicked(sender, args);
-
-    private void OnLocateFolderClicked(object sender, RoutedEventArgs args) =>
-        import.OnLocateFolderClicked(sender, args);
 
     private void OnRootSizeChanged(object sender, SizeChangedEventArgs args) =>
         layout.OnRootSizeChanged(sender, args);

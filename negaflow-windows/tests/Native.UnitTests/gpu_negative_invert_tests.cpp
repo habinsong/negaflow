@@ -1,6 +1,6 @@
 // CPU/GPU 동치 시험 — 네거티브 반전.
 //
-// macOS  : `ChromabaseMetalKernels.swift:557` `negativeInvert`
+// macOS : `ChromabaseMetalKernels.swift:557` `negativeInvert`
 // CPU 판 : `core/negative_inversion.cpp` `apply_negative_inversion`
 // GPU 판 : `gpu/shaders/negative_invert.hlsl` + `gpu/gpu_negative_invert.cpp`
 //
@@ -97,8 +97,8 @@ void invert_matches_cpu(const GpuDevice& device, const char* const label) {
         return;
     }
 
-    // ☠️ 응답 계수를 시험에서 베껴 쓰지 않습니다 — 엔진의 것을 그대로 씁니다.
-    //    베껴 쓰면 셰이더가 틀려도 시험이 같이 틀려 통과합니다.
+    // 응답 계수를 시험에서 베껴 쓰지 않습니다 — 엔진의 것을 그대로 씁니다.
+    // 베껴 쓰면 셰이더가 틀려도 시험이 같이 틀려 통과합니다.
     const negaflow::core::PrintResponse response =
         negaflow::core::color_negative_print_response();
 
@@ -175,7 +175,7 @@ void invert_matches_cpu(const GpuDevice& device, const char* const label) {
         "non-positive dmax is rejected");
 }
 
-}  // namespace
+} // namespace
 
 int main() {
     const GpuDevice warp = GpuDevice::create(GpuDevicePreference::warp_only);

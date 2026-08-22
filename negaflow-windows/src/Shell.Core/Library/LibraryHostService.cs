@@ -83,6 +83,12 @@ public sealed class LibraryHostService : IDisposable
 
     public CatalogSessionError SessionError { get; private set; }
 
+    /// <summary>
+    /// 마지막 저장 뒤에 바뀐 것이 있는지입니다. 진단 보고서가 읽습니다 - macOS
+    /// <c>hasUnsavedLibraryChanges</c> 자리입니다.
+    /// </summary>
+    public bool HasUnsavedChanges => document?.IsDirty ?? false;
+
     public CatalogStoreError StoreError { get; private set; }
 
     public DefectSidecarError DefectSidecarError { get; private set; }
@@ -179,6 +185,14 @@ public sealed class LibraryHostService : IDisposable
     /// 편집 셋은 모두 이 자리를 지나므로, 저장 예약도 여기서 겁니다. 호출부마다 예약을 걸게
     /// 하면 한 군데만 빠져도 그 편집이 조용히 사라집니다.
     /// </summary>
+    /// <summary>
+    /// 지금 카탈로그를 백업합니다. 열려 있지 않으면 아무 것도 하지 않고 실패를 냅니다 —
+    /// 빈 백업을 만들어 "성공"으로 적으면 사용자는 지켜지고 있다고 믿습니다.
+    /// </summary>
+    public CatalogBackupCreateResult CreateBackup() =>
+        document?.CreateBackup() ??
+        new CatalogBackupCreateResult(null, 0, CatalogBackupError.InvalidCatalog, false);
+
     public LibraryFrameError Edit(string frameId, LibraryFrameEdit edit) =>
         AfterCoalescedDevelopEdit(frameId, () =>
             document is null
@@ -582,13 +596,19 @@ public sealed class LibraryHostService : IDisposable
     /// 현상해서 파일로 씁니다. 네이티브 호출은 워커 스레드에서 돌고 결과는 dispatcher 를 거쳐
     /// 돌아옵니다. 자세한 계약은 <see cref="DevelopExportCoordinator"/> 를 보십시오.
     /// </summary>
+    /// <param name="maximumConcurrent">
+    /// 동시에 돌아도 되는 장 수입니다. 배치만 1 보다 큰 값을 넘깁니다 —
+    /// <see cref="DevelopExportCoordinator.MaximumConcurrentExports"/>.
+    /// </param>
     public Task<bool> ExportAsync(
         LibraryFrameSnapshot frame,
         string destinationPath,
         DevelopExportFormat format,
         Action<DevelopExportOutcome> onCompleted,
-        ExportEncodingOptions? encoding = null) =>
-        coordinator.StartAsync(frame, destinationPath, format, onCompleted, encoding);
+        ExportEncodingOptions? encoding = null,
+        int maximumConcurrent = 1) =>
+        coordinator.StartAsync(
+            frame, destinationPath, format, onCompleted, encoding, maximumConcurrent);
 
     public void Dispose()
     {

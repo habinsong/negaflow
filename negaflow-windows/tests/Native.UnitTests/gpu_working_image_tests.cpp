@@ -225,7 +225,7 @@ void same_size_upload_keeps_the_texture(const GpuDevice& device) {
     expect(image.texture() != kept, "a new size must allocate a new texture");
 }
 
-void pool_reuses_the_previous_size(const GpuDevice& device) {
+void pool_follows_the_adapter_memory_budget(const GpuDevice& device) {
     using negaflow::gpu::GpuImagePool;
     GpuImagePool pool{};
     expect(pool.ensure(device, 64U, 48U), "first pool size");
@@ -233,15 +233,40 @@ void pool_reuses_the_previous_size(const GpuDevice& device) {
     expect(first != nullptr, "pool created textures");
     expect(pool.ensure(device, 32U, 24U), "second pool size");
     ID3D11Texture2D* const second = pool.images()[0].texture();
-    expect(second != nullptr && second != first, "new size is a different texture");
+    expect(second != nullptr, "new size has a texture");
+
+    negaflow::gpu::GpuVideoMemoryInfo memory{};
+    const bool expected_retention =
+        !device.capability().adapter.is_integrated &&
+        device.query_local_video_memory_info(memory) &&
+        memory.current_usage <= memory.budget;
+    expect(
+        pool.has_retained_size(64U, 48U) == expected_retention,
+        "previous size residency follows adapter architecture and DXGI budget");
+    if (expected_retention) {
+        expect(second != first, "retained and current sizes use different textures");
+    }
+
     expect(pool.ensure(device, 64U, 48U), "return to first size");
-    expect(
-        pool.images()[0].texture() == first,
-        "returning to the previous size must reuse the retained textures");
+    if (expected_retention) {
+        expect(
+            pool.images()[0].texture() == first,
+            "discrete GPU reuses the retained size while inside budget");
+    } else {
+        expect(
+            !pool.has_retained_size(32U, 24U),
+            "shared or unbudgeted GPU keeps only one texture size");
+    }
     expect(pool.ensure(device, 32U, 24U), "return to second size");
-    expect(
-        pool.images()[0].texture() == second,
-        "returning to the other retained size must reuse those textures");
+    if (expected_retention) {
+        expect(
+            pool.images()[0].texture() == second,
+            "discrete GPU reuses the other retained size while inside budget");
+    } else {
+        expect(
+            !pool.has_retained_size(64U, 48U),
+            "shared or unbudgeted GPU still keeps one size after another switch");
+    }
 }
 
 void unusable_device_is_reported() {
@@ -266,7 +291,7 @@ int main() {
     rejects_bad_input(warp);
     staging_ring_defers_the_first_frame(warp);
     same_size_upload_keeps_the_texture(warp);
-    pool_reuses_the_previous_size(warp);
+    pool_follows_the_adapter_memory_budget(warp);
 
     // 하드웨어가 있으면 같은 것을 하드웨어에서도 봅니다. 없으면 건너뜁니다 —
     // 이 시험은 GPU 유무가 아니라 왕복의 정확성을 봅니다.
@@ -278,7 +303,7 @@ int main() {
         rejects_bad_input(hardware);
         staging_ring_defers_the_first_frame(hardware);
         same_size_upload_keeps_the_texture(hardware);
-        pool_reuses_the_previous_size(hardware);
+        pool_follows_the_adapter_memory_budget(hardware);
     } else {
         std::cout << "[gpu] hardware absent, WARP only\n";
     }

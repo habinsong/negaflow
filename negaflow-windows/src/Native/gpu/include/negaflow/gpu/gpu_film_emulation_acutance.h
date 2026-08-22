@@ -8,7 +8,7 @@
 // 가중치와 세기는 **CPU 의 `prepare_film_emulation_acutance` 가 만든 것을 그대로** 씁니다.
 // 여기서 다시 만들면 두 벌이 되고 `exp` 구현 차이가 화소마다 실립니다.
 //
-// ☠️ **근사한 것입니다.** CPU 는 두 패스를 `double` 로 누적하고 GPU 는 float 입니다.
+// **근사한 것입니다.** CPU 는 두 패스를 `double` 로 누적하고 GPU 는 float 입니다.
 
 #include "negaflow/gpu/gpu_pointwise.h"
 #include "negaflow/imaging/film_emulation_acutance.h"
@@ -45,4 +45,4 @@ private:
     GpuPointwiseKernel vertical_{};
 };
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

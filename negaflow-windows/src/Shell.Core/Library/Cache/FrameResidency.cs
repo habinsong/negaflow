@@ -19,12 +19,21 @@ namespace Negaflow.Shell.Library;
 /// </remarks>
 public sealed class FrameResidency
 {
-    private readonly List<string> resident = [];
-    private readonly Lock gate = new();
+    private sealed record ResidentFrame(string Id, long Bytes);
 
-    public FrameResidency(int limit) => Limit = Math.Max(1, limit);
+    private readonly List<ResidentFrame> resident = [];
+    private readonly Lock gate = new();
+    private long residentBytes;
+
+    public FrameResidency(int limit, long byteLimit = long.MaxValue)
+    {
+        Limit = Math.Max(1, limit);
+        ByteLimit = Math.Max(1L, byteLimit);
+    }
 
     public int Limit { get; private set; }
+
+    public long ByteLimit { get; private set; }
 
     /// <summary>macOS <c>selectedFrameID</c> — 이 프레임은 축출하지 않습니다.</summary>
     public string? SelectedFrameId { get; set; }
@@ -40,6 +49,17 @@ public sealed class FrameResidency
         }
     }
 
+    public long ResidentBytes
+    {
+        get
+        {
+            lock (gate)
+            {
+                return residentBytes;
+            }
+        }
+    }
+
     public void SetLimit(int limit, Action<string> onEvict)
     {
         ArgumentNullException.ThrowIfNull(onEvict);
@@ -50,15 +70,31 @@ public sealed class FrameResidency
         }
     }
 
+    public void SetLimits(int limit, long byteLimit, Action<string> onEvict)
+    {
+        ArgumentNullException.ThrowIfNull(onEvict);
+        lock (gate)
+        {
+            Limit = Math.Max(1, limit);
+            ByteLimit = Math.Max(1L, byteLimit);
+            Trim(onEvict);
+        }
+    }
+
     /// <summary>macOS <c>markDevelopedResident</c>.</summary>
     public void MarkResident(string frameId, Action<string> onEvict)
+        => MarkResident(frameId, 0L, onEvict);
+
+    public void MarkResident(string frameId, long bytes, Action<string> onEvict)
     {
         ArgumentException.ThrowIfNullOrEmpty(frameId);
         ArgumentNullException.ThrowIfNull(onEvict);
         lock (gate)
         {
-            resident.RemoveAll(id => string.Equals(id, frameId, StringComparison.Ordinal));
-            resident.Add(frameId);
+            RemoveLocked(frameId);
+            long storedBytes = Math.Max(0L, bytes);
+            resident.Add(new ResidentFrame(frameId, storedBytes));
+            residentBytes = checked(residentBytes + storedBytes);
             Trim(onEvict);
         }
     }
@@ -69,7 +105,7 @@ public sealed class FrameResidency
         ArgumentException.ThrowIfNullOrEmpty(frameId);
         lock (gate)
         {
-            resident.RemoveAll(id => string.Equals(id, frameId, StringComparison.Ordinal));
+            RemoveLocked(frameId);
         }
     }
 
@@ -78,28 +114,47 @@ public sealed class FrameResidency
         lock (gate)
         {
             resident.Clear();
+            residentBytes = 0L;
+        }
+    }
+
+    private void RemoveLocked(string frameId)
+    {
+        for (int index = resident.Count - 1; index >= 0; index--)
+        {
+            ResidentFrame entry = resident[index];
+            if (!string.Equals(entry.Id, frameId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+            resident.RemoveAt(index);
+            residentBytes -= entry.Bytes;
         }
     }
 
     /// <summary>macOS <c>trimDeveloped</c>.</summary>
     private void Trim(Action<string> onEvict)
     {
-        while (resident.Count > Limit)
+        while (resident.Count > Limit || residentBytes > ByteLimit)
         {
-            string evictId = resident[0];
-            if (string.Equals(evictId, SelectedFrameId, StringComparison.Ordinal))
+            ResidentFrame evict = resident[0];
+            if (string.Equals(evict.Id, SelectedFrameId, StringComparison.Ordinal))
             {
                 resident.RemoveAt(0);
-                resident.Add(evictId);
+                resident.Add(evict);
                 if (resident.TrueForAll(
-                        id => string.Equals(id, SelectedFrameId, StringComparison.Ordinal)))
+                        entry => string.Equals(
+                            entry.Id,
+                            SelectedFrameId,
+                            StringComparison.Ordinal)))
                 {
                     break;
                 }
                 continue;
             }
             resident.RemoveAt(0);
-            onEvict(evictId);
+            residentBytes -= evict.Bytes;
+            onEvict(evict.Id);
         }
     }
 }

@@ -6,16 +6,16 @@
 // 없습니다. 링크하면 순환입니다. 그래서 `imaging` 은 **표만 알고**, 그 표를
 // `pipeline`(둘 다 링크하는 층)이 채웁니다.
 //
-// ☠️ **표에 넣어도 되는 것과 아닌 것이 다릅니다.**
+// **표에 넣어도 되는 것과 아닌 것이 다릅니다.**
 //
-//  · **정확한 것** — 값이 CPU 와 **비트 단위로 같음이 증명되는** 커널.
-//    형태학(min/max)이 그렇습니다: 창 안에서 **하나를 고르는** 일이라 부동소수 산술이
-//    없고, 창과 가장자리 처리가 같으면 고른 값이 같습니다. 이런 것은 **언제나** 켭니다 —
-//    내보내기·골든에서도 값이 안 바뀝니다.
+// · **정확한 것** — 값이 CPU 와 **비트 단위로 같음이 증명되는** 커널.
+// 형태학(min/max)이 그렇습니다: 창 안에서 **하나를 고르는** 일이라 부동소수 산술이
+// 없고, 창과 가장자리 처리가 같으면 고른 값이 같습니다. 이런 것은 **언제나** 켭니다 —
+// 내보내기·골든에서도 값이 안 바뀝니다.
 //
-//  · **근사한 것** — 곱셈·덧셈이 들어가 CPU 와 마지막 비트가 다를 수 있는 커널.
-//    `ApproximateAcceleratorScope` 안에서만 돕니다. 프리뷰·검출만 그 스코프를 엽니다.
-//    **내보내기·골든 경로는 절대 열지 마십시오.**
+// · **근사한 것** — 곱셈·덧셈이 들어가 CPU 와 마지막 비트가 다를 수 있는 커널.
+// `ApproximateAcceleratorScope` 안에서만 돕니다. 프리뷰·검출만 그 스코프를 엽니다.
+// **내보내기·골든 경로는 절대 열지 마십시오.**
 
 #include <cstdint>
 
@@ -28,7 +28,7 @@ enum class MorphologyKind : std::uint8_t {
     // 팽창 → 침식. 어두운 티끌을 지웁니다.
     closing,
     // `max(max(0, source − opened), max(0, closed − source))`.
-    // ☠️ 반경이 0 이면 CPU 는 **원본이 아니라 전부 0** 을 냅니다. 가속도 같아야 합니다.
+    // 반경이 0 이면 CPU 는 **원본이 아니라 전부 0** 을 냅니다. 가속도 같아야 합니다.
     bipolar_top_hat,
 };
 
@@ -71,8 +71,8 @@ using DigitalHalationFunction = bool (*)(
 // 바뀝니다. `dmin`·`dmax_normalized` 는 채널 셋, `response` 는 `{yCeil, amplitude, rate, shape}`
 // 넷입니다 — macOS 커널이 받는 것과 같은 넷입니다.
 //
-// ☠️ **근사한 것입니다.** 곱셈·초월함수가 들어가 CPU 와 마지막 비트가 다를 수 있습니다
-//    (실측 1.8e-07). `ApproximateAcceleratorScope` 안에서만 돕니다.
+// **근사한 것입니다.** 곱셈·초월함수가 들어가 CPU 와 마지막 비트가 다를 수 있습니다
+// (실측 1.8e-07). `ApproximateAcceleratorScope` 안에서만 돕니다.
 using NegativeInversionFunction = bool (*)(
     float* pixels,
     std::uint32_t width,
@@ -87,8 +87,8 @@ using NegativeInversionFunction = bool (*)(
 // `stride_pixels * height` 개의 RGBA float 이고 제자리에서 바뀝니다.
 // `amplitude` 는 **이미 세기가 곱해진** 값이고, CPU 가 화소 루프 밖에서 만드는 것과 같습니다.
 //
-// ☠️ **근사한 것입니다.** 밀도 응답이 `log10`·`sqrt`·`exp`·`pow` 라 CPU 와 마지막 비트가
-//    다를 수 있습니다(실측 4.2e-07). 좌표 해시 자체는 uint32 라 **비트 단위로 같습니다.**
+// **근사한 것입니다.** 밀도 응답이 `log10`·`sqrt`·`exp`·`pow` 라 CPU 와 마지막 비트가
+// 다를 수 있습니다(실측 4.2e-07). 좌표 해시 자체는 uint32 라 **비트 단위로 같습니다.**
 using DigitalFilmGrainFunction = bool (*)(
     float* pixels,
     std::uint32_t width,
@@ -105,7 +105,7 @@ using DigitalFilmGrainFunction = bool (*)(
 // 전방 선언만 쓰는 이유 — 이 헤더는 `imaging` 전체가 포함하는 자리라 무거운 헤더를
 // 끌어오면 재컴파일이 번집니다. 포인터만 넘기므로 정의가 필요 없습니다.
 //
-// ☠️ **근사한 것입니다**(감마 왕복의 `pow`, HSL 왕복의 곱셈).
+// **근사한 것입니다**(감마 왕복의 `pow`, HSL 왕복의 곱셈).
 struct DigitalFilmColorPreset;
 
 using DigitalFilmColorPresetFunction = bool (*)(
@@ -121,8 +121,8 @@ using DigitalFilmColorPresetFunction = bool (*)(
 // 그대로 넘깁니다 — 만드는 일은 GPU 로 옮기지 않습니다(화소마다 같은 값이라 옮길 이유가
 // 없고, 옮기면 두 벌이 됩니다).
 //
-// ☠️ **근사한 것입니다**(sRGB 왕복의 `pow`). 표와 삼선형 보간 자체는 CPU 와 같은
-//    float 연산이라 그 자리에서는 오차가 안 생깁니다.
+// **근사한 것입니다**(sRGB 왕복의 `pow`). 표와 삼선형 보간 자체는 CPU 와 같은
+// float 연산이라 그 자리에서는 오차가 안 생깁니다.
 struct FilmEmulationColorCube;
 
 using FilmEmulationCubeFunction = bool (*)(
@@ -136,7 +136,7 @@ using FilmEmulationCubeFunction = bool (*)(
 // `prepare_film_emulation_acutance` 가 만든 것을 그대로 넘깁니다 — 가중치를 두 곳에서
 // 만들면 그 순간 두 벌이 됩니다.
 //
-// ☠️ **근사한 것입니다.** CPU 는 두 패스를 `double` 로 누적하고 GPU 는 float 입니다.
+// **근사한 것입니다.** CPU 는 두 패스를 `double` 로 누적하고 GPU 는 float 입니다.
 struct FilmEmulationAcutanceSetup;
 
 using FilmEmulationAcutanceFunction = bool (*)(
@@ -177,7 +177,7 @@ using DigitalBwFilmLookFunction = bool (*)(
 // 흐린 장면 vibrance 입니다. `amount` 는 CPU 가 축소본에서 장면 평균 채도를 재서
 // 정한 값입니다 — 여기서 다시 재지 않습니다(축소기가 얽혀 있고 화소마다 같은 값입니다).
 //
-// ☠️ **근사한 것입니다**(33³ 표의 삼선형 + 곱셈).
+// **근사한 것입니다**(33³ 표의 삼선형 + 곱셈).
 using MutedSceneVibranceFunction = bool (*)(
     float* pixels,
     std::uint32_t width,
@@ -188,7 +188,7 @@ using MutedSceneVibranceFunction = bool (*)(
 // 컬러 모델(온도·틴트·색 깊이·vibrance·채도·원색)입니다. CPU 판
 // (`imaging/color_model.cpp` `apply_color_model`)과 같은 순서·같은 게이트여야 합니다.
 //
-// ☠️ **근사한 것입니다.**
+// **근사한 것입니다.**
 struct ColorModelParameters;
 
 using ColorModelFunction = bool (*)(
@@ -202,7 +202,7 @@ using ColorModelFunction = bool (*)(
 // 노리츠 프리뷰 실측으로 병렬화 뒤에도 16,201 ms 이고 전체의 90% 를 넘습니다.
 // `setup` 은 CPU 가 화소 루프 밖에서 만든 것을 그대로 넘깁니다.
 //
-// ☠️ **근사한 것입니다.** CPU 는 Lab 왕복을 `double` 로 돌고 GPU 는 float 입니다.
+// **근사한 것입니다.** CPU 는 Lab 왕복을 `double` 로 돌고 GPU 는 float 입니다.
 struct ScannerTargetGradeSetup;
 
 using ScannerTargetGradeFunction = bool (*)(
@@ -214,8 +214,8 @@ using ScannerTargetGradeFunction = bool (*)(
 
 // NORITSU 장치 질감입니다. `setup` 은 `scanner_target_texture_setup()` 이 만든 것입니다.
 //
-// ☠️ **근사한 것입니다.** CPU 는 두 패스를 `double` 로 누적하고, 하드 게이트가 있어
-//    경계 화소는 1ulp 로 결과가 갈립니다.
+// **근사한 것입니다.** CPU 는 두 패스를 `double` 로 누적하고, 하드 게이트가 있어
+// 경계 화소는 1ulp 로 결과가 갈립니다.
 struct ScannerTargetTextureSetup;
 
 using ScannerTargetTextureFunction = bool (*)(
@@ -227,7 +227,7 @@ using ScannerTargetTextureFunction = bool (*)(
 
 // TextureStage `filmGrain`. `amount` 는 이미 `strength * 0.055` 입니다.
 //
-// ☠️ **근사입니다.** 좌표 해시는 비트 일치, 루마·smoothstep 은 float.
+// **근사입니다.** 좌표 해시는 비트 일치, 루마·smoothstep 은 float.
 using TextureGrainFunction = bool (*)(
     float* pixels,
     std::uint32_t width,
@@ -246,7 +246,7 @@ using ChannelClippingOverlayFunction = bool (*)(
 
 // macOS `CIAreaAverage` 대응. `mean` 은 rgba 넷, `count` 는 영역 화소 수입니다.
 //
-// ☠️ **근사입니다.** CPU 행 우선 double vs GPU groupshared 트리. 평균 1e-5.
+// **근사입니다.** CPU 행 우선 double vs GPU groupshared 트리. 평균 1e-5.
 using AreaAverageFunction = bool (*)(
     const float* pixels,
     std::uint32_t width,
@@ -363,4 +363,4 @@ public:
 // 지금 이 스레드에서 근사 가속이 허용되는지.
 [[nodiscard]] bool approximate_acceleration_allowed() noexcept;
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

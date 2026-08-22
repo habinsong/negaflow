@@ -159,7 +159,8 @@ public static class LibraryBrowserProjector
         LibraryBrowserViewMode mode,
         FilmType selectedFilmType = FilmType.ColorNegative,
         LibraryFolderDevelopmentDrafts? drafts = null,
-        IReadOnlySet<string>? collapsedSectionIds = null)
+        IReadOnlySet<string>? collapsedSectionIds = null,
+        bool includeEmptyFolders = true)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(folders);
@@ -179,11 +180,15 @@ public static class LibraryBrowserProjector
 
         IReadOnlyList<LibraryBrowserFolderSection> sections = mode is
             LibraryBrowserViewMode.Folders or LibraryBrowserViewMode.FilmType
+                // 파일 목록은 **사진을 담고 있는 폴더만** 냅니다. 등록만 해 두고 사진이
+                // 바로 아래에는 없는 폴더까지 내면, 사진이 든 하위 폴더 위에 빈 상위 폴더가
+                // 한 줄 더 붙어 "폴더 - 폴더 - 사진" 으로 보입니다.
                 ? BuildSections(
                     matched,
                     folders,
                     folderAvailabilityById,
-                    includeEmptyRegisteredFolders: mode == LibraryBrowserViewMode.Folders,
+                    includeEmptyRegisteredFolders:
+                        includeEmptyFolders && mode == LibraryBrowserViewMode.Folders,
                     drafts,
                     collapsedSectionIds)
                 : [];

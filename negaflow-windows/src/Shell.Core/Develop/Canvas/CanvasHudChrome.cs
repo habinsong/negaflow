@@ -8,6 +8,23 @@ public enum CanvasBackgroundKind
     White,
 }
 
+/// <summary>
+/// 캔버스 바탕색입니다. macOS <c>CanvasBackground.color</c> 와 같은 값입니다 —
+/// 검정 0.07 · 회색 0.5 · 흰색 0.97.
+/// </summary>
+public static class CanvasBackgroundColors
+{
+    public static double White(CanvasBackgroundKind background) => background switch
+    {
+        CanvasBackgroundKind.Gray => 0.5,
+        CanvasBackgroundKind.White => 0.97,
+        _ => 0.07,
+    };
+
+    public static byte Byte(CanvasBackgroundKind background) =>
+        (byte)Math.Round(255 * White(background), MidpointRounding.AwayFromZero);
+}
+
 /// <summary>macOS <c>CanvasBackground.hudContentColor</c> / <c>hudSurfaceColor</c>.</summary>
 public readonly record struct CanvasHudChrome(double ContentWhite, double SurfaceWhite)
 {

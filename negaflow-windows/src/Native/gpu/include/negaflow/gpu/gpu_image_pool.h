@@ -2,13 +2,13 @@
 
 // 진입점들이 나눠 쓰는 작업 텍스처 묶음입니다.
 //
-// ☠️ **왜 필요한가** — 텍스처를 호출마다 만들면 24MP 에서 264 MB 텍스처와 그에 딸린
-//    스테이징을 **매번 할당·해제**합니다. 실측으로 그 할당이 다운로드 시간의 큰 몫이었고
-//    (99 → 62 ms), 스테이징을 들고 있게 바꾼 뒤에도 텍스처 쪽은 그대로였습니다.
-//    한 번 잡아 두고 크기가 바뀔 때만 다시 만듭니다.
+// **왜 필요한가** — 텍스처를 호출마다 만들면 24MP 에서 264 MB 텍스처와 그에 딸린
+// 스테이징을 **매번 할당·해제**합니다. 실측으로 그 할당이 다운로드 시간의 큰 몫이었고
+// (99 → 62 ms), 스테이징을 들고 있게 바꾼 뒤에도 텍스처 쪽은 그대로였습니다.
+// 한 번 잡아 두고 크기가 바뀔 때만 다시 만듭니다.
 //
-// ☠️ **여러 묶음을 만들지 마십시오.** 24MP 에서 여섯 장이 1.6 GB 입니다. 필름 룩
-//    오케스트레이터도 이 묶음을 받아 씁니다 — 자기 것을 따로 들면 3.2 GB 가 됩니다.
+// **여러 묶음을 만들지 마십시오.** 24MP 에서 여섯 장이 1.6 GB 입니다. 필름 룩
+// 오케스트레이터도 이 묶음을 받아 씁니다 — 자기 것을 따로 들면 3.2 GB 가 됩니다.
 //
 // 여섯 장인 이유: 헐레이션이 원본 + 스크래치 넷 + 결과를 **한꺼번에** 씁니다.
 // 그것이 이 엔진에서 한 번에 필요한 최대치입니다.
@@ -40,6 +40,12 @@ public:
     [[nodiscard]] std::uint32_t width() const noexcept { return width_; }
     [[nodiscard]] std::uint32_t height() const noexcept { return height_; }
 
+    [[nodiscard]] bool has_retained_size(
+        const std::uint32_t width,
+        const std::uint32_t height) const noexcept {
+        return retained_[0].is_valid() && retained_width_ == width && retained_height_ == height;
+    }
+
 private:
     GpuWorkingImage images_[size]{};
     std::uint32_t width_{0U};
@@ -51,4 +57,4 @@ private:
     std::uint32_t retained_height_{0U};
 };
 
-}  // namespace negaflow::gpu
+} // namespace negaflow::gpu

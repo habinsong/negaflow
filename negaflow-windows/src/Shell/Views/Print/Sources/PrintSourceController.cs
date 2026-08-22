@@ -4,6 +4,7 @@ using Negaflow.Catalog;
 using Negaflow.Shell;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
+using Negaflow.Shell.Views.Library.Browser;
 using Negaflow.Shell.Views;
 
 namespace Negaflow.Shell.Views.Print.Sources;
@@ -15,8 +16,7 @@ internal sealed class PrintSourceController
 {
     private readonly PrintSourceSurface surface;
     private readonly Action redraw;
-    private readonly Dictionary<string, TreeViewNode> nodesByFrameId =
-        new(StringComparer.Ordinal);
+    private int builtFrameCount;
     private IReadOnlyList<LibraryFrameListItem> filmstripItems = [];
     private LibraryHostService? libraryHost;
     private ThumbnailService? thumbnails;
@@ -72,16 +72,10 @@ internal sealed class PrintSourceController
         redraw();
     }
 
-    internal void HandleTreeInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
+    internal void HandleTreeInvoked(object? sender, string frameId)
     {
         _ = sender;
-        if (args.InvokedItem is TreeViewNode
-            {
-                Content: LibrarySourceNode { FrameId: { } frameId },
-            })
-        {
-            libraryHost?.SetSelection([frameId], frameId);
-        }
+        libraryHost?.SetSelection([frameId], frameId);
     }
 
     internal void HandleFilmstripSelected(object? sender, LibraryFrameListItem item)
@@ -109,7 +103,7 @@ internal sealed class PrintSourceController
         _ = sender;
         _ = args;
         SynchronizeFilmstrip();
-        if (nodesByFrameId.Count != (libraryHost?.Frames.Count ?? 0))
+        if (builtFrameCount != (libraryHost?.Frames.Count ?? 0))
         {
             RebuildFilesTree();
         }
@@ -123,10 +117,10 @@ internal sealed class PrintSourceController
     /// </summary>
     private void RebuildFilesTree()
     {
-        surface.FilesTree.RootNodes.Clear();
-        nodesByFrameId.Clear();
+        builtFrameCount = 0;
         if (libraryHost is null)
         {
+            surface.FilesTree.SetSections([]);
             return;
         }
         LibraryBrowserProjection projection = LibraryBrowserProjector.Create(
@@ -135,27 +129,10 @@ internal sealed class PrintSourceController
                 libraryHost.SourceAvailabilityByFrameId),
             libraryHost.Folders,
             libraryHost.FolderAvailabilityById,
-            LibraryBrowserViewMode.Folders);
-        foreach (LibraryBrowserFolderSection section in projection.FolderSections)
-        {
-            var folder = new TreeViewNode
-            {
-                Content = LibrarySourceNode.Folder(
-                    section.Title,
-                    AppResources.FormatIntegers("libraryFolderFrameCount", "Text", section.Count)),
-                IsExpanded = true,
-            };
-            foreach (LibraryFrameListItem item in section.Items)
-            {
-                var frameNode = new TreeViewNode
-                {
-                    Content = LibrarySourceNode.Frame(item.DisplayName, item.Id),
-                };
-                folder.Children.Add(frameNode);
-                nodesByFrameId[item.Id] = frameNode;
-            }
-            surface.FilesTree.RootNodes.Add(folder);
-        }
+            LibraryBrowserViewMode.Folders,
+            includeEmptyFolders: false);
+        surface.FilesTree.SetSections(projection.FolderSections);
+        builtFrameCount = projection.FolderSections.Sum(section => section.Items.Count);
     }
 
     private void SynchronizeSidebar()
@@ -174,11 +151,7 @@ internal sealed class PrintSourceController
         ToolTipService.SetToolTip(surface.RightHeader, title);
 
         surface.ApplySourcePane(libraryHost?.Frames.Count > 0);
-        if (activeFrameId is not null &&
-            nodesByFrameId.TryGetValue(activeFrameId, out TreeViewNode? selectedNode))
-        {
-            surface.FilesTree.SelectedNode = selectedNode;
-        }
+        surface.FilesTree.SelectedFrameId = activeFrameId;
     }
 
     private void SynchronizeFilmstrip()
@@ -203,17 +176,7 @@ internal sealed class PrintSourceController
                     StringComparison.Ordinal)).index;
             selectedIndex = found;
         }
-        foreach (LibraryFrameListItem item in filmstripItems)
-        {
-            if (thumbnails?.TryGet(item.Id) is { } jpeg)
-            {
-                item.Thumbnail = LibraryWorkspaceView.DecodeThumbnail(jpeg);
-            }
-            else
-            {
-                thumbnails?.Request(item.Frame);
-            }
-        }
+        _ = LibraryThumbnailBinder.Hydrate(thumbnails, filmstripItems, "print");
         surface.Filmstrip.ShowFrames(filmstripItems, selectedIndex);
     }
 }

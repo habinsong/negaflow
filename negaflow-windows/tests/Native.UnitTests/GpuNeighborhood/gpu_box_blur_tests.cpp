@@ -1,19 +1,19 @@
 // 박스 블러 — macOS `CIBoxBlur`(`FilmScanDenoise.swift:154`),
 // Windows CPU `imaging/film_scan_denoise_filters.cpp` 의 `box_blur`.
 //
-// ☠️ **CPU 는 `box_blur` 를 두 벌 갖고 있고 둘의 누적 괄호가 다릅니다.** 앞 판은 이것을
-//    놓쳐서 참조가 틀렸고, 그 틀린 참조에 GPU 가 delta 0 으로 맞아 "비트 단위 일치" 로
-//    보고됐습니다. 실제 CPU 는 이렇습니다:
+// **CPU 는 `box_blur` 를 두 벌 갖고 있고 둘의 누적 괄호가 다릅니다.** 앞 판은 이것을
+// 놓쳐서 참조가 틀렸고, 그 틀린 참조에 GPU 가 delta 0 으로 맞아 "비트 단위 일치" 로
+// 보고됐습니다. 실제 CPU 는 이렇습니다:
 //
-//      `film_scan_denoise_filters.cpp:145` box_blur(std::vector<float>&)
-//          sum += source[add] - source[remove];         →  sum + (a - b)
-//      `film_scan_denoise_filters.cpp:203` box_blur(std::vector<Rgb>&)
-//          sum = sum + source[add] - source[remove];    → (sum + a) - b
+// `film_scan_denoise_filters.cpp:145` box_blur(std::vector<float>&)
+// sum += source[add] - source[remove]; → sum + (a - b)
+// `film_scan_denoise_filters.cpp:203` box_blur(std::vector<Rgb>&)
+// sum = sum + source[add] - source[remove]; → (sum + a) - b
 //
-//    `Rgb` 의 `operator+`·`operator-`(`film_scan_denoise_math.h:49,57`)가 각각 따로 도는
-//    이항 연산이라 왼쪽부터 묶입니다. `guided_base` 는 둘을 섞어 씁니다 —
-//    guide·guide² 는 float 판, source·guide×source·a·b 는 Rgb 판.
-//    아래 두 참조는 그 구분을 그대로 지킵니다.
+// `Rgb` 의 `operator+`·`operator-`(`film_scan_denoise_math.h:49,57`)가 각각 따로 도는
+// 이항 연산이라 왼쪽부터 묶입니다. `guided_base` 는 둘을 섞어 씁니다 —
+// guide·guide² 는 float 판, source·guide×source·a·b 는 Rgb 판.
+// 아래 두 참조는 그 구분을 그대로 지킵니다.
 
 #include "gpu_box_blur_tests.h"
 
@@ -207,9 +207,9 @@ void box_blur_matches_reference(const GpuDevice& device, const char* const label
         "scratch and destination must differ");
 }
 
-// ☠️ `blur_alpha = true` 경로에 시험이 없었습니다. 그래서 RGB·알파의 누적 순서가 다르다는
-//    것을 아무도 못 잡았고, 가이드 필터에 가서야 `1e-5` 를 넘겼습니다. 가이드 필터가 쓰는
-//    바로 그 경로이므로 여기서 따로 못 박습니다.
+// `blur_alpha = true` 경로에 시험이 없었습니다. 그래서 RGB·알파의 누적 순서가 다르다는
+// 것을 아무도 못 잡았고, 가이드 필터에 가서야 `1e-5` 를 넘겼습니다. 가이드 필터가 쓰는
+// 바로 그 경로이므로 여기서 따로 못 박습니다.
 void box_blur_alpha_matches_reference(const GpuDevice& device, const char* const label) {
     GpuBoxBlur kernel{};
     if (GpuBoxBlur::create(device, kernel) != GpuKernelStatus::ok) {
@@ -246,4 +246,4 @@ void box_blur_alpha_matches_reference(const GpuDevice& device, const char* const
     }
 }
 
-}  // namespace gpu_neighborhood_tests
+} // namespace gpu_neighborhood_tests

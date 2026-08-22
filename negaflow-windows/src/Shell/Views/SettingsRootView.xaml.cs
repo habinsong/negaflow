@@ -13,6 +13,11 @@ namespace Negaflow.Shell.Views;
 public sealed partial class SettingsRootView : UserControl
 {
     private WorkspacePresentationState? workspaceState;
+    private LibraryHostService? library;
+    private Negaflow.Shell.Library.ThumbnailService? thumbnails;
+    /// <summary>지금 설정으로 구한 폴더들입니다. 설정이 바뀔 때마다 새로 만듭니다.</summary>
+    private Negaflow.Shell.Storage.DiskStorageLocations diskStorage =
+        new(new Negaflow.Shell.Storage.DiskStorageSettings());
     private bool isUpdating;
     // 파일 선택기는 자기가 어느 창에 붙을지 알아야 합니다.
     private Microsoft.UI.WindowId? pickerWindowId;
@@ -25,13 +30,25 @@ public sealed partial class SettingsRootView : UserControl
 
     public void Initialize(
         WorkspacePresentationState state,
-        Microsoft.UI.WindowId? windowId = null)
+        Microsoft.UI.WindowId? windowId = null,
+        LibraryHostService? libraryHost = null,
+        Negaflow.Shell.Library.ThumbnailService? thumbnailService = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         workspaceState = state;
+        library = libraryHost;
+        thumbnails = thumbnailService;
         pickerWindowId = windowId;
+        InitializeGeneralTab();
+        state.ScannerCapabilitiesChanged += OnScannerCapabilitiesChanged;
+        scannerCapabilities = state.ScannerCapabilities;
+        InitializeInterfaceWorkflowTabs();
+        InitializeDiskTab();
+        InitializeExportTab();
+        ShortcutGroupPicker.SelectionChanged += OnShortcutGroupChanged;
         state.Changed += OnStateChanged;
         AppResources.LanguageChanged += OnLanguageResourcesChanged;
+        LocalizeControls();
         UpdateState(state.Current);
         BuildShortcutGroups();
         BuildShortcutRows();
@@ -91,63 +108,9 @@ public sealed partial class SettingsRootView : UserControl
         workspaceState?.SetAppearance(appearance);
     }
 
-    private void OnExportColorSpaceChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isUpdating)
-        {
-            return;
-        }
 
-        ExportColorSpace space = ExportColorSpaceComboBox.SelectedIndex switch
-        {
-            1 => ExportColorSpace.DisplayP3,
-            2 => ExportColorSpace.AdobeRgb,
-            _ => ExportColorSpace.Srgb,
-        };
-        workspaceState?.UpdateExport(settings => settings with { ColorSpace = space });
-    }
 
-    private void OnSoftProofToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isUpdating)
-        {
-            return;
-        }
 
-        workspaceState?.UpdateSoftProof(value => value with { IsEnabled = SoftProofToggle.IsOn });
-    }
-
-    private void OnSoftProofSimulationChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isUpdating)
-        {
-            return;
-        }
-
-        SoftProofSimulation simulation = SoftProofSimulationComboBox.SelectedIndex == 1
-            ? SoftProofSimulation.PaperAndBlackInk
-            : SoftProofSimulation.ProfileOnly;
-        workspaceState?.UpdateSoftProof(value => value with { Simulation = simulation });
-    }
-
-    private void OnGamutWarningToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isUpdating)
-        {
-            return;
-        }
-
-        workspaceState?.UpdateSoftProof(
-            value => value with { GamutWarningEnabled = GamutWarningToggle.IsOn });
-    }
 
     private async void OnChooseSoftProofProfile(object sender, RoutedEventArgs args)
     {
@@ -277,38 +240,8 @@ public sealed partial class SettingsRootView : UserControl
         AppResources.SetLanguage(language);
     }
 
-    private void OnPixelSamplerToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (!isUpdating)
-        {
-            workspaceState?.SetPixelSamplerEnabled(PixelSamplerToggle.IsOn);
-        }
-    }
 
-    private void OnClippingOverlayToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (!isUpdating)
-        {
-            workspaceState?.SetClippingOverlayEnabled(ClippingOverlayToggle.IsOn);
-        }
-    }
 
-    private void OnImageHashToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isUpdating)
-        {
-            return;
-        }
-
-        workspaceState?.SetImageContentHashMode(
-            ImageHashToggle.IsOn ? ImageContentHashMode.Sha256 : ImageContentHashMode.Off);
-    }
 
     private void OnStateChanged(object? sender, ShellPreferences preferences)
     {
@@ -316,71 +249,46 @@ public sealed partial class SettingsRootView : UserControl
         UpdateState(preferences);
     }
 
+    /// <summary>
+    /// 저장값을 화면에 겁니다.
+    /// </summary>
+    /// <remarks>
+    /// 갱신 중에는 <c>isUpdating</c> 으로 손잡이를 막습니다. 중간에 무엇이 터지면 그 표시가
+    /// 켜진 채 남아 <b>설정 창의 모든 컨트롤이 조용히 죽습니다</b> - 눌러도 아무 일도 일어나지
+    /// 않습니다. 그래서 finally 로 반드시 풀고, 터진 것은 기록으로 남깁니다.
+    /// </remarks>
     private void UpdateState(ShellPreferences preferences)
     {
         isUpdating = true;
-        AppearanceComboBox.SelectedIndex = preferences.Appearance switch
+        try
         {
-            AppearanceMode.Dark => 1,
-            AppearanceMode.Light => 2,
-            _ => 0,
-        };
-        ImageHashToggle.IsOn = preferences.ImageContentHash == ImageContentHashMode.Sha256;
-        ExportColorSpaceComboBox.SelectedIndex = preferences.Export.ColorSpace switch
+            AppearanceComboBox.SelectedIndex = preferences.Appearance switch
+            {
+                AppearanceMode.Dark => 1,
+                AppearanceMode.Light => 2,
+                _ => 0,
+            };
+            diskStorage = new Negaflow.Shell.Storage.DiskStorageLocations(preferences.Disk);
+            SynchronizeGeneralTab(preferences);
+            SynchronizeInterfaceWorkflowTabs(preferences);
+            SynchronizeDiskTab(preferences);
+            SynchronizeExportTab(preferences);
+            SynchronizeScanTab(preferences);
+            LanguageComboBox.SelectedIndex = Math.Max(
+                0,
+                AppLanguages.All.ToList().IndexOf(AppLanguages.Normalize(preferences.Language)));
+            SelectCategory(preferences.SelectedSettingsCategory);
+        }
+        catch (Exception error)
         {
-            ExportColorSpace.DisplayP3 => 1,
-            ExportColorSpace.AdobeRgb => 2,
-            _ => 0,
-        };
-        // 요약 줄은 고른 값이 아니라 형식이 실제로 낼 수 있는 값을 적습니다 — JPEG 을 고른 채
-        // "Adobe RGB" 라고 적혀 있으면 파일과 화면이 어긋나기 때문입니다.
-        ExportColorSpaceSummary.Text = ColorSpaceLabel(preferences.Export.EffectiveColorSpace);
-
-        SoftProofPreferences proof = preferences.SoftProof;
-        SoftProofToggle.IsOn = proof.IsEnabled;
-        // macOS 는 프루프가 꺼져 있으면 아래 줄들을 아예 그리지 않습니다.
-        SoftProofDetailPanel.Visibility = proof.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
-        SoftProofSimulationComboBox.SelectedIndex =
-            proof.Simulation == SoftProofSimulation.PaperAndBlackInk ? 1 : 0;
-        // 계산할 수 없는 경고는 켤 수 있게 두지 않습니다. ICM 이 이 색공간으로 gamut-check
-        // 변환을 만들 수 있을 때만 살아납니다 — macOS 도 같은 조건으로 끕니다.
-        bool gamutAvailable = NativeGamutCheck.IsSupported(preferences.Export.EffectiveColorSpace);
-        GamutWarningToggle.IsEnabled = gamutAvailable;
-        GamutUnavailableReason.Visibility =
-            gamutAvailable ? Visibility.Collapsed : Visibility.Visible;
-        GamutWarningToggle.IsOn = gamutAvailable && proof.GamutWarningEnabled;
-        // 프로파일을 고르지 않았으면 내보내기 색공간의 이름을 씁니다 — macOS 도 프로파일이
-        // 없으면 같은 값을 보여줍니다.
-        string profileName = proof.ProfileName.Length != 0
-            ? proof.ProfileName
-            : ColorSpaceLabel(preferences.Export.EffectiveColorSpace);
-        SoftProofProfileName.Text = profileName;
-        // 되돌릴 것이 있을 때만 되돌리기를 보여줍니다. macOS 도 같은 조건입니다.
-        SoftProofResetProfileButton.Visibility =
-            proof.ProfileName.Length != 0 ? Visibility.Visible : Visibility.Collapsed;
-        PrinterProfileName.Text = proof.PrinterProfilePath.Length != 0
-            ? Path.GetFileName(proof.PrinterProfilePath)
-            : AppResources.Get("settingsColorUnassigned", "Text");
-        PrinterProfileResetButton.Visibility =
-            proof.PrinterProfilePath.Length != 0 ? Visibility.Visible : Visibility.Collapsed;
-        SoftProofSummary.Text = proof.IsEnabled
-            ? $"{profileName} · {SimulationLabel(proof.Simulation)}"
-            : AppResources.Get("settingsColorOff", "Text");
-        ScannerEmulationSummary.Text = AppResources.Get("settingsColorUnassigned", "Text");
-        // macOS monitorProfileSummary — 화면에 걸린 프로파일 이름, 못 읽으면 대체 문구.
-        MonitorProfileSummary.Text = MonitorProfileName();
-        SynchronizeScanTab(preferences);
-        PixelSamplerToggle.IsOn = preferences.PixelSamplerEnabled;
-        // macOS PixelSamplerSettingsRow — 도움말은 켜져 있을 때만 냅니다(`if store.isEnabled`).
-        PixelSamplerHelp.Visibility = preferences.PixelSamplerEnabled
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        ClippingOverlayToggle.IsOn = preferences.ClippingOverlayEnabled;
-        LanguageComboBox.SelectedIndex = Math.Max(
-            0,
-            AppLanguages.All.ToList().IndexOf(AppLanguages.Normalize(preferences.Language)));
-        SelectCategory(preferences.SelectedSettingsCategory);
-        isUpdating = false;
+            Negaflow.Shell.Diagnostics.SettingsChangeLog.Write(
+                "sync failed: " + error.GetType().Name + " " + error.Message);
+            throw;
+        }
+        finally
+        {
+            isUpdating = false;
+        }
     }
 
     private static string SimulationLabel(SoftProofSimulation simulation) =>
@@ -425,94 +333,29 @@ public sealed partial class SettingsRootView : UserControl
     {
         // x:Uid 로 걸려 있던 문구입니다. 언어를 바꾸면 그 문구만 옛 언어로 남으므로
         // 여기서 겁니다.
-        SettingsLanguagePickerLocalized.Text = AppResources.Get("settingsLanguagePicker", "Text");
-        DeveloperModeToggle.Header = AppResources.Get("developerMode", "Header");
-        SettingsCanvasBackgroundPickerLocalized.Text =
-            AppResources.Get("settingsCanvasBackgroundPicker", "Text");
-        CanvasBackgroundBlackLocalized.Content =
-            AppResources.Get("canvasBackgroundBlack", "Content");
-        CanvasBackgroundGrayLocalized.Content = AppResources.Get("canvasBackgroundGray", "Content");
-        CanvasBackgroundWhiteLocalized.Content =
-            AppResources.Get("canvasBackgroundWhite", "Content");
-        ClippingOverlayToggle.Header = AppResources.Get("colorClippingOverlay", "Header");
-        ScannerSimulatorToggle.Header = AppResources.Get("commandToggleScannerSimulator", "Header");
-        DevelopImportsToggle.Header = AppResources.Get("developImportsAutomatically", "Header");
-        QuickExportSectionLocalized.Text = AppResources.Get("quickExportSection", "Text");
-        SettingsQuickExportFormatLocalized.Text =
-            AppResources.Get("settingsQuickExportFormat", "Text");
-        SettingsQuickExportDPILocalized.Text = AppResources.Get("settingsQuickExportDPI", "Text");
-        SettingsQuickExportSizeLocalized.Text = AppResources.Get("settingsQuickExportSize", "Text");
-        SettingsQuickExportFolderLocalized.Text =
-            AppResources.Get("settingsQuickExportFolder", "Text");
-        SettingsColorManagementSectionLocalized.Text =
-            AppResources.Get("settingsColorManagementSection", "Text");
-        SettingsExportColorLabelLocalized.Text =
-            AppResources.Get("settingsExportColorLabel", "Text");
-        SoftProofChooseProfileButton.Content =
-            AppResources.Get("developExportChangeFolder", "Content");
-        SoftProofProfileError.Text = AppResources.Get("softProofInvalidICC", "Text");
-        PrinterProfileButton.Content = AppResources.Get("developExportChangeFolder", "Content");
-        PrinterProfileError.Text = AppResources.Get("softProofInvalidICC", "Text");
-        SettingsExportProofLabelLocalized.Text =
-            AppResources.Get("settingsExportProofLabel", "Text");
-        SettingsSoftProofProfileOnlyLocalized.Content =
-            AppResources.Get("settingsSoftProofProfileOnly", "Content");
-        SettingsSoftProofPaperAndBlackLocalized.Content =
-            AppResources.Get("settingsSoftProofPaperAndBlack", "Content");
-        GamutUnavailableReason.Text =
-            AppResources.Get("settingsColorGamutUnavailableReason", "Text");
-        SettingsColorScannerInputLocalized.Text =
-            AppResources.Get("settingsColorScannerInput", "Text");
-        SettingsColorWorkingLocalized.Text = AppResources.Get("settingsColorWorking", "Text");
-        SettingsColorMonitorLocalized.Text = AppResources.Get("settingsColorMonitor", "Text");
-        SettingsColorExportLocalized.Text = AppResources.Get("settingsColorExport", "Text");
-        SettingsColorSoftProofLocalized.Text = AppResources.Get("settingsColorSoftProof", "Text");
-        ShortcutResetAllButton.Content = AppResources.Get("shortcutResetAll", "Content");
-        LegalLicenseTitleLocalized.Text = AppResources.Get("legalLicenseTitle", "Text");
-        LegalLicenseBodyLocalized.Text = AppResources.Get("legalLicenseBody", "Text");
-        LegalTrademarkTitleLocalized.Text = AppResources.Get("legalTrademarkTitle", "Text");
-        LegalTrademarkBodyLocalized.Text = AppResources.Get("legalTrademarkBody", "Text");
-        LegalNamesTitleLocalized.Text = AppResources.Get("legalNamesTitle", "Text");
-        LegalNamesBodyLocalized.Text = AppResources.Get("legalNamesBody", "Text");
-        LegalProfilesTitleLocalized.Text = AppResources.Get("legalProfilesTitle", "Text");
-        LegalProfilesBodyLocalized.Text = AppResources.Get("legalProfilesBody", "Text");
-        LegalAffiliationTitleLocalized.Text = AppResources.Get("legalAffiliationTitle", "Text");
-        LegalAffiliationBodyLocalized.Text = AppResources.Get("legalAffiliationBody", "Text");
-        SetCategoryText(GeneralButton, GeneralLabel, GeneralHeading, "settingsGeneralTab");
-        SetCategoryText(InterfaceButton, InterfaceLabel, InterfaceHeading, "settingsInterfaceTab");
-        SetCategoryText(WorkflowButton, WorkflowLabel, WorkflowHeading, "settingsWorkflowTab");
-        SetCategoryText(ScanButton, ScanLabel, ScanHeading, "settingsScanTab");
-        SetCategoryText(DiskButton, DiskLabel, DiskHeading, "settingsDiskTab");
-        SetCategoryText(ExportSettingsButton, ExportLabel, ExportHeading, "settingsExportTab");
-        SetCategoryText(ShortcutsButton, ShortcutsLabel, ShortcutsHeading, "settingsShortcutsTab");
-        SetCategoryText(LegalButton, LegalLabel, LegalHeading, "settingsLegalTab");
+        SetCategoryText(GeneralButton, GeneralLabel, "settingsGeneralTab");
+        LocalizeGeneralTab();
+        SetCategoryText(InterfaceButton, InterfaceLabel, "settingsInterfaceTab");
+        SetCategoryText(WorkflowButton, WorkflowLabel, "settingsWorkflowTab");
+        LocalizeInterfaceWorkflowTabs();
+        SetCategoryText(ScanButton, ScanLabel, "settingsScanTab");
+        SetCategoryText(DiskButton, DiskLabel, "settingsDiskTab");
+        LocalizeDiskTab();
+        SetCategoryText(ExportSettingsButton, ExportLabel, "settingsExportTab");
+        LocalizeExportTab();
+        SetCategoryText(ShortcutsButton, ShortcutsLabel, "settingsShortcutsTab");
+        ShortcutsSection.HeaderText = AppResources.Get("settingsShortcutsTab", "Text");
+        ShortcutResetAllRow.Label = AppResources.Get("shortcutResetAll", "Content");
+        ShortcutResetAllButton.Content = AppResources.Get("shortcutReset", "Content");
+        SetCategoryText(LegalButton, LegalLabel, "settingsLegalTab");
+        LocalizeLegalTab();
         LocalizeScanTab();
-        PixelSamplerToggle.Header = AppResources.Get("samplerEnabled", "Text");
-        AutomationProperties.SetName(PixelSamplerToggle, PixelSamplerToggle.Header.ToString());
-        PixelSamplerHelp.Text = AppResources.Get("samplerMovePointer", "Text");
-        LanguageRestartHint.Text = AppResources.Get("settingsLanguageRestart", "Text");
-
-        AppearanceLabel.Text = AppResources.Get("settingsAppearancePicker", "Text");
         SystemAppearanceItem.Content = AppResources.Get("appearanceSystem", "Content");
         DarkAppearanceItem.Content = AppResources.Get("appearanceDark", "Content");
         LightAppearanceItem.Content = AppResources.Get("appearanceLight", "Content");
-        SourceDpiItem.Content = AppResources.Get("settingsSourceDPI", "Text");
-        FullSizeItem.Content = AppResources.Get("exportFullSize", "Text");
 
-        LocalizeToggle(DeveloperModeToggle);
-        LocalizeToggle(ClippingOverlayToggle);
-        LocalizeToggle(ScannerSimulatorToggle);
-        LocalizeToggle(DevelopImportsToggle);
-        LocalizeToggle(ImageHashToggle);
         // ToggleSwitch 에는 Header, Button 에는 Content 가 있습니다. 리소스 키가
         // .Text/.Value 라서 x:Uid 로 붙이면 WinUI 가 0x802B000A 로 프로세스를 죽입니다.
-        SoftProofToggle.Header = AppResources.Get("settingsExportSoftProofLabel", "Text");
-        AutomationProperties.SetName(SoftProofToggle, SoftProofToggle.Header.ToString());
-        GamutWarningToggle.Header = AppResources.Get("settingsColorGamutWarning", "Text");
-        AutomationProperties.SetName(GamutWarningToggle, GamutWarningToggle.Header.ToString());
-        string reset = AppResources.Get("developTabReset", "Value");
-        SoftProofResetProfileButton.Content = reset;
-        PrinterProfileResetButton.Content = reset;
     }
 
     private static void SetCategoryText(
@@ -521,9 +364,22 @@ public sealed partial class SettingsRootView : UserControl
         TextBlock heading,
         string resourceKey)
     {
+        heading.Text = AppResources.Get(resourceKey, "Text");
+        SetCategoryText(button, label, resourceKey);
+    }
+
+    /// <summary>
+    /// 큰 페이지 제목이 없는 탭용입니다.
+    /// </summary>
+    /// <remarks>
+    /// macOS 설정창은 탭 안에 페이지 제목을 두지 않습니다 — <c>Form(.grouped)</c> 의 섹션
+    /// 머리글만 있습니다. 지금 Windows 는 24pt 제목을 따로 두어 맥보다 한 줄 더 내려가 있고,
+    /// 옮겨 간 탭부터 이 판을 씁니다.
+    /// </remarks>
+    private static void SetCategoryText(Button button, TextBlock label, string resourceKey)
+    {
         string text = AppResources.Get(resourceKey, "Text");
         label.Text = text;
-        heading.Text = text;
         AutomationProperties.SetName(button, text);
         ToolTipService.SetToolTip(button, text);
     }
@@ -542,6 +398,7 @@ public sealed partial class SettingsRootView : UserControl
         if (workspaceState is not null)
         {
             workspaceState.Changed -= OnStateChanged;
+            workspaceState.ScannerCapabilitiesChanged -= OnScannerCapabilitiesChanged;
         }
     }
 }

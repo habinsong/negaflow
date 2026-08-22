@@ -20,13 +20,24 @@ internal sealed class LibraryFilesSourceDrop
     internal LibraryFilesSourceDrop(LibraryFilesSourceTree view) => this.view = view;
 
     /// <summary>
+    /// 이 줄이 어느 폴더인지입니다. 폴더 머리줄은
+    /// <see cref="LibraryFolderTreeView"/> 가 만들며 <c>Tag</c> 에 구역을 답니다 — 구역의
+    /// <c>Id</c> 가 곧 폴더 경로입니다. 사진 줄에는 <c>Tag</c> 가 없어 null 이 나오고,
+    /// 그래서 사진 위에는 놓을 수 없습니다.
+    /// </summary>
+    private static string? DestinationOf(object sender) =>
+        sender is FrameworkElement { Tag: LibraryBrowserFolderSection section }
+            ? section.Id
+            : null;
+
+    /// <summary>
     /// 폴더 줄 위에 있는 동안입니다. 우리 카드가 아니면 아무 표시도 내지 않습니다 — 밖에서 온
     /// 파일을 여기로 받으면 사용자는 가져오기가 될 것으로 읽습니다.
     /// </summary>
     internal void OnDragOver(object sender, DragEventArgs args)
     {
         args.AcceptedOperation =
-            sender is FrameworkElement { DataContext: TreeViewNode { Content: LibrarySourceNode { FolderPath: not null } } } &&
+            DestinationOf(sender) is not null &&
             string.Equals(args.DataView?.Properties.Title, FrameDragFormat, StringComparison.Ordinal)
                 ? DataPackageOperation.Move
                 : DataPackageOperation.None;
@@ -39,10 +50,7 @@ internal sealed class LibraryFilesSourceDrop
     /// </summary>
     internal async void OnDrop(object sender, DragEventArgs args)
     {
-        if (sender is not FrameworkElement
-            {
-                DataContext: TreeViewNode { Content: LibrarySourceNode { FolderPath: { } destination } },
-            } ||
+        if (DestinationOf(sender) is not { } destination ||
             view.libraryHost is not { } host ||
             args.DataView is not { } data ||
             !string.Equals(data.Properties.Title, FrameDragFormat, StringComparison.Ordinal))

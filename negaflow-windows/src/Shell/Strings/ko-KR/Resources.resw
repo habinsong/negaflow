@@ -1060,6 +1060,7 @@
   <data name="scanDetectionManual.Content" xml:space="preserve"><value>수동</value><comment>AppLocalizedPhrase.flatbedDetectionManual</comment></data>
   <data name="scanDetectionMode.Text" xml:space="preserve"><value>프레임 찾기</value><comment>AppLocalizedPhrase.flatbedDetectionMode</comment></data>
   <data name="scanFlatbedFramesFormat.Text" xml:space="preserve"><value>선택: %d</value><comment>AppLocalizedPhrase.flatbedFramesFormat</comment></data>
+  <data name="scanFlatbedFrameFormat.Text" xml:space="preserve"><value>프레임 %d</value><comment>AppLocalizedPhrase.flatbedFrameFormat</comment></data>
   <data name="scanFrameFormat.Text" xml:space="preserve"><value>프레임 규격</value><comment>AppLocalizedPhrase.filmFrameFormat</comment></data>
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>프레임 붙여넣기</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>프레임 다시 찾기</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
@@ -1315,4 +1316,124 @@
   <data name="developLocalDrawPrompt.Text" xml:space="preserve"><value>사진 위에 그리세요</value><comment>LocalAdjustmentLocalizedText[16]</comment></data>
   <data name="developLocalEmpty.Text" xml:space="preserve"><value>부분 보정 없음</value><comment>LocalAdjustmentLocalizedText[17]</comment></data>
   <data name="developLocalVisibility.Text" xml:space="preserve"><value>표시</value><comment>LocalAdjustmentLocalizedText[18]</comment></data>
+  <data name="settingsMemoryCacheSection.Text" xml:space="preserve"><value>메모리 캐시</value><comment>AppLocalizedPhrase.settingsMemoryCacheSection</comment></data>
+  <data name="settingsMemoryCacheModeAutomatic.Content" xml:space="preserve"><value>자동</value><comment>AppLocalizedPhrase.settingsMemoryCacheModeAutomatic</comment></data>
+  <data name="settingsMemoryCacheModeManual.Content" xml:space="preserve"><value>수동</value><comment>AppLocalizedPhrase.settingsMemoryCacheModeManual</comment></data>
+  <data name="settingsMemoryCacheInstalledMemoryFormat.Text" xml:space="preserve"><value>이 PC의 메모리 {0}</value><comment>AppLocalizedPhrase.settingsMemoryCacheInstalledMemoryFormat</comment></data>
+  <data name="settingsMemoryCacheCleanedRawLabel.Text" xml:space="preserve"><value>결함 제거 원본</value><comment>AppLocalizedPhrase.settingsMemoryCacheCleanedRawLabel</comment></data>
+  <data name="settingsMemoryCacheDevelopedLabel.Text" xml:space="preserve"><value>현상 결과</value><comment>AppLocalizedPhrase.settingsMemoryCacheDevelopedLabel</comment></data>
+  <data name="settingsMemoryCacheFramesFormat.Text" xml:space="preserve"><value>{0}장</value><comment>AppLocalizedPhrase.settingsMemoryCacheFramesFormat</comment></data>
+  <data name="settingsMemoryCacheEstimateFormat.Text" xml:space="preserve"><value>최대 상주 약 {0} · 메모리의 {1}%</value><comment>AppLocalizedPhrase.settingsMemoryCacheEstimateFormat</comment></data>
+  <data name="settingsMemoryCacheAutomaticHelp.Text" xml:space="preserve"><value>설치 메모리에 맞춰 상한을 정합니다. 한도를 넘으면 오래된 프레임부터 내려놓고, 다시 열 때 재현상합니다.</value><comment>AppLocalizedPhrase.settingsMemoryCacheAutomaticHelp</comment></data>
+  <data name="settingsMemoryCacheManualHelp.Text" xml:space="preserve"><value>직접 정한 값을 씁니다. 상한은 설치 메모리의 70%입니다.</value><comment>AppLocalizedPhrase.settingsMemoryCacheManualHelp</comment></data>
+  <data name="settingsMemoryCacheResetToAutomatic.Content" xml:space="preserve"><value>자동값으로 되돌리기</value><comment>AppLocalizedPhrase.settingsMemoryCacheResetToAutomatic</comment></data>
+  <data name="supportBundleTitle.Text" xml:space="preserve"><value>지원 번들</value><comment>SupportBundleLocalizedText.title</comment></data>
+  <data name="supportBundleExport.Content" xml:space="preserve"><value>내보내기</value><comment>SupportBundleLocalizedText.export</comment></data>
+  <data name="supportBundleCreating.Content" xml:space="preserve"><value>생성 중</value><comment>SupportBundleLocalizedText.creating</comment></data>
+  <data name="supportBundleComplete.Text" xml:space="preserve"><value>지원 번들을 생성했습니다</value><comment>SupportBundleLocalizedText.complete</comment></data>
+  <data name="supportBundleFailed.Text" xml:space="preserve"><value>지원 번들을 생성하지 못했습니다</value><comment>SupportBundleLocalizedText.failed</comment></data>
+  <data name="defaultDefectMicroSpecks.Text" xml:space="preserve"><value>미세 입자 기본 검출</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
+  <data name="defaultDefectMicroSpecksHelp.Text" xml:space="preserve"><value>새 프레임의 시작값이며 자동과 가이드를 따로 기억합니다. 프레임마다 체크박스가 따로 있어 사진별로 켜고 끌 수 있습니다.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
+  <data name="autoDefect.Text" xml:space="preserve"><value>자동</value><comment>AppLocalizedPhrase.autoDefect</comment></data>
+  <data name="guidedDefect.Text" xml:space="preserve"><value>가이드</value><comment>AppLocalizedPhrase.guidedDefect</comment></data>
+  <data name="diskLocationCloud.Content" xml:space="preserve"><value>원드라이브</value><comment>AppLocalizedPhrase.diskLocationICloud (Windows: OneDrive)</comment></data>
+  <data name="diskLocationDesktop.Content" xml:space="preserve"><value>데스크탑</value><comment>AppLocalizedPhrase.diskLocationDesktop</comment></data>
+  <data name="diskLocationSpecificFolder.Content" xml:space="preserve"><value>특정 폴더</value><comment>AppLocalizedPhrase.diskLocationSpecificFolder</comment></data>
+  <data name="diskLocationCustom.Content" xml:space="preserve"><value>커스텀</value><comment>AppLocalizedPhrase.diskLocationCustom</comment></data>
+  <data name="diskRootFolderLabel.Text" xml:space="preserve"><value>negaflow 폴더</value><comment>AppLocalizedPhrase.diskRootFolderLabel</comment></data>
+  <data name="diskThumbnailsFolderLabel.Text" xml:space="preserve"><value>썸네일 폴더</value><comment>AppLocalizedPhrase.diskThumbnailsFolderLabel</comment></data>
+  <data name="diskImportedSourcesFolderLabel.Text" xml:space="preserve"><value>가져온 원본 이동 기본 폴더</value><comment>AppLocalizedPhrase.diskImportedSourcesFolderLabel</comment></data>
+  <data name="diskCleanedRawFolderLabel.Text" xml:space="preserve"><value>보정 이미지 캐시 폴더</value><comment>AppLocalizedPhrase.diskCleanedRawFolderLabel</comment></data>
+  <data name="diskScanPreviewFolderLabel.Text" xml:space="preserve"><value>스캔 프리뷰 캐시 폴더</value><comment>AppLocalizedPhrase.diskScanPreviewFolderLabel</comment></data>
+  <data name="diskExportFolderLabel.Text" xml:space="preserve"><value>내보내기 폴더</value><comment>AppLocalizedPhrase.diskExportFolderLabel</comment></data>
+  <data name="diskResetPathsButton.Content" xml:space="preserve"><value>경로를 기본값으로 재설정</value><comment>AppLocalizedPhrase.diskResetPathsButton</comment></data>
+  <data name="diskThumbnailCacheLabel.Text" xml:space="preserve"><value>썸네일 캐시</value><comment>AppLocalizedPhrase.diskThumbnailCacheLabel</comment></data>
+  <data name="diskClearThumbnailCache.Content" xml:space="preserve"><value>썸네일 캐시 지우기</value><comment>AppLocalizedPhrase.diskClearThumbnailCache</comment></data>
+  <data name="diskCacheSizeCalculating.Text" xml:space="preserve"><value>계산 중</value><comment>AppLocalizedPhrase.diskCacheSizeCalculating</comment></data>
+  <data name="diskLibraryBackupLabel.Text" xml:space="preserve"><value>카탈로그 백업</value><comment>AppLocalizedPhrase.diskLibraryBackupLabel</comment></data>
+  <data name="diskLibraryBackupNow.Content" xml:space="preserve"><value>지금 라이브러리 백업</value><comment>AppLocalizedPhrase.diskLibraryBackupNow</comment></data>
+  <data name="diskLibraryBackupBrowse.Content" xml:space="preserve"><value>백업 보기</value><comment>AppLocalizedPhrase.diskLibraryBackupBrowse</comment></data>
+  <data name="libraryArchiveCreate.Content" xml:space="preserve"><value>보존 아카이브 생성</value><comment>AppArchiveText.create</comment></data>
+  <data name="showInExplorer.Value" xml:space="preserve"><value>파일 탐색기에서 보기</value><comment>AppLocalizedPhrase.showInFinder (Windows: File Explorer)</comment></data>
+  <data name="scanStorageOriginals.Text" xml:space="preserve"><value>스캔 원본</value><comment>ScanStorageLocalizedText.originals</comment></data>
+  <data name="scanStorageChange.Value" xml:space="preserve"><value>변경</value><comment>ScanStorageLocalizedText.change</comment></data>
+  <data name="scanStorageEstimatedAvailable.Text" xml:space="preserve"><value>예상 사용 가능 공간</value><comment>ScanStorageLocalizedText.estimatedAvailable</comment></data>
+  <data name="scanStorageStorage.Text" xml:space="preserve"><value>저장소</value><comment>ScanStorageLocalizedText.storage</comment></data>
+  <data name="scanStorageLocal.Text" xml:space="preserve"><value>로컬</value><comment>ScanStorageLocalizedText.local</comment></data>
+  <data name="scanStorageCloudManaged.Text" xml:space="preserve"><value>클라우드 관리</value><comment>ScanStorageLocalizedText.cloudManaged</comment></data>
+  <data name="scanStorageUnavailable.Text" xml:space="preserve"><value>확인 불가</value><comment>ScanStorageLocalizedText.unavailable</comment></data>
+  <data name="externalBackupTitle.Text" xml:space="preserve"><value>외부 백업</value><comment>ExternalBackupLocalizedText.title</comment></data>
+  <data name="externalBackupChoose.Content" xml:space="preserve"><value>선택</value><comment>ExternalBackupLocalizedText.choose</comment></data>
+  <data name="externalBackupChange.Content" xml:space="preserve"><value>변경</value><comment>ExternalBackupLocalizedText.change</comment></data>
+  <data name="externalBackupRemove.Content" xml:space="preserve"><value>제거</value><comment>ExternalBackupLocalizedText.remove</comment></data>
+  <data name="externalBackupNotConfigured.Text" xml:space="preserve"><value>설정 안 됨</value><comment>ExternalBackupLocalizedText.notConfigured</comment></data>
+  <data name="externalBackupDisconnected.Text" xml:space="preserve"><value>연결 끊김</value><comment>ExternalBackupLocalizedText.disconnected</comment></data>
+  <data name="externalBackupSameVolume.Text" xml:space="preserve"><value>카탈로그와 같은 볼륨</value><comment>ExternalBackupLocalizedText.sameVolume</comment></data>
+  <data name="externalBackupReadOnly.Text" xml:space="preserve"><value>읽기 전용 대상</value><comment>ExternalBackupLocalizedText.readOnly</comment></data>
+  <data name="externalBackupInsufficient.Text" xml:space="preserve"><value>공간 부족</value><comment>ExternalBackupLocalizedText.insufficient</comment></data>
+  <data name="externalBackupReady.Text" xml:space="preserve"><value>연결됨</value><comment>ExternalBackupLocalizedText.ready</comment></data>
+  <data name="externalBackupCapacity.Text" xml:space="preserve"><value>사용 가능</value><comment>ExternalBackupLocalizedText.capacity</comment></data>
+  <data name="externalBackupLastSuccess.Text" xml:space="preserve"><value>마지막 성공 백업</value><comment>ExternalBackupLocalizedText.lastSuccess</comment></data>
+  <data name="backupScheduleLabel.Text" xml:space="preserve"><value>백업 일정</value><comment>BackupScheduleLocalizedText.schedule</comment></data>
+  <data name="backupScheduleManual.Content" xml:space="preserve"><value>수동</value><comment>BackupScheduleLocalizedText.manual</comment></data>
+  <data name="backupScheduleTermination.Content" xml:space="preserve"><value>앱 종료 시</value><comment>BackupScheduleLocalizedText.termination</comment></data>
+  <data name="backupScheduleDaily.Content" xml:space="preserve"><value>매일</value><comment>BackupScheduleLocalizedText.daily</comment></data>
+  <data name="backupScheduleWeekly.Content" xml:space="preserve"><value>매주</value><comment>BackupScheduleLocalizedText.weekly</comment></data>
+  <data name="backupLastAttempt.Text" xml:space="preserve"><value>마지막 시도</value><comment>BackupScheduleLocalizedText.lastAttempt</comment></data>
+  <data name="backupLastSuccess.Text" xml:space="preserve"><value>마지막 성공</value><comment>BackupScheduleLocalizedText.lastSuccess</comment></data>
+  <data name="backupVerification.Text" xml:space="preserve"><value>복원 검증</value><comment>BackupScheduleLocalizedText.verification</comment></data>
+  <data name="backupPassed.Text" xml:space="preserve"><value>통과</value><comment>BackupScheduleLocalizedText.passed</comment></data>
+  <data name="backupFailed.Text" xml:space="preserve"><value>실패</value><comment>BackupScheduleLocalizedText.failed</comment></data>
+  <data name="backupNever.Text" xml:space="preserve"><value>없음</value><comment>BackupScheduleLocalizedText.never</comment></data>
+  <data name="backupGeneration.Text" xml:space="preserve"><value>세대</value><comment>BackupScheduleLocalizedText.generation</comment></data>
+  <data name="settingsExportVerification.Text" xml:space="preserve"><value>내보내기 무결성 검사</value><comment>AppLocalizedText.settingsExportVerification</comment></data>
+  <data name="settingsExportVerificationStandard.Content" xml:space="preserve"><value>표준</value><comment>AppLocalizedText.settingsExportVerificationStandard</comment></data>
+  <data name="settingsExportVerificationStrict.Content" xml:space="preserve"><value>엄격(느림)</value><comment>AppLocalizedText.settingsExportVerificationStrict</comment></data>
+  <data name="settingsExportVerificationHelp.Text" xml:space="preserve"><value>표준은 파일마다 해시를 한 번만 계산하고 이후에는 파일 식별자로 재확인합니다. 엄격은 확인 지점마다 전체 바이트를 다시 해시합니다. 크래시 복구 보증은 두 경우 모두 같습니다.</value><comment>AppLocalizedText.settingsExportVerificationHelp</comment></data>
+  <data name="exportLongEdgeSuffix.Text" xml:space="preserve"><value>px (긴 변)</value><comment>AppLocalizedText.exportLongEdgeSuffix</comment></data>
+  <data name="settingsColorProfile.Text" xml:space="preserve"><value>프로파일</value><comment>AppLocalizedPhrase.profile</comment></data>
+  <data name="settingsColorPrinterProfile.Text" xml:space="preserve"><value>인화 출력 프로파일</value><comment>Windows 전용 — 인화 출력 프로파일(SoftProofPreferences.PrinterProfilePath)</comment></data>
+  <data name="resolution.Text" xml:space="preserve"><value>해상도</value><comment>AppLocalizedPhrase.resolution</comment></data>
+  <data name="bitDepth.Text" xml:space="preserve"><value>심도</value><comment>AppLocalizedPhrase.bitDepth</comment></data>
+  <data name="transparency.Text" xml:space="preserve"><value>투과 원고</value><comment>AppLocalizedPhrase.transparency</comment></data>
+  <data name="brightness.Text" xml:space="preserve"><value>밝기</value><comment>AppLocalizedPhrase.brightness</comment></data>
+  <data name="contrast.Text" xml:space="preserve"><value>대비</value><comment>AppLocalizedPhrase.contrast</comment></data>
+  <data name="infrared.Text" xml:space="preserve"><value>적외선(IR)</value><comment>AppLocalizedPhrase.infrared</comment></data>
+  <data name="capabilityAvailable.Value" xml:space="preserve"><value>사용 가능</value><comment>AppLocalizedPhrase.capabilityAvailable</comment></data>
+  <data name="settingsScannerPluginApproval.Text" xml:space="preserve"><value>스캐너 플러그인 승인</value><comment>AppLocalizedPhrase.scannerPluginApprovalTitle</comment></data>
+  <data name="scannerPluginApproved.Text" xml:space="preserve"><value>승인됨</value><comment>AppLocalizedPhrase.scannerPluginApproved</comment></data>
+  <data name="scannerPluginChanged.Text" xml:space="preserve"><value>변경됨 · 재승인 필요</value><comment>AppLocalizedPhrase.scannerPluginChangedApprovalRequired</comment></data>
+  <data name="scannerPluginApprovalRequired.Text" xml:space="preserve"><value>승인 필요</value><comment>AppLocalizedPhrase.scannerPluginApprovalRequired</comment></data>
+  <data name="scannerPluginVersion.Text" xml:space="preserve"><value>버전</value><comment>AppLocalizedPhrase.scannerPluginVersion</comment></data>
+  <data name="scannerPluginLicense.Text" xml:space="preserve"><value>라이선스</value><comment>AppLocalizedPhrase.scannerPluginLicense</comment></data>
+  <data name="scannerPluginManifestPath.Text" xml:space="preserve"><value>Manifest 경로</value><comment>AppLocalizedPhrase.scannerPluginManifestPath</comment></data>
+  <data name="scannerPluginManifestHash.Text" xml:space="preserve"><value>Manifest SHA-256</value><comment>AppLocalizedPhrase.scannerPluginManifestHash</comment></data>
+  <data name="scannerPluginExecutableHash.Text" xml:space="preserve"><value>실행 파일 SHA-256</value><comment>AppLocalizedPhrase.scannerPluginExecutableHash</comment></data>
+  <data name="scannerPluginNotReported.Text" xml:space="preserve"><value>보고되지 않음</value><comment>AppLocalizedPhrase.scannerPluginNotReported</comment></data>
+  <data name="diagnosticsReportProblemsSection.Text" xml:space="preserve"><value>최근 문제</value><comment>AppLocalizedText.diagnosticsReportProblemsSection</comment></data>
+  <data name="diagnosticsReportEventsSection.Text" xml:space="preserve"><value>최근 실패 이벤트</value><comment>AppLocalizedText.diagnosticsReportEventsSection</comment></data>
+  <data name="diagnosticsReportLibrarySection.Text" xml:space="preserve"><value>라이브러리 상태</value><comment>AppLocalizedText.diagnosticsReportLibrarySection</comment></data>
+  <data name="diagnosticsReportScannerSection.Text" xml:space="preserve"><value>스캐너</value><comment>AppLocalizedText.diagnosticsReportScannerSection</comment></data>
+  <data name="diagnosticsNoProblems.Text" xml:space="preserve"><value>문제 없음</value><comment>AppLocalizedText.diagnosticsNoProblems</comment></data>
+  <data name="diagnosticsGeneratedAt.Text" xml:space="preserve"><value>생성 시각</value><comment>AppLocalizedText.diagnosticsGeneratedAt</comment></data>
+  <data name="diagnosticsStatSaveError.Text" xml:space="preserve"><value>저장 오류</value><comment>AppLocalizedText.diagnosticsStatSaveError</comment></data>
+  <data name="noActiveScanner.Text" xml:space="preserve"><value>활성 스캐너가 없습니다.</value><comment>AppLocalizedText.noActiveScanner</comment></data>
+  <data name="copyAll.Content" xml:space="preserve"><value>전체 복사</value><comment>AppLocalizedText.copyAll</comment></data>
+  <data name="copy.Content" xml:space="preserve"><value>복사</value><comment>AppLocalizedText.copy</comment></data>
+  <data name="closePanel.Value" xml:space="preserve"><value>닫기</value><comment>AppLocalizedText.closePanel</comment></data>
+  <data name="diagnosticsValueYes.Value" xml:space="preserve"><value>예</value><comment>AppLocalizedText.diagnosticsValueYes</comment></data>
+  <data name="diagnosticsValueNo.Value" xml:space="preserve"><value>아니오</value><comment>AppLocalizedText.diagnosticsValueNo</comment></data>
+  <data name="diagnosticsStatFrames.Text" xml:space="preserve"><value>프레임</value><comment>AppLocalizedText.diagnosticsStatFrames</comment></data>
+  <data name="diagnosticsStatUnsaved.Text" xml:space="preserve"><value>미저장 변경</value><comment>AppLocalizedText.diagnosticsStatUnsaved</comment></data>
+  <data name="diagnosticsStatLifecycle.Text" xml:space="preserve"><value>수명 주기</value><comment>AppLocalizedText.diagnosticsStatLifecycle</comment></data>
+  <data name="diagnosticsScannerBackend.Text" xml:space="preserve"><value>백엔드</value><comment>AppLocalizedText.diagnosticsScannerBackend</comment></data>
+  <data name="diagnosticsScannerPlugins.Text" xml:space="preserve"><value>플러그인</value><comment>AppLocalizedText.diagnosticsScannerPlugins</comment></data>
+  <data name="scannerLabel.Text" xml:space="preserve"><value>스캐너</value><comment>AppLocalizedText.scannerLabel</comment></data>
+  <data name="colorMode.Text" xml:space="preserve"><value>모드</value><comment>AppLocalizedText.colorMode</comment></data>
+  <data name="noInstalledPlugins.Text" xml:space="preserve"><value>(설치된 플러그인 없음)</value><comment>AppLocalizedText.noInstalledPlugins</comment></data>
+  <data name="diagnosticsRefresh.Value" xml:space="preserve"><value>새로고침</value><comment>DiagnosticsReportView refresh button (macOS arrow.clockwise)</comment></data>
+  <data name="canvasBackgroundMenu.Text" xml:space="preserve"><value>배경색</value><comment>AppLocalizedPhrase.canvasBackgroundMenu</comment></data>
+  <data name="developerDebug.Text" xml:space="preserve"><value>개발자 디버그</value><comment>AppLocalizedPhrase.developerDebug</comment></data>
+  <data name="debugOverlay.Text" xml:space="preserve"><value>디버그 오버레이</value><comment>AppLocalizedPhrase.debugOverlay</comment></data>
+  <data name="developerDebugStage.Text" xml:space="preserve"><value>단계</value><comment>AppLocalizedPhrase.stage</comment></data>
 </root>

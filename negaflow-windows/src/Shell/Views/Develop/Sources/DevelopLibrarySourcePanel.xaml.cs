@@ -20,6 +20,7 @@ public sealed partial class DevelopLibrarySourcePanel : UserControl
     {
         InitializeComponent();
         import = new DevelopSourceImport(this);
+        LibraryTree.FrameInvoked += (_, frameId) => FrameSelected?.Invoke(this, frameId);
     }
 
     /// <summary>트리에서 frame 을 누르면 올립니다. 선택은 뷰가 맡습니다.</summary>
@@ -77,9 +78,9 @@ public sealed partial class DevelopLibrarySourcePanel : UserControl
     /// </summary>
     public void Rebuild()
     {
-        LibraryTree.RootNodes.Clear();
         if (libraryHost?.ActiveFrameId is not { } activeFrameId)
         {
+            LibraryTree.SetSections([]);
             return;
         }
         LibraryBrowserProjection projection = LibraryBrowserProjector.Create(
@@ -88,14 +89,15 @@ public sealed partial class DevelopLibrarySourcePanel : UserControl
                 libraryHost.SourceAvailabilityByFrameId),
             libraryHost.Folders,
             libraryHost.FolderAvailabilityById,
-            LibraryBrowserViewMode.Folders);
-        DevelopSourceFolderTree.AddFolderNodes(
-            LibraryTree,
-            projection.FolderSections.Where(section =>
+            LibraryBrowserViewMode.Folders,
+            includeEmptyFolders: false);
+        LibraryTree.SelectedFrameId = activeFrameId;
+        LibraryTree.SetSections(
+            [.. projection.FolderSections.Where(section =>
                 section.Items.Any(item => string.Equals(
                     item.Id,
                     activeFrameId,
-                    StringComparison.Ordinal))));
+                    StringComparison.Ordinal)))]);
     }
 
     internal void NotifyFramesImported() => FramesImported?.Invoke(this, EventArgs.Empty);
@@ -139,12 +141,5 @@ public sealed partial class DevelopLibrarySourcePanel : UserControl
         _ = ScanPanel.OpenAsync();
     }
 
-    private void OnLibraryTreeItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
-    {
-        _ = sender;
-        if (DevelopSourceFolderTree.TryGetFrameId(args, out string frameId))
-        {
-            FrameSelected?.Invoke(this, frameId);
-        }
-    }
+
 }

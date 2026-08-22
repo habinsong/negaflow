@@ -1,14 +1,14 @@
 // CPU/GPU 동치 시험 — NORITSU 장치 질감(감마 도메인 luminance USM).
 //
-// ☠️ **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `apply_noritsu_texture` 를
-//    스코프 밖에서 돌리고, GPU 는 `GpuAccelerator::apply_noritsu_texture` 가
-//    **true 를 돌려준 경우만** 겨룹니다. false 면 폴백이라 시험이 아무것도
-//    증명하지 않습니다.
+// **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `apply_noritsu_texture` 를
+// 스코프 밖에서 돌리고, GPU 는 `GpuAccelerator::apply_noritsu_texture` 가
+// **true 를 돌려준 경우만** 겨룹니다. false 면 폴백이라 시험이 아무것도
+// 증명하지 않습니다.
 //
-// ☠️ 하드 게이트가 있습니다 (`lo < 0 || hi > 1`, `luma <= 1e-5`).
-//    경계 화소의 차이는 누적이 아니라 질감의 크기이므로 최대 오차와
-//    이탈 화소 비율을 같이 겁니다. 게이트에 걸린 화소는 원본과 **비트 단위**로
-//    같아야 합니다.
+// 하드 게이트가 있습니다 (`lo < 0 || hi > 1`, `luma <= 1e-5`).
+// 경계 화소의 차이는 누적이 아니라 질감의 크기이므로 최대 오차와
+// 이탈 화소 비율을 같이 겁니다. 게이트에 걸린 화소는 원본과 **비트 단위**로
+// 같아야 합니다.
 
 #include <algorithm>
 #include <cmath>
@@ -160,7 +160,7 @@ void compare_against_cpu(
     }
 }
 
-}  // namespace
+} // namespace
 
 void warp_matches_cpu(
     const std::vector<Rgba32F>& source,

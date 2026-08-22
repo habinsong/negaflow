@@ -28,44 +28,36 @@ public sealed partial class SettingsRootView
     /// <summary>방금 거절당한 줄입니다. 그 줄에만 빨간 안내가 붙습니다.</summary>
     private WorkflowShortcutAction? rejectedAction;
 
+    /// <summary>
+    /// 묶음 캡슐입니다. macOS 는 <c>Picker(.segmented)</c> 하나이고, 칸은 폭을 똑같이
+    /// 나눠 가집니다 — 이름 길이에 따라 칸이 들쭉날쭉해지지 않습니다.
+    /// </summary>
     private void BuildShortcutGroups()
     {
-        ShortcutGroupBar.Children.Clear();
-        foreach (WorkflowShortcutGroup group in Enum.GetValues<WorkflowShortcutGroup>())
-        {
-            WorkflowShortcutGroup value = group;
-            Button button = new()
-            {
-                Content = GroupTitle(group),
-                Padding = new Thickness(10, 4, 10, 4),
-                FontSize = 12,
-                CornerRadius = new CornerRadius(13),
-            };
-            button.Click += (_, _) =>
-            {
-                shortcutGroup = value;
-                recordingAction = null;
-                rejectedAction = null;
-                BuildShortcutGroups();
-                BuildShortcutRows();
-            };
-            SetSelectedLook(button, group == shortcutGroup);
-            ShortcutGroupBar.Children.Add(button);
-        }
+        ShortcutGroupPicker.SetOptions(
+            [.. Enum.GetValues<WorkflowShortcutGroup>()
+                .Select(group => new Controls.SegmentOption(group, GroupTitle(group)))],
+            shortcutGroup);
     }
 
-    private static void SetSelectedLook(Button button, bool selected)
+    private void OnShortcutGroupChanged(object? sender, EventArgs args)
     {
-        button.Background = selected
-            ? new SolidColorBrush(Windows.UI.Color.FromArgb(0x2D, 0x6B, 0x8B, 0xFF))
-            : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        button.FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal;
-        button.Opacity = selected ? 1 : 0.72;
+        _ = sender;
+        _ = args;
+        if (ShortcutGroupPicker.SelectedValue is not WorkflowShortcutGroup group)
+        {
+            return;
+        }
+        shortcutGroup = group;
+        recordingAction = null;
+        rejectedAction = null;
+        BuildShortcutRows();
     }
 
     private void BuildShortcutRows()
     {
-        ShortcutRows.Children.Clear();
+        ShortcutRowsSection.Rows.Clear();
+        ShortcutRowsSection.HeaderText = GroupTitle(shortcutGroup);
         if (workspaceState is not { } state)
         {
             return;
@@ -77,51 +69,44 @@ public sealed partial class SettingsRootView
             {
                 continue;
             }
-            ShortcutRows.Children.Add(ShortcutRow(action, map));
+            ShortcutRowsSection.Rows.Add(ShortcutRow(action, map));
             if (rejectedAction == action)
             {
-                ShortcutRows.Children.Add(new TextBlock
+                Controls.SettingsFootnote note = new()
                 {
                     Text = AppResources.Get("shortcutInvalidOrConflict", "Text"),
-                    FontSize = 11,
-                    Foreground = new SolidColorBrush(
-                        Windows.UI.Color.FromArgb(0xFF, 0xE5, 0x48, 0x4D)),
-                    TextWrapping = TextWrapping.Wrap,
-                });
+                };
+                note.Foreground = new SolidColorBrush(
+                    Windows.UI.Color.FromArgb(0xFF, 0xE5, 0x48, 0x4D));
+                ShortcutRowsSection.Rows.Add(note);
             }
         }
+        ShortcutRowsSection.Apply();
     }
 
-    private Grid ShortcutRow(WorkflowShortcutAction action, WorkflowShortcutMap map)
+    /// <summary>
+    /// 한 줄입니다. 실측(단축키.png): 줄 높이 51, 녹화 칸 328, 되돌리기 40, 사이 8.
+    /// </summary>
+    private Controls.SettingsRow ShortcutRow(
+        WorkflowShortcutAction action,
+        WorkflowShortcutMap map)
     {
-        Grid row = new() { ColumnSpacing = 8 };
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(180) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        TextBlock title = new()
-        {
-            Text = ActionTitle(action),
-            FontSize = 13,
-            VerticalAlignment = VerticalAlignment.Center,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-        };
-        row.Children.Add(title);
-
         // 빼앗긴 단축키는 빈칸으로 보입니다. 남의 키를 자기 것처럼 보여 주면 눌러 보고 나서야
         // 안 듣는다는 것을 알게 됩니다.
         bool bound = map.IsBound(action);
+        string title = ActionTitle(action);
         Button recorder = new()
         {
             Content = recordingAction == action
                 ? AppResources.Get("shortcutRecordingPrompt", "Text")
                 : bound ? map.For(action).Display() : string.Empty,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Width = 328,
+            Height = 30,
             FontSize = 12,
-            MinHeight = 30,
+            Tag = action,
         };
         ToolTipService.SetToolTip(recorder, AppResources.Get("shortcutClickToRecord", "Text"));
-        AutomationProperties.SetName(recorder, title.Text);
+        AutomationProperties.SetName(recorder, title);
         AutomationProperties.SetAutomationId(
             recorder,
             "settings.shortcuts.record." + action.ToString().ToLowerInvariant());
@@ -134,21 +119,17 @@ public sealed partial class SettingsRootView
         // 기다리는 동안 이 단추가 키를 받습니다. 창 전체를 잠그지 않으므로 Esc 로 언제든
         // 빠져나갈 수 있습니다.
         recorder.PreviewKeyDown += OnShortcutRecorderKeyDown;
-        recorder.Tag = action;
-        Grid.SetColumn(recorder, 1);
-        row.Children.Add(recorder);
-        if (recordingAction == action)
-        {
-            _ = recorder.Focus(FocusState.Programmatic);
-        }
 
         Button reset = new()
         {
-            Content = AppResources.Get("shortcutReset", "Content"),
-            FontSize = 12,
-            MinHeight = 30,
+            Content = new FontIcon { FontSize = 13, Glyph = "\uE7A7" },
+            Width = 40,
+            Height = 30,
+            Padding = new Thickness(0),
         };
-        ToolTipService.SetToolTip(reset, (string)reset.Content);
+        string resetLabel = AppResources.Get("shortcutReset", "Content");
+        ToolTipService.SetToolTip(reset, resetLabel);
+        AutomationProperties.SetName(reset, resetLabel);
         reset.Click += (_, _) =>
         {
             workspaceState?.UpdateShortcuts(current => current.Reset(action));
@@ -156,8 +137,20 @@ public sealed partial class SettingsRootView
             rejectedAction = null;
             BuildShortcutRows();
         };
-        Grid.SetColumn(reset, 2);
-        row.Children.Add(reset);
+
+        StackPanel right = new()
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        right.Children.Add(recorder);
+        right.Children.Add(reset);
+        Controls.SettingsRow row = new() { Label = title, MinHeight = 51, Control = right };
+        if (recordingAction == action)
+        {
+            _ = recorder.Focus(FocusState.Programmatic);
+        }
         return row;
     }
 
@@ -237,7 +230,7 @@ public sealed partial class SettingsRootView
         _ => null,
     };
 
-    private void OnShortcutResetAllClicked(object sender, RoutedEventArgs args)
+    private void OnResetAllShortcuts(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;

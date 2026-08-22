@@ -45,7 +45,7 @@ const Case cases[] = {
     {"grade_all", {{20.0F, 0.8F, 0.3F}, {180.0F, 0.6F, -0.25F}, {300.0F, 0.7F, 0.15F}, 0.35F, 0.4F}},
 };
 
-}  // namespace
+} // namespace
 
 void grade_matches_cpu(const GpuDevice& device, const char* const label) {
     GpuColorGrade kernel{};
@@ -68,8 +68,8 @@ void grade_matches_cpu(const GpuDevice& device, const char* const label) {
     }
 
     for (const Case& scenario : cases) {
-        // ☠️ 준비 계산을 시험에서 다시 구현하지 않습니다 — CPU 와 같은 함수를 씁니다.
-        //    여기서 베껴 쓰면 셰이더가 틀려도 시험이 같이 틀려 통과합니다.
+        // 준비 계산을 시험에서 다시 구현하지 않습니다 — CPU 와 같은 함수를 씁니다.
+        // 여기서 베껴 쓰면 셰이더가 틀려도 시험이 같이 틀려 통과합니다.
         const negaflow::imaging::ColorGradingSetup cpu_setup =
             negaflow::imaging::prepare_color_grading(scenario.parameters);
         GpuColorGradeSetup gpu_setup{};
@@ -131,4 +131,4 @@ void grade_matches_cpu(const GpuDevice& device, const char* const label) {
 
 // 컬러 믹서 — macOS `colorMixerHSL`. 밴드 8개마다 색상/채도/광도.
 
-}  // namespace gpu_color_kernel_tests
+} // namespace gpu_color_kernel_tests

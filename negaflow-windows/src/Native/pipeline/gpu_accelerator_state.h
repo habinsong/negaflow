@@ -23,6 +23,7 @@
 #include "negaflow/gpu/gpu_negative_invert.h"
 #include "negaflow/gpu/gpu_tone_stage.h"
 #include "negaflow/gpu/gpu_area_average.h"
+#include "negaflow/gpu/gpu_scene_correction.h"
 #include "negaflow/gpu/gpu_scratch_angle.h"
 #include "negaflow/gpu/gpu_channel_clipping_overlay.h"
 #include "negaflow/gpu/gpu_neighborhood.h"
@@ -37,10 +38,10 @@
 namespace negaflow::pipeline {
 
 struct GpuAccelerator::State final {
-    // ☠️ D3D11 즉시 컨텍스트는 스레드 안전하지 않습니다. 모든 GPU 호출이 이 자물쇠
-    //    안에서 돕니다 — 빼면 두 현상이 겹칠 때 조용히 깨집니다.
-    //    `recursive` 인 이유: `GpuResidentScope` 가 사슬 동안 자물쇠를 들고,
-    //    그 안의 invert/tone 이 같은 스레드에서 다시 잡습니다.
+    // D3D11 즉시 컨텍스트는 스레드 안전하지 않습니다. 모든 GPU 호출이 이 자물쇠
+    // 안에서 돕니다 — 빼면 두 현상이 겹칠 때 조용히 깨집니다.
+    // `recursive` 인 이유: `GpuResidentScope` 가 사슬 동안 자물쇠를 들고,
+    // 그 안의 invert/tone 이 같은 스레드에서 다시 잡습니다.
     std::recursive_mutex lock{};
     gpu::GpuDevice device{};
     gpu::GpuToneStage tone{};
@@ -82,15 +83,18 @@ struct GpuAccelerator::State final {
     bool clipping_overlay_ready{false};
     gpu::GpuAreaAverage area_average{};
     bool area_average_ready{false};
+    // 자동 레벨·중성 균형. 이것이 GPU 에서 돌아야 반전 뒤 사슬이 호스트로 안 내려옵니다.
+    gpu::GpuSceneCorrection scene_correction{};
+    bool scene_correction_ready{false};
     gpu::GpuMipHalve mip_halve{};
     bool mip_halve_ready{false};
     gpu::GpuScratchAngle scratch_angle{};
     bool scratch_angle_ready{false};
     gpu::GpuWorkingImage mip_a{};
     gpu::GpuWorkingImage mip_b{};
-    // ☠️ **작업 텍스처는 하나의 묶음을 나눠 씁니다.** 진입점마다 자기 것을 만들면
-    //    24MP 에서 264 MB 텍스처를 호출마다 할당·해제하고, 실측으로 그 할당이
-    //    다운로드 시간의 큰 몫이었습니다. 필름 룩 오케스트레이터도 이 묶음을 받습니다.
+    // **작업 텍스처는 하나의 묶음을 나눠 씁니다.** 진입점마다 자기 것을 만들면
+    // 24MP 에서 264 MB 텍스처를 호출마다 할당·해제하고, 실측으로 그 할당이
+    // 다운로드 시간의 큰 몫이었습니다. 필름 룩 오케스트레이터도 이 묶음을 받습니다.
     gpu::GpuImagePool pool{};
     gpu::GpuFiniteCheck finite{};
     bool finite_ready{false};
@@ -141,4 +145,4 @@ struct GpuAccelerator::State final {
     const char* adapter{""};
 };
 
-}  // namespace negaflow::pipeline
+} // namespace negaflow::pipeline

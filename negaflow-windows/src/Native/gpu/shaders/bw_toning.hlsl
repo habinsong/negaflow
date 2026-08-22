@@ -6,8 +6,8 @@
 // (`pixel.red = pixel.green = pixel.blue = neutral`). 흑백 변환과 조색이 한 패스이기 때문입니다.
 // 그래서 `Tone` 이 0 이어도 이 커널은 돌아야 합니다. 조기 반환으로 건너뛰면 흑백 변환이 사라집니다.
 //
-// ⚠️ `Tone` 이 0 일 때 CPU 는 중성값을 **클램프하지 않고** 그대로 씁니다.
-//    켜져 있을 때만 `clamp_unit` 을 겁니다. 그 차이를 그대로 옮겼습니다.
+// 주의 `Tone` 이 0 일 때 CPU 는 중성값을 **클램프하지 않고** 그대로 씁니다.
+// 켜져 있을 때만 `clamp_unit` 을 겁니다. 그 차이를 그대로 옮겼습니다.
 //
 // 색조(tint)는 `imaging::prepare_bw_toning` 이 만든 것을 받습니다. 여기서 다시 계산하지 마십시오.
 
@@ -19,8 +19,8 @@ cbuffer BwToningConstants : register(b0) {
     float3 ShadowTint;
     float Strength;
     float3 HighlightTint;
-    float Mode;          // 세피아 1.0, 셀레늄 0.0
-    float Tone;          // 조색을 거는지 (1.0/0.0)
+    float Mode; // 세피아 1.0, 셀레늄 0.0
+    float Tone; // 조색을 거는지 (1.0/0.0)
     float3 Padding1;
 };
 

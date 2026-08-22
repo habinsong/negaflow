@@ -170,7 +170,7 @@ void copy_active_pixels(
     }
 }
 
-}  // namespace
+} // namespace
 
 bool valid_film_emulation_acutance_parameters(
     const FilmEmulationAcutanceParameters& parameters) noexcept {
@@ -322,8 +322,8 @@ negaflow::core::KernelStatus apply_film_emulation_acutance(
     if (profile == nullptr) {
         return negaflow::core::KernelStatus::invalid_parameter;
     }
-    // ☠️ **근사입니다.** CPU 는 두 패스를 `double` 로 누적하고 GPU 는 float 입니다.
-    //    `ApproximateAcceleratorScope` 안에서만 돕니다 — 내보내기·골든은 CPU 그대로입니다.
+    // **근사입니다.** CPU 는 두 패스를 `double` 로 누적하고 GPU 는 float 입니다.
+    // `ApproximateAcceleratorScope` 안에서만 돕니다 — 내보내기·골든은 CPU 그대로입니다.
     if (exact_in_place && approximate_acceleration_allowed()) {
         if (const KernelAccelerator* const table = kernel_accelerator();
             table != nullptr && table->film_emulation_acutance != nullptr &&
@@ -416,4 +416,4 @@ negaflow::core::KernelStatus apply_film_emulation_acutance(
     return negaflow::core::KernelStatus::ok;
 }
 
-}  // namespace negaflow::imaging
+} // namespace negaflow::imaging

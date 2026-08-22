@@ -3,22 +3,9 @@
     x:Class="Negaflow.Shell.Views.Develop.Sources.DevelopLibrarySourcePanel"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sources="using:Negaflow.Shell.Views.Library.Sources"
     xmlns:defaults="using:Negaflow.Shell.Views.Library.Defaults"
     xmlns:scanner="using:Negaflow.Shell.Views.Library.Scanner">
-    <UserControl.Resources>
-        <!-- macOS ImportGlassAction: 한 줄, 24 high, horizontal padding 6,
-             hover surface radius 12. 긴 번역은 내부 Viewbox가 아래로만 줄입니다. -->
-        <Style x:Key="NegaflowImportActionStyle" TargetType="Button">
-            <Setter Property="MinHeight" Value="24" />
-            <Setter Property="Padding" Value="6,0" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-        </Style>
-    </UserControl.Resources>
     <!-- macOS LibrarySourceSection(content: .combined): 가져오기 3분할 캡슐과
          현재 프레임 폴더 트리를 같은 스크롤 패널에 둡니다. -->
     <ScrollViewer>
@@ -106,35 +93,12 @@
             <defaults:LibraryDevelopDefaultsPanel
                 x:Name="DevelopDefaultsPanel"
                 x:FieldModifier="internal" />
-            <TreeView
+            <!-- macOS `LibraryFolderTreeView` — 사진을 담고 있는 폴더와 그 사진만 냅니다. -->
+            <sources:LibraryFolderTreeView
                 x:Name="LibraryTree"
                 x:FieldModifier="internal"
                 Padding="0"
-                AutomationProperties.AutomationId="negaflow.develop.sources.library-tree"
-                CanDragItems="False"
-                CanReorderItems="False"
-                ItemInvoked="OnLibraryTreeItemInvoked"
-                SelectionMode="Single">
-                <TreeView.ItemTemplate>
-                    <DataTemplate x:DataType="TreeViewNode">
-                        <TreeViewItem
-                            AutomationProperties.Name="{Binding Content.Title, Mode=OneWay}"
-                            IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
-                            ItemsSource="{Binding Children}">
-                            <Grid ColumnSpacing="6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <FontIcon FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="{Binding Content.Glyph, Mode=OneWay}" />
-                                <TextBlock Grid.Column="1" FontSize="12" Text="{Binding Content.Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Grid.Column="2" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{Binding Content.Detail, Mode=OneWay}" />
-                            </Grid>
-                        </TreeViewItem>
-                    </DataTemplate>
-                </TreeView.ItemTemplate>
-            </TreeView>
+                AutomationProperties.AutomationId="negaflow.develop.sources.library-tree" />
         </StackPanel>
     </ScrollViewer>
 </UserControl>

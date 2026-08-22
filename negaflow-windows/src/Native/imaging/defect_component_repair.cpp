@@ -3,8 +3,10 @@
 #include "defect_component_repair_detail.h"
 
 #include "negaflow/color/srgb_transfer.h"
+#include "negaflow/core/parallel_rows.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -123,29 +125,45 @@ DefectComponentRepairResult repair_defect_components(
         result.blend_mask.resize(count);
         std::vector<std::uint8_t> damaged(count, 0U);
         std::vector<Rgba32F> encoded(count);
-        for (int y = 0; y < height; ++y) {
-            const std::size_t source_row =
-                static_cast<std::size_t>(y) * result.image.stride_pixels;
-            const std::size_t mask_row =
-                static_cast<std::size_t>(y) * mask_stride_bytes;
-            const std::size_t packed_row = static_cast<std::size_t>(y) * width;
-            for (int x = 0; x < width; ++x) {
-                const std::size_t packed = packed_row + x;
-                const std::uint8_t weight = mask[mask_row + x];
-                result.blend_mask[packed] = weight;
-                if (weight > 8U) {
-                    damaged[packed] = 1U;
-                    ++result.info.input_mask_pixels;
+        // 전면 마스크 한 장이면 이 루프만으로 5088x3401 화소마다 sRGB 인코드를 세 번 돕니다.
+        // 행끼리 독립이므로 화소당 계산은 그대로 두고 행 블록으로만 나눕니다. 세는 값은
+        // 순서와 무관하므로 원자 누적으로 합칩니다.
+        std::atomic<std::size_t> input_mask_pixels{0U};
+        negaflow::core::for_each_row_block(
+            result.image.height,
+            static_cast<std::uint64_t>(width) * height *
+                (sizeof(Rgba32F) * 2U + 3U),
+            [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+                std::size_t block_mask_pixels = 0U;
+                for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
+                    const std::size_t source_row =
+                        static_cast<std::size_t>(y) * result.image.stride_pixels;
+                    const std::size_t mask_row =
+                        static_cast<std::size_t>(y) * mask_stride_bytes;
+                    const std::size_t packed_row =
+                        static_cast<std::size_t>(y) * static_cast<std::size_t>(width);
+                    for (int x = 0; x < width; ++x) {
+                        const std::size_t packed = packed_row + x;
+                        const std::uint8_t weight = mask[mask_row + x];
+                        result.blend_mask[packed] = weight;
+                        if (weight > 8U) {
+                            damaged[packed] = 1U;
+                            ++block_mask_pixels;
+                        }
+                        const Rgba32F source = result.image.pixels[source_row + x];
+                        encoded[packed] = {
+                            negaflow::color::linear_to_srgb_encoded(source.red),
+                            negaflow::color::linear_to_srgb_encoded(source.green),
+                            negaflow::color::linear_to_srgb_encoded(source.blue),
+                            source.alpha,
+                        };
+                    }
                 }
-                const Rgba32F source = result.image.pixels[source_row + x];
-                encoded[packed] = {
-                    negaflow::color::linear_to_srgb_encoded(source.red),
-                    negaflow::color::linear_to_srgb_encoded(source.green),
-                    negaflow::color::linear_to_srgb_encoded(source.blue),
-                    source.alpha,
-                };
-            }
-        }
+                input_mask_pixels.fetch_add(
+                    block_mask_pixels, std::memory_order_relaxed);
+            });
+        result.info.input_mask_pixels =
+            input_mask_pixels.load(std::memory_order_relaxed);
         if (parameters.has_preferred_angle) {
             damaged = refine_broad_damage_mask(encoded, damaged, width, height);
             for (std::size_t pixel = 0U; pixel < count; ++pixel) {
@@ -171,33 +189,40 @@ DefectComponentRepairResult repair_defect_components(
         result.info.component_count = structure_info.component_count;
         result.info.repaired_pixels = structure_info.repaired_pixels;
 
-        for (int y = 0; y < height; ++y) {
-            const std::size_t output_row =
-                static_cast<std::size_t>(y) * result.image.stride_pixels;
-            const std::size_t packed_row = static_cast<std::size_t>(y) * width;
-            for (int x = 0; x < width; ++x) {
-                const std::size_t packed = packed_row + x;
-                const float blend = static_cast<float>(
-                    static_cast<double>(result.blend_mask[packed]) / 255.0 *
-                    parameters.strength);
-                if (blend <= 0.0F) {
-                    continue;
+        negaflow::core::for_each_row_block(
+            result.image.height,
+            static_cast<std::uint64_t>(width) * height *
+                (sizeof(Rgba32F) * 2U + 1U),
+            [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+                for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
+                    const std::size_t output_row =
+                        static_cast<std::size_t>(y) * result.image.stride_pixels;
+                    const std::size_t packed_row =
+                        static_cast<std::size_t>(y) * static_cast<std::size_t>(width);
+                    for (int x = 0; x < width; ++x) {
+                        const std::size_t packed = packed_row + x;
+                        const float blend = static_cast<float>(
+                            static_cast<double>(result.blend_mask[packed]) / 255.0 *
+                            parameters.strength);
+                        if (blend <= 0.0F) {
+                            continue;
+                        }
+                        Rgba32F& output = result.image.pixels[output_row + x];
+                        const Rgba32F source = output;
+                        const Rgba32F repaired_linear{
+                            negaflow::color::srgb_encoded_to_linear(repaired[packed].red),
+                            negaflow::color::srgb_encoded_to_linear(repaired[packed].green),
+                            negaflow::color::srgb_encoded_to_linear(repaired[packed].blue),
+                            source.alpha,
+                        };
+                        const float keep = 1.0F - blend;
+                        output.red = source.red * keep + repaired_linear.red * blend;
+                        output.green = source.green * keep + repaired_linear.green * blend;
+                        output.blue = source.blue * keep + repaired_linear.blue * blend;
+                        output.alpha = source.alpha;
+                    }
                 }
-                Rgba32F& output = result.image.pixels[output_row + x];
-                const Rgba32F source = output;
-                const Rgba32F repaired_linear{
-                    negaflow::color::srgb_encoded_to_linear(repaired[packed].red),
-                    negaflow::color::srgb_encoded_to_linear(repaired[packed].green),
-                    negaflow::color::srgb_encoded_to_linear(repaired[packed].blue),
-                    source.alpha,
-                };
-                const float keep = 1.0F - blend;
-                output.red = source.red * keep + repaired_linear.red * blend;
-                output.green = source.green * keep + repaired_linear.green * blend;
-                output.blue = source.blue * keep + repaired_linear.blue * blend;
-                output.alpha = source.alpha;
-            }
-        }
+            });
         result.info.applied = result.info.repaired_pixels != 0U &&
                               parameters.strength > 1.0e-3;
         result.status = DefectComponentRepairStatus::ok;

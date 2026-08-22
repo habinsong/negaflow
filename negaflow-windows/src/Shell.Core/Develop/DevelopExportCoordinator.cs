@@ -60,6 +60,20 @@ public sealed class NativeDevelopExporterAdapter : IDevelopExporter
             softProof,
             clippingOverlay);
 
+    /// <summary>카탈로그 background 채움 결과를 native raw에 중복 상주시지 않습니다.</summary>
+    public DevelopExportResult PreviewBackground(
+        DevelopExportRequest request,
+        uint maximumWidth,
+        uint maximumHeight,
+        byte[] pixels,
+        DevelopRun? run = null) =>
+        NativeDevelopExporter.PreviewBackground(
+            request,
+            maximumWidth,
+            maximumHeight,
+            pixels,
+            run);
+
     public GrainMendDetectionResult DetectGrainMend(
         DevelopExportRequest request,
         byte[] mask,
@@ -147,21 +161,39 @@ public sealed class DevelopExportCoordinator
     public bool IsRunning => Volatile.Read(ref inFlight) != 0;
 
     /// <summary>
+    /// 배치가 한 번에 돌릴 수 있는 장 수입니다. macOS
+    /// <c>startExportBatch(… maximumConcurrent: 2)</c> 와 같은 값입니다.
+    /// </summary>
+    /// <remarks>
+    /// 한 장이 코어를 다 쓰지 않습니다 — frame_1(5088×3401) 실측에서 CPU 5,109ms 를 쓰는 동안
+    /// 벽시계는 1,960ms 로, 16 코어에서 병렬도가 2.6 이었습니다. 남는 코어와, 디스크에
+    /// 103MB 를 쓰는 동안 노는 CPU 를 두 번째 장이 씁니다. macOS 가 2 에서 멈춘 이유도 같습니다 —
+    /// 더 늘리면 최고 메모리만 장당 배로 늡니다.
+    /// </remarks>
+    public const int MaximumConcurrentExports = 2;
+
+    /// <summary>
     /// 콜백이 배달되거나 배달에 실패한 뒤 완료됩니다. 반환값은 **결과가 UI 로 전달됐는지** 이며,
     /// 현상이 성공했는지가 아닙니다. 성공 여부는 콜백이 받는
     /// <see cref="DevelopExportOutcome"/> 안에 있습니다.
     /// </summary>
+    /// <param name="maximumConcurrent">
+    /// 이 호출까지 포함해 동시에 돌아도 되는 장 수입니다. 기본 1 은 지금까지와 같습니다 —
+    /// 이미 한 장이 돌고 있으면 <see cref="DevelopExportOutcomeKind.Busy"/> 로 돌려보냅니다.
+    /// 배치만 <see cref="MaximumConcurrentExports"/> 를 넘깁니다.
+    /// </param>
     public async Task<bool> StartAsync(
         LibraryFrameSnapshot frame,
         string destinationPath,
         DevelopExportFormat format,
         Action<DevelopExportOutcome> onCompleted,
-        ExportEncodingOptions? encoding = null)
+        ExportEncodingOptions? encoding = null,
+        int maximumConcurrent = 1)
     {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(onCompleted);
 
-        if (Interlocked.CompareExchange(ref inFlight, 1, 0) != 0)
+        if (!TryEnter(maximumConcurrent))
         {
             // Busy 도 dispatcher 를 거칩니다. 호출자가 경로마다 다른 규칙을 기억하지 않도록.
             return Deliver(DevelopExportOutcome.Busy(), onCompleted);
@@ -195,7 +227,32 @@ public sealed class DevelopExportCoordinator
         }
         finally
         {
-            Volatile.Write(ref inFlight, 0);
+            _ = Interlocked.Decrement(ref inFlight);
+        }
+    }
+
+    /// <summary>
+    /// 지금 도는 수가 <paramref name="limit"/> 보다 적을 때만 자리를 하나 집습니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 0↔1 뿐이라 두 번째 장이 곧바로 <see cref="DevelopExportOutcomeKind.Busy"/> 였고,
+    /// 그래서 배치가 순서대로밖에 돌 수 없었습니다. 세는 값으로 바꾸되 <b>기본 한도는 1</b> 이라
+    /// 단일 내보내기의 거동은 그대로입니다.
+    /// </remarks>
+    private bool TryEnter(int limit)
+    {
+        int allowed = Math.Max(1, limit);
+        while (true)
+        {
+            int current = Volatile.Read(ref inFlight);
+            if (current >= allowed)
+            {
+                return false;
+            }
+            if (Interlocked.CompareExchange(ref inFlight, current + 1, current) == current)
+            {
+                return true;
+            }
         }
     }
 
