@@ -21,6 +21,7 @@ internal static class Program
             return diagnosticExitCode;
         }
         ResourceFileTests.Run();
+        LocalizedTextTests.Run();
         ShellPreferencesTests.Run();
         LibraryBrowsingTests.Run();
         ExportConfigurationTests.Run();

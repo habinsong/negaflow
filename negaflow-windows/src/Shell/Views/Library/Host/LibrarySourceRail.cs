@@ -34,13 +34,13 @@ internal sealed class LibrarySourceRail
     /// </summary>
     internal void Update()
     {
-        view.ImportSourcePanel.Visibility = view.sourceKind == LibrarySourceKind.Importing
+        view.ControlsPanel.ImportSourcePanel.Visibility = view.sourceKind == LibrarySourceKind.Importing
             ? Visibility.Visible
             : Visibility.Collapsed;
-        view.FilesSourceTree.Visibility = view.sourceKind == LibrarySourceKind.Files
+        view.ControlsPanel.FilesSourceTree.Visibility = view.sourceKind == LibrarySourceKind.Files
             ? Visibility.Visible
             : Visibility.Collapsed;
-        view.CollectionsPanel.Visibility = view.sourceKind == LibrarySourceKind.Collections
+        view.ControlsPanel.CollectionsPanel.Visibility = view.sourceKind == LibrarySourceKind.Collections
             ? Visibility.Visible
             : Visibility.Collapsed;
 
@@ -50,17 +50,15 @@ internal sealed class LibrarySourceRail
             LibrarySourceKind.Collections => ("libraryCollections", ""),
             _ => ("importSection", ""),
         };
-        view.ImportHeaderText.Text = AppResources.Get(headerKey, headerKey == "importSection" ? "Text" : "Value");
-        view.SourceHeaderIcon.Glyph = glyph;
+        view.ControlsPanel.ImportHeaderText.Text = AppResources.Get(headerKey, headerKey == "importSection" ? "Text" : "Value");
+        view.ControlsPanel.SourceHeaderIcon.Glyph = glyph;
         foreach ((Button button, FontIcon icon, LibrarySourceKind kind) in Buttons())
         {
             bool selected = kind == view.sourceKind;
             button.Background = selected
-                ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSelectionBrush"]
+                ? SelectionBrush()
                 : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
-            icon.Foreground = selected
-                ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"]
-                : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
+            icon.Foreground = selected ? AccentIconBrush() : PrimaryIconBrush();
             AutomationProperties.SetItemStatus(
                 button,
                 AppResources.Get(selected ? "selected" : "notSelected", "Value"));
@@ -71,11 +69,29 @@ internal sealed class LibrarySourceRail
         }
     }
 
+    private Microsoft.UI.Xaml.Media.Brush PrimaryIconBrush() =>
+        new Microsoft.UI.Xaml.Media.SolidColorBrush(
+            view.Root.ActualTheme == ElementTheme.Dark
+                ? Microsoft.UI.Colors.White
+                : Microsoft.UI.Colors.Black);
+
+    private Microsoft.UI.Xaml.Media.Brush AccentIconBrush() =>
+        new Microsoft.UI.Xaml.Media.SolidColorBrush(
+            view.Root.ActualTheme == ElementTheme.Dark
+                ? Windows.UI.Color.FromArgb(0xFF, 0x0A, 0x84, 0xFF)
+                : Windows.UI.Color.FromArgb(0xFF, 0x00, 0x7A, 0xFF));
+
+    private Microsoft.UI.Xaml.Media.Brush SelectionBrush() =>
+        new Microsoft.UI.Xaml.Media.SolidColorBrush(
+            view.Root.ActualTheme == ElementTheme.Dark
+                ? Windows.UI.Color.FromArgb(0x38, 0x6B, 0x8B, 0xFF)
+                : Windows.UI.Color.FromArgb(0x29, 0x6B, 0x8B, 0xFF));
+
     internal IEnumerable<(Button Button, FontIcon Icon, LibrarySourceKind Kind)> Buttons()
     {
-        yield return (view.ImportRailButton, view.ImportRailIcon, LibrarySourceKind.Importing);
-        yield return (view.FilesRailButton, view.FilesRailIcon, LibrarySourceKind.Files);
-        yield return (view.CollectionsRailButton, view.CollectionsRailIcon, LibrarySourceKind.Collections);
+        yield return (view.ControlsPanel.ImportRailButton, view.ControlsPanel.ImportRailIcon, LibrarySourceKind.Importing);
+        yield return (view.ControlsPanel.FilesRailButton, view.ControlsPanel.FilesRailIcon, LibrarySourceKind.Files);
+        yield return (view.ControlsPanel.CollectionsRailButton, view.ControlsPanel.CollectionsRailIcon, LibrarySourceKind.Collections);
     }
 
     /// <summary>
@@ -84,11 +100,11 @@ internal sealed class LibrarySourceRail
     /// </summary>
     internal void RebuildFilesSourceTree()
     {
-        int matched = view.FilesSourceTree.Rebuild(
+        int matched = view.ControlsPanel.FilesSourceTree.Rebuild(
             view.allItems,
             view.LibrarySearchBox?.Text ?? string.Empty,
             view.quickFilters);
-        view.SourceHeaderCountText.Text = AppResources.FormatIntegers(
+        view.ControlsPanel.SourceHeaderCountText.Text = AppResources.FormatIntegers(
             "libraryFolderFrameCount",
             "Text",
             matched);
@@ -201,7 +217,7 @@ internal sealed class LibrarySourceRail
         }
         if (changed > 0 && host.Save() != CatalogStoreError.None)
         {
-            view.ImportStatusText.Text = AppResources.Get("libraryProcessApplyFailed", "Text");
+            view.ControlsPanel.ImportStatusText.Text = AppResources.Get("libraryProcessApplyFailed", "Text");
         }
         folderDrafts.Clear(sectionId);
         view.ShowLibrary(host, view.importWindowId ?? default);
@@ -256,7 +272,7 @@ internal sealed class LibrarySourceRail
     {
         view.sourceKind = LibrarySourceKind.Importing;
         Update();
-        view.ImportScannerButton.IsChecked = true;
-        view.ScanPanel.Open();
+        view.ControlsPanel.ImportScannerButton.IsChecked = true;
+        view.ControlsPanel.ScanPanel.Open();
     }
 }

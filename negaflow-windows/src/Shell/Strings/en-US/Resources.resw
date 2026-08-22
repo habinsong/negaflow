@@ -457,6 +457,10 @@ Load a scanner from Library to scan film.</value>
   <data name="printProofPreview.Text" xml:space="preserve"><value>Print preview</value></data>
   <data name="printProofOff.Text" xml:space="preserve"><value>Off</value></data>
   <data name="printProofOn.Text" xml:space="preserve"><value>On</value></data>
+  <data name="printPaperPhotoRatio.Text" xml:space="preserve">
+    <value>Photo Ratio</value>
+    <comment>AppLocalizedText.printPaperPhotoRatio</comment>
+  </data>
   <data name="printPaperSize.Text" xml:space="preserve">
     <value>Paper Size</value>
     <comment>AppLocalizedText.printPaperSize</comment>
@@ -1060,7 +1064,6 @@ Load a scanner from Library to scan film.</value>
   <data name="scanDetectionManual.Content" xml:space="preserve"><value>Manual</value><comment>AppLocalizedPhrase.flatbedDetectionManual</comment></data>
   <data name="scanDetectionMode.Text" xml:space="preserve"><value>Find Frames</value><comment>AppLocalizedPhrase.flatbedDetectionMode</comment></data>
   <data name="scanFlatbedFramesFormat.Text" xml:space="preserve"><value>Selected: %d</value><comment>AppLocalizedPhrase.flatbedFramesFormat</comment></data>
-  <data name="scanFlatbedFrameFormat.Text" xml:space="preserve"><value>Frame %d</value><comment>AppLocalizedPhrase.flatbedFrameFormat</comment></data>
   <data name="scanFrameFormat.Text" xml:space="preserve"><value>Frame Format</value><comment>AppLocalizedPhrase.filmFrameFormat</comment></data>
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>Paste Frame</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>Find Frames Again</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
@@ -1172,7 +1175,7 @@ Load a scanner from Library to scan film.</value>
   <data name="printFill.Text" xml:space="preserve"><value>Fill</value><comment>PrintPackageContentMode.fill</comment></data>
   <data name="printRotateToFit.Text" xml:space="preserve"><value>Rotate to fit</value><comment>AppLocalizedPhrase.rotateToFit</comment></data>
   <data name="printRepeatOnePhoto.Text" xml:space="preserve"><value>One photo per page</value><comment>AppLocalizedPhrase.repeatOnePhotoPerPage</comment></data>
-  <data name="printSheetBackground.Text" xml:space="preserve"><value>Sheet Background</value><comment>AppLocalizedPhrase.sheetBackground</comment></data>
+  <data name="printSheetBackground.Text" xml:space="preserve"><value>Sheet Color</value><comment>AppLocalizedPhrase.sheetBackground</comment></data>
   <data name="printBackgroundWhite.Text" xml:space="preserve"><value>White</value><comment>PrintContactSheetBackground.white</comment></data>
   <data name="printBackgroundGray.Text" xml:space="preserve"><value>Gray</value><comment>PrintContactSheetBackground.gray</comment></data>
   <data name="printBackgroundBlack.Text" xml:space="preserve"><value>Black</value><comment>PrintContactSheetBackground.black</comment></data>
@@ -1205,9 +1208,9 @@ Load a scanner from Library to scan film.</value>
   <data name="printCropMarks.Text" xml:space="preserve"><value>Crop marks</value><comment>AppLocalizedPhrase.cropMarks</comment></data>
   <data name="printViewSection.Text" xml:space="preserve"><value>View</value><comment>AppLocalizedPhrase.view</comment></data>
   <data name="printRulers.Text" xml:space="preserve"><value>Rulers</value><comment>AppLocalizedPhrase.rulers</comment></data>
-  <data name="printRulerUnit.Text" xml:space="preserve"><value>Unit</value><comment>AppLocalizedPhrase.rulerUnit</comment></data>
-  <data name="printRulerInches.Text" xml:space="preserve"><value>Inches</value><comment>PrintRulerUnit.inches</comment></data>
-  <data name="printRulerCentimeters.Text" xml:space="preserve"><value>Centimeters</value><comment>PrintRulerUnit.centimeters</comment></data>
+  <data name="printRulerUnit.Text" xml:space="preserve"><value>Ruler Unit</value><comment>AppLocalizedPhrase.rulerUnit</comment></data>
+  <data name="printRulerInches.Text" xml:space="preserve"><value>in</value><comment>PrintRulerUnit.inches</comment></data>
+  <data name="printRulerCentimeters.Text" xml:space="preserve"><value>cm</value><comment>PrintRulerUnit.centimeters</comment></data>
   <data name="printModeCustomPackage.Text" xml:space="preserve"><value>Custom Package</value><comment>PrintWorkspaceLayoutMode.customPackage</comment></data>
   <data name="printCustomAdd.Content" xml:space="preserve"><value>Add cell</value><comment>Windows only: custom placement editor.</comment></data>
   <data name="printCustomRemove.Content" xml:space="preserve"><value>Remove cell</value><comment>Windows only: custom placement editor.</comment></data>
@@ -1233,7 +1236,7 @@ Load a scanner from Library to scan film.</value>
   <data name="samplerSourcePixel.Text" xml:space="preserve"><value>Source Pixel</value><comment>PixelSamplerLocalizedText[3]</comment></data>
   <data name="samplerMovePointer.Text" xml:space="preserve"><value>Move the pointer over the photo</value><comment>PixelSamplerLocalizedText[4]</comment></data>
   <data name="samplerEnabled.Text" xml:space="preserve"><value>Pixel sampler</value><comment>PixelSamplerLocalizedText[5]</comment></data>
-  <data name="settingsLanguageRestart.Text" xml:space="preserve"><value>The new language appears after Negaflow restarts.</value><comment>Windows only: language applies on restart.</comment></data>
+
   <data name="developDefectLayers.Text" xml:space="preserve"><value>GrainMend Layers</value><comment>AppLocalizedPhrase.defectLayers</comment></data>
   <data name="developDefectLayerEnable.Value" xml:space="preserve"><value>Enable layer (apply repair)</value><comment>AppLocalizedPhrase.enableLayer</comment></data>
   <data name="developDefectLayerDisable.Value" xml:space="preserve"><value>Disable layer (view before repair)</value><comment>AppLocalizedPhrase.disableLayer</comment></data>
@@ -1436,4 +1439,54 @@ Load a scanner from Library to scan film.</value>
   <data name="developerDebug.Text" xml:space="preserve"><value>Developer Debug</value><comment>AppLocalizedPhrase.developerDebug</comment></data>
   <data name="debugOverlay.Text" xml:space="preserve"><value>Debug Overlay</value><comment>AppLocalizedPhrase.debugOverlay</comment></data>
   <data name="developerDebugStage.Text" xml:space="preserve"><value>Stage</value><comment>AppLocalizedPhrase.stage</comment></data>
+  <data name="sliderKeyboardHelp.Value" xml:space="preserve"><value>Arrow keys adjust by 0.01; Shift-arrow adjusts by 0.10.</value><comment>AppLocalizedPhrase.sliderKeyboardHelp</comment></data>
+  <data name="filmstripScopeFolder.Text" xml:space="preserve"><value>This Folder</value><comment>AppLocalizedPhrase.filmstripScopeFolder</comment></data>
+  <data name="process.Text" xml:space="preserve"><value>Process</value><comment>AppLocalizedPhrase.process</comment></data>
+  <data name="target.Text" xml:space="preserve"><value>Target</value><comment>AppLocalizedPhrase.target</comment></data>
+  <data name="scanFlatbedFrameFormat.Text" xml:space="preserve"><value>Frame %d</value><comment>AppLocalizedPhrase.flatbedFrameFormat</comment></data>
+  <data name="libraryMoveSourceToTrash.Content" xml:space="preserve"><value>Move Source File to Trash</value><comment>AppLocalizedPhrase.moveSourceToTrash</comment></data>
+  <data name="deleteSourceConfirmationTitle.Text" xml:space="preserve"><value>Move the source file to Trash?</value><comment>AppLocalizedPhrase.deleteSourceConfirmationTitle</comment></data>
+  <data name="deleteSourceConfirmationMessageFormat.Text" xml:space="preserve"><value>%d catalog items share %d source file(s). This removes all of them from negaflow. %s</value><comment>AppLocalizedPhrase.deleteSourceConfirmationMessageFormat</comment></data>
+  <data name="printSurface.Text" xml:space="preserve"><value>Surface</value><comment>AppLocalizedText.printSurface</comment></data>
+  <data name="printSurfaceGlossy.Text" xml:space="preserve"><value>Glossy</value><comment>AppLocalizedText.printSurfaceGlossy</comment></data>
+  <data name="printSurfaceMatte.Text" xml:space="preserve"><value>Matte</value><comment>AppLocalizedText.printSurfaceMatte</comment></data>
+  <data name="printSurfaceLustre.Text" xml:space="preserve"><value>Lustre</value><comment>AppLocalizedText.printSurfaceLustre</comment></data>
+  <data name="printSurfaceSilk.Text" xml:space="preserve"><value>Silk</value><comment>AppLocalizedText.printSurfaceSilk</comment></data>
+  <data name="printContentSection.Text" xml:space="preserve"><value>Content</value><comment>AppLocalizedText.printContentSection</comment></data>
+  <data name="printCaptionAlignment.Text" xml:space="preserve"><value>Caption Alignment</value><comment>AppLocalizedText.printCaptionAlignment</comment></data>
+  <data name="printAdvanced.Text" xml:space="preserve"><value>Advanced</value><comment>AppLocalizedText.printAdvanced</comment></data>
+  <data name="printDeliveryColorSpace.Text" xml:space="preserve"><value>Delivery Color Space</value><comment>AppLocalizedText.printDeliveryColorSpace</comment></data>
+  <data name="printPaperSimulation.Text" xml:space="preserve"><value>Print Paper Simulation</value><comment>AppLocalizedText.printPaperSimulation</comment></data>
+  <data name="printGamutWarning.Text" xml:space="preserve"><value>Gamut Warning</value><comment>AppLocalizedText.printGamutWarning</comment></data>
+  <data name="printPreviewProfileRequired.Text" xml:space="preserve"><value>Choose the lab’s RGB ICC profile to preview the print.</value><comment>AppLocalizedText.printPreviewProfileRequired</comment></data>
+  <data name="printToggleOn.Text" xml:space="preserve"><value>On</value><comment>AppLocalizedText.printToggleOn</comment></data>
+  <data name="printToggleOff.Text" xml:space="preserve"><value>Off</value><comment>AppLocalizedText.printToggleOff</comment></data>
+  <data name="printCaptionAlignLeading.Text" xml:space="preserve"><value>Leading</value><comment>AppLocalizedText.printCaptionAlignLeading</comment></data>
+  <data name="printCaptionAlignCenter.Text" xml:space="preserve"><value>Center</value><comment>AppLocalizedText.printCaptionAlignCenter</comment></data>
+  <data name="printCaptionAlignTrailing.Text" xml:space="preserve"><value>Trailing</value><comment>AppLocalizedText.printCaptionAlignTrailing</comment></data>
+  <data name="printMargin.Text" xml:space="preserve"><value>Margin</value><comment>AppLocalizedText.printMargin</comment></data>
+  <data name="printSpacing.Text" xml:space="preserve"><value>Spacing</value><comment>AppLocalizedText.printSpacing</comment></data>
+  <data name="printHorizontalSpacing.Text" xml:space="preserve"><value>Horizontal Spacing</value><comment>AppLocalizedText.printHorizontalSpacing</comment></data>
+  <data name="printVerticalSpacing.Text" xml:space="preserve"><value>Vertical Spacing</value><comment>AppLocalizedText.printVerticalSpacing</comment></data>
+  <data name="printNormalizeOrientation.Text" xml:space="preserve"><value>Match Orientation</value><comment>AppLocalizedText.printNormalizeOrientation</comment></data>
+  <data name="printPictureTemplate.Text" xml:space="preserve"><value>Package Layout</value><comment>AppLocalizedText.printPictureTemplate</comment></data>
+  <data name="printCell.Text" xml:space="preserve"><value>Cell</value><comment>AppLocalizedText.printCell</comment></data>
+  <data name="printPage.Text" xml:space="preserve"><value>Page</value><comment>AppLocalizedText.printPage</comment></data>
+  <data name="printAddCell.Text" xml:space="preserve"><value>Add Cell</value><comment>AppLocalizedText.printAddCell</comment></data>
+  <data name="printDuplicateCell.Text" xml:space="preserve"><value>Duplicate Cell</value><comment>AppLocalizedText.printDuplicateCell</comment></data>
+  <data name="printDeleteCell.Text" xml:space="preserve"><value>Delete Cell</value><comment>AppLocalizedText.printDeleteCell</comment></data>
+  <data name="printSourcePhoto.Text" xml:space="preserve"><value>Photo</value><comment>AppLocalizedText.printSourcePhoto</comment></data>
+  <data name="printPositionX.Text" xml:space="preserve"><value>Horizontal Position</value><comment>AppLocalizedText.printPositionX</comment></data>
+  <data name="printPositionY.Text" xml:space="preserve"><value>Vertical Position</value><comment>AppLocalizedText.printPositionY</comment></data>
+  <data name="printWidth.Text" xml:space="preserve"><value>Width</value><comment>AppLocalizedText.printWidth</comment></data>
+  <data name="printHeight.Text" xml:space="preserve"><value>Height</value><comment>AppLocalizedText.printHeight</comment></data>
+  <data name="printCaptionFont.Text" xml:space="preserve"><value>Caption Font</value><comment>AppLocalizedText.printCaptionFont</comment></data>
+  <data name="printCaptionText.Text" xml:space="preserve"><value>Caption Text</value><comment>AppLocalizedText.printCaptionText</comment></data>
+  <data name="printCustomCaption.Text" xml:space="preserve"><value>Text</value><comment>AppLocalizedText.printCustomCaption</comment></data>
+  <data name="printAddCaption.Text" xml:space="preserve"><value>Add Text</value><comment>AppLocalizedText.printAddCaption</comment></data>
+  <data name="printDeleteCaption.Text" xml:space="preserve"><value>Delete Text</value><comment>AppLocalizedText.printDeleteCaption</comment></data>
+  <data name="printCaptionCustomText.Text" xml:space="preserve"><value>Custom Text</value><comment>AppLocalizedText.printCaptionCustomText</comment></data>
+  <data name="printMoveBackward.Text" xml:space="preserve"><value>Move Backward</value><comment>AppLocalizedText.printMoveBackward</comment></data>
+  <data name="printMoveForward.Text" xml:space="preserve"><value>Move Forward</value><comment>AppLocalizedText.printMoveForward</comment></data>
+  <data name="printCaptionSystemFont.Text" xml:space="preserve"><value>System Font</value><comment>AppLocalizedText.printCaptionSystemFont</comment></data>
 </root>

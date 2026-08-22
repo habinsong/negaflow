@@ -33,8 +33,7 @@ public sealed partial class SettingsRootView
         GeneralSection.HeaderText = AppResources.Get("settingsGeneralTab", "Text");
         LanguageRow.Label = AppResources.Get("settingsLanguagePicker", "Text");
         AppearanceRow.Label = AppResources.Get("settingsAppearancePicker", "Text");
-        DeveloperModeRow.Label = AppResources.Get("developerMode", "Header");
-        LanguageRestartHint.Text = AppResources.Get("settingsLanguageRestart", "Text");
+        DeveloperModeRow.Label = AppResources.Get("developerMode", "Header");
 
         string memory = AppResources.Get("settingsMemoryCacheSection", "Text");
         MemoryCacheSection.HeaderText = memory;

@@ -139,3 +139,103 @@ for f in scripts/*.ps1; do echo "$(head -c 3 "$f" | od -An -tx1 | tr -d '
 
 **시험이 진짜 잡는지 확인했습니다** — 일부러 한 줄을 중첩시켰더니 shell 시험이 실패했고,
 되돌리니 통과했습니다(1,456 assertions).
+
+---
+
+## 9. 2026-08-22 — 전수조사: **문구가 아니라 "다시 거는 길"** 이 빠져 있었습니다
+
+사용자 보고: **"끔/켬, 컬러 네거티브, 어두운 영역·색조·광도·중간톤·밝은 영역 … 하드코딩된 거
+싹 다 찾아라. 설정에서 언어 바꾸면 바로바로 되야 한다."**
+
+**대조기 셋을 새로 짜서 `src/Shell` 전체를 훑었습니다.**
+
+| 갈래 | 찾은 것 | 결과 |
+|---|---|---|
+| ① XAML 에 영어가 박힘 | 6 | 전부 없앰 |
+| ② C# 화면 글자에 영어가 박힘 | 6 | 전부 없앰 |
+| ③ 언어를 바꿔도 **다시 안 걸리는** 자리 | 36 | 전부 고침 |
+
+사용자가 짚은 문구는 **전부 ③** 이었습니다. `끔`·`켬`·`컬러 네거티브`·`어두운 영역`·`색조`·
+`광도`·`중간톤`·`밝은 영역` 은 여섯 resw 에 이미 다 있었고, 값도 macOS 와 같았습니다.
+**옛 언어로 남은 이유는 그 컨트롤에 문구를 다시 거는 길이 없었기 때문입니다.**
+
+### 9.1 뿌리 원인 — `Localize()` 사슬은 한 마디만 끊겨도 아래가 통째로 남습니다
+
+앞 판은 다시 거는 길이 사슬 하나뿐이었습니다: 셸 → 도구막대 → 구역 → …. 어느 부모가 자식의
+`Localize()` 를 안 부르면 그 아래가 전부 옛 언어로 남습니다. 실제로 그랬습니다:
+
+```
+DevelopColorGradingSection.Localize()   // 머리글만 다시 검
+  └─ ColorGradingEditor                 // 생성자에서만 걸었음 → 안 바뀜
+       어두운 영역 · 중간톤 · 밝은 영역 · 색조 · 채도 · 광도 · 블렌딩 · 균형
+```
+
+**부모가 잊어도 되게** 바꿨습니다 — `Localization/LocalizedElement.cs`:
+
+```csharp
+LocalizedElement.Track(this, LocalizeControls);
+```
+
+화면에 붙어 있는 동안 `AppResources.LanguageChanged` 를 **컨트롤이 스스로** 듣습니다
+(`Unloaded` 에서 떼고 `Loaded` 에서 다시 겁니다 — static 이벤트라 계속 걸어 두면 누수).
+macOS 에서 SwiftUI 가 `model.appLanguage` 를 관찰해 그 자리에서 다시 그리는 것과 같은 자리입니다.
+
+쓴 곳: `InspectorSlider` · `ColorGradingEditor` · `ColorMixerEditor` · `ToneCurveEditor` ·
+`FrameRatingStars` · `FilmstripView` · `QuickStartHelpView` · `AboutNegaflowView` ·
+`DiagnosticsReportView` · 별도 창 넷(정보·진단·빠른시작·설정 제목).
+
+### 9.2 **만들 때 정해지는 문구** — 다시 만들어야 바뀝니다
+
+이름표만 다시 걸어서는 안 되는 자리가 따로 있었습니다. 항목을 만들 때 문구가 박히기 때문입니다.
+
+| 자리 | 무엇이 남았나 | 고침 |
+|---|---|---|
+| 라이브러리 격자·필름스트립 | `사진 %d` · **컬러 네거티브** (변환기는 바인딩 때 한 번만 돎) | `Localize()` 에서 항목을 다시 만듦 |
+| 스캔 카드 | 필름 종류·색 방식·스캔 단추 이름 | `LibraryScanPanel.Localize()` 가 `Render()` 도 부름 |
+| 색 혼합 밴드 | 빨강·주황·노랑 … | `LocalizeControls` 가 `RebuildBands()` 도 부름 |
+| 설정 창 읽기값 | 사진 수·용량·날짜·백업 상태·화면 프로파일 | `OnLanguageResourcesChanged` 가 `UpdateState` 도 부름 |
+| 인화 미리보기 | `N페이지` · 용지 크기 요약 | `Localize()` 가 `printPreview.Draw()` 도 부름 |
+| 상태줄·도구막대·레일 | 대기/사용 불가 · 켬/끔 · 선택됨 | 각 `Localize()` 에서 마지막 상태로 다시 걸음 |
+
+### 9.3 없앤 하드코딩 12건
+
+- `InspectorSlider`: `"Arrow keys adjust by 0.01. Shift+Arrow… Double-click resets…"` →
+  macOS `AppLocalizedPhrase.sliderKeyboardHelp` 를 여섯 언어로 옮겨 `sliderKeyboardHelp.Value`.
+  **"Double-click resets the value" 는 macOS 에 없는 창작이라 함께 없앴습니다.**
+- `InspectorSlider`: `$"{Label} value"` → 슬라이더 이름 그대로(macOS 는 값 칸에 이름을 안 둡니다).
+- `InspectorSlider`: `$"Enter a number from {Min} to {Max}."` (3곳) → 없앴습니다.
+  macOS `EditableSliderValueText` 는 빨간 글자와 소리만 냅니다.
+- `ToneCurveEditor.xaml`: `AutomationProperties.Name="Point Curve input/output percentage"` →
+  `developCurveInput`/`developCurveOutput` + `SetLabeledBy`.
+- `DevelopColorGradingSection.xaml` `"Color Grading"` ·
+  `DevelopColorMixerSection.xaml` `"Color Mixer"` · `DevelopBaseCard.xaml` `"Film base mode"` →
+  구역 제목 리소스.
+- `AppMenuBarView.xaml`: `Title="File"`… 9개 → 지웠습니다(`Localize()` 가 넣습니다).
+
+### 9.4 거짓말하던 안내문 하나
+
+`settingsLanguageRestart` — **"새 언어는 Negaflow 를 다시 시작한 뒤 보입니다."**
+2026-08-20 에 그 자리에서 바뀌게 고쳤는데 안내문이 남아 있었습니다. macOS 에는 없는 줄입니다.
+여섯 resw 에서 뺐습니다. `OnLanguageSelectionChanged` 의 낡은 주석도 고쳤습니다.
+
+### 9.5 시험 — `LocalizedTextTests`
+
+사람 눈으로 못 잡습니다. 새 컨트롤을 붙일 때마다 같은 실수가 납니다. 그래서 게이트에 넣었습니다.
+
+| 검사 | 무엇을 막나 |
+|---|---|
+| XAML 화면 속성에 리터럴 0건 | `AutomationProperties.Name="Color Grading"` 류 |
+| 접근성 이름·도움말·풍선말에 리터럴 0건 | `"Arrow keys adjust by 0.01…"` 류 |
+| 생성자에서 문구를 거는 형식은 `LocalizedElement.Track` 이나 `Localize()` 를 가짐 | `ColorGradingEditor` 류 |
+
+번역할 것이 없는 값(`negaflow` · `JPEG` · `sRGB` · 언어 이름 · 글꼴 글리프 · `ISO — · — s · f/— · — mm`)은
+**macOS 출처를 적어** 예외로 둡니다 — macOS 도 그 자리에서 번역하지 않습니다.
+
+**시험이 진짜 잡습니다** — 처음 돌렸을 때 `AppMenuBarView` 9건과
+`DiagnosticsReportView` 1건을 잡아냈고, 고치니 통과했습니다(1,530 assertions, 실패 0).
+
+### 9.6 아직 안 고친 것 하나 (문구 문제가 아님)
+
+`DevelopWorkspaceView.xaml:162` 의 `ISO — · — s · f/— · — mm` 은 **x:Name 이 없어 영원히
+빈 상태로 남습니다.** macOS `WorkspaceInspectorPane.importedMetadata` 는 같은 줄을 실제 EXIF 로
+채웁니다. 다국어 문제는 아니지만(단위는 macOS 도 번역하지 않습니다) **값이 안 붙는 자리**입니다.

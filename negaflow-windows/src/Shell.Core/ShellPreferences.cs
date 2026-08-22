@@ -48,6 +48,17 @@ public sealed record ShellPreferences
 
     public double FilmstripItemScale { get; init; } = 1;
 
+    /// <summary>
+    /// 하단바가 정하는 필름스트립 차례입니다. macOS <c>workspace.filmstripSortKey</c> 자리이며
+    /// 라이브러리 격자의 차례와 따로 기억합니다 — 두 화면이 서로를 흔들지 않습니다.
+    /// </summary>
+    public LibrarySortKey FilmstripSortKey { get; init; } = LibrarySortKey.InputOrder;
+
+    public bool FilmstripSortAscending { get; init; } = true;
+
+    /// <summary>하단바가 정하는 필름스트립 범위입니다. macOS 기본값과 같이 "해당 폴더" 입니다.</summary>
+    public FilmstripScope FilmstripScope { get; init; } = FilmstripScope.Folder;
+
     public AppearanceMode Appearance { get; init; } = AppearanceMode.System;
 
     public ImageContentHashMode ImageContentHash { get; init; } = ImageContentHashMode.Off;

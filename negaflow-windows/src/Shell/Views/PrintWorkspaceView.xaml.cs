@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -12,16 +12,23 @@ namespace Negaflow.Shell.Views;
 
 public sealed partial class PrintWorkspaceView : UserControl
 {
+    /// <summary>출력 패널이 알린 진행입니다. 위 막대가 같은 값을 보여 줍니다.</summary>
+    public event EventHandler<Negaflow.Shell.Develop.ExportProgress>? ExportProgressChanged;
+
     private readonly ThreePaneResizeController resizeController = new();
     private WorkspacePresentationState? workspaceState;
 
     public PrintWorkspaceView()
     {
         InitializeComponent();
+        // 레이아웃·출력 카드 XAML 은 각자 UserControl 로 옮겼습니다. 이벤트는 옮기기 전과
+        // 같은 이 타입의 메서드로 돌아옵니다.
+        LayoutTab.Owner = this;
+        OutputTab.Owner = this;
+        ContentTab.Owner = this;
         BindPrintComposition();
         LocalizeControls();
         LocalizePrintInspector();
-        LocalizeCustomEditor();
         HookPrintSegments();
     }
 
@@ -34,6 +41,10 @@ public sealed partial class PrintWorkspaceView : UserControl
         // macOS 인화 사이드바도 현상과 **같은** `ExportSection` 이므로 같은 설정을 봅니다.
         // 붙이지 않으면 이 탭에서 고친 값이 저장되지 않고 현상뷰와 따로 놀게 됩니다.
         PrintExportPanel.Attach(state);
+        StatusBar.Attach(state);
+        StatusBar.FilmstripPresentationChanged += (_, _) => RefreshSources();
+        PrintExportPanel.ProgressChanged +=
+            (_, progress) => ExportProgressChanged?.Invoke(this, progress);
         Filmstrip.Initialize(state);
         Filmstrip.FrameSelected += OnPrintFilmstripFrameSelected;
         StatusBar.Initialize(nativeEngineStatus);
@@ -163,16 +174,24 @@ public sealed partial class PrintWorkspaceView : UserControl
     {
         LocalizeControls();
         LocalizePrintInspector();
-        LocalizeCustomEditor();
+        // 좌측 레일 머리글은 고른 갈래(파일/내보내기)에 따라 다릅니다 —
+        // `LocalizeControls` 가 "파일" 로 되돌려 놓으므로 여기서 다시 맞춥니다.
+        ShowPrintSource(printSourceIsExport);
+        StatusBar.Localize();
+        // 사이드바 머리글·필름스트립 항목 이름은 만들 때 정해집니다.
+        printSources?.Localize();
+        // 미리보기 안의 "N페이지"·용지 크기 요약도 리소스 문구라 다시 그려야 바뀝니다.
+        printPreview?.Draw();
     }
 
     private void LocalizeControls()
     {
-        PrintOutputSectionLocalized.Content = AppResources.Get("printOutputSection", "Content");
-        AutomationProperties.SetName(
-            PrintOutputSectionLocalized,
-            AppResources.Get("printOutputSection", "Content"));
-        PrintLayoutSectionLocalized.Text = AppResources.Get("printLayoutSection", "Text");
+        // 인스펙터 탭 셋입니다. macOS `PrintWorkspaceInspector.tabTitle` 과 같은 문구입니다.
+        OutputTabText.Text = AppResources.Get("printOutputSection", "Content");
+        AutomationProperties.SetName(OutputTabButton, OutputTabText.Text);
+        ContentTabText.Text = AppResources.Get("printContentSection", "Text");
+        AutomationProperties.SetName(ContentTabButton, ContentTabText.Text);
+        LayoutTab.PrintLayoutSectionLocalized.Text = AppResources.Get("printLayoutSection", "Text");
         SetNameAndTooltip(FilesRailButton, "libraryFiles");
         SetNameAndTooltip(ExportRailButton, "exportSection");
         FilesHeaderText.Text = AppResources.Get("libraryFiles", "Text");
@@ -183,9 +202,8 @@ public sealed partial class PrintWorkspaceView : UserControl
         NoFrameRightHeaderText.Text = noFrame;
         PrintHeaderText.Text = AppResources.Get("menuPrint", "Text");
         string layout = AppResources.Get("printLayoutMode", "Content");
-        LayoutTabButton.Content = layout;
+        LayoutTabText.Text = layout;
         AutomationProperties.SetName(LayoutTabButton, layout);
-        LayoutModeText.Text = AppResources.Get("printLayoutMode", "Text");
     }
 
     /// <summary>
@@ -194,19 +212,21 @@ public sealed partial class PrintWorkspaceView : UserControl
     /// </summary>
     private void LocalizeCprint()
     {
-        OutputProcessText.Text = AppResources.Get("printOutputProcess", "Text");
-        CprintSectionText.Text = AppResources.Get("printCprintSection", "Text");
-        CprintLabText.Text = AppResources.Get("printCprintLab", "Text");
-        CprintPaperText.Text = AppResources.Get("printCprintPaper", "Text");
+        OutputTab.OutputProcessField.Label = AppResources.Get("printOutputProcess", "Text");
+        OutputTab.CprintSectionText.Text = AppResources.Get("printCprintSection", "Text");
+        // 라벨은 이제 `PrintInspectorInlineField`·`PrintInspectorStackedField` 가 들고
+        // 있습니다 — 자리마다 TextBlock 을 따로 두면 macOS 의 라벨 폭·간격이 어긋납니다.
+        OutputTab.CprintLabField.Label = AppResources.Get("printCprintLab", "Text");
+        OutputTab.CprintPaperField.Label = AppResources.Get("printCprintPaper", "Text");
         string custom = AppResources.Get("printCprintCustom", "Text");
-        CprintLabBox.PlaceholderText = custom;
-        CprintPaperBox.PlaceholderText = custom;
-        AutomationProperties.SetName(CprintLabBox, CprintLabText.Text);
-        AutomationProperties.SetName(CprintPaperBox, CprintPaperText.Text);
-        PrintProofSectionText.Text = AppResources.Get("printProofSection", "Text");
-        PrintProofProfileLabel.Text = AppResources.Get("printProofProfile", "Text");
-        PrintProofPreviewLabel.Text = AppResources.Get("printProofPreview", "Text");
-        OutputProcessSelector.SetOptions(
+        OutputTab.CprintLabBox.PlaceholderText = custom;
+        OutputTab.CprintPaperBox.PlaceholderText = custom;
+        AutomationProperties.SetName(OutputTab.CprintLabBox, OutputTab.CprintLabField.Label);
+        AutomationProperties.SetName(OutputTab.CprintPaperBox, OutputTab.CprintPaperField.Label);
+        OutputTab.PrintProofSectionText.Text = AppResources.Get("printProofSection", "Text");
+        OutputTab.ProofProfileField.Label = AppResources.Get("printProofProfile", "Text");
+        OutputTab.ProofPreviewField.Label = AppResources.Get("printProofPreview", "Text");
+        OutputTab.OutputProcessSelector.SetOptions(
             [
                 new Views.Controls.SegmentOption(
                     PrintOutputProcess.Standard,
@@ -215,13 +235,14 @@ public sealed partial class PrintWorkspaceView : UserControl
                     PrintOutputProcess.CPrint,
                     AppResources.Get("printOutputCprint", "Text")),
             ],
-            PrintOutputProcess.Standard);
-        PrintProofPreviewSelector.SetOptions(
+            // 언어를 바꿀 때도 이 길로 다시 옵니다 — 고른 값을 그대로 두어야 합니다.
+            OutputTab.OutputProcessSelector.SelectedValue ?? PrintOutputProcess.Standard);
+        OutputTab.PrintProofPreviewSelector.SetOptions(
             [
                 new Views.Controls.SegmentOption(false, AppResources.Get("printProofOff", "Text")),
                 new Views.Controls.SegmentOption(true, AppResources.Get("printProofOn", "Text")),
             ],
-            false);
+            OutputTab.PrintProofPreviewSelector.SelectedValue ?? false);
     }
 
     /// <summary>
@@ -308,33 +329,112 @@ public sealed partial class PrintWorkspaceView : UserControl
     /// macOS 인화 인스펙터의 **레이아웃 / 출력** 두 탭입니다. 카드를 두 묶음으로 갈라 두고
     /// 여기서 한 묶음만 보입니다 — macOS 도 같은 자리에서 갈아 끼웁니다.
     /// </summary>
-    private void OnPrintTabClicked(object sender, RoutedEventArgs args)
+    private void OnPrintTabChecked(object sender, RoutedEventArgs args)
     {
         _ = args;
-        if (sender is not Button { Tag: string tag })
+        if (sender is not RadioButton { Tag: string tag })
         {
             return;
         }
-        ShowPrintTab(string.Equals(tag, "Output", StringComparison.Ordinal));
+        ShowPrintTab(tag);
     }
 
-    private void ShowPrintTab(bool output)
+    /// <summary>지금 열려 있는 인스펙터 탭입니다. 레이아웃 · 콘텐츠 · 출력 셋입니다.</summary>
+    private string selectedInspectorTab = "Layout";
+
+    /// <summary>
+    /// 탭을 갈아 끼웁니다. macOS <c>PrintWorkspaceInspector.selectedTabContent</c> 자리입니다.
+    /// </summary>
+    private void ShowPrintTab(string tag)
     {
-        PrintLayoutTabPanel.Visibility = output ? Visibility.Collapsed : Visibility.Visible;
-        PrintOutputTabPanel.Visibility = output ? Visibility.Visible : Visibility.Collapsed;
-        Microsoft.UI.Xaml.Media.Brush selected =
-            (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSelectionBrush"];
-        Microsoft.UI.Xaml.Media.Brush clear =
-            new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        LayoutTabButton.Background = output ? clear : selected;
-        PrintOutputSectionLocalized.Background = output ? selected : clear;
-        AutomationProperties.SetItemStatus(
-            LayoutTabButton,
-            AppResources.Get(output ? "notSelected" : "selected", "Value"));
-        AutomationProperties.SetItemStatus(
-            PrintOutputSectionLocalized,
-            AppResources.Get(output ? "selected" : "notSelected", "Value"));
+        selectedInspectorTab = tag;
+        LayoutTab.Visibility = Visible(tag == "Layout");
+        ContentTab.Visibility = Visible(tag == "Content");
+        OutputTab.Visibility = Visible(tag == "Output");
+
+        // 고른 칸의 음영은 판형(`NegaflowPrintTabStyle`)의 CheckStates 가 그립니다 —
+        // 코드에서 `Application.Current.Resources` 로 브러시를 읽으면 요소의 테마가 아니라
+        // 앱의 테마로 풀려 창이 어두운데 밝은 색이 나옵니다.
+        LayoutTabButton.IsChecked = tag == "Layout";
+        ContentTabButton.IsChecked = tag == "Content";
+        OutputTabButton.IsChecked = tag == "Output";
+        MarkTabStatus(LayoutTabButton, tag == "Layout");
+        MarkTabStatus(ContentTabButton, tag == "Content");
+        MarkTabStatus(OutputTabButton, tag == "Output");
+        PaintTabIcons();
     }
+
+    /// <summary>
+    /// 캡슐의 아이콘을 글자와 같은 색으로 칠합니다. 고른 칸은 강조색, 나머지는 본문색입니다 —
+    /// macOS <c>PrintInspectorTabButton</c> 도 아이콘과 글자를 한 색으로 냅니다.
+    /// </summary>
+    /// <remarks>
+    /// 아이콘은 <see cref="Controls.VectorIcon"/> 이라 판형의 <c>Checked</c> 세터가 칠하는
+    /// <c>ContentPresenter.Foreground</c> 를 <b>물려받지 못합니다</b>. 글자에 바인딩으로
+    /// 묶어 보았지만 상속값이 바뀔 때 알림이 오지 않아 한 번 파랗게 된 아이콘이 그대로
+    /// 남았습니다. 그래서 여기서 직접 칠합니다.
+    ///
+    /// 색은 <b>이 요소의 테마</b>로 풉니다. <c>Application.Current.Resources</c> 를 그냥
+    /// 읽으면 앱 테마로 풀려, 창이 어두운데 밝은 테마의 색이 나옵니다.
+    /// </remarks>
+    private void PaintTabIcons()
+    {
+        Microsoft.UI.Xaml.Media.Brush? accent = ThemedBrush("NegaflowAccentBrush");
+        Microsoft.UI.Xaml.Media.Brush? primary = ThemedBrush("TextFillColorPrimaryBrush");
+        Paint(LayoutTabIcon, LayoutTabButton.IsChecked == true);
+        Paint(ContentTabIcon, ContentTabButton.IsChecked == true);
+        Paint(OutputTabIcon, OutputTabButton.IsChecked == true);
+
+        void Paint(Controls.VectorIcon icon, bool selected)
+        {
+            if ((selected ? accent : primary) is { } brush)
+            {
+                icon.Foreground = brush;
+            }
+        }
+    }
+
+    /// <summary>이 요소의 테마로 푼 브러시입니다. 없으면 평평한 사전에서 찾습니다.</summary>
+    private Microsoft.UI.Xaml.Media.Brush? ThemedBrush(string key)
+    {
+        string theme = ActualTheme == ElementTheme.Dark ? "Dark" : "Light";
+        if (Application.Current.Resources.ThemeDictionaries.TryGetValue(theme, out object? entry) &&
+            entry is ResourceDictionary dictionary &&
+            dictionary.TryGetValue(key, out object? themed) &&
+            themed is Microsoft.UI.Xaml.Media.Brush themedBrush)
+        {
+            return themedBrush;
+        }
+        return Application.Current.Resources.TryGetValue(key, out object? flat)
+            ? flat as Microsoft.UI.Xaml.Media.Brush
+            : null;
+    }
+
+    private static void MarkTabStatus(RadioButton button, bool isSelected) =>
+        AutomationProperties.SetItemStatus(
+            button,
+            AppResources.Get(isSelected ? "selected" : "notSelected", "Value"));
+
+    /// <summary>
+    /// 콘텐츠 탭은 한 판에 여러 장을 놓는 모드에서만 있습니다 — macOS
+    /// <c>availableTabs</c> 와 같습니다. 사라질 때 그 탭을 보고 있었으면 레이아웃으로
+    /// 돌려보냅니다(macOS <c>onChange(of: layoutMode)</c>).
+    /// </summary>
+    internal void ApplyInspectorTabAvailability(PrintPreferences print)
+    {
+        bool package = PrintPreferences.PackageModeFor(print.LayoutMode) is not null;
+        ContentTabButton.Visibility = Visible(package);
+        ContentTabColumn.Width = package
+            ? new GridLength(1, GridUnitType.Star)
+            : new GridLength(0);
+        if (!package && selectedInspectorTab == "Content")
+        {
+            ShowPrintTab("Layout");
+        }
+    }
+
+    private static Visibility Visible(bool value) =>
+        value ? Visibility.Visible : Visibility.Collapsed;
 
     private static void SetNameAndTooltip(Button button, string resourceKey)
     {

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
+
+    <!--
+        출력(내보내기) 패널이 쓰는 판형 한 벌입니다. 색은 App.xaml 의 테마 사전이 들고,
+        여기서는 그 색을 컨트롤에 밀어 넣는 Style 만 둡니다 — App.xaml 한 파일에 다 담으면
+        500 줄을 넘습니다.
+    -->
+
+            <!--
+                내보내기 알약의 색입니다. 코드에서 Application.Current.Resources 로 읽으면
+                요소의 테마가 아니라 앱의 테마로 풀려, 창이 어두운데 밝은 사전의 검은 글자가
+                나옵니다 — 빠른 내보내기 단추가 통째로 안 보이던 원인입니다.
+            -->
+            <Style TargetType="controls:ExportActionPill">
+                <Setter Property="controls:SettingsBrushes.SurfaceBrush" Value="{ThemeResource NegaflowGlassFillBrush}" />
+                <Setter Property="controls:SettingsBrushes.StrokeBrush" Value="{ThemeResource NegaflowGlassStrokeBrush}" />
+                <Setter Property="controls:SettingsBrushes.AccentBrush" Value="{ThemeResource NegaflowAccentBrush}" />
+                <Setter Property="controls:SettingsBrushes.AccentSoftBrush" Value="{ThemeResource NegaflowAccentSoftBrush}" />
+                <Setter Property="controls:SettingsBrushes.PrimaryForeground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                <Setter Property="controls:SettingsBrushes.SecondaryForeground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Style>
+
+            <!-- 알약 안에서 진행을 그리는 고리입니다. 같은 표면·강조색을 씁니다. -->
+            <Style TargetType="controls:ExportProgressRing">
+                <Setter Property="controls:SettingsBrushes.StrokeBrush" Value="{ThemeResource NegaflowGlassStrokeBrush}" />
+                <Setter Property="controls:SettingsBrushes.HoverBrush" Value="{ThemeResource NegaflowSubtleFillBrush}" />
+                <Setter Property="controls:SettingsBrushes.AccentBrush" Value="{ThemeResource NegaflowAccentBrush}" />
+                <Setter Property="controls:SettingsBrushes.PrimaryForeground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                <Setter Property="controls:SettingsBrushes.SecondaryForeground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Style>
+
+            <!--
+                macOS Form 안의 Picker 입니다. 값은 오른쪽 끝에 서고 그 오른쪽에 20 원이
+                붙습니다. 판형은 알약 단추의 것을 그대로 씁니다(호버 표면이 같아야 합니다).
+            -->
+            <Style TargetType="controls:NegaflowPopupPicker" BasedOn="{StaticResource NegaflowPillButtonStyle}">
+                <Setter Property="MinHeight" Value="24" />
+                <Setter Property="Padding" Value="6,0,0,0" />
+                <Setter Property="HorizontalAlignment" Value="Right" />
+                <Setter Property="HorizontalContentAlignment" Value="Right" />
+                <Setter Property="controls:SettingsBrushes.PrimaryForeground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                <Setter Property="controls:SettingsBrushes.HoverBrush" Value="{ThemeResource NegaflowHoverFillBrush}" />
+            </Style>
+
+            <!--
+                행 오른쪽의 작은 단추입니다 — 폴더 줄의 "변경". 실측 40×20 · 라운딩 6 ·
+                바탕 primary 12%. WinUI 기본 단추의 네모 테두리를 쓰지 않습니다.
+            -->
+            <Style x:Key="NegaflowSmallActionButtonStyle" TargetType="Button">
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="MinHeight" Value="20" />
+                <Setter Property="Height" Value="20" />
+                <Setter Property="Padding" Value="8,0" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Background" Value="{ThemeResource NegaflowHoverFillBrush}" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                <Setter Property="FontSize" Value="11" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid x:Name="SmallActionRoot" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}">
+                                <Border x:Name="SmallActionHover" CornerRadius="{TemplateBinding CornerRadius}" />
+                                <ContentPresenter
+                                    x:Name="SmallActionContent"
+                                    Padding="{TemplateBinding Padding}"
+                                    HorizontalContentAlignment="Center"
+                                    VerticalContentAlignment="Center"
+                                    Content="{TemplateBinding Content}"
+                                    FontSize="{TemplateBinding FontSize}"
+                                    Foreground="{TemplateBinding Foreground}" />
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="SmallActionHover.Background" Value="{ThemeResource NegaflowHoverFillBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="SmallActionHover.Background" Value="{ThemeResource NegaflowHoverFillBrush}" />
+                                                <Setter Target="SmallActionContent.Opacity" Value="0.75" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="SmallActionRoot.Opacity" Value="0.4" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+    <!--
+        macOS `PrintInspectorPopupPicker`(Features/Print/PrintInspectorControls.swift:5) 입니다.
+        줄 전체가 누르는 자리이고 평상시에는 투명, 마우스를 올리면 primary 8% 바탕에
+        라운딩 8 입니다. 값 왼쪽에 겹화살이 붙습니다(스크린샷 `인화뷰_기본.png`).
+    -->
+    <Style x:Key="NegaflowInlinePopupPickerStyle" TargetType="controls:NegaflowPopupPicker" BasedOn="{StaticResource NegaflowPillButtonStyle}">
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="controls:SettingsBrushes.PrimaryForeground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+        <Setter Property="controls:SettingsBrushes.SecondaryForeground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+        <Setter Property="controls:SettingsBrushes.HoverBrush" Value="{ThemeResource NegaflowHoverFillBrush}" />
+    </Style>
+</ResourceDictionary>

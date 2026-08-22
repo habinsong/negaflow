@@ -50,7 +50,6 @@
                 x:Name="ColorGradingEditor"
                 HorizontalAlignment="Stretch"
                 AutomationProperties.AutomationId="negaflow.develop.color-grading"
-                AutomationProperties.Name="Color Grading"
                 GradingChanged="OnColorGradingChanged"
                 Visibility="Collapsed" />
         </StackPanel>

@@ -44,9 +44,14 @@ internal static class ExportPanelProjectionTests
             null,
             new ExportSettings { FolderPath = @"D:\Export" },
             new QuickExportSettings { FolderPath = @"D:\Quick" });
-        Check(chosen.ExportFolderPath == @"D:\Export" &&
-            chosen.QuickExportFolderPath == @"D:\Quick",
+        // 줄에는 **마지막 한 칸**만 적습니다 - macOS `exportFolderDisplay` 와 같습니다.
+        // 전체 경로를 우겨넣으면 가운데가 잘려 오히려 어느 폴더인지 알 수 없습니다.
+        Check(chosen.ExportFolderPath == "Export" &&
+            chosen.QuickExportFolderPath == "Quick",
             "export_panel_shows_the_chosen_folders");
+        // 드라이브 뿌리는 마지막 칸이 비므로 경로를 그대로 적습니다.
+        Check(Project(null, new ExportSettings { FolderPath = @"D:\" }).ExportFolderPath == @"D:\",
+            "export_panel_keeps_a_drive_root_as_is");
         // 공백만 적힌 경로는 고른 것으로 치지 않습니다.
         Check(Project(null, new ExportSettings { FolderPath = "   " }).ExportFolderPath == "원본 옆",
             "export_panel_treats_blank_as_unset");

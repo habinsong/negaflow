@@ -149,7 +149,8 @@ internal static class PrintPageCanvas
         int pageHeight,
         string sourcePath,
         PrintRect rect,
-        int quarterTurns)
+        int quarterTurns,
+        PrintPresentationStyle presentation = PrintPresentationStyle.Standard)
     {
         int width = Math.Max(1, (int)Math.Round(rect.Width));
         int height = Math.Max(1, (int)Math.Round(rect.Height));
@@ -187,6 +188,10 @@ internal static class PrintPageCanvas
         {
             return false;
         }
+
+        // 시아노타입 · 유리건판 · 젤라틴은 여기서 화소를 바꿉니다. 미리보기와 파일이
+        // 같은 자리를 지나므로 화면에서 본 것이 그대로 나갑니다.
+        PrintPresentationFilter.Apply(tile, presentation);
 
         int left = (int)Math.Round(rect.X);
         int top = (int)Math.Round(rect.Y);

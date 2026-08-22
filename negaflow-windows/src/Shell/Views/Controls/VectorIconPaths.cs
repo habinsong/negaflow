@@ -8,6 +8,9 @@ public enum VectorIconKind
     /// <summary>macOS <c>folder.badge.gearshape</c>. 폴더 자리 고르기.</summary>
     FolderGear,
 
+    /// <summary>macOS <c>crop</c>. 네 모서리 자르기 표식.</summary>
+    Crop,
+
     /// <summary>macOS <c>rotate.right</c>. 시계 방향 90도.</summary>
     RotateRight,
 
@@ -79,6 +82,15 @@ public enum VectorIconKind
 
     /// <summary>macOS <c>rectangle.on.rectangle</c>. 복제 도장.</summary>
     CloneStamp,
+
+    /// <summary>macOS <c>chevron.up.chevron.down</c>. 팝업 단추의 위·아래 겹화살.</summary>
+    ChevronUpChevronDown,
+
+    /// <summary>macOS <c>rectangle.inset.filled</c>. 인화 인스펙터의 레이아웃 탭.</summary>
+    RectangleInsetFilled,
+
+    /// <summary>macOS <c>photo.on.rectangle.angled</c>. 인화 인스펙터의 콘텐츠 탭.</summary>
+    PhotoOnRectangle,
 }
 
 /// <summary>
@@ -105,13 +117,19 @@ internal static class VectorIconPaths
 {
     internal static string Data(VectorIconKind kind) => kind switch
     {
-        // 원호 + 화살촉. 12시에서 시계 방향으로 돌아 3시에 화살표가 선다.
-        VectorIconKind.RotateRight =>
-            "M 12,4 A 8,8 0 1 1 4.4,9.6 M 12,4 L 8.4,6.4 M 12,4 L 14.6,7.2",
+        // macOS `crop`: 네모 본체에 좌상단·우하단 돌출선을 함께 둡니다.
+        VectorIconKind.Crop =>
+            "M 8,3 L 8,7 L 4,7 " +
+            "M 8,7 L 17,7 L 17,17 L 8,17 L 8,7 " +
+            "M 17,17 L 21,17 M 17,17 L 17,21",
 
-        // 위의 좌우 대칭. 반시계 방향.
-        VectorIconKind.RotateLeft =>
+        // 원호 + 화살촉. macOS `rotate.right`의 화살촉과 원호 방향.
+        VectorIconKind.RotateRight =>
             "M 12,4 A 8,8 0 1 0 19.6,9.6 M 12,4 L 15.6,6.4 M 12,4 L 9.4,7.2",
+
+        // 위의 좌우 대칭. macOS `rotate.left`의 화살촉과 원호 방향.
+        VectorIconKind.RotateLeft =>
+            "M 12,4 A 8,8 0 1 1 4.4,9.6 M 12,4 L 8.4,6.4 M 12,4 L 14.6,7.2",
 
         // 세로 축과 좌우 화살표 둘.
         VectorIconKind.FlipHorizontal =>
@@ -222,6 +240,24 @@ internal static class VectorIconPaths
         VectorIconKind.CloneStamp =>
             "M 3.5,8.5 L 15.5,8.5 L 15.5,20.5 L 3.5,20.5 Z " +
             "M 8.5,8.5 L 8.5,3.5 L 20.5,3.5 L 20.5,15.5 L 15.5,15.5",
+
+        // macOS chevron.up.chevron.down — Form 안 Picker 가 값 오른쪽에 다는 표식입니다.
+        // Segoe 의 E70D/E70E 는 화살이 하나뿐이라 뜻이 다릅니다.
+        VectorIconKind.ChevronUpChevronDown =>
+            "M 7.5,10.5 L 12,6 L 16.5,10.5 " +
+            "M 7.5,13.5 L 12,18 L 16.5,13.5",
+
+        // macOS rectangle.inset.filled — 판 안에 앉힌 사진 한 장. 바깥 테두리 안에
+        // 채운 사각형을 겹칩니다(선으로만 그리므로 안쪽 사각형이 그 자리입니다).
+        VectorIconKind.RectangleInsetFilled =>
+            "M 3,6 L 21,6 L 21,18 L 3,18 Z " +
+            "M 6.5,9.5 L 17.5,9.5 L 17.5,14.5 L 6.5,14.5 Z",
+
+        // macOS photo.on.rectangle.angled — 뒤에 한 장 더 겹친 사진.
+        VectorIconKind.PhotoOnRectangle =>
+            "M 8,4.5 L 20.5,4.5 L 20.5,15 " +
+            "M 3.5,8.5 L 16.5,8.5 L 16.5,20 L 3.5,20 Z " +
+            "M 3.5,17 L 7.5,13 L 10.5,16 L 12.5,14 L 16.5,18",
 
         // 빗금 없는 같은 눈 — 켜짐과 꺼짐이 한 쌍으로 보이도록 모양을 맞춥니다.
         // macOS folder.badge.gearshape — 폴더를 **고르는** 자리. 폴더 윤곽 오른쪽 아래에

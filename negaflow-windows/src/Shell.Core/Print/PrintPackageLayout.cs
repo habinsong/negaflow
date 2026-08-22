@@ -1,4 +1,4 @@
-namespace Negaflow.Shell.Print;
+﻿namespace Negaflow.Shell.Print;
 
 public static class PrintPackageLayout
 {
@@ -124,6 +124,7 @@ public static class PrintPackageLayout
             pages.Add(new PrintPackagePageLayout(pageIndex, canvas, content, items)
             {
                 CropMarks = PrintPackageCells.CropMarks(items, content, package, pixelsPerMm),
+                TextItems = PageTextItems(canvas, package),
             });
         }
         return pages;
@@ -173,6 +174,7 @@ public static class PrintPackageLayout
             pages.Add(new PrintPackagePageLayout(pages.Count, canvas, content, items)
             {
                 CropMarks = PrintPackageCells.CropMarks(items, content, package, pixelsPerMm),
+                TextItems = PageTextItems(canvas, package),
             });
             if (pages.Count > PrintPackageSettings.MaximumPageCount)
             {
@@ -190,6 +192,36 @@ public static class PrintPackageLayout
     /// 판 번호는 <b>0 부터 빈 곳 없이</b> 이어져야 합니다. 1번 판만 있고 0번이 없으면 첫 장이
     /// 빈 채로 인쇄되므로, 그런 배치는 아예 만들지 않습니다 — macOS 도 같은 조건입니다.
     /// </remarks>
+    /// <summary>
+    /// 손으로 놓은 문구를 판 좌표로 옮깁니다. macOS <c>pageTextItems(page:package:)</c> 와
+    /// 같습니다 — 캡션 방식이 "사용자 문구" 일 때만, 빈 문구는 빼고 냅니다.
+    /// </summary>
+    private static IReadOnlyList<PrintPackageTextLayout> PageTextItems(
+        PrintSizeMm canvas,
+        PrintPackageSettings package)
+    {
+        if (package.CaptionMode != PrintPackageCaptionMode.CustomText)
+        {
+            return [];
+        }
+        List<PrintPackageTextLayout> items = [];
+        foreach (PrintCustomCaption caption in package.CustomCaptions)
+        {
+            if (caption.Text.Length == 0)
+            {
+                continue;
+            }
+            items.Add(new PrintPackageTextLayout(
+                caption.Text,
+                new PrintRect(
+                    caption.NormalizedRect.X * canvas.Width,
+                    caption.NormalizedRect.Y * canvas.Height,
+                    caption.NormalizedRect.Width * canvas.Width,
+                    caption.NormalizedRect.Height * canvas.Height),
+                caption.Alignment));
+        }
+        return items;
+    }
     private static IReadOnlyList<PrintPackagePageLayout>? CustomPackagePages(
         IReadOnlyList<PrintSizeMm> sourceSizes,
         PrintPackageSettings package,
@@ -249,6 +281,7 @@ public static class PrintPackageLayout
             pages.Add(new PrintPackagePageLayout(pageIndex, canvas, content, items)
             {
                 CropMarks = PrintPackageCells.CropMarks(items, content, package, pixelsPerMm),
+                TextItems = PageTextItems(canvas, package),
             });
         }
         return pages;

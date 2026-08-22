@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Negaflow.Shell.Develop;
+using Negaflow.Shell.Localization;
 using Windows.System;
 using Windows.UI.Core;
 
@@ -19,7 +20,8 @@ public sealed partial class InspectorSlider : UserControl
     {
         InitializeComponent();
         ApplyLayout();
-        SynchronizeControls();
+        // 이름·도움말이 리소스에서 오므로 언어가 바뀌면 스스로 다시 겁니다.
+        LocalizedElement.Track(this, SynchronizeControls);
     }
 
     public static readonly DependencyProperty LabelProperty = DependencyProperty.Register(
@@ -140,20 +142,20 @@ public sealed partial class InspectorSlider : UserControl
         }
         AutomationProperties.SetName(Slider, Label);
         AutomationProperties.SetAutomationId(Slider, SliderAutomationId);
+        // macOS `InspectorSlider` 는 `.help(sliderKeyboardHelp)` 하나뿐입니다. 앞 판에는
+        // 영어 문장이 박혀 있었고 "Double-click resets…" 처럼 macOS 에 없는 말까지
+        // 붙어 있었습니다.
         AutomationProperties.SetHelpText(
             Slider,
-            CanReset
-                ? "Arrow keys adjust by 0.01. Shift+Arrow adjusts by 0.10. Double-click resets the value. Press Enter to edit the value."
-                : "Arrow keys adjust by 0.01. Shift+Arrow adjusts by 0.10. Press Enter to edit the value.");
-        AutomationProperties.SetName(ValueButton, $"{Label} value");
-        AutomationProperties.SetName(ValueEditor, $"{Label} value");
+            AppResources.Get("sliderKeyboardHelp", "Value"));
+        // 값 칸의 이름은 슬라이더 이름을 그대로 씁니다 — macOS 는 값 칸에 따로 이름을
+        // 두지 않으므로, 여기에 " value" 같은 말을 붙이면 없는 문구를 지어내는 것입니다.
+        AutomationProperties.SetName(ValueButton, Label);
+        AutomationProperties.SetName(ValueEditor, Label);
         AutomationProperties.SetAutomationId(ValueButton, $"{SliderAutomationId}.value");
         AutomationProperties.SetAutomationId(ValueEditor, $"{SliderAutomationId}.value");
         AutomationProperties.SetLabeledBy(ValueButton, LabelText);
         AutomationProperties.SetLabeledBy(ValueEditor, LabelText);
-        AutomationProperties.SetHelpText(
-            ValueEditor,
-            $"Enter a number from {Minimum:0.##} to {Maximum:0.##}.");
         isSynchronizing = false;
     }
 
@@ -287,11 +289,10 @@ public sealed partial class InspectorSlider : UserControl
     {
         if (!InspectorSliderValue.TryParse(ValueEditor.Text, Minimum, Maximum, out double parsed))
         {
+            // macOS `EditableSliderValueText` 는 잘못된 값에 빨간 글자와 소리만 냅니다 —
+            // 안내 문장을 따로 두지 않습니다.
             ValueEditor.Style = (Style)Resources["InspectorSliderValueEditorErrorStyle"];
             _ = MessageBeep(0);
-            AutomationProperties.SetHelpText(
-                ValueEditor,
-                $"Enter a number from {Minimum:0.##} to {Maximum:0.##}. The current value is invalid.");
             ValueEditor.Focus(FocusState.Programmatic);
             return;
         }
@@ -323,13 +324,8 @@ public sealed partial class InspectorSlider : UserControl
         }
     }
 
-    private void ClearEditorError()
-    {
+    private void ClearEditorError() =>
         ValueEditor.Style = (Style)Resources["InspectorSliderValueEditorStyle"];
-        AutomationProperties.SetHelpText(
-            ValueEditor,
-            $"Enter a number from {Minimum:0.##} to {Maximum:0.##}.");
-    }
 
     private void SetControlValue(double value)
     {

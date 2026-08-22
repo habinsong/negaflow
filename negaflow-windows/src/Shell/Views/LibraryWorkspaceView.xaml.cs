@@ -17,7 +17,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
     internal WorkspacePresentationState? workspaceState;
 
     /// <summary>진단이 스캔 상태를 읽어 가는 자리입니다.</summary>
-    internal Library.Scanner.LibraryScanPanel ScanPanelForDiagnostics => ScanPanel;
+    internal Library.Scanner.LibraryScanPanel ScanPanelForDiagnostics => ControlsPanel.ScanPanel;
     internal LibraryHostService? libraryHost;
     internal ThumbnailService? thumbnails;
     internal Views.Library.Scanner.ScanSessionHost? scanSessionHost;
@@ -48,6 +48,9 @@ public sealed partial class LibraryWorkspaceView : UserControl
     public LibraryWorkspaceView()
     {
         InitializeComponent();
+        // 왼쪽 소스 패널 XAML 은 UserControl 로 옮겼습니다. 이벤트는 옮기기 전과 같은
+        // 이 타입의 메서드로 돌아옵니다.
+        ControlsPanel.Owner = this;
         import = new LibraryImportActions(this);
         filters = new LibraryBrowserFilters(this);
         copy = new LibraryWorkspaceCopy(this);
@@ -59,13 +62,14 @@ public sealed partial class LibraryWorkspaceView : UserControl
         shortcuts = new LibraryShortcuts(this);
         rail = new LibrarySourceRail(this);
         layout = new LibraryWorkspaceLayout(this);
-        ScanPanel.IsWanted = () => ImportScannerButton.IsChecked == true;
-        ScanPanel.ExpandRequested += (_, _) => ImportScannerButton.IsChecked = true;
-        ImportScannerButton.Checked += OnImportScannerToggled;
-        ImportScannerButton.Unchecked += OnImportScannerToggled;
-        ScanPanel.LibraryChanged += OnEmbeddedLibraryChanged;
-        ScanPanel.FlatbedPreviewChanged += (_, _) => SyncFlatbedOverlay();
-        FlatbedOverlay.RegionsChanged += (_, _) => ScanPanel.OnOverlayRegionsChanged();
+        Root.ActualThemeChanged += (_, _) => rail.Update();
+        ControlsPanel.ScanPanel.IsWanted = () => ControlsPanel.ImportScannerButton.IsChecked == true;
+        ControlsPanel.ScanPanel.ExpandRequested += (_, _) => ControlsPanel.ImportScannerButton.IsChecked = true;
+        ControlsPanel.ImportScannerButton.Checked += OnImportScannerToggled;
+        ControlsPanel.ImportScannerButton.Unchecked += OnImportScannerToggled;
+        ControlsPanel.ScanPanel.LibraryChanged += OnEmbeddedLibraryChanged;
+        ControlsPanel.ScanPanel.FlatbedPreviewChanged += (_, _) => SyncFlatbedOverlay();
+        FlatbedOverlay.RegionsChanged += (_, _) => ControlsPanel.ScanPanel.OnOverlayRegionsChanged();
         CullingSurface.AttachChrome(
             CullingGridButton,
             CullingSurveyButton,
@@ -76,14 +80,14 @@ public sealed partial class LibraryWorkspaceView : UserControl
             FrameListView.SelectedItem = item;
             ShowFilteredItems();
         });
-        FilesSourceTree.FrameSelected += (_, frameId) => selection.SelectFrame(frameId);
-        FilesSourceTree.LibraryChanged += OnEmbeddedLibraryChanged;
-        FilesSourceTree.StatusChanged += (_, text) => ImportStatusText.Text = text;
-        FilesSourceTree.LocateFolderRequested += (_, folderPath) =>
+        ControlsPanel.FilesSourceTree.FrameSelected += (_, frameId) => selection.SelectFrame(frameId);
+        ControlsPanel.FilesSourceTree.LibraryChanged += OnEmbeddedLibraryChanged;
+        ControlsPanel.FilesSourceTree.StatusChanged += (_, text) => ControlsPanel.ImportStatusText.Text = text;
+        ControlsPanel.FilesSourceTree.LocateFolderRequested += (_, folderPath) =>
             import.LocateFolder(folderPath);
-        FilesSourceTree.FolderRemoveRequested += OnFolderRemoveRequested;
-        CollectionsPanel.FilterChanged += (_, _) => ShowFilteredItems();
-        CollectionsPanel.StoredQueryApplied += (_, query) => ApplyStoredQuery(query);
+        ControlsPanel.FilesSourceTree.FolderRemoveRequested += OnFolderRemoveRequested;
+        ControlsPanel.CollectionsPanel.FilterChanged += (_, _) => ShowFilteredItems();
+        ControlsPanel.CollectionsPanel.StoredQueryApplied += (_, query) => ApplyStoredQuery(query);
         copy.Localize();
         Loaded += OnLoaded;
     }
@@ -144,9 +148,16 @@ public sealed partial class LibraryWorkspaceView : UserControl
     public void Localize()
     {
         copy.Localize();
-        ScanPanel.Localize();
-        CollectionsPanel.Localize();
+        ControlsPanel.ScanPanel.Localize();
+        ControlsPanel.CollectionsPanel.Localize();
         CullingSurface.Localize();
+        // 카드 이름("사진 %d")과 필름 종류("컬러 네거티브")는 **항목을 만들 때** 정해집니다.
+        // `copy.Localize()` 가 이름 서식을 새 언어로 갈아 끼운 **뒤에** 다시 만듭니다.
+        if (libraryHost is { } host)
+        {
+            allItems = LibraryFrameListItems.From(host.Frames, host.SourceAvailabilityByFrameId);
+        }
+        ShowFilteredItems();
     }
 
     public void Initialize(WorkspacePresentationState state)
@@ -154,7 +165,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ArgumentNullException.ThrowIfNull(state);
         workspaceState = state;
         state.Changed += layout.OnStateChanged;
-        ScanPanel.ApplyDefaultRotation(state.Current.DefaultScanRotation);
+        ControlsPanel.ScanPanel.ApplyDefaultRotation(state.Current.DefaultScanRotation);
         layout.SynchronizeWidth(state.Current.LibraryControlsWidth);
         Unloaded += OnUnloaded;
     }
@@ -184,15 +195,15 @@ public sealed partial class LibraryWorkspaceView : UserControl
 
         libraryHost = host;
         importWindowId = windowId;
-        ScanPanel.Bind(host);
-        ScanPanel.WindowId = windowId;
-        FilesSourceTree.Bind(host);
-        CollectionsPanel.Bind(
+        ControlsPanel.ScanPanel.Bind(host);
+        ControlsPanel.ScanPanel.WindowId = windowId;
+        ControlsPanel.FilesSourceTree.Bind(host);
+        ControlsPanel.CollectionsPanel.Bind(
             host,
             () => FrameListView.SelectedItems.OfType<LibraryFrameListItem>().Select(item => item.Id),
             () => LibraryStoredQuery.From(quickFilters, LibrarySearchBox?.Text));
         allItems = LibraryFrameListItems.From(host.Frames, host.SourceAvailabilityByFrameId);
-        CollectionsPanel.Rebuild();
+        ControlsPanel.CollectionsPanel.Rebuild();
         ShowFilteredItems();
 
         bool hasFrames = allItems.Count > 0;
@@ -306,7 +317,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         LibrarySearchBox.Text = string.Empty;
     }
 
-    private void OnSourceRailClicked(object sender, RoutedEventArgs args) =>
+    internal void OnSourceRailClicked(object sender, RoutedEventArgs args) =>
         rail.OnClicked(sender, args);
 
     private void OnFrameDragStarting(object sender, DragItemsStartingEventArgs args) =>
@@ -388,82 +399,15 @@ public sealed partial class LibraryWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
-        await ScanPanel.DetectOnLoadAsync();
+        await ControlsPanel.ScanPanel.DetectOnLoadAsync();
     }
 
     /// <summary>macOS 스캐너 메뉴가 읽는 값입니다.</summary>
-    internal ScannerMenuState ScannerMenuState => ScanPanel.MenuState;
+    internal ScannerMenuState ScannerMenuState => ControlsPanel.ScanPanel.MenuState;
 
-    /// <summary>스캔 세션 값이 바뀌면 메뉴막대가 따라오도록 셸에 알립니다.</summary>
-    internal event EventHandler? ScannerMenuStateChanged
-    {
-        add => ScanPanel.MenuStateChanged += value;
-        remove => ScanPanel.MenuStateChanged -= value;
-    }
+    internal bool HasScanner => ControlsPanel.ScanPanel.HasScanner;
 
-    /// <summary>macOS 스캐너 메뉴의 여섯 명령입니다. 패널 단추와 같은 길을 탑니다.</summary>
-    internal bool InvokeScannerShortcut(WorkflowShortcutAction action)
-    {
-        switch (action)
-        {
-            case WorkflowShortcutAction.DetectScanners:
-                _ = ScanPanel.DetectScannersFromMenuAsync();
-                return true;
-            case WorkflowShortcutAction.ToggleScannerSimulator:
-                _ = ScanPanel.ToggleSimulatorFromMenuAsync();
-                return true;
-            case WorkflowShortcutAction.PreviewScan:
-                _ = ScanPanel.PreviewScanFromMenuAsync();
-                return true;
-            case WorkflowShortcutAction.ScanFrame:
-                _ = ScanPanel.ScanFrameFromMenuAsync();
-                return true;
-            case WorkflowShortcutAction.AddFlatbedFrame:
-                ScanPanel.AddFlatbedFrameFromMenu();
-                return true;
-            case WorkflowShortcutAction.RemoveFlatbedFrame:
-                ScanPanel.RemoveFlatbedFrameFromMenu();
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private void OnImportScannerClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        _ = ScanPanel.OpenAsync();
-    }
-
-    /// <summary>
-    /// macOS <c>presentScannerSetup()</c> 은 <c>showScannerControls</c> 하나만 켭니다. 그 값을
-    /// 라이브러리뷰와 현상뷰가 함께 보므로 여기서 공유 자리에 옮겨 적습니다.
-    /// </summary>
-    private void OnImportScannerToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        scanSessionHost?.SetShowScannerControls(ImportScannerButton.IsChecked == true);
-    }
-
-    /// <summary>
-    /// 라이브러리뷰와 현상뷰가 같은 스캐너 세션을 보게 합니다. macOS 는 <c>AppModel</c> 하나가
-    /// 그 상태를 들고 두 사이드바가 같은 구획을 냅니다.
-    /// </summary>
-    public void AttachScanSessionHost(Views.Library.Scanner.ScanSessionHost host)
-    {
-        ArgumentNullException.ThrowIfNull(host);
-        scanSessionHost = host;
-        ScanPanel.AttachSessionHost(host);
-        host.ShowScannerControlsChanged += (_, _) =>
-        {
-            if (ImportScannerButton.IsChecked != host.ShowScannerControls)
-            {
-                ImportScannerButton.IsChecked = host.ShowScannerControls;
-            }
-        };
-    }
+    internal bool SupportsPreview => ControlsPanel.ScanPanel.SupportsPreview;
 
     /// <summary>저장한 조건을 검색어와 빠른 필터에 되돌립니다.</summary>
     private void ApplyStoredQuery(LibraryStoredQuery query)

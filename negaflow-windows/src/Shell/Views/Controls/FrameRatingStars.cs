@@ -53,6 +53,12 @@ public sealed class FrameRatingStars : UserControl
         }
         Content = panel;
         IsTabStop = true;
+        // 이름("등급")과 도움말이 리소스에서 옵니다 — 언어가 바뀌면 스스로 다시 겁니다.
+        LocalizedElement.Track(this, Localize);
+    }
+
+    private void Localize()
+    {
         AutomationProperties.SetName(this, AppResources.Get("rating", "Value"));
         Render();
     }

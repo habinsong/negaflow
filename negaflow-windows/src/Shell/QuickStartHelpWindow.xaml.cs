@@ -15,7 +15,9 @@ public sealed partial class QuickStartHelpWindow : Window
         ArgumentNullException.ThrowIfNull(settingsStore);
         InitializeComponent();
         WindowIcon.Apply(AppWindow);
-        Title = AppResources.Get("commandNegaflowHelp", "Text");
+        LocalizedElement.Track(
+            this,
+            () => Title = AppResources.Get("commandNegaflowHelp", "Text"));
         AppWindow.Resize(WindowDpiSizing.LogicalToPhysical(
             this,
             ShellLayoutMetrics.QuickStartWindowWidth,

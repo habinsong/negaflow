@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
 
@@ -12,7 +13,25 @@ namespace Negaflow.Shell.Views.Develop.Inspector;
 /// </summary>
 public sealed partial class DevelopQuickActionsCard : UserControl
 {
-    public DevelopQuickActionsCard() => InitializeComponent();
+    private bool autoTonePressed;
+
+    private bool autoWhiteBalancePressed;
+
+    public DevelopQuickActionsCard()
+    {
+        InitializeComponent();
+        ActualThemeChanged += (_, _) => ApplyQuickActionForegrounds();
+        Loaded += (_, _) => ApplyQuickActionForegrounds();
+
+        AutoToneButton.PointerPressed += (_, _) => SetAutoTonePressed(true);
+        AutoToneButton.PointerReleased += (_, _) => SetAutoTonePressed(false);
+        AutoToneButton.PointerCanceled += (_, _) => SetAutoTonePressed(false);
+        AutoToneButton.PointerCaptureLost += (_, _) => SetAutoTonePressed(false);
+        AutoWhiteBalanceButton.PointerPressed += (_, _) => SetAutoWhiteBalancePressed(true);
+        AutoWhiteBalanceButton.PointerReleased += (_, _) => SetAutoWhiteBalancePressed(false);
+        AutoWhiteBalanceButton.PointerCanceled += (_, _) => SetAutoWhiteBalancePressed(false);
+        AutoWhiteBalanceButton.PointerCaptureLost += (_, _) => SetAutoWhiteBalancePressed(false);
+    }
 
     public event EventHandler? AutoColorToggled;
 
@@ -69,6 +88,7 @@ public sealed partial class DevelopQuickActionsCard : UserControl
         Grid.SetRow(AutoWhiteBalancePill, actionRow);
         AutoColorToggle.IsChecked = panel.AutoNeutralBalance;
         AutoLevelsToggle.IsChecked = panel.AutoLevels;
+        ApplyQuickActionForegrounds();
     }
 
     /// <summary>
@@ -97,6 +117,7 @@ public sealed partial class DevelopQuickActionsCard : UserControl
     {
         _ = sender;
         _ = args;
+        ApplyQuickActionForegrounds();
         AutoColorToggled?.Invoke(this, EventArgs.Empty);
     }
 
@@ -104,6 +125,7 @@ public sealed partial class DevelopQuickActionsCard : UserControl
     {
         _ = sender;
         _ = args;
+        ApplyQuickActionForegrounds();
         AutoLevelsToggled?.Invoke(this, EventArgs.Empty);
     }
 
@@ -133,5 +155,45 @@ public sealed partial class DevelopQuickActionsCard : UserControl
         _ = sender;
         _ = args;
         AutoWhiteBalanceResetClicked?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void SetAutoTonePressed(bool pressed)
+    {
+        autoTonePressed = pressed;
+        ApplyQuickActionForegrounds();
+    }
+
+    private void SetAutoWhiteBalancePressed(bool pressed)
+    {
+        autoWhiteBalancePressed = pressed;
+        ApplyQuickActionForegrounds();
+    }
+
+    private void ApplyQuickActionForegrounds()
+    {
+        Brush primary = PrimaryBrushProbe.Foreground ??
+            new SolidColorBrush(ActualTheme == ElementTheme.Dark
+                ? Microsoft.UI.Colors.White
+                : Microsoft.UI.Colors.Black);
+        Brush accent = AccentBrushProbe.Foreground ??
+            new SolidColorBrush(ActualTheme == ElementTheme.Dark
+                ? Windows.UI.Color.FromArgb(0xFF, 0x0A, 0x84, 0xFF)
+                : Windows.UI.Color.FromArgb(0xFF, 0x00, 0x7A, 0xFF));
+
+        Brush autoColorBrush = AutoColorIsOn ? accent : primary;
+        Brush autoLevelsBrush = AutoLevelsIsOn ? accent : primary;
+        Brush autoToneBrush = autoTonePressed ? accent : primary;
+        Brush autoWhiteBalanceBrush = autoWhiteBalancePressed ? accent : primary;
+
+        AutoColorIcon.Foreground = autoColorBrush;
+        AutoColorText.Foreground = autoColorBrush;
+        AutoLevelsIcon.Foreground = autoLevelsBrush;
+        AutoLevelsText.Foreground = autoLevelsBrush;
+        AutoToneIcon.Foreground = autoToneBrush;
+        AutoToneText.Foreground = autoToneBrush;
+        AutoWhiteBalanceIcon.Foreground = autoWhiteBalanceBrush;
+        AutoWhiteBalanceText.Foreground = autoWhiteBalanceBrush;
+        AutoToneResetIcon.Foreground = primary;
+        AutoWhiteBalanceResetIcon.Foreground = primary;
     }
 }

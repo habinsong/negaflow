@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Negaflow.Catalog;
 using Negaflow.Shell.Localization;
+using Negaflow.Shell.Shortcuts;
 
 namespace Negaflow.Shell.Views;
 
@@ -15,6 +16,8 @@ public sealed partial class WorkspaceToolbarView : UserControl
     public WorkspaceToolbarView()
     {
         InitializeComponent();
+        PreviewScanButton.Click += OnPreviewScanClick;
+        ScanFrameButton.Click += OnScanFrameClick;
         LocalizeControls();
     }
 
@@ -25,7 +28,20 @@ public sealed partial class WorkspaceToolbarView : UserControl
 
     public event EventHandler? QuickExportRequested;
 
+    /// <summary>
+    /// 위 막대의 "내보내기" 입니다. macOS 처럼 <b>현상뷰 출력 탭의 내보내기 단추와 같은
+    /// 동작</b>이며, 다른 화면에 있어도 그 동작을 부릅니다.
+    /// </summary>
+    public event EventHandler? ExportRequested;
+
+    public event EventHandler<WorkflowShortcutAction>? ScannerCommandRequested;
+
+    public event EventHandler? TitleBarInteractiveRegionsChanged;
+
     public UIElement TitleBarElement => TitleBarRoot;
+
+    public IReadOnlyList<FrameworkElement> TitleBarInteractiveElements =>
+        [PrimaryControls, ActiveFrameContainer, RightToolbarCluster];
 
     public void UpdateCaptionInsets(double left, double right)
     {
@@ -34,6 +50,12 @@ public sealed partial class WorkspaceToolbarView : UserControl
     }
 
     public void SetQuickExportEnabled(bool isEnabled) => QuickExportButton.IsEnabled = isEnabled;
+
+    public void SetExportEnabled(bool isEnabled) => ExportButton.IsEnabled = isEnabled;
+
+    /// <summary>내보내는 동안 위 막대에 몇 장 중 몇 장인지 보입니다. 끝나면 사라집니다.</summary>
+    public void SetExportProgress(Negaflow.Shell.Develop.ExportProgress progress) =>
+        ExportProgress.Progress = progress;
 
     public void Initialize(WorkspacePresentationState state, LibraryHostService? host = null)
     {
@@ -69,6 +91,7 @@ public sealed partial class WorkspaceToolbarView : UserControl
         ActiveFrameText.Text = text;
         AutomationProperties.SetName(ActiveFrameText, text);
         ToolTipService.SetToolTip(ActiveFrameText, text);
+        TitleBarInteractiveRegionsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnLibraryClick(object sender, RoutedEventArgs args)
@@ -83,6 +106,27 @@ public sealed partial class WorkspaceToolbarView : UserControl
         _ = sender;
         _ = args;
         QuickExportRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnExportClick(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ExportRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnPreviewScanClick(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ScannerCommandRequested?.Invoke(this, WorkflowShortcutAction.PreviewScan);
+    }
+
+    private void OnScanFrameClick(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ScannerCommandRequested?.Invoke(this, WorkflowShortcutAction.ScanFrame);
     }
 
     private void OnDevelopClick(object sender, RoutedEventArgs args)
@@ -192,10 +236,24 @@ public sealed partial class WorkspaceToolbarView : UserControl
     /// <summary>언어가 바뀌면 문구를 다시 겁니다.</summary>
     public void Localize() => LocalizeControls();
 
+    public void SyncScannerState(ScannerMenuState state, bool hasScanner, bool supportsPreview)
+    {
+        bool showPreview = hasScanner && supportsPreview;
+        PreviewScanButton.Visibility = showPreview ? Visibility.Visible : Visibility.Collapsed;
+        PreviewScanDivider.Visibility = showPreview ? Visibility.Visible : Visibility.Collapsed;
+        ScanFrameButton.Visibility = hasScanner ? Visibility.Visible : Visibility.Collapsed;
+        ScannerExportDivider.Visibility = hasScanner ? Visibility.Visible : Visibility.Collapsed;
+        PreviewScanButton.IsEnabled = state.CanPreview;
+        ScanFrameButton.IsEnabled = state.CanScan;
+        TitleBarInteractiveRegionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     private void LocalizeControls()
     {
         CommandQuickExportLocalized.Text = AppResources.Get("commandQuickExport", "Text");
         CommandExportLocalized.Text = AppResources.Get("commandExport", "Text");
+        CommandPreviewScanLocalized.Text = AppResources.Get("shortcutPreviewScan", "Text");
+        CommandScanFrameLocalized.Text = AppResources.Get("shortcutScanFrame", "Text");
         // 활성 사진 이름은 고른 사진에 따라 바뀝니다 — 이름을 지우지 않도록 그 길로 다시 겁니다.
         UpdateActiveFrame();
         LibraryButton.Content = AppResources.Get("menuLibrary", "Content");
@@ -205,6 +263,12 @@ public sealed partial class WorkspaceToolbarView : UserControl
             QuickExportButton,
             AppResources.Get("commandQuickExport", "Text"));
         SetNameAndTooltip(ExportButton, AppResources.Get("commandExport", "Text"));
+        SetNameAndTooltip(
+            PreviewScanButton,
+            AppResources.Get("shortcutPreviewScan", "Text"));
+        SetNameAndTooltip(
+            ScanFrameButton,
+            AppResources.Get("shortcutScanFrame", "Text"));
         SetNameAndTooltip(
             SidebarButton,
             AppResources.Get("commandShowHideSidebar", "Value"));
@@ -225,6 +289,12 @@ public sealed partial class WorkspaceToolbarView : UserControl
         LightAppearanceItem.Text = AppResources.Get("appearanceLight", "Text");
         SettingsItem.Text = AppResources.Get("commandSettings", "Text");
         DiagnosticsItem.Text = AppResources.Get("commandDiagnostics", "Text");
+        // 고름·켬/끔 표시도 리소스 문구입니다. 상태가 바뀔 때만 걸어 두면 언어를 바꿔도
+        // 옛 언어로 남습니다.
+        if (workspaceState is { } state)
+        {
+            UpdateState(state.Current);
+        }
     }
 
     /// <summary>

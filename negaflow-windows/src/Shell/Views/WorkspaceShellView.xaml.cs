@@ -28,6 +28,7 @@ public sealed partial class WorkspaceShellView : UserControl
     public WorkspaceShellView()
     {
         InitializeComponent();
+        Toolbar.TitleBarInteractiveRegionsChanged += OnToolbarTitleBarInteractiveRegionsChanged;
     }
 
     public event EventHandler? AboutRequested;
@@ -39,7 +40,11 @@ public sealed partial class WorkspaceShellView : UserControl
     /// <summary>macOS <c>QuickStartHelpScene</c> 창을 여는 요청입니다.</summary>
     public event EventHandler? QuickStartHelpRequested;
 
+    public event EventHandler? TitleBarInteractiveRegionsChanged;
+
     public UIElement TitleBarElement => Toolbar.TitleBarElement;
+
+    public IReadOnlyList<FrameworkElement> TitleBarInteractiveElements => Toolbar.TitleBarInteractiveElements;
 
     public void UpdateCaptionInsets(double left, double right) =>
         Toolbar.UpdateCaptionInsets(left, right);
@@ -95,6 +100,14 @@ public sealed partial class WorkspaceShellView : UserControl
         LibraryWorkspace.FolderDevelopmentApplied += OnFolderDevelopmentApplied;
         DevelopWorkspace.ScannerSetupRequested += OnDevelopScannerSetupRequested;
         Toolbar.QuickExportRequested += OnToolbarQuickExportRequested;
+        Toolbar.ExportRequested += OnToolbarExportRequested;
+        // 현상뷰든 인화뷰든 내보내는 동안 위 막대에 같은 진행이 보입니다.
+        DevelopWorkspace.ExportProgressChanged += OnExportProgressChanged;
+        PrintWorkspace.ExportProgressChanged += OnExportProgressChanged;
+        // 두 필름스트립의 우클릭 메뉴는 라이브러리가 들고 있는 그 하나를 그대로 씁니다.
+        DevelopWorkspace.Filmstrip.FrameMenuRequested += OnFilmstripMenuRequested;
+        PrintWorkspace.Filmstrip.FrameMenuRequested += OnFilmstripMenuRequested;
+        Toolbar.ScannerCommandRequested += OnAppMenuCommandRequested;
         DevelopWorkspace.QuickExportAvailabilityChanged += OnQuickExportAvailabilityChanged;
         // 한계값은 엔진이 알려 줍니다. 엔진을 못 읽으면 슬라이더 범위를 지어내는 대신
         // Develop 패널을 붙이지 않습니다.
@@ -112,7 +125,7 @@ public sealed partial class WorkspaceShellView : UserControl
             {
             }
         }
-        Toolbar.SetQuickExportEnabled(DevelopWorkspace.CanQuickExport);
+        SyncExportMenu();
         PrintWorkspace.Initialize(state, nativeEngineStatus);
         if (thumbnails is not null)
         {
@@ -154,6 +167,7 @@ public sealed partial class WorkspaceShellView : UserControl
         LibraryWorkspace.ScannerMenuStateChanged += OnScannerMenuStateChanged;
         SyncDevelopMenu();
         AppMenu.SyncScannerState(LibraryWorkspace.ScannerMenuState);
+        SyncScannerToolbar();
         SyncExportMenu();
         UpdateWorkspace(state.Current.SelectedWorkspace);
         Unloaded += OnUnloaded;
@@ -222,6 +236,7 @@ public sealed partial class WorkspaceShellView : UserControl
         PrintWorkspace.Localize();
         SyncDevelopMenu();
         AppMenu.SyncScannerState(LibraryWorkspace.ScannerMenuState);
+        SyncScannerToolbar();
         SyncExportMenu();
     }
 
@@ -230,13 +245,35 @@ public sealed partial class WorkspaceShellView : UserControl
         _ = sender;
         _ = args;
         AppMenu.SyncScannerState(LibraryWorkspace.ScannerMenuState);
+        SyncScannerToolbar();
     }
 
-    /// <summary>macOS 내보내기 메뉴의 두 잠금을 지금 값으로 맞춥니다.</summary>
-    private void SyncExportMenu() =>
-        AppMenu.SyncExportState(
-            DevelopWorkspace.CanQuickExport,
-            DevelopWorkspace.CanExportPhoto);
+    private void SyncScannerToolbar() =>
+        Toolbar.SyncScannerState(
+            LibraryWorkspace.ScannerMenuState,
+            LibraryWorkspace.HasScanner,
+            LibraryWorkspace.SupportsPreview);
+
+    private void OnToolbarTitleBarInteractiveRegionsChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        TitleBarInteractiveRegionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// macOS 내보내기 메뉴의 두 잠금을 지금 값으로 맞춥니다. <b>위 막대의 두 단추도 같은
+    /// 잠금</b>입니다 — 메뉴만 풀고 막대를 두면 사진을 골랐는데도 "내보내기" 가 꺼진 채
+    /// 남습니다.
+    /// </summary>
+    private void SyncExportMenu()
+    {
+        bool canQuickExport = DevelopWorkspace.CanQuickExport;
+        bool canExport = DevelopWorkspace.CanExportPhoto;
+        AppMenu.SyncExportState(canQuickExport, canExport);
+        Toolbar.SetQuickExportEnabled(canQuickExport);
+        Toolbar.SetExportEnabled(canExport);
+    }
 
     /// <summary>
     /// macOS 현상 메뉴는 그릴 때마다 <c>actionableFrame</c> 을 읽습니다. WinUI 는 메뉴를 여는
@@ -298,6 +335,7 @@ public sealed partial class WorkspaceShellView : UserControl
         // 못했으면(사진이 없거나 편집이 거절됐으면) 그 체크는 거짓말이므로 되돌립니다.
         SyncDevelopMenu();
         AppMenu.SyncScannerState(LibraryWorkspace.ScannerMenuState);
+        SyncScannerToolbar();
         SyncExportMenu();
     }
 
@@ -308,12 +346,44 @@ public sealed partial class WorkspaceShellView : UserControl
         await DevelopWorkspace.QuickExportAsync();
     }
 
+    /// <summary>
+    /// 위 막대의 "내보내기" 입니다. 현상뷰 출력 탭의 내보내기 단추와 같은 동작이며, 그
+    /// 단추가 쓰는 값(형식 · 폴더 · 파일명 패턴)을 그대로 씁니다.
+    /// </summary>
+    private async void OnToolbarExportRequested(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        await DevelopWorkspace.ExportPhotoAsync();
+    }
+
+    /// <summary>
+    /// 필름스트립 썸네일의 오른쪽 단추입니다. 필름스트립은 한 장만 고르므로 대상은 그
+    /// 한 장입니다 — 격자와 달리 여러 장 선택이 없습니다.
+    /// </summary>
+    private void OnFilmstripMenuRequested(object? sender, FilmstripMenuRequest request)
+    {
+        _ = sender;
+        LibraryWorkspace.menu.Show(
+            request.Anchor,
+            request.Item,
+            [request.Item],
+            request.Position);
+    }
+
+    private void OnExportProgressChanged(
+        object? sender,
+        Negaflow.Shell.Develop.ExportProgress progress)
+    {
+        _ = sender;
+        Toolbar.SetExportProgress(progress);
+    }
+
     private void OnQuickExportAvailabilityChanged(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
         SyncExportMenu();
-        Toolbar.SetQuickExportEnabled(DevelopWorkspace.CanQuickExport);
     }
 
     private void OnStateChanged(object? sender, ShellPreferences preferences)
@@ -344,9 +414,16 @@ public sealed partial class WorkspaceShellView : UserControl
         AppMenu.SettingsRequested -= OnToolbarSettingsRequested;
         AppMenu.KeyboardShortcutsRequested -= OnKeyboardShortcutsRequested;
         AppMenu.CommandRequested -= OnAppMenuCommandRequested;
+        Toolbar.ScannerCommandRequested -= OnAppMenuCommandRequested;
         LibraryWorkspace.ScannerMenuStateChanged -= OnScannerMenuStateChanged;
         AppResources.LanguageChanged -= OnLanguageChanged;
         Toolbar.QuickExportRequested -= OnToolbarQuickExportRequested;
+        Toolbar.ExportRequested -= OnToolbarExportRequested;
+        DevelopWorkspace.ExportProgressChanged -= OnExportProgressChanged;
+        PrintWorkspace.ExportProgressChanged -= OnExportProgressChanged;
+        DevelopWorkspace.Filmstrip.FrameMenuRequested -= OnFilmstripMenuRequested;
+        PrintWorkspace.Filmstrip.FrameMenuRequested -= OnFilmstripMenuRequested;
+        Toolbar.TitleBarInteractiveRegionsChanged -= OnToolbarTitleBarInteractiveRegionsChanged;
         DevelopWorkspace.QuickExportAvailabilityChanged -= OnQuickExportAvailabilityChanged;
         DevelopWorkspace.ScannerSetupRequested -= OnDevelopScannerSetupRequested;
         LibraryWorkspace.FolderDevelopmentApplied -= OnFolderDevelopmentApplied;

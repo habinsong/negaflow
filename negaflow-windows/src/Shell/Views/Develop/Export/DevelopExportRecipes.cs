@@ -94,30 +94,16 @@ internal sealed class DevelopExportRecipes
 
     internal void SynchronizeExportRecipeControls()
     {
-        view.ExportRecipeSelector.Items.Clear();
-        view.ExportRecipeSelector.Items.Add(new ComboBoxItem
-        {
-            Content = AppResources.Get("developExportRecipeEmpty", "Content"),
-            Tag = null,
-        });
-        foreach (ExportRecipe recipe in view.exportRecipes.Recipes)
-        {
-            view.ExportRecipeSelector.Items.Add(new ComboBoxItem
-            {
-                Content = recipe.Name,
-                Tag = recipe.Id,
-            });
-        }
-        view.ExportRecipeSelector.SelectedIndex = 0;
-        for (int index = 0; index < view.ExportRecipeSelector.Items.Count; ++index)
-        {
-            if (view.ExportRecipeSelector.Items[index] is ComboBoxItem candidate &&
-                Equals(candidate.Tag, view.exportRecipes.SelectedId))
-            {
-                view.ExportRecipeSelector.SelectedIndex = index;
-                break;
-            }
-        }
+        List<Controls.PopupPickerOption> options =
+        [
+            new(AppResources.Get("developExportRecipeEmpty", "Content"), null),
+            .. view.exportRecipes.Recipes.Select(
+                recipe => new Controls.PopupPickerOption(recipe.Name, recipe.Id)),
+        ];
+        view.ExportRecipeSelector.SetOptions(options);
+        // 담아 둔 값이 없으면 첫 항목("저장된 설정 없음")입니다.
+        view.ExportRecipeSelector.SelectSilently(0);
+        view.ExportRecipeSelector.SelectByTag(view.exportRecipes.SelectedId);
         view.BuildExportRecipeMenu();
     }
 }

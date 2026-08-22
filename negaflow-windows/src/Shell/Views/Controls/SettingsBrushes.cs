@@ -91,6 +91,104 @@ public static class SettingsBrushes
     public static void SetThumbBrush(DependencyObject element, Brush? value) =>
         element.SetValue(ThumbBrushProperty, value);
 
+    /// <summary>강조색입니다. macOS <c>Color.accentColor</c>.</summary>
+    public static readonly DependencyProperty AccentBrushProperty =
+        DependencyProperty.RegisterAttached(
+            "AccentBrush",
+            typeof(Brush),
+            typeof(SettingsBrushes),
+            new PropertyMetadata(null, OnBrushChanged));
+
+    public static Brush? GetAccentBrush(DependencyObject element) =>
+        (Brush?)element.GetValue(AccentBrushProperty);
+
+    public static void SetAccentBrush(DependencyObject element, Brush? value) =>
+        element.SetValue(AccentBrushProperty, value);
+
+    /// <summary>강조색 20% 바탕입니다. macOS <c>Color.accentColor.opacity(0.2)</c>.</summary>
+    public static readonly DependencyProperty AccentSoftBrushProperty =
+        DependencyProperty.RegisterAttached(
+            "AccentSoftBrush",
+            typeof(Brush),
+            typeof(SettingsBrushes),
+            new PropertyMetadata(null, OnBrushChanged));
+
+    public static Brush? GetAccentSoftBrush(DependencyObject element) =>
+        (Brush?)element.GetValue(AccentSoftBrushProperty);
+
+    public static void SetAccentSoftBrush(DependencyObject element, Brush? value) =>
+        element.SetValue(AccentSoftBrushProperty, value);
+
+    /// <summary>macOS <c>liquidSurface</c> 의 바탕입니다.</summary>
+    public static readonly DependencyProperty SurfaceBrushProperty =
+        DependencyProperty.RegisterAttached(
+            "SurfaceBrush",
+            typeof(Brush),
+            typeof(SettingsBrushes),
+            new PropertyMetadata(null, OnBrushChanged));
+
+    public static Brush? GetSurfaceBrush(DependencyObject element) =>
+        (Brush?)element.GetValue(SurfaceBrushProperty);
+
+    public static void SetSurfaceBrush(DependencyObject element, Brush? value) =>
+        element.SetValue(SurfaceBrushProperty, value);
+
+    /// <summary>macOS <c>liquidSurface</c> 가 두르는 실선입니다.</summary>
+    public static readonly DependencyProperty StrokeBrushProperty =
+        DependencyProperty.RegisterAttached(
+            "StrokeBrush",
+            typeof(Brush),
+            typeof(SettingsBrushes),
+            new PropertyMetadata(null, OnBrushChanged));
+
+    public static Brush? GetStrokeBrush(DependencyObject element) =>
+        (Brush?)element.GetValue(StrokeBrushProperty);
+
+    public static void SetStrokeBrush(DependencyObject element, Brush? value) =>
+        element.SetValue(StrokeBrushProperty, value);
+
+    /// <summary>마우스가 올라갔을 때의 바탕입니다. macOS <c>Color.primary.opacity(0.12)</c>.</summary>
+    public static readonly DependencyProperty HoverBrushProperty =
+        DependencyProperty.RegisterAttached(
+            "HoverBrush",
+            typeof(Brush),
+            typeof(SettingsBrushes),
+            new PropertyMetadata(null, OnBrushChanged));
+
+    public static Brush? GetHoverBrush(DependencyObject element) =>
+        (Brush?)element.GetValue(HoverBrushProperty);
+
+    public static void SetHoverBrush(DependencyObject element, Brush? value) =>
+        element.SetValue(HoverBrushProperty, value);
+
+    /// <summary>본문 글자색입니다. macOS <c>Color.primary</c>.</summary>
+    public static readonly DependencyProperty PrimaryForegroundProperty =
+        DependencyProperty.RegisterAttached(
+            "PrimaryForeground",
+            typeof(Brush),
+            typeof(SettingsBrushes),
+            new PropertyMetadata(null, OnBrushChanged));
+
+    public static Brush? GetPrimaryForeground(DependencyObject element) =>
+        (Brush?)element.GetValue(PrimaryForegroundProperty);
+
+    public static void SetPrimaryForeground(DependencyObject element, Brush? value) =>
+        element.SetValue(PrimaryForegroundProperty, value);
+
+    /// <summary>잘못된 값을 알리는 색입니다. macOS <c>Color.red</c>.</summary>
+    public static readonly DependencyProperty DangerBrushProperty =
+        DependencyProperty.RegisterAttached(
+            "DangerBrush",
+            typeof(Brush),
+            typeof(SettingsBrushes),
+            new PropertyMetadata(null, OnBrushChanged));
+
+    public static Brush? GetDangerBrush(DependencyObject element) =>
+        (Brush?)element.GetValue(DangerBrushProperty);
+
+    public static void SetDangerBrush(DependencyObject element, Brush? value) =>
+        element.SetValue(DangerBrushProperty, value);
+
     /// <summary>색이 바뀌면 컨트롤이 자기 안쪽을 다시 칠하게 합니다.</summary>
     private static void OnBrushChanged(
         DependencyObject sender,

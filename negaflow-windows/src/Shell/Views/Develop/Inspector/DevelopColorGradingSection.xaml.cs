@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Negaflow.Catalog;
 using Negaflow.Shell.Develop;
@@ -29,13 +30,18 @@ public sealed partial class DevelopColorGradingSection : UserControl
         panel = hostPanel;
     }
 
-    public void Localize() =>
+    public void Localize()
+    {
+        string title = AppResources.Get("developSectionColorGrading", "Text");
         DevelopInspectorSectionChrome.Localize(
             ColorGradingSection,
             ColorGradingHeaderButton,
             ColorGradingSectionTitleText,
             ColorGradingResetButton,
-            AppResources.Get("developSectionColorGrading", "Text"));
+            title);
+        // 앞 판은 XAML 에 "Color Grading" 이 박혀 있어 어떤 언어에서도 그대로였습니다.
+        AutomationProperties.SetName(ColorGradingEditor, title);
+    }
 
     public void Show(DevelopPanelState hostPanel)
     {

@@ -22,29 +22,79 @@
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </StackPanel>
 
+        <!-- macOS `statusBar` 의 trailing 묶음입니다. 차례도 그대로 —
+             크기 HUD(− 100% +) · 정렬 메뉴 · 범위 메뉴, 사이 간격 10. -->
         <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal" Spacing="10">
-            <Button
+            <!-- macOS `compactFilmstripItemSizeHUD` — 세 칸이 간격 1 로 붙어 있습니다. -->
+            <StackPanel Orientation="Horizontal" Spacing="1">
+                <Button
+                    x:Name="ThumbnailSmallerButton"
+                    Width="22"
+                    Height="22"
+                    Padding="0"
+                    AutomationProperties.AutomationId="negaflow.filmstrip.size.decrease"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Click="OnThumbnailSmallerClicked"
+                    Content="&#x2212;"
+                    FontSize="11" />
+                <Button
+                    x:Name="ThumbnailSizeButton"
+                    Width="32"
+                    Height="22"
+                    Padding="0"
+                    AutomationProperties.AutomationId="negaflow.filmstrip.size"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Click="OnThumbnailSizeResetClicked"
+                    FontSize="11"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <Button
+                    x:Name="ThumbnailLargerButton"
+                    Width="22"
+                    Height="22"
+                    Padding="0"
+                    AutomationProperties.AutomationId="negaflow.filmstrip.size.increase"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Click="OnThumbnailLargerClicked"
+                    Content="+"
+                    FontSize="11" />
+            </StackPanel>
+
+            <!-- macOS `bottomSortMenu` — 이름과 방향 화살표 하나. -->
+            <DropDownButton
+                x:Name="FilmstripSortButton"
                 Height="22"
                 Padding="4,0"
+                AutomationProperties.AutomationId="negaflow.filmstrip.sort"
                 Background="Transparent"
-                BorderThickness="0"
-                IsEnabled="False">
+                BorderThickness="0">
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                    <TextBlock x:Name="SortInputOrderLocalized" FontSize="11" />
-                    <FontIcon FontSize="9" Glyph="&#xE74A;" />
+                    <TextBlock x:Name="FilmstripSortText" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" />
+                    <FontIcon x:Name="FilmstripSortDirectionIcon" FontSize="9" Glyph="&#xE74A;" />
                 </StackPanel>
-            </Button>
-            <TextBlock x:Name="LibraryAllShortLocalized" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="100%" />
-            <Button
-                Width="24"
+                <DropDownButton.Flyout>
+                    <MenuFlyout x:Name="FilmstripSortFlyout" />
+                </DropDownButton.Flyout>
+            </DropDownButton>
+
+            <!-- macOS `bottomScopeMenu` — 이름과 필터 아이콘. -->
+            <DropDownButton
+                x:Name="FilmstripScopeButton"
                 Height="22"
-                Padding="0"
+                Padding="4,0"
+                AutomationProperties.AutomationId="negaflow.filmstrip.scope"
                 Background="Transparent"
-                BorderThickness="0"
-                IsEnabled="False">
-                <FontIcon FontSize="11" Glyph="&#xE74A;" />
-            </Button>
+                BorderThickness="0">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock x:Name="FilmstripScopeText" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" />
+                    <FontIcon FontSize="9" Glyph="&#xE71C;" />
+                </StackPanel>
+                <DropDownButton.Flyout>
+                    <MenuFlyout x:Name="FilmstripScopeFlyout" />
+                </DropDownButton.Flyout>
+            </DropDownButton>
         </StackPanel>
     </Grid>
 </UserControl>

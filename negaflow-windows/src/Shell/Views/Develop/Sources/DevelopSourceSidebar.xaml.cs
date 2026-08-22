@@ -149,7 +149,9 @@ public sealed partial class DevelopSourceSidebar : UserControl
             WorkflowSidebarTab.Versions => ("developSectionVersions", ""),
             WorkflowSidebarTab.Presets => ("developSectionPresets", "\uE9E9"),
             WorkflowSidebarTab.Film => ("developSectionFilm", ""),
-            WorkflowSidebarTab.Output => ("developSectionOutput", ""),
+            // macOS 는 머리줄에도 절 아이콘을 답니다 — 출력은 내보내기와 같은 square.and.arrow.up
+            // 입니다(스크린샷 `현상뷰_좌측탭_세로탭_내보내기.png` 의 "⬆ 출력").
+            WorkflowSidebarTab.Output => ("developSectionOutput", ""),
             _ => ("developLibrary", ""),
         };
         LibraryHeaderText.Text = AppResources.Get(headerKey, "Text");

@@ -111,6 +111,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     public event EventHandler? QuickExportAvailabilityChanged;
 
+    /// <summary>출력 패널이 알린 진행입니다. 위 막대가 같은 값을 보여 줍니다.</summary>
+    public event EventHandler<Negaflow.Shell.Develop.ExportProgress>? ExportProgressChanged;
+
     /// <summary>언어가 바뀌면 문구를 다시 겁니다.</summary>
     public void Localize() => copy.Localize();
 
@@ -134,6 +137,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(nativeEngineStatus);
         workspaceState = state;
+        // 하단바가 필름스트립의 크기·차례·범위를 정합니다. 바뀌면 목록을 다시 냅니다.
+        StatusBar.Attach(state);
+        StatusBar.FilmstripPresentationChanged += (_, _) => frames.Refresh();
         state.Changed += OnStateChanged;
         Filmstrip.Initialize(state);
         GrainMendPanel.Attach(
@@ -145,6 +151,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
             RequestPreview);
         LeftPanel.Attach(state);
         LeftPanel.ExportPanel.RunQuickExport = QuickExportAsync;
+        LeftPanel.ExportPanel.ProgressChanged +=
+            (_, progress) => ExportProgressChanged?.Invoke(this, progress);
         StatusBar.Initialize(nativeEngineStatus);
         engineVersion = nativeEngineStatus.BuildInfo?.AbiVersion.ToString() ?? "unknown";
         layout.Update(state.Current);
@@ -316,7 +324,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
     }
 
     /// <summary>macOS <c>exportSelectionToFolder</c> — 출력 패널이 정한 폴더·형식입니다.</summary>
-    public Task ExportPhotoAsync() => LeftPanel.ExportPanel.runner.RunExportAsync();
+    public Task ExportPhotoAsync()
+    {
+        return LeftPanel.ExportPanel.runner.RunExportAsync();
+    }
 
     private void OnThumbnailReady(string frameId) => frames.OnThumbnailReady(frameId);
 

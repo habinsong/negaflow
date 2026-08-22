@@ -48,8 +48,15 @@
                 HorizontalAlignment="Center"
                 Orientation="Horizontal"
                 Spacing="6">
-                <controls:VectorIcon IconSize="13" Kind="CameraFilters" />
-                <TextBlock x:Name="AutoColorText" TextTrimming="CharacterEllipsis" />
+                <controls:VectorIcon
+                    x:Name="AutoColorIcon"
+                    Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                    IconSize="13"
+                    Kind="CameraFilters" />
+                <TextBlock
+                    x:Name="AutoColorText"
+                    Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                    TextTrimming="CharacterEllipsis" />
             </StackPanel>
         </primitives:ToggleButton>
     </Border>
@@ -70,8 +77,15 @@
                 HorizontalAlignment="Center"
                 Orientation="Horizontal"
                 Spacing="6">
-                <controls:VectorIcon IconSize="13" Kind="LevelsChart" />
-                <TextBlock x:Name="AutoLevelsText" TextTrimming="CharacterEllipsis" />
+                <controls:VectorIcon
+                    x:Name="AutoLevelsIcon"
+                    Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                    IconSize="13"
+                    Kind="LevelsChart" />
+                <TextBlock
+                    x:Name="AutoLevelsText"
+                    Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                    TextTrimming="CharacterEllipsis" />
             </StackPanel>
         </primitives:ToggleButton>
     </Border>
@@ -89,15 +103,24 @@
             </Grid.ColumnDefinitions>
             <Button
                 x:Name="AutoToneButton"
+                Grid.ColumnSpan="2"
                 AutomationProperties.AutomationId="negaflow.develop.auto-tone"
                 Click="OnAutoToneClicked"
+                Padding="0"
                 Style="{StaticResource NegaflowPillButtonStyle}">
                 <StackPanel
                     HorizontalAlignment="Center"
                     Orientation="Horizontal"
                     Spacing="6">
-                    <FontIcon FontSize="13" Glyph="&#xE7A1;" />
-                    <TextBlock x:Name="AutoToneText" TextTrimming="CharacterEllipsis" />
+                    <FontIcon
+                        x:Name="AutoToneIcon"
+                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                        FontSize="13"
+                        Glyph="&#xE7A1;" />
+                    <TextBlock
+                        x:Name="AutoToneText"
+                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                        TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </Button>
             <Button
@@ -107,7 +130,11 @@
                 AutomationProperties.AutomationId="negaflow.develop.auto-tone.reset"
                 Click="OnAutoToneResetClicked"
                 Style="{StaticResource NegaflowPillResetButtonStyle}">
-                <FontIcon FontSize="11" Glyph="&#xE777;" />
+                <FontIcon
+                    x:Name="AutoToneResetIcon"
+                    Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                    FontSize="11"
+                    Glyph="&#xE777;" />
             </Button>
         </Grid>
     </Border>
@@ -125,15 +152,24 @@
             </Grid.ColumnDefinitions>
             <Button
                 x:Name="AutoWhiteBalanceButton"
+                Grid.ColumnSpan="2"
                 AutomationProperties.AutomationId="negaflow.develop.auto-white-balance"
                 Click="OnAutoWhiteBalanceClicked"
+                Padding="0"
                 Style="{StaticResource NegaflowPillButtonStyle}">
                 <StackPanel
                     HorizontalAlignment="Center"
                     Orientation="Horizontal"
                     Spacing="6">
-                    <controls:VectorIcon IconSize="13" Kind="Thermometer" />
-                    <TextBlock x:Name="AutoWhiteBalanceText" TextTrimming="CharacterEllipsis" />
+                    <controls:VectorIcon
+                        x:Name="AutoWhiteBalanceIcon"
+                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                        IconSize="13"
+                        Kind="Thermometer" />
+                    <TextBlock
+                        x:Name="AutoWhiteBalanceText"
+                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                        TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </Button>
             <Button
@@ -143,7 +179,11 @@
                 AutomationProperties.AutomationId="negaflow.develop.auto-white-balance.reset"
                 Click="OnAutoWhiteBalanceResetClicked"
                 Style="{StaticResource NegaflowPillResetButtonStyle}">
-                <FontIcon FontSize="11" Glyph="&#xE777;" />
+                <FontIcon
+                    x:Name="AutoWhiteBalanceResetIcon"
+                    Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                    FontSize="11"
+                    Glyph="&#xE777;" />
             </Button>
         </Grid>
     </Border>
@@ -158,6 +198,14 @@
         FontSize="12"
         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
         TextWrapping="Wrap"
+        Visibility="Collapsed" />
+    <TextBlock
+        x:Name="PrimaryBrushProbe"
+        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+        Visibility="Collapsed" />
+    <TextBlock
+        x:Name="AccentBrushProbe"
+        Foreground="{ThemeResource NegaflowAccentBrush}"
         Visibility="Collapsed" />
 </StackPanel>
 </UserControl>

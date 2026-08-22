@@ -32,12 +32,8 @@ public static class ExportPanelProjection
         string besideSourceText,
         string exportTitle)
     {
-        string exportFolder = string.IsNullOrWhiteSpace(exportSettings.FolderPath)
-            ? besideSourceText
-            : exportSettings.FolderPath;
-        string quickFolder = string.IsNullOrWhiteSpace(quickExportSettings.FolderPath)
-            ? besideSourceText
-            : quickExportSettings.FolderPath;
+        string exportFolder = FolderDisplay(exportSettings.FolderPath, besideSourceText);
+        string quickFolder = FolderDisplay(quickExportSettings.FolderPath, besideSourceText);
         string preview = string.Empty;
         string quickName = string.Empty;
         string summary = string.Empty;
@@ -76,5 +72,25 @@ public static class ExportPanelProjection
         return string.Create(
             CultureInfo.CurrentCulture,
             $"{metadata.PixelWidth}×{metadata.PixelHeight} px · {metadata.BitsPerSample}-bit");
+    }
+
+    /// <summary>
+    /// 폴더 줄에 적을 이름입니다. macOS <c>exportFolderDisplay</c> ·
+    /// <c>quickExportFolderDisplay</c> 와 같이 <b>마지막 한 칸</b>만 씁니다 - 한 줄에
+    /// 전체 경로를 우겨넣으면 가운데가 잘려 어느 폴더인지 오히려 알 수 없습니다.
+    /// 전체 경로는 그 줄의 도구 설명과 폴더 열기 단추가 알려 줍니다.
+    /// </summary>
+    private static string FolderDisplay(string folderPath, string besideSourceText)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath))
+        {
+            return besideSourceText;
+        }
+        string trimmed = folderPath.TrimEnd(
+            System.IO.Path.DirectorySeparatorChar,
+            System.IO.Path.AltDirectorySeparatorChar);
+        string name = System.IO.Path.GetFileName(trimmed);
+        // 드라이브 뿌리("C:\\")는 마지막 칸이 비어 있습니다. 그때는 경로 그대로 적습니다.
+        return name.Length > 0 ? name : folderPath;
     }
 }

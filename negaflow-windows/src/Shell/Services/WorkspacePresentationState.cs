@@ -82,6 +82,16 @@ public sealed class WorkspacePresentationState
     public void SetFilmstripHeight(double height) =>
         settingsStore.Update(value => value with { FilmstripHeight = height });
 
+    /// <summary>
+    /// 하단바가 정하는 필름스트립 표시(크기 · 차례 · 범위)입니다. macOS 는 이 셋을
+    /// <c>@AppStorage</c> 로 따로 들고 있으므로 여기서도 설정 한 덩어리에 함께 적습니다.
+    /// </summary>
+    public void UpdateFilmstripPresentation(Func<ShellPreferences, ShellPreferences> update)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        settingsStore.Update(update);
+    }
+
     public void UpdateExport(Func<ExportSettings, ExportSettings> update)
     {
         ArgumentNullException.ThrowIfNull(update);

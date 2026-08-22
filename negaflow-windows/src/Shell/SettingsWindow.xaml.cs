@@ -19,7 +19,9 @@ public sealed partial class SettingsWindow : Window
         this.settingsStore = settingsStore;
         InitializeComponent();
         WindowIcon.Apply(AppWindow);
-        Title = AppResources.Get("commandSettings", "Value");
+        LocalizedElement.Track(
+            this,
+            () => Title = AppResources.Get("commandSettings", "Value"));
 
         SettingsView.Initialize(workspaceState, AppWindow.Id, libraryHost, thumbnails);
         if (AppWindow.Presenter is OverlappedPresenter presenter)

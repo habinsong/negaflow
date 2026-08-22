@@ -53,6 +53,12 @@ internal sealed class DevelopWorkspaceCopy
         SetLocalizedNameAndTooltip(view.ResetTabButton, reset);
         view.PreviewCanvas.Localize();
         view.GrainMendPanel.Localize();
+        // 아래 상태줄도 리소스 문구입니다 — 사슬에서 빠져 있었습니다.
+        view.StatusBar.Localize();
+        // 사진 이름("사진 %d")과 필름 종류("컬러 네거티브")는 **항목을 만들 때** 정해집니다.
+        // 필름스트립·고름 상자는 그 항목을 그대로 보므로, 다시 만들지 않으면 언어를 바꿔도
+        // 옛 언어로 남습니다.
+        view.frames.Refresh();
     }
 
     private static void SetLocalizedNameAndTooltip(ButtonBase button, string text)

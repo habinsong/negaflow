@@ -18,9 +18,7 @@ public sealed partial class DiagnosticsReportView : UserControl
     public DiagnosticsReportView()
     {
         InitializeComponent();
-        Localize();
-        AppResources.LanguageChanged += OnLanguageChanged;
-        Unloaded += (_, _) => AppResources.LanguageChanged -= OnLanguageChanged;
+        LocalizedElement.Track(this, OnLanguageChanged);
     }
 
     /// <summary>보고서를 다시 만들어 달라는 요청입니다. 창이 채워 줍니다.</summary>
@@ -46,10 +44,9 @@ public sealed partial class DiagnosticsReportView : UserControl
         }
     }
 
-    private void OnLanguageChanged(object? sender, EventArgs args)
+    /// <summary>이름표와 보고서 본문이 모두 리소스 문구입니다.</summary>
+    private void OnLanguageChanged()
     {
-        _ = sender;
-        _ = args;
         Localize();
         Build();
     }

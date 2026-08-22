@@ -48,9 +48,10 @@ public sealed partial class ColorMixerEditor : UserControl
     public ColorMixerEditor()
     {
         InitializeComponent();
-        LocalizeControls();
         HueButton.IsChecked = true;
-        RebuildBands();
+        // 색조·채도·광도·모두와 밴드 이름(빨강·주황…)이 리소스에서 옵니다. 언어가 바뀌면
+        // 스스로 다시 겁니다 — 담고 있는 구역의 `Localize()` 는 머리글만 다시 겁니다.
+        LocalizedElement.Track(this, LocalizeControls);
     }
 
     /// <summary>이름은 macOS 와 같은 문자열이며 XAML 에 박아 두지 않습니다.</summary>
@@ -60,6 +61,9 @@ public sealed partial class ColorMixerEditor : UserControl
         SetPropertyText(SaturationButton, AppResources.Get("developSaturation", "Text"));
         SetPropertyText(LuminanceButton, AppResources.Get("developLuminance", "Text"));
         SetPropertyText(AllButton, AppResources.Get("developAll", "Text"));
+        // 밴드 이름은 만들 때 슬라이더 이름 줄에 들어가므로 다시 만들어야 바뀝니다.
+        RebuildBands();
+        SynchronizeBandValues();
     }
 
     private static void SetPropertyText(RadioButton radio, string text)

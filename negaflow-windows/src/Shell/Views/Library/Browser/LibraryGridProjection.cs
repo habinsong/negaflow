@@ -14,7 +14,7 @@ internal sealed class LibraryGridProjection
     {
         IReadOnlyList<LibraryFrameListItem> items = LibrarySorter.Sort(
             view.quickFilters.Apply(
-                view.CollectionsPanel.Apply(
+                view.ControlsPanel.CollectionsPanel.Apply(
                     LibraryFrameListItems.Filter(
                         view.allItems,
                         view.LibrarySearchBox?.Text ?? string.Empty))),

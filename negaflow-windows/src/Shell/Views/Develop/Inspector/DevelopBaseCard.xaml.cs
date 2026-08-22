@@ -86,6 +86,9 @@ public sealed partial class DevelopBaseCard : UserControl
         string baseTitle = AppResources.Get("developTabBase", "Value");
         BaseSectionTitleText.Text = baseTitle;
         AutomationProperties.SetName(BaseControlCard, baseTitle);
+        // 앞 판은 XAML 에 "Film base mode" 가 박혀 있어 어떤 언어에서도 그대로였습니다.
+        // macOS `SegmentedPicker` 에는 따로 이름이 없으므로 구역 이름을 그대로 씁니다.
+        AutomationProperties.SetName(BaseModeControl, baseTitle);
         SetRadioText(BaseAutoModeButton, AppResources.Get("developBaseModeAuto", "Content"));
         SetRadioText(BaseFilmModeButton, AppResources.Get("developBaseModeFilm", "Content"));
         SetRadioText(BaseManualModeButton, AppResources.Get("developBaseModeManual", "Content"));
@@ -105,6 +108,8 @@ public sealed partial class DevelopBaseCard : UserControl
         string reset = AppResources.Get("developReset", "Value");
         AutomationProperties.SetName(BasePickerResetButton, reset);
         ToolTipService.SetToolTip(BasePickerResetButton, reset);
+        // 고름 표시(선택됨/선택되지 않음)도 리소스에서 옵니다.
+        ApplyBasePickerVisual();
     }
 
     private void OnBasePickerToggled(object sender, RoutedEventArgs args)

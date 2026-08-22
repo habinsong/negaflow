@@ -33,8 +33,11 @@ internal sealed class DevelopFrameList
             return;
         }
 
+        // 하단바가 정한 범위와 차례를 그대로 씁니다. macOS
+        // `activeDevelopInteractionScopeFrameIDs` 와 같은 계산입니다 — 범위로 좁힌 뒤
+        // 정렬하며, 기준은 지금 보고 있는 사진입니다.
         IReadOnlyList<LibraryFrameListItem> items =
-            LibraryFrameListItems.From(view.libraryHost.Frames);
+            FilmstripPresentation.Project(view.libraryHost, view.workspaceState);
         bool hasFrames = items.Count > 0;
         view.FramePanel.Visibility = hasFrames ? Visibility.Visible : Visibility.Collapsed;
         view.NoFrameLeftPanel.Visibility = hasFrames ? Visibility.Collapsed : Visibility.Visible;

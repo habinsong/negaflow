@@ -34,7 +34,7 @@ public sealed partial class DevelopWorkspaceView
                 panel.Compare.ActiveMode == CanvasCompareMode.Raw;
         }
 
-        if (panel.Compare.IsComparingSplit)
+        if (panel.Compare.IsSplitRequested)
         {
             compareBeforeNeeded = true;
             RequestCompareBefore();
@@ -155,7 +155,9 @@ public sealed partial class DevelopWorkspaceView
     private void ShowCompareBefore(PreviewOutcome outcome)
     {
         compareBeforeInFlight = false;
-        if (panel is null || !panel.Compare.IsComparingSplit)
+        // 여기서도 **고른 모드**로 봅니다. 이 시점에는 Before 그림이 아직 없어
+        // `IsComparingSplit` 이 거짓이므로, 그것으로 막으면 결과를 버리게 됩니다.
+        if (panel is null || !panel.Compare.IsSplitRequested)
         {
             return;
         }

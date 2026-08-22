@@ -1,5 +1,10 @@
+using System.Collections.Generic;
+using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Media;
+using Windows.Graphics;
+using Rect = Windows.Foundation.Rect;
 
 namespace Negaflow.Shell;
 
@@ -28,6 +33,7 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         WindowIcon.Apply(AppWindow);
 
+        ShellView.TitleBarInteractiveRegionsChanged += OnTitleBarInteractiveRegionsChanged;
         ShellView.Initialize(
             workspaceState,
             nativeEngineStatusService,
@@ -103,6 +109,7 @@ public sealed partial class MainWindow : Window
         _ = sender;
         _ = args;
         UpdateCaptionInsets();
+        UpdateTitleBarInteractiveRegions();
     }
 
     private void OnShellSizeChanged(object sender, SizeChangedEventArgs args)
@@ -110,6 +117,7 @@ public sealed partial class MainWindow : Window
         _ = sender;
         _ = args;
         UpdateCaptionInsets();
+        UpdateTitleBarInteractiveRegions();
     }
 
     private void UpdateCaptionInsets()
@@ -123,6 +131,53 @@ public sealed partial class MainWindow : Window
         ShellView.UpdateCaptionInsets(
             AppWindow.TitleBar.LeftInset / scale,
             AppWindow.TitleBar.RightInset / scale);
+    }
+
+    private void OnTitleBarInteractiveRegionsChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ShellView.DispatcherQueue.TryEnqueue(UpdateTitleBarInteractiveRegions);
+    }
+
+    private void UpdateTitleBarInteractiveRegions()
+    {
+        if (!ExtendsContentIntoTitleBar || ShellView.XamlRoot is not { } root)
+        {
+            return;
+        }
+
+        double scale = root.RasterizationScale;
+        if (scale <= 0)
+        {
+            scale = 1;
+        }
+
+        List<RectInt32> rects = [];
+        foreach (FrameworkElement element in ShellView.TitleBarInteractiveElements)
+        {
+            if (element.Visibility != Visibility.Visible ||
+                element.ActualWidth <= 0 ||
+                element.ActualHeight <= 0)
+            {
+                continue;
+            }
+
+            GeneralTransform transform = element.TransformToVisual(null);
+            Rect bounds = transform.TransformBounds(
+                new Rect(0, 0, element.ActualWidth, element.ActualHeight));
+            rects.Add(new RectInt32(
+                (int)Math.Round(bounds.X * scale),
+                (int)Math.Round(bounds.Y * scale),
+                (int)Math.Round(bounds.Width * scale),
+                (int)Math.Round(bounds.Height * scale)));
+        }
+
+        InputNonClientPointerSource pointerSource =
+            InputNonClientPointerSource.GetForWindowId(AppWindow.Id);
+        pointerSource.SetRegionRects(
+            NonClientRegionKind.Passthrough,
+            rects.ToArray());
     }
 
     /// <summary>
@@ -276,6 +331,7 @@ public sealed partial class MainWindow : Window
         ShellView.SettingsRequested -= OnSettingsRequested;
         ShellView.QuickStartHelpRequested -= OnQuickStartHelpRequested;
         ShellView.AboutRequested -= OnAboutRequested;
+        ShellView.TitleBarInteractiveRegionsChanged -= OnTitleBarInteractiveRegionsChanged;
         settingsStore.Changed -= OnSettingsChanged;
         settingsWindow?.Close();
         settingsWindow = null;

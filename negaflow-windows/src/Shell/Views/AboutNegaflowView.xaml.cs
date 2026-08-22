@@ -9,8 +9,15 @@ public sealed partial class AboutNegaflowView : UserControl
     public AboutNegaflowView()
     {
         InitializeComponent();
+        LocalizedElement.Track(this, Localize);
+    }
+
+    private void Localize()
+    {
         AnniversaryText.Text = AppResources.Get("aboutAnniversaryMessage", "Text");
         VersionText.Text = $"{AppResources.Get("aboutVersionLabel", "Text")} {ApplicationVersion()}";
+        // macOS 는 이 줄을 `NSHumanReadableCopyright` 에서 읽고, 여섯 `InfoPlist.strings`
+        // 어디에도 번역이 없습니다 — 법 문구라 모든 언어에서 같습니다.
         CopyrightText.Text = "Copyright 2026 Song Habin";
     }
 

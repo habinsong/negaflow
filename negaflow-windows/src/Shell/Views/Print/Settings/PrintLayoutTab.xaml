@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Print.Settings.PrintLayoutTab"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls"
+    xmlns:print="using:Negaflow.Shell.Views.Print.Settings">
+
+    <!--
+        macOS `PrintWorkspaceInspector.layoutTab` 그대로입니다.
+
+        차례: 레이아웃·용지 크기(한 줄에 둘) → 방향 → 여백 → 눈금자 → (켬일 때만)
+        눈금자 단위 → 시트 색상 → 표면. 무리 사이에는 40% 분리선이 들어갑니다.
+
+        퍼포레이션은 macOS 에 없습니다 — Windows 에만 있던 창작이라 뺐습니다.
+        DPI 도 레이아웃이 아니라 출력 쪽 값이라 여기 두지 않습니다.
+    -->
+    <StackPanel Spacing="12">
+        <Border Padding="14" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="9">
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                    <FontIcon FontSize="13" Glyph="&#xE740;" />
+                    <TextBlock x:Name="PrintLayoutSectionLocalized" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
+                </StackPanel>
+
+                <!-- macOS `PrintInspectorPairedInlineFields` — 둘을 1:1 로 나누고 사이에
+                     높이 30 분리선을 둡니다. -->
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <print:PrintInspectorInlineField x:Name="LayoutModeField" x:FieldModifier="internal">
+                        <controls:NegaflowPopupPicker
+                        Variant="Inline"
+                            x:Name="LayoutModeSelector" x:FieldModifier="internal"
+                            AutomationProperties.AutomationId="negaflow.print.layout.mode"
+                            SelectionChanged="OnPrintPickerChanged" />
+                    </print:PrintInspectorInlineField>
+                    <Border
+                        x:Name="LayoutHeaderDivider"
+                        Grid.Column="1"
+                        Width="1"
+                        Height="30"
+                        Background="{ThemeResource NegaflowDividerBrush}"
+                        Opacity="0.45" />
+                    <print:PrintInspectorInlineField x:Name="PaperSizeField" x:FieldModifier="internal" Grid.Column="2">
+                        <controls:NegaflowPopupPicker
+                        Variant="Inline"
+                            x:Name="PaperSizeSelector" x:FieldModifier="internal"
+                            AutomationProperties.AutomationId="negaflow.print.paper-size"
+                            SelectionChanged="OnPrintPickerChanged" />
+                    </print:PrintInspectorInlineField>
+                </Grid>
+
+                <print:PrintInspectorDivider />
+
+                <print:PrintInspectorStackedField x:Name="OrientationField" x:FieldModifier="internal">
+                    <controls:NegaflowSegmentedPicker
+                        x:Name="OrientationSelector" x:FieldModifier="internal"
+                        AutomationProperties.AutomationId="negaflow.print.layout.orientation" />
+                </print:PrintInspectorStackedField>
+
+                <print:PrintInspectorDivider />
+
+                <!-- macOS `PrintInspectorSliderRow` — 라벨 왼쪽, 값 오른쪽, 슬라이더는 아래. -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="MarginText" x:FieldModifier="internal" VerticalAlignment="Center" FontSize="12" />
+                    <TextBlock
+                        x:Name="MarginValueText" x:FieldModifier="internal"
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </Grid>
+                <Slider
+                    x:Name="MarginSlider" x:FieldModifier="internal"
+                    Margin="0,-6,0,0"
+                    AutomationProperties.AutomationId="negaflow.print.margin"
+                    Maximum="50"
+                    Minimum="0"
+                    StepFrequency="1"
+                    ValueChanged="OnPrintSliderChanged" />
+
+                <print:PrintInspectorDivider />
+
+                <print:PrintInspectorStackedField x:Name="RulerField" x:FieldModifier="internal">
+                    <controls:NegaflowSegmentedPicker
+                        x:Name="RulerSelector" x:FieldModifier="internal"
+                        AutomationProperties.AutomationId="negaflow.print.layout.ruler" />
+                </print:PrintInspectorStackedField>
+
+                <!-- macOS 는 눈금자를 켰을 때만 단위 줄을 냅니다. -->
+                <print:PrintInspectorStackedField
+                    x:Name="RulerUnitField" x:FieldModifier="internal"
+                    Visibility="Collapsed">
+                    <controls:NegaflowSegmentedPicker
+                        x:Name="RulerUnitSelector" x:FieldModifier="internal"
+                        AutomationProperties.AutomationId="negaflow.print.layout.ruler-unit" />
+                </print:PrintInspectorStackedField>
+
+                <print:PrintInspectorDivider />
+
+                <print:PrintInspectorStackedField x:Name="SheetColorField" x:FieldModifier="internal">
+                    <controls:NegaflowSegmentedPicker
+                        x:Name="SheetBackgroundSelector" x:FieldModifier="internal"
+                        AutomationProperties.AutomationId="negaflow.print.layout.sheet-color" />
+                </print:PrintInspectorStackedField>
+
+                <print:PrintInspectorInlineField x:Name="SurfaceField" x:FieldModifier="internal">
+                    <controls:NegaflowPopupPicker
+                        Variant="Inline"
+                        x:Name="SurfaceSelector" x:FieldModifier="internal"
+                        AutomationProperties.AutomationId="negaflow.print.layout.surface"
+                        SelectionChanged="OnPrintPickerChanged" />
+                </print:PrintInspectorInlineField>
+            </StackPanel>
+        </Border>
+
+        <!-- 패키지 모드(콘택트 시트 · 사진 패키지 · 사용자 패키지)에서만 나오는 배치 값들입니다.
+             macOS `PrintPackageInspectorControls(scope: .layout)` 자리입니다. -->
+        <Border
+            x:Name="PackageLayoutCard" x:FieldModifier="internal"
+            Padding="14"
+            Background="{ThemeResource NegaflowCardBrush}"
+            CornerRadius="9"
+            Visibility="Collapsed">
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                    <FontIcon x:Name="PackageLayoutIcon" x:FieldModifier="internal" FontSize="13" Glyph="&#xE80A;" />
+                    <TextBlock x:Name="PackageLayoutTitle" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
+                </StackPanel>
+
+                <!-- 콘택트 시트만 행·열을 직접 정합니다(macOS `contactSheetControls`). -->
+                <Grid x:Name="GridSizeRow" x:FieldModifier="internal" ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <print:PrintInspectorInlineField x:Name="RowsField" x:FieldModifier="internal">
+                        <NumberBox
+                            x:Name="RowsBox" x:FieldModifier="internal"
+                            AutomationProperties.AutomationId="negaflow.print.rows"
+                            Maximum="12"
+                            Minimum="1"
+                            SpinButtonPlacementMode="Compact"
+                            ValueChanged="OnPrintNumberChanged" />
+                    </print:PrintInspectorInlineField>
+                    <Border Grid.Column="1" Width="1" Height="30" Background="{ThemeResource NegaflowDividerBrush}" Opacity="0.45" />
+                    <print:PrintInspectorInlineField x:Name="ColumnsField" x:FieldModifier="internal" Grid.Column="2">
+                        <NumberBox
+                            x:Name="ColumnsBox" x:FieldModifier="internal"
+                            AutomationProperties.AutomationId="negaflow.print.columns"
+                            Maximum="12"
+                            Minimum="1"
+                            SpinButtonPlacementMode="Compact"
+                            ValueChanged="OnPrintNumberChanged" />
+                    </print:PrintInspectorInlineField>
+                </Grid>
+
+                <!-- 사진 패키지는 담아 둔 판형을 고릅니다(macOS `picturePackageControls`). -->
+                <print:PrintInspectorInlineField
+                    x:Name="TemplateField" x:FieldModifier="internal"
+                    Visibility="Collapsed">
+                    <controls:NegaflowPopupPicker
+                        x:Name="TemplateSelector" x:FieldModifier="internal"
+                        Variant="Inline"
+                        AutomationProperties.AutomationId="negaflow.print.template"
+                        SelectionChanged="OnPrintPickerChanged" />
+                </print:PrintInspectorInlineField>
+
+                <!-- macOS 는 가로·세로 간격을 따로 냅니다. 하나로 묶으면 한 축만 벌릴 수 없습니다. -->
+                <StackPanel x:Name="SpacingGroup" x:FieldModifier="internal" Spacing="10">
+                    <print:PrintInspectorDivider />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="SpacingText" x:FieldModifier="internal" VerticalAlignment="Center" FontSize="12" />
+                        <TextBlock
+                            x:Name="SpacingValueText" x:FieldModifier="internal"
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            FontSize="12"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Grid>
+                    <Slider
+                        x:Name="SpacingSlider" x:FieldModifier="internal"
+                        Margin="0,-6,0,0"
+                        AutomationProperties.AutomationId="negaflow.print.spacing"
+                        Maximum="25"
+                        Minimum="0"
+                        StepFrequency="0.5"
+                        ValueChanged="OnPrintSliderChanged" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="VerticalSpacingText" x:FieldModifier="internal" VerticalAlignment="Center" FontSize="12" />
+                        <TextBlock
+                            x:Name="VerticalSpacingValueText" x:FieldModifier="internal"
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            FontSize="12"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Grid>
+                    <Slider
+                        x:Name="VerticalSpacingSlider" x:FieldModifier="internal"
+                        Margin="0,-6,0,0"
+                        AutomationProperties.AutomationId="negaflow.print.vertical-spacing"
+                        Maximum="25"
+                        Minimum="0"
+                        StepFrequency="0.5"
+                        ValueChanged="OnPrintSliderChanged" />
+                </StackPanel>
+
+                <print:PrintInspectorDivider />
+
+                <!-- 반복은 콘택트 시트만 씁니다(macOS `contactSheetControls`). -->
+                <print:PrintInspectorStackedField
+                    x:Name="RepeatField" x:FieldModifier="internal"
+                    Visibility="Collapsed">
+                    <controls:NegaflowSegmentedPicker
+                        x:Name="RepeatSelector" x:FieldModifier="internal"
+                        AutomationProperties.AutomationId="negaflow.print.repeat" />
+                </print:PrintInspectorStackedField>
+
+                <!-- 세 패키지 모드 모두에 있습니다(macOS `normalizeOrientationField`). -->
+                <print:PrintInspectorStackedField x:Name="NormalizeOrientationField" x:FieldModifier="internal">
+                    <controls:NegaflowSegmentedPicker
+                        x:Name="NormalizeOrientationSelector" x:FieldModifier="internal"
+                        AutomationProperties.AutomationId="negaflow.print.normalize-orientation" />
+                </print:PrintInspectorStackedField>
+
+                <!-- 사용자 패키지의 셀 목록입니다. macOS `customPackageControls` 와 같이
+                     칸마다 접었다 펴는 아코디언이며, 안에 원본 사진·페이지·이미지 맞춤·
+                     90° 회전·가로/세로 위치·너비/높이와 순서 단추가 들어갑니다. -->
+                <StackPanel x:Name="CustomPanel" x:FieldModifier="internal" Spacing="10" Visibility="Collapsed">
+                    <print:PrintInspectorDivider />
+                    <StackPanel x:Name="CustomItemsHost" x:FieldModifier="internal" Spacing="8" />
+                    <Button
+                        x:Name="CustomAddButton" x:FieldModifier="internal"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        AutomationProperties.AutomationId="negaflow.print.custom.add"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="OnCustomAddClicked"
+                        CornerRadius="8" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- macOS `PrintLayoutTemplateControls` — 템플릿 이름 칸 + 저장. -->
+        <Border Padding="14" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="9">
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                    <FontIcon FontSize="13" Glyph="&#xE81E;" />
+                    <TextBlock x:Name="LayoutTemplateSectionText" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
+                </StackPanel>
+                <Grid ColumnSpacing="6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="LayoutTemplateNameLabel" x:FieldModifier="internal" VerticalAlignment="Center" FontSize="12" />
+                    <TextBox
+                        x:Name="LayoutTemplateNameBox" x:FieldModifier="internal"
+                        Grid.Column="1"
+                        AutomationProperties.AutomationId="negaflow.print.template.name"
+                        Style="{StaticResource NegaflowInspectorTextBoxStyle}"
+                        MaxLength="80"
+                        TextChanged="OnLayoutTemplateNameChanged" />
+                    <Button
+                        x:Name="LayoutTemplateSaveButton" x:FieldModifier="internal"
+                        Grid.Column="2"
+                        AutomationProperties.AutomationId="negaflow.print.template.save"
+                        Click="OnLayoutTemplateSaveClicked"
+                        Style="{StaticResource NegaflowInspectorButtonStyle}" />
+                </Grid>
+                <Grid x:Name="LayoutTemplateAppliedRow" x:FieldModifier="internal" ColumnSpacing="6" Visibility="Collapsed">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <controls:NegaflowPopupPicker
+                        x:Name="LayoutTemplateSelector" x:FieldModifier="internal"
+                        Variant="Inline"
+                        AutomationProperties.AutomationId="negaflow.print.template.list" />
+                    <Button
+                        x:Name="LayoutTemplateApplyButton" x:FieldModifier="internal"
+                        Grid.Column="1"
+                        AutomationProperties.AutomationId="negaflow.print.template.apply"
+                        Click="OnLayoutTemplateApplyClicked"
+                        Style="{StaticResource NegaflowInspectorButtonStyle}" />
+                    <Button
+                        x:Name="LayoutTemplateDeleteButton" x:FieldModifier="internal"
+                        Grid.Column="2"
+                        AutomationProperties.AutomationId="negaflow.print.template.delete"
+                        Click="OnLayoutTemplateDeleteClicked"
+                        Style="{StaticResource NegaflowInspectorButtonStyle}" />
+                </Grid>
+                <TextBlock
+                    x:Name="LayoutTemplateStatusText" x:FieldModifier="internal"
+                    FontSize="11"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

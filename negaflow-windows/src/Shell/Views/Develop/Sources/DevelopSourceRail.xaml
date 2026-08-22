@@ -13,7 +13,7 @@
             Click="OnRailClicked"
             Style="{StaticResource NegaflowSidebarButtonStyle}"
             Tag="Library">
-            <FontIcon x:Name="LibraryRailIcon" x:FieldModifier="internal" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE81E;" />
+            <FontIcon x:Name="LibraryRailIcon" x:FieldModifier="internal" FontSize="15" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Glyph="&#xE81E;" />
         </Button>
         <Button
             x:Name="FilesRailButton"

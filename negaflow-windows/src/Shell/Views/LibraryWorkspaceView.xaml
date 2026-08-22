@@ -20,6 +20,21 @@
                 ItemsPath="Items" />
             <controls:FilmTypeNameConverter x:Key="FilmTypeNameConverter" />
             <controls:PickStateBrushConverter x:Key="PickStateBrushConverter" />
+            <!-- 각 보기 모드 칸은 항상 1/4 폭을 유지하고, 긴 번역만 칸 안에서 축소합니다. -->
+            <DataTemplate x:Key="LibraryModeTextTemplate">
+                <Viewbox
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Stretch="Uniform"
+                    StretchDirection="DownOnly">
+                    <TextBlock
+                        FontSize="12"
+                        FontWeight="SemiBold"
+                        Text="{Binding}"
+                        TextAlignment="Center"
+                        TextWrapping="NoWrap" />
+                </Viewbox>
+            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
     <Grid x:Name="Root" x:FieldModifier="internal" Background="{ThemeResource NegaflowWindowBrush}" SizeChanged="OnRootSizeChanged">
@@ -29,140 +44,7 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Grid x:Name="ControlsPanel" x:FieldModifier="internal" Grid.Column="0" Background="{ThemeResource NegaflowPanelBrush}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="76" />
-                <ColumnDefinition Width="1" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <StackPanel Grid.Column="0" Padding="22,10,22,0" Spacing="7">
-                <Button
-                    x:Name="ImportRailButton" x:FieldModifier="internal"
-                    AutomationProperties.AutomationId="negaflow.library.controls.importing"
-                    Background="{ThemeResource NegaflowSelectionBrush}"
-                    Click="OnSourceRailClicked"
-                    Style="{StaticResource NegaflowSidebarButtonStyle}"
-                    Tag="Importing">
-                    <FontIcon x:Name="ImportRailIcon" x:FieldModifier="internal" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE896;" />
-                </Button>
-                <Button
-                    x:Name="FilesRailButton" x:FieldModifier="internal"
-                    AutomationProperties.AutomationId="negaflow.library.controls.files"
-                    Click="OnSourceRailClicked"
-                    Style="{StaticResource NegaflowSidebarButtonStyle}"
-                    Tag="Files">
-                    <FontIcon x:Name="FilesRailIcon" x:FieldModifier="internal" FontSize="15" Glyph="&#xE8B7;" />
-                </Button>
-                <Button
-                    x:Name="CollectionsRailButton" x:FieldModifier="internal"
-                    AutomationProperties.AutomationId="negaflow.library.controls.collections"
-                    Click="OnSourceRailClicked"
-                    Style="{StaticResource NegaflowSidebarButtonStyle}"
-                    Tag="Collections">
-                    <FontIcon x:Name="CollectionsRailIcon" x:FieldModifier="internal" FontSize="15" Glyph="&#xE8FD;" />
-                </Button>
-            </StackPanel>
-
-            <Border Grid.Column="1" Background="{ThemeResource NegaflowDividerBrush}" />
-
-            <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="44" />
-                    <RowDefinition Height="1" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-
-                <Grid Grid.Row="0" Padding="12,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <FontIcon x:Name="SourceHeaderIcon" x:FieldModifier="internal" Grid.Column="0" Margin="0,0,7,0" VerticalAlignment="Center" FontSize="14" Glyph="&#xE896;" />
-                    <TextBlock x:Name="ImportHeaderText" x:FieldModifier="internal" Grid.Column="1" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
-                    <TextBlock x:Name="SourceHeaderCountText" x:FieldModifier="internal" Grid.Column="2" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="0" />
-                </Grid>
-
-                <Border Grid.Row="1" Background="{ThemeResource NegaflowDividerBrush}" />
-
-                <ScrollViewer x:Name="ImportSourcePanel" x:FieldModifier="internal" Grid.Row="2">
-                    <StackPanel Padding="12,14" Spacing="12">
-                        <TextBlock x:Name="ImportSectionText" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
-                        <!-- macOS 가져오기 막대입니다. 세 방법이 <b>하나의 캡슐</b>을 나눠
-                             쓰며 사이에 얇은 세로선이 들어갑니다. 현상 좌측탭
-                             (`DevelopLibrarySourcePanel`)과 같은 모양이어야 두 화면이
-                             갈라지지 않습니다. 안내 문구와 낱개 단추 셋은 macOS 에 없습니다. -->
-                        <Border
-                            Padding="2"
-                            Background="{ThemeResource NegaflowSubtleFillBrush}"
-                            CornerRadius="16">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="1" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="1" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Button
-                                    x:Name="ImportImagesButton" x:FieldModifier="internal"
-                                    AutomationProperties.AutomationId="negaflow.library.import.images"
-                                    Click="OnImportClicked"
-                                    Style="{StaticResource NegaflowImportActionStyle}">
-                                    <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                        <StackPanel Orientation="Horizontal" Spacing="5">
-                                            <FontIcon FontSize="12" Glyph="&#xE91B;" />
-                                            <TextBlock x:Name="ImportImagesText" x:FieldModifier="internal" />
-                                        </StackPanel>
-                                    </Viewbox>
-                                </Button>
-                                <Border Grid.Column="1" Height="16" VerticalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
-                                <Button
-                                    x:Name="ImportFoldersButton" x:FieldModifier="internal"
-                                    Grid.Column="2"
-                                    AutomationProperties.AutomationId="negaflow.library.import.folders"
-                                    Click="OnImportFoldersClicked"
-                                    Style="{StaticResource NegaflowImportActionStyle}">
-                                    <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                        <StackPanel Orientation="Horizontal" Spacing="5">
-                                            <FontIcon FontSize="12" Glyph="&#xE8B7;" />
-                                            <TextBlock x:Name="ImportFoldersText" x:FieldModifier="internal" />
-                                        </StackPanel>
-                                    </Viewbox>
-                                </Button>
-                                <Border Grid.Column="3" Height="16" VerticalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
-                                <ToggleButton
-                                    x:Name="ImportScannerButton" x:FieldModifier="internal"
-                                    Grid.Column="4"
-                                    AutomationProperties.AutomationId="negaflow.library.import.scanner"
-                                    Click="OnImportScannerClicked"
-                                    Style="{StaticResource NegaflowImportToggleStyle}">
-                                    <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                        <StackPanel Orientation="Horizontal" Spacing="5">
-                                            <FontIcon FontSize="12" Glyph="&#xE950;" />
-                                            <TextBlock x:Name="ImportScannerText" x:FieldModifier="internal" />
-                                        </StackPanel>
-                                    </Viewbox>
-                                </ToggleButton>
-                            </Grid>
-                        </Border>
-                        <TextBlock x:Name="ImportStatusText" x:FieldModifier="internal" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-
-                        <scanner:LibraryScanPanel x:Name="ScanPanel" x:FieldModifier="internal" />
-                    </StackPanel>
-                </ScrollViewer>
-
-                <sources:LibraryFilesSourceTree
-                    x:Name="FilesSourceTree" x:FieldModifier="internal"
-                    Grid.Row="2"
-                    Visibility="Collapsed" />
-                <collections:LibraryCollectionsPanel
-                    x:Name="CollectionsPanel" x:FieldModifier="internal"
-                    Grid.Row="2"
-                    Visibility="Collapsed" />
-            </Grid>
-        </Grid>
+        <sources:LibrarySourcePanel x:Name="ControlsPanel" x:FieldModifier="internal" Grid.Column="0" />
 
         <Border Grid.Column="1" Background="{ThemeResource NegaflowDividerBrush}" />
         <primitives:Thumb
@@ -444,7 +326,9 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Bottom"
                     Spacing="6">
-                    <Border Width="280" Padding="2" Background="{ThemeResource NegaflowSubtleFillBrush}" CornerRadius="16">
+                    <!-- macOS 기준 280pt에서, 다국어 캡슐 문구가 잘리지 않도록
+                         사용자 요청에 따라 20% 확장한 336pt입니다. -->
+                    <Border Width="336" Padding="2" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="16">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -455,26 +339,26 @@
                             <!-- macOS `LibraryViewMode.allCases` 차례 그대로입니다 —
                                  폴더별 · 필름 종류 · 오프라인 · 전체. 칸은 높이 28 · 좌우 여백 6 ·
                                  라운딩 14 · 글꼴 `.caption.weight(.semibold)` 입니다. -->
-                            <Button x:Name="FoldersModeButton" x:FieldModifier="internal" Grid.Column="0" MinHeight="28" Padding="6,0" CornerRadius="14" FontSize="12" FontWeight="SemiBold" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.folders" Click="OnFoldersModeClicked" />
-                            <DropDownButton x:Name="FilmTypeModeButton" x:FieldModifier="internal" Grid.Column="1" MinHeight="28" Padding="6,0" CornerRadius="14" FontSize="12" FontWeight="SemiBold" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.film-type">
-                                <DropDownButton.Flyout>
+                            <Button x:Name="FoldersModeButton" x:FieldModifier="internal" Grid.Column="0" Height="28" MinHeight="28" MinWidth="0" Padding="4,0" CornerRadius="14" FontSize="12" FontWeight="SemiBold" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ContentTemplate="{StaticResource LibraryModeTextTemplate}" AutomationProperties.AutomationId="negaflow.library.view.folders" Click="OnFoldersModeClicked" />
+                            <Button x:Name="FilmTypeModeButton" x:FieldModifier="internal" Grid.Column="1" Height="28" MinHeight="28" MinWidth="0" Padding="4,0" CornerRadius="14" FontSize="12" FontWeight="SemiBold" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ContentTemplate="{StaticResource LibraryModeTextTemplate}" AutomationProperties.AutomationId="negaflow.library.view.film-type">
+                                <Button.Flyout>
                                     <MenuFlyout>
                                         <MenuFlyoutItem x:Name="ColorNegativeFilmTypeItem" x:FieldModifier="internal" Tag="ColorNegative" Click="OnFilmTypeClicked" />
                                         <MenuFlyoutItem x:Name="ColorPositiveFilmTypeItem" x:FieldModifier="internal" Tag="ColorPositive" Click="OnFilmTypeClicked" />
                                         <MenuFlyoutItem x:Name="BlackAndWhiteNegativeFilmTypeItem" x:FieldModifier="internal" Tag="BlackAndWhiteNegative" Click="OnFilmTypeClicked" />
                                         <MenuFlyoutItem x:Name="BlackAndWhitePositiveFilmTypeItem" x:FieldModifier="internal" Tag="BlackAndWhitePositive" Click="OnFilmTypeClicked" />
                                     </MenuFlyout>
-                                </DropDownButton.Flyout>
-                            </DropDownButton>
-                            <Button x:Name="OfflineModeButton" x:FieldModifier="internal" Grid.Column="2" MinHeight="28" Padding="6,0" CornerRadius="14" FontSize="12" FontWeight="SemiBold" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.offline" Click="OnOfflineModeClicked" />
-                            <Button x:Name="AllModeButton" x:FieldModifier="internal" Grid.Column="3" MinHeight="28" Padding="6,0" CornerRadius="14" FontSize="12" FontWeight="SemiBold" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.all" Click="OnAllModeClicked" />
+                                </Button.Flyout>
+                            </Button>
+                            <Button x:Name="OfflineModeButton" x:FieldModifier="internal" Grid.Column="2" Height="28" MinHeight="28" MinWidth="0" Padding="4,0" CornerRadius="14" FontSize="12" FontWeight="SemiBold" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ContentTemplate="{StaticResource LibraryModeTextTemplate}" AutomationProperties.AutomationId="negaflow.library.view.offline" Click="OnOfflineModeClicked" />
+                            <Button x:Name="AllModeButton" x:FieldModifier="internal" Grid.Column="3" Height="28" MinHeight="28" MinWidth="0" Padding="4,0" CornerRadius="14" FontSize="12" FontWeight="SemiBold" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ContentTemplate="{StaticResource LibraryModeTextTemplate}" AutomationProperties.AutomationId="negaflow.library.view.all" Click="OnAllModeClicked" />
                         </Grid>
                     </Border>
                     <!-- macOS `LibrarySearchField` — `HStack(spacing: 7) { 돋보기, TextField, 지우기 }`
-                         에 좌우 여백 9 · 280×28 · 라운딩 7 · 테두리 primary 12% 입니다.
+                         에 좌우 여백 9 · 336×28 · 라운딩 7 · 테두리 primary 12% 입니다.
                          지우기는 글자가 있을 때만 나옵니다. -->
                     <Border
-                        Width="280"
+                        Width="336"
                         Height="28"
                         Padding="9,0"
                         BorderBrush="{ThemeResource NegaflowDividerBrush}"
@@ -495,11 +379,15 @@
                             <TextBox
                                 x:Name="LibrarySearchBox" x:FieldModifier="internal"
                                 Grid.Column="1"
+                                Height="28"
+                                MinHeight="0"
                                 VerticalAlignment="Center"
-                                Padding="0"
+                                VerticalContentAlignment="Center"
+                                Padding="0,5,0,0"
                                 Background="Transparent"
                                 BorderThickness="0"
                                 FontSize="12"
+                                TextWrapping="NoWrap"
                                 AutomationProperties.AutomationId="negaflow.library.search"
                                 TextChanged="OnLibrarySearchTextChanged" />
                             <Button

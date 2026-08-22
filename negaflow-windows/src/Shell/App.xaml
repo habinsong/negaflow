@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Negaflow.Shell.Views.Controls"
+    xmlns:print="using:Negaflow.Shell.Views.Print.Settings"
     xmlns:sources="using:Negaflow.Shell.Views.Library.Sources"
     xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives">
     <Application.Resources>
@@ -12,6 +13,9 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
                 <ResourceDictionary Source="ms-appx:///Styles/Pills.xaml" />
                 <ResourceDictionary Source="ms-appx:///Styles/Segments.xaml" />
+                <!-- 알약 판형(Pills)을 `BasedOn` 으로 물려받으므로 그 뒤에 옵니다. -->
+                <ResourceDictionary Source="ms-appx:///Styles/Export.xaml" />
+                <ResourceDictionary Source="ms-appx:///Styles/Inspector.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
@@ -29,9 +33,32 @@
                     <SolidColorBrush x:Key="NegaflowRatingEmptyBrush" Color="#73000000" />
                     <SolidColorBrush x:Key="NegaflowAccentBrush" Color="#FF007AFF" />
                     <SolidColorBrush x:Key="NegaflowAccentSoftBrush" Color="#33007AFF" />
+                    <!-- 인화 인스펙터 탭의 고른 칸입니다. macOS `accentColor.opacity(0.16)`. -->
+                    <SolidColorBrush x:Key="NegaflowAccentTabBrush" Color="#29007AFF" />
                     <SolidColorBrush x:Key="NegaflowHoverFillBrush" Color="#1F000000" />
                     <SolidColorBrush x:Key="NegaflowSegmentTrackBrush" Color="#12000000" />
                     <SolidColorBrush x:Key="NegaflowSegmentThumbBrush" Color="#FFFFFFFF" />
+                    <!--
+                        macOS `liquidSurface` 한 벌입니다. 어두운 테마 실측
+                        (현상뷰_좌측탭_세로탭_내보내기.png): 카드 45,46,47 위의 표면이
+                        66,67,68 → 흰색 10%, 두르는 실선은 94,96,97 → 흰색 20%.
+                        분리선은 65,66,67 → 흰색 10% 입니다. 밝은 테마는 같은 비율의 검정입니다.
+                    -->
+                    <SolidColorBrush x:Key="NegaflowGlassFillBrush" Color="#1A000000" />
+                    <SolidColorBrush x:Key="NegaflowGlassStrokeBrush" Color="#33000000" />
+                    <SolidColorBrush x:Key="NegaflowFormDividerBrush" Color="#1A000000" />
+                    <!-- 캡슐 분절에서 고른 칸입니다. 밝은 테마는 흰 카드 위 흰 알약입니다. -->
+                    <SolidColorBrush x:Key="NegaflowGlassSegmentThumbBrush" Color="#FFFFFFFF" />
+                    <!--
+                        WinUI 기본 Button/Slider/Toggle/Radio/CheckBox 템플릿은
+                        NegaflowAccentBrush가 아니라 SystemAccentColorDark*를 읽습니다.
+                        기본 토큰이 Windows 시스템 남색으로 남지 않도록 macOS systemBlue에
+                        맞춥니다. 명시적인 하늘색 채널 색상은 이 토큰과 별개라 유지됩니다.
+                    -->
+                    <Color x:Key="SystemAccentColor">#007AFF</Color>
+                    <Color x:Key="SystemAccentColorDark1">#007AFF</Color>
+                    <Color x:Key="SystemAccentColorDark2">#007AFF</Color>
+                    <Color x:Key="SystemAccentColorDark3">#007AFF</Color>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="NegaflowWindowBrush" Color="#FF1D1D1D" />
@@ -48,9 +75,27 @@
                     <SolidColorBrush x:Key="NegaflowRatingEmptyBrush" Color="#73FFFFFF" />
                     <SolidColorBrush x:Key="NegaflowAccentBrush" Color="#FF0A84FF" />
                     <SolidColorBrush x:Key="NegaflowAccentSoftBrush" Color="#330A84FF" />
+                    <SolidColorBrush x:Key="NegaflowAccentTabBrush" Color="#290A84FF" />
                     <SolidColorBrush x:Key="NegaflowHoverFillBrush" Color="#1FFFFFFF" />
                     <SolidColorBrush x:Key="NegaflowSegmentTrackBrush" Color="#12FFFFFF" />
-                    <SolidColorBrush x:Key="NegaflowSegmentThumbBrush" Color="#FF333436" />
+                    <!--
+                        macOS `SegmentedPicker` 의 고른 칸은 `.background`(창 바탕)로 채웁니다 —
+                        즉 카드보다 **어둡습니다**. 실측(인화뷰_기본.png): 카드 47,49,50 ·
+                        트랙 60,61,62 · 고른 칸 38,42,45. 카드와 같은 #333436 을 쓰면 고른 칸이
+                        카드에 묻혀 **선택 표시가 아예 보이지 않습니다**(사용자 신고).
+                    -->
+                    <SolidColorBrush x:Key="NegaflowSegmentThumbBrush" Color="#FF292A2C" />
+                    <!-- 위 밝은 테마의 주석과 같은 실측값입니다. -->
+                    <SolidColorBrush x:Key="NegaflowGlassFillBrush" Color="#1AFFFFFF" />
+                    <SolidColorBrush x:Key="NegaflowGlassStrokeBrush" Color="#33FFFFFF" />
+                    <SolidColorBrush x:Key="NegaflowFormDividerBrush" Color="#1AFFFFFF" />
+                    <!-- 어두운 테마에서 고른 칸은 카드보다 **어둡습니다**(40,41,42 = 검정 11%). -->
+                    <SolidColorBrush x:Key="NegaflowGlassSegmentThumbBrush" Color="#1C000000" />
+                    <!-- WinUI 기본 강조색을 macOS의 어두운 테마 systemBlue로 고정합니다. -->
+                    <Color x:Key="SystemAccentColor">#0A84FF</Color>
+                    <Color x:Key="SystemAccentColorDark1">#0A84FF</Color>
+                    <Color x:Key="SystemAccentColorDark2">#0A84FF</Color>
+                    <Color x:Key="SystemAccentColorDark3">#0A84FF</Color>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="HighContrast">
                     <SolidColorBrush x:Key="NegaflowWindowBrush" Color="{ThemeResource SystemColorWindowColor}" />
@@ -67,9 +112,14 @@
                     <SolidColorBrush x:Key="NegaflowRatingEmptyBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
                     <SolidColorBrush x:Key="NegaflowAccentBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="NegaflowAccentSoftBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <SolidColorBrush x:Key="NegaflowAccentTabBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="NegaflowHoverFillBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="NegaflowSegmentTrackBrush" Color="{ThemeResource SystemColorWindowColor}" />
                     <SolidColorBrush x:Key="NegaflowSegmentThumbBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <SolidColorBrush x:Key="NegaflowGlassFillBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="NegaflowGlassStrokeBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="NegaflowFormDividerBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="NegaflowGlassSegmentThumbBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
@@ -94,7 +144,50 @@
                 <Setter Property="CornerRadius" Value="12" />
                 <Setter Property="FontSize" Value="12" />
                 <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid x:Name="ImportActionRoot" Background="Transparent" CornerRadius="12">
+                                <Border x:Name="ImportActionHover" CornerRadius="12" />
+                                <ContentPresenter
+                                    x:Name="ImportActionContent"
+                                    HorizontalAlignment="Stretch"
+                                    Padding="{TemplateBinding Padding}"
+                                    HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                    VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                    FontSize="{TemplateBinding FontSize}"
+                                    Foreground="{TemplateBinding Foreground}" />
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="ImportActionHover.Background" Value="{ThemeResource NegaflowHoverFillBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="ImportActionHover.Background" Value="{ThemeResource NegaflowHoverFillBrush}" />
+                                                <Setter Target="ImportActionContent.Opacity" Value="0.75" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="ImportActionRoot.Opacity" Value="0.4" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
             <!-- 스캐너 칸만 켜짐 상태가 있습니다. 나머지 값은 위와 같습니다. -->
             <Style x:Key="NegaflowImportToggleStyle" TargetType="primitives:ToggleButton">
@@ -105,7 +198,71 @@
                 <Setter Property="CornerRadius" Value="12" />
                 <Setter Property="FontSize" Value="12" />
                 <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="primitives:ToggleButton">
+                            <Grid x:Name="ImportToggleRoot" Background="Transparent" CornerRadius="12">
+                                <Border x:Name="ImportToggleHover" CornerRadius="12" />
+                                <ContentPresenter
+                                    x:Name="ImportToggleContent"
+                                    HorizontalAlignment="Stretch"
+                                    Padding="{TemplateBinding Padding}"
+                                    HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                    VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                    FontSize="{TemplateBinding FontSize}"
+                                    Foreground="{TemplateBinding Foreground}" />
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="ImportToggleHover.Background" Value="{ThemeResource NegaflowHoverFillBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="ImportToggleHover.Background" Value="{ThemeResource NegaflowHoverFillBrush}" />
+                                                <Setter Target="ImportToggleContent.Opacity" Value="0.75" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Checked" />
+                                        <VisualState x:Name="CheckedPointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="ImportToggleHover.Background" Value="{ThemeResource NegaflowHoverFillBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="CheckedPressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="ImportToggleHover.Background" Value="{ThemeResource NegaflowHoverFillBrush}" />
+                                                <Setter Target="ImportToggleContent.Opacity" Value="0.75" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="CheckedDisabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="ImportToggleRoot.Opacity" Value="0.4" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="ImportToggleRoot.Opacity" Value="0.4" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Indeterminate" />
+                                        <VisualState x:Name="IndeterminatePointerOver" />
+                                        <VisualState x:Name="IndeterminatePressed" />
+                                        <VisualState x:Name="IndeterminateDisabled" />
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
             <!-- 폴더 목록 한 줄의 색입니다. 코드에서 Application.Current.Resources 로 읽으면
                  ThemeDictionaries 가 요소 테마로 풀리지 않으므로, 위 주의대로 여기서 겁니다. -->
@@ -120,6 +277,9 @@
                 <Setter Property="controls:SettingsBrushes.DividerBrush" Value="{ThemeResource NegaflowDividerBrush}" />
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
             </Style>
+            <Style TargetType="print:PrintInspectorDivider">
+                <Setter Property="controls:SettingsBrushes.DividerBrush" Value="{ThemeResource NegaflowDividerBrush}" />
+            </Style>
             <Style TargetType="controls:SettingsRow">
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
             </Style>
@@ -129,6 +289,7 @@
             <Style TargetType="controls:SettingsValueRow">
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
                 <Setter Property="controls:SettingsBrushes.SecondaryForeground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+                <Setter Property="controls:SettingsBrushes.DangerBrush" Value="{ThemeResource SystemFillColorCriticalBrush}" />
             </Style>
             <Style TargetType="controls:SettingsFootnote">
                 <Setter Property="controls:SettingsBrushes.SecondaryForeground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -150,7 +311,6 @@
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
                 <Setter Property="controls:SettingsBrushes.SecondaryForeground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
             </Style>
-
 
             <Style x:Key="NegaflowToolbarTextButtonStyle" TargetType="Button">
                 <Setter Property="MinWidth" Value="74" />
@@ -180,6 +340,55 @@
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="CornerRadius" Value="9" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid x:Name="RailRoot" Background="Transparent" CornerRadius="9">
+                                <Border
+                                    x:Name="RailSelection"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="9" />
+                                <ContentPresenter
+                                    x:Name="RailContent"
+                                    Padding="{TemplateBinding Padding}"
+                                    HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                    VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                    FontSize="{TemplateBinding FontSize}"
+                                    Foreground="{TemplateBinding Foreground}" />
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <!-- 선택 음영은 마우스가 올라가도 그대로 둡니다. -->
+                                        <VisualState x:Name="PointerOver" />
+                                        <VisualState x:Name="Pressed" />
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="RailRoot.Opacity" Value="0.4" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 스캔 카드의 보조 단추는 네모 테두리 없이 가져오기 캡슐과 같은 호버 표면만 냅니다. -->
+            <Style
+                x:Key="NegaflowScannerPlainButtonStyle"
+                BasedOn="{StaticResource NegaflowImportActionStyle}"
+                TargetType="Button">
+                <Setter Property="MinWidth" Value="24" />
+                <Setter Property="MinHeight" Value="24" />
+                <Setter Property="Padding" Value="4,0" />
+                <Setter Property="FontSize" Value="12" />
             </Style>
 
             <!--

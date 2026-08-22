@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Settings.SettingsExportPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
+    <StackPanel Spacing="30">
+                    <controls:SettingsSection x:Name="QuickExportSection" x:FieldModifier="internal">
+                        <controls:SettingsSection.Rows>
+                            <controls:SettingsRow x:Name="QuickExportFormatRow" x:FieldModifier="internal">
+                                <controls:NegaflowSegmentedPicker
+                                    x:Name="QuickExportFormatPicker" x:FieldModifier="internal"
+                                    Width="112"
+                                    AutomationProperties.AutomationId="settings.export.quick-format" />
+                            </controls:SettingsRow>
+                            <controls:SettingsRow x:Name="QuickExportDpiRow" x:FieldModifier="internal">
+                                <ComboBox
+                                    x:Name="QuickExportDpiComboBox" x:FieldModifier="internal"
+                                    MinWidth="120"
+                                    AutomationProperties.AutomationId="settings.export.quick-dpi"
+                                    SelectionChanged="OnQuickExportDpiChanged" />
+                            </controls:SettingsRow>
+                            <controls:SettingsRow x:Name="QuickExportSizeRow" x:FieldModifier="internal">
+                                <ComboBox
+                                    x:Name="QuickExportSizeComboBox" x:FieldModifier="internal"
+                                    MinWidth="150"
+                                    AutomationProperties.AutomationId="settings.export.quick-size"
+                                    SelectionChanged="OnQuickExportSizeChanged" />
+                            </controls:SettingsRow>
+                            <controls:SettingsValueRow x:Name="QuickExportFolderRow" x:FieldModifier="internal" />
+                        </controls:SettingsSection.Rows>
+                    </controls:SettingsSection>
+
+                    <controls:SettingsSection x:Name="ExportVerificationSection" x:FieldModifier="internal">
+                        <controls:SettingsSection.Rows>
+                            <controls:SettingsRow x:Name="ExportVerificationRow" x:FieldModifier="internal">
+                                <controls:NegaflowSegmentedPicker
+                                    x:Name="ExportVerificationPicker" x:FieldModifier="internal"
+                                    Width="176"
+                                    AutomationProperties.AutomationId="settings.export.verification" />
+                            </controls:SettingsRow>
+                            <controls:SettingsFootnote x:Name="ExportVerificationHelp" x:FieldModifier="internal" />
+                        </controls:SettingsSection.Rows>
+                    </controls:SettingsSection>
+
+                    <controls:SettingsSection x:Name="ColorManagementSection" x:FieldModifier="internal">
+                        <controls:SettingsSection.Rows>
+                            <controls:SettingsRow x:Name="ExportColorRow" x:FieldModifier="internal">
+                                <ComboBox
+                                    x:Name="ExportColorSpaceComboBox" x:FieldModifier="internal"
+                                    MinWidth="150"
+                                    AutomationProperties.AutomationId="settings.export.color-space"
+                                    SelectionChanged="OnExportColorSpaceChanged">
+                                    <ComboBoxItem Content="sRGB" />
+                                    <ComboBoxItem Content="Display P3" />
+                                    <ComboBoxItem Content="Adobe RGB" />
+                                </ComboBox>
+                            </controls:SettingsRow>
+                            <controls:SettingsToggleRow
+                                x:Name="SoftProofRow" x:FieldModifier="internal"
+                                AutomationId="settings.export.soft-proof" />
+                            <controls:SettingsRow x:Name="SoftProofProfileRow" x:FieldModifier="internal">
+                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <TextBlock
+                                        x:Name="SoftProofProfileName" x:FieldModifier="internal"
+                                        FontSize="13"
+                                        VerticalAlignment="Center"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <Button
+                                        x:Name="SoftProofChooseProfileButton" x:FieldModifier="internal"
+                                        AutomationProperties.AutomationId="settings.export.soft-proof-profile"
+                                        Click="OnChooseSoftProofProfile" />
+                                    <Button
+                                        x:Name="SoftProofResetProfileButton" x:FieldModifier="internal"
+                                        Visibility="Collapsed"
+                                        Click="OnResetSoftProofProfile" />
+                                </StackPanel>
+                            </controls:SettingsRow>
+                            <controls:SettingsFootnote
+                                x:Name="SoftProofProfileError" x:FieldModifier="internal"
+                                Visibility="Collapsed" />
+                            <controls:SettingsRow x:Name="SoftProofSimulationRow" x:FieldModifier="internal">
+                                <ComboBox
+                                    x:Name="SoftProofSimulationComboBox" x:FieldModifier="internal"
+                                    MinWidth="150"
+                                    AutomationProperties.AutomationId="settings.export.soft-proof-simulation"
+                                    SelectionChanged="OnSoftProofSimulationChanged">
+                                    <ComboBoxItem x:Name="SettingsSoftProofProfileOnlyLocalized" x:FieldModifier="internal" />
+                                    <ComboBoxItem x:Name="SettingsSoftProofPaperAndBlackLocalized" x:FieldModifier="internal" />
+                                </ComboBox>
+                            </controls:SettingsRow>
+                            <controls:SettingsToggleRow
+                                x:Name="GamutWarningRow" x:FieldModifier="internal"
+                                AutomationId="settings.export.gamut-warning" />
+                            <controls:SettingsFootnote
+                                x:Name="GamutUnavailableReason" x:FieldModifier="internal"
+                                Visibility="Collapsed" />
+                            <!--
+                                인화 출력 프로파일입니다. macOS 는 이 줄이 없지만 Windows 의
+                                인화 경로(SoftProofPreferences.PrinterProfilePath)가 이 값을
+                                읽으므로, 지우면 고를 방법이 사라집니다.
+                            -->
+                            <controls:SettingsRow x:Name="PrinterProfileRow" x:FieldModifier="internal">
+                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <TextBlock
+                                        x:Name="PrinterProfileName" x:FieldModifier="internal"
+                                        FontSize="13"
+                                        VerticalAlignment="Center"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <Button
+                                        x:Name="PrinterProfileButton" x:FieldModifier="internal"
+                                        AutomationProperties.AutomationId="settings.export.printer-profile"
+                                        Click="OnChoosePrinterProfile" />
+                                    <Button
+                                        x:Name="PrinterProfileResetButton" x:FieldModifier="internal"
+                                        Visibility="Collapsed"
+                                        Click="OnResetPrinterProfile" />
+                                </StackPanel>
+                            </controls:SettingsRow>
+                            <controls:SettingsFootnote
+                                x:Name="PrinterProfileError" x:FieldModifier="internal"
+                                Visibility="Collapsed" />
+                            <controls:SettingsValueRow x:Name="ScannerEmulationRow" x:FieldModifier="internal" />
+                            <controls:SettingsValueRow x:Name="ColorWorkingRow" x:FieldModifier="internal" />
+                            <controls:SettingsValueRow x:Name="ColorMonitorRow" x:FieldModifier="internal" />
+                            <controls:SettingsValueRow x:Name="ColorExportRow" x:FieldModifier="internal" />
+                            <controls:SettingsValueRow x:Name="ColorSoftProofRow" x:FieldModifier="internal" />
+                        </controls:SettingsSection.Rows>
+                    </controls:SettingsSection>
+    </StackPanel>
+</UserControl>

@@ -50,7 +50,6 @@
                 x:Name="ColorMixerEditor"
                 HorizontalAlignment="Stretch"
                 AutomationProperties.AutomationId="negaflow.develop.color-mixer"
-                AutomationProperties.Name="Color Mixer"
                 MixerChanged="OnColorMixerChanged"
                 Visibility="Collapsed" />
         </StackPanel>

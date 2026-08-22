@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI;
@@ -21,7 +21,10 @@ public sealed partial class PrintWorkspaceView
     private PrintSourceController? printSources;
     private PrintInspectorBinder? printInspector;
     private PrintPreviewRenderer? printPreview;
-    private PrintExportWorkflow? printExport;
+    /// <summary>ICC 고르개가 어느 창에 붙을지입니다.</summary>
+    private Microsoft.UI.WindowId? printWindowId;
+
+    private Print.Export.PrintSheetExportRunner? printSheetExport;
 
     private void BindPrintComposition()
     {
@@ -38,6 +41,7 @@ public sealed partial class PrintWorkspaceView
                     hasPrintFrames = frames;
                     ShowPrintSource(printSourceIsExport);
                 },
+                Presentation = () => workspaceState,
             },
             SynchronizePrint);
         PrintFilesSourceTree.FrameInvoked += (sender, frameId) =>
@@ -45,50 +49,90 @@ public sealed partial class PrintWorkspaceView
         printInspector = new PrintInspectorBinder(
             new PrintInspectorSurface
             {
-                LayoutModeText = LayoutModeText,
-                LayoutModeSelector = LayoutModeSelector,
-                PaperSizeText = PaperSizeText,
-                PaperSizeSelector = PaperSizeSelector,
-                OrientationText = OrientationText,
-                OrientationSelector = OrientationSelector,
-                PerforationText = PerforationText,
-                PerforationSelector = PerforationSelector,
-                DpiText = DpiText,
-                DpiSelector = DpiSelector,
-                MarginText = MarginText,
-                MarginSlider = MarginSlider,
-                SheetCard = SheetCard,
-                SheetSectionText = SheetSectionText,
-                RowsText = RowsText,
-                RowsBox = RowsBox,
-                ColumnsText = ColumnsText,
-                ColumnsBox = ColumnsBox,
-                SpacingText = SpacingText,
-                SpacingSlider = SpacingSlider,
-                ContentModeText = ContentModeText,
-                ContentModeSelector = ContentModeSelector,
-                RotateToFitToggle = RotateToFitToggle,
-                RepeatToggle = RepeatToggle,
-                SheetBackgroundText = SheetBackgroundText,
-                SheetBackgroundSelector = SheetBackgroundSelector,
-                TemplatePanel = TemplatePanel,
-                TemplateText = TemplateText,
-                TemplateSelector = TemplateSelector,
-                CaptionModeText = CaptionModeText,
-                CaptionModeSelector = CaptionModeSelector,
-                CropMarksToggle = CropMarksToggle,
-                ViewSectionText = ViewSectionText,
-                RulersToggle = RulersToggle,
-                RulerUnitText = RulerUnitText,
-                RulerUnitSelector = RulerUnitSelector,
-                OutputProcessSelector = OutputProcessSelector,
-                CprintLabBox = CprintLabBox,
-                CprintPaperBox = CprintPaperBox,
-                PrintProofPreviewSelector = PrintProofPreviewSelector,
-                CustomCard = CustomCard,
-                CustomHintText = CustomHintText,
-                OutputSectionText = OutputSectionText,
-                PrintExportButton = PrintExportButton,
+                // 레이아웃 탭
+                LayoutModeField = LayoutTab.LayoutModeField,
+                LayoutModeSelector = LayoutTab.LayoutModeSelector,
+                PaperSizeField = LayoutTab.PaperSizeField,
+                PaperSizeSelector = LayoutTab.PaperSizeSelector,
+                OrientationField = LayoutTab.OrientationField,
+                OrientationSelector = LayoutTab.OrientationSelector,
+                MarginText = LayoutTab.MarginText,
+                MarginValueText = LayoutTab.MarginValueText,
+                MarginSlider = LayoutTab.MarginSlider,
+                RulerField = LayoutTab.RulerField,
+                RulerSelector = LayoutTab.RulerSelector,
+                RulerUnitField = LayoutTab.RulerUnitField,
+                RulerUnitSelector = LayoutTab.RulerUnitSelector,
+                SheetColorField = LayoutTab.SheetColorField,
+                SheetBackgroundSelector = LayoutTab.SheetBackgroundSelector,
+                SurfaceField = LayoutTab.SurfaceField,
+                SurfaceSelector = LayoutTab.SurfaceSelector,
+
+                // 패키지 배치
+                PackageLayoutCard = LayoutTab.PackageLayoutCard,
+                PackageLayoutIcon = LayoutTab.PackageLayoutIcon,
+                PackageLayoutTitle = LayoutTab.PackageLayoutTitle,
+                GridSizeRow = LayoutTab.GridSizeRow,
+                RowsField = LayoutTab.RowsField,
+                RowsBox = LayoutTab.RowsBox,
+                ColumnsField = LayoutTab.ColumnsField,
+                ColumnsBox = LayoutTab.ColumnsBox,
+                TemplateField = LayoutTab.TemplateField,
+                TemplateSelector = LayoutTab.TemplateSelector,
+                SpacingText = LayoutTab.SpacingText,
+                SpacingValueText = LayoutTab.SpacingValueText,
+                SpacingSlider = LayoutTab.SpacingSlider,
+                SpacingGroup = LayoutTab.SpacingGroup,
+                VerticalSpacingText = LayoutTab.VerticalSpacingText,
+                VerticalSpacingValueText = LayoutTab.VerticalSpacingValueText,
+                VerticalSpacingSlider = LayoutTab.VerticalSpacingSlider,
+                NormalizeOrientationField = LayoutTab.NormalizeOrientationField,
+                NormalizeOrientationSelector = LayoutTab.NormalizeOrientationSelector,
+                CustomPanel = LayoutTab.CustomPanel,
+                CustomItemsHost = LayoutTab.CustomItemsHost,
+                CustomAddButton = LayoutTab.CustomAddButton,
+
+                // 콘텐츠 탭
+                ContentFitGroup = ContentTab.ContentFitGroup,
+                ContentFitField = ContentTab.ContentFitField,
+                ContentFitSelector = ContentTab.ContentFitSelector,
+                RotateToFitField = ContentTab.RotateToFitField,
+                RotateToFitSelector = ContentTab.RotateToFitSelector,
+                RepeatField = LayoutTab.RepeatField,
+                RepeatSelector = LayoutTab.RepeatSelector,
+                CaptionFontField = ContentTab.CaptionFontField,
+                CaptionFontSelector = ContentTab.CaptionFontSelector,
+                CaptionDetailGroup = ContentTab.CaptionDetailGroup,
+                CaptionAlignmentGroup = ContentTab.CaptionAlignmentGroup,
+                CustomCaptionGroup = ContentTab.CustomCaptionGroup,
+                CustomCaptionsHost = ContentTab.CustomCaptionsHost,
+                AddCaptionButton = ContentTab.AddCaptionButton,
+                ContentCropMarksField = ContentTab.ContentCropMarksField,
+                ContentCropMarksSelector = ContentTab.ContentCropMarksSelector,
+                ContentSectionText = ContentTab.ContentSectionText,
+                CaptionField = ContentTab.CaptionField,
+                CaptionSelector = ContentTab.CaptionSelector,
+                CaptionAlignmentField = ContentTab.CaptionAlignmentField,
+                CaptionAlignmentSelector = ContentTab.CaptionAlignmentSelector,
+
+                // 출력 탭
+                OutputProcessField = OutputTab.OutputProcessField,
+                OutputProcessSelector = OutputTab.OutputProcessSelector,
+                CprintLabField = OutputTab.CprintLabField,
+                CprintLabBox = OutputTab.CprintLabBox,
+                CprintPaperField = OutputTab.CprintPaperField,
+                CprintPaperBox = OutputTab.CprintPaperBox,
+                ProofProfileField = OutputTab.ProofProfileField,
+                ProofPreviewField = OutputTab.ProofPreviewField,
+                PrintProofPreviewSelector = OutputTab.PrintProofPreviewSelector,
+                OutputSectionText = OutputTab.OutputSectionText,
+                AdvancedProofText = OutputTab.AdvancedProofText,
+                DeliveryColorSpaceRow = OutputTab.DeliveryColorSpaceRow,
+                DeliveryColorSpaceValue = OutputTab.DeliveryColorSpaceValue,
+                PaperSimulationField = OutputTab.PaperSimulationField,
+                PaperSimulationSelector = OutputTab.PaperSimulationSelector,
+                GamutWarningField = OutputTab.GamutWarningField,
+                GamutWarningSelector = OutputTab.GamutWarningSelector,
             });
         printPreview = new PrintPreviewRenderer(
             new PrintPreviewSurface
@@ -99,14 +143,24 @@ public sealed partial class PrintWorkspaceView
                 RulerCanvas = RulerCanvas,
                 NoFramePanel = NoFramePanel,
                 PageCountText = PageCountText,
-                PageSizeSummaryText = PageSizeSummaryText,
-                PrintExportButton = PrintExportButton,
             },
             () => PrintSources,
             () => printSources?.Thumbnails,
             () => workspaceState,
             DrawCustomEditor);
-        printExport = new PrintExportWorkflow(PrintExportButton, PrintStatusText, TextRasterHost);
+
+        // 좌측 내보내기 탭의 두 단추는 판 합성본을 씁니다. macOS
+        // `ExportSection(onExport:onQuickExport:)` 이 인화뷰에서만 따로 꽂아 주는 자리입니다.
+        printSheetExport = new Print.Export.PrintSheetExportRunner(
+            () => PrintSources,
+            () => workspaceState,
+            TextRasterHost,
+            PrintExportPanel.SetOutputStatus);
+        PrintExportPanel.UsesPaperLayout = true;
+        PrintExportPanel.RunExport = () =>
+            printSheetExport.RunExportAsync(PrintExportPanel.Settings);
+        PrintExportPanel.RunQuickExport = () =>
+            printSheetExport.RunQuickExportAsync(PrintExportPanel.QuickSettings);
     }
 
     /// <summary>
@@ -122,7 +176,7 @@ public sealed partial class PrintWorkspaceView
     public void ShowLibrary(LibraryHostService host) => printSources?.ShowLibrary(host);
 
     public void AttachWindow(Microsoft.UI.WindowId windowId) =>
-        printExport?.AttachWindow(windowId);
+        printWindowId = windowId;
 
 
 
@@ -142,11 +196,24 @@ public sealed partial class PrintWorkspaceView
     /// </summary>
     private void HookPrintSegments()
     {
-        OrientationSelector.SelectionChanged += OnPrintSegmentChanged;
-        SheetBackgroundSelector.SelectionChanged += OnPrintSegmentChanged;
-        RulerUnitSelector.SelectionChanged += OnPrintSegmentChanged;
-        OutputProcessSelector.SelectionChanged += OnPrintSegmentChanged;
-        PrintProofPreviewSelector.SelectionChanged += OnPrintSegmentChanged;
+        foreach (Controls.NegaflowSegmentedPicker picker in new[]
+        {
+            LayoutTab.OrientationSelector,
+            LayoutTab.RulerSelector,
+            LayoutTab.RulerUnitSelector,
+            LayoutTab.SheetBackgroundSelector,
+            LayoutTab.RepeatSelector,
+            LayoutTab.NormalizeOrientationSelector,
+            ContentTab.ContentFitSelector,
+            ContentTab.RotateToFitSelector,
+            ContentTab.CaptionAlignmentSelector,
+            ContentTab.ContentCropMarksSelector,
+            OutputTab.OutputProcessSelector,
+            OutputTab.PrintProofPreviewSelector,
+        })
+        {
+            picker.SelectionChanged += OnPrintSegmentChanged;
+        }
     }
 
     /// <summary>
@@ -157,12 +224,47 @@ public sealed partial class PrintWorkspaceView
     {
         ArgumentNullException.ThrowIfNull(print);
         bool cprint = print.OutputProcess == PrintOutputProcess.CPrint;
-        CprintCard.Visibility = cprint ? Visibility.Visible : Visibility.Collapsed;
-        PrintProofCard.Visibility = CprintCard.Visibility;
-        PrintProofProfileText.Text = print.CPrintProofProfileName;
-        PrintProofClearButton.IsEnabled = !string.IsNullOrWhiteSpace(print.CPrintProofProfilePath);
+        OutputTab.CprintCard.Visibility = cprint ? Visibility.Visible : Visibility.Collapsed;
+        OutputTab.PrintProofCard.Visibility = OutputTab.CprintCard.Visibility;
+        bool hasProfile = !string.IsNullOrWhiteSpace(print.CPrintProofProfilePath);
+        // macOS 는 프로파일이 없으면 이름 자리에 긴 대시를 둡니다.
+        OutputTab.PrintProofProfileText.Text = hasProfile
+            ? print.CPrintProofProfileName
+            : "—";
+        // 지우기는 담아 둔 프로파일이 있을 때만 나옵니다(macOS `if ... != nil`).
+        OutputTab.PrintProofClearButton.Visibility = hasProfile
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         // 프로파일이 없으면 미리보기를 켤 수 없습니다 — 흉내 낼 대상이 없습니다.
-        PrintProofPreviewSelector.IsEnabled = PrintProofClearButton.IsEnabled;
+        OutputTab.PrintProofPreviewSelector.IsEnabled = hasProfile;
+        OutputTab.ProofProfileWarning.Visibility = cprint && !hasProfile
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        if (cprint && !hasProfile)
+        {
+            OutputTab.ProofProfileWarningText.Text =
+                AppResources.Get("printPreviewProfileRequired", "Text");
+        }
+        // 전달 색 공간은 보여 주기만 합니다(macOS `model.exportColorSpace.uiLabel`).
+        if (workspaceState is { } current)
+        {
+            OutputTab.DeliveryColorSpaceValue.Text =
+                current.Current.Export.EffectiveColorSpace.ToString();
+            // 여기서 세그먼트를 고르면 그 알림이 다시 이 동기화를 부릅니다. 값을 넣는 동안은
+            // 담기를 막습니다 — 다른 컨트롤이 `printInspector.IsSynchronizing` 으로 하는 것과
+            // 같은 처리입니다.
+            suppressPrintCommit = true;
+            try
+            {
+                OutputTab.GamutWarningSelector.SetSelected(
+                    current.Current.SoftProof.GamutWarningEnabled);
+            }
+            finally
+            {
+                suppressPrintCommit = false;
+            }
+        }
+        ApplyInspectorTabAvailability(print);
     }
 
     /// <summary>
@@ -179,44 +281,48 @@ public sealed partial class PrintWorkspaceView
 
     internal void LocalizeLayoutTemplates()
     {
-        LayoutTemplateSectionText.Text = AppResources.Get("printLayoutTemplateSection", "Text");
-        LayoutTemplateNameLabel.Text = AppResources.Get("printLayoutTemplateName", "Text");
-        LayoutTemplateNameBox.PlaceholderText = LayoutTemplateNameLabel.Text;
-        AutomationProperties.SetName(LayoutTemplateNameBox, LayoutTemplateNameLabel.Text);
-        LayoutTemplateSaveButton.Content = AppResources.Get("printLayoutTemplateSave", "Content");
-        LayoutTemplateApplyButton.Content = AppResources.Get("printLayoutTemplateApply", "Content");
-        LayoutTemplateDeleteButton.Content = AppResources.Get("printLayoutTemplateDelete", "Content");
+        LayoutTab.LayoutTemplateSectionText.Text = AppResources.Get("printLayoutTemplateSection", "Text");
+        LayoutTab.LayoutTemplateNameLabel.Text = AppResources.Get("printLayoutTemplateName", "Text");
+        LayoutTab.LayoutTemplateNameBox.PlaceholderText = LayoutTab.LayoutTemplateNameLabel.Text;
+        AutomationProperties.SetName(LayoutTab.LayoutTemplateNameBox, LayoutTab.LayoutTemplateNameLabel.Text);
+        LayoutTab.LayoutTemplateSaveButton.Content = AppResources.Get("printLayoutTemplateSave", "Content");
+        LayoutTab.LayoutTemplateApplyButton.Content = AppResources.Get("printLayoutTemplateApply", "Content");
+        LayoutTab.LayoutTemplateDeleteButton.Content = AppResources.Get("printLayoutTemplateDelete", "Content");
         RefreshLayoutTemplates();
     }
 
     private void RefreshLayoutTemplates()
     {
-        LayoutTemplateSelector.ItemsSource = Templates.Templates;
+        // 담아 둔 판형 목록입니다. macOS 도 여기서 `PrintInspectorPopupPicker` 를 씁니다 —
+        // WinUI 기본 ComboBox 의 네모 상자를 인스펙터에 두지 않습니다.
+        LayoutTab.LayoutTemplateSelector.SetOptions(
+            [.. Templates.Templates.Select(
+                template => new Views.Controls.PopupPickerOption(template.Name, template.Id))]);
         bool hasTemplates = Templates.Templates.Count > 0;
-        LayoutTemplateAppliedRow.Visibility =
+        LayoutTab.LayoutTemplateAppliedRow.Visibility =
             hasTemplates ? Visibility.Visible : Visibility.Collapsed;
-        if (hasTemplates && LayoutTemplateSelector.SelectedIndex < 0)
+        if (hasTemplates && LayoutTab.LayoutTemplateSelector.SelectedIndex < 0)
         {
-            LayoutTemplateSelector.SelectedIndex = 0;
+            LayoutTab.LayoutTemplateSelector.SelectSilently(0);
         }
-        LayoutTemplateSaveButton.IsEnabled = Templates.CanModify &&
-            !string.IsNullOrWhiteSpace(LayoutTemplateNameBox.Text) &&
+        LayoutTab.LayoutTemplateSaveButton.IsEnabled = Templates.CanModify &&
+            !string.IsNullOrWhiteSpace(LayoutTab.LayoutTemplateNameBox.Text) &&
             Templates.Templates.Count < PrintLayoutTemplateStore.MaximumTemplateCount;
-        LayoutTemplateStatusText.Text = Templates.CanModify
+        LayoutTab.LayoutTemplateStatusText.Text = Templates.CanModify
             ? string.Empty
             : AppResources.Get("printLayoutTemplateLocked", "Text");
     }
 
-    private void OnLayoutTemplateNameChanged(object sender, TextChangedEventArgs args)
+    internal void OnLayoutTemplateNameChanged(object sender, TextChangedEventArgs args)
     {
         _ = sender;
         _ = args;
-        LayoutTemplateSaveButton.IsEnabled = Templates.CanModify &&
-            !string.IsNullOrWhiteSpace(LayoutTemplateNameBox.Text) &&
+        LayoutTab.LayoutTemplateSaveButton.IsEnabled = Templates.CanModify &&
+            !string.IsNullOrWhiteSpace(LayoutTab.LayoutTemplateNameBox.Text) &&
             Templates.Templates.Count < PrintLayoutTemplateStore.MaximumTemplateCount;
     }
 
-    private void OnLayoutTemplateSaveClicked(object sender, RoutedEventArgs args)
+    internal void OnLayoutTemplateSaveClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
@@ -226,46 +332,50 @@ public sealed partial class PrintWorkspaceView
         }
         if (Templates.Templates.Count >= PrintLayoutTemplateStore.MaximumTemplateCount)
         {
-            LayoutTemplateStatusText.Text = AppResources.Get("printLayoutTemplateFull", "Text");
+            LayoutTab.LayoutTemplateStatusText.Text = AppResources.Get("printLayoutTemplateFull", "Text");
             return;
         }
         if (Templates.Add(
-                LayoutTemplateNameBox.Text,
+                LayoutTab.LayoutTemplateNameBox.Text,
                 PrintLayoutTemplateSettings.From(state.Current.Print)) is null)
         {
-            LayoutTemplateStatusText.Text = Templates.CanModify
+            LayoutTab.LayoutTemplateStatusText.Text = Templates.CanModify
                 ? AppResources.Get("printLayoutTemplateDuplicate", "Text")
                 : AppResources.Get("printLayoutTemplateLocked", "Text");
             return;
         }
-        LayoutTemplateNameBox.Text = string.Empty;
+        LayoutTab.LayoutTemplateNameBox.Text = string.Empty;
         RefreshLayoutTemplates();
     }
 
-    private void OnLayoutTemplateApplyClicked(object sender, RoutedEventArgs args)
+    /// <summary>고른 판형입니다. 팝업 단추는 값으로 <c>Id</c> 를 듭니다.</summary>
+    private PrintLayoutTemplate? SelectedLayoutTemplate() =>
+        LayoutTab.LayoutTemplateSelector.SelectedTag is Guid id
+            ? Templates.Templates.FirstOrDefault(template => template.Id == id)
+            : null;
+
+    internal void OnLayoutTemplateApplyClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        if (workspaceState is null ||
-            LayoutTemplateSelector.SelectedItem is not PrintLayoutTemplate template)
+        if (workspaceState is null || SelectedLayoutTemplate() is not { } template)
         {
             return;
         }
         workspaceState.UpdatePrint(current => template.Settings.ApplyTo(current));
     }
 
-    private void OnLayoutTemplateDeleteClicked(object sender, RoutedEventArgs args)
+    internal void OnLayoutTemplateDeleteClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        if (LayoutTemplateSelector.SelectedItem is PrintLayoutTemplate template &&
-            Templates.Delete(template.Id))
+        if (SelectedLayoutTemplate() is { } template && Templates.Delete(template.Id))
         {
             RefreshLayoutTemplates();
         }
     }
 
-    private void OnCprintTextChanged(object sender, TextChangedEventArgs args)
+    internal void OnCprintTextChanged(object sender, TextChangedEventArgs args)
     {
         _ = sender;
         _ = args;
@@ -276,11 +386,13 @@ public sealed partial class PrintWorkspaceView
     /// 인화소가 준 ICC 를 고릅니다. macOS <c>selectCPrintProofICCProfile</c> — 고르면 미리보기가
     /// 함께 켜집니다.
     /// </summary>
-    private async void OnPrintProofChooseClicked(object sender, RoutedEventArgs args)
+    internal async void OnPrintProofChooseClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        if (workspaceState is null || printExport?.WindowId is not { } windowId)
+        PreviewTrace.Write(System.FormattableString.Invariant(
+            $"proof.choose state={workspaceState is not null} window={printWindowId is not null}"));
+        if (workspaceState is null || printWindowId is not { } windowId)
         {
             return;
         }
@@ -290,8 +402,23 @@ public sealed partial class PrintWorkspaceView
         WinRT.Interop.InitializeWithWindow.Initialize(
             picker,
             Win32Interop.GetWindowFromWindowId(windowId));
-        if (await picker.PickSingleFileAsync() is not { } file)
+        Windows.Storage.StorageFile? file = await picker.PickSingleFileAsync();
+        PreviewTrace.Write("proof.picked " + (file?.Path ?? "<none>"));
+        if (file is null)
         {
+            return;
+        }
+        // macOS `SoftProof.rgbOutputColorSpace(fromICCData:)` 와 같은 판정입니다 — 데이터
+        // 공간이 RGB 이고 목적지로 쓸 수 있는 종류인가만 봅니다. 매체 흰색·검정을 읽어 보는
+        // 것으로 대신하면 인화소가 주는 표 기반 프로파일이 통째로 거절됩니다.
+        bool usable = PrintIccProfile.IsRgbOutput(file.Path);
+        PreviewTrace.Write(System.FormattableString.Invariant($"proof.usable {usable}"));
+        if (!usable)
+        {
+            // macOS: `model.statusMessage = model.text(.softProofInvalidICC)` — 담지 않습니다.
+            OutputTab.ProofProfileWarning.Visibility = Visibility.Visible;
+            OutputTab.ProofProfileWarningText.Text =
+                AppResources.Get("softProofInvalidICC", "Text");
             return;
         }
         workspaceState.UpdatePrint(current => current with
@@ -300,10 +427,54 @@ public sealed partial class PrintWorkspaceView
             CPrintProofProfileName = Path.GetFileNameWithoutExtension(file.Path),
             CPrintPreviewEnabled = true,
         });
+        ApplyCprintSoftProof();
+    }
+
+    /// <summary>
+    /// C-print 프루프를 실제 화면 색에 겁니다. macOS
+    /// <c>advanceSoftProofConfiguration()</c> 자리입니다 — 값만 담아 두면 프로파일을 골라도
+    /// 화면과 인화물의 색이 하나도 바뀌지 않습니다.
+    /// </summary>
+    /// <remarks>
+    /// 목적지는 <see cref="Negaflow.Shell.Develop.SoftProofPreferences.PrinterProfilePath"/>
+    /// 입니다. 인화 대상으로 현상할 때 프루프가 그 종이를 향하게 하는 자리이며, 화면을 보는
+    /// 프루프 프로파일과 따로 둡니다 — macOS 도 둘을 나눠 둡니다.
+    /// </remarks>
+    private void ApplyCprintSoftProof()
+    {
+        if (workspaceState is not { } state)
+        {
+            return;
+        }
+        PrintPreferences print = state.Current.Print;
+        bool active = print.OutputProcess == PrintOutputProcess.CPrint &&
+            print.CPrintPreviewEnabled &&
+            print.CPrintProofProfilePath.Length > 0;
+        string wanted = active ? print.CPrintProofProfilePath : string.Empty;
+        Negaflow.Interop.SoftProofSimulation simulation =
+            active && print.CPrintPaperSimulationEnabled
+                ? Negaflow.Interop.SoftProofSimulation.PaperAndBlackInk
+                : state.Current.SoftProof.Simulation;
+        bool enabled = active || state.Current.SoftProof.IsEnabled;
+        // <b>달라질 때만</b> 씁니다. 값이 같은데도 쓰면 설정 변경 알림이 다시 동기화를 부르고,
+        // 그 동기화가 또 여기로 들어와 UI 스레드가 멈춥니다.
+        if (string.Equals(state.Current.SoftProof.PrinterProfilePath, wanted, StringComparison.Ordinal) &&
+            state.Current.SoftProof.Simulation == simulation &&
+            state.Current.SoftProof.IsEnabled == enabled)
+        {
+            return;
+        }
+        state.UpdateSoftProof(value => value with
+        {
+            PrinterProfilePath = wanted,
+            IsEnabled = enabled,
+            // 용지·잉크까지 흉내 낼지는 인화 설정이 정합니다(macOS `cPrintPaperSimulationEnabled`).
+            Simulation = simulation,
+        });
     }
 
     /// <summary>macOS <c>clearCPrintProofICCProfile</c> — 지우면 미리보기도 함께 꺼집니다.</summary>
-    private void OnPrintProofClearClicked(object sender, RoutedEventArgs args)
+    internal void OnPrintProofClearClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
@@ -313,6 +484,8 @@ public sealed partial class PrintWorkspaceView
             CPrintProofProfileName = string.Empty,
             CPrintPreviewEnabled = false,
         });
+        // 지우면 화면 색도 함께 돌아와야 합니다(macOS `clearCPrintProofICCProfile`).
+        ApplyCprintSoftProof();
     }
 
     private void OnPrintSegmentChanged(object? sender, EventArgs args)
@@ -322,38 +495,45 @@ public sealed partial class PrintWorkspaceView
         CommitPrintSettings();
     }
 
-    private void OnPrintSettingChanged(object sender, SelectionChangedEventArgs args)
+    internal void OnPrintSettingChanged(object sender, SelectionChangedEventArgs args)
     {
         _ = sender;
         _ = args;
         CommitPrintSettings();
     }
 
-    private void OnPrintSliderChanged(object sender, RangeBaseValueChangedEventArgs args)
+    internal void OnPrintSliderChanged(object sender, RangeBaseValueChangedEventArgs args)
     {
         _ = sender;
         _ = args;
         CommitPrintSettings();
     }
 
-    private void OnPrintNumberChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    internal void OnPrintNumberChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         _ = sender;
         _ = args;
         CommitPrintSettings();
     }
 
-    private void OnPrintToggled(object sender, RoutedEventArgs args)
+    internal void OnPrintToggled(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
         CommitPrintSettings();
     }
+
+    /// <summary>
+    /// 값을 화면에 넣는 동안 담기를 막습니다. 넣는 것이 다시 담기를 부르면 그 담기가 또
+    /// 넣기를 불러 화면이 멈춥니다.
+    /// </summary>
+    private bool suppressPrintCommit;
 
     private void CommitPrintSettings()
     {
         if (printInspector is null ||
             printInspector.IsSynchronizing ||
+            suppressPrintCommit ||
             workspaceState is not { } state)
         {
             return;
@@ -373,17 +553,27 @@ public sealed partial class PrintWorkspaceView
         ApplyCprintVisibility(state.Current.Print);
         SynchronizeExportSelection();
         SeedCustomLayoutIfEmpty();
+        // 셀·문구 목록은 개수가 바뀌면 통째로 다시 그립니다. 목록 안 컨트롤이 값을 바꿀
+        // 때마다 다시 그리면 손잡이를 놓치므로 개수가 같으면 그대로 둡니다.
+        RebuildPrintCellListsIfNeeded(state.Current.Print);
         printPreview?.Draw();
     }
 
     private void OnCanvasHostSizeChanged(object sender, SizeChangedEventArgs args)
     {
         _ = sender;
-        _ = args;
+        // 확대한 판이 위 막대와 좌우 패널 위로 넘치지 않게 잘라 냅니다. WinUI 에는
+        // ClipToBounds 가 없어 크기가 바뀔 때마다 사각형을 다시 잡습니다 - 현상뷰
+        // 캔버스와 같은 처리입니다.
+        CanvasHost.Clip = new Microsoft.UI.Xaml.Media.RectangleGeometry
+        {
+            Rect = new Windows.Foundation.Rect(
+                0, 0, Math.Max(0, args.NewSize.Width), Math.Max(0, args.NewSize.Height)),
+        };
         printPreview?.Draw();
     }
 
-    private void OnPrintExportClicked(object sender, RoutedEventArgs args)
+    internal void OnPrintExportClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
@@ -391,7 +581,82 @@ public sealed partial class PrintWorkspaceView
     }
 
     /// <summary>macOS 인화 모듈의 <c>exportSelectionToFolder(for:)</c> 입니다.</summary>
-    internal void ExportFromMenu() => printExport?.Export(workspaceState, PrintSources);
+    /// <summary>
+    /// 메뉴의 인화 내보내기입니다. 좌측 내보내기 탭의 단추와 <b>같은 하나</b>를 부릅니다 —
+    /// 두 길이 갈라지면 메뉴와 단추가 서로 다른 파일을 냅니다.
+    /// </summary>
+    /// <summary>
+    /// 사용자 패키지의 셀 목록과 손으로 놓은 문구 목록을 만드는 자리입니다.
+    /// </summary>
+    private Print.Settings.PrintCellEditor? cellEditor;
+
+    private Print.Settings.PrintCellEditor CellEditor => cellEditor ??= new(
+        () => workspaceState?.Current.Print ?? new PrintPreferences(),
+        update =>
+        {
+            workspaceState?.UpdatePrint(update);
+            SynchronizePrint();
+        },
+        () => [.. PrintSources.Select(LibraryFrameNaming.DisplayName)]);
+
+    private int builtCellCount = -1;
+
+    private int builtCaptionCount = -1;
+
+    /// <summary>목록을 지을 때 쓴 사진들입니다. 선택이 바뀌면 "사진" 팝업도 다시 짓습니다.</summary>
+    private string builtSourceSignature = string.Empty;
+
+    /// <summary>개수가 달라졌을 때만 목록을 다시 만듭니다.</summary>
+    private void RebuildPrintCellListsIfNeeded(PrintPreferences print)
+    {
+        // 칸의 "사진" 팝업에 들어가는 목록은 **고른 사진들**입니다. 여러 장을 골랐다 말았다
+        // 하면 그 목록이 달라지므로, 칸 수가 그대로여도 다시 지어야 합니다 — 그러지 않으면
+        // 새로 고른 사진이 팝업에 나오지 않고 예전 목록이 그대로 남습니다.
+        string sourceSignature = string.Join('', PrintSources.Select(frame => frame.Id));
+        if (builtCellCount == print.CustomItems.Count &&
+            builtCaptionCount == print.CustomCaptions.Count &&
+            string.Equals(builtSourceSignature, sourceSignature, StringComparison.Ordinal))
+        {
+            return;
+        }
+        builtCellCount = print.CustomItems.Count;
+        builtCaptionCount = print.CustomCaptions.Count;
+        builtSourceSignature = sourceSignature;
+        RebuildPrintCellLists();
+    }
+
+    /// <summary>목록을 지금 설정에 맞춰 다시 그립니다.</summary>
+    internal void RebuildPrintCellLists()
+    {
+        CellEditor.BuildCells(LayoutTab.CustomItemsHost);
+        CellEditor.BuildCaptions(ContentTab.CustomCaptionsHost);
+    }
+
+    internal void OnAddCustomCaptionClicked()
+    {
+        CellEditor.AddCaption();
+        SynchronizePrint();
+    }
+
+    /// <summary>인스펙터 어디서든 값이 바뀌면 담고 다시 그립니다.</summary>
+    internal void OnPrintInspectorChanged() => CommitPrintSettings();
+
+    internal void ExportFromMenu()
+    {
+        if (printSheetExport is { } runner)
+        {
+            _ = runner.RunExportAsync(PrintExportPanel.Settings);
+        }
+    }
+
+    /// <summary>하단바가 범위·차례를 바꿨습니다. 필름스트립을 다시 냅니다.</summary>
+    internal void RefreshSources()
+    {
+        if (printExportHost is { } host)
+        {
+            printSources?.ShowLibrary(host);
+        }
+    }
 
     private static PrintSizeMm SourcePixelSize(LibraryFrameSnapshot frame) =>
         PrintPreviewRenderer.SourcePixelSize(frame);

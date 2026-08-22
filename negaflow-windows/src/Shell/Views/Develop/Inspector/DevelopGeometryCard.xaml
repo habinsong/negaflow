@@ -5,6 +5,75 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Negaflow.Shell.Views.Controls">
 
+<UserControl.Resources>
+    <!--
+        macOS ToolIconButton 과 같은 고정 크기·평면 표면입니다.
+        기본 WinUI Button 템플릿은 안쪽 여백과 눌림 판형을 추가하므로,
+        기하 도구 행에서만 macOS의 36×34 / radius 7을 직접 유지합니다.
+    -->
+    <Style x:Key="GeometryToolButtonStyle" TargetType="Button">
+        <Setter Property="Width" Value="36" />
+        <Setter Property="Height" Value="34" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="{ThemeResource NegaflowSubtleFillBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="UseSystemFocusVisuals" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid
+                        x:Name="GeometryToolRoot"
+                        Background="Transparent"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                        <Border
+                            x:Name="GeometryToolFill"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{TemplateBinding CornerRadius}" />
+                        <Border
+                            x:Name="GeometryToolHover"
+                            CornerRadius="{TemplateBinding CornerRadius}" />
+                        <ContentPresenter
+                            x:Name="GeometryToolContent"
+                            Padding="{TemplateBinding Padding}"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                            Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}"
+                            Foreground="{TemplateBinding Foreground}" />
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="GeometryToolHover.Background" Value="{ThemeResource NegaflowHoverFillBrush}" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="GeometryToolHover.Background" Value="{ThemeResource NegaflowHoverFillBrush}" />
+                                        <Setter Target="GeometryToolContent.Opacity" Value="0.75" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="GeometryToolRoot.Opacity" Value="0.35" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</UserControl.Resources>
+
 <!--
     베이스 카드와 같은 이유로 안쪽 Border 는 Collapsed 로 두지 않습니다 — 편집 탭이 이
     UserControl 을 켜도 안쪽이 닫혀 있으면 크롭·회전 컨트롤이 아예 나오지 않습니다.
@@ -37,20 +106,60 @@
                 FontSize="11"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </Grid>
-        <Grid ColumnSpacing="6">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Button x:Name="CropButton" Grid.Column="0" AutomationProperties.AutomationId="negaflow.develop.geometry.crop" Click="OnCropClicked"><FontIcon Glyph="&#xE7A8;" /></Button>
-            <Button x:Name="RotateLeftButton" Grid.Column="1" AutomationProperties.AutomationId="negaflow.develop.geometry.rotate-left" Click="OnRotateLeftClicked"><controls:VectorIcon Kind="RotateLeft" IconSize="16" /></Button>
-            <Button x:Name="RotateRightButton" Grid.Column="2" AutomationProperties.AutomationId="negaflow.develop.geometry.rotate-right" Click="OnRotateRightClicked"><controls:VectorIcon Kind="RotateRight" IconSize="16" /></Button>
-            <Button x:Name="FlipHorizontalButton" Grid.Column="3" AutomationProperties.AutomationId="negaflow.develop.geometry.flip-horizontal" Click="OnFlipHorizontalClicked"><controls:VectorIcon Kind="FlipHorizontal" IconSize="16" /></Button>
-            <Button x:Name="FlipVerticalButton" Grid.Column="4" AutomationProperties.AutomationId="negaflow.develop.geometry.flip-vertical" Click="OnFlipVerticalClicked"><controls:VectorIcon Kind="FlipVertical" IconSize="16" /></Button>
-        </Grid>
+        <!-- macOS GeometryToolSection.buttonGrid: HStack(spacing: 6),
+             ToolIconButton(36×34), ToolDivider(1×24 + horizontal padding 2). -->
+        <StackPanel
+            HorizontalAlignment="Center"
+            Orientation="Horizontal"
+            Spacing="6">
+            <Button
+                x:Name="CropButton"
+                AutomationProperties.AutomationId="negaflow.develop.geometry.crop"
+                Click="OnCropClicked"
+                Style="{StaticResource GeometryToolButtonStyle}">
+                <controls:VectorIcon Kind="Crop" IconSize="24" />
+            </Button>
+            <Border
+                Width="1"
+                Height="24"
+                Margin="2,0"
+                Background="{ThemeResource TextFillColorSecondaryBrush}"
+                Opacity="0.38" />
+            <Button
+                x:Name="RotateLeftButton"
+                AutomationProperties.AutomationId="negaflow.develop.geometry.rotate-left"
+                Click="OnRotateLeftClicked"
+                Style="{StaticResource GeometryToolButtonStyle}">
+                <controls:VectorIcon Kind="RotateLeft" IconSize="16" />
+            </Button>
+            <Button
+                x:Name="RotateRightButton"
+                AutomationProperties.AutomationId="negaflow.develop.geometry.rotate-right"
+                Click="OnRotateRightClicked"
+                Style="{StaticResource GeometryToolButtonStyle}">
+                <controls:VectorIcon Kind="RotateRight" IconSize="16" />
+            </Button>
+            <Border
+                Width="1"
+                Height="24"
+                Margin="2,0"
+                Background="{ThemeResource TextFillColorSecondaryBrush}"
+                Opacity="0.38" />
+            <Button
+                x:Name="FlipHorizontalButton"
+                AutomationProperties.AutomationId="negaflow.develop.geometry.flip-horizontal"
+                Click="OnFlipHorizontalClicked"
+                Style="{StaticResource GeometryToolButtonStyle}">
+                <controls:VectorIcon Kind="FlipHorizontal" IconSize="16" />
+            </Button>
+            <Button
+                x:Name="FlipVerticalButton"
+                AutomationProperties.AutomationId="negaflow.develop.geometry.flip-vertical"
+                Click="OnFlipVerticalClicked"
+                Style="{StaticResource GeometryToolButtonStyle}">
+                <controls:VectorIcon Kind="FlipVertical" IconSize="16" />
+            </Button>
+        </StackPanel>
         <!-- macOS 는 crop 모드에서만 다이얼을 내놓습니다. -->
         <controls:CropAngleDial
             x:Name="CropAngleDialControl"

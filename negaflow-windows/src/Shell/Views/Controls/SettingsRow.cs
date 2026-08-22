@@ -35,24 +35,16 @@ public sealed class SettingsRow : ContentControl
         VerticalAlignment = VerticalAlignment.Center,
     };
 
+    private readonly Grid frame;
+
     public SettingsRow()
     {
         MinHeight = SettingsLayout.RowHeight;
         HorizontalAlignment = HorizontalAlignment.Stretch;
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
-        Grid grid = new()
-        {
-            ColumnSpacing = 12,
-            Padding = new Thickness(SettingsLayout.RowHorizontalPadding, 0, SettingsLayout.RowHorizontalPadding, 0),
-            MinHeight = SettingsLayout.RowHeight,
-        };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.Children.Add(label);
-        Grid.SetColumn(presenter, 1);
-        grid.Children.Add(presenter);
+        frame = BuildFrame();
         // ContentControl 의 Content 는 오른쪽 컨트롤이므로, 골격은 Template 대신 여기서 답니다.
-        base.Content = grid;
+        base.Content = frame;
         RegisterPropertyChangedCallback(ContentProperty, (_, _) => MoveContentIntoPresenter());
     }
 
@@ -61,6 +53,36 @@ public sealed class SettingsRow : ContentControl
         typeof(string),
         typeof(SettingsRow),
         new PropertyMetadata(string.Empty, OnLabelChanged));
+
+    /// <summary>
+    /// 행 높이입니다. 설정창은 실측 41 이지만 현상 좌측탭의 내보내기 카드는 38 입니다
+    /// (<c>현상뷰_좌측탭_세로탭_내보내기.png</c> 의 분리선 간격). 자리마다 다르므로 받습니다.
+    /// </summary>
+    public static readonly DependencyProperty RowHeightProperty = DependencyProperty.Register(
+        nameof(RowHeight),
+        typeof(double),
+        typeof(SettingsRow),
+        new PropertyMetadata(SettingsLayout.RowHeight, OnRowHeightChanged));
+
+    public double RowHeight
+    {
+        get => (double)GetValue(RowHeightProperty);
+        set => SetValue(RowHeightProperty, value);
+    }
+
+    /// <summary>라벨 글자 크기입니다. 좌측탭은 설정창보다 한 단 작습니다.</summary>
+    public static readonly DependencyProperty LabelFontSizeProperty = DependencyProperty.Register(
+        nameof(LabelFontSize),
+        typeof(double),
+        typeof(SettingsRow),
+        new PropertyMetadata(SettingsLayout.RowFontSize, (sender, args) =>
+            ((SettingsRow)sender).label.FontSize = (double)args.NewValue));
+
+    public double LabelFontSize
+    {
+        get => (double)GetValue(LabelFontSizeProperty);
+        set => SetValue(LabelFontSizeProperty, value);
+    }
 
     public string Label
     {
@@ -85,6 +107,32 @@ public sealed class SettingsRow : ContentControl
         }
     }
 
+    private static void OnRowHeightChanged(
+        DependencyObject sender,
+        DependencyPropertyChangedEventArgs args)
+    {
+        var row = (SettingsRow)sender;
+        double height = (double)args.NewValue;
+        row.MinHeight = height;
+        row.frame.MinHeight = height;
+    }
+
+    private Grid BuildFrame()
+    {
+        Grid grid = new()
+        {
+            ColumnSpacing = 12,
+            Padding = new Thickness(SettingsLayout.RowHorizontalPadding, 0, SettingsLayout.RowHorizontalPadding, 0),
+            MinHeight = RowHeight,
+        };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.Children.Add(label);
+        Grid.SetColumn(presenter, 1);
+        grid.Children.Add(presenter);
+        return grid;
+    }
+
     private void MoveContentIntoPresenter()
     {
         // XAML 에서 <controls:SettingsRow>…</controls:SettingsRow> 로 넣은 자식을 오른쪽
@@ -96,18 +144,9 @@ public sealed class SettingsRow : ContentControl
         object? incoming = base.Content;
         base.Content = null;
         Control = incoming;
-        Grid grid = new()
-        {
-            ColumnSpacing = 12,
-            Padding = new Thickness(SettingsLayout.RowHorizontalPadding, 0, SettingsLayout.RowHorizontalPadding, 0),
-            MinHeight = SettingsLayout.RowHeight,
-        };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.Children.Add(label);
-        Grid.SetColumn(presenter, 1);
-        grid.Children.Add(presenter);
-        base.Content = grid;
+        // 골격은 처음 만든 것을 그대로 다시 답니다. 다시 만들면 라벨·자리표가 옛 Grid 의
+        // 자식으로 남아 있어 부모가 둘이 됩니다.
+        base.Content = frame;
     }
 }
 
@@ -145,6 +184,8 @@ public sealed class SettingsValueRow : ContentControl, IThemedSettingsControl
 
     public SettingsRowValueKind Kind { get; set; } = SettingsRowValueKind.Primary;
 
+    private readonly Grid frame;
+
     public SettingsValueRow()
     {
         MinHeight = SettingsLayout.CompactRowHeight;
@@ -158,20 +199,70 @@ public sealed class SettingsValueRow : ContentControl, IThemedSettingsControl
         };
         right.Children.Add(value);
         right.Children.Add(reason);
-        Grid grid = new()
+        frame = new Grid
         {
             ColumnSpacing = 12,
             Padding = new Thickness(
                 SettingsLayout.RowHorizontalPadding, 6, SettingsLayout.RowHorizontalPadding, 6),
             MinHeight = SettingsLayout.CompactRowHeight,
         };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.Children.Add(label);
+        frame.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        frame.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        frame.Children.Add(label);
         Grid.SetColumn(right, 1);
-        grid.Children.Add(right);
-        Content = grid;
+        frame.Children.Add(right);
+        Content = frame;
     }
+
+    /// <summary>행 높이입니다. <see cref="SettingsRow.RowHeight"/> 와 같은 이유로 받습니다.</summary>
+    public static readonly DependencyProperty RowHeightProperty = DependencyProperty.Register(
+        nameof(RowHeight),
+        typeof(double),
+        typeof(SettingsValueRow),
+        new PropertyMetadata(SettingsLayout.CompactRowHeight, (sender, args) =>
+        {
+            var row = (SettingsValueRow)sender;
+            row.MinHeight = (double)args.NewValue;
+            row.frame.MinHeight = (double)args.NewValue;
+        }));
+
+    public double RowHeight
+    {
+        get => (double)GetValue(RowHeightProperty);
+        set => SetValue(RowHeightProperty, value);
+    }
+
+    /// <summary>라벨 글자 크기입니다.</summary>
+    public static readonly DependencyProperty LabelFontSizeProperty = DependencyProperty.Register(
+        nameof(LabelFontSize),
+        typeof(double),
+        typeof(SettingsValueRow),
+        new PropertyMetadata(SettingsLayout.RowFontSize, (sender, args) =>
+            ((SettingsValueRow)sender).label.FontSize = (double)args.NewValue));
+
+    public double LabelFontSize
+    {
+        get => (double)GetValue(LabelFontSizeProperty);
+        set => SetValue(LabelFontSizeProperty, value);
+    }
+
+    /// <summary>값 글자 크기입니다. 좌측탭의 값은 라벨보다 한 단 작습니다.</summary>
+    public static readonly DependencyProperty ValueFontSizeProperty = DependencyProperty.Register(
+        nameof(ValueFontSize),
+        typeof(double),
+        typeof(SettingsValueRow),
+        new PropertyMetadata(SettingsLayout.RowFontSize, (sender, args) =>
+            ((SettingsValueRow)sender).value.FontSize = (double)args.NewValue));
+
+    public double ValueFontSize
+    {
+        get => (double)GetValue(ValueFontSizeProperty);
+        set => SetValue(ValueFontSizeProperty, value);
+    }
+
+    /// <summary>값 글자를 다른 색으로 덮습니다 — 잘못된 파일명 패턴을 빨갛게 낼 때입니다.</summary>
+    public void OverrideValueForeground(Brush? brush) =>
+        value.Foreground = brush ?? Foreground;
 
     public static readonly DependencyProperty LabelProperty = DependencyProperty.Register(
         nameof(Label), typeof(string), typeof(SettingsValueRow),
@@ -218,7 +309,15 @@ public sealed class SettingsValueRow : ContentControl, IThemedSettingsControl
         {
             return;
         }
-        value.Foreground = Kind == SettingsRowValueKind.Primary ? Foreground : secondary;
+        value.Foreground = Kind switch
+        {
+            SettingsRowValueKind.Primary => Foreground,
+            // 잘못된 값은 빨갛게 냅니다 — macOS 도 파일명 패턴이 깨지면 미리보기를
+            // `Color.red` 로 칠합니다(ExportNamingControls.swift).
+            SettingsRowValueKind.Danger =>
+                SettingsBrushes.GetDangerBrush(this) ?? secondary,
+            _ => secondary,
+        };
         reason.Foreground = secondary;
     }
 }
@@ -227,6 +326,7 @@ public enum SettingsRowValueKind
 {
     Primary,
     Secondary,
+    Danger,
 }
 
 /// <summary>

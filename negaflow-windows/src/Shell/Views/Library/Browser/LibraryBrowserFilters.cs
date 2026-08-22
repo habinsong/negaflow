@@ -252,7 +252,7 @@ internal sealed class LibraryBrowserFilters
     private static void SetModeAppearance(Control control, bool selected)
     {
         control.Background = selected
-            ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSegmentThumbBrush"]
+            ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowPanelBrush"]
             : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
         control.Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources[
             selected ? "TextFillColorPrimaryBrush" : "TextFillColorSecondaryBrush"];

@@ -29,13 +29,18 @@ public sealed partial class DevelopColorMixerSection : UserControl
         panel = hostPanel;
     }
 
-    public void Localize() =>
+    public void Localize()
+    {
+        string title = AppResources.Get("developSectionColorMixer", "Text");
         DevelopInspectorSectionChrome.Localize(
             ColorMixerSection,
             ColorMixerHeaderButton,
             ColorMixerSectionTitleText,
             ColorMixerResetButton,
-            AppResources.Get("developSectionColorMixer", "Text"));
+            title);
+        // 앞 판은 XAML 에 "Color Mixer" 가 박혀 있어 어떤 언어에서도 그대로였습니다.
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ColorMixerEditor, title);
+    }
 
     public void Show(DevelopPanelState hostPanel)
     {

@@ -47,16 +47,16 @@ internal sealed class LibraryWorkspaceLayout
     {
         // 설정에서 고른 기본 스캔 회전을 스캔 흐름에 꽂습니다. Shell.Core 는 설정 파일을
         // 읽지 않으므로 여기가 유일한 연결점입니다.
-        view.ScanPanel.ApplyDefaultRotation(preferences.DefaultScanRotation);
+        view.ControlsPanel.ScanPanel.ApplyDefaultRotation(preferences.DefaultScanRotation);
         if (view.workspaceState is { } state)
         {
-            view.ScanPanel.CapabilitiesPublisher ??= state.PublishScannerCapabilities;
-            view.ScanPanel.SimulatorPublisher ??= state.SetScannerSimulatorEnabled;
-            _ = view.ScanPanel.ApplySimulatorEnabledAsync(preferences.ScannerSimulatorEnabled);
+            view.ControlsPanel.ScanPanel.CapabilitiesPublisher ??= state.PublishScannerCapabilities;
+            view.ControlsPanel.ScanPanel.SimulatorPublisher ??= state.SetScannerSimulatorEnabled;
+            _ = view.ControlsPanel.ScanPanel.ApplySimulatorEnabledAsync(preferences.ScannerSimulatorEnabled);
         }
         Negaflow.Shell.Storage.DiskStorageLocations scanLocations =
             new(preferences.Disk);
-        view.ScanPanel.ApplyScanStorageRoot(
+        view.ControlsPanel.ScanPanel.ApplyScanStorageRoot(
             scanLocations.Scans, scanLocations.ScanPreviews);
         _ = sender;
         if (!view.isResizing)

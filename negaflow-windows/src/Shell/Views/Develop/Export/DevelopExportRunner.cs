@@ -46,7 +46,7 @@ internal sealed class DevelopExportRunner
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or
                 PathTooLongException or NotSupportedException)
             {
-                view.OutputStatusText.Text = AppResources.Get("developExportFolderFailed", "Text");
+                view.SetOutputStatus(AppResources.Get("developExportFolderFailed", "Text"));
             }
         }
         if (!view.exportSettings.WriteSidecar)
@@ -93,7 +93,7 @@ internal sealed class DevelopExportRunner
         };
         if (ExportSidecarWriter.Write(outputPath, content) is { } failure)
         {
-            view.OutputStatusText.Text = failure;
+            view.SetOutputStatus(failure);
         }
     }
 
@@ -110,13 +110,18 @@ internal sealed class DevelopExportRunner
         // 편집은 메모리에만 있었으므로, 현상하기 전에 저장해 파일과 catalog 가 어긋나지 않게 합니다.
         if (view.panel.Save() != CatalogStoreError.None)
         {
-            view.OutputStatusText.Text = AppResources.Get("developExportSaveFailed", "Text");
+            view.SetOutputStatus(AppResources.Get("developExportSaveFailed", "Text"));
             return;
         }
 
-        view.ExportButton.IsEnabled = false;
-        view.OutputStatusText.Text = AppResources.Get("developExportRunning", "Text");
+        // 도는 동안에는 **동작 단추만** 잠급니다. 알약 전체를 잠그면 폴더 열기까지 죽고,
+        // 되살리는 것은 `RefreshPreview` 의 `IsActionEnabled` 뿐이라 알약이 영영 꺼진 채로
+        // 남습니다 - 내보내기가 딱 한 번만 되던 원인입니다. macOS 도 `isActionEnabled` 만
+        // 씁니다.
+        view.ExportButton.IsActionEnabled = false;
+        view.SetOutputStatus(AppResources.Get("developExportRunning", "Text"));
         string? completedPath = null;
+        view.ReportProgress(new ExportProgress(0, 1));
         try
         {
             IReadOnlyList<LibraryFrameSnapshot> selection = SelectedExportFrames(frame);
@@ -133,7 +138,7 @@ internal sealed class DevelopExportRunner
                 view.exportSettings.Format,
                 outcome =>
                 {
-                    view.OutputStatusText.Text = DevelopPanelState.Describe(outcome);
+                    view.SetOutputStatus(DevelopPanelState.Describe(outcome));
                     if (outcome is { Kind: DevelopExportOutcomeKind.Completed, Result.Succeeded: true })
                     {
                         WriteExportArtifacts(frame, exportedPath, outcome.Result);
@@ -144,6 +149,7 @@ internal sealed class DevelopExportRunner
         }
         finally
         {
+            view.ReportProgress(ExportProgress.Idle);
             view.RefreshPreview();
         }
 
@@ -178,12 +184,13 @@ internal sealed class DevelopExportRunner
         // 편집은 메모리에만 있었으므로, 현상하기 전에 저장해 파일과 catalog 가 어긋나지 않게 합니다.
         if (view.panel.Save() != CatalogStoreError.None)
         {
-            view.OutputStatusText.Text = AppResources.Get("developExportSaveFailed", "Text");
+            view.SetOutputStatus(AppResources.Get("developExportSaveFailed", "Text"));
             return;
         }
 
-        view.QuickExportButton.IsEnabled = false;
-        view.OutputStatusText.Text = AppResources.Get("developExportRunning", "Text");
+        view.QuickExportButton.IsActionEnabled = false;
+        view.SetOutputStatus(AppResources.Get("developExportRunning", "Text"));
+        view.ReportProgress(new ExportProgress(0, 1));
         try
         {
             IReadOnlyList<LibraryFrameSnapshot> selection = SelectedExportFrames(frame);
@@ -198,11 +205,12 @@ internal sealed class DevelopExportRunner
             _ = await view.panel.ExportAsync(
                 view.quickExportSettings.Destination.PathFor(frame.SourcePath),
                 view.quickExportSettings.Format,
-                outcome => view.OutputStatusText.Text = DevelopPanelState.Describe(outcome),
+                outcome => view.SetOutputStatus(DevelopPanelState.Describe(outcome)),
                 view.quickExportSettings.Encoding);
         }
         finally
         {
+            view.ReportProgress(ExportProgress.Idle);
             view.RefreshPreview();
         }
     }
@@ -227,7 +235,7 @@ internal sealed class DevelopExportRunner
             ExportFlatMaster.Neutralize(frame),
             masterPath,
             view.exportSettings.Format,
-            outcome => view.OutputStatusText.Text = DevelopPanelState.Describe(outcome),
+            outcome => view.SetOutputStatus(DevelopPanelState.Describe(outcome)),
             view.exportSettings.ToEncodingOptions());
     }
 
@@ -270,6 +278,7 @@ internal sealed class DevelopExportRunner
             frame => view.libraryHost.RollFor(frame.Id));
         var coordinator = new ExportBatchCoordinator(view.libraryHost);
         int finished = 0;
+        view.ReportProgress(new ExportProgress(0, plans.Count));
         coordinator.ItemChanged += (_, item) =>
         {
             if (item.State is ExportBatchItemState.Running)
@@ -277,17 +286,25 @@ internal sealed class DevelopExportRunner
                 return;
             }
             ++finished;
-            view.OutputStatusText.Text = AppResources.FormatIntegers(
+            view.ReportProgress(new ExportProgress(finished, plans.Count));
+            view.SetOutputStatus(AppResources.FormatIntegers(
                 "exportBatchFrameProgress",
                 "Text",
                 finished,
-                plans.Count);
+                plans.Count));
         };
-        ExportBatchSummary summary = await coordinator.RunAsync(plans, encoding);
-        view.OutputStatusText.Text = AppResources.FormatIntegers(
-            "exportBatchFrameProgress",
-            "Text",
-            summary.Succeeded,
-            summary.Total);
+        try
+        {
+            ExportBatchSummary summary = await coordinator.RunAsync(plans, encoding);
+            view.SetOutputStatus(AppResources.FormatIntegers(
+                "exportBatchFrameProgress",
+                "Text",
+                summary.Succeeded,
+                summary.Total));
+        }
+        finally
+        {
+            view.ReportProgress(ExportProgress.Idle);
+        }
     }
 }

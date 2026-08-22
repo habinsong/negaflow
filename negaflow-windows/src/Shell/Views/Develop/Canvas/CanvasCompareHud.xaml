@@ -42,18 +42,21 @@
         <StackPanel Orientation="Horizontal" Spacing="2">
             <Button
                 x:Name="RawButton"
+                AutomationProperties.AutomationId="negaflow.canvas.compare.raw"
                 Click="OnRawClicked"
                 Style="{StaticResource CompareTextButtonStyle}">
                 <TextBlock x:Name="RawText" FontSize="12" />
             </Button>
             <Button
                 x:Name="DevelopedButton"
+                AutomationProperties.AutomationId="negaflow.canvas.compare.developed"
                 Click="OnDevelopedClicked"
                 Style="{StaticResource CompareTextButtonStyle}">
                 <TextBlock x:Name="DevelopedText" FontSize="12" />
             </Button>
             <Button
                 x:Name="SplitVerticalButton"
+                AutomationProperties.AutomationId="negaflow.canvas.compare.split-vertical"
                 Click="OnSplitVerticalClicked"
                 Style="{StaticResource CompareIconButtonStyle}">
                 <Viewbox Width="12" Height="12">
@@ -78,6 +81,7 @@
             </Button>
             <Button
                 x:Name="SplitHorizontalButton"
+                AutomationProperties.AutomationId="negaflow.canvas.compare.split-horizontal"
                 Click="OnSplitHorizontalClicked"
                 Style="{StaticResource CompareIconButtonStyle}">
                 <Viewbox Width="12" Height="12">

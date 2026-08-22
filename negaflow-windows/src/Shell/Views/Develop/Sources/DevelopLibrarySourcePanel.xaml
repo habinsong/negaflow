@@ -34,45 +34,45 @@
                         <Button
                             x:Name="ImportButton"
                             x:FieldModifier="internal"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
                             AutomationProperties.AutomationId="negaflow.develop.import.image"
                             Click="OnImportClicked"
                             Style="{StaticResource NegaflowImportActionStyle}">
-                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                <StackPanel Orientation="Horizontal" Spacing="5">
-                                    <FontIcon FontSize="12" Glyph="&#xE91B;" />
-                                    <TextBlock x:Name="ImportImageText" x:FieldModifier="internal" />
-                                </StackPanel>
-                            </Viewbox>
+                            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="5">
+                                <FontIcon FontSize="12" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Glyph="&#xE91B;" />
+                                <TextBlock x:Name="ImportImageText" x:FieldModifier="internal" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                            </StackPanel>
                         </Button>
                         <Border Grid.Column="1" Height="16" VerticalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
                         <Button
                             x:Name="ImportFolderButton"
                             x:FieldModifier="internal"
                             Grid.Column="2"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
                             AutomationProperties.AutomationId="negaflow.develop.import.folder"
                             Click="OnImportFolderClicked"
                             Style="{StaticResource NegaflowImportActionStyle}">
-                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                <StackPanel Orientation="Horizontal" Spacing="5">
-                                    <FontIcon FontSize="12" Glyph="&#xE8B7;" />
-                                    <TextBlock x:Name="ImportFolderText" x:FieldModifier="internal" />
-                                </StackPanel>
-                            </Viewbox>
+                            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="5">
+                                <FontIcon FontSize="12" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Glyph="&#xE8B7;" />
+                                <TextBlock x:Name="ImportFolderText" x:FieldModifier="internal" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                            </StackPanel>
                         </Button>
                         <Border Grid.Column="3" Height="16" VerticalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
                         <Button
                             x:Name="ImportScannerButton"
                             x:FieldModifier="internal"
                             Grid.Column="4"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
                             AutomationProperties.AutomationId="negaflow.develop.import.scanner"
                             Click="OnImportScannerClicked"
                             Style="{StaticResource NegaflowImportActionStyle}">
-                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                <StackPanel Orientation="Horizontal" Spacing="5">
-                                    <FontIcon FontSize="12" Glyph="&#xE950;" />
-                                    <TextBlock x:Name="ImportScannerText" x:FieldModifier="internal" />
-                                </StackPanel>
-                            </Viewbox>
+                            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="5">
+                                <FontIcon FontSize="12" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Glyph="&#xE950;" />
+                                <TextBlock x:Name="ImportScannerText" x:FieldModifier="internal" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                            </StackPanel>
                         </Button>
                     </Grid>
                 </Border>

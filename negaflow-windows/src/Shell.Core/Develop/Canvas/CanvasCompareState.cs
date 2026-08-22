@@ -71,8 +71,23 @@ public sealed class CanvasCompareState
         }
     }
 
+    /// <summary>
+    /// 지금 실제로 갈라 그리고 있는지입니다. Before 그림이 준비된 뒤에만 참입니다.
+    /// </summary>
     public bool IsComparingSplit =>
         ActiveMode is CanvasCompareMode.SplitVertical or CanvasCompareMode.SplitHorizontal;
+
+    /// <summary>
+    /// 사용자가 분할을 <b>고르기만</b> 했는지입니다. Before 그림이 아직 없어도 참입니다.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="IsComparingSplit"/> 으로 Before 현상을 걸면 켜지지 않습니다 —
+    /// <see cref="CanCompare"/> 는 Before 그림이 와야 참이 되는데, 그 그림은
+    /// <c>IsComparingSplit</c> 일 때만 요청되기 때문입니다. 서로를 기다려 분할이 영영
+    /// 켜지지 않았습니다. 요청은 <b>고른 모드</b>로 걸고, 그리기만 준비 여부로 막습니다.
+    /// </remarks>
+    public bool IsSplitRequested =>
+        Mode is CanvasCompareMode.SplitVertical or CanvasCompareMode.SplitHorizontal;
 
     /// <summary>macOS <c>selectedBeforeID</c>.</summary>
     public string SelectedBeforeId =>

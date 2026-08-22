@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Settings.SettingsDiskPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
+    <StackPanel Spacing="30">
+                    <controls:SettingsSection x:Name="DiskSection" x:FieldModifier="internal">
+                        <controls:SettingsSection.Rows>
+                            <!--
+                                캡슐은 라벨 없이 카드 가운데 섭니다. 디스크_윗부분.png 실측:
+                                트랙 252..620(368) 이고 카드 84..787 의 가운데(436)에 놓입니다.
+                            -->
+                            <Grid x:Name="DiskLocationRow" x:FieldModifier="internal" Height="44">
+                                <controls:NegaflowSegmentedPicker
+                                    x:Name="DiskLocationPicker" x:FieldModifier="internal"
+                                    Width="368"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    AutomationProperties.AutomationId="settings.disk.location" />
+                            </Grid>
+                            <controls:SettingsPathRow x:Name="DiskRootRow" x:FieldModifier="internal" />
+                            <controls:SettingsPathRow x:Name="DiskThumbnailsRow" x:FieldModifier="internal" />
+                            <controls:SettingsPathRow x:Name="DiskImportedSourcesRow" x:FieldModifier="internal" />
+                            <controls:SettingsPathRow x:Name="DiskCleanedRawRow" x:FieldModifier="internal" />
+                            <controls:SettingsPathRow x:Name="DiskScanPreviewsRow" x:FieldModifier="internal" />
+                            <controls:SettingsPathRow x:Name="DiskExportRow" x:FieldModifier="internal" />
+                            <controls:SettingsPathRow x:Name="DiskQuickExportRow" x:FieldModifier="internal" />
+                            <controls:SettingsPathRow x:Name="DiskScansRow" x:FieldModifier="internal" />
+                            <controls:SettingsValueRow x:Name="DiskAvailableRow" x:FieldModifier="internal" />
+                            <controls:SettingsValueRow x:Name="DiskStorageKindRow" x:FieldModifier="internal" />
+                            <controls:SettingsRow x:Name="DiskResetRow" x:FieldModifier="internal" Visibility="Collapsed">
+                                <Button
+                                    x:Name="DiskResetButton" x:FieldModifier="internal"
+                                    AutomationProperties.AutomationId="settings.disk.reset"
+                                    Click="OnDiskResetPathsClick" />
+                            </controls:SettingsRow>
+                        </controls:SettingsSection.Rows>
+                    </controls:SettingsSection>
+
+                    <!-- macOS 는 이 구역에 머리글이 없습니다(그냥 Section). -->
+                    <controls:SettingsSection x:Name="DiskCacheSection" x:FieldModifier="internal">
+                        <controls:SettingsSection.Rows>
+                            <controls:SettingsRow x:Name="DiskThumbnailCacheRow" x:FieldModifier="internal">
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <TextBlock
+                                        x:Name="DiskThumbnailCacheSize" x:FieldModifier="internal"
+                                        FontSize="13"
+                                        VerticalAlignment="Center"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <Button
+                                        x:Name="DiskClearThumbnailCacheButton" x:FieldModifier="internal"
+                                        AutomationProperties.AutomationId="settings.disk.clear-thumbnails"
+                                        Click="OnClearThumbnailCacheClick" />
+                                </StackPanel>
+                            </controls:SettingsRow>
+                        </controls:SettingsSection.Rows>
+                    </controls:SettingsSection>
+
+                    <controls:SettingsSection x:Name="DiskBackupSection" x:FieldModifier="internal">
+                        <controls:SettingsSection.Rows>
+                            <controls:SettingsValueRow x:Name="BackupFolderRow" x:FieldModifier="internal" />
+                            <controls:SettingsRow x:Name="ExternalBackupRow" x:FieldModifier="internal">
+                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <Button
+                                        x:Name="ExternalBackupChooseButton" x:FieldModifier="internal"
+                                        AutomationProperties.AutomationId="settings.disk.external-backup"
+                                        Click="OnChooseExternalBackupClick" />
+                                    <Button
+                                        x:Name="ExternalBackupRemoveButton" x:FieldModifier="internal"
+                                        Visibility="Collapsed"
+                                        Click="OnRemoveExternalBackupClick" />
+                                </StackPanel>
+                            </controls:SettingsRow>
+                            <controls:SettingsFootnote x:Name="ExternalBackupStatusLine" x:FieldModifier="internal" />
+                            <controls:SettingsValueRow x:Name="ExternalBackupLastSuccessRow" x:FieldModifier="internal" />
+                            <controls:SettingsRow x:Name="BackupScheduleRow" x:FieldModifier="internal">
+                                <ComboBox
+                                    x:Name="BackupScheduleComboBox" x:FieldModifier="internal"
+                                    MinWidth="120"
+                                    AutomationProperties.AutomationId="settings.disk.backup-schedule"
+                                    SelectionChanged="OnBackupScheduleChanged">
+                                    <ComboBoxItem x:Name="BackupScheduleManualItem" x:FieldModifier="internal" />
+                                    <ComboBoxItem x:Name="BackupScheduleTerminationItem" x:FieldModifier="internal" />
+                                    <ComboBoxItem x:Name="BackupScheduleDailyItem" x:FieldModifier="internal" />
+                                    <ComboBoxItem x:Name="BackupScheduleWeeklyItem" x:FieldModifier="internal" />
+                                </ComboBox>
+                            </controls:SettingsRow>
+                            <controls:SettingsValueRow x:Name="BackupLastAttemptRow" x:FieldModifier="internal" />
+                            <controls:SettingsValueRow x:Name="BackupLastSuccessRow" x:FieldModifier="internal" />
+                            <controls:SettingsValueRow x:Name="BackupVerificationRow" x:FieldModifier="internal" />
+                        </controls:SettingsSection.Rows>
+                    </controls:SettingsSection>
+
+                    <!-- macOS backupActions: 세 단추가 폭을 똑같이 나눠 가집니다. -->
+                    <Grid x:Name="BackupActionsRow" x:FieldModifier="internal" ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button
+                            x:Name="BackupNowButton" x:FieldModifier="internal"
+                            HorizontalAlignment="Stretch"
+                            Style="{StaticResource AccentButtonStyle}"
+                            AutomationProperties.AutomationId="settings.disk.backup-now"
+                            Click="OnBackupNowClick" />
+                        <Button
+                            x:Name="BackupBrowseButton" x:FieldModifier="internal"
+                            Grid.Column="1"
+                            HorizontalAlignment="Stretch"
+                            AutomationProperties.AutomationId="settings.disk.backup-browse"
+                            Click="OnBrowseBackupsClick" />
+                        <Button
+                            x:Name="BackupArchiveButton" x:FieldModifier="internal"
+                            Grid.Column="2"
+                            HorizontalAlignment="Stretch"
+                            AutomationProperties.AutomationId="settings.disk.archive"
+                            Click="OnCreateArchiveClick" />
+                    </Grid>
+    </StackPanel>
+</UserControl>

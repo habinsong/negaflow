@@ -74,6 +74,12 @@ public sealed partial class LibraryScanPanel : UserControl
             session.UsesFlatbedRegionWorkflow)
         : ScannerMenuState.Empty;
 
+    /// <summary>macOS <c>hasScanner</c> 에 해당하는 스캐너 플러그인 존재 여부입니다.</summary>
+    internal bool HasScanner => scanSession?.Plugins.Count > 0;
+
+    /// <summary>macOS <c>capabilities.supportsPreview</c> 에 해당합니다.</summary>
+    internal bool SupportsPreview => scanSession?.Capabilities?.SupportsPreview == true;
+
     /// <summary>macOS <c>.detectScanners</c> — 다시 찾기 단추와 같은 길입니다.</summary>
     public async Task DetectScannersFromMenuAsync()
     {
@@ -204,7 +210,16 @@ public sealed partial class LibraryScanPanel : UserControl
     internal IReadOnlyList<InstalledScannerPlugin> PluginsForDiagnostics =>
         scanSession?.Plugins ?? [];
 
-    public void Localize() => copy.Localize();
+    /// <summary>
+    /// 이름표뿐 아니라 <b>목록</b>도 다시 겁니다 — 필름 종류(컬러 네거티브·흑백 포지티브 …),
+    /// 색 방식, 스캔 단추 이름은 <see cref="Render"/> 가 만들어 넣는 것이라 이름표만 다시
+    /// 걸면 옛 언어로 남습니다.
+    /// </summary>
+    public void Localize()
+    {
+        copy.Localize();
+        Render();
+    }
 
     public void Render()
     {

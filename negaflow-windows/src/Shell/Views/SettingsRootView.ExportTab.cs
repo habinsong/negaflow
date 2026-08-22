@@ -16,10 +16,10 @@ public sealed partial class SettingsRootView
 {
     private void InitializeExportTab()
     {
-        QuickExportFormatPicker.SelectionChanged += OnQuickExportFormatChanged;
-        ExportVerificationPicker.SelectionChanged += OnExportVerificationChanged;
-        SoftProofRow.Switched += OnSoftProofSwitched;
-        GamutWarningRow.Switched += OnGamutWarningSwitched;
+        ExportPage.QuickExportFormatPicker.SelectionChanged += OnQuickExportFormatChanged;
+        ExportPage.ExportVerificationPicker.SelectionChanged += OnExportVerificationChanged;
+        ExportPage.SoftProofRow.Switched += OnSoftProofSwitched;
+        ExportPage.GamutWarningRow.Switched += OnGamutWarningSwitched;
         BuildQuickExportChoices();
     }
 
@@ -29,18 +29,18 @@ public sealed partial class SettingsRootView
     /// </summary>
     private void BuildQuickExportChoices()
     {
-        QuickExportDpiComboBox.Items.Clear();
+        ExportPage.QuickExportDpiComboBox.Items.Clear();
         foreach (int dpi in ExportSettings.DpiOptions)
         {
-            QuickExportDpiComboBox.Items.Add(dpi == 0
+            ExportPage.QuickExportDpiComboBox.Items.Add(dpi == 0
                 ? AppResources.Get("settingsSourceDPI", "Text")
                 : string.Create(CultureInfo.CurrentCulture, $"{dpi} dpi"));
         }
-        QuickExportSizeComboBox.Items.Clear();
+        ExportPage.QuickExportSizeComboBox.Items.Clear();
         string suffix = AppResources.Get("exportLongEdgeSuffix", "Text");
         foreach (int edge in ExportSettings.LongEdgeOptions)
         {
-            QuickExportSizeComboBox.Items.Add(edge == 0
+            ExportPage.QuickExportSizeComboBox.Items.Add(edge == 0
                 ? AppResources.Get("exportFullSize", "Text")
                 : string.Create(CultureInfo.CurrentCulture, $"{edge} {suffix}"));
         }
@@ -48,23 +48,23 @@ public sealed partial class SettingsRootView
 
     private void LocalizeExportTab()
     {
-        QuickExportSection.HeaderText = AppResources.Get("quickExportSection", "Text");
-        QuickExportFormatRow.Label = AppResources.Get("settingsQuickExportFormat", "Text");
-        QuickExportFormatPicker.SetOptions(
+        ExportPage.QuickExportSection.HeaderText = AppResources.Get("quickExportSection", "Text");
+        ExportPage.QuickExportFormatRow.Label = AppResources.Get("settingsQuickExportFormat", "Text");
+        ExportPage.QuickExportFormatPicker.SetOptions(
             [
                 new SegmentOption(DevelopExportFormat.Jpeg8, "JPEG"),
                 new SegmentOption(DevelopExportFormat.Png16, "PNG"),
             ],
-            QuickExportFormatPicker.SelectedValue ?? DevelopExportFormat.Jpeg8);
-        QuickExportDpiRow.Label = AppResources.Get("settingsQuickExportDPI", "Text");
-        QuickExportSizeRow.Label = AppResources.Get("settingsQuickExportSize", "Text");
-        QuickExportFolderRow.Label = AppResources.Get("settingsQuickExportFolder", "Text");
+            ExportPage.QuickExportFormatPicker.SelectedValue ?? DevelopExportFormat.Jpeg8);
+        ExportPage.QuickExportDpiRow.Label = AppResources.Get("settingsQuickExportDPI", "Text");
+        ExportPage.QuickExportSizeRow.Label = AppResources.Get("settingsQuickExportSize", "Text");
+        ExportPage.QuickExportFolderRow.Label = AppResources.Get("settingsQuickExportFolder", "Text");
         BuildQuickExportChoices();
 
         string verification = AppResources.Get("settingsExportVerification", "Text");
-        ExportVerificationSection.HeaderText = verification;
-        ExportVerificationRow.Label = verification;
-        ExportVerificationPicker.SetOptions(
+        ExportPage.ExportVerificationSection.HeaderText = verification;
+        ExportPage.ExportVerificationRow.Label = verification;
+        ExportPage.ExportVerificationPicker.SetOptions(
             [
                 new SegmentOption(
                     ImageContentHashMode.Off,
@@ -73,54 +73,54 @@ public sealed partial class SettingsRootView
                     ImageContentHashMode.Sha256,
                     AppResources.Get("settingsExportVerificationStrict", "Content")),
             ],
-            ExportVerificationPicker.SelectedValue ?? ImageContentHashMode.Off);
-        ExportVerificationHelp.Text =
+            ExportPage.ExportVerificationPicker.SelectedValue ?? ImageContentHashMode.Off);
+        ExportPage.ExportVerificationHelp.Text =
             AppResources.Get("settingsExportVerificationHelp", "Text");
 
-        ColorManagementSection.HeaderText =
+        ExportPage.ColorManagementSection.HeaderText =
             AppResources.Get("settingsColorManagementSection", "Text");
-        ExportColorRow.Label = AppResources.Get("settingsExportColorLabel", "Text");
-        SoftProofRow.Label = AppResources.Get("settingsExportSoftProofLabel", "Text");
-        SoftProofProfileRow.Label = AppResources.Get("settingsColorProfile", "Text");
-        SoftProofChooseProfileButton.Content =
+        ExportPage.ExportColorRow.Label = AppResources.Get("settingsExportColorLabel", "Text");
+        ExportPage.SoftProofRow.Label = AppResources.Get("settingsExportSoftProofLabel", "Text");
+        ExportPage.SoftProofProfileRow.Label = AppResources.Get("settingsColorProfile", "Text");
+        ExportPage.SoftProofChooseProfileButton.Content =
             AppResources.Get("developExportChangeFolder", "Content");
-        SoftProofProfileError.Text = AppResources.Get("softProofInvalidICC", "Text");
-        SoftProofSimulationRow.Label = AppResources.Get("settingsExportProofLabel", "Text");
-        SettingsSoftProofProfileOnlyLocalized.Content =
+        ExportPage.SoftProofProfileError.Text = AppResources.Get("softProofInvalidICC", "Text");
+        ExportPage.SoftProofSimulationRow.Label = AppResources.Get("settingsExportProofLabel", "Text");
+        ExportPage.SettingsSoftProofProfileOnlyLocalized.Content =
             AppResources.Get("settingsSoftProofProfileOnly", "Content");
-        SettingsSoftProofPaperAndBlackLocalized.Content =
+        ExportPage.SettingsSoftProofPaperAndBlackLocalized.Content =
             AppResources.Get("settingsSoftProofPaperAndBlack", "Content");
-        GamutWarningRow.Label = AppResources.Get("settingsColorGamutWarning", "Text");
-        GamutUnavailableReason.Text =
+        ExportPage.GamutWarningRow.Label = AppResources.Get("settingsColorGamutWarning", "Text");
+        ExportPage.GamutUnavailableReason.Text =
             AppResources.Get("settingsColorGamutUnavailableReason", "Text");
-        PrinterProfileRow.Label = AppResources.Get("settingsColorPrinterProfile", "Text");
-        PrinterProfileButton.Content = AppResources.Get("developExportChangeFolder", "Content");
-        PrinterProfileError.Text = AppResources.Get("softProofInvalidICC", "Text");
-        ScannerEmulationRow.Label = AppResources.Get("settingsColorScannerInput", "Text");
-        ColorWorkingRow.Label = AppResources.Get("settingsColorWorking", "Text");
-        ColorMonitorRow.Label = AppResources.Get("settingsColorMonitor", "Text");
-        ColorExportRow.Label = AppResources.Get("settingsColorExport", "Text");
-        ColorSoftProofRow.Label = AppResources.Get("settingsColorSoftProof", "Text");
+        ExportPage.PrinterProfileRow.Label = AppResources.Get("settingsColorPrinterProfile", "Text");
+        ExportPage.PrinterProfileButton.Content = AppResources.Get("developExportChangeFolder", "Content");
+        ExportPage.PrinterProfileError.Text = AppResources.Get("softProofInvalidICC", "Text");
+        ExportPage.ScannerEmulationRow.Label = AppResources.Get("settingsColorScannerInput", "Text");
+        ExportPage.ColorWorkingRow.Label = AppResources.Get("settingsColorWorking", "Text");
+        ExportPage.ColorMonitorRow.Label = AppResources.Get("settingsColorMonitor", "Text");
+        ExportPage.ColorExportRow.Label = AppResources.Get("settingsColorExport", "Text");
+        ExportPage.ColorSoftProofRow.Label = AppResources.Get("settingsColorSoftProof", "Text");
         string reset = AppResources.Get("developTabReset", "Value");
-        SoftProofResetProfileButton.Content = reset;
-        PrinterProfileResetButton.Content = reset;
+        ExportPage.SoftProofResetProfileButton.Content = reset;
+        ExportPage.PrinterProfileResetButton.Content = reset;
     }
 
     private void SynchronizeExportTab(ShellPreferences preferences)
     {
         QuickExportSettings quick = preferences.QuickExport;
-        QuickExportFormatPicker.SetSelected(quick.Format);
-        QuickExportDpiComboBox.SelectedIndex =
+        ExportPage.QuickExportFormatPicker.SetSelected(quick.Format);
+        ExportPage.QuickExportDpiComboBox.SelectedIndex =
             Math.Max(0, ExportSettings.DpiOptions.ToList().IndexOf(quick.Dpi));
-        QuickExportSizeComboBox.SelectedIndex =
+        ExportPage.QuickExportSizeComboBox.SelectedIndex =
             Math.Max(0, ExportSettings.LongEdgeOptions.ToList().IndexOf(quick.LongEdge));
         // macOS 는 폴더 이름만 냅니다("Quick Export"). 전체 경로는 디스크 탭에 있습니다.
-        QuickExportFolderRow.ValueText =
+        ExportPage.QuickExportFolderRow.ValueText =
             Path.GetFileName(preferences.ResolvedQuickExport.FolderPath);
 
-        ExportVerificationPicker.SetSelected(preferences.ImageContentHash);
+        ExportPage.ExportVerificationPicker.SetSelected(preferences.ImageContentHash);
 
-        ExportColorSpaceComboBox.SelectedIndex = preferences.Export.ColorSpace switch
+        ExportPage.ExportColorSpaceComboBox.SelectedIndex = preferences.Export.ColorSpace switch
         {
             ExportColorSpace.DisplayP3 => 1,
             ExportColorSpace.AdobeRgb => 2,
@@ -128,63 +128,63 @@ public sealed partial class SettingsRootView
         };
 
         SoftProofPreferences proof = preferences.SoftProof;
-        SoftProofRow.IsOn = proof.IsEnabled;
+        ExportPage.SoftProofRow.IsOn = proof.IsEnabled;
         // macOS 는 프루프가 꺼져 있으면 아래 줄들을 아예 그리지 않습니다.
         Visibility proofRows = proof.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
-        SoftProofProfileRow.Visibility = proofRows;
-        SoftProofSimulationRow.Visibility = proofRows;
-        GamutWarningRow.Visibility = proofRows;
-        SoftProofSimulationComboBox.SelectedIndex =
+        ExportPage.SoftProofProfileRow.Visibility = proofRows;
+        ExportPage.SoftProofSimulationRow.Visibility = proofRows;
+        ExportPage.GamutWarningRow.Visibility = proofRows;
+        ExportPage.SoftProofSimulationComboBox.SelectedIndex =
             proof.Simulation == SoftProofSimulation.PaperAndBlackInk ? 1 : 0;
 
         bool gamutAvailable = NativeGamutCheck.IsSupported(preferences.Export.EffectiveColorSpace);
-        GamutWarningRow.IsEnabled = gamutAvailable;
-        GamutUnavailableReason.Visibility = proof.IsEnabled && !gamutAvailable
+        ExportPage.GamutWarningRow.IsEnabled = gamutAvailable;
+        ExportPage.GamutUnavailableReason.Visibility = proof.IsEnabled && !gamutAvailable
             ? Visibility.Visible
             : Visibility.Collapsed;
-        GamutWarningRow.IsOn = gamutAvailable && proof.GamutWarningEnabled;
+        ExportPage.GamutWarningRow.IsOn = gamutAvailable && proof.GamutWarningEnabled;
 
         string profileName = proof.ProfileName.Length != 0
             ? proof.ProfileName
             : ColorSpaceLabel(preferences.Export.EffectiveColorSpace);
-        SoftProofProfileName.Text = profileName;
-        SoftProofResetProfileButton.Visibility =
+        ExportPage.SoftProofProfileName.Text = profileName;
+        ExportPage.SoftProofResetProfileButton.Visibility =
             proof.ProfileName.Length != 0 ? Visibility.Visible : Visibility.Collapsed;
-        PrinterProfileName.Text = proof.PrinterProfilePath.Length != 0
+        ExportPage.PrinterProfileName.Text = proof.PrinterProfilePath.Length != 0
             ? Path.GetFileName(proof.PrinterProfilePath)
             : AppResources.Get("settingsColorUnassigned", "Text");
-        PrinterProfileResetButton.Visibility =
+        ExportPage.PrinterProfileResetButton.Visibility =
             proof.PrinterProfilePath.Length != 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        ScannerEmulationRow.ValueText = AppResources.Get("settingsColorUnassigned", "Text");
-        ScannerEmulationRow.Reason = AppResources.Get("settingsColorScannerInputReason", "Text");
-        ColorWorkingRow.ValueText = "Linear sRGB (Chromabase)";
-        ColorMonitorRow.ValueText = MonitorProfileName();
-        ColorExportRow.ValueText = ColorSpaceLabel(preferences.Export.EffectiveColorSpace);
-        ColorSoftProofRow.ValueText = proof.IsEnabled
+        ExportPage.ScannerEmulationRow.ValueText = AppResources.Get("settingsColorUnassigned", "Text");
+        ExportPage.ScannerEmulationRow.Reason = AppResources.Get("settingsColorScannerInputReason", "Text");
+        ExportPage.ColorWorkingRow.ValueText = "Linear sRGB (Chromabase)";
+        ExportPage.ColorMonitorRow.ValueText = MonitorProfileName();
+        ExportPage.ColorExportRow.ValueText = ColorSpaceLabel(preferences.Export.EffectiveColorSpace);
+        ExportPage.ColorSoftProofRow.ValueText = proof.IsEnabled
             ? $"{profileName} · {SimulationLabel(proof.Simulation)}"
             : AppResources.Get("settingsColorOff", "Text");
-        ColorSoftProofRow.Reason = proof.IsEnabled
+        ExportPage.ColorSoftProofRow.Reason = proof.IsEnabled
             ? string.Empty
             : AppResources.Get("settingsColorSoftProofOffReason", "Text");
-        ColorManagementSection.Apply();
+        ExportPage.ColorManagementSection.Apply();
     }
 
     private void OnQuickExportFormatChanged(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
-        if (!isUpdating && QuickExportFormatPicker.SelectedValue is DevelopExportFormat format)
+        if (!isUpdating && ExportPage.QuickExportFormatPicker.SelectedValue is DevelopExportFormat format)
         {
             workspaceState?.UpdateQuickExport(quick => quick with { Format = format });
         }
     }
 
-    private void OnQuickExportDpiChanged(object sender, Microsoft.UI.Xaml.Controls.SelectionChangedEventArgs args)
+    internal void OnQuickExportDpiChanged(object sender, Microsoft.UI.Xaml.Controls.SelectionChangedEventArgs args)
     {
         _ = sender;
         _ = args;
-        int index = QuickExportDpiComboBox.SelectedIndex;
+        int index = ExportPage.QuickExportDpiComboBox.SelectedIndex;
         if (!isUpdating && index >= 0 && index < ExportSettings.DpiOptions.Count)
         {
             int dpi = ExportSettings.DpiOptions[index];
@@ -192,11 +192,11 @@ public sealed partial class SettingsRootView
         }
     }
 
-    private void OnQuickExportSizeChanged(object sender, Microsoft.UI.Xaml.Controls.SelectionChangedEventArgs args)
+    internal void OnQuickExportSizeChanged(object sender, Microsoft.UI.Xaml.Controls.SelectionChangedEventArgs args)
     {
         _ = sender;
         _ = args;
-        int index = QuickExportSizeComboBox.SelectedIndex;
+        int index = ExportPage.QuickExportSizeComboBox.SelectedIndex;
         if (!isUpdating && index >= 0 && index < ExportSettings.LongEdgeOptions.Count)
         {
             int edge = ExportSettings.LongEdgeOptions[index];
@@ -212,7 +212,7 @@ public sealed partial class SettingsRootView
     {
         _ = sender;
         _ = args;
-        if (!isUpdating && ExportVerificationPicker.SelectedValue is ImageContentHashMode mode)
+        if (!isUpdating && ExportPage.ExportVerificationPicker.SelectedValue is ImageContentHashMode mode)
         {
             workspaceState?.SetImageContentHashMode(mode);
         }
@@ -224,7 +224,7 @@ public sealed partial class SettingsRootView
         _ = args;
         if (!isUpdating)
         {
-            workspaceState?.UpdateSoftProof(value => value with { IsEnabled = SoftProofRow.IsOn });
+            workspaceState?.UpdateSoftProof(value => value with { IsEnabled = ExportPage.SoftProofRow.IsOn });
         }
     }
 
@@ -235,11 +235,11 @@ public sealed partial class SettingsRootView
         if (!isUpdating)
         {
             workspaceState?.UpdateSoftProof(
-                value => value with { GamutWarningEnabled = GamutWarningRow.IsOn });
+                value => value with { GamutWarningEnabled = ExportPage.GamutWarningRow.IsOn });
         }
     }
 
-    private void OnExportColorSpaceChanged(
+    internal void OnExportColorSpaceChanged(
         object sender,
         Microsoft.UI.Xaml.Controls.SelectionChangedEventArgs args)
     {
@@ -249,7 +249,7 @@ public sealed partial class SettingsRootView
         {
             return;
         }
-        ExportColorSpace space = ExportColorSpaceComboBox.SelectedIndex switch
+        ExportColorSpace space = ExportPage.ExportColorSpaceComboBox.SelectedIndex switch
         {
             1 => ExportColorSpace.DisplayP3,
             2 => ExportColorSpace.AdobeRgb,
@@ -258,7 +258,7 @@ public sealed partial class SettingsRootView
         workspaceState?.UpdateExport(settings => settings with { ColorSpace = space });
     }
 
-    private void OnSoftProofSimulationChanged(
+    internal void OnSoftProofSimulationChanged(
         object sender,
         Microsoft.UI.Xaml.Controls.SelectionChangedEventArgs args)
     {
@@ -268,7 +268,7 @@ public sealed partial class SettingsRootView
         {
             return;
         }
-        SoftProofSimulation simulation = SoftProofSimulationComboBox.SelectedIndex == 1
+        SoftProofSimulation simulation = ExportPage.SoftProofSimulationComboBox.SelectedIndex == 1
             ? SoftProofSimulation.PaperAndBlackInk
             : SoftProofSimulation.ProfileOnly;
         workspaceState?.UpdateSoftProof(value => value with { Simulation = simulation });

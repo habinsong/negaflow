@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <UserControl
     x:Class="Negaflow.Shell.Views.FilmstripView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -86,7 +86,7 @@
                 IsItemClickEnabled="True"
                 ItemClick="OnFrameItemClick"
                 SelectionChanged="OnFrameSelectionChanged"
-                SelectionMode="Single"
+                SelectionMode="Extended"
                 Visibility="Collapsed">
                 <ListView.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -95,7 +95,8 @@
                 </ListView.ItemsPanel>
                 <ListView.ItemTemplate>
                     <DataTemplate>
-                        <Grid Padding="5">
+                        <!-- macOS 는 필름스트립 썸네일에도 격자와 **같은** 메뉴를 답니다. -->
+                        <Grid Padding="5" Background="Transparent" RightTapped="OnFrameRightTapped">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="4" />

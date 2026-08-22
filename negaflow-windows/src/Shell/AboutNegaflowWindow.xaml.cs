@@ -11,7 +11,9 @@ public sealed partial class AboutNegaflowWindow : Window
         ArgumentNullException.ThrowIfNull(settingsStore);
         InitializeComponent();
         WindowIcon.Apply(AppWindow);
-        Title = AppResources.Get("commandAboutNegaflow", "Value");
+        LocalizedElement.Track(
+            this,
+            () => Title = AppResources.Get("commandAboutNegaflow", "Value"));
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {
             presenter.IsResizable = false;

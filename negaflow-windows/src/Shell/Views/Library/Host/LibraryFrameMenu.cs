@@ -33,7 +33,25 @@ internal sealed class LibraryFrameMenu
 
         // 오른쪽 단추는 선택을 바꾸지 않는 것이 macOS 동작입니다. 다만 선택 **밖**의 카드를
         // 눌렀다면 그 카드 하나가 대상입니다 — 보이지 않는 선택에 명령이 가면 안 됩니다.
-        IReadOnlyList<LibraryFrameListItem> targets = ContextTargets(item);
+        Show(card, item, ContextTargets(item), args.GetPosition(card));
+    }
+
+    /// <summary>
+    /// 같은 메뉴를 다른 자리에서도 띄웁니다. 현상·인화 필름스트립의 썸네일이 이 길로
+    /// 들어옵니다 — macOS 도 격자와 필름스트립이 <c>LibraryFrameContextMenu</c> 하나를
+    /// 같이 씁니다.
+    /// </summary>
+    internal void Show(
+        FrameworkElement anchor,
+        LibraryFrameListItem item,
+        IReadOnlyList<LibraryFrameListItem> targets,
+        Windows.Foundation.Point position)
+    {
+        if (view.libraryHost is null)
+        {
+            return;
+        }
+        FrameworkElement card = anchor;
 
         MenuFlyout menu = new();
         AddStackCommands(menu, item, targets);
@@ -90,7 +108,7 @@ internal sealed class LibraryFrameMenu
                 collections.Items.Add(entry);
             }
             menu.Items.Add(collections);
-            if (view.CollectionsPanel.SelectedCollectionId is { } activeCollectionId)
+            if (view.ControlsPanel.CollectionsPanel.SelectedCollectionId is { } activeCollectionId)
             {
                 menu.Items.Add(MenuItem(
                     "libraryRemoveFromCollection",
@@ -110,7 +128,16 @@ internal sealed class LibraryFrameMenu
             "Content",
             () => view.actions.RemoveFromLibrary(targets)));
 
-        menu.ShowAt(card, new FlyoutShowOptions { Position = args.GetPosition(card) });
+        // macOS 는 마지막에 destructive 항목 하나를 더 답니다 - 원본 파일 자체를 휴지통으로
+        // 옮기는 명령이며 빨간 글자입니다.
+        SourceTrashCommand.Append(
+            menu,
+            view.libraryHost,
+            [.. targets.Select(target => target.Frame)],
+            view.XamlRoot,
+            view.ShowFilteredItems);
+
+        menu.ShowAt(card, new FlyoutShowOptions { Position = position });
     }
 
     /// <summary>

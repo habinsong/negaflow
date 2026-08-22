@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Print.Settings.PrintContentTab"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls"
+    xmlns:print="using:Negaflow.Shell.Views.Print.Settings">
+
+    <!--
+        macOS `PrintPackageInspectorControls(scope: .content)` = `commonControls` 그대로입니다.
+
+        차례: (사용자 패키지가 아니면) 이미지 맞춤 → 90° 회전 맞춤 → 분리선 → 캡션 →
+        (캡션이 있을 때) 캡션 글꼴 → 사용자 입력이면 문구 목록, 아니면 캡션 정렬 →
+        분리선 → 재단 표시.
+    -->
+    <Border Padding="14" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="9">
+        <StackPanel Spacing="10">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <FontIcon FontSize="13" Glyph="&#xEB9F;" />
+                <TextBlock x:Name="ContentSectionText" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
+            </StackPanel>
+
+            <!-- 사용자 패키지는 칸마다 맞춤·회전을 따로 정하므로 여기에는 없습니다. -->
+            <StackPanel x:Name="ContentFitGroup" x:FieldModifier="internal" Spacing="10">
+                <print:PrintInspectorStackedField x:Name="ContentFitField" x:FieldModifier="internal">
+                    <controls:NegaflowSegmentedPicker
+                        x:Name="ContentFitSelector" x:FieldModifier="internal"
+                        AutomationProperties.AutomationId="negaflow.print.content.fit" />
+                </print:PrintInspectorStackedField>
+                <print:PrintInspectorStackedField x:Name="RotateToFitField" x:FieldModifier="internal">
+                    <controls:NegaflowSegmentedPicker
+                        x:Name="RotateToFitSelector" x:FieldModifier="internal"
+                        AutomationProperties.AutomationId="negaflow.print.content.rotate-to-fit" />
+                </print:PrintInspectorStackedField>
+                <print:PrintInspectorDivider />
+            </StackPanel>
+
+            <print:PrintInspectorInlineField x:Name="CaptionField" x:FieldModifier="internal">
+                <controls:NegaflowPopupPicker
+                    x:Name="CaptionSelector" x:FieldModifier="internal"
+                    Variant="Inline"
+                    AutomationProperties.AutomationId="negaflow.print.content.caption"
+                    SelectionChanged="OnContentPickerChanged" />
+            </print:PrintInspectorInlineField>
+
+            <!-- 캡션을 끄면 글꼴도 정렬도 고를 것이 없습니다. -->
+            <StackPanel x:Name="CaptionDetailGroup" x:FieldModifier="internal" Spacing="10" Visibility="Collapsed">
+                <print:PrintInspectorDivider />
+                <print:PrintInspectorInlineField x:Name="CaptionFontField" x:FieldModifier="internal">
+                    <controls:NegaflowPopupPicker
+                        x:Name="CaptionFontSelector" x:FieldModifier="internal"
+                        Variant="Inline"
+                        AutomationProperties.AutomationId="negaflow.print.content.caption-font"
+                        SelectionChanged="OnContentPickerChanged" />
+                </print:PrintInspectorInlineField>
+
+                <!-- "사용자 입력" 이면 문구를 손으로 놓습니다(macOS `customCaptionControls`). -->
+                <StackPanel x:Name="CustomCaptionGroup" x:FieldModifier="internal" Spacing="10" Visibility="Collapsed">
+                    <print:PrintInspectorDivider />
+                    <StackPanel x:Name="CustomCaptionsHost" x:FieldModifier="internal" Spacing="8" />
+                    <Button
+                        x:Name="AddCaptionButton" x:FieldModifier="internal"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        AutomationProperties.AutomationId="negaflow.print.content.caption.add"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="OnAddCaptionClicked"
+                        CornerRadius="8" />
+                </StackPanel>
+
+                <!-- 그 밖의 캡션 방식은 정렬만 고릅니다. -->
+                <StackPanel x:Name="CaptionAlignmentGroup" x:FieldModifier="internal" Spacing="10">
+                    <print:PrintInspectorDivider />
+                    <print:PrintInspectorStackedField x:Name="CaptionAlignmentField" x:FieldModifier="internal">
+                        <controls:NegaflowSegmentedPicker
+                            x:Name="CaptionAlignmentSelector" x:FieldModifier="internal"
+                            AutomationProperties.AutomationId="negaflow.print.content.caption-alignment" />
+                    </print:PrintInspectorStackedField>
+                </StackPanel>
+            </StackPanel>
+
+            <print:PrintInspectorDivider />
+
+            <print:PrintInspectorStackedField x:Name="ContentCropMarksField" x:FieldModifier="internal">
+                <controls:NegaflowSegmentedPicker
+                    x:Name="ContentCropMarksSelector" x:FieldModifier="internal"
+                    AutomationProperties.AutomationId="negaflow.print.content.crop-marks" />
+            </print:PrintInspectorStackedField>
+        </StackPanel>
+    </Border>
+</UserControl>

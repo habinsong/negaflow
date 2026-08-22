@@ -19,9 +19,9 @@ public sealed partial class LibraryWorkspaceView
     /// </summary>
     internal void SyncFlatbedOverlay()
     {
-        string? previewPath = ScanPanel.FlatbedPreviewPath;
+        string? previewPath = ControlsPanel.ScanPanel.FlatbedPreviewPath;
         bool show = previewPath is { Length: > 0 };
-        if (show && ScanPanel.SessionForOverlay is { } session)
+        if (show && ControlsPanel.ScanPanel.SessionForOverlay is { } session)
         {
             FlatbedOverlay.Attach(session);
         }

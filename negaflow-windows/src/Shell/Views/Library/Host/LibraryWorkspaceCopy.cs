@@ -39,13 +39,13 @@ internal sealed class LibraryWorkspaceCopy
         LibraryFrameNaming.NamedCopyFormat = static (name, copyNumber) =>
             AppResources.FormatIntegers("namedFrameCopyDisplayFormat", "Text", copyNumber)
                 .Replace("{0}", name, StringComparison.Ordinal);
-        SetNameAndTooltip(view.ImportRailButton, "importSection");
-        SetNameAndTooltip(view.FilesRailButton, "libraryFiles");
-        SetNameAndTooltip(view.CollectionsRailButton, "libraryCollections");
+        SetNameAndTooltip(view.ControlsPanel.ImportRailButton, "importSection");
+        SetNameAndTooltip(view.ControlsPanel.FilesRailButton, "libraryFiles");
+        SetNameAndTooltip(view.ControlsPanel.CollectionsRailButton, "libraryCollections");
         string import = AppResources.Get("importSection", "Text");
-        view.ImportHeaderText.Text = import;
-        view.ImportSectionText.Text = import;
-        view.CollectionsPanel.Localize();
+        view.ControlsPanel.ImportHeaderText.Text = import;
+        view.ControlsPanel.ImportSectionText.Text = import;
+        view.ControlsPanel.CollectionsPanel.Localize();
         view.CullingSurface.Localize();
         view.rail.Update();
         string importImages = AppResources.Get("importImages", "Content");
@@ -123,18 +123,18 @@ internal sealed class LibraryWorkspaceCopy
     private void LocalizeScanSection()
     {
         SetSegmentText(
-            view.ImportImagesButton,
-            view.ImportImagesText,
+            view.ControlsPanel.ImportImagesButton,
+            view.ControlsPanel.ImportImagesText,
             AppResources.Get("libraryImportImageShort", "Content"));
         SetSegmentText(
-            view.ImportFoldersButton,
-            view.ImportFoldersText,
+            view.ControlsPanel.ImportFoldersButton,
+            view.ControlsPanel.ImportFoldersText,
             AppResources.Get("libraryImportFolderShort", "Content"));
         SetSegmentText(
-            view.ImportScannerButton,
-            view.ImportScannerText,
+            view.ControlsPanel.ImportScannerButton,
+            view.ControlsPanel.ImportScannerText,
             AppResources.Get("libraryScannerLabel", "Content"));
-        view.ScanPanel.Localize();
+        view.ControlsPanel.ScanPanel.Localize();
     }
 
     private static void SetSegmentText(
@@ -169,7 +169,7 @@ internal sealed class LibraryWorkspaceCopy
         AutomationProperties.SetName(button, text);
     }
 
-    private static void SetDropDownText(DropDownButton button, string text)
+    private static void SetDropDownText(Button button, string text)
     {
         button.Content = text;
         AutomationProperties.SetName(button, text);

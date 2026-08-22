@@ -19,6 +19,9 @@ public sealed partial class DevelopPreviewCanvas : UserControl
 {
     private CropWorkspaceState? crop;
     private CanvasViewportState? viewport;
+
+    /// <summary>눌러 끌어 사진을 옮기는 도구입니다. macOS 캔버스의 `DragGesture` 자리입니다.</summary>
+    private DevelopCanvasPanInteraction pan = null!;
     private CanvasCompareState? compare;
     private WriteableBitmap? previewBitmap;
     private WriteableBitmap? compareBeforeBitmap;
@@ -47,6 +50,16 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         guided = new DevelopCanvasGuidedOverlay(this);
         defects = new DevelopCanvasDefectOverlay(this);
         cropInteraction = new DevelopCanvasCropInteraction(this);
+        pan = new DevelopCanvasPanInteraction(
+            CanvasHost,
+            () => viewport,
+            () => previewBitmap is null
+                ? null
+                : ((double)previewBitmap.PixelWidth, (double)previewBitmap.PixelHeight),
+            ApplyImageFrame,
+            shape => ProtectedCursor = shape is { } value
+                ? Microsoft.UI.Input.InputSystemCursor.Create(value)
+                : null);
     }
 
     /// <summary>적용 단추입니다. 카탈로그 쓰기는 뷰가 맡습니다.</summary>
@@ -426,6 +439,12 @@ public sealed partial class DevelopPreviewCanvas : UserControl
 
     private void OnCanvasSizeChanged(object sender, SizeChangedEventArgs args)
     {
+        // 확대한 사진이 패널 위로 넘치지 않게 캔버스를 잘라 둡니다.
+        CanvasHost.Clip = new Microsoft.UI.Xaml.Media.RectangleGeometry
+        {
+            Rect = new Windows.Foundation.Rect(
+                0, 0, Math.Max(0, args.NewSize.Width), Math.Max(0, args.NewSize.Height)),
+        };
         _ = sender;
         ApplyImageFrame();
         ApplyHudLayout();

@@ -30,8 +30,7 @@
         -->
         <MenuBarItem
             x:Name="FileMenu"
-            AutomationProperties.AutomationId="negaflow.menu.file"
-            Title="File">
+            AutomationProperties.AutomationId="negaflow.menu.file">
             <MenuFlyoutItem
                 x:Name="ImportImagesItem"
                 AutomationProperties.AutomationId="negaflow.menu.import-images"
@@ -64,8 +63,7 @@
         -->
         <MenuBarItem
             x:Name="EditMenu"
-            AutomationProperties.AutomationId="negaflow.menu.edit"
-            Title="Edit">
+            AutomationProperties.AutomationId="negaflow.menu.edit">
             <MenuFlyoutItem
                 x:Name="UndoItem"
                 AutomationProperties.AutomationId="negaflow.menu.undo"
@@ -103,8 +101,7 @@
         -->
         <MenuBarItem
             x:Name="ViewMenu"
-            AutomationProperties.AutomationId="negaflow.menu.view"
-            Title="View">
+            AutomationProperties.AutomationId="negaflow.menu.view">
             <MenuFlyoutItem
                 x:Name="ShowHideSidebarItem"
                 AutomationProperties.AutomationId="negaflow.menu.sidebar"
@@ -141,8 +138,7 @@
         -->
         <MenuBarItem
             x:Name="LibraryMenu"
-            AutomationProperties.AutomationId="negaflow.menu.library"
-            Title="Library">
+            AutomationProperties.AutomationId="negaflow.menu.library">
             <MenuFlyoutItem
                 x:Name="LibraryImportImagesItem"
                 AutomationProperties.AutomationId="negaflow.menu.library.import-images"
@@ -179,8 +175,7 @@
         -->
         <MenuBarItem
             x:Name="PhotoMenu"
-            AutomationProperties.AutomationId="negaflow.menu.photo"
-            Title="Photo">
+            AutomationProperties.AutomationId="negaflow.menu.photo">
             <MenuFlyoutItem
                 x:Name="PreviousPhotoItem"
                 AutomationProperties.AutomationId="negaflow.menu.photo.previous"
@@ -270,8 +265,7 @@
         -->
         <MenuBarItem
             x:Name="DevelopMenu"
-            AutomationProperties.AutomationId="negaflow.menu.develop"
-            Title="Develop">
+            AutomationProperties.AutomationId="negaflow.menu.develop">
             <MenuFlyoutItem
                 x:Name="AutoToneItem"
                 AutomationProperties.AutomationId="negaflow.menu.develop.auto-tone"
@@ -390,8 +384,7 @@
         -->
         <MenuBarItem
             x:Name="ScannerMenu"
-            AutomationProperties.AutomationId="negaflow.menu.scanner"
-            Title="Scanner">
+            AutomationProperties.AutomationId="negaflow.menu.scanner">
             <MenuFlyoutItem
                 x:Name="DetectScannersItem"
                 AutomationProperties.AutomationId="negaflow.menu.scanner.detect"
@@ -425,8 +418,7 @@
         -->
         <MenuBarItem
             x:Name="ExportMenu"
-            AutomationProperties.AutomationId="negaflow.menu.export"
-            Title="Export">
+            AutomationProperties.AutomationId="negaflow.menu.export">
             <MenuFlyoutItem
                 x:Name="ExportMenuQuickItem"
                 AutomationProperties.AutomationId="negaflow.menu.export.quick"
@@ -442,8 +434,7 @@
         -->
         <MenuBarItem
             x:Name="HelpMenu"
-            AutomationProperties.AutomationId="negaflow.menu.help"
-            Title="Help">
+            AutomationProperties.AutomationId="negaflow.menu.help">
             <MenuFlyoutItem
                 x:Name="KeyboardShortcutsItem"
                 AutomationProperties.AutomationId="negaflow.menu.help.shortcuts"

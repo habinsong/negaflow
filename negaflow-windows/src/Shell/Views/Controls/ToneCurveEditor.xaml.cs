@@ -27,7 +27,8 @@ public sealed partial class ToneCurveEditor : UserControl
     public ToneCurveEditor()
     {
         InitializeComponent();
-        SetAutomationProperties();
+        // 채널 이름(빨강·초록·파랑·DR)·입력·출력·조작 안내가 리소스에서 옵니다.
+        LocalizedElement.Track(this, SetAutomationProperties);
         Render();
     }
 
@@ -79,6 +80,12 @@ public sealed partial class ToneCurveEditor : UserControl
         CurveHelpText.Text = AppResources.Get("developToneCurveHelp", "Text");
         CurveInputLabel.Text = AppResources.Get("developCurveInput", "Text");
         CurveOutputLabel.Text = AppResources.Get("developCurveOutput", "Text");
+        // 입력·출력 칸의 이름은 그 위 이름표와 같습니다. 앞 판은 XAML 에
+        // "Point Curve input percentage" 라는 영어가 박혀 있어 어떤 언어에서도 그대로였습니다.
+        AutomationProperties.SetName(InputEditor, CurveInputLabel.Text);
+        AutomationProperties.SetLabeledBy(InputEditor, CurveInputLabel);
+        AutomationProperties.SetName(OutputEditor, CurveOutputLabel.Text);
+        AutomationProperties.SetLabeledBy(OutputEditor, CurveOutputLabel);
         AutomationProperties.SetAutomationId(RgbChannelButton, "negaflow.develop.point-curve.rgb");
         AutomationProperties.SetAutomationId(RedChannelButton, "negaflow.develop.point-curve.red");
         AutomationProperties.SetAutomationId(GreenChannelButton, "negaflow.develop.point-curve.green");

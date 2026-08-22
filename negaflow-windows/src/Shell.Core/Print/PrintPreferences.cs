@@ -1,4 +1,4 @@
-namespace Negaflow.Shell.Print;
+﻿namespace Negaflow.Shell.Print;
 
 /// <summary>
 /// 인화 화면이 기억하는 값입니다. macOS <c>PrintWorkspaceSettingsStore</c> 와 같은 항목이며,
@@ -18,11 +18,11 @@ public sealed record PrintPreferences
 
     public PrintPerforationStyle PerforationStyle { get; init; } = PrintPerforationStyle.None;
 
-    public PrintPaperSurface PaperSurface { get; init; } = PrintPaperSurface.Glossy;
+    public PrintPaperSurface PaperSurface { get; init; } = PrintPaperSurface.Matte;
 
     public bool ShowsRulers { get; init; }
 
-    public PrintRulerUnit RulerUnit { get; init; } = PrintRulerUnit.Centimeters;
+    public PrintRulerUnit RulerUnit { get; init; } = PrintRulerUnit.Inches;
 
     /// <summary>
     /// 일반 출력인지 C-print 인지입니다.
@@ -49,15 +49,22 @@ public sealed record PrintPreferences
     /// <summary>인화 미리보기(소프트 프루프)를 켤지입니다. macOS <c>cPrintPreviewEnabled</c>.</summary>
     public bool CPrintPreviewEnabled { get; init; }
 
+    /// <summary>
+    /// 용지 흰색과 잉크 검정까지 흉내 낼지입니다. macOS
+    /// <c>cPrintPaperSimulationEnabled</c> 이며, 켜면 프루프가
+    /// <see cref="Develop.SoftProofSimulation.PaperAndInk"/> 로 갑니다.
+    /// </summary>
+    public bool CPrintPaperSimulationEnabled { get; init; }
+
     public PrintSheetBackground SheetBackground { get; init; } = PrintSheetBackground.White;
 
     public int ContactRows { get; init; } = 7;
 
     public int ContactColumns { get; init; } = 6;
 
-    public double HorizontalSpacingMm { get; init; } = 4;
+    public double HorizontalSpacingMm { get; init; } = 2;
 
-    public double VerticalSpacingMm { get; init; } = 4;
+    public double VerticalSpacingMm { get; init; } = 2;
 
     public PrintPackageContentMode ContentMode { get; init; } = PrintPackageContentMode.Fit;
 
@@ -71,16 +78,28 @@ public sealed record PrintPreferences
     public PrintPackageCaptionMode CaptionMode { get; init; } = PrintPackageCaptionMode.None;
 
     public PrintPackageCaptionAlignment CaptionAlignment { get; init; } =
-        PrintPackageCaptionAlignment.Center;
+        PrintPackageCaptionAlignment.Leading;
 
     public double CaptionHeightMm { get; init; } = 6;
 
+    /// <summary>
+    /// 판에 올린 사진을 스캔 기본 방향으로 통일합니다. macOS
+    /// <c>normalizesSourceOrientation</c> 자리입니다.
+    /// </summary>
+    public bool NormalizesSourceOrientation { get; init; }
+
+    /// <summary>캡션 글꼴입니다. 빈 값이면 화면 기본 글꼴입니다.</summary>
+    public string CaptionFontName { get; init; } = PrintCaptionFonts.DefaultName;
+
+    /// <summary>손으로 놓은 문구들입니다. 캡션이 "사용자 문구" 일 때만 씁니다.</summary>
+    public IReadOnlyList<PrintCustomCaption> CustomCaptions { get; init; } = PrintCustomCaption.DefaultSet;
+
     public bool ShowsCropMarks { get; init; }
 
-    public double CropMarkLengthMm { get; init; } = 4;
+    public double CropMarkLengthMm { get; init; } = 3;
 
     /// <summary>손으로 놓은 배치입니다. 커스텀 패키지 모드에서만 쓰입니다.</summary>
-    public IReadOnlyList<PrintCustomPackageItem> CustomItems { get; init; } = [];
+    public IReadOnlyList<PrintCustomPackageItem> CustomItems { get; init; } = PrintCustomPackageSeed.Default;
 
     /// <summary>
     /// 이 값들로 만든 판 설정입니다. 레이아웃 모드가 공정을 고르면 그 겉모습이 함께 갑니다 —
@@ -116,6 +135,9 @@ public sealed record PrintPreferences
         ShowsCropMarks = ShowsCropMarks,
         CropMarkLengthMm = CropMarkLengthMm,
         CustomItems = CustomItems,
+        NormalizesSourceOrientation = NormalizesSourceOrientation,
+        CaptionFontName = CaptionFontName,
+        CustomCaptions = CustomCaptions,
     };
 
     /// <summary>
@@ -147,7 +169,14 @@ public sealed record PrintPreferences
     /// 그대로 기억합니다.
     /// </summary>
     public PrintPreferences Restored() =>
-        Normalize() with { OutputProcess = PrintOutputProcess.Standard };
+        Normalize() with
+        {
+            OutputProcess = PrintOutputProcess.Standard,
+            // 퍼포레이션은 macOS 인화 인스펙터가 <b>내주지 않는</b> 값이라 늘 없음입니다.
+            // 예전 Windows 판에는 이것을 고르는 칸이 있었고, 그때 켜 둔 값이 그대로 남아
+            // 있으면 이제는 끌 방법 없이 판에 구멍이 계속 찍힙니다.
+            PerforationStyle = PrintPerforationStyle.None,
+        };
 
     public PrintPreferences Normalize() => this with
     {
@@ -163,9 +192,12 @@ public sealed record PrintPreferences
         Orientation = Enum.IsDefined(Orientation) ? Orientation : PrintPaperOrientation.Automatic,
         MarginMm = double.IsFinite(MarginMm) ? Math.Clamp(MarginMm, 0, 50) : 10,
         Dpi = Math.Clamp(Dpi, 72, 600),
-        PerforationStyle = Enum.IsDefined(PerforationStyle)
-            ? PerforationStyle
-            : PrintPerforationStyle.None,
+        // 퍼포레이션(필름 띠 + 천공)은 **어느 화면에서도 고를 수 없습니다** — macOS 인화
+        // 인스펙터에 그 자리가 없고, Windows 에만 있던 창작이라 걷어냈습니다
+        // (`PrintInspectorSurface`). 그런데 걷어내기 전에 저장된 설정 파일에는 값이 남아
+        // 있어, 끌 방법 없이 판마다 필름 띠와 천공이 그려졌습니다(사용자 신고). 읽을 때
+        // 되돌립니다 — macOS 가 실제로 내는 값과 같습니다.
+        PerforationStyle = PrintPerforationStyle.None,
         PaperSurface = Enum.IsDefined(PaperSurface) ? PaperSurface : PrintPaperSurface.Glossy,
         RulerUnit = Enum.IsDefined(RulerUnit) ? RulerUnit : PrintRulerUnit.Centimeters,
         OutputProcess = Enum.IsDefined(OutputProcess) ? OutputProcess : PrintOutputProcess.Standard,

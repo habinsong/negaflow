@@ -13,7 +13,7 @@ public sealed partial class QuickStartHelpView : UserControl
     public QuickStartHelpView()
     {
         InitializeComponent();
-        Localize();
+        LocalizedElement.Track(this, Localize);
     }
 
     public void Localize()

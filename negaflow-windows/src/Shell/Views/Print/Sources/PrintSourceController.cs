@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Negaflow.Catalog;
 using Negaflow.Shell;
@@ -78,14 +78,50 @@ internal sealed class PrintSourceController
         libraryHost?.SetSelection([frameId], frameId);
     }
 
+    /// <summary>
+    /// 필름스트립에서 사진을 눌렀습니다. Shift · Ctrl 을 함께 눌렀으면 여러 장이 남고, 그
+    /// 여러 장이 그대로 인화할 사진이 됩니다 — macOS 도 같은 선택 하나를 봅니다.
+    /// </summary>
     internal void HandleFilmstripSelected(object? sender, LibraryFrameListItem item)
     {
         _ = sender;
-        libraryHost?.SetSelection([item.Id], item.Id);
+        libraryHost?.SelectFrame(
+            item.Id,
+            [.. filmstripItems.Select(candidate => candidate.Id)],
+            LibraryModifierKeys.Current());
     }
+
+    /// <summary>
+    /// 썸네일이나 현상본이 새로 왔습니다. 판이 들고 있던 풀어 둔 그림을 버려야 새 그림이
+    /// 보입니다 — 그때 말고는 버리지 않습니다(끌 때마다 다시 풀면 느려집니다).
+    /// </summary>
+    internal event EventHandler? PreviewImageArrived;
+
+    /// <summary>사진마다 마지막으로 판을 다시 그린 때입니다.</summary>
+    private readonly Dictionary<string, long> lastRedrawTicks = [];
+
+    /// <summary>
+    /// 같은 사진 때문에 판을 다시 그리는 최소 간격입니다.
+    /// </summary>
+    /// <remarks>
+    /// 판을 그릴 때 현상본이 없으면 다시 현상을 청합니다. 그 현상이 끝나면 다시 이 알림이
+    /// 오고, 그 알림이 또 판을 그립니다 — 실측 <b>초당 94회</b>가 돌아 UI 스레드가 화면을
+    /// 합성하지 못하고 창이 검게 멈췄습니다. 같은 사진의 알림은 이 간격 안에서 한 번만
+    /// 받아 고리를 끊습니다. 새 그림은 다음 알림에 반영되므로 잃는 것은 없습니다.
+    /// </remarks>
+    private const long RedrawIntervalTicks = TimeSpan.TicksPerMillisecond * 250;
 
     private void OnThumbnailReady(string frameId)
     {
+        long now = Environment.TickCount64 * TimeSpan.TicksPerMillisecond;
+        if (lastRedrawTicks.TryGetValue(frameId, out long last) &&
+            now - last < RedrawIntervalTicks)
+        {
+            return;
+        }
+        lastRedrawTicks[frameId] = now;
+        Negaflow.Shell.PreviewTrace.Write("print.thumb " + frameId);
+        PreviewImageArrived?.Invoke(this, EventArgs.Empty);
         if (thumbnails?.TryGet(frameId) is { } jpeg)
         {
             LibraryFrameListItem? item = filmstripItems.FirstOrDefault(candidate =>
@@ -102,6 +138,7 @@ internal sealed class PrintSourceController
     {
         _ = sender;
         _ = args;
+        Negaflow.Shell.PreviewTrace.Write("print.selection");
         SynchronizeFilmstrip();
         if (builtFrameCount != (libraryHost?.Frames.Count ?? 0))
         {
@@ -135,6 +172,17 @@ internal sealed class PrintSourceController
         builtFrameCount = projection.FolderSections.Sum(section => section.Items.Count);
     }
 
+    /// <summary>
+    /// 언어가 바뀌면 사이드바 머리글("사진 없음")과 필름스트립 항목 이름을 다시 만듭니다.
+    /// 둘 다 만들 때 문구가 정해지므로 다시 만들지 않으면 옛 언어로 남습니다.
+    /// </summary>
+    internal void Localize()
+    {
+        RebuildFilesTree();
+        SynchronizeFilmstrip();
+        SynchronizeSidebar();
+    }
+
     private void SynchronizeSidebar()
     {
         string? activeFrameId = libraryHost?.ActiveFrameId;
@@ -162,9 +210,8 @@ internal sealed class PrintSourceController
             filmstripItems = [];
             return;
         }
-        filmstripItems = LibraryFrameListItems.From(
-            libraryHost.Frames,
-            libraryHost.SourceAvailabilityByFrameId);
+        // 하단바가 정한 범위와 차례를 씁니다 - 현상뷰와 같은 하나입니다.
+        filmstripItems = FilmstripPresentation.Project(libraryHost, surface.Presentation());
         int selectedIndex = 0;
         if (libraryHost.ActiveFrameId is { } activeFrameId)
         {
@@ -178,5 +225,9 @@ internal sealed class PrintSourceController
         }
         _ = LibraryThumbnailBinder.Hydrate(thumbnails, filmstripItems, "print");
         surface.Filmstrip.ShowFrames(filmstripItems, selectedIndex);
+        // 고른 사진이 여러 장이면 스트립도 여러 장을 밝게 냅니다.
+        surface.Filmstrip.SynchronizeSelection(
+            libraryHost.SelectedFrameIds,
+            libraryHost.ActiveFrameId);
     }
 }

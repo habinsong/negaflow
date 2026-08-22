@@ -19,4 +19,10 @@ internal sealed class PrintSourceSurface
     /// 튀어나옵니다 — 그래서 판단은 뷰가 합니다.
     /// </summary>
     public required Action<bool> ApplySourcePane { get; init; }
+
+    /// <summary>
+    /// 하단바가 정한 필름스트립 범위·차례를 읽는 자리입니다. 인화뷰도 현상뷰와 같은
+    /// 값을 씁니다.
+    /// </summary>
+    public required Func<WorkspacePresentationState?> Presentation { get; init; }
 }

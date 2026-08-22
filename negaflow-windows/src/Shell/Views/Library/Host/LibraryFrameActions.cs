@@ -103,7 +103,7 @@ internal sealed class LibraryFrameActions
         }
         if (view.libraryHost.SetCollectionFrames(collectionId, frameIds))
         {
-            view.CollectionsPanel.Rebuild();
+            view.ControlsPanel.CollectionsPanel.Rebuild();
             view.ShowFilteredItems();
         }
     }
@@ -128,7 +128,7 @@ internal sealed class LibraryFrameActions
         }
         if (view.libraryHost.SetCollectionFrames(collectionId, frameIds))
         {
-            view.CollectionsPanel.Rebuild();
+            view.ControlsPanel.CollectionsPanel.Rebuild();
             view.ShowFilteredItems();
         }
     }
@@ -171,9 +171,9 @@ internal sealed class LibraryFrameActions
         }
         // 썸네일은 지우지 않습니다. 되돌리면 그 사진이 다시 오고, 그때 다시 만들게 하면
         // 되살아난 격자가 한동안 빈 칸으로 보입니다.
-        view.CollectionsPanel.Rebuild();
+        view.ControlsPanel.CollectionsPanel.Rebuild();
         view.ShowLibrary(host, view.importWindowId ?? default);
-        view.ImportStatusText.Text = AppResources.FormatIntegers(
+        view.ControlsPanel.ImportStatusText.Text = AppResources.FormatIntegers(
             "libraryRemovalUndoFormat",
             "Text",
             removed);
@@ -194,9 +194,9 @@ internal sealed class LibraryFrameActions
         {
             return false;
         }
-        view.CollectionsPanel.Rebuild();
+        view.ControlsPanel.CollectionsPanel.Rebuild();
         view.ShowLibrary(host, view.importWindowId ?? default);
-        view.ImportStatusText.Text = AppResources
+        view.ControlsPanel.ImportStatusText.Text = AppResources
             .Get("libraryUndoneFormat", "Text")
             .Replace("{0}", ActionDisplayName(actionKey), StringComparison.Ordinal);
         return true;

@@ -25,6 +25,10 @@ public sealed partial class SettingsRootView : UserControl
     public SettingsRootView()
     {
         InitializeComponent();
+        // 디스크·내보내기 탭 XAML 은 각자 UserControl 로 옮겼습니다. 이벤트는 옮기기 전과
+        // 같은 이 타입의 메서드로 돌아옵니다.
+        DiskPage.Owner = this;
+        ExportPage.Owner = this;
         LocalizeControls();
     }
 
@@ -78,6 +82,13 @@ public sealed partial class SettingsRootView : UserControl
         LocalizeControls();
         BuildShortcutGroups();
         BuildShortcutRows();
+        // 읽기값도 리소스 문구입니다 — 사진 수·용량·날짜·백업 상태·화면 프로파일·
+        // 시늉 표시·탭 고름. 앞 판은 `LocalizeControls` 만 다시 걸어서 이 값들이
+        // 처음 열었을 때의 언어에 그대로 남았습니다.
+        if (workspaceState is { } state)
+        {
+            UpdateState(state.Current);
+        }
     }
 
     private void OnCategoryClick(object sender, RoutedEventArgs args)
@@ -112,7 +123,7 @@ public sealed partial class SettingsRootView : UserControl
 
 
 
-    private async void OnChooseSoftProofProfile(object sender, RoutedEventArgs args)
+    internal async void OnChooseSoftProofProfile(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
@@ -125,7 +136,7 @@ public sealed partial class SettingsRootView : UserControl
         picker.FileTypeFilter.Add(".icc");
         picker.FileTypeFilter.Add(".icm");
 
-        SoftProofChooseProfileButton.IsEnabled = false;
+        ExportPage.SoftProofChooseProfileButton.IsEnabled = false;
         try
         {
             if (await picker.PickSingleFileAsync() is not { } file)
@@ -138,7 +149,7 @@ public sealed partial class SettingsRootView : UserControl
             // 프루프가 조용히 다른 값을 씁니다.
             // 읽어 보는 것이 곧 검사입니다. RGB 출력 프로파일이 아니면 null 이 돌아옵니다.
             bool usable = SoftProofProfileReader.Read(file.Path) is not null;
-            SoftProofProfileError.Visibility = usable ? Visibility.Collapsed : Visibility.Visible;
+            ExportPage.SoftProofProfileError.Visibility = usable ? Visibility.Collapsed : Visibility.Visible;
             if (usable)
             {
                 // 이름과 **자리**를 함께 담습니다. 이름만 담으면 다음 실행에서 용지 흰색을
@@ -152,15 +163,15 @@ public sealed partial class SettingsRootView : UserControl
         }
         finally
         {
-            SoftProofChooseProfileButton.IsEnabled = true;
+            ExportPage.SoftProofChooseProfileButton.IsEnabled = true;
         }
     }
 
-    private void OnResetSoftProofProfile(object sender, RoutedEventArgs args)
+    internal void OnResetSoftProofProfile(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        SoftProofProfileError.Visibility = Visibility.Collapsed;
+        ExportPage.SoftProofProfileError.Visibility = Visibility.Collapsed;
         workspaceState?.UpdateSoftProof(value => value with
         {
             ProfileName = string.Empty,
@@ -172,7 +183,7 @@ public sealed partial class SettingsRootView : UserControl
     /// 인화 대상이 쓸 출력 프로파일입니다. macOS 처럼 프루프 프로파일과 따로 둡니다 — 화면을
     /// 보는 목적지와 종이에 찍는 목적지는 같지 않습니다.
     /// </summary>
-    private async void OnChoosePrinterProfile(object sender, RoutedEventArgs args)
+    internal async void OnChoosePrinterProfile(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
@@ -183,7 +194,7 @@ public sealed partial class SettingsRootView : UserControl
         Microsoft.Windows.Storage.Pickers.FileOpenPicker picker = new(pickerWindowId.Value);
         picker.FileTypeFilter.Add(".icc");
         picker.FileTypeFilter.Add(".icm");
-        PrinterProfileButton.IsEnabled = false;
+        ExportPage.PrinterProfileButton.IsEnabled = false;
         try
         {
             if (await picker.PickSingleFileAsync() is not { } file)
@@ -191,7 +202,7 @@ public sealed partial class SettingsRootView : UserControl
                 return;
             }
             bool usable = SoftProofProfileReader.Read(file.Path) is not null;
-            PrinterProfileError.Visibility = usable ? Visibility.Collapsed : Visibility.Visible;
+            ExportPage.PrinterProfileError.Visibility = usable ? Visibility.Collapsed : Visibility.Visible;
             if (usable)
             {
                 workspaceState.UpdateSoftProof(value => value with
@@ -202,23 +213,27 @@ public sealed partial class SettingsRootView : UserControl
         }
         finally
         {
-            PrinterProfileButton.IsEnabled = true;
+            ExportPage.PrinterProfileButton.IsEnabled = true;
         }
     }
 
-    private void OnResetPrinterProfile(object sender, RoutedEventArgs args)
+    internal void OnResetPrinterProfile(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        PrinterProfileError.Visibility = Visibility.Collapsed;
+        ExportPage.PrinterProfileError.Visibility = Visibility.Collapsed;
         workspaceState?.UpdateSoftProof(value => value with { PrinterProfilePath = string.Empty });
     }
 
     /// <summary>
-    /// 앱 언어를 고릅니다. **다시 시작한 뒤에 보입니다** — WinUI 는 리소스를 시작할 때 한 번
-    /// 고르므로, 켜져 있는 창의 문자열을 그 자리에서 바꾸면 이미 만들어진 컨트롤만 남아
-    /// 두 언어가 섞입니다.
+    /// 앱 언어를 고릅니다. macOS 처럼 <b>그 자리에서</b> 바뀝니다 — 다시 시작하지 않습니다.
     /// </summary>
+    /// <remarks>
+    /// 세 가지를 함께 합니다: 설정에 적고(다음 실행), <c>PrimaryLanguageOverride</c> 를 걸고
+    /// (시스템 자원), <see cref="AppResources.SetLanguage"/> 로 열려 있는 창에 알립니다.
+    /// 셋 중 마지막이 <see cref="AppResources.LanguageChanged"/> 를 올리고, 셸과 잎 컨트롤이
+    /// (<see cref="Negaflow.Shell.Localization.LocalizedElement"/>) 문구를 다시 겁니다.
+    /// </remarks>
     private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs args)
     {
         _ = sender;

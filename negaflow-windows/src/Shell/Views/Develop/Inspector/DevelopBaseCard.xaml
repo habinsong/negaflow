@@ -52,7 +52,6 @@
         <Border
             x:Name="BaseModeControl"
             AutomationProperties.AutomationId="negaflow.develop.base"
-            AutomationProperties.Name="Film base mode"
             Style="{StaticResource NegaflowSegmentTrackStyle}">
             <Grid ColumnSpacing="3">
                 <Grid.ColumnDefinitions>

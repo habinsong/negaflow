@@ -16,6 +16,33 @@ internal sealed class LibrarySelectionState
 
     internal string? ActiveFrameId { get; private set; }
 
+    /// <summary>
+    /// Shift 로 이어 고를 때의 기준점입니다. macOS <c>frameSelectionAnchorID</c> 자리입니다.
+    /// </summary>
+    internal string? AnchorFrameId { get; private set; }
+
+    /// <summary>
+    /// 누른 칸과 글쇠로 선택을 바꿉니다. macOS
+    /// <c>selectFrame(_:orderedFrameIDs:modifiers:)</c> 와 같은 규칙입니다.
+    /// </summary>
+    internal void SelectFrame(
+        IReadOnlyList<LibraryFrameSnapshot> frames,
+        string frameId,
+        IReadOnlyList<string> orderedFrameIds,
+        LibrarySelectionModifiers modifiers)
+    {
+        ArgumentNullException.ThrowIfNull(frames);
+        LibraryFrameSelectionCommand next = LibraryFrameSelectionCommand.Apply(
+            frameId,
+            orderedFrameIds,
+            SelectedFrameIds,
+            ActiveFrameId,
+            AnchorFrameId,
+            modifiers);
+        AnchorFrameId = next.AnchorFrameId;
+        Set(frames, next.SelectedFrameIds, next.ActiveFrameId);
+    }
+
     internal void Set(
         IReadOnlyList<LibraryFrameSnapshot> frames,
         IEnumerable<string> frameIds,

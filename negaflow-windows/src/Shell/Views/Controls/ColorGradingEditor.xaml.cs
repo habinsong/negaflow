@@ -24,7 +24,10 @@ public sealed partial class ColorGradingEditor : UserControl
     public ColorGradingEditor()
     {
         InitializeComponent();
-        LocalizeControls();
+        // 어두운 영역·중간톤·밝은 영역·색조·채도가 여기서 옵니다. 앞 판은 생성자에서만
+        // 걸어서, 언어를 바꿔도 이 편집기만 옛 언어로 남았습니다 — 담고 있는 구역의
+        // `Localize()` 는 머리글만 다시 걸기 때문입니다.
+        LocalizedElement.Track(this, LocalizeControls);
         MidtonesButton.IsChecked = true;
         RenderEditor();
     }

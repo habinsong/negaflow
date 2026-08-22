@@ -47,6 +47,17 @@ public sealed class VectorIcon : UserControl
         typeof(VectorIcon),
         new PropertyMetadata(16.0, OnIconSizeChanged));
 
+    /// <summary>
+    /// 획 두께 배수입니다. macOS 가 <c>.font(.callout.weight(.semibold))</c> 로 굵게 내는
+    /// 표식(겹화살 같은 것)은 기본 두께로 12px 아래에서 그리면 <b>선이 반 화소가 되어 거의
+    /// 사라집니다</b> — 화면에는 회색 점만 남습니다. 그런 자리에서 올려 씁니다.
+    /// </summary>
+    public static readonly DependencyProperty StrokeScaleProperty = DependencyProperty.Register(
+        nameof(StrokeScale),
+        typeof(double),
+        typeof(VectorIcon),
+        new PropertyMetadata(1.0, OnStrokeScaleChanged));
+
     private readonly ShapePath path = new()
     {
         StrokeThickness = DesignStrokeThickness,
@@ -94,6 +105,23 @@ public sealed class VectorIcon : UserControl
     {
         get => (double)GetValue(IconSizeProperty);
         set => SetValue(IconSizeProperty, value);
+    }
+
+    /// <summary>획 두께 배수입니다. 1 이 기본(24 기준 1.6)입니다.</summary>
+    public double StrokeScale
+    {
+        get => (double)GetValue(StrokeScaleProperty);
+        set => SetValue(StrokeScaleProperty, value);
+    }
+
+    private static void OnStrokeScaleChanged(
+        DependencyObject sender,
+        DependencyPropertyChangedEventArgs args)
+    {
+        if (sender is VectorIcon icon)
+        {
+            icon.path.StrokeThickness = DesignStrokeThickness * (double)args.NewValue;
+        }
     }
 
     private static void OnKindChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)

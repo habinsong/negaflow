@@ -60,6 +60,25 @@ public sealed class SettingsSection : ContentControl, IThemedSettingsControl
         set => SetValue(HeaderTextProperty, value);
     }
 
+    /// <summary>
+    /// 카드 라운딩입니다. 설정창은 실측 10, 현상 좌측탭의 내보내기 카드는 12 입니다
+    /// (<c>현상뷰_좌측탭_세로탭_내보내기.png</c> 의 왼쪽 위 모서리). 자리마다 다르므로 받습니다.
+    /// </summary>
+    public static readonly DependencyProperty CardCornerRadiusProperty =
+        DependencyProperty.Register(
+            nameof(CardCornerRadius),
+            typeof(double),
+            typeof(SettingsSection),
+            new PropertyMetadata(SettingsLayout.CardCornerRadius, (sender, args) =>
+                ((SettingsSection)sender).card.CornerRadius =
+                    new CornerRadius((double)args.NewValue)));
+
+    public double CardCornerRadius
+    {
+        get => (double)GetValue(CardCornerRadiusProperty);
+        set => SetValue(CardCornerRadiusProperty, value);
+    }
+
     /// <summary>카드 안에 들어가는 행들입니다. XAML 에서 자식으로 씁니다.</summary>
     public UIElementCollection Rows => rows.Children;
 
@@ -113,6 +132,14 @@ public sealed class SettingsSection : ContentControl, IThemedSettingsControl
             });
         }
     }
+
+    /// <summary>
+    /// 이 요소가 <see cref="Apply"/> 가 끼워 넣은 분리선인지입니다. 카드 안의 행을 훑는
+    /// 쪽에서 분리선을 <b>행으로 착각하지 않도록</b> 여기서 알려 줍니다 — 밖에서 표식
+    /// 문자열을 다시 적으면 이 값이 바뀔 때 조용히 어긋납니다.
+    /// </summary>
+    public static bool IsSeparator(object element) =>
+        element is Border { Tag: SeparatorTag };
 
     /// <summary>이 자리 앞에 보이는 행이 있는지입니다. 없으면 선을 놓지 않습니다.</summary>
     private UIElement? PrecedingVisible(int index)

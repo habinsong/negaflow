@@ -5,6 +5,9 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Negaflow.Shell.Views.Develop.Canvas"
     xmlns:grainmend="using:Negaflow.Shell.Views.Develop.GrainMend">
+    <!-- 확대한 사진이 위 막대와 왼쪽 패널 위로 뚫고 나가지 않게 잘라 냅니다. WinUI 에는
+         ClipToBounds 가 없어 크기가 바뀔 때마다 Clip 사각형을 다시 잡습니다
+         (OnCanvasSizeChanged). 이것이 없어서 확대하면 사진이 창 전체를 덮었습니다. -->
     <Grid
         x:Name="CanvasHost"
         x:FieldModifier="internal"

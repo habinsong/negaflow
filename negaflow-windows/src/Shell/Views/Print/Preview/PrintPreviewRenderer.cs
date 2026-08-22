@@ -1,3 +1,5 @@
+﻿using Windows.Graphics.Imaging;
+using Windows.Storage.Streams;
 using System.IO;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Microsoft.UI.Xaml;
@@ -23,6 +25,19 @@ internal sealed class PrintPreviewRenderer
     private readonly Func<ThumbnailService?> thumbnails;
     private readonly Func<WorkspacePresentationState?> state;
     private readonly Action<PrintPackagePageLayout, double> drawCustomEditor;
+
+    /// <summary>
+    /// 풀어 놓은 그림입니다. 같은 사진을 다시 그릴 때 <b>다시 풀지 않습니다</b>.
+    /// </summary>
+    /// <remarks>
+    /// 이것이 없으면 칸을 한 화소 끌 때마다 판에 놓인 사진을 모두 다시 풀었습니다 — JPEG
+    /// 디코드와 BGRA 변환이 초당 수십 번 돌아 끌기가 눈에 띄게 끊겼습니다. macOS 도
+    /// <c>NSImage</c> 를 들고 있다가 자리만 바꿉니다.
+    ///
+    /// 새 썸네일이나 현상본이 도착하면 <see cref="InvalidateTiles"/> 로 비웁니다.
+    /// </remarks>
+    private readonly Dictionary<(string FrameId, PrintPresentationStyle Style, bool Developed),
+        ImageSource> tileImages = [];
 
     internal PrintPreviewRenderer(
         PrintPreviewSurface surface,
@@ -81,7 +96,37 @@ internal sealed class PrintPreviewRenderer
         return longest > 0 ? available / longest : 1;
     }
 
+    /// <summary>다시 그리기가 이미 예약되어 있는지입니다.</summary>
+    private bool drawScheduled;
+
+    /// <summary>
+    /// 판을 다시 그립니다. 같은 프레임 안에서 여러 번 불려도 <b>한 번만</b> 그립니다.
+    /// </summary>
+    /// <remarks>
+    /// 판은 선택·썸네일 도착·설정 변경 등 여러 길에서 다시 그려집니다. 그 길들이 서로를
+    /// 부르면 초당 수십 번씩 다시 그리게 되고, 그동안 UI 스레드가 화면을 합성하지 못해
+    /// 창이 검게 멈춥니다. macOS 는 SwiftUI 가 프레임당 한 번으로 묶어 주는 자리입니다 —
+    /// 여기서는 그 묶음을 직접 만듭니다.
+    /// </remarks>
     internal void Draw()
+    {
+        if (surface.PageCanvas is null || drawScheduled)
+        {
+            return;
+        }
+        drawScheduled = true;
+        if (!surface.PageCanvas.DispatcherQueue.TryEnqueue(() =>
+            {
+                drawScheduled = false;
+                DrawNow();
+            }))
+        {
+            drawScheduled = false;
+            DrawNow();
+        }
+    }
+
+    private void DrawNow()
     {
         if (surface.PageCanvas is null || state() is not { } workspace)
         {
@@ -94,14 +139,11 @@ internal sealed class PrintPreviewRenderer
             surface.PageBorder.Visibility = Visibility.Collapsed;
             surface.NoFramePanel.Visibility = Visibility.Visible;
             surface.PageCountText.Text = string.Empty;
-            surface.PageSizeSummaryText.Text = string.Empty;
-            surface.PrintExportButton.IsEnabled = false;
             surface.RulerCanvas.Children.Clear();
             return;
         }
         surface.NoFramePanel.Visibility = Visibility.Collapsed;
         surface.PageBorder.Visibility = Visibility.Visible;
-        surface.PrintExportButton.IsEnabled = true;
 
         PrintPreferences print = workspace.Current.Print;
         PrintSizeMm firstSource = SourcePixelSize(currentSources[0]);
@@ -125,7 +167,6 @@ internal sealed class PrintPreviewRenderer
         if (PrintCompositionLayout.Make(sourceSize, composition) is not { } layout)
         {
             surface.PageBorder.Visibility = Visibility.Collapsed;
-            surface.PageSizeSummaryText.Text = string.Empty;
             return;
         }
         double scale = PreviewScale(layout.CanvasSize);
@@ -140,7 +181,8 @@ internal sealed class PrintPreviewRenderer
                 scale,
                 Windows.UI.Color.FromArgb(0xEB, 0x70, 0x2B, 0x0E)));
         }
-        surface.PageCanvas.Children.Add(ImageTile(frame, layout.ImageRect, scale, 0));
+        surface.PageCanvas.Children.Add(
+            ImageTile(frame, layout.ImageRect, scale, 0, composition.PresentationStyle));
         foreach (PrintRect hole in layout.PerforationRects)
         {
             surface.PageCanvas.Children.Add(Rect(
@@ -150,6 +192,7 @@ internal sealed class PrintPreviewRenderer
                 layout.PerforationCornerRadius * scale));
         }
         surface.PageCountText.Text = string.Empty;
+        DrawPaperSurface(layout.CanvasSize, scale, print.PaperSurface);
         DrawRulers(layout.CanvasSize, scale, composition);
         WritePageSummary(layout.CanvasSize, composition);
     }
@@ -164,7 +207,6 @@ internal sealed class PrintPreviewRenderer
             is not { Count: > 0 } pages)
         {
             surface.PageBorder.Visibility = Visibility.Collapsed;
-            surface.PageSizeSummaryText.Text = string.Empty;
             return;
         }
         // 첫 판만 그립니다. 나머지는 장수로 알립니다 — 스무 장을 한꺼번에 그리면 설정을
@@ -178,20 +220,37 @@ internal sealed class PrintPreviewRenderer
                 currentSources[item.SourceIndex],
                 item.ImageRect,
                 scale,
-                item.QuarterTurns));
+                item.QuarterTurns,
+                composition.PresentationStyle));
         }
-        foreach (PrintPackageItemLayout item in page.Items)
+        // 캡션은 <b>글자</b>를 그립니다. macOS `PrintPackageCanvasView` 도 자리 표시 상자가
+        // 아니라 그 자리에 실제 글자를 놓습니다 — 회색 네모는 Windows 에만 있던 창작입니다.
+        for (int slot = 0; slot < page.Items.Count; ++slot)
         {
-            if (item.CaptionRect is not { } caption)
+            PrintPackageItemLayout item = page.Items[slot];
+            if (item.CaptionRect is not { } caption ||
+                PrintCaptionFormatter.Caption(
+                    currentSources[item.SourceIndex],
+                    print.CaptionMode,
+                    slot + 1) is not { Length: > 0 } text)
             {
                 continue;
             }
-            // 캡션 자리를 옅게 표시합니다. 글자는 판을 쓸 때 들어갑니다 — 미리보기에서 자리를
-            // 보여야 사용자가 사진이 왜 위로 물러났는지 압니다.
-            surface.PageCanvas.Children.Add(Rect(
-                caption,
+            surface.PageCanvas.Children.Add(CaptionText(
+                new PrintPackageTextLayout(text, caption, print.CaptionAlignment),
                 scale,
-                Windows.UI.Color.FromArgb(0x33, 0x80, 0x80, 0x80)));
+                print.SheetBackground,
+                print.CaptionFontName,
+                // macOS: `size: max(7, min(11, height * 0.55))`
+                maximumFontSize: 11));
+        }
+        // 손으로 놓은 문구입니다. 판에 나갈 글자를 화면에서도 같은 자리에 같은 정렬로
+        // 보여 줍니다 — macOS `PrintCustomTextOverlay` 자리입니다.
+        foreach (PrintPackageTextLayout textItem in page.TextItems)
+        {
+            // macOS: `size: max(7, min(18, rect.height * 0.55))`
+            surface.PageCanvas.Children.Add(CaptionText(
+                textItem, scale, print.SheetBackground, print.CaptionFontName, 18));
         }
         foreach (PrintLineSegment segment in page.CropMarks)
         {
@@ -200,6 +259,7 @@ internal sealed class PrintPreviewRenderer
         surface.PageCountText.Text = pages.Count > 1
             ? AppResources.FormatIntegers("printPageCountFormat", "Text", pages.Count)
             : string.Empty;
+        DrawPaperSurface(page.CanvasSize, scale, print.PaperSurface);
         DrawRulers(page.CanvasSize, scale, composition);
         drawCustomEditor(page, scale);
         WritePageSummary(page.CanvasSize, composition);
@@ -288,13 +348,6 @@ internal sealed class PrintPreviewRenderer
 
     private void WritePageSummary(PrintSizeMm canvas, PrintCompositionSettings composition)
     {
-        surface.PageSizeSummaryText.Text = AppResources
-            .FormatIntegers("printPageSummaryFormat", "Text", composition.Dpi)
-            .Replace("{0}", PrintPaper.Label(composition.PaperSize), StringComparison.Ordinal)
-            .Replace("{1}", ((int)canvas.Width).ToString(
-                System.Globalization.CultureInfo.CurrentCulture), StringComparison.Ordinal)
-            .Replace("{2}", ((int)canvas.Height).ToString(
-                System.Globalization.CultureInfo.CurrentCulture), StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -335,11 +388,74 @@ internal sealed class PrintPreviewRenderer
         return shape;
     }
 
+    /// <summary>
+    /// 손으로 놓은 문구 하나를 판 위에 얹습니다. 글자색은 판 바탕의 반대쪽이며, 내보내기가
+    /// 쓰는 <see cref="PrintTextRasterizer"/> 와 같은 규칙입니다.
+    /// </summary>
+    private static FrameworkElement CaptionText(
+        PrintPackageTextLayout item,
+        double scale,
+        PrintSheetBackground background,
+        string fontName,
+        double maximumFontSize)
+    {
+        double height = Math.Max(1, item.Rect.Height * scale);
+        TextBlock text = new()
+        {
+            Text = item.Text,
+            Width = Math.Max(1, item.Rect.Width * scale),
+            Height = height,
+            // macOS `max(7, min(maximum, height * 0.55))`
+            FontSize = Math.Max(7, Math.Min(maximumFontSize, height * 0.55)),
+            TextWrapping = TextWrapping.NoWrap,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextAlignment = item.Alignment switch
+            {
+                PrintPackageCaptionAlignment.Center => TextAlignment.Center,
+                PrintPackageCaptionAlignment.Trailing => TextAlignment.Right,
+                _ => TextAlignment.Left,
+            },
+            // macOS `foregroundStyle(pageForegroundColor.opacity(0.92))` — 흰 종이는 검정,
+            // 그 밖에는 흰색입니다.
+            Foreground = new SolidColorBrush(background == PrintSheetBackground.White
+                ? Windows.UI.Color.FromArgb(0xEB, 0x00, 0x00, 0x00)
+                : Windows.UI.Color.FromArgb(0xEB, 0xFF, 0xFF, 0xFF)),
+            IsHitTestVisible = false,
+        };
+        if (fontName.Length > 0)
+        {
+            text.FontFamily = new FontFamily(fontName);
+        }
+        Canvas.SetLeft(text, item.Rect.X * scale);
+        Canvas.SetTop(text, item.Rect.Y * scale);
+        return text;
+    }
+
+    /// <summary>
+    /// 인화지 표면을 판 위에 덮습니다. macOS 는 사진 위·편집기 아래에 놓습니다
+    /// (<c>PrintPackageCanvasView</c> 의 <c>PrintPaperSurfaceOverlay</c> 자리).
+    /// </summary>
+    private void DrawPaperSurface(PrintSizeMm canvas, double scale, PrintPaperSurface paper)
+    {
+        if (PrintPaperSurfaceOverlay.Make(
+                paper,
+                canvas.Width * scale,
+                canvas.Height * scale) is not { } overlay)
+        {
+            return;
+        }
+        Canvas.SetLeft(overlay, 0);
+        Canvas.SetTop(overlay, 0);
+        surface.PageCanvas.Children.Add(overlay);
+    }
+
     private FrameworkElement ImageTile(
         LibraryFrameSnapshot frame,
         PrintRect rect,
         double scale,
-        int quarterTurns)
+        int quarterTurns,
+        PrintPresentationStyle presentation)
     {
         // macOS `packageImage(_:)` — 홀수 번 돌면 그리는 상자의 가로세로가 바뀝니다.
         // `ImageRect` 는 이미 <b>돌린 뒤</b>의 자리이므로, 돌리기 전 상자는 가로세로를 맞바꾼
@@ -360,14 +476,40 @@ internal sealed class PrintPreviewRenderer
         ThumbnailService? cache = thumbnails();
         // macOS PrintSingleImagePageView: developedImage ?? rawPreviewImage ?? thumbnailImage.
         // 현상본이 있으면 그것을 쓰고, 칸이 더 크면 표시 크기로 올립니다.
-        if (cache?.TryGetDeveloped(frame, out ThumbnailService.DevelopedPreview developed) == true)
+        ThumbnailService.DevelopedPreview developed = default;
+        bool hasDeveloped = cache?.TryGetDeveloped(frame, out developed) == true;
+        (string, PrintPresentationStyle, bool) key = (frame.Id, presentation, hasDeveloped);
+        if (tileImages.TryGetValue(key, out ImageSource? cached) && cached is not null)
         {
-            image.Source = BgraBitmap(developed);
+            image.Source = cached;
+        }
+        else if (hasDeveloped)
+        {
+            WriteableBitmap bitmap = BgraBitmap(developed, presentation);
+            tileImages[key] = bitmap;
+            image.Source = bitmap;
         }
         else if (cache?.TryGet(frame.Id) is { } jpeg)
         {
-            image.Source = LibraryWorkspaceView.DecodeThumbnail(jpeg);
+            BitmapImage? decoded = LibraryWorkspaceView.DecodeThumbnail(jpeg);
+            image.Source = decoded;
+            // 시아노타입 · 유리건판 · 젤라틴 실버는 **화면에서도** 보여야 합니다. 썸네일은
+            // JPEG 이라 화소를 바로 만질 수 없으므로 풀어서 다시 겁니다 — 내보내기가 지나는
+            // `PrintPresentationFilter` 와 같은 계산입니다.
+            if (PrintPresentationFilter.Transforms(presentation))
+            {
+                _ = ApplyPresentationAsync(image, jpeg, presentation, source =>
+                {
+                    tileImages[key] = source;
+                });
+            }
+            else if (decoded is not null)
+            {
+                tileImages[key] = decoded;
+            }
         }
+        PreviewTrace.Write(System.FormattableString.Invariant(
+            $"print.tile {frame.Id} box={boxWidth:F0}x{boxHeight:F0} developed={hasDeveloped} source={(image.Source is null ? "NONE" : image.Source.GetType().Name)} cached={tileImages.Count}"));
         RequestDevelopedIfNeeded(cache, frame, rect, scale);
         Border host = new()
         {
@@ -430,10 +572,26 @@ internal sealed class PrintPreviewRenderer
         }
     }
 
-    private static WriteableBitmap BgraBitmap(ThumbnailService.DevelopedPreview preview)
+    private static WriteableBitmap BgraBitmap(
+        ThumbnailService.DevelopedPreview preview,
+        PrintPresentationStyle presentation)
     {
         WriteableBitmap bitmap = new(preview.Width, preview.Height);
         int written = preview.Width * preview.Height * 4;
+        if (PrintPresentationFilter.Transforms(presentation))
+        {
+            // 캐시의 화소는 다른 화면도 함께 봅니다. 그 자리에서 바꾸면 현상 미리보기까지
+            // 파랗게 물들므로 여기서 한 벌 떠서 바꿉니다.
+            byte[] tinted = new byte[written];
+            Array.Copy(preview.Pixels, tinted, written);
+            PrintPresentationFilter.Apply(tinted, presentation);
+            using (Stream buffer = bitmap.PixelBuffer.AsStream())
+            {
+                buffer.Write(tinted, 0, written);
+            }
+            bitmap.Invalidate();
+            return bitmap;
+        }
         using (Stream buffer = bitmap.PixelBuffer.AsStream())
         {
             buffer.Write(preview.Pixels, 0, written);
@@ -441,4 +599,51 @@ internal sealed class PrintPreviewRenderer
         bitmap.Invalidate();
         return bitmap;
     }
+
+    /// <summary>
+    /// 썸네일 JPEG 을 풀어 공정 색을 입힌 뒤 다시 겁니다. 화면이 먼저 원본을 보여 주고
+    /// 곧 바뀌는 것은 macOS 가 <c>developedImage ?? thumbnailImage</c> 로 채우는 것과 같은
+    /// 순서입니다.
+    /// </summary>
+    private static async Task ApplyPresentationAsync(
+        Image image,
+        byte[] jpeg,
+        PrintPresentationStyle presentation,
+        Action<ImageSource> keep)
+    {
+        try
+        {
+            using InMemoryRandomAccessStream stream = new();
+            await stream.WriteAsync(jpeg.AsBuffer());
+            stream.Seek(0);
+            BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
+            PixelDataProvider provider = await decoder.GetPixelDataAsync(
+                BitmapPixelFormat.Bgra8,
+                BitmapAlphaMode.Ignore,
+                new BitmapTransform(),
+                ExifOrientationMode.IgnoreExifOrientation,
+                ColorManagementMode.DoNotColorManage);
+            byte[] pixels = provider.DetachPixelData();
+            PrintPresentationFilter.Apply(pixels, presentation);
+            WriteableBitmap bitmap = new((int)decoder.PixelWidth, (int)decoder.PixelHeight);
+            using (Stream buffer = bitmap.PixelBuffer.AsStream())
+            {
+                buffer.Write(pixels, 0, Math.Min(pixels.Length, (int)bitmap.PixelBuffer.Capacity));
+            }
+            bitmap.Invalidate();
+            image.Source = bitmap;
+            keep(bitmap);
+        }
+        catch (Exception error) when (error is IOException or ArgumentException or
+            NotSupportedException or System.Runtime.InteropServices.COMException)
+        {
+            // 썸네일을 못 풀면 원본 그대로 둡니다 — 판이 비는 것보다 낫습니다.
+        }
+    }
+
+    /// <summary>
+    /// 풀어 둔 그림을 버립니다. 새 썸네일이나 현상본이 도착했을 때만 부릅니다 — 그때만
+    /// 화면에 걸 그림이 실제로 달라집니다.
+    /// </summary>
+    internal void InvalidateTiles() => tileImages.Clear();
 }

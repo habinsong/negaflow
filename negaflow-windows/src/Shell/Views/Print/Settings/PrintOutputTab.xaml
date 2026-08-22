@@ -1,0 +1,203 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Print.Settings.PrintOutputTab"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls"
+    xmlns:print="using:Negaflow.Shell.Views.Print.Settings">
+
+    <!--
+        macOS `PrintInspectorTextField` 는 `.textFieldStyle(.plain)` 입니다 — 테두리도 상자도
+        없습니다. WinUI 기본 `TextBox` 는 네모 테두리와 아래쪽 강조선을 그리므로, 이 화면의
+        입력칸이 쓰는 테마 값들을 여기서 통째로 비웁니다.
+    -->
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="TextControlBackground" Color="Transparent" />
+        <StaticResource x:Key="TextControlBackgroundPointerOver" ResourceKey="NegaflowSubtleFillBrush" />
+        <StaticResource x:Key="TextControlBackgroundFocused" ResourceKey="NegaflowHoverFillBrush" />
+        <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="Transparent" />
+        <SolidColorBrush x:Key="TextControlBorderBrush" Color="Transparent" />
+        <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent" />
+        <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent" />
+        <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="Transparent" />
+        <Thickness x:Key="TextControlBorderThemeThickness">0</Thickness>
+        <Thickness x:Key="TextControlBorderThemeThicknessFocused">0</Thickness>
+    </UserControl.Resources>
+    <!--
+        macOS `PrintWorkspaceInspector.outputTab` 그대로입니다.
+
+        출력 카드에는 <b>출력 방식 하나</b>만 있습니다 — 내보내기 단추는 좌측 내보내기 탭에
+        있고, 여기에 또 두면 같은 일을 하는 단추가 둘이 됩니다(Windows 에만 있던 창작).
+        C-print 를 고르면 아래 두 카드가 따라 나옵니다.
+    -->
+    <StackPanel Spacing="12">
+        <Border Padding="14" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="9">
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                    <FontIcon FontSize="13" Glyph="&#xE790;" />
+                    <TextBlock x:Name="OutputSectionText" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
+                </StackPanel>
+                <print:PrintInspectorStackedField x:Name="OutputProcessField" x:FieldModifier="internal">
+                    <controls:NegaflowSegmentedPicker
+                        x:Name="OutputProcessSelector" x:FieldModifier="internal"
+                        AutomationProperties.AutomationId="negaflow.print.output.process" />
+                </print:PrintInspectorStackedField>
+            </StackPanel>
+        </Border>
+
+        <!-- macOS C-print 카드: 인화소 · 인화지가 한 줄에 1:1, 사이에 높이 30 분리선. -->
+        <Border
+            x:Name="CprintCard" x:FieldModifier="internal"
+            Padding="14"
+            Background="{ThemeResource NegaflowCardBrush}"
+            CornerRadius="9"
+            Visibility="Collapsed">
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                    <FontIcon FontSize="13" Glyph="&#xE8FB;" />
+                    <TextBlock x:Name="CprintSectionText" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
+                </StackPanel>
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <print:PrintInspectorInlineField x:Name="CprintLabField" x:FieldModifier="internal">
+                        <TextBox
+                            x:Name="CprintLabBox" x:FieldModifier="internal"
+                            AutomationProperties.AutomationId="negaflow.print.cprint.lab"
+                            Style="{StaticResource NegaflowPrintTextFieldStyle}"
+                            TextChanged="OnCprintTextChanged" />
+                    </print:PrintInspectorInlineField>
+                    <Border Grid.Column="1" Width="1" Height="30" Background="{ThemeResource NegaflowDividerBrush}" Opacity="0.45" />
+                    <print:PrintInspectorInlineField x:Name="CprintPaperField" x:FieldModifier="internal" Grid.Column="2">
+                        <TextBox
+                            x:Name="CprintPaperBox" x:FieldModifier="internal"
+                            AutomationProperties.AutomationId="negaflow.print.cprint.paper"
+                            Style="{StaticResource NegaflowPrintTextFieldStyle}"
+                            TextChanged="OnCprintTextChanged" />
+                    </print:PrintInspectorInlineField>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- macOS 인화 미리보기 카드: 프로파일 고르기 · 미리보기 켬끔 · 고급. -->
+        <Border
+            x:Name="PrintProofCard" x:FieldModifier="internal"
+            Padding="14"
+            Background="{ThemeResource NegaflowCardBrush}"
+            CornerRadius="9"
+            Visibility="Collapsed">
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                    <FontIcon FontSize="13" Glyph="&#xE7B3;" />
+                    <TextBlock x:Name="PrintProofSectionText" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
+                </StackPanel>
+
+                <print:PrintInspectorStackedField x:Name="ProofProfileField" x:FieldModifier="internal">
+                    <Grid ColumnSpacing="6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <!-- macOS 는 이름 전체가 누르는 자리이고 오른쪽 끝에 폴더 기호가 붙습니다. -->
+                        <Button
+                            x:Name="PrintProofChooseButton" x:FieldModifier="internal"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            AutomationProperties.AutomationId="negaflow.print.proof.choose"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Click="OnPrintProofChooseClicked"
+                            CornerRadius="8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    x:Name="PrintProofProfileText" x:FieldModifier="internal"
+                                    VerticalAlignment="Center"
+                                    FontSize="12"
+                                    TextTrimming="CharacterEllipsis" />
+                                <FontIcon Grid.Column="1" FontSize="12" Glyph="&#xE8B7;" />
+                            </Grid>
+                        </Button>
+                        <!-- 담아 둔 프로파일이 있을 때만 지우기가 나옵니다. -->
+                        <Button
+                            x:Name="PrintProofClearButton" x:FieldModifier="internal"
+                            Grid.Column="1"
+                            Padding="9,4"
+                            AutomationProperties.AutomationId="negaflow.print.proof.clear"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Click="OnPrintProofClearClicked"
+                            Content="&#xE711;"
+                            CornerRadius="8"
+                            FontFamily="{ThemeResource SymbolThemeFontFamily}"
+                            FontSize="12"
+                            Visibility="Collapsed" />
+                    </Grid>
+                </print:PrintInspectorStackedField>
+
+                <print:PrintInspectorDivider />
+
+                <print:PrintInspectorStackedField x:Name="ProofPreviewField" x:FieldModifier="internal">
+                    <controls:NegaflowSegmentedPicker
+                        x:Name="PrintProofPreviewSelector" x:FieldModifier="internal"
+                        AutomationProperties.AutomationId="negaflow.print.proof.preview" />
+                </print:PrintInspectorStackedField>
+
+                <!-- 프로파일이 없으면 미리보기를 켤 수 없다는 것을 알려 줍니다. -->
+                <StackPanel
+                    x:Name="ProofProfileWarning" x:FieldModifier="internal"
+                    Orientation="Horizontal"
+                    Spacing="6"
+                    Visibility="Collapsed">
+                    <FontIcon FontSize="12" Foreground="{ThemeResource SystemFillColorCautionBrush}" Glyph="&#xE7BA;" />
+                    <TextBlock
+                        x:Name="ProofProfileWarningText" x:FieldModifier="internal"
+                        FontSize="11"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+
+                <print:PrintInspectorDivider />
+
+                <!-- macOS `PrintInspectorDisclosure` — 접었다 펼치는 고급 무리입니다. -->
+                <Expander
+                    x:Name="AdvancedProofExpander" x:FieldModifier="internal"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch"
+                    AutomationProperties.AutomationId="negaflow.print.proof.advanced"
+                    Background="Transparent"
+                    BorderThickness="0">
+                    <Expander.Header>
+                        <TextBlock x:Name="AdvancedProofText" x:FieldModifier="internal" FontSize="12" FontWeight="Medium" />
+                    </Expander.Header>
+                    <StackPanel Spacing="10">
+                        <print:PrintInspectorRow x:Name="DeliveryColorSpaceRow" x:FieldModifier="internal">
+                            <TextBlock
+                                x:Name="DeliveryColorSpaceValue" x:FieldModifier="internal"
+                                HorizontalAlignment="Right"
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </print:PrintInspectorRow>
+                        <print:PrintInspectorDivider />
+                        <print:PrintInspectorStackedField x:Name="PaperSimulationField" x:FieldModifier="internal">
+                            <controls:NegaflowSegmentedPicker
+                                x:Name="PaperSimulationSelector" x:FieldModifier="internal"
+                                AutomationProperties.AutomationId="negaflow.print.proof.paper-simulation" />
+                        </print:PrintInspectorStackedField>
+                        <print:PrintInspectorStackedField x:Name="GamutWarningField" x:FieldModifier="internal">
+                            <controls:NegaflowSegmentedPicker
+                                x:Name="GamutWarningSelector" x:FieldModifier="internal"
+                                AutomationProperties.AutomationId="negaflow.print.proof.gamut-warning" />
+                        </print:PrintInspectorStackedField>
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

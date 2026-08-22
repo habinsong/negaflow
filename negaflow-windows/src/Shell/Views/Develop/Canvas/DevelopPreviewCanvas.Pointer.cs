@@ -22,10 +22,15 @@ public sealed partial class DevelopPreviewCanvas
         {
             return;
         }
-        if (crop is not null)
+        // 크롭 상태는 늘 있습니다 - 자르기 중인지는 `TryBeginDrag` 가 스스로 봅니다.
+        // 여기서 `crop is not null` 만 보고 돌아서면 자르기를 켜지 않았는데도 끌기가
+        // 통째로 막힙니다.
+        if (crop is not null && cropInteraction.TryBeginDrag(args, crop))
         {
-            cropInteraction.TryBeginDrag(args, crop);
+            return;
         }
+        // 아무 도구도 집지 않았으면 끌기로 사진을 옮깁니다 - 맨 마지막 차례입니다.
+        _ = pan.TryBegin(args);
     }
 
     private void OnCanvasPointerMoved(object sender, PointerRoutedEventArgs args)
@@ -42,10 +47,11 @@ public sealed partial class DevelopPreviewCanvas
         {
             return;
         }
-        if (crop is not null)
+        if (crop is not null && cropInteraction.TryContinueDrag(args, crop))
         {
-            cropInteraction.TryContinueDrag(args, crop);
+            return;
         }
+        _ = pan.TryContinue(args);
     }
 
     private void OnCanvasPointerReleased(object sender, PointerRoutedEventArgs args)
@@ -63,6 +69,7 @@ public sealed partial class DevelopPreviewCanvas
         {
             cropInteraction.EndDrag(args, crop);
         }
+        _ = pan.End(args);
     }
 
     private void OnCanvasPointerCancelled(object sender, PointerRoutedEventArgs args)
@@ -70,6 +77,7 @@ public sealed partial class DevelopPreviewCanvas
         _ = sender;
         EndCompareDivider(args);
         HandlePointerCancelled?.Invoke(args);
+        _ = pan.End(args);
         if (crop is not null)
         {
             cropInteraction.EndDrag(args, crop);
@@ -81,6 +89,7 @@ public sealed partial class DevelopPreviewCanvas
         _ = sender;
         EndCompareDivider(args);
         HandlePointerCancelled?.Invoke(args);
+        _ = pan.End(args);
         if (crop is not null)
         {
             cropInteraction.EndDrag(args, crop);

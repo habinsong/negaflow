@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Library.Sources.LibrarySourcePanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:scanner="using:Negaflow.Shell.Views.Library.Scanner"
+    xmlns:sources="using:Negaflow.Shell.Views.Library.Sources"
+    xmlns:collections="using:Negaflow.Shell.Views.Library.Collections">
+    <Grid Background="{ThemeResource NegaflowPanelBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="76" />
+                <ColumnDefinition Width="1" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Padding="22,10,22,0" Spacing="7">
+                <Button
+                    x:Name="ImportRailButton" x:FieldModifier="internal"
+                    AutomationProperties.AutomationId="negaflow.library.controls.importing"
+                    Background="{ThemeResource NegaflowSelectionBrush}"
+                    Click="OnSourceRailClicked"
+                    Style="{StaticResource NegaflowSidebarButtonStyle}"
+                    Tag="Importing">
+                    <FontIcon x:Name="ImportRailIcon" x:FieldModifier="internal" FontSize="15" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Glyph="&#xE896;" />
+                </Button>
+                <Button
+                    x:Name="FilesRailButton" x:FieldModifier="internal"
+                    AutomationProperties.AutomationId="negaflow.library.controls.files"
+                    Click="OnSourceRailClicked"
+                    Style="{StaticResource NegaflowSidebarButtonStyle}"
+                    Tag="Files">
+                    <FontIcon x:Name="FilesRailIcon" x:FieldModifier="internal" FontSize="15" Glyph="&#xE8B7;" />
+                </Button>
+                <Button
+                    x:Name="CollectionsRailButton" x:FieldModifier="internal"
+                    AutomationProperties.AutomationId="negaflow.library.controls.collections"
+                    Click="OnSourceRailClicked"
+                    Style="{StaticResource NegaflowSidebarButtonStyle}"
+                    Tag="Collections">
+                    <FontIcon x:Name="CollectionsRailIcon" x:FieldModifier="internal" FontSize="15" Glyph="&#xE8FD;" />
+                </Button>
+            </StackPanel>
+
+            <Border Grid.Column="1" Background="{ThemeResource NegaflowDividerBrush}" />
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="44" />
+                    <RowDefinition Height="1" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Padding="12,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <FontIcon x:Name="SourceHeaderIcon" x:FieldModifier="internal" Grid.Column="0" Margin="0,0,7,0" VerticalAlignment="Center" FontSize="14" Glyph="&#xE896;" />
+                    <TextBlock x:Name="ImportHeaderText" x:FieldModifier="internal" Grid.Column="1" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
+                    <TextBlock x:Name="SourceHeaderCountText" x:FieldModifier="internal" Grid.Column="2" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="0" />
+                </Grid>
+
+                <Border Grid.Row="1" Background="{ThemeResource NegaflowDividerBrush}" />
+
+                <ScrollViewer x:Name="ImportSourcePanel" x:FieldModifier="internal" Grid.Row="2">
+                    <StackPanel Padding="12,14" Spacing="12">
+                        <TextBlock x:Name="ImportSectionText" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
+                        <!-- macOS 가져오기 막대입니다. 세 방법이 <b>하나의 캡슐</b>을 나눠
+                             쓰며 사이에 얇은 세로선이 들어갑니다. 현상 좌측탭
+                             (`DevelopLibrarySourcePanel`)과 같은 모양이어야 두 화면이
+                             갈라지지 않습니다. 안내 문구와 낱개 단추 셋은 macOS 에 없습니다. -->
+                        <Border
+                            Padding="2"
+                            Background="{ThemeResource NegaflowSubtleFillBrush}"
+                            CornerRadius="16">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="1" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="1" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button
+                                    x:Name="ImportImagesButton" x:FieldModifier="internal"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    AutomationProperties.AutomationId="negaflow.library.import.images"
+                                    Click="OnImportClicked"
+                                    Style="{StaticResource NegaflowImportActionStyle}">
+                                    <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="5">
+                                        <FontIcon FontSize="12" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Glyph="&#xE91B;" />
+                                        <TextBlock x:Name="ImportImagesText" x:FieldModifier="internal" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                    </StackPanel>
+                                </Button>
+                                <Border Grid.Column="1" Height="16" VerticalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
+                                <Button
+                                    x:Name="ImportFoldersButton" x:FieldModifier="internal"
+                                    Grid.Column="2"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    AutomationProperties.AutomationId="negaflow.library.import.folders"
+                                    Click="OnImportFoldersClicked"
+                                    Style="{StaticResource NegaflowImportActionStyle}">
+                                    <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="5">
+                                        <FontIcon FontSize="12" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Glyph="&#xE8B7;" />
+                                        <TextBlock x:Name="ImportFoldersText" x:FieldModifier="internal" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                    </StackPanel>
+                                </Button>
+                                <Border Grid.Column="3" Height="16" VerticalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
+                                <ToggleButton
+                                    x:Name="ImportScannerButton" x:FieldModifier="internal"
+                                    Grid.Column="4"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    AutomationProperties.AutomationId="negaflow.library.import.scanner"
+                                    Click="OnImportScannerClicked"
+                                    Style="{StaticResource NegaflowImportToggleStyle}">
+                                    <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="5">
+                                        <FontIcon FontSize="12" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Glyph="&#xE950;" />
+                                        <TextBlock x:Name="ImportScannerText" x:FieldModifier="internal" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                    </StackPanel>
+                                </ToggleButton>
+                            </Grid>
+                        </Border>
+                        <TextBlock x:Name="ImportStatusText" x:FieldModifier="internal" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+
+                        <scanner:LibraryScanPanel x:Name="ScanPanel" x:FieldModifier="internal" />
+                    </StackPanel>
+                </ScrollViewer>
+
+                <sources:LibraryFilesSourceTree
+                    x:Name="FilesSourceTree" x:FieldModifier="internal"
+                    Grid.Row="2"
+                    Visibility="Collapsed" />
+                <collections:LibraryCollectionsPanel
+                    x:Name="CollectionsPanel" x:FieldModifier="internal"
+                    Grid.Row="2"
+                    Visibility="Collapsed" />
+            </Grid>
+    </Grid>
+</UserControl>

@@ -23,35 +23,35 @@ public sealed partial class SettingsRootView
     private (SettingsPathRow Row, string LabelKey, Func<DiskStorageLocations, string> Read,
         Func<DiskStorageSettings, string, DiskStorageSettings> Write)[] DiskPathRows =>
     [
-        (DiskRootRow, "diskRootFolderLabel",
+        (DiskPage.DiskRootRow, "diskRootFolderLabel",
             locations => locations.Root,
             (settings, path) => settings with { RootFolder = path }),
-        (DiskThumbnailsRow, "diskThumbnailsFolderLabel",
+        (DiskPage.DiskThumbnailsRow, "diskThumbnailsFolderLabel",
             locations => locations.Thumbnails,
             (settings, path) => settings with { ThumbnailsFolder = path }),
-        (DiskImportedSourcesRow, "diskImportedSourcesFolderLabel",
+        (DiskPage.DiskImportedSourcesRow, "diskImportedSourcesFolderLabel",
             locations => locations.ImportedSources,
             (settings, path) => settings with { ImportedSourcesFolder = path }),
-        (DiskCleanedRawRow, "diskCleanedRawFolderLabel",
+        (DiskPage.DiskCleanedRawRow, "diskCleanedRawFolderLabel",
             locations => locations.CleanedRaw,
             (settings, path) => settings with { CleanedRawFolder = path }),
-        (DiskScanPreviewsRow, "diskScanPreviewFolderLabel",
+        (DiskPage.DiskScanPreviewsRow, "diskScanPreviewFolderLabel",
             locations => locations.ScanPreviews,
             (settings, path) => settings with { ScanPreviewsFolder = path }),
-        (DiskExportRow, "diskExportFolderLabel",
+        (DiskPage.DiskExportRow, "diskExportFolderLabel",
             locations => locations.Export,
             (settings, path) => settings with { ExportFolder = path }),
-        (DiskQuickExportRow, "settingsQuickExportFolder",
+        (DiskPage.DiskQuickExportRow, "settingsQuickExportFolder",
             locations => locations.QuickExport,
             (settings, path) => settings with { QuickExportFolder = path }),
-        (DiskScansRow, "scanStorageOriginals",
+        (DiskPage.DiskScansRow, "scanStorageOriginals",
             locations => locations.Scans,
             (settings, path) => settings with { ScansFolder = path }),
     ];
 
     private void InitializeDiskTab()
     {
-        DiskLocationPicker.SelectionChanged += OnDiskLocationChanged;
+        DiskPage.DiskLocationPicker.SelectionChanged += OnDiskLocationChanged;
         foreach (var entry in DiskPathRows)
         {
             var write = entry.Write;
@@ -64,8 +64,8 @@ public sealed partial class SettingsRootView
 
     private void LocalizeDiskTab()
     {
-        DiskSection.HeaderText = AppResources.Get("settingsDiskTab", "Text");
-        DiskLocationPicker.SetOptions(
+        DiskPage.DiskSection.HeaderText = AppResources.Get("settingsDiskTab", "Text");
+        DiskPage.DiskLocationPicker.SetOptions(
             [
                 new SegmentOption(
                     DiskStorageLocationMode.Cloud,
@@ -80,7 +80,7 @@ public sealed partial class SettingsRootView
                     DiskStorageLocationMode.Custom,
                     AppResources.Get("diskLocationCustom", "Content")),
             ],
-            DiskLocationPicker.SelectedValue ?? DiskStorageLocationMode.Desktop);
+            DiskPage.DiskLocationPicker.SelectedValue ?? DiskStorageLocationMode.Desktop);
         string change = AppResources.Get("scanStorageChange", "Value");
         string reveal = AppResources.Get("showInExplorer", "Value");
         foreach (var entry in DiskPathRows)
@@ -88,78 +88,78 @@ public sealed partial class SettingsRootView
             entry.Row.Label = AppResources.Get(entry.LabelKey, "Text");
             entry.Row.SetButtonTooltips(change, reveal);
         }
-        DiskAvailableRow.Label = AppResources.Get("scanStorageEstimatedAvailable", "Text");
-        DiskStorageKindRow.Label = AppResources.Get("scanStorageStorage", "Text");
-        DiskResetButton.Content = AppResources.Get("diskResetPathsButton", "Content");
-        DiskThumbnailCacheRow.Label = AppResources.Get("diskThumbnailCacheLabel", "Text");
-        DiskClearThumbnailCacheButton.Content =
+        DiskPage.DiskAvailableRow.Label = AppResources.Get("scanStorageEstimatedAvailable", "Text");
+        DiskPage.DiskStorageKindRow.Label = AppResources.Get("scanStorageStorage", "Text");
+        DiskPage.DiskResetButton.Content = AppResources.Get("diskResetPathsButton", "Content");
+        DiskPage.DiskThumbnailCacheRow.Label = AppResources.Get("diskThumbnailCacheLabel", "Text");
+        DiskPage.DiskClearThumbnailCacheButton.Content =
             AppResources.Get("diskClearThumbnailCache", "Content");
 
-        DiskBackupSection.HeaderText = AppResources.Get("diskLibraryBackupLabel", "Text");
-        BackupFolderRow.Label = AppResources.Get("diskLibraryBackupLabel", "Text");
-        ExternalBackupRow.Label = AppResources.Get("externalBackupTitle", "Text");
-        ExternalBackupRemoveButton.Content = AppResources.Get("externalBackupRemove", "Content");
-        ExternalBackupLastSuccessRow.Label =
+        DiskPage.DiskBackupSection.HeaderText = AppResources.Get("diskLibraryBackupLabel", "Text");
+        DiskPage.BackupFolderRow.Label = AppResources.Get("diskLibraryBackupLabel", "Text");
+        DiskPage.ExternalBackupRow.Label = AppResources.Get("externalBackupTitle", "Text");
+        DiskPage.ExternalBackupRemoveButton.Content = AppResources.Get("externalBackupRemove", "Content");
+        DiskPage.ExternalBackupLastSuccessRow.Label =
             AppResources.Get("externalBackupLastSuccess", "Text");
-        BackupScheduleRow.Label = AppResources.Get("backupScheduleLabel", "Text");
-        BackupScheduleManualItem.Content = AppResources.Get("backupScheduleManual", "Content");
-        BackupScheduleTerminationItem.Content =
+        DiskPage.BackupScheduleRow.Label = AppResources.Get("backupScheduleLabel", "Text");
+        DiskPage.BackupScheduleManualItem.Content = AppResources.Get("backupScheduleManual", "Content");
+        DiskPage.BackupScheduleTerminationItem.Content =
             AppResources.Get("backupScheduleTermination", "Content");
-        BackupScheduleDailyItem.Content = AppResources.Get("backupScheduleDaily", "Content");
-        BackupScheduleWeeklyItem.Content = AppResources.Get("backupScheduleWeekly", "Content");
-        BackupLastAttemptRow.Label = AppResources.Get("backupLastAttempt", "Text");
-        BackupLastSuccessRow.Label = AppResources.Get("backupLastSuccess", "Text");
-        BackupVerificationRow.Label = AppResources.Get("backupVerification", "Text");
-        BackupNowButton.Content = AppResources.Get("diskLibraryBackupNow", "Content");
-        BackupBrowseButton.Content = AppResources.Get("diskLibraryBackupBrowse", "Content");
-        BackupArchiveButton.Content = AppResources.Get("libraryArchiveCreate", "Content");
+        DiskPage.BackupScheduleDailyItem.Content = AppResources.Get("backupScheduleDaily", "Content");
+        DiskPage.BackupScheduleWeeklyItem.Content = AppResources.Get("backupScheduleWeekly", "Content");
+        DiskPage.BackupLastAttemptRow.Label = AppResources.Get("backupLastAttempt", "Text");
+        DiskPage.BackupLastSuccessRow.Label = AppResources.Get("backupLastSuccess", "Text");
+        DiskPage.BackupVerificationRow.Label = AppResources.Get("backupVerification", "Text");
+        DiskPage.BackupNowButton.Content = AppResources.Get("diskLibraryBackupNow", "Content");
+        DiskPage.BackupBrowseButton.Content = AppResources.Get("diskLibraryBackupBrowse", "Content");
+        DiskPage.BackupArchiveButton.Content = AppResources.Get("libraryArchiveCreate", "Content");
     }
 
     private void SynchronizeDiskTab(ShellPreferences preferences)
     {
         bool custom = preferences.Disk.LocationMode == DiskStorageLocationMode.Custom;
-        DiskLocationPicker.SetSelected(preferences.Disk.LocationMode);
+        DiskPage.DiskLocationPicker.SetSelected(preferences.Disk.LocationMode);
         foreach (var entry in DiskPathRows)
         {
             entry.Row.PathText = DiskStorageLocations.Abbreviate(entry.Read(diskStorage));
             entry.Row.CanChange = custom;
         }
-        DiskResetRow.Visibility = custom ? Visibility.Visible : Visibility.Collapsed;
-        DiskSection.Apply();
+        DiskPage.DiskResetRow.Visibility = custom ? Visibility.Visible : Visibility.Collapsed;
+        DiskPage.DiskSection.Apply();
 
         ScanStorageLocationStatus status =
             ScanStorageLocationInspector.Inspect(diskStorage.Scans);
-        DiskAvailableRow.ValueText = status.AvailableCapacityBytes is { } available
+        DiskPage.DiskAvailableRow.ValueText = status.AvailableCapacityBytes is { } available
             ? FileBytesText(available)
             : AppResources.Get("scanStorageUnavailable", "Text");
-        DiskStorageKindRow.ValueText = AppResources.Get(
+        DiskPage.DiskStorageKindRow.ValueText = AppResources.Get(
             status.Kind == ScanStorageKind.CloudManaged
                 ? "scanStorageCloudManaged"
                 : "scanStorageLocal",
             "Text");
 
         LibraryBackupSettings backup = preferences.Backup;
-        BackupFolderRow.ValueText = library?.StorageRoots is { } roots
+        DiskPage.BackupFolderRow.ValueText = library?.StorageRoots is { } roots
             ? DiskStorageLocations.Abbreviate(roots.BackupRoot)
             : AppResources.Get("scanStorageUnavailable", "Text");
-        ExternalBackupChooseButton.Content = AppResources.Get(
+        DiskPage.ExternalBackupChooseButton.Content = AppResources.Get(
             backup.ExternalDestination.Length == 0 ? "externalBackupChoose" : "externalBackupChange",
             "Content");
-        ExternalBackupRemoveButton.Visibility = backup.ExternalDestination.Length == 0
+        DiskPage.ExternalBackupRemoveButton.Visibility = backup.ExternalDestination.Length == 0
             ? Visibility.Collapsed
             : Visibility.Visible;
-        ExternalBackupStatusLine.Text = ExternalBackupStatusText(backup);
-        ExternalBackupLastSuccessRow.ValueText = DateText(backup.ExternalLastSuccessAt);
-        BackupScheduleComboBox.SelectedIndex = (int)backup.Schedule;
-        BackupLastAttemptRow.ValueText = DateText(backup.LastAttemptAt);
-        BackupLastSuccessRow.ValueText = DateText(backup.LastSuccessAt);
-        BackupVerificationRow.ValueText = backup.LastRestoreDrillSucceeded is { } passed
+        DiskPage.ExternalBackupStatusLine.Text = ExternalBackupStatusText(backup);
+        DiskPage.ExternalBackupLastSuccessRow.ValueText = DateText(backup.ExternalLastSuccessAt);
+        DiskPage.BackupScheduleComboBox.SelectedIndex = (int)backup.Schedule;
+        DiskPage.BackupLastAttemptRow.ValueText = DateText(backup.LastAttemptAt);
+        DiskPage.BackupLastSuccessRow.ValueText = DateText(backup.LastSuccessAt);
+        DiskPage.BackupVerificationRow.ValueText = backup.LastRestoreDrillSucceeded is { } passed
             ? AppResources.Get(passed ? "backupPassed" : "backupFailed", "Text")
             : AppResources.Get("backupNever", "Text");
-        BackupVerificationRow.Reason = backup.LastRestoreDrillGeneration.Length == 0
+        DiskPage.BackupVerificationRow.Reason = backup.LastRestoreDrillGeneration.Length == 0
             ? string.Empty
             : $"{AppResources.Get("backupGeneration", "Text")} {backup.LastRestoreDrillGeneration}";
-        DiskBackupSection.Apply();
+        DiskPage.DiskBackupSection.Apply();
         RefreshThumbnailCacheSize();
     }
 
@@ -234,7 +234,7 @@ public sealed partial class SettingsRootView
     {
         _ = sender;
         _ = args;
-        if (isUpdating || DiskLocationPicker.SelectedValue is not DiskStorageLocationMode mode)
+        if (isUpdating || DiskPage.DiskLocationPicker.SelectedValue is not DiskStorageLocationMode mode)
         {
             return;
         }
@@ -262,7 +262,7 @@ public sealed partial class SettingsRootView
         }
         else if (workspaceState is { } state)
         {
-            DiskLocationPicker.SetSelected(state.Current.Disk.LocationMode);
+            DiskPage.DiskLocationPicker.SetSelected(state.Current.Disk.LocationMode);
         }
     }
 
@@ -312,7 +312,7 @@ public sealed partial class SettingsRootView
         }
     }
 
-    private void OnDiskResetPathsClick(object sender, RoutedEventArgs args)
+    internal void OnDiskResetPathsClick(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
@@ -340,7 +340,7 @@ public sealed partial class SettingsRootView
 
     private void RefreshThumbnailCacheSize()
     {
-        DiskThumbnailCacheSize.Text = AppResources.Get("diskCacheSizeCalculating", "Text");
+        DiskPage.DiskThumbnailCacheSize.Text = AppResources.Get("diskCacheSizeCalculating", "Text");
         string directory = diskStorage.Thumbnails;
         _ = MeasureThumbnailCacheAsync(directory);
     }
@@ -349,14 +349,14 @@ public sealed partial class SettingsRootView
     {
         long bytes = await Task.Run(
             () => Negaflow.Shell.Library.ThumbnailDiskCache.DirectorySize(directory));
-        DiskThumbnailCacheSize.Text = FileBytesText(bytes);
+        DiskPage.DiskThumbnailCacheSize.Text = FileBytesText(bytes);
     }
 
-    private async void OnClearThumbnailCacheClick(object sender, RoutedEventArgs args)
+    internal async void OnClearThumbnailCacheClick(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        DiskClearThumbnailCacheButton.IsEnabled = false;
+        DiskPage.DiskClearThumbnailCacheButton.IsEnabled = false;
         try
         {
             string directory = diskStorage.Thumbnails;
@@ -368,23 +368,23 @@ public sealed partial class SettingsRootView
         }
         finally
         {
-            DiskClearThumbnailCacheButton.IsEnabled = true;
+            DiskPage.DiskClearThumbnailCacheButton.IsEnabled = true;
         }
     }
 
-    private void OnBackupScheduleChanged(object sender, SelectionChangedEventArgs args)
+    internal void OnBackupScheduleChanged(object sender, SelectionChangedEventArgs args)
     {
         _ = sender;
         _ = args;
-        if (isUpdating || BackupScheduleComboBox.SelectedIndex < 0)
+        if (isUpdating || DiskPage.BackupScheduleComboBox.SelectedIndex < 0)
         {
             return;
         }
-        var schedule = (LibraryBackupSchedule)BackupScheduleComboBox.SelectedIndex;
+        var schedule = (LibraryBackupSchedule)DiskPage.BackupScheduleComboBox.SelectedIndex;
         workspaceState?.UpdateBackup(backup => backup with { Schedule = schedule });
     }
 
-    private async void OnBackupNowClick(object sender, RoutedEventArgs args)
+    internal async void OnBackupNowClick(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
@@ -392,7 +392,7 @@ public sealed partial class SettingsRootView
         {
             return;
         }
-        BackupNowButton.IsEnabled = false;
+        DiskPage.BackupNowButton.IsEnabled = false;
         try
         {
             DateTimeOffset attempt = DateTimeOffset.Now;
@@ -405,11 +405,11 @@ public sealed partial class SettingsRootView
         }
         finally
         {
-            BackupNowButton.IsEnabled = true;
+            DiskPage.BackupNowButton.IsEnabled = true;
         }
     }
 
-    private void OnBrowseBackupsClick(object sender, RoutedEventArgs args)
+    internal void OnBrowseBackupsClick(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
@@ -419,7 +419,7 @@ public sealed partial class SettingsRootView
         }
     }
 
-    private async void OnChooseExternalBackupClick(object sender, RoutedEventArgs args)
+    internal async void OnChooseExternalBackupClick(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
@@ -429,7 +429,7 @@ public sealed partial class SettingsRootView
         }
     }
 
-    private void OnRemoveExternalBackupClick(object sender, RoutedEventArgs args)
+    internal void OnRemoveExternalBackupClick(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
@@ -444,7 +444,7 @@ public sealed partial class SettingsRootView
     /// macOS <c>LibraryArchiveButton.presentSavePanel()</c> 자리입니다. 카탈로그와 결함
     /// 레시피를 한 덩어리로 묶고 파일마다 SHA-256 을 적습니다.
     /// </summary>
-    private async void OnCreateArchiveClick(object sender, RoutedEventArgs args)
+    internal async void OnCreateArchiveClick(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
@@ -471,7 +471,7 @@ public sealed partial class SettingsRootView
         {
             return;
         }
-        BackupArchiveButton.IsEnabled = false;
+        DiskPage.BackupArchiveButton.IsEnabled = false;
         try
         {
             DateTimeOffset now = DateTimeOffset.Now;
@@ -479,7 +479,7 @@ public sealed partial class SettingsRootView
         }
         finally
         {
-            BackupArchiveButton.IsEnabled = true;
+            DiskPage.BackupArchiveButton.IsEnabled = true;
         }
     }
 }

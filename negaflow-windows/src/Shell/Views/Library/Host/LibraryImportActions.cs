@@ -31,7 +31,7 @@ internal sealed class LibraryImportActions
         }
 
         SetBusy(false);
-        view.ImportStatusText.Text = string.Empty;
+        view.ControlsPanel.ImportStatusText.Text = string.Empty;
         try
         {
             IReadOnlyList<Microsoft.Windows.Storage.Pickers.PickFileResult> picked =
@@ -47,7 +47,7 @@ internal sealed class LibraryImportActions
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or
             NotSupportedException or ArgumentException or PathTooLongException)
         {
-            view.ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
+            view.ControlsPanel.ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
         }
         finally
         {
@@ -70,7 +70,7 @@ internal sealed class LibraryImportActions
         };
 
         SetBusy(false);
-        view.ImportStatusText.Text = string.Empty;
+        view.ControlsPanel.ImportStatusText.Text = string.Empty;
         try
         {
             Microsoft.Windows.Storage.Pickers.PickFolderResult? picked =
@@ -85,10 +85,10 @@ internal sealed class LibraryImportActions
                 DevelopmentProcess.C41);
             if (!imported.IsSuccess)
             {
-                view.ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
+                view.ControlsPanel.ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
                 return;
             }
-            view.ImportStatusText.Text = AppResources.FormatIntegers(
+            view.ControlsPanel.ImportStatusText.Text = AppResources.FormatIntegers(
                 "libraryFolderImportResult",
                 "Text",
                 imported.AddedFrameCount,
@@ -99,7 +99,7 @@ internal sealed class LibraryImportActions
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or
             NotSupportedException or ArgumentException or PathTooLongException)
         {
-            view.ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
+            view.ControlsPanel.ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
         }
         finally
         {
@@ -157,7 +157,7 @@ internal sealed class LibraryImportActions
             SourceRelinkPlan? plan = SourceRelinkPlanner.FilePlan(item.Frame.SourcePath, picked.Path);
             if (plan is null || !view.libraryHost.Relink(plan).IsSuccess)
             {
-                view.ImportStatusText.Text = AppResources.Get("libraryRelinkFailed", "Text");
+                view.ControlsPanel.ImportStatusText.Text = AppResources.Get("libraryRelinkFailed", "Text");
                 return;
             }
             view.ShowLibrary(view.libraryHost, view.importWindowId.Value);
@@ -165,7 +165,7 @@ internal sealed class LibraryImportActions
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or
             NotSupportedException or ArgumentException or PathTooLongException)
         {
-            view.ImportStatusText.Text = AppResources.Get("libraryRelinkFailed", "Text");
+            view.ControlsPanel.ImportStatusText.Text = AppResources.Get("libraryRelinkFailed", "Text");
         }
     }
 
@@ -200,7 +200,7 @@ internal sealed class LibraryImportActions
                 view.libraryHost.Frames);
             if (!view.libraryHost.Relink(plan).IsSuccess)
             {
-                view.ImportStatusText.Text = AppResources.Get("libraryFolderRelinkFailed", "Text");
+                view.ControlsPanel.ImportStatusText.Text = AppResources.Get("libraryFolderRelinkFailed", "Text");
                 return;
             }
             view.ShowLibrary(view.libraryHost, view.importWindowId.Value);
@@ -208,14 +208,14 @@ internal sealed class LibraryImportActions
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or
             NotSupportedException or ArgumentException or PathTooLongException)
         {
-            view.ImportStatusText.Text = AppResources.Get("libraryFolderRelinkFailed", "Text");
+            view.ControlsPanel.ImportStatusText.Text = AppResources.Get("libraryFolderRelinkFailed", "Text");
         }
     }
 
     private void SetBusy(bool enabled)
     {
-        view.ImportImagesButton.IsEnabled = enabled;
+        view.ControlsPanel.ImportImagesButton.IsEnabled = enabled;
         view.EmptyImportImagesButton.IsEnabled = enabled;
-        view.ImportFoldersButton.IsEnabled = enabled;
+        view.ControlsPanel.ImportFoldersButton.IsEnabled = enabled;
     }
 }

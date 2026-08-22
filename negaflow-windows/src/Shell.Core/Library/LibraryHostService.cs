@@ -1,37 +1,8 @@
-using Negaflow.Catalog;
+﻿using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
 
 namespace Negaflow.Shell;
-
-public enum LibraryHostState
-{
-    NotOpened,
-    Open,
-
-    /// <summary>다른 프로세스가 이미 이 카탈로그의 작성자입니다.</summary>
-    Busy,
-
-    /// <summary>카탈로그가 손상됐거나 이 빌드가 모르는 version 입니다.</summary>
-    Unavailable,
-}
-
-public enum ScannerFramePublishStatus
-{
-    Published,
-    InfraredApplied,
-    InfraredSkipped,
-    InfraredSourceUnreadable,
-    ReceiptWriteFailed,
-    CatalogWriteFailed,
-}
-
-public sealed record ScannerFramePublishResult(
-    ScannerFramePublishStatus Status,
-    FrameImportPlan Plan,
-    LibraryFrameSnapshot? Frame,
-    InfraredDefectApplyResult? Infrared,
-    CatalogStoreError CatalogError);
 
 /// <summary>
 /// 셸이 라이브러리와 현상 엔진에 닿는 유일한 자리입니다. XAML 코드비하인드가 catalog 세션이나
@@ -41,7 +12,7 @@ public sealed record ScannerFramePublishResult(
 /// 열기는 시작할 때 한 번입니다. 실패해도 예외를 던지지 않고 상태로 남기며, 셸은 그 상태를
 /// 보여 줄 뿐 빈 라이브러리로 착각하지 않습니다.
 /// </remarks>
-public sealed class LibraryHostService : IDisposable
+public sealed partial class LibraryHostService : IDisposable
 {
     private readonly LibraryAutosaveController autosave;
     private readonly LibraryAvailabilityController availability;
@@ -126,6 +97,22 @@ public sealed class LibraryHostService : IDisposable
         selection.Set(Frames, frameIds, activeFrameId);
         TryInfraredCleanIfNeeded(ActiveFrameId);
     }
+
+    /// <summary>
+    /// 누른 칸과 함께 누른 글쇠로 선택을 바꿉니다. Shift 는 이어 고르기, Ctrl 은 하나씩
+    /// 더하고 빼기입니다 — macOS <c>selectFrame(_:orderedFrameIDs:modifiers:)</c> 그대로입니다.
+    /// </summary>
+    public void SelectFrame(
+        string frameId,
+        IReadOnlyList<string> orderedFrameIds,
+        LibrarySelectionModifiers modifiers)
+    {
+        selection.SelectFrame(Frames, frameId, orderedFrameIds, modifiers);
+        TryInfraredCleanIfNeeded(ActiveFrameId);
+    }
+
+    /// <summary>Shift 로 이어 고를 때의 기준점입니다.</summary>
+    public string? SelectionAnchorFrameId => selection.AnchorFrameId;
 
     /// <summary>
     /// 앱을 다시 열 때 저장된 active frame을 복구합니다. 없거나 원본이 오프라인이면 macOS처럼
@@ -232,93 +219,6 @@ public sealed class LibraryHostService : IDisposable
                 ? LibraryFrameError.MissingId
                 : document.EditRoute(frameId, selection));
 
-    public IReadOnlyList<LibraryCollectionSnapshot> Collections =>
-        document?.Collections ?? [];
-
-    public IReadOnlyList<LibraryRollSnapshot> Rolls => document?.Rolls ?? [];
-
-    public IReadOnlyList<LibraryStoredSearchSnapshot> StoredSearches =>
-        document?.StoredSearches ?? [];
-
-    public string? CreateStoredSearch(
-        string name,
-        LibraryStoredSearchKind kind,
-        LibraryStoredQuery query)
-    {
-        string? id = document?.CreateStoredSearch(name, kind, query);
-        if (id is not null)
-        {
-            _ = SaveIfDirty();
-        }
-        return id;
-    }
-
-    public bool DeleteStoredSearch(string searchId) =>
-        SavedAfter(document?.DeleteStoredSearch(searchId) == true);
-
-    public string? ActiveRollId => document?.ActiveRollId;
-
-    public LibraryRollSnapshot? RollFor(string frameId) => document?.RollFor(frameId);
-
-    public string? CreateRoll(string name, FilmType filmType, IEnumerable<string> frameIds)
-    {
-        string? id = document?.CreateRoll(name, filmType, frameIds);
-        if (id is not null)
-        {
-            _ = SaveIfDirty();
-        }
-        return id;
-    }
-
-    public bool SetRollRecord(string rollId, RollRecord? record) =>
-        SavedAfter(document?.SetRollRecord(rollId, record) == true);
-
-    public bool SetRollFrames(string rollId, IEnumerable<string> frameIds) =>
-        SavedAfter(document?.SetRollFrames(rollId, frameIds) == true);
-
-    public bool DeleteRoll(string rollId) =>
-        SavedAfter(document?.DeleteRoll(rollId) == true);
-
-    public bool SetActiveRoll(string? rollId) =>
-        SavedAfter(document?.SetActiveRoll(rollId) == true);
-
-    /// <summary>묶음을 만들고 바로 저장합니다. 만들지 못하면 null 입니다.</summary>
-    public string? CreateCollection(string name, IEnumerable<string> frameIds) =>
-        Undoable(UndoActions.CreateCollection, () => document?.CreateCollection(name, frameIds));
-
-    public bool RenameCollection(string collectionId, string name) =>
-        Undoable(UndoActions.RenameCollection, () =>
-            document?.RenameCollection(collectionId, name) == true);
-
-    public bool SetCollectionFrames(string collectionId, IEnumerable<string> frameIds) =>
-        Undoable(UndoActions.EditCollection, () =>
-            document?.SetCollectionFrames(collectionId, frameIds) == true);
-
-    public bool DeleteCollection(string collectionId) =>
-        Undoable(UndoActions.DeleteCollection, () =>
-            document?.DeleteCollection(collectionId) == true);
-
-    /// <summary>
-    /// 가상 사본을 만들고 바로 저장합니다. 원본 파일은 그대로이며 카탈로그에만 줄이 늘어납니다.
-    /// </summary>
-    public string? CreateVirtualCopy(string frameId) =>
-        Undoable(UndoActions.VirtualCopy, () => document?.CreateVirtualCopy(frameId));
-
-    /// <summary>한 장으로 접어 둔 사진 묶음입니다.</summary>
-    public IReadOnlyList<LibraryStackSnapshot> Stacks => document?.Stacks ?? [];
-
-    public LibraryStackSnapshot? StackFor(string frameId) => document?.StackFor(frameId);
-
-    public string? CreateStack(IEnumerable<string> frameIds) =>
-        Undoable(UndoActions.CreateStack, () => document?.CreateStack(frameIds));
-
-    public bool UngroupStack(string stackId) =>
-        Undoable(UndoActions.UngroupStack, () => document?.UngroupStack(stackId) == true);
-
-    public bool ToggleStackCollapsed(string stackId) =>
-        Undoable(UndoActions.ToggleStack, () =>
-            document?.ToggleStackCollapsed(stackId) == true);
-
     /// <summary>
     /// 사진을 라이브러리에서 빼고 바로 저장합니다. 원본 파일은 그대로 둡니다. 돌려주는 값은
     /// 실제로 빠진 장수입니다.
@@ -368,173 +268,6 @@ public sealed class LibraryHostService : IDisposable
         /// 한 칸씩 쌓입니다.
         /// </summary>
         public const string DefectEdit = LibraryDefectEditor.UndoActionName;
-    }
-
-    public bool CanUndo => document?.CanUndo == true;
-
-    public bool CanRedo => document?.CanRedo == true;
-
-    public string? UndoActionName => document?.UndoActionName;
-
-    public string? RedoActionName => document?.RedoActionName;
-
-    /// <summary>한 단계 되돌리고 저장합니다. 되돌린 동작의 이름을 돌려줍니다.</summary>
-    public string? Undo()
-    {
-        frameEdits.Clear();
-        string? name = document?.Undo();
-        if (name is not null)
-        {
-            _ = SaveIfDirty();
-        }
-        return name;
-    }
-
-    public string? Redo()
-    {
-        frameEdits.Clear();
-        string? name = document?.Redo();
-        if (name is not null)
-        {
-            _ = SaveIfDirty();
-        }
-        return name;
-    }
-
-    private readonly FrameEditHistory frameEdits = new();
-    private readonly HashSet<string> infraredCleanAttempted = new(StringComparer.Ordinal);
-
-    /// <summary>macOS <c>runInfraredCleanIfNeeded</c>.</summary>
-    public InfraredDefectApplyResult? TryInfraredCleanIfNeeded(string? frameId)
-    {
-        if (document is null || frameId is null)
-        {
-            return null;
-        }
-
-        LibraryFrameSnapshot? frame = Frames.FirstOrDefault(candidate =>
-            string.Equals(candidate.Id, frameId, StringComparison.Ordinal));
-        bool attempted = infraredCleanAttempted.Contains(frameId);
-        if (!InfraredCleanPolicy.ShouldRun(frame, attempted) || frame is null)
-        {
-            return null;
-        }
-
-        infraredCleanAttempted.Add(frameId);
-        if (!DefectSourceIdentityReader.TryRead(frame.SourcePath, out DefectSourceIdentity identity) ||
-            frame.InfraredPath is not { } infraredPath)
-        {
-            if (InfraredCleanPolicy.ShouldRearm(InfraredDefectApplyStatus.DetectionFailed))
-            {
-                infraredCleanAttempted.Remove(frameId);
-            }
-
-            return new InfraredDefectApplyResult(
-                InfraredDefectApplyStatus.DetectionFailed,
-                null,
-                null,
-                DefectSidecarError.None,
-                CatalogStoreError.None);
-        }
-
-        InfraredDefectApplyResult result = InfraredDefectRecipeCoordinator.RunFiles(
-            document,
-            frame,
-            identity,
-            frame.SourcePath,
-            infraredPath);
-        if (InfraredCleanPolicy.ShouldRearm(result.Status))
-        {
-            infraredCleanAttempted.Remove(frameId);
-        }
-
-        return result;
-    }
-
-    /// <summary>macOS <c>recordFrameEditIfChanged</c> — <see cref="Edit"/> 길목.</summary>
-    private LibraryFrameError AfterCoalescedDevelopEdit(
-        string frameId,
-        Func<LibraryFrameError> edit)
-    {
-        if (document is not { } open)
-        {
-            return LibraryFrameError.MissingId;
-        }
-
-        DateTime now = DateTime.UtcNow;
-        bool captured = frameEdits.ConsumeCapture(frameId, now);
-        if (captured)
-        {
-            open.CaptureUndo(UndoActions.DevelopAdjustment);
-        }
-
-        LibraryFrameError error = edit();
-        if (error != LibraryFrameError.None && captured)
-        {
-            _ = open.Undo();
-            return error;
-        }
-
-        return AfterEdit(error);
-    }
-
-    /// <summary>
-    /// 바꾸기 직전 상태를 담고 편집을 돌린 뒤 저장합니다. 편집이 아무것도 바꾸지 않았으면
-    /// 담아 둔 상태를 도로 버립니다 — 아무 일도 없었던 편집이 되돌리기 더미를 채우면 Ctrl+Z 가
-    /// 헛돕니다.
-    /// </summary>
-    private T Undoable<T>(string actionName, Func<T> mutate)
-    {
-        if (document is not { } open)
-        {
-            return mutate();
-        }
-        open.CaptureUndo(actionName);
-        T result = mutate();
-        bool changed = result switch
-        {
-            bool flag => flag,
-            null => false,
-            _ => true,
-        };
-        if (!changed)
-        {
-            _ = open.Undo();
-            return result;
-        }
-        _ = SaveIfDirty();
-        return result;
-    }
-
-    private bool SavedAfter(bool changed)
-    {
-        if (changed)
-        {
-            _ = SaveIfDirty();
-        }
-        return changed;
-    }
-
-    /// <summary>사이드카가 적을 frame record 의 복사본입니다.</summary>
-    public System.Text.Json.Nodes.JsonObject? FrameRecord(string frameId) =>
-        document?.FrameRecord(frameId);
-
-    /// <summary>현상 버전을 담거나 되돌리거나, 현상 설정을 붙여넣습니다.</summary>
-    public LibraryFrameError EditFrameRecord(
-        string frameId,
-        Func<System.Text.Json.Nodes.JsonObject, LibraryFrameWriteResult> edit) =>
-        AfterEdit(document is null
-            ? LibraryFrameError.MissingId
-            : document.EditFrameRecord(frameId, edit));
-
-    private LibraryFrameError AfterEdit(LibraryFrameError error)
-    {
-        if (error == LibraryFrameError.None)
-        {
-            ScheduleSave();
-            FrameEdited?.Invoke(this, EventArgs.Empty);
-        }
-        return error;
     }
 
     /// <summary>

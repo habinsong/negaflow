@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <UserControl
     x:Class="Negaflow.Shell.Views.PrintWorkspaceView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -7,6 +7,7 @@
     xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives"
     xmlns:views="using:Negaflow.Shell.Views"
     xmlns:export="using:Negaflow.Shell.Views.Develop.Export"
+    xmlns:settings="using:Negaflow.Shell.Views.Print.Settings"
     xmlns:controls="using:Negaflow.Shell.Views.Controls">
     <Grid x:Name="Root" Background="{ThemeResource NegaflowWindowBrush}" SizeChanged="OnRootSizeChanged">
         <Grid.ColumnDefinitions>
@@ -156,8 +157,8 @@
                     IsHitTestVisible="False" />
             </Grid>
 
-            <views:FilmstripView x:Name="Filmstrip" Grid.Row="1" />
-            <views:StatusBarView x:Name="StatusBar" Grid.Row="2" />
+            <views:FilmstripView x:Name="Filmstrip" x:FieldModifier="internal" Grid.Row="1" />
+            <views:StatusBarView x:Name="StatusBar" x:FieldModifier="internal" Grid.Row="2" />
         </Grid>
 
         <Border x:Name="RightDivider" Grid.Column="3" Background="{ThemeResource NegaflowDividerBrush}" />
@@ -175,7 +176,7 @@
         <Grid x:Name="RightPanel" Grid.Column="4" Background="{ThemeResource NegaflowPanelBrush}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="44" />
-                <RowDefinition Height="38" />
+                <RowDefinition Height="48" />
                 <RowDefinition Height="1" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
@@ -189,437 +190,69 @@
                 <TextBlock x:Name="PrintHeaderText" Grid.Column="1" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
                 <TextBlock x:Name="NoFrameRightHeaderText" Grid.Column="2" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             </Grid>
-            <!-- macOS 인화 인스펙터는 **레이아웃 · 출력 둘**입니다
-                 (스크린샷 `인화뷰_기본.png` · `인화뷰_출력.png`). 셋으로 두고 둘을
-                 `IsEnabled="False"` 로 막아 두면 눌리지 않는 가짜 탭이 됩니다. -->
-            <Grid Grid.Row="1" Margin="12,3" Background="{ThemeResource NegaflowSubtleFillBrush}" CornerRadius="15">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Button
-                    x:Name="LayoutTabButton"
-                    Grid.Column="0"
-                    AutomationProperties.AutomationId="negaflow.print.tab.layout"
-                    Background="{ThemeResource NegaflowSelectionBrush}"
-                    BorderThickness="0"
-                    Click="OnPrintTabClicked"
-                    CornerRadius="12"
-                    Tag="Layout" />
-                <Button
-                    x:Name="PrintOutputSectionLocalized"
-                    Grid.Column="1"
-                    AutomationProperties.AutomationId="negaflow.print.tab.output"
-                    Background="Transparent"
-                    BorderThickness="0"
-                    Click="OnPrintTabClicked"
-                    CornerRadius="12"
-                    Tag="Output" />
-            </Grid>
+            <!-- macOS `PrintWorkspaceInspector.availableTabs` — 한 판에 여러 장을 놓는
+                 모드에서는 레이아웃 · 콘텐츠 · 출력 셋, 한 장씩 놓는 모드에서는 콘텐츠를
+                 빼고 둘입니다. 그래서 가운데 칸은 모드에 따라 나왔다 사라집니다. -->
+            <Border
+                x:Name="InspectorTabs"
+                Grid.Row="1"
+                Margin="12,0,12,10"
+                Style="{StaticResource NegaflowPrintTabTrackStyle}">
+                <Grid ColumnSpacing="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition x:Name="ContentTabColumn" Width="0" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <RadioButton
+                        x:Name="LayoutTabButton"
+                        Grid.Column="0"
+                        AutomationProperties.AutomationId="negaflow.print.tab.layout"
+                        Checked="OnPrintTabChecked"
+                        GroupName="PrintInspectorTab"
+                        IsChecked="True"
+                        Style="{StaticResource NegaflowPrintTabStyle}"
+                        Tag="Layout">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <controls:VectorIcon x:Name="LayoutTabIcon" IconSize="13" Kind="RectangleInsetFilled" />
+                            <TextBlock x:Name="LayoutTabText" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton
+                        x:Name="ContentTabButton"
+                        Grid.Column="1"
+                        AutomationProperties.AutomationId="negaflow.print.tab.content"
+                        Checked="OnPrintTabChecked"
+                        GroupName="PrintInspectorTab"
+                        Style="{StaticResource NegaflowPrintTabStyle}"
+                        Tag="Content"
+                        Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <controls:VectorIcon x:Name="ContentTabIcon" IconSize="13" Kind="PhotoOnRectangle" />
+                            <TextBlock x:Name="ContentTabText" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton
+                        x:Name="OutputTabButton"
+                        Grid.Column="2"
+                        AutomationProperties.AutomationId="negaflow.print.tab.output"
+                        Checked="OnPrintTabChecked"
+                        GroupName="PrintInspectorTab"
+                        Style="{StaticResource NegaflowPrintTabStyle}"
+                        Tag="Output">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <controls:VectorIcon x:Name="OutputTabIcon" IconSize="13" Kind="CameraFilters" />
+                            <TextBlock x:Name="OutputTabText" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+                </Grid>
+            </Border>
             <Border Grid.Row="2" Background="{ThemeResource NegaflowDividerBrush}" />
             <ScrollViewer Grid.Row="3">
                 <StackPanel Padding="12" Spacing="12">
-                    <StackPanel x:Name="PrintLayoutTabPanel" Spacing="12">
-                    <Border Padding="14" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="9">
-                        <StackPanel Spacing="10">
-                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                <FontIcon FontSize="13" Glyph="&#xE740;" />
-                                <TextBlock x:Name="PrintLayoutSectionLocalized" FontSize="13" FontWeight="SemiBold" />
-                            </StackPanel>
-                            <Grid ColumnSpacing="10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Spacing="4">
-                                    <TextBlock x:Name="LayoutModeText" FontSize="11" />
-                                    <ComboBox
-                                        x:Name="LayoutModeSelector"
-                                        HorizontalAlignment="Stretch"
-                                        AutomationProperties.AutomationId="negaflow.print.layout-mode"
-                                        DisplayMemberPath="Label"
-                                        FontSize="12"
-                                        SelectionChanged="OnPrintSettingChanged" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Spacing="4">
-                                    <TextBlock x:Name="PaperSizeText" FontSize="11" />
-                                    <ComboBox
-                                        x:Name="PaperSizeSelector"
-                                        HorizontalAlignment="Stretch"
-                                        AutomationProperties.AutomationId="negaflow.print.paper-size"
-                                        DisplayMemberPath="Label"
-                                        FontSize="12"
-                                        SelectionChanged="OnPrintSettingChanged" />
-                                </StackPanel>
-                            </Grid>
-                            <Grid ColumnSpacing="10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Spacing="4">
-                                    <TextBlock x:Name="OrientationText" FontSize="11" />
-                                    <controls:NegaflowSegmentedPicker
-                                        x:Name="OrientationSelector"
-                                        AutomationProperties.AutomationId="negaflow.print.orientation" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Spacing="4">
-                                    <TextBlock x:Name="PerforationText" FontSize="11" />
-                                    <ComboBox
-                                        x:Name="PerforationSelector"
-                                        HorizontalAlignment="Stretch"
-                                        AutomationProperties.AutomationId="negaflow.print.perforation"
-                                        DisplayMemberPath="Label"
-                                        FontSize="12"
-                                        SelectionChanged="OnPrintSettingChanged" />
-                                </StackPanel>
-                            </Grid>
-                            <TextBlock x:Name="MarginText" FontSize="11" />
-                            <Slider
-                                x:Name="MarginSlider"
-                                AutomationProperties.AutomationId="negaflow.print.margin"
-                                Maximum="50"
-                                Minimum="0"
-                                StepFrequency="0.5"
-                                ValueChanged="OnPrintSliderChanged" />
-                            <TextBlock x:Name="DpiText" FontSize="11" />
-                            <ComboBox
-                                x:Name="DpiSelector"
-                                HorizontalAlignment="Stretch"
-                                AutomationProperties.AutomationId="negaflow.print.dpi"
-                                DisplayMemberPath="Label"
-                                FontSize="12"
-                                SelectionChanged="OnPrintSettingChanged" />
-                        </StackPanel>
-                    </Border>
-
-                    <!-- 여러 장을 한 판에 놓는 모드에서만 나옵니다. -->
-                    <Border
-                        x:Name="SheetCard"
-                        Padding="14"
-                        Background="{ThemeResource NegaflowCardBrush}"
-                        CornerRadius="9"
-                        Visibility="Collapsed">
-                        <StackPanel Spacing="10">
-                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                <FontIcon FontSize="13" Glyph="&#xE80A;" />
-                                <TextBlock x:Name="SheetSectionText" FontSize="13" FontWeight="SemiBold" />
-                            </StackPanel>
-                            <Grid ColumnSpacing="10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Spacing="4">
-                                    <TextBlock x:Name="RowsText" FontSize="11" />
-                                    <NumberBox
-                                        x:Name="RowsBox"
-                                        AutomationProperties.AutomationId="negaflow.print.rows"
-                                        Maximum="20"
-                                        Minimum="1"
-                                        SpinButtonPlacementMode="Compact"
-                                        ValueChanged="OnPrintNumberChanged" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Spacing="4">
-                                    <TextBlock x:Name="ColumnsText" FontSize="11" />
-                                    <NumberBox
-                                        x:Name="ColumnsBox"
-                                        AutomationProperties.AutomationId="negaflow.print.columns"
-                                        Maximum="20"
-                                        Minimum="1"
-                                        SpinButtonPlacementMode="Compact"
-                                        ValueChanged="OnPrintNumberChanged" />
-                                </StackPanel>
-                            </Grid>
-                            <TextBlock x:Name="SpacingText" FontSize="11" />
-                            <Slider
-                                x:Name="SpacingSlider"
-                                AutomationProperties.AutomationId="negaflow.print.spacing"
-                                Maximum="50"
-                                Minimum="0"
-                                StepFrequency="0.5"
-                                ValueChanged="OnPrintSliderChanged" />
-                            <TextBlock x:Name="ContentModeText" FontSize="11" />
-                            <ComboBox
-                                x:Name="ContentModeSelector"
-                                HorizontalAlignment="Stretch"
-                                AutomationProperties.AutomationId="negaflow.print.content-mode"
-                                DisplayMemberPath="Label"
-                                FontSize="12"
-                                SelectionChanged="OnPrintSettingChanged" />
-                            <ToggleSwitch
-                                x:Name="RotateToFitToggle"
-                                AutomationProperties.AutomationId="negaflow.print.rotate-to-fit"
-                                Toggled="OnPrintToggled" />
-                            <ToggleSwitch
-                                x:Name="RepeatToggle"
-                                AutomationProperties.AutomationId="negaflow.print.repeat"
-                                Toggled="OnPrintToggled" />
-                            <TextBlock x:Name="SheetBackgroundText" FontSize="11" />
-                            <controls:NegaflowSegmentedPicker
-                                x:Name="SheetBackgroundSelector"
-                                AutomationProperties.AutomationId="negaflow.print.sheet-background" />
-                            <!-- 픽처 패키지에서만 나옵니다. -->
-                            <StackPanel x:Name="TemplatePanel" Spacing="4" Visibility="Collapsed">
-                                <TextBlock x:Name="TemplateText" FontSize="11" />
-                                <ComboBox
-                                    x:Name="TemplateSelector"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.AutomationId="negaflow.print.template"
-                                    DisplayMemberPath="Label"
-                                    FontSize="12"
-                                    SelectionChanged="OnPrintSettingChanged" />
-                            </StackPanel>
-                            <TextBlock x:Name="CaptionModeText" FontSize="11" />
-                            <ComboBox
-                                x:Name="CaptionModeSelector"
-                                HorizontalAlignment="Stretch"
-                                AutomationProperties.AutomationId="negaflow.print.caption-mode"
-                                DisplayMemberPath="Label"
-                                FontSize="12"
-                                SelectionChanged="OnPrintSettingChanged" />
-                            <ToggleSwitch
-                                x:Name="CropMarksToggle"
-                                AutomationProperties.AutomationId="negaflow.print.crop-marks"
-                                Toggled="OnPrintToggled" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Padding="14" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="9">
-                        <StackPanel Spacing="10">
-                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                <FontIcon FontSize="13" Glyph="&#xED5E;" />
-                                <TextBlock x:Name="ViewSectionText" FontSize="13" FontWeight="SemiBold" />
-                            </StackPanel>
-                            <ToggleSwitch
-                                x:Name="RulersToggle"
-                                AutomationProperties.AutomationId="negaflow.print.rulers"
-                                Toggled="OnPrintToggled" />
-                            <TextBlock x:Name="RulerUnitText" FontSize="11" />
-                            <controls:NegaflowSegmentedPicker
-                                x:Name="RulerUnitSelector"
-                                AutomationProperties.AutomationId="negaflow.print.ruler-unit" />
-                        </StackPanel>
-                    </Border>
-
-                    <!-- 커스텀 배치에서만 나옵니다. 칸은 캔버스에서 끌어 옮깁니다. -->
-                    <Border
-                        x:Name="CustomCard"
-                        Padding="14"
-                        Background="{ThemeResource NegaflowCardBrush}"
-                        CornerRadius="9"
-                        Visibility="Collapsed">
-                        <StackPanel Spacing="10">
-                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                <FontIcon FontSize="13" Glyph="&#xE7C4;" />
-                                <TextBlock x:Name="CustomSectionText" FontSize="13" FontWeight="SemiBold" />
-                            </StackPanel>
-                            <TextBlock x:Name="CustomHintText" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                            <Grid ColumnSpacing="8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Button
-                                    x:Name="CustomAddButton"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.AutomationId="negaflow.print.custom.add"
-                                    Click="OnCustomAddClicked" />
-                                <Button
-                                    x:Name="CustomRemoveButton"
-                                    Grid.Column="1"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.AutomationId="negaflow.print.custom.remove"
-                                    Click="OnCustomRemoveClicked" />
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- macOS `PrintLayoutTemplateControls` (스크린샷 `인화뷰_기본.png` 아래):
-                         템플릿 이름 칸 + 저장. 담아 둔 것은 고르개에서 불러오고 지웁니다. -->
-                    <Border Padding="14" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="9">
-                        <StackPanel Spacing="10">
-                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                <FontIcon FontSize="13" Glyph="&#xE81E;" />
-                                <TextBlock x:Name="LayoutTemplateSectionText" FontSize="13" FontWeight="SemiBold" />
-                            </StackPanel>
-                            <Grid ColumnSpacing="6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock x:Name="LayoutTemplateNameLabel" VerticalAlignment="Center" FontSize="11" />
-                                <TextBox
-                                    x:Name="LayoutTemplateNameBox"
-                                    Grid.Column="1"
-                                    AutomationProperties.AutomationId="negaflow.print.template.name"
-                                    FontSize="12"
-                                    MaxLength="80"
-                                    TextChanged="OnLayoutTemplateNameChanged" />
-                                <Button
-                                    x:Name="LayoutTemplateSaveButton"
-                                    Grid.Column="2"
-                                    Padding="10,4"
-                                    AutomationProperties.AutomationId="negaflow.print.template.save"
-                                    Click="OnLayoutTemplateSaveClicked"
-                                    CornerRadius="8"
-                                    FontSize="12" />
-                            </Grid>
-                            <Grid x:Name="LayoutTemplateAppliedRow" ColumnSpacing="6" Visibility="Collapsed">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ComboBox
-                                    x:Name="LayoutTemplateSelector"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.AutomationId="negaflow.print.template.list"
-                                    DisplayMemberPath="Name"
-                                    FontSize="12" />
-                                <Button
-                                    x:Name="LayoutTemplateApplyButton"
-                                    Grid.Column="1"
-                                    Padding="10,4"
-                                    AutomationProperties.AutomationId="negaflow.print.template.apply"
-                                    Click="OnLayoutTemplateApplyClicked"
-                                    CornerRadius="8"
-                                    FontSize="12" />
-                                <Button
-                                    x:Name="LayoutTemplateDeleteButton"
-                                    Grid.Column="2"
-                                    Padding="10,4"
-                                    AutomationProperties.AutomationId="negaflow.print.template.delete"
-                                    Click="OnLayoutTemplateDeleteClicked"
-                                    CornerRadius="8"
-                                    FontSize="12" />
-                            </Grid>
-                            <TextBlock
-                                x:Name="LayoutTemplateStatusText"
-                                FontSize="11"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
-                    </StackPanel>
-                    <StackPanel x:Name="PrintOutputTabPanel" Spacing="12" Visibility="Collapsed">
-                    <Border Padding="14" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="9">
-                        <StackPanel Spacing="10">
-                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                <FontIcon FontSize="13" Glyph="&#xE72D;" />
-                                <TextBlock x:Name="OutputSectionText" FontSize="13" FontWeight="SemiBold" />
-                            </StackPanel>
-                            <!-- macOS 출력 카드: "출력 방식" 라벨 한 줄 + [일반 출력][C-print]
-                                 두 칸 세그먼트 (스크린샷 `인화뷰_출력.png`). -->
-                            <TextBlock x:Name="OutputProcessText" FontSize="11" />
-                            <controls:NegaflowSegmentedPicker
-                                x:Name="OutputProcessSelector"
-                                AutomationProperties.AutomationId="negaflow.print.output-process" />
-                            <TextBlock x:Name="PageSizeSummaryText" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                            <Button
-                                x:Name="PrintExportButton"
-                                HorizontalAlignment="Stretch"
-                                AutomationProperties.AutomationId="negaflow.print.export"
-                                Click="OnPrintExportClicked"
-                                Style="{StaticResource AccentButtonStyle}" />
-                            <TextBlock x:Name="PrintStatusText" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
-
-                    <!-- macOS C-print 카드: 인화소 · 인화지가 한 줄에 둘. C-print 를 골랐을
-                         때만 나옵니다. -->
-                    <Border
-                        x:Name="CprintCard"
-                        Padding="14"
-                        Background="{ThemeResource NegaflowCardBrush}"
-                        CornerRadius="9"
-                        Visibility="Collapsed">
-                        <StackPanel Spacing="10">
-                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                <FontIcon FontSize="13" Glyph="&#xE7C5;" />
-                                <TextBlock x:Name="CprintSectionText" FontSize="13" FontWeight="SemiBold" />
-                            </StackPanel>
-                            <Grid ColumnSpacing="10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock x:Name="CprintLabText" VerticalAlignment="Center" FontSize="11" />
-                                <TextBox
-                                    x:Name="CprintLabBox"
-                                    Grid.Column="1"
-                                    AutomationProperties.AutomationId="negaflow.print.cprint.lab"
-                                    FontSize="12"
-                                    TextChanged="OnCprintTextChanged" />
-                                <TextBlock x:Name="CprintPaperText" Grid.Column="2" VerticalAlignment="Center" FontSize="11" />
-                                <TextBox
-                                    x:Name="CprintPaperBox"
-                                    Grid.Column="3"
-                                    AutomationProperties.AutomationId="negaflow.print.cprint.paper"
-                                    FontSize="12"
-                                    TextChanged="OnCprintTextChanged" />
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- macOS 인화 미리보기 카드: 인화 프로파일 이름 + [파일][지우기],
-                         그 아래 [끔][켬] 두 칸 세그먼트. -->
-                    <Border
-                        x:Name="PrintProofCard"
-                        Padding="14"
-                        Background="{ThemeResource NegaflowCardBrush}"
-                        CornerRadius="9"
-                        Visibility="Collapsed">
-                        <StackPanel Spacing="10">
-                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                <FontIcon FontSize="13" Glyph="&#xE7B3;" />
-                                <TextBlock x:Name="PrintProofSectionText" FontSize="13" FontWeight="SemiBold" />
-                            </StackPanel>
-                            <TextBlock x:Name="PrintProofProfileLabel" FontSize="11" />
-                            <Grid ColumnSpacing="6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock
-                                    x:Name="PrintProofProfileText"
-                                    VerticalAlignment="Center"
-                                    FontSize="12"
-                                    TextTrimming="CharacterEllipsis" />
-                                <Button
-                                    x:Name="PrintProofChooseButton"
-                                    Grid.Column="1"
-                                    Padding="7,4"
-                                    AutomationProperties.AutomationId="negaflow.print.proof.choose"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Click="OnPrintProofChooseClicked"
-                                    Content="&#xE8B7;"
-                                    FontFamily="{ThemeResource SymbolThemeFontFamily}"
-                                    FontSize="12" />
-                                <Button
-                                    x:Name="PrintProofClearButton"
-                                    Grid.Column="2"
-                                    Padding="7,4"
-                                    AutomationProperties.AutomationId="negaflow.print.proof.clear"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Click="OnPrintProofClearClicked"
-                                    Content="&#xE711;"
-                                    FontFamily="{ThemeResource SymbolThemeFontFamily}"
-                                    FontSize="12" />
-                            </Grid>
-                            <TextBlock x:Name="PrintProofPreviewLabel" FontSize="11" />
-                            <controls:NegaflowSegmentedPicker
-                                x:Name="PrintProofPreviewSelector"
-                                AutomationProperties.AutomationId="negaflow.print.proof.preview" />
-                        </StackPanel>
-                    </Border>
-                    </StackPanel>
+                    <settings:PrintLayoutTab x:Name="LayoutTab" />
+                    <settings:PrintContentTab x:Name="ContentTab" Visibility="Collapsed" />
+                    <settings:PrintOutputTab x:Name="OutputTab" Visibility="Collapsed" />
                 </StackPanel>
             </ScrollViewer>
         </Grid>

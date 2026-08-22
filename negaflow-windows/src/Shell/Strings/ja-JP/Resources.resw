@@ -457,6 +457,10 @@
   <data name="printProofPreview.Text" xml:space="preserve"><value>Print preview</value></data>
   <data name="printProofOff.Text" xml:space="preserve"><value>Off</value></data>
   <data name="printProofOn.Text" xml:space="preserve"><value>On</value></data>
+  <data name="printPaperPhotoRatio.Text" xml:space="preserve">
+    <value>写真の比率</value>
+    <comment>AppLocalizedText.printPaperPhotoRatio</comment>
+  </data>
   <data name="printPaperSize.Text" xml:space="preserve">
     <value>用紙サイズ</value>
     <comment>AppLocalizedText.printPaperSize</comment>
@@ -1060,7 +1064,6 @@
   <data name="scanDetectionManual.Content" xml:space="preserve"><value>手動</value><comment>AppLocalizedPhrase.flatbedDetectionManual</comment></data>
   <data name="scanDetectionMode.Text" xml:space="preserve"><value>コマ検出</value><comment>AppLocalizedPhrase.flatbedDetectionMode</comment></data>
   <data name="scanFlatbedFramesFormat.Text" xml:space="preserve"><value>選択中: %d</value><comment>AppLocalizedPhrase.flatbedFramesFormat</comment></data>
-  <data name="scanFlatbedFrameFormat.Text" xml:space="preserve"><value>コマ %d</value><comment>AppLocalizedPhrase.flatbedFrameFormat</comment></data>
   <data name="scanFrameFormat.Text" xml:space="preserve"><value>フレーム形式</value><comment>AppLocalizedPhrase.filmFrameFormat</comment></data>
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>コマをペースト</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>コマを検出し直す</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
@@ -1172,7 +1175,7 @@
   <data name="printFill.Text" xml:space="preserve"><value>全体を埋める</value><comment>PrintPackageContentMode.fill</comment></data>
   <data name="printRotateToFit.Text" xml:space="preserve"><value>セルに合わせて回転</value><comment>AppLocalizedPhrase.rotateToFit</comment></data>
   <data name="printRepeatOnePhoto.Text" xml:space="preserve"><value>1ページに1枚</value><comment>AppLocalizedPhrase.repeatOnePhotoPerPage</comment></data>
-  <data name="printSheetBackground.Text" xml:space="preserve"><value>シートの背景</value><comment>AppLocalizedPhrase.sheetBackground</comment></data>
+  <data name="printSheetBackground.Text" xml:space="preserve"><value>シートカラー</value><comment>AppLocalizedPhrase.sheetBackground</comment></data>
   <data name="printBackgroundWhite.Text" xml:space="preserve"><value>白</value><comment>PrintContactSheetBackground.white</comment></data>
   <data name="printBackgroundGray.Text" xml:space="preserve"><value>グレー</value><comment>PrintContactSheetBackground.gray</comment></data>
   <data name="printBackgroundBlack.Text" xml:space="preserve"><value>黒</value><comment>PrintContactSheetBackground.black</comment></data>
@@ -1181,11 +1184,11 @@
   <data name="printOrientationAuto.Text" xml:space="preserve"><value>自動</value><comment>PrintPaperOrientation.automatic</comment></data>
   <data name="printOrientationPortrait.Text" xml:space="preserve"><value>縦</value><comment>PrintPaperOrientation.portrait</comment></data>
   <data name="printOrientationLandscape.Text" xml:space="preserve"><value>横</value><comment>PrintPaperOrientation.landscape</comment></data>
-  <data name="printModeSingle.Text" xml:space="preserve"><value>1枚</value><comment>PrintWorkspaceLayoutMode.singleImage</comment></data>
+  <data name="printModeSingle.Text" xml:space="preserve"><value>単一画像</value><comment>PrintWorkspaceLayoutMode.singleImage</comment></data>
   <data name="printModeContactSheet.Text" xml:space="preserve"><value>コンタクトシート</value><comment>PrintWorkspaceLayoutMode.contactSheet</comment></data>
-  <data name="printModePicturePackage.Text" xml:space="preserve"><value>ピクチャパッケージ</value><comment>PrintWorkspaceLayoutMode.picturePackage</comment></data>
+  <data name="printModePicturePackage.Text" xml:space="preserve"><value>ピクチャーパッケージ</value><comment>PrintWorkspaceLayoutMode.picturePackage</comment></data>
   <data name="printModeCyanotype.Text" xml:space="preserve"><value>サイアノタイプ</value><comment>PrintWorkspaceLayoutMode.cyanotype</comment></data>
-  <data name="printModeGlassPlate.Text" xml:space="preserve"><value>乾板</value><comment>PrintWorkspaceLayoutMode.glassPlate</comment></data>
+  <data name="printModeGlassPlate.Text" xml:space="preserve"><value>ガラス乾板</value><comment>PrintWorkspaceLayoutMode.glassPlate</comment></data>
   <data name="printModeGelatin.Text" xml:space="preserve"><value>ゼラチンシルバー</value><comment>PrintWorkspaceLayoutMode.gelatin</comment></data>
   <data name="printExport.Content" xml:space="preserve"><value>プリントを書き出す</value><comment>AppLocalizedPhrase.exportPrint</comment></data>
   <data name="printPageSummaryFormat.Text" xml:space="preserve"><value>{0} · {1} × {2} px、%d dpi</value><comment>Windows only: page size readout under the inspector.</comment></data>
@@ -1205,9 +1208,9 @@
   <data name="printCropMarks.Text" xml:space="preserve"><value>トンボ</value><comment>AppLocalizedPhrase.cropMarks</comment></data>
   <data name="printViewSection.Text" xml:space="preserve"><value>表示</value><comment>AppLocalizedPhrase.view</comment></data>
   <data name="printRulers.Text" xml:space="preserve"><value>定規</value><comment>AppLocalizedPhrase.rulers</comment></data>
-  <data name="printRulerUnit.Text" xml:space="preserve"><value>単位</value><comment>AppLocalizedPhrase.rulerUnit</comment></data>
-  <data name="printRulerInches.Text" xml:space="preserve"><value>インチ</value><comment>PrintRulerUnit.inches</comment></data>
-  <data name="printRulerCentimeters.Text" xml:space="preserve"><value>センチメートル</value><comment>PrintRulerUnit.centimeters</comment></data>
+  <data name="printRulerUnit.Text" xml:space="preserve"><value>ルーラー単位</value><comment>AppLocalizedPhrase.rulerUnit</comment></data>
+  <data name="printRulerInches.Text" xml:space="preserve"><value>in</value><comment>PrintRulerUnit.inches</comment></data>
+  <data name="printRulerCentimeters.Text" xml:space="preserve"><value>cm</value><comment>PrintRulerUnit.centimeters</comment></data>
   <data name="printModeCustomPackage.Text" xml:space="preserve"><value>カスタムパッケージ</value><comment>PrintWorkspaceLayoutMode.customPackage</comment></data>
   <data name="printCustomAdd.Content" xml:space="preserve"><value>セルを追加</value><comment>Windows only: custom placement editor.</comment></data>
   <data name="printCustomRemove.Content" xml:space="preserve"><value>セルを削除</value><comment>Windows only: custom placement editor.</comment></data>
@@ -1233,7 +1236,7 @@
   <data name="samplerSourcePixel.Text" xml:space="preserve"><value>ソースピクセル</value><comment>PixelSamplerLocalizedText[3]</comment></data>
   <data name="samplerMovePointer.Text" xml:space="preserve"><value>写真上にポインタを移動</value><comment>PixelSamplerLocalizedText[4]</comment></data>
   <data name="samplerEnabled.Text" xml:space="preserve"><value>ピクセルサンプラー</value><comment>PixelSamplerLocalizedText[5]</comment></data>
-  <data name="settingsLanguageRestart.Text" xml:space="preserve"><value>新しい言語は Negaflow の再起動後に適用されます。</value><comment>Windows only: language applies on restart.</comment></data>
+
   <data name="developDefectLayers.Text" xml:space="preserve"><value>GrainMend レイヤー</value><comment>AppLocalizedPhrase.defectLayers</comment></data>
   <data name="developDefectLayerEnable.Value" xml:space="preserve"><value>レイヤーをオン（修復を適用）</value><comment>AppLocalizedPhrase.enableLayer</comment></data>
   <data name="developDefectLayerDisable.Value" xml:space="preserve"><value>レイヤーをオフ（修復前を表示）</value><comment>AppLocalizedPhrase.disableLayer</comment></data>
@@ -1436,4 +1439,54 @@
   <data name="developerDebug.Text" xml:space="preserve"><value>開発者向けデバッグ</value><comment>AppLocalizedPhrase.developerDebug</comment></data>
   <data name="debugOverlay.Text" xml:space="preserve"><value>デバッグオーバーレイ</value><comment>AppLocalizedPhrase.debugOverlay</comment></data>
   <data name="developerDebugStage.Text" xml:space="preserve"><value>ステージ</value><comment>AppLocalizedPhrase.stage</comment></data>
+  <data name="sliderKeyboardHelp.Value" xml:space="preserve"><value>矢印キーで 0.01、Shift+矢印キーで 0.10 ずつ調整します。</value><comment>AppLocalizedPhrase.sliderKeyboardHelp</comment></data>
+  <data name="filmstripScopeFolder.Text" xml:space="preserve"><value>このフォルダ</value><comment>AppLocalizedPhrase.filmstripScopeFolder</comment></data>
+  <data name="process.Text" xml:space="preserve"><value>プロセス</value><comment>AppLocalizedPhrase.process</comment></data>
+  <data name="target.Text" xml:space="preserve"><value>ターゲット</value><comment>AppLocalizedPhrase.target</comment></data>
+  <data name="scanFlatbedFrameFormat.Text" xml:space="preserve"><value>コマ %d</value><comment>AppLocalizedPhrase.flatbedFrameFormat</comment></data>
+  <data name="libraryMoveSourceToTrash.Content" xml:space="preserve"><value>元ファイルをゴミ箱に移動</value><comment>AppLocalizedPhrase.moveSourceToTrash</comment></data>
+  <data name="deleteSourceConfirmationTitle.Text" xml:space="preserve"><value>元ファイルをゴミ箱に移動しますか？</value><comment>AppLocalizedPhrase.deleteSourceConfirmationTitle</comment></data>
+  <data name="deleteSourceConfirmationMessageFormat.Text" xml:space="preserve"><value>%d件のカタログ項目が%d個の元ファイルを共有しています。すべてnegaflowから削除されます。%s</value><comment>AppLocalizedPhrase.deleteSourceConfirmationMessageFormat</comment></data>
+  <data name="printSurface.Text" xml:space="preserve"><value>表面</value><comment>AppLocalizedText.printSurface</comment></data>
+  <data name="printSurfaceGlossy.Text" xml:space="preserve"><value>光沢</value><comment>AppLocalizedText.printSurfaceGlossy</comment></data>
+  <data name="printSurfaceMatte.Text" xml:space="preserve"><value>マット</value><comment>AppLocalizedText.printSurfaceMatte</comment></data>
+  <data name="printSurfaceLustre.Text" xml:space="preserve"><value>ラスター</value><comment>AppLocalizedText.printSurfaceLustre</comment></data>
+  <data name="printSurfaceSilk.Text" xml:space="preserve"><value>シルク</value><comment>AppLocalizedText.printSurfaceSilk</comment></data>
+  <data name="printContentSection.Text" xml:space="preserve"><value>内容</value><comment>AppLocalizedText.printContentSection</comment></data>
+  <data name="printCaptionAlignment.Text" xml:space="preserve"><value>キャプション揃え</value><comment>AppLocalizedText.printCaptionAlignment</comment></data>
+  <data name="printAdvanced.Text" xml:space="preserve"><value>詳細</value><comment>AppLocalizedText.printAdvanced</comment></data>
+  <data name="printDeliveryColorSpace.Text" xml:space="preserve"><value>納品色空間</value><comment>AppLocalizedText.printDeliveryColorSpace</comment></data>
+  <data name="printPaperSimulation.Text" xml:space="preserve"><value>印画紙シミュレーション</value><comment>AppLocalizedText.printPaperSimulation</comment></data>
+  <data name="printGamutWarning.Text" xml:space="preserve"><value>色域外警告</value><comment>AppLocalizedText.printGamutWarning</comment></data>
+  <data name="printPreviewProfileRequired.Text" xml:space="preserve"><value>プリントをプレビューするには、ラボの RGB ICC プロファイルを選択してください。</value><comment>AppLocalizedText.printPreviewProfileRequired</comment></data>
+  <data name="printToggleOn.Text" xml:space="preserve"><value>オン</value><comment>AppLocalizedText.printToggleOn</comment></data>
+  <data name="printToggleOff.Text" xml:space="preserve"><value>オフ</value><comment>AppLocalizedText.printToggleOff</comment></data>
+  <data name="printCaptionAlignLeading.Text" xml:space="preserve"><value>左</value><comment>AppLocalizedText.printCaptionAlignLeading</comment></data>
+  <data name="printCaptionAlignCenter.Text" xml:space="preserve"><value>中央</value><comment>AppLocalizedText.printCaptionAlignCenter</comment></data>
+  <data name="printCaptionAlignTrailing.Text" xml:space="preserve"><value>右</value><comment>AppLocalizedText.printCaptionAlignTrailing</comment></data>
+  <data name="printMargin.Text" xml:space="preserve"><value>余白</value><comment>AppLocalizedText.printMargin</comment></data>
+  <data name="printSpacing.Text" xml:space="preserve"><value>間隔</value><comment>AppLocalizedText.printSpacing</comment></data>
+  <data name="printHorizontalSpacing.Text" xml:space="preserve"><value>横方向の間隔</value><comment>AppLocalizedText.printHorizontalSpacing</comment></data>
+  <data name="printVerticalSpacing.Text" xml:space="preserve"><value>縦方向の間隔</value><comment>AppLocalizedText.printVerticalSpacing</comment></data>
+  <data name="printNormalizeOrientation.Text" xml:space="preserve"><value>向きをそろえる</value><comment>AppLocalizedText.printNormalizeOrientation</comment></data>
+  <data name="printPictureTemplate.Text" xml:space="preserve"><value>パッケージ構成</value><comment>AppLocalizedText.printPictureTemplate</comment></data>
+  <data name="printCell.Text" xml:space="preserve"><value>セル</value><comment>AppLocalizedText.printCell</comment></data>
+  <data name="printPage.Text" xml:space="preserve"><value>ページ</value><comment>AppLocalizedText.printPage</comment></data>
+  <data name="printAddCell.Text" xml:space="preserve"><value>セルを追加</value><comment>AppLocalizedText.printAddCell</comment></data>
+  <data name="printDuplicateCell.Text" xml:space="preserve"><value>セルを複製</value><comment>AppLocalizedText.printDuplicateCell</comment></data>
+  <data name="printDeleteCell.Text" xml:space="preserve"><value>セルを削除</value><comment>AppLocalizedText.printDeleteCell</comment></data>
+  <data name="printSourcePhoto.Text" xml:space="preserve"><value>写真</value><comment>AppLocalizedText.printSourcePhoto</comment></data>
+  <data name="printPositionX.Text" xml:space="preserve"><value>横位置</value><comment>AppLocalizedText.printPositionX</comment></data>
+  <data name="printPositionY.Text" xml:space="preserve"><value>縦位置</value><comment>AppLocalizedText.printPositionY</comment></data>
+  <data name="printWidth.Text" xml:space="preserve"><value>幅</value><comment>AppLocalizedText.printWidth</comment></data>
+  <data name="printHeight.Text" xml:space="preserve"><value>高さ</value><comment>AppLocalizedText.printHeight</comment></data>
+  <data name="printCaptionFont.Text" xml:space="preserve"><value>キャプションフォント</value><comment>AppLocalizedText.printCaptionFont</comment></data>
+  <data name="printCaptionText.Text" xml:space="preserve"><value>キャプションテキスト</value><comment>AppLocalizedText.printCaptionText</comment></data>
+  <data name="printCustomCaption.Text" xml:space="preserve"><value>テキスト</value><comment>AppLocalizedText.printCustomCaption</comment></data>
+  <data name="printAddCaption.Text" xml:space="preserve"><value>テキストを追加</value><comment>AppLocalizedText.printAddCaption</comment></data>
+  <data name="printDeleteCaption.Text" xml:space="preserve"><value>テキストを削除</value><comment>AppLocalizedText.printDeleteCaption</comment></data>
+  <data name="printCaptionCustomText.Text" xml:space="preserve"><value>ユーザー入力</value><comment>AppLocalizedText.printCaptionCustomText</comment></data>
+  <data name="printMoveBackward.Text" xml:space="preserve"><value>背面へ</value><comment>AppLocalizedText.printMoveBackward</comment></data>
+  <data name="printMoveForward.Text" xml:space="preserve"><value>前面へ</value><comment>AppLocalizedText.printMoveForward</comment></data>
+  <data name="printCaptionSystemFont.Text" xml:space="preserve"><value>システムフォント</value><comment>AppLocalizedText.printCaptionSystemFont</comment></data>
 </root>

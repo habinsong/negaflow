@@ -3,6 +3,48 @@
     x:Class="Negaflow.Shell.Views.Library.Scanner.LibraryScanPanel"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <Style x:Key="NegaflowScannerComboBoxStyle" TargetType="ComboBox">
+                <Setter Property="MinHeight" Value="24" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                <Setter Property="HorizontalContentAlignment" Value="Right" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+            </Style>
+            <Style TargetType="ComboBox" BasedOn="{StaticResource NegaflowScannerComboBoxStyle}" />
+            <Style x:Key="NegaflowScannerTextBoxStyle" TargetType="TextBox">
+                <Setter Property="Height" Value="32" />
+                <Setter Property="MinHeight" Value="24" />
+                <!-- WinUI TextBox의 내부 ScrollViewer가 VerticalContentAlignment를
+                     글자에 그대로 전달하지 않으므로, 32px 행의 기준선에 맞춥니다. -->
+                <Setter Property="Padding" Value="0,6,0,0" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                <Setter Property="HorizontalContentAlignment" Value="Right" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+            </Style>
+            <Style TargetType="TextBox" BasedOn="{StaticResource NegaflowScannerTextBoxStyle}" />
+            <Style x:Key="NegaflowScannerNumberBoxStyle" TargetType="NumberBox">
+                <Setter Property="Height" Value="32" />
+                <Setter Property="MinHeight" Value="24" />
+                <!-- NumberBox 내부 입력 TextBox도 같은 기준선을 사용합니다. -->
+                <Setter Property="Padding" Value="0,6,0,0" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                <Setter Property="HorizontalContentAlignment" Value="Right" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+            </Style>
+            <Style TargetType="NumberBox" BasedOn="{StaticResource NegaflowScannerNumberBoxStyle}" />
+        </ResourceDictionary>
+    </UserControl.Resources>
     <StackPanel Spacing="12">
                         <!-- macOS `scanSectionHeader` = `Label(스캔, systemImage: "scanner")`
                              `.font(.subheadline.weight(.semibold))`. 아이콘 없이 글자만 내면
@@ -20,11 +62,11 @@
                         </StackPanel>
                         <Border
                             x:Name="ScanSectionCard" x:FieldModifier="internal"
-                            Padding="12"
+                            Padding="12,12,12,0"
                             Background="{ThemeResource NegaflowCardBrush}"
                             CornerRadius="8"
                             Visibility="Collapsed">
-                            <StackPanel Spacing="9">
+                            <StackPanel Spacing="0">
                                 <TextBlock
                                     x:Name="ScanStateText" x:FieldModifier="internal"
                                     FontSize="12"
@@ -35,6 +77,7 @@
                                     HorizontalAlignment="Stretch"
                                     AutomationProperties.AutomationId="negaflow.library.scan.approve"
                                     Click="OnScanApprovePluginClicked"
+                                    Style="{StaticResource NegaflowScannerPlainButtonStyle}"
                                     Visibility="Collapsed" />
                                 <!-- macOS `unavailableState` 의 두 줄입니다 — 스캐너를 찾지 못했을 때만
                                      [스캐너 찾기] 와 시뮬레이터 스위치를 냅니다. 쓸 수 있는 상태에서는
@@ -44,6 +87,7 @@
                                     HorizontalAlignment="Stretch"
                                     AutomationProperties.AutomationId="negaflow.library.scan.detect"
                                     Click="OnScanRescanClicked"
+                                    Style="{StaticResource NegaflowScannerPlainButtonStyle}"
                                     Visibility="Collapsed" />
                                 <Grid x:Name="ScanSimulatorRow" x:FieldModifier="internal" ColumnSpacing="8" Visibility="Collapsed">
                                     <Grid.ColumnDefinitions>
@@ -59,7 +103,7 @@
                                         Toggled="OnScanSimulatorToggled" />
                                 </Grid>
 
-                                <StackPanel x:Name="ScanControls" x:FieldModifier="internal" Spacing="9" Visibility="Collapsed">
+                                <StackPanel x:Name="ScanControls" x:FieldModifier="internal" Spacing="6" Visibility="Collapsed">
                                     <Grid ColumnSpacing="6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
@@ -79,10 +123,16 @@
                                             Padding="7,4"
                                             AutomationProperties.AutomationId="negaflow.scanner.rescan"
                                             Click="OnScanRescanClicked"
-                                            Content="&#xE72C;"
-                                            FontFamily="{ThemeResource SymbolThemeFontFamily}"
-                                            FontSize="12" />
+                                            FontSize="12"
+                                            Style="{StaticResource NegaflowScannerPlainButtonStyle}">
+                                            <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="10" Glyph="&#xE72C;" RenderTransformOrigin="0.5,0.5">
+                                                <FontIcon.RenderTransform>
+                                                    <ScaleTransform ScaleX="-1" />
+                                                </FontIcon.RenderTransform>
+                                            </FontIcon>
+                                        </Button>
                                     </Grid>
+                                    <Border Height="1" Margin="0,1" Background="{ThemeResource NegaflowDividerBrush}" />
                                     <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
@@ -96,6 +146,7 @@
                                             AutomationProperties.AutomationId="negaflow.library.scan.film"
                                             SelectionChanged="OnScanFilmChanged" />
                                     </Grid>
+                                    <Border Height="1" Margin="0,1" Background="{ThemeResource NegaflowDividerBrush}" />
                                     <!-- macOS `LabeledContent(스캔 폴더 이름) { HStack(spacing: 6) { TextField, 폴더 단추 } }` -->
                                     <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
@@ -109,6 +160,8 @@
                                             Grid.Column="1"
                                             Margin="0,0,6,0"
                                             AutomationProperties.AutomationId="negaflow.library.scan.folder-name"
+                                            VerticalAlignment="Center"
+                                            VerticalContentAlignment="Center"
                                             TextAlignment="Right"
                                             TextChanged="OnScanFolderNameChanged" />
                                         <Button
@@ -119,8 +172,10 @@
                                             Click="OnScanChooseFolderClicked"
                                             Content="&#xE8B7;"
                                             FontFamily="{ThemeResource SymbolThemeFontFamily}"
-                                            FontSize="12" />
+                                            FontSize="12"
+                                            Style="{StaticResource NegaflowScannerPlainButtonStyle}" />
                                     </Grid>
+                                    <Border Height="1" Margin="0,1" Background="{ThemeResource NegaflowDividerBrush}" />
                                     <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
@@ -145,6 +200,7 @@
                                             AutomationProperties.AutomationId="negaflow.library.scan.color-mode"
                                             SelectionChanged="OnScanColorModeChanged" />
                                     </Grid>
+                                    <Border Height="1" Margin="0,1" Background="{ThemeResource NegaflowDividerBrush}" />
                                     <TextBlock
                                         x:Name="ScanBitDepthUnavailableText" x:FieldModifier="internal"
                                         FontSize="11"
@@ -164,6 +220,11 @@
                                             AutomationProperties.AutomationId="negaflow.library.scan.bit-depth"
                                             SelectionChanged="OnScanBitDepthChanged" />
                                     </Grid>
+                                    <Border
+                                        Height="1"
+                                        Margin="0,1"
+                                        Background="{ThemeResource NegaflowDividerBrush}"
+                                        Visibility="{Binding Visibility, ElementName=ScanBitDepthRow}" />
                                     <Grid x:Name="ScanFrameFormatRow" x:FieldModifier="internal" ColumnSpacing="8" Visibility="Collapsed">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
@@ -177,6 +238,11 @@
                                             AutomationProperties.AutomationId="negaflow.library.scan.frame-format"
                                             SelectionChanged="OnScanFrameFormatChanged" />
                                     </Grid>
+                                    <Border
+                                        Height="1"
+                                        Margin="0,1"
+                                        Background="{ThemeResource NegaflowDividerBrush}"
+                                        Visibility="{Binding Visibility, ElementName=ScanFrameFormatRow}" />
                                     <Grid x:Name="ScanDetectionModeRow" x:FieldModifier="internal" ColumnSpacing="6" Visibility="Collapsed">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
@@ -219,10 +285,20 @@
                                             Padding="7,4"
                                             AutomationProperties.AutomationId="negaflow.library.scan.refresh-frames"
                                             Click="OnScanRefreshFramesClicked"
-                                            Content="&#xE72C;"
-                                            FontFamily="{ThemeResource SymbolThemeFontFamily}"
-                                            FontSize="12" />
+                                            FontSize="12"
+                                            Style="{StaticResource NegaflowScannerPlainButtonStyle}">
+                                            <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="10" Glyph="&#xE72C;" RenderTransformOrigin="0.5,0.5">
+                                                <FontIcon.RenderTransform>
+                                                    <ScaleTransform ScaleX="-1" />
+                                                </FontIcon.RenderTransform>
+                                            </FontIcon>
+                                        </Button>
                                     </Grid>
+                                    <Border
+                                        Height="1"
+                                        Margin="0,1"
+                                        Background="{ThemeResource NegaflowDividerBrush}"
+                                        Visibility="{Binding Visibility, ElementName=ScanDetectionModeRow}" />
                                     <Grid x:Name="ScanRegionsRow" x:FieldModifier="internal" ColumnSpacing="6" Visibility="Collapsed">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
@@ -232,11 +308,16 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock x:Name="ScanRegionsLabel" x:FieldModifier="internal" VerticalAlignment="Center" FontSize="12" />
-                                        <Button x:Name="ScanCopyFrameButton" x:FieldModifier="internal" Grid.Column="1" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.copy" Click="OnScanCopyFrameClicked" Content="&#xE8C8;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" />
-                                        <Button x:Name="ScanPasteFrameButton" x:FieldModifier="internal" Grid.Column="2" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.paste" Click="OnScanPasteFrameClicked" Content="&#xE77F;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" />
-                                        <Button x:Name="ScanAddFrameButton" x:FieldModifier="internal" Grid.Column="3" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.add" Click="OnScanAddFrameClicked" Content="&#xE710;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" />
-                                        <Button x:Name="ScanRemoveFrameButton" x:FieldModifier="internal" Grid.Column="4" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.remove" Click="OnScanRemoveFrameClicked" Content="&#xE74D;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" />
+                                        <Button x:Name="ScanCopyFrameButton" x:FieldModifier="internal" Grid.Column="1" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.copy" Click="OnScanCopyFrameClicked" Content="&#xE8C8;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" Style="{StaticResource NegaflowScannerPlainButtonStyle}" />
+                                        <Button x:Name="ScanPasteFrameButton" x:FieldModifier="internal" Grid.Column="2" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.paste" Click="OnScanPasteFrameClicked" Content="&#xE77F;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" Style="{StaticResource NegaflowScannerPlainButtonStyle}" />
+                                        <Button x:Name="ScanAddFrameButton" x:FieldModifier="internal" Grid.Column="3" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.add" Click="OnScanAddFrameClicked" Content="&#xE710;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" Style="{StaticResource NegaflowScannerPlainButtonStyle}" />
+                                        <Button x:Name="ScanRemoveFrameButton" x:FieldModifier="internal" Grid.Column="4" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.remove" Click="OnScanRemoveFrameClicked" Content="&#xE74D;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" Style="{StaticResource NegaflowScannerPlainButtonStyle}" />
                                     </Grid>
+                                    <Border
+                                        Height="1"
+                                        Margin="0,1"
+                                        Background="{ThemeResource NegaflowDividerBrush}"
+                                        Visibility="{Binding Visibility, ElementName=ScanRegionsRow}" />
                                     <Grid x:Name="ScanFrameCountRow" x:FieldModifier="internal" ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
@@ -246,13 +327,21 @@
                                         <NumberBox
                                             x:Name="ScanFrameCountBox" x:FieldModifier="internal"
                                             Grid.Column="1"
+                                            Height="32"
                                             MinWidth="98"
                                             AutomationProperties.AutomationId="negaflow.library.scan.frame-count"
                                             Maximum="12"
                                             Minimum="1"
                                             SpinButtonPlacementMode="Compact"
+                                            VerticalAlignment="Center"
+                                            VerticalContentAlignment="Center"
                                             ValueChanged="OnScanFrameCountChanged" />
                                     </Grid>
+                                    <Border
+                                        Height="1"
+                                        Margin="0,1"
+                                        Background="{ThemeResource NegaflowDividerBrush}"
+                                        Visibility="{Binding Visibility, ElementName=ScanFrameCountRow}" />
                                     <!-- macOS `Toggle(model.text(.infrared), isOn: $model.infraredEnabled)` —
                                          Form 안의 Toggle 은 이름이 왼쪽, 스위치가 오른쪽 한 줄입니다.
                                          머리글·켬/끔 글자를 따로 내면 macOS 에 없는 줄이 생깁니다. -->
@@ -269,6 +358,7 @@
                                             AutomationProperties.AutomationId="negaflow.library.scan.infrared"
                                             Toggled="OnScanInfraredToggled" />
                                     </Grid>
+                                    <Border Height="1" Margin="0,1" Background="{ThemeResource NegaflowDividerBrush}" />
                                     <!-- macOS 는 옵션 Section 에만 `.disabled(model.isScanning)` 을 걸고
                                          단추 Section 은 살려 둡니다 — 스캔 중에 취소를 눌러야 하기
                                          때문입니다. 그래서 이 줄만 따로 이름을 답니다. -->
@@ -297,11 +387,13 @@
                                             HorizontalAlignment="Stretch"
                                             AutomationProperties.AutomationId="negaflow.library.scan.cancel"
                                             Click="OnScanCancelClicked"
+                                            Style="{StaticResource NegaflowScannerPlainButtonStyle}"
                                             Visibility="Collapsed" />
                                     </Grid>
                                 </StackPanel>
                                 <TextBlock
                                     x:Name="ScanStatusText" x:FieldModifier="internal"
+                                    Margin="0,6,0,0"
                                     FontSize="11"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                     TextWrapping="Wrap" />

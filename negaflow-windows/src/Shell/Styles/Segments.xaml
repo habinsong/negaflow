@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
@@ -243,5 +243,259 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!--
+        macOS `ExportSection.exportDetailTabs`(Features/Export/ExportSection.swift) 그대로입니다.
+
+          HStack(spacing: 0) { … }
+              Text(title).font(.caption.weight(.semibold))
+                         .foregroundStyle(isSelected ? .primary : .secondary)
+                         .frame(maxWidth: .infinity, minHeight: 30)
+                         .padding(.horizontal, 6)
+                         .background { if isSelected { liquidSurface(cornerRadius: 15) } }
+          .padding(3)
+          .liquidSurface(cornerRadius: 18)
+
+        즉 **트랙 높이 36(30+여백 3×2) · 트랙 라운딩 18 · 칸 높이 30 · 고른 칸 라운딩 15** 로
+        양끝이 완전히 둥근 캡슐입니다. 실측(현상뷰_좌측탭_세로탭_내보내기.png)도 트랙 175..210,
+        고른 칸이 카드보다 어두운 검정 11% 입니다. 위의 `SegmentedPicker`(라운딩 11/8)와
+        수치가 하나도 같지 않으므로 섞지 마십시오.
+    -->
+
+    <Style x:Key="NegaflowGlassSegmentTrackStyle" TargetType="Border">
+        <Setter Property="Padding" Value="3" />
+        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="{ThemeResource NegaflowGlassFillBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource NegaflowGlassStrokeBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style x:Key="NegaflowGlassSegmentStyle" TargetType="RadioButton">
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="UseSystemFocusVisuals" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Grid x:Name="GlassSegmentRoot" Background="Transparent" CornerRadius="15">
+                        <Border x:Name="GlassSegmentThumb" CornerRadius="15" />
+                        <ContentPresenter
+                            x:Name="GlassSegmentContent"
+                            Margin="6,0"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Content="{TemplateBinding Content}"
+                            FontSize="{TemplateBinding FontSize}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            TextWrapping="NoWrap" />
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver" />
+                                <VisualState x:Name="Pressed" />
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="GlassSegmentRoot.Opacity" Value="0.4" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="CheckStates">
+                                <VisualState x:Name="Unchecked" />
+                                <VisualState x:Name="Checked">
+                                    <VisualState.Setters>
+                                        <Setter Target="GlassSegmentThumb.Background" Value="{ThemeResource NegaflowGlassSegmentThumbBrush}" />
+                                        <Setter Target="GlassSegmentContent.Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                                        <Setter Target="GlassSegmentContent.FontWeight" Value="SemiBold" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Indeterminate" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        macOS `PrintInspectorTabButton`(Features/Print/PrintInspectorControls.swift:468) 그대로입니다.
+
+          HStack(spacing: 5) { Image(systemImage).font(.system(size: 13, weight: .semibold)); Text(title) }
+              .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+              .frame(maxWidth: .infinity, minHeight: 30)
+              .padding(.horizontal, 8)
+              .background(RoundedRectangle(cornerRadius: 12).fill(backgroundFill))
+          // backgroundFill: 고름 = accentColor.opacity(0.16), 마우스 올림 = primary.opacity(0.08)
+
+        묶음은 `HStack(spacing: 2).padding(3).liquidSurface(cornerRadius: 15)` 이므로
+        **칸 사이 2 · 트랙 여백 3 · 트랙 라운딩 15** 이고, 칸은 폭을 똑같이 나눠 가집니다.
+    -->
+
+    <Style x:Key="NegaflowPrintTabTrackStyle" TargetType="Border">
+        <Setter Property="Padding" Value="3" />
+        <Setter Property="CornerRadius" Value="15" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="{ThemeResource NegaflowGlassFillBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource NegaflowGlassStrokeBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style x:Key="NegaflowPrintTabStyle" TargetType="RadioButton">
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="Padding" Value="8,0" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <!-- 고르지 않은 탭은 **본문 색**입니다 - 다크 모드에서 흰색, 라이트 모드에서
+             검정. 고른 탭만 강조색이 됩니다(아래 Checked). 흐린 회색으로 두면 두 탭이
+             모두 꺼져 보입니다. -->
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+        <Setter Property="UseSystemFocusVisuals" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Grid x:Name="PrintTabRoot" Background="Transparent" CornerRadius="12">
+                        <Border x:Name="PrintTabFill" CornerRadius="12" />
+                        <ContentPresenter
+                            x:Name="PrintTabContent"
+                            Padding="{TemplateBinding Padding}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Content="{TemplateBinding Content}"
+                            FontSize="{TemplateBinding FontSize}"
+                            Foreground="{TemplateBinding Foreground}" />
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <!-- 호버·누름은 <b>바탕</b>을 칠합니다. 고른 칸의 강조 음영과
+                                     같은 자리를 칠하면 두 무리가 서로 덮어써서, 마우스가 지나간
+                                     뒤 파란 음영이 회색으로 바뀐 채 돌아오지 않습니다. macOS 는
+                                     `isSelected ? accent.opacity(0.16) : primary.opacity(hover)`
+                                     로 선택이 늘 이깁니다. -->
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="PrintTabRoot.Background" Value="{ThemeResource NegaflowSubtleFillBrush}" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="PrintTabRoot.Background" Value="{ThemeResource NegaflowSubtleFillBrush}" />
+                                        <Setter Target="PrintTabContent.Opacity" Value="0.75" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="PrintTabRoot.Opacity" Value="0.4" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="CheckStates">
+                                <VisualState x:Name="Unchecked" />
+                                <VisualState x:Name="Checked">
+                                    <VisualState.Setters>
+                                        <Setter Target="PrintTabFill.Background" Value="{ThemeResource NegaflowAccentTabBrush}" />
+                                        <Setter Target="PrintTabContent.Foreground" Value="{ThemeResource NegaflowAccentBrush}" />
+                                        <Setter Target="PrintTabContent.FontWeight" Value="SemiBold" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Indeterminate" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        `NegaflowSegmentedPicker` 의 칸 하나입니다. 바탕은 컨트롤이 값에 따라 직접 칠하므로
+        판형은 **어떤 상태에서도 바탕을 덮지 않습니다** — WinUI 기본 단추 판형은 마우스를
+        올리면 ContentPresenter 의 바탕을 자기 색으로 갈아 끼워, 고른 칸의 음영이 지워집니다.
+    -->
+    <Style x:Key="NegaflowSegmentButtonStyle" TargetType="Button">
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Padding" Value="4,0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="UseSystemFocusVisuals" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid
+                        x:Name="SegmentButtonRoot"
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                        <ContentPresenter
+                            x:Name="SegmentButtonContent"
+                            Padding="{TemplateBinding Padding}"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            Content="{TemplateBinding Content}"
+                            FontSize="{TemplateBinding FontSize}"
+                            FontWeight="{TemplateBinding FontWeight}"
+                            Foreground="{TemplateBinding Foreground}" />
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver" />
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="SegmentButtonContent.Opacity" Value="0.75" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="SegmentButtonRoot.Opacity" Value="0.4" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <!--
+        인화 인스펙터의 글자 입력칸입니다. macOS `PrintInspectorTextField` 그대로입니다 —
+        `.textFieldStyle(.plain)` 이라 **테두리도 상자도 없고**, 호버 0.08 · 포커스 0.10 의
+        둥근(8) 채움만 있습니다. 높이 30, 좌우 여백 10.
+
+        WinUI 기본 `TextBox` 는 네모 테두리에 아래쪽 강조선까지 그립니다 — 맥에는 없는
+        모양이라 상태별 배경과 테두리를 모두 없앱니다.
+    -->
+    <Style x:Key="NegaflowPrintTextFieldStyle" TargetType="TextBox">
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="Transparent" />
+
     </Style>
 </ResourceDictionary>

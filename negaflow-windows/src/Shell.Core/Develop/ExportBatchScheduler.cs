@@ -18,7 +18,10 @@ namespace Negaflow.Shell.Develop;
 /// 올리는 진행 표시도 UI 스레드에서 그대로 납니다.
 /// </para>
 /// </remarks>
-internal static class ExportBatchScheduler
+/// <remarks>
+/// 인화 판 쓰기(<c>PrintSheetWriter</c>)도 같은 규칙으로 여러 장을 돌리므로 셸에서 보입니다.
+/// </remarks>
+public static class ExportBatchScheduler
 {
     /// <summary>
     /// <paramref name="operation"/> 을 항목마다 한 번씩, 동시에 최대

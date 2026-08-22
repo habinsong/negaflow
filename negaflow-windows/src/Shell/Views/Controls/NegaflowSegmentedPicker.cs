@@ -27,13 +27,28 @@ public sealed class NegaflowSegmentedPicker : ContentControl, IThemedSettingsCon
     private readonly List<Button> buttons = [];
     private IReadOnlyList<SegmentOption> options = [];
 
+    /// <summary>
+    /// 트랙을 칠하는 자리입니다. <b>ContentControl 의 기본 판형은 <c>Background</c> 도
+    /// <c>CornerRadius</c> 도 그리지 않습니다</b> — 자리표(ContentPresenter) 하나뿐입니다.
+    /// 그래서 컨트롤에 색을 걸어 두어도 트랙 캡슐이 아예 나오지 않았고, 화면에는 글자 셋만
+    /// 벌어져 보였습니다(사용자 신고). 색을 실제로 그리는 Border 를 여기서 답니다.
+    /// </summary>
+    private readonly Border surface = new()
+    {
+        Padding = new Thickness(3),
+        CornerRadius = new CornerRadius(11),
+        HorizontalAlignment = HorizontalAlignment.Stretch,
+    };
+
     public NegaflowSegmentedPicker()
     {
-        Padding = new Thickness(3);
-        CornerRadius = new CornerRadius(11);
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
         HorizontalAlignment = HorizontalAlignment.Stretch;
-        Content = track;
+        surface.Child = track;
+        Content = surface;
+        // 붙는 순서가 화면마다 다릅니다 — 어떤 화면은 Style 이 붙기 **전에** SetOptions 를
+        // 부릅니다. 그때 브러시는 아직 null 이므로 여기서 한 번 더 칠합니다.
+        Loaded += (_, _) => ApplyBrushes();
     }
 
     /// <summary>고른 값이 바뀌면 올립니다. 같은 값을 다시 눌러도 올리지 않습니다.</summary>
@@ -58,11 +73,8 @@ public sealed class NegaflowSegmentedPicker : ContentControl, IThemedSettingsCon
                 Content = option.Label,
                 Tag = option.Value,
                 Height = 28,
-                Padding = new Thickness(4, 0, 4, 0),
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                BorderThickness = new Thickness(0),
-                CornerRadius = new CornerRadius(8),
-                FontSize = 12,
+                // 판형은 바탕을 덮지 않습니다 — 고른 칸의 음영은 아래 `Select` 가 칠합니다.
+                Style = (Style)Application.Current.Resources["NegaflowSegmentButtonStyle"],
             };
             AutomationProperties.SetName(button, option.Label);
             button.Click += OnSegmentClicked;
@@ -92,7 +104,7 @@ public sealed class NegaflowSegmentedPicker : ContentControl, IThemedSettingsCon
     {
         bool changed = !Equals(SelectedValue, value);
         SelectedValue = value;
-        Background = SettingsBrushes.GetTrackBrush(this);
+        surface.Background = SettingsBrushes.GetTrackBrush(this);
         Brush thumb = SettingsBrushes.GetThumbBrush(this) ??
             new SolidColorBrush(Microsoft.UI.Colors.Transparent);
         Brush clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);

@@ -12,6 +12,4 @@ internal sealed class PrintPreviewSurface
     public required Canvas RulerCanvas { get; init; }
     public required UIElement NoFramePanel { get; init; }
     public required TextBlock PageCountText { get; init; }
-    public required TextBlock PageSizeSummaryText { get; init; }
-    public required Button PrintExportButton { get; init; }
 }

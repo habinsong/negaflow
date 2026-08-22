@@ -9,7 +9,13 @@ namespace Negaflow.Shell.Views.Develop.Sources;
 /// <summary>macOS <c>WorkflowSidebarTab</c>과 같은 현상 왼쪽 소스 레일입니다.</summary>
 public sealed partial class DevelopSourceRail : UserControl
 {
-    public DevelopSourceRail() => InitializeComponent();
+    private WorkflowSidebarTab selectedTab = WorkflowSidebarTab.Library;
+
+    public DevelopSourceRail()
+    {
+        InitializeComponent();
+        ActualThemeChanged += (_, _) => SetSelected(selectedTab);
+    }
 
     public event EventHandler<WorkflowSidebarTab>? TabClicked;
 
@@ -25,6 +31,8 @@ public sealed partial class DevelopSourceRail : UserControl
         SetLocalizedNameAndTooltip(VersionsRailButton, AppResources.Get("developSectionVersions", "Text"));
         SetLocalizedNameAndTooltip(FilmRailButton, AppResources.Get("developSectionFilm", "Text"));
         SetLocalizedNameAndTooltip(OutputRailButton, AppResources.Get("developSectionOutput", "Text"));
+        // 고름 표시(선택됨/선택되지 않음)도 리소스 문구입니다.
+        SetSelected(selectedTab);
     }
 
     public void SetCompact(bool compact)
@@ -36,9 +44,10 @@ public sealed partial class DevelopSourceRail : UserControl
 
     public void SetSelected(WorkflowSidebarTab selected)
     {
-        var accent = (Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"];
-        var normal = (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
-        var selection = (Brush)Application.Current.Resources["NegaflowSelectionBrush"];
+        selectedTab = selected;
+        Brush accent = AccentIconBrush();
+        Brush normal = PrimaryIconBrush();
+        Brush selection = SelectionBrush();
         foreach ((Button button, FrameworkElement icon, WorkflowSidebarTab kind) in Buttons())
         {
             bool isSelected = kind == selected;
@@ -51,6 +60,24 @@ public sealed partial class DevelopSourceRail : UserControl
                 AppResources.Get(isSelected ? "selected" : "notSelected", "Value"));
         }
     }
+
+    private Brush PrimaryIconBrush() =>
+        new SolidColorBrush(
+            ActualTheme == ElementTheme.Dark
+                ? Microsoft.UI.Colors.White
+                : Microsoft.UI.Colors.Black);
+
+    private Brush AccentIconBrush() =>
+        new SolidColorBrush(
+            ActualTheme == ElementTheme.Dark
+                ? Windows.UI.Color.FromArgb(0xFF, 0x0A, 0x84, 0xFF)
+                : Windows.UI.Color.FromArgb(0xFF, 0x00, 0x7A, 0xFF));
+
+    private Brush SelectionBrush() =>
+        new SolidColorBrush(
+            ActualTheme == ElementTheme.Dark
+                ? Windows.UI.Color.FromArgb(0x38, 0x6B, 0x8B, 0xFF)
+                : Windows.UI.Color.FromArgb(0x29, 0x6B, 0x8B, 0xFF));
 
     private void OnRailClicked(object sender, RoutedEventArgs args)
     {
