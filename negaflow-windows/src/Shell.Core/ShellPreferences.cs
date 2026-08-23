@@ -1,4 +1,4 @@
-using Negaflow.Catalog;
+﻿using Negaflow.Catalog;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Print;
@@ -58,6 +58,13 @@ public sealed record ShellPreferences
 
     /// <summary>하단바가 정하는 필름스트립 범위입니다. macOS 기본값과 같이 "해당 폴더" 입니다.</summary>
     public FilmstripScope FilmstripScope { get; init; } = FilmstripScope.Folder;
+
+    /// <summary>
+    /// 좌측 "파일" 탭에서 <b>접어 둔</b> 폴더들입니다. 라이브러리·현상·인화가 같은 목록을
+    /// 보므로 한 벌만 둡니다 — 화면마다 따로 기억하면 같은 폴더가 여기서는 접히고 저기서는
+    /// 펼쳐집니다. macOS <c>LibraryFolderExpansionStore</c> 자리입니다.
+    /// </summary>
+    public IReadOnlyList<string> CollapsedFolders { get; init; } = [];
 
     public AppearanceMode Appearance { get; init; } = AppearanceMode.System;
 

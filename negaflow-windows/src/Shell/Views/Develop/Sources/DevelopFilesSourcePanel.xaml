@@ -1,14 +1,13 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <UserControl
     x:Class="Negaflow.Shell.Views.Develop.Sources.DevelopFilesSourcePanel"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:sources="using:Negaflow.Shell.Views.Library.Sources">
-    <!-- macOS `LibraryFolderTreeView` — 사진을 담고 있는 폴더와 그 폴더의 사진만 냅니다.
-         계층을 접는 트리가 아니라 폴더별 묶음이라 `TreeView` 를 쓰지 않습니다. -->
-    <sources:LibraryFolderTreeView
-        x:Name="FilesTree"
+    <!-- 라이브러리의 "파일" 탭 <b>그대로</b>입니다. 같은 컨트롤을 써야 폴더 목록·✕·맥락
+         메뉴·접기·강조가 세 화면에서 어긋나지 않습니다. -->
+    <sources:LibraryFilesSourceTree
+        x:Name="FilesPanel"
         x:FieldModifier="internal"
-        Padding="4,6"
         AutomationProperties.AutomationId="negaflow.develop.sources.files" />
 </UserControl>

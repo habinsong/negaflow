@@ -1,4 +1,4 @@
-using Negaflow.Shell.Develop;
+﻿using Negaflow.Shell.Develop;
 
 namespace Negaflow.Shell;
 
@@ -42,6 +42,15 @@ public sealed class WorkspacePresentationState
 
     public void SetActiveFrame(string? frameId) =>
         settingsStore.Update(value => value with { ActiveFrameId = frameId });
+
+    /// <summary>
+    /// 좌측 "파일" 탭에서 접어 둔 폴더입니다. 세 화면이 같은 목록을 보므로 한 벌만 담습니다.
+    /// </summary>
+    public void SetCollapsedFolders(IReadOnlyList<string> folders)
+    {
+        ArgumentNullException.ThrowIfNull(folders);
+        settingsStore.Update(value => value with { CollapsedFolders = [.. folders] });
+    }
 
     public void SelectDevelopSidebarTab(WorkflowSidebarTab tab) =>
         settingsStore.Update(value => value with { SelectedDevelopSidebarTab = tab });

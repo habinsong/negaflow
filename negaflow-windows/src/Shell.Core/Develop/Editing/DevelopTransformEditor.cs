@@ -13,50 +13,20 @@ internal sealed class DevelopTransformEditor
         this.host = host;
     }
 
-    public DevelopEditResult Rotate(LibraryFrameSnapshot? frame, bool clockwise)
-    {
-        if (frame is null)
-        {
-            return Missing();
-        }
-        ImageRotation rotation = frame.ImageTransform.Rotation;
-        ImageRotation updated = clockwise
-            ? rotation switch
-            {
-                ImageRotation.Degrees0 => ImageRotation.Degrees90,
-                ImageRotation.Degrees90 => ImageRotation.Degrees180,
-                ImageRotation.Degrees180 => ImageRotation.Degrees270,
-                _ => ImageRotation.Degrees0,
-            }
-            : rotation switch
-            {
-                ImageRotation.Degrees0 => ImageRotation.Degrees270,
-                ImageRotation.Degrees90 => ImageRotation.Degrees0,
-                ImageRotation.Degrees180 => ImageRotation.Degrees90,
-                _ => ImageRotation.Degrees180,
-            };
-        return Set(frame, frame.ImageTransform with { Rotation = updated });
-    }
+    public DevelopEditResult Rotate(LibraryFrameSnapshot? frame, bool clockwise) =>
+        frame is null
+            ? Missing()
+            : Set(frame, ImageTransformGeometry.Rotate(frame.ImageTransform, clockwise));
 
     public DevelopEditResult FlipHorizontally(LibraryFrameSnapshot? frame) =>
         frame is null
             ? Missing()
-            : Set(
-                frame,
-                frame.ImageTransform with
-                {
-                    FlipHorizontal = !frame.ImageTransform.FlipHorizontal,
-                });
+            : Set(frame, ImageTransformGeometry.Flip(frame.ImageTransform, displayHorizontal: true));
 
     public DevelopEditResult FlipVertically(LibraryFrameSnapshot? frame) =>
         frame is null
             ? Missing()
-            : Set(
-                frame,
-                frame.ImageTransform with
-                {
-                    FlipVertical = !frame.ImageTransform.FlipVertical,
-                });
+            : Set(frame, ImageTransformGeometry.Flip(frame.ImageTransform, displayHorizontal: false));
 
     public DevelopEditResult SetStraightenAngle(LibraryFrameSnapshot? frame, double angle) =>
         frame is null
@@ -106,6 +76,23 @@ internal sealed class DevelopTransformEditor
         ImageTransformRecipe imageTransform)
     {
         ArgumentNullException.ThrowIfNull(imageTransform);
+        if (Negaflow.Shell.PreviewTrace.IsEnabled)
+        {
+            string crop = imageTransform.Crop is { } box
+                ? System.FormattableString.Invariant(
+                    $"({box.X:F4},{box.Y:F4},{box.Width:F4},{box.Height:F4})")
+                : "none";
+            string aspect = imageTransform.CropAspect is { } ratio
+                ? ratio.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)
+                : "none";
+            string angle = imageTransform.StraightenAngle.ToString(
+                "F2", System.Globalization.CultureInfo.InvariantCulture);
+            Negaflow.Shell.PreviewTrace.Write(
+                "transform rot=" + imageTransform.Rotation +
+                " flipH=" + imageTransform.FlipHorizontal +
+                " flipV=" + imageTransform.FlipVertical +
+                " straighten=" + angle + " crop=" + crop + " aspect=" + aspect);
+        }
         LibraryFrameError error = host.Edit(
             frame.Id,
             new LibraryFrameEdit(

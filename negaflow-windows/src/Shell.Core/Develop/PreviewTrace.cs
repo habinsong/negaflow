@@ -37,6 +37,12 @@ public static class PreviewTrace
         "Logs",
         "preview-trace.txt");
 
+    /// <summary>
+    /// 기록 중인지입니다. 인자를 만드는 비용이 큰 자리는 이것으로 먼저 막습니다 — 인자는
+    /// <see cref="Write"/> 안의 검사보다 <b>먼저</b> 계산되기 때문입니다.
+    /// </summary>
+    public static bool IsEnabled => Enabled.Value;
+
     public static void Write(string message)
     {
         if (!Enabled.Value)

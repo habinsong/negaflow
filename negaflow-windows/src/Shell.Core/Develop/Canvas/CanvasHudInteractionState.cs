@@ -82,6 +82,53 @@ public sealed class CanvasHudInteractionState
     }
 
     /// <summary>macOS <c>canvasHUDDragGesture.onChanged</c>.</summary>
+    /// <summary>
+    /// 인화 캔버스에는 줌 캡슐 <b>하나뿐</b>입니다. 기본 자리가 현상과 다르고, 피할 상대도
+    /// 없으므로 가장자리만 잡습니다.
+    /// </summary>
+    public CanvasHudOrigins ResolvePrintZoom(double canvasWidth, double canvasHeight)
+    {
+        (double defaultX, double defaultY) = CanvasHudPlacement.PrintZoomOrigin(
+            canvasWidth,
+            canvasHeight,
+            ZoomWidth,
+            ZoomHeight);
+        (double x, double y) = CanvasHudPlacement.ClampedOrigin(
+            ZoomOriginX ?? defaultX,
+            ZoomOriginY ?? defaultY,
+            ZoomWidth,
+            ZoomHeight,
+            canvasWidth,
+            canvasHeight);
+        return new CanvasHudOrigins(0, 0, x, y);
+    }
+
+    /// <summary>인화 캔버스의 줌 캡슐 끌기입니다. 피할 상대가 없습니다.</summary>
+    public void UpdatePrintZoomDrag(
+        double translationX,
+        double translationY,
+        double currentOriginX,
+        double currentOriginY,
+        double canvasWidth,
+        double canvasHeight)
+    {
+        ZoomDragStartX ??= currentOriginX;
+        ZoomDragStartY ??= currentOriginY;
+        if (ZoomDragStartX is not { } startX || ZoomDragStartY is not { } startY)
+        {
+            return;
+        }
+        (double x, double y) = CanvasHudPlacement.ClampedOrigin(
+            startX + translationX,
+            startY + translationY,
+            ZoomWidth,
+            ZoomHeight,
+            canvasWidth,
+            canvasHeight);
+        ZoomOriginX = x;
+        ZoomOriginY = y;
+    }
+
     public void BeginOrUpdateDrag(
         CanvasHudKind kind,
         double translationX,

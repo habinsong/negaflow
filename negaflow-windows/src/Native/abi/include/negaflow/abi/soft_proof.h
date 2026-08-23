@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 /* Soft proof media reading and the gamut-warning capability question. */
 
@@ -57,6 +57,36 @@ NF_API nf_status_t NF_CALL nf_read_soft_proof_media_v1(
    2 Adobe RGB. Writes 1 when it can and 0 when it cannot - the settings screen asks this
    before offering the gamut warning, because a warning that cannot be computed must not
    be offered. */
+/* Marks which pixels the given ICC profile cannot reproduce.
+
+   `pixels` is 8-bit BGRA in sRGB, `mask` is one byte per pixel: 0 inside the destination
+   gamut, non-zero outside. Judged by ICM's real gamut-check transform, never approximated -
+   an approximation would mark different pixels than macOS marks on the same picture.
+
+   The destination has to be the lab's profile. Judging sRGB pixels against sRGB (or any
+   wider space) can never find anything, so the warning would draw nothing at all. */
+/* Runs the picture through the lab profile and back so the screen shows what that paper can
+   reproduce. This is what profile-only proofing means: macOS changes the rendering colour
+   space instead of the pixels, and on an sRGB screen the equivalent is a round trip.
+   Leaves the pixels untouched when ICM cannot build the transform. */
+NF_API nf_status_t NF_CALL nf_soft_proof_convert_bgra_icc_v1(
+    uint8_t* pixels,
+    uint32_t width,
+    uint32_t height,
+    uint32_t stride_bytes,
+    const uint8_t* destination_icc,
+    uint32_t destination_icc_size);
+
+NF_API nf_status_t NF_CALL nf_gamut_check_mask_icc_v1(
+    const uint8_t* pixels,
+    uint32_t width,
+    uint32_t height,
+    uint32_t stride_bytes,
+    const uint8_t* destination_icc,
+    uint32_t destination_icc_size,
+    uint8_t* mask,
+    uint32_t mask_size);
+
 NF_API nf_status_t NF_CALL nf_gamut_check_supported_v1(
     uint32_t output_color_space,
     uint32_t* supported);

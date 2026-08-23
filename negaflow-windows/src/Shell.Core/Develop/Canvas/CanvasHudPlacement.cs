@@ -56,6 +56,23 @@ public static class CanvasHudPlacement
         return new CanvasHudOrigins(compareX, compareY, zoomX, zoomY);
     }
 
+    /// <summary>
+    /// 인화 캔버스의 줌 캡슐 기본 자리입니다. macOS <c>PrintCanvasView</c> 는 캡슐의
+    /// <b>가운데</b>를 <c>(canvasWidth - 96, canvasHeight - 28)</c> 에 둡니다.
+    /// </summary>
+    public static (double X, double Y) PrintZoomOrigin(
+        double canvasWidth,
+        double canvasHeight,
+        double zoomWidth,
+        double zoomHeight) =>
+        ClampedOrigin(
+            canvasWidth - 96 - (zoomWidth / 2),
+            canvasHeight - 28 - (zoomHeight / 2),
+            zoomWidth,
+            zoomHeight,
+            canvasWidth,
+            canvasHeight);
+
     public static (double X, double Y) ClampedOrigin(
         double originX,
         double originY,

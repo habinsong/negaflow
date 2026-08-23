@@ -50,6 +50,7 @@ internal sealed class DevelopFrameList
             view.Filmstrip.ShowFrames([], -1);
             view.HistogramView.Clear();
             view.LeftPanel.RebuildLibraryTree();
+            view.LeftPanel.RebuildFilesTree();
             view.SyncToneControls();
             view.NotifyQuickExportAvailabilityChanged();
             return;
@@ -67,6 +68,10 @@ internal sealed class DevelopFrameList
             view.FrameSelector.SelectedIndex = selectedIndex;
             // 필름스트립과 왼쪽 목록은 같은 항목을 봅니다. 썸네일이 도착하면 둘 다 채워집니다.
             view.LeftPanel.RebuildLibraryTree();
+            // "파일" 탭도 같은 사진들을 냅니다. 여기서 짓지 않으면 카탈로그가 붙기 <b>전에</b>
+            // 한 번 지어진 빈 목록이 그대로 남습니다 — 앱을 켜자마자 현상뷰의 파일 탭이 비어
+            // 있던 원인이며, 다른 세로탭을 눌렀다 돌아와야 그제서야 채워졌습니다.
+            view.LeftPanel.RebuildFilesTree();
             view.Filmstrip.ShowFrames(items, selectedIndex);
         }
         finally
@@ -134,6 +139,8 @@ internal sealed class DevelopFrameList
             SynchronizeSharedSelection();
         }
         view.LeftPanel.RebuildLibraryTree();
+        // 목록을 통째로 다시 짓지 않고 강조만 옮깁니다 — 인화뷰와 같은 처리입니다.
+        view.LeftPanel.SynchronizeFilesSelection(view.libraryHost?.ActiveFrameId);
         view.LeftPanel.ExportPanel.RefreshPreview();
     }
 
@@ -175,6 +182,11 @@ internal sealed class DevelopFrameList
         Activate(item, index, publishSelection: true);
     }
 
+    /// <summary>
+    /// 좌측탭 목록에서 사진을 골랐습니다. macOS 는 이 목록의 선택이 곧 <b>공유 선택</b>이라
+    /// 필름스트립·파일 탭 강조·인화 대상이 함께 움직입니다. 예전에는 여기서 캔버스만 바꿔
+    /// 놓아 목록의 파란 강조와 하단 필름스트립이 옛 사진에 남았습니다.
+    /// </summary>
     private void OnSourceFrameSelected(object? sender, string frameId)
     {
         _ = sender;
@@ -182,14 +194,22 @@ internal sealed class DevelopFrameList
         {
             return;
         }
-        view.panel.Select(frameId);
+        if (view.libraryHost is { } host)
+        {
+            host.SetSelection([frameId], frameId);
+        }
+        // 공유 선택이 이미 그 사진이었다면 알림이 나지 않습니다. 그때만 직접 옮깁니다.
+        if (!string.Equals(view.panel.SelectedFrame?.Id, frameId, StringComparison.Ordinal))
+        {
+            view.panel.Select(frameId);
+            view.SynchronizeInspectorValues();
+            view.RequestPreview();
+            view.LeftPanel.RebuildLibraryTree();
+        }
         if (InfraredCleanStatusText.For(view.panel.LastInfraredClean) is { Length: > 0 } infrared)
         {
             view.ExportStatusText.Text = infrared;
         }
-        view.SynchronizeInspectorValues();
-        view.RequestPreview();
-        view.LeftPanel.RebuildLibraryTree();
     }
 
     private void OnSourceFramesImported(object? sender, EventArgs args)

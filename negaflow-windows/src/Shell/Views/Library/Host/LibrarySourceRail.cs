@@ -100,6 +100,8 @@ internal sealed class LibrarySourceRail
     /// </summary>
     internal void RebuildFilesSourceTree()
     {
+        Negaflow.Shell.PreviewTrace.Write(
+            $"files.library.rebuild items={view.allItems.Count} host={view.libraryHost is not null}");
         int matched = view.ControlsPanel.FilesSourceTree.Rebuild(
             view.allItems,
             view.LibrarySearchBox?.Text ?? string.Empty,

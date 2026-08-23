@@ -164,25 +164,31 @@ internal sealed class PrintCellEditor
         body.Children.Add(new PrintInspectorDivider());
 
         // 가로/세로 위치와 너비/높이. 값은 내용 영역에 대한 비율이라 퍼센트로 보여 줍니다.
+        // 자리는 macOS `customRectBinding` 규칙으로 자릅니다 — 판 밖으로 나간 칸이 하나라도
+        // 있으면 배치가 통째로 거절돼 미리보기가 빈 종이가 됩니다.
         body.Children.Add(RectSlider("printPositionX", item.NormalizedRect.X,
             value => Mutate(index, current => current with
             {
-                NormalizedRect = current.NormalizedRect with { X = value },
+                NormalizedRect = PrintCustomRect.UpdateCell(
+                    current.NormalizedRect, PrintRectComponent.X, value),
             })));
         body.Children.Add(RectSlider("printPositionY", item.NormalizedRect.Y,
             value => Mutate(index, current => current with
             {
-                NormalizedRect = current.NormalizedRect with { Y = value },
+                NormalizedRect = PrintCustomRect.UpdateCell(
+                    current.NormalizedRect, PrintRectComponent.Y, value),
             })));
         body.Children.Add(RectSlider("printWidth", item.NormalizedRect.Width,
             value => Mutate(index, current => current with
             {
-                NormalizedRect = current.NormalizedRect with { Width = value },
+                NormalizedRect = PrintCustomRect.UpdateCell(
+                    current.NormalizedRect, PrintRectComponent.Width, value),
             })));
         body.Children.Add(RectSlider("printHeight", item.NormalizedRect.Height,
             value => Mutate(index, current => current with
             {
-                NormalizedRect = current.NormalizedRect with { Height = value },
+                NormalizedRect = PrintCustomRect.UpdateCell(
+                    current.NormalizedRect, PrintRectComponent.Height, value),
             })));
 
         // 뒤로 · 앞으로 · 복제 · 삭제.
@@ -247,22 +253,26 @@ internal sealed class PrintCellEditor
         body.Children.Add(RectSlider("printPositionX", caption.NormalizedRect.X,
             value => MutateCaption(index, current => current with
             {
-                NormalizedRect = current.NormalizedRect with { X = value },
+                NormalizedRect = PrintCustomRect.UpdateCaption(
+                    current.NormalizedRect, PrintRectComponent.X, value),
             })));
         body.Children.Add(RectSlider("printPositionY", caption.NormalizedRect.Y,
             value => MutateCaption(index, current => current with
             {
-                NormalizedRect = current.NormalizedRect with { Y = value },
+                NormalizedRect = PrintCustomRect.UpdateCaption(
+                    current.NormalizedRect, PrintRectComponent.Y, value),
             })));
         body.Children.Add(RectSlider("printWidth", caption.NormalizedRect.Width,
             value => MutateCaption(index, current => current with
             {
-                NormalizedRect = current.NormalizedRect with { Width = value },
+                NormalizedRect = PrintCustomRect.UpdateCaption(
+                    current.NormalizedRect, PrintRectComponent.Width, value),
             })));
         body.Children.Add(RectSlider("printHeight", caption.NormalizedRect.Height,
             value => MutateCaption(index, current => current with
             {
-                NormalizedRect = current.NormalizedRect with { Height = value },
+                NormalizedRect = PrintCustomRect.UpdateCaption(
+                    current.NormalizedRect, PrintRectComponent.Height, value),
             })));
 
         Button delete = new()

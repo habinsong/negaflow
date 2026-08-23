@@ -53,8 +53,17 @@ public sealed partial class CanvasCompareHud : UserControl
         Paint(SplitHorizontalButton, null, compare.ActiveMode == CanvasCompareMode.SplitHorizontal);
     }
 
+    /// <summary>
+    /// 지금 걸려 있는 캡슐 색입니다. 칸을 다시 칠할 때도 <b>같은 값</b>을 써야 합니다 —
+    /// 예전에는 <see cref="Paint"/> 가 검정 배경 값을 못박아 두어, 캔버스 배경을 흰색으로
+    /// 두면 캡슐 바탕만 밝아지고 "원본 · 현상본" 글자는 <b>흰색 그대로</b>라 읽히지
+    /// 않았습니다(실측 캡처).
+    /// </summary>
+    private CanvasHudChrome activeChrome = CanvasHudChrome.For(CanvasBackgroundKind.Black);
+
     public void ApplyChrome(CanvasHudChrome chrome)
     {
+        activeChrome = chrome;
         Windows.UI.Color content = ColorHelper.FromArgb(255, chrome.ContentByte, chrome.ContentByte, chrome.ContentByte);
         Windows.UI.Color surface = ColorHelper.FromArgb(255, chrome.SurfaceByte, chrome.SurfaceByte, chrome.SurfaceByte);
         if (Resources["CompareContentBrush"] is SolidColorBrush brush)
@@ -98,7 +107,7 @@ public sealed partial class CanvasCompareHud : UserControl
 
     private void Paint(Button button, TextBlock? label, bool active)
     {
-        CanvasHudChrome chrome = CanvasHudChrome.For(CanvasBackgroundKind.Black);
+        CanvasHudChrome chrome = activeChrome;
         Windows.UI.Color content = ColorHelper.FromArgb(255, chrome.ContentByte, chrome.ContentByte, chrome.ContentByte);
         byte inactive = (byte)Math.Round(255 * CanvasCompareHudPolicy.InactiveContentOpacity, MidpointRounding.AwayFromZero);
         byte fill = (byte)Math.Round(255 * CanvasCompareHudPolicy.ActiveFillOpacity, MidpointRounding.AwayFromZero);

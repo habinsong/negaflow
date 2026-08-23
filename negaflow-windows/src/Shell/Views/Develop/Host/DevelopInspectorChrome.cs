@@ -56,10 +56,22 @@ internal sealed class DevelopInspectorChrome
         view.GeometryCard.Visibility = view.inspectorPresentation.SelectedTab == DevelopInspectorTab.Edit
             ? Visibility.Visible
             : Visibility.Collapsed;
-        view.LocalAdjustmentCard.Visibility = view.GeometryCard.Visibility;
-        if (view.GeometryCard.Visibility == Visibility.Visible)
+        // 부분 보정(닷지·번)은 마스크가 화면에 하나도 그려지지 않아 지금은 쓸 수 없습니다.
+        // 설정 · 일반의 <b>개발자 모드</b>를 켰을 때만 냅니다 — 반쯤 동작하는 것을 사용자
+        // 앞에 두지 않기 위해서입니다.
+        view.LocalAdjustmentCard.Visibility =
+            view.developerMode && view.GeometryCard.Visibility == Visibility.Visible
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        if (view.LocalAdjustmentCard.Visibility == Visibility.Visible)
         {
             view.LocalAdjustmentCard.Show();
+        }
+        else
+        {
+            // 카드를 감추면 그리는 중이던 것도 멈춥니다. 안 그러면 캔버스에 안내줄만 남습니다.
+            view.LocalAdjustmentCard.StopDrawing();
+            view.SyncLocalAdjustmentPrompt();
         }
         // macOS resetToolContent — 초기화 탭은 ResetControlsSection 하나를 냅니다.
         view.ResetCard.Visibility = view.inspectorPresentation.SelectedTab == DevelopInspectorTab.Reset

@@ -115,6 +115,29 @@ public sealed class LibraryFrameListItem : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// 이 칸이 고른 칸인지입니다. 선택 표시 막대를 칸 <b>안에</b> 그리기 때문에 필요합니다 —
+    /// WinUI 기본 표시는 왼쪽 세로 막대인데 여기서는 위쪽 가로 막대입니다.
+    /// </summary>
+    /// <remarks>
+    /// 선택 자체는 여전히 <c>ListView</c> 가 들고 있습니다. 이 값은 그 하나를 <b>비추기만</b>
+    /// 하며, 필름스트립의 <c>SelectionChanged</c> 한 곳에서만 채웁니다 — 두 곳에서 쓰면
+    /// 갈라집니다.
+    /// </remarks>
+    public bool IsSelected
+    {
+        get => isSelected;
+        set
+        {
+            if (isSelected == value)
+            {
+                return;
+            }
+            isSelected = value;
+            PropertyChanged?.Invoke(this, SelectedChangedArgs);
+        }
+    }
+
     public bool HasThumbnail => thumbnail is not null;
 
     /// <summary>썸네일이 아직 없어 자리표시자를 보여야 하는 상태입니다.</summary>
@@ -124,7 +147,11 @@ public sealed class LibraryFrameListItem : INotifyPropertyChanged
 
     private object? thumbnail;
 
+    private bool isSelected;
+
     private int stackCount;
+
+    private static readonly PropertyChangedEventArgs SelectedChangedArgs = new(nameof(IsSelected));
 
     private static readonly PropertyChangedEventArgs ThumbnailChangedArgs = new(nameof(Thumbnail));
 

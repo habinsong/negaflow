@@ -34,6 +34,7 @@
         <StackPanel Orientation="Horizontal" Spacing="4">
             <Button
                 x:Name="ZoomOutButton"
+                AutomationProperties.AutomationId="negaflow.canvas.zoom.out"
                 Click="OnZoomOutClicked"
                 Style="{StaticResource CanvasToolButtonStyle}">
                 <Viewbox Width="13" Height="13">
@@ -68,6 +69,7 @@
             </Button>
             <Button
                 x:Name="ZoomInButton"
+                AutomationProperties.AutomationId="negaflow.canvas.zoom.in"
                 Click="OnZoomInClicked"
                 Style="{StaticResource CanvasToolButtonStyle}">
                 <Viewbox Width="13" Height="13">
@@ -111,6 +113,7 @@
             </Button>
             <Button
                 x:Name="ZoomPercentButton"
+                AutomationProperties.AutomationId="negaflow.canvas.zoom.percent"
                 Width="46"
                 Height="22"
                 MinWidth="0"
@@ -155,6 +158,7 @@
             </Button>
             <Button
                 x:Name="FitButton"
+                AutomationProperties.AutomationId="negaflow.canvas.zoom.fit"
                 Click="OnFitClicked"
                 Style="{StaticResource CanvasToolButtonStyle}">
                 <Viewbox Width="13" Height="13">
@@ -171,6 +175,7 @@
             </Button>
             <Button
                 x:Name="ActualSizeButton"
+                AutomationProperties.AutomationId="negaflow.canvas.zoom.actual"
                 Click="OnActualSizeClicked"
                 Style="{StaticResource CanvasToolButtonStyle}">
                 <Viewbox Width="13" Height="13">

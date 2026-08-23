@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml.Input;
+using Negaflow.Shell.Develop;
 
 namespace Negaflow.Shell.Views.Develop.Canvas;
 
@@ -31,6 +32,33 @@ public sealed partial class DevelopPreviewCanvas
         }
         // 아무 도구도 집지 않았으면 끌기로 사진을 옮깁니다 - 맨 마지막 차례입니다.
         _ = pan.TryBegin(args);
+    }
+
+    /// <summary>
+    /// 휠로 사진을 확대·축소합니다. macOS <c>zoomGesture</c>(<c>MagnificationGesture</c>)
+    /// 자리이며, 줌 캡슐과 <b>같은 뷰포트</b>를 쓰므로 캡슐의 값도 함께 따라갑니다.
+    /// </summary>
+    private void OnCanvasPointerWheel(object sender, PointerRoutedEventArgs args)
+    {
+        _ = sender;
+        if (viewport is not { } state || previewBitmap is null)
+        {
+            return;
+        }
+        int delta = args.GetCurrentPoint(CanvasHost).Properties.MouseWheelDelta;
+        if (delta == 0)
+        {
+            return;
+        }
+        state.ZoomBy(
+            delta > 0 ? CanvasToolHudPolicy.ZoomStep : 1 / CanvasToolHudPolicy.ZoomStep,
+            previewBitmap.PixelWidth,
+            previewBitmap.PixelHeight,
+            CanvasHost.ActualWidth,
+            CanvasHost.ActualHeight);
+        ApplyImageFrame();
+        ZoomHud.RefreshZoomText();
+        args.Handled = true;
     }
 
     private void OnCanvasPointerMoved(object sender, PointerRoutedEventArgs args)

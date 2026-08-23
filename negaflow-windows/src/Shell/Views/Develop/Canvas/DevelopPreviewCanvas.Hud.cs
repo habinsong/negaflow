@@ -57,19 +57,44 @@ public sealed partial class DevelopPreviewCanvas
         ApplyHudLayout();
     }
 
-    private void OnCompareHudPointerPressed(object sender, PointerRoutedEventArgs args) =>
-        BeginHudPress(CanvasHudKind.Compare, args);
-
-    private void OnZoomHudPointerPressed(object sender, PointerRoutedEventArgs args) =>
-        BeginHudPress(CanvasHudKind.Zoom, args);
-
-    private void BeginHudPress(CanvasHudKind kind, PointerRoutedEventArgs args)
+    /// <summary>
+    /// HUD 의 포인터를 잇습니다. <b>이미 처리된 이벤트도</b> 받습니다.
+    /// </summary>
+    /// <remarks>
+    /// macOS 는 <c>highPriorityGesture(DragGesture(minimumDistance: 4))</c> 를 HUD 통째에
+    /// 겁니다 — 캡슐의 <b>어디를 잡아도</b> 끌리고, 4 미만으로 움직이면 안쪽 단추가 눌립니다.
+    ///
+    /// WinUI 에서는 단추가 눌림을 먼저 처리해 버리므로, 보통 방식으로 걸면 단추 위에서
+    /// 눌림이 <b>오지 않습니다</b>. 실측: 단추 위에서 끌면 hud.press 0 · hud.drag 0 으로
+    /// HUD 가 꿈쩍도 하지 않았고, 3px 테두리에서만 끌렸는데 그때는 눌림이 캔버스까지
+    /// 올라가 <b>사진도 같이 끌렸습니다</b>(pan.move 1).
+    /// </remarks>
+    private void HookHud(FrameworkElement hud, CanvasHudKind kind)
     {
-        if (IsHudInteractiveSource(args.OriginalSource))
-        {
-            return;
-        }
+        hud.AddHandler(
+            UIElement.PointerPressedEvent,
+            new PointerEventHandler((_, args) => BeginHudPress(hud, kind, args)),
+            handledEventsToo: true);
+        hud.AddHandler(
+            UIElement.PointerMovedEvent,
+            new PointerEventHandler(OnHudPointerMoved),
+            handledEventsToo: true);
+        hud.AddHandler(
+            UIElement.PointerReleasedEvent,
+            new PointerEventHandler(OnHudPointerReleased),
+            handledEventsToo: true);
+        hud.AddHandler(
+            UIElement.PointerCanceledEvent,
+            new PointerEventHandler(OnHudPointerCanceled),
+            handledEventsToo: true);
+        hud.AddHandler(
+            UIElement.PointerCaptureLostEvent,
+            new PointerEventHandler(OnHudPointerCanceled),
+            handledEventsToo: true);
+    }
 
+    private void BeginHudPress(FrameworkElement hud, CanvasHudKind kind, PointerRoutedEventArgs args)
+    {
         Windows.Foundation.Point point = args.GetCurrentPoint(CanvasHost).Position;
         CanvasHudOrigins origins = hudInteraction.Resolve(CanvasHost.ActualWidth, CanvasHost.ActualHeight);
         hudPressKind = kind;
@@ -78,6 +103,10 @@ public sealed partial class DevelopPreviewCanvas
         hudPressOriginX = kind == CanvasHudKind.Compare ? origins.CompareX : origins.ZoomX;
         hudPressOriginY = kind == CanvasHudKind.Compare ? origins.CompareY : origins.ZoomY;
         hudDragging = false;
+        hudPressElement = hud;
+        // 눌림을 여기서 끝냅니다. 그러지 않으면 캔버스까지 올라가 사진 끌기가 함께
+        // 시작됩니다 — 실측으로 확인한 충돌입니다.
+        args.Handled = true;
     }
 
     private void OnHudPointerMoved(object sender, PointerRoutedEventArgs args)
@@ -100,7 +129,9 @@ public sealed partial class DevelopPreviewCanvas
             }
 
             hudDragging = true;
-            CaptureHost(args.Pointer);
+            // 포인터를 HUD 가 붙듭니다. 안쪽 단추는 캡처를 잃어 <b>클릭이 나지 않고</b>,
+            // 뒤따르는 움직임은 계속 HUD 로 옵니다.
+            _ = hudPressElement?.CapturePointer(args.Pointer);
         }
 
         hudInteraction.BeginOrUpdateDrag(
@@ -137,27 +168,15 @@ public sealed partial class DevelopPreviewCanvas
         if (hudDragging)
         {
             hudInteraction.EndDrag(kind);
-            ReleaseHost(args.Pointer);
+            hudPressElement?.ReleasePointerCapture(args.Pointer);
             args.Handled = true;
         }
 
         hudPressKind = null;
+        hudPressElement = null;
         hudDragging = false;
     }
 
-    private static bool IsHudInteractiveSource(object source)
-    {
-        DependencyObject? current = source as DependencyObject;
-        while (current is not null)
-        {
-            if (current is Button or TextBox)
-            {
-                return true;
-            }
-
-            current = VisualTreeHelper.GetParent(current);
-        }
-
-        return false;
-    }
+    /// <summary>지금 눌린 HUD 입니다. 끌기가 시작되면 이것이 포인터를 붙듭니다.</summary>
+    private FrameworkElement? hudPressElement;
 }

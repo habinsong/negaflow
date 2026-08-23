@@ -36,6 +36,12 @@ internal sealed class DevelopWorkspaceLayout
         view.LeftPanel.SynchronizeTab(preferences.SelectedDevelopSidebarTab);
         // macOS: `if model.developerMode { debugSection }`
         view.Adjustments.SetDeveloperMode(preferences.DeveloperMode);
+        if (view.developerMode != preferences.DeveloperMode)
+        {
+            view.developerMode = preferences.DeveloperMode;
+            // 부분 보정 카드의 가시성이 여기에 걸립니다.
+            view.inspectorChrome.Apply();
+        }
         view.PreviewCanvas.CanvasBackgroundPicked ??= view.workspaceState is { } canvasState
             ? canvasState.SetCanvasBackground
             : null;

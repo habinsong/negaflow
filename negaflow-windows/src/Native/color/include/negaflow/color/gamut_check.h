@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "negaflow/color/output_color_space.h"
 
@@ -43,5 +43,31 @@ struct GamutCheckResult final {
     std::uint32_t height,
     std::uint32_t stride_bytes,
     OutputColorSpace destination);
+
+/// 같은 판정을 <b>주어진 ICC 프로파일</b>을 목적지로 삼아 합니다.
+///
+/// 인화소가 준 프로파일이 목적지여야 경고가 뜻을 갖습니다. 목적지를 sRGB·P3·AdobeRGB 로
+/// 두면 sRGB 그림에는 색역 밖 화소가 있을 수 없어 아무것도 표시되지 않습니다 — macOS 도
+/// C-print ICC 를 목적지로 씁니다.
+[[nodiscard]] GamutCheckResult check_gamut_bgr8_icc(
+    const std::uint8_t* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_bytes,
+    const std::uint8_t* destination_icc,
+    std::uint32_t destination_icc_size);
+
+/// 화면 화소를 <b>목적지 프로파일로 갔다가 되돌려</b> 옵니다 — 소프트 프루프의 본체입니다.
+///
+/// macOS 는 `profileOnly` 에서 화소 행렬을 걸지 않고 그리는 색 공간을 바꿉니다. 화면이
+/// sRGB 인 Windows 에서 같은 것을 보려면 sRGB → 인화지 → sRGB 로 왕복해야 합니다. 그래야
+/// 인화지가 못 내는 색이 실제로 눌려 보입니다. 되지 않으면 화소를 건드리지 않습니다.
+[[nodiscard]] bool soft_proof_convert_bgra_icc(
+    std::uint8_t* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_bytes,
+    const std::uint8_t* destination_icc,
+    std::uint32_t destination_icc_size) noexcept;
 
 }  // namespace negaflow::color

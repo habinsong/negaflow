@@ -17,7 +17,15 @@ internal sealed class DevelopCanvasCropInteraction
 
     internal bool TryBeginDrag(PointerRoutedEventArgs args, CropWorkspaceState crop)
     {
-        if (!view.TryMapPointer(args, out CropDisplayPoint point) || !crop.TryBeginDrag(point))
+        // 핸들은 절반이 그림 밖에 그려집니다. 그 절반까지 받아야 눈에 보이는 대로 잡힙니다.
+        if (!view.TryMapPointerForCrop(
+                args,
+                CropInteraction.LongHandleSize / 2.0,
+                out CropDisplayPoint point,
+                out bool inside,
+                out double frameWidth,
+                out double frameHeight) ||
+            !crop.TryBeginDrag(point, frameWidth, frameHeight, allowCreate: inside))
         {
             return false;
         }
@@ -28,7 +36,16 @@ internal sealed class DevelopCanvasCropInteraction
 
     internal bool TryContinueDrag(PointerRoutedEventArgs args, CropWorkspaceState crop)
     {
-        if (!view.TryMapPointer(args, out CropDisplayPoint point) || !crop.TryContinueDrag(point))
+        // 끄는 동안에는 그림 밖으로 나가도 가장자리에 붙여 이어 갑니다 — macOS 도 제스처가
+        // 잡혀 있는 동안 좌표를 그대로 받습니다.
+        if (!view.TryMapPointerForCrop(
+                args,
+                double.MaxValue / 4.0,
+                out CropDisplayPoint point,
+                out _,
+                out _,
+                out _) ||
+            !crop.TryContinueDrag(point))
         {
             return false;
         }

@@ -194,6 +194,12 @@ public sealed partial class DevelopWorkspaceView
 
         int width = (int)outcome.Width;
         int height = (int)outcome.Height;
+        if (PreviewTrace.IsEnabled)
+        {
+            PreviewTrace.Write(
+                $"shown.develop {outcome.FrameId} {width}x{height} settled={outcome.Settled} " +
+                Negaflow.Shell.Develop.PreviewPixelStats.Describe(pixels, width, height));
+        }
         PreviewCanvas.Present(pixels, width, height);
         TraceCompositionFrame(
             outcome.FrameId ?? expectedId ?? "null",

@@ -1,4 +1,4 @@
-using Microsoft.UI.Input;
+﻿using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -96,6 +96,17 @@ public sealed partial class WorkspaceShellView : UserControl
             }
         }
         DevelopWorkspace.Initialize(state, nativeEngineStatus);
+        // 현상 · 인화의 "파일" 탭은 라이브러리와 <b>같은 컨트롤</b>입니다. ✕ 와 맥락 메뉴도
+        // 라이브러리의 같은 처리로 보내야 화면마다 결과가 갈라지지 않습니다 — 여기서 잇지
+        // 않으면 그 두 화면의 ✕ 는 눌러도 아무 일도 하지 않는 가짜 단추가 됩니다.
+        foreach (Views.Library.Sources.LibraryFilesSourceTree tab in
+            new[] { DevelopWorkspace.LeftPanel.FilesTab, PrintWorkspace.FilesTab })
+        {
+            tab.FolderRemoveRequested += (_, folderPath) =>
+                LibraryWorkspace.RemoveFolderFromLibrary(folderPath);
+            tab.LocateFolderRequested += (_, folderPath) =>
+                LibraryWorkspace.LocateLibraryFolder(folderPath);
+        }
         LibraryWorkspace.FrameOpenRequested += OnLibraryFrameOpenRequested;
         LibraryWorkspace.FolderDevelopmentApplied += OnFolderDevelopmentApplied;
         DevelopWorkspace.ScannerSetupRequested += OnDevelopScannerSetupRequested;
@@ -201,6 +212,9 @@ public sealed partial class WorkspaceShellView : UserControl
         _ = sender;
         _ = args;
         SyncDevelopMenu();
+        // 인화 미리보기는 현상뷰와 같은 그림이어야 합니다. macOS 는 프레임 관찰로 저절로
+        // 따라오지만 WinUI 는 알려 주지 않으면 옛 그림에 멈춰 있습니다.
+        PrintWorkspace.NotifyFrameEdited();
     }
 
     /// <summary>
@@ -403,6 +417,10 @@ public sealed partial class WorkspaceShellView : UserControl
         PrintWorkspace.Visibility = selectedWorkspace == WorkspaceModule.Print
             ? Visibility.Visible
             : Visibility.Collapsed;
+        if (selectedWorkspace == WorkspaceModule.Print)
+        {
+            PrintWorkspace.RedrawIfStale();
+        }
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args)

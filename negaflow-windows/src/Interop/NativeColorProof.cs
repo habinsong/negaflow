@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Negaflow.Interop;
@@ -22,6 +22,26 @@ internal static partial class NativeColorProof
         double unitY,
         uint filmType,
         NativeFilmBasePickV1* result);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_soft_proof_convert_bgra_icc_v1")]
+    internal static unsafe partial uint nf_soft_proof_convert_bgra_icc_v1(
+        byte* pixels,
+        uint width,
+        uint height,
+        uint strideBytes,
+        byte* destinationIcc,
+        uint destinationIccSize);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_gamut_check_mask_icc_v1")]
+    internal static unsafe partial uint nf_gamut_check_mask_icc_v1(
+        byte* pixels,
+        uint width,
+        uint height,
+        uint strideBytes,
+        byte* destinationIcc,
+        uint destinationIccSize,
+        byte* mask,
+        uint maskSize);
 
     [LibraryImport(LibraryName, EntryPoint = "nf_read_soft_proof_media_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]

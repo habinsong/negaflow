@@ -1,4 +1,4 @@
-using Negaflow.Interop;
+﻿using Negaflow.Interop;
 
 namespace Negaflow.Shell.Develop;
 
@@ -44,8 +44,11 @@ public sealed record SoftProofPreferences
         PrinterProfilePath = (PrinterProfilePath ?? string.Empty).Trim(),
         Simulation = Enum.IsDefined(Simulation) ? Simulation : SoftProofSimulation.ProfileOnly,
         ProfileName = (ProfileName ?? string.Empty).Trim(),
-        // 프루프가 꺼져 있으면 색역 경고도 의미가 없습니다. 켤 때 함께 살아납니다.
-        GamutWarningEnabled = IsEnabled && GamutWarningEnabled,
+        // 색영역 경고는 프루프와 <b>별개의 스위치</b>입니다. macOS 도
+        // `destinationGamutWarningEnabled` 를 따로 들고 있고, 프루프가 꺼져 있다고 이 값을
+        // 끄지 않습니다 — 여기서 강제로 끄면 켬 단추를 눌러도 곧바로 되돌아가 아예 눌리지
+        // 않는 것처럼 보입니다. 실제로 표시할 수 있는지는 출력 프로파일이 정합니다.
+
     };
 
     /// <summary>

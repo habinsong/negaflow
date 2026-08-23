@@ -139,6 +139,9 @@ internal sealed class PrintSourceController
         _ = sender;
         _ = args;
         Negaflow.Shell.PreviewTrace.Write("print.selection");
+        // 고른 사진이 바뀌면 파일 목록의 강조도 따라가야 합니다 — 목록을 통째로 다시 짓지
+        // 않고 강조만 옮깁니다.
+        surface.FilesTree.SelectedFrameId = libraryHost?.ActiveFrameId;
         SynchronizeFilmstrip();
         if (builtFrameCount != (libraryHost?.Frames.Count ?? 0))
         {
@@ -157,6 +160,7 @@ internal sealed class PrintSourceController
         builtFrameCount = 0;
         if (libraryHost is null)
         {
+            Negaflow.Shell.PreviewTrace.Write("files.print.rebuild host=null");
             surface.FilesTree.SetSections([]);
             return;
         }
@@ -168,6 +172,11 @@ internal sealed class PrintSourceController
             libraryHost.FolderAvailabilityById,
             LibraryBrowserViewMode.Folders,
             includeEmptyFolders: false);
+        Negaflow.Shell.PreviewTrace.Write(
+            $"files.print.rebuild host=ok frames={libraryHost.Frames.Count} " +
+            $"folders={libraryHost.Folders.Count} sections={projection.FolderSections.Count}");
+        // 고른 사진과 그 폴더가 파랗게 되도록 라이브러리 · 현상과 같은 값을 넣습니다.
+        surface.FilesTree.SelectedFrameId = libraryHost.ActiveFrameId;
         surface.FilesTree.SetSections(projection.FolderSections);
         builtFrameCount = projection.FolderSections.Sum(section => section.Items.Count);
     }

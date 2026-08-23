@@ -83,9 +83,37 @@ public readonly record struct PreviewFrame(double Left, double Top, double Width
     public bool Contains(double x, double y) =>
         x >= Left && x <= Right && y >= Top && y <= Bottom;
 
-    public bool TryMapPoint(double x, double y, out CropDisplayPoint point)
+    public bool TryMapPoint(double x, double y, out CropDisplayPoint point) =>
+        TryMapPoint(x, y, 0.0, out point, out _);
+
+    /// <summary>
+    /// 캔버스 좌표를 그림 안 정규 좌표로 옮깁니다. <paramref name="margin"/> 만큼은 그림
+    /// <b>밖</b>이어도 받아 가장자리로 붙입니다.
+    /// </summary>
+    /// <remarks>
+    /// 크롭 핸들은 모서리를 <b>가운데</b>에 두고 그려지므로 그 절반이 그림 밖에 있습니다.
+    /// 밖을 거부하면 그 절반이 죽어, 눈에 보이는 핸들을 눌러도 아무 일이 없습니다 —
+    /// 실측: 왼쪽 위 모서리를 정확히 눌렀을 때 <c>mapped=False</c>, 안쪽 4 부터만 잡혔고
+    /// 사용자는 "좀 더 안쪽을 눌러야 동작한다" 고 신고했습니다. macOS 는 핸들 뷰마다
+    /// 자기 제스처가 붙어 있어 그려진 사각형 전체가 잡힙니다.
+    /// </remarks>
+    public bool TryMapPoint(
+        double x,
+        double y,
+        double margin,
+        out CropDisplayPoint point,
+        out bool inside)
     {
-        if (!Contains(x, y) || Width <= 0.0 || Height <= 0.0)
+        inside = false;
+        if (Width <= 0.0 || Height <= 0.0)
+        {
+            point = default;
+            return false;
+        }
+        inside = Contains(x, y);
+        double slack = Math.Max(0.0, margin);
+        if (!inside &&
+            (x < Left - slack || x > Right + slack || y < Top - slack || y > Bottom + slack))
         {
             point = default;
             return false;

@@ -18,6 +18,9 @@ public sealed partial class PrintWorkspaceView : UserControl
     private readonly ThreePaneResizeController resizeController = new();
     private WorkspacePresentationState? workspaceState;
 
+    /// <summary>숨어 있는 동안 현상 설정이 바뀌었습니다. 다시 보일 때 판을 새로 그립니다.</summary>
+    private bool printPageIsStale;
+
     public PrintWorkspaceView()
     {
         InitializeComponent();
@@ -37,6 +40,7 @@ public sealed partial class PrintWorkspaceView : UserControl
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(nativeEngineStatus);
         workspaceState = state;
+        PrintFilesSourceTree.AttachPresentation(state);
         state.Changed += OnStateChanged;
         // macOS 인화 사이드바도 현상과 **같은** `ExportSection` 이므로 같은 설정을 봅니다.
         // 붙이지 않으면 이 탭에서 고친 값이 저장되지 않고 현상뷰와 따로 놀게 됩니다.
@@ -51,6 +55,41 @@ public sealed partial class PrintWorkspaceView : UserControl
         UpdateState(state.Current);
         SynchronizePrint();
         Unloaded += OnUnloaded;
+    }
+
+    /// <summary>
+    /// 카탈로그의 현상 설정이 바뀌었습니다. 인화 미리보기는 현상뷰와 <b>같은 그림</b>이어야
+    /// 하므로 풀어 둔 그림과 크기 판정을 버립니다.
+    /// </summary>
+    /// <remarks>
+    /// macOS 는 <c>ScanFrame</c> 이 <c>ObservableObject</c> 라 값이 바뀌는 순간 인화 판이
+    /// 저절로 따라옵니다. WinUI 에는 그 관찰이 없어 알려 주지 않으면 인화 판은 <b>처음
+    /// 그린 그림에 그대로 멈춰 있습니다</b> — 현상뷰에서 자동 레벨·자동 색상을 껐는데도
+    /// 인화뷰에는 켠 그림이 남아 있던 원인입니다(실측: 현상 3회 변경, 인화 재요청 0회).
+    ///
+    /// 숨어 있을 때는 표시만 남깁니다. 현상뷰에서 슬라이더를 끄는 동안 편집마다 숨은 판을
+    /// 다시 그리면 그 값이 그대로 UI 스레드 비용이 됩니다.
+    /// </remarks>
+    public void NotifyFrameEdited()
+    {
+        printPreview?.InvalidateForRecipeChange();
+        if (Visibility == Visibility.Visible)
+        {
+            printPreview?.Draw();
+            return;
+        }
+        printPageIsStale = true;
+    }
+
+    /// <summary>인화뷰가 다시 보일 때입니다. 숨은 동안 바뀐 것이 있으면 그때 그립니다.</summary>
+    public void RedrawIfStale()
+    {
+        if (!printPageIsStale)
+        {
+            return;
+        }
+        printPageIsStale = false;
+        printPreview?.Draw();
     }
 
     private void OnRootSizeChanged(object sender, SizeChangedEventArgs args)
@@ -145,6 +184,10 @@ public sealed partial class PrintWorkspaceView : UserControl
         CanvasHost.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
             Microsoft.UI.ColorHelper.FromArgb(255, level, level, level));
         printCanvasBackground = background;
+        // 캡슐의 글자·아이콘 색은 <b>캔버스 배경</b>을 따릅니다 — 검정·회색이면 흰색,
+        // 흰색이면 검정입니다(macOS `CanvasBackground.hudContentColor`). 라이트·다크
+        // 모드와는 무관합니다.
+        PrintZoomHud.ApplyChrome(Negaflow.Shell.Develop.CanvasHudChrome.For(background));
         CanvasHost.ContextFlyout ??= Views.Controls.CanvasBackgroundFlyout.Create(
             () => printCanvasBackground,
             kind => workspaceState?.SetCanvasBackground(kind));

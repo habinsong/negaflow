@@ -45,6 +45,17 @@ public sealed class CropAngleDial : UserControl
         IsTabStop = true;
         Content = surface;
         BuildFace();
+        // 눈금과 테두리는 만들 때 붓을 값으로 잡습니다. 테마가 바뀌면 다시 만들어야
+        // 색이 따라옵니다 — 파일 목록과 같은 이유입니다.
+        ActualThemeChanged += (_, _) =>
+        {
+            surface.Children.Clear();
+            BuildFace();
+            surface.Children.Add(arm);
+            surface.Children.Add(knob);
+            surface.Children.Add(valueText);
+            Render();
+        };
         surface.Children.Add(arm);
         surface.Children.Add(knob);
         Canvas.SetTop(valueText, (DialSize / 2.0) + 18.0);
@@ -178,25 +189,38 @@ public sealed class CropAngleDial : UserControl
         arm.Stroke = AccentFill(0.55);
 
         knob.Fill = AccentFill(1.0);
-        knob.Stroke = new SolidColorBrush(Microsoft.UI.Colors.White) { Opacity = 0.85 };
+        knob.Stroke = Fill(0.85);
         Canvas.SetLeft(knob, knobX - 6.0);
         Canvas.SetTop(knob, knobY - 6.0);
 
         valueText.Text = Math.Abs(Angle) < 0.05
             ? "0.0°"
             : string.Create(CultureInfo.CurrentCulture, $"{Angle:+0.0;-0.0}°");
-        valueText.Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+        valueText.Foreground = Fill(1.0);
         AutomationProperties.SetHelpText(this, valueText.Text);
     }
 
-    private static Brush Fill(double opacity) =>
-        new SolidColorBrush(((SolidColorBrush)Application.Current.Resources["TextFillColorPrimaryBrush"]).Color)
+    /// <summary>
+    /// 눈금과 테두리 색입니다. 다크에서 <b>순백</b>, 라이트에서 <b>순검정</b>입니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 <c>Application.Current.Resources[...]</c> 로 읽었습니다. 그 조회는
+    /// <c>ThemeDictionaries</c> 를 <b>요소의 테마로 풀지 않아</b> 밝은 모드에서도 어두운
+    /// 값이 나옵니다(App.xaml 에 같은 주의가 적혀 있습니다). 요소의 테마를 직접 봅니다.
+    /// </remarks>
+    private Brush Fill(double opacity) =>
+        new SolidColorBrush(ActualTheme == ElementTheme.Dark
+            ? Microsoft.UI.Colors.White
+            : Microsoft.UI.Colors.Black)
         {
             Opacity = opacity,
         };
 
-    private static Brush AccentFill(double opacity) =>
-        new SolidColorBrush(((SolidColorBrush)Application.Current.Resources["AccentFillColorDefaultBrush"]).Color)
+    /// <summary>포인트(0도 눈금·팔·손잡이)는 맥이 쓰는 파랑입니다.</summary>
+    private Brush AccentFill(double opacity) =>
+        new SolidColorBrush(ActualTheme == ElementTheme.Dark
+            ? Windows.UI.Color.FromArgb(0xFF, 0x0A, 0x84, 0xFF)
+            : Windows.UI.Color.FromArgb(0xFF, 0x00, 0x7A, 0xFF))
         {
             Opacity = opacity,
         };

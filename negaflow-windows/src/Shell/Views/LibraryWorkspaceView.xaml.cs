@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -96,6 +96,16 @@ public sealed partial class LibraryWorkspaceView : UserControl
     /// 폴더 머리줄의 ✕ 입니다. macOS <c>removeLibraryFolderSection</c> 과 같은 뜻 — 그 폴더의
     /// 사진을 라이브러리에서 뺍니다. <b>파일은 지우지 않습니다.</b>
     /// </summary>
+    /// <summary>
+    /// 현상 · 인화의 "파일" 탭도 같은 컨트롤이라 같은 ✕ 를 냅니다. 그 ✕ 는 라이브러리와
+    /// <b>같은 처리</b>로 와야 합니다 — 화면마다 다른 결과가 나면 공통 탭이 아닙니다.
+    /// </summary>
+    internal void RemoveFolderFromLibrary(string folderPath) =>
+        OnFolderRemoveRequested(this, folderPath);
+
+    /// <summary>맥락 메뉴의 "폴더에서 보기" 도 같은 처리로 옵니다.</summary>
+    internal void LocateLibraryFolder(string folderPath) => import.LocateFolder(folderPath);
+
     private void OnFolderRemoveRequested(object? sender, string folderPath)
     {
         _ = sender;
@@ -164,6 +174,8 @@ public sealed partial class LibraryWorkspaceView : UserControl
     {
         ArgumentNullException.ThrowIfNull(state);
         workspaceState = state;
+        // 좌측 "파일" 탭의 접기 상태는 세 화면이 함께 봅니다.
+        ControlsPanel.FilesSourceTree.AttachPresentation(state);
         state.Changed += layout.OnStateChanged;
         ControlsPanel.ScanPanel.ApplyDefaultRotation(state.Current.DefaultScanRotation);
         layout.SynchronizeWidth(state.Current.LibraryControlsWidth);
@@ -193,7 +205,14 @@ public sealed partial class LibraryWorkspaceView : UserControl
     {
         ArgumentNullException.ThrowIfNull(host);
 
+        if (libraryHost is { } previous)
+        {
+            previous.SelectionChanged -= OnHostSelectionChanged;
+        }
         libraryHost = host;
+        // 격자·현상·인화 어디서 골랐든 "파일" 탭의 파란 강조가 따라갑니다 — 인화뷰가 이미
+        // 같은 신호를 쓰고 있으며, 목록을 다시 짓지 않고 강조만 옮깁니다.
+        host.SelectionChanged += OnHostSelectionChanged;
         importWindowId = windowId;
         ControlsPanel.ScanPanel.Bind(host);
         ControlsPanel.ScanPanel.WindowId = windowId;
@@ -214,16 +233,28 @@ public sealed partial class LibraryWorkspaceView : UserControl
         LibraryIssueBar.Message = issueSummary ?? string.Empty;
         LibraryIssueBar.IsOpen = issueSummary is not null;
 
+        PreviewTrace.Write(
+            $"files.availability ask frames={host.Frames.Count} folders={host.Folders.Count}");
         host.RefreshAvailability(() =>
         {
             if (!ReferenceEquals(libraryHost, host))
             {
                 return;
             }
+            PreviewTrace.Write(
+                $"files.availability done frames={host.SourceAvailabilityByFrameId.Count} " +
+                $"folders={host.FolderAvailabilityById.Count}");
             host.ReconcileActiveFrameAvailability();
             allItems = LibraryFrameListItems.From(host.Frames, host.SourceAvailabilityByFrameId);
             ShowFilteredItems();
         });
+    }
+
+    private void OnHostSelectionChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ControlsPanel.FilesSourceTree.SelectedFrameId = libraryHost?.ActiveFrameId;
     }
 
     /// <summary>사용자가 라이브러리에서 현상으로 넘기려는 frame 입니다.</summary>

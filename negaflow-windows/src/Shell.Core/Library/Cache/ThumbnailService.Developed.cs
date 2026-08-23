@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Print;
@@ -252,6 +252,46 @@ public sealed partial class ThumbnailService
     /// macOS <c>preparePrintPackageDisplayPreview</c> — 칸이 현재 래스터보다 크면
     /// 표시 크기로 현상본을 올립니다. 360 썸네일을 확대해 깨지지 않게 하려는 것입니다.
     /// </summary>
+    /// <summary>
+    /// 인화 미리보기가 걸어 둔 프루프입니다. macOS 는 인화 작업공간에서만
+    /// <c>cPrintSoftProofSettings</c> 를 씁니다 — 여기 값이 있으면 현상본이 그 프로파일로
+    /// 나오고, 색영역 경고도 ICM 이 판정해 표시합니다.
+    /// </summary>
+    public SoftProofSettings? PrintProof { get; private set; }
+
+    /// <summary>
+    /// 프루프를 갈아 끼웁니다. 값이 달라지면 현상본을 버려 다음 그리기에서 다시 만듭니다.
+    /// </summary>
+    public bool SetPrintProof(SoftProofSettings? proof)
+    {
+        if (Same(PrintProof, proof))
+        {
+            return false;
+        }
+        PrintProof = proof;
+        // 프루프가 달라지면 지금 들고 있는 현상본은 옛 색입니다. 버려야 다음 그리기에서
+        // 새 프로파일로 다시 만듭니다.
+        developed.Clear();
+        return true;
+    }
+
+    private static bool Same(SoftProofSettings? left, SoftProofSettings? right)
+    {
+        if (left is null || right is null)
+        {
+            return left is null && right is null;
+        }
+        return left.IsEnabled == right.IsEnabled &&
+            left.Simulation == right.Simulation &&
+            left.WarnOutOfGamut == right.WarnOutOfGamut &&
+            Math.Abs(left.PaperWhite.Red - right.PaperWhite.Red) < 1e-6 &&
+            Math.Abs(left.PaperWhite.Green - right.PaperWhite.Green) < 1e-6 &&
+            Math.Abs(left.PaperWhite.Blue - right.PaperWhite.Blue) < 1e-6 &&
+            Math.Abs(left.BlackInk.Red - right.BlackInk.Red) < 1e-6 &&
+            Math.Abs(left.BlackInk.Green - right.BlackInk.Green) < 1e-6 &&
+            Math.Abs(left.BlackInk.Blue - right.BlackInk.Blue) < 1e-6;
+    }
+
     public void RequestDeveloped(LibraryFrameSnapshot frame, int maxDimension)
     {
         ArgumentNullException.ThrowIfNull(frame);
@@ -313,10 +353,25 @@ public sealed partial class ThumbnailService
                 DevelopedPreviewCacheIdentityFactory.TryCreate(frame, out var created)
                     ? created
                     : null;
-            DevelopExportResult result = exporter.Preview(request, edge, edge, pixels);
+            // 인화 미리보기의 프루프를 그대로 실어 보냅니다. 색영역 경고 판정도 여기서
+            // ICM 이 합니다 — 화소를 손으로 흉내 내지 않습니다.
+            PreviewTrace.Write(
+                $"req.print {frame.Id} auto={request.AutoLevels}/{request.AutoNeutralBalance} " +
+                $"target={request.DevelopTarget} exposure={request.ExposureStops} " +
+                $"contrast={request.Contrast} look={request.FilmEmulation} edge={edge} " +
+                $"proof={(PrintProof is { IsEnabled: true } ? PrintProof.Simulation.ToString() : "off")}");
+            DevelopExportResult result = exporter.Preview(
+                request, edge, edge, pixels, null, PrintProof);
             if (!result.Succeeded || result.ImageWidth == 0U || result.ImageHeight == 0U)
             {
                 return;
+            }
+            if (PreviewTrace.IsEnabled)
+            {
+                PreviewTrace.Write(
+                    $"made.print {frame.Id} {result.ImageWidth}x{result.ImageHeight} " +
+                    Negaflow.Shell.Develop.PreviewPixelStats.Describe(
+                        pixels, (int)result.ImageWidth, (int)result.ImageHeight));
             }
 
             RememberDeveloped(

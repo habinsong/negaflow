@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -55,7 +55,24 @@ public sealed class LibraryFolderTreeView : UserControl
         Content = host;
         HorizontalAlignment = HorizontalAlignment.Stretch;
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
+        // 줄은 만들 때 붓을 <b>값으로</b> 잡습니다. 테마가 바뀌어도 그 붓은 그대로이므로
+        // 다시 그려 주지 않으면 색이 옛 테마에 남습니다 — 실측: 테마 전환 2회, 다시
+        // 그림 0회. macOS 는 SwiftUI 가 `Color.primary` 를 그릴 때마다 풉니다.
+        ActualThemeChanged += (_, _) => Render();
+        // 숨어 있는 동안 테마가 바뀌면 위 알림이 오지 않습니다(실측: 현상뷰의 라이브러리
+        // 탭은 접혀 있는 동안 한 번도 다시 그려지지 않았습니다). 다시 보일 때 지금 테마와
+        // 마지막으로 그린 테마가 다르면 그 자리에서 다시 그립니다.
+        _ = RegisterPropertyChangedCallback(VisibilityProperty, (_, _) =>
+        {
+            if (Visibility == Visibility.Visible && renderedTheme != ActualTheme)
+            {
+                Render();
+            }
+        });
     }
+
+    /// <summary>마지막으로 그릴 때의 테마입니다. 숨은 동안 바뀐 것을 알아채는 자리입니다.</summary>
+    private ElementTheme renderedTheme = ElementTheme.Default;
 
     /// <summary>
     /// 줄에 쓰는 붓입니다. App.xaml 의 스타일이 <c>{ThemeResource}</c> 로 걸어 주므로 테마가
@@ -106,6 +123,31 @@ public sealed class LibraryFolderTreeView : UserControl
     /// <summary>✕ 를 낼지입니다. 현상·인화의 읽기 전용 목록은 내지 않습니다.</summary>
     public bool ShowsRemoveButton { get; set; }
 
+    /// <summary>
+    /// 접힌 폴더가 바뀌었습니다. 셸이 받아 설정에 담아 두면 앱을 다시 켜도 그대로입니다.
+    /// </summary>
+    public event EventHandler<IReadOnlyList<string>>? CollapsedFoldersChanged;
+
+    /// <summary>접어 둔 폴더들입니다. 설정에서 불러온 값을 그대로 넣습니다.</summary>
+    public IReadOnlyList<string> CollapsedFolders
+    {
+        get => [.. collapsed];
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            if (collapsed.SetEquals(value))
+            {
+                return;
+            }
+            collapsed.Clear();
+            foreach (string id in value)
+            {
+                _ = collapsed.Add(id);
+            }
+            Render();
+        }
+    }
+
     /// <summary>지금 열려 있는 사진입니다. 이 사진과 그 폴더가 강조됩니다.</summary>
     public string? SelectedFrameId
     {
@@ -127,8 +169,21 @@ public sealed class LibraryFolderTreeView : UserControl
         Render();
     }
 
+    /// <summary>로그에 붙는 이름입니다. 세 화면이 같은 컨트롤을 씁니다.</summary>
+    public string TraceName { get; set; } = "library";
+
     private void Render()
     {
+        if (Negaflow.Shell.PreviewTrace.IsEnabled)
+        {
+            Negaflow.Shell.PreviewTrace.Write(
+                $"files.render {TraceName} sections={sections.Count} " +
+                $"frames={sections.Sum(section => section.Items.Count)} " +
+                $"selected={selectedFrameId ?? "-"} theme={ActualTheme} " +
+                $"accent={Describe(Accent)} primary={Describe(Primary)} " +
+                $"secondary={Describe(Secondary)}");
+        }
+        renderedTheme = ActualTheme;
         host.Children.Clear();
         foreach (LibraryBrowserFolderSection section in sections)
         {
@@ -203,16 +258,17 @@ public sealed class LibraryFolderTreeView : UserControl
             row.Children.Add(remove);
         }
 
-        Brush accentOrSecondary = holdsSelection
-            ? Accent
-            : Secondary;
+        // 고른 사진을 담고 있는 폴더는 아이콘도 이름도 강조색입니다. 그 밖에는 본문색이며,
+        // 다크 모드에서 흰색, 라이트 모드에서 검정입니다 — 흐린 회색으로 두면 폴더가 모두
+        // 꺼져 보입니다.
+        Brush headerForeground = holdsSelection ? Accent : Primary;
 
         FontIcon chevron = new()
         {
             FontSize = 10,
             Width = 12,
             Glyph = isExpanded ? "" : "",
-            Foreground = accentOrSecondary,
+            Foreground = headerForeground,
             VerticalAlignment = VerticalAlignment.Center,
         };
         Grid.SetColumn(chevron, 1);
@@ -224,7 +280,7 @@ public sealed class LibraryFolderTreeView : UserControl
             FontSize = 14,
             Width = 16,
             Glyph = section is { IsRegistered: true, IsAvailable: false } ? "" : "",
-            Foreground = accentOrSecondary,
+            Foreground = headerForeground,
             VerticalAlignment = VerticalAlignment.Center,
         };
         Grid.SetColumn(folder, 2);
@@ -237,6 +293,7 @@ public sealed class LibraryFolderTreeView : UserControl
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,
+            Foreground = headerForeground,
         };
         Grid.SetColumn(title, 3);
         row.Children.Add(title);
@@ -273,6 +330,8 @@ public sealed class LibraryFolderTreeView : UserControl
             {
                 _ = collapsed.Remove(section.Id);
             }
+            // 접고 펼친 것은 앱을 다시 켜도 그대로여야 합니다.
+            CollapsedFoldersChanged?.Invoke(this, [.. collapsed]);
             Render();
         };
         header.RightTapped += (sender, args) =>
@@ -291,6 +350,12 @@ public sealed class LibraryFolderTreeView : UserControl
     /// macOS <c>frameRows</c> 한 줄 — 사진 아이콘과 이름이며, 왼쪽 28 을 들여씁니다.
     /// 고른 사진은 아이콘과 글자가 모두 강조색입니다.
     /// </summary>
+    private static string Describe(Brush brush) =>
+        brush is SolidColorBrush solid
+            ? System.FormattableString.Invariant(
+                $"#{solid.Color.A:X2}{solid.Color.R:X2}{solid.Color.G:X2}{solid.Color.B:X2}")
+            : brush.GetType().Name;
+
     private Button BuildFrameRow(LibraryFrameListItem item)
     {
         bool isSelected = string.Equals(item.Id, selectedFrameId, StringComparison.Ordinal);
@@ -310,7 +375,7 @@ public sealed class LibraryFolderTreeView : UserControl
             Width = 14,
             // macOS `photo` · `exclamationmark.circle` — 원본을 못 찾으면 다른 모양입니다.
             Glyph = item.IsSourceOffline ? "" : "",
-            Foreground = isSelected ? Accent : Secondary,
+            Foreground = foreground,
             VerticalAlignment = VerticalAlignment.Center,
         });
         content.Children.Add(new TextBlock

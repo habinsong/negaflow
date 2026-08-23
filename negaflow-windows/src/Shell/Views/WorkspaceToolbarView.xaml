@@ -165,6 +165,7 @@
             <Button
                 x:Name="AppearanceButton"
                 Grid.Column="3"
+                AutomationProperties.AutomationId="negaflow.appearance"
                 Style="{StaticResource NegaflowToolbarIconButtonStyle}">
                 <!--
                     macOS AppAppearanceMode.systemImage 와 같은 셋입니다 -
@@ -174,9 +175,18 @@
                 <FontIcon x:Name="AppearanceIcon" FontSize="14" Glyph="&#xE706;" />
                 <Button.Flyout>
                     <MenuFlyout>
-                        <MenuFlyoutItem x:Name="SystemAppearanceItem" Click="OnSystemAppearanceClick" />
-                        <MenuFlyoutItem x:Name="DarkAppearanceItem" Click="OnDarkAppearanceClick" />
-                        <MenuFlyoutItem x:Name="LightAppearanceItem" Click="OnLightAppearanceClick" />
+                        <MenuFlyoutItem
+                            x:Name="SystemAppearanceItem"
+                            AutomationProperties.AutomationId="negaflow.appearance.system"
+                            Click="OnSystemAppearanceClick" />
+                        <MenuFlyoutItem
+                            x:Name="DarkAppearanceItem"
+                            AutomationProperties.AutomationId="negaflow.appearance.dark"
+                            Click="OnDarkAppearanceClick" />
+                        <MenuFlyoutItem
+                            x:Name="LightAppearanceItem"
+                            AutomationProperties.AutomationId="negaflow.appearance.light"
+                            Click="OnLightAppearanceClick" />
                     </MenuFlyout>
                 </Button.Flyout>
             </Button>

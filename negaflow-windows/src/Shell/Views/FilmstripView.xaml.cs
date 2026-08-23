@@ -222,10 +222,30 @@ public sealed partial class FilmstripView : UserControl
         FrameSelected?.Invoke(this, item);
     }
 
+    /// <summary>
+    /// 칸 안에 그리는 선택 막대의 값을 목록의 선택 하나에서 채웁니다. 선택이 바뀌는 길이
+    /// 여럿이므로 <b>알림 한 곳</b>에서만 채웁니다 — 길마다 채우면 한 곳만 빠져도 막대가
+    /// 옛 칸에 남습니다.
+    /// </summary>
+    private void SynchronizeSelectionFlags()
+    {
+        if (FrameStrip.ItemsSource is not IReadOnlyList<LibraryFrameListItem> shown)
+        {
+            return;
+        }
+        HashSet<LibraryFrameListItem> selected =
+            [.. FrameStrip.SelectedItems.OfType<LibraryFrameListItem>()];
+        foreach (LibraryFrameListItem item in shown)
+        {
+            item.IsSelected = selected.Contains(item);
+        }
+    }
+
     private void OnFrameSelectionChanged(object sender, SelectionChangedEventArgs args)
     {
         _ = sender;
         _ = args;
+        SynchronizeSelectionFlags();
         if (itemClickRaised)
         {
             itemClickRaised = false;

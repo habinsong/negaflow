@@ -40,6 +40,15 @@ public sealed partial class PreviewCoordinator
         // Read once, here, so the whole render uses one proof state even if the property
         // changes while it is inside the engine. That render is superseded anyway.
         SoftProofSettings? proof = SoftProof;
+        if (PreviewTrace.IsEnabled)
+        {
+            PreviewTrace.Write(
+                $"req.develop {frame.Id} auto={developRequest.AutoLevels}/" +
+                $"{developRequest.AutoNeutralBalance} target={developRequest.DevelopTarget} " +
+                $"exposure={developRequest.ExposureStops} contrast={developRequest.Contrast} " +
+                $"look={developRequest.FilmEmulation} raw={rawSource} " +
+                $"proof={(proof is { IsEnabled: true } ? proof.Simulation.ToString() : "off")}");
+        }
         bool clippingOverlay = ClippingOverlayEnabled;
         // 단계 그림은 최종 결과가 아니므로 정착본 캐시에 넣지 않습니다 - 넣으면 오버레이를
         // 끈 뒤에도 그 그림이 나옵니다.

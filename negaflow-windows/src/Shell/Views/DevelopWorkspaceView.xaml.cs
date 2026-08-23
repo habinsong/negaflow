@@ -24,6 +24,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
     internal bool isSynchronizingFrameSelection;
     internal bool isSynchronizingInspectorPresentation;
     internal bool isInspectorPresentationReady;
+
+    /// <summary>
+    /// 설정 · 일반의 개발자 모드입니다. 부분 보정(닷지·번)은 화면에 아무것도 그려지지 않아
+    /// 이 값이 켜졌을 때만 냅니다.
+    /// </summary>
+    internal bool developerMode;
     internal Negaflow.Shell.Library.ThumbnailService? thumbnails;
     internal string engineVersion = "unknown";
     internal readonly CropWorkspaceState crop = new();

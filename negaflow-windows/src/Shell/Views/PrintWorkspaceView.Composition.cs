@@ -26,6 +26,9 @@ public sealed partial class PrintWorkspaceView
 
     private Print.Export.PrintSheetExportRunner? printSheetExport;
 
+    /// <summary>인화의 "파일" 탭입니다. 라이브러리와 같은 컨트롤이며 셸이 ✕ 를 잇습니다.</summary>
+    internal Library.Sources.LibraryFilesSourceTree FilesTab => PrintFilesSourceTree;
+
     private void BindPrintComposition()
     {
         printSources = new PrintSourceController(
@@ -44,6 +47,13 @@ public sealed partial class PrintWorkspaceView
                 Presentation = () => workspaceState,
             },
             SynchronizePrint);
+        // 인화 캔버스의 확대·이동과 줌 캡슐입니다(macOS `PrintCanvasView`).
+        HookPrintViewport();
+        PrintFilesSourceTree.TraceName = "print";
+        // 새 현상본·썸네일이 도착하면 풀어 둔 그림을 버립니다. 이 신호를 아무도 받지 않아
+        // 현상뷰에서 자동 레벨·자동 색상을 바꿔도 인화 판은 <b>옛 그림</b>을 계속 다시
+        // 걸었습니다 — 두 화면의 사진이 달라 보이던 원인입니다.
+        printSources.PreviewImageArrived += (_, _) => printPreview?.InvalidateTiles();
         PrintFilesSourceTree.FrameInvoked += (sender, frameId) =>
             printSources?.HandleTreeInvoked(sender, frameId);
         printInspector = new PrintInspectorBinder(
@@ -210,6 +220,8 @@ public sealed partial class PrintWorkspaceView
             ContentTab.ContentCropMarksSelector,
             OutputTab.OutputProcessSelector,
             OutputTab.PrintProofPreviewSelector,
+            OutputTab.PaperSimulationSelector,
+            OutputTab.GamutWarningSelector,
         })
         {
             picker.SelectionChanged += OnPrintSegmentChanged;
@@ -248,8 +260,10 @@ public sealed partial class PrintWorkspaceView
         // 전달 색 공간은 보여 주기만 합니다(macOS `model.exportColorSpace.uiLabel`).
         if (workspaceState is { } current)
         {
-            OutputTab.DeliveryColorSpaceValue.Text =
-                current.Current.Export.EffectiveColorSpace.ToString();
+            // 색 공간 이름은 한곳에서만 정합니다 — `enum.ToString()` 을 쓰면 "Srgb" 같은
+            // 코드 이름이 화면으로 새어 나옵니다(macOS `ExportColorSpace.uiLabel`).
+            OutputTab.DeliveryColorSpaceValue.Text = Negaflow.Shell.Develop.ExportColorSpaceLabel
+                .For(current.Current.Export.EffectiveColorSpace);
             // 여기서 세그먼트를 고르면 그 알림이 다시 이 동기화를 부릅니다. 값을 넣는 동안은
             // 담기를 막습니다 — 다른 컨트롤이 `printInspector.IsSynchronizing` 으로 하는 것과
             // 같은 처리입니다.
@@ -428,6 +442,9 @@ public sealed partial class PrintWorkspaceView
             CPrintPreviewEnabled = true,
         });
         ApplyCprintSoftProof();
+        // 이름 글자와 지우기 단추는 `ApplyCprintVisibility` 가 채웁니다. 여기서 부르지 않으면
+        // 프로파일을 새로 골라도 이름 자리가 "—" 로 남습니다.
+        SynchronizePrint();
     }
 
     /// <summary>
@@ -455,14 +472,29 @@ public sealed partial class PrintWorkspaceView
             active && print.CPrintPaperSimulationEnabled
                 ? Negaflow.Interop.SoftProofSimulation.PaperAndBlackInk
                 : state.Current.SoftProof.Simulation;
-        bool enabled = active || state.Current.SoftProof.IsEnabled;
+        // 우리가 켠 것만 우리가 끕니다. 설정에서 사용자가 켜 둔 프루프는 건드리지 않습니다.
+        bool enabled = active || (state.Current.SoftProof.IsEnabled && !printTurnedProofOn);
+        printTurnedProofOn = active;
+        // 색영역 경고는 맥에서도 프루프와 별개의 스위치입니다
+        // (`model.destinationGamutWarningEnabled`). 사람이 만졌을 때 그대로 담습니다.
+        bool gamut = OutputTab.GamutWarningSelector.SelectedValue as bool? ??
+            state.Current.SoftProof.GamutWarningEnabled;
         // <b>달라질 때만</b> 씁니다. 값이 같은데도 쓰면 설정 변경 알림이 다시 동기화를 부르고,
         // 그 동기화가 또 여기로 들어와 UI 스레드가 멈춥니다.
         if (string.Equals(state.Current.SoftProof.PrinterProfilePath, wanted, StringComparison.Ordinal) &&
             state.Current.SoftProof.Simulation == simulation &&
-            state.Current.SoftProof.IsEnabled == enabled)
+            state.Current.SoftProof.IsEnabled == enabled &&
+            state.Current.SoftProof.GamutWarningEnabled == gamut)
         {
             return;
+        }
+        // 현상본이 이 프로파일로 나오게 합니다 — 사진에 프로파일이 걸리는 자리이고,
+        // 색영역 경고도 여기서 ICM 이 판정합니다.
+        if (printSources?.Thumbnails is { } cache &&
+            cache.SetPrintProof(PrintSoftProofFilter.Preview(print, gamut)))
+        {
+            printPreview?.InvalidateForRecipeChange();
+            printPreview?.Draw();
         }
         state.UpdateSoftProof(value => value with
         {
@@ -470,6 +502,7 @@ public sealed partial class PrintWorkspaceView
             IsEnabled = enabled,
             // 용지·잉크까지 흉내 낼지는 인화 설정이 정합니다(macOS `cPrintPaperSimulationEnabled`).
             Simulation = simulation,
+            GamutWarningEnabled = gamut,
         });
     }
 
@@ -486,6 +519,7 @@ public sealed partial class PrintWorkspaceView
         });
         // 지우면 화면 색도 함께 돌아와야 합니다(macOS `clearCPrintProofICCProfile`).
         ApplyCprintSoftProof();
+        SynchronizePrint();
     }
 
     private void OnPrintSegmentChanged(object? sender, EventArgs args)
@@ -529,6 +563,9 @@ public sealed partial class PrintWorkspaceView
     /// </summary>
     private bool suppressPrintCommit;
 
+    /// <summary>인화 미리보기 때문에 소프트 프루프를 켠 것인지입니다.</summary>
+    private bool printTurnedProofOn;
+
     private void CommitPrintSettings()
     {
         if (printInspector is null ||
@@ -539,6 +576,11 @@ public sealed partial class PrintWorkspaceView
             return;
         }
         printInspector.Commit(state);
+        // 색영역 경고와 프루프 목적지는 `PrintPreferences` 가 아니라 소프트 프루프 설정에
+        // 삽니다. 사람이 세그먼트를 만졌을 때 여기서 담지 않으면 아무 데도 기록되지 않아
+        // 켬 단추가 눌리지 않는 것처럼 보입니다. 되먹임은 값이 달라질 때만 쓰는 것과
+        // `suppressPrintCommit` 으로 막습니다.
+        ApplyCprintSoftProof();
         SynchronizePrint();
     }
 

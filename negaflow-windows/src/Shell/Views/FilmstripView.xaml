@@ -79,6 +79,7 @@
                 Padding="4,0"
                 AutomationProperties.AutomationId="negaflow.filmstrip.frames"
                 ContainerContentChanging="OnFrameContainerChanging"
+                ItemContainerStyle="{StaticResource NegaflowFilmstripItemStyle}"
                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
                 ScrollViewer.HorizontalScrollMode="Enabled"
                 ScrollViewer.VerticalScrollBarVisibility="Disabled"
@@ -96,7 +97,23 @@
                 <ListView.ItemTemplate>
                     <DataTemplate>
                         <!-- macOS 는 필름스트립 썸네일에도 격자와 **같은** 메뉴를 답니다. -->
-                        <Grid Padding="5" Background="Transparent" RightTapped="OnFrameRightTapped">
+                        <Grid Background="Transparent" RightTapped="OnFrameRightTapped">
+                        <!--
+                            선택 표시입니다. WinUI 기본은 왼쪽 세로 막대인데 여기서는 위쪽
+                            가로 막대입니다. 크기·모양·색은 기본과 같습니다 — 실행 중인 창에서
+                            잰 값(배율 1.5): 두께 5px=3, 길이 153px≈102(칸 폭 125 에서 좌우
+                            12 씩), 가장자리에서 6px=4, 끝 테이퍼 1px → 반지름 1.5, #007AFF.
+                        -->
+                        <Rectangle
+                            Height="3"
+                            Margin="12,4,12,0"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Top"
+                            Fill="{ThemeResource NegaflowAccentBrush}"
+                            RadiusX="1.5"
+                            RadiusY="1.5"
+                            Visibility="{Binding IsSelected, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <Grid Padding="5">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="4" />
@@ -137,6 +154,7 @@
                                 HorizontalAlignment="Left"
                                 GlyphSize="10"
                                 Rating="{Binding Rating}" />
+                        </Grid>
                         </Grid>
                     </DataTemplate>
                 </ListView.ItemTemplate>

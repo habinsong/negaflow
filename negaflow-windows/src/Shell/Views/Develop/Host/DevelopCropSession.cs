@@ -52,7 +52,9 @@ internal sealed class DevelopCropSession
             view.panel.ImageTransform.CropAspect,
             metadata.PixelWidth,
             metadata.PixelHeight,
-            view.panel.ImageTransform.Rotation);
+            view.panel.ImageTransform.Rotation,
+            // 고른 비율이 없으면 지금 사각형의 비율을 잠급니다(macOS 와 같음).
+            view.crop.Session?.Selection);
     }
 
     internal void OnAspectChosen(object? sender, CropAspectOption option)

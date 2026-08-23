@@ -19,6 +19,7 @@
     PointerMoved="OnCanvasPointerMoved"
     PointerPressed="OnCanvasPointerPressed"
     PointerReleased="OnCanvasPointerReleased"
+    PointerWheelChanged="OnCanvasPointerWheel"
     SizeChanged="OnCanvasSizeChanged">
     <StackPanel x:Name="EmptyCanvasPanel" x:FieldModifier="internal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
         <FontIcon FontSize="42" Foreground="#FF8A8A8A" Glyph="&#xE91B;" />
@@ -253,27 +254,19 @@
     <local:CanvasCompareHud
         x:Name="CompareHud"
         x:FieldModifier="internal"
+        AutomationProperties.AutomationId="negaflow.canvas.compare-hud"
         HorizontalAlignment="Left"
         VerticalAlignment="Top"
         Visibility="Collapsed"
-        PointerPressed="OnCompareHudPointerPressed"
-        PointerMoved="OnHudPointerMoved"
-        PointerReleased="OnHudPointerReleased"
-        PointerCanceled="OnHudPointerCanceled"
-        PointerCaptureLost="OnHudPointerCanceled"
         SizeChanged="OnCompareHudSizeChanged" />
 
     <!-- macOS CanvasToolHUD — `resolvedCanvasHUDOrigins` 가 좌표를 잡는다. -->
     <local:CanvasToolHud
         x:Name="ZoomHud"
         x:FieldModifier="internal"
+        AutomationProperties.AutomationId="negaflow.canvas.zoom-hud"
         HorizontalAlignment="Left"
         VerticalAlignment="Top"
-        PointerPressed="OnZoomHudPointerPressed"
-        PointerMoved="OnHudPointerMoved"
-        PointerReleased="OnHudPointerReleased"
-        PointerCanceled="OnHudPointerCanceled"
-        PointerCaptureLost="OnHudPointerCanceled"
         SizeChanged="OnZoomHudSizeChanged" />
 </Grid>
 </UserControl>

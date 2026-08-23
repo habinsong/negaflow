@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Negaflow.Catalog;
 using Negaflow.Interop;
@@ -25,6 +25,7 @@ internal static class Program
         ShellPreferencesTests.Run();
         LibraryBrowsingTests.Run();
         ExportConfigurationTests.Run();
+        PrintCustomPackageTests.Run();
         CropAndLookTests.Run();
         GrainMendRecipeTests.Run();
         CloneStampOverlayTests.Run();

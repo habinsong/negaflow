@@ -19,6 +19,9 @@ public sealed partial class DevelopLibrarySourcePanel : UserControl
     public DevelopLibrarySourcePanel()
     {
         InitializeComponent();
+        // 현상뷰의 "라이브러리" 탭도 같은 트리 컨트롤입니다. 로그에서 "파일" 탭과 헷갈리지
+        // 않도록 이름을 갈라 둡니다.
+        LibraryTree.TraceName = "develop-library";
         import = new DevelopSourceImport(this);
         LibraryTree.FrameInvoked += (_, frameId) => FrameSelected?.Invoke(this, frameId);
     }

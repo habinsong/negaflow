@@ -67,6 +67,60 @@ public static class CropInteraction
                 : CropDragMode.Create);
     }
 
+    /// <summary>
+    /// 프레임 크기를 알고 있을 때의 판정입니다. 히트 영역이 <b>그려진 핸들</b>과 같아집니다.
+    /// </summary>
+    public static CropDragMode BeginDrag(
+        CropDisplayPoint point,
+        CropDisplayRect selection,
+        double frameWidth,
+        double frameHeight)
+    {
+        return HitHandle(point, selection, frameWidth, frameHeight) ??
+            (Contains(selection, point) && !selection.IsFull
+                ? CropDragMode.Move
+                : CropDragMode.Create);
+    }
+
+    /// <summary>
+    /// 그려진 핸들 사각형 그대로 판정합니다. macOS 는 핸들마다 뷰가 있어 그 사각형이 곧
+    /// 히트 영역입니다(<c>CropOverlay.handleView</c>: 14×14, 위·아래는 24×14,
+    /// 좌·우는 14×24).
+    /// </summary>
+    public static CropDragMode? HitHandle(
+        CropDisplayPoint point,
+        CropDisplayRect rect,
+        double frameWidth,
+        double frameHeight)
+    {
+        if (frameWidth <= 0.0 || frameHeight <= 0.0)
+        {
+            return HitHandle(point, rect);
+        }
+        foreach ((CropDragMode mode, double x, double y, bool wide, bool tall) candidate in new[]
+                 {
+                     (CropDragMode.TopLeft, rect.X, rect.Y, false, false),
+                     (CropDragMode.Top, rect.X + rect.Width / 2.0, rect.Y, true, false),
+                     (CropDragMode.TopRight, rect.Right, rect.Y, false, false),
+                     (CropDragMode.Right, rect.Right, rect.Y + rect.Height / 2.0, false, true),
+                     (CropDragMode.BottomRight, rect.Right, rect.Bottom, false, false),
+                     (CropDragMode.Bottom, rect.X + rect.Width / 2.0, rect.Bottom, true, false),
+                     (CropDragMode.BottomLeft, rect.X, rect.Bottom, false, false),
+                     (CropDragMode.Left, rect.X, rect.Y + rect.Height / 2.0, false, true),
+                 })
+        {
+            double halfX = (candidate.wide ? LongHandleSize : HandleSize) / 2.0 / frameWidth;
+            double halfY = (candidate.tall ? LongHandleSize : HandleSize) / 2.0 / frameHeight;
+            if (Math.Abs(point.X - candidate.x) <= halfX &&
+                Math.Abs(point.Y - candidate.y) <= halfY)
+            {
+                return candidate.mode;
+            }
+        }
+
+        return null;
+    }
+
     public static CropHandle? HandleFor(CropDragMode mode) => mode switch
     {
         CropDragMode.TopLeft => CropHandle.TopLeft,
@@ -107,19 +161,24 @@ public static class CropInteraction
     public static bool Contains(CropDisplayRect rect, CropDisplayPoint point) =>
         point.X >= rect.X && point.X <= rect.Right && point.Y >= rect.Y && point.Y <= rect.Bottom;
 
+    /// <summary>
+    /// 잠긴 비율을 <b>정규</b> 값으로 냅니다. macOS <c>cropAspectLockRatio(for:)</c> 그대로입니다 —
+    /// 고른 비율이 있으면 그것을, 없으면 <b>지금 사각형의 화소 비율</b>을 잠급니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 고른 비율이 없으면 <c>null</c> 을 냈습니다. 비율 고르개의 기본값이 "원본"
+    /// 이므로 자물쇠를 눌러도 아무 일도 일어나지 않았습니다 — 사용자가 "잠금 기능이
+    /// 미구현" 이라고 한 것이 이것입니다. macOS 는 그때 지금 사각형의 비율을 잠급니다.
+    /// </remarks>
     public static double? LockedNormalizedAspectRatio(
         bool isLocked,
         double? cropAspect,
         uint pixelWidth,
         uint pixelHeight,
-        ImageRotation rotation)
+        ImageRotation rotation,
+        CropDisplayRect? selection = null)
     {
-        if (!isLocked ||
-            cropAspect is not { } aspect ||
-            !double.IsFinite(aspect) ||
-            aspect <= 0.0 ||
-            pixelWidth == 0U ||
-            pixelHeight == 0U)
+        if (!isLocked || pixelWidth == 0U || pixelHeight == 0U)
         {
             return null;
         }
@@ -129,6 +188,24 @@ public static class CropInteraction
         if (rotation is ImageRotation.Degrees90 or ImageRotation.Degrees270)
         {
             (width, height) = (height, width);
+        }
+
+        double aspect;
+        if (cropAspect is { } chosen && double.IsFinite(chosen) && chosen > 0.0)
+        {
+            aspect = chosen;
+        }
+        else if (selection is { } visible && visible.Width > 0.0 && visible.Height > 0.0)
+        {
+            // macOS: max(0.05, min(20, (visible.width * imageW) / (visible.height * imageH)))
+            aspect = Math.Clamp(
+                visible.Width * width / (visible.Height * height),
+                0.05,
+                20.0);
+        }
+        else
+        {
+            aspect = width / height;
         }
 
         return aspect * height / width;

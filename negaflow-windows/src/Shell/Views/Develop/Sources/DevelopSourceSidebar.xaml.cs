@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
@@ -32,11 +32,18 @@ public sealed partial class DevelopSourceSidebar : UserControl
     /// <summary>macOS의 스캐너 가져오기 명령을 공유 Library 소스에 요청합니다.</summary>
     public event EventHandler? ScannerSetupRequested;
 
+    /// <summary>공통 "파일" 탭입니다.</summary>
+    internal Negaflow.Shell.Views.Library.Sources.LibraryFilesSourceTree FilesTab =>
+        FilesPanel.FilesTab;
+
     public void Attach(WorkspacePresentationState state)
     {
         ArgumentNullException.ThrowIfNull(state);
         workspaceState = state;
         ExportPanel.Attach(state);
+        // 좌측 "파일" 탭의 접기 상태는 세 화면이 함께 봅니다. `Bind` 보다 먼저 올 수도
+        // 있으므로 여기서도 붙입니다 — 두 번 붙여도 값은 같습니다.
+        FilesPanel.AttachPresentation(state);
     }
 
     public void Bind(
@@ -52,6 +59,10 @@ public sealed partial class DevelopSourceSidebar : UserControl
         PresetsPanel.Bind(hostPanel);
         FilmLookPanel.Bind(hostPanel);
         FilesPanel.Bind(host);
+        if (workspaceState is { } state)
+        {
+            FilesPanel.AttachPresentation(state);
+        }
         // 현상 기본값은 "지금 손대는 프레임"을 따라갑니다 — macOS `model.actionableFrame` 자리입니다.
         LibraryPanel.Bind(host, windowId, () => hostPanel.SelectedFrame);
     }
@@ -118,6 +129,12 @@ public sealed partial class DevelopSourceSidebar : UserControl
 
     public void RebuildFilesTree() => FilesPanel.Rebuild();
 
+    /// <summary>
+    /// 고른 사진이 바뀌었습니다. 목록은 그대로 두고 파란 강조만 옮깁니다.
+    /// </summary>
+    public void SynchronizeFilesSelection(string? frameId) =>
+        FilesPanel.SynchronizeSelection(frameId);
+
     private void OnRailTabClicked(object? sender, WorkflowSidebarTab kind)
     {
         _ = sender;
@@ -134,6 +151,7 @@ public sealed partial class DevelopSourceSidebar : UserControl
             RebuildLibraryTree();
         }
         FilesPanel.Visibility = Show(WorkflowSidebarTab.Files);
+        Negaflow.Shell.PreviewTrace.Write($"files.develop.tab {selectedTab}");
         if (selectedTab == WorkflowSidebarTab.Files)
         {
             RebuildFilesTree();

@@ -8,6 +8,7 @@
     xmlns:views="using:Negaflow.Shell.Views"
     xmlns:export="using:Negaflow.Shell.Views.Develop.Export"
     xmlns:settings="using:Negaflow.Shell.Views.Print.Settings"
+    xmlns:canvas="using:Negaflow.Shell.Views.Develop.Canvas"
     xmlns:controls="using:Negaflow.Shell.Views.Controls">
     <Grid x:Name="Root" Background="{ThemeResource NegaflowWindowBrush}" SizeChanged="OnRootSizeChanged">
         <Grid.ColumnDefinitions>
@@ -69,9 +70,8 @@
                 <Grid Grid.Row="2">
                     <!-- macOS `PrintWorkspaceSidebar` 의 파일 탭 — 사진을 담고 있는 폴더와
                          그 사진만 냅니다. 라이브러리·현상과 같은 컨트롤입니다. -->
-                    <sources:LibraryFolderTreeView
-                        x:Name="PrintFilesSourceTree"
-                        Padding="4,6"
+                    <sources:LibraryFilesSourceTree
+                        x:Name="PrintFilesSourceTree" x:FieldModifier="internal"
                         AutomationProperties.AutomationId="negaflow.print.sources.files"
                         Visibility="Collapsed" />
                     <StackPanel
@@ -146,6 +146,15 @@
                     Foreground="#FFB4B4B4" />
                 <!-- 눈금자입니다. 판 바깥 위와 왼쪽에 붙습니다. -->
                 <Canvas x:Name="RulerCanvas" IsHitTestVisible="False" />
+                <!-- macOS `PrintCanvasView` 의 `CanvasToolHUD` — 현상뷰와 같은 컨트롤이며
+                     원본/현상본 캡슐은 인화에 없습니다. -->
+                <canvas:CanvasToolHud
+                    x:Name="PrintZoomHud"
+                    x:FieldModifier="internal"
+                    AutomationProperties.AutomationId="negaflow.print.zoom"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    SizeChanged="OnPrintZoomHudSizeChanged" />
                 <!-- 캡션 글자를 화소로 바꾸는 자리입니다. 시각 트리 안에 있어야 렌더러가
                      그릴 수 있으므로 크기를 0 으로 두고 잘라 냅니다. -->
                 <Canvas

@@ -1,4 +1,4 @@
-using Microsoft.UI.Text;
+﻿using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -311,13 +311,9 @@ public sealed partial class SettingsRootView : UserControl
             ? AppResources.Get("settingsSoftProofPaperAndBlack", "Content")
             : AppResources.Get("settingsSoftProofProfileOnly", "Content");
 
-    // macOS ExportColorSpace.uiLabel 과 같은 문자열입니다. 색공간 이름은 번역하지 않습니다.
-    private static string ColorSpaceLabel(ExportColorSpace space) => space switch
-    {
-        ExportColorSpace.DisplayP3 => "Display P3",
-        ExportColorSpace.AdobeRgb => "Adobe RGB",
-        _ => "sRGB",
-    };
+    // macOS ExportColorSpace.uiLabel 과 같은 문자열입니다. 인화 화면도 같은 표기를 씁니다.
+    private static string ColorSpaceLabel(ExportColorSpace space) =>
+        Negaflow.Shell.Develop.ExportColorSpaceLabel.For(space);
 
     private void SelectCategory(SettingsCategory category)
     {

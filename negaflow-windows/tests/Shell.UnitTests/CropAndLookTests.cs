@@ -20,16 +20,214 @@ internal static class CropAndLookTests
         VerifyLookPresetReachesTheEngine();
         VerifyDisplayToRawMapping();
         VerifyDevelopedPixelSizeFollowsTheTransform();
+        VerifyCropHandlesAreGrabbableWhereTheyAreDrawn();
+        VerifyAspectLockUsesTheCurrentRectangleWhenNoRatioIsChosen();
+        VerifyRotateAndFlipKeepTheCropWhereItWas();
     }
 
     /// <summary>
-    /// 인화 판이 칸을 만들 때 쓰는 크기입니다 — <b>변형 뒤</b> 크기여야 합니다.
+    /// 돌리기·뒤집기는 <b>크롭을 지킵니다</b>. macOS <c>rotatePreservingCrop</c> ·
+    /// <c>toggleFlipPreservingCrop</c> 과 같은 값이어야 합니다.
     /// </summary>
     /// <remarks>
-    /// 세로로 돌린 사진에 가로 칸을 만들고 그 칸에 사진을 눌러 넣던 고장을 고정합니다. macOS
-    /// <c>transformedPrintPackageSize(_:transform:)</c> 와 같은 갈래입니다 — 90°·270° 는
-    /// 가로세로를 맞바꾸고, 크롭은 그 위에서 잘립니다.
+    /// 앞 판은 회전값·뒤집기 깃발만 바꿨습니다. 그래서 (가) 크롭해 둔 사진을 돌리면 잘린
+    /// 자리가 옮겨 가고, (나) 90·270 으로 돌린 뒤 "좌우 뒤집기" 를 누르면 <b>상하</b>가
+    /// 뒤집혔습니다 — 원본 축과 화면 축이 다르기 때문입니다.
     /// </remarks>
+    private static void VerifyRotateAndFlipKeepTheCropWhereItWas()
+    {
+        ImageCropRect box = new(0.10, 0.20, 0.30, 0.40);
+        ImageTransformRecipe start = ImageTransformRecipe.Identity with
+        {
+            Crop = box,
+            CropAspect = 3.0 / 2.0,
+            StraightenAngle = 4.0,
+        };
+
+        // 시계로 한 번: SIMD4(y, 1 - x - width, height, width)
+        ImageTransformRecipe once = ImageTransformGeometry.Rotate(start, clockwise: true);
+        Check(once.Rotation == ImageRotation.Degrees90, "clockwise turns 0 into 90");
+        Check(
+            once.Crop is { } turned &&
+            Math.Abs(turned.X - 0.20) < 1e-12 &&
+            Math.Abs(turned.Y - (1.0 - 0.10 - 0.30)) < 1e-12 &&
+            Math.Abs(turned.Width - 0.40) < 1e-12 &&
+            Math.Abs(turned.Height - 0.30) < 1e-12,
+            "clockwise turns the crop with the photo");
+        Check(
+            once.CropAspect is { } flipped && Math.Abs(flipped - (2.0 / 3.0)) < 1e-12,
+            "clockwise inverts the chosen ratio");
+
+        // 네 번 돌리면 제자리입니다.
+        ImageTransformRecipe full = once;
+        for (int turn = 0; turn < 3; ++turn)
+        {
+            full = ImageTransformGeometry.Rotate(full, clockwise: true);
+        }
+        Check(full.Rotation == ImageRotation.Degrees0, "four turns come back to zero");
+        Check(
+            full.Crop is { } same &&
+            Math.Abs(same.X - box.X) < 1e-12 &&
+            Math.Abs(same.Y - box.Y) < 1e-12 &&
+            Math.Abs(same.Width - box.Width) < 1e-12 &&
+            Math.Abs(same.Height - box.Height) < 1e-12,
+            "four turns come back to the same crop");
+        Check(
+            full.CropAspect is { } back && Math.Abs(back - (3.0 / 2.0)) < 1e-12,
+            "four turns come back to the same ratio");
+
+        // 시계 → 반시계는 제자리입니다.
+        ImageTransformRecipe there = ImageTransformGeometry.Rotate(start, clockwise: true);
+        ImageTransformRecipe andBack = ImageTransformGeometry.Rotate(there, clockwise: false);
+        Check(andBack.Rotation == ImageRotation.Degrees0, "turning back returns to zero");
+        Check(
+            andBack.Crop is { } returned &&
+            Math.Abs(returned.X - box.X) < 1e-12 &&
+            Math.Abs(returned.Y - box.Y) < 1e-12,
+            "turning back returns the crop");
+
+        // 돌리지 않은 사진: 화면 좌우 = 원본 좌우.
+        ImageTransformRecipe mirrored = ImageTransformGeometry.Flip(start, displayHorizontal: true);
+        Check(mirrored.FlipHorizontal && !mirrored.FlipVertical, "unrotated left-right flips the source x");
+        Check(
+            mirrored.Crop is { } across && Math.Abs(across.X - (1.0 - 0.10 - 0.30)) < 1e-12,
+            "the crop mirrors across");
+        Check(
+            Math.Abs(mirrored.StraightenAngle + 4.0) < 1e-12,
+            "flipping negates the straighten angle");
+
+        // 90 도로 돌린 사진: 화면 좌우 = 원본 <b>상하</b>.
+        ImageTransformRecipe turnedOnce = ImageTransformGeometry.Rotate(start, clockwise: true);
+        ImageTransformRecipe afterTurn =
+            ImageTransformGeometry.Flip(turnedOnce, displayHorizontal: true);
+        Check(
+            !afterTurn.FlipHorizontal && afterTurn.FlipVertical,
+            "after a quarter turn the screen's left-right is the source's up-down");
+
+        // 두 번 뒤집으면 제자리입니다.
+        ImageTransformRecipe twice =
+            ImageTransformGeometry.Flip(mirrored, displayHorizontal: true);
+        Check(
+            !twice.FlipHorizontal && !twice.FlipVertical &&
+            twice.Crop is { } home && Math.Abs(home.X - box.X) < 1e-12 &&
+            Math.Abs(twice.StraightenAngle - 4.0) < 1e-12,
+            "flipping twice comes back");
+    }
+
+    /// <summary>
+    /// 크롭 핸들은 <b>그려진 사각형 그대로</b> 잡혀야 합니다. 모서리 핸들은 모서리를
+    /// 가운데에 두고 14×14 로 그리므로 그 절반이 사각형 밖에 있습니다.
+    /// </summary>
+    /// <remarks>
+    /// 실측으로 고정합니다 — 고치기 전에는 왼쪽 위 모서리를 <b>정확히</b> 눌러도
+    /// <c>mapped=False</c> 로 죽었고(그림 밖 거부), 히트 영역은 정규 0.025 라 프레임 비율에
+    /// 따라 가로 17.5 · 세로 26 처럼 제멋대로였습니다.
+    /// </remarks>
+    private static void VerifyCropHandlesAreGrabbableWhereTheyAreDrawn()
+    {
+        // 실행 중인 창에서 잰 값입니다: 프레임 700×1049 DIP, 크롭은 전체.
+        const double frameWidth = 700.0;
+        const double frameHeight = 1049.0;
+        CropDisplayRect full = new(0.0, 0.0, 1.0, 1.0);
+        double halfCorner = CropInteraction.HandleSize / 2.0;
+
+        Check(
+            CropInteraction.BeginDrag(new CropDisplayPoint(0.0, 0.0), full, frameWidth, frameHeight)
+                == CropDragMode.TopLeft,
+            "crop handle grabs at the very corner");
+        Check(
+            CropInteraction.BeginDrag(
+                new CropDisplayPoint((halfCorner - 0.5) / frameWidth, (halfCorner - 0.5) / frameHeight),
+                full,
+                frameWidth,
+                frameHeight) == CropDragMode.TopLeft,
+            "crop handle grabs at its inner edge");
+        Check(
+            CropInteraction.BeginDrag(
+                new CropDisplayPoint(8.0 / frameWidth, 8.0 / frameHeight),
+                full,
+                frameWidth,
+                frameHeight) == CropDragMode.Create,
+            "past the handle the drag creates a new rectangle");
+        Check(
+            CropInteraction.BeginDrag(
+                new CropDisplayPoint(0.5 + (11.0 / frameWidth), 0.0),
+                full,
+                frameWidth,
+                frameHeight) == CropDragMode.Top,
+            "the top handle is long across");
+        Check(
+            CropInteraction.BeginDrag(
+                new CropDisplayPoint(0.5 + (13.0 / frameWidth), 0.0),
+                full,
+                frameWidth,
+                frameHeight) != CropDragMode.Top,
+            "the top handle stops at its drawn width");
+
+        // 그림 밖 여백까지 받아 가장자리로 붙입니다 — 핸들의 바깥 절반입니다.
+        PreviewFrame frame = new(100.0, 50.0, frameWidth, frameHeight);
+        bool outerMapped = frame.TryMapPoint(
+            100.0 - 6.0,
+            50.0 - 6.0,
+            CropInteraction.LongHandleSize / 2.0,
+            out CropDisplayPoint outer,
+            out bool insideOuter);
+        Check(outerMapped, "the outer half of a handle still maps");
+        Check(!insideOuter, "the outer half is reported as outside");
+        Check(outer.X == 0.0 && outer.Y == 0.0, "the outer half clamps to the edge");
+        Check(
+            !frame.TryMapPoint(
+                100.0 - 40.0,
+                50.0 - 40.0,
+                CropInteraction.LongHandleSize / 2.0,
+                out _,
+                out _),
+            "far outside the frame is still refused");
+    }
+
+    /// <summary>
+    /// 비율을 고르지 않았을 때 자물쇠는 <b>지금 사각형</b>의 비율을 잠급니다 — macOS
+    /// <c>cropAspectLockRatio(for:)</c> 와 같습니다. 앞 판은 null 을 내서 자물쇠가 아무
+    /// 일도 하지 않았습니다.
+    /// </summary>
+    private static void VerifyAspectLockUsesTheCurrentRectangleWhenNoRatioIsChosen()
+    {
+        const uint width = 6000U;
+        const uint height = 4000U;
+        CropDisplayRect square = new(0.25, 0.25, 0.25, 0.375);
+
+        double? free = CropInteraction.LockedNormalizedAspectRatio(
+            true, null, width, height, ImageRotation.Degrees0, square);
+        Check(free is not null, "the lock without a chosen ratio is not null");
+        // 화소 비율 = 0.25*6000 / 0.375*4000 = 1500/1500 = 1 → 정규 = 1 * 4000/6000.
+        Check(
+            free is { } ratio && Math.Abs(ratio - (4000.0 / 6000.0)) < 1e-9,
+            "the lock keeps the rectangle's own pixel ratio");
+
+        double? chosen = CropInteraction.LockedNormalizedAspectRatio(
+            true, 3.0 / 2.0, width, height, ImageRotation.Degrees0, square);
+        Check(
+            chosen is { } picked && Math.Abs(picked - (1.5 * 4000.0 / 6000.0)) < 1e-9,
+            "a chosen ratio wins over the rectangle");
+
+        Check(
+            CropInteraction.LockedNormalizedAspectRatio(
+                false, null, width, height, ImageRotation.Degrees0, square) is null,
+            "an unlocked aspect is still null");
+
+        double? whole = CropInteraction.LockedNormalizedAspectRatio(
+            true, null, width, height, ImageRotation.Degrees0);
+        Check(
+            whole is { } all && Math.Abs(all - 1.0) < 1e-9,
+            "without a rectangle the whole image ratio is locked");
+
+        double? turned = CropInteraction.LockedNormalizedAspectRatio(
+            true, 3.0 / 2.0, width, height, ImageRotation.Degrees90);
+        Check(
+            turned is { } spun && Math.Abs(spun - (1.5 * 6000.0 / 4000.0)) < 1e-9,
+            "rotation swaps the pixel box");
+    }
+
     private static void VerifyDevelopedPixelSizeFollowsTheTransform()
     {
         const uint width = 5088U;

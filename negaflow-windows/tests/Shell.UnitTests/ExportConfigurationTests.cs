@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Negaflow.Catalog;
 using Negaflow.Interop;
@@ -223,9 +223,13 @@ internal static class ExportConfigurationTests
             Simulation = SoftProofSimulation.PaperAndBlackInk,
             GamutWarningEnabled = true,
         };
+        // 색영역 경고는 프루프와 <b>별개의 스위치</b>입니다. macOS 도
+        // `destinationGamutWarningEnabled` 를 따로 들고 있고, 프루프를 껐다고 이 값을 지우지
+        // 않습니다 — 지우면 켬 단추를 눌러도 곧 되돌아가 아예 눌리지 않는 것처럼 보입니다.
+        // 실제로 표시할지는 쓰는 자리에서 프루프가 켜졌는지 함께 봅니다.
         Check(
-            (proofOn with { IsEnabled = false }).Normalize().GamutWarningEnabled == false,
-            "soft_proof_off_clears_the_gamut_warning");
+            (proofOn with { IsEnabled = false }).Normalize().GamutWarningEnabled,
+            "soft_proof_off_keeps_the_gamut_switch");
 
         // 프로파일을 아직 읽지 못했으면 용지·잉크를 흉내 내지 않습니다.
         SoftProofSettings withoutMedia = proofOn.Normalize().ToSettings(null);

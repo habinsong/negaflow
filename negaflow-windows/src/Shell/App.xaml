@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Application
     x:Class="Negaflow.Shell.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -32,6 +32,10 @@
                     <SolidColorBrush x:Key="NegaflowRatingFilledBrush" Color="#FF007AFF" />
                     <SolidColorBrush x:Key="NegaflowRatingEmptyBrush" Color="#73000000" />
                     <SolidColorBrush x:Key="NegaflowAccentBrush" Color="#FF007AFF" />
+                    <!-- 파일 목록 한 줄의 글자·아이콘입니다. macOS `Color.primary` 는 밝은
+                         테마에서 순검정입니다. WinUI 의 TextFillColorPrimaryBrush 는
+                         #E4000000(89%)이라 흐려 보입니다(실측). -->
+                    <SolidColorBrush x:Key="NegaflowRowTextBrush" Color="#FF000000" />
                     <SolidColorBrush x:Key="NegaflowAccentSoftBrush" Color="#33007AFF" />
                     <!-- 인화 인스펙터 탭의 고른 칸입니다. macOS `accentColor.opacity(0.16)`. -->
                     <SolidColorBrush x:Key="NegaflowAccentTabBrush" Color="#29007AFF" />
@@ -74,6 +78,8 @@
                     <SolidColorBrush x:Key="NegaflowRatingFilledBrush" Color="#FF0A84FF" />
                     <SolidColorBrush x:Key="NegaflowRatingEmptyBrush" Color="#73FFFFFF" />
                     <SolidColorBrush x:Key="NegaflowAccentBrush" Color="#FF0A84FF" />
+                    <!-- 어두운 테마에서는 순백입니다. -->
+                    <SolidColorBrush x:Key="NegaflowRowTextBrush" Color="#FFFFFFFF" />
                     <SolidColorBrush x:Key="NegaflowAccentSoftBrush" Color="#330A84FF" />
                     <SolidColorBrush x:Key="NegaflowAccentTabBrush" Color="#290A84FF" />
                     <SolidColorBrush x:Key="NegaflowHoverFillBrush" Color="#1FFFFFFF" />
@@ -111,6 +117,7 @@
                     <SolidColorBrush x:Key="NegaflowRatingFilledBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="NegaflowRatingEmptyBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
                     <SolidColorBrush x:Key="NegaflowAccentBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <SolidColorBrush x:Key="NegaflowRowTextBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
                     <SolidColorBrush x:Key="NegaflowAccentSoftBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="NegaflowAccentTabBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="NegaflowHoverFillBrush" Color="{ThemeResource SystemColorHighlightColor}" />
@@ -267,9 +274,15 @@
             <!-- 폴더 목록 한 줄의 색입니다. 코드에서 Application.Current.Resources 로 읽으면
                  ThemeDictionaries 가 요소 테마로 풀리지 않으므로, 위 주의대로 여기서 겁니다. -->
             <Style TargetType="sources:LibraryFolderTreeView">
-                <Setter Property="sources:LibraryFolderRowBrushes.AccentBrush" Value="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                <Setter Property="sources:LibraryFolderRowBrushes.PrimaryBrush" Value="{ThemeResource TextFillColorPrimaryBrush}" />
-                <Setter Property="sources:LibraryFolderRowBrushes.SecondaryBrush" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+                <!-- 고른 사진과 그 폴더는 <b>맥이 쓰는 파랑</b>입니다. 라이트·다크 모두
+                     같은 계열이며(#007AFF · #0A84FF), Windows 시스템 강조색은 사용자가
+                     바꿀 수 있어 맥과 달라지므로 쓰지 않습니다. -->
+                <Setter Property="sources:LibraryFolderRowBrushes.AccentBrush" Value="{ThemeResource NegaflowAccentBrush}" />
+                <!-- 라이트=검정, 다크=흰색. 두 값 모두 <b>불투명도 100%</b> 입니다 — 흐린
+                     회색으로 두면 폴더와 사진 이름이 모두 꺼져 보입니다. 장수와 ✕ 도 같은
+                     색입니다(사용자 지시: "아이콘과 텍스트 모두"). -->
+                <Setter Property="sources:LibraryFolderRowBrushes.PrimaryBrush" Value="{ThemeResource NegaflowRowTextBrush}" />
+                <Setter Property="sources:LibraryFolderRowBrushes.SecondaryBrush" Value="{ThemeResource NegaflowRowTextBrush}" />
                 <Setter Property="sources:LibraryFolderRowBrushes.HeaderBackground" Value="{ThemeResource NegaflowSubtleFillBrush}" />
             </Style>
             <Style TargetType="controls:SettingsSection">
@@ -415,6 +428,37 @@
                 <Setter Property="CornerRadius" Value="10" />
                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                 <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            </Style>
+            <!--
+                필름스트립 칸의 선택 표시입니다. WinUI 기본은 <b>왼쪽 세로 막대</b>인데,
+                여기서는 <b>위쪽 가로 막대</b>로 둡니다. 크기·모양·색은 기본과 같습니다 —
+                실행 중인 창에서 잰 값(배율 1.5)입니다: 두께 5px=3, 길이 153px=102,
+                가장자리에서 6px=4, 끝 테이퍼 1px → 반지름 1.5, 색 #007AFF.
+            -->
+            <!--
+                필름스트립 칸입니다. WinUI 기본 선택 표시(<b>왼쪽 세로 막대</b>)만 끕니다 —
+                같은 막대를 칸 템플릿의 <b>위쪽 가로</b>로 다시 그립니다. 프리젠터를 Grid 로
+                감싸면 XAML 이 죽습니다(실측: 0xc000027b, Microsoft.UI.Xaml.dll). 그래서
+                프리젠터는 템플릿의 뿌리 그대로 둡니다.
+            -->
+            <Style x:Key="NegaflowFilmstripItemStyle" TargetType="ListViewItem">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListViewItem">
+                            <ListViewItemPresenter
+                                Control.IsTemplateFocusTarget="True"
+                                ContentMargin="{TemplateBinding Padding}"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                SelectionIndicatorVisualEnabled="False"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
         </ResourceDictionary>
     </Application.Resources>

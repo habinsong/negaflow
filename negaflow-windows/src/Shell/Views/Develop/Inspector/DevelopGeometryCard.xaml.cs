@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Negaflow.Catalog;
@@ -15,7 +15,59 @@ public sealed partial class DevelopGeometryCard : UserControl
 {
     private bool isSynchronizing;
 
-    public DevelopGeometryCard() => InitializeComponent();
+    public DevelopGeometryCard()
+    {
+        InitializeComponent();
+        // 아이콘 색은 코드에서 칠합니다. `{ThemeResource}` 는 스타일이나 템플릿이 <b>걸릴
+        // 때 한 번</b> 풀리고 테마를 바꿔도 다시 풀리지 않습니다 — 실측: 어둡게로 시작하면
+        // 흰색, 밝게로 시작하면 검정이지만, 켜 둔 채로 바꾸면 그대로였습니다.
+        ApplyToolIconColor();
+        ActualThemeChanged += (_, _) => ApplyToolIconColor();
+    }
+
+    /// <summary>
+    /// 다섯 단추의 아이콘과 알약 바탕 색입니다. 아이콘은 라이트에서 <b>순검정</b>,
+    /// 다크에서 <b>순백</b>이고, 알약은 <b>기본 음영</b>(라이트 6% 검정 · 다크 9% 흰색)입니다.
+    /// </summary>
+    private void ApplyToolIconColor()
+    {
+        Microsoft.UI.Xaml.Media.Brush icon = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+            ActualTheme == ElementTheme.Dark
+                ? Microsoft.UI.Colors.White
+                : Microsoft.UI.Colors.Black);
+        // 단추의 <c>Foreground</c> 를 바꾸는 것만으로는 아이콘이 따라오지 않습니다 —
+        // 실측: 테마를 바꾸면 이 메서드는 돌지만(로그 확인) 아이콘 색은 그대로였습니다.
+        // 그림에 직접 칠합니다.
+        foreach (VectorIcon glyph in new[]
+        {
+            CropIcon,
+            RotateLeftIcon,
+            RotateRightIcon,
+            FlipHorizontalIcon,
+            FlipVerticalIcon,
+        })
+        {
+            glyph.Foreground = icon;
+        }
+
+        // 알약 바탕은 <b>기본 음영</b>입니다 — App.xaml 의 `NegaflowSubtleFillBrush` 와
+        // 같은 값(라이트 6% 검정 · 다크 9% 흰색)이며, 테마가 바뀌면 여기서 다시 칠합니다.
+        Microsoft.UI.Xaml.Media.Brush pill = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+            ActualTheme == ElementTheme.Dark
+                ? Windows.UI.Color.FromArgb(0x16, 0xFF, 0xFF, 0xFF)
+                : Windows.UI.Color.FromArgb(0x10, 0x00, 0x00, 0x00));
+        foreach (Button button in new[]
+        {
+            CropButton,
+            RotateLeftButton,
+            RotateRightButton,
+            FlipHorizontalButton,
+            FlipVerticalButton,
+        })
+        {
+            button.Background = pill;
+        }
+    }
 
     public event EventHandler? CropClicked;
 

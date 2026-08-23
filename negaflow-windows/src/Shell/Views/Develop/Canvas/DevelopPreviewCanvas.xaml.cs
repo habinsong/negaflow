@@ -45,6 +45,9 @@ public sealed partial class DevelopPreviewCanvas : UserControl
     public DevelopPreviewCanvas()
     {
         InitializeComponent();
+        // HUD 끌기는 안쪽 단추가 눌림을 먼저 먹어도 받아야 합니다 — `HookHud` 주석 참고.
+        HookHud(CompareHud, CanvasHudKind.Compare);
+        HookHud(ZoomHud, CanvasHudKind.Zoom);
         sampler = new DevelopCanvasSampler(this);
         cropOverlay = new DevelopCropOverlayPresenter(this);
         guided = new DevelopCanvasGuidedOverlay(this);
@@ -201,12 +204,50 @@ public sealed partial class DevelopPreviewCanvas : UserControl
     public void ReleaseHost(Microsoft.UI.Xaml.Input.Pointer pointer) =>
         CanvasHost.ReleasePointerCapture(pointer);
 
+    /// <summary>
+    /// 크롭용 좌표 옮기기입니다. <paramref name="margin"/> 만큼 그림 밖도 받아 가장자리로
+    /// 붙이고, 원래 자리가 그림 안이었는지와 프레임 크기를 함께 돌려줍니다.
+    /// </summary>
+    public bool TryMapPointerForCrop(
+        PointerRoutedEventArgs args,
+        double margin,
+        out CropDisplayPoint point,
+        out bool inside,
+        out double frameWidth,
+        out double frameHeight)
+    {
+        point = default;
+        inside = false;
+        frameWidth = 0.0;
+        frameHeight = 0.0;
+        Windows.Foundation.Point position = args.GetCurrentPoint(CanvasHost).Position;
+        if (!TryGetPreviewFrame(out PreviewFrame frame))
+        {
+            return false;
+        }
+        frameWidth = frame.Width;
+        frameHeight = frame.Height;
+        bool mapped = frame.TryMapPoint(position.X, position.Y, margin, out point, out inside);
+        if (Negaflow.Shell.PreviewTrace.IsEnabled)
+        {
+            string at = System.FormattableString.Invariant($"({position.X:F1},{position.Y:F1})");
+            string box = System.FormattableString.Invariant(
+                $"({frame.Left:F1},{frame.Top:F1},{frame.Width:F1},{frame.Height:F1})");
+            string unit = System.FormattableString.Invariant($"({point.X:F4},{point.Y:F4})");
+            Negaflow.Shell.PreviewTrace.Write(
+                "crop.map pointer=" + at + " frame=" + box +
+                " mapped=" + mapped + " inside=" + inside + " unit=" + unit);
+        }
+        return mapped;
+    }
+
     public bool TryMapPointer(PointerRoutedEventArgs args, out CropDisplayPoint point)
     {
         Windows.Foundation.Point position = args.GetCurrentPoint(CanvasHost).Position;
         if (!TryGetPreviewFrame(out PreviewFrame frame))
         {
             point = default;
+            Negaflow.Shell.PreviewTrace.Write("crop.map noframe");
             return false;
         }
         return frame.TryMapPoint(position.X, position.Y, out point);

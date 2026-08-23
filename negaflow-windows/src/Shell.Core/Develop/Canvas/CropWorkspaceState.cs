@@ -84,16 +84,47 @@ public sealed class CropWorkspaceState
         }
     }
 
-    public bool TryBeginDrag(CropDisplayPoint point)
+    public bool TryBeginDrag(CropDisplayPoint point) =>
+        TryBeginDrag(point, 0.0, 0.0, allowCreate: true);
+
+    /// <summary>
+    /// 누른 자리에서 드래그를 시작합니다. 프레임 크기를 주면 핸들 히트 영역이 <b>그려진
+    /// 핸들과 같아집니다</b>. <paramref name="allowCreate"/> 가 거짓이면 핸들을 잡았을
+    /// 때만 시작합니다 — 그림 밖을 눌러 새 사각형이 그려지지 않게 합니다.
+    /// </summary>
+    public bool TryBeginDrag(
+        CropDisplayPoint point,
+        double frameWidth,
+        double frameHeight,
+        bool allowCreate)
     {
         if (!CanInteract || Session is null)
         {
             return false;
         }
 
+        CropDisplayRect rect = Session.Selection;
+        CropDragMode mode = CropInteraction.BeginDrag(point, rect, frameWidth, frameHeight);
+        if (!allowCreate && mode is CropDragMode.Create or CropDragMode.Move)
+        {
+            return false;
+        }
+
         DragStart = point;
-        DragStartRect = Session.Selection;
-        DragMode = CropInteraction.BeginDrag(point, DragStartRect);
+        DragStartRect = rect;
+        DragMode = mode;
+        if (Negaflow.Shell.PreviewTrace.IsEnabled)
+        {
+            string unit = System.FormattableString.Invariant($"({point.X:F4},{point.Y:F4})");
+            string box = System.FormattableString.Invariant(
+                $"({DragStartRect.X:F4},{DragStartRect.Y:F4},{DragStartRect.Width:F4},{DragStartRect.Height:F4})");
+            string lockedAspect = Session.LockedNormalizedAspectRatio is { } ratio
+                ? ratio.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)
+                : "none";
+            Negaflow.Shell.PreviewTrace.Write(
+                "crop.begin unit=" + unit + " rect=" + box +
+                " mode=" + DragMode + " lockedAspect=" + lockedAspect);
+        }
         return true;
     }
 
@@ -122,6 +153,13 @@ public sealed class CropWorkspaceState
                 break;
         }
 
+        if (Negaflow.Shell.PreviewTrace.IsEnabled)
+        {
+            CropDisplayRect now = Session.Selection;
+            string shape = System.FormattableString.Invariant(
+                $"({now.X:F4},{now.Y:F4},{now.Width:F4},{now.Height:F4}) ratio={now.Width / Math.Max(1e-9, now.Height):F4}");
+            Negaflow.Shell.PreviewTrace.Write("crop.drag " + DragMode + " rect=" + shape);
+        }
         return true;
     }
 

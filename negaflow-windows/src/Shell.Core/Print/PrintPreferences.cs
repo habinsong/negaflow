@@ -144,6 +144,18 @@ public sealed record PrintPreferences
     /// 여러 장을 한 판에 놓는 모드인지. 아니면 사진마다 한 장씩입니다 — macOS
     /// <c>packageMode</c> 와 같습니다.
     /// </summary>
+    /// <summary>
+    /// macOS <c>usesIndividualPages</c> — 판을 묶지 않고 사진마다 한 장씩 내는 레이아웃입니다.
+    /// </summary>
+    public static bool UsesIndividualPages(PrintLayoutMode mode) => PackageModeFor(mode) is null;
+
+    /// <summary>
+    /// macOS <c>usesVerticalPageStack(sourceCount:)</c> — 여러 장을 세로로 늘어놓는 중입니다.
+    /// 이때는 끌기가 스크롤과 싸우므로 캔버스 끌기를 끕니다.
+    /// </summary>
+    public static bool UsesVerticalPageStack(PrintLayoutMode mode, int sourceCount) =>
+        UsesIndividualPages(mode) && sourceCount > 1;
+
     public static PrintPackageMode? PackageModeFor(PrintLayoutMode mode) => mode switch
     {
         PrintLayoutMode.ContactSheet => PrintPackageMode.ContactSheet,
