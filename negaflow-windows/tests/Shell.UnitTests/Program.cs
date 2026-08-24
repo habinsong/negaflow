@@ -90,6 +90,7 @@ internal static class Program
         FilmBaseSidecarTests.Run();
         ScanSessionTests.Run();
         ScannerCapabilityMatrixTests.Run();
+        FilmFrameFormatTests.Run();
         LocalAdjustmentTests.Run();
         PrintLayoutTemplateTests.Run();
 
