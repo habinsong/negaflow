@@ -212,11 +212,41 @@ internal static class GrainMendInfraredStatusDiagnostics
             clock.Stop();
         }
 
-        string? undone = null;
-        dispatcher.Send(() => undone = host.Undo());
-        if (undone is null)
+        // ☠️ **여기서 `Undo()` 를 쓰면 안 됩니다.** IR 편집의 undo 는 제품 계약상
+        //    **IR 레이어를 보존**합니다 — `InfraredRecipeTests` 의
+        //    `defect_history_mode_ir_noop_undo_preserves_ir_revision_6` 가 그것을 못 박습니다.
+        //    그래서 undo 는 이름을 돌려주면서도 IR 항목을 지우지 않았고, 다음 반복이
+        //    `LibraryHostService.Infrared.cs:144` 의 "이미 IR 이 있으면 건너뛴다" 가드에 걸려
+        //    상태를 영영 못 받고 120초 타임아웃으로 끝났습니다. 그래서 warm-up 뒤 모든
+        //    표본이 실패했고 이 진단이 쓸모없어져 있었습니다.
+        //
+        //    도구별 초기화가 정확히 이 일을 합니다. macOS 의 도구별 리셋과 같은 경로입니다.
+        LibraryFrameError cleanup = LibraryFrameError.None;
+        bool selected = false;
+        dispatcher.Send(() =>
         {
-            failure ??= "infrared undo cleanup refused";
+            var panel = new DevelopPanelState(host, ToneLimits.Read(), NegativeLimits.Read());
+            selected = panel.Select(frame.Id);
+            if (selected)
+            {
+                cleanup = panel.RemoveDefectEdits(DefectEditLabelKind.Infrared);
+            }
+        });
+        if (!selected)
+        {
+            failure ??= "infrared cleanup could not select the frame";
+        }
+        else if (cleanup != LibraryFrameError.None)
+        {
+            failure ??= $"infrared cleanup refused: {cleanup}";
+        }
+        else if (host.Frames.FirstOrDefault(candidate =>
+                     string.Equals(candidate.Id, frame.Id, StringComparison.Ordinal))
+                 is { } cleaned &&
+                 cleaned.DefectRecipe?.Items.Any(item => item.Kind == DefectEditKind.Infrared) == true)
+        {
+            // 지웠다고 했는데 남아 있으면 다음 반복이 또 타임아웃합니다. 조용히 넘기지 않습니다.
+            failure ??= "infrared cleanup left the layer in place";
         }
 
         lock (sync)

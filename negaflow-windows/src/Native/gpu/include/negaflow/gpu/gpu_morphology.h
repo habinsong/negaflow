@@ -27,13 +27,6 @@ namespace negaflow::gpu {
 class GpuDevice;
 class GpuWorkingImage;
 
-/// 축 패스 한 그룹의 스레드 수입니다. `morphology.hlsl` 의 `MORPH_AXIS_GROUP` 과
-/// **같은 값이어야 합니다** — 다르면 그룹이 자기 구간을 벗어난 곳에 씁니다.
-///
-/// 축 패스는 화소당 창을 훑으므로 인접 스레드의 읽기가 크게 겹칩니다. 한 줄에 64 스레드를
-/// 두고 그 구간과 halo 를 groupshared 로 한 번만 올리면 전역 읽기가 창 크기와 무관해집니다.
-inline constexpr std::uint32_t gpu_morphology_axis_group = 64U;
-
 class GpuMorphology final {
 public:
     // `opening`·`closing` 이 쓰는 중간 텍스처 수.
