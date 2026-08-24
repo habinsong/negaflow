@@ -140,7 +140,16 @@ void morphology_matches_cpu(const GpuDevice& device, const char* const label) {
 
     // 실제로 쓰이는 반경 전부입니다 — 검출 먼지 {4, 8, 12}(`grain_mend_detector.cpp:154`),
     // 미세 입자 {1, 3}(`grain_mend_speck_detector.cpp:17`), 그리고 조기 반환 0.
-    const std::uint32_t radii[] = {0U, 1U, 3U, 4U, 8U, 12U};
+    //
+    // 뒤의 넷은 **IR 검출 때문에** 있습니다. `infrared_defect_detector.cpp:158` 의 반경은
+    // `clamp(min(width,height)/100, 4, 96)` 이라 실제 스캔(2272×3431)에서 22 이고 큰
+    // 스캔에서는 상한 96 까지 갑니다. 앞의 여섯 개만으로는 그 구간이 전혀 안 덮였습니다.
+    //
+    // 22  실제 IR 스캔이 쓰는 값.
+    // 64  `morphology.hlsl` 의 `MORPH_AXIS_GROUP` 과 같은 값 — 타일 경계.
+    // 96  groupshared 경로의 상한.
+    // 97  상한을 넘겨 직접 훑기로 내려가는 첫 값. 두 경로가 같은 값을 내야 합니다.
+    const std::uint32_t radii[] = {0U, 1U, 3U, 4U, 8U, 12U, 22U, 64U, 96U, 97U};
     const Operation operations[] = {Operation::opening, Operation::closing, Operation::top_hat};
 
     for (const Operation operation : operations) {
