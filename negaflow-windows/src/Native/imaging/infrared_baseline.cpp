@@ -1,8 +1,12 @@
 #include "infrared_baseline.h"
 
+#include "negaflow/core/parallel_rows.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
+#include <limits>
 
 namespace negaflow::imaging::infrared_detail {
 
@@ -10,13 +14,26 @@ std::vector<float> optical_density(
     const std::span<const float> plane,
     const std::span<const float> baseline) {
     std::vector<float> density(plane.size(), 0.0F);
-    for (std::size_t index = 0U; index < plane.size(); ++index) {
-        const float value = std::max(plane[index], tuning::kPlaneFloor);
-        const float base = std::max(baseline[index], tuning::kPlaneFloor);
-        if (base > value) {
-            density[index] = std::log(base / value);
+    const auto fill = [&](const std::size_t first, const std::size_t count) noexcept {
+        const std::size_t end = first + count;
+        for (std::size_t index = first; index < end; ++index) {
+            const float value = std::max(plane[index], tuning::kPlaneFloor);
+            const float base = std::max(baseline[index], tuning::kPlaneFloor);
+            if (base > value) {
+                density[index] = std::log(base / value);
+            }
         }
+    };
+    if (density.size() > std::numeric_limits<std::uint32_t>::max()) {
+        fill(0U, density.size());
+        return density;
     }
+    negaflow::core::for_each_row_block(
+        static_cast<std::uint32_t>(density.size()),
+        density.size(),
+        [&](const std::uint32_t first, const std::uint32_t count) noexcept {
+            fill(first, count);
+        });
     return density;
 }
 

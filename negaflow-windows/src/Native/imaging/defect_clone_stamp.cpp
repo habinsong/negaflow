@@ -5,8 +5,12 @@
 #include "defect_clone_stamp_types.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdint>
 #include <limits>
 #include <new>
 #include <utility>
@@ -16,6 +20,20 @@ namespace negaflow::imaging {
 namespace {
 
 using namespace negaflow::imaging::clone_stamp_detail;
+
+using TimingClock = std::chrono::steady_clock;
+
+[[nodiscard]] bool timing_enabled() noexcept {
+    std::size_t length = 0U;
+    return getenv_s(&length, nullptr, 0U, "NEGA_TIMING") == 0 && length > 0U;
+}
+
+[[nodiscard]] std::uint64_t elapsed_microseconds(
+    const TimingClock::time_point started,
+    const TimingClock::time_point finished) noexcept {
+    return static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::microseconds>(finished - started).count());
+}
 
 void discard_pixels(WorkingImage& image) noexcept {
     std::vector<negaflow::core::Rgba32F>{}.swap(image.pixels);
@@ -106,7 +124,9 @@ void discard_pixels(WorkingImage& image) noexcept {
 
 DefectCloneResult apply_defect_clone_stamps(
     WorkingImage image,
-    const DefectCloneParameters& parameters) noexcept {
+    const DefectCloneParameters& parameters,
+    const negaflow::core::CancelFlag cancel) noexcept {
+    const auto started = TimingClock::now();
     DefectCloneResult result{};
     result.image = std::move(image);
     if (!valid_layout(result.image) || !valid_parameters(parameters) ||
@@ -125,15 +145,42 @@ DefectCloneResult apply_defect_clone_stamps(
         result.status = DefectCloneStatus::ok;
         return result;
     }
+    const auto validated = TimingClock::now();
 
     try {
         const WorkingImage& item_base = result.image;
         std::vector<StoredPatch> full_strength_patches{};
         full_strength_patches.reserve(parameters.strokes.size());
         std::size_t stored_patch_bytes = 0U;
+        std::uint64_t patch_microseconds = 0U;
+        std::uint64_t composite_microseconds = 0U;
         for (const DefectCloneStroke& stroke : parameters.strokes) {
+            if (cancel.requested()) {
+                result.status = DefectCloneStatus::cancelled;
+                discard_pixels(result.image);
+                return result;
+            }
             StoredPatch patch{};
-            if (!make_patch(item_base, full_strength_patches, stroke, patch)) {
+            const auto patch_started = TimingClock::now();
+            const PatchBuildStatus patch_status = make_patch(
+                item_base,
+                full_strength_patches,
+                stroke,
+                patch,
+                cancel);
+            patch_microseconds += elapsed_microseconds(
+                patch_started, TimingClock::now());
+            if (patch_status == PatchBuildStatus::cancelled) {
+                result.status = DefectCloneStatus::cancelled;
+                discard_pixels(result.image);
+                return result;
+            }
+            if (patch_status == PatchBuildStatus::no_change) {
+                if (cancel.requested()) {
+                    result.status = DefectCloneStatus::cancelled;
+                    discard_pixels(result.image);
+                    return result;
+                }
                 continue;
             }
             const std::size_t patch_bytes =
@@ -143,16 +190,32 @@ DefectCloneResult apply_defect_clone_stamps(
                 throw std::bad_alloc{};
             }
             stored_patch_bytes += patch_bytes;
+            const auto composite_started = TimingClock::now();
             composite_patch(
                 result.image,
                 patch,
                 static_cast<float>(parameters.strength));
+            composite_microseconds += elapsed_microseconds(
+                composite_started, TimingClock::now());
             result.info.applied = true;
             ++result.info.applied_strokes;
             result.info.patched_pixels +=
                 static_cast<std::size_t>(patch.width) * patch.height;
             result.info.peak_patch_bytes = stored_patch_bytes;
             full_strength_patches.push_back(std::move(patch));
+        }
+        const auto finished = TimingClock::now();
+        if (timing_enabled()) {
+            (void)std::fprintf(
+                stderr,
+                "[clone timing] validation=%llu patches=%llu composite=%llu "
+                "total=%llu us strokes=%zu patched_pixels=%zu\n",
+                static_cast<unsigned long long>(elapsed_microseconds(started, validated)),
+                static_cast<unsigned long long>(patch_microseconds),
+                static_cast<unsigned long long>(composite_microseconds),
+                static_cast<unsigned long long>(elapsed_microseconds(started, finished)),
+                result.info.applied_strokes,
+                result.info.patched_pixels);
         }
         result.status = DefectCloneStatus::ok;
         return result;
@@ -177,6 +240,8 @@ const char* defect_clone_status_name(const DefectCloneStatus status) noexcept {
             return "kernel_failed";
         case DefectCloneStatus::allocation_failed:
             return "allocation_failed";
+        case DefectCloneStatus::cancelled:
+            return "cancelled";
     }
     return "unknown";
 }

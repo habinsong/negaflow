@@ -1,5 +1,6 @@
 #pragma once
 
+#include "negaflow/core/cancel_flag.h"
 #include "negaflow/imaging/defect_clone_stamp.h"
 #include "negaflow/imaging/defect_heal_brush.h"
 #include "negaflow/pipeline/defect_infrared_stage.h"
@@ -57,6 +58,7 @@ enum class DefectRecipeStageStatus : std::uint8_t {
     brush_failed,
     infrared_failed,
     allocation_failed,
+    cancelled,
 };
 
 struct DefectRecipeStageInfo final {
@@ -87,7 +89,15 @@ struct DefectRecipeStageResult final {
 
 [[nodiscard]] DefectRecipeStageResult apply_defect_recipe(
     negaflow::imaging::WorkingImage image,
-    const DefectRecipeParameters& parameters) noexcept;
+    const DefectRecipeParameters& parameters,
+    negaflow::core::CancelFlag cancel = {}) noexcept;
+
+[[nodiscard]] DefectRecipeStageResult apply_defect_recipe_suffix(
+    negaflow::imaging::WorkingImage image,
+    const DefectRecipeParameters& parameters,
+    std::size_t first_order_index,
+    const DefectRecipeStageInfo& prefix_info,
+    negaflow::core::CancelFlag cancel = {}) noexcept;
 
 [[nodiscard]] const char* defect_recipe_stage_status_name(
     const DefectRecipeStageResult& result) noexcept;

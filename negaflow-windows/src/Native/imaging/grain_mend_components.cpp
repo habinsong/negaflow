@@ -64,7 +64,7 @@ void build_automatic_evidence(
         : minimum_automatic_scratch_aspect;
     const double minimum_thick_defect = labeled_detection ? 4.0 : 1.0;
     const double maximum_thick_defect = labeled_detection
-        ? 12.0 + dust_sensitivity * 12.0
+        ? labeled_maximum_thickness(dust_sensitivity)
         : 0.0;
 
     // macOS `buildLabeled` 의 `dustTrustedStrong` 유무입니다. 자동은 nil 을 넘기므로

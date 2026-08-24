@@ -28,7 +28,7 @@ internal sealed class LibraryScanRunner
         }
         if (view.libraryHost.StorageRoots is not { } roots)
         {
-            view.ScanStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
+            view.SetScanStatus(AppResources.Get("libraryImportFailed", "Text"));
             return;
         }
 
@@ -61,11 +61,11 @@ internal sealed class LibraryScanRunner
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
-            view.ScanStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
+            view.SetScanStatus(AppResources.Get("libraryImportFailed", "Text"));
             return;
         }
 
-        view.ScanStatusText.Text = AppResources.Get("scanSection", "Text");
+        view.SetScanStatus(string.Empty);
         using CancellationTokenSource cancellation = new();
         running?.Cancel();
         running = cancellation;
@@ -81,7 +81,7 @@ internal sealed class LibraryScanRunner
         catch (OperationCanceledException)
         {
             // macOS 도 취소를 실패로 적지 않습니다 — 사용자가 멈춘 것입니다.
-            view.ScanStatusText.Text = string.Empty;
+            view.SetScanStatus(string.Empty);
             return;
         }
         finally
@@ -91,7 +91,7 @@ internal sealed class LibraryScanRunner
                 running = null;
             }
         }
-        view.ScanStatusText.Text = Describe(outcome);
+        view.SetScanStatus(Describe(outcome));
         if (preview)
         {
             RemoveStalePreviewFrames();
@@ -110,6 +110,7 @@ internal sealed class LibraryScanRunner
                     view.flatbedPreview.PhysicalHeightMm);
             }
             view.renderer.Render();
+            view.RequestLibraryReload();
             return;
         }
         view.RequestLibraryReload();
@@ -139,11 +140,7 @@ internal sealed class LibraryScanRunner
     {
         if (outcome.IsSuccess)
         {
-            return AppResources.FormatIntegers(
-                "libraryFolderImportResult",
-                "Text",
-                outcome.Published,
-                1);
+            return string.Empty;
         }
         // 실패는 어느 단계에서 멈췄는지를 남깁니다. "스캔 실패" 만으로는 다시 시도하는 것 말고
         // 사용자가 할 수 있는 일이 없습니다.

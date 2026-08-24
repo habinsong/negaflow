@@ -26,7 +26,7 @@ void paint_stamp(
     double hardness) noexcept;
 
 // 획을 따라 일정 간격으로 도장을 찍어 마스크를 굽습니다.
-void rasterize_stroke(
+[[nodiscard]] bool rasterize_stroke(
     const std::vector<PixelPoint>& points,
     double spacing,
     double radius,
@@ -35,6 +35,7 @@ void rasterize_stroke(
     std::uint32_t origin_y,
     std::uint32_t width,
     std::uint32_t height,
-    std::vector<float>& mask) noexcept;
+    std::vector<float>& mask,
+    negaflow::core::CancelFlag cancel) noexcept;
 
 }  // namespace negaflow::imaging::clone_stamp_detail

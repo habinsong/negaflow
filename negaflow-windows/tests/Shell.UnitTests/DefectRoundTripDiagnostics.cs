@@ -58,36 +58,36 @@ internal static class DefectRoundTripDiagnostics
             }
 
             // 1) 실제 스캔에서 자동 검출을 돌립니다.
-            GrainMendDetectionResult sized = NativeDevelopExporter.DetectGrainMend(
-                request,
-                Span<byte>.Empty);
-            if (!sized.Result.Succeeded || sized.MaskByteCount == 0UL)
+            GrainMendDetectionResult detected = NativeDevelopExporter.DetectGrainMend(
+                request);
+            if (!detected.Result.Succeeded || detected.ReviewProposal is not { } proposal)
             {
-                Console.WriteLine($"detect refused {sized.Result.FailureName}");
+                detected.ReviewProposal?.Dispose();
+                Console.WriteLine($"detect refused {detected.Result.FailureName}");
                 return 1;
             }
-            byte[] mask = new byte[checked((int)sized.MaskByteCount)];
-            GrainMendDetectionResult filled =
-                NativeDevelopExporter.DetectGrainMend(request, mask);
-            uint sourceWidth = frame.SourceMetadata?.PixelWidth ?? 0U;
-            uint sourceHeight = frame.SourceMetadata?.PixelHeight ?? 0U;
-            if (GrainMendRegionEdit.From(
-                    mask,
-                    (int)filled.Width,
-                    (int)filled.Height,
-                    sourceWidth,
-                    sourceHeight,
-                    0U,
-                    0U,
-                    sourceWidth,
-                    sourceHeight,
-                    filled.AcceptedPixels,
-                    automatic: true) is not { } edit)
+            GrainMendReviewSession? review = null;
+            try
             {
-                Console.WriteLine("region edit refused");
-                return 1;
+                review = GrainMendReviewSession.TryCreate(proposal, automatic: true);
+                if (review?.BuildAcceptedEdit() is not { } edit)
+                {
+                    Console.WriteLine("region edit refused");
+                    return 1;
+                }
+                accepted = edit;
             }
-            accepted = edit;
+            finally
+            {
+                if (review is not null)
+                {
+                    review.Dispose();
+                }
+                else
+                {
+                    proposal.Dispose();
+                }
+            }
 
             // 2) 받아들입니다. 여기까지 와야 사진이 바뀝니다.
             DevelopPanelState panel = new(

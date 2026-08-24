@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Negaflow.Catalog;
 using Negaflow.Interop;
 
 namespace Negaflow.Shell;
@@ -74,6 +75,7 @@ public static class ScannerPluginClient
         ScannerPluginTrustIdentity approvedIdentity,
         ScannerPluginScanRequest request,
         LibraryHostService library,
+        ImageTransformRecipe? initialTransform = null,
         InfraredDetectorParameters? infraredParameters = null,
         DevelopRun? run = null,
         bool isPreviewScan = false,
@@ -83,6 +85,7 @@ public static class ScannerPluginClient
             approvedIdentity,
             request,
             library,
+            initialTransform,
             infraredParameters,
             run,
             isPreviewScan,
@@ -98,12 +101,14 @@ public static class ScannerPluginClient
         JsonElement payload,
         ScanWire wire,
         out string? infraredPath,
-        out ScannerArtifactRequirements? artifactRequirements) =>
+        out ScannerArtifactRequirements? artifactRequirements,
+        out ScannerPluginScanArea? appliedScanArea) =>
         ScannerScanCodec.TryValidateV2Result(
             payload,
             wire,
             out infraredPath,
-            out artifactRequirements);
+            out artifactRequirements,
+            out appliedScanArea);
 
     public sealed record ScanWire(
         [property: JsonPropertyName("protocolVersion")] int ProtocolVersion,

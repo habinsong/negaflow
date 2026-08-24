@@ -269,9 +269,7 @@
                         VerticalAlignment="Center"
                         Minimum="0.004"
                         Maximum="0.06"
-                        StepFrequency="0.001"
-                        SmallChange="0.001"
-                        LargeChange="0.005"
+                        StepFrequency="0"
                         AutomationProperties.AutomationId="negaflow.canvas.grainmend.brush-thickness"
                         IsThumbToolTipEnabled="False"
                         ValueChanged="OnBrushThicknessChanged" />
@@ -319,11 +317,21 @@
                     CornerRadius="14"
                     Style="{StaticResource AccentButtonStyle}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <controls:VectorIcon VerticalAlignment="Center" IconSize="12" Kind="Bandage" />
+                        <controls:VectorIcon
+                            x:Name="BrushApplyIcon"
+                            VerticalAlignment="Center"
+                            IconSize="12"
+                            Kind="Bandage" />
                         <TextBlock
                             x:Name="BrushApplyText"
                             VerticalAlignment="Center"
                             FontSize="12" />
+                        <ProgressRing
+                            x:Name="BrushApplyingRing"
+                            Width="14"
+                            Height="14"
+                            IsActive="False"
+                            Visibility="Collapsed" />
                     </StackPanel>
                 </Button>
             </StackPanel>

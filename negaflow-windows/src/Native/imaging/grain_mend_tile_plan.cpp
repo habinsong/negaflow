@@ -29,6 +29,16 @@ namespace negaflow::imaging::grain_mend_detail {
         std::llround(ratio * ratio * base_maximum_dust_area) * 1.0);
 }
 
+[[nodiscard]] std::size_t labeled_maximum_dust_area(
+    const double base,
+    const double dust_sensitivity,
+    const bool constrained_region) noexcept {
+    const double sensitivity = std::clamp(dust_sensitivity, 0.0, 1.0);
+    const double area_scale = constrained_region ? 48.0 : 5.0;
+    return static_cast<std::size_t>(
+        base * (1.0 + sensitivity * area_scale));
+}
+
 [[nodiscard]] std::uint32_t minimum_scratch_length(
     const DetectionImage& tile,
     const double dust_sensitivity) noexcept {
@@ -47,6 +57,28 @@ namespace negaflow::imaging::grain_mend_detail {
     component.minimum_y = source.minimum_y;
     component.maximum_y = source.maximum_y;
     return component;
+}
+
+void remove_tile_local_structure_grid(
+    const DetectionImage& tile,
+    std::vector<std::uint8_t>& evidence) {
+    std::vector<Component> scratch = collect_components(
+        tile, evidence, evidence, 2U);
+    if (scratch.size() < tuning::grid_line_minimum_field) {
+        return;
+    }
+    const std::vector<std::uint8_t> drops = structure_grid_drops(
+        scratch,
+        tile,
+        static_cast<int>(std::min(tile.width, tile.height)));
+    for (std::size_t index = 0U; index < scratch.size(); ++index) {
+        if (drops[index] == 0U) {
+            continue;
+        }
+        for (const std::size_t pixel : scratch[index].pixels) {
+            evidence[pixel] &= static_cast<std::uint8_t>(~2U);
+        }
+    }
 }
 
 void append_mapped_core_components(

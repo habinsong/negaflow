@@ -51,7 +51,9 @@ internal sealed class DevelopInspectorSync
         Synchronize();
         SyncBase();
         SyncTone();
-        view.RequestPreview();
+        // 프로세스/타깃은 이산 명령입니다. 같은 프레임의 이전 interactive 렌더가 길어져도
+        // 그 뒤에 줄 세우지 않고 방금 고른 recipe로 교체합니다.
+        view.RequestPreviewReplacingCurrent();
     }
 
     internal void Synchronize()
@@ -102,7 +104,7 @@ internal sealed class DevelopInspectorSync
         // macOS `onChange(of: frame.imageTransform.displayName)` → `resetViewport`.
         view.panel.Viewport.Reset();
         Synchronize();
-        view.RequestPreview();
+        view.RequestPreviewReplacingCurrent();
     }
 
     private void OnPreviewRequested(object? sender, EventArgs args)

@@ -17,6 +17,7 @@ namespace negaflow::core::tiff_probe_detail {
     std::uint64_t directory_entry_bytes,
     std::uint64_t next_directory_bytes,
     const TiffProbeLimits& limits,
+    bool select_first_directory,
     TiffProbeInfo& info) noexcept;
 
 }  // namespace negaflow::core::tiff_probe_detail

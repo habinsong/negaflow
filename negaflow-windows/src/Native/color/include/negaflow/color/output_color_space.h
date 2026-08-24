@@ -31,8 +31,11 @@ using ColorMatrix = std::array<float, 9>;
 // Display P3 or Adobe RGB, so the bytes are built here rather than read from the system -
 // a file that may not exist cannot be a dependency of an export.
 //
-// Returns an empty vector only if the space is unknown.
-[[nodiscard]] std::vector<std::uint8_t> build_icc_profile(OutputColorSpace space);
+// `linear_transfer` is supported for sRGB primaries only and is used by the defect bake TIFF.
+// Returns an empty vector if the space is unknown or the requested combination is unsupported.
+[[nodiscard]] std::vector<std::uint8_t> build_icc_profile(
+    OutputColorSpace space,
+    bool linear_transfer = false);
 
 [[nodiscard]] const char* output_color_space_name(OutputColorSpace space) noexcept;
 

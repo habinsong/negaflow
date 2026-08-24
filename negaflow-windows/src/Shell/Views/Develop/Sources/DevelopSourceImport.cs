@@ -32,10 +32,7 @@ internal sealed class DevelopSourceImport
         {
             CommitButtonText = AppResources.Get("importSection", "Value"),
         };
-        foreach (string extension in ImageSourcePaths.SupportedImportExtensions)
-        {
-            picker.FileTypeFilter.Add(extension);
-        }
+        // Windows App SDK 기본값 *.*를 사용하고 실제 WIC/RAW decode로 raster를 판정합니다.
 
         view.SetImportActionsEnabled(false);
         try
@@ -49,13 +46,13 @@ internal sealed class DevelopSourceImport
             }
 
             FrameImportPlan plan = view.libraryHost.Import(paths, DevelopmentProcess.C41);
-            view.ImportStatusText.Text = FrameImport.Describe(plan);
+            view.SetImportStatus(plan.Rows.Count > 0 ? null : FrameImport.Describe(plan));
             view.NotifyFramesImported();
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or
             NotSupportedException or ArgumentException or PathTooLongException)
         {
-            view.ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
+            view.SetImportStatus(AppResources.Get("libraryImportFailed", "Text"));
         }
         finally
         {
@@ -77,7 +74,7 @@ internal sealed class DevelopSourceImport
             CommitButtonText = AppResources.Get("importFolder", "Content"),
         };
         view.SetImportActionsEnabled(false);
-        view.ImportStatusText.Text = string.Empty;
+        view.SetImportStatus(null);
         try
         {
             Microsoft.Windows.Storage.Pickers.PickFolderResult? picked =
@@ -89,19 +86,15 @@ internal sealed class DevelopSourceImport
             FolderImportResult imported = view.libraryHost.ImportFolders(
                 [picked.Path],
                 DevelopmentProcess.C41);
-            view.ImportStatusText.Text = imported.IsSuccess
-                ? AppResources.FormatIntegers(
-                    "libraryFolderImportResult",
-                    "Text",
-                    imported.AddedFrameCount,
-                    imported.AddedFolderCount)
-                : AppResources.Get("libraryImportFailed", "Text");
+            view.SetImportStatus(imported.IsSuccess
+                ? null
+                : AppResources.Get("libraryImportFailed", "Text"));
             view.NotifyFramesImported();
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or
             NotSupportedException or ArgumentException or PathTooLongException)
         {
-            view.ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
+            view.SetImportStatus(AppResources.Get("libraryImportFailed", "Text"));
         }
         finally
         {

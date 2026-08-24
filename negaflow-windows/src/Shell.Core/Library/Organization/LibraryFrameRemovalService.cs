@@ -27,6 +27,7 @@ internal sealed class LibraryFrameRemovalService(LibraryDocumentState state)
             {
                 sidecars.Add((sidecarId, recipe.RecipeRevision));
             }
+            state.DefectRevisions.Remove(state.RowIds[index]);
             state.Payloads.RemoveAt(index);
             state.RowIds.RemoveAt(index);
         }

@@ -16,14 +16,20 @@ public sealed partial class LibraryHostService : IDisposable
 {
     private readonly LibraryAutosaveController autosave;
     private readonly LibraryAvailabilityController availability;
+    private readonly IUiDispatcher dispatcher;
     private readonly DevelopExportCoordinator coordinator;
+    private readonly IDefectBakeExporter? defectBakeExporter;
     private readonly LibraryImportController importer;
+    private readonly LibraryFolderMonitor folderMonitor;
+    private readonly LibraryInfraredCleanCoordinator infraredClean;
     private readonly ScannerFramePublisher scannerPublisher;
     private readonly LibrarySelectionState selection;
     private readonly LibrarySourceController sourceController;
     private readonly Func<string, LibrarySourceMetadata?> sourceMetadataReader;
     private LibraryDocument? document;
     private StorageRootSet? storageRoots;
+
+    internal LibraryDefectLiveStrengthStore DefectLiveStrengths { get; } = new();
 
     /// <summary>열린 카탈로그가 쓰는 디스크 자리입니다. 열기 전에는 null 입니다.</summary>
     public StorageRootSet? StorageRoots => storageRoots;
@@ -36,18 +42,50 @@ public sealed partial class LibraryHostService : IDisposable
         IUiDispatcher dispatcher,
         IDevelopExporter exporter,
         Func<string, LibrarySourceMetadata?>? sourceMetadataReader = null)
+        : this(dispatcher, exporter, sourceMetadataReader, null)
+    {
+    }
+
+    internal LibraryHostService(
+        IUiDispatcher dispatcher,
+        IDevelopExporter exporter,
+        Func<string, LibrarySourceMetadata?>? sourceMetadataReader,
+        Func<CancellationToken, Task>? infraredSelectionDelay)
     {
         ArgumentNullException.ThrowIfNull(dispatcher);
         ArgumentNullException.ThrowIfNull(exporter);
+        this.dispatcher = dispatcher;
         this.sourceMetadataReader = sourceMetadataReader ?? LibrarySourceMetadataReader.Read;
         selection = new LibrarySelectionState(
             () => SelectionChanged?.Invoke(this, EventArgs.Empty));
         availability = new LibraryAvailabilityController(dispatcher, () => document);
         autosave = new LibraryAutosaveController(dispatcher, () => document);
-        importer = new LibraryImportController(this.sourceMetadataReader, SelectSingleFrame);
-        scannerPublisher = new ScannerFramePublisher(this.sourceMetadataReader, SelectSingleFrame);
+        importer = new LibraryImportController(
+            this.sourceMetadataReader,
+            SelectSingleFrame,
+            OnImportedInfraredAttached,
+            OnStrayInfraredFramesRemoved);
+        scannerPublisher = new ScannerFramePublisher(
+            this.sourceMetadataReader,
+            SelectSingleFrame,
+            BeginScannerInfraredClean,
+            CompleteScannerInfraredClean);
         sourceController = new LibrarySourceController(this.sourceMetadataReader);
+        folderMonitor = new LibraryFolderMonitor(OnFolderChanges);
         coordinator = new DevelopExportCoordinator(exporter, dispatcher);
+        defectBakeExporter = exporter as IDefectBakeExporter;
+        infraredClean = new LibraryInfraredCleanCoordinator(
+            dispatcher,
+            () => ActiveFrameId,
+            PrepareScheduledInfraredClean,
+            static (work, run) => InfraredDefectRecipeCoordinator.DetectFiles(
+                work.VisiblePath,
+                work.InfraredPath,
+                work.SourceKind,
+                run: run),
+            CompleteScheduledInfraredClean,
+            RearmInfraredClean,
+            infraredSelectionDelay);
     }
 
     public LibraryHostState State { get; private set; } = LibraryHostState.NotOpened;
@@ -91,11 +129,17 @@ public sealed partial class LibraryHostService : IDisposable
     /// </summary>
     public event EventHandler? FrameEdited;
 
+    /// <summary>
+    /// 등록 leaf 폴더의 실제 파일 집합이 바뀌어 Library·Develop·Print 투영을 다시 만들어야 할 때
+    /// 납니다. 파일시스템 worker가 아니라 UI dispatcher에서만 발생합니다.
+    /// </summary>
+    public event EventHandler<LibraryContentChangedEventArgs>? LibraryContentChanged;
+
     /// <summary>고른 순서를 지키며, 카탈로그에 없는 id 는 버립니다.</summary>
     public void SetSelection(IEnumerable<string> frameIds, string? activeFrameId = null)
     {
         selection.Set(Frames, frameIds, activeFrameId);
-        TryInfraredCleanIfNeeded(ActiveFrameId);
+        ScheduleInfraredCleanForSelection(ActiveFrameId);
     }
 
     /// <summary>
@@ -108,7 +152,7 @@ public sealed partial class LibraryHostService : IDisposable
         LibrarySelectionModifiers modifiers)
     {
         selection.SelectFrame(Frames, frameId, orderedFrameIds, modifiers);
-        TryInfraredCleanIfNeeded(ActiveFrameId);
+        ScheduleInfraredCleanForSelection(ActiveFrameId);
     }
 
     /// <summary>Shift 로 이어 고를 때의 기준점입니다.</summary>
@@ -119,7 +163,14 @@ public sealed partial class LibraryHostService : IDisposable
     /// 가장 최근의 사용 가능한 사진을 고릅니다.
     /// </summary>
     public string? RestoreActiveFrame(string? savedFrameId)
-        => selection.RestoreActiveFrame(Frames, savedFrameId, availability.IsAvailable);
+    {
+        string? restored = selection.RestoreActiveFrame(
+            Frames,
+            savedFrameId,
+            availability.IsAvailable);
+        ScheduleInfraredCleanForSelection(restored);
+        return restored;
+    }
 
     /// <summary>
     /// 비동기 원본 가용성 검사가 끝난 뒤 오프라인 active frame을 바로잡습니다. 살아 있는
@@ -149,6 +200,8 @@ public sealed partial class LibraryHostService : IDisposable
             return State;
         }
 
+        DefectLiveStrengths.Clear();
+
         LibraryDocumentOpenResult opened = LibraryDocument.Open(roots);
         SessionError = opened.SessionError;
         StoreError = opened.StoreError;
@@ -159,6 +212,7 @@ public sealed partial class LibraryHostService : IDisposable
             storageRoots = roots;
             State = LibraryHostState.Open;
             scannerPublisher.Recover(document, storageRoots);
+            folderMonitor.Update(Folders.Select(folder => folder.SourcePath), reconcileAll: true);
             return State;
         }
 
@@ -205,7 +259,7 @@ public sealed partial class LibraryHostService : IDisposable
         LibraryFrameError error = open.Edit(frameId, edit);
         if (error != LibraryFrameError.None)
         {
-            _ = open.Undo();
+            _ = ApplyHistoryResult(open.UndoWithResult(), publishEdit: false);
             return error;
         }
 
@@ -235,14 +289,14 @@ public sealed partial class LibraryHostService : IDisposable
         {
             return 0;
         }
-        open.CaptureUndo(UndoActions.RemoveFrames);
+        LibraryUndoSnapshot pendingUndo =
+            open.CapturePendingRemovalUndo(UndoActions.RemoveFrames);
         LibraryFrameRemoval removal = open.RemoveFrames(frameIds);
         if (removal.Count == 0)
         {
-            // 아무것도 빠지지 않았으면 되돌릴 것도 없습니다.
-            _ = open.Undo();
             return 0;
         }
+        open.CommitPendingRemovalUndo(pendingUndo, removal);
         _ = SaveIfDirty();
         return removal.Count;
     }
@@ -282,7 +336,14 @@ public sealed partial class LibraryHostService : IDisposable
     public FolderImportResult ImportFolders(
         IReadOnlyList<string> folderPaths,
         DevelopmentProcess process)
-        => importer.ImportFolders(document, folderPaths, process);
+    {
+        FolderImportResult result = importer.ImportFolders(document, folderPaths, process);
+        if (result.CatalogError == CatalogStoreError.None)
+        {
+            folderMonitor.Update(Folders.Select(folder => folder.SourcePath));
+        }
+        return result;
+    }
 
     /// <summary>
     /// macOS와 같은 source/folder snapshot을 만듭니다. 작은 library는 즉시 갱신하고, 256개를
@@ -313,6 +374,16 @@ public sealed partial class LibraryHostService : IDisposable
     /// <summary>예약된 저장이 남아 있으면 창을 닫기 전에 즉시 씁니다.</summary>
     public CatalogStoreError SaveIfDirty() => autosave.SaveIfDirty();
 
+    public Task<LibraryDefectTerminationResult> PrepareForTerminationAsync(
+        string scansDirectory) =>
+        document is { } open
+            ? new LibraryDefectTerminationService(
+                defectBakeExporter,
+                sourceMetadataReader,
+                frameId => DefectLiveStrengths.Clear(frameId))
+                .PrepareAsync(open, scansDirectory)
+            : Task.FromResult(LibraryDefectTerminationResult.Success());
+
     /// <summary>
     /// 고른 사진의 원본을 다른 폴더로 옮기고 카탈로그를 따라가게 합니다. 파일 이동이 실패하면
     /// 카탈로그는 손대지 않습니다 — 없는 자리를 가리키는 사진을 만들지 않기 위해서입니다.
@@ -322,8 +393,15 @@ public sealed partial class LibraryHostService : IDisposable
         string destinationFolder)
         => sourceController.Move(document, frames, destinationFolder);
 
-    public LibrarySourceRelinkResult Relink(SourceRelinkPlan plan) =>
-        sourceController.Relink(document, plan);
+    public LibrarySourceRelinkResult Relink(SourceRelinkPlan plan)
+    {
+        LibrarySourceRelinkResult result = sourceController.Relink(document, plan);
+        if (result.IsSuccess)
+        {
+            folderMonitor.Update(Folders.Select(folder => folder.SourcePath));
+        }
+        return result;
+    }
 
     /// <summary>
     /// 현상해서 파일로 씁니다. 네이티브 호출은 워커 스레드에서 돌고 결과는 dispatcher 를 거쳐
@@ -347,8 +425,11 @@ public sealed partial class LibraryHostService : IDisposable
     {
         // 놓아 주기 전에 마지막으로 씁니다. 여기서 빠지면 마지막 1.5 초의 편집이 사라집니다.
         _ = SaveIfDirty();
+        folderMonitor.Dispose();
         autosave.Dispose();
         availability.Reset();
+        infraredClean.Dispose();
+        DefectLiveStrengths.Clear();
         document?.Dispose();
         document = null;
         State = LibraryHostState.NotOpened;
@@ -362,6 +443,12 @@ public sealed partial class LibraryHostService : IDisposable
         string frameId,
         Func<DefectSourceIdentity, DefectRecipeSnapshot?, DefectRecipeSnapshot?> build)
         => LibraryDefectEditor.AppendStroke(document, frameId, build);
+
+    internal LibraryFrameError AppendDefectStroke(
+        string frameId,
+        Func<DefectSourceIdentity, DefectRecipeSnapshot?, ulong, DefectRecipeSnapshot?> build,
+        LibraryDefectHistoryMode historyMode = LibraryDefectHistoryMode.PreservingInfrared)
+        => LibraryDefectEditor.AppendStroke(document, frameId, build, historyMode);
 
     private void SelectSingleFrame(string frameId) => SetSelection([frameId], frameId);
 

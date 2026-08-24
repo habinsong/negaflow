@@ -1,3 +1,5 @@
+using Negaflow.Catalog;
+
 namespace Negaflow.Shell;
 
 public interface IScannerPluginGateway
@@ -25,6 +27,7 @@ public interface IScannerPluginGateway
         ScannerPluginTrustIdentity approvedIdentity,
         ScannerPluginScanRequest request,
         LibraryHostService library,
+        ImageTransformRecipe? initialTransform,
         bool isPreviewScan,
         CancellationToken cancellationToken);
 

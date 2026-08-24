@@ -96,6 +96,25 @@ void run_pass(
     return true;
 }
 
+[[nodiscard]] bool filter_images_match(
+    const GpuWorkingImage& reference,
+    const GpuWorkingImage* const scratch,
+    const GpuWorkingImage& destination) noexcept {
+    if (!destination.is_valid() || destination.width() != reference.width() ||
+        destination.height() != reference.height()) {
+        return false;
+    }
+    for (int index = 0; index < GpuMorphology::filter_scratch_count; ++index) {
+        if (!scratch[index].is_valid() || scratch[index].width() != reference.width() ||
+            scratch[index].height() != reference.height() ||
+            scratch[index].texture() == reference.texture() ||
+            scratch[index].texture() == destination.texture()) {
+            return false;
+        }
+    }
+    return scratch[0].texture() != scratch[1].texture();
+}
+
 } // namespace
 
 GpuMorphology::~GpuMorphology() { reset(); }
@@ -240,10 +259,13 @@ GpuKernelStatus GpuMorphology::opening(
         return GpuKernelStatus::device_unavailable;
     }
     if (scratch == nullptr || !source.is_valid() ||
-        !distinct_and_matching(source, scratch, filter_scratch_count, destination)) {
+        !filter_images_match(source, scratch, destination)) {
         return GpuKernelStatus::invalid_arguments;
     }
     if (radius == 0U) {
+        if (destination.texture() == source.texture()) {
+            return GpuKernelStatus::ok;
+        }
         // CPU 와 같이 원본을 그대로 내보냅니다.
         const GpuImageStatus copied = destination.copy_from(device, source);
         return copied == GpuImageStatus::ok ? GpuKernelStatus::ok
@@ -268,10 +290,13 @@ GpuKernelStatus GpuMorphology::closing(
         return GpuKernelStatus::device_unavailable;
     }
     if (scratch == nullptr || !source.is_valid() ||
-        !distinct_and_matching(source, scratch, filter_scratch_count, destination)) {
+        !filter_images_match(source, scratch, destination)) {
         return GpuKernelStatus::invalid_arguments;
     }
     if (radius == 0U) {
+        if (destination.texture() == source.texture()) {
+            return GpuKernelStatus::ok;
+        }
         const GpuImageStatus copied = destination.copy_from(device, source);
         return copied == GpuImageStatus::ok ? GpuKernelStatus::ok
                                             : GpuKernelStatus::invalid_arguments;

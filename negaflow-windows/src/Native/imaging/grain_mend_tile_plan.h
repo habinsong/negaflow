@@ -58,12 +58,24 @@ struct TilePlacement {
 /// ROI 를 작게 그리든 크게 그리든 같은 물리 먼지 크기가 됩니다.
 [[nodiscard]] double base_dust_area(const WorkingImage& image) noexcept;
 
+[[nodiscard]] std::size_t labeled_maximum_dust_area(
+    double base,
+    double dust_sensitivity,
+    bool constrained_region) noexcept;
+
 /// macOS `detectLabeledWithResponse`: `max(6, max(w, h) / (120 + s * 120))`.
 [[nodiscard]] std::uint32_t minimum_scratch_length(
     const DetectionImage& tile,
     double dust_sensitivity) noexcept;
 
 [[nodiscard]] Component to_raw_component(const ClassifiedComponent& source);
+
+// macOS 타일 `buildLabeled(rejectLineGrid: true)`와 같은 자리입니다. grain-field
+// 게이트를 통과한 scratch 성분에서 타일 내부 격자만 제거하며 continuation 판정은
+// stitch 뒤 전역 단계에 남깁니다.
+void remove_tile_local_structure_grid(
+    const DetectionImage& tile,
+    std::vector<std::uint8_t>& evidence);
 
 // macOS 타일 `detectLabeled`: 게이트가 끝난 evidence 에서 성분을 모으고 그 타일에서
 // 분류한 뒤, core 화소만 전역 좌표로 옮긴다. stitch 가 이 목록을 union 한다.

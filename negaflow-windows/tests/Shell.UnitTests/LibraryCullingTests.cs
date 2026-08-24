@@ -112,6 +112,101 @@ internal static class LibraryCullingTests
             "library_undo_depth_is_capped");
     }
 
+    internal static void VerifyLibraryUndoSaveFailure(string parent)
+    {
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(
+            Path.Combine(parent, "undo-save-failure")).Roots!;
+        JsonObject frame = FrameRecord("frame-1", "IMG_0001.tif", 0.0, 1);
+
+        using CatalogSession session = CatalogSession.Open(roots).Session!;
+        Check(
+            session.Write(new CatalogSnapshot(
+                null,
+                new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                {
+                    [CatalogEntityTable.Frames] = [new("frame-1", frame)],
+                })).IsSuccess,
+            "library_undo_failure_seed");
+
+        CatalogSnapshot snapshot = session.Read().Snapshot!;
+        List<CatalogEntityRow> frameRows = [.. snapshot.Rows(CatalogEntityTable.Frames)];
+        var retainedRows = CatalogEntityTables.All
+            .Where(table => table != CatalogEntityTable.Frames)
+            .ToDictionary(
+                table => table,
+                table => (IReadOnlyList<CatalogEntityRow>)[.. snapshot.Rows(table)]);
+        var state = new LibraryDocumentState(
+            session,
+            [.. frameRows.Select(row => row.Id)],
+            [.. frameRows.Select(row => (JsonObject)row.Payload.DeepClone())],
+            retainedRows,
+            snapshot.ActiveRollId);
+        var persistence = new LibraryCatalogPersistence(state);
+        CatalogStoreError injectedError = CatalogStoreError.None;
+        var undo = new LibraryUndoCoordinator(
+            state,
+            new LibraryDefectRecipeStore(state),
+            () => injectedError == CatalogStoreError.None
+                ? persistence.Save()
+                : injectedError);
+        var editor = new LibraryFrameEditor(state);
+
+        undo.CaptureUndo("tone");
+        Check(
+            editor.Edit(
+                "frame-1",
+                new LibraryFrameEdit(new ToneAdjustment(2.5, 0, 0, 0, 0, 0), null)) ==
+                LibraryFrameError.None &&
+            persistence.Save() == CatalogStoreError.None,
+            "library_undo_failure_current_state_is_durable");
+
+        injectedError = CatalogStoreError.IoFailure;
+        LibraryHistoryResult undoFailure = undo.Undo();
+        Check(
+            undoFailure.ActionName is null &&
+            undoFailure.CatalogError == CatalogStoreError.IoFailure &&
+            state.Frames.Single().Tone.Exposure == 2.5 &&
+            undo.CanUndo && !undo.CanRedo &&
+            undo.UndoActionName == "tone" &&
+            !state.IsDirty,
+            "library_undo_save_failure_preserves_memory_stack_and_dirty_state");
+
+        injectedError = CatalogStoreError.None;
+        Check(
+            undo.Undo().ActionName == "tone" &&
+            state.Frames.Single().Tone.Exposure == 0.0 &&
+            !undo.CanUndo && undo.CanRedo,
+            "library_undo_success_moves_stack_after_save");
+
+        injectedError = CatalogStoreError.IoFailure;
+        LibraryHistoryResult redoFailure = undo.Redo();
+        Check(
+            redoFailure.ActionName is null &&
+            redoFailure.CatalogError == CatalogStoreError.IoFailure &&
+            state.Frames.Single().Tone.Exposure == 0.0 &&
+            !undo.CanUndo && undo.CanRedo &&
+            undo.RedoActionName == "tone" &&
+            !state.IsDirty,
+            "library_redo_save_failure_preserves_memory_stack_and_dirty_state");
+
+        injectedError = CatalogStoreError.RollbackFailed;
+        LibraryHistoryResult rollbackFailure = undo.Redo();
+        Check(
+            rollbackFailure.ActionName is null &&
+            rollbackFailure.RequiresRecovery &&
+            rollbackFailure.CatalogError == CatalogStoreError.RollbackFailed &&
+            state.Frames.Single().Tone.Exposure == 2.5 &&
+            !undo.CanUndo && undo.CanRedo &&
+            !state.IsDirty,
+            "library_redo_rollback_failure_reports_recovery_without_false_memory_restore");
+
+        session.Dispose();
+        using LibraryDocument reopened = LibraryDocument.Open(roots).Document!;
+        Check(
+            reopened.Frames.Single().Tone.Exposure == 0.0,
+            "library_undo_redo_save_failure_restart_keeps_last_durable_state");
+    }
+
 
     /// <summary>
     /// 비교·살펴보기에 올라가는 사진은 **격자에 보이는 차례**를 따라야 합니다 — 고른 차례가

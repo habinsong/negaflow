@@ -20,9 +20,11 @@ public static class InfraredImportPairing
     public static string ImportIdentity(string path)
     {
         ArgumentException.ThrowIfNullOrEmpty(path);
-        return Path.IsPathFullyQualified(path)
-            ? Path.GetFullPath(path)
-            : path;
+        if (!Path.IsPathFullyQualified(path))
+        {
+            return path;
+        }
+        return InfraredImportPathIdentity.ResolvePhysicalComponents(Path.GetFullPath(path));
     }
 
     /// <summary>

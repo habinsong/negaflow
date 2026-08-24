@@ -373,6 +373,24 @@ internal static unsafe class NativeDevelopRequestV18V34
         };
     }
 
+    internal static NativeDevelopExportRequestV36 BuildRequestV36(
+        NativeDevelopExportRequestV35 v35,
+        byte* defectRecipeAppendPrefixSha256,
+        uint defectRecipeAppendPrefixSha256Size,
+        uint defectRecipeAppendPrefixEditCount)
+    {
+        v35.V34.V33.V32.V31.V30.V29.V28.V27.V26.V25.V24.V21.V20.V19.V18.V17.V16.V15.V14
+            .V13.V12.V11.V10.V9.V8.V7.StructSize =
+            (uint)sizeof(NativeDevelopExportRequestV36);
+        return new NativeDevelopExportRequestV36
+        {
+            V35 = v35,
+            DefectRecipeAppendPrefixSha256 = defectRecipeAppendPrefixSha256,
+            DefectRecipeAppendPrefixSha256Size = defectRecipeAppendPrefixSha256Size,
+            DefectRecipeAppendPrefixEditCount = defectRecipeAppendPrefixEditCount,
+        };
+    }
+
     internal static byte[] BuildDefectSourceSha256(DevelopExportRequest request) =>
         request.DefectSourceIdentity is { } identity
             ? Convert.FromHexString(identity.Sha256)
@@ -380,6 +398,12 @@ internal static unsafe class NativeDevelopRequestV18V34
 
     internal static byte[] BuildDefectRecipeSha256(DevelopExportRequest request) =>
         request.DefectRecipeSha256 is { } sha256
+            ? Convert.FromHexString(sha256)
+            : [];
+
+    internal static byte[] BuildDefectRecipeAppendPrefixSha256(
+        DevelopExportRequest request) =>
+        request.DefectRecipeAppendPrefixSha256 is { } sha256
             ? Convert.FromHexString(sha256)
             : [];
 }

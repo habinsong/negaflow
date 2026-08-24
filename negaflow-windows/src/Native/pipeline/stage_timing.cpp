@@ -119,6 +119,13 @@ void dump_stage_timings() noexcept {
         static_cast<unsigned long long>(transfers.downloads),
         static_cast<unsigned long long>(transfers.downloaded_pixels),
         static_cast<double>(transfers.downloaded_bytes) / (1024.0 * 1024.0));
+    const GpuAccelerator& accelerator = GpuAccelerator::shared();
+    const char* const adapter = accelerator.adapter_description();
+    (void)std::fprintf(
+        stderr,
+        "[timing] gpu adapter=%s available=%s\n",
+        adapter != nullptr && adapter[0] != '\0' ? adapter : "none",
+        accelerator.available() ? "true" : "false");
 }
 
 } // namespace negaflow::pipeline

@@ -54,10 +54,11 @@ public readonly record struct CatalogSessionOpenResult(
 /// 세션은 SQLite 연결을 계속 붙들고 있지 않습니다. 연산마다 열고 닫으므로 backup 세대 교체와
 /// pending restore 가 파일을 치환할 수 있습니다. lock 파일은 세션이 살아 있는 동안 유지됩니다.
 /// </remarks>
-public sealed class CatalogSession : IDisposable
+public sealed partial class CatalogSession : IDisposable
 {
     private readonly StorageRootSet roots;
     private readonly object writeGate = new();
+    private readonly DefectRecipeCatalogTransaction defectRecipes;
     private CatalogProcessLock? processLock;
     private bool mutationBlocked;
 
@@ -67,6 +68,7 @@ public sealed class CatalogSession : IDisposable
         CatalogPendingRestoreApplicationResult pendingRestoreApplication)
     {
         this.roots = roots;
+        defectRecipes = new DefectRecipeCatalogTransaction(roots);
         this.processLock = processLock;
         PendingRestoreApplication = pendingRestoreApplication;
     }
@@ -114,6 +116,13 @@ public sealed class CatalogSession : IDisposable
                 pending.ObservedVersion);
         }
 
+        if (CatalogCommitRollback.HasUnresolvedRollbackArtifact(roots))
+        {
+            held.Dispose();
+            return CatalogSessionOpenResult.Failure(
+                CatalogSessionError.MissingAuthoritativeData);
+        }
+
         CatalogReadResult catalog = SqliteCatalogStore.Read(roots.CatalogPath);
         if (catalog.Snapshot is { } snapshot)
         {
@@ -125,6 +134,15 @@ public sealed class CatalogSession : IDisposable
                 return CatalogSessionOpenResult.Failure(
                     CatalogSessionError.MissingAuthoritativeData,
                     defectSidecarError: health.Error);
+            }
+            DefectSidecarError defectCleanup =
+                DefectSidecarCatalogHealth.CleanupUndeclaredFrameSidecars(roots, snapshot);
+            if (defectCleanup != DefectSidecarError.None)
+            {
+                held.Dispose();
+                return CatalogSessionOpenResult.Failure(
+                    CatalogSessionError.MissingAuthoritativeData,
+                    defectSidecarError: defectCleanup);
             }
         }
         else if (catalog.Error == CatalogStoreError.NotFound &&
@@ -164,57 +182,6 @@ public sealed class CatalogSession : IDisposable
                     CatalogStoreError.MissingAuthoritativeData);
             }
             return ObserveCommitResult(CatalogCommitVerifier.Commit(snapshot, roots));
-        }
-    }
-
-    public DefectSidecarReadResult ReadDefectRecipe(Guid frameId)
-    {
-        lock (writeGate)
-        {
-            RequireOpen();
-            return DefectSidecarStore.Read(roots, frameId);
-        }
-    }
-
-    /// <summary>
-    /// sidecar를 먼저 durable하게 기록합니다. 호출자는 이 성공 뒤 catalog의
-    /// hasDefectEdits를 true로 commit해야 하며, 반대 순서는 Write가 거부합니다.
-    /// </summary>
-    public DefectSidecarWriteResult WriteDefectRecipe(
-        DefectRecipeSnapshot snapshot)
-    {
-        ArgumentNullException.ThrowIfNull(snapshot);
-        lock (writeGate)
-        {
-            RequireOpen();
-            if (mutationBlocked)
-            {
-                return DefectSidecarWriteResult.Failure(
-                    DefectSidecarError.IoFailure);
-            }
-            return DefectSidecarStore.Write(roots, snapshot);
-        }
-    }
-
-    /// <summary>
-    /// catalog가 더는 해당 frame의 edit을 선언하지 않을 때만 sidecar를 지웁니다.
-    /// catalog false commit → sidecar remove 순서라 crash 시 orphan만 남고 recipe 유실은 없습니다.
-    /// </summary>
-    public DefectSidecarDeleteResult RemoveDefectRecipe(
-        Guid frameId,
-        ulong minimumRevision)
-    {
-        lock (writeGate)
-        {
-            RequireOpen();
-            CatalogReadResult current = SqliteCatalogStore.Read(roots.CatalogPath);
-            if (current.Snapshot is not { } snapshot ||
-                CatalogDeclaresDefectEdits(snapshot, frameId))
-            {
-                return DefectSidecarDeleteResult.Failure(
-                    DefectSidecarError.InvalidSnapshot);
-            }
-            return DefectSidecarStore.Remove(roots, frameId, minimumRevision);
         }
     }
 
@@ -384,27 +351,6 @@ public sealed class CatalogSession : IDisposable
     private void RequireOpen()
     {
         ObjectDisposedException.ThrowIf(!IsOpen, this);
-    }
-
-    private static bool CatalogDeclaresDefectEdits(
-        CatalogSnapshot snapshot,
-        Guid frameId)
-    {
-        string expected = frameId.ToString("D");
-        foreach (CatalogEntityRow frame in snapshot.Rows(CatalogEntityTable.Frames))
-        {
-            if (!string.Equals(frame.Id, expected, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-            return frame.Payload.TryGetPropertyValue(
-                    "hasDefectEdits",
-                    out System.Text.Json.Nodes.JsonNode? node) &&
-                node is System.Text.Json.Nodes.JsonValue value &&
-                value.TryGetValue(out bool hasEdits) &&
-                hasEdits;
-        }
-        return false;
     }
 
     private static CatalogSessionError Translate(CatalogProcessLockError error) => error switch

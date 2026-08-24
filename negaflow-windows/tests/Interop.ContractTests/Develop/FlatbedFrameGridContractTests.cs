@@ -8,7 +8,7 @@ internal static unsafe class FlatbedFrameGridContractTests
     {
         context.Check(sizeof(NativeFlatbedFrameGridSummaryV1) == 24,
               "flatbed_summary_size");
-        context.Check(sizeof(NativeFlatbedFrameDetectionV1) == 56,
+        context.Check(sizeof(NativeFlatbedFrameDetectionV1) == 64,
               "flatbed_detection_size");
 
         const uint width = 640;

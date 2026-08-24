@@ -26,6 +26,82 @@ internal readonly record struct DefectCatalogHealthResult(
 /// </summary>
 internal static class DefectSidecarCatalogHealth
 {
+    public static DefectSidecarError CleanupUndeclaredFrameSidecars(
+        StorageRootSet roots,
+        CatalogSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(roots);
+        ArgumentNullException.ThrowIfNull(snapshot);
+        lock (DefectSidecarStore.Gate)
+        {
+            if (!DefectSidecarFile.HasValidRoots(roots))
+            {
+                return DefectSidecarError.InvalidStorageRoots;
+            }
+            if (File.Exists(roots.DefectRecipeRoot) ||
+                StoragePathPolicy.IsExistingReparsePoint(roots.DefectRecipeRoot))
+            {
+                return DefectSidecarError.ReparsePointNotAllowed;
+            }
+
+            List<Guid> cleanupTargets = [];
+            HashSet<Guid> frameIds = [];
+            foreach (CatalogEntityRow frame in snapshot.Rows(CatalogEntityTable.Frames))
+            {
+                bool hasEdits = false;
+                if (frame.Payload.TryGetPropertyValue(
+                        "hasDefectEdits",
+                        out System.Text.Json.Nodes.JsonNode? node) &&
+                    node is not null)
+                {
+                    if (node is not System.Text.Json.Nodes.JsonValue value ||
+                        !value.TryGetValue(out hasEdits))
+                    {
+                        return DefectSidecarError.InvalidContent;
+                    }
+                }
+                if (!Guid.TryParseExact(frame.Id, "D", out Guid frameId) ||
+                    frameId == Guid.Empty)
+                {
+                    if (hasEdits)
+                    {
+                        return DefectSidecarError.InvalidFrameId;
+                    }
+                    continue;
+                }
+                if (!frameIds.Add(frameId))
+                {
+                    return DefectSidecarError.InvalidFrameId;
+                }
+                if (!hasEdits)
+                {
+                    cleanupTargets.Add(frameId);
+                }
+            }
+
+            foreach (Guid frameId in cleanupTargets)
+            {
+                DefectSidecarReadResult read = DefectSidecarFile.ReadFile(
+                    DefectSidecarStore.PathFor(roots, frameId),
+                    frameId);
+                if (read.Snapshot is null && read.Error != DefectSidecarError.NotFound)
+                {
+                    return read.Error;
+                }
+            }
+            foreach (Guid frameId in cleanupTargets)
+            {
+                DefectSidecarDeleteResult cleaned =
+                    DefectSidecarStore.CleanupUndeclared(roots, frameId);
+                if (!cleaned.IsSuccess)
+                {
+                    return cleaned.Error;
+                }
+            }
+            return DefectSidecarError.None;
+        }
+    }
+
     public static DefectCatalogHealthResult ValidateCatalogDeclarations(
         StorageRootSet roots,
         CatalogSnapshot snapshot)

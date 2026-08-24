@@ -31,7 +31,8 @@ public readonly record struct FlatbedFrameDetection(
     double Height,
     double Confidence,
     uint Row,
-    uint Column);
+    uint Column,
+    double StraightenAngle = 0.0);
 
 public sealed record FlatbedFrameGridResult(
     FlatbedFrameGridStatus Status,
@@ -59,6 +60,7 @@ internal struct NativeFlatbedFrameDetectionV1
     internal double Width;
     internal double Height;
     internal double Confidence;
+    internal double StraightenAngle;
 }
 
 public static unsafe class NativeFlatbedFrameGridDetector
@@ -72,12 +74,34 @@ public static unsafe class NativeFlatbedFrameGridDetector
         double physicalWidthMm,
         double physicalHeightMm,
         FlatbedFrameFormat format = FlatbedFrameFormat.FullFrame35mm,
-        DevelopRun? run = null)
+        DevelopRun? run = null) =>
+        DetectCore(
+            luminance, width, height, physicalWidthMm, physicalHeightMm,
+            format, run, edges: false);
+
+    public static FlatbedFrameGridResult DetectEdges(
+        ReadOnlySpan<float> luminance,
+        uint width,
+        uint height,
+        FlatbedFrameFormat format = FlatbedFrameFormat.FullFrame35mm,
+        DevelopRun? run = null) =>
+        DetectCore(luminance, width, height, 0.0, 0.0, format, run, edges: true);
+
+    private static FlatbedFrameGridResult DetectCore(
+        ReadOnlySpan<float> luminance,
+        uint width,
+        uint height,
+        double physicalWidthMm,
+        double physicalHeightMm,
+        FlatbedFrameFormat format,
+        DevelopRun? run,
+        bool edges)
     {
         ArgumentOutOfRangeException.ThrowIfZero(width);
         ArgumentOutOfRangeException.ThrowIfZero(height);
-        if (!double.IsFinite(physicalWidthMm) || !double.IsFinite(physicalHeightMm) ||
-            physicalWidthMm <= 0.0 || physicalHeightMm <= 0.0)
+        if (!edges &&
+            (!double.IsFinite(physicalWidthMm) || !double.IsFinite(physicalHeightMm) ||
+             physicalWidthMm <= 0.0 || physicalHeightMm <= 0.0))
         {
             throw new ArgumentOutOfRangeException(nameof(physicalWidthMm));
         }
@@ -99,21 +123,33 @@ public static unsafe class NativeFlatbedFrameGridDetector
         {
             NativeDevelopRunStateV1* state = run is null ? null : run.StatePointer;
             uint* cancel = state is null ? null : &state->CancelRequested;
-            status = NativeFlatbedDetect.nf_detect_flatbed_frame_grid_v1(
-                pixels,
-                checked(width * (uint)sizeof(float)),
-                width,
-                height,
-                physicalWidthMm,
-                physicalHeightMm,
-                (uint)format,
-                cancel,
-                &summary,
-                &handle);
+            status = edges
+                ? NativeFlatbedDetect.nf_detect_flatbed_frame_edges_v1(
+                    pixels,
+                    checked(width * (uint)sizeof(float)),
+                    width,
+                    height,
+                    (uint)format,
+                    cancel,
+                    &summary,
+                    &handle)
+                : NativeFlatbedDetect.nf_detect_flatbed_frame_grid_v1(
+                    pixels,
+                    checked(width * (uint)sizeof(float)),
+                    width,
+                    height,
+                    physicalWidthMm,
+                    physicalHeightMm,
+                    (uint)format,
+                    cancel,
+                    &summary,
+                    &handle);
         }
         if (status != StatusOk)
         {
-            throw NativeFailure("nf_detect_flatbed_frame_grid_v1", status);
+            throw NativeFailure(
+                edges ? "nf_detect_flatbed_frame_edges_v1" : "nf_detect_flatbed_frame_grid_v1",
+                status);
         }
         try
         {
@@ -153,7 +189,9 @@ public static unsafe class NativeFlatbedFrameGridDetector
                 }
                 if (!double.IsFinite(detection.X) || !double.IsFinite(detection.Y) ||
                     !double.IsFinite(detection.Width) || !double.IsFinite(detection.Height) ||
-                    !double.IsFinite(detection.Confidence) || detection.X < 0.0 ||
+                    !double.IsFinite(detection.Confidence) ||
+                    !double.IsFinite(detection.StraightenAngle) ||
+                    Math.Abs(detection.StraightenAngle) > 45.0 || detection.X < 0.0 ||
                     detection.Y < 0.0 || detection.Width <= 0.0 || detection.Height <= 0.0 ||
                     detection.X + detection.Width > 1.0 || detection.Y + detection.Height > 1.0 ||
                     detection.Confidence < 0.0 || detection.Confidence > 1.0)
@@ -169,7 +207,8 @@ public static unsafe class NativeFlatbedFrameGridDetector
                     detection.Height,
                     detection.Confidence,
                     detection.Row,
-                    detection.Column);
+                    detection.Column,
+                    detection.StraightenAngle);
             }
             return new FlatbedFrameGridResult(resultStatus, detections);
         }

@@ -12,6 +12,9 @@ extern "C" {
    the top. ROI y is bottom-origin in raw-image pixels, matching the fixed macOS
    recipe. The edit list is applied in order before negative development. */
 #define NF_DEFECT_REGION_MAX_EDITS 4096U
+#define NF_DEFECT_INFRARED_MAX_CLUSTERS 100000U
+#define NF_DEFECT_RECIPE_MAX_NATIVE_REGION_DESCRIPTORS \
+    (NF_DEFECT_REGION_MAX_EDITS + NF_DEFECT_INFRARED_MAX_CLUSTERS)
 #define NF_DEFECT_REGION_MAX_MASK_BYTES (512U * 1024U * 1024U)
 
 typedef struct nf_defect_region_edit_v1 {
@@ -55,7 +58,8 @@ typedef struct nf_develop_export_request_v19 {
 #define NF_DEFECT_CLONE_MAX_EDITS 4096U
 #define NF_DEFECT_CLONE_MAX_STROKES 100000U
 #define NF_DEFECT_CLONE_MAX_POINTS 5000000U
-#define NF_DEFECT_RECIPE_MAX_ORDERED_EDITS 8192U
+#define NF_DEFECT_RECIPE_MAX_ORDERED_EDITS \
+    (NF_DEFECT_REGION_MAX_EDITS + NF_DEFECT_INFRARED_MAX_CLUSTERS)
 
 #define NF_DEFECT_RECIPE_EDIT_REGION 0U
 #define NF_DEFECT_RECIPE_EDIT_CLONE 1U
@@ -147,7 +151,8 @@ typedef struct nf_develop_export_request_v21 {
     uint32_t defect_brush_point_reserved;
 } nf_develop_export_request_v21;
 
-#define NF_DEFECT_INFRARED_MAX_EDITS 4096U
+#define NF_DEFECT_INFRARED_MAX_ITEMS 4096U
+#define NF_DEFECT_INFRARED_MAX_EDITS NF_DEFECT_INFRARED_MAX_CLUSTERS
 #define NF_DEFECT_INFRARED_MAX_ATTENUATION_BYTES (512U * 1024U * 1024U)
 
 /* An infrared descriptor turns one v21 region descriptor into a distinct IR

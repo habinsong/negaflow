@@ -50,7 +50,7 @@ internal static class NativeDevelopDefectValidator
         IReadOnlyList<DevelopDefectInfraredEdit> edits)
     {
         ArgumentNullException.ThrowIfNull(edits);
-        if (edits.Count > MaximumDefectInfraredEdits)
+        if (edits.Count > MaximumDefectInfraredItems)
         {
             throw new ArgumentException(
                 "The defect recipe contains too many infrared edits.",
@@ -70,7 +70,7 @@ internal static class NativeDevelopDefectValidator
                     nameof(edits));
             }
             totalClusters = checked(totalClusters + edit.Clusters.Count);
-            if (totalClusters > MaximumDefectInfraredEdits)
+            if (totalClusters > MaximumDefectInfraredClusters)
             {
                 throw new ArgumentException(
                     "The defect recipe contains too many infrared clusters.",
@@ -139,7 +139,8 @@ internal static class NativeDevelopDefectValidator
         {
             infraredClusterCount = checked(infraredClusterCount + item.Clusters.Count);
         }
-        if (regions.Count > MaximumDefectRegionEdits - infraredClusterCount)
+        if (regions.Count >
+            MaximumDefectNativeRegionDescriptors - infraredClusterCount)
         {
             throw new ArgumentException(
                 "The combined region and infrared recipe exceeds native capacity.");
@@ -295,7 +296,7 @@ internal static class NativeDevelopDefectValidator
             return;
         }
         if (expectedCount > MaximumDefectOrderedEdits ||
-            nativeExpectedCount > MaximumDefectOrderedEdits ||
+            nativeExpectedCount > MaximumDefectNativeOrderedEdits ||
             request.DefectEditOrder.Count != expectedCount)
         {
             throw new ArgumentException(
@@ -378,6 +379,26 @@ internal static class NativeDevelopDefectValidator
         {
             throw new ArgumentException(
                 "A Defects recipe requires a lowercase SHA-256 identity.",
+                nameof(sha256));
+        }
+    }
+
+    internal static void ValidateDefectRecipeAppendPrefix(
+        int editCount,
+        string? sha256,
+        int prefixEditCount)
+    {
+        if (sha256 is null && prefixEditCount == 0)
+        {
+            return;
+        }
+        if (sha256 is not { Length: 64 } ||
+            sha256.Any(character => character is not
+                (>= '0' and <= '9') and not (>= 'a' and <= 'f')) ||
+            prefixEditCount <= 0 || prefixEditCount >= editCount)
+        {
+            throw new ArgumentException(
+                "A Defects append prefix requires a lowercase SHA-256 identity and a proper ordered prefix.",
                 nameof(sha256));
         }
     }

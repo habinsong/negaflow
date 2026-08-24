@@ -19,6 +19,26 @@ internal static class InfraredCleanStatusTests
         VerifyRefusalsMapToTheirOwnMessage();
         VerifyCancelledAndDuplicateStaySilent();
         VerifyEveryOtherFailureReadsAsFailed();
+        VerifySelectedFrameOwnsAsyncStatus();
+    }
+
+    private static void VerifySelectedFrameOwnsAsyncStatus()
+    {
+        using var host = new LibraryHostService(
+            new ImmediateUiDispatcher(),
+            new FakeExporter(_ => DevelopTestResults.FailedResult("unused")));
+        var state = new DevelopInfraredCleanState(host);
+        state.BindFrame("frame-a");
+        Check(state.Update("frame-a", InfraredCleanStatus.Detecting) &&
+              state.Status.Message == InfraredCleanMessage.Detecting,
+            "infrared_status_selected_frame_accepts_async_update");
+        state.BindFrame("frame-a");
+        Check(state.Status.Message == InfraredCleanMessage.Detecting,
+            "infrared_status_same_frame_refresh_preserves_message");
+        state.BindFrame("frame-b");
+        Check(state.Status == InfraredCleanStatus.Silent &&
+              !state.Update("frame-a", InfraredCleanStatus.Detecting),
+            "infrared_status_photo_switch_rejects_stale_message");
     }
 
     private static void VerifyAppliedCarriesTheDefectCount()

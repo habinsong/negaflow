@@ -18,6 +18,12 @@ public sealed class CropWorkspaceState
 
     public bool AwaitingPreview { get; private set; }
 
+    /// <summary>
+    /// 현재 화면에 그려진 크롭 오버레이의 프레임입니다. 줌·팬은 사진만 바꾸므로 이 값은
+    /// 유지하고, 새 미리보기나 캔버스 크기 변경 때만 갱신합니다.
+    /// </summary>
+    public PreviewFrame? OverlayFrame { get; private set; }
+
     /// <summary>macOS 의 <c>crop.aspectLocked</c> 와 같이 잠긴 상태로 시작합니다.</summary>
     public bool IsAspectLocked { get; private set; } = true;
 
@@ -34,6 +40,7 @@ public sealed class CropWorkspaceState
         Session = next;
         DragMode = CropDragMode.None;
         AwaitingPreview = true;
+        OverlayFrame = null;
         return next;
     }
 
@@ -47,6 +54,15 @@ public sealed class CropWorkspaceState
         Session = null;
         DragMode = CropDragMode.None;
         AwaitingPreview = false;
+        OverlayFrame = null;
+    }
+
+    public void SetOverlayFrame(PreviewFrame frame)
+    {
+        if (IsActive && frame.Width > 0.0 && frame.Height > 0.0)
+        {
+            OverlayFrame = frame;
+        }
     }
 
     public ImageCropRect? Cancel()

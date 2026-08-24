@@ -396,8 +396,23 @@ NF_API nf_status_t NF_CALL nf_develop_export_v35(
     const nf_develop_export_request_v35* request,
     nf_develop_run_state_v1* run_state,
     nf_develop_export_result_v3* result);
+/* Applies only the accepted non-IR defect recipe and publishes the linear RGB16 TIFF
+   used to replace or repoint the source during application termination. */
+NF_API nf_status_t NF_CALL nf_develop_bake_defects_v1(
+    const nf_develop_export_request_v35* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
 NF_API nf_status_t NF_CALL nf_develop_preview_v35(
     const nf_develop_export_request_v35* request,
+    const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v36(
+    const nf_develop_export_request_v36* request,
     const nf_soft_proof_v1* soft_proof,
     uint32_t maximum_width,
     uint32_t maximum_height,

@@ -196,7 +196,8 @@ public sealed record ScannerPluginScanResult(
     ScannerPluginScanStatus Status,
     ScannerPluginProcessResult? Process,
     ScannerPluginStreamStatus? ProtocolStatus,
-    ScannerArtifactCommitResult? ArtifactCommit)
+    ScannerArtifactCommitResult? ArtifactCommit,
+    ScannerPluginScanArea? AppliedScanArea = null)
 {
     public bool IsSuccess => Status == ScannerPluginScanStatus.Completed &&
         ArtifactCommit is { IsSuccess: true };

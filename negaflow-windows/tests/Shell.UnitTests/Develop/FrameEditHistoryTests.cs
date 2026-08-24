@@ -50,6 +50,8 @@ internal static class FrameEditHistoryTests
             FakeDispatcher dispatcher = new(accepts: true);
             FakeExporter exporter = new(_ => OkResult());
             using LibraryHostService host = new(dispatcher, exporter);
+            int frameEditedCount = 0;
+            host.FrameEdited += (_, _) => ++frameEditedCount;
             host.Open(roots);
             DevelopPanelState panel = new(host, limits, negativeLimits);
             Check(panel.Select("frame-1"), "history_select");
@@ -60,8 +62,13 @@ internal static class FrameEditHistoryTests
                 host.UndoActionName == LibraryHostService.UndoActions.DevelopAdjustment,
                 "history_undo_name");
             Check(host.Undo() == LibraryHostService.UndoActions.DevelopAdjustment, "history_undo");
+            Check(frameEditedCount == 3, "history_undo_notifies_frame_edited");
             Check(panel.Select("frame-1"), "history_reselect");
             Check(panel.Tone.Exposure == 0, "history_undo_skips_mid_drag");
+            Check(host.Redo() == LibraryHostService.UndoActions.DevelopAdjustment, "history_redo");
+            Check(frameEditedCount == 4, "history_redo_notifies_frame_edited");
+            Check(panel.Select("frame-1"), "history_reselect_after_redo");
+            Check(panel.Tone.Exposure == 2.0, "history_redo_restores_latest_drag_value");
         }
         finally
         {

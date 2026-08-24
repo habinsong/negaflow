@@ -27,6 +27,9 @@ extern "C" {
 #define NF_INFRARED_DEFECT_SCRATCH_VERTICAL 2U
 #define NF_INFRARED_DEFECT_SCRATCH_DIAGONAL 3U
 
+#define NF_INFRARED_VISIBLE_SOURCE_SCANNER_TIFF 0U
+#define NF_INFRARED_VISIBLE_SOURCE_IMPORTED_FILE 1U
+
 typedef struct nf_infrared_detector_parameters_v1 {
     uint32_t struct_size;
     uint32_t reserved;
@@ -106,6 +109,14 @@ NF_API nf_status_t NF_CALL nf_detect_infrared_defects_v1(
 NF_API nf_status_t NF_CALL nf_detect_infrared_defects_from_tiff_v1(
     const wchar_t* visible_path,
     const wchar_t* infrared_path,
+    const nf_infrared_detector_parameters_v1* parameters,
+    const uint32_t* cancel_requested,
+    nf_infrared_detection_summary_v1* summary,
+    nf_infrared_detection_handle_v1** handle);
+NF_API nf_status_t NF_CALL nf_detect_infrared_defects_from_files_v2(
+    const wchar_t* visible_path,
+    const wchar_t* infrared_path,
+    uint32_t visible_source_kind,
     const nf_infrared_detector_parameters_v1* parameters,
     const uint32_t* cancel_requested,
     nf_infrared_detection_summary_v1* summary,

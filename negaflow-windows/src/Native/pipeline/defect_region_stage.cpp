@@ -1,5 +1,7 @@
 #include "negaflow/pipeline/defect_region_stage.h"
 
+#include "defect_patch_quantization.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <algorithm>
@@ -86,6 +88,29 @@ void discard_pixels(WorkingImage& image) noexcept {
     }
     return DefectRegionStageStatus::invalid_argument;
 }
+
+struct PatchBounds final {
+    bool has_pixels{false};
+    std::uint32_t left{0U};
+    std::uint32_t top{0U};
+    std::uint32_t right{0U};
+    std::uint32_t bottom{0U};
+
+    void include(const std::uint32_t x, const std::uint32_t y) noexcept {
+        if (!has_pixels) {
+            has_pixels = true;
+            left = x;
+            top = y;
+            right = x + 1U;
+            bottom = y + 1U;
+            return;
+        }
+        left = std::min(left, x);
+        top = std::min(top, y);
+        right = std::max(right, x + 1U);
+        bottom = std::max(bottom, y + 1U);
+    }
+};
 
 }  // namespace
 
@@ -195,29 +220,63 @@ DefectRegionStageResult apply_defect_region_edits(
                     }
                 }
             }
+            const std::span<const std::uint8_t> repair_mask = rgba_mask
+                ? std::span<const std::uint8_t>{single_channel}
+                : edit.mask;
+            const std::size_t repair_stride = rgba_mask
+                ? static_cast<std::size_t>(edit.width)
+                : edit.mask_stride_bytes;
+            PatchBounds patch_bounds{};
+            for (std::uint32_t y = 0U; y < edit.height; ++y) {
+                const std::size_t row = static_cast<std::size_t>(y) * repair_stride;
+                for (std::uint32_t x = 0U; x < edit.width; ++x) {
+                    if (repair_mask[row + x] > 8U) {
+                        patch_bounds.include(x, y);
+                    }
+                }
+            }
+            auto full_strength = edit.repair;
+            full_strength.strength = 1.0;
             auto repaired = negaflow::imaging::repair_defect_components(
                 std::move(roi),
-                rgba_mask ? std::span<const std::uint8_t>{single_channel} : edit.mask,
-                rgba_mask ? static_cast<std::size_t>(edit.width) : edit.mask_stride_bytes,
-                edit.repair);
+                repair_mask,
+                repair_stride,
+                full_strength);
             if (repaired.status !=
                 negaflow::imaging::DefectComponentRepairStatus::ok) {
                 result.status = map_status(repaired.status);
                 discard_pixels(result.image);
                 return result;
             }
-            for (std::uint32_t y = 0U; y < edit.height; ++y) {
+            if (!patch_bounds.has_pixels) {
+                continue;
+            }
+            const float strength =
+                defect_patch_detail::composited_patch_strength(edit.repair.strength);
+            const float keep = 1.0F - strength;
+            for (std::uint32_t y = patch_bounds.top; y < patch_bounds.bottom; ++y) {
                 auto destination = result.image.pixels.begin() +
                     static_cast<std::ptrdiff_t>(
                         static_cast<std::size_t>(top + y) *
                             result.image.stride_pixels +
                         edit.roi_x);
-                std::copy_n(
-                    repaired.image.pixels.begin() +
-                        static_cast<std::ptrdiff_t>(
-                            static_cast<std::size_t>(y) * edit.width),
-                    edit.width,
-                    destination);
+                const auto source = repaired.image.pixels.begin() +
+                    static_cast<std::ptrdiff_t>(
+                        static_cast<std::size_t>(y) * edit.width);
+                for (std::uint32_t x = patch_bounds.left;
+                     x < patch_bounds.right;
+                     ++x) {
+                    Rgba32F& output = destination[x];
+                    const Rgba32F patch = source[x];
+                    output.red = output.red * keep +
+                        defect_patch_detail::quantize_linear16(patch.red) * strength;
+                    output.green = output.green * keep +
+                        defect_patch_detail::quantize_linear16(patch.green) * strength;
+                    output.blue = output.blue * keep +
+                        defect_patch_detail::quantize_linear16(patch.blue) * strength;
+                    output.alpha = output.alpha * keep +
+                        defect_patch_detail::quantize_linear16(patch.alpha) * strength;
+                }
             }
             if (repaired.info.applied) {
                 result.info.applied = true;

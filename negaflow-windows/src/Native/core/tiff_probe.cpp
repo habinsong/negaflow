@@ -110,6 +110,7 @@ TiffProbeResult probe_tiff(
             directory_entry_bytes,
             next_directory_bytes,
             limits,
+            control.select_first_directory,
             result.info);
         if (selection_status != TiffProbeStatus::ok) {
             result.status = selection_status;

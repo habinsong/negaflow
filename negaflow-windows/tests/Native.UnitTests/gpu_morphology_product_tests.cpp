@@ -69,9 +69,17 @@ int main() {
 
     const std::vector<float> cpu_open = morphology::opening(red, width, height, 4U);
     const std::vector<float> cpu_close = morphology::closing(red, width, height, 4U);
+    const std::vector<float> cpu_close_g = morphology::closing(green, width, height, 4U);
+    const std::vector<float> cpu_close_b = morphology::closing(blue, width, height, 4U);
     const std::vector<float> cpu_hat = morphology::bipolar_top_hat(red, width, height, 4U);
     const std::vector<float> cpu_hat_g = morphology::bipolar_top_hat(green, width, height, 4U);
     const std::vector<float> cpu_hat_b = morphology::bipolar_top_hat(blue, width, height, 4U);
+    const std::vector<float> cpu_close_open_r =
+        morphology::opening(morphology::closing(red, width, height, 3U), width, height, 3U);
+    const std::vector<float> cpu_close_open_g =
+        morphology::opening(morphology::closing(green, width, height, 3U), width, height, 3U);
+    const std::vector<float> cpu_close_open_b =
+        morphology::opening(morphology::closing(blue, width, height, 3U), width, height, 3U);
 
     negaflow::pipeline::install_gpu_kernel_accelerator();
     if (!GpuAccelerator::shared().available()) {
@@ -153,6 +161,40 @@ int main() {
         "RGB opening red must match CPU");
     expect(planes_equal(cpu_open_g, open_g), "RGB opening green must match CPU");
     expect(planes_equal(cpu_open_b, open_b), "RGB opening blue must match CPU");
+
+    negaflow::pipeline::reset_gpu_host_transfer_stats();
+    const morphology::RgbPlanes close_open =
+        morphology::close_open_rgb(red, green, blue, width, height, 3U);
+    const negaflow::pipeline::GpuHostTransferStats transfers =
+        negaflow::pipeline::gpu_host_transfer_stats();
+    expect(!close_open.red.empty(), "RGB close-open product path must run on GPU");
+    expect(
+        planes_equal(cpu_close_open_r, close_open.red),
+        "RGB close-open red must match sequential CPU");
+    expect(
+        planes_equal(cpu_close_open_g, close_open.green),
+        "RGB close-open green must match sequential CPU");
+    expect(
+        planes_equal(cpu_close_open_b, close_open.blue),
+        "RGB close-open blue must match sequential CPU");
+    expect(transfers.uploads == 1U, "RGB close-open must upload once");
+    expect(transfers.downloads == 1U, "RGB close-open must download once");
+
+    negaflow::pipeline::reset_gpu_host_transfer_stats();
+    const morphology::RgbPlanes paired_close =
+        morphology::closing_rgb(red, green, blue, width, height, 4U);
+    const negaflow::pipeline::GpuHostTransferStats paired_transfers =
+        negaflow::pipeline::gpu_host_transfer_stats();
+    expect(!paired_close.red.empty(), "RGB paired closing product path must run on GPU");
+    expect(planes_equal(cpu_close, paired_close.red), "RGB paired closing red must match CPU");
+    expect(
+        planes_equal(cpu_close_g, paired_close.green),
+        "RGB paired closing green must match CPU");
+    expect(
+        planes_equal(cpu_close_b, paired_close.blue),
+        "RGB paired closing blue must match CPU");
+    expect(paired_transfers.uploads == 1U, "RGB paired closing must upload once");
+    expect(paired_transfers.downloads == 1U, "RGB paired closing must download once");
 
     if (failures != 0) {
         std::cerr << failures << " failure(s)\n";

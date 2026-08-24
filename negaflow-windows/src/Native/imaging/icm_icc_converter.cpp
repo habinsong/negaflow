@@ -168,8 +168,10 @@ EncodedSrgb16Result convert_embedded_icc_to_srgb16(
         const std::uint64_t rgb_pixel_bytes = rgb_stride_bytes * decoded.height;
         const std::uint64_t source_memory_bytes =
             static_cast<std::uint64_t>(decoded.stride_bytes) * decoded.height;
+        // ICM 변환은 RGB16 만 받습니다. rgba 는 alpha 를 떼고, gray 는 한 표본을 세 채널로
+        // 펴서 같은 입력 모양으로 맞춥니다.
         const bool needs_rgb_copy =
-            decoded.layout == negaflow::imageio::DecodedPixelLayout::rgba16;
+            decoded.layout != negaflow::imageio::DecodedPixelLayout::rgb16;
         const std::uint64_t additional_temporary_bytes =
             rgb_pixel_bytes + (needs_rgb_copy ? rgb_pixel_bytes : 0ULL);
         if (rgb_stride_bytes > std::numeric_limits<DWORD>::max() ||
@@ -189,26 +191,35 @@ EncodedSrgb16Result convert_embedded_icc_to_srgb16(
                 static_cast<std::size_t>(rgb_pixel_bytes / sizeof(std::uint16_t)));
             const std::size_t decoded_stride =
                 decoded.stride_bytes / sizeof(std::uint16_t);
+            const std::size_t source_channels =
+                negaflow::imageio::channel_count(decoded.layout);
+            const bool source_has_alpha =
+                decoded.layout == negaflow::imageio::DecodedPixelLayout::rgba16;
+            const negaflow::imageio::RgbSampleOffsets rgb =
+                negaflow::imageio::rgb_sample_offsets(decoded.layout);
             for (std::uint32_t row = 0U; row < decoded.height; ++row) {
                 const std::uint16_t* const source =
                     decoded.samples.data() + static_cast<std::size_t>(row) * decoded_stride;
                 std::uint16_t* const destination =
                     packed_rgb.data() + static_cast<std::size_t>(row) * decoded.width * 3U;
                 for (std::uint32_t column = 0U; column < decoded.width; ++column) {
-                    const std::size_t source_offset = static_cast<std::size_t>(column) * 4U;
+                    const std::size_t source_offset =
+                        static_cast<std::size_t>(column) * source_channels;
                     const std::size_t destination_offset = static_cast<std::size_t>(column) * 3U;
                     const bool associated =
                         decoded.alpha_mode == negaflow::imageio::AlphaMode::associated;
-                    const std::uint16_t alpha = source[source_offset + 3U];
+                    const std::uint16_t alpha = source_has_alpha
+                        ? source[source_offset + 3U]
+                        : std::uint16_t{65'535U};
                     destination[destination_offset] = associated
-                        ? unassociate_component(source[source_offset], alpha)
-                        : source[source_offset];
+                        ? unassociate_component(source[source_offset + rgb.red], alpha)
+                        : source[source_offset + rgb.red];
                     destination[destination_offset + 1U] = associated
-                        ? unassociate_component(source[source_offset + 1U], alpha)
-                        : source[source_offset + 1U];
+                        ? unassociate_component(source[source_offset + rgb.green], alpha)
+                        : source[source_offset + rgb.green];
                     destination[destination_offset + 2U] = associated
-                        ? unassociate_component(source[source_offset + 2U], alpha)
-                        : source[source_offset + 2U];
+                        ? unassociate_component(source[source_offset + rgb.blue], alpha)
+                        : source[source_offset + rgb.blue];
                 }
             }
             source_samples = packed_rgb.data();

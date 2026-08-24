@@ -132,11 +132,13 @@ public sealed record FlatbedScanRegion(
     double UnitX,
     double UnitY,
     double UnitWidth,
-    double UnitHeight)
+    double UnitHeight,
+    double StraightenAngle = 0.0)
 {
     public bool IsValid =>
         double.IsFinite(UnitX) && double.IsFinite(UnitY) &&
         double.IsFinite(UnitWidth) && double.IsFinite(UnitHeight) &&
+        double.IsFinite(StraightenAngle) && Math.Abs(StraightenAngle) <= 45.0 &&
         UnitX >= 0.0 && UnitY >= 0.0 && UnitWidth > 0.0 && UnitHeight > 0.0 &&
         UnitX + UnitWidth <= 1.000_001 && UnitY + UnitHeight <= 1.000_001;
 
@@ -148,8 +150,15 @@ public sealed record FlatbedScanRegion(
         double unitX,
         double unitY,
         double unitWidth,
-        double unitHeight) =>
-        new(Guid.NewGuid().ToString("D"), unitX, unitY, unitWidth, unitHeight);
+        double unitHeight,
+        double straightenAngle = 0.0) =>
+        new(
+            Guid.NewGuid().ToString("D"),
+            unitX,
+            unitY,
+            unitWidth,
+            unitHeight,
+            straightenAngle);
 
     /// <summary>비율을 0~1 안으로 접습니다. 프리뷰 밖은 스캔할 수 없습니다.</summary>
     public FlatbedScanRegion Clamped()

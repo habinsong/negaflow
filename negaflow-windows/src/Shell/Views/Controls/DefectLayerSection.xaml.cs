@@ -24,11 +24,14 @@ public enum DefectLayerCommand
 
 public sealed class DefectLayerCommandEventArgs(
     DefectLayerCommand command,
+    string? frameId,
     Guid id,
     double strength,
     bool isLive) : EventArgs
 {
     public DefectLayerCommand Command { get; } = command;
+
+    public string? FrameId { get; } = frameId;
 
     public Guid Id { get; } = id;
 
@@ -46,6 +49,7 @@ public sealed class DefectLayerCommandEventArgs(
 public sealed partial class DefectLayerSection : UserControl
 {
     private Guid lastRowId;
+    private string? frameId;
 
     public DefectLayerSection() => InitializeComponent();
 
@@ -55,10 +59,15 @@ public sealed partial class DefectLayerSection : UserControl
     /// 한 번에 전부 다시 그립니다. 목록이 바뀔 때마다 부르며, 바뀐 줄만 고르지 않습니다 —
     /// 두 벌을 관리하면 언제나 한쪽이 옛 값을 붙듭니다.
     /// </summary>
-    public void Update(DefectLayerSectionState state, DefectLayerText text, bool isBusy)
+    public void Update(
+        string? frameId,
+        DefectLayerSectionState state,
+        DefectLayerText text,
+        bool isBusy)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(text);
+        this.frameId = frameId;
         LayerCard.Visibility = state.Visible ? Visibility.Visible : Visibility.Collapsed;
         if (!state.Visible)
         {
@@ -77,18 +86,27 @@ public sealed partial class DefectLayerSection : UserControl
             ? ScrollBarVisibility.Auto
             : ScrollBarVisibility.Disabled;
         Rows.ItemsSource = state.Rows
-            .Select(row => new DefectLayerRowView(row, text, isBusy))
+            .Select(row => new DefectLayerRowView(frameId!, row, text, isBusy))
             .ToArray();
 
-        DoneRow.Visibility = state.DoneVisible ? Visibility.Visible : Visibility.Collapsed;
-        DoneButton.IsEnabled = state.DoneEnabled;
         DoneText.Text = text.Done;
         AutomationProperties.SetName(DoneButton, text.Done);
         ToolTipService.SetToolTip(DoneButton, text.Done);
-        // macOS: checkmark.seal.fill 이면 이미 검토를 마친 것입니다.
-        DoneIcon.Glyph = state.Reviewed ? "" : "";
+        UpdateDoneState(state);
 
         ScrollToLatest(state);
+    }
+
+    /// <summary>
+    /// 강도 drag 중에는 slider row를 다시 만들지 않고 현재 recipe의 검토 상태만 갱신합니다.
+    /// </summary>
+    internal void UpdateDoneState(DefectLayerSectionState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        DoneRow.Visibility = state.DoneVisible ? Visibility.Visible : Visibility.Collapsed;
+        DoneButton.IsEnabled = state.DoneEnabled;
+        // macOS: checkmark.seal.fill 이면 이미 검토를 마친 것입니다.
+        DoneIcon.Glyph = state.Reviewed ? "" : "";
     }
 
     /// <summary>새 항목이 생기면 마지막으로 스크롤합니다. macOS <c>scrollToLatest</c> 와 같습니다.</summary>
@@ -133,6 +151,7 @@ public sealed partial class DefectLayerSection : UserControl
             this,
             new DefectLayerCommandEventArgs(
                 DefectLayerCommand.MarkReviewed,
+                frameId,
                 Guid.Empty,
                 0.0,
                 isLive: false));
@@ -147,7 +166,9 @@ public sealed partial class DefectLayerSection : UserControl
         _ = args;
         if (sender is Slider slider)
         {
-            slider.Tag = slider.Tag is Guid id ? id : Guid.Empty;
+            slider.Tag = slider.Tag is DefectLayerCommandTarget target
+                ? target
+                : null;
         }
     }
 
@@ -184,11 +205,17 @@ public sealed partial class DefectLayerSection : UserControl
         double strength = 0.0,
         bool isLive = false)
     {
-        if (sender is FrameworkElement { Tag: Guid id } && id != Guid.Empty)
+        if (sender is FrameworkElement { Tag: DefectLayerCommandTarget target } &&
+            target.ItemId != Guid.Empty)
         {
             Command?.Invoke(
                 this,
-                new DefectLayerCommandEventArgs(command, id, strength, isLive));
+                new DefectLayerCommandEventArgs(
+                    command,
+                    target.FrameId,
+                    target.ItemId,
+                    strength,
+                    isLive));
         }
     }
 }

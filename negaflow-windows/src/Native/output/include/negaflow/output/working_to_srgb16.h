@@ -25,6 +25,8 @@ struct WorkingToSrgb16Limits final {
     std::uint64_t max_encoded_pixel_bytes{512ULL * 1024ULL * 1024ULL};
     // The space the published file is encoded in. sRGB leaves the pixels alone.
     negaflow::color::OutputColorSpace color_space{negaflow::color::OutputColorSpace::srgb};
+    // False keeps the working values linear for the macOS-compatible defect bake artifact.
+    bool encode_transfer{true};
     // False publishes RGB and deliberately omits alpha, matching the macOS export option.
     // True keeps straight (unassociated) alpha as a fourth output component.
     bool preserve_alpha{false};

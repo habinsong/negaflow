@@ -25,7 +25,8 @@ namespace negaflow::abi::detail {
     nf_develop_export_result_v2& result) noexcept {
     if (request.defect_infrared_edit_reserved != 0U ||
         request.defect_infrared_attenuation_reserved != 0U ||
-        request.defect_infrared_edit_count > NF_DEFECT_INFRARED_MAX_EDITS ||
+        request.defect_infrared_edit_count >
+            NF_DEFECT_INFRARED_MAX_CLUSTERS ||
         request.defect_infrared_attenuation_byte_count >
             NF_DEFECT_INFRARED_MAX_ATTENUATION_BYTES ||
         (request.defect_infrared_edit_count != 0U &&
@@ -187,7 +188,7 @@ namespace negaflow::abi::detail {
     negaflow::pipeline::DevelopExportRequest& pipeline_request,
     nf_develop_export_result_v2& result) noexcept {
     if (request.defect_infrared_item_reserved != 0U ||
-        request.defect_infrared_item_count > NF_DEFECT_INFRARED_MAX_EDITS ||
+        request.defect_infrared_item_count > NF_DEFECT_INFRARED_MAX_ITEMS ||
         (request.defect_infrared_item_count != 0U) !=
             (request.defect_infrared_items != nullptr)) {
         fail_defect_region_request(

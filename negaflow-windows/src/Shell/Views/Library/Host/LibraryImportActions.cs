@@ -25,10 +25,8 @@ internal sealed class LibraryImportActions
         {
             CommitButtonText = AppResources.Get("importSection", "Value"),
         };
-        foreach (string extension in ImageSourcePaths.SupportedImportExtensions)
-        {
-            picker.FileTypeFilter.Add(extension);
-        }
+        // 비워 두면 Windows App SDK picker는 *.*를 표시합니다. 실제 raster 여부는 WIC/RAW
+        // metadata probe가 판정하고 SVG는 host gate에서 명시적으로 거부합니다.
 
         SetBusy(false);
         view.ControlsPanel.ImportStatusText.Text = string.Empty;
@@ -142,10 +140,7 @@ internal sealed class LibraryImportActions
         {
             CommitButtonText = AppResources.Get("libraryLocateOriginal", "Content"),
         };
-        foreach (string extension in ImageSourcePaths.SupportedImportExtensions)
-        {
-            picker.FileTypeFilter.Add(extension);
-        }
+        // 새 codec/카메라 RAW 확장자도 다시 찾을 수 있도록 picker를 *.*로 둡니다.
 
         try
         {

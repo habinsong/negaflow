@@ -97,8 +97,9 @@ StandardSrgbStatus load_output_color_context(
     const std::uint32_t max_color_profile_bytes,
     ComPtr<IWICColorContext>& context,
     std::vector<std::uint8_t>& profile_bytes,
-    std::uint32_t& native_error_code) {
-    if (space == negaflow::color::OutputColorSpace::srgb) {
+    std::uint32_t& native_error_code,
+    const bool linear_transfer) {
+    if (space == negaflow::color::OutputColorSpace::srgb && !linear_transfer) {
         return load_standard_srgb_context(
             factory,
             max_color_profile_bytes,
@@ -106,7 +107,8 @@ StandardSrgbStatus load_output_color_context(
             profile_bytes,
             native_error_code);
     }
-    std::vector<std::uint8_t> generated = negaflow::color::build_icc_profile(space);
+    std::vector<std::uint8_t> generated =
+        negaflow::color::build_icc_profile(space, linear_transfer);
     if (generated.empty() ||
         generated.size() > static_cast<std::size_t>(max_color_profile_bytes)) {
         return StandardSrgbStatus::invalid;

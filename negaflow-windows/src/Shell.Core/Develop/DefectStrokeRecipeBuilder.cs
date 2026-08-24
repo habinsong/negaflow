@@ -7,7 +7,7 @@ namespace Negaflow.Shell;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 좌표는 이미 <see cref="DevelopDisplayGeometry"/> 가 원본 공간으로 되돌린 값이어야 합니다.
+/// 좌표는 이미 <see cref="Negaflow.Shell.Develop.DevelopDefectEditor"/> 가 원본 공간으로 되돌린 값이어야 합니다.
 /// 이 자리에서는 공간을 바꾸지 않습니다 — 두 곳에서 변환하면 언젠가 한쪽만 고쳐집니다.
 /// </para>
 /// <para>
@@ -18,37 +18,63 @@ namespace Negaflow.Shell;
 /// </remarks>
 public static class DefectStrokeRecipeBuilder
 {
-    /// <summary>
-    /// 한 획을 담은 새 recipe 입니다. 기존 항목은 그대로 두고 뒤에 붙이며, 개정 번호를 하나
-    /// 올립니다. 원본 identity 가 다른 recipe 에는 붙이지 않습니다 — 다른 사진의 편집을
-    /// 이어받으면 엉뚱한 자리를 지웁니다.
-    /// </summary>
     public static DefectRecipeSnapshot? AppendBrushStroke(
         Guid frameId,
         DefectSourceIdentity sourceIdentity,
         DefectRecipeSnapshot? existing,
         IReadOnlyList<DefectPoint> rawPoints,
         double thickness,
-        DefectSize baseSize) =>
-        Append(
+        DefectSize baseSize) => AppendBrushStrokes(
             frameId,
             sourceIdentity,
             existing,
-            rawPoints,
-            thickness,
-            baseSize,
-            static (points, size) => new DefectEditItem(
+            [new DefectStroke(rawPoints, thickness)],
+            baseSize);
+
+    /// <summary>macOS처럼 한 번 적용한 여러 Brush 획을 한 item과 한 revision에 담습니다.</summary>
+    public static DefectRecipeSnapshot? AppendBrushStrokes(
+        Guid frameId,
+        DefectSourceIdentity sourceIdentity,
+        DefectRecipeSnapshot? existing,
+        IReadOnlyList<DefectStroke> rawStrokes,
+        DefectSize baseSize)
+    {
+        ArgumentNullException.ThrowIfNull(rawStrokes);
+        if (rawStrokes.Count == 0)
+        {
+            return null;
+        }
+        List<DefectStroke> strokes = new(rawStrokes.Count);
+        foreach (DefectStroke stroke in rawStrokes)
+        {
+            if (!double.IsFinite(stroke.Thickness) || stroke.Thickness <= 0.0 ||
+                !TryCopyPoints(stroke.Points, out DefectPoint[] points))
+            {
+                return null;
+            }
+            strokes.Add(new DefectStroke(points, stroke.Thickness));
+        }
+        try
+        {
+            DefectEditItem item = new(
                 Guid.NewGuid(),
                 DefectEditKind.Brush,
                 Enabled: true,
                 Strength: 1.0,
-                new DefectEditLabel(DefectEditLabelKind.Brush, 1),
+                new DefectEditLabel(DefectEditLabelKind.Brush, strokes.Count),
                 new DefectEditSummary(DefectEditSummaryKind.Brush, null),
-                size,
+                baseSize,
                 [])
             {
-                Strokes = [new DefectStroke(points.Points, points.Size)],
-            });
+                Strokes = strokes,
+            };
+            return AppendItem(frameId, sourceIdentity, existing, item);
+        }
+        catch (Exception error) when (error is ArgumentException or OverflowException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// 복제 도장 한 획입니다. <paramref name="offsetX"/> 와 <paramref name="offsetY"/> 는 대상에서
@@ -66,77 +92,52 @@ public static class DefectStrokeRecipeBuilder
         double hardness = DefaultCloneHardness)
     {
         if (!double.IsFinite(offsetX) || !double.IsFinite(offsetY) ||
+            !double.IsFinite(diameter) || diameter <= 0.0 ||
             !double.IsFinite(hardness) || hardness is < 0.0 or > 1.0 ||
-            (offsetX == 0.0 && offsetY == 0.0))
+            !TryCopyPoints(rawPoints, out DefectPoint[] points))
         {
-            // 변위가 없으면 자기 자신을 복제합니다 — 아무 일도 일어나지 않는 편집을
-            // 카탈로그에 남기지 않습니다.
             return null;
         }
-        return Append(
-            frameId,
-            sourceIdentity,
-            existing,
-            rawPoints,
-            diameter,
-            baseSize,
-            (points, size) => new DefectEditItem(
+        try
+        {
+            DefectEditItem item = new(
                 Guid.NewGuid(),
                 DefectEditKind.Clone,
                 Enabled: true,
                 Strength: 1.0,
                 new DefectEditLabel(
                     DefectEditLabelKind.Clone,
-                    (int)Math.Clamp(Math.Truncate(points.Size), 0.0, int.MaxValue)),
+                    (int)Math.Clamp(Math.Truncate(diameter), 0.0, int.MaxValue)),
                 new DefectEditSummary(DefectEditSummaryKind.Clone, null),
-                size,
+                baseSize,
                 [])
             {
                 CloneStrokes =
                 [
-                    new DefectCloneStroke(points.Points, offsetX, offsetY, points.Size, hardness),
+                    new DefectCloneStroke(points, offsetX, offsetY, diameter, hardness),
                 ],
-            });
+            };
+            return AppendItem(frameId, sourceIdentity, existing, item);
+        }
+        catch (Exception error) when (error is ArgumentException or OverflowException)
+        {
+            return null;
+        }
     }
 
     /// <summary>macOS 복제 도장의 가장자리 부드러움 기본값입니다.</summary>
     public const double DefaultCloneHardness = 0.5;
 
-    /// <summary>
-    /// 붙어 있는 점은 버립니다. 포인터는 한 획에 수백 개를 흘리는데 그대로 담으면 recipe 가
-    /// 커지고 수리 결과는 달라지지 않습니다.
-    /// </summary>
-    private const double MinimumPointSpacing = 1.0e-4;
-
-    private readonly record struct Stroke(IReadOnlyList<DefectPoint> Points, double Size);
-
-    private static DefectRecipeSnapshot? Append(
+    private static DefectRecipeSnapshot? AppendItem(
         Guid frameId,
         DefectSourceIdentity sourceIdentity,
         DefectRecipeSnapshot? existing,
-        IReadOnlyList<DefectPoint> rawPoints,
-        double size,
-        DefectSize baseSize,
-        Func<Stroke, DefectSize?, DefectEditItem> makeItem)
+        DefectEditItem item)
     {
-        ArgumentNullException.ThrowIfNull(rawPoints);
-        ArgumentNullException.ThrowIfNull(makeItem);
-        if (!double.IsFinite(size) || size <= 0.0)
-        {
-            return null;
-        }
         if (existing?.SourceIdentity is { } identity && identity != sourceIdentity)
         {
             return null;
         }
-
-        List<DefectPoint> points = Thin(rawPoints);
-        if (points.Count == 0)
-        {
-            return null;
-        }
-
-        DefectEditItem item = makeItem(new Stroke(points, size), baseSize);
         DefectEditItem[] items = existing is null ? [item] : [.. existing.Items, item];
         try
         {
@@ -152,27 +153,27 @@ public static class DefectStrokeRecipeBuilder
         }
     }
 
-    private static List<DefectPoint> Thin(IReadOnlyList<DefectPoint> rawPoints)
+    private static bool TryCopyPoints(
+        IReadOnlyList<DefectPoint> rawPoints,
+        out DefectPoint[] points)
     {
-        List<DefectPoint> points = [];
-        foreach (DefectPoint point in rawPoints)
+        ArgumentNullException.ThrowIfNull(rawPoints);
+        points = new DefectPoint[rawPoints.Count];
+        if (points.Length == 0)
         {
+            return false;
+        }
+        for (int index = 0; index < rawPoints.Count; index++)
+        {
+            DefectPoint point = rawPoints[index];
             if (!double.IsFinite(point.X) || !double.IsFinite(point.Y) ||
                 point.X is < 0.0 or > 1.0 || point.Y is < 0.0 or > 1.0)
             {
-                continue;
+                points = [];
+                return false;
             }
-            if (points.Count != 0)
-            {
-                DefectPoint last = points[^1];
-                if (Math.Abs(point.X - last.X) < MinimumPointSpacing &&
-                    Math.Abs(point.Y - last.Y) < MinimumPointSpacing)
-                {
-                    continue;
-                }
-            }
-            points.Add(point);
+            points[index] = point;
         }
-        return points;
+        return true;
     }
 }

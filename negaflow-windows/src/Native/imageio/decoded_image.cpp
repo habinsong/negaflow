@@ -11,6 +11,15 @@ std::uint8_t channel_count(const DecodedPixelLayout layout) noexcept {
     return 0U;
 }
 
+RgbSampleOffsets rgb_sample_offsets(const DecodedPixelLayout layout) noexcept {
+    switch (layout) {
+        case DecodedPixelLayout::gray16: return {0U, 0U, 0U};
+        case DecodedPixelLayout::rgb16:
+        case DecodedPixelLayout::rgba16: break;
+    }
+    return {};
+}
+
 const char* decoded_pixel_layout_name(const DecodedPixelLayout layout) noexcept {
     switch (layout) {
         case DecodedPixelLayout::rgb16: return "rgb16";

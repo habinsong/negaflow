@@ -201,8 +201,10 @@ internal static class ScannerPluginTests
                       validAppliedResult.RootElement,
                       wire,
                       out string? validatedInfrared,
-                      out ScannerArtifactRequirements? artifactRequirements) &&
+                      out ScannerArtifactRequirements? artifactRequirements,
+                      out ScannerPluginScanArea? appliedScanArea) &&
                   validatedInfrared is null &&
+                  appliedScanArea == wire.ScanArea &&
                   artifactRequirements is { PixelWidth: 640, PixelHeight: 480, BitDepth: 16 },
                 "scanner_plugin_accepts_explicit_null_applied_option_keys");
 
@@ -215,8 +217,25 @@ internal static class ScannerPluginTests
                       missingAppliedResult.RootElement,
                       wire,
                       out _,
+                      out _,
                       out _),
                 "scanner_plugin_rejects_missing_nullable_applied_option_key");
+
+            resultPayload["appliedOptions"] = new Dictionary<string, object?>(appliedOptions)
+            {
+                ["scanArea"] = wire.ScanArea! with { HeightMm = wire.ScanArea.HeightMm - 0.7 },
+            };
+            using JsonDocument adjustedAppliedResult = JsonDocument.Parse(
+                JsonSerializer.Serialize(resultPayload));
+            Check(ScannerPluginClient.TryValidateV2Result(
+                      adjustedAppliedResult.RootElement,
+                      wire,
+                      out _,
+                      out _,
+                      out ScannerPluginScanArea? adjustedArea) &&
+                  adjustedArea is not null &&
+                  Math.Abs(adjustedArea.HeightMm - (wire.ScanArea!.HeightMm - 0.7)) < 1e-9,
+                "scanner_plugin_preserves_the_actual_applied_scan_area");
         }
         finally
         {
@@ -288,6 +307,30 @@ internal static class ScannerPluginTests
 
     private static void VerifyScannerPublicationRecovery()
     {
+        FrameImportPlan emptyPlan = new([], []);
+        Check(
+            ScannerScanPublisher.PublicationStatus(new ScannerFramePublishResult(
+                ScannerFramePublishStatus.ReceiptWriteFailed,
+                emptyPlan,
+                null,
+                null,
+                CatalogStoreError.None)) ==
+                ScannerPluginLibraryScanStatus.CatalogPublicationFailed &&
+            ScannerScanPublisher.PublicationStatus(new ScannerFramePublishResult(
+                ScannerFramePublishStatus.CatalogWriteFailed,
+                emptyPlan,
+                null,
+                null,
+                CatalogStoreError.InvalidSnapshot)) ==
+                ScannerPluginLibraryScanStatus.CatalogPublicationFailed &&
+            ScannerScanPublisher.PublicationStatus(new ScannerFramePublishResult(
+                ScannerFramePublishStatus.InfraredSourceUnreadable,
+                emptyPlan,
+                null,
+                null,
+                CatalogStoreError.None)) == ScannerPluginLibraryScanStatus.Published,
+            "scanner_publication_failure_status_is_not_counted_as_published");
+
         string root = Path.Combine(Path.GetTempPath(), $"negaflow-scanner-recovery-{Guid.NewGuid():N}");
         try
         {
@@ -295,18 +338,37 @@ internal static class ScannerPluginTests
             Directory.CreateDirectory(root);
             string visible = Path.Combine(root, "recovered-scan.tiff");
             File.WriteAllBytes(visible, [1, 2, 3, 4]);
-            ScannerFrameImport scan = new(visible, null, DevelopmentProcess.C41);
+            ImageTransformRecipe transform = new(
+                ImageRotation.Degrees270,
+                true,
+                false,
+                new ImageCropRect(0.1, 0.2, 0.6, 0.5),
+                2.25,
+                1.2);
+            ScannerFrameImport scan = new(visible, null, DevelopmentProcess.C41)
+            {
+                Rotation = ImageRotation.Degrees90,
+                InitialTransform = transform,
+            };
             Check(ScannerPublicationReceiptStore.TrySchedule(roots, scan, out _),
                 "scanner_publication_writes_receipt_before_restart");
+            ScannerPublicationReceipt? pending = ScannerPublicationReceiptStore
+                .ReadPending(roots)
+                .SingleOrDefault()
+                .Receipt;
+            Check(pending?.Rotation == ImageRotation.Degrees90 &&
+                  pending.InitialTransform == transform,
+                "scanner_publication_receipt_preserves_initial_transform");
 
             using LibraryHostService host = new(
                 new FakeDispatcher(accepts: true),
                 new FakeExporter(_ => OkResult()),
                 TestSourceMetadata);
             Check(host.Open(roots) == LibraryHostState.Open &&
-                  host.Frames.Any(frame => frame.SourcePath == visible) &&
+                  host.Frames.Any(frame =>
+                      frame.SourcePath == visible && frame.ImageTransform == transform) &&
                   ScannerPublicationReceiptStore.ReadPending(roots).Count == 0,
-                "scanner_publication_replays_pending_receipt_after_restart");
+                "scanner_publication_replays_transform_after_restart");
         }
         finally
         {

@@ -289,4 +289,17 @@ public static class WorkflowShortcutActions
         5 => WorkflowShortcutAction.RateFive,
         _ => WorkflowShortcutAction.RateZero,
     };
+
+    /// <summary>
+    /// 이미 키 표에서 찾은 명령을 한 번 호출하고 키 이벤트를 소비합니다. 명령의 성공 여부는
+    /// PreviewKeyDown과 bubble KeyDown 사이의 라우팅 여부가 아닙니다.
+    /// </summary>
+    public static bool DispatchRecognized(
+        WorkflowShortcutAction action,
+        Func<WorkflowShortcutAction, bool> invoke)
+    {
+        ArgumentNullException.ThrowIfNull(invoke);
+        _ = invoke(action);
+        return true;
+    }
 }

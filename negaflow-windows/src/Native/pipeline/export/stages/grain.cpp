@@ -27,7 +27,7 @@ std::optional<DevelopExportOutcome> apply_grain_stage(
     if (detect != nullptr) {
         // 검토 도구는 수리 결과가 아니라 판정을 원합니다. 호출측이 cleaned raw
         // (반전 전 스캔)를 넘깁니다 — macOS `detectComponents(in: cleanedRaw)`.
-        const auto detected = negaflow::imaging::detect_grain_mend(
+        auto detected = negaflow::imaging::detect_grain_mend(
             image,
             request.grain_mend,
             detect->roi,

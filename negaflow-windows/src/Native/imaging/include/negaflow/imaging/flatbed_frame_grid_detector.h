@@ -44,6 +44,7 @@ struct FlatbedFrameDetection final {
     double y{0.0};
     double width{0.0};
     double height{0.0};
+    double straighten_angle{0.0};
     double confidence{0.0};
     std::uint32_t row{0U};
     std::uint32_t column{0U};
@@ -55,6 +56,13 @@ struct FlatbedFrameGridResult final {
 };
 
 [[nodiscard]] FlatbedFrameGridResult detect_flatbed_frame_grid(
+    const FlatbedFramePreview& preview,
+    FlatbedFrameFormat format = FlatbedFrameFormat::full_frame_35mm,
+    negaflow::core::CancelFlag cancel = {}) noexcept;
+
+// Physical dimensions are intentionally not required. This is the macOS
+// FlatbedFrameDetector fallback used when the physical grid has no result.
+[[nodiscard]] FlatbedFrameGridResult detect_flatbed_frame_edges(
     const FlatbedFramePreview& preview,
     FlatbedFrameFormat format = FlatbedFrameFormat::full_frame_35mm,
     negaflow::core::CancelFlag cancel = {}) noexcept;

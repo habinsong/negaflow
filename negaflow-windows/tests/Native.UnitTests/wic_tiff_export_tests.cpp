@@ -137,6 +137,33 @@ void test_round_trip_and_publish(const std::filesystem::path& root) {
     expect(!has_staging_file(root), "successful TIFF publish leaves no staging file");
 }
 
+void test_linear_round_trip_and_publish(const std::filesystem::path& root) {
+    const std::filesystem::path destination = root / L"linear-round-trip.tif";
+    negaflow::output::WicTiffExportLimits limits{};
+    limits.verify_pixel_readback = true;
+    limits.write_buffer_bytes = 18U;
+    limits.readback_buffer_bytes = 18U;
+    const auto result = negaflow::output::export_working_to_linear16_tiff(
+        make_image(),
+        destination,
+        limits);
+    report_failure(result);
+    const auto probe = negaflow::core::probe_tiff_file(destination);
+    expect(
+        result.status == negaflow::output::WicTiffExportStatus::ok &&
+            result.info.encoded_pixel_bytes == 36U && result.info.compression == 1U &&
+            result.info.color_profile_bytes > 0U && result.info.pixels_verified &&
+            result.info.profile_verified && result.info.published,
+        "linear RGB16 TIFF publishes with exact pixel and profile readback");
+    expect(
+        probe.status == negaflow::core::TiffProbeStatus::ok &&
+            probe.info.bits_per_sample_count == 3U && probe.info.bits_per_sample[0] == 16U &&
+            probe.info.bits_per_sample[1] == 16U && probe.info.bits_per_sample[2] == 16U &&
+            probe.info.samples_per_pixel == 3U && probe.info.extra_samples_count == 0U &&
+            probe.info.compression == 1U && probe.info.icc_profile_bytes > 0U,
+        "linear bake TIFF is opaque RGB16, uncompressed and ICC-tagged");
+}
+
 void test_existing_destination_is_preserved(const std::filesystem::path& root) {
     const std::filesystem::path destination = root / L"existing.tif";
     {
@@ -395,6 +422,7 @@ int main() {
     const TempDirectory temporary{};
     test_source_metadata_policy_rules();
     test_round_trip_and_publish(temporary.path());
+    test_linear_round_trip_and_publish(temporary.path());
     test_existing_destination_is_preserved(temporary.path());
     test_compression_and_dpi(temporary.path());
     test_failures_leave_no_file(temporary.path());

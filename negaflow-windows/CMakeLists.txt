@@ -560,6 +560,7 @@ add_library(negaflow_imageio STATIC
     src/Native/imageio/image_content_hash.cpp
     src/Native/imageio/image_file_observation.cpp
     src/Native/imageio/wic_standard_image_decoder.cpp
+    src/Native/imageio/wic_orientation.cpp
     src/Native/imageio/wic_tiff_decoder.cpp
     src/Native/imageio/wic_tiff_frame.cpp
     src/Native/imageio/wic_tiff_preflight.cpp
@@ -632,6 +633,7 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/grain_mend_scratch_response_map.cpp
       src/Native/imaging/grain_mend_grain_field.cpp
       src/Native/imaging/grain_mend_mask_paint.cpp
+      src/Native/imaging/grain_mend_review.cpp
       src/Native/imaging/grain_mend_shape.cpp
       src/Native/imaging/grain_mend_structure_lines.cpp
       src/Native/imaging/grain_mend_morphology.cpp
@@ -654,6 +656,7 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/infrared_confirmation.cpp
       src/Native/imaging/infrared_defect_alignment.cpp
       src/Native/imaging/infrared_defect_detector.cpp
+      src/Native/imaging/infrared_plane_resample.cpp
       src/Native/imaging/infrared_planes.cpp
       src/Native/imaging/icm_icc_converter.cpp
       src/Native/imaging/image_transform.cpp
@@ -724,6 +727,7 @@ target_link_libraries(
 # could not run the pipeline without a second copy of it. It is a library now so the
 # CLI and the shell drive exactly the same code.
 add_library(negaflow_pipeline STATIC
+    src/Native/pipeline/defect_bake.cpp
     src/Native/pipeline/defect_infrared_stage.cpp
     src/Native/pipeline/defect_recipe_stage.cpp
     src/Native/pipeline/defect_region_stage.cpp
@@ -781,6 +785,7 @@ add_library(negaflow_native SHARED
     src/Native/abi/detect/grain_mend_detect_abi.cpp
     src/Native/abi/detect/grain_mend_detect_shared.cpp
     src/Native/abi/detect/grain_mend_detect_v1_v3.cpp
+    src/Native/abi/detect/infrared_file_detection.cpp
     src/Native/abi/detect/infrared_detect_abi.cpp
     src/Native/abi/export/develop_export_v1_v21.cpp
     src/Native/abi/preview/develop_preview_v1_v10.cpp
@@ -799,6 +804,7 @@ add_library(negaflow_native SHARED
     src/Native/abi/request/develop_request_v20_v21.cpp
     src/Native/abi/request/develop_request_v24_v25.cpp
     src/Native/abi/request/develop_request_v26_v34.cpp
+    src/Native/abi/request/develop_request_v36.cpp
     src/Native/abi/result/develop_result_prepare_v1_v12.cpp
     src/Native/abi/result/develop_result_prepare_v13_v21.cpp
     src/Native/abi/result/develop_result_prepare_v22_v34.cpp
@@ -806,6 +812,7 @@ add_library(negaflow_native SHARED
     src/Native/abi/run/develop_run_v22.cpp
     src/Native/abi/run/develop_run_v23_v28.cpp
     src/Native/abi/run/develop_run_v29_v34.cpp
+    src/Native/abi/run/develop_run_v36.cpp
     src/Native/abi/support/abi_layout.cpp
     src/Native/abi/support/crash_log.cpp
     src/Native/abi/support/abi_text.cpp
@@ -891,6 +898,7 @@ if(BUILD_TESTING)
         tests/Native.UnitTests/DevelopExportAbi/run_state.cpp
         tests/Native.UnitTests/DevelopExportAbi/auto_adjust.cpp
         tests/Native.UnitTests/DevelopExportAbi/defect_region.cpp
+        tests/Native.UnitTests/DevelopExportAbi/defect_bake.cpp
         tests/Native.UnitTests/DevelopExportAbi/defect_region_preview_scale.cpp
         tests/Native.UnitTests/DevelopExportAbi/soft_proof.cpp
         tests/Native.UnitTests/DevelopExportAbi/probe.cpp
@@ -947,7 +955,9 @@ if(BUILD_TESTING)
 
     add_executable(negaflow_infrared_detector_abi_tests
         tests/Native.UnitTests/infrared_detector_abi_tests.cpp
+        tests/Native.UnitTests/Diagnostics/infrared_pair_diagnostic.cpp
         tests/fixtures/tiff/synthetic_wic_tiff.cpp
+        tests/fixtures/tiff/wic_multiframe_tiff_fixture.cpp
     )
     target_include_directories(
         negaflow_infrared_detector_abi_tests
@@ -955,7 +965,7 @@ if(BUILD_TESTING)
     )
     target_link_libraries(
         negaflow_infrared_detector_abi_tests
-        PRIVATE negaflow_native negaflow_project_options
+        PRIVATE negaflow_native negaflow_output negaflow_project_options
     )
     add_test(
         NAME native.infrared_detector_abi
@@ -967,11 +977,13 @@ if(BUILD_TESTING)
     )
     target_link_libraries(
         negaflow_flatbed_frame_grid_abi_tests
-        PRIVATE negaflow_native negaflow_project_options
+        PRIVATE negaflow_native negaflow_imageio negaflow_project_options
     )
     add_test(
         NAME native.flatbed_frame_grid_abi
         COMMAND negaflow_flatbed_frame_grid_abi_tests
+            "${CMAKE_CURRENT_SOURCE_DIR}/../negaflow-mac/Sources/ScannerKit/Resources/Roll.tiff"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../negaflow-mac/Sources/ScannerKit/Resources/Roll_Perforation.tiff"
     )
 
     add_executable(negaflow_scalar_tests
@@ -1610,6 +1622,7 @@ if(BUILD_TESTING)
         tests/Native.UnitTests/GrainMend/grain_mend_repair_tests.cpp
         tests/Native.UnitTests/GrainMend/grain_mend_protection_tests.cpp
         tests/Native.UnitTests/GrainMend/grain_mend_detection_tests.cpp
+        tests/Native.UnitTests/GrainMend/grain_mend_review_tests.cpp
         tests/Native.UnitTests/GrainMend/grain_mend_contract_tests.cpp
     )
     target_include_directories(
@@ -1649,6 +1662,18 @@ if(BUILD_TESTING)
         COMMAND negaflow_defect_component_repair_tests
     )
 
+    add_executable(negaflow_defect_region_stage_tests
+        tests/Native.UnitTests/defect_region_stage_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_defect_region_stage_tests
+        PRIVATE negaflow_pipeline negaflow_project_options
+    )
+    add_test(
+        NAME native.defect_region_stage
+        COMMAND negaflow_defect_region_stage_tests
+    )
+
     add_executable(negaflow_defect_infrared_stage_tests
         tests/Native.UnitTests/defect_infrared_stage_tests.cpp
     )
@@ -1668,6 +1693,10 @@ if(BUILD_TESTING)
         negaflow_infrared_defect_detector_tests
         PRIVATE negaflow_imaging negaflow_project_options
     )
+    target_include_directories(
+        negaflow_infrared_defect_detector_tests
+        PRIVATE src/Native/imaging
+    )
     add_test(
         NAME native.infrared_defect_detector
         COMMAND negaflow_infrared_defect_detector_tests
@@ -1679,6 +1708,10 @@ if(BUILD_TESTING)
     target_link_libraries(
         negaflow_defect_clone_stamp_tests
         PRIVATE negaflow_imaging negaflow_project_options
+    )
+    target_include_directories(
+        negaflow_defect_clone_stamp_tests
+        PRIVATE src/Native/imaging
     )
     add_test(
         NAME native.defect_clone_stamp

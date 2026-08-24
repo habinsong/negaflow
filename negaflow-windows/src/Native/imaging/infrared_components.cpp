@@ -38,14 +38,17 @@ std::vector<RawComponent> label_components(
                     pending.push_back(next);
                 }
             };
-            if (x > 0U) visit(pixel - 1U);
-            if (x + 1U < width) visit(pixel + 1U);
-            if (y > 0U) visit(pixel - width);
-            if (y + 1U < height) visit(pixel + width);
-            if (x > 0U && y > 0U) visit(pixel - width - 1U);
-            if (x + 1U < width && y > 0U) visit(pixel - width + 1U);
-            if (x > 0U && y + 1U < height) visit(pixel + width - 1U);
-            if (x + 1U < width && y + 1U < height) visit(pixel + width + 1U);
+            for (std::int32_t delta_y = -1; delta_y <= 1; ++delta_y) {
+                const auto next_y = static_cast<std::int64_t>(y) + delta_y;
+                if (next_y < 0 || next_y >= static_cast<std::int64_t>(height)) continue;
+                for (std::int32_t delta_x = -1; delta_x <= 1; ++delta_x) {
+                    if (delta_x == 0 && delta_y == 0) continue;
+                    const auto next_x = static_cast<std::int64_t>(x) + delta_x;
+                    if (next_x < 0 || next_x >= static_cast<std::int64_t>(width)) continue;
+                    visit(static_cast<std::size_t>(next_y) * width +
+                          static_cast<std::uint32_t>(next_x));
+                }
+            }
         }
         if (component.pixels.size() >= minimum_area) {
             component.source_area = component.pixels.size();

@@ -98,6 +98,13 @@ struct WicTiffExportResult final {
     const std::filesystem::path& destination,
     const WicTiffExportLimits& limits = {}) noexcept;
 
+// Publishes the opaque, uncompressed, linear-sRGB RGB16 TIFF used when defect edits are
+// materialized into the source image at application termination.
+[[nodiscard]] WicTiffExportResult export_working_to_linear16_tiff(
+    const negaflow::imaging::WorkingImage& working,
+    const std::filesystem::path& destination,
+    const WicTiffExportLimits& limits = {}) noexcept;
+
 [[nodiscard]] const char* wic_tiff_export_status_name(
     WicTiffExportStatus status) noexcept;
 

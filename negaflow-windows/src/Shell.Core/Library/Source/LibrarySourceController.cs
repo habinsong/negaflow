@@ -43,6 +43,11 @@ internal sealed class LibrarySourceController
     internal LibrarySourceRelinkResult Relink(
         LibraryDocument? document,
         SourceRelinkPlan plan) => document is null
-        ? new(0, 0, plan?.Mappings.Count ?? 0, CatalogStoreError.NotFound)
+        ? new(
+            0,
+            0,
+            plan?.Mappings.Count ?? 0,
+            CatalogStoreError.NotFound,
+            DefectSidecarError.None)
         : document.Relink(plan, sourceMetadataReader);
 }

@@ -164,7 +164,14 @@ internal static class DevelopRequestDefectTests
                 new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Region, 1),
             ]) &&
             orderedDefectRequest.Request.DefectRecipeSha256 ==
-                orderedDefectRecipe.RecipeSha256,
+                orderedDefectRecipe.RecipeSha256 &&
+            orderedDefectRequest.Request.DefectRecipeAppendPrefixEditCount == 3 &&
+            orderedDefectRequest.Request.DefectRecipeAppendPrefixSha256 ==
+                DefectRecipeSnapshot.Create(
+                    defectFrameId,
+                    recipeRevision: 3,
+                    new DefectSourceIdentity(123, new string('d', 64)),
+                    [regionEdit, infraredEdit, cloneEdit]).RecipeSha256,
             "develop_request_preserves_interleaved_region_infrared_clone_order");
 
         DefectEditItem legacyInfraredEdit = infraredEdit with
@@ -326,5 +333,43 @@ internal static class DevelopRequestDefectTests
                 },
                 destination).Refusal == DevelopRequestRefusal.InvalidDefectRecipe,
             "develop_request_rejects_out_of_range_brush_geometry");
+
+        VerifyInfraredProjectionBoundary(
+            defectFrameId, infraredEdit, destination, clusterCount: 4_096);
+        VerifyInfraredProjectionBoundary(
+            defectFrameId, infraredEdit, destination, clusterCount: 4_097);
+    }
+
+    private static void VerifyInfraredProjectionBoundary(
+        Guid frameId,
+        DefectEditItem infraredEdit,
+        string destination,
+        int clusterCount)
+    {
+        DefectEditItem boundaryEdit = infraredEdit with
+        {
+            Clusters = Enumerable.Repeat(
+                infraredEdit.Clusters!.Single(), clusterCount).ToArray(),
+        };
+        DefectRecipeSnapshot recipe = DefectRecipeSnapshot.Create(
+            frameId,
+            recipeRevision: checked((ulong)clusterCount),
+            new DefectSourceIdentity(123, new string('d', 64)),
+            [boundaryEdit]);
+        DevelopRequestResult result = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
+            {
+                DefectRecipe = recipe,
+            },
+            destination);
+        Check(
+            result.IsSuccess &&
+            result.Request?.DefectInfrared.Count == 1 &&
+            result.Request.DefectInfrared[0].Clusters.Count == clusterCount &&
+            result.Request.DefectEditOrder.SequenceEqual(
+            [
+                new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Infrared, 0),
+            ]),
+            $"develop_request_projects_{clusterCount}_infrared_clusters_as_one_item");
     }
 }

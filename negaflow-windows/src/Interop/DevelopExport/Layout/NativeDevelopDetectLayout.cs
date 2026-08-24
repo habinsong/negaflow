@@ -158,6 +158,27 @@ internal struct NativeGrainMendDetectionV4
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal struct NativeGrainMendReviewHitV1
+{
+    internal uint StructSize;
+    internal uint Found;
+    internal ulong ComponentIndex;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeGrainMendAcceptedRegionV1
+{
+    internal uint StructSize;
+    internal uint Status;
+    internal uint RoiX;
+    internal uint RoiY;
+    internal uint Width;
+    internal uint Height;
+    internal ulong MaskByteCount;
+    internal ulong IncludedComponentCount;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal struct NativeDevelopRunStateV1
 {
     internal uint StructSize;

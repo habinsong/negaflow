@@ -5,6 +5,10 @@
 using namespace grain_mend_tests;
 
 int main() {
+    test_labeled_integer_gate_boundaries_match_macos();
+    test_tile_local_structure_grid_precedes_speck_merge();
+    test_review_preserves_exact_component_ownership_and_acceptance();
+    test_review_nearest_hit_matches_macos_ring_order();
     test_dust_and_thin_scratch_are_repaired();
     test_grain_only_field_is_not_wiped();
     test_diagonal_scratch_is_repaired();

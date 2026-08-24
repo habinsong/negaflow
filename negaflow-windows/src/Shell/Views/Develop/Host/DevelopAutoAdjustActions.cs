@@ -49,7 +49,7 @@ internal sealed class DevelopAutoAdjustActions
         }
         view.SynchronizeInspectorValues();
         view.SyncToneControls();
-        view.RequestPreview();
+        view.RequestPreviewReplacingCurrent();
     }
 
     private void OnAutoColorToggled(object? sender, EventArgs args)
@@ -114,7 +114,7 @@ internal sealed class DevelopAutoAdjustActions
                 if (error == LibraryFrameError.None)
                 {
                     view.SynchronizeInspectorValues();
-                    view.RequestPreview();
+                    view.RequestPreviewReplacingCurrent();
                 }
                 else
                 {

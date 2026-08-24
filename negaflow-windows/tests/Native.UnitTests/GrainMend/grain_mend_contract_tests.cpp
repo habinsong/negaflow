@@ -311,7 +311,15 @@ void test_micro_speck_detection_is_optional_and_additive() {
     off.scratch_sensitivity = 0.7;
     off.protect_detail = 0.6;
     off.detect_micro_specks = false;
+    negaflow::imaging::GrainMendParameters defaults{1.0};
+    defaults.dust_sensitivity = off.dust_sensitivity;
+    defaults.scratch_sensitivity = off.scratch_sensitivity;
+    defaults.protect_detail = off.protect_detail;
+    expect(!defaults.detect_micro_specks,
+        "the strength-path default keeps the macOS micro-speck pass disabled");
     const auto legacy = negaflow::imaging::detect_grain_mend(damaged, off);
+    const auto default_detected =
+        negaflow::imaging::detect_grain_mend(damaged, defaults);
     negaflow::imaging::GrainMendParameters on = off;
     on.detect_micro_specks = true;
     const auto detected = negaflow::imaging::detect_grain_mend(damaged, on);
@@ -324,6 +332,36 @@ void test_micro_speck_detection_is_optional_and_additive() {
         detected.accepted_pixels >= legacy.accepted_pixels &&
             detected.mask.size() == legacy.mask.size(),
         "the enabled micro-speck pass only adds to the legacy proposal");
+    expect(
+        default_detected.status == negaflow::imaging::GrainMendStatus::ok &&
+            default_detected.accepted_pixels == legacy.accepted_pixels &&
+            default_detected.mask == legacy.mask,
+        "the default detector is byte-identical to explicit micro-speck off");
+
+    const auto default_repaired =
+        negaflow::imaging::apply_grain_mend(damaged, defaults);
+    const auto explicit_off_repaired =
+        negaflow::imaging::apply_grain_mend(damaged, off);
+    bool default_pixels_match =
+        default_repaired.status == negaflow::imaging::GrainMendStatus::ok &&
+        explicit_off_repaired.status == negaflow::imaging::GrainMendStatus::ok &&
+        default_repaired.info.candidate_pixels ==
+            explicit_off_repaired.info.candidate_pixels &&
+        default_repaired.info.repaired_pixels ==
+            explicit_off_repaired.info.repaired_pixels &&
+        default_repaired.image.pixels.size() ==
+            explicit_off_repaired.image.pixels.size();
+    for (std::size_t index = 0U;
+         default_pixels_match && index < default_repaired.image.pixels.size();
+         ++index) {
+        default_pixels_match =
+            std::memcmp(
+                &default_repaired.image.pixels[index],
+                &explicit_off_repaired.image.pixels[index],
+                sizeof(default_repaired.image.pixels[index])) == 0;
+    }
+    expect(default_pixels_match,
+        "the default strength repair is pixel-identical to explicit micro-speck off");
     bool preserves_legacy = true;
     for (std::size_t index = 0U; index < legacy.mask.size(); ++index) {
         preserves_legacy = preserves_legacy &&

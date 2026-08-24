@@ -37,7 +37,8 @@ internal static class SliderDragDiagnostics
             Argument(args, 2, "frame_12"),
             double.Parse(Argument(args, 3, "1500")),
             int.Parse(Argument(args, 4, "60")),
-            int.Parse(Argument(args, 5, "8")));
+            int.Parse(Argument(args, 5, "8")),
+            Argument(args, 6, "none"));
         return true;
     }
 
@@ -53,12 +54,17 @@ internal static class SliderDragDiagnostics
         bool Settled,
         string Kind);
 
+    private readonly record struct DefectAttachLatency(
+        double? InteractiveMilliseconds,
+        double? SettledMilliseconds);
+
     private static int Run(
         string storageRoot,
         string frameSelector,
         double canvasPixels,
         int ticks,
-        int tickIntervalMs)
+        int tickIntervalMs,
+        string defectTool)
     {
         if (StorageRootResolver.ResolveForTests(storageRoot).Roots is not { } roots)
         {
@@ -79,6 +85,24 @@ internal static class SliderDragDiagnostics
             Console.Error.WriteLine("frame not found: " + frameSelector);
             return 2;
         }
+        LibraryFrameSnapshot warmFrame = defectTool == "none"
+            ? frame
+            : frame with { DefectRecipe = null };
+        if (!TryAttachDefect(frame, defectTool, out frame, out string reason))
+        {
+            Console.Error.WriteLine("defect recipe refused: " + reason);
+            return 2;
+        }
+        LibraryFrameSnapshot appendedFrame = frame;
+        if (defectTool != "none")
+        {
+            if (DefectToolRecipes.AppendManual(frame, defectTool, out reason) is not { } appended)
+            {
+                Console.Error.WriteLine("second defect recipe refused: " + reason);
+                return 2;
+            }
+            appendedFrame = frame with { DefectRecipe = appended };
+        }
 
         NativeDevelopExporterAdapter exporter = new();
         PreviewCoordinator coordinator = new(exporter, dispatcher, () => canvasPixels);
@@ -96,7 +120,15 @@ internal static class SliderDragDiagnostics
 
         // 실제 앱은 사진을 열고 정착까지 간 상태에서 슬라이더를 잡습니다. 프록시가 식은 채로
         // 재면 첫 디코드 비용이 드래그 비용에 섞입니다.
-        double warmMs = Warm(dispatcher, coordinator, frame, Record);
+        double warmMs = Warm(dispatcher, coordinator, warmFrame, Record);
+        deliveries.Clear();
+        DefectAttachLatency attach = defectTool == "none"
+            ? default
+            : MeasureDefectAttach(dispatcher, coordinator, frame, Record);
+        DefectAttachLatency append = defectTool == "none"
+            ? default
+            : MeasureDefectAttach(dispatcher, coordinator, appendedFrame, Record);
+        frame = appendedFrame;
         deliveries.Clear();
         long dragMark = TraceLength();
 
@@ -114,7 +146,10 @@ internal static class SliderDragDiagnostics
             canvasPixels,
             ticks,
             tickIntervalMs,
+            defectTool,
             warmMs,
+            attach,
+            append,
             dragStart,
             lastRequestAt,
             totalMs,
@@ -122,6 +157,34 @@ internal static class SliderDragDiagnostics
             TraceSince(dragMark),
             traceMark);
         return 0;
+    }
+
+    private static bool TryAttachDefect(
+        LibraryFrameSnapshot frame,
+        string tool,
+        out LibraryFrameSnapshot prepared,
+        out string reason)
+    {
+        prepared = frame;
+        reason = string.Empty;
+        if (tool == "none")
+        {
+            return true;
+        }
+        DefectEditItem? item = tool switch
+        {
+            "brush" => DefectToolRecipes.Brush(frame, out reason),
+            "clone" => DefectToolRecipes.Clone(frame, out reason),
+            _ => null,
+        };
+        DefectRecipeSnapshot? recipe = item is null ? null : DefectToolRecipes.Wrap(frame, item);
+        if (recipe is null)
+        {
+            reason = reason.Length > 0 ? reason : "expected brush or clone";
+            return false;
+        }
+        prepared = frame with { DefectRecipe = recipe };
+        return true;
     }
 
     private static LibraryFrameSnapshot? SelectFrame(
@@ -158,6 +221,36 @@ internal static class SliderDragDiagnostics
         }));
         settled.Wait(TimeSpan.FromSeconds(120));
         return clock.Elapsed.TotalMilliseconds;
+    }
+
+    private static DefectAttachLatency MeasureDefectAttach(
+        PumpDispatcher dispatcher,
+        PreviewCoordinator coordinator,
+        LibraryFrameSnapshot frame,
+        Action<PreviewOutcome> record)
+    {
+        Stopwatch clock = Stopwatch.StartNew();
+        using ManualResetEventSlim interactive = new();
+        using ManualResetEventSlim settled = new();
+        double? interactiveMilliseconds = null;
+        double? settledMilliseconds = null;
+        dispatcher.Send(() => _ = coordinator.RequestAsync(frame, outcome =>
+        {
+            record(outcome);
+            if (outcome.Kind == DevelopExportOutcomeKind.Completed && !outcome.Settled)
+            {
+                interactiveMilliseconds ??= clock.Elapsed.TotalMilliseconds;
+                interactive.Set();
+            }
+            if (outcome.Kind == DevelopExportOutcomeKind.Completed && outcome.Settled)
+            {
+                settledMilliseconds = clock.Elapsed.TotalMilliseconds;
+                settled.Set();
+            }
+        }));
+        interactive.Wait(TimeSpan.FromSeconds(120));
+        settled.Wait(TimeSpan.FromSeconds(120));
+        return new DefectAttachLatency(interactiveMilliseconds, settledMilliseconds);
     }
 
     /// <summary>슬라이더 한 번 끌기입니다. 값은 매 틱 바뀝니다.</summary>
@@ -205,7 +298,10 @@ internal static class SliderDragDiagnostics
         double canvasPixels,
         int ticks,
         int tickIntervalMs,
+        string defectTool,
         double warmMs,
+        DefectAttachLatency attach,
+        DefectAttachLatency append,
         double dragStart,
         double lastRequestAt,
         double totalMs,
@@ -228,6 +324,7 @@ internal static class SliderDragDiagnostics
             status = "ok",
             operation = "slider_drag",
             source = Path.GetFileName(frame.SourcePath),
+            defectTool,
             // 어떤 단계가 켜져 있는지입니다. 프레임마다 틱 비용이 4배씩 갈리므로, 무엇이
             // 그 차이를 만드는지 숫자 옆에 같이 적혀 있어야 합니다.
             recipe = Recipe(frame),
@@ -235,6 +332,18 @@ internal static class SliderDragDiagnostics
             interactiveEdge = DevelopPreviewProxy.BufferEdge(
                 DevelopPreviewProxy.InteractiveProxyDimension(canvasPixels)),
             warmMs = Math.Round(warmMs, 1),
+            defectAttachInteractiveMs = attach.InteractiveMilliseconds is { } interactive
+                ? Math.Round(interactive, 1)
+                : (double?)null,
+            defectAttachSettledMs = attach.SettledMilliseconds is { } settled
+                ? Math.Round(settled, 1)
+                : (double?)null,
+            defectAppendInteractiveMs = append.InteractiveMilliseconds is { } appendInteractive
+                ? Math.Round(appendInteractive, 1)
+                : (double?)null,
+            defectAppendSettledMs = append.SettledMilliseconds is { } appendSettled
+                ? Math.Round(appendSettled, 1)
+                : (double?)null,
             ticks,
             tickIntervalMs,
             dragSpanMs = Math.Round(dragSpanMs, 1),
@@ -366,85 +475,4 @@ internal static class SliderDragDiagnostics
         }
     }
 
-    /// <summary>
-    /// WinUI <c>DispatcherQueue</c> 와 같은 규칙의 디스패처입니다 — 전용 스레드 하나가 큐를
-    /// 비웁니다. 워커에서 <see cref="IUiDispatcher.HasThreadAccess"/> 가 false 여야
-    /// 코디네이터가 실제 앱과 같은 갈래를 탑니다.
-    /// </summary>
-    private sealed class PumpDispatcher : IUiDispatcher, IDisposable
-    {
-        private readonly BlockingCollection<Action> queue = [];
-        private readonly Thread thread;
-        private int pumpThreadId;
-
-        public PumpDispatcher()
-        {
-            using ManualResetEventSlim ready = new();
-            thread = new Thread(() =>
-            {
-                pumpThreadId = Environment.CurrentManagedThreadId;
-                ready.Set();
-                foreach (Action work in queue.GetConsumingEnumerable())
-                {
-                    try
-                    {
-                        work();
-                    }
-                    catch (Exception error)
-                    {
-                        Console.Error.WriteLine("pump: " + error);
-                    }
-                }
-            })
-            {
-                IsBackground = true,
-                Name = "negaflow-ui-pump",
-            };
-            thread.Start();
-            ready.Wait();
-        }
-
-        public bool HasThreadAccess => Environment.CurrentManagedThreadId == pumpThreadId;
-
-        public bool TryEnqueue(Action callback)
-        {
-            try
-            {
-                queue.Add(callback);
-                return true;
-            }
-            catch (InvalidOperationException)
-            {
-                return false;
-            }
-        }
-
-        /// <summary>UI 스레드에서 실행하고 끝날 때까지 기다립니다.</summary>
-        public void Send(Action callback)
-        {
-            using ManualResetEventSlim done = new();
-            if (!TryEnqueue(() =>
-                {
-                    try
-                    {
-                        callback();
-                    }
-                    finally
-                    {
-                        done.Set();
-                    }
-                }))
-            {
-                return;
-            }
-            done.Wait();
-        }
-
-        public void Dispose()
-        {
-            queue.CompleteAdding();
-            thread.Join(TimeSpan.FromSeconds(5));
-            queue.Dispose();
-        }
-    }
 }

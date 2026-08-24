@@ -70,9 +70,12 @@ internal static class DefectReviewTrackingTests
             .Apply(new JsonObject(), new DefectReviewMarkRecord(2UL, "r", "s"))
             .FrameRecord!;
         JsonObject cleared = DefectReviewTrackingCodec.Apply(withMark, null).FrameRecord!;
+        JsonObject tracking = cleared[DefectReviewTrackingCodec.TrackingName]!.AsObject();
         Check(
-            DefectReviewTrackingCodec.Read(Parse(cleared)) is null,
-            "defect_review_null_mark_clears_the_record");
+            DefectReviewTrackingCodec.Read(Parse(cleared)) is null &&
+            tracking.Count == 1 &&
+            tracking["coverage"]!.GetValue<string>() == "tracked",
+            "defect_review_null_mark_keeps_tracked_empty_identity");
     }
 
     /// <summary>쓰기는 <c>JsonObject</c>, 읽기는 <c>JsonElement</c> 이므로 한 번 건넙니다.</summary>

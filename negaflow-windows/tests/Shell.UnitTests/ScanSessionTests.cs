@@ -148,6 +148,19 @@ internal static class ScanSessionTests
         Check(
             ScanOptionPolicy.AvailableFrameFormats(null).Count == 0,
             "no_capabilities_means_no_frame_formats");
+
+        ScannerPluginCapabilities changedDevice = Caps(
+            null,
+            null,
+            positioned: false,
+            preview: true) with
+        {
+            ResolutionsDpi = [600, 3600],
+        };
+        ScanOptions staleSelection = new() { ResolutionDpi = 7200 };
+        Check(
+            ScanOptionPolicy.Clamp(changedDevice, 7200, staleSelection).ResolutionDpi == 3600,
+            "scanner_device_change_clamps_stale_resolution_to_reported_capability");
     }
 
     private static void VerifyScanSession()

@@ -21,7 +21,47 @@ internal static class GrainMendRecipeTests
         VerifyGrainMendClassReview();
         VerifyGrainMendHudProjection();
         VerifyGrainMendWorkspaceStateAndOverlay();
+        VerifyManualToolFrameOwnership();
         VerifyGrainMendDetectCoordinator();
+    }
+
+    private static void VerifyManualToolFrameOwnership()
+    {
+        GrainMendWorkspaceState state = new();
+        state.Strokes.Select(GrainMendTool.Clone);
+        Check(state.Strokes.Tool == GrainMendTool.None,
+            "grain_mend_manual_tool_requires_a_selected_frame");
+
+        state.ChangeFrame("frame-a");
+        Check(state.OwnsFrame("frame-a") && !state.OwnsFrame("frame-b"),
+            "grain_mend_workspace_reports_exact_frame_ownership");
+        state.Strokes.Select(GrainMendTool.Brush);
+        Check(state.Strokes.Begin(new DefectPoint(0.2, 0.3), cloneSourceModifier: false) &&
+              state.Strokes.Continue(new DefectPoint(0.3, 0.4)) &&
+              state.Strokes.IsDragging,
+            "grain_mend_brush_stroke_belongs_to_its_start_frame");
+        state.ChangeFrame("frame-b");
+        Check(state.Strokes.Tool == GrainMendTool.None &&
+              !state.Strokes.IsDragging && state.Strokes.InProgressStroke.Count == 0,
+            "grain_mend_photo_switch_discards_the_brush_stroke");
+        state.ChangeFrame("frame-a");
+        Check(state.Strokes.Tool == GrainMendTool.Brush,
+            "grain_mend_manual_tool_owner_is_the_original_frame");
+
+        state.ChangeFrame("frame-b");
+        state.Strokes.Select(GrainMendTool.Clone);
+        Check(state.Strokes.Begin(new DefectPoint(0.7, 0.6), cloneSourceModifier: true) &&
+              state.Strokes.CloneSourceAnchor == new DefectPoint(0.7, 0.6),
+            "grain_mend_clone_source_belongs_to_its_start_frame");
+        state.ChangeFrame("frame-a");
+        Check(state.Strokes.Tool == GrainMendTool.None &&
+              state.Strokes.CloneSourceAnchor is null &&
+              state.Strokes.CloneAlignedRawOffset is null,
+            "grain_mend_photo_switch_discards_clone_source_and_offset");
+        state.ChangeFrame("frame-b");
+        Check(state.Strokes.Tool == GrainMendTool.Clone &&
+              state.Strokes.CloneSourceAnchor is null,
+            "grain_mend_clone_tool_returns_without_stale_source");
     }
 
     /// <summary>
@@ -126,7 +166,7 @@ internal static class GrainMendRecipeTests
             "grain_mend_review_invents_no_class_without_a_detector_component");
 
         static DefectPoint Raw(int x, int y) =>
-            new(x / (double)(width - 1), y / (double)(height - 1));
+            new(x / (double)width, y / (double)height);
 
         static void Mark(byte[] rgba, int stride, int x, int y)
         {
@@ -301,8 +341,8 @@ internal static class GrainMendRecipeTests
             return;
         }
 
-        DefectPoint firstRaw = new(1.0 / (width - 1), 1.0 / (height - 1));
-        DefectPoint secondRaw = new(4.0 / (width - 1), 2.0 / (height - 1));
+        DefectPoint firstRaw = new(1.0 / width, 1.0 / height);
+        DefectPoint secondRaw = new(4.0 / width, 2.0 / height);
         Check(review.ToggleAtRaw(firstRaw) && review.IsExcludedAtRaw(firstRaw) &&
               review.IncludedCount == 1,
             "grain_mend_review_excludes_clicked_component");
@@ -318,10 +358,12 @@ internal static class GrainMendRecipeTests
     private static void VerifyGrainMendWorkspaceStateAndOverlay()
     {
         GrainMendWorkspaceState state = new();
-        state.BeginDetection();
-        Check(state.IsDetecting && !state.IsReviewing,
+        state.ChangeFrame("frame-a");
+        long generation = state.BeginDetection("frame-a");
+        Check(state.IsDetecting && !state.IsReviewing &&
+            state.OwnsDetection("frame-a", generation),
             "grain_mend_workspace_begins_without_a_persisted_edit");
-        state.EndDetection();
+        state.EndDetection("frame-a", generation);
 
         byte[] rgba = new byte[2 * 2 * 4];
         rgba[0] = rgba[1] = rgba[2] = rgba[3] = 1;
@@ -375,7 +417,343 @@ internal static class GrainMendRecipeTests
         state.ClearPending();
         Check(!state.IsReviewing && state.PendingRawRoi is null,
             "grain_mend_workspace_clears_unaccepted_state");
+
+        state.ChangeFrame("frame-a");
+        LibraryFrameSnapshot exactFrame = frame with { Id = "frame-a" };
+        GrainMendDetectionToken exactToken = DetectionTokenFor(exactFrame);
+        long exactGeneration = state.BeginDetection("frame-a");
+        FakeGrainMendReviewProposal exactProposal = new(
+            4U,
+            4U,
+            [
+                new GrainMendComponent(
+                    GrainMendDefectClass.Dust,
+                    0.9,
+                    1UL,
+                    0U,
+                    0U,
+                    0U,
+                    0U,
+                    [new GrainMendPreviewPoint(0U, 0U)]),
+            ]);
+        Check(state.SetDetectedReview(
+                exactProposal,
+                exactToken,
+                "frame-a",
+                exactGeneration,
+                new DefectRect(0.0, 0.0, 1.0, 1.0),
+                automatic: true) &&
+            state.PendingEdit?.Label.Kind == DefectEditLabelKind.Automatic &&
+            state.PendingEdit.Label.Value == 1 &&
+            exactProposal.BuildAcceptedCount == 0,
+            "grain_mend_workspace_builds_preview_from_exact_review_ownership");
+        Check(state.ToggleReviewAtRaw(new DefectPoint(0.0, 0.0)) &&
+            state.BuildAcceptedEdit() is null,
+            "grain_mend_workspace_excludes_an_exact_native_component");
+        state.ChangeFrame("frame-a");
+        Check(exactProposal.DisposeCount == 1 && !state.IsReviewing,
+            "grain_mend_workspace_disposes_exact_review_on_same_frame_snapshot_refresh");
+
+        state.ChangeFrame("frame-a");
+        long commitGeneration = state.BeginDetection("frame-a");
+        FakeGrainMendReviewProposal commitProposal = new(
+            4U,
+            4U,
+            [
+                new GrainMendComponent(
+                    GrainMendDefectClass.Dust,
+                    0.9,
+                    1UL,
+                    1U,
+                    1U,
+                    1U,
+                    1U,
+                    [new GrainMendPreviewPoint(1U, 1U)]),
+            ]);
+        bool preparedCommit = state.SetDetectedReview(
+            commitProposal,
+            exactToken,
+            "frame-a",
+            commitGeneration,
+            new DefectRect(0.0, 0.0, 1.0, 1.0),
+            automatic: true);
+        int acceptanceCallerThread = Environment.CurrentManagedThreadId;
+        GrainMendAcceptance? commitAcceptance = state.CaptureAcceptance();
+        GrainMendAcceptanceBuildResult? commitBuild = commitAcceptance?
+            .BuildAsync(exactFrame).GetAwaiter().GetResult();
+        DefectEditItem? persistedEdit = commitBuild?.Edit;
+        Check(preparedCommit && commitBuild is
+                { Kind: GrainMendAcceptanceBuildKind.Completed, Edit: not null } &&
+            commitProposal.BuildAcceptedCount == 1 &&
+            commitProposal.BuildAcceptedThreadId != acceptanceCallerThread,
+            "grain_mend_workspace_builds_an_exact_edit_off_the_calling_thread");
+        if (persistedEdit is not null)
+        {
+            Check(state.CommitAcceptedEdit(
+                    persistedEdit,
+                    _ => LibraryFrameError.InvalidDefectRecipe) ==
+                    LibraryFrameError.InvalidDefectRecipe &&
+                state.IsReviewing && commitProposal.DisposeCount == 0,
+                "grain_mend_workspace_preserves_review_after_persistence_failure");
+            Check(state.CommitAcceptedEdit(
+                    persistedEdit,
+                    _ => LibraryFrameError.None) == LibraryFrameError.None &&
+                !state.IsReviewing && commitProposal.DisposeCount == 1,
+                "grain_mend_workspace_clears_review_only_after_persistence_success");
+        }
+
+        long selectionGeneration = state.BeginDetection("frame-a");
+        FakeGrainMendReviewProposal selectionProposal = new(
+            4U,
+            4U,
+            [
+                new GrainMendComponent(
+                    GrainMendDefectClass.Dust,
+                    0.9,
+                    1UL,
+                    0U,
+                    0U,
+                    0U,
+                    0U,
+                    [new GrainMendPreviewPoint(0U, 0U)]),
+                new GrainMendComponent(
+                    GrainMendDefectClass.ScratchVertical,
+                    0.8,
+                    1UL,
+                    3U,
+                    3U,
+                    3U,
+                    3U,
+                    [new GrainMendPreviewPoint(3U, 3U)]),
+            ]);
+        bool preparedSelection = state.SetDetectedReview(
+            selectionProposal,
+            exactToken,
+            "frame-a",
+            selectionGeneration,
+            new DefectRect(0.0, 0.0, 1.0, 1.0),
+            automatic: true) &&
+            state.ToggleReviewAtRaw(new DefectPoint(0.0, 0.0));
+        GrainMendAcceptance? selectionAcceptance = state.CaptureAcceptance();
+        bool changedLiveSelection = state.ToggleReviewAtRaw(new DefectPoint(0.0, 0.0)) &&
+            state.ToggleReviewAtRaw(new DefectPoint(0.75, 0.75));
+        GrainMendAcceptanceBuildResult? selectionBuild = selectionAcceptance?
+            .BuildAsync(exactFrame).GetAwaiter().GetResult();
+        Check(preparedSelection && selectionAcceptance is not null && changedLiveSelection &&
+            selectionBuild is { Kind: GrainMendAcceptanceBuildKind.Completed, Edit: not null } &&
+            selectionBuild.Edit.Label.Value == 1 &&
+            selectionBuild.Edit.Preview is [{ Classification: DefectClassification.ScratchVertical }],
+            "grain_mend_acceptance_uses_the_exclusion_snapshot_from_commit_time");
+        state.ClearPending();
+
+        state.ChangeFrame("frame-a");
+        long disposedGeneration = state.BeginDetection("frame-a");
+        FakeGrainMendReviewProposal disposedProposal = SingleDustProposal();
+        Check(state.SetDetectedReview(
+                disposedProposal,
+                exactToken,
+                "frame-a",
+                disposedGeneration,
+                new DefectRect(0.0, 0.0, 1.0, 1.0),
+                automatic: true),
+            "grain_mend_workspace_prepares_an_acceptance_before_photo_switch");
+        GrainMendAcceptance? disposedAcceptance = state.CaptureAcceptance();
+        state.ChangeFrame("frame-b");
+        GrainMendAcceptanceBuildResult? disposedBuild = disposedAcceptance?
+            .BuildAsync(exactFrame).GetAwaiter().GetResult();
+        Check(disposedBuild?.Kind == GrainMendAcceptanceBuildKind.Failed &&
+            disposedProposal.DisposeCount == 1 && !state.IsReviewing,
+            "grain_mend_acceptance_fails_closed_when_photo_switch_disposes_the_review");
+        state.ChangeFrame("frame-a");
+
+        long failingGeneration = state.BeginDetection("frame-a");
+        FakeGrainMendReviewProposal failingProposal = new(
+            4U,
+            4U,
+            [
+                new GrainMendComponent(
+                    GrainMendDefectClass.Dust,
+                    0.9,
+                    1UL,
+                    1U,
+                    1U,
+                    1U,
+                    1U,
+                    [new GrainMendPreviewPoint(1U, 1U)]),
+            ])
+        {
+            BuildAcceptedFailure = new NativeBootstrapException(
+                NativeBootstrapFailure.NativeCallFailed,
+                "accepted region failed"),
+        };
+        Check(state.SetDetectedReview(
+                failingProposal,
+                exactToken,
+                "frame-a",
+                failingGeneration,
+                new DefectRect(0.0, 0.0, 1.0, 1.0),
+                automatic: true) &&
+            !state.TryBuildAcceptedEdit(out _) && state.IsReviewing &&
+            failingProposal.DisposeCount == 0,
+            "grain_mend_workspace_preserves_review_after_native_acceptance_failure");
+        state.ClearPending();
+
+        long emptyGeneration = state.BeginDetection("frame-a");
+        FakeGrainMendReviewProposal emptyProposal = new(
+            4U,
+            4U,
+            [
+                new GrainMendComponent(
+                    GrainMendDefectClass.Dust,
+                    0.9,
+                    1UL,
+                    1U,
+                    1U,
+                    1U,
+                    1U,
+                    [new GrainMendPreviewPoint(1U, 1U)]),
+            ])
+        {
+            ReturnEmptyAcceptance = true,
+        };
+        Check(state.SetDetectedReview(
+                emptyProposal,
+                exactToken,
+                "frame-a",
+                emptyGeneration,
+                new DefectRect(0.0, 0.0, 1.0, 1.0),
+                automatic: true) &&
+            !state.TryBuildAcceptedEdit(out _) && state.IsReviewing &&
+            emptyProposal.DisposeCount == 0,
+            "grain_mend_workspace_rejects_inconsistent_empty_native_acceptance");
+        state.ClearPending();
+
+        long invalidAcceptedGeneration = state.BeginDetection("frame-a");
+        FakeGrainMendReviewProposal invalidAcceptedProposal =
+            SingleDustProposal(acceptedIncludedCount: 2UL);
+        Check(state.SetDetectedReview(
+                invalidAcceptedProposal,
+                exactToken,
+                "frame-a",
+                invalidAcceptedGeneration,
+                new DefectRect(0.0, 0.0, 1.0, 1.0),
+                automatic: true),
+            "grain_mend_workspace_prepares_invalid_converted_acceptance");
+        GrainMendAcceptanceBuildResult? invalidAcceptedBuild = state.CaptureAcceptance()?
+            .BuildAsync(exactFrame).GetAwaiter().GetResult();
+        Check(invalidAcceptedBuild?.Kind == GrainMendAcceptanceBuildKind.Failed &&
+            state.IsReviewing && invalidAcceptedProposal.DisposeCount == 0,
+            "grain_mend_workspace_preserves_review_after_accepted_region_conversion_failure");
+        state.ClearPending();
+
+        long recipeChangedGeneration = state.BeginDetection("frame-a");
+        FakeGrainMendReviewProposal recipeChangedProposal = SingleDustProposal();
+        Check(state.SetDetectedReview(
+                recipeChangedProposal,
+                exactToken,
+                "frame-a",
+                recipeChangedGeneration,
+                new DefectRect(0.0, 0.0, 1.0, 1.0),
+                automatic: true),
+            "grain_mend_workspace_captures_a_recipe_bound_acceptance");
+        GrainMendAcceptanceBuildResult? recipeChangedBuild = state.CaptureAcceptance()?
+            .BuildAsync(exactFrame with { AutoLevels = true }).GetAwaiter().GetResult();
+        Check(recipeChangedBuild?.Kind == GrainMendAcceptanceBuildKind.Stale &&
+            recipeChangedProposal.BuildAcceptedCount == 0 && state.IsReviewing,
+            "grain_mend_acceptance_rejects_a_changed_develop_recipe_before_building");
+        state.ClearPending();
+
+        string changingSourcePath = Path.Combine(
+            Path.GetTempPath(),
+            $"negaflow-grain-mend-accept-{Guid.NewGuid():N}.tif");
+        try
+        {
+            File.WriteAllBytes(changingSourcePath, [1, 2, 3, 4]);
+            LibraryFrameSnapshot sourceFrame = Frame(
+                new ManualBaseRgb(0.2, 0.2, 0.2),
+                sourcePath: changingSourcePath) with { Id = "frame-source" };
+            GrainMendDetectionToken sourceToken = DetectionTokenFor(sourceFrame);
+            state.ChangeFrame(sourceFrame.Id);
+            long sourceGeneration = state.BeginDetection(sourceFrame.Id);
+            FakeGrainMendReviewProposal sourceChangedProposal = SingleDustProposal(
+                () => File.WriteAllBytes(changingSourcePath, [4, 3, 2, 1]));
+            Check(state.SetDetectedReview(
+                    sourceChangedProposal,
+                    sourceToken,
+                    sourceFrame.Id,
+                    sourceGeneration,
+                    new DefectRect(0.0, 0.0, 1.0, 1.0),
+                    automatic: true),
+                "grain_mend_workspace_captures_a_source_bound_acceptance");
+            GrainMendAcceptanceBuildResult? sourceChangedBuild = state.CaptureAcceptance()?
+                .BuildAsync(sourceFrame).GetAwaiter().GetResult();
+            Check(sourceChangedBuild?.Kind == GrainMendAcceptanceBuildKind.Stale &&
+                sourceChangedProposal.BuildAcceptedCount == 1 && state.IsReviewing,
+                "grain_mend_acceptance_discards_a_source_changed_during_native_build");
+        }
+        finally
+        {
+            state.ClearPending();
+            File.Delete(changingSourcePath);
+        }
+
+        using DevelopRun frameRun = new();
+        long staleGeneration = state.BeginDetection(
+            "frame-a",
+            frameRun,
+            DefectEditLabelKind.Automatic);
+        Check(state.ActiveRegionKind == DefectEditLabelKind.Automatic,
+            "grain_mend_workspace_owns_the_active_automatic_detection_kind");
+        state.ChangeFrame("frame-b");
+        Check(!state.IsDetecting && !state.IsReviewing &&
+            !state.OwnsDetection("frame-a", staleGeneration) &&
+            state.PendingFrameId is null && state.ActiveRegionKind is null &&
+            frameRun.IsCancelRequested,
+            "grain_mend_workspace_discards_detection_and_review_on_frame_change");
+        using DevelopRun cancelledRun = new();
+        long currentGeneration = state.BeginDetection(
+            "frame-b",
+            cancelledRun,
+            DefectEditLabelKind.Guided);
+        Check(state.ActiveRegionKind == DefectEditLabelKind.Guided,
+            "grain_mend_workspace_owns_the_active_guided_detection_kind");
+        state.ExitRegionMode();
+        Check(!state.OwnsDetection("frame-b", currentGeneration) &&
+            state.ActiveRegionKind is null && cancelledRun.IsCancelRequested,
+            "grain_mend_workspace_cancel_invalidates_late_detection_generation");
     }
+
+    private static GrainMendDetectionToken DetectionTokenFor(LibraryFrameSnapshot frame)
+    {
+        if (!GrainMendDetectionToken.TryCreate(frame, out GrainMendDetectionToken? token) ||
+            token is null)
+        {
+            throw new InvalidOperationException("The GrainMend detection token fixture is invalid.");
+        }
+        return token;
+    }
+
+    private static FakeGrainMendReviewProposal SingleDustProposal(
+        Action? onBuildAccepted = null,
+        ulong? acceptedIncludedCount = null) =>
+        new(
+            4U,
+            4U,
+            [
+                new GrainMendComponent(
+                    GrainMendDefectClass.Dust,
+                    0.9,
+                    1UL,
+                    1U,
+                    1U,
+                    1U,
+                    1U,
+                    [new GrainMendPreviewPoint(1U, 1U)]),
+            ])
+        {
+            OnBuildAccepted = onBuildAccepted,
+            AcceptedIncludedCount = acceptedIncludedCount,
+        };
 
     /// <summary>
     /// 자동·가이드 검출 한 번입니다. 요점은 <b>저장하지 않는다</b>는 것입니다 — macOS 는 버튼을
@@ -383,77 +761,123 @@ internal static class GrainMendRecipeTests
     /// </summary>
     private static void VerifyGrainMendDetectCoordinator()
     {
+        string sourcePath = Path.Combine(
+            Path.GetTempPath(),
+            $"negaflow-grain-mend-detect-{Guid.NewGuid():N}.tif");
+        File.WriteAllBytes(sourcePath, [1, 2, 3, 4]);
+        LibraryFrameSnapshot detectFrame = Frame(
+            new ManualBaseRgb(0.2, 0.2, 0.2),
+            sourcePath: sourcePath);
+        try
+        {
         int callerThreadId = Environment.CurrentManagedThreadId;
         FakeDispatcher dispatcher = new(accepts: true);
         FakeExporter exporter = new(_ => OkResult());
         const uint width = 40U;
         const uint height = 30U;
-        exporter.DetectBehaviour = mask =>
+        FakeGrainMendReviewProposal? latestProposal = null;
+        exporter.DetectBehaviour = () =>
         {
-            // 몇 화소만 표시해 둡니다. 나머지는 호출부가 넘긴 버퍼 그대로입니다.
-            Array.Clear(mask, 0, (int)(width * height));
-            mask[0] = 1;
-            mask[(int)width + 3] = 90;
+            GrainMendComponent[] components =
+            [
+                new(
+                    GrainMendDefectClass.Dust,
+                    0.9,
+                    1UL,
+                    0U,
+                    0U,
+                    0U,
+                    0U,
+                    [new GrainMendPreviewPoint(0U, 0U)]),
+                new(
+                    GrainMendDefectClass.ScratchVertical,
+                    0.8,
+                    1UL,
+                    3U,
+                    1U,
+                    3U,
+                    1U,
+                    [new GrainMendPreviewPoint(3U, 1U)]),
+            ];
+            latestProposal = new FakeGrainMendReviewProposal(width, height, components);
             return new GrainMendDetectionResult(
                 OkResult(), width, height, 2UL, width * height,
-                width, height, 0U, 0U, width, height);
+                width, height, 0U, 0U, width, height,
+                components,
+                ReviewProposal: latestProposal);
         };
 
         GrainMendDetectCoordinator coordinator = new(exporter, dispatcher);
         GrainMendDetectOutcome? seen = null;
+        using DevelopRun detectRun = new();
         Check(
             coordinator.RunAsync(
-                Frame(new ManualBaseRgb(0.2, 0.2, 0.2)),
+                detectFrame,
                 new DefectRect(0.0, 0.0, 1.0, 1.0),
-                outcome => seen = outcome).GetAwaiter().GetResult(),
+                GrainMendSensitivity.ToDetectionOptions(GrainMendSensitivity.Default, true),
+                outcome => seen = outcome,
+                detectRun).GetAwaiter().GetResult(),
             "grain_mend_detect_delivers");
-        Check(exporter.DetectCallCount == 1 && exporter.DetectThreadId != callerThreadId,
-            "grain_mend_detect_runs_off_the_calling_thread");
-        Check(seen is { Kind: DevelopExportOutcomeKind.Completed, Edit: not null } &&
+        Check(exporter.DetectCallCount == 1 && exporter.DetectThreadId != callerThreadId &&
+            ReferenceEquals(exporter.LastDetectRun, detectRun),
+            "grain_mend_detect_runs_off_the_calling_thread_with_cancellation");
+        Check(seen is { Kind: DevelopExportOutcomeKind.Completed, ReviewProposal: not null } &&
             seen.Width == width && seen.Height == height,
             "grain_mend_detect_reports_the_analysis_size");
-        Check(seen?.Edit?.Kind == DefectEditKind.Region &&
-            seen.Edit.Label.Kind == DefectEditLabelKind.Automatic &&
-            seen.Edit.Label.Value == 2,
-            "grain_mend_detect_labels_a_whole_frame_run_automatic");
+        Check(ReferenceEquals(seen?.ReviewProposal, latestProposal),
+            "grain_mend_detect_transfers_exact_review_ownership");
+        Check(seen?.DetectionToken is { } token && token.MatchesRecipe(detectFrame) &&
+            !token.MatchesRecipe(detectFrame with { AutoLevels = true }),
+            "grain_mend_detect_binds_the_review_to_the_source_and_full_develop_recipe");
+        Check(GrainMendDetectionToken.SameDevelopRecipeAsync(
+                detectFrame,
+                detectFrame with { DisplayName = "Metadata-only rename" })
+                .GetAwaiter().GetResult() &&
+            !GrainMendDetectionToken.SameDevelopRecipeAsync(
+                detectFrame,
+                detectFrame with { AutoLevels = true }).GetAwaiter().GetResult(),
+            "grain_mend_recipe_refresh_ignores_metadata_but_detects_render_changes");
         Check(exporter.LastDetectOptions is
             { DustSensitivity: 1.0, ScratchSensitivity: 1.0, ProtectDetail: 0.6,
                 RejectStructureLines: true, DetectMicroSpecks: true },
             "grain_mend_detect_defaults_to_mac_auto_sensitivity_structure_rejection_and_micro_specks");
 
-        // 부분 ROI 는 가이드입니다.
+        // 모드는 ROI 크기가 아니라 사용자의 Auto/Guided 선택으로 정합니다.
+        seen?.Dispose();
         seen = null;
         Check(
             coordinator.RunAsync(
-                Frame(new ManualBaseRgb(0.2, 0.2, 0.2)),
-                new DefectRect(0.1, 0.1, 0.5, 0.5),
+                detectFrame,
+                new DefectRect(0.0, 0.0, 1.0, 1.0),
+                automatic: false,
                 outcome => seen = outcome).GetAwaiter().GetResult() &&
-            seen?.Edit?.Label.Kind == DefectEditLabelKind.Guided &&
-            exporter.LastDetectRoi == new DefectRect(0.1, 0.1, 0.5, 0.5),
-            "grain_mend_detect_labels_a_partial_roi_guided");
+            seen?.ReviewProposal is not null &&
+            exporter.LastDetectRoi == new DefectRect(0.0, 0.0, 1.0, 1.0) &&
+            exporter.LastDetectOptions is { RejectStructureLines: false },
+            "grain_mend_detect_keeps_a_full_frame_guided_request_guided");
+        seen?.Dispose();
         GrainMendDetectionOptions minimumGuided = GrainMendSensitivity.ToDetectionOptions(0.7, false);
         Check(
             coordinator.RunAsync(
-                Frame(new ManualBaseRgb(0.2, 0.2, 0.2)),
+                detectFrame,
                 new DefectRect(0.1, 0.1, 0.5, 0.5),
                 minimumGuided,
                 outcome => seen = outcome).GetAwaiter().GetResult() &&
             exporter.LastDetectOptions == new GrainMendDetectionOptions(0.0, 0.1, 0.6, false, true),
             "grain_mend_detect_forwards_guided_slider_tuning_without_structure_rejection");
+        seen?.Dispose();
 
         // 아무것도 못 찾으면 항목이 없고, 그것은 실패가 아닙니다.
-        exporter.DetectBehaviour = mask =>
-        {
-            Array.Clear(mask, 0, (int)(width * height));
-            return new GrainMendDetectionResult(
+        exporter.DetectBehaviour = () =>
+            new GrainMendDetectionResult(
                 OkResult(), width, height, 0UL, width * height,
                 width, height, 0U, 0U, width, height);
-        };
         seen = null;
         Check(
             coordinator.RunAsync(
-                Frame(new ManualBaseRgb(0.2, 0.2, 0.2)),
+                detectFrame,
                 new DefectRect(0.0, 0.0, 1.0, 1.0),
+                automatic: true,
                 outcome => seen = outcome).GetAwaiter().GetResult() &&
             seen is { FoundNothing: true },
             "grain_mend_detect_finding_nothing_is_not_a_failure");
@@ -463,8 +887,9 @@ internal static class GrainMendRecipeTests
         seen = null;
         Check(
             coordinator.RunAsync(
-                Frame(new ManualBaseRgb(0.2, 0.2, 0.2)),
+                detectFrame,
                 new DefectRect(0.0, 0.0, 1.0, 1.0),
+                automatic: true,
                 outcome => seen = outcome).GetAwaiter().GetResult() &&
             seen is { Kind: DevelopExportOutcomeKind.Faulted } &&
             seen.FaultMessage == "detector_unavailable",
@@ -475,12 +900,95 @@ internal static class GrainMendRecipeTests
         seen = null;
         Check(
             coordinator.RunAsync(
-                Frame(null, SourceSignalKind.SceneLinearDigital),
+                Frame(
+                    null,
+                    SourceSignalKind.SceneLinearDigital,
+                    sourcePath: sourcePath),
                 new DefectRect(0.0, 0.0, 1.0, 1.0),
+                automatic: true,
                 outcome => seen = outcome).GetAwaiter().GetResult() &&
             seen is { Kind: DevelopExportOutcomeKind.Refused } &&
             exporter.DetectCallCount == before,
             "grain_mend_detect_refuses_before_calling_the_engine");
+
+        FakeDispatcher rejectingDispatcher = new(accepts: false);
+        FakeExporter rejectingExporter = new(_ => OkResult());
+        FakeGrainMendReviewProposal rejectedProposal = new(
+            2U,
+            2U,
+            [
+                new GrainMendComponent(
+                    GrainMendDefectClass.Dust,
+                    0.9,
+                    1UL,
+                    0U,
+                    0U,
+                    0U,
+                    0U,
+                    [new GrainMendPreviewPoint(0U, 0U)]),
+            ]);
+        rejectingExporter.DetectBehaviour = () => new GrainMendDetectionResult(
+            OkResult(),
+            2U,
+            2U,
+            1UL,
+            4UL,
+            2U,
+            2U,
+            0U,
+            0U,
+            2U,
+            2U,
+            rejectedProposal.Components,
+            ReviewProposal: rejectedProposal);
+        bool rejectedDelivery = new GrainMendDetectCoordinator(
+            rejectingExporter,
+            rejectingDispatcher).RunAsync(
+                detectFrame,
+                new DefectRect(0.0, 0.0, 1.0, 1.0),
+                automatic: true,
+                _ => throw new InvalidOperationException("Rejected callbacks must not run."))
+            .GetAwaiter().GetResult();
+        Check(!rejectedDelivery && rejectedProposal.DisposeCount == 1,
+            "grain_mend_detect_releases_review_when_dispatcher_rejects_delivery");
+
+        File.WriteAllBytes(sourcePath, [1, 2, 3, 4]);
+        FakeGrainMendReviewProposal sourceChangedProposal = SingleDustProposal();
+        FakeExporter sourceChangedExporter = new(_ => OkResult())
+        {
+            DetectBehaviour = () =>
+            {
+                File.WriteAllBytes(sourcePath, [4, 3, 2, 1]);
+                return new GrainMendDetectionResult(
+                    OkResult(),
+                    4U,
+                    4U,
+                    1UL,
+                    16UL,
+                    4U,
+                    4U,
+                    0U,
+                    0U,
+                    4U,
+                    4U,
+                    sourceChangedProposal.Components,
+                    ReviewProposal: sourceChangedProposal);
+            },
+        };
+        seen = null;
+        Check(new GrainMendDetectCoordinator(sourceChangedExporter, dispatcher).RunAsync(
+                detectFrame,
+                new DefectRect(0.0, 0.0, 1.0, 1.0),
+                automatic: true,
+                outcome => seen = outcome).GetAwaiter().GetResult() &&
+            seen is { Kind: DevelopExportOutcomeKind.Faulted } &&
+            sourceChangedProposal.DisposeCount == 1,
+            "grain_mend_detect_discards_a_result_when_the_source_changes_during_detection");
+        }
+        finally
+        {
+            File.Delete(sourcePath);
+        }
     }
 
 }

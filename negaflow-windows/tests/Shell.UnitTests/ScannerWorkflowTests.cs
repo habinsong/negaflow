@@ -17,6 +17,7 @@ internal static class ScannerWorkflowTests
     public static void Run()
     {
         VerifyScannerSimulator();
+        VerifyPreviewPersistenceBoundary();
         VerifyFlatbedRegions();
     }
 
@@ -96,27 +97,164 @@ internal static class ScannerWorkflowTests
                 published.Route.SourceTransport == FrameSourceTransport.Scanner,
                 "simulator_frame_route_says_scanner");
             // 두 장이 서로 다른 파일이어야 합니다 — 배치가 같은 자리를 덮으면 안 됩니다.
-            // 프리뷰는 판을 보려고 찍는 것이지 사용자의 사진이 아닙니다. 카탈로그에 올리지
-            // 않고 파일만 붙잡아 자동 프레임 찾기에 넘깁니다.
+            // 프리뷰는 Develop에서 보이지만 catalog에는 저장되지 않는 세션 frame입니다.
             int beforePreview = library.Frames.Count;
             ScanRunOutcome previewRun = session2.RunAsync(
                 library,
                 _ => ScanStorageLayout.NextAvailablePath(rollDirectory, "Preview"),
                 preview: true).GetAwaiter().GetResult();
             Check(previewRun.IsSuccess, "simulator_preview_runs");
-            Check(
-                library.Frames.Count == beforePreview,
-                "simulator_preview_stays_out_of_the_catalog");
+            Check(library.Frames.Count == beforePreview + 1,
+                "simulator_preview_is_visible_in_memory");
+            LibraryFrameSnapshot previewFrame = library.Frames[^1];
+            Check(previewFrame.IsPreviewScan, "simulator_preview_has_ephemeral_marker");
+            Check(session2.PreviewFrameId == previewFrame.Id,
+                "simulator_preview_session_tracks_frame");
+            Check(library.ActiveFrameId == previewFrame.Id,
+                "simulator_preview_is_selected");
             Check(
                 session2.LastPreviewPath is { } previewPath && File.Exists(previewPath),
                 "simulator_preview_leaves_a_file");
 
+            var previewTransform = new ImageTransformRecipe(
+                ImageRotation.Degrees90,
+                true,
+                false,
+                new ImageCropRect(0.05, 0.08, 0.80, 0.75),
+                1.25,
+                4.0 / 3.0);
             Check(
-                library.Frames.Count == 2 && !string.Equals(
+                library.Edit(
+                    previewFrame.Id,
+                    new LibraryFrameEdit(
+                        previewFrame.Tone,
+                        previewFrame.ManualBase,
+                        ImageTransform: previewTransform)) == LibraryFrameError.None,
+                "simulator_preview_transform_is_editable");
+            LibraryFrameSnapshot selectedPreview = library.Frames.First(
+                frame => frame.Id == previewFrame.Id);
+            DefectRect previewRawRoi = new(0.12, 0.18, 0.31, 0.27);
+            GrainMendGuidedCarryover? expectedCarryover = GrainMendGuidedCarryover.Capture(
+                selectedPreview,
+                previewRawRoi,
+                0.72);
+            GrainMendGuidedCarryover? transformOnlyCarryover = GrainMendGuidedCarryover.Capture(
+                selectedPreview,
+                null,
+                0.72);
+            Check(
+                transformOnlyCarryover is { DisplayRoi: null } &&
+                transformOnlyCarryover.Transform == previewTransform,
+                "scanner_carryover_keeps_transform_without_guided_roi");
+            var carried = new List<(string FrameId, GrainMendGuidedCarryover Carryover)>();
+            session2.GuidedCarryoverProvider = () => expectedCarryover;
+            session2.GuidedCarryoverPublished = (frameId, carryover) =>
+                carried.Add((frameId, carryover));
+            ScanRunOutcome carryoverRun = session2.RunAsync(
+                library,
+                _ => ScanStorageLayout.NextAvailablePath(rollDirectory, "Carryover"),
+                preview: false).GetAwaiter().GetResult();
+            LibraryFrameSnapshot carriedFrame = library.Frames.First(frame =>
+                carried.Count == 1 && frame.Id == carried[0].FrameId);
+            Check(
+                carryoverRun.Published == 2 && carried.Count == 1 &&
+                carried[0].Carryover == expectedCarryover,
+                "guided_carryover_reaches_only_the_first_full_scan");
+            Check(carriedFrame.ImageTransform == previewTransform,
+                "scanner_carryover_publishes_preview_transform");
+            Check(
+                carried[0].Carryover.TryMapToRaw(carriedFrame, out DefectRect carriedRawRoi) &&
+                double.IsFinite(carriedRawRoi.X) && double.IsFinite(carriedRawRoi.Y) &&
+                double.IsFinite(carriedRawRoi.Width) && double.IsFinite(carriedRawRoi.Height) &&
+                carriedRawRoi.Width > 0.0 && carriedRawRoi.Height > 0.0,
+                "guided_carryover_maps_display_roi_to_full_scan");
+            Check(
+                library.Frames.Count == beforePreview + 2 &&
+                library.Frames.All(frame => !frame.IsPreviewScan),
+                "successful_full_scan_removes_ephemeral_preview");
+
+            Check(
+                library.Frames.Count == 4 && !string.Equals(
                     library.Frames[0].SourcePath,
                     library.Frames[1].SourcePath,
                     StringComparison.OrdinalIgnoreCase),
                 "simulator_batch_never_overwrites");
+
+            session2.SelectDeviceAsync(SimulatedScannerGateway.FlatbedScannerId)
+                .GetAwaiter().GetResult();
+            string? flatbedRegionId = session2.AddRegion();
+            int flatbedCarryoverCaptureCount = 0;
+            int flatbedCarryoverPublishCount = 0;
+            session2.GuidedCarryoverProvider = () =>
+            {
+                flatbedCarryoverCaptureCount++;
+                return expectedCarryover;
+            };
+            session2.GuidedCarryoverPublished = (_, _) => flatbedCarryoverPublishCount++;
+            ScanRunOutcome flatbedRun = session2.RunAsync(
+                library,
+                _ => ScanStorageLayout.NextAvailablePath(rollDirectory, "Flatbed"),
+                preview: false).GetAwaiter().GetResult();
+            Check(flatbedRegionId is not null && flatbedRun.Published == 1,
+                "flatbed_region_scan_publishes");
+            Check(flatbedCarryoverCaptureCount == 0 && flatbedCarryoverPublishCount == 0,
+                "guided_carryover_excludes_flatbed_region_scan");
+        }
+        finally
+        {
+            if (Directory.Exists(isolatedBase) &&
+                StoragePathPolicy.IsLexicallyContained(parent, isolatedBase))
+            {
+                try
+                {
+                    Directory.Delete(isolatedBase, true);
+                }
+                catch (IOException)
+                {
+                    // 시험 뒤처리 실패는 시험 결과가 아닙니다.
+                }
+            }
+        }
+    }
+
+    private static void VerifyPreviewPersistenceBoundary()
+    {
+        string parent = Path.Combine(AppContext.BaseDirectory, "scan-preview-persistence-tests");
+        string isolatedBase = Path.Combine(parent, $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(isolatedBase).Roots!;
+        string previewPath = Path.Combine(isolatedBase, "preview.tif");
+        try
+        {
+            Directory.CreateDirectory(isolatedBase);
+            File.WriteAllBytes(previewPath, [1, 2, 3, 4]);
+            using (CatalogSession session = CatalogSession.Open(roots).Session!)
+            {
+                Check(session.ReadOrCreate().IsSuccess, "preview_persistence_catalog_create");
+            }
+            LibrarySourceMetadata metadata = new(4, 64, 48, 3, 16, 1, 1);
+            using (var library = new LibraryHostService(
+                       new ImmediateUiDispatcher(),
+                       new ThrowingDevelopExporter(),
+                       _ => metadata))
+            {
+                Check(library.Open(roots) == LibraryHostState.Open,
+                    "preview_persistence_library_open");
+                ScannerFramePublishResult published = library.PublishScannerPreviewFrame(
+                    new ScannerFrameImport(previewPath, null, DevelopmentProcess.C41)
+                    {
+                        IsPreviewScan = true,
+                    });
+                Check(published.Frame is { IsPreviewScan: true } && library.Frames.Count == 1,
+                    "preview_persistence_frame_is_visible_in_memory");
+                Check(library.Save() == CatalogStoreError.None,
+                    "preview_persistence_save_succeeds");
+            }
+            using var reopened = new LibraryHostService(
+                new ImmediateUiDispatcher(),
+                new ThrowingDevelopExporter(),
+                _ => metadata);
+            Check(reopened.Open(roots) == LibraryHostState.Open && reopened.Frames.Count == 0,
+                "preview_persistence_frame_is_not_in_catalog");
         }
         finally
         {
@@ -191,7 +329,6 @@ internal static class ScannerWorkflowTests
 
         public GrainMendDetectionResult DetectGrainMend(
             DevelopExportRequest request,
-            byte[] mask,
             DefectRect rawRoi,
             GrainMendDetectionOptions options,
             DevelopRun? run = null) =>
@@ -218,6 +355,115 @@ internal static class ScannerWorkflowTests
             "frame_formats_fit_a_flatbed");
         // 크기를 모르면 좁히지 않습니다.
         Check(FilmFrameFormats.Available(null, null).Count == 10, "frame_formats_unknown_bounds");
+
+        var overhang = new FlatbedFrameDetection(
+            0.016, 0.857, 0.161, 0.1463, 0.9, 0, 5, StraightenAngle: 0.12);
+        FlatbedFrameDetection? clamped = FlatbedRegionEditor.UsableDetection(overhang);
+        Check(clamped is { } accepted &&
+              Math.Abs((accepted.Y + accepted.Height) - 1.0) < 1e-9 &&
+              Math.Abs(accepted.StraightenAngle - overhang.StraightenAngle) < 1e-12 &&
+              accepted.Row == overhang.Row && accepted.Column == overhang.Column,
+            "flatbed_edge_frame_is_clamped_not_dropped");
+        Check(FlatbedRegionEditor.UsableDetection(
+                  new FlatbedFrameDetection(0.02, 0.95, 0.16, 0.146, 0.9, 0, 0)) is null &&
+              FlatbedRegionEditor.UsableDetection(
+                  new FlatbedFrameDetection(double.NaN, 0.1, 0.16, 0.146, 0.9, 0, 0)) is null &&
+              FlatbedRegionEditor.UsableDetection(
+                  new FlatbedFrameDetection(0.02, 0.1, 0.16, 0.146, 1.4, 0, 0)) is null &&
+              FlatbedRegionEditor.UsableDetection(
+                  new FlatbedFrameDetection(
+                      0.02, 0.1, 0.16, 0.146, 0.9, 0, 0,
+                      StraightenAngle: double.NaN)) is null,
+            "flatbed_unusable_detections_are_rejected");
+
+        var automaticRegion = FlatbedScanRegion.Create(0.1, 0.2, 0.3, 0.4, 1.25);
+        var previewOrientation = new ImageTransformRecipe(
+            ImageRotation.Degrees90,
+            true,
+            false,
+            new ImageCropRect(0.05, 0.08, 0.80, 0.75),
+            3.5,
+            4.0 / 3.0);
+        ImageTransformRecipe regionTransform = ScanSessionController.FlatbedInitialTransform(
+            previewOrientation,
+            ImageRotation.Degrees180,
+            automaticRegion);
+        Check(
+            regionTransform.Rotation == ImageRotation.Degrees90 &&
+            regionTransform.FlipHorizontal && !regionTransform.FlipVertical &&
+            regionTransform.Crop is null && regionTransform.CropAspect is null &&
+            Math.Abs(regionTransform.StraightenAngle + 1.25) < 1e-12,
+            "flatbed_initial_transform_keeps_orientation_and_applies_detected_angle");
+        ImageTransformRecipe defaultTransform = ScanSessionController.FlatbedInitialTransform(
+            null,
+            ImageRotation.Degrees180,
+            automaticRegion);
+        Check(
+            defaultTransform.Rotation == ImageRotation.Degrees180 &&
+            Math.Abs(defaultTransform.StraightenAngle - 1.25) < 1e-12,
+            "flatbed_initial_transform_uses_default_rotation_without_preview_orientation");
+
+        FlatbedOverlayRect imageFrame = new(10.0, 20.0, 200.0, 300.0);
+        FlatbedScanRegion rawRegion = FlatbedScanRegion.Create(0.1, 0.2, 0.3, 0.4);
+        ImageTransformRecipe quarterTurn = ImageTransformRecipe.Identity with
+        {
+            Rotation = ImageRotation.Degrees90,
+        };
+        FlatbedOverlayRect turnedRect = FlatbedOverlayGeometry.ScreenRect(
+            rawRegion, imageFrame, quarterTurn, 4000U, 3000U);
+        Check(
+            Math.Abs(turnedRect.X - 90.0) < 1e-9 &&
+            Math.Abs(turnedRect.Y - 50.0) < 1e-9 &&
+            Math.Abs(turnedRect.Width - 80.0) < 1e-9 &&
+            Math.Abs(turnedRect.Height - 90.0) < 1e-9,
+            "flatbed_overlay_region_follows_preview_rotation");
+        (double rawX, double rawY, double rawWidth, double rawHeight) =
+            FlatbedOverlayGeometry.UnitRect(
+                turnedRect, imageFrame, quarterTurn, 4000U, 3000U);
+        Check(
+            Math.Abs(rawX - rawRegion.UnitX) < 1e-9 &&
+            Math.Abs(rawY - rawRegion.UnitY) < 1e-9 &&
+            Math.Abs(rawWidth - rawRegion.UnitWidth) < 1e-9 &&
+            Math.Abs(rawHeight - rawRegion.UnitHeight) < 1e-9,
+            "flatbed_overlay_drag_maps_back_to_base_region");
+
+        ImageTransformRecipe combinedTransform = new(
+            ImageRotation.Degrees270,
+            true,
+            false,
+            new ImageCropRect(0.1, 0.15, 0.75, 0.7),
+            2.0,
+            null);
+        Check(
+            DevelopDisplayGeometry.TryMapRawToDisplay(
+                combinedTransform, 4000U, 3000U, 0.45, 0.55,
+                out double displayX, out double displayY),
+            "flatbed_overlay_combined_transform_maps_forward");
+        (double restoredX, double restoredY) = FlatbedOverlayGeometry.UnitPoint(
+            imageFrame.X + displayX * imageFrame.Width,
+            imageFrame.Y + displayY * imageFrame.Height,
+            imageFrame,
+            combinedTransform,
+            4000U,
+            3000U);
+        Check(
+            Math.Abs(restoredX - 0.45) < 1e-9 && Math.Abs(restoredY - 0.55) < 1e-9,
+            "flatbed_overlay_crop_straighten_point_round_trip");
+
+        (double nudgeX, double nudgeY) = FlatbedOverlayGeometry.BaseNudgeDelta(
+            quarterTurn, 4000U, 3000U, -1.0, 0.0, 0.01, 0.02);
+        Check(
+            Math.Abs(nudgeX) < 1e-9 && Math.Abs(nudgeY - 0.02) < 1e-9,
+            "flatbed_overlay_left_arrow_stays_screen_left_after_rotation");
+        ImageTransformRecipe mirrored = ImageTransformRecipe.Identity with
+        {
+            FlipHorizontal = true,
+        };
+        (nudgeX, nudgeY) = FlatbedOverlayGeometry.BaseNudgeDelta(
+            mirrored, 4000U, 3000U, -1.0, 0.0, 0.01, 0.02);
+        Check(
+            Math.Abs(nudgeX - 0.01) < 1e-9 && Math.Abs(nudgeY) < 1e-9,
+            "flatbed_overlay_left_arrow_stays_screen_left_after_flip");
 
         string parent = Path.Combine(AppContext.BaseDirectory, "flatbed-tests");
         string isolatedBase = Path.Combine(parent, $"{Environment.ProcessId}-{Guid.NewGuid():N}");
@@ -251,11 +497,30 @@ internal static class ScannerWorkflowTests
         Check(
             session.Regions[1].UnitY >= session.Regions[0].UnitMaxY,
             "flatbed_frames_do_not_overlap");
+        FlatbedScanRegion manuallyMoved = session.Regions[0] with
+        {
+            UnitX = session.Regions[0].UnitX + 0.001,
+            StraightenAngle = 2.0,
+        };
+        Check(
+            session.UpdateRegion(session.Regions[0].Id, manuallyMoved) &&
+            session.Regions[0].StraightenAngle == 0.0,
+            "flatbed_manual_edit_clears_automatic_straighten");
 
         Check(session.CopySelectedRegion() && session.PasteRegion(), "flatbed_copy_paste");
         Check(session.Regions.Count == 3, "flatbed_paste_adds_a_frame");
+        string nextAfterFirst = session.Regions[1].Id;
         session.SelectRegion(session.Regions[0].Id);
-        Check(session.DeleteSelectedRegion() && session.Regions.Count == 2, "flatbed_delete");
+        Check(session.DeleteSelectedRegion() && session.Regions.Count == 2 &&
+              session.SelectedRegionId == nextAfterFirst,
+            "flatbed_delete_selects_the_next_frame");
+        string previousAfterLast = session.Regions[0].Id;
+        session.SelectRegion(session.Regions[^1].Id);
+        Check(session.DeleteSelectedRegion() && session.Regions.Count == 1 &&
+              session.SelectedRegionId == previousAfterLast,
+            "flatbed_delete_last_selects_the_previous_frame");
+        Check(session.AddRegion() is not null && session.Regions.Count == 2,
+            "flatbed_delete_test_restores_a_second_frame");
 
         // 고른 프레임 자리가 요청에 실려야 그 자리만 스캔합니다.
         ScannerPluginScanRequest? request = session.BuildRequest(

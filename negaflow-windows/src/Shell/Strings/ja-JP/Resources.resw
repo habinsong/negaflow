@@ -937,7 +937,11 @@
   <data name="developGrainMendGuided.Content" xml:space="preserve"><value>ガイド</value></data>
   <data name="developGrainMendGuidedHelp.Value" xml:space="preserve"><value>ガイド — 範囲をドラッグしてから、Enter または「ゴミ・キズを除去」を押します。</value></data>
   <data name="developGrainMendBrush.Content" xml:space="preserve"><value>ブラシ</value></data>
-  <data name="developGrainMendBrushHelp.Value" xml:space="preserve"><value>ブラシ — ゴミやキズをなぞって、離すと除去します。</value></data>
+  <data name="developGrainMendBrushHelp.Value" xml:space="preserve"><value>ブラシ — ゴミやキズをなぞってから、Enter または「ゴミ・キズを除去」を押します。</value></data>
+  <data name="developGrainMendUndoLastStroke.Text" xml:space="preserve"><value>直前のストロークを取り消す</value></data>
+  <data name="developGrainMendClearPaintedStrokes.Text" xml:space="preserve"><value>描いたストロークを消去</value></data>
+  <data name="developGrainMendResetAppliedDefects.Text" xml:space="preserve"><value>適用済みのゴミ・キズ除去をすべてリセット</value></data>
+  <data name="developGrainMendUndoDefectRemoval.Text" xml:space="preserve"><value>直前のゴミ・キズ除去を取り消します</value></data>
   <data name="developGrainMendClone.Content" xml:space="preserve"><value>クローンスタンプ</value></data>
   <data name="developGrainMendCloneHelp.Value" xml:space="preserve"><value>クローンスタンプ — Alt クリックでソースを指定し、ドラッグして複製します。</value></data>
   <data name="developGrainMendReset.Value" xml:space="preserve"><value>リセット</value></data>

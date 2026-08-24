@@ -59,24 +59,39 @@ WicTiffDecodeResult decode_tiff_with_wic_impl(
         }
 
         SelectedFrame selected{};
-        result.status = select_tiff_frame(preflight, limits, selected, result);
+        result.status = select_tiff_frame(
+            preflight, limits, control.select_first_frame, selected, result);
         if (result.status != WicTiffDecodeStatus::ok) {
             return result;
         }
-        result.image.stride_bytes =
-            static_cast<std::uint32_t>(preflight.stride_bytes);
-
         ComPtr<IWICBitmapSource> pixel_source{};
         result.status = open_pixel_source(
-            selected, preflight, limits, pixel_source, result);
+            selected,
+            preflight,
+            limits,
+            control.orientation_policy,
+            pixel_source,
+            result);
         if (result.status != WicTiffDecodeStatus::ok) {
             return result;
         }
+
+        const std::uint64_t output_channels = channel_count(result.image.layout);
+        const std::uint64_t oriented_stride =
+            static_cast<std::uint64_t>(selected.width) * output_channels *
+            sizeof(std::uint16_t);
+        const std::uint64_t oriented_bytes = oriented_stride * selected.height;
+        if (oriented_stride > std::numeric_limits<std::uint32_t>::max() ||
+            oriented_bytes > limits.max_decoded_pixel_bytes) {
+            result.status = WicTiffDecodeStatus::memory_limit_exceeded;
+            return result;
+        }
+        result.image.stride_bytes = static_cast<std::uint32_t>(oriented_stride);
 
         UINT output_width = selected.width;
         UINT output_height = selected.height;
-        std::uint64_t output_stride = preflight.stride_bytes;
-        std::uint64_t output_bytes = preflight.pixel_bytes;
+        std::uint64_t output_stride = oriented_stride;
+        std::uint64_t output_bytes = oriented_bytes;
         ComPtr<IWICBitmapScaler> scaler{};
         // 48bpp RGB 비압축(frame_1)은 스케일러+행 CopyPixels 가 invalid_argument 로
         // 끝났습니다. 이 형식은 원본 디코드가 174ms 라 스케일이 필요 없습니다.

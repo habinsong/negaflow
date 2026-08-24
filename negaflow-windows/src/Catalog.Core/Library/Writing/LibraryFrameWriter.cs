@@ -24,7 +24,7 @@ public static class LibraryFrameWriter
         {
             copy[LibraryFrameReader.SourceFrameDisplayNameName] = rootDisplayName;
         }
-        return copy;
+        return DefectReviewTrackingCodec.Apply(copy, mark: null).FrameRecord!;
     }
 
     public static LibraryFrameWriteResult Apply(JsonObject frameRecord, LibraryFrameEdit edit)

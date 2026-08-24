@@ -54,6 +54,12 @@ internal sealed class LibraryShortcuts
                 return view.selection.Move(1);
         }
 
+        if (action == WorkflowShortcutAction.DeletePhoto &&
+            view.ControlsPanel.ScanPanel.TryDeleteSelectedFlatbedRegion())
+        {
+            return true;
+        }
+
         IReadOnlyList<LibraryFrameListItem> targets = view.selection.SelectedItems();
         if (targets.Count == 0)
         {

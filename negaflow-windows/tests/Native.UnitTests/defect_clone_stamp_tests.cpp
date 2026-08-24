@@ -1,5 +1,7 @@
 #include "negaflow/imaging/defect_clone_stamp.h"
+#include "defect_clone_stamp_mask.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -211,6 +213,54 @@ void test_zero_offset_is_a_no_op_and_invalid_input_fails_closed() {
         "non-finite clone geometry fails closed");
 }
 
+void test_cancellation_stops_before_a_stamp_and_discards_pixels() {
+    std::uint32_t cancel_word = 1U;
+    const negaflow::core::CancelFlag cancel{&cancel_word};
+    const std::vector<negaflow::imaging::clone_stamp_detail::PixelPoint>
+        pixel_points{{4.0, 4.0}, {28.0, 4.0}};
+    std::vector<float> mask(32U * 8U, 0.0F);
+    const bool rasterized =
+        negaflow::imaging::clone_stamp_detail::rasterize_stroke(
+            pixel_points,
+            2.0,
+            2.0,
+            1.0,
+            0U,
+            0U,
+            32U,
+            8U,
+            mask,
+            cancel);
+    expect(
+        !rasterized &&
+            std::all_of(mask.begin(), mask.end(), [](const float value) {
+                return value == 0.0F;
+            }),
+        "a latched cancellation stops before the first clone stamp");
+
+    auto source = make_gradient();
+    const std::vector<negaflow::imaging::DefectClonePoint> points{
+        {0.25, 0.5},
+        {0.75, 0.5},
+    };
+    const negaflow::imaging::DefectCloneStroke stroke{
+        points,
+        0.1,
+        0.0,
+        8.0,
+        0.5,
+    };
+    const auto result = negaflow::imaging::apply_defect_clone_stamps(
+        std::move(source),
+        {std::span<const negaflow::imaging::DefectCloneStroke>(&stroke, 1U),
+         1.0},
+        cancel);
+    expect(
+        result.status == negaflow::imaging::DefectCloneStatus::cancelled &&
+            result.image.pixels.empty(),
+        "a cancelled clone recipe cannot publish partial pixels");
+}
+
 }  // namespace
 
 int main() {
@@ -218,6 +268,7 @@ int main() {
     test_layer_strength_mixes_the_full_strength_patch();
     test_later_stroke_reads_the_prior_full_strength_patch();
     test_zero_offset_is_a_no_op_and_invalid_input_fails_closed();
+    test_cancellation_stops_before_a_stamp_and_discards_pixels();
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"defect_clone_stamp\",\"failures\":"

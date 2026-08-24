@@ -396,7 +396,8 @@
                                     Margin="0,6,0,0"
                                     FontSize="11"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    TextWrapping="Wrap" />
+                                    TextWrapping="Wrap"
+                                    Visibility="Collapsed" />
                             </StackPanel>
                         </Border>
     </StackPanel>

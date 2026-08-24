@@ -1,14 +1,7 @@
 namespace Negaflow.Interop;
 
-/// <summary>
-/// GrainMend 자동·가이드가 받아 가는 판정입니다. 마스크는 호출부 버퍼에 담기고 여기에는
-/// 그 크기와 채택 화소 수만 옵니다.
-/// </summary>
+/// <summary>GrainMend 자동·가이드가 받아 가는 판정입니다.</summary>
 /// <param name="Width">검출 이미지 크기입니다. 원본 해상도가 아니라 1800 상한이 걸린 값입니다.</param>
-/// <param name="MaskByteCount">
-/// 마스크에 필요한 바이트 수입니다. 버퍼가 모자라 실패했을 때도 채워지므로, 이 값으로
-/// 다시 부르면 됩니다.
-/// </param>
 /// <summary>
 /// 검출기가 고른 물리 결함 종류입니다. 값은 네이티브
 /// <c>grain_mend_detail::DefectClassification</c> 과 같은 순서여야 합니다 — 순서가 어긋나면
@@ -67,12 +60,48 @@ public readonly record struct GrainMendDetectionResult(
     // `automaticCandidatePixelFraction`. 전체 프레임 자동에서만 채워지고, 성분은 하나도
     // 버리지 않습니다 — 화면이 개수 대신 경고 문구를 낼 뿐입니다.
     bool AutomaticFalsePositiveRisk = false,
-    double AutomaticCandidatePixelFraction = 0.0)
+    double AutomaticCandidatePixelFraction = 0.0,
+    IGrainMendReviewProposal? ReviewProposal = null)
 {
     /// <summary>
     /// 채택된 결함 하나하나. 비어 있으면 분류가 없는 것이며, 지어내지 않습니다.
     /// </summary>
     public IReadOnlyList<GrainMendComponent> Defects => Components ?? [];
+}
+
+/// <summary>채택된 후보에서 독립 복사된 최종 RGBA8 마스크입니다.</summary>
+public sealed record GrainMendAcceptedRegion(
+    uint RoiX,
+    uint RoiY,
+    uint Width,
+    uint Height,
+    byte[] RgbaMask,
+    ulong IncludedComponentCount);
+
+/// <summary>한 번 검출한 Auto/Guided 후보의 원 component 소유권입니다.</summary>
+public interface IGrainMendReviewProposal : IDisposable
+{
+    uint Width { get; }
+
+    uint Height { get; }
+
+    uint SourceWidth { get; }
+
+    uint SourceHeight { get; }
+
+    uint RoiX { get; }
+
+    uint RoiY { get; }
+
+    uint RoiWidth { get; }
+
+    uint RoiHeight { get; }
+
+    IReadOnlyList<GrainMendComponent> Components { get; }
+
+    bool TryHit(int x, int y, uint radius, out int componentIndex);
+
+    GrainMendAcceptedRegion? BuildAccepted(ReadOnlySpan<byte> excludedComponents);
 }
 
 /// <summary>

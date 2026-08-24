@@ -1,5 +1,6 @@
 #pragma once
 
+#include "negaflow/core/cancel_flag.h"
 #include "negaflow/imaging/scanner_to_working.h"
 
 #include <cstddef>
@@ -32,6 +33,7 @@ enum class DefectHealBrushStatus : std::uint8_t {
     invalid_argument,
     kernel_failed,
     allocation_failed,
+    cancelled,
 };
 
 struct DefectHealBrushInfo final {
@@ -56,7 +58,8 @@ struct DefectHealBrushResult final {
 // input discards pixels so a partial edit cannot ship.
 [[nodiscard]] DefectHealBrushResult apply_defect_heal_brush(
     WorkingImage image,
-    const DefectHealBrushParameters& parameters) noexcept;
+    const DefectHealBrushParameters& parameters,
+    negaflow::core::CancelFlag cancel = {}) noexcept;
 
 [[nodiscard]] const char* defect_heal_brush_status_name(
     DefectHealBrushStatus status) noexcept;

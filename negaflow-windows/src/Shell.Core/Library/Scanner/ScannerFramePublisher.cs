@@ -8,15 +8,69 @@ internal sealed class ScannerFramePublisher
 {
     private readonly Func<string, LibrarySourceMetadata?> sourceMetadataReader;
     private readonly Action<string> selectFrame;
+    private readonly Action<string> beginInfraredClean;
+    private readonly Action<string, InfraredDefectApplyResult> completeInfraredClean;
 
     internal ScannerFramePublisher(
         Func<string, LibrarySourceMetadata?> sourceMetadataReader,
-        Action<string> selectFrame)
+        Action<string> selectFrame,
+        Action<string> beginInfraredClean,
+        Action<string, InfraredDefectApplyResult> completeInfraredClean)
     {
         ArgumentNullException.ThrowIfNull(sourceMetadataReader);
         ArgumentNullException.ThrowIfNull(selectFrame);
+        ArgumentNullException.ThrowIfNull(beginInfraredClean);
+        ArgumentNullException.ThrowIfNull(completeInfraredClean);
         this.sourceMetadataReader = sourceMetadataReader;
         this.selectFrame = selectFrame;
+        this.beginInfraredClean = beginInfraredClean;
+        this.completeInfraredClean = completeInfraredClean;
+    }
+
+    internal ScannerFramePublishResult PublishPreview(
+        LibraryDocument? document,
+        ScannerFrameImport scan)
+    {
+        ArgumentNullException.ThrowIfNull(scan);
+        if (document is null || !scan.IsPreviewScan)
+        {
+            return Failed(scan.VisiblePath, CatalogStoreError.NotFound);
+        }
+
+        FrameImportPlan plan = FrameImport.PlanScanner(
+            scan,
+            document.Frames,
+            sourceMetadataReader: sourceMetadataReader);
+        if (plan.Rows.Count != 1 || document.AppendTransientPreview(plan.Rows) != 1)
+        {
+            return new(
+                ScannerFramePublishStatus.CatalogWriteFailed,
+                plan,
+                null,
+                null,
+                CatalogStoreError.None);
+        }
+
+        LibraryFrameSnapshot? frame = document.Frames.FirstOrDefault(
+            candidate => candidate.Id == plan.Rows[0].Id);
+        if (frame is null)
+        {
+            return new(
+                ScannerFramePublishStatus.CatalogWriteFailed,
+                plan,
+                null,
+                null,
+                CatalogStoreError.InvalidSnapshot);
+        }
+
+        _ = document.RemoveTransientPreviewFrames(frame.Id);
+        selectFrame(frame.Id);
+        return new(
+            ScannerFramePublishStatus.InfraredSkipped,
+            plan,
+            frame,
+            null,
+            CatalogStoreError.None);
     }
 
     internal ScannerFramePublishResult Publish(
@@ -99,14 +153,23 @@ internal sealed class ScannerFramePublisher
                 CatalogStoreError.None);
         }
 
-        InfraredDefectApplyResult infrared = InfraredDefectRecipeCoordinator.RunFiles(
-            document,
-            frame,
-            identity,
-            frame.SourcePath,
-            frame.InfraredPath,
-            parameters,
-            run);
+        InfraredDefectApplyResult? infrared = null;
+        try
+        {
+            beginInfraredClean(frame.Id);
+            infrared = InfraredDefectRecipeCoordinator.RunFiles(
+                document,
+                frame,
+                identity,
+                frame.SourcePath,
+                frame.InfraredPath,
+                parameters,
+                run);
+        }
+        finally
+        {
+            completeInfraredClean(frame.Id, infrared ?? FailedInfraredClean());
+        }
         return new(
             infrared.Status == InfraredDefectApplyStatus.Applied
                 ? ScannerFramePublishStatus.InfraredApplied
@@ -116,6 +179,13 @@ internal sealed class ScannerFramePublisher
             infrared,
             CatalogStoreError.None);
     }
+
+    private static InfraredDefectApplyResult FailedInfraredClean() => new(
+        InfraredDefectApplyStatus.DetectionFailed,
+        null,
+        null,
+        DefectSidecarError.None,
+        CatalogStoreError.None);
 
     internal void Recover(LibraryDocument? document, StorageRootSet? storageRoots)
     {
@@ -130,7 +200,7 @@ internal sealed class ScannerFramePublisher
             _ = Publish(
                 document,
                 storageRoots,
-                new ScannerFrameImport(receipt.VisiblePath, receipt.InfraredPath, receipt.Process),
+                ScannerPublicationReceiptStore.ToScan(receipt),
                 null,
                 null,
                 path);
@@ -141,4 +211,12 @@ internal sealed class ScannerFramePublisher
         document.Frames.Any(frame =>
             string.Equals(frame.SourcePath, scan.VisiblePath, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(frame.InfraredPath, scan.InfraredPath, StringComparison.OrdinalIgnoreCase));
+
+    private static ScannerFramePublishResult Failed(string path, CatalogStoreError error) =>
+        new(
+            ScannerFramePublishStatus.CatalogWriteFailed,
+            new FrameImportPlan([], [new FrameImportRejection(path, FrameImportRefusal.NoFiles)]),
+            null,
+            null,
+            error);
 }

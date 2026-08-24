@@ -39,11 +39,12 @@ public sealed partial class DevelopPanelState
         toneEditor = new DevelopToneEditor(host, limits);
         transformEditor = new DevelopTransformEditor(host);
         versionPresets = new DevelopVersionPresetController(host);
+        InfraredClean = new DevelopInfraredCleanState(host);
         Compare = new CanvasCompareState();
         Viewport = new CanvasViewportState();
         Tone = new DevelopTonePanel(this, toneEditor);
         Color = new DevelopColorPanel(this, colorEditor);
-        DefectLayers = new DevelopDefectLayerPanel(this, defectEditor);
+        DefectLayers = new DevelopDefectLayerPanel(this, defectEditor, host.DefectLiveStrengths);
     }
 
     /// <summary>
@@ -94,9 +95,6 @@ public sealed partial class DevelopPanelState
         }
     }
 
-    internal InfraredDefectApplyResult? TryInfraredCleanIfNeeded() =>
-        SelectedFrame is { } frame ? host.TryInfraredCleanIfNeeded(frame.Id) : null;
-
     public BaseEstimationMode BaseMode => SelectedFrame?.Base.Mode ?? BaseEstimationMode.Auto;
 
     public bool CanEditBase => DevelopBaseEditor.CanEdit(SelectedFrame);
@@ -140,6 +138,8 @@ public sealed partial class DevelopPanelState
 
     public LibraryFrameSnapshot? SelectedFrame { get; private set; }
 
+    public event Action<string?>? SelectedFrameChanged;
+
     public CanvasCompareState Compare { get; }
 
     /// <summary>macOS <c>CanvasView.viewport</c>.</summary>
@@ -166,41 +166,37 @@ public sealed partial class DevelopPanelState
     /// 화면이 읽어 문구로 바꿉니다. IR 이 돌지 않았으면 <see cref="InfraredCleanMessage.None"/>
     /// 입니다.
     /// </summary>
-    public InfraredCleanStatus LastInfraredClean { get; private set; } =
-        InfraredCleanStatus.Silent;
+    public DevelopInfraredCleanState InfraredClean { get; }
+
+    public InfraredCleanStatus LastInfraredClean => InfraredClean.Status;
 
     public bool Select(string frameId)
     {
         ArgumentNullException.ThrowIfNull(frameId);
+        DefectLayers.RetainFrames(host.Frames.Select(frame => frame.Id));
+        string? priorFrameId = SelectedFrame?.Id;
         foreach (LibraryFrameSnapshot frame in host.Frames)
         {
             if (string.Equals(frame.Id, frameId, StringComparison.Ordinal))
             {
                 SelectedFrame = frame;
                 LastAppliedBase = frame.AppliedBase;
-                // macOS 는 이 결과를 `statusMessage` 로 냅니다. 버리면 IR 이 왜 건너뛰었는지
-                // (은염 흑백·마스크 과대) 사용자가 알 방법이 없습니다.
-                LastInfraredClean = InfraredCleanStatus.From(
-                    host.TryInfraredCleanIfNeeded(frame.Id));
-                foreach (LibraryFrameSnapshot updated in host.Frames)
-                {
-                    if (string.Equals(updated.Id, frame.Id, StringComparison.Ordinal))
-                    {
-                        SelectedFrame = updated;
-                        LastAppliedBase = updated.AppliedBase ?? LastAppliedBase;
-                        break;
-                    }
-                }
+                InfraredClean.BindFrame(frame.Id);
                 // macOS 는 `showDeveloped` 가 프레임 객체에 붙어 있어 프레임을 옮기면 그
                 // 프레임의 비교 모드가 따라옵니다. 여기가 그 자리입니다.
                 Compare.BindFrame(frame.Id);
+                SelectedFrameChanged?.Invoke(frame.Id);
                 return true;
             }
         }
         SelectedFrame = null;
         LastAppliedBase = null;
-        LastInfraredClean = InfraredCleanStatus.Silent;
+        InfraredClean.BindFrame(null);
         Compare.BindFrame(null);
+        if (priorFrameId is not null)
+        {
+            SelectedFrameChanged?.Invoke(null);
+        }
         return false;
     }
 

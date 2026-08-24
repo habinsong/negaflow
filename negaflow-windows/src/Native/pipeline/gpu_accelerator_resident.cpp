@@ -103,6 +103,21 @@ bool GpuAccelerator::trim_idle() noexcept {
     return state_->device.trim_idle();
 }
 
+void GpuAccelerator::release_transient_resources() noexcept {
+    if (!available()) {
+        return;
+    }
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
+    if (state_->resident.scope_depth != 0) {
+        return;
+    }
+    flush_unlocked();
+    state_->resident = State::ResidentFrame{};
+    state_->pool.clear();
+    std::vector<core::Rgba32F>{}.swap(state_->morphology_staging);
+    (void)state_->device.trim_idle();
+}
+
 bool GpuAccelerator::has_resident_image(
     const float* const pixels,
     const std::uint32_t width,

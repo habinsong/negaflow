@@ -43,26 +43,26 @@ public:
                 return false;
             }
 
-            std::uint64_t channels = 0U;
-            switch (frame.layout) {
-                case negaflow::imageio::DecodedPixelLayout::rgb16:
-                    channels = 3U;
-                    if (frame.alpha_mode != negaflow::imageio::AlphaMode::opaque) {
-                        result_.status = ScannerToWorkingStatus::unsupported_alpha;
-                        return false;
-                    }
-                    break;
-                case negaflow::imageio::DecodedPixelLayout::rgba16:
-                    channels = 4U;
-                    if (frame.alpha_mode != negaflow::imageio::AlphaMode::associated &&
-                        frame.alpha_mode != negaflow::imageio::AlphaMode::unassociated) {
-                        result_.status = ScannerToWorkingStatus::unsupported_alpha;
-                        return false;
-                    }
-                    break;
-                default:
-                    result_.status = ScannerToWorkingStatus::invalid_argument;
-                    return false;
+            // `channel_count` 는 아는 layout 만 양수를 돌려줍니다. switch 에 default 를 두면
+            // 새 layout 을 조용히 삼키므로, 알 수 없는 값은 여기서 한 번에 걸러냅니다.
+            const std::uint64_t channels =
+                negaflow::imageio::channel_count(frame.layout);
+            if (channels == 0U) {
+                result_.status = ScannerToWorkingStatus::invalid_argument;
+                return false;
+            }
+            // alpha 계약은 rgba16 만 다릅니다. rgb16 과 스캐너 Gray 의 1채널 `gray16` 은
+            // 불투명이어야 합니다. Gray 를 받는 이유는 macOS 가 `CIImage(cgImage:)` 로 회색
+            // CGImage 를 그대로 받기 때문이며, 여기서 거부하면 Windows 만 Gray 스캔을
+            // 통째로 못 읽습니다.
+            const bool alpha_matches_layout =
+                frame.layout == negaflow::imageio::DecodedPixelLayout::rgba16
+                    ? (frame.alpha_mode == negaflow::imageio::AlphaMode::associated ||
+                       frame.alpha_mode == negaflow::imageio::AlphaMode::unassociated)
+                    : frame.alpha_mode == negaflow::imageio::AlphaMode::opaque;
+            if (!alpha_matches_layout) {
+                result_.status = ScannerToWorkingStatus::unsupported_alpha;
+                return false;
             }
 
             const std::uint64_t expected_stride =
@@ -229,6 +229,8 @@ private:
             layout_ == negaflow::imageio::DecodedPixelLayout::rgba16;
         const bool associated =
             alpha_mode_ == negaflow::imageio::AlphaMode::associated;
+        const negaflow::imageio::RgbSampleOffsets rgb =
+            negaflow::imageio::rgb_sample_offsets(layout_);
         std::atomic<bool> cancelled{false};
         negaflow::core::for_each_row_block(
             rows.row_count,
@@ -248,12 +250,12 @@ private:
                         const std::size_t offset = static_cast<std::size_t>(column) * channels;
                         const std::uint16_t alpha16 = has_alpha ? source[offset + 3U] : 65'535U;
                         destination[column] = {
-                            associated ? static_cast<float>(unassociate_component(source[offset], alpha16)) * u16_scale
-                                       : static_cast<float>(source[offset]) * u16_scale,
-                            associated ? static_cast<float>(unassociate_component(source[offset + 1U], alpha16)) * u16_scale
-                                       : static_cast<float>(source[offset + 1U]) * u16_scale,
-                            associated ? static_cast<float>(unassociate_component(source[offset + 2U], alpha16)) * u16_scale
-                                       : static_cast<float>(source[offset + 2U]) * u16_scale,
+                            associated ? static_cast<float>(unassociate_component(source[offset + rgb.red], alpha16)) * u16_scale
+                                       : static_cast<float>(source[offset + rgb.red]) * u16_scale,
+                            associated ? static_cast<float>(unassociate_component(source[offset + rgb.green], alpha16)) * u16_scale
+                                       : static_cast<float>(source[offset + rgb.green]) * u16_scale,
+                            associated ? static_cast<float>(unassociate_component(source[offset + rgb.blue], alpha16)) * u16_scale
+                                       : static_cast<float>(source[offset + rgb.blue]) * u16_scale,
                             has_alpha ? static_cast<float>(source[offset + 3U]) * u16_scale : 1.0F,
                         };
                     }
@@ -278,8 +280,10 @@ private:
         const std::uint64_t rgb_stride_bytes =
             static_cast<std::uint64_t>(width_) * 3ULL * sizeof(std::uint16_t);
         const std::uint64_t rgb_chunk_bytes = rgb_stride_bytes * rows.row_count;
+        // ICM 변환은 RGB16 만 받습니다. rgba 는 alpha 를 떼고, gray 는 한 표본을 세 채널로
+        // 펴서 같은 입력 모양으로 맞춥니다.
         const bool needs_rgb_copy =
-            layout_ == negaflow::imageio::DecodedPixelLayout::rgba16;
+            layout_ != negaflow::imageio::DecodedPixelLayout::rgb16;
         if (needs_rgb_copy &&
             rgb_chunk_bytes > std::numeric_limits<std::uint64_t>::max() / 2U) {
             return ScannerToWorkingStatus::size_overflow;
@@ -304,9 +308,15 @@ private:
                 source_stride_bytes_ / sizeof(std::uint16_t);
             const bool associated =
                 alpha_mode_ == negaflow::imageio::AlphaMode::associated;
+            const std::size_t source_channels =
+                negaflow::imageio::channel_count(layout_);
+            const bool source_has_alpha =
+                layout_ == negaflow::imageio::DecodedPixelLayout::rgba16;
+            const negaflow::imageio::RgbSampleOffsets rgb =
+                negaflow::imageio::rgb_sample_offsets(layout_);
             negaflow::core::for_each_row_block(
                 rows.row_count,
-                row_block_work_units(rows.row_count, 4U),
+                row_block_work_units(rows.row_count, source_channels),
                 [&](const std::uint32_t first_row, const std::uint32_t block_rows) noexcept {
                     for (std::uint32_t row = first_row; row < first_row + block_rows; ++row) {
                         const std::uint16_t* const source_row =
@@ -314,19 +324,22 @@ private:
                         std::uint16_t* const destination_row =
                             packed_rgb_.data() + static_cast<std::size_t>(row) * width_ * 3U;
                         for (std::uint32_t column = 0U; column < width_; ++column) {
-                            const std::size_t source_offset = static_cast<std::size_t>(column) * 4U;
+                            const std::size_t source_offset =
+                                static_cast<std::size_t>(column) * source_channels;
                             const std::size_t destination_offset =
                                 static_cast<std::size_t>(column) * 3U;
-                            const std::uint16_t alpha = source_row[source_offset + 3U];
+                            const std::uint16_t alpha = source_has_alpha
+                                ? source_row[source_offset + 3U]
+                                : std::uint16_t{65'535U};
                             destination_row[destination_offset] = associated
-                                ? unassociate_component(source_row[source_offset], alpha)
-                                : source_row[source_offset];
+                                ? unassociate_component(source_row[source_offset + rgb.red], alpha)
+                                : source_row[source_offset + rgb.red];
                             destination_row[destination_offset + 1U] = associated
-                                ? unassociate_component(source_row[source_offset + 1U], alpha)
-                                : source_row[source_offset + 1U];
+                                ? unassociate_component(source_row[source_offset + rgb.green], alpha)
+                                : source_row[source_offset + rgb.green];
                             destination_row[destination_offset + 2U] = associated
-                                ? unassociate_component(source_row[source_offset + 2U], alpha)
-                                : source_row[source_offset + 2U];
+                                ? unassociate_component(source_row[source_offset + rgb.blue], alpha)
+                                : source_row[source_offset + rgb.blue];
                         }
                     }
                 });

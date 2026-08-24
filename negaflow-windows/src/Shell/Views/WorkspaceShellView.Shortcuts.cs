@@ -127,6 +127,14 @@ public sealed partial class WorkspaceShellView
             Trace($"skip key={args.Key} handled={args.Handled} state={workspaceState is not null}");
             return;
         }
+        if (args.Key == VirtualKey.Escape &&
+            workspaceState.Current.SelectedWorkspace == WorkspaceModule.Develop &&
+            DevelopWorkspace.TryExitGrainMendInteraction())
+        {
+            args.Handled = true;
+            Trace("invoke escape action=exit-grain-mend handled=True");
+            return;
+        }
         WorkflowShortcutModifiers modifiers = PressedModifiers();
         object? focused = FocusManager.GetFocusedElement(XamlRoot);
         if (modifiers == WorkflowShortcutModifiers.None && IsTypingTarget(focused))
@@ -144,7 +152,7 @@ public sealed partial class WorkspaceShellView
             Trace($"unbound key={key} modifiers={modifiers}");
             return;
         }
-        args.Handled = Invoke(action);
+        args.Handled = WorkflowShortcutActions.DispatchRecognized(action, Invoke);
         Trace($"invoke key={key} modifiers={modifiers} action={action} handled={args.Handled}");
     }
 
@@ -281,8 +289,11 @@ public sealed partial class WorkspaceShellView
             case WorkflowShortcutAction.RateThree:
             case WorkflowShortcutAction.RateFour:
             case WorkflowShortcutAction.RateFive:
-            case WorkflowShortcutAction.CreateVirtualCopy:
                 return LibraryWorkspace.InvokeShortcut(action);
+            case WorkflowShortcutAction.CreateVirtualCopy:
+                return state.Current.SelectedWorkspace == WorkspaceModule.Develop
+                    ? DevelopWorkspace.CreateVirtualCopyFromMenu()
+                    : LibraryWorkspace.InvokeShortcut(action);
             case WorkflowShortcutAction.RotateLeft:
                 DevelopWorkspace.UpdateImageTransform(state => state.Rotate(clockwise: false));
                 return true;

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
+#include <numeric>
 #include <vector>
 
 namespace negaflow::imaging::infrared_detail {
@@ -127,6 +128,44 @@ bool confirm_component(
         std::clamp(gain, 0.2F, 4.0F),
         significance};
     return true;
+}
+
+ConsensusOffset coarse_consensus_offset(
+    const std::vector<RawComponent>& candidates,
+    const std::span<const float> density,
+    const std::span<const float> visible,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const float magnitude_floor,
+    const std::int32_t search) {
+    std::vector<std::size_t> order(candidates.size(), 0U);
+    std::iota(order.begin(), order.end(), 0U);
+    std::sort(order.begin(), order.end(), [&](const std::size_t a, const std::size_t b) {
+        return candidates[a].source_area > candidates[b].source_area;
+    });
+    std::vector<std::int32_t> votes_x{};
+    std::vector<std::int32_t> votes_y{};
+    const std::size_t vote_count = std::min<std::size_t>(64U, order.size());
+    votes_x.reserve(vote_count);
+    votes_y.reserve(vote_count);
+    for (std::size_t ordinal = 0U; ordinal < vote_count; ++ordinal) {
+        const RawComponent& candidate = candidates[order[ordinal]];
+        const auto extent = static_cast<std::int32_t>(
+            std::min(candidate.max_x - candidate.min_x,
+                     candidate.max_y - candidate.min_y) / 2U + 1U);
+        ConfirmedDefect vote{};
+        if (confirm_component(candidate, density, visible, width, height,
+                              magnitude_floor, search + extent, 0, 0, vote)) {
+            votes_x.push_back(vote.offset_x);
+            votes_y.push_back(vote.offset_y);
+        }
+    }
+    if (votes_x.size() < 8U) return {};
+    std::sort(votes_x.begin(), votes_x.end());
+    std::sort(votes_y.begin(), votes_y.end());
+    return ConsensusOffset{
+        votes_x[votes_x.size() / 2U],
+        votes_y[votes_y.size() / 2U]};
 }
 
 }  // namespace negaflow::imaging::infrared_detail

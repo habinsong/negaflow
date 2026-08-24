@@ -127,6 +127,16 @@ typedef struct nf_develop_export_request_v35 {
     uint32_t defect_recipe_identity_reserved;
 } nf_develop_export_request_v35;
 
+/* v36 appends an explicit canonical identity for the ordered prefix preceding the
+   newest edit. It is an optimization hint only and is ignored unless the retained
+   full-resolution cleaned raw has that exact recipe identity. */
+typedef struct nf_develop_export_request_v36 {
+    nf_develop_export_request_v35 v35;
+    const uint8_t* defect_recipe_append_prefix_sha256;
+    uint32_t defect_recipe_append_prefix_sha256_size;
+    uint32_t defect_recipe_append_prefix_edit_count;
+} nf_develop_export_request_v36;
+
 #ifdef __cplusplus
 }
 #endif

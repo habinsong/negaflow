@@ -15,9 +15,14 @@ internal static class NativeDevelopExportLimits
     internal const int MaximumDefectBrushEdits = 4096;
     internal const int MaximumDefectBrushStrokes = 100_000;
     internal const int MaximumDefectBrushPoints = 5_000_000;
-    internal const int MaximumDefectInfraredEdits = 4096;
+    internal const int MaximumDefectInfraredItems = 4096;
+    internal const int MaximumDefectInfraredClusters = 100_000;
     internal const int MaximumDefectInfraredAttenuationBytes = 512 * 1024 * 1024;
     internal const int MaximumDefectOrderedEdits = 8192;
+    internal const int MaximumDefectNativeRegionDescriptors =
+        MaximumDefectRegionEdits + MaximumDefectInfraredClusters;
+    internal const int MaximumDefectNativeOrderedEdits =
+        MaximumDefectRegionEdits + MaximumDefectInfraredClusters;
 
     internal const uint StatusOk = 0;
     internal const uint StatusInvalidArgument = 1;

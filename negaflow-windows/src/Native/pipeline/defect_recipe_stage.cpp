@@ -67,17 +67,29 @@ void discard_pixels(WorkingImage& image) noexcept {
 
 }  // namespace
 
-DefectRecipeStageResult apply_defect_recipe(
+static DefectRecipeStageResult apply_defect_recipe_range(
     WorkingImage image,
-    const DefectRecipeParameters& parameters) noexcept {
+    const DefectRecipeParameters& parameters,
+    const std::size_t first_order_index,
+    const DefectRecipeStageInfo& prefix_info,
+    const negaflow::core::CancelFlag cancel) noexcept {
     DefectRecipeStageResult result{};
+    result.info = prefix_info;
     result.image = std::move(image);
     try {
-        if (!valid_order(parameters)) {
+        if (!valid_order(parameters) || first_order_index > parameters.order.size()) {
             discard_pixels(result.image);
             return result;
         }
-        for (const DefectRecipeEditRef reference : parameters.order) {
+        for (std::size_t order_index = first_order_index;
+             order_index < parameters.order.size();
+             ++order_index) {
+            const DefectRecipeEditRef reference = parameters.order[order_index];
+            if (cancel.requested()) {
+                result.status = DefectRecipeStageStatus::cancelled;
+                discard_pixels(result.image);
+                return result;
+            }
             if (reference.kind == DefectRecipeEditKind::region) {
                 DefectRegionParameters one{};
                 one.edits.push_back(parameters.regions.edits[reference.index]);
@@ -107,8 +119,14 @@ DefectRecipeStageResult apply_defect_recipe(
                     continue;
                 }
                 auto applied = negaflow::imaging::apply_defect_clone_stamps(
-                    std::move(result.image), edit.parameters);
+                    std::move(result.image), edit.parameters, cancel);
                 result.info.clone_status = applied.status;
+                if (applied.status ==
+                    negaflow::imaging::DefectCloneStatus::cancelled) {
+                    result.status = DefectRecipeStageStatus::cancelled;
+                    discard_pixels(applied.image);
+                    return result;
+                }
                 if (applied.status != negaflow::imaging::DefectCloneStatus::ok) {
                     result.status = DefectRecipeStageStatus::clone_failed;
                     discard_pixels(applied.image);
@@ -148,8 +166,14 @@ DefectRecipeStageResult apply_defect_recipe(
                 continue;
             }
             auto applied = negaflow::imaging::apply_defect_heal_brush(
-                std::move(result.image), edit.parameters);
+                std::move(result.image), edit.parameters, cancel);
             result.info.brush_status = applied.status;
+            if (applied.status ==
+                negaflow::imaging::DefectHealBrushStatus::cancelled) {
+                result.status = DefectRecipeStageStatus::cancelled;
+                discard_pixels(applied.image);
+                return result;
+            }
             if (applied.status !=
                 negaflow::imaging::DefectHealBrushStatus::ok) {
                 result.status = DefectRecipeStageStatus::brush_failed;
@@ -167,6 +191,11 @@ DefectRecipeStageResult apply_defect_recipe(
                     applied.info.peak_patch_bytes);
             }
         }
+        if (cancel.requested()) {
+            result.status = DefectRecipeStageStatus::cancelled;
+            discard_pixels(result.image);
+            return result;
+        }
         result.status = DefectRecipeStageStatus::ok;
         return result;
     } catch (const std::bad_alloc&) {
@@ -178,6 +207,24 @@ DefectRecipeStageResult apply_defect_recipe(
         discard_pixels(result.image);
         return result;
     }
+}
+
+DefectRecipeStageResult apply_defect_recipe(
+    WorkingImage image,
+    const DefectRecipeParameters& parameters,
+    const negaflow::core::CancelFlag cancel) noexcept {
+    return apply_defect_recipe_range(
+        std::move(image), parameters, 0U, {}, cancel);
+}
+
+DefectRecipeStageResult apply_defect_recipe_suffix(
+    WorkingImage image,
+    const DefectRecipeParameters& parameters,
+    const std::size_t first_order_index,
+    const DefectRecipeStageInfo& prefix_info,
+    const negaflow::core::CancelFlag cancel) noexcept {
+    return apply_defect_recipe_range(
+        std::move(image), parameters, first_order_index, prefix_info, cancel);
 }
 
 const char* defect_recipe_stage_status_name(
@@ -202,6 +249,8 @@ const char* defect_recipe_stage_status_name(
         }
         case DefectRecipeStageStatus::allocation_failed:
             return "allocation_failed";
+        case DefectRecipeStageStatus::cancelled:
+            return "cancelled";
     }
     return "unknown";
 }

@@ -14,7 +14,18 @@ internal static unsafe class NativeDevelopExportCommand
     /// <param name="run">
     /// 실행 중 취소하고 진행도를 읽는 손잡이입니다. null 이면 예전처럼 끝까지 블로킹합니다.
     /// </param>
-    public static DevelopExportResult Run(DevelopExportRequest request, DevelopRun? run = null)
+    public static DevelopExportResult Run(DevelopExportRequest request, DevelopRun? run = null) =>
+        RunCore(request, run, bakeDefects: false);
+
+    public static DevelopExportResult BakeDefects(
+        DevelopExportRequest request,
+        DevelopRun? run = null) =>
+        RunCore(request, run, bakeDefects: true);
+
+    private static DevelopExportResult RunCore(
+        DevelopExportRequest request,
+        DevelopRun? run,
+        bool bakeDefects)
     {
         ArgumentNullException.ThrowIfNull(request);
         ValidateLayoutAndEnums(request);
@@ -29,6 +40,10 @@ internal static unsafe class NativeDevelopExportCommand
         NativeDefectRecipeEditRefV1[] defectEditOrder = BuildDefectEditOrder(request);
         byte[] defectSourceSha256 = BuildDefectSourceSha256(request);
         byte[] defectRecipeSha256 = BuildDefectRecipeSha256(request);
+        if (bakeDefects && defectRecipeSha256.Length == 0)
+        {
+            throw new ArgumentException("A defect bake requires a non-empty recipe.", nameof(request));
+        }
 
         NativeDevelopExportResultV4 raw = default;
         raw.StructSize = (uint)sizeof(NativeDevelopExportResultV4);
@@ -140,8 +155,11 @@ internal static unsafe class NativeDevelopExportCommand
                 {
                     NativeDevelopExportRequestV35 v35 = BuildRequestV35(
                         v34, defectRecipeDigest, checked((uint)defectRecipeSha256.Length));
-                    status = NativeDevelopRun.nf_develop_export_v35(
-                        &v35, runState, (NativeDevelopExportResultV3*)&raw);
+                    status = bakeDefects
+                        ? NativeDevelopRun.nf_develop_bake_defects_v1(
+                            &v35, runState, (NativeDevelopExportResultV3*)&raw)
+                        : NativeDevelopRun.nf_develop_export_v35(
+                            &v35, runState, (NativeDevelopExportResultV3*)&raw);
                 }
             }
         }
@@ -151,7 +169,9 @@ internal static unsafe class NativeDevelopExportCommand
             raw,
             defectRecipeSha256.Length == 0
                 ? "nf_develop_export_v34"
-                : "nf_develop_export_v35");
+                : bakeDefects
+                    ? "nf_develop_bake_defects_v1"
+                    : "nf_develop_export_v35");
     }
 
     /// <summary>

@@ -31,15 +31,17 @@ struct SelectedFrame final {
 [[nodiscard]] WicTiffDecodeStatus select_tiff_frame(
     const TiffPreflight& preflight,
     const WicTiffDecodeLimits& limits,
+    bool select_first_frame,
     SelectedFrame& selected,
     WicTiffDecodeResult& result);
 
 // 고른 프레임을 목표 형식의 화소 소스로 바꾸고 ICC 프로파일을 읽습니다. 형식이 이미 같으면
 // 변환기를 세우지 않습니다.
 [[nodiscard]] WicTiffDecodeStatus open_pixel_source(
-    const SelectedFrame& selected,
+    SelectedFrame& selected,
     const TiffPreflight& preflight,
     const WicTiffDecodeLimits& limits,
+    WicTiffOrientationPolicy orientation_policy,
     Microsoft::WRL::ComPtr<IWICBitmapSource>& pixel_source,
     WicTiffDecodeResult& result);
 

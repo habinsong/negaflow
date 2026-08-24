@@ -74,6 +74,8 @@ public:
     void flush_resident_if(const void* host) noexcept;
     /// background preview가 유휴로 들어갈 때 driver 내부 임시 버퍼를 반환합니다.
     [[nodiscard]] bool trim_idle() noexcept;
+    /// 대형 일회 검출 전후에 공유 texture pool과 morphology staging까지 반환합니다.
+    void release_transient_resources() noexcept;
     [[nodiscard]] bool has_resident_image(
         const float* pixels,
         std::uint32_t width,
@@ -335,6 +337,18 @@ public:
         std::uint32_t height,
         std::uint32_t radius,
         imaging::MorphologyKind kind) noexcept;
+
+    // RGB closing 결과를 호스트로 내리지 않고 같은 반경의 opening까지 이어서 실행합니다.
+    [[nodiscard]] bool apply_morphology_close_open_rgb(
+        const float* red,
+        const float* green,
+        const float* blue,
+        float* out_red,
+        float* out_green,
+        float* out_blue,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t radius) noexcept;
 
     // 같은 반경의 양극 톱햇을 채널 셋에 한 번 올립니다. 셰이더는 채널마다 독립입니다.
     [[nodiscard]] bool apply_morphology_bipolar_top_hat_rgb(

@@ -9,6 +9,9 @@ param(
     # 이미 만들어 둔 레이아웃을 그대로 다시 등록해 띄운다. 코드를 고치지 않았을 때만 쓴다.
     [switch]$SkipBuild,
 
+    # 느슨한 설치 payload에서만 preview trace를 켠다. 만든 MSIX에는 이 marker가 들어가지 않는다.
+    [switch]$EnablePreviewTrace,
+
     # 등록만 풀고 끝낸다. 설치본으로 넘어가기 전에 개발용 등록을 치우는 용도다.
     [switch]$Unregister,
 
@@ -142,6 +145,13 @@ if (-not $SkipBuild) {
 $manifestPath = Join-Path $payloadDirectory 'AppxManifest.xml'
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
     throw "Package manifest is missing: $manifestPath. Run without -SkipBuild first."
+}
+
+$previewTraceMarker = Join-Path $payloadDirectory 'preview-trace.on'
+if ($EnablePreviewTrace) {
+    $null = New-Item -ItemType File -Path $previewTraceMarker -Force
+} elseif (Test-Path -LiteralPath $previewTraceMarker -PathType Leaf) {
+    Remove-Item -LiteralPath $previewTraceMarker -Force
 }
 
 # 등록은 멈출 수 있는 단계다(CI 설치본 잡이 실제로 여기서 멈춘다). 어디서 멈췄는지 말하고

@@ -1,29 +1,154 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Negaflow.Catalog;
 using Negaflow.Interop;
+using Negaflow.Shell.Library;
 
 namespace Negaflow.Shell;
 
 public sealed record GrainMendDetectOutcome(
     DevelopExportOutcomeKind Kind,
-    DefectEditItem? Edit,
     uint Width,
     uint Height,
     DevelopRequestRefusal Refusal,
     string? FaultMessage,
     // macOS `DefectLabelField.automaticFalsePositiveRisk`. 전체 프레임 자동에서만 서고,
     // 성분을 하나도 버리지 않습니다 — 캡슐이 개수 대신 경고 문구를 냅니다.
-    bool AutomaticFalsePositiveRisk = false)
+    bool AutomaticFalsePositiveRisk = false,
+    IGrainMendReviewProposal? ReviewProposal = null,
+    GrainMendDetectionToken? DetectionToken = null) : IDisposable
 {
     /// <summary>검출은 됐지만 고칠 것이 없었습니다. 실패가 아닙니다.</summary>
-    public bool FoundNothing => Kind == DevelopExportOutcomeKind.Completed && Edit is null;
+    public bool FoundNothing => Kind == DevelopExportOutcomeKind.Completed &&
+        ReviewProposal is null;
+
+    public void Dispose() => ReviewProposal?.Dispose();
 
     internal static GrainMendDetectOutcome Refused(DevelopRequestRefusal refusal) =>
-        new(DevelopExportOutcomeKind.Refused, null, 0U, 0U, refusal, null);
+        new(DevelopExportOutcomeKind.Refused, 0U, 0U, refusal, null);
 
     internal static GrainMendDetectOutcome Faulted(string message) =>
-        new(DevelopExportOutcomeKind.Faulted, null, 0U, 0U, DevelopRequestRefusal.None, message);
+        new(DevelopExportOutcomeKind.Faulted, 0U, 0U, DevelopRequestRefusal.None, message);
+}
+
+/// <summary>한 번의 GrainMend 검출이 읽은 source와 전체 develop recipe의 불변 identity입니다.</summary>
+public sealed class GrainMendDetectionToken
+{
+    private readonly byte[] recipeSha256;
+
+    internal GrainMendDetectionToken(
+        string frameId,
+        string sourcePath,
+        DefectSourceIdentity? sourceIdentity,
+        byte[] recipeSha256)
+    {
+        FrameId = frameId;
+        SourcePath = sourcePath;
+        SourceIdentity = sourceIdentity;
+        this.recipeSha256 = recipeSha256;
+    }
+
+    public string FrameId { get; }
+
+    internal string SourcePath { get; }
+
+    internal DefectSourceIdentity? SourceIdentity { get; }
+
+    public bool Matches(GrainMendDetectionToken other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+        return string.Equals(FrameId, other.FrameId, StringComparison.Ordinal) &&
+            string.Equals(SourcePath, other.SourcePath, StringComparison.Ordinal) &&
+            SourceIdentity == other.SourceIdentity &&
+            recipeSha256.AsSpan().SequenceEqual(other.recipeSha256);
+    }
+
+    public bool MatchesRecipe(LibraryFrameSnapshot frame)
+    {
+        ArgumentNullException.ThrowIfNull(frame);
+        return TryCreate(
+                frame,
+                ReadSourceIdentity(frame.SourcePath),
+                out GrainMendDetectionToken? current) &&
+            current is not null && Matches(current);
+    }
+
+    public Task<bool> MatchesRecipeAsync(LibraryFrameSnapshot frame)
+    {
+        ArgumentNullException.ThrowIfNull(frame);
+        return Task.Run(() => MatchesRecipe(frame));
+    }
+
+    public static Task<bool> SameDevelopRecipeAsync(
+        LibraryFrameSnapshot left,
+        LibraryFrameSnapshot right)
+    {
+        ArgumentNullException.ThrowIfNull(left);
+        ArgumentNullException.ThrowIfNull(right);
+        return Task.Run(() =>
+            TryCreate(left, null, out GrainMendDetectionToken? leftToken) &&
+            TryCreate(right, null, out GrainMendDetectionToken? rightToken) &&
+            leftToken is not null && rightToken is not null &&
+            leftToken.Matches(rightToken));
+    }
+
+    internal bool MatchesPersistedSource(
+        string frameId,
+        string sourcePath,
+        DefectSourceIdentity sourceIdentity) =>
+        SourceIdentity is { } expected && expected == sourceIdentity &&
+        string.Equals(FrameId, frameId, StringComparison.Ordinal) &&
+        string.Equals(SourcePath, sourcePath, StringComparison.Ordinal);
+
+    public static bool TryCreate(
+        LibraryFrameSnapshot frame,
+        out GrainMendDetectionToken? token) =>
+        TryCreate(frame, ReadSourceIdentity(frame.SourcePath), out token);
+
+    internal static bool TryCreate(
+        LibraryFrameSnapshot frame,
+        DefectSourceIdentity? sourceIdentity,
+        out GrainMendDetectionToken? token)
+    {
+        ArgumentNullException.ThrowIfNull(frame);
+        token = null;
+        string unusedDestination = Path.ChangeExtension(frame.SourcePath, ".detect.png");
+        DevelopRequestResult built = DevelopRequestFactory.Create(frame, unusedDestination);
+        return built.Request is { } request &&
+            TryCreate(frame, request, sourceIdentity, out token);
+    }
+
+    internal static bool TryCreate(
+        LibraryFrameSnapshot frame,
+        DevelopExportRequest request,
+        DefectSourceIdentity? sourceIdentity,
+        out GrainMendDetectionToken? token)
+    {
+        ArgumentNullException.ThrowIfNull(frame);
+        ArgumentNullException.ThrowIfNull(request);
+        token = null;
+        try
+        {
+            token = new GrainMendDetectionToken(
+                frame.Id,
+                frame.SourcePath,
+                sourceIdentity,
+                SHA256.HashData(
+                    DevelopedPreviewCacheRecipeCodec.Compose(request, frame.DefectRecipe)));
+            return true;
+        }
+        catch (Exception error) when (error is JsonException or NotSupportedException or
+            ArgumentException or OverflowException)
+        {
+            return false;
+        }
+    }
+
+    internal static DefectSourceIdentity? ReadSourceIdentity(string sourcePath) =>
+        DefectSourceIdentityReader.TryRead(sourcePath, out DefectSourceIdentity identity)
+            ? identity
+            : null;
 }
 
 /// <summary>
@@ -42,32 +167,8 @@ public sealed class GrainMendDetectCoordinator
     private const string TraceMarkerFileName = "grain-mend-trace.enabled";
     private static readonly object TraceGate = new();
 
-    /// <summary>
-    /// 처음 잡아 두는 마스크 버퍼의 한 변입니다. 자동·가이드는 macOS 와 같이 <b>원본
-    /// 해상도</b>로 검출하므로 프레임이 이보다 크면 그 프레임 크기로 다시 잡습니다.
-    /// </summary>
-    private const int InitialMaskDimension = 1800;
-
     private readonly IDevelopExporter exporter;
     private readonly IUiDispatcher dispatcher;
-    private byte[] mask = new byte[InitialMaskDimension * InitialMaskDimension];
-
-    /// <summary>
-    /// 원본 해상도 검출은 화소마다 한 바이트를 냅니다. 버퍼가 작으면 마스크가 잘려 검출
-    /// 결과가 조용히 사라지므로, 필요한 만큼 키워 두고 다음 검출에 다시 씁니다.
-    /// </summary>
-    private void EnsureMask(LibraryFrameSnapshot frame)
-    {
-        if (frame.SourceMetadata is not { } metadata)
-        {
-            return;
-        }
-        long required = checked((long)metadata.PixelWidth * metadata.PixelHeight);
-        if (required > mask.Length && required <= int.MaxValue)
-        {
-            mask = new byte[(int)required];
-        }
-    }
 
     public GrainMendDetectCoordinator(IDevelopExporter exporter, IUiDispatcher dispatcher)
     {
@@ -85,12 +186,13 @@ public sealed class GrainMendDetectCoordinator
     public async Task<bool> RunAsync(
         LibraryFrameSnapshot frame,
         DefectRect roi,
+        bool automatic,
         Action<GrainMendDetectOutcome> onCompleted)
     {
         return await RunAsync(
             frame,
             roi,
-            GrainMendSensitivity.ToDetectionOptions(GrainMendSensitivity.Default, IsWholeFrame(roi)),
+            GrainMendSensitivity.ToDetectionOptions(GrainMendSensitivity.Default, automatic),
             onCompleted).ConfigureAwait(false);
     }
 
@@ -102,12 +204,12 @@ public sealed class GrainMendDetectCoordinator
         LibraryFrameSnapshot frame,
         DefectRect roi,
         GrainMendDetectionOptions options,
-        Action<GrainMendDetectOutcome> onCompleted)
+        Action<GrainMendDetectOutcome> onCompleted,
+        DevelopRun? run = null)
     {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(onCompleted);
         Stopwatch clock = Stopwatch.StartNew();
-        EnsureMask(frame);
 
         // 검출은 파일을 쓰지 않지만 요청 팩토리는 목적지를 요구합니다.
         string unusedDestination = Path.ChangeExtension(frame.SourcePath, ".detect.png");
@@ -122,12 +224,23 @@ public sealed class GrainMendDetectCoordinator
             return Deliver(GrainMendDetectOutcome.Refused(built.Refusal), onCompleted);
         }
 
+        IGrainMendReviewProposal? proposal = null;
         try
         {
-            GrainMendDetectionResult detected = await Task.Run(
-                () => exporter.DetectGrainMend(request, mask, roi, options)).ConfigureAwait(false);
+            DefectSourceIdentity? sourceBefore = null;
+            DefectSourceIdentity? sourceAfter = null;
+            GrainMendDetectionResult detected = await Task.Run(() =>
+            {
+                sourceBefore = GrainMendDetectionToken.ReadSourceIdentity(frame.SourcePath);
+                GrainMendDetectionResult value = exporter.DetectGrainMend(request, roi, options, run);
+                sourceAfter = GrainMendDetectionToken.ReadSourceIdentity(frame.SourcePath);
+                return value;
+            }).ConfigureAwait(false);
+            proposal = detected.ReviewProposal;
             if (!detected.Result.Succeeded)
             {
+                proposal?.Dispose();
+                proposal = null;
                 WriteTrace(frame.Id, roi, options, clock.ElapsedMilliseconds, new
                 {
                     outcome = "native-failure",
@@ -138,20 +251,29 @@ public sealed class GrainMendDetectCoordinator
                     GrainMendDetectOutcome.Faulted(detected.Result.FailureName),
                     onCompleted);
             }
+            if (sourceBefore is null || sourceAfter is null || sourceBefore != sourceAfter ||
+                !GrainMendDetectionToken.TryCreate(
+                    frame, request, sourceAfter, out GrainMendDetectionToken? detectionToken))
+            {
+                proposal?.Dispose();
+                proposal = null;
+                return Deliver(
+                    GrainMendDetectOutcome.Faulted("grain_mend_detection_input_changed"),
+                    onCompleted);
+            }
 
-            DefectEditItem? edit = GrainMendRegionEdit.From(
-                mask.AsSpan(0, checked((int)detected.MaskByteCount)),
-                checked((int)detected.Width),
-                checked((int)detected.Height),
-                detected.SourceWidth,
-                detected.SourceHeight,
-                detected.RoiX,
-                detected.RoiY,
-                detected.RoiWidth,
-                detected.RoiHeight,
-                detected.AcceptedPixels,
-                automatic: IsWholeFrame(roi),
-                detected.Defects);
+            if (proposal is null &&
+                (detected.AcceptedPixels != 0UL || detected.Defects.Count != 0))
+            {
+                const string ownershipFailure =
+                    "A non-empty GrainMend detection did not return review ownership.";
+                WriteTrace(frame.Id, roi, options, clock.ElapsedMilliseconds, new
+                {
+                    outcome = "contract-failure",
+                    reason = ownershipFailure,
+                });
+                return Deliver(GrainMendDetectOutcome.Faulted(ownershipFailure), onCompleted);
+            }
             WriteTrace(frame.Id, roi, options, clock.ElapsedMilliseconds, new
             {
                 outcome = "completed",
@@ -165,23 +287,24 @@ public sealed class GrainMendDetectCoordinator
                 detected.RoiHeight,
                 detected.AcceptedPixels,
                 detected.MaskByteCount,
-                markedPixels = CountMarkedPixels(mask, detected.MaskByteCount),
-                editCreated = edit is not null,
+                exactReviewCreated = proposal is not null,
             });
-            return Deliver(
-                new GrainMendDetectOutcome(
-                    DevelopExportOutcomeKind.Completed,
-                    edit,
-                    detected.Width,
-                    detected.Height,
-                    DevelopRequestRefusal.None,
-                    null,
-                    detected.AutomaticFalsePositiveRisk),
-                onCompleted);
+            GrainMendDetectOutcome outcome = new(
+                DevelopExportOutcomeKind.Completed,
+                detected.Width,
+                detected.Height,
+                DevelopRequestRefusal.None,
+                null,
+                detected.AutomaticFalsePositiveRisk,
+                proposal,
+                detectionToken);
+            proposal = null;
+            return Deliver(outcome, onCompleted);
         }
         catch (Exception error) when (error is NativeBootstrapException or
             OverflowException or ArgumentException)
         {
+            proposal?.Dispose();
             WriteTrace(frame.Id, roi, options, clock.ElapsedMilliseconds, new
             {
                 outcome = "exception",
@@ -189,23 +312,6 @@ public sealed class GrainMendDetectCoordinator
             });
             return Deliver(GrainMendDetectOutcome.Faulted(error.Message), onCompleted);
         }
-    }
-
-    private static long CountMarkedPixels(byte[] mask, ulong maskByteCount)
-    {
-        if (!TraceEnabled() || maskByteCount > (ulong)mask.Length)
-        {
-            return -1L;
-        }
-        long count = 0L;
-        for (int index = 0; index < checked((int)maskByteCount); ++index)
-        {
-            if (mask[index] != 0)
-            {
-                ++count;
-            }
-        }
-        return count;
     }
 
     private static bool TraceEnabled()
@@ -271,19 +377,40 @@ public sealed class GrainMendDetectCoordinator
         }
     }
 
-    private static bool IsWholeFrame(DefectRect roi) =>
-        roi.X == 0.0 && roi.Y == 0.0 && roi.Width == 1.0 && roi.Height == 1.0;
-
     private bool Deliver(
         GrainMendDetectOutcome outcome,
         Action<GrainMendDetectOutcome> onCompleted)
     {
         if (dispatcher.HasThreadAccess)
         {
-            onCompleted(outcome);
-            return true;
+            try
+            {
+                onCompleted(outcome);
+                return true;
+            }
+            catch
+            {
+                outcome.Dispose();
+                throw;
+            }
         }
         // 큐에 못 넣었다는 것은 창이 닫혔다는 뜻입니다. 결과는 버립니다.
-        return dispatcher.TryEnqueue(() => onCompleted(outcome));
+        if (!dispatcher.TryEnqueue(() =>
+            {
+                try
+                {
+                    onCompleted(outcome);
+                }
+                catch
+                {
+                    outcome.Dispose();
+                    throw;
+                }
+            }))
+        {
+            outcome.Dispose();
+            return false;
+        }
+        return true;
     }
 }

@@ -118,8 +118,8 @@ internal static unsafe class DevelopExportDefectContractTests
             NativeDevelopExporter.Run(maximumInfraredRequest).FailedStage ==
                 DevelopExportStage.ObserveSourceBefore,
             "develop_export_accepts_4096_flat_regions_and_8192_expanded_order");
-        context.CheckThrows<ArgumentException>(
-            () => NativeDevelopExporter.Run(new DevelopExportRequest
+        context.Check(
+            NativeDevelopExporter.Run(new DevelopExportRequest
             {
                 SourcePath = absentSource,
                 DestinationPath = destination,
@@ -140,10 +140,10 @@ internal static unsafe class DevelopExportDefectContractTests
                 DefectSourceIdentity = new DevelopDefectSourceIdentity(
                     1,
                     new string('0', 64)),
-            }),
-            "develop_export_rejects_4097_flat_regions_before_marshalling");
-        context.CheckThrows<ArgumentException>(
-            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            }).FailedStage == DevelopExportStage.ObserveSourceBefore,
+            "develop_export_accepts_4097_infrared_clusters_through_native_mapping");
+        context.Check(
+            NativeDevelopExporter.Run(new DevelopExportRequest
             {
                 SourcePath = absentSource,
                 DestinationPath = destination,
@@ -161,8 +161,8 @@ internal static unsafe class DevelopExportDefectContractTests
                 DefectSourceIdentity = new DevelopDefectSourceIdentity(
                     1,
                     new string('0', 64)),
-            }),
-            "develop_export_rejects_8193_expanded_order_before_marshalling");
+            }).FailedStage == DevelopExportStage.ObserveSourceBefore,
+            "develop_export_accepts_8193_transport_refs_for_4098_recipe_items");
 
         DevelopExportResult clone = NativeDevelopExporter.Run(new DevelopExportRequest
         {

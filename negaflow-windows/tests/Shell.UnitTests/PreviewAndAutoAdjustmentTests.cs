@@ -159,6 +159,43 @@ internal static class PreviewAndAutoAdjustmentTests
         Check(delivered.Count == 2, "preview_delivers_every_finished_interactive_render");
         Check(!coordinator.IsRendering, "preview_clears_rendering_flag");
 
+        using ManualResetEventSlim rollbackGate = new(initialState: false);
+        FakeExporter rollbackExporter = new(_ => OkResult(), rollbackGate);
+        PreviewCoordinator rollbackCoordinator = new(rollbackExporter, dispatcher, 64, 64);
+        List<int> rollbackDelivered = [];
+        Task rollbackStarted = rollbackCoordinator.RequestAsync(
+            first,
+            outcome => rollbackDelivered.Add(outcome.Revision));
+        while (Volatile.Read(ref rollbackExporter.CallCount) == 0)
+        {
+            Thread.Yield();
+        }
+        rollbackCoordinator.RequestReplacingAsync(
+            first,
+            outcome => rollbackDelivered.Add(outcome.Revision));
+        rollbackGate.Set();
+        rollbackStarted.GetAwaiter().GetResult();
+        Check(rollbackExporter.CallCount == 2 && rollbackExporter.CancelledCount == 1,
+            "preview_rollback_cancels_held_same_frame_live_render");
+        Check(rollbackDelivered.SequenceEqual([2]),
+            "preview_rollback_delivers_only_committed_replacement");
+
+        QueuedDispatcher queuedDispatcher = new();
+        int queuedCalls = 0;
+        FakeExporter queuedExporter = new(_ =>
+            Interlocked.Increment(ref queuedCalls) == 1
+                ? OkResult()
+                : FailedResult("rollback_failed"));
+        PreviewCoordinator queuedCoordinator = new(queuedExporter, queuedDispatcher, 64, 64);
+        List<PreviewOutcome> queuedDelivered = [];
+        queuedCoordinator.RequestAsync(first, queuedDelivered.Add)
+            .GetAwaiter().GetResult();
+        queuedCoordinator.RequestReplacingAsync(first, queuedDelivered.Add)
+            .GetAwaiter().GetResult();
+        queuedDispatcher.Drain();
+        Check(queuedDelivered is [{ Revision: 2, Kind: DevelopExportOutcomeKind.Faulted }],
+            "preview_rollback_failure_suppresses_already_queued_live_callback");
+
         // 요청이 겹치지 않으면 그냥 매번 그립니다.
         FakeDispatcher quiet = new(accepts: true);
         FakeExporter sequential = new(_ => OkResult());
@@ -292,6 +329,38 @@ internal static class PreviewAndAutoAdjustmentTests
     }
 
     private static bool Near(double actual, double expected) => Math.Abs(actual - expected) <= 1e-9;
+
+    private sealed class QueuedDispatcher : IUiDispatcher
+    {
+        private readonly Queue<Action> callbacks = new();
+
+        public bool HasThreadAccess => false;
+
+        public bool TryEnqueue(Action callback)
+        {
+            lock (callbacks)
+            {
+                callbacks.Enqueue(callback);
+            }
+            return true;
+        }
+
+        public void Drain()
+        {
+            while (true)
+            {
+                Action callback;
+                lock (callbacks)
+                {
+                    if (!callbacks.TryDequeue(out callback!))
+                    {
+                        return;
+                    }
+                }
+                callback();
+            }
+        }
+    }
 
     private static bool NearRect(CropDisplayRect actual, double x, double y, double width, double height) =>
         Near(actual.X, x) && Near(actual.Y, y) && Near(actual.Width, width) && Near(actual.Height, height);

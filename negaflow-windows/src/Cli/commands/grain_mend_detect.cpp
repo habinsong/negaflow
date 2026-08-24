@@ -233,9 +233,12 @@ int run_grain_mend_detect(
     // 검출 안쪽의 형태학이 GPU 를 쓰게 표를 겁니다. 여러 번 불러도 한 번만 겁니다.
     // `NEGA_GPU=0` 이면 장치를 안 열므로 표도 안 걸리고 CPU 그대로 돕니다.
     negaflow::pipeline::install_gpu_kernel_accelerator();
+    negaflow::pipeline::reset_gpu_host_transfer_stats();
     const negaflow::imaging::GrainMendDetection detection =
         negaflow::imaging::detect_grain_mend(
             prepared.working.image, parameters, roi);
+    const negaflow::pipeline::GpuHostTransferStats gpu_transfers =
+        negaflow::pipeline::gpu_host_transfer_stats();
     const auto finished = std::chrono::steady_clock::now();
     if (!dump_path.empty()) {
         write_component_dump(dump_path, detection);
@@ -261,6 +264,11 @@ int run_grain_mend_detect(
               << "\",\"operation\":\"grain_mend_detect\""
               << ",\"source_width\":" << prepared.working.image.width
               << ",\"source_height\":" << prepared.working.image.height
+              << ",\"gpu_transfers\":{\"uploads\":" << gpu_transfers.uploads
+              << ",\"downloads\":" << gpu_transfers.downloads
+              << ",\"uploaded_pixels\":" << gpu_transfers.uploaded_pixels
+              << ",\"downloaded_pixels\":" << gpu_transfers.downloaded_pixels
+              << ",\"downloaded_bytes\":" << gpu_transfers.downloaded_bytes << '}'
               << ",\"input_domain\":\"cleaned_raw\""
               << ",\"dmin_mode\":\"unused\""
               << ",\"detection_width\":" << detection.width

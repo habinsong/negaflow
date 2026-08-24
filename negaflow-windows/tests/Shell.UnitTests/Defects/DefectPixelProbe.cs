@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
@@ -12,6 +13,8 @@ internal sealed record DefectPixelDelta(
     bool RepairedSucceeded,
     string RepairedStage,
     string? FailureName,
+    long BaselineMilliseconds,
+    long RepairedMilliseconds,
     long DifferingBytes,
     int MaximumDifference);
 
@@ -59,10 +62,14 @@ internal static class DefectPixelProbe
             }
             byte[] baseline = new byte[checked(width * height * 4)];
             byte[] repaired = new byte[baseline.Length];
+            Stopwatch baselineClock = Stopwatch.StartNew();
             DevelopExportResult baselineResult =
                 exporter.Preview(without!, (uint)width, (uint)height, baseline);
+            baselineClock.Stop();
+            Stopwatch repairedClock = Stopwatch.StartNew();
             DevelopExportResult repairedResult =
                 exporter.Preview(with!, (uint)width, (uint)height, repaired);
+            repairedClock.Stop();
             (long differing, int maximum) = Compare(baseline, repaired);
             deltas.Add(new DefectPixelDelta(
                 width,
@@ -71,6 +78,8 @@ internal static class DefectPixelProbe
                 repairedResult.Succeeded,
                 repairedResult.FailedStage.ToString(),
                 repairedResult.FailureName,
+                baselineClock.ElapsedMilliseconds,
+                repairedClock.ElapsedMilliseconds,
                 differing,
                 maximum));
         }

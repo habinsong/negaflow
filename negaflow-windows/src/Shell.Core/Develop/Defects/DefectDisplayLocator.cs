@@ -3,31 +3,29 @@ using Negaflow.Catalog;
 namespace Negaflow.Shell.Develop;
 
 /// <summary>
-/// 원본 정규 좌표를 표시 화소로 되돌리는 표입니다.
+/// 원본 정규 좌표를 표시 화소로 되돌립니다.
 /// </summary>
 /// <remarks>
-/// <para>
-/// <see cref="DevelopDisplayGeometry"/> 는 표시 → 원본 한 방향만 있습니다. 그 식을 손으로
-/// 뒤집으면 회전·수평보정·크롭 세 단계를 다시 유도해야 하고, 두 벌이 되면 언젠가 한쪽만
-/// 고쳐집니다. 그래서 뒤집지 않고, 표시 화소를 한 번 훑으면서 원본 격자에 그 화소를 적어 둡니다.
-/// </para>
-/// <para>
-/// 격자는 원본 정규 좌표를 <see cref="Resolution"/> 칸으로 나눈 것입니다. 같은 칸에 여러 표시
-/// 화소가 들어오면 나중 것이 덮어씁니다 — 어느 쪽이든 그 칸 안의 화소이므로 한 화소 차이입니다.
-/// </para>
+/// <see cref="DevelopDisplayGeometry.TryMapRawToDisplay"/>가 macOS
+/// <c>ImageTransform.baseUnitToDisplay</c>와 같은 직접 변환을 소유합니다. 고정 해상도 역조회 표를
+/// 만들지 않아 작은 preview에서도 원본 점을 누락하지 않습니다.
 /// </remarks>
 public sealed class DefectDisplayLocator
 {
-    /// <summary>원본 정규 좌표의 칸 수입니다. 표시 크기와 무관하게 고정입니다.</summary>
-    public const int Resolution = 1024;
+    private readonly ImageTransformRecipe transform;
+    private readonly uint sourceWidth;
+    private readonly uint sourceHeight;
 
-    private const int Empty = -1;
-
-    private readonly int[] cells;
-
-    private DefectDisplayLocator(int[] cells, int width, int height)
+    private DefectDisplayLocator(
+        ImageTransformRecipe transform,
+        uint sourceWidth,
+        uint sourceHeight,
+        int width,
+        int height)
     {
-        this.cells = cells;
+        this.transform = transform;
+        this.sourceWidth = sourceWidth;
+        this.sourceHeight = sourceHeight;
         Width = width;
         Height = height;
     }
@@ -37,7 +35,7 @@ public sealed class DefectDisplayLocator
     public int Height { get; }
 
     /// <summary>
-    /// 표시 크기 한 장을 훑어 표를 만듭니다. 변환을 적용할 수 없으면 <see langword="null"/> 입니다.
+    /// 직접 변환을 준비합니다. 변환을 적용할 수 없으면 <see langword="null"/> 입니다.
     /// </summary>
     public static DefectDisplayLocator? Build(
         LibraryFrameSnapshot frame,
@@ -50,31 +48,21 @@ public sealed class DefectDisplayLocator
             return null;
         }
 
-        int[] cells = new int[Resolution * Resolution];
-        Array.Fill(cells, Empty);
-        bool any = false;
-        for (int y = 0; y < height; ++y)
-        {
-            double displayY = height == 1 ? 0.0 : (double)y / (height - 1);
-            for (int x = 0; x < width; ++x)
-            {
-                double displayX = width == 1 ? 0.0 : (double)x / (width - 1);
-                if (!DevelopDisplayGeometry.TryMapDisplayToRaw(
-                        frame.ImageTransform,
-                        metadata.PixelWidth,
-                        metadata.PixelHeight,
-                        displayX,
-                        displayY,
-                        out double rawX,
-                        out double rawY))
-                {
-                    continue;
-                }
-                cells[Cell(rawX, rawY)] = (y * width) + x;
-                any = true;
-            }
-        }
-        return any ? new DefectDisplayLocator(cells, width, height) : null;
+        return DevelopDisplayGeometry.TryMapRawToDisplay(
+                frame.ImageTransform,
+                metadata.PixelWidth,
+                metadata.PixelHeight,
+                0.0,
+                0.0,
+                out _,
+                out _)
+            ? new DefectDisplayLocator(
+                frame.ImageTransform,
+                metadata.PixelWidth,
+                metadata.PixelHeight,
+                width,
+                height)
+            : null;
     }
 
     /// <summary>
@@ -90,20 +78,21 @@ public sealed class DefectDisplayLocator
         {
             return false;
         }
-        int index = cells[Cell(raw.X, raw.Y)];
-        if (index == Empty)
+        if (!DevelopDisplayGeometry.TryMapRawToDisplay(
+                transform,
+                sourceWidth,
+                sourceHeight,
+                raw.X,
+                raw.Y,
+                out double displayX,
+                out double displayY) ||
+            !double.IsFinite(displayX) || !double.IsFinite(displayY) ||
+            displayX is < 0.0 or > 1.0 || displayY is < 0.0 or > 1.0)
         {
             return false;
         }
-        x = index % Width;
-        y = index / Width;
+        x = Width == 1 ? 0 : (int)Math.Round(displayX * (Width - 1));
+        y = Height == 1 ? 0 : (int)Math.Round(displayY * (Height - 1));
         return true;
-    }
-
-    private static int Cell(double rawX, double rawY)
-    {
-        int column = Math.Clamp((int)(rawX * (Resolution - 1)), 0, Resolution - 1);
-        int row = Math.Clamp((int)(rawY * (Resolution - 1)), 0, Resolution - 1);
-        return (row * Resolution) + column;
     }
 }

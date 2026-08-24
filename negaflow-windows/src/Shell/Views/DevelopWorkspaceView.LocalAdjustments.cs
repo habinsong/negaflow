@@ -55,9 +55,7 @@ public sealed partial class DevelopWorkspaceView
         {
             return;
         }
-        cropSession.Cancel();
-        BaseCard.CancelBasePicker();
-        GrainMendPanel.SetTool(GrainMendTool.None);
+        ExitCanvasToolsForLocalAdjustment();
     }
 
     /// <summary>

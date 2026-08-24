@@ -31,7 +31,8 @@ public static class DefectMaskOverlayRenderer
         LibraryFrameSnapshot frame,
         int width,
         int height,
-        DefectEditItem item)
+        DefectEditItem item,
+        double bitmapPixelsPerDisplayPoint = 1.0)
     {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(item);
@@ -51,7 +52,7 @@ public static class DefectMaskOverlayRenderer
                 DrawClone(canvas, locator, item, frame);
                 break;
             default:
-                DrawRegion(canvas, locator, item);
+                DrawRegion(canvas, locator, item, PreviewPointPixels(bitmapPixelsPerDisplayPoint));
                 break;
         }
         return canvas.Touched ? bgra : null;
@@ -71,7 +72,8 @@ public static class DefectMaskOverlayRenderer
         int width,
         int height,
         IReadOnlyList<DefectPreviewComponent> preview,
-        Func<int, bool> isExcluded)
+        Func<int, bool> isExcluded,
+        double bitmapPixelsPerDisplayPoint = 1.0)
     {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(preview);
@@ -84,6 +86,7 @@ public static class DefectMaskOverlayRenderer
 
         byte[] bgra = new byte[checked(width * height * 4)];
         DefectCanvas canvas = new(bgra, width, height);
+        int pointSize = PreviewPointPixels(bitmapPixelsPerDisplayPoint);
         for (int index = 0; index < preview.Count; ++index)
         {
             DefectPreviewComponent component = preview[index];
@@ -96,7 +99,7 @@ public static class DefectMaskOverlayRenderer
             {
                 if (locator.TryLocate(point, out int x, out int y))
                 {
-                    canvas.FillSquare(x, y, PreviewPointSize, color);
+                    canvas.FillSquare(x, y, pointSize, color);
                 }
             }
         }
@@ -112,7 +115,8 @@ public static class DefectMaskOverlayRenderer
     private static void DrawRegion(
         DefectCanvas canvas,
         DefectDisplayLocator locator,
-        DefectEditItem item)
+        DefectEditItem item,
+        int pointSize)
     {
         foreach (DefectPreviewComponent component in item.Preview)
         {
@@ -123,11 +127,19 @@ public static class DefectMaskOverlayRenderer
             {
                 if (locator.TryLocate(point, out int x, out int y))
                 {
-                    canvas.FillSquare(x, y, PreviewPointSize, color);
+                    canvas.FillSquare(x, y, pointSize, color);
                 }
             }
         }
     }
+
+    private static int PreviewPointPixels(double bitmapPixelsPerDisplayPoint) =>
+        Math.Max(1, (int)Math.Round(
+            PreviewPointSize * Math.Max(
+                double.IsFinite(bitmapPixelsPerDisplayPoint)
+                    ? bitmapPixelsPerDisplayPoint
+                    : 1.0,
+                0.0)));
 
     /// <summary>
     /// macOS <c>drawBrush</c>: 굵기는 짧은 변에 대한 비율이므로 표시 크기의 짧은 변을 곱합니다.

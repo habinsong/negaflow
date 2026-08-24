@@ -32,7 +32,8 @@ namespace negaflow::abi::detail {
     }
     if (request.defect_region_reserved != 0U ||
         request.defect_mask_reserved != 0U ||
-        request.defect_region_edit_count > NF_DEFECT_REGION_MAX_EDITS ||
+        request.defect_region_edit_count >
+            NF_DEFECT_RECIPE_MAX_NATIVE_REGION_DESCRIPTORS ||
         request.defect_mask_byte_count > NF_DEFECT_REGION_MAX_MASK_BYTES ||
         (request.defect_region_edit_count != 0U &&
          request.defect_region_edits == nullptr) ||

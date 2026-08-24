@@ -60,15 +60,11 @@ public sealed class CloneStampSourceWindow
         DefectPoint? alignedRawOffset)
     {
         ArgumentNullException.ThrowIfNull(frame);
-        if (width <= 0 || height <= 0 || frame.SourceMetadata is not { } metadata ||
-            !DevelopDisplayGeometry.TryMapDisplayToRaw(
-                frame.ImageTransform,
-                metadata.PixelWidth,
-                metadata.PixelHeight,
-                anchor.X,
-                anchor.Y,
-                out double anchorRawX,
-                out double anchorRawY))
+        if (width <= 0 || height <= 0 ||
+            !DevelopDefectCoordinateMapper.TryMapCloneDisplayToRaw(
+                frame,
+                anchor,
+                out DefectPoint anchorRaw))
         {
             return null;
         }
@@ -78,16 +74,12 @@ public sealed class CloneStampSourceWindow
         {
             offsetRaw = aligned;
         }
-        else if (DevelopDisplayGeometry.TryMapDisplayToRaw(
-            frame.ImageTransform,
-            metadata.PixelWidth,
-            metadata.PixelHeight,
-            source.X,
-            source.Y,
-            out double sourceRawX,
-            out double sourceRawY))
+        else if (DevelopDefectCoordinateMapper.TryMapCloneDisplayToRaw(
+            frame,
+            source,
+            out DefectPoint sourceRaw))
         {
-            offsetRaw = new DefectPoint(sourceRawX - anchorRawX, sourceRawY - anchorRawY);
+            offsetRaw = new DefectPoint(sourceRaw.X - anchorRaw.X, sourceRaw.Y - anchorRaw.Y);
         }
         else
         {
@@ -99,14 +91,10 @@ public sealed class CloneStampSourceWindow
         }
 
         // macOS: `transform.baseUnitToDisplay(cursorBase + offset)`.
-        if (!DevelopDisplayGeometry.TryMapRawToDisplay(
-                frame.ImageTransform,
-                metadata.PixelWidth,
-                metadata.PixelHeight,
-                anchorRawX + offsetRaw.X,
-                anchorRawY + offsetRaw.Y,
-                out double sourceDisplayX,
-                out double sourceDisplayY))
+        if (!DevelopDefectCoordinateMapper.TryMapCloneRawToDisplay(
+                frame,
+                new DefectPoint(anchorRaw.X + offsetRaw.X, anchorRaw.Y + offsetRaw.Y),
+                out DefectPoint sourceDisplay))
         {
             return null;
         }
@@ -114,7 +102,7 @@ public sealed class CloneStampSourceWindow
         // macOS 는 CGSize(실수)로 돌려주고 이미지를 보간해 그립니다. 여기서는 화소를 통째로
         // 옮기므로 가장 가까운 화소로 반올림합니다.
         (int anchorX, int anchorY) = Pixel(anchor.X, anchor.Y, width, height);
-        (int sourceX, int sourceY) = Pixel(sourceDisplayX, sourceDisplayY, width, height);
+        (int sourceX, int sourceY) = Pixel(sourceDisplay.X, sourceDisplay.Y, width, height);
         return (sourceX - anchorX, sourceY - anchorY);
     }
 

@@ -380,6 +380,57 @@ GpuImageStatus GpuWorkingImage::upload_into(
     return GpuImageStatus::ok;
 }
 
+GpuImageStatus GpuWorkingImage::upload_planes_into(
+    const GpuDevice& device,
+    const float* const red,
+    const float* const green,
+    const float* const blue,
+    const std::uint32_t stride_pixels) const noexcept {
+    if (red == nullptr) {
+        return GpuImageStatus::buffer_size_mismatch;
+    }
+    if (!is_valid() || !device.is_usable()) {
+        return GpuImageStatus::device_unavailable;
+    }
+    if (stride_pixels < width_) {
+        return GpuImageStatus::invalid_dimensions;
+    }
+    if (upload_staging_ == nullptr) {
+        upload_staging_ = make_staging(device, width_, height_, D3D11_CPU_ACCESS_WRITE);
+    }
+    if (upload_staging_ == nullptr) {
+        return GpuImageStatus::allocation_failed;
+    }
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    if (FAILED(device.context()->Map(
+            upload_staging_, 0U, D3D11_MAP_WRITE, 0U, &mapped))) {
+        return GpuImageStatus::map_failed;
+    }
+    negaflow::core::for_each_row_block(
+        height_,
+        static_cast<std::uint64_t>(width_) * height_ * 7U,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
+                auto* destination = reinterpret_cast<core::Rgba32F*>(
+                    reinterpret_cast<std::byte*>(mapped.pData) +
+                    static_cast<std::size_t>(y) * mapped.RowPitch);
+                const std::size_t source_base = static_cast<std::size_t>(y) * stride_pixels;
+                for (std::uint32_t x = 0U; x < width_; ++x) {
+                    const std::size_t source = source_base + x;
+                    destination[x] = {
+                        red[source],
+                        green != nullptr ? green[source] : red[source],
+                        blue != nullptr ? blue[source] : red[source],
+                        0.0F};
+                }
+            }
+        });
+    device.context()->Unmap(upload_staging_, 0U);
+    device.context()->CopyResource(texture_, upload_staging_);
+    note_upload(width_, height_);
+    return GpuImageStatus::ok;
+}
+
 GpuImageStatus GpuWorkingImage::download(
     const GpuDevice& device,
     core::Rgba32F* const pixels,
@@ -403,6 +454,55 @@ GpuImageStatus GpuWorkingImage::download(
         note_download(width_, height_);
     }
     return status;
+}
+
+GpuImageStatus GpuWorkingImage::download_planes(
+    const GpuDevice& device,
+    float* const red,
+    float* const green,
+    float* const blue,
+    const std::uint32_t stride_pixels) const noexcept {
+    if (red == nullptr) {
+        return GpuImageStatus::buffer_size_mismatch;
+    }
+    if (!device.is_usable() || texture_ == nullptr) {
+        return GpuImageStatus::device_unavailable;
+    }
+    if (stride_pixels < width_) {
+        return GpuImageStatus::invalid_dimensions;
+    }
+    if (staging_ == nullptr) {
+        staging_ = make_staging(device, width_, height_);
+        if (staging_ == nullptr) {
+            return GpuImageStatus::allocation_failed;
+        }
+    }
+    device.context()->CopyResource(staging_, texture_);
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    if (FAILED(device.context()->Map(staging_, 0U, D3D11_MAP_READ, 0U, &mapped))) {
+        return GpuImageStatus::map_failed;
+    }
+    negaflow::core::for_each_row_block(
+        height_,
+        static_cast<std::uint64_t>(width_) * height_ *
+            (green != nullptr || blue != nullptr ? 7U : 2U),
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
+                const auto* source = reinterpret_cast<const core::Rgba32F*>(
+                    reinterpret_cast<const std::byte*>(mapped.pData) +
+                    static_cast<std::size_t>(y) * mapped.RowPitch);
+                const std::size_t destination_base = static_cast<std::size_t>(y) * stride_pixels;
+                for (std::uint32_t x = 0U; x < width_; ++x) {
+                    const std::size_t destination = destination_base + x;
+                    red[destination] = source[x].red;
+                    if (green != nullptr) green[destination] = source[x].green;
+                    if (blue != nullptr) blue[destination] = source[x].blue;
+                }
+            }
+        });
+    device.context()->Unmap(staging_, 0U);
+    note_download(width_, height_);
+    return GpuImageStatus::ok;
 }
 
 GpuImageStatus GpuWorkingImage::copy_from(

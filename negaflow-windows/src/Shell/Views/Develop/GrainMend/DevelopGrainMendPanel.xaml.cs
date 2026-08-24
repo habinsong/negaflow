@@ -21,13 +21,10 @@ public sealed partial class DevelopGrainMendPanel : UserControl
     internal Action? endCropSession;
     internal Action<string>? setStatus;
     internal Action? requestPreview;
+    internal Action? replacePreview;
     internal readonly GrainMendWorkspaceState grainMend = new();
 
-    /// <summary>
-    /// "결함 제거"가 도는 중입니다. macOS 는 이 동안 단추 안을 프로그래스로 바꿉니다.
-    /// Windows 의 수락은 아직 동기라 눈에 보일 틈이 없지만, 상태는 어긋나지 않게 둡니다.
-    /// </summary>
-    internal bool isRemovingDefects;
+    internal GrainMendAcceptance? removingAcceptance;
     internal readonly DevelopGrainMendChrome chrome;
     internal readonly DevelopGrainMendDetector detector;
     internal readonly DevelopGrainMendReview review;
@@ -52,21 +49,27 @@ public sealed partial class DevelopGrainMendPanel : UserControl
         CropWorkspaceState cropState,
         DevelopPreviewCanvas previewCanvas,
         Action endCrop,
+        Action exitCompetingTools,
         Action<string> status,
-        Action preview)
+        Action preview,
+        Action replace)
     {
         ArgumentNullException.ThrowIfNull(workspace);
         ArgumentNullException.ThrowIfNull(cropState);
         ArgumentNullException.ThrowIfNull(previewCanvas);
         ArgumentNullException.ThrowIfNull(endCrop);
+        ArgumentNullException.ThrowIfNull(exitCompetingTools);
         ArgumentNullException.ThrowIfNull(status);
         ArgumentNullException.ThrowIfNull(preview);
+        ArgumentNullException.ThrowIfNull(replace);
         workspaceState = workspace;
         crop = cropState;
         canvas = previewCanvas;
         endCropSession = endCrop;
+        exitCompetingCanvasTools = exitCompetingTools;
         setStatus = status;
         requestPreview = preview;
+        replacePreview = replace;
         AttachHud(previewCanvas.GrainMendHud);
     }
 
@@ -85,8 +88,8 @@ public sealed partial class DevelopGrainMendPanel : UserControl
         hud.BrushThicknessChanged += OnHudBrushThicknessChanged;
         hud.BrushUndoRequested += OnHudBrushUndoRequested;
         hud.BrushClearRequested += OnHudBrushClearRequested;
-        hud.BrushResetRequested += () => review.RemoveEdits(DefectEditKind.Brush);
-        hud.BrushApplyRequested += OnHudBrushApplyRequested;
+        hud.AppliedDefectsResetRequested += () => review.RemoveAppliedDefects();
+        hud.BrushApplyRequested += ApplyBrushDraft;
         hud.CloneDiameterChanged += OnHudCloneDiameterChanged;
         hud.CloneHardnessChanged += OnHudCloneHardnessChanged;
         hud.CloneUndoRequested += OnHudUndoRequested;
@@ -100,12 +103,25 @@ public sealed partial class DevelopGrainMendPanel : UserControl
     /// </summary>
     private void OnHudUndoRequested()
     {
-        if (panel is null || !panel.UndoDefectEdit())
+        if (panel is null)
         {
             return;
         }
+        if (!panel.UndoDefectEdit())
+        {
+            if (panel.HistoryStoreError != CatalogStoreError.None ||
+                panel.HistorySidecarError != DefectSidecarError.None)
+            {
+                SetStatus(AppResources.Get(
+                    panel.HistoryStoreError != CatalogStoreError.None
+                        ? "developExportSaveFailed"
+                        : "libraryProcessApplyFailed",
+                    "Text"));
+            }
+            return;
+        }
         chrome.Update();
-        RequestPreview();
+        RequestDefectPreview();
     }
 
     /// <summary>크기가 바뀌면 커서 원도 곧바로 그 크기가 됩니다(macOS <c>screenDiameter</c>).</summary>
@@ -137,6 +153,7 @@ public sealed partial class DevelopGrainMendPanel : UserControl
     {
         if (!grainMend.Strokes.UndoLastPaintedStroke())
         {
+            OnHudUndoRequested();
             return;
         }
         review.RenderPaintOverlay();
@@ -156,8 +173,10 @@ public sealed partial class DevelopGrainMendPanel : UserControl
     /// <summary>
     /// macOS <c>onApply</c>: 모아 둔 칠을 recipe 로 보냅니다. 그때에만 현상이 다시 돕니다.
     /// </summary>
-    private void OnHudBrushApplyRequested()
+    internal void ApplyBrushDraft()
     {
+        GrainMendPresentationSample presentation =
+            BeginManualPresentation(GrainMendTool.Brush);
         if (panel is null ||
             !grainMend.Strokes.ApplyPaintedStrokes(panel, out LibraryFrameError error))
         {
@@ -167,50 +186,60 @@ public sealed partial class DevelopGrainMendPanel : UserControl
         chrome.Update();
         if (error == LibraryFrameError.None)
         {
-            RequestPreview();
+            SetStatus(string.Empty);
+            TrackDevelopedPresentation(presentation);
+            RequestDefectPreview();
+        }
+        else
+        {
+            ShowDefectWriteError();
         }
     }
 
     private void OnHudSensitivityChanged(double value)
     {
-        if (grainMend.PendingEdit is null)
+        if (isRemovingDefects || grainMend.PendingRawRoi is null ||
+            grainMend.ActiveRegionKind is not { } activeKind)
         {
             return;
         }
         options.SetSensitivity(
-            grainMend.PendingEdit.Label.Kind == DefectEditLabelKind.Automatic,
+            activeKind == DefectEditLabelKind.Automatic,
             value);
     }
 
-    private async void OnHudSensitivityCommitted() =>
-        await detector.RedetectForSensitivityAsync();
+    private async void OnHudSensitivityCommitted()
+    {
+        if (!isRemovingDefects)
+        {
+            await detector.RedetectForSensitivityAsync();
+        }
+    }
 
     private async void OnHudMicroSpecksToggled(bool enabled)
     {
-        // 검토 중이 아니면(가이드를 켜 두고 기다리는 중) 값만 담아 둡니다. macOS 도 이때는
-        // 재검출하지 않습니다 — 아직 검출한 것이 없습니다.
-        bool automatic = grainMend.PendingEdit?.Label.Kind == DefectEditLabelKind.Automatic;
-        options.SetMicroSpecks(automatic, enabled);
-        if (grainMend.PendingEdit is null || grainMend.PendingRawRoi is not { } rawRoi ||
-            grainMend.IsDetecting)
+        if (isRemovingDefects)
         {
             return;
         }
-        await detector.DetectAsync(rawRoi);
+        if (grainMend.ActiveRegionKind is not { } activeKind)
+        {
+            return;
+        }
+        // 검토 중이 아니면(가이드를 켜 두고 기다리는 중) 값만 담아 둡니다. macOS 도 이때는
+        // 재검출하지 않습니다 — 아직 검출한 것이 없습니다.
+        bool automatic = activeKind == DefectEditLabelKind.Automatic;
+        options.SetMicroSpecks(automatic, enabled);
+        if (grainMend.PendingRawRoi is not { } rawRoi || grainMend.IsDetecting)
+        {
+            return;
+        }
+        await detector.DetectAsync(rawRoi, automatic);
     }
 
-    private void OnHudRemoveRequested()
+    private async void OnHudRemoveRequested()
     {
-        isRemovingDefects = true;
-        try
-        {
-            review.AcceptPending();
-        }
-        finally
-        {
-            isRemovingDefects = false;
-        }
-        chrome.Update();
+        await review.AcceptPendingAsync();
     }
 
     /// <summary>
@@ -219,7 +248,8 @@ public sealed partial class DevelopGrainMendPanel : UserControl
     /// </summary>
     private void OnHudClassToggled(DefectClassification classification)
     {
-        if (grainMend.PendingReview?.ToggleClass(classification) != true ||
+        if (isRemovingDefects ||
+            grainMend.PendingReview?.ToggleClass(classification) != true ||
             grainMend.PendingEdit is not { } edit)
         {
             return;
@@ -235,7 +265,13 @@ public sealed partial class DevelopGrainMendPanel : UserControl
     public void Bind(DevelopPanelState hostPanel)
     {
         ArgumentNullException.ThrowIfNull(hostPanel);
+        if (panel is not null)
+        {
+            panel.SelectedFrameChanged -= OnSelectedFrameChanged;
+        }
         panel = hostPanel;
+        panel.SelectedFrameChanged += OnSelectedFrameChanged;
+        grainMend.ChangeFrame(panel.SelectedFrame?.Id);
     }
 
     public void SetDetectCoordinator(GrainMendDetectCoordinator coordinator)
@@ -251,6 +287,7 @@ public sealed partial class DevelopGrainMendPanel : UserControl
         {
             // 탭을 떠나면 도구도 놓습니다. 보이지 않는 도구가 캔버스를 잡고 있으면
             // 크롭이나 확대가 먹지 않는 것처럼 보입니다.
+            CancelRegionDefectSession();
             SetTool(GrainMendTool.None);
         }
         chrome.Update();
@@ -268,7 +305,7 @@ public sealed partial class DevelopGrainMendPanel : UserControl
         input.TryHandleReleased(args);
 
     public void HandlePointerCancelled(PointerRoutedEventArgs args) =>
-        input.EndGuidedSelection(args);
+        input.CancelActivePointer(args);
 
     public bool TryHandleKeyDown(KeyRoutedEventArgs args) =>
         input.TryHandleKey(args);
@@ -277,10 +314,6 @@ public sealed partial class DevelopGrainMendPanel : UserControl
 
     internal void SetTool(GrainMendTool tool)
     {
-        if (grainMend.Strokes.Tool == tool)
-        {
-            return;
-        }
         grainMend.Strokes.Select(tool);
         if (tool != GrainMendTool.Guided)
         {
@@ -298,40 +331,66 @@ public sealed partial class DevelopGrainMendPanel : UserControl
 
     internal void RequestPreview() => requestPreview?.Invoke();
 
-    /// <summary>
-    /// macOS <c>handleDevelopToolShortcutRequest</c> 의 <c>.autoDefectTool</c> — 전체 프레임
-    /// 표시 ROI(0,0,1,1)로 검출을 겁니다. 칩을 누른 것과 같은 길입니다.
-    /// </summary>
-    internal Task RunAutoDefectAsync()
-    {
-        SetTool(GrainMendTool.None);
-        return detector.DetectAsync(new DefectRect(0.0, 0.0, 1.0, 1.0));
-    }
+    internal void RequestPreviewReplacingCurrent() => replacePreview?.Invoke();
 
-    /// <summary>macOS <c>.guidedDefectTool</c> — 켜져 있으면 끕니다.</summary>
-    internal void ToggleGuidedDefect()
+    private void OnSelectedFrameChanged(string? frameId)
     {
-        review.ClearPending();
-        SetTool(grainMend.Strokes.Tool == GrainMendTool.Guided
-            ? GrainMendTool.None
-            : GrainMendTool.Guided);
+        // Select는 같은 사진의 recipe/preview snapshot을 다시 붙일 때도 발생합니다. 실제 ID가
+        // 그대로면 활성 검출·검토·제거 작업을 사진 전환으로 오인해 폐기하지 않습니다.
+        if (grainMend.OwnsFrame(frameId))
+        {
+            chrome.Update();
+            return;
+        }
+        removingAcceptance = null;
+        CancelDevelopedPresentation();
+        ResetDefectPreviewBuild();
+        grainMend.ChangeFrame(frameId);
         if (grainMend.Strokes.Tool == GrainMendTool.Guided)
         {
-            canvas?.FocusHost();
+            SetTool(GrainMendTool.None);
         }
+        input.CancelGuidedDrag();
+        review.HideOverlay();
+        SetStatus(string.Empty);
+        chrome.Update();
     }
 
-    /// <summary>macOS <c>.brushDefectTool</c> — 켜져 있으면 끕니다.</summary>
-    internal void ToggleBrushDefect() =>
-        SetTool(grainMend.Strokes.Tool == GrainMendTool.Brush
-            ? GrainMendTool.None
-            : GrainMendTool.Brush);
+    /// <summary>macOS <c>exitActiveDevelopInteraction</c>의 region mode 종료입니다.</summary>
+    internal bool TryExitRegionDefectInteraction()
+    {
+        if (grainMend.ActiveRegionKind is null &&
+            grainMend.Strokes.Tool == GrainMendTool.None &&
+            !isRemovingDefects)
+        {
+            return false;
+        }
+        CancelRegionDefectSession();
+        SetTool(GrainMendTool.None);
+        return true;
+    }
 
-    /// <summary>macOS <c>.cloneStampTool</c> — 켜져 있으면 끕니다.</summary>
-    internal void ToggleCloneStamp() =>
-        SetTool(grainMend.Strokes.Tool == GrainMendTool.Clone
-            ? GrainMendTool.None
-            : GrainMendTool.Clone);
+    internal Task PrepareForTerminationAsync()
+    {
+        removingAcceptance = null;
+        CancelDevelopedPresentation();
+        ResetDefectPreviewBuild();
+        grainMend.ChangeFrame(panel?.SelectedFrame?.Id);
+        SetTool(GrainMendTool.None);
+        input.CancelGuidedDrag();
+        review.HideOverlay();
+        chrome.Update();
+        return detector.DrainAsync();
+    }
+
+    private void CancelRegionDefectSession()
+    {
+        removingAcceptance = null;
+        grainMend.ExitRegionMode();
+        review.HideOverlay();
+        SetStatus(string.Empty);
+        chrome.Update();
+    }
 
     private async void OnGrainMendAutoClicked(object sender, RoutedEventArgs args)
     {
@@ -365,16 +424,18 @@ public sealed partial class DevelopGrainMendPanel : UserControl
     {
         _ = sender;
         _ = args;
-        review.ClearPending();
-        review.RemoveEdits(DefectEditLabelKind.Automatic);
+        CancelRegionDefectSession();
+        SetTool(GrainMendTool.None);
+        review.RemoveEdits(DefectEditKind.Region);
     }
 
     private void OnGrainMendGuidedResetClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        review.ClearPending();
-        review.RemoveEdits(DefectEditLabelKind.Guided);
+        CancelRegionDefectSession();
+        SetTool(GrainMendTool.None);
+        review.RemoveEdits(DefectEditKind.Region);
     }
 
     private void OnGrainMendBrushResetClicked(object sender, RoutedEventArgs args)

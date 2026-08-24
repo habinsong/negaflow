@@ -21,6 +21,19 @@ internal static class PrintCompositionTests
 
     private static void VerifyPrintComposition()
     {
+        LibraryFrameSnapshot durable = Frame(null) with { Id = "print-durable" };
+        LibraryFrameSnapshot preview = Frame(null) with
+        {
+            Id = "print-preview",
+            IsPreviewScan = true,
+        };
+        Check(
+            PrintSourceSelection.Eligible([preview, durable]).Single().Id == durable.Id &&
+            PrintSourceSelection.Resolve([preview], [preview, durable]).Single().Id == durable.Id &&
+            PrintSourceSelection.Resolve([preview], [preview]).Count == 0 &&
+            PrintSourceSelection.ActiveFrameId(preview.Id, [durable]) == durable.Id,
+            "print_excludes_transient_scanner_preview_from_all_sources");
+
         // 용지 치수는 macOS dimensionsMM 과 같은 수여야 합니다.
         Check(
             PrintPaper.DimensionsMm(PrintPaperSize.A4) == new PrintSizeMm(210, 297) &&

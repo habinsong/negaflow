@@ -8,8 +8,8 @@ namespace Negaflow.Shell.Develop;
 /// <remarks>
 /// recipe 의 ROI 는 y-up 이고 마스크 행은 위에서부터입니다. 그 한 번의 뒤집기를 여기 한 곳에만
 /// 둡니다 — 두 벌이 되면 언젠가 한쪽만 고쳐지고, 덮개와 클릭이 서로 다른 자리를 가리킵니다.
-/// 정규 좌표 0 과 1 은 첫 화소와 마지막 화소의 <b>중심</b>입니다
-/// (<see cref="DevelopDisplayGeometry"/> 와 같은 규약).
+/// GrainMend preview와 클릭은 macOS와 같이 pixel / sourceSize 및
+/// round(unit * sourceSize)를 사용합니다. 따라서 마지막 화소 중심은 1보다 작습니다.
 /// </remarks>
 public readonly record struct GrainMendMaskWindow(
     int Width,
@@ -33,8 +33,8 @@ public readonly record struct GrainMendMaskWindow(
         }
 
         double rawTop = BaseSize.Height - Roi.Y - Roi.Height;
-        x = (int)Math.Round((rawPoint.X * (BaseSize.Width - 1.0)) - Roi.X);
-        y = (int)Math.Round((rawPoint.Y * (BaseSize.Height - 1.0)) - rawTop);
+        x = (int)Math.Round((rawPoint.X * BaseSize.Width) - Roi.X);
+        y = (int)Math.Round((rawPoint.Y * BaseSize.Height) - rawTop);
         return x >= 0 && x < Width && y >= 0 && y < Height;
     }
 

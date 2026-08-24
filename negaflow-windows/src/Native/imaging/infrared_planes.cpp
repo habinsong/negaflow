@@ -1,5 +1,7 @@
 #include "infrared_planes.h"
 
+#include "negaflow/core/parallel_rows.h"
+
 #include <algorithm>
 #include <cstddef>
 #include <queue>
@@ -38,21 +40,26 @@ std::vector<float> shift_plane(
     std::vector<std::uint8_t>& excluded) {
     if (dx == 0 && dy == 0) return std::vector<float>(source.begin(), source.end());
     std::vector<float> output(source.size(), 0.0F);
-    for (std::int32_t y = 0; y < static_cast<std::int32_t>(height); ++y) {
-        for (std::int32_t x = 0; x < static_cast<std::int32_t>(width); ++x) {
-            const std::int32_t source_x = x + dx;
-            const std::int32_t source_y = y + dy;
-            const std::size_t target = static_cast<std::size_t>(y) * width +
-                static_cast<std::uint32_t>(x);
-            if (source_x >= 0 && source_y >= 0 && source_x < static_cast<std::int32_t>(width) &&
-                source_y < static_cast<std::int32_t>(height)) {
-                output[target] = source[static_cast<std::size_t>(source_y) * width +
-                    static_cast<std::uint32_t>(source_x)];
-            } else {
-                excluded[target] = 1U;
+    negaflow::core::for_each_row_block(
+        height,
+        source.size() * 3U,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
+                for (std::uint32_t x = 0U; x < width; ++x) {
+                    const std::int32_t source_x = static_cast<std::int32_t>(x) + dx;
+                    const std::int32_t source_y = static_cast<std::int32_t>(y) + dy;
+                    const std::size_t target = static_cast<std::size_t>(y) * width + x;
+                    if (source_x >= 0 && source_y >= 0 &&
+                        source_x < static_cast<std::int32_t>(width) &&
+                        source_y < static_cast<std::int32_t>(height)) {
+                        output[target] = source[static_cast<std::size_t>(source_y) * width +
+                            static_cast<std::uint32_t>(source_x)];
+                    } else {
+                        excluded[target] = 1U;
+                    }
+                }
             }
-        }
-    }
+        });
     return output;
 }
 
@@ -92,43 +99,61 @@ void exclude_border_dark(
         if (y + 1U < height) seed(x, y + 1U);
     }
     if (rim == 0U) {
-        for (std::size_t index = 0U; index < excluded.size(); ++index) {
-            excluded[index] = excluded[index] != 0U || margin[index] != 0U ? 1U : 0U;
-        }
+        negaflow::core::for_each_row_block(
+            height,
+            excluded.size() * 2U,
+            [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+                const std::size_t first = static_cast<std::size_t>(first_row) * width;
+                const std::size_t end = static_cast<std::size_t>(first_row + row_count) * width;
+                for (std::size_t index = first; index < end; ++index) {
+                    excluded[index] = excluded[index] != 0U || margin[index] != 0U ? 1U : 0U;
+                }
+            });
         return;
     }
     std::vector<std::uint8_t> horizontal(margin.size(), 0U);
-    for (std::uint32_t y = 0U; y < height; ++y) {
-        std::uint32_t active = 0U;
-        for (std::uint32_t x = 0U; x <= std::min(rim, width - 1U); ++x) {
-            active += margin[static_cast<std::size_t>(y) * width + x];
-        }
-        for (std::uint32_t x = 0U; x < width; ++x) {
-            horizontal[static_cast<std::size_t>(y) * width + x] = active != 0U ? 1U : 0U;
-            if (x + rim + 1U < width) {
-                active += margin[static_cast<std::size_t>(y) * width + x + rim + 1U];
+    negaflow::core::for_each_row_block(
+        height,
+        margin.size() * 2U,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
+                std::uint32_t active = 0U;
+                for (std::uint32_t x = 0U; x <= std::min(rim, width - 1U); ++x) {
+                    active += margin[static_cast<std::size_t>(y) * width + x];
+                }
+                for (std::uint32_t x = 0U; x < width; ++x) {
+                    horizontal[static_cast<std::size_t>(y) * width + x] =
+                        active != 0U ? 1U : 0U;
+                    if (x + rim + 1U < width) {
+                        active += margin[static_cast<std::size_t>(y) * width + x + rim + 1U];
+                    }
+                    if (x >= rim) {
+                        active -= margin[static_cast<std::size_t>(y) * width + x - rim];
+                    }
+                }
             }
-            if (x >= rim) {
-                active -= margin[static_cast<std::size_t>(y) * width + x - rim];
+        });
+    negaflow::core::for_each_row_block(
+        width,
+        horizontal.size() * 2U,
+        [&](const std::uint32_t first_column, const std::uint32_t column_count) noexcept {
+            for (std::uint32_t x = first_column; x < first_column + column_count; ++x) {
+                std::uint32_t active = 0U;
+                for (std::uint32_t y = 0U; y <= std::min(rim, height - 1U); ++y) {
+                    active += horizontal[static_cast<std::size_t>(y) * width + x];
+                }
+                for (std::uint32_t y = 0U; y < height; ++y) {
+                    const std::size_t index = static_cast<std::size_t>(y) * width + x;
+                    if (active != 0U) excluded[index] = 1U;
+                    if (y + rim + 1U < height) {
+                        active += horizontal[static_cast<std::size_t>(y + rim + 1U) * width + x];
+                    }
+                    if (y >= rim) {
+                        active -= horizontal[static_cast<std::size_t>(y - rim) * width + x];
+                    }
+                }
             }
-        }
-    }
-    for (std::uint32_t x = 0U; x < width; ++x) {
-        std::uint32_t active = 0U;
-        for (std::uint32_t y = 0U; y <= std::min(rim, height - 1U); ++y) {
-            active += horizontal[static_cast<std::size_t>(y) * width + x];
-        }
-        for (std::uint32_t y = 0U; y < height; ++y) {
-            const std::size_t index = static_cast<std::size_t>(y) * width + x;
-            if (active != 0U) excluded[index] = 1U;
-            if (y + rim + 1U < height) {
-                active += horizontal[static_cast<std::size_t>(y + rim + 1U) * width + x];
-            }
-            if (y >= rim) {
-                active -= horizontal[static_cast<std::size_t>(y - rim) * width + x];
-            }
-        }
-    }
+        });
 }
 
 }  // namespace negaflow::imaging::infrared_detail

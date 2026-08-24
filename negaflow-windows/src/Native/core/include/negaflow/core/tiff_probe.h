@@ -67,6 +67,9 @@ struct TiffProbeLimits final {
 struct TiffProbeControl final {
     bool validate_lzw_code_streams{false};
     bool validate_deflate_streams{false};
+    // Callers matching CGImageSource index-0 semantics can opt out of primary-image
+    // discovery. The default keeps scanner TIFF ambiguity fail-closed.
+    bool select_first_directory{false};
     std::stop_token stop_token{};
 };
 

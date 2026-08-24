@@ -1,5 +1,10 @@
 #include "negaflow/imaging/infrared_defect_detector.h"
 
+#include "infrared_components.h"
+#include "infrared_clusters.h"
+#include "infrared_confirmation.h"
+
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -159,6 +164,97 @@ void test_untrusted_limit_seed_recovers_consensus_offset() {
            "consensus_target_location");
 }
 
+void test_coarse_consensus_ring_pixels_are_not_hole_filled() {
+    using namespace negaflow::imaging::infrared_detail;
+    constexpr std::uint32_t width = 64U;
+    constexpr std::uint32_t height = 64U;
+    RawComponent ring{};
+    ring.min_x = 20U;
+    ring.max_x = 24U;
+    ring.min_y = 20U;
+    ring.max_y = 24U;
+    for (std::uint32_t y = ring.min_y; y <= ring.max_y; ++y) {
+        for (std::uint32_t x = ring.min_x; x <= ring.max_x; ++x) {
+            if (x == ring.min_x || x == ring.max_x ||
+                y == ring.min_y || y == ring.max_y) {
+                ring.pixels.push_back(static_cast<std::size_t>(y) * width + x);
+            }
+        }
+    }
+    ring.source_area = ring.pixels.size();
+    std::vector<float> density(static_cast<std::size_t>(width) * height, 0.0F);
+    std::vector<float> visible(density.size(), 0.0F);
+    for (const std::size_t pixel : ring.pixels) {
+        density[pixel] = 1.0F;
+        visible[pixel] = 1.0F;
+    }
+    for (std::uint32_t y = 21U; y <= 23U; ++y) {
+        for (std::uint32_t x = 21U; x <= 23U; ++x) {
+            density[static_cast<std::size_t>(y) * width + x] = 1.0F;
+            visible[static_cast<std::size_t>(y) * width + x + 10U] = 2.0F;
+        }
+    }
+
+    ConfirmedDefect original_match{};
+    const bool original_confirmed = confirm_component(
+        ring, density, visible, width, height, 0.0F, 12, 0, 0, original_match);
+    RawComponent filled = fill_component_holes(ring, width);
+    ConfirmedDefect filled_match{};
+    const bool filled_confirmed = confirm_component(
+        filled, density, visible, width, height, 0.0F, 12, 0, 0, filled_match);
+    const std::vector<RawComponent> candidates(8U, ring);
+    const ConsensusOffset consensus = coarse_consensus_offset(
+        candidates, density, visible, width, height, 0.0F, 12);
+    expect(original_confirmed, "ring_consensus_original_confirmed");
+    expect(filled_confirmed, "ring_consensus_filled_confirmed");
+    expect(filled.pixels.size() == ring.pixels.size() + 9U,
+           "ring_consensus_hole_filled");
+    expect(original_match.offset_x == 0 && original_match.offset_y == 0,
+           "ring_consensus_original_offset");
+    expect(filled_match.offset_x == 9 && filled_match.offset_y == -1,
+           "ring_consensus_filled_offset_differs");
+    expect(consensus.x == 0 && consensus.y == 0,
+           "ring_consensus_runtime_uses_original_pixels");
+}
+
+void test_preview_summary_uses_macos_component_order_and_omits_holes() {
+    using namespace negaflow::imaging::infrared_detail;
+    constexpr std::uint32_t width = 3U;
+    constexpr std::uint32_t height = 3U;
+    const std::vector<std::uint8_t> mask(width * height, 1U);
+    const std::vector<RawComponent> components =
+        label_components(mask, width, height, 1U);
+    expect(components.size() == 1U, "preview_order_component_count");
+    if (components.empty()) return;
+
+    const std::vector<std::size_t> macos_order{0U, 4U, 8U, 7U, 6U, 5U, 2U, 3U, 1U};
+    expect(components[0].pixels == macos_order, "preview_order_macos_dfs");
+    const std::vector<float> attenuation(width * height, 1.0F);
+    const auto full_summary = summarize_component(components[0], attenuation, width);
+    expect(full_summary.preview_points.size() == macos_order.size(),
+           "preview_order_summary_count");
+    for (std::size_t ordinal = 0U;
+         ordinal < std::min(full_summary.preview_points.size(), macos_order.size());
+         ++ordinal) {
+        expect(full_summary.preview_points[ordinal].x == macos_order[ordinal] % width &&
+                   full_summary.preview_points[ordinal].y == macos_order[ordinal] / width,
+               "preview_order_summary_point");
+    }
+
+    RawComponent ring = components[0];
+    ring.pixels.erase(
+        std::remove(ring.pixels.begin(), ring.pixels.end(), 4U),
+        ring.pixels.end());
+    ring.source_area = ring.pixels.size();
+    const auto ring_summary = summarize_component(ring, attenuation, width);
+    const bool includes_hole = std::any_of(
+        ring_summary.preview_points.begin(), ring_summary.preview_points.end(),
+        [](const negaflow::imaging::InfraredPreviewPoint& point) {
+            return point.x == 1U && point.y == 1U;
+        });
+    expect(!includes_hole, "preview_summary_omits_component_hole");
+}
+
 void test_border_connected_margin_dilates_safety_rim() {
     constexpr std::uint32_t width = 128U;
     constexpr std::uint32_t height = 96U;
@@ -297,6 +393,8 @@ int main() {
     test_global_seed_alignment_places_attenuation_on_visible_defect();
     test_diagonal_scratch_uses_eight_connected_candidates();
     test_untrusted_limit_seed_recovers_consensus_offset();
+    test_coarse_consensus_ring_pixels_are_not_hole_filled();
+    test_preview_summary_uses_macos_component_order_and_omits_holes();
     test_border_connected_margin_dilates_safety_rim();
     test_input_contract_and_cancel();
     test_macos_anchor_scene_recovers_defect_seed_and_scratch();

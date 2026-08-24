@@ -33,7 +33,10 @@ namespace {
 struct DecodedSourceEntry final {
     std::filesystem::path path{};
     negaflow::imageio::ImageFileObservation observation{};
-    std::shared_ptr<const negaflow::imaging::WorkingImage> image{};
+    std::shared_ptr<const negaflow::imaging::WorkingImage> source_image{};
+    std::optional<std::array<std::uint8_t, 32U>> cleaned_recipe_sha256{};
+    std::shared_ptr<const negaflow::imaging::WorkingImage> cleaned_image{};
+    DefectRecipeStageInfo cleaned_info{};
 };
 
 // 앞이 오래된 것 — macOS `residentCleanedRawIDs` 와 같은 차례입니다.
@@ -48,6 +51,10 @@ std::mutex g_decoded_mutex{};
               sizeof(negaflow::core::Rgba32F);
 }
 
+[[nodiscard]] std::uint64_t decoded_bytes(const DecodedSourceEntry& entry) noexcept {
+    return decoded_bytes(entry.source_image) + decoded_bytes(entry.cleaned_image);
+}
+
 [[nodiscard]] std::uint64_t decoded_budget_bytes() noexcept {
     return decoded_source_budget_bytes();
 }
@@ -57,11 +64,11 @@ std::mutex g_decoded_mutex{};
 void trim_decoded_locked() noexcept {
     std::uint64_t resident = 0ULL;
     for (const DecodedSourceEntry& entry : g_decoded_sources) {
-        resident += decoded_bytes(entry.image);
+        resident += decoded_bytes(entry);
     }
     const std::uint64_t budget = decoded_budget_bytes();
     while (g_decoded_sources.size() > 1U && resident > budget) {
-        resident -= decoded_bytes(g_decoded_sources.front().image);
+        resident -= decoded_bytes(g_decoded_sources.front());
         g_decoded_sources.erase(g_decoded_sources.begin());
     }
 }
@@ -81,7 +88,10 @@ void trim_decoded_locked() noexcept {
                 entry.observation, observation)) {
             continue;
         }
-        std::shared_ptr<const negaflow::imaging::WorkingImage> image = entry.image;
+        if (entry.source_image == nullptr) {
+            continue;
+        }
+        std::shared_ptr<const negaflow::imaging::WorkingImage> image = entry.source_image;
         try {
             DecodedSourceEntry moved = std::move(entry);
             g_decoded_sources.erase(
@@ -105,16 +115,28 @@ void put_decoded(
     try {
         const std::lock_guard<std::mutex> guard{g_decoded_mutex};
         for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
-            if (g_decoded_sources[index].path == path) {
+            DecodedSourceEntry& existing = g_decoded_sources[index];
+            if (existing.path != path) {
+                continue;
+            }
+            if (negaflow::imageio::same_image_file_observation(
+                    existing.observation, observation)) {
+                existing.source_image = std::move(image);
+                DecodedSourceEntry moved = std::move(existing);
                 g_decoded_sources.erase(
                     g_decoded_sources.begin() + static_cast<std::ptrdiff_t>(index));
-                break;
+                g_decoded_sources.push_back(std::move(moved));
+                trim_decoded_locked();
+                return;
             }
+            g_decoded_sources.erase(
+                g_decoded_sources.begin() + static_cast<std::ptrdiff_t>(index));
+            break;
         }
         DecodedSourceEntry entry{};
         entry.path = path;
         entry.observation = observation;
-        entry.image = std::move(image);
+        entry.source_image = std::move(image);
         g_decoded_sources.push_back(std::move(entry));
         trim_decoded_locked();
     } catch (...) {
@@ -132,9 +154,83 @@ std::uint64_t decoded_source_store_resident_bytes() noexcept {
     const std::lock_guard<std::mutex> guard{g_decoded_mutex};
     std::uint64_t resident = 0ULL;
     for (const DecodedSourceEntry& entry : g_decoded_sources) {
-        resident += decoded_bytes(entry.image);
+        resident += decoded_bytes(entry);
     }
     return resident;
+}
+
+bool decoded_cleaned_raw_try_take(
+    const std::filesystem::path& path,
+    const negaflow::imageio::ImageFileObservation& observation,
+    const std::array<std::uint8_t, 32U>& recipe_sha256,
+    std::shared_ptr<const negaflow::imaging::WorkingImage>& image,
+    DefectRecipeStageInfo& info) noexcept {
+    const std::lock_guard<std::mutex> guard{g_decoded_mutex};
+    trim_decoded_locked();
+    for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
+        DecodedSourceEntry& entry = g_decoded_sources[index];
+        if (entry.path != path || entry.cleaned_image == nullptr ||
+            entry.cleaned_recipe_sha256 != recipe_sha256 ||
+            !negaflow::imageio::same_image_file_observation(
+                entry.observation, observation)) {
+            continue;
+        }
+        image = entry.cleaned_image;
+        info = entry.cleaned_info;
+        try {
+            DecodedSourceEntry moved = std::move(entry);
+            g_decoded_sources.erase(
+                g_decoded_sources.begin() + static_cast<std::ptrdiff_t>(index));
+            g_decoded_sources.push_back(std::move(moved));
+        } catch (...) {
+        }
+        return true;
+    }
+    return false;
+}
+
+void decoded_cleaned_raw_put(
+    const std::filesystem::path& path,
+    const negaflow::imageio::ImageFileObservation& observation,
+    const std::array<std::uint8_t, 32U>& recipe_sha256,
+    std::shared_ptr<const negaflow::imaging::WorkingImage> image,
+    const DefectRecipeStageInfo& info) noexcept {
+    if (image == nullptr) {
+        return;
+    }
+    try {
+        const std::lock_guard<std::mutex> guard{g_decoded_mutex};
+        for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
+            DecodedSourceEntry& entry = g_decoded_sources[index];
+            if (entry.path != path) {
+                continue;
+            }
+            if (!negaflow::imageio::same_image_file_observation(
+                    entry.observation, observation)) {
+                g_decoded_sources.erase(
+                    g_decoded_sources.begin() + static_cast<std::ptrdiff_t>(index));
+                break;
+            }
+            entry.cleaned_recipe_sha256 = recipe_sha256;
+            entry.cleaned_image = std::move(image);
+            entry.cleaned_info = info;
+            DecodedSourceEntry moved = std::move(entry);
+            g_decoded_sources.erase(
+                g_decoded_sources.begin() + static_cast<std::ptrdiff_t>(index));
+            g_decoded_sources.push_back(std::move(moved));
+            trim_decoded_locked();
+            return;
+        }
+        DecodedSourceEntry entry{};
+        entry.path = path;
+        entry.observation = observation;
+        entry.cleaned_recipe_sha256 = recipe_sha256;
+        entry.cleaned_image = std::move(image);
+        entry.cleaned_info = info;
+        g_decoded_sources.push_back(std::move(entry));
+        trim_decoded_locked();
+    } catch (...) {
+    }
 }
 
 std::optional<DevelopExportOutcome> decode_source(
@@ -171,10 +267,9 @@ std::optional<DevelopExportOutcome> decode_source(
         // 줄면 그 좌표가 작아진 이미지 밖으로 나가 defect 단계 전체가 invalid_argument 로
         // 끝납니다(실제 OpticFilm8100_frame_7: 5088x3401 기준 roi (1332,3340) 52x36 을
         // 1536x1026 이미지에 적용). brush 와 clone 은 정규화 좌표라 크기와 무관합니다.
-        const bool source_pixel_defects =
-            !request.defect_recipe.regions.edits.empty() ||
-            !request.defect_recipe.infrared.empty();
-        if (!source_pixel_defects) {
+        const bool requires_full_resolution_cleaned_raw =
+            !request.defect_recipe.order.empty();
+        if (!requires_full_resolution_cleaned_raw) {
             decode_control.max_output_width = preview->maximum_width;
             decode_control.max_output_height = preview->maximum_height;
         }
@@ -265,7 +360,7 @@ std::optional<DevelopExportOutcome> decode_source(
             DevelopExportStage::observe_source_after, "source_changed_during_decode");
     }
 
-    if (preview == nullptr) {
+    if (preview == nullptr || !request.defect_recipe.order.empty()) {
         try {
             put_decoded(
                 request.source,

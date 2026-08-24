@@ -17,6 +17,7 @@ public sealed partial class WorkspaceShellView : UserControl
 {
     private WorkspacePresentationState? workspaceState;
     private LibraryHostService? libraryHost;
+    private Negaflow.Shell.Library.ThumbnailService? thumbnails;
     private Microsoft.UI.WindowId? hostWindowId;
     private bool isInitialized;
 
@@ -49,6 +50,9 @@ public sealed partial class WorkspaceShellView : UserControl
     public void UpdateCaptionInsets(double left, double right) =>
         Toolbar.UpdateCaptionInsets(left, right);
 
+    internal Task PrepareForTerminationAsync() =>
+        DevelopWorkspace.PrepareForTerminationAsync();
+
     public void Initialize(
         WorkspacePresentationState state,
         NativeEngineStatusService nativeEngineStatusService,
@@ -66,12 +70,14 @@ public sealed partial class WorkspaceShellView : UserControl
         isInitialized = true;
         workspaceState = state;
         this.libraryHost = libraryHost;
+        this.thumbnails = thumbnails;
         hostWindowId = windowId;
         if (libraryHost is not null)
         {
             libraryHost.RestoreActiveFrame(state.Current.ActiveFrameId);
             libraryHost.SelectionChanged += OnLibrarySelectionChanged;
             libraryHost.FrameEdited += OnLibraryFrameEdited;
+            libraryHost.LibraryContentChanged += OnLibraryContentChanged;
             state.SetActiveFrame(libraryHost.ActiveFrameId);
         }
         NativeEngineStatus nativeEngineStatus = nativeEngineStatusService.Probe();
@@ -212,9 +218,34 @@ public sealed partial class WorkspaceShellView : UserControl
         _ = sender;
         _ = args;
         SyncDevelopMenu();
+        DevelopWorkspace.NotifyFrameEdited();
         // 인화 미리보기는 현상뷰와 같은 그림이어야 합니다. macOS 는 프레임 관찰로 저절로
         // 따라오지만 WinUI 는 알려 주지 않으면 옛 그림에 멈춰 있습니다.
         PrintWorkspace.NotifyFrameEdited();
+    }
+
+    private void OnLibraryContentChanged(
+        object? sender,
+        LibraryContentChangedEventArgs args)
+    {
+        _ = sender;
+        foreach (string frameId in args.RemovedFrameIds.Concat(args.InvalidatedFrameIds).Distinct(
+            StringComparer.Ordinal))
+        {
+            thumbnails?.Invalidate(frameId);
+        }
+        if (libraryHost is not { } host)
+        {
+            return;
+        }
+        if (hostWindowId is { } windowId)
+        {
+            LibraryWorkspace.ShowLibrary(host, windowId);
+        }
+        DevelopWorkspace.ReloadFrames();
+        PrintWorkspace.ShowLibrary(host);
+        SyncDevelopMenu();
+        SyncExportMenu();
     }
 
     /// <summary>
@@ -453,6 +484,7 @@ public sealed partial class WorkspaceShellView : UserControl
         {
             libraryHost.SelectionChanged -= OnLibrarySelectionChanged;
             libraryHost.FrameEdited -= OnLibraryFrameEdited;
+            libraryHost.LibraryContentChanged -= OnLibraryContentChanged;
         }
     }
 }

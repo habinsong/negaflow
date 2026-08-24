@@ -278,4 +278,45 @@ void test_v35_contract() {
         "background preview entry reaches source observation without a raw-cache flag in recipe");
 }
 
+void test_v36_contract() {
+    expect(sizeof(nf_develop_export_request_v36) == 5136U,
+           "v36 request layout is fixed");
+    expect(offsetof(
+               nf_develop_export_request_v36,
+               defect_recipe_append_prefix_sha256) == 5120U,
+           "v36 append-prefix identity offset is fixed");
+
+    nf_develop_export_request_v36 request;
+    std::memset(&request, 0, sizeof(request));
+    request.v35.v34.v33.v32.v31.v30 = make_request_v30(L"a.tif", L"b.tif");
+    request.v35.v34.v33.v32.v31.output_bit_depth = 16U;
+    auto& base = request.v35.v34.v33.v32.v31.v30.v29.v28.v27.v26.v25.v24.v21.v20
+                     .v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8;
+    base.struct_size = static_cast<std::uint32_t>(sizeof(request));
+    std::array<std::uint8_t, 32U> pixels{};
+    nf_develop_export_result_v3 result = make_result_v3();
+    expect(
+        nf_develop_preview_v36(
+            &request, nullptr, 2U, 2U, pixels.data(),
+            static_cast<std::uint32_t>(pixels.size()), nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v36 request without a recipe reaches source observation");
+
+    std::array<std::uint8_t, 32U> digest{};
+    request.defect_recipe_append_prefix_sha256 = digest.data();
+    request.defect_recipe_append_prefix_sha256_size =
+        static_cast<std::uint32_t>(digest.size());
+    request.defect_recipe_append_prefix_edit_count = 1U;
+    result = make_result_v3();
+    expect(
+        nf_develop_preview_v36(
+            &request, nullptr, 2U, 2U, pixels.data(),
+            static_cast<std::uint32_t>(pixels.size()), nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(
+                result.failure_name,
+                "invalid_defect_recipe_append_prefix") == 0,
+        "v36 rejects an append prefix without a proper recipe prefix");
+}
+
 }  // namespace negaflow::develop_export_abi_tests

@@ -13,10 +13,13 @@ namespace negaflow::pipeline::develop_export_detail {
 // 디코드된 음성/양화 위에 결함 recipe 를 순서대로 적용한다.
 [[nodiscard]] std::optional<DevelopExportOutcome> apply_defect_stage(
     const DevelopExportRequest& request,
+    const DevelopRunControl& control,
     const PreviewTarget* preview,
     const DetectTarget* detect,
     RunTracker& tracker,
     negaflow::imaging::WorkingImage& image,
-    DefectRecipeStageResult& recipe) noexcept;
+    DefectRecipeStageResult& recipe,
+    std::size_t first_order_index = 0U,
+    const DefectRecipeStageInfo* prefix_info = nullptr) noexcept;
 
 }  // namespace negaflow::pipeline::develop_export_detail

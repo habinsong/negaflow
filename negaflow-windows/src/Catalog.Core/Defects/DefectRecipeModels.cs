@@ -142,6 +142,10 @@ public sealed class DefectRecipeSnapshot
         RecipeSha256 = recipeSha256;
         SourceIdentity = sourceIdentity;
         Items = items;
+        AppendPrefixEditCount = Math.Max(0, items.Count - 1);
+        AppendPrefixSha256 = AppendPrefixEditCount == 0
+            ? null
+            : DefectRecipeFingerprint.Compute(items.Take(AppendPrefixEditCount).ToArray());
     }
 
     public Guid FrameId { get; }
@@ -155,6 +159,14 @@ public sealed class DefectRecipeSnapshot
     public DefectSourceIdentity? SourceIdentity { get; }
 
     public IReadOnlyList<DefectEditItem> Items { get; }
+
+    /// <summary>
+    /// 마지막 item을 제외한 ordered recipe의 지문입니다. 새 item append를 full-resolution
+    /// cleaned raw에 증분 적용할 때만 쓰며, 전체 <see cref="RecipeSha256"/>는 그대로 권위가 있습니다.
+    /// </summary>
+    public string? AppendPrefixSha256 { get; }
+
+    public int AppendPrefixEditCount { get; }
 
     public static DefectRecipeSnapshot Create(
         Guid frameId,
@@ -235,4 +247,41 @@ public readonly record struct DefectSidecarDeleteResult(DefectSidecarError Error
 
     internal static DefectSidecarDeleteResult Failure(DefectSidecarError error) =>
         new(error);
+}
+
+public readonly record struct DefectRecipeCatalogWriteResult(
+    DefectRecipeSnapshot? Snapshot,
+    DefectSidecarWriteResult Sidecar,
+    CatalogStoreError CatalogError)
+{
+    public bool IsSuccess => Snapshot is not null && Sidecar.IsSuccess &&
+        CatalogError == CatalogStoreError.None;
+
+    internal static DefectRecipeCatalogWriteResult Success(
+        DefectRecipeSnapshot snapshot,
+        DefectSidecarWriteResult sidecar) =>
+        new(snapshot, sidecar, CatalogStoreError.None);
+
+    internal static DefectRecipeCatalogWriteResult Failure(
+        DefectSidecarWriteResult sidecar,
+        CatalogStoreError catalogError = CatalogStoreError.None) =>
+        new(null, sidecar, catalogError);
+}
+
+public readonly record struct DefectRecipeCatalogDeleteResult(
+    bool Deleted,
+    DefectSidecarError SidecarError,
+    CatalogStoreError CatalogError)
+{
+    public bool IsSuccess => Deleted &&
+        SidecarError == DefectSidecarError.None &&
+        CatalogError == CatalogStoreError.None;
+
+    internal static DefectRecipeCatalogDeleteResult Success() =>
+        new(true, DefectSidecarError.None, CatalogStoreError.None);
+
+    internal static DefectRecipeCatalogDeleteResult Failure(
+        DefectSidecarError sidecarError = DefectSidecarError.None,
+        CatalogStoreError catalogError = CatalogStoreError.None) =>
+        new(false, sidecarError, catalogError);
 }

@@ -84,11 +84,8 @@ internal static class DefectRecipeProjector
                     break;
                 case DefectEditKind.Infrared:
                     if (infrared.Count >= MaximumNativeRegionEdits ||
-                        item.Clusters is not { Count: > 0 } sourceClusters ||
-                        sourceClusters.Count >
-                            MaximumNativeRegionEdits - nativeRegionDescriptorCount ||
-                        sourceClusters.Count >
-                            MaximumNativeOrderedEdits - nativeOrderReferenceCount)
+                        nativeOrderReferenceCount >= MaximumNativeOrderedEdits ||
+                        item.Clusters is not { Count: > 0 } sourceClusters)
                     {
                         return Projection.Invalid();
                     }
@@ -115,8 +112,7 @@ internal static class DefectRecipeProjector
                     order.Add(new(
                         DevelopDefectEditKind.Infrared,
                         checked((uint)infrared.Count - 1U)));
-                    nativeRegionDescriptorCount += sourceClusters.Count;
-                    nativeOrderReferenceCount += sourceClusters.Count;
+                    ++nativeOrderReferenceCount;
                     break;
                 case DefectEditKind.Brush:
                     if (nativeOrderReferenceCount >= MaximumNativeOrderedEdits ||

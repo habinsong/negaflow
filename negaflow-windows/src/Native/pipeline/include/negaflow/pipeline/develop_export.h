@@ -98,6 +98,10 @@ struct DevelopExportRequest final {
     // Present only when the ordered Defects payload is non-empty. It keys rebuildable
     // cleaned/proxy caches; the edit payload above remains the source of rendered pixels.
     std::optional<std::array<std::uint8_t, 32U>> defect_recipe_sha256{};
+    // Explicit canonical identity of order[0..count). Native never infers that the
+    // last retained recipe is a prefix of a new request.
+    std::optional<std::array<std::uint8_t, 32U>> defect_recipe_append_prefix_sha256{};
+    std::size_t defect_recipe_append_prefix_edit_count{0U};
     // Present only for source-bound Defects recipes. Ordinary renders do not hash
     // the source and retain the default low-I/O path.
     std::optional<ExpectedSourceIdentity> expected_defect_source_identity{};
@@ -255,6 +259,13 @@ struct DevelopExportOutcome final {
 // after decoding and the call fails if it changed underneath. Blocking, and safe
 // to call from a worker thread; it touches no UI and no global state.
 [[nodiscard]] DevelopExportOutcome develop_and_export(
+    const DevelopExportRequest& request,
+    const DevelopRunControl& control = {}) noexcept;
+
+// Decodes the unchanged source, applies only its accepted non-infrared defect recipe,
+// and publishes an opaque, uncompressed, linear-sRGB RGB16 TIFF. It deliberately skips
+// negative inversion, grading, look, grain and every other develop stage.
+[[nodiscard]] DevelopExportOutcome bake_defect_recipe(
     const DevelopExportRequest& request,
     const DevelopRunControl& control = {}) noexcept;
 

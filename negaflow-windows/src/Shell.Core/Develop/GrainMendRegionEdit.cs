@@ -36,6 +36,119 @@ public static class GrainMendRegionEdit
     /// </summary>
     public const byte DefectMaskWeight = 255;
 
+    public static DefectEditItem? ForReview(
+        IGrainMendReviewProposal proposal,
+        bool automatic)
+    {
+        ArgumentNullException.ThrowIfNull(proposal);
+        if (proposal.Width == 0U || proposal.Height == 0U ||
+            proposal.SourceWidth <= 2U || proposal.SourceHeight <= 2U ||
+            proposal.RoiWidth == 0U || proposal.RoiHeight == 0U ||
+            proposal.Components.Count == 0)
+        {
+            return null;
+        }
+        IReadOnlyList<DefectPreviewComponent> preview = Preview(
+            proposal.Components,
+            checked((int)proposal.Width),
+            checked((int)proposal.Height),
+            proposal.SourceWidth,
+            proposal.SourceHeight,
+            proposal.RoiX,
+            proposal.RoiY,
+            proposal.RoiWidth,
+            proposal.RoiHeight);
+        if (preview.Count == 0)
+        {
+            return null;
+        }
+        return new DefectEditItem(
+            Guid.NewGuid(),
+            DefectEditKind.Region,
+            Enabled: true,
+            Strength: 1.0,
+            new DefectEditLabel(
+                automatic ? DefectEditLabelKind.Automatic : DefectEditLabelKind.Guided,
+                proposal.Components.Count),
+            new DefectEditSummary(
+                DefectEditSummaryKind.ClassBreakdown,
+                Breakdown(proposal.Components, 0UL)),
+            new DefectSize(proposal.SourceWidth, proposal.SourceHeight),
+            preview);
+    }
+
+    /// <summary>
+    /// v7 review가 생존 컴포넌트에서 직접 만든 exact RGBA8 마스크를 region 항목으로 옮깁니다.
+    /// 좌표와 마스크를 다시 표본화하지 않습니다.
+    /// </summary>
+    public static DefectEditItem? FromAccepted(
+        GrainMendAcceptedRegion accepted,
+        uint sourceWidth,
+        uint sourceHeight,
+        bool automatic,
+        IReadOnlyList<GrainMendComponent> defects,
+        uint detectionWidth,
+        uint detectionHeight,
+        uint detectionRoiX,
+        uint detectionRoiY,
+        uint detectionRoiWidth,
+        uint detectionRoiHeight)
+    {
+        ArgumentNullException.ThrowIfNull(accepted);
+        ArgumentNullException.ThrowIfNull(defects);
+        ulong expectedBytes = checked((ulong)accepted.Width * accepted.Height * 4UL);
+        if (accepted.Width <= 2U || accepted.Height <= 2U ||
+            accepted.RgbaMask.LongLength != checked((long)expectedBytes) ||
+            sourceWidth <= 2U || sourceHeight <= 2U ||
+            accepted.RoiX > sourceWidth || accepted.RoiY > sourceHeight ||
+            accepted.Width > sourceWidth - accepted.RoiX ||
+            accepted.Height > sourceHeight - accepted.RoiY ||
+            defects.Count == 0 ||
+            accepted.IncludedComponentCount != (ulong)defects.Count ||
+            detectionWidth == 0U || detectionHeight == 0U ||
+            detectionRoiWidth == 0U || detectionRoiHeight == 0U)
+        {
+            return null;
+        }
+
+        int storedWidth = checked((int)accepted.Width);
+        int storedHeight = checked((int)accepted.Height);
+        int top = checked((int)accepted.RoiY);
+        int bottom = checked(top + storedHeight);
+        return new DefectEditItem(
+            Guid.NewGuid(),
+            DefectEditKind.Region,
+            Enabled: true,
+            Strength: 1.0,
+            new DefectEditLabel(
+                automatic ? DefectEditLabelKind.Automatic : DefectEditLabelKind.Guided,
+                defects.Count),
+            new DefectEditSummary(
+                DefectEditSummaryKind.ClassBreakdown,
+                Breakdown(defects, 0UL)),
+            new DefectSize(sourceWidth, sourceHeight),
+            Preview(
+                defects,
+                checked((int)detectionWidth),
+                checked((int)detectionHeight),
+                sourceWidth,
+                sourceHeight,
+                detectionRoiX,
+                detectionRoiY,
+                detectionRoiWidth,
+                detectionRoiHeight))
+        {
+            RegionMask = new DefectMask(false, accepted.RgbaMask),
+            RegionRoi = new DefectRect(
+                accepted.RoiX,
+                checked((int)sourceHeight) - bottom,
+                storedWidth,
+                storedHeight),
+            RegionWidth = storedWidth,
+            RegionHeight = storedHeight,
+        };
+    }
+
     /// <param name="defects">
     /// 검출기가 분류한 결함들입니다. 비어 있으면 종류를 지어내지 않고 검출 화소 수만
     /// 먼지 하나로 냅니다 — 옛 경로와 같은 모양이며, 그것이 정확하지 않다는 사실은
@@ -201,14 +314,12 @@ public static class GrainMendRegionEdit
         }
 
         // 검출 이미지는 ROI 를 줄인 것입니다. 화소 좌표를 ROI 안의 원본 화소로 되돌린 뒤
-        // 원본 크기로 나눕니다. 정규 좌표 0 과 1 은 첫·마지막 화소의 **중심**이므로
-        // `sourceWidth - 1` 로 나눕니다 — `DevelopDisplayGeometry` 와 같은 규약입니다.
-        // 크기로 나누면 오른쪽·아래로 갈수록 한 화소까지 밀려, 덮개와 클릭이 검출 자리와
-        // 어긋납니다.
+        // macOS previewComponents 와 같이 원본 크기로 나눕니다. 따라서 마지막 원본 화소는
+        // 1이 아니라 (size - 1) / size에 놓이며, 클릭의 unit * size 역변환과 왕복합니다.
         double scaleX = (double)roiWidth / width;
         double scaleY = (double)roiHeight / height;
-        double spanX = Math.Max(1.0, sourceWidth - 1.0);
-        double spanY = Math.Max(1.0, sourceHeight - 1.0);
+        double spanX = Math.Max(1.0, sourceWidth);
+        double spanY = Math.Max(1.0, sourceHeight);
         List<DefectPreviewComponent> preview = new(defects.Count);
         foreach (GrainMendComponent defect in defects)
         {
@@ -266,6 +377,7 @@ public static class GrainMendRegionEdit
     private static DefectClassification Map(GrainMendDefectClass classification) =>
         classification switch
         {
+            GrainMendDefectClass.Dust => DefectClassification.Dust,
             GrainMendDefectClass.Pinhole => DefectClassification.Pinhole,
             GrainMendDefectClass.ScratchHorizontal =>
                 DefectClassification.ScratchHorizontal,
@@ -273,7 +385,8 @@ public static class GrainMendRegionEdit
             GrainMendDefectClass.ScratchDiagonal => DefectClassification.ScratchDiagonal,
             GrainMendDefectClass.EmulsionDamage => DefectClassification.EmulsionDamage,
             GrainMendDefectClass.MicroSpeck => DefectClassification.MicroSpeck,
-            _ => DefectClassification.Dust,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(classification), classification, "Unknown GrainMend classification."),
         };
 
     private static byte SampleMask(

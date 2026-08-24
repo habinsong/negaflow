@@ -113,6 +113,24 @@ bool accelerate_closing_rgb(
         imaging::MorphologyKind::closing);
 }
 
+bool accelerate_close_open_rgb(
+    const float* const red,
+    const float* const green,
+    const float* const blue,
+    float* const out_red,
+    float* const out_green,
+    float* const out_blue,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t radius) noexcept {
+    GpuAccelerator& accelerator = GpuAccelerator::shared();
+    if (!accelerator.available()) {
+        return false;
+    }
+    return accelerator.apply_morphology_close_open_rgb(
+        red, green, blue, out_red, out_green, out_blue, width, height, radius);
+}
+
 bool accelerate_bipolar_top_hat_rgb(
     const float* const red,
     const float* const green,
@@ -472,6 +490,7 @@ const imaging::KernelAccelerator kernel_table{
     accelerate_bipolar_top_hat_rgb,
     accelerate_opening_rgb,
     accelerate_closing_rgb,
+    accelerate_close_open_rgb,
     accelerate_scratch_angle_maps,
     accelerate_scratch_angle_stack,
     accelerate_digital_halation,
@@ -535,6 +554,7 @@ void install_gpu_kernel_accelerator() noexcept {
             effective.bipolar_top_hat_rgb = nullptr;
             effective.opening_rgb = nullptr;
             effective.closing_rgb = nullptr;
+            effective.close_open_rgb = nullptr;
         }
         imaging::install_kernel_accelerator(&effective);
     });

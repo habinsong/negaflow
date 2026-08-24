@@ -1,3 +1,4 @@
+using Negaflow.Catalog;
 using Negaflow.Interop;
 
 namespace Negaflow.Shell;
@@ -9,6 +10,7 @@ internal static class ScannerScanPublisher
         ScannerPluginTrustIdentity approvedIdentity,
         ScannerPluginScanRequest request,
         LibraryHostService library,
+        ImageTransformRecipe? initialTransform,
         InfraredDetectorParameters? infraredParameters,
         DevelopRun? run,
         bool isPreviewScan,
@@ -37,16 +39,22 @@ internal static class ScannerScanPublisher
                 request.Process)
             {
                 Rotation = request.Rotation,
+                InitialTransform = initialTransform,
                 IsPreviewScan = isPreviewScan,
             },
             // 프리뷰에는 IR 결함 검출을 걸지 않습니다.
             isPreviewScan ? null : infraredParameters,
             run);
         return new(
-            published.Status == ScannerFramePublishStatus.CatalogWriteFailed
-                ? ScannerPluginLibraryScanStatus.CatalogPublicationFailed
-                : ScannerPluginLibraryScanStatus.Published,
+            PublicationStatus(published),
             scan,
             published);
     }
+
+    internal static ScannerPluginLibraryScanStatus PublicationStatus(
+        ScannerFramePublishResult published) =>
+        published.Status is ScannerFramePublishStatus.ReceiptWriteFailed or
+            ScannerFramePublishStatus.CatalogWriteFailed
+            ? ScannerPluginLibraryScanStatus.CatalogPublicationFailed
+            : ScannerPluginLibraryScanStatus.Published;
 }

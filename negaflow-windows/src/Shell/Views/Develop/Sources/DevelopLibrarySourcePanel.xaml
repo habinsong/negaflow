@@ -82,7 +82,8 @@
                 x:FieldModifier="internal"
                 FontSize="11"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                TextWrapping="Wrap" />
+                TextWrapping="Wrap"
+                Visibility="Collapsed" />
             <!-- macOS 좌측탭은 가져오기 다음에 스캔이 옵니다(`현상뷰_기본.png`).
                  라이브러리뷰와 같은 컨트롤을 씁니다 — 스캐너 상태를 두 벌로 들면 갈라집니다. -->
             <scanner:LibraryScanPanel x:Name="ScanPanel" x:FieldModifier="internal" />

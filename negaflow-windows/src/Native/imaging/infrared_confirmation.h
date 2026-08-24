@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <span>
+#include <vector>
 
 namespace negaflow::imaging::infrared_detail {
 
@@ -34,5 +35,19 @@ namespace negaflow::imaging::infrared_detail {
     std::int32_t origin_x,
     std::int32_t origin_y,
     ConfirmedDefect& confirmed);
+
+struct ConsensusOffset final {
+    std::int32_t x{0};
+    std::int32_t y{0};
+};
+
+[[nodiscard]] ConsensusOffset coarse_consensus_offset(
+    const std::vector<RawComponent>& candidates,
+    std::span<const float> density,
+    std::span<const float> visible,
+    std::uint32_t width,
+    std::uint32_t height,
+    float magnitude_floor,
+    std::int32_t search);
 
 }  // namespace negaflow::imaging::infrared_detail

@@ -179,7 +179,9 @@ void write_u32(std::vector<std::uint8_t>& bytes, const std::size_t at, const std
 // A parametric curve would be exact for the sRGB piecewise transfer, but 'para' is v4 and
 // this profile is v2. A 1024-point sampled 'curv' reproduces either curve to well under a
 // 16-bit step, which is what an 8- or 16-bit file can carry anyway.
-[[nodiscard]] std::vector<std::uint8_t> curve_element(const OutputColorSpace space) {
+[[nodiscard]] std::vector<std::uint8_t> curve_element(
+    const OutputColorSpace space,
+    const bool linear_transfer) {
     constexpr std::uint32_t points = 1024U;
     std::vector<std::uint8_t> element{};
     append_tag(element, "curv");
@@ -187,8 +189,9 @@ void write_u32(std::vector<std::uint8_t>& bytes, const std::size_t at, const std
     append_u32(element, points);
     for (std::uint32_t index = 0U; index < points; ++index) {
         const double linear = static_cast<double>(index) / static_cast<double>(points - 1U);
-        const double encoded = static_cast<double>(
-            encode_output_component(static_cast<float>(linear), space));
+        const double encoded = linear_transfer
+            ? linear
+            : static_cast<double>(encode_output_component(static_cast<float>(linear), space));
         append_u16(
             element,
             static_cast<std::uint16_t>(std::lround(std::clamp(encoded, 0.0, 1.0) * 65535.0)));
@@ -237,8 +240,13 @@ float encode_output_component(const float linear, const OutputColorSpace space) 
     return linear_to_srgb_encoded(linear);
 }
 
-std::vector<std::uint8_t> build_icc_profile(const OutputColorSpace space) {
-    const char* description = output_color_space_name(space);
+std::vector<std::uint8_t> build_icc_profile(
+    const OutputColorSpace space,
+    const bool linear_transfer) {
+    if (linear_transfer && space != OutputColorSpace::srgb) {
+        return {};
+    }
+    const char* description = linear_transfer ? "Linear sRGB" : output_color_space_name(space);
     if (description == nullptr) {
         return {};
     }
@@ -258,7 +266,7 @@ std::vector<std::uint8_t> build_icc_profile(const OutputColorSpace space) {
     tags.push_back({"rXYZ", xyz_element(to_d50[0], to_d50[3], to_d50[6])});
     tags.push_back({"gXYZ", xyz_element(to_d50[1], to_d50[4], to_d50[7])});
     tags.push_back({"bXYZ", xyz_element(to_d50[2], to_d50[5], to_d50[8])});
-    const std::vector<std::uint8_t> curve = curve_element(space);
+    const std::vector<std::uint8_t> curve = curve_element(space, linear_transfer);
     tags.push_back({"rTRC", curve});
     tags.push_back({"gTRC", curve});
     tags.push_back({"bTRC", curve});

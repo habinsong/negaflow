@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Negaflow.Catalog;
 using Negaflow.Interop;
 
@@ -26,6 +27,10 @@ public sealed record InfraredDefectApplyResult(
 {
     public bool IsSuccess => Status == InfraredDefectApplyStatus.Applied;
 }
+
+internal sealed record InfraredDefectDetectionOutcome(
+    InfraredDetectionResult? Detection,
+    bool IsFaulted);
 
 public static class InfraredDefectRecipeCoordinator
 {
@@ -104,22 +109,52 @@ public static class InfraredDefectRecipeCoordinator
         {
             return Result(InfraredDefectApplyStatus.SourceMismatch);
         }
-        InfraredDetectionResult detection;
+        InfraredDefectDetectionOutcome outcome = DetectFiles(
+            visiblePath,
+            infraredPath,
+            frame.SourceKind,
+            parameters,
+            run);
+        return outcome.Detection is { } detection && !outcome.IsFaulted
+            ? ApplyDetection(document, frame, frameId, sourceIdentity, detection)
+            : Result(InfraredDefectApplyStatus.DetectionFailed);
+    }
+
+    internal static InfraredDefectDetectionOutcome DetectFiles(
+        string visiblePath,
+        string infraredPath,
+        FrameSourceKind sourceKind = FrameSourceKind.ImportedFile,
+        InfraredDetectorParameters? parameters = null,
+        DevelopRun? run = null)
+    {
+        bool trace = InfraredPerformanceTrace.Enabled;
+        Stopwatch? timing = trace ? Stopwatch.StartNew() : null;
         try
         {
-            detection = NativeInfraredDefectDetector.DetectFiles(
-                visiblePath, infraredPath, parameters, run);
+            InfraredDetectionResult detection = NativeInfraredDefectDetector.DetectFiles(
+                    visiblePath,
+                    infraredPath,
+                    sourceKind == FrameSourceKind.ScannerTiff
+                        ? InfraredVisibleSourceKind.ScannerTiff
+                        : InfraredVisibleSourceKind.ImportedFile,
+                    parameters,
+                    run);
+            if (trace)
+            {
+                InfraredPerformanceTrace.Write(
+                    $"detect-files total={timing!.Elapsed.TotalMilliseconds:F3} ms");
+            }
+            return new(detection, false);
         }
         catch (Exception error) when (error is
             ArgumentException or OverflowException or NativeBootstrapException or
             DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
         {
-            return Result(InfraredDefectApplyStatus.DetectionFailed);
+            return new(null, true);
         }
-        return ApplyDetection(document, frame, frameId, sourceIdentity, detection);
     }
 
-    private static InfraredDefectApplyResult ApplyDetection(
+    internal static InfraredDefectApplyResult ApplyDetection(
         LibraryDocument document,
         LibraryFrameSnapshot frame,
         Guid frameId,
@@ -141,10 +176,17 @@ public static class InfraredDefectRecipeCoordinator
             return Result(detectionStatus, detection);
         }
 
+        bool trace = InfraredPerformanceTrace.Enabled;
+        Stopwatch? timing = trace ? Stopwatch.StartNew() : null;
         DefectRecipeSnapshot recipe;
         try
         {
-            recipe = CreateRecipe(frameId, sourceIdentity, frame.DefectRecipe, detection);
+            recipe = CreateRecipe(
+                frameId,
+                sourceIdentity,
+                frame.DefectRecipe,
+                checked(frame.DefectRecipeRevision + 1UL),
+                detection);
         }
         catch (ArgumentException)
         {
@@ -154,20 +196,35 @@ public static class InfraredDefectRecipeCoordinator
         {
             return Result(InfraredDefectApplyStatus.PersistenceFailed, detection);
         }
+        double recipeMilliseconds = timing?.Elapsed.TotalMilliseconds ?? 0.0;
 
-        // macOS `applyInfraredDetection` 도 `appendDefectEdit` 을 지나 히스토리 한 칸을
-        // 남깁니다 — IR 레이어도 Ctrl+Z 로 되돌아가야 합니다. 실패하면 담은 칸을 도로 뺍니다.
-        document.CaptureUndo(LibraryDefectEditor.UndoActionName);
+        Stopwatch? captureTiming = trace ? Stopwatch.StartNew() : null;
+        LibraryUndoSnapshot pendingUndo = document.CapturePendingDefectUndo(
+            frame.Id,
+            LibraryDefectHistoryMode.PreservingInfrared);
+        captureTiming?.Stop();
+        Stopwatch? writeTiming = trace ? Stopwatch.StartNew() : null;
         LibraryDefectRecipeWriteResult written = document.WriteDefectRecipe(frame.Id, recipe);
+        writeTiming?.Stop();
         if (!written.IsSuccess)
         {
-            _ = document.Undo();
             return new InfraredDefectApplyResult(
                 InfraredDefectApplyStatus.PersistenceFailed,
                 detection,
                 null,
                 written.SidecarError,
                 written.CatalogError);
+        }
+        Stopwatch? commitTiming = trace ? Stopwatch.StartNew() : null;
+        document.CommitPendingUndo(pendingUndo);
+        commitTiming?.Stop();
+        if (trace)
+        {
+            InfraredPerformanceTrace.Write(
+                $"apply recipe={recipeMilliseconds:F3} capture={captureTiming!.Elapsed.TotalMilliseconds:F3} " +
+                $"write={writeTiming!.Elapsed.TotalMilliseconds:F3} " +
+                $"commit={commitTiming!.Elapsed.TotalMilliseconds:F3} " +
+                $"total={timing!.Elapsed.TotalMilliseconds:F3} ms");
         }
         return Result(InfraredDefectApplyStatus.Applied, detection, written.Recipe);
     }
@@ -176,6 +233,7 @@ public static class InfraredDefectRecipeCoordinator
         Guid frameId,
         DefectSourceIdentity sourceIdentity,
         DefectRecipeSnapshot? existing,
+        ulong recipeRevision,
         InfraredDetectionResult detection)
     {
         ArgumentNullException.ThrowIfNull(detection);
@@ -183,6 +241,8 @@ public static class InfraredDefectRecipeCoordinator
             detection.Width == 0 || detection.Height == 0 ||
             detection.Clusters.Count == 0 || detection.Components.Count == 0 ||
             detection.Components.Count > int.MaxValue ||
+            recipeRevision == 0 ||
+            existing is not null && recipeRevision <= existing.RecipeRevision ||
             existing?.Items.Any(item => item.Kind == DefectEditKind.Infrared) == true ||
             existing?.SourceIdentity is { } currentIdentity && currentIdentity != sourceIdentity)
         {
@@ -228,8 +288,11 @@ public static class InfraredDefectRecipeCoordinator
         DefectEditItem[] items = existing is null
             ? [item]
             : [.. existing.Items, item];
-        ulong revision = checked((existing?.RecipeRevision ?? 0UL) + 1UL);
-        return DefectRecipeSnapshot.Create(frameId, revision, sourceIdentity, items);
+        return DefectRecipeSnapshot.Create(
+            frameId,
+            recipeRevision,
+            sourceIdentity,
+            items);
     }
 
     private static DefectClassification MapClassification(

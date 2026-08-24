@@ -50,8 +50,8 @@ public sealed partial class DevelopGrainMendHud : UserControl
     /// <summary>macOS <c>onClear</c> — 칠한 것을 전부 지웁니다.</summary>
     public event Action? BrushClearRequested;
 
-    /// <summary>macOS <c>onResetAll</c> — 이미 적용된 브러시 편집을 지웁니다.</summary>
-    public event Action? BrushResetRequested;
+    /// <summary>macOS <c>onResetAll</c> — IR을 제외한 적용 결함 전체를 지웁니다.</summary>
+    public event Action? AppliedDefectsResetRequested;
 
     /// <summary>macOS <c>onApply</c> — 칠한 것을 recipe 로 보냅니다.</summary>
     public event Action? BrushApplyRequested;
@@ -88,11 +88,19 @@ public sealed partial class DevelopGrainMendHud : UserControl
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(classNames);
-        HudRoot.Visibility = state.IsVisible ? Visibility.Visible : Visibility.Collapsed;
+        ControlCapsule.Visibility = Show(state.IsVisible);
         if (!state.IsVisible)
         {
+            ClearRegionSurface();
+            RefreshRootVisibility();
             return;
         }
+
+        // macOS는 활성 도구의 HUD 하나만 조건부로 만듭니다. Windows는 같은 Grid에 세 HUD를
+        // 보관하므로 region을 열 때 이전 수동 도구 bar를 명시적으로 닫아야 합니다.
+        BrushCapsule.Visibility = Visibility.Collapsed;
+        CloneCapsule.Visibility = Visibility.Collapsed;
+        HudRoot.Visibility = Visibility.Visible;
 
         bool detecting = state.Mode == GrainMendHudMode.Detecting;
         bool reviewing = state.Mode == GrainMendHudMode.Reviewing;
@@ -114,9 +122,11 @@ public sealed partial class DevelopGrainMendHud : UserControl
         MicroSpecksCheck.Visibility = Show(!detecting);
 
         SensitivitySlider.IsEnabled = state.TuningEnabled && !isRemoving;
-        MicroSpecksCheck.IsEnabled = state.TuningEnabled || state.Mode == GrainMendHudMode.Waiting;
+        MicroSpecksCheck.IsEnabled =
+            (state.TuningEnabled || state.Mode == GrainMendHudMode.Waiting) && !isRemoving;
         CancelButton.IsEnabled = !isRemoving;
         RemoveButton.IsEnabled = state.RemoveEnabled && !isRemoving;
+        ClassChips.IsEnabled = !isRemoving;
         // macOS 는 제거가 도는 동안 단추 안을 프로그래스로 바꿉니다.
         RemoveIcon.Visibility = Show(!isRemoving);
         RemoveText.Visibility = Show(!isRemoving);
@@ -135,6 +145,7 @@ public sealed partial class DevelopGrainMendHud : UserControl
 
         Localize();
         UpdateChips(state, classNames);
+        RefreshRootVisibility();
     }
 
     /// <summary>
@@ -146,26 +157,31 @@ public sealed partial class DevelopGrainMendHud : UserControl
         bool visible,
         double thickness,
         bool hasPaintedStrokes,
-        bool hasAppliedBrushEdits,
+        bool hasAppliedDefects,
         bool isBusy)
     {
         BrushCapsule.Visibility = Show(visible);
         if (!visible)
         {
+            RefreshRootVisibility();
             return;
         }
-        if (HudRoot.Visibility != Visibility.Visible)
-        {
-            HudRoot.Visibility = Visibility.Visible;
-        }
+        ControlCapsule.Visibility = Visibility.Collapsed;
+        CloneCapsule.Visibility = Visibility.Collapsed;
+        ClearRegionChips();
+        HudRoot.Visibility = Visibility.Visible;
         updatingBrushThickness = true;
         BrushThicknessSlider.Value = thickness;
         updatingBrushThickness = false;
         BrushThicknessSlider.IsEnabled = !isBusy;
         BrushUndoButton.IsEnabled = hasPaintedStrokes && !isBusy;
         BrushClearButton.IsEnabled = hasPaintedStrokes && !isBusy;
-        BrushResetButton.IsEnabled = hasAppliedBrushEdits && !isBusy;
+        BrushResetButton.IsEnabled = hasAppliedDefects && !isBusy;
         BrushApplyButton.IsEnabled = hasPaintedStrokes && !isBusy;
+        BrushApplyIcon.Visibility = Show(!isBusy);
+        BrushApplyText.Visibility = Show(!isBusy);
+        BrushApplyingRing.IsActive = isBusy;
+        BrushApplyingRing.Visibility = Show(isBusy);
         BrushApplyText.Text = AppResources.Get("developGrainMendRemove", "Content");
     }
 
@@ -184,12 +200,13 @@ public sealed partial class DevelopGrainMendHud : UserControl
         CloneCapsule.Visibility = Show(visible);
         if (!visible)
         {
+            RefreshRootVisibility();
             return;
         }
-        if (HudRoot.Visibility != Visibility.Visible)
-        {
-            HudRoot.Visibility = Visibility.Visible;
-        }
+        ControlCapsule.Visibility = Visibility.Collapsed;
+        BrushCapsule.Visibility = Visibility.Collapsed;
+        ClearRegionChips();
+        HudRoot.Visibility = Visibility.Visible;
         CloneSourceHint.Visibility = Show(!hasSource);
         CloneHintDivider.Visibility = Show(!hasSource);
         updatingClone = true;
@@ -271,7 +288,7 @@ public sealed partial class DevelopGrainMendHud : UserControl
     {
         _ = sender;
         _ = args;
-        BrushResetRequested?.Invoke();
+        AppliedDefectsResetRequested?.Invoke();
     }
 
     private void OnBrushApplyClicked(object sender, RoutedEventArgs args)
@@ -297,6 +314,33 @@ public sealed partial class DevelopGrainMendHud : UserControl
         string remove = AppResources.Get("developGrainMendRemove", "Content");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(RemoveButton, remove);
         ToolTipService.SetToolTip(RemoveButton, remove);
+        string brush = AppResources.Get("developGrainMendBrush", "Content");
+        SetLocalizedNameAndTooltip(BrushThicknessSlider, brush);
+        SetLocalizedNameAndTooltip(
+            BrushUndoButton,
+            AppResources.Get("developGrainMendUndoLastStroke", "Text"));
+        SetLocalizedNameAndTooltip(
+            BrushClearButton,
+            AppResources.Get("developGrainMendClearPaintedStrokes", "Text"));
+        SetLocalizedNameAndTooltip(
+            BrushResetButton,
+            AppResources.Get("developGrainMendResetAppliedDefects", "Text"));
+        SetLocalizedNameAndTooltip(BrushApplyButton, remove);
+        SetLocalizedNameAndTooltip(
+            CloneSizeSlider,
+            AppResources.Get("developGrainMendCloneSize", "Text"));
+        SetLocalizedNameAndTooltip(
+            CloneHardnessSlider,
+            AppResources.Get("developGrainMendCloneHardness", "Text"));
+        SetLocalizedNameAndTooltip(
+            CloneUndoButton,
+            AppResources.Get("developGrainMendUndoDefectRemoval", "Text"));
+    }
+
+    private static void SetLocalizedNameAndTooltip(FrameworkElement element, string text)
+    {
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(element, text);
+        ToolTipService.SetToolTip(element, text);
     }
 
     /// <summary>
@@ -337,6 +381,27 @@ public sealed partial class DevelopGrainMendHud : UserControl
                     : chip.Classification.ToString()))
             .ToArray();
         ChipsCapsule.Visibility = Visibility.Visible;
+    }
+
+    private void ClearRegionSurface()
+    {
+        ControlCapsule.Visibility = Visibility.Collapsed;
+        DetectingRing.IsActive = false;
+        ClearRegionChips();
+    }
+
+    private void ClearRegionChips()
+    {
+        ChipsCapsule.Visibility = Visibility.Collapsed;
+        ClassChips.ItemsSource = null;
+    }
+
+    private void RefreshRootVisibility()
+    {
+        bool visible = ControlCapsule.Visibility == Visibility.Visible ||
+            BrushCapsule.Visibility == Visibility.Visible ||
+            CloneCapsule.Visibility == Visibility.Visible;
+        HudRoot.Visibility = Show(visible);
     }
 
     private static Visibility Show(bool visible) =>

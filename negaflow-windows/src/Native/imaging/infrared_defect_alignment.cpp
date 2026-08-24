@@ -1,6 +1,7 @@
 #include "infrared_defect_alignment.h"
 
 #include "grain_mend_morphology.h"
+#include "negaflow/core/parallel_rows.h"
 
 #include <algorithm>
 #include <cmath>
@@ -32,10 +33,14 @@ std::optional<DefectAlignment> estimate_defect_alignment(
         }
     }
     if (sample.size() <= 64U) return std::nullopt;
-    std::sort(sample.begin(), sample.end());
-    const float base = sample[static_cast<std::size_t>(
-        0.90 * static_cast<double>(sample.size() - 1U))];
-    const float median = sample[sample.size() / 2U];
+    const std::size_t base_index = static_cast<std::size_t>(
+        0.90 * static_cast<double>(sample.size() - 1U));
+    std::nth_element(sample.begin(), sample.begin() + base_index, sample.end());
+    const float base = sample[base_index];
+    const std::size_t median_index = sample.size() / 2U;
+    std::nth_element(
+        sample.begin(), sample.begin() + median_index, sample.begin() + base_index);
+    const float median = sample[median_index];
     const float spread = base - median;
     if (!(base > 1.0e-4F) || !(spread > base * 1.0e-3F)) return std::nullopt;
     const float cut = base - 4.0F * spread;
@@ -70,35 +75,57 @@ std::optional<DefectAlignment> estimate_defect_alignment(
     }
     const std::uint32_t darkness_radius =
         std::max(4U, std::min(24U, std::min(width, height) / 200U));
-    const std::vector<float> red_copy(red.begin(), red.end());
-    auto darkness = grain_mend_detail::box_mean(red_copy, width, height, darkness_radius);
-    for (std::size_t index = 0U; index < darkness.size(); ++index) {
-        darkness[index] = std::max(0.0F, darkness[index] - red[index]);
-    }
+    auto darkness = grain_mend_detail::box_mean(red, width, height, darkness_radius);
+    negaflow::core::for_each_row_block(
+        height,
+        darkness.size() * 2U,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            const std::size_t first = static_cast<std::size_t>(first_row) * width;
+            const std::size_t end = static_cast<std::size_t>(first_row + row_count) * width;
+            for (std::size_t index = first; index < end; ++index) {
+                darkness[index] = std::max(0.0F, darkness[index] - red[index]);
+            }
+        });
     const double total_weight = std::accumulate(weights.begin(), weights.end(), 0.0);
     if (!(total_weight > 0.0)) return std::nullopt;
     const std::int32_t search = static_cast<std::int32_t>(search_radius);
     const std::int32_t side = 2 * search + 1;
     std::vector<double> scores(static_cast<std::size_t>(side) * side, 0.0);
+    const auto score_work = static_cast<std::uint64_t>(scores.size()) >
+            std::numeric_limits<std::uint64_t>::max() / points.size()
+        ? std::numeric_limits<std::uint64_t>::max()
+        : static_cast<std::uint64_t>(scores.size()) * points.size();
+    negaflow::core::for_each_row_block(
+        static_cast<std::uint32_t>(side),
+        score_work,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t row = first_row; row < first_row + row_count; ++row) {
+                const std::int32_t dy = static_cast<std::int32_t>(row) - search;
+                for (std::int32_t dx = -search; dx <= search; ++dx) {
+                    double sum = 0.0;
+                    for (std::size_t ordinal = 0U; ordinal < points.size(); ++ordinal) {
+                        const std::size_t pixel = points[ordinal];
+                        const std::int32_t x = static_cast<std::int32_t>(pixel % width) + dx;
+                        const std::int32_t y = static_cast<std::int32_t>(pixel / width) + dy;
+                        if (x >= 0 && y >= 0 && x < static_cast<std::int32_t>(width) &&
+                            y < static_cast<std::int32_t>(height)) {
+                            sum += static_cast<double>(darkness[static_cast<std::size_t>(y) * width +
+                                static_cast<std::uint32_t>(x)]) * weights[ordinal];
+                        }
+                    }
+                    const double score = sum / total_weight;
+                    scores[static_cast<std::size_t>(dy + search) * side + dx + search] = score;
+                }
+            }
+        });
     double best = -std::numeric_limits<double>::infinity();
     std::int32_t best_x = 0;
     std::int32_t best_y = 0;
     double score_sum = 0.0;
     for (std::int32_t dy = -search; dy <= search; ++dy) {
         for (std::int32_t dx = -search; dx <= search; ++dx) {
-            double sum = 0.0;
-            for (std::size_t ordinal = 0U; ordinal < points.size(); ++ordinal) {
-                const std::size_t pixel = points[ordinal];
-                const std::int32_t x = static_cast<std::int32_t>(pixel % width) + dx;
-                const std::int32_t y = static_cast<std::int32_t>(pixel / width) + dy;
-                if (x >= 0 && y >= 0 && x < static_cast<std::int32_t>(width) &&
-                    y < static_cast<std::int32_t>(height)) {
-                    sum += static_cast<double>(darkness[static_cast<std::size_t>(y) * width +
-                        static_cast<std::uint32_t>(x)]) * weights[ordinal];
-                }
-            }
-            const double score = sum / total_weight;
-            scores[static_cast<std::size_t>(dy + search) * side + dx + search] = score;
+            const double score =
+                scores[static_cast<std::size_t>(dy + search) * side + dx + search];
             score_sum += score;
             if (score > best) {
                 best = score;

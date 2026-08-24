@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <span>
 #include <vector>
 
 namespace negaflow::imaging::grain_mend_detail {
@@ -47,6 +48,14 @@ struct RgbPlanes final {
     std::uint32_t height,
     std::uint32_t radius);
 
+[[nodiscard]] RgbPlanes close_open_rgb(
+    const std::vector<float>& red,
+    const std::vector<float>& green,
+    const std::vector<float>& blue,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t radius);
+
 [[nodiscard]] RgbPlanes bipolar_top_hat_rgb(
     const std::vector<float>& red,
     const std::vector<float>& green,
@@ -56,7 +65,7 @@ struct RgbPlanes final {
     std::uint32_t radius);
 
 [[nodiscard]] std::vector<float> box_mean(
-    const std::vector<float>& source,
+    std::span<const float> source,
     std::uint32_t width,
     std::uint32_t height,
     std::uint32_t radius);

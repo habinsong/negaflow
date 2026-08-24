@@ -19,8 +19,10 @@ internal static class CropAndLookTests
         VerifyCropSession();
         VerifyLookPresetReachesTheEngine();
         VerifyDisplayToRawMapping();
+        VerifyManualDefectCoordinatesMatchMacOS();
         VerifyDevelopedPixelSizeFollowsTheTransform();
         VerifyCropHandlesAreGrabbableWhereTheyAreDrawn();
+        VerifyCropHitTestingUsesTheDisplayedFrameAcrossZoom();
         VerifyAspectLockUsesTheCurrentRectangleWhenNoRatioIsChosen();
         VerifyRotateAndFlipKeepTheCropWhereItWas();
     }
@@ -183,6 +185,39 @@ internal static class CropAndLookTests
                 out _,
                 out _),
             "far outside the frame is still refused");
+    }
+
+    private static void VerifyCropHitTestingUsesTheDisplayedFrameAcrossZoom()
+    {
+        var crop = new CropWorkspaceState();
+        crop.Begin(new ImageCropRect(0.1, 0.5, 0.2, 0.3), lockedNormalizedAspect: null);
+        crop.MarkPreviewReady();
+
+        PreviewFrame displayed = new(100.0, 50.0, 700.0, 1000.0);
+        crop.SetOverlayFrame(displayed);
+        CropDisplayRect selection = crop.Session!.Selection;
+        double pointerX = displayed.Left + (selection.X + selection.Width / 2.0) * displayed.Width;
+        double pointerY = displayed.Top + (selection.Y + selection.Height / 2.0) * displayed.Height;
+
+        Check(
+            displayed.TryMapPoint(pointerX, pointerY, out CropDisplayPoint displayedPoint) &&
+            crop.TryBeginDrag(displayedPoint, displayed.Width, displayed.Height, allowCreate: true) &&
+            crop.DragMode == CropDragMode.Move,
+            "crop interior stays movable after the image zooms");
+        crop.EndDrag();
+
+        // 사진만 2배 확대된 프레임으로 같은 화면 좌표를 환산하면 선택 밖이 됩니다. 앞 판은
+        // 이 좌표를 써서 내부 드래그를 새 사각형 만들기로 잘못 판정했습니다.
+        PreviewFrame zoomedImage = new(-250.0, -450.0, 1400.0, 2000.0);
+        Check(
+            zoomedImage.TryMapPoint(pointerX, pointerY, out CropDisplayPoint wrongPoint) &&
+            CropInteraction.BeginDrag(wrongPoint, selection, zoomedImage.Width, zoomedImage.Height)
+                == CropDragMode.Create,
+            "zoomed image coordinates reproduce the old redraw defect");
+
+        PreviewFrame rotatedPreview = new(50.0, 100.0, 1000.0, 700.0);
+        crop.SetOverlayFrame(rotatedPreview);
+        Check(crop.OverlayFrame == rotatedPreview, "a new rotated preview refreshes the crop frame");
     }
 
     /// <summary>
@@ -494,6 +529,45 @@ internal static class CropAndLookTests
             "display_to_raw_rejects_degenerate_source");
 
         VerifyRawToDisplayIsTheExactInverse(width, height);
+    }
+
+    private static void VerifyManualDefectCoordinatesMatchMacOS()
+    {
+        LibraryFrameSnapshot frame = Frame(new ManualBaseRgb(0.2, 0.2, 0.2)) with
+        {
+            SourceMetadata = new LibrarySourceMetadata(1UL, 100U, 100U, 3, 16, 1, 1),
+            ImageTransform = ImageTransformRecipe.Identity with
+            {
+                Crop = new ImageCropRect(0.1, 0.0, 0.5, 1.0),
+            },
+        };
+        Check(DevelopDefectCoordinateMapper.TryMapCloneDisplayToRaw(
+                frame, new DefectPoint(0.5, 0.5), out DefectPoint cloneRaw) &&
+            Math.Abs(cloneRaw.X - 0.35) < 1e-12 &&
+            Math.Abs(cloneRaw.Y - 0.5) < 1e-12,
+            "clone_coordinate_uses_the_macos_continuous_crop_affine");
+
+        LibraryFrameSnapshot straightened = frame with
+        {
+            ImageTransform = ImageTransformRecipe.Identity with { StraightenAngle = 10.0 },
+        };
+        Check(DevelopDefectCoordinateMapper.TryMapBrushDisplayToRaw(
+                straightened, new DefectPoint(1.0, 0.5), out DefectPoint brushRaw) &&
+            brushRaw == new DefectPoint(1.0, 0.5),
+            "brush_coordinate_skips_straighten_without_a_macos_base_size");
+        Check(DevelopDefectCoordinateMapper.TryMapCloneDisplayToRaw(
+                straightened, new DefectPoint(0.8, 0.4), out cloneRaw) &&
+            DevelopDefectCoordinateMapper.TryMapCloneRawToDisplay(
+                straightened, cloneRaw, out DefectPoint cloneDisplay) &&
+            Math.Abs(cloneDisplay.X - 0.8) < 1e-12 &&
+            Math.Abs(cloneDisplay.Y - 0.4) < 1e-12,
+            "clone_coordinate_round_trips_the_macos_straighten_affine");
+
+        LibraryFrameSnapshot identity = frame with { ImageTransform = ImageTransformRecipe.Identity };
+        Check(DevelopDefectCoordinateMapper.TryMapCloneRawToDisplay(
+                identity, new DefectPoint(1.2, -0.1), out DefectPoint outside) &&
+            outside == new DefectPoint(1.2, -0.1),
+            "clone_cursor_mapping_does_not_clamp_an_outside_source");
     }
 
     /// <summary>

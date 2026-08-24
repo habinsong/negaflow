@@ -16,6 +16,8 @@ internal sealed class DevelopGrainMendCanvasInput
     private readonly DevelopGrainMendPanel view;
     private CropDisplayPoint guidedDragStart;
     private CropDisplayPoint guidedDragCurrent;
+    private double guidedFrameWidth;
+    private double guidedFrameHeight;
     private bool guidedDragging;
     private DefectPoint? cloneCursor;
 
@@ -36,12 +38,14 @@ internal sealed class DevelopGrainMendCanvasInput
 
     internal bool TryHandlePressed(PointerRoutedEventArgs args)
     {
-        if (TryTogglePendingComponent(args))
+        // Guided는 press가 아니라 release에서 6pt 탭/드래그를 가릅니다. 먼저 gesture를 잡아야
+        // macOS처럼 작은 이동의 끝점에서 component를 토글할 수 있습니다.
+        if (TryBeginGuided(args))
         {
             args.Handled = true;
             return true;
         }
-        if (TryBeginGuided(args))
+        if (TryTogglePendingComponent(args))
         {
             args.Handled = true;
             return true;
@@ -101,26 +105,54 @@ internal sealed class DevelopGrainMendCanvasInput
         // Esc 가 버립니다.
         if (view.grainMend.PendingEdit is not null)
         {
+            if (view.isRemovingDefects && args.Key == VirtualKey.Enter)
+            {
+                args.Handled = true;
+                return true;
+            }
             if (args.Key == VirtualKey.Enter)
             {
-                view.review.AcceptPending();
+                _ = view.review.AcceptPendingAsync();
                 args.Handled = true;
                 return true;
             }
             if (args.Key == VirtualKey.Escape)
             {
-                view.review.CancelPending();
+                _ = view.TryExitRegionDefectInteraction();
                 args.Handled = true;
                 return true;
             }
         }
-        if (args.Key == VirtualKey.Escape && view.grainMend.Strokes.Tool == GrainMendTool.Guided)
+        if (args.Key == VirtualKey.Escape &&
+            (view.grainMend.IsDetecting ||
+             view.grainMend.Strokes.Tool != GrainMendTool.None))
         {
-            view.SetTool(GrainMendTool.None);
+            args.Handled = view.TryExitRegionDefectInteraction();
+            return args.Handled;
+        }
+        if (args.Key == VirtualKey.Enter &&
+            view.grainMend.Strokes.Tool == GrainMendTool.Brush &&
+            view.grainMend.Strokes.HasPaintedStrokes)
+        {
+            view.ApplyBrushDraft();
             args.Handled = true;
-            // 크롭이 켜져 있으면 Esc 는 이어서 크롭도 닫습니다. 여기서 삼키지 않습니다.
+            return true;
         }
         return false;
+    }
+
+    internal void CancelActivePointer(PointerRoutedEventArgs args)
+    {
+        bool hadStroke = view.grainMend.Strokes.IsDragging;
+        EndGuidedSelection(args);
+        if (!hadStroke)
+        {
+            return;
+        }
+        view.grainMend.Strokes.CancelStroke();
+        view.canvas?.ReleaseHost(args.Pointer);
+        RenderActiveTool();
+        view.chrome.Update();
     }
 
     internal void EndGuidedSelection(PointerRoutedEventArgs args)
@@ -129,14 +161,18 @@ internal sealed class DevelopGrainMendCanvasInput
         {
             return;
         }
-        view.canvas?.ReleaseHost(args.Pointer);
         guidedDragging = false;
+        view.canvas?.ReleaseHost(args.Pointer);
+        guidedFrameWidth = 0.0;
+        guidedFrameHeight = 0.0;
         view.canvas?.HideGuidedSelection();
     }
 
     internal void CancelGuidedDrag()
     {
         guidedDragging = false;
+        guidedFrameWidth = 0.0;
+        guidedFrameHeight = 0.0;
         view.canvas?.HideGuidedSelection();
     }
 
@@ -152,14 +188,21 @@ internal sealed class DevelopGrainMendCanvasInput
 
     private bool TryBeginGuided(PointerRoutedEventArgs args)
     {
-        if (view.grainMend.Strokes.Tool != GrainMendTool.Guided || view.grainMend.IsDetecting ||
+        if (view.isRemovingDefects ||
+            view.grainMend.Strokes.Tool != GrainMendTool.Guided || view.grainMend.IsDetecting ||
             view.panel?.SelectedFrame is null ||
-            !TryMap(args, out CropDisplayPoint point))
+            !TryMapGuided(
+                args,
+                out CropDisplayPoint point,
+                out double frameWidth,
+                out double frameHeight))
         {
             return false;
         }
         guidedDragStart = point;
         guidedDragCurrent = point;
+        guidedFrameWidth = frameWidth;
+        guidedFrameHeight = frameHeight;
         guidedDragging = true;
         RenderGuidedSelection();
         view.canvas?.CaptureHost(args.Pointer);
@@ -172,9 +215,15 @@ internal sealed class DevelopGrainMendCanvasInput
     /// </summary>
     private bool TryTogglePendingComponent(PointerRoutedEventArgs args)
     {
-        if (view.grainMend.PendingReview is null || view.grainMend.PendingEdit is null ||
+        return TryMap(args, out CropDisplayPoint displayPoint) &&
+            TryTogglePendingComponent(displayPoint);
+    }
+
+    private bool TryTogglePendingComponent(CropDisplayPoint displayPoint)
+    {
+        if (view.isRemovingDefects || view.grainMend.IsDetecting ||
+            view.grainMend.PendingReview is null || view.grainMend.PendingEdit is null ||
             view.panel?.SelectedFrame is not { SourceMetadata: { } metadata } frame ||
-            !TryMap(args, out CropDisplayPoint displayPoint) ||
             !DevelopDisplayGeometry.TryMapDisplayToRaw(
                 frame.ImageTransform,
                 metadata.PixelWidth,
@@ -199,11 +248,14 @@ internal sealed class DevelopGrainMendCanvasInput
 
     private bool TryContinueGuided(PointerRoutedEventArgs args)
     {
-        if (!guidedDragging || !TryMap(args, out CropDisplayPoint point))
+        if (!guidedDragging ||
+            !TryMapGuided(args, out CropDisplayPoint point, out double frameWidth, out double frameHeight))
         {
             return false;
         }
         guidedDragCurrent = point;
+        guidedFrameWidth = frameWidth;
+        guidedFrameHeight = frameHeight;
         RenderGuidedSelection();
         return true;
     }
@@ -214,28 +266,40 @@ internal sealed class DevelopGrainMendCanvasInput
         {
             return false;
         }
-        if (TryMap(args, out CropDisplayPoint point))
+        if (TryMapGuided(
+                args,
+                out CropDisplayPoint point,
+                out double frameWidth,
+                out double frameHeight))
         {
             guidedDragCurrent = point;
+            guidedFrameWidth = frameWidth;
+            guidedFrameHeight = frameHeight;
         }
-        view.canvas?.ReleaseHost(args.Pointer);
         guidedDragging = false;
+        view.canvas?.ReleaseHost(args.Pointer);
         view.canvas?.HideGuidedSelection();
 
-        double width = Math.Abs(guidedDragCurrent.X - guidedDragStart.X);
-        double height = Math.Abs(guidedDragCurrent.Y - guidedDragStart.Y);
-        if (width <= 0.012 || height <= 0.012 || view.panel is null)
+        GrainMendGuidedGestureResult result = GrainMendGuidedGesture.Complete(
+            guidedDragStart,
+            guidedDragCurrent,
+            guidedFrameWidth,
+            guidedFrameHeight);
+        guidedFrameWidth = 0.0;
+        guidedFrameHeight = 0.0;
+        if (result.Kind == GrainMendGuidedGestureKind.Tap)
+        {
+            _ = TryTogglePendingComponent(guidedDragCurrent);
+            return true;
+        }
+        if (result is not { Kind: GrainMendGuidedGestureKind.Region, Region: { } displayRoi } ||
+            view.panel is null)
         {
             return true;
         }
-        DefectRect displayRoi = new(
-            Math.Min(guidedDragStart.X, guidedDragCurrent.X),
-            Math.Min(guidedDragStart.Y, guidedDragCurrent.Y),
-            width,
-            height);
         if (view.panel.TryMapDisplayRectToRaw(displayRoi, out DefectRect rawRoi))
         {
-            _ = view.detector.DetectAsync(rawRoi);
+            _ = view.detector.DetectAsync(rawRoi, automatic: false);
         }
         return true;
     }
@@ -277,7 +341,7 @@ internal sealed class DevelopGrainMendCanvasInput
 
     private bool TryContinueStroke(PointerRoutedEventArgs args)
     {
-        if (!TryMap(args, out CropDisplayPoint point))
+        if (!TryMapStroke(args, out CropDisplayPoint point))
         {
             return false;
         }
@@ -295,14 +359,13 @@ internal sealed class DevelopGrainMendCanvasInput
     /// 모르고 칠합니다), <c>CloneStampOverlay</c> 는 빨강 대신 <b>소스 창의 실제 화소</b>를 획
     /// 모양으로 보여 줍니다. Windows 는 한 표면을 나눠 쓰므로 도구에 맞는 쪽을 그립니다.
     /// </summary>
-    private void RenderActiveTool()
+    private bool RenderActiveTool()
     {
         if (view.grainMend.Strokes.Tool == GrainMendTool.Clone)
         {
-            view.review.RenderCloneCursor();
-            return;
+            return view.review.RenderCloneCursor();
         }
-        view.review.RenderPaintOverlay();
+        return view.review.RenderPaintOverlay();
     }
 
     private bool TryFinishStroke(PointerRoutedEventArgs args)
@@ -311,17 +374,25 @@ internal sealed class DevelopGrainMendCanvasInput
         {
             return false;
         }
-        view.canvas?.ReleaseHost(args.Pointer);
+        GrainMendPresentationSample presentation =
+            view.grainMend.Strokes.Tool == GrainMendTool.Clone
+                ? view.BeginManualPresentation(GrainMendTool.Clone)
+                : default;
         if (view.panel is null)
         {
             view.grainMend.Strokes.CancelStroke();
+            view.canvas?.ReleaseHost(args.Pointer);
             return true;
         }
         bool wasBrush = view.grainMend.Strokes.Tool == GrainMendTool.Brush;
         if (!view.grainMend.Strokes.Finish(view.panel, out LibraryFrameError error))
         {
+            view.canvas?.ReleaseHost(args.Pointer);
             return false;
         }
+        // ReleasePointerCapture는 PointerCaptureLost를 즉시 다시 보낼 수 있습니다. 먼저 Finish로
+        // 획을 draft/recipe에 확정해야 재진입한 cancel이 완료 전 획을 지우지 않습니다.
+        view.canvas?.ReleaseHost(args.Pointer);
         // 브러시는 recipe 로 가지 않고 칠로 남습니다(macOS 와 같은 "모았다가 적용").
         if (wasBrush)
         {
@@ -331,8 +402,15 @@ internal sealed class DevelopGrainMendCanvasInput
         }
         if (error == LibraryFrameError.None)
         {
+            view.SetStatus(string.Empty);
             view.chrome.Update();
+            view.TrackDevelopedPresentation(presentation);
             view.RequestPreview();
+        }
+        else
+        {
+            view.ShowDefectWriteError();
+            view.chrome.Update();
         }
         // macOS 는 획이 끝나면 `current` 가 비어 획 모양 미리보기가 사라지고, 원과 소스 십자선만
         // 남습니다. 이제 정렬 오프셋이 확정됐으므로 원 안에는 그 오프셋의 소스가 보입니다.
@@ -348,5 +426,42 @@ internal sealed class DevelopGrainMendCanvasInput
             return false;
         }
         return view.canvas.TryMapPointer(args, out point);
+    }
+
+    private bool TryMapStroke(PointerRoutedEventArgs args, out CropDisplayPoint point)
+    {
+        if (view.grainMend.Strokes.Tool != GrainMendTool.Brush || view.canvas is null)
+        {
+            return TryMap(args, out point);
+        }
+        return view.canvas.TryMapPointerForCrop(
+            args,
+            double.PositiveInfinity,
+            out point,
+            out _,
+            out _,
+            out _);
+    }
+
+    private bool TryMapGuided(
+        PointerRoutedEventArgs args,
+        out CropDisplayPoint point,
+        out double frameWidth,
+        out double frameHeight)
+    {
+        if (view.canvas is null)
+        {
+            point = default;
+            frameWidth = 0.0;
+            frameHeight = 0.0;
+            return false;
+        }
+        return view.canvas.TryMapPointerForCrop(
+            args,
+            0.0,
+            out point,
+            out bool inside,
+            out frameWidth,
+            out frameHeight) && inside;
     }
 }

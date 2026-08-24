@@ -13,7 +13,14 @@ using static Negaflow.Catalog.UnitTests.DefectTestFixture;
 
 internal static class DefectSidecarTests
 {
-    public static void Run(StorageRootSet roots) => VerifyDefectSidecarStore(roots);
+    public static void Run(StorageRootSet roots)
+    {
+        VerifyDefectSidecarStore(roots);
+        VerifyDefectCatalogTransaction(roots);
+    }
+
+    internal static void RunTransaction(StorageRootSet roots) =>
+        VerifyDefectCatalogTransaction(roots);
 
     private static void VerifyDefectSidecarStore(StorageRootSet parentRoots)
     {
@@ -279,6 +286,367 @@ internal static class DefectSidecarTests
         Check(DefectSidecarStore.Write(roots, invalidZlib).Error ==
               DefectSidecarError.InvalidSnapshot,
             "defect_sidecar_invalid_zlib_rejected_before_publish");
+    }
+
+    private static void VerifyDefectCatalogTransaction(StorageRootSet parentRoots)
+    {
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "defect-catalog-transaction")).Roots!;
+        Guid frameId = Guid.Parse("dc881525-6db3-4ae8-b4dc-09947787919f");
+        IReadOnlyList<DefectEditItem> items = DefectRecipeItems();
+        DefectRecipeSnapshot revisionOne = DefectRecipeSnapshot.Create(
+            frameId,
+            recipeRevision: 1,
+            sourceIdentity: null,
+            items);
+        DefectRecipeSnapshot emptyRevisionOne = DefectRecipeSnapshot.Create(
+            frameId,
+            recipeRevision: 1,
+            sourceIdentity: null,
+            items: []);
+        DefectEditItem[] changedItems = [.. items];
+        changedItems[0] = changedItems[0] with { Strength = 0.375 };
+        DefectRecipeSnapshot revisionTwo = DefectRecipeSnapshot.Create(
+            frameId,
+            recipeRevision: 2,
+            sourceIdentity: null,
+            changedItems);
+        changedItems[0] = changedItems[0] with { Strength = 0.625 };
+        DefectRecipeSnapshot revisionFour = DefectRecipeSnapshot.Create(
+            frameId,
+            recipeRevision: 4,
+            sourceIdentity: null,
+            changedItems);
+        string sidecarPath = DefectSidecarStore.PathFor(roots, frameId);
+
+        CatalogWriteResult seeded = SqliteCatalogStore.Write(
+            DefectCatalog(frameId, hasEdits: false, marker: 0),
+            roots.CatalogPath);
+        Check(seeded.IsSuccess,
+            $"defect_transaction_catalog_seed_without_sidecar_{seeded.Error}");
+        Check(CatalogRecovery.IsValidCatalogSource(roots.CatalogPath),
+            "defect_transaction_catalog_seed_is_valid_recovery_source");
+        using (CatalogSession session = CatalogSession.Open(roots).Session!)
+        {
+            Check(CatalogMarker(session.Read()) == 0,
+                "defect_transaction_catalog_seed_readback");
+
+            DefectSidecarWriteResult emptySidecar =
+                session.WriteDefectRecipe(emptyRevisionOne);
+            Check(!emptySidecar.IsSuccess &&
+                  emptySidecar.Error == DefectSidecarError.InvalidSnapshot &&
+                  DefectSidecarStore.Read(roots, frameId).Error ==
+                      DefectSidecarError.NotFound,
+                "defect_sidecar_store_rejects_empty_recipe_before_publish");
+
+            DefectRecipeCatalogWriteResult emptyCommit =
+                session.WriteDefectRecipeAndCatalog(
+                    emptyRevisionOne,
+                    DefectCatalog(frameId, hasEdits: true, marker: 0));
+            Check(!emptyCommit.IsSuccess &&
+                  emptyCommit.Sidecar.Error == DefectSidecarError.InvalidSnapshot &&
+                  DefectSidecarStore.Read(roots, frameId).Error ==
+                      DefectSidecarError.NotFound &&
+                  CatalogHasDefectEdits(session.Read()) == false,
+                "defect_transaction_rejects_empty_recipe_before_publish");
+
+            DefectRecipeCatalogWriteResult absentRollback =
+                session.WriteDefectRecipeAndCatalogForTesting(
+                    revisionOne,
+                    DefectCatalog(frameId, hasEdits: true, marker: 0),
+                    writer: (_, _) => CatalogWriteResult.Failure(CatalogStoreError.IoFailure));
+            Check(absentRollback.CatalogError == CatalogStoreError.IoFailure &&
+                  DefectSidecarStore.Read(roots, frameId).Error == DefectSidecarError.NotFound &&
+                  CatalogMarker(session.Read()) == 0,
+                "defect_transaction_catalog_failure_restores_sidecar_absence");
+
+            DefectRecipeCatalogWriteResult initialCommit =
+                session.WriteDefectRecipeAndCatalog(
+                    revisionOne,
+                    DefectCatalog(frameId, hasEdits: true, marker: 0));
+            Check(initialCommit.IsSuccess && File.Exists(sidecarPath),
+                $"defect_transaction_initial_commit_{initialCommit.Sidecar.Error}_" +
+                $"{initialCommit.CatalogError}_{initialCommit.Sidecar.Kind}");
+            if (!initialCommit.IsSuccess || !File.Exists(sidecarPath))
+            {
+                return;
+            }
+            byte[] revisionOneBytes = File.ReadAllBytes(sidecarPath);
+
+            DefectRecipeCatalogWriteResult byteRollback =
+                DefectSidecarCatalogWriter.Write(
+                    roots,
+                    revisionTwo,
+                    commitCatalog: () =>
+                        CatalogWriteResult.Failure(CatalogStoreError.IoFailure));
+            Check(byteRollback.CatalogError == CatalogStoreError.IoFailure &&
+                  File.ReadAllBytes(sidecarPath).SequenceEqual(revisionOneBytes) &&
+                  DefectSidecarStore.Read(roots, frameId).Snapshot?.RecipeRevision == 1 &&
+                  CatalogMarker(session.Read()) == 0,
+                "defect_transaction_catalog_failure_restores_exact_previous_sidecar");
+        }
+
+        using (CatalogSession reopened = CatalogSession.Open(roots).Session!)
+        {
+            Check(reopened.ReadOrCreate().IsSuccess &&
+                  reopened.ReadDefectRecipe(frameId).Snapshot?.RecipeRevision == 1 &&
+                  CatalogMarker(reopened.Read()) == 0,
+                "defect_transaction_reopen_keeps_previous_recipe");
+            Check(reopened.WriteDefectRecipeAndCatalog(
+                    revisionTwo,
+                    DefectCatalog(frameId, hasEdits: true, marker: 0)).IsSuccess &&
+                  reopened.ReadDefectRecipe(frameId).Snapshot?.RecipeRevision == 2,
+                "defect_transaction_rollback_restores_revision_floor");
+            DefectRecipeCatalogWriteResult unsafeTarget =
+                reopened.WriteDefectRecipeAndCatalog(
+                    revisionTwo,
+                    DefectCatalog(frameId, hasEdits: true, marker: 3));
+            Check(!unsafeTarget.IsSuccess &&
+                  unsafeTarget.CatalogError == CatalogStoreError.MissingAuthoritativeData &&
+                  reopened.ReadDefectRecipe(frameId).Snapshot?.RecipeRevision == 2 &&
+                  CatalogMarker(reopened.Read()) == 0,
+                "defect_transaction_rejects_uncommitted_catalog_delta_before_sidecar");
+            DefectRecipeCatalogWriteResult staleCommit =
+                reopened.WriteDefectRecipeAndCatalog(
+                    revisionOne,
+                    DefectCatalog(frameId, hasEdits: true, marker: 0));
+            Check(!staleCommit.IsSuccess &&
+                  staleCommit.Sidecar.Error == DefectSidecarError.InvalidSnapshot &&
+                  reopened.ReadDefectRecipe(frameId).Snapshot?.RecipeRevision == 2 &&
+                  CatalogMarker(reopened.Read()) == 0,
+                "defect_transaction_skipped_newer_does_not_commit_catalog");
+
+            DefectRecipeCatalogDeleteResult gapDelete =
+                reopened.DeleteDefectRecipeAndCatalog(
+                    frameId,
+                    deletionRevision: 4,
+                    DefectCatalog(frameId, hasEdits: false, marker: 0));
+            Check(!gapDelete.IsSuccess &&
+                  gapDelete.SidecarError == DefectSidecarError.InvalidSnapshot &&
+                  reopened.ReadDefectRecipe(frameId).Snapshot?.RecipeRevision == 2 &&
+                  CatalogHasDefectEdits(reopened.Read()) == true,
+                "defect_transaction_rejects_gap_delete_before_catalog_commit");
+
+            DefectRecipeCatalogDeleteResult deleted =
+                reopened.DeleteDefectRecipeAndCatalog(
+                    frameId,
+                    deletionRevision: 3,
+                    DefectCatalog(frameId, hasEdits: false, marker: 0));
+            Check(deleted.IsSuccess &&
+                  reopened.ReadDefectRecipe(frameId).Error == DefectSidecarError.NotFound &&
+                  CatalogHasDefectEdits(reopened.Read()) == false,
+                $"defect_transaction_delete_commits_catalog_and_removes_sidecar_" +
+                $"{deleted.SidecarError}_{deleted.CatalogError}");
+
+            Check(reopened.WriteDefectRecipeAndCatalog(
+                    revisionFour,
+                    DefectCatalog(frameId, hasEdits: true, marker: 0)).IsSuccess &&
+                  reopened.ReadDefectRecipe(frameId).Snapshot?.RecipeRevision == 4,
+                "defect_transaction_next_revision_after_delete_succeeds");
+
+            DefectRecipeCatalogDeleteResult lockedDelete;
+            using (FileStream held = new(
+                       sidecarPath,
+                       FileMode.Open,
+                       FileAccess.Read,
+                       FileShare.Read))
+            {
+                lockedDelete = reopened.DeleteDefectRecipeAndCatalog(
+                    frameId,
+                    deletionRevision: 5,
+                    DefectCatalog(frameId, hasEdits: false, marker: 0));
+            }
+            Check(!lockedDelete.IsSuccess &&
+                  lockedDelete.SidecarError == DefectSidecarError.IoFailure &&
+                  lockedDelete.CatalogError == CatalogStoreError.None &&
+                  reopened.ReadDefectRecipe(frameId).Snapshot?.RecipeRevision == 4 &&
+                  CatalogHasDefectEdits(reopened.Read()) == true,
+                $"defect_transaction_delete_failure_restores_catalog_" +
+                $"{lockedDelete.SidecarError}_{lockedDelete.CatalogError}");
+
+            DefectRecipeCatalogDeleteResult retryDelete =
+                reopened.DeleteDefectRecipeAndCatalog(
+                    frameId,
+                    deletionRevision: 5,
+                    DefectCatalog(frameId, hasEdits: false, marker: 0));
+            Check(retryDelete.IsSuccess &&
+                  reopened.ReadDefectRecipe(frameId).Error == DefectSidecarError.NotFound &&
+                  CatalogHasDefectEdits(reopened.Read()) == false,
+                "defect_transaction_failed_delete_does_not_advance_revision_floor");
+        }
+
+        StorageRootSet recoveryRoots = StorageRootResolver.ResolveForTests(Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "defect-catalog-rollback-failure")).Roots!;
+        Check(SqliteCatalogStore.Write(
+                DefectCatalog(frameId, hasEdits: false, marker: 0),
+                recoveryRoots.CatalogPath).IsSuccess,
+            "defect_transaction_recovery_catalog_seed");
+        using (CatalogSession session = CatalogSession.Open(recoveryRoots).Session!)
+        {
+            DefectRecipeCatalogWriteResult rollbackFailure =
+                session.WriteDefectRecipeAndCatalogForTesting(
+                    revisionOne,
+                    DefectCatalog(frameId, hasEdits: true, marker: 0),
+                    writer: (_, _) => CatalogWriteResult.Failure(CatalogStoreError.IoFailure),
+                    forceSidecarRollbackFailure: true);
+            Check(rollbackFailure.CatalogError == CatalogStoreError.RollbackFailed &&
+                  session.Write(DefectCatalog(frameId, hasEdits: false, marker: 0)).Error ==
+                      CatalogStoreError.RollbackFailed,
+                "defect_transaction_sidecar_rollback_failure_blocks_session");
+        }
+
+        CatalogSessionOpenResult recoveryOpen = CatalogSession.Open(recoveryRoots);
+        using CatalogSession? recovery = recoveryOpen.Session;
+        Check(!recoveryOpen.IsSuccess ||
+              recovery?.ReadOrCreate().Error == CatalogStoreError.RollbackFailed,
+            "defect_transaction_sidecar_rollback_failure_blocks_reopen");
+
+        Guid aliasFrameId = Guid.Parse("abcdefab-cdef-4abc-8def-abcdefabcdef");
+        DefectRecipeSnapshot aliasRecipe = DefectRecipeSnapshot.Create(
+            aliasFrameId,
+            1,
+            revisionOne.SourceIdentity,
+            revisionOne.Items);
+        StorageRootSet aliasRoots = StorageRootResolver.ResolveForTests(Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "defect-catalog-guid-alias")).Roots!;
+        using (CatalogSession aliasSeed = CatalogSession.Open(aliasRoots).Session!)
+        {
+            Check(aliasSeed.ReadOrCreate().IsSuccess,
+                "defect_orphan_alias_catalog_create");
+            Check(aliasSeed.WriteDefectRecipe(aliasRecipe).IsSuccess,
+                "defect_orphan_alias_sidecar_seed");
+            JsonObject lowerPayload = new()
+            {
+                ["hasDefectEdits"] = false,
+            };
+            JsonObject upperPayload = new()
+            {
+                ["hasDefectEdits"] = true,
+            };
+            Check(aliasSeed.Write(new CatalogSnapshot(
+                null,
+                new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                {
+                    [CatalogEntityTable.Frames] =
+                    [
+                        new(aliasFrameId.ToString("D"), lowerPayload),
+                        new(aliasFrameId.ToString("D").ToUpperInvariant(), upperPayload),
+                    ],
+                })).IsSuccess, "defect_orphan_alias_catalog_seed");
+        }
+        string aliasSidecarPath = DefectSidecarStore.PathFor(aliasRoots, aliasFrameId);
+        CatalogSessionOpenResult aliasOpen = CatalogSession.Open(aliasRoots);
+        aliasOpen.Session?.Dispose();
+        Check(!aliasOpen.IsSuccess &&
+              aliasOpen.Error == CatalogSessionError.MissingAuthoritativeData &&
+              aliasOpen.DefectSidecarError == DefectSidecarError.InvalidFrameId &&
+              File.Exists(aliasSidecarPath),
+            "defect_orphan_alias_fails_before_authoritative_sidecar_delete");
+
+        Guid orphanFrameId = Guid.Parse("3ca0aecc-d727-4e62-ab37-d9c3c06d4a84");
+        Guid missingFrameId = Guid.Parse("09cd48e7-28c2-4b15-98cb-e8a7dd7b5ecf");
+        StorageRootSet mixedHealthRoots = StorageRootResolver.ResolveForTests(Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "defect-catalog-mixed-health")).Roots!;
+        DefectRecipeSnapshot orphanRecipe = DefectRecipeSnapshot.Create(
+            orphanFrameId,
+            1,
+            revisionOne.SourceIdentity,
+            revisionOne.Items);
+        Check(DefectSidecarStore.Write(mixedHealthRoots, orphanRecipe).IsSuccess,
+            "defect_orphan_mixed_health_sidecar_seed");
+        JsonObject orphanPayload = new()
+        {
+            ["hasDefectEdits"] = false,
+        };
+        JsonObject missingPayload = new()
+        {
+            ["hasDefectEdits"] = true,
+        };
+        Check(SqliteCatalogStore.Write(new CatalogSnapshot(
+                null,
+                new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                {
+                    [CatalogEntityTable.Frames] =
+                    [
+                        new(orphanFrameId.ToString("D"), orphanPayload),
+                        new(missingFrameId.ToString("D"), missingPayload),
+                    ],
+                }), mixedHealthRoots.CatalogPath).IsSuccess,
+            "defect_orphan_mixed_health_catalog_seed");
+        string mixedOrphanPath = DefectSidecarStore.PathFor(mixedHealthRoots, orphanFrameId);
+        CatalogSessionOpenResult mixedHealthOpen = CatalogSession.Open(mixedHealthRoots);
+        mixedHealthOpen.Session?.Dispose();
+        Check(!mixedHealthOpen.IsSuccess &&
+              mixedHealthOpen.Error == CatalogSessionError.MissingAuthoritativeData &&
+              mixedHealthOpen.DefectSidecarError == DefectSidecarError.NotFound &&
+              File.Exists(mixedOrphanPath),
+            "defect_orphan_authoritative_health_fails_before_cleanup");
+
+        Guid markedFrameId = Guid.Parse("98308931-0756-41df-bdbf-93ef558b2c57");
+        DefectRecipeSnapshot markedRecipe = DefectRecipeSnapshot.Create(
+            markedFrameId,
+            1,
+            revisionOne.SourceIdentity,
+            revisionOne.Items);
+        StorageRootSet markerRoots = StorageRootResolver.ResolveForTests(Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "defect-catalog-unresolved-marker")).Roots!;
+        using (CatalogSession markerSeed = CatalogSession.Open(markerRoots).Session!)
+        {
+            Check(markerSeed.ReadOrCreate().IsSuccess &&
+                  markerSeed.Write(DefectCatalog(markedFrameId, hasEdits: false, marker: 0))
+                      .IsSuccess &&
+                  markerSeed.WriteDefectRecipe(markedRecipe).IsSuccess,
+                "defect_orphan_marker_seed");
+        }
+        string markedSidecarPath = DefectSidecarStore.PathFor(markerRoots, markedFrameId);
+        File.WriteAllBytes($"{markerRoots.CatalogPath}.rollback-required", [1]);
+        CatalogSessionOpenResult markerOpen = CatalogSession.Open(markerRoots);
+        markerOpen.Session?.Dispose();
+        Check(!markerOpen.IsSuccess &&
+              markerOpen.Error == CatalogSessionError.MissingAuthoritativeData &&
+              File.Exists(markedSidecarPath),
+            "defect_orphan_marker_blocks_before_sidecar_cleanup");
+    }
+
+    private static CatalogSnapshot DefectCatalog(Guid frameId, bool hasEdits, int marker)
+    {
+        JsonObject payload = new()
+        {
+            ["hasDefectEdits"] = hasEdits,
+            ["marker"] = marker,
+        };
+        return new CatalogSnapshot(
+            null,
+            new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+            {
+                [CatalogEntityTable.Frames] =
+                [new CatalogEntityRow(frameId.ToString("D"), payload)],
+            });
+    }
+
+    private static int? CatalogMarker(CatalogReadResult read)
+    {
+        IReadOnlyList<CatalogEntityRow>? rows = read.Snapshot?.Rows(CatalogEntityTable.Frames);
+        return rows?.Count == 1 &&
+            rows[0].Payload["marker"] is JsonValue value &&
+            value.TryGetValue(out int marker)
+                ? marker
+                : null;
+    }
+
+    private static bool? CatalogHasDefectEdits(CatalogReadResult read)
+    {
+        IReadOnlyList<CatalogEntityRow>? rows = read.Snapshot?.Rows(CatalogEntityTable.Frames);
+        return rows?.Count == 1 &&
+            rows[0].Payload["hasDefectEdits"] is JsonValue value &&
+            value.TryGetValue(out bool hasEdits)
+                ? hasEdits
+                : null;
     }
 
 }

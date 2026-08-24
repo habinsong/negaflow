@@ -27,12 +27,15 @@ namespace {
 [[nodiscard]] std::uint16_t quantize_component(
     const float linear,
     const negaflow::color::OutputColorSpace space,
+    const bool encode_transfer,
     std::uint64_t& clipped_components) noexcept {
     if (linear < 0.0F || linear > 1.0F) {
         ++clipped_components;
     }
     const float bounded = std::clamp(linear, 0.0F, 1.0F);
-    const float encoded = negaflow::color::encode_output_component(bounded, space);
+    const float encoded = encode_transfer
+        ? negaflow::color::encode_output_component(bounded, space)
+        : bounded;
     return static_cast<std::uint16_t>(std::floor(encoded * 65'535.0F + 0.5F));
 }
 
@@ -74,6 +77,7 @@ struct OutputPixel final {
 [[nodiscard]] std::uint8_t quantize_component_8(
     const float linear,
     const negaflow::color::OutputColorSpace space,
+    const bool encode_transfer,
     const std::uint32_t x,
     const std::uint32_t y,
     const std::uint32_t channel,
@@ -82,7 +86,9 @@ struct OutputPixel final {
         ++clipped_components;
     }
     const float bounded = std::clamp(linear, 0.0F, 1.0F);
-    const float encoded = negaflow::color::encode_output_component(bounded, space);
+    const float encoded = encode_transfer
+        ? negaflow::color::encode_output_component(bounded, space)
+        : bounded;
     const float noise =
         static_cast<float>(dither_hash(x, y, channel) >> 8U) / 16777215.0F - 0.5F;
     const float dithered = std::clamp(encoded + noise / 255.0F, 0.0F, 1.0F);
@@ -300,22 +306,25 @@ WorkingToSrgb16Status convert_working_to_srgb_rows(
                 destination_row + static_cast<std::size_t>(column) * description.image.channels;
             if (bits_per_sample == 8U) {
                 destination_bytes[destination] = quantize_component_8(
-                    output.red, space, column, image_row, 0U, clipped_color_components);
+                    output.red, space, limits.encode_transfer,
+                    column, image_row, 0U, clipped_color_components);
                 destination_bytes[destination + 1U] = quantize_component_8(
-                    output.green, space, column, image_row, 1U, clipped_color_components);
+                    output.green, space, limits.encode_transfer,
+                    column, image_row, 1U, clipped_color_components);
                 destination_bytes[destination + 2U] = quantize_component_8(
-                    output.blue, space, column, image_row, 2U, clipped_color_components);
+                    output.blue, space, limits.encode_transfer,
+                    column, image_row, 2U, clipped_color_components);
                 if (description.image.channels == 4U) {
                     destination_bytes[destination + 3U] = quantize_alpha_8(pixel.alpha);
                 }
                 continue;
             }
             samples16[destination] =
-                quantize_component(output.red, space, clipped_color_components);
+                quantize_component(output.red, space, limits.encode_transfer, clipped_color_components);
             samples16[destination + 1U] =
-                quantize_component(output.green, space, clipped_color_components);
+                quantize_component(output.green, space, limits.encode_transfer, clipped_color_components);
             samples16[destination + 2U] =
-                quantize_component(output.blue, space, clipped_color_components);
+                quantize_component(output.blue, space, limits.encode_transfer, clipped_color_components);
             if (description.image.channels == 4U) {
                 samples16[destination + 3U] = quantize_alpha(pixel.alpha);
             }
@@ -376,11 +385,11 @@ WorkingToSrgb16Result convert_working_to_srgb16(
                     const std::size_t destination =
                         destination_row + static_cast<std::size_t>(column) * result.image.channels;
                     result.image.samples[destination] =
-                        quantize_component(output.red, space, block_clipped);
+                        quantize_component(output.red, space, limits.encode_transfer, block_clipped);
                     result.image.samples[destination + 1U] =
-                        quantize_component(output.green, space, block_clipped);
+                        quantize_component(output.green, space, limits.encode_transfer, block_clipped);
                     result.image.samples[destination + 2U] =
-                        quantize_component(output.blue, space, block_clipped);
+                        quantize_component(output.blue, space, limits.encode_transfer, block_clipped);
                     if (result.image.channels == 4U) {
                         result.image.samples[destination + 3U] = quantize_alpha(pixel.alpha);
                     }

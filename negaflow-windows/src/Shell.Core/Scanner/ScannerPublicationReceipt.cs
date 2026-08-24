@@ -7,7 +7,9 @@ public sealed record ScannerPublicationReceipt(
     Guid Id,
     string VisiblePath,
     string? InfraredPath,
-    DevelopmentProcess Process);
+    DevelopmentProcess Process,
+    ImageRotation Rotation = ImageRotation.Degrees0,
+    ImageTransformRecipe? InitialTransform = null);
 
 // The scan files are already committed outside the catalog. This tiny journal makes the final
 // catalog append restartable without making the adapter responsible for catalog durability.
@@ -33,7 +35,13 @@ public static class ScannerPublicationReceiptStore
             return false;
         }
 
-        ScannerPublicationReceipt receipt = new(Guid.NewGuid(), scan.VisiblePath, scan.InfraredPath, scan.Process);
+        ScannerPublicationReceipt receipt = new(
+            Guid.NewGuid(),
+            scan.VisiblePath,
+            scan.InfraredPath,
+            scan.Process,
+            scan.Rotation,
+            scan.InitialTransform);
         receiptPath = Path.Combine(root, $"{receipt.Id:N}.json");
         string temporary = Path.Combine(root, $".{receipt.Id:N}.tmp");
         try
@@ -93,8 +101,7 @@ public static class ScannerPublicationReceiptStore
                 {
                     receipt = JsonSerializer.Deserialize<ScannerPublicationReceipt>(stream, Json);
                 }
-                if (receipt is not null && IsValidScan(new(
-                        receipt.VisiblePath, receipt.InfraredPath, receipt.Process)))
+                if (receipt is not null && IsValidScan(ToScan(receipt)))
                 {
                     result.Add((path, receipt));
                 }
@@ -161,7 +168,16 @@ public static class ScannerPublicationReceiptStore
 
     private static bool IsValidScan(ScannerFrameImport scan) =>
         Path.IsPathFullyQualified(scan.VisiblePath) &&
-        (scan.InfraredPath is null || Path.IsPathFullyQualified(scan.InfraredPath));
+        (scan.InfraredPath is null || Path.IsPathFullyQualified(scan.InfraredPath)) &&
+        Enum.IsDefined(scan.Rotation) &&
+        (scan.InitialTransform is null || scan.InitialTransform.IsValid);
+
+    internal static ScannerFrameImport ToScan(ScannerPublicationReceipt receipt) =>
+        new(receipt.VisiblePath, receipt.InfraredPath, receipt.Process)
+        {
+            Rotation = receipt.Rotation,
+            InitialTransform = receipt.InitialTransform,
+        };
 
     private static bool IsReparsePoint(string path)
     {

@@ -22,10 +22,23 @@ extension ImageLoader {
     ) -> CIImage {
         if untaggedTIFFRole == .linearScannerRaw,
            shouldInterpretAsLinearRaw(cg, properties: properties),
-           let linear = CGColorSpace(name: CGColorSpace.linearSRGB) {
+           let linear = CGColorSpace(name: linearRawColorSpaceName(cg)) {
             return CIImage(cgImage: cg, options: [.colorSpace: linear])
         }
         return CIImage(cgImage: cg)
+    }
+
+    /// 프로필 없는 16bit raw 를 linear 로 읽을 때 쓸 색공간 이름이다.
+    ///
+    /// 스캐너의 Gray 스캔은 Samples/Pixel 1 인 TIFF 로 오고 `CGImageSource` 는 그것을
+    /// monochrome 모델 `CGImage` 로 준다. 여기에 `linearSRGB` 를 지정하면 이미지의 채널
+    /// 수와 다른 모델의 색공간을 지정하는 것이라 Core Image 가 그 지정을 쓸 수 없고, gray
+    /// raw 가 linear 가 아닌 기본 해석으로 들어간다. 같은 필름을 Color 로 스캔했을 때와
+    /// 밝기가 달라지므로 모델에 맞는 linear 색공간을 고른다.
+    static func linearRawColorSpaceName(_ cg: CGImage) -> CFString {
+        cg.colorSpace?.model == .monochrome
+            ? CGColorSpace.linearGray
+            : CGColorSpace.linearSRGB
     }
 
     static func untaggedTIFFRoleIfApplicable(

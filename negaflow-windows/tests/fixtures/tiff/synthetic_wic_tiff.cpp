@@ -85,7 +85,8 @@ void append_entry(
     const std::uint32_t height,
     const std::uint16_t compression,
     const std::vector<std::uint8_t>& compressed,
-    const std::uint16_t bits_per_channel = 16U) {
+    const std::uint16_t bits_per_channel = 16U,
+    const std::uint16_t orientation = 1U) {
     constexpr std::uint16_t entry_count = 12U;
 
     std::vector<std::uint8_t> bytes{};
@@ -100,7 +101,7 @@ void append_entry(
     append_entry(bytes, 259U, 3U, 1U, compression);
     append_entry(bytes, 262U, 3U, 1U, 2U);
     append_entry(bytes, 273U, 4U, 1U, pixel_offset);
-    append_entry(bytes, 274U, 3U, 1U, 1U);
+    append_entry(bytes, 274U, 3U, 1U, orientation);
     append_entry(bytes, 277U, 3U, 1U, 3U);
     append_entry(bytes, 278U, 4U, 1U, height);
     append_entry(
@@ -544,7 +545,8 @@ std::vector<std::uint8_t> make_uncompressed_gray16_tiff(
 
 std::vector<std::uint8_t> make_infrared_detector_visible_tiff(
     const std::uint32_t width,
-    const std::uint32_t height) {
+    const std::uint32_t height,
+    const std::uint16_t orientation) {
     if (width < 32U || height < 32U) return {};
     std::vector<std::uint8_t> pixels{};
     pixels.reserve(static_cast<std::size_t>(width) * height * 6U);
@@ -560,7 +562,7 @@ std::vector<std::uint8_t> make_infrared_detector_visible_tiff(
             append_u16(pixels, 40'632U);
         }
     }
-    return make_tiff(width, height, 1U, pixels);
+    return make_tiff(width, height, 1U, pixels, 16U, orientation);
 }
 
 std::vector<std::uint8_t> make_infrared_detector_gray_tiff(

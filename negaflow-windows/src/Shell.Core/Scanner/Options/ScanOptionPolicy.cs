@@ -89,15 +89,19 @@ internal static class ScanOptionPolicy
         ScanOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        IReadOnlyList<int> resolutions = Resolutions(capabilities, currentSelectedDpi);
+        IReadOnlyList<int> supportedResolutions = [..
+            (capabilities?.ResolutionsDpi ?? [])
+                .Where(dpi => dpi > 0)
+                .Distinct()
+                .Order()];
         IReadOnlyList<int> depths = BitDepths(capabilities);
         IReadOnlyList<string> modes = ColorModes(capabilities);
         // macOS `clampScannerChoices()` 와 같은 규칙입니다. 목록의 마지막(=최대) 값을 쓰면
         // 50dpi 부터 12800dpi 까지 내는 평판에서 기본값이 12800 으로 튑니다.
-        int resolution = resolutions.Contains(options.ResolutionDpi)
+        int resolution = supportedResolutions.Contains(options.ResolutionDpi)
             ? options.ResolutionDpi
             : PreferredScanResolution(
-                  resolutions,
+                  supportedResolutions,
                   capabilities?.SupportsPositionedScanArea == true) ?? 0;
         int depth = depths.Contains(options.BitDepth)
             ? options.BitDepth

@@ -10,8 +10,8 @@
 // **여러 묶음을 만들지 마십시오.** 24MP 에서 여섯 장이 1.6 GB 입니다. 필름 룩
 // 오케스트레이터도 이 묶음을 받아 씁니다 — 자기 것을 따로 들면 3.2 GB 가 됩니다.
 //
-// 여섯 장인 이유: 헐레이션이 원본 + 스크래치 넷 + 결과를 **한꺼번에** 씁니다.
-// 그것이 이 엔진에서 한 번에 필요한 최대치입니다.
+// 최대 여섯 장인 이유: 헐레이션이 원본 + 스크래치 넷 + 결과를 **한꺼번에** 씁니다.
+// 호출부가 필요한 장수를 넘기며, 단순 opening/closing은 세 장만 할당합니다.
 
 #include <cstdint>
 
@@ -32,7 +32,11 @@ public:
     [[nodiscard]] bool ensure(
         const GpuDevice& device,
         std::uint32_t width,
-        std::uint32_t height) noexcept;
+        std::uint32_t height,
+        int required_image_count = size) noexcept;
+
+    /// 풀해상도 일회 작업 뒤 재생성 가능한 texture/staging 두 치수를 모두 반환합니다.
+    void clear() noexcept;
 
     [[nodiscard]] GpuWorkingImage* images() noexcept { return images_; }
     [[nodiscard]] const GpuWorkingImage* images() const noexcept { return images_; }

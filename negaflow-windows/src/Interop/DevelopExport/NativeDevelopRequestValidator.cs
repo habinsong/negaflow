@@ -52,6 +52,7 @@ internal static unsafe class NativeDevelopRequestValidator
             sizeof(NativeDevelopExportRequestV33) != RequestV33Size ||
             sizeof(NativeDevelopExportRequestV34) != RequestV34Size ||
             sizeof(NativeDevelopExportRequestV35) != RequestV35Size ||
+            sizeof(NativeDevelopExportRequestV36) != RequestV36Size ||
             sizeof(NativeDevelopExportResultV2) != ResultV2Size ||
             sizeof(NativeDevelopExportResultV3) != ResultV3Size ||
             sizeof(NativeFilmBaseMeasurementV1) != FilmBaseMeasurementV1Size ||
@@ -63,7 +64,10 @@ internal static unsafe class NativeDevelopRequestValidator
             sizeof(NativeGrainMendDetectParametersV1) != GrainMendDetectParametersV1Size ||
             sizeof(NativeGrainMendDetectParametersV2) != GrainMendDetectParametersV2Size ||
             sizeof(NativeGrainMendDetectParametersV3) != GrainMendDetectParametersV3Size ||
-            sizeof(NativeGrainMendDetectionV2) != GrainMendDetectionV2Size)
+            sizeof(NativeGrainMendDetectionV2) != GrainMendDetectionV2Size ||
+            sizeof(NativeGrainMendDetectionV4) != GrainMendDetectionV4Size ||
+            sizeof(NativeGrainMendReviewHitV1) != GrainMendReviewHitV1Size ||
+            sizeof(NativeGrainMendAcceptedRegionV1) != GrainMendAcceptedRegionV1Size)
         {
             throw new NativeBootstrapException(
                 NativeBootstrapFailure.ContractViolation,
@@ -106,6 +110,10 @@ internal static unsafe class NativeDevelopRequestValidator
         ValidateDefectRecipeIdentity(
             request.DefectEditOrder.Count,
             request.DefectRecipeSha256);
+        ValidateDefectRecipeAppendPrefix(
+            request.DefectEditOrder.Count,
+            request.DefectRecipeAppendPrefixSha256,
+            request.DefectRecipeAppendPrefixEditCount);
         if (!SignedNormalized(request.Warmth) ||
             !SignedNormalized(request.Tint) ||
             !SignedNormalized(request.ColorDepth) ||

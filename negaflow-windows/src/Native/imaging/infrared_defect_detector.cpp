@@ -10,18 +10,32 @@
 
 #include "grain_mend_morphology.h"
 
+#include "negaflow/core/parallel_rows.h"
+
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <numeric>
+#include <optional>
 #include <utility>
 
 namespace negaflow::imaging {
 namespace {
 
 using namespace negaflow::imaging::infrared_detail;
+
+using TimingClock = std::chrono::steady_clock;
+
+[[nodiscard]] std::uint64_t elapsed_microseconds(
+    const TimingClock::time_point started,
+    const TimingClock::time_point finished) noexcept {
+    return static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::microseconds>(finished - started).count());
+}
 
 [[nodiscard]] bool checked_area(
     const std::uint32_t width,
@@ -33,6 +47,29 @@ using namespace negaflow::imaging::infrared_detail;
     }
     area = static_cast<std::size_t>(width) * height;
     return true;
+}
+
+[[nodiscard]] bool finite_planes(
+    const std::span<const float> infrared,
+    const std::span<const float> red,
+    const std::uint32_t width,
+    const std::uint32_t height) noexcept {
+    std::atomic_bool finite{true};
+    negaflow::core::for_each_row_block(
+        height,
+        static_cast<std::uint64_t>(infrared.size()) * 2U,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            const std::size_t first = static_cast<std::size_t>(first_row) * width;
+            const std::size_t end = static_cast<std::size_t>(first_row + row_count) * width;
+            for (std::size_t index = first;
+                 index < end && finite.load(std::memory_order_relaxed);
+                 ++index) {
+                if (!std::isfinite(infrared[index]) || !std::isfinite(red[index])) {
+                    finite.store(false, std::memory_order_relaxed);
+                }
+            }
+        });
+    return finite.load(std::memory_order_relaxed);
 }
 
 }  // namespace
@@ -65,11 +102,11 @@ InfraredDetectionResult detect_infrared_defects(
     const InfraredDetectorParameters& raw_parameters,
     const negaflow::core::CancelFlag cancel) noexcept {
     InfraredDetectionResult result{};
+    const auto started = TimingClock::now();
     try {
         std::size_t area = 0U;
         if (!checked_area(width, height, area) || infrared.size() != area || red.size() != area ||
-            !std::all_of(infrared.begin(), infrared.end(), [](float value) { return std::isfinite(value); }) ||
-            !std::all_of(red.begin(), red.end(), [](float value) { return std::isfinite(value); })) {
+            !finite_planes(infrared, red, width, height)) {
             result.status = InfraredDetectionStatus::unreadable;
             return result;
         }
@@ -86,9 +123,14 @@ InfraredDetectionResult detect_infrared_defects(
         result.detection.width = width;
         result.detection.height = height;
         std::vector<std::uint8_t> excluded(area, 0U);
+        auto phase_started = TimingClock::now();
+        result.timings.validation_microseconds = elapsed_microseconds(started, phase_started);
         result.detection.alignment = estimate_alignment(
             infrared, red, width, height,
             static_cast<std::uint32_t>(parameters.alignment_search_radius));
+        auto phase_finished = TimingClock::now();
+        result.timings.alignment_microseconds = elapsed_microseconds(phase_started, phase_finished);
+        phase_started = phase_finished;
         const bool seed_trusted =
             result.detection.alignment.status == InfraredAlignmentStatus::not_requested ||
             result.detection.alignment.status == InfraredAlignmentStatus::aligned;
@@ -105,23 +147,46 @@ InfraredDetectionResult detect_infrared_defects(
         }
         const std::uint32_t rim = std::max(4U, std::min(24U, std::min(width, height) / 200U));
         exclude_border_dark(aligned_infrared, width, height, p95 * 0.2F, rim, excluded);
+        phase_finished = TimingClock::now();
+        result.timings.preparation_microseconds = elapsed_microseconds(phase_started, phase_finished);
+        phase_started = phase_finished;
         if (cancel.requested()) {
             result.status = InfraredDetectionStatus::cancelled;
             return result;
         }
 
         const std::uint32_t radius = std::max(4U, std::min(96U, std::min(width, height) / 100U));
-        auto ir_baseline = grain_mend_detail::closing(aligned_infrared, width, height, radius);
+        const std::vector<float> red_copy(red.begin(), red.end());
+        grain_mend_detail::RgbPlanes paired_baselines = grain_mend_detail::closing_rgb(
+            aligned_infrared, red_copy, red_copy, width, height, radius);
+        std::vector<float> ir_baseline = paired_baselines.red.empty()
+            ? grain_mend_detail::closing(aligned_infrared, width, height, radius)
+            : std::move(paired_baselines.red);
+        std::vector<float> visible_baseline = paired_baselines.green.empty()
+            ? std::vector<float>{}
+            : std::move(paired_baselines.green);
         auto density = optical_density(aligned_infrared, ir_baseline);
         ir_baseline.clear();
         const SignalStatistics statistics = signal_statistics(density, excluded, parameters.sensitivity);
+        phase_finished = TimingClock::now();
+        result.timings.infrared_signal_microseconds =
+            elapsed_microseconds(phase_started, phase_finished);
+        phase_started = phase_finished;
         const float excess = statistics.threshold - statistics.floor;
         std::vector<std::uint8_t> candidate_mask(area, 0U);
-        for (std::size_t index = 0U; index < area; ++index) {
-            if (excluded[index] == 0U && density[index] >= statistics.floor + 0.5F * excess) {
-                candidate_mask[index] = 1U;
-            }
-        }
+        negaflow::core::for_each_row_block(
+            height,
+            static_cast<std::uint64_t>(area) * 3U,
+            [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+                const std::size_t first = static_cast<std::size_t>(first_row) * width;
+                const std::size_t end = static_cast<std::size_t>(first_row + row_count) * width;
+                for (std::size_t index = first; index < end; ++index) {
+                    if (excluded[index] == 0U &&
+                        density[index] >= statistics.floor + 0.5F * excess) {
+                        candidate_mask[index] = 1U;
+                    }
+                }
+            });
         auto candidates = label_components(
             candidate_mask, width, height, static_cast<std::size_t>(parameters.minimum_area));
         candidates.erase(
@@ -139,48 +204,40 @@ InfraredDetectionResult detect_infrared_defects(
             result.status = InfraredDetectionStatus::no_defects;
             return result;
         }
+        phase_finished = TimingClock::now();
+        result.timings.candidates_microseconds = elapsed_microseconds(phase_started, phase_finished);
+        phase_started = phase_finished;
 
-        const std::vector<float> red_copy(red.begin(), red.end());
-        auto visible_baseline = grain_mend_detail::closing(red_copy, width, height, radius);
+        if (visible_baseline.empty()) {
+            visible_baseline = grain_mend_detail::closing(red_copy, width, height, radius);
+        }
         auto visible = optical_density(red, visible_baseline);
         visible_baseline.clear();
         const float visible_floor = signal_statistics(visible, excluded, parameters.sensitivity).floor;
-        for (float& value : visible) value -= visible_floor;
+        negaflow::core::for_each_row_block(
+            height,
+            visible.size(),
+            [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+                const std::size_t first = static_cast<std::size_t>(first_row) * width;
+                const std::size_t end = static_cast<std::size_t>(first_row + row_count) * width;
+                for (std::size_t index = first; index < end; ++index) {
+                    visible[index] -= visible_floor;
+                }
+            });
+        phase_finished = TimingClock::now();
+        result.timings.visible_signal_microseconds = elapsed_microseconds(phase_started, phase_finished);
+        phase_started = phase_finished;
 
-        std::vector<ConfirmedCandidate> confirmed{};
         std::int32_t consensus_x = 0;
         std::int32_t consensus_y = 0;
         const std::int32_t coarse_search =
             std::max(4, std::min(20, parameters.alignment_search_radius));
         if (!seed_trusted && coarse_search > 4) {
-            std::vector<std::size_t> order(candidates.size(), 0U);
-            std::iota(order.begin(), order.end(), 0U);
-            std::sort(order.begin(), order.end(), [&](const std::size_t a, const std::size_t b) {
-                return candidates[a].source_area > candidates[b].source_area;
-            });
-            std::vector<std::int32_t> votes_x{};
-            std::vector<std::int32_t> votes_y{};
-            const std::size_t vote_count = std::min<std::size_t>(64U, order.size());
-            votes_x.reserve(vote_count);
-            votes_y.reserve(vote_count);
-            for (std::size_t ordinal = 0U; ordinal < vote_count; ++ordinal) {
-                RawComponent candidate = fill_component_holes(candidates[order[ordinal]], width);
-                const auto extent = static_cast<std::int32_t>(
-                    std::min(candidate.max_x - candidate.min_x,
-                             candidate.max_y - candidate.min_y) / 2U + 1U);
-                ConfirmedDefect vote{};
-                if (confirm_component(candidate, density, visible, width, height,
-                                      statistics.floor, coarse_search + extent, 0, 0, vote)) {
-                    votes_x.push_back(vote.offset_x);
-                    votes_y.push_back(vote.offset_y);
-                }
-            }
-            if (votes_x.size() >= 8U) {
-                std::sort(votes_x.begin(), votes_x.end());
-                std::sort(votes_y.begin(), votes_y.end());
-                consensus_x = votes_x[votes_x.size() / 2U];
-                consensus_y = votes_y[votes_y.size() / 2U];
-            }
+            const ConsensusOffset consensus = coarse_consensus_offset(
+                candidates, density, visible, width, height,
+                statistics.floor, coarse_search);
+            consensus_x = consensus.x;
+            consensus_y = consensus.y;
             if (cancel.requested()) {
                 result.status = InfraredDetectionStatus::cancelled;
                 return result;
@@ -189,21 +246,58 @@ InfraredDetectionResult detect_infrared_defects(
         result.detection.offset_x = seed_x + consensus_x;
         result.detection.offset_y = seed_y + consensus_y;
         const std::int32_t residual = std::max(4, std::min(8, parameters.alignment_search_radius));
-        for (RawComponent& component : candidates) {
-            if (cancel.requested()) {
-                result.status = InfraredDetectionStatus::cancelled;
-                return result;
+        std::vector<std::optional<ConfirmedCandidate>> confirmed_by_candidate(candidates.size());
+        std::atomic_bool confirmation_cancelled{false};
+        const auto confirm_range = [&](const std::size_t first, const std::size_t count) noexcept {
+            for (std::size_t index = first;
+                 index < first + count &&
+                     !confirmation_cancelled.load(std::memory_order_relaxed);
+                 ++index) {
+                if (cancel.requested()) {
+                    confirmation_cancelled.store(true, std::memory_order_relaxed);
+                    return;
+                }
+                RawComponent& component = candidates[index];
+                RawComponent filled = fill_component_holes(component, width);
+                const auto extent = static_cast<std::int32_t>(
+                    std::min(component.max_x - component.min_x,
+                             component.max_y - component.min_y) / 2U + 1U);
+                ConfirmedDefect match{};
+                if (confirm_component(
+                        filled,
+                        density,
+                        visible,
+                        width,
+                        height,
+                        statistics.floor,
+                        std::min<int>(radius + residual, residual + extent + 3),
+                        consensus_x,
+                        consensus_y,
+                        match)) {
+                    confirmed_by_candidate[index].emplace(ConfirmedCandidate{
+                        std::move(component), std::move(filled.pixels), match});
+                }
             }
-            RawComponent filled = fill_component_holes(component, width);
-            const auto extent = static_cast<std::int32_t>(
-                std::min(component.max_x - component.min_x,
-                         component.max_y - component.min_y) / 2U + 1U);
-            ConfirmedDefect match{};
-            if (confirm_component(filled, density, visible, width, height,
-                                  statistics.floor, std::min<int>(radius + residual, residual + extent + 3),
-                                  consensus_x, consensus_y, match)) {
-                confirmed.push_back(ConfirmedCandidate{
-                    std::move(component), std::move(filled.pixels), match});
+        };
+        if (candidates.size() <= std::numeric_limits<std::uint32_t>::max()) {
+            negaflow::core::for_each_row_block(
+                static_cast<std::uint32_t>(candidates.size()),
+                area,
+                [&](const std::uint32_t first, const std::uint32_t count) noexcept {
+                    confirm_range(first, count);
+                });
+        } else {
+            confirm_range(0U, candidates.size());
+        }
+        if (confirmation_cancelled.load(std::memory_order_relaxed)) {
+            result.status = InfraredDetectionStatus::cancelled;
+            return result;
+        }
+        std::vector<ConfirmedCandidate> confirmed{};
+        confirmed.reserve(candidates.size());
+        for (auto& candidate : confirmed_by_candidate) {
+            if (candidate.has_value()) {
+                confirmed.push_back(std::move(*candidate));
             }
         }
         result.detection.confirmed_count = confirmed.size();
@@ -211,6 +305,9 @@ InfraredDetectionResult detect_infrared_defects(
             result.status = InfraredDetectionStatus::no_defects;
             return result;
         }
+        phase_finished = TimingClock::now();
+        result.timings.confirmation_microseconds = elapsed_microseconds(phase_started, phase_finished);
+        phase_started = phase_finished;
 
         std::vector<float> gains{};
         gains.reserve(confirmed.size());
@@ -275,34 +372,40 @@ InfraredDetectionResult detect_infrared_defects(
         }
         const float significant_cut = std::max(
             1.0F - std::exp(-3.0F * statistics.sigma), 0.002F);
-        std::size_t significant = 0U;
+        std::vector<std::size_t> significant_pixels{};
+        significant_pixels.reserve(core_pixels.size());
+        std::size_t excluded_count = 0U;
         for (std::size_t index = 0U; index < attenuation.size(); ++index) {
-            if (attenuation[index] >= significant_cut) ++significant;
+            if (attenuation[index] >= significant_cut) significant_pixels.push_back(index);
             if (attenuation[index] >= tuning::kCoreCut) core_pixels.push_back(index);
+            if (excluded[index] != 0U) ++excluded_count;
         }
-        const std::size_t excluded_count = std::accumulate(
-            excluded.begin(), excluded.end(), std::size_t{0U});
         const std::size_t valid_area = std::max<std::size_t>(1U, area - excluded_count);
-        result.detection.coverage = static_cast<double>(significant) /
+        result.detection.coverage = static_cast<double>(significant_pixels.size()) /
             static_cast<double>(valid_area);
         if (result.detection.coverage > parameters.maximum_coverage) {
             result.status = InfraredDetectionStatus::coverage_too_high;
             return result;
         }
+        phase_finished = TimingClock::now();
+        result.timings.attenuation_microseconds = elapsed_microseconds(phase_started, phase_finished);
+        phase_started = phase_finished;
         result.detection.components.reserve(confirmed.size());
         for (const ConfirmedCandidate& candidate : confirmed) {
             result.detection.components.push_back(summarize_component(
                 candidate.component,
-                candidate.correction_pixels,
                 attenuation,
                 width));
         }
         result.detection.clusters = render_clusters(
-            attenuation, core_pixels, significant_cut, width, height, parameters);
+            attenuation, significant_pixels, core_pixels, width, height, parameters);
         if (result.detection.clusters.empty()) {
             result.status = InfraredDetectionStatus::no_defects;
             return result;
         }
+        phase_finished = TimingClock::now();
+        result.timings.output_microseconds = elapsed_microseconds(phase_started, phase_finished);
+        result.timings.total_microseconds = elapsed_microseconds(started, phase_finished);
         result.status = InfraredDetectionStatus::ok;
         return result;
     } catch (const std::bad_alloc&) {

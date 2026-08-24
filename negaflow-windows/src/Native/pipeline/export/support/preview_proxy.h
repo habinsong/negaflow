@@ -41,4 +41,13 @@ struct PreviewProxyHint final {
     negaflow::imaging::WorkingImage& image,
     PreviewProxyHint& hint) noexcept;
 
+// full-resolution cleaned raw를 보존한 채 표시 proxy만 파생합니다.
+[[nodiscard]] std::optional<DevelopExportOutcome> preview_proxy_materialize_from_cleaned(
+    const DevelopExportRequest& request,
+    const ObservedSource& observed,
+    const PreviewTarget& preview,
+    const negaflow::imaging::WorkingImage& cleaned,
+    negaflow::imaging::WorkingImage& image,
+    PreviewProxyHint& hint) noexcept;
+
 }  // namespace negaflow::pipeline::develop_export_detail

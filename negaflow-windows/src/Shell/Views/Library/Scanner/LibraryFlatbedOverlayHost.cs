@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Negaflow.Catalog;
 
 namespace Negaflow.Shell.Views;
 
@@ -23,7 +24,11 @@ public sealed partial class LibraryWorkspaceView
         bool show = previewPath is { Length: > 0 };
         if (show && ControlsPanel.ScanPanel.SessionForOverlay is { } session)
         {
-            FlatbedOverlay.Attach(session);
+            LibraryFrameSnapshot? previewFrame = session.PreviewFrameId is { } frameId
+                ? libraryHost?.Frames.FirstOrDefault(frame =>
+                    string.Equals(frame.Id, frameId, StringComparison.Ordinal))
+                : null;
+            FlatbedOverlay.Attach(session, previewFrame, thumbnails);
         }
 
         FlatbedOverlay.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
@@ -40,5 +45,11 @@ public sealed partial class LibraryWorkspaceView
         // 아래쪽 프레임을 가리고 그 자리를 집을 수도 없습니다.
         LibraryBottomBar.Visibility = show ? Visibility.Collapsed : Visibility.Visible;
         FlatbedOverlay.Render(previewPath);
+    }
+
+    private void OnThumbnailReady(string frameId)
+    {
+        thumbs.OnReady(frameId);
+        FlatbedOverlay.OnDevelopedReady(frameId);
     }
 }

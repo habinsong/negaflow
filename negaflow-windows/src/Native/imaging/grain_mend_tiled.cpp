@@ -42,11 +42,10 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
     // macOS 게이트 계약. 자동과 가이드가 나뉘는 유일한 자리입니다.
     const double sensitivity = std::clamp(request.dust_sensitivity, 0.0, 1.0);
     const double base = base_dust_area(image);
-    const double area_scale = request.constrained_region ? 48.0 : 5.0;
-    const auto dust_area = static_cast<std::size_t>(std::llround(
-        base * (1.0 + sensitivity * area_scale)));
-    const auto classification_dust_area = static_cast<std::size_t>(std::llround(
-        base * (1.0 + sensitivity * 5.0)));
+    const std::size_t dust_area = labeled_maximum_dust_area(
+        base, sensitivity, request.constrained_region);
+    const std::size_t classification_dust_area = labeled_maximum_dust_area(
+        base, sensitivity, false);
     // 사용자가 ROI 로 결함을 지목한 가이드에서는 대상 스크래치를 격자로 오인해 지우지
     // 않도록 끕니다 — macOS `rejectLineGrid = !constrainedRegion`.
     const bool reject_line_grid = !request.constrained_region;
@@ -133,7 +132,7 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
             futures.push_back(std::async(
                 std::launch::async,
                 [&image, &request, &workspace, placement, sensitivity,
-                 dust_area, extended_dust_scales, cancel] {
+                 dust_area, reject_line_grid, extended_dust_scales, cancel] {
                     const auto image_started = std::chrono::steady_clock::now();
                     make_detection_image_region(
                         image,
@@ -170,6 +169,10 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                         true,
                         extended_dust_scales,
                         workspace.evidence);
+                    if (reject_line_grid) {
+                        remove_tile_local_structure_grid(
+                            workspace.tile, workspace.evidence);
+                    }
                     const auto speck_started = std::chrono::steady_clock::now();
                     workspace.evidence_microseconds = static_cast<std::uint64_t>(
                         std::chrono::duration_cast<std::chrono::microseconds>(

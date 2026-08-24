@@ -118,3 +118,6 @@ NEGAFLOW_LIGHTROOM_EXPANSION.md
 /codebase_map.md
 /codebase_technical_debt.md
 /]+
+
+# 중단된 git filter-branch 가 남긴 작업 디렉터리
+.git-rewrite/

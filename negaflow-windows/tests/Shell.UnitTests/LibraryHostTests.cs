@@ -230,6 +230,37 @@ internal static class LibraryHostTests
                 "library_host_export_completed");
             Check(exporter.CallCount == 1, "library_host_export_called_engine");
             Check(!host.IsExporting, "library_host_export_flag_clears");
+
+            int historyFailureEditEvents = 0;
+            host.FrameEdited += (_, _) => ++historyFailureEditEvents;
+            Check(
+                host.ApplyHistoryResult(new LibraryHistoryResult(
+                    null,
+                    CatalogStoreError.IoFailure,
+                    DefectSidecarError.None)) is null &&
+                host.State == LibraryHostState.Open &&
+                host.StoreError == CatalogStoreError.IoFailure &&
+                host.Frames.Count > 0 &&
+                historyFailureEditEvents == 0,
+                "library_host_history_io_failure_is_published_without_false_success");
+            Check(
+                host.ApplyHistoryResult(new LibraryHistoryResult(
+                    null,
+                    CatalogStoreError.RollbackFailed,
+                    DefectSidecarError.None)) is null &&
+                host.State == LibraryHostState.Unavailable &&
+                host.StoreError == CatalogStoreError.RollbackFailed &&
+                host.Frames.Count == 0 &&
+                host.SelectedFrameIds.Count == 0 &&
+                host.ActiveFrameId is null &&
+                historyFailureEditEvents == 0,
+                "library_host_history_rollback_failure_detaches_the_document");
+            Check(
+                host.Edit("frame-1", new LibraryFrameEdit(
+                    new ToneAdjustment(1.0, 0, 0, 0, 0, 0),
+                    null)) == LibraryFrameError.MissingId &&
+                host.Save() == CatalogStoreError.NotFound,
+                "library_host_history_rollback_failure_blocks_followup_mutation");
         }
         finally
         {

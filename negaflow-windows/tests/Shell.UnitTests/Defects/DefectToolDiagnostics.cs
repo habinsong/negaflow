@@ -22,15 +22,25 @@ internal static class DefectToolDiagnostics
     public static bool TryRun(string[] args, out int exitCode)
     {
         exitCode = 0;
+        if (args.Length == 4 && args[0] == "--defect-preview" &&
+            args[3] is "brush" or "clone")
+        {
+            exitCode = Run(args[1], args[2], null, args[3]);
+            return true;
+        }
         if (args.Length is < 3 or > 4 || args[0] != "--defect-tools")
         {
             return false;
         }
-        exitCode = Run(args[1], args[2], args.Length == 4 ? args[3] : null);
+        exitCode = Run(args[1], args[2], args.Length == 4 ? args[3] : null, null);
         return true;
     }
 
-    private static int Run(string storageRoot, string frameId, string? infraredPath)
+    private static int Run(
+        string storageRoot,
+        string frameId,
+        string? infraredPath,
+        string? toolFilter)
     {
         if (StorageRootResolver.ResolveForTests(Path.GetFullPath(storageRoot)).Roots is not
             { } roots)
@@ -65,7 +75,7 @@ internal static class DefectToolDiagnostics
 
         bool allRepaired = true;
         foreach ((string tool, DefectEditItem? item, string reason) in Build(
-                     subject, exporter, infraredPath))
+                     subject, exporter, infraredPath, toolFilter))
         {
             allRepaired &= Report(subject, exporter, tool, item, reason);
         }
@@ -75,30 +85,48 @@ internal static class DefectToolDiagnostics
     private static IEnumerable<(string Tool, DefectEditItem? Item, string Reason)> Build(
         LibraryFrameSnapshot frame,
         IDevelopExporter exporter,
-        string? infraredPath)
+        string? infraredPath,
+        string? toolFilter)
     {
-        DefectEditItem? automatic = DefectToolRecipes.Automatic(frame, exporter, out string why);
-        Elapsed("automatic");
-        yield return ("automatic", automatic, why);
+        if (toolFilter is null)
+        {
+            DefectEditItem? automatic = DefectToolRecipes.Automatic(
+                frame, exporter, out string automaticWhy);
+            Elapsed("automatic");
+            yield return ("automatic", automatic, automaticWhy);
 
-        DefectEditItem? guided = DefectToolRecipes.Guided(frame, exporter, out why);
-        Elapsed("guided");
-        yield return ("guided", guided, why);
+            DefectEditItem? guided = DefectToolRecipes.Guided(
+                frame, exporter, out string guidedWhy);
+            Elapsed("guided");
+            yield return ("guided", guided, guidedWhy);
+        }
 
-        DefectEditItem? brush = DefectToolRecipes.Brush(frame, out why);
-        yield return ("brush", brush, why);
+        if (toolFilter is null or "brush")
+        {
+            DefectEditItem? brush = DefectToolRecipes.Brush(
+                frame, out string brushWhy);
+            yield return ("brush", brush, brushWhy);
+        }
 
-        DefectEditItem? clone = DefectToolRecipes.Clone(frame, out why);
-        yield return ("clone", clone, why);
+        if (toolFilter is null or "clone")
+        {
+            DefectEditItem? clone = DefectToolRecipes.Clone(
+                frame, out string cloneWhy);
+            yield return ("clone", clone, cloneWhy);
+        }
 
-        DefectEditItem? infrared = infraredPath is null
-            ? null
-            : DefectToolRecipes.Infrared(frame, frame.SourcePath, infraredPath, out why);
+        if (toolFilter is not null)
+        {
+            yield break;
+        }
         if (infraredPath is null)
         {
-            why = "no infrared plane given";
+            yield return ("infrared", null, "no infrared plane given");
+            yield break;
         }
-        yield return ("infrared", infrared, why);
+        DefectEditItem? infrared = DefectToolRecipes.Infrared(
+            frame, frame.SourcePath, infraredPath, out string infraredWhy);
+        yield return ("infrared", infrared, infraredWhy);
     }
 
     /// <summary>

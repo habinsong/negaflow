@@ -20,9 +20,14 @@ public static class PreviewTrace
         {
             try
             {
-                return System.IO.File.Exists(System.IO.Path.Combine(
+                string localMarker = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "Negaflow", "Logs", "preview-trace.on"));
+                    "Negaflow", "Logs", "preview-trace.on");
+                string packageMarker = System.IO.Path.Combine(
+                    AppContext.BaseDirectory,
+                    "preview-trace.on");
+                return System.IO.File.Exists(localMarker) ||
+                    System.IO.File.Exists(packageMarker);
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException
                 or ArgumentException or NotSupportedException or PathTooLongException)

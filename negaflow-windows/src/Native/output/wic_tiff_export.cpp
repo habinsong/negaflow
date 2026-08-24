@@ -58,10 +58,24 @@ void discard_staging(
 
 }  // namespace
 
-WicTiffExportResult export_working_to_srgb16_tiff(
+namespace {
+
+WicTiffExportResult export_working_to_tiff(
     const negaflow::imaging::WorkingImage& working,
     const std::filesystem::path& destination,
-    const WicTiffExportLimits& limits) noexcept {
+    const WicTiffExportLimits& requested_limits,
+    const bool linear_transfer) noexcept {
+    WicTiffExportLimits limits = requested_limits;
+    if (linear_transfer) {
+        limits.bits_per_sample = 16U;
+        limits.color_space = negaflow::color::OutputColorSpace::srgb;
+        limits.compression = WicTiffCompression::none;
+        limits.output_dpi = 0U;
+        limits.metadata_policy = ExportMetadataPolicy::minimal;
+        limits.metadata = {};
+        limits.conversion.preserve_alpha = false;
+        limits.conversion.encode_transfer = false;
+    }
     WicTiffExportResult result{};
     // 색공간은 변환과 프로파일 양쪽이 함께 알아야 합니다. 한쪽만 바뀌면 픽셀과 프로파일이
     // 서로 다른 공간을 가리키게 됩니다.
@@ -122,7 +136,8 @@ WicTiffExportResult export_working_to_srgb16_tiff(
             limits.max_color_profile_bytes,
             color_context,
             profile_bytes,
-            result.native_error_code)) {
+            result.native_error_code,
+            linear_transfer)) {
             case detail::StandardSrgbStatus::ok:
                 break;
             case detail::StandardSrgbStatus::unavailable:
@@ -243,6 +258,22 @@ WicTiffExportResult export_working_to_srgb16_tiff(
         result.status = WicTiffExportStatus::encode_failed;
         return result;
     }
+}
+
+}  // namespace
+
+WicTiffExportResult export_working_to_srgb16_tiff(
+    const negaflow::imaging::WorkingImage& working,
+    const std::filesystem::path& destination,
+    const WicTiffExportLimits& limits) noexcept {
+    return export_working_to_tiff(working, destination, limits, false);
+}
+
+WicTiffExportResult export_working_to_linear16_tiff(
+    const negaflow::imaging::WorkingImage& working,
+    const std::filesystem::path& destination,
+    const WicTiffExportLimits& limits) noexcept {
+    return export_working_to_tiff(working, destination, limits, true);
 }
 
 const char* wic_tiff_export_status_name(const WicTiffExportStatus status) noexcept {

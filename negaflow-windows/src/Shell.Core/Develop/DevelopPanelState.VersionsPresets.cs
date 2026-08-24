@@ -32,8 +32,19 @@ public sealed partial class DevelopPanelState
     /// macOS <c>AppModel.createVirtualCopy(from:)</c> — 같은 원본을 가리키는 사본을 하나
     /// 만듭니다. 원본의 recipe·기록·스냅샷을 그대로 물려받되 파일은 복사하지 않습니다.
     /// </summary>
-    public bool CreateVirtualCopy() =>
-        SelectedFrame is { } frame && host.CreateVirtualCopy(frame.Id) is { Length: > 0 };
+    public bool CreateVirtualCopy()
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return false;
+        }
+        if (host.CreateVirtualCopy(frame.Id) is not { Length: > 0 } copyId)
+        {
+            return false;
+        }
+        host.SetSelection([copyId], copyId);
+        return string.Equals(SelectedFrame?.Id, copyId, StringComparison.Ordinal) || Select(copyId);
+    }
 
     /// <summary>
     /// 지금 recipe 를 기록으로 남깁니다. macOS 는 이름을 순번으로 붙이므로(`기록 N`) 다음

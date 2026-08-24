@@ -58,9 +58,11 @@ public sealed partial class PreviewCoordinator
     private readonly Func<double>? displayTargetPixels;
     private readonly bool settleEnabled;
     private int developRevision;
+    private int minimumDeliveryRevision;
 
     private bool isRunning;
     private PreviewRequest? pending;
+    private TaskCompletionSource? idleSignal;
     // The handle for the render currently inside the engine. Held under the same lock as
     // `pending` so a request that queues itself also cancels what it just superseded.
     private DevelopRun? activeRun;
@@ -144,6 +146,23 @@ public sealed partial class PreviewCoordinator
             {
                 return isRunning;
             }
+        }
+    }
+
+    /// <summary>
+    /// 대기 요청을 버리고 현재 native preview가 파일 손잡이를 놓을 때까지 기다립니다.
+    /// 종료 시 cleaned raw를 같은 경로에 교체하기 전에만 사용합니다.
+    /// </summary>
+    public Task CancelAndDrainAsync()
+    {
+        lock (gate)
+        {
+            pending = null;
+            minimumDeliveryRevision = checked(developRevision + 1);
+            activeRun?.Cancel();
+            return isRunning && idleSignal is not null
+                ? idleSignal.Task
+                : Task.CompletedTask;
         }
     }
 
@@ -246,7 +265,22 @@ public sealed partial class PreviewCoordinator
     /// </summary>
     public Task RequestAsync(
         LibraryFrameSnapshot frame,
-        Action<PreviewOutcome> onCompleted)
+        Action<PreviewOutcome> onCompleted) =>
+        RequestAsync(frame, onCompleted, replaceActive: false);
+
+    /// <summary>
+    /// 화면이 이미 지난 상태로 돌아가야 할 때, 진행 중이거나 UI 큐에 든 이전 결과까지 폐기하고
+    /// 이 요청부터 다시 배달합니다.
+    /// </summary>
+    public Task RequestReplacingAsync(
+        LibraryFrameSnapshot frame,
+        Action<PreviewOutcome> onCompleted) =>
+        RequestAsync(frame, onCompleted, replaceActive: true);
+
+    private Task RequestAsync(
+        LibraryFrameSnapshot frame,
+        Action<PreviewOutcome> onCompleted,
+        bool replaceActive)
     {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(onCompleted);
@@ -258,12 +292,17 @@ public sealed partial class PreviewCoordinator
             // 요청마다 하나씩 올라가는 번호입니다. 배달된 그림이 어느 편집 상태의 것인지
             // 화면이 판정하는 유일한 근거입니다.
             request = new PreviewRequest(frame, onCompleted, ++developRevision);
+            if (replaceActive)
+            {
+                minimumDeliveryRevision = request.Revision;
+            }
             PreviewTrace.Write(
                 "RequestAsync rev=" + request.Revision +
                 " frame=" + frame.Id +
                 " running=" + isRunning +
                 " active=" + (activeFrameId ?? "null") +
-                " settled=" + activeRunIsSettled);
+                " settled=" + activeRunIsSettled +
+                " replace=" + replaceActive);
             if (isRunning)
             {
                 pending = request;
@@ -286,7 +325,7 @@ public sealed partial class PreviewCoordinator
                 // 덮거나 전환이 한 장만큼 늦습니다.
                 bool differentFrame = activeFrameId is not null &&
                     !string.Equals(activeFrameId, frame.Id, StringComparison.Ordinal);
-                if (activeRunIsSettled || differentFrame)
+                if (activeRunIsSettled || differentFrame || replaceActive)
                 {
                     PreviewTrace.Write(
                         "cancel issued rev=" + request.Revision +
@@ -297,6 +336,8 @@ public sealed partial class PreviewCoordinator
                 return Task.CompletedTask;
             }
             isRunning = true;
+            idleSignal = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
             activeFrameId = frame.Id;
             // Created here rather than inside the render so that `activeRun` is never null
             // while `isRunning` is true. Otherwise a request arriving in the gap between
@@ -349,6 +390,8 @@ public sealed partial class PreviewCoordinator
                         activeRun = null;
                         activeRunIsSettled = false;
                         activeFrameId = null;
+                        idleSignal?.TrySetResult();
+                        idleSignal = null;
                     }
                     else
                     {
@@ -375,6 +418,8 @@ public sealed partial class PreviewCoordinator
                     activeRun = null;
                     activeRunIsSettled = false;
                     activeFrameId = null;
+                    idleSignal?.TrySetResult();
+                    idleSignal = null;
                 }
             }
             if (retry is null)

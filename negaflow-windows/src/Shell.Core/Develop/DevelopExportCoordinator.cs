@@ -25,23 +25,27 @@ public interface IDevelopExporter
         SoftProofSettings? softProof = null,
         bool clippingOverlay = false);
 
-    /// <summary>
-    /// GrainMend 가 무엇을 고칠지 재기만 합니다. 빈 <paramref name="mask"/> 로 부르면 필요한
-    /// 크기만 알려 줍니다.
-    /// </summary>
+    /// <summary>GrainMend 가 무엇을 고칠지 재기만 합니다.</summary>
     GrainMendDetectionResult DetectGrainMend(
         DevelopExportRequest request,
-        byte[] mask,
         DefectRect rawRoi,
         GrainMendDetectionOptions options,
         DevelopRun? run = null);
 }
 
+public interface IDefectBakeExporter
+{
+    DevelopExportResult BakeDefects(DevelopExportRequest request);
+}
+
 /// <summary>제품 구현. 블로킹이며 워커 스레드에서만 불러야 합니다.</summary>
-public sealed class NativeDevelopExporterAdapter : IDevelopExporter
+public sealed class NativeDevelopExporterAdapter : IDevelopExporter, IDefectBakeExporter
 {
     public DevelopExportResult Run(DevelopExportRequest request) =>
         NativeDevelopExporter.Run(request);
+
+    public DevelopExportResult BakeDefects(DevelopExportRequest request) =>
+        NativeDevelopExporter.BakeDefects(request);
 
     public DevelopExportResult Preview(
         DevelopExportRequest request,
@@ -76,13 +80,11 @@ public sealed class NativeDevelopExporterAdapter : IDevelopExporter
 
     public GrainMendDetectionResult DetectGrainMend(
         DevelopExportRequest request,
-        byte[] mask,
         DefectRect rawRoi,
         GrainMendDetectionOptions options,
         DevelopRun? run = null) =>
         NativeDevelopExporter.DetectGrainMend(
             request,
-            mask,
             rawRoi.X,
             rawRoi.Y,
             rawRoi.Width,

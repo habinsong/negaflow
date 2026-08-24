@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using Negaflow.Catalog;
 using Windows.Foundation;
 using Windows.System;
 using Windows.UI;
@@ -126,7 +127,7 @@ public sealed partial class FlatbedScanAreaOverlay
             return;
         }
         draggingRegionId = regionId;
-        dragStartRect = FlatbedOverlayGeometry.ScreenRect(region, ImageFrame);
+        dragStartRect = ScreenRect(region);
         dragStartPoint = e.GetCurrentPoint(Host).Position;
         _ = body.CapturePointer(e.Pointer);
         e.Handled = true;
@@ -173,7 +174,7 @@ public sealed partial class FlatbedScanAreaOverlay
         }
         _ = Focus(FocusState.Pointer);
         resizingHandle = tag;
-        dragStartRect = FlatbedOverlayGeometry.ScreenRect(region, ImageFrame);
+        dragStartRect = ScreenRect(region);
         _ = grip.CapturePointer(e.Pointer);
         e.Handled = true;
     }
@@ -214,6 +215,16 @@ public sealed partial class FlatbedScanAreaOverlay
         }
         bool shift = IsDown(VirtualKey.Shift);
         bool control = IsDown(VirtualKey.Control);
+        if (e.Key is VirtualKey.Delete or VirtualKey.Back)
+        {
+            if (session.DeleteSelectedRegion())
+            {
+                LayoutRegions();
+                NotifyChanged();
+                e.Handled = true;
+            }
+            return;
+        }
         // Ctrl+C / Ctrl+V 는 macOS 의 Cmd+C / Cmd+V 자리입니다. 포커스가 이 오버레이에
         // 있을 때만 살아 있어 옆 글상자의 복사를 빼앗지 않습니다.
         if (control && e.Key == VirtualKey.C)
@@ -246,7 +257,17 @@ public sealed partial class FlatbedScanAreaOverlay
         {
             return;
         }
-        if (session.NudgeSelectedRegion(dx, dy, shift))
+        bool transformed = TryPreviewTransform(
+            out ImageTransformRecipe transform,
+            out uint sourceWidth,
+            out uint sourceHeight);
+        if (session.NudgeSelectedRegion(
+                dx,
+                dy,
+                shift,
+                transformed ? transform : null,
+                sourceWidth,
+                sourceHeight))
         {
             LayoutRegions();
             NotifyChanged();
@@ -285,7 +306,11 @@ public sealed partial class FlatbedScanAreaOverlay
     private FlatbedScanRegion ToRegion(string regionId, FlatbedOverlayRect screenRect)
     {
         (double x, double y, double width, double height) =
-            FlatbedOverlayGeometry.UnitRect(screenRect, ImageFrame);
+            TryPreviewTransform(out ImageTransformRecipe transform, out uint sourceWidth,
+                out uint sourceHeight)
+                ? FlatbedOverlayGeometry.UnitRect(
+                    screenRect, ImageFrame, transform, sourceWidth, sourceHeight)
+                : FlatbedOverlayGeometry.UnitRect(screenRect, ImageFrame);
         return new FlatbedScanRegion(regionId, x, y, width, height).Clamped();
     }
 
@@ -296,10 +321,18 @@ public sealed partial class FlatbedScanAreaOverlay
         {
             return null;
         }
-        (double startX, double startY) =
-            FlatbedOverlayGeometry.UnitPoint(start.X, start.Y, ImageFrame);
-        (double currentX, double currentY) =
-            FlatbedOverlayGeometry.UnitPoint(current.X, current.Y, ImageFrame);
+        bool transformed = TryPreviewTransform(
+            out ImageTransformRecipe transform,
+            out uint sourceWidth,
+            out uint sourceHeight);
+        (double startX, double startY) = transformed
+            ? FlatbedOverlayGeometry.UnitPoint(
+                start.X, start.Y, ImageFrame, transform, sourceWidth, sourceHeight)
+            : FlatbedOverlayGeometry.UnitPoint(start.X, start.Y, ImageFrame);
+        (double currentX, double currentY) = transformed
+            ? FlatbedOverlayGeometry.UnitPoint(
+                current.X, current.Y, ImageFrame, transform, sourceWidth, sourceHeight)
+            : FlatbedOverlayGeometry.UnitPoint(current.X, current.Y, ImageFrame);
         FlatbedScanRegion drawn = FlatbedScanRegion.Create(
             Math.Min(startX, currentX),
             Math.Min(startY, currentY),

@@ -67,6 +67,10 @@ void test_rounded_short_axis_keeps_the_uniform_lanczos_scale();
 void test_strength_zero_is_bit_exact_and_partial_strength_blends();
 
 // 검출 경로: 민감도, 전면 구조 필터, 타일 stitch, 라벨 검출.
+void test_labeled_integer_gate_boundaries_match_macos();
+void test_tile_local_structure_grid_precedes_speck_merge();
+void test_review_preserves_exact_component_ownership_and_acceptance();
+void test_review_nearest_hit_matches_macos_ring_order();
 void test_detection_sensitivity_controls_candidate_thresholds();
 void test_whole_frame_structure_filter_preserves_grid_lines();
 void test_stitch_keeps_highest_confidence_classification();

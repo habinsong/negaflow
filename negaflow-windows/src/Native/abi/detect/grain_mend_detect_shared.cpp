@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <utility>
 
 using namespace negaflow::abi::detail;
 
@@ -33,7 +34,8 @@ nf_status_t detect_grain_mend_shared(
     double* const automatic_candidate_pixel_fraction,
     nf_develop_run_state_v1* const run_state,
     nf_grain_mend_detection_v2* const detection,
-    nf_develop_export_result_v3* const result) {
+    nf_develop_export_result_v3* const result,
+    negaflow::pipeline::GrainMendDetectionOutcome* const retained_detection) {
     nf_status_t status = NF_STATUS_OK;
     if (!prepare_result_v27(request, result, status)) {
         return status;
@@ -103,7 +105,7 @@ nf_status_t detect_grain_mend_shared(
         parameters->v2.v1.roi_height,
     };
     const auto started = std::chrono::steady_clock::now();
-    const negaflow::pipeline::GrainMendDetectionOutcome detected =
+    negaflow::pipeline::GrainMendDetectionOutcome detected =
         negaflow::pipeline::develop_detect_grain_mend(
             pipeline_request,
             mask,
@@ -203,6 +205,9 @@ nf_status_t detect_grain_mend_shared(
     }
     write_outcome_v3(
         detected.outcome, elapsed_microseconds(started, finished), *result);
+    if (retained_detection != nullptr && result->succeeded != 0U) {
+        *retained_detection = std::move(detected);
+    }
     return NF_STATUS_OK;
 }
 

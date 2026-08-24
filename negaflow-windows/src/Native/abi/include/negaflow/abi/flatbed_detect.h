@@ -42,6 +42,8 @@ typedef struct nf_flatbed_frame_detection_v1 {
     double width;
     double height;
     double confidence;
+    /* Optional tail since 2026-08-24. Older 56-byte callers receive the common fields. */
+    double straighten_angle;
 } nf_flatbed_frame_detection_v1;
 
 typedef struct nf_flatbed_frame_grid_handle_v1 nf_flatbed_frame_grid_handle_v1;
@@ -56,6 +58,15 @@ NF_API nf_status_t NF_CALL nf_detect_flatbed_frame_grid_v1(
     uint32_t height,
     double physical_width_mm,
     double physical_height_mm,
+    uint32_t format,
+    const uint32_t* cancel_requested,
+    nf_flatbed_frame_grid_summary_v1* summary,
+    nf_flatbed_frame_grid_handle_v1** handle);
+NF_API nf_status_t NF_CALL nf_detect_flatbed_frame_edges_v1(
+    const float* luminance,
+    uint32_t stride_bytes,
+    uint32_t width,
+    uint32_t height,
     uint32_t format,
     const uint32_t* cancel_requested,
     nf_flatbed_frame_grid_summary_v1* summary,

@@ -51,6 +51,7 @@ internal static class NativeDevelopAbiSizes
     internal const int RequestV33Size = 5088;
     internal const int RequestV34Size = 5104;
     internal const int RequestV35Size = 5120;
+    internal const int RequestV36Size = 5136;
     internal const int ResultV2Size = 152;
     internal const int ResultV3Size = 160;
     internal const int FilmBaseMeasurementV1Size = 184;
@@ -63,4 +64,7 @@ internal static class NativeDevelopAbiSizes
     internal const int GrainMendDetectParametersV2Size = 72;
     internal const int GrainMendDetectParametersV3Size = 80;
     internal const int GrainMendDetectionV2Size = 56;
+    internal const int GrainMendDetectionV4Size = 88;
+    internal const int GrainMendReviewHitV1Size = 16;
+    internal const int GrainMendAcceptedRegionV1Size = 40;
 }

@@ -287,3 +287,12 @@ internal unsafe struct NativeDevelopExportRequestV35
     internal uint DefectRecipeSha256Size;
     internal uint DefectRecipeIdentityReserved;
 }
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV36
+{
+    internal NativeDevelopExportRequestV35 V35;
+    internal byte* DefectRecipeAppendPrefixSha256;
+    internal uint DefectRecipeAppendPrefixSha256Size;
+    internal uint DefectRecipeAppendPrefixEditCount;
+}

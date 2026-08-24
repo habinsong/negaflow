@@ -10,7 +10,8 @@ public static class GrainMendOverlayRenderer
         int previewWidth,
         int previewHeight,
         DefectEditItem edit,
-        GrainMendReviewSession? review)
+        GrainMendReviewSession? review,
+        double bitmapPixelsPerDisplayPoint = 1.0)
     {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(edit);
@@ -24,7 +25,8 @@ public static class GrainMendOverlayRenderer
                 previewWidth,
                 previewHeight,
                 edit.Preview,
-                component => review?.IsComponentExcluded(component) == true);
+                component => review?.IsComponentExcluded(component) == true,
+                bitmapPixelsPerDisplayPoint);
             if (classified is not null)
             {
                 return classified;

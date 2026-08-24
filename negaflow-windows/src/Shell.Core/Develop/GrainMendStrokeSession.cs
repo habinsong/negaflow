@@ -38,11 +38,18 @@ public sealed class GrainMendStrokeSession
     private readonly List<DefectStroke> painted = [];
     private DefectPoint? cloneSourceAnchor;
     private DefectPoint? cloneAlignedOffsetRaw;
+    private GrainMendTool selectedTool;
+    private string? currentFrameId;
+    private string? toolFrameId;
     private double brushThickness = DefaultBrushThickness;
     private double cloneDiameterPixels = DefaultCloneDiameterPixels;
     private double cloneHardness = DefaultCloneHardness;
 
-    public GrainMendTool Tool { get; private set; }
+    public GrainMendTool Tool =>
+        currentFrameId is not null &&
+        string.Equals(currentFrameId, toolFrameId, StringComparison.Ordinal)
+            ? selectedTool
+            : GrainMendTool.None;
 
     public bool IsDragging { get; private set; }
 
@@ -102,11 +109,48 @@ public sealed class GrainMendStrokeSession
 
     public void Select(GrainMendTool tool)
     {
-        if (Tool == tool)
+        if (tool == GrainMendTool.None)
+        {
+            if (selectedTool == GrainMendTool.None)
+            {
+                return;
+            }
+            selectedTool = GrainMendTool.None;
+            toolFrameId = null;
+            ClearTransientInput();
+            return;
+        }
+        if (currentFrameId is null || Tool == tool)
         {
             return;
         }
-        Tool = tool;
+        selectedTool = tool;
+        toolFrameId = currentFrameId;
+        ClearTransientInput();
+    }
+
+    /// <summary>
+    /// macOS 캔버스는 frame ID로 다시 만들어져 draft/source/current stroke를 다른 사진에 넘기지
+    /// 않습니다. Brush/Clone tool owner만 원래 frame ID에 남아 돌아왔을 때 빈 도구로 다시 보입니다.
+    /// Guided는 frame 전환 즉시 끝납니다.
+    /// </summary>
+    public void ChangeFrame(string? frameId)
+    {
+        if (string.Equals(currentFrameId, frameId, StringComparison.Ordinal))
+        {
+            return;
+        }
+        currentFrameId = frameId;
+        ClearTransientInput();
+        if (selectedTool == GrainMendTool.Guided || frameId is null)
+        {
+            selectedTool = GrainMendTool.None;
+            toolFrameId = null;
+        }
+    }
+
+    private void ClearTransientInput()
+    {
         stroke.Clear();
         painted.Clear();
         cloneSourceAnchor = null;
@@ -147,15 +191,12 @@ public sealed class GrainMendStrokeSession
         {
             return false;
         }
-        foreach (DefectStroke entry in painted)
+        DefectStroke[] pending = [.. painted];
+        error = panel.AddBrushStrokes(pending);
+        if (error == LibraryFrameError.None)
         {
-            error = panel.AddBrushStroke([.. entry.Points], entry.Thickness);
-            if (error != LibraryFrameError.None)
-            {
-                return true;
-            }
+            painted.Clear();
         }
-        painted.Clear();
         return true;
     }
 

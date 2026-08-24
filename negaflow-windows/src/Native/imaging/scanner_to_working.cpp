@@ -29,16 +29,13 @@ constexpr std::uint32_t color_space_profile_signature = 0x73706163U;
         return ScannerToWorkingStatus::invalid_dimensions;
     }
 
-    std::uint64_t channels = 0U;
-    switch (decoded.layout) {
-        case negaflow::imageio::DecodedPixelLayout::rgb16:
-            channels = 3U;
-            break;
-        case negaflow::imageio::DecodedPixelLayout::rgba16:
-            channels = 4U;
-            break;
-        default:
-            return ScannerToWorkingStatus::invalid_argument;
+    // rgb16·rgba16 과 함께 스캐너 Gray 의 1채널 `gray16` 도 받습니다. macOS 는
+    // `CIImage(cgImage:)` 가 회색 CGImage 를 그대로 받으므로, 여기서 거부하면 Windows 만
+    // Gray 스캔을 통째로 못 읽습니다. `channel_count` 는 아는 layout 만 양수를 돌려주므로
+    // 알 수 없는 값은 그대로 걸립니다.
+    const std::uint64_t channels = negaflow::imageio::channel_count(decoded.layout);
+    if (channels == 0U) {
+        return ScannerToWorkingStatus::invalid_argument;
     }
     const std::uint64_t minimum_stride =
         static_cast<std::uint64_t>(decoded.width) * channels * sizeof(std::uint16_t);
@@ -68,7 +65,7 @@ constexpr std::uint32_t color_space_profile_signature = 0x73706163U;
         return ScannerToWorkingStatus::memory_limit_exceeded;
     }
 
-    if (decoded.layout == negaflow::imageio::DecodedPixelLayout::rgb16) {
+    if (decoded.layout != negaflow::imageio::DecodedPixelLayout::rgba16) {
         return decoded.alpha_mode == negaflow::imageio::AlphaMode::opaque
                    ? ScannerToWorkingStatus::ok
                    : ScannerToWorkingStatus::unsupported_alpha;
@@ -138,6 +135,8 @@ constexpr std::uint32_t color_space_profile_signature = 0x73706163U;
     WorkingImage& output) {
     constexpr float u16_scale = 1.0F / 65'535.0F;
     const std::size_t channels = negaflow::imageio::channel_count(decoded.layout);
+    const negaflow::imageio::RgbSampleOffsets rgb =
+        negaflow::imageio::rgb_sample_offsets(decoded.layout);
     const std::size_t source_stride = decoded.stride_bytes / sizeof(std::uint16_t);
     output.width = decoded.width;
     output.height = decoded.height;
@@ -154,16 +153,16 @@ constexpr std::uint32_t color_space_profile_signature = 0x73706163U;
             destination[column] = {
                 negaflow::color::srgb_encoded_to_linear(static_cast<float>(
                     decoded.alpha_mode == negaflow::imageio::AlphaMode::associated
-                        ? unassociate_component(source[offset], source[offset + 3U])
-                        : source[offset]) * u16_scale),
+                        ? unassociate_component(source[offset + rgb.red], source[offset + 3U])
+                        : source[offset + rgb.red]) * u16_scale),
                 negaflow::color::srgb_encoded_to_linear(static_cast<float>(
                     decoded.alpha_mode == negaflow::imageio::AlphaMode::associated
-                        ? unassociate_component(source[offset + 1U], source[offset + 3U])
-                        : source[offset + 1U]) * u16_scale),
+                        ? unassociate_component(source[offset + rgb.green], source[offset + 3U])
+                        : source[offset + rgb.green]) * u16_scale),
                 negaflow::color::srgb_encoded_to_linear(static_cast<float>(
                     decoded.alpha_mode == negaflow::imageio::AlphaMode::associated
-                        ? unassociate_component(source[offset + 2U], source[offset + 3U])
-                        : source[offset + 2U]) * u16_scale),
+                        ? unassociate_component(source[offset + rgb.blue], source[offset + 3U])
+                        : source[offset + rgb.blue]) * u16_scale),
                 decoded_alpha(decoded, source, offset),
             };
         }

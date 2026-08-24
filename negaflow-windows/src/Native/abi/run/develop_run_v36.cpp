@@ -1,0 +1,91 @@
+#include "negaflow/abi/develop_entry.h"
+
+#include "request/develop_request_map.h"
+#include "result/develop_result_write.h"
+#include "support/abi_text.h"
+
+#include "negaflow/pipeline/develop_export.h"
+
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+
+using namespace negaflow::abi::detail;
+
+nf_status_t NF_CALL nf_develop_preview_v36(
+    const nf_develop_export_request_v36* const request,
+    const nf_soft_proof_v1* const soft_proof,
+    const uint32_t maximum_width,
+    const uint32_t maximum_height,
+    uint8_t* const pixels,
+    const uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* const run_state,
+    nf_develop_export_result_v3* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v35(
+            request == nullptr ? nullptr : &request->v35,
+            result,
+            status)) {
+        return status;
+    }
+    if (request->v35.v34.v33.v32.v31.v30.v29.v28.v27.v26.v25.v24.v21.v20.v19.v18
+            .v17.v16.v15.v14.v13.v12.v11.v10.v9.v8.struct_size <
+            static_cast<std::uint32_t>(sizeof(*request))) {
+        return NF_STATUS_STRUCT_TOO_SMALL;
+    }
+    if (pixels == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+
+    negaflow::pipeline::DevelopPreviewProof proof{};
+    if (soft_proof != nullptr) {
+        if (soft_proof->struct_size <
+            static_cast<std::uint32_t>(sizeof(*soft_proof))) {
+            return NF_STATUS_STRUCT_TOO_SMALL;
+        }
+        proof.enabled = soft_proof->enabled != 0U;
+        proof.simulate_paper_and_black_ink =
+            soft_proof->simulate_paper_and_black_ink != 0U;
+        proof.warn_out_of_gamut = soft_proof->warn_out_of_gamut != 0U;
+        for (std::size_t channel = 0U; channel < 3U; ++channel) {
+            proof.paper.white[channel] =
+                static_cast<double>(soft_proof->paper_white_rgb[channel]);
+            proof.paper.black[channel] =
+                static_cast<double>(soft_proof->black_ink_rgb[channel]);
+        }
+        if (soft_proof->struct_size >=
+            static_cast<std::uint32_t>(
+                offsetof(nf_soft_proof_v1, clipping_overlay) +
+                sizeof(soft_proof->clipping_overlay))) {
+            proof.clipping_overlay = soft_proof->clipping_overlay != 0U;
+        }
+    }
+
+    negaflow::pipeline::DevelopRunControl control{};
+    if (!prepare_run_state(run_state, control, status)) {
+        return status;
+    }
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    nf_develop_export_result_v2 mapping_result{};
+    mapping_result.struct_size = static_cast<std::uint32_t>(sizeof(mapping_result));
+    copy_failure_name("ok", mapping_result.failure_name);
+    if (!map_request_v36(*request, false, pipeline_request, mapping_result)) {
+        write_request_rejection_v3(mapping_result, *result);
+        return NF_STATUS_OK;
+    }
+
+    const auto started = std::chrono::steady_clock::now();
+    const auto outcome = negaflow::pipeline::develop_preview(
+        pipeline_request,
+        maximum_width,
+        maximum_height,
+        pixels,
+        static_cast<std::size_t>(pixel_capacity_bytes),
+        control,
+        proof);
+    write_outcome_v3(
+        outcome,
+        elapsed_microseconds(started, std::chrono::steady_clock::now()),
+        *result);
+    return NF_STATUS_OK;
+}

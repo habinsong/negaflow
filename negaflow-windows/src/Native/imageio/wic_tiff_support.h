@@ -103,7 +103,8 @@ void discard_samples(WicTiffDecodeResult& result) noexcept;
 
 // probe 가 읽은 배치를 이 디코더가 다룰 수 있는가.
 [[nodiscard]] bool is_supported_layout(
-    const negaflow::core::TiffProbeInfo& info) noexcept;
+    const negaflow::core::TiffProbeInfo& info,
+    bool allow_orientation) noexcept;
 
 [[nodiscard]] WicPixelFormat classify_pixel_format(const GUID& format) noexcept;
 

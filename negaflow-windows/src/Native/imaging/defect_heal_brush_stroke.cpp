@@ -1,5 +1,7 @@
 #include "defect_heal_brush_stroke.h"
 
+#include "negaflow/core/parallel_rows.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -137,26 +139,32 @@ std::vector<float> rasterize_mask(
         0.5,
         chunk.thickness * static_cast<double>(
             std::min(image_width, image_height)) * 0.5);
-    for (int y = 0; y < height; ++y) {
-        const double pixel_y = static_cast<double>(bounds.top + y) + 0.5;
-        for (int x = 0; x < width; ++x) {
-            const double pixel_x = static_cast<double>(bounds.left + x) + 0.5;
-            double distance = std::hypot(
-                pixel_x - points.front().x,
-                pixel_y - points.front().y);
-            for (std::size_t point = 1U; point < points.size(); ++point) {
-                distance = std::min(
-                    distance,
-                    point_segment_distance(
-                        pixel_x,
-                        pixel_y,
-                        points[point - 1U],
-                        points[point]));
+    negaflow::core::for_each_row_block(
+        static_cast<std::uint32_t>(height),
+        static_cast<std::uint64_t>(width) * height *
+            std::max<std::size_t>(1U, points.size()),
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
+                const double pixel_y = static_cast<double>(bounds.top) + y + 0.5;
+                for (int x = 0; x < width; ++x) {
+                    const double pixel_x = static_cast<double>(bounds.left + x) + 0.5;
+                    double distance = std::hypot(
+                        pixel_x - points.front().x,
+                        pixel_y - points.front().y);
+                    for (std::size_t point = 1U; point < points.size(); ++point) {
+                        distance = std::min(
+                            distance,
+                            point_segment_distance(
+                                pixel_x,
+                                pixel_y,
+                                points[point - 1U],
+                                points[point]));
+                    }
+                    mask[static_cast<std::size_t>(y) * width + x] =
+                        static_cast<float>(std::clamp(radius + 0.5 - distance, 0.0, 1.0));
+                }
             }
-            mask[static_cast<std::size_t>(y) * width + x] =
-                static_cast<float>(std::clamp(radius + 0.5 - distance, 0.0, 1.0));
-        }
-    }
+        });
     return mask;
 }
 

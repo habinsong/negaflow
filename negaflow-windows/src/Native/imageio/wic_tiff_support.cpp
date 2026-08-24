@@ -35,7 +35,9 @@ void discard_samples(WicTiffDecodeResult& result) noexcept {
     return true;
 }
 
-[[nodiscard]] bool is_supported_layout(const negaflow::core::TiffProbeInfo& info) noexcept {
+[[nodiscard]] bool is_supported_layout(
+    const negaflow::core::TiffProbeInfo& info,
+    const bool allow_orientation) noexcept {
     // 8 and 16 bits per channel, and nothing in between. WIC widens 8-bit samples to the
     // 16-bit target by bit replication (v * 257), which is exactly v / 255 once the
     // working conversion divides by 65535 — so the shallower file loses no accuracy on
@@ -52,7 +54,7 @@ void discard_samples(WicTiffDecodeResult& result) noexcept {
     if (info.width > std::numeric_limits<UINT>::max() ||
         info.height > std::numeric_limits<UINT>::max() ||
         (!grayscale && !rgb) || info.planar_configuration != 1U ||
-        info.orientation != 1U ||
+        (!allow_orientation && info.orientation != 1U) ||
         (!eight_bit && !sixteen_bit) ||
         !all_u16_values_equal(info.sample_format, info.sample_format_count, 1U) ||
         (info.compression != 1U && info.compression != 5U && info.compression != 8U)) {

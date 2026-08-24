@@ -32,8 +32,32 @@ internal static class PreviewOrderingTests
     {
         VerifyLastEditWinsAcrossAQueuedDispatcher();
         VerifySwitchingFramesCancelsThePreviousInteractive();
+        VerifyTerminationCancelsAndDrainsPreview();
         VerifyLastQueuedEditWinsWhileFirstIsHeld();
         VerifyLastQueuedFrameWinsWhileFirstIsHeld();
+    }
+
+    private static void VerifyTerminationCancelsAndDrainsPreview()
+    {
+        ManualResetEventSlim gate = new(false);
+        FakeExporter exporter = new(_ => OkResult(), gate);
+        PreviewCoordinator coordinator = new(
+            exporter,
+            new FakeDispatcher(accepts: true),
+            64,
+            64);
+        Task started = coordinator.RequestAsync(FrameWithExposure(0.1), _ => { });
+        SpinWait.SpinUntil(() => Volatile.Read(ref exporter.CallCount) == 1, 5000);
+        _ = coordinator.RequestAsync(FrameWithExposure(0.2), _ => { });
+
+        Task drained = coordinator.CancelAndDrainAsync();
+        bool completed = drained.Wait(TimeSpan.FromSeconds(5));
+        started.GetAwaiter().GetResult();
+        Check(completed &&
+              exporter.CancelledCount == 1 &&
+              exporter.CallCount == 1 &&
+              !coordinator.IsRendering,
+            "preview_termination_cancels_active_and_discards_pending");
     }
 
     /// <summary>배달을 모아 두었다가 한꺼번에 흘리는 dispatcher — 실제 UI 큐와 같은 순서입니다.</summary>
@@ -116,7 +140,6 @@ internal static class PreviewOrderingTests
 
         public GrainMendDetectionResult DetectGrainMend(
             DevelopExportRequest request,
-            byte[] mask,
             DefectRect rawRoi,
             GrainMendDetectionOptions options,
             DevelopRun? run = null) =>
@@ -164,7 +187,6 @@ internal static class PreviewOrderingTests
 
         public GrainMendDetectionResult DetectGrainMend(
             DevelopExportRequest request,
-            byte[] mask,
             DefectRect rawRoi,
             GrainMendDetectionOptions options,
             DevelopRun? run = null) =>

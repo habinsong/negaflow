@@ -442,6 +442,31 @@ nf_status_t NF_CALL nf_develop_export_v35(
     return NF_STATUS_OK;
 }
 
+nf_status_t NF_CALL nf_develop_bake_defects_v1(
+    const nf_develop_export_request_v35* const request,
+    nf_develop_run_state_v1* const run_state,
+    nf_develop_export_result_v3* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v35(request, result, status)) return status;
+    negaflow::pipeline::DevelopRunControl control{};
+    if (!prepare_run_state(run_state, control, status)) return status;
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    nf_develop_export_result_v2 mapping_result{};
+    mapping_result.struct_size = static_cast<std::uint32_t>(sizeof(mapping_result));
+    copy_failure_name("ok", mapping_result.failure_name);
+    if (!map_request_v35(*request, true, pipeline_request, mapping_result)) {
+        write_request_rejection_v3(mapping_result, *result);
+        return NF_STATUS_OK;
+    }
+    const auto started = std::chrono::steady_clock::now();
+    const auto outcome = negaflow::pipeline::bake_defect_recipe(pipeline_request, control);
+    write_outcome_v3(
+        outcome,
+        elapsed_microseconds(started, std::chrono::steady_clock::now()),
+        *result);
+    return NF_STATUS_OK;
+}
+
 nf_status_t NF_CALL nf_develop_preview_v35(
     const nf_develop_export_request_v35* const request,
     const nf_soft_proof_v1* const soft_proof,

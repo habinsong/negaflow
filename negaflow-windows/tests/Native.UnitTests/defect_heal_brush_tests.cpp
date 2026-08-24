@@ -154,12 +154,33 @@ void test_identity_and_invalid_input_fail_closed() {
         "out-of-range normalized brush geometry fails closed");
 }
 
+void test_cancellation_discards_brush_pixels() {
+    auto image = make_textured_gradient();
+    const std::vector<negaflow::imaging::DefectBrushPoint> points{
+        {0.25, 0.5},
+        {0.75, 0.5},
+    };
+    const negaflow::imaging::DefectBrushStroke stroke{points, 0.03};
+    std::uint32_t cancel_word = 1U;
+    const auto result = negaflow::imaging::apply_defect_heal_brush(
+        std::move(image),
+        {std::span<const negaflow::imaging::DefectBrushStroke>(&stroke, 1U),
+         1.0},
+        negaflow::core::CancelFlag{&cancel_word});
+    expect(
+        result.status ==
+                negaflow::imaging::DefectHealBrushStatus::cancelled &&
+            result.image.pixels.empty(),
+        "a cancelled brush recipe cannot publish partial pixels");
+}
+
 }  // namespace
 
 int main() {
     test_center_stroke_heals_locally_and_preserves_alpha();
     test_layer_strength_mixes_one_full_strength_result();
     test_identity_and_invalid_input_fail_closed();
+    test_cancellation_discards_brush_pixels();
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"defect_heal_brush\",\"failures\":"

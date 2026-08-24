@@ -50,7 +50,7 @@
                         VerticalAlignment="Center"
                         IsEnabled="{Binding CanEdit}"
                         Style="{StaticResource DefectLayerGlyphButtonStyle}"
-                        Tag="{Binding Id}"
+                        Tag="{Binding Target}"
                         Click="OnEnabledClicked">
                         <FontIcon
                             FontSize="13"
@@ -76,7 +76,7 @@
                         Grid.Column="4"
                         VerticalAlignment="Center"
                         Style="{StaticResource DefectLayerGlyphButtonStyle}"
-                        Tag="{Binding Id}"
+                        Tag="{Binding Target}"
                         Click="OnMaskClicked">
                         <FontIcon
                             FontSize="13"
@@ -88,7 +88,7 @@
                         VerticalAlignment="Center"
                         IsEnabled="{Binding CanEdit}"
                         Style="{StaticResource DefectLayerGlyphButtonStyle}"
-                        Tag="{Binding Id}"
+                        Tag="{Binding Target}"
                         Click="OnDeleteClicked">
                         <FontIcon
                             FontSize="13"
@@ -117,19 +117,19 @@
                         FontSize="11"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Text="{Binding StrengthLabel}" />
-                    <!-- macOS Slider(value:in: 0.1...1.0).frame(width: 72).controlSize(.mini) -->
+                    <!-- 현재 제품 계약: 0은 제거 전 원본, 1은 해당 layer의 전체 기여. -->
                     <Slider
                         Grid.Column="2"
                         VerticalAlignment="Center"
                         Width="72"
-                        Minimum="0.1"
+                        Minimum="0.0"
                         Maximum="1.0"
                         StepFrequency="0.01"
                         SmallChange="0.01"
                         LargeChange="0.1"
                         IsEnabled="{Binding CanSetStrength}"
                         IsThumbToolTipEnabled="False"
-                        Tag="{Binding Id}"
+                        Tag="{Binding Target}"
                         Value="{Binding Strength}"
                         Loaded="OnStrengthSliderLoaded"
                         ValueChanged="OnStrengthValueChanged"

@@ -8,8 +8,11 @@
 #include "negaflow/core/pixel.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdio>
+#include <cstdlib>
 #include <cstdint>
 #include <limits>
 #include <new>
@@ -20,6 +23,20 @@ namespace negaflow::imaging {
 namespace {
 
 using namespace negaflow::imaging::heal_brush_detail;
+
+using TimingClock = std::chrono::steady_clock;
+
+[[nodiscard]] bool timing_enabled() noexcept {
+    std::size_t length = 0U;
+    return getenv_s(&length, nullptr, 0U, "NEGA_TIMING") == 0 && length > 0U;
+}
+
+[[nodiscard]] std::uint64_t elapsed_microseconds(
+    const TimingClock::time_point started,
+    const TimingClock::time_point finished) noexcept {
+    return static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::microseconds>(finished - started).count());
+}
 
 void discard_pixels(WorkingImage& image) noexcept {
     std::vector<Rgba32F>{}.swap(image.pixels);
@@ -86,7 +103,9 @@ void discard_pixels(WorkingImage& image) noexcept {
 
 DefectHealBrushResult apply_defect_heal_brush(
     WorkingImage image,
-    const DefectHealBrushParameters& parameters) noexcept {
+    const DefectHealBrushParameters& parameters,
+    const negaflow::core::CancelFlag cancel) noexcept {
+    const auto started = TimingClock::now();
     DefectHealBrushResult result{};
     result.image = std::move(image);
     if (!valid_layout(result.image) || !valid_parameters(parameters)) {
@@ -104,9 +123,15 @@ DefectHealBrushResult apply_defect_heal_brush(
         result.status = DefectHealBrushStatus::ok;
         return result;
     }
+    const auto validated = TimingClock::now();
     try {
         std::vector<BrushChunk> chunks{};
         for (const DefectBrushStroke& stroke : parameters.strokes) {
+            if (cancel.requested()) {
+                result.status = DefectHealBrushStatus::cancelled;
+                discard_pixels(result.image);
+                return result;
+            }
             auto stroke_chunks = make_chunks(
                 stroke,
                 static_cast<int>(result.image.width),
@@ -115,10 +140,16 @@ DefectHealBrushResult apply_defect_heal_brush(
                 chunks.push_back(std::move(chunk));
             }
         }
+        const auto chunked = TimingClock::now();
         std::vector<StoredPatch> patches{};
         patches.reserve(chunks.size());
         std::size_t patch_bytes = 0U;
         for (const BrushChunk& chunk : chunks) {
+            if (cancel.requested()) {
+                result.status = DefectHealBrushStatus::cancelled;
+                discard_pixels(result.image);
+                return result;
+            }
             bool fallback = false;
             std::size_t components = 0U;
             std::size_t pixels = 0U;
@@ -146,10 +177,30 @@ DefectHealBrushResult apply_defect_heal_brush(
             result.info.fallback_chunk_count += fallback ? 1U : 0U;
             patches.push_back(std::move(patch));
         }
-        composite_patches(
+        const auto patched = TimingClock::now();
+        if (cancel.requested()) {
+            result.status = DefectHealBrushStatus::cancelled;
+            discard_pixels(result.image);
+            return result;
+        }
+        const std::size_t covered_pixels = composite_patches(
             result.image,
             patches,
             static_cast<float>(parameters.strength));
+        const auto composited = TimingClock::now();
+        if (timing_enabled()) {
+            (void)std::fprintf(
+                stderr,
+                "[brush timing] validation=%llu chunks=%llu patches=%llu "
+                "composite=%llu total=%llu us chunks_count=%zu covered_pixels=%zu\n",
+                static_cast<unsigned long long>(elapsed_microseconds(started, validated)),
+                static_cast<unsigned long long>(elapsed_microseconds(validated, chunked)),
+                static_cast<unsigned long long>(elapsed_microseconds(chunked, patched)),
+                static_cast<unsigned long long>(elapsed_microseconds(patched, composited)),
+                static_cast<unsigned long long>(elapsed_microseconds(started, composited)),
+                chunks.size(),
+                covered_pixels);
+        }
         result.info.applied = !patches.empty();
         result.status = DefectHealBrushStatus::ok;
         return result;
@@ -175,6 +226,8 @@ const char* defect_heal_brush_status_name(
             return "kernel_failed";
         case DefectHealBrushStatus::allocation_failed:
             return "allocation_failed";
+        case DefectHealBrushStatus::cancelled:
+            return "cancelled";
     }
     return "unknown";
 }

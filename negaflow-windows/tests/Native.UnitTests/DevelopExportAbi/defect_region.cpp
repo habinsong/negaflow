@@ -124,6 +124,20 @@ void test_v18_defect_region_preview_and_export() {
     expect(
         repaired_preview_ok && repaired_pixels != identity_pixels,
         "v18 ordered region repair changes the shared preview pipeline");
+    edit.strength = 0.0;
+    std::vector<std::uint8_t> zero_region_pixels(identity_pixels.size(), 0U);
+    nf_develop_export_result_v2 zero_region_result = make_result_v2();
+    expect(
+        nf_develop_preview_v18(
+            &repaired,
+            width,
+            height,
+            zero_region_pixels.data(),
+            static_cast<std::uint32_t>(zero_region_pixels.size()),
+            &zero_region_result) == NF_STATUS_OK &&
+            zero_region_result.succeeded == 1U && zero_region_pixels == identity_pixels,
+        "v18 Auto and Guided region strength zero is pixel-identical to the source recipe");
+    edit.strength = 1.0;
 
     nf_develop_export_request_v19 bound = make_request_v19(
         source_text.c_str(),
@@ -189,6 +203,20 @@ void test_v18_defect_region_preview_and_export() {
     expect(
         cloned_preview_ok && cloned_pixels != identity_pixels,
         "v20 Clone Stamp changes the shared preview pipeline");
+    clone_edit.strength = 0.0;
+    std::vector<std::uint8_t> zero_clone_pixels(identity_pixels.size(), 0U);
+    nf_develop_export_result_v2 zero_clone_result = make_result_v2();
+    expect(
+        nf_develop_preview_v20(
+            &cloned,
+            width,
+            height,
+            zero_clone_pixels.data(),
+            static_cast<std::uint32_t>(zero_clone_pixels.size()),
+            &zero_clone_result) == NF_STATUS_OK &&
+            zero_clone_result.succeeded == 1U && zero_clone_pixels == identity_pixels,
+        "v20 Clone strength zero is pixel-identical to the source recipe");
+    clone_edit.strength = 1.0;
 
     std::array<nf_defect_brush_point_v1, 2U> brush_points{{
         {0.5, 0.625},
@@ -232,6 +260,20 @@ void test_v18_defect_region_preview_and_export() {
     expect(
         brushed_preview_ok && brushed_pixels != identity_pixels,
         "v21 Brush changes the shared preview pipeline");
+    brush_edit.strength = 0.0;
+    std::vector<std::uint8_t> zero_brush_pixels(identity_pixels.size(), 0U);
+    nf_develop_export_result_v2 zero_brush_result = make_result_v2();
+    expect(
+        nf_develop_preview_v21(
+            &brushed,
+            width,
+            height,
+            zero_brush_pixels.data(),
+            static_cast<std::uint32_t>(zero_brush_pixels.size()),
+            &zero_brush_result) == NF_STATUS_OK &&
+            zero_brush_result.succeeded == 1U && zero_brush_pixels == identity_pixels,
+        "v21 Brush strength zero is pixel-identical to the source recipe");
+    brush_edit.strength = 1.0;
 
     std::vector<std::uint8_t> infrared_core(mask.size(), 0U);
     std::vector<std::uint8_t> infrared_attenuation(mask.size() * 2U, 0U);
@@ -320,6 +362,23 @@ void test_v18_defect_region_preview_and_export() {
         infrared_preview_ok && infrared_changed_inside &&
             infrared_unchanged_outside,
         "v25 attenuation-only infrared replay changes only its ROI with a zero core");
+    infrared_region.strength = 0.0;
+    std::vector<std::uint8_t> zero_infrared_pixels(identity_pixels.size(), 0U);
+    nf_develop_export_result_v3 zero_infrared_result = make_result_v3();
+    expect(
+        nf_develop_preview_v25(
+            &infrared,
+            nullptr,
+            width,
+            height,
+            zero_infrared_pixels.data(),
+            static_cast<std::uint32_t>(zero_infrared_pixels.size()),
+            nullptr,
+            &zero_infrared_result) == NF_STATUS_OK &&
+            zero_infrared_result.succeeded == 1U &&
+            zero_infrared_pixels == identity_pixels,
+        "v25 Infrared strength zero is pixel-identical to the source recipe");
+    infrared_region.strength = 1.0;
 
     const std::wstring calibrated_output_text = calibrated_output.wstring();
     nf_develop_export_request_v27 calibrated;

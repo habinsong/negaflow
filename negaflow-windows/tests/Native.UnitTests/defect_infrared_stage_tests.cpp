@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <span>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -28,6 +29,12 @@ void expect(const bool condition, const char* const name) {
 
 [[nodiscard]] bool near(const float left, const float right) {
     return std::abs(left - right) <= 1.0e-6F;
+}
+
+[[nodiscard]] float quantize_linear16(const float value) noexcept {
+    return static_cast<float>(std::floor(
+        static_cast<double>(std::clamp(value, 0.0F, 1.0F)) * 65'535.0 + 0.5) /
+        65'535.0);
 }
 
 [[nodiscard]] WorkingImage make_image(
@@ -88,12 +95,32 @@ void test_partial_attenuation_without_core_does_not_inpaint() {
            "partial_zero_core_skips_repair");
     expect(near(
                result.image.pixels[center].red,
-               static_cast<float>(original.pixels[center].red / transmittance)),
-           "partial_divides_source_red_by_transmittance");
+               quantize_linear16(static_cast<float>(
+                   original.pixels[center].red / transmittance))),
+           "partial_materializes_linear16_patch_after_attenuation");
     expect(result.image.pixels[0U].red == original.pixels[0U].red,
            "partial_leaves_outside_pixel_exact");
     expect(result.image.pixels[center].alpha == original.pixels[center].alpha,
            "partial_preserves_alpha");
+
+    edit.strength = 0.998;
+    const auto below_boundary = negaflow::pipeline::apply_defect_infrared_edit(
+        make_image(5U, 5U), edit);
+    edit.strength = 0.999;
+    const auto at_boundary = negaflow::pipeline::apply_defect_infrared_edit(
+        make_image(5U, 5U), edit);
+    edit.strength = 1.0;
+    const auto full_strength = negaflow::pipeline::apply_defect_infrared_edit(
+        make_image(5U, 5U), edit);
+    const float full_red = quantize_linear16(static_cast<float>(
+        original.pixels[center].red / transmittance));
+    const float below_red = original.pixels[center].red +
+        (full_red - original.pixels[center].red) * static_cast<float>(0.998);
+    expect(near(below_boundary.image.pixels[center].red, below_red),
+           "infrared_strength_below_0999_blends");
+    expect(near(at_boundary.image.pixels[center].red, full_red) &&
+               near(full_strength.image.pixels[center].red, full_red),
+           "infrared_strength_0999_and_one_apply_full_patch");
 }
 
 void test_core_repair_reads_attenuation_corrected_context() {
@@ -154,12 +181,12 @@ void test_core_repair_reads_attenuation_corrected_context() {
     expect(expected.status ==
                negaflow::imaging::DefectComponentRepairStatus::ok &&
            near(result.image.pixels[output_center].red,
-                expected.image.pixels[12U].red) &&
+                quantize_linear16(expected.image.pixels[12U].red)) &&
            near(result.image.pixels[output_center].green,
-                expected.image.pixels[12U].green) &&
+                quantize_linear16(expected.image.pixels[12U].green)) &&
            near(result.image.pixels[output_center].blue,
-                expected.image.pixels[12U].blue),
-           "core_matches_attenuation_then_component_repair_order");
+                quantize_linear16(expected.image.pixels[12U].blue)),
+           "core_materializes_linear16_patch_after_repair");
 }
 
 void test_legacy_mask_only_matches_component_repair() {
@@ -197,8 +224,10 @@ void test_legacy_mask_only_matches_component_repair() {
         {});
     expect(result.status == DefectInfraredStageStatus::ok,
            "legacy_status_ok");
-    expect(near(result.image.pixels[24U].red, expected.image.pixels[12U].red),
-           "legacy_matches_component_repair_fallback");
+    expect(near(
+               result.image.pixels[24U].red,
+               quantize_linear16(expected.image.pixels[12U].red)),
+           "legacy_materializes_linear16_component_repair_patch");
 }
 
 void test_item_clusters_share_base_and_publish_only_correction_bounds() {
@@ -250,21 +279,69 @@ void test_item_clusters_share_base_and_publish_only_correction_bounds() {
     expect(near(
                result.image.pixels[first_only].red,
                static_cast<float>(
-                   original.pixels[first_only].red / transmittance)),
+                   quantize_linear16(static_cast<float>(
+                       original.pixels[first_only].red / transmittance)))),
            "wider_second_roi_padding_does_not_overwrite_first_patch");
     expect(near(
                result.image.pixels[overlap].red,
                static_cast<float>(
-                   original.pixels[overlap].red / transmittance)),
+                   quantize_linear16(static_cast<float>(
+                       original.pixels[overlap].red / transmittance)))),
            "overlapping_cluster_attenuation_uses_item_base_once");
     expect(near(
                result.image.pixels[second_only].red,
                static_cast<float>(
-                   original.pixels[second_only].red / transmittance)),
+                   quantize_linear16(static_cast<float>(
+                       original.pixels[second_only].red / transmittance)))),
            "second_cluster_correction_is_published");
     expect(result.image.pixels[later_rectangle_hole].red ==
-               original.pixels[later_rectangle_hole].red,
+               quantize_linear16(original.pixels[later_rectangle_hole].red),
            "later_exact_rectangle_hole_overwrites_earlier_patch_with_base");
+}
+
+void test_valid_item_can_exceed_old_rgba32_patch_storage_limit() {
+    constexpr std::uint32_t width = 1024U;
+    constexpr std::uint32_t height = 1024U;
+    constexpr std::size_t area = static_cast<std::size_t>(width) * height;
+    WorkingImage image{};
+    image.width = width;
+    image.height = height;
+    image.stride_pixels = width;
+    image.pixels.assign(area, Rgba32F{0.24F, 0.30F, 0.36F, 0.73F});
+    std::vector<std::uint8_t> core(area, 0U);
+    std::vector<std::uint8_t> attenuation(area * 2U, 0U);
+    write_r16(attenuation, 0U, 32768U);
+    write_r16(attenuation, area - 1U, 32768U);
+
+    DefectInfraredEdit edit{};
+    edit.width = width;
+    edit.height = height;
+    edit.core_mask = core;
+    edit.core_mask_stride_bytes = width;
+    edit.attenuation_r16 = attenuation;
+    edit.attenuation_stride_bytes = width * 2U;
+    DefectInfraredItem item{};
+    item.clusters.assign(33U, edit);
+
+    const auto result = negaflow::pipeline::apply_defect_infrared_item(
+        std::move(image), item);
+    const double transmittance =
+        std::max(1.0 - 32768.0 / 65535.0, 0.5);
+    expect(result.status == DefectInfraredStageStatus::ok &&
+               result.image.pixels.size() == area,
+           "over_old_patch_limit_status_ok");
+    expect(result.info.attenuated_pixels == 66U,
+           "over_old_patch_limit_processes_every_cluster");
+    expect(near(
+               result.image.pixels.front().red,
+               quantize_linear16(static_cast<float>(0.24 / transmittance))) &&
+               near(
+                   result.image.pixels.back().red,
+                   quantize_linear16(static_cast<float>(0.24 / transmittance))),
+           "over_old_patch_limit_keeps_same_base_overlap_contract");
+    expect(near(result.image.pixels[area / 2U].red, quantize_linear16(0.24F)) &&
+               near(result.image.pixels[area / 2U].alpha, 0.73F),
+           "over_old_patch_limit_keeps_rectangle_and_alpha_contract");
 }
 
 void test_malformed_payload_fails_closed() {
@@ -298,12 +375,17 @@ void test_malformed_payload_fails_closed() {
 
 }  // namespace
 
-int main() {
+int main(const int argc, const char* const* const argv) {
     test_partial_attenuation_without_core_does_not_inpaint();
-    test_core_repair_reads_attenuation_corrected_context();
-    test_legacy_mask_only_matches_component_repair();
-    test_item_clusters_share_base_and_publish_only_correction_bounds();
-    test_malformed_payload_fails_closed();
+    const bool strength_only = argc == 2 &&
+        std::string_view(argv[1]) == "--strength-only";
+    if (!strength_only) {
+        test_core_repair_reads_attenuation_corrected_context();
+        test_legacy_mask_only_matches_component_repair();
+        test_item_clusters_share_base_and_publish_only_correction_bounds();
+        test_valid_item_can_exceed_old_rgba32_patch_storage_limit();
+        test_malformed_payload_fails_closed();
+    }
     if (failures != 0) {
         std::cerr << failures << " infrared stage test(s) failed\n";
         return EXIT_FAILURE;

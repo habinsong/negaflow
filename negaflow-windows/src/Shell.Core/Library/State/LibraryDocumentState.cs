@@ -16,19 +16,28 @@ internal sealed class LibraryDocumentState
         List<string> rowIds,
         List<JsonObject> payloads,
         Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows,
-        string? activeRollId)
+        string? activeRollId,
+        IReadOnlyDictionary<string, ulong>? initialDefectRevisions = null)
     {
         Session = session;
         RowIds = rowIds;
         Payloads = payloads;
         RetainedRows = retainedRows;
         ActiveRollId = activeRollId;
+        if (initialDefectRevisions is not null)
+        {
+            foreach ((string frameId, ulong revision) in initialDefectRevisions)
+            {
+                DefectRevisions.Observe(frameId, revision);
+            }
+        }
         projection = new LibraryDocumentProjection(
             session,
             rowIds,
             payloads,
             retainedRows,
             DefectRecipes,
+            DefectRevisions,
             MarkDirty);
         ProjectAll();
         IsDirty = false;
@@ -44,6 +53,8 @@ internal sealed class LibraryDocumentState
 
     public Dictionary<string, DefectRecipeSnapshot> DefectRecipes { get; } =
         new(StringComparer.Ordinal);
+
+    public LibraryDefectRevisionTracker DefectRevisions { get; } = new();
 
     public string? ActiveRollId { get; set; }
 

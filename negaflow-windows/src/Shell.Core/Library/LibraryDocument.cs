@@ -43,13 +43,15 @@ public readonly record struct LibraryDocumentOpenResult(
             CatalogStoreError.None,
             defectSidecarError);
 
-    internal static LibraryDocumentOpenResult StoreFailure(CatalogStoreError error) =>
+    internal static LibraryDocumentOpenResult StoreFailure(
+        CatalogStoreError error,
+        DefectSidecarError defectSidecarError = DefectSidecarError.None) =>
         new(
             null,
             LibraryDocumentError.CatalogUnreadable,
             CatalogSessionError.None,
             error,
-            DefectSidecarError.None);
+            defectSidecarError);
 }
 
 public readonly record struct LibraryDefectRecipeWriteResult(
@@ -58,7 +60,9 @@ public readonly record struct LibraryDefectRecipeWriteResult(
     DefectSidecarError SidecarError,
     CatalogStoreError CatalogError)
 {
-    public bool IsSuccess => Recipe is not null &&
+    public bool IsDeleted { get; init; }
+
+    public bool IsSuccess => (Recipe is not null || IsDeleted) &&
         FrameError == LibraryFrameError.None &&
         SidecarError == DefectSidecarError.None &&
         CatalogError == CatalogStoreError.None;
@@ -68,9 +72,11 @@ public readonly record struct LibrarySourceRelinkResult(
     int UpdatedFrameCount,
     int UpdatedSourceCount,
     int RejectedSourceCount,
-    CatalogStoreError CatalogError)
+    CatalogStoreError CatalogError,
+    DefectSidecarError SidecarError)
 {
-    public bool IsSuccess => CatalogError == CatalogStoreError.None;
+    public bool IsSuccess => CatalogError == CatalogStoreError.None &&
+        SidecarError == DefectSidecarError.None;
 }
 
 /// <summary>
@@ -91,7 +97,7 @@ public sealed record LibraryFrameRemoval(
 /// 원본 payload 를 그대로 들고 있다가 저장할 때 그 위에 편집을 얹습니다. 투영된 값만 들고 있으면
 /// 이 빌드가 모르는 field 가 저장할 때마다 사라집니다.
 /// </remarks>
-public sealed class LibraryDocument : IDisposable
+public sealed partial class LibraryDocument : IDisposable
 {
     private readonly LibraryDocumentState state;
     private readonly LibraryOrganizationService organization;
@@ -110,20 +116,22 @@ public sealed class LibraryDocument : IDisposable
         List<string> rowIds,
         List<JsonObject> payloads,
         Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows,
-        string? activeRollId)
+        string? activeRollId,
+        IReadOnlyDictionary<string, ulong>? initialDefectRevisions = null)
     {
         state = new LibraryDocumentState(
             session,
             rowIds,
             payloads,
             retainedRows,
-            activeRollId);
+            activeRollId,
+            initialDefectRevisions);
         organization = new LibraryOrganizationService(state);
         persistence = new LibraryCatalogPersistence(state);
         sourceRelinker = new LibrarySourceRelinker(state, persistence);
-        undo = new LibraryUndoCoordinator(state);
+        defectRecipeStore = new LibraryDefectRecipeStore(state);
+        undo = new LibraryUndoCoordinator(state, defectRecipeStore, persistence.Save);
         frameEditor = new LibraryFrameEditor(state);
-        defectRecipeStore = new LibraryDefectRecipeStore(state, persistence);
         frameRemoval = new LibraryFrameRemovalService(state);
         virtualCopies = new LibraryVirtualCopyService(state);
     }
@@ -178,6 +186,9 @@ public sealed class LibraryDocument : IDisposable
 
     public string? RedoActionName => undo.RedoActionName;
 
+    public bool CanUndoDefectFrame(string frameId) =>
+        undo.CanUndoDefectFrame(frameId);
+
     /// <summary>
     /// 이 편집을 되돌릴 수 있게 지금 상태를 담아 둡니다. **바꾸기 직전에** 불러야 합니다.
     /// </summary>
@@ -188,13 +199,36 @@ public sealed class LibraryDocument : IDisposable
     public void CaptureUndo(string actionName)
         => undo.CaptureUndo(actionName);
 
+    internal LibraryUndoSnapshot CapturePendingRemovalUndo(string actionName) =>
+        undo.CapturePendingRemovalUndo(actionName);
+
+    internal void CommitPendingRemovalUndo(
+        LibraryUndoSnapshot snapshot,
+        LibraryFrameRemoval removal) =>
+        undo.CommitPendingRemovalUndo(snapshot, removal);
+
+    internal LibraryUndoSnapshot CapturePendingDefectUndo(
+        string frameId,
+        LibraryDefectHistoryMode mode) =>
+        undo.CapturePendingDefectUndo(frameId, mode);
+
+    internal void CommitPendingUndo(LibraryUndoSnapshot snapshot)
+        => undo.CommitPendingUndo(snapshot);
+
     /// <summary>
-    /// 한 단계 되돌립니다. 되돌린 동작의 이름을 돌려주며, 되돌릴 것이 없으면 null 입니다.
+    /// 한 단계를 되돌려 catalog에 저장합니다. 저장까지 성공한 동작의 이름을 돌려주며,
+    /// 되돌릴 것이 없거나 저장이 실패하면 null 입니다.
     /// </summary>
     public string? Undo()
-        => undo.Undo();
+        => UndoWithResult().ActionName;
 
     public string? Redo()
+        => RedoWithResult().ActionName;
+
+    internal LibraryHistoryResult UndoWithResult()
+        => undo.Undo();
+
+    internal LibraryHistoryResult RedoWithResult()
         => undo.Redo();
 
     /// <summary>
@@ -275,12 +309,58 @@ public sealed class LibraryDocument : IDisposable
             out addedFolders,
             out addedFrames);
 
+    internal CatalogStoreError ApplyImportAndSave(
+        IReadOnlyList<LibraryFolderSnapshot> requestedFolders,
+        IReadOnlyList<CatalogEntityRow> requestedFrames,
+        IReadOnlyList<FrameInfraredAttachment> requestedInfraredAttachments,
+        IReadOnlyList<string> requestedStrayFrameRemovals,
+        out int addedFolders,
+        out int addedFrames,
+        out IReadOnlyList<string> attachedInfraredFrameIds,
+        out IReadOnlyList<string> removedStrayFrameIds)
+    {
+        ArgumentNullException.ThrowIfNull(requestedStrayFrameRemovals);
+        LibraryUndoSnapshot? beforeRemoval = null;
+        bool wasDirty = state.IsDirty;
+        LibraryFrameRemoval removal = new([], []);
+        if (requestedStrayFrameRemovals.Count > 0)
+        {
+            beforeRemoval = undo.CaptureTransientState();
+            removal = frameRemoval.Remove(requestedStrayFrameRemovals);
+        }
+
+        CatalogStoreError save = persistence.ApplyImportAndSave(
+            requestedFolders,
+            requestedFrames,
+            requestedInfraredAttachments,
+            forceCatalogWrite: removal.Count > 0,
+            out addedFolders,
+            out addedFrames,
+            out attachedInfraredFrameIds);
+        if (save != CatalogStoreError.None)
+        {
+            removedStrayFrameIds = [];
+            if (beforeRemoval is not null && save != CatalogStoreError.RollbackFailed)
+            {
+                undo.RestoreTransientState(beforeRemoval, wasDirty);
+            }
+            return save;
+        }
+
+        removedStrayFrameIds = removal.FrameIds;
+        if (removal.Count > 0)
+        {
+            defectRecipeStore.Purge(removal);
+        }
+        return CatalogStoreError.None;
+    }
+
     public CatalogStoreError Save()
         => persistence.Save();
 
     /// <summary>
-    /// 원본 위치만 바꾸는 원자적 catalog 갱신입니다. source-bound defect sidecar가 있는 경우
-    /// 새 파일의 SHA-256까지 같아야 하므로, 다른 사진을 같은 경로에 연결하지 않습니다.
+    /// 원본 위치를 바꾸는 원자적 갱신입니다. source-bound defect sidecar가 있는 경우 새 파일의
+    /// SHA-256까지 같아야 하며, family recipe revision과 검토 상태도 같은 commit에서 갱신합니다.
     /// </summary>
     public LibrarySourceRelinkResult Relink(
         SourceRelinkPlan plan,
@@ -317,6 +397,9 @@ public sealed class LibraryDocument : IDisposable
     /// </remarks>
     public void PurgeDefectSidecars(LibraryFrameRemoval removal)
         => defectRecipeStore.Purge(removal);
+
+    internal DefectSidecarError PurgeRemovedDefectSidecarsForTermination() =>
+        undo.PurgeForTermination();
 
     public void Dispose() => session.Dispose();
 
@@ -378,6 +461,12 @@ public sealed class LibraryDocument : IDisposable
     /// </remarks>
     public string? CreateVirtualCopy(string frameId)
         => virtualCopies.Create(frameId);
+
+    internal string? CreateVirtualCopy(
+        string frameId,
+        Guid? liveDefectItemId,
+        double? liveDefectStrength) =>
+        virtualCopies.Create(frameId, liveDefectItemId, liveDefectStrength);
 
     /// <summary>
     /// 고른 사진들을 한 묶음으로 접습니다. 이미 다른 묶음에 든 사진이 하나라도 있으면 만들지

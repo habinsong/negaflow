@@ -31,13 +31,17 @@ WicTiffDecodeStatus preflight_tiff_source(
     if (!reader.valid()) {
         return WicTiffDecodeStatus::stream_open_failed;
     }
+    negaflow::core::TiffProbeControl probe_control{};
+    probe_control.select_first_directory = control.select_first_frame;
     const negaflow::core::TiffProbeResult probe =
-        negaflow::core::probe_tiff(reader, limits.probe);
+        negaflow::core::probe_tiff(reader, limits.probe, probe_control);
     result.preflight_status = probe.status;
     if (probe.status != negaflow::core::TiffProbeStatus::ok) {
         return WicTiffDecodeStatus::preflight_failed;
     }
-    if (!is_supported_layout(probe.info)) {
+    if (!is_supported_layout(
+            probe.info,
+            control.orientation_policy != WicTiffOrientationPolicy::require_normal)) {
         return WicTiffDecodeStatus::unsupported_layout;
     }
     const std::uint64_t channels = probe.info.samples_per_pixel;
@@ -67,6 +71,7 @@ WicTiffDecodeStatus preflight_tiff_source(
         negaflow::core::TiffProbeControl semantic_control{};
         semantic_control.validate_lzw_code_streams = probe.info.compression == 5U;
         semantic_control.validate_deflate_streams = probe.info.compression == 8U;
+        semantic_control.select_first_directory = control.select_first_frame;
         semantic_control.stop_token = control.stop_token;
         const negaflow::core::TiffProbeResult semantic_probe =
             negaflow::core::probe_tiff(reader, limits.probe, semantic_control);

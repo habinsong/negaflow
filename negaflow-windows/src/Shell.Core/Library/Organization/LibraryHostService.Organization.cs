@@ -76,8 +76,16 @@ public sealed partial class LibraryHostService
     /// <summary>
     /// 가상 사본을 만들고 바로 저장합니다. 원본 파일은 그대로이며 카탈로그에만 줄이 늘어납니다.
     /// </summary>
-    public string? CreateVirtualCopy(string frameId) =>
-        Undoable(UndoActions.VirtualCopy, () => document?.CreateVirtualCopy(frameId));
+    public string? CreateVirtualCopy(string frameId)
+    {
+        LibraryDefectLiveStrength? liveStrength = DefectLiveStrengths.Get(frameId);
+        return Undoable(
+            UndoActions.VirtualCopy,
+            () => document?.CreateVirtualCopy(
+                frameId,
+                liveStrength?.ItemId,
+                liveStrength?.Strength));
+    }
 
     /// <summary>한 장으로 접어 둔 사진 묶음입니다.</summary>
     public IReadOnlyList<LibraryStackSnapshot> Stacks => document?.Stacks ?? [];

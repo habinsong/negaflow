@@ -56,7 +56,7 @@ public sealed partial class FlatbedScanAreaOverlay
         for (int index = 0; index < regions.Count; ++index)
         {
             FlatbedScanRegion region = regions[index];
-            FlatbedOverlayRect rect = FlatbedOverlayGeometry.ScreenRect(region, ImageFrame);
+            FlatbedOverlayRect rect = ScreenRect(region);
             bool selected = string.Equals(region.Id, selectedId, StringComparison.Ordinal);
             RegionVisual visual = EnsureVisual(region.Id);
             ApplyVisual(visual, rect, index + 1, selected);

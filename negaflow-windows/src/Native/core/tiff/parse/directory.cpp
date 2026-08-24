@@ -125,7 +125,14 @@ TiffProbeStatus select_primary_directory(
     const std::uint64_t directory_entry_bytes,
     const std::uint64_t next_directory_bytes,
     const TiffProbeLimits& limits,
+    const bool select_first_directory,
     TiffProbeInfo& info) noexcept {
+    if (select_first_directory) {
+        info.directory_count = 1U;
+        info.primary_directory_index = 0U;
+        info.primary_ifd_offset = first_ifd_offset;
+        return TiffProbeStatus::ok;
+    }
     std::uint64_t offset = first_ifd_offset;
     std::uint64_t index = 0;
     std::uint64_t primary_count = 0;

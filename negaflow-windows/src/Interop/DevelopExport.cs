@@ -106,6 +106,14 @@ public sealed class DevelopExportRequest
     /// </summary>
     public string? DefectRecipeSha256 { get; init; }
 
+    /// <summary>
+    /// 마지막 ordered edit를 제외한 canonical recipe SHA-256입니다. Native는 보유한 cleaned raw의
+    /// recipe identity와 정확히 일치할 때만 suffix 적용에 사용합니다.
+    /// </summary>
+    public string? DefectRecipeAppendPrefixSha256 { get; init; }
+
+    public int DefectRecipeAppendPrefixEditCount { get; init; }
+
     /// <summary>FilmScanDenoise master strength from zero through one.</summary>
     public float NoiseReductionStrength { get; init; }
 

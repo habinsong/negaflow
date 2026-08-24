@@ -17,7 +17,16 @@ internal sealed record LibraryUndoSnapshot(
     List<JsonObject> Payloads,
     Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> RetainedRows,
     Dictionary<string, DefectRecipeSnapshot> DefectRecipes,
-    string? ActiveRollId);
+    string? ActiveRollId,
+    string? DefectFrameId = null,
+    LibraryDefectHistoryMode? DefectHistoryMode = null,
+    LibraryFrameRemoval? RemovedFrames = null);
+
+internal enum LibraryDefectHistoryMode
+{
+    PreservingInfrared,
+    Exact,
+}
 
 /// <summary>
 /// 되돌리기·다시 실행 더미입니다. macOS 는 AppKit <c>UndoManager</c> 를 쓰고, 여기서는 같은
@@ -43,19 +52,45 @@ internal sealed class LibraryUndoStack
 
     public string? RedoActionName => redo.Last?.Value.ActionName;
 
+    public LibraryUndoSnapshot? PeekUndo() => undo.Last?.Value;
+
+    public LibraryUndoSnapshot? PeekRedo() => redo.Last?.Value;
+
+    public bool CanUndoDefectFrame(string frameId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(frameId);
+        foreach (LibraryUndoSnapshot snapshot in undo)
+        {
+            if (string.Equals(snapshot.DefectFrameId, frameId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /// <summary>
     /// 새 편집을 담습니다. **다시 실행 더미는 지웁니다** — 되돌린 뒤 다른 길로 갔으면 옛 앞길은
     /// 더 이상 이 상태에서 이어지지 않습니다.
     /// </summary>
-    public void Push(LibraryUndoSnapshot snapshot)
+    public LibraryFrameRemoval Push(LibraryUndoSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
+        List<LibraryFrameRemoval> discarded = redo
+            .Select(candidate => candidate.RemovedFrames)
+            .OfType<LibraryFrameRemoval>()
+            .ToList();
         redo.Clear();
         undo.AddLast(snapshot);
         while (undo.Count > MaximumDepth)
         {
+            if (undo.First!.Value.RemovedFrames is { } removal)
+            {
+                discarded.Add(removal);
+            }
             undo.RemoveFirst();
         }
+        return MergeRemovals(discarded);
     }
 
     /// <summary>
@@ -70,7 +105,13 @@ internal sealed class LibraryUndoStack
             return null;
         }
         undo.RemoveLast();
-        redo.AddLast(current with { ActionName = last.Value.ActionName });
+        redo.AddLast(current with
+        {
+            ActionName = last.Value.ActionName,
+            DefectFrameId = last.Value.DefectFrameId,
+            DefectHistoryMode = last.Value.DefectHistoryMode,
+            RemovedFrames = last.Value.RemovedFrames,
+        });
         return last.Value;
     }
 
@@ -82,7 +123,13 @@ internal sealed class LibraryUndoStack
             return null;
         }
         redo.RemoveLast();
-        undo.AddLast(current with { ActionName = last.Value.ActionName });
+        undo.AddLast(current with
+        {
+            ActionName = last.Value.ActionName,
+            DefectFrameId = last.Value.DefectFrameId,
+            DefectHistoryMode = last.Value.DefectHistoryMode,
+            RemovedFrames = last.Value.RemovedFrames,
+        });
         return last.Value;
     }
 
@@ -90,5 +137,54 @@ internal sealed class LibraryUndoStack
     {
         undo.Clear();
         redo.Clear();
+    }
+
+    public LibraryFrameRemoval RemovalCandidates() => MergeRemovals(
+        undo.Concat(redo)
+            .Select(snapshot => snapshot.RemovedFrames)
+            .OfType<LibraryFrameRemoval>());
+
+    public bool ReferencesRemoval(Guid frameId) => undo.Concat(redo).Any(snapshot =>
+        snapshot.RemovedFrames?.DefectSidecars.Any(sidecar => sidecar.FrameId == frameId) == true);
+
+    public void RemoveDefectFrame(string frameId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(frameId);
+        RemoveDefectFrame(undo, frameId);
+        RemoveDefectFrame(redo, frameId);
+    }
+
+    private static void RemoveDefectFrame(
+        LinkedList<LibraryUndoSnapshot> snapshots,
+        string frameId)
+    {
+        LinkedListNode<LibraryUndoSnapshot>? node = snapshots.First;
+        while (node is not null)
+        {
+            LinkedListNode<LibraryUndoSnapshot>? next = node.Next;
+            if (string.Equals(node.Value.DefectFrameId, frameId, StringComparison.Ordinal))
+            {
+                snapshots.Remove(node);
+            }
+            node = next;
+        }
+    }
+
+    private static LibraryFrameRemoval MergeRemovals(
+        IEnumerable<LibraryFrameRemoval> removals)
+    {
+        Dictionary<Guid, ulong> sidecars = [];
+        HashSet<string> frames = new(StringComparer.Ordinal);
+        foreach (LibraryFrameRemoval removal in removals)
+        {
+            frames.UnionWith(removal.FrameIds);
+            foreach ((Guid frameId, ulong revision) in removal.DefectSidecars)
+            {
+                sidecars[frameId] = Math.Max(sidecars.GetValueOrDefault(frameId), revision);
+            }
+        }
+        return new LibraryFrameRemoval(
+            [.. frames],
+            [.. sidecars.Select(pair => (pair.Key, pair.Value))]);
     }
 }

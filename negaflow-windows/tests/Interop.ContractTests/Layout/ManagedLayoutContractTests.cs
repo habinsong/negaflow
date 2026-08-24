@@ -26,6 +26,24 @@ internal static unsafe class ManagedLayoutContractTests
                 NativeDevelopExporter.GrainMendDetectParametersV3Size,
             "grain_mend_detect_v4_parameters_size");
         context.Check(
+            sizeof(NativeGrainMendDetectionV4) ==
+                NativeDevelopExporter.GrainMendDetectionV4Size,
+            "grain_mend_detection_v4_size");
+        context.Check(
+            sizeof(NativeGrainMendReviewHitV1) ==
+                NativeDevelopExporter.GrainMendReviewHitV1Size &&
+            Marshal.OffsetOf<NativeGrainMendReviewHitV1>(
+                nameof(NativeGrainMendReviewHitV1.ComponentIndex)).ToInt32() == 8,
+            "grain_mend_review_hit_v1_layout");
+        context.Check(
+            sizeof(NativeGrainMendAcceptedRegionV1) ==
+                NativeDevelopExporter.GrainMendAcceptedRegionV1Size &&
+            Marshal.OffsetOf<NativeGrainMendAcceptedRegionV1>(
+                nameof(NativeGrainMendAcceptedRegionV1.MaskByteCount)).ToInt32() == 24 &&
+            Marshal.OffsetOf<NativeGrainMendAcceptedRegionV1>(
+                nameof(NativeGrainMendAcceptedRegionV1.IncludedComponentCount)).ToInt32() == 32,
+            "grain_mend_accepted_region_v1_layout");
+        context.Check(
             sizeof(NativeDevelopExportRequestV2) == NativeDevelopExporter.RequestV2Size,
             "develop_export_v2_request_size");
         context.Check(
@@ -155,6 +173,12 @@ internal static unsafe class ManagedLayoutContractTests
         context.Check(
             sizeof(NativeDevelopExportRequestV30) == NativeDevelopExporter.RequestV30Size,
             "develop_export_v30_request_size");
+        context.Check(
+            sizeof(NativeDevelopExportRequestV36) == NativeDevelopAbiSizes.RequestV36Size &&
+            Marshal.OffsetOf<NativeDevelopExportRequestV36>(
+                nameof(NativeDevelopExportRequestV36.DefectRecipeAppendPrefixSha256))
+                .ToInt32() == 5120,
+            "develop_preview_v36_append_prefix_layout");
         context.Check(
             sizeof(NativeDevelopExportResultV2) == NativeDevelopExporter.ResultV2Size,
             "develop_export_v2_result_size");

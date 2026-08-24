@@ -69,7 +69,7 @@ void paint_stamp(
     }
 }
 
-void rasterize_stroke(
+[[nodiscard]] bool rasterize_stroke(
     const std::vector<PixelPoint>& points,
     const double spacing,
     const double radius,
@@ -78,14 +78,18 @@ void rasterize_stroke(
     const std::uint32_t origin_y,
     const std::uint32_t width,
     const std::uint32_t height,
-    std::vector<float>& mask) noexcept {
+    std::vector<float>& mask,
+    const negaflow::core::CancelFlag cancel) noexcept {
     if (points.empty()) {
-        return;
+        return true;
+    }
+    if (cancel.requested()) {
+        return false;
     }
     paint_stamp(
         mask, width, height, origin_x, origin_y, points.front(), radius, hardness);
     if (points.size() == 1U) {
-        return;
+        return true;
     }
     double distance_since_stamp = 0.0;
     PixelPoint previous = points.front();
@@ -97,6 +101,9 @@ void rasterize_stroke(
             target.y - segment_start.y);
         while (distance_since_stamp + remaining >= spacing &&
                remaining > minimum_segment_length) {
+            if (cancel.requested()) {
+                return false;
+            }
             const double needed = spacing - distance_since_stamp;
             const double ratio = needed / remaining;
             const PixelPoint center{
@@ -112,6 +119,7 @@ void rasterize_stroke(
         distance_since_stamp += remaining;
         previous = target;
     }
+    return true;
 }
 
 }  // namespace negaflow::imaging::clone_stamp_detail

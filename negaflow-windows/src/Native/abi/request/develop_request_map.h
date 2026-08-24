@@ -247,4 +247,10 @@ void fail_defect_region_request(
     negaflow::pipeline::DevelopExportRequest& pipeline_request,
     nf_develop_export_result_v2& result) noexcept;
 
+[[nodiscard]] bool map_request_v36(
+    const nf_develop_export_request_v36& request,
+    bool require_destination,
+    negaflow::pipeline::DevelopExportRequest& pipeline_request,
+    nf_develop_export_result_v2& result) noexcept;
+
 }  // namespace negaflow::abi::detail

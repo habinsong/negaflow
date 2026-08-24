@@ -242,22 +242,13 @@ bool merge_micro_speck_mask(
         }
         std::vector<float> minimum_response(count, std::numeric_limits<float>::max());
         std::vector<float> maximum_response(count, 0.0F);
-        const RgbPlanes closed = closing_rgb(
+        const RgbPlanes background = close_open_rgb(
             image.channels[0],
             image.channels[1],
             image.channels[2],
             image.width,
             image.height,
             radius);
-        const RgbPlanes background = closed.red.empty()
-            ? RgbPlanes{}
-            : opening_rgb(
-                  closed.red,
-                  closed.green,
-                  closed.blue,
-                  image.width,
-                  image.height,
-                  radius);
         const bool used_packed = !background.red.empty();
         for (std::size_t channel = 0U; channel < image.channels.size(); ++channel) {
             std::vector<float> fallback_background{};

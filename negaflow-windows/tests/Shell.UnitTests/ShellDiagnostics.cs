@@ -14,9 +14,15 @@ internal static class ShellDiagnostics
         return CatalogSeedDiagnostics.TryRun(args, out exitCode) ||
             CatalogInspectionDiagnostics.TryRun(args, out exitCode) ||
             DevelopPipelineDiagnostics.TryRun(args, out exitCode) ||
+            FirstActionLatencyDiagnostics.TryRun(args, out exitCode) ||
+            LiveScannerEndToEndDiagnostics.TryRun(args, out exitCode) ||
             SliderDragDiagnostics.TryRun(args, out exitCode) ||
             DefectRoundTripDiagnostics.TryRun(args, out exitCode) ||
             DefectToolDiagnostics.TryRun(args, out exitCode) ||
+            GrainMendDetectionOverlayDiagnostics.TryRun(args, out exitCode) ||
+            GrainMendInfraredStatusDiagnostics.TryRun(args, out exitCode) ||
+            GrainMendInfraredFolderDiagnostics.TryRun(args, out exitCode) ||
+            GrainMendDevicePerformanceDiagnostics.TryRun(args, out exitCode) ||
             CloneCursorBenchmark.TryRun(args, out exitCode);
     }
 

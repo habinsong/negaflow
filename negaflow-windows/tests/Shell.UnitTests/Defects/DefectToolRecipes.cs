@@ -12,20 +12,6 @@ namespace Negaflow.Shell.UnitTests;
 internal static class DefectToolRecipes
 {
     /// <summary>
-    /// 검출 마스크 버퍼의 크기입니다. 자동·가이드는 macOS <c>detectLabeled</c> 와 같이
-    /// <b>다운스케일 없이</b> 원본 해상도로 돕니다(1,800px 상한은 브러시 경로만 씁니다). 그래서
-    /// 버퍼는 프레임 화소 수만큼 필요합니다 — 1,800×1,800 으로 잡으면 5,088×3,401 스캔에서
-    /// 네이티브가 <c>mask_buffer_too_small</c> 로 거절하고, 그 거절이 "자동 검출이 깨졌다"로
-    /// 잘못 읽힙니다(실제로 그렇게 읽혔습니다).
-    /// </summary>
-    private static int MaskByteCapacity(LibraryFrameSnapshot frame)
-    {
-        long width = frame.SourceMetadata?.PixelWidth ?? 0U;
-        long height = frame.SourceMetadata?.PixelHeight ?? 0U;
-        return checked((int)Math.Max(1L, width * height));
-    }
-
-    /// <summary>
     /// 마지막 검출 한 번에 걸린 시간입니다. 자동은 5초 미만이어야 합니다 — 재지 않으면
     /// 이식이 느려졌는지 알 수 없습니다.
     /// </summary>
@@ -102,6 +88,32 @@ internal static class DefectToolRecipes
             out reason);
     }
 
+    public static DefectRecipeSnapshot? AppendManual(
+        LibraryFrameSnapshot frame,
+        string tool,
+        out string reason)
+    {
+        reason = string.Empty;
+        DefectRecipeSnapshot? recipe = tool switch
+        {
+            "brush" => DefectStrokeRecipeBuilder.AppendBrushStroke(
+                FrameId(frame), SourceIdentity(frame), frame.DefectRecipe,
+                [new(0.28, 0.58), new(0.42, 0.56), new(0.56, 0.54), new(0.70, 0.52)],
+                thickness: 0.018, BaseSize(frame)),
+            "clone" => DefectStrokeRecipeBuilder.AppendCloneStroke(
+                FrameId(frame), SourceIdentity(frame), frame.DefectRecipe,
+                [new(0.36, 0.38), new(0.43, 0.40), new(0.50, 0.42)],
+                diameter: 44.0, offsetX: -0.07, offsetY: 0.05, BaseSize(frame)),
+            _ => null,
+        };
+        if (recipe is null || recipe.Items.Count != 2)
+        {
+            reason = "second manual recipe builder refused";
+            return null;
+        }
+        return recipe;
+    }
+
     /// <summary>
     /// IR: 스캐너가 함께 낸 적외선 판과 가시광 판을 짝지어 검출합니다. 짝이 없으면 이 경로는
     /// 존재하지 않습니다 — 없는 것을 있는 것처럼 지어내지 않습니다.
@@ -141,6 +153,7 @@ internal static class DefectToolRecipes
                     FrameId(frame),
                     SourceIdentity(frame),
                     existing: null,
+                    recipeRevision: 1,
                     detection),
                 out reason);
         }
@@ -183,43 +196,47 @@ internal static class DefectToolRecipes
             reason = "request refused";
             return null;
         }
-        byte[] mask = new byte[MaskByteCapacity(frame)];
         GrainMendDetectionOptions options = GrainMendSensitivity.ToDetectionOptions(
             GrainMendSensitivity.Default,
             automatic);
         Stopwatch clock = Stopwatch.StartNew();
-        GrainMendDetectionResult detected = exporter.DetectGrainMend(request, mask, roi, options);
+        GrainMendDetectionResult detected = exporter.DetectGrainMend(request, roi, options);
         clock.Stop();
         LastDetectMilliseconds = clock.ElapsedMilliseconds;
         if (!detected.Result.Succeeded)
         {
+            detected.ReviewProposal?.Dispose();
             reason = $"detect failed: {detected.Result.FailureName}";
             return null;
         }
-        if (detected.AcceptedPixels == 0UL)
+        if (detected.ReviewProposal is not { } proposal)
         {
             reason = "detect accepted nothing";
             return null;
         }
-        DefectEditItem? edit = GrainMendRegionEdit.From(
-            mask.AsSpan(0, checked((int)detected.MaskByteCount)),
-            checked((int)detected.Width),
-            checked((int)detected.Height),
-            detected.SourceWidth,
-            detected.SourceHeight,
-            detected.RoiX,
-            detected.RoiY,
-            detected.RoiWidth,
-            detected.RoiHeight,
-            detected.AcceptedPixels,
-            automatic,
-            detected.Defects);
         LastDetectComponents = detected.Defects.Count;
-        if (edit is null)
+        GrainMendReviewSession? review = null;
+        try
         {
-            reason = "region edit refused";
+            review = GrainMendReviewSession.TryCreate(proposal, automatic);
+            DefectEditItem? edit = review?.BuildAcceptedEdit();
+            if (edit is null)
+            {
+                reason = "region edit refused";
+            }
+            return edit;
         }
-        return edit;
+        finally
+        {
+            if (review is not null)
+            {
+                review.Dispose();
+            }
+            else
+            {
+                proposal.Dispose();
+            }
+        }
     }
 
     private static DefectEditItem? Single(DefectRecipeSnapshot? recipe, out string reason)

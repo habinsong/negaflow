@@ -101,13 +101,16 @@ internal sealed class DevelopCropSession
             return;
         }
 
-        // macOS와 같이 crop을 먼저 해제해 전체 프레임에서 새 선택을 만들게 합니다. 드래그 중
-        // catalog를 쓰지 않고 Apply/Cancel에서 한 번만 저장합니다.
+        // macOS처럼 기존 crop을 먼저 보관한 뒤 원본 전체를 보여 줍니다. 앞 판은 SetCrop(null)
+        // 뒤에 값을 읽어 세션이 늘 전체 사각형으로 시작했고, 내부 drag가 새 선택 생성으로
+        // 잘못 들어갔습니다.
+        ImageCropRect? previousCrop = view.panel.ImageTransform.Crop;
         if (view.panel.SetCrop(null) != LibraryFrameError.None)
         {
             return;
         }
-        view.crop.Begin(view.panel.ImageTransform.Crop, LockedNormalizedAspectRatio());
+        view.crop.Begin(previousCrop, lockedNormalizedAspect: null);
+        view.crop.SyncLockedAspect(LockedNormalizedAspectRatio());
         view.GeometryCard.SetDialVisible(true);
         view.PreviewCanvas.FocusHost();
         view.RequestPreview();

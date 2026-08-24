@@ -14,6 +14,9 @@ public enum InfraredCleanMessage
     /// <summary>할 말이 없습니다. macOS 도 취소·중복 적용에는 아무 말도 하지 않습니다.</summary>
     None,
 
+    /// <summary>macOS <c>infraredCleanDetectingStatus</c>.</summary>
+    Detecting,
+
     /// <summary>macOS <c>infraredCleanAppliedFormat</c> — 제거한 결함 개수가 붙습니다.</summary>
     Applied,
 
@@ -35,6 +38,9 @@ public readonly record struct InfraredCleanStatus(InfraredCleanMessage Message, 
 {
     public static InfraredCleanStatus Silent { get; } =
         new(InfraredCleanMessage.None, 0);
+
+    public static InfraredCleanStatus Detecting { get; } =
+        new(InfraredCleanMessage.Detecting, 0);
 
     /// <summary>
     /// 검출 한 번의 결과를 화면이 할 말로 옮깁니다. macOS 와 같은 분기이며, 성공했는데

@@ -38,6 +38,7 @@ public static class GrainMendCardProjection
     public static GrainMendCardState Create(
         bool hasFrame,
         bool isDetecting,
+        DefectEditLabelKind? activeRegionKind,
         DefectEditLabelKind? pendingLabel,
         int? includedCount,
         GrainMendTool tool,
@@ -46,12 +47,12 @@ public static class GrainMendCardProjection
         bool hasBrushEdits,
         bool hasCloneEdits)
     {
-        // 검토 중에는 새 검출을 시작하지 않습니다 — 두 결과가 같은 자리를 두고 다투게 됩니다.
         bool reviewing = pendingLabel is not null;
-        bool canStartDetect = hasFrame && !reviewing && !isDetecting;
         return new GrainMendCardState(
-            AutoEnabled: canStartDetect,
-            GuidedEnabled: canStartDetect,
+            // macOS action pill은 현재 모드를 취소하거나 다른 모드로 전환하는 입력이므로
+            // 검출·검토 중에도 닫지 않습니다.
+            AutoEnabled: hasFrame,
+            GuidedEnabled: hasFrame,
             BrushEnabled: hasFrame,
             CloneEnabled: hasFrame,
             AutoResetEnabled: hasAutomaticEdits,
@@ -64,8 +65,8 @@ public static class GrainMendCardProjection
             // 모두 꺼 둔 검토를 받아들이면 아무것도 고치지 않는 항목이 남습니다.
             RemoveEnabled: reviewing && (includedCount ?? 1) > 0,
             CancelEnabled: reviewing,
-            AutoActive: pendingLabel == DefectEditLabelKind.Automatic,
-            GuidedActive: tool == GrainMendTool.Guided,
+            AutoActive: activeRegionKind == DefectEditLabelKind.Automatic,
+            GuidedActive: activeRegionKind == DefectEditLabelKind.Guided,
             BrushActive: tool == GrainMendTool.Brush,
             CloneActive: tool == GrainMendTool.Clone,
             ReviewingAutomatic: pendingLabel == DefectEditLabelKind.Automatic);

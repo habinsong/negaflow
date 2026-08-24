@@ -131,6 +131,7 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
         ScannerPluginTrustIdentity approvedIdentity,
         ScannerPluginScanRequest request,
         LibraryHostService library,
+        ImageTransformRecipe? initialTransform,
         bool isPreviewScan,
         CancellationToken cancellationToken)
     {
@@ -160,14 +161,14 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
                 isPreviewScan ? null : commit.Artifacts.InfraredPath,
                 request.Process)
             {
+                Rotation = request.Rotation,
+                InitialTransform = initialTransform,
                 IsPreviewScan = isPreviewScan,
             },
             null,
             null);
         return Task.FromResult(new ScannerPluginLibraryScanResult(
-            published.Status == ScannerFramePublishStatus.CatalogWriteFailed
-                ? ScannerPluginLibraryScanStatus.CatalogPublicationFailed
-                : ScannerPluginLibraryScanStatus.Published,
+            ScannerScanPublisher.PublicationStatus(published),
             new ScannerPluginScanResult(
                 ScannerPluginScanStatus.Completed,
                 Succeeded(),
@@ -277,7 +278,8 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
                 : ScannerPluginScanStatus.ArtifactCommitFailed,
             Succeeded(),
             ScannerPluginStreamStatus.Accepted,
-            staged));
+            staged,
+            request.ScanArea));
     }
 
     private static ScannerPluginProcessResult Succeeded() =>

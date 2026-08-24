@@ -30,15 +30,12 @@ internal static unsafe class NativeDevelopPreviewRender
         double roiWidth = 1.0,
         double roiHeight = 1.0,
         GrainMendDetectionOptions? detectionOptions = null,
-        NativeGrainMendComponentV1* components = null,
-        ulong componentCapacity = 0UL,
         ulong* componentCount = null,
-        NativeGrainMendPreviewPointV1* previewPoints = null,
-        ulong previewPointCapacity = 0UL,
         ulong* previewPointCount = null,
         // macOS `applyingWholeFrameAutomaticRiskFlag` 의 결과입니다. 자동에서만 채워집니다.
         bool* automaticRisk = null,
         double* automaticCandidateFraction = null,
+        nint* grainMendReview = null,
         bool clippingOverlay = false,
         bool retainPreviewRaw = true)
     {
@@ -49,6 +46,18 @@ internal static unsafe class NativeDevelopPreviewRender
             throw new ArgumentException(
                 "Background preview caching only supports the normal developed view.",
                 nameof(retainPreviewRaw));
+        }
+        if (grainMendReview is not null && detection is null)
+        {
+            throw new ArgumentException(
+                "A GrainMend review handle requires a detection result.",
+                nameof(grainMendReview));
+        }
+        if (detection is not null && grainMendReview is null)
+        {
+            throw new ArgumentException(
+                "A GrainMend detection requires v7 review ownership.",
+                nameof(grainMendReview));
         }
         GrainMendDetectionOptions effectiveDetectionOptions =
             detectionOptions ?? GrainMendDetectionOptions.LegacyDefault;
@@ -75,6 +84,8 @@ internal static unsafe class NativeDevelopPreviewRender
         NativeDefectRecipeEditRefV1[] defectEditOrder = BuildDefectEditOrder(request);
         byte[] defectSourceSha256 = BuildDefectSourceSha256(request);
         byte[] defectRecipeSha256 = BuildDefectRecipeSha256(request);
+        byte[] defectRecipeAppendPrefixSha256 =
+            BuildDefectRecipeAppendPrefixSha256(request);
 
         // 미리보기도 v4 자리를 줍니다. 네이티브는 struct_size 를 보고 채우므로, 작게 주면
         // 필름 베이스 실측과 개발자 디버그 지표가 통째로 빠집니다 - 현상 화면에서 dmin·
@@ -120,6 +131,7 @@ internal static unsafe class NativeDevelopPreviewRender
         fixed (byte* defectMaskBytes = defects.MaskBytes)
         fixed (byte* defectSourceDigest = defectSourceSha256)
         fixed (byte* defectRecipeDigest = defectRecipeSha256)
+        fixed (byte* defectRecipeAppendPrefixDigest = defectRecipeAppendPrefixSha256)
         fixed (NativeDefectCloneEditV1* defectCloneEdits = clones.Edits)
         fixed (NativeDefectCloneStrokeV1* defectCloneStrokes = clones.Strokes)
         fixed (NativeDefectClonePointV1* defectClonePoints = clones.Points)
@@ -205,18 +217,18 @@ internal static unsafe class NativeDevelopPreviewRender
                 // 중첩 구조라 가장 안쪽 V2 의 StructSize 가 전체 크기를 말합니다.
                 NativeGrainMendDetectionV4 detectionV4 = default;
                 detectionV4.V3.V2.StructSize = (uint)sizeof(NativeGrainMendDetectionV4);
-                status = NativeGrainMendDetect.nf_develop_detect_grain_mend_v6(
+                *grainMendReview = 0;
+                status = NativeGrainMendDetect.nf_develop_detect_grain_mend_v7(
                     &v27,
                     &detectionParameters,
-                    pixels.IsEmpty ? null : pixelBuffer,
-                    (ulong)pixels.Length,
-                    components,
-                    componentCapacity,
-                    previewPoints,
-                    previewPointCapacity,
                     runState,
                     &detectionV4,
-                    (NativeDevelopExportResultV3*)&raw);
+                    (NativeDevelopExportResultV3*)&raw,
+                    grainMendReview);
+                if (status == NativeDevelopExportLimits.StatusOk)
+                {
+                    ValidateGrainMendDetectionExtension(detectionV4);
+                }
                 *detection = detectionV4.V3.V2;
                 detection->StructSize = (uint)sizeof(NativeGrainMendDetectionV2);
                 if (componentCount is not null)
@@ -267,8 +279,13 @@ internal static unsafe class NativeDevelopPreviewRender
                 {
                     NativeDevelopExportRequestV35 v35 = BuildRequestV35(
                         v34, defectRecipeDigest, checked((uint)defectRecipeSha256.Length));
-                    status = NativeDevelopRun.nf_develop_preview_v35(
-                        &v35, proofPointer, maximumWidth, maximumHeight, pixelBuffer,
+                    NativeDevelopExportRequestV36 v36 = BuildRequestV36(
+                        v35,
+                        defectRecipeAppendPrefixDigest,
+                        checked((uint)defectRecipeAppendPrefixSha256.Length),
+                        checked((uint)request.DefectRecipeAppendPrefixEditCount));
+                    status = NativeDevelopRun.nf_develop_preview_v36(
+                        &v36, proofPointer, maximumWidth, maximumHeight, pixelBuffer,
                         (uint)Math.Min(pixels.Length, int.MaxValue), runState, (NativeDevelopExportResultV3*)&raw);
                 }
             }
@@ -278,11 +295,25 @@ internal static unsafe class NativeDevelopPreviewRender
             status,
             raw,
             detection is not null
-                ? "nf_develop_detect_grain_mend_v4"
+                ? NativeGrainMendDetect.CurrentEntryPoint
                 : !retainPreviewRaw
                     ? "nf_develop_preview_background_v1"
                 : defectRecipeSha256.Length == 0
                     ? "nf_develop_preview_v34"
-                    : "nf_develop_preview_v35"));
+                    : "nf_develop_preview_v36"));
+    }
+
+    internal static void ValidateGrainMendDetectionExtension(
+        NativeGrainMendDetectionV4 detection)
+    {
+        if (detection.V3.V2.StructSize != (uint)sizeof(NativeGrainMendDetectionV4) ||
+            detection.AutomaticFalsePositiveRisk > 1U || detection.Reserved != 0U ||
+            !double.IsFinite(detection.AutomaticCandidatePixelFraction) ||
+            detection.AutomaticCandidatePixelFraction is < 0.0 or > 1.0)
+        {
+            throw new NativeBootstrapException(
+                NativeBootstrapFailure.ContractViolation,
+                "The native GrainMend detection extension is inconsistent.");
+        }
     }
 }

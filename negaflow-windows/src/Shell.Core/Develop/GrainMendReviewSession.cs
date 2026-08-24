@@ -1,4 +1,5 @@
 using Negaflow.Catalog;
+using Negaflow.Interop;
 
 namespace Negaflow.Shell.Develop;
 
@@ -16,7 +17,7 @@ public readonly record struct GrainMendClassSummary(
 /// 자동·가이드 검출 결과를 저장 전에 검토하는 짧은 수명 세션입니다. 검출한 결함을 하나씩 또는
 /// 종류째로 포함/제외할 수 있으며, 수락할 때에만 제외한 것을 뺀 region 편집을 만듭니다.
 /// </summary>
-public sealed class GrainMendReviewSession
+public sealed class GrainMendReviewSession : IDisposable
 {
     /// <summary>
     /// 클릭 관용 반경의 하한입니다. macOS <c>max(3, field.width / 100)</c> 과 같습니다.
@@ -26,10 +27,14 @@ public sealed class GrainMendReviewSession
     private const int HitRadiusDivisor = 100;
 
     private readonly DefectEditItem source;
-    private readonly byte[] rgba;
-    private readonly GrainMendComponentMap map;
-    private readonly GrainMendMaskWindow window;
+    private readonly byte[]? rgba;
+    private readonly GrainMendComponentMap? map;
+    private readonly GrainMendMaskWindow? window;
     private readonly bool[] excluded;
+    private readonly IGrainMendReviewProposal? proposal;
+    private readonly IReadOnlyList<GrainMendComponent>? nativeComponents;
+    private readonly bool automatic;
+    private bool disposed;
 
     /// <summary>검출기가 낸 성분입니다. 분류를 내지 못했으면 비어 있습니다.</summary>
     private readonly IReadOnlyList<DefectPreviewComponent> components;
@@ -47,8 +52,25 @@ public sealed class GrainMendReviewSession
         this.map = map;
         this.window = window;
         this.components = components;
+        automatic = source.Label.Kind == DefectEditLabelKind.Automatic;
         FalsePositiveRisk = falsePositiveRisk;
         excluded = new bool[map.ComponentCount];
+    }
+
+    private GrainMendReviewSession(
+        IGrainMendReviewProposal proposal,
+        DefectEditItem source,
+        IReadOnlyList<GrainMendComponent> nativeComponents,
+        bool automatic,
+        bool falsePositiveRisk)
+    {
+        this.proposal = proposal;
+        this.source = source;
+        this.nativeComponents = nativeComponents;
+        this.automatic = automatic;
+        components = source.Preview;
+        FalsePositiveRisk = falsePositiveRisk;
+        excluded = new bool[nativeComponents.Count];
     }
 
     /// <summary>
@@ -91,25 +113,63 @@ public sealed class GrainMendReviewSession
             : null;
     }
 
+    public static GrainMendReviewSession? TryCreate(
+        IGrainMendReviewProposal proposal,
+        bool automatic,
+        bool falsePositiveRisk = false)
+    {
+        ArgumentNullException.ThrowIfNull(proposal);
+        if (proposal.Components.Count == 0)
+        {
+            return null;
+        }
+        DefectEditItem? source = GrainMendRegionEdit.ForReview(proposal, automatic);
+        return source is null
+            ? null
+            : new GrainMendReviewSession(
+                proposal, source, proposal.Components, automatic, falsePositiveRisk);
+    }
+
+    public DefectEditItem PreviewEdit => source;
+
     /// <summary>
     /// 화면에서 찍은 자리의 결함을 제외↔포함으로 바꿉니다. 정확히 짚지 않아도 반경 안에서
     /// 가장 가까운 것을 잡습니다 — macOS <c>toggleRegionComponent</c> 와 같습니다.
     /// </summary>
     public bool ToggleAtRaw(DefectPoint rawPoint)
     {
-        if (!window.TryLocate(rawPoint, out int x, out int y))
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (proposal is not null)
+        {
+            if (!TryLocateProposal(rawPoint, out int x, out int y) ||
+                !proposal.TryHit(
+                    x,
+                    y,
+                    checked((uint)Math.Max(
+                        MinimumHitRadius,
+                        checked((int)proposal.Width) / HitRadiusDivisor)),
+                    out int component) ||
+                component < 0 || component >= excluded.Length)
+            {
+                return false;
+            }
+            excluded[component] = !excluded[component];
+            return true;
+        }
+        if (window is not { } legacyWindow || map is null ||
+            !legacyWindow.TryLocate(rawPoint, out int legacyX, out int legacyY))
         {
             return false;
         }
-        int component = map.NearestOwner(
-            x,
-            y,
-            Math.Max(MinimumHitRadius, window.Width / HitRadiusDivisor));
-        if (component < 0 || component >= excluded.Length)
+        int legacyComponent = map.NearestOwner(
+            legacyX,
+            legacyY,
+            Math.Max(MinimumHitRadius, legacyWindow.Width / HitRadiusDivisor));
+        if (legacyComponent < 0 || legacyComponent >= excluded.Length)
         {
             return false;
         }
-        excluded[component] = !excluded[component];
+        excluded[legacyComponent] = !excluded[legacyComponent];
         return true;
     }
 
@@ -118,9 +178,19 @@ public sealed class GrainMendReviewSession
         component >= 0 && component < excluded.Length && excluded[component];
 
     /// <summary>원본 정규 좌표 한 점이 제외한 성분에 속하는지입니다.</summary>
-    public bool IsExcludedAtRaw(DefectPoint rawPoint) =>
-        window.TryLocate(rawPoint, out int x, out int y) &&
-        IsComponentExcluded(map.Owner(x, y));
+    public bool IsExcludedAtRaw(DefectPoint rawPoint)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (proposal is not null)
+        {
+            return TryLocateProposal(rawPoint, out int x, out int y) &&
+                proposal.TryHit(x, y, 0U, out int component) &&
+                IsComponentExcluded(component);
+        }
+        return window is { } legacyWindow && map is not null &&
+            legacyWindow.TryLocate(rawPoint, out int legacyX, out int legacyY) &&
+            IsComponentExcluded(map.Owner(legacyX, legacyY));
+    }
 
     /// <summary>
     /// 지금 검출 결과의 종류별 요약입니다. macOS <c>defectClassSummaries</c> 와 같이
@@ -210,14 +280,79 @@ public sealed class GrainMendReviewSession
     /// 분류별 개수·평균 신뢰도는 <b>남은 결함에서 다시 셉니다</b> — macOS
     /// <c>commitRegionDefect</c> 가 생존 성분으로 요약을 다시 만드는 것과 같습니다.
     /// </summary>
-    public DefectEditItem? BuildAcceptedEdit()
+    public DefectEditItem? BuildAcceptedEdit() =>
+        BuildAcceptedEdit(CaptureExclusions());
+
+    /// <summary>
+    /// 수락 단추를 누른 순간의 제외 선택입니다. macOS <c>commitRegionDefect</c>가 MainActor에서
+    /// <c>defectExcludedIDs</c>를 값 복사한 뒤 detached task에 넘기는 경계와 같습니다.
+    /// </summary>
+    internal bool[] CaptureExclusions()
     {
-        if (IncludedCount == 0)
+        ObjectDisposedException.ThrowIf(disposed, this);
+        return (bool[])excluded.Clone();
+    }
+
+    internal DefectEditItem? BuildAcceptedEdit(ReadOnlySpan<bool> exclusionSnapshot)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (exclusionSnapshot.Length != excluded.Length)
+        {
+            throw new ArgumentException(
+                "The exclusion snapshot must match the component count.",
+                nameof(exclusionSnapshot));
+        }
+        int includedCount = 0;
+        for (int component = 0; component < exclusionSnapshot.Length; ++component)
+        {
+            if (!exclusionSnapshot[component])
+            {
+                ++includedCount;
+            }
+        }
+        if (includedCount == 0)
         {
             return null;
         }
 
-        byte[] selected = map.WithoutExcluded(rgba, excluded);
+        if (proposal is not null && nativeComponents is not null)
+        {
+            byte[] exclusionBytes = new byte[exclusionSnapshot.Length];
+            List<GrainMendComponent> nativeSurvivors = new(includedCount);
+            for (int component = 0; component < exclusionSnapshot.Length; ++component)
+            {
+                if (exclusionSnapshot[component])
+                {
+                    exclusionBytes[component] = 1;
+                }
+                else
+                {
+                    nativeSurvivors.Add(nativeComponents[component]);
+                }
+            }
+            GrainMendAcceptedRegion accepted = proposal.BuildAccepted(exclusionBytes) ??
+                throw new InvalidOperationException(
+                    "The GrainMend review returned an empty accepted region while components remain included.");
+            return GrainMendRegionEdit.FromAccepted(
+                accepted,
+                proposal.SourceWidth,
+                proposal.SourceHeight,
+                automatic,
+                nativeSurvivors,
+                proposal.Width,
+                proposal.Height,
+                proposal.RoiX,
+                proposal.RoiY,
+                proposal.RoiWidth,
+                proposal.RoiHeight) ?? throw new InvalidOperationException(
+                    "The GrainMend review returned an invalid accepted region while components remain included.");
+        }
+
+        if (map is null || rgba is null)
+        {
+            return null;
+        }
+        byte[] selected = map.WithoutExcluded(rgba, exclusionSnapshot);
         if (components.Count == 0)
         {
             // 분류가 없습니다. 종류를 지어내지 않고, 검출이 낸 요약을 그대로 둔 채 남은
@@ -232,7 +367,7 @@ public sealed class GrainMendReviewSession
         List<DefectPreviewComponent> survivors = new(components.Count);
         for (int component = 0; component < components.Count; ++component)
         {
-            if (!IsComponentExcluded(component))
+            if (component >= exclusionSnapshot.Length || !exclusionSnapshot[component])
             {
                 survivors.Add(components[component]);
             }
@@ -247,6 +382,42 @@ public sealed class GrainMendReviewSession
             Preview = survivors,
             RegionMask = new DefectMask(false, selected),
         };
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+        disposed = true;
+        proposal?.Dispose();
+    }
+
+    private bool TryLocateProposal(DefectPoint rawPoint, out int x, out int y)
+    {
+        x = 0;
+        y = 0;
+        if (proposal is null || proposal.Width == 0U || proposal.Height == 0U ||
+            proposal.SourceWidth <= 1U || proposal.SourceHeight <= 1U ||
+            proposal.RoiWidth == 0U || proposal.RoiHeight == 0U ||
+            !double.IsFinite(rawPoint.X) || !double.IsFinite(rawPoint.Y) ||
+            rawPoint.X is < 0.0 or > 1.0 || rawPoint.Y is < 0.0 or > 1.0)
+        {
+            return false;
+        }
+
+        // macOS toggleRegionComponent uses round(unit * sourceSize). Keep the
+        // proposal lookup inverse to GrainMendRegionEdit's pixel / sourceSize preview.
+        double rawX = rawPoint.X * proposal.SourceWidth;
+        double rawY = rawPoint.Y * proposal.SourceHeight;
+        double fieldX = ((rawX - proposal.RoiX + 0.5) * proposal.Width /
+            proposal.RoiWidth) - 0.5;
+        double fieldY = ((rawY - proposal.RoiY + 0.5) * proposal.Height /
+            proposal.RoiHeight) - 0.5;
+        x = (int)Math.Round(fieldX);
+        y = (int)Math.Round(fieldY);
+        return x >= 0 && x < proposal.Width && y >= 0 && y < proposal.Height;
     }
 
     /// <summary>

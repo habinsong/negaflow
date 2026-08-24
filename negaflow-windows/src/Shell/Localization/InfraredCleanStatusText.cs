@@ -12,6 +12,8 @@ public static class InfraredCleanStatusText
     public static string For(InfraredCleanStatus status) =>
         status.Message switch
         {
+            InfraredCleanMessage.Detecting =>
+                AppResources.Get("developInfraredCleanDetecting", "Text"),
             InfraredCleanMessage.Applied => AppResources.FormatIntegers(
                 "developInfraredCleanAppliedFormat",
                 "Value",

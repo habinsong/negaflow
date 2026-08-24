@@ -24,6 +24,8 @@ ScannerToWorkingStatus convert_linear_scanner_raw(
     WorkingImage& output) {
     constexpr float u16_scale = 1.0F / 65'535.0F;
     const std::size_t channels = negaflow::imageio::channel_count(decoded.layout);
+    const negaflow::imageio::RgbSampleOffsets rgb =
+        negaflow::imageio::rgb_sample_offsets(decoded.layout);
     const std::size_t source_stride = decoded.stride_bytes / sizeof(std::uint16_t);
 
     output.width = decoded.width;
@@ -45,12 +47,12 @@ ScannerToWorkingStatus convert_linear_scanner_raw(
             const bool associated =
                 decoded.alpha_mode == negaflow::imageio::AlphaMode::associated;
             destination[column] = {
-                associated ? unassociated_component(source[offset], alpha16)
-                           : static_cast<float>(source[offset]) * u16_scale,
-                associated ? unassociated_component(source[offset + 1U], alpha16)
-                           : static_cast<float>(source[offset + 1U]) * u16_scale,
-                associated ? unassociated_component(source[offset + 2U], alpha16)
-                           : static_cast<float>(source[offset + 2U]) * u16_scale,
+                associated ? unassociated_component(source[offset + rgb.red], alpha16)
+                           : static_cast<float>(source[offset + rgb.red]) * u16_scale,
+                associated ? unassociated_component(source[offset + rgb.green], alpha16)
+                           : static_cast<float>(source[offset + rgb.green]) * u16_scale,
+                associated ? unassociated_component(source[offset + rgb.blue], alpha16)
+                           : static_cast<float>(source[offset + rgb.blue]) * u16_scale,
                 static_cast<float>(alpha16) * u16_scale,
             };
         }

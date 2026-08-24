@@ -27,6 +27,9 @@ namespace negaflow::imaging::grain_mend_detail {
 
 [[nodiscard]] double bounding_aspect(const Component& component) noexcept;
 
+[[nodiscard]] double labeled_maximum_thickness(
+    double dust_sensitivity) noexcept;
+
 // 먼지 게이트: 면적·경계상자 aspect 로 보고, 넘치면 평균 두께로 한 번 더 봅니다.
 [[nodiscard]] bool passes_dust_gate(
     const Component& component,

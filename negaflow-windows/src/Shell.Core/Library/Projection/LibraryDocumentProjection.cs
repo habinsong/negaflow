@@ -11,6 +11,7 @@ internal sealed class LibraryDocumentProjection
     private readonly List<JsonObject> payloads;
     private readonly Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows;
     private readonly Dictionary<string, DefectRecipeSnapshot> defectRecipes;
+    private readonly LibraryDefectRevisionTracker defectRevisions;
     private readonly Action markDirty;
 
     internal LibraryDocumentProjection(
@@ -19,6 +20,7 @@ internal sealed class LibraryDocumentProjection
         List<JsonObject> payloads,
         Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows,
         Dictionary<string, DefectRecipeSnapshot> defectRecipes,
+        LibraryDefectRevisionTracker defectRevisions,
         Action markDirty)
     {
         this.session = session;
@@ -26,6 +28,7 @@ internal sealed class LibraryDocumentProjection
         this.payloads = payloads;
         this.retainedRows = retainedRows;
         this.defectRecipes = defectRecipes;
+        this.defectRevisions = defectRevisions;
         this.markDirty = markDirty;
     }
 
@@ -68,12 +71,17 @@ internal sealed class LibraryDocumentProjection
                         recipe = loadedRecipe;
                         defectRecipes[rowIds[index]] = recipe;
                     }
+                    defectRevisions.Observe(rowIds[index], recipe.RecipeRevision);
                     frame = frame with { DefectRecipe = recipe };
                 }
                 else
                 {
                     defectRecipes.Remove(rowIds[index]);
                 }
+                frame = frame with
+                {
+                    DefectRecipeRevision = defectRevisions.Current(rowIds[index]),
+                };
                 Frames.Add(frame);
                 IndexById[frame.Id] = index;
                 continue;

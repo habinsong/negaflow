@@ -105,6 +105,14 @@ public sealed partial class DevelopLibrarySourcePanel : UserControl
 
     internal void NotifyFramesImported() => FramesImported?.Invoke(this, EventArgs.Empty);
 
+    internal void SetImportStatus(string? text)
+    {
+        ImportStatusText.Text = text ?? string.Empty;
+        ImportStatusText.Visibility = string.IsNullOrEmpty(text)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+    }
+
     internal void SetImportActionsEnabled(bool enabled)
     {
         ImportButton.IsEnabled = enabled;

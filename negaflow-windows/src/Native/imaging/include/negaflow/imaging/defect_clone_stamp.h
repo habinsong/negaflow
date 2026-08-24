@@ -1,5 +1,6 @@
 #pragma once
 
+#include "negaflow/core/cancel_flag.h"
 #include "negaflow/core/pixel.h"
 #include "negaflow/imaging/scanner_to_working.h"
 
@@ -40,6 +41,7 @@ enum class DefectCloneStatus : std::uint8_t {
     invalid_argument,
     kernel_failed,
     allocation_failed,
+    cancelled,
 };
 
 struct DefectCloneInfo final {
@@ -63,7 +65,8 @@ struct DefectCloneResult final {
 // with the layer strength. Source pixels outside the image are ignored.
 [[nodiscard]] DefectCloneResult apply_defect_clone_stamps(
     WorkingImage image,
-    const DefectCloneParameters& parameters) noexcept;
+    const DefectCloneParameters& parameters,
+    negaflow::core::CancelFlag cancel = {}) noexcept;
 
 [[nodiscard]] const char* defect_clone_status_name(
     DefectCloneStatus status) noexcept;

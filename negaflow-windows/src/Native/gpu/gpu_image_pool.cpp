@@ -17,10 +17,10 @@ void reset_images(GpuWorkingImage* const images) noexcept {
 [[nodiscard]] bool texture_pool_bytes(
     const std::uint32_t width,
     const std::uint32_t height,
+    const int image_count,
     std::uint64_t& bytes) noexcept {
     constexpr std::uint64_t bytes_per_pixel = 16ULL;
-    constexpr std::uint64_t images = static_cast<std::uint64_t>(GpuImagePool::size);
-    if (width == 0U || height == 0U) {
+    if (width == 0U || height == 0U || image_count < 1 || image_count > GpuImagePool::size) {
         return false;
     }
     const std::uint64_t row = static_cast<std::uint64_t>(width) * bytes_per_pixel;
@@ -28,6 +28,7 @@ void reset_images(GpuWorkingImage* const images) noexcept {
         return false;
     }
     const std::uint64_t image = row * height;
+    const auto images = static_cast<std::uint64_t>(image_count);
     if (image > std::numeric_limits<std::uint64_t>::max() / images) {
         return false;
     }
@@ -58,8 +59,10 @@ void reset_images(GpuWorkingImage* const images) noexcept {
 bool GpuImagePool::ensure(
     const GpuDevice& device,
     const std::uint32_t width,
-    const std::uint32_t height) noexcept {
-    if (width == 0U || height == 0U) {
+    const std::uint32_t height,
+    const int required_image_count) noexcept {
+    if (width == 0U || height == 0U ||
+        required_image_count < 1 || required_image_count > size) {
         return false;
     }
     if (images_[0].is_valid() && width_ == width && height_ == height) {
@@ -67,6 +70,16 @@ bool GpuImagePool::ensure(
             reset_images(retained_);
             retained_width_ = 0U;
             retained_height_ = 0U;
+        }
+        for (int index = 0; index < required_image_count; ++index) {
+            if (!images_[index].is_valid() &&
+                GpuWorkingImage::create(device, width, height, images_[index]) !=
+                    GpuImageStatus::ok) {
+                reset_images(images_);
+                width_ = 0U;
+                height_ = 0U;
+                return false;
+            }
         }
         return true;
     }
@@ -79,6 +92,14 @@ bool GpuImagePool::ensure(
             }
             std::swap(width_, retained_width_);
             std::swap(height_, retained_height_);
+            for (int index = 0; index < required_image_count; ++index) {
+                if (!images_[index].is_valid() &&
+                    GpuWorkingImage::create(device, width, height, images_[index]) !=
+                        GpuImageStatus::ok) {
+                    clear();
+                    return false;
+                }
+            }
             return true;
         }
         reset_images(images_);
@@ -89,6 +110,14 @@ bool GpuImagePool::ensure(
         height_ = retained_height_;
         retained_width_ = 0U;
         retained_height_ = 0U;
+        for (int index = 0; index < required_image_count; ++index) {
+            if (!images_[index].is_valid() &&
+                GpuWorkingImage::create(device, width, height, images_[index]) !=
+                    GpuImageStatus::ok) {
+                clear();
+                return false;
+            }
+        }
         return true;
     }
 
@@ -100,7 +129,7 @@ bool GpuImagePool::ensure(
 
     std::uint64_t new_pool_bytes = 0ULL;
     const bool keep_current =
-        texture_pool_bytes(width, height, new_pool_bytes) &&
+        texture_pool_bytes(width, height, required_image_count, new_pool_bytes) &&
         can_keep_two_sizes(device, new_pool_bytes);
     if (keep_current) {
         for (int index = 0; index < size; ++index) {
@@ -112,7 +141,7 @@ bool GpuImagePool::ensure(
         reset_images(images_);
     }
 
-    for (int index = 0; index < size; ++index) {
+    for (int index = 0; index < required_image_count; ++index) {
         if (GpuWorkingImage::create(device, width, height, images_[index]) !=
             GpuImageStatus::ok) {
             // 못 잡으면 전부 놓습니다 — 반쯤 잡은 상태로 두면 다음 호출이 크기가
@@ -129,6 +158,15 @@ bool GpuImagePool::ensure(
     width_ = width;
     height_ = height;
     return true;
+}
+
+void GpuImagePool::clear() noexcept {
+    reset_images(images_);
+    reset_images(retained_);
+    width_ = 0U;
+    height_ = 0U;
+    retained_width_ = 0U;
+    retained_height_ = 0U;
 }
 
 }  // namespace negaflow::gpu

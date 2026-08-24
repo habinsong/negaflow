@@ -191,10 +191,10 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ArgumentNullException.ThrowIfNull(service);
         if (thumbnails is not null)
         {
-            thumbnails.ThumbnailReady -= thumbs.OnReady;
+            thumbnails.ThumbnailReady -= OnThumbnailReady;
         }
         thumbnails = service;
-        thumbnails.ThumbnailReady += thumbs.OnReady;
+        thumbnails.ThumbnailReady += OnThumbnailReady;
     }
 
     /// <summary>
@@ -248,6 +248,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
             allItems = LibraryFrameListItems.From(host.Frames, host.SourceAvailabilityByFrameId);
             ShowFilteredItems();
         });
+        SyncFlatbedOverlay();
     }
 
     private void OnHostSelectionChanged(object? sender, EventArgs args)

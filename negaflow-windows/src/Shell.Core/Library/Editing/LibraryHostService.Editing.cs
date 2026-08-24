@@ -1,5 +1,4 @@
 using Negaflow.Catalog;
-using Negaflow.Interop;
 using Negaflow.Shell.Develop;
 
 namespace Negaflow.Shell;
@@ -15,78 +14,61 @@ public sealed partial class LibraryHostService
 
     public string? RedoActionName => document?.RedoActionName;
 
-    /// <summary>한 단계 되돌리고 저장합니다. 되돌린 동작의 이름을 돌려줍니다.</summary>
+    public bool CanUndoDefectFrame(string frameId) =>
+        document?.CanUndoDefectFrame(frameId) == true;
+
+    /// <summary>문서가 저장까지 완료한 한 단계를 되돌리고 그 동작의 이름을 돌려줍니다.</summary>
     public string? Undo()
     {
         frameEdits.Clear();
-        string? name = document?.Undo();
-        if (name is not null)
+        if (document is not { } open)
         {
-            _ = SaveIfDirty();
+            return null;
         }
-        return name;
+        return ApplyHistoryResult(open.UndoWithResult());
     }
 
     public string? Redo()
     {
         frameEdits.Clear();
-        string? name = document?.Redo();
-        if (name is not null)
+        if (document is not { } open)
         {
-            _ = SaveIfDirty();
+            return null;
+        }
+        return ApplyHistoryResult(open.RedoWithResult());
+    }
+
+    internal string? ApplyHistoryResult(
+        LibraryHistoryResult result,
+        bool publishEdit = true)
+    {
+        StoreError = result.CatalogError;
+        DefectSidecarError = result.SidecarError;
+        if (result.RequiresRecovery)
+        {
+            LibraryDocument? failed = document;
+            document = null;
+            State = LibraryHostState.Unavailable;
+            availability.Reset();
+            infraredClean.Reset();
+            infraredCleanAttempted.Clear();
+            failed?.Dispose();
+            selection.Set([], [], null);
+            return null;
+        }
+        if (result.ActionName is not { } name)
+        {
+            return null;
+        }
+
+        if (publishEdit)
+        {
+            FrameEdited?.Invoke(this, EventArgs.Empty);
         }
         return name;
     }
 
     private readonly FrameEditHistory frameEdits = new();
-    private readonly HashSet<string> infraredCleanAttempted = new(StringComparer.Ordinal);
-
-    /// <summary>macOS <c>runInfraredCleanIfNeeded</c>.</summary>
-    public InfraredDefectApplyResult? TryInfraredCleanIfNeeded(string? frameId)
-    {
-        if (document is null || frameId is null)
-        {
-            return null;
-        }
-
-        LibraryFrameSnapshot? frame = Frames.FirstOrDefault(candidate =>
-            string.Equals(candidate.Id, frameId, StringComparison.Ordinal));
-        bool attempted = infraredCleanAttempted.Contains(frameId);
-        if (!InfraredCleanPolicy.ShouldRun(frame, attempted) || frame is null)
-        {
-            return null;
-        }
-
-        infraredCleanAttempted.Add(frameId);
-        if (!DefectSourceIdentityReader.TryRead(frame.SourcePath, out DefectSourceIdentity identity) ||
-            frame.InfraredPath is not { } infraredPath)
-        {
-            if (InfraredCleanPolicy.ShouldRearm(InfraredDefectApplyStatus.DetectionFailed))
-            {
-                infraredCleanAttempted.Remove(frameId);
-            }
-
-            return new InfraredDefectApplyResult(
-                InfraredDefectApplyStatus.DetectionFailed,
-                null,
-                null,
-                DefectSidecarError.None,
-                CatalogStoreError.None);
-        }
-
-        InfraredDefectApplyResult result = InfraredDefectRecipeCoordinator.RunFiles(
-            document,
-            frame,
-            identity,
-            frame.SourcePath,
-            infraredPath);
-        if (InfraredCleanPolicy.ShouldRearm(result.Status))
-        {
-            infraredCleanAttempted.Remove(frameId);
-        }
-
-        return result;
-    }
 
     /// <summary>macOS <c>recordFrameEditIfChanged</c> — <see cref="Edit"/> 길목.</summary>
     private LibraryFrameError AfterCoalescedDevelopEdit(
@@ -108,7 +90,7 @@ public sealed partial class LibraryHostService
         LibraryFrameError error = edit();
         if (error != LibraryFrameError.None && captured)
         {
-            _ = open.Undo();
+            _ = ApplyHistoryResult(open.UndoWithResult(), publishEdit: false);
             return error;
         }
 
@@ -136,7 +118,7 @@ public sealed partial class LibraryHostService
         };
         if (!changed)
         {
-            _ = open.Undo();
+            _ = ApplyHistoryResult(open.UndoWithResult(), publishEdit: false);
             return result;
         }
         _ = SaveIfDirty();

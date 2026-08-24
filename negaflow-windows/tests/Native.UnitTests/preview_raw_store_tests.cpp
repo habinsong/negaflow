@@ -49,6 +49,11 @@ void expect(const bool condition, const char* const message) {
         .runs;
 }
 
+[[nodiscard]] std::uint32_t stage_runs(
+    const negaflow::pipeline::DevelopExportStage stage) {
+    return negaflow::pipeline::stage_timings().slots[static_cast<std::size_t>(stage)].runs;
+}
+
 [[nodiscard]] bool write_source(
     const std::filesystem::path& path,
     const std::uint32_t width,
@@ -76,6 +81,43 @@ void expect(const bool condition, const char* const message) {
     return request;
 }
 
+[[nodiscard]] negaflow::pipeline::DevelopExportRequest clone_request_for(
+    const negaflow::pipeline::DevelopExportRequest& base,
+    const std::size_t edit_count,
+    const std::uint8_t recipe_byte) {
+    negaflow::pipeline::DevelopExportRequest request = base;
+    auto& recipe = request.defect_recipe;
+    recipe.clone_points_storage.reserve(edit_count);
+    recipe.clone_strokes_storage.reserve(edit_count);
+    recipe.clones.reserve(edit_count);
+    recipe.order.reserve(edit_count);
+    for (std::size_t index = 0U; index < edit_count; ++index) {
+        recipe.clone_points_storage.push_back(
+            {0.40 + static_cast<double>(index) * 0.08, 0.48});
+    }
+    for (std::size_t index = 0U; index < edit_count; ++index) {
+        negaflow::imaging::DefectCloneStroke stroke{};
+        stroke.points = std::span{&recipe.clone_points_storage[index], 1U};
+        stroke.offset_x = index == 0U ? 0.07 : -0.05;
+        stroke.offset_y = index == 0U ? -0.03 : 0.06;
+        stroke.diameter_pixels = 34.0;
+        stroke.hardness = 0.65;
+        recipe.clone_strokes_storage.push_back(stroke);
+    }
+    for (std::size_t index = 0U; index < edit_count; ++index) {
+        negaflow::pipeline::DefectCloneEdit edit{};
+        edit.parameters.strokes =
+            std::span{&recipe.clone_strokes_storage[index], 1U};
+        recipe.clones.push_back(edit);
+        recipe.order.push_back(
+            {negaflow::pipeline::DefectRecipeEditKind::clone, index});
+    }
+    std::array<std::uint8_t, 32U> digest{};
+    digest.fill(recipe_byte);
+    request.defect_recipe_sha256 = digest;
+    return request;
+}
+
 [[nodiscard]] negaflow::pipeline::DevelopExportOutcome preview_at(
     const negaflow::pipeline::DevelopExportRequest& request,
     const std::uint32_t box,
@@ -90,12 +132,15 @@ constexpr std::uint32_t settled_box = 3600U;
 
 int run_transient_memory_probe(
     const std::filesystem::path& source,
-    const int iterations) {
+    const int iterations,
+    const bool grain_mend) {
     if (!std::filesystem::exists(source) || iterations <= 0 || iterations > 100) {
         std::cerr << "invalid transient-memory probe arguments\n";
         return 2;
     }
-    negaflow::pipeline::DevelopExportRequest request = request_for(source);
+    negaflow::pipeline::DevelopExportRequest request = grain_mend
+        ? clone_request_for(request_for(source), 2U, 0x51U)
+        : request_for(source);
     request.retain_preview_raw = false;
     negaflow::pipeline::develop_export_detail::preview_raw_store_reset();
     negaflow::pipeline::develop_export_detail::decoded_source_store_reset();
@@ -110,13 +155,16 @@ int run_transient_memory_probe(
                 static_cast<DWORD>(sizeof(memory)))) {
             return 3;
         }
-        std::cout << "transient_memory iteration=" << iteration
+        std::cout << (grain_mend ? "grainmend_memory" : "transient_memory")
+                  << " iteration=" << iteration
                   << " ok=" << outcome.succeeded
                   << " private=" << memory.PrivateUsage
                   << " working=" << memory.WorkingSetSize
                   << " peak_working=" << memory.PeakWorkingSetSize
                   << " raw="
                   << negaflow::pipeline::develop_export_detail::preview_raw_store_resident_bytes()
+                  << " decoded="
+                  << negaflow::pipeline::develop_export_detail::decoded_source_store_resident_bytes()
                   << '\n';
         if (!outcome.succeeded) {
             return 4;
@@ -130,13 +178,17 @@ int run_transient_memory_probe(
 int main(int argc, char** argv) {
     (void)_putenv_s("NEGA_TIMING", "1");
 
-    if (argc == 4 && std::string{argv[1]} == "--transient-memory") {
+    if (argc == 4 &&
+        (std::string{argv[1]} == "--transient-memory" ||
+         std::string{argv[1]} == "--grainmend-memory")) {
         const long parsed = std::strtol(argv[3], nullptr, 10);
         if (parsed <= 0 || parsed > std::numeric_limits<int>::max()) {
             return 2;
         }
         return run_transient_memory_probe(
-            std::filesystem::path{argv[2]}, static_cast<int>(parsed));
+            std::filesystem::path{argv[2]},
+            static_cast<int>(parsed),
+            std::string{argv[1]} == "--grainmend-memory");
     }
 
     using negaflow::pipeline::develop_export_detail::FrameCachePressureLevel;
@@ -302,7 +354,110 @@ int main(int argc, char** argv) {
     expect(preview_at(recipe, 1280U, pixels).succeeded, "changed recipe preview succeeds");
     expect(decode_runs() >= 1U, "changed recipe identity cannot reuse the old raw proxy");
 
-    // ④ 먼 프레임의 persistent disk 채움은 최종 BGRA만 쓰고 native Rgba32F raw를
+    // ④ Brush/Clone도 macOS처럼 full-resolution cleaned raw에서 먼저 적용합니다. 첫
+    // interactive가 만든 같은 recipe raw는 settled가 공유하며, cache 유무가 출력은 바꾸지 않습니다.
+    negaflow::pipeline::DevelopExportRequest clone_recipe = develop;
+    clone_recipe.defect_recipe.clone_points_storage.push_back({0.45, 0.50});
+    negaflow::imaging::DefectCloneStroke clone_stroke{};
+    clone_stroke.points = clone_recipe.defect_recipe.clone_points_storage;
+    clone_stroke.offset_x = 0.08;
+    clone_stroke.offset_y = -0.04;
+    clone_stroke.diameter_pixels = 32.0;
+    clone_stroke.hardness = 0.7;
+    clone_recipe.defect_recipe.clone_strokes_storage.push_back(clone_stroke);
+    negaflow::pipeline::DefectCloneEdit clone_edit{};
+    clone_edit.parameters.strokes = clone_recipe.defect_recipe.clone_strokes_storage;
+    clone_recipe.defect_recipe.clones.push_back(clone_edit);
+    clone_recipe.defect_recipe.order.push_back(
+        {negaflow::pipeline::DefectRecipeEditKind::clone, 0U});
+    std::array<std::uint8_t, 32U> clone_sha{};
+    clone_sha.fill(0x33U);
+    clone_recipe.defect_recipe_sha256 = clone_sha;
+
+    negaflow::pipeline::develop_export_detail::preview_raw_store_reset();
+    negaflow::pipeline::develop_export_detail::decoded_source_store_reset();
+    std::vector<std::uint8_t> clone_interactive{};
+    expect(
+        preview_at(clone_recipe, 1280U, clone_interactive).succeeded,
+        "clone interactive preview succeeds");
+    const std::uint64_t full_source_bytes =
+        2ULL * 1600ULL * 1200ULL * sizeof(negaflow::core::Rgba32F);
+    expect(
+        negaflow::pipeline::develop_export_detail::decoded_source_store_resident_bytes() >=
+            full_source_bytes,
+        "clone preview retains full-resolution source and cleaned raw");
+
+    negaflow::pipeline::develop_export_detail::preview_raw_store_reset();
+    negaflow::pipeline::reset_stage_timings();
+    std::vector<std::uint8_t> cached_settled{};
+    expect(
+        preview_at(clone_recipe, settled_box, cached_settled).succeeded,
+        "clone settled preview reuses cleaned raw");
+    expect(decode_runs() == 0U, "cleaned raw reuse skips decode");
+    expect(
+        stage_runs(negaflow::pipeline::DevelopExportStage::defect_component_repair) == 0U,
+        "cleaned raw reuse skips ordered defect repair");
+
+    negaflow::pipeline::develop_export_detail::preview_raw_store_reset();
+    negaflow::pipeline::develop_export_detail::decoded_source_store_reset();
+    std::vector<std::uint8_t> uncached_settled{};
+    expect(
+        preview_at(clone_recipe, settled_box, uncached_settled).succeeded,
+        "uncached clone settled preview succeeds");
+    expect(
+        cached_settled == uncached_settled,
+        "cleaned raw cache preserves exact settled output");
+
+    // ⑤ 새 revision은 마지막 cached recipe를 접두라고 추정하지 않습니다. 명시 SHA가
+    //    정확히 맞는 append만 첫 layer를 건너뛰며, source부터 두 layer를 적용한 출력과 같습니다.
+    negaflow::pipeline::DevelopExportRequest prefix_recipe =
+        clone_request_for(develop, 1U, 0x41U);
+    negaflow::pipeline::develop_export_detail::preview_raw_store_reset();
+    negaflow::pipeline::develop_export_detail::decoded_source_store_reset();
+    expect(preview_at(prefix_recipe, 1280U, pixels).succeeded,
+           "append prefix preview succeeds");
+
+    negaflow::pipeline::DevelopExportRequest appended_recipe =
+        clone_request_for(develop, 2U, 0x42U);
+    appended_recipe.defect_recipe_append_prefix_sha256 =
+        prefix_recipe.defect_recipe_sha256;
+    appended_recipe.defect_recipe_append_prefix_edit_count = 1U;
+    negaflow::pipeline::develop_export_detail::preview_raw_store_reset();
+    negaflow::pipeline::reset_stage_timings();
+    std::vector<std::uint8_t> appended_cached{};
+    expect(preview_at(appended_recipe, 1280U, appended_cached).succeeded,
+           "explicit append prefix preview succeeds");
+    expect(decode_runs() == 0U, "explicit append prefix skips source decode");
+    expect(stage_runs(negaflow::pipeline::DevelopExportStage::defect_component_repair) == 1U,
+           "explicit append prefix applies only the new suffix stage");
+
+    negaflow::pipeline::develop_export_detail::preview_raw_store_reset();
+    negaflow::pipeline::develop_export_detail::decoded_source_store_reset();
+    std::vector<std::uint8_t> appended_full{};
+    expect(preview_at(clone_request_for(develop, 2U, 0x42U), 1280U, appended_full).succeeded,
+           "full two-edit preview succeeds");
+    expect(appended_cached == appended_full,
+           "append-prefix reuse is byte-exact with a full ordered rebuild");
+
+    negaflow::pipeline::develop_export_detail::preview_raw_store_reset();
+    negaflow::pipeline::develop_export_detail::decoded_source_store_reset();
+    expect(preview_at(prefix_recipe, 1280U, pixels).succeeded,
+           "prefix is retained again for mismatch test");
+    auto mismatched_prefix = clone_request_for(develop, 2U, 0x42U);
+    std::array<std::uint8_t, 32U> wrong_prefix{};
+    wrong_prefix.fill(0x99U);
+    mismatched_prefix.defect_recipe_append_prefix_sha256 = wrong_prefix;
+    mismatched_prefix.defect_recipe_append_prefix_edit_count = 1U;
+    negaflow::pipeline::develop_export_detail::preview_raw_store_reset();
+    negaflow::pipeline::reset_stage_timings();
+    std::vector<std::uint8_t> mismatch_output{};
+    expect(preview_at(mismatched_prefix, 1280U, mismatch_output).succeeded,
+           "mismatched prefix falls back to a full rebuild");
+    expect(decode_runs() >= 1U, "mismatched prefix does not reuse cleaned raw");
+    expect(mismatch_output == appended_full,
+           "mismatched prefix fallback preserves exact output");
+
+    // ⑥ 먼 프레임의 persistent disk 채움은 최종 BGRA만 쓰고 native Rgba32F raw를
     //    카탈로그 전체에 중복 상주시지 않습니다.
     negaflow::pipeline::DevelopExportRequest background = other;
     background.retain_preview_raw = false;
@@ -312,7 +467,7 @@ int main(int argc, char** argv) {
         negaflow::pipeline::develop_export_detail::preview_raw_store_resident_bytes() == 0ULL,
         "background preview does not retain a raw proxy");
 
-    // ⑤ 같은 캐시를 여러 스레드가 동시에 두드려도 죽지 않는다.
+    // ⑦ 같은 캐시를 여러 스레드가 동시에 두드려도 죽지 않는다.
     //    앱에서 겹치는 자리 그대로입니다 — 현상 프리뷰(큰 상자) + 썸네일 3개(360).
     std::atomic<int> concurrent_failures{0};
     std::vector<std::thread> workers{};

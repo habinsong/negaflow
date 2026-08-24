@@ -44,6 +44,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     // onChange 가 현상본을 요청하면 샘플과 렌더가 겹치고, 취소된 렌더가 빈 캔버스를 남깁니다.
     private bool basePickInFlight;
     private string? presentedFrameId;
+    private long frameEditRefreshGeneration;
 
     public DevelopWorkspaceView()
     {
@@ -77,6 +78,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
             GrainMendPanel.TryHandlePointerPressed(args);
         BaseCard.BasePickerModeChanged += (_, _) =>
         {
+            if (BaseCard.IsBasePickerActive)
+            {
+                ExitCanvasToolsForBasePicker();
+            }
             PreviewCanvas.ShowBasePickerPrompt(BaseCard.IsBasePickerActive);
             // macOS `onChange(of: basePickerMode)` — 켜면 Raw, 끄면 현상본.
             if (previewCoordinator is not null)
@@ -153,8 +158,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
             crop,
             PreviewCanvas,
             cropSession.End,
+            ExitCanvasToolsForRegionDefect,
             text => ExportStatusText.Text = text,
-            RequestPreview);
+            RequestPreview,
+            RequestPreviewReplacingCurrent);
         LeftPanel.Attach(state);
         LeftPanel.ExportPanel.RunQuickExport = QuickExportAsync;
         LeftPanel.ExportPanel.ProgressChanged +=
@@ -196,10 +203,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
         if (libraryHost is not null)
         {
             libraryHost.SelectionChanged -= frames.OnLibrarySelectionChanged;
+            libraryHost.InfraredCleanStatusChanged -= OnInfraredCleanStatusChanged;
         }
         libraryHost = host;
         // 격자에서 고른 장수가 바뀌면 내보내기 단추의 이름도 따라갑니다.
         host.SelectionChanged += frames.OnLibrarySelectionChanged;
+        host.InfraredCleanStatusChanged += OnInfraredCleanStatusChanged;
         panel = new DevelopPanelState(host, limits, negativeLimits);
         PreviewCanvas.AttachViewport(panel.Viewport);
         PreviewCanvas.AttachCompare(panel.Compare, OnCompareModeChosen, OnCompareBeforeChosen);
@@ -259,8 +268,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// macOS 는 <c>AppModel</c> 하나가 스캐너를 들고, 라이브러리 사이드바와 현상 사이드바가
     /// 같은 <c>LibrarySourceSection</c> 을 냅니다. 여기서 그 한 벌을 물려받습니다.
     /// </summary>
-    public void AttachScanSessionHost(Views.Library.Scanner.ScanSessionHost host) =>
+    public void AttachScanSessionHost(Views.Library.Scanner.ScanSessionHost host)
+    {
         LeftPanel.AttachScanSessionHost(host);
+        host.BindGrainMendCarryover(
+            GrainMendPanel.CaptureScannerPreviewCarryover,
+            QueueScannerGuidedCarryover);
+    }
 
     /// <summary>
     /// 라이브러리에서 카탈로그가 바깥에서 바뀌었을 때 현상뷰를 그 값으로 다시 맞춥니다.
@@ -274,6 +288,33 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// 번에 새 값으로 갑니다.
     /// </remarks>
     public void ReloadFrames() => frames.Refresh();
+
+    public void NotifyFrameEdited() => _ = NotifyFrameEditedAsync();
+
+    private async Task NotifyFrameEditedAsync()
+    {
+        long generation = checked(++frameEditRefreshGeneration);
+        if (libraryHost is not { } host || panel?.SelectedFrame is not { } selected ||
+            host.Frames.FirstOrDefault(candidate =>
+                string.Equals(candidate.Id, selected.Id, StringComparison.Ordinal)) is not { } current ||
+            ReferenceEquals(selected, current))
+        {
+            return;
+        }
+
+        bool sameRecipe = await GrainMendDetectionToken.SameDevelopRecipeAsync(selected, current);
+        if (generation != frameEditRefreshGeneration || sameRecipe ||
+            !ReferenceEquals(panel?.SelectedFrame, selected) ||
+            libraryHost is not { } currentHost ||
+            !ReferenceEquals(
+                currentHost.Frames.FirstOrDefault(candidate =>
+                    string.Equals(candidate.Id, current.Id, StringComparison.Ordinal)),
+                current))
+        {
+            return;
+        }
+        frames.Refresh();
+    }
 
     internal void RaiseScannerSetupRequested() =>
         ScannerSetupRequested?.Invoke(this, EventArgs.Empty);
@@ -333,6 +374,17 @@ public sealed partial class DevelopWorkspaceView : UserControl
     public Task ExportPhotoAsync()
     {
         return LeftPanel.ExportPanel.runner.RunExportAsync();
+    }
+
+    internal bool TryExitGrainMendInteraction() =>
+        GrainMendPanel.TryExitRegionDefectInteraction();
+
+    internal async Task PrepareForTerminationAsync()
+    {
+        Task grainMendDrain = GrainMendPanel.PrepareForTerminationAsync();
+        Task previewDrain = previewCoordinator?.CancelAndDrainAsync() ?? Task.CompletedTask;
+        Task neighborDrain = CancelNeighborWarmAsync();
+        await Task.WhenAll(grainMendDrain, previewDrain, neighborDrain);
     }
 
     private void OnThumbnailReady(string frameId) => frames.OnThumbnailReady(frameId);

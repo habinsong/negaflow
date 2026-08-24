@@ -221,7 +221,12 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         frameWidth = 0.0;
         frameHeight = 0.0;
         Windows.Foundation.Point position = args.GetCurrentPoint(CanvasHost).Position;
-        if (!TryGetPreviewFrame(out PreviewFrame frame))
+        PreviewFrame frame;
+        if (crop is { IsActive: true, OverlayFrame: { } overlayFrame })
+        {
+            frame = overlayFrame;
+        }
+        else if (!TryGetPreviewFrame(out frame))
         {
             return false;
         }
@@ -384,12 +389,27 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         CompareHud.Refresh();
     }
 
-    public void RenderCropOverlay()
+    public void RenderCropOverlay(bool refreshFrame = false)
     {
-        if (crop is null || !TryGetPreviewFrame(out PreviewFrame frame))
+        if (crop is null)
         {
             cropOverlay.Hide();
             return;
+        }
+
+        PreviewFrame frame;
+        if (refreshFrame || crop.OverlayFrame is not { } overlayFrame)
+        {
+            if (!TryGetPreviewFrame(out frame))
+            {
+                cropOverlay.Hide();
+                return;
+            }
+            crop.SetOverlayFrame(frame);
+        }
+        else
+        {
+            frame = overlayFrame;
         }
         cropOverlay.Render(crop, frame);
     }
@@ -489,7 +509,7 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         _ = sender;
         ApplyImageFrame();
         ApplyHudLayout();
-        RenderCropOverlay();
+        RenderCropOverlay(refreshFrame: true);
         HostSizeChanged?.Invoke(this, args);
     }
 

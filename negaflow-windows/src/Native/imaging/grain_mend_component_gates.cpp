@@ -90,6 +90,12 @@ using namespace tuning;
            static_cast<double>(std::max(1U, std::min(width, height)));
 }
 
+[[nodiscard]] double labeled_maximum_thickness(
+    const double dust_sensitivity) noexcept {
+    return static_cast<double>(static_cast<int>(
+        12.0 + std::clamp(dust_sensitivity, 0.0, 1.0) * 12.0));
+}
+
 [[nodiscard]] bool passes_dust_gate(
     const Component& component,
     const std::size_t maximum_area,

@@ -1,6 +1,7 @@
 #include "defect.h"
 
 #include "export/support/outcome.h"
+#include "negaflow/core/cancel_flag.h"
 
 #include <cstddef>
 #include <cstdio>
@@ -20,17 +21,31 @@ namespace {
 
 std::optional<DevelopExportOutcome> apply_defect_stage(
     const DevelopExportRequest& request,
+    const DevelopRunControl& control,
     const PreviewTarget* const preview,
     const DetectTarget* const detect,
     RunTracker& tracker,
     negaflow::imaging::WorkingImage& decoded_image,
-    DefectRecipeStageResult& defect_recipe) noexcept {
+    DefectRecipeStageResult& defect_recipe,
+    const std::size_t first_order_index,
+    const DefectRecipeStageInfo* const prefix_info) noexcept {
     tracker.begin(
         DevelopExportStage::defect_component_repair,
         cost_of(defect_cost, !request.defect_recipe.order.empty()));
-    defect_recipe = apply_defect_recipe(
-        std::move(decoded_image),
-        request.defect_recipe);
+    defect_recipe = prefix_info == nullptr
+        ? apply_defect_recipe(
+              std::move(decoded_image),
+              request.defect_recipe,
+              negaflow::core::CancelFlag{control.cancel_flag})
+        : apply_defect_recipe_suffix(
+              std::move(decoded_image),
+              request.defect_recipe,
+              first_order_index,
+              *prefix_info,
+              negaflow::core::CancelFlag{control.cancel_flag});
+    if (defect_recipe.status == DefectRecipeStageStatus::cancelled) {
+        return cancelled_outcome(DevelopExportStage::defect_component_repair);
+    }
     if (defect_recipe.status != DefectRecipeStageStatus::ok) {
         const DevelopExportStage stage = [&]() {
             if (defect_recipe.status == DefectRecipeStageStatus::clone_failed) {

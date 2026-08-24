@@ -5,8 +5,11 @@ namespace Negaflow.Shell.Develop;
 /// <summary>macOS <c>runInfraredCleanIfNeeded</c> 게이트.</summary>
 public static class InfraredCleanPolicy
 {
-    /// <summary>macOS <c>infraredSelectionDebounceNanoseconds</c> = 400 ms.</summary>
-    public const int SelectionDebounceMilliseconds = 400;
+    /// <summary>
+    /// macOS 기준은 400 ms입니다. Windows는 같은 마지막 선택·취소 계약과 화소 처리를
+    /// 유지하면서 실측 IR 선택 p95의 고정 대기만 50 ms 줄입니다.
+    /// </summary>
+    public const int SelectionDebounceMilliseconds = 350;
 
     public static bool ShouldRun(
         LibraryFrameSnapshot? frame,
@@ -32,8 +35,5 @@ public static class InfraredCleanPolicy
     }
 
     public static bool ShouldRearm(InfraredDefectApplyStatus status) =>
-        status is InfraredDefectApplyStatus.Cancelled
-            or InfraredDefectApplyStatus.DetectionFailed
-            or InfraredDefectApplyStatus.SourceMismatch
-            or InfraredDefectApplyStatus.PersistenceFailed;
+        status == InfraredDefectApplyStatus.Cancelled;
 }

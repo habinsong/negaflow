@@ -12,27 +12,90 @@ internal sealed class DevelopGrainMendReview
     internal DevelopGrainMendReview(DevelopGrainMendPanel view) => this.view = view;
 
     /// <summary>검토 중인 검출을 받아들여 recipe 에 담습니다.</summary>
-    internal void AcceptPending()
+    internal async Task AcceptPendingAsync()
     {
-        if (view.panel is null || view.grainMend.PendingEdit is null)
+        if (view.panel is not { } panel || view.grainMend.PendingEdit is null ||
+            view.isRemovingDefects)
         {
             return;
         }
-        DefectEditItem? edit = view.grainMend.BuildAcceptedEdit();
-        if (edit is null)
+        if (view.grainMend.CaptureAcceptance() is not { } acceptance ||
+            panel.GrainMendFrameSnapshot(acceptance.DetectionToken.FrameId) is not { } startFrame)
         {
-            CancelPending();
+            view.SetStatus(AppResources.Get("developGrainMendDetectFailed", "Text"));
+            view.chrome.Update();
+            return;
+        }
+
+        view.removingAcceptance = acceptance;
+        view.chrome.Update();
+        try
+        {
+            GrainMendAcceptanceBuildResult built = await acceptance.BuildAsync(startFrame);
+            if (!view.grainMend.OwnsAcceptance(acceptance))
+            {
+                return;
+            }
+            if (built.Kind == GrainMendAcceptanceBuildKind.Stale)
+            {
+                DiscardStale(acceptance);
+                return;
+            }
+            if (built.Kind == GrainMendAcceptanceBuildKind.Failed)
+            {
+                view.SetStatus(AppResources.Get("developGrainMendDetectFailed", "Text"));
+                return;
+            }
+            if (built.Edit is not { } edit)
+            {
+                CancelPending();
+                return;
+            }
+
+            if (panel.GrainMendFrameSnapshot(
+                    acceptance.DetectionToken.FrameId) is not { } currentFrame ||
+                !await acceptance.DetectionToken.MatchesRecipeAsync(currentFrame) ||
+                !view.grainMend.OwnsAcceptance(acceptance) ||
+                !ReferenceEquals(
+                    panel.GrainMendFrameSnapshot(acceptance.DetectionToken.FrameId),
+                    currentFrame))
+            {
+                DiscardStale(acceptance);
+                return;
+            }
+
+            if (view.grainMend.CommitAcceptedEdit(
+                    edit,
+                    item => panel.AcceptDefectRegion(
+                        item,
+                        acceptance.DetectionToken,
+                        currentFrame)) != LibraryFrameError.None)
+            {
+                view.SetStatus(AppResources.Get("developGrainMendDetectFailed", "Text"));
+                return;
+            }
+            HideOverlay();
+            view.SetStatus(string.Empty);
+            view.RequestDefectPreview();
+        }
+        finally
+        {
+            if (ReferenceEquals(view.removingAcceptance, acceptance))
+            {
+                view.removingAcceptance = null;
+            }
+            view.chrome.Update();
+        }
+    }
+
+    private void DiscardStale(GrainMendAcceptance acceptance)
+    {
+        if (!view.grainMend.OwnsAcceptance(acceptance))
+        {
             return;
         }
         ClearPending();
-        if (view.panel.AcceptDefectRegion(edit) != LibraryFrameError.None)
-        {
-            view.SetStatus(AppResources.Get("developGrainMendDetectFailed", "Text"));
-            return;
-        }
         view.SetStatus(string.Empty);
-        view.chrome.Update();
-        view.RequestPreview();
     }
 
     internal void CancelPending()
@@ -48,18 +111,30 @@ internal sealed class DevelopGrainMendReview
         HideOverlay();
     }
 
+    internal void RestorePendingOverlay()
+    {
+        if (view.grainMend.PendingEdit is { } edit)
+        {
+            ShowOverlay(edit);
+        }
+        else
+        {
+            HideOverlay();
+        }
+    }
+
     internal void HideOverlay() => view.canvas?.HideDefectOverlay();
 
     /// <summary>
     /// macOS <c>CloneStampOverlay.draw</c>: 소스 창 미리보기, 커서 원과 그 안의 소스 화소,
     /// 그리고 샘플 십자선을 캔버스에 올립니다. Alt 를 누르고 있으면 원 대신 십자선만 냅니다.
     /// </summary>
-    internal void RenderCloneCursor()
+    internal bool RenderCloneCursor()
     {
         if (view.panel?.SelectedFrame is not { SourceMetadata: { } metadata } frame ||
             view.canvas?.PreviewBitmap is null)
         {
-            return;
+            return false;
         }
         int width = view.canvas.PreviewBitmap.PixelWidth;
         int height = view.canvas.PreviewBitmap.PixelHeight;
@@ -80,20 +155,21 @@ internal sealed class DevelopGrainMendReview
                 view.input.CloneSourceModifierDown) is not { } bgra)
         {
             HideOverlay();
-            return;
+            return false;
         }
         view.canvas.ShowDefectPixels(bgra, width, height);
+        return true;
     }
 
     /// <summary>
     /// macOS <c>BrushOverlay</c>: 모아 둔 칠과 진행 중인 획을 빨강으로 캔버스에 올립니다.
     /// 칠이 없으면 덮개를 내립니다.
     /// </summary>
-    internal void RenderPaintOverlay()
+    internal bool RenderPaintOverlay()
     {
         if (view.panel?.SelectedFrame is not { } frame || view.canvas?.PreviewBitmap is null)
         {
-            return;
+            return false;
         }
         int width = view.canvas.PreviewBitmap.PixelWidth;
         int height = view.canvas.PreviewBitmap.PixelHeight;
@@ -106,30 +182,37 @@ internal sealed class DevelopGrainMendReview
                 view.grainMend.Strokes.BrushThickness) is not { } bgra)
         {
             HideOverlay();
-            return;
+            return false;
         }
         view.canvas.ShowDefectPixels(bgra, width, height);
+        return true;
     }
 
-    internal void ShowOverlay(DefectEditItem edit)
+    internal bool ShowOverlay(DefectEditItem edit)
     {
         if (view.panel?.SelectedFrame is not { } frame || view.canvas?.PreviewBitmap is null)
         {
-            return;
+            return false;
         }
 
         int width = view.canvas.PreviewBitmap.PixelWidth;
         int height = view.canvas.PreviewBitmap.PixelHeight;
+        double pointScale = view.canvas.TryGetPreviewFrame(out PreviewFrame displayFrame) &&
+            displayFrame.Width > 0.0
+                ? width / displayFrame.Width
+                : 1.0;
         if (GrainMendOverlayRenderer.Render(
                 frame,
                 width,
                 height,
                 edit,
-                view.grainMend.PendingReview) is not { } bgra)
+                view.grainMend.PendingReview,
+                pointScale) is not { } bgra)
         {
-            return;
+            return false;
         }
         view.canvas.ShowDefectPixels(bgra, width, height);
+        return true;
     }
 
     internal void RemoveEdits(DefectEditKind kind)
@@ -144,7 +227,7 @@ internal sealed class DevelopGrainMendReview
             return;
         }
         view.chrome.Update();
-        view.RequestPreview();
+        view.RequestDefectPreview();
     }
 
     internal void RemoveEdits(DefectEditLabelKind label)
@@ -159,6 +242,18 @@ internal sealed class DevelopGrainMendReview
             return;
         }
         view.chrome.Update();
-        view.RequestPreview();
+        view.RequestDefectPreview();
+    }
+
+    /// <summary>Brush HUD 초기화: 모드와 draft는 유지하고 IR 외 적용 결함만 지웁니다.</summary>
+    internal void RemoveAppliedDefects()
+    {
+        if (view.panel is null ||
+            view.panel.RemoveNonInfraredDefectEdits() != LibraryFrameError.None)
+        {
+            return;
+        }
+        view.chrome.Update();
+        view.RequestDefectPreview();
     }
 }

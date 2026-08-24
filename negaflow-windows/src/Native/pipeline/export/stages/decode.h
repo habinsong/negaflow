@@ -8,6 +8,7 @@
 #include "negaflow/imaging/scanner_to_working.h"
 
 #include <optional>
+#include <memory>
 #include <stop_token>
 
 namespace negaflow::pipeline::develop_export_detail {
@@ -25,5 +26,21 @@ namespace negaflow::pipeline::develop_export_detail {
 void decoded_source_store_reset() noexcept;
 
 [[nodiscard]] std::uint64_t decoded_source_store_resident_bytes() noexcept;
+
+// 같은 source observation과 ordered recipe SHA의 full-resolution cleaned raw입니다.
+// 프리뷰 크기별 proxy와 달리 interactive/settled가 한 결과를 공유합니다.
+[[nodiscard]] bool decoded_cleaned_raw_try_take(
+    const std::filesystem::path& path,
+    const negaflow::imageio::ImageFileObservation& observation,
+    const std::array<std::uint8_t, 32U>& recipe_sha256,
+    std::shared_ptr<const negaflow::imaging::WorkingImage>& image,
+    DefectRecipeStageInfo& info) noexcept;
+
+void decoded_cleaned_raw_put(
+    const std::filesystem::path& path,
+    const negaflow::imageio::ImageFileObservation& observation,
+    const std::array<std::uint8_t, 32U>& recipe_sha256,
+    std::shared_ptr<const negaflow::imaging::WorkingImage> image,
+    const DefectRecipeStageInfo& info) noexcept;
 
 }  // namespace negaflow::pipeline::develop_export_detail

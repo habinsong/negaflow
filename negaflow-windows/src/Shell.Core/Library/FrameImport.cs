@@ -14,10 +14,13 @@ public enum FrameImportRefusal
     InfraredMatchesVisible,
     AlreadyInLibrary,
     UnsupportedImage,
+    InvalidImageTransform,
     RouteRejected,
 }
 
 public sealed record FrameImportRejection(string Path, FrameImportRefusal Refusal);
+
+public sealed record FrameInfraredAttachment(string FrameId, string InfraredPath);
 
 /// <summary>
 /// scanner host가 RGB artifact를 안전하게 publish한 뒤 library에 넘기는 한 프레임입니다.
@@ -36,6 +39,12 @@ public sealed record ScannerFrameImport(
     public ImageRotation Rotation { get; init; } = ImageRotation.Degrees0;
 
     /// <summary>
+    /// 스캐너 preview에서 이어받아 catalog publication에 원자적으로 넣을 전체 기하 recipe입니다.
+    /// 하드웨어 요청과는 별개이며, 없으면 <see cref="Rotation"/>만 초기 recipe로 씁니다.
+    /// </summary>
+    public ImageTransformRecipe? InitialTransform { get; init; }
+
+    /// <summary>
     /// 평판 프리뷰 스캔입니다. macOS <c>isPreviewScan: preview</c> 와 같은 뜻이며, 이 표시가
     /// 붙은 프레임은 장수 세기와 내보내기에서 빠집니다.
     /// </summary>
@@ -46,7 +55,12 @@ public sealed record FrameImportPlan(
     IReadOnlyList<CatalogEntityRow> Rows,
     IReadOnlyList<FrameImportRejection> Rejected)
 {
-    public bool HasAnything => Rows.Count > 0;
+    public IReadOnlyList<FrameInfraredAttachment> InfraredAttachments { get; init; } = [];
+
+    public IReadOnlyList<string> RemovedStrayInfraredFrameIds { get; init; } = [];
+
+    public bool HasAnything => Rows.Count > 0 || InfraredAttachments.Count > 0 ||
+        RemovedStrayInfraredFrameIds.Count > 0;
 }
 
 /// <summary>
@@ -88,10 +102,49 @@ public static class FrameImport
         HashSet<string> pairedInfrared = new(
             pairing.PairedInfraredPaths.Select(InfraredImportPairing.ImportIdentity),
             StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> pendingInfrared = new(
+            pairing.InfraredByBaseIdentity,
+            StringComparer.OrdinalIgnoreCase);
 
         List<CatalogEntityRow> rows = [];
         List<FrameImportRejection> rejected = [];
+        List<FrameInfraredAttachment> infraredAttachments = [];
         DevelopRouteSelection selection = DevelopRouteSelection.FromProcess(process);
+
+        foreach (LibraryFrameSnapshot frame in existingFrames)
+        {
+            string baseIdentity = InfraredImportPairing.ImportIdentity(frame.SourcePath);
+            if (!pendingInfrared.Remove(baseIdentity, out string? infraredPath) ||
+                frame.InfraredPath is not null)
+            {
+                continue;
+            }
+            if (!IsFullPath(infraredPath))
+            {
+                rejected.Add(new FrameImportRejection(
+                    infraredPath,
+                    FrameImportRefusal.InvalidInfraredPath));
+                continue;
+            }
+            if (!exists(infraredPath))
+            {
+                rejected.Add(new FrameImportRejection(
+                    infraredPath,
+                    FrameImportRefusal.InfraredFileNotFound));
+                continue;
+            }
+            if (string.Equals(
+                    NormalizePath(frame.SourcePath),
+                    NormalizePath(infraredPath),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                rejected.Add(new FrameImportRejection(
+                    infraredPath,
+                    FrameImportRefusal.InfraredMatchesVisible));
+                continue;
+            }
+            infraredAttachments.Add(new FrameInfraredAttachment(frame.Id, infraredPath));
+        }
 
         foreach (string path in filePaths)
         {
@@ -111,6 +164,19 @@ public static class FrameImport
                 rejected.Add(new FrameImportRejection(path, FrameImportRefusal.FileNotFound));
                 continue;
             }
+            if (!ImageSourcePaths.IsSupportedImportPath(path))
+            {
+                rejected.Add(new FrameImportRejection(path, FrameImportRefusal.UnsupportedImage));
+                continue;
+            }
+            string normalizedPath = NormalizePath(path);
+            // 등록 폴더의 변경을 다시 확인할 때 기존 대형 TIFF/RAW를 매번 디코딩하지 않습니다.
+            // 중복 여부는 경로만으로 확정할 수 있으므로 메타데이터 읽기보다 먼저 끝냅니다.
+            if (taken.Contains(normalizedPath))
+            {
+                rejected.Add(new FrameImportRejection(path, FrameImportRefusal.AlreadyInLibrary));
+                continue;
+            }
             LibrarySourceMetadata? sourceMetadata = sourceMetadataReader?.Invoke(path);
             if (sourceMetadataReader is not null && sourceMetadata is null)
             {
@@ -119,7 +185,7 @@ public static class FrameImport
             }
             // 같은 파일을 두 번 넣으면 편집이 둘로 갈라져 사용자가 어느 쪽을 고쳤는지 알 수
             // 없게 됩니다. 한 번 고르든 두 번 고르든 한 건입니다.
-            if (!taken.Add(NormalizePath(path)))
+            if (!taken.Add(normalizedPath))
             {
                 rejected.Add(new FrameImportRejection(path, FrameImportRefusal.AlreadyInLibrary));
                 continue;
@@ -139,9 +205,9 @@ public static class FrameImport
             };
             if (sourceMetadata is { } metadata)
             {
-                record[LibraryFrameReader.SourceMetadataName] = WriteSourceMetadata(metadata);
+                record[LibraryFrameReader.SourceMetadataName] = LibrarySourceMetadataJson.Write(metadata);
             }
-            if (pairing.InfraredByBaseIdentity.TryGetValue(
+            if (pendingInfrared.TryGetValue(
                     InfraredImportPairing.ImportIdentity(path),
                     out string? infraredPath))
             {
@@ -152,7 +218,7 @@ public static class FrameImport
             if (written.FrameRecord is not { } routed)
             {
                 rejected.Add(new FrameImportRejection(path, FrameImportRefusal.RouteRejected));
-                taken.Remove(NormalizePath(path));
+                taken.Remove(normalizedPath);
                 continue;
             }
 
@@ -160,11 +226,14 @@ public static class FrameImport
             ++nextScanIndex;
         }
 
-        if (rows.Count == 0 && rejected.Count == 0)
+        if (rows.Count == 0 && infraredAttachments.Count == 0 && rejected.Count == 0)
         {
             rejected.Add(new FrameImportRejection(string.Empty, FrameImportRefusal.NoFiles));
         }
-        return new FrameImportPlan(rows, rejected);
+        return new FrameImportPlan(rows, rejected)
+        {
+            InfraredAttachments = infraredAttachments,
+        };
     }
 
     /// <summary>
@@ -225,6 +294,18 @@ public static class FrameImport
             return Rejected(scan.VisiblePath, FrameImportRefusal.AlreadyInLibrary);
         }
 
+        ImageTransformRecipe initialTransform = scan.InitialTransform ?? new ImageTransformRecipe(
+            scan.Rotation,
+            false,
+            false,
+            null,
+            0.0,
+            null);
+        if (!initialTransform.IsValid)
+        {
+            return Rejected(scan.VisiblePath, FrameImportRefusal.InvalidImageTransform);
+        }
+
         JsonObject record = new()
         {
             ["id"] = nextId(),
@@ -232,7 +313,7 @@ public static class FrameImport
             // 스캐너로 들어온 것도 같습니다 — 이름은 파일 이름에서 파생합니다.
             ["scanIndex"] = nextScanIndex,
             ["sourceKind"] = "scanner",
-            ["params"] = RotationParameters(scan.Rotation),
+            ["params"] = TransformParameters(initialTransform),
         };
         if (scan.IsPreviewScan)
         {
@@ -247,7 +328,8 @@ public static class FrameImport
         // 다른 사진을 같은 자리에 연결하는 것을 막지 못합니다.
         if (sourceMetadataReader?.Invoke(scan.VisiblePath) is { IsValid: true } scannedMetadata)
         {
-            record[LibraryFrameReader.SourceMetadataName] = WriteSourceMetadata(scannedMetadata);
+            record[LibraryFrameReader.SourceMetadataName] =
+                LibrarySourceMetadataJson.Write(scannedMetadata);
         }
         DevelopRouteWriteResult written = DevelopRouteWriter.Apply(
             record,
@@ -261,15 +343,34 @@ public static class FrameImport
     /// 설정의 기본 회전을 recipe 로 만듭니다. 회전이 없으면 빈 params 이며, 그때 결과는 이
     /// 기능이 없던 때와 바이트 단위로 같습니다.
     /// </summary>
-    private static JsonObject RotationParameters(ImageRotation rotation) =>
-        rotation == ImageRotation.Degrees0
-            ? []
-            : new JsonObject
-            {
-                // 회전은 params 바로 밑이 아니라 imageTransform 안에 삽니다 — reader 가 거기서
-                // 찾습니다.
-                ["imageTransform"] = new JsonObject { ["rotation"] = (int)rotation },
-            };
+    private static JsonObject TransformParameters(ImageTransformRecipe transform)
+    {
+        if (transform == ImageTransformRecipe.Identity)
+        {
+            return [];
+        }
+
+        JsonObject imageTransform = new()
+        {
+            ["rotation"] = (int)transform.Rotation,
+            ["flipHorizontal"] = transform.FlipHorizontal,
+            ["flipVertical"] = transform.FlipVertical,
+            ["straightenAngle"] = transform.StraightenAngle,
+        };
+        if (transform.Crop is { } crop)
+        {
+            imageTransform["cropRect"] = new JsonArray(
+                crop.X,
+                crop.Y,
+                crop.Width,
+                crop.Height);
+        }
+        if (transform.CropAspect is { } cropAspect)
+        {
+            imageTransform["cropAspect"] = cropAspect;
+        }
+        return new JsonObject { ["imageTransform"] = imageTransform };
+    }
 
     /// <summary>
     /// 결과를 한 줄로 만듭니다. 거부된 것이 있으면 몇 건이고 왜인지 말합니다 — 고른 파일 다섯 개
@@ -330,14 +431,4 @@ public static class FrameImport
     private static FrameImportPlan Rejected(string path, FrameImportRefusal refusal) =>
         new([], [new FrameImportRejection(path, refusal)]);
 
-    private static JsonObject WriteSourceMetadata(LibrarySourceMetadata metadata) => new()
-    {
-        [LibraryFrameReader.SourceFileBytesName] = metadata.FileBytes,
-        [LibraryFrameReader.SourcePixelWidthName] = metadata.PixelWidth,
-        [LibraryFrameReader.SourcePixelHeightName] = metadata.PixelHeight,
-        [LibraryFrameReader.SourceSamplesPerPixelName] = metadata.SamplesPerPixel,
-        [LibraryFrameReader.SourceBitsPerSampleName] = metadata.BitsPerSample,
-        [LibraryFrameReader.SourceSampleFormatName] = metadata.SampleFormat,
-        [LibraryFrameReader.SourceOrientationName] = metadata.Orientation,
-    };
 }

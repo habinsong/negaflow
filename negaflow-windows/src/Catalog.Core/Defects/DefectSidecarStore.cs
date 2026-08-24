@@ -6,7 +6,7 @@ internal static class DefectSidecarStore
 
 
     internal static readonly object Gate = new();
-    private static readonly Dictionary<string, ulong> RevisionFloors =
+    internal static readonly Dictionary<string, ulong> RevisionFloors =
         new(StringComparer.OrdinalIgnoreCase);
 
     public static string FileName(Guid frameId) => $"{frameId:D}.json";
@@ -71,9 +71,6 @@ internal static class DefectSidecarStore
 
             string path = PathFor(roots, frameId);
             string key = DefectSidecarFile.RevisionKey(path);
-            RevisionFloors[key] = Math.Max(
-                RevisionFloors.GetValueOrDefault(key),
-                minimumRevision);
             try
             {
                 if (Directory.Exists(path) ||
@@ -82,10 +79,31 @@ internal static class DefectSidecarStore
                     return DefectSidecarDeleteResult.Failure(
                         DefectSidecarError.ReparsePointNotAllowed);
                 }
+                DefectSidecarReadResult existing =
+                    DefectSidecarFile.ReadFile(path, frameId);
+                if (existing.Snapshot is { } current &&
+                    current.RecipeRevision >= minimumRevision)
+                {
+                    return DefectSidecarDeleteResult.Failure(
+                        DefectSidecarError.InvalidSnapshot);
+                }
+                if (existing.Snapshot is null &&
+                    existing.Error != DefectSidecarError.NotFound)
+                {
+                    return DefectSidecarDeleteResult.Failure(existing.Error);
+                }
                 if (File.Exists(path))
                 {
                     File.Delete(path);
                 }
+                if (File.Exists(path) || Directory.Exists(path))
+                {
+                    return DefectSidecarDeleteResult.Failure(
+                        DefectSidecarError.IoFailure);
+                }
+                RevisionFloors[key] = Math.Max(
+                    RevisionFloors.GetValueOrDefault(key),
+                    minimumRevision);
                 return DefectSidecarDeleteResult.Success();
             }
             catch (UnauthorizedAccessException)
@@ -149,7 +167,8 @@ internal static class DefectSidecarStore
             return DefectSidecarWriteResult.Failure(
                 DefectSidecarError.InvalidSnapshot);
         }
-        if (supplied.FingerprintVersion != snapshot.FingerprintVersion ||
+        if (snapshot.Items.Count == 0 ||
+            supplied.FingerprintVersion != snapshot.FingerprintVersion ||
             !string.Equals(
                 supplied.RecipeSha256,
                 snapshot.RecipeSha256,
@@ -226,12 +245,13 @@ internal static class DefectSidecarStore
         }
 
         byte[] data = DefectSidecarCodec.Serialize(snapshot);
+        DefectSidecarReadResult validated = DefectSidecarCodec.Decode(
+            data,
+            snapshot.FrameId,
+            validateCompressedMasks: true);
         if (data.LongLength > MaximumFileBytes ||
-            DefectSidecarCodec.Decode(
-                data,
-                snapshot.FrameId,
-                validateCompressedMasks: true).Snapshot is not { } encoded ||
-            !DefectSidecarCodec.AreSameSnapshot(snapshot, encoded))
+            validated.Snapshot is not { } encoded ||
+            !data.AsSpan().SequenceEqual(DefectSidecarCodec.Serialize(encoded)))
         {
             return DefectSidecarWriteResult.Failure(
                 DefectSidecarError.InvalidSnapshot);
@@ -246,7 +266,7 @@ internal static class DefectSidecarStore
                 return DefectSidecarWriteResult.Failure(
                     DefectSidecarError.ReparsePointNotAllowed);
             }
-            DefectSidecarFile.WriteAtomic(path, data, snapshot);
+            DefectSidecarFile.WriteAtomic(path, data);
             RevisionFloors[key] = snapshot.RecipeRevision;
             return DefectSidecarWriteResult.Success(
                 DefectSidecarWriteKind.Written);
@@ -263,4 +283,59 @@ internal static class DefectSidecarStore
                 DefectSidecarError.IoFailure);
         }
     }
+
+    internal static DefectSidecarDeleteResult CleanupUndeclared(
+        StorageRootSet roots,
+        Guid frameId)
+    {
+        ArgumentNullException.ThrowIfNull(roots);
+        lock (Gate)
+        {
+            if (frameId == Guid.Empty)
+            {
+                return DefectSidecarDeleteResult.Failure(
+                    DefectSidecarError.InvalidFrameId);
+            }
+            if (!DefectSidecarFile.HasValidRoots(roots))
+            {
+                return DefectSidecarDeleteResult.Failure(
+                    DefectSidecarError.InvalidStorageRoots);
+            }
+
+            string path = PathFor(roots, frameId);
+            string key = DefectSidecarFile.RevisionKey(path);
+            try
+            {
+                if (Directory.Exists(path) ||
+                    StoragePathPolicy.IsExistingReparsePoint(path))
+                {
+                    return DefectSidecarDeleteResult.Failure(
+                        DefectSidecarError.ReparsePointNotAllowed);
+                }
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+                if (File.Exists(path) || Directory.Exists(path))
+                {
+                    return DefectSidecarDeleteResult.Failure(
+                        DefectSidecarError.IoFailure);
+                }
+                RevisionFloors.Remove(key);
+                return DefectSidecarDeleteResult.Success();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return DefectSidecarDeleteResult.Failure(
+                    DefectSidecarError.AccessDenied);
+            }
+            catch (Exception error) when (error is
+                IOException or NotSupportedException or ArgumentException)
+            {
+                return DefectSidecarDeleteResult.Failure(
+                    DefectSidecarError.IoFailure);
+            }
+        }
+    }
+
 }

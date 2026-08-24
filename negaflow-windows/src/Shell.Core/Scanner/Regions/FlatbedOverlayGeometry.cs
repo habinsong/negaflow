@@ -1,3 +1,5 @@
+using Negaflow.Catalog;
+
 namespace Negaflow.Shell;
 
 /// <summary>프레임 사각형의 크기를 바꾸는 손잡이 여덟 자리입니다.</summary>
@@ -179,6 +181,45 @@ public static class FlatbedOverlayGeometry
             region.UnitHeight * imageFrame.Height);
     }
 
+    /// <summary>
+    /// 원본(base) 좌표의 region을 현상 변형이 적용된 프리뷰 위로 옮깁니다. macOS
+    /// <c>screenRect(for:)</c>처럼 네 모서리를 모두 옮긴 뒤 경계 사각형을 씁니다.
+    /// </summary>
+    public static FlatbedOverlayRect ScreenRect(
+        FlatbedScanRegion region,
+        FlatbedOverlayRect imageFrame,
+        ImageTransformRecipe transform,
+        uint sourceWidth,
+        uint sourceHeight)
+    {
+        ArgumentNullException.ThrowIfNull(region);
+        ArgumentNullException.ThrowIfNull(transform);
+        Span<(double X, double Y)> corners =
+        [
+            (region.UnitX, region.UnitY),
+            (region.UnitMaxX, region.UnitY),
+            (region.UnitMaxX, region.UnitMaxY),
+            (region.UnitX, region.UnitMaxY),
+        ];
+        Span<(double X, double Y)> display = stackalloc (double X, double Y)[4];
+        for (int index = 0; index < corners.Length; ++index)
+        {
+            if (!DevelopDisplayGeometry.TryMapRawToDisplay(
+                    transform,
+                    sourceWidth,
+                    sourceHeight,
+                    corners[index].X,
+                    corners[index].Y,
+                    out double x,
+                    out double y))
+            {
+                return ScreenRect(region, imageFrame);
+            }
+            display[index] = (x, y);
+        }
+        return DisplayBounds(display, imageFrame);
+    }
+
     /// <summary>화면 자리를 프레임의 비율 좌표로 되돌립니다.</summary>
     public static (double X, double Y, double Width, double Height) UnitRect(
         FlatbedOverlayRect screenRect,
@@ -193,6 +234,48 @@ public static class FlatbedOverlayGeometry
             screenRect.Height / height);
     }
 
+    /// <summary>
+    /// 변형된 프리뷰의 화면 사각형을 원본(base) region으로 되돌립니다. macOS
+    /// <c>baseRect(from:)</c>와 같은 네 모서리 역변환입니다.
+    /// </summary>
+    public static (double X, double Y, double Width, double Height) UnitRect(
+        FlatbedOverlayRect screenRect,
+        FlatbedOverlayRect imageFrame,
+        ImageTransformRecipe transform,
+        uint sourceWidth,
+        uint sourceHeight)
+    {
+        ArgumentNullException.ThrowIfNull(transform);
+        double width = Math.Max(imageFrame.Width, 1.0);
+        double height = Math.Max(imageFrame.Height, 1.0);
+        Span<(double X, double Y)> corners =
+        [
+            (screenRect.X, screenRect.Y),
+            (screenRect.MaxX, screenRect.Y),
+            (screenRect.MaxX, screenRect.MaxY),
+            (screenRect.X, screenRect.MaxY),
+        ];
+        Span<(double X, double Y)> raw = stackalloc (double X, double Y)[4];
+        for (int index = 0; index < corners.Length; ++index)
+        {
+            double displayX = (corners[index].X - imageFrame.X) / width;
+            double displayY = (corners[index].Y - imageFrame.Y) / height;
+            if (!DevelopDisplayGeometry.TryMapDisplayToRaw(
+                    transform,
+                    sourceWidth,
+                    sourceHeight,
+                    displayX,
+                    displayY,
+                    out double x,
+                    out double y))
+            {
+                return UnitRect(screenRect, imageFrame);
+            }
+            raw[index] = (x, y);
+        }
+        return UnitBounds(raw);
+    }
+
     /// <summary>화면의 한 점을 프리뷰 안의 비율로 되돌립니다. 그림 밖은 가장자리로 접습니다.</summary>
     public static (double X, double Y) UnitPoint(
         double x,
@@ -201,6 +284,67 @@ public static class FlatbedOverlayGeometry
         (
             Math.Clamp((x - imageFrame.X) / Math.Max(imageFrame.Width, 1), 0, 1),
             Math.Clamp((y - imageFrame.Y) / Math.Max(imageFrame.Height, 1), 0, 1));
+
+    /// <summary>변형된 프리뷰의 화면 점을 원본(base) 비율 좌표로 되돌립니다.</summary>
+    public static (double X, double Y) UnitPoint(
+        double x,
+        double y,
+        FlatbedOverlayRect imageFrame,
+        ImageTransformRecipe transform,
+        uint sourceWidth,
+        uint sourceHeight)
+    {
+        ArgumentNullException.ThrowIfNull(transform);
+        double displayX = Math.Clamp(
+            (x - imageFrame.X) / Math.Max(imageFrame.Width, 1.0), 0.0, 1.0);
+        double displayY = Math.Clamp(
+            (y - imageFrame.Y) / Math.Max(imageFrame.Height, 1.0), 0.0, 1.0);
+        return DevelopDisplayGeometry.TryMapDisplayToRaw(
+                transform,
+                sourceWidth,
+                sourceHeight,
+                displayX,
+                displayY,
+                out double rawX,
+                out double rawY)
+            ? (rawX, rawY)
+            : (displayX, displayY);
+    }
+
+    /// <summary>
+    /// 화면 방향 이동을 원본(base) 방향 이동으로 바꿉니다. 회전으로 축이 바뀔 때 이동 거리도
+    /// 해당 base 축의 mm step을 사용합니다.
+    /// </summary>
+    public static (double X, double Y) BaseNudgeDelta(
+        ImageTransformRecipe transform,
+        uint sourceWidth,
+        uint sourceHeight,
+        double displayX,
+        double displayY,
+        double stepX,
+        double stepY)
+    {
+        ArgumentNullException.ThrowIfNull(transform);
+        const double center = 0.5;
+        if (!DevelopDisplayGeometry.TryMapRawToDisplay(
+                transform, sourceWidth, sourceHeight, center, center,
+                out double displayCenterX, out double displayCenterY) ||
+            !DevelopDisplayGeometry.TryMapRawToDisplay(
+                transform, sourceWidth, sourceHeight, center + stepX, center + stepY,
+                out double displaySteppedX, out double displaySteppedY) ||
+            !DevelopDisplayGeometry.TryMapDisplayToRaw(
+                transform,
+                sourceWidth,
+                sourceHeight,
+                displayCenterX + displayX * Math.Abs(displaySteppedX - displayCenterX),
+                displayCenterY + displayY * Math.Abs(displaySteppedY - displayCenterY),
+                out double movedX,
+                out double movedY))
+        {
+            return (displayX * stepX, displayY * stepY);
+        }
+        return (movedX - center, movedY - center);
+    }
 
     /// <summary>끌어서 만든 사각형을 그림 안으로 접고 최소 크기를 지킵니다.</summary>
     public static FlatbedOverlayRect ClampedScreenRect(
@@ -224,4 +368,47 @@ public static class FlatbedOverlayGeometry
             Math.Min(y1, y2),
             Math.Abs(x2 - x1),
             Math.Abs(y2 - y1));
+
+    private static FlatbedOverlayRect DisplayBounds(
+        ReadOnlySpan<(double X, double Y)> points,
+        FlatbedOverlayRect imageFrame)
+    {
+        double minX = points[0].X;
+        double maxX = points[0].X;
+        double minY = points[0].Y;
+        double maxY = points[0].Y;
+        for (int index = 1; index < points.Length; ++index)
+        {
+            minX = Math.Min(minX, points[index].X);
+            maxX = Math.Max(maxX, points[index].X);
+            minY = Math.Min(minY, points[index].Y);
+            maxY = Math.Max(maxY, points[index].Y);
+        }
+        return new FlatbedOverlayRect(
+            imageFrame.X + minX * imageFrame.Width,
+            imageFrame.Y + minY * imageFrame.Height,
+            (maxX - minX) * imageFrame.Width,
+            (maxY - minY) * imageFrame.Height);
+    }
+
+    private static (double X, double Y, double Width, double Height) UnitBounds(
+        ReadOnlySpan<(double X, double Y)> points)
+    {
+        double minX = points[0].X;
+        double maxX = points[0].X;
+        double minY = points[0].Y;
+        double maxY = points[0].Y;
+        for (int index = 1; index < points.Length; ++index)
+        {
+            minX = Math.Min(minX, points[index].X);
+            maxX = Math.Max(maxX, points[index].X);
+            minY = Math.Min(minY, points[index].Y);
+            maxY = Math.Max(maxY, points[index].Y);
+        }
+        minX = Math.Clamp(minX, 0.0, 1.0);
+        maxX = Math.Clamp(maxX, minX, 1.0);
+        minY = Math.Clamp(minY, 0.0, 1.0);
+        maxY = Math.Clamp(maxY, minY, 1.0);
+        return (minX, minY, maxX - minX, maxY - minY);
+    }
 }

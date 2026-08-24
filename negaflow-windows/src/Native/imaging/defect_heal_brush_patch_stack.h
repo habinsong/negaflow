@@ -2,6 +2,7 @@
 
 #include "defect_heal_brush_types.h"
 
+#include <cstddef>
 #include <vector>
 
 namespace negaflow::imaging::heal_brush_detail {
@@ -27,7 +28,7 @@ namespace negaflow::imaging::heal_brush_detail {
 [[nodiscard]] float quantize_linear16(float value) noexcept;
 
 // 쌓인 패치를 강도만큼 이미지에 앉힙니다. 나중 패치가 이깁니다.
-void composite_patches(
+[[nodiscard]] std::size_t composite_patches(
     WorkingImage& image,
     const std::vector<StoredPatch>& patches,
     float strength);

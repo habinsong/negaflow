@@ -1,8 +1,11 @@
 #include "negaflow/abi/infrared_detect.h"
 
+#include "detect/infrared_file_detection.h"
 #include "negaflow/imaging/infrared_defect_detector.h"
-#include "negaflow/imageio/wic_tiff_decoder.h"
+#include "negaflow/pipeline/gpu_accelerator.h"
+#include "negaflow/pipeline/stage_timing.h"
 
+#include <cstdio>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
@@ -16,83 +19,6 @@ struct nf_infrared_detection_handle_v1 final {
 };
 
 namespace {
-
-class InfraredPlaneSink final : public negaflow::imageio::WicTiffRowSink {
-public:
-    InfraredPlaneSink(
-        const bool allow_gray,
-        const negaflow::core::CancelFlag cancel) noexcept
-        : allow_gray_(allow_gray), cancel_(cancel) {}
-
-    bool begin(const negaflow::imageio::WicTiffFrameView& frame) noexcept override {
-        try {
-            const bool valid_layout =
-                frame.layout == negaflow::imageio::DecodedPixelLayout::rgb16 ||
-                frame.layout == negaflow::imageio::DecodedPixelLayout::rgba16 ||
-                (allow_gray_ &&
-                 frame.layout == negaflow::imageio::DecodedPixelLayout::gray16);
-            channels_ = negaflow::imageio::channel_count(frame.layout);
-            const std::uint64_t area = static_cast<std::uint64_t>(frame.width) * frame.height;
-            if (!valid_layout || channels_ == 0U || frame.width == 0U || frame.height == 0U ||
-                area > std::numeric_limits<std::size_t>::max() || cancel_.requested()) {
-                return false;
-            }
-            width_ = frame.width;
-            height_ = frame.height;
-            values_.assign(static_cast<std::size_t>(area), 0.0F);
-            return true;
-        } catch (...) {
-            return false;
-        }
-    }
-
-    bool write(const negaflow::imageio::WicTiffRowChunk& rows) noexcept override {
-        if (cancel_.requested() || rows.first_row != next_row_ || rows.row_count == 0U ||
-            rows.first_row > height_ || rows.row_count > height_ - rows.first_row ||
-            rows.stride_bytes % sizeof(std::uint16_t) != 0U) {
-            return false;
-        }
-        const std::size_t stride = rows.stride_bytes / sizeof(std::uint16_t);
-        if (stride < static_cast<std::size_t>(width_) * channels_ ||
-            rows.samples.size() != stride * rows.row_count) {
-            return false;
-        }
-        constexpr float scale = 1.0F / 65'535.0F;
-        for (std::uint32_t row = 0U; row < rows.row_count; ++row) {
-            const std::uint16_t* const source = rows.samples.data() + row * stride;
-            float* const destination = values_.data() +
-                static_cast<std::size_t>(rows.first_row + row) * width_;
-            for (std::uint32_t x = 0U; x < width_; ++x) {
-                destination[x] = static_cast<float>(source[x * channels_]) * scale;
-            }
-        }
-        next_row_ += rows.row_count;
-        return true;
-    }
-
-    void complete(const negaflow::imageio::WicTiffDecodeStatus status) noexcept override {
-        complete_ = status == negaflow::imageio::WicTiffDecodeStatus::ok &&
-            next_row_ == height_;
-        if (!complete_) {
-            std::vector<float>{}.swap(values_);
-        }
-    }
-
-    [[nodiscard]] bool complete() const noexcept { return complete_; }
-    [[nodiscard]] std::uint32_t width() const noexcept { return width_; }
-    [[nodiscard]] std::uint32_t height() const noexcept { return height_; }
-    [[nodiscard]] std::vector<float>& values() noexcept { return values_; }
-
-private:
-    bool allow_gray_{false};
-    negaflow::core::CancelFlag cancel_{};
-    std::uint8_t channels_{0U};
-    std::uint32_t width_{0U};
-    std::uint32_t height_{0U};
-    std::uint32_t next_row_{0U};
-    bool complete_{false};
-    std::vector<float> values_{};
-};
 
 [[nodiscard]] negaflow::imaging::InfraredDetectorParameters infrared_parameters(
     const nf_infrared_detector_parameters_v1& source) noexcept {
@@ -149,6 +75,27 @@ private:
     negaflow::imaging::InfraredDetectionResult&& detection,
     nf_infrared_detection_summary_v1* const summary,
     nf_infrared_detection_handle_v1** const handle) noexcept {
+    if (negaflow::pipeline::stage_timing_enabled()) {
+        const auto& timing = detection.timings;
+        const auto transfers = negaflow::pipeline::gpu_host_transfer_stats();
+        (void)std::fprintf(
+            stderr,
+            "[infrared timing] validation=%llu alignment=%llu preparation=%llu "
+            "ir_signal=%llu candidates=%llu visible_signal=%llu confirmation=%llu "
+            "attenuation=%llu output=%llu total=%llu us gpu_up=%llu gpu_down=%llu\n",
+            static_cast<unsigned long long>(timing.validation_microseconds),
+            static_cast<unsigned long long>(timing.alignment_microseconds),
+            static_cast<unsigned long long>(timing.preparation_microseconds),
+            static_cast<unsigned long long>(timing.infrared_signal_microseconds),
+            static_cast<unsigned long long>(timing.candidates_microseconds),
+            static_cast<unsigned long long>(timing.visible_signal_microseconds),
+            static_cast<unsigned long long>(timing.confirmation_microseconds),
+            static_cast<unsigned long long>(timing.attenuation_microseconds),
+            static_cast<unsigned long long>(timing.output_microseconds),
+            static_cast<unsigned long long>(timing.total_microseconds),
+            static_cast<unsigned long long>(transfers.uploads),
+            static_cast<unsigned long long>(transfers.downloads));
+    }
     summary->status = infrared_status(detection.status);
     summary->width = detection.detection.width;
     summary->height = detection.detection.height;
@@ -177,6 +124,41 @@ private:
     owned->detection = std::move(detection.detection);
     *handle = owned;
     return NF_STATUS_OK;
+}
+
+[[nodiscard]] nf_status_t detect_infrared_files(
+    const wchar_t* const visible_path,
+    const wchar_t* const infrared_path,
+    const negaflow::abi::detail::InfraredVisibleSourceKind visible_source_kind,
+    const nf_infrared_detector_parameters_v1* const parameters,
+    const uint32_t* const cancel_requested,
+    nf_infrared_detection_summary_v1* const summary,
+    nf_infrared_detection_handle_v1** const handle) {
+    if (summary == nullptr || handle == nullptr) return NF_STATUS_INVALID_ARGUMENT;
+    *handle = nullptr;
+    if (summary->struct_size < static_cast<std::uint32_t>(sizeof(*summary))) {
+        return NF_STATUS_STRUCT_TOO_SMALL;
+    }
+    if (visible_path == nullptr || visible_path[0] == L'\0' ||
+        infrared_path == nullptr || infrared_path[0] == L'\0' ||
+        parameters == nullptr ||
+        parameters->struct_size < static_cast<std::uint32_t>(sizeof(*parameters)) ||
+        parameters->reserved != 0U || parameters->reserved2 != 0U) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+
+    const std::uint32_t declared_size = summary->struct_size;
+    std::memset(summary, 0, sizeof(*summary));
+    summary->struct_size = declared_size;
+    negaflow::pipeline::install_gpu_kernel_accelerator();
+    negaflow::pipeline::reset_gpu_host_transfer_stats();
+    auto detection = negaflow::abi::detail::detect_infrared_defects_from_files(
+        std::filesystem::path{visible_path},
+        std::filesystem::path{infrared_path},
+        visible_source_kind,
+        infrared_parameters(*parameters),
+        negaflow::core::CancelFlag{cancel_requested});
+    return publish_infrared_detection(std::move(detection), summary, handle);
 }
 
 }  // namespace
@@ -216,6 +198,8 @@ nf_status_t NF_CALL nf_detect_infrared_defects_v1(
     const std::uint32_t declared_size = summary->struct_size;
     std::memset(summary, 0, sizeof(*summary));
     summary->struct_size = declared_size;
+    negaflow::pipeline::install_gpu_kernel_accelerator();
+    negaflow::pipeline::reset_gpu_host_transfer_stats();
     try {
         const std::size_t area = static_cast<std::size_t>(width) * height;
         if (height != 0U && area / height != width) {
@@ -273,75 +257,43 @@ nf_status_t NF_CALL nf_detect_infrared_defects_from_tiff_v1(
     const uint32_t* const cancel_requested,
     nf_infrared_detection_summary_v1* const summary,
     nf_infrared_detection_handle_v1** const handle) {
-    if (summary == nullptr || handle == nullptr) {
-        return NF_STATUS_INVALID_ARGUMENT;
-    }
-    *handle = nullptr;
-    if (summary->struct_size < static_cast<std::uint32_t>(sizeof(*summary))) {
-        return NF_STATUS_STRUCT_TOO_SMALL;
-    }
-    if (visible_path == nullptr || visible_path[0] == L'\0' ||
-        infrared_path == nullptr || infrared_path[0] == L'\0' ||
-        parameters == nullptr ||
-        parameters->struct_size < static_cast<std::uint32_t>(sizeof(*parameters)) ||
-        parameters->reserved != 0U || parameters->reserved2 != 0U) {
-        return NF_STATUS_INVALID_ARGUMENT;
-    }
+    return detect_infrared_files(
+        visible_path,
+        infrared_path,
+        negaflow::abi::detail::InfraredVisibleSourceKind::infer_from_extension,
+        parameters,
+        cancel_requested,
+        summary,
+        handle);
+}
 
-    const std::uint32_t declared_size = summary->struct_size;
-    std::memset(summary, 0, sizeof(*summary));
-    summary->struct_size = declared_size;
-    const negaflow::core::CancelFlag cancel{cancel_requested};
-    if (cancel.requested()) {
-        summary->status = NF_INFRARED_DETECTION_CANCELLED;
-        return NF_STATUS_OK;
+nf_status_t NF_CALL nf_detect_infrared_defects_from_files_v2(
+    const wchar_t* const visible_path,
+    const wchar_t* const infrared_path,
+    const uint32_t visible_source_kind,
+    const nf_infrared_detector_parameters_v1* const parameters,
+    const uint32_t* const cancel_requested,
+    nf_infrared_detection_summary_v1* const summary,
+    nf_infrared_detection_handle_v1** const handle) {
+    negaflow::abi::detail::InfraredVisibleSourceKind source_kind{};
+    switch (visible_source_kind) {
+        case NF_INFRARED_VISIBLE_SOURCE_SCANNER_TIFF:
+            source_kind = negaflow::abi::detail::InfraredVisibleSourceKind::scanner_tiff;
+            break;
+        case NF_INFRARED_VISIBLE_SOURCE_IMPORTED_FILE:
+            source_kind = negaflow::abi::detail::InfraredVisibleSourceKind::imported_file;
+            break;
+        default:
+            return NF_STATUS_INVALID_ARGUMENT;
     }
-    try {
-        negaflow::imageio::WicTiffDecodeControl control{};
-        control.rows_per_copy = 32U;
-        InfraredPlaneSink visible_sink{false, cancel};
-        const auto visible = negaflow::imageio::decode_tiff_rows_with_wic(
-            std::filesystem::path{visible_path}, visible_sink, {}, control);
-        if (cancel.requested()) {
-            summary->status = NF_INFRARED_DETECTION_CANCELLED;
-            return NF_STATUS_OK;
-        }
-        if (visible.status != negaflow::imageio::WicTiffDecodeStatus::ok ||
-            !visible_sink.complete()) {
-            summary->status = NF_INFRARED_DETECTION_UNREADABLE;
-            return NF_STATUS_OK;
-        }
-
-        InfraredPlaneSink infrared_sink{true, cancel};
-        const auto infrared = negaflow::imageio::decode_tiff_rows_with_wic(
-            std::filesystem::path{infrared_path}, infrared_sink, {}, control);
-        if (cancel.requested()) {
-            summary->status = NF_INFRARED_DETECTION_CANCELLED;
-            return NF_STATUS_OK;
-        }
-        if (infrared.status != negaflow::imageio::WicTiffDecodeStatus::ok ||
-            !infrared_sink.complete() ||
-            infrared_sink.width() != visible_sink.width() ||
-            infrared_sink.height() != visible_sink.height()) {
-            summary->status = NF_INFRARED_DETECTION_UNREADABLE;
-            return NF_STATUS_OK;
-        }
-
-        auto detection = negaflow::imaging::detect_infrared_defects(
-            infrared_sink.values(),
-            visible_sink.values(),
-            visible_sink.width(),
-            visible_sink.height(),
-            infrared_parameters(*parameters),
-            cancel);
-        return publish_infrared_detection(std::move(detection), summary, handle);
-    } catch (const std::bad_alloc&) {
-        summary->status = NF_INFRARED_DETECTION_ALLOCATION_FAILED;
-        return NF_STATUS_OK;
-    } catch (...) {
-        summary->status = NF_INFRARED_DETECTION_UNREADABLE;
-        return NF_STATUS_OK;
-    }
+    return detect_infrared_files(
+        visible_path,
+        infrared_path,
+        source_kind,
+        parameters,
+        cancel_requested,
+        summary,
+        handle);
 }
 
 nf_status_t NF_CALL nf_infrared_detection_get_cluster_v1(

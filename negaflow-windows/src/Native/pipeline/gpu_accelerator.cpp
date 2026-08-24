@@ -5,7 +5,6 @@
 #include <cstdlib>
 #include <mutex>
 #include <new>
-#include <vector>
 
 namespace negaflow::pipeline {
 
@@ -231,32 +230,26 @@ bool GpuAccelerator::apply_morphology_plane(
     if (!state_->morphology_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    const bool bipolar = kind == imaging::MorphologyKind::bipolar_top_hat;
+    if (!state_->pool.ensure(state_->device, width, height, bipolar ? 6 : 3)) {
         return false;
     }
 
-    // 단일 채널을 RGBA 에 복제합니다. 형태학은 채널마다 독립이라 값은 같습니다.
-    // 텍스처는 풀에서 가져옵니다 — 호출마다 만들면 전송 개선이 도로 사라집니다.
-    const std::size_t count = static_cast<std::size_t>(width) * height;
-    std::vector<core::Rgba32F>& staging = state_->morphology_staging;
-    staging.resize(count);
-    for (std::size_t index = 0U; index < count; ++index) {
-        staging[index] = {source[index], source[index], source[index], source[index]};
-    }
-
     gpu::GpuWorkingImage* const pool = state_->pool.images();
-    if (pool[0].upload_into(state_->device, staging.data(), width) != gpu::GpuImageStatus::ok) {
+    if (pool[0].upload_planes_into(state_->device, source, nullptr, nullptr, width) !=
+        gpu::GpuImageStatus::ok) {
         return false;
     }
 
     gpu::GpuKernelStatus status = gpu::GpuKernelStatus::invalid_arguments;
-    gpu::GpuWorkingImage* const scratch = &pool[gpu::GpuImagePool::scratch_first];
+    gpu::GpuWorkingImage* const scratch =
+        bipolar ? &pool[gpu::GpuImagePool::scratch_first] : &pool[1];
     switch (kind) {
         case imaging::MorphologyKind::opening:
-            status = state_->morphology.opening(state_->device, pool[0], scratch, pool[1], radius);
+            status = state_->morphology.opening(state_->device, pool[0], scratch, pool[0], radius);
             break;
         case imaging::MorphologyKind::closing:
-            status = state_->morphology.closing(state_->device, pool[0], scratch, pool[1], radius);
+            status = state_->morphology.closing(state_->device, pool[0], scratch, pool[0], radius);
             break;
         case imaging::MorphologyKind::bipolar_top_hat:
             status = state_->morphology.bipolar_top_hat(
@@ -266,13 +259,10 @@ bool GpuAccelerator::apply_morphology_plane(
     if (status != gpu::GpuKernelStatus::ok) {
         return false;
     }
-    if (pool[1].download(state_->device, staging.data(), width) != gpu::GpuImageStatus::ok) {
-        return false;
-    }
-    for (std::size_t index = 0U; index < count; ++index) {
-        destination[index] = staging[index].red;
-    }
-    return true;
+    gpu::GpuWorkingImage& output = bipolar ? pool[1] : pool[0];
+    return output.download_planes(
+               state_->device, destination, nullptr, nullptr, width) ==
+        gpu::GpuImageStatus::ok;
 }
 
 bool GpuAccelerator::apply_morphology_rgb(
@@ -297,29 +287,25 @@ bool GpuAccelerator::apply_morphology_rgb(
     if (!state_->morphology_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    const bool bipolar = kind == imaging::MorphologyKind::bipolar_top_hat;
+    if (!state_->pool.ensure(state_->device, width, height, bipolar ? 6 : 3)) {
         return false;
-    }
-
-    const std::size_t count = static_cast<std::size_t>(width) * height;
-    std::vector<core::Rgba32F>& staging = state_->morphology_staging;
-    staging.resize(count);
-    for (std::size_t index = 0U; index < count; ++index) {
-        staging[index] = {red[index], green[index], blue[index], 0.0F};
     }
 
     gpu::GpuWorkingImage* const pool = state_->pool.images();
-    if (pool[0].upload_into(state_->device, staging.data(), width) != gpu::GpuImageStatus::ok) {
+    if (pool[0].upload_planes_into(state_->device, red, green, blue, width) !=
+        gpu::GpuImageStatus::ok) {
         return false;
     }
-    gpu::GpuWorkingImage* const scratch = &pool[gpu::GpuImagePool::scratch_first];
+    gpu::GpuWorkingImage* const scratch =
+        bipolar ? &pool[gpu::GpuImagePool::scratch_first] : &pool[1];
     gpu::GpuKernelStatus status = gpu::GpuKernelStatus::invalid_arguments;
     switch (kind) {
         case imaging::MorphologyKind::opening:
-            status = state_->morphology.opening(state_->device, pool[0], scratch, pool[1], radius);
+            status = state_->morphology.opening(state_->device, pool[0], scratch, pool[0], radius);
             break;
         case imaging::MorphologyKind::closing:
-            status = state_->morphology.closing(state_->device, pool[0], scratch, pool[1], radius);
+            status = state_->morphology.closing(state_->device, pool[0], scratch, pool[0], radius);
             break;
         case imaging::MorphologyKind::bipolar_top_hat:
             status = state_->morphology.bipolar_top_hat(
@@ -329,15 +315,53 @@ bool GpuAccelerator::apply_morphology_rgb(
     if (status != gpu::GpuKernelStatus::ok) {
         return false;
     }
-    if (pool[1].download(state_->device, staging.data(), width) != gpu::GpuImageStatus::ok) {
+    gpu::GpuWorkingImage& output = bipolar ? pool[1] : pool[0];
+    return output.download_planes(
+               state_->device, out_red, out_green, out_blue, width) ==
+        gpu::GpuImageStatus::ok;
+}
+
+bool GpuAccelerator::apply_morphology_close_open_rgb(
+    const float* const red,
+    const float* const green,
+    const float* const blue,
+    float* const out_red,
+    float* const out_green,
+    float* const out_blue,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t radius) noexcept {
+    if (!available() || red == nullptr || green == nullptr || blue == nullptr ||
+        out_red == nullptr || out_green == nullptr || out_blue == nullptr) {
         return false;
     }
-    for (std::size_t index = 0U; index < count; ++index) {
-        out_red[index] = staging[index].red;
-        out_green[index] = staging[index].green;
-        out_blue[index] = staging[index].blue;
+    if (width == 0U || height == 0U || radius == 0U) {
+        return false;
     }
-    return true;
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
+    if (!state_->morphology_ready || !state_->pool.ensure(state_->device, width, height, 3)) {
+        return false;
+    }
+
+    gpu::GpuWorkingImage* const pool = state_->pool.images();
+    if (pool[0].upload_planes_into(state_->device, red, green, blue, width) !=
+        gpu::GpuImageStatus::ok) {
+        return false;
+    }
+    gpu::GpuWorkingImage* const scratch = &pool[1];
+    if (state_->morphology.closing(
+            state_->device, pool[0], scratch, pool[0], radius) !=
+        gpu::GpuKernelStatus::ok) {
+        return false;
+    }
+    if (state_->morphology.opening(
+            state_->device, pool[0], scratch, pool[0], radius) !=
+        gpu::GpuKernelStatus::ok) {
+        return false;
+    }
+    return pool[0].download_planes(
+               state_->device, out_red, out_green, out_blue, width) ==
+        gpu::GpuImageStatus::ok;
 }
 
 bool GpuAccelerator::apply_morphology_bipolar_top_hat_rgb(

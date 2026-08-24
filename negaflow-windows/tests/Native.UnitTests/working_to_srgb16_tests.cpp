@@ -51,6 +51,21 @@ void test_quantization() {
     expect(result.info.clipped_color_components == 2U, "clipped component count is exact");
 }
 
+void test_linear_quantization() {
+    negaflow::output::WorkingToSrgb16Limits limits{};
+    limits.encode_transfer = false;
+    const auto result = negaflow::output::convert_working_to_srgb16(make_image(), limits);
+    expect(
+        result.status == negaflow::output::WorkingToSrgb16Status::ok,
+        "valid working image converts without an output transfer");
+    expect(
+        result.image.samples.size() == 6U &&
+            result.image.samples[0] == 0U && result.image.samples[1] == 205U &&
+            result.image.samples[2] == 14'027U && result.image.samples[3] == 65'535U &&
+            result.image.samples[4] == 0U && result.image.samples[5] == 65'535U,
+        "linear RGB16 quantization preserves bounded working values exactly");
+}
+
 void test_rejections() {
     negaflow::imaging::WorkingImage image = make_image();
     image.width = 0U;
@@ -138,6 +153,7 @@ void test_inspection_and_bounded_rows() {
 
 int main() {
     test_quantization();
+    test_linear_quantization();
     test_rejections();
     test_inspection_and_bounded_rows();
     if (failures != 0) {

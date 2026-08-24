@@ -1,5 +1,7 @@
 #include "infrared_clusters.h"
 
+#include "negaflow/core/parallel_rows.h"
+
 #include <algorithm>
 #include <cmath>
 #include <utility>
@@ -8,7 +10,6 @@ namespace negaflow::imaging::infrared_detail {
 
 InfraredDetectedComponent summarize_component(
     const RawComponent& component,
-    const std::span<const std::size_t> correction_pixels,
     const std::span<const float> attenuation,
     const std::uint32_t width) {
     double sum_x = 0.0;
@@ -58,9 +59,9 @@ InfraredDetectedComponent summarize_component(
     summary.area = component.pixels.size();
     constexpr std::size_t kMaximumPreviewPoints = 240U;
     const std::size_t step = std::max<std::size_t>(
-        1U, correction_pixels.size() / kMaximumPreviewPoints);
-    for (std::size_t ordinal = 0U; ordinal < correction_pixels.size(); ordinal += step) {
-        const std::size_t pixel = correction_pixels[ordinal];
+        1U, component.pixels.size() / kMaximumPreviewPoints);
+    for (std::size_t ordinal = 0U; ordinal < component.pixels.size(); ordinal += step) {
+        const std::size_t pixel = component.pixels[ordinal];
         summary.preview_points.push_back({
             static_cast<std::uint32_t>(pixel % width),
             static_cast<std::uint32_t>(pixel / width)});
@@ -70,8 +71,8 @@ InfraredDetectedComponent summarize_component(
 
 std::vector<InfraredCorrectionCluster> render_clusters(
     const std::span<const float> attenuation,
+    const std::vector<std::size_t>& significant_pixels,
     const std::vector<std::size_t>& core_pixels,
-    const float threshold,
     const std::uint32_t width,
     const std::uint32_t height,
     const InfraredDetectorParameters& parameters) {
@@ -80,12 +81,10 @@ std::vector<InfraredCorrectionCluster> render_clusters(
     const std::uint32_t columns = std::max(1U, (width + tile - 1U) / tile);
     const std::uint32_t rows = std::max(1U, (height + tile - 1U) / tile);
     std::vector<std::uint8_t> touched(static_cast<std::size_t>(columns) * rows, 0U);
-    for (std::uint32_t y = 0U; y < height; ++y) {
-        for (std::uint32_t x = 0U; x < width; ++x) {
-            if (attenuation[static_cast<std::size_t>(y) * width + x] >= threshold) {
-                touched[static_cast<std::size_t>(y / tile) * columns + x / tile] = 1U;
-            }
-        }
+    for (const std::size_t pixel : significant_pixels) {
+        const std::uint32_t x = static_cast<std::uint32_t>(pixel % width);
+        const std::uint32_t y = static_cast<std::uint32_t>(pixel / width);
+        touched[static_cast<std::size_t>(y / tile) * columns + x / tile] = 1U;
     }
     std::vector<InfraredCorrectionCluster> clusters{};
     for (std::uint32_t key = 0U; key < touched.size(); ++key) {
@@ -104,14 +103,23 @@ std::vector<InfraredCorrectionCluster> render_clusters(
         const std::size_t cluster_area = static_cast<std::size_t>(cluster.width) * cluster.height;
         cluster.core_mask.assign(cluster_area * 4U, 0U);
         cluster.attenuation_r16.assign(cluster_area, 0U);
-        for (std::uint32_t y = y0; y < y1; ++y) {
-            for (std::uint32_t x = x0; x < x1; ++x) {
-                const std::size_t source = static_cast<std::size_t>(y) * width + x;
-                const std::size_t target = static_cast<std::size_t>(y - y0) * cluster.width + x - x0;
-                cluster.attenuation_r16[target] = static_cast<std::uint16_t>(std::lround(
-                    std::clamp(attenuation[source], 0.0F, 1.0F) * 65535.0F));
-            }
-        }
+        negaflow::core::for_each_row_block(
+            cluster.height,
+            static_cast<std::uint64_t>(cluster_area) * 6U,
+            [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+                for (std::uint32_t local_y = first_row;
+                     local_y < first_row + row_count;
+                     ++local_y) {
+                    const std::uint32_t y = y0 + local_y;
+                    for (std::uint32_t x = x0; x < x1; ++x) {
+                        const std::size_t source = static_cast<std::size_t>(y) * width + x;
+                        const std::size_t target =
+                            static_cast<std::size_t>(local_y) * cluster.width + x - x0;
+                        cluster.attenuation_r16[target] = static_cast<std::uint16_t>(std::lround(
+                            std::clamp(attenuation[source], 0.0F, 1.0F) * 65535.0F));
+                    }
+                }
+            });
         const auto dilate = static_cast<std::uint32_t>(parameters.dilate_radius);
         for (const std::size_t pixel : core_pixels) {
             const std::uint32_t px = static_cast<std::uint32_t>(pixel % width);

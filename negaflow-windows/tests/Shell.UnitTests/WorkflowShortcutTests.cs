@@ -245,6 +245,28 @@ internal static class WorkflowShortcutTests
                 WorkflowShortcutAction.RateThree,
             "workflow_shortcut_culling_keys_match_mac");
 
+        int failedUndoCalls = 0;
+        bool previewHandled = WorkflowShortcutActions.DispatchRecognized(
+            WorkflowShortcutAction.Undo,
+            _ =>
+            {
+                ++failedUndoCalls;
+                return false;
+            });
+        if (!previewHandled)
+        {
+            _ = WorkflowShortcutActions.DispatchRecognized(
+                WorkflowShortcutAction.Undo,
+                _ =>
+                {
+                    ++failedUndoCalls;
+                    return false;
+                });
+        }
+        Check(
+            previewHandled && failedUndoCalls == 1,
+            "workflow_shortcut_failed_command_is_handled_once_before_bubble");
+
         // 이미 쓰이는 키는 거절합니다. 참조가 그대로면 거절입니다.
         WorkflowShortcutMap refused = defaults.With(
             WorkflowShortcutAction.RateOne,

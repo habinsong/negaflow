@@ -1,5 +1,7 @@
 #include "negaflow/imageio/wic_standard_image_decoder.h"
 
+#include "wic_orientation.h"
+
 #include <Windows.h>
 #include <wincodec.h>
 #include <wrl/client.h>
@@ -85,61 +87,6 @@ void discard_samples(WicStandardImageDecodeResult& result) noexcept {
     return orientation >= 1U && orientation <= 8U
         ? static_cast<std::uint16_t>(orientation)
         : 1U;
-}
-
-[[nodiscard]] WicStandardImageDecodeStatus apply_exif_orientation(
-    IWICImagingFactory* const factory,
-    IWICBitmapSource* const source,
-    const std::uint16_t orientation,
-    ComPtr<IWICBitmapSource>& oriented) noexcept {
-    oriented = source;
-    const auto rotate = [&](const WICBitmapTransformOptions transform) noexcept {
-        if (transform == WICBitmapTransformRotate0) {
-            return true;
-        }
-        ComPtr<IWICBitmapFlipRotator> rotator{};
-        return SUCCEEDED(factory->CreateBitmapFlipRotator(&rotator)) &&
-            SUCCEEDED(rotator->Initialize(oriented.Get(), transform)) &&
-            SUCCEEDED(rotator.As(&oriented));
-    };
-    const auto flip = [&](const WICBitmapTransformOptions transform) noexcept {
-        ComPtr<IWICBitmapFlipRotator> rotator{};
-        return SUCCEEDED(factory->CreateBitmapFlipRotator(&rotator)) &&
-            SUCCEEDED(rotator->Initialize(oriented.Get(), transform)) &&
-            SUCCEEDED(rotator.As(&oriented));
-    };
-    switch (orientation) {
-        case 1U: return WicStandardImageDecodeStatus::ok;
-        case 2U:
-            return flip(WICBitmapTransformFlipHorizontal)
-                ? WicStandardImageDecodeStatus::ok
-                : WicStandardImageDecodeStatus::pixel_decode_failed;
-        case 3U:
-            return rotate(WICBitmapTransformRotate180)
-                ? WicStandardImageDecodeStatus::ok
-                : WicStandardImageDecodeStatus::pixel_decode_failed;
-        case 4U:
-            return flip(WICBitmapTransformFlipVertical)
-                ? WicStandardImageDecodeStatus::ok
-                : WicStandardImageDecodeStatus::pixel_decode_failed;
-        case 5U:
-            return rotate(WICBitmapTransformRotate90) && flip(WICBitmapTransformFlipHorizontal)
-                ? WicStandardImageDecodeStatus::ok
-                : WicStandardImageDecodeStatus::pixel_decode_failed;
-        case 6U:
-            return rotate(WICBitmapTransformRotate90)
-                ? WicStandardImageDecodeStatus::ok
-                : WicStandardImageDecodeStatus::pixel_decode_failed;
-        case 7U:
-            return rotate(WICBitmapTransformRotate90) && flip(WICBitmapTransformFlipVertical)
-                ? WicStandardImageDecodeStatus::ok
-                : WicStandardImageDecodeStatus::pixel_decode_failed;
-        case 8U:
-            return rotate(WICBitmapTransformRotate270)
-                ? WicStandardImageDecodeStatus::ok
-                : WicStandardImageDecodeStatus::pixel_decode_failed;
-        default: return WicStandardImageDecodeStatus::ok;
-    }
 }
 
 [[nodiscard]] WicStandardImageDecodeStatus extract_icc_profile(
@@ -342,10 +289,9 @@ WicStandardImageDecodeResult decode_standard_image_with_wic(
             result.info.format_conversion_used = true;
         }
         ComPtr<IWICBitmapSource> oriented{};
-        const WicStandardImageDecodeStatus orientation_status = apply_exif_orientation(
-            factory.Get(), source.Get(), result.info.exif_orientation, oriented);
-        if (orientation_status != WicStandardImageDecodeStatus::ok) {
-            result.status = orientation_status;
+        if (!wic_detail::apply_exif_orientation(
+                factory.Get(), source.Get(), result.info.exif_orientation, oriented)) {
+            result.status = WicStandardImageDecodeStatus::pixel_decode_failed;
             return result;
         }
         if (FAILED(oriented->GetSize(&width, &height)) || width == 0U || height == 0U) {

@@ -44,7 +44,8 @@ enum class StandardSrgbStatus : std::uint8_t {
     std::uint32_t max_color_profile_bytes,
     Microsoft::WRL::ComPtr<IWICColorContext>& context,
     std::vector<std::uint8_t>& profile_bytes,
-    std::uint32_t& native_error_code);
+    std::uint32_t& native_error_code,
+    bool linear_transfer = false);
 
 [[nodiscard]] StandardSrgbStatus load_standard_srgb_context(
     IWICImagingFactory* factory,

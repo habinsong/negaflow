@@ -37,6 +37,7 @@ internal sealed class DevelopGrainMendChrome
         GrainMendCardState card = GrainMendCardProjection.Create(
             view.panel?.SelectedFrame is not null,
             view.grainMend.IsDetecting,
+            view.grainMend.ActiveRegionKind,
             view.grainMend.PendingEdit?.Label.Kind,
             view.grainMend.PendingReview?.IncludedCount,
             view.grainMend.Strokes.Tool,
@@ -81,7 +82,7 @@ internal sealed class DevelopGrainMendChrome
         }
         // 검토 중이 아니면 캡슐이 남아 있는 것은 가이드를 켜 둔 때뿐이고, 가이드는 자동이
         // 아닙니다 — 두 모드는 민감도도 미세 입자도 나눠 씁니다.
-        bool automatic = card.Reviewing && card.ReviewingAutomatic;
+        bool automatic = card.AutoActive;
         // macOS `frame.canUndoDefects` — 되돌릴 결함 편집이 남아 있을 때만 캡슐과 복제 바의
         // 되돌리기가 섭니다. 두 바가 같은 히스토리를 보므로 판정도 한 곳에서 옵니다.
         bool canUndoDefectEdit = view.panel?.CanUndoDefectEdit == true;
@@ -92,7 +93,9 @@ internal sealed class DevelopGrainMendChrome
                 view.grainMend.PendingEdit?.Label.Kind,
                 view.grainMend.PendingReview,
                 view.grainMend.Strokes.Tool,
-                canUndoDefectEdit),
+                canUndoDefectEdit,
+                view.grainMend.ActiveRegionKind,
+                view.grainMend.PendingRawRoi is not null),
             view.options.GetSensitivity(automatic),
             view.options.GetMicroSpecks(automatic),
             view.isRemovingDefects,
@@ -102,7 +105,7 @@ internal sealed class DevelopGrainMendChrome
             view.grainMend.Strokes.Tool == GrainMendTool.Brush,
             view.grainMend.Strokes.BrushThickness,
             view.grainMend.Strokes.HasPaintedStrokes,
-            card.BrushResetEnabled,
+            view.panel?.DefectLayers.PreviewFrame?.DefectRecipe?.Items.Count > 0,
             view.isRemovingDefects);
         // macOS `CloneStampOverlay` 는 복제 도구를 켜면 자기 컨트롤 바를 냅니다.
         hud.UpdateCloneBar(

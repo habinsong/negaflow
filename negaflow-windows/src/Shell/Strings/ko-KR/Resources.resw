@@ -937,7 +937,11 @@
   <data name="developGrainMendGuided.Content" xml:space="preserve"><value>가이드</value></data>
   <data name="developGrainMendGuidedHelp.Value" xml:space="preserve"><value>가이드 — 영역 드래그 후 Enter 또는 결함 제거</value></data>
   <data name="developGrainMendBrush.Content" xml:space="preserve"><value>브러시</value></data>
-  <data name="developGrainMendBrushHelp.Value" xml:space="preserve"><value>브러시 — 먼지/스크래치 위를 칠한 뒤 놓으면 제거</value></data>
+  <data name="developGrainMendBrushHelp.Value" xml:space="preserve"><value>브러시 — 먼지/스크래치 위를 칠한 뒤 Enter 또는 결함 제거</value></data>
+  <data name="developGrainMendUndoLastStroke.Text" xml:space="preserve"><value>마지막 스트로크 취소</value></data>
+  <data name="developGrainMendClearPaintedStrokes.Text" xml:space="preserve"><value>칠한 스트로크 지우기</value></data>
+  <data name="developGrainMendResetAppliedDefects.Text" xml:space="preserve"><value>적용된 결함 제거 전체 초기화</value></data>
+  <data name="developGrainMendUndoDefectRemoval.Text" xml:space="preserve"><value>마지막 결함 제거 편집 취소</value></data>
   <data name="developGrainMendClone.Content" xml:space="preserve"><value>복제 도장</value></data>
   <data name="developGrainMendCloneHelp.Value" xml:space="preserve"><value>복제 도장 — Alt 클릭으로 소스를 지정한 뒤 드래그해 복제</value></data>
   <data name="developGrainMendReset.Value" xml:space="preserve"><value>초기화</value></data>

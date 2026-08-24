@@ -58,6 +58,12 @@ public:
     virtual void report(WicTiffDecodeProgress progress) noexcept = 0;
 };
 
+enum class WicTiffOrientationPolicy : std::uint8_t {
+    require_normal = 0,
+    ignore_metadata,
+    apply_metadata,
+};
+
 struct WicTiffDecodeControl final {
     // Zero keeps the legacy whole-frame CopyPixels call when its buffer fits UINT.
     // A positive value creates explicit cooperative row boundaries.
@@ -72,6 +78,11 @@ struct WicTiffDecodeControl final {
     // 미리보기는 WIC 가 한 번 더 풉니다. LZW/Deflate 전체 검증을 앞에 또 하면
     // compression=5 파일에서 디코드가 2초대입니다(frame_15 실측).
     bool validate_compressed_streams{true};
+    // GrainMend IR pairing follows macOS CGImageSource index 0 for both files.
+    // Other scanner decode paths retain unambiguous primary-image selection.
+    bool select_first_frame{false};
+    // Scanner TIFF pixels stay in stored orientation. Imported files follow EXIF.
+    WicTiffOrientationPolicy orientation_policy{WicTiffOrientationPolicy::require_normal};
 };
 
 struct WicTiffFrameView final {

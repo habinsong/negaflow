@@ -1,4 +1,5 @@
 using Negaflow.Catalog;
+using Negaflow.Shell.Develop;
 
 namespace Negaflow.Shell.Views.Library.Scanner;
 
@@ -22,6 +23,8 @@ public sealed class ScanSessionHost
 {
     private ScanSessionController? session;
     private ImageRotation defaultRotation = ImageRotation.Degrees0;
+    private Func<GrainMendGuidedCarryover?>? guidedCarryoverProvider;
+    private Action<string, GrainMendGuidedCarryover>? guidedCarryoverPublished;
 
     /// <summary>세션이 새로 만들어졌을 때입니다. 붙어 있는 패널이 다시 걸 자리입니다.</summary>
     public event EventHandler? SessionCreated;
@@ -59,6 +62,17 @@ public sealed class ScanSessionHost
         }
     }
 
+    public void BindGrainMendCarryover(
+        Func<GrainMendGuidedCarryover?> provider,
+        Action<string, GrainMendGuidedCarryover> published)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        ArgumentNullException.ThrowIfNull(published);
+        guidedCarryoverProvider = provider;
+        guidedCarryoverPublished = published;
+        ApplyGrainMendCarryoverCallbacks();
+    }
+
     /// <summary>
     /// 세션을 만들어 돌려줍니다. <b>UI 스레드에서만</b> 부르십시오 — 디스패처를 여기서
     /// 잡습니다. 이미 있으면 그대로 돌려줍니다.
@@ -81,10 +95,21 @@ public sealed class ScanSessionHost
         {
             DefaultRotation = defaultRotation,
         };
+        ApplyGrainMendCarryoverCallbacks();
         SessionCreated?.Invoke(this, EventArgs.Empty);
         return session;
     }
 
     /// <summary>승인 저장소입니다. 세션과 같은 수명을 씁니다.</summary>
     public ScannerPluginTrustStore? Trust { get; private set; }
+
+    private void ApplyGrainMendCarryoverCallbacks()
+    {
+        if (session is null)
+        {
+            return;
+        }
+        session.GuidedCarryoverProvider = guidedCarryoverProvider;
+        session.GuidedCarryoverPublished = guidedCarryoverPublished;
+    }
 }

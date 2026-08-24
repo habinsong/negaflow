@@ -120,6 +120,8 @@ public sealed partial class DevelopWorkspaceView
 
     internal void CopyDevelopSettingsFromMenu() => _ = panel?.CopyDevelopSettings();
 
+    internal bool CreateVirtualCopyFromMenu() => panel?.CreateVirtualCopy() == true;
+
     /// <summary>macOS <c>pasteDevelopSettings</c> — 고른 사진이 없으면 조용히 끝납니다.</summary>
     internal void PasteDevelopSettingsFromMenu()
     {

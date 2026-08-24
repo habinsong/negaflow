@@ -70,11 +70,15 @@ internal static class DevelopPanelStateTests
             host.Open(roots);
 
             DevelopPanelState panel = new(host, limits, negativeLimits);
+            int selectedFrameRefreshCount = 0;
+            panel.SelectedFrameChanged += _ => ++selectedFrameRefreshCount;
             Check(panel.SelectedFrame is null, "panel_starts_with_no_selection");
             Check(!panel.CanExport, "panel_cannot_export_without_selection");
             Check(!panel.Select("missing"), "panel_select_unknown_id");
 
-            Check(panel.Select("frame-1"), "panel_select");
+            Check(panel.Select("frame-1") && selectedFrameRefreshCount == 1, "panel_select");
+            Check(panel.Select("frame-1") && selectedFrameRefreshCount == 2,
+                "panel_notifies_same_frame_snapshot_refresh");
             Check(panel.CanExport, "panel_can_export_after_select");
             Check(panel.LastAppliedBase is null, "panel_has_no_applied_base_until_preview");
             panel.RememberAppliedBase(0.72F, 0.54F, 0.34F);

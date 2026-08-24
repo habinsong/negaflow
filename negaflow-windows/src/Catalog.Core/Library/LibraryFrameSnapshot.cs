@@ -272,6 +272,12 @@ public sealed record LibraryFrameSnapshot(
     public DefectRecipeSnapshot? DefectRecipe { get; init; }
 
     /// <summary>
+    /// 열린 문서에서 마지막으로 소비한 defect recipe revision입니다. 마지막 레이어 삭제 뒤에도
+    /// 다음 Auto/Guided/IR 결과가 이전 revision을 재사용하지 않도록 세션 동안만 유지됩니다.
+    /// </summary>
+    public ulong DefectRecipeRevision { get; init; }
+
+    /// <summary>
     /// Auto는 native resolver가 입력에서 base를 결정하므로 수동 Dmin 없이 현상할 수 있습니다.
     /// Manual만 저장된 수동 base를 요구하고, 아직 resolver가 없는 Preset은 명시적으로 막습니다.
     /// </summary>

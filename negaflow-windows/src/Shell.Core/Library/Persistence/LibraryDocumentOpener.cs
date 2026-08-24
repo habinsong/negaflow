@@ -24,6 +24,18 @@ internal static class LibraryDocumentOpener
             session.Dispose();
             return LibraryDocumentOpenResult.StoreFailure(read.Error);
         }
+        LibraryStartupDefectRecipeCleanupResult cleanup =
+            LibraryStartupDefectRecipeCleanup.Run(session, snapshot);
+        if (!cleanup.IsSuccess || cleanup.Snapshot is not { } cleanedSnapshot)
+        {
+            session.Dispose();
+            return LibraryDocumentOpenResult.StoreFailure(
+                cleanup.CatalogError == CatalogStoreError.None
+                    ? CatalogStoreError.MissingAuthoritativeData
+                    : cleanup.CatalogError,
+                cleanup.SidecarError);
+        }
+        snapshot = cleanedSnapshot;
 
         IReadOnlyList<CatalogEntityRow> rows = snapshot.Rows(CatalogEntityTable.Frames);
         List<string> rowIds = new(rows.Count);
@@ -48,6 +60,12 @@ internal static class LibraryDocumentOpener
         }
 
         return LibraryDocumentOpenResult.Success(
-            new LibraryDocument(session, rowIds, payloads, retainedRows, snapshot.ActiveRollId));
+            new LibraryDocument(
+                session,
+                rowIds,
+                payloads,
+                retainedRows,
+                snapshot.ActiveRollId,
+                cleanup.Revisions));
     }
 }

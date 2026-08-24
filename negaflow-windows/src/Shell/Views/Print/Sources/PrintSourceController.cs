@@ -4,6 +4,7 @@ using Negaflow.Catalog;
 using Negaflow.Shell;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
+using Negaflow.Shell.Print;
 using Negaflow.Shell.Views.Library.Browser;
 using Negaflow.Shell.Views;
 
@@ -34,11 +35,15 @@ internal sealed class PrintSourceController
     /// 봅니다.
     /// </summary>
     internal IReadOnlyList<LibraryFrameSnapshot> Sources =>
-        libraryHost?.SelectedFrames is { Count: > 0 } selected
-            ? selected
-            : libraryHost?.Frames is { Count: > 0 } all
-                ? [all[0]]
-                : [];
+        PrintSourceSelection.Resolve(
+            libraryHost?.SelectedFrames ?? [],
+            libraryHost?.Frames ?? []);
+
+    private IReadOnlyList<LibraryFrameSnapshot> EligibleFrames =>
+        PrintSourceSelection.Eligible(libraryHost?.Frames ?? []);
+
+    private string? ActiveSourceFrameId =>
+        PrintSourceSelection.ActiveFrameId(libraryHost?.ActiveFrameId, Sources);
 
     /// <summary>
     /// 썸네일이 도착하면 판을 다시 그립니다. 인화 화면은 라이브러리와 같은 캐시를 봅니다 —
@@ -58,6 +63,10 @@ internal sealed class PrintSourceController
     internal void ShowLibrary(LibraryHostService host)
     {
         ArgumentNullException.ThrowIfNull(host);
+        if (libraryHost is { } previous)
+        {
+            previous.SelectionChanged -= OnSelectionChanged;
+        }
         libraryHost = host;
         host.SelectionChanged += OnSelectionChanged;
         // 고른 사진의 썸네일이 아직 없을 수 있습니다. 미리보기가 그림 없이 시작하지 않도록
@@ -141,9 +150,9 @@ internal sealed class PrintSourceController
         Negaflow.Shell.PreviewTrace.Write("print.selection");
         // 고른 사진이 바뀌면 파일 목록의 강조도 따라가야 합니다 — 목록을 통째로 다시 짓지
         // 않고 강조만 옮깁니다.
-        surface.FilesTree.SelectedFrameId = libraryHost?.ActiveFrameId;
+        surface.FilesTree.SelectedFrameId = ActiveSourceFrameId;
         SynchronizeFilmstrip();
-        if (builtFrameCount != (libraryHost?.Frames.Count ?? 0))
+        if (builtFrameCount != EligibleFrames.Count)
         {
             RebuildFilesTree();
         }
@@ -164,19 +173,20 @@ internal sealed class PrintSourceController
             surface.FilesTree.SetSections([]);
             return;
         }
+        IReadOnlyList<LibraryFrameSnapshot> eligibleFrames = EligibleFrames;
         LibraryBrowserProjection projection = LibraryBrowserProjector.Create(
             LibraryFrameListItems.From(
-                libraryHost.Frames,
+                eligibleFrames,
                 libraryHost.SourceAvailabilityByFrameId),
             libraryHost.Folders,
             libraryHost.FolderAvailabilityById,
             LibraryBrowserViewMode.Folders,
             includeEmptyFolders: false);
         Negaflow.Shell.PreviewTrace.Write(
-            $"files.print.rebuild host=ok frames={libraryHost.Frames.Count} " +
+            $"files.print.rebuild host=ok frames={eligibleFrames.Count} " +
             $"folders={libraryHost.Folders.Count} sections={projection.FolderSections.Count}");
         // 고른 사진과 그 폴더가 파랗게 되도록 라이브러리 · 현상과 같은 값을 넣습니다.
-        surface.FilesTree.SelectedFrameId = libraryHost.ActiveFrameId;
+        surface.FilesTree.SelectedFrameId = ActiveSourceFrameId;
         surface.FilesTree.SetSections(projection.FolderSections);
         builtFrameCount = projection.FolderSections.Sum(section => section.Items.Count);
     }
@@ -194,11 +204,9 @@ internal sealed class PrintSourceController
 
     private void SynchronizeSidebar()
     {
-        string? activeFrameId = libraryHost?.ActiveFrameId;
-        LibraryFrameSnapshot? activeFrame = activeFrameId is null
-            ? null
-            : libraryHost?.Frames.FirstOrDefault(frame =>
-                string.Equals(frame.Id, activeFrameId, StringComparison.Ordinal));
+        string? activeFrameId = ActiveSourceFrameId;
+        LibraryFrameSnapshot? activeFrame = Sources.FirstOrDefault(frame =>
+            string.Equals(frame.Id, activeFrameId, StringComparison.Ordinal));
         string title = activeFrame is null
             ? AppResources.Get("noFrame", "Text")
             : LibraryFrameNaming.DisplayName(activeFrame);
@@ -207,7 +215,7 @@ internal sealed class PrintSourceController
         ToolTipService.SetToolTip(surface.LeftHeader, title);
         ToolTipService.SetToolTip(surface.RightHeader, title);
 
-        surface.ApplySourcePane(libraryHost?.Frames.Count > 0);
+        surface.ApplySourcePane(EligibleFrames.Count > 0);
         surface.FilesTree.SelectedFrameId = activeFrameId;
     }
 
@@ -220,9 +228,11 @@ internal sealed class PrintSourceController
             return;
         }
         // 하단바가 정한 범위와 차례를 씁니다 - 현상뷰와 같은 하나입니다.
-        filmstripItems = FilmstripPresentation.Project(libraryHost, surface.Presentation());
+        filmstripItems = [.. FilmstripPresentation
+            .Project(libraryHost, surface.Presentation())
+            .Where(item => !item.Frame.IsPreviewScan)];
         int selectedIndex = 0;
-        if (libraryHost.ActiveFrameId is { } activeFrameId)
+        if (ActiveSourceFrameId is { } activeFrameId)
         {
             int found = filmstripItems
                 .Select((item, index) => (item, index))
@@ -236,7 +246,9 @@ internal sealed class PrintSourceController
         surface.Filmstrip.ShowFrames(filmstripItems, selectedIndex);
         // 고른 사진이 여러 장이면 스트립도 여러 장을 밝게 냅니다.
         surface.Filmstrip.SynchronizeSelection(
-            libraryHost.SelectedFrameIds,
-            libraryHost.ActiveFrameId);
+            [.. libraryHost.SelectedFrames
+                .Where(frame => !frame.IsPreviewScan)
+                .Select(frame => frame.Id)],
+            ActiveSourceFrameId);
     }
 }

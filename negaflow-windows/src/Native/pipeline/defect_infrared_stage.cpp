@@ -1,5 +1,6 @@
 #include "negaflow/pipeline/defect_infrared_stage.h"
 
+#include "defect_patch_quantization.h"
 #include "negaflow/core/pixel.h"
 
 #include <algorithm>
@@ -103,15 +104,12 @@ struct CorrectionBounds final {
 };
 
 struct InfraredPatch final {
-    std::vector<Rgba32F> pixels{};
+    std::vector<std::uint16_t> rgb16{};
     std::uint32_t image_left{0U};
     std::uint32_t image_top{0U};
     std::uint32_t width{0U};
     std::uint32_t height{0U};
 };
-
-inline constexpr std::size_t maximum_patch_storage_bytes =
-    512U * 1024U * 1024U;
 
 [[nodiscard]] float safe_restore(
     const float source,
@@ -177,7 +175,6 @@ DefectInfraredStageResult apply_defect_infrared_item(
     try {
         std::vector<InfraredPatch> patches{};
         patches.reserve(item.clusters.size());
-        std::size_t patch_storage_bytes = 0U;
         for (const DefectInfraredEdit& edit : item.clusters) {
             const std::uint32_t image_top =
                 result.image.height - edit.roi_y - edit.height;
@@ -279,60 +276,72 @@ DefectInfraredStageResult apply_defect_infrared_item(
             patch.width = bounds.right - bounds.left;
             patch.height = bounds.bottom - bounds.top;
             if (patch.width > std::numeric_limits<std::size_t>::max() /
-                                  patch.height ||
-                static_cast<std::size_t>(patch.width) * patch.height >
-                    std::numeric_limits<std::size_t>::max() / sizeof(Rgba32F)) {
+                                  patch.height) {
                 result.status = DefectInfraredStageStatus::allocation_failed;
                 discard_pixels(result.image);
                 return result;
             }
             const std::size_t patch_pixels =
                 static_cast<std::size_t>(patch.width) * patch.height;
-            const std::size_t patch_bytes = patch_pixels * sizeof(Rgba32F);
-            if (patch_bytes > maximum_patch_storage_bytes - patch_storage_bytes) {
+            if (patch_pixels > std::numeric_limits<std::size_t>::max() /
+                                   (3U * sizeof(std::uint16_t))) {
                 result.status = DefectInfraredStageStatus::allocation_failed;
                 discard_pixels(result.image);
                 return result;
             }
-            patch.pixels.resize(patch_pixels);
+            patch.rgb16.resize(patch_pixels * 3U);
             for (std::uint32_t y = 0U; y < patch.height; ++y) {
                 const auto source = roi.pixels.begin() +
                     static_cast<std::ptrdiff_t>(
                         static_cast<std::size_t>(bounds.top + y) *
                             roi.stride_pixels +
                         bounds.left);
-                std::copy_n(
-                    source,
-                    patch.width,
-                    patch.pixels.begin() + static_cast<std::ptrdiff_t>(
-                        static_cast<std::size_t>(y) * patch.width));
+                auto destination = patch.rgb16.begin() +
+                    static_cast<std::ptrdiff_t>(
+                        static_cast<std::size_t>(y) * patch.width * 3U);
+                for (std::uint32_t x = 0U; x < patch.width; ++x) {
+                    destination[static_cast<std::size_t>(x) * 3U] =
+                        defect_patch_detail::encode_linear16(source[x].red);
+                    destination[static_cast<std::size_t>(x) * 3U + 1U] =
+                        defect_patch_detail::encode_linear16(source[x].green);
+                    destination[static_cast<std::size_t>(x) * 3U + 2U] =
+                        defect_patch_detail::encode_linear16(source[x].blue);
+                }
             }
-            patch_storage_bytes += patch_bytes;
             patches.push_back(std::move(patch));
         }
 
+        const float strength =
+            defect_patch_detail::composited_patch_strength(item.strength);
         for (const InfraredPatch& patch : patches) {
             for (std::uint32_t y = 0U; y < patch.height; ++y) {
                 const std::size_t patch_row =
-                    static_cast<std::size_t>(y) * patch.width;
+                    static_cast<std::size_t>(y) * patch.width * 3U;
                 const std::size_t image_row =
                     static_cast<std::size_t>(patch.image_top + y) *
                         result.image.stride_pixels +
                     patch.image_left;
                 for (std::uint32_t x = 0U; x < patch.width; ++x) {
-                    const Rgba32F source = patch.pixels[patch_row + x];
+                    const std::size_t source = patch_row +
+                        static_cast<std::size_t>(x) * 3U;
                     Rgba32F& destination = result.image.pixels[image_row + x];
                     destination.red = safe_restore(
                         destination.red + static_cast<float>(
-                            (source.red - destination.red) * item.strength),
+                            (defect_patch_detail::decode_linear16(
+                                 patch.rgb16[source]) -
+                             destination.red) * strength),
                         1.0);
                     destination.green = safe_restore(
                         destination.green + static_cast<float>(
-                            (source.green - destination.green) * item.strength),
+                            (defect_patch_detail::decode_linear16(
+                                 patch.rgb16[source + 1U]) -
+                             destination.green) * strength),
                         1.0);
                     destination.blue = safe_restore(
                         destination.blue + static_cast<float>(
-                            (source.blue - destination.blue) * item.strength),
+                            (defect_patch_detail::decode_linear16(
+                                 patch.rgb16[source + 2U]) -
+                             destination.blue) * strength),
                         1.0);
                 }
             }

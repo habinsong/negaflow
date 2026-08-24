@@ -1,5 +1,6 @@
 using Negaflow.Catalog;
 using Negaflow.Interop;
+using Negaflow.Shell.Develop;
 
 namespace Negaflow.Shell;
 
@@ -27,6 +28,7 @@ public sealed class ScanSessionController
     private readonly SimulatedScannerGateway simulator;
     private readonly ScannerPluginTrustStore trust;
     private readonly IUiDispatcher dispatcher;
+    private string? previewFrameId;
 
     public ScanSessionController(
         IScannerPluginGateway gateway,
@@ -75,9 +77,15 @@ public sealed class ScanSessionController
 
     /// <summary>
     /// 마지막 프리뷰 스캔이 남긴 파일입니다. 자동 프레임 찾기가 이 그림에서 프레임을 셉니다.
-    /// 프리뷰는 카탈로그에 올리지 않으므로 여기서만 붙잡습니다.
+    /// 프리뷰 frame은 메모리에만 게시하며 원본 파일 경로는 여기서 붙잡습니다.
     /// </summary>
     public string? LastPreviewPath { get; private set; }
+
+    /// <summary>선택된 scanner preview의 Guided 영역을 전체 스캔 시작 직전에 캡처합니다.</summary>
+    public Func<GrainMendGuidedCarryover?>? GuidedCarryoverProvider { get; set; }
+
+    /// <summary>첫 전체 스캔 frame이 게시된 뒤 캡처한 Guided 영역을 소비자에게 넘깁니다.</summary>
+    public Action<string, GrainMendGuidedCarryover>? GuidedCarryoverPublished { get; set; }
 
     public bool SimulatorEnabled { get; private set; }
 
@@ -118,20 +126,40 @@ public sealed class ScanSessionController
         regionEditor.Update(regionId, moved);
 
     /// <summary>선택한 프레임을 방향키 한 칸만큼 밉니다.</summary>
-    public bool NudgeSelectedRegion(double deltaX, double deltaY, bool coarse = false) =>
-        regionEditor.NudgeSelected(Capabilities, deltaX, deltaY, coarse);
+    public bool NudgeSelectedRegion(
+        double deltaX,
+        double deltaY,
+        bool coarse = false,
+        ImageTransformRecipe? previewTransform = null,
+        uint sourceWidth = 0,
+        uint sourceHeight = 0) =>
+        regionEditor.NudgeSelected(
+            Capabilities,
+            deltaX,
+            deltaY,
+            coarse,
+            previewTransform,
+            sourceWidth,
+            sourceHeight);
 
     /// <summary>프리뷰가 담은 실제 영역입니다. 비율을 밀리미터로 되돌리는 자입니다.</summary>
     public FlatbedPreviewArea PreviewArea => regionEditor.ResolvePreviewArea(Capabilities);
 
     /// <summary>화면에 걸린 프리뷰 프레임의 카탈로그 식별자입니다.</summary>
-    public string? PreviewFrameId => regionEditor.PreviewFrameId;
+    public string? PreviewFrameId => previewFrameId;
 
     /// <summary>새 프리뷰를 받았습니다. macOS <c>prepareFlatbedPreview</c> 자리입니다.</summary>
-    public void PrepareForPreview(string? previewFrameId, ScannerPluginScanArea? scanArea) =>
-        regionEditor.PrepareForPreview(previewFrameId, scanArea);
+    public void PrepareForPreview(string? frameId, ScannerPluginScanArea? scanArea)
+    {
+        previewFrameId = frameId;
+        regionEditor.PrepareForPreview(frameId, scanArea);
+    }
 
-    public void ClearPreview() => regionEditor.ClearPreview();
+    public void ClearPreview()
+    {
+        previewFrameId = null;
+        regionEditor.ClearPreview();
+    }
 
     public bool DeleteSelectedRegion() => regionEditor.DeleteSelected();
 
@@ -391,6 +419,9 @@ public sealed class ScanSessionController
         int requested = preview
             ? 1
             : UsesFlatbedRegionWorkflow ? Regions.Count : Options.BatchCount;
+        GrainMendGuidedCarryover? guidedCarryover = !preview && !UsesFlatbedRegionWorkflow
+            ? GuidedCarryoverProvider?.Invoke()
+            : null;
         IsScanning = true;
         LastFailureName = null;
         Changed?.Invoke(this, EventArgs.Empty);
@@ -404,17 +435,30 @@ public sealed class ScanSessionController
                 BuildRequest,
                 preview,
                 requested,
+                index => InitialTransformForRegion(index, library),
+                guidedCarryover,
+                GuidedCarryoverPublished,
                 cancellationToken).ConfigureAwait(false);
             LastFailureName = execution.FailureName;
             if (execution.PreviewPath is not null)
             {
                 LastPreviewPath = execution.PreviewPath;
             }
+            if (preview && execution.PreviewFrameId is not null)
+            {
+                previewFrameId = execution.PreviewFrameId;
+            }
             if (preview && UsesFlatbedRegionWorkflow && execution.PreviewScanArea is not null)
             {
                 // 이 프리뷰가 담은 영역이 앞으로 프레임 비율을 밀리미터로 되돌리는 자입니다.
                 regionEditor.PrepareForPreview(
                     execution.PreviewFrameId, execution.PreviewScanArea);
+            }
+            if (!preview && execution.Outcome.Published > 0 &&
+                (!UsesFlatbedRegionWorkflow || execution.Outcome.Published == requested))
+            {
+                _ = library.RemoveScannerPreviewFrames();
+                previewFrameId = null;
             }
             return execution.Outcome;
         }
@@ -423,6 +467,49 @@ public sealed class ScanSessionController
             IsScanning = false;
             _ = dispatcher.TryEnqueue(() => Changed?.Invoke(this, EventArgs.Empty));
         }
+    }
+
+    private ImageTransformRecipe? InitialTransformForRegion(
+        int regionIndex,
+        LibraryHostService library)
+    {
+        if (!UsesFlatbedRegionWorkflow || regionEditor.RegionAt(regionIndex) is not { } region)
+        {
+            return null;
+        }
+        ImageTransformRecipe? previewTransform = previewFrameId is { } frameId
+            ? library.Frames.FirstOrDefault(frame =>
+                string.Equals(frame.Id, frameId, StringComparison.Ordinal))?.ImageTransform
+            : null;
+        return FlatbedInitialTransform(previewTransform, DefaultRotation, region);
+    }
+
+    internal static ImageTransformRecipe FlatbedInitialTransform(
+        ImageTransformRecipe? previewTransform,
+        ImageRotation defaultRotation,
+        FlatbedScanRegion region)
+    {
+        ArgumentNullException.ThrowIfNull(region);
+        ImageTransformRecipe orientation = previewTransform is null
+            ? ImageTransformRecipe.Identity
+            : previewTransform with
+            {
+                Crop = null,
+                StraightenAngle = 0.0,
+                CropAspect = null,
+            };
+        if (orientation == ImageTransformRecipe.Identity)
+        {
+            orientation = ImageTransformRecipe.Identity with { Rotation = defaultRotation };
+        }
+        return orientation with
+        {
+            Crop = null,
+            StraightenAngle = orientation.FlipHorizontal != orientation.FlipVertical
+                ? -region.StraightenAngle
+                : region.StraightenAngle,
+            CropAspect = null,
+        };
     }
 
     private (InstalledScannerPlugin? Plugin, ScannerPluginTrustIdentity? Identity)

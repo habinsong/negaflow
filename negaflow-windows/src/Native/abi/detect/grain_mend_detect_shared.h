@@ -4,6 +4,10 @@
 
 #include <cstdint>
 
+namespace negaflow::pipeline {
+struct GrainMendDetectionOutcome;
+}
+
 namespace negaflow::abi::detail {
 
 // v4·v5·v6 의 공유 몸통입니다. 두 벌로 두면 한쪽만 고쳐질 자리라 하나만 둡니다.
@@ -24,6 +28,7 @@ namespace negaflow::abi::detail {
     double* automatic_candidate_pixel_fraction,
     nf_develop_run_state_v1* run_state,
     nf_grain_mend_detection_v2* detection,
-    nf_develop_export_result_v3* result);
+    nf_develop_export_result_v3* result,
+    negaflow::pipeline::GrainMendDetectionOutcome* retained_detection = nullptr);
 
 }  // namespace negaflow::abi::detail

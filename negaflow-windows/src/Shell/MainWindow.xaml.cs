@@ -74,6 +74,7 @@ public sealed partial class MainWindow : Window
         AppWindow.TitleBar.ButtonInactiveBackgroundColor = Microsoft.UI.Colors.Transparent;
         ApplyAppearance(settingsStore.Current.Appearance);
         settingsStore.Changed += OnSettingsChanged;
+        AppWindow.Closing += OnAppWindowClosing;
         Closed += OnClosed;
     }
 
@@ -333,6 +334,7 @@ public sealed partial class MainWindow : Window
         ShellView.AboutRequested -= OnAboutRequested;
         ShellView.TitleBarInteractiveRegionsChanged -= OnTitleBarInteractiveRegionsChanged;
         settingsStore.Changed -= OnSettingsChanged;
+        AppWindow.Closing -= OnAppWindowClosing;
         settingsWindow?.Close();
         settingsWindow = null;
         aboutWindow?.Close();

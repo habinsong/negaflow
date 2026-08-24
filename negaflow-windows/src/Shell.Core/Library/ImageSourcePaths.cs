@@ -19,7 +19,9 @@ public static class ImageSourcePaths
     public static bool IsSupportedImportPath(string path)
     {
         string extension = Path.GetExtension(path);
-        return SupportedImportExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase);
+        // 확장자 목록은 설치된 WIC/RAW codec보다 항상 뒤처집니다. SVG만 제품 계약으로
+        // 제외하고, 실제 raster decode 가능 여부는 LibrarySourceMetadataReader가 판정합니다.
+        return !string.Equals(extension, ".svg", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsTiff(string extension) =>

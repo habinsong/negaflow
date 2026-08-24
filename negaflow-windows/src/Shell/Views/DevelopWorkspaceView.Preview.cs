@@ -38,7 +38,9 @@ public sealed partial class DevelopWorkspaceView
 
     internal void RequestPreview() => RequestPreviewNow();
 
-    internal void RequestPreviewNow()
+    internal void RequestPreviewReplacingCurrent() => RequestPreviewNow(replaceActive: true);
+
+    internal void RequestPreviewNow(bool replaceActive = false)
     {
         // 사용자가 새 사진이나 새 보정 상태를 요청하면 백그라운드 이웃 예열보다 현재 화면이
         // 항상 먼저입니다. 실행 중 포인터는 워커가 반환 뒤 Dispose 합니다.
@@ -51,6 +53,10 @@ public sealed partial class DevelopWorkspaceView
                 "RequestPreviewNow skip coordinator=" + (previewCoordinator is not null) +
                 " previewFrame=" + (panel?.DefectLayers.PreviewFrame is not null) +
                 " selected=" + (panel?.SelectedFrame?.Id ?? "null"));
+            if (panel?.DefectLayers.PreviewFrame is { } refusedFrame)
+            {
+                GrainMendPanel.CompleteDefectPreview(refusedFrame);
+            }
             return;
         }
         PreviewTrace.Write(
@@ -88,6 +94,15 @@ public sealed partial class DevelopWorkspaceView
                     " " + developed.Width + "x" + developed.Height +
                     " skipRequest=" + (developed.Settled ? "1" : "0"));
                 PreviewCanvas.Present(developed.Pixels, developed.Width, developed.Height);
+                GrainMendPanel.CompleteDefectPreview(frame);
+                GrainMendPanel.TraceDevelopedPresentation(
+                    frame,
+                    developed.Width,
+                    developed.Height);
+                TraceInfraredPresentation(
+                    frame.Id,
+                    developed.Width,
+                    developed.Height);
                 TraceCompositionFrame(
                     frame.Id,
                     revision: 0,
@@ -111,7 +126,13 @@ public sealed partial class DevelopWorkspaceView
                     " hasThumb=" + (thumbnails is not null));
             }
         }
-        _ = previewCoordinator.RequestAsync(frame, ShowPreview);
+        _ = replaceActive
+            ? previewCoordinator.RequestReplacingAsync(
+                frame,
+                outcome => ShowPreview(outcome, clearPixelsOnFailure: true, frame))
+            : previewCoordinator.RequestAsync(
+                frame,
+                outcome => ShowPreview(outcome, clearPixelsOnFailure: false, frame));
     }
 
     /// <summary>
@@ -131,7 +152,10 @@ public sealed partial class DevelopWorkspaceView
     /// <summary>화면에 올라가 있는 그림의 리비전입니다.</summary>
     private int presentedRevision;
 
-    private void ShowPreview(PreviewOutcome outcome)
+    private void ShowPreview(
+        PreviewOutcome outcome,
+        bool clearPixelsOnFailure,
+        LibraryFrameSnapshot requestedFrame)
     {
         // **자기보다 오래된 그림은 버립니다.**
         // 배달은 UI 큐에 실리므로 두 장이 연달아 실릴 수 있고, 그러면 나중에 처리되는
@@ -155,11 +179,13 @@ public sealed partial class DevelopWorkspaceView
             !string.Equals(frameId, expectedId, StringComparison.Ordinal))
         {
             PreviewTrace.Write("ShowPreview drop frame mismatch");
+            GrainMendPanel.CancelDevelopedPresentation(requestedFrame);
             return;
         }
         if (outcome.Revision != 0 && outcome.Revision < presentedRevision)
         {
             PreviewTrace.Write("ShowPreview drop old revision");
+            GrainMendPanel.CancelDevelopedPresentation(requestedFrame);
             return;
         }
         if (outcome.Revision > presentedRevision)
@@ -177,6 +203,7 @@ public sealed partial class DevelopWorkspaceView
             // 겹친 요청이 빈 캔버스("이미지를 가져오세요")를 남깁니다.
             if (outcome.Kind == DevelopExportOutcomeKind.Cancelled)
             {
+                GrainMendPanel.CancelDevelopedPresentation(requestedFrame);
                 return;
             }
             string reason = outcome.Kind == DevelopExportOutcomeKind.Completed
@@ -186,8 +213,16 @@ public sealed partial class DevelopWorkspaceView
                     : outcome.Refusal.ToString();
             ExportStatusText.Text =
                 $"{AppResources.Get("developPreviewFailed", "Text")} ({reason})";
-            // 고른 사진이 있는데 빈 캔버스("이미지를 가져오세요")를 띄우지 않습니다.
-            // 실패한 배달이 자리표시자를 지워 선택이 안 먹은 것처럼 보였습니다.
+            if (clearPixelsOnFailure)
+            {
+                PreviewCanvas.KeepPreviewPixels(null, 0U, 0U);
+                PreviewCanvas.ShowEmpty();
+                HistogramView.Clear();
+            }
+            // 일반 실패는 고른 사진의 마지막 그림을 보존합니다. 저장 실패 rollback만은 마지막
+            // 그림이 미확정 live 화소일 수 있으므로 위에서 fail-closed로 비웁니다.
+            GrainMendPanel.CompleteDefectPreview(requestedFrame);
+            GrainMendPanel.CancelDevelopedPresentation(requestedFrame);
             return;
         }
         PreviewCanvas.KeepPreviewPixels(pixels, outcome.Width, outcome.Height);
@@ -201,6 +236,12 @@ public sealed partial class DevelopWorkspaceView
                 Negaflow.Shell.Develop.PreviewPixelStats.Describe(pixels, width, height));
         }
         PreviewCanvas.Present(pixels, width, height);
+        GrainMendPanel.CompleteDefectPreview(requestedFrame);
+        GrainMendPanel.TraceDevelopedPresentation(requestedFrame, width, height);
+        TraceInfraredPresentation(
+            outcome.FrameId ?? expectedId ?? "null",
+            width,
+            height);
         TraceCompositionFrame(
             outcome.FrameId ?? expectedId ?? "null",
             outcome.Revision,
@@ -252,7 +293,9 @@ public sealed partial class DevelopWorkspaceView
         }
 
         crop.MarkPreviewReady();
-        PreviewCanvas.RenderCropOverlay();
+        // 새 미리보기(특히 90도 회전)는 크롭도 따라가야 합니다. 이후 줌·팬 동안에는
+        // 이 프레임을 고정해 표시와 히트테스트가 같은 좌표계를 쓰게 합니다.
+        PreviewCanvas.RenderCropOverlay(refreshFrame: true);
         PreviewCanvas.RefreshCompare();
         if (compareBeforeNeeded && !PreviewCanvas.HasCompareBefore)
         {

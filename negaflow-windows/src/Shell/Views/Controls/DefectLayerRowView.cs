@@ -2,6 +2,8 @@ using Negaflow.Shell.Develop;
 
 namespace Negaflow.Shell.Views.Controls;
 
+public sealed record DefectLayerCommandTarget(string FrameId, Guid ItemId);
+
 /// <summary>
 /// 레이어 한 줄이 화면에 내는 값 전부입니다. 템플릿이 값을 짓지 않도록 글리프·도구설명·흐림까지
 /// 여기서 정합니다.
@@ -36,11 +38,17 @@ public sealed class DefectLayerRowView
     /// <summary>macOS <c>trash</c> — Segoe Fluent Delete.</summary>
     private const string DeleteGlyph = "";
 
-    public DefectLayerRowView(DefectLayerRow row, DefectLayerText text, bool isBusy)
+    public DefectLayerRowView(
+        string frameId,
+        DefectLayerRow row,
+        DefectLayerText text,
+        bool isBusy)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(frameId);
         ArgumentNullException.ThrowIfNull(row);
         ArgumentNullException.ThrowIfNull(text);
         Id = row.Id;
+        Target = new DefectLayerCommandTarget(frameId, row.Id);
         IndexText = $"{row.DisplayIndex}.";
         Enabled = row.Enabled;
         Strength = row.Strength;
@@ -68,6 +76,8 @@ public sealed class DefectLayerRowView
     }
 
     public Guid Id { get; }
+
+    public DefectLayerCommandTarget Target { get; }
 
     public string IndexText { get; }
 

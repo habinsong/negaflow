@@ -135,10 +135,12 @@ internal static class ScannerScanCodec
         JsonElement payload,
         ScannerPluginClient.ScanWire wire,
         out string? infraredPath,
-        out ScannerArtifactRequirements? artifactRequirements)
+        out ScannerArtifactRequirements? artifactRequirements,
+        out ScannerPluginScanArea? appliedScanArea)
     {
         infraredPath = null;
         artifactRequirements = null;
+        appliedScanArea = null;
         try
         {
             if (!HasRequiredAppliedOptionNames(payload))
@@ -164,6 +166,7 @@ internal static class ScannerScanCodec
                 height,
                 wire.BitDepth,
                 wire.ColorMode);
+            appliedScanArea = result.AppliedOptions!.ScanArea;
             if (!wire.Infrared)
             {
                 return result.IrPath is null;

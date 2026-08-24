@@ -66,7 +66,9 @@ public static class GrainMendHudProjection
         DefectEditLabelKind? pendingLabel,
         GrainMendReviewSession? review,
         GrainMendTool tool,
-        bool canUndo = false)
+        bool canUndo = false,
+        DefectEditLabelKind? activeRegionKind = null,
+        bool hasRegionSession = false)
     {
         bool reviewing = pendingLabel is not null;
         bool automatic = pendingLabel == DefectEditLabelKind.Automatic;
@@ -101,7 +103,32 @@ public static class GrainMendHudProjection
                 Chips: review?.ClassSummaries() ?? [],
                 FalsePositiveRisk: review?.FalsePositiveRisk == true);
         }
-        // 자동은 누르는 즉시 검출로 넘어갑니다. 기다리는 상태가 남는 것은 가이드뿐입니다.
+        if (hasRegionSession && activeRegionKind is { } activeKind)
+        {
+            return new GrainMendHudState(
+                GrainMendHudMode.Reviewing,
+                Automatic: activeKind == DefectEditLabelKind.Automatic,
+                Total: 0,
+                Excluded: 0,
+                RemoveEnabled: false,
+                TuningEnabled: true,
+                Chips: []);
+        }
+        // 수락·검토 취소는 검출 세션만 닫고 region mode는 유지합니다. macOS와 같이 Auto도
+        // 다음 실행/명시적 종료를 기다리는 안내를 남깁니다.
+        if (activeRegionKind is { } waitingKind)
+        {
+            return new GrainMendHudState(
+                GrainMendHudMode.Waiting,
+                Automatic: waitingKind == DefectEditLabelKind.Automatic,
+                Total: 0,
+                Excluded: 0,
+                RemoveEnabled: false,
+                TuningEnabled: false,
+                Chips: [],
+                FalsePositiveRisk: false,
+                CanUndo: canUndo);
+        }
         return tool == GrainMendTool.Guided
             ? new GrainMendHudState(
                 GrainMendHudMode.Waiting,

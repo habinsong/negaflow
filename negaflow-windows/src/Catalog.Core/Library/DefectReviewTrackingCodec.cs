@@ -59,8 +59,8 @@ public static class DefectReviewTrackingCodec
     }
 
     /// <summary>
-    /// 검토 완료를 적습니다. <paramref name="mark"/> 가 null 이면 표시를 지웁니다 —
-    /// macOS 도 원본이 바뀌면 승계하지 않고 지웁니다.
+    /// 검토 완료를 적습니다. <paramref name="mark"/> 가 null 이면 macOS와 같이 tracked coverage는
+    /// 유지하고 현재/검토 identity만 비웁니다.
     /// </summary>
     public static LibraryFrameWriteResult Apply(
         JsonObject frameRecord,
@@ -70,7 +70,10 @@ public static class DefectReviewTrackingCodec
         JsonObject updated = frameRecord.DeepClone().AsObject();
         if (mark is not { } written)
         {
-            updated.Remove(TrackingName);
+            updated[TrackingName] = new JsonObject
+            {
+                [CoverageName] = TrackedCoverage,
+            };
             return LibraryFrameWriteResult.Success(updated);
         }
         if (string.IsNullOrEmpty(written.RecipeSha256) ||

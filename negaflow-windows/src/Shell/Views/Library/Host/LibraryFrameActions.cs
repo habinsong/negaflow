@@ -192,6 +192,16 @@ internal sealed class LibraryFrameActions
         string? actionKey = redo ? host.Redo() : host.Undo();
         if (actionKey is null)
         {
+            if (host.StoreError != CatalogStoreError.None ||
+                host.DefectSidecarError != DefectSidecarError.None)
+            {
+                view.ShowLibrary(host, view.importWindowId ?? default);
+                view.ControlsPanel.ImportStatusText.Text = AppResources.Get(
+                    host.StoreError != CatalogStoreError.None
+                        ? "developExportSaveFailed"
+                        : "libraryProcessApplyFailed",
+                    "Text");
+            }
             return false;
         }
         view.ControlsPanel.CollectionsPanel.Rebuild();

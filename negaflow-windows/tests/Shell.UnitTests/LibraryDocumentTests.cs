@@ -52,6 +52,7 @@ internal static class LibraryDocumentTests
             LibraryStructureTests.VerifyLibraryStacks(isolatedBase);
             LibraryStructureTests.VerifyVirtualCopies(isolatedBase);
             LibraryCullingTests.VerifyLibraryUndo(isolatedBase);
+            LibraryCullingTests.VerifyLibraryUndoSaveFailure(isolatedBase);
             LibraryStructureTests.VerifyLibraryDocumentDefectProjection(isolatedBase);
         }
         finally

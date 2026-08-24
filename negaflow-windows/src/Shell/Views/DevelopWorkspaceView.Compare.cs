@@ -16,6 +16,7 @@ namespace Negaflow.Shell.Views;
 public sealed partial class DevelopWorkspaceView
 {
     private DevelopRun? neighborWarmRun;
+    private Task neighborWarmTask = Task.CompletedTask;
     private bool compareBeforeNeeded;
     private bool compareBeforeInFlight;
 
@@ -213,8 +214,16 @@ public sealed partial class DevelopWorkspaceView
         uint edge = DevelopPreviewProxy.BufferEdge(DevelopPreviewProxy.FullMaxDimension);
         DevelopRun run = new();
         System.Threading.Interlocked.Exchange(ref neighborWarmRun, run)?.Cancel();
-        _ = System.Threading.Tasks.Task.Run(() =>
+        Task previousWarmTask = neighborWarmTask;
+        neighborWarmTask = Task.Run(() =>
         {
+            try
+            {
+                previousWarmTask.GetAwaiter().GetResult();
+            }
+            catch
+            {
+            }
             ThreadPriority previousPriority = Thread.CurrentThread.Priority;
             bool priorityChanged = false;
             try
@@ -262,6 +271,23 @@ public sealed partial class DevelopWorkspaceView
                 run.Dispose();
             }
         });
+    }
+
+    private async Task CancelNeighborWarmAsync()
+    {
+        Interlocked.Exchange(ref neighborWarmRun, null)?.Cancel();
+        Task running = neighborWarmTask;
+        try
+        {
+            await running;
+        }
+        catch
+        {
+        }
+        if (ReferenceEquals(neighborWarmTask, running))
+        {
+            neighborWarmTask = Task.CompletedTask;
+        }
     }
 
     private void WarmSettledPreview(

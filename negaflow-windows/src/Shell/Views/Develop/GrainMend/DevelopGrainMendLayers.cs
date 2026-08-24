@@ -27,22 +27,28 @@ internal sealed class DevelopGrainMendLayers
             return;
         }
         view.panel.DefectLayers.ForgetMissingMaskPreview();
+        LibraryFrameSnapshot? selectedFrame = view.panel.SelectedFrame;
         DefectLayerSectionState state = DefectLayerProjection.Create(
-            view.panel.SelectedFrame,
+            view.panel.DefectLayers.PreviewFrame,
             DefectLayerTextFactory.Create(),
             view.panel.DefectLayers.MaskPreviewId,
             // macOS `libraryWorkflowTrackingState.defectReviewTracking` — 카탈로그에 적힌
             // 검토 완료 판입니다. 지금 recipe 와 세 값이 다르면 저절로 "아직"이 됩니다.
-            Reviewed(view.panel.SelectedFrame),
-            view.grainMend.IsDetecting);
-        view.DefectLayers.Update(state, DefectLayerTextFactory.Create(), view.grainMend.IsDetecting);
+            Reviewed(selectedFrame),
+            view.isRemovingDefects);
+        view.DefectLayers.Update(
+            selectedFrame?.Id,
+            state,
+            DefectLayerTextFactory.Create(),
+            view.isRemovingDefects);
         ShowMaskOverlay();
     }
 
     internal void OnCommand(object? sender, DefectLayerCommandEventArgs args)
     {
         _ = sender;
-        if (view.panel is null)
+        if (view.panel?.SelectedFrame is not { } selectedFrame ||
+            !string.Equals(selectedFrame.Id, args.FrameId, StringComparison.Ordinal))
         {
             return;
         }
@@ -80,19 +86,34 @@ internal sealed class DevelopGrainMendLayers
     /// </summary>
     private void SetLayerStrength(DefectLayerCommandEventArgs args)
     {
-        if (view.panel is null ||
-            view.panel.DefectLayers.SetStrength(args.Id, args.Strength, args.IsLive) !=
-                LibraryFrameError.None)
+        if (view.panel is null)
         {
+            return;
+        }
+        LibraryFrameError error =
+            view.panel.DefectLayers.SetStrength(args.Id, args.Strength, args.IsLive);
+        if (error != LibraryFrameError.None)
+        {
+            // 저장 실패 전 EndGesture가 live 값과 cache를 지웠습니다. 목록과 화소도 같은
+            // committed recipe로 즉시 되돌려 서로 다른 상태가 화면에 남지 않게 합니다.
+            Update();
+            view.RequestPreviewReplacingCurrent();
             return;
         }
         if (args.IsLive)
         {
+            LibraryFrameSnapshot? selectedFrame = view.panel.SelectedFrame;
+            view.DefectLayers.UpdateDoneState(DefectLayerProjection.Create(
+                view.panel.DefectLayers.PreviewFrame,
+                DefectLayerTextFactory.Create(),
+                view.panel.DefectLayers.MaskPreviewId,
+                Reviewed(selectedFrame),
+                view.isRemovingDefects));
             view.RequestPreview();
             return;
         }
         Update();
-        view.RequestPreview();
+        view.RequestDefectPreview();
     }
 
     /// <summary>
@@ -102,7 +123,11 @@ internal sealed class DevelopGrainMendLayers
     /// </summary>
     private void ShowMaskOverlay()
     {
-        if (view.panel is null || view.canvas is null || view.grainMend.PendingEdit is not null)
+        if (view.panel is null || view.canvas is null ||
+            view.grainMend.PendingEdit is not null ||
+            view.grainMend.IsDetecting ||
+            view.grainMend.ActiveRegionKind is not null ||
+            view.grainMend.Strokes.Tool != GrainMendTool.None)
         {
             return;
         }
@@ -117,7 +142,16 @@ internal sealed class DevelopGrainMendLayers
 
         int width = view.canvas.PreviewBitmap.PixelWidth;
         int height = view.canvas.PreviewBitmap.PixelHeight;
-        if (DefectMaskOverlayRenderer.Render(frame, width, height, item) is not { } bgra)
+        double pointScale = view.canvas.TryGetPreviewFrame(out PreviewFrame displayFrame) &&
+            displayFrame.Width > 0.0
+                ? width / displayFrame.Width
+                : 1.0;
+        if (DefectMaskOverlayRenderer.Render(
+                frame,
+                width,
+                height,
+                item,
+                pointScale) is not { } bgra)
         {
             view.review.HideOverlay();
             return;
@@ -148,6 +182,6 @@ internal sealed class DevelopGrainMendLayers
         }
         // Update 가 끝에서 목록도 다시 그립니다.
         view.chrome.Update();
-        view.RequestPreview();
+        view.RequestDefectPreview();
     }
 }

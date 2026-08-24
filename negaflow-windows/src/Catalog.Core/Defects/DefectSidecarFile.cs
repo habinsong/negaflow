@@ -73,8 +73,7 @@ internal static class DefectSidecarFile
 
     internal static void WriteAtomic(
         string destination,
-        byte[] data,
-        DefectRecipeSnapshot expected)
+        byte[] data)
     {
         string directory = Path.GetDirectoryName(destination)!;
         string temporary = Path.Combine(directory, $".sidecar-{Guid.NewGuid():N}.tmp");
@@ -111,9 +110,8 @@ internal static class DefectSidecarFile
                 throw new IOException("Defects sidecar promotion failed.");
             }
 
-            DefectSidecarReadResult readback = ReadFile(destination, expected.FrameId);
-            if (readback.Snapshot is not { } persisted ||
-                !DefectSidecarCodec.AreSameSnapshot(expected, persisted))
+            byte[] readback = File.ReadAllBytes(destination);
+            if (!data.AsSpan().SequenceEqual(readback))
             {
                 throw new IOException("Defects sidecar readback failed.");
             }

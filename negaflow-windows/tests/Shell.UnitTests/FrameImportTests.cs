@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Collections.Concurrent;
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
@@ -85,6 +86,40 @@ internal static class FrameImportTests
                 NextId,
                 _ => null).Rejected.Single().Refusal == FrameImportRefusal.UnsupportedImage,
             "import_rejects_unprobed_source");
+        int unsupportedMetadataReads = 0;
+        Check(
+            FrameImport.Plan(
+                [@"C:\scans\vector.svg"],
+                [],
+                DevelopmentProcess.C41,
+                Exists,
+                NextId,
+                _ =>
+                {
+                    ++unsupportedMetadataReads;
+                    return new LibrarySourceMetadata(4096, 64, 32, 3, 16, 1, 1);
+                }).Rejected.Single().Refusal == FrameImportRefusal.UnsupportedImage &&
+            unsupportedMetadataReads == 0,
+            "import_rejects_svg_before_metadata_decode");
+        Check(
+            FrameImport.Plan(
+                [@"C:\scans\future-camera-format.xyzraw"],
+                [],
+                DevelopmentProcess.C41,
+                Exists,
+                NextId,
+                _ => new LibrarySourceMetadata(4096, 64, 32, 3, 16, 1, 1))
+                .Rows.Count == 1,
+            "import_accepts_decoder_supported_format_without_extension_allowlist");
+        Check(
+            FrameImport.Plan(
+                [@"C:\scans\not-an-image.txt"],
+                [],
+                DevelopmentProcess.C41,
+                Exists,
+                NextId,
+                _ => null).Rejected.Single().Refusal == FrameImportRefusal.UnsupportedImage,
+            "import_rejects_non_image_by_decoder_probe");
 
         LibraryFrameSnapshot existing = read.Frame!;
         FrameImportPlan again = FrameImport.Plan(
@@ -100,6 +135,23 @@ internal static class FrameImportTests
         Check(
             again.Rows[0].Payload["scanIndex"]!.GetValue<int>() == 1,
             "import_continues_scan_index");
+        int duplicateMetadataReads = 0;
+        FrameImportPlan duplicateWithMetadataReader = FrameImport.Plan(
+            [@"C:\scans\a.tif"],
+            [existing],
+            DevelopmentProcess.C41,
+            Exists,
+            NextId,
+            _ =>
+            {
+                ++duplicateMetadataReads;
+                return new LibrarySourceMetadata(4096, 64, 32, 3, 16, 1, 1);
+            });
+        Check(
+            duplicateWithMetadataReader.Rejected.Single().Refusal ==
+                FrameImportRefusal.AlreadyInLibrary &&
+            duplicateMetadataReads == 0,
+            "import_skips_duplicate_metadata_decode");
 
         // 같은 호출 안에서 같은 파일을 두 번 고른 경우도 한 건입니다.
         FrameImportPlan twice = FrameImport.Plan(
@@ -185,22 +237,33 @@ internal static class FrameImportTests
         string isolatedBase = Path.Combine(testParent, $"{Environment.ProcessId}-{Guid.NewGuid():N}");
         string source = Path.Combine(isolatedBase, "source");
         string empty = Path.Combine(isolatedBase, "empty");
+        string nonLeaf = Path.Combine(isolatedBase, "non-leaf");
+        string child = Path.Combine(nonLeaf, "child");
+        string parentOnly = Path.Combine(isolatedBase, "parent-only");
         StorageRootSet roots = StorageRootResolver.ResolveForTests(isolatedBase).Roots!;
 
         try
         {
             Directory.CreateDirectory(source);
             Directory.CreateDirectory(empty);
+            Directory.CreateDirectory(child);
+            Directory.CreateDirectory(Path.Combine(parentOnly, "nested"));
             File.WriteAllBytes(Path.Combine(source, "B.tiff"), [0]);
             File.WriteAllBytes(Path.Combine(source, "A.tif"), [0]);
             File.WriteAllBytes(Path.Combine(source, "C.jpg"), [0]);
             File.WriteAllBytes(Path.Combine(source, "D.dng"), [0]);
             File.WriteAllBytes(Path.Combine(source, "E.arw"), [0]);
             File.WriteAllBytes(Path.Combine(source, "ignore.txt"), [0]);
+            File.WriteAllBytes(Path.Combine(nonLeaf, "visible.tiff"), [0]);
+            File.WriteAllBytes(Path.Combine(child, "nested.tiff"), [0]);
 
             FakeDispatcher dispatcher = new(accepts: true);
             FakeExporter exporter = new(_ => OkResult());
-            using (LibraryHostService host = new(dispatcher, exporter, TestSourceMetadata))
+            LibrarySourceMetadata? DecodeImage(string path) =>
+                string.Equals(Path.GetExtension(path), ".txt", StringComparison.OrdinalIgnoreCase)
+                    ? null
+                    : TestSourceMetadata(path);
+            using (LibraryHostService host = new(dispatcher, exporter, DecodeImage))
             {
                 Check(host.Open(roots) == LibraryHostState.Open, "folder_import_host_open");
                 FolderImportResult imported = host.ImportFolders([source], DevelopmentProcess.C41);
@@ -212,16 +275,113 @@ internal static class FrameImportTests
                           "A,B,C,D,E",
                     "folder_import_preserves_standard_and_raw_file_order");
 
+                using var contentChanged = new AutoResetEvent(false);
+                var changedEvents = new ConcurrentQueue<LibraryContentChangedEventArgs>();
+                host.LibraryContentChanged += (_, args) =>
+                {
+                    changedEvents.Enqueue(args);
+                    contentChanged.Set();
+                };
+                string selectedBeforeSync = host.ActiveFrameId!;
+                string addedPath = Path.Combine(source, "F.tif");
+                File.WriteAllBytes(addedPath, [0]);
+                Check(contentChanged.WaitOne(TimeSpan.FromSeconds(5)) &&
+                      host.Frames.Count == 6 && host.ActiveFrameId == selectedBeforeSync,
+                    "folder_monitor_adds_new_image_without_stealing_selection");
+
+                LibraryFrameSnapshot addedFrame = host.Frames.Single(frame =>
+                    string.Equals(frame.SourcePath, addedPath, StringComparison.OrdinalIgnoreCase));
+                string renamedPath = Path.Combine(source, "G.tif");
+                File.Move(addedPath, renamedPath);
+                Check(contentChanged.WaitOne(TimeSpan.FromSeconds(5)) &&
+                      host.Frames.Any(frame => frame.Id == addedFrame.Id &&
+                          string.Equals(frame.SourcePath, renamedPath,
+                              StringComparison.OrdinalIgnoreCase)),
+                    "folder_monitor_rename_preserves_frame_identity_and_edits");
+
+                string aPath = Path.Combine(source, "A.tif");
+                string aFrameId = host.Frames.Single(frame =>
+                    string.Equals(frame.SourcePath, aPath, StringComparison.OrdinalIgnoreCase)).Id;
+                string infraredPath = Path.Combine(source, "A.ir.tif");
+                File.WriteAllBytes(infraredPath, [0]);
+                Check(contentChanged.WaitOne(TimeSpan.FromSeconds(5)) &&
+                      host.Frames.Count == 6 &&
+                      string.Equals(
+                          host.Frames.Single(frame => frame.Id == aFrameId).InfraredPath,
+                          infraredPath,
+                          StringComparison.OrdinalIgnoreCase),
+                    "folder_monitor_attaches_ir_without_publishing_an_ir_frame");
+
+                string renamedInfraredPath = Path.Combine(source, "A_ir.tif");
+                File.Move(infraredPath, renamedInfraredPath);
+                Check(contentChanged.WaitOne(TimeSpan.FromSeconds(5)) &&
+                      string.Equals(
+                          host.Frames.Single(frame => frame.Id == aFrameId).InfraredPath,
+                          renamedInfraredPath,
+                          StringComparison.OrdinalIgnoreCase),
+                    "folder_monitor_relinks_ir_companion_without_a_visible_row");
+
+                File.WriteAllBytes(Path.Combine(source, "B.tiff"), [1]);
+                Check(contentChanged.WaitOne(TimeSpan.FromSeconds(5)) &&
+                      changedEvents.Any(args => args.InvalidatedFrameIds.Any(id =>
+                          host.Frames.Any(frame => frame.Id == id &&
+                              string.Equals(frame.SourcePath, Path.Combine(source, "B.tiff"),
+                                  StringComparison.OrdinalIgnoreCase)))),
+                    "folder_monitor_invalidates_replaced_source_caches");
+
+                File.Delete(renamedInfraredPath);
+                File.Delete(renamedPath);
+                Check(contentChanged.WaitOne(TimeSpan.FromSeconds(5)) &&
+                      host.Frames.Count == 5 &&
+                      host.Frames.Single(frame => frame.Id == aFrameId).InfraredPath is null,
+                    "folder_monitor_removes_deleted_source_and_detaches_deleted_ir");
+
+                string laterChild = Path.Combine(source, "later-child");
+                string blockedImage = Path.Combine(source, "H.tif");
+                Directory.CreateDirectory(laterChild);
+                File.WriteAllBytes(blockedImage, [0]);
+                Thread.Sleep(TimeSpan.FromMilliseconds(1_200));
+                Check(host.Frames.Count == 5 && !host.Frames.Any(frame =>
+                        string.Equals(frame.SourcePath, blockedImage,
+                            StringComparison.OrdinalIgnoreCase)),
+                    "folder_monitor_fails_closed_when_registered_folder_stops_being_leaf");
+                Directory.Delete(laterChild);
+                Check(contentChanged.WaitOne(TimeSpan.FromSeconds(5)) &&
+                      host.Frames.Any(frame => string.Equals(
+                          frame.SourcePath,
+                          blockedImage,
+                          StringComparison.OrdinalIgnoreCase)),
+                    "folder_monitor_recovers_leaf_and_imports_pending_image_once");
+                File.Delete(blockedImage);
+                Check(contentChanged.WaitOne(TimeSpan.FromSeconds(5)) && host.Frames.Count == 5,
+                    "folder_monitor_returns_to_exact_file_set_after_delete");
+
                 FolderImportResult emptyImport = host.ImportFolders([empty], DevelopmentProcess.C41);
-                Check(emptyImport.IsSuccess && emptyImport.AddedFolderCount == 1 &&
-                      emptyImport.AddedFrameCount == 0 && host.Folders.Count == 2,
-                    "folder_import_keeps_empty_folder_as_library_source");
+                Check(!emptyImport.IsSuccess && emptyImport.AddedFolderCount == 0 &&
+                      emptyImport.AddedFrameCount == 0 && host.Folders.Count == 1 &&
+                      emptyImport.Plan.Rejected.Single().Refusal ==
+                          FolderImportRefusal.NoImportableImages,
+                    "folder_import_rejects_empty_leaf");
+
+                FolderImportResult mixedParent = host.ImportFolders(
+                    [nonLeaf],
+                    DevelopmentProcess.C41);
+                FolderImportResult childOnlyParent = host.ImportFolders(
+                    [parentOnly],
+                    DevelopmentProcess.C41);
+                Check(!mixedParent.IsSuccess && !childOnlyParent.IsSuccess &&
+                      mixedParent.Plan.Rejected.Single().Refusal ==
+                          FolderImportRefusal.HasSubfolders &&
+                      childOnlyParent.Plan.Rejected.Single().Refusal ==
+                          FolderImportRefusal.HasSubfolders &&
+                      host.Folders.Count == 1 && host.Frames.Count == 5,
+                    "folder_import_rejects_every_non_leaf_without_recursive_import");
             }
 
             using LibraryHostService reopened = new(new FakeDispatcher(accepts: true), new FakeExporter(_ => OkResult()));
-            Check(reopened.Open(roots) == LibraryHostState.Open && reopened.Folders.Count == 2 &&
+            Check(reopened.Open(roots) == LibraryHostState.Open && reopened.Folders.Count == 1 &&
                   reopened.Frames.Count == 5,
-                "folder_import_persists_folders_and_frames_together");
+                "folder_import_persists_only_the_image_leaf");
         }
         finally
         {

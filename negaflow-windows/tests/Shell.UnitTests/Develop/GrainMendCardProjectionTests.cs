@@ -22,6 +22,7 @@ internal static class GrainMendCardProjectionTests
     private static GrainMendCardState Card(
         bool hasFrame = true,
         bool isDetecting = false,
+        DefectEditLabelKind? activeRegionKind = null,
         DefectEditLabelKind? pendingLabel = null,
         int? includedCount = null,
         GrainMendTool tool = GrainMendTool.None,
@@ -32,6 +33,8 @@ internal static class GrainMendCardProjectionTests
         GrainMendCardProjection.Create(
             hasFrame,
             isDetecting,
+            activeRegionKind ?? pendingLabel ??
+                (tool == GrainMendTool.Guided ? DefectEditLabelKind.Guided : null),
             pendingLabel,
             includedCount,
             tool,
@@ -68,11 +71,22 @@ internal static class GrainMendCardProjectionTests
 
     private static void VerifyDetecting()
     {
-        GrainMendCardState busy = Card(isDetecting: true);
+        GrainMendCardState automatic = Card(
+            isDetecting: true,
+            activeRegionKind: DefectEditLabelKind.Automatic);
+        // 따라서 활성 pill은 재검출이 아니라 현재 모드 취소·전환 입력으로 열어 둡니다.
         // 검출이 도는 동안 또 시작하면 두 결과가 같은 자리를 두고 다툽니다.
-        Check(!busy.AutoEnabled && !busy.GuidedEnabled,
-            "grain_mend_card_refuses_a_second_detect_while_one_runs");
-        Check(busy.BrushEnabled && busy.CloneEnabled,
+        Check(automatic.AutoEnabled && automatic.GuidedEnabled && automatic.AutoActive &&
+            !automatic.GuidedActive,
+            "grain_mend_card_keeps_detect_actions_open_and_highlights_automatic");
+        GrainMendCardState guided = Card(
+            isDetecting: true,
+            activeRegionKind: DefectEditLabelKind.Guided,
+            tool: GrainMendTool.Guided);
+        Check(guided.AutoEnabled && guided.GuidedEnabled && guided.GuidedActive &&
+            !guided.AutoActive,
+            "grain_mend_card_keeps_detect_actions_open_and_highlights_guided");
+        Check(automatic.BrushEnabled && automatic.CloneEnabled,
             "grain_mend_card_keeps_the_direct_tools_during_detect");
     }
 
@@ -83,9 +97,9 @@ internal static class GrainMendCardProjectionTests
         Check(reviewing.Reviewing && reviewing.SensitivityEnabled &&
             reviewing.MicroSpecksEnabled && reviewing.CancelEnabled,
             "grain_mend_card_opens_the_review_row_for_a_pending_edit");
-        // 검토 중에는 새 검출을 시작하지 않습니다 — 이것이 자동·가이드가 잠기는 유일한 이유입니다.
-        Check(!reviewing.AutoEnabled && !reviewing.GuidedEnabled,
-            "grain_mend_card_locks_detect_while_a_review_is_open");
+        // 검토 중 action pill도 현재 모드 취소와 다른 모드 전환을 위해 열어 둡니다.
+        Check(reviewing.AutoEnabled && reviewing.GuidedEnabled,
+            "grain_mend_card_keeps_mode_cancel_and_switch_actions_open_during_review");
         Check(reviewing.RemoveEnabled,
             "grain_mend_card_allows_removing_an_included_review");
         // 모두 꺼 둔 검토를 받아들이면 아무것도 고치지 않는 항목이 남습니다.

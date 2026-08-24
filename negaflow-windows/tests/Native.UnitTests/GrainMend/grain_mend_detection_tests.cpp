@@ -1,8 +1,11 @@
 #include "grain_mend_test_support.h"
 
+#include "grain_mend_component_gates.h"
 #include "grain_mend_detector.h"
 #include "grain_mend_resample.h"
+#include "grain_mend_speck_detector.h"
 #include "grain_mend_stitch.h"
+#include "grain_mend_tile_plan.h"
 
 #include <algorithm>
 #include <array>
@@ -16,6 +19,89 @@
 #include <vector>
 
 namespace grain_mend_tests {
+
+void test_labeled_integer_gate_boundaries_match_macos() {
+    constexpr double sensitivity = (3.1 - 0.7) / (6.0 - 0.7);
+    negaflow::imaging::grain_mend_detail::Component area_boundary{};
+    area_boundary.pixels.resize(490U);
+    area_boundary.maximum_x = 27U;
+    area_boundary.maximum_y = 17U;
+    negaflow::imaging::grain_mend_detail::Component thickness_boundary{};
+    thickness_boundary.pixels.resize(522U);
+    thickness_boundary.maximum_x = 29U;
+    thickness_boundary.maximum_y = 17U;
+    expect(
+        negaflow::imaging::grain_mend_detail::labeled_maximum_dust_area(
+            150.0, sensitivity, false) == 489U &&
+            negaflow::imaging::grain_mend_detail::labeled_maximum_thickness(
+                sensitivity) == 17.0 &&
+            !negaflow::imaging::grain_mend_detail::passes_dust_gate(
+                area_boundary, 489U, 4.0, 3.0, 17.0) &&
+            !negaflow::imaging::grain_mend_detail::passes_dust_gate(
+                thickness_boundary, 489U, 4.0, 3.0, 17.0),
+        "labeled dust area and thickness use macOS positive integer truncation");
+}
+
+void test_tile_local_structure_grid_precedes_speck_merge() {
+    using negaflow::imaging::grain_mend_detail::DetectionImage;
+    using negaflow::imaging::grain_mend_detail::remove_tile_local_structure_grid;
+
+    DetectionImage tile{};
+    tile.width = 256U;
+    tile.height = 256U;
+    tile.brightest_channel.assign(
+        static_cast<std::size_t>(tile.width) * tile.height, 0.5F);
+    std::vector<std::uint8_t> evidence(tile.brightest_channel.size(), 0U);
+    constexpr std::array<std::uint32_t, 3U> centers{72U, 96U, 120U};
+    for (const std::uint32_t center_y : centers) {
+        for (const std::uint32_t center_x : centers) {
+            for (std::uint32_t y = center_y - 7U; y <= center_y + 7U; ++y) {
+                evidence[static_cast<std::size_t>(y) * tile.width + center_x] = 2U;
+            }
+        }
+    }
+    for (std::uint32_t y = 40U; y < 82U; ++y) {
+        evidence[static_cast<std::size_t>(y) * tile.width + 220U] = 2U;
+    }
+
+    remove_tile_local_structure_grid(tile, evidence);
+
+    const std::size_t speck = 96U * tile.width + 96U;
+    std::vector<std::uint8_t> speck_mask(evidence.size(), 0U);
+    std::vector<float> speck_confidence(evidence.size(), 0.0F);
+    speck_mask[speck] = 1U;
+    speck_mask[speck + 1U] = 1U;
+    speck_confidence[speck] = 0.75F;
+    speck_confidence[speck + 1U] = 0.75F;
+    std::vector<std::uint8_t> occupancy(evidence.size(), 0U);
+    std::size_t accepted = 0U;
+    for (std::size_t index = 0U; index < evidence.size(); ++index) {
+        if (evidence[index] != 0U) {
+            occupancy[index] = 1U;
+            ++accepted;
+        }
+    }
+    std::vector<negaflow::imaging::grain_mend_detail::ClassifiedComponent>
+        components{};
+    negaflow::imaging::grain_mend_detail::merge_micro_specks_into(
+        speck_mask,
+        speck_confidence,
+        tile.width,
+        tile.height,
+        &components,
+        occupancy,
+        accepted);
+
+    expect(
+        (evidence[speck] & 2U) == 0U &&
+            (evidence[60U * tile.width + 220U] & 2U) != 0U &&
+            occupancy[speck] != 0U && occupancy[speck + 1U] != 0U &&
+            components.size() == 1U &&
+            components.front().classification ==
+                negaflow::imaging::grain_mend_detail::DefectClassification::
+                    micro_speck,
+        "tile-local grid rejection removes repeated structure before speck merge");
+}
 
 void test_detection_sensitivity_controls_candidate_thresholds() {
     const auto dust_clean = make_uniform_image(96U, 72U);

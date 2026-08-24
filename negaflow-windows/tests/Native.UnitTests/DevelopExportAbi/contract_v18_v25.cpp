@@ -394,7 +394,7 @@ void test_v25_contract() {
         nf_develop_export_v25(&request, nullptr, &result) == NF_STATUS_OK &&
             result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
             std::strcmp(result.failure_name, "invalid_defect_clone_payload") == 0,
-        "v25 rejects an expanded native order above 8192 before region mapping");
+        "v25 rejects an expanded native order above the transport limit");
 }
 
 }  // namespace negaflow::develop_export_abi_tests

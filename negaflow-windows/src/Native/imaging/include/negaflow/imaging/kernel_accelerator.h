@@ -320,6 +320,7 @@ struct KernelAccelerator final {
     MorphologyRgbFunction bipolar_top_hat_rgb{nullptr};
     MorphologyRgbFunction opening_rgb{nullptr};
     MorphologyRgbFunction closing_rgb{nullptr};
+    MorphologyRgbFunction close_open_rgb{nullptr};
     ScratchAngleMapsFunction scratch_angle_maps{nullptr};
     ScratchAngleStackFunction scratch_angle_stack{nullptr};
 

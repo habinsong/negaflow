@@ -1,6 +1,9 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
+using System.Runtime.InteropServices.WindowsRuntime;
+using Negaflow.Catalog;
+using Negaflow.Shell.Library;
 
 namespace Negaflow.Shell.Views.Library.Scanner;
 
@@ -23,6 +26,12 @@ public sealed partial class FlatbedScanAreaOverlay : UserControl
 
     private double imagePixelHeight;
 
+    private LibraryFrameSnapshot? previewFrame;
+
+    private ThumbnailService? previewCache;
+
+    private WriteableBitmap? developedBitmap;
+
     public FlatbedScanAreaOverlay()
     {
         InitializeComponent();
@@ -34,17 +43,22 @@ public sealed partial class FlatbedScanAreaOverlay : UserControl
 
     /// <summary>지금 그려진 프레임 사각형입니다. 화면 좌표이며 시험이 읽습니다.</summary>
     internal IReadOnlyList<FlatbedOverlayRect> ScreenRects =>
-        [.. Regions.Select(region => FlatbedOverlayGeometry.ScreenRect(region, ImageFrame))];
+        [.. Regions.Select(ScreenRect)];
 
     internal IReadOnlyList<FlatbedScanRegion> Regions => session?.Regions ?? [];
 
     /// <summary>그림이 실제로 그려진 자리입니다. 프레임 비율을 여기에 폅니다.</summary>
     internal FlatbedOverlayRect ImageFrame { get; private set; }
 
-    public void Attach(ScanSessionController controller)
+    public void Attach(
+        ScanSessionController controller,
+        LibraryFrameSnapshot? frame,
+        ThumbnailService? cache)
     {
         ArgumentNullException.ThrowIfNull(controller);
         session = controller;
+        previewFrame = frame;
+        previewCache = cache;
     }
 
     /// <summary>
@@ -63,7 +77,30 @@ public sealed partial class FlatbedScanAreaOverlay : UserControl
             loadedPreviewPath = null;
             imagePixelWidth = 0;
             imagePixelHeight = 0;
+            previewFrame = null;
             RegionLayer.Children.Clear();
+            return;
+        }
+
+        if (TryPresentDeveloped())
+        {
+            LayoutRegions();
+            return;
+        }
+        if (previewFrame is { } frame)
+        {
+            previewCache?.RequestDeveloped(frame, 2048);
+        }
+
+        // 변형된 frame에 raw 파일을 잠깐 보여 주면 region만 변형 좌표로 움직여 둘이 어긋납니다.
+        // native 현상 프록시가 올 때까지 빈 상태를 유지하고, identity일 때만 raw를 즉시 씁니다.
+        if (previewFrame?.ImageTransform != ImageTransformRecipe.Identity)
+        {
+            PreviewImage.Source = null;
+            loadedPreviewPath = null;
+            imagePixelWidth = 0;
+            imagePixelHeight = 0;
+            LayoutRegions();
             return;
         }
 
@@ -72,6 +109,44 @@ public sealed partial class FlatbedScanAreaOverlay : UserControl
             LoadPreview(previewPath!);
         }
         LayoutRegions();
+    }
+
+    /// <summary>developed FIFO에 현재 프리뷰가 준비되면 raw 대신 같은 현상 화소를 올립니다.</summary>
+    internal void OnDevelopedReady(string frameId)
+    {
+        if (!string.Equals(previewFrame?.Id, frameId, StringComparison.Ordinal) ||
+            !TryPresentDeveloped())
+        {
+            return;
+        }
+        LayoutRegions();
+    }
+
+    private bool TryPresentDeveloped()
+    {
+        if (previewFrame is not { } frame || previewCache is null ||
+            !previewCache.TryGetDeveloped(frame, out ThumbnailService.DevelopedPreview developed) ||
+            developed.Width <= 0 || developed.Height <= 0 ||
+            developed.Pixels.LongLength < (long)developed.Width * developed.Height * 4)
+        {
+            return false;
+        }
+        if (developedBitmap is null ||
+            developedBitmap.PixelWidth != developed.Width ||
+            developedBitmap.PixelHeight != developed.Height)
+        {
+            developedBitmap = new WriteableBitmap(developed.Width, developed.Height);
+        }
+        using (Stream buffer = developedBitmap.PixelBuffer.AsStream())
+        {
+            buffer.Write(developed.Pixels, 0, developed.Width * developed.Height * 4);
+        }
+        developedBitmap.Invalidate();
+        PreviewImage.Source = developedBitmap;
+        loadedPreviewPath = null;
+        imagePixelWidth = developed.Width;
+        imagePixelHeight = developed.Height;
+        return true;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs args)
@@ -129,4 +204,20 @@ public sealed partial class FlatbedScanAreaOverlay : UserControl
     private void OnHostSizeChanged(object sender, SizeChangedEventArgs args) => LayoutRegions();
 
     private void NotifyChanged() => RegionsChanged?.Invoke(this, EventArgs.Empty);
+
+    private FlatbedOverlayRect ScreenRect(FlatbedScanRegion region) =>
+        TryPreviewTransform(out ImageTransformRecipe transform, out uint width, out uint height)
+            ? FlatbedOverlayGeometry.ScreenRect(region, ImageFrame, transform, width, height)
+            : FlatbedOverlayGeometry.ScreenRect(region, ImageFrame);
+
+    private bool TryPreviewTransform(
+        out ImageTransformRecipe transform,
+        out uint width,
+        out uint height)
+    {
+        transform = previewFrame?.ImageTransform ?? ImageTransformRecipe.Identity;
+        width = previewFrame?.SourceMetadata?.PixelWidth ?? 0U;
+        height = previewFrame?.SourceMetadata?.PixelHeight ?? 0U;
+        return width > 1U && height > 1U && transform.IsValid;
+    }
 }

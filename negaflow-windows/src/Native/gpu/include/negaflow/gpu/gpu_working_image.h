@@ -99,12 +99,29 @@ public:
         const core::Rgba32F* pixels,
         std::uint32_t stride_pixels) const noexcept;
 
+    // 분리 평면을 중간 RGBA host vector 없이 upload staging에 바로 pack합니다.
+    // green/blue가 null이면 red를 복제합니다.
+    [[nodiscard]] GpuImageStatus upload_planes_into(
+        const GpuDevice& device,
+        const float* red,
+        const float* green,
+        const float* blue,
+        std::uint32_t stride_pixels) const noexcept;
+
     // GPU → 호스트. 스테이징 텍스처를 거칩니다(D3D11 은 이것 말고 읽는 길이 없습니다).
     // D3D11 의 `Map` 은 **동기화합니다** — 밀린 GPU 작업이 끝날 때까지 CPU 가 멈춥니다.
     // 매 프레임 내리는 경로에서는 `GpuStagingRing` 을 쓰십시오.
     [[nodiscard]] GpuImageStatus download(
         const GpuDevice& device,
         core::Rgba32F* pixels,
+        std::uint32_t stride_pixels) const noexcept;
+
+    // 회수 staging에서 분리 평면으로 바로 unpack합니다. green/blue는 생략할 수 있습니다.
+    [[nodiscard]] GpuImageStatus download_planes(
+        const GpuDevice& device,
+        float* red,
+        float* green,
+        float* blue,
         std::uint32_t stride_pixels) const noexcept;
 
     // 같은 크기의 다른 텍스처 내용을 그대로 가져옵니다. CPU 커널들이 "변화 없음" 일 때

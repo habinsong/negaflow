@@ -93,18 +93,47 @@ public sealed partial class DevelopPanelState
         return RefreshAfterDefectEdit(result);
     }
 
+    public LibraryFrameError AddBrushStrokes(IReadOnlyList<DefectStroke> displayStrokes)
+    {
+        DevelopDefectEditResult result = defectEditor.AddBrushStrokes(
+            SelectedFrame,
+            displayStrokes);
+        return RefreshAfterDefectEdit(result);
+    }
+
+    public LibraryFrameError AcceptDefectRegion(
+        DefectEditItem edit,
+        GrainMendDetectionToken detectionToken,
+        LibraryFrameSnapshot validatedFrame)
+    {
+        ArgumentNullException.ThrowIfNull(edit);
+        ArgumentNullException.ThrowIfNull(detectionToken);
+        ArgumentNullException.ThrowIfNull(validatedFrame);
+        if (!ReferenceEquals(
+                GrainMendFrameSnapshot(detectionToken.FrameId),
+                validatedFrame))
+        {
+            return LibraryFrameError.InvalidDefectRecipe;
+        }
+        DevelopDefectEditResult result = defectEditor.AcceptRegion(
+            validatedFrame,
+            edit,
+            detectionToken,
+            validatedFrame.DefectRecipe);
+        return RefreshAfterDefectEdit(result);
+    }
+
     /// <summary>
-    /// 되돌리기 더미 맨 위가 GrainMend 편집인지입니다. macOS 는
-    /// <c>ScanFrame.canUndoDefects</c>(= <c>defectHistoryDepth &gt; 0</c>)로 캡슐의 되돌리기
-    /// 단추를 켭니다. 여기 더미는 문서 하나를 공유하므로 "이 프레임이 편집을 한 적 있는가"
-    /// 대신 <b>다음 한 칸이 결함 편집인가</b>로 묻습니다 — 캡슐의 단추가 슬라이더 조정이나
-    /// 컬렉션 변경을 되돌려 버리는 일이 없어야 합니다.
+    /// macOS <c>ScanFrame.canUndoDefects</c>(= <c>defectHistoryDepth &gt; 0</c>)와 같이 현재
+    /// 프레임에 접근 가능한 GrainMend 이력이 남았는지입니다. 실제 실행은 양쪽 모두 문서 공용
+    /// undo stack의 마지막 동작을 되돌립니다.
     /// </summary>
     public bool CanUndoDefectEdit =>
-        string.Equals(
-            host.UndoActionName,
-            LibraryHostService.UndoActions.DefectEdit,
-            StringComparison.Ordinal);
+        SelectedFrame is { } frame && host.CanUndoDefectFrame(frame.Id);
+
+    public CatalogStoreError HistoryStoreError => host.StoreError;
+
+    public DefectSidecarError HistorySidecarError => host.DefectSidecarError;
 
     /// <summary>
     /// macOS <c>performUndo</c> — 결함 편집 한 칸을 되돌립니다. 캡슐의 되돌리기 단추가
@@ -124,12 +153,17 @@ public sealed partial class DevelopPanelState
     }
 
     /// <summary>
-    /// macOS <c>markDefectRecipeReviewed</c> — 지금 recipe 판을 "검토 완료"로 적습니다.
+    /// macOS <c>markDefectRecipeReviewed</c> — 지금 화면의 recipe 판을 "검토 완료"로 적습니다.
     /// 원본에 묶이지 않은 recipe 는 물을 수 없으므로 아무 일도 하지 않습니다.
     /// </summary>
     public LibraryFrameError MarkDefectRecipeReviewed()
     {
-        if (SelectedFrame is not { DefectRecipe: { SourceIdentity: { } source } recipe } frame)
+        LibraryFrameSnapshot? frame = DefectLayers.PreviewFrame;
+        if (frame?.IsPreviewScan == true)
+        {
+            return LibraryFrameError.None;
+        }
+        if (frame is not { DefectRecipe: { SourceIdentity: { } source } recipe })
         {
             return LibraryFrameError.MissingId;
         }
@@ -153,6 +187,23 @@ public sealed partial class DevelopPanelState
     public bool HasDefectEdits(DefectEditLabelKind label) =>
         DevelopDefectEditor.HasEdits(SelectedFrame, label);
 
+    public LibraryFrameSnapshot? GrainMendFrameSnapshot(string frameId)
+    {
+        ArgumentNullException.ThrowIfNull(frameId);
+        if (!string.Equals(SelectedFrame?.Id, frameId, StringComparison.Ordinal))
+        {
+            return null;
+        }
+        foreach (LibraryFrameSnapshot frame in host.Frames)
+        {
+            if (string.Equals(frame.Id, frameId, StringComparison.Ordinal))
+            {
+                return frame;
+            }
+        }
+        return null;
+    }
+
     /// <summary>
     /// 한 도구가 남긴 편집만 지웁니다. 다른 도구의 편집과 자동 검출 결과는 남습니다 — macOS 의
     /// 도구별 초기화와 같습니다.
@@ -167,6 +218,13 @@ public sealed partial class DevelopPanelState
     public LibraryFrameError RemoveDefectEdits(DefectEditLabelKind label)
     {
         DevelopDefectEditResult result = defectEditor.RemoveEdits(SelectedFrame, label);
+        return RefreshAfterDefectEdit(result);
+    }
+
+    /// <summary>macOS <c>clearAllDefects</c> — 측정된 IR은 보존하고 나머지 적용 결함을 지웁니다.</summary>
+    public LibraryFrameError RemoveNonInfraredDefectEdits()
+    {
+        DevelopDefectEditResult result = defectEditor.RemoveNonInfraredEdits(SelectedFrame);
         return RefreshAfterDefectEdit(result);
     }
 

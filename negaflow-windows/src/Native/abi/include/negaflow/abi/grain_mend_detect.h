@@ -121,6 +121,37 @@ typedef struct nf_grain_mend_detection_v4 {
     double automatic_candidate_pixel_fraction;
 } nf_grain_mend_detection_v4;
 
+/* v7 keeps exact component pixels and dust/scratch kind in native memory until the
+   transient review is accepted or cancelled. Exact pixels never enter a sidecar. */
+typedef struct nf_grain_mend_review_handle_v1 nf_grain_mend_review_handle_v1;
+typedef struct nf_grain_mend_accepted_region_handle_v1
+    nf_grain_mend_accepted_region_handle_v1;
+
+typedef struct nf_grain_mend_review_hit_v1 {
+    uint32_t struct_size;
+    uint32_t found;
+    uint64_t component_index;
+} nf_grain_mend_review_hit_v1;
+
+enum {
+    NF_GRAIN_MEND_ACCEPTED_OK = 0U,
+    NF_GRAIN_MEND_ACCEPTED_EMPTY = 1U,
+    NF_GRAIN_MEND_ACCEPTED_INVALID_GEOMETRY = 2U,
+    NF_GRAIN_MEND_ACCEPTED_ALLOCATION_FAILED = 3U,
+};
+
+typedef struct nf_grain_mend_accepted_region_v1 {
+    uint32_t struct_size;
+    uint32_t status;
+    /* Raw source coordinates are top-first. Convert to recipe y-up only at commit. */
+    uint32_t roi_x;
+    uint32_t roi_y;
+    uint32_t width;
+    uint32_t height;
+    uint64_t mask_byte_count;
+    uint64_t included_component_count;
+} nf_grain_mend_accepted_region_v1;
+
 NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v1(
     const nf_develop_export_request_v27* request,
     uint8_t* mask,
@@ -185,6 +216,49 @@ NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v6(
     nf_develop_run_state_v1* run_state,
     nf_grain_mend_detection_v4* detection,
     nf_develop_export_result_v3* result);
+
+/* Detects exactly once and returns an opaque transient review. The detection summary
+   reports exact component and sampled preview-point counts; callers copy those arrays
+   from the handle without re-running the image pipeline. */
+NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v7(
+    const nf_develop_export_request_v27* request,
+    const nf_grain_mend_detect_parameters_v3* parameters,
+    nf_develop_run_state_v1* run_state,
+    nf_grain_mend_detection_v4* detection,
+    nf_develop_export_result_v3* result,
+    nf_grain_mend_review_handle_v1** review);
+
+NF_API nf_status_t NF_CALL nf_grain_mend_review_copy_components_v1(
+    const nf_grain_mend_review_handle_v1* review,
+    nf_grain_mend_component_v1* components,
+    uint64_t component_capacity,
+    nf_grain_mend_preview_point_v1* preview_points,
+    uint64_t preview_point_capacity);
+
+NF_API nf_status_t NF_CALL nf_grain_mend_review_hit_test_v1(
+    const nf_grain_mend_review_handle_v1* review,
+    int32_t x,
+    int32_t y,
+    uint32_t radius,
+    nf_grain_mend_review_hit_v1* hit);
+
+NF_API nf_status_t NF_CALL nf_grain_mend_review_build_accepted_v1(
+    const nf_grain_mend_review_handle_v1* review,
+    const uint8_t* excluded,
+    uint64_t excluded_count,
+    nf_grain_mend_accepted_region_v1* accepted,
+    nf_grain_mend_accepted_region_handle_v1** accepted_handle);
+
+NF_API nf_status_t NF_CALL nf_grain_mend_accepted_region_copy_mask_v1(
+    const nf_grain_mend_accepted_region_handle_v1* accepted,
+    uint8_t* rgba,
+    uint64_t rgba_capacity_bytes);
+
+NF_API void NF_CALL nf_grain_mend_accepted_region_destroy_v1(
+    nf_grain_mend_accepted_region_handle_v1* accepted);
+
+NF_API void NF_CALL nf_grain_mend_review_destroy_v1(
+    nf_grain_mend_review_handle_v1* review);
 
 #ifdef __cplusplus
 }

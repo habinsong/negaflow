@@ -147,10 +147,11 @@ bool preview_proxy_try_take(
     return true;
 }
 
-std::optional<DevelopExportOutcome> preview_proxy_materialize(
+[[nodiscard]] static std::optional<DevelopExportOutcome> materialize_from_raw(
     const DevelopExportRequest& request,
     const ObservedSource& observed,
     const PreviewTarget& preview,
+    const negaflow::imaging::WorkingImage& raw,
     negaflow::imaging::WorkingImage& image,
     PreviewProxyHint& hint) noexcept {
     if (preview.maximum_width == 0U || preview.maximum_height == 0U) {
@@ -160,7 +161,7 @@ std::optional<DevelopExportOutcome> preview_proxy_materialize(
     if (request.film_polarity == FilmPolarity::negative &&
         (request.base_estimation_mode == NegativeBaseEstimationMode::auto_estimate ||
          request.base_estimation_mode == NegativeBaseEstimationMode::preset)) {
-        if (auto failed = resolve_negative_base(request, image, hint)) {
+        if (auto failed = resolve_negative_base(request, raw, hint)) {
             return failed;
         }
     }
@@ -168,8 +169,8 @@ std::optional<DevelopExportOutcome> preview_proxy_materialize(
     std::uint32_t width = 0U;
     std::uint32_t height = 0U;
     preview_fit_size(
-        image.width,
-        image.height,
+        raw.width,
+        raw.height,
         preview.maximum_width,
         preview.maximum_height,
         width,
@@ -177,10 +178,10 @@ std::optional<DevelopExportOutcome> preview_proxy_materialize(
     if (width == 0U || height == 0U) {
         return fail(DevelopExportStage::decode, "empty_preview_source");
     }
-    if (width < image.width || height < image.height) {
+    if (width < raw.width || height < raw.height) {
         // macOS DevelopFrameRenderer.displayProxy — CILanczosScaleTransform.
         auto resampled = negaflow::imaging::resample_working_image_lanczos3(
-            image,
+            raw,
             width,
             height);
         if (resampled.status != negaflow::imaging::WorkingImageResampleStatus::ok) {
@@ -189,6 +190,12 @@ std::optional<DevelopExportOutcome> preview_proxy_materialize(
                 negaflow::imaging::working_image_resample_status_name(resampled.status));
         }
         image = std::move(resampled.image);
+    } else if (&raw != &image) {
+        try {
+            image = raw;
+        } catch (...) {
+            return fail(DevelopExportStage::decode, "cleaned_raw_copy_failed");
+        }
     }
 
     hint.image_is_proxy = true;
@@ -214,6 +221,25 @@ std::optional<DevelopExportOutcome> preview_proxy_materialize(
         // 캐시에 못 남겨도 이번 렌더 결과는 이미 `image` 에 있습니다.
     }
     return std::nullopt;
+}
+
+std::optional<DevelopExportOutcome> preview_proxy_materialize(
+    const DevelopExportRequest& request,
+    const ObservedSource& observed,
+    const PreviewTarget& preview,
+    negaflow::imaging::WorkingImage& image,
+    PreviewProxyHint& hint) noexcept {
+    return materialize_from_raw(request, observed, preview, image, image, hint);
+}
+
+std::optional<DevelopExportOutcome> preview_proxy_materialize_from_cleaned(
+    const DevelopExportRequest& request,
+    const ObservedSource& observed,
+    const PreviewTarget& preview,
+    const negaflow::imaging::WorkingImage& cleaned,
+    negaflow::imaging::WorkingImage& image,
+    PreviewProxyHint& hint) noexcept {
+    return materialize_from_raw(request, observed, preview, cleaned, image, hint);
 }
 
 }  // namespace negaflow::pipeline::develop_export_detail

@@ -1,4 +1,5 @@
 using Negaflow.Interop;
+using Negaflow.Catalog;
 
 namespace Negaflow.Shell;
 
@@ -103,7 +104,7 @@ internal sealed class FlatbedRegionEditor
         }
 
         FlatbedScanRegion? proposed = unitRect is { } drawn
-            ? drawn.Clamped()
+            ? (drawn with { StraightenAngle = 0.0 }).Clamped()
             : FlatbedScanRegionLayout.ProposedRect(Regions, options.FrameFormat, area);
         if (proposed is not { } created || !created.IsValid)
         {
@@ -122,15 +123,18 @@ internal sealed class FlatbedRegionEditor
         {
             return false;
         }
-        FlatbedScanRegion[] remaining = [.. Regions.Where(region =>
-            !string.Equals(region.Id, regionId, StringComparison.Ordinal))];
-        if (remaining.Length == Regions.Count)
+        int index = IndexOf(regionId);
+        if (index < 0)
         {
             return false;
         }
 
+        FlatbedScanRegion[] remaining = [.. Regions.Where(region =>
+            !string.Equals(region.Id, regionId, StringComparison.Ordinal))];
         Regions = remaining;
-        SelectedRegionId = null;
+        SelectedRegionId = index < remaining.Length
+            ? remaining[index].Id
+            : remaining.LastOrDefault()?.Id;
         changed();
         return true;
     }
@@ -181,7 +185,10 @@ internal sealed class FlatbedRegionEditor
         {
             return false;
         }
-        FlatbedScanRegion clamped = moved.Clamped() with { Id = Regions[index].Id };
+        FlatbedScanRegion clamped = (moved with { StraightenAngle = 0.0 }).Clamped() with
+        {
+            Id = Regions[index].Id,
+        };
         if (!clamped.IsValid || clamped == Regions[index])
         {
             return false;
@@ -202,7 +209,10 @@ internal sealed class FlatbedRegionEditor
         ScannerPluginCapabilities? capabilities,
         double deltaX,
         double deltaY,
-        bool coarse)
+        bool coarse,
+        ImageTransformRecipe? previewTransform = null,
+        uint sourceWidth = 0,
+        uint sourceHeight = 0)
     {
         if (SelectedRegionId is not { } regionId || IndexOf(regionId) is var index && index < 0)
         {
@@ -210,7 +220,12 @@ internal sealed class FlatbedRegionEditor
         }
         (double stepX, double stepY) = FlatbedScanRegionLayout.NudgeStep(
             ResolvePreviewArea(capabilities), coarse);
-        return Update(regionId, Regions[index].OffsetBy(deltaX * stepX, deltaY * stepY));
+        (double baseX, double baseY) = previewTransform is { } transform &&
+            sourceWidth > 1U && sourceHeight > 1U
+            ? FlatbedOverlayGeometry.BaseNudgeDelta(
+                transform, sourceWidth, sourceHeight, deltaX, deltaY, stepX, stepY)
+            : (deltaX * stepX, deltaY * stepY);
+        return Update(regionId, Regions[index].OffsetBy(baseX, baseY));
     }
 
     /// <param name="previewPhysicalWidthMm">
@@ -262,11 +277,6 @@ internal sealed class FlatbedRegionEditor
         {
             candidates.Add((area.WidthMm, area.HeightMm));
         }
-        if (candidates.Count == 0)
-        {
-            return FlatbedFrameGridStatus.InvalidInput;
-        }
-
         FlatbedFrameGridResult detected = new(FlatbedFrameGridStatus.InvalidInput, []);
         foreach ((double width, double height) in candidates)
         {
@@ -289,6 +299,18 @@ internal sealed class FlatbedRegionEditor
                 break;
             }
         }
+        if (detected.Status != FlatbedFrameGridStatus.Ok || detected.Detections.Count == 0)
+        {
+            detected = NativeFlatbedFrameGridDetector.DetectEdges(
+                previewLuminance,
+                previewWidth,
+                previewHeight,
+                options.FrameFormat);
+            PreviewTrace.Write(
+                "flatbed edge detect " +
+                $"preview={previewWidth}x{previewHeight} " +
+                $"status={detected.Status} count={detected.Detections.Count}");
+        }
         if (detected.Status != FlatbedFrameGridStatus.Ok)
         {
             return detected.Status;
@@ -297,6 +319,9 @@ internal sealed class FlatbedRegionEditor
         // macOS 는 줄/칸 차례로 정렬하고, 같은 칸이 두 번 나오면 통째로 버립니다 - 겹친
         // 프레임을 그대로 두면 같은 컷을 두 번 스캔합니다.
         List<FlatbedFrameDetection> usable = [.. detected.Detections
+            .Select(UsableDetection)
+            .Where(detection => detection.HasValue)
+            .Select(detection => detection!.Value)
             .OrderBy(detection => detection.Row)
             .ThenBy(detection => detection.Column)];
         if (usable.Select(detection => (detection.Row, detection.Column)).Distinct().Count() !=
@@ -307,11 +332,50 @@ internal sealed class FlatbedRegionEditor
 
         Regions = [.. usable
             .Select(detection => FlatbedScanRegion.Create(
-                detection.X, detection.Y, detection.Width, detection.Height))
+                detection.X,
+                detection.Y,
+                detection.Width,
+                detection.Height,
+                detection.StraightenAngle))
             .Where(region => region.IsValid)];
         SelectedRegionId = Regions.Count > 0 ? Regions[0].Id : null;
         changed();
         return FlatbedFrameGridStatus.Ok;
+    }
+
+    /// <summary>macOS <c>usableFlatbedFrameDetection</c>과 같은 수용 규칙입니다.</summary>
+    internal static FlatbedFrameDetection? UsableDetection(FlatbedFrameDetection detection)
+    {
+        if (!double.IsFinite(detection.X) || !double.IsFinite(detection.Y) ||
+            !double.IsFinite(detection.Width) || !double.IsFinite(detection.Height) ||
+            detection.Width <= 0.0 || detection.Height <= 0.0 ||
+            !double.IsFinite(detection.StraightenAngle) ||
+            Math.Abs(detection.StraightenAngle) > 45.0 ||
+            !double.IsFinite(detection.Confidence) ||
+            detection.Confidence < 0.0 || detection.Confidence > 1.0)
+        {
+            return null;
+        }
+
+        double maxX = detection.X + detection.Width;
+        double maxY = detection.Y + detection.Height;
+        if (detection.X >= 0.0 && detection.Y >= 0.0 && maxX <= 1.0 && maxY <= 1.0)
+        {
+            return detection;
+        }
+
+        double minX = Math.Max(0.0, detection.X);
+        double minY = Math.Max(0.0, detection.Y);
+        double clampedMaxX = Math.Min(1.0, maxX);
+        double clampedMaxY = Math.Min(1.0, maxY);
+        double width = clampedMaxX - minX;
+        double height = clampedMaxY - minY;
+        if (width <= 0.0 || height <= 0.0 ||
+            width < detection.Width * 0.5 || height < detection.Height * 0.5)
+        {
+            return null;
+        }
+        return detection with { X = minX, Y = minY, Width = width, Height = height };
     }
 
     internal FlatbedScanRegion? RegionAt(int index) =>

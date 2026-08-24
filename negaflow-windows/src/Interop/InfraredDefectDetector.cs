@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace Negaflow.Interop;
@@ -28,6 +29,12 @@ public enum InfraredDefectClass : uint
     ScratchHorizontal = 1,
     ScratchVertical = 2,
     ScratchDiagonal = 3,
+}
+
+public enum InfraredVisibleSourceKind : uint
+{
+    ScannerTiff = 0,
+    ImportedFile = 1,
 }
 
 public sealed class InfraredDetectorParameters
@@ -203,34 +210,55 @@ public static unsafe class NativeInfraredDefectDetector
     public static InfraredDetectionResult DetectFiles(
         string visiblePath,
         string infraredPath,
+        InfraredVisibleSourceKind visibleSourceKind = InfraredVisibleSourceKind.ImportedFile,
         InfraredDetectorParameters? parameters = null,
         DevelopRun? run = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(visiblePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(infraredPath);
+        if (!Enum.IsDefined(visibleSourceKind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(visibleSourceKind));
+        }
         NativeInfraredDetectorParametersV1 nativeParameters = CreateParameters(parameters);
         NativeInfraredDetectionSummaryV1 summary = default;
         summary.StructSize = (uint)sizeof(NativeInfraredDetectionSummaryV1);
         nint handle = 0;
         uint status;
+        bool trace = string.Equals(
+            Environment.GetEnvironmentVariable("NEGA_TIMING"),
+            "1",
+            StringComparison.Ordinal);
+        long nativeStarted = trace ? Stopwatch.GetTimestamp() : 0;
         fixed (char* visible = visiblePath)
         fixed (char* infrared = infraredPath)
         {
             NativeDevelopRunStateV1* state = run is null ? null : run.StatePointer;
             uint* cancel = state is null ? null : &state->CancelRequested;
-            status = NativeInfraredDetect.nf_detect_infrared_defects_from_tiff_v1(
+            status = NativeInfraredDetect.nf_detect_infrared_defects_from_files_v2(
                 visible,
                 infrared,
+                (uint)visibleSourceKind,
                 &nativeParameters,
                 cancel,
                 &summary,
                 &handle);
         }
+        long nativeFinished = trace ? Stopwatch.GetTimestamp() : 0;
         if (status != StatusOk)
         {
-            throw NativeFailure("nf_detect_infrared_defects_from_tiff_v1", status);
+            throw NativeFailure("nf_detect_infrared_defects_from_files_v2", status);
         }
-        return Consume(summary, handle);
+        InfraredDetectionResult result = Consume(summary, handle);
+        if (trace)
+        {
+            long finished = Stopwatch.GetTimestamp();
+            Console.Error.WriteLine(
+                $"[infrared interop timing] native=" +
+                $"{Stopwatch.GetElapsedTime(nativeStarted, nativeFinished).TotalMilliseconds:F3} ms " +
+                $"consume={Stopwatch.GetElapsedTime(nativeFinished, finished).TotalMilliseconds:F3} ms");
+        }
+        return result;
     }
 
     private static NativeInfraredDetectorParametersV1 CreateParameters(

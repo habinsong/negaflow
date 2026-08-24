@@ -129,6 +129,28 @@ public sealed partial class LibraryScanPanel : UserControl
         renderer.Render();
     }
 
+    /// <summary>macOS의 사진 삭제 라우팅처럼 actionable preview에서는 사진 대신 프레임을 지웁니다.</summary>
+    internal bool TryDeleteSelectedFlatbedRegion()
+    {
+        if (scanSession is not { Regions.Count: > 0 } session ||
+            libraryHost?.ActiveFrameId is not { } activeFrameId ||
+            libraryHost.Frames.FirstOrDefault(frame => frame.Id == activeFrameId)?.IsPreviewScan != true ||
+            !session.DeleteSelectedRegion())
+        {
+            return false;
+        }
+        renderer.Render();
+        return true;
+    }
+
+    internal void SetScanStatus(string text)
+    {
+        ScanStatusText.Text = text;
+        ScanStatusText.Visibility = string.IsNullOrWhiteSpace(text)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+    }
+
     internal void RaiseMenuStateChanged()
     {
         PublishCapabilities();

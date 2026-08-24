@@ -8,6 +8,8 @@ namespace Negaflow.Catalog;
 /// </summary>
 internal static class DefectRecipeMaskCompression
 {
+    private const long MinimumParallelRawBytes = 1L * 1_024 * 1_024;
+
     internal static IReadOnlyList<DefectEditItem> CompressRawMasks(
         IReadOnlyList<DefectEditItem> items)
     {
@@ -22,14 +24,9 @@ internal static class DefectRecipeMaskCompression
             DefectMask? regionMask = item.RegionMask is { } mask
                 ? Compress(mask)
                 : null;
-            IReadOnlyList<DefectCluster>? clusters = item.Clusters?.Select(cluster =>
-                cluster with
-                {
-                    Mask = Compress(cluster.Mask),
-                    AttenuationR16 = cluster.AttenuationR16 is { } attenuation
-                        ? Compress(attenuation)
-                        : null,
-                }).ToArray();
+            IReadOnlyList<DefectCluster>? clusters = item.Clusters is { } sourceClusters
+                ? CompressClusters(sourceClusters)
+                : null;
             copies[index] = item with
             {
                 RegionMask = regionMask,
@@ -38,6 +35,49 @@ internal static class DefectRecipeMaskCompression
         }
         return copies;
     }
+
+    private static IReadOnlyList<DefectCluster> CompressClusters(
+        IReadOnlyList<DefectCluster> source)
+    {
+        DefectCluster[] compressed = new DefectCluster[source.Count];
+        long rawBytes = 0L;
+        foreach (DefectCluster cluster in source)
+        {
+            rawBytes += cluster.Mask.Data.LongLength;
+            rawBytes += cluster.AttenuationR16?.Data.LongLength ?? 0L;
+        }
+        if (source.Count > 1 && rawBytes >= MinimumParallelRawBytes &&
+            Environment.ProcessorCount > 1)
+        {
+            Parallel.For(
+                0,
+                source.Count,
+                new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Math.Min(
+                        Environment.ProcessorCount,
+                        source.Count),
+                },
+                index => compressed[index] = CompressCluster(source[index]));
+        }
+        else
+        {
+            for (int index = 0; index < source.Count; ++index)
+            {
+                compressed[index] = CompressCluster(source[index]);
+            }
+        }
+        return compressed;
+    }
+
+    private static DefectCluster CompressCluster(DefectCluster cluster) =>
+        cluster with
+        {
+            Mask = Compress(cluster.Mask),
+            AttenuationR16 = cluster.AttenuationR16 is { } attenuation
+                ? Compress(attenuation)
+                : null,
+        };
 
     internal static DefectMask Compress(DefectMask mask)
     {

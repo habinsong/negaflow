@@ -89,9 +89,23 @@ struct InfraredDetection final {
     std::uint32_t height{0U};
 };
 
+struct InfraredDetectionTimings final {
+    std::uint64_t validation_microseconds{0U};
+    std::uint64_t alignment_microseconds{0U};
+    std::uint64_t preparation_microseconds{0U};
+    std::uint64_t infrared_signal_microseconds{0U};
+    std::uint64_t candidates_microseconds{0U};
+    std::uint64_t visible_signal_microseconds{0U};
+    std::uint64_t confirmation_microseconds{0U};
+    std::uint64_t attenuation_microseconds{0U};
+    std::uint64_t output_microseconds{0U};
+    std::uint64_t total_microseconds{0U};
+};
+
 struct InfraredDetectionResult final {
     InfraredDetectionStatus status{InfraredDetectionStatus::unreadable};
     InfraredDetection detection{};
+    InfraredDetectionTimings timings{};
 };
 
 [[nodiscard]] InfraredDetectorParameters sanitize_infrared_detector_parameters(

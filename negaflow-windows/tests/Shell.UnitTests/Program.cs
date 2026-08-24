@@ -16,6 +16,11 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
+        if (args is ["--defect-source-identity-only"])
+        {
+            DefectSourceIdentityTests.Run();
+            return Report("shell_defect_source_identity_tests");
+        }
         if (ShellDiagnostics.TryRun(args, out int diagnosticExitCode))
         {
             return diagnosticExitCode;
@@ -33,9 +38,22 @@ internal static class Program
         DevelopedPreviewDiskCacheTests.Run();
         ScannerPluginTests.Run();
         InfraredRecipeTests.Run();
+        InfraredSessionLifecycleTests.Run();
+        InfraredSelectionTriggerTests.Run();
+        InfraredLateImportTests.Run();
+        InfraredCleanCoordinatorTests.Run();
+        ScannerInfraredPublicationTests.Run();
         DevelopCoordinatorTests.Run();
         LibraryDocumentTests.Run();
         SourceMoveTests.Run();
+        SourceRelinkDefectTests.Run();
+        VirtualCopyDefectReviewTests.Run();
+        DefectTerminationTests.Run();
+        RemovedDefectSidecarTests.Run();
+        GrainMendDetectionSessionTests.Run();
+        GrainMendPreviewBuildStateTests.Run();
+        GrainMendOverlayMappingTests.Run();
+        GrainMendGuidedGestureTests.Run();
         DevelopTargetTests.Run();
         LibraryCullingTests.Run();
         PrintCompositionTests.Run();
@@ -50,6 +68,8 @@ internal static class Program
         FilmLookMenuProjectionTests.Run();
         GrainMendCardProjectionTests.Run();
         DefectLayerSectionTests.Run();
+        DefectLayerFrameInteractionTests.Run();
+        DefectUndoFrameOwnershipTests.Run();
         InfraredCleanStatusTests.Run();
         VersionListProjectionTests.Run();
         PasteScopeSummaryTests.Run();
@@ -72,10 +92,15 @@ internal static class Program
         LocalAdjustmentTests.Run();
         PrintLayoutTemplateTests.Run();
 
+        return Report("shell_unit_tests");
+    }
+
+    private static int Report(string operation)
+    {
         var report = new
         {
             status = Failures.Count == 0 ? "ok" : "failed",
-            operation = "shell_unit_tests",
+            operation,
             assertions = AssertionCount,
             failures = Failures,
         };

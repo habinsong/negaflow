@@ -279,6 +279,6 @@ public sealed partial class LibraryScanPanel
             return;
         }
         scanSession.ScanStorageRoot = picked.Path;
-        ScanStatusText.Text = picked.Path;
+        SetScanStatus(picked.Path);
     }
 }

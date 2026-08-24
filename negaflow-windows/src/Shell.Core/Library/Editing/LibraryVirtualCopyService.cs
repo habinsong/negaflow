@@ -6,7 +6,13 @@ namespace Negaflow.Shell;
 /// <summary>원본 파일은 그대로 두고 catalog에 같은 원본을 가리키는 가상 사본 행을 만듭니다.</summary>
 internal sealed class LibraryVirtualCopyService(LibraryDocumentState state)
 {
-    public string? Create(string frameId)
+    public string? Create(string frameId) =>
+        Create(frameId, liveDefectItemId: null, liveDefectStrength: null);
+
+    internal string? Create(
+        string frameId,
+        Guid? liveDefectItemId,
+        double? liveDefectStrength)
     {
         ArgumentNullException.ThrowIfNull(frameId);
         if (!state.IndexById.TryGetValue(frameId, out int index))
@@ -42,9 +48,6 @@ internal sealed class LibraryVirtualCopyService(LibraryDocumentState state)
             nextNumber,
             LibraryFrameNaming.DisplayName(source));
 
-        state.Payloads.Insert(lastFamilyIndex + 1, copy);
-        state.RowIds.Insert(lastFamilyIndex + 1, copyId);
-
         // 결함 편집은 물려받되 sidecar 는 **각자의 파일**이어야 합니다. 하나를 지우는 것이
         // 다른 하나를 깨뜨리면 안 됩니다. payload 에 hasDefectEdits 가 복제되어 왔으므로,
         // 사본 몫의 sidecar 를 지금 만들지 않으면 투영이 그 사진을 읽지 못해 목록에서
@@ -52,24 +55,90 @@ internal sealed class LibraryVirtualCopyService(LibraryDocumentState state)
         if (state.DefectRecipes.TryGetValue(frameId, out DefectRecipeSnapshot? recipe) &&
             Guid.TryParseExact(copyId, "D", out Guid copyGuid))
         {
-            DefectRecipeSnapshot copied = DefectRecipeSnapshot.Create(
-                copyGuid,
-                recipe.RecipeRevision,
-                recipe.SourceIdentity,
-                recipe.Items);
-            if (state.Session.WriteDefectRecipe(copied).IsSuccess)
+            if (FlushDirtyCatalog() != CatalogStoreError.None)
             {
-                state.DefectRecipes[copyId] = copied;
+                return null;
             }
-            else
+
+            DefectRecipeSnapshot copied;
+            try
             {
-                // sidecar 를 못 만들면 사본은 결함 편집 없이 시작합니다. 읽을 수 없는 사진을
-                // 목록에 남기는 것보다 낫습니다.
-                copy.Remove("hasDefectEdits");
+                copied = DefectRecipeSnapshot.Create(
+                    copyGuid,
+                    recipe.RecipeRevision,
+                    recipe.SourceIdentity,
+                    ItemsForCopy(recipe, liveDefectItemId, liveDefectStrength));
             }
+            catch (Exception error) when (error is ArgumentException or OverflowException)
+            {
+                return null;
+            }
+
+            List<CatalogEntityRow> candidateRows = state.FrameRows();
+            candidateRows.Insert(lastFamilyIndex + 1, new CatalogEntityRow(copyId, copy));
+            DefectRecipeCatalogWriteResult committed =
+                state.Session.WriteDefectRecipeAndCatalog(
+                    copied,
+                    state.CreateSnapshot(candidateRows));
+            if (!committed.IsSuccess || committed.Snapshot is not { } stored)
+            {
+                return null;
+            }
+
+            state.Payloads.Insert(lastFamilyIndex + 1, copy);
+            state.RowIds.Insert(lastFamilyIndex + 1, copyId);
+            state.DefectRecipes[copyId] = stored;
+            state.DefectRevisions.Observe(copyId, stored.RecipeRevision);
+            state.ProjectFrames();
+            state.IsDirty = false;
+            return copyId;
         }
 
+        state.Payloads.Insert(lastFamilyIndex + 1, copy);
+        state.RowIds.Insert(lastFamilyIndex + 1, copyId);
         state.ProjectFrames();
         return copyId;
+    }
+
+    private CatalogStoreError FlushDirtyCatalog()
+    {
+        if (!state.IsDirty)
+        {
+            return CatalogStoreError.None;
+        }
+
+        CatalogStoreError error = state.Session.Write(
+            state.CreateSnapshot(state.FrameRows())).Error;
+        if (error == CatalogStoreError.None)
+        {
+            state.IsDirty = false;
+        }
+        return error;
+    }
+
+    private static IReadOnlyList<DefectEditItem> ItemsForCopy(
+        DefectRecipeSnapshot recipe,
+        Guid? liveDefectItemId,
+        double? liveDefectStrength)
+    {
+        if (liveDefectItemId is not { } itemId ||
+            liveDefectStrength is not { } strength ||
+            !double.IsFinite(strength) ||
+            strength is < 0.0 or > 1.0)
+        {
+            return recipe.Items;
+        }
+
+        DefectEditItem[] items = [.. recipe.Items];
+        for (int index = 0; index < items.Length; ++index)
+        {
+            if (items[index].Id != itemId)
+            {
+                continue;
+            }
+            items[index] = items[index] with { Strength = strength };
+            return items;
+        }
+        return recipe.Items;
     }
 }

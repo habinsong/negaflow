@@ -1,8 +1,10 @@
+using Negaflow.Catalog;
+using Negaflow.Shell.Develop;
+
 namespace Negaflow.Shell;
 
 /// <param name="PreviewFrameId">
-/// 백엔드가 프리뷰를 카탈로그 프레임으로 표현할 때의 선택적 식별자입니다. Windows의
-/// 기본 프리뷰 경로는 카탈로그에 넣지 않고 파일만 남깁니다.
+/// 메모리에만 게시한 프리뷰 frame의 선택적 식별자입니다.
 /// </param>
 /// <param name="PreviewScanArea">
 /// 프리뷰를 찍을 때 스캐너에 보낸 영역입니다. 프리뷰 안의 비율을 밀리미터로 되돌리는 자입니다.
@@ -24,8 +26,12 @@ internal static class ScanRunCoordinator
         Func<bool, string, int, ScannerPluginScanRequest?> buildRequest,
         bool preview,
         int requested,
+        Func<int, ImageTransformRecipe?> initialTransformForIndex,
+        GrainMendGuidedCarryover? guidedCarryover,
+        Action<string, GrainMendGuidedCarryover>? guidedCarryoverPublished,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(initialTransformForIndex);
         int published = 0;
         string? failureName = null;
         string? previewPath = null;
@@ -47,8 +53,8 @@ internal static class ScanRunCoordinator
             }
             if (preview)
             {
-                // 프리뷰는 프레임 찾기용 임시 그림이라 카탈로그에 게시하지 않습니다. 파일은
-                // 그대로 남겨 오버레이가 읽고, 평판 영역의 실제 자는 요청에서 보존합니다.
+                // 프리뷰는 영속 catalog에서 제외한 세션 frame으로 게시합니다. 파일은 그대로
+                // 남겨 오버레이가 읽고, 평판 영역의 실제 자는 플러그인이 적용한 값으로 보존합니다.
                 ScannerPluginScanResult scanned = await gateway
                     .ScanAsync(plugin, identity, request, cancellationToken)
                     .ConfigureAwait(false);
@@ -59,13 +65,38 @@ internal static class ScanRunCoordinator
                     break;
                 }
                 previewPath = scanned.ArtifactCommit?.Artifacts?.VisiblePath;
-                previewScanArea = request.ScanArea;
+                if (previewPath is null)
+                {
+                    failureName = ScannerPluginScanStatus.ArtifactCommitFailed.ToString();
+                    break;
+                }
+                ScannerFramePublishResult previewPublished = library.PublishScannerPreviewFrame(
+                    new ScannerFrameImport(previewPath, null, request.Process)
+                    {
+                        Rotation = request.Rotation,
+                        IsPreviewScan = true,
+                    });
+                if (previewPublished.Frame is not { } previewFrame)
+                {
+                    failureName = previewPublished.Status.ToString();
+                    break;
+                }
+                previewFrameId = previewFrame.Id;
+                previewScanArea = scanned.AppliedScanArea ?? request.ScanArea;
                 ++published;
                 continue;
             }
 
             ScannerPluginLibraryScanResult result = await gateway
-                .ScanAndPublishAsync(plugin, identity, request, library, false, cancellationToken)
+                .ScanAndPublishAsync(
+                    plugin,
+                    identity,
+                    request,
+                    library,
+                    initialTransformForIndex(index) ??
+                        (index == 0 ? guidedCarryover?.Transform : null),
+                    false,
+                    cancellationToken)
                 .ConfigureAwait(false);
             lastStatus = result.Status;
             lastScanStatus = result.Scan.Status;
@@ -75,6 +106,11 @@ internal static class ScanRunCoordinator
                     ? result.Status.ToString()
                     : result.Scan.Status.ToString();
                 break;
+            }
+            if (index == 0 && guidedCarryover is not null &&
+                result.Publication?.Frame is { } publishedFrame)
+            {
+                guidedCarryoverPublished?.Invoke(publishedFrame.Id, guidedCarryover);
             }
             ++published;
         }

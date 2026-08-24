@@ -67,9 +67,17 @@ public static unsafe class NativeDevelopExporter
     internal const int GrainMendDetectParametersV2Size = NativeDevelopAbiSizes.GrainMendDetectParametersV2Size;
     internal const int GrainMendDetectParametersV3Size = NativeDevelopAbiSizes.GrainMendDetectParametersV3Size;
     internal const int GrainMendDetectionV2Size = NativeDevelopAbiSizes.GrainMendDetectionV2Size;
+    internal const int GrainMendDetectionV4Size = NativeDevelopAbiSizes.GrainMendDetectionV4Size;
+    internal const int GrainMendReviewHitV1Size = NativeDevelopAbiSizes.GrainMendReviewHitV1Size;
+    internal const int GrainMendAcceptedRegionV1Size = NativeDevelopAbiSizes.GrainMendAcceptedRegionV1Size;
 
     public static DevelopExportResult Run(DevelopExportRequest request, DevelopRun? run = null) =>
         NativeDevelopExportCommand.Run(request, run);
+
+    public static DevelopExportResult BakeDefects(
+        DevelopExportRequest request,
+        DevelopRun? run = null) =>
+        NativeDevelopExportCommand.BakeDefects(request, run);
 
     public static DevelopExportResult Preview(
         DevelopExportRequest request,
@@ -93,7 +101,6 @@ public static unsafe class NativeDevelopExporter
 
     public static GrainMendDetectionResult DetectGrainMend(
         DevelopExportRequest request,
-        Span<byte> mask,
         double roiX = 0.0,
         double roiY = 0.0,
         double roiWidth = 1.0,
@@ -101,5 +108,5 @@ public static unsafe class NativeDevelopExporter
         DevelopRun? run = null,
         GrainMendDetectionOptions? detectionOptions = null) =>
         NativeDevelopGrainMendDetect.DetectGrainMend(
-            request, mask, roiX, roiY, roiWidth, roiHeight, run, detectionOptions);
+            request, roiX, roiY, roiWidth, roiHeight, run, detectionOptions);
 }

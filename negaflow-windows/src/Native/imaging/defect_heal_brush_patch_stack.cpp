@@ -1,6 +1,7 @@
 #include "defect_heal_brush_patch_stack.h"
 
 #include "negaflow/imaging/coreimage_gaussian.h"
+#include "negaflow/core/parallel_rows.h"
 
 #include <algorithm>
 #include <cmath>
@@ -55,38 +56,50 @@ std::vector<float> gaussian_radius_one(
     }
     std::vector<float> horizontal(source.size(), 0.0F);
     std::vector<float> output(source.size(), 0.0F);
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            float value = 0.0F;
-            for (int offset = -support_radius;
-                 offset <= support_radius;
-                 ++offset) {
-                const int sample_x = x + offset;
-                if (sample_x >= 0 && sample_x < width) {
-                    value += source[
-                        static_cast<std::size_t>(y) * width + sample_x] *
-                        weights[static_cast<std::size_t>(offset + support_radius)];
+    const std::uint64_t work_units = static_cast<std::uint64_t>(source.size()) *
+        static_cast<std::uint64_t>(support_radius * 2 + 1);
+    negaflow::core::for_each_row_block(
+        static_cast<std::uint32_t>(height),
+        work_units,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
+                for (int x = 0; x < width; ++x) {
+                    float value = 0.0F;
+                    for (int offset = -support_radius;
+                         offset <= support_radius;
+                         ++offset) {
+                        const int sample_x = x + offset;
+                        if (sample_x >= 0 && sample_x < width) {
+                            value += source[
+                                static_cast<std::size_t>(y) * width + sample_x] *
+                                weights[static_cast<std::size_t>(offset + support_radius)];
+                        }
+                    }
+                    horizontal[static_cast<std::size_t>(y) * width + x] = value;
                 }
             }
-            horizontal[static_cast<std::size_t>(y) * width + x] = value;
-        }
-    }
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            float value = 0.0F;
-            for (int offset = -support_radius;
-                 offset <= support_radius;
-                 ++offset) {
-                const int sample_y = y + offset;
-                if (sample_y >= 0 && sample_y < height) {
-                    value += horizontal[
-                        static_cast<std::size_t>(sample_y) * width + x] *
-                        weights[static_cast<std::size_t>(offset + support_radius)];
+        });
+    negaflow::core::for_each_row_block(
+        static_cast<std::uint32_t>(width),
+        work_units,
+        [&](const std::uint32_t first_column, const std::uint32_t column_count) noexcept {
+            for (std::uint32_t x = first_column; x < first_column + column_count; ++x) {
+                for (int y = 0; y < height; ++y) {
+                    float value = 0.0F;
+                    for (int offset = -support_radius;
+                         offset <= support_radius;
+                         ++offset) {
+                        const int sample_y = y + offset;
+                        if (sample_y >= 0 && sample_y < height) {
+                            value += horizontal[
+                                static_cast<std::size_t>(sample_y) * width + x] *
+                                weights[static_cast<std::size_t>(offset + support_radius)];
+                        }
+                    }
+                    output[static_cast<std::size_t>(y) * width + x] = value;
                 }
             }
-            output[static_cast<std::size_t>(y) * width + x] = value;
-        }
-    }
+        });
     return output;
 }
 
@@ -96,12 +109,27 @@ float quantize_linear16(const float value) noexcept {
     return static_cast<float>(encoded / 65'535.0);
 }
 
-void composite_patches(
+std::size_t composite_patches(
     WorkingImage& image,
     const std::vector<StoredPatch>& patches,
     const float strength) {
+    if (patches.empty()) {
+        return 0U;
+    }
+    int covered_left = static_cast<int>(image.width);
+    int covered_top = static_cast<int>(image.height);
+    int covered_right = 0;
+    int covered_bottom = 0;
+    for (const StoredPatch& patch : patches) {
+        covered_left = std::min(covered_left, patch.left);
+        covered_top = std::min(covered_top, patch.top);
+        covered_right = std::max(covered_right, patch.left + patch.width);
+        covered_bottom = std::max(covered_bottom, patch.top + patch.height);
+    }
+    const int covered_width = covered_right - covered_left;
+    const int covered_height = covered_bottom - covered_top;
     std::vector<std::uint8_t> covered(
-        static_cast<std::size_t>(image.width) * image.height,
+        static_cast<std::size_t>(covered_width) * covered_height,
         0U);
     for (auto current = patches.rbegin(); current != patches.rend(); ++current) {
         const StoredPatch& patch = *current;
@@ -114,8 +142,8 @@ void composite_patches(
                         image.stride_pixels +
                     static_cast<std::size_t>(patch.left + x);
                 const std::size_t packed_pixel =
-                    static_cast<std::size_t>(patch.top + y) * image.width +
-                    static_cast<std::size_t>(patch.left + x);
+                    static_cast<std::size_t>(patch.top + y - covered_top) * covered_width +
+                    static_cast<std::size_t>(patch.left + x - covered_left);
                 if (covered[packed_pixel] != 0U) {
                     continue;
                 }
@@ -132,6 +160,7 @@ void composite_patches(
             }
         }
     }
+    return covered.size();
 }
 
 }  // namespace negaflow::imaging::heal_brush_detail

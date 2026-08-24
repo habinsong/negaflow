@@ -1,5 +1,6 @@
 #include "wic_tiff_frame.h"
 
+#include "wic_orientation.h"
 #include "wic_tiff_support.h"
 
 namespace negaflow::imageio::wic_tiff_detail {
@@ -9,6 +10,7 @@ using Microsoft::WRL::ComPtr;
 WicTiffDecodeStatus select_tiff_frame(
     const TiffPreflight& preflight,
     const WicTiffDecodeLimits& limits,
+    const bool select_first_frame,
     SelectedFrame& selected,
     WicTiffDecodeResult& result) {
     ComPtr<IWICImagingFactory> factory{};
@@ -61,7 +63,8 @@ WicTiffDecodeStatus select_tiff_frame(
     UINT width = 0U;
     UINT height = 0U;
     UINT matches = 0U;
-    for (UINT index = 0U; index < result.info.frame_count; ++index) {
+    const UINT frame_limit = select_first_frame ? 1U : result.info.frame_count;
+    for (UINT index = 0U; index < frame_limit; ++index) {
         ComPtr<IWICBitmapFrameDecode> candidate{};
         UINT candidate_width = 0U;
         UINT candidate_height = 0U;
@@ -74,7 +77,7 @@ WicTiffDecodeStatus select_tiff_frame(
             continue;
         }
         ++matches;
-        if (matches > 1U) {
+        if (!select_first_frame && matches > 1U) {
             return WicTiffDecodeStatus::frame_count_unsupported;
         }
         frame = candidate;
@@ -118,9 +121,10 @@ WicTiffDecodeStatus select_tiff_frame(
 }
 
 WicTiffDecodeStatus open_pixel_source(
-    const SelectedFrame& selected,
+    SelectedFrame& selected,
     const TiffPreflight& preflight,
     const WicTiffDecodeLimits& limits,
+    const WicTiffOrientationPolicy orientation_policy,
     ComPtr<IWICBitmapSource>& pixel_source,
     WicTiffDecodeResult& result) {
     HRESULT status = S_OK;
@@ -149,6 +153,22 @@ WicTiffDecodeStatus open_pixel_source(
     }
     if (FAILED(status)) {
         return WicTiffDecodeStatus::unsupported_pixel_format;
+    }
+
+    if (orientation_policy == WicTiffOrientationPolicy::apply_metadata) {
+        ComPtr<IWICBitmapSource> oriented{};
+        if (!wic_detail::apply_exif_orientation(
+                selected.factory.Get(),
+                pixel_source.Get(),
+                preflight.info.orientation,
+                oriented) ||
+            FAILED(oriented->GetSize(&selected.width, &selected.height)) ||
+            selected.width == 0U || selected.height == 0U) {
+            return WicTiffDecodeStatus::pixel_decode_failed;
+        }
+        pixel_source = oriented;
+        result.image.width = selected.width;
+        result.image.height = selected.height;
     }
 
     return extract_icc_profile(

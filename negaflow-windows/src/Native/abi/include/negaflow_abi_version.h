@@ -24,10 +24,12 @@
    review detector tuning, 0.43 GrainMend optional micro-speck review
    detection, and 0.44 TIFF compression plus PNG/TIFF DPI output metadata, and 0.45
    eight-bit PNG/TIFF publication with output dither, 0.46 output colour space, 0.47 export metadata policy,
-   and 0.48 preserve-alpha export, and 0.49 transient background preview caching.
+   and 0.48 preserve-alpha export, 0.49 transient background preview caching, and
+   0.50 exact GrainMend review ownership and accepted-region handles, and 0.51
+   explicit append-prefix identity for incremental full-resolution Defects preview.
    The managed loader
    refuses anything below the minor it actually calls, so an older engine fails at load
    instead of at the first missing entry point. */
 #define NF_ABI_VERSION_MAJOR 0U
-#define NF_ABI_VERSION_MINOR 49U
+#define NF_ABI_VERSION_MINOR 51U
 #define NF_ABI_VERSION ((NF_ABI_VERSION_MAJOR << 16U) | NF_ABI_VERSION_MINOR)

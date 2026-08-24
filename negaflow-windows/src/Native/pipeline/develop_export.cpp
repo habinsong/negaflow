@@ -23,6 +23,7 @@
 #include "export/support/progress.h"
 
 #include <new>
+#include <memory>
 #include <stop_token>
 #include <utility>
 
@@ -99,8 +100,11 @@ using develop_export_detail::apply_look_stages;
 using develop_export_detail::cancelled_outcome;
 using develop_export_detail::fail;
 using develop_export_detail::decode_source;
+using develop_export_detail::decoded_cleaned_raw_put;
+using develop_export_detail::decoded_cleaned_raw_try_take;
 using develop_export_detail::invert_source;
 using develop_export_detail::preview_proxy_materialize;
+using develop_export_detail::preview_proxy_materialize_from_cleaned;
 using develop_export_detail::preview_proxy_try_take;
 using develop_export_detail::PreviewProxyHint;
 using develop_export_detail::observe_source_before;
@@ -153,15 +157,76 @@ using develop_export_detail::validate_request;
         preview_proxy_try_take(request, observed, *preview, decoded_image, proxy_hint);
 
     DefectRecipeStageResult defect_recipe{};
-    if (!used_preview_proxy) {
-        if (auto failed = decode_source(
-                request, tracker, stop, observed, decoded_image, preview)) {
-            return *failed;
+    std::shared_ptr<const negaflow::imaging::WorkingImage> cleaned_raw{};
+    const bool may_retain_cleaned_raw = preview != nullptr && detect == nullptr &&
+        request.retain_preview_raw && !request.defect_recipe.order.empty() &&
+        request.defect_recipe_sha256.has_value();
+    const bool used_cleaned_raw = !used_preview_proxy && may_retain_cleaned_raw &&
+        decoded_cleaned_raw_try_take(
+            request.source,
+            observed.before.observation,
+            *request.defect_recipe_sha256,
+            cleaned_raw,
+            defect_recipe.info);
+    DefectRecipeStageInfo prefix_info{};
+    std::shared_ptr<const negaflow::imaging::WorkingImage> prefix_cleaned_raw{};
+    bool used_cleaned_prefix = false;
+    if (!used_preview_proxy && !used_cleaned_raw && may_retain_cleaned_raw &&
+        request.defect_recipe_append_prefix_sha256.has_value() &&
+        request.defect_recipe_append_prefix_edit_count > 0U &&
+        request.defect_recipe_append_prefix_edit_count <
+            request.defect_recipe.order.size() &&
+        decoded_cleaned_raw_try_take(
+            request.source,
+            observed.before.observation,
+            *request.defect_recipe_append_prefix_sha256,
+            prefix_cleaned_raw,
+            prefix_info)) {
+        try {
+            decoded_image = *prefix_cleaned_raw;
+            used_cleaned_prefix = true;
+        } catch (...) {
+            decoded_image = {};
+            prefix_cleaned_raw.reset();
+        }
+    }
+    if (used_cleaned_raw) {
+        defect_recipe.status = DefectRecipeStageStatus::ok;
+    } else if (!used_preview_proxy) {
+        if (!used_cleaned_prefix) {
+            if (auto failed = decode_source(
+                    request, tracker, stop, observed, decoded_image, preview)) {
+                return *failed;
+            }
         }
 
         if (auto failed = apply_defect_stage(
-                request, preview, detect, tracker, decoded_image, defect_recipe)) {
+                request,
+                control,
+                preview,
+                detect,
+                tracker,
+                decoded_image,
+                defect_recipe,
+                used_cleaned_prefix
+                    ? request.defect_recipe_append_prefix_edit_count
+                    : 0U,
+                used_cleaned_prefix ? &prefix_info : nullptr)) {
             return *failed;
+        }
+        if (may_retain_cleaned_raw) {
+            try {
+                cleaned_raw = std::make_shared<const negaflow::imaging::WorkingImage>(
+                    std::move(decoded_image));
+                decoded_cleaned_raw_put(
+                    request.source,
+                    observed.before.observation,
+                    *request.defect_recipe_sha256,
+                    cleaned_raw,
+                    defect_recipe.info);
+            } catch (...) {
+                cleaned_raw.reset();
+            }
         }
     }
 
@@ -185,12 +250,12 @@ using develop_export_detail::validate_request;
     }
 
     if (preview != nullptr && !used_preview_proxy) {
-        if (auto failed = preview_proxy_materialize(
-                request,
-                observed,
-                *preview,
-                decoded_image,
-                proxy_hint)) {
+        const auto failed = cleaned_raw != nullptr
+            ? preview_proxy_materialize_from_cleaned(
+                request, observed, *preview, *cleaned_raw, decoded_image, proxy_hint)
+            : preview_proxy_materialize(
+                request, observed, *preview, decoded_image, proxy_hint);
+        if (failed.has_value()) {
             return *failed;
         }
     }

@@ -80,6 +80,7 @@ internal sealed class FakeScannerGateway(string pluginDirectory) : IScannerPlugi
             ScannerPluginTrustIdentity approvedIdentity,
             ScannerPluginScanRequest request,
             LibraryHostService library,
+            ImageTransformRecipe? initialTransform,
             bool isPreviewScan,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();

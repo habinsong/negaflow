@@ -78,7 +78,8 @@ internal static class ScannerScanExecutor
                     terminal.Payload,
                     scanWire,
                     out string? infraredPath,
-                    out ScannerArtifactRequirements? artifactRequirements))
+                    out ScannerArtifactRequirements? artifactRequirements,
+                    out ScannerPluginScanArea? appliedScanArea))
             {
                 ScannerDiagnosticsLog.WriteFailure(
                     "ResultMismatch", plugin, request, wireJson, stagingDirectory, process);
@@ -112,7 +113,8 @@ internal static class ScannerScanExecutor
                     : ScannerPluginScanStatus.ArtifactCommitFailed,
                 process,
                 stream.Status,
-                committed);
+                committed,
+                appliedScanArea);
         }
         finally
         {

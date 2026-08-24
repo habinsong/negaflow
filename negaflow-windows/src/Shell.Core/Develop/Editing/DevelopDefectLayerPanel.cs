@@ -23,29 +23,37 @@ public sealed class DevelopDefectLayerPanel
     /// <summary>macOS 슬라이더의 사각지대입니다. 이보다 작게 움직이면 아무것도 하지 않습니다.</summary>
     private const double StrengthEpsilon = 1.0e-3;
 
-    /// <summary>macOS Slider(value:in: 0.1...1.0) 과 같은 범위입니다.</summary>
-    public const double MinimumStrength = 0.1;
+    /// <summary>왼쪽 끝은 해당 결함 제거 전 원본입니다.</summary>
+    public const double MinimumStrength = 0.0;
 
     public const double MaximumStrength = 1.0;
 
     private readonly DevelopPanelState panel;
     private readonly DevelopDefectEditor editor;
+    private readonly DefectLayerFrameInteractionState interactions;
+    private LibraryFrameSnapshot? cachedPreviewSource;
+    private LibraryDefectLiveStrength? cachedPreviewStrength;
+    private LibraryFrameSnapshot? cachedPreviewFrame;
 
-    /// <summary>끄는 동안의 값입니다. 놓기 전까지 디스크에 가지 않습니다.</summary>
-    private Guid? liveId;
-    private double liveStrength;
-
-    internal DevelopDefectLayerPanel(DevelopPanelState panel, DevelopDefectEditor editor)
+    internal DevelopDefectLayerPanel(
+        DevelopPanelState panel,
+        DevelopDefectEditor editor,
+        LibraryDefectLiveStrengthStore liveStrengths)
     {
         this.panel = panel;
         this.editor = editor;
+        interactions = new DefectLayerFrameInteractionState(liveStrengths);
     }
 
     /// <summary>마스크를 보여 주는 항목입니다. macOS <c>frame.defectMaskPreviewID</c> 와 같습니다.</summary>
-    public Guid? MaskPreviewId { get; private set; }
+    public Guid? MaskPreviewId => interactions.MaskPreview(panel.SelectedFrame?.Id);
 
     public IReadOnlyList<DefectEditItem> Items =>
         panel.SelectedFrame?.DefectRecipe?.Items ?? [];
+
+    /// <summary>현재 frame에 아직 저장하지 않은 strength가 있으면 참입니다.</summary>
+    public bool HasLiveStrength =>
+        interactions.LiveStrength(panel.SelectedFrame?.Id) is not null;
 
     /// <summary>
     /// 미리보기가 그려야 하는 frame 입니다. 슬라이더를 끄는 동안에는 아직 저장하지 않은 강도를
@@ -59,13 +67,26 @@ public sealed class DevelopDefectLayerPanel
             {
                 return null;
             }
-            if (liveId is not { } id || frame.DefectRecipe is not { } recipe)
+            if (interactions.LiveStrength(frame.Id) is not { } live ||
+                frame.DefectRecipe is not { } recipe)
             {
+                ClearPreviewCache();
                 return frame;
             }
-            return WithStrength(recipe, id, liveStrength) is { } previewRecipe
+            if (ReferenceEquals(cachedPreviewSource, frame) &&
+                cachedPreviewStrength == live &&
+                cachedPreviewFrame is { } cached)
+            {
+                return cached;
+            }
+            LibraryFrameSnapshot preview = WithStrength(recipe, live.ItemId, live.Strength) is
+                { } previewRecipe
                 ? frame with { DefectRecipe = previewRecipe }
                 : frame;
+            cachedPreviewSource = frame;
+            cachedPreviewStrength = live;
+            cachedPreviewFrame = preview;
+            return preview;
         }
     }
 
@@ -97,20 +118,37 @@ public sealed class DevelopDefectLayerPanel
             return LibraryFrameError.MissingId;
         }
         // macOS 는 변화량이 1e-3 이하이면 아무 것도 하지 않습니다.
-        double reference = liveId == id ? liveStrength : item.Strength;
+        if (panel.SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (live && frame.DefectRecipe?.RecipeRevision == ulong.MaxValue)
+        {
+            return LibraryFrameError.InvalidDefectRecipe;
+        }
+        LibraryDefectLiveStrength? currentLive = interactions.LiveStrength(frame.Id);
+        double reference = currentLive is { } liveState && liveState.ItemId == id
+            ? liveState.Strength
+            : item.Strength;
         if (live && Math.Abs(clamped - reference) <= StrengthEpsilon)
         {
             return LibraryFrameError.None;
         }
         if (live)
         {
-            liveId = id;
-            liveStrength = clamped;
+            ClearPreviewCache();
+            interactions.SetLiveStrength(frame.Id, id, clamped);
             return LibraryFrameError.None;
         }
 
+        if (currentLive is null && interactions.HasLiveStrengthForOtherFrame(frame.Id, id))
+        {
+            return LibraryFrameError.None;
+        }
+
+        bool commitsLiveGesture = currentLive is { } pending && pending.ItemId == id;
         EndGesture();
-        return Math.Abs(clamped - item.Strength) <= StrengthEpsilon
+        return !commitsLiveGesture && Math.Abs(clamped - item.Strength) <= StrengthEpsilon
             ? LibraryFrameError.None
             : Write(recipe => Map(recipe, id, existing => existing with { Strength = clamped }));
     }
@@ -122,43 +160,76 @@ public sealed class DevelopDefectLayerPanel
     public LibraryFrameError Remove(Guid id)
     {
         EndGesture();
-        LibraryFrameError error = Write(recipe =>
+        LibraryFrameError error = Write(
+            recipe =>
+            {
+                DefectEditItem[] remaining = [.. recipe.Items.Where(item => item.Id != id)];
+                return remaining.Length == recipe.Items.Count ? null : remaining;
+            },
+            LibraryDefectHistoryMode.Exact);
+        if (error == LibraryFrameError.None &&
+            panel.SelectedFrame is { } frame &&
+            MaskPreviewId == id)
         {
-            DefectEditItem[] remaining = [.. recipe.Items.Where(item => item.Id != id)];
-            return remaining.Length == recipe.Items.Count ? null : remaining;
-        });
-        if (error == LibraryFrameError.None && MaskPreviewId == id)
-        {
-            MaskPreviewId = null;
+            interactions.SetMaskPreview(frame.Id, itemId: null);
         }
         return error;
     }
 
     /// <summary>마스크 표시를 켜고 끕니다. 한 번에 한 항목만 보입니다.</summary>
-    public void ToggleMaskPreview(Guid id) =>
-        MaskPreviewId = MaskPreviewId == id ? null : id;
+    public void ToggleMaskPreview(Guid id)
+    {
+        if (panel.SelectedFrame is { } frame)
+        {
+            interactions.ToggleMaskPreview(frame.Id, id);
+        }
+    }
 
     /// <summary>
     /// 목록이 바뀐 뒤 사라진 항목의 마스크 표시를 거둡니다. 고른 사진이 바뀔 때도 부릅니다.
     /// </summary>
-    public void ForgetMissingMaskPreview() =>
-        MaskPreviewId = DefectLayerProjection.SurvivingMaskPreview(
-            panel.SelectedFrame,
-            MaskPreviewId);
+    public void ForgetMissingMaskPreview()
+    {
+        if (panel.SelectedFrame is not { } frame)
+        {
+            return;
+        }
+        interactions.SetMaskPreview(
+            frame.Id,
+            DefectLayerProjection.SurvivingMaskPreview(frame, MaskPreviewId));
+    }
 
     /// <summary>끄는 중이던 값을 버립니다. 사진을 바꾸거나 다른 편집이 끼어들 때 부릅니다.</summary>
     public void EndGesture()
     {
-        liveId = null;
-        liveStrength = 0.0;
+        ClearPreviewCache();
+        interactions.EndGesture(panel.SelectedFrame?.Id);
+    }
+
+    internal void RetainFrames(IEnumerable<string> frameIds)
+    {
+        ClearPreviewCache();
+        interactions.RetainFrames(frameIds);
+    }
+
+    private void ClearPreviewCache()
+    {
+        cachedPreviewSource = null;
+        cachedPreviewStrength = null;
+        cachedPreviewFrame = null;
     }
 
     private DefectEditItem? Current(Guid id) =>
         panel.SelectedFrame?.DefectRecipe?.Items.FirstOrDefault(item => item.Id == id);
 
-    private LibraryFrameError Write(Func<DefectRecipeSnapshot, IReadOnlyList<DefectEditItem>?> map)
+    private LibraryFrameError Write(
+        Func<DefectRecipeSnapshot, IReadOnlyList<DefectEditItem>?> map,
+        LibraryDefectHistoryMode historyMode = LibraryDefectHistoryMode.PreservingInfrared)
     {
-        DevelopDefectEditResult result = editor.ReplaceItems(panel.SelectedFrame, map);
+        DevelopDefectEditResult result = editor.ReplaceItems(
+            panel.SelectedFrame,
+            map,
+            historyMode);
         return panel.RefreshAfterDefectEdit(result);
     }
 
@@ -198,7 +269,7 @@ public sealed class DevelopDefectLayerPanel
         {
             return DefectRecipeSnapshot.Create(
                 recipe.FrameId,
-                recipe.RecipeRevision,
+                checked(recipe.RecipeRevision + 1UL),
                 recipe.SourceIdentity,
                 items);
         }

@@ -4,29 +4,51 @@
 #include "defect_clone_stamp_patch_stack.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdio>
+#include <cstdlib>
 #include <cstdint>
 #include <limits>
 #include <new>
 #include <vector>
 
 namespace negaflow::imaging::clone_stamp_detail {
+namespace {
 
-[[nodiscard]] bool make_patch(
+using TimingClock = std::chrono::steady_clock;
+
+[[nodiscard]] bool timing_enabled() noexcept {
+    std::size_t length = 0U;
+    return getenv_s(&length, nullptr, 0U, "NEGA_TIMING") == 0 && length > 0U;
+}
+
+[[nodiscard]] std::uint64_t elapsed_microseconds(
+    const TimingClock::time_point started,
+    const TimingClock::time_point finished) noexcept {
+    return static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::microseconds>(finished - started).count());
+}
+
+}  // namespace
+
+[[nodiscard]] PatchBuildStatus make_patch(
     const WorkingImage& base,
     const std::vector<StoredPatch>& preceding,
     const DefectCloneStroke& stroke,
-    StoredPatch& patch) {
+    StoredPatch& patch,
+    const negaflow::core::CancelFlag cancel) {
+    const auto started = TimingClock::now();
     if (stroke.points.empty()) {
-        return false;
+        return PatchBuildStatus::no_change;
     }
     const long long offset_x = std::llround(
         stroke.offset_x * static_cast<double>(base.width));
     const long long offset_y = std::llround(
         stroke.offset_y * static_cast<double>(base.height));
     if (offset_x == 0LL && offset_y == 0LL) {
-        return false;
+        return PatchBuildStatus::no_change;
     }
 
     std::vector<PixelPoint> points{};
@@ -60,7 +82,7 @@ namespace negaflow::imaging::clone_stamp_detail {
         static_cast<long long>(base.height),
         static_cast<long long>(std::ceil(maximum_y + padding)));
     if (left >= right || top >= bottom) {
-        return false;
+        return PatchBuildStatus::no_change;
     }
     const auto width = static_cast<std::uint32_t>(right - left);
     const auto height = static_cast<std::uint32_t>(bottom - top);
@@ -69,7 +91,8 @@ namespace negaflow::imaging::clone_stamp_detail {
         throw std::bad_alloc{};
     }
     std::vector<float> mask(static_cast<std::size_t>(width) * height, 0.0F);
-    rasterize_stroke(
+    const auto prepared = TimingClock::now();
+    if (!rasterize_stroke(
         points,
         std::max(1.0, stroke.diameter_pixels * stamp_spacing_fraction),
         radius,
@@ -78,7 +101,11 @@ namespace negaflow::imaging::clone_stamp_detail {
         static_cast<std::uint32_t>(top),
         width,
         height,
-        mask);
+        mask,
+        cancel)) {
+        return PatchBuildStatus::cancelled;
+    }
+    const auto masked = TimingClock::now();
 
     std::uint32_t local_left = width;
     std::uint32_t local_top = height;
@@ -107,8 +134,14 @@ namespace negaflow::imaging::clone_stamp_detail {
         }
     }
     if (!any) {
-        return false;
+        return cancel.requested()
+            ? PatchBuildStatus::cancelled
+            : PatchBuildStatus::no_change;
     }
+    if (cancel.requested()) {
+        return PatchBuildStatus::cancelled;
+    }
+    const auto bounded = TimingClock::now();
 
     patch.x = static_cast<std::uint32_t>(left) + local_left;
     patch.y = static_cast<std::uint32_t>(top) + local_top;
@@ -156,7 +189,20 @@ namespace negaflow::imaging::clone_stamp_detail {
             patch.rgba16[output + 3U] = 65'535U;
         }
     }
-    return true;
+    const auto filled = TimingClock::now();
+    if (timing_enabled()) {
+        (void)std::fprintf(
+            stderr,
+            "[clone patch timing] pixels=%zu prepare=%llu mask=%llu bounds=%llu "
+            "fill=%llu total=%llu us\n",
+            pixel_count,
+            static_cast<unsigned long long>(elapsed_microseconds(started, prepared)),
+            static_cast<unsigned long long>(elapsed_microseconds(prepared, masked)),
+            static_cast<unsigned long long>(elapsed_microseconds(masked, bounded)),
+            static_cast<unsigned long long>(elapsed_microseconds(bounded, filled)),
+            static_cast<unsigned long long>(elapsed_microseconds(started, filled)));
+    }
+    return PatchBuildStatus::ready;
 }
 
 }  // namespace negaflow::imaging::clone_stamp_detail

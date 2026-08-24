@@ -84,7 +84,8 @@ public static class DevelopRequestFactory
         string destinationPath,
         DevelopExportFormat format = DevelopExportFormat.Png16,
         ExportEncodingOptions? encoding = null,
-        bool uninvertedSource = false)
+        bool uninvertedSource = false,
+        bool forceDefectSourceContentVerification = false)
     {
         ArgumentNullException.ThrowIfNull(frame);
         // 인코딩 값은 게시되는 파일에만 영향을 줍니다. preview 는 항상 기본값으로 도므로 크기·
@@ -227,7 +228,7 @@ public static class DevelopRequestFactory
             // 달라지므로 값싼 검사만으로도 마스크를 엉뚱한 사진에 걸 일은 없습니다.
             defectSourceIdentity = new DevelopDefectSourceIdentity(
                 sourceIdentity.ByteCount,
-                VerifyDefectSourceContent
+                VerifyDefectSourceContent || forceDefectSourceContentVerification
                     ? sourceIdentity.Sha256
                     : DefectSourceContentCheckOnly);
         }
@@ -364,6 +365,12 @@ public static class DevelopRequestFactory
             DefectRecipeSha256 = defectEditOrder.Count == 0
                 ? null
                 : frame.DefectRecipe!.RecipeSha256,
+            DefectRecipeAppendPrefixSha256 = defectEditOrder.Count <= 1
+                ? null
+                : frame.DefectRecipe!.AppendPrefixSha256,
+            DefectRecipeAppendPrefixEditCount = defectEditOrder.Count <= 1
+                ? 0
+                : frame.DefectRecipe!.AppendPrefixEditCount,
             LocalDodgeBurn = dodgeBurn.Select(MapLocalDodgeBurn).ToArray(),
         });
     }

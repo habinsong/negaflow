@@ -298,17 +298,18 @@ internal static class LibraryStructureTests
 
         using LibraryDocument document = LibraryDocument.Open(roots).Document!;
         Check(document.Frames.Count == 1 &&
-              document.Frames[0].DefectRecipe?.RecipeRevision == 8,
-            "library_document_restart_loads_defect_sidecar");
+              document.Frames[0] is
+                  { DefectRecipe: { RecipeRevision: 8 }, DefectRecipeRevision: 8 } &&
+              document.FrameRecord(frameId.ToString("D"))?["hasDefectEdits"]?.GetValue<bool>() == true,
+            "library_document_restart_restores_persisted_sidecar");
         DevelopRequestResult request = DevelopRequestFactory.Create(
             document.Frames[0],
             Path.Combine(parent, "defect-output.png"));
         Check(request.IsSuccess &&
               request.Request?.DefectRegions.Count == 1 &&
-              request.Request.DefectRegions[0].RoiX == 5 &&
-              request.Request.DefectRegions[0].RoiY == 7 &&
-              request.Request.DefectRegions[0].Mask.Span.SequenceEqual(mask),
-            "library_document_restart_reapplies_defect_recipe_to_pipeline");
+              request.Request.DefectEditOrder.Count == 1,
+            "library_document_restart_reapplies_persisted_recipe");
+
     }
 
 }

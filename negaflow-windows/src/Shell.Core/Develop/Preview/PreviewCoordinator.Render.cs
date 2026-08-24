@@ -328,11 +328,19 @@ public sealed partial class PreviewCoordinator
 
     private void Deliver(LeasedOutcome leased, Action<PreviewOutcome> onCompleted)
     {
+        if (!CanDeliver(leased.Outcome.Revision))
+        {
+            ReleaseLease(leased.Lease);
+            return;
+        }
         if (dispatcher.HasThreadAccess)
         {
             try
             {
-                onCompleted(leased.Outcome);
+                if (CanDeliver(leased.Outcome.Revision))
+                {
+                    onCompleted(leased.Outcome);
+                }
             }
             finally
             {
@@ -346,7 +354,10 @@ public sealed partial class PreviewCoordinator
             {
                 try
                 {
-                    onCompleted(leased.Outcome);
+                    if (CanDeliver(leased.Outcome.Revision))
+                    {
+                        onCompleted(leased.Outcome);
+                    }
                 }
                 finally
                 {
@@ -355,6 +366,14 @@ public sealed partial class PreviewCoordinator
             }))
         {
             ReleaseLease(leased.Lease);
+        }
+    }
+
+    private bool CanDeliver(int revision)
+    {
+        lock (gate)
+        {
+            return revision >= minimumDeliveryRevision;
         }
     }
 }

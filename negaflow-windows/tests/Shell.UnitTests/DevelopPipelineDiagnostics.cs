@@ -183,51 +183,46 @@ internal static class DevelopPipelineDiagnostics
         }
 
         System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
-        GrainMendDetectionResult sized = NativeDevelopExporter.DetectGrainMend(
-            request,
-            Span<byte>.Empty);
+        GrainMendDetectionResult detected = NativeDevelopExporter.DetectGrainMend(
+            request);
         Console.WriteLine(
-            $"size query: succeeded={sized.Result.Succeeded} {sized.Width}x{sized.Height} " +
-            $"accepted={sized.AcceptedPixels} maskBytes={sized.MaskByteCount} " +
-            $"{clock.ElapsedMilliseconds}ms stage={sized.Result.FailedStage} " +
-            $"name={sized.Result.FailureName}");
-        if (!sized.Result.Succeeded || sized.MaskByteCount == 0UL)
+            $"v7 review: succeeded={detected.Result.Succeeded} {detected.Width}x{detected.Height} " +
+            $"accepted={detected.AcceptedPixels} components={detected.Defects.Count} " +
+            $"{clock.ElapsedMilliseconds}ms stage={detected.Result.FailedStage} " +
+            $"name={detected.Result.FailureName}");
+        if (!detected.Result.Succeeded || detected.ReviewProposal is not { } proposal)
         {
+            detected.ReviewProposal?.Dispose();
             return 1;
         }
-
-        byte[] mask = new byte[sized.MaskByteCount];
-        clock.Restart();
-        GrainMendDetectionResult filled =
-            NativeDevelopExporter.DetectGrainMend(request, mask);
-        long marked = 0;
-        foreach (byte value in mask)
+        GrainMendReviewSession? review = null;
+        try
         {
-            if (value != 0)
+            review = GrainMendReviewSession.TryCreate(proposal, automatic: true);
+            DefectEditItem? edit = review?.BuildAcceptedEdit();
+            bool exact = edit?.RegionMask is not null &&
+                edit.Label.Value == detected.Defects.Count &&
+                edit.RegionWidth is > 0 && edit.RegionHeight is > 0 &&
+                DefectMaskCodec.TryDecodeRgba8(
+                    edit.RegionMask,
+                    edit.RegionWidth.Value,
+                    edit.RegionHeight.Value,
+                    out byte[] rgba) &&
+                rgba.Where((_, index) => index % 4 == 0).Any(value => value != 0);
+            Console.WriteLine($"singleDetectionExactAccepted={exact}");
+            return exact ? 0 : 1;
+        }
+        finally
+        {
+            if (review is not null)
             {
-                ++marked;
+                review.Dispose();
+            }
+            else
+            {
+                proposal.Dispose();
             }
         }
-        Console.WriteLine(
-            $"with mask: succeeded={filled.Result.Succeeded} {filled.Width}x{filled.Height} " +
-            $"accepted={filled.AcceptedPixels} marked={marked} " +
-            $"{clock.ElapsedMilliseconds}ms");
-
-        // 모자란 버퍼는 닫히는 쪽으로 실패하고 필요한 크기를 알려 주어야 합니다.
-        GrainMendDetectionResult tooSmall = NativeDevelopExporter.DetectGrainMend(
-            request,
-            new byte[16]);
-        Console.WriteLine(
-            $"too small: succeeded={tooSmall.Result.Succeeded} " +
-            $"name={tooSmall.Result.FailureName} needs={tooSmall.MaskByteCount}");
-
-        bool agrees = filled.Width == sized.Width && filled.Height == sized.Height &&
-            filled.AcceptedPixels == sized.AcceptedPixels &&
-            marked == (long)filled.AcceptedPixels;
-        bool refuses = !tooSmall.Result.Succeeded &&
-            tooSmall.MaskByteCount == sized.MaskByteCount;
-        Console.WriteLine($"agrees={agrees} refusesSmallBuffer={refuses}");
-        return agrees && refuses ? 0 : 1;
     }
 
     /// <summary>
@@ -372,71 +367,77 @@ internal static class DevelopPipelineDiagnostics
             System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
             GrainMendDetectionResult result = NativeDevelopExporter.DetectGrainMend(
                 request,
-                Span<byte>.Empty,
                 detectionOptions: options);
-            Console.WriteLine(JsonSerializer.Serialize(new
+            IGrainMendReviewProposal? proposal = result.ReviewProposal;
+            GrainMendReviewSession? review = null;
+            try
             {
-                profile = name,
-                options.DustSensitivity,
-                options.ScratchSensitivity,
-                options.ProtectDetail,
-                options.RejectStructureLines,
-                options.DetectMicroSpecks,
-                result.Result.Succeeded,
-                result.Width,
-                result.Height,
-                result.AcceptedPixels,
-                result.MaskByteCount,
-                elapsedMilliseconds = clock.ElapsedMilliseconds,
-                stage = result.Result.FailedStage.ToString(),
-                result.Result.FailureName,
-            }));
-            succeeded &= result.Result.Succeeded;
-            if (name == "current-ui" && result.Result.Succeeded && result.MaskByteCount > 0UL)
-            {
-                byte[] mask = new byte[checked((int)result.MaskByteCount)];
-                System.Diagnostics.Stopwatch fillClock = System.Diagnostics.Stopwatch.StartNew();
-                GrainMendDetectionResult filled = NativeDevelopExporter.DetectGrainMend(
-                    request,
-                    mask,
-                    detectionOptions: options);
-                long marked = mask.LongCount(value => value != 0);
-                DefectEditItem? edit = GrainMendRegionEdit.From(
-                    mask,
-                    checked((int)filled.Width),
-                    checked((int)filled.Height),
-                    filled.SourceWidth,
-                    filled.SourceHeight,
-                    filled.RoiX,
-                    filled.RoiY,
-                    filled.RoiWidth,
-                    filled.RoiHeight,
-                    filled.AcceptedPixels,
-                    automatic: true);
-                System.Diagnostics.Stopwatch reviewClock = System.Diagnostics.Stopwatch.StartNew();
-                GrainMendReviewSession? review = edit is null
-                    ? null
-                    : GrainMendReviewSession.TryCreate(edit);
                 Console.WriteLine(JsonSerializer.Serialize(new
                 {
-                    profile = "current-ui-mask",
-                    filled.Result.Succeeded,
-                    filled.AcceptedPixels,
-                    marked,
-                    filled.SourceWidth,
-                    filled.SourceHeight,
-                    filled.RoiX,
-                    filled.RoiY,
-                    filled.RoiWidth,
-                    filled.RoiHeight,
-                    editCreated = edit is not null,
-                    reviewCreated = review is not null,
-                    reviewComponents = review?.ComponentCount ?? 0,
-                    reviewElapsedMilliseconds = reviewClock.ElapsedMilliseconds,
-                    elapsedMilliseconds = fillClock.ElapsedMilliseconds,
+                    profile = name,
+                    options.DustSensitivity,
+                    options.ScratchSensitivity,
+                    options.ProtectDetail,
+                    options.RejectStructureLines,
+                    options.DetectMicroSpecks,
+                    result.Result.Succeeded,
+                    result.Width,
+                    result.Height,
+                    result.AcceptedPixels,
+                    result.MaskByteCount,
+                    components = result.Defects.Count,
+                    exactReview = proposal is not null,
+                    elapsedMilliseconds = clock.ElapsedMilliseconds,
+                    stage = result.Result.FailedStage.ToString(),
+                    result.Result.FailureName,
                 }));
-                succeeded &= filled.Result.Succeeded && marked > 0 && edit is not null &&
-                    review is not null;
+                succeeded &= result.Result.Succeeded;
+                if (name == "current-ui" && result.Result.Succeeded)
+                {
+                    System.Diagnostics.Stopwatch reviewClock =
+                        System.Diagnostics.Stopwatch.StartNew();
+                    review = proposal is null
+                        ? null
+                        : GrainMendReviewSession.TryCreate(proposal, automatic: true);
+                    DefectEditItem? edit = review?.BuildAcceptedEdit();
+                    long marked = 0L;
+                    if (edit?.RegionMask is { } regionMask &&
+                        edit.RegionWidth is { } regionWidth &&
+                        edit.RegionHeight is { } regionHeight &&
+                        DefectMaskCodec.TryDecodeRgba8(
+                            regionMask, regionWidth, regionHeight, out byte[] rgba))
+                    {
+                        for (int pixel = 0; pixel * 4 < rgba.Length; ++pixel)
+                        {
+                            if (rgba[pixel * 4] != 0)
+                            {
+                                ++marked;
+                            }
+                        }
+                    }
+                    Console.WriteLine(JsonSerializer.Serialize(new
+                    {
+                        profile = "current-ui-v7-review",
+                        editCreated = edit is not null,
+                        reviewCreated = review is not null,
+                        reviewComponents = review?.ComponentCount ?? 0,
+                        marked,
+                        reviewElapsedMilliseconds = reviewClock.ElapsedMilliseconds,
+                    }));
+                    succeeded &= proposal is not null && review is not null &&
+                        edit is not null && marked > 0L;
+                }
+            }
+            finally
+            {
+                if (review is not null)
+                {
+                    review.Dispose();
+                }
+                else
+                {
+                    proposal?.Dispose();
+                }
             }
         }
         return succeeded ? 0 : 1;
