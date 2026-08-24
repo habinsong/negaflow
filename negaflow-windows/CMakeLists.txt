@@ -560,6 +560,7 @@ add_library(negaflow_imageio STATIC
     src/Native/imageio/image_content_hash.cpp
     src/Native/imageio/image_file_observation.cpp
     src/Native/imageio/wic_standard_image_decoder.cpp
+    src/Native/imageio/libraw_image_decoder.cpp
     src/Native/imageio/wic_orientation.cpp
     src/Native/imageio/wic_tiff_decoder.cpp
     src/Native/imageio/wic_tiff_frame.cpp
@@ -839,6 +840,7 @@ set_target_properties(negaflow_native PROPERTIES OUTPUT_NAME "Negaflow.Native")
 
 add_executable(negaflow_cli
     src/Cli/main.cpp
+    src/Cli/commands/probe_image.cpp
     src/Cli/commands/develop_negative_tiff.cpp
     src/Cli/commands/auto_base_probe.cpp
     src/Cli/commands/pick_film_base.cpp
@@ -1895,6 +1897,7 @@ if(BUILD_TESTING)
 
     add_executable(negaflow_preview_raw_store_tests
         tests/Native.UnitTests/preview_raw_store_tests.cpp
+        tests/Native.UnitTests/grain_mend_memory_probe.cpp
         tests/fixtures/tiff/synthetic_wic_tiff.cpp
     )
     target_include_directories(

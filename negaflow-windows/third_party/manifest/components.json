@@ -57,7 +57,8 @@
     },
     {
       "name": "Microsoft Raw Image Extension",
-      "reason": "Required only when importing DNG or camera RAW. It supplies the installed WIC RAW codec; Negaflow does not redistribute its binary."
+      "reason": "Optional since 2026-08-25. Negaflow now redistributes LibRaw as libraw.dll, so DNG and camera RAW import without it. When the extension is installed its WIC codec is still tried first and LibRaw is only the fallback. Negaflow does not redistribute the extension's binary.",
+      "required": false
     }
   ],
   "third_party_runtime_dependencies": [
@@ -162,6 +163,22 @@
       "relationship": "implicit-platform-runtime-pack",
       "license": "Microsoft Windows SDK license",
       "current_payload": "Microsoft.Windows.SDK.NET.dll and WinRT.Runtime.dll"
+    },
+    {
+      "name": "LibRaw",
+      "version": "0.22.2",
+      "relationship": "direct",
+      "license": "LGPL-2.1-or-later OR CDDL-1.0",
+      "distributed_under": "LGPL-2.1",
+      "license_source": "LICENSE.LGPL and LICENSE.CDDL inside the pinned source archive",
+      "upstream_source": "https://www.libraw.org/data/LibRaw-0.22.2.tar.gz",
+      "upstream_sha256": "de86b035655accff8d4010f1a221fdf50d353cb7b1422ba26f14a0db92612cfa",
+      "build_recipe": "negaflow-windows/scripts/build-libraw.ps1",
+      "modified": false,
+      "current_payload": "libraw.dll",
+      "payload_note": "Second third-party native binary in the distribution, and the first one negaflow builds itself. Loaded at run time with LoadLibraryExW/GetProcAddress, so it is absent from the native engine's import table and the product runs without it. Windows ships no camera RAW codec (the WIC built-ins are BMP, GIF, ICO, JPEG, JPEG XR, PNG, TIFF, HD Photo, DDS); RAW otherwise needs Microsoft's Raw Image Extension from the Store, which is not preinstalled. macOS has RAW inside ImageIO, so without this the same file opens on macOS and fails on Windows.",
+      "obligations": "LGPL-2.1 requires the licence text, the complete corresponding source (or a written offer), and the ability to relink. scripts/build-libraw.ps1 stages LICENSE.LGPL, LICENSE.CDDL, COPYRIGHT, Changelog.txt and the pinned source archive into its redistributable/ directory; shipping as a separate replaceable DLL satisfies relinking.",
+      "exclusion": "Optional LibRaw dependencies (RawSpeed, Adobe DNG SDK, LCMS, libjpeg) are all left off, so libraw.dll introduces no further third-party code."
     }
   ],
   "distribution_gate": {

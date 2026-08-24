@@ -14,6 +14,7 @@
 #include "export/stages/decode.h"
 #include "export/support/frame_cache_budget.h"
 #include "export/support/preview_raw_store.h"
+#include "grain_mend_memory_probe.h"
 #include "synthetic_wic_tiff.h"
 
 #include <array>
@@ -130,65 +131,26 @@ void expect(const bool condition, const char* const message) {
 // macOS `DevelopFrameRenderer.fullMaxDimension`.
 constexpr std::uint32_t settled_box = 3600U;
 
-int run_transient_memory_probe(
-    const std::filesystem::path& source,
-    const int iterations,
-    const bool grain_mend) {
-    if (!std::filesystem::exists(source) || iterations <= 0 || iterations > 100) {
-        std::cerr << "invalid transient-memory probe arguments\n";
-        return 2;
-    }
-    negaflow::pipeline::DevelopExportRequest request = grain_mend
-        ? clone_request_for(request_for(source), 2U, 0x51U)
-        : request_for(source);
-    request.retain_preview_raw = false;
-    negaflow::pipeline::develop_export_detail::preview_raw_store_reset();
-    negaflow::pipeline::develop_export_detail::decoded_source_store_reset();
-    std::vector<std::uint8_t> pixels{};
-    for (int iteration = 1; iteration <= iterations; ++iteration) {
-        const auto outcome = preview_at(request, settled_box, pixels);
-        PROCESS_MEMORY_COUNTERS_EX memory{};
-        memory.cb = static_cast<DWORD>(sizeof(memory));
-        if (!GetProcessMemoryInfo(
-                GetCurrentProcess(),
-                reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&memory),
-                static_cast<DWORD>(sizeof(memory)))) {
-            return 3;
-        }
-        std::cout << (grain_mend ? "grainmend_memory" : "transient_memory")
-                  << " iteration=" << iteration
-                  << " ok=" << outcome.succeeded
-                  << " private=" << memory.PrivateUsage
-                  << " working=" << memory.WorkingSetSize
-                  << " peak_working=" << memory.PeakWorkingSetSize
-                  << " raw="
-                  << negaflow::pipeline::develop_export_detail::preview_raw_store_resident_bytes()
-                  << " decoded="
-                  << negaflow::pipeline::develop_export_detail::decoded_source_store_resident_bytes()
-                  << '\n';
-        if (!outcome.succeeded) {
-            return 4;
-        }
-    }
-    return 0;
-}
 
 }  // namespace
 
 int main(int argc, char** argv) {
     (void)_putenv_s("NEGA_TIMING", "1");
 
-    if (argc == 4 &&
-        (std::string{argv[1]} == "--transient-memory" ||
-         std::string{argv[1]} == "--grainmend-memory")) {
-        const long parsed = std::strtol(argv[3], nullptr, 10);
+    // `--grainmend-memory <source> <feature> <iterations> [<second-source>]`
+    //
+    // 앞 판은 Clone 한 기능만 100회 돌 수 있었습니다. 한 경계만 재고 "누수 없음" 이라고
+    // 적지 않기 위해 Auto·Guided·Brush·Clone·IR 과 사진 A↔B 전환을 모두 받습니다.
+    if ((argc == 5 || argc == 6) && std::string{argv[1]} == "--grainmend-memory") {
+        const long parsed = std::strtol(argv[4], nullptr, 10);
         if (parsed <= 0 || parsed > std::numeric_limits<int>::max()) {
             return 2;
         }
-        return run_transient_memory_probe(
+        return negaflow::test_probes::run_grain_mend_memory_probe(
             std::filesystem::path{argv[2]},
-            static_cast<int>(parsed),
-            std::string{argv[1]} == "--grainmend-memory");
+            argc == 6 ? std::filesystem::path{argv[5]} : std::filesystem::path{},
+            std::string{argv[3]},
+            static_cast<int>(parsed));
     }
 
     using negaflow::pipeline::develop_export_detail::FrameCachePressureLevel;

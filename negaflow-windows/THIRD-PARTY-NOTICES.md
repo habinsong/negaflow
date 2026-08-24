@@ -14,10 +14,16 @@ third-party code. Its only imports are Windows system libraries
 (`kernel32`, `bcrypt`, `mscms`, `ole32`, `shlwapi`), so it contributes no
 obligations to this file.
 
-That zero-dependency statement is about the native engine, not about the
-distribution as a whole. As of 2026-08-07 the managed catalog layer ships a
-third-party **native** binary of its own — `e_sqlite3.dll` — under section 3
-below. See [ADR-0025](docs/decisions/0025-managed-sqlite-catalog-provider.md).
+That zero-dependency statement is about **linking**, and about the native engine
+rather than the distribution as a whole. Two third-party **native** binaries do
+ship alongside it, and neither appears in the engine's import table:
+
+- `e_sqlite3.dll` — the managed catalog layer, as of 2026-08-07, section 3 below.
+  See [ADR-0025](docs/decisions/0025-managed-sqlite-catalog-provider.md).
+- `libraw.dll` — the camera RAW decoder, as of 2026-08-25, section 4 below. The
+  engine resolves it at run time with `LoadLibraryExW`/`GetProcAddress` and runs
+  without it. Windows ships no RAW codec of its own, so this is what keeps RAW
+  import working on a machine that does not have Microsoft's Store extension.
 
 ---
 
@@ -146,13 +152,62 @@ bind the product to `winsqlite3.dll`. Microsoft treats that DLL as a Windows
 component for Windows and Microsoft apps and updates it only through Windows
 Update, so it is not a supported base for a third-party product database.
 
-## 4. Windows platform APIs
+## 4. LibRaw — camera RAW decoder (`libraw.dll`)
+
+Windows does not ship a camera RAW codec. The codecs Microsoft documents as built
+into WIC are BMP, GIF, ICO, JPEG, JPEG XR, PNG, TIFF, HD Photo and DDS — RAW is
+not among them. RAW support on Windows comes from **Raw Image Extension**, a
+separate free Microsoft Store package that is not guaranteed to be present.
+macOS has RAW decoding inside ImageIO, so without a decoder of our own the same
+file opens on macOS and fails on Windows.
+
+negaflow therefore redistributes LibRaw as `libraw.dll` and uses it whenever the
+installed WIC codecs cannot open a file.
+
+| Component | Version | License | Shipped payload |
+|---|---|---|---|
+| LibRaw | 0.22.2 | **LGPL-2.1** or **CDDL-1.0** (dual; we distribute under LGPL-2.1) | `libraw.dll` |
+
+- Upstream source: <https://www.libraw.org/data/LibRaw-0.22.2.tar.gz>
+- Upstream SHA-256: `de86b035655accff8d4010f1a221fdf50d353cb7b1422ba26f14a0db92612cfa`
+- Build recipe: [`scripts/build-libraw.ps1`](scripts/build-libraw.ps1). It pins the
+  URL and hash above, builds with the `Makefile.msvc` that ships in the LibRaw
+  source, and verifies that the fifteen C API entry points negaflow resolves are
+  actually exported. No optional LibRaw dependency (RawSpeed, Adobe DNG SDK,
+  LCMS, libjpeg) is enabled, so `libraw.dll` pulls in no further third-party code.
+- The source is **not modified**. We build stock LibRaw 0.22.2.
+
+### Why this does not change the native engine's zero-dependency statement
+
+`Negaflow.Native.dll` and `negaflow-cli.exe` still **link** no third-party code.
+`libraw.dll` is resolved at run time with `LoadLibraryExW` and `GetProcAddress`;
+it is not in the import table, and the product runs without it (RAW files then
+fail with the same message any undecodable file gets). This is the same
+arrangement as `e_sqlite3.dll` in section 3.
+
+### LGPL-2.1 obligations a distribution must meet
+
+1. Ship the licence text. `LICENSE.LGPL` and `LICENSE.CDDL` come from the LibRaw
+   source archive; `scripts/build-libraw.ps1` copies both, plus `COPYRIGHT` and
+   `Changelog.txt`, into its `redistributable\` staging directory.
+2. Ship the complete corresponding source, or a written offer for it. The build
+   script places the exact pinned `LibRaw-0.22.2.tar.gz` in the same directory.
+   Ship that archive; it is the source the shipped binary was built from.
+3. Allow the user to relink. Satisfied by shipping LibRaw as a separate DLL the
+   user can replace with their own build of the same C API.
+4. State that LibRaw is used and is covered by the LGPL. This file does that.
+
+**LibRaw is not linked into, and does not affect the licence of, any Apache-2.0
+negaflow code.** The dual licence also offers CDDL-1.0; we take LGPL-2.1 because
+dynamic linking under it is unambiguous and needs no per-file copyleft tracking.
+
+## 5. Windows platform APIs
 
 The following are used through the operating system and are **not** redistributed:
 Windows SDK, Win32, Windows Imaging Component, Windows Color System / ICM, COM,
 and Shell Lightweight Utility APIs.
 
-## 5. Build-only tooling
+## 6. Build-only tooling
 
 `vcpkg` (MIT), `Microsoft.Windows.SDK.BuildTools`, and
 `Microsoft.Windows.SDK.BuildTools.MSIX` are development tools. They are pinned

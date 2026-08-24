@@ -13,7 +13,12 @@ public enum FrameImportRefusal
     InvalidInfraredPath,
     InfraredMatchesVisible,
     AlreadyInLibrary,
+    // 제품 계약으로 받지 않는 형식입니다. 현재는 SVG 뿐입니다.
     UnsupportedImage,
+    // 설치된 어떤 codec 도 이 파일을 읽지 못했습니다. `UnsupportedImage` 와 원인도 사용자
+    // 대처도 다르므로 한 값으로 합치지 않습니다 — RAW 은 codec 을 설치하면 열리지만
+    // SVG 는 무엇을 설치해도 열리지 않습니다.
+    UndecodableImage,
     InvalidImageTransform,
     RouteRejected,
 }
@@ -180,7 +185,7 @@ public static class FrameImport
             LibrarySourceMetadata? sourceMetadata = sourceMetadataReader?.Invoke(path);
             if (sourceMetadataReader is not null && sourceMetadata is null)
             {
-                rejected.Add(new FrameImportRejection(path, FrameImportRefusal.UnsupportedImage));
+                rejected.Add(new FrameImportRejection(path, FrameImportRefusal.UndecodableImage));
                 continue;
             }
             // 같은 파일을 두 번 넣으면 편집이 둘로 갈라져 사용자가 어느 쪽을 고쳤는지 알 수
@@ -400,7 +405,12 @@ public static class FrameImport
             FrameImportRefusal.InvalidInfraredPath => "infrared companion path is invalid",
             FrameImportRefusal.InfraredMatchesVisible => "infrared companion is the RGB source",
             FrameImportRefusal.InvalidPath => "not a full path",
-            FrameImportRefusal.UnsupportedImage => "not a supported TIFF image",
+            // 예전 문구는 "not a supported TIFF image" 였습니다. 확장자 allowlist 를 걷어낸
+            // 뒤로는 틀린 말입니다 — CR2 를 골라도 "TIFF 가 아니다" 라고 말했습니다.
+            FrameImportRefusal.UnsupportedImage => "vector images are not imported",
+            // Windows 내장 WIC codec 도, 함께 배포하는 RAW 디코더도 이 파일을 읽지 못했습니다.
+            // 추가 설치를 안내하지 않습니다 — RAW 디코더는 우리가 같이 넣기 때문입니다.
+            FrameImportRefusal.UndecodableImage => "no available decoder could read it",
             FrameImportRefusal.RouteRejected => "rejected by the develop route",
             _ => "skipped",
         };

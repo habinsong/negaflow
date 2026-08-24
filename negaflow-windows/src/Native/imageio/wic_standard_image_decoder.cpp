@@ -1,5 +1,7 @@
 #include "negaflow/imageio/wic_standard_image_decoder.h"
 
+#include "negaflow/imageio/libraw_image_decoder.h"
+
 #include "wic_orientation.h"
 
 #include <Windows.h>
@@ -163,7 +165,57 @@ void discard_samples(WicStandardImageDecodeResult& result) noexcept {
 
 }  // namespace
 
+namespace {
+
+/// WIC 가 이 파일을 열 codec 자체를 못 찾았는지 봅니다.
+///
+/// Windows 에 항상 있는 WIC codec 은 BMP·GIF·ICO·JPEG·JPEG XR·PNG·TIFF·HD Photo·DDS
+/// 아홉 개뿐이고 **카메라 RAW 은 없습니다.** RAW 은 Microsoft Store 의 별도 패키지라
+/// 선탑재가 보장되지 않으므로, 여기 걸린 파일은 "깨졌다" 가 아니라 "읽을 codec 이
+/// 없다" 일 수 있습니다. 그때 함께 배포한 LibRaw 로 한 번 더 시도합니다.
+[[nodiscard]] bool missing_codec(const WicStandardImageDecodeStatus status) noexcept {
+    return status == WicStandardImageDecodeStatus::decoder_initialization_failed ||
+        status == WicStandardImageDecodeStatus::unsupported_container ||
+        status == WicStandardImageDecodeStatus::raw_development_failed;
+}
+
+}  // namespace
+
 WicStandardImageDecodeResult decode_standard_image_with_wic(
+    const std::filesystem::path& path,
+    const WicStandardImageDecodeLimits& limits,
+    const std::stop_token stop_token) noexcept {
+    WicStandardImageDecodeResult wic = decode_standard_image_with_wic_only(path, limits, stop_token);
+    if (wic.status == WicStandardImageDecodeStatus::ok || !missing_codec(wic.status) ||
+        !libraw_decoder_available()) {
+        return wic;
+    }
+
+    const LibRawDecodeResult raw = decode_raw_with_libraw(path, limits, stop_token);
+    if (raw.status != LibRawDecodeStatus::ok) {
+        // LibRaw 도 못 읽으면 **WIC 의 실패 사유를 그대로 돌려줍니다.** LibRaw 의 사유로
+        // 덮으면 "codec 이 없다" 와 "파일이 깨졌다" 가 뒤섞여 사용자에게 엉뚱한 안내가
+        // 나갑니다.
+        return wic;
+    }
+
+    WicStandardImageDecodeResult result{};
+    result.status = WicStandardImageDecodeStatus::ok;
+    result.icc_status = negaflow::color::IccProfileStatus::not_present;
+    result.info.frame_count = 1U;
+    result.info.raw_development_used = true;
+    result.info.libraw_fallback_used = true;
+    // LibRaw 가 파일의 flip 을 이미 적용해서 돌려줍니다. WIC RAW 경로가
+    // `IWICDevelopRaw` 로 as-shot 회전을 적용하고 orientation 을 1 로 두는 것과 같습니다.
+    result.info.exif_orientation = 1U;
+    result.info.orientation_applied = false;
+    result.info.decoded_pixel_bytes =
+        static_cast<std::uint64_t>(raw.image.stride_bytes) * raw.image.height;
+    result.image = std::move(const_cast<LibRawDecodeResult&>(raw).image);
+    return result;
+}
+
+WicStandardImageDecodeResult decode_standard_image_with_wic_only(
     const std::filesystem::path& path,
     const WicStandardImageDecodeLimits& limits,
     const std::stop_token stop_token) noexcept {

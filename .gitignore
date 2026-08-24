@@ -121,3 +121,6 @@ NEGAFLOW_LIGHTROOM_EXPANSION.md
 
 # 중단된 git filter-branch 가 남긴 작업 디렉터리
 .git-rewrite/
+
+# libraw.dll 을 만드는 작업 디렉터리 (소스 tarball + 빌드 산출물)
+/negaflow-windows/build-libraw/

@@ -84,7 +84,7 @@ internal static class FrameImportTests
                 DevelopmentProcess.C41,
                 Exists,
                 NextId,
-                _ => null).Rejected.Single().Refusal == FrameImportRefusal.UnsupportedImage,
+                _ => null).Rejected.Single().Refusal == FrameImportRefusal.UndecodableImage,
             "import_rejects_unprobed_source");
         int unsupportedMetadataReads = 0;
         Check(
@@ -118,8 +118,30 @@ internal static class FrameImportTests
                 DevelopmentProcess.C41,
                 Exists,
                 NextId,
-                _ => null).Rejected.Single().Refusal == FrameImportRefusal.UnsupportedImage,
+                _ => null).Rejected.Single().Refusal == FrameImportRefusal.UndecodableImage,
             "import_rejects_non_image_by_decoder_probe");
+
+        // SVG 계약 거부와 "디코더가 못 읽음" 은 사용자 대처가 다릅니다. SVG 는 무엇을 설치해도
+        // 열리지 않고, 후자는 파일이 깨졌거나 그 카메라를 아직 지원하지 않는 것입니다.
+        // 한 값으로 합치면 안내가 뒤섞이므로 서로 다른 사유로 남는지 못 박습니다.
+        Check(
+            FrameImport.Describe(FrameImport.Plan(
+                [@"C:\scans\vector.svg"],
+                [],
+                DevelopmentProcess.C41,
+                Exists,
+                NextId,
+                _ => null)).Contains("vector", StringComparison.Ordinal),
+            "svg_refusal_says_vector_not_tiff");
+        Check(
+            FrameImport.Describe(FrameImport.Plan(
+                [@"C:\scans\broken.cr3"],
+                [],
+                DevelopmentProcess.C41,
+                Exists,
+                NextId,
+                _ => null)).Contains("no available decoder", StringComparison.Ordinal),
+            "undecodable_refusal_does_not_claim_tiff");
 
         LibraryFrameSnapshot existing = read.Frame!;
         FrameImportPlan again = FrameImport.Plan(

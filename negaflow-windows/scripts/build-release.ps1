@@ -156,6 +156,32 @@ try {
 
     Copy-Item -LiteralPath $packageRegistrationScript -Destination $payloadDirectory -Force
 
+    # 카메라 RAW 디코더. Windows 는 RAW codec 을 기본 제공하지 않으므로 이것이 빠지면
+    # DNG/CR2/NEF 가져오기가 Microsoft Store 확장이 깔린 기계에서만 됩니다. LGPL-2.1 이라
+    # 라이선스 원문과 대응 소스를 같이 넣어야 합니다 — 셋 다 build-libraw.ps1 이 만듭니다.
+    $librawDll = Join-Path $projectRoot "out\build\native\$nativePreset\Release\libraw.dll"
+    if (-not (Test-Path -LiteralPath $librawDll)) {
+        & (Join-Path $PSScriptRoot 'build-libraw.ps1') `
+            -OutputDirectory (Split-Path -Parent $librawDll)
+        if ($LASTEXITCODE -ne 0) { throw 'libraw.dll build failed.' }
+    }
+    if (-not (Test-Path -LiteralPath $librawDll)) {
+        throw "Camera RAW decoder is missing: $librawDll"
+    }
+    Copy-Item -LiteralPath $librawDll -Destination $payloadDirectory -Force
+
+    $librawLicenseDirectory = Join-Path $projectRoot 'build-libraw\redistributable'
+    $librawNoticeDirectory = Join-Path $payloadDirectory 'licenses\libraw'
+    New-Item -ItemType Directory -Force -Path $librawNoticeDirectory | Out-Null
+    foreach ($librawNotice in @(
+        'LICENSE.LGPL', 'LICENSE.CDDL', 'COPYRIGHT', 'LibRaw-0.22.2.tar.gz')) {
+        $source = Join-Path $librawLicenseDirectory $librawNotice
+        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+            throw "LibRaw redistribution file is missing: $source. Run scripts\build-libraw.ps1."
+        }
+        Copy-Item -LiteralPath $source -Destination $librawNoticeDirectory -Force
+    }
+
     foreach ($notice in @('LICENSE', 'NOTICE', 'negaflow-windows\\THIRD-PARTY-NOTICES.md')) {
         $source = Join-Path $repositoryRoot $notice
         if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
@@ -175,7 +201,12 @@ try {
         'package-registration.ps1',
         'LICENSE',
         'NOTICE',
-        'THIRD-PARTY-NOTICES.md'
+        'THIRD-PARTY-NOTICES.md',
+        'libraw.dll',
+        'licenses\libraw\LICENSE.LGPL',
+        'licenses\libraw\LICENSE.CDDL',
+        'licenses\libraw\COPYRIGHT',
+        'licenses\libraw\LibRaw-0.22.2.tar.gz'
     )) {
         if (-not (Test-Path -LiteralPath (Join-Path $payloadDirectory $required))) {
             throw "Published payload is missing required file '$required'."

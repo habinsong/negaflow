@@ -152,8 +152,12 @@ public sealed partial class LibraryHostService
             return new(0, removingIds.Length, relinked, invalidated.Count,
                 FolderImportRefusal.None, imported.CatalogError, retry);
         }
+        // 아직 다 쓰이지 않은 파일은 디코드가 실패합니다. 큰 RAW/TIFF 를 복사하는 중이면
+        // 몇 초 뒤에는 열리므로 다시 시도합니다. `UnsupportedImage`(SVG 처럼 제품 계약으로
+        // 받지 않는 형식)는 시간이 지나도 달라지지 않으므로 재시도 대상이 아닙니다 —
+        // 예전에는 두 경우가 한 값이라 SVG 를 넣어 두면 감시가 계속 다시 시도했습니다.
         retry |= imported.Plan.Frames.Rejected.Any(rejection =>
-            rejection.Refusal is FrameImportRefusal.UnsupportedImage or
+            rejection.Refusal is FrameImportRefusal.UndecodableImage or
                 FrameImportRefusal.FileNotFound);
         string[] addedIds = [.. Frames.Select(frame => frame.Id).Where(id => !before.Contains(id))];
 

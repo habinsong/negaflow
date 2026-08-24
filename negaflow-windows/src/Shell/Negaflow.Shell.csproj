@@ -54,6 +54,10 @@
     <NativePreset Condition="'$(Platform)' == 'ARM64' and '$(Configuration)' == 'Debug'">arm64-debug</NativePreset>
     <NativePreset Condition="'$(Platform)' == 'ARM64' and '$(Configuration)' == 'Release'">arm64-release</NativePreset>
     <NativeLibrarySource>$(MSBuildThisFileDirectory)..\..\out\build\native\$(NativePreset)\$(Configuration)\Negaflow.Native.dll</NativeLibrarySource>
+    <!-- 카메라 RAW 디코더. Windows 는 RAW codec 을 기본 제공하지 않으므로 이것이 없으면
+         DNG/CR2/NEF 가져오기가 Microsoft Store 확장이 깔린 기계에서만 된다.
+         scripts\build-libraw.ps1 이 만든다. -->
+    <LibRawLibrarySource>$(MSBuildThisFileDirectory)..\..\out\build\native\$(NativePreset)\Release\libraw.dll</LibRawLibrarySource>
   </PropertyGroup>
 
   <!-- MSIX loose layout과 최종 패키지에 모두 넣는다. Build 뒤 TargetDir에만
@@ -61,6 +65,15 @@
   <ItemGroup Condition="Exists('$(NativeLibrarySource)')">
     <Content Include="$(NativeLibrarySource)"
              Link="Negaflow.Native.dll"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- libraw.dll 은 `LoadLibraryExW(LOAD_LIBRARY_SEARCH_APPLICATION_DIR)` 로 열리므로
+       실행 파일과 같은 폴더에 있어야 한다. 없어도 빌드는 통과한다 — 그때는 RAW 만
+       "no available decoder" 로 끝나고 나머지 형식은 그대로 동작한다. -->
+  <ItemGroup Condition="Exists('$(LibRawLibrarySource)')">
+    <Content Include="$(LibRawLibrarySource)"
+             Link="libraw.dll"
              CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

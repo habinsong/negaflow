@@ -14,6 +14,7 @@
 #include "commands/export_developed_tiff.h"
 #include "commands/hash_image.h"
 #include "commands/prepare_scanner_tiff.h"
+#include "commands/probe_image.h"
 
 #include <array>
 #include <charconv>
@@ -38,6 +39,7 @@ void print_help() {
                  "  negaflow-cli --probe-tiff <path>\n"
                  "  negaflow-cli --decode-tiff-wic <path>\n"
                  "  negaflow-cli --prepare-scanner-tiff <path>\n"
+                 "  negaflow-cli --probe-image <path>\n"
                  "  negaflow-cli --develop-negative-tiff <path> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<exposure> <contrast> <curve-highlights> <curve-lights> <curve-darks> <curve-shadows>] [<film_scan> <film-emulation> <film-look-intensity>]\n"
                  "  negaflow-cli --export-developed-png16 <source> <destination> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<exposure> <contrast> <curve-highlights> <curve-lights> <curve-darks> <curve-shadows>] [<film_scan> <film-emulation> <film-look-intensity>]\n"
                  "  negaflow-cli --export-developed-tiff16 <source> <destination> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<exposure> <contrast> <curve-highlights> <curve-lights> <curve-darks> <curve-shadows>] [<film_scan> <film-emulation> <film-look-intensity>]\n"
@@ -313,6 +315,9 @@ int wmain(const int argument_count, const wchar_t* const arguments[]) {
     }
     if (command == L"--prepare-scanner-tiff") {
         return negaflow::cli::run_prepare_scanner_tiff(argument_count, arguments);
+    }
+    if (command == L"--probe-image") {
+        return negaflow::cli::run_probe_image(argument_count, arguments);
     }
     if (command == L"--develop-negative-tiff") {
         return negaflow::cli::run_develop_negative_tiff(argument_count, arguments);
