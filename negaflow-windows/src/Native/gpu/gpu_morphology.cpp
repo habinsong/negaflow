@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "negaflow/gpu/gpu_device.h"
+#include "negaflow/gpu/gpu_kernel_timing.h"
 #include "negaflow/gpu/gpu_working_image.h"
 #include "negaflow/gpu/shaders/morphology_BipolarTopHatMain.h"
 #include "negaflow/gpu/shaders/morphology_MorphologyHorizontalMain.h"
@@ -237,15 +238,33 @@ GpuKernelStatus GpuMorphology::run_filter(
         return GpuKernelStatus::resource_creation_failed;
     }
     ID3D11DeviceContext* context = device.context();
-    const std::uint32_t groups_x = group_count(source.width(), gpu_thread_group_width);
-    const std::uint32_t groups_y = group_count(source.height(), gpu_thread_group_height);
 
+    // 축 패스는 8×8 이 아니라 **한 줄에 64 스레드**입니다. 그래야 그룹이 자기 구간과
+    // halo 를 groupshared 에 한 번만 올리고 거기서 창을 훑을 수 있습니다. 창 45 기준으로
+    // 8×8 은 같은 화소를 6.9배 중복해서 전역에서 읽었습니다.
+    // `morphology.hlsl` 의 `MORPH_AXIS_GROUP` 과 **같은 값이어야 합니다.**
     ID3D11ShaderResourceView* horizontal_source[1] = {source.srv()};
+    const GpuKernelTimer horizontal_timer{device, GpuTimedKernel::morphology_horizontal};
     run_pass(
-        context, horizontal_, constants_, horizontal_source, 1U, scratch, groups_x, groups_y);
+        context,
+        horizontal_,
+        constants_,
+        horizontal_source,
+        1U,
+        scratch,
+        group_count(source.width(), gpu_morphology_axis_group),
+        source.height());
     ID3D11ShaderResourceView* vertical_source[1] = {scratch.srv()};
+    const GpuKernelTimer vertical_timer{device, GpuTimedKernel::morphology_vertical};
     run_pass(
-        context, vertical_, constants_, vertical_source, 1U, destination, groups_x, groups_y);
+        context,
+        vertical_,
+        constants_,
+        vertical_source,
+        1U,
+        destination,
+        source.width(),
+        group_count(source.height(), gpu_morphology_axis_group));
     return GpuKernelStatus::ok;
 }
 

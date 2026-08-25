@@ -402,6 +402,12 @@ struct GpuHostTransferStats final {
 void reset_gpu_host_transfer_stats() noexcept;
 [[nodiscard]] GpuHostTransferStats gpu_host_transfer_stats() noexcept;
 
+/// `NEGA_GPU_TIMING=1` 일 때 커널 구간의 **GPU 시간** 표를 stderr 로 찍고 지웁니다.
+/// 꺼져 있으면 아무 일도 하지 않습니다. `stage_timing.h` 는 CPU 벽시계라 GPU 디스패치가
+/// 실제로 GPU 에서 쓴 시간을 못 보여 줍니다 — 커널을 고치고도 좋아졌는지 말할 수 없어서
+/// 따로 둡니다(체크포인트 §18.3).
+void dump_gpu_kernel_timings() noexcept;
+
 bool accelerate_scratch_angle_maps(
     const float* bright,
     const std::uint8_t* valid,

@@ -1,5 +1,7 @@
 #include "negaflow/pipeline/gpu_accelerator.h"
 
+#include "negaflow/gpu/gpu_kernel_timing.h"
+
 #include "gpu_accelerator_state.h"
 
 #include "negaflow/gpu/gpu_working_image.h"
@@ -216,6 +218,11 @@ GpuResidentScope::~GpuResidentScope() {
 
 void reset_gpu_host_transfer_stats() noexcept {
     gpu::reset_gpu_host_transfer_stats();
+}
+
+void dump_gpu_kernel_timings() noexcept {
+    gpu::dump_gpu_kernel_timings();
+    gpu::reset_gpu_kernel_timings();
 }
 
 GpuHostTransferStats gpu_host_transfer_stats() noexcept {

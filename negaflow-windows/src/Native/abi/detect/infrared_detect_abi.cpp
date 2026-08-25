@@ -95,6 +95,9 @@ namespace {
             static_cast<unsigned long long>(timing.total_microseconds),
             static_cast<unsigned long long>(transfers.uploads),
             static_cast<unsigned long long>(transfers.downloads));
+        // `NEGA_GPU_TIMING=1` 일 때만 커널 구간 GPU 시간을 함께 찍습니다. CPU 벽시계로는
+        // 이 크기의 차이를 못 가르기 때문입니다(체크포인트 §18.3).
+        negaflow::pipeline::dump_gpu_kernel_timings();
     }
     summary->status = infrared_status(detection.status);
     summary->width = detection.detection.width;

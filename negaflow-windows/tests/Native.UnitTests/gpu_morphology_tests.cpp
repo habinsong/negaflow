@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "negaflow/gpu/gpu_device.h"
+#include "negaflow/gpu/gpu_kernel_timing.h"
 #include "negaflow/gpu/gpu_morphology.h"
 #include "negaflow/gpu/gpu_working_image.h"
 
@@ -228,11 +229,19 @@ int main() {
         return 1;
     }
     morphology_matches_cpu(warp, "warp");
+    // `NEGA_GPU_TIMING=1` 이면 커널 구간의 **GPU 시간** 표를 찍습니다. CPU 벽시계로는
+    // 형태학 커널의 차이를 못 가릅니다(체크포인트 §18.3). 꺼져 있으면 아무것도 안 찍습니다.
+    std::cout << "[gpu] --- warp kernel time ---\n";
+    negaflow::gpu::dump_gpu_kernel_timings();
+    negaflow::gpu::reset_gpu_kernel_timings();
 
     const GpuDevice hardware = GpuDevice::create(GpuDevicePreference::hardware_only);
     if (hardware.is_usable()) {
         std::cout << "[gpu] hardware: " << hardware.capability().adapter.description.data() << '\n';
         morphology_matches_cpu(hardware, "hardware");
+        std::cout << "[gpu] --- hardware kernel time ---\n";
+        negaflow::gpu::dump_gpu_kernel_timings();
+        negaflow::gpu::reset_gpu_kernel_timings();
     } else {
         std::cout << "[gpu] hardware absent, WARP only\n";
     }

@@ -520,6 +520,7 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_scratch_angle.cpp
     src/Native/gpu/gpu_lookup_table.cpp
     src/Native/gpu/gpu_image_pool.cpp
+    src/Native/gpu/gpu_kernel_timing.cpp
     src/Native/gpu/gpu_morphology.cpp
     src/Native/gpu/gpu_tone_stage.cpp
     src/Native/gpu/gpu_film_scan_stage.cpp
