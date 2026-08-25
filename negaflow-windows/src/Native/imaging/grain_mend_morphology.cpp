@@ -249,9 +249,9 @@ std::vector<float> bipolar_top_hat(
 }
 
 RgbPlanes run_rgb(
-    const std::vector<float>& red,
-    const std::vector<float>& green,
-    const std::vector<float>& blue,
+    std::span<const float> red,
+    std::span<const float> green,
+    std::span<const float> blue,
     const std::uint32_t width,
     const std::uint32_t height,
     const std::uint32_t radius,
@@ -400,9 +400,9 @@ RgbPlanes run_rgb(
 }
 
 RgbPlanes opening_rgb(
-    const std::vector<float>& red,
-    const std::vector<float>& green,
-    const std::vector<float>& blue,
+    std::span<const float> red,
+    std::span<const float> green,
+    std::span<const float> blue,
     const std::uint32_t width,
     const std::uint32_t height,
     const std::uint32_t radius) {
@@ -419,9 +419,9 @@ RgbPlanes opening_rgb(
 }
 
 RgbPlanes closing_rgb(
-    const std::vector<float>& red,
-    const std::vector<float>& green,
-    const std::vector<float>& blue,
+    std::span<const float> red,
+    std::span<const float> green,
+    std::span<const float> blue,
     const std::uint32_t width,
     const std::uint32_t height,
     const std::uint32_t radius) {
@@ -438,9 +438,9 @@ RgbPlanes closing_rgb(
 }
 
 RgbPlanes close_open_rgb(
-    const std::vector<float>& red,
-    const std::vector<float>& green,
-    const std::vector<float>& blue,
+    std::span<const float> red,
+    std::span<const float> green,
+    std::span<const float> blue,
     const std::uint32_t width,
     const std::uint32_t height,
     const std::uint32_t radius) {
@@ -457,9 +457,9 @@ RgbPlanes close_open_rgb(
 }
 
 RgbPlanes bipolar_top_hat_rgb(
-    const std::vector<float>& red,
-    const std::vector<float>& green,
-    const std::vector<float>& blue,
+    std::span<const float> red,
+    std::span<const float> green,
+    std::span<const float> blue,
     const std::uint32_t width,
     const std::uint32_t height,
     const std::uint32_t radius) {

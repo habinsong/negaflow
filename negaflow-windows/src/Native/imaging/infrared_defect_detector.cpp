@@ -156,9 +156,11 @@ InfraredDetectionResult detect_infrared_defects(
         }
 
         const std::uint32_t radius = std::max(4U, std::min(96U, std::min(width, height) / 100U));
-        const std::vector<float> red_copy(red.begin(), red.end());
+        // green·blue 자리에 같은 red 를 넣습니다 - `run_rgb` 가 별칭을 알아보고 blue 쪽
+        // 타일·출력을 아예 만들지 않습니다. 예전에는 `closing_rgb` 가 vector 를 받아서
+        // 여기서 red 를 통째로 복사했는데, 4배 프레임(31.7MP)에서 그 복사만 127MB 였습니다.
         grain_mend_detail::RgbPlanes paired_baselines = grain_mend_detail::closing_rgb(
-            aligned_infrared, red_copy, red_copy, width, height, radius);
+            aligned_infrared, red, red, width, height, radius);
         std::vector<float> ir_baseline = paired_baselines.red.empty()
             ? grain_mend_detail::closing(aligned_infrared, width, height, radius)
             : std::move(paired_baselines.red);
@@ -209,7 +211,11 @@ InfraredDetectionResult detect_infrared_defects(
         phase_started = phase_finished;
 
         if (visible_baseline.empty()) {
-            visible_baseline = grain_mend_detail::closing(red_copy, width, height, radius);
+            // RGB 한 왕복이 실패했을 때만 오는 CPU 되돌림 경로입니다. 단일 평면
+            // `closing` 은 아직 vector 를 받으므로 여기서만 만듭니다 - 빠른 경로는
+            // 위에서 span 으로 지나가므로 복사가 없습니다.
+            const std::vector<float> red_plane(red.begin(), red.end());
+            visible_baseline = grain_mend_detail::closing(red_plane, width, height, radius);
         }
         auto visible = optical_density(red, visible_baseline);
         visible_baseline.clear();

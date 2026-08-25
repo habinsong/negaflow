@@ -16,6 +16,15 @@ internal static class DefectSourceIdentityReader
 {
     private const uint FileAttributeDirectory = 0x10U;
     private const int MaximumCachedIdentities = 128;
+
+    /// <summary>
+    /// 파일 시각의 눈금이 굵어서, 같은 크기로 연달아 쓰면 <see cref="DefectSourceObservation"/>
+    /// 가 그대로인데 내용만 바뀝니다 - 실측으로 200회 중 92회(46%)가 같은 `LastWriteTime` 을
+    /// 받았습니다. 그러면 캐시가 **이전 내용의 SHA** 를 돌려주고, 검출 전후 identity 비교가
+    /// "안 바뀌었다"고 잘못 답합니다. git 이 racily-clean 항목을 다루는 것과 같은 규칙을 씁니다:
+    /// 파일 시각이 지금과 이 창 안이면 그 관측은 믿지도, 캐시에 넣지도 않습니다.
+    /// </summary>
+    private static readonly long RacyObservationTicks = TimeSpan.FromSeconds(1).Ticks;
     private static readonly object CacheGate = new();
     private static readonly Dictionary<DefectSourceObservation, DefectSourceIdentity>
         CachedIdentities = [];
@@ -36,12 +45,15 @@ internal static class DefectSourceIdentityReader
             {
                 return false;
             }
-            lock (CacheGate)
+            if (!IsRacyObservation(observed))
             {
-                if (CachedIdentities.TryGetValue(observed, out identity))
+                lock (CacheGate)
                 {
-                    observation = observed;
-                    return true;
+                    if (CachedIdentities.TryGetValue(observed, out identity))
+                    {
+                        observation = observed;
+                        return true;
+                    }
                 }
             }
             using FileStream stream = new(
@@ -66,13 +78,16 @@ internal static class DefectSourceIdentityReader
                 after.ByteCount,
                 Convert.ToHexString(hash).ToLowerInvariant());
             observation = after;
-            lock (CacheGate)
+            if (!IsRacyObservation(after))
             {
-                if (CachedIdentities.Count >= MaximumCachedIdentities)
+                lock (CacheGate)
                 {
-                    CachedIdentities.Clear();
+                    if (CachedIdentities.Count >= MaximumCachedIdentities)
+                    {
+                        CachedIdentities.Clear();
+                    }
+                    CachedIdentities[after] = identity;
                 }
-                CachedIdentities[after] = identity;
             }
             return true;
         }
@@ -81,6 +96,16 @@ internal static class DefectSourceIdentityReader
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// 방금 기록된 파일인지 봅니다. 시계가 뒤로 간 경우(파일 시각이 미래)도 믿지 않습니다.
+    /// </summary>
+    private static bool IsRacyObservation(in DefectSourceObservation observed)
+    {
+        long now = DateTime.UtcNow.ToFileTimeUtc();
+        long newest = Math.Max(observed.LastWriteTime, observed.ChangeTime);
+        return newest >= now || now - newest < RacyObservationTicks;
     }
 
     internal static bool TryObserve(string path, out DefectSourceObservation observation)

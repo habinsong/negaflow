@@ -33,33 +33,33 @@ struct RgbPlanes final {
 };
 
 [[nodiscard]] RgbPlanes opening_rgb(
-    const std::vector<float>& red,
-    const std::vector<float>& green,
-    const std::vector<float>& blue,
+    std::span<const float> red,
+    std::span<const float> green,
+    std::span<const float> blue,
     std::uint32_t width,
     std::uint32_t height,
     std::uint32_t radius);
 
 [[nodiscard]] RgbPlanes closing_rgb(
-    const std::vector<float>& red,
-    const std::vector<float>& green,
-    const std::vector<float>& blue,
+    std::span<const float> red,
+    std::span<const float> green,
+    std::span<const float> blue,
     std::uint32_t width,
     std::uint32_t height,
     std::uint32_t radius);
 
 [[nodiscard]] RgbPlanes close_open_rgb(
-    const std::vector<float>& red,
-    const std::vector<float>& green,
-    const std::vector<float>& blue,
+    std::span<const float> red,
+    std::span<const float> green,
+    std::span<const float> blue,
     std::uint32_t width,
     std::uint32_t height,
     std::uint32_t radius);
 
 [[nodiscard]] RgbPlanes bipolar_top_hat_rgb(
-    const std::vector<float>& red,
-    const std::vector<float>& green,
-    const std::vector<float>& blue,
+    std::span<const float> red,
+    std::span<const float> green,
+    std::span<const float> blue,
     std::uint32_t width,
     std::uint32_t height,
     std::uint32_t radius);
