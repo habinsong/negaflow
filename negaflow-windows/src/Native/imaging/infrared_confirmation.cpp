@@ -1,5 +1,7 @@
 #include "infrared_confirmation.h"
 
+#include "negaflow/core/parallel_rows.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -9,6 +11,56 @@
 
 namespace negaflow::imaging::infrared_detail {
 
+namespace {
+
+// 컴포넌트 좌표를 한 번만 풀어 두고 모든 이동 칸이 나눠 씁니다. 예전에는 `weighted_score` 가
+// 칸마다 화소마다 `pixel % width` 와 `pixel / width` 를 다시 했습니다 - 실제
+// `GT-X900_frame_18` 의 가장 큰 후보(bbox 116,595px)는 이동 칸이 5,353개여서 정수 나눗셈만
+// 10억 회를 넘겼고, 그 후보 하나가 confirmation 634ms 의 98% 였습니다.
+struct ComponentCoordinates final {
+    std::vector<std::int32_t> x{};
+    std::vector<std::int32_t> y{};
+};
+
+[[nodiscard]] ComponentCoordinates resolve_coordinates(
+    const RawComponent& component,
+    const std::uint32_t width) {
+    ComponentCoordinates resolved{};
+    resolved.x.resize(component.pixels.size());
+    resolved.y.resize(component.pixels.size());
+    for (std::size_t ordinal = 0U; ordinal < component.pixels.size(); ++ordinal) {
+        const std::size_t pixel = component.pixels[ordinal];
+        resolved.x[ordinal] = static_cast<std::int32_t>(pixel % width);
+        resolved.y[ordinal] = static_cast<std::int32_t>(pixel / width);
+    }
+    return resolved;
+}
+
+[[nodiscard]] double resolved_score(
+    const ComponentCoordinates& coordinates,
+    const std::span<const float> weights,
+    const std::span<const float> visible,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::int32_t dx,
+    const std::int32_t dy) noexcept {
+    double score = 0.0;
+    const auto signed_width = static_cast<std::int32_t>(width);
+    const auto signed_height = static_cast<std::int32_t>(height);
+    for (std::size_t ordinal = 0U; ordinal < coordinates.x.size(); ++ordinal) {
+        const std::int32_t x = coordinates.x[ordinal] + dx;
+        const std::int32_t y = coordinates.y[ordinal] + dy;
+        if (x >= 0 && y >= 0 && x < signed_width && y < signed_height) {
+            score += static_cast<double>(weights[ordinal]) *
+                visible[static_cast<std::size_t>(y) * width +
+                    static_cast<std::uint32_t>(x)];
+        }
+    }
+    return score;
+}
+
+}  // namespace
+
 double weighted_score(
     const RawComponent& component,
     const std::span<const float> weights,
@@ -17,19 +69,8 @@ double weighted_score(
     const std::uint32_t height,
     const std::int32_t dx,
     const std::int32_t dy) {
-    double score = 0.0;
-    for (std::size_t ordinal = 0U; ordinal < component.pixels.size(); ++ordinal) {
-        const std::size_t pixel = component.pixels[ordinal];
-        const auto x = static_cast<std::int32_t>(pixel % width) + dx;
-        const auto y = static_cast<std::int32_t>(pixel / width) + dy;
-        if (x >= 0 && y >= 0 && x < static_cast<std::int32_t>(width) &&
-            y < static_cast<std::int32_t>(height)) {
-            score += static_cast<double>(weights[ordinal]) *
-                visible[static_cast<std::size_t>(y) * width +
-                    static_cast<std::uint32_t>(x)];
-        }
-    }
-    return score;
+    return resolved_score(
+        resolve_coordinates(component, width), weights, visible, width, height, dx, dy);
 }
 
 float selection_bias(const float significance) noexcept {
@@ -59,20 +100,46 @@ bool confirm_component(
         square_sum += static_cast<double>(weight) * weight;
     }
     if (!(square_sum > 0.0)) return false;
+    const ComponentCoordinates coordinates = resolve_coordinates(component, width);
 
+    // 이 격자는 (2*search+1)^2 번 `weighted_score` 를 부르고 그 하나하나가 컴포넌트 화소를
+    // 전부 훑습니다. 바깥 후보 반복은 이미 병렬이지만 **큰 결함 하나가 통째로 직렬**이 되어,
+    // 실제 `GT-X900_frame_18` 에서 후보 359개 중 하나가 622ms 로 confirmation 634ms 의 98%
+    // 였습니다(bbox 116,595px). 행마다 최선을 따로 구한 뒤 dy 순서로 합치므로 결과는
+    // 순차판과 **같습니다** - 원래도 처음으로 더 큰 점수를 만난 칸이 이깁니다.
+    const std::size_t search_rows = static_cast<std::size_t>(2 * search + 1);
+    std::vector<double> row_best(search_rows, -std::numeric_limits<double>::infinity());
+    std::vector<std::int32_t> row_best_dx(search_rows, 0);
+    negaflow::core::for_each_row_block(
+        static_cast<std::uint32_t>(search_rows),
+        static_cast<std::uint64_t>(search_rows) * search_rows *
+            std::max<std::size_t>(component.pixels.size(), 1U),
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t row = first_row; row < first_row + row_count; ++row) {
+                const std::int32_t dy = static_cast<std::int32_t>(row) - search;
+                double row_value = -std::numeric_limits<double>::infinity();
+                std::int32_t row_dx = 0;
+                for (std::int32_t dx = -search; dx <= search; ++dx) {
+                    const double score = resolved_score(
+                        coordinates, weights, visible, width, height,
+                        dx + origin_x, dy + origin_y);
+                    if (score > row_value) {
+                        row_value = score;
+                        row_dx = dx;
+                    }
+                }
+                row_best[row] = row_value;
+                row_best_dx[row] = row_dx;
+            }
+        });
     double best = -std::numeric_limits<double>::infinity();
     std::int32_t best_x = 0;
     std::int32_t best_y = 0;
-    for (std::int32_t dy = -search; dy <= search; ++dy) {
-        for (std::int32_t dx = -search; dx <= search; ++dx) {
-            const double score = weighted_score(
-                component, weights, visible, width, height,
-                dx + origin_x, dy + origin_y);
-            if (score > best) {
-                best = score;
-                best_x = dx;
-                best_y = dy;
-            }
+    for (std::size_t row = 0U; row < search_rows; ++row) {
+        if (row_best[row] > best) {
+            best = row_best[row];
+            best_x = row_best_dx[row];
+            best_y = static_cast<std::int32_t>(row) - search;
         }
     }
     if (!(best > 0.0)) return false;
@@ -87,24 +154,45 @@ bool confirm_component(
     for (std::int32_t dy = -search; dy <= search; ++dy) {
         for (std::int32_t dx = -search; dx <= search; ++dx) {
             if (std::max(std::abs(dx), std::abs(dy)) >= null_inner) {
-                null_samples.push_back(weighted_score(
-                    component, weights, visible, width, height,
+                null_samples.push_back(resolved_score(
+                    coordinates, weights, visible, width, height,
                     dx + origin_x, dy + origin_y));
             }
         }
     }
+    // 위 격자가 비면(큰 결함은 `null_inner` 가 `search` 를 넘어 한 칸도 안 남습니다) null 표본이
+    // 전부 여기서 나옵니다. 반경 하나만으로 200개를 채우고 끝나지만 그 한 반경이 수천 칸이라
+    // 위 격자와 맞먹는 비용입니다. 바깥 반경 반복과 멈춤 조건은 그대로 두고 **한 반경 안만**
+    // 병렬로 셉니다 - 칸 목록과 넣는 순서가 순차판과 같으므로 표본 집합이 같습니다.
+    std::vector<std::int32_t> ring_dx{};
+    std::vector<std::int32_t> ring_dy{};
+    std::vector<double> ring_scores{};
     for (std::int32_t radius = std::max(null_inner, search + 1);
          null_samples.size() < tuning::kMinimumNullSamples && radius <=
              std::max(null_inner, search + 1) + 2 * extent + 8;
          ++radius) {
+        ring_dx.clear();
+        ring_dy.clear();
         for (std::int32_t dy = -radius; dy <= radius; ++dy) {
             const std::int32_t step = std::abs(dy) == radius ? 1 : 2 * radius;
             for (std::int32_t dx = -radius; dx <= radius; dx += step) {
-                null_samples.push_back(weighted_score(
-                    component, weights, visible, width, height,
-                    dx + origin_x, dy + origin_y));
+                ring_dx.push_back(dx);
+                ring_dy.push_back(dy);
             }
         }
+        ring_scores.assign(ring_dx.size(), 0.0);
+        negaflow::core::for_each_row_block(
+            static_cast<std::uint32_t>(ring_dx.size()),
+            static_cast<std::uint64_t>(ring_dx.size()) *
+                std::max<std::size_t>(component.pixels.size(), 1U),
+            [&](const std::uint32_t first, const std::uint32_t count) noexcept {
+                for (std::uint32_t cell = first; cell < first + count; ++cell) {
+                    ring_scores[cell] = resolved_score(
+                        coordinates, weights, visible, width, height,
+                        ring_dx[cell] + origin_x, ring_dy[cell] + origin_y);
+                }
+            });
+        null_samples.insert(null_samples.end(), ring_scores.begin(), ring_scores.end());
     }
     if (null_samples.size() < tuning::kMinimumNullSamples) return false;
     std::sort(null_samples.begin(), null_samples.end());
