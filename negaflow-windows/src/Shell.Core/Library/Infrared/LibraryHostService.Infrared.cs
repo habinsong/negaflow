@@ -68,10 +68,20 @@ public sealed partial class LibraryHostService
         FrameEdited?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// 스캐너 게시가 IR 굽기를 시작했습니다. <b>알림은 UI 스레드로 넘깁니다.</b>
+    /// </summary>
+    /// <remarks>
+    /// 배치 스캔은 워커 스레드에서 돕니다. 여기서 곧바로 알림을 올리면 구독자가 그 스레드
+    /// 에서 XAML 을 건드리고, WinUI 가 던진 <c>COMException</c> 이
+    /// <c>ScannerFramePublisher.Publish</c> 밖으로 그대로 올라가 <b>롤을 통째로 끊습니다</b> —
+    /// 실기 기록: <c>batch publish threw at index=1: COMException</c>, 그 사진은 IR 까지
+    /// 적용된 뒤였습니다(`defects=1`).
+    /// </remarks>
     private void BeginScannerInfraredClean(string frameId)
     {
         infraredCleanAttempted.Add(frameId);
-        PublishInfraredCleanStatus(frameId, InfraredCleanStatus.Detecting);
+        OnUiThread(() => PublishInfraredCleanStatus(frameId, InfraredCleanStatus.Detecting));
     }
 
     private void CompleteScannerInfraredClean(
@@ -82,11 +92,30 @@ public sealed partial class LibraryHostService
         {
             RearmInfraredClean(frameId);
         }
-        PublishInfraredCleanStatus(frameId, InfraredCleanStatus.From(result));
-        if (result.IsSuccess)
+        InfraredCleanStatus status = InfraredCleanStatus.From(result);
+        bool edited = result.IsSuccess;
+        OnUiThread(() =>
         {
-            FrameEdited?.Invoke(this, EventArgs.Empty);
+            PublishInfraredCleanStatus(frameId, status);
+            if (edited)
+            {
+                FrameEdited?.Invoke(this, EventArgs.Empty);
+            }
+        });
+    }
+
+    /// <summary>
+    /// UI 스레드에서 돌립니다. 큐가 닫혔으면(창이 닫히는 중) 그냥 넘어갑니다 - 그때는
+    /// 알릴 화면도 없습니다.
+    /// </summary>
+    private void OnUiThread(Action work)
+    {
+        if (dispatcher.HasThreadAccess)
+        {
+            work();
+            return;
         }
+        _ = dispatcher.TryEnqueue(work);
     }
 
     private LibraryInfraredCleanWork? PrepareScheduledInfraredClean(string frameId)

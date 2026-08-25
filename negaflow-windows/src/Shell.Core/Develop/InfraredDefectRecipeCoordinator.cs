@@ -150,6 +150,12 @@ public static class InfraredDefectRecipeCoordinator
             ArgumentException or OverflowException or NativeBootstrapException or
             DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
         {
+            // **삼키되 남깁니다.** 앞 판은 여기서 조용히 `DetectionFailed` 로만 돌아갔고,
+            // 같은 파일이 밖에서는 멀쩡히 검출되는데 앱 안에서만 실패하는 이유를 알 길이
+            // 없었습니다.
+            ScannerDiagnosticsLog.Write(
+                $"ir detect threw: {error.GetType().Name} {error.Message} " +
+                $"visible={visiblePath} infrared={infraredPath} kind={sourceKind}");
             return new(null, true);
         }
     }
@@ -173,6 +179,11 @@ public static class InfraredDefectRecipeCoordinator
         };
         if (detectionStatus != InfraredDefectApplyStatus.Applied)
         {
+            ScannerDiagnosticsLog.Write(
+                $"ir detect not applied: native={detection.Status} mapped={detectionStatus} " +
+                $"components={detection.Components.Count} clusters={detection.Clusters.Count} " +
+                $"alignment={detection.AlignmentStatus} coverage={detection.Coverage:F6} " +
+                $"size={detection.Width}x{detection.Height} frame={frame.Id}");
             return Result(detectionStatus, detection);
         }
 
@@ -188,8 +199,15 @@ public static class InfraredDefectRecipeCoordinator
                 checked(frame.DefectRecipeRevision + 1UL),
                 detection);
         }
-        catch (ArgumentException)
+        catch (ArgumentException error)
         {
+            // 레시피로 옮기지 못한 이유는 여기서만 알 수 있습니다 - 밖에서는 그냥
+            // `DetectionFailed` 로 보입니다.
+            ScannerDiagnosticsLog.Write(
+                $"ir recipe refused: {error.Message} native={detection.Status} " +
+                $"components={detection.Components.Count} clusters={detection.Clusters.Count} " +
+                $"revision={frame.DefectRecipeRevision} " +
+                $"existingItems={frame.DefectRecipe?.Items.Count.ToString() ?? "none"}");
             return Result(InfraredDefectApplyStatus.DetectionFailed, detection);
         }
         catch (OverflowException)

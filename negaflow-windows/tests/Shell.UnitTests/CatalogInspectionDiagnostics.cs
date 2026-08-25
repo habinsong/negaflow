@@ -42,6 +42,13 @@ internal static class CatalogInspectionDiagnostics
                 $"  {frame.Id} exists={exists} availability={availability} " +
                 $"metadata={(frame.SourceMetadata is null ? "none" : "present")} " +
                 $"request={(request.IsSuccess ? "ok" : request.Refusal.ToString())} " +
+                $"kind={frame.SourceKind} preview={frame.IsPreviewScan} " +
+                // IR 쌍이 실제로 어디를 가리키는지 - 카탈로그를 문자열로 훑으면 경계가 안 맞아
+                // 엉뚱한 기록을 읽습니다. 여기서 바로 냅니다.
+                $"ir={(frame.InfraredPath is { Length: > 0 } infrared
+                    ? (File.Exists(infrared) ? infrared : infrared + " (없음)")
+                    : "none")} " +
+                $"defects={frame.DefectRecipe?.Items.Count.ToString() ?? "none"} " +
                 $"path={frame.SourcePath}");
         }
         return 0;
