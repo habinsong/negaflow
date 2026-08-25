@@ -53,6 +53,10 @@ struct FrameCacheBudget final {
 enum class FrameCacheKind : std::uint8_t {
     decoded_source = 0,
     preview_proxy,
+    // 셸의 managed BGRA8 표시본 캐시입니다. 엔진 밖에 있지만 **같은 프로세스**의 같은
+    // 상한을 나눠 쓰므로 여기서 함께 셉니다. 안 세면 그 몫이 간접비로 잡혀 네이티브
+    // 캐시만 굶고, managed 쪽은 안 줄어 총량이 상한을 넘습니다.
+    developed_display,
     count,
 };
 
@@ -70,6 +74,10 @@ void report_cache_resident_bytes(FrameCacheKind kind, std::uint64_t bytes) noexc
 // 디코드된 원본(`WorkingImage`) 상주에 쓸 바이트 예산입니다.
 // macOS 배분비에서 cleaned raw 몫 = 190 / (190 + 2×170).
 [[nodiscard]] std::uint64_t decoded_source_budget_bytes() noexcept;
+
+// 셸의 managed BGRA8 표시본 캐시에 쓸 바이트 예산입니다.
+// macOS 배분비에서 developed 몫 x managed 화소 비율(4 / (16 + 4)).
+[[nodiscard]] std::uint64_t developed_display_budget_bytes() noexcept;
 
 // 프리뷰 raw 프록시(인터랙티브 + 정착) 상주에 쓸 바이트 예산입니다.
 // macOS 배분비에서 developed 몫 = 2×170 / (190 + 2×170).

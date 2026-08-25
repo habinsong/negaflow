@@ -490,6 +490,9 @@ internal static class MemoryStressDiagnostics
             $"  프리뷰 프록시        {Mb(value.PreviewProxyResidentBytes)} / " +
             $"{Mb(value.PreviewProxyBudgetBytes)}");
         text.AppendLine(
+            $"  현상본 표시(managed) {Mb(value.DevelopedDisplayResidentBytes)} / " +
+            $"{Mb(value.DevelopedDisplayBudgetBytes)}");
+        text.AppendLine(
             $"  GPU 작업 텍스처      {Mb(value.GpuPoolResidentBytes)} / " +
             $"{Mb(value.GpuPoolLimitBytes)}");
         text.AppendLine(

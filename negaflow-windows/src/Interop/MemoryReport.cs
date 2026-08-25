@@ -12,6 +12,8 @@ internal struct NativeMemoryReportV1
     internal ulong DecodedSourceBudgetBytes;
     internal ulong PreviewProxyResidentBytes;
     internal ulong PreviewProxyBudgetBytes;
+    internal ulong DevelopedDisplayResidentBytes;
+    internal ulong DevelopedDisplayBudgetBytes;
     internal ulong GpuPoolResidentBytes;
     internal ulong GpuPoolLimitBytes;
     internal ulong GpuSystemMemoryBytes;
@@ -32,6 +34,8 @@ public readonly record struct MemoryReport(
     ulong DecodedSourceBudgetBytes,
     ulong PreviewProxyResidentBytes,
     ulong PreviewProxyBudgetBytes,
+    ulong DevelopedDisplayResidentBytes,
+    ulong DevelopedDisplayBudgetBytes,
     ulong GpuPoolResidentBytes,
     ulong GpuPoolLimitBytes,
     ulong GpuSystemMemoryBytes,
@@ -61,6 +65,8 @@ public static class MemoryReportBridge
             raw.DecodedSourceBudgetBytes,
             raw.PreviewProxyResidentBytes,
             raw.PreviewProxyBudgetBytes,
+            raw.DevelopedDisplayResidentBytes,
+            raw.DevelopedDisplayBudgetBytes,
             raw.GpuPoolResidentBytes,
             raw.GpuPoolLimitBytes,
             raw.GpuSystemMemoryBytes,

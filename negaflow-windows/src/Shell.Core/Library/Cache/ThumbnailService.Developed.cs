@@ -93,6 +93,7 @@ public sealed partial class ThumbnailService
             height,
             settled);
         developedIdentities.TryRemove(frameId, out _);
+        SyncDisplayCacheBudget();
         // macOS `markDevelopedResident` — FIFO 재등록 뒤 한도 초과분을 내려놓습니다.
         developedResidency.MarkResident(frameId, bytes, EvictDeveloped);
     }
@@ -133,6 +134,7 @@ public sealed partial class ThumbnailService
         {
             developed[frame.Id] = preview;
             developedIdentities.TryRemove(frame.Id, out _);
+            SyncDisplayCacheBudget();
             developedResidency.MarkResident(frame.Id, bytes, EvictDeveloped);
         }
     }
@@ -170,6 +172,35 @@ public sealed partial class ThumbnailService
     {
         get => developedResidency.SelectedFrameId;
         set => developedResidency.SelectedFrameId = value;
+    }
+
+    /// <summary>
+    /// 이 캐시를 엔진의 <b>프로세스 예산</b>에 붙입니다. 지금 상주량을 알리고 쓸 수 있는
+    /// 바이트를 받아 FIFO 한도에 겁니다.
+    /// </summary>
+    /// <remarks>
+    /// 이 캐시는 엔진 밖에 있지만 같은 프로세스의 같은 상한을 나눠 씁니다. 붙이지 않으면
+    /// 이 몫이 "캐시가 아닌 몫"으로 잡혀 네이티브 캐시만 굶고, 이쪽은 간접비가 늘어도 줄지
+    /// 않습니다 — 실측으로 설치 앱이 9.7GB 까지 갔고 그때 이 캐시가 520MB 였습니다.
+    ///
+    /// 엔진을 못 부르면 <b>손대지 않습니다.</b> 설정에서 고른 장수에서 나온 값이 그대로
+    /// 남습니다 — 캐시 상한 하나 때문에 앱을 세우지 않습니다.
+    /// </remarks>
+    private void SyncDisplayCacheBudget()
+    {
+        if (Negaflow.Interop.DisplayCacheBudgetBridge.Sync(DevelopedResidentBytes())
+            is not { } budget)
+        {
+            return;
+        }
+        long allowed = budget > long.MaxValue ? long.MaxValue : (long)budget;
+        if (allowed <= 0L || allowed == developedByteLimit)
+        {
+            return;
+        }
+        developedByteLimit = allowed;
+        developedResidency.SetLimits(
+            developedResidency.Limit, developedByteLimit, EvictDeveloped);
     }
 
     /// <summary>지금 상주 중인 현상본 화소 바이트입니다. 시험이 축출을 확인하는 자리입니다.</summary>

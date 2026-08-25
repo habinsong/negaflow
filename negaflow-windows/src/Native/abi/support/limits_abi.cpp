@@ -134,10 +134,21 @@ nf_status_t NF_CALL nf_get_memory_report_v1(nf_memory_report_v1* const output) {
     output->decoded_source_budget_bytes = report.decoded_source_budget_bytes;
     output->preview_proxy_resident_bytes = report.preview_proxy_resident_bytes;
     output->preview_proxy_budget_bytes = report.preview_proxy_budget_bytes;
+    output->developed_display_resident_bytes = report.developed_display_resident_bytes;
+    output->developed_display_budget_bytes = report.developed_display_budget_bytes;
     output->gpu_pool_resident_bytes = report.gpu_pool_resident_bytes;
     output->gpu_pool_limit_bytes = report.gpu_pool_limit_bytes;
     output->gpu_system_memory_bytes = report.gpu_system_memory_bytes;
     output->non_cache_overhead_bytes = report.non_cache_overhead_bytes;
     output->automatic_process_ceiling_bytes = report.automatic_process_ceiling_bytes;
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_sync_display_cache_v1(
+    const std::uint64_t resident_bytes, std::uint64_t* const budget_bytes) {
+    if (budget_bytes == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    *budget_bytes = negaflow::pipeline::sync_display_cache_budget(resident_bytes);
     return NF_STATUS_OK;
 }

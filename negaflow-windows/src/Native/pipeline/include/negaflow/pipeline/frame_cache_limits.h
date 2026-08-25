@@ -41,6 +41,9 @@ struct FrameCacheMemoryReport final {
     std::uint64_t decoded_source_budget_bytes{0};
     std::uint64_t preview_proxy_resident_bytes{0};
     std::uint64_t preview_proxy_budget_bytes{0};
+    // 셸의 managed BGRA8 표시본 캐시입니다. 엔진 밖이지만 같은 상한을 나눠 씁니다.
+    std::uint64_t developed_display_resident_bytes{0};
+    std::uint64_t developed_display_budget_bytes{0};
     std::uint64_t gpu_pool_resident_bytes{0};
     std::uint64_t gpu_pool_limit_bytes{0};
     // 그중 시스템 RAM 에 있는 몫입니다 - 스테이징 두 장(+내장이면 텍스처까지).
@@ -53,5 +56,13 @@ struct FrameCacheMemoryReport final {
 };
 
 [[nodiscard]] FrameCacheMemoryReport frame_cache_memory_report() noexcept;
+
+// 셸의 managed BGRA8 표시본 캐시가 자기 상주량을 알리고, 지금 쓸 수 있는 예산을 받아 갑니다.
+//
+// **왜 한 번에 주고받는가** — 그 캐시는 엔진 밖에 있지만 같은 프로세스의 같은 상한을 나눠
+// 씁니다. 알리지 않으면 그 몫이 "캐시가 아닌 몫"으로 잡혀 네이티브 캐시만 굶고, 예산을 받아
+// 가지 않으면 managed 쪽은 간접비가 늘어도 줄지 않아 총량이 상한을 넘습니다. 실측으로 앱이
+// 9.7GB 까지 갔고 그중 managed 표시본이 520MB, managed 힙이 1,443MB 였습니다.
+[[nodiscard]] std::uint64_t sync_display_cache_budget(std::uint64_t resident_bytes) noexcept;
 
 }  // namespace negaflow::pipeline

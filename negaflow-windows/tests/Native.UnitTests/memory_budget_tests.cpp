@@ -74,9 +74,24 @@ int main() {
         report.automatic_process_ceiling_bytes > 0ULL,
         "자동 상한을 셉니다");
     expect(
-        report.decoded_source_budget_bytes + report.preview_proxy_budget_bytes <=
+        report.decoded_source_budget_bytes + report.preview_proxy_budget_bytes +
+                report.developed_display_budget_bytes <=
             report.automatic_process_ceiling_bytes,
         "캐시 예산 합계는 프로세스 상한 안입니다");
+
+    // 셸의 managed 표시본 캐시도 같은 예산을 나눠 씁니다. 알린 만큼이 간접비에서 빠지고,
+    // 예산을 받아 가야 간접비가 늘 때 이쪽도 같이 줄어듭니다.
+    const std::uint64_t display_budget =
+        negaflow::pipeline::sync_display_cache_budget(0ULL);
+    expect(display_budget > 0ULL, "표시본 캐시가 예산을 받습니다");
+    expect(
+        display_budget < report.automatic_process_ceiling_bytes,
+        "표시본 예산은 프로세스 상한보다 작습니다");
+    // 알린 값이 실제로 반영되는지 - 많이 들고 있다고 알리면 남는 예산이 줄어야 합니다.
+    const std::uint64_t crowded_budget = negaflow::pipeline::sync_display_cache_budget(
+        report.automatic_process_ceiling_bytes / 2ULL);
+    expect(crowded_budget <= display_budget, "많이 들고 있다고 알리면 예산이 줄거나 같습니다");
+    (void)negaflow::pipeline::sync_display_cache_budget(0ULL);
 
     // ── GPU 예산: 바이트 상수가 아니라 이 기계 용량의 비율입니다 ──
     // 보고와 같은 장치를 봅니다 - `GpuDevice::shared()` 는 가속기 것과 다른 장치입니다.

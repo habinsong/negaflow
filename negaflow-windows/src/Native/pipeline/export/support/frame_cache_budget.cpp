@@ -22,7 +22,7 @@ std::atomic<std::uint32_t> g_manual_cleaned_raw_frames{0U};
 std::atomic<std::uint32_t> g_manual_developed_frames{0U};
 
 // 각 캐시가 알린 상주량입니다. 예산이 "캐시가 아닌 몫" 을 빼려면 이 값이 필요합니다.
-std::atomic<std::uint64_t> g_cache_resident_bytes[2]{};
+std::atomic<std::uint64_t> g_cache_resident_bytes[3]{};
 
 }  // namespace
 
@@ -144,6 +144,19 @@ std::uint64_t decoded_source_budget_bytes() noexcept {
         bytes_from_megabytes(megabytes), current_frame_cache_pressure());
 }
 
+std::uint64_t developed_display_budget_bytes() noexcept {
+    // developed 몫을 native Rgba32F 프록시와 managed BGRA8 표시본이 화소 바이트 비율
+    // 16 : 4 로 나눕니다. 여기는 그 **managed 쪽**입니다.
+    const std::uint32_t frames =
+        g_manual_developed_frames.load(std::memory_order_relaxed);
+    const double developed_megabytes = frames > 0U
+        ? static_cast<double>(frames) * FrameCacheBudget::developed_megabytes_per_frame
+        : automatic_budget_megabytes() * (1.0 - cleaned_raw_share);
+    return effective_cache_budget_bytes(
+        bytes_from_megabytes(developed_megabytes * (1.0 - native_preview_proxy_share)),
+        current_frame_cache_pressure());
+}
+
 std::uint64_t preview_proxy_budget_bytes() noexcept {
     // developed 몫은 native Rgba32F 프록시와 managed BGRA8 표시본이 나눠 씁니다 —
     // 화소 바이트 비율 16 : 4 로 가릅니다(위 `native_preview_proxy_share`).
@@ -230,6 +243,15 @@ void set_frame_cache_residency_limits(const FrameCacheResidencyLimits limits) no
     g_manual_developed_frames.store(limits.developed_frames, std::memory_order_relaxed);
 }
 
+std::uint64_t sync_display_cache_budget(const std::uint64_t resident_bytes) noexcept {
+    namespace detail = negaflow::pipeline::develop_export_detail;
+    // 예산을 물어보기 **전에** 알립니다 - 안 그러면 내 몫까지 간접비로 세어 예산이 두 배로
+    // 깎입니다(`decode.cpp` 와 같은 규칙).
+    detail::report_cache_resident_bytes(
+        detail::FrameCacheKind::developed_display, resident_bytes);
+    return detail::developed_display_budget_bytes();
+}
+
 FrameCacheMemoryReport frame_cache_memory_report() noexcept {
     namespace detail = negaflow::pipeline::develop_export_detail;
     FrameCacheMemoryReport report{};
@@ -245,6 +267,9 @@ FrameCacheMemoryReport frame_cache_memory_report() noexcept {
     // 하나 더 생깁니다 - 가속기는 자기 것을 따로 만듭니다.
     report.gpu_pool_limit_bytes = negaflow::gpu::GpuCacheBudget::effective_bytes(
         negaflow::pipeline::GpuAccelerator::shared().device());
+    report.developed_display_resident_bytes =
+        g_cache_resident_bytes[2].load(std::memory_order_relaxed);
+    report.developed_display_budget_bytes = detail::developed_display_budget_bytes();
     report.gpu_system_memory_bytes = negaflow::gpu::gpu_pool_system_memory_bytes();
     report.non_cache_overhead_bytes = detail::non_cache_overhead_bytes();
     const std::uint64_t physical = detail::FrameCacheBudget::physical_memory_bytes();

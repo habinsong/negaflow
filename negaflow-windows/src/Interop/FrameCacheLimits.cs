@@ -53,3 +53,38 @@ public static class FrameCacheLimitsBridge
         }
     }
 }
+
+/// <summary>
+/// 셸의 managed BGRA8 표시본 캐시를 엔진의 프로세스 예산에 붙입니다.
+/// </summary>
+/// <remarks>
+/// <para>
+/// 그 캐시는 엔진 밖에 있지만 <b>같은 프로세스의 같은 상한</b>을 나눠 씁니다. 알리지 않으면
+/// 그 몫이 "캐시가 아닌 몫"으로 잡혀 네이티브 캐시만 굶고, 예산을 받아 가지 않으면 managed
+/// 쪽은 간접비가 늘어도 줄지 않습니다. 실측으로 설치 앱이 9.7GB 까지 갔고, 그때 managed
+/// 표시본이 520MB, managed 힙이 1,443MB 였습니다.
+/// </para>
+/// <para>
+/// 알리기와 받기를 <b>한 번에</b> 합니다 - 두 번 부르면 그 사이에 다른 스레드가 값을 바꿔
+/// 자기 몫을 간접비로 세는 창이 생깁니다.
+/// </para>
+/// </remarks>
+public static class DisplayCacheBudgetBridge
+{
+    /// <summary>지금 상주량을 알리고 쓸 수 있는 예산을 받습니다. 엔진을 못 부르면 null 입니다.</summary>
+    public static ulong? Sync(long residentBytes)
+    {
+        try
+        {
+            ulong budget = 0UL;
+            return NativeLimits.nf_sync_display_cache_v1(
+                (ulong)Math.Max(0L, residentBytes), ref budget) == 0
+                ? budget
+                : null;
+        }
+        catch (Exception error) when (error is DllNotFoundException or EntryPointNotFoundException)
+        {
+            return null;
+        }
+    }
+}

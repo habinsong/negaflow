@@ -32,4 +32,10 @@ internal static partial class NativeLimits
     [LibraryImport(LibraryName, EntryPoint = "nf_get_memory_report_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial uint nf_get_memory_report_v1(ref NativeMemoryReportV1 output);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_sync_display_cache_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial uint nf_sync_display_cache_v1(
+        ulong residentBytes,
+        ref ulong budgetBytes);
 }

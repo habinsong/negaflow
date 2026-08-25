@@ -95,6 +95,8 @@ typedef struct nf_memory_report_v1 {
     uint64_t decoded_source_budget_bytes;
     uint64_t preview_proxy_resident_bytes;
     uint64_t preview_proxy_budget_bytes;
+    uint64_t developed_display_resident_bytes;
+    uint64_t developed_display_budget_bytes;
     uint64_t gpu_pool_resident_bytes;
     uint64_t gpu_pool_limit_bytes;
     uint64_t gpu_system_memory_bytes;
@@ -105,6 +107,13 @@ typedef struct nf_memory_report_v1 {
 NF_API nf_status_t NF_CALL nf_set_gpu_cache_limit_v1(const nf_gpu_cache_limit_v1* limit);
 
 NF_API nf_status_t NF_CALL nf_get_memory_report_v1(nf_memory_report_v1* output);
+
+/* 셸의 managed BGRA8 표시본 캐시가 자기 상주량을 알리고 지금 쓸 수 있는 예산을 받아 갑니다.
+   같은 프로세스의 같은 상한을 나눠 쓰므로 한 번에 주고받습니다. 엔진을 못 부르면
+   `*budget_bytes` 는 손대지 않으며, 셸은 자기 자동값으로 계속 돕니다. */
+NF_API nf_status_t NF_CALL nf_sync_display_cache_v1(
+    uint64_t resident_bytes,
+    uint64_t* budget_bytes);
 
 NF_API nf_status_t NF_CALL nf_get_gpu_cache_info_v1(nf_gpu_cache_info_v1* output);
 
