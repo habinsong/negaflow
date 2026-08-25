@@ -1079,6 +1079,7 @@
   <data name="librarySearchName.Text" xml:space="preserve"><value>검색 이름</value><comment>AppLocalizedPhrase.librarySearchName</comment></data>
   <data name="librarySmartCollections.Text" xml:space="preserve"><value>스마트 컬렉션</value><comment>AppLocalizedPhrase.librarySmartCollections</comment></data>
   <data name="frameDisplayFormat.Text" xml:space="preserve"><value>사진 %d</value><comment>AppLocalizedPhrase.frameDisplayFormat</comment></data>
+  <data name="framePreviewDisplayFormat.Text" xml:space="preserve"><value>프리뷰 %d</value><comment>AppLocalizedPhrase.framePreviewDisplayFormat</comment></data>
   <data name="libraryRating.Text" xml:space="preserve"><value>별점</value><comment>AppLocalizedPhrase.rating</comment></data>
   <data name="libraryClearRating.Content" xml:space="preserve"><value>별점 초기화</value><comment>AppLocalizedPhrase.resetRating</comment></data>
   <data name="libraryStarFormat.Text" xml:space="preserve"><value>별 %d개</value><comment>AppLocalizedPhrase.starHelpFormat</comment></data>

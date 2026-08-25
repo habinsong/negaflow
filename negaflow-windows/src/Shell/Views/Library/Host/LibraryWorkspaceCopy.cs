@@ -32,6 +32,10 @@ internal sealed class LibraryWorkspaceCopy
         // 영어 기본값으로 불립니다.
         LibraryFrameNaming.NumberFormat = static number =>
             AppResources.FormatIntegers("frameDisplayFormat", "Text", number);
+        // 프리뷰는 사진이 아니라 프레임을 찾기 위한 임시 그림입니다. 같은 말로 부르면
+        // 목록에서 실제 사진과 이름이 겹칩니다.
+        LibraryFrameNaming.PreviewFormat = static number =>
+            AppResources.FormatIntegers("framePreviewDisplayFormat", "Text", number);
         LibraryFrameNaming.CopyFormat = static (number, copyNumber) =>
             AppResources.FormatIntegers("frameCopyDisplayFormat", "Text", number, copyNumber);
         // 이름 자리는 macOS 가 %@ 로 두는 곳입니다. .NET 리소스에서는 {0} 으로 두고 여기서

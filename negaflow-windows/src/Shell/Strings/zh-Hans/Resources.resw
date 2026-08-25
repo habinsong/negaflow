@@ -1079,6 +1079,7 @@
   <data name="librarySearchName.Text" xml:space="preserve"><value>搜索名称</value><comment>AppLocalizedPhrase.librarySearchName</comment></data>
   <data name="librarySmartCollections.Text" xml:space="preserve"><value>智能收藏集</value><comment>AppLocalizedPhrase.librarySmartCollections</comment></data>
   <data name="frameDisplayFormat.Text" xml:space="preserve"><value>照片 %d</value><comment>AppLocalizedPhrase.frameDisplayFormat</comment></data>
+  <data name="framePreviewDisplayFormat.Text" xml:space="preserve"><value>预览 %d</value><comment>AppLocalizedPhrase.framePreviewDisplayFormat</comment></data>
   <data name="libraryRating.Text" xml:space="preserve"><value>星级</value><comment>AppLocalizedPhrase.rating</comment></data>
   <data name="libraryClearRating.Content" xml:space="preserve"><value>清除星级</value><comment>AppLocalizedPhrase.resetRating</comment></data>
   <data name="libraryStarFormat.Text" xml:space="preserve"><value>%d 星</value><comment>AppLocalizedPhrase.starHelpFormat</comment></data>

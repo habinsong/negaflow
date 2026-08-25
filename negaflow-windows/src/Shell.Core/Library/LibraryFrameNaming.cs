@@ -34,6 +34,17 @@ public static class LibraryFrameNaming
     public static Func<string, int, string> NamedCopyFormat { get; set; } =
         (name, copy) => $"{name} Copy {copy}";
 
+    /// <summary>
+    /// 평판 <b>프리뷰</b> 스캔의 문구입니다. <c>{0}</c> 이 번호입니다.
+    /// </summary>
+    /// <remarks>
+    /// 프리뷰는 프레임을 찾기 위한 임시 그림이지 사진이 아닙니다. 그런데 사진과 같은
+    /// "사진 N" 으로 불려서 <b>실제 사진과 이름이 겹쳤습니다</b> — 목록에 같은 이름이 둘
+    /// 나오면 어느 것이 원본인지 사용자가 구별할 수 없습니다.
+    /// </remarks>
+    public static Func<int, string> PreviewFormat { get; set; } =
+        number => $"Preview {number}";
+
     /// <summary>이 사진을 화면에 부를 이름입니다.</summary>
     public static string DisplayName(LibraryFrameSnapshot frame)
     {
@@ -52,6 +63,12 @@ public static class LibraryFrameNaming
 
     private static string BaseName(LibraryFrameSnapshot frame)
     {
+        // **프리뷰가 먼저입니다.** 번호를 어디서 얻든 부르는 말이 달라야 합니다 -
+        // 사진과 같은 말로 부르면 목록에서 겹칩니다.
+        if (frame.IsPreviewScan)
+        {
+            return PreviewFormat(PreviewNumber(frame));
+        }
         // 번호를 직접 지정했으면 파일 이름이 무엇이든 그 번호로 부릅니다 — 사용자가 그렇게
         // 정했기 때문입니다.
         if (frame.AssignedPhotoNumber is { } assigned)
@@ -68,6 +85,14 @@ public static class LibraryFrameNaming
             ? NumberFormat(frame.PresentationIndex)
             : frame.SourceFileBaseName ?? Path.GetFileName(frame.SourcePath);
     }
+
+    /// <summary>
+    /// 프리뷰에 붙일 번호입니다. 사진 번호와 **따로** 셉니다 - 같은 수를 쓰면 "프리뷰 3" 과
+    /// "사진 3" 이 나란히 놓여도 서로 다른 것을 가리켜 헷갈립니다. 순번을 모르면 파일
+    /// 이름을 그대로 씁니다.
+    /// </summary>
+    private static int PreviewNumber(LibraryFrameSnapshot frame) =>
+        frame.AssignedPhotoNumber ?? (frame.PresentationIndex > 0 ? frame.PresentationIndex : 1);
 
     /// <summary>
     /// 이름 변경 상자에 처음 넣을 값입니다. macOS <c>editableDisplayName</c> 과 같이, 번호로

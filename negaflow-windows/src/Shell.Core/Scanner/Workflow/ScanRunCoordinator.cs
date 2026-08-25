@@ -136,17 +136,38 @@ internal static class ScanRunCoordinator
                 continue;
             }
 
-            ScannerPluginLibraryScanResult result = await gateway
-                .ScanAndPublishAsync(
-                    plugin,
-                    identity,
-                    request,
-                    library,
-                    initialTransformForIndex(index) ??
-                        (index == 0 ? guidedCarryover?.Transform : null),
-                    false,
-                    cancellationToken)
-                .ConfigureAwait(false);
+            ScannerPluginLibraryScanResult result;
+            try
+            {
+                result = await gateway
+                    .ScanAndPublishAsync(
+                        plugin,
+                        identity,
+                        request,
+                        library,
+                        initialTransformForIndex(index) ??
+                            (index == 0 ? guidedCarryover?.Transform : null),
+                        false,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                stopReason = $"cancelled by the user at index={index}";
+                break;
+            }
+            catch (Exception error)
+            {
+                // **배치가 조용히 사라지지 않게 합니다.** 실기에서 다섯 장을 청한 롤이 첫
+                // 장만 게시하고 두 번째에서 없어졌는데, 파일은 스캔까지 끝났고 게시 줄도
+                // 종료 줄도 남지 않았습니다 - 게시 도중 던진 예외가 여기까지 그대로 올라와
+                // 루프 밖으로 나갔기 때문입니다(워커 스레드에서 XAML 을 건드린 COMException).
+                // 그 자리는 따로 고쳤지만, 어떤 예외든 롤을 통째로 지우지 못하게 막습니다.
+                failureName = error.GetType().Name;
+                stopReason = $"publish threw at index={index}: {error.GetType().Name} {error.Message}";
+                ScannerDiagnosticsLog.Write($"batch {stopReason}");
+                break;
+            }
             lastStatus = result.Status;
             lastScanStatus = result.Scan.Status;
             // IR 결과(`InfraredApplied` / `InfraredSkipped` / `InfraredSourceUnreadable`)는
@@ -156,6 +177,13 @@ internal static class ScanRunCoordinator
                 $"batch frame index={index} scan={result.Scan.Status} " +
                 $"publish={result.Publication?.Status.ToString() ?? "none"} " +
                 $"ir={(result.Publication?.Frame?.InfraredPath is { Length: > 0 } ? "paired" : "none")} " +
+                // **적용 실패 코드를 그대로 남깁니다.** `publish=Published` 하나로는
+                // "IR 이 왜 안 붙었는가" 를 못 가립니다 - `NoDefects` 인지 `SourceMismatch`
+                // 인지 `DetectionFailed` 인지에 따라 다음에 볼 자리가 완전히 다릅니다.
+                $"irApply={result.Publication?.Infrared?.Status.ToString() ?? "none"} " +
+                $"irRecipe={(result.Publication?.Infrared?.Recipe is null ? "none" : "written")} " +
+                $"irSidecar={result.Publication?.Infrared?.SidecarError.ToString() ?? "none"} " +
+                $"irCatalog={result.Publication?.Infrared?.CatalogError.ToString() ?? "none"} " +
                 $"-> {result.Publication?.Frame?.Id ?? "none"}");
             if (!result.IsSuccess)
             {

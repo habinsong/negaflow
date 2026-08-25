@@ -450,6 +450,33 @@ public sealed partial class LibraryHostService : IDisposable
         LibraryDefectHistoryMode historyMode = LibraryDefectHistoryMode.PreservingInfrared)
         => LibraryDefectEditor.AppendStroke(document, frameId, build, historyMode);
 
-    private void SelectSingleFrame(string frameId) => SetSelection([frameId], frameId);
+    /// <summary>
+    /// 스캐너가 사진을 게시한 뒤 그 사진을 고릅니다. <b>UI 스레드로 넘겨서</b> 부릅니다.
+    /// </summary>
+    /// <remarks>
+    /// 배치 스캔은 <b>워커 스레드</b>에서 돕니다. 거기서 곧바로 선택을 옮기면
+    /// <c>SelectionChanged</c> 구독자들이 그 스레드에서 XAML 을 건드리고, WinUI 가
+    /// <c>COMException</c> 을 던집니다. 그 예외는 <c>ScannerFramePublisher.Publish</c> 밖으로
+    /// 그대로 올라가 <b>배치를 통째로 끊었습니다</b> — 실기 기록에 그 스택이 남아 있습니다:
+    /// <code>
+    /// ScannerFramePublisher.Publish -> LibraryHostService.SelectSingleFrame -> SetSelection
+    ///   -> WorkspaceShellView.OnLibrarySelectionChanged -> SetActiveFrame
+    ///   -> WorkspaceToolbarView.UpdateState        (여기서 XAML)
+    /// </code>
+    /// 프레임 다섯 장을 청한 배치가 첫 장만 게시하고 두 번째에서 사라졌습니다 — 두 번째
+    /// 파일은 스캔까지 끝났는데 게시 줄도 종료 줄도 남지 않았습니다.
+    ///
+    /// 선택을 옮기는 것은 화면 일이므로 UI 스레드에 넣습니다. 큐가 이미 닫혔으면 넣지
+    /// 못하는데(창이 닫히는 중), 그때는 선택을 옮길 화면도 없으므로 그냥 넘어갑니다.
+    /// </remarks>
+    private void SelectSingleFrame(string frameId)
+    {
+        if (dispatcher.HasThreadAccess)
+        {
+            SetSelection([frameId], frameId);
+            return;
+        }
+        _ = dispatcher.TryEnqueue(() => SetSelection([frameId], frameId));
+    }
 
 }
