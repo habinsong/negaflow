@@ -188,12 +188,12 @@ public sealed partial class ThumbnailService
     /// </remarks>
     private void SyncDisplayCacheBudget()
     {
+        Negaflow.Shell.Diagnostics.MemoryBudgetLog.Sample("developed");
         if (Negaflow.Interop.DisplayCacheBudgetBridge.Sync(DevelopedResidentBytes())
             is not { } budget)
         {
             return;
         }
-        Negaflow.Shell.Diagnostics.MemoryBudgetLog.Sample("developed");
         long allowed = budget > long.MaxValue ? long.MaxValue : (long)budget;
         if (allowed <= 0L || allowed == developedByteLimit)
         {

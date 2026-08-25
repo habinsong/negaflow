@@ -154,6 +154,9 @@ public sealed partial class ThumbnailService : IAsyncDisposable
             return;
         }
         string frameId = frame.Id;
+        // 예산이 어떻게 도는지 남깁니다. 표시 파일이 없으면 아무 일도 하지 않고, 있어도
+        // 초당 한 줄입니다 - 현상본 등록만으로는 라이브러리뷰에서 한 줄도 안 남았습니다.
+        Diagnostics.MemoryBudgetLog.Sample("thumbnail");
         Task job = Task.Run(() => ProduceAsync(frame));
         if (!inFlight.TryAdd(frameId, job))
         {
