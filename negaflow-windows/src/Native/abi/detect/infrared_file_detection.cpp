@@ -380,8 +380,14 @@ negaflow::imaging::InfraredDetectionResult detect_infrared_defects_from_files(
                 visible_height = direct.height;
             } else if (direct.status ==
                        WorkingRedDecodeStatus::requires_full_working_conversion) {
+                // 위 fast path 시도가 `begin` 에서 빠지기 전에 이미 같은 파일의 압축 stream 을
+                // ADR-0011 대로 전수 검증했습니다. 여기서 또 하면 compression=5 파일에서 LZW
+                // 전수 walk 를 두 번 합니다 — 실제 `GT-X900_frame_17`(LZW·492스트립·RGBA·ICC)
+                // 에서 회당 약 371ms 입니다. 검증은 그대로 한 번 하고, 중복만 없앱니다.
+                auto full_control = visible_control;
+                full_control.validate_compressed_streams = false;
                 const auto visible = negaflow::imaging::decode_scanner_tiff_to_working_rows(
-                    visible_path, {}, {}, visible_control);
+                    visible_path, {}, {}, full_control);
                 if (visible.decode.status != negaflow::imageio::WicTiffDecodeStatus::ok ||
                     visible.working.status != negaflow::imaging::ScannerToWorkingStatus::ok ||
                     !extract_working_red(
