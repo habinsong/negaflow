@@ -29,6 +29,7 @@ internal static class ScanRunCoordinator
         Func<int, ImageTransformRecipe?> initialTransformForIndex,
         GrainMendGuidedCarryover? guidedCarryover,
         Action<string, GrainMendGuidedCarryover>? guidedCarryoverPublished,
+        Action<int>? framePublished,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(initialTransformForIndex);
@@ -39,16 +40,31 @@ internal static class ScanRunCoordinator
         ScannerPluginScanArea? previewScanArea = null;
         ScannerPluginLibraryScanStatus? lastStatus = null;
         ScannerPluginScanStatus? lastScanStatus = null;
+        // 배치가 **왜** 끝났는지를 남깁니다. 앞 판은 프레임 셋 중 마지막 한 장이 스캔되지
+        // 않는데 실패 기록이 한 줄도 없었습니다 - 플러그인을 부르기 전에 멈추면 아무도
+        // 아무 것도 적지 않았기 때문입니다. 그러면 추측밖에 할 수 없습니다.
+        ScannerDiagnosticsLog.Write(
+            $"batch start preview={preview} requested={requested}");
+        string stopReason = "completed";
         for (int index = 0; index < requested; ++index)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                stopReason = $"cancelled at index={index}";
+                ScannerDiagnosticsLog.Write($"batch {stopReason}");
+            }
             cancellationToken.ThrowIfCancellationRequested();
             if (buildRequest(preview, destinationForIndex(index), index) is not { } request)
             {
+                stopReason = $"no request at index={index} (device or capabilities missing)";
                 break;
             }
             (InstalledScannerPlugin? plugin, ScannerPluginTrustIdentity? identity) = approvedPlugin();
             if (plugin is null || identity is null)
             {
+                stopReason =
+                    $"no approved plugin at index={index} " +
+                    $"(plugin={plugin is not null} identity={identity is not null})";
                 break;
             }
             if (preview)
@@ -71,12 +87,14 @@ internal static class ScanRunCoordinator
                 if (!scanned.IsSuccess)
                 {
                     failureName = scanned.Status.ToString();
+                    stopReason = $"preview scan failed at index={index}: {failureName}";
                     break;
                 }
                 previewPath = scanned.ArtifactCommit?.Artifacts?.VisiblePath;
                 if (previewPath is null)
                 {
                     failureName = ScannerPluginScanStatus.ArtifactCommitFailed.ToString();
+                    stopReason = $"preview artifact missing at index={index}";
                     break;
                 }
                 ScannerFramePublishResult previewPublished = library.PublishScannerPreviewFrame(
@@ -88,6 +106,7 @@ internal static class ScanRunCoordinator
                 if (previewPublished.Frame is not { } previewFrame)
                 {
                     failureName = previewPublished.Status.ToString();
+                    stopReason = $"preview publish refused at index={index}: {failureName}";
                     break;
                 }
                 previewFrameId = previewFrame.Id;
@@ -109,11 +128,20 @@ internal static class ScanRunCoordinator
                 .ConfigureAwait(false);
             lastStatus = result.Status;
             lastScanStatus = result.Scan.Status;
+            // IR 결과(`InfraredApplied` / `InfraredSkipped` / `InfraredSourceUnreadable`)는
+            // `PublicationStatus` 가 전부 `Published` 로 뭉개므로 어디에도 안 남았습니다.
+            // IR 을 켜 놓고도 적용이 안 되는 것을 화면에서 가릴 방법이 없었습니다.
+            ScannerDiagnosticsLog.Write(
+                $"batch frame index={index} scan={result.Scan.Status} " +
+                $"publish={result.Publication?.Status.ToString() ?? "none"} " +
+                $"ir={(result.Publication?.Frame?.InfraredPath is { Length: > 0 } ? "paired" : "none")} " +
+                $"-> {result.Publication?.Frame?.Id ?? "none"}");
             if (!result.IsSuccess)
             {
                 failureName = result.Scan.Status == ScannerPluginScanStatus.Completed
                     ? result.Status.ToString()
                     : result.Scan.Status.ToString();
+                stopReason = $"scan failed at index={index}: {failureName}";
                 break;
             }
             if (index == 0 && guidedCarryover is not null &&
@@ -122,8 +150,14 @@ internal static class ScanRunCoordinator
                 guidedCarryoverPublished?.Invoke(publishedFrame.Id, guidedCarryover);
             }
             ++published;
+            // **한 쌍이 끝날 때마다** 알립니다. 배치가 다 끝난 뒤에 한 번만 알리면, 프레임
+            // 세 장짜리 롤에서 마지막 장이 끝날 때까지 아무 것도 안 보입니다 - macOS 는
+            // 스캔한 장이 나오는 대로 보여 줍니다.
+            framePublished?.Invoke(published);
         }
 
+        ScannerDiagnosticsLog.Write(
+            $"batch end published={published}/{requested} reason={stopReason}");
         return new ScanRunExecution(
             new ScanRunOutcome(requested, published, lastStatus, lastScanStatus),
             failureName,

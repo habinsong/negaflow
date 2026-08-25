@@ -76,7 +76,11 @@ internal sealed class LibraryScanRunner
                 view.libraryHost,
                 _ => ScanStorageLayout.NextAvailablePath(directory, stem),
                 preview,
-                cancellation.Token);
+                cancellation.Token,
+                // 한 쌍이 끝날 때마다 화면을 갱신합니다. 앞 판은 배치가 **다 끝난 뒤에만**
+                // 새로 고쳐서, 프레임 세 장짜리 롤이면 마지막 장이 끝날 때까지 아무 것도
+                // 안 보였습니다 - IR 쌍은 한 장에 2분씩 걸립니다.
+                framePublished: _ => RequestReloadOnUiThread());
         }
         catch (OperationCanceledException)
         {
@@ -114,6 +118,25 @@ internal sealed class LibraryScanRunner
             return;
         }
         view.RequestLibraryReload();
+    }
+
+    /// <summary>
+    /// <b>UI 스레드로 넘겨서</b> 새로 고칩니다.
+    /// </summary>
+    /// <remarks>
+    /// 본 스캔 경로는 `ConfigureAwait(false)` 로 워커에서 이어집니다. 거기서 곧바로
+    /// <c>LibraryChanged</c> 를 올리면 그 처리기가 XAML 속성을 건드리고, WinUI 가
+    /// <c>COMException</c>(RPC_E_WRONG_THREAD)을 던져 배치가 통째로 끊깁니다 - 평판
+    /// 오버레이에서 실제로 겪은 고장입니다(§22.1).
+    /// </remarks>
+    private void RequestReloadOnUiThread()
+    {
+        if (view.DispatcherQueue is not { } queue || queue.HasThreadAccess)
+        {
+            view.RequestLibraryReload();
+            return;
+        }
+        _ = queue.TryEnqueue(view.RequestLibraryReload);
     }
 
     /// <summary>

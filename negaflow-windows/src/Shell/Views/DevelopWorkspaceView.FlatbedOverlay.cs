@@ -93,6 +93,21 @@ public sealed partial class DevelopWorkspaceView
         RequestFlatbedOverlaySync();
     }
 
+    /// <summary>
+    /// 보고 있는 사진이 바뀌었습니다. 사각형을 다시 판정합니다.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="ActiveFlatbedPreviewFrame"/> 는 "지금 보는 사진이 이 세션의 프리뷰인가" 를
+    /// 봅니다. 그런데 그 판정을 **스캔 세션이 바뀔 때만** 다시 했기 때문에, 사진을 넘겨도
+    /// 오버레이가 그대로 남아 다른 사진 위에 옛 사각형이 그려졌습니다.
+    /// </remarks>
+    private void OnLibrarySelectionChangedForFlatbed(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        RequestFlatbedOverlaySync();
+    }
+
     private void RequestFlatbedOverlaySync()
     {
         if (DispatcherQueue is null || DispatcherQueue.HasThreadAccess)

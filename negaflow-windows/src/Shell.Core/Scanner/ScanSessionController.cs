@@ -407,7 +407,8 @@ public sealed class ScanSessionController
         LibraryHostService library,
         Func<int, string> destinationForIndex,
         bool preview,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action<int>? framePublished = null)
     {
         ArgumentNullException.ThrowIfNull(library);
         ArgumentNullException.ThrowIfNull(destinationForIndex);
@@ -438,6 +439,7 @@ public sealed class ScanSessionController
                 index => InitialTransformForRegion(index, library),
                 guidedCarryover,
                 GuidedCarryoverPublished,
+                framePublished,
                 cancellationToken).ConfigureAwait(false);
             LastFailureName = execution.FailureName;
             if (execution.PreviewPath is not null)

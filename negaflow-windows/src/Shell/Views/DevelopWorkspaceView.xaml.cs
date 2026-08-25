@@ -203,11 +203,15 @@ public sealed partial class DevelopWorkspaceView : UserControl
         if (libraryHost is not null)
         {
             libraryHost.SelectionChanged -= frames.OnLibrarySelectionChanged;
+            libraryHost.SelectionChanged -= OnLibrarySelectionChangedForFlatbed;
             libraryHost.InfraredCleanStatusChanged -= OnInfraredCleanStatusChanged;
         }
         libraryHost = host;
         // 격자에서 고른 장수가 바뀌면 내보내기 단추의 이름도 따라갑니다.
         host.SelectionChanged += frames.OnLibrarySelectionChanged;
+        // 평판 프레임 사각형은 **그 프리뷰 사진에서만** 보여야 합니다. 사진을 넘길 때
+        // 다시 판정하지 않으면 옛 사각형이 다음 사진 위에 그대로 남습니다.
+        host.SelectionChanged += OnLibrarySelectionChangedForFlatbed;
         host.InfraredCleanStatusChanged += OnInfraredCleanStatusChanged;
         panel = new DevelopPanelState(host, limits, negativeLimits);
         PreviewCanvas.AttachViewport(panel.Viewport);
