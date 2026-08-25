@@ -237,6 +237,18 @@ public sealed partial class FilmstripView : UserControl
         }
     }
 
+    /// <summary>
+    /// 지금 스트립에서 밝게 잡혀 있는 사진들입니다.
+    /// </summary>
+    /// <remarks>
+    /// 스트립은 <c>SelectionMode="Extended"</c> 라 Shift·Ctrl 다중 선택을 컨트롤이 직접
+    /// 합니다. 그런데 현상뷰는 클릭을 받아 <b>한 장짜리 선택을 다시 발행</b>해서 매번 접혔고,
+    /// Ctrl 로 여러 장을 담을 수 없었습니다(인화뷰는 다중 목록을 발행해 되고 있었습니다).
+    /// 부르는 쪽이 컨트롤이 실제로 잡은 것을 그대로 읽을 수 있게 엽니다.
+    /// </remarks>
+    public IReadOnlyList<string> SelectedFrameIds =>
+        [.. FrameStrip.SelectedItems.OfType<LibraryFrameListItem>().Select(item => item.Id)];
+
     private void OnFrameItemClick(object sender, ItemClickEventArgs args)
     {
         _ = sender;

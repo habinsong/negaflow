@@ -270,6 +270,18 @@ internal sealed class DevelopFrameList
         view.PreviewCanvas.RefreshCompare();
     }
 
+    /// <summary>
+    /// 이 클릭으로 발행할 선택입니다. 스트립이 여러 장을 잡고 있고 그 안에 이 사진이 있으면
+    /// 그 목록 그대로, 아니면 이 사진 하나입니다.
+    /// </summary>
+    private IReadOnlyList<string> SelectionIdsFor(LibraryFrameListItem item)
+    {
+        IReadOnlyList<string> shown = view.Filmstrip.SelectedFrameIds;
+        return shown.Count > 1 && shown.Contains(item.Id, StringComparer.Ordinal)
+            ? shown
+            : [item.Id];
+    }
+
     private void Activate(
         LibraryFrameListItem item,
         int selectedIndex,
@@ -283,13 +295,25 @@ internal sealed class DevelopFrameList
         view.cropSession.Cancel();
         if (publishSelection)
         {
-            view.libraryHost?.SetSelection([item.Id], item.Id);
+            // **스트립이 실제로 잡은 것을 그대로 발행합니다.** 앞 판은 언제나 한 장짜리
+            // 목록을 발행해서, Ctrl 로 여러 장을 골라도 매번 한 장으로 접혔습니다 -
+            // 그래서 현상뷰에서는 배치 내보내기를 시작할 수가 없었습니다(인화뷰는 다중
+            // 목록을 발행해 되고 있었습니다).
+            view.libraryHost?.SetSelection(SelectionIdsFor(item), item.Id);
         }
         if (!view.panel.Select(item.Id))
         {
             return;
         }
-        view.Filmstrip.SynchronizeSelection(selectedIndex);
+        _ = selectedIndex;
+        // 여러 장을 고른 채로 두려면 **번호 하나가 아니라 목록**으로 맞춰야 합니다.
+        // `SynchronizeSelection(int)` 는 `SelectedIndex` 를 넣어 선택을 하나로 접습니다.
+        view.Filmstrip.SynchronizeSelection(
+            view.libraryHost?.SelectedFrames
+                .Where(frame => !frame.IsPreviewScan)
+                .Select(frame => frame.Id)
+                .ToArray() ?? [item.Id],
+            item.Id);
         view.LeftPanel.SetHeaderTitle(item.DisplayName);
         UpdateSelectedFrameText();
         RebindPerFrameCanvasTools();
