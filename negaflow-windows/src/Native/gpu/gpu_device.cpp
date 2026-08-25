@@ -3,6 +3,7 @@
 #include <d3d11.h>
 #include <dxgi1_6.h>
 
+#include <cstdlib>
 #include <cstring>
 #include <string>
 
@@ -151,6 +152,49 @@ struct CreatedDevice final {
     return adapter3;
 }
 
+// `NEGA_GPU_ADAPTER` 는 **검증 도구**입니다. 제품 기본 경로는 여전히 "쓸 수 있는 첫 어댑터"
+// 이지만, GPU 가 여러 개 꽂힌 기계에서 각각을 따로 증명하려면 고를 수 있어야 합니다. 값은
+// 열거 인덱스(`0`,`1`,…)이거나 어댑터 이름의 부분 문자열(대소문자 무시, 예: `intel`,`amd`,
+// `arc`,`nvidia`)입니다. 맞는 어댑터가 없으면 하드웨어를 열지 않으므로 WARP 로 떨어지고,
+// 시험이 찍는 어댑터 이름으로 그 사실이 그대로 드러납니다.
+//
+// 이것으로 §19.1 ③ 이 코드 수정 없이 풀립니다 — 그 기계에서 어댑터마다 한 줄씩 돌리면 됩니다.
+[[nodiscard]] bool adapter_selector(std::string& selector) noexcept {
+    std::size_t length = 0U;
+    char value[160]{};
+    if (::getenv_s(&length, value, sizeof(value), "NEGA_GPU_ADAPTER") != 0 || length == 0U) {
+        return false;
+    }
+    selector.assign(value);
+    return !selector.empty();
+}
+
+[[nodiscard]] bool matches_selector(
+    const std::string& selector,
+    const UINT index,
+    IDXGIAdapter1* adapter) noexcept {
+    if (selector.find_first_not_of("0123456789") == std::string::npos) {
+        return selector == std::to_string(index);
+    }
+    DXGI_ADAPTER_DESC1 description{};
+    if (adapter == nullptr || FAILED(adapter->GetDesc1(&description))) {
+        return false;
+    }
+    std::array<char, 160> name{};
+    copy_description(description.Description, name);
+    std::string lowered{name.data()};
+    std::string wanted{selector};
+    const auto fold = [](std::string& text) noexcept {
+        for (char& letter : text) {
+            letter = static_cast<char>(
+                letter >= 'A' && letter <= 'Z' ? letter - 'A' + 'a' : letter);
+        }
+    };
+    fold(lowered);
+    fold(wanted);
+    return lowered.find(wanted) != std::string::npos;
+}
+
 // DXGI 어댑터를 훑습니다. `IDXGIFactory6` 가 있으면 OS 의 고성능 선호 순서를 그대로 받고,
 // 없으면 열거 순서를 씁니다. **어느 경로에서도 벤더로 거르지 않습니다.**
 [[nodiscard]] bool create_hardware(CreatedDevice& created, GpuAdapterInfo& info) noexcept {
@@ -162,6 +206,8 @@ struct CreatedDevice final {
     IDXGIFactory6* factory6 = nullptr;
     (void)factory1->QueryInterface(__uuidof(IDXGIFactory6), reinterpret_cast<void**>(&factory6));
 
+    std::string selector{};
+    const bool selecting = adapter_selector(selector);
     bool made = false;
     for (UINT index = 0U; !made; ++index) {
         IDXGIAdapter1* adapter = nullptr;
@@ -178,7 +224,9 @@ struct CreatedDevice final {
         if (enumerated == DXGI_ERROR_NOT_FOUND || FAILED(enumerated) || adapter == nullptr) {
             break;
         }
-        if (!is_software_adapter(adapter) && create_on(adapter, D3D_DRIVER_TYPE_HARDWARE, created)) {
+        if ((!selecting || matches_selector(selector, index, adapter)) &&
+            !is_software_adapter(adapter) &&
+            create_on(adapter, D3D_DRIVER_TYPE_HARDWARE, created)) {
             info = describe(adapter);
             made = true;
         }
