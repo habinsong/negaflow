@@ -188,9 +188,11 @@ public static class PrintSheetWriter
         DevelopExportFormat format)
     {
         string extension = PrintSheetEncoder.ExtensionFor(format);
-        return Path.Combine(
+        // 이미 있는 파일이면 빈 이름을 찾습니다. 엔진은 덮지 않으므로(`destination_exists`),
+        // 같은 인화 시트를 두 번째로 내보내면 언제나 실패했습니다.
+        return Negaflow.Shell.Develop.ExportBatchCoordinator.UniquePath(Path.Combine(
             folder,
-            count > 1 ? $"{baseName}-{index + 1}{extension}" : $"{baseName}{extension}");
+            count > 1 ? $"{baseName}-{index + 1}{extension}" : $"{baseName}{extension}"));
     }
 
     /// <summary>

@@ -103,6 +103,18 @@ public sealed class ExportBatchCoordinator
         return plans;
     }
 
+    /// <summary>
+    /// 이미 있는 파일을 덮지 않도록 빈 이름을 찾습니다.
+    /// </summary>
+    /// <remarks>
+    /// <b>한 장 내보내기도 이것을 씁니다.</b> 앞 판은 배치만 이 자리를 지나고 한 장은
+    /// <c>ExportDestination.PathFor</c> 를 그대로 썼습니다. 엔진은 이미 있는 파일을 덮지
+    /// 않으므로(`atomic_output_file.cpp`: <c>destination_exists</c>), 같은 사진을 두 번째로
+    /// 내보내면 <b>언제나</b> 실패했습니다 — 화면에는 "Develop stopped at writing the file:
+    /// destination_exists" 만 떴고, 사용자가 할 수 있는 일이 없었습니다.
+    /// </remarks>
+    public static string UniquePath(string path) => Unique(path, []);
+
     private static string Unique(string path, HashSet<string> taken)
     {
         string directory = Path.GetDirectoryName(path) ?? string.Empty;

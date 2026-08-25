@@ -63,6 +63,8 @@ internal static class Program
         GpuCacheSettingsTests.Run();
         FrameCacheEngineLimitsTests.Run();
         DevelopRequestStaleDefectSourceTests.Run();
+        ScannerFlatbedBatchTests.Run();
+        ExportUniqueDestinationTests.Run();
         PreviewOrderingTests.Run();
         DevelopMetadataTests.Run();
         DevelopMenuStateTests.Run();

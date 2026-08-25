@@ -130,9 +130,12 @@ internal sealed class DevelopExportRunner
                 await RunExportBatchAsync(selection);
                 return;
             }
-            string exportedPath = view.exportSettings.Destination.PathFor(
-                frame.SourcePath,
-                view.sync.NamingContextFor(frame));
+            // 이미 있는 파일이면 빈 이름을 찾습니다. 배치는 이 자리를 지나는데 한 장은
+            // 지나지 않아, 같은 사진을 두 번째로 내보내면 언제나 `destination_exists` 였습니다.
+            string exportedPath = Negaflow.Shell.Develop.ExportBatchCoordinator.UniquePath(
+                view.exportSettings.Destination.PathFor(
+                    frame.SourcePath,
+                    view.sync.NamingContextFor(frame)));
             _ = await view.panel.ExportAsync(
                 exportedPath,
                 view.exportSettings.Format,
@@ -203,7 +206,8 @@ internal sealed class DevelopExportRunner
                 return;
             }
             _ = await view.panel.ExportAsync(
-                view.quickExportSettings.Destination.PathFor(frame.SourcePath),
+                Negaflow.Shell.Develop.ExportBatchCoordinator.UniquePath(
+                    view.quickExportSettings.Destination.PathFor(frame.SourcePath)),
                 view.quickExportSettings.Format,
                 outcome => view.SetOutputStatus(DevelopPanelState.Describe(outcome)),
                 view.quickExportSettings.Encoding);

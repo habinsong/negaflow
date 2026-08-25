@@ -277,6 +277,10 @@ internal static class ScannerWorkflowTests
     /// 합성 TIFF 의 첫 IFD 만 읽습니다. 관리 코드로 충분한 이유는 이 시험이 확인하려는 것이
     /// 디코더가 아니라 스캔→커밋→게시의 연결이기 때문입니다.
     /// </summary>
+    /// <summary>같은 TIFF 머리글 읽기를 다른 스캐너 시험도 씁니다.</summary>
+    internal static LibrarySourceMetadata? ReadTiffHeaderForTests(string path) =>
+        ReadTiffHeader(path);
+
     private static LibrarySourceMetadata? ReadTiffHeader(string path)
     {
         using FileStream stream = File.OpenRead(path);
@@ -312,7 +316,7 @@ internal static class ScannerWorkflowTests
     }
 
     /// <summary>이 시험은 현상을 부르지 않습니다. 불리면 그것 자체가 실패입니다.</summary>
-    private sealed class ThrowingDevelopExporter : IDevelopExporter
+    internal sealed class ThrowingDevelopExporter : IDevelopExporter
     {
         public DevelopExportResult Run(DevelopExportRequest request) =>
             throw new NotSupportedException();
