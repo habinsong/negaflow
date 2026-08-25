@@ -4,7 +4,8 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Negaflow.Shell.Views.Develop.Canvas"
-    xmlns:grainmend="using:Negaflow.Shell.Views.Develop.GrainMend">
+    xmlns:grainmend="using:Negaflow.Shell.Views.Develop.GrainMend"
+    xmlns:scanner="using:Negaflow.Shell.Views.Library.Scanner">
     <!-- 확대한 사진이 위 막대와 왼쪽 패널 위로 뚫고 나가지 않게 잘라 냅니다. WinUI 에는
          ClipToBounds 가 없어 크기가 바뀔 때마다 Clip 사각형을 다시 잡습니다
          (OnCanvasSizeChanged). 이것이 없어서 확대하면 사진이 창 전체를 덮었습니다. -->
@@ -120,6 +121,16 @@
         AutomationProperties.AutomationId="negaflow.canvas.defect-overlay"
         IsHitTestVisible="False"
         Stretch="Fill"
+        Visibility="Collapsed" />
+
+    <!-- macOS `CanvasView` 는 평판 프리뷰 프레임 사각형을 **이 캔버스 위에** 얹습니다:
+         `if frame.isPreviewScan, flatbedPreviewFrameID == frame.id, usesFlatbedRegionWorkflow,
+          !cropMode, !brushMode, ... { FlatbedScanAreaOverlay(frame:imageFrame:) }`.
+         사진은 캔버스가 그리므로 오버레이는 자기 그림을 그리지 않고 자리만 받습니다
+         (`UseExternalImage`). 이것이 없어서 현상뷰에서 프리뷰를 스캔하면 "선택: 18" 이라고
+         적히는데 사각형은 어디에도 안 그려졌습니다. -->
+    <scanner:FlatbedScanAreaOverlay
+        x:Name="FlatbedOverlay" x:FieldModifier="internal"
         Visibility="Collapsed" />
 
     <!-- macOS `basePickerOverlay` — 스포이드 모드일 때 사진 위에 안내 캡슐을 띄웁니다.

@@ -389,6 +389,16 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         CompareHud.Refresh();
     }
 
+    /// <summary>평판 오버레이에 캔버스가 지금 그리는 사진 자리를 넘깁니다.</summary>
+    internal void RefreshFlatbedOverlayFrame()
+    {
+        if (TryGetPreviewFrame(out PreviewFrame frame))
+        {
+            FlatbedOverlay.SetExternalImageFrame(
+                frame.Left, frame.Top, frame.Width, frame.Height);
+        }
+    }
+
     public void RenderCropOverlay(bool refreshFrame = false)
     {
         if (crop is null)
@@ -524,6 +534,13 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         PositionSurface(DefectOverlayImage, frame);
         ApplyCompareLayout(frame);
         ApplyHudLayout();
+        // 평판 프레임 사각형도 같은 자리에 얹힙니다. macOS 는 `imageLayer` 와
+        // `FlatbedScanAreaOverlay` 에 같은 `imageFrame` 을 넘깁니다.
+        if (FlatbedOverlay.Visibility == Visibility.Visible)
+        {
+            FlatbedOverlay.SetExternalImageFrame(
+                frame.Left, frame.Top, frame.Width, frame.Height);
+        }
         // 크롭도 **같은 프레임**을 써야 합니다. macOS 는 `canvasFittedImageFrame(..., scale:
         // viewport.scale, offset: viewport.offset)` 하나를 `imageLayer` 와 `CropOverlay` 에
         // 똑같이 넘깁니다(`CanvasView.swift`). Windows 는 여기서 사진만 다시 놓고 크롭은

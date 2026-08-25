@@ -50,6 +50,27 @@ public sealed partial class FlatbedScanAreaOverlay : UserControl
     /// <summary>그림이 실제로 그려진 자리입니다. 프레임 비율을 여기에 폅니다.</summary>
     internal FlatbedOverlayRect ImageFrame { get; private set; }
 
+    private FlatbedOverlayRect? externalImageFrame;
+
+    /// <summary>
+    /// 사진을 <b>바깥이 그리는</b> 자리에 얹습니다. 현상 캔버스가 줌·팬까지 넣어 계산한
+    /// 프레임을 그대로 받아 씁니다. 이 판에서는 자기 그림을 그리지 않습니다.
+    /// </summary>
+    internal void UseExternalImage()
+    {
+        PreviewImage.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+        drawsOwnImage = false;
+    }
+
+    /// <summary>바깥이 그린 사진의 자리입니다. 줌·팬이 바뀔 때마다 부릅니다.</summary>
+    internal void SetExternalImageFrame(double left, double top, double width, double height)
+    {
+        externalImageFrame = new FlatbedOverlayRect(left, top, width, height);
+        LayoutRegions();
+    }
+
+    private bool drawsOwnImage = true;
+
     public void Attach(
         ScanSessionController controller,
         LibraryFrameSnapshot? frame,
@@ -82,6 +103,12 @@ public sealed partial class FlatbedScanAreaOverlay : UserControl
             return;
         }
 
+        if (!drawsOwnImage)
+        {
+            // 사진은 캔버스가 그립니다. 프레임만 다시 폅니다.
+            LayoutRegions();
+            return;
+        }
         if (TryPresentDeveloped())
         {
             LayoutRegions();

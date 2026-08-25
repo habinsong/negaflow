@@ -271,6 +271,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     public void AttachScanSessionHost(Views.Library.Scanner.ScanSessionHost host)
     {
         LeftPanel.AttachScanSessionHost(host);
+        AttachFlatbedOverlay(host);
         host.BindGrainMendCarryover(
             GrainMendPanel.CaptureScannerPreviewCarryover,
             QueueScannerGuidedCarryover);

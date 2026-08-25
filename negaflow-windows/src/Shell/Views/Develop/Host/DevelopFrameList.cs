@@ -84,6 +84,8 @@ internal sealed class DevelopFrameList
         // 항목의 `Thumbnail` 은 영원히 null 로 남습니다 — 폴더 일괄 적용이 모든 프레임을
         // 캐시에 넣은 직후 필름스트립이 통째로 비던 원인이 이것입니다.
         _ = LibraryThumbnailBinder.Hydrate(view.thumbnails, items, "develop");
+        // 고른 사진이 평판 프리뷰면 그 위에 프레임 사각형이 서야 합니다.
+        view.SyncFlatbedOverlay();
     }
 
     /// <summary>

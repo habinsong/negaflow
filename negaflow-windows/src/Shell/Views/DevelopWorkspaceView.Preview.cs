@@ -296,6 +296,8 @@ public sealed partial class DevelopWorkspaceView
         // 새 미리보기(특히 90도 회전)는 크롭도 따라가야 합니다. 이후 줌·팬 동안에는
         // 이 프레임을 고정해 표시와 히트테스트가 같은 좌표계를 쓰게 합니다.
         PreviewCanvas.RenderCropOverlay(refreshFrame: true);
+        // 평판 프리뷰를 보고 있으면 프레임 사각형도 새 그림 위에 다시 폅니다.
+        SyncFlatbedOverlay();
         PreviewCanvas.RefreshCompare();
         if (compareBeforeNeeded && !PreviewCanvas.HasCompareBefore)
         {

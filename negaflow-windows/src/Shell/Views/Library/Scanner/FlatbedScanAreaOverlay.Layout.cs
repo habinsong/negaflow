@@ -33,7 +33,10 @@ public sealed partial class FlatbedScanAreaOverlay
     /// </summary>
     private void LayoutRegions()
     {
-        ImageFrame = FlatbedOverlayGeometry.FittedImageFrame(
+        // 현상 캔버스에 얹을 때는 사진을 캔버스가 그립니다. 줌·팬이 이미 들어간 그 자리를
+        // 그대로 받아야 프레임이 사진을 따라갑니다 - macOS 도 `canvasFittedImageFrame` 하나를
+        // `imageLayer` 와 `FlatbedScanAreaOverlay` 에 똑같이 넘깁니다(`CanvasView.swift`).
+        ImageFrame = externalImageFrame ?? FlatbedOverlayGeometry.FittedImageFrame(
             imagePixelWidth,
             imagePixelHeight,
             Host.ActualWidth,
