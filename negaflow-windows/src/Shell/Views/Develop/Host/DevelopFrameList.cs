@@ -109,19 +109,26 @@ internal sealed class DevelopFrameList
 
     internal void OnThumbnailReady(string frameId)
     {
-        if (view.FrameSelector.ItemsSource is not IReadOnlyList<LibraryFrameListItem> current ||
-            view.thumbnails?.TryGet(frameId) is not { } jpeg)
+        if (view.thumbnails?.TryGet(frameId) is not { } jpeg)
         {
             return;
         }
-        foreach (LibraryFrameListItem item in current)
+        Microsoft.UI.Xaml.Media.ImageSource? decoded =
+            LibraryWorkspaceView.DecodeThumbnail(jpeg);
+        if (view.FrameSelector.ItemsSource is IReadOnlyList<LibraryFrameListItem> current)
         {
-            if (string.Equals(item.Id, frameId, StringComparison.Ordinal))
+            foreach (LibraryFrameListItem item in current)
             {
-                item.Thumbnail = LibraryWorkspaceView.DecodeThumbnail(jpeg);
-                return;
+                if (string.Equals(item.Id, frameId, StringComparison.Ordinal))
+                {
+                    item.Thumbnail = decoded;
+                    break;
+                }
             }
         }
+        // 하단 스트립은 목록을 다시 지어도 **예전 항목 객체**를 붙들고 있습니다. 위에서
+        // 새 객체만 갱신하면 스트립은 비어 있는 채로 남습니다.
+        view.Filmstrip.ApplyThumbnail(frameId, decoded);
     }
 
     internal void OnLibrarySelectionChanged(object? sender, EventArgs args)

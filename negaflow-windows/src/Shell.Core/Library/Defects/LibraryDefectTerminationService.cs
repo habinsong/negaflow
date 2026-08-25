@@ -53,6 +53,7 @@ internal sealed class LibraryDefectTerminationService(
             .Where(frame => !frame.IsPreviewScan && frame.DefectRecipe is not null)
             .Select(frame => frame.Id)
             .ToArray();
+        List<string> skippedSourceMismatch = [];
         foreach (string frameId in frameIds)
         {
             LibraryFrameSnapshot? frame = document.Frames.FirstOrDefault(candidate =>
@@ -126,6 +127,29 @@ internal sealed class LibraryDefectTerminationService(
             if (!staged.IsSuccess)
             {
                 LibraryDefectBakeFiles.DeleteStaging(stagingPath);
+                // 원본이 recipe 가 적어 둔 그 파일이 아니면 **이 사진만 건너뜁니다.**
+                // 종료를 막지 않고, recipe 도 지우지 않습니다.
+                //
+                // 스캐너 TIFF 는 제자리에 굽습니다. 그래서 굽기가 원본을 갈아 끼운 뒤 뒷단계가
+                // 실패하면 파일은 이미 구워졌고 recipe 는 남습니다. 그 다음부터는 기대 크기와
+                // 실제 크기가 영원히 어긋나고, 여기서 실패를 돌리면 **앱을 다시는 닫을 수
+                // 없습니다** - 실기에서 사용자가 종료할 때마다 대화상자를 봤습니다
+                // (OpticFilm8100-0002.tif: 기대 109,181,328 실제 109,216,380).
+                //
+                // macOS 에는 이 관문 자체가 없습니다(`AppModel+DefectBakeOnQuit.swift` 는
+                // 원본에서 바로 합성합니다). 그래서 이 상태에 빠지지 않습니다. Windows 는
+                // 관문을 지키되 **막다른 골목을 만들지 않습니다** - 편집을 버리지도, 어긋난
+                // 원본에 덮어쓰지도 않고, 다음 실행이 다시 다룰 수 있게 그대로 둡니다.
+                if (staged.Failure.Error == LibraryDefectTerminationError.NativeBakeFailed &&
+                    string.Equals(
+                        staged.Failure.NativeFailureName,
+                        SourceIdentityMismatch,
+                        StringComparison.Ordinal))
+                {
+                    skippedSourceMismatch.Add(frame.Id);
+                    clearLiveStrength(frame.Id);
+                    continue;
+                }
                 return staged.Failure;
             }
             if (!document.MatchesDefectBakeSource(frame.Id, recipe, frame.SourcePath))
@@ -180,8 +204,21 @@ internal sealed class LibraryDefectTerminationService(
                 LibraryDefectTerminationError.OrphanPurgeFailed,
                 SidecarError: orphanError);
         }
+        if (skippedSourceMismatch.Count != 0)
+        {
+            // 종료는 막지 않지만 조용히 넘어가지도 않습니다. 어느 사진을 못 구웠는지 남깁니다.
+            PreviewTrace.Write(
+                "defect bake skipped source mismatch " +
+                string.Join(',', skippedSourceMismatch));
+        }
         return LibraryDefectTerminationResult.Success();
     }
+
+    /// <summary>
+    /// 엔진이 "원본이 recipe 가 적어 둔 그 파일이 아니다" 라고 답할 때의 이름입니다
+    /// (`src/Native/pipeline/export/stages/observe.cpp`).
+    /// </summary>
+    private const string SourceIdentityMismatch = "defect_source_identity_mismatch";
 
     private LibraryDefectBakeStageResult StageBake(
         LibraryFrameSnapshot frame,

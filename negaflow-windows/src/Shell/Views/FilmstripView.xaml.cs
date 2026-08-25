@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
 using Windows.System;
@@ -51,6 +52,32 @@ public sealed partial class FilmstripView : UserControl
         FrameMenuRequested?.Invoke(
             this,
             new FilmstripMenuRequest(thumbnail, item, args.GetPosition(thumbnail)));
+    }
+
+    /// <summary>
+    /// 썸네일 하나가 도착했습니다. <b>스트립이 실제로 걸고 있는 객체</b>에 넣습니다.
+    /// </summary>
+    /// <remarks>
+    /// 목록을 다시 지으면 <c>ItemsSource</c> 에는 새 항목 객체가 오는데, 스트립은 아이디가
+    /// 같으면 <b>예전 객체</b>를 그대로 붙들고 있습니다(<see cref="ShowFrames"/> 의 깜빡임
+    /// 방지). 그래서 새 객체만 갱신하면 스트립은 영영 비어 있습니다 - 앱을 켜자마자 현상뷰
+    /// 하단 스트립이 통째로 비어 있다가, 다른 일이 <see cref="ShowFrames"/> 를 다시 부를 때만
+    /// 한꺼번에 돌아오던 원인입니다.
+    /// </remarks>
+    public void ApplyThumbnail(string frameId, ImageSource? thumbnail)
+    {
+        if (string.IsNullOrEmpty(frameId) || thumbnail is null)
+        {
+            return;
+        }
+        for (int index = 0; index < items.Count; ++index)
+        {
+            if (string.Equals(items[index].Id, frameId, StringComparison.Ordinal))
+            {
+                items[index].Thumbnail = thumbnail;
+                return;
+            }
+        }
     }
 
     /// <summary>
