@@ -67,6 +67,14 @@ internal sealed class LibraryScanRunner
 
         view.SetScanStatus(string.Empty);
         using CancellationTokenSource cancellation = new();
+        if (running is { IsCancellationRequested: false })
+        {
+            // **돌고 있던 스캔을 끊습니다.** 여기가 조용하면 배치가 중간에 사라진 이유를
+            // 어디서도 알 수 없습니다 - 실기에서 프레임 셋 중 마지막 한 장이 빠지는데
+            // 실패 기록이 한 줄도 없었습니다.
+            ScannerDiagnosticsLog.Write(
+                $"scan run cancelled by a new run (preview={preview})");
+        }
         running?.Cancel();
         running = cancellation;
         ScanRunOutcome outcome;
@@ -84,7 +92,10 @@ internal sealed class LibraryScanRunner
         }
         catch (OperationCanceledException)
         {
-            // macOS 도 취소를 실패로 적지 않습니다 — 사용자가 멈춘 것입니다.
+            // macOS 도 취소를 실패로 적지 않습니다 — 사용자가 멈춘 것입니다. 화면에는
+            // 남기지 않되 **기록에는 남깁니다** - 취소가 조용하면 "마지막 한 장이 왜
+            // 빠졌는가" 를 추측으로만 다투게 됩니다.
+            ScannerDiagnosticsLog.Write($"scan run cancelled (preview={preview})");
             view.SetScanStatus(string.Empty);
             return;
         }
