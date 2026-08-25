@@ -141,6 +141,8 @@ nf_status_t NF_CALL nf_get_memory_report_v1(nf_memory_report_v1* const output) {
     output->gpu_system_memory_bytes = report.gpu_system_memory_bytes;
     output->non_cache_overhead_bytes = report.non_cache_overhead_bytes;
     output->automatic_process_ceiling_bytes = report.automatic_process_ceiling_bytes;
+    output->engine_cleaned_raw_frames = report.engine_cleaned_raw_frames;
+    output->engine_developed_frames = report.engine_developed_frames;
     return NF_STATUS_OK;
 }
 

@@ -53,6 +53,11 @@ struct FrameCacheMemoryReport final {
     std::uint64_t non_cache_overhead_bytes{0};
     // 이 기계의 자동 상한입니다 - 프로세스 전체가 이 안에 있어야 합니다.
     std::uint64_t automatic_process_ceiling_bytes{0};
+    // 지금 엔진에 걸린 한도입니다. **둘 다 0 이면 자동**이고, 그때만 위 상한에서 간접비를
+    // 뺀 예산이 돕니다. 셸이 자동인데도 장수를 밀어 넣으면 여기가 0 이 아니게 되고,
+    // 그 순간 프로세스 기준 예산이 통째로 꺼집니다 - 실제로 그래서 앱이 상한을 넘었습니다.
+    std::uint32_t engine_cleaned_raw_frames{0};
+    std::uint32_t engine_developed_frames{0};
 };
 
 [[nodiscard]] FrameCacheMemoryReport frame_cache_memory_report() noexcept;

@@ -33,6 +33,7 @@ internal static class ContractTestRunner
             SoftProofContractTests.Verify(context);
             ToneLimitsContractTests.Verify(context);
             NegativeLimitsContractTests.Verify(context);
+            MemoryBudgetContractTests.Verify(context);
         }
         catch (Exception exception)
         {

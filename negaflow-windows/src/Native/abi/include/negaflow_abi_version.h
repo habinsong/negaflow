@@ -26,10 +26,12 @@
    eight-bit PNG/TIFF publication with output dither, 0.46 output colour space, 0.47 export metadata policy,
    and 0.48 preserve-alpha export, 0.49 transient background preview caching, and
    0.50 exact GrainMend review ownership and accepted-region handles, and 0.51
-   explicit append-prefix identity for incremental full-resolution Defects preview.
+   explicit append-prefix identity for incremental full-resolution Defects preview, and 0.52
+   the process-wide memory budget: nf_set_gpu_cache_limit_v1, nf_get_gpu_cache_info_v1,
+   nf_get_memory_report_v1, and nf_sync_display_cache_v1.
    The managed loader
    refuses anything below the minor it actually calls, so an older engine fails at load
    instead of at the first missing entry point. */
 #define NF_ABI_VERSION_MAJOR 0U
-#define NF_ABI_VERSION_MINOR 51U
+#define NF_ABI_VERSION_MINOR 52U
 #define NF_ABI_VERSION ((NF_ABI_VERSION_MAJOR << 16U) | NF_ABI_VERSION_MINOR)

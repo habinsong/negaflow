@@ -33,9 +33,12 @@ internal static unsafe class NativeAbiReader
       // 44 for TIFF compression plus PNG/TIFF DPI output metadata, and 45 for
       // eight-bit PNG/TIFF publication with output dither, 46 for output colour space, 47 for the export metadata policy,
       // and 48 for preserve-alpha export, 49 for transient background preview caching,
-      // 50 for exact GrainMend review ownership, and 51 for explicit Defects append-prefix reuse.
+      // 50 for exact GrainMend review ownership, 51 for explicit Defects append-prefix reuse,
+      // and 52 for the process-wide memory budget (GPU cache limit, memory report, display
+      // cache sync) - the shell calls all four, so an engine below 52 leaves the budget off.
+      
     // An engine below this is refused at load, not at the call.
-    internal const ushort MinimumMinor = 51;
+    internal const ushort MinimumMinor = 52;
 
     private const uint StatusOk = 0;
 

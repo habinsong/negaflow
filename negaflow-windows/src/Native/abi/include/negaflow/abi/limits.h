@@ -102,6 +102,9 @@ typedef struct nf_memory_report_v1 {
     uint64_t gpu_system_memory_bytes;
     uint64_t non_cache_overhead_bytes;
     uint64_t automatic_process_ceiling_bytes;
+    /* 지금 엔진에 걸린 한도. 둘 다 0 이면 자동이고, 그때만 프로세스 기준 예산이 돕니다. */
+    uint32_t engine_cleaned_raw_frames;
+    uint32_t engine_developed_frames;
 } nf_memory_report_v1;
 
 NF_API nf_status_t NF_CALL nf_set_gpu_cache_limit_v1(const nf_gpu_cache_limit_v1* limit);

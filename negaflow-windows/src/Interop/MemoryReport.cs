@@ -19,6 +19,8 @@ internal struct NativeMemoryReportV1
     internal ulong GpuSystemMemoryBytes;
     internal ulong NonCacheOverheadBytes;
     internal ulong AutomaticProcessCeilingBytes;
+    internal uint EngineCleanedRawFrames;
+    internal uint EngineDevelopedFrames;
 }
 
 /// <summary>지금 이 프로세스의 메모리 내역입니다.</summary>
@@ -40,7 +42,9 @@ public readonly record struct MemoryReport(
     ulong GpuPoolLimitBytes,
     ulong GpuSystemMemoryBytes,
     ulong NonCacheOverheadBytes,
-    ulong AutomaticProcessCeilingBytes);
+    ulong AutomaticProcessCeilingBytes,
+    uint EngineCleanedRawFrames,
+    uint EngineDevelopedFrames);
 
 public static class MemoryReportBridge
 {
@@ -71,6 +75,8 @@ public static class MemoryReportBridge
             raw.GpuPoolLimitBytes,
             raw.GpuSystemMemoryBytes,
             raw.NonCacheOverheadBytes,
-            raw.AutomaticProcessCeilingBytes);
+            raw.AutomaticProcessCeilingBytes,
+            raw.EngineCleanedRawFrames,
+            raw.EngineDevelopedFrames);
     }
 }

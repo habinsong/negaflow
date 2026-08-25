@@ -272,6 +272,9 @@ FrameCacheMemoryReport frame_cache_memory_report() noexcept {
     report.developed_display_budget_bytes = detail::developed_display_budget_bytes();
     report.gpu_system_memory_bytes = negaflow::gpu::gpu_pool_system_memory_bytes();
     report.non_cache_overhead_bytes = detail::non_cache_overhead_bytes();
+    const FrameCacheResidencyLimits engine = frame_cache_residency_limits();
+    report.engine_cleaned_raw_frames = engine.cleaned_raw_frames;
+    report.engine_developed_frames = engine.developed_frames;
     const std::uint64_t physical = detail::FrameCacheBudget::physical_memory_bytes();
     report.automatic_process_ceiling_bytes = static_cast<std::uint64_t>(
         static_cast<double>(physical) *
