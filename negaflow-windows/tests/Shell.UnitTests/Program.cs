@@ -62,6 +62,7 @@ internal static class Program
         FrameResidencyTests.Run();
         GpuCacheSettingsTests.Run();
         FrameCacheEngineLimitsTests.Run();
+        DevelopRequestStaleDefectSourceTests.Run();
         PreviewOrderingTests.Run();
         DevelopMetadataTests.Run();
         DevelopMenuStateTests.Run();

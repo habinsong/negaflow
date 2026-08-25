@@ -27,10 +27,19 @@ public sealed partial class PreviewCoordinator
         LibraryFrameSnapshot rendered = stage is { } wanted
             ? DevelopDebugFrames.Prepare(frame, wanted)
             : frame;
+        // 화면용 요청입니다. 원본 파일이 결함 편집을 기록할 때와 달라졌으면 편집만 내려놓고
+        // 사진은 그립니다 - 그러지 않으면 엔진이 `defect_source_identity_mismatch` 로 현상을
+        // 통째로 거부해 **사진이 아예 안 보입니다.** 내보내기는 이 길로 오지 않습니다.
         DevelopRequestResult built = DevelopRequestFactory.Create(
             rendered,
             unusedDestination,
-            uninvertedSource: rawSource);
+            uninvertedSource: rawSource,
+            allowStaleDefectSource: true);
+        if (built.DroppedStaleDefectEdits)
+        {
+            PreviewTrace.Write(
+                $"RenderAsync stale defect source frame={frame.Id} - 결함 편집을 빼고 그립니다");
+        }
         if (built.Request is not { } developRequest)
         {
             PreviewTrace.Write("RenderAsync refused " + built.Refusal + " rev=" + revision);

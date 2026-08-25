@@ -33,14 +33,21 @@ public enum DevelopRequestRefusal
     UnsupportedDefectEditKind,
 }
 
+/// <param name="DroppedStaleDefectEdits">
+/// 원본 파일이 결함 편집을 기록할 때와 달라져 <b>화면용 요청에서만</b> 편집을 내려놓았습니다.
+/// 편집은 카탈로그에 그대로 있습니다 — 부르는 쪽이 사용자에게 알릴 자리입니다.
+/// </param>
 public readonly record struct DevelopRequestResult(
     DevelopExportRequest? Request,
-    DevelopRequestRefusal Refusal)
+    DevelopRequestRefusal Refusal,
+    bool DroppedStaleDefectEdits = false)
 {
     public bool IsSuccess => Refusal == DevelopRequestRefusal.None && Request is not null;
 
-    internal static DevelopRequestResult Success(DevelopExportRequest request) =>
-        new(request, DevelopRequestRefusal.None);
+    internal static DevelopRequestResult Success(
+        DevelopExportRequest request,
+        bool droppedStaleDefectEdits = false) =>
+        new(request, DevelopRequestRefusal.None, droppedStaleDefectEdits);
 
     internal static DevelopRequestResult Failure(DevelopRequestRefusal refusal) =>
         new(null, refusal);
@@ -85,7 +92,8 @@ public static class DevelopRequestFactory
         DevelopExportFormat format = DevelopExportFormat.Png16,
         ExportEncodingOptions? encoding = null,
         bool uninvertedSource = false,
-        bool forceDefectSourceContentVerification = false)
+        bool forceDefectSourceContentVerification = false,
+        bool allowStaleDefectSource = false)
     {
         ArgumentNullException.ThrowIfNull(frame);
         // 인코딩 값은 게시되는 파일에만 영향을 줍니다. preview 는 항상 기본값으로 도므로 크기·
@@ -209,6 +217,30 @@ public static class DevelopRequestFactory
             uninvertedSource ? FilmEmulation.None : frame.Route.FilmEmulation;
 
         DevelopDefectSourceIdentity? defectSourceIdentity = null;
+        bool droppedStaleDefectEdits = false;
+        // **원본이 바뀌었으면 결함 편집만 내려놓고 사진은 보여 줍니다.**
+        //
+        // 엔진은 identity 가 어긋나면 현상을 통째로 거부합니다
+        // (`observe.cpp`: `defect_source_identity_mismatch`). 마스크를 다른 화소에 얹지
+        // 않으려는 것이라 그 자체는 옳습니다. 그런데 셸이 그 실패를 그대로 받아 캔버스를
+        // 비우면 **사진이 아예 안 보입니다** - 실기에서 스캔 원본 파일이 바뀐 사진 한 장이
+        // 썸네일을 눌러도 열리지 않았습니다.
+        //
+        // 그래서 화면용 요청에서만(`allowStaleDefectSource`) 미리 크기를 보고, 어긋나면
+        // 결함 편집을 뺀 채로 청합니다. 편집은 카탈로그에 그대로 남아 있고, 부르는 쪽이
+        // 사용자에게 알릴 수 있게 결과에 표시를 답니다. **내보내기는 이 길로 오지
+        // 않습니다** - 거기서는 편집을 조용히 빼면 안 되므로 그대로 거부합니다.
+        if (allowStaleDefectSource && defectEditOrder.Count != 0 &&
+            frame.DefectRecipe?.SourceIdentity is { } recorded &&
+            !SourceStillMatches(frame.SourcePath, recorded.ByteCount))
+        {
+            defectRegions = [];
+            defectInfrared = [];
+            defectClones = [];
+            defectBrushes = [];
+            defectEditOrder = [];
+            droppedStaleDefectEdits = true;
+        }
         if (defectEditOrder.Count != 0)
         {
             if (frame.DefectRecipe?.SourceIdentity is not { } sourceIdentity)
@@ -233,7 +265,7 @@ public static class DevelopRequestFactory
                     : DefectSourceContentCheckOnly);
         }
 
-        return DevelopRequestResult.Success(new DevelopExportRequest
+        return Succeed(droppedStaleDefectEdits, new DevelopExportRequest
         {
             SourcePath = frame.SourcePath,
             DestinationPath = destinationPath,
@@ -500,4 +532,34 @@ public static class DevelopRequestFactory
             FilmEmulation.Vision3_200T => FilmEmulationProfile.Vision3_200T,
             _ => throw new ArgumentOutOfRangeException(nameof(emulation)),
         };
+
+    private static DevelopRequestResult Succeed(
+        bool droppedStaleDefectEdits,
+        DevelopExportRequest request) =>
+        DevelopRequestResult.Success(request, droppedStaleDefectEdits);
+
+    /// <summary>
+    /// 결함 편집을 기록할 때의 바이트 수와 지금 파일이 같은지입니다.
+    /// </summary>
+    /// <remarks>
+    /// 크기만 봅니다. 내용 해시는 렌더마다 원본을 통째로 다시 읽어야 하고(frame_1 104MB 에서
+    /// 슬라이더 틱당 약 140ms), 파일이 바뀌면 크기가 먼저 달라집니다. 읽지 못하면
+    /// <b>같다고 봅니다</b> — 못 읽는 것을 근거로 편집을 내려놓으면, 잠깐 잠긴 파일 때문에
+    /// 사용자의 편집이 사라진 것처럼 보입니다.
+    /// </remarks>
+    private static bool SourceStillMatches(string sourcePath, ulong recordedByteCount)
+    {
+        try
+        {
+            return new FileInfo(sourcePath) is { Exists: true } info
+                ? (ulong)info.Length == recordedByteCount
+                : true;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException
+            or ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return true;
+        }
+    }
+
 }
