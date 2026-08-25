@@ -36,6 +36,9 @@ internal static class Program
         GrainMendRecipeTests.Run();
         CloneStampOverlayTests.Run();
         DevelopRequestFactoryTests.Run();
+        // 시험 기록을 사용자의 진단 파일과 섞지 않습니다.
+        Negaflow.Shell.ScannerDiagnosticsLog.RedirectedLogDirectory =
+            Path.Combine(Path.GetTempPath(), "negaflow-test-logs");
         DevelopedPreviewDiskCacheTests.Run();
         ScannerPluginTests.Run();
         InfraredRecipeTests.Run();

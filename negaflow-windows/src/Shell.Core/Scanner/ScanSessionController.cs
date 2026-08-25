@@ -44,7 +44,7 @@ public sealed class ScanSessionController
         this.trust = trust;
         this.dispatcher = dispatcher;
         regionEditor = new FlatbedRegionEditor(
-            () => Changed?.Invoke(this, EventArgs.Empty));
+            () => RaiseChanged());
         Refresh();
     }
 
@@ -118,6 +118,31 @@ public sealed class ScanSessionController
     public string? SelectedRegionId => regionEditor.SelectedRegionId;
 
     public FlatbedScanRegion? CopiedRegion => regionEditor.CopiedRegion;
+
+    /// <summary>
+    /// 바뀜을 알립니다. <b>구독자 하나가 던져도 여기서 멈추지 않습니다.</b>
+    /// </summary>
+    /// <remarks>
+    /// 이 알림은 장치 탐색 도중 <b>워커 스레드</b>에서도 올라갑니다(`ConfigureAwait(false)`
+    /// 뒤). 구독자가 그 스레드에서 XAML 을 건드리면 WinUI 가 `COMException` 을 던지고, 그
+    /// 예외가 그대로 올라와 <b>장치 탐색을 통째로 끊었습니다</b> — 실기에서 스캐너가 아예
+    /// 안 잡히거나 "심도 옵션을 보고하지 않아 스캔할 수 없습니다" 로 끝났습니다.
+    ///
+    /// 구독자를 고치는 것과 별개로, 알림 하나가 장치 목록을 못 죽이게 여기서 막습니다 —
+    /// 화면 한 곳이 잘못돼도 스캐너는 잡혀야 합니다. 삼킨 예외는 기록에 남깁니다.
+    /// </remarks>
+    private void RaiseChanged()
+    {
+        try
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception error)
+        {
+            ScannerDiagnosticsLog.Write(
+                $"scan session listener threw: {error.GetType().Name} {error.Message}");
+        }
+    }
 
     public void SelectRegion(string? regionId) => regionEditor.Select(regionId);
 
@@ -241,7 +266,7 @@ public sealed class ScanSessionController
             SelectedDevice = null;
             Capabilities = null;
         }
-        Changed?.Invoke(this, EventArgs.Empty);
+        RaiseChanged();
     }
 
     private ScannerPluginTrustIdentity? ApprovedIdentityFor(InstalledScannerPlugin plugin) =>
@@ -265,14 +290,18 @@ public sealed class ScanSessionController
         }
         IsDetecting = true;
         LastFailureName = null;
-        Changed?.Invoke(this, EventArgs.Empty);
+        RaiseChanged();
         var found = new List<ScannerPluginDevice>();
+        ScannerDiagnosticsLog.Write(
+            $"detect start plugins={Plugins.Count} simulator={SimulatorEnabled}");
         try
         {
             foreach (InstalledScannerPlugin plugin in Plugins)
             {
                 if (ApprovedIdentityFor(plugin) is not { } identity)
                 {
+                    ScannerDiagnosticsLog.Write(
+                        $"detect skip {plugin.Manifest.Id} - not approved");
                     continue;
                 }
                 ScannerPluginDetectResult result =
@@ -281,12 +310,18 @@ public sealed class ScanSessionController
                 if (result.IsSuccess)
                 {
                     found.AddRange(result.Devices);
+                    ScannerDiagnosticsLog.Write(
+                        $"detect ok {plugin.Manifest.Id} devices={result.Devices.Count}");
                 }
                 else
                 {
                     LastFailureName ??= result.IsMalformedResponse
                         ? "malformed_detect_response"
                         : result.Process.Status.ToString();
+                    ScannerDiagnosticsLog.Write(
+                        $"detect failed {plugin.Manifest.Id} - {LastFailureName} " +
+                        $"(malformed={result.IsMalformedResponse} " +
+                        $"process={result.Process.Status} exit={result.Process.ExitCode?.ToString() ?? "none"})");
                 }
             }
         }
@@ -299,7 +334,9 @@ public sealed class ScanSessionController
         string? keep = SelectedDevice?.Id;
         SelectedDevice = found.FirstOrDefault(device =>
             string.Equals(device.Id, keep, StringComparison.Ordinal)) ?? found.FirstOrDefault();
-        Changed?.Invoke(this, EventArgs.Empty);
+        ScannerDiagnosticsLog.Write(
+            $"detect end devices={found.Count} selected={SelectedDevice?.Id ?? "none"}");
+        RaiseChanged();
         if (SelectedDevice is not null)
         {
             await LoadCapabilitiesAsync(cancellationToken).ConfigureAwait(false);
@@ -307,7 +344,7 @@ public sealed class ScanSessionController
         else
         {
             Capabilities = null;
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
         }
     }
 
@@ -322,7 +359,7 @@ public sealed class ScanSessionController
             return;
         }
         SelectedDevice = chosen;
-        Changed?.Invoke(this, EventArgs.Empty);
+        RaiseChanged();
         await LoadCapabilitiesAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -351,12 +388,12 @@ public sealed class ScanSessionController
             }
             Capabilities = result.Capabilities;
             Options = ClampToCapabilities(Options);
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
             return;
         }
         Capabilities = null;
         LastFailureName ??= "capabilities_unavailable";
-        Changed?.Invoke(this, EventArgs.Empty);
+        RaiseChanged();
     }
 
     public void UpdateOptions(Func<ScanOptions, ScanOptions> update)
@@ -368,7 +405,7 @@ public sealed class ScanSessionController
             return;
         }
         Options = next;
-        Changed?.Invoke(this, EventArgs.Empty);
+        RaiseChanged();
     }
 
     /// <summary>
@@ -428,7 +465,7 @@ public sealed class ScanSessionController
             : null;
         IsScanning = true;
         LastFailureName = null;
-        Changed?.Invoke(this, EventArgs.Empty);
+        RaiseChanged();
         try
         {
             ScanRunExecution execution = await ScanRunCoordinator.RunAsync(
@@ -470,7 +507,7 @@ public sealed class ScanSessionController
         finally
         {
             IsScanning = false;
-            _ = dispatcher.TryEnqueue(() => Changed?.Invoke(this, EventArgs.Empty));
+            _ = dispatcher.TryEnqueue(() => RaiseChanged());
         }
     }
 

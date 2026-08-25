@@ -164,11 +164,20 @@ public static class ScannerDiagnosticsLog
     private static string Truncate(string value, int maximum) =>
         value.Length <= maximum ? value : value[..maximum] + "…";
 
+    /// <summary>
+    /// 기록을 다른 자리로 돌립니다. <b>시험이 씁니다.</b>
+    /// </summary>
+    /// <remarks>
+    /// 시험이 이 기록을 쓰면 사용자의 <c>scanner-failure.txt</c> 에 시뮬레이터 줄이 섞입니다.
+    /// 실기 문제를 그 파일로 짚는 중에 시험 줄이 끼면 서로를 잘못 읽습니다 - 실제로 그랬습니다.
+    /// </remarks>
+    public static string? RedirectedLogDirectory { get; set; }
+
     private static string? Destination()
     {
         try
         {
-            string logs = Path.Combine(
+            string logs = RedirectedLogDirectory ?? Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Negaflow",
                 "Logs");
