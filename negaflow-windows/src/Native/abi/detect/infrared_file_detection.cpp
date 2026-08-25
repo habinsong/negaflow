@@ -293,10 +293,31 @@ using TimingClock = std::chrono::steady_clock;
         std::move(sink.values())};
 }
 
+/// 실패한 자리를 가리키는 코드입니다. 상태 하나에 접힌 갈래를 갈라 놓습니다.
+enum class InfraredFileFailureDetail : std::uint32_t {
+    none = 0U,
+    empty_path = 1U,
+    cancelled_before_start = 2U,
+    visible_full_conversion_failed = 3U,
+    visible_fast_path_failed = 4U,
+    cancelled_after_visible = 5U,
+    cancelled_before_standard_decode = 6U,
+    visible_standard_decode_failed = 7U,
+    visible_standard_working_failed = 8U,
+    visible_standard_extract_failed = 9U,
+    cancelled_before_join = 10U,
+    infrared_decode_incomplete = 11U,
+    infrared_resample_failed = 12U,
+    allocation_failed = 13U,
+    unexpected_exception = 14U,
+};
+
 [[nodiscard]] negaflow::imaging::InfraredDetectionResult failure(
-    const negaflow::imaging::InfraredDetectionStatus status) noexcept {
+    const negaflow::imaging::InfraredDetectionStatus status,
+    const InfraredFileFailureDetail detail) noexcept {
     negaflow::imaging::InfraredDetectionResult result{};
     result.status = status;
+    result.failure_detail = static_cast<std::uint32_t>(detail);
     return result;
 }
 
@@ -335,10 +356,14 @@ negaflow::imaging::InfraredDetectionResult detect_infrared_defects_from_files(
     const negaflow::imaging::InfraredDetectorParameters& parameters,
     const negaflow::core::CancelFlag cancel) noexcept {
     if (visible_path.empty() || infrared_path.empty()) {
-        return failure(negaflow::imaging::InfraredDetectionStatus::unreadable);
+        return failure(
+                negaflow::imaging::InfraredDetectionStatus::unreadable,
+                InfraredFileFailureDetail::empty_path);
     }
     if (cancel.requested()) {
-        return failure(negaflow::imaging::InfraredDetectionStatus::cancelled);
+        return failure(
+                negaflow::imaging::InfraredDetectionStatus::cancelled,
+                InfraredFileFailureDetail::cancelled_before_start);
     }
     try {
         const bool trace = negaflow::pipeline::stage_timing_enabled();
@@ -395,32 +420,46 @@ negaflow::imaging::InfraredDetectionResult detect_infrared_defects_from_files(
                         visible_values,
                         visible_width,
                         visible_height)) {
-                    return failure(negaflow::imaging::InfraredDetectionStatus::unreadable);
+                    return failure(
+                negaflow::imaging::InfraredDetectionStatus::unreadable,
+                InfraredFileFailureDetail::visible_full_conversion_failed);
                 }
             } else {
-                return failure(negaflow::imaging::InfraredDetectionStatus::unreadable);
+                return failure(
+                negaflow::imaging::InfraredDetectionStatus::unreadable,
+                InfraredFileFailureDetail::visible_fast_path_failed);
             }
             if (cancel.requested()) {
-                return failure(negaflow::imaging::InfraredDetectionStatus::cancelled);
+                return failure(
+                negaflow::imaging::InfraredDetectionStatus::cancelled,
+                InfraredFileFailureDetail::cancelled_after_visible);
             }
         } else {
             const auto decoded = negaflow::imageio::decode_standard_image_with_wic(visible_path);
             if (cancel.requested()) {
-                return failure(negaflow::imaging::InfraredDetectionStatus::cancelled);
+                return failure(
+                negaflow::imaging::InfraredDetectionStatus::cancelled,
+                InfraredFileFailureDetail::cancelled_before_standard_decode);
             }
             if (decoded.status != negaflow::imageio::WicStandardImageDecodeStatus::ok) {
-                return failure(negaflow::imaging::InfraredDetectionStatus::unreadable);
+                return failure(
+                negaflow::imaging::InfraredDetectionStatus::unreadable,
+                InfraredFileFailureDetail::visible_standard_decode_failed);
             }
             auto working = negaflow::imaging::convert_scanner_to_working(decoded.image);
             if (working.status != negaflow::imaging::ScannerToWorkingStatus::ok) {
-                return failure(negaflow::imaging::InfraredDetectionStatus::unreadable);
+                return failure(
+                negaflow::imaging::InfraredDetectionStatus::unreadable,
+                InfraredFileFailureDetail::visible_standard_working_failed);
             }
             if (!extract_working_red(
                     working.image,
                     visible_values,
                     visible_width,
                     visible_height)) {
-                return failure(negaflow::imaging::InfraredDetectionStatus::unreadable);
+                return failure(
+                negaflow::imaging::InfraredDetectionStatus::unreadable,
+                InfraredFileFailureDetail::visible_standard_extract_failed);
             }
         }
 
@@ -429,10 +468,14 @@ negaflow::imaging::InfraredDetectionResult detect_infrared_defects_from_files(
         DecodedInfraredPlane infrared = infrared_future.get();
         const auto join_finished = trace ? TimingClock::now() : TimingClock::time_point{};
         if (cancel.requested()) {
-            return failure(negaflow::imaging::InfraredDetectionStatus::cancelled);
+            return failure(
+                negaflow::imaging::InfraredDetectionStatus::cancelled,
+                InfraredFileFailureDetail::cancelled_before_join);
         }
         if (!infrared.complete) {
-            return failure(negaflow::imaging::InfraredDetectionStatus::unreadable);
+            return failure(
+                negaflow::imaging::InfraredDetectionStatus::unreadable,
+                InfraredFileFailureDetail::infrared_decode_incomplete);
         }
         std::uint64_t resample_microseconds = 0U;
         if (infrared.width != visible_width || infrared.height != visible_height) {
@@ -445,7 +488,9 @@ negaflow::imaging::InfraredDetectionResult detect_infrared_defects_from_files(
                     visible_width,
                     visible_height,
                     resampled)) {
-                return failure(negaflow::imaging::InfraredDetectionStatus::unreadable);
+                return failure(
+                negaflow::imaging::InfraredDetectionStatus::unreadable,
+                InfraredFileFailureDetail::infrared_resample_failed);
             }
             infrared.values = std::move(resampled);
             if (trace) {
@@ -483,9 +528,13 @@ negaflow::imaging::InfraredDetectionResult detect_infrared_defects_from_files(
         }
         return result;
     } catch (const std::bad_alloc&) {
-        return failure(negaflow::imaging::InfraredDetectionStatus::allocation_failed);
+        return failure(
+                negaflow::imaging::InfraredDetectionStatus::allocation_failed,
+                InfraredFileFailureDetail::allocation_failed);
     } catch (...) {
-        return failure(negaflow::imaging::InfraredDetectionStatus::unreadable);
+        return failure(
+                negaflow::imaging::InfraredDetectionStatus::unreadable,
+                InfraredFileFailureDetail::unexpected_exception);
     }
 }
 

@@ -13,24 +13,18 @@ using Windows.UI.Core;
 namespace Negaflow.Shell.Views.Library.Scanner;
 
 /// <summary>
-/// 프레임을 고르고, 끌어서 옮기고, 손잡이로 크기를 바꾸고, 빈 자리에서 끌어 새로 그립니다.
-/// macOS <c>createGesture</c> / <c>moveGesture</c> / <c>resizeGesture</c> 와 같은 규칙입니다.
+/// 프레임을 고르고, 끌어서 옮기고, 손잡이로 크기를 바꿉니다.
 /// </summary>
+/// <remarks>
+/// **빈 자리를 끄는 것은 사진을 옮기는 동작입니다.**
+///
+/// 앞 판은 빈 자리에서 끌면 새 사각형을 그렸습니다. 그 자리는 캔버스가 사진을 잡고 끄는
+/// 자리와 같아서, 오버레이가 포인터를 먼저 잡고 <c>Handled</c> 로 막는 순간 사진을 움직일
+/// 방법이 사라졌습니다 - 두 동작이 같은 몸짓을 두고 다툰 것입니다. 새 프레임은 더하기 단추와
+/// 복사·붙여넣기(Ctrl+C / Ctrl+V)로 만들고, 만든 사각형을 끌어서 자리를 잡습니다.
+/// </remarks>
 public sealed partial class FlatbedScanAreaOverlay
 {
-    /// <summary>이만큼은 끌어야 그리기로 봅니다. macOS `minimumDistance: 4` 와 같습니다.</summary>
-    private const double CreateThreshold = 4.0;
-
-    private Rectangle? draftRectangle;
-
-    private Point createStart;
-
-    private Point createCurrent;
-
-    private bool creating;
-
-    private bool createArmed;
-
     private FlatbedOverlayRect dragStartRect;
 
     private Point dragStartPoint;
@@ -38,79 +32,6 @@ public sealed partial class FlatbedScanAreaOverlay
     private string? draggingRegionId;
 
     private HandleTag? resizingHandle;
-
-    protected override void OnPointerPressed(PointerRoutedEventArgs e)
-    {
-        base.OnPointerPressed(e);
-        if (session is null || ImageFrame.Width <= 0)
-        {
-            return;
-        }
-        _ = Focus(FocusState.Pointer);
-        Point point = e.GetCurrentPoint(Host).Position;
-        // 이미 놓인 프레임 근처에서 시작하면 그리기가 아닙니다 - macOS
-        // `canBeginCreation(at:existingRects:)` 와 같은 판단입니다.
-        if (!FlatbedOverlayGeometry.CanBeginCreation(point.X, point.Y, ScreenRects))
-        {
-            return;
-        }
-        createStart = point;
-        createCurrent = point;
-        createArmed = true;
-        creating = false;
-        _ = CapturePointer(e.Pointer);
-        e.Handled = true;
-    }
-
-    protected override void OnPointerMoved(PointerRoutedEventArgs e)
-    {
-        base.OnPointerMoved(e);
-        if (!createArmed || session is null)
-        {
-            return;
-        }
-        createCurrent = e.GetCurrentPoint(Host).Position;
-        if (!creating)
-        {
-            double moved = Math.Max(
-                Math.Abs(createCurrent.X - createStart.X),
-                Math.Abs(createCurrent.Y - createStart.Y));
-            if (moved < CreateThreshold)
-            {
-                return;
-            }
-            creating = true;
-        }
-        LayoutDraftRectangle();
-        e.Handled = true;
-    }
-
-    protected override void OnPointerReleased(PointerRoutedEventArgs e)
-    {
-        base.OnPointerReleased(e);
-        ReleasePointerCapture(e.Pointer);
-        if (!createArmed)
-        {
-            return;
-        }
-        createArmed = false;
-        if (!creating || session is null)
-        {
-            creating = false;
-            LayoutDraftRectangle();
-            return;
-        }
-        creating = false;
-        createCurrent = e.GetCurrentPoint(Host).Position;
-        FlatbedScanRegion? drawn = DrawnRegion(createStart, createCurrent);
-        LayoutDraftRectangle();
-        if (drawn is not null && session.AddRegion(drawn) is not null)
-        {
-            LayoutRegions();
-            NotifyChanged();
-        }
-        e.Handled = true;
-    }
 
     private void OnRegionPointerPressed(object sender, PointerRoutedEventArgs e)
     {
@@ -313,84 +234,6 @@ public sealed partial class FlatbedScanAreaOverlay
                 : FlatbedOverlayGeometry.UnitRect(screenRect, ImageFrame);
         return new FlatbedScanRegion(regionId, x, y, width, height).Clamped();
     }
-
-    /// <summary>끌어서 그린 사각형입니다. 규격 비율로 맞춥니다(Alt 로 해제).</summary>
-    private FlatbedScanRegion? DrawnRegion(Point start, Point current)
-    {
-        if (session is null)
-        {
-            return null;
-        }
-        bool transformed = TryPreviewTransform(
-            out ImageTransformRecipe transform,
-            out uint sourceWidth,
-            out uint sourceHeight);
-        (double startX, double startY) = transformed
-            ? FlatbedOverlayGeometry.UnitPoint(
-                start.X, start.Y, ImageFrame, transform, sourceWidth, sourceHeight)
-            : FlatbedOverlayGeometry.UnitPoint(start.X, start.Y, ImageFrame);
-        (double currentX, double currentY) = transformed
-            ? FlatbedOverlayGeometry.UnitPoint(
-                current.X, current.Y, ImageFrame, transform, sourceWidth, sourceHeight)
-            : FlatbedOverlayGeometry.UnitPoint(current.X, current.Y, ImageFrame);
-        FlatbedScanRegion drawn = FlatbedScanRegion.Create(
-            Math.Min(startX, currentX),
-            Math.Min(startY, currentY),
-            Math.Abs(currentX - startX),
-            Math.Abs(currentY - startY));
-        if (drawn.UnitWidth < FlatbedScanRegionLayout.MinimumUnitExtent ||
-            drawn.UnitHeight < FlatbedScanRegionLayout.MinimumUnitExtent)
-        {
-            return null;
-        }
-        if (IsDown(VirtualKey.Menu))
-        {
-            return drawn;
-        }
-        return FlatbedScanRegionLayout.SnappedToFrameAspect(
-            drawn,
-            drawn with { UnitX = startX, UnitY = startY, UnitWidth = 0, UnitHeight = 0 },
-            session.Options.FrameFormat,
-            session.PreviewArea);
-    }
-
-    /// <summary>그리는 중인 점선 사각형입니다. macOS 의 파선 6-4 와 같습니다.</summary>
-    private void LayoutDraftRectangle()
-    {
-        if (!creating)
-        {
-            if (draftRectangle is not null)
-            {
-                _ = RegionLayer.Children.Remove(draftRectangle);
-                draftRectangle = null;
-            }
-            return;
-        }
-
-        FlatbedOverlayRect rect = FlatbedOverlayGeometry.ClampedScreenRect(
-            FlatbedOverlayGeometry.RectBetween(
-                createStart.X, createStart.Y, createCurrent.X, createCurrent.Y),
-            ImageFrame,
-            minimum: 0);
-        draftRectangle ??= NewDraftRectangle();
-        if (!RegionLayer.Children.Contains(draftRectangle))
-        {
-            RegionLayer.Children.Add(draftRectangle);
-        }
-        draftRectangle.Width = Math.Max(rect.Width, 0);
-        draftRectangle.Height = Math.Max(rect.Height, 0);
-        Canvas.SetLeft(draftRectangle, rect.X);
-        Canvas.SetTop(draftRectangle, rect.Y);
-    }
-
-    private Rectangle NewDraftRectangle() => new()
-    {
-        Fill = AccentBrush(0.08),
-        Stroke = AccentBrush(1.0),
-        StrokeThickness = 1.5,
-        StrokeDashArray = [6, 4],
-        IsHitTestVisible = false,
-    };
 
     private static bool IsDown(VirtualKey key) =>
         InputKeyboardSource.GetKeyStateForCurrentThread(key)

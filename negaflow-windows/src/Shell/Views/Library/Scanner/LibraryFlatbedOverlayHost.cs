@@ -1,55 +1,20 @@
-using Microsoft.UI.Xaml;
-using Negaflow.Catalog;
-
 namespace Negaflow.Shell.Views;
 
 /// <summary>
-/// 평판 프리뷰 오버레이를 라이브러리 화면에 걸고 내립니다.
+/// 라이브러리 화면의 썸네일이 도착했을 때 할 일입니다.
 /// </summary>
 /// <remarks>
-/// macOS 는 프리뷰가 카탈로그의 한 프레임이라 캔버스가 그대로 띄우고, 오버레이는 그 위에
-/// 얹기만 합니다(<c>CanvasView</c>: <c>frame.isPreviewScan &amp;&amp;
-/// flatbedPreviewFrameID == frame.id &amp;&amp; usesFlatbedRegionWorkflow</c>). Windows
-/// 라이브러리에는 한 장을 크게 띄우는 캔버스가 없어 격자 자리를 대신 씁니다 - 조건은
-/// macOS 와 같습니다.
+/// **라이브러리에는 평판 오버레이가 없습니다.**
+///
+/// macOS 에서 프레임 사각형을 그리는 자리는 <c>CanvasView</c> 이고, 그 캔버스는
+/// <c>ContentView+Workspace</c> 의 <c>case .develop</c> 안에만 있습니다 - <c>case .library</c>
+/// 는 <c>LibraryWorkspaceView</c> 만 띄웁니다. 앞 판은 이것을 라이브러리에 얹으면서
+/// <c>FrameListView.Visibility = Collapsed</c> 로 **격자를 통째로 내렸습니다.** 그래서 프리뷰
+/// 스캔 한 번이면 사진 56장이 화면에서 사라지고 평판 한 장만 남았습니다.
+///
+/// 사각형은 현상뷰 캔버스가 그립니다(<see cref="DevelopWorkspaceView"/>).
 /// </remarks>
 public sealed partial class LibraryWorkspaceView
 {
-    /// <summary>
-    /// 평판 프리뷰가 살아 있으면 오버레이를 보이고, 아니면 격자를 되돌립니다.
-    /// </summary>
-    internal void SyncFlatbedOverlay()
-    {
-        string? previewPath = ControlsPanel.ScanPanel.FlatbedPreviewPath;
-        bool show = previewPath is { Length: > 0 };
-        if (show && ControlsPanel.ScanPanel.SessionForOverlay is { } session)
-        {
-            LibraryFrameSnapshot? previewFrame = session.PreviewFrameId is { } frameId
-                ? libraryHost?.Frames.FirstOrDefault(frame =>
-                    string.Equals(frame.Id, frameId, StringComparison.Ordinal))
-                : null;
-            FlatbedOverlay.Attach(session, previewFrame, thumbnails);
-        }
-
-        FlatbedOverlay.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
-        if (show)
-        {
-            // 프리뷰를 띄우는 동안에는 격자와 살펴보기를 내립니다. 두 개가 겹치면
-            // 프레임 사각형을 집을 수 없습니다.
-            FrameListView.Visibility = Visibility.Collapsed;
-            CullingSurface.Visibility = Visibility.Collapsed;
-            LibraryContentPanel.Visibility = Visibility.Visible;
-            EmptyLibraryPanel.Visibility = Visibility.Collapsed;
-        }
-        // 보기 방식 캡슐과 검색은 격자에 딸린 것입니다. 프리뷰 위에 그대로 떠 있으면
-        // 아래쪽 프레임을 가리고 그 자리를 집을 수도 없습니다.
-        LibraryBottomBar.Visibility = show ? Visibility.Collapsed : Visibility.Visible;
-        FlatbedOverlay.Render(previewPath);
-    }
-
-    private void OnThumbnailReady(string frameId)
-    {
-        thumbs.OnReady(frameId);
-        FlatbedOverlay.OnDevelopedReady(frameId);
-    }
+    private void OnThumbnailReady(string frameId) => thumbs.OnReady(frameId);
 }

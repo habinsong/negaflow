@@ -94,11 +94,16 @@ public static class FrameImport
         Func<string> nextId = newId ?? (() => Guid.NewGuid().ToString("D"));
 
         HashSet<string> taken = new(StringComparer.OrdinalIgnoreCase);
-        int nextScanIndex = 0;
+        // macOS `nextScanIndex` — **장수가 아니라 가장 큰 번호 + 1** 입니다. 장수를 세면 사진을
+        // 지운 뒤 가져올 때 이미 쓰인 번호가 다시 나옵니다.
+        int nextScanIndex = 1;
         foreach (LibraryFrameSnapshot frame in existingFrames)
         {
             taken.Add(NormalizePath(frame.SourcePath));
-            ++nextScanIndex;
+            if (!frame.IsPreviewScan && frame.ScanIndex >= nextScanIndex)
+            {
+                nextScanIndex = frame.ScanIndex + 1;
+            }
         }
 
         InfraredImportPairing.Resolution pairing = InfraredImportPairing.Resolve(
@@ -283,7 +288,6 @@ public static class FrameImport
         }
 
         HashSet<string> taken = new(StringComparer.OrdinalIgnoreCase);
-        int nextScanIndex = 0;
         foreach (LibraryFrameSnapshot frame in existingFrames)
         {
             taken.Add(NormalizePath(frame.SourcePath));
@@ -291,8 +295,8 @@ public static class FrameImport
             {
                 taken.Add(NormalizePath(existingInfrared));
             }
-            ++nextScanIndex;
         }
+        int nextScanIndex = NextScanIndexInFolder(existingFrames, scan.VisiblePath, scan.IsPreviewScan);
         if (!taken.Add(NormalizePath(scan.VisiblePath)) ||
             scan.InfraredPath is { } candidateInfrared && !taken.Add(NormalizePath(candidateInfrared)))
         {
@@ -421,6 +425,51 @@ public static class FrameImport
             ? $"Nothing imported: {skipped}."
             : $"{added}; {skipped}.";
     }
+
+    /// <summary>
+    /// 이 폴더에서 다음에 붙일 번호입니다. <b>폴더마다 1 부터</b> 셉니다.
+    /// </summary>
+    /// <remarks>
+    /// macOS <c>AppModel+FullScanPlan</c> 이 그렇게 셉니다 — 목적지 폴더 안의 프레임만 골라
+    /// 최대 <c>scanIndex</c> 를 찾고 거기에 1 을 더합니다:
+    /// <code>
+    /// let existingFrameMaximum = frames.lazy
+    ///     .filter { !$0.isPreviewScan &amp;&amp; $0.sourceFrameID == nil
+    ///         &amp;&amp; $0.sourceKind == .scannerTIFF
+    ///         &amp;&amp; $0.rawScanURL.deletingLastPathComponent() == standardizedOutputFolder }
+    ///     .map(\.scanIndex).max() ?? 0
+    /// let firstScanIndex = max(existingFrameMaximum, reservedMaximum) + 1
+    /// </code>
+    /// 앞 판은 <b>폴더를 가리지 않고 카탈로그 전체 장수</b>를 셌습니다. 그래서 새 롤을 만들어도
+    /// "사진 1" 이 아니라 "사진 58" 부터 시작했고, 폴더가 늘수록 번호가 끝없이 이어졌습니다.
+    ///
+    /// 프리뷰는 사진과 <b>따로</b> 셉니다 - 섞어 세면 프리뷰가 사진 번호를 밀어 올립니다.
+    /// </remarks>
+    private static int NextScanIndexInFolder(
+        IReadOnlyList<LibraryFrameSnapshot> existingFrames,
+        string destinationPath,
+        bool preview)
+    {
+        string folder = FolderOf(destinationPath);
+        int maximum = 0;
+        foreach (LibraryFrameSnapshot frame in existingFrames)
+        {
+            if (frame.IsVirtualCopy ||
+                frame.IsPreviewScan != preview ||
+                !string.Equals(FolderOf(frame.SourcePath), folder, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            if (frame.ScanIndex > maximum)
+            {
+                maximum = frame.ScanIndex;
+            }
+        }
+        return maximum + 1;
+    }
+
+    private static string FolderOf(string path) =>
+        NormalizePath(Path.GetDirectoryName(path) ?? string.Empty);
 
     private static string NormalizePath(string path)
     {

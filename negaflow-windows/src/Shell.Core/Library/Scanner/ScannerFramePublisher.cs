@@ -140,15 +140,22 @@ internal sealed class ScannerFramePublisher
                 CatalogStoreError.InvalidSnapshot);
         }
 
-        selectFrame(frame.Id);
-        if (frame.InfraredPath is null ||
+        // **IR 이 끝나기 전에는 이 사진을 내놓지 않습니다.**
+        //
+        // 앞 판은 여기서 곧바로 골랐습니다. 그러면 IR 을 붙이기 전 사진이 먼저 화면에
+        // 뜨고, 몇 초 뒤에 GrainMend IR 이 얹히면서 같은 사진이 두 번 바뀝니다 - 사용자에게는
+        // "IR 이 안 먹은 사진이 먼저 나온다" 로 보입니다. IR 을 쓰는 스캔은 본 스캔 한 장과
+        // IR 한 장이 <b>합쳐져야 한 장</b>이므로, 그 일이 끝난 뒤에 내놓습니다.
+        if (frame.InfraredPath is not { } infraredPath ||
             frame.Route.FilmType is not (FilmType.ColorNegative or FilmType.ColorPositive))
         {
+            selectFrame(frame.Id);
             return new(ScannerFramePublishStatus.InfraredSkipped, plan, frame, null,
                 CatalogStoreError.None);
         }
         if (!DefectSourceIdentityReader.TryRead(frame.SourcePath, out DefectSourceIdentity identity))
         {
+            selectFrame(frame.Id);
             return new(ScannerFramePublishStatus.InfraredSourceUnreadable, plan, frame, null,
                 CatalogStoreError.None);
         }
@@ -162,13 +169,16 @@ internal sealed class ScannerFramePublisher
                 frame,
                 identity,
                 frame.SourcePath,
-                frame.InfraredPath,
+                infraredPath,
                 parameters,
                 run);
         }
         finally
         {
             completeInfraredClean(frame.Id, infrared ?? FailedInfraredClean());
+            // IR 이 끝난 지금이 이 사진을 내놓을 자리입니다 - 붙었든 못 붙었든, 더 바뀔 일이
+            // 없을 때 한 번만 보여 줍니다.
+            selectFrame(frame.Id);
         }
         return new(
             infrared.Status == InfraredDefectApplyStatus.Applied

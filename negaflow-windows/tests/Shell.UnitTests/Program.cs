@@ -68,6 +68,7 @@ internal static class Program
         DevelopRequestStaleDefectSourceTests.Run();
         ScannerFlatbedBatchTests.Run();
         ExportUniqueDestinationTests.Run();
+        LibrarySortTests.Run();
         PreviewOrderingTests.Run();
         DevelopMetadataTests.Run();
         DevelopMenuStateTests.Run();

@@ -131,14 +131,14 @@ public static class InfraredDefectRecipeCoordinator
         Stopwatch? timing = trace ? Stopwatch.StartNew() : null;
         try
         {
-            InfraredDetectionResult detection = NativeInfraredDefectDetector.DetectFiles(
-                    visiblePath,
-                    infraredPath,
-                    sourceKind == FrameSourceKind.ScannerTiff
-                        ? InfraredVisibleSourceKind.ScannerTiff
-                        : InfraredVisibleSourceKind.ImportedFile,
-                    parameters,
-                    run);
+            InfraredDetectionResult detection = DetectWithRetry(
+                visiblePath,
+                infraredPath,
+                sourceKind == FrameSourceKind.ScannerTiff
+                    ? InfraredVisibleSourceKind.ScannerTiff
+                    : InfraredVisibleSourceKind.ImportedFile,
+                parameters,
+                run);
             if (trace)
             {
                 InfraredPerformanceTrace.Write(
@@ -158,6 +158,69 @@ public static class InfraredDefectRecipeCoordinator
                 $"visible={visiblePath} infrared={infraredPath} kind={sourceKind}");
             return new(null, true);
         }
+    }
+
+    /// <summary>
+    /// 아직 <b>쓰이는 중</b>인 파일이면 다시 읽습니다. 기다리는 시간을 정해 두지 않습니다.
+    /// </summary>
+    /// <remarks>
+    /// **관측으로 멈춥니다, 시계로 멈추지 않습니다.**
+    ///
+    /// 앞 판은 실제로 성공했던 한 사례의 간격(2.3초)을 보고 물러나는 시간을 상수로 박았습니다.
+    /// 기계마다 디스크도 백신도 다르므로 그 수는 이 기계 밖에서는 아무 뜻이 없습니다. 여기서는
+    /// <b>두 파일의 크기와 마지막 쓰기 시각</b>을 보고, 지난번과 달라졌을 때만 - 즉 누군가
+    /// 아직 쓰고 있을 때만 - 다시 읽습니다. 아무 것도 안 변했으면 기다릴 이유가 없으므로
+    /// 곧바로 그만둡니다. 검출 자체가 수백 ms 걸리므로 그것이 관측 간격이 됩니다.
+    ///
+    /// 다시 읽는 것은 <b>바이트를 못 읽은 갈래</b>뿐입니다. 결함이 없다거나 정렬이 안 맞는
+    /// 것은 파일이 그대로면 답도 그대로입니다.
+    /// </remarks>
+    private static InfraredDetectionResult DetectWithRetry(
+        string visiblePath,
+        string infraredPath,
+        InfraredVisibleSourceKind kind,
+        InfraredDetectorParameters? parameters,
+        DevelopRun? run)
+    {
+        (long, long, long, long) stamp = FileStamp(visiblePath, infraredPath);
+        InfraredDetectionResult detection = NativeInfraredDefectDetector.DetectFiles(
+            visiblePath, infraredPath, kind, parameters, run);
+        while (detection.Status == InfraredDetectionStatus.Unreadable)
+        {
+            (long, long, long, long) latest = FileStamp(visiblePath, infraredPath);
+            if (latest == stamp)
+            {
+                // 파일이 그대로입니다. 다시 읽어도 같은 답이므로 여기서 멈춥니다.
+                return detection;
+            }
+            ScannerDiagnosticsLog.Write(
+                $"ir detect retrying - source still settling detail={detection.FailureDetail} " +
+                $"visible={visiblePath} infrared={infraredPath}");
+            stamp = latest;
+            detection = NativeInfraredDefectDetector.DetectFiles(
+                visiblePath, infraredPath, kind, parameters, run);
+        }
+        return detection;
+    }
+
+    /// <summary>두 파일의 크기와 마지막 쓰기 시각입니다. 못 읽으면 -1 로 둡니다.</summary>
+    private static (long, long, long, long) FileStamp(string visiblePath, string infraredPath)
+    {
+        (long length, long written) Look(string path)
+        {
+            try
+            {
+                FileInfo info = new(path);
+                return info.Exists ? (info.Length, info.LastWriteTimeUtc.Ticks) : (-1L, -1L);
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                return (-1L, -1L);
+            }
+        }
+        (long visibleLength, long visibleWritten) = Look(visiblePath);
+        (long infraredLength, long infraredWritten) = Look(infraredPath);
+        return (visibleLength, visibleWritten, infraredLength, infraredWritten);
     }
 
     internal static InfraredDefectApplyResult ApplyDetection(
@@ -180,10 +243,13 @@ public static class InfraredDefectRecipeCoordinator
         if (detectionStatus != InfraredDefectApplyStatus.Applied)
         {
             ScannerDiagnosticsLog.Write(
-                $"ir detect not applied: native={detection.Status} mapped={detectionStatus} " +
+                $"ir detect not applied: native={detection.Status} " +
+                $"detail={InfraredFailureDetail.Describe(detection.FailureDetail)} " +
+                $"mapped={detectionStatus} " +
                 $"components={detection.Components.Count} clusters={detection.Clusters.Count} " +
                 $"alignment={detection.AlignmentStatus} coverage={detection.Coverage:F6} " +
-                $"size={detection.Width}x{detection.Height} frame={frame.Id}");
+                $"size={detection.Width}x{detection.Height} frame={frame.Id} " +
+                $"visible={frame.SourcePath} infrared={frame.InfraredPath}");
             return Result(detectionStatus, detection);
         }
 

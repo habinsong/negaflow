@@ -308,11 +308,15 @@ internal sealed class DevelopFrameList
         _ = selectedIndex;
         // 여러 장을 고른 채로 두려면 **번호 하나가 아니라 목록**으로 맞춰야 합니다.
         // `SynchronizeSelection(int)` 는 `SelectedIndex` 를 넣어 선택을 하나로 접습니다.
+        // **프리뷰도 고를 수 있어야 합니다.** macOS `actionableFrame` 은 고른 프레임을
+        // 그대로 돌려주고 프리뷰를 빼지 않습니다 - 평판 프레임 사각형을 그리는 자리가 바로
+        // 현상 캔버스 위의 프리뷰이기 때문입니다. 여기서 걸러 내면 프리뷰를 눌렀을 때
+        // 고른 것이 하나도 없는 목록이 되어, 스트립이 선택을 잃습니다.
+        string[] selectedIds = view.libraryHost?.SelectedFrames
+            .Select(frame => frame.Id)
+            .ToArray() ?? [];
         view.Filmstrip.SynchronizeSelection(
-            view.libraryHost?.SelectedFrames
-                .Where(frame => !frame.IsPreviewScan)
-                .Select(frame => frame.Id)
-                .ToArray() ?? [item.Id],
+            selectedIds.Length == 0 ? [item.Id] : selectedIds,
             item.Id);
         view.LeftPanel.SetHeaderTitle(item.DisplayName);
         UpdateSelectedFrameText();

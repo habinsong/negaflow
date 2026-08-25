@@ -51,6 +51,55 @@ public static class ScanStorageLayout
         return joined.Length <= 24 ? joined : joined[..24];
     }
 
+    /// <summary>
+    /// 프리뷰 그림이 사는 캐시 폴더 이름입니다. macOS <c>diskStorage.scanPreviewsURL</c> 자리이며,
+    /// 스캔 원본 폴더와 <b>반드시</b> 달라야 합니다 - 섞이면 프리뷰가 사진 번호를 차지합니다.
+    /// </summary>
+    public const string PreviewCacheFolderName = "Scan Previews";
+
+    /// <summary>
+    /// 프리뷰 파일 이름의 머리입니다. macOS <c>removeOwnedPreviewFile</c> 이 이 머리로 "우리가
+    /// 만든 것"을 가려 지우므로, 지우는 쪽과 만드는 쪽이 같은 머리를 써야 합니다.
+    /// </summary>
+    public const string PreviewFilePrefix = "negaflow_preview_";
+
+    /// <summary>
+    /// 프리뷰 한 장이 놓일 자리입니다. 번호를 세지 않습니다 - 프리뷰는 본 스캔으로 대체되는
+    /// 휘발 산출물이라 이름에 차례가 없습니다(macOS <c>ScanTempFile.makeURL</c>).
+    /// </summary>
+    public static string NewPreviewPath(string directory)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(directory);
+        return Path.Combine(
+            directory,
+            PreviewFilePrefix + Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture) + ".tif");
+    }
+
+    /// <summary>우리가 만든 프리뷰 파일인지. 아니면 손대지 않습니다.</summary>
+    public static bool IsOwnedPreviewFile(string path) =>
+        !string.IsNullOrEmpty(path) &&
+        Path.GetFileName(path).StartsWith(PreviewFilePrefix, StringComparison.Ordinal);
+
+    /// <summary>
+    /// 대체된 프리뷰 파일을 지웁니다. macOS <c>removeOwnedPreviewFile(at:)</c> 과 같이 <b>우리가
+    /// 지은 이름</b>만 지웁니다 - 사용자가 고른 원본이 이 길로 지워지면 안 됩니다.
+    /// </summary>
+    public static void RemoveOwnedPreviewFile(string path)
+    {
+        if (!IsOwnedPreviewFile(path))
+        {
+            return;
+        }
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            // 지우지 못해도 스캔은 계속합니다 - 캐시 한 장이 남는 것뿐입니다.
+        }
+    }
+
     /// <summary>이번 롤이 들어갈 폴더입니다. 없으면 만듭니다.</summary>
     public static string EnsureRollDirectory(
         string scanRoot,

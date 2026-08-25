@@ -104,6 +104,9 @@ struct InfraredDetectionTimings final {
 
 struct InfraredDetectionResult final {
     InfraredDetectionStatus status{InfraredDetectionStatus::unreadable};
+    // 실패한 **자리**입니다. `unreadable` 하나에 여덟 갈래가 접혀 있어, 앱 안에서만 나는
+    // 실패를 두고 어느 갈래인지 다투게 됩니다. 0 은 "사유 없음"입니다.
+    std::uint32_t failure_detail{0U};
     InfraredDetection detection{};
     InfraredDetectionTimings timings{};
 };

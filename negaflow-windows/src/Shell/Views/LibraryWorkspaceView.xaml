@@ -310,14 +310,6 @@
                         Grid.Row="1"
                         Visibility="Collapsed" />
 
-                    <!-- 평판 프리뷰가 살아 있는 동안 격자 대신 이것이 보입니다. macOS 는
-                         캔버스 위에 얹지만 Windows 라이브러리에는 한 장을 크게 띄우는
-                         캔버스가 없어, 찾은 프레임을 눈으로 보고 손으로 고칠 자리를
-                         여기서 냅니다. -->
-                    <scanner:FlatbedScanAreaOverlay
-                        x:Name="FlatbedOverlay" x:FieldModifier="internal"
-                        Grid.Row="1"
-                        Visibility="Collapsed" />
                 </Grid>
 
                 <StackPanel

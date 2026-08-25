@@ -64,7 +64,6 @@ public sealed partial class FlatbedScanAreaOverlay
             RegionVisual visual = EnsureVisual(region.Id);
             ApplyVisual(visual, rect, index + 1, selected);
         }
-        LayoutDraftRectangle();
     }
 
     private RegionVisual EnsureVisual(string regionId)

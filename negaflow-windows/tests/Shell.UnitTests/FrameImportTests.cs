@@ -51,8 +51,11 @@ internal static class FrameImportTests
         Check(
             !plan.Rows[0].Payload.ContainsKey("customDisplayName"),
             "import_leaves_display_name_to_the_file_name");
-        Check(plan.Rows[0].Payload["scanIndex"]!.GetValue<int>() == 0, "import_first_scan_index");
-        Check(plan.Rows[1].Payload["scanIndex"]!.GetValue<int>() == 1, "import_second_scan_index");
+        // macOS `ScanFrame.scanIndex` 는 "롤 내 순서 (1-based 표시용)" 이고
+        // `nextScanIndex` 는 **장수가 아니라 가장 큰 번호 + 1** 입니다. 0 부터 세면 첫 사진이
+        // "사진 0" 이 되고, 사진을 지운 뒤 가져오면 이미 쓴 번호가 다시 나옵니다.
+        Check(plan.Rows[0].Payload["scanIndex"]!.GetValue<int>() == 1, "import_first_scan_index");
+        Check(plan.Rows[1].Payload["scanIndex"]!.GetValue<int>() == 2, "import_second_scan_index");
         // route 는 DevelopRouteWriter 가 씁니다. 여기서 직접 쓰면 legacy marker 규칙이 갈라집니다.
         Check(
             plan.Rows[0].Payload["filmType"]!.GetValue<string>() == "colorNegative",
@@ -155,7 +158,7 @@ internal static class FrameImportTests
             again.Rejected[0].Refusal == FrameImportRefusal.AlreadyInLibrary,
             "import_reports_duplicate");
         Check(
-            again.Rows[0].Payload["scanIndex"]!.GetValue<int>() == 1,
+            again.Rows[0].Payload["scanIndex"]!.GetValue<int>() == existing.ScanIndex + 1,
             "import_continues_scan_index");
         int duplicateMetadataReads = 0;
         FrameImportPlan duplicateWithMetadataReader = FrameImport.Plan(

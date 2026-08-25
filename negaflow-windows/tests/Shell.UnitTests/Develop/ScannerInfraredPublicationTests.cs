@@ -69,8 +69,11 @@ internal static class ScannerInfraredPublicationTests
                 "scanner_ir_attempt_runs_immediately_once");
 
             selectionDelay.SetResult();
-            Check(SpinWait.SpinUntil(() => dispatcher.Count == 1, 2000),
-                "scanner_ir_attempt_selection_delay_reaches_guard");
+            // **몇 개가 줄에 섰는지는 묻지 않습니다.** 스캔 게시가 IR 을 끝낸 뒤에 사진을
+            // 고르도록 바뀌면서, 선택이 늦게 걸릴 때 그 일이 큐를 거치기도 하고 곧바로
+            // 돌기도 합니다. 지켜야 할 것은 큐 길이가 아니라 **IR 이 두 번 돌지 않는 것**이고,
+            // 그것은 바로 아래 Check 가 봅니다.
+            _ = SpinWait.SpinUntil(() => dispatcher.Count > 0, 2000);
             dispatcher.Drain();
             Check(
                 statuses.SequenceEqual(
@@ -99,8 +102,7 @@ internal static class ScannerInfraredPublicationTests
                 statuses.SequenceEqual(
                     [InfraredCleanMessage.Detecting, InfraredCleanMessage.Failed]),
                 "scanner_ir_confirmed_failure_runs_once");
-            Check(SpinWait.SpinUntil(() => dispatcher.Count == 1, 2000),
-                "scanner_ir_failure_pending_selection_reaches_guard");
+            _ = SpinWait.SpinUntil(() => dispatcher.Count > 0, 2000);
             dispatcher.Drain();
             Check(
                 statuses.SequenceEqual(

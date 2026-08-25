@@ -43,24 +43,40 @@ internal sealed class LibraryScanRunner
         string directory;
         try
         {
-            // macOS `diskStorage.scansPath` — 스캔 패널에서 고른 자리가 우선이고, 없으면
-            // 설정 · 디스크 탭의 "스캔 원본" 폴더입니다. 둘 다 없을 때만 카탈로그 옆으로
-            // 갑니다 — 원본을 사용자가 모르는 곳에 두지 않기 위해서입니다.
-            // 프리뷰는 원본이 아니라 프레임 찾기용 임시 그림입니다. macOS 도 스캔 원본과
-            // 다른 자리(스캔 프리뷰 캐시)에 둡니다 - 원본 폴더에 섞이면 사용자가 지운 뒤에도
-            // 남아 장수가 어긋납니다.
-            string scanRoot = preview && view.diskScanPreviewRoot is { Length: > 0 } previewRoot
-                ? previewRoot
-                : view.scanSession.ScanStorageRoot is { Length: > 0 } chosen
+            if (preview)
+            {
+                // **프리뷰는 스캔 폴더에 넣지 않습니다.**
+                //
+                // macOS `AppModel+PreviewScanning`:
+                //   opts.temporaryOutputURL = ScanTempFile.makeURL(
+                //       prefix: "negaflow_preview", suffix: ".tiff", in: diskStorage.scanPreviewsURL)
+                // 본 스캔만 <스캔 폴더>/<날짜>/<필름 종류>/… 로 갑니다.
+                //
+                // 앞 판은 프리뷰 캐시 자리가 비어 있으면 조용히 스캔 폴더로 되돌아갔고,
+                // 그 자리는 실제로 늘 비어 있었습니다 - 그래서 프리뷰 한 장마다 롤 폴더에
+                // `GT-X900-0001.tif` 같은 원본 이름을 하나씩 차지하고 사진 번호를 먹었습니다.
+                // 되돌아갈 자리도 프리뷰 캐시여야 합니다.
+                directory = view.diskScanPreviewRoot is { Length: > 0 } previewRoot
+                    ? previewRoot
+                    : Path.Combine(roots.LibraryRoot, ScanStorageLayout.PreviewCacheFolderName);
+                _ = Directory.CreateDirectory(directory);
+            }
+            else
+            {
+                // macOS `diskStorage.scansPath` — 스캔 패널에서 고른 자리가 우선이고, 없으면
+                // 설정 · 디스크 탭의 "스캔 원본" 폴더입니다. 둘 다 없을 때만 카탈로그 옆으로
+                // 갑니다 — 원본을 사용자가 모르는 곳에 두지 않기 위해서입니다.
+                string scanRoot = view.scanSession.ScanStorageRoot is { Length: > 0 } chosen
                     ? chosen
                     : view.diskScanRoot is { Length: > 0 } configured
                         ? configured
                         : Path.Combine(roots.LibraryRoot, "Scans");
-            directory = ScanStorageLayout.EnsureRollDirectory(
-                scanRoot,
-                view.scanSession.Options.FilmType,
-                rollName,
-                DateTime.Now);
+                directory = ScanStorageLayout.EnsureRollDirectory(
+                    scanRoot,
+                    view.scanSession.Options.FilmType,
+                    rollName,
+                    DateTime.Now);
+            }
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
@@ -94,7 +110,9 @@ internal sealed class LibraryScanRunner
         {
             outcome = await view.scanSession.RunAsync(
                 view.libraryHost,
-                _ => ScanStorageLayout.NextAvailablePath(directory, stem),
+                _ => preview
+                    ? ScanStorageLayout.NewPreviewPath(directory)
+                    : ScanStorageLayout.NextAvailablePath(directory, stem),
                 preview,
                 cancellation.Token,
                 // 한 쌍이 끝날 때마다 화면을 갱신합니다. 앞 판은 배치가 **다 끝난 뒤에만**
@@ -121,7 +139,7 @@ internal sealed class LibraryScanRunner
         view.SetScanStatus(Describe(outcome));
         if (preview)
         {
-            RemoveStalePreviewFrames();
+            RemoveStalePreviewFrames(view.libraryHost?.ActiveFrameId);
             // 프리뷰는 카탈로그에 올리지 않습니다. 그림만 읽어 두었다가 프레임 찾기에 넘깁니다.
             view.flatbedPreview = view.scanSession.LastPreviewPath is { } previewPath
                 ? await PreviewLuminanceReader.ReadAsync(previewPath)
@@ -140,6 +158,10 @@ internal sealed class LibraryScanRunner
             view.RequestLibraryReload();
             return;
         }
+        // 본 스캔이 끝나면 프리뷰는 제 할 일을 마쳤습니다. macOS 는 프레임을 하나 게시할
+        // 때마다 `removeEphemeralPreviewFrames(keeping: nil)` 로 한 장도 남기지 않습니다.
+        RemoveStalePreviewFrames(keep: null);
+        view.flatbedPreview = PreviewLuminance.None;
         view.RequestLibraryReload();
     }
 
@@ -166,19 +188,24 @@ internal sealed class LibraryScanRunner
     /// 지난 프리뷰 프레임을 걷어냅니다. macOS <c>removeEphemeralPreviewFrames(keeping:)</c>
     /// 자리이며, 남겨 두면 프리뷰를 누를 때마다 임시 그림이 쌓입니다.
     /// </summary>
-    private void RemoveStalePreviewFrames()
+    private void RemoveStalePreviewFrames(string? keep)
     {
         if (view.libraryHost is not { } host)
         {
             return;
         }
-        string? keep = host.ActiveFrameId;
-        List<string> stale = [.. host.Frames
-            .Where(frame => frame.IsPreviewScan && frame.Id != keep)
-            .Select(frame => frame.Id)];
-        if (stale.Count != 0)
+        List<LibraryFrameSnapshot> stale = [.. host.Frames
+            .Where(frame => frame.IsPreviewScan && !string.Equals(frame.Id, keep, StringComparison.Ordinal))];
+        if (stale.Count == 0)
         {
-            _ = host.RemoveFrames(stale);
+            return;
+        }
+        // 카탈로그에서 빼고, 우리가 지은 이름의 캐시 파일도 지웁니다 - macOS 는 두 가지를
+        // 함께 합니다(`removeFramesFromLibrary` + `removeOwnedPreviewFile`).
+        _ = host.RemoveFrames([.. stale.Select(frame => frame.Id)]);
+        foreach (LibraryFrameSnapshot frame in stale)
+        {
+            ScanStorageLayout.RemoveOwnedPreviewFile(frame.SourcePath);
         }
     }
 

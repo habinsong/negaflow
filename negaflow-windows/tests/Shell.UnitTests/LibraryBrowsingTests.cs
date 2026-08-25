@@ -78,9 +78,21 @@ internal static class LibraryBrowsingTests
             byRating[0].Id == "b" && byRating[1].Id == "a" && byRating[2].Id == "c",
             "library_sort_rating_keeps_input_order_within_ties");
 
+        // **입력 순서도 방향은 따릅니다.** macOS 두 자리가 같은 말을 합니다:
+        //   LibraryPresentation.sortedFrames:  if key == .inputOrder {
+        //       return ascending ? frames : frames.reversed() }
+        //   LibraryBrowserProjection.sortFrameIDs: guard descriptor.key != .inputOrder else {
+        //       return descriptor.ascending ? frameIDs : frameIDs.reversed() }
+        // 앞 판의 시험은 "차례를 비교하지 않는다"를 "방향을 무시한다"로 잘못 못 박아,
+        // 기본 정렬에서 목록이 한 칸도 뒤집히지 않게 만들었습니다.
         Check(
-            ReferenceEquals(LibrarySorter.Sort(source, LibrarySortKey.InputOrder, ascending: false), source),
-            "library_sort_input_order_never_reorders");
+            ReferenceEquals(LibrarySorter.Sort(source, LibrarySortKey.InputOrder, ascending: true), source),
+            "library_sort_input_order_ascending_keeps_input");
+        IReadOnlyList<LibraryFrameListItem> reversed =
+            LibrarySorter.Sort(source, LibrarySortKey.InputOrder, ascending: false);
+        Check(
+            reversed[0].Id == "c" && reversed[1].Id == "b" && reversed[2].Id == "a",
+            "library_sort_input_order_descending_reverses");
     }
 
     /// <summary>

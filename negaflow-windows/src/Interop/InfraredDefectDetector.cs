@@ -80,7 +80,19 @@ public sealed record InfraredDetectionResult(
     ulong CandidateCount,
     ulong ConfirmedCount,
     IReadOnlyList<InfraredDetectionCluster> Clusters,
-    IReadOnlyList<InfraredDetectedComponent> Components);
+    IReadOnlyList<InfraredDetectedComponent> Components)
+{
+    /// <summary>
+    /// 실패한 <b>자리</b>입니다. 성공이면 0 입니다.
+    /// </summary>
+    /// <remarks>
+    /// <c>Unreadable</c> 하나에 "경로가 비었다 · 눈에 보이는 원본을 못 폈다 · IR 을 못 폈다 ·
+    /// 크기를 못 맞췄다 · 예외가 났다" 가 전부 접혀 있었습니다. 그래서 파일을 밖에서 열면
+    /// 멀쩡한데 앱 안에서만 실패하는 일을 두고 <b>어느 갈래인지 가릴 방법이 없었습니다.</b>
+    /// 네이티브가 자리마다 다른 코드를 <c>reserved2</c> 에 실어 보냅니다.
+    /// </remarks>
+    public uint FailureDetail { get; init; }
+}
 
 [StructLayout(LayoutKind.Sequential)]
 internal struct NativeInfraredDetectorParametersV1
@@ -431,7 +443,10 @@ public static unsafe class NativeInfraredDefectDetector
             summary.CandidateCount,
             summary.ConfirmedCount,
             clusters,
-            components);
+            components)
+        {
+            FailureDetail = summary.Reserved2,
+        };
 
     private static NativeBootstrapException NativeFailure(string operation, uint status) =>
         new(

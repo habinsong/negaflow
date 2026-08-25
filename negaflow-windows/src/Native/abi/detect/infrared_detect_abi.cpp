@@ -100,6 +100,9 @@ namespace {
         negaflow::pipeline::dump_gpu_kernel_timings();
     }
     summary->status = infrared_status(detection.status);
+    // 실패한 자리입니다. `reserved2` 는 지금까지 늘 0 이었으므로 구조체 크기도 뜻도
+    // 바뀌지 않습니다 - 옛 읽는 쪽은 그대로 무시합니다.
+    summary->reserved2 = detection.failure_detail;
     summary->width = detection.detection.width;
     summary->height = detection.detection.height;
     summary->offset_x = detection.detection.offset_x;

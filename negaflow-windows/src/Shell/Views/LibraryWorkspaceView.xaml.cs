@@ -68,8 +68,6 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ControlsPanel.ImportScannerButton.Checked += OnImportScannerToggled;
         ControlsPanel.ImportScannerButton.Unchecked += OnImportScannerToggled;
         ControlsPanel.ScanPanel.LibraryChanged += OnEmbeddedLibraryChanged;
-        ControlsPanel.ScanPanel.FlatbedPreviewChanged += (_, _) => SyncFlatbedOverlay();
-        FlatbedOverlay.RegionsChanged += (_, _) => ControlsPanel.ScanPanel.OnOverlayRegionsChanged();
         CullingSurface.AttachChrome(
             CullingGridButton,
             CullingSurveyButton,
@@ -248,7 +246,6 @@ public sealed partial class LibraryWorkspaceView : UserControl
             allItems = LibraryFrameListItems.From(host.Frames, host.SourceAvailabilityByFrameId);
             ShowFilteredItems();
         });
-        SyncFlatbedOverlay();
     }
 
     private void OnHostSelectionChanged(object? sender, EventArgs args)

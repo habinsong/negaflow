@@ -8,9 +8,10 @@
     mc:Ignorable="d">
 
     <!-- macOS FlatbedScanAreaOverlay - 프리뷰 그림 위에 프레임 사각형을 얹습니다.
-         배경을 칠해야 빈 자리에서 끌어 새 프레임을 그릴 수 있습니다. WinUI 는 배경이
-         null 인 Grid 를 아예 집지 않습니다. -->
-    <Grid x:Name="Host" x:FieldModifier="internal" Background="Transparent" SizeChanged="OnHostSizeChanged">
+         **배경을 칠하지 않습니다.** 칠하면 빈 자리의 눌림을 이 판이 먼저 집어, 그 아래
+         캔버스가 사진을 잡고 끄는 동작이 죽습니다. 사각형과 손잡이는 자기 몸에서 직접
+         집으므로 배경 없이도 잡힙니다. -->
+    <Grid x:Name="Host" x:FieldModifier="internal" Background="{x:Null}" SizeChanged="OnHostSizeChanged">
         <Image
             x:Name="PreviewImage" x:FieldModifier="internal"
             HorizontalAlignment="Center"
