@@ -1,8 +1,16 @@
+using System.Diagnostics;
+
 namespace Negaflow.Catalog;
 
 internal static class DefectSidecarStore
 {
     public const long MaximumFileBytes = 128L * 1_024 * 1_024;
+
+    /// <summary>`NEGA_TIMING=1` 일 때만 sidecar write 내부 구간을 실측합니다.</summary>
+    private static readonly bool TraceEnabled = string.Equals(
+        Environment.GetEnvironmentVariable("NEGA_TIMING"),
+        "1",
+        StringComparison.Ordinal);
 
 
     internal static readonly object Gate = new();
@@ -101,6 +109,7 @@ internal static class DefectSidecarStore
                     return DefectSidecarDeleteResult.Failure(
                         DefectSidecarError.IoFailure);
                 }
+                DefectSidecarValidationCache.Invalidate(path);
                 RevisionFloors[key] = Math.Max(
                     RevisionFloors.GetValueOrDefault(key),
                     minimumRevision);
@@ -244,11 +253,22 @@ internal static class DefectSidecarStore
                 floor);
         }
 
+        long traceStart = TraceEnabled ? Stopwatch.GetTimestamp() : 0L;
+        double Split()
+        {
+            long now = Stopwatch.GetTimestamp();
+            double elapsed = (now - traceStart) * 1000.0 / Stopwatch.Frequency;
+            traceStart = now;
+            return elapsed;
+        }
+
         byte[] data = DefectSidecarCodec.Serialize(snapshot);
+        double serializeMilliseconds = TraceEnabled ? Split() : 0.0;
         DefectSidecarReadResult validated = DefectSidecarCodec.Decode(
             data,
             snapshot.FrameId,
             validateCompressedMasks: true);
+        double decodeMilliseconds = TraceEnabled ? Split() : 0.0;
         if (data.LongLength > MaximumFileBytes ||
             validated.Snapshot is not { } encoded ||
             !data.AsSpan().SequenceEqual(DefectSidecarCodec.Serialize(encoded)))
@@ -256,6 +276,7 @@ internal static class DefectSidecarStore
             return DefectSidecarWriteResult.Failure(
                 DefectSidecarError.InvalidSnapshot);
         }
+        double reserializeMilliseconds = TraceEnabled ? Split() : 0.0;
 
         try
         {
@@ -267,6 +288,15 @@ internal static class DefectSidecarStore
                     DefectSidecarError.ReparsePointNotAllowed);
             }
             DefectSidecarFile.WriteAtomic(path, data);
+            DefectSidecarValidationCache.RecordCurrent(path);
+            if (TraceEnabled)
+            {
+                Console.Error.WriteLine(
+                    $"[sidecar write timing] bytes={data.LongLength} " +
+                    $"items={snapshot.Items.Count} " +
+                    $"serialize={serializeMilliseconds:F1} decode={decodeMilliseconds:F1} " +
+                    $"reserialize={reserializeMilliseconds:F1} file={Split():F1} ms");
+            }
             RevisionFloors[key] = snapshot.RecipeRevision;
             return DefectSidecarWriteResult.Success(
                 DefectSidecarWriteKind.Written);
@@ -321,6 +351,7 @@ internal static class DefectSidecarStore
                     return DefectSidecarDeleteResult.Failure(
                         DefectSidecarError.IoFailure);
                 }
+                DefectSidecarValidationCache.Invalidate(path);
                 RevisionFloors.Remove(key);
                 return DefectSidecarDeleteResult.Success();
             }

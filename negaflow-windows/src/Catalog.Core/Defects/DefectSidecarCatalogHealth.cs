@@ -102,6 +102,97 @@ internal static class DefectSidecarCatalogHealth
         }
     }
 
+    /// <summary>
+    /// 선언된 sidecar 가 전부 읽히는지만 확인합니다. <see cref="ValidateCatalogDeclarations"/>
+    /// 와 달리 snapshot 을 모으지 않고, <see cref="DefectSidecarValidationCache"/> 로 이미
+    /// 검증한 파일의 재복호를 건너뜁니다. commit gate 처럼 목록이 필요 없는 쪽이 씁니다.
+    /// </summary>
+    public static DefectSidecarError ValidateDeclaredSidecars(
+        StorageRootSet roots,
+        CatalogSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(roots);
+        ArgumentNullException.ThrowIfNull(snapshot);
+        lock (DefectSidecarStore.Gate)
+        {
+            if (!DefectSidecarFile.HasValidRoots(roots))
+            {
+                return DefectSidecarError.InvalidStorageRoots;
+            }
+            if (File.Exists(roots.DefectRecipeRoot) ||
+                StoragePathPolicy.IsExistingReparsePoint(roots.DefectRecipeRoot))
+            {
+                return DefectSidecarError.ReparsePointNotAllowed;
+            }
+
+            HashSet<Guid> frameIds = [];
+            foreach (CatalogEntityRow frame in snapshot.Rows(CatalogEntityTable.Frames))
+            {
+                if (!DeclaresDefectEdits(frame, out bool hasEdits))
+                {
+                    return DefectSidecarError.InvalidContent;
+                }
+                if (!hasEdits)
+                {
+                    continue;
+                }
+                if (!Guid.TryParseExact(frame.Id, "D", out Guid frameId) ||
+                    frameId == Guid.Empty ||
+                    !frameIds.Add(frameId))
+                {
+                    return DefectSidecarError.InvalidFrameId;
+                }
+
+                string path = DefectSidecarStore.PathFor(roots, frameId);
+                bool stamped = DefectSidecarValidationCache.TryStamp(
+                    path,
+                    out long length,
+                    out long ticks);
+                if (stamped &&
+                    DefectSidecarValidationCache.IsValidated(path, length, ticks))
+                {
+                    continue;
+                }
+                DefectSidecarReadResult read = DefectSidecarFile.ReadFile(path, frameId);
+                if (read.Snapshot is null)
+                {
+                    return read.Error;
+                }
+                // 복호 중에 파일이 바뀌었으면 어느 내용을 통과시킨 것인지 알 수 없으므로
+                // 캐시에 넣지 않습니다 - 다음 gate 에서 다시 읽습니다.
+                if (stamped &&
+                    DefectSidecarValidationCache.TryStamp(
+                        path,
+                        out long afterLength,
+                        out long afterTicks) &&
+                    afterLength == length &&
+                    afterTicks == ticks)
+                {
+                    DefectSidecarValidationCache.Record(path, length, ticks);
+                }
+            }
+            return DefectSidecarError.None;
+        }
+    }
+
+    /// <summary>
+    /// `hasDefectEdits` 를 읽습니다. 값이 bool 이 아니면 <c>false</c> 를 내고, 없으면
+    /// 선언하지 않은 것으로 봅니다.
+    /// </summary>
+    private static bool DeclaresDefectEdits(CatalogEntityRow frame, out bool hasEdits)
+    {
+        hasEdits = false;
+        if (!frame.Payload.TryGetPropertyValue(
+                "hasDefectEdits",
+                out System.Text.Json.Nodes.JsonNode? node) ||
+            node is null)
+        {
+            return true;
+        }
+        return node is System.Text.Json.Nodes.JsonValue value &&
+            value.TryGetValue(out hasEdits);
+    }
+
     public static DefectCatalogHealthResult ValidateCatalogDeclarations(
         StorageRootSet roots,
         CatalogSnapshot snapshot)

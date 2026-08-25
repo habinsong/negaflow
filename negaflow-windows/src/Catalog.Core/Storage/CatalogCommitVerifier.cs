@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace Negaflow.Catalog;
 
 internal readonly record struct CatalogPrimarySnapshot(bool Existed, string? CopyPath);
@@ -8,6 +10,12 @@ internal readonly record struct CatalogPrimarySnapshot(bool Existed, string? Cop
 /// </summary>
 internal static class CatalogCommitVerifier
 {
+    /// <summary>`NEGA_TIMING=1` 일 때만 commit 내부 구간을 실측합니다.</summary>
+    private static readonly bool TraceEnabled = string.Equals(
+        Environment.GetEnvironmentVariable("NEGA_TIMING"),
+        "1",
+        StringComparison.Ordinal);
+
 
     public static CatalogWriteResult Commit(
         CatalogSnapshot snapshot,
@@ -56,6 +64,21 @@ internal static class CatalogCommitVerifier
             return CatalogWriteResult.Failure(CatalogStoreError.RollbackFailed);
         }
 
+        long traceStart = TraceEnabled ? Stopwatch.GetTimestamp() : 0L;
+        double previousRead = 0.0;
+        double compare = 0.0;
+        double snapshotCopy = 0.0;
+        double preserve = 0.0;
+        double writeMilliseconds = 0.0;
+        double readbackMilliseconds = 0.0;
+        double Split()
+        {
+            long now = Stopwatch.GetTimestamp();
+            double elapsed = (now - traceStart) * 1000.0 / Stopwatch.Frequency;
+            traceStart = now;
+            return elapsed;
+        }
+
         bool primaryExisted = File.Exists(roots.CatalogPath);
         if (!primaryExisted && CatalogCommitRollback.HasBlockingArtifactWhenPrimaryMissing(roots))
         {
@@ -67,12 +90,20 @@ internal static class CatalogCommitVerifier
         if (primaryExisted)
         {
             CatalogReadResult previous = SqliteCatalogStore.Read(roots.CatalogPath);
+            if (TraceEnabled)
+            {
+                previousRead = Split();
+            }
             if (previous.Snapshot is not { } previousSnapshot)
             {
                 return CatalogWriteResult.Failure(previous.Error);
             }
 
             bool unchanged = SnapshotsMatch(previousSnapshot, snapshot);
+            if (TraceEnabled)
+            {
+                compare = Split();
+            }
             if (unchanged &&
                 CatalogRecovery.IsValidCatalogSource(roots.CatalogBackupPath))
             {
@@ -93,6 +124,10 @@ internal static class CatalogCommitVerifier
                 roots,
                 previousSnapshot,
                 out primarySnapshot);
+            if (TraceEnabled)
+            {
+                snapshotCopy = Split();
+            }
             if (snapshotError != CatalogStoreError.None)
             {
                 return CatalogWriteResult.Failure(snapshotError);
@@ -107,6 +142,10 @@ internal static class CatalogCommitVerifier
                 CatalogStoreError preserveError = CatalogCommitRollback.PreservePreviousPrimary(
                     previousPrimaryPath,
                     roots);
+                if (TraceEnabled)
+                {
+                    preserve = Split();
+                }
                 if (preserveError != CatalogStoreError.None)
                 {
                     return CatalogWriteResult.Failure(preserveError);
@@ -117,6 +156,10 @@ internal static class CatalogCommitVerifier
             try
             {
                 written = writer(snapshot, roots.CatalogPath);
+                if (TraceEnabled)
+                {
+                    writeMilliseconds = Split();
+                }
             }
             catch (Exception error) when (CatalogCommitFiles.IsRecoverableCommitException(error))
             {
@@ -143,6 +186,10 @@ internal static class CatalogCommitVerifier
             try
             {
                 persisted = readback(roots.CatalogPath);
+                if (TraceEnabled)
+                {
+                    readbackMilliseconds = Split();
+                }
             }
             catch (Exception error) when (CatalogCommitFiles.IsRecoverableCommitException(error))
             {
@@ -166,6 +213,15 @@ internal static class CatalogCommitVerifier
                 return CatalogWriteResult.Failure(CatalogStoreError.RollbackFailed);
             }
 
+            if (TraceEnabled)
+            {
+                double verify = Split();
+                Console.Error.WriteLine(
+                    $"[catalog commit timing] read={previousRead:F1} compare={compare:F1} " +
+                    $"snapshot={snapshotCopy:F1} preserve={preserve:F1} " +
+                    $"write={writeMilliseconds:F1} readback={readbackMilliseconds:F1} " +
+                    $"verify={verify:F1} ms");
+            }
             return CatalogWriteResult.Success();
         }
         finally

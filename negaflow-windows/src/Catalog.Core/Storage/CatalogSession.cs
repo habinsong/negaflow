@@ -126,14 +126,14 @@ public sealed partial class CatalogSession : IDisposable
         CatalogReadResult catalog = SqliteCatalogStore.Read(roots.CatalogPath);
         if (catalog.Snapshot is { } snapshot)
         {
-            DefectCatalogHealthResult health =
-                DefectSidecarCatalogHealth.ValidateCatalogDeclarations(roots, snapshot);
-            if (!health.IsHealthy)
+            DefectSidecarError health =
+                DefectSidecarCatalogHealth.ValidateDeclaredSidecars(roots, snapshot);
+            if (health != DefectSidecarError.None)
             {
                 held.Dispose();
                 return CatalogSessionOpenResult.Failure(
                     CatalogSessionError.MissingAuthoritativeData,
-                    defectSidecarError: health.Error);
+                    defectSidecarError: health);
             }
             DefectSidecarError defectCleanup =
                 DefectSidecarCatalogHealth.CleanupUndeclaredFrameSidecars(roots, snapshot);
@@ -176,7 +176,8 @@ public sealed partial class CatalogSession : IDisposable
             {
                 return CatalogWriteResult.Failure(CatalogStoreError.RollbackFailed);
             }
-            if (!DefectSidecarCatalogHealth.ValidateCatalogDeclarations(roots, snapshot).IsHealthy)
+            if (DefectSidecarCatalogHealth.ValidateDeclaredSidecars(roots, snapshot) !=
+                DefectSidecarError.None)
             {
                 return CatalogWriteResult.Failure(
                     CatalogStoreError.MissingAuthoritativeData);

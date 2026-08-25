@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json.Nodes;
 using Negaflow.Catalog;
 
@@ -36,13 +37,28 @@ internal sealed class LibraryDefectRecipeStore(
             return Delete(frameId, index, recipe);
         }
 
+        bool trace = InfraredPerformanceTrace.Enabled;
+        long traceStart = trace ? Stopwatch.GetTimestamp() : 0L;
+        double Split()
+        {
+            long now = Stopwatch.GetTimestamp();
+            double elapsed = (now - traceStart) * 1000.0 / Stopwatch.Frequency;
+            traceStart = now;
+            return elapsed;
+        }
+
         JsonObject updatedPayload = (JsonObject)state.Payloads[index].DeepClone();
         updatedPayload["hasDefectEdits"] = true;
+        double cloneMilliseconds = trace ? Split() : 0.0;
         List<CatalogEntityRow> candidateRows = state.FrameRows();
         candidateRows[index] = new CatalogEntityRow(frameId, updatedPayload);
+        double rowsMilliseconds = trace ? Split() : 0.0;
+        CatalogSnapshot candidateSnapshot = state.CreateSnapshot(candidateRows);
+        double snapshotMilliseconds = trace ? Split() : 0.0;
         DefectRecipeCatalogWriteResult committed = state.Session.WriteDefectRecipeAndCatalog(
             recipe,
-            state.CreateSnapshot(candidateRows));
+            candidateSnapshot);
+        double commitMilliseconds = trace ? Split() : 0.0;
         if (!committed.IsSuccess || committed.Snapshot is not { } stored)
         {
             return new(null, LibraryFrameError.None,
@@ -53,6 +69,13 @@ internal sealed class LibraryDefectRecipeStore(
         state.DefectRecipes[frameId] = stored;
         state.DefectRevisions.Observe(frameId, stored.RecipeRevision);
         state.ProjectFrames();
+        if (trace)
+        {
+            InfraredPerformanceTrace.Write(
+                $"recipe-store clone={cloneMilliseconds:F1} rows={rowsMilliseconds:F1} " +
+                $"snapshot={snapshotMilliseconds:F1} commit={commitMilliseconds:F1} " +
+                $"project={Split():F1} ms");
+        }
         state.IsDirty = false;
         return new(stored, LibraryFrameError.None,
             DefectSidecarError.None, CatalogStoreError.None);

@@ -23,7 +23,9 @@ internal static class SqliteCatalogSchema
         // 파일 핸들이 남고, 그러면 backup 교체와 pending restore 의 파일 치환이 실패합니다.
         SqliteConnectionStringBuilder builder = new()
         {
-            DataSource = catalogPath,
+            // SQLite native 도 확장 경로 접두사 없이는 MAX_PATH(260) 를 넘는 경로를 못 엽니다.
+            // 260자 catalog 에서 promotion 검증(IsValidRecoverySource)이 여기서 실패했습니다.
+            DataSource = StorageExtendedPath.ToExtendedPath(catalogPath),
             Mode = mode,
             Cache = SqliteCacheMode.Private,
             Pooling = false,

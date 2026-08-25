@@ -41,7 +41,8 @@ internal sealed class DefectRecipeCatalogBatchTransaction(StorageRootSet roots)
         return DefectSidecarCatalogWriter.WriteMany(
             roots,
             recipes,
-            () => DefectSidecarCatalogHealth.ValidateCatalogDeclarations(roots, catalog).IsHealthy
+            () => DefectSidecarCatalogHealth.ValidateDeclaredSidecars(roots, catalog) ==
+                    DefectSidecarError.None
                 ? commitCatalog()
                 : CatalogWriteResult.Failure(CatalogStoreError.MissingAuthoritativeData),
             forceSidecarRollbackFailure);

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
@@ -21,6 +22,24 @@ internal sealed record LibraryInfraredCleanWork(
 internal sealed class LibraryInfraredCleanCoordinator : IDisposable
 {
     private sealed record ActiveRun(long Revision, DevelopRun Run);
+
+    /// <summary>`NEGA_TIMING=1` 일 때만 선택→적용 사이의 각 구간을 실측합니다.</summary>
+    private sealed class ScheduleTiming
+    {
+        internal long Start = Stopwatch.GetTimestamp();
+        internal double Debounce;
+        internal double Dispatch;
+        internal double Prepare;
+        internal double Detect;
+
+        internal double Split()
+        {
+            long now = Stopwatch.GetTimestamp();
+            double elapsed = (now - Start) * 1000.0 / Stopwatch.Frequency;
+            Start = now;
+            return elapsed;
+        }
+    }
 
     private readonly object sync = new();
     private readonly IUiDispatcher dispatcher;
@@ -74,7 +93,11 @@ internal sealed class LibraryInfraredCleanCoordinator : IDisposable
             }
             generation = lifecycleGeneration;
         }
-        _ = DelayAndStartAsync(frameId, generation, lifetime.Token);
+        _ = DelayAndStartAsync(
+            frameId,
+            generation,
+            InfraredPerformanceTrace.Enabled ? new ScheduleTiming() : null,
+            lifetime.Token);
     }
 
     internal bool YieldToManualTool(string frameId)
@@ -111,6 +134,7 @@ internal sealed class LibraryInfraredCleanCoordinator : IDisposable
     private async Task DelayAndStartAsync(
         string frameId,
         long generation,
+        ScheduleTiming? timing,
         CancellationToken cancellationToken)
     {
         try
@@ -125,11 +149,19 @@ internal sealed class LibraryInfraredCleanCoordinator : IDisposable
         {
             return;
         }
-        _ = dispatcher.TryEnqueue(() => StartIfCurrent(frameId, generation));
+        if (timing is not null)
+        {
+            timing.Debounce = timing.Split();
+        }
+        _ = dispatcher.TryEnqueue(() => StartIfCurrent(frameId, generation, timing));
     }
 
-    private void StartIfCurrent(string frameId, long generation)
+    private void StartIfCurrent(string frameId, long generation, ScheduleTiming? timing)
     {
+        if (timing is not null)
+        {
+            timing.Dispatch = timing.Split();
+        }
         lock (sync)
         {
             if (disposed || lifecycleGeneration != generation)
@@ -141,6 +173,10 @@ internal sealed class LibraryInfraredCleanCoordinator : IDisposable
             prepare(frameId) is not { } work)
         {
             return;
+        }
+        if (timing is not null)
+        {
+            timing.Prepare = timing.Split();
         }
 
         var run = new DevelopRun();
@@ -161,13 +197,14 @@ internal sealed class LibraryInfraredCleanCoordinator : IDisposable
             activeRuns[frameId] = new ActiveRun(revision, run);
         }
         prior?.Run.Cancel();
-        _ = RunAsync(work, revision, run);
+        _ = RunAsync(work, revision, run, timing);
     }
 
     private async Task RunAsync(
         LibraryInfraredCleanWork work,
         long revision,
-        DevelopRun run)
+        DevelopRun run,
+        ScheduleTiming? timing)
     {
         InfraredDefectDetectionOutcome outcome;
         try
@@ -179,7 +216,11 @@ internal sealed class LibraryInfraredCleanCoordinator : IDisposable
             outcome = new InfraredDefectDetectionOutcome(null, true);
         }
 
-        if (!dispatcher.TryEnqueue(() => Finish(work, revision, run, outcome)))
+        if (timing is not null)
+        {
+            timing.Detect = timing.Split();
+        }
+        if (!dispatcher.TryEnqueue(() => Finish(work, revision, run, outcome, timing)))
         {
             RemoveIfCurrent(work.FrameId, revision);
             run.Dispose();
@@ -190,8 +231,16 @@ internal sealed class LibraryInfraredCleanCoordinator : IDisposable
         LibraryInfraredCleanWork work,
         long revision,
         DevelopRun run,
-        InfraredDefectDetectionOutcome outcome)
+        InfraredDefectDetectionOutcome outcome,
+        ScheduleTiming? timing)
     {
+        if (timing is not null)
+        {
+            InfraredPerformanceTrace.Write(
+                $"schedule debounce={timing.Debounce:F1} dispatch={timing.Dispatch:F1} " +
+                $"prepare={timing.Prepare:F1} detect={timing.Detect:F1} " +
+                $"publish={timing.Split():F1}");
+        }
         bool current = RemoveIfCurrent(work.FrameId, revision);
         run.Dispose();
         if (current)

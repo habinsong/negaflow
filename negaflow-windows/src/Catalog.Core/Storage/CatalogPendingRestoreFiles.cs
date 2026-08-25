@@ -148,11 +148,9 @@ internal static partial class CatalogPendingRestoreFiles
         string destinationPath,
         out int win32Error)
     {
-        string source = ToExtendedPath(sourcePath);
-        string destination = ToExtendedPath(destinationPath);
         for (int attempt = 0; ; attempt++)
         {
-            if (MoveFileEx(source, destination, MoveFileWriteThrough))
+            if (MoveFileEx(sourcePath, destinationPath, MoveFileWriteThrough))
             {
                 win32Error = 0;
                 return true;
@@ -220,8 +218,8 @@ internal static partial class CatalogPendingRestoreFiles
                     ignoreMetadataErrors: false);
             }
             else if (!MoveFileEx(
-                ToExtendedPath(temporaryPath),
-                ToExtendedPath(markerPath),
+                temporaryPath,
+                markerPath,
                 MoveFileWriteThrough))
             {
                 throw new IOException("Pending restore marker promotion failed.");
@@ -239,8 +237,8 @@ internal static partial class CatalogPendingRestoreFiles
             if (IsRegularFile(displacedPath))
             {
                 _ = MoveFileEx(
-                    ToExtendedPath(displacedPath),
-                    ToExtendedPath(markerPath),
+                    displacedPath,
+                    markerPath,
                     MoveFileReplaceExisting | MoveFileWriteThrough);
             }
             throw;

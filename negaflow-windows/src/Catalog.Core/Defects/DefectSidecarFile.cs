@@ -103,8 +103,8 @@ internal static class DefectSidecarFile
                     ignoreMetadataErrors: false);
             }
             else if (!MoveFileEx(
-                ToExtendedPath(temporary),
-                ToExtendedPath(destination),
+                temporary,
+                destination,
                 MoveFileWriteThrough))
             {
                 throw new IOException("Defects sidecar promotion failed.");
@@ -122,8 +122,8 @@ internal static class DefectSidecarFile
             if (destinationExisted && File.Exists(displaced))
             {
                 _ = MoveFileEx(
-                    ToExtendedPath(displaced),
-                    ToExtendedPath(destination),
+                    displaced,
+                    destination,
                     MoveFileReplaceExisting | MoveFileWriteThrough);
             }
             else if (!destinationExisted && File.Exists(destination) &&
@@ -180,17 +180,19 @@ internal static class DefectSidecarFile
         }
     }
 
-    internal static string ToExtendedPath(string path)
-    {
-        string fullPath = Path.GetFullPath(path);
-        if (fullPath.StartsWith(@"\\?\", StringComparison.Ordinal))
-        {
-            return fullPath;
-        }
-        return fullPath.StartsWith(@"\\", StringComparison.Ordinal)
-            ? @"\\?\UNC\" + fullPath[2..]
-            : @"\\?\" + fullPath;
-    }
+    /// <summary>
+    /// P/Invoke 경계에서 확장 경로를 붙입니다. 호출부마다 붙이면 반드시 한 곳이 새고,
+    /// 실제로 <c>CatalogCommitRollback.RestorePriorAbsence</c> 의 262자 quarantine 이동이
+    /// ERROR_PATH_NOT_FOUND 로 조용히 실패했습니다.
+    /// </summary>
+    internal static bool MoveFileEx(
+        string existingFileName,
+        string newFileName,
+        uint flags) =>
+        MoveFileExNative(
+            StorageExtendedPath.ToExtendedPath(existingFileName),
+            StorageExtendedPath.ToExtendedPath(newFileName),
+            flags);
 
     [DllImport(
         "kernel32.dll",
@@ -198,7 +200,7 @@ internal static class DefectSidecarFile
         CharSet = CharSet.Unicode,
         SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    internal static extern bool MoveFileEx(
+    private static extern bool MoveFileExNative(
         string existingFileName,
         string newFileName,
         uint flags);

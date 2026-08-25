@@ -39,7 +39,8 @@ internal sealed class DefectRecipeCatalogTransaction(StorageRootSet roots)
         return DefectSidecarCatalogWriter.Write(
             roots,
             recipe,
-            () => DefectSidecarCatalogHealth.ValidateCatalogDeclarations(roots, catalog).IsHealthy
+            () => DefectSidecarCatalogHealth.ValidateDeclaredSidecars(roots, catalog) ==
+                    DefectSidecarError.None
                 ? commitCatalog()
                 : CatalogWriteResult.Failure(CatalogStoreError.MissingAuthoritativeData),
             forceSidecarRollbackFailure);
@@ -97,7 +98,8 @@ internal sealed class DefectRecipeCatalogTransaction(StorageRootSet roots)
                 DefectSidecarError.InvalidSnapshot);
         }
 
-        if (!DefectSidecarCatalogHealth.ValidateCatalogDeclarations(roots, catalog).IsHealthy)
+        if (DefectSidecarCatalogHealth.ValidateDeclaredSidecars(roots, catalog) !=
+            DefectSidecarError.None)
         {
             return DefectRecipeCatalogDeleteResult.Failure(
                 catalogError: CatalogStoreError.MissingAuthoritativeData);
@@ -116,9 +118,9 @@ internal sealed class DefectRecipeCatalogTransaction(StorageRootSet roots)
             return DefectRecipeCatalogDeleteResult.Success();
         }
 
-        if (DefectSidecarCatalogHealth.ValidateCatalogDeclarations(
+        if (DefectSidecarCatalogHealth.ValidateDeclaredSidecars(
                 roots,
-                currentCatalog).IsHealthy &&
+                currentCatalog) == DefectSidecarError.None &&
             CatalogCommitVerifier.Commit(currentCatalog, roots).IsSuccess)
         {
             return DefectRecipeCatalogDeleteResult.Failure(deleted.Error);

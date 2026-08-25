@@ -128,10 +128,7 @@ internal static class CatalogCommitFiles
             }
             else
             {
-                if (!MoveFileEx(
-                    temporaryPath,
-                    destinationPath,
-                    MoveFileWriteThrough))
+                if (!MoveFileEx(temporaryPath, destinationPath, MoveFileWriteThrough))
                 {
                     return ClassifyWin32(Marshal.GetLastPInvokeError());
                 }
@@ -249,13 +246,27 @@ internal static class CatalogCommitFiles
     internal static bool IsRecoverableCommitException(Exception error) => error is not
         OutOfMemoryException and not AccessViolationException;
 
+    /// <summary>
+    /// P/Invoke 경계에서 확장 경로를 붙입니다. 호출부마다 붙이면 반드시 한 곳이 새고,
+    /// 실제로 <c>CatalogCommitRollback.RestorePriorAbsence</c> 의 262자 quarantine 이동이
+    /// ERROR_PATH_NOT_FOUND 로 조용히 실패했습니다.
+    /// </summary>
+    internal static bool MoveFileEx(
+        string existingFileName,
+        string newFileName,
+        uint flags) =>
+        MoveFileExNative(
+            StorageExtendedPath.ToExtendedPath(existingFileName),
+            StorageExtendedPath.ToExtendedPath(newFileName),
+            flags);
+
     [DllImport(
         "kernel32.dll",
         EntryPoint = "MoveFileExW",
         CharSet = CharSet.Unicode,
         SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    internal static extern bool MoveFileEx(
+    private static extern bool MoveFileExNative(
         string existingFileName,
         string newFileName,
         uint flags);

@@ -23,7 +23,9 @@ internal static class CatalogStorageFixtures
     {
         SqliteConnectionStringBuilder builder = new()
         {
-            DataSource = catalogPath,
+            // 제품과 같은 경계를 지나게 합니다 - 시험 root 가 MAX_PATH 를 넘으면
+            // 접두사 없이는 fixture 자신이 파일을 못 엽니다.
+            DataSource = StorageExtendedPath.ToExtendedPath(catalogPath),
             Mode = SqliteOpenMode.ReadWrite,
             Pooling = false,
         };
