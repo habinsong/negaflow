@@ -19,8 +19,13 @@ public sealed class CropWorkspaceState
     public bool AwaitingPreview { get; private set; }
 
     /// <summary>
-    /// 현재 화면에 그려진 크롭 오버레이의 프레임입니다. 줌·팬은 사진만 바꾸므로 이 값은
-    /// 유지하고, 새 미리보기나 캔버스 크기 변경 때만 갱신합니다.
+    /// 현재 화면에 그려진 크롭 오버레이의 프레임입니다. **사진이 놓이는 프레임이 바뀔 때마다**
+    /// 갱신합니다 - 줌·팬·캔버스 크기·새 미리보기 전부입니다. macOS 는 캐시 없이
+    /// `canvasFittedImageFrame(..., scale:offset:)` 하나를 사진과 크롭에 똑같이 넘깁니다
+    /// (`CanvasView.swift`). 여기서 값을 들고 있는 것은 그 사이 - 포인터 드래그 중에 미리보기가
+    /// 다시 와도 오버레이가 흔들리지 않게 하기 위해서일 뿐이며, **줌·팬을 무시하라는 뜻이
+    /// 아닙니다.** 무시했더니 확대하면 크롭이 사진 안쪽으로 들어가고 축소하면 사진보다 넓게
+    /// 잡혔습니다.
     /// </summary>
     public PreviewFrame? OverlayFrame { get; private set; }
 

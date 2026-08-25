@@ -55,9 +55,18 @@ internal static class ScanRunCoordinator
             {
                 // 프리뷰는 영속 catalog에서 제외한 세션 frame으로 게시합니다. 파일은 그대로
                 // 남겨 오버레이가 읽고, 평판 영역의 실제 자는 플러그인이 적용한 값으로 보존합니다.
+                // `ConfigureAwait(false)` 를 쓰면 안 됩니다. 바로 아래
+                // `library.PublishScannerPreviewFrame` 이 선택을 옮기고, 그 선택이
+                // `WorkspacePresentationState.SetActiveFrame` -> 툴바 `SetWorkspaceSelection`
+                // 까지 이어져 **XAML 속성을 건드립니다.** 워커 스레드에서 그것을 하면 WinUI 가
+                // `COMException`(RPC_E_WRONG_THREAD)을 던지고, 그 예외가 프리뷰 게시를 통째로
+                // 끊습니다 - 실제로 V700 프리뷰가 파일까지 다 만들고도 화면·썸네일·파일 목록
+                // 어디에도 안 나오고, region 검출과 본 스캔도 시작되지 않았습니다.
+                //
+                // 본 스캔 경로(`ScannerScanPublisher.ScanAndPublishAsync`)는 같은 자리에서
+                // `ConfigureAwait` 를 붙이지 않아 UI 컨텍스트를 유지합니다. 여기도 같게 둡니다.
                 ScannerPluginScanResult scanned = await gateway
-                    .ScanAsync(plugin, identity, request, cancellationToken)
-                    .ConfigureAwait(false);
+                    .ScanAsync(plugin, identity, request, cancellationToken);
                 lastScanStatus = scanned.Status;
                 if (!scanned.IsSuccess)
                 {

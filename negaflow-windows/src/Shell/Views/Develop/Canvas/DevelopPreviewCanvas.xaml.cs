@@ -524,6 +524,12 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         PositionSurface(DefectOverlayImage, frame);
         ApplyCompareLayout(frame);
         ApplyHudLayout();
+        // 크롭도 **같은 프레임**을 써야 합니다. macOS 는 `canvasFittedImageFrame(..., scale:
+        // viewport.scale, offset: viewport.offset)` 하나를 `imageLayer` 와 `CropOverlay` 에
+        // 똑같이 넘깁니다(`CanvasView.swift`). Windows 는 여기서 사진만 다시 놓고 크롭은
+        // 옛 프레임에 남겨 둬서, 확대하면 크롭이 사진 안쪽으로 들어가고 축소하면 사진보다
+        // 넓게 잡혔습니다.
+        RenderCropOverlay(refreshFrame: true);
     }
 
     private void OnCropApplyClicked(object sender, RoutedEventArgs args)

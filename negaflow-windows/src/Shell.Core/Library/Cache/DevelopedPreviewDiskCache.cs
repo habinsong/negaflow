@@ -83,6 +83,15 @@ internal sealed class DevelopedPreviewDiskCache : IAsyncDisposable
                 height,
                 Settled: true);
         }
+        catch (Exception error) when (IsTransientReadFailure(error))
+        {
+            // 못 읽은 것과 **깨진 것**은 다릅니다. 쓰기는 `.tmp` 에 다 쓴 뒤
+            // `File.Move(overwrite: true)` 로 갈아 끼우므로, 그 순간에 읽으면 공유 위반이나
+            // 없음이 납니다. 그것을 손상으로 보고 지우면 **방금 쓴 캐시를 스스로 지웁니다** -
+            // 실제 로그에서 한 파일에 640회 넘게 반복됐고, 현상뷰 썸네일이 뜨는 것과
+            // 안 뜨는 것으로 갈렸습니다. 여기서는 아무것도 지우지 않고 다음에 다시 읽습니다.
+            return null;
+        }
         catch (Exception error) when (IsExpectedFailure(error))
         {
             RemoveInvalid(path);
@@ -136,6 +145,12 @@ internal sealed class DevelopedPreviewDiskCache : IAsyncDisposable
             }
             TryTouch(path);
             return true;
+        }
+        catch (Exception error) when (IsTransientReadFailure(error))
+        {
+            // TryRead 와 같은 이유입니다. 못 읽었을 뿐이므로 지우지 않습니다 - "없다" 고만
+            // 답하면 호출부가 다시 만들고, 그때 이미 있는 파일이면 같은 내용으로 덮습니다.
+            return false;
         }
         catch (Exception error) when (IsExpectedFailure(error))
         {
@@ -456,6 +471,15 @@ internal sealed class DevelopedPreviewDiskCache : IAsyncDisposable
         {
         }
     }
+
+    /// <summary>
+    /// 내용이 깨진 것이 아니라 **지금 못 읽은 것**입니다. 파일이 아직 없거나(교체 중),
+    /// 폴더가 없거나, 다른 쪽이 쥐고 있는 경우입니다. 이런 실패에 캐시를 지우면 안 됩니다.
+    /// </summary>
+    private static bool IsTransientReadFailure(Exception error) =>
+        error is FileNotFoundException or DirectoryNotFoundException ||
+        (error is IOException && error is not EndOfStreamException &&
+            error.GetType() == typeof(IOException));
 
     private static bool IsExpectedFailure(Exception error) =>
         error is IOException or UnauthorizedAccessException or NotSupportedException or

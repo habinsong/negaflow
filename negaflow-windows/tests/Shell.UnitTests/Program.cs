@@ -32,6 +32,7 @@ internal static class Program
         ExportConfigurationTests.Run();
         PrintCustomPackageTests.Run();
         CropAndLookTests.Run();
+        CropOverlayZoomTests.Run();
         GrainMendRecipeTests.Run();
         CloneStampOverlayTests.Run();
         DevelopRequestFactoryTests.Run();
