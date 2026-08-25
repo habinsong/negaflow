@@ -128,6 +128,10 @@ bool GpuAccelerator::available() const noexcept {
     return state_ != nullptr && state_->usable;
 }
 
+const gpu::GpuDevice& GpuAccelerator::device() const noexcept {
+    return state_->device;
+}
+
 const char* GpuAccelerator::adapter_description() const noexcept {
     return state_ != nullptr ? state_->adapter : "";
 }

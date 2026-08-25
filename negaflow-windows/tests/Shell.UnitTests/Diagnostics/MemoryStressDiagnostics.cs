@@ -9,7 +9,7 @@ using Negaflow.Shell.Storage;
 namespace Negaflow.Shell.UnitTests;
 
 /// <summary>
-/// 가상 스캔 수백~수천 장으로 메모리 누수를 잡습니다. <b>사용자의 사진은 쓰지 않습니다.</b>
+/// 가상 스캔 수백~수천 장으로 메모리 누수를 잡고, 프로세스가 자동 상한 안에 있는지 봅니다.
 /// </summary>
 /// <remarks>
 /// 한 화면만 재면 아무 것도 못 잡습니다 - 미리보기만 재던 앞 판은 평탄하다고 나왔는데 설치
@@ -24,9 +24,23 @@ namespace Negaflow.Shell.UnitTests;
 /// <item>현상 프로세스와 현상 타깃 전환</item>
 /// </list>
 ///
-/// 판정선은 <b>첫 바퀴 뒤의 증가</b>입니다. 상주 한도까지 차오르는 것은 설계이고
-/// (`FrameCacheBudget` = 결함 제거 원본 장수 + 현상 결과 장수), 다 찬 뒤에도 계속 오르면
-/// 그것이 누수입니다.
+/// 판정은 <b>둘 다</b> 봅니다.
+///
+/// <list type="number">
+/// <item>
+/// <b>마지막 한 바퀴</b>의 뷰당 증가. 첫 바퀴 뒤라도 캐시는 아직 예산까지 차오르는
+/// 중일 수 있고 그 차오름은 설계입니다 - 다 찬 뒤에도 늘면 그때가 누수입니다.
+/// </item>
+/// <item>
+/// <b>프로세스 전체가 자동 상한 안</b>인지. 작업 관리자에서 사용자가 보는 값입니다.
+/// 캐시가 저마다 자기 예산 안이어도 코드·런타임·WinUI·D3D11 스테이징까지 합치면
+/// 넘을 수 있습니다 - 실제로 그래서 넘었습니다(§24).
+/// </item>
+/// </list>
+///
+/// 기본은 <b>가상 스캔</b>입니다 - 사용자의 사진을 쓰지 않습니다. 가상본이 통과한 뒤
+/// 실제 카탈로그로 확인할 때는 <c>--memory-stress-folder</c> 를 씁니다. 그쪽도 여기와
+/// <b>같은 경로·같은 판정</b>을 지나며, 소스 파일은 읽기만 합니다.
 /// </remarks>
 internal static class MemoryStressDiagnostics
 {
@@ -47,6 +61,23 @@ internal static class MemoryStressDiagnostics
         if (args.Length >= 1 && args[0] == "--memory-report")
         {
             Console.WriteLine(MemoryReportText());
+            return true;
+        }
+        // 실제 카탈로그 폴더로 같은 시험을 돕니다. 합성본과 **같은** `RunSize` 를 지나므로
+        // 판정선도 같습니다 - 두 벌로 나누면 어느 한쪽만 고치게 됩니다.
+        if (args.Length >= 2 && args[0] == "--memory-stress-folder")
+        {
+            string folder = Path.GetFullPath(args[1]);
+            if (!Directory.Exists(folder))
+            {
+                Console.Error.WriteLine("folder not found: " + folder);
+                exitCode = 2;
+                return true;
+            }
+            int folderPasses =
+                args.Length > 2 && int.TryParse(args[2], out int folderLoops) ? folderLoops : 3;
+            string folderPaths = args.Length > 3 ? args[3] : "tdprn";
+            exitCode = RunFolder(folder, folderPasses, folderPaths);
             return true;
         }
         if (args.Length is < 1 || args[0] != "--memory-stress")
@@ -162,27 +193,67 @@ internal static class MemoryStressDiagnostics
         }
     }
 
+    /// <summary>
+    /// 실제 카탈로그 폴더로 돕니다. 소스는 <b>읽기만</b> 합니다 - 이 진단은 어떤 굽기도
+    /// 하지 않으며, 카탈로그와 캐시는 임시 폴더에 만들고 끝나면 지웁니다.
+    /// </summary>
+    private static int RunFolder(string folder, int passes, string paths)
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            $"negaflow-stress-folder-{Guid.NewGuid():N}");
+        List<Sample> samples = [];
+        try
+        {
+            SizeResult result = RunSize(root, 0, 0, passes, samples, paths, folder);
+            Console.Error.WriteLine(MemoryReportText());
+            Console.Error.WriteLine(ProcessRegionMap.Report());
+            Console.WriteLine(JsonSerializer.Serialize(
+                new
+                {
+                    status = "ok",
+                    operation = "memory_stress_folder",
+                    folder,
+                    passed = result.Passed,
+                    results = new[] { result },
+                    samples,
+                },
+                new JsonSerializerOptions { WriteIndented = true }));
+            return result.Passed ? 0 : 1;
+        }
+        finally
+        {
+            TryDeleteTree(root);
+        }
+    }
+
     private static SizeResult RunSize(
         string root,
         int megapixels,
         int framesPerSize,
         int passes,
         List<Sample> samples,
-        string paths)
+        string paths,
+        string? existingFolder = null)
     {
-        (int width, int baseHeight) = SyntheticScanWriter.ExtentForMegapixels(megapixels);
-        string sourceFolder = Path.Combine(root, $"src-{megapixels}mp");
+        (int width, int baseHeight) = megapixels > 0
+            ? SyntheticScanWriter.ExtentForMegapixels(megapixels)
+            : (0, 0);
+        string sourceFolder = existingFolder ?? Path.Combine(root, $"src-{megapixels}mp");
         string storageRoot = Path.Combine(root, $"store-{megapixels}mp");
-        Directory.CreateDirectory(sourceFolder);
-        for (int index = 0; index < framesPerSize; ++index)
+        if (existingFolder is null)
         {
-            // 실기 스캔처럼 세로를 흔듭니다. GPU 풀이 사진마다 새로 잡는 조건입니다.
-            int height = baseHeight + (index % 37) * 2;
-            SyntheticScanWriter.Write(
-                Path.Combine(sourceFolder, $"synthetic-{megapixels}mp-{index:D5}.tiff"),
-                width,
-                height,
-                index);
+            Directory.CreateDirectory(sourceFolder);
+            for (int index = 0; index < framesPerSize; ++index)
+            {
+                // 실기 스캔처럼 세로를 흔듭니다. GPU 풀이 사진마다 새로 잡는 조건입니다.
+                int height = baseHeight + (index % 37) * 2;
+                SyntheticScanWriter.Write(
+                    Path.Combine(sourceFolder, $"synthetic-{megapixels}mp-{index:D5}.tiff"),
+                    width,
+                    height,
+                    index);
+            }
         }
 
         if (StorageRootResolver.ResolveForTests(storageRoot).Roots is not { } roots)
@@ -221,11 +292,14 @@ internal static class MemoryStressDiagnostics
             }
             if (host.ImportFolders([sourceFolder], DevelopmentProcess.C41) is not { } imported ||
                 imported.CatalogError != CatalogStoreError.None ||
-                host.Frames.Count != framesPerSize)
+                host.Frames.Count == 0 ||
+                (existingFolder is null && host.Frames.Count != framesPerSize))
             {
                 throw new InvalidOperationException(
                     $"folder import refused: frames={host.Frames.Count} expected={framesPerSize}");
             }
+            // 실제 폴더는 몇 장인지 모른 채 들어옵니다. 판정에 쓰는 장수를 실제 값으로 맞춥니다.
+            framesPerSize = host.Frames.Count;
 
             ThumbnailService thumbnails = new(
                 new NativeDevelopExporterAdapter(),

@@ -33,6 +33,10 @@
 #include "negaflow/imaging/kernel_accelerator.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
 
+namespace negaflow::gpu {
+class GpuDevice;
+}  // namespace negaflow::gpu
+
 namespace negaflow::pipeline {
 
 // 어느 경로에서 부르는지. 값이 바이트까지 같아야 하는 경로는 `cpu_only` 입니다.
@@ -103,6 +107,15 @@ public:
         const imaging::ImageTransformGather* gather = nullptr) noexcept;
     // 어떤 장치를 잡았는지. 없으면 빈 문자열입니다. 진단·로그용입니다.
     [[nodiscard]] const char* adapter_description() const noexcept;
+
+    /// <summary>이 가속기가 실제로 쓰는 장치입니다. 설정 창과 메모리 보고가 봅니다.</summary>
+    /// <remarks>
+    /// <b>`GpuDevice::shared()` 를 쓰지 마십시오.</b> 가속기는 자기 장치를 따로 만들므로
+    /// (`GpuDevice::create`), 보고 쪽에서 `shared()` 를 부르면 D3D11 장치가 **하나 더**
+    /// 생깁니다. 예산을 재는 자리가 일하는 자리와 달라지고, 장치 하나 값의 메모리도 그냥
+    /// 늘어납니다.
+    /// </remarks>
+    [[nodiscard]] const gpu::GpuDevice& device() const noexcept;
 
     // 실패하거나 정책이 막으면 `handled == false` 이고 **이미지는 손대지 않습니다.**
     // 호출부는 그대로 CPU 경로로 가면 됩니다.

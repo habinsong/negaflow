@@ -4,8 +4,8 @@
 
 #include <windows.h>
 
-#include <algorithm>
 #include <atomic>
+#include <chrono>
 
 namespace negaflow::gpu {
 namespace {
@@ -35,6 +35,27 @@ std::uint64_t GpuCacheBudget::automatic_bytes(const GpuDevice& device) noexcept 
     if (!device.is_usable()) {
         return 0ULL;
     }
+
+    // `GpuImagePool::ensure` 는 커널 단계마다 불립니다. 거기서 매번 DXGI 에 물어보면
+    // 사슬 하나에 수십 번의 시스템 호출이 붙습니다. DXGI 예산은 다른 앱이 뜨고 질 때
+    // 바뀌는 값이라 그렇게 빨리 변하지 않으므로 250ms 동안은 직전 값을 씁니다 -
+    // RAM 쪽 `non_cache_overhead_bytes` 와 같은 규칙입니다.
+    using clock = std::chrono::steady_clock;
+    static std::atomic<std::uint64_t> cached{0ULL};
+    static std::atomic<std::int64_t> measured_at{0};
+    const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
+        clock::now().time_since_epoch()).count();
+    const std::int64_t last = measured_at.load(std::memory_order_relaxed);
+    if (last != 0 && now - last < 250) {
+        return cached.load(std::memory_order_relaxed);
+    }
+    const std::uint64_t measured = measure_automatic_bytes(device);
+    cached.store(measured, std::memory_order_relaxed);
+    measured_at.store(now == 0 ? 1 : now, std::memory_order_relaxed);
+    return measured;
+}
+
+std::uint64_t GpuCacheBudget::measure_automatic_bytes(const GpuDevice& device) noexcept {
 
     if (device.capability().adapter.is_integrated) {
         // 내장은 VRAM 이 시스템 RAM 입니다. DXGI 예산(공유 메모리 전체)을 믿으면 RAM 캐시와

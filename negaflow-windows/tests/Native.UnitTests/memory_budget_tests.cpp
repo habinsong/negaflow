@@ -17,6 +17,7 @@
 #include "negaflow/imaging/scanner_to_working.h"
 #include "negaflow/output/working_to_srgb16.h"
 #include "negaflow/pipeline/frame_cache_limits.h"
+#include "negaflow/pipeline/gpu_accelerator.h"
 #include "export/support/frame_cache_budget.h"
 
 #include <cstdint>
@@ -78,7 +79,9 @@ int main() {
         "캐시 예산 합계는 프로세스 상한 안입니다");
 
     // ── GPU 예산: 바이트 상수가 아니라 이 기계 용량의 비율입니다 ──
-    const negaflow::gpu::GpuDevice& device = negaflow::gpu::GpuDevice::shared();
+    // 보고와 같은 장치를 봅니다 - `GpuDevice::shared()` 는 가속기 것과 다른 장치입니다.
+    const negaflow::gpu::GpuDevice& device =
+        negaflow::pipeline::GpuAccelerator::shared().device();
     const std::uint64_t automatic = negaflow::gpu::GpuCacheBudget::automatic_bytes(device);
     if (!device.is_usable()) {
         expect(automatic == 0ULL, "GPU 가 없으면 한도도 없습니다");

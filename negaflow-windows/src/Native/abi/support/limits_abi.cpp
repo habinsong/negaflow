@@ -2,6 +2,7 @@
 
 #include "negaflow/gpu/gpu_cache_budget.h"
 #include "negaflow/gpu/gpu_device.h"
+#include "negaflow/pipeline/gpu_accelerator.h"
 #include "negaflow/imaging/manual_negative_developer.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
 #include "negaflow/pipeline/frame_cache_limits.h"
@@ -88,9 +89,10 @@ nf_status_t NF_CALL nf_get_gpu_cache_info_v1(nf_gpu_cache_info_v1* const output)
     *output = nf_gpu_cache_info_v1{};
     output->struct_size = declared_size;
 
-    // 공유 장치를 씁니다 - 여기서 새로 만들면 설정 창을 열 때마다 D3D11 장치가 하나씩
-    // 더 생깁니다.
-    const negaflow::gpu::GpuDevice& device = negaflow::gpu::GpuDevice::shared();
+    // 가속기가 실제로 쓰는 장치를 봅니다. `GpuDevice::shared()` 는 가속기 것과 **다른**
+    // 장치라, 설정 창을 열 때 D3D11 장치가 하나 더 생깁니다.
+    const negaflow::gpu::GpuDevice& device =
+        negaflow::pipeline::GpuAccelerator::shared().device();
     output->resident_bytes = negaflow::gpu::gpu_pool_resident_bytes();
     if (!device.is_usable()) {
         return NF_STATUS_OK;

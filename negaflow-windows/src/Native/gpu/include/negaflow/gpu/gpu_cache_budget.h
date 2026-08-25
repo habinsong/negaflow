@@ -26,10 +26,20 @@ class GpuDevice;
 
 struct GpuCacheBudget final {
     // 외장: DXGI 예산의 몫입니다. 나머지는 스왑체인·컴포지션·다른 앱 몫으로 남깁니다.
-    static constexpr double discrete_budget_fraction = 0.60;
+    //
+    // **0.75 인 근거(실측).** 풀해상도 48MP 여섯 장이 8484x5656x16 = 4,608MB 입니다.
+    // 이 기계의 DXGI 예산 7,181MB 에 0.60 을 곱하면 4,309MB 라 그 풀이 거부되어 해당
+    // 단계가 CPU 로 떨어집니다. 0.75 면 5,385MB 로 들어갑니다. 남기는 25% 는 스왑체인과
+    // 다른 앱 몫이며, 그 위에 `can_keep_two_sizes` 가 DXGI 실사용량을 한 번 더 봅니다.
+    static constexpr double discrete_budget_fraction = 0.75;
 
     // 내장: 설치 RAM 의 몫입니다. RAM 캐시가 이미 25~35% 를 쓰므로 그 위에 얹는 몫입니다.
-    static constexpr double integrated_system_fraction = 0.10;
+    //
+    // **0.15 인 근거(실측).** 프리뷰 사슬의 풀은 정착 프록시 크기로 돕니다 - 48MP 원본
+    // 에서도 풀 상주가 1,049MB 였습니다(원본이 아니라 3,600 long edge 로 줄여 올립니다).
+    // 8GB 기계에서 0.10 이면 819MB 라 그 풀이 거부되어 내장 그래픽에서 GPU 가 통째로
+    // 꺼집니다. 0.15 면 1,229MB 로 들어갑니다.
+    static constexpr double integrated_system_fraction = 0.15;
 
     /// 이 기계의 GPU 를 보고 자동으로 잡은 상한입니다.
     ///
@@ -38,6 +48,12 @@ struct GpuCacheBudget final {
     /// GPU 가 없거나 용량을 못 읽으면 <b>0</b> 이고, 0 은 "한도 없음" 입니다 — 모르는 것을
     /// 근거로 막으면 멀쩡한 기계에서 GPU 를 꺼 버립니다.
     [[nodiscard]] static std::uint64_t automatic_bytes(const GpuDevice& device) noexcept;
+
+private:
+    /// 실제로 DXGI 에 물어봅니다. <see cref="automatic_bytes"/> 가 250ms 로 묶어 부릅니다.
+    [[nodiscard]] static std::uint64_t measure_automatic_bytes(const GpuDevice& device) noexcept;
+
+public:
 
     /// 지금 실제로 적용되는 상한입니다 — 수동값이 있으면 그것, 없으면 자동값입니다.
     [[nodiscard]] static std::uint64_t effective_bytes(const GpuDevice& device) noexcept;

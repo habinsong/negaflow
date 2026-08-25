@@ -2,6 +2,7 @@
 
 #include "negaflow/gpu/gpu_cache_budget.h"
 #include "negaflow/gpu/gpu_device.h"
+#include "negaflow/pipeline/gpu_accelerator.h"
 #include "negaflow/pipeline/frame_cache_limits.h"
 
 #include <windows.h>
@@ -240,8 +241,10 @@ FrameCacheMemoryReport frame_cache_memory_report() noexcept {
         g_cache_resident_bytes[1].load(std::memory_order_relaxed);
     report.preview_proxy_budget_bytes = detail::preview_proxy_budget_bytes();
     report.gpu_pool_resident_bytes = negaflow::gpu::gpu_pool_resident_bytes();
-    report.gpu_pool_limit_bytes =
-        negaflow::gpu::GpuCacheBudget::effective_bytes(negaflow::gpu::GpuDevice::shared());
+    // 가속기가 실제로 쓰는 장치를 봅니다. `GpuDevice::shared()` 를 부르면 D3D11 장치가
+    // 하나 더 생깁니다 - 가속기는 자기 것을 따로 만듭니다.
+    report.gpu_pool_limit_bytes = negaflow::gpu::GpuCacheBudget::effective_bytes(
+        negaflow::pipeline::GpuAccelerator::shared().device());
     report.gpu_system_memory_bytes = negaflow::gpu::gpu_pool_system_memory_bytes();
     report.non_cache_overhead_bytes = detail::non_cache_overhead_bytes();
     const std::uint64_t physical = detail::FrameCacheBudget::physical_memory_bytes();
