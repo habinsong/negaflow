@@ -34,10 +34,18 @@
                 HorizontalAlignment="Right"
                 VerticalAlignment="Center"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <!--
+                높이를 26 으로 박아 두었더니 기본 패딩(위 5 · 아래 6)과 14px 글자가 들어가지
+                않아 **글자 아래가 잘렸습니다.** 한글·일본어 글자는 밑으로 더 내려가서 특히
+                심합니다. 최소 높이만 두고 실제 높이는 글자가 정하게 합니다 - 옆의 새로고침
+                단추(26x26)와 같은 줄에 서되, 글꼴이 커지는 언어에서도 잘리지 않습니다.
+            -->
             <Button
                 x:Name="CopyAllButton"
                 Grid.Column="2"
-                Height="26"
+                MinHeight="26"
+                Padding="10,3,10,4"
+                VerticalAlignment="Center"
                 AutomationProperties.AutomationId="negaflow.diagnostics.copy-all"
                 Click="OnCopyAllClick" />
             <Button

@@ -185,7 +185,28 @@ public enum ScannerPluginScanStatus
     InvalidRequest,
     CapabilityMismatch,
     StagingCreateFailed,
+    /// <summary>
+    /// 플러그인 프로세스가 실패했는데 <b>어느 갈래인지 모를 때만</b> 씁니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 실행 실패·신뢰 거부·시간 초과·<b>사용자 취소</b>·출력 상한 초과·비정상 종료를
+    /// 전부 이 한 이름으로 접었습니다. 그래서 스캔을 사용자가 멈춰도 화면에 "ProcessFailed"
+    /// 가 떴고, 사용자가 그 글자로 할 수 있는 일이 없었습니다. 아래 갈래들이 그 자리를
+    /// 대신하며, 이 값은 새로 생긴 프로세스 상태를 못 옮겼을 때의 마지막 자리입니다.
+    /// </remarks>
     ProcessFailed,
+    /// <summary>플러그인을 띄우지 못했습니다(경로·권한·실행 파일).</summary>
+    ProcessLaunchFailed,
+    /// <summary>플러그인 서명·해시가 승인된 것과 다릅니다. 실행하지 않았습니다.</summary>
+    PluginUntrusted,
+    /// <summary>플러그인이 제한 시간 안에 끝내지 못했습니다.</summary>
+    ProcessTimedOut,
+    /// <summary><b>사용자가 멈췄습니다.</b> 실패가 아닙니다.</summary>
+    Cancelled,
+    /// <summary>플러그인 출력이 상한을 넘었습니다.</summary>
+    ProcessOutputLimitExceeded,
+    /// <summary>플러그인이 0 이 아닌 코드로 끝났습니다. 코드는 기록에 남습니다.</summary>
+    ProcessExitedWithError,
     ProtocolViolation,
     PluginError,
     ResultMismatch,

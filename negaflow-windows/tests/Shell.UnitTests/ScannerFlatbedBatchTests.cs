@@ -39,6 +39,107 @@ internal static class ScannerFlatbedBatchTests
         {
             RunOne(frameCount);
         }
+        VerifyPluginResolvedOncePerBatch();
+    }
+
+    /// <summary>
+    /// 배치 도중 플러그인 목록이 잠깐 비어도 롤이 끊기지 않아야 합니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 <b>회차마다</b> 승인된 플러그인을 다시 찾았습니다. 그런데
+    /// <c>ScanSessionController.Refresh()</c> 는 배치 도중에도 돌 수 있고
+    /// (<c>ActiveGateway.Discover()</c> 로 디스크를 다시 읽습니다), 그 창에서 목록이 비면
+    /// 그 회차가 <b>스캔을 시도하지도 않고 조용히 끝났습니다</b> — 실기에서 프레임 셋 중
+    /// 마지막 한 장이 빠지는데 실패 기록이 한 줄도 없던 모양입니다.
+    ///
+    /// 여기서는 첫 물음에만 플러그인을 주고 그 뒤로는 비워, <b>한 배치는 한 플러그인</b>
+    /// 이라는 계약을 못 박습니다.
+    /// </remarks>
+    private static void VerifyPluginResolvedOncePerBatch()
+    {
+        string parent = Path.Combine(AppContext.BaseDirectory, "scan-batch-plugin-tests");
+        string isolatedBase = Path.Combine(parent, $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        if (StorageRootResolver.ResolveForTests(isolatedBase).Roots is not { } roots)
+        {
+            Check(false, "flatbed_batch_plugin_storage_root");
+            return;
+        }
+        var dispatcher = new ImmediateUiDispatcher();
+        try
+        {
+            using (CatalogSession session = CatalogSession.Open(roots).Session!)
+            {
+                Check(session.ReadOrCreate().IsSuccess, "flatbed_batch_plugin_catalog_create");
+            }
+            var trust = new ScannerPluginTrustStore(Path.Combine(isolatedBase, "trust.json"));
+            var session2 = new ScanSessionController(
+                new FakeScannerGateway(Path.Combine(isolatedBase, "no-plugins")),
+                trust,
+                dispatcher,
+                new SimulatedScannerGateway(ScannerWorkflowTests.ReadTiffHeaderForTests));
+            session2.SetSimulatorEnabled(true);
+            session2.RefreshDevicesAsync().GetAwaiter().GetResult();
+            session2.SelectDeviceAsync(SimulatedScannerGateway.FlatbedScannerId)
+                .GetAwaiter().GetResult();
+            using var library = new LibraryHostService(
+                dispatcher,
+                new ScannerWorkflowTests.ThrowingDevelopExporter(),
+                ScannerWorkflowTests.ReadTiffHeaderForTests);
+            Check(
+                library.Open(roots) == LibraryHostState.Open,
+                "flatbed_batch_plugin_library_open");
+            string rollDirectory = ScanStorageLayout.EnsureRollDirectory(
+                Path.Combine(roots.LibraryRoot, "Scans"),
+                FilmType.ColorNegative,
+                "PluginOnce",
+                DateTime.Now);
+            for (int index = 0; index < 3; ++index)
+            {
+                _ = session2.AddRegion();
+            }
+
+            int asked = 0;
+            (InstalledScannerPlugin? Plugin, ScannerPluginTrustIdentity? Identity) Resolve()
+            {
+                ++asked;
+                InstalledScannerPlugin? plugin = session2.Plugins.FirstOrDefault();
+                // 첫 물음에만 답합니다. 두 번째부터는 목록이 비어 있는 창을 흉내 냅니다.
+                return asked == 1 && plugin is not null
+                    ? (plugin, plugin.TrustIdentity)
+                    : (null, null);
+            }
+
+            ScanRunExecution execution = ScanRunCoordinator.RunAsync(
+                session2.ActiveGatewayForTests,
+                Resolve,
+                library,
+                _ => ScanStorageLayout.NextAvailablePath(rollDirectory, "PluginOnce"),
+                session2.BuildRequest,
+                preview: false,
+                requested: 3,
+                _ => null,
+                null,
+                null,
+                null,
+                CancellationToken.None).GetAwaiter().GetResult();
+
+            Check(asked == 1, "flatbed_batch_asks_for_the_plugin_once");
+            Check(execution.Outcome.Published == 3, "flatbed_batch_survives_a_plugin_refresh");
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(isolatedBase) &&
+                    StoragePathPolicy.IsLexicallyContained(parent, isolatedBase))
+                {
+                    Directory.Delete(isolatedBase, recursive: true);
+                }
+            }
+            catch (IOException)
+            {
+            }
+        }
     }
 
     private static void RunOne(int frameCount)

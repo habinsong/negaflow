@@ -104,6 +104,9 @@ public sealed class ScanSessionController
 
     private IScannerPluginGateway ActiveGateway => SimulatorEnabled ? simulator : gateway;
 
+    /// <summary>지금 쓰는 게이트웨이입니다. 배치 계약 시험이 이것을 그대로 씁니다.</summary>
+    internal IScannerPluginGateway ActiveGatewayForTests => ActiveGateway;
+
     public bool UsesFlatbedRegionWorkflow =>
         ScanOptionPolicy.UsesFlatbedRegionWorkflow(Capabilities);
 

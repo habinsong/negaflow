@@ -28,7 +28,10 @@ internal sealed class LibraryScanRunner
         }
         if (view.libraryHost.StorageRoots is not { } roots)
         {
-            view.SetScanStatus(AppResources.Get("libraryImportFailed", "Text"));
+            // 사유는 기록에만 남깁니다 - 스캔 단추 아래 빨간 줄은 사용자가 할 수 있는 일을
+            // 알려 주지 않습니다.
+            ScannerDiagnosticsLog.Write("scan run refused - no storage roots");
+            view.SetScanStatus(string.Empty);
             return;
         }
 
@@ -61,21 +64,30 @@ internal sealed class LibraryScanRunner
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
-            view.SetScanStatus(AppResources.Get("libraryImportFailed", "Text"));
+            ScannerDiagnosticsLog.Write(
+                $"scan run refused - roll directory: {error.GetType().Name} {error.Message}");
+            view.SetScanStatus(string.Empty);
             return;
         }
 
-        view.SetScanStatus(string.Empty);
-        using CancellationTokenSource cancellation = new();
+        // **돌고 있는 스캔은 끊지 않습니다.**
+        //
+        // 앞 판은 새 실행이 들어오면 무조건 `running?.Cancel()` 로 앞의 것을 끊었고, 취소를
+        // 화면에도 기록에도 남기지 않았습니다. 배치 한 장이 IR 쌍까지 2분씩 걸리는데 그
+        // 사이에 어떤 경로로든 이 함수가 한 번 더 불리면 **돌고 있던 롤이 조용히 사라집니다** -
+        // 프레임 셋 중 마지막 한 장이 빠지고 실패 기록이 한 줄도 없던 모양입니다.
+        //
+        // 멈추는 것은 사용자의 취소 단추(`Cancel()`)가 할 일입니다. 여기서는 거절하고
+        // 그 사실을 화면에 적습니다 - 조용히 덮어쓰지 않습니다.
         if (running is { IsCancellationRequested: false })
         {
-            // **돌고 있던 스캔을 끊습니다.** 여기가 조용하면 배치가 중간에 사라진 이유를
-            // 어디서도 알 수 없습니다 - 실기에서 프레임 셋 중 마지막 한 장이 빠지는데
-            // 실패 기록이 한 줄도 없었습니다.
             ScannerDiagnosticsLog.Write(
-                $"scan run cancelled by a new run (preview={preview})");
+                $"scan run refused - another run is in flight (preview={preview})");
+            view.SetScanStatus(AppResources.Get("scanBusy", "Text"));
+            return;
         }
-        running?.Cancel();
+        view.SetScanStatus(string.Empty);
+        using CancellationTokenSource cancellation = new();
         running = cancellation;
         ScanRunOutcome outcome;
         try
@@ -170,17 +182,28 @@ internal sealed class LibraryScanRunner
         }
     }
 
+    /// <summary>
+    /// 실패 사유는 <b>기록에만</b> 남기고 화면에는 내지 않습니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 프리뷰·스캔 단추 바로 아래에 "선택한 사진을 가져올 수 없습니다 —
+    /// ProcessFailed" 같은 줄을 띄웠습니다. 스캔을 <b>사용자가 중간에 멈춰도</b> 플러그인
+    /// 프로세스가 0 이 아닌 코드로 끝나 `ProcessFailed` 가 되므로, 정상적인 취소에도 빨간
+    /// 문구가 남았습니다. 게다가 `ProcessFailed` 는 실행 실패·신뢰 거부·시간 초과·출력 상한·
+    /// 플러그인 오류를 한 이름으로 접은 것이라 사용자가 그 글자로 할 수 있는 일이 없습니다.
+    ///
+    /// 사유는 `scanner-failure.txt` 에 그대로 남습니다 — 진단은 거기서 봅니다.
+    /// </remarks>
     private string Describe(ScanRunOutcome outcome)
     {
-        if (outcome.IsSuccess)
+        if (!outcome.IsSuccess)
         {
-            return string.Empty;
+            ScannerDiagnosticsLog.Write(
+                "scan run failed: " +
+                (view.scanSession?.LastFailureName ??
+                    outcome.LastScanStatus?.ToString() ??
+                    "unavailable"));
         }
-        // 실패는 어느 단계에서 멈췄는지를 남깁니다. "스캔 실패" 만으로는 다시 시도하는 것 말고
-        // 사용자가 할 수 있는 일이 없습니다.
-        string reason = view.scanSession?.LastFailureName ??
-            outcome.LastScanStatus?.ToString() ??
-            "unavailable";
-        return AppResources.Get("libraryImportFailed", "Text") + " — " + reason;
+        return string.Empty;
     }
 }

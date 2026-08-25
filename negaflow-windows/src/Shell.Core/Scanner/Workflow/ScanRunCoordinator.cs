@@ -43,8 +43,28 @@ internal static class ScanRunCoordinator
         // 배치가 **왜** 끝났는지를 남깁니다. 앞 판은 프레임 셋 중 마지막 한 장이 스캔되지
         // 않는데 실패 기록이 한 줄도 없었습니다 - 플러그인을 부르기 전에 멈추면 아무도
         // 아무 것도 적지 않았기 때문입니다. 그러면 추측밖에 할 수 없습니다.
+        // **승인된 플러그인은 배치 시작에서 한 번만 정합니다.**
+        //
+        // 앞 판은 회차마다 `approvedPlugin()` 을 불렀고, 그것은 `Plugins` 목록을 다시
+        // 훑습니다. 그런데 `ScanSessionController.Refresh()` 가 배치 도중에도 돌 수 있고
+        // (`ActiveGateway.Discover()` 로 디스크를 다시 읽습니다), 그 창에서 목록이 비면
+        // 회차가 **스캔을 시도하지도 않고 조용히 끝났습니다** - 실기에서 프레임 셋 중
+        // 마지막 한 장이 빠지는데 실패 기록이 한 줄도 없던 것이 이 모양입니다.
+        //
+        // 한 배치는 한 플러그인입니다. 도중에 바꿔 다는 것은 어차피 뜻이 없습니다.
+        (InstalledScannerPlugin? batchPlugin, ScannerPluginTrustIdentity? batchIdentity) =
+            approvedPlugin();
         ScannerDiagnosticsLog.Write(
-            $"batch start preview={preview} requested={requested}");
+            $"batch start preview={preview} requested={requested} " +
+            $"plugin={batchPlugin?.Manifest.Id ?? "none"}");
+        if (batchPlugin is null || batchIdentity is null)
+        {
+            ScannerDiagnosticsLog.Write("batch end published=0 reason=no approved plugin at start");
+            return new ScanRunExecution(
+                new ScanRunOutcome(requested, 0, null, null),
+                ScannerPluginScanStatus.CapabilityMismatch.ToString(),
+                null);
+        }
         string stopReason = "completed";
         for (int index = 0; index < requested; ++index)
         {
@@ -59,14 +79,8 @@ internal static class ScanRunCoordinator
                 stopReason = $"no request at index={index} (device or capabilities missing)";
                 break;
             }
-            (InstalledScannerPlugin? plugin, ScannerPluginTrustIdentity? identity) = approvedPlugin();
-            if (plugin is null || identity is null)
-            {
-                stopReason =
-                    $"no approved plugin at index={index} " +
-                    $"(plugin={plugin is not null} identity={identity is not null})";
-                break;
-            }
+            InstalledScannerPlugin plugin = batchPlugin;
+            ScannerPluginTrustIdentity identity = batchIdentity;
             if (preview)
             {
                 // 프리뷰는 영속 catalog에서 제외한 세션 frame으로 게시합니다. 파일은 그대로
@@ -86,6 +100,13 @@ internal static class ScanRunCoordinator
                 lastScanStatus = scanned.Status;
                 if (!scanned.IsSuccess)
                 {
+                    // 사용자가 멈춘 것은 실패가 아닙니다. 이름을 남기지 않아야 화면이
+                    // 조용합니다 - 앞 판은 취소도 `ProcessFailed` 로 접혀 빨간 줄이 떴습니다.
+                    if (scanned.Status == ScannerPluginScanStatus.Cancelled)
+                    {
+                        stopReason = $"cancelled by the user at index={index}";
+                        break;
+                    }
                     failureName = scanned.Status.ToString();
                     stopReason = $"preview scan failed at index={index}: {failureName}";
                     break;
@@ -138,6 +159,11 @@ internal static class ScanRunCoordinator
                 $"-> {result.Publication?.Frame?.Id ?? "none"}");
             if (!result.IsSuccess)
             {
+                if (result.Scan.Status == ScannerPluginScanStatus.Cancelled)
+                {
+                    stopReason = $"cancelled by the user at index={index}";
+                    break;
+                }
                 failureName = result.Scan.Status == ScannerPluginScanStatus.Completed
                     ? result.Status.ToString()
                     : result.Scan.Status.ToString();

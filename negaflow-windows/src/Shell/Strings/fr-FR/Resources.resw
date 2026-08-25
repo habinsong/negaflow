@@ -1021,6 +1021,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="scanSection.Text" xml:space="preserve"><value>Numérisation</value><comment>AppLocalizedPhrase.scanSection</comment></data>
   <data name="scanStart.Content" xml:space="preserve"><value>Numériser</value><comment>AppLocalizedPhrase.scan</comment></data>
   <data name="scanUntitledFilm.Text" xml:space="preserve"><value>Film sans titre</value><comment>AppLocalizedPhrase.untitledFilm</comment></data>
+  <data name="scanBusy.Text" xml:space="preserve"><value>Une numérisation est déjà en cours.</value><comment>AppLocalizedPhrase.scanBusy</comment></data>
   <data name="scanWaitingStatus.Text" xml:space="preserve"><value>En attente de la connexion du scanner</value><comment>AppLocalizedPhrase.scannerWaitingStatus</comment></data>
   <data name="exportBatchFrameProgress.Text" xml:space="preserve"><value>Image %d/%d</value><comment>AppLocalizedPhrase.batchFrameProgressFormat</comment></data>
   <data name="developAppMetadataCaption.Text" xml:space="preserve"><value>Légende</value><comment>AppMetadataOverlayLocalizedText[2]</comment></data>

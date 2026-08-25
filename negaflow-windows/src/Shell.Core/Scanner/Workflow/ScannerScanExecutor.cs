@@ -45,12 +45,33 @@ internal static class ScannerScanExecutor
                 cancellationToken: cancellationToken);
             if (!process.IsSuccess)
             {
-                // `ProcessFailed` 는 서로 다른 원인을 한 이름으로 접습니다 — 실행 실패,
-                // 신뢰 검사 거부, 시간 초과, 출력 상한 초과, 그리고 플러그인이 0 이 아닌
-                // 코드로 끝난 경우가 모두 여기로 옵니다. 어느 쪽인지는 로그에만 있습니다.
+                // **한 이름으로 접지 않습니다.** 프로세스는 이미 갈래를 알고 있으므로 그대로
+                // 옮깁니다 - 앞 판은 전부 `ProcessFailed` 였고, 사용자가 스캔을 멈춘 것까지
+                // 실패로 보였습니다.
+                ScannerPluginScanStatus status = process.Status switch
+                {
+                    ScannerPluginProcessStatus.LaunchFailed =>
+                        ScannerPluginScanStatus.ProcessLaunchFailed,
+                    ScannerPluginProcessStatus.Untrusted =>
+                        ScannerPluginScanStatus.PluginUntrusted,
+                    ScannerPluginProcessStatus.TimedOut =>
+                        ScannerPluginScanStatus.ProcessTimedOut,
+                    ScannerPluginProcessStatus.Cancelled =>
+                        ScannerPluginScanStatus.Cancelled,
+                    ScannerPluginProcessStatus.OutputLimitExceeded =>
+                        ScannerPluginScanStatus.ProcessOutputLimitExceeded,
+                    ScannerPluginProcessStatus.Succeeded or ScannerPluginProcessStatus.Failed =>
+                        ScannerPluginScanStatus.ProcessExitedWithError,
+                    _ => ScannerPluginScanStatus.ProcessFailed,
+                };
                 ScannerDiagnosticsLog.WriteFailure(
-                    "ProcessFailed", plugin, request, wireJson, stagingDirectory, process);
-                return new(ScannerPluginScanStatus.ProcessFailed, process, null, null);
+                    $"{status} (process={process.Status} exit={process.ExitCode?.ToString() ?? "none"})",
+                    plugin,
+                    request,
+                    wireJson,
+                    stagingDirectory,
+                    process);
+                return new(status, process, null, null);
             }
 
             ScannerPluginStreamValidation stream = ScannerPluginProtocol.ValidateV2(

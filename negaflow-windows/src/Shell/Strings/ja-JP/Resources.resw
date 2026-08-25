@@ -1021,6 +1021,7 @@
   <data name="scanSection.Text" xml:space="preserve"><value>スキャン</value><comment>AppLocalizedPhrase.scanSection</comment></data>
   <data name="scanStart.Content" xml:space="preserve"><value>スキャン</value><comment>AppLocalizedPhrase.scan</comment></data>
   <data name="scanUntitledFilm.Text" xml:space="preserve"><value>名称未設定のフィルム</value><comment>AppLocalizedPhrase.untitledFilm</comment></data>
+  <data name="scanBusy.Text" xml:space="preserve"><value>スキャンはすでに実行中です。</value><comment>AppLocalizedPhrase.scanBusy</comment></data>
   <data name="scanWaitingStatus.Text" xml:space="preserve"><value>スキャナーの接続を待機中</value><comment>AppLocalizedPhrase.scannerWaitingStatus</comment></data>
   <data name="exportBatchFrameProgress.Text" xml:space="preserve"><value>コマ %d/%d</value><comment>AppLocalizedPhrase.batchFrameProgressFormat</comment></data>
   <data name="developAppMetadataCaption.Text" xml:space="preserve"><value>説明</value><comment>AppMetadataOverlayLocalizedText[2]</comment></data>
