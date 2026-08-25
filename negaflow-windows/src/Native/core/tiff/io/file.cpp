@@ -3,6 +3,8 @@
 #include "tiff/io/math.h"
 
 #include <limits>
+#include <memory>
+#include <new>
 
 namespace negaflow::core::tiff_probe_detail {
 
@@ -30,7 +32,23 @@ bool ReadOnlyFile::open(const std::filesystem::path& path) noexcept {
         return false;
     }
     size_ = static_cast<std::uint64_t>(size.QuadPart);
+    path_ = path;
     return true;
+}
+
+std::unique_ptr<TiffRandomAccessReader> ReadOnlyFile::clone() const noexcept {
+    if (handle_ == INVALID_HANDLE_VALUE || path_.empty()) {
+        return nullptr;
+    }
+    try {
+        auto copy = std::make_unique<ReadOnlyFile>();
+        if (!copy->open(path_) || copy->size() != size_) {
+            return nullptr;
+        }
+        return copy;
+    } catch (const std::bad_alloc&) {
+        return nullptr;
+    }
 }
 
 std::uint64_t ReadOnlyFile::size() const noexcept {

@@ -8,10 +8,14 @@
 #include "negaflow/core/tiff_probe.h"
 
 #include <Windows.h>
+#include <Shlwapi.h>
 #include <wincodec.h>
 
 #include <array>
 #include <cstddef>
+#include <filesystem>
+#include <memory>
+#include <new>
 #include <cstdint>
 #include <limits>
 #include <vector>
@@ -40,12 +44,24 @@ private:
 
 class IStreamTiffReader final : public negaflow::core::TiffRandomAccessReader {
 public:
-    explicit IStreamTiffReader(IStream* const stream) noexcept : stream_(stream) {
+    // 빌려 쓰는 판입니다. 수명은 호출부가 쥔 스트림을 따릅니다. `path` 를 주면 복제할 수
+    // 있습니다 - `SHCreateStreamOnFileEx` 가 낸 스트림은 `IStream::Clone` 을 구현하지 않고
+    // **E_NOTIMPL(0x80004001)** 을 냅니다(실측). 그래서 같은 파일을 다시 열어 복제합니다.
+    explicit IStreamTiffReader(
+        IStream* const stream,
+        std::filesystem::path path = {}) noexcept
+        : stream_(stream), path_(std::move(path)) {
         STATSTG statistics{};
         if (stream_ != nullptr && SUCCEEDED(stream_->Stat(&statistics, STATFLAG_NONAME)) &&
             statistics.type == STGTY_STREAM) {
             size_ = statistics.cbSize.QuadPart;
             valid_ = true;
+        }
+    }
+
+    ~IStreamTiffReader() noexcept override {
+        if (owned_ != nullptr) {
+            owned_->Release();
         }
     }
 
@@ -55,6 +71,45 @@ public:
 
     [[nodiscard]] std::uint64_t size() const noexcept override {
         return size_;
+    }
+
+    /// <summary>
+    /// `IStream::Clone` 은 같은 바이트를 가리키되 **자체 seek 위치**를 가진 스트림을 냅니다.
+    /// 그래서 복제본끼리는 동시에 읽어도 서로의 위치를 흔들지 않습니다. 스트림 구현이
+    /// `Clone` 을 지원하지 않으면(선택 사항입니다) `nullptr` 을 내고 호출부가 순차로 갑니다.
+    /// </summary>
+    [[nodiscard]] std::unique_ptr<negaflow::core::TiffRandomAccessReader>
+    clone() const noexcept override {
+        if (!valid_ || stream_ == nullptr) {
+            return nullptr;
+        }
+        IStream* copied = nullptr;
+        // 규격상 `Clone` 은 선택 사항입니다. 되면 그것을 쓰고, 안 되면 경로로 다시 엽니다.
+        if (FAILED(stream_->Clone(&copied)) || copied == nullptr) {
+            copied = nullptr;
+            if (path_.empty() ||
+                FAILED(SHCreateStreamOnFileEx(
+                    path_.c_str(),
+                    STGM_READ | STGM_SHARE_DENY_WRITE,
+                    FILE_ATTRIBUTE_NORMAL,
+                    FALSE,
+                    nullptr,
+                    &copied)) ||
+                copied == nullptr) {
+                return nullptr;
+            }
+        }
+        try {
+            auto reader = std::unique_ptr<IStreamTiffReader>{
+                new IStreamTiffReader{copied, OwnsStream{}, path_}};
+            if (!reader->valid() || reader->size() != size_) {
+                return nullptr;
+            }
+            return reader;
+        } catch (const std::bad_alloc&) {
+            copied->Release();
+            return nullptr;
+        }
     }
 
     [[nodiscard]] bool read(
@@ -85,7 +140,19 @@ public:
     }
 
 private:
+    struct OwnsStream final {};
+
+    IStreamTiffReader(
+        IStream* const stream,
+        OwnsStream,
+        std::filesystem::path path) noexcept
+        : IStreamTiffReader(stream, std::move(path)) {
+        owned_ = stream;
+    }
+
     IStream* stream_{nullptr};
+    IStream* owned_{nullptr};
+    std::filesystem::path path_{};
     std::uint64_t size_{0};
     bool valid_{false};
 };

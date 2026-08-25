@@ -27,9 +27,13 @@ public:
         std::uint8_t* destination,
         std::size_t byte_count) const noexcept override;
 
+    // 같은 파일을 다시 열어 냅니다. 핸들이 따로라 위치를 공유하지 않습니다.
+    [[nodiscard]] std::unique_ptr<TiffRandomAccessReader> clone() const noexcept override;
+
 private:
     HANDLE handle_{INVALID_HANDLE_VALUE};
     std::uint64_t size_{0};
+    std::filesystem::path path_{};
 };
 
 }  // namespace negaflow::core::tiff_probe_detail

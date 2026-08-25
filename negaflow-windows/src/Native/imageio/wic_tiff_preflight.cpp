@@ -27,7 +27,7 @@ WicTiffDecodeStatus preflight_tiff_source(
         return WicTiffDecodeStatus::stream_open_failed;
     }
 
-    const IStreamTiffReader reader{stream.Get()};
+    const IStreamTiffReader reader{stream.Get(), path};
     if (!reader.valid()) {
         return WicTiffDecodeStatus::stream_open_failed;
     }

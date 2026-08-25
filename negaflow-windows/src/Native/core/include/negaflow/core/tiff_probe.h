@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <filesystem>
 #include <stop_token>
 
@@ -130,6 +131,15 @@ public:
         std::uint64_t offset,
         std::uint8_t* destination,
         std::size_t byte_count) const noexcept = 0;
+
+    /// <summary>
+    /// 같은 원본을 가리키는 **독립된** reader 를 냅니다. 위치를 공유하지 않으므로 여러
+    /// 스레드가 동시에 읽어도 됩니다. 낼 수 없으면 `nullptr` 이고, 그때 호출부는 순차로
+    /// 갑니다 - IStream 판은 Seek+Read 가 한 위치를 공유해서 복제할 수 없습니다.
+    /// </summary>
+    [[nodiscard]] virtual std::unique_ptr<TiffRandomAccessReader> clone() const noexcept {
+        return nullptr;
+    }
 };
 
 [[nodiscard]] TiffProbeResult probe_tiff(
