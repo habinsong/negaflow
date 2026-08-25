@@ -860,6 +860,46 @@ struct EdgeRect final {
     return preferred;
 }
 
+// ABI 계약: 검출은 단위 사각형 안이고 유한해야 합니다. 여기서 한 번 맞춥니다.
+//
+// 경로마다 자기 나눗셈을 합니다 - 격자는 `snapped.first / preview.width` 와
+// `snapped.count() / preview.width` 로 짓고, `map_from_crop` 은 crop 좌표를 원본 크기로
+// 되돌리며, 회전 되돌림만 min/max 를 clamp 합니다. 그래서 정수 구간이 폭을 꽉 채우거나
+// 부동소수 나머지가 남으면 `x + width` 가 1.0 을 아주 조금 넘습니다. 관리 쪽 검사는 그것을
+// 계약 위반으로 보고 예외를 던지고, 그 예외가 평판 프리뷰의 프레임 찾기를 통째로 끊었습니다
+// (실기: "The flatbed detector returned an invalid frame rectangle").
+//
+// 자르는 것이 맞습니다 - 화면 밖은 볼 수 없는 자리이고, macOS 도 경계에 걸친 컷을 프리뷰와
+// 교차시켜 남깁니다. 넓이가 0 이 된 것만 버립니다.
+void constrain_to_unit_square(std::vector<FlatbedFrameDetection>& detections) noexcept {
+    std::size_t kept = 0U;
+    for (std::size_t index = 0U; index < detections.size(); ++index) {
+        FlatbedFrameDetection detection = detections[index];
+        if (!std::isfinite(detection.x) || !std::isfinite(detection.y) ||
+            !std::isfinite(detection.width) || !std::isfinite(detection.height) ||
+            !std::isfinite(detection.confidence) ||
+            !std::isfinite(detection.straighten_angle)) {
+            continue;
+        }
+        const double left = std::clamp(detection.x, 0.0, 1.0);
+        const double top = std::clamp(detection.y, 0.0, 1.0);
+        const double right = std::clamp(detection.x + detection.width, left, 1.0);
+        const double bottom = std::clamp(detection.y + detection.height, top, 1.0);
+        if (!(right > left) || !(bottom > top)) {
+            continue;
+        }
+        detection.x = left;
+        detection.y = top;
+        detection.width = right - left;
+        detection.height = bottom - top;
+        detection.confidence = std::clamp(detection.confidence, 0.0, 1.0);
+        detection.straighten_angle = std::clamp(detection.straighten_angle, -45.0, 45.0);
+        detections[kept] = detection;
+        ++kept;
+    }
+    detections.resize(kept);
+}
+
 [[nodiscard]] std::vector<FlatbedFrameDetection> normalized_topology(
     std::vector<FlatbedFrameDetection> detections) {
     std::sort(detections.begin(), detections.end(), [](const auto& first, const auto& second) {
@@ -1084,6 +1124,7 @@ FlatbedFrameGridResult detect_flatbed_frame_grid(
                 }
             }
         }
+        constrain_to_unit_square(result.detections);
         result.status = FlatbedFrameGridStatus::ok;
         return result;
     } catch (const std::bad_alloc&) {
@@ -1117,6 +1158,7 @@ FlatbedFrameGridResult detect_flatbed_frame_edges(
             result.status = FlatbedFrameGridStatus::cancelled;
             return result;
         }
+        constrain_to_unit_square(result.detections);
         result.status = FlatbedFrameGridStatus::ok;
         return result;
     } catch (const std::bad_alloc&) {

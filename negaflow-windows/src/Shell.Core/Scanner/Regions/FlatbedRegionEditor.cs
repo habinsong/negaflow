@@ -228,6 +228,52 @@ internal sealed class FlatbedRegionEditor
         return Update(regionId, Regions[index].OffsetBy(baseX, baseY));
     }
 
+    /// <summary>
+    /// 검출이 계약을 어겨도 <b>앱을 세우지 않습니다.</b> macOS 는 아무 것도 못 찾으면 사용자가
+    /// 프레임을 직접 그리며, 그 자리에서 앱이 죽지 않습니다. Windows 는 ABI 경계 검사가
+    /// <see cref="NativeBootstrapException"/> 을 던졌고 그것이 평판 프리뷰의 프레임 찾기를
+    /// 통째로 끊었습니다 - 실기에서 사진은 떴는데 프레임 UI 가 아예 안 그려졌습니다.
+    /// 여기서 "못 찾았다" 로 바꿔 담고, 원인은 추적에 남깁니다.
+    /// </summary>
+    private static FlatbedFrameGridResult DetectGrid(
+        ReadOnlySpan<float> previewLuminance,
+        uint previewWidth,
+        uint previewHeight,
+        double widthMm,
+        double heightMm,
+        FlatbedFrameFormat format)
+    {
+        try
+        {
+            return NativeFlatbedFrameGridDetector.Detect(
+                previewLuminance, previewWidth, previewHeight, widthMm, heightMm, format);
+        }
+        catch (NativeBootstrapException error)
+        {
+            PreviewTrace.Write("flatbed detect refused " + error.Message);
+            return new(FlatbedFrameGridStatus.InvalidInput, []);
+        }
+    }
+
+    /// <inheritdoc cref="DetectGrid"/>
+    private static FlatbedFrameGridResult DetectEdges(
+        ReadOnlySpan<float> previewLuminance,
+        uint previewWidth,
+        uint previewHeight,
+        FlatbedFrameFormat format)
+    {
+        try
+        {
+            return NativeFlatbedFrameGridDetector.DetectEdges(
+                previewLuminance, previewWidth, previewHeight, format);
+        }
+        catch (NativeBootstrapException error)
+        {
+            PreviewTrace.Write("flatbed edge detect refused " + error.Message);
+            return new(FlatbedFrameGridStatus.InvalidInput, []);
+        }
+    }
+
     /// <param name="previewPhysicalWidthMm">
     /// 프리뷰 파일이 스스로 밝히는 실제 가로 크기입니다(픽셀 / 해상도). 0 이면 모름입니다.
     /// </param>
@@ -280,7 +326,7 @@ internal sealed class FlatbedRegionEditor
         FlatbedFrameGridResult detected = new(FlatbedFrameGridStatus.InvalidInput, []);
         foreach ((double width, double height) in candidates)
         {
-            detected = NativeFlatbedFrameGridDetector.Detect(
+            detected = DetectGrid(
                 previewLuminance,
                 previewWidth,
                 previewHeight,
@@ -301,7 +347,7 @@ internal sealed class FlatbedRegionEditor
         }
         if (detected.Status != FlatbedFrameGridStatus.Ok || detected.Detections.Count == 0)
         {
-            detected = NativeFlatbedFrameGridDetector.DetectEdges(
+            detected = DetectEdges(
                 previewLuminance,
                 previewWidth,
                 previewHeight,

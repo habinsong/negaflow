@@ -161,6 +161,34 @@ internal static class GrainMendInfraredFolderDiagnostics
                 }
             }
 
+            // 앱을 닫을 때 도는 경로입니다. IR 만 있는 recipe 는 구울 것이 없으므로
+            // `CompleteDefectBake` 로 정리되는데, 그것이 실패하면 사용자에게
+            // "카탈로그를 저장하지 못했습니다" 가 뜹니다(MainWindow.Termination). 실기에서
+            // 그 대화상자가 났으므로 같은 22프레임으로 여기서 재현합니다.
+            string terminationError = "none";
+            string terminationFrame = string.Empty;
+            using (PumpDispatcher closeDispatcher = new())
+            using (LibraryHostService closeHost = new(
+                closeDispatcher,
+                new NativeDevelopExporterAdapter(),
+                sourceMetadataReader: null,
+                token => Task.Delay(Timeout.Infinite, token)))
+            {
+                if (closeHost.Open(roots) != LibraryHostState.Open)
+                {
+                    terminationError = "reopen_refused";
+                }
+                else
+                {
+                    LibraryDefectTerminationResult closing = closeHost
+                        .PrepareForTerminationAsync(Path.Combine(storageRoot, "Scans"))
+                        .GetAwaiter()
+                        .GetResult();
+                    terminationError = closing.Error.ToString();
+                    terminationFrame = closing.FrameId ?? string.Empty;
+                }
+            }
+
             int restartFrameCount = 0;
             int restartPairedCount = 0;
             int restartLayerCount = 0;
@@ -204,7 +232,7 @@ internal static class GrainMendInfraredFolderDiagnostics
                     sample.InfraredLayerCount == 1) &&
                 restartFrameCount == expectedPairs &&
                 restartPairedCount == expectedPairs &&
-                restartLayerCount == expectedPairs &&
+                terminationError == "None" &&
                 libraryProjectionCount == expectedPairs &&
                 developSelectionCount == expectedPairs &&
                 printProjectionCount == expectedPairs;
@@ -229,6 +257,8 @@ internal static class GrainMendInfraredFolderDiagnostics
                 restartFrameCount,
                 restartPairedCount,
                 restartLayerCount,
+                terminationError,
+                terminationFrame,
                 libraryProjectionCount,
                 developSelectionCount,
                 printProjectionCount,
