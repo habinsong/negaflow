@@ -124,6 +124,21 @@ public sealed partial class DevelopGrainMendPanel : UserControl
         RequestDefectPreview();
     }
 
+    /// <summary>
+    /// 결함 레시피가 <b>바깥에서</b> 바뀌었을 때 목록과 캡슐을 다시 읽습니다.
+    /// </summary>
+    /// <remarks>
+    /// IR 굽기는 스캔이 게시한 뒤에 끝납니다. 그때 카탈로그에는 IR 항목이 생기는데, 화면은
+    /// 그 사실을 아무도 알려 주지 않아 <b>옛 스냅샷을 계속 들고</b> 있었습니다 — GrainMend
+    /// 목록에 IR 이 없고 그림도 IR 전 그대로였습니다. 가져오기는 사용자가 고르기 전에 굽기가
+    /// 끝나 있어 이 자리를 지나지 않습니다.
+    /// </remarks>
+    internal void RefreshAfterExternalRecipeChange()
+    {
+        chrome.Update();
+        RequestDefectPreview();
+    }
+
     /// <summary>크기가 바뀌면 커서 원도 곧바로 그 크기가 됩니다(macOS <c>screenDiameter</c>).</summary>
     private void OnHudCloneDiameterChanged(double value)
     {
