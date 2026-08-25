@@ -61,6 +61,9 @@ public sealed partial class ThumbnailService : IAsyncDisposable
     private FrameCachePolicy developedPolicy;
     private long developedByteLimit;
 
+    /// <summary>지금 걸린 갈래입니다. 자동이면 엔진에 0 을 겁니다.</summary>
+    private FrameCacheResidencyMode residencyMode = FrameCacheResidencyMode.Automatic;
+
     /// <summary>현상 미리보기 화소입니다. 인화 판은 360 JPEG 가 아니라 이것을 먼저 씁니다.</summary>
     public readonly record struct DevelopedPreview(
         byte[] Pixels,
@@ -125,9 +128,33 @@ public sealed partial class ThumbnailService : IAsyncDisposable
         developedResidency.SetLimits(limits.Developed, developedByteLimit, EvictDeveloped);
         // 엔진을 못 부르는 것은 캐시 상한 하나가 자동으로 남는다는 뜻뿐입니다. 그것 때문에
         // 설정 창이나 시작을 세우지 않습니다 — 대신 걸렸는지를 남겨 진단이 볼 수 있게 합니다.
-        NativeResidencyLimitsApplied =
-            FrameCacheLimitsBridge.Apply(limits.CleanedRaw, limits.Developed);
+        NativeResidencyLimitsApplied = ApplyEngineLimits(settings.Mode, limits);
     }
+
+    /// <summary>
+    /// 엔진에 한도를 겁니다. <b>자동이면 0 을 겁니다</b> — 0 이 "엔진이 알아서" 입니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 자동 모드에서도 셸이 계산한 장수(이 기계에서 16 / 32)를 그대로 밀어 넣었습니다.
+    /// 엔진은 0 이 아니면 <b>사용자가 고른 값</b>으로 보고 `장수 × 190MB` 로만 예산을 잡습니다 —
+    /// 그 길에는 "프로세스 private 에서 캐시 몫을 뺀 간접비" 차감이 없습니다. 그래서 코드·
+    /// 런타임·WinUI·D3D11 스테이징 몫이 예산 밖에 그대로 남았고, 실측으로 설치 앱이
+    /// 8,480MB(=16×190 + 32×170) 에 간접비를 더해 9.5GB 를 넘겼습니다.
+    ///
+    /// 압력이 올라갔을 때는 자동이라도 <b>줄인 장수</b>를 겁니다. 그것은 자동값보다 낮추는
+    /// 명시적 지시라 "엔진이 알아서" 와 다릅니다.
+    /// </remarks>
+    private static bool ApplyEngineLimits(
+        FrameCacheResidencyMode mode,
+        FrameCacheLimits limits,
+        bool clampedByPressure = false) =>
+        FrameCacheLimitsBridge.Apply(
+            mode == FrameCacheResidencyMode.Automatic && !clampedByPressure
+                ? 0
+                : limits.CleanedRaw,
+            mode == FrameCacheResidencyMode.Automatic && !clampedByPressure
+                ? 0
+                : limits.Developed);
 
     /// <summary>
     /// 엔진 캐시에도 한도를 걸었는지입니다. 엔진을 못 부르면 엔진은 자동 예산으로 계속 돕니다 —

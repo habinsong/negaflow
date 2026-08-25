@@ -44,6 +44,31 @@ public static class MemoryBudgetLog
         }
     }
 
+    private static Timer? sampler;
+
+    /// <summary>
+    /// 앱이 놀고 있어도 표본이 남게 합니다.
+    /// </summary>
+    /// <remarks>
+    /// 캐시는 <b>접근할 때만</b> 축출합니다. 그래서 사진을 다 그린 뒤 가만히 두면 상주량이
+    /// 그대로 남고, 그때가 사용자가 작업 관리자를 보는 순간입니다. 그 구간에 표본이 없으면
+    /// "예산이 안 도는 것" 과 "부를 일이 없어서 안 도는 것" 을 못 가립니다.
+    ///
+    /// 표시 파일이 없으면 타이머 자체를 만들지 않습니다.
+    /// </remarks>
+    public static void StartBackgroundSampling()
+    {
+        if (sampler is not null || !IsEnabled())
+        {
+            return;
+        }
+        sampler = new Timer(
+            _ => Sample("idle"),
+            state: null,
+            dueTime: TimeSpan.FromSeconds(2),
+            period: TimeSpan.FromSeconds(2));
+    }
+
     /// <summary>한 줄 남깁니다. 표시 파일이 없거나 1초가 안 지났으면 아무 것도 하지 않습니다.</summary>
     public static void Sample(string origin)
     {

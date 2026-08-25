@@ -230,7 +230,13 @@ public sealed partial class ThumbnailService
         // 엔진 안의 두 캐시에도 같은 한도를 겁니다. 여기서 멈추면 설정에서 고른 값이
         // 표시본 캐시에만 걸리고 엔진은 계속 설치 메모리만 보고 예산을 잡습니다 -
         // macOS `FrameCacheResidencyStore.onLimitsChange` 는 둘 다 겁니다.
-        _ = Negaflow.Interop.FrameCacheLimitsBridge.Apply(limits.CleanedRaw, limits.Developed);
+        //
+        // 압력이 없을 때는 **자동이면 0** 을 겁니다(`ApplyEngineLimits` 주석 참고).
+        // 압력이 올라갔을 때만 줄인 장수를 걸어 자동값보다 낮춥니다.
+        _ = ApplyEngineLimits(
+            residencyMode,
+            limits,
+            clampedByPressure: pressure != FrameCachePressureLevel.Normal);
     }
 
     /// <summary>

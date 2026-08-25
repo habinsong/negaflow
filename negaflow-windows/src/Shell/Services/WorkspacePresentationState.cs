@@ -11,6 +11,9 @@ public sealed class WorkspacePresentationState
         this.settingsStore = settingsStore;
         settingsStore.Changed += OnSettingsChanged;
         ApplyDevelopPolicies(settingsStore.Current);
+        // 표시 파일이 있을 때만 켜집니다. 앱이 놀고 있어도 예산 표본이 남아야 "예산이 안
+        // 도는 것" 과 "부를 일이 없어서 안 도는 것" 을 가릅니다.
+        Diagnostics.MemoryBudgetLog.StartBackgroundSampling();
     }
 
     public event EventHandler<ShellPreferences>? Changed;
