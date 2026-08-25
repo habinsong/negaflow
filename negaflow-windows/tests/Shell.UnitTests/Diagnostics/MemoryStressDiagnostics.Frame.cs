@@ -14,6 +14,33 @@ namespace Negaflow.Shell.UnitTests;
 /// </remarks>
 internal static partial class MemoryStressDiagnostics
 {
+    /// <summary>
+    /// 기본은 <b>자동</b>입니다. <c>NEGA_STRESS_MANUAL=16:32</c> 로 수동 장수를 걸면
+    /// 자동 상한을 프로세스 기준으로 바꾸기 **전의** 예산을 그대로 재현합니다 — 상한을
+    /// 지키느라 얼마나 느려졌는지는 그 둘을 나란히 재야 알 수 있습니다.
+    /// </summary>
+    private static FrameCacheResidencySettings ResidencySettingsFromEnvironment()
+    {
+        string? manual = Environment.GetEnvironmentVariable("NEGA_STRESS_MANUAL");
+        if (string.IsNullOrWhiteSpace(manual))
+        {
+            return new FrameCacheResidencySettings();
+        }
+        string[] parts = manual.Split(':', StringSplitOptions.TrimEntries);
+        if (parts.Length != 2 ||
+            !int.TryParse(parts[0], out int cleanedRaw) ||
+            !int.TryParse(parts[1], out int developed))
+        {
+            return new FrameCacheResidencySettings();
+        }
+        return new FrameCacheResidencySettings
+        {
+            Mode = FrameCacheResidencyMode.Manual,
+            ManualCleanedRaw = cleanedRaw,
+            ManualDeveloped = developed,
+        };
+    }
+
     /// <summary>한 프레임이 실제 앱에서 지나는 여섯 경로를 그대로 지납니다.</summary>
     private static void ExerciseOneFrame(
         PumpDispatcher dispatcher,
