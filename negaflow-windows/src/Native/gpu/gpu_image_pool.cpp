@@ -14,6 +14,23 @@ void reset_images(GpuWorkingImage* const images) noexcept {
     }
 }
 
+// 텍스처를 실제로 놓았으면 그 자리에서 회수까지 시킵니다.
+//
+// 스캐너 프레임은 높이가 몇 화소씩 다릅니다 - 실측 `부산` 22장이 3420·3422·3423·3461·
+// 3487·3493 처럼 전부 다릅니다. 풀은 치수가 정확히 같아야 재사용하므로 **사진 한 장마다**
+// 텍스처 6장을 새로 만들고 옛 6장을 놓습니다. D3D11 은 그 해제를 지연하므로, 제출하지
+// 않으면 큐에 계속 쌓입니다. 그것이 "사진을 볼수록 메모리가 는다" 의 정체였습니다.
+void release_images(const GpuDevice& device, GpuWorkingImage* const images) noexcept {
+    bool released = false;
+    for (int index = 0; index < GpuImagePool::size; ++index) {
+        released = released || images[index].is_valid();
+        images[index] = GpuWorkingImage{};
+    }
+    if (released) {
+        (void)device.flush_released_resources();
+    }
+}
+
 [[nodiscard]] bool texture_pool_bytes(
     const std::uint32_t width,
     const std::uint32_t height,
@@ -67,7 +84,7 @@ bool GpuImagePool::ensure(
     }
     if (images_[0].is_valid() && width_ == width && height_ == height) {
         if (retained_[0].is_valid() && !can_keep_two_sizes(device, 0ULL)) {
-            reset_images(retained_);
+            release_images(device, retained_);
             retained_width_ = 0U;
             retained_height_ = 0U;
         }
@@ -75,7 +92,7 @@ bool GpuImagePool::ensure(
             if (!images_[index].is_valid() &&
                 GpuWorkingImage::create(device, width, height, images_[index]) !=
                     GpuImageStatus::ok) {
-                reset_images(images_);
+                release_images(device, images_);
                 width_ = 0U;
                 height_ = 0U;
                 return false;
@@ -102,7 +119,7 @@ bool GpuImagePool::ensure(
             }
             return true;
         }
-        reset_images(images_);
+        release_images(device, images_);
         for (int index = 0; index < size; ++index) {
             images_[index] = std::move(retained_[index]);
         }
@@ -123,7 +140,7 @@ bool GpuImagePool::ensure(
 
     // 두 단계 전 치수는 먼저 버립니다. 그 뒤 DXGI CurrentUsage를 읽어야 이미 버린 풀까지
     // 사용량에 넣어 새 풀을 불필요하게 거부하지 않습니다.
-    reset_images(retained_);
+    release_images(device, retained_);
     retained_width_ = 0U;
     retained_height_ = 0U;
 
@@ -138,7 +155,7 @@ bool GpuImagePool::ensure(
         retained_width_ = width_;
         retained_height_ = height_;
     } else {
-        reset_images(images_);
+        release_images(device, images_);
     }
 
     for (int index = 0; index < required_image_count; ++index) {
@@ -146,8 +163,8 @@ bool GpuImagePool::ensure(
             GpuImageStatus::ok) {
             // 못 잡으면 전부 놓습니다 — 반쯤 잡은 상태로 두면 다음 호출이 크기가
             // 맞는다고 믿고 씁니다.
-            reset_images(images_);
-            reset_images(retained_);
+            release_images(device, images_);
+            release_images(device, retained_);
             width_ = 0U;
             height_ = 0U;
             retained_width_ = 0U;
@@ -161,6 +178,8 @@ bool GpuImagePool::ensure(
 }
 
 void GpuImagePool::clear() noexcept {
+    // 장치를 모르는 자리입니다. 호출부(`release_transient_resources`)가 곧바로
+    // `trim_idle` 로 제출·반환합니다.
     reset_images(images_);
     reset_images(retained_);
     width_ = 0U;

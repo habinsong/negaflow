@@ -399,6 +399,19 @@ bool GpuDevice::query_local_video_memory_info(GpuVideoMemoryInfo& info) const no
     return true;
 }
 
+bool GpuDevice::flush_released_resources() const noexcept {
+    if (!is_usable() || context_ == nullptr || device_ == nullptr) {
+        return false;
+    }
+    // 제출해야 드라이버가 지연 해제 큐를 비웁니다. 바인딩은 건드리지 않습니다.
+    //
+    // `IDXGIDevice3::Trim` 은 여기서 부르지 않습니다 - 예비분까지 OS 로 돌려주면 다음 장에서
+    // 다시 커밋하느라 느려집니다. 누수를 막는 것은 제출이고, 예비분 반환은 대형 IR 검출
+    // 전후의 `trim_idle` 이 맡습니다.
+    context_->Flush();
+    return true;
+}
+
 bool GpuDevice::trim_idle() const noexcept {
     if (!is_usable() || context_ == nullptr || device_ == nullptr) {
         return false;

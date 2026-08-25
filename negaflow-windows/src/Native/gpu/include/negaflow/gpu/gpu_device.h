@@ -126,6 +126,20 @@ public:
     /// 유휴 진입 전에 D3D11 runtime/driver의 재생성 가능한 내부 버퍼를 폐기합니다.
     [[nodiscard]] bool trim_idle() const noexcept;
 
+    /// <summary>
+    /// 방금 놓은 자원을 드라이버가 실제로 회수하게 합니다.
+    /// </summary>
+    /// <remarks>
+    /// D3D11 은 `Release` 를 지연 처리합니다 - GPU 가 그 자원을 다 쓸 때까지 큐에 두고,
+    /// 그동안 그 메모리는 프로세스에 남아 있습니다. 사진마다 텍스처를 새로 만들고 옛 것을
+    /// 놓는데 아무도 제출하지 않으면 큐가 계속 자랍니다. 실측으로 사진 22장을 두 바퀴 보면
+    /// private bytes 가 11.9GB 에서 16.7GB 로 늘고 GC 로도 안 돌아왔습니다.
+    ///
+    /// <see cref="trim_idle"/> 과 달리 `ClearState` 를 부르지 않습니다 - 사슬 도중에 바인딩을
+    /// 풀면 진행 중인 단계가 깨집니다. 제출과 반환만 합니다.
+    /// </remarks>
+    bool flush_released_resources() const noexcept;
+
 private:
     void reset() noexcept;
 
