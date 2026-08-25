@@ -28,16 +28,45 @@ namespace Negaflow.Shell.Views;
 public sealed partial class SettingsRootView
 {
     /// <summary>
-    /// 이 기계의 GPU 상황입니다. 창을 열 때 한 번 읽습니다 — 어댑터는 실행 중에 바뀌지
+    /// 이 기계의 GPU 상황입니다. 프로세스에 한 번만 읽습니다 — 어댑터는 실행 중에 바뀌지
     /// 않고, DXGI 예산은 매 프레임 흔들려서 그때마다 다시 그리면 값이 춤춥니다.
     /// </summary>
+    /// <remarks>
+    /// <b>UI 스레드에서 읽지 않습니다.</b> 엔진이 아직 GPU 를 안 열었으면 이 호출이
+    /// `D3D11CreateDevice` 를 부르고, 그것은 수백 ms 가 걸릴 수 있습니다. 사진을 한 장도
+    /// 안 보고 설정부터 여는 경우가 정확히 그 자리입니다. 워커에서 읽고 돌아와 그립니다.
+    /// </remarks>
+    private static GpuCacheInfo? sharedGpuCache;
+
+    private static bool gpuCacheRead;
+
     private GpuCacheInfo? gpuCache;
 
     private void InitializeGpuCacheRow()
     {
-        gpuCache = GpuCacheBridge.TryRead();
+        gpuCache = sharedGpuCache;
         GpuCacheModePicker.SelectionChanged += OnGpuCacheModeChanged;
         GpuCacheSlider.ValuePicked += OnGpuCacheSizePicked;
+        if (gpuCacheRead)
+        {
+            return;
+        }
+        gpuCacheRead = true;
+        _ = Task.Run(() =>
+        {
+            GpuCacheInfo? info = GpuCacheBridge.TryRead();
+            _ = DispatcherQueue?.TryEnqueue(() =>
+            {
+                sharedGpuCache = info;
+                gpuCache = info;
+                // 값이 왔으니 그 줄만 다시 그립니다. 창 전체를 다시 그리면 사용자가
+                // 만지고 있던 다른 줄이 튑니다.
+                if (workspaceState?.Current is { } preferences)
+                {
+                    SynchronizeGpuCacheRow(preferences);
+                }
+            });
+        });
     }
 
     private void LocalizeGpuCacheRow()
