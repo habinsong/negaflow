@@ -124,7 +124,8 @@
                             </controls:SettingsRow>
                             <controls:SettingsToggleRow
                                 x:Name="DeveloperModeRow"
-                                AutomationId="settings.developer-mode" />
+                                AutomationId="settings.developer-mode" />
+
                         </controls:SettingsSection.Rows>
                     </controls:SettingsSection>
 
@@ -152,6 +153,27 @@
                                     Click="OnMemoryCacheResetClick" />
                             </controls:SettingsRow>
                             <controls:SettingsFootnote x:Name="MemoryCacheHelp" />
+                            <!--
+                                GPU 작업 텍스처 한도입니다. macOS 에는 없는 줄입니다 - 통합
+                                메모리라 GPU 텍스처가 이미 위 예산 안이기 때문입니다. Windows
+                                는 외장 그래픽에서 다른 물리 메모리를 쓰므로 따로 잽니다.
+                                GPU 가 없는 기계에서는 아래 다섯 줄이 통째로 접힙니다.
+                            -->
+                            <controls:SettingsRow x:Name="GpuCacheModeRow" Visibility="Collapsed">
+                                <controls:NegaflowSegmentedPicker
+                                    x:Name="GpuCacheModePicker"
+                                    MinWidth="150"
+                                    AutomationProperties.AutomationId="settings.gpu-cache.mode" />
+                            </controls:SettingsRow>
+                            <controls:SettingsValueRow x:Name="GpuCacheValueRow" Visibility="Collapsed" />
+                            <controls:SettingsSliderRow x:Name="GpuCacheSlider" Visibility="Collapsed" />
+                            <controls:SettingsRow x:Name="GpuCacheResetRow" Visibility="Collapsed">
+                                <Button
+                                    x:Name="GpuCacheResetButton"
+                                    AutomationProperties.AutomationId="settings.gpu-cache.reset"
+                                    Click="OnGpuCacheResetClick" />
+                            </controls:SettingsRow>
+                            <controls:SettingsFootnote x:Name="GpuCacheHelp" Visibility="Collapsed" />
                         </controls:SettingsSection.Rows>
                     </controls:SettingsSection>
 

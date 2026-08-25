@@ -1334,6 +1334,10 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="settingsMemoryCacheAutomaticHelp.Text" xml:space="preserve"><value>Ajuste la limite à la mémoire installée. Au-delà, les vues les plus anciennes sont libérées puis redéveloppées à la réouverture.</value><comment>AppLocalizedPhrase.settingsMemoryCacheAutomaticHelp</comment></data>
   <data name="settingsMemoryCacheManualHelp.Text" xml:space="preserve"><value>Utilise les valeurs que vous définissez. Le plafond est de 70% de la mémoire installée.</value><comment>AppLocalizedPhrase.settingsMemoryCacheManualHelp</comment></data>
   <data name="settingsMemoryCacheResetToAutomatic.Content" xml:space="preserve"><value>Revenir aux valeurs automatiques</value><comment>AppLocalizedPhrase.settingsMemoryCacheResetToAutomatic</comment></data>
+  <data name="settingsGpuCacheLabel.Text" xml:space="preserve"><value>Cache mémoire GPU</value><comment>AppLocalizedPhrase.settingsGpuCacheLabel</comment></data>
+  <data name="settingsGpuCacheAdapterFormat.Text" xml:space="preserve"><value>{0} · {1}</value><comment>AppLocalizedPhrase.settingsGpuCacheAdapterFormat</comment></data>
+  <data name="settingsGpuCacheDiscreteHelp.Text" xml:space="preserve"><value>Plafond des textures de travail dans la mémoire graphique. Au-delà, le traitement passe au processeur.</value><comment>AppLocalizedPhrase.settingsGpuCacheDiscreteHelp</comment></data>
+  <data name="settingsGpuCacheIntegratedHelp.Text" xml:space="preserve"><value>Les cartes graphiques intégrées partagent la mémoire système. Ce plafond est pris sur la même mémoire physique que le cache ci-dessus.</value><comment>AppLocalizedPhrase.settingsGpuCacheIntegratedHelp</comment></data>
   <data name="supportBundleTitle.Text" xml:space="preserve"><value>Bundle d’assistance</value><comment>SupportBundleLocalizedText.title</comment></data>
   <data name="supportBundleExport.Content" xml:space="preserve"><value>Exporter</value><comment>SupportBundleLocalizedText.export</comment></data>
   <data name="supportBundleCreating.Content" xml:space="preserve"><value>Création</value><comment>SupportBundleLocalizedText.creating</comment></data>

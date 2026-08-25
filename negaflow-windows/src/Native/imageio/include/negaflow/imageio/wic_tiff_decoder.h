@@ -4,6 +4,8 @@
 #include "negaflow/core/tiff_probe.h"
 #include "negaflow/imageio/decoded_image.h"
 
+#include "negaflow/core/machine_memory.h"
+
 #include <cstdint>
 #include <filesystem>
 #include <span>
@@ -118,7 +120,8 @@ public:
 struct WicTiffDecodeLimits final {
     negaflow::core::TiffProbeLimits probe{};
     negaflow::color::IccProfileLimits icc{};
-    std::uint64_t max_decoded_pixel_bytes{512ULL * 1024ULL * 1024ULL};
+    // 이 기계의 설치 메모리에서 옵니다 - `negaflow::core::default_max_pixel_bytes` 주석 참고.
+    std::uint64_t max_decoded_pixel_bytes{negaflow::core::default_max_pixel_bytes()};
     std::uint32_t max_color_contexts{4U};
 };
 

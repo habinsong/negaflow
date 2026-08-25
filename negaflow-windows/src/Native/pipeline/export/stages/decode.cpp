@@ -66,11 +66,16 @@ void trim_decoded_locked() noexcept {
     for (const DecodedSourceEntry& entry : g_decoded_sources) {
         resident += decoded_bytes(entry);
     }
+    // 예산을 물어보기 **전에** 알립니다. 자동 예산은 "프로세스 private 에서 캐시 몫을 뺀
+    // 나머지" 를 간접비로 보므로, 내 몫을 안 알리면 그것까지 간접비로 세어 예산이 두 배로
+    // 깎입니다.
+    report_cache_resident_bytes(FrameCacheKind::decoded_source, resident);
     const std::uint64_t budget = decoded_budget_bytes();
     while (g_decoded_sources.size() > 1U && resident > budget) {
         resident -= decoded_bytes(g_decoded_sources.front());
         g_decoded_sources.erase(g_decoded_sources.begin());
     }
+    report_cache_resident_bytes(FrameCacheKind::decoded_source, resident);
 }
 
 // macOS `markCleanedRawResident` 의 FIFO 재등록 — 쓰인 것은 뒤로 갑니다. 그래서 현상

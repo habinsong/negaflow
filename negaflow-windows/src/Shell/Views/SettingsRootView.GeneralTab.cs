@@ -26,6 +26,7 @@ public sealed partial class SettingsRootView
         MemoryCacheModePicker.SelectionChanged += OnMemoryCacheModeChanged;
         MemoryCacheCleanedRawSlider.ValuePicked += OnMemoryCacheCleanedRawPicked;
         MemoryCacheDevelopedSlider.ValuePicked += OnMemoryCacheDevelopedPicked;
+        InitializeGpuCacheRow();
     }
 
     private void LocalizeGeneralTab()
@@ -33,7 +34,8 @@ public sealed partial class SettingsRootView
         GeneralSection.HeaderText = AppResources.Get("settingsGeneralTab", "Text");
         LanguageRow.Label = AppResources.Get("settingsLanguagePicker", "Text");
         AppearanceRow.Label = AppResources.Get("settingsAppearancePicker", "Text");
-        DeveloperModeRow.Label = AppResources.Get("developerMode", "Header");
+        DeveloperModeRow.Label = AppResources.Get("developerMode", "Header");
+
 
         string memory = AppResources.Get("settingsMemoryCacheSection", "Text");
         MemoryCacheSection.HeaderText = memory;
@@ -56,6 +58,8 @@ public sealed partial class SettingsRootView
         MemoryCacheDevelopedSlider.Label = developed;
         MemoryCacheResetButton.Content =
             AppResources.Get("settingsMemoryCacheResetToAutomatic", "Content");
+
+        LocalizeGpuCacheRow();
 
         SupportBundleSection.HeaderText = AppResources.Get("supportBundleTitle", "Text");
         SupportBundleRow.Label = AppResources.Get("supportBundleTitle", "Text");
@@ -113,6 +117,8 @@ public sealed partial class SettingsRootView
             AppResources.Get(
                 manual ? "settingsMemoryCacheManualHelp" : "settingsMemoryCacheAutomaticHelp",
                 "Text"));
+
+        SynchronizeGpuCacheRow(preferences);
     }
 
     private static string FrameCountText(int count) => string.Format(

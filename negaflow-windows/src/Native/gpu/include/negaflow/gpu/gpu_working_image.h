@@ -135,6 +135,19 @@ public:
     [[nodiscard]] std::uint32_t width() const noexcept { return width_; }
     [[nodiscard]] std::uint32_t height() const noexcept { return height_; }
 
+    /// <summary>이 이미지가 <b>시스템 RAM</b> 에서 차지하는 바이트입니다.</summary>
+    /// <remarks>
+    /// 텍스처 자체는 `DEFAULT` 라 외장 그래픽에서는 VRAM 에 있습니다. 그런데 스테이징 두
+    /// 장은 CPU 접근이라 **언제나 시스템 RAM** 입니다. 실측으로 8MP 스트레스에서 이 몫이
+    /// 3.2GB 였고, 어느 예산에도 들어 있지 않아 프로세스 총량이 상한을 넘었습니다.
+    /// </remarks>
+    [[nodiscard]] std::uint64_t system_memory_bytes() const noexcept {
+        const std::uint64_t one = static_cast<std::uint64_t>(width_) *
+            static_cast<std::uint64_t>(height_) * 16ULL;
+        return (staging_ == nullptr ? 0ULL : one) +
+            (upload_staging_ == nullptr ? 0ULL : one);
+    }
+
     [[nodiscard]] ID3D11Texture2D* texture() const noexcept { return texture_; }
     [[nodiscard]] ID3D11ShaderResourceView* srv() const noexcept { return srv_; }
     [[nodiscard]] ID3D11UnorderedAccessView* uav() const noexcept { return uav_; }

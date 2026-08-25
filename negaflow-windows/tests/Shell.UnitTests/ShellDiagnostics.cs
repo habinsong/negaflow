@@ -11,7 +11,8 @@ internal static class ShellDiagnostics
 {
     public static bool TryRun(string[] args, out int exitCode)
     {
-        return LibraryViewingMemoryDiagnostics.TryRun(args, out exitCode) ||
+        return MemoryStressDiagnostics.TryRun(args, out exitCode) ||
+            LibraryViewingMemoryDiagnostics.TryRun(args, out exitCode) ||
             LibraryTerminationDiagnostics.TryRun(args, out exitCode) ||
             CatalogSeedDiagnostics.TryRun(args, out exitCode) ||
             CatalogInspectionDiagnostics.TryRun(args, out exitCode) ||

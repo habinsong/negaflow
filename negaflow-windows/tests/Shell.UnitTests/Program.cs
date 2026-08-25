@@ -60,6 +60,7 @@ internal static class Program
         PrintCompositionTests.Run();
         PrintPreviewResolutionTests.Run();
         FrameResidencyTests.Run();
+        GpuCacheSettingsTests.Run();
         PreviewOrderingTests.Run();
         DevelopMetadataTests.Run();
         DevelopMenuStateTests.Run();

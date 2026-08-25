@@ -4,6 +4,8 @@
 #include "negaflow/core/pixel.h"
 #include "negaflow/imageio/decoded_image.h"
 
+#include "negaflow/core/machine_memory.h"
+
 #include <cstdint>
 #include <vector>
 
@@ -37,8 +39,10 @@ enum class ScannerToWorkingStatus : std::uint8_t {
 };
 
 struct ScannerToWorkingLimits final {
-    std::uint64_t max_working_pixel_bytes{512ULL * 1024ULL * 1024ULL};
-    std::uint64_t max_temporary_pixel_bytes{512ULL * 1024ULL * 1024ULL};
+    // 이 기계의 설치 메모리에서 옵니다 - 바이트 상수를 박으면 48MP(768MB)·64MP·128MP
+    // 스캔이 32GB 기계에서도 거부됩니다. `negaflow::core::default_max_pixel_bytes` 주석 참고.
+    std::uint64_t max_working_pixel_bytes{negaflow::core::default_max_pixel_bytes()};
+    std::uint64_t max_temporary_pixel_bytes{negaflow::core::default_max_pixel_bytes()};
     negaflow::color::IccProfileLimits icc{};
 };
 

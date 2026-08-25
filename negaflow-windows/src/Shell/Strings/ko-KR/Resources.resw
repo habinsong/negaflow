@@ -1334,6 +1334,10 @@
   <data name="settingsMemoryCacheAutomaticHelp.Text" xml:space="preserve"><value>설치 메모리에 맞춰 상한을 정합니다. 한도를 넘으면 오래된 프레임부터 내려놓고, 다시 열 때 재현상합니다.</value><comment>AppLocalizedPhrase.settingsMemoryCacheAutomaticHelp</comment></data>
   <data name="settingsMemoryCacheManualHelp.Text" xml:space="preserve"><value>직접 정한 값을 씁니다. 상한은 설치 메모리의 70%입니다.</value><comment>AppLocalizedPhrase.settingsMemoryCacheManualHelp</comment></data>
   <data name="settingsMemoryCacheResetToAutomatic.Content" xml:space="preserve"><value>자동값으로 되돌리기</value><comment>AppLocalizedPhrase.settingsMemoryCacheResetToAutomatic</comment></data>
+  <data name="settingsGpuCacheLabel.Text" xml:space="preserve"><value>GPU 메모리 캐시</value><comment>AppLocalizedPhrase.settingsGpuCacheLabel</comment></data>
+  <data name="settingsGpuCacheAdapterFormat.Text" xml:space="preserve"><value>{0} · {1}</value><comment>AppLocalizedPhrase.settingsGpuCacheAdapterFormat</comment></data>
+  <data name="settingsGpuCacheDiscreteHelp.Text" xml:space="preserve"><value>그래픽 카드 메모리에서 작업 텍스처가 쓸 상한입니다. 넘으면 그 작업은 CPU 로 갑니다.</value><comment>AppLocalizedPhrase.settingsGpuCacheDiscreteHelp</comment></data>
+  <data name="settingsGpuCacheIntegratedHelp.Text" xml:space="preserve"><value>내장 그래픽은 시스템 메모리를 나눠 씁니다. 이 상한은 위 메모리 캐시와 같은 물리 메모리에서 나갑니다.</value><comment>AppLocalizedPhrase.settingsGpuCacheIntegratedHelp</comment></data>
   <data name="supportBundleTitle.Text" xml:space="preserve"><value>지원 번들</value><comment>SupportBundleLocalizedText.title</comment></data>
   <data name="supportBundleExport.Content" xml:space="preserve"><value>내보내기</value><comment>SupportBundleLocalizedText.export</comment></data>
   <data name="supportBundleCreating.Content" xml:space="preserve"><value>생성 중</value><comment>SupportBundleLocalizedText.creating</comment></data>

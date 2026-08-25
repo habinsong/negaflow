@@ -20,4 +20,16 @@ internal static partial class NativeLimits
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial uint nf_set_frame_cache_limits_v1(
         ref NativeFrameCacheLimitsV1 limits);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_set_gpu_cache_limit_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial uint nf_set_gpu_cache_limit_v1(ref NativeGpuCacheLimitV1 limit);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_get_gpu_cache_info_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial uint nf_get_gpu_cache_info_v1(ref NativeGpuCacheInfoV1 output);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_get_memory_report_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial uint nf_get_memory_report_v1(ref NativeMemoryReportV1 output);
 }

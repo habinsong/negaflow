@@ -54,11 +54,14 @@ void trim_locked() noexcept {
     for (const PreviewRawEntry& entry : g_entries) {
         resident += entry_bytes(entry);
     }
+    // 예산을 물어보기 **전에** 알립니다 - `decode.cpp` 와 같은 이유입니다.
+    report_cache_resident_bytes(FrameCacheKind::preview_proxy, resident);
     const std::uint64_t budget = budget_bytes();
     while (g_entries.size() > 1U && resident > budget) {
         resident -= entry_bytes(g_entries.front());
         g_entries.erase(g_entries.begin());
     }
+    report_cache_resident_bytes(FrameCacheKind::preview_proxy, resident);
 }
 
 // macOS `markDevelopedResident` 의 앞 두 줄 — 지우고 뒤에 다시 붙입니다.

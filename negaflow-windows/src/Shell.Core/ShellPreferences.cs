@@ -108,6 +108,13 @@ public sealed record ShellPreferences
     public FrameCacheResidencySettings FrameCache { get; init; } = new();
 
     /// <summary>
+    /// GPU 작업 텍스처 캐시 한도입니다. macOS 에는 없는 자리입니다 — 통합 메모리라 GPU
+    /// 텍스처가 이미 <see cref="FrameCache"/> 예산 안이기 때문입니다. Windows 는 외장
+    /// 그래픽에서 다른 물리 메모리를 쓰므로 따로 재야 합니다.
+    /// </summary>
+    public GpuCacheSettings GpuCache { get; init; } = new();
+
+    /// <summary>
     /// 자동 결함 도구가 미세 반점까지 찾을지의 **기본값**입니다. 프레임마다 따로 끄고 켜는
     /// 것과 별개로, 새로 여는 도구가 무엇으로 시작할지를 정합니다.
     /// </summary>
@@ -191,6 +198,7 @@ public sealed record ShellPreferences
             Shortcuts = (Shortcuts ?? new WorkflowShortcutMap()).Normalize(),
             Print = (Print ?? new PrintPreferences()).Normalize(),
             FrameCache = (FrameCache ?? new FrameCacheResidencySettings()).Normalize(),
+            GpuCache = (GpuCache ?? new GpuCacheSettings()).Normalize(),
             Disk = (Disk ?? new DiskStorageSettings()).Normalize(),
             Backup = (Backup ?? new LibraryBackupSettings()).Normalize(),
             Language = AppLanguages.Normalize(Language),

@@ -183,6 +183,13 @@ public sealed partial class ThumbnailService
         return total;
     }
 
+    /// <summary>지금 걸린 developed FIFO 한도입니다 - 장수와 바이트 둘 다입니다.</summary>
+    public (int Frames, long Bytes) DevelopedLimits()
+        => (developedResidency.Limit, developedResidency.ByteLimit);
+
+    /// <summary>FIFO 가 지금 들고 있는 현상본 장수입니다.</summary>
+    public int DevelopedResidentCount => developedResidency.Count;
+
     /// <summary>Windows 메모리 압력 알림을 실제 developed FIFO 한도에 반영합니다.</summary>
     public void ApplyMemoryPressure(FrameCachePressureLevel pressure)
     {

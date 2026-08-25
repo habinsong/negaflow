@@ -1334,6 +1334,10 @@
   <data name="settingsMemoryCacheAutomaticHelp.Text" xml:space="preserve"><value>搭載メモリに合わせて上限を決めます。上限を超えたフレームは古いものから解放し、再度開いたときに再現像します。</value><comment>AppLocalizedPhrase.settingsMemoryCacheAutomaticHelp</comment></data>
   <data name="settingsMemoryCacheManualHelp.Text" xml:space="preserve"><value>指定した値を使います。上限は搭載メモリの 70% です。</value><comment>AppLocalizedPhrase.settingsMemoryCacheManualHelp</comment></data>
   <data name="settingsMemoryCacheResetToAutomatic.Content" xml:space="preserve"><value>自動値に戻す</value><comment>AppLocalizedPhrase.settingsMemoryCacheResetToAutomatic</comment></data>
+  <data name="settingsGpuCacheLabel.Text" xml:space="preserve"><value>GPU メモリキャッシュ</value><comment>AppLocalizedPhrase.settingsGpuCacheLabel</comment></data>
+  <data name="settingsGpuCacheAdapterFormat.Text" xml:space="preserve"><value>{0} · {1}</value><comment>AppLocalizedPhrase.settingsGpuCacheAdapterFormat</comment></data>
+  <data name="settingsGpuCacheDiscreteHelp.Text" xml:space="preserve"><value>グラフィックスメモリで作業テクスチャが使う上限です。超えた処理は CPU で実行されます。</value><comment>AppLocalizedPhrase.settingsGpuCacheDiscreteHelp</comment></data>
+  <data name="settingsGpuCacheIntegratedHelp.Text" xml:space="preserve"><value>内蔵グラフィックスはシステムメモリを共有します。この上限は上のキャッシュと同じ物理メモリから取られます。</value><comment>AppLocalizedPhrase.settingsGpuCacheIntegratedHelp</comment></data>
   <data name="supportBundleTitle.Text" xml:space="preserve"><value>サポートバンドル</value><comment>SupportBundleLocalizedText.title</comment></data>
   <data name="supportBundleExport.Content" xml:space="preserve"><value>書き出す</value><comment>SupportBundleLocalizedText.export</comment></data>
   <data name="supportBundleCreating.Content" xml:space="preserve"><value>作成中</value><comment>SupportBundleLocalizedText.creating</comment></data>

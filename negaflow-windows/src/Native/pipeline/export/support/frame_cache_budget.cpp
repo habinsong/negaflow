@@ -1,11 +1,16 @@
 #include "frame_cache_budget.h"
 
+#include "negaflow/gpu/gpu_cache_budget.h"
+#include "negaflow/gpu/gpu_device.h"
 #include "negaflow/pipeline/frame_cache_limits.h"
 
 #include <windows.h>
 
+#include <psapi.h>
+
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 
 namespace {
 
@@ -14,6 +19,9 @@ namespace {
 // 예산 함수와 설정 함수가 서로 다른 이름공간에 있어 파일 맨 위에 둡니다.
 std::atomic<std::uint32_t> g_manual_cleaned_raw_frames{0U};
 std::atomic<std::uint32_t> g_manual_developed_frames{0U};
+
+// 각 캐시가 알린 상주량입니다. 예산이 "캐시가 아닌 몫" 을 빼려면 이 값이 필요합니다.
+std::atomic<std::uint64_t> g_cache_resident_bytes[2]{};
 
 }  // namespace
 
@@ -62,7 +70,22 @@ constexpr double native_preview_proxy_share = 16.0 / (16.0 + 4.0);
         return conservative_cleaned_raw_megabytes + conservative_developed_megabytes;
     }
     const double total_megabytes = static_cast<double>(physical) / megabyte;
-    return total_megabytes * FrameCacheBudget::automatic_memory_fraction(physical);
+    const double share =
+        total_megabytes * FrameCacheBudget::automatic_memory_fraction(physical);
+
+    // **자동 상한은 프로세스 전체의 상한입니다.**
+    //
+    // 예전에는 이 몫을 캐시들끼리만 나눠 가졌습니다. 그런데 프로세스는 코드(실측 432MB)·
+    // .NET 힙·WinUI·D3D11 스테이징(실측 297MB)·일회성 작업 버퍼도 들고 있고, 그 어느 것도
+    // 어느 예산에도 없었습니다. 그래서 캐시가 전부 자기 예산 안이어도 작업 관리자 총량은
+    // 상한을 넘었습니다 - 실측으로 31.8GB 기계에서 상한 8.27GB 인데 프로세스가 8.77GB 였습니다.
+    //
+    // 캐시가 아닌 몫을 재서 빼면 총량이 상한 안에 들어옵니다. 되먹임이라 스스로 맞습니다 -
+    // 그 몫이 늘면 캐시가 줄고, 캐시가 줄면 private 이 줄어 다음 계산이 안정됩니다.
+    const double overhead = static_cast<double>(non_cache_overhead_bytes()) / megabyte;
+    const double floor_megabytes =
+        conservative_cleaned_raw_megabytes + conservative_developed_megabytes;
+    return std::max(floor_megabytes, share - overhead);
 }
 
 }  // namespace
@@ -133,6 +156,69 @@ std::uint64_t preview_proxy_budget_bytes() noexcept {
         current_frame_cache_pressure());
 }
 
+void report_cache_resident_bytes(
+    const FrameCacheKind kind, const std::uint64_t bytes) noexcept {
+    const auto index = static_cast<std::size_t>(kind);
+    if (index >= static_cast<std::size_t>(FrameCacheKind::count)) {
+        return;
+    }
+    g_cache_resident_bytes[index].store(bytes, std::memory_order_relaxed);
+}
+
+std::uint64_t process_private_bytes() noexcept {
+    PROCESS_MEMORY_COUNTERS_EX counters{};
+    counters.cb = sizeof(counters);
+    if (GetProcessMemoryInfo(
+            GetCurrentProcess(),
+            reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&counters),
+            sizeof(counters)) == 0) {
+        return 0ULL;
+    }
+    return static_cast<std::uint64_t>(counters.PrivateUsage);
+}
+
+std::uint64_t non_cache_overhead_bytes() noexcept {
+    // 예산은 캐시가 한 장 오갈 때마다 물어봅니다. `GetProcessMemoryInfo` 는 시스템 호출이라
+    // 그때마다 부르면 디코드 사슬에 눈에 띄는 값이 붙습니다. 값 자체도 그렇게 빨리 변하지
+    // 않으므로 250ms 동안은 직전 값을 씁니다.
+    using clock = std::chrono::steady_clock;
+    static std::atomic<std::uint64_t> cached{0ULL};
+    static std::atomic<std::int64_t> measured_at{0};
+
+    const auto now =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            clock::now().time_since_epoch())
+            .count();
+    const std::int64_t last = measured_at.load(std::memory_order_relaxed);
+    if (last != 0 && now - last < 250) {
+        return cached.load(std::memory_order_relaxed);
+    }
+
+    const std::uint64_t private_bytes = process_private_bytes();
+    if (private_bytes == 0ULL) {
+        return 0ULL;
+    }
+    std::uint64_t cached_bytes = 0ULL;
+    for (std::size_t index = 0U;
+         index < static_cast<std::size_t>(FrameCacheKind::count);
+         ++index) {
+        cached_bytes += g_cache_resident_bytes[index].load(std::memory_order_relaxed);
+    }
+    // **GPU 몫은 여기서 빼지 않습니다.**
+    //
+    // 외장 그래픽의 텍스처는 VRAM 에 있어 애초에 private 바이트에 없습니다 - 뺄 것이
+    // 없습니다. 반대로 스테이징 두 장은 CPU 접근이라 **언제나 시스템 RAM** 이고, 내장
+    // 그래픽이면 텍스처까지 시스템 RAM 입니다. 그 몫은 상한 안에서 RAM 캐시와 **경쟁해야**
+    // 합니다 - 캐시로 세어 빼 주면 상한이 그만큼 늘어나 프로세스 총량이 다시 넘습니다.
+    // 실측으로 8MP 스트레스에서 스테이징이 3.2GB 였습니다.
+
+    const std::uint64_t overhead =
+        private_bytes > cached_bytes ? private_bytes - cached_bytes : 0ULL;
+    cached.store(overhead, std::memory_order_relaxed);
+    measured_at.store(now == 0 ? 1 : now, std::memory_order_relaxed);
+    return overhead;
+}
+
 }  // namespace negaflow::pipeline::develop_export_detail
 
 namespace negaflow::pipeline {
@@ -141,6 +227,28 @@ void set_frame_cache_residency_limits(const FrameCacheResidencyLimits limits) no
     g_manual_cleaned_raw_frames.store(
         limits.cleaned_raw_frames, std::memory_order_relaxed);
     g_manual_developed_frames.store(limits.developed_frames, std::memory_order_relaxed);
+}
+
+FrameCacheMemoryReport frame_cache_memory_report() noexcept {
+    namespace detail = negaflow::pipeline::develop_export_detail;
+    FrameCacheMemoryReport report{};
+    report.process_private_bytes = detail::process_private_bytes();
+    report.decoded_source_resident_bytes =
+        g_cache_resident_bytes[0].load(std::memory_order_relaxed);
+    report.decoded_source_budget_bytes = detail::decoded_source_budget_bytes();
+    report.preview_proxy_resident_bytes =
+        g_cache_resident_bytes[1].load(std::memory_order_relaxed);
+    report.preview_proxy_budget_bytes = detail::preview_proxy_budget_bytes();
+    report.gpu_pool_resident_bytes = negaflow::gpu::gpu_pool_resident_bytes();
+    report.gpu_pool_limit_bytes =
+        negaflow::gpu::GpuCacheBudget::effective_bytes(negaflow::gpu::GpuDevice::shared());
+    report.gpu_system_memory_bytes = negaflow::gpu::gpu_pool_system_memory_bytes();
+    report.non_cache_overhead_bytes = detail::non_cache_overhead_bytes();
+    const std::uint64_t physical = detail::FrameCacheBudget::physical_memory_bytes();
+    report.automatic_process_ceiling_bytes = static_cast<std::uint64_t>(
+        static_cast<double>(physical) *
+        detail::FrameCacheBudget::automatic_memory_fraction(physical));
+    return report;
 }
 
 FrameCacheResidencyLimits frame_cache_residency_limits() noexcept {

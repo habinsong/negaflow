@@ -48,6 +48,25 @@ struct FrameCacheBudget final {
     [[nodiscard]] static std::uint64_t physical_memory_bytes() noexcept;
 };
 
+// 어느 캐시가 얼마를 들고 있는지입니다. 예산 계산이 "캐시가 **아닌** 몫" 을 알아야
+// 프로세스 전체를 상한 안에 둘 수 있습니다.
+enum class FrameCacheKind : std::uint8_t {
+    decoded_source = 0,
+    preview_proxy,
+    count,
+};
+
+// 캐시가 상주량이 바뀔 때마다 알립니다. 값은 절대량입니다(증감이 아닙니다).
+void report_cache_resident_bytes(FrameCacheKind kind, std::uint64_t bytes) noexcept;
+
+// 지금 이 프로세스가 커밋한 private 바이트입니다. 못 읽으면 0 입니다.
+[[nodiscard]] std::uint64_t process_private_bytes() noexcept;
+
+// 캐시가 아닌 몫입니다 - 코드·런타임·WinUI·GPU 스테이징·일회성 작업 버퍼 전부입니다.
+// 실측으로 설치 앱에서 약 1GB 였고, 그만큼이 어느 예산에도 들어 있지 않아 작업 관리자
+// 총량이 자동 상한을 넘었습니다.
+[[nodiscard]] std::uint64_t non_cache_overhead_bytes() noexcept;
+
 // 디코드된 원본(`WorkingImage`) 상주에 쓸 바이트 예산입니다.
 // macOS 배분비에서 cleaned raw 몫 = 190 / (190 + 2×170).
 [[nodiscard]] std::uint64_t decoded_source_budget_bytes() noexcept;

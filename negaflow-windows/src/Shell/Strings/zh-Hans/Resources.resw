@@ -1334,6 +1334,10 @@
   <data name="settingsMemoryCacheAutomaticHelp.Text" xml:space="preserve"><value>根据已安装内存自动确定上限。超出上限的帧会从最旧的开始释放，重新打开时再次冲洗。</value><comment>AppLocalizedPhrase.settingsMemoryCacheAutomaticHelp</comment></data>
   <data name="settingsMemoryCacheManualHelp.Text" xml:space="preserve"><value>使用你设定的数值。上限为已安装内存的 70%。</value><comment>AppLocalizedPhrase.settingsMemoryCacheManualHelp</comment></data>
   <data name="settingsMemoryCacheResetToAutomatic.Content" xml:space="preserve"><value>恢复为自动值</value><comment>AppLocalizedPhrase.settingsMemoryCacheResetToAutomatic</comment></data>
+  <data name="settingsGpuCacheLabel.Text" xml:space="preserve"><value>GPU 内存缓存</value><comment>AppLocalizedPhrase.settingsGpuCacheLabel</comment></data>
+  <data name="settingsGpuCacheAdapterFormat.Text" xml:space="preserve"><value>{0} · {1}</value><comment>AppLocalizedPhrase.settingsGpuCacheAdapterFormat</comment></data>
+  <data name="settingsGpuCacheDiscreteHelp.Text" xml:space="preserve"><value>工作纹理可占用的显存上限。超出部分改由 CPU 处理。</value><comment>AppLocalizedPhrase.settingsGpuCacheDiscreteHelp</comment></data>
+  <data name="settingsGpuCacheIntegratedHelp.Text" xml:space="preserve"><value>集成显卡共用系统内存。此上限与上方缓存取自同一块物理内存。</value><comment>AppLocalizedPhrase.settingsGpuCacheIntegratedHelp</comment></data>
   <data name="supportBundleTitle.Text" xml:space="preserve"><value>支持包</value><comment>SupportBundleLocalizedText.title</comment></data>
   <data name="supportBundleExport.Content" xml:space="preserve"><value>导出</value><comment>SupportBundleLocalizedText.export</comment></data>
   <data name="supportBundleCreating.Content" xml:space="preserve"><value>正在创建</value><comment>SupportBundleLocalizedText.creating</comment></data>

@@ -1334,6 +1334,10 @@ Load a scanner from Library to scan film.</value>
   <data name="settingsMemoryCacheAutomaticHelp.Text" xml:space="preserve"><value>Sizes the limit to your installed memory. Frames beyond the limit are released oldest first and re-developed when reopened.</value><comment>AppLocalizedPhrase.settingsMemoryCacheAutomaticHelp</comment></data>
   <data name="settingsMemoryCacheManualHelp.Text" xml:space="preserve"><value>Uses the values you set. The ceiling is 70% of installed memory.</value><comment>AppLocalizedPhrase.settingsMemoryCacheManualHelp</comment></data>
   <data name="settingsMemoryCacheResetToAutomatic.Content" xml:space="preserve"><value>Reset to automatic</value><comment>AppLocalizedPhrase.settingsMemoryCacheResetToAutomatic</comment></data>
+  <data name="settingsGpuCacheLabel.Text" xml:space="preserve"><value>GPU memory cache</value><comment>AppLocalizedPhrase.settingsGpuCacheLabel</comment></data>
+  <data name="settingsGpuCacheAdapterFormat.Text" xml:space="preserve"><value>{0} · {1}</value><comment>AppLocalizedPhrase.settingsGpuCacheAdapterFormat</comment></data>
+  <data name="settingsGpuCacheDiscreteHelp.Text" xml:space="preserve"><value>The ceiling for working textures in graphics memory. Work beyond it runs on the CPU.</value><comment>AppLocalizedPhrase.settingsGpuCacheDiscreteHelp</comment></data>
+  <data name="settingsGpuCacheIntegratedHelp.Text" xml:space="preserve"><value>Integrated graphics share system memory. This ceiling comes out of the same physical memory as the cache above.</value><comment>AppLocalizedPhrase.settingsGpuCacheIntegratedHelp</comment></data>
   <data name="supportBundleTitle.Text" xml:space="preserve"><value>Support Bundle</value><comment>SupportBundleLocalizedText.title</comment></data>
   <data name="supportBundleExport.Content" xml:space="preserve"><value>Export</value><comment>SupportBundleLocalizedText.export</comment></data>
   <data name="supportBundleCreating.Content" xml:space="preserve"><value>Creating</value><comment>SupportBundleLocalizedText.creating</comment></data>

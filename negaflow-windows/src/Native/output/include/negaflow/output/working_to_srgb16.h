@@ -4,6 +4,8 @@
 #include "negaflow/color/output_color_space.h"
 
 #include <cstddef>
+#include "negaflow/core/machine_memory.h"
+
 #include <cstdint>
 #include <vector>
 
@@ -22,7 +24,8 @@ enum class WorkingToSrgb16Status : std::uint8_t {
 };
 
 struct WorkingToSrgb16Limits final {
-    std::uint64_t max_encoded_pixel_bytes{512ULL * 1024ULL * 1024ULL};
+    // 이 기계의 설치 메모리에서 옵니다 - `negaflow::core::default_max_pixel_bytes` 주석 참고.
+    std::uint64_t max_encoded_pixel_bytes{negaflow::core::default_max_pixel_bytes()};
     // The space the published file is encoded in. sRGB leaves the pixels alone.
     negaflow::color::OutputColorSpace color_space{negaflow::color::OutputColorSpace::srgb};
     // False keeps the working values linear for the macOS-compatible defect bake artifact.

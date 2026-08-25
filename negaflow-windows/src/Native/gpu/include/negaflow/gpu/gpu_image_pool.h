@@ -25,6 +25,14 @@ class GpuImagePool final {
 public:
     static constexpr int size = 6;
 
+    GpuImagePool() noexcept = default;
+    // 풀이 사라질 때 들고 있던 바이트를 전역 회계에서 뺍니다. 안 빼면 그만큼이 영원히
+    // 예산을 먹은 것으로 남아, 다음 풀이 멀쩡한 치수를 예산 초과로 거부합니다.
+    ~GpuImagePool();
+
+    GpuImagePool(const GpuImagePool&) = delete;
+    GpuImagePool& operator=(const GpuImagePool&) = delete;
+
     // 앞 둘(`0`,`1`)은 핑퐁, 뒤 넷(`2`…`5`)은 스크래치로 쓰는 것이 관례입니다.
     // 헐레이션·아큐턴스·색 프리셋이 스크래치를 연속 배열로 받으므로 그 순서를 지키십시오.
     static constexpr int scratch_first = 2;
@@ -51,6 +59,25 @@ public:
     }
 
 private:
+    /// 실제 일을 합니다. `ensure` 는 이것을 부르고 **모든 출구에서** 회계를 맞춥니다 —
+    /// 출구가 여덟 곳이라 자리마다 적으면 언젠가 하나를 빠뜨립니다.
+    [[nodiscard]] bool ensure_impl(
+        const GpuDevice& device,
+        std::uint32_t width,
+        std::uint32_t height,
+        int required_image_count) noexcept;
+
+    /// 이 치수·장수를 새로 잡아도 GPU 캐시 상한 안인지 봅니다.
+    [[nodiscard]] bool fits_budget(
+        const GpuDevice& device,
+        std::uint32_t width,
+        std::uint32_t height,
+        int required_image_count) const noexcept;
+
+    /// 지금 실제로 들고 있는 바이트를 전역 회계에 반영합니다. `ensure`·`clear` 의 모든
+    /// 출구에서 부릅니다 — 한 자리라도 빠뜨리면 회계가 실제와 어긋납니다.
+    void sync_resident_bytes() noexcept;
+
     GpuWorkingImage images_[size]{};
     std::uint32_t width_{0U};
     std::uint32_t height_{0U};
@@ -59,6 +86,12 @@ private:
     GpuWorkingImage retained_[size]{};
     std::uint32_t retained_width_{0U};
     std::uint32_t retained_height_{0U};
+    // 전역 회계에 마지막으로 알린 값입니다. 풀이 여럿일 수 있으므로 절대값이 아니라
+    // 차이를 올립니다.
+    std::uint64_t reported_bytes_{0ULL};
+    // 마지막 `ensure` 가 본 장치가 내장이었는지입니다. 내장이면 텍스처가 시스템 RAM 에
+    // 있어 RAM 예산이 그만큼을 캐시 몫으로 세야 합니다.
+    bool system_memory_backed_{false};
 };
 
 } // namespace negaflow::gpu

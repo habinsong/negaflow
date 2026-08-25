@@ -83,6 +83,7 @@ add_library(negaflow_core STATIC
     src/Native/core/tiff/parse/entry.cpp
     src/Native/core/tiff_deflate_validator.cpp
     src/Native/core/tiff_lzw_validator.cpp
+    src/Native/core/machine_memory.cpp
     src/Native/core/tiff_probe.cpp
 )
 target_include_directories(negaflow_core
@@ -519,6 +520,7 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_scene_correction.cpp
     src/Native/gpu/gpu_scratch_angle.cpp
     src/Native/gpu/gpu_lookup_table.cpp
+    src/Native/gpu/gpu_cache_budget.cpp
     src/Native/gpu/gpu_image_pool.cpp
     src/Native/gpu/gpu_kernel_timing.cpp
     src/Native/gpu/gpu_morphology.cpp
@@ -831,6 +833,7 @@ target_link_libraries(
     PRIVATE
         negaflow_core
         negaflow_color
+        negaflow_gpu
         negaflow_imageio
         negaflow_imaging
         negaflow_output
@@ -1894,6 +1897,29 @@ if(BUILD_TESTING)
     add_test(
         NAME native.preview_proxy_cache
         COMMAND negaflow_preview_proxy_cache_tests
+    )
+
+    add_executable(negaflow_memory_budget_tests
+        tests/Native.UnitTests/memory_budget_tests.cpp
+    )
+    target_include_directories(
+        negaflow_memory_budget_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/pipeline"
+    )
+    target_link_libraries(
+        negaflow_memory_budget_tests
+        PRIVATE
+            negaflow_pipeline
+            negaflow_gpu
+            negaflow_imageio
+            negaflow_imaging
+            negaflow_output
+            negaflow_core
+            negaflow_project_options
+    )
+    add_test(
+        NAME native.memory_budget
+        COMMAND negaflow_memory_budget_tests
     )
 
     add_executable(negaflow_preview_raw_store_tests

@@ -175,6 +175,16 @@ public sealed class WorkspacePresentationState
         settingsStore.Update(current => current with { FrameCache = update(current.FrameCache) });
     }
 
+    /// <summary>
+    /// GPU 작업 텍스처 캐시 한도를 바꿉니다. RAM 쪽 <see cref="UpdateFrameCache"/> 와 나란한
+    /// 자리이며, 마찬가지로 <see cref="ApplyDevelopPolicies"/> 가 엔진에 바로 겁니다.
+    /// </summary>
+    public void UpdateGpuCache(Func<Library.GpuCacheSettings, Library.GpuCacheSettings> update)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        settingsStore.Update(current => current with { GpuCache = update(current.GpuCache) });
+    }
+
     public void SetPixelSamplerEnabled(bool value) =>
         settingsStore.Update(current => current with { PixelSamplerEnabled = value });
 
@@ -219,6 +229,9 @@ public sealed class WorkspacePresentationState
         DevelopRequestFactory.VerifyDefectSourceContent =
             preferences.ImageContentHash == ImageContentHashMode.Sha256;
         FrameCacheLimitsChanged?.Invoke(preferences.FrameCache);
+        // GPU 쪽은 셸이 들고 있는 것이 없습니다 - 엔진 안 `GpuImagePool` 이 바로 읽으므로
+        // 여기서 곧장 겁니다. 엔진을 못 부르면 엔진이 자동 예산으로 계속 돕니다.
+        _ = Negaflow.Interop.GpuCacheBridge.Apply(preferences.GpuCache.LimitBytesToApply());
         // 개발자 모드는 썸네일·미리보기·단축키 추적 기록을 켭니다. 표시 파일이 생기고
         // 다음 동작부터 %LOCALAPPDATA%\Negaflow\Logs 에 줄이 쌓입니다.
         // 값이 **바뀔 때만** 손댑니다. 시작할 때마다 지우면 손으로 놓아 둔 표시 파일이
