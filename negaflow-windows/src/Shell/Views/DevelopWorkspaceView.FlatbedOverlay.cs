@@ -44,7 +44,7 @@ public sealed partial class DevelopWorkspaceView
         flatbedScanHost = host;
         flatbedScanHost.SessionCreated += OnFlatbedSessionCreated;
         PreviewCanvas.FlatbedOverlay.UseExternalImage();
-        PreviewCanvas.FlatbedOverlay.RegionsChanged += (_, _) => SyncFlatbedOverlay();
+        PreviewCanvas.FlatbedOverlay.RegionsChanged += (_, _) => RequestFlatbedOverlaySync();
         BindFlatbedSession(host.Session);
     }
 
@@ -52,7 +52,12 @@ public sealed partial class DevelopWorkspaceView
     {
         _ = sender;
         _ = args;
-        BindFlatbedSession(flatbedScanHost?.Session);
+        if (DispatcherQueue is null || DispatcherQueue.HasThreadAccess)
+        {
+            BindFlatbedSession(flatbedScanHost?.Session);
+            return;
+        }
+        _ = DispatcherQueue.TryEnqueue(() => BindFlatbedSession(flatbedScanHost?.Session));
     }
 
     private void BindFlatbedSession(ScanSessionController? session)
@@ -74,11 +79,28 @@ public sealed partial class DevelopWorkspaceView
         SyncFlatbedOverlay();
     }
 
+    /// <summary>
+    /// <b>UI 스레드로 넘겨서</b> 부릅니다. <see cref="ScanSessionController.Changed"/> 는
+    /// 장치 탐색 같은 워커 작업에서도 올라옵니다. 그 스레드에서 <c>Visibility</c> 를 건드리면
+    /// WinUI 가 <c>COMException</c> 을 던지고 그것이 스캔 흐름을 통째로 끊습니다 - 실기에서
+    /// `RefreshDevicesAsync -> OnFlatbedSessionChanged -> SyncFlatbedOverlay` 로 앱이
+    /// 죽었습니다(§22.1 과 같은 종류의 실수입니다).
+    /// </summary>
     private void OnFlatbedSessionChanged(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
-        SyncFlatbedOverlay();
+        RequestFlatbedOverlaySync();
+    }
+
+    private void RequestFlatbedOverlaySync()
+    {
+        if (DispatcherQueue is null || DispatcherQueue.HasThreadAccess)
+        {
+            SyncFlatbedOverlay();
+            return;
+        }
+        _ = DispatcherQueue.TryEnqueue(SyncFlatbedOverlay);
     }
 
     /// <summary>
