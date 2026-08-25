@@ -56,6 +56,15 @@ internal static class MemoryStressDiagnostics
             Console.WriteLine($"wrote {args[1]} {w}x{h} ({mp}MP)");
             return true;
         }
+        // 다른 프로세스(설치 앱)의 커밋 영역을 크기별로 셉니다. 총량만 봐서는 "무엇이
+        // 들고 있는가" 를 못 가립니다 - 화상 버퍼는 크기가 딱 떨어지므로 히스토그램이
+        // 바로 답을 줍니다.
+        if (args.Length >= 2 && args[0] == "--process-map" &&
+            int.TryParse(args[1], out int mapPid))
+        {
+            Console.WriteLine(ProcessRegionMap.Report(mapPid));
+            return true;
+        }
         // 지금 이 프로세스의 메모리 내역을 그대로 냅니다. 예산이 프로세스 전체를 상한 안에
         // 두는지 판정하는 자리입니다.
         if (args.Length >= 1 && args[0] == "--memory-report")

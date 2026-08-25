@@ -24,6 +24,8 @@ public static class DiagnosticTraceSwitches
         "thumbnail-trace.on",
         "preview-trace.on",
         "shortcut-trace.on",
+        // 메모리 예산이 실제로 어떻게 도는지 - 상한·각 캐시 상주량·간접비를 한 줄로 남깁니다.
+        MemoryBudgetLog.MarkerName,
     ];
 
     public static string LogDirectory => Path.Combine(

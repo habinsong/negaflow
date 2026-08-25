@@ -193,6 +193,7 @@ public sealed partial class ThumbnailService
         {
             return;
         }
+        Negaflow.Shell.Diagnostics.MemoryBudgetLog.Sample("developed");
         long allowed = budget > long.MaxValue ? long.MaxValue : (long)budget;
         if (allowed <= 0L || allowed == developedByteLimit)
         {

@@ -30,11 +30,50 @@ internal static class ProcessRegionMap
     private static extern IntPtr VirtualQuery(
         IntPtr address, out MemoryBasicInformation buffer, IntPtr length);
 
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr VirtualQueryEx(
+        IntPtr process, IntPtr address, out MemoryBasicInformation buffer, IntPtr length);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr OpenProcess(
+        uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, int processId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CloseHandle(IntPtr handle);
+
+    private const uint QueryInformation = 0x0400;
+    private const uint VirtualMemoryRead = 0x0010;
+
     private const uint Committed = 0x1000;
     private const uint PrivateType = 0x20000;
     private const uint WriteCombine = 0x400;
 
+    /// <summary>
+    /// 다른 프로세스를 훑습니다 — 설치 앱을 밖에서 들여다보는 자리입니다.
+    /// </summary>
+    internal static string Report(int processId, long thresholdBytes = 32L * 1024L * 1024L)
+    {
+        IntPtr process = OpenProcess(QueryInformation | VirtualMemoryRead, false, processId);
+        if (process == IntPtr.Zero)
+        {
+            return $"프로세스 {processId} 를 열 수 없습니다 " +
+                $"(win32 {Marshal.GetLastWin32Error()})";
+        }
+        try
+        {
+            return Report(thresholdBytes, process);
+        }
+        finally
+        {
+            _ = CloseHandle(process);
+        }
+    }
+
     internal static string Report(long thresholdBytes = 32L * 1024L * 1024L)
+        => Report(thresholdBytes, IntPtr.Zero);
+
+    private static string Report(long thresholdBytes, IntPtr process)
     {
         SortedDictionary<long, (int Count, long Bytes)> buckets = [];
         long address = 0;
@@ -43,7 +82,11 @@ internal static class ProcessRegionMap
         IntPtr length = Marshal.SizeOf<MemoryBasicInformation>();
         while (address < 0x7FFFFFFF0000L)
         {
-            if (VirtualQuery((IntPtr)address, out MemoryBasicInformation info, length) == 0)
+            MemoryBasicInformation info;
+            IntPtr queried = process == IntPtr.Zero
+                ? VirtualQuery((IntPtr)address, out info, length)
+                : VirtualQueryEx(process, (IntPtr)address, out info, length);
+            if (queried == IntPtr.Zero)
             {
                 break;
             }
