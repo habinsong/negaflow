@@ -202,10 +202,38 @@ internal static class ScannerFlatbedBatchTests
             int regionCount = session2.Regions.Count;
             Check(regionCount == frameCount, $"flatbed_batch_{frameCount}_regions_present");
 
+            // **진행 표시가 실제 배치 경로를 지나는지** 여기서 봅니다. 화면 없이 확인할 수
+            // 있는 유일한 자리입니다 - 오버레이는 이 상태만 그립니다.
+            List<double> seenFractions = [];
+            List<ScanPhase> seenPhases = [];
+            session2.Progress.Changed += (_, _) =>
+            {
+                seenFractions.Add(session2.Progress.DisplayedFraction());
+                seenPhases.Add(session2.Progress.Phase);
+            };
+
             ScanRunOutcome outcome = session2.RunAsync(
                 library,
                 _ => ScanStorageLayout.NextAvailablePath(rollDirectory, "Flatbed"),
                 preview: false).GetAwaiter().GetResult();
+
+            Check(
+                session2.Progress.BatchTotal == regionCount,
+                $"flatbed_batch_progress_knows_the_batch_size_{frameCount}");
+            Check(
+                seenPhases.Contains(ScanPhase.ScanningRGB),
+                $"flatbed_batch_progress_reaches_the_scanning_phase_{frameCount}");
+            // 되돌아가지 않습니다 - 컷이 넘어갈 때 0 으로 튀면 정상인 스캔이 실패로 보입니다.
+            bool monotonic = true;
+            for (int index = 1; index < seenFractions.Count; ++index)
+            {
+                monotonic &= seenFractions[index] >= seenFractions[index - 1] - 1e-9;
+            }
+            Check(monotonic, $"flatbed_batch_progress_never_walks_backwards_{frameCount}");
+            Check(
+                !session2.Progress.IsScanning &&
+                Math.Abs(session2.Progress.DisplayedFraction() - 1.0) < 1e-9,
+                $"flatbed_batch_progress_ends_full_{frameCount}");
 
             Check(outcome.Requested == regionCount, $"flatbed_batch_requests_every_region_{frameCount}");
             // 여기가 사용자가 본 고장입니다 — 프레임 셋을 청하고 둘만 나왔습니다.

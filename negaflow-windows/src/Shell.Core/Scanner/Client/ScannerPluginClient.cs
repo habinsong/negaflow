@@ -79,7 +79,8 @@ public static class ScannerPluginClient
         InfraredDetectorParameters? infraredParameters = null,
         DevelopRun? run = null,
         bool isPreviewScan = false,
-        CancellationToken cancellationToken = default) =>
+        CancellationToken cancellationToken = default,
+        Action<ScanProgressReport>? onProgress = null) =>
         ScannerScanPublisher.ScanAndPublishAsync(
             plugin,
             approvedIdentity,
@@ -89,7 +90,8 @@ public static class ScannerPluginClient
             infraredParameters,
             run,
             isPreviewScan,
-            cancellationToken);
+            cancellationToken,
+            onProgress);
 
     public static bool TryBuildScanWire(
         ScannerPluginScanRequest request,

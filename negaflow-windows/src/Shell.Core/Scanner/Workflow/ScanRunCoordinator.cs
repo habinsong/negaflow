@@ -30,7 +30,8 @@ internal static class ScanRunCoordinator
         GrainMendGuidedCarryover? guidedCarryover,
         Action<string, GrainMendGuidedCarryover>? guidedCarryoverPublished,
         Action<int>? framePublished,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ScanProgressState? progress = null)
     {
         ArgumentNullException.ThrowIfNull(initialTransformForIndex);
         int published = 0;
@@ -66,8 +67,10 @@ internal static class ScanRunCoordinator
                 null);
         }
         string stopReason = "completed";
+        progress?.BeginBatch(requested);
         for (int index = 0; index < requested; ++index)
         {
+            progress?.BeginFrame(index);
             if (cancellationToken.IsCancellationRequested)
             {
                 stopReason = $"cancelled at index={index}";
@@ -148,7 +151,8 @@ internal static class ScanRunCoordinator
                         initialTransformForIndex(index) ??
                             (index == 0 ? guidedCarryover?.Transform : null),
                         false,
-                        cancellationToken)
+                        cancellationToken,
+                        onProgress: report => progress?.Report(report, DateTimeOffset.UtcNow))
                     .ConfigureAwait(false);
             }
             catch (OperationCanceledException)
@@ -212,6 +216,7 @@ internal static class ScanRunCoordinator
 
         ScannerDiagnosticsLog.Write(
             $"batch end published={published}/{requested} reason={stopReason}");
+        progress?.EndBatch(published == requested && stopReason == "completed");
         return new ScanRunExecution(
             new ScanRunOutcome(requested, published, lastStatus, lastScanStatus),
             failureName,

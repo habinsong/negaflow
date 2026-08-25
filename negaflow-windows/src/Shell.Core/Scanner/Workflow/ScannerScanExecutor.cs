@@ -2,11 +2,30 @@ namespace Negaflow.Shell;
 
 internal static class ScannerScanExecutor
 {
+    /// <summary>진행 줄을 읽어 넘기는 손입니다. 듣는 쪽이 없으면 만들지 않습니다.</summary>
+    private static Action<string>? ProgressLineReader(
+        Guid requestId,
+        Action<ScanProgressReport>? onProgress)
+    {
+        if (onProgress is null)
+        {
+            return null;
+        }
+        return line =>
+        {
+            if (ScannerPluginProgressReader.TryRead(line, requestId) is { } report)
+            {
+                onProgress(report);
+            }
+        };
+    }
+
     internal static async Task<ScannerPluginScanResult> ScanAsync(
         InstalledScannerPlugin plugin,
         ScannerPluginTrustIdentity approvedIdentity,
         ScannerPluginScanRequest request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<ScanProgressReport>? onProgress = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         if (!ScannerScanCodec.TryBuild(
@@ -42,7 +61,10 @@ internal static class ScannerScanExecutor
                 "scan",
                 [request.Device.Id],
                 wireJson,
-                cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken,
+                // 스캔이 **도는 동안** 진행 줄을 읽어 넘깁니다. 끝난 뒤에 넘기면 이미 지나간
+                // 이야기라 화면에 그릴 수가 없습니다.
+                onStandardOutputLine: ProgressLineReader(scanWire.RequestId, onProgress));
             if (!process.IsSuccess)
             {
                 // **한 이름으로 접지 않습니다.** 프로세스는 이미 갈래를 알고 있으므로 그대로

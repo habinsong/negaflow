@@ -82,7 +82,8 @@ internal sealed class FakeScannerGateway(string pluginDirectory) : IScannerPlugi
             LibraryHostService library,
             ImageTransformRecipe? initialTransform,
             bool isPreviewScan,
-            CancellationToken cancellationToken) =>
+            CancellationToken cancellationToken,
+            Action<ScanProgressReport>? onProgress = null) =>
             throw new NotSupportedException();
 
         public Task<ScannerPluginScanResult> ScanAsync(

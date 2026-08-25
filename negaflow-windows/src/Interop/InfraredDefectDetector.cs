@@ -232,6 +232,13 @@ public static unsafe class NativeInfraredDefectDetector
         {
             throw new ArgumentOutOfRangeException(nameof(visibleSourceKind));
         }
+        if (NativeApartment.IsSingleThreaded)
+        {
+            // WIC 는 STA 에서 못 씁니다 - `NativeApartment` 주석 참고. 부르는 쪽 전부를 고치는
+            // 대신 경계 한 자리에서 막습니다.
+            return NativeApartment.Run(() =>
+                DetectFiles(visiblePath, infraredPath, visibleSourceKind, parameters, run));
+        }
         NativeInfraredDetectorParametersV1 nativeParameters = CreateParameters(parameters);
         NativeInfraredDetectionSummaryV1 summary = default;
         summary.StructSize = (uint)sizeof(NativeInfraredDetectionSummaryV1);

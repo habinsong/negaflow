@@ -71,14 +71,22 @@ public static unsafe class NativeDevelopExporter
     internal const int GrainMendReviewHitV1Size = NativeDevelopAbiSizes.GrainMendReviewHitV1Size;
     internal const int GrainMendAcceptedRegionV1Size = NativeDevelopAbiSizes.GrainMendAcceptedRegionV1Size;
 
+    // 아래 다섯은 모두 WIC 디코더·인코더를 탑니다. STA 스레드에서 부르면 COM 이
+    // `RPC_E_CHANGED_MODE` 를 돌려주어 한 줄도 읽지 못합니다 — `NativeApartment` 주석 참고.
+    // 이미 MTA 면 아무 일도 하지 않으므로 값이 들지 않습니다.
+
     public static DevelopExportResult Run(DevelopExportRequest request, DevelopRun? run = null) =>
-        NativeDevelopExportCommand.Run(request, run);
+        NativeApartment.Run(() => NativeDevelopExportCommand.Run(request, run));
 
     public static DevelopExportResult BakeDefects(
         DevelopExportRequest request,
         DevelopRun? run = null) =>
-        NativeDevelopExportCommand.BakeDefects(request, run);
+        NativeApartment.Run(() => NativeDevelopExportCommand.BakeDefects(request, run));
 
+    /// <remarks>
+    /// <paramref name="pixels"/> 는 <c>Span</c> 이라 람다에 담을 수 없습니다. STA 일 때만
+    /// 고정(pin)해 두고 주소와 길이로 건네며, 고정은 기다리는 동안 그대로 유지됩니다.
+    /// </remarks>
     public static DevelopExportResult Preview(
         DevelopExportRequest request,
         uint maximumWidth,
@@ -86,18 +94,52 @@ public static unsafe class NativeDevelopExporter
         Span<byte> pixels,
         DevelopRun? run = null,
         SoftProofSettings? softProof = null,
-        bool clippingOverlay = false) =>
-        NativeDevelopExportCommand.Preview(
-            request, maximumWidth, maximumHeight, pixels, run, softProof, clippingOverlay);
+        bool clippingOverlay = false)
+    {
+        if (!NativeApartment.IsSingleThreaded)
+        {
+            return NativeDevelopExportCommand.Preview(
+                request, maximumWidth, maximumHeight, pixels, run, softProof, clippingOverlay);
+        }
+        fixed (byte* pinned = pixels)
+        {
+            byte* buffer = pinned;
+            int length = pixels.Length;
+            return NativeApartment.Run(() => NativeDevelopExportCommand.Preview(
+                request,
+                maximumWidth,
+                maximumHeight,
+                length == 0 ? default : new Span<byte>(buffer, length),
+                run,
+                softProof,
+                clippingOverlay));
+        }
+    }
 
     public static DevelopExportResult PreviewBackground(
         DevelopExportRequest request,
         uint maximumWidth,
         uint maximumHeight,
         Span<byte> pixels,
-        DevelopRun? run = null) =>
-        NativeDevelopExportCommand.PreviewBackground(
-            request, maximumWidth, maximumHeight, pixels, run);
+        DevelopRun? run = null)
+    {
+        if (!NativeApartment.IsSingleThreaded)
+        {
+            return NativeDevelopExportCommand.PreviewBackground(
+                request, maximumWidth, maximumHeight, pixels, run);
+        }
+        fixed (byte* pinned = pixels)
+        {
+            byte* buffer = pinned;
+            int length = pixels.Length;
+            return NativeApartment.Run(() => NativeDevelopExportCommand.PreviewBackground(
+                request,
+                maximumWidth,
+                maximumHeight,
+                length == 0 ? default : new Span<byte>(buffer, length),
+                run));
+        }
+    }
 
     public static GrainMendDetectionResult DetectGrainMend(
         DevelopExportRequest request,
@@ -107,6 +149,6 @@ public static unsafe class NativeDevelopExporter
         double roiHeight = 1.0,
         DevelopRun? run = null,
         GrainMendDetectionOptions? detectionOptions = null) =>
-        NativeDevelopGrainMendDetect.DetectGrainMend(
-            request, roiX, roiY, roiWidth, roiHeight, run, detectionOptions);
+        NativeApartment.Run(() => NativeDevelopGrainMendDetect.DetectGrainMend(
+            request, roiX, roiY, roiWidth, roiHeight, run, detectionOptions));
 }

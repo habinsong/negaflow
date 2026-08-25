@@ -29,7 +29,8 @@ public interface IScannerPluginGateway
         LibraryHostService library,
         ImageTransformRecipe? initialTransform,
         bool isPreviewScan,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        Action<ScanProgressReport>? onProgress = null);
 
     Task<ScannerPluginScanResult> ScanAsync(
         InstalledScannerPlugin plugin,

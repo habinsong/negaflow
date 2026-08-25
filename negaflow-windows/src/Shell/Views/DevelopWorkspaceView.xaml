@@ -10,7 +10,8 @@
     xmlns:info="using:Negaflow.Shell.Views.Develop.Info"
     xmlns:inspector="using:Negaflow.Shell.Views.Develop.Inspector"
     xmlns:canvas="using:Negaflow.Shell.Views.Develop.Canvas"
-    xmlns:grainmend="using:Negaflow.Shell.Views.Develop.GrainMend">
+    xmlns:grainmend="using:Negaflow.Shell.Views.Develop.GrainMend"
+    xmlns:scanner="using:Negaflow.Shell.Views.Scanner">
     <UserControl.Resources>
         <!-- macOS DevelopInspectorTabLabel: outer radius 18, selected/hover radius 15,
              icon row minimum height 32. WinUI 기본 ToggleButton chrome은 이 형상을 바꾸므로
@@ -131,6 +132,23 @@
             <canvas:DevelopPreviewCanvas
                 x:Name="PreviewCanvas" x:FieldModifier="internal"
                 Grid.Row="0" />
+
+            <!--  macOS `ContentView+CenterStatus.swift`:
+                    .overlay(alignment: .bottom) {
+                        if model.isScanning {
+                            ScanProgressOverlay()
+                                .allowsHitTesting(false)
+                                .padding(.bottom, 18)
+                        }
+                    }
+                  캔버스 위 **하단 가운데**, 아래 여백 18. 손으로 집히지 않습니다.  -->
+            <scanner:ScanProgressOverlay
+                x:Name="ScanProgress" x:FieldModifier="internal"
+                Grid.Row="0"
+                Margin="0,0,0,18"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Visibility="Collapsed" />
 
             <views:FilmstripView x:Name="Filmstrip" x:FieldModifier="internal" Grid.Row="1" />
             <views:StatusBarView x:Name="StatusBar" x:FieldModifier="internal" Grid.Row="2" />

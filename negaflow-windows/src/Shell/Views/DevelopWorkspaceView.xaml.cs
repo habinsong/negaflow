@@ -126,7 +126,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
     public event EventHandler<Negaflow.Shell.Develop.ExportProgress>? ExportProgressChanged;
 
     /// <summary>언어가 바뀌면 문구를 다시 겁니다.</summary>
-    public void Localize() => copy.Localize();
+    public void Localize()
+    {
+        copy.Localize();
+        // 진행 카드의 단계 이름과 상태줄도 리소스에서 옵니다.
+        ScanProgress.Localize();
+    }
 
     /// <summary>macOS의 스캐너 가져오기 명령을 공유 Library 소스에 요청합니다.</summary>
     public event EventHandler? ScannerSetupRequested;

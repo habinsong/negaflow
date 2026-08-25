@@ -76,6 +76,9 @@ public sealed partial class DevelopWorkspaceView
         {
             flatbedSession.Changed += OnFlatbedSessionChanged;
         }
+        // 스캔 진행 카드도 같은 세션을 봅니다. macOS 는 `AppModel` 하나가 두 가지를 다
+        // 들고 있어 따로 걸 일이 없습니다.
+        ScanProgress.Bind(flatbedSession?.Progress);
         SyncFlatbedOverlay();
     }
 

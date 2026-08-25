@@ -54,7 +54,8 @@ public static class ScannerPluginProcessHost
         IReadOnlyList<string> arguments,
         string? standardInput,
         ScannerPluginProcessLimits? limits = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action<string>? onStandardOutputLine = null)
     {
         ArgumentNullException.ThrowIfNull(plugin);
         ArgumentNullException.ThrowIfNull(approvedIdentity);
@@ -148,7 +149,8 @@ public static class ScannerPluginProcessHost
             process.StandardOutput,
             effectiveLimits.MaximumStandardOutputBytes,
             effectiveLimits.MaximumStandardOutputLineBytes,
-            cancelled.Token);
+            cancelled.Token,
+            onStandardOutputLine);
         Task<string> errorTask = ReadBoundedTextAsync(
             process.StandardError,
             effectiveLimits.MaximumStandardErrorBytes,
@@ -190,25 +192,25 @@ public static class ScannerPluginProcessHost
         }
         catch (OutputLimitException)
         {
-            StopProcessTree(process);
+            await StopProcessTreeAsync(process);
             await DrainAfterStopAsync(outputTask, errorTask);
             return new(ScannerPluginProcessStatus.OutputLimitExceeded, ExitCode(process), [], string.Empty);
         }
         catch (OperationCanceledException) when (timeout.IsCancellationRequested)
         {
-            StopProcessTree(process);
+            await StopProcessTreeAsync(process);
             await DrainAfterStopAsync(outputTask, errorTask);
             return new(ScannerPluginProcessStatus.TimedOut, ExitCode(process), [], string.Empty);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            StopProcessTree(process);
+            await StopProcessTreeAsync(process);
             await DrainAfterStopAsync(outputTask, errorTask);
             return new(ScannerPluginProcessStatus.Cancelled, ExitCode(process), [], string.Empty);
         }
         catch (IOException)
         {
-            StopProcessTree(process);
+            await StopProcessTreeAsync(process);
             await DrainAfterStopAsync(outputTask, errorTask);
             return new(ScannerPluginProcessStatus.Failed, ExitCode(process), [], string.Empty);
         }
@@ -217,11 +219,17 @@ public static class ScannerPluginProcessHost
     private static string Short(string? sha) =>
         string.IsNullOrEmpty(sha) ? "-" : sha[..Math.Min(12, sha.Length)];
 
+    /// <param name="onLine">
+    /// 줄이 하나 완성될 때마다 부릅니다. **진행률이 살아 있으려면 이것이 필요합니다** — 앞 판은
+    /// 프로세스가 끝난 뒤에야 stdout 전체를 넘겼고, 그러면 진행 이벤트는 이미 지나간 이야기라
+    /// 화면에 그릴 수가 없었습니다. 여기서 넘겨도 목록에는 그대로 쌓이므로 계약은 그대로입니다.
+    /// </param>
     private static async Task<StandardOutput> ReadStandardOutputAsync(
         StreamReader reader,
         int maximumBytes,
         int maximumLineBytes,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<string>? onLine = null)
     {
         var lines = new List<string>();
         var line = new StringBuilder();
@@ -234,7 +242,7 @@ public static class ScannerPluginProcessHost
             {
                 if (line.Length != 0)
                 {
-                    CommitLine(line, lines, ref consumed, maximumBytes, maximumLineBytes);
+                    CommitLine(line, lines, ref consumed, maximumBytes, maximumLineBytes, onLine);
                 }
                 return new(lines);
             }
@@ -243,7 +251,7 @@ public static class ScannerPluginProcessHost
             {
                 if (buffer[index] == '\n')
                 {
-                    CommitLine(line, lines, ref consumed, maximumBytes, maximumLineBytes);
+                    CommitLine(line, lines, ref consumed, maximumBytes, maximumLineBytes, onLine);
                     continue;
                 }
                 // A UTF-8 scalar takes at least one byte. This caps storage before a newline
@@ -262,7 +270,8 @@ public static class ScannerPluginProcessHost
         List<string> lines,
         ref int consumed,
         int maximumBytes,
-        int maximumLineBytes)
+        int maximumLineBytes,
+        Action<string>? onLine = null)
     {
         if (pending.Length != 0 && pending[^1] == '\r')
         {
@@ -277,6 +286,15 @@ public static class ScannerPluginProcessHost
         }
         consumed += lineBytes;
         lines.Add(line);
+        // 듣는 쪽이 던지면 스캔이 끊깁니다. 진행률 표시가 스캔을 죽여서는 안 됩니다.
+        try
+        {
+            onLine?.Invoke(line);
+        }
+        catch (Exception error)
+        {
+            ScannerDiagnosticsLog.Write($"progress listener threw: {error.GetType().Name} {error.Message}");
+        }
     }
 
     private static async Task<string> ReadBoundedTextAsync(
@@ -305,14 +323,38 @@ public static class ScannerPluginProcessHost
         }
     }
 
-    private static void StopProcessTree(Process process)
+    /// <summary>
+    /// 플러그인을 멈춥니다. <b>정상 종료를 먼저 청하고</b>, 그래도 안 끝날 때만 죽입니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 곧바로 <see cref="Process.Kill(bool)"/> 이었습니다. 그것은
+    /// <c>TerminateProcess</c> 라 <c>sane_cancel()</c> 이 불리지 않고, 전송 도중에 죽은
+    /// 스캐너는 헤드가 홈으로 돌아가지 못한 채 남아 <b>전원을 다시 넣기 전까지 어떤 요청에도
+    /// 답하지 않습니다.</b> 스캔을 취소할 때마다 그 뒤 장치를 못 찾던 것이 이것입니다.
+    ///
+    /// 플러그인은 콘솔 제어 이벤트를 받아 <c>scanimage</c> 에 CTRL_BREAK → 유예 → Job 종료의
+    /// 3단계를 적용하도록 이미 만들어져 있습니다. 보내는 쪽이 없었을 뿐입니다.
+    /// </remarks>
+    private static async Task StopProcessTreeAsync(Process process)
     {
         try
         {
-            if (!process.HasExited)
+            if (process.HasExited)
             {
-                process.Kill(entireProcessTree: true);
+                return;
             }
+            if (await ScannerPluginGracefulStop
+                    .TryStopAsync(process, ScannerPluginGracefulStop.DefaultGrace)
+                    .ConfigureAwait(false))
+            {
+                ScannerDiagnosticsLog.Write("plugin stopped gracefully - the scanner was told to cancel");
+                return;
+            }
+            // 여기까지 왔으면 강제 종료입니다. 그 사실을 남깁니다 - 이 뒤에 장치가 물리면
+            // 원인을 추측하지 않아도 됩니다.
+            ScannerDiagnosticsLog.Write(
+                "plugin did not stop in time - forcing the tree down; the scanner may need a power cycle");
+            process.Kill(entireProcessTree: true);
         }
         catch (InvalidOperationException)
         {

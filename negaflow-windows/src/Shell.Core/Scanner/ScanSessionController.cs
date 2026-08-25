@@ -64,6 +64,12 @@ public sealed class ScanSessionController
 
     public bool IsDetecting { get; private set; }
 
+    /// <summary>
+    /// 스캔 진행 상태입니다. macOS 는 <c>AppModel</c> 이 <c>scanPhase</c>/<c>scanFraction</c> 을
+    /// 들고 <c>ScanProgressOverlay</c> 가 그것을 그립니다. 여기가 그 자리입니다.
+    /// </summary>
+    public ScanProgressState Progress { get; } = new();
+
     public bool IsScanning { get; private set; }
 
     /// <summary>
@@ -480,7 +486,8 @@ public sealed class ScanSessionController
                 guidedCarryover,
                 GuidedCarryoverPublished,
                 framePublished,
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                Progress).ConfigureAwait(false);
             LastFailureName = execution.FailureName;
             if (execution.PreviewPath is not null)
             {

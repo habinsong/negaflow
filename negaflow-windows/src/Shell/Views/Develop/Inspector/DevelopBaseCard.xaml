@@ -146,13 +146,17 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
+                <!--  macOS `InspectorActionPill`:
+                        Text(title).frame(maxWidth: .infinity, minHeight: 31).padding(.leading, 7)
+                      SwiftUI 의 `frame` 은 기본 정렬이 **가운데**입니다. 왼쪽 정렬은 원본에
+                      없던 것이라 걷어냅니다.  -->
                 <Button
                     x:Name="BasePickerButton"
                     Grid.Column="0"
                     MinHeight="31"
                     Padding="7,0,0,0"
                     HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Left"
+                    HorizontalContentAlignment="Center"
                     AutomationProperties.AutomationId="negaflow.develop.base.pick"
                     Background="Transparent"
                     BorderThickness="0"

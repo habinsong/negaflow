@@ -29,6 +29,7 @@ internal static class Program
         LocalizedTextTests.Run();
         ShellPreferencesTests.Run();
         LibraryBrowsingTests.Run();
+        ScanProgressTests.Run();
         ExportConfigurationTests.Run();
         PrintCustomPackageTests.Run();
         CropAndLookTests.Run();

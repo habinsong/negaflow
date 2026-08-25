@@ -14,14 +14,16 @@ internal static class ScannerScanPublisher
         InfraredDetectorParameters? infraredParameters,
         DevelopRun? run,
         bool isPreviewScan,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<ScanProgressReport>? onProgress = null)
     {
         ArgumentNullException.ThrowIfNull(library);
         ScannerPluginScanResult scan = await ScannerScanExecutor.ScanAsync(
             plugin,
             approvedIdentity,
             request,
-            cancellationToken);
+            cancellationToken,
+            onProgress);
         if (scan.ArtifactCommit?.Artifacts is not { } artifacts)
         {
             return new(ScannerPluginLibraryScanStatus.ScanFailed, scan, null);

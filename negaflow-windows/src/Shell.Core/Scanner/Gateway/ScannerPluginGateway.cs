@@ -36,7 +36,8 @@ public sealed class ScannerPluginGateway : IScannerPluginGateway
         LibraryHostService library,
         ImageTransformRecipe? initialTransform,
         bool isPreviewScan,
-        CancellationToken cancellationToken) =>
+        CancellationToken cancellationToken,
+        Action<ScanProgressReport>? onProgress = null) =>
         ScannerPluginClient.ScanAndPublishAsync(
             plugin,
             approvedIdentity,
@@ -44,7 +45,8 @@ public sealed class ScannerPluginGateway : IScannerPluginGateway
             library,
             initialTransform: initialTransform,
             isPreviewScan: isPreviewScan,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken,
+            onProgress: onProgress);
 
     public Task<ScannerPluginScanResult> ScanAsync(
         InstalledScannerPlugin plugin,

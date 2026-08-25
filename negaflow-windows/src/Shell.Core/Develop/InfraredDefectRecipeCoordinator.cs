@@ -131,14 +131,11 @@ public static class InfraredDefectRecipeCoordinator
         Stopwatch? timing = trace ? Stopwatch.StartNew() : null;
         try
         {
-            InfraredDetectionResult detection = DetectWithRetry(
-                visiblePath,
-                infraredPath,
-                sourceKind == FrameSourceKind.ScannerTiff
-                    ? InfraredVisibleSourceKind.ScannerTiff
-                    : InfraredVisibleSourceKind.ImportedFile,
-                parameters,
-                run);
+            InfraredVisibleSourceKind kind = sourceKind == FrameSourceKind.ScannerTiff
+                ? InfraredVisibleSourceKind.ScannerTiff
+                : InfraredVisibleSourceKind.ImportedFile;
+            InfraredDetectionResult detection = OnMultiThreadedApartment(
+                () => DetectWithRetry(visiblePath, infraredPath, kind, parameters, run));
             if (trace)
             {
                 InfraredPerformanceTrace.Write(
@@ -158,6 +155,36 @@ public static class InfraredDefectRecipeCoordinator
                 $"visible={visiblePath} infrared={infraredPath} kind={sourceKind}");
             return new(null, true);
         }
+    }
+
+    /// <summary>
+    /// 검출을 <b>MTA 스레드에서</b> 돌립니다.
+    /// </summary>
+    /// <remarks>
+    /// **WIC 는 STA 스레드에서 이 길을 쓰지 못합니다.**
+    ///
+    /// 네이티브 디코더는 먼저 <c>CoInitializeEx(COINIT_MULTITHREADED)</c> 를 겁니다. 그
+    /// 스레드가 이미 STA 면 COM 이 <c>RPC_E_CHANGED_MODE</c> 를 돌려주고, 디코더는
+    /// <c>com_apartment_mismatch</c> 로 물러납니다 - 파일이 멀쩡해도 한 줄도 못 읽습니다.
+    /// WinUI 의 UI 스레드가 바로 그 STA 입니다.
+    ///
+    /// 실기 기록이 그것을 그대로 보여 주었습니다: 배치의 <b>첫 장만</b> 늘 실패했고
+    /// (<c>detail=visible-full-decode-failed(밑=4)</c>), 같은 파일을 콘솔에서 읽으면 언제나
+    /// <c>Ok</c> 였습니다. 첫 장은 아직 UI 스레드에서 이어지고, 둘째 장부터는 스캔을 기다리며
+    /// 한 번 끊긴 뒤라 워커에서 이어지기 때문입니다.
+    ///
+    /// 47MB TIFF 두 장을 펴는 일은 어차피 UI 스레드에서 할 일이 아닙니다.
+    /// </remarks>
+    private static InfraredDetectionResult OnMultiThreadedApartment(
+        Func<InfraredDetectionResult> work)
+    {
+        if (Thread.CurrentThread.GetApartmentState() != ApartmentState.STA)
+        {
+            return work();
+        }
+        ScannerDiagnosticsLog.Write(
+            "ir detect moved off the STA thread - WIC refuses COINIT_MULTITHREADED there");
+        return Task.Run(work).GetAwaiter().GetResult();
     }
 
     /// <summary>

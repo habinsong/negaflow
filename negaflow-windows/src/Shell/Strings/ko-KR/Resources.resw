@@ -1499,4 +1499,36 @@
   <data name="printMoveBackward.Text" xml:space="preserve"><value>뒤로 보내기</value><comment>AppLocalizedText.printMoveBackward</comment></data>
   <data name="printMoveForward.Text" xml:space="preserve"><value>앞으로 가져오기</value><comment>AppLocalizedText.printMoveForward</comment></data>
   <data name="printCaptionSystemFont.Text" xml:space="preserve"><value>시스템 글꼴</value><comment>AppLocalizedText.printCaptionSystemFont</comment></data>
+  <data name="scanPhaseIdle.Text" xml:space="preserve"><value>대기</value><comment>AppLocalizedText.scanPhaseIdle</comment></data>
+  <data name="scanPhaseConnecting.Text" xml:space="preserve"><value>연결 중</value><comment>AppLocalizedText.scanPhaseConnecting</comment></data>
+  <data name="scanPhaseWarmingLamp.Text" xml:space="preserve"><value>램프 예열</value><comment>AppLocalizedText.scanPhaseWarmingLamp</comment></data>
+  <data name="scanPhaseReady.Text" xml:space="preserve"><value>준비됨</value><comment>AppLocalizedText.scanPhaseReady</comment></data>
+  <data name="scanPhasePreviewScanning.Text" xml:space="preserve"><value>프리뷰 스캔</value><comment>AppLocalizedText.scanPhasePreviewScanning</comment></data>
+  <data name="scanPhaseWaitingForFilmHolder.Text" xml:space="preserve"><value>필름 홀더 대기</value><comment>AppLocalizedText.scanPhaseWaitingForFilmHolder</comment></data>
+  <data name="scanPhaseScanningRGB.Text" xml:space="preserve"><value>스캔 중</value><comment>AppLocalizedText.scanPhaseScanningRGB</comment></data>
+  <data name="scanPhaseScanningIR.Text" xml:space="preserve"><value>IR 스캔</value><comment>AppLocalizedText.scanPhaseScanningIR</comment></data>
+  <data name="scanPhaseProcessingNegative.Text" xml:space="preserve"><value>네거티브 처리</value><comment>AppLocalizedText.scanPhaseProcessingNegative</comment></data>
+  <data name="scanPhaseRenderingLook.Text" xml:space="preserve"><value>현상 렌더링</value><comment>AppLocalizedText.scanPhaseRenderingLook</comment></data>
+  <data name="scanPhaseExporting.Text" xml:space="preserve"><value>내보내는 중</value><comment>AppLocalizedText.scanPhaseExporting</comment></data>
+  <data name="scanPhaseComplete.Text" xml:space="preserve"><value>완료</value><comment>AppLocalizedText.scanPhaseComplete</comment></data>
+  <data name="scanPhaseScannerBusy.Text" xml:space="preserve"><value>스캐너 사용 중</value><comment>AppLocalizedText.scanPhaseScannerBusy</comment></data>
+  <data name="scanPhaseDisconnected.Text" xml:space="preserve"><value>연결 끊김</value><comment>AppLocalizedText.scanPhaseDisconnected</comment></data>
+  <data name="scanPhaseError.Text" xml:space="preserve"><value>오류</value><comment>AppLocalizedText.scanPhaseError</comment></data>
+  <data name="scanPhaseBackendFallbackActive.Text" xml:space="preserve"><value>대체 백엔드</value><comment>AppLocalizedText.scanPhaseBackendFallbackActive</comment></data>
+  <data name="scanProgressIdle.Text" xml:space="preserve"><value>대기 중</value><comment>AppLocalizedPhrase.scanProgressIdle</comment></data>
+  <data name="scanProgressConnecting.Text" xml:space="preserve"><value>스캐너 연결 중</value><comment>AppLocalizedPhrase.scanProgressConnecting</comment></data>
+  <data name="scanProgressWarmingLamp.Text" xml:space="preserve"><value>램프 예열 중</value><comment>AppLocalizedPhrase.scanProgressWarmingLamp</comment></data>
+  <data name="scanProgressReady.Text" xml:space="preserve"><value>스캔 준비됨</value><comment>AppLocalizedPhrase.scanProgressReady</comment></data>
+  <data name="scanProgressPreviewScanning.Text" xml:space="preserve"><value>프리뷰 스캔 중</value><comment>AppLocalizedPhrase.scanProgressPreviewScanning</comment></data>
+  <data name="scanProgressWaitingForFilmHolder.Text" xml:space="preserve"><value>필름 홀더 대기 중</value><comment>AppLocalizedPhrase.scanProgressWaitingForFilmHolder</comment></data>
+  <data name="scanProgressScanningRGB.Text" xml:space="preserve"><value>필름 스캔 중</value><comment>AppLocalizedPhrase.scanProgressScanningRGB</comment></data>
+  <data name="scanProgressScanningIR.Text" xml:space="preserve"><value>IR 채널 스캔 중</value><comment>AppLocalizedPhrase.scanProgressScanningIR</comment></data>
+  <data name="scanProgressProcessingNegative.Text" xml:space="preserve"><value>스캔 데이터 처리 중</value><comment>AppLocalizedPhrase.scanProgressProcessingNegative</comment></data>
+  <data name="scanProgressRenderingLook.Text" xml:space="preserve"><value>미리보기 현상 중</value><comment>AppLocalizedPhrase.scanProgressRenderingLook</comment></data>
+  <data name="scanProgressExporting.Text" xml:space="preserve"><value>내보내는 중</value><comment>AppLocalizedPhrase.scanProgressExporting</comment></data>
+  <data name="scanProgressComplete.Text" xml:space="preserve"><value>스캔 완료</value><comment>AppLocalizedPhrase.scanProgressComplete</comment></data>
+  <data name="scanProgressScannerBusy.Text" xml:space="preserve"><value>스캐너 사용 중</value><comment>AppLocalizedPhrase.scanProgressScannerBusy</comment></data>
+  <data name="scanProgressDisconnected.Text" xml:space="preserve"><value>스캐너 연결 끊김</value><comment>AppLocalizedPhrase.scanProgressDisconnected</comment></data>
+  <data name="scanProgressError.Text" xml:space="preserve"><value>스캔 오류</value><comment>AppLocalizedPhrase.scanProgressError</comment></data>
+  <data name="scanProgressBackendFallbackActive.Text" xml:space="preserve"><value>대체 백엔드 사용 중</value><comment>AppLocalizedPhrase.scanProgressBackendFallbackActive</comment></data>
 </root>

@@ -133,11 +133,17 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
         LibraryHostService library,
         ImageTransformRecipe? initialTransform,
         bool isPreviewScan,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<ScanProgressReport>? onProgress = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(library);
         cancellationToken.ThrowIfCancellationRequested();
+        // 흉내 게이트웨이도 실제와 같은 단계를 냅니다 - 진행 표시를 스캐너 없이 시험할 수
+        // 있어야 합니다.
+        onProgress?.Invoke(new ScanProgressReport(ScanPhase.WarmingLamp, null, string.Empty));
+        onProgress?.Invoke(new ScanProgressReport(
+            isPreviewScan ? ScanPhase.PreviewScanning : ScanPhase.ScanningRGB, null, string.Empty));
 
         if (Stage(request) is not { } commit)
         {
