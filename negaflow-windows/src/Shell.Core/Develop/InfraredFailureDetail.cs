@@ -17,7 +17,7 @@ public static class InfraredFailureDetail
     public const uint None = 0U;
     public const uint EmptyPath = 1U;
     public const uint CancelledBeforeStart = 2U;
-    public const uint VisibleFullConversionFailed = 3U;
+    public const uint VisibleFullDecodeFailed = 3U;
     public const uint VisibleFastPathFailed = 4U;
     public const uint CancelledAfterVisible = 5U;
     public const uint CancelledBeforeStandardDecode = 6U;
@@ -29,14 +29,33 @@ public static class InfraredFailureDetail
     public const uint InfraredResampleFailed = 12U;
     public const uint AllocationFailed = 13U;
     public const uint UnexpectedException = 14U;
+    public const uint VisibleFullWorkingFailed = 15U;
+    public const uint VisibleFullExtractFailed = 16U;
+
+    /// <summary>사유 코드에서 "어느 자리" 만 떼어 냅니다(아래 여덟 칸).</summary>
+    public static uint Site(uint detail) => detail & 0xFFU;
+
+    /// <summary>그 자리에서 <b>밑</b>이 뭐라고 했는지입니다. 없으면 0 입니다.</summary>
+    public static uint Underlying(uint detail) => (detail >> 8) & 0xFFFFU;
 
     /// <summary>진단 기록에 남길 말입니다. 모르는 값은 숫자를 그대로 냅니다.</summary>
-    public static string Describe(uint detail) => detail switch
+    public static string Describe(uint detail)
+    {
+        string site = DescribeSite(Site(detail));
+        uint underlying = Underlying(detail);
+        return underlying == 0U
+            ? site
+            : string.Create(
+                System.Globalization.CultureInfo.InvariantCulture,
+                $"{site}(밑={underlying})");
+    }
+
+    private static string DescribeSite(uint detail) => detail switch
     {
         None => "none",
         EmptyPath => "empty-path",
         CancelledBeforeStart => "cancelled-before-start",
-        VisibleFullConversionFailed => "visible-full-conversion-failed",
+        VisibleFullDecodeFailed => "visible-full-decode-failed",
         VisibleFastPathFailed => "visible-fast-path-failed",
         CancelledAfterVisible => "cancelled-after-visible",
         CancelledBeforeStandardDecode => "cancelled-before-standard-decode",
@@ -48,6 +67,8 @@ public static class InfraredFailureDetail
         InfraredResampleFailed => "infrared-resample-failed",
         AllocationFailed => "allocation-failed",
         UnexpectedException => "unexpected-exception",
+        VisibleFullWorkingFailed => "visible-full-working-failed",
+        VisibleFullExtractFailed => "visible-full-extract-failed",
         _ => detail.ToString(System.Globalization.CultureInfo.InvariantCulture),
     };
 }

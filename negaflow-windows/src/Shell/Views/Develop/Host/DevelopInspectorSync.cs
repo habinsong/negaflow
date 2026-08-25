@@ -28,6 +28,23 @@ internal sealed class DevelopInspectorSync
         view.LeftPanel.VersionsPanel.VersionRestored += OnVersionRestored;
         view.LeftPanel.FilmLookPanel.LookChanged += OnFilmLookChanged;
         view.LeftPanel.DevelopDefaultsChanged += OnDevelopDefaultsChanged;
+        view.LeftPanel.LibraryFramesChanged += OnLibraryFramesChanged;
+    }
+
+    /// <summary>
+    /// 목록에 들고 난 것이 있으면 필름스트립을 다시 짓습니다. 라이브러리 화면이
+    /// <c>OnEmbeddedLibraryChanged</c> 로 하는 일과 같은 자리입니다.
+    /// </summary>
+    private void OnLibraryFramesChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (view.DispatcherQueue is { } queue && !queue.HasThreadAccess)
+        {
+            _ = queue.TryEnqueue(() => view.frames.Refresh());
+            return;
+        }
+        view.frames.Refresh();
     }
 
     /// <summary>

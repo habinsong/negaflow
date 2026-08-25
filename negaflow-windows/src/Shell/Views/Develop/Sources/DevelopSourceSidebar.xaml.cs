@@ -78,6 +78,12 @@ public sealed partial class DevelopSourceSidebar : UserControl
     internal Library.Defaults.LibraryDevelopDefaultsPanel DevelopDefaults => LibraryPanel.Defaults;
 
     /// <summary>현상 기본값이 카탈로그를 고쳤을 때 올립니다.</summary>
+    public event EventHandler? LibraryFramesChanged
+    {
+        add => LibraryPanel.LibraryFramesChanged += value;
+        remove => LibraryPanel.LibraryFramesChanged -= value;
+    }
+
     public event EventHandler? DevelopDefaultsChanged
     {
         add => LibraryPanel.DevelopDefaultsChanged += value;

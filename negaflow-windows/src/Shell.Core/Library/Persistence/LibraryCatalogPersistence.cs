@@ -154,13 +154,7 @@ internal sealed class LibraryCatalogPersistence(LibraryDocumentState state)
 
         if (addedFrames > 0 || attachedFrameIds.Count > 0)
         {
-            state.RowIds.Clear();
-            state.Payloads.Clear();
-            foreach (CatalogEntityRow row in candidateFrames.Concat(transientFrames))
-            {
-                state.RowIds.Add(row.Id);
-                state.Payloads.Add(row.Payload);
-            }
+            RebuildFrameRowsPreservingOrder(candidateFrames, transientFrames);
             state.ProjectFrames();
         }
         if (addedFolders > 0)
@@ -181,6 +175,48 @@ internal sealed class LibraryCatalogPersistence(LibraryDocumentState state)
             state.IsDirty = false;
         }
         return error;
+    }
+
+    /// <summary>
+    /// 저장한 뒤 메모리 목록을 다시 짓되, <b>있던 차례를 지킵니다</b>.
+    /// </summary>
+    /// <remarks>
+    /// **프리뷰가 늘 맨 뒤로 밀리던 자리입니다.**
+    ///
+    /// 앞 판은 <c>candidateFrames.Concat(transientFrames)</c> 로 이었습니다. 프리뷰는
+    /// 카탈로그에 저장하지 않는 <c>transient</c> 라, 사진을 한 장 게시할 때마다 목록이
+    /// "저장되는 것들 전부 + 프리뷰" 로 다시 지어져 <b>프리뷰가 언제 만들어졌든 끝으로
+    /// 밀렸습니다.</b> 입력순으로 봐도 늘 오른쪽 끝에 있었던 것이 이 때문이며, 정렬 기준을
+    /// 무엇으로 바꾸든 마찬가지였습니다 - 정렬이 보는 목록 자체가 이미 그렇게 지어졌기
+    /// 때문입니다.
+    ///
+    /// 이미 있던 줄은 있던 자리에 두고, 이번에 새로 들어온 줄만 뒤에 답니다.
+    /// </remarks>
+    private void RebuildFrameRowsPreservingOrder(
+        List<CatalogEntityRow> persistent,
+        List<CatalogEntityRow> transient)
+    {
+        Dictionary<string, int> previousIndexById = new(state.RowIds.Count, StringComparer.Ordinal);
+        for (int index = 0; index < state.RowIds.Count; ++index)
+        {
+            previousIndexById[state.RowIds[index]] = index;
+        }
+        List<CatalogEntityRow> merged = [.. persistent, .. transient];
+        List<CatalogEntityRow> ordered = [.. merged
+            .Select((row, arrival) => (Row: row, Arrival: arrival))
+            .OrderBy(entry => previousIndexById.TryGetValue(entry.Row.Id, out int previous)
+                ? previous
+                : int.MaxValue)
+            // 있던 줄끼리는 있던 차례, 새 줄끼리는 들어온 차례입니다.
+            .ThenBy(entry => entry.Arrival)
+            .Select(entry => entry.Row)];
+        state.RowIds.Clear();
+        state.Payloads.Clear();
+        foreach (CatalogEntityRow row in ordered)
+        {
+            state.RowIds.Add(row.Id);
+            state.Payloads.Add(row.Payload);
+        }
     }
 
     private List<CatalogEntityRow> PersistentFrameRows() => state.FrameRows()

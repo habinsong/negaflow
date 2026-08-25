@@ -298,7 +298,7 @@ enum class InfraredFileFailureDetail : std::uint32_t {
     none = 0U,
     empty_path = 1U,
     cancelled_before_start = 2U,
-    visible_full_conversion_failed = 3U,
+    visible_full_decode_failed = 3U,
     visible_fast_path_failed = 4U,
     cancelled_after_visible = 5U,
     cancelled_before_standard_decode = 6U,
@@ -310,14 +310,20 @@ enum class InfraredFileFailureDetail : std::uint32_t {
     infrared_resample_failed = 12U,
     allocation_failed = 13U,
     unexpected_exception = 14U,
+    visible_full_working_failed = 15U,
+    visible_full_extract_failed = 16U,
 };
 
 [[nodiscard]] negaflow::imaging::InfraredDetectionResult failure(
     const negaflow::imaging::InfraredDetectionStatus status,
-    const InfraredFileFailureDetail detail) noexcept {
+    const InfraredFileFailureDetail detail,
+    const std::uint32_t underlying = 0U) noexcept {
     negaflow::imaging::InfraredDetectionResult result{};
     result.status = status;
-    result.failure_detail = static_cast<std::uint32_t>(detail);
+    // 아래 여덟 칸이 "어느 자리", 그 위가 "그 자리에서 밑이 뭐라고 했는가" 입니다. 자리만
+    // 알고 밑을 모르면 또 한 겹을 추측하게 됩니다.
+    result.failure_detail =
+        static_cast<std::uint32_t>(detail) | ((underlying & 0xFFFFU) << 8U);
     return result;
 }
 
@@ -403,31 +409,59 @@ negaflow::imaging::InfraredDetectionResult detect_infrared_defects_from_files(
                 visible_values = std::move(direct.values);
                 visible_width = direct.width;
                 visible_height = direct.height;
-            } else if (direct.status ==
-                       WorkingRedDecodeStatus::requires_full_working_conversion) {
-                // 위 fast path 시도가 `begin` 에서 빠지기 전에 이미 같은 파일의 압축 stream 을
-                // ADR-0011 대로 전수 검증했습니다. 여기서 또 하면 compression=5 파일에서 LZW
-                // 전수 walk 를 두 번 합니다 — 실제 `GT-X900_frame_17`(LZW·492스트립·RGBA·ICC)
-                // 에서 회당 약 371ms 입니다. 검증은 그대로 한 번 하고, 중복만 없앱니다.
+            } else if (cancel.requested()) {
+                // 취소는 실패가 아닙니다. 빠른 경로의 sink 는 취소를 만나면 그저 `false` 를
+                // 돌려주어 `failure` 로 남으므로, 여기서 가려내지 않으면 사용자가 멈춘 것이
+                // "파일을 못 읽었다" 로 기록됩니다.
+                return failure(
+                    negaflow::imaging::InfraredDetectionStatus::cancelled,
+                    InfraredFileFailureDetail::cancelled_after_visible);
+            } else {
+                // **빠른 경로가 안 되면 제 길로 돌아갑니다.**
+                //
+                // 앞 판은 `requires_full_working_conversion` 일 때만 전체 변환을 했고, 그
+                // 밖의 실패는 곧바로 `unreadable` 로 포기했습니다. 그런데 빠른 경로는
+                // ICC·화소 배치·stride·알파 모드가 모두 제 모양일 때만 되는 좁은 길입니다 -
+                // 하나라도 어긋나면 sink 의 `begin` 이 `false` 를 돌려주고 상태는 `failure`
+                // 로 남습니다. 그러면 **전체 변환으로 멀쩡히 읽히는 파일이 통째로 버려집니다.**
+                // 실기에서 IR 이 붙지 않던 프레임을 앱 밖에서 같은 코드로 읽으면 `Ok` 였던
+                // 것이 이 모양입니다 - 상태 하나 차이로 되돌아갈 길이 막혀 있었습니다.
+                //
+                // 전체 변환은 ICC 갈래가 이미 쓰던 바로 그 길입니다.
                 auto full_control = visible_control;
-                full_control.validate_compressed_streams = false;
+                // ICC 갈래는 fast path 가 `begin` 까지 가서 같은 파일의 압축 stream 을
+                // ADR-0011 대로 이미 전수 검증했습니다. 여기서 또 하면 compression=5 파일에서
+                // LZW 전수 walk 를 두 번 합니다 — 실제 `GT-X900_frame_17`(LZW·492스트립·
+                // RGBA·ICC)에서 회당 약 371ms 입니다. 그 경우에만 중복을 없앱니다.
+                //
+                // 그 밖의 실패는 fast path 가 **어디까지 갔는지 알 수 없으므로** 검증을
+                // 건너뛰지 않습니다. 검증을 건너뛴 채로 깨진 stream 을 읽으면 그때는 조용히
+                // 틀린 화소가 나옵니다 - 못 읽는 것보다 나쁩니다.
+                full_control.validate_compressed_streams =
+                    direct.status != WorkingRedDecodeStatus::requires_full_working_conversion;
                 const auto visible = negaflow::imaging::decode_scanner_tiff_to_working_rows(
                     visible_path, {}, {}, full_control);
-                if (visible.decode.status != negaflow::imageio::WicTiffDecodeStatus::ok ||
-                    visible.working.status != negaflow::imaging::ScannerToWorkingStatus::ok ||
-                    !extract_working_red(
+                if (visible.decode.status != negaflow::imageio::WicTiffDecodeStatus::ok) {
+                    return failure(
+                        negaflow::imaging::InfraredDetectionStatus::unreadable,
+                        InfraredFileFailureDetail::visible_full_decode_failed,
+                        static_cast<std::uint32_t>(visible.decode.status));
+                }
+                if (visible.working.status != negaflow::imaging::ScannerToWorkingStatus::ok) {
+                    return failure(
+                        negaflow::imaging::InfraredDetectionStatus::unreadable,
+                        InfraredFileFailureDetail::visible_full_working_failed,
+                        static_cast<std::uint32_t>(visible.working.status));
+                }
+                if (!extract_working_red(
                         visible.working.image,
                         visible_values,
                         visible_width,
                         visible_height)) {
                     return failure(
-                negaflow::imaging::InfraredDetectionStatus::unreadable,
-                InfraredFileFailureDetail::visible_full_conversion_failed);
+                        negaflow::imaging::InfraredDetectionStatus::unreadable,
+                        InfraredFileFailureDetail::visible_full_extract_failed);
                 }
-            } else {
-                return failure(
-                negaflow::imaging::InfraredDetectionStatus::unreadable,
-                InfraredFileFailureDetail::visible_fast_path_failed);
             }
             if (cancel.requested()) {
                 return failure(

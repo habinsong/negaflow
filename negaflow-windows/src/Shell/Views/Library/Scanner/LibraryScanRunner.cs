@@ -158,10 +158,17 @@ internal sealed class LibraryScanRunner
             view.RequestLibraryReload();
             return;
         }
-        // 본 스캔이 끝나면 프리뷰는 제 할 일을 마쳤습니다. macOS 는 프레임을 하나 게시할
-        // 때마다 `removeEphemeralPreviewFrames(keeping: nil)` 로 한 장도 남기지 않습니다.
-        RemoveStalePreviewFrames(keep: null);
-        view.flatbedPreview = PreviewLuminance.None;
+        // 본 스캔이 사진을 한 장이라도 냈으면 프리뷰는 제 할 일을 마쳤습니다. macOS 는
+        // 프레임을 게시할 때마다 `removeEphemeralPreviewFrames(keeping: nil)` 을 부릅니다.
+        //
+        // **한 장도 못 냈으면 그대로 둡니다.** 스캔이 실패하거나 사용자가 멈춘 뒤에도 프리뷰를
+        // 지우면, 찾아 둔 프레임 사각형을 보고 다시 뜨려던 사용자가 프리뷰부터 새로 찍어야
+        // 합니다 - 사용자가 아무 것도 얻지 못한 채 가진 것만 잃습니다.
+        if (outcome.Published > 0)
+        {
+            RemoveStalePreviewFrames(keep: null);
+            view.flatbedPreview = PreviewLuminance.None;
+        }
         view.RequestLibraryReload();
     }
 

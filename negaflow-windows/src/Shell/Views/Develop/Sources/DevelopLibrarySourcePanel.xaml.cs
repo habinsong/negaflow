@@ -38,6 +38,9 @@ public sealed partial class DevelopLibrarySourcePanel : UserControl
     /// <summary>현상 기본값(프로세스·타깃·필름 프로파일·룩)이 카탈로그를 고쳤을 때 올립니다.</summary>
     public event EventHandler? DevelopDefaultsChanged;
 
+    /// <summary>목록에 들고 나는 것이 생겼습니다 — 필름스트립을 다시 지어야 합니다.</summary>
+    public event EventHandler? LibraryFramesChanged;
+
     /// <summary>단축키가 프로세스·타깃을 바꿀 때 씁니다. macOS 메뉴 명령과 같은 자리입니다.</summary>
     internal Library.Defaults.LibraryDevelopDefaultsPanel Defaults => DevelopDefaultsPanel;
 
@@ -52,8 +55,12 @@ public sealed partial class DevelopLibrarySourcePanel : UserControl
         importWindowId = windowId;
         ScanPanel.Bind(host);
         ScanPanel.WindowId = windowId;
-        ScanPanel.LibraryChanged += (_, _) =>
-            DevelopDefaultsChanged?.Invoke(this, EventArgs.Empty);
+        // **스캔은 목록 자체를 바꿉니다.** 새 사진이 들어오고, 다 쓴 프리뷰가 빠집니다.
+        // 앞 판은 여기서 `DevelopDefaultsChanged` 만 올렸는데 그것은 고른 사진의 프로세스·
+        // 타깃을 다시 읽을 뿐이라, 현상뷰의 필름스트립은 스캔 전 목록에 그대로 머물렀습니다 -
+        // 방금 스캔한 사진이 안 나타나고, 이미 지운 프리뷰가 유령으로 남아 누르면
+        // "선택 안 함" 이 됐습니다(선택은 지금 있는 프레임에서만 고를 수 있습니다).
+        ScanPanel.LibraryChanged += (_, _) => LibraryFramesChanged?.Invoke(this, EventArgs.Empty);
         DevelopDefaultsPanel.Bind(host, actionable);
         DevelopDefaultsPanel.LibraryChanged += (_, _) =>
             DevelopDefaultsChanged?.Invoke(this, EventArgs.Empty);
