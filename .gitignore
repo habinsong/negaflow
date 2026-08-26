@@ -116,7 +116,12 @@ NEGAFLOW_LIGHTROOM_EXPANSION.md
 # `docs/` 는 여기 없다. 최상위 README 가 그 안의 스크린샷과 제품 문서를 링크하므로,
 # 빼면 GitHub 첫 화면이 통째로 깨진다.
 /windows_docs/
-/negaflow-windows/docs/
+#
+# 다만 네이티브 골든은 시험 자료다. 조사 문서와 같은 폴더에 있을 뿐이며, 빼면 CI 의
+# 골든·패리티 시험이 자료를 못 찾고 무너진다(2026-08-27 실제로 다섯 개가 무너졌다).
+# 디렉터리를 통째로 제외하면 하위를 되살릴 수 없으므로 **내용**을 제외하고 그 하나만 뺀다.
+/negaflow-windows/docs/*
+!/negaflow-windows/docs/verification/
 
 # 일회성 코드 감사 / 청크 생성물
 /all_swift_files.txt
