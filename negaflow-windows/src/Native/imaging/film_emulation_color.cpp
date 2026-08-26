@@ -443,7 +443,8 @@ negaflow::core::KernelStatus apply_film_emulation_color_cube(
                 negaflow::color::srgb_encoded_to_linear(encoded.blue),
                 source.alpha,
             };
-        });
+        },
+        16);
 }
 
 } // namespace negaflow::imaging

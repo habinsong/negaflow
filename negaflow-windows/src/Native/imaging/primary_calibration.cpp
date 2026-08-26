@@ -251,7 +251,8 @@ negaflow::core::KernelStatus apply_primary_calibration(
                 result.blue,
                 source.alpha,
             };
-        });
+        },
+        12);
 }
 
 }  // namespace negaflow::imaging

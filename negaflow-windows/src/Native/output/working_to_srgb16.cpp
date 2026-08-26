@@ -288,48 +288,75 @@ WorkingToSrgb16Status convert_working_to_srgb_rows(
     auto* const samples16 = reinterpret_cast<std::uint16_t*>(destination_bytes);
     const negaflow::color::OutputColorSpace space = limits.color_space;
     const negaflow::color::ColorMatrix matrix = negaflow::color::linear_srgb_to(space);
-    clipped_color_components = 0U;
-    for (std::uint32_t row = 0U; row < row_count; ++row) {
-        const std::uint32_t image_row = first_row + row;
-        const std::size_t source_row =
-            static_cast<std::size_t>(image_row) * working.stride_pixels;
-        const std::size_t destination_row =
-            static_cast<std::size_t>(row) * working.width * description.image.channels;
-        for (std::uint32_t column = 0U; column < working.width; ++column) {
-            const negaflow::core::Rgba32F& pixel = working.pixels[source_row + column];
-            if (!std::isfinite(pixel.red) || !std::isfinite(pixel.green) ||
-                !std::isfinite(pixel.blue) || !std::isfinite(pixel.alpha)) {
-                return WorkingToSrgb16Status::non_finite_pixel;
-            }
-            const OutputPixel output = to_output_primaries(pixel, matrix);
-            const std::size_t destination =
-                destination_row + static_cast<std::size_t>(column) * description.image.channels;
-            if (bits_per_sample == 8U) {
-                destination_bytes[destination] = quantize_component_8(
-                    output.red, space, limits.encode_transfer,
-                    column, image_row, 0U, clipped_color_components);
-                destination_bytes[destination + 1U] = quantize_component_8(
-                    output.green, space, limits.encode_transfer,
-                    column, image_row, 1U, clipped_color_components);
-                destination_bytes[destination + 2U] = quantize_component_8(
-                    output.blue, space, limits.encode_transfer,
-                    column, image_row, 2U, clipped_color_components);
-                if (description.image.channels == 4U) {
-                    destination_bytes[destination + 3U] = quantize_alpha_8(pixel.alpha);
+    // 띠 하나를 코어에 나눕니다. 행끼리 독립이고 잘린 성분 수는 정수 덧셈이라 순서가
+    // 결과를 바꾸지 않습니다. 첫 실패는 가장 작은 행으로 모읍니다 - 한 줄씩 돌던 것과
+    // 같은 답입니다. 전체 이미지 판(`convert_working_to_srgb16`)은 이미 이 길이었고
+    // **띠로 흘려 쓰는 이 길만 한 스레드에 남아 있었습니다** - TIFF·PNG 내보내기가
+    // 여기를 지나므로, 24 MP 한 장 인코딩이 1,344 ms 였습니다.
+    std::atomic<std::uint64_t> first_failure{negaflow::core::no_row_failure};
+    std::atomic<std::uint64_t> clipped_total{0U};
+    const std::uint64_t work_units =
+        static_cast<std::uint64_t>(working.width) * row_count * 4U;
+    negaflow::core::for_each_row_block(
+        row_count,
+        work_units,
+        [&](const std::uint32_t block_first, const std::uint32_t block_rows) noexcept {
+            std::uint64_t block_clipped = 0U;
+            for (std::uint32_t row = block_first; row < block_first + block_rows; ++row) {
+                const std::uint32_t image_row = first_row + row;
+                const std::size_t source_row =
+                    static_cast<std::size_t>(image_row) * working.stride_pixels;
+                const std::size_t destination_row =
+                    static_cast<std::size_t>(row) * working.width * description.image.channels;
+                for (std::uint32_t column = 0U; column < working.width; ++column) {
+                    const negaflow::core::Rgba32F& pixel = working.pixels[source_row + column];
+                    if (!std::isfinite(pixel.red) || !std::isfinite(pixel.green) ||
+                        !std::isfinite(pixel.blue) || !std::isfinite(pixel.alpha)) {
+                        negaflow::core::record_row_failure(
+                            first_failure, row, WorkingToSrgb16Status::non_finite_pixel);
+                        clipped_total.fetch_add(block_clipped, std::memory_order_relaxed);
+                        return;
+                    }
+                    const OutputPixel output = to_output_primaries(pixel, matrix);
+                    const std::size_t destination =
+                        destination_row +
+                        static_cast<std::size_t>(column) * description.image.channels;
+                    if (bits_per_sample == 8U) {
+                        destination_bytes[destination] = quantize_component_8(
+                            output.red, space, limits.encode_transfer,
+                            column, image_row, 0U, block_clipped);
+                        destination_bytes[destination + 1U] = quantize_component_8(
+                            output.green, space, limits.encode_transfer,
+                            column, image_row, 1U, block_clipped);
+                        destination_bytes[destination + 2U] = quantize_component_8(
+                            output.blue, space, limits.encode_transfer,
+                            column, image_row, 2U, block_clipped);
+                        if (description.image.channels == 4U) {
+                            destination_bytes[destination + 3U] = quantize_alpha_8(pixel.alpha);
+                        }
+                        continue;
+                    }
+                    samples16[destination] = quantize_component(
+                        output.red, space, limits.encode_transfer, block_clipped);
+                    samples16[destination + 1U] = quantize_component(
+                        output.green, space, limits.encode_transfer, block_clipped);
+                    samples16[destination + 2U] = quantize_component(
+                        output.blue, space, limits.encode_transfer, block_clipped);
+                    if (description.image.channels == 4U) {
+                        samples16[destination + 3U] = quantize_alpha(pixel.alpha);
+                    }
                 }
-                continue;
             }
-            samples16[destination] =
-                quantize_component(output.red, space, limits.encode_transfer, clipped_color_components);
-            samples16[destination + 1U] =
-                quantize_component(output.green, space, limits.encode_transfer, clipped_color_components);
-            samples16[destination + 2U] =
-                quantize_component(output.blue, space, limits.encode_transfer, clipped_color_components);
-            if (description.image.channels == 4U) {
-                samples16[destination + 3U] = quantize_alpha(pixel.alpha);
-            }
-        }
+            clipped_total.fetch_add(block_clipped, std::memory_order_relaxed);
+        });
+
+    const std::uint64_t packed = first_failure.load(std::memory_order_relaxed);
+    if (negaflow::core::has_row_failure(packed)) {
+        clipped_color_components = 0U;
+        return static_cast<WorkingToSrgb16Status>(
+            negaflow::core::row_failure_status_value(packed));
     }
+    clipped_color_components = clipped_total.load(std::memory_order_relaxed);
     return WorkingToSrgb16Status::ok;
 }
 

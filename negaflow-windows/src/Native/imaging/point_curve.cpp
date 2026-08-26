@@ -296,7 +296,8 @@ negaflow::core::KernelStatus apply_point_curves(
                 apply_lut_component(source.blue, luts.blue),
                 source.alpha,
             };
-        });
+        },
+        6);
 }
 
 }  // namespace negaflow::imaging

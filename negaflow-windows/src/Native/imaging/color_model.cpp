@@ -179,7 +179,8 @@ negaflow::core::KernelStatus apply_color_model(
                 color.blue,
                 source.alpha,
             };
-        });
+        },
+        8);
 }
 
 } // namespace negaflow::imaging

@@ -25,14 +25,26 @@ namespace negaflow::core {
 //
 // The transform is called concurrently from several threads, so it must be pure: capture
 // parameters by value and touch nothing shared.
+//
+// `per_pixel_work` is what one pixel actually costs relative to a plain multiply. Leave it
+// at 1 for arithmetic that is a handful of operations. Raise it when the transform runs a
+// colour-space round trip or a `pow`: the split is decided from `width * height *
+// per_pixel_work`, and an under-count silently drops the whole stage back onto one thread.
+//
+// This is not hypothetical. `digital_film_color_preset` hands this helper tiles of
+// `1 << 20` pixels, and a 6000-wide image makes that 174 rows — 1,044,000 units, just under
+// the 1,048,576 threshold. Three colour kernels ran single-threaded on every export until
+// the weight was passed.
 template <typename Transform>
 [[nodiscard]] KernelStatus transform_validated_pointwise(
     const ConstImageView input,
     const ImageView output,
-    Transform transform) noexcept {
+    Transform transform,
+    const std::uint64_t per_pixel_work = 1U) noexcept {
     std::atomic<std::uint64_t> first_failure{no_row_failure};
     const std::uint64_t work_units =
-        static_cast<std::uint64_t>(input.width) * static_cast<std::uint64_t>(input.height);
+        static_cast<std::uint64_t>(input.width) *
+        static_cast<std::uint64_t>(input.height) * per_pixel_work;
     for_each_row_block(
         input.height,
         work_units,
@@ -67,7 +79,8 @@ template <typename Transform>
 [[nodiscard]] KernelStatus apply_pointwise(
     const ConstImageView input,
     const ImageView output,
-    Transform transform) noexcept {
+    Transform transform,
+    const std::uint64_t per_pixel_work = 1U) noexcept {
     const KernelStatus compatibility_status = validate_compatible_views(input, output);
     if (compatibility_status != KernelStatus::ok) {
         return compatibility_status;
@@ -76,7 +89,7 @@ template <typename Transform>
     if (input_status != KernelStatus::ok) {
         return input_status;
     }
-    return transform_validated_pointwise(input, output, transform);
+    return transform_validated_pointwise(input, output, transform, per_pixel_work);
 }
 
 // Row-wise copy for the identity path of a stage that is switched off. Same contract as
