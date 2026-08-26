@@ -326,11 +326,22 @@ std::optional<DevelopExportOutcome> decode_source(
         }
         decoded_image = std::move(prepared.working.image);
     } else {
+        // 프리뷰는 프리뷰 크기로 풉니다. 스캐너 TIFF 는 위에서 이미 그렇게 하고 있었고,
+        // 표준·RAW 경로에만 빠져 있어서 사진 한 장을 처음 열 때마다 원본 전체를 풀었습니다
+        // (실측: 2.2~13.1 초, 7 장에 peak 1,232 MB). 전체 해상도가 필요한 조건은 위와
+        // 같습니다 - defect 편집의 ROI 가 원본 화소 좌표이기 때문입니다.
+        negaflow::imageio::WicStandardImageDecodeControl standard_control{};
+        if (preview != nullptr && request.defect_recipe.order.empty()) {
+            standard_control.max_output_width = preview->maximum_width;
+            standard_control.max_output_height = preview->maximum_height;
+            standard_control.prefer_speed = true;
+        }
         const negaflow::imageio::WicStandardImageDecodeResult decoded =
             negaflow::imageio::decode_standard_image_with_wic(
                 request.source,
                 {},
-                stop.get_token());
+                stop.get_token(),
+                standard_control);
         if (decoded.status == negaflow::imageio::WicStandardImageDecodeStatus::cancelled) {
             return cancelled_outcome(DevelopExportStage::decode);
         }

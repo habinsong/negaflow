@@ -34,9 +34,20 @@ Set-StrictMode -Version Latest
 # ── 고정된 upstream ──────────────────────────────────────────────────────────
 # 버전을 올릴 때는 URL 과 해시를 같이 고치고, THIRD-PARTY-NOTICES.md 와
 # third_party\manifest\components.json 의 같은 값도 함께 고친다.
-$LibRawVersion = '0.22.2'
-$LibRawUrl = "https://www.libraw.org/data/LibRaw-$LibRawVersion.tar.gz"
-$LibRawSha256 = 'de86b035655accff8d4010f1a221fdf50d353cb7b1422ba26f14a0db92612cfa'
+# **릴리스가 아니라 고정된 커밋입니다.**
+#
+# 최신 릴리스 0.22.2 의 카메라 목록에는 ILCE-7M2/7M3/7M4 는 있고 **7M5(A7 V)가 없어**,
+# 실기 파일 하나가 열리지 않았습니다(2026-08-26 실측). upstream master 에는 들어 있고
+# libraw.org 은 스냅샷 tarball 을 배포하지 않으므로, GitHub 이 그 커밋으로 만들어 주는
+# 아카이브를 URL 과 SHA-256 으로 고정합니다 - 같은 커밋이면 같은 바이트가 나오는 것을
+# 두 번 받아 확인했습니다. 해시가 달라지면 이 스크립트가 그 자리에서 멈춥니다.
+#
+# 올릴 때는 커밋과 해시를 같이 고치고, THIRD-PARTY-NOTICES.md 와
+# third_party\manifest\components.json 의 같은 값도 함께 고친다.
+$LibRawCommit = 'df226ea4178ccd74245f4f13c23adddfa01411c9'
+$LibRawVersion = "0.22.2+$($LibRawCommit.Substring(0, 7))"
+$LibRawUrl = "https://github.com/LibRaw/LibRaw/archive/$LibRawCommit.tar.gz"
+$LibRawSha256 = '06a37602a3f80b3e309e7ce704e6bb277c8298e162cde81e925a784ddf0fce21'
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path -Parent $scriptDir
@@ -61,7 +72,8 @@ if ($actual -ne $LibRawSha256) {
 Write-Host "SHA-256 확인: $actual"
 
 # ── 2. 푼다 ──────────────────────────────────────────────────────────────────
-$sourceDir = Join-Path $WorkRoot "LibRaw-$LibRawVersion"
+# GitHub 아카이브는 커밋 이름으로 풀립니다.
+$sourceDir = Join-Path $WorkRoot "LibRaw-$LibRawCommit"
 if (-not (Test-Path $sourceDir)) {
     & tar.exe -xzf $archive -C $WorkRoot
     if ($LASTEXITCODE -ne 0) { throw "LibRaw 소스를 풀지 못했다 (exit $LASTEXITCODE)." }

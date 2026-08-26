@@ -29,6 +29,17 @@ enum class WicStandardImageDecodeStatus : std::uint8_t {
     pixel_decode_failed,
 };
 
+/// 프리뷰가 쓸 최대 크기입니다. 0 이면 원본 그대로 풉니다.
+///
+/// 스캐너 TIFF 경로의 `WicTiffDecodeControl::max_output_*` 과 같은 자리입니다 - 표준·RAW
+/// 경로에만 없어서, 1536x1024 프리뷰 하나에 6000x4000 이상을 통째로 풀고 있었습니다.
+struct WicStandardImageDecodeControl final {
+    std::uint32_t max_output_width{0U};
+    std::uint32_t max_output_height{0U};
+    // 프리뷰 프록시를 만드는 길입니다. 정확도보다 시간이 우선입니다.
+    bool prefer_speed{false};
+};
+
 struct WicStandardImageDecodeLimits final {
     negaflow::color::IccProfileLimits icc{};
     // 이 기계의 설치 메모리에서 옵니다 - `negaflow::core::default_max_pixel_bytes` 주석 참고.
@@ -44,6 +55,8 @@ struct WicStandardImageDecodeInfo final {
     // 설치된 WIC codec 이 이 파일을 열지 못해 함께 배포한 `libraw.dll` 이 대신 현상했습니다.
     // 진단이 어느 디코더가 화소를 만들었는지 구분할 수 있어야 하므로 남깁니다.
     bool libraw_fallback_used{false};
+    // 프리뷰 크기로 줄여 풀었습니다. 캐시가 이것을 전체 해상도 결과와 섞지 않도록 남깁니다.
+    bool reduced_for_preview{false};
     std::uint16_t exif_orientation{1U};
     bool orientation_applied{false};
     negaflow::color::IccProfileInfo icc{};
@@ -96,7 +109,8 @@ struct StandardImageMetadataResult final {
 [[nodiscard]] WicStandardImageDecodeResult decode_standard_image_with_wic_only(
     const std::filesystem::path& path,
     const WicStandardImageDecodeLimits& limits = {},
-    std::stop_token stop_token = {}) noexcept;
+    std::stop_token stop_token = {},
+    const WicStandardImageDecodeControl& control = {}) noexcept;
 
 /// JPEG/PNG 과 카메라 RAW 을 읽습니다. WIC RAW codec 이 있으면 그것이 as-shot·최고 품질
 /// sRGB 현상을 하고, **없으면 함께 배포한 `libraw.dll` 이 같은 계약으로 대신 현상합니다.**
@@ -108,7 +122,8 @@ struct StandardImageMetadataResult final {
 [[nodiscard]] WicStandardImageDecodeResult decode_standard_image_with_wic(
     const std::filesystem::path& path,
     const WicStandardImageDecodeLimits& limits = {},
-    std::stop_token stop_token = {}) noexcept;
+    std::stop_token stop_token = {},
+    const WicStandardImageDecodeControl& control = {}) noexcept;
 
 [[nodiscard]] const char* wic_standard_image_decode_status_name(
     WicStandardImageDecodeStatus status) noexcept;

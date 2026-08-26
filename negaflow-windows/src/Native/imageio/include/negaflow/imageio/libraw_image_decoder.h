@@ -73,7 +73,8 @@ struct LibRawMetadataResult final {
 [[nodiscard]] LibRawDecodeResult decode_raw_with_libraw(
     const std::filesystem::path& path,
     const WicStandardImageDecodeLimits& limits,
-    std::stop_token stop_token = {}) noexcept;
+    std::stop_token stop_token = {},
+    const WicStandardImageDecodeControl& control = {}) noexcept;
 
 [[nodiscard]] const char* libraw_decode_status_name(LibRawDecodeStatus status) noexcept;
 

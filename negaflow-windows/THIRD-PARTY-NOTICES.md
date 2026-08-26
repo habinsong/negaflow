@@ -166,16 +166,22 @@ installed WIC codecs cannot open a file.
 
 | Component | Version | License | Shipped payload |
 |---|---|---|---|
-| LibRaw | 0.22.2 | **LGPL-2.1** or **CDDL-1.0** (dual; we distribute under LGPL-2.1) | `libraw.dll` |
+| LibRaw | 0.22.2+df226ea | **LGPL-2.1** or **CDDL-1.0** (dual; we distribute under LGPL-2.1) | `libraw.dll` |
 
-- Upstream source: <https://www.libraw.org/data/LibRaw-0.22.2.tar.gz>
-- Upstream SHA-256: `de86b035655accff8d4010f1a221fdf50d353cb7b1422ba26f14a0db92612cfa`
+- Upstream source: <https://github.com/LibRaw/LibRaw/archive/df226ea4178ccd74245f4f13c23adddfa01411c9.tar.gz>
+- Upstream SHA-256: `06a37602a3f80b3e309e7ce704e6bb277c8298e162cde81e925a784ddf0fce21`
+- **This is a pinned upstream commit, not a tagged release.** The newest tagged
+  release, 0.22.2, lists ILCE-7M2/7M3/7M4 but not ILCE-7M5, so a real Sony A7 V
+  file did not open at all. Upstream master carries that camera and libraw.org
+  publishes no snapshot tarball, so the pin is the GitHub archive of commit
+  `df226ea4178ccd74245f4f13c23adddfa01411c9` (2026-08-18). The archive was
+  downloaded twice and produced the same SHA-256.
 - Build recipe: [`scripts/build-libraw.ps1`](scripts/build-libraw.ps1). It pins the
   URL and hash above, builds with the `Makefile.msvc` that ships in the LibRaw
   source, and verifies that the fifteen C API entry points negaflow resolves are
   actually exported. No optional LibRaw dependency (RawSpeed, Adobe DNG SDK,
   LCMS, libjpeg) is enabled, so `libraw.dll` pulls in no further third-party code.
-- The source is **not modified**. We build stock LibRaw 0.22.2.
+- The source is **not modified**. We build stock LibRaw at that commit.
 
 ### Why this does not change the native engine's zero-dependency statement
 
@@ -191,7 +197,7 @@ arrangement as `e_sqlite3.dll` in section 3.
    source archive; `scripts/build-libraw.ps1` copies both, plus `COPYRIGHT` and
    `Changelog.txt`, into its `redistributable\` staging directory.
 2. Ship the complete corresponding source, or a written offer for it. The build
-   script places the exact pinned `LibRaw-0.22.2.tar.gz` in the same directory.
+   script places the exact pinned `LibRaw-0.22.2+df226ea.tar.gz` in the same directory.
    Ship that archive; it is the source the shipped binary was built from.
 3. Allow the user to relink. Satisfied by shipping LibRaw as a separate DLL the
    user can replace with their own build of the same C API.

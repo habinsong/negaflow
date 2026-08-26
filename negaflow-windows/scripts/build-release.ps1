@@ -188,14 +188,23 @@ try {
     $librawLicenseDirectory = Join-Path $projectRoot 'build-libraw\redistributable'
     $librawNoticeDirectory = Join-Path $payloadDirectory 'licenses\libraw'
     New-Item -ItemType Directory -Force -Path $librawNoticeDirectory | Out-Null
-    foreach ($librawNotice in @(
-        'LICENSE.LGPL', 'LICENSE.CDDL', 'COPYRIGHT', 'LibRaw-0.22.2.tar.gz')) {
+    foreach ($librawNotice in @('LICENSE.LGPL', 'LICENSE.CDDL', 'COPYRIGHT')) {
         $source = Join-Path $librawLicenseDirectory $librawNotice
         if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
             throw "LibRaw redistribution file is missing: $source. Run scripts\build-libraw.ps1."
         }
         Copy-Item -LiteralPath $source -Destination $librawNoticeDirectory -Force
     }
+    # LGPL 대응 소스. 파일 이름을 여기 적어 두면 LibRaw 를 올릴 때마다 이 줄이 어긋나고,
+    # 어긋난 것은 빌드가 아니라 배포 뒤에 드러납니다. `build-libraw.ps1` 이 놓아 둔 것을
+    # 그대로 집되, 없거나 둘 이상이면 세웁니다.
+    $librawSource = @(Get-ChildItem -LiteralPath $librawLicenseDirectory -Filter 'LibRaw-*.tar.gz' -File)
+    if ($librawSource.Count -ne 1) {
+        throw ("Expected exactly one LibRaw corresponding-source archive in " +
+            "'$librawLicenseDirectory' but found $($librawSource.Count). Run scripts\build-libraw.ps1.")
+    }
+    Copy-Item -LiteralPath $librawSource[0].FullName -Destination $librawNoticeDirectory -Force
+    $librawSourceName = $librawSource[0].Name
 
     foreach ($notice in @('LICENSE', 'NOTICE', 'negaflow-windows\\THIRD-PARTY-NOTICES.md')) {
         $source = Join-Path $repositoryRoot $notice
@@ -221,7 +230,7 @@ try {
         'licenses\libraw\LICENSE.LGPL',
         'licenses\libraw\LICENSE.CDDL',
         'licenses\libraw\COPYRIGHT',
-        'licenses\libraw\LibRaw-0.22.2.tar.gz'
+        "licenses\libraw\$librawSourceName"
     )) {
         if (-not (Test-Path -LiteralPath (Join-Path $payloadDirectory $required))) {
             throw "Published payload is missing required file '$required'."

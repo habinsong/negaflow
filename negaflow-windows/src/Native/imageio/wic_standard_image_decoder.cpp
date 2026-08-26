@@ -179,6 +179,90 @@ namespace {
         status == WicStandardImageDecodeStatus::raw_development_failed;
 }
 
+/// LibRaw 가 돌려준 rgba16 을 프리뷰 크기로 줄입니다.
+///
+/// WIC 경로는 `IWICBitmapScaler` 가 디코드하면서 줄이지만, LibRaw 는 이미 다 만들어 놓고
+/// 돌려줍니다. 그것을 그대로 두면 이어지는 working 변환과 파이프라인이 원본 화소 수만큼
+/// 돌고, working 이미지 하나가 수백 MB 가 됩니다(실측: 6000x4000 한 장이 384 MB). 같은
+/// 스케일러로 줄여 그 뒤 단계 전부를 프리뷰 크기로 만듭니다.
+[[nodiscard]] bool shrink_decoded_rgba16(
+    DecodedImage& image,
+    const WicStandardImageDecodeControl& control) noexcept {
+    if (control.max_output_width == 0U || control.max_output_height == 0U ||
+        image.layout != DecodedPixelLayout::rgba16 || image.width == 0U || image.height == 0U ||
+        (image.width <= control.max_output_width && image.height <= control.max_output_height)) {
+        return false;
+    }
+    UINT fitted_width = image.width;
+    UINT fitted_height = image.height;
+    if (fitted_width > control.max_output_width) {
+        fitted_width = control.max_output_width;
+        fitted_height = static_cast<UINT>(
+            (static_cast<std::uint64_t>(image.height) * fitted_width) / image.width);
+        if (fitted_height == 0U) fitted_height = 1U;
+    }
+    if (fitted_height > control.max_output_height) {
+        fitted_height = control.max_output_height;
+        fitted_width = static_cast<UINT>(
+            (static_cast<std::uint64_t>(image.width) * fitted_height) / image.height);
+        if (fitted_width == 0U) fitted_width = 1U;
+    }
+    try {
+        const ComApartment apartment{};
+        if (FAILED(apartment.status())) {
+            return false;
+        }
+        ComPtr<IWICImagingFactory> factory{};
+        if (FAILED(CoCreateInstance(
+                CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&factory)))) {
+            return false;
+        }
+        const UINT source_stride = image.stride_bytes != 0U
+            ? image.stride_bytes
+            : static_cast<UINT>(image.width) * 8U;
+        ComPtr<IWICBitmap> source{};
+        if (FAILED(factory->CreateBitmapFromMemory(
+                image.width,
+                image.height,
+                GUID_WICPixelFormat64bppRGBA,
+                source_stride,
+                static_cast<UINT>(image.samples.size() * sizeof(std::uint16_t)),
+                reinterpret_cast<BYTE*>(image.samples.data()),
+                &source))) {
+            return false;
+        }
+        ComPtr<IWICBitmapScaler> scaler{};
+        if (FAILED(factory->CreateBitmapScaler(&scaler)) ||
+            FAILED(scaler->Initialize(
+                source.Get(),
+                fitted_width,
+                fitted_height,
+                WICBitmapInterpolationModeHighQualityCubic))) {
+            return false;
+        }
+        const std::uint64_t stride = static_cast<std::uint64_t>(fitted_width) * 8ULL;
+        const std::uint64_t bytes = stride * fitted_height;
+        if (stride > std::numeric_limits<UINT>::max() || bytes > std::numeric_limits<UINT>::max()) {
+            return false;
+        }
+        std::vector<std::uint16_t> scaled(static_cast<std::size_t>(bytes / sizeof(std::uint16_t)));
+        if (FAILED(scaler->CopyPixels(
+                nullptr,
+                static_cast<UINT>(stride),
+                static_cast<UINT>(bytes),
+                reinterpret_cast<BYTE*>(scaled.data())))) {
+            return false;
+        }
+        image.samples = std::move(scaled);
+        image.width = fitted_width;
+        image.height = fitted_height;
+        image.stride_bytes = static_cast<std::uint32_t>(stride);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
 }  // namespace
 
 StandardImageMetadataResult probe_standard_image_metadata(
@@ -249,14 +333,16 @@ StandardImageMetadataResult probe_standard_image_metadata(
 WicStandardImageDecodeResult decode_standard_image_with_wic(
     const std::filesystem::path& path,
     const WicStandardImageDecodeLimits& limits,
-    const std::stop_token stop_token) noexcept {
-    WicStandardImageDecodeResult wic = decode_standard_image_with_wic_only(path, limits, stop_token);
+    const std::stop_token stop_token,
+    const WicStandardImageDecodeControl& control) noexcept {
+    WicStandardImageDecodeResult wic =
+        decode_standard_image_with_wic_only(path, limits, stop_token, control);
     if (wic.status == WicStandardImageDecodeStatus::ok || !missing_codec(wic.status) ||
         !libraw_decoder_available()) {
         return wic;
     }
 
-    const LibRawDecodeResult raw = decode_raw_with_libraw(path, limits, stop_token);
+    const LibRawDecodeResult raw = decode_raw_with_libraw(path, limits, stop_token, control);
     if (raw.status != LibRawDecodeStatus::ok) {
         // LibRaw 도 못 읽으면 **WIC 의 실패 사유를 그대로 돌려줍니다.** LibRaw 의 사유로
         // 덮으면 "codec 이 없다" 와 "파일이 깨졌다" 가 뒤섞여 사용자에게 엉뚱한 안내가
@@ -274,16 +360,22 @@ WicStandardImageDecodeResult decode_standard_image_with_wic(
     // `IWICDevelopRaw` 로 as-shot 회전을 적용하고 orientation 을 1 로 두는 것과 같습니다.
     result.info.exif_orientation = 1U;
     result.info.orientation_applied = false;
-    result.info.decoded_pixel_bytes =
-        static_cast<std::uint64_t>(raw.image.stride_bytes) * raw.image.height;
     result.image = std::move(const_cast<LibRawDecodeResult&>(raw).image);
+    // WIC 경로가 디코드하면서 줄이는 것과 같은 자리입니다. LibRaw 는 다 만들어 놓고
+    // 돌려주므로 여기서 줄여야 그 뒤 단계 전부가 프리뷰 크기로 돕니다.
+    if (shrink_decoded_rgba16(result.image, control)) {
+        result.info.reduced_for_preview = true;
+    }
+    result.info.decoded_pixel_bytes =
+        static_cast<std::uint64_t>(result.image.stride_bytes) * result.image.height;
     return result;
 }
 
 WicStandardImageDecodeResult decode_standard_image_with_wic_only(
     const std::filesystem::path& path,
     const WicStandardImageDecodeLimits& limits,
-    const std::stop_token stop_token) noexcept {
+    const std::stop_token stop_token,
+    const WicStandardImageDecodeControl& control) noexcept {
     WicStandardImageDecodeResult result{};
     try {
         if (path.empty()) {
@@ -414,6 +506,60 @@ WicStandardImageDecodeResult decode_standard_image_with_wic_only(
         if (FAILED(oriented->GetSize(&width, &height)) || width == 0U || height == 0U) {
             result.status = WicStandardImageDecodeStatus::pixel_decode_failed;
             return result;
+        }
+        // **프리뷰는 원본 전체를 풀지 않습니다.**
+        //
+        // 실측(2026-08-26, 제조사별 RAW 7 장): 1536x1024 프리뷰 하나를 만들려고 6000x4000
+        // 이상을 통째로 디코드해서 사진을 처음 열 때마다 2.2~13.1 초, 7 장에 peak 1,232 MB
+        // 였습니다. 사진을 갈아탈 때마다 그 값을 다시 냈습니다.
+        //
+        // macOS 는 같은 자리에서 `ImageLoader.loadImportedPreview` 가 `CIRAWFilter.scaleFactor`
+        // 로 **줄여서** 풉니다(캔버스 정착본도 긴 변 3600, 빠른 프리뷰는 720). 스캐너 TIFF
+        // 경로는 이 포트에도 이미 같은 축소가 있었고, 표준·RAW 경로에만 빠져 있었습니다.
+        //
+        // `IWICBitmapScaler` 는 소스가 `IWICBitmapSourceTransform` 을 내면 그것으로 줄여
+        // 풉니다 — RAW codec 이 바로 그런 소스라, 전체를 푼 뒤 줄이는 것이 아니라 처음부터
+        // 작게 풉니다.
+        if (control.max_output_width > 0U && control.max_output_height > 0U &&
+            (width > control.max_output_width || height > control.max_output_height)) {
+            UINT fitted_width = width;
+            UINT fitted_height = height;
+            if (fitted_width > control.max_output_width) {
+                fitted_width = control.max_output_width;
+                fitted_height = width == 0U
+                    ? 0U
+                    : static_cast<UINT>(
+                          (static_cast<std::uint64_t>(height) * fitted_width) / width);
+                if (fitted_height == 0U) fitted_height = 1U;
+            }
+            if (fitted_height > control.max_output_height) {
+                fitted_height = control.max_output_height;
+                fitted_width = height == 0U
+                    ? 0U
+                    : static_cast<UINT>(
+                          (static_cast<std::uint64_t>(width) * fitted_height) / height);
+                if (fitted_width == 0U) fitted_width = 1U;
+            }
+            ComPtr<IWICBitmapScaler> scaler{};
+            ComPtr<IWICBitmapSource> scaled{};
+            if (SUCCEEDED(factory->CreateBitmapScaler(&scaler)) &&
+                SUCCEEDED(scaler->Initialize(
+                    oriented.Get(),
+                    fitted_width,
+                    fitted_height,
+                    WICBitmapInterpolationModeHighQualityCubic)) &&
+                SUCCEEDED(scaler.As(&scaled))) {
+                UINT scaled_width = 0U;
+                UINT scaled_height = 0U;
+                if (SUCCEEDED(scaled->GetSize(&scaled_width, &scaled_height)) &&
+                    scaled_width != 0U && scaled_height != 0U) {
+                    oriented = scaled;
+                    width = scaled_width;
+                    height = scaled_height;
+                    result.info.reduced_for_preview = true;
+                }
+            }
+            // 스케일러를 못 만들면 원본 크기로 그대로 갑니다 — 느릴 뿐 결과는 옳습니다.
         }
         const std::uint64_t oriented_stride = static_cast<std::uint64_t>(width) * 8ULL;
         const std::uint64_t oriented_bytes = oriented_stride * height;

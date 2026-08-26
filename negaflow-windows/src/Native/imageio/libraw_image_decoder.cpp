@@ -47,6 +47,8 @@ struct Api final {
     // 부르지 않고 헤더만 읽습니다 - 가져오기가 이것 때문에 파일 전체를 현상했습니다.
     int(__cdecl* get_iwidth)(void*){nullptr};
     int(__cdecl* get_iheight)(void*){nullptr};
+    // 보간 알고리즘. 프리뷰는 기본 AHD 대신 빠른 것을 씁니다.
+    void(__cdecl* set_demosaic)(void*, int){nullptr};
     const char*(__cdecl* version)(){nullptr};
 };
 
@@ -82,6 +84,7 @@ template <typename Fn>
         bind(api.module, "libraw_get_cam_mul", api.get_cam_mul) &&
         bind(api.module, "libraw_get_iwidth", api.get_iwidth) &&
         bind(api.module, "libraw_get_iheight", api.get_iheight) &&
+        bind(api.module, "libraw_set_demosaic", api.set_demosaic) &&
         bind(api.module, "libraw_version", api.version);
     if (!bound) {
         // 심볼이 하나라도 없으면 그 DLL 은 우리가 아는 LibRaw 가 아닙니다. 반쯤 쓰지 않고
@@ -255,7 +258,8 @@ LibRawMetadataResult probe_raw_metadata_with_libraw(const std::filesystem::path&
 LibRawDecodeResult decode_raw_with_libraw(
     const std::filesystem::path& path,
     const WicStandardImageDecodeLimits& limits,
-    const std::stop_token stop_token) noexcept {
+    const std::stop_token stop_token,
+    const WicStandardImageDecodeControl& control) noexcept {
     LibRawDecodeResult result{};
     const Api& functions = api();
     if (functions.module == nullptr) {
@@ -285,6 +289,12 @@ LibRawDecodeResult decode_raw_with_libraw(
         }
 
         configure_as_shot(functions, handle.get());
+        // 프리뷰는 보간을 빠른 것으로 바꿉니다. LibRaw 기본은 AHD(3) 이고, 0 은 선형
+        // 보간입니다 - 프리뷰 프록시는 어차피 줄여서 보는 그림이라 이 차이가 화면에서
+        // 드러나지 않고, 정착본은 기본 보간을 그대로 씁니다.
+        if (control.prefer_speed && functions.set_demosaic != nullptr) {
+            functions.set_demosaic(handle.get(), 0);
+        }
 
         result.native_error_code = functions.unpack(handle.get());
         if (result.native_error_code != 0) {
