@@ -1,5 +1,7 @@
 #include "decode.h"
 
+#include "../support/preview_proxy.h"
+
 #include "export/support/frame_cache_budget.h"
 #include "export/support/outcome.h"
 
@@ -33,6 +35,16 @@ namespace {
 struct DecodedSourceEntry final {
     std::filesystem::path path{};
     negaflow::imageio::ImageFileObservation observation{};
+    // **어느 크기로 푼 것인가.** 0 이면 원본 그대로입니다.
+    //
+    // 프리뷰는 프리뷰 크기로 풉니다. 그것을 크기 없이 담아 두면 내보내기가 작은 화상을
+    // 원본이라 믿고 집어갑니다. 반대로 크기를 담지 않는다고 캐시를 통째로 끄면, 슬라이더를
+    // 움직일 때마다 도는 정착 패스가 **디코드 도중에 취소돼** 아무것도 남기지 못하고
+    // 다음 번에 처음부터 다시 풉니다 - 실기 기록에서 같은 프레임의 정착 패스가
+    // 1,401 / 1,419 / 1,440 ms 로 세 번 연속 취소됐고, 그 사이에 낀 다음 조작이
+    // 그만큼 밀렸습니다(2026-08-26 `preview-trace.txt`). 크기를 함께 담아 둘 다 지킵니다.
+    std::uint32_t box_width{0U};
+    std::uint32_t box_height{0U};
     std::shared_ptr<const negaflow::imaging::WorkingImage> source_image{};
     std::optional<std::array<std::uint8_t, 32U>> cleaned_recipe_sha256{};
     std::shared_ptr<const negaflow::imaging::WorkingImage> cleaned_image{};
@@ -82,13 +94,16 @@ void trim_decoded_locked() noexcept {
 // 중인 프레임은 썸네일이 아무리 흘러가도 가장 마지막에 밀려납니다.
 [[nodiscard]] std::shared_ptr<const negaflow::imaging::WorkingImage> take_decoded(
     const std::filesystem::path& path,
-    const negaflow::imageio::ImageFileObservation& observation) noexcept {
+    const negaflow::imageio::ImageFileObservation& observation,
+    const std::uint32_t box_width,
+    const std::uint32_t box_height) noexcept {
     const std::lock_guard<std::mutex> guard{g_decoded_mutex};
     // 새 할당이 없어도 시스템이 저메모리로 바뀌었으면 첫 재사용에서 과거 프레임을 내립니다.
     trim_decoded_locked();
     for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
         DecodedSourceEntry& entry = g_decoded_sources[index];
         if (entry.path != path ||
+            entry.box_width != box_width || entry.box_height != box_height ||
             !negaflow::imageio::same_image_file_observation(
                 entry.observation, observation)) {
             continue;
@@ -113,6 +128,8 @@ void trim_decoded_locked() noexcept {
 void put_decoded(
     const std::filesystem::path& path,
     const negaflow::imageio::ImageFileObservation& observation,
+    const std::uint32_t box_width,
+    const std::uint32_t box_height,
     std::shared_ptr<const negaflow::imaging::WorkingImage> image) noexcept {
     if (image == nullptr) {
         return;
@@ -121,7 +138,8 @@ void put_decoded(
         const std::lock_guard<std::mutex> guard{g_decoded_mutex};
         for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
             DecodedSourceEntry& existing = g_decoded_sources[index];
-            if (existing.path != path) {
+            if (existing.path != path ||
+                existing.box_width != box_width || existing.box_height != box_height) {
                 continue;
             }
             if (negaflow::imageio::same_image_file_observation(
@@ -141,6 +159,8 @@ void put_decoded(
         DecodedSourceEntry entry{};
         entry.path = path;
         entry.observation = observation;
+        entry.box_width = box_width;
+        entry.box_height = box_height;
         entry.source_image = std::move(image);
         g_decoded_sources.push_back(std::move(entry));
         trim_decoded_locked();
@@ -246,10 +266,24 @@ std::optional<DevelopExportOutcome> decode_source(
     negaflow::imaging::WorkingImage& decoded_image,
     const PreviewTarget* preview) noexcept {
     tracker.begin(DevelopExportStage::decode, cost_of(decode_cost, true));
+    // 전체 해상도가 필요한 조건은 아래 두 갈래가 같습니다 - defect 편집의 ROI 가 원본 화소
+    // 좌표라 프리뷰 크기로 줄이면 그 좌표가 화상 밖으로 나갑니다.
+    const bool decodes_full_resolution =
+        preview == nullptr || !request.defect_recipe.order.empty();
+    // **요청 상자가 무엇이든 디코드는 정착 크기로 한 번만 합니다.**
+    //
+    // 앱은 한 프레임에 인터랙티브(2560)와 정착(3600)을 이어서 부릅니다. 요청 상자 그대로
+    // 풀면 같은 파일을 두 번 풀고(실기: 1,982 ms + 2,047 ms), 캐시에도 두 벌이 남아
+    // 프레임당 메모리가 두 배가 됩니다. 정착 크기 한 벌만 두면 인터랙티브는 그것을
+    // 줄여 쓰면 됩니다 — `preview_proxy_materialize` 가 이미 Lanczos 로 줄입니다.
+    const std::uint32_t box_width =
+        decodes_full_resolution ? 0U : preview_full_max_dimension;
+    const std::uint32_t box_height =
+        decodes_full_resolution ? 0U : preview_full_max_dimension;
     // 잠금은 참조를 꺼낼 때만 잡습니다. 277MB 복사를 잠금 안에서 하면 다른 스레드가
     // 그동안 통째로 멈춥니다 — 참조를 들고 있으므로 복사 중에 해제되지 않습니다.
     if (const std::shared_ptr<const negaflow::imaging::WorkingImage> cached =
-            take_decoded(request.source, observed.before.observation)) {
+            take_decoded(request.source, observed.before.observation, box_width, box_height)) {
         try {
             decoded_image = *cached;
         } catch (...) {
@@ -272,11 +306,9 @@ std::optional<DevelopExportOutcome> decode_source(
         // 줄면 그 좌표가 작아진 이미지 밖으로 나가 defect 단계 전체가 invalid_argument 로
         // 끝납니다(실제 OpticFilm8100_frame_7: 5088x3401 기준 roi (1332,3340) 52x36 을
         // 1536x1026 이미지에 적용). brush 와 clone 은 정규화 좌표라 크기와 무관합니다.
-        const bool requires_full_resolution_cleaned_raw =
-            !request.defect_recipe.order.empty();
-        if (!requires_full_resolution_cleaned_raw) {
-            decode_control.max_output_width = preview->maximum_width;
-            decode_control.max_output_height = preview->maximum_height;
+        if (!decodes_full_resolution) {
+            decode_control.max_output_width = box_width;
+            decode_control.max_output_height = box_height;
         }
         decode_control.validate_compressed_streams = false;
     }
@@ -331,9 +363,9 @@ std::optional<DevelopExportOutcome> decode_source(
         // (실측: 2.2~13.1 초, 7 장에 peak 1,232 MB). 전체 해상도가 필요한 조건은 위와
         // 같습니다 - defect 편집의 ROI 가 원본 화소 좌표이기 때문입니다.
         negaflow::imageio::WicStandardImageDecodeControl standard_control{};
-        if (preview != nullptr && request.defect_recipe.order.empty()) {
-            standard_control.max_output_width = preview->maximum_width;
-            standard_control.max_output_height = preview->maximum_height;
+        if (!decodes_full_resolution) {
+            standard_control.max_output_width = box_width;
+            standard_control.max_output_height = box_height;
             standard_control.prefer_speed = true;
         }
         const negaflow::imageio::WicStandardImageDecodeResult decoded =
@@ -376,15 +408,18 @@ std::optional<DevelopExportOutcome> decode_source(
             DevelopExportStage::observe_source_after, "source_changed_during_decode");
     }
 
-    if (preview == nullptr || !request.defect_recipe.order.empty()) {
-        try {
-            put_decoded(
-                request.source,
-                observed.before.observation,
-                std::make_shared<const negaflow::imaging::WorkingImage>(decoded_image));
-        } catch (...) {
-            // 캐시에 못 남겨도 이번 디코드 결과는 `decoded_image` 에 있습니다.
-        }
+    // **프리뷰도 담습니다.** 예전에는 프리뷰를 빼 두어서, 슬라이더를 움직이는 동안 도는
+    // 정착 패스가 디코드 도중 취소될 때마다 아무것도 남기지 못하고 다음 번에 처음부터 다시
+    // 풀었습니다. 크기를 함께 담으므로 내보내기가 작은 화상을 집어갈 위험은 없습니다.
+    try {
+        put_decoded(
+            request.source,
+            observed.before.observation,
+            box_width,
+            box_height,
+            std::make_shared<const negaflow::imaging::WorkingImage>(decoded_image));
+    } catch (...) {
+        // 캐시에 못 남겨도 이번 디코드 결과는 `decoded_image` 에 있습니다.
     }
 
     tracker.finish();

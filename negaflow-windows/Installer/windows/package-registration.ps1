@@ -1,7 +1,7 @@
 ﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory)]
-    [ValidateSet('Register', 'Unregister', 'EnsureRuntime')]
+    [ValidateSet('Register', 'Unregister', 'EnsureRuntime', 'EnableLoosePackageRegistration')]
     [string]$Action,
 
     [string]$ManifestPath,
@@ -57,6 +57,42 @@ function Invoke-BoundedAppxOperation {
     }
     Receive-Job -Job $job
     Remove-Job -Job $job -Force
+}
+
+if ($Action -eq 'EnableLoosePackageRegistration') {
+    # negaflow 는 서명하지 않은 **느슨한 패키지**로 등록됩니다(ADR-0027 이 코드 서명을 접었고,
+    # 그래서 MSIX 가 아니라 NSIS + `Add-AppxPackage -Register` 입니다). Windows 는 그 등록을
+    # `AllowDevelopmentWithoutDevLicense` 로 막아 두고, 깨끗한 PC 는 그 값이 없습니다.
+    #
+    # 개발 기계와 CI 러너는 둘 다 이 값이 1 이라 여태 드러나지 않았습니다 - 2026-08-26 CI
+    # 로그에 러너 값을 찍어 확인했습니다. "여기서는 되더라" 가 사용자 PC 를 증명하지 못하는
+    # 자리가 정확히 이것입니다.
+    #
+    # HKLM 이라 관리자가 필요합니다. 설치 자체는 사용자 영역 그대로 두고 이 한 단계만
+    # 올립니다. 32 비트로 실행돼도 64 비트 하이브를 보도록 base key 를 직접 엽니다 —
+    # 리디렉션된 Wow6432Node 에 써 두면 Windows 는 그것을 보지 않습니다.
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    if (-not ([Security.Principal.WindowsPrincipal]$identity).IsInRole(
+            [Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        throw 'Enabling loose-package registration requires administrator rights.'
+    }
+    $base = [Microsoft.Win32.RegistryKey]::OpenBaseKey(
+        [Microsoft.Win32.RegistryHive]::LocalMachine,
+        [Microsoft.Win32.RegistryView]::Registry64)
+    try {
+        $key = $base.CreateSubKey('SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock', $true)
+        try {
+            $key.SetValue('AllowDevelopmentWithoutDevLicense', 1, [Microsoft.Win32.RegistryValueKind]::DWord)
+            $written = $key.GetValue('AllowDevelopmentWithoutDevLicense')
+        }
+        finally { $key.Dispose() }
+    }
+    finally { $base.Dispose() }
+    if ($written -ne 1) {
+        throw "AllowDevelopmentWithoutDevLicense is '$written' after the write."
+    }
+    Write-Host 'AllowDevelopmentWithoutDevLicense=1 (loose-package registration is allowed).'
+    exit 0
 }
 
 if ($Action -eq 'Unregister') {

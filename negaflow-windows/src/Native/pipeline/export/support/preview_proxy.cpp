@@ -13,7 +13,8 @@ namespace negaflow::pipeline::develop_export_detail {
 namespace {
 
 // DevelopFrameRenderer.fullMaxDimension — 정착 슬롯 경계.
-constexpr double full_max_dimension = 3600.0;
+constexpr double full_max_dimension =
+    static_cast<double>(preview_full_max_dimension);
 
 // macOS `cachedPreviewRaw(for:maxDimension:)`:
 //   maxDimension >= DevelopFrameRenderer.fullMaxDimension - 0.5 이면 정착 슬롯.

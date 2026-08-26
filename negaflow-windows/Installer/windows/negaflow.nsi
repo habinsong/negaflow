@@ -65,6 +65,16 @@ Var RegisterLog
 ; 출력은 `Pop` 한 레지스터에만 있고, 무인 설치에는 그것을 보여 줄 화면이 없습니다.
 ; CI 에서 25 분을 기다린 뒤 남은 것이 "설치가 안 끝났다" 한 줄뿐이었던 까닭입니다.
 ; 실패한 자리와 플러그인 출력을 파일로 남겨, 검증 스크립트가 그대로 찍게 합니다.
+!macro LogValue label value
+  ClearErrors
+  FileOpen $R9 "$RegisterLog" a
+  ${IfNot} ${Errors}
+    FileSeek $R9 0 END
+    FileWrite $R9 "== ${label} = ${value} ==$\r$\n"
+    FileClose $R9
+  ${EndIf}
+!macroend
+
 !macro LogExec label code output
   ClearErrors
   FileOpen $R9 "$RegisterLog" a
@@ -107,6 +117,33 @@ Section "Install"
     RMDir /r "$Staging"
     MessageBox MB_ICONSTOP "Windows App Runtime 을 설치할 수 없습니다. Windows 업데이트를 마친 뒤 다시 시도하십시오." /SD IDOK
     Abort "Windows App Runtime installation failed: $1"
+  ${EndIf}
+
+  ; --- 느슨한 패키지 등록 허용 ---
+  ;
+  ; negaflow 는 서명하지 않은 느슨한 패키지로 등록됩니다(ADR-0027 이 코드 서명을 접었습니다).
+  ; Windows 는 그 등록을 `AllowDevelopmentWithoutDevLicense` 로 막아 두고, **깨끗한 PC 에는
+  ; 그 값이 없습니다.** 개발 기계도 CI 러너도 둘 다 1 이라 여태 드러나지 않았습니다 —
+  ; 2026-08-26 CI 로그에 러너 값을 찍어 확인했습니다.
+  ;
+  ; HKLM 이라 관리자가 필요합니다. 설치 자체는 사용자 영역 그대로 두고 이 한 단계만 올립니다.
+  ; NSIS 는 32 비트라 리디렉션을 끄고 64 비트 하이브를 봐야 합니다.
+  SetRegView 64
+  ReadRegDWORD $2 HKLM "Software\Microsoft\Windows\CurrentVersion\AppModelUnlock" "AllowDevelopmentWithoutDevLicense"
+  SetRegView lastused
+  ${If} $2 != 1
+    ${If} ${Silent}
+      ; 무인 설치는 관리자 확인을 띄울 수 없습니다. 건너뛰고 그 사실을 남깁니다.
+      !insertmacro LogValue "loose-package-registration" "silent-skipped"
+    ${Else}
+      MessageBox MB_YESNO|MB_ICONQUESTION "Negaflow 를 등록하려면 Windows 설정을 한 번 바꿔야 합니다.$\n$\n서명하지 않은 앱 패키지의 등록을 허용하는 설정이며 관리자 확인이 필요합니다. 건너뛰면 설치가 등록 단계에서 실패합니다.$\n$\n지금 바꿀까요?" /SD IDYES IDNO SkipUnlock
+      ExecShellWait "runas" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -ExecutionPolicy Bypass -File "$Staging\package-registration.ps1" -Action EnableLoosePackageRegistration' SW_SHOWMINIMIZED
+      SkipUnlock:
+    ${EndIf}
+    SetRegView 64
+    ReadRegDWORD $2 HKLM "Software\Microsoft\Windows\CurrentVersion\AppModelUnlock" "AllowDevelopmentWithoutDevLicense"
+    SetRegView lastused
+    !insertmacro LogValue "loose-package-registration-allowed" $2
   ${EndIf}
 
   ; A previous loose package points at the live directory. Unregister it

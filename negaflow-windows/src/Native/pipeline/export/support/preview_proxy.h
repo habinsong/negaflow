@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "export/stages/observe.h"
 #include "export/support/preview.h"
 
@@ -10,6 +12,10 @@
 #include <optional>
 
 namespace negaflow::pipeline::develop_export_detail {
+
+/// macOS `DevelopFrameRenderer.fullMaxDimension` — 정착 프리뷰의 긴 변입니다.
+/// 디코드는 요청 상자가 무엇이든 **이 크기로 한 번만** 풉니다.
+inline constexpr std::uint32_t preview_full_max_dimension = 3600U;
 
 // macOS `cachedInteractivePreviewRaw` / `cachedSettledPreviewRaw`.
 // 디코드·결함 뒤, 반전 전의 linear raw 프록시입니다.

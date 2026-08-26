@@ -20,6 +20,20 @@ internal sealed class DevelopedPreviewDiskCache : IAsyncDisposable
     private readonly Channel<Action> queue =
         Channel.CreateUnbounded<Action>(new UnboundedChannelOptions { SingleReader = true });
     private readonly ConcurrentDictionary<string, ulong> versions = new(StringComparer.Ordinal);
+    /// <summary>
+    /// 디스크에 **없다고 확인된** 자리입니다.
+    /// </summary>
+    /// <remarks>
+    /// 이 캐시가 비어 있는 것은 고장이 아니라 정상입니다 — 방금 가져온 사진에는 정착본이
+    /// 없습니다. 그런데 <see cref="Load"/> 가 없는 파일을 열어 <c>FileNotFoundException</c>
+    /// 으로 판정하고 있었고, 같은 자리를 화면이 다시 그릴 때마다 반복했습니다. 실기 한
+    /// 세션에서 <b>5,714 회</b>였습니다(2026-08-26 <c>startup-first-chance.txt</c>).
+    /// 예외 하나하나가 스택을 뜨므로, 사진을 넘기는 그 순간에 그 값을 그대로 냅니다.
+    ///
+    /// 없다는 사실을 기억해 두 번째부터는 디스크도 예외도 건드리지 않습니다. 쓰기가 끝나면
+    /// 그 자리를 지웁니다.
+    /// </remarks>
+    private readonly ConcurrentDictionary<string, byte> knownAbsent = new(StringComparer.Ordinal);
     private readonly Task worker;
     private ulong clearGeneration;
 
@@ -37,6 +51,15 @@ internal sealed class DevelopedPreviewDiskCache : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(expected);
         string path = PathFor(frame.Id);
+        if (knownAbsent.ContainsKey(path))
+        {
+            return null;
+        }
+        if (!File.Exists(path))
+        {
+            knownAbsent[path] = 0;
+            return null;
+        }
         try
         {
             using FileStream stream = new(
@@ -110,6 +133,15 @@ internal sealed class DevelopedPreviewDiskCache : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(expected);
         string path = PathFor(frame.Id);
+        if (knownAbsent.ContainsKey(path))
+        {
+            return false;
+        }
+        if (!File.Exists(path))
+        {
+            knownAbsent[path] = 0;
+            return false;
+        }
         try
         {
             using FileStream stream = new(
@@ -191,7 +223,9 @@ internal sealed class DevelopedPreviewDiskCache : IAsyncDisposable
             {
                 return;
             }
-            Write(PathFor(frame.Id), frame.Id, identity, pixels, width, height, required);
+            string written = PathFor(frame.Id);
+            _ = knownAbsent.TryRemove(written, out _);
+            Write(written, frame.Id, identity, pixels, width, height, required);
             Prune();
         });
     }
@@ -200,13 +234,16 @@ internal sealed class DevelopedPreviewDiskCache : IAsyncDisposable
     {
         ArgumentException.ThrowIfNullOrEmpty(frameId);
         versions.AddOrUpdate(frameId, 1UL, static (_, current) => current + 1UL);
-        queue.Writer.TryWrite(() => TryDeleteFile(PathFor(frameId)));
+        string removed = PathFor(frameId);
+        knownAbsent[removed] = 0;
+        queue.Writer.TryWrite(() => TryDeleteFile(removed));
     }
 
     internal Task ClearAsync()
     {
         Interlocked.Increment(ref clearGeneration);
         versions.Clear();
+        knownAbsent.Clear();
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         queue.Writer.TryWrite(() =>
         {
