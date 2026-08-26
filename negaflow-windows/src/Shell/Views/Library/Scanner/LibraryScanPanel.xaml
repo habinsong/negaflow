@@ -176,17 +176,21 @@
                                             Style="{StaticResource NegaflowScannerPlainButtonStyle}" />
                                     </Grid>
                                     <Border Height="1" Margin="0,1" Background="{ThemeResource NegaflowDividerBrush}" />
-                                    <!--  색 모드 칸은 내용 크기입니다. 반씩 나누면 "Gray (불안정)"
-                                          처럼 긴 문구가 언어에 따라 잘립니다.  -->
+                                    <!--  가로를 정확히 반씩 나눕니다. 양쪽이 같은 `*` 이므로
+                                          가운데 작대기가 줄의 한가운데에 섭니다. 두 칸은
+                                          `Stretch` 로 제 몫을 다 쓰고 글자만 왼쪽·오른쪽으로
+                                          붙습니다 — 내용 크기로 두면 "Gray (불안정)" 같은 긴
+                                          문구가 제 칸을 못 쓰고 잘립니다.  -->
                                     <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
                                         <ComboBox
                                             x:Name="ScanResolutionSelector" x:FieldModifier="internal"
-                                            HorizontalAlignment="Left"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Left"
                                             AutomationProperties.AutomationId="negaflow.library.scan.resolution"
                                             SelectionChanged="OnScanResolutionChanged" />
                                         <TextBlock
@@ -198,7 +202,8 @@
                                         <ComboBox
                                             x:Name="ScanColorModeSelector" x:FieldModifier="internal"
                                             Grid.Column="2"
-                                            HorizontalAlignment="Right"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Right"
                                             AutomationProperties.AutomationId="negaflow.library.scan.color-mode"
                                             SelectionChanged="OnScanColorModeChanged" />
                                     </Grid>

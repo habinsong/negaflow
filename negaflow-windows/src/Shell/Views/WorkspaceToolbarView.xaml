@@ -19,7 +19,9 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid x:Name="TitleBarRoot" Grid.Row="0" Padding="12,6,10,6">
+        <!--  세로 여백을 두지 않습니다. `MenuBar` 는 제 높이를 가지는데 위아래 6 씩
+              깎으면 글자 아랫부분이 잘립니다. 각 요소가 스스로 가운데에 섭니다.  -->
+        <Grid x:Name="TitleBarRoot" Grid.Row="0" Padding="12,0,10,0">
         <Grid.ColumnDefinitions>
             <ColumnDefinition x:Name="LeftCaptionInsetColumn" Width="0" />
             <ColumnDefinition Width="Auto" />
