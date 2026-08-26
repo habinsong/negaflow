@@ -368,6 +368,18 @@
                 <Setter Property="FontWeight" Value="SemiBold" />
             </Style>
 
+            <!--  도구줄의 동작 단추입니다. 평소에는 배경이 없고, 마우스를 올리거나 누를
+                  때만 음영이 보입니다 — 기본 단추는 늘 네모난 바탕을 깔아, 넷이 나란히
+                  있으면 줄 전체가 상자로 보입니다. 올림·누름 음영은 기본 서식이 그대로
+                  줍니다(`ButtonBackgroundPointerOver`·`ButtonBackgroundPressed`).  -->
+            <Style x:Key="NegaflowToolbarActionButtonStyle" TargetType="Button">
+                <Setter Property="Height" Value="24" />
+                <Setter Property="Padding" Value="5,0" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="CornerRadius" Value="6" />
+            </Style>
+
             <Style x:Key="NegaflowToolbarIconButtonStyle" TargetType="Button">
                 <Setter Property="Width" Value="26" />
                 <Setter Property="Height" Value="24" />

@@ -40,6 +40,9 @@ public sealed partial class WorkspaceToolbarView : UserControl
 
     public UIElement TitleBarElement => TitleBarRoot;
 
+    /// <summary>메뉴줄입니다. 제목 표시줄 첫 칸에 있고, 신호는 셸이 받습니다.</summary>
+    internal AppMenuBarView Menu => MenuBar;
+
     /// <summary>
     /// 제목 표시줄 안에서 **끌기가 아니라 누르기**로 동작해야 하는 자리입니다.
     /// </summary>
@@ -48,28 +51,8 @@ public sealed partial class WorkspaceToolbarView : UserControl
     /// 여기 남겨 두면 제목 표시줄 밖의 좌표를 상호작용 영역으로 등록하게 됩니다.
     /// </remarks>
     public IReadOnlyList<FrameworkElement> TitleBarInteractiveElements =>
-        [MenuHost, ActiveFrameContainer, RightToolbarCluster];
+        [MenuBar, ActiveFrameContainer, RightToolbarCluster];
 
-    /// <summary>메뉴줄을 제목 표시줄 첫 칸에 답니다.</summary>
-    public void HostMenu(UIElement menu)
-    {
-        ArgumentNullException.ThrowIfNull(menu);
-        MenuHost.Child = menu;
-        TitleBarInteractiveRegionsChanged?.Invoke(this, EventArgs.Empty);
-    }
-
-    /// <summary>
-    /// 스캔·내보내기 단추를 떼어 돌려줍니다. 처리기는 이 화면이 계속 들고 있으므로
-    /// 자리만 옮겨도 동작은 그대로입니다.
-    /// </summary>
-    public UIElement DetachPrimaryControls()
-    {
-        if (PrimaryControls.Parent is Panel parent)
-        {
-            _ = parent.Children.Remove(PrimaryControls);
-        }
-        return PrimaryControls;
-    }
 
     public void UpdateCaptionInsets(double left, double right)
     {
@@ -94,6 +77,9 @@ public sealed partial class WorkspaceToolbarView : UserControl
         if (libraryHost is not null)
         {
             libraryHost.SelectionChanged += OnLibrarySelectionChanged;
+            // 별·깃발·제외는 라이브러리 카드·메뉴·단축키에서도 바뀝니다. 이 줄이 없으면
+            // 도구줄 가운데가 옛 값에 멈춰 있습니다.
+            libraryHost.FrameEdited += OnLibraryFrameEdited;
         }
         UpdateState(state.Current);
         UpdateActiveFrame();
@@ -101,6 +87,13 @@ public sealed partial class WorkspaceToolbarView : UserControl
     }
 
     private void OnLibrarySelectionChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        UpdateActiveFrame();
+    }
+
+    private void OnLibraryFrameEdited(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
@@ -451,6 +444,7 @@ public sealed partial class WorkspaceToolbarView : UserControl
         if (libraryHost is not null)
         {
             libraryHost.SelectionChanged -= OnLibrarySelectionChanged;
+            libraryHost.FrameEdited -= OnLibraryFrameEdited;
         }
     }
 }

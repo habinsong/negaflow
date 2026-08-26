@@ -315,7 +315,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
 
-        bool sameRecipe = await GrainMendDetectionToken.SameDevelopRecipeAsync(selected, current);
+        // **별·깃발·제외는 현상 레시피가 아닙니다.** 레시피만 보면 도구줄이나 라이브러리
+        // 카드에서 준 별이 필름스트립에 뜨지 않습니다 — 세 화면이 같은 값을 보여야 합니다.
+        bool sameMarks = selected.Rating == current.Rating &&
+            selected.PickState == current.PickState;
+        bool sameRecipe = sameMarks &&
+            await GrainMendDetectionToken.SameDevelopRecipeAsync(selected, current);
         if (generation != frameEditRefreshGeneration || sameRecipe ||
             !ReferenceEquals(panel?.SelectedFrame, selected) ||
             libraryHost is not { } currentHost ||

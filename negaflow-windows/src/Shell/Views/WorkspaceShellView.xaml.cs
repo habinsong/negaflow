@@ -32,16 +32,6 @@ public sealed partial class WorkspaceShellView : UserControl
         {
             InitializeComponent();
         }
-        // **첫째 줄이 제목 표시줄입니다.** 메뉴는 셸이 이름으로 들고 있어야 하고(신호를
-        // 여기서 받습니다) 동작 단추의 처리기는 툴바가 들고 있으므로, 둘 다 만들어진 뒤
-        // 자리만 옮깁니다.
-        if (AppMenu.Parent is Panel menuParent)
-        {
-            _ = menuParent.Children.Remove(AppMenu);
-        }
-        AppMenu.Visibility = Visibility.Visible;
-        Toolbar.HostMenu(AppMenu);
-        ActionBarHost.Child = Toolbar.DetachPrimaryControls();
         Toolbar.TitleBarInteractiveRegionsChanged += OnToolbarTitleBarInteractiveRegionsChanged;
     }
 
@@ -57,6 +47,9 @@ public sealed partial class WorkspaceShellView : UserControl
     public event EventHandler? TitleBarInteractiveRegionsChanged;
 
     public UIElement TitleBarElement => Toolbar.TitleBarElement;
+
+    /// <summary>메뉴줄은 도구줄의 첫 줄 안에 있습니다.</summary>
+    private AppMenuBarView AppMenu => Toolbar.Menu;
 
     public IReadOnlyList<FrameworkElement> TitleBarInteractiveElements => Toolbar.TitleBarInteractiveElements;
 
@@ -281,6 +274,12 @@ public sealed partial class WorkspaceShellView : UserControl
         // 인화 미리보기는 현상뷰와 같은 그림이어야 합니다. macOS 는 프레임 관찰로 저절로
         // 따라오지만 WinUI 는 알려 주지 않으면 옛 그림에 멈춰 있습니다.
         PrintWorkspace.NotifyFrameEdited();
+        // **라이브러리 격자도 같은 프레임을 보고 있습니다.** 별·깃발·제외는 카드에도 붙어
+        // 있으므로, 여기서 알리지 않으면 도구줄에서 준 별이 카드에 뜨지 않습니다.
+        if (libraryHost is { } host)
+        {
+            LibraryWorkspace.ShowLibrary(host, LibraryWorkspace.importWindowId ?? default);
+        }
     }
 
     private void OnLibraryContentChanged(

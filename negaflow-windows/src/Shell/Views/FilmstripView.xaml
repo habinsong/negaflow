@@ -8,6 +8,7 @@
     <UserControl.Resources>
         <controls:FilmTypeNameConverter x:Key="FilmTypeNameConverter" />
         <controls:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <controls:PickStateBrushConverter x:Key="PickStateBrushConverter" />
     </UserControl.Resources>
     <Grid x:Name="Root" Background="{ThemeResource NegaflowBarBrush}">
         <Grid.RowDefinitions>
@@ -138,6 +139,16 @@
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                     Glyph="&#xE91B;"
                                     Visibility="{Binding IsThumbnailPending, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <!--  깃발·제외는 라이브러리 카드와 같은 자리·같은 색입니다.
+                                      세 화면이 같은 표시를 보여야 합니다.  -->
+                                <FontIcon
+                                    Margin="4"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Top"
+                                    FontSize="11"
+                                    Foreground="{Binding PickState, Converter={StaticResource PickStateBrushConverter}}"
+                                    Glyph="{Binding PickGlyph}"
+                                    Visibility="{Binding IsFlagged, Converter={StaticResource BooleanToVisibilityConverter}}" />
                             </Grid>
 
                             <TextBlock
