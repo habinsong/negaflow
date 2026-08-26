@@ -26,6 +26,53 @@ public sealed partial class MainWindow : Window
     private AboutNegaflowWindow? aboutWindow;
     private QuickStartHelpWindow? quickStartHelpWindow;
 
+    private void OnLoadingIconOpened(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        Diagnostics.StartupTrace.Mark("로고 이미지 열림");
+        logoReady = true;
+        StartShellWhenLogoIsUp();
+    }
+
+    private void OnLoadingIconFailed(object sender, ExceptionRoutedEventArgs args)
+    {
+        _ = sender;
+        Diagnostics.StartupTrace.Mark("로고 이미지 실패: " + args.ErrorMessage);
+        // 그림이 없어도 이름은 보입니다. 셸 만들기를 붙잡아 둘 이유가 없습니다.
+        logoReady = true;
+        StartShellWhenLogoIsUp();
+    }
+
+    private bool logoReady;
+
+    private bool shellStarted;
+
+    /// <summary>
+    /// 로고가 <b>화면에 나온 뒤</b>에 셸을 만듭니다.
+    /// </summary>
+    /// <remarks>
+    /// 셸을 만드는 동안 UI 스레드는 통째로 막힙니다(실측 1 초). 그 전에 시작하면 그림 디코딩이
+    /// 끝나도 그것을 화면에 올릴 차례가 오지 않아, 로고는 셸이 다 만들어진 뒤에야 나타납니다 -
+    /// 즉 보여 줄 시간에는 없습니다. 실측으로 그림이 4.30 초에야 열렸고 오버레이는 2.99 초에
+    /// 이미 걷혔습니다.
+    ///
+    /// 그림이 준비되고 한 프레임이 더 그려진 뒤에 시작합니다. 그림이 없어도(실패해도) 이름은
+    /// 보이므로 그때도 곧바로 시작합니다.
+    /// </remarks>
+    private void StartShellWhenLogoIsUp()
+    {
+        if (shellStarted || !logoReady || !firstFrameSeen)
+        {
+            return;
+        }
+        shellStarted = true;
+        Diagnostics.StartupTrace.Mark("로고 표시됨 - 셸 만들기 시작");
+        _ = DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+            CompleteInitialization);
+    }
+
     private bool firstFrameSeen;
 
     private void OnFirstRendered(object? sender, object args)
@@ -38,13 +85,8 @@ public sealed partial class MainWindow : Window
         }
         firstFrameSeen = true;
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= OnFirstRendered;
-        Diagnostics.StartupTrace.Mark("첫 프레임 그려짐 (로고)");
-        // 로고가 화면에 나왔습니다. 이제 셸을 만듭니다 - 그 값이 아무리 커도 사용자는
-        // 빈 화면이 아니라 로고를 보고 있습니다. 이 프레임을 끝내고 시작하도록 한 차례
-        // 뒤로 넘깁니다.
-        _ = DispatcherQueue.TryEnqueue(
-            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
-            CompleteInitialization);
+        Diagnostics.StartupTrace.Mark("첫 프레임 그려짐");
+        StartShellWhenLogoIsUp();
 
     }
 
