@@ -1,5 +1,6 @@
 #include "negaflow/imaging/film_emulation_color.h"
 
+#include "negaflow/core/pointwise.h"
 #include "negaflow/imaging/kernel_accelerator.h"
 
 #include "film_emulation_profiles.h"
@@ -421,42 +422,28 @@ negaflow::core::KernelStatus apply_film_emulation_color_cube(
         }
     }
 
-    for (std::uint32_t row = 0U; row < input.height; ++row) {
-        const std::size_t input_offset =
-            static_cast<std::size_t>(row) * input.stride_pixels;
-        const std::size_t output_offset =
-            static_cast<std::size_t>(row) * output.stride_pixels;
-        for (std::uint32_t column = 0U; column < input.width; ++column) {
-            const negaflow::core::Rgba32F source =
-                input.pixels[input_offset + column];
+    // 화소마다 sRGB 왕복(`pow`)과 삼선형 보간이 돕니다. 엔진의 화소별 헬퍼가 행끼리
+    // 나눠 돌며 — 행이 서로를 보지 않으므로 값은 그대로이고, 첫 실패 행을 가장 작은
+    // 것으로 모아 돌려주는 규칙도 그대로입니다.
+    return negaflow::core::transform_validated_pointwise(
+        input,
+        output,
+        [cube](const negaflow::core::Rgba32F source) noexcept {
             const FilmEmulationCubeEntry encoded = sample_cube(
                 *cube,
                 std::clamp(
-                    negaflow::color::linear_to_srgb_encoded(source.red),
-                    0.0F,
-                    1.0F),
+                    negaflow::color::linear_to_srgb_encoded(source.red), 0.0F, 1.0F),
                 std::clamp(
-                    negaflow::color::linear_to_srgb_encoded(source.green),
-                    0.0F,
-                    1.0F),
+                    negaflow::color::linear_to_srgb_encoded(source.green), 0.0F, 1.0F),
                 std::clamp(
-                    negaflow::color::linear_to_srgb_encoded(source.blue),
-                    0.0F,
-                    1.0F));
-            const negaflow::core::Rgba32F result{
+                    negaflow::color::linear_to_srgb_encoded(source.blue), 0.0F, 1.0F));
+            return negaflow::core::Rgba32F{
                 negaflow::color::srgb_encoded_to_linear(encoded.red),
                 negaflow::color::srgb_encoded_to_linear(encoded.green),
                 negaflow::color::srgb_encoded_to_linear(encoded.blue),
                 source.alpha,
             };
-            if (!std::isfinite(result.red) || !std::isfinite(result.green) ||
-                !std::isfinite(result.blue)) {
-                return negaflow::core::KernelStatus::non_finite_output;
-            }
-            output.pixels[output_offset + column] = result;
-        }
-    }
-    return negaflow::core::KernelStatus::ok;
+        });
 }
 
 } // namespace negaflow::imaging

@@ -167,6 +167,7 @@ installed WIC codecs cannot open a file.
 | Component | Version | License | Shipped payload |
 |---|---|---|---|
 | LibRaw | 0.22.2+df226ea | **LGPL-2.1** or **CDDL-1.0** (dual; we distribute under LGPL-2.1) | `libraw.dll` |
+| Microsoft OpenMP runtime | 14.51.36231 (VC++ 2015-2022 redistributable) | Microsoft Visual C++ Redistributable licence (redistributable component) | `vcomp140.dll` |
 
 - Upstream source: <https://github.com/LibRaw/LibRaw/archive/df226ea4178ccd74245f4f13c23adddfa01411c9.tar.gz>
 - Upstream SHA-256: `06a37602a3f80b3e309e7ce704e6bb277c8298e162cde81e925a784ddf0fce21`
@@ -181,6 +182,13 @@ installed WIC codecs cannot open a file.
   source, and verifies that the fifteen C API entry points negaflow resolves are
   actually exported. No optional LibRaw dependency (RawSpeed, Adobe DNG SDK,
   LCMS, libjpeg) is enabled, so `libraw.dll` pulls in no further third-party code.
+- **Built with `/openmp`.** LibRaw's demosaic carries 44 OpenMP regions and stock
+  `Makefile.msvc` leaves them switched off, which left a Fuji X-Trans export at
+  14.1 s where the same file takes 4.5 s with them on. The only added payload is
+  Microsoft's own OpenMP runtime, `vcomp140.dll`, which the build script copies
+  from the installed Visual C++ redistributable directory; the C runtime stays
+  statically linked (`/MT`). `libraw.dll` will not load without it, so the two
+  ship and install together.
 - The source is **not modified**. We build stock LibRaw at that commit.
 
 ### Why this does not change the native engine's zero-dependency statement
@@ -192,6 +200,10 @@ fail with the same message any undecodable file gets). This is the same
 arrangement as `e_sqlite3.dll` in section 3.
 
 ### LGPL-2.1 obligations a distribution must meet
+
+`vcomp140.dll` is Microsoft's redistributable OpenMP runtime, shipped under the
+Visual C++ Redistributable licence that permits redistribution with an
+application. It is not LibRaw code and carries no LGPL obligation of its own.
 
 1. Ship the licence text. `LICENSE.LGPL` and `LICENSE.CDDL` come from the LibRaw
    source archive; `scripts/build-libraw.ps1` copies both, plus `COPYRIGHT` and

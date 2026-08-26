@@ -1,5 +1,6 @@
 #include "negaflow/imaging/digital_film_grain.h"
 
+#include "negaflow/core/parallel_rows.h"
 #include "negaflow/imaging/kernel_accelerator.h"
 
 #include <algorithm>
@@ -163,24 +164,32 @@ DigitalFilmGrainResult apply_digital_film_grain_material(
             }
         }
     }
-    for (std::uint32_t y = 0U; y < result.image.height; ++y) {
-        for (std::uint32_t x = 0U; x < result.image.width; ++x) {
-            auto& pixel = result.image.pixels[
-                static_cast<std::size_t>(y) * result.image.stride_pixels + x];
-            std::array<float, 3> noise{
-                scaled_noise(x, y, 0U, profile.size) - 0.5F,
-                scaled_noise(x, y, 1U, profile.size) - 0.5F,
-                scaled_noise(x, y, 2U, profile.size) - 0.5F,
-            };
-            const float luma = (noise[0] + noise[1] + noise[2]) / 3.0F;
-            for (float& value : noise) {
-                value = luma + (value - luma) * chroma;
+    // 알갱이는 **좌표 해시**라 이웃을 보지 않습니다. 행끼리 독립이므로 코어로 나눠도
+    // 값이 그대로입니다. 화소마다 잡음 셋과 밀도 응답(`log10`·`sqrt`·`exp`·`pow`)이
+    // 도므로, 넘기는 몫도 그만큼 세어 문턱을 넘깁니다(`parallel_rows.h`).
+    negaflow::core::for_each_row_block(
+        result.image.height,
+        static_cast<std::uint64_t>(result.image.width) * result.image.height * 12U,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
+                for (std::uint32_t x = 0U; x < result.image.width; ++x) {
+                    auto& pixel = result.image.pixels[
+                        static_cast<std::size_t>(y) * result.image.stride_pixels + x];
+                    std::array<float, 3> noise{
+                        scaled_noise(x, y, 0U, profile.size) - 0.5F,
+                        scaled_noise(x, y, 1U, profile.size) - 0.5F,
+                        scaled_noise(x, y, 2U, profile.size) - 0.5F,
+                    };
+                    const float luma = (noise[0] + noise[1] + noise[2]) / 3.0F;
+                    for (float& value : noise) {
+                        value = luma + (value - luma) * chroma;
+                    }
+                    pixel.red = apply_channel(pixel.red, noise[0], amplitude);
+                    pixel.green = apply_channel(pixel.green, noise[1], amplitude);
+                    pixel.blue = apply_channel(pixel.blue, noise[2], amplitude);
+                }
             }
-            pixel.red = apply_channel(pixel.red, noise[0], amplitude);
-            pixel.green = apply_channel(pixel.green, noise[1], amplitude);
-            pixel.blue = apply_channel(pixel.blue, noise[2], amplitude);
-        }
-    }
+        });
     result.info.kernel_status =
         negaflow::core::validate_finite_pixels(const_view(result.image));
     if (result.info.kernel_status != negaflow::core::KernelStatus::ok) {

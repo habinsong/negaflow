@@ -107,8 +107,12 @@ foreach ($sub in @('bin', 'lib', 'object')) {
     if (Test-Path $stale) { Get-ChildItem -LiteralPath $stale -File | Remove-Item -Force }
 }
 
-Write-Host "MSVC x64 로 libraw.dll 을 빌드한다 (정적 CRT)"
-& cmd /c "`"$vcvars`" >nul 2>&1 && cd /d `"$sourceDir`" && nmake -f Makefile.msvc COPT_OPT=/MT bin\libraw.dll"
+# **OpenMP 를 켠다.** LibRaw 에는 `#pragma omp` 가 44 곳 있고, 그 대부분이 디모자이크다.
+# 끄고 빌드하면 한 장을 내보내는 데 코어 하나만 쓴다 - 실측(제조사별 RAW 8 장, TIFF16,
+# 한 장씩): 50.2 초에서 30.4 초로, 가장 느린 Fujifilm X-Trans 는 14.11 초에서 4.49 초로
+# 줄었다. 출력은 같다. 대가는 `vcomp140.dll` 한 개이며, 설치본에 함께 싣는다.
+Write-Host "MSVC x64 로 libraw.dll 을 빌드한다 (정적 CRT · OpenMP)"
+& cmd /c "`"$vcvars`" >nul 2>&1 && cd /d `"$sourceDir`" && nmake -f Makefile.msvc COPT_OPT=`"/MT /openmp`" bin\libraw.dll"
 if ($LASTEXITCODE -ne 0) { throw "libraw.dll 빌드가 실패했다 (exit $LASTEXITCODE)." }
 
 $built = Join-Path $sourceDir 'bin\libraw.dll'
@@ -123,7 +127,23 @@ if ($dynamicCrt) {
     throw ("libraw.dll 이 아직 Visual C++ 재배포 런타임을 요구한다: " +
         "$($dynamicCrt -join ', '). /MT 가 먹지 않았다.")
 }
-Write-Host "CRT 정적 링크 확인 (Visual C++ 재배포 런타임 요구 없음)"
+# OpenMP 런타임 하나만 예외다. 정적으로 링크할 수 없는 대신 설치본에 함께 싣는다.
+if ($imports -notmatch 'VCOMP140') {
+    throw 'libraw.dll 이 OpenMP 를 쓰지 않는다. /openmp 가 먹지 않았다.'
+}
+Write-Host "CRT 정적 링크 확인 · OpenMP 켜짐 (필요한 곁 DLL 은 vcomp140.dll 하나)"
+
+# 그 vcomp140.dll 을 배포 자료와 같은 자리에 놓는다. 설치본을 만드는 쪽이 집어간다.
+$redistRoot = Join-Path $vsPath 'VC\Redist\MSVC'
+$openMpRuntime = Get-ChildItem -LiteralPath $redistRoot -Recurse -Filter 'vcomp140.dll' -ErrorAction SilentlyContinue |
+    Where-Object { $_.FullName -match '\\x64\\' } |
+    Sort-Object FullName |
+    Select-Object -Last 1
+if ($null -eq $openMpRuntime) {
+    throw "vcomp140.dll (x64) 을 못 찾았다: $redistRoot. Visual Studio 의 OpenMP 재배포 구성 요소가 필요하다."
+}
+Copy-Item -LiteralPath $openMpRuntime.FullName -Destination $OutputDirectory -Force
+Write-Host "OpenMP 런타임: $($openMpRuntime.FullName)"
 
 # ── 4. C API 심볼이 전부 있는지 확인한다 ─────────────────────────────────────
 # 없는 심볼이 하나라도 있으면 native 쪽 `libraw_decoder_available()` 이 통째로 거부하므로,

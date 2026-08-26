@@ -185,6 +185,15 @@ try {
     }
     Copy-Item -LiteralPath $librawDll -Destination $payloadDirectory -Force
 
+    # LibRaw 는 OpenMP 로 디모자이크를 코어에 나눕니다. 그 런타임은 정적으로 링크할 수 없어
+    # 곁에 둡니다 - 없으면 libraw.dll 이 아예 로드되지 않습니다. `build-libraw.ps1` 이 Visual
+    # Studio 의 재배포 자리에서 골라 놓아 둔 것을 그대로 집습니다.
+    $openMpRuntime = Join-Path (Split-Path -Parent $librawDll) 'vcomp140.dll'
+    if (-not (Test-Path -LiteralPath $openMpRuntime -PathType Leaf)) {
+        throw "OpenMP runtime is missing: $openMpRuntime. Run scripts\build-libraw.ps1."
+    }
+    Copy-Item -LiteralPath $openMpRuntime -Destination $payloadDirectory -Force
+
     $librawLicenseDirectory = Join-Path $projectRoot 'build-libraw\redistributable'
     $librawNoticeDirectory = Join-Path $payloadDirectory 'licenses\libraw'
     New-Item -ItemType Directory -Force -Path $librawNoticeDirectory | Out-Null
@@ -227,6 +236,7 @@ try {
         'NOTICE',
         'THIRD-PARTY-NOTICES.md',
         'libraw.dll',
+        'vcomp140.dll',
         'licenses\libraw\LICENSE.LGPL',
         'licenses\libraw\LICENSE.CDDL',
         'licenses\libraw\COPYRIGHT',
