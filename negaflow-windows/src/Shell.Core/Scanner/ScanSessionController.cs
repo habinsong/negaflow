@@ -472,6 +472,13 @@ public sealed class ScanSessionController
         IsScanning = true;
         LastFailureName = null;
         RaiseChanged();
+        // **취소권은 세션이 가집니다.** 스캔 패널은 라이브러리뷰와 현상뷰 양쪽에 하나씩
+        // 있고 각자 자기 실행을 들고 있었습니다. 그런데 취소 단추가 보이는 조건은 공유되는
+        // `IsScanning` 이라, 스캔을 시작하지 않은 쪽 패널에서도 단추가 떴고 그것을 누르면
+        // 자기에게는 끊을 것이 없어 **아무 일도 일어나지 않았습니다.**
+        using CancellationTokenSource run =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        activeRun = run;
         try
         {
             ScanRunExecution execution = await ScanRunCoordinator.RunAsync(
@@ -486,7 +493,7 @@ public sealed class ScanSessionController
                 guidedCarryover,
                 GuidedCarryoverPublished,
                 framePublished,
-                cancellationToken,
+                run.Token,
                 Progress).ConfigureAwait(false);
             LastFailureName = execution.FailureName;
             if (execution.PreviewPath is not null)
@@ -513,10 +520,39 @@ public sealed class ScanSessionController
         }
         finally
         {
+            if (ReferenceEquals(activeRun, run))
+            {
+                activeRun = null;
+            }
             IsScanning = false;
             _ = dispatcher.TryEnqueue(() => RaiseChanged());
         }
     }
+
+    /// <summary>돌고 있는 스캔을 멈춥니다. 어느 화면의 취소 단추든 이리로 옵니다.</summary>
+    /// <returns>멈출 것이 있었으면 <see langword="true"/> 입니다.</returns>
+    public bool CancelActiveRun()
+    {
+        if (activeRun is not { IsCancellationRequested: false } run)
+        {
+            ScannerDiagnosticsLog.Write("cancel requested but no run is active");
+            return false;
+        }
+        ScannerDiagnosticsLog.Write("cancel requested - stopping the active run");
+        try
+        {
+            run.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 방금 끝났습니다. 멈출 것이 없습니다.
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>지금 돌고 있는 실행입니다. 없으면 <see langword="null"/> 입니다.</summary>
+    private CancellationTokenSource? activeRun;
 
     private ImageTransformRecipe? InitialTransformForRegion(
         int regionIndex,

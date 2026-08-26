@@ -160,6 +160,9 @@ internal sealed class LibraryGridSelection
         }
     }
 
+    /// <summary>마지막으로 화면을 옮겨 준 사진입니다. 같은 사진이면 다시 옮기지 않습니다.</summary>
+    private string? scrolledToFrameId;
+
     internal void Synchronize(IReadOnlyList<LibraryFrameListItem> visibleItems)
     {
         if (view.libraryHost is null)
@@ -186,7 +189,17 @@ internal sealed class LibraryGridSelection
             {
                 // 마지막에 넣은 항목이 WinUI의 active item이 되므로 multi-selection도 보존됩니다.
                 view.FrameListView.SelectedItems.Add(active);
-                view.FrameListView.ScrollIntoView(active);
+                // **고른 사진이 바뀌었을 때만 그 자리로 옮깁니다.**
+                //
+                // 앞 판은 격자를 다시 그릴 때마다 옮겼습니다. 폴더를 접거나 펴면 목록이 다시
+                // 지어지고 선택도 다시 맞춰지는데, 그때마다 화면이 고른 사진 자리로 뛰었습니다 -
+                // 사용자는 접기만 눌렀는데 보던 자리를 잃습니다. 선택이 그대로면 보던 자리도
+                // 그대로여야 합니다.
+                if (!string.Equals(scrolledToFrameId, activeFrameId, StringComparison.Ordinal))
+                {
+                    scrolledToFrameId = activeFrameId;
+                    view.FrameListView.ScrollIntoView(active);
+                }
             }
         }
         finally

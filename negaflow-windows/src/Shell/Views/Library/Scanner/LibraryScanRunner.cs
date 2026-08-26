@@ -13,8 +13,22 @@ internal sealed class LibraryScanRunner
 
     internal LibraryScanRunner(LibraryScanPanel view) => this.view = view;
 
-    /// <summary>macOS <c>cancelScan()</c> — 스캔 중에만 뜨는 취소 단추가 부릅니다.</summary>
-    internal void Cancel() => running?.Cancel();
+    /// <summary>
+    /// macOS <c>cancelScan()</c> — 스캔 중에만 뜨는 취소 단추가 부릅니다.
+    /// </summary>
+    /// <remarks>
+    /// **세션에게 먼저 청합니다.** 스캔 패널은 라이브러리뷰와 현상뷰 양쪽에 하나씩 있고 각자
+    /// 자기 실행만 들고 있는데, 취소 단추가 보이는 조건은 공유되는 <c>IsScanning</c> 입니다.
+    /// 그래서 스캔을 시작하지 않은 쪽에서 누르면 끊을 것이 없어 아무 일도 없었습니다 - 눌러도
+    /// 스캔이 끝까지 도는 것으로 보였습니다. 실행은 하나뿐이므로 세션이 들고 있어야 합니다.
+    ///
+    /// 자기 것도 함께 끊습니다 - 세션이 아직 실행을 잡기 전의 짧은 창을 위해서입니다.
+    /// </remarks>
+    internal void Cancel()
+    {
+        _ = view.scanSession?.CancelActiveRun();
+        running?.Cancel();
+    }
 
     /// <summary>
     /// 스캔해서 카탈로그에 게시하고 격자를 다시 그립니다. 목적지는 매 장마다 새로 고르므로

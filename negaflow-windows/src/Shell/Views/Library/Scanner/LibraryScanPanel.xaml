@@ -370,12 +370,14 @@
                                         <Button
                                             x:Name="ScanPreviewButton" x:FieldModifier="internal"
                                             HorizontalAlignment="Stretch"
+                                            CornerRadius="16"
                                             AutomationProperties.AutomationId="negaflow.library.scan.preview"
                                             Click="OnScanPreviewClicked" />
                                         <Button
                                             x:Name="ScanStartButton" x:FieldModifier="internal"
                                             Grid.Column="1"
                                             HorizontalAlignment="Stretch"
+                                            CornerRadius="16"
                                             AutomationProperties.AutomationId="negaflow.library.scan.start"
                                             Click="OnScanStartClicked"
                                             Style="{StaticResource AccentButtonStyle}" />
@@ -385,6 +387,7 @@
                                             x:Name="ScanCancelButton" x:FieldModifier="internal"
                                             Grid.Column="1"
                                             HorizontalAlignment="Stretch"
+                                            CornerRadius="16"
                                             AutomationProperties.AutomationId="negaflow.library.scan.cancel"
                                             Click="OnScanCancelClicked"
                                             Style="{StaticResource NegaflowScannerPlainButtonStyle}"
