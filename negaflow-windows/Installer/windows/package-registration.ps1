@@ -8,8 +8,10 @@ param(
 
     # 등록이 멈추면 설치 프로그램이 그대로 매달립니다. CI 는 그것을 25 분 뒤 orphan 으로
     # 끝내고, 어디서 멈췄는지는 아무 데도 남지 않습니다.
+    # 설치 프로그램은 등록을 한 번 더 시도합니다. 상한이 크면 그 두 번이 그대로 잡 시간을
+    # 먹으므로, 한 번에 3 분을 넘기지 않게 둡니다 - 정상 등록은 실측으로 수 초입니다.
     [ValidateRange(30, 1800)]
-    [int]$RegisterTimeoutSeconds = 300
+    [int]$RegisterTimeoutSeconds = 180
 )
 
 $ErrorActionPreference = 'Stop'

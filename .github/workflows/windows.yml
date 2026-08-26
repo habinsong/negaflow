@@ -92,7 +92,10 @@ jobs:
     name: x64 installer smoke
     needs: [native, managed]
     runs-on: windows-2025
-    timeout-minutes: 25
+    # 이 잡은 설치 프로그램을 **처음부터** 짓고(네이티브 포함, 실측 14분 28초) 그것을 무인
+    # 설치·실행·제거까지 합니다. 25 분으로는 빌드가 끝나면 검증에 10 분밖에 남지 않아,
+    # 등록이 조금만 늦어도 잡이 통째로 취소되고 무엇이 늦었는지는 남지 않습니다.
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: negaflow-windows
