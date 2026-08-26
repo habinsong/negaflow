@@ -151,12 +151,10 @@ public partial class App : Application
             mainWindow.Activate();
         }
         Diagnostics.StartupTrace.Mark("window shown");
-        // 창이 뜬 **뒤에** 셸을 채웁니다. 같은 UI 스레드의 다음 차례로 넘기므로 창은 이미
-        // 그려져 있고, 사용자는 검은 화면 대신 화면이 채워지는 것을 봅니다.
-        if (mainWindow is MainWindow shell)
-        {
-            _ = shell.DispatcherQueue.TryEnqueue(shell.CompleteInitialization);
-        }
+        // 셸을 채우는 것은 **첫 프레임이 실제로 그려진 뒤**에 시작합니다
+        // (`MainWindow.OnFirstRendered`). 여기서 큐에 넣으면 그 항목이 렌더보다 먼저 돌아
+        // UI 스레드를 붙잡고, 로딩 화면이 한 번도 그려지지 못한 채 검은 화면이 이어집니다 -
+        // 실측으로 창은 0.82 초에 떴는데 첫 렌더는 3.01 초였습니다.
         Diagnostics.StartupTrace.Mark("OnLaunched done");
     }
 

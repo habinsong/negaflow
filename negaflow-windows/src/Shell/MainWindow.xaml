@@ -6,7 +6,14 @@
     xmlns:views="using:Negaflow.Shell.Views"
     Title="negaflow">
     <Grid x:Name="WindowRoot">
-        <views:WorkspaceShellView x:Name="ShellView" />
+        <!--  셸이 들어올 자리입니다. **비어 있습니다.**
+
+              셸을 여기 적어 두면 그 XAML(실측 800ms)이 창을 띄우기 전에 펴지고, 그동안
+              사용자는 아무 것도 없는 창 - 검은 화면 - 을 봅니다. 로딩 화면도 같은 XAML 에
+              있으니 그때는 아직 존재하지도 않아 보일 수가 없습니다.
+
+              창은 로딩 화면만 갖고 즉시 뜨고, 셸은 그 뒤에 코드로 만들어 여기 넣습니다.  -->
+        <Grid x:Name="ShellHost" x:FieldModifier="internal" />
 
         <!--  뜨는 동안 보이는 화면입니다.
 

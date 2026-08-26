@@ -13,6 +13,12 @@ public sealed partial class MainWindow : Window
     private readonly PresentationSettingsStore settingsStore;
     private readonly WorkspacePresentationState workspaceState;
     /// <summary>창을 띄운 뒤에 열립니다 - 그 전에는 <see langword="null"/> 입니다.</summary>
+    /// <summary>
+    /// 셸입니다. 창을 띄운 <b>뒤</b>에 만들어 <c>ShellHost</c> 에 넣습니다 - XAML 에 적어 두면
+    /// 그 값이 창 등장 앞에 놓여 검은 화면이 됩니다.
+    /// </summary>
+    private Views.WorkspaceShellView ShellView { get; set; } = null!;
+
     private LibraryHostService? libraryHost;
     private Negaflow.Shell.Library.ThumbnailService? thumbnails;
     private SettingsWindow? settingsWindow;
@@ -32,9 +38,13 @@ public sealed partial class MainWindow : Window
         }
         firstFrameSeen = true;
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= OnFirstRendered;
-        Diagnostics.StartupTrace.Mark("첫 프레임 그려짐");
-        // 셸이 그려졌으니 로딩 화면을 걷습니다.
-        LoadingOverlay.Visibility = Visibility.Collapsed;
+        Diagnostics.StartupTrace.Mark("첫 프레임 그려짐 (로고)");
+        // 로고가 화면에 나왔습니다. 이제 셸을 만듭니다 - 그 값이 아무리 커도 사용자는
+        // 빈 화면이 아니라 로고를 보고 있습니다. 이 프레임을 끝내고 시작하도록 한 차례
+        // 뒤로 넘깁니다.
+        _ = DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+            CompleteInitialization);
 
     }
 
@@ -49,7 +59,11 @@ public sealed partial class MainWindow : Window
         ShellView.Loaded += OnShellLoaded;
         ShellView.SizeChanged += OnShellSizeChanged;
         ShellView.Loaded += (_, _) =>
+        {
             Diagnostics.StartupTrace.Mark("shell Loaded (첫 레이아웃)");
+            // 셸이 자리를 잡았으니 이제 로고를 걷습니다.
+            LoadingOverlay.Visibility = Visibility.Collapsed;
+        };
         SetTitleBar(ShellView.TitleBarElement);
     }
 
@@ -92,9 +106,14 @@ public sealed partial class MainWindow : Window
         // 창의 네임스코프에서 셸을 찾지 못해 그 뒤가 통째로 `NullReferenceException` 이었고,
         // 앱이 죽는 것을 실기에서 확인했습니다. 창을 더 빨리 띄우려면 그 자리부터 풀어야
         // 합니다.
-        WireShell();
         pendingInitialization = () =>
         {
+            using (Diagnostics.StartupTrace.Measure("ShellView 만들기"))
+            {
+                ShellView = new Views.WorkspaceShellView();
+                ShellHost.Children.Add(ShellView);
+            }
+            WireShell();
             using (Diagnostics.StartupTrace.Measure("OpenLibrary"))
             {
                 libraryHost = openLibrary();
