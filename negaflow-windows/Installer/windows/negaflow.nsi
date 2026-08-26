@@ -78,9 +78,9 @@ VIAddVersionKey "LegalCopyright" "Copyright 2026 Song Habin"
 !define MUI_HEADERIMAGE_UNBITMAP_STRETCH AspectFitHeight
 
 !define MUI_WELCOMEFINISHPAGE_BITMAP "${BRANDING}\welcome.bmp"
-!define MUI_WELCOMEFINISHPAGE_BITMAP_STRETCH AspectFill
+!define MUI_WELCOMEFINISHPAGE_BITMAP_STRETCH FitControl
 !define MUI_UNWELCOMEFINISHPAGE_BITMAP "${BRANDING}\welcome.bmp"
-!define MUI_UNWELCOMEFINISHPAGE_BITMAP_STRETCH AspectFill
+!define MUI_UNWELCOMEFINISHPAGE_BITMAP_STRETCH FitControl
 
 !define MUI_WELCOMEPAGE_TITLE "$(NegaflowWelcomeTitle)"
 !define MUI_WELCOMEPAGE_TEXT "$(NegaflowWelcomeText)"
@@ -326,9 +326,20 @@ Section "Uninstall"
     Abort "Package unregistration failed: $1"
   ${EndIf}
 
+  ; 패키지 신원을 막 지운 참이라 **배포 서비스가 아직 이 폴더를 붙들고 있습니다.**
+  ; 곧바로 옮기면 공유 위반으로 실패하고, 그러면 제거가 앱 폴더를 통째로 남긴 채
+  ; 끝납니다 - 2026-08-27 로컬 CI 가 그렇게 실패했습니다. 손을 뗄 때까지 기다립니다.
+  ; 30 초를 넘기면 그때는 정말로 Negaflow 가 떠 있는 것입니다.
+  StrCpy $2 0
+  negaflow_uninstall_rename:
   ClearErrors
   Rename "$INSTDIR" "$INSTDIR.removing"
   ${If} ${Errors}
+    IntOp $2 $2 + 1
+    ${If} $2 < 60
+      Sleep 500
+      Goto negaflow_uninstall_rename
+    ${EndIf}
     MessageBox MB_ICONSTOP "Negaflow를 제거할 수 없습니다. 실행 중인 Negaflow를 닫고 다시 시도하십시오." /SD IDOK
     Abort "Negaflow is running."
   ${EndIf}
