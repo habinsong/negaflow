@@ -192,25 +192,25 @@ public static class ScannerPluginProcessHost
         }
         catch (OutputLimitException)
         {
-            await StopProcessTreeAsync(process);
+            StopProcessTree(process);
             await DrainAfterStopAsync(outputTask, errorTask);
             return new(ScannerPluginProcessStatus.OutputLimitExceeded, ExitCode(process), [], string.Empty);
         }
         catch (OperationCanceledException) when (timeout.IsCancellationRequested)
         {
-            await StopProcessTreeAsync(process);
+            StopProcessTree(process);
             await DrainAfterStopAsync(outputTask, errorTask);
             return new(ScannerPluginProcessStatus.TimedOut, ExitCode(process), [], string.Empty);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            await StopProcessTreeAsync(process);
+            StopProcessTree(process);
             await DrainAfterStopAsync(outputTask, errorTask);
             return new(ScannerPluginProcessStatus.Cancelled, ExitCode(process), [], string.Empty);
         }
         catch (IOException)
         {
-            await StopProcessTreeAsync(process);
+            StopProcessTree(process);
             await DrainAfterStopAsync(outputTask, errorTask);
             return new(ScannerPluginProcessStatus.Failed, ExitCode(process), [], string.Empty);
         }
@@ -324,37 +324,30 @@ public static class ScannerPluginProcessHost
     }
 
     /// <summary>
-    /// 플러그인을 멈춥니다. <b>정상 종료를 먼저 청하고</b>, 그래도 안 끝날 때만 죽입니다.
+    /// 플러그인 프로세스 나무를 내립니다.
     /// </summary>
     /// <remarks>
-    /// 앞 판은 곧바로 <see cref="Process.Kill(bool)"/> 이었습니다. 그것은
-    /// <c>TerminateProcess</c> 라 <c>sane_cancel()</c> 이 불리지 않고, 전송 도중에 죽은
-    /// 스캐너는 헤드가 홈으로 돌아가지 못한 채 남아 <b>전원을 다시 넣기 전까지 어떤 요청에도
-    /// 답하지 않습니다.</b> 스캔을 취소할 때마다 그 뒤 장치를 못 찾던 것이 이것입니다.
+    /// **정상 종료를 청하는 길은 되돌렸습니다.**
     ///
-    /// 플러그인은 콘솔 제어 이벤트를 받아 <c>scanimage</c> 에 CTRL_BREAK → 유예 → Job 종료의
-    /// 3단계를 적용하도록 이미 만들어져 있습니다. 보내는 쪽이 없었을 뿐입니다.
+    /// 콘솔 제어 이벤트로 `sane_cancel()` 을 부르게 하려 했으나, 그러려면 플러그인의 콘솔에
+    /// 우리도 잠시 붙어야 하고 그 콘솔에 보낸 `CTRL_BREAK_EVENT` 를 **앱 자신이 함께 받습니다**.
+    /// `SetConsoleCtrlHandler(NULL, TRUE)` 는 MSDN 계약상 CTRL+C 만 무시하게 하고
+    /// CTRL_BREAK 는 막지 못합니다 - 실기에서 취소를 누를 때마다 앱이 그대로 꺼졌고,
+    /// 그 바람에 스캐너까지 전송 도중에 죽었습니다.
+    ///
+    /// 강제 종료는 `sane_cancel()` 을 부르지 않으므로 취소 뒤 스캐너가 물릴 수 있습니다.
+    /// 그것은 여전히 고쳐야 할 일이지만, **앱이 꺼지는 것보다는 낫습니다.** 제대로 하려면
+    /// 앱 수명 내내 살아 있는 제어 처리기를 두어 그 신호를 삼켜야 하고, 그것은 따로
+    /// 검증한 뒤에 넣습니다.
     /// </remarks>
-    private static async Task StopProcessTreeAsync(Process process)
+    private static void StopProcessTree(Process process)
     {
         try
         {
-            if (process.HasExited)
+            if (!process.HasExited)
             {
-                return;
+                process.Kill(entireProcessTree: true);
             }
-            if (await ScannerPluginGracefulStop
-                    .TryStopAsync(process, ScannerPluginGracefulStop.DefaultGrace)
-                    .ConfigureAwait(false))
-            {
-                ScannerDiagnosticsLog.Write("plugin stopped gracefully - the scanner was told to cancel");
-                return;
-            }
-            // 여기까지 왔으면 강제 종료입니다. 그 사실을 남깁니다 - 이 뒤에 장치가 물리면
-            // 원인을 추측하지 않아도 됩니다.
-            ScannerDiagnosticsLog.Write(
-                "plugin did not stop in time - forcing the tree down; the scanner may need a power cycle");
-            process.Kill(entireProcessTree: true);
         }
         catch (InvalidOperationException)
         {
