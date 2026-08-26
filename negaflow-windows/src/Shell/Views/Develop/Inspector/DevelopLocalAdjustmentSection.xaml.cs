@@ -27,7 +27,10 @@ public sealed partial class DevelopLocalAdjustmentSection : UserControl
 
     public DevelopLocalAdjustmentSection()
     {
-        InitializeComponent();
+        using (Negaflow.Shell.Diagnostics.StartupTrace.Measure("  DevelopLocalAdjustmentSection"))
+        {
+            InitializeComponent();
+        }
         // RangeBase 는 현재 Value 보다 큰 Minimum 을 XBF 로딩 중 바로 적용하지 못합니다.
         // 기본값을 유효 범위 안으로 옮긴 뒤 최소값을 완성합니다.
         LocalSizeSlider.Value = 0.005;

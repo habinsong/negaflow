@@ -15,7 +15,10 @@ public sealed partial class DevelopSourceSidebar : UserControl
 
     public DevelopSourceSidebar()
     {
-        InitializeComponent();
+        using (Negaflow.Shell.Diagnostics.StartupTrace.Measure("  DevelopSourceSidebar"))
+        {
+            InitializeComponent();
+        }
         SourceRail.TabClicked += OnRailTabClicked;
         FilesPanel.FrameSelected += OnChildFrameSelected;
         LibraryPanel.FrameSelected += OnChildFrameSelected;

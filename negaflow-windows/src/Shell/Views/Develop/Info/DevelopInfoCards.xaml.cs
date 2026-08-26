@@ -19,7 +19,10 @@ public sealed partial class DevelopInfoCards : UserControl
 
     public DevelopInfoCards()
     {
-        InitializeComponent();
+        using (Negaflow.Shell.Diagnostics.StartupTrace.Measure("  DevelopInfoCards"))
+        {
+            InitializeComponent();
+        }
         AppMetadata.Committed += OnAppMetadataCommitted;
         FilmShot.Committed += OnAppMetadataCommitted;
         RollCard.Committed += OnRollRecordCommitted;

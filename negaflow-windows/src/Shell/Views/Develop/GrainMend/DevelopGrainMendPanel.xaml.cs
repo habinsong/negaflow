@@ -34,7 +34,10 @@ public sealed partial class DevelopGrainMendPanel : UserControl
 
     public DevelopGrainMendPanel()
     {
-        InitializeComponent();
+        using (Negaflow.Shell.Diagnostics.StartupTrace.Measure("  DevelopGrainMendPanel"))
+        {
+            InitializeComponent();
+        }
         chrome = new DevelopGrainMendChrome(this);
         detector = new DevelopGrainMendDetector(this);
         review = new DevelopGrainMendReview(this);

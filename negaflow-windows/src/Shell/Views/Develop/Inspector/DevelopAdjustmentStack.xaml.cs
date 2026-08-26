@@ -13,7 +13,10 @@ public sealed partial class DevelopAdjustmentStack : UserControl
 {
     public DevelopAdjustmentStack()
     {
-        InitializeComponent();
+        using (Negaflow.Shell.Diagnostics.StartupTrace.Measure("  DevelopAdjustmentStack"))
+        {
+            InitializeComponent();
+        }
         Tone.ToggleRequested += (_, _) => RaiseToggle(DevelopInspectorSection.Tone);
         Tone.ExpansionRequested += (_, args) => RaiseExpansion(DevelopInspectorSection.Tone, args);
         Tone.PreviewRequested += OnChildPreview;

@@ -109,11 +109,9 @@ public partial class App : Application
         var workspaceState = new WorkspacePresentationState(settingsStore);
         try
         {
-            LibraryHostService? opened;
-            using (Diagnostics.StartupTrace.Measure("OpenLibrary"))
-            {
-                opened = OpenLibrary();
-            }
+            // **카탈로그는 창 뒤에 엽니다.** 창을 띄우기 전에 읽으면 그 시간(실측 310ms)
+            // 동안 화면에 아무 것도 없습니다. 셸 초기화가 이미 창 뒤로 갔으므로, 그것이
+            // 쓰기 직전에 열면 됩니다.
             NativeEngineStatusService engineStatus;
             using (Diagnostics.StartupTrace.Measure("engine status"))
             {
@@ -125,8 +123,8 @@ public partial class App : Application
                     settingsStore,
                     workspaceState,
                     engineStatus,
-                    opened,
-                    thumbnails);
+                    OpenLibrary,
+                    () => thumbnails);
             }
         }
         catch (Exception exception)

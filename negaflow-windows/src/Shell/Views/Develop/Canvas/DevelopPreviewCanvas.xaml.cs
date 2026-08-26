@@ -44,7 +44,10 @@ public sealed partial class DevelopPreviewCanvas : UserControl
 
     public DevelopPreviewCanvas()
     {
-        InitializeComponent();
+        using (Negaflow.Shell.Diagnostics.StartupTrace.Measure("  DevelopPreviewCanvas"))
+        {
+            InitializeComponent();
+        }
         // HUD 끌기는 안쪽 단추가 눌림을 먼저 먹어도 받아야 합니다 — `HookHud` 주석 참고.
         HookHud(CompareHud, CanvasHudKind.Compare);
         HookHud(ZoomHud, CanvasHudKind.Zoom);

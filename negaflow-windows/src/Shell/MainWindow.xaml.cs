@@ -12,8 +12,9 @@ public sealed partial class MainWindow : Window
 {
     private readonly PresentationSettingsStore settingsStore;
     private readonly WorkspacePresentationState workspaceState;
-    private readonly LibraryHostService? libraryHost;
-    private readonly Negaflow.Shell.Library.ThumbnailService? thumbnails;
+    /// <summary>창을 띄운 뒤에 열립니다 - 그 전에는 <see langword="null"/> 입니다.</summary>
+    private LibraryHostService? libraryHost;
+    private Negaflow.Shell.Library.ThumbnailService? thumbnails;
     private SettingsWindow? settingsWindow;
     private DiagnosticsWindow? diagnosticsWindow;
     private AboutNegaflowWindow? aboutWindow;
@@ -57,13 +58,13 @@ public sealed partial class MainWindow : Window
         PresentationSettingsStore settingsStore,
         WorkspacePresentationState workspaceState,
         NativeEngineStatusService nativeEngineStatusService,
-        LibraryHostService? libraryHost = null,
-        Negaflow.Shell.Library.ThumbnailService? thumbnails = null)
+        Func<LibraryHostService?> openLibrary,
+        Func<Negaflow.Shell.Library.ThumbnailService?> thumbnailsFactory)
     {
+        ArgumentNullException.ThrowIfNull(openLibrary);
+        ArgumentNullException.ThrowIfNull(thumbnailsFactory);
         this.settingsStore = settingsStore;
         this.workspaceState = workspaceState;
-        this.libraryHost = libraryHost;
-        this.thumbnails = thumbnails;
         using (Diagnostics.StartupTrace.Measure("MainWindow.InitializeComponent"))
         {
             InitializeComponent();
@@ -74,12 +75,22 @@ public sealed partial class MainWindow : Window
         // **셸 초기화는 창을 띄운 뒤로 미룹니다.** 생성자에서 끝내면 그 시간만큼 창이
         // 아예 뜨지 않아 사용자는 검은 화면을 봅니다 - 실측으로 창이 2.02 초에 떴고 그중
         // 0.39 초가 이 초기화였습니다. 창을 먼저 내놓고 같은 UI 스레드에서 이어서 채웁니다.
-        pendingInitialization = () => ShellView.Initialize(
-            workspaceState,
-            nativeEngineStatusService,
-            libraryHost,
-            AppWindow.Id,
-            thumbnails);
+        pendingInitialization = () =>
+        {
+            // 카탈로그 열기도 여기서 합니다 - 창을 띄우기 전에 하면 그 시간 동안 화면이
+            // 비어 있습니다.
+            using (Diagnostics.StartupTrace.Measure("OpenLibrary"))
+            {
+                libraryHost = openLibrary();
+            }
+            thumbnails = thumbnailsFactory();
+            ShellView.Initialize(
+                workspaceState,
+                nativeEngineStatusService,
+                libraryHost,
+                AppWindow.Id,
+                thumbnails);
+        };
 
         ShellView.SettingsRequested += OnSettingsRequested;
         ShellView.DiagnosticsRequested += OnDiagnosticsRequested;
