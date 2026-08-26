@@ -130,7 +130,7 @@ public static class ScannerPluginProcessHost
                 return new(ScannerPluginProcessStatus.LaunchFailed, null, [], string.Empty);
             }
             // 앱이 **강제로** 죽어도 이 자식과 그 자손이 같이 죽게 묶습니다. 안 묶으면
-            // `scanimage` 가 고아로 남아 USB 스캐너를 물고, 다음 실행의 장치 탐색이
+            // 플러그인의 자식 프로세스가 고아로 남아 USB 스캐너를 물고, 다음 실행의 장치 탐색이
             // 90초 시간 초과로 "스캐너 없음" 이 됩니다.
             ScannerPluginJobObject.Bind(process);
         }
