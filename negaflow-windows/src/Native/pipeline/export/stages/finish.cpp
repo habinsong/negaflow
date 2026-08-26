@@ -112,10 +112,9 @@ std::optional<DevelopExportOutcome> apply_finish_stages(
     // **GPU 를 먼저 시도하고, 처리하지 못했으면 CPU 로 갑니다.**
     // CPU 판의 주석 원문 — *"On a 17 MP scan this stage was by far the most expensive
     // in the whole develop."* 그래서 프리뷰·검출에서 이것이 가장 크게 체감됩니다.
-    // 내보내기는 `cpu_only` 라 값이 그대로입니다.
-    const GpuUsePolicy gpu_policy = (preview != nullptr || detect != nullptr)
-        ? GpuUsePolicy::allowed
-        : GpuUsePolicy::cpu_only;
+    // 내보내기도 같은 정책입니다 — 맥이 현상 미리보기와 같은 Metal 컨텍스트로 파일을
+    // 내므로(`develop_export.cpp` 의 설명), 여기만 CPU 로 두면 갈래가 다시 갈립니다.
+    const GpuUsePolicy gpu_policy = GpuUsePolicy::allowed;
     negaflow::imaging::FilmScanDenoiseResult film_scan_denoise{};
     const GpuDenoiseOutcome accelerated_denoise =
         GpuAccelerator::shared().apply_film_scan_denoise(

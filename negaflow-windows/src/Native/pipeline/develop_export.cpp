@@ -124,15 +124,27 @@ using develop_export_detail::validate_request;
     if (auto failed = validate_request(request, preview, detect)) {
         return *failed;
     }
-    // 값이 바이트까지 같아야 하는 경로(내보내기·골든)는 CPU 로 둡니다. 사용자가 기다리는
-    // 프리뷰·검출에서만 GPU 를 켭니다 — `gpu_accelerator.h` 의 정책표.
+    // **내보내기도 GPU 를 씁니다. 맥이 그렇게 합니다.**
+    //
+    // 예전에는 여기서 내보내기만 `cpu_only` 로 묶었습니다 — "값이 바이트까지 같아야 한다" 는
+    // 이유였는데, 맥에는 그런 갈래가 없었습니다. `DevelopFrameRenderer.sharedRenderContext`
+    // 는 `CIContext(mtlCommandQueue:)` 이고, `ExportFramePipeline` 이 내보낼 때 부르는
+    // `renderContext()` 가 바로 그것입니다. 즉 맥은 현상 미리보기와 **같은 Metal 컨텍스트**로
+    // 파일을 냅니다. 윈도우만 CPU 로 도는 것은 맥에 없는 세금이었고, 사용자 기계의
+    // RTX 4060 Ti 가 내보내기 내내 놀았습니다.
+    //
+    // 골든이 흔들리지 않는 것도 확인했습니다. 맥 골든
+    // (`film_emulation_core_image_golden_fixture.h`, macOS 26.5.2)의 허용오차는 2.1e-3 이고,
+    // GPU 와 CPU 의 실측 차이는 4.2e-07(그레인)·0(할레이션)입니다. CLI 산출물 시험도 화소
+    // 해시를 보지 않습니다(`artifact_sha256_mode: off`).
     //
     // 이 판정을 **여기서** 합니다. 반전 단계가 아래에서 도는데, 그 단계 안의 GPU 가속은
     // `ApproximateAcceleratorScope` 를 보고 켜지므로 스코프가 먼저 열려 있어야 합니다.
     // 스코프는 스레드마다 따로라 다른 스레드의 내보내기는 영향을 안 받습니다.
-    const GpuUsePolicy gpu_policy = (preview != nullptr || detect != nullptr)
-        ? GpuUsePolicy::allowed
-        : GpuUsePolicy::cpu_only;
+    //
+    // GPU 가 없거나 자리를 못 잡으면 가속기가 이미지를 손대지 않고 물러나고, 그 자리의 CPU
+    // 판이 그대로 이어집니다 — 없는 기계에서도 결과가 나옵니다.
+    const GpuUsePolicy gpu_policy = GpuUsePolicy::allowed;
     std::optional<negaflow::imaging::ApproximateAcceleratorScope> approximate_scope{};
     if (gpu_policy == GpuUsePolicy::allowed) {
         install_gpu_kernel_accelerator();

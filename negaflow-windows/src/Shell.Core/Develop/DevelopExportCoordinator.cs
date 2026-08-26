@@ -182,8 +182,14 @@ public sealed class DevelopExportCoordinator
     /// <para>
     /// 6 을 넘으면 시간이 평평해지고 메모리만 오릅니다. 그래서 코어에서 뽑은 값과 설치
     /// 메모리에서 뽑은 값 중 작은 쪽을 씁니다 — 코어가 많아도 메모리가 작으면 겹치는 만큼
-    /// 스왑으로 갑니다. 한 장이 도는 동안 원본 디코드와 working 이미지가 함께 상주하며,
-    /// 위 측정의 기울기는 장당 약 400MB 입니다.
+    /// 스왑으로 갑니다. 한 장이 도는 동안 원본 디코드와 working 이미지가 함께 상주합니다.
+    /// </para>
+    /// <para>
+    /// **기울기는 장당 약 1,070MB 입니다.** 예전 값 400MB 는 내보내기가 CPU 로만 돌던 때의
+    /// 것입니다. 지금은 맥과 같이 GPU 로 내므로 단계마다 업로드·다운로드 버퍼가 함께
+    /// 떠 있습니다 — 사진 80 장을 여섯 칸으로 돌린 실측이 최대 6,418MB 였고(CPU 판은
+    /// 3,193MB), 여섯으로 나누면 칸당 약 1,070MB 입니다. 이 값을 낮게 잡으면 메모리가
+    /// 적은 기계가 제 능력보다 많은 칸을 열어 스왑으로 갑니다.
     /// </para>
     /// <para>
     /// GPU 가 없거나 내장이면 색 단계까지 CPU 가 지므로 한 칸 줄입니다. 그 판정은
@@ -192,7 +198,7 @@ public sealed class DevelopExportCoordinator
     /// </remarks>
     public static int MaximumConcurrentExports { get; } = ResolveMaximumConcurrentExports();
 
-    private const long ExportSlotBytes = 400L * 1024 * 1024;
+    private const long ExportSlotBytes = 1070L * 1024 * 1024;
     private const long ExportReserveBytes = 1024L * 1024 * 1024;
 
     private static int ResolveMaximumConcurrentExports()
