@@ -17,7 +17,7 @@
             <CollectionViewSource
                 x:Name="FolderGroupedItems" x:FieldModifier="internal"
                 IsSourceGrouped="True"
-                ItemsPath="Items" />
+                ItemsPath="Displayed" />
             <controls:FilmTypeNameConverter x:Key="FilmTypeNameConverter" />
             <controls:PickStateBrushConverter x:Key="PickStateBrushConverter" />
             <!-- 각 보기 모드 칸은 항상 1/4 폭을 유지하고, 긴 번역만 칸 안에서 축소합니다. -->

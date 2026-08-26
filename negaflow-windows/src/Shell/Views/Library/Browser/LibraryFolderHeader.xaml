@@ -81,9 +81,14 @@
             VerticalAlignment="Center"
             Orientation="Horizontal"
             Spacing="7">
+            <!--  macOS 는 `width: 98` 입니다. 그 폭 안에 SwiftUI 는 `C-41/ECN-2` 를 다
+                  담지만, WinUI 콤보박스는 펼침 화살표 칸과 안쪽 여백이 훨씬 커서 같은
+                  98 에서는 글자가 잘립니다. 그래서 **최소** 폭으로 둡니다 - macOS 보다
+                  좁아지지 않으면서, `Digital Color` 처럼 더 긴 이름이나 다른 언어에서도
+                  잘리지 않습니다.  -->
             <ComboBox
                 x:Name="ProcessSelector" x:FieldModifier="internal"
-                Width="98"
+                MinWidth="98"
                 Height="30"
                 CornerRadius="8"
                 AutomationProperties.AutomationId="negaflow.library.folder.process"
@@ -94,7 +99,7 @@
                 SelectionChanged="OnProcessChanged" />
             <ComboBox
                 x:Name="TargetSelector" x:FieldModifier="internal"
-                Width="84"
+                MinWidth="84"
                 Height="30"
                 CornerRadius="8"
                 AutomationProperties.AutomationId="negaflow.library.folder.target"

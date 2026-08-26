@@ -51,8 +51,15 @@ public sealed record LibraryBrowserFolderSection(
     /// <summary>펼침 ⌄ · 접힘 ›. macOS 폴더 머리줄의 디스클로저와 같은 자리입니다.</summary>
     public string DisclosureGlyph => IsCollapsed ? "" : "";
 
-    /// <summary>접힌 폴더는 머리줄만 남고 사진은 그리지 않습니다.</summary>
-    private IReadOnlyList<LibraryFrameListItem> Displayed => IsCollapsed ? [] : Items;
+    /// <summary>
+    /// 접힌 폴더는 머리줄만 남고 사진은 그리지 않습니다.
+    /// </summary>
+    /// <remarks>
+    /// **격자가 읽는 것이 이 목록입니다.** 앞 판은 <c>CollectionViewSource.ItemsPath</c> 가
+    /// <c>Items</c> 를 가리켰습니다. 그것은 접든 말든 전부 들고 있는 원본이라, 화살표를 눌러도
+    /// 글자(⌄/›)만 바뀌고 사진은 그대로 남았습니다 - 접기가 아예 화면에 닿지 않았습니다.
+    /// </remarks>
+    public IReadOnlyList<LibraryFrameListItem> Displayed => IsCollapsed ? [] : Items;
 
     public int Count => Displayed.Count;
 
