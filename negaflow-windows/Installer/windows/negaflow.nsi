@@ -56,10 +56,28 @@ VIAddVersionKey "LegalCopyright" "Copyright 2026 Song Habin"
 Var Staging
 Var Backup
 Var MovedAside
+Var RegisterLog
+
+; 등록이 실패해도 그 이유가 어디에도 남지 않았습니다 - `nsExec::ExecToStack` 이 담아 온
+; 출력은 `Pop` 한 레지스터에만 있고, 무인 설치에는 그것을 보여 줄 화면이 없습니다.
+; CI 에서 25 분을 기다린 뒤 남은 것이 "설치가 안 끝났다" 한 줄뿐이었던 까닭입니다.
+; 실패한 자리와 플러그인 출력을 파일로 남겨, 검증 스크립트가 그대로 찍게 합니다.
+!macro LogExec label code output
+  ClearErrors
+  FileOpen $R9 "$RegisterLog" a
+  ${IfNot} ${Errors}
+    ; `a` 는 파일 끝이 아니라 0 번지에서 엽니다. 옮기지 않으면 뒤 기록이 앞 기록을 덮습니다.
+    FileSeek $R9 0 END
+    FileWrite $R9 "== ${label} exit=${code} ==$\r$\n${output}$\r$\n"
+    FileClose $R9
+  ${EndIf}
+!macroend
 
 Section "Install"
   ; First complete the new payload beside the live application.  A running
   ; app makes the rename fail, leaving the previous application untouched.
+  StrCpy $RegisterLog "$TEMP\negaflow-install-registration.log"
+  Delete "$RegisterLog"
   StrCpy $MovedAside "0"
   StrCpy $Staging "$INSTDIR.staging"
   StrCpy $Backup "$INSTDIR.previous"
@@ -75,13 +93,14 @@ Section "Install"
   nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$Staging\package-registration.ps1" -Action Unregister'
   Pop $0
   Pop $1
+  !insertmacro LogExec "unregister-before-swap" $0 $1
 
   ${If} ${FileExists} "$INSTDIR\*.*"
     ClearErrors
     Rename "$INSTDIR" "$Backup"
     ${If} ${Errors}
       RMDir /r "$Staging"
-      MessageBox MB_ICONSTOP "기존 Negaflow를 교체할 수 없습니다. 실행 중인 Negaflow를 닫고 다시 시도하십시오."
+      MessageBox MB_ICONSTOP "기존 Negaflow를 교체할 수 없습니다. 실행 중인 Negaflow를 닫고 다시 시도하십시오." /SD IDOK
       Abort "Negaflow is running."
     ${EndIf}
     StrCpy $MovedAside "1"
@@ -100,6 +119,7 @@ Section "Install"
   nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\package-registration.ps1" -Action Register -ManifestPath "$INSTDIR\AppxManifest.xml"'
   Pop $0
   Pop $1
+  !insertmacro LogExec "register" $0 $1
   ${If} $0 != 0
     RMDir /r "$INSTDIR"
     ${If} $MovedAside == "1"
@@ -108,9 +128,10 @@ Section "Install"
         nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\package-registration.ps1" -Action Register -ManifestPath "$INSTDIR\AppxManifest.xml"'
         Pop $2
         Pop $3
+        !insertmacro LogExec "register-rollback" $2 $3
       ${EndIf}
     ${EndIf}
-    MessageBox MB_ICONSTOP "Negaflow package identity could not be registered. Windows Developer Mode must allow unsigned loose-package registration."
+    MessageBox MB_ICONSTOP "Negaflow package identity could not be registered. Windows Developer Mode must allow unsigned loose-package registration." /SD IDOK
     Abort "Package registration failed: $1"
   ${EndIf}
   RMDir /r "$Backup"
@@ -139,14 +160,14 @@ Section "Uninstall"
   Pop $0
   Pop $1
   ${If} $0 != 0
-    MessageBox MB_ICONSTOP "Negaflow package identity could not be removed."
+    MessageBox MB_ICONSTOP "Negaflow package identity could not be removed." /SD IDOK
     Abort "Package unregistration failed: $1"
   ${EndIf}
 
   ClearErrors
   Rename "$INSTDIR" "$INSTDIR.removing"
   ${If} ${Errors}
-    MessageBox MB_ICONSTOP "Negaflow를 제거할 수 없습니다. 실행 중인 Negaflow를 닫고 다시 시도하십시오."
+    MessageBox MB_ICONSTOP "Negaflow를 제거할 수 없습니다. 실행 중인 Negaflow를 닫고 다시 시도하십시오." /SD IDOK
     Abort "Negaflow is running."
   ${EndIf}
 

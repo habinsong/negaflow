@@ -6,7 +6,10 @@ param(
     [string]$InstallDirectory,
 
     [ValidateRange(1, 60)]
-    [int]$InstallTimeoutMinutes = 10
+    [int]$InstallTimeoutMinutes = 10,
+
+    [ValidateRange(1, 30)]
+    [int]$UninstallTimeoutMinutes = 3
 )
 
 $ErrorActionPreference = 'Stop'
@@ -27,6 +30,19 @@ if (Test-Path -LiteralPath $InstallDirectory) {
 # 영원히 돌아오지 않고, CI 에서는 잡이 취소될 때까지 아무 것도 남지 않는다(2026-08-17 관측:
 # 25분 뒤 Negaflow-1.0.9-x64-setup 이 orphan 으로 종료됨). 기다림에 경계를 두어 멈춘 자리를
 # 로그로 남긴다.
+
+# 설치 프로그램이 남긴 등록 기록. NSIS 는 플러그인 출력을 레지스터에만 담아 두고 무인
+# 설치에는 그것을 보여 줄 화면이 없어, 여태 실패 이유가 통째로 사라졌습니다.
+function Write-RegistrationLog {
+    $log = Join-Path ([System.IO.Path]::GetTempPath()) 'negaflow-install-registration.log'
+    if (-not (Test-Path -LiteralPath $log)) {
+        Write-Host "No registration log at $log (설치가 등록 단계에 닿지 못했습니다)."
+        return
+    }
+    Write-Host "--- $log ---"
+    Get-Content -LiteralPath $log -Encoding UTF8 | Write-Host
+    Write-Host '--- end ---'
+}
 $installTimeout = [TimeSpan]::FromMinutes($InstallTimeoutMinutes)
 $process = Start-Process -FilePath $InstallerPath -ArgumentList @('/S', "/D=$InstallDirectory") -PassThru
 if (-not $process.WaitForExit($installTimeout.TotalMilliseconds)) {
@@ -41,10 +57,12 @@ if (-not $process.WaitForExit($installTimeout.TotalMilliseconds)) {
         Format-List Name, PackageFullName, Status |
         Out-String |
         Write-Host
+    Write-RegistrationLog
     try { $process.Kill($true) } catch { }
     throw "Silent install timed out after $($installTimeout.TotalMinutes) minute(s)."
 }
 if ($process.ExitCode -ne 0) {
+    Write-RegistrationLog
     throw "Silent install failed with exit code $($process.ExitCode)."
 }
 
@@ -105,15 +123,42 @@ if ($null -eq $applicationProcess -or $applicationProcess.MainWindowHandle -eq 0
 Stop-Process -Id $applicationProcess.Id -Force
 $applicationProcess.WaitForExit(5000) | Out-Null
 
+# NSIS 제거기는 제 디렉터리째 지워야 해서, 실행되면 스스로를 $TEMP 로 복사하고 그 복사본에
+# 일을 넘긴 뒤 **원본은 즉시 0 으로 빠집니다**. `-Wait` 가 기다리는 것은 그 원본이라 실제
+# 제거가 끝나기 전에 다음 줄로 넘어갑니다 - 2026-08-26 관측: 여기서 "디렉터리가 남았다"로
+# 실패했는데 같은 디렉터리가 잠시 뒤 스스로 사라져 있었습니다. 끝난 자리를 결과로 기다립니다.
 $uninstaller = Join-Path $InstallDirectory 'uninstall.exe'
-$process = Start-Process -FilePath $uninstaller -ArgumentList '/S' -Wait -PassThru
+$process = Start-Process -FilePath $uninstaller -ArgumentList '/S' -PassThru
+if (-not $process.WaitForExit(60000)) {
+    try { $process.Kill($true) } catch { }
+    throw 'Silent uninstall did not hand off to its worker copy within 1 minute.'
+}
 if ($process.ExitCode -ne 0) {
     throw "Silent uninstall failed with exit code $($process.ExitCode)."
 }
-if (Test-Path -LiteralPath $InstallDirectory) {
+
+$uninstallDeadline = [DateTime]::UtcNow.AddMinutes($UninstallTimeoutMinutes)
+do {
+    $directoryRemains = Test-Path -LiteralPath $InstallDirectory
+    $packageRemains = $null -ne (Get-AppxPackage -Name 'Negaflow.Windows' -ErrorAction SilentlyContinue)
+    if (-not $directoryRemains -and -not $packageRemains) {
+        break
+    }
+    Start-Sleep -Milliseconds 250
+} while ([DateTime]::UtcNow -lt $uninstallDeadline)
+
+if ($directoryRemains -or $packageRemains) {
+    Write-Host 'Processes still running:'
+    Get-Process -ErrorAction SilentlyContinue |
+        Where-Object { $_.ProcessName -match 'Au_|Negaflow|powershell|AppxDeployment' } |
+        Format-Table -AutoSize Id, ProcessName, StartTime |
+        Out-String |
+        Write-Host
+}
+if ($directoryRemains) {
     throw "Uninstaller left its application directory behind: $InstallDirectory"
 }
-if ($null -ne (Get-AppxPackage -Name 'Negaflow.Windows' -ErrorAction SilentlyContinue)) {
+if ($packageRemains) {
     throw 'Uninstaller left the Negaflow.Windows package identity registered.'
 }
 
