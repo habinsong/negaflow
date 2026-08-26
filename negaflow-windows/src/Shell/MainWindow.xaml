@@ -7,5 +7,34 @@
     Title="negaflow">
     <Grid x:Name="WindowRoot">
         <views:WorkspaceShellView x:Name="ShellView" />
+
+        <!--  뜨는 동안 보이는 화면입니다.
+
+              배경을 칠하지 않습니다 - 창은 이미 투명하게 확장돼 있고, 여기에 색을 칠하면
+              그것이 곧 사용자가 말한 검은 화면입니다. 아이콘과 이름만 떠 있게 둡니다.
+
+              셸이 첫 프레임을 그리면 걷어냅니다(`MainWindow.OnFirstRendered`).  -->
+        <Grid
+            x:Name="LoadingOverlay" x:FieldModifier="internal"
+            Background="{x:Null}"
+            IsHitTestVisible="False">
+            <StackPanel
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="18">
+                <Image
+                    Width="96"
+                    Height="96"
+                    HorizontalAlignment="Center"
+                    Source="ms-appx:///Assets/AppIcon-App-1024.png" />
+                <!--  아방가르드하게 - 굵게, 자간을 넓혀 소문자 이름을 표지처럼 세웁니다.  -->
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    CharacterSpacing="260"
+                    FontSize="22"
+                    FontWeight="Bold"
+                    Text="negaflow" />
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>

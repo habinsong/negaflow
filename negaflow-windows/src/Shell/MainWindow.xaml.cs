@@ -33,7 +33,24 @@ public sealed partial class MainWindow : Window
         firstFrameSeen = true;
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= OnFirstRendered;
         Diagnostics.StartupTrace.Mark("첫 프레임 그려짐");
+        // 셸이 그려졌으니 로딩 화면을 걷습니다.
+        LoadingOverlay.Visibility = Visibility.Collapsed;
 
+    }
+
+    /// <summary>셸이 만들어진 뒤에 거는 것들입니다. 만들기 전에는 걸 대상이 없습니다.</summary>
+    private void WireShell()
+    {
+        ShellView.TitleBarInteractiveRegionsChanged += OnTitleBarInteractiveRegionsChanged;
+        ShellView.SettingsRequested += OnSettingsRequested;
+        ShellView.DiagnosticsRequested += OnDiagnosticsRequested;
+        ShellView.QuickStartHelpRequested += OnQuickStartHelpRequested;
+        ShellView.AboutRequested += OnAboutRequested;
+        ShellView.Loaded += OnShellLoaded;
+        ShellView.SizeChanged += OnShellSizeChanged;
+        ShellView.Loaded += (_, _) =>
+            Diagnostics.StartupTrace.Mark("shell Loaded (첫 레이아웃)");
+        SetTitleBar(ShellView.TitleBarElement);
     }
 
     /// <summary>창을 띄운 뒤에 할 초기화입니다. 한 번만 돕니다.</summary>
@@ -71,14 +88,13 @@ public sealed partial class MainWindow : Window
         }
         WindowIcon.Apply(AppWindow);
 
-        ShellView.TitleBarInteractiveRegionsChanged += OnTitleBarInteractiveRegionsChanged;
-        // **셸 초기화는 창을 띄운 뒤로 미룹니다.** 생성자에서 끝내면 그 시간만큼 창이
-        // 아예 뜨지 않아 사용자는 검은 화면을 봅니다 - 실측으로 창이 2.02 초에 떴고 그중
-        // 0.39 초가 이 초기화였습니다. 창을 먼저 내놓고 같은 UI 스레드에서 이어서 채웁니다.
+        // 셸 자체를 `x:Load="False"` 로 미루는 것도 해 봤으나 되돌렸습니다 - `FindName` 이
+        // 창의 네임스코프에서 셸을 찾지 못해 그 뒤가 통째로 `NullReferenceException` 이었고,
+        // 앱이 죽는 것을 실기에서 확인했습니다. 창을 더 빨리 띄우려면 그 자리부터 풀어야
+        // 합니다.
+        WireShell();
         pendingInitialization = () =>
         {
-            // 카탈로그 열기도 여기서 합니다 - 창을 띄우기 전에 하면 그 시간 동안 화면이
-            // 비어 있습니다.
             using (Diagnostics.StartupTrace.Measure("OpenLibrary"))
             {
                 libraryHost = openLibrary();
@@ -92,12 +108,13 @@ public sealed partial class MainWindow : Window
                 thumbnails);
         };
 
-        ShellView.SettingsRequested += OnSettingsRequested;
-        ShellView.DiagnosticsRequested += OnDiagnosticsRequested;
-        ShellView.QuickStartHelpRequested += OnQuickStartHelpRequested;
-        ShellView.AboutRequested += OnAboutRequested;
+        // **뜨는 동안 검은 창이 보이지 않게 합니다.**
+        //
+        // 창은 콘텐츠가 그려지기 전까지 아무 것도 없는 판이고, 그 판은 검게 보입니다.
+        // 시스템 배경(Mica)을 걸면 그 자리에 바탕 화면이 비쳐 보이므로, 로딩 화면의
+        // 아이콘과 이름만 떠 있는 모양이 됩니다.
+        SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
         ExtendsContentIntoTitleBar = true;
-        SetTitleBar(ShellView.TitleBarElement);
         // 창 뿌리에서 키를 한 번 봅니다. 여기까지도 안 오면 키가 앱에 들어오지 않은
         // 것이고, 여기는 오는데 셸이 못 받으면 라우팅이 끊긴 것입니다.
         WindowRoot.AddHandler(
@@ -108,13 +125,11 @@ public sealed partial class MainWindow : Window
             UIElement.PreviewKeyDownEvent,
             new Microsoft.UI.Xaml.Input.KeyEventHandler(OnWindowRootPreviewKeyDown),
             handledEventsToo: true);
-        ShellView.Loaded += (_, _) =>
-            Diagnostics.StartupTrace.Mark("shell Loaded (첫 레이아웃)");
+
         // **화면에 실제로 픽셀이 나온 때**입니다. 창이 뜬 것과 다릅니다 - 창은 비어 있어도
         // 뜹니다. `Rendering` 은 합성기가 프레임을 그릴 때마다 오므로 첫 번을 받고 뗍니다.
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += OnFirstRendered;
-        ShellView.Loaded += OnShellLoaded;
-        ShellView.SizeChanged += OnShellSizeChanged;
+
 
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {
@@ -384,6 +399,10 @@ public sealed partial class MainWindow : Window
     {
         _ = sender;
         _ = args;
+        if (ShellView is null)
+        {
+            return;
+        }
         ShellView.Loaded -= OnShellLoaded;
         ShellView.SizeChanged -= OnShellSizeChanged;
         ShellView.SettingsRequested -= OnSettingsRequested;
