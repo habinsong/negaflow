@@ -107,11 +107,19 @@ internal sealed class DevelopExportRunner
         {
             return;
         }
+        ExportTrace.Write(
+            $"export press frame={frame.Id} format={view.exportSettings.Format} " +
+            $"sidecar={view.exportSettings.WriteSidecar} raw={view.exportSettings.WriteOriginalRaw} " +
+            $"flat={view.exportSettings.WriteMainFlatMaster}");
+        using IDisposable _pressed = ExportTrace.Measure("export total");
         // 편집은 메모리에만 있었으므로, 현상하기 전에 저장해 파일과 catalog 가 어긋나지 않게 합니다.
-        if (view.panel.Save() != CatalogStoreError.None)
+        using (ExportTrace.Measure("  save"))
         {
-            view.SetOutputStatus(AppResources.Get("developExportSaveFailed", "Text"));
-            return;
+            if (view.panel.Save() != CatalogStoreError.None)
+            {
+                view.SetOutputStatus(AppResources.Get("developExportSaveFailed", "Text"));
+                return;
+            }
         }
 
         // 도는 동안에는 **동작 단추만** 잠급니다. 알약 전체를 잠그면 폴더 열기까지 죽고,
@@ -136,30 +144,44 @@ internal sealed class DevelopExportRunner
                 view.exportSettings.Destination.PathFor(
                     frame.SourcePath,
                     view.sync.NamingContextFor(frame)));
-            _ = await view.panel.ExportAsync(
-                exportedPath,
-                view.exportSettings.Format,
-                outcome =>
-                {
-                    view.SetOutputStatus(DevelopPanelState.Describe(outcome));
-                    if (outcome is { Kind: DevelopExportOutcomeKind.Completed, Result.Succeeded: true })
+            using (ExportTrace.Measure("  develop+encode"))
+            {
+                _ = await view.panel.ExportAsync(
+                    exportedPath,
+                    view.exportSettings.Format,
+                    outcome =>
                     {
-                        WriteExportArtifacts(frame, exportedPath, outcome.Result);
-                        completedPath = exportedPath;
-                    }
-                },
-                view.exportSettings.ToEncodingOptions());
+                        view.SetOutputStatus(DevelopPanelState.Describe(outcome));
+                        if (outcome is { Kind: DevelopExportOutcomeKind.Completed, Result.Succeeded: true })
+                        {
+                            using (ExportTrace.Measure("  artifacts"))
+                            {
+                                WriteExportArtifacts(frame, exportedPath, outcome.Result);
+                            }
+                            completedPath = exportedPath;
+                        }
+                    },
+                    view.exportSettings.ToEncodingOptions());
+            }
         }
         finally
         {
             view.ReportProgress(ExportProgress.Idle);
-            view.RefreshPreview();
+            using (ExportTrace.Measure("  refresh preview"))
+            {
+                view.RefreshPreview();
+            }
         }
 
         // 무보정본은 사진이 나간 뒤에 한 장 더 냅니다. 여기서 실패해도 사진은 남습니다.
         if (completedPath is { } published && view.exportSettings.WriteMainFlatMaster)
         {
-            await WriteMainFlatMasterAsync(frame, published);
+            // **한 장을 두 번 현상하는 자리입니다.** 무보정본을 켜 두면 단추 한 번에 현상이
+            // 두 번 돕니다 — 걸린 시간이 갑절로 보이는 이유가 여기라면 이 줄이 말해 줍니다.
+            using (ExportTrace.Measure("  flat master (두 번째 현상)"))
+            {
+                await WriteMainFlatMasterAsync(frame, published);
+            }
         }
     }
 
@@ -184,11 +206,17 @@ internal sealed class DevelopExportRunner
         {
             return;
         }
+        ExportTrace.Write(
+            $"quick export press frame={frame.Id} format={view.quickExportSettings.Format}");
+        using IDisposable _pressed = ExportTrace.Measure("quick export total");
         // 편집은 메모리에만 있었으므로, 현상하기 전에 저장해 파일과 catalog 가 어긋나지 않게 합니다.
-        if (view.panel.Save() != CatalogStoreError.None)
+        using (ExportTrace.Measure("  save"))
         {
-            view.SetOutputStatus(AppResources.Get("developExportSaveFailed", "Text"));
-            return;
+            if (view.panel.Save() != CatalogStoreError.None)
+            {
+                view.SetOutputStatus(AppResources.Get("developExportSaveFailed", "Text"));
+                return;
+            }
         }
 
         view.QuickExportButton.IsActionEnabled = false;
@@ -205,17 +233,23 @@ internal sealed class DevelopExportRunner
                     view.quickExportSettings.Encoding);
                 return;
             }
-            _ = await view.panel.ExportAsync(
-                Negaflow.Shell.Develop.ExportBatchCoordinator.UniquePath(
-                    view.quickExportSettings.Destination.PathFor(frame.SourcePath)),
-                view.quickExportSettings.Format,
-                outcome => view.SetOutputStatus(DevelopPanelState.Describe(outcome)),
-                view.quickExportSettings.Encoding);
+            using (ExportTrace.Measure("  develop+encode"))
+            {
+                _ = await view.panel.ExportAsync(
+                    Negaflow.Shell.Develop.ExportBatchCoordinator.UniquePath(
+                        view.quickExportSettings.Destination.PathFor(frame.SourcePath)),
+                    view.quickExportSettings.Format,
+                    outcome => view.SetOutputStatus(DevelopPanelState.Describe(outcome)),
+                    view.quickExportSettings.Encoding);
+            }
         }
         finally
         {
             view.ReportProgress(ExportProgress.Idle);
-            view.RefreshPreview();
+            using (ExportTrace.Measure("  refresh preview"))
+            {
+                view.RefreshPreview();
+            }
         }
     }
 
@@ -299,7 +333,11 @@ internal sealed class DevelopExportRunner
         };
         try
         {
+            ExportTrace.Write(
+                $"  batch start frames={plans.Count} slots={DevelopExportCoordinator.MaximumConcurrentExports}");
+            using IDisposable _batch = ExportTrace.Measure("  batch");
             ExportBatchSummary summary = await coordinator.RunAsync(plans, encoding);
+            ExportTrace.Write($"  batch done ok={summary.Succeeded}/{summary.Total}");
             view.SetOutputStatus(AppResources.FormatIntegers(
                 "exportBatchFrameProgress",
                 "Text",

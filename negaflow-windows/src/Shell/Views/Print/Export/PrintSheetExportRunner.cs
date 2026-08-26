@@ -76,6 +76,8 @@ internal sealed class PrintSheetExportRunner
         report(string.Empty);
         try
         {
+            ExportTrace.Write($"print sheet press frames={selection.Count} format={format}");
+            using IDisposable _pressed = ExportTrace.Measure("print sheet total");
             PrintSheetWriteResult result = await PrintSheetWriter.WriteAsync(
                 selection,
                 presentation.Current.Print,
