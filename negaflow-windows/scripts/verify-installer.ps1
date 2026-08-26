@@ -26,6 +26,40 @@ if (Test-Path -LiteralPath $InstallDirectory) {
     throw "Verification install directory must not already exist: $InstallDirectory"
 }
 
+# 패키지 신원 `Negaflow.Windows` 는 계정에 하나뿐이다. 이 검증은 임시 폴더에 설치하지만
+# 그 신원과 시작 메뉴 바로가기는 전역이라, 실기에 이미 설치돼 있던 negaflow 가 검증 한 번에
+# 등록이 풀리고 바로가기까지 사라진다 - 2026-08-26 이 기계에서 실제로 그렇게 지워졌다.
+# CI 러너에는 설치가 없어 드러나지 않던 자리다. 있던 설치를 기억해 두었다가 끝나면 같은
+# 설치 관리자로 되돌린다. 되돌리는 방법을 여기서 흉내내지 않고 설치 관리자에게 맡긴다.
+$priorInstallLocation = $null
+$priorPackage = Get-AppxPackage -Name 'Negaflow.Windows' -ErrorAction SilentlyContinue
+if ($null -ne $priorPackage -and -not [string]::IsNullOrWhiteSpace($priorPackage.InstallLocation)) {
+    $priorInstallLocation = [System.IO.Path]::GetFullPath($priorPackage.InstallLocation)
+    Write-Host "Existing installation will be restored afterwards: $priorInstallLocation"
+}
+
+function Restore-PriorInstallation {
+    if ($null -eq $script:priorInstallLocation) {
+        return
+    }
+    if ($null -ne (Get-AppxPackage -Name 'Negaflow.Windows' -ErrorAction SilentlyContinue)) {
+        return
+    }
+    Write-Host "Restoring the previous installation: $script:priorInstallLocation"
+    $restore = Start-Process -FilePath $InstallerPath -ArgumentList @('/S', "/D=$script:priorInstallLocation") -PassThru
+    if (-not $restore.WaitForExit(600000)) {
+        try { $restore.Kill($true) } catch { }
+        Write-Host 'WARNING: restoring the previous installation timed out.'
+        return
+    }
+    if ($restore.ExitCode -ne 0) {
+        Write-Host "WARNING: restoring the previous installation failed with exit code $($restore.ExitCode)."
+    }
+}
+
+# 검증이 도중에 터져도 되돌린다.
+trap { Restore-PriorInstallation; break }
+
 # 무인 설치는 payload 를 풀고 PowerShell 로 패키지를 등록한다. 그 등록이 멈추면 -Wait 는
 # 영원히 돌아오지 않고, CI 에서는 잡이 취소될 때까지 아무 것도 남지 않는다(2026-08-17 관측:
 # 25분 뒤 Negaflow-1.0.9-x64-setup 이 orphan 으로 종료됨). 기다림에 경계를 두어 멈춘 자리를
@@ -163,3 +197,5 @@ if ($packageRemains) {
 }
 
 Write-Host "Installer install, package registration, window launch, and uninstall passed: $InstallerPath" -ForegroundColor Green
+
+Restore-PriorInstallation
