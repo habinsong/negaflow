@@ -90,6 +90,7 @@ internal static class Program
         WorkflowShortcutTests.Run();
         EditPersistenceTests.Run();
         LibraryHostTests.Run();
+        FrameMarkSyncTests.Run();
         DevelopPresentationTests.Run();
         DevelopPanelTests.Run();
         FrameImportTests.Run();

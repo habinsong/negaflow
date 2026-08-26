@@ -198,13 +198,14 @@ public sealed partial class WorkspaceToolbarView : UserControl
         {
             return;
         }
-        if (libraryHost.Edit(frame.Id, edit) != LibraryFrameError.None ||
-            libraryHost.Save() != CatalogStoreError.None)
+        if (libraryHost.Edit(frame.Id, edit) != LibraryFrameError.None)
         {
-            // 저장에 실패했으면 화면도 되돌립니다 — 다음 실행에서 사라질 값을 남기지 않습니다.
+            // 값을 못 넣었으면 화면도 되돌립니다 — 남길 수 없는 값을 남기지 않습니다.
             UpdateActiveFrameMarks(frame);
             return;
         }
+        // 저장은 `Edit` 이 예약합니다(1.5 초 debounce, macOS 와 같습니다). 누를 때마다 카탈로그를
+        // 통째로 쓰면 연달아 누르는 동안 그만큼 멈춥니다.
         UpdateActiveFrame();
     }
 

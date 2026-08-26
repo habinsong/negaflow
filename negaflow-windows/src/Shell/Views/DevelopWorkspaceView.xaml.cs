@@ -304,6 +304,17 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     public void NotifyFrameEdited() => _ = NotifyFrameEditedAsync();
 
+    /// <summary>
+    /// 별·깃발·제외가 바뀌었습니다. 하단 필름스트립의 표시만 맞춥니다.
+    /// </summary>
+    internal void RefreshFrameMarks()
+    {
+        if (libraryHost is { } host)
+        {
+            Filmstrip.RefreshFrames(host.Frames);
+        }
+    }
+
     private async Task NotifyFrameEditedAsync()
     {
         long generation = checked(++frameEditRefreshGeneration);

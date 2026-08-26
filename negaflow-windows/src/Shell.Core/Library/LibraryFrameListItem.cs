@@ -20,7 +20,7 @@ public sealed class LibraryFrameListItem : INotifyPropertyChanged
         Availability = availability;
     }
 
-    public LibraryFrameSnapshot Frame { get; }
+    public LibraryFrameSnapshot Frame { get; private set; }
 
     public string Id => Frame.Id;
 
@@ -143,6 +143,55 @@ public sealed class LibraryFrameListItem : INotifyPropertyChanged
     /// <summary>썸네일이 아직 없어 자리표시자를 보여야 하는 상태입니다.</summary>
     public bool IsThumbnailPending => thumbnail is null;
 
+    /// <summary>
+    /// 같은 사진의 <b>새 스냅샷</b>으로 갈아 끼우고, 보이는 값이 바뀐 것만 알립니다.
+    /// </summary>
+    /// <remarks>
+    /// 별·깃발·제외는 라이브러리 격자·필름스트립·도구줄이 <b>같은 항목 객체</b>를 보고 있습니다.
+    /// 목록을 다시 지어 새 객체를 넣는 길로는 세 곳이 함께 따라오지 않습니다 — 필름스트립은
+    /// 아이디가 같으면 예전 객체를 그대로 붙들기 때문입니다(<c>FilmstripView.ShowFrames</c>).
+    /// 썸네일이 이미 쓰는 길과 같습니다: 칸을 다시 만들지 않고 값만 바꿔 끼웁니다.
+    /// </remarks>
+    /// <returns>실제로 바뀐 것이 있으면 <c>true</c> 입니다.</returns>
+    public bool Refresh(LibraryFrameSnapshot frame)
+    {
+        ArgumentNullException.ThrowIfNull(frame);
+        if (ReferenceEquals(Frame, frame))
+        {
+            return false;
+        }
+        LibraryFrameSnapshot previous = Frame;
+        Frame = frame;
+        PropertyChanged?.Invoke(this, FrameChangedArgs);
+        if (previous.Rating != frame.Rating)
+        {
+            PropertyChanged?.Invoke(this, RatingChangedArgs);
+        }
+        if (previous.PickState != frame.PickState)
+        {
+            PropertyChanged?.Invoke(this, FlaggedChangedArgs);
+            PropertyChanged?.Invoke(this, PickGlyphChangedArgs);
+            PropertyChanged?.Invoke(this, PickStateChangedArgs);
+        }
+        if (previous.CanDevelop != frame.CanDevelop)
+        {
+            PropertyChanged?.Invoke(this, CanDevelopChangedArgs);
+        }
+        if (previous.Route.FilmType != frame.Route.FilmType)
+        {
+            PropertyChanged?.Invoke(this, FilmTypeChangedArgs);
+        }
+        if (!string.Equals(DisplayNameOf(previous), DisplayName, StringComparison.Ordinal))
+        {
+            PropertyChanged?.Invoke(this, DisplayNameChangedArgs);
+        }
+        PropertyChanged?.Invoke(this, DetailChangedArgs);
+        return true;
+    }
+
+    private static string DisplayNameOf(LibraryFrameSnapshot frame) =>
+        LibraryFrameNaming.DisplayName(frame);
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private object? thumbnail;
@@ -167,6 +216,26 @@ public sealed class LibraryFrameListItem : INotifyPropertyChanged
 
     private static readonly PropertyChangedEventArgs StackGlyphChangedArgs =
         new(nameof(StackGlyph));
+
+    private static readonly PropertyChangedEventArgs FrameChangedArgs = new(nameof(Frame));
+
+    private static readonly PropertyChangedEventArgs RatingChangedArgs = new(nameof(Rating));
+
+    private static readonly PropertyChangedEventArgs FlaggedChangedArgs = new(nameof(IsFlagged));
+
+    private static readonly PropertyChangedEventArgs PickGlyphChangedArgs = new(nameof(PickGlyph));
+
+    private static readonly PropertyChangedEventArgs PickStateChangedArgs = new(nameof(PickState));
+
+    private static readonly PropertyChangedEventArgs CanDevelopChangedArgs =
+        new(nameof(CanDevelop));
+
+    private static readonly PropertyChangedEventArgs FilmTypeChangedArgs = new(nameof(FilmType));
+
+    private static readonly PropertyChangedEventArgs DisplayNameChangedArgs =
+        new(nameof(DisplayName));
+
+    private static readonly PropertyChangedEventArgs DetailChangedArgs = new(nameof(Detail));
 }
 
 public static class LibraryFrameListItems
@@ -186,6 +255,41 @@ public static class LibraryFrameListItems
             items.Add(new LibraryFrameListItem(frame, availability));
         }
         return items;
+    }
+
+    /// <summary>
+    /// 이미 화면에 걸린 항목들을 <b>현재 카탈로그 값</b>으로 맞춥니다. 목록은 다시 짓지 않습니다.
+    /// </summary>
+    /// <remarks>
+    /// 별 하나를 줄 때마다 목록을 다시 지으면 격자·필름스트립의 칸이 통째로 헐리고
+    /// 다시 세워지며, 그때 원본 존재 확인이 사진 수만큼 다시 돕니다. 바뀐 것은 사진 하나의
+    /// 표시값뿐이므로 그 하나만 갈아 끼웁니다.
+    /// </remarks>
+    /// <returns>실제로 바뀐 항목 수입니다.</returns>
+    public static int Refresh(
+        IReadOnlyList<LibraryFrameListItem> items,
+        IReadOnlyList<LibraryFrameSnapshot> frames)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(frames);
+        if (items.Count == 0 || frames.Count == 0)
+        {
+            return 0;
+        }
+        Dictionary<string, LibraryFrameSnapshot> byId = new(frames.Count, StringComparer.Ordinal);
+        foreach (LibraryFrameSnapshot frame in frames)
+        {
+            byId[frame.Id] = frame;
+        }
+        int changed = 0;
+        foreach (LibraryFrameListItem item in items)
+        {
+            if (byId.TryGetValue(item.Id, out LibraryFrameSnapshot? current) && item.Refresh(current))
+            {
+                ++changed;
+            }
+        }
+        return changed;
     }
 
     /// <summary>

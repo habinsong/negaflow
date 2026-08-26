@@ -270,16 +270,23 @@ public sealed partial class WorkspaceShellView : UserControl
         _ = sender;
         _ = args;
         SyncDevelopMenu();
+        // **별·깃발·제외는 세 화면이 같은 항목 객체를 보고 있습니다.** 먼저 그 값을 맞춥니다 —
+        // 라이브러리 카드, 현상·인화 하단 스트립, 도구줄 가운데가 한 번에 따라옵니다.
+        //
+        // 예전에는 라이브러리를 통째로 다시 보여 주었습니다(`ShowLibrary`). 그 길은 별 하나에
+        // 사이드탭을 전부 다시 세우고 원본 존재 확인을 사진 수만큼 다시 돌렸고, 그러고도
+        // 필름스트립에는 닿지 않았습니다 — 스트립은 아이디가 같으면 예전 객체를 붙들기
+        // 때문입니다. 값을 그 자리에서 갈아 끼우면 두 문제가 함께 사라집니다.
+        if (libraryHost is { } host)
+        {
+            LibraryWorkspace.RefreshFrameMarks();
+            DevelopWorkspace.RefreshFrameMarks();
+            PrintWorkspace.RefreshFrameMarks(host);
+        }
         DevelopWorkspace.NotifyFrameEdited();
         // 인화 미리보기는 현상뷰와 같은 그림이어야 합니다. macOS 는 프레임 관찰로 저절로
         // 따라오지만 WinUI 는 알려 주지 않으면 옛 그림에 멈춰 있습니다.
         PrintWorkspace.NotifyFrameEdited();
-        // **라이브러리 격자도 같은 프레임을 보고 있습니다.** 별·깃발·제외는 카드에도 붙어
-        // 있으므로, 여기서 알리지 않으면 도구줄에서 준 별이 카드에 뜨지 않습니다.
-        if (libraryHost is { } host)
-        {
-            LibraryWorkspace.ShowLibrary(host, LibraryWorkspace.importWindowId ?? default);
-        }
     }
 
     private void OnLibraryContentChanged(

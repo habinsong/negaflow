@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Negaflow.Catalog;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
 using Windows.System;
@@ -79,6 +80,17 @@ public sealed partial class FilmstripView : UserControl
             }
         }
     }
+
+    /// <summary>
+    /// 별·깃발·제외가 바뀌었습니다. <b>스트립이 실제로 붙들고 있는 객체</b>를 맞춥니다.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="ShowFrames"/> 는 아이디가 같으면 예전 항목 객체를 그대로 두므로, 목록을 다시
+    /// 지어 넘기는 길로는 새 값이 스트립에 영영 닿지 않습니다 — 도구줄이나 라이브러리 카드에서
+    /// 준 별이 하단 스트립에 뜨지 않던 자리입니다.
+    /// </remarks>
+    public void RefreshFrames(IReadOnlyList<LibraryFrameSnapshot> frames) =>
+        _ = LibraryFrameListItems.Refresh(items, frames);
 
     /// <summary>
     /// 스트립에 보일 frame 들입니다. 항목은 라이브러리 그리드와 같은 것을 씁니다 — 썸네일이

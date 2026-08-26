@@ -185,6 +185,15 @@ public sealed partial class PrintWorkspaceView
 
     public void ShowLibrary(LibraryHostService host) => printSources?.ShowLibrary(host);
 
+    /// <summary>
+    /// 별·깃발·제외가 바뀌었습니다. 하단 필름스트립의 표시만 맞춥니다.
+    /// </summary>
+    internal void RefreshFrameMarks(LibraryHostService host)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        Filmstrip.RefreshFrames(host.Frames);
+    }
+
     public void AttachWindow(Microsoft.UI.WindowId windowId) =>
         printWindowId = windowId;
 

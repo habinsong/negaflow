@@ -251,6 +251,23 @@ public sealed partial class LibraryWorkspaceView : UserControl
         });
     }
 
+    /// <summary>
+    /// 별·깃발·제외만 바뀌었습니다. 격자를 다시 짓지 않고 그 값만 갈아 끼웁니다.
+    /// </summary>
+    /// <remarks>
+    /// 예전에는 여기서 <see cref="ShowLibrary"/> 를 다시 불렀습니다. 그러면 별 하나에 사이드탭
+    /// 전부가 다시 세워지고 원본 존재 확인이 사진 수만큼 다시 돌아, 별을 누를 때마다 눈에 보이게
+    /// 멈췄습니다.
+    /// </remarks>
+    internal void RefreshFrameMarks()
+    {
+        if (libraryHost is not { } host)
+        {
+            return;
+        }
+        _ = LibraryFrameListItems.Refresh(allItems, host.Frames);
+    }
+
     private void OnHostSelectionChanged(object? sender, EventArgs args)
     {
         _ = sender;

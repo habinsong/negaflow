@@ -71,10 +71,9 @@ internal sealed class LibraryFrameActions
                 changed = true;
             }
         }
-        if (changed && view.libraryHost.Save() == CatalogStoreError.None)
-        {
-            view.ShowLibrary(view.libraryHost, view.importWindowId ?? default);
-        }
+        // 저장은 `Edit` 이 이미 예약했습니다(1.5 초 debounce, macOS 와 같습니다). 화면도 셸의
+        // `FrameEdited` 가 그 자리에서 맞춥니다 — 여기서 목록을 다시 지으면 두 번 짓습니다.
+        _ = changed;
     }
 
     internal void AddToCollection(
@@ -332,12 +331,12 @@ internal sealed class LibraryFrameActions
         LibraryFrameError error = view.libraryHost.Edit(
             frame.Id,
             new LibraryFrameEdit(frame.Tone, frame.ManualBase, Rating: rating));
-        if (error != LibraryFrameError.None || view.libraryHost.Save() != CatalogStoreError.None)
+        if (error != LibraryFrameError.None)
         {
-            // 저장에 실패했으면 화면도 되돌립니다 — 다음 실행에서 사라질 값을 남기지 않습니다.
+            // 값을 못 넣었으면 화면도 되돌립니다 — 남길 수 없는 값을 남기지 않습니다.
             ((FrameRatingStars)sender).Rating = frame.Rating;
-            return;
         }
-        view.ShowLibrary(view.libraryHost, view.importWindowId ?? default);
+        // 저장 예약과 화면 반영은 `Edit` 과 셸의 `FrameEdited` 가 맡습니다. 별 하나에 카탈로그를
+        // 통째로 쓰고 라이브러리를 다시 세우던 자리라, 별을 누를 때마다 눈에 보이게 멈췄습니다.
     }
 }
