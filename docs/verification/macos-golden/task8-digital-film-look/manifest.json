@@ -1,0 +1,65 @@
+{
+  "cases" : [
+    {
+      "bytes" : 1048576,
+      "file" : "digital-film-look-portra400-i0.500-256x256.f32",
+      "filmEmulation" : "portra400",
+      "intensity" : 0.5,
+      "monochrome" : false,
+      "sha256" : "e95fc2fb2ee2a43a2e48f2554c1040ce76ca56caa7e31454b5109517627ac89e"
+    },
+    {
+      "bytes" : 1048576,
+      "file" : "digital-film-look-portra400-i1.000-256x256.f32",
+      "filmEmulation" : "portra400",
+      "intensity" : 1,
+      "monochrome" : false,
+      "sha256" : "e0e0f257a43a4608e81538d481650b37c608b16ba0d058813e3732bf4edda97f"
+    },
+    {
+      "bytes" : 1048576,
+      "file" : "digital-film-look-velvia50-i0.500-256x256.f32",
+      "filmEmulation" : "velvia50",
+      "intensity" : 0.5,
+      "monochrome" : false,
+      "sha256" : "4995e9d2ac8e0c36787f4b2f8f43f8d56414c3e13a9b9365dfd595e83e22f038"
+    },
+    {
+      "bytes" : 1048576,
+      "file" : "digital-film-look-velvia50-i1.000-256x256.f32",
+      "filmEmulation" : "velvia50",
+      "intensity" : 1,
+      "monochrome" : false,
+      "sha256" : "71be5494424f67fcace9d8fa23e5acfe8eee6d88ebe2a40d09998028097802ee"
+    },
+    {
+      "bytes" : 1048576,
+      "file" : "digital-film-look-triX400-i0.500-256x256.f32",
+      "filmEmulation" : "triX400",
+      "intensity" : 0.5,
+      "monochrome" : true,
+      "sha256" : "cb986e25537af4aaa0f1a94f79eb8ee0f3b91bbeac4ee5995dfa39112092681f"
+    },
+    {
+      "bytes" : 1048576,
+      "file" : "digital-film-look-triX400-i1.000-256x256.f32",
+      "filmEmulation" : "triX400",
+      "intensity" : 1,
+      "monochrome" : true,
+      "sha256" : "fd2f5d3cb4bd172be386f0472cb6ecdae2c2aced2a9a46ab1992f07cd3dbbf79"
+    }
+  ],
+  "input" : {
+    "bytes" : 1048576,
+    "file" : "digital-film-look-input-256x256.f32",
+    "height" : 256,
+    "layout" : "sky gradient, warm subject, foliage, neutral wall, deep shadow, highlight patches",
+    "sha256" : "f05a12ada43f5dc9668a811d4304992e615d105ac0d28197254b47faf461e134",
+    "width" : 256
+  },
+  "renderFormat" : "little-endian Float32 RGBAf, row-major, y-down",
+  "schemaVersion" : 1,
+  "sourceContract" : "synthetic positive digital scene; this is not a film-scan develop path",
+  "task" : "REQUEST-5 F · DigitalFilmLook pixel golden",
+  "workingColorSpace" : "linear sRGB"
+}

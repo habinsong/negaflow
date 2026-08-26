@@ -408,10 +408,28 @@ std::optional<DevelopExportOutcome> decode_source(
             DevelopExportStage::observe_source_after, "source_changed_during_decode");
     }
 
-    // **프리뷰도 담습니다.** 예전에는 프리뷰를 빼 두어서, 슬라이더를 움직이는 동안 도는
-    // 정착 패스가 디코드 도중 취소될 때마다 아무것도 남기지 못하고 다음 번에 처음부터 다시
-    // 풀었습니다. 크기를 함께 담으므로 내보내기가 작은 화상을 집어갈 위험은 없습니다.
+    // **프리뷰만 담습니다.**
+    //
+    // 프리뷰는 같은 프레임을 계속 다시 그립니다 - 슬라이더를 움직이는 동안 도는 정착 패스가
+    // 디코드 도중 취소될 때마다 아무것도 남기지 못하고 처음부터 다시 풀던 것을 이 캐시가
+    // 막습니다. 크기를 함께 담으므로 내보내기가 작은 화상을 집어갈 위험은 없습니다.
+    //
+    // 반대로 **내보내기는 담지 않습니다.** 한 프레임을 한 번만 쓰는데 담아 두면 그 한 번을
+    // 위해 프레임당 수백 MB 가 배치가 끝날 때까지 남습니다. 실측(제조사별 RAW 8 장 TIFF16
+    // 배치): 담을 때 peak 3,740 MB, 담지 않을 때 1,021 MB 였고, 그 차이가 동시에 돌릴 수
+    // 있는 장수를 그대로 정합니다.
+    //
+    // **전체 해상도 프리뷰는 다릅니다.** 결함 편집은 ROI 가 원본 화소 좌표라 전체 해상도로
+    // 풀지만, 붓질마다 같은 프레임을 다시 그립니다 — 담지 않으면 획 하나에 한 번씩 다시
+    // 풉니다. 그래서 판정은 "전체 해상도냐"가 아니라 **"프리뷰냐"** 입니다.
     try {
+        if (preview == nullptr) {
+            tracker.finish();
+            if (tracker.cancelled()) {
+                return cancelled_outcome(DevelopExportStage::decode);
+            }
+            return std::nullopt;
+        }
         put_decoded(
             request.source,
             observed.before.observation,

@@ -176,11 +176,13 @@
                                             Style="{StaticResource NegaflowScannerPlainButtonStyle}" />
                                     </Grid>
                                     <Border Height="1" Margin="0,1" Background="{ThemeResource NegaflowDividerBrush}" />
+                                    <!--  색 모드 칸은 내용 크기입니다. 반씩 나누면 "Gray (불안정)"
+                                          처럼 긴 문구가 언어에 따라 잘립니다.  -->
                                     <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <ComboBox
                                             x:Name="ScanResolutionSelector" x:FieldModifier="internal"

@@ -1,0 +1,120 @@
+{
+  "ciGaussianBlur" : [
+    {
+      "bytes" : 1048576,
+      "file" : "cigaussianblur-radius1.0-256x256.f32",
+      "provenance" : "SoftwareDefectRemoval fallback and DefectHealBrush feather",
+      "radius" : 1,
+      "sha256" : "5b41c4dee7e9df3f545f174c9c982ac383bdce006664cc4589e00d874bf9ca41"
+    },
+    {
+      "bytes" : 1048576,
+      "file" : "cigaussianblur-radius1.3-256x256.f32",
+      "provenance" : "FilmScanDenoise fine band",
+      "radius" : 1.3,
+      "sha256" : "a0aed22f8901b9f0cb55ec1425fa8dff5f36dbb881ac5dc0f37a89b60ede82e2"
+    },
+    {
+      "bytes" : 1048576,
+      "file" : "cigaussianblur-radius2.4-256x256.f32",
+      "provenance" : "ScannerNoiseReduction low-saturation chroma",
+      "radius" : 2.3999999999999999,
+      "sha256" : "c2764fa50c56a0c90f640ea47272d9a8cdd855c8f764196ebece76dd8f8b85f8"
+    },
+    {
+      "bytes" : 1048576,
+      "file" : "cigaussianblur-clarity-0.00-radius4.0-256x256.f32",
+      "provenance" : "ColorModel negative clarity lower endpoint",
+      "radius" : 4,
+      "sha256" : "e4215523b1c4110c42fbef10a0cba5aff1970c47e24981758ae0f06dc1191185"
+    },
+    {
+      "bytes" : 1048576,
+      "file" : "cigaussianblur-clarity-0.50-radius7.0-256x256.f32",
+      "provenance" : "ColorModel negative clarity midpoint",
+      "radius" : 7,
+      "sha256" : "514ed2f1bb711b91082e180aa41e6909e4082a62cbb6f695c2c18441b1e356a1"
+    },
+    {
+      "bytes" : 1048576,
+      "file" : "cigaussianblur-clarity-1.00-radius10.0-256x256.f32",
+      "provenance" : "ColorModel negative clarity upper endpoint",
+      "radius" : 10,
+      "sha256" : "c24f614891d0e43bbd3704932b7969148f384f5e84a4efa849d0e1d89ceae9b3"
+    }
+  ],
+  "ciUnsharpMask" : [
+    {
+      "bytes" : 1048576,
+      "file" : "ciunsharpmask-clarity-0.01-256x256.f32",
+      "intensity" : 0.1018,
+      "provenance" : "ColorModel positive clarity lower anchor",
+      "radius" : 6.0499999999999998,
+      "sha256" : "3cd243a20c87dfa40784bd52051d7bead9e0c4bad2ecede18ccd8eeb8c07792d"
+    },
+    {
+      "bytes" : 1048576,
+      "file" : "ciunsharpmask-clarity-0.50-256x256.f32",
+      "intensity" : 0.19,
+      "provenance" : "ColorModel positive clarity midpoint",
+      "radius" : 8.5,
+      "sha256" : "261a9f879a0b984aa52f787a7ead6b5ef46e13c28bfb745c6441b78ac959f6b1"
+    },
+    {
+      "bytes" : 1048576,
+      "file" : "ciunsharpmask-clarity-1.00-256x256.f32",
+      "intensity" : 0.28000000000000003,
+      "provenance" : "ColorModel positive clarity upper anchor",
+      "radius" : 11,
+      "sha256" : "3546259ff8725304e0a2f26bb101ef02a548f1f15c0aff09d6a745257ca8f81a"
+    },
+    {
+      "bytes" : 1048576,
+      "file" : "ciunsharpmask-export-screen-dpi144-strength1-256x256.f32",
+      "intensity" : 0.22,
+      "provenance" : "ExportEngine output sharpening",
+      "radius" : 0.45000000000000001,
+      "sha256" : "55d75bcf62eb2da1e91fae3f6fdfc5f4ffff0e3c8e7f038b2f21beb61d15ded6"
+    },
+    {
+      "bytes" : 1048576,
+      "file" : "ciunsharpmask-export-matte-dpi300-strength1-256x256.f32",
+      "intensity" : 0.34000000000000002,
+      "provenance" : "ExportEngine output sharpening",
+      "radius" : 1,
+      "sha256" : "9054af67726ee1dc9144d79e373327ba48ee40281d90966a2db18d9d9be5eacb"
+    },
+    {
+      "bytes" : 1048576,
+      "file" : "ciunsharpmask-export-glossy-dpi300-strength1-256x256.f32",
+      "intensity" : 0.28000000000000003,
+      "provenance" : "ExportEngine output sharpening",
+      "radius" : 0.75,
+      "sha256" : "706d5bd1e9cb1094f703b0f21450ba134ad1424cb22a41d0aa29d20ab75853a2"
+    }
+  ],
+  "extentBehavior" : "Each direct Core Image filter result is cropped to the 256x256 input extent.",
+  "input" : {
+    "bytes" : 1048576,
+    "file" : "coreimage-filter-input-256x256.f32",
+    "height" : 256,
+    "layout" : [
+      "rows 0-63: left vertical step, right horizontal step",
+      "rows 64-127: impulse grid on neutral 0.18",
+      "rows 128-191: vertical sine-frequency sweep",
+      "rows 192-255: 0.18, 0.50, 0.90 uniform neutral patches"
+    ],
+    "sha256" : "7b1448dbd42226d54ed96f2fa53a855286ce749a697343d7a4bf94be235cb34d",
+    "width" : 256
+  },
+  "pipelineParameterContracts" : {
+    "clarityNegative" : "radius = 4 - clarity*6 for clarity in [-1, 0); the blurred result is mixed at min(0.9, -clarity*0.8)",
+    "clarityPositive" : "radius = 6 + clarity*5; intensity = 0.10 + clarity*0.18; clarity in (0, 1]",
+    "fixedGaussianAnchors" : "1.0 software-defect fallback and heal-brush feather; 1.3 film-scan denoise fine band; 2.4 low-saturation chroma neutralization",
+    "outputSharpening" : "screen: radius 0.45*sqrt(clamp(dpi/144, 0.5, 2)), intensity 0.22*strength; matte: 1.00*sqrt(clamp(dpi/300, 0.5, 2)), 0.34*strength; glossy: 0.75*sqrt(clamp(dpi/300, 0.5, 2)), 0.28*strength; strength in (0, 1]"
+  },
+  "renderFormat" : "little-endian Float32 RGBAf, row-major, y-down",
+  "schemaVersion" : 1,
+  "task" : "REQUEST-5 C and D · Core Image neighborhood-filter mapping",
+  "workingColorSpace" : "linear sRGB"
+}

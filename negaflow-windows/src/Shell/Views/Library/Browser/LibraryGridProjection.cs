@@ -38,6 +38,9 @@ internal sealed class LibraryGridProjection
             return;
         }
 
+        // 지난 실행에서 접어 둔 폴더를 되살립니다. 설정이 붙은 뒤 처음 그릴 때 한 번뿐입니다.
+        view.rail.RestoreCollapsedFolders();
+
         using IDisposable _measure = Negaflow.Shell.Diagnostics.StartupTrace.Measure("grid project");
         LibraryBrowserProjection projection = LibraryBrowserProjector.Create(
             items,

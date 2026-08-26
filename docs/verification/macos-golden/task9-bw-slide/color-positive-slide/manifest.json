@@ -1,0 +1,100 @@
+{
+  "cases" : [
+    {
+      "bytes" : 30832142,
+      "case" : "a-default-main-srgb",
+      "developTarget" : "main",
+      "exportColorSpace" : "sRGB",
+      "file" : "a-default-main-srgb.tif",
+      "scannerProfile" : "none",
+      "sha256" : "025d44ec73a84011da2473655a7a1c4190b982a25d0c0b3402dec13ac9a957fa"
+    },
+    {
+      "bytes" : 30832142,
+      "case" : "b-main-scannerprofile-srgb",
+      "developTarget" : "main",
+      "exportColorSpace" : "sRGB",
+      "file" : "b-main-scannerprofile-srgb.tif",
+      "scannerProfile" : "noritsu__color-slide__kodak-ektachrome-100",
+      "sha256" : "5bb1747dc06cd612365a87cb565f015af54dc78d7f50573b597f7bcd50c3026a"
+    },
+    {
+      "bytes" : 30832142,
+      "case" : "c-target-hs-srgb",
+      "developTarget" : "noritsu",
+      "exportColorSpace" : "sRGB",
+      "file" : "c-target-hs-srgb.tif",
+      "scannerProfile" : "none",
+      "sha256" : "d68d8fce558d155b93017c35251e19924d5364b2a5382393421ccb65e209951c"
+    },
+    {
+      "bytes" : 30832142,
+      "case" : "c-target-sp-srgb",
+      "developTarget" : "sp-3000",
+      "exportColorSpace" : "sRGB",
+      "file" : "c-target-sp-srgb.tif",
+      "scannerProfile" : "none",
+      "sha256" : "847f4836a9bbe82f097f0645dc4b84bbaa99143b8f8569dc1ee785eaf2e47b2e"
+    },
+    {
+      "bytes" : 30832142,
+      "case" : "c-target-f135-srgb",
+      "developTarget" : "f135",
+      "exportColorSpace" : "sRGB",
+      "file" : "c-target-f135-srgb.tif",
+      "scannerProfile" : "none",
+      "sha256" : "533881d13f6c62c99f9af97e7b32ea1c64598bc8fed26656af80b7c655f573b5"
+    },
+    {
+      "bytes" : 30832142,
+      "case" : "c-target-hr-srgb",
+      "developTarget" : "hr",
+      "exportColorSpace" : "sRGB",
+      "file" : "c-target-hr-srgb.tif",
+      "scannerProfile" : "none",
+      "sha256" : "9f39893035b03d98fb7c1ae11e85faf7a580d0a2b2126004b87af31b3033c9de"
+    },
+    {
+      "bytes" : 30829534,
+      "case" : "d-main-displayp3",
+      "developTarget" : "main",
+      "exportColorSpace" : "displayP3",
+      "file" : "d-main-displayp3.tif",
+      "scannerProfile" : "none",
+      "sha256" : "7d1548954fcaa5791e4f67f88301d085a7d44c743b0d8c752a4a705fbe3d52a3"
+    },
+    {
+      "bytes" : 30829558,
+      "case" : "d-main-adobergb",
+      "developTarget" : "main",
+      "exportColorSpace" : "adobeRGB",
+      "file" : "d-main-adobergb.tif",
+      "scannerProfile" : "none",
+      "sha256" : "df4b2918be712310987e934cfe849d9d0f30448513e41eb637fc9daf4e247def"
+    }
+  ],
+  "fixedSettings" : {
+    "chemistryProvenance" : "not recorded in the local TIFF; treated only as a color-positive slide path golden",
+    "defectRemoval" : 0,
+    "developPath" : "ChromabaseEngine.developScanner",
+    "exportFormat" : "tiff16",
+    "exportMeta" : "nil",
+    "filmType" : "colorPositive",
+    "loadPath" : "ImageLoader.loadScannerTIFF",
+    "look" : "none (plain DevelopParameters())",
+    "metadataPolicy" : "minimal",
+    "tiffBitDepth" : 16,
+    "tiffCompression" : "none",
+    "toneOverrides" : "none"
+  },
+  "input" : {
+    "bytes" : 30827088,
+    "file" : "source.tiff",
+    "originalPathAtCapture" : "/Users/songhabin/tiff_test/preview/color_slide.tiff",
+    "pixelHeight" : 2906,
+    "pixelWidth" : 1768,
+    "sha256" : "1568e4843e6e43edf31c5360520f7b2df67861bd222799ffe772a8cce16e6a24"
+  },
+  "schemaVersion" : 1,
+  "task" : "REQUEST-5 E · real-input color-positive-slide pixel golden"
+}

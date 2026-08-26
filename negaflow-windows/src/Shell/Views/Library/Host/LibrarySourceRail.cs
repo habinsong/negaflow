@@ -125,6 +125,25 @@ internal sealed class LibrarySourceRail
     /// </summary>
     internal readonly HashSet<string> collapsedFolders = new(StringComparer.OrdinalIgnoreCase);
 
+    private bool restoredCollapsedFolders;
+
+    /// <summary>
+    /// 지난 실행에서 접어 둔 폴더를 되살립니다. 설정이 붙은 뒤 격자를 처음 그릴 때 한 번만
+    /// 돕니다 — 그 뒤로는 이 집합이 정본이고, 바뀔 때마다 설정에 씁니다.
+    /// </summary>
+    internal void RestoreCollapsedFolders()
+    {
+        if (restoredCollapsedFolders || view.workspaceState is not { } state)
+        {
+            return;
+        }
+        restoredCollapsedFolders = true;
+        foreach (string folder in state.Current.CollapsedGridFolders)
+        {
+            _ = collapsedFolders.Add(folder);
+        }
+    }
+
     /// <summary>폴더 머리줄의 화살표입니다.</summary>
     internal void OnFolderDisclosureClicked(object? sender, RoutedEventArgs args)
     {
@@ -137,6 +156,8 @@ internal sealed class LibrarySourceRail
         {
             collapsedFolders.Remove(section.Id);
         }
+        // 앱을 껐다 켜도 그대로여야 합니다. 접는 순간 남깁니다.
+        view.workspaceState?.SetCollapsedGridFolders([.. collapsedFolders]);
         view.ShowLibrary(host, view.importWindowId ?? default);
     }
 

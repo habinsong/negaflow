@@ -17,6 +17,9 @@
             <ColumnDefinition x:Name="RightCaptionInsetColumn" Width="0" />
         </Grid.ColumnDefinitions>
 
+        <!--  메뉴줄이 들어오는 자리입니다. 셸이 만들어 넘깁니다.  -->
+        <Border x:Name="MenuHost" Grid.Column="1" VerticalAlignment="Center" />
+
         <StackPanel x:Name="PrimaryControls" Grid.Column="1" Orientation="Horizontal" Spacing="3">
             <Button
                 x:Name="PreviewScanButton"

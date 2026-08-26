@@ -155,19 +155,20 @@ public sealed partial class DevelopExportPanel : UserControl
         ? "quality"
         : ExportSourceTabButton.IsChecked == true ? "source" : "file";
 
-    /// <summary>상태 줄입니다. 빈 글이면 줄 자체가 사라집니다 — macOS 도 자리를 비웁니다.</summary>
+    /// <summary>
+    /// 내보내기 결과입니다. **단추 아래에 글로 띄우지 않습니다.**
+    /// </summary>
+    /// <remarks>
+    /// 저장한 경로·진행·실패를 단추 바로 밑에 쌓으면 카드가 움직이고, 성공했을 때조차
+    /// 읽을 일이 없는 줄이 남습니다. 진행은 도구줄의 원형 표시가, 결과는 파일 자체가
+    /// 말합니다. 다만 조용히 삼키지는 않습니다 — 진단 기록에는 남깁니다.
+    /// </remarks>
     internal void SetOutputStatus(string text)
     {
-        OutputStatusText.Text = text;
-        Visibility wanted = Visible(text.Length > 0);
-        if (OutputStatusRow.Visibility == wanted)
+        if (text.Length != 0)
         {
-            return;
+            PreviewTrace.Write("export status " + text);
         }
-        // 분리선은 줄이 나타나거나 사라질 때만 다시 놓습니다. 배치 진행처럼 1초에 여러 번
-        // 들어오는 자리라 매번 카드를 다시 꾸미면 UI 스레드가 그만큼 밀립니다.
-        OutputStatusRow.Visibility = wanted;
-        ExportCard.Apply();
     }
 
     /// <summary>

@@ -32,6 +32,16 @@ public sealed partial class WorkspaceShellView : UserControl
         {
             InitializeComponent();
         }
+        // **첫째 줄이 제목 표시줄입니다.** 메뉴는 셸이 이름으로 들고 있어야 하고(신호를
+        // 여기서 받습니다) 동작 단추의 처리기는 툴바가 들고 있으므로, 둘 다 만들어진 뒤
+        // 자리만 옮깁니다.
+        if (AppMenu.Parent is Panel menuParent)
+        {
+            _ = menuParent.Children.Remove(AppMenu);
+        }
+        AppMenu.Visibility = Visibility.Visible;
+        Toolbar.HostMenu(AppMenu);
+        ActionBarHost.Child = Toolbar.DetachPrimaryControls();
         Toolbar.TitleBarInteractiveRegionsChanged += OnToolbarTitleBarInteractiveRegionsChanged;
     }
 

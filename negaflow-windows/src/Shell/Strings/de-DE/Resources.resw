@@ -1003,6 +1003,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="scanBitDepthUnavailable.Text" xml:space="preserve"><value>Dieser Scanner meldet keine Bittiefe-Option und kann daher nicht scannen.</value><comment>AppLocalizedPhrase.bitDepthUnavailable</comment></data>
   <data name="scanCancel.Content" xml:space="preserve"><value>Abbrechen</value><comment>AppLocalizedPhrase.cancel</comment></data>
   <data name="scanColorMode.Text" xml:space="preserve"><value>Modus</value><comment>AppLocalizedPhrase.colorMode</comment></data>
+  <data name="scanColorModeGrayUnstable.Text" xml:space="preserve"><value>Gray (instabil)</value><comment>스캐너 색 모드 목록의 gray 항목. 이 경로는 아직 불안정하다는 것을 이름에 남긴다.</comment></data>
   <data name="scanCountFormat.Text" xml:space="preserve"><value>Scan x%d</value><comment>AppLocalizedPhrase.scanCountFormat</comment></data>
   <data name="scanDetectScanners.Text" xml:space="preserve"><value>Scanner erneut suchen</value><comment>AppLocalizedText.commandDetectScanners</comment></data>
   <data name="scanFilm.Text" xml:space="preserve"><value>Film</value><comment>AppLocalizedPhrase.film</comment></data>

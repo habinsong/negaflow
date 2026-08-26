@@ -1,0 +1,1133 @@
+[
+  {
+    "byteOrder": "big",
+    "exifIFD": [
+      {
+        "count": 1,
+        "name": "FNumber",
+        "tag": 33437,
+        "type": "RATIONAL",
+        "value": "7/5"
+      },
+      {
+        "count": 1,
+        "name": "ISOSpeedRatings",
+        "tag": 34855,
+        "type": "SHORT",
+        "value": 400
+      },
+      {
+        "count": 20,
+        "name": "DateTimeOriginal",
+        "tag": 36867,
+        "type": "ASCII",
+        "value": "2026:01:02 03:04:05"
+      },
+      {
+        "count": 20,
+        "name": "DateTimeDigitized",
+        "tag": 36868,
+        "type": "ASCII",
+        "value": "2026:01:02 03:04:05"
+      },
+      {
+        "count": 7,
+        "name": "OffsetTime",
+        "tag": 36880,
+        "type": "ASCII",
+        "value": "+00:00"
+      },
+      {
+        "count": 7,
+        "name": "OffsetTimeOriginal",
+        "tag": 36881,
+        "type": "ASCII",
+        "value": "+00:00"
+      },
+      {
+        "count": 7,
+        "name": "OffsetTimeDigitized",
+        "tag": 36882,
+        "type": "ASCII",
+        "value": "+00:00"
+      },
+      {
+        "count": 60,
+        "name": "UserComment",
+        "tag": 37510,
+        "type": "UNDEFINED",
+        "value": "ASCII"
+      },
+      {
+        "count": 1,
+        "name": "PixelXDimension",
+        "tag": 40962,
+        "type": "LONG",
+        "value": 64
+      },
+      {
+        "count": 1,
+        "name": "PixelYDimension",
+        "tag": 40963,
+        "type": "LONG",
+        "value": 64
+      },
+      {
+        "count": 18,
+        "name": "LensModel",
+        "tag": 42036,
+        "type": "ASCII",
+        "value": "Nikkor 50mm f/1.4"
+      }
+    ],
+    "file": "task6-metadata-policy/policy-all.tif",
+    "gpsIFD": [
+      {
+        "count": 2,
+        "name": "GPSLatitudeRef",
+        "tag": 1,
+        "type": "ASCII",
+        "value": "N"
+      },
+      {
+        "count": 3,
+        "name": "GPSLatitude",
+        "tag": 2,
+        "type": "RATIONAL",
+        "value": [
+          "37/1",
+          "34/1",
+          "2244/100"
+        ]
+      },
+      {
+        "count": 2,
+        "name": "GPSLongitudeRef",
+        "tag": 3,
+        "type": "ASCII",
+        "value": "E"
+      },
+      {
+        "count": 3,
+        "name": "GPSLongitude",
+        "tag": 4,
+        "type": "RATIONAL",
+        "value": [
+          "126/1",
+          "58/1",
+          "4584/100"
+        ]
+      }
+    ],
+    "iptcIIM": [
+      {
+        "dataset": 90,
+        "name": "CodedCharacterSet",
+        "record": 1,
+        "value": "\u001b%G"
+      },
+      {
+        "dataset": 0,
+        "name": "RecordVersion",
+        "record": 2,
+        "value": "\u0000\u0002"
+      },
+      {
+        "dataset": 101,
+        "name": "Country/PrimaryLocationName",
+        "record": 2,
+        "value": "Republic of Korea"
+      },
+      {
+        "dataset": 80,
+        "name": "By-line",
+        "record": 2,
+        "value": "Song Habin"
+      },
+      {
+        "dataset": 105,
+        "name": "Headline",
+        "record": 2,
+        "value": "golden fixture"
+      },
+      {
+        "dataset": 100,
+        "name": "Country/PrimaryLocationCode",
+        "record": 2,
+        "value": "KOR"
+      },
+      {
+        "dataset": 92,
+        "name": "Sub-location",
+        "record": 2,
+        "value": "Jongno-gu"
+      },
+      {
+        "dataset": 116,
+        "name": "CopyrightNotice",
+        "record": 2,
+        "value": "(c) 2026 Song Habin"
+      },
+      {
+        "dataset": 95,
+        "name": "Province/State",
+        "record": 2,
+        "value": "Seoul"
+      },
+      {
+        "dataset": 90,
+        "name": "City",
+        "record": 2,
+        "value": "Seoul"
+      }
+    ],
+    "tiffIFD0": [
+      {
+        "count": 1,
+        "name": "ImageWidth",
+        "tag": 256,
+        "type": "SHORT",
+        "value": 64
+      },
+      {
+        "count": 1,
+        "name": "ImageLength",
+        "tag": 257,
+        "type": "SHORT",
+        "value": 64
+      },
+      {
+        "count": 3,
+        "name": "BitsPerSample",
+        "tag": 258,
+        "type": "SHORT",
+        "value": [
+          16,
+          16,
+          16
+        ]
+      },
+      {
+        "count": 1,
+        "name": "Compression",
+        "tag": 259,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 1,
+        "name": "PhotometricInterpretation",
+        "tag": 262,
+        "type": "SHORT",
+        "value": 2
+      },
+      {
+        "count": 1,
+        "name": "FillOrder",
+        "tag": 266,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 15,
+        "name": "ImageDescription",
+        "tag": 270,
+        "type": "ASCII",
+        "value": "golden fixture"
+      },
+      {
+        "count": 12,
+        "name": "Make",
+        "tag": 271,
+        "type": "ASCII",
+        "value": "Seiko Epson"
+      },
+      {
+        "count": 8,
+        "name": "Model",
+        "tag": 272,
+        "type": "ASCII",
+        "value": "GT-X900"
+      },
+      {
+        "count": 1,
+        "name": "StripOffsets",
+        "tag": 273,
+        "type": "LONG",
+        "value": 395
+      },
+      {
+        "count": 1,
+        "name": "Orientation",
+        "tag": 274,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 1,
+        "name": "SamplesPerPixel",
+        "tag": 277,
+        "type": "SHORT",
+        "value": 3
+      },
+      {
+        "count": 1,
+        "name": "RowsPerStrip",
+        "tag": 278,
+        "type": "SHORT",
+        "value": 64
+      },
+      {
+        "count": 1,
+        "name": "StripByteCounts",
+        "tag": 279,
+        "type": "LONG",
+        "value": 24576
+      },
+      {
+        "count": 1,
+        "name": "XResolution",
+        "tag": 282,
+        "type": "RATIONAL",
+        "value": "2400/1"
+      },
+      {
+        "count": 1,
+        "name": "YResolution",
+        "tag": 283,
+        "type": "RATIONAL",
+        "value": "2400/1"
+      },
+      {
+        "count": 1,
+        "name": "PlanarConfiguration",
+        "tag": 284,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 1,
+        "name": "ResolutionUnit",
+        "tag": 296,
+        "type": "SHORT",
+        "value": 2
+      },
+      {
+        "count": 24,
+        "name": "Software",
+        "tag": 305,
+        "type": "ASCII",
+        "value": "negaflow golden harness"
+      },
+      {
+        "count": 20,
+        "name": "DateTime",
+        "tag": 306,
+        "type": "ASCII",
+        "value": "2026:01:02 03:04:05"
+      },
+      {
+        "count": 11,
+        "name": "Artist",
+        "tag": 315,
+        "type": "ASCII",
+        "value": "Song Habin"
+      },
+      {
+        "count": 3,
+        "name": "SampleFormat",
+        "tag": 339,
+        "type": "SHORT",
+        "value": [
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "count": 1705,
+        "name": "XMLPacket(XMP)",
+        "tag": 700,
+        "type": "BYTE",
+        "value": [
+          60,
+          120,
+          58,
+          120,
+          109,
+          112,
+          109,
+          101,
+          116,
+          97,
+          32,
+          120,
+          109,
+          108,
+          110,
+          115,
+          "...(1705 total)"
+        ]
+      },
+      {
+        "count": 20,
+        "name": "Copyright",
+        "tag": 33432,
+        "type": "ASCII",
+        "value": "(c) 2026 Song Habin"
+      },
+      {
+        "count": 137,
+        "name": "IPTC/NAA",
+        "tag": 33723,
+        "type": "UNDEFINED",
+        "value": "\u001c\u0001Z"
+      },
+      {
+        "count": 1,
+        "name": "ExifIFDPointer",
+        "tag": 34665,
+        "type": "LONG",
+        "value": 8
+      },
+      {
+        "count": 3144,
+        "name": "ICCProfile",
+        "tag": 34675,
+        "type": "UNDEFINED",
+        "value": ""
+      },
+      {
+        "count": 1,
+        "name": "GPSInfoIFDPointer",
+        "tag": 34853,
+        "type": "LONG",
+        "value": 293
+      }
+    ]
+  },
+  {
+    "byteOrder": "big",
+    "file": "task6-metadata-policy/policy-copyrightOnly.tif",
+    "iptcIIM": [
+      {
+        "dataset": 90,
+        "name": "CodedCharacterSet",
+        "record": 1,
+        "value": "\u001b%G"
+      },
+      {
+        "dataset": 0,
+        "name": "RecordVersion",
+        "record": 2,
+        "value": "\u0000\u0002"
+      },
+      {
+        "dataset": 116,
+        "name": "CopyrightNotice",
+        "record": 2,
+        "value": "(c) 2026 Song Habin"
+      },
+      {
+        "dataset": 80,
+        "name": "By-line",
+        "record": 2,
+        "value": "Song Habin"
+      }
+    ],
+    "tiffIFD0": [
+      {
+        "count": 1,
+        "name": "ImageWidth",
+        "tag": 256,
+        "type": "SHORT",
+        "value": 64
+      },
+      {
+        "count": 1,
+        "name": "ImageLength",
+        "tag": 257,
+        "type": "SHORT",
+        "value": 64
+      },
+      {
+        "count": 3,
+        "name": "BitsPerSample",
+        "tag": 258,
+        "type": "SHORT",
+        "value": [
+          16,
+          16,
+          16
+        ]
+      },
+      {
+        "count": 1,
+        "name": "Compression",
+        "tag": 259,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 1,
+        "name": "PhotometricInterpretation",
+        "tag": 262,
+        "type": "SHORT",
+        "value": 2
+      },
+      {
+        "count": 1,
+        "name": "FillOrder",
+        "tag": 266,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 1,
+        "name": "StripOffsets",
+        "tag": 273,
+        "type": "LONG",
+        "value": 8
+      },
+      {
+        "count": 1,
+        "name": "Orientation",
+        "tag": 274,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 1,
+        "name": "SamplesPerPixel",
+        "tag": 277,
+        "type": "SHORT",
+        "value": 3
+      },
+      {
+        "count": 1,
+        "name": "RowsPerStrip",
+        "tag": 278,
+        "type": "SHORT",
+        "value": 64
+      },
+      {
+        "count": 1,
+        "name": "StripByteCounts",
+        "tag": 279,
+        "type": "LONG",
+        "value": 24576
+      },
+      {
+        "count": 1,
+        "name": "PlanarConfiguration",
+        "tag": 284,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 1,
+        "name": "ResolutionUnit",
+        "tag": 296,
+        "type": "SHORT",
+        "value": 2
+      },
+      {
+        "count": 11,
+        "name": "Artist",
+        "tag": 315,
+        "type": "ASCII",
+        "value": "Song Habin"
+      },
+      {
+        "count": 3,
+        "name": "SampleFormat",
+        "tag": 339,
+        "type": "SHORT",
+        "value": [
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "count": 20,
+        "name": "Copyright",
+        "tag": 33432,
+        "type": "ASCII",
+        "value": "(c) 2026 Song Habin"
+      },
+      {
+        "count": 54,
+        "name": "IPTC/NAA",
+        "tag": 33723,
+        "type": "UNDEFINED",
+        "value": "\u001c\u0001Z"
+      },
+      {
+        "count": 3144,
+        "name": "ICCProfile",
+        "tag": 34675,
+        "type": "UNDEFINED",
+        "value": ""
+      }
+    ]
+  },
+  {
+    "byteOrder": "big",
+    "exifIFD": [
+      {
+        "count": 20,
+        "name": "DateTimeOriginal",
+        "tag": 36867,
+        "type": "ASCII",
+        "value": "2026:01:02 03:04:05"
+      },
+      {
+        "count": 20,
+        "name": "DateTimeDigitized",
+        "tag": 36868,
+        "type": "ASCII",
+        "value": "2026:01:02 03:04:05"
+      },
+      {
+        "count": 7,
+        "name": "OffsetTime",
+        "tag": 36880,
+        "type": "ASCII",
+        "value": "+00:00"
+      },
+      {
+        "count": 7,
+        "name": "OffsetTimeOriginal",
+        "tag": 36881,
+        "type": "ASCII",
+        "value": "+00:00"
+      },
+      {
+        "count": 7,
+        "name": "OffsetTimeDigitized",
+        "tag": 36882,
+        "type": "ASCII",
+        "value": "+00:00"
+      },
+      {
+        "count": 31,
+        "name": "UserComment",
+        "tag": 37510,
+        "type": "UNDEFINED",
+        "value": "ASCII"
+      },
+      {
+        "count": 1,
+        "name": "PixelXDimension",
+        "tag": 40962,
+        "type": "LONG",
+        "value": 64
+      },
+      {
+        "count": 1,
+        "name": "PixelYDimension",
+        "tag": 40963,
+        "type": "LONG",
+        "value": 64
+      }
+    ],
+    "file": "task6-metadata-policy/policy-minimal.tif",
+    "tiffIFD0": [
+      {
+        "count": 1,
+        "name": "ImageWidth",
+        "tag": 256,
+        "type": "SHORT",
+        "value": 64
+      },
+      {
+        "count": 1,
+        "name": "ImageLength",
+        "tag": 257,
+        "type": "SHORT",
+        "value": 64
+      },
+      {
+        "count": 3,
+        "name": "BitsPerSample",
+        "tag": 258,
+        "type": "SHORT",
+        "value": [
+          16,
+          16,
+          16
+        ]
+      },
+      {
+        "count": 1,
+        "name": "Compression",
+        "tag": 259,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 1,
+        "name": "PhotometricInterpretation",
+        "tag": 262,
+        "type": "SHORT",
+        "value": 2
+      },
+      {
+        "count": 1,
+        "name": "FillOrder",
+        "tag": 266,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 12,
+        "name": "Make",
+        "tag": 271,
+        "type": "ASCII",
+        "value": "Seiko Epson"
+      },
+      {
+        "count": 8,
+        "name": "Model",
+        "tag": 272,
+        "type": "ASCII",
+        "value": "GT-X900"
+      },
+      {
+        "count": 1,
+        "name": "StripOffsets",
+        "tag": 273,
+        "type": "LONG",
+        "value": 202
+      },
+      {
+        "count": 1,
+        "name": "Orientation",
+        "tag": 274,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 1,
+        "name": "SamplesPerPixel",
+        "tag": 277,
+        "type": "SHORT",
+        "value": 3
+      },
+      {
+        "count": 1,
+        "name": "RowsPerStrip",
+        "tag": 278,
+        "type": "SHORT",
+        "value": 64
+      },
+      {
+        "count": 1,
+        "name": "StripByteCounts",
+        "tag": 279,
+        "type": "LONG",
+        "value": 24576
+      },
+      {
+        "count": 1,
+        "name": "XResolution",
+        "tag": 282,
+        "type": "RATIONAL",
+        "value": "2400/1"
+      },
+      {
+        "count": 1,
+        "name": "YResolution",
+        "tag": 283,
+        "type": "RATIONAL",
+        "value": "2400/1"
+      },
+      {
+        "count": 1,
+        "name": "PlanarConfiguration",
+        "tag": 284,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 1,
+        "name": "ResolutionUnit",
+        "tag": 296,
+        "type": "SHORT",
+        "value": 2
+      },
+      {
+        "count": 24,
+        "name": "Software",
+        "tag": 305,
+        "type": "ASCII",
+        "value": "negaflow golden harness"
+      },
+      {
+        "count": 20,
+        "name": "DateTime",
+        "tag": 306,
+        "type": "ASCII",
+        "value": "2026:01:02 03:04:05"
+      },
+      {
+        "count": 3,
+        "name": "SampleFormat",
+        "tag": 339,
+        "type": "SHORT",
+        "value": [
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "count": 1,
+        "name": "ExifIFDPointer",
+        "tag": 34665,
+        "type": "LONG",
+        "value": 8
+      },
+      {
+        "count": 3144,
+        "name": "ICCProfile",
+        "tag": 34675,
+        "type": "UNDEFINED",
+        "value": ""
+      }
+    ]
+  },
+  {
+    "byteOrder": "big",
+    "exifIFD": [
+      {
+        "count": 1,
+        "name": "FNumber",
+        "tag": 33437,
+        "type": "RATIONAL",
+        "value": "7/5"
+      },
+      {
+        "count": 1,
+        "name": "ISOSpeedRatings",
+        "tag": 34855,
+        "type": "SHORT",
+        "value": 400
+      },
+      {
+        "count": 20,
+        "name": "DateTimeOriginal",
+        "tag": 36867,
+        "type": "ASCII",
+        "value": "2026:01:02 03:04:05"
+      },
+      {
+        "count": 20,
+        "name": "DateTimeDigitized",
+        "tag": 36868,
+        "type": "ASCII",
+        "value": "2026:01:02 03:04:05"
+      },
+      {
+        "count": 7,
+        "name": "OffsetTime",
+        "tag": 36880,
+        "type": "ASCII",
+        "value": "+00:00"
+      },
+      {
+        "count": 7,
+        "name": "OffsetTimeOriginal",
+        "tag": 36881,
+        "type": "ASCII",
+        "value": "+00:00"
+      },
+      {
+        "count": 7,
+        "name": "OffsetTimeDigitized",
+        "tag": 36882,
+        "type": "ASCII",
+        "value": "+00:00"
+      },
+      {
+        "count": 60,
+        "name": "UserComment",
+        "tag": 37510,
+        "type": "UNDEFINED",
+        "value": "ASCII"
+      },
+      {
+        "count": 1,
+        "name": "PixelXDimension",
+        "tag": 40962,
+        "type": "LONG",
+        "value": 64
+      },
+      {
+        "count": 1,
+        "name": "PixelYDimension",
+        "tag": 40963,
+        "type": "LONG",
+        "value": 64
+      },
+      {
+        "count": 18,
+        "name": "LensModel",
+        "tag": 42036,
+        "type": "ASCII",
+        "value": "Nikkor 50mm f/1.4"
+      }
+    ],
+    "file": "task6-metadata-policy/policy-removeLocation.tif",
+    "iptcIIM": [
+      {
+        "dataset": 90,
+        "name": "CodedCharacterSet",
+        "record": 1,
+        "value": "\u001b%G"
+      },
+      {
+        "dataset": 0,
+        "name": "RecordVersion",
+        "record": 2,
+        "value": "\u0000\u0002"
+      },
+      {
+        "dataset": 80,
+        "name": "By-line",
+        "record": 2,
+        "value": "Song Habin"
+      },
+      {
+        "dataset": 116,
+        "name": "CopyrightNotice",
+        "record": 2,
+        "value": "(c) 2026 Song Habin"
+      },
+      {
+        "dataset": 105,
+        "name": "Headline",
+        "record": 2,
+        "value": "golden fixture"
+      }
+    ],
+    "tiffIFD0": [
+      {
+        "count": 1,
+        "name": "ImageWidth",
+        "tag": 256,
+        "type": "SHORT",
+        "value": 64
+      },
+      {
+        "count": 1,
+        "name": "ImageLength",
+        "tag": 257,
+        "type": "SHORT",
+        "value": 64
+      },
+      {
+        "count": 3,
+        "name": "BitsPerSample",
+        "tag": 258,
+        "type": "SHORT",
+        "value": [
+          16,
+          16,
+          16
+        ]
+      },
+      {
+        "count": 1,
+        "name": "Compression",
+        "tag": 259,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 1,
+        "name": "PhotometricInterpretation",
+        "tag": 262,
+        "type": "SHORT",
+        "value": 2
+      },
+      {
+        "count": 1,
+        "name": "FillOrder",
+        "tag": 266,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 15,
+        "name": "ImageDescription",
+        "tag": 270,
+        "type": "ASCII",
+        "value": "golden fixture"
+      },
+      {
+        "count": 12,
+        "name": "Make",
+        "tag": 271,
+        "type": "ASCII",
+        "value": "Seiko Epson"
+      },
+      {
+        "count": 8,
+        "name": "Model",
+        "tag": 272,
+        "type": "ASCII",
+        "value": "GT-X900"
+      },
+      {
+        "count": 1,
+        "name": "StripOffsets",
+        "tag": 273,
+        "type": "LONG",
+        "value": 293
+      },
+      {
+        "count": 1,
+        "name": "Orientation",
+        "tag": 274,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 1,
+        "name": "SamplesPerPixel",
+        "tag": 277,
+        "type": "SHORT",
+        "value": 3
+      },
+      {
+        "count": 1,
+        "name": "RowsPerStrip",
+        "tag": 278,
+        "type": "SHORT",
+        "value": 64
+      },
+      {
+        "count": 1,
+        "name": "StripByteCounts",
+        "tag": 279,
+        "type": "LONG",
+        "value": 24576
+      },
+      {
+        "count": 1,
+        "name": "XResolution",
+        "tag": 282,
+        "type": "RATIONAL",
+        "value": "2400/1"
+      },
+      {
+        "count": 1,
+        "name": "YResolution",
+        "tag": 283,
+        "type": "RATIONAL",
+        "value": "2400/1"
+      },
+      {
+        "count": 1,
+        "name": "PlanarConfiguration",
+        "tag": 284,
+        "type": "SHORT",
+        "value": 1
+      },
+      {
+        "count": 1,
+        "name": "ResolutionUnit",
+        "tag": 296,
+        "type": "SHORT",
+        "value": 2
+      },
+      {
+        "count": 24,
+        "name": "Software",
+        "tag": 305,
+        "type": "ASCII",
+        "value": "negaflow golden harness"
+      },
+      {
+        "count": 20,
+        "name": "DateTime",
+        "tag": 306,
+        "type": "ASCII",
+        "value": "2026:01:02 03:04:05"
+      },
+      {
+        "count": 11,
+        "name": "Artist",
+        "tag": 315,
+        "type": "ASCII",
+        "value": "Song Habin"
+      },
+      {
+        "count": 3,
+        "name": "SampleFormat",
+        "tag": 339,
+        "type": "SHORT",
+        "value": [
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "count": 1332,
+        "name": "XMLPacket(XMP)",
+        "tag": 700,
+        "type": "BYTE",
+        "value": [
+          60,
+          120,
+          58,
+          120,
+          109,
+          112,
+          109,
+          101,
+          116,
+          97,
+          32,
+          120,
+          109,
+          108,
+          110,
+          115,
+          "...(1332 total)"
+        ]
+      },
+      {
+        "count": 20,
+        "name": "Copyright",
+        "tag": 33432,
+        "type": "ASCII",
+        "value": "(c) 2026 Song Habin"
+      },
+      {
+        "count": 73,
+        "name": "IPTC/NAA",
+        "tag": 33723,
+        "type": "UNDEFINED",
+        "value": "\u001c\u0001Z"
+      },
+      {
+        "count": 1,
+        "name": "ExifIFDPointer",
+        "tag": 34665,
+        "type": "LONG",
+        "value": 8
+      },
+      {
+        "count": 3144,
+        "name": "ICCProfile",
+        "tag": 34675,
+        "type": "UNDEFINED",
+        "value": ""
+      }
+    ]
+  }
+]

@@ -112,7 +112,9 @@ NEGAFLOW_LIGHTROOM_EXPANSION.md
 #
 # 이미 추적되던 것들은 `git rm -r --cached` 로 인덱스에서 뺐다. 무시 규칙은 추적 중인
 # 파일에는 듣지 않으므로 규칙만 적어 두면 계속 올라간다.
-/docs/
+#
+# `docs/` 는 여기 없다. 최상위 README 가 그 안의 스크린샷과 제품 문서를 링크하므로,
+# 빼면 GitHub 첫 화면이 통째로 깨진다.
 /windows_docs/
 /negaflow-windows/docs/
 

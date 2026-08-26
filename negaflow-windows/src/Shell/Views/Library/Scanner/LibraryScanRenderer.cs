@@ -222,8 +222,16 @@ internal sealed class LibraryScanRenderer
         FilmType.BlackAndWhitePositive,
     ];
 
+    /// <summary>
+    /// 색 모드 목록에 보일 이름입니다. <c>gray</c> 만 이름에 상태를 답니다 — 그 경로는 아직
+    /// 불안정하고, 고르기 전에 알아야 할 것이기 때문입니다.
+    /// </summary>
     internal static string ColorModeLabel(string mode) =>
-        mode.Length == 0 ? mode : char.ToUpperInvariant(mode[0]) + mode[1..];
+        // 프로토콜이 쓰는 값입니다(`ScanOptionPolicy.ColorModeGray`). 그 상수는 다른
+        // 어셈블리의 internal 이라 여기서는 같은 글자를 씁니다.
+        string.Equals(mode, "gray", StringComparison.Ordinal)
+            ? AppResources.Get("scanColorModeGrayUnstable", "Text")
+            : mode.Length == 0 ? mode : char.ToUpperInvariant(mode[0]) + mode[1..];
 
     /// <summary>
     /// 목록을 갈아 끼우고 고른 값을 다시 잡습니다. 목록을 지우면 선택이 풀리므로 항상 짝으로

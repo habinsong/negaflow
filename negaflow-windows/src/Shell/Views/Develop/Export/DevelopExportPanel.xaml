@@ -311,14 +311,6 @@
                         RevealAutomationId="negaflow.develop.output.export.reveal"
                         RevealRequested="OnExportRevealClicked" />
                 </Border>
-                <Border x:Name="OutputStatusRow" x:FieldModifier="internal" Padding="10,0,10,10" Visibility="Collapsed">
-                    <TextBlock
-                        x:Name="OutputStatusText"
-                        x:FieldModifier="internal"
-                        FontSize="11"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        TextWrapping="Wrap" />
-                </Border>
             </controls:SettingsSection>
 
             <!-- macOS `sectionHeader(빠른 내보내기, systemImage: "bolt")` -->

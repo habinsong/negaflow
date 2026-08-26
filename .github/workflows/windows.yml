@@ -105,6 +105,10 @@ jobs:
           fetch-depth: 1
       - name: Install NSIS
         run: choco install nsis --yes --no-progress
+      - name: Install branding image tooling
+        shell: pwsh
+        # 설치 화면 비트맵은 앱 아이콘에서 굽는다. 저장소에 BMP 를 두지 않는 대가다.
+        run: py -3 -m pip install --quiet --disable-pip-version-check pillow
       - name: Build installer
         shell: pwsh
         run: >
@@ -113,7 +117,7 @@ jobs:
       - name: Verify silent install and uninstall
         shell: pwsh
         run: |
-          $installer = Get-ChildItem .\out\release\win-x64\Negaflow-*-x64-setup.exe | Select-Object -First 1
+          $installer = Get-ChildItem .\out\release\win-x64\negaflow-*-x64-setup.exe | Select-Object -First 1
           if ($null -eq $installer) { throw 'Installer artifact was not created.' }
           powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-installer.ps1 -InstallerPath $installer.FullName
       - name: Upload installer artifact
@@ -121,8 +125,8 @@ jobs:
         with:
           name: Negaflow-x64-installer-${{ github.sha }}
           path: |
-            negaflow-windows/out/release/win-x64/Negaflow-*-x64-setup.exe
-            negaflow-windows/out/release/win-x64/Negaflow-*-x64-setup.exe.sha256
+            negaflow-windows/out/release/win-x64/negaflow-*-x64-setup.exe
+            negaflow-windows/out/release/win-x64/negaflow-*-x64-setup.exe.sha256
           if-no-files-found: error
           retention-days: 14
 

@@ -66,6 +66,16 @@ public sealed record ShellPreferences
     /// </summary>
     public IReadOnlyList<string> CollapsedFolders { get; init; } = [];
 
+    /// <summary>
+    /// 격자 <b>폴더 머리줄</b>에서 접어 둔 폴더들입니다.
+    /// </summary>
+    /// <remarks>
+    /// 좌측 파일 탭의 <see cref="CollapsedFolders"/> 와 다른 자리입니다 — 트리에서 접는 것과
+    /// 격자 머리줄의 화살표는 서로 다른 것을 접고, 식별자도 다릅니다(트리는 폴더, 격자는
+    /// 구획). 앞 판은 이 목록을 아예 담지 않아 앱을 껐다 켜면 전부 펼쳐져 있었습니다.
+    /// </remarks>
+    public IReadOnlyList<string> CollapsedGridFolders { get; init; } = [];
+
     public AppearanceMode Appearance { get; init; } = AppearanceMode.System;
 
     public ImageContentHashMode ImageContentHash { get; init; } = ImageContentHashMode.Off;

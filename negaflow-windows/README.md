@@ -27,7 +27,7 @@ matches the macOS app's results and its interface.
 
 ## Install
 
-Download `Negaflow-1.1.0-x64-setup.exe` from
+Download `negaflow-1.1.0-x64-setup.exe` from
 [GitHub Releases](https://github.com/habinsong/negaflow/releases) and run it.
 
 The installer writes only to your own user profile — `%LOCALAPPDATA%\Negaflow\App`. It does not

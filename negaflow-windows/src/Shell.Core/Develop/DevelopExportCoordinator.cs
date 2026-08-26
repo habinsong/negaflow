@@ -163,24 +163,55 @@ public sealed class DevelopExportCoordinator
     public bool IsRunning => Volatile.Read(ref inFlight) != 0;
 
     /// <summary>
-    /// 배치가 한 번에 돌릴 수 있는 장 수입니다. macOS
-    /// <c>startExportBatch(… maximumConcurrent: 2)</c> 와 같은 값입니다.
+    /// 배치가 한 번에 돌릴 수 있는 장 수입니다. **기계에서 뽑습니다.**
     /// </summary>
     /// <remarks>
     /// <para>
-    /// 한 장이 코어를 다 쓰지 않습니다 — frame_1(5088x3401) 실측에서 CPU 5,109ms 를 쓰는 동안
-    /// 벽시계는 1,960ms 로, 16 코어에서 병렬도가 2.6 이었습니다. 남는 코어와, 디스크에
-    /// 103MB 를 쓰는 동안 노는 CPU 를 두 번째 장이 씁니다.
+    /// 예전에는 2 로 고정돼 있었고, 그 근거는 스캐너 TIFF 측정이었습니다 — 그 자료에서는
+    /// 남는 것이 코어가 아니라 디스크였고 4 로 올리면 오히려 느렸습니다. 카메라 RAW 은
+    /// 반대입니다. 디코드가 CPU 를 먹으므로 겹칠수록 빨라집니다. 실측(제조사별 RAW 8 장,
+    /// TIFF16, 회차마다 새 프로세스, 16 코어):
+    /// </para>
+    /// <code>
+    ///   동시 1장  49.8초   peak 1,021 MB
+    ///   동시 2장  29.5초   peak 1,431 MB
+    ///   동시 4장  20.5초   peak 2,075 MB
+    ///   동시 6장  18.5초   peak 3,178 MB
+    ///   동시 8장  18.4초   peak 3,691 MB
+    /// </code>
+    /// <para>
+    /// 6 을 넘으면 시간이 평평해지고 메모리만 오릅니다. 그래서 코어에서 뽑은 값과 설치
+    /// 메모리에서 뽑은 값 중 작은 쪽을 씁니다 — 코어가 많아도 메모리가 작으면 겹치는 만큼
+    /// 스왑으로 갑니다. 한 장이 도는 동안 원본 디코드와 working 이미지가 함께 상주하며,
+    /// 위 측정의 기울기는 장당 약 400MB 입니다.
     /// </para>
     /// <para>
-    /// <b>더 늘려도 빨라지지 않습니다.</b> 코어와 설치 메모리로 4 까지 올려 재 봤습니다
-    /// (16 코어 · 32GB, 6장 빠른 내보내기): 2 에서 32.6초, 4 에서 36.98초와 34.14초로
-    /// <b>오히려 느렸습니다</b>. 남는 것은 코어가 아니라 메모리 대역과 디스크였고, 장을
-    /// 더 겹치면 그 둘을 서로 뺏습니다. macOS 가 2 에 멈춘 이유도 같습니다 — 다시 올리려면
-    /// 이 수치부터 다시 재십시오.
+    /// GPU 가 없거나 내장이면 색 단계까지 CPU 가 지므로 한 칸 줄입니다. 그 판정은
+    /// <see cref="GpuCacheBridge"/> 가 엔진에서 읽어 옵니다 — 여기서 짐작하지 않습니다.
     /// </para>
     /// </remarks>
-    public const int MaximumConcurrentExports = 2;
+    public static int MaximumConcurrentExports { get; } = ResolveMaximumConcurrentExports();
+
+    private const long ExportSlotBytes = 400L * 1024 * 1024;
+    private const long ExportReserveBytes = 1024L * 1024 * 1024;
+
+    private static int ResolveMaximumConcurrentExports()
+    {
+        int byCores = Math.Max(1, Environment.ProcessorCount / 2);
+
+        long installed = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+        int byMemory = installed > ExportReserveBytes
+            ? (int)((installed - ExportReserveBytes) / ExportSlotBytes)
+            : 1;
+
+        int slots = Math.Min(byCores, byMemory);
+        if (GpuCacheBridge.TryRead() is not { HasGpu: true, IsIntegrated: false })
+        {
+            // 전용 GPU 가 없으면 색·룩 단계도 CPU 가 집니다. 디코드와 서로 코어를 뺏습니다.
+            slots -= 1;
+        }
+        return Math.Clamp(slots, 1, 6);
+    }
 
     /// <summary>
     /// 콜백이 배달되거나 배달에 실패한 뒤 완료됩니다. 반환값은 **결과가 UI 로 전달됐는지** 이며,

@@ -40,8 +40,36 @@ public sealed partial class WorkspaceToolbarView : UserControl
 
     public UIElement TitleBarElement => TitleBarRoot;
 
+    /// <summary>
+    /// 제목 표시줄 안에서 **끌기가 아니라 누르기**로 동작해야 하는 자리입니다.
+    /// </summary>
+    /// <remarks>
+    /// 스캔·내보내기 단추는 이제 이 줄에 없습니다 — 셸이 가져가 둘째 줄에 답니다.
+    /// 여기 남겨 두면 제목 표시줄 밖의 좌표를 상호작용 영역으로 등록하게 됩니다.
+    /// </remarks>
     public IReadOnlyList<FrameworkElement> TitleBarInteractiveElements =>
-        [PrimaryControls, ActiveFrameContainer, RightToolbarCluster];
+        [MenuHost, ActiveFrameContainer, RightToolbarCluster];
+
+    /// <summary>메뉴줄을 제목 표시줄 첫 칸에 답니다.</summary>
+    public void HostMenu(UIElement menu)
+    {
+        ArgumentNullException.ThrowIfNull(menu);
+        MenuHost.Child = menu;
+        TitleBarInteractiveRegionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// 스캔·내보내기 단추를 떼어 돌려줍니다. 처리기는 이 화면이 계속 들고 있으므로
+    /// 자리만 옮겨도 동작은 그대로입니다.
+    /// </summary>
+    public UIElement DetachPrimaryControls()
+    {
+        if (PrimaryControls.Parent is Panel parent)
+        {
+            _ = parent.Children.Remove(PrimaryControls);
+        }
+        return PrimaryControls;
+    }
 
     public void UpdateCaptionInsets(double left, double right)
     {

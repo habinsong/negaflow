@@ -37,7 +37,7 @@ if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
 $OutputDirectory = [System.IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 
-$installerName = "Negaflow-$Version-$artifactArchitecture-setup.exe"
+$installerName = "negaflow-$Version-$artifactArchitecture-setup.exe"
 $installerPath = Join-Path $OutputDirectory $installerName
 if ((Test-Path -LiteralPath $installerPath) -and -not $Overwrite) {
     throw "Installer already exists: $installerPath. Pass -Overwrite to replace this release artifact."
@@ -240,9 +240,9 @@ try {
     # 설치 화면이 쓰는 브랜딩 비트맵. 앱 아이콘에서 매번 구워 아이콘을 바꾸면 설치 화면도
     # 같이 바뀌게 한다 - 저장소에 BMP 를 넣어 두면 둘이 어긋난다.
     $brandingDirectory = Join-Path $OutputDirectory ('.branding-' + [Guid]::NewGuid().ToString('N'))
-    & (Join-Path $PSScriptRoot 'generate-installer-branding.ps1') `
-        -SourceIcon (Join-Path $projectRoot 'src\Shell\Assets\AppIcon-1024.png') `
-        -OutputDirectory $brandingDirectory
+    & py -3 (Join-Path $PSScriptRoot 'generate-installer-branding.py') `
+        --source (Join-Path $projectRoot 'src\Shell\Assets\AppIcon-1024.png') `
+        --output $brandingDirectory
     foreach ($bitmap in @('welcome.bmp', 'header.bmp')) {
         if (-not (Test-Path -LiteralPath (Join-Path $brandingDirectory $bitmap) -PathType Leaf)) {
             throw "Installer branding bitmap was not produced: $bitmap"

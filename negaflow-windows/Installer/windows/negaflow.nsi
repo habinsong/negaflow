@@ -29,16 +29,19 @@ SetCompressor /SOLID lzma
   !define ARCH "x64"
 !endif
 
-!define APPNAME "Negaflow"
+; 제품 이름은 언제나 소문자다.
+!define APPNAME "negaflow"
 !define EXENAME "Negaflow.Shell.exe"
 !define AUMID "Negaflow.Windows_esnvpjf0wq370!App"
 !define REGKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\Negaflow"
 !define APP_ICON "${__FILEDIR__}\..\..\src\Shell\Assets\Negaflow.ico"
 
 Name "${APPNAME}"
-OutFile "Negaflow-${VERSION}-${ARCH}-setup.exe"
+OutFile "negaflow-${VERSION}-${ARCH}-setup.exe"
 InstallDir "$LOCALAPPDATA\Negaflow\App"
 RequestExecutionLevel user
+; 기본값은 NSIS 자기 이름과 판번호를 답니다. 이 제품의 것이 아닙니다.
+BrandingText "${APPNAME} ${VERSION}"
 Icon "${APP_ICON}"
 UninstallIcon "${APP_ICON}"
 
@@ -64,16 +67,20 @@ VIAddVersionKey "LegalCopyright" "Copyright 2026 Song Habin"
 !define MUI_ICON "${APP_ICON}"
 !define MUI_UNICON "${APP_ICON}"
 
+; 비트맵은 두 배 크기로 굽고 칸에 맞춥니다. 마법사는 화면 배율을 따라 커지는데 비트맵은
+; 그대로 그려지므로, 원래 크기로 두면 왼쪽 판 아래에 흰 여백이 남고 머리글 아이콘이
+; 뭉갭니다. `AspectFill` 은 비율을 지키며 칸을 채웁니다.
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_RIGHT
-!define MUI_HEADERIMAGE_UNSTRETCHED
 !define MUI_HEADERIMAGE_BITMAP "${BRANDING}\header.bmp"
+!define MUI_HEADERIMAGE_BITMAP_STRETCH AspectFitHeight
 !define MUI_HEADERIMAGE_UNBITMAP "${BRANDING}\header.bmp"
+!define MUI_HEADERIMAGE_UNBITMAP_STRETCH AspectFitHeight
 
 !define MUI_WELCOMEFINISHPAGE_BITMAP "${BRANDING}\welcome.bmp"
+!define MUI_WELCOMEFINISHPAGE_BITMAP_STRETCH AspectFill
 !define MUI_UNWELCOMEFINISHPAGE_BITMAP "${BRANDING}\welcome.bmp"
-!define MUI_WELCOMEFINISHPAGE_BITMAP_NOSTRETCH
-!define MUI_UNWELCOMEFINISHPAGE_BITMAP_NOSTRETCH
+!define MUI_UNWELCOMEFINISHPAGE_BITMAP_STRETCH AspectFill
 
 !define MUI_WELCOMEPAGE_TITLE "$(NegaflowWelcomeTitle)"
 !define MUI_WELCOMEPAGE_TEXT "$(NegaflowWelcomeText)"
@@ -82,6 +89,11 @@ VIAddVersionKey "LegalCopyright" "Copyright 2026 Song Habin"
 !define MUI_FINISHPAGE_RUN "$WINDIR\explorer.exe"
 !define MUI_FINISHPAGE_RUN_PARAMETERS "shell:AppsFolder\${AUMID}"
 !define MUI_FINISHPAGE_RUN_TEXT "$(NegaflowFinishRun)"
+; 마음에 들면 프로젝트에 별 하나. 기본은 꺼짐입니다.
+!define MUI_FINISHPAGE_SHOWREADME ""
+!define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED
+!define MUI_FINISHPAGE_SHOWREADME_TEXT "$(NegaflowFinishStar)"
+!define MUI_FINISHPAGE_SHOWREADME_FUNCTION OpenProjectPage
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
@@ -103,36 +115,46 @@ LangString NegaflowWelcomeText  ${LANG_ENGLISH} "Import a scan or a camera copy,
 LangString NegaflowFinishTitle  ${LANG_ENGLISH} "negaflow is ready"
 LangString NegaflowFinishText   ${LANG_ENGLISH} "You'll find it in the Start menu.$\r$\n$\r$\nTo use a scanner, install negaflow-scanner-sane as well."
 LangString NegaflowFinishRun    ${LANG_ENGLISH} "Open negaflow"
+LangString NegaflowFinishStar   ${LANG_ENGLISH} "Star negaflow on GitHub"
 
 LangString NegaflowWelcomeTitle ${LANG_KOREAN} "negaflow for Windows"
 LangString NegaflowWelcomeText  ${LANG_KOREAN} "스캔한 필름이나 카메라로 복사한 필름을 가져와 베이스를 재고, 반전하고, 현상합니다. 컬러와 흑백, 네거티브와 포지티브를 모두 다룹니다. 원본 파일은 고쳐 쓰지 않습니다.$\r$\n$\r$\nnegaflow 에 필요한 것은 이 설치 파일에 전부 들어 있고, 사용자 폴더에만 씁니다.$\r$\n$\r$\n스캐너 조작은 별도의 스캐너 플러그인을 설치하면 나타납니다."
 LangString NegaflowFinishTitle  ${LANG_KOREAN} "negaflow 준비 완료"
 LangString NegaflowFinishText   ${LANG_KOREAN} "시작 메뉴에서 열 수 있습니다.$\r$\n$\r$\n스캐너를 쓰려면 negaflow-scanner-sane 도 설치하십시오."
 LangString NegaflowFinishRun    ${LANG_KOREAN} "negaflow 열기"
+LangString NegaflowFinishStar   ${LANG_KOREAN} "GitHub 에서 negaflow 에 별 남기기"
 
 LangString NegaflowWelcomeTitle ${LANG_JAPANESE} "negaflow for Windows"
 LangString NegaflowWelcomeText  ${LANG_JAPANESE} "スキャンしたフィルムやカメラで複写したフィルムを読み込み、ベースを測り、反転して現像します。カラーとモノクロ、ネガとポジのどちらにも対応します。元のファイルは書き換えません。$\r$\n$\r$\n必要なものはこのインストーラーに揃っており、ユーザーフォルダーだけに書き込みます。$\r$\n$\r$\nスキャナーの操作は、別のスキャナープラグインを入れると現れます。"
 LangString NegaflowFinishTitle  ${LANG_JAPANESE} "negaflow の準備ができました"
 LangString NegaflowFinishText   ${LANG_JAPANESE} "スタートメニューから開けます。$\r$\n$\r$\nスキャナーを使うには negaflow-scanner-sane も入れてください。"
 LangString NegaflowFinishRun    ${LANG_JAPANESE} "negaflow を開く"
+LangString NegaflowFinishStar   ${LANG_JAPANESE} "GitHub で negaflow にスターを付ける"
 
 LangString NegaflowWelcomeTitle ${LANG_SIMPCHINESE} "negaflow for Windows"
 LangString NegaflowWelcomeText  ${LANG_SIMPCHINESE} "导入扫描的胶片或用相机翻拍的胶片，测量片基、反转并进行显影。彩色与黑白、负片与正片均可处理。原始文件不会被改写。$\r$\n$\r$\nnegaflow 所需的一切都包含在此安装程序中，且只写入你的用户目录。$\r$\n$\r$\n安装单独的扫描仪插件后，扫描仪控件才会出现。"
 LangString NegaflowFinishTitle  ${LANG_SIMPCHINESE} "negaflow 已就绪"
 LangString NegaflowFinishText   ${LANG_SIMPCHINESE} "可从开始菜单打开。$\r$\n$\r$\n若要使用扫描仪，请一并安装 negaflow-scanner-sane。"
 LangString NegaflowFinishRun    ${LANG_SIMPCHINESE} "打开 negaflow"
+LangString NegaflowFinishStar   ${LANG_SIMPCHINESE} "在 GitHub 上为 negaflow 点星"
 
 LangString NegaflowWelcomeTitle ${LANG_FRENCH} "negaflow pour Windows"
 LangString NegaflowWelcomeText  ${LANG_FRENCH} "Importez un scan ou une reproduction au boîtier, mesurez la base du film, inversez-la et développez. Couleur et noir et blanc, négatif et positif. Votre fichier d'origine n'est jamais réécrit.$\r$\n$\r$\nTout ce dont negaflow a besoin se trouve dans ce programme d'installation, qui n'écrit que dans votre profil utilisateur.$\r$\n$\r$\nLes commandes du scanner apparaissent une fois le module scanner installé séparément."
 LangString NegaflowFinishTitle  ${LANG_FRENCH} "negaflow est prêt"
 LangString NegaflowFinishText   ${LANG_FRENCH} "Vous le trouverez dans le menu Démarrer.$\r$\n$\r$\nPour utiliser un scanner, installez également negaflow-scanner-sane."
 LangString NegaflowFinishRun    ${LANG_FRENCH} "Ouvrir negaflow"
+LangString NegaflowFinishStar   ${LANG_FRENCH} "Mettre une étoile à negaflow sur GitHub"
 
 LangString NegaflowWelcomeTitle ${LANG_GERMAN} "negaflow für Windows"
 LangString NegaflowWelcomeText  ${LANG_GERMAN} "Scan oder Kamera-Reproduktion importieren, die Filmbasis messen, invertieren und entwickeln. Farbe und Schwarzweiß, Negativ und Positiv. Ihre Originaldatei wird nie überschrieben.$\r$\n$\r$\nAlles, was negaflow braucht, steckt in diesem Installationsprogramm, und es schreibt ausschließlich in Ihr Benutzerprofil.$\r$\n$\r$\nScanner-Bedienelemente erscheinen, sobald das separate Scanner-Plug-in installiert ist."
 LangString NegaflowFinishTitle  ${LANG_GERMAN} "negaflow ist bereit"
 LangString NegaflowFinishText   ${LANG_GERMAN} "Sie finden es im Startmenü.$\r$\n$\r$\nFür einen Scanner installieren Sie zusätzlich negaflow-scanner-sane."
 LangString NegaflowFinishRun    ${LANG_GERMAN} "negaflow öffnen"
+LangString NegaflowFinishStar   ${LANG_GERMAN} "negaflow auf GitHub mit einem Stern versehen"
+
+Function OpenProjectPage
+  ExecShell "open" "https://github.com/habinsong/negaflow"
+FunctionEnd
 
 Function .onInit
   !insertmacro MUI_LANGDLL_DISPLAY

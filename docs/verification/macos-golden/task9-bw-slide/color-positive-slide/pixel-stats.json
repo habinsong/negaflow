@@ -1,0 +1,218 @@
+[
+  {
+    "bytes": 30832142,
+    "channels": {
+      "B": {
+        "max": 65535,
+        "mean": 13802.349408736178,
+        "median": 1783.0,
+        "min": 0
+      },
+      "G": {
+        "max": 65535,
+        "mean": 10959.041138555587,
+        "median": 1124.0,
+        "min": 0
+      },
+      "R": {
+        "max": 64789,
+        "mean": 8092.8580018949715,
+        "median": 853.0,
+        "min": 0
+      }
+    },
+    "dtype": "uint16",
+    "file": "a-default-main-srgb.tif",
+    "height": 2906,
+    "width": 1768
+  },
+  {
+    "bytes": 30832142,
+    "channels": {
+      "B": {
+        "max": 65535,
+        "mean": 13984.739827373853,
+        "median": 421.0,
+        "min": 0
+      },
+      "G": {
+        "max": 65535,
+        "mean": 10724.857138881018,
+        "median": 0.0,
+        "min": 0
+      },
+      "R": {
+        "max": 64771,
+        "mean": 6953.461473842542,
+        "median": 0.0,
+        "min": 0
+      }
+    },
+    "dtype": "uint16",
+    "file": "b-main-scannerprofile-srgb.tif",
+    "height": 2906,
+    "width": 1768
+  },
+  {
+    "bytes": 30832142,
+    "channels": {
+      "B": {
+        "max": 65535,
+        "mean": 14019.41416183711,
+        "median": 1618.0,
+        "min": 0
+      },
+      "G": {
+        "max": 65535,
+        "mean": 10968.419361330747,
+        "median": 967.0,
+        "min": 0
+      },
+      "R": {
+        "max": 64789,
+        "mean": 7798.422718209789,
+        "median": 727.0,
+        "min": 0
+      }
+    },
+    "dtype": "uint16",
+    "file": "c-target-f135-srgb.tif",
+    "height": 2906,
+    "width": 1768
+  },
+  {
+    "bytes": 30832142,
+    "channels": {
+      "B": {
+        "max": 65535,
+        "mean": 13966.108544928109,
+        "median": 1618.0,
+        "min": 0
+      },
+      "G": {
+        "max": 65535,
+        "mean": 10771.448399200593,
+        "median": 967.0,
+        "min": 0
+      },
+      "R": {
+        "max": 64789,
+        "mean": 7569.22737867978,
+        "median": 727.0,
+        "min": 0
+      }
+    },
+    "dtype": "uint16",
+    "file": "c-target-hr-srgb.tif",
+    "height": 2906,
+    "width": 1768
+  },
+  {
+    "bytes": 30832142,
+    "channels": {
+      "B": {
+        "max": 65535,
+        "mean": 14154.661295634247,
+        "median": 1861.0,
+        "min": 0
+      },
+      "G": {
+        "max": 65535,
+        "mean": 11441.677540499762,
+        "median": 1238.0,
+        "min": 0
+      },
+      "R": {
+        "max": 64784,
+        "mean": 8791.677584487392,
+        "median": 985.0,
+        "min": 0
+      }
+    },
+    "dtype": "uint16",
+    "file": "c-target-hs-srgb.tif",
+    "height": 2906,
+    "width": 1768
+  },
+  {
+    "bytes": 30832142,
+    "channels": {
+      "B": {
+        "max": 65535,
+        "mean": 14743.015509337834,
+        "median": 1917.0,
+        "min": 0
+      },
+      "G": {
+        "max": 65535,
+        "mean": 11634.280818979612,
+        "median": 1262.0,
+        "min": 0
+      },
+      "R": {
+        "max": 64789,
+        "mean": 8196.877095640786,
+        "median": 978.0,
+        "min": 0
+      }
+    },
+    "dtype": "uint16",
+    "file": "c-target-sp-srgb.tif",
+    "height": 2906,
+    "width": 1768
+  },
+  {
+    "bytes": 30829558,
+    "channels": {
+      "B": {
+        "max": 65535,
+        "mean": 14914.54419822617,
+        "median": 3946.0,
+        "min": 283
+      },
+      "G": {
+        "max": 65535,
+        "mean": 12153.555973675933,
+        "median": 3227.0,
+        "min": 0
+      },
+      "R": {
+        "max": 64985,
+        "mean": 10294.333248731755,
+        "median": 2950.0,
+        "min": 667
+      }
+    },
+    "dtype": "uint16",
+    "file": "d-main-adobergb.tif",
+    "height": 2906,
+    "width": 1768
+  },
+  {
+    "bytes": 30829534,
+    "channels": {
+      "B": {
+        "max": 65522,
+        "mean": 13549.273515475861,
+        "median": 1716.0,
+        "min": 19
+      },
+      "G": {
+        "max": 65510,
+        "mean": 10879.146030758642,
+        "median": 1115.0,
+        "min": 2
+      },
+      "R": {
+        "max": 64922,
+        "mean": 8694.127241617436,
+        "median": 894.0,
+        "min": 27
+      }
+    },
+    "dtype": "uint16",
+    "file": "d-main-displayp3.tif",
+    "height": 2906,
+    "width": 1768
+  }
+]

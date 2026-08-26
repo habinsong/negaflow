@@ -55,6 +55,13 @@ public sealed class WorkspacePresentationState
         settingsStore.Update(value => value with { CollapsedFolders = [.. folders] });
     }
 
+    /// <summary>격자 폴더 머리줄에서 접어 둔 폴더입니다.</summary>
+    public void SetCollapsedGridFolders(IReadOnlyList<string> folders)
+    {
+        ArgumentNullException.ThrowIfNull(folders);
+        settingsStore.Update(value => value with { CollapsedGridFolders = [.. folders] });
+    }
+
     public void SelectDevelopSidebarTab(WorkflowSidebarTab tab) =>
         settingsStore.Update(value => value with { SelectedDevelopSidebarTab = tab });
 
