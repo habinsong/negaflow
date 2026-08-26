@@ -32,7 +32,11 @@ public sealed record ScannerPluginProcessLimits(
 {
     public static ScannerPluginProcessLimits ForOperation(string operation) => operation switch
     {
-        "detect" => new(TimeSpan.FromSeconds(90), 4 * 1024 * 1024, 512 * 1024, 256 * 1024),
+        // **찾기는 15 초 안에 답이 납니다.** 실기 기록에서 성공한 찾기는 전부 1.2 초 안에
+        // 끝났습니다(가장 느린 것이 0.43 초). 90 초는 장치가 물렸을 때 그 시간 내내 "스캐너를
+        // 찾는 중" 만 띄우고 사용자가 할 수 있는 일이 없게 만들었을 뿐입니다. 가장 느린 성공의
+        // 서른 배를 주고, 그 안에 답이 없으면 물린 것으로 보고 사유를 진단에 남깁니다.
+        "detect" => new(TimeSpan.FromSeconds(15), 4 * 1024 * 1024, 512 * 1024, 256 * 1024),
         "capabilities" => new(TimeSpan.FromSeconds(180), 4 * 1024 * 1024, 512 * 1024, 256 * 1024),
         "scan" => new(TimeSpan.FromHours(2), 8 * 1024 * 1024, 512 * 1024, 256 * 1024),
         _ => throw new ArgumentOutOfRangeException(nameof(operation)),

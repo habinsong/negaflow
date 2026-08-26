@@ -12,9 +12,19 @@
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal" Spacing="7">
-            <Ellipse x:Name="StateIndicator" Width="6" Height="6" />
-            <TextBlock x:Name="StateText" VerticalAlignment="Center" FontSize="11" />
+        <StackPanel Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal" Spacing="10">
+            <!--  macOS `StatusPhaseIndicator` — 점은 8, 글자와 사이 간격 10.  -->
+            <Ellipse x:Name="StateIndicator" Width="8" Height="8" />
+            <!--  **글자는 3초 뒤 사라집니다.** macOS 주석 그대로 - 상태가 계속 붙어 있으면
+                  하단 바가 늘 지저분하고 가운데 메시지와 겹칠 여지도 커집니다. 폭 92 는
+                  유지해 오른쪽 칸이 밀리지 않게 합니다.  -->
+            <TextBlock
+                x:Name="StateText"
+                Width="92"
+                VerticalAlignment="Center"
+                FontSize="11"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                TextTrimming="CharacterEllipsis" />
             <TextBlock
                 x:Name="StateDetail"
                 VerticalAlignment="Center"

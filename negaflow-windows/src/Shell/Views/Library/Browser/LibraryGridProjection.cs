@@ -38,6 +38,7 @@ internal sealed class LibraryGridProjection
             return;
         }
 
+        using IDisposable _measure = Negaflow.Shell.Diagnostics.StartupTrace.Measure("grid project");
         LibraryBrowserProjection projection = LibraryBrowserProjector.Create(
             items,
             view.libraryHost.Folders,

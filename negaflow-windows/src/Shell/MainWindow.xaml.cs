@@ -30,16 +30,23 @@ public sealed partial class MainWindow : Window
         this.workspaceState = workspaceState;
         this.libraryHost = libraryHost;
         this.thumbnails = thumbnails;
-        InitializeComponent();
+        using (Diagnostics.StartupTrace.Measure("MainWindow.InitializeComponent"))
+        {
+            InitializeComponent();
+        }
         WindowIcon.Apply(AppWindow);
 
         ShellView.TitleBarInteractiveRegionsChanged += OnTitleBarInteractiveRegionsChanged;
-        ShellView.Initialize(
-            workspaceState,
-            nativeEngineStatusService,
-            libraryHost,
-            AppWindow.Id,
-            thumbnails);
+        using (Diagnostics.StartupTrace.Measure("ShellView.Initialize"))
+        {
+            ShellView.Initialize(
+                workspaceState,
+                nativeEngineStatusService,
+                libraryHost,
+                AppWindow.Id,
+                thumbnails);
+        }
+
         ShellView.SettingsRequested += OnSettingsRequested;
         ShellView.DiagnosticsRequested += OnDiagnosticsRequested;
         ShellView.QuickStartHelpRequested += OnQuickStartHelpRequested;

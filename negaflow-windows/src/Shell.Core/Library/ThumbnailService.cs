@@ -183,6 +183,9 @@ public sealed partial class ThumbnailService : IAsyncDisposable
     /// 20KB 짜리 파일 하나를 읽는 값이라, 왕복을 없애는 편이 언제나 쌉니다. 격자는 눈에 보이는
     /// 칸만 채우므로 한 번에 읽는 수도 화면 하나만큼입니다.
     /// </remarks>
+    /// <summary>메모리에 들고 있는 썸네일 수입니다. 계측용입니다.</summary>
+    public int MemoryCount => memory.Count;
+
     public byte[]? TryGetOrLoad(string frameId)
     {
         ArgumentException.ThrowIfNullOrEmpty(frameId);
@@ -327,6 +330,7 @@ public sealed partial class ThumbnailService : IAsyncDisposable
     public void Invalidate(string frameId)
     {
         ArgumentException.ThrowIfNullOrEmpty(frameId);
+        Diagnostics.StartupTrace.Mark($"thumbnail invalidate {frameId}");
         memory.TryRemove(frameId, out _);
         developed.TryRemove(frameId, out _);
         developedIdentities.TryRemove(frameId, out _);

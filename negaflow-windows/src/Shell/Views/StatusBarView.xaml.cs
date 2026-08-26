@@ -27,6 +27,11 @@ public sealed partial class StatusBarView : UserControl
     public StatusBarView()
     {
         InitializeComponent();
+        stateHideTimer.Tick += (_, _) =>
+        {
+            stateHideTimer.Stop();
+            StateText.Text = string.Empty;
+        };
         Localize();
     }
 
@@ -42,19 +47,40 @@ public sealed partial class StatusBarView : UserControl
         // 상태 문구도 리소스에서 옵니다 — 앞 판은 처음 받은 언어에 그대로 머물렀습니다.
         if (status is { } current)
         {
-            StateText.Text = AppResources.Get(
+            ShowState(AppResources.Get(
                 current.IsAvailable ? "idleStatus" : "capabilityUnavailable",
-                "Value");
+                "Value"));
         }
     }
+
+    /// <summary>
+    /// 상태 글자를 띄우고 <b>잠시 뒤 지웁니다.</b>
+    /// </summary>
+    /// <remarks>
+    /// macOS <c>StatusPhaseIndicator</c> 주석 그대로입니다 — 단계가 바뀌면 이름을 띄우고 3 초
+    /// 뒤 사라집니다. 상태가 계속 붙어 있으면 하단 바가 늘 지저분하고 가운데 메시지와 겹칠
+    /// 여지도 커집니다. 새 상태가 들어오면 다시 띄우고 시계를 되돌립니다. 자리(폭 92)는
+    /// 그대로 두어 오른쪽 칸이 밀리지 않습니다.
+    /// </remarks>
+    private void ShowState(string text)
+    {
+        StateText.Text = text;
+        stateHideTimer.Stop();
+        stateHideTimer.Start();
+    }
+
+    private readonly DispatcherTimer stateHideTimer = new()
+    {
+        Interval = TimeSpan.FromSeconds(3),
+    };
 
     public void Initialize(NativeEngineStatus status)
     {
         ArgumentNullException.ThrowIfNull(status);
         this.status = status;
-        StateText.Text = AppResources.Get(
+        ShowState(AppResources.Get(
             status.IsAvailable ? "idleStatus" : "capabilityUnavailable",
-            "Value");
+            "Value"));
         StateDetail.Text = status.Detail;
         StateIndicator.Fill = new SolidColorBrush(
             status.IsAvailable ? Microsoft.UI.Colors.LimeGreen : Microsoft.UI.Colors.OrangeRed);

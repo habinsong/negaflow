@@ -91,23 +91,43 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         _ = args;
+        Diagnostics.StartupTrace.Mark("OnLaunched");
         // 언어는 **창을 만들기 전에** 걸어야 합니다. 창이 뜬 뒤에 바꾸면 이미 만들어진
         // 컨트롤은 옛 언어를 들고 있어 한 화면에 두 언어가 섞입니다.
-        ApplySavedLanguage();
+        using (Diagnostics.StartupTrace.Measure("language"))
+        {
+            ApplySavedLanguage();
+        }
         // 첫 창을 만들기 전에 읽습니다. 썸네일과 미리보기가 곧바로 현상 요청을 만들기 시작하므로
         // 그 뒤에 읽으면 처음 몇 장만 프리셋 없이 현상됩니다.
-        LookPresetLibrary.Load(Path.Combine(AppContext.BaseDirectory, "presets"));
+        using (Diagnostics.StartupTrace.Measure("presets"))
+        {
+            LookPresetLibrary.Load(Path.Combine(AppContext.BaseDirectory, "presets"));
+        }
         var settingsStore = new PresentationSettingsStore();
         presentationSettings = settingsStore;
         var workspaceState = new WorkspacePresentationState(settingsStore);
         try
         {
-            mainWindow = new MainWindow(
-                settingsStore,
-                workspaceState,
-                new NativeEngineStatusService(),
-                OpenLibrary(),
-                thumbnails);
+            LibraryHostService? opened;
+            using (Diagnostics.StartupTrace.Measure("OpenLibrary"))
+            {
+                opened = OpenLibrary();
+            }
+            NativeEngineStatusService engineStatus;
+            using (Diagnostics.StartupTrace.Measure("engine status"))
+            {
+                engineStatus = new NativeEngineStatusService();
+            }
+            using (Diagnostics.StartupTrace.Measure("MainWindow ctor"))
+            {
+                mainWindow = new MainWindow(
+                    settingsStore,
+                    workspaceState,
+                    engineStatus,
+                    opened,
+                    thumbnails);
+            }
         }
         catch (Exception exception)
         {
@@ -128,7 +148,11 @@ public partial class App : Application
                 _ = window.DispatcherQueue.TryEnqueue(window.BringToFront);
             }
         });
-        mainWindow.Activate();
+        using (Diagnostics.StartupTrace.Measure("Activate"))
+        {
+            mainWindow.Activate();
+        }
+        Diagnostics.StartupTrace.Mark("OnLaunched done");
     }
 
     /// <summary>

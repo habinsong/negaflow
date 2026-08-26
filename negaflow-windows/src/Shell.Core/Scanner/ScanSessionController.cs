@@ -328,6 +328,15 @@ public sealed class ScanSessionController
                         $"detect failed {plugin.Manifest.Id} - {LastFailureName} " +
                         $"(malformed={result.IsMalformedResponse} " +
                         $"process={result.Process.Status} exit={result.Process.ExitCode?.ToString() ?? "none"})");
+                    // **무엇을 하면 되는지 여기에 적습니다.** 화면에는 오류를 내지 않으므로
+                    // (사용자가 그 글자로 할 수 있는 일이 없습니다) 진단에서 읽습니다.
+                    if (result.Process.Status == ScannerPluginProcessStatus.TimedOut)
+                    {
+                        ScannerDiagnosticsLog.Write(
+                            "detect hint: the plugin did not answer in time. Another scan or " +
+                            "detect usually still holds the device - close other scanning apps, " +
+                            "then power-cycle the scanner if it stays quiet.");
+                    }
                 }
             }
         }

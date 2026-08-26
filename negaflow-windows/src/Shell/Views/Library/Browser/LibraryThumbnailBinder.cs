@@ -39,6 +39,11 @@ internal static class LibraryThumbnailBinder
         }
         ThumbnailTrace.Write(
             $"{trace,-9} hydrate items={items.Count} filled={filled} requested={requested}");
+        // 시작이 왜 비어 보이는지 숫자로 남깁니다 - 캐시에서 그 자리에 채운 수와, 렌더를
+        // 기다려야 하는 수가 갈립니다.
+        Negaflow.Shell.Diagnostics.StartupTrace.Mark(
+            $"hydrate {trace} items={items.Count} filled={filled} requested={requested} " +
+            $"memory={thumbnails?.MemoryCount ?? -1}");
         return filled;
     }
 

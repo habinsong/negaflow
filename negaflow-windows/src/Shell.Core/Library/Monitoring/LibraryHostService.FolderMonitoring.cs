@@ -163,10 +163,25 @@ public sealed partial class LibraryHostService
 
         if (change.RequiresFullReconciliation)
         {
+            // **다시 훑었다는 것이 바뀌었다는 뜻은 아닙니다.**
+            //
+            // 앞 판은 폴더를 전수 재조정할 때 그 폴더의 프레임을 조건 없이 전부 무효로
+            // 표시했습니다. 무효 표시는 썸네일을 메모리와 디스크 양쪽에서 지우므로, 앱을 켤
+            // 때 감시를 등록하며 걸리는 재조정 한 번에 **멀쩡한 썸네일이 통째로 날아갔습니다.**
+            // 그래서 켤 때마다 첫 화면이 비었다가 다시 그려졌습니다.
+            //
+            // 실측(startup-trace): 1.851 초에 22 장을 캐시에서 채웠는데 3.142 초에 같은 22 장이
+            // 줄줄이 무효화됐고, 그 사이 파일은 하나도 바뀌지 않았습니다.
+            //
+            // 원본이 실제로 달라졌을 때만 지웁니다. 크기를 확인할 수 없으면 그대로 둡니다 -
+            // 모르는 것을 근거로 지우면 멀쩡한 것을 잃습니다.
             foreach (LibraryFrameSnapshot frame in Frames.Where(frame =>
                 IsDirectChild(frame.SourcePath, folder)))
             {
-                invalidated.Add(frame.Id);
+                if (SourceBytesChanged(frame))
+                {
+                    invalidated.Add(frame.Id);
+                }
             }
         }
         if (addedIds.Length > 0 || removingIds.Length > 0 || relinked > 0 ||
@@ -419,6 +434,28 @@ public sealed partial class LibraryHostService
             active = fallback.Id;
         }
         selection.Set(Frames, kept, active);
+    }
+
+    /// <summary>
+    /// 카탈로그에 적힌 원본 크기와 지금 파일의 크기가 다른가. 확인할 수 없으면
+    /// <see langword="false"/> 입니다 — 모르는 것을 바뀐 것으로 치지 않습니다.
+    /// </summary>
+    private static bool SourceBytesChanged(LibraryFrameSnapshot frame)
+    {
+        if (frame.SourceMetadata is not { IsValid: true } metadata || metadata.FileBytes == 0UL)
+        {
+            return false;
+        }
+        try
+        {
+            FileInfo info = new(frame.SourcePath);
+            return info.Exists && (ulong)info.Length != metadata.FileBytes;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
+            ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return false;
+        }
     }
 
     private static bool IsDirectChild(string filePath, string folderPath)
