@@ -57,6 +57,41 @@ struct WicStandardImageDecodeResult final {
     DecodedImage image{};
 };
 
+/// 화소를 만들지 않고 **헤더만 읽어** 크기를 돌려줍니다.
+enum class StandardImageMetadataStatus : std::uint8_t {
+    ok = 0,
+    invalid_argument,
+    com_apartment_mismatch,
+    unreadable,
+    unsupported,
+};
+
+struct StandardImageMetadata final {
+    std::uint32_t pixel_width{0U};
+    std::uint32_t pixel_height{0U};
+    std::uint16_t exif_orientation{1U};
+    bool libraw_fallback_used{false};
+};
+
+struct StandardImageMetadataResult final {
+    StandardImageMetadataStatus status{StandardImageMetadataStatus::invalid_argument};
+    StandardImageMetadata metadata{};
+};
+
+/// 가져오기는 가로·세로만 있으면 됩니다.
+///
+/// **그것을 알려고 파일을 끝까지 현상하면 안 됩니다.** 실측(2026-08-26, 제조사별 RAW 8 장):
+/// 크기만 읽는 프로브가 파일당 1~13 초, 8 장에 peak 980 MB 를 썼습니다 — 7168x5120 한 장이
+/// RGBA16 으로 294 MB 이고, 그 뒤 전 화소를 훑어 불투명 여부까지 검사한 뒤 전부 버리고
+/// 가로·세로만 썼기 때문입니다. 폴더 가져오기가 그 때문에 무너졌습니다.
+///
+/// macOS 는 같은 자리에서 `CGImageSourceCopyPropertiesAtIndex` 로 속성만 읽습니다
+/// (`ImageLoader+ImageIO.swift`의 `sourcePixelSize`). 이것이 그 짝입니다 — WIC 는 프레임을
+/// 열어 `GetSize` 만 부르고, WIC 가 못 여는 카메라 RAW 은 `libraw_open_wfile` 뒤 크기만
+/// 읽습니다(`libraw_unpack` 도 `dcraw_process` 도 부르지 않습니다).
+[[nodiscard]] StandardImageMetadataResult probe_standard_image_metadata(
+    const std::filesystem::path& path) noexcept;
+
 /// WIC codec 만 씁니다. LibRaw 대체 없이 WIC 자체의 판정을 보고 싶은 시험이 씁니다.
 [[nodiscard]] WicStandardImageDecodeResult decode_standard_image_with_wic_only(
     const std::filesystem::path& path,

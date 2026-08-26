@@ -43,6 +43,10 @@ struct Api final {
     void(__cdecl* set_highlight)(void*, int){nullptr};
     void(__cdecl* set_user_mul)(void*, int, float){nullptr};
     float(__cdecl* get_cam_mul)(void*, int){nullptr};
+    // 크기만 알면 되는 자리를 위한 것입니다. `libraw_unpack` 도 `dcraw_process` 도
+    // 부르지 않고 헤더만 읽습니다 - 가져오기가 이것 때문에 파일 전체를 현상했습니다.
+    int(__cdecl* get_iwidth)(void*){nullptr};
+    int(__cdecl* get_iheight)(void*){nullptr};
     const char*(__cdecl* version)(){nullptr};
 };
 
@@ -76,6 +80,8 @@ template <typename Fn>
         bind(api.module, "libraw_set_highlight", api.set_highlight) &&
         bind(api.module, "libraw_set_user_mul", api.set_user_mul) &&
         bind(api.module, "libraw_get_cam_mul", api.get_cam_mul) &&
+        bind(api.module, "libraw_get_iwidth", api.get_iwidth) &&
+        bind(api.module, "libraw_get_iheight", api.get_iheight) &&
         bind(api.module, "libraw_version", api.version);
     if (!bound) {
         // 심볼이 하나라도 없으면 그 DLL 은 우리가 아는 LibRaw 가 아닙니다. 반쯤 쓰지 않고
@@ -201,6 +207,49 @@ const char* libraw_decode_status_name(const LibRawDecodeStatus status) noexcept 
         case LibRawDecodeStatus::cancelled: return "cancelled";
     }
     return "unknown_libraw_decode_status";
+}
+
+LibRawMetadataResult probe_raw_metadata_with_libraw(const std::filesystem::path& path) noexcept {
+    LibRawMetadataResult result{};
+    const Api& functions = api();
+    if (functions.module == nullptr) {
+        result.status = LibRawDecodeStatus::unavailable;
+        return result;
+    }
+    if (path.empty()) {
+        result.status = LibRawDecodeStatus::invalid_argument;
+        return result;
+    }
+    try {
+        const Handle handle{functions};
+        if (handle.get() == nullptr) {
+            result.status = LibRawDecodeStatus::allocation_failed;
+            return result;
+        }
+        // **여기서 멈춥니다.** `libraw_open_wfile` 은 헤더만 읽고, 그것만으로 크기가 정해집니다.
+        // `libraw_unpack`/`libraw_dcraw_process` 를 부르면 파일 전체를 현상하게 되고, 크기만
+        // 필요한 자리에서 그것은 파일 하나에 수백 MB 와 수 초입니다 - 실측으로 7168x5120 한 장이
+        // 294 MB 였고 폴더 가져오기가 그 때문에 무너졌습니다.
+        const int opened = functions.open_wfile(handle.get(), path.c_str());
+        if (opened != 0) {
+            result.status = LibRawDecodeStatus::open_failed;
+            result.native_error_code = opened;
+            return result;
+        }
+        const int width = functions.get_iwidth(handle.get());
+        const int height = functions.get_iheight(handle.get());
+        if (width <= 0 || height <= 0) {
+            result.status = LibRawDecodeStatus::unsupported_output;
+            return result;
+        }
+        result.status = LibRawDecodeStatus::ok;
+        result.pixel_width = static_cast<std::uint32_t>(width);
+        result.pixel_height = static_cast<std::uint32_t>(height);
+        return result;
+    } catch (...) {
+        result.status = LibRawDecodeStatus::allocation_failed;
+        return result;
+    }
 }
 
 LibRawDecodeResult decode_raw_with_libraw(

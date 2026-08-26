@@ -3,6 +3,7 @@
 #include "negaflow/imageio/decoded_image.h"
 #include "negaflow/imageio/wic_standard_image_decoder.h"
 
+#include <cstdint>
 #include <filesystem>
 #include <stop_token>
 
@@ -47,6 +48,20 @@ struct LibRawDecodeResult final {
     int native_error_code{0};
     DecodedImage image{};
 };
+
+/// 화소를 만들지 않고 **헤더만 읽어** 크기를 돌려줍니다.
+struct LibRawMetadataResult final {
+    LibRawDecodeStatus status{LibRawDecodeStatus::unavailable};
+    int native_error_code{0};
+    std::uint32_t pixel_width{0U};
+    std::uint32_t pixel_height{0U};
+};
+
+/// 가져오기는 가로·세로만 있으면 됩니다. 그것을 알려고 파일 전체를 현상하면 한 장에
+/// 수백 MB 와 수 초가 들고, 폴더 단위로는 그대로 무너집니다 - macOS 는 같은 자리에서
+/// `CGImageSourceCopyPropertiesAtIndex` 로 속성만 읽습니다. 이것이 그 짝입니다.
+[[nodiscard]] LibRawMetadataResult probe_raw_metadata_with_libraw(
+    const std::filesystem::path& path) noexcept;
 
 /// `libraw.dll` 을 열 수 있고 필요한 심볼이 전부 있는지 봅니다. 한 번 확인한 결과를
 /// 재사용하며 실패해도 매번 다시 시도하지 않습니다.

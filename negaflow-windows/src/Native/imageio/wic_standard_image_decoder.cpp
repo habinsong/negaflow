@@ -181,6 +181,71 @@ namespace {
 
 }  // namespace
 
+StandardImageMetadataResult probe_standard_image_metadata(
+    const std::filesystem::path& path) noexcept {
+    StandardImageMetadataResult result{};
+    try {
+        if (path.empty()) {
+            result.status = StandardImageMetadataStatus::invalid_argument;
+            return result;
+        }
+        const ComApartment apartment{};
+        if (apartment.status() == RPC_E_CHANGED_MODE) {
+            result.status = StandardImageMetadataStatus::com_apartment_mismatch;
+            return result;
+        }
+        if (SUCCEEDED(apartment.status())) {
+            ComPtr<IWICImagingFactory> factory{};
+            ComPtr<IWICBitmapDecoder> decoder{};
+            if (SUCCEEDED(CoCreateInstance(
+                    CLSID_WICImagingFactory,
+                    nullptr,
+                    CLSCTX_INPROC_SERVER,
+                    IID_PPV_ARGS(&factory))) &&
+                SUCCEEDED(factory->CreateDecoderFromFilename(
+                    path.c_str(),
+                    nullptr,
+                    GENERIC_READ,
+                    WICDecodeMetadataCacheOnDemand,
+                    &decoder))) {
+                GUID format{};
+                UINT frames = 0U;
+                ComPtr<IWICBitmapFrameDecode> frame{};
+                UINT width = 0U;
+                UINT height = 0U;
+                if (SUCCEEDED(decoder->GetContainerFormat(&format)) &&
+                    supported_container(format) &&
+                    SUCCEEDED(decoder->GetFrameCount(&frames)) && frames == 1U &&
+                    SUCCEEDED(decoder->GetFrame(0U, &frame)) &&
+                    SUCCEEDED(frame->GetSize(&width, &height)) && width != 0U && height != 0U) {
+                    result.status = StandardImageMetadataStatus::ok;
+                    result.metadata.pixel_width = width;
+                    result.metadata.pixel_height = height;
+                    result.metadata.exif_orientation = exif_orientation(frame.Get());
+                    return result;
+                }
+            }
+        }
+        // WIC 가 못 열었습니다. 카메라 RAW 이면 함께 배포한 `libraw.dll` 이 헤더를 읽습니다 —
+        // 디코드 경로와 같은 대체 관계입니다.
+        const LibRawMetadataResult raw = probe_raw_metadata_with_libraw(path);
+        if (raw.status == LibRawDecodeStatus::ok) {
+            result.status = StandardImageMetadataStatus::ok;
+            result.metadata.pixel_width = raw.pixel_width;
+            result.metadata.pixel_height = raw.pixel_height;
+            result.metadata.libraw_fallback_used = true;
+            return result;
+        }
+        result.status = raw.status == LibRawDecodeStatus::unavailable
+            ? StandardImageMetadataStatus::unreadable
+            : StandardImageMetadataStatus::unsupported;
+        return result;
+    } catch (...) {
+        result.status = StandardImageMetadataStatus::unreadable;
+        return result;
+    }
+}
+
 WicStandardImageDecodeResult decode_standard_image_with_wic(
     const std::filesystem::path& path,
     const WicStandardImageDecodeLimits& limits,

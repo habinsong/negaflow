@@ -45,7 +45,10 @@ internal sealed class DevelopSourceImport
                 paths.Add(file.Path);
             }
 
-            FrameImportPlan plan = view.libraryHost.Import(paths, DevelopmentProcess.C41);
+            // 폴더 가져오기와 같습니다 - 프로세스는 적용을 눌러야 정해집니다.
+            FrameImportPlan plan = view.libraryHost.Import(
+                paths,
+                DevelopmentProcess.DigitalColor);
             view.SetImportStatus(plan.Rows.Count > 0 ? null : FrameImport.Describe(plan));
             view.NotifyFramesImported();
         }
@@ -85,7 +88,12 @@ internal sealed class DevelopSourceImport
             }
             FolderImportResult imported = view.libraryHost.ImportFolders(
                 [picked.Path],
-                DevelopmentProcess.C41);
+                // 가져오기는 **현상 프로세스를 정하지 않습니다.** 폴더 머리줄에서 고르고
+                // 적용을 눌러야 정해집니다 - 예전에는 여기서 C-41 을 박아, 디지털 카메라
+                // RAW 을 가져와도 필름 네거티브로 반전된 그림이 먼저 나왔습니다.
+                // `DigitalColor` 는 `RenderedDigital` + `ColorPositive`, 곧 아무 필름
+                // 프로세스도 걸지 않은 상태입니다.
+                DevelopmentProcess.DigitalColor);
             view.SetImportStatus(imported.IsSuccess
                 ? null
                 : AppResources.Get("libraryImportFailed", "Text"));

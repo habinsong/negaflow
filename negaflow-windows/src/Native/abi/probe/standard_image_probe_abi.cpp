@@ -8,7 +8,16 @@
 #include <limits>
 #include <system_error>
 
-// JPEG/PNG 등 표준 이미지를 WIC 로 열어 원본 정보를 읽습니다.
+// 표준 이미지와 카메라 RAW 의 **원본 정보만** 읽습니다.
+//
+// 화소는 만들지 않습니다. 예전에는 이 자리가 `decode_standard_image_with_wic` 로 파일을
+// 끝까지 현상하고, 그 결과의 전 화소를 훑어 불투명 여부를 검사한 뒤, 전부 버리고
+// 가로·세로·파일크기만 썼습니다. 실측(2026-08-26, 제조사별 RAW 8 장)으로 파일당 1~13 초,
+// 8 장에 peak 980 MB 였고 폴더 가져오기가 그 때문에 무너졌습니다.
+//
+// 불투명 검사는 macOS 에 없는 Windows 만의 관문이었습니다. macOS 는
+// `CGImageSourceCopyPropertiesAtIndex` 로 크기만 읽고 알파를 이유로 거르지 않습니다.
+// 그 관문을 유지하려면 화소를 다 만들어야 하고, 그것이 이 함수를 무겁게 만든 이유입니다.
 
 nf_status_t NF_CALL nf_probe_standard_image_source_v1(
     const wchar_t* const source_path,
@@ -23,25 +32,13 @@ nf_status_t NF_CALL nf_probe_standard_image_source_v1(
     std::memset(result, 0, sizeof(*result));
     result->struct_size = declared_size;
     try {
-        const auto decoded = negaflow::imageio::decode_standard_image_with_wic(
+        const auto probed = negaflow::imageio::probe_standard_image_metadata(
             std::filesystem::path{source_path});
-        if (decoded.status != negaflow::imageio::WicStandardImageDecodeStatus::ok) {
-            result->status = decoded.status ==
-                    negaflow::imageio::WicStandardImageDecodeStatus::decoder_initialization_failed ||
-                decoded.status == negaflow::imageio::WicStandardImageDecodeStatus::wic_unavailable
-                ? NF_STANDARD_IMAGE_SOURCE_PROBE_UNREADABLE
-                : NF_STANDARD_IMAGE_SOURCE_PROBE_UNSUPPORTED;
-            return NF_STATUS_OK;
-        }
-        bool opaque = true;
-        for (std::size_t index = 3U; index < decoded.image.samples.size(); index += 4U) {
-            opaque = opaque && decoded.image.samples[index] == 65535U;
-        }
-        if (decoded.image.width == 0U || decoded.image.height == 0U ||
-            decoded.image.layout != negaflow::imageio::DecodedPixelLayout::rgba16 ||
-            decoded.image.samples.size() < 4U || decoded.image.samples.size() % 4U != 0U ||
-            !opaque) {
-            result->status = NF_STANDARD_IMAGE_SOURCE_PROBE_UNSUPPORTED;
+        if (probed.status != negaflow::imageio::StandardImageMetadataStatus::ok) {
+            result->status =
+                probed.status == negaflow::imageio::StandardImageMetadataStatus::unsupported
+                ? NF_STANDARD_IMAGE_SOURCE_PROBE_UNSUPPORTED
+                : NF_STANDARD_IMAGE_SOURCE_PROBE_UNREADABLE;
             return NF_STATUS_OK;
         }
         std::error_code error;
@@ -51,8 +48,10 @@ nf_status_t NF_CALL nf_probe_standard_image_source_v1(
             return NF_STATUS_OK;
         }
         result->status = NF_STANDARD_IMAGE_SOURCE_PROBE_OK;
-        result->pixel_width = decoded.image.width;
-        result->pixel_height = decoded.image.height;
+        result->pixel_width = probed.metadata.pixel_width;
+        result->pixel_height = probed.metadata.pixel_height;
+        // 디코더 계약이 rgba16 · unassociated alpha · orientation 적용 완료이므로, 이 값들은
+        // 파일이 아니라 **디코드 결과**를 서술합니다. 예전 구현도 같은 상수를 썼습니다.
         result->samples_per_pixel = 4U;
         result->bits_per_sample = 16U;
         result->sample_format = 1U;
