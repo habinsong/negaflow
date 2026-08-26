@@ -42,12 +42,12 @@ internal static class Program
             Path.Combine(Path.GetTempPath(), "negaflow-test-logs");
         DevelopedPreviewDiskCacheTests.Run();
         ScannerPluginTests.Run();
-        InfraredRecipeTests.Run();
-        InfraredSessionLifecycleTests.Run();
+        TestAssert.RunIfNativeIsPresent(InfraredRecipeTests.Run, nameof(InfraredRecipeTests));
+        TestAssert.RunIfNativeIsPresent(InfraredSessionLifecycleTests.Run, nameof(InfraredSessionLifecycleTests));
         InfraredSelectionTriggerTests.Run();
         InfraredLateImportTests.Run();
         InfraredCleanCoordinatorTests.Run();
-        ScannerInfraredPublicationTests.Run();
+        TestAssert.RunIfNativeIsPresent(ScannerInfraredPublicationTests.Run, nameof(ScannerInfraredPublicationTests));
         DevelopCoordinatorTests.Run();
         LibraryDocumentTests.Run();
         SourceMoveTests.Run();
