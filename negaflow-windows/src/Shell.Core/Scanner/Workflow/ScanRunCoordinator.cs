@@ -99,7 +99,12 @@ internal static class ScanRunCoordinator
                 // 본 스캔 경로(`ScannerScanPublisher.ScanAndPublishAsync`)는 같은 자리에서
                 // `ConfigureAwait` 를 붙이지 않아 UI 컨텍스트를 유지합니다. 여기도 같게 둡니다.
                 ScannerPluginScanResult scanned = await gateway
-                    .ScanAsync(plugin, identity, request, cancellationToken);
+                    .ScanAsync(
+                        plugin,
+                        identity,
+                        request,
+                        cancellationToken,
+                        onProgress: report => progress?.Report(report, DateTimeOffset.UtcNow));
                 lastScanStatus = scanned.Status;
                 if (!scanned.IsSuccess)
                 {

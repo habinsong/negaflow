@@ -90,6 +90,7 @@ internal sealed class FakeScannerGateway(string pluginDirectory) : IScannerPlugi
             InstalledScannerPlugin plugin,
             ScannerPluginTrustIdentity approvedIdentity,
             ScannerPluginScanRequest request,
-            CancellationToken cancellationToken) =>
+            CancellationToken cancellationToken,
+            Action<ScanProgressReport>? onProgress = null) =>
             throw new NotSupportedException();
     }

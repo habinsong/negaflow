@@ -67,8 +67,10 @@ public static class ScannerPluginClient
         InstalledScannerPlugin plugin,
         ScannerPluginTrustIdentity approvedIdentity,
         ScannerPluginScanRequest request,
-        CancellationToken cancellationToken = default) =>
-        ScannerScanExecutor.ScanAsync(plugin, approvedIdentity, request, cancellationToken);
+        CancellationToken cancellationToken = default,
+        Action<ScanProgressReport>? onProgress = null) =>
+        ScannerScanExecutor.ScanAsync(
+            plugin, approvedIdentity, request, cancellationToken, onProgress);
 
     public static Task<ScannerPluginLibraryScanResult> ScanAndPublishAsync(
         InstalledScannerPlugin plugin,

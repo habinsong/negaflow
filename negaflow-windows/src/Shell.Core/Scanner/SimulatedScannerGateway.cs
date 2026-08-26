@@ -266,10 +266,13 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
         InstalledScannerPlugin plugin,
         ScannerPluginTrustIdentity approvedIdentity,
         ScannerPluginScanRequest request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<ScanProgressReport>? onProgress = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
+        onProgress?.Invoke(new ScanProgressReport(ScanPhase.WarmingLamp, null, string.Empty));
+        onProgress?.Invoke(new ScanProgressReport(ScanPhase.PreviewScanning, null, string.Empty));
         if (Stage(request) is not { } staged)
         {
             return Task.FromResult(new ScannerPluginScanResult(

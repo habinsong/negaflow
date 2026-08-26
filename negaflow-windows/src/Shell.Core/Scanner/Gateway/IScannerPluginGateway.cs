@@ -32,9 +32,15 @@ public interface IScannerPluginGateway
         CancellationToken cancellationToken,
         Action<ScanProgressReport>? onProgress = null);
 
+    /// <param name="onProgress">
+    /// 스캔이 도는 동안 진행 줄을 받습니다. **프리뷰도 여기로 옵니다** — 프리뷰는 게시까지 한
+    /// 번에 하는 <c>ScanAndPublishAsync</c> 가 아니라 이 길로 가므로, 여기에 달지 않으면
+    /// 프리뷰만 진행률이 "연결 중 0%" 에 멈춘 채로 끝납니다.
+    /// </param>
     Task<ScannerPluginScanResult> ScanAsync(
         InstalledScannerPlugin plugin,
         ScannerPluginTrustIdentity approvedIdentity,
         ScannerPluginScanRequest request,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        Action<ScanProgressReport>? onProgress = null);
 }

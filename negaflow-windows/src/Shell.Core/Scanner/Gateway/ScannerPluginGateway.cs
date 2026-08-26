@@ -52,6 +52,8 @@ public sealed class ScannerPluginGateway : IScannerPluginGateway
         InstalledScannerPlugin plugin,
         ScannerPluginTrustIdentity approvedIdentity,
         ScannerPluginScanRequest request,
-        CancellationToken cancellationToken) =>
-        ScannerPluginClient.ScanAsync(plugin, approvedIdentity, request, cancellationToken);
+        CancellationToken cancellationToken,
+        Action<ScanProgressReport>? onProgress = null) =>
+        ScannerPluginClient.ScanAsync(
+            plugin, approvedIdentity, request, cancellationToken, onProgress);
 }

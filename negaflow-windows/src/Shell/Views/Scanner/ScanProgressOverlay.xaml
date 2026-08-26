@@ -21,13 +21,23 @@
               .lineLimit(1) .minimumScaleFactor(...)
           .padding(.horizontal, 12) .padding(.vertical, 9)
           .cardSurface(cornerRadius: 10)            → 카드 배경 + 1px 테두리, 반지름 10
+
+          배경과 글자색은 **테마를 따라가지 않습니다** — 사진 위에 뜨는 카드라
+          라이트 테마의 흰 카드는 밝은 사진 위에서 사라집니다. 두 테마 모두 진회색 +
+          흰 글자입니다(`NegaflowScanProgress*Brush`).
+
+          배경은 **불투명**이어야 합니다. macOS `CardSurface` 는
+          `Color(nsColor: .controlBackgroundColor)` 로 칠하는데 그것이 불투명입니다.
+          WinUI 의 `CardBackgroundFillColorDefaultBrush` 는 다크에서 흰색 5% 라 사실상
+          투명이고, 사진 위에 얹히면 글자가 그림에 묻혀 읽히지 않습니다. 앱이 이미 쓰는
+          `NegaflowCardBrush`(다크 #FF333436 · 라이트 흰색)가 그 자리입니다.
     -->
     <Border
         x:Name="Card"
         Width="264"
         Padding="12,9"
-        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+        Background="{ThemeResource NegaflowScanProgressCardBrush}"
+        BorderBrush="{ThemeResource NegaflowScanProgressBorderBrush}"
         BorderThickness="1"
         CornerRadius="10">
         <StackPanel Spacing="6">
@@ -45,11 +55,13 @@
                     <FontIcon
                         FontFamily="{ThemeResource SymbolThemeFontFamily}"
                         FontSize="12"
+                        Foreground="{ThemeResource NegaflowScanProgressTextBrush}"
                         Glyph="&#xE8FE;" />
                     <TextBlock
                         x:Name="PhaseText"
                         FontSize="11"
-                        FontWeight="SemiBold" />
+                        FontWeight="SemiBold"
+                        Foreground="{ThemeResource NegaflowScanProgressTextBrush}" />
                 </StackPanel>
 
                 <TextBlock
@@ -57,7 +69,7 @@
                     Grid.Column="2"
                     FontFamily="{ThemeResource ContentControlThemeFontFamily}"
                     FontSize="11"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                    Foreground="{ThemeResource NegaflowScanProgressSecondaryTextBrush}">
                     <TextBlock.TextDecorations>None</TextBlock.TextDecorations>
                 </TextBlock>
             </Grid>
@@ -72,7 +84,7 @@
             <TextBlock
                 x:Name="MessageText"
                 FontSize="11"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Foreground="{ThemeResource NegaflowScanProgressSecondaryTextBrush}"
                 TextTrimming="CharacterEllipsis"
                 TextWrapping="NoWrap" />
         </StackPanel>

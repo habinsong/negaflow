@@ -24,6 +24,14 @@
                     <SolidColorBrush x:Key="NegaflowBarBrush" Color="#FFF5F5F6" />
                     <SolidColorBrush x:Key="NegaflowCardBrush" Color="#FFFFFFFF" />
                     <SolidColorBrush x:Key="NegaflowDividerBrush" Color="#24000000" />
+                    <!--  스캔 진행 카드입니다. **테마를 따라가지 않습니다.**
+                          이 카드는 사진 위에 뜨므로, 라이트 테마에서 흰 카드가 되면 밝은
+                          사진 위에서 통째로 사라집니다. 두 테마 모두 같은 진회색이고 글자는
+                          흰색입니다 - 아래 그림이 무엇이든 읽힙니다.  -->
+                    <SolidColorBrush x:Key="NegaflowScanProgressCardBrush" Color="#FF333436" />
+                    <SolidColorBrush x:Key="NegaflowScanProgressBorderBrush" Color="#32FFFFFF" />
+                    <SolidColorBrush x:Key="NegaflowScanProgressTextBrush" Color="#FFFFFFFF" />
+                    <SolidColorBrush x:Key="NegaflowScanProgressSecondaryTextBrush" Color="#C5FFFFFF" />
                     <SolidColorBrush x:Key="NegaflowCanvasBrush" Color="#FF121212" />
                     <SolidColorBrush x:Key="NegaflowSubtleFillBrush" Color="#10000000" />
                     <SolidColorBrush x:Key="NegaflowSelectionBrush" Color="#296B8BFF" />
@@ -70,6 +78,14 @@
                     <SolidColorBrush x:Key="NegaflowBarBrush" Color="#FF242426" />
                     <SolidColorBrush x:Key="NegaflowCardBrush" Color="#FF333436" />
                     <SolidColorBrush x:Key="NegaflowDividerBrush" Color="#32FFFFFF" />
+                    <!--  스캔 진행 카드입니다. **테마를 따라가지 않습니다.**
+                          이 카드는 사진 위에 뜨므로, 라이트 테마에서 흰 카드가 되면 밝은
+                          사진 위에서 통째로 사라집니다. 두 테마 모두 같은 진회색이고 글자는
+                          흰색입니다 - 아래 그림이 무엇이든 읽힙니다.  -->
+                    <SolidColorBrush x:Key="NegaflowScanProgressCardBrush" Color="#FF333436" />
+                    <SolidColorBrush x:Key="NegaflowScanProgressBorderBrush" Color="#32FFFFFF" />
+                    <SolidColorBrush x:Key="NegaflowScanProgressTextBrush" Color="#FFFFFFFF" />
+                    <SolidColorBrush x:Key="NegaflowScanProgressSecondaryTextBrush" Color="#C5FFFFFF" />
                     <SolidColorBrush x:Key="NegaflowCanvasBrush" Color="#FF121212" />
                     <SolidColorBrush x:Key="NegaflowSubtleFillBrush" Color="#16FFFFFF" />
                     <SolidColorBrush x:Key="NegaflowSelectionBrush" Color="#386B8BFF" />
@@ -109,6 +125,14 @@
                     <SolidColorBrush x:Key="NegaflowBarBrush" Color="{ThemeResource SystemColorWindowColor}" />
                     <SolidColorBrush x:Key="NegaflowCardBrush" Color="{ThemeResource SystemColorWindowColor}" />
                     <SolidColorBrush x:Key="NegaflowDividerBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <!--  스캔 진행 카드입니다. **테마를 따라가지 않습니다.**
+                          이 카드는 사진 위에 뜨므로, 라이트 테마에서 흰 카드가 되면 밝은
+                          사진 위에서 통째로 사라집니다. 두 테마 모두 같은 진회색이고 글자는
+                          흰색입니다 - 아래 그림이 무엇이든 읽힙니다.  -->
+                    <SolidColorBrush x:Key="NegaflowScanProgressCardBrush" Color="#FF333436" />
+                    <SolidColorBrush x:Key="NegaflowScanProgressBorderBrush" Color="#32FFFFFF" />
+                    <SolidColorBrush x:Key="NegaflowScanProgressTextBrush" Color="#FFFFFFFF" />
+                    <SolidColorBrush x:Key="NegaflowScanProgressSecondaryTextBrush" Color="#C5FFFFFF" />
                     <SolidColorBrush x:Key="NegaflowCanvasBrush" Color="{ThemeResource SystemColorWindowColor}" />
                     <SolidColorBrush x:Key="NegaflowSubtleFillBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="NegaflowSelectionBrush" Color="{ThemeResource SystemColorHighlightColor}" />
