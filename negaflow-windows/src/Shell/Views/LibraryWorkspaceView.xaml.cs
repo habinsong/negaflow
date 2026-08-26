@@ -47,7 +47,10 @@ public sealed partial class LibraryWorkspaceView : UserControl
 
     public LibraryWorkspaceView()
     {
-        InitializeComponent();
+        using (Diagnostics.StartupTrace.Measure("LibraryWorkspaceView.xaml"))
+        {
+            InitializeComponent();
+        }
         // 왼쪽 소스 패널 XAML 은 UserControl 로 옮겼습니다. 이벤트는 옮기기 전과 같은
         // 이 타입의 메서드로 돌아옵니다.
         ControlsPanel.Owner = this;

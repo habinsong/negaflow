@@ -21,10 +21,18 @@
         <views:AppMenuBarView x:Name="AppMenu" Grid.Row="1" />
         <Border Grid.Row="2" Background="{ThemeResource NegaflowDividerBrush}" />
 
+        <!--  **세 화면을 한꺼번에 만들지 않습니다.**
+
+              앱이 뜰 때 보여 줄 것은 마지막으로 본 화면 하나뿐인데, 앞 판은 셋을 모두
+              만들었습니다. 실측으로 라이브러리 98ms · 현상 358ms · 인화 65ms 이고, 그
+              전부가 창이 뜨기 전에 들어갔습니다 - 그동안 사용자는 검은 화면을 봅니다.
+
+              `x:Load="False"` 는 `FindName` 이 부를 때까지 만들지 않습니다. 실체화는
+              `Initialize` 가 하고, 그 `Initialize` 는 창을 띄운 뒤에 돕니다.  -->
         <Grid Grid.Row="3">
-            <views:LibraryWorkspaceView x:Name="LibraryWorkspace" Visibility="Collapsed" />
-            <views:DevelopWorkspaceView x:Name="DevelopWorkspace" />
-            <views:PrintWorkspaceView x:Name="PrintWorkspace" Visibility="Collapsed" />
+            <views:LibraryWorkspaceView x:Name="LibraryWorkspace" x:Load="False" Visibility="Collapsed" />
+            <views:DevelopWorkspaceView x:Name="DevelopWorkspace" x:Load="False" />
+            <views:PrintWorkspaceView x:Name="PrintWorkspace" x:Load="False" Visibility="Collapsed" />
         </Grid>
     </Grid>
 </UserControl>

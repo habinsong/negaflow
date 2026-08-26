@@ -152,6 +152,13 @@ public partial class App : Application
         {
             mainWindow.Activate();
         }
+        Diagnostics.StartupTrace.Mark("window shown");
+        // 창이 뜬 **뒤에** 셸을 채웁니다. 같은 UI 스레드의 다음 차례로 넘기므로 창은 이미
+        // 그려져 있고, 사용자는 검은 화면 대신 화면이 채워지는 것을 봅니다.
+        if (mainWindow is MainWindow shell)
+        {
+            _ = shell.DispatcherQueue.TryEnqueue(shell.CompleteInitialization);
+        }
         Diagnostics.StartupTrace.Mark("OnLaunched done");
     }
 

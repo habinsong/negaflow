@@ -19,6 +19,24 @@ public sealed partial class MainWindow : Window
     private AboutNegaflowWindow? aboutWindow;
     private QuickStartHelpWindow? quickStartHelpWindow;
 
+    /// <summary>창을 띄운 뒤에 할 초기화입니다. 한 번만 돕니다.</summary>
+    private Action? pendingInitialization;
+
+    /// <summary>
+    /// 창이 뜬 뒤 셸을 채웁니다. <see cref="App"/> 이 <c>Activate()</c> 바로 뒤에 부릅니다.
+    /// </summary>
+    public void CompleteInitialization()
+    {
+        if (Interlocked.Exchange(ref pendingInitialization, null) is not { } work)
+        {
+            return;
+        }
+        using (Diagnostics.StartupTrace.Measure("ShellView.Initialize"))
+        {
+            work();
+        }
+    }
+
     public MainWindow(
         PresentationSettingsStore settingsStore,
         WorkspacePresentationState workspaceState,
@@ -37,15 +55,15 @@ public sealed partial class MainWindow : Window
         WindowIcon.Apply(AppWindow);
 
         ShellView.TitleBarInteractiveRegionsChanged += OnTitleBarInteractiveRegionsChanged;
-        using (Diagnostics.StartupTrace.Measure("ShellView.Initialize"))
-        {
-            ShellView.Initialize(
-                workspaceState,
-                nativeEngineStatusService,
-                libraryHost,
-                AppWindow.Id,
-                thumbnails);
-        }
+        // **셸 초기화는 창을 띄운 뒤로 미룹니다.** 생성자에서 끝내면 그 시간만큼 창이
+        // 아예 뜨지 않아 사용자는 검은 화면을 봅니다 - 실측으로 창이 2.02 초에 떴고 그중
+        // 0.39 초가 이 초기화였습니다. 창을 먼저 내놓고 같은 UI 스레드에서 이어서 채웁니다.
+        pendingInitialization = () => ShellView.Initialize(
+            workspaceState,
+            nativeEngineStatusService,
+            libraryHost,
+            AppWindow.Id,
+            thumbnails);
 
         ShellView.SettingsRequested += OnSettingsRequested;
         ShellView.DiagnosticsRequested += OnDiagnosticsRequested;

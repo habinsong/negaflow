@@ -28,7 +28,10 @@ public sealed partial class WorkspaceShellView : UserControl
 
     public WorkspaceShellView()
     {
-        InitializeComponent();
+        using (Diagnostics.StartupTrace.Measure("WorkspaceShellView.xaml"))
+        {
+            InitializeComponent();
+        }
         Toolbar.TitleBarInteractiveRegionsChanged += OnToolbarTitleBarInteractiveRegionsChanged;
     }
 
@@ -53,6 +56,28 @@ public sealed partial class WorkspaceShellView : UserControl
     internal Task PrepareForTerminationAsync() =>
         DevelopWorkspace.PrepareForTerminationAsync();
 
+    /// <summary>
+    /// <c>x:Load="False"</c> 로 미뤄 둔 세 화면을 실제로 만듭니다.
+    /// </summary>
+    /// <remarks>
+    /// 마지막으로 본 화면부터 만듭니다 — 그것이 곧 보일 것이라 먼저 준비되는 편이 낫습니다.
+    /// 나머지 둘도 이어서 만듭니다: 이 함수는 창이 뜬 뒤에 돌고, 화면 전환은 언제든 일어날 수
+    /// 있으므로 그때 만들면 전환이 눈에 띄게 끊깁니다.
+    /// </remarks>
+    private void RealizeWorkspaces()
+    {
+        string[] order = workspaceState?.Current.SelectedWorkspace switch
+        {
+            WorkspaceModule.Library => ["LibraryWorkspace", "DevelopWorkspace", "PrintWorkspace"],
+            WorkspaceModule.Print => ["PrintWorkspace", "DevelopWorkspace", "LibraryWorkspace"],
+            _ => ["DevelopWorkspace", "LibraryWorkspace", "PrintWorkspace"],
+        };
+        foreach (string name in order)
+        {
+            _ = FindName(name);
+        }
+    }
+
     public void Initialize(
         WorkspacePresentationState state,
         NativeEngineStatusService nativeEngineStatusService,
@@ -68,6 +93,12 @@ public sealed partial class WorkspaceShellView : UserControl
         }
 
         isInitialized = true;
+        // 세 화면은 `x:Load="False"` 라 아직 없습니다. 여기서 만듭니다 - 이 초기화는 창을
+        // 띄운 뒤에 도므로, 만드는 값이 창 등장에 들어가지 않습니다.
+        using (Diagnostics.StartupTrace.Measure("realize workspaces"))
+        {
+            RealizeWorkspaces();
+        }
         workspaceState = state;
         this.libraryHost = libraryHost;
         this.thumbnails = thumbnails;
@@ -81,7 +112,9 @@ public sealed partial class WorkspaceShellView : UserControl
             state.SetActiveFrame(libraryHost.ActiveFrameId);
         }
         NativeEngineStatus nativeEngineStatus = nativeEngineStatusService.Probe();
+        Diagnostics.StartupTrace.Mark("shell: toolbar");
         Toolbar.Initialize(state, libraryHost);
+        Diagnostics.StartupTrace.Mark("shell: library init");
         LibraryWorkspace.Initialize(state);
         // macOS 는 `AppModel` 하나가 `showScannerControls` 와 스캐너 세션을 들고 라이브러리·
         // 현상 사이드바가 같은 `LibrarySourceSection` 을 냅니다. 두 벌을 만들면 현상뷰 쪽은
@@ -98,9 +131,12 @@ public sealed partial class WorkspaceShellView : UserControl
         {
             if (windowId is { } libraryWindowId)
             {
+                Diagnostics.StartupTrace.Mark("shell: ShowLibrary begin");
                 LibraryWorkspace.ShowLibrary(libraryHost, libraryWindowId);
+                Diagnostics.StartupTrace.Mark("shell: ShowLibrary end");
             }
         }
+        Diagnostics.StartupTrace.Mark("shell: develop init");
         DevelopWorkspace.Initialize(state, nativeEngineStatus);
         // 현상 · 인화의 "파일" 탭은 라이브러리와 <b>같은 컨트롤</b>입니다. ✕ 와 맥락 메뉴도
         // 라이브러리의 같은 처리로 보내야 화면마다 결과가 갈라지지 않습니다 — 여기서 잇지
@@ -132,11 +168,13 @@ public sealed partial class WorkspaceShellView : UserControl
         {
             try
             {
+                Diagnostics.StartupTrace.Mark("shell: develop ShowLibrary begin");
                 DevelopWorkspace.ShowLibrary(
                     libraryHost,
                     ToneLimits.Read(),
                     NegativeLimits.Read(),
                     id);
+                Diagnostics.StartupTrace.Mark("shell: develop ShowLibrary end");
             }
             catch (NativeBootstrapException)
             {

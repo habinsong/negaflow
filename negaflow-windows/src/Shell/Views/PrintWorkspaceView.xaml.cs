@@ -23,7 +23,10 @@ public sealed partial class PrintWorkspaceView : UserControl
 
     public PrintWorkspaceView()
     {
-        InitializeComponent();
+        using (Diagnostics.StartupTrace.Measure("PrintWorkspaceView.xaml"))
+        {
+            InitializeComponent();
+        }
         // 레이아웃·출력 카드 XAML 은 각자 UserControl 로 옮겼습니다. 이벤트는 옮기기 전과
         // 같은 이 타입의 메서드로 돌아옵니다.
         LayoutTab.Owner = this;

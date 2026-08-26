@@ -48,7 +48,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     public DevelopWorkspaceView()
     {
-        InitializeComponent();
+        using (Diagnostics.StartupTrace.Measure("DevelopWorkspaceView.xaml"))
+        {
+            InitializeComponent();
+        }
         frames = new DevelopFrameList(this);
         inspectorChrome = new DevelopInspectorChrome(this);
         inspectorSync = new DevelopInspectorSync(this);
