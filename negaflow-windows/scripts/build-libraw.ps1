@@ -70,7 +70,14 @@ if (-not (Test-Path $sourceDir)) {
 # ── 3. MSVC 로 빌드한다 ──────────────────────────────────────────────────────
 # LibRaw 의 CMake 스크립트는 upstream 이 공식 지원하지 않는다(README.cmake). 저장소가
 # 함께 주는 Makefile.msvc 를 그대로 쓴다. 추가 의존성(RawSpeed·DNG SDK·LCMS·JPEG)은
-# 전부 끈 기본값이라 libraw.dll 은 다른 DLL 을 요구하지 않는다.
+# 전부 끈 기본값이다.
+#
+# **CRT 는 정적으로 링크한다.** Makefile.msvc 의 기본은 `/MD` 라, 만들어진 libraw.dll 이
+# MSVCP140.dll·VCRUNTIME140.dll·VCRUNTIME140_1.dll 을 요구한다 - 그것들은 Windows 구성품이
+# 아니라 Visual C++ 재배포 패키지다. 개발 기계에는 늘 깔려 있어 드러나지 않지만, 없는 PC 에서는
+# libraw.dll 이 아예 로드되지 않아 RAW 가져오기가 통째로 죽는다. `COPT_OPT` 은 Makefile.msvc
+# 자신이 열어 둔 확장 자리이고 `$(COPT)` 안에서 `/MD` 뒤에 놓이므로, 여기 `/MT` 를 주면
+# cl 이 마지막 것을 쓴다(D9025). native 쪽 CMakeLists 도 같은 `MultiThreaded` 다.
 $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
 if (-not (Test-Path $vswhere)) { throw "vswhere 를 찾지 못했다: $vswhere" }
 $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
@@ -81,12 +88,30 @@ if (-not (Test-Path $vcvars)) { throw "vcvars64.bat 을 찾지 못했다: $vcvar
 foreach ($sub in @('bin', 'lib', 'object')) {
     New-Item -ItemType Directory -Force -Path (Join-Path $sourceDir $sub) | Out-Null
 }
-Write-Host "MSVC x64 로 libraw.dll 을 빌드한다"
-& cmd /c "`"$vcvars`" >nul 2>&1 && cd /d `"$sourceDir`" && nmake -f Makefile.msvc bin\libraw.dll"
+# nmake 는 컴파일 플래그가 바뀌어도 다시 만들지 않는다 - 남아 있는 .obj 는 예전 CRT 로
+# 만들어진 것이므로 지우고 시작한다.
+foreach ($sub in @('bin', 'lib', 'object')) {
+    $stale = Join-Path $sourceDir $sub
+    if (Test-Path $stale) { Get-ChildItem -LiteralPath $stale -File | Remove-Item -Force }
+}
+
+Write-Host "MSVC x64 로 libraw.dll 을 빌드한다 (정적 CRT)"
+& cmd /c "`"$vcvars`" >nul 2>&1 && cd /d `"$sourceDir`" && nmake -f Makefile.msvc COPT_OPT=/MT bin\libraw.dll"
 if ($LASTEXITCODE -ne 0) { throw "libraw.dll 빌드가 실패했다 (exit $LASTEXITCODE)." }
 
 $built = Join-Path $sourceDir 'bin\libraw.dll'
 if (-not (Test-Path $built)) { throw "빌드 산출물이 없다: $built" }
+
+# 정적으로 링크됐는지 결과로 확인한다. 플래그가 먹지 않아도 빌드는 성공하고, 그 차이는
+# Visual C++ 재배포 패키지가 없는 기계에서만 드러난다 - 여기서 잡지 않으면 사용자가 잡는다.
+$imports = (& cmd /c "`"$vcvars`" >nul 2>&1 && dumpbin /dependents `"$built`"") -join "`n"
+$dynamicCrt = @('MSVCP140', 'VCRUNTIME140', 'MSVCR') |
+    Where-Object { $imports -match $_ }
+if ($dynamicCrt) {
+    throw ("libraw.dll 이 아직 Visual C++ 재배포 런타임을 요구한다: " +
+        "$($dynamicCrt -join ', '). /MT 가 먹지 않았다.")
+}
+Write-Host "CRT 정적 링크 확인 (Visual C++ 재배포 런타임 요구 없음)"
 
 # ── 4. C API 심볼이 전부 있는지 확인한다 ─────────────────────────────────────
 # 없는 심볼이 하나라도 있으면 native 쪽 `libraw_decoder_available()` 이 통째로 거부하므로,

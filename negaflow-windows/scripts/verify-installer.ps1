@@ -77,6 +77,14 @@ function Write-RegistrationLog {
     Get-Content -LiteralPath $log -Encoding UTF8 | Write-Host
     Write-Host '--- end ---'
 }
+# 서명 없는 느슨한 패키지를 등록하는 길은 기계의 잠금 해제 상태에 달려 있다. 개발 기계는
+# 개발자 모드가 켜져 있어 늘 되고, 그것이 켜져 있는 한 "여기서는 되더라" 는 사용자 PC 에
+# 대해 아무것도 증명하지 않는다. 어떤 기계에서 통과한 것인지 결과와 함께 남긴다.
+$unlock = Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock' -ErrorAction SilentlyContinue
+Write-Host ("AppModelUnlock: AllowDevelopmentWithoutDevLicense=" +
+    "$(if ($null -ne $unlock) { $unlock.AllowDevelopmentWithoutDevLicense } else { '<none>' })" +
+    " AllowAllTrustedApps=$(if ($null -ne $unlock) { $unlock.AllowAllTrustedApps } else { '<none>' })")
+
 $installTimeout = [TimeSpan]::FromMinutes($InstallTimeoutMinutes)
 $process = Start-Process -FilePath $InstallerPath -ArgumentList @('/S', "/D=$InstallDirectory") -PassThru
 if (-not $process.WaitForExit($installTimeout.TotalMilliseconds)) {
