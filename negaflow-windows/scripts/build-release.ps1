@@ -237,10 +237,23 @@ try {
         }
     }
 
+    # 설치 화면이 쓰는 브랜딩 비트맵. 앱 아이콘에서 매번 구워 아이콘을 바꾸면 설치 화면도
+    # 같이 바뀌게 한다 - 저장소에 BMP 를 넣어 두면 둘이 어긋난다.
+    $brandingDirectory = Join-Path $OutputDirectory ('.branding-' + [Guid]::NewGuid().ToString('N'))
+    & (Join-Path $PSScriptRoot 'generate-installer-branding.ps1') `
+        -SourceIcon (Join-Path $projectRoot 'src\Shell\Assets\AppIcon-1024.png') `
+        -OutputDirectory $brandingDirectory
+    foreach ($bitmap in @('welcome.bmp', 'header.bmp')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $brandingDirectory $bitmap) -PathType Leaf)) {
+            throw "Installer branding bitmap was not produced: $bitmap"
+        }
+    }
+
     Push-Location $OutputDirectory
     try {
         & $makensisPath '-V2' '-INPUTCHARSET' 'UTF8' "-DPAYLOAD=$payloadDirectory" `
             "-DRUNTIMEPACKAGE=$runtimePackage" `
+            "-DBRANDING=$brandingDirectory" `
             "-DVERSION=$Version" "-DARCH=$artifactArchitecture" $installerScript
         if ($LASTEXITCODE -ne 0) {
             throw 'NSIS compilation failed.'
@@ -268,5 +281,8 @@ finally {
     }
     if (Test-Path -LiteralPath $packageDirectory) {
         Remove-Item -LiteralPath $packageDirectory -Recurse -Force
+    }
+    if ($null -ne $brandingDirectory -and (Test-Path -LiteralPath $brandingDirectory)) {
+        Remove-Item -LiteralPath $brandingDirectory -Recurse -Force
     }
 }

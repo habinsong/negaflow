@@ -45,12 +45,16 @@
                 <ColumnDefinition Width="50" />
             </Grid.ColumnDefinitions>
 
+            <!--  좌우 이동 단추는 필름스트립 높이를 따라 세로로 섭니다. 얇은 알약이면
+                  누를 자리가 좁고, 썸네일 줄과 눈높이도 맞지 않습니다.  -->
             <Button
                 x:Name="PreviousButton"
                 Grid.Column="0"
                 Width="34"
-                Margin="8,10"
+                Margin="8,12"
                 Padding="0"
+                VerticalAlignment="Stretch"
+                VerticalContentAlignment="Center"
                 Background="{ThemeResource NegaflowSubtleFillBrush}"
                 BorderThickness="0"
                 Click="OnPreviousClicked"
@@ -164,8 +168,10 @@
                 x:Name="NextButton"
                 Grid.Column="2"
                 Width="34"
-                Margin="8,10"
+                Margin="8,12"
                 Padding="0"
+                VerticalAlignment="Stretch"
+                VerticalContentAlignment="Center"
                 Background="{ThemeResource NegaflowSubtleFillBrush}"
                 BorderThickness="0"
                 Click="OnNextClicked"

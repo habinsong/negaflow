@@ -91,8 +91,102 @@ public sealed partial class WorkspaceToolbarView : UserControl
         ActiveFrameText.Text = text;
         AutomationProperties.SetName(ActiveFrameText, text);
         ToolTipService.SetToolTip(ActiveFrameText, text);
+        UpdateActiveFrameMarks(frame);
         TitleBarInteractiveRegionsChanged?.Invoke(this, EventArgs.Empty);
     }
+    /// <summary>
+    /// 가운데 줄의 사진 이름·평점·깃발·제외를 지금 고른 사진에 맞춥니다.
+    /// macOS <c>RollToolbarStrip</c> 과 같은 색 규칙입니다 — 채운 별은 파랑, 깃발은 초록,
+    /// 제외는 빨강, 걸리지 않은 것은 흐린 보조색.
+    /// </summary>
+    private void UpdateActiveFrameMarks(LibraryFrameSnapshot? frame)
+    {
+        bool hasFrame = frame is not null;
+        ActiveFrameRating.IsEnabled = hasFrame;
+        ActiveFramePickButton.IsEnabled = hasFrame;
+        ActiveFrameRejectButton.IsEnabled = hasFrame;
+        ActiveFrameRating.Rating = frame?.Rating ?? 0;
+
+        FramePickState state = frame?.PickState ?? FramePickState.Unflagged;
+        ActiveFramePickIcon.Glyph = state == FramePickState.Picked ? "\uEB4B" : "\uE129";
+        ActiveFramePickIcon.Foreground = state == FramePickState.Picked
+            ? PickedBrush
+            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+        ActiveFrameRejectIcon.Foreground = state == FramePickState.Rejected
+            ? RejectedBrush
+            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorTertiaryBrush"];
+
+        AutomationProperties.SetName(ActiveFramePickButton, AppResources.Get("picked", "Text"));
+        AutomationProperties.SetName(ActiveFrameRejectButton, AppResources.Get("rejected", "Text"));
+    }
+
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush PickedBrush =
+        new(Windows.UI.Color.FromArgb(0xFF, 0x30, 0xA4, 0x6C));
+
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush RejectedBrush =
+        new(Windows.UI.Color.FromArgb(0xFF, 0xE5, 0x48, 0x4D));
+
+    private LibraryFrameSnapshot? ActiveFrame() =>
+        libraryHost?.ActiveFrameId is { } activeFrameId
+            ? libraryHost.Frames.FirstOrDefault(candidate =>
+                string.Equals(candidate.Id, activeFrameId, StringComparison.Ordinal))
+            : null;
+
+    private void OnActiveFrameRatingCommitted(object? sender, int rating)
+    {
+        _ = sender;
+        if (libraryHost is null || ActiveFrame() is not { } frame)
+        {
+            return;
+        }
+        Commit(frame, new LibraryFrameEdit(frame.Tone, frame.ManualBase, Rating: rating));
+    }
+
+    private void OnActiveFramePickClick(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (libraryHost is null || ActiveFrame() is not { } frame)
+        {
+            return;
+        }
+        // macOS 와 같이 이미 그 상태면 다시 눌러 해제합니다.
+        FramePickState next = frame.PickState == FramePickState.Picked
+            ? FramePickState.Unflagged
+            : FramePickState.Picked;
+        Commit(frame, new LibraryFrameEdit(frame.Tone, frame.ManualBase, PickState: next));
+    }
+
+    private void OnActiveFrameRejectClick(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (libraryHost is null || ActiveFrame() is not { } frame)
+        {
+            return;
+        }
+        FramePickState next = frame.PickState == FramePickState.Rejected
+            ? FramePickState.Unflagged
+            : FramePickState.Rejected;
+        Commit(frame, new LibraryFrameEdit(frame.Tone, frame.ManualBase, PickState: next));
+    }
+
+    private void Commit(LibraryFrameSnapshot frame, LibraryFrameEdit edit)
+    {
+        if (libraryHost is null)
+        {
+            return;
+        }
+        if (libraryHost.Edit(frame.Id, edit) != LibraryFrameError.None ||
+            libraryHost.Save() != CatalogStoreError.None)
+        {
+            // 저장에 실패했으면 화면도 되돌립니다 — 다음 실행에서 사라질 값을 남기지 않습니다.
+            UpdateActiveFrameMarks(frame);
+            return;
+        }
+        UpdateActiveFrame();
+    }
+
 
     private void OnLibraryClick(object sender, RoutedEventArgs args)
     {

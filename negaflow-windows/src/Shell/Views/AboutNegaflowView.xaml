@@ -14,7 +14,7 @@
             Height="96"
             Margin="0,0,0,12"
             AutomationProperties.AccessibilityView="Raw"
-            Source="ms-appx:///Assets/AppIcon-App-1024.png"
+            Source="ms-appx:///Assets/AppIcon-1024.png"
             Stretch="Uniform" />
         <TextBlock
             Margin="0,0,0,10"

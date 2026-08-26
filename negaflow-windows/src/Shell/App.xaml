@@ -349,10 +349,17 @@
                 <Setter Property="controls:SettingsBrushes.SecondaryForeground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
             </Style>
 
+            <!--  macOS `WorkspaceTextButton` — 글자를 `minWidth 74 / maxWidth 86` 프레임에
+                  담고, SwiftUI 의 `.frame` 은 그 안에서 **가운데**에 둡니다. 늘리기와 가운데
+                  정렬이 빠져 있으면 단추가 글자 크기대로 줄어들고, 고른 항목만 굵어지므로
+                  셋의 폭이 서로 달라 보입니다.  -->
             <Style x:Key="NegaflowToolbarTextButtonStyle" TargetType="Button">
                 <Setter Property="MinWidth" Value="74" />
                 <Setter Property="MaxWidth" Value="86" />
                 <Setter Property="MinHeight" Value="24" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
                 <Setter Property="Padding" Value="5,0" />
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />

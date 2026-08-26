@@ -1,239 +1,118 @@
-# Negaflow Windows
+<p align="center">
+  <img src="src/Shell/Assets/AppIcon-1024.png" width="128" alt="negaflow app icon">
+</p>
 
-macOS용 Negaflow의 제품 계약을 Windows 네이티브 기술로 독립 구현하는 작업 공간입니다.
-현재 단계는 M0 기준선, M1 native/managed 빌드·Interop 기반, M2 scalar 네거티브·톤 수치 계약, M3 TIFF
-decode·입력 색상·검증된 PNG16/TIFF16 출력 경계, M4 단일 이미지 CLI와 M8 WinUI 셸 기반입니다. 제품 전체
-이미지 처리나 실제 제품 기능이 완성된 상태는 아닙니다.
+<h1 align="center">negaflow for Windows</h1>
 
-## 고정 기준
+<p align="center">Import, invert, and develop scanned film — or film copied with a digital camera — on Windows</p>
 
-- macOS 제품 기준선: `2fa1d6297378673b58b8bec72025e968ccc3125c`
-- 설계 문서 조사 기준: `9be909c43edd7e04ba98cdc9d6a0c688739e343e`
-- Windows 기술 경계: C#/.NET 10/WinUI 3 셸, C++20 엔진, 좁은 C ABI
-- 네이티브 대상: x64와 순수 ARM64
-- GPU 기준선: D3D11, Direct2D, DirectCompute, WARP 검증, 완전한 CPU 경로
+<p align="center">
+  <a href="https://habinsong.github.io/negaflow-site/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="website"></a>
+  <img src="https://img.shields.io/badge/release-1.1.0-EF8B26" alt="1.1.0">
+  <img src="https://img.shields.io/badge/Windows-11-0078D4?logo=windows&logoColor=white" alt="Windows 11">
+  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 license"></a>
+</p>
 
-두 커밋 사이의 디지털 필름 명부 범위 수정은 correctness 변경으로 분류해 Windows 기준선에
-포함했습니다. 자세한 내용은 `baseline/known-deltas.json`에 있습니다.
+---
 
-## 현재 제공하는 것
+negaflow is an app for the analog-film workflow: bring in a scan or a camera copy, measure the film
+base, invert it, develop it, and print it. It handles color and black-and-white, negative and
+positive. Your original file is never rewritten — every edit lives in the catalog beside it.
 
-- architecture별로 격리된 CMake 프리셋
-- C++20 네이티브 코어와 좁은 C ABI DLL
-- .NET 10 source-generated `LibraryImport`와 절대 경로 ABI bootstrap
-- build ID, architecture, CPU capability를 구조화해 출력하는 CLI
-- checked float32 pixel view와 scalar exposure/color-matrix/basic-tone/parametric/DR·R·G·B point curve/8-band Color Mixer/3-zone Color Grading/R·G·B Primary Calibration
-- `shoulder-print-response-v4` color/B&W negative inversion reference
-- 원본 불변 Classic/BigTIFF 구조 검사와 `--probe-tiff` CLI
-- Microsoft 기본 WIC의 RGB/RGBA 16-bit TIFF none/LZW decode, 독립 LZW 의미 사전 검사와 Deflate 격리
-- full decoded source를 만들지 않는 WIC row sink와 cooperative cancellation·row progress
-- bounded ICC 검사와 재사용 Windows ICM row transform 기반 scanner→linear-sRGB float 변환
-- 사용자 scanner TIFF 15개 read-only streaming 변환과 whole-frame 최종 float exact parity
-- TIFF decode→scanner color→수동 Dmin 네거티브 반전 수직 경로
-- macOS 수식 순서의 노출·기본 톤·4-band 파라메트릭 커브, 64표본 포인트 커브, 8-band Color Mixer,
-  3-zone Color Grading, R/G/B Primary Calibration scalar와 bounded 동적 측정
-- Primary Calibration 다음 필름 스캔 분기의 11종 profile·5% intensity·RGB33 Film Emulation 색상과
-  unquantized profile strength·11행 scratch의 acutance standalone component
-- canonical macOS Core Image golden, 두 run 12,912개 수치 exact 반복성과 색상/acutance regression envelope
-- working float→sRGB16→Microsoft WIC PNG encode→pixel·ICC readback→기존 파일 비덮어쓰기 게시
-- working float→sRGB16→무압축 Classic TIFF encode→최소 IFD·pixel·ICC readback→비덮어쓰기 게시
-- content를 읽지 않는 source file 상태 전후 관찰과 PNG16/TIFF16 공통 단계별 wall/process-CPU report
-- 진단 명령에만 분리한 scanner/develop/tone RGBA32F min/max와 versioned 비암호 fingerprint
-- 일반 이미지 SHA-256 기본 `끔`, 명시적 opt-in Windows CNG 순차 경로
-- `scanner`/`imported` transport와 film/digital 신호를 분리하고 legacy marker·강도를 보존하는 catalog
-  Develop route projection
-- Swift 기준 치수와 6개 언어를 쓰는 WinUI 3 Library/Develop/Print/Settings 셸
-- 현재 모니터 작업영역 최대화와 Windows 오른쪽 caption button runtime inset
-- Settings의 일반 이미지 SHA-256 기본 `끔` 표시·저장 기반
-- ABI layout과 capability 불변식을 확인하는 native test
-- 현재 기준선과 canonical asset SHA-256 목록
-- 설치 가능한 Visual Studio workload 선언
+The develop engine is called **Chroma Engine**. Dust and scratch repair is called **GrainMend**.
 
-현재 네이티브 엔진 코드에는 제3자 라이브러리가 없습니다. Windows WIC/ICM과 Win32만 runtime API로
-사용하며 MSVC runtime은 정적으로 링크합니다. 따라서 Release native CLI는 별도 VC++ Redistributable
-DLL 설치를 요구하지 않습니다. 관리 Interop도 외부 NuGet package가 없습니다.
+This is the Windows build. It is a native port, not a wrapper: a C++20 imaging engine behind a
+narrow C ABI, a .NET 10 / WinUI 3 shell, and Direct3D 11 compute for the develop pipeline. It
+matches the macOS app's results and its interface.
 
-WinUI 셸은 `Microsoft.WindowsAppSDK.Runtime 1.8.260710003`과
-`Microsoft.WindowsAppSDK.WinUI 1.8.260709004`를 직접 고정합니다. 현재 unpackaged build는
-framework-dependent이므로 .NET 10 runtime과 Windows App Runtime 1.8이 필요합니다. 정확한 package graph,
-license와 배포 gate는 `third_party/manifest/components.json`에 기록합니다.
-상세 진행률, 구현 설명, 설치·검증 기록은 [`docs/README.md`](docs/README.md)에서 시작합니다.
+## Install
 
-## 빌드
+Download `Negaflow-1.1.0-x64-setup.exe` from
+[GitHub Releases](https://github.com/habinsong/negaflow/releases) and run it.
 
-먼저 Visual Studio 2026과 Windows 11 SDK를 포함한 개발 환경을 구성합니다.
+The installer writes only to your own user profile — `%LOCALAPPDATA%\Negaflow\App`. It does not
+need administrator rights to install the app.
 
-```powershell
-winget configure -f .\configuration.dsc.yaml --accept-configuration-agreements
-```
+Everything the app needs is inside the installer. You do not have to install .NET, the Windows App
+Runtime, or the Visual C++ redistributable separately.
 
-이 구성은 `.vsconfig`를 사용해 C#, 네이티브 C++, WinUI 3, x64, ARM64 도구를 같은 목록으로
-재현합니다. 이후 PowerShell에서 빌드합니다.
+**Requirements**
 
-Visual Studio에 포함된 vcpkg 도구를 사용하며, 제3자 port 버전은 `vcpkg.json`의 정확한
-`builtin-baseline`으로 고정합니다. 현재 runtime port dependency는 0개입니다.
+| | |
+|---|---|
+| Windows | Windows 11, build 26100 or newer |
+| Architecture | x64 |
+| Graphics | Any Direct3D 11 GPU. There is a full CPU path when none is available. |
 
-```powershell
-./scripts/build.ps1 -Preset x64-debug
-./scripts/test.ps1 -Preset x64-debug
-./scripts/test-interop.ps1 -Preset x64-debug
-./scripts/test-managed.ps1 -Preset x64-debug
-```
+The release is not signed with a commercial certificate, so SmartScreen will warn on first run.
+Check the SHA-256 published beside the download before choosing **More info → Run anyway**.
 
-managed solution build가 끝나면 x64 Debug 셸은 다음 위치에서 실행할 수 있습니다.
+## Scanners
 
-```powershell
-.\out\build\managed\Negaflow.Shell\x64\Debug\net10.0-windows10.0.26100.0\win-x64\Negaflow.Shell.exe
-```
+Scanner controls appear only when a scanner plugin is installed. negaflow itself contains no
+scanner code and stays neutral about how a scanner is driven.
 
-Release 빌드:
+For SANE-supported scanners, install
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) — a separate,
+GPL-licensed project. Its Windows installer carries the plugin, the patched SANE runtime, and the
+device-interface INF that opens the scanner through Windows' own `usbscan` driver. No vendor
+software and no driver replacement tools are involved.
+
+Verified on real hardware: Plustek OpticFilm 8100 (`genesys`) and Epson GT-X900 / V700
+(`epson2`), including the infrared channel that feeds GrainMend IR.
+
+## What it does
+
+- Film-base measurement, then color or black-and-white inversion
+- Exposure, contrast, curves, HSL, color grading, black-and-white toning
+- Sharpening, noise reduction, grain, vignette, halation
+- GrainMend dust and scratch repair, including GrainMend IR from a scanner's infrared pass
+- Rolls, folders, collections, ratings, stacks, virtual copies
+- Zoom, crop, rotation, comparison views, histogram, clipping display
+- Camera, lens, film, and exposure notes written into the exported file's EXIF
+- JPEG and 16-bit TIFF export, ICC profiles, print layouts
+- C-print destination settings and lab ICC soft proof
+- Presets and copy/paste covering process, target, adjustments, crop, and orientation
+- Seven print layouts, from a single image to contact sheets, cyanotype, and gelatin silver
+
+**Camera RAW.** Windows ships no RAW codec of its own — RAW is a separate Store package that is not
+guaranteed to be present. negaflow bundles LibRaw so the same file opens here and on macOS. Canon
+CR3, Sony ARW, Fujifilm RAF, Panasonic RW2, Olympus/OM ORF, Nikon NEF, Adobe DNG and the rest of
+LibRaw's list all import directly.
+
+## Building from source
+
+You need Visual Studio 2022 or newer with the C++ desktop workload, the .NET 10 SDK, CMake, and
+NSIS. Then:
 
 ```powershell
-./scripts/test.ps1 -Preset x64-release
-./scripts/test-interop.ps1 -Preset x64-release
-./scripts/test-managed.ps1 -Preset x64-release
-./scripts/build-managed.ps1 -Preset arm64-debug
-./scripts/build-managed.ps1 -Preset arm64-release
+# native engine, managed shell, tests, installer, and a silent install/uninstall check
+.\scripts\local-ci.ps1
+
+# just the installer
+.\scripts\build-release.ps1 -Architecture x64
 ```
 
-PowerShell 실행 정책이 스크립트를 막는 기본 Windows 환경에서는 정책을 영구 변경하지 않고 다음처럼
-현재 프로세스에만 허용할 수 있습니다.
+`build-release.ps1` produces `out\release\win-x64\Negaflow-<version>-x64-setup.exe` together with
+its SHA-256. `scripts\build-libraw.ps1` builds the bundled RAW decoder from a pinned upstream
+commit and refuses to continue if the result would need a redistributable runtime.
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 -Preset x64-debug
-```
+## Third-party code
 
-한 픽셀의 네거티브 반전 수치를 CLI로 확인할 수 있습니다.
+The imaging engine links no third-party libraries. It calls Windows itself — WIC, ICM, Direct3D —
+and nothing else, with the MSVC runtime linked statically.
 
-```powershell
-.\out\build\native\x64-debug\Debug\negaflow-cli.exe --negative-invert 0.72 0.72 1.55 color
-```
+Three components ship alongside it, each loaded at run time rather than linked in:
 
-TIFF를 디코드하지 않고 header와 첫 IFD, tag/strip 범위를 읽기 전용으로 확인할 수 있습니다.
+| Component | License | Why |
+|---|---|---|
+| LibRaw | LGPL-2.1 (or CDDL-1.0) | Camera RAW decoding, which Windows does not provide |
+| SQLite (`e_sqlite3`) | Public domain | Catalog storage |
+| Windows App Runtime | Microsoft | WinUI 3 |
 
-```powershell
-.\out\build\native\x64-debug\Debug\negaflow-cli.exe --probe-tiff C:\path\scan.tiff
-```
+Exact versions, pinned source URLs, hashes, and the obligations each one carries are recorded in
+[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) and
+[`third_party/manifest/components.json`](third_party/manifest/components.json).
 
-Microsoft 기본 WIC로 허용된 TIFF를 16-bit sample까지 decode해 구조화된 통계를 확인할 수 있습니다.
-LZW는 WIC 호출 전에 압축 구간 전체, code 수와 기대 복원 byte 수를 독립 검사하며 Deflate는 별도
-검증기가 생기기 전까지 거부합니다.
-
-```powershell
-.\out\build\native\x64-debug\Debug\negaflow-cli.exe --decode-tiff-wic C:\path\scan.tiff
-```
-
-scanner 입력 정책을 적용해 working linear-sRGB float buffer까지 검증할 수 있습니다. 결과에는 ICC
-경로의 16-bit intermediate 여부, row copy 횟수와 application-owned peak buffer가 포함되며 pixel이나
-경로는 출력하지 않습니다.
-
-```powershell
-.\out\build\native\x64-debug\Debug\negaflow-cli.exe --prepare-scanner-tiff C:\path\scan.tiff
-```
-
-working 변환 뒤 명시한 채널별 film-base 투과율로 color 또는 B&W 네거티브를 수동 반전할 수 있습니다.
-이 진단 경로는 장면 통계를 이용한 자동 보정을 하지 않고, 파일을 출력하지 않으며 이미지 SHA-256도
-계산하지 않습니다. scanner→working, develop, tone 단계의 min/max와 빠른 비암호 fingerprint를
-보고하므로 기본 export에 추가 pixel scan을 넣지 않고 회귀를 비교할 수 있습니다.
-
-    .\out\build\native\x64-debug\Debug\negaflow-cli.exe --develop-negative-tiff C:\path\scan.tiff 0.72 0.32 0.15 color
-
-노출·대비·파라메트릭 커브 진단도 export와 같은 여섯 값을 모두 덧붙이는 형식으로 실행합니다.
-
-    .\out\build\native\x64-debug\Debug\negaflow-cli.exe --develop-negative-tiff C:\path\scan.tiff 0.72 0.32 0.15 color 0.5 0.25 0.1 -0.1 0.2 -0.2
-
-같은 수직 경로를 16-bit opaque sRGB PNG로 내보낼 수 있습니다. 목적지는 절대 경로이고 기존 파일이
-없어야 합니다. 게시 전에 PNG 구조, 전체 RGB16 pixel과 ICC bytes를 다시 읽어 확인하며 source와
-artifact SHA-256은 계산하지 않습니다.
-
-```powershell
-.\out\build\native\x64-debug\Debug\negaflow-cli.exe --export-developed-png16 C:\path\scan.tiff C:\path\result.png 0.72 0.32 0.15 color
-```
-
-macOS 기본 export와 같은 무압축 16-bit opaque sRGB TIFF로도 내보낼 수 있습니다. 게시 전 단일 IFD,
-구조 tag allowlist, 전체 RGB16 pixel과 ICC bytes를 확인합니다. source metadata는 복사하지 않으며 Make,
-Model, Software, DateTime, Artist, Copyright, XMP, EXIF, GPS와 알 수 없는 tag는 허용하지 않습니다.
-
-```powershell
-.\out\build\native\x64-debug\Debug\negaflow-cli.exe --export-developed-tiff16 C:\path\scan.tiff C:\path\result.tiff 0.72 0.32 0.15 color
-```
-
-노출·대비·파라메트릭 커브 네 구간을 적용하려면 여섯 값을 모두 덧붙입니다. 범위는 노출 `[-5, 5]`,
-나머지는 `[-1, 1]`입니다.
-
-```powershell
-.\out\build\native\x64-debug\Debug\negaflow-cli.exe --export-developed-tiff16 C:\path\scan.tiff C:\path\result.tiff 0.72 0.32 0.15 color 0.5 0.25 0.1 -0.1 0.2 -0.2
-```
-
-두 export command는 source를 읽기 전후에 file identity·크기·최종 수정 시각만 비교하고, SHA-256은
-계산하지 않습니다. 결과에는 decode+color, develop, tone, output의 byte·memory·wall/process-CPU time과
-검증 상태가 들어가며 경로와 file identity 값은 들어가지 않습니다. process CPU는 모든 스레드의
-user+kernel 합계라 병렬 실행 시 wall보다 클 수 있고, API 실패 시 해당 값은 `null`입니다. 동적 커브는
-target·percentile 계약을 macOS와 맞추고 비공개 Core Image 축소 filter 대신 명시적
-`portable_area_v1`을 사용했다는 사실을 report합니다.
-
-native tone recipe에는 DR/R/G/B 포인트 커브 다음 8-band Color Mixer, 3-zone Color Grading과 R/G/B
-Primary Calibration 경계까지 연결되어 있지만 현재 CLI와 WinUI는 네 단계의 조절값 입력·저장을 아직
-노출하지 않습니다. 기본 빈 커브와 0인 mixer·grading·calibration 값은 무연산이며 report에는 각
-알고리즘 버전과 적용 여부만 들어갑니다.
-
-Film Emulation은 macOS와 같은 11종 profile의 절차형 RGB33 cube와 뒤따르는 bounded acutance를
-Primary Calibration 다음의 명시적 film-scan route로 연결했습니다. 진단·PNG16·TIFF16 CLI가 같은 순서를
-사용하고 실제 TIFF artifact 변화까지 확인합니다. persisted source/profile/intensity를 읽고 쓰는 catalog
-projection도 있지만 실제 SQLite, C ABI와 WinUI에는 아직 연결하지 않았습니다. rendered-digital 전체
-그래프는 부분 필름 효과로 대체하지 않고 `unsupported_route`로 실패합니다.
-
-이미지 SHA-256은 기본 작업에서 계산하지 않습니다. 사용자가 명시적으로 필요할 때만 다음 opt-in
-command를 사용합니다.
-
-```powershell
-.\out\build\native\x64-debug\Debug\negaflow-cli.exe --sha256-image C:\path\scan.tiff
-```
-
-versioned 합성 fixture의 수치 오차 보고서는 별도 실행 파일로 출력합니다.
-
-```powershell
-.\out\build\native\x64-debug\Debug\negaflow-conformance.exe
-```
-
-ARM64는 빌드 프리셋과 실제 장치 실행 검증을 분리합니다. x64 PC에서 cross-compile에 성공한
-것만으로 ARM64 지원을 주장하지 않습니다.
-
-## 디렉터리
-
-```text
-baseline/             고정 macOS 기준선과 자산 hash
-cmake/                공통 compiler 정책
-docs/                 결정과 현재 검증 상태
-src/Native/core/      Windows 네이티브 공통 기반
-src/Native/color/     ICC 구조와 순수 색상 수학
-src/Native/imageio/   WIC decode와 소유형 sample
-src/Native/imaging/   scanner source→working 정책과 ICM adapter
-src/Native/output/    sRGB16 변환, WIC PNG/TIFF readback과 단일 파일 게시
-src/Native/abi/       유일한 공개 C ABI
-src/Catalog.Core/     catalog source/recipe route와 deterministic JSON 경계
-src/Interop/          C# ABI binding, 안전한 DLL probing과 version validation
-src/Shell.Core/       UI 비종속 표시 상태, 기본값과 적응형 배치 계산
-src/Shell/            WinUI 3 main/Settings 창, localization과 화면 셸
-src/Cli/              WinUI 없는 첫 소비자와 분리된 command
-tests/Native.UnitTests/
-tests/Catalog.UnitTests/
-tests/Interop.ContractTests/
-tests/Shell.UnitTests/
-scripts/              로컬과 CI가 함께 사용할 build/test 진입점
-third_party/          실제 payload 기준 공급망 manifest
-```
-
-## 다음 순서
-
-1. catalog route projection을 import frame writer, SQLite payload와 C ABI render snapshot에 연결
-2. cube 경계·fractional alpha golden, cube/scratch cache 수명과 취소 계약 보강
-3. 다음 Develop 후처리 단계를 macOS 처리 순서대로 조사·이식
-4. 독립 Deflate 검증 또는 dependency gate와 WIC 압축 해제 CPU budget·deadline 보강
-5. macOS ColorSync golden과 Windows ICM 수치 비교
-6. 필요한 경우에만 libtiff/LittleCMS dependency gate 재평가
-7. 최종 working buffer와 출력의 downstream row/tile 처리·process budget
-8. 실제 ARM64 장치에서 같은 native/scalar/TIFF/hash/PNG test 실행
-9. WinUI 셸의 축소 폭·DPI·High Contrast·keyboard matrix와 실제 catalog 연결
-
-현재 WinUI는 실행 가능한 화면 기반일 뿐 실제 제품 기능 완료를 의미하지 않습니다.
+negaflow itself is Apache-2.0. The SANE scanner plugin is GPL and lives in its own repository for
+that reason.

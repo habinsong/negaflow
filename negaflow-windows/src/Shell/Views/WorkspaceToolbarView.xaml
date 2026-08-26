@@ -76,21 +76,74 @@
                 AutomationProperties.AutomationId="negaflow.export.progress" />
         </StackPanel>
 
+        <!--  macOS `RollToolbarStrip.swift` 그대로입니다.
+
+              HStack(spacing: 8)
+                Label(name, systemImage: "film.stack")  .font(.caption.weight(.semibold))
+                Divider().frame(height: 16)
+                HStack(spacing: 1) { 별 다섯 — 채우면 파랑, 비면 흐린 보조색 }
+                flag / flag.fill                        20x20
+                xmark.octagon.fill                      20x20
+              .padding(.horizontal, 9) .padding(.vertical, 4) .frame(maxWidth: 420)
+
+              **격자의 한 칸이 아니라 줄 전체에 걸칩니다.** 앞 판은 `*` 칸 안에서 가운데를
+              잡았는데, 왼쪽은 Auto 이고 오른쪽은 502 로 고정이라 그 칸의 가운데가 창의
+              가운데가 아니었습니다 — 그래서 늘 왼쪽으로 쏠려 보였습니다.  -->
         <StackPanel
             x:Name="ActiveFrameContainer"
-            Grid.Column="2"
-            Margin="12,0"
+            Grid.Column="0"
+            Grid.ColumnSpan="5"
+            MaxWidth="420"
+            Padding="9,4"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
             Orientation="Horizontal"
-            Spacing="6">
-            <FontIcon FontSize="11" Glyph="&#xE72E;" />
-            <TextBlock
-                x:Name="ActiveFrameText"
-                MaxWidth="520"
+            Spacing="8">
+            <FontIcon
+                VerticalAlignment="Center"
                 FontSize="12"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Glyph="&#xE8B9;" />
+            <TextBlock
+                x:Name="ActiveFrameText"
+                MaxWidth="220"
+                VerticalAlignment="Center"
+                FontSize="12"
+                FontWeight="SemiBold"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 TextTrimming="CharacterEllipsis" />
+            <Border
+                Width="1"
+                Height="16"
+                VerticalAlignment="Center"
+                Background="{ThemeResource NegaflowDividerBrush}" />
+            <controls:FrameRatingStars
+                x:Name="ActiveFrameRating"
+                VerticalAlignment="Center"
+                GlyphSize="11"
+                RatingCommitted="OnActiveFrameRatingCommitted" />
+            <Button
+                x:Name="ActiveFramePickButton"
+                Width="24"
+                Height="24"
+                Padding="0"
+                VerticalAlignment="Center"
+                Background="Transparent"
+                BorderThickness="0"
+                Click="OnActiveFramePickClick">
+                <FontIcon x:Name="ActiveFramePickIcon" FontSize="12" Glyph="&#xE129;" />
+            </Button>
+            <Button
+                x:Name="ActiveFrameRejectButton"
+                Width="24"
+                Height="24"
+                Padding="0"
+                VerticalAlignment="Center"
+                Background="Transparent"
+                BorderThickness="0"
+                Click="OnActiveFrameRejectClick">
+                <FontIcon x:Name="ActiveFrameRejectIcon" FontSize="12" Glyph="&#xEB90;" />
+            </Button>
         </StackPanel>
 
         <Grid x:Name="RightToolbarCluster" Grid.Column="3" ColumnSpacing="10">

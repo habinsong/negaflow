@@ -108,7 +108,12 @@ NEGAFLOW_LIGHTROOM_EXPANSION.md
 /PERFORMANCE_STRESS_AUDIT_*.md
 /UI_UX_IMPLEMENTATION_REQUESTS.md
 
-# Windows 이식 조사 자료 (로컬 전용, 공개 대상 아님)
+# 조사·설계 자료 (로컬 전용, 공개 대상 아님)
+#
+# 이미 추적되던 것들은 `git rm -r --cached` 로 인덱스에서 뺐다. 무시 규칙은 추적 중인
+# 파일에는 듣지 않으므로 규칙만 적어 두면 계속 올라간다.
+/docs/
+/windows_docs/
 /negaflow-windows/docs/
 
 # 일회성 코드 감사 / 청크 생성물

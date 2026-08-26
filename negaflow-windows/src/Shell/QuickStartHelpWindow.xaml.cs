@@ -18,10 +18,10 @@ public sealed partial class QuickStartHelpWindow : Window
         LocalizedElement.Track(
             this,
             () => Title = AppResources.Get("commandNegaflowHelp", "Text"));
-        AppWindow.Resize(WindowDpiSizing.LogicalToPhysical(
+        WindowDpiSizing.ResizeClientToContent(
             this,
             ShellLayoutMetrics.QuickStartWindowWidth,
-            ShellLayoutMetrics.QuickStartWindowHeight));
+            ShellLayoutMetrics.QuickStartWindowHeight);
         WindowRoot.RequestedTheme = settingsStore.Current.Appearance switch
         {
             AppearanceMode.Dark => ElementTheme.Dark,

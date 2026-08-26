@@ -30,10 +30,10 @@ public sealed partial class SettingsWindow : Window
             presenter.IsMaximizable = false;
         }
 
-        AppWindow.Resize(WindowDpiSizing.LogicalToPhysical(
+        WindowDpiSizing.ResizeClientToContent(
             this,
             ShellLayoutMetrics.SettingsWindowWidth,
-            ShellLayoutMetrics.SettingsWindowHeight));
+            ShellLayoutMetrics.SettingsWindowHeight);
         ApplyAppearance(settingsStore.Current.Appearance);
         settingsStore.Changed += OnSettingsChanged;
         Closed += OnClosed;

@@ -1,7 +1,0 @@
-# 컬러 영화용 필름 조사
-
-[ドキュメントホーム](../../README.md)
-
-この調査文書は日本語の文書インデックスから開く原資料です。
-
-[原文を開く](../../../research/film-simulation/03-color-motion-picture.md)

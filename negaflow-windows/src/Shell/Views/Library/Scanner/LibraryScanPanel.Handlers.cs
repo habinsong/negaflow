@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Negaflow.Catalog;
 using Negaflow.Interop;
 
@@ -138,6 +139,62 @@ public sealed partial class LibraryScanPanel
             return;
         }
         scanSession?.UpdateOptions(options => options with { BatchCount = (int)args.NewValue });
+    }
+
+    /// <summary>ESC 로 되돌릴 값입니다. 상자에 들어온 순간의 장수입니다.</summary>
+    private double scanFrameCountOnFocus = double.NaN;
+
+    private void OnScanFrameCountGotFocus(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (sender is NumberBox box)
+        {
+            scanFrameCountOnFocus = box.Value;
+        }
+    }
+
+    /// <summary>
+    /// 장수 상자 안에서만 듣는 키입니다. Enter 는 입력을 확정하고, ESC 는 들어올 때의
+    /// 값으로 되돌립니다.
+    /// </summary>
+    /// <remarks>
+    /// **두 키 모두 여기서 소비합니다.** 그대로 위로 올려보내면 ESC 는 스캐너 패널을 닫고
+    /// Enter 는 스캔을 시작합니다 — 장수를 고치다가 스캔이 시작되면 안 됩니다. 상자에
+    /// 초점이 있을 때만 도는 처리기라 다른 단축키와 겹치지 않습니다.
+    /// </remarks>
+    private void OnScanFrameCountPreviewKeyDown(object sender, KeyRoutedEventArgs args)
+    {
+        if (sender is not NumberBox box)
+        {
+            return;
+        }
+        switch (args.Key)
+        {
+            case Windows.System.VirtualKey.Escape:
+                if (!double.IsNaN(scanFrameCountOnFocus))
+                {
+                    box.Value = scanFrameCountOnFocus;
+                }
+                MoveFocusOffScanFrameCount(box);
+                args.Handled = true;
+                return;
+            case Windows.System.VirtualKey.Enter:
+                // 초점을 옮기면 NumberBox 가 입력한 글자를 값으로 확정합니다.
+                MoveFocusOffScanFrameCount(box);
+                scanFrameCountOnFocus = box.Value;
+                args.Handled = true;
+                return;
+            default:
+                return;
+        }
+    }
+
+    private void MoveFocusOffScanFrameCount(NumberBox box)
+    {
+        ScanFrameCountLabel.IsTabStop = true;
+        _ = ScanFrameCountLabel.Focus(FocusState.Programmatic);
+        ScanFrameCountLabel.IsTabStop = false;
+        _ = box;
     }
 
     private void OnScanInfraredToggled(object sender, RoutedEventArgs args)

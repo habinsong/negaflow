@@ -45,20 +45,26 @@
                             DecodePixelHeight="96"
                             DecodePixelType="Logical"
                             DecodePixelWidth="96"
-                            UriSource="ms-appx:///Assets/AppIcon-App-1024.png" />
+                            UriSource="ms-appx:///Assets/AppIcon-1024.png" />
                     </Image.Source>
                 </Image>
-                <!--  아방가르드하게 - 굵게, 자간을 넓혀 소문자 이름을 표지처럼 세웁니다.  -->
-                <!--  색을 테마에 맡기지 않습니다. 이 화면은 시스템 배경 위에 떠 있어
+                <!--  아방가르드하게 - 대문자, 굵게, 자간을 크게 벌려 표지처럼 세웁니다.
+
+                      글꼴은 `Bahnschrift` 입니다. Windows 10 부터 기본 탑재되는 기하학적
+                      산세리프라 **따로 싣지 않고 시스템 것을 그대로 쓰므로 라이선스 문제가
+                      없습니다.** 없는 기계에서는 XAML 이 기본 글꼴로 물러납니다.
+
+                      색을 테마에 맡기지 않습니다. 이 화면은 시스템 배경 위에 떠 있어
                       바탕 화면이 비치므로, 테마가 라이트면 검은 글자가 어두운 바탕에
                       묻혀 사라집니다.  -->
                 <TextBlock
                     HorizontalAlignment="Center"
-                    CharacterSpacing="260"
-                    FontSize="22"
+                    CharacterSpacing="420"
+                    FontFamily="Bahnschrift"
+                    FontSize="24"
                     FontWeight="Bold"
                     Foreground="#FFFFFFFF"
-                    Text="negaflow" />
+                    Text="NEGAFLOW" />
             </StackPanel>
         </Grid>
     </Grid>

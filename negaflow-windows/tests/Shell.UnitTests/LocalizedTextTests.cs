@@ -49,7 +49,8 @@ internal static class LocalizedTextTests
     /// </summary>
     private static readonly HashSet<string> Untranslated = new(StringComparer.Ordinal)
     {
-        "negaflow",
+        // 제품 이름입니다. 부팅 화면은 같은 이름을 대문자 워드마크로 세웁니다.
+        "negaflow", "NEGAFLOW",
         // 파일 형식과 비트 깊이 — macOS 도 표에 넣지 않고 그대로 씁니다.
         "JPEG", "PNG", "TIFF", "8-bit", "16-bit",
         // 색 공간 이름은 고유 명사입니다.

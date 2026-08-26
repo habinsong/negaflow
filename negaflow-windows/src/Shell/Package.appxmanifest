@@ -10,7 +10,7 @@
   <Properties>
     <DisplayName>negaflow</DisplayName>
     <PublisherDisplayName>Negaflow</PublisherDisplayName>
-    <Logo>Assets\AppIcon-App-1024.png</Logo>
+    <Logo>Assets\AppIcon-1024.png</Logo>
   </Properties>
   <Dependencies>
     <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.26100.0" MaxVersionTested="10.0.26226.0" />
@@ -21,8 +21,8 @@
   <Applications>
     <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="$targetentrypoint$">
       <uap:VisualElements DisplayName="negaflow" Description="negaflow" BackgroundColor="transparent"
-        Square150x150Logo="Assets\AppIcon-App-1024.png" Square44x44Logo="Assets\AppIcon-App-1024.png">
-        <uap:DefaultTile Wide310x150Logo="Assets\AppIcon-App-1024.png" />
+        Square150x150Logo="Assets\AppIcon-1024.png" Square44x44Logo="Assets\AppIcon-1024.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\AppIcon-1024.png" />
       </uap:VisualElements>
     </Application>
   </Applications>

@@ -26,7 +26,7 @@ public sealed partial class DiagnosticsWindow : Window
             () => Title = AppResources.Get("commandDiagnostics", "Text"));
         ReportView.ReportSource = reportSource;
         // macOS 팝오버 폭 500 + 좌우 여백 20. 높이는 네 구역이 스크롤 없이 들어가는 값입니다.
-        AppWindow.Resize(WindowDpiSizing.LogicalToPhysical(this, 540, 640));
+        WindowDpiSizing.ResizeClientToContent(this, 540, 640);
         ApplyAppearance(settingsStore.Current.Appearance);
         settingsStore.Changed += OnSettingsChanged;
         Closed += OnClosed;

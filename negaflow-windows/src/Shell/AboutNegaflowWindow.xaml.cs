@@ -20,10 +20,10 @@ public sealed partial class AboutNegaflowWindow : Window
             presenter.IsMaximizable = false;
         }
 
-        AppWindow.Resize(WindowDpiSizing.LogicalToPhysical(
+        WindowDpiSizing.ResizeClientToContent(
             this,
             ShellLayoutMetrics.AboutWindowWidth,
-            ShellLayoutMetrics.AboutWindowHeight));
+            ShellLayoutMetrics.AboutWindowHeight);
         WindowRoot.RequestedTheme = settingsStore.Current.Appearance switch
         {
             AppearanceMode.Dark => ElementTheme.Dark,

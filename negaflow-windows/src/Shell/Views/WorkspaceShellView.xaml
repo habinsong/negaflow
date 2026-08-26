@@ -10,15 +10,17 @@
     Loaded="OnShellLoadedForShortcuts"
     PreviewKeyDown="OnShellPreviewKeyDown">
     <Grid Background="{ThemeResource NegaflowWindowBrush}">
+        <!--  메뉴줄이 위, 동작 도구줄이 아래입니다. macOS 는 메뉴가 늘 맨 위에 있고,
+              도구줄은 그 아래 창 안에 있습니다.  -->
         <Grid.RowDefinitions>
-            <RowDefinition Height="40" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="40" />
             <RowDefinition Height="1" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <views:WorkspaceToolbarView x:Name="Toolbar" Grid.Row="0" />
-        <views:AppMenuBarView x:Name="AppMenu" Grid.Row="1" />
+        <views:AppMenuBarView x:Name="AppMenu" Grid.Row="0" />
+        <views:WorkspaceToolbarView x:Name="Toolbar" Grid.Row="1" />
         <Border Grid.Row="2" Background="{ThemeResource NegaflowDividerBrush}" />
 
         <!--  **세 화면을 한꺼번에 만들지 않습니다.**
