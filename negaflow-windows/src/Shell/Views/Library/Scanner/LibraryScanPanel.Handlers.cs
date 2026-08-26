@@ -247,14 +247,6 @@ public sealed partial class LibraryScanPanel
         await runner.RunAsync(preview: false);
     }
 
-    /// <summary>macOS <c>Button(role: .destructive) { cancelScan() }</c>.</summary>
-    private void OnScanCancelClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        runner.Cancel();
-    }
-
     /// <summary>
     /// macOS <c>chooseScanStorageRoot()</c> — 스캔 원본을 둘 폴더를 고릅니다. 고른 값은
     /// <c>diskStorage.scansPath</c> 자리인 <see cref="ScanSessionController.ScanStorageRoot"/>

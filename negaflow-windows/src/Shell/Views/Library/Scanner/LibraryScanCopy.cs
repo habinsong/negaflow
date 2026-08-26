@@ -30,7 +30,6 @@ internal sealed class LibraryScanCopy
         // macOS `unavailableState` 의 전폭 [스캐너 찾기] 단추입니다.
         SetButtonText(view.ScanDetectButton, rescan);
         SetIconButtonName(view.ScanChooseFolderButton, "scanChooseFolder");
-        SetButtonText(view.ScanCancelButton, AppResources.Get("scanCancel", "Content"));
         view.ScanFilmLabel.Text = AppResources.Get("scanFilm", "Text");
         AutomationProperties.SetName(view.ScanFilmSelector, view.ScanFilmLabel.Text);
         view.ScanFolderNameLabel.Text = AppResources.Get("scanFolderName", "Text");

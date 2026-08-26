@@ -50,7 +50,7 @@ internal static class LibraryThumbnailBinder
         {
             return false;
         }
-        if (thumbnails.TryGet(item.Id) is { } jpeg)
+        if (thumbnails.TryGetOrLoad(item.Id) is { } jpeg)
         {
             item.Thumbnail = LibraryThumbnails.Decode(jpeg);
             return true;

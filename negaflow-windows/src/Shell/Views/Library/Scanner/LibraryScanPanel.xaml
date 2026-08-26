@@ -381,17 +381,6 @@
                                             AutomationProperties.AutomationId="negaflow.library.scan.start"
                                             Click="OnScanStartClicked"
                                             Style="{StaticResource AccentButtonStyle}" />
-                                        <!-- macOS `if model.isScanning { Button(role: .destructive) … }` —
-                                             스캔 중에는 같은 자리에 취소가 들어섭니다. -->
-                                        <Button
-                                            x:Name="ScanCancelButton" x:FieldModifier="internal"
-                                            Grid.Column="1"
-                                            HorizontalAlignment="Stretch"
-                                            CornerRadius="16"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.cancel"
-                                            Click="OnScanCancelClicked"
-                                            Style="{StaticResource NegaflowScannerPlainButtonStyle}"
-                                            Visibility="Collapsed" />
                                     </Grid>
                                 </StackPanel>
                                 <TextBlock

@@ -170,6 +170,35 @@ public sealed partial class ThumbnailService : IAsyncDisposable
         memory.TryGetValue(frameId, out byte[]? jpeg) ? jpeg : null;
 
     /// <summary>
+    /// 메모리에 없으면 <b>디스크를 그 자리에서</b> 봅니다. 있으면 메모리에도 올립니다.
+    /// </summary>
+    /// <remarks>
+    /// **앱을 켤 때마다 첫 화면이 비었다가 채워지던 자리입니다.**
+    ///
+    /// 화면을 채우는 쪽은 메모리 캐시만 보고, 없으면 <see cref="Request"/> 로 넘겼습니다.
+    /// 다시 켠 직후에는 메모리가 비어 있으므로 <b>디스크에 멀쩡히 있는 썸네일도</b> 스레드풀로
+    /// 넘어갔다가 다시 UI 로 돌아오는 왕복을 거쳤고, 그 왕복이 눈에 보이는 "로딩" 이었습니다.
+    /// 실측으로 확인했습니다 - 프레임 70 장이 모두 디스크에 있는데도 그랬습니다.
+    ///
+    /// 20KB 짜리 파일 하나를 읽는 값이라, 왕복을 없애는 편이 언제나 쌉니다. 격자는 눈에 보이는
+    /// 칸만 채우므로 한 번에 읽는 수도 화면 하나만큼입니다.
+    /// </remarks>
+    public byte[]? TryGetOrLoad(string frameId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(frameId);
+        if (memory.TryGetValue(frameId, out byte[]? jpeg))
+        {
+            return jpeg;
+        }
+        if (ThumbnailDiskCache.Load(PathFor(frameId)) is not { Length: > 0 } cached)
+        {
+            return null;
+        }
+        memory[frameId] = cached;
+        return cached;
+    }
+
+    /// <summary>
     /// 썸네일을 확보합니다. 이미 있으면 아무 일도 하지 않고, 없으면 디스크를 거쳐 현상까지
     /// 갑니다. 준비되면 <see cref="ThumbnailReady"/> 가 UI 스레드에서 불립니다.
     /// </summary>

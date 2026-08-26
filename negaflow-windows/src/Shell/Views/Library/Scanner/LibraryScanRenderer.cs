@@ -166,9 +166,6 @@ internal sealed class LibraryScanRenderer
         view.ScanStartButton.Visibility = view.scanSession.IsScanning
             ? Visibility.Collapsed
             : Visibility.Visible;
-        view.ScanCancelButton.Visibility = view.scanSession.IsScanning
-            ? Visibility.Visible
-            : Visibility.Collapsed;
         // macOS `.disabled(model.isScanning)` 은 옵션 Section 에만 걸립니다. 단추 줄까지 잠그면
         // 스캔을 멈출 방법이 없어집니다.
         view.ScanControls.IsHitTestVisible = true;
