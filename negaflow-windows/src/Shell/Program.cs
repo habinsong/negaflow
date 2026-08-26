@@ -40,6 +40,7 @@ internal static class Program
     private static void Main(string[] args)
     {
         _ = args;
+        Diagnostics.StartupTrace.Mark("Main");
         using Mutex? localPrimary = TryClaimLocalPrimary();
         if (localPrimary is null)
         {
@@ -68,11 +69,14 @@ internal static class Program
             return;
         }
 
+        Diagnostics.StartupTrace.Mark("ComWrappers begin");
         WinRT.ComWrappersSupport.InitializeComWrappers();
+        Diagnostics.StartupTrace.Mark("ComWrappers end");
         if (!TryInitializeWindowsAppRuntime())
         {
             return;
         }
+        Diagnostics.StartupTrace.Mark("app runtime ready");
 
         if (ShouldRedirectToExistingInstance())
         {
@@ -104,6 +108,7 @@ internal static class Program
             }
         };
 
+        Diagnostics.StartupTrace.Mark("Application.Start");
         Application.Start(static _ =>
         {
             SynchronizationContext.SetSynchronizationContext(

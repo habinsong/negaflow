@@ -19,6 +19,22 @@ public sealed partial class MainWindow : Window
     private AboutNegaflowWindow? aboutWindow;
     private QuickStartHelpWindow? quickStartHelpWindow;
 
+    private bool firstFrameSeen;
+
+    private void OnFirstRendered(object? sender, object args)
+    {
+        _ = sender;
+        _ = args;
+        if (firstFrameSeen)
+        {
+            return;
+        }
+        firstFrameSeen = true;
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= OnFirstRendered;
+        Diagnostics.StartupTrace.Mark("첫 프레임 그려짐");
+
+    }
+
     /// <summary>창을 띄운 뒤에 할 초기화입니다. 한 번만 돕니다.</summary>
     private Action? pendingInitialization;
 
@@ -81,6 +97,11 @@ public sealed partial class MainWindow : Window
             UIElement.PreviewKeyDownEvent,
             new Microsoft.UI.Xaml.Input.KeyEventHandler(OnWindowRootPreviewKeyDown),
             handledEventsToo: true);
+        ShellView.Loaded += (_, _) =>
+            Diagnostics.StartupTrace.Mark("shell Loaded (첫 레이아웃)");
+        // **화면에 실제로 픽셀이 나온 때**입니다. 창이 뜬 것과 다릅니다 - 창은 비어 있어도
+        // 뜹니다. `Rendering` 은 합성기가 프레임을 그릴 때마다 오므로 첫 번을 받고 뗍니다.
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += OnFirstRendered;
         ShellView.Loaded += OnShellLoaded;
         ShellView.SizeChanged += OnShellSizeChanged;
 

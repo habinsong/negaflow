@@ -64,123 +64,26 @@ public sealed partial class WorkspaceShellView : UserControl
     /// 나머지 둘도 이어서 만듭니다: 이 함수는 창이 뜬 뒤에 돌고, 화면 전환은 언제든 일어날 수
     /// 있으므로 그때 만들면 전환이 눈에 띄게 끊깁니다.
     /// </remarks>
-    private void RealizeWorkspaces()
+    /// <summary>
+    /// 인화 화면을 잇습니다. <b>첫 프레임 뒤</b>에 부릅니다 — 시작할 때 인화를 보고 있지
+    /// 않으면 그 트리를 만들고 배치하는 값이 첫 화면 앞에 들어갈 이유가 없습니다.
+    /// </summary>
+    private void WirePrintWorkspace()
     {
-        string[] order = workspaceState?.Current.SelectedWorkspace switch
-        {
-            WorkspaceModule.Library => ["LibraryWorkspace", "DevelopWorkspace", "PrintWorkspace"],
-            WorkspaceModule.Print => ["PrintWorkspace", "DevelopWorkspace", "LibraryWorkspace"],
-            _ => ["DevelopWorkspace", "LibraryWorkspace", "PrintWorkspace"],
-        };
-        foreach (string name in order)
-        {
-            _ = FindName(name);
-        }
-    }
-
-    public void Initialize(
-        WorkspacePresentationState state,
-        NativeEngineStatusService nativeEngineStatusService,
-        LibraryHostService? libraryHost = null,
-        Microsoft.UI.WindowId? windowId = null,
-        Negaflow.Shell.Library.ThumbnailService? thumbnails = null)
-    {
-        ArgumentNullException.ThrowIfNull(state);
-        ArgumentNullException.ThrowIfNull(nativeEngineStatusService);
-        if (isInitialized)
+        if (PrintWorkspace is null || printWired || workspaceState is not { } state)
         {
             return;
         }
-
-        isInitialized = true;
-        // 세 화면은 `x:Load="False"` 라 아직 없습니다. 여기서 만듭니다 - 이 초기화는 창을
-        // 띄운 뒤에 도므로, 만드는 값이 창 등장에 들어가지 않습니다.
-        using (Diagnostics.StartupTrace.Measure("realize workspaces"))
+        if (engineStatus is not { } nativeEngineStatus)
         {
-            RealizeWorkspaces();
+            printWired = false;
+            return;
         }
-        workspaceState = state;
-        this.libraryHost = libraryHost;
-        this.thumbnails = thumbnails;
-        hostWindowId = windowId;
-        if (libraryHost is not null)
-        {
-            libraryHost.RestoreActiveFrame(state.Current.ActiveFrameId);
-            libraryHost.SelectionChanged += OnLibrarySelectionChanged;
-            libraryHost.FrameEdited += OnLibraryFrameEdited;
-            libraryHost.LibraryContentChanged += OnLibraryContentChanged;
-            state.SetActiveFrame(libraryHost.ActiveFrameId);
-        }
-        NativeEngineStatus nativeEngineStatus = nativeEngineStatusService.Probe();
-        Diagnostics.StartupTrace.Mark("shell: toolbar");
-        Toolbar.Initialize(state, libraryHost);
-        Diagnostics.StartupTrace.Mark("shell: library init");
-        LibraryWorkspace.Initialize(state);
-        // macOS 는 `AppModel` 하나가 `showScannerControls` 와 스캐너 세션을 들고 라이브러리·
-        // 현상 사이드바가 같은 `LibrarySourceSection` 을 냅니다. 두 벌을 만들면 현상뷰 쪽은
-        // 아무도 열어 주지 않아 스캔 자리가 늘 비어 있습니다.
-        LibraryWorkspace.AttachScanSessionHost(scanSessionHost);
-        DevelopWorkspace.AttachScanSessionHost(scanSessionHost);
-        if (thumbnails is not null)
-        {
-            // 카드가 만들어지기 전에 붙여야 첫 화면부터 썸네일이 채워집니다.
-            LibraryWorkspace.AttachThumbnails(thumbnails);
-            DevelopWorkspace.AttachThumbnails(thumbnails);
-        }
-        if (libraryHost is not null)
-        {
-            if (windowId is { } libraryWindowId)
-            {
-                Diagnostics.StartupTrace.Mark("shell: ShowLibrary begin");
-                LibraryWorkspace.ShowLibrary(libraryHost, libraryWindowId);
-                Diagnostics.StartupTrace.Mark("shell: ShowLibrary end");
-            }
-        }
-        Diagnostics.StartupTrace.Mark("shell: develop init");
-        DevelopWorkspace.Initialize(state, nativeEngineStatus);
-        // 현상 · 인화의 "파일" 탭은 라이브러리와 <b>같은 컨트롤</b>입니다. ✕ 와 맥락 메뉴도
-        // 라이브러리의 같은 처리로 보내야 화면마다 결과가 갈라지지 않습니다 — 여기서 잇지
-        // 않으면 그 두 화면의 ✕ 는 눌러도 아무 일도 하지 않는 가짜 단추가 됩니다.
-        foreach (Views.Library.Sources.LibraryFilesSourceTree tab in
-            new[] { DevelopWorkspace.LeftPanel.FilesTab, PrintWorkspace.FilesTab })
-        {
-            tab.FolderRemoveRequested += (_, folderPath) =>
-                LibraryWorkspace.RemoveFolderFromLibrary(folderPath);
-            tab.LocateFolderRequested += (_, folderPath) =>
-                LibraryWorkspace.LocateLibraryFolder(folderPath);
-        }
-        LibraryWorkspace.FrameOpenRequested += OnLibraryFrameOpenRequested;
-        LibraryWorkspace.FolderDevelopmentApplied += OnFolderDevelopmentApplied;
-        DevelopWorkspace.ScannerSetupRequested += OnDevelopScannerSetupRequested;
-        Toolbar.QuickExportRequested += OnToolbarQuickExportRequested;
-        Toolbar.ExportRequested += OnToolbarExportRequested;
-        // 현상뷰든 인화뷰든 내보내는 동안 위 막대에 같은 진행이 보입니다.
-        DevelopWorkspace.ExportProgressChanged += OnExportProgressChanged;
+        printWired = true;
+        Microsoft.UI.WindowId? windowId = hostWindowId;
+        WireFilesTab(PrintWorkspace.FilesTab);
         PrintWorkspace.ExportProgressChanged += OnExportProgressChanged;
-        // 두 필름스트립의 우클릭 메뉴는 라이브러리가 들고 있는 그 하나를 그대로 씁니다.
-        DevelopWorkspace.Filmstrip.FrameMenuRequested += OnFilmstripMenuRequested;
         PrintWorkspace.Filmstrip.FrameMenuRequested += OnFilmstripMenuRequested;
-        Toolbar.ScannerCommandRequested += OnAppMenuCommandRequested;
-        DevelopWorkspace.QuickExportAvailabilityChanged += OnQuickExportAvailabilityChanged;
-        // 한계값은 엔진이 알려 줍니다. 엔진을 못 읽으면 슬라이더 범위를 지어내는 대신
-        // Develop 패널을 붙이지 않습니다.
-        if (libraryHost is not null && windowId is { } id && nativeEngineStatus.IsAvailable)
-        {
-            try
-            {
-                Diagnostics.StartupTrace.Mark("shell: develop ShowLibrary begin");
-                DevelopWorkspace.ShowLibrary(
-                    libraryHost,
-                    ToneLimits.Read(),
-                    NegativeLimits.Read(),
-                    id);
-                Diagnostics.StartupTrace.Mark("shell: develop ShowLibrary end");
-            }
-            catch (NativeBootstrapException)
-            {
-            }
-        }
-        SyncExportMenu();
         PrintWorkspace.Initialize(state, nativeEngineStatus);
         if (thumbnails is not null)
         {
@@ -211,6 +114,114 @@ public sealed partial class WorkspaceShellView : UserControl
                 }
             }
         }
+    }
+
+    /// <summary>"파일" 탭의 ✕ 와 맥락 메뉴를 라이브러리의 같은 처리로 보냅니다.</summary>
+    private void WireFilesTab(Views.Library.Sources.LibraryFilesSourceTree tab)
+    {
+        tab.FolderRemoveRequested += (_, folderPath) =>
+            LibraryWorkspace?.RemoveFolderFromLibrary(folderPath);
+        tab.LocateFolderRequested += (_, folderPath) =>
+            LibraryWorkspace?.LocateLibraryFolder(folderPath);
+    }
+
+    private bool printWired;
+
+    private NativeEngineStatus? engineStatus;
+
+    /// <summary>남은 화면을 잇습니다. 지금은 인화뿐입니다.</summary>
+
+
+    public void Initialize(
+        WorkspacePresentationState state,
+        NativeEngineStatusService nativeEngineStatusService,
+        LibraryHostService? libraryHost = null,
+        Microsoft.UI.WindowId? windowId = null,
+        Negaflow.Shell.Library.ThumbnailService? thumbnails = null)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(nativeEngineStatusService);
+        if (isInitialized)
+        {
+            return;
+        }
+
+        isInitialized = true;
+        workspaceState = state;
+        this.libraryHost = libraryHost;
+        this.thumbnails = thumbnails;
+        hostWindowId = windowId;
+        if (libraryHost is not null)
+        {
+            libraryHost.RestoreActiveFrame(state.Current.ActiveFrameId);
+            libraryHost.SelectionChanged += OnLibrarySelectionChanged;
+            libraryHost.FrameEdited += OnLibraryFrameEdited;
+            libraryHost.LibraryContentChanged += OnLibraryContentChanged;
+            state.SetActiveFrame(libraryHost.ActiveFrameId);
+        }
+        NativeEngineStatus nativeEngineStatus = nativeEngineStatusService.Probe();
+        engineStatus = nativeEngineStatus;
+        Diagnostics.StartupTrace.Mark("shell: toolbar");
+        Toolbar.Initialize(state, libraryHost);
+        Diagnostics.StartupTrace.Mark("shell: library init");
+        LibraryWorkspace.Initialize(state);
+        // macOS 는 `AppModel` 하나가 `showScannerControls` 와 스캐너 세션을 들고 라이브러리·
+        // 현상 사이드바가 같은 `LibrarySourceSection` 을 냅니다. 두 벌을 만들면 현상뷰 쪽은
+        // 아무도 열어 주지 않아 스캔 자리가 늘 비어 있습니다.
+        LibraryWorkspace.AttachScanSessionHost(scanSessionHost);
+        DevelopWorkspace.AttachScanSessionHost(scanSessionHost);
+        if (thumbnails is not null)
+        {
+            // 카드가 만들어지기 전에 붙여야 첫 화면부터 썸네일이 채워집니다.
+            LibraryWorkspace.AttachThumbnails(thumbnails);
+            DevelopWorkspace.AttachThumbnails(thumbnails);
+        }
+        if (libraryHost is not null)
+        {
+            if (windowId is { } libraryWindowId)
+            {
+                Diagnostics.StartupTrace.Mark("shell: ShowLibrary begin");
+                LibraryWorkspace.ShowLibrary(libraryHost, libraryWindowId);
+                Diagnostics.StartupTrace.Mark("shell: ShowLibrary end");
+            }
+        }
+        Diagnostics.StartupTrace.Mark("shell: develop init");
+        DevelopWorkspace.Initialize(state, nativeEngineStatus);
+        // 현상 · 인화의 "파일" 탭은 라이브러리와 <b>같은 컨트롤</b>입니다. ✕ 와 맥락 메뉴도
+        // 라이브러리의 같은 처리로 보내야 화면마다 결과가 갈라지지 않습니다 — 여기서 잇지
+        // 않으면 그 두 화면의 ✕ 는 눌러도 아무 일도 하지 않는 가짜 단추가 됩니다.
+        WireFilesTab(DevelopWorkspace.LeftPanel.FilesTab);
+        LibraryWorkspace.FrameOpenRequested += OnLibraryFrameOpenRequested;
+        LibraryWorkspace.FolderDevelopmentApplied += OnFolderDevelopmentApplied;
+        DevelopWorkspace.ScannerSetupRequested += OnDevelopScannerSetupRequested;
+        Toolbar.QuickExportRequested += OnToolbarQuickExportRequested;
+        Toolbar.ExportRequested += OnToolbarExportRequested;
+        // 현상뷰든 인화뷰든 내보내는 동안 위 막대에 같은 진행이 보입니다.
+        DevelopWorkspace.ExportProgressChanged += OnExportProgressChanged;
+        // 두 필름스트립의 우클릭 메뉴는 라이브러리가 들고 있는 그 하나를 그대로 씁니다.
+        DevelopWorkspace.Filmstrip.FrameMenuRequested += OnFilmstripMenuRequested;
+        Toolbar.ScannerCommandRequested += OnAppMenuCommandRequested;
+        DevelopWorkspace.QuickExportAvailabilityChanged += OnQuickExportAvailabilityChanged;
+        // 한계값은 엔진이 알려 줍니다. 엔진을 못 읽으면 슬라이더 범위를 지어내는 대신
+        // Develop 패널을 붙이지 않습니다.
+        if (libraryHost is not null && windowId is { } id && nativeEngineStatus.IsAvailable)
+        {
+            try
+            {
+                Diagnostics.StartupTrace.Mark("shell: develop ShowLibrary begin");
+                DevelopWorkspace.ShowLibrary(
+                    libraryHost,
+                    ToneLimits.Read(),
+                    NegativeLimits.Read(),
+                    id);
+                Diagnostics.StartupTrace.Mark("shell: develop ShowLibrary end");
+            }
+            catch (NativeBootstrapException)
+            {
+            }
+        }
+        SyncExportMenu();
+        WirePrintWorkspace();
         Toolbar.SettingsRequested += OnToolbarSettingsRequested;
         Toolbar.DiagnosticsRequested += OnToolbarDiagnosticsRequested;
         AppMenu.AboutRequested += OnAppMenuAboutRequested;

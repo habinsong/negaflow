@@ -20,7 +20,28 @@ namespace Negaflow.Shell.Diagnostics;
 public static class StartupTrace
 {
     private static readonly Lock Gate = new();
-    private static readonly Stopwatch Since = Stopwatch.StartNew();
+    /// <summary>
+    /// **프로세스가 뜬 시각**부터 잽니다.
+    /// </summary>
+    /// <remarks>
+    /// 이 클래스가 처음 쓰이는 순간부터 재면 그 앞의 런타임 로딩·COM 초기화가 통째로
+    /// 빠집니다 - 사용자가 보는 검은 화면은 <b>아이콘을 누른 순간</b>부터이므로, 재는 자리도
+    /// 거기여야 합니다. <c>Process.StartTime</c> 이 그 자리입니다.
+    /// </remarks>
+    private static readonly DateTime ProcessStarted = ReadProcessStart();
+
+    private static DateTime ReadProcessStart()
+    {
+        try
+        {
+            return Process.GetCurrentProcess().StartTime;
+        }
+        catch (Exception error) when (error is InvalidOperationException or
+            System.ComponentModel.Win32Exception or NotSupportedException)
+        {
+            return DateTime.Now;
+        }
+    }
     private static readonly Lazy<string?> Destination = new(Resolve, isThreadSafe: true);
 
     /// <summary>한 단계를 남깁니다. 프로세스가 뜬 뒤로 흐른 시간이 함께 적힙니다.</summary>
@@ -32,7 +53,7 @@ public static class StartupTrace
         }
         string line = string.Create(
             CultureInfo.InvariantCulture,
-            $"{Since.Elapsed.TotalSeconds,8:F3}  t{Environment.CurrentManagedThreadId,-3}  {stage}{Environment.NewLine}");
+            $"{(DateTime.Now - ProcessStarted).TotalSeconds,8:F3}  t{Environment.CurrentManagedThreadId,-3}  {stage}{Environment.NewLine}");
         try
         {
             lock (Gate)
@@ -83,7 +104,8 @@ public static class StartupTrace
                 path,
                 string.Create(
                     CultureInfo.InvariantCulture,
-                    $"# {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff} pid={Environment.ProcessId}{Environment.NewLine}"),
+                    $"# {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff} pid={Environment.ProcessId} " +
+                    $"(0.000 = 프로세스 시작 {ProcessStarted:HH:mm:ss.fff}){Environment.NewLine}"),
                 Encoding.UTF8);
             return path;
         }
