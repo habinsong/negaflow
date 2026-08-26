@@ -129,6 +129,21 @@ try {
     }
     $appPackage = $appPackages[0].FullName
 
+    # 그 프레임워크가 없는 기계에서는 앱 등록이 `0x80073CF3` 으로 거부된다 - 러너에서 실제로
+    # 그렇게 거부됐다. 설치 프로그램은 사용자 권한으로 도는지라 나중에 깔아 줄 수도 없으므로,
+    # 빌드가 여기 만들어 두는 Microsoft 서명 프레임워크 패키지를 설치본에 함께 싣는다.
+    $runtimePackages = @(Get-ChildItem -LiteralPath $packageDirectory -Recurse -Filter '*.msix' -File |
+        Where-Object {
+            $parent = Split-Path -Parent $_.FullName
+            (Split-Path -Leaf $parent) -eq $artifactArchitecture -and
+            (Split-Path -Leaf (Split-Path -Parent $parent)) -eq 'Dependencies'
+        })
+    if ($runtimePackages.Count -ne 1) {
+        throw ("Expected exactly one $artifactArchitecture Windows App Runtime MSIX under " +
+            "'$packageDirectory\Dependencies' but found $($runtimePackages.Count).")
+    }
+    $runtimePackage = $runtimePackages[0].FullName
+
     $makeappxPath = Resolve-MakeAppx
     & $makeappxPath unpack /p $appPackage /d $payloadDirectory /o /nv
     if ($LASTEXITCODE -ne 0) {
@@ -216,6 +231,7 @@ try {
     Push-Location $OutputDirectory
     try {
         & $makensisPath '-V2' '-INPUTCHARSET' 'UTF8' "-DPAYLOAD=$payloadDirectory" `
+            "-DRUNTIMEPACKAGE=$runtimePackage" `
             "-DVERSION=$Version" "-DARCH=$artifactArchitecture" $installerScript
         if ($LASTEXITCODE -ne 0) {
             throw 'NSIS compilation failed.'

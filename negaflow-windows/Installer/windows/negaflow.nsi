@@ -16,6 +16,9 @@ SetCompressor /SOLID lzma
 !ifndef PAYLOAD
   !error "PAYLOAD is required: makensis -DPAYLOAD=<published directory>"
 !endif
+!ifndef RUNTIMEPACKAGE
+  !error "RUNTIMEPACKAGE is required: makensis -DRUNTIMEPACKAGE=<Windows App Runtime msix>"
+!endif
 !ifndef VERSION
   !define VERSION "0.0.0"
 !endif
@@ -87,6 +90,24 @@ Section "Install"
   SetOutPath "$Staging"
   File /r "${PAYLOAD}\*.*"
   SetOutPath "$TEMP"
+
+  ; 앱 패키지는 Windows App Runtime 프레임워크에 기대고 있습니다. 그것이 없는 기계에서는
+  ; 등록이 `0x80073CF3` 으로 거부되고 - 러너에서 실제로 그렇게 거부됐습니다 - 이 설치
+  ; 프로그램은 사용자 권한으로 도는지라 프레임워크를 나중에 깔아 줄 수도 없습니다.
+  ; 그래서 Microsoft 서명 프레임워크 패키지를 함께 싣고, **기존 설치를 건드리기 전에**
+  ; 먼저 갖춥니다. 여기서 물러나면 이미 깔려 있던 negaflow 는 그대로 남습니다.
+  ; `$PLUGINSDIR` 은 설치가 끝나면 스스로 지워지므로 41 MB 가 설치 폴더에 남지 않습니다.
+  InitPluginsDir
+  File "/oname=$PLUGINSDIR\WindowsAppRuntime.msix" "${RUNTIMEPACKAGE}"
+  nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$Staging\package-registration.ps1" -Action EnsureRuntime -RuntimePackagePath "$PLUGINSDIR\WindowsAppRuntime.msix"'
+  Pop $0
+  Pop $1
+  !insertmacro LogExec "ensure-runtime" $0 $1
+  ${If} $0 != 0
+    RMDir /r "$Staging"
+    MessageBox MB_ICONSTOP "Windows App Runtime 을 설치할 수 없습니다. Windows 업데이트를 마친 뒤 다시 시도하십시오." /SD IDOK
+    Abort "Windows App Runtime installation failed: $1"
+  ${EndIf}
 
   ; A previous loose package points at the live directory. Unregister it
   ; before the atomic directory swap, then register the new manifest below.
