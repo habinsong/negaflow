@@ -174,6 +174,8 @@ internal static class PrintPageCanvas
             },
         };
 
+        IDisposable decodeSpan = Negaflow.Shell.ExportTrace.Measure(
+            $"      blit decode {width}x{height}");
         using IRandomAccessStream stream =
             await PrintSheetFile.OpenAsync(sourcePath, FileAccess.Read);
         BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
@@ -184,6 +186,7 @@ internal static class PrintPageCanvas
             ExifOrientationMode.IgnoreExifOrientation,
             ColorManagementMode.DoNotColorManage);
         byte[] tile = pixels.DetachPixelData();
+        decodeSpan.Dispose();
         if (tile.Length < width * height * 4)
         {
             return false;

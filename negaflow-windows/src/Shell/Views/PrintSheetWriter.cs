@@ -32,7 +32,7 @@ public readonly record struct PrintSheetWriteResult(
 /// 이 정한 자리에 놓는 것뿐입니다 — 인화가 색을 따로 만들면 현상 화면에서 본 것과 다른 사진이
 /// 인화됩니다. 미리보기와 이 파일이 같은 layout 을 쓰므로 여백과 배치도 같습니다.
 /// </remarks>
-public static class PrintSheetWriter
+public static partial class PrintSheetWriter
 {
     /// <summary>
     /// 판을 만들어 폴더에 씁니다. 여러 판이면 <c>-1</c>, <c>-2</c> 를 붙입니다.
@@ -70,8 +70,15 @@ public static class PrintSheetWriter
             // (`DevelopExportCoordinator.MaximumConcurrentExports`, macOS
             // `startExportBatch(maximumConcurrent: 2)`). 더 늘리면 한 장이 수백 MB 라
             // 메모리만 밀립니다.
+            int[] scratchLongEdges = PlanScratchLongEdges(sources, print);
+            ExportTrace.Write(
+                $"print sheet write sources={sources.Count} layout={print.LayoutMode} " +
+                $"scratch-long-edge={string.Join(',', scratchLongEdges)} " +
+                $"format={format} slots={DevelopExportCoordinator.MaximumConcurrentExports}");
+            using IDisposable _sheet = ExportTrace.Measure("print sheet total");
             string[] developedPaths = new string[sources.Count];
             bool developFailed = false;
+            IDisposable? developSpan = ExportTrace.Measure("  develop sources");
             // 같은 사진이 판에 두 번 올라갈 수 있으므로 자리 번호로 돕니다 - 사진 자체로
             // 찾으면 같은 것 둘이 한 자리를 덮어씁니다.
             int[] order = [.. Enumerable.Range(0, sources.Count)];
@@ -86,19 +93,24 @@ public static class PrintSheetWriter
                     }
                     LibraryFrameSnapshot source = sources[index];
                     string path = Path.Combine(scratch, $"{index}.tif");
-                    if (await Task.Run(() => Develop(source, path)).ConfigureAwait(true))
+                    ExportTrace.Write($"    develop {index} begin");
+                    using IDisposable _one = ExportTrace.Measure($"    develop {index} end");
+                    if (await Task.Run(() => Develop(source, path, scratchLongEdges[index]))
+                        .ConfigureAwait(true))
                     {
                         developedPaths[index] = path;
                         return;
                     }
                     developFailed = true;
                 }).ConfigureAwait(true);
+            developSpan.Dispose();
             if (developFailed || developedPaths.Any(string.IsNullOrEmpty))
             {
                 return new PrintSheetWriteResult(PrintSheetWriteStatus.DevelopFailed, []);
             }
             List<string> developed = [.. developedPaths];
 
+            using IDisposable _sizes = ExportTrace.Measure("  read sizes");
             PrintSizeMm[] sizes = new PrintSizeMm[developed.Count];
             for (int index = 0; index < developed.Count; ++index)
             {
@@ -109,6 +121,7 @@ public static class PrintSheetWriter
                 sizes[index] = size;
             }
 
+            _sizes.Dispose();
             PrintCompositionSettings composition = print.Composition(
                 sizes[0].Height > 0 ? sizes[0].Width / sizes[0].Height : null);
             List<string> written = [];
@@ -121,6 +134,8 @@ public static class PrintSheetWriter
                 }
                 foreach (PrintPackagePageLayout page in pages)
                 {
+                    using IDisposable _page = ExportTrace.Measure(
+                        $"  compose page {page.PageIndex + 1}/{pages.Count}");
                     string path = PagePath(
                         destinationFolder, baseName, page.PageIndex, pages.Count, format);
                     if (!await WritePageAsync(
@@ -145,6 +160,8 @@ public static class PrintSheetWriter
             // 낱장 모드는 사진마다 한 판입니다.
             for (int index = 0; index < developed.Count; ++index)
             {
+                using IDisposable _single = ExportTrace.Measure(
+                    $"  compose sheet {index + 1}/{developed.Count}");
                 PrintCompositionSettings pageSettings = composition with
                 {
                     PhotoAspectRatio = sizes[index].Height > 0
@@ -199,7 +216,14 @@ public static class PrintSheetWriter
     /// 현상 화면과 <b>같은 요청</b>으로 사진을 냅니다. 인화 전용 경로를 따로 만들면 두 화면의
     /// 색이 갈립니다.
     /// </summary>
-    private static bool Develop(LibraryFrameSnapshot frame, string destination)
+    /// <summary>
+    /// 판에 얹을 사진 하나를 임시 파일로 현상합니다.
+    /// </summary>
+    /// <param name="longEdge">
+    /// 0 이면 원본 해상도입니다. 그 위이면 현상 끝에서 그 긴 변까지 줄입니다 — 판보다 큰
+    /// 그림은 어차피 놓일 자리에서 다시 줄어들기 때문입니다.
+    /// </param>
+    private static bool Develop(LibraryFrameSnapshot frame, string destination, int longEdge)
     {
         // 중간 파일은 **압축 없는 16-bit TIFF** 입니다. 판에 얹으려고 한 번 쓰고 한 번
         // 읽을 뿐인데 16-bit PNG 는 deflate 로 굽느라 쓰기도 읽기도 몇 배 느립니다
@@ -208,6 +232,7 @@ public static class PrintSheetWriter
         {
             Format = DevelopExportFormat.Tiff16,
             TiffCompression = DevelopTiffCompression.None,
+            LongEdge = longEdge,
         };
         DevelopRequestResult built = DevelopRequestFactory.Create(
             frame,
