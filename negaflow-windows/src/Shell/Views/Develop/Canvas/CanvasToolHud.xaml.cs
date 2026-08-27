@@ -166,6 +166,13 @@ public sealed partial class CanvasToolHud : UserControl
         applied?.Invoke();
     }
 
+    /// <summary>
+    /// 키보드로 캔버스를 확대·축소합니다. macOS <c>canvasKeyboardShortcuts</c> 의
+    /// <c>+</c> · <c>=</c> · <c>-</c> 자리이며, 단추와 같은 배율을 씁니다.
+    /// </summary>
+    internal void ZoomByKeyboard(bool zoomIn) =>
+        ZoomBy(zoomIn ? CanvasToolHudPolicy.ZoomStep : 1 / CanvasToolHudPolicy.ZoomStep);
+
     private void ZoomBy(double multiplier)
     {
         if (viewport is null ||

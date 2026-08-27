@@ -43,6 +43,25 @@ internal static class WorkflowShortcutTests
         }
         Check(collisions.Count == 0, "workflow_shortcut_defaults_are_unique");
 
+        // **캔버스가 홀로 듣는 키는 워크플로 기본값이 가져가면 안 됩니다.**
+        //
+        // 현상 캔버스는 macOS `canvasKeyboardShortcuts` 와 같이 수식키 없는 `+`·`=`·`-` 로
+        // 확대·축소하고, 크롭 중에는 Enter 로 적용, Esc 로 해제합니다. 그 키들은 명령표에
+        // 없으므로 여기서 비어 있는지 지킵니다 — 나중에 누가 기본값으로 `-` 를 집어 가면
+        // 캔버스 확대가 조용히 죽습니다.
+        string[] canvasOnlyKeys = ["+", "=", "-", "enter", "escape"];
+        List<string> stolen = [];
+        foreach (WorkflowShortcutAction action in WorkflowShortcutActions.All)
+        {
+            WorkflowShortcut shortcut = defaults.For(action).Normalized();
+            if (shortcut.Modifiers == WorkflowShortcutModifiers.None &&
+                canvasOnlyKeys.Contains(shortcut.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                stolen.Add($"{action} takes {shortcut.Display()} from the canvas");
+            }
+        }
+        Check(stolen.Count == 0, "workflow_shortcut_defaults_leave_canvas_keys_alone");
+
         // macOS 와 같은 훑기 키입니다. 이 넷이 틀리면 손에 밴 흐름이 통째로 어긋납니다.
         Check(
             WorkflowShortcutActions.Default(WorkflowShortcutAction.LoadScanner) ==

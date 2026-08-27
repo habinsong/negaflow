@@ -76,6 +76,14 @@ internal sealed class DevelopCanvasCropInteraction
             args.Handled = true;
             return true;
         }
+        // macOS 는 크롭에만 Return 을 겁니다 — `canApplyActiveTool` 이 `cropMode` 뿐입니다.
+        // GrainMend 쪽 Return 은 그 컨트롤 바가 따로 가지므로 같은 키가 두 번 돌지 않습니다.
+        if (args.Key is VirtualKey.Enter)
+        {
+            view.RaiseCropApply();
+            args.Handled = true;
+            return true;
+        }
 
         double step = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift)
             .HasFlag(CoreVirtualKeyStates.Down) ? 0.02 : 0.005;

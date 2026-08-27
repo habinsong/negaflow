@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml.Input;
 using Negaflow.Shell.Develop;
+using Windows.System;
 
 namespace Negaflow.Shell.Views.Develop.Canvas;
 
@@ -133,9 +134,29 @@ public sealed partial class DevelopPreviewCanvas
         {
             return;
         }
-        if (crop is not null)
+        if (crop is not null && cropInteraction.TryHandleKey(args, crop))
         {
-            cropInteraction.TryHandleKey(args, crop);
+            return;
+        }
+        // macOS `canvasKeyboardShortcuts` 의 확대·축소입니다. `+` 와 `=` 은 같은 자판을
+        // shift 없이 누른 것이라 둘 다 확대이며, 단추와 같은 배율을 씁니다.
+        //
+        // 도구가 켜져 있을 때도 듣습니다 — 크롭 중에 확대해서 모서리를 맞추는 것이
+        // 자연스럽고, 크롭 키 처리는 방향키·Esc·Enter 만 집어 갑니다.
+        switch (args.Key)
+        {
+            case VirtualKey.Add:
+            case (VirtualKey)0xBB: // OEM_PLUS - `=` 와 `+` 가 같은 자판입니다.
+                ZoomHud.ZoomByKeyboard(zoomIn: true);
+                args.Handled = true;
+                break;
+            case VirtualKey.Subtract:
+            case (VirtualKey)0xBD: // OEM_MINUS
+                ZoomHud.ZoomByKeyboard(zoomIn: false);
+                args.Handled = true;
+                break;
+            default:
+                break;
         }
     }
 }
