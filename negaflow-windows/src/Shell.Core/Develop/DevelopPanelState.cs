@@ -170,6 +170,38 @@ public sealed partial class DevelopPanelState
 
     public InfraredCleanStatus LastInfraredClean => InfraredClean.Status;
 
+    /// <summary>
+    /// 고른 사진의 스냅샷만 지금 것으로 바꿉니다. 별·깃발·제외처럼 <b>현상 레시피가 그대로인</b>
+    /// 편집 뒤에 부릅니다.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Select"/> 로 다시 고르면 프레임 결합과 비교 모드가 다시 서고 목록이 통째로
+    /// 다시 지어집니다. 바뀐 것이 표시값뿐일 때는 그 일이 전부 헛일이며, 그러고도 사이드카가
+    /// 옛 별점을 적지 않으려면 스냅샷은 지금 것이어야 합니다.
+    /// </remarks>
+    /// <returns>실제로 갈아 끼웠으면 <c>true</c> 입니다.</returns>
+    public bool RefreshSelectedFrame()
+    {
+        if (SelectedFrame is not { } current)
+        {
+            return false;
+        }
+        foreach (LibraryFrameSnapshot frame in host.Frames)
+        {
+            if (!string.Equals(frame.Id, current.Id, StringComparison.Ordinal))
+            {
+                continue;
+            }
+            if (ReferenceEquals(frame, current))
+            {
+                return false;
+            }
+            SelectedFrame = frame;
+            return true;
+        }
+        return false;
+    }
+
     public bool Select(string frameId)
     {
         ArgumentNullException.ThrowIfNull(frameId);

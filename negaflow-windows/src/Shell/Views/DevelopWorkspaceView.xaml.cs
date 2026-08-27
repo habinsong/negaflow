@@ -326,13 +326,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
 
-        // **별·깃발·제외는 현상 레시피가 아닙니다.** 레시피만 보면 도구줄이나 라이브러리
-        // 카드에서 준 별이 필름스트립에 뜨지 않습니다 — 세 화면이 같은 값을 보여야 합니다.
-        bool sameMarks = selected.Rating == current.Rating &&
-            selected.PickState == current.PickState;
-        bool sameRecipe = sameMarks &&
-            await GrainMendDetectionToken.SameDevelopRecipeAsync(selected, current);
-        if (generation != frameEditRefreshGeneration || sameRecipe ||
+        // **별·깃발·제외는 현상 레시피가 아닙니다.** 그것만 바뀌었으면 목록을 다시 지을
+        // 이유가 없습니다 — 다시 지으면 좌측 트리 둘이 다시 서고 썸네일이 전부 다시
+        // 디코드되며, 별을 누를 때마다 눈에 보이게 멈춥니다. 표시는 셸의 `FrameEdited` 가
+        // 항목 객체에서 그 자리에 맞췄고(`RefreshFrameMarks`), 여기서는 스냅샷만 지금 것으로
+        // 갈아 끼웁니다. 그러지 않으면 사이드카가 옛 별점을 적습니다.
+        bool sameRecipe = await GrainMendDetectionToken.SameDevelopRecipeAsync(selected, current);
+        if (generation != frameEditRefreshGeneration ||
             !ReferenceEquals(panel?.SelectedFrame, selected) ||
             libraryHost is not { } currentHost ||
             !ReferenceEquals(
@@ -340,6 +340,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
                     string.Equals(candidate.Id, current.Id, StringComparison.Ordinal)),
                 current))
         {
+            return;
+        }
+        if (sameRecipe)
+        {
+            _ = panel.RefreshSelectedFrame();
             return;
         }
         frames.Refresh();
