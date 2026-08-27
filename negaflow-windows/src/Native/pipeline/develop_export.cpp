@@ -151,6 +151,28 @@ using develop_export_detail::validate_request;
         approximate_scope.emplace();
     }
 
+    // **내보내기가 끝나면 GPU 쪽 여벌을 놓습니다.**
+    //
+    // 미리보기는 다음 슬라이더 조작이 같은 화소를 다시 쓰므로 상주가 이득입니다. 내보내기는
+    // 그렇지 않습니다 — 한 장 끝나면 다음 장은 다른 치수이고, 놓지 않으면 장마다 쌓입니다.
+    //
+    // 실측(제조사별 RAW 여덟 장, 한 장씩, 8GB 기계의 GPU 예산으로 묶어): 사진이 끝날 때마다
+    // 상주가 863 → 4,142MB 로 올랐고 최대 4,745MB 였습니다. GPU 를 아예 안 쓰면 같은 자리가
+    // 130~136MB 로 평평하고 최대 1,056MB 입니다. 램 8GB · 내장 그래픽 기계가 정확히 이
+    // 경로를 탑니다 — 그 기계에서 GPU 예산은 전체 해상도 풀을 못 받아 CPU 로 물러나는데,
+    // 물러난 뒤에도 여벌이 남았습니다.
+    //
+    // IR 검출은 이미 같은 자리에서 같은 일을 합니다(`infrared_file_detection.cpp`).
+    struct ReleaseGpuAfterExport final {
+        bool active{false};
+        ~ReleaseGpuAfterExport() {
+            if (active) {
+                GpuAccelerator::shared().release_transient_resources();
+            }
+        }
+    } release_gpu{gpu_policy == GpuUsePolicy::allowed && preview == nullptr &&
+                  detect == nullptr};
+
     RunTracker tracker{control, plan_total_cost(request, preview != nullptr)};
     std::stop_source stop{};
     if (tracker.cancelled()) {
