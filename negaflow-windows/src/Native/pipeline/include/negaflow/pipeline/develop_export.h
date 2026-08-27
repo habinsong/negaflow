@@ -30,6 +30,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -123,6 +124,11 @@ struct DevelopExportRequest final {
     // ignores it - the canvas is always shown in the display's own space.
     negaflow::color::OutputColorSpace output_color_space{
         negaflow::color::OutputColorSpace::srgb};
+    // 인화소가 준 ICC 입니다. 비어 있지 않으면 **이것이 published 색공간**이 되어
+    // `output_color_space` 를 대신합니다 — 화소를 이 프로파일로 옮기고 파일에도 이것을
+    // 박습니다. macOS `ExportEngine.write(outputProfile:)` 과 같은 뜻입니다. 바이트는
+    // 호출자 것이며 이 호출이 끝날 때까지만 살아 있으면 됩니다. 미리보기는 무시합니다.
+    std::span<const std::uint8_t> output_icc_profile{};
     // PNG/TIFF only. When false, the RGB export deliberately omits source alpha.
     bool preserve_alpha{false};
     // 게시하는 파일에 무엇을 적을지. 값이 비어 있으면 그 항목은 쓰지 않는다.

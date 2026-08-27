@@ -129,6 +129,9 @@ static_assert(sizeof(nf_develop_export_request_v36) == 5136U);
 static_assert(offsetof(
                   nf_develop_export_request_v36,
                   defect_recipe_append_prefix_sha256) == 5120U);
+static_assert(sizeof(nf_develop_export_request_v37) == 5152U);
+static_assert(offsetof(nf_develop_export_request_v37, output_icc_profile) == 5136U);
+static_assert(offsetof(nf_develop_export_request_v37, output_icc_profile_size) == 5144U);
 static_assert(sizeof(nf_develop_export_request_v32) == 5008U);
 static_assert(offsetof(nf_develop_export_request_v32, output_color_space) == 4992U);
 static_assert(sizeof(nf_grain_mend_detect_parameters_v1) == 40U);

@@ -75,6 +75,8 @@ WicTiffExportResult export_working_to_tiff(
         limits.metadata = {};
         limits.conversion.preserve_alpha = false;
         limits.conversion.encode_transfer = false;
+        // 무보정본은 작업 공간 그대로 남기는 보관용입니다. 인화소 프로파일을 걸지 않습니다.
+        limits.conversion.output_icc_profile = {};
     }
     WicTiffExportResult result{};
     // 색공간은 변환과 프로파일 양쪽이 함께 알아야 합니다. 한쪽만 바뀌면 픽셀과 프로파일이
@@ -137,7 +139,8 @@ WicTiffExportResult export_working_to_tiff(
             color_context,
             profile_bytes,
             result.native_error_code,
-            linear_transfer)) {
+            linear_transfer,
+            limits.conversion.output_icc_profile)) {
             case detail::StandardSrgbStatus::ok:
                 break;
             case detail::StandardSrgbStatus::unavailable:

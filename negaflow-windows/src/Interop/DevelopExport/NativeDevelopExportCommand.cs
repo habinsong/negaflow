@@ -40,6 +40,7 @@ internal static unsafe class NativeDevelopExportCommand
         NativeDefectRecipeEditRefV1[] defectEditOrder = BuildDefectEditOrder(request);
         byte[] defectSourceSha256 = BuildDefectSourceSha256(request);
         byte[] defectRecipeSha256 = BuildDefectRecipeSha256(request);
+        byte[] outputIcc = request.OutputIccProfile ?? [];
         if (bakeDefects && defectRecipeSha256.Length == 0)
         {
             throw new ArgumentException("A defect bake requires a non-empty recipe.", nameof(request));
@@ -66,6 +67,7 @@ internal static unsafe class NativeDevelopExportCommand
         fixed (byte* defectMaskBytes = defects.MaskBytes)
         fixed (byte* defectSourceDigest = defectSourceSha256)
         fixed (byte* defectRecipeDigest = defectRecipeSha256)
+        fixed (byte* outputIccProfile = outputIcc)
         fixed (NativeDefectCloneEditV1* defectCloneEdits = clones.Edits)
         fixed (NativeDefectCloneStrokeV1* defectCloneStrokes = clones.Strokes)
         fixed (NativeDefectClonePointV1* defectClonePoints = clones.Points)
@@ -146,7 +148,7 @@ internal static unsafe class NativeDevelopExportCommand
                         v32, request, make, model, software, artist, copyright, filmType,
                         filmStock, capturedAt),
                     request);
-                if (defectRecipeSha256.Length == 0)
+                if (defectRecipeSha256.Length == 0 && outputIcc.Length == 0)
                 {
                     status = NativeDevelopRun.nf_develop_export_v34(
                         &v34, runState, (NativeDevelopExportResultV3*)&raw);
@@ -155,11 +157,25 @@ internal static unsafe class NativeDevelopExportCommand
                 {
                     NativeDevelopExportRequestV35 v35 = BuildRequestV35(
                         v34, defectRecipeDigest, checked((uint)defectRecipeSha256.Length));
-                    status = bakeDefects
-                        ? NativeDevelopRun.nf_develop_bake_defects_v1(
-                            &v35, runState, (NativeDevelopExportResultV3*)&raw)
-                        : NativeDevelopRun.nf_develop_export_v35(
-                            &v35, runState, (NativeDevelopExportResultV3*)&raw);
+                    if (outputIcc.Length != 0 && !bakeDefects)
+                    {
+                        // 인화소 ICC 가 붙으면 그것을 받는 판으로 갑니다. 결함 접두 힌트는
+                        // 내보내기에 쓰지 않으므로 v36 은 빈 채로 지나갑니다.
+                        NativeDevelopExportRequestV37 v37 = BuildRequestV37(
+                            BuildRequestV36(v35, null, 0U, 0U),
+                            outputIccProfile,
+                            checked((uint)outputIcc.Length));
+                        status = NativeDevelopRun.nf_develop_export_v37(
+                            &v37, runState, (NativeDevelopExportResultV3*)&raw);
+                    }
+                    else
+                    {
+                        status = bakeDefects
+                            ? NativeDevelopRun.nf_develop_bake_defects_v1(
+                                &v35, runState, (NativeDevelopExportResultV3*)&raw)
+                            : NativeDevelopRun.nf_develop_export_v35(
+                                &v35, runState, (NativeDevelopExportResultV3*)&raw);
+                    }
                 }
             }
         }
@@ -167,11 +183,13 @@ internal static unsafe class NativeDevelopExportCommand
         return Translate(
             status,
             raw,
-            defectRecipeSha256.Length == 0
+            defectRecipeSha256.Length == 0 && outputIcc.Length == 0
                 ? "nf_develop_export_v34"
                 : bakeDefects
                     ? "nf_develop_bake_defects_v1"
-                    : "nf_develop_export_v35");
+                    : outputIcc.Length != 0
+                        ? "nf_develop_export_v37"
+                        : "nf_develop_export_v35");
     }
 
     /// <summary>

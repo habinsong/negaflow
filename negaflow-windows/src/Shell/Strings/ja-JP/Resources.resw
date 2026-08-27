@@ -1202,6 +1202,7 @@
   <data name="printPageCountFormat.Text" xml:space="preserve"><value>%d ページ</value><comment>Windows only: sheet count over the canvas.</comment></data>
   <data name="printExportDone.Text" xml:space="preserve"><value>{0} に保存しました。</value><comment>Windows only: print export result line.</comment></data>
   <data name="printExportFailed.Text" xml:space="preserve"><value>プリントを書き出せませんでした。</value><comment>Windows only: print export failure line.</comment></data>
+  <data name="printOutputProfileRequired.Text" xml:space="preserve"><value>PRINT 書き出しには、有効な RGB プリンター ICC プロファイルが必要です。</value><comment>AppLocalizedPhrase.printOutputProfileRequired</comment></data>
   <data name="printTemplate.Text" xml:space="preserve"><value>テンプレート</value><comment>AppLocalizedPhrase.template</comment></data>
   <data name="printTemplateOneLargeTwoSmall.Text" xml:space="preserve"><value>大 1 + 小 2</value><comment>PrintPicturePackageTemplate.oneLargeTwoSmall</comment></data>
   <data name="printTemplateTwoUp.Text" xml:space="preserve"><value>2面付け</value><comment>PrintPicturePackageTemplate.twoUp</comment></data>

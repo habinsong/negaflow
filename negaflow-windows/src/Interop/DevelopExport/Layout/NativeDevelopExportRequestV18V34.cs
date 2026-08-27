@@ -296,3 +296,16 @@ internal unsafe struct NativeDevelopExportRequestV36
     internal uint DefectRecipeAppendPrefixSha256Size;
     internal uint DefectRecipeAppendPrefixEditCount;
 }
+
+/// <summary>
+/// v36 에 <b>인화소 ICC</b> 를 더한 것입니다. 바이트가 있으면 그것이 published 색공간이 되어
+/// <c>OutputColorSpace</c> 를 대신합니다 — macOS <c>ExportEngine.write(outputProfile:)</c>.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV37
+{
+    internal NativeDevelopExportRequestV36 V36;
+    internal byte* OutputIccProfile;
+    internal uint OutputIccProfileSize;
+    internal uint OutputIccReserved;
+}

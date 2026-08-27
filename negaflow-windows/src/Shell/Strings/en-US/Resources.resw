@@ -1202,6 +1202,7 @@ Load a scanner from Library to scan film.</value>
   <data name="printPageCountFormat.Text" xml:space="preserve"><value>%d pages</value><comment>Windows only: sheet count over the canvas.</comment></data>
   <data name="printExportDone.Text" xml:space="preserve"><value>Saved to {0}</value><comment>Windows only: print export result line.</comment></data>
   <data name="printExportFailed.Text" xml:space="preserve"><value>The print could not be written.</value><comment>Windows only: print export failure line.</comment></data>
+  <data name="printOutputProfileRequired.Text" xml:space="preserve"><value>PRINT export requires a valid RGB printer ICC profile.</value><comment>AppLocalizedPhrase.printOutputProfileRequired</comment></data>
   <data name="printTemplate.Text" xml:space="preserve"><value>Template</value><comment>AppLocalizedPhrase.template</comment></data>
   <data name="printTemplateOneLargeTwoSmall.Text" xml:space="preserve"><value>1 large + 2 small</value><comment>PrintPicturePackageTemplate.oneLargeTwoSmall</comment></data>
   <data name="printTemplateTwoUp.Text" xml:space="preserve"><value>2 up</value><comment>PrintPicturePackageTemplate.twoUp</comment></data>

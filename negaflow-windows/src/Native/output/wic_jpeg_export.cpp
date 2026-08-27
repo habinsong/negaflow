@@ -77,12 +77,15 @@ WicJpegExportResult export_working_to_srgb8_jpeg(
         }
         ComPtr<IWICColorContext> color_context{};
         std::vector<std::uint8_t> profile_bytes{};
-        switch (detail::load_standard_srgb_context(
+        switch (detail::load_output_color_context(
             factory.Get(),
+            negaflow::color::OutputColorSpace::srgb,
             limits.max_color_profile_bytes,
             color_context,
             profile_bytes,
-            result.native_error_code)) {
+            result.native_error_code,
+            false,
+            limits.conversion.output_icc_profile)) {
             case detail::StandardSrgbStatus::ok:
                 break;
             case detail::StandardSrgbStatus::unavailable:

@@ -1,9 +1,12 @@
 #include "wic_srgb16_support.h"
 
+#include "../imaging/icm_rgb16_transform.h"
+
 #include "negaflow/color/icc_profile.h"
 
 #include <icm.h>
 
+#include <cstring>
 #include <algorithm>
 #include <cstddef>
 #include <cmath>
@@ -98,7 +101,28 @@ StandardSrgbStatus load_output_color_context(
     ComPtr<IWICColorContext>& context,
     std::vector<std::uint8_t>& profile_bytes,
     std::uint32_t& native_error_code,
-    const bool linear_transfer) {
+    const bool linear_transfer,
+    const std::span<const std::uint8_t> output_icc_profile) {
+    // **인화소 ICC 가 있으면 그것이 published 색공간입니다.** 이름 있는 공간을 만들어
+    // 붙이는 대신 준 바이트를 그대로 박습니다 — 랩이 준 프로파일과 파일에 박힌 것이
+    // 한 바이트도 다르면 안 됩니다.
+    if (!output_icc_profile.empty()) {
+        if (output_icc_profile.size() > static_cast<std::size_t>(max_color_profile_bytes)) {
+            return StandardSrgbStatus::invalid;
+        }
+        HRESULT embedded = factory->CreateColorContext(&context);
+        if (SUCCEEDED(embedded)) {
+            embedded = context->InitializeFromMemory(
+                output_icc_profile.data(),
+                static_cast<UINT>(output_icc_profile.size()));
+        }
+        if (FAILED(embedded)) {
+            native_error_code = static_cast<std::uint32_t>(embedded);
+            return StandardSrgbStatus::unavailable;
+        }
+        profile_bytes.assign(output_icc_profile.begin(), output_icc_profile.end());
+        return StandardSrgbStatus::ok;
+    }
     if (space == negaflow::color::OutputColorSpace::srgb && !linear_transfer) {
         return load_standard_srgb_context(
             factory,
@@ -238,6 +262,96 @@ WicSrgb16FrameStatus configure_srgb16_frame(
     return WicSrgb16FrameStatus::ok;
 }
 
+namespace {
+
+// 인화소 ICC 로 옮기는 밴드 변환입니다.
+//
+// **화소를 sRGB16 으로 만든 뒤에 겁니다.** macOS 는 Core Image 가 float 에서 곧장 목적지
+// 공간으로 렌더하지만, 여기서는 이미 있는 sRGB16 경로 끝에 한 단계를 더합니다 — 16 비트는
+// 중간 단계 하나를 견딜 만큼 넓고, 그렇게 해야 인코더의 띠 쓰기 구조를 그대로 둘 수 있습니다.
+//
+// ICM 은 3 채널 16 비트(`BM_16b_RGB`)만 받습니다. 알파를 남기는 출력은 RGB 만 따로 모아
+// 옮기고 알파는 그대로 둡니다.
+class OutputIccBandTransform final {
+public:
+    [[nodiscard]] bool ready() const noexcept { return ready_; }
+
+    [[nodiscard]] negaflow::imaging::ScannerToWorkingStatus initialize(
+        const std::span<const std::uint8_t> profile,
+        std::uint32_t& native_error_code) {
+        const negaflow::imaging::ScannerToWorkingStatus status =
+            transform_.initialize_to_profile(profile, native_error_code);
+        ready_ = status == negaflow::imaging::ScannerToWorkingStatus::ok;
+        return status;
+    }
+
+    [[nodiscard]] bool translate(
+        std::uint8_t* const samples,
+        const std::uint32_t width,
+        const std::uint32_t rows,
+        const std::uint32_t channels,
+        const std::uint32_t bits_per_sample,
+        std::uint32_t& native_error_code) {
+        if (!ready_ || samples == nullptr || width == 0U || rows == 0U ||
+            (channels != 3U && channels != 4U)) {
+            return false;
+        }
+        const std::uint32_t sample_bytes = bits_per_sample == 8U ? 1U : 2U;
+        const std::uint32_t rgb_stride_bytes = width * 3U * sample_bytes;
+        const std::size_t pixels = static_cast<std::size_t>(width) * rows;
+
+        std::uint8_t* rgb = samples;
+        if (channels == 4U) {
+            // ICM 은 3 채널만 받습니다. RGB 만 모아 옮기고 알파는 건드리지 않습니다.
+            try {
+                if (packed_.size() < pixels * 3U * sample_bytes) {
+                    packed_.resize(pixels * 3U * sample_bytes);
+                }
+            } catch (const std::bad_alloc&) {
+                return false;
+            }
+            for (std::size_t pixel = 0U; pixel < pixels; ++pixel) {
+                std::memcpy(
+                    packed_.data() + pixel * 3U * sample_bytes,
+                    samples + pixel * 4U * sample_bytes,
+                    3U * sample_bytes);
+            }
+            rgb = packed_.data();
+        }
+
+        const negaflow::imaging::ScannerToWorkingStatus status = bits_per_sample == 8U
+            ? transform_.translate8(
+                  rgb, width, rows, rgb_stride_bytes, rgb, rgb_stride_bytes, native_error_code)
+            : transform_.translate(
+                  reinterpret_cast<const std::uint16_t*>(rgb),
+                  width,
+                  rows,
+                  rgb_stride_bytes,
+                  reinterpret_cast<std::uint16_t*>(rgb),
+                  rgb_stride_bytes,
+                  native_error_code);
+        if (status != negaflow::imaging::ScannerToWorkingStatus::ok) {
+            return false;
+        }
+        if (channels == 4U) {
+            for (std::size_t pixel = 0U; pixel < pixels; ++pixel) {
+                std::memcpy(
+                    samples + pixel * 4U * sample_bytes,
+                    packed_.data() + pixel * 3U * sample_bytes,
+                    3U * sample_bytes);
+            }
+        }
+        return true;
+    }
+
+private:
+    negaflow::imaging::detail::IcmRgb16Transform transform_{};
+    std::vector<std::uint8_t> packed_{};
+    bool ready_{false};
+};
+
+}  // namespace
+
 WicSrgb16FrameStatus write_working_srgb16_pixels(
     IWICBitmapFrameEncode* const frame,
     const negaflow::imaging::WorkingImage& working,
@@ -260,6 +374,15 @@ WicSrgb16FrameStatus write_working_srgb16_pixels(
         std::min<std::uint64_t>(rows_per_write, image.height));
     const std::uint64_t buffer_bytes_64 =
         static_cast<std::uint64_t>(allocated_rows) * image.stride_bytes;
+    // 인화소 ICC 가 있으면 띠마다 그 프로파일로 옮깁니다. 못 만들면 그대로 실패합니다 —
+    // 프로파일이 걸린 줄 알고 sRGB 파일을 받아 가면 인화 결과가 달라집니다.
+    OutputIccBandTransform icc{};
+    if (!conversion_limits.output_icc_profile.empty()) {
+        if (icc.initialize(conversion_limits.output_icc_profile, native_error_code) !=
+            negaflow::imaging::ScannerToWorkingStatus::ok) {
+            return WicSrgb16FrameStatus::write_failed;
+        }
+    }
     try {
         std::vector<std::uint8_t> buffer(static_cast<std::size_t>(buffer_bytes_64));
         for (std::uint32_t row = 0U; row < image.height;) {
@@ -277,6 +400,16 @@ WicSrgb16FrameStatus write_working_srgb16_pixels(
                 conversion_limits);
             if (conversion_status != WorkingToSrgb16Status::ok) {
                 return WicSrgb16FrameStatus::working_conversion_failed;
+            }
+            if (icc.ready() &&
+                !icc.translate(
+                    buffer.data(),
+                    image.width,
+                    row_count,
+                    image.channels,
+                    image.bits_per_sample,
+                    native_error_code)) {
+                return WicSrgb16FrameStatus::write_failed;
             }
             const UINT buffer_bytes = row_count * image.stride_bytes;
             if (image.bits_per_sample == 8U) {

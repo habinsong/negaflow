@@ -104,6 +104,42 @@ ScannerToWorkingStatus IcmRgb16Transform::initialize(
         return ScannerToWorkingStatus::color_profile_open_failed;
     }
 
+    return link(native_error_code);
+}
+
+ScannerToWorkingStatus IcmRgb16Transform::initialize_to_profile(
+    const std::span<const std::uint8_t> destination_profile_bytes,
+    std::uint32_t& native_error_code) {
+    reset();
+    native_error_code = 0U;
+    if (destination_profile_bytes.empty() ||
+        destination_profile_bytes.size() > std::numeric_limits<DWORD>::max()) {
+        return ScannerToWorkingStatus::invalid_icc_profile;
+    }
+
+    source_profile_ = open_standard_srgb_profile(native_error_code);
+    if (source_profile_ == nullptr) {
+        return ScannerToWorkingStatus::color_profile_open_failed;
+    }
+
+    PROFILE destination_description{};
+    destination_description.dwType = PROFILE_MEMBUFFER;
+    destination_description.pProfileData =
+        const_cast<std::uint8_t*>(destination_profile_bytes.data());
+    destination_description.cbDataSize =
+        static_cast<DWORD>(destination_profile_bytes.size());
+    SetLastError(ERROR_SUCCESS);
+    destination_profile_ =
+        OpenColorProfileW(&destination_description, PROFILE_READ, 0U, OPEN_EXISTING);
+    if (destination_profile_ == nullptr) {
+        native_error_code = GetLastError();
+        reset();
+        return ScannerToWorkingStatus::color_profile_open_failed;
+    }
+    return link(native_error_code);
+}
+
+ScannerToWorkingStatus IcmRgb16Transform::link(std::uint32_t& native_error_code) {
     HPROFILE profiles[2]{source_profile_, destination_profile_};
     DWORD intent = INTENT_RELATIVE_COLORIMETRIC;
     SetLastError(ERROR_SUCCESS);
@@ -118,6 +154,39 @@ ScannerToWorkingStatus IcmRgb16Transform::initialize(
         native_error_code = GetLastError();
         reset();
         return ScannerToWorkingStatus::color_transform_initialization_failed;
+    }
+    return ScannerToWorkingStatus::ok;
+}
+
+ScannerToWorkingStatus IcmRgb16Transform::translate8(
+    const std::uint8_t* const source,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t source_stride_bytes,
+    std::uint8_t* const destination,
+    const std::uint32_t destination_stride_bytes,
+    std::uint32_t& native_error_code) const noexcept {
+    native_error_code = 0U;
+    if (transform_ == nullptr || source == nullptr || destination == nullptr || width == 0U ||
+        height == 0U || source_stride_bytes == 0U || destination_stride_bytes == 0U) {
+        return ScannerToWorkingStatus::invalid_argument;
+    }
+    SetLastError(ERROR_SUCCESS);
+    const BOOL converted = TranslateBitmapBits(
+        transform_,
+        const_cast<std::uint8_t*>(source),
+        BM_RGBTRIPLETS,
+        width,
+        height,
+        source_stride_bytes,
+        destination,
+        BM_RGBTRIPLETS,
+        destination_stride_bytes,
+        nullptr,
+        0);
+    if (converted == FALSE) {
+        native_error_code = GetLastError();
+        return ScannerToWorkingStatus::color_transform_failed;
     }
     return ScannerToWorkingStatus::ok;
 }

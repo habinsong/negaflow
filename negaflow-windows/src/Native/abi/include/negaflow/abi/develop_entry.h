@@ -420,6 +420,13 @@ NF_API nf_status_t NF_CALL nf_develop_preview_v36(
     uint32_t pixel_capacity_bytes,
     nf_develop_run_state_v1* run_state,
     nf_develop_export_result_v3* result);
+/* Publishes with the lab's own ICC profile when the request carries one. Everything
+   else matches nf_develop_export_v35. Callers that publish into a named colour space
+   keep using v35; there is nothing to gain from the wider struct. */
+NF_API nf_status_t NF_CALL nf_develop_export_v37(
+    const nf_develop_export_request_v37* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
 /* Builds the same BGRA preview as v35 without retaining its rebuildable Rgba32F raw
    proxy. This is for serialized background population of the persistent developed
    cache; foreground preview calls must continue to use nf_develop_preview_v35. */

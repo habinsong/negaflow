@@ -44,7 +44,8 @@ public static partial class PrintSheetWriter
         string baseName,
         Microsoft.UI.Xaml.Controls.Panel? textHost = null,
         DevelopExportFormat format = DevelopExportFormat.Png16,
-        double jpegQuality = 1.0)
+        double jpegQuality = 1.0,
+        byte[]? outputIccProfile = null)
     {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(print);
@@ -95,7 +96,8 @@ public static partial class PrintSheetWriter
                     string path = Path.Combine(scratch, $"{index}.tif");
                     ExportTrace.Write($"    develop {index} begin");
                     using IDisposable _one = ExportTrace.Measure($"    develop {index} end");
-                    if (await Task.Run(() => Develop(source, path, scratchLongEdges[index]))
+                    if (await Task.Run(
+                            () => Develop(source, path, scratchLongEdges[index], outputIccProfile))
                         .ConfigureAwait(true))
                     {
                         developedPaths[index] = path;
@@ -223,7 +225,11 @@ public static partial class PrintSheetWriter
     /// 0 이면 원본 해상도입니다. 그 위이면 현상 끝에서 그 긴 변까지 줄입니다 — 판보다 큰
     /// 그림은 어차피 놓일 자리에서 다시 줄어들기 때문입니다.
     /// </param>
-    private static bool Develop(LibraryFrameSnapshot frame, string destination, int longEdge)
+    private static bool Develop(
+        LibraryFrameSnapshot frame,
+        string destination,
+        int longEdge,
+        byte[]? outputIccProfile)
     {
         // 중간 파일은 **압축 없는 16-bit TIFF** 입니다. 판에 얹으려고 한 번 쓰고 한 번
         // 읽을 뿐인데 16-bit PNG 는 deflate 로 굽느라 쓰기도 읽기도 몇 배 느립니다
@@ -234,11 +240,17 @@ public static partial class PrintSheetWriter
             TiffCompression = DevelopTiffCompression.None,
             LongEdge = longEdge,
         };
+        ExportEncodingOptions encoding = settings.ToEncodingOptions() with
+        {
+            // 인화소 ICC 는 **판에 얹는 임시 현상본**에 겁니다. 판 자체는 그 화소를 그대로
+            // 옮겨 담으므로, 여기서 한 번 걸면 나오는 판이 그 프로파일 안에 있게 됩니다.
+            OutputIccProfile = outputIccProfile,
+        };
         DevelopRequestResult built = DevelopRequestFactory.Create(
             frame,
             destination,
             settings.Format,
-            settings.ToEncodingOptions());
+            encoding);
         if (built.Request is not { } request)
         {
             PreviewTrace.Write($"print develop: no request refusal={built.Refusal}");

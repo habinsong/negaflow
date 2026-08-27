@@ -137,6 +137,20 @@ typedef struct nf_develop_export_request_v36 {
     uint32_t defect_recipe_append_prefix_edit_count;
 } nf_develop_export_request_v36;
 
+/* v37 preserves v36 and appends the lab's own ICC profile for the published file.
+   When the bytes are present they REPLACE `output_color_space`: the pixels are converted
+   into that profile and the file carries it verbatim. That is what macOS does in
+   `ExportEngine.write(outputProfile:)` when a print target needs the printer's paper.
+   A null pointer or a zero count leaves the named colour space in charge. The bytes are
+   read during the call and never retained. Preview ignores them - the canvas is shown in
+   the display's own space and the proof path handles the paper simulation. */
+typedef struct nf_develop_export_request_v37 {
+    nf_develop_export_request_v36 v36;
+    const uint8_t* output_icc_profile;
+    uint32_t output_icc_profile_size;
+    uint32_t output_icc_reserved;
+} nf_develop_export_request_v37;
+
 #ifdef __cplusplus
 }
 #endif

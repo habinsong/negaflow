@@ -4,6 +4,7 @@ using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
+using Negaflow.Shell.Print;
 
 namespace Negaflow.Shell.Views.Develop.Export;
 
@@ -98,6 +99,27 @@ internal sealed class DevelopExportRunner
     }
 
     /// <summary>
+    /// 이 사진들을 게시할 때 쓸 인화소 ICC 입니다.
+    /// </summary>
+    /// <remarks>
+    /// macOS <c>selectedPrintWorkspaceOutputProfile</c> 과 같은 규칙입니다 — 출력 공정이
+    /// C-print 이면 그 프로파일, 아니면 <b>현상 대상이 PRINT 인 사진이 하나라도 있으면</b>
+    /// 프린터 출력 프로파일. 있어야 하는데 없으면 <see cref="PrintOutputProfileChoice.Missing"/>
+    /// 이며 부르는 쪽이 멈춥니다.
+    /// </remarks>
+    private PrintOutputProfileChoice OutputProfileFor(
+        IReadOnlyList<LibraryFrameSnapshot> frames) =>
+        view.workspaceState is { } state
+            ? PrintOutputProfile.For(frames, state.Current.Print, state.Current.SoftProof)
+            : PrintOutputProfileChoice.None;
+
+    /// <summary>고른 프로파일을 인코딩 값에 실어 줍니다.</summary>
+    private static ExportEncodingOptions With(
+        ExportEncodingOptions encoding,
+        PrintOutputProfileChoice profile) =>
+        profile.Profile is { } bytes ? encoding with { OutputIccProfile = bytes } : encoding;
+
+    /// <summary>
     /// 출력 패널의 내보내기입니다. 빠른 내보내기와 같은 경로를 쓰되 목적지와 형식을 사용자가
     /// 정한 값으로 씁니다.
     /// </summary>
@@ -107,8 +129,15 @@ internal sealed class DevelopExportRunner
         {
             return;
         }
+        PrintOutputProfileChoice profile = OutputProfileFor(SelectedExportFrames(frame));
+        if (profile.Missing)
+        {
+            view.SetOutputStatus(AppResources.Get("printOutputProfileRequired", "Text"));
+            return;
+        }
         ExportTrace.Write(
             $"export press frame={frame.Id} format={view.exportSettings.Format} " +
+            $"icc={(profile.Profile is { } profileBytes ? profileBytes.Length : 0)} " +
             $"sidecar={view.exportSettings.WriteSidecar} raw={view.exportSettings.WriteOriginalRaw} " +
             $"flat={view.exportSettings.WriteMainFlatMaster}");
         using IDisposable _pressed = ExportTrace.Measure("export total");
@@ -161,7 +190,7 @@ internal sealed class DevelopExportRunner
                             completedPath = exportedPath;
                         }
                     },
-                    view.exportSettings.ToEncodingOptions());
+                    With(view.exportSettings.ToEncodingOptions(), profile));
             }
         }
         finally
@@ -206,8 +235,15 @@ internal sealed class DevelopExportRunner
         {
             return;
         }
+        PrintOutputProfileChoice profile = OutputProfileFor(SelectedExportFrames(frame));
+        if (profile.Missing)
+        {
+            view.SetOutputStatus(AppResources.Get("printOutputProfileRequired", "Text"));
+            return;
+        }
         ExportTrace.Write(
-            $"quick export press frame={frame.Id} format={view.quickExportSettings.Format}");
+            $"quick export press frame={frame.Id} format={view.quickExportSettings.Format} " +
+            $"icc={(profile.Profile is { } quickBytes ? quickBytes.Length : 0)}");
         using IDisposable _pressed = ExportTrace.Measure("quick export total");
         // 편집은 메모리에만 있었으므로, 현상하기 전에 저장해 파일과 catalog 가 어긋나지 않게 합니다.
         using (ExportTrace.Measure("  save"))
@@ -230,7 +266,7 @@ internal sealed class DevelopExportRunner
                 await RunExportBatchAsync(
                     selection,
                     view.quickExportSettings.ToBatchSettings(),
-                    view.quickExportSettings.Encoding);
+                    With(view.quickExportSettings.Encoding, profile));
                 return;
             }
             using (ExportTrace.Measure("  develop+encode"))
@@ -240,7 +276,7 @@ internal sealed class DevelopExportRunner
                         view.quickExportSettings.Destination.PathFor(frame.SourcePath)),
                     view.quickExportSettings.Format,
                     outcome => view.SetOutputStatus(DevelopPanelState.Describe(outcome)),
-                    view.quickExportSettings.Encoding);
+                    With(view.quickExportSettings.Encoding, profile));
             }
         }
         finally
@@ -295,7 +331,7 @@ internal sealed class DevelopExportRunner
         RunExportBatchAsync(
             frames,
             view.exportSettings,
-            view.exportSettings.ToEncodingOptions());
+            With(view.exportSettings.ToEncodingOptions(), OutputProfileFor(frames)));
 
     /// <summary>
     /// 본 내보내기와 빠른 내보내기가 같이 쓰는 배치입니다. macOS 도 <c>startExportBatch</c>

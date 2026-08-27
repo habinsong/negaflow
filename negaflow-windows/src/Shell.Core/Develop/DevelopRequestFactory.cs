@@ -276,6 +276,7 @@ public static class DevelopRequestFactory
             TiffCompression = output.TiffCompression,
             OutputBitDepth = (uint)output.BitDepth,
             OutputColorSpace = output.ColorSpace,
+            OutputIccProfile = output.OutputIccProfile,
             PreserveAlpha = output.PreserveAlpha,
             MetadataPolicy = output.MetadataPolicy,
             Metadata = output.Metadata ?? new ExportMetadataValues(),

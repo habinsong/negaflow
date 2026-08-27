@@ -72,11 +72,25 @@ internal sealed class PrintSheetExportRunner
             return;
         }
 
+        // 인화소 ICC 를 고릅니다. macOS `selectedPrintWorkspaceOutputProfile` 과 같은 규칙이며,
+        // 있어야 하는데 없으면 **내보내지 않고** 알립니다 — 그대로 내면 랩이 받는 색이 달라집니다.
+        PrintOutputProfileChoice profile = PrintOutputProfile.For(
+            selection,
+            presentation.Current.Print,
+            presentation.Current.SoftProof);
+        if (profile.Missing)
+        {
+            report(AppResources.Get("printOutputProfileRequired", "Text"));
+            return;
+        }
+
         isRunning = true;
         report(string.Empty);
         try
         {
-            ExportTrace.Write($"print sheet press frames={selection.Count} format={format}");
+            ExportTrace.Write(
+                $"print sheet press frames={selection.Count} format={format} " +
+                $"icc={(profile.Profile is { } bytes ? bytes.Length : 0)}");
             using IDisposable _pressed = ExportTrace.Measure("print sheet total");
             PrintSheetWriteResult result = await PrintSheetWriter.WriteAsync(
                 selection,
@@ -85,7 +99,8 @@ internal sealed class PrintSheetExportRunner
                 LibraryFrameNaming.DisplayName(selection[0]),
                 textRasterHost,
                 format,
-                jpegQuality);
+                jpegQuality,
+                profile.Profile);
             // 실패는 어느 단계에서 멈췄는지를 남깁니다. "쓰지 못했습니다" 만으로는 다시
             // 눌러 보는 것 말고 사용자가 할 수 있는 일이 없습니다 - 스캔 실패 줄과 같은
             // 규칙입니다.

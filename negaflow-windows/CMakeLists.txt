@@ -809,6 +809,7 @@ add_library(negaflow_native SHARED
     src/Native/abi/request/develop_request_v24_v25.cpp
     src/Native/abi/request/develop_request_v26_v34.cpp
     src/Native/abi/request/develop_request_v36.cpp
+    src/Native/abi/request/develop_request_v37.cpp
     src/Native/abi/result/develop_result_prepare_v1_v12.cpp
     src/Native/abi/result/develop_result_prepare_v13_v21.cpp
     src/Native/abi/result/develop_result_prepare_v22_v34.cpp
@@ -817,6 +818,7 @@ add_library(negaflow_native SHARED
     src/Native/abi/run/develop_run_v23_v28.cpp
     src/Native/abi/run/develop_run_v29_v34.cpp
     src/Native/abi/run/develop_run_v36.cpp
+    src/Native/abi/run/develop_run_v37.cpp
     src/Native/abi/support/abi_layout.cpp
     src/Native/abi/support/crash_log.cpp
     src/Native/abi/support/abi_text.cpp

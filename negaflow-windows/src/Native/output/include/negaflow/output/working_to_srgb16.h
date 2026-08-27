@@ -7,6 +7,7 @@
 #include "negaflow/core/machine_memory.h"
 
 #include <cstdint>
+#include <span>
 #include <vector>
 
 namespace negaflow::output {
@@ -33,6 +34,11 @@ struct WorkingToSrgb16Limits final {
     // False publishes RGB and deliberately omits alpha, matching the macOS export option.
     // True keeps straight (unassociated) alpha as a fourth output component.
     bool preserve_alpha{false};
+    // 인화소가 준 ICC 입니다. 비어 있지 않으면 **published 색공간이 이것**이 됩니다 —
+    // 화소를 이 프로파일로 옮기고 파일에도 이것을 박습니다. macOS
+    // `ExportEngine.write(outputProfile:)` 가 `outputColorSpace` 를 통째로 바꾸는 자리와
+    // 같습니다. 비어 있으면 `color_space` 가 그대로 쓰입니다.
+    std::span<const std::uint8_t> output_icc_profile{};
 };
 
 struct Srgb16Image final {

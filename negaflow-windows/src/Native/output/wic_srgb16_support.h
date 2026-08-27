@@ -8,6 +8,7 @@
 #include <wrl/client.h>
 
 #include <cstdint>
+#include <span>
 #include <vector>
 
 namespace negaflow::output::detail {
@@ -45,7 +46,8 @@ enum class StandardSrgbStatus : std::uint8_t {
     Microsoft::WRL::ComPtr<IWICColorContext>& context,
     std::vector<std::uint8_t>& profile_bytes,
     std::uint32_t& native_error_code,
-    bool linear_transfer = false);
+    bool linear_transfer = false,
+    std::span<const std::uint8_t> output_icc_profile = {});
 
 [[nodiscard]] StandardSrgbStatus load_standard_srgb_context(
     IWICImagingFactory* factory,

@@ -1202,6 +1202,7 @@
   <data name="printPageCountFormat.Text" xml:space="preserve"><value>%d장</value><comment>Windows only: sheet count over the canvas.</comment></data>
   <data name="printExportDone.Text" xml:space="preserve"><value>{0} 에 저장했습니다.</value><comment>Windows only: print export result line.</comment></data>
   <data name="printExportFailed.Text" xml:space="preserve"><value>인화물을 쓰지 못했습니다.</value><comment>Windows only: print export failure line.</comment></data>
+  <data name="printOutputProfileRequired.Text" xml:space="preserve"><value>PRINT 내보내기에는 유효한 RGB 프린터 ICC 프로파일이 필요합니다.</value><comment>AppLocalizedPhrase.printOutputProfileRequired</comment></data>
   <data name="printTemplate.Text" xml:space="preserve"><value>템플릿</value><comment>AppLocalizedPhrase.template</comment></data>
   <data name="printTemplateOneLargeTwoSmall.Text" xml:space="preserve"><value>큰 1 + 작은 2</value><comment>PrintPicturePackageTemplate.oneLargeTwoSmall</comment></data>
   <data name="printTemplateTwoUp.Text" xml:space="preserve"><value>2분할</value><comment>PrintPicturePackageTemplate.twoUp</comment></data>

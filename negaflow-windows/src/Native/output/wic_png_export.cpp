@@ -288,7 +288,9 @@ WicPngExportResult export_working_to_srgb16_png(
             limits.max_color_profile_bytes,
             color_context,
             profile_bytes,
-            result.native_error_code)) {
+            result.native_error_code,
+            false,
+            limits.conversion.output_icc_profile)) {
             case detail::StandardSrgbStatus::ok:
                 break;
             case detail::StandardSrgbStatus::unavailable:

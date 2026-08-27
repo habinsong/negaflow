@@ -182,6 +182,13 @@ public sealed class DevelopExportRequest
     public ExportColorSpace OutputColorSpace { get; init; } = ExportColorSpace.Srgb;
 
     /// <summary>
+    /// 인화소가 준 ICC 프로파일입니다. 비어 있지 않으면 <b>이것이 게시 색공간</b>이 되어
+    /// <see cref="OutputColorSpace"/> 를 대신합니다 — 화소를 이 프로파일로 옮기고 파일에도
+    /// 이것을 박습니다. macOS <c>ExportEngine.write(outputProfile:)</c> 와 같은 뜻입니다.
+    /// </summary>
+    public byte[]? OutputIccProfile { get; init; }
+
+    /// <summary>
     /// PNG/TIFF exports preserve straight source alpha. JPEG requests with this flag are
     /// rejected before the native pipeline reads the source.
     /// </summary>

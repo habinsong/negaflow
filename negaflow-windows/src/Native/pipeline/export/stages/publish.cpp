@@ -96,6 +96,7 @@ DevelopExportOutcome publish_developed(
         output_limits.bits_per_sample = request.output_bit_depth;
         output_limits.color_space = request.output_color_space;
         output_limits.conversion.preserve_alpha = request.preserve_alpha;
+        output_limits.conversion.output_icc_profile = request.output_icc_profile;
         // PNG 는 EXIF 를 담지 않는다. 정책은 파일에 아무 흔적도 남기지 않는다.
         const negaflow::output::WicPngExportResult exported =
             negaflow::output::export_working_to_srgb16_png(
@@ -130,6 +131,7 @@ DevelopExportOutcome publish_developed(
         negaflow::output::WicJpegExportLimits jpeg_limits{};
         jpeg_limits.metadata_policy = request.metadata_policy;
         jpeg_limits.metadata = request.metadata;
+        jpeg_limits.conversion.output_icc_profile = request.output_icc_profile;
         const negaflow::output::WicJpegExportResult exported =
             negaflow::output::export_working_to_srgb8_jpeg(
                 output_sharpening.image,
@@ -167,6 +169,7 @@ DevelopExportOutcome publish_developed(
     output_limits.bits_per_sample = request.output_bit_depth;
     output_limits.color_space = request.output_color_space;
     output_limits.conversion.preserve_alpha = request.preserve_alpha;
+    output_limits.conversion.output_icc_profile = request.output_icc_profile;
     output_limits.metadata_policy = request.metadata_policy;
     output_limits.metadata = request.metadata;
     const negaflow::output::WicTiffExportResult exported =

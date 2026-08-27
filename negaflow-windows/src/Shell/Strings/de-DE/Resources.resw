@@ -1202,6 +1202,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="printPageCountFormat.Text" xml:space="preserve"><value>%d Seiten</value><comment>Windows only: sheet count over the canvas.</comment></data>
   <data name="printExportDone.Text" xml:space="preserve"><value>Gespeichert unter {0}</value><comment>Windows only: print export result line.</comment></data>
   <data name="printExportFailed.Text" xml:space="preserve"><value>Der Druck konnte nicht geschrieben werden.</value><comment>Windows only: print export failure line.</comment></data>
+  <data name="printOutputProfileRequired.Text" xml:space="preserve"><value>Für den PRINT-Export ist ein gültiges RGB-Drucker-ICC-Profil erforderlich.</value><comment>AppLocalizedPhrase.printOutputProfileRequired</comment></data>
   <data name="printTemplate.Text" xml:space="preserve"><value>Vorlage</value><comment>AppLocalizedPhrase.template</comment></data>
   <data name="printTemplateOneLargeTwoSmall.Text" xml:space="preserve"><value>1 groß + 2 klein</value><comment>PrintPicturePackageTemplate.oneLargeTwoSmall</comment></data>
   <data name="printTemplateTwoUp.Text" xml:space="preserve"><value>2 pro Seite</value><comment>PrintPicturePackageTemplate.twoUp</comment></data>

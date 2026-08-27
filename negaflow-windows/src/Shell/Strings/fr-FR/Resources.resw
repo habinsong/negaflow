@@ -1202,6 +1202,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="printPageCountFormat.Text" xml:space="preserve"><value>%d pages</value><comment>Windows only: sheet count over the canvas.</comment></data>
   <data name="printExportDone.Text" xml:space="preserve"><value>Enregistré dans {0}</value><comment>Windows only: print export result line.</comment></data>
   <data name="printExportFailed.Text" xml:space="preserve"><value>Impossible d’écrire le tirage.</value><comment>Windows only: print export failure line.</comment></data>
+  <data name="printOutputProfileRequired.Text" xml:space="preserve"><value>L’export PRINT nécessite un profil ICC d’imprimante RVB valide.</value><comment>AppLocalizedPhrase.printOutputProfileRequired</comment></data>
   <data name="printTemplate.Text" xml:space="preserve"><value>Modèle</value><comment>AppLocalizedPhrase.template</comment></data>
   <data name="printTemplateOneLargeTwoSmall.Text" xml:space="preserve"><value>1 grande + 2 petites</value><comment>PrintPicturePackageTemplate.oneLargeTwoSmall</comment></data>
   <data name="printTemplateTwoUp.Text" xml:space="preserve"><value>2 par page</value><comment>PrintPicturePackageTemplate.twoUp</comment></data>

@@ -92,6 +92,7 @@ internal static class Program
         LibraryHostTests.Run();
         FrameMarkSyncTests.Run();
         ExportConcurrencyTests.Run();
+        PrintOutputProfileTests.Run();
         DevelopPresentationTests.Run();
         DevelopPanelTests.Run();
         FrameImportTests.Run();

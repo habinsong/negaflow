@@ -236,6 +236,13 @@ public readonly record struct ExportEncodingOptions
 
     public ExportColorSpace ColorSpace { get; init; }
 
+    /// <summary>
+    /// 인화소가 준 ICC 입니다. 비어 있지 않으면 <b>이것이 게시 색공간</b>이 되어
+    /// <see cref="ColorSpace"/> 를 대신합니다. macOS <c>ExportEngine.write(outputProfile:)</c>
+    /// 와 같은 뜻이며, 현상 대상이 PRINT 이거나 C-print 공정일 때 걸립니다.
+    /// </summary>
+    public byte[]? OutputIccProfile { get; init; }
+
     public ExportMetadataPolicy MetadataPolicy { get; init; }
 
     /// <summary>구조체라 기본값을 둘 수 없습니다. null 은 빈 값으로 봅니다.</summary>
@@ -289,6 +296,9 @@ public static class ExportSettingsExtensions
                 : DevelopTiffCompression.None,
         BitDepth = encoding.BitDepth == 8 ? 8 : 16,
         ColorSpace = Enum.IsDefined(encoding.ColorSpace) ? encoding.ColorSpace : ExportColorSpace.Srgb,
+        // ICC 는 머리말만 128 바이트입니다. 그보다 짧은 것은 프로파일이 아니므로 버립니다 —
+        // 네이티브도 같은 자리에서 거절하지만, 여기서 걸러야 왜 sRGB 로 나갔는지가 분명합니다.
+        OutputIccProfile = encoding.OutputIccProfile is { Length: >= 128 } profile ? profile : null,
         MetadataPolicy = Enum.IsDefined(encoding.MetadataPolicy)
             ? encoding.MetadataPolicy
             : ExportMetadataPolicy.Minimal,
