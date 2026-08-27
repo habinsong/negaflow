@@ -174,16 +174,24 @@ public sealed class DevelopExportCoordinator
     /// TIFF16, 회차마다 새 프로세스, 16 코어):
     /// </para>
     /// <code>
-    ///   동시 1장  49.8초   peak 1,021 MB
-    ///   동시 2장  29.5초   peak 1,431 MB
-    ///   동시 4장  20.5초   peak 2,075 MB
-    ///   동시 6장  18.5초   peak 3,178 MB
-    ///   동시 8장  18.4초   peak 3,691 MB
+    ///   스캔 TIFF 12 장                     카메라 RAW 12 장
+    ///   동시 1장  17.1초  장당 1.43  401MB   37.6초  장당 3.13
+    ///   동시 2장  12.8초  장당 1.07  672MB   25.0초  장당 2.08
+    ///   동시 3장  11.1초  장당 0.92  945MB   21.2초  장당 1.76
+    ///   동시 4장   9.9초  장당 0.83  958MB   19.7초  장당 1.64
+    ///   동시 6장  10.1초  장당 0.84 1224MB   22.1초  장당 1.84
+    ///   동시 8장   9.8초  장당 0.82 1500MB   17.3초  장당 1.44
     /// </code>
     /// <para>
-    /// 6 을 넘으면 시간이 평평해지고 메모리만 오릅니다. 그래서 코어에서 뽑은 값과 설치
-    /// 메모리에서 뽑은 값 중 작은 쪽을 씁니다 — 코어가 많아도 메모리가 작으면 겹치는 만큼
-    /// 스왑으로 갑니다. 한 장이 도는 동안 원본 디코드와 working 이미지가 함께 상주합니다.
+    /// **무릎은 4 입니다.** 그 위로는 시간이 평평하고 메모리만 오릅니다. 예전에는 상한이 6
+    /// 이었는데, 그 값은 <b>한 장의 현상이 코어 하나만 쓰던 때</b>의 것입니다. 지금은 필름
+    /// 룩·인코딩·색 커널이 전부 행 블록으로 쪼개져 돌고 GPU 까지 쓰므로, 한 장이 이미 기계를
+    /// 거의 채웁니다 — 여섯을 겹치면 같은 자원을 여섯으로 나눠 갖고 경합만 늘어납니다.
+    /// </para>
+    /// <para>
+    /// 코어에서 뽑은 값과 설치 메모리에서 뽑은 값 중 작은 쪽을 씁니다 — 코어가 많아도
+    /// 메모리가 작으면 겹치는 만큼 스왑으로 갑니다. 한 장이 도는 동안 원본 디코드와
+    /// working 이미지가 함께 상주합니다.
     /// </para>
     /// <para>
     /// **기울기는 장당 약 1,070MB 입니다.** 예전 값 400MB 는 내보내기가 CPU 로만 돌던 때의
@@ -217,6 +225,11 @@ public sealed class DevelopExportCoordinator
     /// 여기서 빼 두지 않으면 같은 바이트를 두 번 쓰게 됩니다.
     /// </summary>
     private const double IntegratedGpuFraction = 0.15;
+
+    /// <summary>
+    /// 실측으로 시간이 평평해지는 자리입니다(위 표). 넘겨 봐야 메모리만 오릅니다.
+    /// </summary>
+    private const int MaximumUsefulSlots = 4;
 
     private static int ResolveMaximumConcurrentExports() =>
         ResolveMaximumConcurrentExports(
@@ -271,7 +284,7 @@ public sealed class DevelopExportCoordinator
             // 전용 GPU 가 없으면 색·룩 단계도 CPU 가 집니다. 디코드와 서로 코어를 뺏습니다.
             slots -= 1;
         }
-        return Math.Clamp(slots, 1, 6);
+        return Math.Clamp(slots, 1, MaximumUsefulSlots);
     }
 
     /// <summary>

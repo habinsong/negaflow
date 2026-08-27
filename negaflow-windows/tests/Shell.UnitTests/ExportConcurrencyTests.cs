@@ -49,11 +49,11 @@ internal static class ExportConcurrencyTests
                 2, 4UL * Gigabyte, Gpu(hasGpu: true, integrated: true)) == 1,
             "a 4GB machine still exports, one at a time");
 
-        // 램이 넉넉하고 전용 GPU 가 있으면 실측 최적인 여섯 칸까지 엽니다.
+        // 램이 넉넉하고 전용 GPU 가 있으면 실측 최적인 네 칸까지 엽니다.
         Check(
             DevelopExportCoordinator.ResolveMaximumConcurrentExports(
-                16, 32UL * Gigabyte, Gpu(hasGpu: true, integrated: false)) == 6,
-            "a 32GB workstation with a discrete GPU opens six slots");
+                16, 32UL * Gigabyte, Gpu(hasGpu: true, integrated: false)) == 4,
+            "a 32GB workstation with a discrete GPU opens four slots");
 
         // 코어가 적으면 램이 남아도 코어가 상한입니다.
         Check(
@@ -61,7 +61,7 @@ internal static class ExportConcurrencyTests
                 4, 32UL * Gigabyte, Gpu(hasGpu: true, integrated: false)) == 2,
             "cores cap the slots when memory is plentiful");
 
-        // 어떤 조합에서도 한 칸 아래로 내려가거나 여섯 칸 위로 올라가지 않습니다.
+        // 어떤 조합에서도 한 칸 아래로 내려가거나 네 칸 위로 올라가지 않습니다.
         foreach (int cores in new[] { 1, 2, 4, 8, 16, 32 })
         {
             foreach (ulong gigabytes in new[] { 2UL, 4UL, 8UL, 16UL, 32UL, 64UL, 128UL })
@@ -77,7 +77,7 @@ internal static class ExportConcurrencyTests
                     int slots = DevelopExportCoordinator.ResolveMaximumConcurrentExports(
                         cores, gigabytes * Gigabyte, adapter);
                     Check(
-                        slots is >= 1 and <= 6,
+                        slots is >= 1 and <= 4,
                         $"slots stay in range for {cores} cores / {gigabytes}GB");
                 }
             }
