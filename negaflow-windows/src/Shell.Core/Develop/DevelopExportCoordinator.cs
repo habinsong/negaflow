@@ -1,6 +1,7 @@
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
+using Negaflow.Shell.Library;
 
 namespace Negaflow.Shell;
 
@@ -198,20 +199,74 @@ public sealed class DevelopExportCoordinator
     /// </remarks>
     public static int MaximumConcurrentExports { get; } = ResolveMaximumConcurrentExports();
 
+    /// <summary>한 칸이 도는 동안 쓰는 양입니다. 실측 기울기입니다(위 설명).</summary>
     private const long ExportSlotBytes = 1070L * 1024 * 1024;
-    private const long ExportReserveBytes = 1024L * 1024 * 1024;
 
-    private static int ResolveMaximumConcurrentExports()
+    /// <summary>
+    /// 캐시도 GPU 풀도 아닌 몫입니다 — 코드·.NET 힙·WinUI·D3D11 스테이징.
+    /// </summary>
+    /// <remarks>
+    /// 엔진이 같은 자리를 재어 남긴 값입니다: 코드 432MB, D3D11 스테이징 297MB
+    /// (<c>frame_cache_budget.cpp</c> 의 "캐시가 아닌 몫"). 합쳐 1GB 로 둡니다.
+    /// </remarks>
+    private const long ProcessBaselineBytes = 1024L * 1024 * 1024;
+
+    /// <summary>
+    /// 내장 그래픽의 작업 텍스처는 **같은 RAM 에서 나옵니다.** 엔진이 설치 RAM 의 이 몫을
+    /// GPU 풀 상한으로 씁니다(<c>gpu_cache_budget.h</c> 의 <c>integrated_system_fraction</c>).
+    /// 여기서 빼 두지 않으면 같은 바이트를 두 번 쓰게 됩니다.
+    /// </summary>
+    private const double IntegratedGpuFraction = 0.15;
+
+    private static int ResolveMaximumConcurrentExports() =>
+        ResolveMaximumConcurrentExports(
+            Environment.ProcessorCount,
+            (ulong)Math.Max(0L, GC.GetGCMemoryInfo().TotalAvailableMemoryBytes),
+            GpuCacheBridge.TryRead());
+
+    /// <summary>
+    /// 칸 수를 정하는 규칙입니다. **인자는 전부 기계에서 옵니다** — 상수는 실측 기울기뿐입니다.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 램 8GB · 내장 그래픽 노트북에서도 돌아야 합니다. 예전 규칙은 예약이 1GB 고정이라
+    /// 그런 기계에서 코어가 여덟이면 세 칸을 열었고, 앱의 프레임 캐시(그 크기에서는 890MB)와
+    /// 내장 GPU 풀(설치 RAM 의 15% = 1,229MB)이 <b>같은 8GB</b> 를 나눠 쓰는 것을 아무도 세지
+    /// 않아 합계가 6.3GB 가 됐습니다. 그 기계는 스왑으로 갑니다.
+    /// </para>
+    /// <para>
+    /// 그래서 예약을 기계에서 뽑습니다 — 프레임 캐시 예산(<see cref="FrameCacheBudget"/>,
+    /// 엔진과 같은 규칙) + 내장이면 GPU 풀 몫 + 프로세스 바탕. 그 위에 프로세스 전체가 설치
+    /// 메모리의 <see cref="FrameCacheBudget.ManualMemoryFraction"/> 를 넘지 않게 묶습니다 —
+    /// 이 저장소가 이미 "이 기계에서 우리가 가져도 되는 최대" 로 쓰는 값입니다.
+    /// </para>
+    /// </remarks>
+    internal static int ResolveMaximumConcurrentExports(
+        int processorCount,
+        ulong installedBytes,
+        GpuCacheInfo? gpu)
     {
-        int byCores = Math.Max(1, Environment.ProcessorCount / 2);
+        int byCores = Math.Max(1, processorCount / 2);
+        if (installedBytes == 0UL)
+        {
+            // 설치 메모리를 못 읽었습니다. 모르는 것을 근거로 여러 칸을 열지 않습니다.
+            return 1;
+        }
 
-        long installed = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
-        int byMemory = installed > ExportReserveBytes
-            ? (int)((installed - ExportReserveBytes) / ExportSlotBytes)
-            : 1;
+        bool hasDiscreteGpu = gpu is { HasGpu: true, IsIntegrated: false };
+        FrameCacheLimits cache = FrameCacheBudget.AutomaticLimits(installedBytes);
+        long cacheBytes = (long)(FrameCacheBudget.EstimatedResidentMegabytes(cache) * 1024 * 1024);
+        long integratedGpuBytes = hasDiscreteGpu
+            ? 0L
+            : (long)(installedBytes * IntegratedGpuFraction);
+        long reserve = cacheBytes + integratedGpuBytes + ProcessBaselineBytes;
+
+        long ceiling = (long)(installedBytes * FrameCacheBudget.ManualMemoryFraction);
+        long forSlots = ceiling - reserve;
+        int byMemory = forSlots >= ExportSlotBytes ? (int)(forSlots / ExportSlotBytes) : 1;
 
         int slots = Math.Min(byCores, byMemory);
-        if (GpuCacheBridge.TryRead() is not { HasGpu: true, IsIntegrated: false })
+        if (!hasDiscreteGpu)
         {
             // 전용 GPU 가 없으면 색·룩 단계도 CPU 가 집니다. 디코드와 서로 코어를 뺏습니다.
             slots -= 1;
