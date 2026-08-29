@@ -199,7 +199,7 @@ FILM-R은 GrainMend RGB 자동 경로만 검증합니다.
 - 지원하는 모든 Mac의 성능
 
 최종 화면과 실기기 확인은 사용자가 맡습니다.
-빌드 성공으로 대신하지 않고 [출시 전 실기기 점검표](../validation/REAL_QA_CHECKLIST.md)에 결과를
+빌드 성공으로 대신하지 않고 출시 전 실기기 점검표에 결과를
 남깁니다.
 
 ## 문서 기준
@@ -213,5 +213,5 @@ FILM-R은 GrainMend RGB 자동 경로만 검증합니다.
 | 카탈로그 저장 방식 | [카탈로그 저장 구조](../architecture/CATALOG_STORAGE.md) |
 | 스캐너 프로파일 출시 기준 | [스캐너 프로파일 품질 검사](../reference/PROFILE_QUALITY_GATE.md) |
 | GrainMend 구현과 한계 | [GrainMend](GRAINMEND.md) |
-| 최종 화면·실기기 승인 | [출시 전 실기기 점검표](../validation/REAL_QA_CHECKLIST.md) |
+| 최종 화면·실기기 승인 | 출시 전 실기기 점검표 |
 | 설치와 사용법 | 저장소 루트의 README 파일 |

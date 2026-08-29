@@ -179,8 +179,8 @@ Organizing:
 - Grid, compare, survey
 - Reviewing duplicate candidates
 
-In the folder view each folder shows a band — disclosure triangle, folder, name, count, develop
-process, target, apply — and the band collapses the thumbnails under it. Collapsed folders are
+In the folder view each folder shows a band with a disclosure triangle, folder, name, count,
+develop process, target, and apply. The band collapses the thumbnails under it. Collapsed folders are
 remembered across launches, separately from the file list in the sidebar.
 
 The folder view is **one** grid, with each folder as a section and its band as the section header.
@@ -392,12 +392,12 @@ What automated checks do not settle:
 
 | What you want | Document |
 |---|---|
-| Current implementation and verification state | [Project status](../product/PROJECT_STATUS.md) |
+| Current implementation and verification state | Project status |
 | Inversion and develop | [Chroma Engine](../product/CHROMA_ENGINE.md) |
 | Defect repair | [GrainMend](../product/GRAINMEND.md) |
 | Film profiles | [Film profiles](../product/FILM_PROFILES.md) |
 | Connecting a scanner | [Scanner plugin architecture](SCANNER_PLUGINS.md) |
 | Release criteria for profiles | [Scanner profile quality gate](../reference/PROFILE_QUALITY_GATE.md) |
-| Checking real hardware and displays | [Real-device QA checklist](../validation/REAL_QA_CHECKLIST.md) |
+| Checking real hardware and displays | Real-device QA checklist |
 | Preservation archive | [Library archive](LIBRARY_ARCHIVE.md) |
 | Hash relationships of output files | [Render manifest](../reference/RENDER_MANIFEST.md) |

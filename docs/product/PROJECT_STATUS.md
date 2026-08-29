@@ -209,7 +209,7 @@ does the regression check and uploads the report.
 
 The final look and the real hardware are the user's call.
 A successful build does not stand in for them; results go in the
-[real-device QA checklist](../validation/REAL_QA_CHECKLIST.md).
+real-device QA checklist.
 
 ## Which document owns what
 
@@ -222,5 +222,5 @@ A successful build does not stand in for them; results go in the
 | How the catalog is stored | [Catalog storage](../architecture/CATALOG_STORAGE.md) |
 | Release rules for scanner profiles | [Scanner profile quality gate](../reference/PROFILE_QUALITY_GATE.md) |
 | GrainMend implementation and limits | [GrainMend](GRAINMEND.md) |
-| Final look and real-device approval | [Real-device QA checklist](../validation/REAL_QA_CHECKLIST.md) |
+| Final look and real-device approval | Real-device QA checklist |
 | Install and usage | The README files in the repository root |

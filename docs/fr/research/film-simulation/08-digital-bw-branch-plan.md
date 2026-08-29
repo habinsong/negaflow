@@ -4,4 +4,4 @@
 
 Ce document de recherche est la source liée depuis l’index français.
 
-[Ouvrir la source](../../../research/film-simulation/08-digital-bw-branch-plan.md)
+Ouvrir la source

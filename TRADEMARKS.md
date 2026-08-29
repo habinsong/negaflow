@@ -28,20 +28,20 @@ All trademarks, service marks, trade names, logos, and product names are the
 property of their respective owners, including but not limited to:
 
 - **Kodak, Portra, Ektar, Gold, UltraMax, Pro Image, ColorPlus, Ektachrome,
-  Vision3** — Eastman Kodak Company / Kodak Alaris.
-- **Fujifilm, Fujicolor, Superia, Velvia, Provia, Frontier, SP-3000** — FUJIFILM
+  Vision3**, Eastman Kodak Company / Kodak Alaris.
+- **Fujifilm, Fujicolor, Superia, Velvia, Provia, Frontier, SP-3000**, FUJIFILM
   Corporation.
-- **Noritsu, HS-1800** — Noritsu Koki Co., Ltd.
-- **Plustek, OpticFilm** — Plustek Inc.; **Ilford** — Harman Technology Ltd;
-  **Fomapan** — Foma Bohemia; **Adox** — ADOX; and the raw-format and camera
+- **Noritsu, HS-1800**, Noritsu Koki Co., Ltd.
+- **Plustek, OpticFilm**, Plustek Inc.; **Ilford**, Harman Technology Ltd;
+  **Fomapan**, Foma Bohemia; **Adox**, ADOX; and the raw-format and camera
   names referenced for file interoperability (Canon, Nikon, Sony, Fujifilm,
   Panasonic, Olympus, Pentax, Samsung, Hasselblad, Leica, Phase One, Sigma,
-  Epson, Mamiya, Leaf) — their respective owners.
-- **CineStill** — CineStill Film; **Lomography** — Lomographische AG;
-  **Phoenix** — Harman Technology Ltd; **Wolfen** — ORWO.
-- **Digital ICE** — Eastman Kodak Company (originally Applied Science Fiction);
-  **iSRD, SRDx, SilverFast** — LaserSoft Imaging AG; **VueScan** — Hamrick
-  Software; **Photoshop, Lightroom, Adobe RGB** — Adobe Inc.; **Capture One** —
+  Epson, Mamiya, Leaf), their respective owners.
+- **CineStill**, CineStill Film; **Lomography**, Lomographische AG;
+  **Phoenix**, Harman Technology Ltd; **Wolfen**, ORWO.
+- **Digital ICE**, Eastman Kodak Company (originally Applied Science Fiction);
+  **iSRD, SRDx, SilverFast**, LaserSoft Imaging AG; **VueScan**, Hamrick
+  Software; **Photoshop, Lightroom, Adobe RGB**, Adobe Inc.; **Capture One**,
   Capture One A/S.
 
 ## Bundled profile data

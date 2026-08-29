@@ -4,13 +4,13 @@
 
 <h1 align="center">negaflow</h1>
 
-<p align="center">Eine macOS-App für den gesamten Scan- und Entwicklungsprozess analoger Filme</p>
+<p align="center">Eine App für den Analogfilm-Ablauf, vom Scan über die Entwicklung bis zum Druck. Nativ auf macOS und auf Windows.</p>
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/de/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="Website"></a>
-  <a href="docs/de/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.9%20release-EF8B26" alt="Veröffentlichungsstatus"></a>
-  <a href="#voraussetzungen"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 oder neuer"></a>
-  <a href="negaflow-mac/Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 oder neuer"></a>
+  <a href="#install"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="Version 1.1.0"></a>
+  <a href="negaflow-mac/docs/README_de.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 oder neuer"></a>
+  <a href="negaflow-windows/docs/README_de.md"><img src="https://img.shields.io/badge/Windows-11-0078D4?logo=windows&logoColor=white" alt="Windows 11"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache-2.0-Lizenz"></a>
 </p>
 
@@ -34,7 +34,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/de/develop-dark.webp">
-    <img src="docs/images/de/develop-light.webp" alt="negaflow — Entwicklung">
+    <img src="docs/images/de/develop-light.webp" alt="negaflow Entwicklung">
   </picture>
 </p>
 
@@ -59,34 +59,74 @@ Scanner-Funktionen erscheinen nur, wenn ein separates Plug-in installiert ist.
 > So ein Werkzeug muss vor allem zuverlässig sein, leicht von der Hand gehen, schnell reagieren und Routinearbeit ordentlich erledigen.<br>
 > **negaflow** wird unabhängig als native macOS-App entwickelt und verbindet Abläufe aus Filmlaboren mit der Arbeit zu Hause.
 >
-> **Diesem Sommer gewidmet — zweihundert Jahre seit Niépces erster Fotografie.**
+> **Diesem Sommer gewidmet, zweihundert Jahre seit Niépces erster Fotografie.**
+
+---
+
+## Zwei Apps, getrennt gebaut
+
+negaflow läuft auf macOS und auf Windows. Die beiden Apps teilen sich keinen Code.
+
+| | macOS | Windows |
+|---|---|---|
+| Oberfläche | SwiftUI | WinUI 3 |
+| Engine | Swift und Core Image | C++ und Direct3D |
+| Farbmanagement | ColorSync | Windows ICM |
+
+Dasselbe Foto ergibt auf beiden Seiten dasselbe Bild. Referenzbilder aus dem macOS-Build
+liest die Windows-Testsuite zurück und vergleicht sie Pixel für Pixel.
+
+Jede Fassung ist für ihre eigene Plattform geschrieben statt portiert, was bedeutet, alles
+zweimal zu bauen. Dafür verhalten sich beide so, wie man es auf dem jeweiligen System
+erwartet.
+
+- [macOS-Dokumentation](negaflow-mac/docs/README_de.md)
+- [Windows-Dokumentation](negaflow-windows/docs/README_de.md)
+- [Wo sich beide unterscheiden](docs/de/platform/PLATFORM_DIFFERENCES.md)
 
 ---
 
 ## Installation
 
-Laden Sie die aktuelle Version unter [GitHub Releases](https://github.com/habinsong/negaflow/releases) herunter.<br>
-Für die meisten Macs ist das Universal-PKG vorgesehen.
+Die aktuelle Version gibt es bei [GitHub Releases](https://github.com/habinsong/negaflow/releases).
 
-| Download | Unterstützte Macs |
+### macOS
+
+| Download | Mac |
 |---|---|
-| `negaflow-1.0.9-1-macOS-universal.pkg` | Apple Silicon und Intel |
-| `negaflow-1.0.9-1-macOS-arm64.pkg` | Nur Apple Silicon |
+| `negaflow-1.1.0-1-macOS-universal.pkg` | Apple Silicon und Intel |
+| `negaflow-1.1.0-1-macOS-arm64.pkg` | Nur Apple Silicon |
 
-1. Laden Sie das passende PKG herunter.
-2. Öffnen Sie es und folgen Sie Installer.
+Für die meisten Macs passt das Universal-PKG.
+
+1. Laden Sie das PKG für Ihren Mac herunter.
+2. Öffnen Sie es und folgen Sie dem Installationsprogramm.
 3. Starten Sie **negaflow** aus `/Applications`.
 
-Das PKG installiert `negaflow.app` direkt unter `/Applications`.<br>
-DMG- und ZIP-Dateien für die manuelle Installation stehen auf derselben Release-Seite bereit.<br>
-Die derzeit auf GitHub veröffentlichten Dateien sind ad-hoc signiert und nicht von Apple notarisiert.<br>
-macOS kann den ersten Start deshalb blockieren. Versuchen Sie zunächst, negaflow zu öffnen, prüfen Sie
-dann den Hinweis unter **Systemeinstellungen → Datenschutz & Sicherheit** und wählen Sie
-**Trotzdem öffnen** nur dann, wenn die SHA-256-Prüfsumme der geladenen Datei mit der
-bei der Version veröffentlichten übereinstimmt.
+Auf derselben Seite liegen DMG und ZIP, falls Sie lieber von Hand installieren.
+Die App ist nicht notarisiert. Beim ersten Start öffnen Sie die Systemeinstellungen,
+gehen zu Datenschutz und Sicherheit und klicken auf Trotzdem öffnen.
 
-> Für einen echten Scanner ist ein separates Scanner-Plug-in erforderlich.<br>
-> SANE-Scanner verwenden [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane).
+### Windows
+
+| Download | PC |
+|---|---|
+| `negaflow-1.1.0-x64-setup.exe` | Windows 11 (x64) |
+
+1. Installationsprogramm herunterladen und starten.
+2. Sprache wählen und den Schritten folgen.
+3. **negaflow** über das Startmenü öffnen.
+
+Alles landet in Ihrem Benutzerordner, Administratorrechte sind nicht nötig.
+Zum Entfernen nehmen Sie `negaflow deinstallieren` im Startmenü oder die App-Liste
+in den Einstellungen.
+Das Installationsprogramm ist nicht signiert, deshalb warnt SmartScreen einmal.
+Klicken Sie auf Weitere Informationen und dann auf Trotzdem ausführen.
+
+> Für einen echten Scanner brauchen Sie ein separates Plug-in.<br>
+> SANE-Scanner übernimmt [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), verfügbar für macOS und Windows.
+
+---
 
 ## Funktionen
 
@@ -110,7 +150,6 @@ bei der Version veröffentlichten übereinstimmt.
 - Seitenbezogener Abzugs- und Schnellexport: Ein 6 × 7-Kontaktbogen mit 39 Fotos wird zu einer
   zusammengesetzten Datei, Einzelbildlayouts zu 39 Dateien, mit linearem Fortschritt und Prozent
 
-> Abgeschlossene Prüfungen stehen im [Projektstatus](docs/de/product/PROJECT_STATUS.md). <br>
 
 ## Chroma Engine
 
@@ -153,7 +192,6 @@ Jedes Ergebnis bleibt als GrainMend-Ebene erhalten. <br><br>
 Bei jeder **GrainMend RGB**-Ebene lassen sich Stärke ändern, Maske ansehen sowie einzeln deaktivieren oder löschen.
 
 
-
 Liefert das Scanner-Plug-in einen Infrarotkanal, ergänzt **GrainMend IR** seine Erkennung in derselben Bearbeitungshistorie.<br><br>
 
 **GrainMend RGB** ist ein eigenständiges Softwareverfahren und unterscheidet sich von hardwarebasierter Infrarotreinigung; <br>
@@ -187,14 +225,14 @@ Daten und Erzeugung sind unter [Filmprofile](docs/de/product/FILM_PROFILES.md) b
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/de/library-dark.webp">
-    <img src="docs/images/de/library-light.webp" alt="negaflow — Mediathek">
+    <img src="docs/images/de/library-light.webp" alt="negaflow Mediathek">
   </picture>
 </p>
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/de/print-dark.webp">
-    <img src="docs/images/de/print-light.webp" alt="negaflow — Druck">
+    <img src="docs/images/de/print-light.webp" alt="negaflow Druck">
   </picture>
 </p>
 
@@ -225,50 +263,39 @@ Einzelheiten stehen unter [Von der Bibliothek zum Druck](docs/de/product/WORKFLO
 
 ## Aus dem Quellcode bauen
 
-### Voraussetzungen
+Werkzeuge und Befehle unterscheiden sich je nach Plattform. Ausführlich steht es in der jeweiligen Dokumentation.
 
-- macOS 14.0 oder neuer
-- GUI-App: Xcode 26
-- Engine und CLI: Swift 5.9 oder neuer
-- Hardware-Scan: separates Scanner-Plug-in
+**macOS**
 
 ```bash
 git clone https://github.com/habinsong/negaflow.git
 cd negaflow
 
-# Release-App bauen und starten
+# Release bauen und starten
 bash scripts/run-app.sh
 
 # Nur bauen, nicht starten
 bash scripts/run-app.sh build
 ```
 
-Die GUI-App wird mit `xcodebuild` gebaut.<br>
-`scripts/run-app.sh` baut den Code, erstellt das App-Bundle und signiert es lokal.<br>
-Für Engine und CLI allein genügt `swift build`.
+Sie brauchen macOS 14 oder neuer und Xcode 26. Für Engine und CLI allein genügt `swift build`.
+Mehr steht in der [macOS-Dokumentation](negaflow-mac/docs/README_de.md).
 
-## CLI
+**Windows**
 
-```bash
-swift build
+```powershell
+git clone https://github.com/habinsong/negaflow.git
+cd negaflow\negaflow-windows
 
-# Scanner finden
-.build/debug/negaflow detect
-.build/debug/negaflow capabilities <scannerID>
+# Engine bauen
+.\scripts\build.ps1 -Preset x64-release
 
-# Entwickeln
-.build/debug/negaflow develop in.tiff out.jpg --look rich-neutral --target main
-
-# GrainMend
-.build/debug/negaflow develop scan.tif out.jpg --defects 1
-.build/debug/negaflow defect-bench ./scans --out ./report
-
-# Profile auflisten und Engine prüfen
-.build/debug/negaflow list-scanner-profiles
-.build/debug/negaflow selftest
+# App bauen und starten
+.\scripts\run-app.ps1 -Architecture x64 -Configuration Release
 ```
 
-Alle Optionen erscheinen, wenn `negaflow` ohne Argumente ausgeführt wird.
+Sie brauchen Windows 11, Visual Studio 2022 und das .NET 10 SDK.
+Mehr steht in der [Windows-Dokumentation](negaflow-windows/docs/README_de.md).
 
 ## Scanner
 
@@ -281,42 +308,46 @@ Die Haupt-App enthält und verlinkt keinen SANE-Code.
 
 ## Repository
 
-| Modul | Aufgabe |
-|---|---|
-| `Chromabase` | Chroma Engine, GrainMend, Profile und Export |
-| `ScannerKit` | Scanner-Funktionen und Verbindung externer Plug-ins |
-| `negaflowApp` | Oberfläche für Bibliothek, Entwicklung, Scan und Export |
-| `negaflowCLI` | Befehle für Entwicklung, Scan, Benchmarks und Selbsttest |
-
-Der Datenfluss zwischen den Modulen steht in der [Produktarchitektur](docs/de/architecture/PRODUCT_ARCHITECTURE.md).
-
-## Entwicklungsprüfungen
-
-```bash
-# Swift-Tests
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
-
-# GUI-Release-Build
-bash scripts/run-app.sh build
-
-# Vollständige Repository-Prüfung
-bash scripts/ci-gate.sh
+```
+negaflow/
+├── negaflow-mac/       macOS-App und Engine (Swift)
+├── negaflow-windows/   Windows-App und Engine (C#, C++)
+└── docs/               gemeinsame Dokumentation
 ```
 
-Automatisierte Tests prüfen Codeverhalten und Regressionen.<br>
-Scanner-spezifisches Verhalten, endgültige Bildqualität, Signatur und Notarisierung werden getrennt geprüft.
+**macOS**
+
+| Modul | Aufgabe |
+|---|---|
+| `Chromabase` | Chroma Engine, GrainMend, Profile, Export |
+| `ScannerKit` | Scannerfähigkeiten prüfen und Plug-in anbinden |
+| `negaflowApp` | Bibliothek, Entwicklung, Scan und Export |
+| `negaflowCLI` | Entwickeln, scannen, messen, Selbsttest |
+
+**Windows**
+
+| Modul | Aufgabe |
+|---|---|
+| `Native` | Chroma Engine, GrainMend, Export (C++) |
+| `Interop` | Die Brücke zwischen Engine und App |
+| `Catalog.Core` | Speicher der Bibliothek |
+| `Shell.Core` | Logik für Entwicklung, Druck und Export |
+| `Shell` | Bibliothek, Entwicklung und Druck (WinUI 3) |
+
+Wie die Daten zwischen den Modulen laufen, steht in der [Produktarchitektur](docs/de/architecture/PRODUCT_ARCHITECTURE.md).
 
 ## Dokumentation
 
 | Dokument | Inhalt |
 |---|---|
-| [Chroma Engine](docs/de/product/CHROMA_ENGINE.md) | Filmbasis, Invertierung, Farbe und Entwicklungsfolge |
-| [GrainMend](docs/de/product/GRAINMEND.md) | Erkennung, Reparatur, IR, Historie, Leistung und Qualität |
-| [Filmprofile](docs/de/product/FILM_PROFILES.md) | Analyse der Quelldaten und Profilerzeugung |
-| [Von der Bibliothek zum Print](docs/de/product/WORKFLOW.md) | Import, Ordnersynchronisierung, Stapelentwicklung, Einstellungsübertragung und Printprofile |
-| [Produktarchitektur](docs/de/architecture/PRODUCT_ARCHITECTURE.md) | App, Engine, Scanner, Speicher und Export |
-| [Projektstatus](docs/de/product/PROJECT_STATUS.md) | Implementierung, Messwerte und offene Prüfungen |
-| [Checkliste für reale QA](docs/de/validation/REAL_QA_CHECKLIST.md) | Prüfungen an echter Hardware und am Bildschirm |
+| [Chroma Engine](docs/de/product/CHROMA_ENGINE.md) | Filmbasis, Umkehrung, Farbverarbeitung, Reihenfolge |
+| [GrainMend](docs/de/product/GRAINMEND.md) | Defekterkennung und Reparatur, IR, Bearbeitungsverlauf, Qualität und Tempo |
+| [Filmprofile](docs/de/product/FILM_PROFILES.md) | Auswertung des Materials und Profilerstellung |
+| [Von der Bibliothek zum Druck](docs/de/product/WORKFLOW.md) | Import, Ordnerabgleich, Stapelentwicklung, Druckprofil |
+| [Produktarchitektur](docs/de/architecture/PRODUCT_ARCHITECTURE.md) | App, Engine, Scanner, Speicher, Export |
+| [Wo sich beide unterscheiden](docs/de/platform/PLATFORM_DIFFERENCES.md) | Was gleich ist und was nicht |
+| [macOS-Dokumentation](negaflow-mac/docs/README_de.md) | Installation, Bauen, CLI unter macOS |
+| [Windows-Dokumentation](negaflow-windows/docs/README_de.md) | Installation, Bauen, Engine-Prüfungen unter Windows |
 
 ## Lizenz
 

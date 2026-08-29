@@ -52,6 +52,6 @@
 最优点压在搜索边界时，不管偏移多大都算失败。
 
 自动测试代替不了真实设备上的 RGB/IR 对齐和逐种胶片的结果。
-真机确认按 [实机检查表](../validation/REAL_QA_CHECKLIST.md)里的 IR 项目做。
+真机确认按 实机检查表里的 IR 项目做。
 
 SANE 的设备控制和采集代码只放在独立仓库 `negaflow-scanner-sane` 里。

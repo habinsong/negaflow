@@ -4,4 +4,4 @@
 
 이 조사 문서는 한국어 문서 인덱스에서 연결되는 원문 자료입니다.
 
-[원문 열기](../../../research/film-simulation/08-digital-bw-branch-plan.md)
+원문 열기

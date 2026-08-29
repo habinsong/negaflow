@@ -215,7 +215,7 @@ macht die Regressionsprüfung und lädt den Bericht hoch.
 
 Das Endergebnis auf dem Bildschirm und die echte Hardware liegen beim Nutzer.
 Ein erfolgreicher Build ersetzt das nicht; die Ergebnisse gehören in die
-[Checkliste für echte Geräte](../validation/REAL_QA_CHECKLIST.md).
+Checkliste für echte Geräte.
 
 ## Welches Dokument gilt wofür
 
@@ -228,5 +228,5 @@ Ein erfolgreicher Build ersetzt das nicht; die Ergebnisse gehören in die
 | Art der Katalogspeicherung | [Katalogspeicherung](../architecture/CATALOG_STORAGE.md) |
 | Freigabekriterien für Scannerprofile | [Qualitätsprüfung der Scannerprofile](../reference/PROFILE_QUALITY_GATE.md) |
 | Umsetzung und Grenzen von GrainMend | [GrainMend](GRAINMEND.md) |
-| Freigabe von Endergebnis und echter Hardware | [Checkliste für echte Geräte](../validation/REAL_QA_CHECKLIST.md) |
+| Freigabe von Endergebnis und echter Hardware | Checkliste für echte Geräte |
 | Installation und Bedienung | Die README-Dateien im Wurzelverzeichnis |

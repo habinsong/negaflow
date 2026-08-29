@@ -139,7 +139,7 @@ v2 규격 위반은 일반 시간 제한을 기다리지 않고 플러그인을 
 v2 `result`에는 `appliedOptions`가 꼭 있어야 합니다.
 
 - `deviceID`, `resolutionDPI`, `bitDepth`, `colorMode`, `filmType`
-- `scanArea`: `originXMM`, `originYMM`, `widthMM`, `heightMM` — 요청을 복사한 값이 아니라
+- `scanArea`: `originXMM`, `originYMM`, `widthMM`, `heightMM`. 요청을 복사한 값이 아니라
   플러그인이 실제로 백엔드에 보낸 영역이다. 스캔 크기를 잘못 계산하는 백엔드를 우회하려고
   1mm 미만으로 조정될 수 있다. 앱은 반환된 픽셀 크기를 이 영역과 대조하므로, 요청을 그대로
   복사하면 검사가 무의미해진다.

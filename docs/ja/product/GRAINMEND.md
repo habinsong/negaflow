@@ -272,7 +272,7 @@ RGBの後退測定には、FILM-R v2の破損版と専門家による復元版44
 結果が良くなっても、6枚は専門家の復元版よりPSNRが低いままです。
 すべての写真の改善、RGBとIRの同等さ、実際のスキャナーのIR 品質を証明するものではありません。
 
-すべての表とコマンドは[GrainMend実スキャン比較](../validation/GRAINMEND_CORPUS.md)にあります。
+すべての表とコマンドはGrainMend実スキャン比較にあります。
 
 フィルムごとのIRの制限と位置合わせの失敗条件は、
 [GrainMend IRが避けるフィルム](../reference/INFRARED_LIMITS.md)にまとめました。

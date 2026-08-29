@@ -52,8 +52,8 @@ or viewing condition.
 
 **Print Export**, directly below Quick Export, renders the current page size, orientation, margins,
 layout, black, gray, or white sheet, captions, custom text, and crop marks. It uses the format, DPI, folder,
-naming, and delivery color-space settings shown in Export. Screen-only aids—gamut warnings,
-soft-proof simulation, and paper-surface sheen—are not baked into the file.
+naming, and delivery color-space settings shown in Export. Screen-only aids are not baked into the file: gamut warnings,
+soft-proof simulation, and paper-surface sheen.
 
 While either Print Export path is running, the Export panel shows the completed-page count, a
 linear progress bar, and a percentage instead of an indeterminate spinner.

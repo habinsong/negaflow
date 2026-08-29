@@ -4,4 +4,4 @@
 
 此研究文档是从简体中文文档索引打开的原始资料。
 
-[打开原文](../../../research/film-simulation/01-color-negative-still.md)
+打开原文

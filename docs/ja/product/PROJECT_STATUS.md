@@ -202,7 +202,7 @@ FILM-RはGrainMend RGBの自動経路だけを検証します。
 - 対応するすべてのMacでの性能
 
 最終的な画面と実機の確認はユーザーが担当します。
-ビルド成功で代用せず、[実機点検リスト](../validation/REAL_QA_CHECKLIST.md)に結果を残します。
+ビルド成功で代用せず、実機点検リストに結果を残します。
 
 ## どのドキュメントが基準か
 
@@ -215,5 +215,5 @@ FILM-RはGrainMend RGBの自動経路だけを検証します。
 | カタログの保存方法 | [カタログ保存構造](../architecture/CATALOG_STORAGE.md) |
 | スキャナープロファイルの出荷基準 | [スキャナープロファイル品質判定](../reference/PROFILE_QUALITY_GATE.md) |
 | GrainMendの実装と限界 | [GrainMend](GRAINMEND.md) |
-| 最終画面・実機の承認 | [実機点検リスト](../validation/REAL_QA_CHECKLIST.md) |
+| 最終画面・実機の承認 | 実機点検リスト |
 | インストールと使い方 | リポジトリ直下のREADMEファイル |

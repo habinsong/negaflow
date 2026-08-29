@@ -299,7 +299,7 @@ Rien de tout cela ne prouve que chaque photo s'améliore, que RGB et IR se valen
 soit sur la qualité IR d'un scanner réel.
 
 Le tableau complet et les commandes sont dans
-[Comparaison GrainMend sur scans réels](../validation/GRAINMEND_CORPUS.md).
+Comparaison GrainMend sur scans réels.
 
 Les limites IR par film et les conditions d'échec de l'alignement sont réunies dans
 [Films que GrainMend IR doit éviter](../reference/INFRARED_LIMITS.md).

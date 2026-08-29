@@ -4,4 +4,4 @@
 
 Dieses Forschungsdokument ist die Quelle, die aus dem deutschen Index verlinkt wird.
 
-[Quelle öffnen](../../../research/film-simulation/01-color-negative-still.md)
+Quelle öffnen

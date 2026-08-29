@@ -269,7 +269,7 @@ RGB 회귀에는 FILM-R v2의 손상본과 전문가 복원본 44쌍을 씁니�
 결과가 좋아졌어도 6장은 전문가 복원본보다 PSNR이 낮습니다.
 모든 사진의 개선, RGB와 IR의 동등함, 실제 스캐너 IR 품질을 증명하지 않습니다.
 
-전체 표와 명령은 [GrainMend 실제 스캔 비교](../validation/GRAINMEND_CORPUS.md)에 있습니다.
+전체 표와 명령은 GrainMend 실제 스캔 비교에 있습니다.
 
 필름별 IR 제한과 정렬 실패 조건은
 [GrainMend IR이 피해야 할 필름](../reference/INFRARED_LIMITS.md)에 정리했습니다.

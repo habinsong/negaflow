@@ -183,14 +183,14 @@ Pour organiser :
 - Grille, comparaison, sélection
 - Examen des doublons candidats
 
-Dans la vue par dossier, chaque dossier porte un bandeau — triangle, dossier, nom, nombre,
+Dans la vue par dossier, chaque dossier porte un bandeau : triangle, dossier, nom, nombre,
 procédé de développement, cible, appliquer. Le triangle replie les vignettes en dessous. Les
 dossiers repliés le restent au lancement suivant, indépendamment du repli de la liste de fichiers
 de la barre latérale.
 
 La vue par dossier est **une seule** grille : chaque dossier est une section et son bandeau en est
 l'en-tête. Il faut conserver cette structure. Donner une grille à chaque dossier puis les empiler
-supprime la paresse — la pile doit connaître la hauteur entière d'un dossier, donc celui-ci
+supprime la paresse. La pile doit connaître la hauteur entière d'un dossier, donc celui-ci
 construit toutes ses cartes dès qu'il entre dans le champ. Avec une seule grille, l'unité de
 paresse est une rangée, et c'est ce qui garde le défilement fluide sur plusieurs centaines de
 photos.
@@ -407,12 +407,12 @@ Ce que les contrôles automatiques ne règlent pas :
 
 | Ce que vous cherchez | Document |
 |---|---|
-| État actuel de l'implémentation et des vérifications | [État du projet](../product/PROJECT_STATUS.md) |
+| État actuel de l'implémentation et des vérifications | État du projet |
 | Inversion et développement | [Chroma Engine](../product/CHROMA_ENGINE.md) |
 | Réparation des défauts | [GrainMend](../product/GRAINMEND.md) |
 | Profils de film | [Profils de film](../product/FILM_PROFILES.md) |
 | Connecter un scanner | [Architecture des plugins scanner](SCANNER_PLUGINS.md) |
 | Critères de publication des profils | [Contrôle qualité des profils scanner](../reference/PROFILE_QUALITY_GATE.md) |
-| Vérifier matériel et écrans réels | [Checklist QA sur matériel réel](../validation/REAL_QA_CHECKLIST.md) |
+| Vérifier matériel et écrans réels | Checklist QA sur matériel réel |
 | Archive de conservation | [Archive de bibliothèque](LIBRARY_ARCHIVE.md) |
 | Relations d'empreintes des fichiers de sortie | [Manifeste de rendu](../reference/RENDER_MANIFEST.md) |

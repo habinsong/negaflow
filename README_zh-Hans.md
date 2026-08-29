@@ -4,13 +4,13 @@
 
 <h1 align="center">negaflow</h1>
 
-<p align="center">支持胶片翻拍、扫描和完整显影流程的 macOS 应用</p>
+<p align="center">从扫描胶片到冲洗和打印的完整流程。macOS 和 Windows 各有一套原生应用。</p>
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/zh/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="网站"></a>
-  <a href="docs/zh-Hans/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.9%20release-EF8B26" alt="发布状态"></a>
-  <a href="#系统要求"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 或更高版本"></a>
-  <a href="negaflow-mac/Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 或更高版本"></a>
+  <a href="#install"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="版本 1.1.0"></a>
+  <a href="negaflow-mac/docs/README_zh-Hans.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 及以上"></a>
+  <a href="negaflow-windows/docs/README_zh-Hans.md"><img src="https://img.shields.io/badge/Windows-11-0078D4?logo=windows&logoColor=white" alt="Windows 11"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 许可证"></a>
 </p>
 
@@ -34,7 +34,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/zh-Hans/develop-dark.webp">
-    <img src="docs/images/zh-Hans/develop-light.webp" alt="negaflow — 显影界面">
+    <img src="docs/images/zh-Hans/develop-light.webp" alt="negaflow 显影界面">
   </picture>
 </p>
 
@@ -60,29 +60,66 @@ negaflow 是一款 macOS 应用，用于导入、反相和显影扫描胶片或�
 
 ---
 
+## 两套分开做
+
+negaflow 在 macOS 和 Windows 上都能运行。两个应用不共用代码。
+
+| | macOS | Windows |
+|---|---|---|
+| 界面 | SwiftUI | WinUI 3 |
+| 引擎 | Swift 和 Core Image | C++ 和 Direct3D |
+| 色彩管理 | ColorSync | Windows ICM |
+
+同一张照片交给两边，出来的结果是一样的。macOS 版渲染出的基准图存在仓库里，
+Windows 的测试会读回来逐像素比对。
+
+每一边都按各自平台的方式写，不是移植过去再打补丁。代价是整套东西做了两遍，
+好处是两个版本在各自系统上都不显得别扭。
+
+- [macOS 文档](negaflow-mac/docs/README_zh-Hans.md)
+- [Windows 文档](negaflow-windows/docs/README_zh-Hans.md)
+- [两个版本的差异](docs/zh-Hans/platform/PLATFORM_DIFFERENCES.md)
+
+---
+
 ## 安装
 
-请从 [GitHub Releases](https://github.com/habinsong/negaflow/releases) 下载当前版本。<br>
-大多数 Mac 请使用 Universal PKG。
+在 [GitHub Releases](https://github.com/habinsong/negaflow/releases) 下载当前版本。
 
-| 下载文件 | 支持的 Mac |
+### macOS
+
+| 下载 | 适用的 Mac |
 |---|---|
-| `negaflow-1.0.9-1-macOS-universal.pkg` | Apple Silicon 和 Intel |
-| `negaflow-1.0.9-1-macOS-arm64.pkg` | 仅 Apple Silicon |
+| `negaflow-1.1.0-1-macOS-universal.pkg` | Apple Silicon 和 Intel |
+| `negaflow-1.1.0-1-macOS-arm64.pkg` | 仅 Apple Silicon |
 
-1. 下载适合当前 Mac 的 PKG。
-2. 打开 PKG，并按安装器提示操作。
+多数 Mac 用 Universal PKG 就可以。
+
+1. 下载与你的 Mac 匹配的 PKG。
+2. 打开后按安装程序提示操作。
 3. 从 `/Applications` 启动 **negaflow**。
 
-PKG 会把 `negaflow.app` 直接安装到 `/Applications`。<br>
-同一发布页面还提供用于手动安装的 DMG 和 ZIP。<br>
-目前在 GitHub 上发布的文件为 ad-hoc 签名，并未通过 Apple 公证。<br>
-因此 macOS 可能会拦下首次启动。请先尝试打开 negaflow，然后在
-**系统设置 → 隐私与安全性**中查看该提示，并仅在下载文件的 SHA-256 校验和
-与发布页公布的一致时，选择**仍要打开**。
+同一个发布页也提供 DMG 和 ZIP，可以自己手动安装。
+应用没有经过 Apple 公证，第一次启动需要在系统设置的隐私与安全性里点仍要打开。
 
-> 使用实体扫描仪还需要单独安装扫描仪插件。<br>
-> SANE 扫描仪使用 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)。
+### Windows
+
+| 下载 | 适用的电脑 |
+|---|---|
+| `negaflow-1.1.0-x64-setup.exe` | Windows 11 (x64) |
+
+1. 下载安装程序并运行。
+2. 选择语言，按提示操作。
+3. 从开始菜单启动 **negaflow**。
+
+只安装到用户目录，不需要管理员权限。
+卸载走开始菜单里的`卸载 negaflow`，或者设置里的应用列表。
+安装程序没有签名，SmartScreen 会提示一次。点更多信息，再点仍要运行。
+
+> 要连接实际的扫描仪，需要单独的插件。<br>
+> SANE 扫描仪由 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) 负责，macOS 和 Windows 都支持。
+
+---
 
 ## 功能
 
@@ -104,7 +141,6 @@ PKG 会把 `negaflow.app` 直接安装到 `/Applications`。<br>
 - 按成品页计数的印相导出与快速导出：39 张照片的 6 × 7 接触印相表输出为一个合成文件，
   单张式布局则作为受限并发的 39 文件批处理，并显示线性进度与百分比
 
-> 已完成的检查记录在[项目状态](docs/zh-Hans/product/PROJECT_STATUS.md)中。 <br>
 
 ## Chroma Engine
 
@@ -147,7 +183,6 @@ Chroma Engine 是 `Chromabase` 模块中的胶片反相和显影引擎。<br>
 每个 **GrainMend RGB** 图层都可以调整强度、查看蒙版，也可以单独关闭或删除。
 
 
-
 如果扫描仪插件提供红外通道，**GrainMend IR** 的检测结果也会加入同一份编辑记录。<br><br>
 
 **GrainMend RGB** 是有别于硬件红外除尘的独立软件方案， <br>
@@ -180,14 +215,14 @@ Chroma Engine 是 `Chromabase` 模块中的胶片反相和显影引擎。<br>
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/zh-Hans/library-dark.webp">
-    <img src="docs/images/zh-Hans/library-light.webp" alt="negaflow — 图库界面">
+    <img src="docs/images/zh-Hans/library-light.webp" alt="negaflow 图库界面">
   </picture>
 </p>
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/zh-Hans/print-dark.webp">
-    <img src="docs/images/zh-Hans/print-light.webp" alt="negaflow — 打印界面">
+    <img src="docs/images/zh-Hans/print-light.webp" alt="negaflow 打印界面">
   </picture>
 </p>
 
@@ -214,12 +249,9 @@ Chroma Engine 是 `Chromabase` 模块中的胶片反相和显影引擎。<br>
 
 ## 从源码构建
 
-### 系统要求
+两个平台需要的工具和命令不同，详细内容在各自的文档里。
 
-- macOS 14.0 或更高版本
-- GUI 应用：Xcode 26
-- 引擎和 CLI：Swift 5.9 或更高版本
-- 硬件扫描：单独安装扫描仪插件
+**macOS**
 
 ```bash
 git clone https://github.com/habinsong/negaflow.git
@@ -228,36 +260,28 @@ cd negaflow
 # 构建 Release 版本并启动
 bash scripts/run-app.sh
 
-# 只构建，不启动
+# 只构建不启动
 bash scripts/run-app.sh build
 ```
 
-GUI 应用使用 `xcodebuild` 构建。<br>
-`scripts/run-app.sh` 会完成构建、应用包组装和本地签名。<br>
-只构建引擎和 CLI 时，请使用 `swift build`。
+需要 macOS 14 及以上和 Xcode 26。只构建引擎和 CLI 用 `swift build` 就够。
+更多内容见 [macOS 文档](negaflow-mac/docs/README_zh-Hans.md)。
 
-## CLI
+**Windows**
 
-```bash
-swift build
+```powershell
+git clone https://github.com/habinsong/negaflow.git
+cd negaflow\negaflow-windows
 
-# 查找扫描仪
-.build/debug/negaflow detect
-.build/debug/negaflow capabilities <scannerID>
+# 构建引擎
+.\scripts\build.ps1 -Preset x64-release
 
-# 显影
-.build/debug/negaflow develop in.tiff out.jpg --look rich-neutral --target main
-
-# GrainMend
-.build/debug/negaflow develop scan.tif out.jpg --defects 1
-.build/debug/negaflow defect-bench ./scans --out ./report
-
-# 列出配置文件并检查引擎
-.build/debug/negaflow list-scanner-profiles
-.build/debug/negaflow selftest
+# 构建应用并启动
+.\scripts\run-app.ps1 -Architecture x64 -Configuration Release
 ```
 
-不带参数运行 `negaflow` 可以查看全部选项。
+需要 Windows 11、Visual Studio 2022 和 .NET 10 SDK。
+更多内容见 [Windows 文档](negaflow-windows/docs/README_zh-Hans.md)。
 
 ## 扫描仪
 
@@ -270,42 +294,46 @@ negaflow 主应用不包含或链接 SANE 代码。
 
 ## 仓库结构
 
-| 模块 | 用途 |
-|---|---|
-| `Chromabase` | Chroma Engine、GrainMend、配置文件和导出 |
-| `ScannerKit` | 扫描仪功能检查和外部插件连接 |
-| `negaflowApp` | 图库、显影、扫描和导出界面 |
-| `negaflowCLI` | 显影、扫描、基准测试和自检命令 |
-
-模块之间的数据流见[产品结构](docs/zh-Hans/architecture/PRODUCT_ARCHITECTURE.md)。
-
-## 开发检查
-
-```bash
-# Swift 测试
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
-
-# GUI Release 构建
-bash scripts/run-app.sh build
-
-# 仓库完整检查
-bash scripts/ci-gate.sh
+```
+negaflow/
+├── negaflow-mac/       macOS 应用与引擎 (Swift)
+├── negaflow-windows/   Windows 应用与引擎 (C#, C++)
+└── docs/               共用文档
 ```
 
-自动测试用于检查代码行为和回归。<br>
-扫描仪特有行为、最终画质、签名和公证需要单独检查。
+**macOS**
+
+| 模块 | 职责 |
+|---|---|
+| `Chromabase` | Chroma Engine、GrainMend、配置文件与导出 |
+| `ScannerKit` | 扫描仪能力检查与外部插件连接 |
+| `negaflowApp` | 图库、冲洗、扫描与导出界面 |
+| `negaflowCLI` | 冲洗、扫描、基准测试与自检命令 |
+
+**Windows**
+
+| 模块 | 职责 |
+|---|---|
+| `Native` | Chroma Engine、GrainMend、导出 (C++) |
+| `Interop` | 引擎与应用之间的桥接 |
+| `Catalog.Core` | 图库存储 |
+| `Shell.Core` | 冲洗、打印与导出逻辑 |
+| `Shell` | 图库、冲洗与打印界面 (WinUI 3) |
+
+模块之间的数据流向见[产品结构文档](docs/zh-Hans/architecture/PRODUCT_ARCHITECTURE.md)。
 
 ## 文档
 
 | 文档 | 内容 |
 |---|---|
-| [Chroma Engine](docs/zh-Hans/product/CHROMA_ENGINE.md) | 片基、反相、色彩处理和显影顺序 |
-| [GrainMend](docs/zh-Hans/product/GRAINMEND.md) | 缺陷检测与修复、IR、编辑记录、性能和画质标准 |
-| [胶片配置文件](docs/zh-Hans/product/FILM_PROFILES.md) | 拍摄资料分析和配置文件生成 |
-| [从图库到打印](docs/zh-Hans/product/WORKFLOW.md) | 导入、文件夹同步、批量显影、设置复制和打印配置文件 |
-| [产品结构](docs/zh-Hans/architecture/PRODUCT_ARCHITECTURE.md) | 应用、引擎、扫描仪、存储和导出 |
-| [项目状态](docs/zh-Hans/product/PROJECT_STATUS.md) | 实现状态、测量结果和待验证内容 |
-| [真机与画质检查表](docs/zh-Hans/validation/REAL_QA_CHECKLIST.md) | 需要真机或人工查看的项目 |
+| [Chroma Engine](docs/zh-Hans/product/CHROMA_ENGINE.md) | 片基、反转、色彩处理与冲洗顺序 |
+| [GrainMend](docs/zh-Hans/product/GRAINMEND.md) | 缺陷检测与修复、IR、编辑记录、质量与性能标准 |
+| [胶片配置文件](docs/zh-Hans/product/FILM_PROFILES.md) | 素材分析与配置文件生成 |
+| [从图库到打印](docs/zh-Hans/product/WORKFLOW.md) | 导入、文件夹同步、批量冲洗、设置复制与打印配置 |
+| [产品结构](docs/zh-Hans/architecture/PRODUCT_ARCHITECTURE.md) | 应用、引擎、扫描仪、存储与导出结构 |
+| [两个版本的差异](docs/zh-Hans/platform/PLATFORM_DIFFERENCES.md) | macOS 与 Windows 相同和不同的地方 |
+| [macOS 文档](negaflow-mac/docs/README_zh-Hans.md) | macOS 安装、构建与 CLI |
+| [Windows 文档](negaflow-windows/docs/README_zh-Hans.md) | Windows 安装、构建与引擎检查 |
 
 ## 许可证
 

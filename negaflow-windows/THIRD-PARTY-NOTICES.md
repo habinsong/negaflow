@@ -1,4 +1,4 @@
-# Third-Party Notices — negaflow for Windows
+# Third-Party Notices for negaflow on Windows
 
 negaflow itself is licensed under the Apache License 2.0. See the repository
 [LICENSE](../LICENSE) and [NOTICE](../NOTICE).
@@ -18,9 +18,9 @@ That zero-dependency statement is about **linking**, and about the native engine
 rather than the distribution as a whole. Two third-party **native** binaries do
 ship alongside it, and neither appears in the engine's import table:
 
-- `e_sqlite3.dll` — the managed catalog layer, as of 2026-08-07, section 3 below.
-  See [ADR-0025](docs/decisions/0025-managed-sqlite-catalog-provider.md).
-- `libraw.dll` — the camera RAW decoder, as of 2026-08-25, section 4 below. The
+- `e_sqlite3.dll`, the managed catalog layer, as of 2026-08-07, section 3 below.
+  See ADR-0025.
+- `libraw.dll`, the camera RAW decoder, as of 2026-08-25, section 4 below. The
   engine resolves it at run time with `LoadLibraryExW`/`GetProcAddress` and runs
   without it. Windows ships no RAW codec of its own, so this is what keeps RAW
   import working on a machine that does not have Microsoft's Store extension.
@@ -34,7 +34,7 @@ ship alongside it, and neither appears in the engine's import table:
   packages `Microsoft.WindowsAppSDK.Base` 1.8.251216001,
   `Microsoft.WindowsAppSDK.Foundation` 1.8.260709000,
   `Microsoft.WindowsAppSDK.InteractiveExperiences` 1.8.260708001.
-- License: **MICROSOFT SOFTWARE LICENSE TERMS — MICROSOFT WINDOWS APP SDK**
+- License: **MICROSOFT SOFTWARE LICENSE TERMS, MICROSOFT WINDOWS APP SDK**
   (proprietary; not an open-source license).
 - Redistribution basis: Section 3(a)(i) of those terms states that files
   binplaced with the application by the Windows App SDK NuGet package are
@@ -51,7 +51,7 @@ Note that these terms also carry data-collection provisions (Section 2). The
 current shell does not enable Windows App SDK telemetry features, but this must
 be re-checked before release.
 
-## 2. Microsoft Edge WebView2 — NOT redistributed
+## 2. Microsoft Edge WebView2, NOT redistributed
 
 - Package: `Microsoft.Web.WebView2` 1.0.3179.45 (transitive, via WinUI).
 - License: **BSD 3-Clause**.
@@ -62,7 +62,7 @@ be re-checked before release.
   (~1.6 MB) into the output; the `RemoveUnusedWebView2Payload` target in
   `src/Shell/Negaflow.Shell.csproj` now removes them from the copied output on
   both x64 and ARM64. See
-  [ADR-0022](docs/decisions/0022-webview2-payload-boundary.md).
+  ADR-0022.
 - Because no WebView2 binary is shipped, **no WebView2 notice obligation
   currently applies.**
 
@@ -103,11 +103,11 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-WebView2 additionally ships a `NOTICE.txt` listing components Microsoft
+WebView2 also ships a `NOTICE.txt` listing components Microsoft
 incorporated into it, including an offer to provide corresponding source for
 components under copyleft terms. Dropping the payload also drops that chain. If
 the payload is ever reintroduced, that `NOTICE.txt` must be reproduced alongside
-this file, unmodified, from the pinned package directory — it is Microsoft's own
+this file, unmodified, from the pinned package directory. It is Microsoft's own
 attribution document and must not drift from the version actually shipped.
 
 ## 3. SQLite catalog stack
@@ -116,7 +116,7 @@ The catalog store (`Negaflow.Catalog.Core`) uses SQLite through the managed
 provider. The packages are referenced separately rather than through the
 convenience `Microsoft.Data.Sqlite` package, so that the native SQLite version
 can be raised on its own; see
-[ADR-0025](docs/decisions/0025-managed-sqlite-catalog-provider.md) for why that
+ADR-0025 for why that
 matters here.
 
 | Package | Version | License | Shipped payload |
@@ -152,10 +152,10 @@ bind the product to `winsqlite3.dll`. Microsoft treats that DLL as a Windows
 component for Windows and Microsoft apps and updates it only through Windows
 Update, so it is not a supported base for a third-party product database.
 
-## 4. LibRaw — camera RAW decoder (`libraw.dll`)
+## 4. LibRaw, the camera RAW decoder (`libraw.dll`)
 
 Windows does not ship a camera RAW codec. The codecs Microsoft documents as built
-into WIC are BMP, GIF, ICO, JPEG, JPEG XR, PNG, TIFF, HD Photo and DDS — RAW is
+into WIC are BMP, GIF, ICO, JPEG, JPEG XR, PNG, TIFF, HD Photo and DDS. RAW is
 not among them. RAW support on Windows comes from **Raw Image Extension**, a
 separate free Microsoft Store package that is not guaranteed to be present.
 macOS has RAW decoding inside ImageIO, so without a decoder of our own the same

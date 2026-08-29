@@ -28,10 +28,11 @@ xcuserdata/
 
 # 로컬 이미지 / 분석 입력
 *.tiff
-!Sources/ScannerKit/Resources/Frame.tiff
-!Sources/ScannerKit/Resources/Frame_Perforation.tiff
-!Sources/ScannerKit/Resources/Roll.tiff
-!Sources/ScannerKit/Resources/Roll_Perforation.tiff
+# 아래 경로들은 앞의 *.tiff 규칙에서 빼낸다. 슬래시가 들어간 규칙은 이 파일이 있는
+# 자리를 기준으로 잡히므로 negaflow-mac/ 까지 적어야 맞는다. 예전에는 그 앞부분이
+# 빠져 있어서 규칙이 걸리지 않았고, 스캐너 코드가 쓰는 리소스 네 개가 계속 제외
+# 대상으로 잡혀 있었다.
+!negaflow-mac/Sources/ScannerKit/Resources/*.tiff
 !docs/verification/macos-golden/**/*.tiff
 
 # macOS / 편집기 메타데이터
@@ -108,20 +109,30 @@ NEGAFLOW_LIGHTROOM_EXPANSION.md
 /PERFORMANCE_STRESS_AUDIT_*.md
 /UI_UX_IMPLEMENTATION_REQUESTS.md
 
-# 조사·설계 자료 (로컬 전용, 공개 대상 아님)
+# 만드는 과정에서 남긴 기록이다. 끝난 일, 남은 일, 왜 그렇게 정했는지 같은 것들이라
+# 공개하지 않는다. 공개하는 문서는 docs/ 와 negaflow-mac/docs/, negaflow-windows/docs/
+# 에 둔다.
 #
-# 이미 추적되던 것들은 `git rm -r --cached` 로 인덱스에서 뺐다. 무시 규칙은 추적 중인
-# 파일에는 듣지 않으므로 규칙만 적어 두면 계속 올라간다.
-#
-# `docs/` 는 여기 없다. 최상위 README 가 그 안의 스크린샷과 제품 문서를 링크하므로,
-# 빼면 GitHub 첫 화면이 통째로 깨진다.
+# 여기 규칙은 새 파일에만 걸린다. 이미 추적 중인 파일은 git rm --cached 로 따로
+# 빼야 한다 (2026-08-30 에 126 개를 그렇게 뺐다).
 /windows_docs/
-#
-# 다만 네이티브 골든은 시험 자료다. 조사 문서와 같은 폴더에 있을 뿐이며, 빼면 CI 의
-# 골든·패리티 시험이 자료를 못 찾고 무너진다(2026-08-27 실제로 다섯 개가 무너졌다).
-# 디렉터리를 통째로 제외하면 하위를 되살릴 수 없으므로 **내용**을 제외하고 그 하나만 뺀다.
-/negaflow-windows/docs/*
-!/negaflow-windows/docs/verification/
+/negaflow-windows/dev-notes/
+/negaflow-mac/dev-notes/
+/docs/research/
+/docs/*/research/
+/docs/validation/
+/docs/*/validation/
+/docs/product/PROJECT_STATUS.md
+/docs/*/product/PROJECT_STATUS.md
+
+# 골든 자료 자체는 공개한다. 테스트가 읽기 때문이다. 다만 그 폴더에 같이 있던 글은
+# 맥 쪽에 값을 찍어 달라고 부탁한 기록과 그 진행 메모라서 공개하지 않는다.
+/docs/verification/macos-golden/*.md
+/docs/verification/macos-golden/*/README.md
+
+# docs/verification/macos-golden 은 공개한다. 개발 기록이 아니라 macOS 판에서 뽑아 둔
+# 골든 이미지이고, negaflow-windows/CMakeLists.txt 의 골든 테스트가 이 파일들을 읽는다.
+# 빼면 새로 받은 사람이 테스트를 돌릴 수 없다.
 
 # 일회성 코드 감사 / 청크 생성물
 /all_swift_files.txt
@@ -136,3 +147,7 @@ NEGAFLOW_LIGHTROOM_EXPANSION.md
 
 # libraw.dll 을 만드는 작업 디렉터리 (소스 tarball + 빌드 산출물)
 /negaflow-windows/build-libraw/
+
+# 사용자의 로컬 LUT 자료입니다. 저장소에 둘 이유가 없어 추적만 뺐고, 파일은 그대로
+# 자리에 있습니다 (10 x 33^3 float64, 2.9 MB).
+/g33.npy

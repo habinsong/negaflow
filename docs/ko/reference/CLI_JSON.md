@@ -44,7 +44,7 @@ negaflow capabilities <scannerID> [--demo] --json
 
 </details>
 
-실패하면 `status`는 `error`, `payload`는 `null`입니다.
+실패하면 `status`에 `error`가 들어가고 `payload`는 비웁니다.
 `error`에는 바뀌지 않는 기계용 코드와 사람이 읽는 설명이 들어갑니다.
 진단 로그는 stderr로 보냅니다. stdout에는 로그나 진행률을 섞지 않습니다.
 

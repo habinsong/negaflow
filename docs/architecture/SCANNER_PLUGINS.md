@@ -144,7 +144,7 @@ A v2 spec violation ends the plugin immediately instead of waiting for the usual
 A v2 `result` must carry `appliedOptions`.
 
 - `deviceID`, `resolutionDPI`, `bitDepth`, `colorMode`, `filmType`
-- `scanArea`: `originXMM`, `originYMM`, `widthMM`, `heightMM` — the area the plug-in actually
+- `scanArea`: `originXMM`, `originYMM`, `widthMM`, `heightMM`, the area the plug-in actually
   sent to the backend, not a copy of the request. A plug-in may adjust it by less than 1 mm to
   work around a backend that miscomputes the scan size. The app checks the returned pixel size
   against this area, so a copy of the request would defeat the check.
@@ -168,7 +168,7 @@ values the result reported itself.
 
 ## Positioned flatbed scan area
 
-The preview for this workflow asks for an explicit resolution — the closest supported value to 300 dpi — instead of leaving it to the device. A device default can be as low as 25 dpi, which is far too coarse to place frames on or to detect them. A preview that carries a resolution is an ordinary scan, so it does not use the plug-in's preview path.
+The preview for this workflow asks for an explicit resolution, the closest supported value to 300 dpi, instead of leaving it to the device. A device default can be as low as 25 dpi, which is far too coarse to place frames on or to detect them. A preview that carries a resolution is an ordinary scan, so it does not use the plug-in's preview path.
 
 A flatbed scan with a chosen position turns on only when the plugin reports all of these.
 

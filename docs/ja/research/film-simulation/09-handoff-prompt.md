@@ -4,4 +4,4 @@
 
 この調査文書は日本語の文書インデックスから開く原資料です。
 
-[原文を開く](../../../research/film-simulation/09-handoff-prompt.md)
+原文を開く

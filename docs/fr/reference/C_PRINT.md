@@ -52,8 +52,8 @@ condition d’observation historique précise.
 **Exporter le tirage**, sous Exportation rapide, rend le format et l’orientation du papier, les
 marges, la mise en page, le fond noir, gris ou blanc, les légendes, les textes personnalisés et les
 repères de coupe. Le format de fichier, le DPI, le dossier, le nom et l’espace colorimétrique de
-livraison viennent des réglages d’export. Les aides d’écran — avertissement de gamut, simulation
-d’épreuvage et reflet de surface — ne sont pas intégrées au fichier.
+livraison viennent des réglages d’export. Les aides d’écran ne sont pas intégrées au fichier : avertissement de gamut,
+simulation d’épreuvage et reflet de surface.
 
 Pendant l’export du tirage ou l’exportation rapide, le panneau affiche le nombre de pages terminées,
 une barre de progression linéaire et un pourcentage plutôt qu’un indicateur circulaire indéterminé.

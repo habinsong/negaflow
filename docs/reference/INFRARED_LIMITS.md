@@ -59,7 +59,6 @@ The last three are not replaced with `(0,0)`. They stop with an `alignmentUnreli
 If the best point lands on the search boundary, that counts as a failure whatever the offset size.
 
 Automated tests do not stand in for RGB/IR alignment on a real device or for per-film results.
-Real scanner checks follow the IR items in the
-[real-device QA checklist](../validation/REAL_QA_CHECKLIST.md).
+Checks on a real scanner are done by hand, on real film.
 
 SANE device control and capture code live only in the separate `negaflow-scanner-sane` repository.

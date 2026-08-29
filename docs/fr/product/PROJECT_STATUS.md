@@ -215,7 +215,7 @@ Release, puis fait le contrôle de régression et téléverse le rapport.
 
 Le rendu final et le matériel réel relèvent de l'utilisateur.
 Un build réussi ne les remplace pas ; les résultats vont dans la
-[checklist QA sur matériel réel](../validation/REAL_QA_CHECKLIST.md).
+checklist QA sur matériel réel.
 
 ## Quel document fait référence
 
@@ -228,5 +228,5 @@ Un build réussi ne les remplace pas ; les résultats vont dans la
 | Mode de stockage du catalogue | [Stockage du catalogue](../architecture/CATALOG_STORAGE.md) |
 | Règles de publication des profils scanner | [Contrôle qualité des profils scanner](../reference/PROFILE_QUALITY_GATE.md) |
 | Implémentation et limites de GrainMend | [GrainMend](GRAINMEND.md) |
-| Approbation du rendu final et du matériel réel | [Checklist QA sur matériel réel](../validation/REAL_QA_CHECKLIST.md) |
+| Approbation du rendu final et du matériel réel | Checklist QA sur matériel réel |
 | Installation et usage | Les fichiers README à la racine du dépôt |

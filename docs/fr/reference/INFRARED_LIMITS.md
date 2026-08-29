@@ -63,8 +63,7 @@ décalage.
 
 Les tests automatisés ne remplacent pas l'alignement RVB/IR sur un appareil réel ni les résultats
 film par film.
-Les contrôles sur scanner réel suivent les points IR de la
-[checklist QA sur matériel réel](../validation/REAL_QA_CHECKLIST.md).
+Les contrôles sur scanner réel se font à la main, sur de la vraie pellicule.
 
 Le pilotage des périphériques SANE et le code de capture ne vivent que dans le dépôt séparé
 `negaflow-scanner-sane`.

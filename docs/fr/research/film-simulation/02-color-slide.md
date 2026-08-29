@@ -4,4 +4,4 @@
 
 Ce document de recherche est la source liée depuis l’index français.
 
-[Ouvrir la source](../../../research/film-simulation/02-color-slide.md)
+Ouvrir la source

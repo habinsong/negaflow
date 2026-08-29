@@ -148,7 +148,7 @@ temps habituelle.
 Un `result` v2 doit porter `appliedOptions`.
 
 - `deviceID`, `resolutionDPI`, `bitDepth`, `colorMode`, `filmType`
-- `scanArea` : `originXMM`, `originYMM`, `widthMM`, `heightMM` — la zone réellement envoyée au
+- `scanArea` : `originXMM`, `originYMM`, `widthMM`, `heightMM`, la zone réellement envoyée au
   backend par le plug-in, et non une copie de la demande. Elle peut être ajustée de moins de
   1 mm pour contourner un backend qui calcule mal la taille de numérisation. L'application
   compare les pixels renvoyés à cette zone ; une copie de la demande annulerait ce contrôle.
@@ -173,7 +173,7 @@ valeurs correctes signalées par le résultat lui-même.
 
 ## Zone de scan positionnée à plat
 
-L'aperçu de ce flux demande une résolution explicite — la valeur prise en charge la plus proche de 300 ppp — au lieu de la laisser à l'appareil. Une valeur par défaut peut descendre à 25 ppp, bien trop grossière pour y placer des vues ou les détecter. Un aperçu portant une résolution est une numérisation ordinaire et n'emprunte donc pas le chemin d'aperçu du plug-in.
+L'aperçu de ce flux demande une résolution explicite, la valeur prise en charge la plus proche de 300 ppp, au lieu de la laisser à l'appareil. Une valeur par défaut peut descendre à 25 ppp, bien trop grossière pour y placer des vues ou les détecter. Un aperçu portant une résolution est une numérisation ordinaire et n'emprunte donc pas le chemin d'aperçu du plug-in.
 
 Un scan à plat avec position choisie ne s'active que si le plugin signale tout ceci.
 

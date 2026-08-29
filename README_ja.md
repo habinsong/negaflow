@@ -4,13 +4,13 @@
 
 <h1 align="center">negaflow</h1>
 
-<p align="center">アナログフィルムのカメラ複写・スキャンから現像までを支える macOS アプリ</p>
+<p align="center">アナログフィルムのスキャンから現像、プリントまで。macOS と Windows それぞれにネイティブなアプリです。</p>
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/ja/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="ウェブサイト"></a>
-  <a href="docs/ja/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.9%20release-EF8B26" alt="リリース状況"></a>
-  <a href="#動作環境"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 以降"></a>
-  <a href="negaflow-mac/Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 以降"></a>
+  <a href="#install"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="バージョン 1.1.0"></a>
+  <a href="negaflow-mac/docs/README_ja.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 以降"></a>
+  <a href="negaflow-windows/docs/README_ja.md"><img src="https://img.shields.io/badge/Windows-11-0078D4?logo=windows&logoColor=white" alt="Windows 11"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 ライセンス"></a>
 </p>
 
@@ -34,7 +34,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/ja/develop-dark.webp">
-    <img src="docs/images/ja/develop-light.webp" alt="negaflow — 現像画面">
+    <img src="docs/images/ja/develop-light.webp" alt="negaflow 現像画面">
   </picture>
 </p>
 
@@ -60,29 +60,67 @@ negaflow は、スキャンしたフィルムやデジタルカメラで複写�
 
 ---
 
+## 二つを別々に作りました
+
+negaflow は macOS でも Windows でも動きます。二つのアプリはコードを共有していません。
+
+| | macOS | Windows |
+|---|---|---|
+| 画面 | SwiftUI | WinUI 3 |
+| エンジン | Swift と Core Image | C++ と Direct3D |
+| カラーマネジメント | ColorSync | Windows ICM |
+
+同じ写真を渡せば同じ結果が出ます。macOS 版で書き出した基準画像を Windows のテストが読み込み、
+画素単位で照合しています。
+
+それぞれのプラットフォームの流儀で書いたので、片方を移植して継ぎ足したものではありません。
+結果として二度作ることになりましたが、どちらもそのOSのアプリとして自然に動きます。
+
+- [macOS のドキュメント](negaflow-mac/docs/README_ja.md)
+- [Windows のドキュメント](negaflow-windows/docs/README_ja.md)
+- [二つの版の違い](docs/ja/platform/PLATFORM_DIFFERENCES.md)
+
+---
+
 ## インストール
 
-現在のリリースは[GitHub Releases](https://github.com/habinsong/negaflow/releases)からダウンロードできます。<br>
-通常はUniversal PKGを使用してください。
+[GitHub Releases](https://github.com/habinsong/negaflow/releases)から現在のリリースをダウンロードします。
+
+### macOS
 
 | ダウンロード | 対応するMac |
 |---|---|
-| `negaflow-1.0.9-1-macOS-universal.pkg` | Apple Silicon、Intel |
-| `negaflow-1.0.9-1-macOS-arm64.pkg` | Apple Siliconのみ |
+| `negaflow-1.1.0-1-macOS-universal.pkg` | Apple Silicon、Intel |
+| `negaflow-1.1.0-1-macOS-arm64.pkg` | Apple Siliconのみ |
+
+通常は Universal PKG を使ってください。
 
 1. Macに合うPKGをダウンロードします。
 2. PKGを開き、インストーラの案内に従います。
 3. `/Applications`から**negaflow**を起動します。
 
-PKGは`negaflow.app`を`/Applications`へ直接インストールします。<br>
-手動インストール用のDMGとZIPも同じリリースページにあります。<br>
-現在GitHubで公開しているファイルはad-hoc署名で、Appleの公証は受けていません。<br>
-そのためmacOSが初回起動をブロックすることがあります。一度negaflowを開こうとしたうえで、
-**システム設定 → プライバシーとセキュリティ**に表示される警告を確認し、ダウンロードしたファイルの
-SHA-256チェックサムがリリースに掲載されたものと一致する場合にかぎり**このまま開く**を選んでください。
+手動インストール用のDMGとZIPも同じリリースページにあります。
+Appleの公証を受けていないため、初回起動時は**システム設定 → プライバシーとセキュリティ**で
+**このまま開く**を選ぶ必要があります。
+
+### Windows
+
+| ダウンロード | 対応するPC |
+|---|---|
+| `negaflow-1.1.0-x64-setup.exe` | Windows 11 (x64) |
+
+1. インストーラをダウンロードして実行します。
+2. 言語を選び、案内に従います。
+3. スタートメニューから**negaflow**を起動します。
+
+インストール先はユーザーフォルダーの中だけで、管理者権限は要りません。
+削除はスタートメニューの`negaflow の削除`か、設定のアプリ一覧から行います。
+署名していないインストーラなので、SmartScreen が一度警告します。詳細情報を押して実行してください。
 
 > スキャナー実機を使うには、別途スキャナープラグインが必要です。<br>
-> SANEスキャナーには[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)を使用します。
+> SANEスキャナーには[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)を使用します。macOS と Windows の両方に対応しています。
+
+---
 
 ## 機能
 
@@ -106,7 +144,6 @@ SHA-256チェックサムがリリースに掲載されたものと一致する�
 - 39枚の6 × 7コンタクトシートは合成済みの1ファイル、個別画像レイアウトは制限付き
   39ファイルのバッチとして扱い、バーとパーセントを示すプリント書き出しとクイック書き出し
 
-> 確認を終えた範囲は[プロジェクト状況](docs/ja/product/PROJECT_STATUS.md)に記録しています。 <br>
 
 ## Chroma Engine
 
@@ -149,7 +186,6 @@ Chroma Engine は `Chromabase` モジュールに入っているフィルム反�
 **GrainMend RGB** のレイヤーはそれぞれ、強さの変更、マスクの確認、個別の無効化や削除ができます。
 
 
-
 スキャナープラグインが赤外線チャンネルを提供する場合、**GrainMend IR** の検出結果も同じ編集履歴に加わります。<br><br>
 
 **GrainMend RGB** はハードウェアの赤外線クリーニングとは異なる、独自のソフトウェア方式であり、 <br>
@@ -183,14 +219,14 @@ Chroma Engine は `Chromabase` モジュールに入っているフィルム反�
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/ja/library-dark.webp">
-    <img src="docs/images/ja/library-light.webp" alt="negaflow — ライブラリ画面">
+    <img src="docs/images/ja/library-light.webp" alt="negaflow ライブラリ画面">
   </picture>
 </p>
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/ja/print-dark.webp">
-    <img src="docs/images/ja/print-light.webp" alt="negaflow — プリント画面">
+    <img src="docs/images/ja/print-light.webp" alt="negaflow プリント画面">
   </picture>
 </p>
 
@@ -219,50 +255,39 @@ AI が形だけ作ったような UI ではなく、写真が趣味なら迷わ�
 
 ## ソースからビルド
 
-### 動作環境
+必要な道具とコマンドはプラットフォームごとに違います。詳しくは各ドキュメントにあります。
 
-- macOS 14.0 以降
-- GUI アプリ: Xcode 26
-- エンジンと CLI: Swift 5.9 以降
-- ハードウェアスキャン: 別途スキャナープラグイン
+**macOS**
 
 ```bash
 git clone https://github.com/habinsong/negaflow.git
 cd negaflow
 
-# Release ビルド後に起動
+# Release ビルドして起動
 bash scripts/run-app.sh
 
-# 起動せずにビルド
+# 起動せずビルドだけ
 bash scripts/run-app.sh build
 ```
 
-GUI アプリは `xcodebuild` でビルドします。<br>
-`scripts/run-app.sh` がビルド、アプリバンドルの組み立て、ローカル署名を行います。<br>
-エンジンと CLI だけをビルドする場合は `swift build` を使います。
+macOS 14 以降と Xcode 26 が必要です。エンジンとCLIだけなら `swift build` で足ります。
+[macOS のドキュメント](negaflow-mac/docs/README_ja.md)に続きがあります。
 
-## CLI
+**Windows**
 
-```bash
-swift build
+```powershell
+git clone https://github.com/habinsong/negaflow.git
+cd negaflow\negaflow-windows
 
-# スキャナーを探す
-.build/debug/negaflow detect
-.build/debug/negaflow capabilities <scannerID>
+# エンジンのビルド
+.\scripts\build.ps1 -Preset x64-release
 
-# 現像
-.build/debug/negaflow develop in.tiff out.jpg --look rich-neutral --target main
-
-# GrainMend
-.build/debug/negaflow develop scan.tif out.jpg --defects 1
-.build/debug/negaflow defect-bench ./scans --out ./report
-
-# プロファイル一覧とエンジンの自己診断
-.build/debug/negaflow list-scanner-profiles
-.build/debug/negaflow selftest
+# アプリをビルドして起動
+.\scripts\run-app.ps1 -Architecture x64 -Configuration Release
 ```
 
-すべてのオプションは、引数を付けずに `negaflow` を実行すると確認できます。
+Windows 11、Visual Studio 2022、.NET 10 SDK が必要です。
+[Windows のドキュメント](negaflow-windows/docs/README_ja.md)に続きがあります。
 
 ## スキャナー
 
@@ -275,42 +300,46 @@ negaflow 本体は SANE コードを含まず、リンクもしません。
 
 ## リポジトリ構成
 
+```
+negaflow/
+├── negaflow-mac/       macOS のアプリとエンジン (Swift)
+├── negaflow-windows/   Windows のアプリとエンジン (C#, C++)
+└── docs/               共通のドキュメント
+```
+
+**macOS**
+
 | モジュール | 役割 |
 |---|---|
 | `Chromabase` | Chroma Engine、GrainMend、プロファイル、書き出し |
 | `ScannerKit` | スキャナー機能の確認と外部プラグイン接続 |
 | `negaflowApp` | ライブラリ、現像、スキャン、書き出しの画面 |
-| `negaflowCLI` | 現像、スキャン、ベンチマーク、自己診断コマンド |
+| `negaflowCLI` | 現像、スキャン、ベンチマーク、自己点検 |
 
-モジュール間のデータの流れは [製品構成](docs/ja/architecture/PRODUCT_ARCHITECTURE.md)にあります。
+**Windows**
 
-## 開発時の確認
+| モジュール | 役割 |
+|---|---|
+| `Native` | Chroma Engine、GrainMend、書き出し (C++) |
+| `Interop` | エンジンとアプリをつなぐ層 |
+| `Catalog.Core` | ライブラリの保存 |
+| `Shell.Core` | 現像、プリント、書き出しのロジック |
+| `Shell` | ライブラリ、現像、プリントの画面 (WinUI 3) |
 
-```bash
-# Swift テスト
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
-
-# GUI Release ビルド
-bash scripts/run-app.sh build
-
-# リポジトリ全体の確認
-bash scripts/ci-gate.sh
-```
-
-自動テストはコードの動作と回帰を確認します。<br>
-スキャナー固有の動作、最終画質、署名、公証は別に確認します。
+モジュール間のデータの流れは[製品構成のドキュメント](docs/ja/architecture/PRODUCT_ARCHITECTURE.md)にあります。
 
 ## ドキュメント
 
 | ドキュメント | 内容 |
 |---|---|
-| [Chroma Engine](docs/ja/product/CHROMA_ENGINE.md) | フィルムベース、反転、色処理、現像順序 |
-| [GrainMend](docs/ja/product/GRAINMEND.md) | 欠陥の検出と修復、IR、編集履歴、性能と画質基準 |
-| [フィルムプロファイル](docs/ja/product/FILM_PROFILES.md) | 撮影資料の分析とプロファイル生成 |
-| [ライブラリからプリントまで](docs/ja/product/WORKFLOW.md) | 取り込み、フォルダー同期、一括現像、設定のコピー、プリントプロファイル |
-| [製品構成](docs/ja/architecture/PRODUCT_ARCHITECTURE.md) | アプリ、エンジン、スキャナー、保存、書き出し |
-| [プロジェクトの状況](docs/ja/product/PROJECT_STATUS.md) | 実装状況、測定結果、残っている確認 |
-| [実機・画質確認表](docs/ja/validation/REAL_QA_CHECKLIST.md) | 実機と画面で確認する項目 |
+| [Chroma Engine](docs/ja/product/CHROMA_ENGINE.md) | フィルムベース、反転、色処理、現像の順序 |
+| [GrainMend](docs/ja/product/GRAINMEND.md) | 欠陥の検出と修復、IR、編集履歴、品質と性能の基準 |
+| [フィルムプロファイル](docs/ja/product/FILM_PROFILES.md) | 撮影素材の分析とプロファイル生成 |
+| [ライブラリからプリントまで](docs/ja/product/WORKFLOW.md) | 読み込み、フォルダー同期、一括現像、設定のコピー、プリントプロファイル |
+| [製品構成](docs/ja/architecture/PRODUCT_ARCHITECTURE.md) | アプリ、エンジン、スキャナー、保存、書き出しの構成 |
+| [二つの版の違い](docs/ja/platform/PLATFORM_DIFFERENCES.md) | macOS と Windows で同じところと違うところ |
+| [macOS のドキュメント](negaflow-mac/docs/README_ja.md) | macOS のインストール、ビルド、CLI |
+| [Windows のドキュメント](negaflow-windows/docs/README_ja.md) | Windows のインストール、ビルド、エンジン点検 |
 
 ## ライセンス
 

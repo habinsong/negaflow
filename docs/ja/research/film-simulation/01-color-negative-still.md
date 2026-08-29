@@ -4,4 +4,4 @@
 
 この調査文書は日本語の文書インデックスから開く原資料です。
 
-[原文を開く](../../../research/film-simulation/01-color-negative-still.md)
+原文を開く

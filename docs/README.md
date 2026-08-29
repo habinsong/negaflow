@@ -10,12 +10,19 @@ flowchart LR
     A["I want to know the product"] --> P["product"]
     B["I want the code and data flow"] --> R["architecture"]
     C["I want formats and numbers"] --> S["reference"]
-    D["I want to know if it can ship"] --> V["validation"]
 ```
 
 > [!NOTE]
-> The current version is `1.0.9`. What is built and what was actually checked
-> is tracked in [Project status](product/PROJECT_STATUS.md).
+> negaflow 1.1.0 runs on macOS and on Windows. The two apps are written separately
+> for their own platform and produce the same picture from the same file.
+
+## Platform
+
+| Document | Read it when |
+|---|---|
+| [How macOS and Windows differ](platform/PLATFORM_DIFFERENCES.md) | You want to know what is the same on both and what is not |
+| [macOS docs](../negaflow-mac/docs/README.md) | You install, build, or use the CLI on macOS |
+| [Windows docs](../negaflow-windows/docs/README.md) | You install, build, or check the engine on Windows |
 
 ## Product
 
@@ -25,7 +32,6 @@ flowchart LR
 | [Chroma Engine](product/CHROMA_ENGINE.md) | You want the film inversion and develop order |
 | [GrainMend](product/GRAINMEND.md) | You want to see how dust and scratch repair works |
 | [Film profiles](product/FILM_PROFILES.md) | You want where the bundled profiles came from, and their limits |
-| [Project status](product/PROJECT_STATUS.md) | You want the implementation, measurement, and release state |
 
 ## Architecture
 
@@ -49,25 +55,6 @@ flowchart LR
 | [Film GrainMend IR should avoid](reference/INFRARED_LIMITS.md) | Black and white, Kodachrome, RGB/IR alignment limits |
 | [Flatbed frame detection](reference/FRAME_DETECTION.md) | How film is told from an empty holder, and how cut boundaries are measured |
 | [IT8 color validation](reference/IT8_COLOR_VALIDATION.md) | Patch measurement, evidence grades, synthetic regression |
-
-## Validation
-
-| Document | Use it when |
-|---|---|
-| [Real-device QA checklist](validation/REAL_QA_CHECKLIST.md) | You check a real Mac, display, scanner, and film |
-| [GrainMend real scan comparison](validation/GRAINMEND_CORPUS.md) | You measure the 44 FILM-R v2 pairs again |
-| [GrainMend IR real scan measurement](validation/GRAINMEND_IR.md) | You measure how much GrainMend IR removes |
-
-## Film simulation research
-
-| Document | Use it when |
-|---|---|
-| [Color negative still film research](research/film-simulation/01-color-negative-still.md) | You need the C-41 research notes |
-| [Color slide film research](research/film-simulation/02-color-slide.md) | You need the E-6 and K-14 research notes |
-| [Color motion picture film research](research/film-simulation/03-color-motion-picture.md) | You need the ECN-2 research notes |
-| [Digital B&W branch plan](research/film-simulation/08-digital-bw-branch-plan.md) | You need the black-and-white design handoff |
-| [Next-session prompt](research/film-simulation/09-handoff-prompt.md) | You are continuing the film-simulation work |
-| [Film simulation handoff](research/film-simulation/09-handoff.md) | You need the current implementation handoff |
 
 ## Provenance and distribution
 

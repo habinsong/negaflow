@@ -4,4 +4,4 @@
 
 この調査文書は日本語の文書インデックスから開く原資料です。
 
-[原文を開く](../../../research/film-simulation/02-color-slide.md)
+原文を開く

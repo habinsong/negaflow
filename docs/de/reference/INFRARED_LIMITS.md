@@ -61,7 +61,6 @@ Sie brechen mit dem Fehler `alignmentUnreliable` ab.
 Liegt das Optimum auf der Suchgrenze, gilt das unabhängig vom Betrag des Versatzes als Fehlschlag.
 
 Automatische Tests ersetzen weder die RGB/IR-Ausrichtung am echten Gerät noch Ergebnisse je Film.
-Prüfungen am echten Scanner folgen den IR-Punkten der
-[Checkliste für echte Geräte](../validation/REAL_QA_CHECKLIST.md).
+Prüfungen am echten Scanner laufen von Hand, mit echtem Film.
 
 SANE-Gerätesteuerung und Aufnahmecode liegen nur im separaten Repository `negaflow-scanner-sane`.

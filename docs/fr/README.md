@@ -10,12 +10,19 @@ flowchart LR
     A["Je veux connaître le produit"] --> P["product"]
     B["Je veux le code et les données"] --> R["architecture"]
     C["Je veux les formats et les valeurs"] --> S["reference"]
-    D["Je veux savoir si ça peut sortir"] --> V["validation"]
 ```
 
 > [!NOTE]
-> La version actuelle est `1.0.9`. Ce qui est fait et ce qui a été réellement vérifié
-> est noté dans [État du projet](product/PROJECT_STATUS.md).
+> negaflow 1.1.0 tourne sur macOS et sur Windows. Les deux applications sont écrites
+> séparément pour leur plateforme et rendent la même image à partir du même fichier.
+
+## Plateforme
+
+| Document | À lire quand |
+|---|---|
+| [Ce qui diffère entre macOS et Windows](platform/PLATFORM_DIFFERENCES.md) | Vous voulez savoir ce qui est identique et ce qui ne l'est pas |
+| [Documentation macOS](../../negaflow-mac/docs/README_fr.md) | Vous installez, compilez ou utilisez la CLI sur macOS |
+| [Documentation Windows](../../negaflow-windows/docs/README_fr.md) | Vous installez, compilez ou vérifiez le moteur sur Windows |
 
 ## Produit
 
@@ -25,7 +32,6 @@ flowchart LR
 | [Chroma Engine](product/CHROMA_ENGINE.md) | Vous voulez l'inversion du film et l'ordre de développement |
 | [GrainMend](product/GRAINMEND.md) | Vous voulez voir comment la réparation poussière et rayures fonctionne |
 | [Profils de film](product/FILM_PROFILES.md) | Vous voulez l'origine des profils fournis et leurs limites |
-| [État du projet](product/PROJECT_STATUS.md) | Vous voulez l'état d'implémentation, de mesure et de distribution |
 
 ## Architecture
 
@@ -49,25 +55,6 @@ flowchart LR
 | [Films que GrainMend IR doit éviter](reference/INFRARED_LIMITS.md) | Noir et blanc, Kodachrome, limites d'alignement RVB/IR |
 | [Détection des vues sur scanner à plat](reference/FRAME_DETECTION.md) | Comment le film est distingué d'un porte-films vide et comment les limites de vue sont mesurées |
 | [Validation colorimétrique IT8](reference/IT8_COLOR_VALIDATION.md) | Mesure des patchs, niveaux de preuve, régression synthétique |
-
-## Validation
-
-| Document | À utiliser quand |
-|---|---|
-| [Checklist QA sur matériel réel](validation/REAL_QA_CHECKLIST.md) | Vous vérifiez un Mac, un écran, un scanner et un film réels |
-| [Comparaison GrainMend sur scans réels](validation/GRAINMEND_CORPUS.md) | Vous remesurez les 44 paires FILM-R v2 |
-| [Mesure de GrainMend IR sur scans réels](validation/GRAINMEND_IR.md) | Vous mesurez ce que GrainMend IR retire |
-
-## Recherche sur la simulation de film
-
-| Document | À lire quand |
-|---|---|
-| [컬러 네거티브 스틸 필름 조사](research/film-simulation/01-color-negative-still.md) | Vous consultez les notes C-41 |
-| [컬러 리버설 필름 조사](research/film-simulation/02-color-slide.md) | Vous consultez les notes E-6 et K-14 |
-| [컬러 영화용 필름 조사](research/film-simulation/03-color-motion-picture.md) | Vous consultez les notes ECN-2 |
-| [Digital B&W 분기 설계](research/film-simulation/08-digital-bw-branch-plan.md) | Vous consultez le transfert du design noir et blanc |
-| [다음 세션 시작 프롬프트](research/film-simulation/09-handoff-prompt.md) | Vous reprenez le travail de simulation |
-| [필름 시뮬레이션 확장 인수인계](research/film-simulation/09-handoff.md) | Vous consultez le transfert de l’implémentation |
 
 ## Provenance et distribution
 

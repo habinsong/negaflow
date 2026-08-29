@@ -253,7 +253,7 @@ RGB 回归用的是 FILM-R v2 的损伤版与专家修复版共 44 对。
 就算结果变好了，仍有 6 张的 PSNR 低于专家修复版。
 这些数字不证明所有照片都会变好，不证明 RGB 和 IR 等同，也不证明真实扫描仪的 IR 质量。
 
-完整表格和命令在 [GrainMend 实际扫描比较](../validation/GRAINMEND_CORPUS.md) 里。
+完整表格和命令在 GrainMend 实际扫描比较 里。
 
 按胶片区分的 IR 限制和对齐失败条件，整理在
 [GrainMend IR 要避开的胶片](../reference/INFRARED_LIMITS.md) 里。

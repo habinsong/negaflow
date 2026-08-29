@@ -10,12 +10,19 @@ flowchart LR
     A["まず製品を知りたい"] --> P["product"]
     B["コードとデータの流れを見る"] --> R["architecture"]
     C["形式と数値を確認する"] --> S["reference"]
-    D["出せる状態か確認する"] --> V["validation"]
 ```
 
 > [!NOTE]
-> 現在のバージョンは`1.0.9`です。作ったものと実際に確認した範囲は
-> [プロジェクトの状態](product/PROJECT_STATUS.md)に書いています。
+> negaflow 1.1.0 は macOS と Windows で動きます。二つのアプリはそれぞれのプラットフォーム
+> 向けに別々に作られ、同じファイルからは同じ絵が出ます。
+
+## プラットフォーム
+
+| ドキュメント | 見るとき |
+|---|---|
+| [macOS と Windows の違い](platform/PLATFORM_DIFFERENCES.md) | 両方で同じところと違うところを知りたいとき |
+| [macOS のドキュメント](../../negaflow-mac/docs/README_ja.md) | macOS でインストール、ビルド、CLI を使うとき |
+| [Windows のドキュメント](../../negaflow-windows/docs/README_ja.md) | Windows でインストール、ビルド、エンジンを確かめるとき |
 
 ## 製品
 
@@ -25,7 +32,6 @@ flowchart LR
 | [クロマエンジン](product/CHROMA_ENGINE.md) | フィルム反転と現像順序を知りたいとき |
 | [GrainMend](product/GRAINMEND.md) | ホコリとキズの復元がどう動くか見るとき |
 | [フィルムプロファイル](product/FILM_PROFILES.md) | 同梱プロファイルの出どころと限界を確認するとき |
-| [プロジェクトの状態](product/PROJECT_STATUS.md) | 実装、計測、配布の状態を確認するとき |
 
 ## 構造
 
@@ -49,25 +55,6 @@ flowchart LR
 | [GrainMend IRが避けるフィルム](reference/INFRARED_LIMITS.md) | 白黒、Kodachrome、RGB/IR整列の限界 |
 | [フラットベッドの自動フレーム検出](reference/FRAME_DETECTION.md) | フィルムと空のホルダーの見分け方、コマ境界の測り方 |
 | [IT8色検査](reference/IT8_COLOR_VALIDATION.md) | パッチ計測、証拠等級、合成回帰 |
-
-## 検証
-
-| ドキュメント | 使うとき |
-|---|---|
-| [実機点検リスト](validation/REAL_QA_CHECKLIST.md) | 実機のMac、画面、スキャナー、フィルムを確認するとき |
-| [GrainMend実スキャン比較](validation/GRAINMEND_CORPUS.md) | FILM-R v2の44ペアを測り直すとき |
-| [GrainMend IR実スキャン測定](validation/GRAINMEND_IR.md) | GrainMend IRがどれだけ消すか測るとき |
-
-## フィルムシミュレーション調査
-
-| ドキュメント | 読むとき |
-|---|---|
-| [컬러 네거티브 스틸 필름 조사](research/film-simulation/01-color-negative-still.md) | C-41の調査メモを確認するとき |
-| [컬러 리버설 필름 조사](research/film-simulation/02-color-slide.md) | E-6とK-14の調査メモを確認するとき |
-| [컬러 영화용 필름 조사](research/film-simulation/03-color-motion-picture.md) | ECN-2の調査メモを確認するとき |
-| [Digital B&W 분기 설계](research/film-simulation/08-digital-bw-branch-plan.md) | 白黒の設計引き継ぎを確認するとき |
-| [다음 세션 시작 프롬프트](research/film-simulation/09-handoff-prompt.md) | フィルムシミュレーションを続けるとき |
-| [필름 시뮬레이션 확장 인수인계](research/film-simulation/09-handoff.md) | 現在の実装引き継ぎを確認するとき |
 
 ## 出所と配布
 

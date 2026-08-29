@@ -286,7 +286,7 @@ None of this proves every photograph improves, that RGB and IR are equivalent, o
 quality on a real scanner.
 
 The full table and the commands are in
-[GrainMend real scan comparison](../validation/GRAINMEND_CORPUS.md).
+GrainMend real scan comparison.
 
 Per-film IR limits and the conditions where alignment fails are collected in
 [Film GrainMend IR should avoid](../reference/INFRARED_LIMITS.md).

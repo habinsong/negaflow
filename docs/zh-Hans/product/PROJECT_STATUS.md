@@ -193,7 +193,7 @@ FILM-R 只验证 GrainMend RGB 的自动路径。
 - 所有受支持 Mac 上的性能
 
 最终画面和实机确认由用户负责。
-不拿构建成功当替代，结果记在 [实机检查表](../validation/REAL_QA_CHECKLIST.md)里。
+不拿构建成功当替代，结果记在 实机检查表里。
 
 ## 各项内容以哪份文档为准
 
@@ -206,5 +206,5 @@ FILM-R 只验证 GrainMend RGB 的自动路径。
 | 目录的保存方式 | [目录存储结构](../architecture/CATALOG_STORAGE.md) |
 | 扫描仪配置文件的发布标准 | [扫描仪配置文件质量判定](../reference/PROFILE_QUALITY_GATE.md) |
 | GrainMend 的实现与限制 | [GrainMend](GRAINMEND.md) |
-| 最终画面与实机批准 | [实机检查表](../validation/REAL_QA_CHECKLIST.md) |
+| 最终画面与实机批准 | 实机检查表 |
 | 安装与用法 | 仓库根目录的 README 文件 |

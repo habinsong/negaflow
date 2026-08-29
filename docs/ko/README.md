@@ -10,12 +10,19 @@ flowchart LR
     A["제품을 먼저 알고 싶다"] --> P["product"]
     B["코드와 데이터 흐름을 본다"] --> R["architecture"]
     C["형식과 수치를 확인한다"] --> S["reference"]
-    D["출시 가능 여부를 확인한다"] --> V["validation"]
 ```
 
 > [!NOTE]
-> 현재 버전은 `1.0.9`입니다. 구현 여부와 실제로 확인한 범위는
-> [지금 어디까지 됐나](product/PROJECT_STATUS.md)를 기준으로 봅니다.
+> negaflow 1.1.0 은 macOS 와 Windows 에서 동작합니다. 두 앱은 각 플랫폼에 맞춰 따로
+> 만들었고, 같은 파일을 넣으면 같은 결과가 나옵니다.
+
+## 플랫폼
+
+| 문서 | 언제 보나 |
+|---|---|
+| [macOS와 Windows의 차이](platform/PLATFORM_DIFFERENCES.md) | 두 쪽에서 같은 것과 다른 것을 알고 싶을 때 |
+| [macOS 문서](../../negaflow-mac/docs/README_ko.md) | macOS에서 설치하거나 빌드하거나 CLI를 쓸 때 |
+| [Windows 문서](../../negaflow-windows/docs/README_ko.md) | Windows에서 설치하거나 빌드하거나 엔진을 확인할 때 |
 
 ## 제품
 
@@ -25,7 +32,6 @@ flowchart LR
 | [크로마 엔진](product/CHROMA_ENGINE.md) | 필름 반전과 현상 순서가 궁금할 때 |
 | [GrainMend](product/GRAINMEND.md) | 먼지·스크래치 복원이 어떻게 작동하는지 볼 때 |
 | [필름 프로파일](product/FILM_PROFILES.md) | 번들 프로파일의 출처와 한계를 확인할 때 |
-| [지금 어디까지 됐나](product/PROJECT_STATUS.md) | 구현, 측정, 배포 상태를 확인할 때 |
 
 ## 구조
 
@@ -49,25 +55,6 @@ flowchart LR
 | [GrainMend IR이 피해야 할 필름](reference/INFRARED_LIMITS.md) | 흑백, Kodachrome, RGB/IR 정렬 한계 |
 | [평판 프레임 자동 검출](reference/FRAME_DETECTION.md) | 필름과 빈 홀더를 어떻게 가르고 컷 경계를 어떻게 재는지 |
 | [IT8 색 검사](reference/IT8_COLOR_VALIDATION.md) | 패치 측정, 증거 등급, 합성 회귀 |
-
-## 검증
-
-| 문서 | 쓰는 때 |
-|---|---|
-| [출시 전 실기기 점검표](validation/REAL_QA_CHECKLIST.md) | 실제 Mac, 화면, 스캐너, 필름을 확인할 때 |
-| [GrainMend 실제 스캔 비교](validation/GRAINMEND_CORPUS.md) | FILM-R v2 44쌍을 다시 측정할 때 |
-| [GrainMend IR 실제 스캔 측정](validation/GRAINMEND_IR.md) | GrainMend IR이 얼마나 지우는지 측정할 때 |
-
-## 필름 시뮬레이션 조사
-
-| 문서 | 쓰는 때 |
-|---|---|
-| [컬러 네거티브 스틸 필름 조사](research/film-simulation/01-color-negative-still.md) | C-41 조사 메모를 확인할 때 |
-| [컬러 리버설 필름 조사](research/film-simulation/02-color-slide.md) | E-6와 K-14 조사 메모를 확인할 때 |
-| [컬러 영화용 필름 조사](research/film-simulation/03-color-motion-picture.md) | ECN-2 조사 메모를 확인할 때 |
-| [Digital B&W 분기 설계](research/film-simulation/08-digital-bw-branch-plan.md) | 흑백 설계 인수인계를 확인할 때 |
-| [다음 세션 시작 프롬프트](research/film-simulation/09-handoff-prompt.md) | 필름 시뮬레이션 작업을 이어갈 때 |
-| [필름 시뮬레이션 확장 인수인계](research/film-simulation/09-handoff.md) | 현재 구현 인수인계를 확인할 때 |
 
 ## 출처와 배포
 

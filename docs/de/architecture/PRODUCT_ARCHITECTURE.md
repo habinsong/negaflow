@@ -184,13 +184,13 @@ Zum Ordnen:
 - Raster, Vergleich, Auswahl
 - Doppelte Kandidaten durchsehen
 
-In der Ordneransicht trägt jeder Ordner ein Band — Dreieck, Ordner, Name, Anzahl,
+In der Ordneransicht trägt jeder Ordner ein Band: Dreieck, Ordner, Name, Anzahl,
 Entwicklungsprozess, Ziel, Anwenden. Das Dreieck klappt die Miniaturen darunter ein. Eingeklappte
 Ordner bleiben es beim nächsten Start, getrennt vom Einklappen der Dateiliste in der Seitenleiste.
 
 Die Ordneransicht ist **ein** Raster: jeder Ordner eine Sektion, sein Band deren Kopf. Diese
 Struktur muss so bleiben. Jedem Ordner ein eigenes Raster zu geben und diese zu stapeln hebt die
-Faulheit auf — der Stapel muss die Höhe eines Ordners als Ganzes kennen, also baut ein Ordner alle
+Faulheit auf. Der Stapel muss die Höhe eines Ordners als Ganzes kennen, also baut ein Ordner alle
 seine Karten, sobald er ins Bild kommt. Mit einem Raster ist die Einheit der Faulheit eine Zeile,
 und genau das hält das Scrollen bei mehreren hundert Fotos flüssig.
 
@@ -403,12 +403,12 @@ Was automatische Prüfungen nicht klären:
 
 | Was Sie suchen | Dokument |
 |---|---|
-| Aktueller Umsetzungs- und Prüfstand | [Projektstand](../product/PROJECT_STATUS.md) |
+| Aktueller Umsetzungs- und Prüfstand | Projektstand |
 | Umkehr und Entwicklung | [Chroma Engine](../product/CHROMA_ENGINE.md) |
 | Reparatur von Defekten | [GrainMend](../product/GRAINMEND.md) |
 | Filmprofile | [Filmprofile](../product/FILM_PROFILES.md) |
 | Einen Scanner anbinden | [Scanner-Plugin-Struktur](SCANNER_PLUGINS.md) |
 | Freigabekriterien für Profile | [Qualitätsprüfung der Scannerprofile](../reference/PROFILE_QUALITY_GATE.md) |
-| Echte Geräte und Bildschirme prüfen | [Checkliste für echte Geräte](../validation/REAL_QA_CHECKLIST.md) |
+| Echte Geräte und Bildschirme prüfen | Checkliste für echte Geräte |
 | Aufbewahrungsarchiv | [Bibliotheksarchiv](LIBRARY_ARCHIVE.md) |
 | Hash-Beziehungen der Ausgabedateien | [Render-Protokoll](../reference/RENDER_MANIFEST.md) |
