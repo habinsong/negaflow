@@ -148,7 +148,10 @@ internal static unsafe class NativeDevelopExportCommand
                         v32, request, make, model, software, artist, copyright, filmType,
                         filmStock, capturedAt),
                     request);
-                if (defectRecipeSha256.Length == 0 && outputIcc.Length == 0)
+                // 판 프록시는 v34 지름길을 쓸 수 없습니다 — 입력 해상도를 싣는 칸이 v38 에만
+                // 있기 때문입니다.
+                if (defectRecipeSha256.Length == 0 && outputIcc.Length == 0 &&
+                    request.ProxyInputLongEdge == 0)
                 {
                     status = NativeDevelopRun.nf_develop_export_v34(
                         &v34, runState, (NativeDevelopExportResultV3*)&raw);
@@ -157,7 +160,20 @@ internal static unsafe class NativeDevelopExportCommand
                 {
                     NativeDevelopExportRequestV35 v35 = BuildRequestV35(
                         v34, defectRecipeDigest, checked((uint)defectRecipeSha256.Length));
-                    if (outputIcc.Length != 0 && !bakeDefects)
+                    if (request.ProxyInputLongEdge != 0 && !bakeDefects)
+                    {
+                        // 판 프록시입니다. 인화소 ICC 는 있어도 되고 없어도 되므로 v37 을
+                        // 그대로 감쌉니다 — 비어 있으면 네이티브가 그 칸을 건너뜁니다.
+                        NativeDevelopExportRequestV38 v38 = BuildRequestV38(
+                            BuildRequestV37(
+                                BuildRequestV36(v35, null, 0U, 0U),
+                                outputIcc.Length == 0 ? null : outputIccProfile,
+                                checked((uint)outputIcc.Length)),
+                            request.ProxyInputLongEdge);
+                        status = NativeDevelopRun.nf_develop_export_v38(
+                            &v38, runState, (NativeDevelopExportResultV3*)&raw);
+                    }
+                    else if (outputIcc.Length != 0 && !bakeDefects)
                     {
                         // 인화소 ICC 가 붙으면 그것을 받는 판으로 갑니다. 결함 접두 힌트는
                         // 내보내기에 쓰지 않으므로 v36 은 빈 채로 지나갑니다.
@@ -183,13 +199,16 @@ internal static unsafe class NativeDevelopExportCommand
         return Translate(
             status,
             raw,
-            defectRecipeSha256.Length == 0 && outputIcc.Length == 0
+            defectRecipeSha256.Length == 0 && outputIcc.Length == 0 &&
+                request.ProxyInputLongEdge == 0
                 ? "nf_develop_export_v34"
                 : bakeDefects
                     ? "nf_develop_bake_defects_v1"
-                    : outputIcc.Length != 0
-                        ? "nf_develop_export_v37"
-                        : "nf_develop_export_v35");
+                    : request.ProxyInputLongEdge != 0
+                        ? "nf_develop_export_v38"
+                        : outputIcc.Length != 0
+                            ? "nf_develop_export_v37"
+                            : "nf_develop_export_v35");
     }
 
     /// <summary>

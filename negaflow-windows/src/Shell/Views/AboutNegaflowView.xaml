@@ -42,5 +42,15 @@
             HorizontalAlignment="Center"
             FontSize="12"
             Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        <HyperlinkButton
+            x:Name="GitHubButton"
+            Margin="0,6,0,0"
+            Padding="10,4"
+            HorizontalAlignment="Center"
+            AutomationProperties.AutomationId="negaflow.about.github"
+            Content="GitHub"
+            FontSize="12"
+            NavigateUri="https://github.com/habinsong/negaflow"
+            ToolTipService.ToolTip="https://github.com/habinsong/negaflow" />
     </StackPanel>
 </UserControl>

@@ -130,6 +130,20 @@ public sealed partial class DevelopExportPanel : UserControl
     }
 
     /// <summary>
+    /// 한 판에 <b>여러 장을 얹는</b> 배치인지입니다. macOS
+    /// <c>ExportSection(usesCompositeLayout:)</c> — <c>layoutMode != .singleImage</c> 입니다.
+    /// 참이면 내보내기 단추는 한 장이어도 숫자를 답니다: 그 숫자가 사진 수가 아니라
+    /// <b>나올 파일 수</b>이기 때문입니다.
+    /// </summary>
+    public bool UsesCompositeLayout { get; set; }
+
+    /// <summary>
+    /// 지금 설정으로 나올 <b>판 수</b>입니다. macOS <c>printExportOutputCount</c> 자리이며,
+    /// 인화뷰가 레이아웃과 고른 장수에서 계산해 꽂습니다.
+    /// </summary>
+    public Func<int>? PaperOutputCount { get; set; }
+
+    /// <summary>
     /// 빠른 내보내기 카드의 줄 하나를 켜고 끕니다. 줄이 늘거나 줄면 <b>분리선을 다시</b>
     /// 놓습니다 — 그러지 않으면 접힌 줄 앞의 선만 빈 자리에 남습니다.
     /// </summary>

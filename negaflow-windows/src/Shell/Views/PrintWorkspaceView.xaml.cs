@@ -468,6 +468,10 @@ public sealed partial class PrintWorkspaceView : UserControl
     /// </summary>
     internal void ApplyInspectorTabAvailability(PrintPreferences print)
     {
+        // macOS `usesCompositeLayout: settingsStore.layoutMode != .singleImage` 그대로입니다.
+        // 낱장만 사진 하나에 판 하나이고, 나머지는 전부 판이 사진 수와 따로 놉니다 — 그래서
+        // 낱장이 아니면 한 장을 골라도 나올 파일 수를 단추에 적습니다.
+        PrintExportPanel.UsesCompositeLayout = print.LayoutMode != PrintLayoutMode.SingleImage;
         bool package = PrintPreferences.PackageModeFor(print.LayoutMode) is not null;
         ContentTabButton.Visibility = Visible(package);
         ContentTabColumn.Width = package

@@ -63,3 +63,52 @@ nf_status_t NF_CALL nf_probe_standard_image_source_v1(
         return NF_STATUS_OK;
     }
 }
+
+
+// 촬영 기록만 읽습니다. 화소도, 크기도 만들지 않습니다 - 현상 인스펙터 머리줄이 한 장을
+// 열 때만 부릅니다(macOS `DevelopInspectorHeaderSummary.importedMetadata` 자리).
+nf_status_t NF_CALL nf_probe_image_shot_v1(
+    const wchar_t* const source_path,
+    nf_image_shot_info_v1* const result) {
+    if (result == nullptr) return NF_STATUS_INVALID_ARGUMENT;
+    if (result->struct_size < static_cast<std::uint32_t>(sizeof(*result))) {
+        return NF_STATUS_STRUCT_TOO_SMALL;
+    }
+    if (source_path == nullptr || source_path[0] == L'\0') return NF_STATUS_INVALID_ARGUMENT;
+
+    const std::uint32_t declared_size = result->struct_size;
+    std::memset(result, 0, sizeof(*result));
+    result->struct_size = declared_size;
+    try {
+        const auto probed = negaflow::imageio::probe_source_shot_metadata(
+            std::filesystem::path{source_path});
+        if (probed.status != negaflow::imageio::StandardImageMetadataStatus::ok) {
+            result->status =
+                probed.status == negaflow::imageio::StandardImageMetadataStatus::unsupported
+                ? NF_IMAGE_SHOT_PROBE_UNSUPPORTED
+                : NF_IMAGE_SHOT_PROBE_UNREADABLE;
+            return NF_STATUS_OK;
+        }
+        result->status = NF_IMAGE_SHOT_PROBE_OK;
+        if (probed.shot.has_iso_speed) {
+            result->present_mask |= NF_IMAGE_SHOT_HAS_ISO_SPEED;
+            result->iso_speed = probed.shot.iso_speed;
+        }
+        if (probed.shot.has_exposure_time) {
+            result->present_mask |= NF_IMAGE_SHOT_HAS_EXPOSURE_TIME;
+            result->exposure_time_seconds = probed.shot.exposure_time_seconds;
+        }
+        if (probed.shot.has_f_number) {
+            result->present_mask |= NF_IMAGE_SHOT_HAS_F_NUMBER;
+            result->f_number = probed.shot.f_number;
+        }
+        if (probed.shot.has_focal_length) {
+            result->present_mask |= NF_IMAGE_SHOT_HAS_FOCAL_LENGTH;
+            result->focal_length_mm = probed.shot.focal_length_mm;
+        }
+        return NF_STATUS_OK;
+    } catch (...) {
+        result->status = NF_IMAGE_SHOT_PROBE_UNREADABLE;
+        return NF_STATUS_OK;
+    }
+}

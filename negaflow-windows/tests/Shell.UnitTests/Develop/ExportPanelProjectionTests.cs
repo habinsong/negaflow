@@ -24,7 +24,10 @@ internal static class ExportPanelProjectionTests
         ExportSettings? exportSettings = null,
         QuickExportSettings? quickSettings = null,
         bool canExport = true,
-        int selectedFrameCount = 1) =>
+        int selectedFrameCount = 1,
+        bool usesPaperLayout = false,
+        bool usesCompositeLayout = false,
+        int paperOutputCount = 0) =>
         ExportPanelProjection.Create(
             frame,
             exportSettings ?? new ExportSettings(),
@@ -33,7 +36,11 @@ internal static class ExportPanelProjectionTests
             canExport,
             selectedFrameCount,
             "원본 옆",
-            "내보내기");
+            "내보내기",
+            "빠른 내보내기",
+            usesPaperLayout,
+            usesCompositeLayout,
+            paperOutputCount);
 
     private static void VerifyFolderFallback()
     {

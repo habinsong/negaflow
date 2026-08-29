@@ -19,8 +19,17 @@ namespace Negaflow.Shell.UnitTests;
 /// </para>
 /// <para>
 /// 그래서 <b>화면용 요청에서만</b> 편집을 내려놓고 사진을 그립니다. 편집은 카탈로그에 그대로
-/// 남습니다. <b>내보내기는 그대로 거부</b>해야 합니다 — 거기서 편집을 조용히 빼면 사용자가
-/// 지운 적 없는 먼지가 결과물에 남습니다.
+/// 남습니다. <b>내보내기는 편집을 조용히 빼지 않습니다</b> — 거기서 빼면 사용자가 지운 적
+/// 없는 먼지가 결과물에 남습니다.
+/// </para>
+/// <para>
+/// 다만 "거부한다" 가 <b>어디서</b> 나는지는 달라졌습니다. 예전에는 요청을 그대로 만들어
+/// 보내고 네이티브가 <c>defect_source_identity_mismatch</c> 로 멈췄습니다 — 사용자에게는
+/// 알 수 없는 단계 이름 한 줄뿐이었고, 그 사진은 영영 내보낼 수 없었습니다. 이제 셸이
+/// 먼저 <b>화소 격자</b>를 보고, 격자가 그대로면 지금 파일로 다시 앵커해 내보내기를 이어
+/// 가고(macOS 의 cleaned raw 재빌드와 같은 결론), 확인할 수 없거나 격자가 달라졌으면
+/// <see cref="DevelopRequestRefusal.StaleDefectSource"/> 로 <b>무엇을 하면 되는지 적어</b>
+/// 거부합니다.
 /// </para>
 /// </remarks>
 internal static class DevelopRequestStaleDefectSourceTests
@@ -86,12 +95,13 @@ internal static class DevelopRequestStaleDefectSourceTests
                     stale.Request.DefectSourceIdentity is null,
                 "stale_defect_source_drops_edits_for_display");
 
-            // ③ 내보내기 경로(기본값)는 편집을 그대로 싣습니다 — 엔진이 거부해야 합니다.
+            // ③ 내보내기 경로(기본값)는 편집을 조용히 빼지 않습니다. 이 프레임에는 기록된
+            //    화소 치수가 없어 격자가 그대로인지 확인할 수 없으므로, 셸이 먼저 막습니다 —
+            //    네이티브 단계 이름 대신 무엇을 하면 되는지 적힌 거부입니다.
             DevelopRequestResult export = DevelopRequestFactory.Create(Build(4096UL), destination);
             Check(
-                export.IsSuccess && !export.DroppedStaleDefectEdits &&
-                    export.Request?.DefectRegions.Count == 1 &&
-                    export.Request.DefectSourceIdentity is not null,
+                !export.IsSuccess && !export.DroppedStaleDefectEdits &&
+                    export.Refusal == DevelopRequestRefusal.StaleDefectSource,
                 "stale_defect_source_still_fails_closed_for_export");
 
             // ④ 원본을 못 읽으면 **같다고 봅니다.** 잠깐 잠긴 파일 때문에 사용자의 편집이

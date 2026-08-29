@@ -753,6 +753,7 @@ add_library(negaflow_pipeline STATIC
     src/Native/pipeline/export/support/preview_proxy.cpp
     src/Native/pipeline/export/support/preview_raw_store.cpp
     src/Native/pipeline/export/support/progress.cpp
+    src/Native/pipeline/export/support/stage_trace.cpp
     src/Native/pipeline/film_look_workspace.cpp
     src/Native/pipeline/gpu_accelerator.cpp
     src/Native/pipeline/gpu_accelerator_resident.cpp
@@ -810,6 +811,7 @@ add_library(negaflow_native SHARED
     src/Native/abi/request/develop_request_v26_v34.cpp
     src/Native/abi/request/develop_request_v36.cpp
     src/Native/abi/request/develop_request_v37.cpp
+    src/Native/abi/request/develop_request_v38.cpp
     src/Native/abi/result/develop_result_prepare_v1_v12.cpp
     src/Native/abi/result/develop_result_prepare_v13_v21.cpp
     src/Native/abi/result/develop_result_prepare_v22_v34.cpp
@@ -819,6 +821,7 @@ add_library(negaflow_native SHARED
     src/Native/abi/run/develop_run_v29_v34.cpp
     src/Native/abi/run/develop_run_v36.cpp
     src/Native/abi/run/develop_run_v37.cpp
+    src/Native/abi/run/develop_run_v38.cpp
     src/Native/abi/support/abi_layout.cpp
     src/Native/abi/support/crash_log.cpp
     src/Native/abi/support/abi_text.cpp
@@ -899,6 +902,7 @@ if(BUILD_TESTING)
         tests/Native.UnitTests/DevelopExportAbi/contract_v18_v25.cpp
         tests/Native.UnitTests/DevelopExportAbi/contract_v26_v34.cpp
         tests/Native.UnitTests/DevelopExportAbi/preview_core.cpp
+        tests/Native.UnitTests/DevelopExportAbi/preview_export_parity.cpp
         tests/Native.UnitTests/DevelopExportAbi/preview_tone_color.cpp
         tests/Native.UnitTests/DevelopExportAbi/preview_grain_mend.cpp
         tests/Native.UnitTests/DevelopExportAbi/preview_denoise_texture.cpp

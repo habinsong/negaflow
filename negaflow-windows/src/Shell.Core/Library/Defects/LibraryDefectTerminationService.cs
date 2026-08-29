@@ -207,10 +207,15 @@ internal sealed class LibraryDefectTerminationService(
         if (skippedSourceMismatch.Count != 0)
         {
             // 종료는 막지 않지만 조용히 넘어가지도 않습니다. 어느 사진을 못 구웠는지 남깁니다.
-            PreviewTrace.Write(
-                "defect bake skipped source mismatch " +
-                string.Join(',', skippedSourceMismatch));
+            // **늘 켜진 기록에 남깁니다** — 개발자 모드에서만 켜지는 기록에 적으면 실기에서
+            // 무슨 일이 있었는지 볼 수 없습니다.
+            string skipped = string.Join(',', skippedSourceMismatch);
+            Negaflow.Shell.Diagnostics.TerminationLog.Write(
+                $"defect bake skipped source mismatch: {skipped}");
+            PreviewTrace.Write("defect bake skipped source mismatch " + skipped);
         }
+        Negaflow.Shell.Diagnostics.TerminationLog.Write(
+            $"defect bake ok frames={frameIds.Length} skipped={skippedSourceMismatch.Count}");
         return LibraryDefectTerminationResult.Success();
     }
 

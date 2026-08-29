@@ -138,6 +138,16 @@ struct DevelopExportRequest final {
     // Zero preserves source dimensions. Positive values cap the exported long edge;
     // they never upscale and do not alter previews or GrainMend detection.
     std::uint32_t output_long_edge{0U};
+    // 이 결과가 **판에 얹힐 프록시**일 때 입력을 얼마나 크게 풀지입니다. 0 이면 원본 그대로.
+    //
+    // macOS `ExportDevelopedFrameRenderer.proxyInputLongEdge(outputLongEdge:…)` 와 같은
+    // 자리입니다. 콘택트 시트 한 칸이 268 px 인데 5136x3543 을 통째로 푸는 것을 막습니다 —
+    // 맥 주석 그대로 "콘택트 시트 한 칸이 3cm 라면 6000px 원본을 그대로 현상할 이유가 없다".
+    //
+    // `output_long_edge` 와 다른 값입니다. 그쪽은 **다 만든 뒤** 줄이는 상한이고 이것은
+    // **풀 때** 의 상한입니다. 사용자가 고른 내보내기 크기에는 걸지 않습니다 — 맥도 일반
+    // 내보내기는 전체 해상도로 현상한 뒤 줄입니다.
+    std::uint32_t proxy_input_long_edge{0U};
     std::uint32_t rows_per_copy{64U};
     // Background developed-cache generation writes the final BGRA result to disk and
     // must not also retain a full Rgba32F proxy for every catalog frame. Foreground

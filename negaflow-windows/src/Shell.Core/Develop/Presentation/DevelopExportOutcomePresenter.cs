@@ -38,6 +38,10 @@ internal static class DevelopExportOutcomePresenter
                         "Choose a full path to export to.",
                     DevelopRequestRefusal.UnknownOutputFormat =>
                         "That export format is not supported.",
+                    DevelopRequestRefusal.StaleDefectSource =>
+                        "The scan file changed size since the defect edits were recorded. " +
+                        "Relink the frame to the original scan, or clear the defect edits, " +
+                        "then export again.",
                     _ => "The develop request was refused.",
                 };
 

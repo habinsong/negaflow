@@ -180,6 +180,8 @@ void expect(bool condition, const char* message);
 
 [[nodiscard]] bool preview_is_neutral(const std::vector<std::uint8_t>& pixels) noexcept;
 
+void test_preview_and_export_agree(const std::filesystem::path& source);
+
 void test_argument_contract();
 void test_request_validation();
 void test_v2_contract();

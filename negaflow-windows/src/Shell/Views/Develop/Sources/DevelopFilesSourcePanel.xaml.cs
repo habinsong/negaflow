@@ -14,7 +14,7 @@ public sealed partial class DevelopFilesSourcePanel : UserControl
     {
         InitializeComponent();
         FilesPanel.TraceName = "develop";
-        FilesPanel.FrameInvoked += (_, frameId) => FrameSelected?.Invoke(this, frameId);
+        FilesPanel.FrameInvoked += (_, invocation) => FrameSelected?.Invoke(this, invocation);
     }
 
     /// <summary>
@@ -27,10 +27,15 @@ public sealed partial class DevelopFilesSourcePanel : UserControl
     internal Negaflow.Shell.Views.Library.Sources.LibraryFilesSourceTree FilesTab => FilesPanel;
 
     /// <summary>목록에서 frame 을 누르면 올립니다. 선택은 뷰가 맡습니다.</summary>
-    public event EventHandler<string>? FrameSelected;
+    public event EventHandler<Negaflow.Shell.Views.Library.Sources.LibraryFrameInvocation>? FrameSelected;
 
-    /// <summary>고른 사진만 바꿉니다. 목록을 다시 짓지 않습니다.</summary>
-    public void SynchronizeSelection(string? frameId) => FilesPanel.SelectedFrameId = frameId;
+    /// <summary>
+    /// 고른 사진만 바꿉니다. 목록을 다시 짓지 않습니다. <b>활성 사진만 밀지 않습니다</b> —
+    /// 그러면 트리가 옛 선택 집합으로 칠해 지운 줄이 파랗게 남습니다.
+    /// </summary>
+    public void SynchronizeSelection() => FilesPanel.SetSelection(
+        libraryHost?.ActiveFrameId,
+        libraryHost?.SelectedFrameIds ?? []);
 
     public void Bind(LibraryHostService host)
     {
@@ -57,7 +62,9 @@ public sealed partial class DevelopFilesSourcePanel : UserControl
         Negaflow.Shell.PreviewTrace.Write(
             $"files.develop.rebuild host=ok frames={libraryHost.Frames.Count} " +
             $"folders={libraryHost.Folders.Count} sections={projection.FolderSections.Count}");
-        FilesPanel.SelectedFrameId = libraryHost.ActiveFrameId;
+        // 활성 사진과 고른 사진들을 함께 겁니다. Shift·Ctrl 로 여럿을 골라도 한 줄만
+        // 강조되면 무엇이 나갈지 보이지 않습니다.
+        FilesPanel.SetSelection(libraryHost.ActiveFrameId, libraryHost.SelectedFrameIds);
         FilesPanel.SetSections(projection.FolderSections);
     }
 }

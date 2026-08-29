@@ -160,6 +160,14 @@ internal sealed class DevelopExportControlSync
             view.libraryHost?.RollFor(frame.Id),
             view.exportSettings.SequenceStart);
 
+    /// <summary>
+    /// 빠른 내보내기의 이름 문맥입니다. macOS <c>quickExport(_:)</c> 와 같이 본 내보내기와
+    /// <b>같은 이름</b>을 쓰되 순번만 1 로 고정합니다 — 빠른 내보내기에는 순번 시작 칸이
+    /// 없습니다.
+    /// </summary>
+    internal ExportNamingContext QuickNamingContextFor(LibraryFrameSnapshot frame) =>
+        ExportNamingContexts.For(frame, view.libraryHost?.RollFor(frame.Id), 1);
+
     internal static string Percent(double unit) =>
         Math.Round(unit * 100.0).ToString("0", CultureInfo.CurrentCulture) + "%";
 
@@ -181,7 +189,11 @@ internal sealed class DevelopExportControlSync
             view.panel?.CanExport == true,
             view.libraryHost?.SelectedFrames.Count ?? 0,
             AppResources.Get("developExportFolderBesideSource", "Text"),
-            AppResources.Get("exportSection", "Text"));
+            AppResources.Get("exportSection", "Text"),
+            AppResources.Get("commandQuickExport", "Text"),
+            view.UsesPaperLayout,
+            view.UsesCompositeLayout,
+            view.PaperOutputCount?.Invoke() ?? 0);
         view.ExportFolderPathText.Text = projected.ExportFolderPath;
         view.QuickExportFolderPathText.Text = projected.QuickExportFolderPath;
         // 줄에는 폴더 이름만 적습니다(macOS `exportFolderDisplay`). 전체 경로는 여기서
@@ -208,6 +220,7 @@ internal sealed class DevelopExportControlSync
         view.ExportButton.IsActionEnabled = projected.CanExport;
         view.QuickExportButton.IsActionEnabled = projected.CanExport;
         view.ExportButton.Title = projected.ExportButtonText;
+        view.QuickExportButton.Title = projected.QuickExportButtonText;
     }
 
     /// <summary>고를 수 있는 값들을 팝업 단추에 담습니다.</summary>

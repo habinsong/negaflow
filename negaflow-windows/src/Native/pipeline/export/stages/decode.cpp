@@ -7,6 +7,7 @@
 
 #include "negaflow/imageio/wic_standard_image_decoder.h"
 #include "negaflow/imaging/scanner_tiff_to_working.h"
+#include "negaflow/imaging/working_image_resample.h"
 
 #include <cwchar>
 #include <memory>
@@ -268,18 +269,26 @@ std::optional<DevelopExportOutcome> decode_source(
     tracker.begin(DevelopExportStage::decode, cost_of(decode_cost, true));
     // 전체 해상도가 필요한 조건은 아래 두 갈래가 같습니다 - defect 편집의 ROI 가 원본 화소
     // 좌표라 프리뷰 크기로 줄이면 그 좌표가 화상 밖으로 나갑니다.
+    // 판에 얹을 프록시는 **풀 때부터** 그 크기로 풉니다. macOS
+    // `preparePageSource` 가 `proxyInputLongEdge` 를 구해
+    // `prepareForPrintComposite(_:proxyLongEdge:)` 로 넘기는 자리이며, 그래서 콘택트 시트
+    // 한 칸을 채우려고 원본을 통째로 푸는 일이 맥에는 없습니다.
+    const bool proxy_decode =
+        preview == nullptr && request.proxy_input_long_edge != 0U;
     const bool decodes_full_resolution =
-        preview == nullptr || !request.defect_recipe.order.empty();
+        (preview == nullptr && !proxy_decode) || !request.defect_recipe.order.empty();
     // **요청 상자가 무엇이든 디코드는 정착 크기로 한 번만 합니다.**
     //
     // 앱은 한 프레임에 인터랙티브(2560)와 정착(3600)을 이어서 부릅니다. 요청 상자 그대로
     // 풀면 같은 파일을 두 번 풀고(실기: 1,982 ms + 2,047 ms), 캐시에도 두 벌이 남아
     // 프레임당 메모리가 두 배가 됩니다. 정착 크기 한 벌만 두면 인터랙티브는 그것을
     // 줄여 쓰면 됩니다 — `preview_proxy_materialize` 가 이미 Lanczos 로 줄입니다.
-    const std::uint32_t box_width =
-        decodes_full_resolution ? 0U : preview_full_max_dimension;
-    const std::uint32_t box_height =
-        decodes_full_resolution ? 0U : preview_full_max_dimension;
+    // 프리뷰는 정착 크기 한 벌로 접고, 판 프록시는 호출자가 판 크기에서 구해 온 값을
+    // 그대로 씁니다 — 판마다 칸 크기가 다르므로 여기서 다시 고르지 않습니다.
+    const std::uint32_t proxy_box =
+        proxy_decode ? request.proxy_input_long_edge : preview_full_max_dimension;
+    const std::uint32_t box_width = decodes_full_resolution ? 0U : proxy_box;
+    const std::uint32_t box_height = decodes_full_resolution ? 0U : proxy_box;
     // 잠금은 참조를 꺼낼 때만 잡습니다. 277MB 복사를 잠금 안에서 하면 다른 스레드가
     // 그동안 통째로 멈춥니다 — 참조를 들고 있으므로 복사 중에 해제되지 않습니다.
     if (const std::shared_ptr<const negaflow::imaging::WorkingImage> cached =
@@ -301,15 +310,18 @@ std::optional<DevelopExportOutcome> decode_source(
     decode_control.rows_per_copy = request.rows_per_copy;
     decode_control.stop_token = stop.get_token();
     decode_control.progress_observer = &decode_progress;
+    // region 과 infrared 편집의 ROI·마스크는 원본 화소 좌표입니다. 디코드가 줄어들면 그
+    // 좌표가 작아진 이미지 밖으로 나가 defect 단계 전체가 invalid_argument 로 끝납니다
+    // (실제 OpticFilm8100_frame_7: 5088x3401 기준 roi (1332,3340) 52x36 을 1536x1026
+    // 이미지에 적용). brush 와 clone 은 정규화 좌표라 크기와 무관합니다. 그 판단은
+    // `decodes_full_resolution` 하나가 들고 있으므로 프리뷰와 판 프록시가 같은 규칙을 봅니다.
+    if (!decodes_full_resolution) {
+        decode_control.max_output_width = box_width;
+        decode_control.max_output_height = box_height;
+    }
     if (preview != nullptr) {
-        // region 과 infrared 편집의 ROI·마스크는 원본 화소 좌표입니다. 디코드가 프리뷰 크기로
-        // 줄면 그 좌표가 작아진 이미지 밖으로 나가 defect 단계 전체가 invalid_argument 로
-        // 끝납니다(실제 OpticFilm8100_frame_7: 5088x3401 기준 roi (1332,3340) 52x36 을
-        // 1536x1026 이미지에 적용). brush 와 clone 은 정규화 좌표라 크기와 무관합니다.
-        if (!decodes_full_resolution) {
-            decode_control.max_output_width = box_width;
-            decode_control.max_output_height = box_height;
-        }
+        // 압축 스트림 검사를 건너뛰는 것은 **화면 전용** 절충입니다. 판에 얹을 프록시는
+        // 게시되는 파일의 일부이므로 그 검사를 그대로 둡니다.
         decode_control.validate_compressed_streams = false;
     }
     if (is_tiff_source(request.source)) {
@@ -318,8 +330,9 @@ std::optional<DevelopExportOutcome> decode_source(
             {},
             {},
             decode_control);
-        if (preview != nullptr &&
-            decode_control.max_output_width != 0U &&
+        // 줄여 푼 것이 실패하면 **원본 크기로 한 번 더** 시도합니다. 판 프록시도 같은
+        // 물러섬을 씁니다 — 줄여 풀지 못한다는 이유로 판이 통째로 실패하면 안 됩니다.
+        if (decode_control.max_output_width != 0U &&
             prepared.decode.status != negaflow::imageio::WicTiffDecodeStatus::cancelled &&
             (prepared.decode.status != negaflow::imageio::WicTiffDecodeStatus::ok ||
              prepared.working.status != negaflow::imaging::ScannerToWorkingStatus::ok)) {
@@ -391,6 +404,38 @@ std::optional<DevelopExportOutcome> decode_source(
                 working.info.native_error_code);
         }
         decoded_image = std::move(working.image);
+    }
+
+    // 디코더가 줄여 주지 못한 형식은 **여기서** 줄입니다.
+    //
+    // 비압축 48bpp RGB 스캐너 TIFF 는 WIC 스케일러를 쓸 수 없어(`wic_tiff_decoder.cpp`
+    // 의 `allow_scaler`) 상한을 줘도 원본 크기로 나옵니다. 그러면 뒤따르는 파이프라인
+    // 전부가 18MP 로 도는데, 판에 놓일 자리는 268 px 입니다. macOS 는 이 자리에서
+    // `proxyLongEdge` 로 이미 줄어든 그림을 현상하므로 같은 결론에 맞춥니다.
+    //
+    // 실측(사용자 스캔 5136x3543, 판 한 칸 335 px): 줄이지 않으면 937 ms.
+    if (proxy_decode && decoded_image.width > 0U && decoded_image.height > 0U) {
+        const std::uint32_t longest =
+            decoded_image.width > decoded_image.height ? decoded_image.width
+                                                       : decoded_image.height;
+        if (longest > request.proxy_input_long_edge) {
+            const double scale =
+                static_cast<double>(request.proxy_input_long_edge) /
+                static_cast<double>(longest);
+            const auto fitted = [scale](const std::uint32_t value) {
+                const auto scaled = static_cast<std::uint32_t>(
+                    static_cast<double>(value) * scale + 0.5);
+                return scaled < 1U ? 1U : scaled;
+            };
+            const negaflow::imaging::WorkingImageResampleResult shrunk =
+                negaflow::imaging::resample_working_image_lanczos3(
+                    decoded_image, fitted(decoded_image.width), fitted(decoded_image.height));
+            // 줄이지 못해도 판은 나와야 합니다 — 느릴 뿐입니다. 원본 그대로 이어 갑니다.
+            if (shrunk.status == negaflow::imaging::WorkingImageResampleStatus::ok) {
+                decoded_image = std::move(
+                    const_cast<negaflow::imaging::WorkingImageResampleResult&>(shrunk).image);
+            }
+        }
     }
 
     const negaflow::imageio::ImageFileObservationResult after =

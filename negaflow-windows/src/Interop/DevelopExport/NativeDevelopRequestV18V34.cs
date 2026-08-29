@@ -407,6 +407,20 @@ internal static unsafe class NativeDevelopRequestV18V34
         };
     }
 
+    internal static NativeDevelopExportRequestV38 BuildRequestV38(
+        NativeDevelopExportRequestV37 v37,
+        uint proxyInputLongEdge)
+    {
+        v37.V36.V35.V34.V33.V32.V31.V30.V29.V28.V27.V26.V25.V24.V21.V20.V19.V18.V17.V16
+            .V15.V14.V13.V12.V11.V10.V9.V8.V7.StructSize =
+            (uint)sizeof(NativeDevelopExportRequestV38);
+        return new NativeDevelopExportRequestV38
+        {
+            V37 = v37,
+            ProxyInputLongEdge = proxyInputLongEdge,
+        };
+    }
+
     internal static byte[] BuildDefectSourceSha256(DevelopExportRequest request) =>
         request.DefectSourceIdentity is { } identity
             ? Convert.FromHexString(identity.Sha256)

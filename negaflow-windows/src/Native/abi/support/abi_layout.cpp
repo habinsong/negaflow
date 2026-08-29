@@ -132,6 +132,9 @@ static_assert(offsetof(
 static_assert(sizeof(nf_develop_export_request_v37) == 5152U);
 static_assert(offsetof(nf_develop_export_request_v37, output_icc_profile) == 5136U);
 static_assert(offsetof(nf_develop_export_request_v37, output_icc_profile_size) == 5144U);
+static_assert(sizeof(nf_develop_export_request_v38) == 5160U);
+static_assert(offsetof(nf_develop_export_request_v38, proxy_input_long_edge) == 5152U);
+static_assert(offsetof(nf_develop_export_request_v38, proxy_reserved) == 5156U);
 static_assert(sizeof(nf_develop_export_request_v32) == 5008U);
 static_assert(offsetof(nf_develop_export_request_v32, output_color_space) == 4992U);
 static_assert(sizeof(nf_grain_mend_detect_parameters_v1) == 40U);

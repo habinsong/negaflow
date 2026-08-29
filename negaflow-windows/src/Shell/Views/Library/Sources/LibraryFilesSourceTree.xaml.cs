@@ -28,7 +28,7 @@ public sealed partial class LibraryFilesSourceTree : UserControl
         InitializeComponent();
         drop = new LibraryFilesSourceDrop(this);
         FilesTree.ShowsRemoveButton = true;
-        FilesTree.FrameInvoked += (_, frameId) => FrameSelected?.Invoke(this, frameId);
+        FilesTree.FrameInvoked += (_, invocation) => FrameSelected?.Invoke(this, invocation);
         FilesTree.FolderRemoveRequested += OnFolderRemoveRequested;
         FilesTree.FolderContextRequested += OnFolderContextRequested;
         FilesTree.FolderDragOver = drop.OnDragOver;
@@ -42,18 +42,21 @@ public sealed partial class LibraryFilesSourceTree : UserControl
         LibraryFolderTreeBinding.Attach(FilesTree, state);
 
     /// <summary>목록에서 사진을 눌렀습니다. 현상·인화가 쓰던 이름과 같습니다.</summary>
-    public event EventHandler<string>? FrameInvoked
+    public event EventHandler<LibraryFrameInvocation>? FrameInvoked
     {
         add => FilesTree.FrameInvoked += value;
         remove => FilesTree.FrameInvoked -= value;
     }
 
-    /// <summary>지금 열려 있는 사진입니다. 이 사진과 그 폴더가 파랗게 됩니다.</summary>
-    public string? SelectedFrameId
-    {
-        get => FilesTree.SelectedFrameId;
-        set => FilesTree.SelectedFrameId = value;
-    }
+    /// <summary>지금 열려 있는 사진입니다.</summary>
+    public string? SelectedFrameId => FilesTree.SelectedFrameId;
+
+    /// <summary>
+    /// 활성 사진과 고른 사진들을 함께 겁니다 — 따로 걸 수 있으면 반드시 한쪽만 미는 길이
+    /// 생기고, 그때 트리가 옛 선택으로 칠합니다.
+    /// </summary>
+    public void SetSelection(string? activeFrameId, IReadOnlyCollection<string> frameIds) =>
+        FilesTree.SetSelection(activeFrameId, frameIds);
 
     /// <summary>목록을 갈아 끼웁니다.</summary>
     public void SetSections(IReadOnlyList<LibraryBrowserFolderSection> value)
@@ -66,7 +69,7 @@ public sealed partial class LibraryFilesSourceTree : UserControl
     }
 
     /// <summary>목록에서 사진을 골랐을 때 격자 선택을 맞춥니다.</summary>
-    public event EventHandler<string>? FrameSelected;
+    public event EventHandler<LibraryFrameInvocation>? FrameSelected;
 
     /// <summary>원본을 옮긴 뒤 격자를 다시 그릴 때 올립니다.</summary>
     public event EventHandler? LibraryChanged;
@@ -110,7 +113,7 @@ public sealed partial class LibraryFilesSourceTree : UserControl
             libraryHost.FolderAvailabilityById,
             LibraryBrowserViewMode.Folders,
             includeEmptyFolders: false);
-        FilesTree.SelectedFrameId = libraryHost.ActiveFrameId;
+        FilesTree.SetSelection(libraryHost.ActiveFrameId, libraryHost.SelectedFrameIds);
         PreviewTrace.Write(
             $"files.rebuild {TraceName} host=ok items={allItems.Count} " +
             $"folders={projection.FolderSections.Count} matched={projection.MatchedCount}");

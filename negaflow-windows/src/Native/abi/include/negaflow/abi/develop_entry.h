@@ -427,6 +427,12 @@ NF_API nf_status_t NF_CALL nf_develop_export_v37(
     const nf_develop_export_request_v37* request,
     nf_develop_run_state_v1* run_state,
     nf_develop_export_result_v3* result);
+/* Same as v37, plus the decode cap a print-sheet proxy needs. Callers publishing a
+   user-facing file leave `proxy_input_long_edge` at zero and get v37 behaviour. */
+NF_API nf_status_t NF_CALL nf_develop_export_v38(
+    const nf_develop_export_request_v38* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
 /* Builds the same BGRA preview as v35 without retaining its rebuildable Rgba32F raw
    proxy. This is for serialized background population of the persistent developed
    cache; foreground preview calls must continue to use nf_develop_preview_v35. */

@@ -48,6 +48,7 @@ int main(const int argument_count, const char* const arguments[]) {
         if (std::filesystem::exists(source)) {
             test_full_develop(source);
             test_preview(source);
+            test_preview_and_export_agree(source);
             test_v2_auto_develop(source);
             test_v2_auto_preview(source);
             test_v3_basic_tone_preview(source);

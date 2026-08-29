@@ -2,6 +2,9 @@
 
 #include "export/support/outcome.h"
 #include "export/support/preview.h"
+#include "export/support/stage_trace.h"
+
+#include "negaflow/pipeline/gpu_accelerator.h"
 
 #include "negaflow/output/wic_jpeg_export.h"
 #include "negaflow/output/wic_png_export.h"
@@ -89,6 +92,23 @@ DevelopExportOutcome publish_developed(
         }
         return preview_outcome;
     }
+
+    // **인코더는 호스트 버퍼를 읽습니다.** 여기까지 오는 화소는 GPU 에 머물러 있을 수
+    // 있고, 그러면 `image.pixels` 는 상주로 묶이기 **전** 내용 — 곧 반전 전 네거티브 —
+    // 그대로입니다. 미리보기 갈래는 `write_preview` 가 스스로 내리므로 무사했지만,
+    // 내보내기 갈래에는 내리는 자리가 없었습니다.
+    //
+    // 그래서 현상 타깃에 따라 되고 안 되고가 갈렸습니다: `grade.cpp` 가 `target_active`
+    // 일 때만 `flush_resident()` 를 부르므로 노리츠·SP3000·F135·HR·복원은 우연히
+    // 살아났고, 스캐너 프로파일 없는 MAIN·PRINT 는 **원본 네거티브를 그대로 내보냈습니다.**
+    // 실측(GT-X900_frame_15, MAIN): 내보낸 파일 평균 (74,49,40)/원본과 상관 +0.97 →
+    // 내린 뒤 (189,196,197)/상관 -0.99, 미리보기 (189,195,196) 와 일치.
+    //
+    // 버퍼를 **소비하는 자리**에서만 내린다는 `outcome.h` 규칙 그대로, 이 이미지 하나만
+    // 내리고 묶음을 풉니다.
+    GpuAccelerator::shared().flush_resident_if(output_sharpening.image.pixels.data());
+
+    stage_trace_image("publish.encode_in", output_sharpening.image);
 
     if (request.format == DevelopExportFormat::png16) {
         negaflow::output::WicPngExportLimits output_limits{};

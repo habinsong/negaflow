@@ -54,8 +54,8 @@ public sealed partial class PrintWorkspaceView
         // 현상뷰에서 자동 레벨·자동 색상을 바꿔도 인화 판은 <b>옛 그림</b>을 계속 다시
         // 걸었습니다 — 두 화면의 사진이 달라 보이던 원인입니다.
         printSources.PreviewImageArrived += (_, _) => printPreview?.InvalidateTiles();
-        PrintFilesSourceTree.FrameInvoked += (sender, frameId) =>
-            printSources?.HandleTreeInvoked(sender, frameId);
+        PrintFilesSourceTree.FrameInvoked += (sender, invocation) =>
+            printSources?.HandleTreeInvoked(sender, invocation);
         printInspector = new PrintInspectorBinder(
             new PrintInspectorSurface
             {
@@ -167,10 +167,34 @@ public sealed partial class PrintWorkspaceView
             TextRasterHost,
             PrintExportPanel.SetOutputStatus);
         PrintExportPanel.UsesPaperLayout = true;
+        // 나올 **파일 수**를 단추에 답니다. macOS `printExportOutputCount` 와 같은 계산이며,
+        // 낱장 배치는 사진마다 한 판이고 콘택트 시트·사진 패키지·사용자 패키지는 한 판에
+        // 여러 장을 얹습니다 — 사진 수를 적으면 실제로 나올 파일 수와 어긋납니다.
+        PrintExportPanel.PaperOutputCount = () => PrintExportOutputCount;
         PrintExportPanel.RunExport = () =>
             printSheetExport.RunExportAsync(PrintExportPanel.Settings);
         PrintExportPanel.RunQuickExport = () =>
             printSheetExport.RunQuickExportAsync(PrintExportPanel.QuickSettings);
+    }
+
+    /// <summary>
+    /// 지금 설정으로 나올 판(파일) 수입니다. macOS <c>printExportOutputCount</c> 그대로입니다 —
+    /// 패키지 배치가 아니면 사진 수이고, 패키지 배치이면 <c>ExpectedPageCount</c> 입니다.
+    /// 셀 수 없으면 사진 수로 물러납니다.
+    /// </summary>
+    internal int PrintExportOutputCount
+    {
+        get
+        {
+            int sourceCount = PrintSources.Count;
+            if (workspaceState?.Current.Print is not { } print ||
+                PrintPreferences.PackageModeFor(print.LayoutMode) is null)
+            {
+                return sourceCount;
+            }
+            return PrintPackageLayout.ExpectedPageCount(sourceCount, print.Package())
+                ?? sourceCount;
+        }
     }
 
     /// <summary>

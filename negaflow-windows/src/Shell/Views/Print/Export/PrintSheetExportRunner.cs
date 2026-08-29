@@ -104,6 +104,20 @@ internal sealed class PrintSheetExportRunner
             // 실패는 어느 단계에서 멈췄는지를 남깁니다. "쓰지 못했습니다" 만으로는 다시
             // 눌러 보는 것 말고 사용자가 할 수 있는 일이 없습니다 - 스캔 실패 줄과 같은
             // 규칙입니다.
+            //
+            // **결과는 `ExportTrace` 에 남깁니다.** 앞 판은 `PreviewTrace` 에만 적었는데
+            // 그것은 개발자 모드에서만 켜지는 기록이라(`preview-trace.on`), 실기에서는
+            // 인화 내보내기가 무엇을 했는지 **어디에도 남지 않았습니다** — 현상 내보내기는
+            // `export-trace.txt` 에 남는데 인화만 비어 있었습니다. 자세한 줄은 그대로
+            // 개발자 모드 기록에도 남깁니다.
+            string outcome =
+                $"  outcome {result.Status} pages={result.Paths.Count} " +
+                $"sources={selection.Count} folder={destinationFolder}";
+            ExportTrace.Write(outcome);
+            foreach (string written in result.Paths)
+            {
+                ExportTrace.Write($"    wrote {written}");
+            }
             PreviewTrace.Write(
                 $"print sheet export status={result.Status} count={result.Paths.Count} " +
                 $"sources={selection.Count} folder={destinationFolder}");

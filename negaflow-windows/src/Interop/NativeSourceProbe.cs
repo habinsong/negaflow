@@ -19,4 +19,10 @@ internal static partial class NativeSourceProbe
     internal static unsafe partial uint nf_probe_standard_image_source_v1(
         char* sourcePath,
         NativeStandardImageSourceInfoV1* result);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_probe_image_shot_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_probe_image_shot_v1(
+        char* sourcePath,
+        NativeImageShotInfoV1* result);
 }

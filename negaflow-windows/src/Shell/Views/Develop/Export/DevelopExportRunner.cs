@@ -180,6 +180,12 @@ internal sealed class DevelopExportRunner
                     view.exportSettings.Format,
                     outcome =>
                     {
+                        // **결과를 기록에 남깁니다.** 앞 판은 걸린 시간만 적어서, 내보내기가
+                        // 즉시 거부돼도 기록에는 "develop+encode 3 ms" 한 줄만 남았습니다 —
+                        // 화면의 한 줄을 놓치면 왜 안 나갔는지 알 길이 없었습니다.
+                        ExportTrace.Write(
+                            $"  outcome {outcome.Kind} -> {DevelopPanelState.Describe(outcome)} " +
+                            $"path={exportedPath}");
                         view.SetOutputStatus(DevelopPanelState.Describe(outcome));
                         if (outcome is { Kind: DevelopExportOutcomeKind.Completed, Result.Succeeded: true })
                         {
@@ -269,13 +275,27 @@ internal sealed class DevelopExportRunner
                     With(view.quickExportSettings.Encoding, profile));
                 return;
             }
+            // **이름은 카드 이름입니다.** 앞 판은 이름 문맥 없이 원본 경로만 넘겨서
+            // `{name}` 이 원본 스캔 파일 이름으로 풀렸습니다 — 같은 사진을 본 내보내기로
+            // 내면 `사진 48.tif`, 빠른 내보내기로 내면 `OpticFilm8100-0002.jpg` 가 나와
+            // 두 파일이 같은 사진인지 알 수 없었습니다. macOS `quickExport(_:)` 도 본
+            // 내보내기와 같은 `exportBaseName(for:)` 을 쓰고 순번만 1 로 고정합니다.
+            string quickPath = Negaflow.Shell.Develop.ExportBatchCoordinator.UniquePath(
+                view.quickExportSettings.Destination.PathFor(
+                    frame.SourcePath,
+                    view.sync.QuickNamingContextFor(frame)));
             using (ExportTrace.Measure("  develop+encode"))
             {
                 _ = await view.panel.ExportAsync(
-                    Negaflow.Shell.Develop.ExportBatchCoordinator.UniquePath(
-                        view.quickExportSettings.Destination.PathFor(frame.SourcePath)),
+                    quickPath,
                     view.quickExportSettings.Format,
-                    outcome => view.SetOutputStatus(DevelopPanelState.Describe(outcome)),
+                    outcome =>
+                    {
+                        ExportTrace.Write(
+                            $"  outcome {outcome.Kind} -> {DevelopPanelState.Describe(outcome)} " +
+                            $"path={quickPath}");
+                        view.SetOutputStatus(DevelopPanelState.Describe(outcome));
+                    },
                     With(view.quickExportSettings.Encoding, profile));
             }
         }

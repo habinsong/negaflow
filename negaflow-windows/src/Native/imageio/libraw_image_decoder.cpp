@@ -27,6 +27,17 @@ struct LibRawProcessedImage final {
 
 constexpr int libraw_image_bitmap = 2;
 
+// `libraw_imgother_t` 의 **앞 네 개**입니다. 뒤쪽(타임스탬프·GPS·설명 문자열)은 판마다
+// 달라지므로 옮기지 않습니다 — 이 네 float 은 LibRaw 0.14 이후 구조체 맨 앞에 같은 차례로
+// 있고, 우리가 함께 배포하는 판은 `build-libraw/` 에 고정돼 있습니다. 뒤를 읽지 않으므로
+// 뒤가 바뀌어도 이 코드는 영향을 받지 않습니다.
+struct LibRawImgOtherPrefix final {
+    float iso_speed;
+    float shutter;
+    float aperture;
+    float focal_len;
+};
+
 struct Api final {
     HMODULE module{nullptr};
     void* (__cdecl* init)(unsigned int){nullptr};
@@ -50,6 +61,10 @@ struct Api final {
     // 보간 알고리즘. 프리뷰는 기본 AHD 대신 빠른 것을 씁니다.
     void(__cdecl* set_demosaic)(void*, int){nullptr};
     const char*(__cdecl* version)(){nullptr};
+    // **선택 심볼**입니다. 아래 `bound` 사슬에 넣지 않습니다 — 이것이 없다고 RAW 현상까지
+    // 포기하면 옛 `libraw.dll` 하나 때문에 사진이 아예 안 열립니다. 없으면 촬영 기록만
+    // 비웁니다.
+    const LibRawImgOtherPrefix*(__cdecl* get_imgother)(void*){nullptr};
 };
 
 template <typename Fn>
@@ -86,6 +101,8 @@ template <typename Fn>
         bind(api.module, "libraw_get_iheight", api.get_iheight) &&
         bind(api.module, "libraw_set_demosaic", api.set_demosaic) &&
         bind(api.module, "libraw_version", api.version);
+    // 선택 심볼입니다. 실패해도 `bound` 를 깎지 않습니다.
+    (void)bind(api.module, "libraw_get_imgother", api.get_imgother);
     if (!bound) {
         // 심볼이 하나라도 없으면 그 DLL 은 우리가 아는 LibRaw 가 아닙니다. 반쯤 쓰지 않고
         // 통째로 포기하고 WIC 실패 사유를 그대로 사용자에게 돌려줍니다.
@@ -248,6 +265,62 @@ LibRawMetadataResult probe_raw_metadata_with_libraw(const std::filesystem::path&
         result.status = LibRawDecodeStatus::ok;
         result.pixel_width = static_cast<std::uint32_t>(width);
         result.pixel_height = static_cast<std::uint32_t>(height);
+        return result;
+    } catch (...) {
+        result.status = LibRawDecodeStatus::allocation_failed;
+        return result;
+    }
+}
+
+LibRawShotResult probe_raw_shot_with_libraw(const std::filesystem::path& path) noexcept {
+    LibRawShotResult result{};
+    const Api& functions = api();
+    if (functions.module == nullptr || functions.get_imgother == nullptr) {
+        result.status = LibRawDecodeStatus::unavailable;
+        return result;
+    }
+    if (path.empty()) {
+        result.status = LibRawDecodeStatus::invalid_argument;
+        return result;
+    }
+    try {
+        const Handle handle{functions};
+        if (handle.get() == nullptr) {
+            result.status = LibRawDecodeStatus::allocation_failed;
+            return result;
+        }
+        // 크기 프로브와 같이 **여기서 멈춥니다.** `libraw_open_wfile` 이 헤더를 훑으면서
+        // `imgdata.other` 를 채우므로 현상까지 갈 이유가 없습니다.
+        const int opened = functions.open_wfile(handle.get(), path.c_str());
+        if (opened != 0) {
+            result.status = LibRawDecodeStatus::open_failed;
+            return result;
+        }
+        const LibRawImgOtherPrefix* const other = functions.get_imgother(handle.get());
+        if (other == nullptr) {
+            result.status = LibRawDecodeStatus::unsupported_output;
+            return result;
+        }
+        const auto usable = [](const float value) noexcept {
+            return value > 0.0F && value < 1.0e9F && value == value;
+        };
+        if (usable(other->iso_speed)) {
+            result.shot.has_iso_speed = true;
+            result.shot.iso_speed = static_cast<std::uint32_t>(other->iso_speed + 0.5F);
+        }
+        if (usable(other->shutter)) {
+            result.shot.has_exposure_time = true;
+            result.shot.exposure_time_seconds = static_cast<double>(other->shutter);
+        }
+        if (usable(other->aperture)) {
+            result.shot.has_f_number = true;
+            result.shot.f_number = static_cast<double>(other->aperture);
+        }
+        if (usable(other->focal_len)) {
+            result.shot.has_focal_length = true;
+            result.shot.focal_length_mm = static_cast<double>(other->focal_len);
+        }
+        result.status = LibRawDecodeStatus::ok;
         return result;
     } catch (...) {
         result.status = LibRawDecodeStatus::allocation_failed;

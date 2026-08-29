@@ -71,12 +71,16 @@ public static partial class PrintSheetWriter
             // (`DevelopExportCoordinator.MaximumConcurrentExports`, macOS
             // `startExportBatch(maximumConcurrent: 2)`). 더 늘리면 한 장이 수백 MB 라
             // 메모리만 밀립니다.
-            int[] scratchLongEdges = PlanScratchLongEdges(sources, print);
+            int[] scratchLongEdges = PlanScratchLongEdges(
+                sources, print, out int[] proxyInputLongEdges);
             ExportTrace.Write(
                 $"print sheet write sources={sources.Count} layout={print.LayoutMode} " +
                 $"scratch-long-edge={string.Join(',', scratchLongEdges)} " +
+                $"proxy-input-long-edge={string.Join(',', proxyInputLongEdges)} " +
                 $"format={format} slots={DevelopExportCoordinator.MaximumConcurrentExports}");
-            using IDisposable _sheet = ExportTrace.Measure("print sheet total");
+            // 이름을 누름 쪽과 다르게 둡니다. 둘 다 "print sheet total" 이면 기록에 같은
+            // 줄이 두 번 찍혀 어느 것이 무엇인지 알 수 없습니다.
+            using IDisposable _sheet = ExportTrace.Measure("  print sheet compose");
             string[] developedPaths = new string[sources.Count];
             bool developFailed = false;
             IDisposable? developSpan = ExportTrace.Measure("  develop sources");
@@ -97,7 +101,12 @@ public static partial class PrintSheetWriter
                     ExportTrace.Write($"    develop {index} begin");
                     using IDisposable _one = ExportTrace.Measure($"    develop {index} end");
                     if (await Task.Run(
-                            () => Develop(source, path, scratchLongEdges[index], outputIccProfile))
+                            () => Develop(
+                                source,
+                                path,
+                                scratchLongEdges[index],
+                                proxyInputLongEdges[index],
+                                outputIccProfile))
                         .ConfigureAwait(true))
                     {
                         developedPaths[index] = path;
@@ -132,6 +141,21 @@ public static partial class PrintSheetWriter
                 if (PrintPackageLayout.Make(sizes, composition, print.Package())
                     is not { Count: > 0 } pages)
                 {
+                    return new PrintSheetWriteResult(PrintSheetWriteStatus.LayoutRefused, []);
+                }
+                // **나올 판 수를 먼저 세어 두고 그것과 맞는지 봅니다.** macOS
+                // `PrintPackageExportWriter` 도 쓰기 전에 `expectedPageCount` 와
+                // `outputURLs.count` 가 같은지 확인합니다. 배치에 따라 판 수가 어긋나면
+                // 파일이 모자라거나 남는데, 그때 조용히 쓰면 사용자는 몇 장이 나와야 하는지
+                // 모른 채 결과만 이상해집니다.
+                int? expected = PrintPackageLayout.ExpectedPageCount(
+                    sources.Count, print.Package());
+                if (expected is null || expected.Value != pages.Count)
+                {
+                    ExportTrace.Write(
+                        $"    page count mismatch layout={print.LayoutMode} " +
+                        $"sources={sources.Count} expected={expected?.ToString() ?? "none"} " +
+                        $"planned={pages.Count}");
                     return new PrintSheetWriteResult(PrintSheetWriteStatus.LayoutRefused, []);
                 }
                 foreach (PrintPackagePageLayout page in pages)
@@ -229,6 +253,7 @@ public static partial class PrintSheetWriter
         LibraryFrameSnapshot frame,
         string destination,
         int longEdge,
+        int proxyInputLongEdge,
         byte[]? outputIccProfile)
     {
         // 중간 파일은 **압축 없는 16-bit TIFF** 입니다. 판에 얹으려고 한 번 쓰고 한 번
@@ -250,15 +275,27 @@ public static partial class PrintSheetWriter
             frame,
             destination,
             settings.Format,
-            encoding);
+            encoding,
+            // **판 프록시는 풀 때부터 판 크기로 풉니다.** macOS `preparePageSource` 가
+            // `proxyInputLongEdge` 를 구해 `prepareForPrintComposite(_:proxyLongEdge:)` 로
+            // 넘기는 자리입니다 — 그것이 없으면 268 px 한 칸을 채우려고 5136x3543 을
+            // 통째로 풀고, 실측으로 한 장에 2.4 초, 열두 장에 7.6 초가 들었습니다.
+            proxyInputLongEdge: proxyInputLongEdge > 0 ? (uint)proxyInputLongEdge : 0U);
         if (built.Request is not { } request)
         {
+            // 현상이 **시작도 못 했습니다.** 판이 통째로 실패하는 가장 흔한 자리이므로 늘
+            // 켜져 있는 기록에 남깁니다 — 개발자 모드 기록에만 적으면 실기에서 보이지
+            // 않습니다.
+            ExportTrace.Write($"    develop refused frame={frame.Id} reason={built.Refusal}");
             PreviewTrace.Write($"print develop: no request refusal={built.Refusal}");
             return false;
         }
         DevelopExportResult result = new NativeDevelopExporterAdapter().Run(request);
         if (!result.Succeeded)
         {
+            ExportTrace.Write(
+                $"    develop failed frame={frame.Id} stage={result.FailedStage} " +
+                $"name={result.FailureName} native=0x{result.NativeErrorCode:X}");
             PreviewTrace.Write(
                 $"print develop: run failed stage={result.FailedStage} " +
                 $"name={result.FailureName} native=0x{result.NativeErrorCode:X}");

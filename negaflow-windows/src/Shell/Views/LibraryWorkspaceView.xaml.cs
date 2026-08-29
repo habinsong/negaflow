@@ -81,7 +81,18 @@ public sealed partial class LibraryWorkspaceView : UserControl
             FrameListView.SelectedItem = item;
             ShowFilteredItems();
         });
-        ControlsPanel.FilesSourceTree.FrameSelected += (_, frameId) => selection.SelectFrame(frameId);
+        // 좌측 "파일" 탭도 격자·필름스트립과 같은 규칙으로 고릅니다 — Shift 는 이어
+        // 고르기, Ctrl 은 하나씩 더하고 빼기(macOS `selectFrame(_:orderedFrameIDs:modifiers:)`).
+        ControlsPanel.FilesSourceTree.FrameSelected += (_, invocation) =>
+        {
+            libraryHost?.SelectFrame(
+                invocation.FrameId,
+                invocation.OrderedFrameIds,
+                invocation.Modifiers);
+            // 격자는 여기서 직접 건드리지 않습니다. 공유 선택이 바뀌면
+            // `OnHostSelectionChanged` 가 격자와 트리를 함께 맞춥니다 — 여기서 한 장을
+            // 다시 고르면 방금 푼 Shift·Ctrl 이 그 자리에서 접힙니다.
+        };
         ControlsPanel.FilesSourceTree.LibraryChanged += OnEmbeddedLibraryChanged;
         ControlsPanel.FilesSourceTree.StatusChanged += (_, text) => ControlsPanel.ImportStatusText.Text = text;
         ControlsPanel.FilesSourceTree.LocateFolderRequested += (_, folderPath) =>
@@ -268,11 +279,24 @@ public sealed partial class LibraryWorkspaceView : UserControl
         _ = LibraryFrameListItems.Refresh(allItems, host.Frames);
     }
 
+    /// <summary>
+    /// 공유 선택이 바뀌었습니다 — 라이브러리 격자에서 눌렀을 수도, <b>현상·인화의
+    /// 필름스트립에서 눌렀을 수도</b> 있습니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 왼쪽 "파일" 탭의 강조만 옮겼습니다. 격자는 <c>LibraryGridProjection.Show</c>
+    /// 가 다시 돌 때만 맞춰지므로, 현상이나 인화에서 사진을 고르고 라이브러리로 돌아오면
+    /// 방금 본 사진이 아니라 예전 사진에 강조가 남아 있었습니다 — macOS 는 선택이 모델
+    /// 하나에 있어 세 화면이 함께 움직입니다.
+    /// </remarks>
     private void OnHostSelectionChanged(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
-        ControlsPanel.FilesSourceTree.SelectedFrameId = libraryHost?.ActiveFrameId;
+        ControlsPanel.FilesSourceTree.SetSelection(
+            libraryHost?.ActiveFrameId,
+            libraryHost?.SelectedFrameIds ?? []);
+        selection.SynchronizeFromHost();
     }
 
     /// <summary>사용자가 라이브러리에서 현상으로 넘기려는 frame 입니다.</summary>

@@ -59,9 +59,8 @@ internal static class LocalizedTextTests
         "System", "English", "한국어", "日本語", "简体中文", "Français", "Deutsch",
         // 법 문구입니다. macOS 는 여섯 InfoPlist.strings 어디에도 번역을 두지 않습니다.
         "Copyright 2026 Song Habin",
-        // 촬영값 요약의 빈 상태입니다. macOS `WorkspaceInspectorPane.importedMetadata` 도
-        // ISO·s·f/·mm 을 Swift 리터럴로 두고 번역하지 않습니다.
-        "ISO — · — s · f/— · — mm",
+        // 저장소 이름과 그 주소입니다. 고유 명사와 URL 이라 여섯 언어가 같은 글자입니다.
+        "GitHub", "https://github.com/habinsong/negaflow",
     };
 
     public static void Run()

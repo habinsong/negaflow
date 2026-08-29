@@ -3,7 +3,9 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Negaflow.Catalog;
 using Negaflow.Shell.Localization;
+using Negaflow.Shell.Views.Library.Browser;
 
 namespace Negaflow.Shell.Views.Library.Sources;
 
@@ -49,6 +51,12 @@ public sealed class LibraryFolderTreeView : UserControl
 
     private IReadOnlyList<LibraryBrowserFolderSection> sections = [];
     private string? selectedFrameId;
+
+    /// <summary>
+    /// 밝게 잡혀 있는 사진 전부입니다. 활성 사진 하나만으로는 Shift·Ctrl 로 여러 장을 골라도
+    /// 트리에 한 줄만 강조돼, 무엇이 고른 것인지 보이지 않았습니다.
+    /// </summary>
+    private readonly HashSet<string> selectedFrameIds = new(StringComparer.Ordinal);
 
     public LibraryFolderTreeView()
     {
@@ -103,8 +111,12 @@ public sealed class LibraryFolderTreeView : UserControl
     private static readonly Brush FallbackHeaderBackground =
         new SolidColorBrush(Windows.UI.Color.FromArgb(0x09, 0xFF, 0xFF, 0xFF));
 
-    /// <summary>사진 줄을 눌렀습니다. 인자는 frame id 입니다.</summary>
-    public event EventHandler<string>? FrameInvoked;
+    /// <summary>
+    /// 사진 줄을 눌렀습니다. 무엇을, 어떤 차례에서, 어떤 글쇠와 함께 눌렀는지 함께 옵니다 —
+    /// 받는 쪽이 라이브러리의 <c>SelectFrame</c> 에 그대로 넘길 수 있어야 Shift·Ctrl 이
+    /// 세 화면에서 같게 듣습니다.
+    /// </summary>
+    public event EventHandler<LibraryFrameInvocation>? FrameInvoked;
 
     /// <summary>폴더 머리줄의 ✕ 를 눌렀습니다. 인자는 폴더 경로입니다.</summary>
     public event EventHandler<string>? FolderRemoveRequested;
@@ -148,19 +160,49 @@ public sealed class LibraryFolderTreeView : UserControl
         }
     }
 
-    /// <summary>지금 열려 있는 사진입니다. 이 사진과 그 폴더가 강조됩니다.</summary>
-    public string? SelectedFrameId
+    /// <summary>지금 열려 있는 사진입니다. 읽기만 합니다 — 쓰려면 <see cref="SetSelection"/>.</summary>
+    public string? SelectedFrameId => selectedFrameId;
+
+    /// <summary>고른 사진 전부입니다. 읽기만 합니다.</summary>
+    public IReadOnlyCollection<string> SelectedFrameIds => selectedFrameIds;
+
+    /// <summary>
+    /// 활성 사진과 고른 사진들을 <b>함께</b> 겁니다. 한 번만 다시 그립니다.
+    /// </summary>
+    /// <remarks>
+    /// 둘을 따로 거는 자리가 있으면 그 가운데 하나만 미는 길이 반드시 생깁니다 — 실제로
+    /// 현상뷰의 <c>SynchronizeFilesSelection</c> 이 활성 사진만 밀어서, 그 길로 다시 그려질
+    /// 때마다 트리가 <b>옛 선택 집합</b>으로 칠했습니다. 화면에는 지운 줄이 파랗게 남고 새로
+    /// 고른 줄은 안 칠해져, 고를 때마다 이전 것과 겹치는 것처럼 보였습니다. 그래서 쓰는 길을
+    /// 이 하나로 좁힙니다.
+    /// </remarks>
+    public void SetSelection(string? activeFrameId, IReadOnlyCollection<string> frameIds)
     {
-        get => selectedFrameId;
-        set
+        ArgumentNullException.ThrowIfNull(frameIds);
+        bool sameActive = string.Equals(selectedFrameId, activeFrameId, StringComparison.Ordinal);
+        bool sameSet = selectedFrameIds.SetEquals(frameIds);
+        if (sameActive && sameSet)
         {
-            if (!string.Equals(selectedFrameId, value, StringComparison.Ordinal))
-            {
-                selectedFrameId = value;
-                Render();
-            }
+            return;
         }
+        selectedFrameId = activeFrameId;
+        selectedFrameIds.Clear();
+        foreach (string id in frameIds)
+        {
+            _ = selectedFrameIds.Add(id);
+        }
+        Render();
     }
+
+    /// <summary>
+    /// 트리에 보이는 사진의 차례입니다. Shift 로 이어 고를 때 그 사이가 곧 <b>화면에 보이는
+    /// 사이</b>여야 하므로, 펼쳐진 폴더의 줄만 위에서 아래로 모읍니다.
+    /// </summary>
+    public IReadOnlyList<string> OrderedFrameIds =>
+        [.. sections
+            .Where(section => !collapsed.Contains(section.Id))
+            .SelectMany(section => section.Items)
+            .Select(item => item.Id)];
 
     public void SetSections(IReadOnlyList<LibraryBrowserFolderSection> value)
     {
@@ -179,7 +221,8 @@ public sealed class LibraryFolderTreeView : UserControl
             Negaflow.Shell.PreviewTrace.Write(
                 $"files.render {TraceName} sections={sections.Count} " +
                 $"frames={sections.Sum(section => section.Items.Count)} " +
-                $"selected={selectedFrameId ?? "-"} theme={ActualTheme} " +
+                $"selected={selectedFrameId ?? "-"} picked={selectedFrameIds.Count} " +
+                $"theme={ActualTheme} " +
                 $"accent={Describe(Accent)} primary={Describe(Primary)} " +
                 $"secondary={Describe(Secondary)}");
         }
@@ -196,8 +239,9 @@ public sealed class LibraryFolderTreeView : UserControl
     {
         bool isExpanded = !collapsed.Contains(section.Id);
         // macOS: 폴더를 직접 고른 경우 외에, 지금 열려 있는 사진이 든 폴더도 같은 강조를 받습니다.
-        bool holdsSelection = selectedFrameId is { } id &&
-            section.Items.Any(item => string.Equals(item.Id, id, StringComparison.Ordinal));
+        bool holdsSelection = section.Items.Any(item =>
+            string.Equals(item.Id, selectedFrameId, StringComparison.Ordinal) ||
+            selectedFrameIds.Contains(item.Id));
 
         StackPanel panel = new()
         {
@@ -358,7 +402,9 @@ public sealed class LibraryFolderTreeView : UserControl
 
     private Button BuildFrameRow(LibraryFrameListItem item)
     {
-        bool isSelected = string.Equals(item.Id, selectedFrameId, StringComparison.Ordinal);
+        bool isSelected =
+            string.Equals(item.Id, selectedFrameId, StringComparison.Ordinal) ||
+            selectedFrameIds.Contains(item.Id);
         Brush foreground = isSelected
             ? Accent
             : Primary;
@@ -399,10 +445,23 @@ public sealed class LibraryFolderTreeView : UserControl
         };
         AutomationProperties.SetAutomationId(row, "negaflow.library.file-row");
         AutomationProperties.SetName(row, item.DisplayName);
-        row.Click += (_, _) => FrameInvoked?.Invoke(this, item.Id);
+        // 글쇠는 **누른 그 순간** 읽습니다 — macOS 도 `NSEvent.modifierFlags` 를 그 자리에서
+        // 읽어 `selectFrame` 에 넘깁니다. 뒤늦게 읽으면 이미 손을 뗀 뒤일 수 있습니다.
+        row.Click += (_, _) => FrameInvoked?.Invoke(
+            this,
+            new LibraryFrameInvocation(item.Id, OrderedFrameIds, LibraryModifierKeys.Current()));
         return row;
     }
 }
+
+/// <summary>
+/// 좌측 파일 트리에서 사진 한 줄을 누른 사건입니다. macOS
+/// <c>selectFrame(_:orderedFrameIDs:modifiers:)</c> 의 세 인자 그대로입니다.
+/// </summary>
+public sealed record LibraryFrameInvocation(
+    string FrameId,
+    IReadOnlyList<string> OrderedFrameIds,
+    LibrarySelectionModifiers Modifiers);
 
 /// <summary>폴더 머리줄을 오른쪽으로 눌렀을 때 셸이 메뉴를 띄우는 데 필요한 것입니다.</summary>
 public sealed record LibraryFolderContextRequest(

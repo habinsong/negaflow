@@ -74,8 +74,16 @@ public sealed partial class LibraryScanPanel : UserControl
             session.UsesFlatbedRegionWorkflow)
         : ScannerMenuState.Empty;
 
-    /// <summary>macOS <c>hasScanner</c> 에 해당하는 스캐너 플러그인 존재 여부입니다.</summary>
-    internal bool HasScanner => scanSession?.Plugins.Count > 0;
+    /// <summary>
+    /// macOS <c>hasScanner</c> — <c>backend != nil</c>, 즉 <b>고를 수 있는 장치가 실제로 잡혀
+    /// 있는가</b>입니다. 플러그인이 깔려 있는지는 macOS <c>hasScannerPlugin</c> 이라 별개이며,
+    /// 위 막대의 "사진 스캔"은 macOS <c>WorkspaceToolbar</c> 와 같이 이 값만 봅니다 —
+    /// 플러그인 존재로 재면 스캐너를 꽂지 않아도 단추가 남습니다.
+    /// </summary>
+    internal bool HasScanner => scanSession?.SelectedDevice is not null;
+
+    /// <summary>macOS <c>hasScannerPlugin</c> — 설치된 플러그인이 하나라도 있는지입니다.</summary>
+    internal bool HasScannerPlugin => scanSession?.Plugins.Count > 0;
 
     /// <summary>macOS <c>capabilities.supportsPreview</c> 에 해당합니다.</summary>
     internal bool SupportsPreview => scanSession?.Capabilities?.SupportsPreview == true;

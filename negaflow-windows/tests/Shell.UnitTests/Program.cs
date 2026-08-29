@@ -94,6 +94,10 @@ internal static class Program
         ExportConcurrencyTests.Run();
         PrintOutputProfileTests.Run();
         DevelopPresentationTests.Run();
+        DevelopInspectorHeaderTests.Run();
+        StaleDefectSourceExportTests.Run();
+        FilmstripMultiSelectionTests.Run();
+        PrintExportOutputCountTests.Run();
         DevelopPanelTests.Run();
         FrameImportTests.Run();
         PreviewAndAutoAdjustmentTests.Run();

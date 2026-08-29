@@ -40,6 +40,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     internal readonly DevelopAutoAdjustActions autoAdjust;
     internal readonly DevelopCropSession cropSession;
     internal readonly DevelopWorkspaceCopy copy;
+    internal readonly DevelopInspectorHeader inspectorHeader;
     // macOS `pickFilmBase` 가 Task 로 샘플하는 동안 피커를 먼저 끕니다. 그 사이
     // onChange 가 현상본을 요청하면 샘플과 렌더가 겹치고, 취소된 렌더가 빈 캔버스를 남깁니다.
     private bool basePickInFlight;
@@ -59,6 +60,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         autoAdjust = new DevelopAutoAdjustActions(this);
         cropSession = new DevelopCropSession(this);
         copy = new DevelopWorkspaceCopy(this);
+        inspectorHeader = new DevelopInspectorHeader(this);
         isInspectorPresentationReady = true;
         frames.Hook();
         inspectorChrome.Hook();

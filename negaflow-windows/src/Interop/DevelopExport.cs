@@ -211,5 +211,18 @@ public sealed class DevelopExportRequest
     /// </summary>
     public uint OutputLongEdge { get; init; }
 
+    /// <summary>
+    /// 이 결과가 <b>인화 판에 얹힐 프록시</b>일 때, 원본을 얼마나 크게 풀지입니다. 0 이면
+    /// 원본 그대로 — 사용자에게 나가는 내보내기는 전부 0 입니다.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="OutputLongEdge"/> 는 <b>다 만든 뒤</b> 줄이는 상한이고 이것은 <b>풀 때</b>
+    /// 의 상한입니다. macOS 는 판을 만들 때
+    /// <c>ExportDevelopedFrameRenderer.proxyInputLongEdge(outputLongEdge:…)</c> 로 이 값을
+    /// 구해 <c>prepareForPrintComposite(_:proxyLongEdge:)</c> 에 넘깁니다 — 콘택트 시트 한
+    /// 칸이 268 px 인데 5136x3543 을 통째로 푸는 일이 맥에는 없는 이유입니다.
+    /// </remarks>
+    public uint ProxyInputLongEdge { get; init; }
+
     public uint RowsPerCopy { get; init; } = 64;
 }

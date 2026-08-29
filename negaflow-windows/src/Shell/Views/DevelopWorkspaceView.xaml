@@ -177,7 +177,15 @@
                 </Grid.ColumnDefinitions>
                 <FontIcon Grid.Column="0" Margin="0,0,7,0" VerticalAlignment="Center" FontSize="14" Glyph="&#xE9E9;" />
                 <TextBlock x:Name="DevelopHeaderText" x:FieldModifier="internal" Grid.Column="1" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
-                <TextBlock Grid.Column="2" VerticalAlignment="Center" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="ISO — · — s · f/— · — mm" />
+                <TextBlock
+                    x:Name="DevelopHeaderSummaryText" x:FieldModifier="internal"
+                    Grid.Column="2"
+                    Margin="8,0,0,0"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="negaflow.develop.inspector.summary"
+                    FontSize="10"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    TextTrimming="CharacterEllipsis" />
             </Grid>
             <Border Grid.Row="1" Background="{ThemeResource NegaflowDividerBrush}" />
             <ScrollViewer

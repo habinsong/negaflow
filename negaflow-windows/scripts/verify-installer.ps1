@@ -13,6 +13,33 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+# 되돌리기는 **맨 앞에서 정의합니다.** PowerShell 의 `trap` 은 그 범위 전체에 걸리므로
+# 아래 `trap` 줄보다 **먼저 난 오류에도** 반응합니다. 그런데 함수 정의는 hoist 되지 않아,
+# 앞쪽에서 오류가 나면 trap 이 아직 없는 함수를 부르고 그 자리에서
+# `Restore-PriorInstallation is not recognized` 로 바뀝니다 — 진짜 실패 이유가 통째로
+# 가려집니다(실측 2026-08-29, 이 스크립트가 그렇게 끝났습니다).
+function Restore-PriorInstallation {
+    if ($null -eq $script:priorInstallLocation) {
+        return
+    }
+    if ($null -ne (Get-AppxPackage -Name 'Negaflow.Windows' -ErrorAction SilentlyContinue)) {
+        return
+    }
+    Write-Host "Restoring the previous installation: $script:priorInstallLocation"
+    $restore = Start-Process -FilePath $InstallerPath -ArgumentList @('/S', "/D=$script:priorInstallLocation") -PassThru
+    if (-not $restore.WaitForExit(600000)) {
+        try { $restore.Kill($true) } catch { }
+        Write-Host 'WARNING: restoring the previous installation timed out.'
+        return
+    }
+    if ($restore.ExitCode -ne 0) {
+        Write-Host "WARNING: restoring the previous installation failed with exit code $($restore.ExitCode)."
+    }
+}
+
+$script:priorInstallLocation = $null
+
 $InstallerPath = [System.IO.Path]::GetFullPath($InstallerPath)
 if (-not (Test-Path -LiteralPath $InstallerPath)) {
     throw "Installer does not exist: $InstallerPath"
@@ -38,27 +65,8 @@ if ($null -ne $priorPackage -and -not [string]::IsNullOrWhiteSpace($priorPackage
     Write-Host "Existing installation will be restored afterwards: $priorInstallLocation"
 }
 
-function Restore-PriorInstallation {
-    if ($null -eq $script:priorInstallLocation) {
-        return
-    }
-    if ($null -ne (Get-AppxPackage -Name 'Negaflow.Windows' -ErrorAction SilentlyContinue)) {
-        return
-    }
-    Write-Host "Restoring the previous installation: $script:priorInstallLocation"
-    $restore = Start-Process -FilePath $InstallerPath -ArgumentList @('/S', "/D=$script:priorInstallLocation") -PassThru
-    if (-not $restore.WaitForExit(600000)) {
-        try { $restore.Kill($true) } catch { }
-        Write-Host 'WARNING: restoring the previous installation timed out.'
-        return
-    }
-    if ($restore.ExitCode -ne 0) {
-        Write-Host "WARNING: restoring the previous installation failed with exit code $($restore.ExitCode)."
-    }
-}
-
-# 검증이 도중에 터져도 되돌린다.
-trap { Restore-PriorInstallation; break }
+# 검증이 도중에 터져도 되돌린다. 원래 오류는 되돌리기에 가려지지 않게 먼저 찍는다.
+trap { Write-Host "verify-installer failed: $_"; Restore-PriorInstallation; break }
 
 # 무인 설치는 payload 를 풀고 PowerShell 로 패키지를 등록한다. 그 등록이 멈추면 -Wait 는
 # 영원히 돌아오지 않고, CI 에서는 잡이 취소될 때까지 아무 것도 남지 않는다(2026-08-17 관측:

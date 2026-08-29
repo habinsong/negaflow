@@ -63,6 +63,20 @@ struct LibRawMetadataResult final {
 [[nodiscard]] LibRawMetadataResult probe_raw_metadata_with_libraw(
     const std::filesystem::path& path) noexcept;
 
+/// 화소도 만들지 않고 **촬영 기록만** 읽습니다. `libraw_open_wfile` 이 헤더를 훑으며
+/// `imgdata.other` 를 채우므로 `libraw_unpack` 도 `libraw_dcraw_process` 도 부르지 않습니다.
+///
+/// `libraw_get_imgother` 는 **선택 심볼**입니다. 없는 `libraw.dll` 을 만나면 촬영 기록만
+/// 비고 RAW 현상 자체는 그대로 됩니다 — 필수 심볼로 묶으면 옛 DLL 하나 때문에 RAW 을
+/// 통째로 못 엽니다.
+struct LibRawShotResult final {
+    LibRawDecodeStatus status{LibRawDecodeStatus::unavailable};
+    SourceShotMetadata shot{};
+};
+
+[[nodiscard]] LibRawShotResult probe_raw_shot_with_libraw(
+    const std::filesystem::path& path) noexcept;
+
 /// `libraw.dll` 을 열 수 있고 필요한 심볼이 전부 있는지 봅니다. 한 번 확인한 결과를
 /// 재사용하며 실패해도 매번 다시 시도하지 않습니다.
 [[nodiscard]] bool libraw_decoder_available() noexcept;

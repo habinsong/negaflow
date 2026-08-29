@@ -163,6 +163,19 @@ internal sealed class LibraryGridSelection
     /// <summary>마지막으로 화면을 옮겨 준 사진입니다. 같은 사진이면 다시 옮기지 않습니다.</summary>
     private string? scrolledToFrameId;
 
+    /// <summary>
+    /// 공유 선택이 <b>다른 화면에서</b> 바뀌었습니다. 격자를 다시 짓지 않고 강조만 그 사진으로
+    /// 옮깁니다.
+    /// </summary>
+    /// <remarks>
+    /// macOS 는 선택이 <c>AppModel</c> 하나에 있어 라이브러리·현상·인화가 같은 값을 봅니다.
+    /// WinUI 는 격자가 자기 선택을 따로 들고 있어서, 현상이나 인화에서 사진을 바꿔도
+    /// <see cref="Synchronize"/> 를 부르는 <c>LibraryGridProjection.Show</c> 가 돌기 전까지
+    /// 격자는 옛 사진에 강조를 남겼습니다 — 라이브러리로 돌아오면 방금 본 사진이 아니라
+    /// 예전 사진이 골라져 있었습니다.
+    /// </remarks>
+    internal void SynchronizeFromHost() => Synchronize(VisibleGridItems());
+
     internal void Synchronize(IReadOnlyList<LibraryFrameListItem> visibleItems)
     {
         if (view.libraryHost is null)

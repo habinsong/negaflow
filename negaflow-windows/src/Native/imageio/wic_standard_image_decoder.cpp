@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <limits>
 #include <new>
+#include <string>
 #include <vector>
 
 namespace negaflow::imageio {
@@ -89,6 +90,122 @@ void discard_samples(WicStandardImageDecodeResult& result) noexcept {
     return orientation >= 1U && orientation <= 8U
         ? static_cast<std::uint16_t>(orientation)
         : 1U;
+}
+
+/// EXIF 하위 IFD 가 붙는 자리는 컨테이너마다 다릅니다. JPEG 은 APP1 안이고, TIFF 은
+/// 최상위 IFD 안입니다. 태그만 읽으므로 둘 다 시도합니다 — 하나만 걸면 가져온 TIFF 의
+/// 촬영 기록이 통째로 비어 보입니다.
+constexpr const wchar_t* exif_query_roots[] = {
+    L"/app1/ifd/exif/",
+    L"/ifd/exif/",
+};
+
+/// WIC 은 EXIF RATIONAL 을 `VT_UI8` 하나로 돌려줍니다 — 하위 32비트가 분자, 상위 32비트가
+/// 분모입니다. SRATIONAL 은 같은 자리 `VT_I8` 입니다. 이 규칙을 모르면 1/125 초가
+/// 536870912125 같은 숫자로 읽힙니다.
+[[nodiscard]] bool rational_to_double(const std::uint64_t packed, double& value) noexcept {
+    const std::uint32_t numerator = static_cast<std::uint32_t>(packed & 0xFFFFFFFFULL);
+    const std::uint32_t denominator = static_cast<std::uint32_t>(packed >> 32U);
+    if (denominator == 0U) return false;
+    value = static_cast<double>(numerator) / static_cast<double>(denominator);
+    return true;
+}
+
+[[nodiscard]] bool signed_rational_to_double(const std::int64_t packed, double& value) noexcept {
+    const std::int32_t numerator = static_cast<std::int32_t>(
+        static_cast<std::uint32_t>(static_cast<std::uint64_t>(packed) & 0xFFFFFFFFULL));
+    const std::int32_t denominator = static_cast<std::int32_t>(
+        static_cast<std::uint32_t>(static_cast<std::uint64_t>(packed) >> 32U));
+    if (denominator == 0) return false;
+    value = static_cast<double>(numerator) / static_cast<double>(denominator);
+    return true;
+}
+
+/// PROPVARIANT 하나를 실수로 접습니다. 벡터는 **첫 원소**만 씁니다 — macOS 도
+/// `isoSpeedRatings.first` 로 첫 값만 보여 줍니다.
+[[nodiscard]] bool propvariant_to_double(const PROPVARIANT& value, double& out) noexcept {
+    switch (value.vt) {
+        case VT_UI2: out = static_cast<double>(value.uiVal); return true;
+        case VT_UI4: out = static_cast<double>(value.ulVal); return true;
+        case VT_I2: out = static_cast<double>(value.iVal); return true;
+        case VT_I4: out = static_cast<double>(value.lVal); return true;
+        case VT_R4: out = static_cast<double>(value.fltVal); return true;
+        case VT_R8: out = value.dblVal; return true;
+        case VT_UI8: return rational_to_double(value.uhVal.QuadPart, out);
+        case VT_I8: return signed_rational_to_double(value.hVal.QuadPart, out);
+        case VT_VECTOR | VT_UI2:
+            if (value.caui.cElems == 0U) return false;
+            out = static_cast<double>(value.caui.pElems[0]);
+            return true;
+        case VT_VECTOR | VT_UI4:
+            if (value.caul.cElems == 0U) return false;
+            out = static_cast<double>(value.caul.pElems[0]);
+            return true;
+        case VT_VECTOR | VT_UI8:
+            if (value.cauh.cElems == 0U) return false;
+            return rational_to_double(value.cauh.pElems[0].QuadPart, out);
+        case VT_VECTOR | VT_I8:
+            if (value.cah.cElems == 0U) return false;
+            return signed_rational_to_double(value.cah.pElems[0].QuadPart, out);
+        default: return false;
+    }
+}
+
+/// EXIF 태그 하나를 읽습니다. 값이 없거나 형이 낯설면 **없는 것으로 둡니다** — 지어내지
+/// 않습니다.
+[[nodiscard]] bool read_exif_double(
+    IWICMetadataQueryReader* const reader,
+    const wchar_t* const tag_suffix,
+    double& out) noexcept {
+    for (const wchar_t* const root : exif_query_roots) {
+        std::wstring query{root};
+        query.append(tag_suffix);
+        PROPVARIANT value{};
+        PropVariantInit(&value);
+        const HRESULT status = reader->GetMetadataByName(query.c_str(), &value);
+        const bool read = SUCCEEDED(status) && propvariant_to_double(value, out);
+        PropVariantClear(&value);
+        if (read) return true;
+    }
+    return false;
+}
+
+[[nodiscard]] bool positive_finite(const double value) noexcept {
+    return value > 0.0 && value < 1.0e9 && value == value;
+}
+
+/// EXIF 촬영 태그 넷을 읽습니다. macOS `SourceMetadataReader+ImageProperties` 가 읽는
+/// `kCGImagePropertyExifISOSpeedRatings` · `ExposureTime` · `FNumber` · `FocalLength` 와
+/// 같은 태그 번호입니다.
+[[nodiscard]] SourceShotMetadata read_shot_metadata(
+    IWICBitmapFrameDecode* const frame) noexcept {
+    SourceShotMetadata shot{};
+    ComPtr<IWICMetadataQueryReader> reader{};
+    if (FAILED(frame->GetMetadataQueryReader(&reader))) {
+        return shot;
+    }
+    double value = 0.0;
+    // ISOSpeedRatings(34855). 배열이면 첫 값입니다.
+    if (read_exif_double(reader.Get(), L"{ushort=34855}", value) && positive_finite(value)) {
+        shot.has_iso_speed = true;
+        shot.iso_speed = static_cast<std::uint32_t>(value + 0.5);
+    }
+    // ExposureTime(33434), 초 단위 RATIONAL.
+    if (read_exif_double(reader.Get(), L"{ushort=33434}", value) && positive_finite(value)) {
+        shot.has_exposure_time = true;
+        shot.exposure_time_seconds = value;
+    }
+    // FNumber(33437).
+    if (read_exif_double(reader.Get(), L"{ushort=33437}", value) && positive_finite(value)) {
+        shot.has_f_number = true;
+        shot.f_number = value;
+    }
+    // FocalLength(37386), mm.
+    if (read_exif_double(reader.Get(), L"{ushort=37386}", value) && positive_finite(value)) {
+        shot.has_focal_length = true;
+        shot.focal_length_mm = value;
+    }
+    return shot;
 }
 
 [[nodiscard]] WicStandardImageDecodeStatus extract_icc_profile(
@@ -318,6 +435,67 @@ StandardImageMetadataResult probe_standard_image_metadata(
             result.metadata.pixel_width = raw.pixel_width;
             result.metadata.pixel_height = raw.pixel_height;
             result.metadata.libraw_fallback_used = true;
+            return result;
+        }
+        result.status = raw.status == LibRawDecodeStatus::unavailable
+            ? StandardImageMetadataStatus::unreadable
+            : StandardImageMetadataStatus::unsupported;
+        return result;
+    } catch (...) {
+        result.status = StandardImageMetadataStatus::unreadable;
+        return result;
+    }
+}
+
+SourceShotMetadataResult probe_source_shot_metadata(
+    const std::filesystem::path& path) noexcept {
+    SourceShotMetadataResult result{};
+    try {
+        if (path.empty()) {
+            result.status = StandardImageMetadataStatus::invalid_argument;
+            return result;
+        }
+        const ComApartment apartment{};
+        if (apartment.status() == RPC_E_CHANGED_MODE) {
+            result.status = StandardImageMetadataStatus::com_apartment_mismatch;
+            return result;
+        }
+        if (SUCCEEDED(apartment.status())) {
+            ComPtr<IWICImagingFactory> factory{};
+            ComPtr<IWICBitmapDecoder> decoder{};
+            ComPtr<IWICBitmapFrameDecode> frame{};
+            if (SUCCEEDED(CoCreateInstance(
+                    CLSID_WICImagingFactory,
+                    nullptr,
+                    CLSCTX_INPROC_SERVER,
+                    IID_PPV_ARGS(&factory))) &&
+                SUCCEEDED(factory->CreateDecoderFromFilename(
+                    path.c_str(),
+                    nullptr,
+                    GENERIC_READ,
+                    WICDecodeMetadataCacheOnDemand,
+                    &decoder)) &&
+                SUCCEEDED(decoder->GetFrame(0U, &frame))) {
+                result.status = StandardImageMetadataStatus::ok;
+                result.shot = read_shot_metadata(frame.Get());
+                // WIC 이 열긴 했는데 촬영 태그가 하나도 없을 수 있습니다. 카메라 RAW 이면
+                // `libraw.dll` 이 같은 값을 들고 있으므로 한 번 더 물어봅니다 — 열었다는
+                // 이유만으로 빈 값을 확정하면 RAW codec 이 깔린 기계에서만 값이 비어
+                // 보입니다.
+                if (!result.shot.empty()) {
+                    return result;
+                }
+            }
+        }
+        const LibRawShotResult raw = probe_raw_shot_with_libraw(path);
+        if (raw.status == LibRawDecodeStatus::ok) {
+            result.status = StandardImageMetadataStatus::ok;
+            result.shot = raw.shot;
+            result.libraw_fallback_used = true;
+            return result;
+        }
+        if (result.status == StandardImageMetadataStatus::ok) {
+            // WIC 은 열었습니다. 촬영 기록이 없는 파일일 뿐입니다.
             return result;
         }
         result.status = raw.status == LibRawDecodeStatus::unavailable

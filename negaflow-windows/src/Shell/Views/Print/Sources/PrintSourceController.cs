@@ -81,10 +81,19 @@ internal sealed class PrintSourceController
         redraw();
     }
 
-    internal void HandleTreeInvoked(object? sender, string frameId)
+    /// <summary>
+    /// 좌측 "파일" 탭에서 사진을 눌렀습니다. Shift · Ctrl 은 필름스트립과 같은 규칙으로
+    /// 풀립니다 — macOS <c>selectFrame(_:orderedFrameIDs:modifiers:)</c> 하나가 세 자리를
+    /// 모두 답니다.
+    /// </summary>
+    internal void HandleTreeInvoked(object? sender, Negaflow.Shell.Views.Library.Sources.LibraryFrameInvocation invocation)
     {
         _ = sender;
-        libraryHost?.SetSelection([frameId], frameId);
+        ArgumentNullException.ThrowIfNull(invocation);
+        libraryHost?.SelectFrame(
+            invocation.FrameId,
+            invocation.OrderedFrameIds,
+            invocation.Modifiers);
     }
 
     /// <summary>
@@ -150,7 +159,8 @@ internal sealed class PrintSourceController
         Negaflow.Shell.PreviewTrace.Write("print.selection");
         // 고른 사진이 바뀌면 파일 목록의 강조도 따라가야 합니다 — 목록을 통째로 다시 짓지
         // 않고 강조만 옮깁니다.
-        surface.FilesTree.SelectedFrameId = ActiveSourceFrameId;
+        surface.FilesTree.SetSelection(
+            ActiveSourceFrameId, libraryHost?.SelectedFrameIds ?? []);
         SynchronizeFilmstrip();
         if (builtFrameCount != EligibleFrames.Count)
         {
@@ -186,7 +196,8 @@ internal sealed class PrintSourceController
             $"files.print.rebuild host=ok frames={eligibleFrames.Count} " +
             $"folders={libraryHost.Folders.Count} sections={projection.FolderSections.Count}");
         // 고른 사진과 그 폴더가 파랗게 되도록 라이브러리 · 현상과 같은 값을 넣습니다.
-        surface.FilesTree.SelectedFrameId = ActiveSourceFrameId;
+        surface.FilesTree.SetSelection(
+            ActiveSourceFrameId, libraryHost?.SelectedFrameIds ?? []);
         surface.FilesTree.SetSections(projection.FolderSections);
         builtFrameCount = projection.FolderSections.Sum(section => section.Items.Count);
     }
@@ -216,7 +227,7 @@ internal sealed class PrintSourceController
         ToolTipService.SetToolTip(surface.RightHeader, title);
 
         surface.ApplySourcePane(EligibleFrames.Count > 0);
-        surface.FilesTree.SelectedFrameId = activeFrameId;
+        surface.FilesTree.SetSelection(activeFrameId, libraryHost?.SelectedFrameIds ?? []);
     }
 
     private void SynchronizeFilmstrip()

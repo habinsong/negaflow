@@ -105,6 +105,42 @@ struct StandardImageMetadataResult final {
 [[nodiscard]] StandardImageMetadataResult probe_standard_image_metadata(
     const std::filesystem::path& path) noexcept;
 
+/// 파일에 적힌 **촬영 기록**입니다. 필름 카메라는 EXIF 를 남기지 않으므로 스캔 원본에는
+/// 없고, 사용자가 가져온 디지털 원본에만 있습니다.
+///
+/// macOS 는 `SourceMetadataReader` 가 `CGImageSourceCopyPropertiesAtIndex` 로 읽어
+/// `SourceEXIFMetadata` 에 담고, 현상 인스펙터 머리줄이 그 값을 씁니다. 이것이 그 짝입니다 —
+/// 값이 없으면 `has_*` 가 false 이고, 화면은 그 자리에 `—` 를 냅니다.
+struct SourceShotMetadata final {
+    bool has_iso_speed{false};
+    std::uint32_t iso_speed{0U};
+    bool has_exposure_time{false};
+    double exposure_time_seconds{0.0};
+    bool has_f_number{false};
+    double f_number{0.0};
+    bool has_focal_length{false};
+    double focal_length_mm{0.0};
+
+    [[nodiscard]] bool empty() const noexcept {
+        return !has_iso_speed && !has_exposure_time && !has_f_number && !has_focal_length;
+    }
+};
+
+struct SourceShotMetadataResult final {
+    StandardImageMetadataStatus status{StandardImageMetadataStatus::invalid_argument};
+    SourceShotMetadata shot{};
+    bool libraw_fallback_used{false};
+};
+
+/// 화소를 만들지 않고 EXIF 촬영 태그만 읽습니다.
+///
+/// `probe_standard_image_metadata` 와 나란한 자리이지만 **가져오기 경로에서는 부르지
+/// 않습니다** — 가져오기는 크기만 있으면 되고, 여기는 화면이 한 장을 열 때만 봅니다.
+/// 컨테이너를 JPEG/PNG/RAW 으로 좁히지 않습니다: 태그만 읽으므로 WIC 가 여는 파일이면
+/// 무엇이든 읽을 수 있어야 합니다(가져온 TIFF 도 포함).
+[[nodiscard]] SourceShotMetadataResult probe_source_shot_metadata(
+    const std::filesystem::path& path) noexcept;
+
 /// WIC codec 만 씁니다. LibRaw 대체 없이 WIC 자체의 판정을 보고 싶은 시험이 씁니다.
 [[nodiscard]] WicStandardImageDecodeResult decode_standard_image_with_wic_only(
     const std::filesystem::path& path,

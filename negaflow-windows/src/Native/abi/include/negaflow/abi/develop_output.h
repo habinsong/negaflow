@@ -151,6 +151,19 @@ typedef struct nf_develop_export_request_v37 {
     uint32_t output_icc_reserved;
 } nf_develop_export_request_v37;
 
+/* Carries the input resolution a print-sheet proxy needs.
+
+   `output_long_edge` caps the finished image; this caps the *decode*. A contact-sheet
+   cell 268 px wide has no reason to decode a 5136x3543 scan, and macOS does not: it
+   computes `ExportDevelopedFrameRenderer.proxyInputLongEdge(outputLongEdge:…)` and hands
+   that to `prepareForPrintComposite(_:proxyLongEdge:)`. Zero keeps the source resolution,
+   which is what every user-facing export asks for. */
+typedef struct nf_develop_export_request_v38 {
+    nf_develop_export_request_v37 v37;
+    uint32_t proxy_input_long_edge;
+    uint32_t proxy_reserved;
+} nf_develop_export_request_v38;
+
 #ifdef __cplusplus
 }
 #endif

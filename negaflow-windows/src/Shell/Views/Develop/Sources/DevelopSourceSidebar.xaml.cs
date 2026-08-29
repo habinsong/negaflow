@@ -27,7 +27,7 @@ public sealed partial class DevelopSourceSidebar : UserControl
     }
 
     /// <summary>트리에서 frame 을 누르면 올립니다. 선택은 뷰가 맡습니다.</summary>
-    public event EventHandler<string>? FrameSelected;
+    public event EventHandler<Negaflow.Shell.Views.Library.Sources.LibraryFrameInvocation>? FrameSelected;
 
     /// <summary>가져오기가 끝난 뒤 목록을 다시 그릴 때 올립니다.</summary>
     public event EventHandler? FramesImported;
@@ -141,8 +141,7 @@ public sealed partial class DevelopSourceSidebar : UserControl
     /// <summary>
     /// 고른 사진이 바뀌었습니다. 목록은 그대로 두고 파란 강조만 옮깁니다.
     /// </summary>
-    public void SynchronizeFilesSelection(string? frameId) =>
-        FilesPanel.SynchronizeSelection(frameId);
+    public void SynchronizeFilesSelection() => FilesPanel.SynchronizeSelection();
 
     private void OnRailTabClicked(object? sender, WorkflowSidebarTab kind)
     {
@@ -193,10 +192,10 @@ public sealed partial class DevelopSourceSidebar : UserControl
     private Visibility Show(WorkflowSidebarTab kind) =>
         selectedTab == kind ? Visibility.Visible : Visibility.Collapsed;
 
-    private void OnChildFrameSelected(object? sender, string frameId)
+    private void OnChildFrameSelected(object? sender, Negaflow.Shell.Views.Library.Sources.LibraryFrameInvocation invocation)
     {
         _ = sender;
-        FrameSelected?.Invoke(this, frameId);
+        FrameSelected?.Invoke(this, invocation);
     }
 
     private void OnLibraryFramesImported(object? sender, EventArgs args)

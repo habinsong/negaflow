@@ -31,6 +31,12 @@ public enum DevelopRequestRefusal
     InvalidDefectRecipe,
 
     UnsupportedDefectEditKind,
+
+    /// <summary>
+    /// 결함 편집을 기록할 때의 원본과 지금 파일이 다르고, <b>화소 격자까지 달라졌습니다.</b>
+    /// 마스크를 다른 화소에 얹게 되므로 현상하지 않습니다.
+    /// </summary>
+    StaleDefectSource,
 }
 
 /// <param name="DroppedStaleDefectEdits">
@@ -93,7 +99,8 @@ public static class DevelopRequestFactory
         ExportEncodingOptions? encoding = null,
         bool uninvertedSource = false,
         bool forceDefectSourceContentVerification = false,
-        bool allowStaleDefectSource = false)
+        bool allowStaleDefectSource = false,
+        uint proxyInputLongEdge = 0U)
     {
         ArgumentNullException.ThrowIfNull(frame);
         // 인코딩 값은 게시되는 파일에만 영향을 줍니다. preview 는 항상 기본값으로 도므로 크기·
@@ -258,9 +265,44 @@ public static class DevelopRequestFactory
             // 네이티브가 그것을 "바이트 수만 확인" 으로 읽습니다
             // (`export/stages/observe.cpp`). 파일이 바뀌면 크기·수정 시각이 먼저
             // 달라지므로 값싼 검사만으로도 마스크를 엉뚱한 사진에 걸 일은 없습니다.
+            // 기록된 바이트 수가 **지금 파일과 다를 수 있습니다.** 원본이 그 자리에서 한 번
+            // 다시 쓰이면(결함 굽기·IR 정리·스캐너 재저장) 그렇게 됩니다.
+            //
+            // 앞 판은 그대로 보냈고, 네이티브가 `defect_source_identity_mismatch` 로 거부해
+            // **그 사진은 영영 내보낼 수 없었습니다.** 화면에는 프리뷰가 멀쩡히 나오는데
+            // (프리뷰는 `allowStaleDefectSource` 로 편집을 빼고 그립니다) 내보내기만
+            // 1~4 ms 만에 끝나고 아무 파일도 남지 않았습니다 — 실기 2026-08-29,
+            // `OpticFilm8100-0002.tif` 가 109,181,328 → 109,216,380 바이트로 바뀐 뒤부터.
+            //
+            // macOS 는 이때 거부하지 않고 cleaned raw 를 **다시 짓습니다**
+            // (`prepareCleanedRawForExport`: `discardCleanedRaw` → `rebuildCleanedRaw`).
+            // 이 검사의 목적은 마스크를 **다른 화소**에 얹지 않는 것이므로, 화소 격자가
+            // 그대로일 때만 지금 파일로 다시 앵커해 같은 결론에 이릅니다. 크기가 달라졌으면
+            // 그때는 정말로 다른 그림이라 거부합니다.
+            ulong anchoredByteCount = sourceIdentity.ByteCount;
+            bool reanchored = false;
+            // **원본을 다시 쓰는 길에서는 다시 앵커하지 않습니다.** 결함 굽기가
+            // `forceDefectSourceContentVerification` 으로 내용 해시까지 확인하는 이유가
+            // 그것입니다 — 화소 격자가 같다는 것만으로 원본을 덮어쓰면 안 됩니다. 읽기만
+            // 하는 내보내기는 격자가 같으면 이어 갑니다.
+            if (!forceDefectSourceContentVerification &&
+                !SourceStillMatches(frame.SourcePath, sourceIdentity.ByteCount))
+            {
+                if (CurrentSourceByteCount(frame.SourcePath) is not { } currentByteCount ||
+                    !SourcePixelGridUnchanged(frame))
+                {
+                    return DevelopRequestResult.Failure(
+                        DevelopRequestRefusal.StaleDefectSource);
+                }
+                anchoredByteCount = currentByteCount;
+                reanchored = true;
+            }
             defectSourceIdentity = new DevelopDefectSourceIdentity(
-                sourceIdentity.ByteCount,
-                VerifyDefectSourceContent || forceDefectSourceContentVerification
+                anchoredByteCount,
+                // 다시 앵커했으면 기록된 sha 는 이 파일의 것이 아닙니다. 그것을 그대로
+                // 보내면 내용 검사를 켠 사용자만 다시 거부당합니다.
+                !reanchored &&
+                (VerifyDefectSourceContent || forceDefectSourceContentVerification)
                     ? sourceIdentity.Sha256
                     : DefectSourceContentCheckOnly);
         }
@@ -272,6 +314,8 @@ public static class DevelopRequestFactory
             Format = format,
             OutputDpi = (uint)output.Dpi,
             OutputLongEdge = (uint)output.LongEdge,
+            // 0 이 기본입니다 — 인화 판만 값을 넘깁니다.
+            ProxyInputLongEdge = proxyInputLongEdge,
             JpegQuality = (float)output.JpegQuality,
             TiffCompression = output.TiffCompression,
             OutputBitDepth = (uint)output.BitDepth,
@@ -563,4 +607,47 @@ public static class DevelopRequestFactory
         }
     }
 
+    /// <summary>지금 파일의 바이트 수입니다. 못 읽으면 <see langword="null"/> 입니다.</summary>
+    private static ulong? CurrentSourceByteCount(string sourcePath)
+    {
+        try
+        {
+            return new FileInfo(sourcePath) is { Exists: true } info && info.Length > 0
+                ? (ulong)info.Length
+                : null;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException
+            or ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 원본의 <b>화소 격자</b>가 가져올 때와 같은지입니다. 결함 마스크는 정규화 좌표로
+    /// 살아 있으므로, 가로·세로가 그대로면 같은 화소에 얹힙니다.
+    /// </summary>
+    /// <remarks>
+    /// 파일을 열지만 <b>바이트 수가 어긋난 그 한 번</b>만 옵니다 — 크기만 읽는 프로브라
+    /// 화소를 만들지 않습니다. 기록된 치수가 없으면 견줄 것이 없으므로 같지 않다고 봅니다.
+    /// </remarks>
+    private static bool SourcePixelGridUnchanged(LibraryFrameSnapshot frame)
+    {
+        if (frame.SourceMetadata is not { PixelWidth: > 0U, PixelHeight: > 0U } recorded)
+        {
+            return false;
+        }
+        try
+        {
+            return LibrarySourceMetadataReader.Read(frame.SourcePath) is { } current &&
+                current.PixelWidth == recorded.PixelWidth &&
+                current.PixelHeight == recorded.PixelHeight;
+        }
+        catch (Exception)
+        {
+            // 크기를 못 읽으면 **같다고 보지 않습니다.** 확인할 수 없는 것을 근거로 마스크를
+            // 얹으면 이 검사가 있는 이유가 없어집니다.
+            return false;
+        }
+    }
 }

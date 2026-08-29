@@ -13,6 +13,7 @@ public sealed record ExportPanelView(
     string QuickExportFileName,
     string SourceSummary,
     string ExportButtonText,
+    string QuickExportButtonText,
     bool CanExport);
 
 /// <summary>
@@ -30,8 +31,16 @@ public static class ExportPanelProjection
         bool canExport,
         int selectedFrameCount,
         string besideSourceText,
-        string exportTitle)
+        string exportTitle,
+        string quickExportTitle,
+        bool usesPaperLayout = false,
+        bool usesCompositeLayout = false,
+        int paperOutputCount = 0)
     {
+        // macOS `ExportSection.exportButtonTitle(_:)` 그대로입니다 — 인화뷰는 **나올 판
+        // 수**를, 현상뷰는 고른 사진 수를 셉니다. 콘택트 시트·사진 패키지·사용자 패키지는
+        // 한 판에 여러 장을 얹으므로 사진 수를 적으면 나올 파일 수와 어긋납니다.
+        int count = usesPaperLayout ? paperOutputCount : selectedFrameCount;
         string exportFolder = FolderDisplay(exportSettings.FolderPath, besideSourceText);
         string quickFolder = FolderDisplay(quickExportSettings.FolderPath, besideSourceText);
         string preview = string.Empty;
@@ -42,7 +51,12 @@ public static class ExportPanelProjection
             preview = namingContext is { } context
                 ? exportSettings.Destination.FileNameFor(frame.SourcePath, context)
                 : exportSettings.Destination.FileNameFor(frame.SourcePath);
-            quickName = quickExportSettings.Destination.FileNameFor(frame.SourcePath);
+            // 빠른 내보내기도 **카드 이름**으로 냅니다. 문맥 없이 원본 경로만 넘기면
+            // `{name}` 이 원본 스캔 파일 이름으로 풀려, 미리 보이는 이름과 실제로 나가는
+            // 이름이 갈립니다.
+            quickName = namingContext is { } quickContext
+                ? quickExportSettings.Destination.FileNameFor(frame.SourcePath, quickContext)
+                : quickExportSettings.Destination.FileNameFor(frame.SourcePath);
             summary = DescribeSource(frame);
         }
 
@@ -52,12 +66,24 @@ public static class ExportPanelProjection
             preview,
             quickName,
             summary,
-            // 여러 장을 고르면 macOS 처럼 몇 장인지 단추에 적습니다.
-            selectedFrameCount > 1
-                ? string.Create(CultureInfo.CurrentCulture, $"{exportTitle} ({selectedFrameCount})")
-                : exportTitle,
+            // 여러 장을 고르면 macOS 처럼 몇 장인지 단추에 적습니다. **두 단추 모두**입니다 —
+            // macOS `ExportSection` 은 같은 `exportButtonTitle(_:)` 을 내보내기(33행)와 빠른
+            // 내보내기(84행)에 함께 겁니다. 빠른 내보내기만 숫자가 없으면 여러 장을 골라
+            // 놓고도 일괄로 나가는지 알 수가 없습니다.
+            ButtonTitle(exportTitle, count, usesCompositeLayout),
+            ButtonTitle(quickExportTitle, count, usesCompositeLayout),
             canExport);
     }
+
+    /// <summary>
+    /// macOS <c>exportButtonTitle(_:)</c> — <c>usesCompositeLayout || count > 1</c> 일 때만
+    /// 숫자를 답니다. 한 판에 여러 장을 얹는 배치에서는 <b>한 장이어도</b> 적습니다: 그
+    /// 숫자가 사진 수가 아니라 나올 파일 수이기 때문입니다.
+    /// </summary>
+    private static string ButtonTitle(string title, int count, bool usesCompositeLayout) =>
+        usesCompositeLayout || count > 1
+            ? string.Create(CultureInfo.CurrentCulture, $"{title} ({count})")
+            : title;
 
     /// <summary>
     /// 소스 탭의 한 줄 요약입니다. macOS 는 여기에 스캔 DPI 도 적지만 Windows 카탈로그는 아직

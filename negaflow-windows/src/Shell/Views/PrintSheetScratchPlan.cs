@@ -38,9 +38,11 @@ public static partial class PrintSheetWriter
     /// </remarks>
     private static int[] PlanScratchLongEdges(
         IReadOnlyList<LibraryFrameSnapshot> sources,
-        PrintPreferences print)
+        PrintPreferences print,
+        out int[] proxyInputLongEdges)
     {
         int[] none = new int[sources.Count];
+        proxyInputLongEdges = new int[sources.Count];
         PrintSizeMm[] planned = new PrintSizeMm[sources.Count];
         for (int index = 0; index < sources.Count; ++index)
         {
@@ -90,6 +92,7 @@ public static partial class PrintSheetWriter
         }
 
         int[] result = new int[sources.Count];
+        proxyInputLongEdges = new int[sources.Count];
         for (int index = 0; index < result.Length; ++index)
         {
             double source = Math.Max(planned[index].Width, planned[index].Height);
@@ -98,8 +101,49 @@ public static partial class PrintSheetWriter
             double wanted = Math.Ceiling(longest[index] * ScratchLongEdgeMargin);
             // 원본보다 크게 잡지 않습니다 — 상한은 줄이기 위한 것이지 늘리기 위한 것이 아닙니다.
             result[index] = wanted >= source || wanted < 1.0 ? 0 : (int)wanted;
+            proxyInputLongEdges[index] = ProxyInputLongEdge(sources[index], wanted, source);
         }
         return result;
+    }
+
+    /// <summary>
+    /// 판에 얹을 프록시를 만들 때 <b>원본을 얼마나 크게 풀지</b>입니다.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// macOS <c>ExportDevelopedFrameRenderer.proxyInputLongEdge(outputLongEdge:…)</c> 를
+    /// 그대로 옮겼습니다 — <c>outputLongEdge × sourceLongEdge / transformedLongEdge</c>.
+    /// 크롭과 수평 보정이 프레임을 깎으므로, 나올 그림의 긴 변만큼을 얻으려면 <b>깎이기
+    /// 전</b> 원본은 그 비율만큼 더 커야 합니다. 여유는 맥의 1.02 자리에
+    /// <see cref="ScratchLongEdgeMargin"/> 이 이미 들어가 있습니다.
+    /// </para>
+    /// <para>
+    /// 0 을 돌려주면 원본 그대로 풉니다. 판에 놓일 크기가 원본만 하거나 그보다 크면 줄일
+    /// 것이 없고, 크기를 못 읽었으면 <b>모르는 값으로 줄이지 않습니다</b>.
+    /// </para>
+    /// </remarks>
+    private static int ProxyInputLongEdge(
+        LibraryFrameSnapshot frame,
+        double wantedOutputLongEdge,
+        double transformedLongEdge)
+    {
+        if (!double.IsFinite(wantedOutputLongEdge) || wantedOutputLongEdge < 1.0 ||
+            !double.IsFinite(transformedLongEdge) || transformedLongEdge < 1.0)
+        {
+            return 0;
+        }
+        if (!TryProbe(frame.SourcePath, out uint pixelWidth, out uint pixelHeight, out _))
+        {
+            return 0;
+        }
+        double sourceLongEdge = Math.Max(pixelWidth, pixelHeight);
+        if (sourceLongEdge < 1.0)
+        {
+            return 0;
+        }
+        double wanted = Math.Ceiling(
+            wantedOutputLongEdge * sourceLongEdge / transformedLongEdge);
+        return wanted >= sourceLongEdge || wanted < 1.0 ? 0 : (int)wanted;
     }
 
     /// <summary>얹을 자리보다 이만큼 크게 현상합니다.</summary>

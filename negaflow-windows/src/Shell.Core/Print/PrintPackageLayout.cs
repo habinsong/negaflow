@@ -2,6 +2,76 @@
 
 public static class PrintPackageLayout
 {
+    /// <summary>사진 수를 세는 상한입니다. macOS <c>maximumSourceCount</c> 와 같습니다.</summary>
+    private const int MaximumSourceCount = 10_000;
+
+    /// <summary>
+    /// 이 설정으로 <b>판이 몇 장</b> 나오는지입니다. 화소를 하나도 만들지 않고 셉니다.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// macOS <c>PrintPackageLayout.expectedPageCount(sourceCount:package:)</c> 를 그대로
+    /// 옮겼습니다. 두 자리가 이 값을 씁니다 — 내보내기 단추의 <c>(N)</c> 과, 판을 쓰기 전의
+    /// 확인입니다. 맥도 <c>PrintPackageExportWriter</c> 에서 실제로 만든 판 수가 이 값과
+    /// 같은지 먼저 봅니다.
+    /// </para>
+    /// <para>
+    /// <see langword="null"/> 은 <b>이 설정으로는 판을 낼 수 없다</b>는 뜻입니다 — 설정이
+    /// 유효하지 않거나, 사용자 패키지가 없는 사진을 가리키거나, 판이 상한을 넘을 때입니다.
+    /// 사진이 없으면 0 입니다.
+    /// </para>
+    /// </remarks>
+    public static int? ExpectedPageCount(int sourceCount, PrintPackageSettings package)
+    {
+        ArgumentNullException.ThrowIfNull(package);
+        if (!package.IsValid || sourceCount < 0 || sourceCount > MaximumSourceCount)
+        {
+            return null;
+        }
+        if (sourceCount == 0)
+        {
+            return 0;
+        }
+        int pageCount;
+        switch (package.Mode)
+        {
+            case PrintPackageMode.ContactSheet:
+                if (package.RepeatOnePhotoPerPage)
+                {
+                    // 사진마다 한 판을 채웁니다. 판 수는 사진 수와 같습니다.
+                    pageCount = sourceCount;
+                    break;
+                }
+                int capacity = package.ContactRows * package.ContactColumns;
+                pageCount = (sourceCount + capacity - 1) / capacity;
+                break;
+            case PrintPackageMode.PicturePackage:
+                int cells = PictureCellCapacity(package.PictureTemplate);
+                pageCount = (sourceCount + cells - 1) / cells;
+                break;
+            case PrintPackageMode.CustomPackage:
+                // 없는 사진을 가리키는 칸이 하나라도 있으면 판을 낼 수 없습니다.
+                if (package.CustomItems.Count == 0 ||
+                    package.CustomItems.Any(item => item.SourceIndex >= sourceCount))
+                {
+                    return null;
+                }
+                pageCount = package.CustomItems.Max(item => item.PageIndex) + 1;
+                break;
+            default:
+                return null;
+        }
+        return pageCount <= PrintPackageSettings.MaximumPageCount ? pageCount : null;
+    }
+
+    /// <summary>macOS <c>pictureCellCapacity(_:)</c> 와 같은 칸 수입니다.</summary>
+    private static int PictureCellCapacity(PrintPicturePackageTemplate template) => template switch
+    {
+        PrintPicturePackageTemplate.TwoUp => 2,
+        PrintPicturePackageTemplate.FourUp => 4,
+        _ => 3,
+    };
+
     /// <summary>
     /// 판을 계산합니다. 사진이 한 판에 다 안 들어가면 판을 여러 장 냅니다.
     /// </summary>

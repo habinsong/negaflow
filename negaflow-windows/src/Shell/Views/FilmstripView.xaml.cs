@@ -25,6 +25,17 @@ public sealed partial class FilmstripView : UserControl
 
     private string? pendingActiveFrameId;
     private double liveHeight = ShellLayoutMetrics.FilmstripDefaultHeight;
+
+    /// <summary>
+    /// 하단바의 크기 HUD 가 정한 배율입니다. macOS <c>workspace.filmstripItemScale</c> 자리이며,
+    /// <b>카드 높이는 이 값과 스트립 높이 둘에서</b> 나옵니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 카드를 잴 때 배율을 <c>1.0</c> 으로 박아 두었습니다. 하단바의 <c>−</c>·
+    /// <c>+</c>·<c>100%</c> 는 값을 저장하고 퍼센트 글자만 바꿨을 뿐, 썸네일 크기는 한 번도
+    /// 바뀌지 않았습니다.
+    /// </remarks>
+    private double liveItemScale = 1.0;
     private IReadOnlyList<LibraryFrameListItem> items = [];
 
     public FilmstripView()
@@ -319,7 +330,7 @@ public sealed partial class FilmstripView : UserControl
         {
             return;
         }
-        double itemHeight = FilmstripMetrics.ItemHeight(1.0, liveHeight);
+        double itemHeight = FilmstripMetrics.ItemHeight(liveItemScale, liveHeight);
         container.Height = itemHeight;
         container.Width = FilmstripMetrics.CardWidth(itemHeight);
         container.Margin = new Thickness(3.0, 0.0, 3.0, 0.0);
@@ -357,6 +368,7 @@ public sealed partial class FilmstripView : UserControl
         ArgumentNullException.ThrowIfNull(state);
         workspaceState = state;
         state.Changed += OnStateChanged;
+        liveItemScale = state.Current.FilmstripItemScale;
         SetHeight(state.Current.FilmstripHeight);
         Unloaded += OnUnloaded;
     }
@@ -459,6 +471,13 @@ public sealed partial class FilmstripView : UserControl
     private void OnStateChanged(object? sender, ShellPreferences preferences)
     {
         _ = sender;
+        if (Math.Abs(preferences.FilmstripItemScale - liveItemScale) > 0.0001)
+        {
+            liveItemScale = preferences.FilmstripItemScale;
+            // 높이가 함께 바뀌지 않았어도 카드는 다시 재야 합니다.
+            SetHeight(liveHeight);
+            return;
+        }
         if (!isResizing && Math.Abs(preferences.FilmstripHeight - liveHeight) > 0.01)
         {
             SetHeight(preferences.FilmstripHeight);

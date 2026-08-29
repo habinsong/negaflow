@@ -46,6 +46,7 @@ internal sealed class DevelopFrameList
         if (!hasFrames)
         {
             view.LeftPanel.SetHeaderTitle(AppResources.Get("noFrame", "Text"));
+            view.inspectorHeader.Clear();
             view.FrameSelector.ItemsSource = null;
             view.Filmstrip.ShowFrames([], -1);
             view.HistogramView.Clear();
@@ -149,7 +150,7 @@ internal sealed class DevelopFrameList
         }
         view.LeftPanel.RebuildLibraryTree();
         // 목록을 통째로 다시 짓지 않고 강조만 옮깁니다 — 인화뷰와 같은 처리입니다.
-        view.LeftPanel.SynchronizeFilesSelection(view.libraryHost?.ActiveFrameId);
+        view.LeftPanel.SynchronizeFilesSelection();
         view.LeftPanel.ExportPanel.RefreshPreview();
     }
 
@@ -161,6 +162,20 @@ internal sealed class DevelopFrameList
         }
     }
 
+    /// <summary>
+    /// 하단 필름스트립에서 사진을 눌렀습니다. <b>Shift·Ctrl 풀이는 라이브러리가 합니다.</b>
+    /// </summary>
+    /// <remarks>
+    /// macOS <c>selectFrame(_:orderedFrameIDs:modifiers:)</c> 자리이며 인화뷰도 같은 길을
+    /// 씁니다(<c>PrintSourceController.HandleFilmstripSelected</c>).
+    ///
+    /// 현상뷰만 자기 계산을 따로 들고 있었습니다 — 누른 순간 <b>컨트롤이 잡고 있는 선택</b>
+    /// 을 읽어 여러 장이면 그대로, 아니면 한 장으로 발행했습니다. 그런데 <c>ItemClick</c> 은
+    /// <c>SelectionChanged</c> 보다 **먼저** 오므로 그때 읽는 목록에는 방금 Ctrl 로 더한
+    /// 사진이 아직 없습니다. 그래서 언제나 "여러 장이 아님" 으로 판정돼 한 장으로 접혔고,
+    /// 이어지는 <c>Activate</c> 가 그 한 장짜리 선택을 스트립에 되써서 Shift·Ctrl 이
+    /// 아예 듣지 않았습니다. 고른 장수를 세는 내보내기·빠른 내보내기도 늘 한 장이었습니다.
+    /// </remarks>
     private void OnFilmstripFrameSelected(object? sender, LibraryFrameListItem item)
     {
         _ = sender;
@@ -174,21 +189,36 @@ internal sealed class DevelopFrameList
         {
             return;
         }
+        // 차례는 **스트립이 보여 주는 차례**입니다. Shift 로 이어 고를 때 그 사이가 곧
+        // 화면에 보이는 사이여야 합니다.
+        view.libraryHost?.SelectFrame(
+            item.Id,
+            [.. items.Select(candidate => candidate.Id)],
+            LibraryModifierKeys.Current());
+        // Ctrl 로 방금 누른 사진을 뺐다면 이제 열려야 할 사진은 다른 것입니다. 라이브러리가
+        // 정한 활성 사진을 따릅니다 — 그것이 목록에 없을 때만 누른 사진으로 물러납니다.
+        int activeIndex = IndexOf(items, view.libraryHost?.ActiveFrameId);
+        if (activeIndex < 0)
+        {
+            activeIndex = index;
+        }
+        LibraryFrameListItem active = items[activeIndex];
         // FrameSelector.SelectedIndex 만 바꾸면, 이미 그 칸이거나 SelectionChanged 가
         // 빠른 클릭을 건너뛸 때 Activate 가 안 불립니다. 스트립 클릭은 항상 이 장을 엽니다.
         view.isSynchronizingFrameSelection = true;
         try
         {
-            if (view.FrameSelector.SelectedIndex != index)
+            if (view.FrameSelector.SelectedIndex != activeIndex)
             {
-                view.FrameSelector.SelectedIndex = index;
+                view.FrameSelector.SelectedIndex = activeIndex;
             }
         }
         finally
         {
             view.isSynchronizingFrameSelection = false;
         }
-        Activate(item, index, publishSelection: true);
+        // 선택은 위에서 이미 발행했습니다. 여기서 다시 발행하면 그 풀이를 덮어씁니다.
+        Activate(active, activeIndex, publishSelection: false);
     }
 
     /// <summary>
@@ -196,17 +226,22 @@ internal sealed class DevelopFrameList
     /// 필름스트립·파일 탭 강조·인화 대상이 함께 움직입니다. 예전에는 여기서 캔버스만 바꿔
     /// 놓아 목록의 파란 강조와 하단 필름스트립이 옛 사진에 남았습니다.
     /// </summary>
-    private void OnSourceFrameSelected(object? sender, string frameId)
+    private void OnSourceFrameSelected(object? sender, Negaflow.Shell.Views.Library.Sources.LibraryFrameInvocation invocation)
     {
         _ = sender;
+        ArgumentNullException.ThrowIfNull(invocation);
         if (view.panel is null)
         {
             return;
         }
-        if (view.libraryHost is { } host)
-        {
-            host.SetSelection([frameId], frameId);
-        }
+        // Shift · Ctrl 은 라이브러리가 풉니다 — 필름스트립·격자·인화뷰와 같은 한 규칙입니다.
+        view.libraryHost?.SelectFrame(
+            invocation.FrameId,
+            invocation.OrderedFrameIds,
+            invocation.Modifiers);
+        // 열 사진은 라이브러리가 정한 활성 사진입니다. Ctrl 로 누른 사진을 빼면 다른 사진이
+        // 활성이 됩니다.
+        string frameId = view.libraryHost?.ActiveFrameId ?? invocation.FrameId;
         // 공유 선택이 이미 그 사진이었다면 알림이 나지 않습니다. 그때만 직접 옮깁니다.
         if (!string.Equals(view.panel.SelectedFrame?.Id, frameId, StringComparison.Ordinal))
         {
@@ -270,18 +305,6 @@ internal sealed class DevelopFrameList
         view.PreviewCanvas.RefreshCompare();
     }
 
-    /// <summary>
-    /// 이 클릭으로 발행할 선택입니다. 스트립이 여러 장을 잡고 있고 그 안에 이 사진이 있으면
-    /// 그 목록 그대로, 아니면 이 사진 하나입니다.
-    /// </summary>
-    private IReadOnlyList<string> SelectionIdsFor(LibraryFrameListItem item)
-    {
-        IReadOnlyList<string> shown = view.Filmstrip.SelectedFrameIds;
-        return shown.Count > 1 && shown.Contains(item.Id, StringComparer.Ordinal)
-            ? shown
-            : [item.Id];
-    }
-
     private void Activate(
         LibraryFrameListItem item,
         int selectedIndex,
@@ -295,11 +318,10 @@ internal sealed class DevelopFrameList
         view.cropSession.Cancel();
         if (publishSelection)
         {
-            // **스트립이 실제로 잡은 것을 그대로 발행합니다.** 앞 판은 언제나 한 장짜리
-            // 목록을 발행해서, Ctrl 로 여러 장을 골라도 매번 한 장으로 접혔습니다 -
-            // 그래서 현상뷰에서는 배치 내보내기를 시작할 수가 없었습니다(인화뷰는 다중
-            // 목록을 발행해 되고 있었습니다).
-            view.libraryHost?.SetSelection(SelectionIdsFor(item), item.Id);
+            // 글쇠 없이 이 사진 하나를 여는 길입니다(좌측 목록·복구·단축키). 필름스트립
+            // 클릭은 여기로 오지 않습니다 — Shift·Ctrl 풀이가 필요해서
+            // `OnFilmstripFrameSelected` 가 라이브러리의 `SelectFrame` 으로 먼저 발행합니다.
+            view.libraryHost?.SetSelection([item.Id], item.Id);
         }
         if (!view.panel.Select(item.Id))
         {
@@ -319,6 +341,9 @@ internal sealed class DevelopFrameList
             selectedIds.Length == 0 ? [item.Id] : selectedIds,
             item.Id);
         view.LeftPanel.SetHeaderTitle(item.DisplayName);
+        // 머리줄 오른쪽 한 줄입니다. 스캐너 TIFF 는 타깃·공정을, 가져온 파일은 그 파일에
+        // 실제로 적힌 EXIF 를 냅니다 — macOS `DevelopInspectorHeaderSummary` 와 같습니다.
+        view.inspectorHeader.Update(item.Frame);
         UpdateSelectedFrameText();
         RebindPerFrameCanvasTools();
         // 좌측탭의 프로세스·타깃·필름 프로파일·룩은 선택된 프레임을 따라갑니다.

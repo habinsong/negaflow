@@ -154,6 +154,9 @@ $required = @(
     'libraw_set_output_bps', 'libraw_set_output_color', 'libraw_set_gamma',
     'libraw_set_no_auto_bright', 'libraw_set_highlight', 'libraw_set_user_mul',
     'libraw_get_cam_mul', 'libraw_version')
+# 선택 심볼. 없어도 RAW 현상은 되고 촬영 기록만 비므로 여기서 배포를 막지 않는다 —
+# 다만 우리가 짓는 DLL 에서 빠졌다면 그것은 알아야 한다.
+$optional = @('libraw_get_imgother')
 # dumpbin 은 여러 줄을 돌려주므로 **한 문자열로 합쳐서** 본다. 배열에 `-notmatch` 를 쓰면
 # boolean 이 아니라 "안 맞는 원소들" 이 나와서 거의 항상 참이 된다 — 실제로 이 스크립트가
 # 처음에 모든 심볼을 없다고 보고한 원인이 그것이었다.
@@ -161,6 +164,12 @@ $exports = (& cmd /c "`"$vcvars`" >nul 2>&1 && dumpbin /exports `"$built`"") -jo
 $missing = @($required | Where-Object { $exports -notmatch "\b$([regex]::Escape($_))\b" })
 if ($missing) { throw "libraw.dll 에 필요한 C API 가 없다: $($missing -join ', ')" }
 Write-Host "C API 심볼 $($required.Count) 개 확인"
+$missingOptional = @($optional | Where-Object { $exports -notmatch "$([regex]::Escape($_))" })
+if ($missingOptional) {
+    Write-Warning "선택 C API 가 없다(촬영 기록만 비고 나머지는 그대로 동작한다): $($missingOptional -join ', ')"
+} else {
+    Write-Host "선택 C API 심볼 $($optional.Count) 개 확인"
+}
 
 # ── 5. 출력 폴더와 GPL/LGPL 고지 자료를 놓는다 ───────────────────────────────
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null

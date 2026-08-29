@@ -11,9 +11,17 @@ Windows 는 투명 원본(`AppIcon-1024.png`)에서 나와야 한다.
 으로 나온다. Pillow 의 ICO 저장은 모든 크기를 PNG 로 쓰므로 컨테이너는 직접 조립한다 —
 화소를 줄이는 일만 Pillow 에 맡긴다.
 
+**MSIX 작업 표시줄 아이콘은 ICO 가 아니라 패키지 로고에서 나온다.** 이 앱은 MSIX 로
+포장되므로 작업 표시줄·Alt+Tab·작업 보기는 `Square44x44Logo` 를 쓴다. `altform-unplated`
+자산을 주지 않으면 셸이 **판(plate)** 위에 로고를 얹어 그린다 — 그것이 아이콘 뒤에 보이던
+반투명 흰 사각형이다. 판이 없는 자산을 함께 만들어 두면 셸이 그쪽을 골라 배경 없이 그린다.
+
 만드는 것:
     Assets/AppIcon-1024.png   32bpp RGBA 원본 사본
     Assets/Negaflow.ico       16·20·24·32·40·48·64·256
+    Assets/Square44x44Logo.*  scale-* 과 targetsize-*(판 있는 것·없는 것 둘 다)
+    Assets/Square150x150Logo.scale-*  ·  Assets/Wide310x150Logo.scale-*
+    Assets/StoreLogo.scale-*
 """
 from __future__ import annotations
 
@@ -29,6 +37,13 @@ from PIL import Image
 # Windows 셸이 실제로 고르는 크기들이다. 큰 것 하나만 넣으면 작업 표시줄·탐색기가 스스로
 # 줄이면서 가장자리가 뭉갠다.
 SIZES = [16, 20, 24, 32, 40, 48, 64, 256]
+
+# MSIX 자산의 배율입니다. Windows 11 이 실제로 고르는 다섯 가지다.
+SCALES = [100, 125, 150, 200, 400]
+
+# 작업 표시줄·Alt+Tab·작업 보기·검색이 고르는 실제 화소 크기다. 각 크기마다 판 있는 것과
+# **판 없는 것**(`altform-unplated`)을 함께 둔다 — 판 없는 것이 없으면 셸이 판을 그린다.
+TARGET_SIZES = [16, 20, 24, 30, 32, 36, 40, 44, 48, 56, 60, 64, 72, 80, 96, 256]
 
 
 def main() -> int:
@@ -72,7 +87,45 @@ def main() -> int:
         return 1
 
     print(f"아이콘: {target} ({len(SIZES)} 크기, 256 만 PNG, 모서리 전부 투명)")
+
+    written = build_package_logos(icon, assets)
+    print(f"MSIX 로고: {written} 개 (판 없는 자산 포함)")
     return 0
+
+
+def square(icon: Image.Image, size: int) -> Image.Image:
+    """정사각 로고. 원본이 이미 정사각이라 크기만 줄인다."""
+    return scaled(icon, size)
+
+
+def letterboxed(icon: Image.Image, width: int, height: int) -> Image.Image:
+    """와이드 타일. 배경을 채우지 않고 **투명 캔버스 가운데**에 놓는다."""
+    canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    edge = min(width, height)
+    art = scaled(icon, edge)
+    canvas.paste(art, ((width - edge) // 2, (height - edge) // 2), art)
+    return canvas
+
+
+def build_package_logos(icon: Image.Image, assets: Path) -> int:
+    """appxmanifest 가 가리키는 로고 자산을 전부 만든다."""
+    written = 0
+    for scale in SCALES:
+        factor = scale / 100.0
+        square(icon, round(44 * factor)).save(assets / f"Square44x44Logo.scale-{scale}.png")
+        square(icon, round(150 * factor)).save(assets / f"Square150x150Logo.scale-{scale}.png")
+        square(icon, round(50 * factor)).save(assets / f"StoreLogo.scale-{scale}.png")
+        letterboxed(icon, round(310 * factor), round(150 * factor)).save(
+            assets / f"Wide310x150Logo.scale-{scale}.png")
+        written += 4
+    for size in TARGET_SIZES:
+        frame = square(icon, size)
+        frame.save(assets / f"Square44x44Logo.targetsize-{size}.png")
+        # **같은 화소를 판 없는 이름으로도 둔다.** 원본이 이미 투명 배경이므로 그림을 바꿀
+        # 필요가 없다 — 셸에게 "이 아이콘은 판 없이 그려라" 라고 말하는 것이 이름이다.
+        frame.save(assets / f"Square44x44Logo.targetsize-{size}_altform-unplated.png")
+        written += 2
+    return written
 
 
 def scaled(icon: Image.Image, size: int) -> Image.Image:

@@ -60,6 +60,7 @@ public static class ExportTrace
     {
         private readonly string stage;
         private readonly long started;
+        private bool written;
 
         internal Span(string stage)
         {
@@ -67,9 +68,26 @@ public static class ExportTrace
             started = Stopwatch.GetTimestamp();
         }
 
-        public void Dispose() => Write(string.Create(
-            CultureInfo.InvariantCulture,
-            $"{stage} {Stopwatch.GetElapsedTime(started).TotalMilliseconds:F1} ms"));
+        /// <summary>
+        /// 한 구간은 <b>한 줄</b>입니다. 두 번 놓아도 두 번 적지 않습니다.
+        /// </summary>
+        /// <remarks>
+        /// 일찍 끝내려고 <c>Dispose()</c> 를 직접 부른 뒤 <c>using</c> 이 범위 끝에서 한 번 더
+        /// 놓는 자리가 있습니다(`PrintSheetWriter` 의 <c>develop sources</c> · <c>read sizes</c>).
+        /// 그때 같은 이름이 서로 다른 시간으로 두 번 찍혀, 기록만 보면 단계가 두 번 돈 것처럼
+        /// 보였습니다 — 실측 기록이 거짓말을 하면 그 기록으로 아무것도 못 잽니다.
+        /// </remarks>
+        public void Dispose()
+        {
+            if (written)
+            {
+                return;
+            }
+            written = true;
+            Write(string.Create(
+                CultureInfo.InvariantCulture,
+                $"{stage} {Stopwatch.GetElapsedTime(started).TotalMilliseconds:F1} ms"));
+        }
     }
 
     private static string? Resolve()

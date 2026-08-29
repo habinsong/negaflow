@@ -309,3 +309,16 @@ internal unsafe struct NativeDevelopExportRequestV37
     internal uint OutputIccProfileSize;
     internal uint OutputIccReserved;
 }
+
+/// <summary>
+/// v37 에 <b>판 프록시 입력 해상도</b>를 더한 것입니다. 0 이면 원본 그대로 풉니다 —
+/// 사용자에게 나가는 내보내기는 전부 0 입니다. macOS
+/// <c>ExportDevelopedFrameRenderer.proxyInputLongEdge</c> 와 같은 자리입니다.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV38
+{
+    internal NativeDevelopExportRequestV37 V37;
+    internal uint ProxyInputLongEdge;
+    internal uint ProxyReserved;
+}

@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
 
 namespace Negaflow.Shell.Views;
@@ -12,9 +13,9 @@ namespace Negaflow.Shell.Views;
 public sealed partial class StatusBarView : UserControl
 {
     /// <summary>macOS <c>FilmstripSizing</c> 과 같은 값입니다.</summary>
-    private const double MinimumItemScale = 0.56;
+    private const double MinimumItemScale = ShellLayoutMetrics.FilmstripMinimumItemScale;
 
-    private const double MaximumItemScale = 1.34;
+    private const double MaximumItemScale = ShellLayoutMetrics.FilmstripMaximumItemScale;
 
     /// <summary>macOS 의 한 걸음입니다(`effectiveScale ± 0.08`).</summary>
     private const double ScaleStep = 0.08;
@@ -103,12 +104,19 @@ public sealed partial class StatusBarView : UserControl
         {
             return;
         }
-        int percent = (int)Math.Round(preferences.FilmstripItemScale * 100.0);
+        // **저장된 값이 아니라 실효 배율**을 냅니다. 스트립이 낮으면 1.34 를 저장해도 그
+        // 크기로 설 자리가 없으므로, macOS 는 잴 수 있는 값을 보여 주고 그 값에서 한 걸음씩
+        // 움직입니다(`ContentView+CenterStatus`).
+        double effectiveScale = EffectiveScale(preferences);
+        double maximumScale = FilmstripMetrics.MaximumEffectiveItemScale(
+            preferences.FilmstripItemScale,
+            preferences.FilmstripHeight);
+        int percent = (int)Math.Round(effectiveScale * 100.0);
         ThumbnailSizeButton.Content = string.Create(
             System.Globalization.CultureInfo.CurrentCulture,
             $"{percent}%");
-        ThumbnailSmallerButton.IsEnabled = preferences.FilmstripItemScale > MinimumItemScale + 0.001;
-        ThumbnailLargerButton.IsEnabled = preferences.FilmstripItemScale < MaximumItemScale - 0.001;
+        ThumbnailSmallerButton.IsEnabled = effectiveScale > MinimumItemScale + 0.001;
+        ThumbnailLargerButton.IsEnabled = effectiveScale < maximumScale - 0.001;
 
         FilmstripSortText.Text = SortKeyName(preferences.FilmstripSortKey);
         // 오름차순은 위 화살표, 내림차순은 아래 화살표입니다.
@@ -170,7 +178,7 @@ public sealed partial class StatusBarView : UserControl
         _ = args;
         Mutate(current => current with
         {
-            FilmstripItemScale = Math.Max(MinimumItemScale, current.FilmstripItemScale - ScaleStep),
+            FilmstripItemScale = Math.Max(MinimumItemScale, EffectiveScale(current) - ScaleStep),
         });
     }
 
@@ -180,7 +188,11 @@ public sealed partial class StatusBarView : UserControl
         _ = args;
         Mutate(current => current with
         {
-            FilmstripItemScale = Math.Min(MaximumItemScale, current.FilmstripItemScale + ScaleStep),
+            FilmstripItemScale = Math.Min(
+                FilmstripMetrics.MaximumEffectiveItemScale(
+                    current.FilmstripItemScale,
+                    current.FilmstripHeight),
+                EffectiveScale(current) + ScaleStep),
         });
     }
 
@@ -191,6 +203,12 @@ public sealed partial class StatusBarView : UserControl
         _ = args;
         Mutate(current => current with { FilmstripItemScale = 1 });
     }
+
+    /// <summary>스트립 높이가 허락하는 만큼으로 줄인 배율입니다.</summary>
+    private static double EffectiveScale(ShellPreferences preferences) =>
+        FilmstripMetrics.EffectiveItemScale(
+            preferences.FilmstripItemScale,
+            preferences.FilmstripHeight);
 
     private void Mutate(Func<ShellPreferences, ShellPreferences> update)
     {

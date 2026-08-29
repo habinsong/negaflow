@@ -21,6 +21,7 @@
 #include "export/support/preview.h"
 #include "export/support/preview_proxy.h"
 #include "export/support/progress.h"
+#include "export/support/stage_trace.h"
 
 #include <new>
 #include <memory>
@@ -111,6 +112,11 @@ using develop_export_detail::observe_source_before;
 using develop_export_detail::plan_total_cost;
 using develop_export_detail::prepare_look_workspace;
 using develop_export_detail::publish_developed;
+using develop_export_detail::stage_trace_begin;
+using develop_export_detail::stage_trace_defect;
+using develop_export_detail::stage_trace_grain_mend;
+using develop_export_detail::stage_trace_image;
+using develop_export_detail::stage_trace_invert;
 using develop_export_detail::validate_request;
 
 // 공개 진입점은 여기로 모인다. 단계 본문은 export/ 아래 번역 단위가 소유한다.
@@ -264,6 +270,10 @@ using develop_export_detail::validate_request;
         }
     }
 
+    stage_trace_begin(request, preview, detect);
+    stage_trace_image("decode+defect", decoded_image);
+    stage_trace_defect(request, defect_recipe);
+
     // macOS `runRegionDetect` 는 반전·톤·필름룩 전 cleaned raw 에서 검출한다.
     // 양화 뒤에서 돌리면 같은 먼지가 전혀 다른 대비로 보인다.
     if (detect != nullptr) {
@@ -293,6 +303,8 @@ using develop_export_detail::validate_request;
             return *failed;
         }
     }
+
+    stage_trace_image("preview_proxy", decoded_image);
 
     LookWorkspaceOutput look_workspace{};
     if (auto failed =
@@ -332,9 +344,14 @@ using develop_export_detail::validate_request;
         return *failed;
     }
 
+    stage_trace_invert(invert);
+    stage_trace_image("invert", invert.image);
+
     if (auto failed = apply_grade_stages(request, tracker, gpu_policy, invert)) {
         return *failed;
     }
+
+    stage_trace_image("grade", invert.image);
 
     // **상주 해제는 단계 안에서 합니다.** 예전에는 여기서 넘기기 직전에 무조건 내렸는데,
     // `std::vector` 이동은 버퍼 주소를 그대로 두므로 항등 단계를 지나는 흔한 경우에도
@@ -356,6 +373,8 @@ using develop_export_detail::validate_request;
         return *failed;
     }
 
+    stage_trace_image("look", look.image);
+
     if (auto failed = apply_grain_stage(
             request, control, detect, tracker, std::move(look.image), grain)) {
         return *failed;
@@ -363,6 +382,9 @@ using develop_export_detail::validate_request;
     if (grain.detect_complete) {
         return grain.detect_outcome;
     }
+
+    stage_trace_image("grain", grain.applied.image);
+    stage_trace_grain_mend(grain);
 
     if (auto failed = apply_finish_stages(
             request,
@@ -376,6 +398,8 @@ using develop_export_detail::validate_request;
             finish)) {
         return *failed;
     }
+
+    stage_trace_image("finish", finish.sharpening.image);
 
     // 마무리 화소는 `finish.sharpening.image` 가 들고 있습니다. `write_preview` 가
     // 상주면 GPU 로 BGRA8 을 내리고, 아니면 스스로 `flush_resident()` 합니다 —

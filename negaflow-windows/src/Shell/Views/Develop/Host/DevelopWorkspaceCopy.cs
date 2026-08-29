@@ -18,6 +18,7 @@ internal sealed class DevelopWorkspaceCopy
         string noFrame = AppResources.Get("noFrame", "Text");
         view.NoFrameLeftText.Text = noFrame;
         view.NoFrameInspectorText.Text = noFrame;
+        view.inspectorHeader.Localize();
         view.DevelopHeaderText.Text = AppResources.Get("menuDevelop", "Text");
         view.InfoCards.Localize();
         view.Adjustments.Localize();

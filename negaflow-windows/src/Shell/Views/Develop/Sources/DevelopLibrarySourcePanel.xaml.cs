@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Negaflow.Catalog;
@@ -23,11 +23,11 @@ public sealed partial class DevelopLibrarySourcePanel : UserControl
         // 않도록 이름을 갈라 둡니다.
         LibraryTree.TraceName = "develop-library";
         import = new DevelopSourceImport(this);
-        LibraryTree.FrameInvoked += (_, frameId) => FrameSelected?.Invoke(this, frameId);
+        LibraryTree.FrameInvoked += (_, invocation) => FrameSelected?.Invoke(this, invocation);
     }
 
     /// <summary>트리에서 frame 을 누르면 올립니다. 선택은 뷰가 맡습니다.</summary>
-    public event EventHandler<string>? FrameSelected;
+    public event EventHandler<Negaflow.Shell.Views.Library.Sources.LibraryFrameInvocation>? FrameSelected;
 
     /// <summary>파일·폴더 가져오기가 끝난 뒤 목록을 다시 그릴 때 올립니다.</summary>
     public event EventHandler? FramesImported;
@@ -101,7 +101,7 @@ public sealed partial class DevelopLibrarySourcePanel : UserControl
             libraryHost.FolderAvailabilityById,
             LibraryBrowserViewMode.Folders,
             includeEmptyFolders: false);
-        LibraryTree.SelectedFrameId = activeFrameId;
+        LibraryTree.SetSelection(activeFrameId, libraryHost.SelectedFrameIds);
         LibraryTree.SetSections(
             [.. projection.FolderSections.Where(section =>
                 section.Items.Any(item => string.Equals(
