@@ -1,5 +1,7 @@
 # macOS 버전과 Windows 버전의 차이
 
+[문서 홈](../README.md)
+
 negaflow는 macOS용과 Windows용이 따로 있습니다. 두 앱은 소스 코드를 공유하지 않고,
 각각 그 운영체제에서 쓰는 방식으로 만들었습니다.
 

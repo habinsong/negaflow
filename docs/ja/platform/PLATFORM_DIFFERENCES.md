@@ -1,5 +1,7 @@
 # macOS 版と Windows 版の違い
 
+[ドキュメントホーム](../README.md)
+
 negaflow は二つあります。macOS 版は Core Image の上の Swift と SwiftUI、Windows 版は
 Direct3D の上の C++ エンジンに C# と WinUI 3 です。二つはソースコードを共有していません。
 

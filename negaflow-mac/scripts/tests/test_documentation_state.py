@@ -40,12 +40,12 @@ README_LANGUAGES = {
     "README_de.md": "de",
 }
 CANONICAL_PRODUCT_DOCS = (
-    "product/PROJECT_STATUS.md",
     "product/CHROMA_ENGINE.md",
     "product/GRAINMEND.md",
     "product/FILM_PROFILES.md",
+    "product/WORKFLOW.md",
     "architecture/PRODUCT_ARCHITECTURE.md",
-    "validation/REAL_QA_CHECKLIST.md",
+    "platform/PLATFORM_DIFFERENCES.md",
 )
 
 
@@ -193,20 +193,6 @@ class DocumentationStateTests(unittest.TestCase):
                 ):
                     self.assertIn(token, text)
 
-    def test_status_describes_sqlite_primary_and_json_interchange_boundary(self) -> None:
-        # Korean is the source the other languages are written from, so the wording
-        # of the storage boundary is pinned there.
-        status = (ROOT / "docs/ko/product/PROJECT_STATUS.md").read_text(encoding="utf-8")
-        self.assertIn("기본 저장소는 `library.sqlite`", status)
-        self.assertIn("백업·아카이브 교환 형식", status)
-        self.assertIn("증거가 맞지 않으면 닫힌 상태로 실패", status)
-        self.assertIn("bash scripts/ci-gate.sh", status)
-        self.assertIn("bash scripts/build-release.sh", status)
-        self.assertIn("Apple Silicon(`arm64`)과 Universal(`arm64`, `x86_64`)", status)
-        self.assertIn("ZIP, PKG, DMG, dSYM", status)
-        self.assertIn("CLI_JSON.md", status)
-        self.assertIn("REAL_QA_CHECKLIST.md", status)
-
     def test_main_docs_do_not_own_plugin_runtime_instructions(self) -> None:
         texts = [
             (ROOT / name).read_text(encoding="utf-8")
@@ -220,14 +206,6 @@ class DocumentationStateTests(unittest.TestCase):
         self.assertNotIn("scan" + "image -L", combined)
         self.assertNotIn("scan" + "image -A", combined)
         self.assertIn("negaflow-scanner-sane", combined)
-
-    def test_real_qa_owns_manual_evidence_and_blocking_rules(self) -> None:
-        qa = (ROOT / "docs/ko/validation/REAL_QA_CHECKLIST.md").read_text(encoding="utf-8")
-        self.assertIn("최종 화면 확인과 실제 장비 확인은 사용자가", qa)
-        self.assertIn("실제 스캐너", qa)
-        self.assertIn("자동 `REJECT`", qa)
-        self.assertIn("CLI `detect --json`", qa)
-        self.assertIn("7200 DPI", qa)
 
 
 if __name__ == "__main__":

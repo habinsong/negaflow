@@ -1,5 +1,7 @@
 # Ce qui diffère entre les versions macOS et Windows
 
+[Accueil de la documentation](../README.md)
+
 negaflow existe en deux exemplaires. La version macOS est écrite en Swift et SwiftUI
 sur Core Image. La version Windows est en C# et WinUI 3 avec un moteur C++ sur Direct3D.
 Les deux ne partagent aucun code source.

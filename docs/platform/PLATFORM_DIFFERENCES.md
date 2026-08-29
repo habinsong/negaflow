@@ -1,5 +1,7 @@
 # How the macOS and Windows versions differ
 
+[Docs home](../README.md)
+
 negaflow exists twice, once for macOS and once for Windows. The two share no source
 code, and each is written the way its own system does things.
 

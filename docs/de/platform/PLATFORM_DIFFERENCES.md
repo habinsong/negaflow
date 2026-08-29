@@ -1,5 +1,7 @@
 # Wo sich die macOS- und die Windows-Version unterscheiden
 
+[Dokumentationsstart](../README.md)
+
 negaflow gibt es zweimal. Die macOS-Version ist Swift und SwiftUI auf Core Image. Die
 Windows-Version ist C# und WinUI 3 mit einer C++-Engine auf Direct3D. Beide teilen sich
 keinen Quellcode.
