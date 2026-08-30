@@ -22,6 +22,14 @@ namespace negaflow::pipeline::develop_export_detail {
     negaflow::imaging::WorkingImage& image,
     const PreviewTarget* preview = nullptr) noexcept;
 
+// 판에 놓을 크기로 줄입니다. 0 이면 그대로 둡니다.
+//
+// 결함 편집이 있는 프레임은 디코드 자리가 아니라 결함을 다 지운 뒤에 이것을 부릅니다.
+// 마스크가 원본 화소 좌표라 먼저 줄이면 어긋납니다.
+void shrink_to_proxy_long_edge(
+    negaflow::imaging::WorkingImage& image,
+    std::uint32_t proxy_long_edge) noexcept;
+
 // 디코드 상주 캐시(macOS `residentCleanedRawIDs`). 시험이 비우고 재는 자리입니다.
 void decoded_source_store_reset() noexcept;
 

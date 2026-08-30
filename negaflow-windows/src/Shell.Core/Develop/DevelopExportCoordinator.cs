@@ -321,6 +321,7 @@ public sealed class DevelopExportCoordinator
                 destinationPath,
                 format,
                 encoding);
+            ExportCargoTrace.Write(frame, built);
             if (built.Request is not { } request)
             {
                 return Deliver(DevelopExportOutcome.Refused(built.Refusal), onCompleted);

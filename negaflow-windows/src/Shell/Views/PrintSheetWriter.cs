@@ -281,6 +281,7 @@ public static partial class PrintSheetWriter
             // 넘기는 자리입니다 — 그것이 없으면 268 px 한 칸을 채우려고 5136x3543 을
             // 통째로 풀고, 실측으로 한 장에 2.4 초, 열두 장에 7.6 초가 들었습니다.
             proxyInputLongEdge: proxyInputLongEdge > 0 ? (uint)proxyInputLongEdge : 0U);
+        ExportCargoTrace.Write(frame, built);
         if (built.Request is not { } request)
         {
             // 현상이 **시작도 못 했습니다.** 판이 통째로 실패하는 가장 흔한 자리이므로 늘

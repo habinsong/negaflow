@@ -55,6 +55,8 @@ internal static class Program
         VirtualCopyDefectReviewTests.Run();
         DefectTerminationTests.Run();
         RemovedDefectSidecarTests.Run();
+        Negaflow.Shell.UnitTests.Defects.ColdExportDefectCoverageTests.Run();
+        Negaflow.Shell.UnitTests.Develop.CropAspectExactnessTests.Run();
         GrainMendDetectionSessionTests.Run();
         GrainMendPreviewBuildStateTests.Run();
         GrainMendOverlayMappingTests.Run();

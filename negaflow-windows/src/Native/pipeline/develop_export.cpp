@@ -101,6 +101,7 @@ using develop_export_detail::apply_look_stages;
 using develop_export_detail::cancelled_outcome;
 using develop_export_detail::fail;
 using develop_export_detail::decode_source;
+using develop_export_detail::shrink_to_proxy_long_edge;
 using develop_export_detail::decoded_cleaned_raw_put;
 using develop_export_detail::decoded_cleaned_raw_try_take;
 using develop_export_detail::invert_source;
@@ -271,6 +272,13 @@ using develop_export_detail::validate_request;
     }
 
     stage_trace_begin(request, preview, detect);
+    // 결함 마스크는 원본 좌표라 결함을 지우기 전에는 줄일 수 없었습니다. 다 지운 지금
+    // 줄여, 남은 단계가 판에 놓일 크기로 돌게 합니다 (macOS `prepareForPrintComposite`).
+    if (preview == nullptr && detect == nullptr &&
+        !request.defect_recipe.order.empty()) {
+        shrink_to_proxy_long_edge(decoded_image, request.proxy_input_long_edge);
+    }
+
     stage_trace_image("decode+defect", decoded_image);
     stage_trace_defect(request, defect_recipe);
 

@@ -414,28 +414,14 @@ std::optional<DevelopExportOutcome> decode_source(
     // `proxyLongEdge` 로 이미 줄어든 그림을 현상하므로 같은 결론에 맞춥니다.
     //
     // 실측(사용자 스캔 5136x3543, 판 한 칸 335 px): 줄이지 않으면 937 ms.
-    if (proxy_decode && decoded_image.width > 0U && decoded_image.height > 0U) {
-        const std::uint32_t longest =
-            decoded_image.width > decoded_image.height ? decoded_image.width
-                                                       : decoded_image.height;
-        if (longest > request.proxy_input_long_edge) {
-            const double scale =
-                static_cast<double>(request.proxy_input_long_edge) /
-                static_cast<double>(longest);
-            const auto fitted = [scale](const std::uint32_t value) {
-                const auto scaled = static_cast<std::uint32_t>(
-                    static_cast<double>(value) * scale + 0.5);
-                return scaled < 1U ? 1U : scaled;
-            };
-            const negaflow::imaging::WorkingImageResampleResult shrunk =
-                negaflow::imaging::resample_working_image_lanczos3(
-                    decoded_image, fitted(decoded_image.width), fitted(decoded_image.height));
-            // 줄이지 못해도 판은 나와야 합니다 — 느릴 뿐입니다. 원본 그대로 이어 갑니다.
-            if (shrunk.status == negaflow::imaging::WorkingImageResampleStatus::ok) {
-                decoded_image = std::move(
-                    const_cast<negaflow::imaging::WorkingImageResampleResult&>(shrunk).image);
-            }
-        }
+    //
+    // **결함 편집이 있으면 여기서 줄이지 않습니다.** 마스크가 원본 화소 좌표로 적혀 있어서,
+    // 먼저 줄이면 마스크가 그림 밖을 가리키고 `DefectComponentRepair` 가
+    // `invalid_argument` 로 멈춥니다. 그 경우는 결함을 다 지운 뒤에
+    // `shrink_to_proxy_long_edge` 로 줄입니다 (`develop_export.cpp`).
+    if (request.defect_recipe.order.empty()) {
+        shrink_to_proxy_long_edge(
+            decoded_image, proxy_decode ? request.proxy_input_long_edge : 0U);
     }
 
     const negaflow::imageio::ImageFileObservationResult after =
@@ -490,6 +476,33 @@ std::optional<DevelopExportOutcome> decode_source(
         return cancelled_outcome(DevelopExportStage::decode);
     }
     return std::nullopt;
+}
+
+void shrink_to_proxy_long_edge(
+    negaflow::imaging::WorkingImage& image,
+    const std::uint32_t proxy_long_edge) noexcept {
+    if (proxy_long_edge == 0U || image.width == 0U || image.height == 0U) {
+        return;
+    }
+    const std::uint32_t longest = image.width > image.height ? image.width : image.height;
+    if (longest <= proxy_long_edge) {
+        return;
+    }
+    const double scale =
+        static_cast<double>(proxy_long_edge) / static_cast<double>(longest);
+    const auto fitted = [scale](const std::uint32_t value) {
+        const auto scaled =
+            static_cast<std::uint32_t>(static_cast<double>(value) * scale + 0.5);
+        return scaled < 1U ? 1U : scaled;
+    };
+    const negaflow::imaging::WorkingImageResampleResult shrunk =
+        negaflow::imaging::resample_working_image_lanczos3(
+            image, fitted(image.width), fitted(image.height));
+    // 줄이지 못해도 판은 나와야 합니다. 느릴 뿐이므로 원본 그대로 이어 갑니다.
+    if (shrunk.status == negaflow::imaging::WorkingImageResampleStatus::ok) {
+        image = std::move(
+            const_cast<negaflow::imaging::WorkingImageResampleResult&>(shrunk).image);
+    }
 }
 
 } // namespace negaflow::pipeline::develop_export_detail
