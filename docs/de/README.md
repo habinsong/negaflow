@@ -68,4 +68,4 @@ flowchart LR
 - Codewerte, Feldnamen und Hashes bleiben unverändert.
 - Prüfdokumente trennen Bestandenes von noch nicht Geprüftem.
 - Schlichte Sätze. Keine Werbeadjektive, kein abschließender Zusammenfassungsabsatz, keine negative Parallelführung.
-- Ein Abschnitt, den es in einer Sprache gibt, steht in allen sechs. Die Regeln stehen in [`AGENTS.md`](../../AGENTS.md).
+- Ein Abschnitt, den es in einer Sprache gibt, steht in allen sechs.

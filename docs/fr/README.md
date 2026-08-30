@@ -68,4 +68,4 @@ flowchart LR
 - Les valeurs de code, noms de champs et empreintes restent tels quels.
 - Les documents de validation séparent ce qui est passé de ce qui reste à vérifier.
 - Des phrases simples. Pas d'adjectifs publicitaires, pas de paragraphe de conclusion, pas de parallélisme négatif.
-- Une section présente dans une langue l'est dans les six. Les règles sont dans [`AGENTS.md`](../../AGENTS.md).
+- Une section présente dans une langue l'est dans les six.

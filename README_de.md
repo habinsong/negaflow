@@ -63,6 +63,8 @@ Die Entwicklungs-Engine heißt **Chroma Engine**, die Reparatur von Staub und Kr
 
 Die beiden Apps sind native Apps, in unterschiedlichen Sprachen und auf unterschiedliche Weise entwickelt, und trotzdem sind Funktionen und Ergebnisse gleich.
 
+Der Engine-Code liegt unter macOS im Modul `Chromabase` und unter Windows im Modul `Native`.
+
 Es gibt einen Weg, beide auf einmal zu bauen (plattformübergreifend), aber dabei werden beide langsam und laufen nicht richtig. Deshalb habe ich den Code je Betriebssystem auf dessen eigene Art von vorn geschrieben. Was gleich ist und was nicht, steht [hier](docs/de/platform/PLATFORM_DIFFERENCES.md).
 
 ## Download

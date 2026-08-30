@@ -68,4 +68,4 @@ flowchart LR
 - Code values, field names, and hashes in reference documents stay as they are.
 - Validation documents separate what passed from what is not checked yet.
 - Plain sentences. No marketing adjectives, no closing summary paragraph, no negative parallelism.
-- A section that exists in one language exists in all six. The rules are in [`AGENTS.md`](../AGENTS.md).
+- A section that exists in one language exists in all six.

@@ -63,6 +63,8 @@ Le moteur de développement s'appelle **Chroma Engine**, et la réparation des p
 
 Les deux applications sont des applications natives développées dans des langages différents et de manières différentes, et malgré cela les fonctions et les résultats sont identiques.
 
+Le code du moteur se trouve dans le module `Chromabase` sur macOS et dans le module `Native` sur Windows.
+
 Il existe une façon de fabriquer les deux à la fois (le multiplateforme), mais en procédant ainsi les deux deviennent lentes et ne fonctionnent pas correctement. J'ai donc réécrit le code depuis le début, à la manière propre à chaque système. Ce qui est identique et ce qui ne l'est pas est écrit [ici](docs/fr/platform/PLATFORM_DIFFERENCES.md).
 
 ## Téléchargement

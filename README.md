@@ -63,6 +63,8 @@ The develop engine is called **Chroma Engine**, and dust and scratch repair is c
 
 The two apps are native apps developed in different languages and in different ways, and even so the features and the results are the same.
 
+The engine code lives in the `Chromabase` module on macOS and the `Native` module on Windows.
+
 There is a way to build both at once (cross-platform), but doing that makes both of them slow and they don't work properly. So I wrote the code again from scratch, in the way that is native to each OS. What is the same and what is not is written [here](docs/platform/PLATFORM_DIFFERENCES.md).
 
 ## Download
