@@ -198,11 +198,34 @@
                 FontSize="12">
                 <DropDownButton.Flyout>
                     <Flyout>
+                        <!-- macOS `GeometryToolSection.aspectRow` 는 76pt 두 칸짜리
+                             `LazyVGrid` 로 열일곱 항목을 아홉 줄에 세로로 쌓습니다.
+                             그냥 `GridView` 로 두면 팝업 폭에 맞춰 한 줄에 여러 개가
+                             늘어서서 가로로 흐릅니다. 폭을 두 칸에 맞춰 못 박아
+                             같은 모양으로 둡니다. -->
                         <GridView
                             x:Name="CropAspectOptions"
+                            Width="164"
+                            Padding="0"
                             IsItemClickEnabled="True"
                             ItemClick="OnCropAspectClicked"
                             SelectionMode="None">
+                            <GridView.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <ItemsWrapGrid
+                                        MaximumRowsOrColumns="2"
+                                        Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </GridView.ItemsPanel>
+                            <GridView.ItemContainerStyle>
+                                <Style TargetType="GridViewItem">
+                                    <Setter Property="Margin" Value="0,0,0,2" />
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="MinWidth" Value="0" />
+                                    <Setter Property="MinHeight" Value="0" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                </Style>
+                            </GridView.ItemContainerStyle>
                             <GridView.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock

@@ -408,4 +408,8 @@ public sealed partial class DevelopPanelState
     /// </summary>
     public LibraryFrameError SetCropAspect(CropAspectOption option) =>
         RefreshAfterEdit(transformEditor.SetCropAspect(SelectedFrame, option));
+
+    /// <summary>크롭 화면이 열려 있을 때 씁니다. 비율만 적고 사각형은 그대로 둡니다.</summary>
+    public LibraryFrameError SetCropAspectOnly(CropAspectOption option) =>
+        RefreshAfterEdit(transformEditor.SetCropAspectOnly(SelectedFrame, option));
 }

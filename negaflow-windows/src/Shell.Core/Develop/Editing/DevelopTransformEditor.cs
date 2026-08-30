@@ -71,6 +71,27 @@ internal sealed class DevelopTransformEditor
                     frame.SourceMetadata?.PixelWidth ?? 0U,
                     frame.SourceMetadata?.PixelHeight ?? 0U));
 
+    /// <summary>
+    /// 비율만 적어 둡니다. 잘라 낸 사각형은 건드리지 않습니다.
+    /// </summary>
+    /// <remarks>
+    /// 크롭 화면이 열려 있는 동안에는 자르지 않은 원본을 보여 줍니다. 그때 crop 까지 적으면
+    /// 미리보기가 잘린 그림으로 바뀌고, 그 위에 다음 비율이 다시 걸려 비율이 곱해집니다.
+    /// 실측 2026-08-30: 4:3 다음에 2:3 을 고르면 화면에 그려지는 그림의 비율이 이미 1.333 이라
+    /// 결과가 2:3 이 아니라 그 둘을 겹친 모양이 됐습니다. 사각형은 크롭을 적용할 때 씁니다.
+    /// </remarks>
+    public DevelopEditResult SetCropAspectOnly(
+        LibraryFrameSnapshot? frame,
+        CropAspectOption option) =>
+        frame is null
+            ? Missing()
+            : Set(
+                frame,
+                frame.ImageTransform with
+                {
+                    CropAspect = option.Ratio is { } ratio && ratio > 0.0 ? ratio : null,
+                });
+
     private DevelopEditResult Set(
         LibraryFrameSnapshot frame,
         ImageTransformRecipe imageTransform)

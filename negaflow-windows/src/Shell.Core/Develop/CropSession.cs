@@ -53,6 +53,18 @@ public sealed class CropSession
     public void SetSelection(CropDisplayRect selection) =>
         Selection = Constrain(CropDisplayRect.Clamp(selection));
 
+    /// <summary>
+    /// 이미 맞는 사각형을 그대로 넣습니다. 비율을 다시 맞추지 않습니다.
+    /// </summary>
+    /// <remarks>
+    /// 종횡비를 고르면 그 비율에 딱 맞는 사각형이 변형에 먼저 들어갑니다. 그것을
+    /// <see cref="SetSelection"/> 으로 넣으면 잠긴 비율로 한 번 더 맞추므로, 잠금이 아직 옛
+    /// 비율이면 두 비율을 곱한 모양이 됩니다. 실측으로 4:3 을 골랐는데 21:9 처럼 나왔습니다.
+    /// 들어오는 값이 이미 정답인 자리에서는 이쪽을 씁니다.
+    /// </remarks>
+    public void SetSelectionExact(CropDisplayRect selection) =>
+        Selection = CropDisplayRect.Clamp(selection);
+
     /// <summary>옮기기는 크기를 바꾸지 않으므로 비율을 다시 맞출 필요가 없습니다.</summary>
     public void Move(double dx, double dy) => Selection = Selection.Move(dx, dy);
 
