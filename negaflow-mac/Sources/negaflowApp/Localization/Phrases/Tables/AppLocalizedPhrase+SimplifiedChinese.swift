@@ -244,6 +244,7 @@ extension AppLocalization {
         .bitDepth: "位深度",
         .bitDepthUnavailable: "此扫描仪未报告位深度选项，因此无法扫描。",
         .colorMode: "模式",
+        .scanColorModeGrayUnstable: "Gray (不稳定)",
         .perforation: "齿孔",
         .filmFrameFormat: "画幅格式",
         .hardwareScanArea: "硬件扫描区域",

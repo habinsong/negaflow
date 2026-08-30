@@ -244,6 +244,7 @@ extension AppLocalization {
         .bitDepth: "ビット深度",
         .bitDepthUnavailable: "このスキャナーはビット深度オプションを報告しないためスキャンできません。",
         .colorMode: "モード",
+        .scanColorModeGrayUnstable: "Gray (不安定)",
         .perforation: "パーフォレーション",
         .filmFrameFormat: "フレーム形式",
         .hardwareScanArea: "ハードウェアスキャン範囲",

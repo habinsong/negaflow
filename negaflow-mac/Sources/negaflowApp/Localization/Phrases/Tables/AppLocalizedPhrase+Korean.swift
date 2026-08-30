@@ -244,6 +244,7 @@ extension AppLocalization {
             .bitDepth: "심도",
             .bitDepthUnavailable: "이 스캐너가 심도 옵션을 보고하지 않아 스캔할 수 없습니다.",
             .colorMode: "모드",
+            .scanColorModeGrayUnstable: "Gray (불안정)",
             .perforation: "퍼포레이션",
             .filmFrameFormat: "프레임 규격",
             .hardwareScanArea: "하드웨어 스캔 영역",

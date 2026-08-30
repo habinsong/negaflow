@@ -192,6 +192,7 @@ enum AppLocalizedPhrase: CaseIterable {
     case bitDepth
     case bitDepthUnavailable
     case colorMode
+    case scanColorModeGrayUnstable
     case perforation
     case filmFrameFormat
     case hardwareScanArea

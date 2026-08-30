@@ -244,6 +244,7 @@ extension AppLocalization {
         .bitDepth: "Bittiefe",
         .bitDepthUnavailable: "Dieser Scanner meldet keine Bittiefe-Option und kann daher nicht scannen.",
         .colorMode: "Modus",
+        .scanColorModeGrayUnstable: "Gray (instabil)",
         .perforation: "Perforation",
         .filmFrameFormat: "Bildformat",
         .hardwareScanArea: "Hardware-Scanbereich",

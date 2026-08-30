@@ -85,7 +85,7 @@ struct ScannerControlsSection: View {
 
                 Picker(model.text(AppLocalizedPhrase.colorMode), selection: $model.colorModeChoice) {
                     ForEach(colorModes, id: \.self) { colorMode in
-                        Text(colorMode.rawValue.capitalized).tag(colorMode)
+                        Text(colorModeLabel(colorMode)).tag(colorMode)
                     }
                 }
                 .labelsHidden()
@@ -411,6 +411,14 @@ struct ScannerControlsSection: View {
 
     var colorModes: [ColorMode] {
         (model.capabilities?.supportedModes ?? []).filter { $0 == .color || $0 == .gray }
+    }
+
+    /// 색 모드 목록에 보일 이름이다. gray 만 이름에 상태를 단다 — 그 경로는 아직 불안정하고,
+    /// 고르기 전에 알아야 할 것이기 때문이다.
+    func colorModeLabel(_ colorMode: ColorMode) -> String {
+        colorMode == .gray
+            ? model.text(AppLocalizedPhrase.scanColorModeGrayUnstable)
+            : colorMode.rawValue.capitalized
     }
 
     @ViewBuilder

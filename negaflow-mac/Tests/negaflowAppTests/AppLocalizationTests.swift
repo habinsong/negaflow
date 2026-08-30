@@ -117,6 +117,24 @@ final class AppLocalizationTests: XCTestCase {
         XCTAssertEqual(AppLocalization.text(.userPreset, language: .german), "Benutzervorgabe")
     }
 
+    func testScanGrayColorModeIsMarkedUnstableInEveryLanguage() {
+        let expected: [AppLanguage: String] = [
+            .english: "Gray (unstable)",
+            .korean: "Gray (불안정)",
+            .japanese: "Gray (不安定)",
+            .simplifiedChinese: "Gray (不稳定)",
+            .french: "Gray (instable)",
+            .german: "Gray (instabil)",
+        ]
+
+        for (language, label) in expected {
+            XCTAssertEqual(
+                AppLocalization.text(.scanColorModeGrayUnstable, language: language),
+                label
+            )
+        }
+    }
+
     func testGrainMendBrandIsFixedAndModeLabelsAreLocalized() {
         let expectedModes: [AppLanguage: [String]] = [
             .english: ["Auto", "Guided", "Brush"],

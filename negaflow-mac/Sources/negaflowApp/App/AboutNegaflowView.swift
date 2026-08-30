@@ -6,6 +6,8 @@ import SwiftUI
 struct AboutNegaflowView: View {
     static let windowID = "about-negaflow"
     static let contentSize = CGSize(width: 460, height: 330)
+    /// 저장소 주소다. 고유 명사와 URL 이라 여섯 언어가 같은 글자여서 표에 넣지 않는다.
+    static let repositoryURL = URL(string: "https://github.com/habinsong/negaflow")
 
     @ObservedObject var model: AppModel
 
@@ -58,6 +60,16 @@ struct AboutNegaflowView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.top, 12)
+            }
+
+            if let repositoryURL = Self.repositoryURL {
+                Link(destination: repositoryURL) {
+                    Text(verbatim: "GitHub")
+                }
+                .font(.caption)
+                .padding(.top, 6)
+                .help(repositoryURL.absoluteString)
+                .accessibilityIdentifier("negaflow.about.github")
             }
         }
         .frame(
