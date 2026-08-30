@@ -6,14 +6,11 @@ Où ça se trouve :
 
 - Swift : `PrintResponse` dans `Sources/Chromabase/Film/NegativeInversion.swift`
 - Metal : le noyau `negativeInvert`
-- Test de verrouillage :
-`NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
+- Test de verrouillage : `NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
 
 ## La courbe
 
-Une courbe caractéristique de film explique l'exposition face à la densité en trois parties : pied,
-partie droite, épaule. negaflow approche l'épaule dans le domaine des densités par une exponentielle
-étirée.
+Une courbe caractéristique de film explique l'exposition face à la densité en trois parties : pied, partie droite, épaule. negaflow approche l'épaule dans le domaine des densités par une exponentielle étirée.
 
 ```math
 \begin{aligned}
@@ -23,24 +20,19 @@ d &= \frac{D}{d_{\max}} \\
 \end{aligned}
 ```
 
-`A`, `r` et `s` sont les formes courtes de `amplitude`, `rate` et `shape` dans le code.
-`d_{\max}` correspond à `dmaxNorm`.
+`A`, `r` et `s` sont les formes courtes de `amplitude`, `rate` et `shape` dans le code. `d_{\max}` correspond à `dmaxNorm`.
 
 - `D` : densité optique une fois le support retiré
 - `d` : cette valeur divisée par la plage de densité utilisée
 - `P` : luminosité de sortie linéaire
 
-La courbe monte sur toute la plage. Pour `d ≥ 0`, la sortie tombe dans `[baseToe, ceiling)`.
-Les valeurs négatives, comme un rétroéclairage plus lumineux que le support ou les perforations, ne
-sont pas ramenées à zéro.
-Elles continuent en nombres positifs finis.
+La courbe monte sur toute la plage. Pour `d ≥ 0`, la sortie tombe dans `[baseToe, ceiling)`. Les valeurs négatives, comme un rétroéclairage plus lumineux que le support ou les perforations, ne sont pas ramenées à zéro. Elles continuent en nombres positifs finis.
 
 ```math
 y(-|d|) = 2\log_{10}(P_{\mathrm{toe}}) - y(|d|)
 ```
 
-La réciproque a aussi une forme fermée.
-Elle sert à fabriquer des négatifs synthétiques et à faire des contrôles aller-retour.
+La réciproque a aussi une forme fermée. Elle sert à fabriquer des négatifs synthétiques et à faire des contrôles aller-retour.
 
 ```math
 d = \frac{\left[\ln\left(\frac{A}{y_{\mathrm{ceil}}-\log_{10}(P)}\right)\right]^{1/s}}{r}
@@ -74,10 +66,7 @@ r &= r_{\mathrm{white}}^{1/s}
 
 ## Plage de densité par défaut
 
-`normalRange` n'est pas la densité maximale physique du film.
-C'est la plage qu'utilise une scène normalement exposée.
-Elle compte surtout quand le support n'a pas pu être mesuré, ou quand le contraste de la scène est
-très faible.
+`normalRange` n'est pas la densité maximale physique du film. C'est la plage qu'utilise une scène normalement exposée. Elle compte surtout quand le support n'a pas pu être mesuré, ou quand le contraste de la scène est très faible.
 
 ```math
 \begin{aligned}
@@ -91,14 +80,11 @@ très faible.
 - Noir et blanc `3.5` : habitude du tirage noir et blanc, qui utilise une partie droite plus longue
 - `0.60D` : densité du gris moyen d'une scène normalement exposée
 
-`applySceneRanged` mesure la plage de densité que l'image utilise réellement, canal par canal, au
-lieu de prendre cette valeur.
+`applySceneRanged` mesure la plage de densité que l'image utilise réellement, canal par canal, au lieu de prendre cette valeur.
 
 ## Ce qui a changé en v4
 
-L'ancienne approche utilisait une fonction découpée en trois sections et des préréglages fixes.
-La v4 utilise une seule courbe et quatre points d'ancrage.
-Plus de frontières de sections, et chaque valeur se retrouve dans le code et les tests.
+L'ancienne approche utilisait une fonction découpée en trois sections et des préréglages fixes. La v4 utilise une seule courbe et quatre points d'ancrage. Plus de frontières de sections, et chaque valeur se retrouve dans le code et les tests.
 
 Face à l'ancien résultat :
 
@@ -110,13 +96,10 @@ Face à l'ancien résultat :
 
 ## Sources et périmètre
 
-Pied, partie droite, épaule et gamma viennent de la sensitométrie publiée.
-Aucun coefficient de courbe de cette littérature n'a été copié. negaflow calcule les siens à partir
-des quatre points d'ancrage ci-dessus.
+Pied, partie droite, épaule et gamma viennent de la sensitométrie publiée. Aucun coefficient de courbe de cette littérature n'a été copié. negaflow calcule les siens à partir des quatre points d'ancrage ci-dessus.
 
 - [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)
 - [Hurter–Driffield Characteristic Curve](https://studyguides.com/study-methods/overview/cmpanf83znm1201neitjb4waw)
 - [Comparaison de papiers RA-4](https://tinker.koraks.nl/photography/on-a-color-mission-comparing-two-ra4-color-papers/)
 
-Les plages de contraste connues des matériaux RA-4 ne sont pas reprises telles quelles.
-Le contraste de cette courbe vient du `shape` issu des quatre points d'ancrage.
+Les plages de contraste connues des matériaux RA-4 ne sont pas reprises telles quelles. Le contraste de cette courbe vient du `shape` issu des quatre points d'ancrage.

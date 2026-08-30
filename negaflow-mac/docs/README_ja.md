@@ -43,26 +43,24 @@
 
 ## インストール
 
-[Releases](https://github.com/habinsong/negaflow/releases) からダウンロードします。
+[Releases](https://github.com/habinsong/negaflow/releases) から入手します。
 
-| ダウンロード | 対応する Mac |
+| インストーラー | 対応する Mac |
 |---|---|
 | `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon、Intel |
 | `negaflow-1.1.0-mac-arm64.pkg` | Apple Silicon のみ |
 
-通常は Universal PKG で構いません。開いて案内に従うと `/Applications` に入ります。
-手動で置きたい場合は同じページの DMG か ZIP を使ってください。
+たいていは Universal PKG で足ります。`/Applications` に入ります。自分で移すなら同じページの DMG か ZIP を使ってください。
 
-Apple の公証を受けていないため、初回起動は macOS がブロックします。システム設定の
-プライバシーとセキュリティで「このまま開く」を選ぶと起動します。
+Apple の公証を受けていないので、初回起動で macOS が止めます。システム設定のプライバシーとセキュリティで「このまま開く」を押してください。
 
-ライブラリと設定は `~/Library/Application Support/negaflow` に入ります。
+ライブラリと設定は `~/Library/Application Support/negaflow` に保存されます。
 
 ## ビルド
 
 ```bash
 git clone https://github.com/habinsong/negaflow.git
-cd negaflow
+cd negaflow/negaflow-mac
 
 # Release ビルドして起動
 bash scripts/run-app.sh
@@ -71,10 +69,9 @@ bash scripts/run-app.sh
 bash scripts/run-app.sh build
 ```
 
-`run-app.sh` が `xcodebuild` を呼び、アプリバンドルを組み立ててローカル署名まで行います。
-エンジンや CLI だけ触るなら `swift build` で足り、Xcode は要りません。
+`run-app.sh` が `xcodebuild` を呼び、アプリバンドルを組み立て、ローカル署名まで行います。エンジンや CLI だけなら `swift build` で足ります。
 
-配布物を作るとき:
+配布用ファイルを作るとき:
 
 ```bash
 bash negaflow-mac/scripts/build-release.sh
@@ -96,7 +93,7 @@ bash scripts/ci-gate.sh
 
 ## コマンドライン
 
-macOS 版にはアプリと一緒に使える CLI が入っています。
+macOS 版には CLI が入っています。
 
 ```bash
 swift build
@@ -117,32 +114,28 @@ swift build
 .build/debug/negaflow selftest
 ```
 
-引数なしで実行すると全オプションが出ます。
+`negaflow` を引数なしで実行すると全オプションが出ます。
 
 ## スキャナー
 
-プラグインを入れるまでスキャナーの操作は現れません。SANE 機器は
-[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) が担当し、
-別途インストールが必要です。
+プラグインを入れるまでスキャナーの操作は出てきません。SANE 機器は [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) が担当し、別に入れる必要があります。
 
 ## モジュール構成
 
 | モジュール | 役割 |
 |---|---|
-| `Chromabase` | Chroma Engine、GrainMend、プロファイル、書き出し |
+| `Chromabase` | クロマエンジン、GrainMend、プロファイルと書き出し |
 | `ScannerKit` | スキャナー機能の確認と外部プラグイン接続 |
-| `negaflowApp` | ライブラリ、現像、スキャン、書き出しの画面 |
-| `negaflowCLI` | 現像、スキャン、ベンチマーク、自己点検 |
+| `negaflowApp` | ライブラリ、現像、スキャンと書き出しの画面 |
+| `negaflowCLI` | 現像、スキャン、ベンチマークと自己点検のコマンド |
 
 ## 基準画像
 
-リポジトリ最上位の `docs/verification/macos-golden` には、このビルドが書き出した画像が
-入っています。Windows のエンジンテストがこれを読んで画素単位で比べます。二つの版を
-揃えている仕組みがこれです。macOS の出力を変えるときだけ作り直してください。
+リポジトリ最上位の `docs/verification/macos-golden` には、このビルドが作った画像が入っています。Windows のエンジンテストがこのファイルを読んで画素単位で比べます。macOS の出力が変わるべきときだけ作り直してください。
 
 ## 関連ドキュメント
 
-- [二つの版の違い](../../docs/ja/platform/PLATFORM_DIFFERENCES.md)
-- [Chroma Engine](../../docs/ja/product/CHROMA_ENGINE.md)
+- [macOS と Windows の違い](../../docs/ja/platform/PLATFORM_DIFFERENCES.md)
+- [クロマエンジン](../../docs/ja/product/CHROMA_ENGINE.md)
 - [GrainMend](../../docs/ja/product/GRAINMEND.md)
-- [製品構成](../../docs/ja/architecture/PRODUCT_ARCHITECTURE.md)
+- [製品の構造](../../docs/ja/architecture/PRODUCT_ARCHITECTURE.md)

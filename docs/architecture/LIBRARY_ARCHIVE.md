@@ -2,8 +2,7 @@
 
 [Docs home](../README.md)
 
-A catalog backup is there to get the app running again, so it does not hold the original photos.
-The `.negaflowarchive` archive keeps the following material in one package.
+A catalog backup is there to get the app running again, so it does not hold the original photos. The `.negaflowarchive` archive keeps the following material in one package.
 
 | Included | Left out |
 |---|---|
@@ -12,20 +11,14 @@ The `.negaflowarchive` archive keeps the following material in one package.
 | The GrainMend edit history that is still needed | GrainMend caches that can be rebuilt |
 | The link between virtual copies and shared originals | Exported files |
 
-The running SQLite file is not included.
-Anything that can be rebuilt is also left out: thumbnails, previews, GrainMend caches, exported
-files.
+The running SQLite file is not included. Anything that can be rebuilt is also left out: thumbnails, previews, GrainMend caches, exported files.
 
 > [!WARNING]
-> If the archive fails to build, the existing archive is not overwritten. Originals,
-> third-party XMP, and the running catalog are not touched either.
+> If the archive fails to build, the existing archive is not overwritten. Originals, third-party XMP, and the running catalog are not touched either.
 
 ## Package layout and checks
 
-The package follows the [RFC 8493 BagIt](https://www.rfc-editor.org/rfc/rfc8493.html) folder layout.
-SHA-256 lists are written separately for content files and for administrative files.
-`negaflow-archive.json` connects frame IDs to stored file IDs.
-When several virtual copies use the same original, the original bytes are stored once.
+The package follows the [RFC 8493 BagIt](https://www.rfc-editor.org/rfc/rfc8493.html) folder layout. SHA-256 lists are written separately for content files and for administrative files. `negaflow-archive.json` connects frame IDs to stored file IDs. When several virtual copies use the same original, the original bytes are stored once.
 
 The temporary folder moves to its final location only after all of these pass.
 
@@ -45,16 +38,13 @@ flowchart LR
     F --> G["Keep the existing archive and originals"]
 ```
 
-On failure the existing archive stays. Only the half-built temporary folder is deleted.
-Originals, third-party XMP, and the running catalog are left alone.
+On failure the existing archive stays. Only the half-built temporary folder is deleted. Originals, third-party XMP, and the running catalog are left alone.
 
 ## Limits
 
-Original formats are kept as they are. Nothing is converted for the sake of long-term compatibility.
-PREMIS preservation events and agent records, and migration to recommended formats, are outside v1.
+Original formats are kept as they are. Nothing is converted for the sake of long-term compatibility. PREMIS preservation events and agent records, and migration to recommended formats, are outside v1.
 
-One archive is not a preservation plan.
-Keep copies on other media and in another place, and check the hashes again on a schedule.
+One archive is not a preservation plan. Keep copies on other media and in another place, and check the hashes again on a schedule.
 
 Sources:
 

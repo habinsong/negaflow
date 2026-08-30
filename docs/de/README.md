@@ -2,8 +2,7 @@
 
 Nach Themen getrennt, damit Sie direkt das passende Dokument öffnen.
 
-[English](../README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) ·
-[简体中文](../zh-Hans/README.md) · [Français](../fr/README.md) · Deutsch
+[English](../README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [Français](../fr/README.md) · Deutsch
 
 ```mermaid
 flowchart LR
@@ -13,8 +12,7 @@ flowchart LR
 ```
 
 > [!NOTE]
-> negaflow 1.1.0 läuft auf macOS und auf Windows. Beide Apps sind getrennt für ihre
-> Plattform geschrieben und liefern aus derselben Datei dasselbe Bild.
+> negaflow 1.1.0 läuft auf macOS und auf Windows. Beide Apps sind getrennt für ihre Plattform geschrieben und liefern aus derselben Datei dasselbe Bild.
 
 ## Plattform
 
@@ -69,3 +67,5 @@ flowchart LR
 - Strukturdokumente beschreiben Zuständigkeiten und den Weg der Daten.
 - Codewerte, Feldnamen und Hashes bleiben unverändert.
 - Prüfdokumente trennen Bestandenes von noch nicht Geprüftem.
+- Schlichte Sätze. Keine Werbeadjektive, kein abschließender Zusammenfassungsabsatz, keine negative Parallelführung.
+- Ein Abschnitt, den es in einer Sprache gibt, steht in allen sechs. Die Regeln stehen in [`AGENTS.md`](../../AGENTS.md).

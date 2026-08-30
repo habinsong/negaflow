@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="#"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="version 1.1.0"></a>
-  <a href="#"><img src="https://img.shields.io/badge/Windows-11-0078D4?logo=windows&logoColor=white" alt="Windows 11"></a>
+  <a href="#"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 or later"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
 
@@ -32,8 +32,8 @@
 
 To run it:
 
-- Windows 11 (build 26100 or later), 64-bit
-- 8 GB of memory for 35mm work. 16 GB is more comfortable with medium format.
+- Windows 11 24H2 (build 26100) or later, 64-bit
+- 8 GB of memory for 35mm work, 16 GB is more comfortable with medium format
 
 To build it:
 
@@ -43,18 +43,15 @@ To build it:
 - CMake 3.28 or later
 - Python 3.11 or later, for the icon and resource scripts
 
-The app runs on Arm64 machines too. Release builds for Arm64 are less tested than x64.
+It runs on Arm64 machines too. Arm64 releases are less tested than x64.
 
 ## Installing
 
-Download `negaflow-1.1.0-x64-setup.exe` from
-[Releases](https://github.com/habinsong/negaflow/releases) and run it.
+Download `negaflow-1.1.0-win-x64.exe` from [Releases](https://github.com/habinsong/negaflow/releases) and run it.
 
-No administrator rights are needed. SmartScreen warns the first time you run it.
-Click More info, then Run anyway.
+No administrator rights are needed. SmartScreen warns once on the first run. Click More info, then run it.
 
-To remove it, use `Uninstall negaflow` in the Start menu, or find negaflow in
-Settings under Apps. Your library and photos are left alone.
+Uninstall from `Uninstall negaflow` in the Start menu or the app list in Settings. Your library and photos are left alone.
 
 ## Building
 
@@ -69,12 +66,9 @@ cd negaflow\negaflow-windows
 .\scripts\run-app.ps1 -Architecture x64 -Configuration Release
 ```
 
-`build.ps1` takes `x64-debug`, `x64-release`, `arm64-debug`, or `arm64-release`.
+`build.ps1` accepts `x64-debug`, `x64-release`, `arm64-debug`, and `arm64-release`.
 
-`run-app.ps1` is the only way to start the app during development. The app is built as an
-MSIX package, so the loose executable in the build folder will not run on its own. The
-script packages it, registers it for your user, and launches it by app ID. That is the same
-path the installer takes, minus the installer itself.
+`run-app.ps1` is the only way to launch the app during development. The app builds as an MSIX package, so running the exe in the build folder does nothing. The script builds the package, registers it for the current user, and launches it by app ID.
 
 To build the installer:
 
@@ -82,7 +76,7 @@ To build the installer:
 .\scripts\build-release.ps1 -Architecture x64
 ```
 
-The result lands in `out\release\win-x64`.
+The output lands in `out\release\win-x64`.
 
 ## Checks
 
@@ -96,68 +90,57 @@ ctest --preset x64-release --output-on-failure
 # Engine and app boundary tests
 .\scripts\test-interop.ps1
 
-# Everything above in one go
+# All of the above at once
 .\scripts\local-ci.ps1
 ```
 
-The engine tests include golden image comparisons. They read reference files that were
-captured from the macOS build and check that the Windows engine produces the same pixels.
+The engine tests include a golden image comparison. They read the reference files rendered by the macOS build and check that the Windows engine produces the same pixels.
 
-## Engine checks from the command line
+## Checking the engine from the command line
 
-`negaflow-cli.exe` is a small tool for looking at what the engine does with one file.
-It is meant for checking behavior, not for daily use, so it takes flags rather than
-subcommands.
+`negaflow-cli.exe` shows how the engine handles a single file. It takes flags rather than subcommands.
 
 ```powershell
 $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 
-# What this build is
+# See what this build is
 & $cli --build-info
 
-# Read a scan and report what the file contains
+# See what is inside a scan file
 & $cli --probe-tiff scan.tif
 
-# Develop and write a 16-bit TIFF
+# Develop and save as 16-bit TIFF
 & $cli --export-developed-tiff16 scan.tif out.tif
 
-# Where time goes in a develop pass
+# See where the time goes in one develop pass
 & $cli --develop-timing scan.tif
 
-# Find the film base automatically and report what it picked
+# Find the film base automatically and see what it picked
 & $cli --auto-base-probe scan.tif
 ```
 
-Run it with no arguments to see the full list.
+Run it with no arguments for the full list.
 
 ## Scanners
 
-Scanner controls stay hidden until a plugin is installed.
-[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) covers SANE
-devices on Windows. Install it separately.
+Scanner controls stay hidden until a plugin is installed. SANE devices are handled by [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), installed separately.
 
-The plugin talks to scanners through the driver path Windows already provides, so software
-like VueScan and SilverFast keeps working on the same machine.
+The plugin talks to the scanner through the driver paths Windows already provides. You can keep using VueScan or SilverFast on the same machine.
 
 ## When something goes wrong
 
-The app writes plain text logs to `%LOCALAPPDATA%\Negaflow\Logs`.
+The app writes text logs to `%LOCALAPPDATA%\Negaflow\Logs`.
 
 | File | What it records |
 |---|---|
-| `export-trace.txt` | Every export and quick export, including failures |
+| `export-trace.txt` | Export and quick export, including failures |
 | `termination.txt` | What happened while the app was closing |
 | `settings-change.txt` | Settings that changed and what changed them |
 
-These are always on. If you report a problem, the relevant one usually explains it.
+Those three are always on. Two more turn on only when you are chasing a specific problem.
 
-Two more are off by default and only for digging into a specific problem:
-
-- `preview-trace.txt`, enabled by creating an empty file named `preview-trace.on` in the
-  same folder
-- `stage-trace.txt`, enabled by setting the environment variable `NEGAFLOW_STAGE_TRACE=1`
-  before launching. It records pixel statistics after each step of a develop pass, which
-  is how you find out where a preview and an export stopped agreeing.
+- `preview-trace.txt`. Create an empty file named `preview-trace.on` in the same folder to turn it on.
+- `stage-trace.txt`. Set the environment variable `NEGAFLOW_STAGE_TRACE=1` before launching the app. It records pixel statistics at each develop stage.
 
 ## Layout
 
@@ -165,11 +148,11 @@ Two more are off by default and only for digging into a specific problem:
 negaflow-windows/
 ├── src/
 │   ├── Native/        Chroma Engine, GrainMend, decoding and export (C++)
-│   ├── Interop/       The bridge between the engine and the app (C#)
+│   ├── Interop/       The layer between engine and app (C#)
 │   ├── Catalog.Core/  Library storage (C#)
 │   ├── Shell.Core/    Develop, print, and export logic (C#)
 │   ├── Shell/         Library, develop, and print screens (WinUI 3)
-│   └── Cli/           Engine check tool (C++)
+│   └── Cli/           Engine inspection tool (C++)
 ├── scripts/           Build, test, and packaging scripts
 ├── tests/             Engine, app, and boundary tests
 └── Installer/windows/ NSIS installer

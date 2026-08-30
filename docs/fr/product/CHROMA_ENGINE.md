@@ -2,8 +2,7 @@
 
 [Accueil de la documentation](../README.md)
 
-Chroma Engine inverse et développe le film. Le code se trouve dans le module `Chromabase`.
-L'application et la CLI utilisent le même module : à entrée identique, même suite d'étapes.
+Chroma Engine inverse et développe le film. Le code se trouve dans le module `Chromabase`. L'application et la CLI utilisent le même module : à entrée identique, même suite d'étapes.
 
 | En bref | Détail |
 |---|---|
@@ -14,8 +13,7 @@ L'application et la CLI utilisent le même module : à entrée identique, même 
 | Espace de sortie | sRGB, Display P3, Adobe RGB, ICC RVB personnalisé |
 
 > [!IMPORTANT]
-> Auto Tone, Auto White Balance, Auto Levels et Auto Color ne se glissent jamais dans le
-> développement par défaut.
+> Auto Tone, Auto White Balance, Auto Levels et Auto Color ne se glissent jamais dans le développement par défaut.
 
 ## Ce qui prime
 
@@ -42,9 +40,7 @@ flowchart LR
     J --> K["Espace écran ou sortie"]
 ```
 
-L'image de travail est traitée dans un espace linéaire en virgule flottante 32 bits.
-Seules les opérations qui demandent du gamma convertissent, à leur étape fixée.
-L'encodage pour un écran ou un format de fichier arrive en dernier.
+L'image de travail est traitée dans un espace linéaire en virgule flottante 32 bits. Seules les opérations qui demandent du gamma convertissent, à leur étape fixée. L'encodage pour un écran ou un format de fichier arrive en dernier.
 
 Documentation Core Image d'Apple :
 
@@ -53,22 +49,15 @@ Documentation Core Image d'Apple :
 - [workingColorSpace](https://developer.apple.com/documentation/coreimage/cicontext/workingcolorspace)
 - [Guide de performance Core Image](https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/CoreImaging/ci_performance/ci_performance.html)
 
-`CIContext` n'est pas recréé à chaque rendu.
-Il est réutilisé, séparé par usage : affichage, analyse, export.
-L'aperçu ne calcule que la taille nécessaire et la dernière version d'édition.
-L'export refait le rendu à la taille source.
+`CIContext` n'est pas recréé à chaque rendu. Il est réutilisé, séparé par usage : affichage, analyse, export. L'aperçu ne calcule que la taille nécessaire et la dernière version d'édition. L'export refait le rendu à la taille source.
 
 ## Support du film
 
-### Pourquoi le mesurer
+### Raison de la mesure
 
-La partie non exposée d'un négatif est un point de référence qui combine le film, le développement
-et la source lumineuse du scan.
-Le masque orange du négatif couleur s'y trouve aussi.
-Un support faux fausse ensuite toutes les densités et tous les rapports entre canaux.
+La partie non exposée d'un négatif est un point de référence qui combine le film, le développement et la source lumineuse du scan. Le masque orange du négatif couleur s'y trouve aussi. Un support faux fausse ensuite toutes les densités et tous les rapports entre canaux.
 
-Les données Portra 400 de Kodak consignent elles aussi séparément la densité minimale, les courbes
-caractéristiques et la densité spectrale des colorants.
+Les données Portra 400 de Kodak consignent elles aussi séparément la densité minimale, les courbes caractéristiques et la densité spectrale des colorants.
 
 - [Kodak Professional Portra 400 technical data](https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/e4050_portra_400.pdf)
 
@@ -82,10 +71,7 @@ caractéristiques et la densité spectrale des colorants.
 - Avec plusieurs bandes de film sur une même planche, des zones séparées se lisent ensemble.
 - Une frontière où porte-film et film se mêlent inspire moins confiance que l'intérieur.
 
-Il cherche la distribution de luminosité sur une image d'analyse réduite, regroupe les zones
-connexes, puis écarte les candidats hors film.
-Quand plusieurs bandes passent les conditions, elles sont calculées ensemble.
-Le résultat consigne aussi la méthode retenue et la confiance.
+Il cherche la distribution de luminosité sur une image d'analyse réduite, regroupe les zones connexes, puis écarte les candidats hors film. Quand plusieurs bandes passent les conditions, elles sont calculées ensemble. Le résultat consigne aussi la méthode retenue et la confiance.
 
 ### Choix de la méthode
 
@@ -95,8 +81,7 @@ Le résultat consigne aussi la méthode retenue et la confiance.
 | `Film` | Utilise la mesure comme Dmin, le film choisi fournissant surtout `dmaxNorm`. Les valeurs par défaut du film et de la source n'interviennent qu'en cas d'échec de mesure. |
 | `Auto` | Utilise l'analyse spatiale, et retombe sur la méthode par les bords en cas d'échec. |
 
-Sans valeur manuelle, ou avec un identifiant de film erroné, il passe à la méthode sûre suivante.
-L'objet le plus clair de la scène n'est jamais pris tel quel comme support du film.
+Sans valeur manuelle, ou avec un identifiant de film erroné, il passe à la méthode sûre suivante. L'objet le plus clair de la scène n'est jamais pris tel quel comme support du film.
 
 ## Densité optique et inversion
 
@@ -106,9 +91,7 @@ La densité vient de la transmittance linéaire `T` et du support `Dmin` par can
 D = \log_{10}\left(\frac{D_{\min}}{T}\right)
 ```
 
-`D = 0` signifie que l'entrée égale le support non exposé. Perforations et rétroéclairage peuvent
-passer en négatif.
-Ces valeurs restent finies et ne sont pas écrêtées sur place.
+`D = 0` signifie que l'entrée égale le support non exposé. Perforations et rétroéclairage peuvent passer en négatif. Ces valeurs restent finies et ne sont pas écrêtées sur place.
 
 ### Données par type de film
 
@@ -120,23 +103,18 @@ La table actuelle contient 27 noms de films : négatifs couleur, noir et blanc, 
 - La plage de densité par canal
 - Une plage sûre quand un faible contraste fait vaciller la mesure automatique
 
-Certaines valeurs approchent des courbes lues dans des documents publics, d'autres ont été prises
-prudemment. 27 noms ne signifient pas 27 profils couleur validés.
-Dès que le support est mesuré, la mesure prime.
+Certaines valeurs approchent des courbes lues dans des documents publics, d'autres ont été prises prudemment. 27 noms ne signifient pas 27 profils couleur validés. Dès que le support est mesuré, la mesure prime.
 
 ### Réponse de tirage fixe
 
-`MAIN` transforme la densité, support soustrait, en une courbe strictement croissante.
-Les coefficients ne sont pas un préréglage caché : ils viennent de quatre points d'ancrage.
+`MAIN` transforme la densité, support soustrait, en une courbe strictement croissante. Les coefficients ne sont pas un préréglage caché : ils viennent de quatre points d'ancrage.
 
 - Le point noir du support
 - Le gris moyen 18 %
 - Le blanc de la plage de densité mesurée
 - La marge pour la lumière réfléchie
 
-La courbe actuelle est une exponentielle étirée et possède une réciproque sur toute la plage.
-Le test aller-retour sur négatifs synthétiques utilise cette réciproque. Équations et valeurs sont
-dans [réponse de tirage fixe](../reference/PRINT_RESPONSE.md).
+La courbe actuelle est une exponentielle étirée et possède une réciproque sur toute la plage. Le test aller-retour sur négatifs synthétiques utilise cette réciproque. Équations et valeurs sont dans [réponse de tirage fixe](../reference/PRINT_RESPONSE.md).
 
 Où s'arrête le chemin par défaut et où commencent les fonctions automatiques :
 
@@ -154,10 +132,7 @@ Où s'arrête le chemin par défaut et où commencent les fonctions automatiques
 | Light source | Comment la source lumineuse du scan a agi sur chaque canal | Gain par canal, correction basée sur le support |
 | Scanner target | Quel style de tonalité et de couleur a le résultat | Statistiques relatives de scans réalisés pour ce projet |
 
-Séparer ces trois évite l'erreur qui consiste à faire porter à un seul nom de film les propriétés de
-l'émulsion, la couleur de la source et le style de rendu d'un laboratoire.
-Quand un support réel existe, la mesure passe avant les valeurs par défaut de la source.
-Les statistiques de scanner ne servent pas directement de matrice couleur absolue pour une scène.
+Séparer ces trois évite l'erreur qui consiste à faire porter à un seul nom de film les propriétés de l'émulsion, la couleur de la source et le style de rendu d'un laboratoire. Quand un support réel existe, la mesure passe avant les valeurs par défaut de la source. Les statistiques de scanner ne servent pas directement de matrice couleur absolue pour une scène.
 
 Les données sont décrites dans [profils de film](FILM_PROFILES.md).
 
@@ -165,33 +140,20 @@ Les données sont décrites dans [profils de film](FILM_PROFILES.md).
 
 ### `MAIN`
 
-La valeur par défaut du développement courant.
-Elle n'intègre ni style de scanner non choisi, ni Auto Levels, Auto Color, Auto Tone ou Auto White
-Balance.
-La mesure du support et de la plage de densité, ainsi que le vibrance limité des scènes peu
-saturées, font partie de l'inversion de base.
+La valeur par défaut du développement courant. Elle n'intègre ni style de scanner non choisi, ni Auto Levels, Auto Color, Auto Tone ou Auto White Balance. La mesure du support et de la plage de densité, ainsi que le vibrance limité des scènes peu saturées, font partie de l'inversion de base.
 
 ### `PRINT`
 
-L'image de travail est celle de `MAIN`.
-Un ICC imprimante RVB valide est appliqué une seule fois, à la fin de l'export.
-Un profil absent ou invalide fait échouer, sans repli sur le sRGB ni sur des valeurs de papier
-arbitraires.
+L'image de travail est celle de `MAIN`. Un ICC imprimante RVB valide est appliqué une seule fois, à la fin de l'export. Un profil absent ou invalide fait échouer, sans repli sur le sRGB ni sur des valeurs de papier arbitraires.
 
 ### `HS`, `SP`
 
 Deux étapes.
 
-1. `documentedCharacter` : `SP` utilise un caractère de base limité, tiré de six paires du même
-négatif passées par SP-3000 et par negaflow MAIN.
-`HS` construit son caractère de tonalité, de neutre et de couleur à partir d'orientations publiées
-et des valeurs de conception du projet.
-2. `scannerSignature` : seule la différence relative des groupes dont les noms de films et le
-nombre d'images concordent sur les deux machines s'ajoute.
+1. `documentedCharacter` : `SP` utilise un caractère de base limité, tiré de six paires du même négatif passées par SP-3000 et par negaflow MAIN. `HS` construit son caractère de tonalité, de neutre et de couleur à partir d'orientations publiées et des valeurs de conception du projet.
+2. `scannerSignature` : seule la différence relative des groupes dont les noms de films et le nombre d'images concordent sur les deux machines s'ajoute.
 
-`HS` comprend une accentuation sur le canal de luminosité. Ce rayon et cette intensité n'ont pas été
-mesurés sur la machine réelle.
-`SP` ne l'inclut pas.
+`HS` comprend une accentuation sur le canal de luminosité. Ce rayon et cette intensité n'ont pas été mesurés sur la machine réelle. `SP` ne l'inclut pas.
 
 Tous les profils actuels sont `realOnly`.
 
@@ -202,16 +164,31 @@ Tous les profils actuels sont `realOnly`.
 
 ### `F135`, `HR`
 
-Ce sont deux styles de minilab construits par le projet, pas des clones de machines mesurées.
-`F135` emploie une courbe en S proche du tirage avec des tons moyens chauds ; `HR` des noirs
-profonds et une direction neutre et bleue plus calme.
-Aucune prétention à avoir validé et cloné une machine précise.
+Ce sont deux styles de minilab construits par le projet, pas des clones de machines mesurées. `F135` emploie une courbe en S proche du tirage avec des tons moyens chauds ; `HR` des noirs profonds et une direction neutre et bleue plus calme. Aucune prétention à avoir validé et cloné une machine précise.
 
 ### `EXPIRED`
 
-Une cible de récupération pour les films anciens.
-Elle ne désature pas systématiquement et n'étire pas la plage : elle s'en tient à des corrections
-limitées, dans les limites des preuves actuelles.
+Une cible de récupération pour les films anciens. Elle ne désature pas systématiquement et n'étire pas la plage : elle s'en tient à des corrections limitées, dans les limites des preuves actuelles.
+
+## Le rendu argentique sur une source numérique
+
+L'onglet Film, à gauche, propose des inversibles et des négatifs couleur. Sur un scan, une transformation de couleur suffit : la latitude, la réponse en densité, la diffusion et le grain de la pellicule sont déjà dans les pixels.
+
+Une photo numérique n'a rien de tout cela. Nous avons mesuré ce que donne la seule transformation de couleur : sur une image déjà rendue par l'appareil, l'écart entre les hautes lumières tombe à 0,0031, soit un quatorzième de ce que donne la même mesure sur une entrée plate, et la saturation monte quand même. Le résultat se lit comme un filtre, pas comme de la pellicule.
+
+Une source marquée `Digital Color` ou `Digital B&W` emprunte donc une chaîne distincte qui refait, dans l'ordre, ce que fait la pellicule.
+
+1. Défaire le rendu d'affichage appliqué par l'appareil pour estimer l'exposition que la pellicule aurait reçue. Les détails écrêtés ne reviennent pas : c'est une reconstruction plausible, pas une récupération.
+2. Ajouter diffusion et halation tant que l'image est encore en lumière linéaire, avant toute densité. La lumière renvoyée touche d'abord la couche rouge, d'où un halo rougeâtre ; elle est redistribuée, pas ajoutée.
+3. Développement virtuel. Une courbe caractéristique construit la densité, les coupleurs DIR inhibent les couches voisines, et un négatif passe ensuite sur papier RA-4. Le faible gamma du négatif et le gamma élevé du papier sont deux courbes distinctes : c'est pour cela que les hautes lumières se couchent au lieu d'être écrêtées.
+4. La signature couleur de l'émulsion, puisque le contraste vient déjà de l'étape 3.
+5. Un grain qui suit la densité, et une réponse de contour tirée de la FTM du fabricant.
+
+Les sources scannées n'entrent jamais dans cette chaîne. Le seul aiguillage est l'indicateur de source, et le chemin du scan reste inchangé.
+
+L'exposition est remise à l'échelle de la latitude de chaque émulsion. Un inversible est blanc environ un diaphragme au-dessus du gris moyen : pousser telle quelle une scène numérique de six diaphragmes n'y laisse aucun détail dans les hautes lumières. Cette remise à l'échelle conserve le classement en contraste de chaque émulsion au lieu de les aplatir toutes sur la même réponse.
+
+Une fois l'émulsion choisie, grain et halation deviennent des propriétés de la pellicule. Les curseurs de texture en règlent donc l'intensité au lieu d'ajouter un second effet séparé.
 
 ## Réglages de développement
 
@@ -222,15 +199,11 @@ limitées, dans les limites des preuves actuelles.
 | Détail et effets | Netteté, clarté, correction de voile, grain, vignetage, halation, réduction de bruit |
 | Correction locale | Masques radial, linéaire, polygonal, pinceau, plus densité plus et densité moins |
 
-Ces valeurs sont enregistrées comme un historique d'édition par étapes.
-GrainMend et la correction locale ordinaire diffèrent par leur but et par leur mode
-d'enregistrement.
+Ces valeurs sont enregistrées comme un historique d'édition par étapes. GrainMend et la correction locale ordinaire diffèrent par leur but et par leur mode d'enregistrement.
 
 ## Gestion des couleurs
 
-Si l'entrée porte un ICC valide, cet espace est lu.
-Les calculs internes se font dans l'espace de travail linéaire retenu, et le passage à un espace de
-sortie a lieu à l'affichage, à l'épreuvage écran et à l'export.
+Si l'entrée porte un ICC valide, cet espace est lu. Les calculs internes se font dans l'espace de travail linéaire retenu, et le passage à un espace de sortie a lieu à l'affichage, à l'épreuvage écran et à l'export.
 
 Principales sorties prises en charge :
 
@@ -239,28 +212,17 @@ Principales sorties prises en charge :
 - Adobe RGB
 - Un ICC imprimante/sortie RVB choisi par l'utilisateur
 
-Le nom, la taille en octets et le SHA-256 du profil imprimante sont figés au démarrage de l'export.
-Si le fichier change pendant le rendu, tout s'arrête.
+Le nom, la taille en octets et le SHA-256 du profil imprimante sont figés au démarrage de l'export. Si le fichier change pendant le rendu, tout s'arrête.
 
-Rien n'affirme que le chemin actuel Core Image et ColorSync donne une intention de rendu et une
-black-point compensation identiques bit à bit sur toutes les versions de macOS.
-Une telle garantie demanderait d'abord un chemin de tampon ColorSync distinct et des contrôles
-mémoire sur les grandes images 16 bits.
+Rien n'affirme que le chemin actuel Core Image et ColorSync donne une intention de rendu et une black-point compensation identiques bit à bit sur toutes les versions de macOS. Une telle garantie demanderait d'abord un chemin de tampon ColorSync distinct et des contrôles mémoire sur les grandes images 16 bits.
 
 ## Encodage de sortie
 
-Les réglages de format sont en dehors du pipeline colorimétrique, mais ils décident de ce qui
-subsiste dans le fichier livré.
+Les réglages de format sont en dehors du pipeline colorimétrique, mais ils décident de ce qui subsiste dans le fichier livré.
 
-Le JPEG enregistre la couleur à une résolution inférieure à la luminance, sauf si l'encodeur dépasse
-son seuil de sous-échantillonnage. En dessous, la chrominance est divisée par deux horizontalement
-et verticalement : le détail de luminance reste intact, mais les bords saturés s'adoucissent. Une
-qualité de 95 % ou plus est donc encodée sans sous-échantillonnage de chrominance. Les réglages
-inférieurs conservent la valeur choisie, puisque les choisir revient à demander un fichier plus petit.
+Le JPEG enregistre la couleur à une résolution inférieure à la luminance, sauf si l'encodeur dépasse son seuil de sous-échantillonnage. En dessous, la chrominance est divisée par deux horizontalement et verticalement : le détail de luminance reste intact, mais les bords saturés s'adoucissent. Une qualité de 95 % ou plus est donc encodée sans sous-échantillonnage de chrominance. Les réglages inférieurs conservent la valeur choisie, puisque les choisir revient à demander un fichier plus petit.
 
-Le PNG et le TIFF sont sans perte et ne sous-échantillonnent jamais. Leur seul réglage de qualité est
-la profondeur de bits, 8 ou 16 bits par canal. Le tramage n'est appliqué qu'en 8 bits, où il masque
-les bandes de quantification.
+Le PNG et le TIFF sont sans perte et ne sous-échantillonnent jamais. Leur seul réglage de qualité est la profondeur de bits, 8 ou 16 bits par canal. Le tramage n'est appliqué qu'en 8 bits, où il masque les bandes de quantification.
 
 ## Performance et sûreté
 
@@ -279,10 +241,7 @@ les bandes de quantification.
 5. Paires REAL/TARGET : un contrôle qualité d'appareil avec du matériel de validation distinct
 6. Vérification sur matériel réel : scanner, film, écran et tirage
 
-Un bon résultat sur IT8 synthétique ne prouve pas la justesse absolue sur des négatifs réels.
-Le jugement de qualité des profils scanner suit
-[contrôle qualité des profils scanner](../reference/PROFILE_QUALITY_GATE.md) et
-[validation colorimétrique IT8](../reference/IT8_COLOR_VALIDATION.md).
+Un bon résultat sur IT8 synthétique ne prouve pas la justesse absolue sur des négatifs réels. Le jugement de qualité des profils scanner suit [contrôle qualité des profils scanner](../reference/PROFILE_QUALITY_GATE.md) et [validation colorimétrique IT8](../reference/IT8_COLOR_VALIDATION.md).
 
 ## Où se trouve le code
 
@@ -294,6 +253,4 @@ Le jugement de qualité des profils scanner suit
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-La version produit actuelle est `1.1.0`.
-L'historique d'édition et les schémas de profils continueront de passer par une procédure de
-validation avant de changer.
+La version produit actuelle est `1.1.0`. L'historique d'édition et les schémas de profils continueront de passer par une procédure de validation avant de changer.

@@ -2,9 +2,7 @@
 
 [Dokumentationsstart](../README.md)
 
-So liest ein Skript oder ein anderes Programm die Scannerangaben.
-Das bleibt getrennt von der Scannerimplementierung.
-Die CLI wandelt nur die Geräteangaben und Fähigkeiten, die `ScannerKit` erhalten hat, in JSON um.
+So liest ein Skript oder ein anderes Programm die Scannerangaben. Das bleibt getrennt von der Scannerimplementierung. Die CLI wandelt nur die Geräteangaben und Fähigkeiten, die `ScannerKit` erhalten hat, in JSON um.
 
 | Punkt | Vertrag |
 |---|---|
@@ -20,9 +18,7 @@ negaflow detect [--demo] --json
 negaflow capabilities <scannerID> [--demo] --json
 ```
 
-Vorerst funktioniert `--json` nur bei diesen beiden lesenden Befehlen.
-An `scan` oder `develop`, die Dateien ändern oder Fortschritt melden, endet es mit dem Fehler
-`unsupported_json_command`.
+Vorerst funktioniert `--json` nur bei diesen beiden lesenden Befehlen. An `scan` oder `develop`, die Dateien ändern oder Fortschritt melden, endet es mit dem Fehler `unsupported_json_command`.
 
 ## Gemeinsame Form
 
@@ -44,9 +40,7 @@ Erfolg und Fehler schreiben je ein JSON-Dokument nach stdout, mit Zeilenumbruch 
 
 </details>
 
-Bei einem Fehler ist `status` gleich `error` und `payload` gleich `null`.
-In `error` stehen ein unveränderlicher Maschinencode und eine Beschreibung für Menschen.
-Diagnoseprotokolle gehen nach stderr. Protokolle und Fortschritt kommen nie in stdout.
+Bei einem Fehler ist `status` gleich `error` und `payload` gleich `null`. In `error` stehen ein unveränderlicher Maschinencode und eine Beschreibung für Menschen. Diagnoseprotokolle gehen nach stderr. Protokolle und Fortschritt kommen nie in stdout.
 
 ## Fähigkeitsangaben
 
@@ -63,9 +57,7 @@ Das `payload` von `capabilities` führt immer alle diese Felder.
 - `minScanArea`, `maxScanArea`, `scanAreaUnit`
 - `outputFormats`, `estimatedScanSpeeds`
 
-Werte, die das Gerät nicht gemeldet hat, werden nicht geraten.
-Je nach Wert stehen dort `null`, ein leeres Array, `false` oder die vom Plugin gesendeten
-`disabledReasons`.
+Werte, die das Gerät nicht gemeldet hat, werden nicht geraten. Je nach Wert stehen dort `null`, ein leeres Array, `false` oder die vom Plugin gesendeten `disabledReasons`.
 
 `estimatedScanSpeeds` ist ein Array dieses Objekts, aufsteigend nach DPI.
 
@@ -73,9 +65,7 @@ Je nach Wert stehen dort `null`, ein leeres Array, `false` oder die vom Plugin g
 { "dpi": 3600, "seconds": 42.0 }
 ```
 
-App-Oberfläche und CLI lesen dieselben `ScannerCapabilities`.
-Die Abgleichprüfung bestätigt, dass die auf dem Bildschirm geöffneten Bedienelemente denselben
-Werten folgen wie die JSON-Felder.
+App-Oberfläche und CLI lesen dieselben `ScannerCapabilities`. Die Abgleichprüfung bestätigt, dass die auf dem Bildschirm geöffneten Bedienelemente denselben Werten folgen wie die JSON-Felder.
 
 ## Versionsregeln
 

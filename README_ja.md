@@ -4,13 +4,13 @@
 
 <h1 align="center">negaflow</h1>
 
-<p align="center">アナログフィルムのスキャンから現像、プリントまで。macOS と Windows それぞれにネイティブなアプリです。</p>
+<p align="center">フィルムから完成した写真まで。macOS と Windows でそれぞれネイティブに動きます。</p>
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/ja/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="ウェブサイト"></a>
-  <a href="#install"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="バージョン 1.1.0"></a>
+  <a href="#ダウンロード"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="バージョン 1.1.0"></a>
   <a href="negaflow-mac/docs/README_ja.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 以降"></a>
-  <a href="negaflow-windows/docs/README_ja.md"><img src="https://img.shields.io/badge/Windows-11-0078D4?logo=windows&logoColor=white" alt="Windows 11"></a>
+  <a href="negaflow-windows/docs/README_ja.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 以降"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 ライセンス"></a>
 </p>
 
@@ -25,7 +25,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/ja/">ウェブサイト</a> ·
-  <a href="https://habinsong.github.io/negaflow-site/ja/camera-scanning/">カメラスキャンのガイド</a> ·
+  <a href="https://habinsong.github.io/negaflow-site/ja/camera-scanning/">カメラスキャンガイド</a> ·
   <a href="https://habinsong.github.io/negaflow-site/ja/faq/">FAQ</a>
 </p>
 
@@ -38,183 +38,102 @@
   </picture>
 </p>
 
-negaflow は、スキャンしたフィルムやデジタルカメラで複写したフィルムを読み込み、反転して現像する macOS アプリです。<br>
-カラーと白黒、ネガとポジに対応し、補正内容は元のファイルと分けて保存します。<br>
-ライブラリ管理から現像、プリントまで、フィルムをデジタルで扱う一連の作業を支えます。
+**negaflow** は、スキャンしたフィルムやカメラで複写したフィルムを読み込んで現像するアプリです。カラーも白黒も、ネガもポジも全部いけます。ライブラリから現像、プリントまでアプリひとつの中で終わります。補正の値は元と分けて保存するので、元のファイルはそのまま残ります。
 
-現像エンジンの名前は **Chroma Engine**、ゴミやキズの修復機能は **GrainMend** です。<br>
-画像ファイルを読み込むだけでも現像と書き出しが使えます。<br>
-スキャナー接続は、別途プラグインを導入した場合だけ有効になります。
+現像エンジンの名前は **Chroma Engine**、ゴミやキズの修復は **GrainMend** です。スキャナーがなくても大丈夫です。画像ファイルを読み込むだけでも現像も書き出しもできます。スキャナー接続は、プラグインを別に入れたときだけ開きます。
 
-> 技術は進歩を続けていますが、フィルム人気の再燃とは裏腹に、アナログ写真を取り巻く作業は足踏みしています。<br>
-> 暗室でプリントしない限り、フィルムはデジタル化して初めて多くの人が見たり共有したりできます。<br>
-> ところが、ラボや現像所が減り、そのための選択肢も少なくなっています。
-> <br>
-> このプロジェクトは、いくつもの作業方法を試す中で感じた不便と、「こんな機能があれば」と思ったことから始まりました。<br>
-> 35mm と中判フィルムで得た経験を土台に、すべてを一から自分で開発しています。<br>
-> 最初は自分だけで使う小さなプロジェクトでしたが、今の **negaflow** はそれ以上のものになっています。<br>
-> 結局のところ、道具はきちんと動き、気軽に使えて、速く、面倒なことを正しく片づけてくれるのが一番です。<br>
-> **negaflow** は独立して開発しているネイティブ macOS アプリで、フィルムラボと個人の両方の作業を取り入れています。
+> 最近のアナログ流行の伸びとは違って、今のアナログ写真のプロセスは停滞期と言えます。フィルムをアナログでプリントする方法でない限り、アナログをデジタルに変換する過程を経てはじめて私たちの目に見えます。
 >
-> **ニエプスが人類最初の一枚を写してから二百年。その夏に寄せて。**
+> ところが、その過程のすべてが止まりかけています。フィルムラボや現像所はどんどんなくなり、メーカーと製品への支えが減っているからです。
+>
+> 本プロジェクトは、あれこれのやり方で作業しながら感じた不便と、こんな機能があればいいという考えから始まりました。35mm フィルムと中判フィルムを使いながら知った経験と知識をもとに、一から十まで全部自分で開発しました。最初は自分ひとりで使いながらいろいろ作ってみたトイプロジェクトでしたが、今の negaflow はそれ以上の何かになりました。
+>
+> 結局のところ何よりも「ちゃんと」動いて楽に使えて、速くなければならず、何でも勝手にきちんと作った結果物が大事ですから。独自開発した **negaflow** は macOS と Windows でそれぞれネイティブに動き、フィルムラボと個人のワークフローを全部溶かし込んでみました。
+>
+>
+> **ニエプスが撮った最初の写真から200周年になる今年の夏を記念して。** 2026年7月25日。
+## negaflow for macOS and Windows
 
----
-
-## 二つを別々に作りました
-
-negaflow は macOS でも Windows でも動きます。二つのアプリはコードを共有していません。
 
 | | macOS | Windows |
 |---|---|---|
 | 画面 | SwiftUI | WinUI 3 |
-| エンジン | Swift と Core Image | C++ と Direct3D |
+| エンジン | Swift + Core Image | C++ + Direct3D |
 | カラーマネジメント | ColorSync | Windows ICM |
 
-同じ写真を渡せば同じ結果が出ます。macOS 版で書き出した基準画像を Windows のテストが読み込み、
-画素単位で照合しています。
+二つのアプリはネイティブアプリとして違う言語で違うやり方で開発されましたが、それでも機能と結果は同じです。
 
-それぞれのプラットフォームの流儀で書いたので、片方を移植して継ぎ足したものではありません。
-結果として二度作ることになりましたが、どちらもそのOSのアプリとして自然に動きます。
+二つを同時に作る方法(クロスプラットフォーム)もありますが、そうすると両方とも遅くなり、まともに動きません。だから OS ごとに固有のやり方で最初からコードを書き直しました。何が同じで何が違うかは[こちら](docs/ja/platform/PLATFORM_DIFFERENCES.md)に書いてあります。
 
-- [macOS のドキュメント](negaflow-mac/docs/README_ja.md)
-- [Windows のドキュメント](negaflow-windows/docs/README_ja.md)
-- [二つの版の違い](docs/ja/platform/PLATFORM_DIFFERENCES.md)
+## ダウンロード
 
----
+[GitHub Releases](https://github.com/habinsong/negaflow/releases) から入手できます。
 
-## インストール
-
-[GitHub Releases](https://github.com/habinsong/negaflow/releases)から現在のリリースをダウンロードします。
-
-### macOS
-
-| ダウンロード | 対応するMac |
+| インストーラー | 対象 |
 |---|---|
-| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon、Intel |
-| `negaflow-1.1.0-mac-arm64.pkg` | Apple Siliconのみ |
+| `negaflow-1.1.0-mac-universal.pkg` | macOS 14 以降、Apple Silicon と Intel |
+| `negaflow-1.1.0-mac-arm64.pkg` | macOS 14 以降、Apple Silicon のみ |
+| `negaflow-1.1.0-win-x64.exe` | Windows 11 24H2 以降、x64 |
 
-通常は Universal PKG を使ってください。
+たいていの Mac は Universal PKG で大丈夫です。もちろん、Silicon 用のファイルと DMG と ZIP も同じページに上げてあります。初回起動のときはシステム設定のプライバシーとセキュリティで「このまま開く」を一度押す必要があります。
 
-1. Macに合うPKGをダウンロードします。
-2. PKGを開き、インストーラの案内に従います。
-3. `/Applications`から**negaflow**を起動します。
+Windows のインストールはユーザーフォルダーの中で終わり、管理者権限を聞いてきません。署名がないので SmartScreen が一度止めます。詳細情報を押して実行すれば大丈夫です。削除はコントロールパネルからできます。
 
-手動インストール用のDMGとZIPも同じリリースページにあります。
-Appleの公証を受けていないため、初回起動時は**システム設定 → プライバシーとセキュリティ**で
-**このまま開く**を選ぶ必要があります。
-
-### Windows
-
-| ダウンロード | 対応するPC |
-|---|---|
-| `negaflow-1.1.0-win-x64.exe` | Windows 11 (x64) |
-
-1. インストーラをダウンロードして実行します。
-2. 言語を選び、案内に従います。
-3. スタートメニューから**negaflow**を起動します。
-
-インストール先はユーザーフォルダーの中だけで、管理者権限は要りません。
-削除はスタートメニューの`negaflow の削除`か、設定のアプリ一覧から行います。
-署名していないインストーラなので、SmartScreen が一度警告します。詳細情報を押して実行してください。
-
-> スキャナー実機を使うには、別途スキャナープラグインが必要です。<br>
-> SANEスキャナーには[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)を使用します。macOS と Windows の両方に対応しています。
-
----
+実機のスキャナーをつなぐにはプラグインが別に必要で、SANE スキャナーには [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) があります。当然、macOS と Windows の両方で動きます。
 
 ## 機能
-
-- フィルムベースの測定と、カラー・白黒フィルムの反転
-- 露出、コントラスト、カーブ、HSL、カラーグレーディング、白黒トーニング
-- シャープネス、ノイズ除去、グレイン、ビネット、ハレーション
-- ゴミやキズを修復する GrainMend、スキャナーの赤外パスを使う GrainMend IR を含む
-- ロール、フォルダー、コレクション、評価、スタック、仮想コピー
-- 拡大、切り抜き、回転、比較表示、ヒストグラム、クリッピング表示
-- カメラ、レンズ、フィルム、露出の記録を書き出したファイルの EXIF に記録
-- ロール単位の撮影記録と、カメラ・レンズ・フィルムで探すライブラリ検索
-- JPEG と 16-bit TIFF の書き出し、ICC プロファイル、プリントレイアウト
-- レイアウト別の黒・グレー・白シート、共通のマット・光沢・ラスター・シルク表示、
-  写真用・ISO用紙、任意のin/cmルーラー
-- C-printのラボ・印画紙設定とラボICCソフトプルーフプレビュー
-- 読み込み進捗、フォルダー単位の現像プロセス・ターゲット適用と進捗表示
-- 折りたたみ状態を記憶するフォルダー一覧、写真のドラッグ移動、Finder変更の自動反映
-- プロセス、ターゲット、補正、クロップ、向きを含むプリセットとコピー・ペースト
-- 単一画像、コンタクトシート、ピクチャーパッケージ、カスタムパッケージ、サイアノタイプ、
-  ガラス乾板、ゼラチンシルバーの7種類のプリントレイアウト
-- 39枚の6 × 7コンタクトシートは合成済みの1ファイル、個別画像レイアウトは制限付き
-  39ファイルのバッチとして扱い、バーとパーセントを示すプリント書き出しとクイック書き出し
-
+> アナログフィルムを完成した写真にするための機能が全部入っています。
+- フィルムベースを測ってカラー・白黒のネガとポジを現像する機能から
+- 露出、コントラスト、カーブ、HSL、カラーグレーディングなど補正に必要なすべて
+- シャープネス、ノイズ除去、粒子、周辺光量、ハレーションのような付加オプション
+- ゴミとキズを取り除いて写真を復元する GrainMend。
+- ロール、フォルダー、コレクション、レーティング、スタック、仮想コピー、カメラ・レンズ・フィルム検索ができるライブラリ
+- 現像プロセス、ターゲット、トーン・色・ディテール、切り抜きと向きをまとめて運ぶプリセットとコピー・ペースト
+- JPEG と 16bit TIFF の書き出し、ICC プロファイル、カメラ・レンズ・フィルムなどの記録を EXIF に保存
+- 7種類のプリントレイアウトと用紙プレビュー、写真用・ISO 用紙、C-print 機能まで全部あります。
 
 ## Chroma Engine
 
-Chroma Engine は `Chromabase` モジュールに入っているフィルム反転・現像エンジンです。<br>
-ネガを反転する前に、未露光部分からフィルムベースを測定します。<br>
-自動測定が合わないときは、スポイトで範囲を選ぶか RGB 値を直接入力できます。
+**Chroma Engine** はフィルムの反転と現像を受け持ちます。
 
-初期状態は `MAIN` と手動補正です。<br>
-自動トーン、自動ホワイトバランス、自動レベル、自動カラーは、自分で実行したときだけ適用されます。
+ネガを現像する前にフィルムベースを先に測ります。光が一度も当たっていない領域から値を読みます。自動測定がずれた場所はスポイトで取るか RGB 値を調整すれば大丈夫です。
 
-現像ターゲット:
+初期値は `MAIN` と手動補正です。自動トーン、自動ホワイトバランス、自動レベル、自動カラーは押したときだけ動きます。
 
-- `MAIN`: 標準現像
-- `PRINT`: プリンター ICC を使う出力
-- `HS`, `SP`: ミニラボ系の現像
-- `F135`, `HR`: 各機器系列の現像スタイル
-- `EXPIRED`: 古いフィルムの救済
+残りのターゲットはこうです。プリンターの ICC で出す `PRINT`、ミニラボ系の `HS` と `SP`、ラボ機材系の `F135` と `HR`、古いフィルムを起こしてみる `EXPIRED`。出力は sRGB、Display P3、Adobe RGB、それに自分で使う RGB ICC から選べます。
 
-出力には sRGB、Display P3、Adobe RGB、または任意の RGB ICC を使えます。<br>
-反転と色処理の順序は [Chroma Engine](docs/ja/product/CHROMA_ENGINE.md)にあります。
+反転と色処理の順序は[クロマエンジンのドキュメント](docs/ja/product/CHROMA_ENGINE.md)にあります。
 
 ## GrainMend
 
-**GrainMend は、フィルムのゴミ、ピンホール、キズ、乳剤の傷みといった欠陥を修復します。** <br>
+> **GrainMend** はゴミ、ピンホール、キズ、乳剤の傷みを復元します。
+
+**GrainMend RGB** はソフトウェアの方式なのでハードウェアの IR とは違います。 <br> <br>
+`自動` は写真全体を見ます。手軽ですが誤検出はあります。 <br>
+`ガイド` は指定した領域だけを見ます。スキャン中に付いたゴミにいちばんよく効きます。 <br>
+`ブラシ` は自動が取りこぼした場所を自分で塗る道具で、クローンスタンプは選んだ位置の画素をそのまま移してくれます。<br>
+`クローンスタンプ` はユーザーが望む質感を選んで自分で塗るスタンプ機能です。 <br>
+
+自動とガイドは周りの質感を見て欠陥を埋めます。埋める前に向きと周辺の構造を先に見ます。写真の中の手すりや目地をキズと間違えて消してしまったら、それは復元ではなく破損ですから。
+
+修正結果はレイヤーとして残ります。強さを変えて、マスクを確かめて、ひとつずつ切ったり消したりできます。<br>
+**GrainMend IR** はスキャナープラグインが渡してくれた赤外チャンネルの検出結果を同じ記録に足します。
 
 
-| GrainMend RGB | 使い方 |
-|---|---|
-| 自動 | 写真全体から欠陥を探して修復します。 |
-| ガイド | 指定した範囲の中から欠陥を探します。 |
-| ブラシ | 修復したい場所を直接塗ります。 |
-| コピースタンプ | 指定した場所のピクセルを別の場所へ複製します。 |
 
+**GrainMend IR** はスキャナーの赤外チャンネル(IR)を使いますが、Digital ICE、iSRD、SRDx の実装でも互換モードでもありません。動作の仕組みと品質・性能の基準は [GrainMend のドキュメント](docs/ja/product/GRAINMEND.md)にまとめてあります。
 
-**GrainMend RGB** の自動とガイドは周囲の質感を手がかりに欠陥を埋め、 <br>
-写真の中の線や格子をキズとして消してしまわないよう、方向と周囲の構造もあわせて調べます。 <br>
-修正結果は GrainMend レイヤーとして残ります。 <br><br>
-> 自動は写真によくある欠陥を取り除きます。安全に適用できないほど候補が密集した場合は、画像を変えずに停止してガイドの使用を案内します。 <br>
-> ガイドはスキャン時に生じるさまざまなゴミに向いています。ブラシは自動で見つからなかった欠陥を直接修復し、コピースタンプは選んだ参照元のピクセルを複製します。 <br>
-**GrainMend RGB** のレイヤーはそれぞれ、強さの変更、マスクの確認、個別の無効化や削除ができます。
-
-
-スキャナープラグインが赤外線チャンネルを提供する場合、**GrainMend IR** の検出結果も同じ編集履歴に加わります。<br><br>
-
-**GrainMend RGB** はハードウェアの赤外線クリーニングとは異なる、独自のソフトウェア方式であり、 <br>
-**GrainMend IR** はスキャナーの赤外線チャンネルを使います。Digital ICE、iSRD、SRDx の実装や互換モードではありません。
-
-実装方法と画質・性能の基準は [GrainMend](docs/ja/product/GRAINMEND.md) にあります。
-
-## フィルムプロファイル
-
-作者が実際に撮影したフィルム資料から作ったスキャナープロファイルを 15 個収録しています。<br>
-画像の観測値は合計 928 件で、現在はすべて `realOnly` です。<br>
-`realOnly` は実スキャンを元に作られているものの、独立した基準スキャンとの組み合わせで精度確認を終えていない状態です。
-
-スキャナー名だけでプロファイルを自動適用することはありません。<br>
-利用者が自分で選択します。<br>
-アプリは各ファイルと一覧の SHA-256 も検証します。
-
-`928` はプロファイルごとの観測数を足した値です。<br>
-同じフィルムが複数のスキャナーに重複して数えられるため、異なる写真が 928 枚あるという意味ではありません。<br>
-元になった 928 件のスキャンはすべて自分で確認し、誤検出や見逃しのあるファイルを測定前に除外しました。<br>
-資料と生成手順は [フィルムプロファイル](docs/ja/product/FILM_PROFILES.md)に記載しています。
-
-## 基本の使い方
+## 読み込みからプリントまで
 
 1. 画像ファイルを読み込むか、導入済みのプラグインでスキャンします。
-2. フィルムの種類を選び、フィルムベースを測定します。
-3. Chroma Engine で色とトーンを調整します。
-4. 必要な写真に GrainMend を使います。
-5. 比較表示とヒストグラムで確認してからプリントまたは書き出します。
+2. 現像プロセスの種類を選んでスキャンターゲットを指定します。
+3. クロマエンジンで色とトーンを調節します。
+4. 必要な写真に GrainMend を適用します。
+5. 比較表示とヒストグラムで確認してからプリントするか書き出します。
+
+読み込んだだけでは現像しません。フォルダーのプロセスとターゲットを選んで**適用**を押したとき、または現像画面に入ったときに始まります。自動で回す設定も別にありますが、初期値はオフです。
+
+それぞれの操作が元のファイルに何をするかは[ライブラリからプリントまで](docs/ja/product/WORKFLOW.md)に表でまとめてあります。
 
 <p align="center">
   <picture>
@@ -230,121 +149,31 @@ Chroma Engine は `Chromabase` モジュールに入っているフィルム反�
   </picture>
 </p>
 
-画面は、写真を扱う人が使いやすいように作りました。<br>
-AI が形だけ作ったような UI ではなく、写真が趣味なら迷わず使える操作を目指しています。
+## スキャナーとフィルムプロファイル
 
-## ライブラリからプリントまで
+negaflow 本体はスキャナーの機種名を見て機能を開けたりしません。<br> プラグインが知らせた解像度、ビット深度、スキャン領域、露出、IR 対応だけを使います。名前から推測すると装置にない機能が点きます。
 
-画像を読み込んだだけでは、初期設定では現像しません。まず元画像のサムネイルとフォルダーを
-作り、フォルダーでプロセスとターゲットを適用するか、現像画面に入った時点で現像を始めます。
-自動現像は設定のワークフローで有効にでき、初期値はオフです。
+SANE 機器は別の GPL プロジェクトである [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) が担当します。プラグインは別プロセスで動き、やり取りの形式は JSON です。**negaflow** に SANE のコードは入っていませんし、リンクもしていません。
 
-フォルダーの折りたたみ状態は再起動後も残ります。写真はフォルダー間でドラッグでき、同名の
-ファイルがある場合は上書きせず番号を付けます。Finderで元画像やフォルダーを移動・改名すると、
-変更されたフォルダーだけを読み直してライブラリの位置を合わせます。
+同梱にはスキャナープロファイルが15個入っています。自分で撮ったフィルムで作り、記録したデータの数は928個です。
 
-現像設定のコピー・ペーストとユーザープリセットには、プロセス、ターゲット、フィルムベース、
-トーン、色、ディテール、クロップ、回転、反転、傾き補正が含まれます。複数選択時は選択した
-すべての写真に適用します。
+状態は全部 `realOnly` です。実際のスキャンで作りはしましたが、独立した基準で精度を検証した段階ではないという意味です。検証していないものを検証したとは書きたくありませんでした。プロファイルはスキャナー名を見て自動で当たることはないので、自分で選ぶ必要があります。
 
-プリント画面のプリンター出力プロファイルは、組み上げたページ全体に適用されます。同じ写真を
-繰り返す写真パッケージや複数写真のレイアウトでも、すべての配置に反映されます。現像画面の
-プレビューには入りません。
-
-詳しい動作は[ライブラリからプリントまで](docs/ja/product/WORKFLOW.md)にまとめています。
-
-## ソースからビルド
-
-必要な道具とコマンドはプラットフォームごとに違います。詳しくは各ドキュメントにあります。
-
-**macOS**
-
-```bash
-git clone https://github.com/habinsong/negaflow.git
-cd negaflow
-
-# Release ビルドして起動
-bash scripts/run-app.sh
-
-# 起動せずビルドだけ
-bash scripts/run-app.sh build
-```
-
-macOS 14 以降と Xcode 26 が必要です。エンジンとCLIだけなら `swift build` で足ります。
-[macOS のドキュメント](negaflow-mac/docs/README_ja.md)に続きがあります。
-
-**Windows**
-
-```powershell
-git clone https://github.com/habinsong/negaflow.git
-cd negaflow\negaflow-windows
-
-# エンジンのビルド
-.\scripts\build.ps1 -Preset x64-release
-
-# アプリをビルドして起動
-.\scripts\run-app.ps1 -Architecture x64 -Configuration Release
-```
-
-Windows 11、Visual Studio 2022、.NET 10 SDK が必要です。
-[Windows のドキュメント](negaflow-windows/docs/README_ja.md)に続きがあります。
-
-## スキャナー
-
-negaflow はスキャナーの機種名から機能を推測しません。<br>
-プラグインが返した解像度、ビット深度、スキャン範囲、露出、IR 機能だけを使います。
-
-SANE 機器は別の GPL プロジェクト [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)が担当します。<br>
-プラグインは別プロセスで動き、本体とは JSON で通信します。<br>
-negaflow 本体は SANE コードを含まず、リンクもしません。
-
-## リポジトリ構成
-
-```
-negaflow/
-├── negaflow-mac/       macOS のアプリとエンジン (Swift)
-├── negaflow-windows/   Windows のアプリとエンジン (C#, C++)
-└── docs/               共通のドキュメント
-```
-
-**macOS**
-
-| モジュール | 役割 |
-|---|---|
-| `Chromabase` | Chroma Engine、GrainMend、プロファイル、書き出し |
-| `ScannerKit` | スキャナー機能の確認と外部プラグイン接続 |
-| `negaflowApp` | ライブラリ、現像、スキャン、書き出しの画面 |
-| `negaflowCLI` | 現像、スキャン、ベンチマーク、自己点検 |
-
-**Windows**
-
-| モジュール | 役割 |
-|---|---|
-| `Native` | Chroma Engine、GrainMend、書き出し (C++) |
-| `Interop` | エンジンとアプリをつなぐ層 |
-| `Catalog.Core` | ライブラリの保存 |
-| `Shell.Core` | 現像、プリント、書き出しのロジック |
-| `Shell` | ライブラリ、現像、プリントの画面 (WinUI 3) |
-
-モジュール間のデータの流れは[製品構成のドキュメント](docs/ja/architecture/PRODUCT_ARCHITECTURE.md)にあります。
+詳しくは[フィルムプロファイルのドキュメント](docs/ja/product/FILM_PROFILES.md)に書きました。
 
 ## ドキュメント
 
-| ドキュメント | 内容 |
-|---|---|
-| [Chroma Engine](docs/ja/product/CHROMA_ENGINE.md) | フィルムベース、反転、色処理、現像の順序 |
-| [GrainMend](docs/ja/product/GRAINMEND.md) | 欠陥の検出と修復、IR、編集履歴、品質と性能の基準 |
-| [フィルムプロファイル](docs/ja/product/FILM_PROFILES.md) | 撮影素材の分析とプロファイル生成 |
-| [ライブラリからプリントまで](docs/ja/product/WORKFLOW.md) | 読み込み、フォルダー同期、一括現像、設定のコピー、プリントプロファイル |
-| [製品構成](docs/ja/architecture/PRODUCT_ARCHITECTURE.md) | アプリ、エンジン、スキャナー、保存、書き出しの構成 |
-| [二つの版の違い](docs/ja/platform/PLATFORM_DIFFERENCES.md) | macOS と Windows で同じところと違うところ |
-| [macOS のドキュメント](negaflow-mac/docs/README_ja.md) | macOS のインストール、ビルド、CLI |
-| [Windows のドキュメント](negaflow-windows/docs/README_ja.md) | Windows のインストール、ビルド、エンジン点検 |
+- [クロマエンジン](docs/ja/product/CHROMA_ENGINE.md) | フィルムベース、反転、色処理と現像の順序
+- [GrainMend](docs/ja/product/GRAINMEND.md) | 欠陥の検出と復元、IR、編集記録
+- [フィルムプロファイル](docs/ja/product/FILM_PROFILES.md) | 撮影資料の分析とプロファイル生成
+- [ライブラリからプリントまで](docs/ja/product/WORKFLOW.md) | 読み込み、フォルダー同期、一括現像、プリント
+- [製品の構造](docs/ja/architecture/PRODUCT_ARCHITECTURE.md) | アプリ、エンジン、保存と書き出しの構造
+- [ドキュメント全体](docs/ja/README.md) | 多言語(6言語)
+
+## 自分でビルドする
+
+プラットフォームごとに必要な道具とコマンドが違います。全体の手順は各ドキュメントにあります。[macOS](negaflow-mac/docs/README_ja.md) は macOS 14 以降と Xcode 26、[Windows](negaflow-windows/docs/README_ja.md) は Windows 11 24H2 と Visual Studio 2022、.NET 10 SDK が必要です。リポジトリでの作業のきまりは [`CONTRIBUTING.md`](CONTRIBUTING.md) にまとめてあります。
 
 ## ライセンス
 
-negaflow 本体は [Apache License 2.0](LICENSE) で配布します。
-
-negaflow は Kodak、Fujifilm、Noritsu、LaserSoft Imaging、その他の商標権者と提携しておらず、支援も受けていません。<br>
-製品名は測定対象や互換対象を示す場合にだけ使います。<br>
-詳しくは [商標について](TRADEMARKS.md)をご覧ください。
+**negaflow** は [Apache License 2.0](LICENSE) で配布します。Kodak、Fujifilm、Noritsu、LaserSoft Imaging をはじめ、どの商標権者とも提携や後援を受けていません。製品名は互換の対象や測定の対象を指すときだけ使います。[商標について](TRADEMARKS.md)に詳しく書いてあります。

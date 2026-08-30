@@ -4,7 +4,7 @@
 
 <h1 align="center">negaflow for macOS</h1>
 
-<p align="center">negaflow, développé nativement pour macOS.</p>
+<p align="center">negaflow, conçu nativement pour macOS.</p>
 
 <p align="center">
   <a href="#"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="version 1.1.0"></a>
@@ -30,51 +30,46 @@
 
 ## Ce qu'il faut
 
-Pour l'utiliser :
+Pour l'exécuter :
 
-- macOS 14.0 ou plus récent
+- macOS 14.0 ou ultérieur
 - Apple Silicon ou Intel
 - 8 Go de mémoire pour du 35 mm, 16 Go plus confortables en moyen format
 
 Pour le compiler :
 
 - Xcode 26 pour l'application
-- Swift 5.9 ou plus récent pour le moteur et la CLI
+- Swift 5.9 ou ultérieur pour le moteur et la CLI
 
 ## Installation
 
 Téléchargez depuis [Releases](https://github.com/habinsong/negaflow/releases).
 
-| Téléchargement | Mac |
+| Fichier | Mac pris en charge |
 |---|---|
-| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon et Intel |
+| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon, Intel |
 | `negaflow-1.1.0-mac-arm64.pkg` | Apple Silicon uniquement |
 
-La plupart des gens prendront le PKG Universal. Ouvrez-le, suivez l'installateur, et
-l'application arrive dans `/Applications`. Un DMG et un ZIP sont sur la même page si vous
-préférez déplacer l'application vous-même.
+Le PKG Universal convient à la plupart. Il installe dans `/Applications`. Pour déplacer l'application vous-même, prenez le DMG ou le ZIP de la même page.
 
-L'application n'est pas notarisée. Au premier lancement macOS la bloque, et vous
-l'autorisez dans Réglages Système, sous Confidentialité et sécurité, en cliquant sur
-Ouvrir quand même.
+L'application n'est pas notariée, macOS la bloque donc au premier lancement. Autorisez-la dans Réglages Système, sous Confidentialité et sécurité, avec Ouvrir quand même.
 
-Votre photothèque et vos réglages vivent dans `~/Library/Application Support/negaflow`.
+La photothèque et les réglages sont dans `~/Library/Application Support/negaflow`.
 
 ## Compilation
 
 ```bash
 git clone https://github.com/habinsong/negaflow.git
-cd negaflow
+cd negaflow/negaflow-mac
 
-# Compiler en Release et lancer
+# Compiler en Release puis lancer
 bash scripts/run-app.sh
 
 # Compiler sans lancer
 bash scripts/run-app.sh build
 ```
 
-`run-app.sh` appelle `xcodebuild`, assemble le bundle et signe en local. Pour travailler
-seulement sur le moteur ou la CLI, `swift build` suffit et évite Xcode.
+`run-app.sh` appelle `xcodebuild`, assemble le paquet et le signe localement. Pour le moteur ou la CLI seuls, `swift build` suffit.
 
 Pour produire les fichiers de distribution :
 
@@ -92,13 +87,13 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 # Compilation Release de l'application
 bash scripts/run-app.sh build
 
-# Contrôle complet du dépôt
+# Vérification complète du dépôt
 bash scripts/ci-gate.sh
 ```
 
 ## Ligne de commande
 
-La version macOS livre une CLI complète à côté de l'application.
+La version macOS embarque une CLI.
 
 ```bash
 swift build
@@ -114,7 +109,7 @@ swift build
 .build/debug/negaflow develop scan.tif out.jpg --defects 1
 .build/debug/negaflow defect-bench ./scans --out ./report
 
-# Profils et autotest du moteur
+# Liste des profils et autotest du moteur
 .build/debug/negaflow list-scanner-profiles
 .build/debug/negaflow selftest
 ```
@@ -123,29 +118,24 @@ Lancez `negaflow` sans argument pour la liste complète des options.
 
 ## Scanners
 
-Les contrôles scanner restent cachés tant qu'aucun module n'est installé.
-[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) couvre les
-appareils SANE et s'installe séparément.
+Les commandes du scanner n'apparaissent pas tant qu'un module n'est pas installé. Les appareils SANE passent par [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), qui s'installe à part.
 
 ## Modules
 
 | Module | Rôle |
 |---|---|
-| `Chromabase` | Chroma Engine, GrainMend, profils, export |
-| `ScannerKit` | Vérification des capacités scanner et lien avec le module |
-| `negaflowApp` | Écrans photothèque, développement, scan et export |
-| `negaflowCLI` | Commandes de développement, scan, mesure et autotest |
+| `Chromabase` | Chroma Engine, GrainMend, profils et export |
+| `ScannerKit` | Vérification des capacités scanner et connexion des modules |
+| `negaflowApp` | Écrans photothèque, développement, numérisation et export |
+| `negaflowCLI` | Commandes de développement, numérisation, benchmark et autotest |
 
 ## Images de référence
 
-`docs/verification/macos-golden`, à la racine du dépôt, contient les images rendues par
-cette version. Les tests du moteur Windows les lisent et comparent pixel par pixel : c'est
-ainsi que les deux versions restent d'accord. Ne les régénérez que si la sortie macOS doit
-changer.
+`docs/verification/macos-golden`, à la racine du dépôt, contient les images rendues par cette compilation. Les tests du moteur Windows les lisent et comparent pixel par pixel. Ne les régénérez que lorsque la sortie macOS doit changer.
 
 ## Documents liés
 
-- [Ce qui diffère entre les deux](../../docs/fr/platform/PLATFORM_DIFFERENCES.md)
+- [Différences entre macOS et Windows](../../docs/fr/platform/PLATFORM_DIFFERENCES.md)
 - [Chroma Engine](../../docs/fr/product/CHROMA_ENGINE.md)
 - [GrainMend](../../docs/fr/product/GRAINMEND.md)
 - [Architecture produit](../../docs/fr/architecture/PRODUCT_ARCHITECTURE.md)

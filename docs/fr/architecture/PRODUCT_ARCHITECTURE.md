@@ -2,15 +2,10 @@
 
 [Accueil de la documentation](../README.md)
 
-negaflow est une application macOS.
-Vous importez ou scannez des images de film, puis viennent l'inversion, le développement, GrainMend,
-la sortie et la conservation.
-Chaque modification est conservée à part de l'original.
+negaflow est une application macOS. Vous importez ou scannez des images de film, puis viennent l'inversion, le développement, GrainMend, la sortie et la conservation. Chaque modification est conservée à part de l'original.
 
 > [!IMPORTANT]
-> Originaux, historique d'édition, caches et fichiers de sortie sont des matériaux différents.
-> Perdre un cache ne doit pas faire perdre l'original ni l'historique, et un export échoue plutôt
-> que de livrer un résultat qu'il ne peut pas reconstruire.
+> Originaux, historique d'édition, caches et fichiers de sortie sont des matériaux différents. Perdre un cache ne doit pas faire perdre l'original ni l'historique, et un export échoue plutôt que de livrer un résultat qu'il ne peut pas reconstruire.
 
 ## Règles de sécurité qui ne changent pas
 
@@ -19,11 +14,9 @@ Chaque modification est conservée à part de l'original.
 3. L'écran scanner n'affiche que ce que le plugin a déclaré.
 4. Aucun faux scanner ne prend le relais si vous n'avez pas choisi la démo vous-même.
 5. Si un résultat édité ne peut pas être reconstruit, l'original n'est pas exporté à sa place.
-6. Une tâche longue revérifie l'image, la version d'édition et la session juste avant d'appliquer
-son résultat.
+6. Une tâche longue revérifie l'image, la version d'édition et la session juste avant d'appliquer son résultat.
 7. Un cache doit pouvoir être reconstruit depuis l'original et l'historique d'édition.
-8. Profils, lots de sortie et archives insuffisamment vérifiés ne sont pas publiés comme un
-résultat abouti.
+8. Profils, lots de sortie et archives insuffisamment vérifiés ne sont pas publiés comme un résultat abouti.
 
 ## Modules
 
@@ -67,9 +60,7 @@ Ce n'est pas un pilote de scanner. Il porte le contrat qui relie un plugin exter
 - Sessions de scan et historique des travaux
 - Le scanner de démonstration, que vous devez activer vous-même
 
-L'implémentation SANE vit dans un projet GPL séparé,
-[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane).
-L'application et le plugin ne communiquent que par JSON et par la CLI.
+L'implémentation SANE vit dans un projet GPL séparé, [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane). L'application et le plugin ne communiquent que par JSON et par la CLI.
 
 ### `negaflowCLI`
 
@@ -115,9 +106,7 @@ Chaque étape ajoute au catalogue et à l'historique d'édition au lieu de chang
 
 ### Importer des fichiers
 
-La voie d'entrée par défaut.
-Elle prend en charge TIFF, JPEG, PNG et les RAW d'appareil photo que macOS Image I/O sait lire.
-L'ICC embarqué et l'orientation sont lus, et l'identifiant de l'original entre dans le catalogue.
+La voie d'entrée par défaut. Elle prend en charge TIFF, JPEG, PNG et les RAW d'appareil photo que macOS Image I/O sait lire. L'ICC embarqué et l'orientation sont lus, et l'identifiant de l'original entre dans le catalogue.
 
 ### Numériser
 
@@ -129,25 +118,17 @@ Un plugin installé peut déclarer les fonctions suivantes.
 - IR
 - Comportement des lots et du passe-vues
 
-L'application n'invente jamais une fonction à partir d'une table de noms de modèles.
-Quand un scan se termine, les réglages réellement appliqués par le plugin et le fichier de sortie
-sont revérifiés.
+L'application n'invente jamais une fonction à partir d'une table de noms de modèles. Quand un scan se termine, les réglages réellement appliqués par le plugin et le fichier de sortie sont revérifiés.
 
 ### Identifiant de l'original
 
-Un chemin de fichier ne suffit pas à identifier un original.
-Les valeurs exigées par le contrat actuel sont conservées : observations sur le fichier, nombre
-d'octets, date de modification, SHA-256 et un bookmark persistant.
+Un chemin de fichier ne suffit pas à identifier un original. Les valeurs exigées par le contrat actuel sont conservées : observations sur le fichier, nombre d'octets, date de modification, SHA-256 et un bookmark persistant.
 
-Si un fichier a bougé, le chemin ne change que lorsque vous le reliez vous-même ou que la
-restauration du bookmark réussit.
+Si un fichier a bougé, le chemin ne change que lorsque vous le reliez vous-même ou que la restauration du bookmark réussit.
 
 ## Catalogue
 
-Le stockage principal est `library.sqlite`.
-L'ancien `library.json` ne sert qu'à faire passer du matériel ancien vérifié, ou à écrire une
-sauvegarde transportable.
-Les deux stockages ne sont jamais mis à jour en même temps.
+Le stockage principal est `library.sqlite`. L'ancien `library.json` ne sert qu'à faire passer du matériel ancien vérifié, ou à écrire une sauvegarde transportable. Les deux stockages ne sont jamais mis à jour en même temps.
 
 Ce qui va dans SQLite :
 
@@ -171,8 +152,7 @@ Ce qui n'y va pas :
 5. Vérifier l'intégrité SQLite et les conditions de sécurité de l'application.
 6. Ne basculer le stockage principal que si tout concorde.
 
-Un JSON en échec n'est pas traité comme un catalogue vide.
-Les chiffres et la décision sont dans [Stockage du catalogue](CATALOG_STORAGE.md).
+Un JSON en échec n'est pas traité comme un catalogue vide. Les chiffres et la décision sont dans [Stockage du catalogue](CATALOG_STORAGE.md).
 
 ## Bibliothèque
 
@@ -183,32 +163,15 @@ Pour organiser :
 - Grille, comparaison, sélection
 - Examen des doublons candidats
 
-Dans la vue par dossier, chaque dossier porte un bandeau : triangle, dossier, nom, nombre,
-procédé de développement, cible, appliquer. Le triangle replie les vignettes en dessous. Les
-dossiers repliés le restent au lancement suivant, indépendamment du repli de la liste de fichiers
-de la barre latérale.
+Dans la vue par dossier, chaque dossier porte un bandeau : triangle, dossier, nom, nombre, procédé de développement, cible, appliquer. Le triangle replie les vignettes en dessous. Les dossiers repliés le restent au lancement suivant, indépendamment du repli de la liste de fichiers de la barre latérale.
 
-La vue par dossier est **une seule** grille : chaque dossier est une section et son bandeau en est
-l'en-tête. Il faut conserver cette structure. Donner une grille à chaque dossier puis les empiler
-supprime la paresse. La pile doit connaître la hauteur entière d'un dossier, donc celui-ci
-construit toutes ses cartes dès qu'il entre dans le champ. Avec une seule grille, l'unité de
-paresse est une rangée, et c'est ce qui garde le défilement fluide sur plusieurs centaines de
-photos.
+La vue par dossier est **une seule** grille : chaque dossier est une section et son bandeau en est l'en-tête. Il faut conserver cette structure. Donner une grille à chaque dossier puis les empiler supprime la paresse. La pile doit connaître la hauteur entière d'un dossier, donc celui-ci construit toutes ses cartes dès qu'il entre dans le champ. Avec une seule grille, l'unité de paresse est une rangée, et c'est ce qui garde le défilement fluide sur plusieurs centaines de photos.
 
-Plusieurs copies virtuelles peuvent partager un même original.
-Avant de supprimer un original, ses références sont vérifiées d'abord.
-Retirer de la bibliothèque ne change que des références du catalogue.
-La mise à la corbeille est une action séparée.
+Plusieurs copies virtuelles peuvent partager un même original. Avant de supprimer un original, ses références sont vérifiées d'abord. Retirer de la bibliothèque ne change que des références du catalogue. La mise à la corbeille est une action séparée.
 
-Les modifications survivent au débranchement d'un disque externe.
-L'original est marqué hors ligne et vous le reliez par fichier ou par dossier.
-Si l'identifiant n'est pas celui attendu, rien n'est remplacé automatiquement.
+Les modifications survivent au débranchement d'un disque externe. L'original est marqué hors ligne et vous le reliez par fichier ou par dossier. Si l'identifiant n'est pas celui attendu, rien n'est remplacé automatiquement.
 
-Chaque dossier source physique enregistré utilise un seul observateur du système de fichiers. Les
-événements sont regroupés brièvement, puis seul le dossier modifié est relu. Le reliaison par
-signet conserve l’identifiant du dossier de catalogue après un déplacement ou un renommage dans le
-Finder, et les nouvelles images ajoutées directement au dossier sont importées sans sondage ni
-nouvelle analyse de toute la bibliothèque.
+Chaque dossier source physique enregistré utilise un seul observateur du système de fichiers. Les événements sont regroupés brièvement, puis seul le dossier modifié est relu. Le reliaison par signet conserve l’identifiant du dossier de catalogue après un déplacement ou un renommage dans le Finder, et les nouvelles images ajoutées directement au dossier sont importées sans sondage ni nouvelle analyse de toute la bibliothèque.
 
 ## Développement et GrainMend
 
@@ -221,27 +184,19 @@ Chaque image porte :
 - Historique de versions
 - État d'export
 
-Pendant les réglages, un aperçu en basse résolution est utilisé. Un résultat terminé n'atteint
-l'écran que si son identifiant d'image et sa version d'édition correspondent toujours à la sélection
-en cours.
+Pendant les réglages, un aperçu en basse résolution est utilisé. Un résultat terminé n'atteint l'écran que si son identifiant d'image et sa version d'édition correspondent toujours à la sélection en cours.
 
-L'export n'enregistre pas le bitmap d'aperçu affiché. Il reconstruit l'image en pleine résolution à
-partir de l'original et des valeurs d'édition figées.
+L'export n'enregistre pas le bitmap d'aperçu affiché. Il reconstruit l'image en pleine résolution à partir de l'original et des valeurs d'édition figées.
 
-GrainMend garde l'automatique, le guidé, la brosse, le tampon de duplication et l'IR dans une liste
-ordonnée.
-Les caches sont des fichiers dérivés.
-Si un résultat ne peut pas être reconstruit depuis l'original et l'historique, l'export échoue.
+GrainMend garde l'automatique, le guidé, la brosse, le tampon de duplication et l'IR dans une liste ordonnée. Les caches sont des fichiers dérivés. Si un résultat ne peut pas être reconstruit depuis l'original et l'historique, l'export échoue.
 
 Plus de détail dans [GrainMend](../product/GRAINMEND.md).
 
 ## Versions
 
-- **History et Snapshot :** enregistrez vous-même un état de développement, puis comparez-le ou
-revenez-y.
+- **History et Snapshot :** enregistrez vous-même un état de développement, puis comparez-le ou revenez-y.
 - **Virtual Copy :** une autre branche d'édition sans dupliquer le fichier original.
-- **Copy/Paste :** collez une plage choisie, tonalité, couleur, détail ou géométrie. Les masques qui
-ont besoin des coordonnées d'origine voient leurs conditions de sécurité vérifiées.
+- **Copy/Paste :** collez une plage choisie, tonalité, couleur, détail ou géométrie. Les masques qui ont besoin des coordonnées d'origine voient leurs conditions de sécurité vérifiées.
 
 ## Export
 
@@ -281,8 +236,7 @@ Au lieu de chemins, il enregistre les relations SHA-256 entre :
 - Les versions du décodeur et du moteur de rendu
 - Les octets de sortie, la taille en pixels, le format
 
-Il n'y a ni signature numérique ni certificat, donc ce n'est pas appelé C2PA Content Credentials.
-Plus de détail dans [Manifeste de rendu](../reference/RENDER_MANIFEST.md).
+Il n'y a ni signature numérique ni certificat, donc ce n'est pas appelé C2PA Content Credentials. Plus de détail dans [Manifeste de rendu](../reference/RENDER_MANIFEST.md).
 
 ## Tirage et épreuvage écran
 
@@ -296,24 +250,13 @@ Mises en page prises en charge :
 - Plaque de verre
 - Gélatino-argentique
 
-Image seule et les trois mises en page historiques créent une page verticale par photo
-sélectionnée. Planche-contact, package d’images et package personnalisé affichent et exportent leur
-nombre de pages terminées. Pour 39 photos : une page contact 6 × 7, 10 pages à quatre images, une
-page de package personnalisé par défaut ou 39 fichiers individuels.
+Image seule et les trois mises en page historiques créent une page verticale par photo sélectionnée. Planche-contact, package d’images et package personnalisé affichent et exportent leur nombre de pages terminées. Pour 39 photos : une page contact 6 × 7, 10 pages à quatre images, une page de package personnalisé par défaut ou 39 fichiers individuels.
 
-L’aperçu de package réutilise vignettes et images développées et ne matérialise un petit aperçu
-rapide qu’en cas de manque. L’export calcule les emplacements à partir des métadonnées, ne développe
-que les pixels requis, prépare deux à quatre sources uniques à la fois, conserve le graphe Core
-Image jusqu’à l’écriture et impose un budget de 512 MiB de rasters source par page.
+L’aperçu de package réutilise vignettes et images développées et ne matérialise un petit aperçu rapide qu’en cas de manque. L’export calcule les emplacements à partir des métadonnées, ne développe que les pixels requis, prépare deux à quatre sources uniques à la fois, conserve le graphe Core Image jusqu’à l’écriture et impose un budget de 512 MiB de rasters source par page.
 
-Chaque case d’un package observe l’image qui lui est assignée. L’ICC de sortie imprimante est
-appliqué une seule fois à la page finale complète, après la mise en page : les packages qui répètent
-une photo et ceux qui mélangent plusieurs photos suivent le même contrat. Il ne modifie ni la
-Bibliothèque ni l’aperçu Développement.
-Ni le TIFF de scan d'origine ni `-main-flat` ne reçoit de profil d'imprimante.
+Chaque case d’un package observe l’image qui lui est assignée. L’ICC de sortie imprimante est appliqué une seule fois à la page finale complète, après la mise en page : les packages qui répètent une photo et ceux qui mélangent plusieurs photos suivent le même contrat. Il ne modifie ni la Bibliothèque ni l’aperçu Développement. Ni le TIFF de scan d'origine ni `-main-flat` ne reçoit de profil d'imprimante.
 
-Sans ICC imprimante RVB valide, aucun autre profil n'est substitué. Les octets et le SHA-256 du
-profil que vous avez choisi entrent dans le manifeste de sortie.
+Sans ICC imprimante RVB valide, aucun autre profil n'est substitué. Les octets et le SHA-256 du profil que vous avez choisi entrent dans le manifeste de sortie.
 
 ## Archive de conservation
 
@@ -325,17 +268,13 @@ Ce qui entre dans `.negaflowarchive` :
 - L'historique GrainMend nécessaire
 - La relation entre les copies virtuelles et l'original qu'elles partagent
 
-Vignettes, aperçus, caches GrainMend et fichiers exportés peuvent être reconstruits, donc ils
-restent dehors.
-La structure BagIt de la RFC 8493 est utilisée avec une liste SHA-256, et chaque fichier et chaque
-relation sont vérifiés avant que le lot ne rejoigne son emplacement final.
+Vignettes, aperçus, caches GrainMend et fichiers exportés peuvent être reconstruits, donc ils restent dehors. La structure BagIt de la RFC 8493 est utilisée avec une liste SHA-256, et chaque fichier et chaque relation sont vérifiés avant que le lot ne rejoigne son emplacement final.
 
 - [Archive de bibliothèque](LIBRARY_ARCHIVE.md)
 - [RFC 8493](https://www.rfc-editor.org/info/rfc8493/)
 - [PREMIS](https://www.loc.gov/standards/premis/)
 
-La conservation à long terme demande aussi un autre support, une copie hors site et des
-vérifications d'empreintes régulières.
+La conservation à long terme demande aussi un autre support, une copie hors site et des vérifications d'empreintes régulières.
 
 ## Sécurité des plugins scanner
 
@@ -349,14 +288,9 @@ Quand un plugin est trouvé, ceci est vérifié.
 
 Si le fichier a changé, l'approbation précédente n'est pas réutilisée.
 
-Le protocole v2 utilise un identifiant de requête et un numéro de séquence, et exige exactement un
-résultat final.
-La taille de sortie a un plafond, et après un délai dépassé ou une annulation, le processus et ses
-tubes sont nettoyés.
+Le protocole v2 utilise un identifiant de requête et un numéro de séquence, et exige exactement un résultat final. La taille de sortie a un plafond, et après un délai dépassé ou une annulation, le processus et ses tubes sont nettoyés.
 
-Un plugin ne publie jamais lui-même un fichier à l'emplacement final.
-L'application lui donne un emplacement temporaire, vérifie le format, la taille, l'identifiant et
-les réglages réellement appliqués, puis déplace le fichier dans son propre stockage.
+Un plugin ne publie jamais lui-même un fichier à l'emplacement final. L'application lui donne un emplacement temporaire, vérifie le format, la taille, l'identifiant et les réglages réellement appliqués, puis déplace le fichier dans son propre stockage.
 
 Le contrat complet est dans [Architecture des plugins scanner](SCANNER_PLUGINS.md).
 
@@ -378,13 +312,9 @@ Catalogue :
 - Contrôles d'intégrité
 - Mesuré à 50 000 images
 
-Aujourd'hui, tout le catalogue est chargé en mémoire au démarrage.
-Sur le même Mac, la lecture SQLite a pris environ 7,4 secondes, proche du JSON.
-Ne lire que les lignes utiles, via un index, est l'étape suivante.
+Aujourd'hui, tout le catalogue est chargé en mémoire au démarrage. Sur le même Mac, la lecture SQLite a pris environ 7,4 secondes, proche du JSON. Ne lire que les lignes utiles, via un index, est l'étape suivante.
 
-Les limites de performance du dépôt sont des plafonds larges destinés à attraper une grosse
-régression.
-Ce ne sont pas une promesse de confort sur tous les Mac pris en charge.
+Les limites de performance du dépôt sont des plafonds larges destinés à attraper une grosse régression. Ce ne sont pas une promesse de confort sur tous les Mac pris en charge.
 
 ## Ce qui est vérifié
 

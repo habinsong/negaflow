@@ -34,7 +34,7 @@ To run it:
 
 - macOS 14.0 or later
 - Apple Silicon or Intel
-- 8 GB of memory for 35mm work. 16 GB is more comfortable with medium format.
+- 8 GB of memory for 35mm work, 16 GB is more comfortable with medium format
 
 To build it:
 
@@ -45,17 +45,14 @@ To build it:
 
 Download from [Releases](https://github.com/habinsong/negaflow/releases).
 
-| Download | Mac |
+| File | Supported Macs |
 |---|---|
-| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon and Intel |
+| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon, Intel |
 | `negaflow-1.1.0-mac-arm64.pkg` | Apple Silicon only |
 
-Most people should take the Universal PKG. Open it, follow the installer, and the app
-lands in `/Applications`. A DMG and a ZIP are on the same page if you would rather move
-the app yourself.
+The Universal PKG works for most people. It installs into `/Applications`. To move it yourself, use the DMG or the ZIP on the same page.
 
-The app is not notarized. On first launch macOS blocks it, and you allow it in
-System Settings under Privacy and Security by clicking Open Anyway.
+The app is not notarized, so macOS blocks it on the first launch. Allow it in System Settings under Privacy and Security with Open Anyway.
 
 Your library and settings live under `~/Library/Application Support/negaflow`.
 
@@ -63,7 +60,7 @@ Your library and settings live under `~/Library/Application Support/negaflow`.
 
 ```bash
 git clone https://github.com/habinsong/negaflow.git
-cd negaflow
+cd negaflow/negaflow-mac
 
 # Build a Release app and launch it
 bash scripts/run-app.sh
@@ -72,8 +69,7 @@ bash scripts/run-app.sh
 bash scripts/run-app.sh build
 ```
 
-`run-app.sh` runs `xcodebuild`, assembles the app bundle, and signs it locally. To work on
-the engine or the CLI alone, `swift build` is enough and skips Xcode.
+`run-app.sh` calls `xcodebuild`, assembles the app bundle, and signs it locally. For work on the engine or the CLI alone, `swift build` is enough.
 
 To produce release artifacts:
 
@@ -97,7 +93,7 @@ bash scripts/ci-gate.sh
 
 ## Command line
 
-The macOS build ships a full CLI alongside the app.
+The macOS build ships a CLI.
 
 ```bash
 swift build
@@ -122,11 +118,9 @@ Run `negaflow` with no arguments for the full option list.
 
 ## Scanners
 
-Scanner controls stay hidden until a plugin is installed.
-[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) covers SANE
-devices. Install it separately.
+Scanner controls stay hidden until a plugin is installed. SANE devices are handled by [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), installed separately.
 
-## Layout
+## Modules
 
 | Module | Role |
 |---|---|
@@ -137,10 +131,7 @@ devices. Install it separately.
 
 ## Reference images
 
-`docs/verification/macos-golden` in the repository root holds images rendered by this
-build. The Windows engine tests read them and compare pixel for pixel, which is how the
-two versions are kept in agreement. Regenerate them only when the macOS output is meant
-to change.
+`docs/verification/macos-golden` in the repository root holds images rendered by this build. The Windows engine tests read them and compare pixel for pixel. Regenerate them only when the macOS output is meant to change.
 
 ## Related documents
 

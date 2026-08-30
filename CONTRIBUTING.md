@@ -1,23 +1,17 @@
 # Contributing to negaflow
 
-Thank you for helping improve negaflow. Small, focused changes with clear verification are the
-easiest to review.
+Thank you for helping improve negaflow. Small, focused changes with clear verification are the easiest to review.
 
 ## Before opening an issue
 
 - Search existing issues first.
-- Use the bug report or feature request form and include only information needed to reproduce or
-  evaluate the request.
-- Do not disclose a security vulnerability in a public issue. Follow
-  [the security policy](SECURITY.md).
-- Report SANE backend, device discovery, and scanner-plugin packaging problems to
-  [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane/issues).
-  Issues in negaflow's plugin host, capability UI, or scan workflow belong here.
+- Use the bug report or feature request form and include only information needed to reproduce or evaluate the request.
+- Do not disclose a security vulnerability in a public issue. Follow [the security policy](SECURITY.md).
+- Report SANE backend, device discovery, and scanner-plugin packaging problems to [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane/issues). Issues in negaflow's plugin host, capability UI, or scan workflow belong here.
 
 ## Development setup
 
-The project requires macOS 14 or later. The GUI build uses Xcode 26, and the engine and CLI require
-Swift 5.9 or later.
+The project requires macOS 14 or later. The GUI build uses Xcode 26, and the engine and CLI require Swift 5.9 or later.
 
 ```bash
 git clone https://github.com/habinsong/negaflow.git
@@ -33,15 +27,11 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 bash scripts/run-app.sh build
 ```
 
-See [Product Architecture](docs/architecture/PRODUCT_ARCHITECTURE.md) before changing module
-boundaries or persistent data.
+See [Product Architecture](docs/architecture/PRODUCT_ARCHITECTURE.md) before changing module boundaries or persistent data.
 
 ### Line endings
 
-Every text file is stored and checked out with LF endings, pinned by `.gitattributes`. This holds
-regardless of your `core.autocrlf` setting, so the resource hashes in
-`scripts/ci/verify-provenance.py` stay reproducible on any platform. Windows-only PowerShell
-scripts are the one exception and keep CRLF working copies.
+Every text file is stored and checked out with LF endings, pinned by `.gitattributes`. This holds regardless of your `core.autocrlf` setting, so the resource hashes in `scripts/ci/verify-provenance.py` stay reproducible on any platform. Windows-only PowerShell scripts are the one exception and keep CRLF working copies.
 
 If your clone predates `.gitattributes`, run this once after pulling:
 
@@ -49,8 +39,7 @@ If your clone predates `.gitattributes`, run this once after pulling:
 git add --renormalize .
 ```
 
-That refreshes Git's cached file stats. No tracked content changes. Skipping it can make
-`git status` list a large number of files as modified even though `git diff` is empty.
+That refreshes Git's cached file stats. No tracked content changes. Skipping it can make `git status` list a large number of files as modified even though `git diff` is empty.
 
 ## Making a change
 
@@ -62,12 +51,10 @@ That refreshes Git's cached file stats. No tracked content changes. Skipping it 
 
 The following project rules are especially important:
 
-- Imported and scanned source files are immutable. Keep edits, sidecars, thumbnails, and caches
-  separate from the source.
+- Imported and scanned source files are immutable. Keep edits, sidecars, thumbnails, and caches separate from the source.
 - Never silently fall back to the original when a required non-destructive result cannot be rebuilt.
 - Scanner controls and requests must use only capabilities reported by the installed plugin.
-- Do not add SANE implementation code or a second app-to-plugin communication path to this
-  repository.
+- Do not add SANE implementation code or a second app-to-plugin communication path to this repository.
 - Automated checks do not replace real-scanner, final-image, signing, or notarization verification.
 
 ## Verification
@@ -86,9 +73,7 @@ bash scripts/run-app.sh build
 bash scripts/ci-gate.sh
 ```
 
-Document any check that was not run and why. UI, image-quality, performance, scanner, and release
-changes should include the relevant screenshots, measurements, hardware details, or artifact
-evidence.
+Document any check that was not run and why. UI, image-quality, performance, scanner, and release changes should include the relevant screenshots, measurements, hardware details, or artifact evidence.
 
 ## Pull requests
 
@@ -96,12 +81,9 @@ evidence.
 - Link the issue when one exists.
 - Keep unrelated cleanup and formatting out of the pull request.
 - Describe the commands and manual scenarios used for verification.
-- Call out data migration, source-file safety, plugin-contract, localization, performance, or release
-  impact.
-- Do not include build products, credentials, private scans, proprietary datasets, or third-party
-  material without clear redistribution rights.
+- Call out data migration, source-file safety, plugin-contract, localization, performance, or release impact.
+- Do not include build products, credentials, private scans, proprietary datasets, or third-party material without clear redistribution rights.
 
-By submitting a contribution, you confirm that you have the right to provide it under this
-repository's [Apache License 2.0](LICENSE).
+By submitting a contribution, you confirm that you have the right to provide it under this repository's [Apache License 2.0](LICENSE).
 
 All contributors must follow the [Code of Conduct](CODE_OF_CONDUCT.md).

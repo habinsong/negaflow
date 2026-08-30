@@ -4,13 +4,13 @@
 
 <h1 align="center">negaflow</h1>
 
-<p align="center">Eine App für den Analogfilm-Ablauf, vom Scan über die Entwicklung bis zum Druck. Nativ auf macOS und auf Windows.</p>
+<p align="center">Vom Film zum fertigen Foto. Läuft auf macOS und Windows jeweils nativ.</p>
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/de/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="Website"></a>
-  <a href="#install"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="Version 1.1.0"></a>
+  <a href="#download"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="Version 1.1.0"></a>
   <a href="negaflow-mac/docs/README_de.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 oder neuer"></a>
-  <a href="negaflow-windows/docs/README_de.md"><img src="https://img.shields.io/badge/Windows-11-0078D4?logo=windows&logoColor=white" alt="Windows 11"></a>
+  <a href="negaflow-windows/docs/README_de.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 oder neuer"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache-2.0-Lizenz"></a>
 </p>
 
@@ -25,7 +25,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/de/">Website</a> ·
-  <a href="https://habinsong.github.io/negaflow-site/de/camera-scanning/">Anleitung zum Abfotografieren</a> ·
+  <a href="https://habinsong.github.io/negaflow-site/de/camera-scanning/">Abfotografieren mit der Kamera</a> ·
   <a href="https://habinsong.github.io/negaflow-site/de/faq/">FAQ</a>
 </p>
 
@@ -34,325 +34,146 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/de/develop-dark.webp">
-    <img src="docs/images/de/develop-light.webp" alt="negaflow Entwicklung">
+    <img src="docs/images/de/develop-light.webp" alt="negaflow, Ansicht Entwickeln">
   </picture>
 </p>
 
-negaflow ist eine macOS-App zum Importieren, Invertieren und Entwickeln von Filmscans und Kamera-Reproduktionen.<br>
-Sie verarbeitet Farb- und Schwarzweißfilm, Negative und Positive.<br>
-Bearbeitungen werden getrennt von der Originaldatei gespeichert.<br>
-Die App begleitet den digitalen Film-Workflow von der Bibliothek über die Entwicklung bis zum Druck.
+**negaflow** ist eine App, die Film, den Sie gescannt oder mit der Kamera abfotografiert haben, hereinnimmt und entwickelt. Farbe wie Schwarzweiß, Negativ wie Positiv, alles geht. Von der Bibliothek über das Entwickeln bis zum Abzug ist alles in einer App erledigt. Die Bearbeitungswerte werden getrennt vom Original gespeichert, die Originaldatei bleibt also, wie sie ist.
 
-Die Entwicklungs-Engine heißt **Chroma Engine**.<br>
-Die Staub- und Kratzerreparatur heißt **GrainMend**.<br>
-Für Entwicklung und Export reicht eine importierte Bilddatei.<br>
-Scanner-Funktionen erscheinen nur, wenn ein separates Plug-in installiert ist.
+Die Entwicklungs-Engine heißt **Chroma Engine**, die Reparatur von Staub und Kratzern heißt **GrainMend**. Es macht nichts, wenn Sie keinen Scanner haben. Auch wenn Sie nur Bilddateien importieren, können Sie entwickeln und exportieren. Die Scanner-Verbindung öffnet sich erst, wenn Sie ein Plug-in separat installieren.
 
-> Die Technik entwickelt sich weiter, doch der Ablauf rund um die analoge Fotografie ist stehen geblieben, obwohl Film wieder beliebter wird.<br>
-> Ohne einen klassischen Dunkelkammerabzug muss Film erst digitalisiert werden, bevor die meisten von uns das Bild sehen und teilen können.<br>
-> Genau dieser Teil wird kleiner, weil Labore und Entwicklungsdienste verschwinden und damit auch die Auswahl.
-> <br>
-> Das Projekt entstand aus Problemen, die mir in verschiedenen Arbeitsabläufen begegnet sind, und aus Funktionen, die ich dort vermisst habe.<br>
-> Meine Erfahrungen mit Kleinbild- und Mittelformatfilm bilden die Grundlage; jeden Teil habe ich selbst von Grund auf entwickelt.<br>
-> Anfangs war es ein kleines Projekt nur für mich.<br>
-> Inzwischen ist **negaflow** mehr daraus geworden.<br>
-> So ein Werkzeug muss vor allem zuverlässig sein, leicht von der Hand gehen, schnell reagieren und Routinearbeit ordentlich erledigen.<br>
-> **negaflow** wird unabhängig als native macOS-App entwickelt und verbindet Abläufe aus Filmlaboren mit der Arbeit zu Hause.
+> Anders als das Wachstum der analogen Mode in letzter Zeit steckt der Prozess der analogen Fotografie derzeit fest. Solange man den Film nicht analog vergrößert, muss er den Weg der Umwandlung ins Digitale gehen, damit er uns endlich vor Augen kommt.
 >
-> **Diesem Sommer gewidmet, zweihundert Jahre seit Niépces erster Fotografie.**
+> Doch dieser ganze Ablauf kommt zum Stillstand. Filmlabore und Entwicklungsdienste verschwinden nach und nach, und die Unterstützung durch die Hersteller und für deren Produkte nimmt ab.
+>
+> Dieses Projekt begann mit den Unannehmlichkeiten, die ich beim Arbeiten auf die eine und die andere Weise gespürt habe, und mit dem Gedanken, dass es schön wäre, wenn es eine solche Funktion gäbe. Auf Grundlage der Erfahrung und des Wissens, die ich beim Arbeiten mit Kleinbild und Mittelformat gewonnen habe, habe ich von eins bis zehn alles selbst entwickelt. Anfangs war es ein Spielzeugprojekt, an dem ich für mich allein herumgebaut habe, doch inzwischen ist negaflow etwas mehr als das geworden.
+>
+> Am Ende zählt vor allem, dass es „gut“ läuft und bequem zu benutzen ist, dass es schnell sein muss, und dass am Ende ein Ergebnis steht, das von allein ordentlich gemacht wurde. Eigenständig entwickelt, läuft **negaflow** auf macOS und Windows jeweils nativ, und ich habe die Arbeitsabläufe der Filmlabore wie die der Einzelnen alle hineingeschmolzen.
+>
+>
+> **Diesem Sommer gewidmet, dem zweihundertsten Jahr seit Niépces erster Fotografie.** 25. Juli 2026.
+## negaflow for macOS and Windows
 
----
-
-## Zwei Apps, getrennt gebaut
-
-negaflow läuft auf macOS und auf Windows. Die beiden Apps teilen sich keinen Code.
 
 | | macOS | Windows |
 |---|---|---|
 | Oberfläche | SwiftUI | WinUI 3 |
-| Engine | Swift und Core Image | C++ und Direct3D |
+| Engine | Swift + Core Image | C++ + Direct3D |
 | Farbmanagement | ColorSync | Windows ICM |
 
-Dasselbe Foto ergibt auf beiden Seiten dasselbe Bild. Referenzbilder aus dem macOS-Build
-liest die Windows-Testsuite zurück und vergleicht sie Pixel für Pixel.
+Die beiden Apps sind native Apps, in unterschiedlichen Sprachen und auf unterschiedliche Weise entwickelt, und trotzdem sind Funktionen und Ergebnisse gleich.
 
-Jede Fassung ist für ihre eigene Plattform geschrieben statt portiert, was bedeutet, alles
-zweimal zu bauen. Dafür verhalten sich beide so, wie man es auf dem jeweiligen System
-erwartet.
+Es gibt einen Weg, beide auf einmal zu bauen (plattformübergreifend), aber dabei werden beide langsam und laufen nicht richtig. Deshalb habe ich den Code je Betriebssystem auf dessen eigene Art von vorn geschrieben. Was gleich ist und was nicht, steht [hier](docs/de/platform/PLATFORM_DIFFERENCES.md).
 
-- [macOS-Dokumentation](negaflow-mac/docs/README_de.md)
-- [Windows-Dokumentation](negaflow-windows/docs/README_de.md)
-- [Wo sich beide unterscheiden](docs/de/platform/PLATFORM_DIFFERENCES.md)
+## Download
 
----
+Sie holen es sich bei [GitHub Releases](https://github.com/habinsong/negaflow/releases).
 
-## Installation
-
-Die aktuelle Version gibt es bei [GitHub Releases](https://github.com/habinsong/negaflow/releases).
-
-### macOS
-
-| Download | Mac |
+| Datei | Umgebung |
 |---|---|
-| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon und Intel |
-| `negaflow-1.1.0-mac-arm64.pkg` | Nur Apple Silicon |
+| `negaflow-1.1.0-mac-universal.pkg` | macOS 14 oder neuer, Apple Silicon und Intel |
+| `negaflow-1.1.0-mac-arm64.pkg` | macOS 14 oder neuer, nur Apple Silicon |
+| `negaflow-1.1.0-win-x64.exe` | Windows 11 24H2 oder neuer, x64 |
 
-Für die meisten Macs passt das Universal-PKG.
+Für die meisten Macs genügt das Universal-PKG. Natürlich liegen die Datei für Silicon sowie ein DMG und ein ZIP auf derselben Seite. Beim ersten Start müssen Sie in den Systemeinstellungen unter Datenschutz und Sicherheit einmal auf Trotzdem öffnen klicken.
 
-1. Laden Sie das PKG für Ihren Mac herunter.
-2. Öffnen Sie es und folgen Sie dem Installationsprogramm.
-3. Starten Sie **negaflow** aus `/Applications`.
+Die Windows-Installation endet innerhalb Ihres Benutzerordners und fragt nicht nach Administratorrechten. Da es keine Signatur gibt, blockt SmartScreen einmal. Klicken Sie auf Weitere Informationen und führen Sie es aus. Entfernen können Sie es über die Systemsteuerung.
 
-Auf derselben Seite liegen DMG und ZIP, falls Sie lieber von Hand installieren.
-Die App ist nicht notarisiert. Beim ersten Start öffnen Sie die Systemeinstellungen,
-gehen zu Datenschutz und Sicherheit und klicken auf Trotzdem öffnen.
-
-### Windows
-
-| Download | PC |
-|---|---|
-| `negaflow-1.1.0-win-x64.exe` | Windows 11 (x64) |
-
-1. Installationsprogramm herunterladen und starten.
-2. Sprache wählen und den Schritten folgen.
-3. **negaflow** über das Startmenü öffnen.
-
-Alles landet in Ihrem Benutzerordner, Administratorrechte sind nicht nötig.
-Zum Entfernen nehmen Sie `negaflow deinstallieren` im Startmenü oder die App-Liste
-in den Einstellungen.
-Das Installationsprogramm ist nicht signiert, deshalb warnt SmartScreen einmal.
-Klicken Sie auf Weitere Informationen und dann auf Trotzdem ausführen.
-
-> Für einen echten Scanner brauchen Sie ein separates Plug-in.<br>
-> SANE-Scanner übernimmt [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), verfügbar für macOS und Windows.
-
----
+Um einen echten Scanner anzuschließen, braucht es ein separates Plug-in, und für SANE-Scanner gibt es [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane). Selbstverständlich läuft es auf macOS wie auf Windows.
 
 ## Funktionen
-
-- Messung der Filmbasis und Invertierung von Farb- oder Schwarzweißfilm
-- Belichtung, Kontrast, Kurven, HSL, Farbkorrektur und Schwarzweiß-Tonung
-- Schärfung, Rauschminderung, Korn, Vignette und Halation
-- Staub- und Kratzerreparatur mit GrainMend, samt GrainMend IR über einen Infrarotdurchgang des Scanners
-- Filme, Ordner, Sammlungen, Bewertungen, Stapel und virtuelle Kopien
-- Zoom, Zuschnitt, Drehung, Vergleichsansichten, Histogramm und Beschnittwarnung
-- Kamera, Objektiv, Film und Belichtung als Notiz, geschrieben in die EXIF der Exportdatei
-- Aufnahmedaten je Rolle und Suche in der Bibliothek nach Kamera, Objektiv oder Film
-- JPEG- und 16-Bit-TIFF-Export, ICC-Profile und Drucklayouts
-- Layoutbezogene Bögen in Schwarz/Grau/Weiß, gemeinsame Vorschau für Matt/Glänzend/Lustre/Seide,
-  Foto-/ISO-Formate und optionale in/cm-Lineale
-- C-Print-Angaben zu Labor und Papier mit ICC-Softproof
-- Importfortschritt, Entwicklung pro Ordner mit Prozess, Ziel und Fortschrittsanzeige
-- Gespeicherte Ordnerzustände, Verschieben per Drag-and-drop und Finder-Synchronisierung
-- Vorgaben und Kopieren/Einfügen einschließlich Prozess, Ziel, Korrekturen, Beschnitt und Ausrichtung
-- Sieben Abzugslayouts: Einzelbild, Kontaktbogen, Bildpaket, Benutzerpaket, Cyanotypie,
-  Glasplatte und Silbergelatine
-- Seitenbezogener Abzugs- und Schnellexport: Ein 6 × 7-Kontaktbogen mit 39 Fotos wird zu einer
-  zusammengesetzten Datei, Einzelbildlayouts zu 39 Dateien, mit linearem Fortschritt und Prozent
-
+> Alles, was analogen Film zu einem fertigen Foto macht, steckt darin.
+- Angefangen bei der Messung der Filmbasis und der Entwicklung von Farb- und Schwarzweißnegativen und -positiven
+- Alles, was die Korrektur braucht: Belichtung, Kontrast, Kurven, HSL, Colorgrading
+- Zusatzoptionen wie Schärfung, Rauschminderung, Korn, Vignette, Halation
+- GrainMend, das Fotos wiederherstellt, indem es Staub und Kratzer entfernt.
+- Eine Bibliothek mit Filmen, Ordnern, Sammlungen, Bewertungen, Stapeln, virtuellen Kopien und Suche nach Kamera, Objektiv oder Film
+- Vorgaben und Kopieren/Einfügen, die Entwicklungsprozess, Ziel, Tonwert, Farbe, Detail, Ausschnitt und Ausrichtung gemeinsam mitnehmen
+- Export als JPEG und 16-Bit-TIFF, ICC-Profile, und Angaben wie Kamera, Objektiv und Film ins EXIF geschrieben
+- Sieben Abzugslayouts und Papiervorschauen, Foto- und ISO-Papiere, bis hin zur C-Print-Funktion.
 
 ## Chroma Engine
 
-Chroma Engine ist die Film-Invertierungs- und Entwicklungs-Engine im Modul `Chromabase`.<br>
-Vor der Invertierung eines Negativs misst sie die unbelichtete Filmbasis.<br>
-Falls die automatische Messung nicht passt, kann ein Bereich mit der Pipette gewählt oder ein RGB-Wert eingegeben werden.
+**Chroma Engine** übernimmt Invertierung und Entwicklung des Films.
 
-Der Ausgangszustand ist `MAIN` mit manuellen Korrekturen.<br>
-Automatischer Tonwert, automatischer Weißabgleich, automatische Tonwertspreizung und automatische Farbe werden nur auf ausdrücklichen Aufruf angewendet.
+Bevor ein Negativ entwickelt wird, misst sie zuerst die Filmbasis. Sie liest den Wert aus einem Bereich, den das Licht nie erreicht hat. Wo die automatische Messung danebenliegt, tippen Sie einfach mit der Pipette oder passen die RGB-Werte an.
 
-Entwicklungsziele:
+Voreingestellt sind `MAIN` und manuelle Korrekturen. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe laufen nur, wenn Sie sie drücken.
 
-- `MAIN`: normale Entwicklung
-- `PRINT`: Ausgabe über ein Drucker-ICC-Profil
-- `HS`, `SP`: Entwicklung im Minilab-Stil
-- `F135`, `HR`: Stile der entsprechenden Gerätefamilien
-- `EXPIRED`: Rettung alten Films
+Die übrigen Ziele sind diese. `PRINT`, das über ein Drucker-ICC ausgibt, `HS` und `SP` aus der Minilab-Familie, `F135` und `HR` aus der Familie der Laborgeräte, `EXPIRED`, das alten Film zurückzuholen versucht. Bei der Ausgabe wählen Sie zwischen sRGB, Display P3, Adobe RGB und einem eigenen RGB-ICC.
 
-Die Ausgabe unterstützt sRGB, Display P3, Adobe RGB und eigene RGB-ICC-Profile.<br>
-Die Reihenfolge von Invertierung und Farbverarbeitung steht unter [Chroma Engine](docs/de/product/CHROMA_ENGINE.md).
+Die Reihenfolge von Invertierung und Farbverarbeitung steht in der [Chroma-Engine-Dokumentation](docs/de/product/CHROMA_ENGINE.md).
 
 ## GrainMend
 
-**GrainMend repariert Filmfehler: Staub, Pinholes, Kratzer und Emulsionsschäden.** <br>
+> **GrainMend** repariert Staub, Pinholes, Kratzer und Emulsionsschäden.
+
+**GrainMend RGB** ist ein Software-Verfahren und unterscheidet sich damit vom Hardware-IR. <br> <br>
+`Automatisch` geht das ganze Foto durch. Einfach, aber Fehlerkennungen wird es geben. <br>
+`Geführt` sieht sich nur den angegebenen Bereich an. Auf Staub, der beim Scannen dazukommt, wirkt es am besten. <br>
+`Pinsel` ist das Werkzeug, um die von Automatisch übersehenen Stellen selbst zu übermalen, und der Klonstempel überträgt die Pixel einer gewählten Position unverändert.<br>
+`Klonstempel` ist eine Stempelfunktion, bei der Sie die gewünschte Textur auswählen und selbst auftragen. <br>
+
+Automatisch und Geführt füllen Defekte, indem sie die umgebende Textur ansehen. Vor dem Füllen sehen sie zuerst Richtung und umgebende Struktur an. Hält man ein Geländer oder eine Fliesenfuge im Foto für einen Kratzer und löscht sie, dann ist das keine Wiederherstellung, sondern ein Schaden.
+
+Das Ergebnis der Korrekturen bleibt als Ebenen erhalten. Sie können die Stärke ändern, die Maske prüfen und einzelne abschalten oder löschen.<br>
+**GrainMend IR** fügt die Erkennungsergebnisse aus dem Infrarotkanal, den ein Scanner-Plug-in übergibt, demselben Verlauf hinzu.
 
 
-| GrainMend RGB | Aufgabe |
-|---|---|
-| Auto | Findet und repariert Fehler im ganzen Bild. |
-| Geführt | Sucht Fehler in einem markierten Bereich. |
-| Pinsel | Lässt die zu reparierende Stelle direkt übermalen. |
-| Kopierstempel | Kopiert Pixel von einem gewählten Quellpunkt. |
 
+**GrainMend IR** nutzt den Infrarotkanal (IR) des Scanners, ist aber weder eine Implementierung noch ein Kompatibilitätsmodus von Digital ICE, iSRD oder SRDx. Die Arbeitsweise sowie die Qualitäts- und Leistungsmaßstäbe stehen in der [GrainMend-Dokumentation](docs/de/product/GRAINMEND.md).
 
-Auto und Geführt in **GrainMend RGB** füllen einen Fehler mit Textur aus der Umgebung und <br>
-prüfen dabei Richtung und benachbarte Strukturen, damit Linien oder Gitter im Motiv nicht als Kratzer verschwinden. <br>
-Jedes Ergebnis bleibt als GrainMend-Ebene erhalten. <br><br>
-> Auto beseitigt die üblichen Fehler eines Bildes. Werden die Kandidaten zu dicht, um sie sicher anzuwenden, stoppt es ohne Bildänderung und verweist auf Geführt. <br>
-> Geführt ist für die unterschiedlichen Staubspuren gedacht, die beim Scannen entstehen. Der Pinsel repariert, was die automatischen Durchgänge übersehen haben, und der Kopierstempel überträgt die selbst gewählten Quellpixel. <br>
-Bei jeder **GrainMend RGB**-Ebene lassen sich Stärke ändern, Maske ansehen sowie einzeln deaktivieren oder löschen.
+## Vom Import zum Abzug
 
+1. Bilddateien importieren oder mit einem installierten Plug-in scannen.
+2. Die Art des Entwicklungsprozesses wählen und das Scanziel angeben.
+3. Farbe und Tonwert in der Chroma Engine anpassen.
+4. GrainMend auf die Fotos anwenden, die es brauchen.
+5. Mit Vorher/Nachher-Ansicht und Histogramm prüfen, dann drucken oder exportieren.
 
-Liefert das Scanner-Plug-in einen Infrarotkanal, ergänzt **GrainMend IR** seine Erkennung in derselben Bearbeitungshistorie.<br><br>
+Nur zu importieren entwickelt nichts. Es beginnt, wenn Sie für einen Ordner Prozess und Ziel wählen und **Anwenden** drücken, oder wenn Sie die Ansicht Entwickeln öffnen. Es gibt auch eine eigene Einstellung, die das automatisch erledigt, und deren Standard ist aus.
 
-**GrainMend RGB** ist ein eigenständiges Softwareverfahren und unterscheidet sich von hardwarebasierter Infrarotreinigung; <br>
-**GrainMend IR** nutzt den Infrarotkanal des Scanners und ist keine Implementierung oder Kompatibilitätsfunktion für Digital ICE, iSRD oder SRDx.
-
-Umsetzung sowie Qualitäts- und Leistungskontrollen stehen unter [GrainMend](docs/de/product/GRAINMEND.md).
-
-## Filmprofile
-
-Die App enthält 15 Scannerprofile aus Filmmaterial, das der Projektentwickler selbst aufgenommen hat.<br>
-Zusammen enthalten sie 928 Bildbeobachtungen.<br>
-Alle Profile haben derzeit den Stand `realOnly`: Sie beruhen auf echten Scans, haben aber noch keine unabhängige Genauigkeitsprüfung mit Referenzpaaren bestanden.
-
-Ein Profil wird nicht allein anhand des Scanner-Namens angewendet.<br>
-Es muss manuell gewählt werden.<br>
-Die App prüft außerdem die SHA-256-Werte jedes Profils und des Manifests.
-
-`928` ist die Summe der Beobachtungen aller Profilgruppen, nicht die Zahl unterschiedlicher Fotos.<br>
-Derselbe Film kann in mehreren Scannergruppen gezählt sein.<br>
-Ich habe alle 928 Ausgangsscans selbst geprüft und Dateien mit Fehl- oder Nichterkennungen vor der Messung ausgeschlossen.<br>
-Daten und Erzeugung sind unter [Filmprofile](docs/de/product/FILM_PROFILES.md) beschrieben.
-
-## Grundlegender Ablauf
-
-1. Bilddatei importieren oder mit einem installierten Plug-in scannen.
-2. Filmtyp wählen und Filmbasis messen.
-3. Farbe und Ton in Chroma Engine einstellen.
-4. GrainMend auf die benötigten Bilder anwenden.
-5. Ergebnis in Vergleichsansichten und Histogramm prüfen und anschließend drucken oder exportieren.
+Was jede Aktion mit Ihren Originaldateien macht, ist als Tabelle in [Von der Bibliothek zum Abzug](docs/de/product/WORKFLOW.md) zusammengestellt.
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/de/library-dark.webp">
-    <img src="docs/images/de/library-light.webp" alt="negaflow Mediathek">
+    <img src="docs/images/de/library-light.webp" alt="negaflow, Ansicht Bibliothek">
   </picture>
 </p>
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/de/print-dark.webp">
-    <img src="docs/images/de/print-light.webp" alt="negaflow Druck">
+    <img src="docs/images/de/print-light.webp" alt="negaflow, Ansicht Abzug">
   </picture>
 </p>
 
-Die Oberfläche ist für Menschen gebaut, die wirklich mit Fotos arbeiten, nicht als beliebiger KI-generierter Entwurf.<br>
-Wer Fotografie als Hobby betreibt, soll sich darin ohne Umwege zurechtfinden.
+## Scanner und Filmprofile
 
-## Von der Bibliothek zum Druck
+negaflow selbst schaltet keine Funktionen anhand eines Scanner-Modellnamens frei.<br> Es benutzt nur Auflösung, Bittiefe, Scanbereich, Belichtung und IR-Unterstützung, wie das Plug-in sie meldet. Rät man vom Namen aus, gehen Funktionen an, die das Gerät gar nicht hat.
 
-Ein Import startet standardmäßig keine Entwicklung. negaflow legt zuerst das Quellvorschaubild und
-den Ordner an. Die Entwicklung beginnt, wenn Prozess und Ziel auf einen Ordner angewendet werden
-oder wenn Entwickeln geöffnet wird. Die automatische Entwicklung lässt sich in den
-Arbeitsablauf-Einstellungen einschalten und ist standardmäßig aus.
+SANE-Geräte übernimmt [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), ein eigenständiges GPL-Projekt. Das Plug-in läuft als eigener Prozess, das Austauschformat ist JSON. In **negaflow** steckt kein SANE-Code, und es wird auch keiner eingebunden.
 
-Eingeklappte Ordner bleiben nach einem Neustart eingeklappt. Fotos können zwischen Ordnern
-verschoben werden. Existiert der Dateiname bereits, ergänzt negaflow eine Nummer, statt die Datei
-zu überschreiben. Verschieben oder Umbenennen im Finder aktualisiert die Bibliothek, wobei nur der
-geänderte Ordner neu gelesen wird.
+Im Paket sind 15 Scannerprofile enthalten. Sie sind aus Film entstanden, den ich selbst fotografiert habe, und die Zahl der erfassten Daten beträgt 928.
 
-Kopieren/Einfügen von Entwicklungseinstellungen und Benutzervorgaben umfassen Prozess, Ziel,
-Filmbasis, Ton, Farbe, Details, Beschnitt, Drehung, Spiegelung und Ausrichtung. Bei einer
-Mehrfachauswahl gilt das Einfügen für alle ausgewählten Fotos.
+Der Status ist überall `realOnly`. Das heißt, sie wurden zwar aus echten Scans gebaut, sind aber nicht so weit, dass die Genauigkeit gegen eine unabhängige Referenz geprüft wäre. Ich wollte Ungeprüftes nicht als geprüft hinschreiben. Profile greifen nicht automatisch anhand eines Scannernamens, Sie müssen sie selbst wählen.
 
-Das Drucker-Ausgabeprofil im Druckbereich wird auf die zusammengesetzte Seite angewendet. Dadurch
-erhalten wiederholte Platzierungen und Pakete mit mehreren Fotos dieselbe Ausgabeumwandlung. Die
-Vorschau in Entwickeln bleibt davon unberührt.
-
-Einzelheiten stehen unter [Von der Bibliothek zum Druck](docs/de/product/WORKFLOW.md).
-
-## Aus dem Quellcode bauen
-
-Werkzeuge und Befehle unterscheiden sich je nach Plattform. Ausführlich steht es in der jeweiligen Dokumentation.
-
-**macOS**
-
-```bash
-git clone https://github.com/habinsong/negaflow.git
-cd negaflow
-
-# Release bauen und starten
-bash scripts/run-app.sh
-
-# Nur bauen, nicht starten
-bash scripts/run-app.sh build
-```
-
-Sie brauchen macOS 14 oder neuer und Xcode 26. Für Engine und CLI allein genügt `swift build`.
-Mehr steht in der [macOS-Dokumentation](negaflow-mac/docs/README_de.md).
-
-**Windows**
-
-```powershell
-git clone https://github.com/habinsong/negaflow.git
-cd negaflow\negaflow-windows
-
-# Engine bauen
-.\scripts\build.ps1 -Preset x64-release
-
-# App bauen und starten
-.\scripts\run-app.ps1 -Architecture x64 -Configuration Release
-```
-
-Sie brauchen Windows 11, Visual Studio 2022 und das .NET 10 SDK.
-Mehr steht in der [Windows-Dokumentation](negaflow-windows/docs/README_de.md).
-
-## Scanner
-
-negaflow leitet Funktionen nicht aus einem Scanner-Modellnamen ab.<br>
-Es verwendet nur Auflösungen, Bittiefen, Scanbereiche, Belichtungssteuerung und IR-Unterstützung, die das Plug-in meldet.
-
-SANE-Geräte betreut das separate GPL-Projekt [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane).<br>
-Das Plug-in läuft in einem eigenen Prozess und spricht über JSON mit der App.<br>
-Die Haupt-App enthält und verlinkt keinen SANE-Code.
-
-## Repository
-
-```
-negaflow/
-├── negaflow-mac/       macOS-App und Engine (Swift)
-├── negaflow-windows/   Windows-App und Engine (C#, C++)
-└── docs/               gemeinsame Dokumentation
-```
-
-**macOS**
-
-| Modul | Aufgabe |
-|---|---|
-| `Chromabase` | Chroma Engine, GrainMend, Profile, Export |
-| `ScannerKit` | Scannerfähigkeiten prüfen und Plug-in anbinden |
-| `negaflowApp` | Bibliothek, Entwicklung, Scan und Export |
-| `negaflowCLI` | Entwickeln, scannen, messen, Selbsttest |
-
-**Windows**
-
-| Modul | Aufgabe |
-|---|---|
-| `Native` | Chroma Engine, GrainMend, Export (C++) |
-| `Interop` | Die Brücke zwischen Engine und App |
-| `Catalog.Core` | Speicher der Bibliothek |
-| `Shell.Core` | Logik für Entwicklung, Druck und Export |
-| `Shell` | Bibliothek, Entwicklung und Druck (WinUI 3) |
-
-Wie die Daten zwischen den Modulen laufen, steht in der [Produktarchitektur](docs/de/architecture/PRODUCT_ARCHITECTURE.md).
+Näheres steht in der [Filmprofil-Dokumentation](docs/de/product/FILM_PROFILES.md).
 
 ## Dokumentation
 
-| Dokument | Inhalt |
-|---|---|
-| [Chroma Engine](docs/de/product/CHROMA_ENGINE.md) | Filmbasis, Umkehrung, Farbverarbeitung, Reihenfolge |
-| [GrainMend](docs/de/product/GRAINMEND.md) | Defekterkennung und Reparatur, IR, Bearbeitungsverlauf, Qualität und Tempo |
-| [Filmprofile](docs/de/product/FILM_PROFILES.md) | Auswertung des Materials und Profilerstellung |
-| [Von der Bibliothek zum Druck](docs/de/product/WORKFLOW.md) | Import, Ordnerabgleich, Stapelentwicklung, Druckprofil |
-| [Produktarchitektur](docs/de/architecture/PRODUCT_ARCHITECTURE.md) | App, Engine, Scanner, Speicher, Export |
-| [Wo sich beide unterscheiden](docs/de/platform/PLATFORM_DIFFERENCES.md) | Was gleich ist und was nicht |
-| [macOS-Dokumentation](negaflow-mac/docs/README_de.md) | Installation, Bauen, CLI unter macOS |
-| [Windows-Dokumentation](negaflow-windows/docs/README_de.md) | Installation, Bauen, Engine-Prüfungen unter Windows |
+- [Chroma Engine](docs/de/product/CHROMA_ENGINE.md) | Filmbasis, Invertierung, Farbverarbeitung und Entwicklungsreihenfolge
+- [GrainMend](docs/de/product/GRAINMEND.md) | Defekterkennung und Reparatur, IR, Bearbeitungsverlauf
+- [Filmprofile](docs/de/product/FILM_PROFILES.md) | Materialanalyse und Profilerzeugung
+- [Von der Bibliothek zum Abzug](docs/de/product/WORKFLOW.md) | Import, Ordnerabgleich, Stapelentwicklung, Abzug
+- [Produktarchitektur](docs/de/architecture/PRODUCT_ARCHITECTURE.md) | Struktur von App, Engine, Speicherung und Export
+- [Die ganze Dokumentation](docs/de/README.md) | mehrsprachig (6 Sprachen)
+
+## Selbst bauen
+
+Werkzeuge und Befehle unterscheiden sich je Plattform. Der vollständige Ablauf steht in der jeweiligen Dokumentation. [macOS](negaflow-mac/docs/README_de.md) braucht macOS 14 oder neuer und Xcode 26, [Windows](negaflow-windows/docs/README_de.md) braucht Windows 11 24H2, Visual Studio 2022 und das .NET 10 SDK. Die Arbeitsregeln für das Repository stehen in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Lizenz
 
-Das negaflow-Hauptprojekt wird unter der [Apache License 2.0](LICENSE) veröffentlicht.
-
-negaflow ist weder mit Kodak, Fujifilm, Noritsu, LaserSoft Imaging noch mit anderen Markeninhabern verbunden oder von ihnen unterstützt.<br>
-Produktnamen dienen nur zur Benennung eines Mess- oder Kompatibilitätsziels.<br>
-Siehe [Markenhinweis](TRADEMARKS.md).
+**negaflow** wird unter der [Apache-Lizenz 2.0](LICENSE) veröffentlicht. Es steht in keiner Verbindung zu Kodak, Fujifilm, Noritsu, LaserSoft Imaging oder einem anderen Markeninhaber und wird von ihnen nicht gesponsert. Produktnamen werden nur benutzt, um zu benennen, womit etwas kompatibel ist oder woran es gemessen wurde. Die [Markenhinweise](TRADEMARKS.md) führen es genauer aus.

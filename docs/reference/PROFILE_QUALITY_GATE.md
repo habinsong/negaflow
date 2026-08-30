@@ -2,30 +2,18 @@
 
 [Docs home](../README.md)
 
-`scripts/evaluate_profile_quality.py` checks that a change to a scanner profile did not come out
-worse than the accepted baseline.
-It compares two `SOURCE/summary.json` files produced by `LUT_target/analyze_lut_target.py`, and only
-the validation cases that were kept out of profile tuning count toward the decision.
+`scripts/evaluate_profile_quality.py` checks that a change to a scanner profile did not come out worse than the accepted baseline. It compares two `SOURCE/summary.json` files produced by `LUT_target/analyze_lut_target.py`, and only the validation cases that were kept out of profile tuning count toward the decision.
 
-The tool does not decide what "good color" is.
-Which numbers should go down, which should go up, and how much movement is acceptable are written
-into the corpus manifest by a person.
-No default pass values are handed out.
+The tool does not decide what "good color" is. Which numbers should go down, which should go up, and how much movement is acceptable are written into the corpus manifest by a person. No default pass values are handed out.
 
-There is no REAL/TARGET image pair in this repository today.
-So there is no real corpus manifest, no accepted baseline, and no pass result from a real device
-either.
-The synthetic tests check the checker's code and nothing else.
+There is no REAL/TARGET image pair in this repository today. So there is no real corpus manifest, no accepted baseline, and no pass result from a real device either. The synthetic tests check the checker's code and nothing else.
 
 > [!WARNING]
-> Scanner color accuracy cannot be approved from this repository alone. A real release decision
-> needs pinned REAL/TARGET pairs, validation cases that were not used for tuning, and tolerances
-> set by a person.
+> Scanner color accuracy cannot be approved from this repository alone. A real release decision needs pinned REAL/TARGET pairs, validation cases that were not used for tuning, and tolerances set by a person.
 
 ## How far the app uses the current profiles
 
-When you pick the `NORITSU` or `FUJI` target yourself, a limited relative difference from the
-bundled `realOnly` group can be used.
+When you pick the `NORITSU` or `FUJI` target yourself, a limited relative difference from the bundled `realOnly` group can be used.
 
 Conditions:
 
@@ -33,9 +21,7 @@ Conditions:
 - The tidied set of source roll names matches.
 - The image count differs by 15% or less.
 
-The source profiles carry no per-frame ID or SHA-256.
-Matching roll names are not evidence that the exact same frames were paired.
-So this cannot be called the same result as the real machine.
+The source profiles carry no per-frame ID or SHA-256. Matching roll names are not evidence that the exact same frames were paired. So this cannot be called the same result as the real machine.
 
 Rules for applying it:
 
@@ -49,23 +35,15 @@ Rules for applying it:
 
 ## What manufacturer material can confirm
 
-- The [Fujifilm Frontier 570/SP-3000 guide](https://www.photolabdigital.com/fuji_frontier570_en%5B1%5D.pdf)
-names features like the area CCD, Hyper-tone, and Hyper-sharpness, but publishes no transfer
-function or setting values.
-- [Noritsu HS-1800 product information](https://www.noritsu.eu/hardware/noritsu-film-scanner.html)
-lists supported formats, resolution, and throughput, but gives no fixed color transfer function.
-- [Noritsu patent US 7,589,863](https://patents.google.com/patent/US7589863/en) describes the
-minilab flow where an operator chooses density, gradation, and sharpening.
+- The [Fujifilm Frontier 570/SP-3000 guide](https://www.photolabdigital.com/fuji_frontier570_en%5B1%5D.pdf) names features like the area CCD, Hyper-tone, and Hyper-sharpness, but publishes no transfer function or setting values.
+- [Noritsu HS-1800 product information](https://www.noritsu.eu/hardware/noritsu-film-scanner.html) lists supported formats, resolution, and throughput, but gives no fixed color transfer function.
+- [Noritsu patent US 7,589,863](https://patents.google.com/patent/US7589863/en) describes the minilab flow where an operator chooses density, gradation, and sharpening.
 
-This material shows that processing changes with the scene and the operator.
-It does not hand over constants for reproducing an HS-1800 or an SP-3000. negaflow does not guess
-such values from a product name.
+This material shows that processing changes with the scene and the operator. It does not hand over constants for reproducing an HS-1800 or an SP-3000. negaflow does not guess such values from a product name.
 
 ## Corpus manifest schema v1
 
-The manifest sits next to the input material it pins, for example
-`LUT_target/quality/corpus-v1.json`.
-Paths are relative to the manifest file. With `--data-root`, that path becomes the base instead.
+The manifest sits next to the input material it pins, for example `LUT_target/quality/corpus-v1.json`. Paths are relative to the manifest file. With `--data-root`, that path becomes the base instead.
 
 <details>
 <summary>Example manifest</summary>
@@ -123,8 +101,7 @@ Paths are relative to the manifest file. With `--data-root`, that path becomes t
 
 </details>
 
-The `0.0` in the example is not a recommendation.
-Set the entries and tolerances to match how you measure and what your release policy is.
+The `0.0` in the example is not a recommendation. Set the entries and tolerances to match how you measure and what your release policy is.
 
 ## Manifest rules
 
@@ -140,8 +117,7 @@ Set the entries and tolerances to match how you measure and what your release po
 - `allowedRegression` has to be a finite number of zero or more. Booleans are refused.
 - Only `lowerIsBetter`, `higherIsBetter`, and `absoluteLowerIsBetter` are accepted directions.
 
-`absoluteLowerIsBetter` compares distance from zero.
-Use it only when zero is the reviewed reference.
+`absoluteLowerIsBetter` compares distance from zero. Use it only when zero is the reviewed reference.
 
 ## Preparing the candidate and the accepted baseline
 
@@ -149,18 +125,11 @@ Use it only when zero is the reviewed reference.
 python3 LUT_target/analyze_lut_target.py
 ```
 
-Before approving a release, keep the candidate's whole `SOURCE/summary.json` as the next accepted
-baseline file.
-The existing accepted file is not overwritten until the candidate has passed review.
-Put the exact SHA-256 of the accepted file into `acceptedBaselineSHA256`.
+Before approving a release, keep the candidate's whole `SOURCE/summary.json` as the next accepted baseline file. The existing accepted file is not overwritten until the candidate has passed review. Put the exact SHA-256 of the accepted file into `acceptedBaselineSHA256`.
 
-The candidate and baseline summaries have to contain each case from the manifest exactly once.
-A missing case, a duplicate, a processing failure, or a case outside the manifest is an input error.
+The candidate and baseline summaries have to contain each case from the manifest exactly once. A missing case, a duplicate, a processing failure, or a case outside the manifest is an input error.
 
-`calibration` cases can be used to fit the profile. They do not count toward the decision.
-`holdout` cases stay out of tuning and selection.
-Validation numbers are compared case by case, so an average improvement cannot hide one image
-getting worse.
+`calibration` cases can be used to fit the profile. They do not count toward the decision. `holdout` cases stay out of tuning and selection. Validation numbers are compared case by case, so an average improvement cannot hide one image getting worse.
 
 ```mermaid
 flowchart LR
@@ -197,10 +166,7 @@ File verification modes:
 | `holdout` | Checks the validation files only | For quick diagnosis |
 | `none` | Does not check image files | No |
 
-The default is `all`.
-The report records the mode that was used, the hashes of the manifest and summary files, the file
-verification result, and the per-case comparison and counts for the validation set.
-The same JSON goes to stdout and to the `--report` file. The file is saved atomically.
+The default is `all`. The report records the mode that was used, the hashes of the manifest and summary files, the file verification result, and the per-case comparison and counts for the validation set. The same JSON goes to stdout and to the `--report` file. The file is saved atomically.
 
 Exit codes:
 
@@ -214,6 +180,4 @@ Exit codes:
 python3 -m unittest scripts/tests/test_evaluate_profile_quality.py
 ```
 
-The tests use temporary synthetic files to cover a normal comparison, a regression, a changed hash,
-a bad schema and bad numbers, duplicate, missing, and failed cases, and empty material.
-They do not prove the quality of real scanner output.
+The tests use temporary synthetic files to cover a normal comparison, a regression, a changed hash, a bad schema and bad numbers, duplicate, missing, and failed cases, and empty material. They do not prove the quality of real scanner output.

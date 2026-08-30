@@ -4,7 +4,7 @@
 
 <h1 align="center">negaflow for macOS</h1>
 
-<p align="center">为 macOS 原生开发的 negaflow。</p>
+<p align="center">用 macOS 原生方式做的 negaflow。</p>
 
 <p align="center">
   <a href="#"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="版本 1.1.0"></a>
@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <a href="../../README_zh-Hans.md">共用文档</a> ·
+  <a href="../../README_zh-Hans.md">共同文档</a> ·
   <a href="../../negaflow-windows/docs/README_zh-Hans.md">Windows</a>
 </p>
 
@@ -30,51 +30,48 @@
 
 ## 需要什么
 
-运行：
+运行时：
 
-- macOS 14.0 或更高
+- macOS 14.0 及以上
 - Apple Silicon 或 Intel
 - 处理 35mm 需要 8GB 内存，中画幅有 16GB 会舒服些
 
-构建：
+构建时：
 
 - 应用需要 Xcode 26
-- 引擎和 CLI 需要 Swift 5.9 或更高
+- 引擎和 CLI 需要 Swift 5.9 及以上
 
 ## 安装
 
 在 [Releases](https://github.com/habinsong/negaflow/releases) 下载。
 
-| 下载 | 适用的 Mac |
+| 安装文件 | 支持的 Mac |
 |---|---|
-| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon 和 Intel |
+| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon、Intel |
 | `negaflow-1.1.0-mac-arm64.pkg` | 仅 Apple Silicon |
 
-多数人用 Universal PKG 就行。打开后按提示操作，应用会进到 `/Applications`。
-同一页也有 DMG 和 ZIP，想自己拖放安装可以用它们。
+多数情况用 Universal PKG 就行，它会装进 `/Applications`。想自己搬就用同一页面上的 DMG 或 ZIP。
 
-应用没有经过 Apple 公证，第一次启动会被系统拦下。到系统设置的隐私与安全性里
-点仍要打开即可。
+没有经过 Apple 公证，第一次运行时 macOS 会拦住。在系统设置的隐私与安全性里点「仍要打开」。
 
-图库和设置存在 `~/Library/Application Support/negaflow`。
+图库和设置保存在 `~/Library/Application Support/negaflow`。
 
 ## 构建
 
 ```bash
 git clone https://github.com/habinsong/negaflow.git
-cd negaflow
+cd negaflow/negaflow-mac
 
-# 构建 Release 并启动
+# Release 构建后运行
 bash scripts/run-app.sh
 
-# 只构建不启动
+# 只构建不运行
 bash scripts/run-app.sh build
 ```
 
-`run-app.sh` 会调用 `xcodebuild`，组装应用包并做本地签名。只改引擎或 CLI 的话，
-`swift build` 就够，不需要 Xcode。
+`run-app.sh` 会调用 `xcodebuild`，组装应用包，再做本地签名。只改引擎或 CLI 的时候 `swift build` 就够了。
 
-制作发布文件：
+做发布文件时：
 
 ```bash
 bash negaflow-mac/scripts/build-release.sh
@@ -96,16 +93,16 @@ bash scripts/ci-gate.sh
 
 ## 命令行
 
-macOS 版随应用带一个可用的 CLI。
+macOS 版里带了 CLI。
 
 ```bash
 swift build
 
-# 查找扫描仪
+# 找扫描仪
 .build/debug/negaflow detect
 .build/debug/negaflow capabilities <scannerID>
 
-# 冲洗
+# 显影
 .build/debug/negaflow develop in.tiff out.jpg --look rich-neutral --target main
 
 # GrainMend
@@ -117,32 +114,28 @@ swift build
 .build/debug/negaflow selftest
 ```
 
-不带参数运行会列出全部选项。
+不带参数运行 `negaflow` 会列出全部选项。
 
 ## 扫描仪
 
-装插件之前，扫描仪相关的操作不会出现。SANE 设备由
-[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) 负责，
-需要单独安装。
+装插件之前不会出现扫描仪的操作项。SANE 设备由 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) 负责，要另外安装。
 
-## 模块结构
+## 模块构成
 
 | 模块 | 职责 |
 |---|---|
 | `Chromabase` | Chroma Engine、GrainMend、配置文件与导出 |
-| `ScannerKit` | 扫描仪能力检查与外部插件连接 |
-| `negaflowApp` | 图库、冲洗、扫描与导出界面 |
-| `negaflowCLI` | 冲洗、扫描、基准测试与自检命令 |
+| `ScannerKit` | 扫描仪能力确认与外部插件连接 |
+| `negaflowApp` | 图库、显影、扫描与导出界面 |
+| `negaflowCLI` | 显影、扫描、基准测试与自检命令 |
 
-## 基准图
+## 基准图像
 
-仓库根目录的 `docs/verification/macos-golden` 放着这个版本渲染出来的图。
-Windows 的引擎测试会读它们逐像素比对，两个版本就是这样保持一致的。
-只有在 macOS 输出确实要变的时候才重新生成。
+仓库最上层的 `docs/verification/macos-golden` 里放着这个构建产出的图像。Windows 的引擎测试会读这些文件，逐像素比对。只有 macOS 输出该变的时候才重新生成。
 
 ## 相关文档
 
-- [macOS 与 Windows 的差异](../../docs/zh-Hans/platform/PLATFORM_DIFFERENCES.md)
+- [macOS 和 Windows 的差异](../../docs/zh-Hans/platform/PLATFORM_DIFFERENCES.md)
 - [Chroma Engine](../../docs/zh-Hans/product/CHROMA_ENGINE.md)
 - [GrainMend](../../docs/zh-Hans/product/GRAINMEND.md)
 - [产品结构](../../docs/zh-Hans/architecture/PRODUCT_ARCHITECTURE.md)

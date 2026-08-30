@@ -2,8 +2,7 @@
 
 Split by subject so you can open the one you need first.
 
-English · [한국어](ko/README.md) · [日本語](ja/README.md) · [简体中文](zh-Hans/README.md) ·
-[Français](fr/README.md) · [Deutsch](de/README.md)
+English · [한국어](ko/README.md) · [日本語](ja/README.md) · [简体中文](zh-Hans/README.md) · [Français](fr/README.md) · [Deutsch](de/README.md)
 
 ```mermaid
 flowchart LR
@@ -13,8 +12,7 @@ flowchart LR
 ```
 
 > [!NOTE]
-> negaflow 1.1.0 runs on macOS and on Windows. The two apps are written separately
-> for their own platform and produce the same picture from the same file.
+> negaflow 1.1.0 runs on macOS and on Windows. The two apps are written separately for their own platform and produce the same picture from the same file.
 
 ## Platform
 
@@ -69,3 +67,5 @@ flowchart LR
 - Architecture documents describe responsibilities and how data moves.
 - Code values, field names, and hashes in reference documents stay as they are.
 - Validation documents separate what passed from what is not checked yet.
+- Plain sentences. No marketing adjectives, no closing summary paragraph, no negative parallelism.
+- A section that exists in one language exists in all six. The rules are in [`AGENTS.md`](../AGENTS.md).

@@ -2,9 +2,7 @@
 
 [ドキュメントホーム](../README.md)
 
-スクリプトや他のアプリがスキャナー情報を読むための規格です。
-実際のスキャナー実装とは分けてあります。
-CLIは`ScannerKit`が受け取った装置情報と機能をJSONに変えるだけです。
+スクリプトや他のアプリがスキャナー情報を読むための規格です。 実際のスキャナー実装とは分けてあります。 CLIは`ScannerKit`が受け取った装置情報と機能をJSONに変えるだけです。
 
 | 項目 | 契約 |
 |---|---|
@@ -20,9 +18,7 @@ negaflow detect [--demo] --json
 negaflow capabilities <scannerID> [--demo] --json
 ```
 
-今のところ`--json`は上の2つの読み取り専用コマンドだけで使えます。
-ファイルを変えたり進捗を送る `scan`、`develop`に付けると`unsupported_json_command`エラーで終わり
-ます。
+今のところ`--json`は上の2つの読み取り専用コマンドだけで使えます。 ファイルを変えたり進捗を送る `scan`、`develop`に付けると`unsupported_json_command`エラーで終わります。
 
 ## 共通の形
 
@@ -44,9 +40,7 @@ negaflow capabilities <scannerID> [--demo] --json
 
 </details>
 
-失敗すると`status`は`error`、`payload`は`null`です。
-`error`には変わらない機械用コードと人が読む説明が入ります。診断ログはstderrに送ります。
-stdoutにログや進捗を混ぜません。
+失敗すると`status`は`error`、`payload`は`null`です。 `error`には変わらない機械用コードと人が読む説明が入ります。診断ログはstderrに送ります。 stdoutにログや進捗を混ぜません。
 
 ## 機能情報
 
@@ -63,9 +57,7 @@ stdoutにログや進捗を混ぜません。
 - `minScanArea`、`maxScanArea`、`scanAreaUnit`
 - `outputFormats`、`estimatedScanSpeeds`
 
-装置が知らせなかった値は推測しません。
-値に応じて`null`、空の配列、`false`、またはプラグインが送った`disabledReasons`をそのまま使います
-。
+装置が知らせなかった値は推測しません。 値に応じて`null`、空の配列、`false`、またはプラグインが送った`disabledReasons`をそのまま使います 。
 
 `estimatedScanSpeeds`は次のオブジェクトの配列で、DPIの昇順です。
 
@@ -73,8 +65,7 @@ stdoutにログや進捗を混ぜません。
 { "dpi": 3600, "seconds": 42.0 }
 ```
 
-アプリの画面とCLIは同じ`ScannerCapabilities`を読みます。
-一致検査では、画面で開いている機能と JSONフィールドが同じ値に従っているかを確認します。
+アプリの画面とCLIは同じ`ScannerCapabilities`を読みます。 一致検査では、画面で開いている機能と JSONフィールドが同じ値に従っているかを確認します。
 
 ## バージョンの決まり
 

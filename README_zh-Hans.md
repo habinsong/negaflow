@@ -4,13 +4,13 @@
 
 <h1 align="center">negaflow</h1>
 
-<p align="center">从扫描胶片到冲洗和打印的完整流程。macOS 和 Windows 各有一套原生应用。</p>
+<p align="center">从胶片到完成的照片。在 macOS 和 Windows 上各自原生运行。</p>
 
 <p align="center">
-  <a href="https://habinsong.github.io/negaflow-site/zh/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="网站"></a>
-  <a href="#install"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="版本 1.1.0"></a>
+  <a href="https://habinsong.github.io/negaflow-site/zh-Hans/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="网站"></a>
+  <a href="#下载"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="版本 1.1.0"></a>
   <a href="negaflow-mac/docs/README_zh-Hans.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 及以上"></a>
-  <a href="negaflow-windows/docs/README_zh-Hans.md"><img src="https://img.shields.io/badge/Windows-11-0078D4?logo=windows&logoColor=white" alt="Windows 11"></a>
+  <a href="negaflow-windows/docs/README_zh-Hans.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 或更高"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 许可证"></a>
 </p>
 
@@ -24,9 +24,9 @@
 </p>
 
 <p align="center">
-  <a href="https://habinsong.github.io/negaflow-site/zh/">网站</a> ·
-  <a href="https://habinsong.github.io/negaflow-site/zh/camera-scanning/">相机翻拍指南</a> ·
-  <a href="https://habinsong.github.io/negaflow-site/zh/faq/">常见问题</a>
+  <a href="https://habinsong.github.io/negaflow-site/zh-Hans/">网站</a> ·
+  <a href="https://habinsong.github.io/negaflow-site/zh-Hans/camera-scanning/">相机翻拍指南</a> ·
+  <a href="https://habinsong.github.io/negaflow-site/zh-Hans/faq/">FAQ</a>
 </p>
 
 ---
@@ -38,179 +38,102 @@
   </picture>
 </p>
 
-negaflow 是一款 macOS 应用，用于导入、反相和显影扫描胶片或数码相机翻拍的胶片。<br>
-它支持彩色和黑白、负片和正片，所有调整都会与原始文件分开保存。<br>
-从图库管理到显影和打印，它覆盖了胶片数字化处理的完整流程。
+**negaflow** 是一款把扫描的胶片或者用相机翻拍的胶片读进来显影的应用。彩色黑白、负片正片全都可以。从图库到显影，再到印相，都在一个应用里完成。调整值和原始文件分开保存，所以原始文件保持原样。
 
-显影引擎名为 **Chroma Engine**，灰尘和划痕修复功能名为 **GrainMend**。<br>
-只导入图像文件也能完成显影和导出。<br>
-只有安装单独的插件后，扫描仪连接才会启用。
+显影引擎的名字是 **Chroma Engine**，灰尘和划痕的修复是 **GrainMend**。没有扫描仪也没关系。只导入图像文件也能显影和导出。扫描仪连接只有在另外装了插件之后才会打开。
 
-> 技术一直在进步，但与胶片重新流行的势头相反，模拟摄影周边的工作流程却停滞了。<br>
-> 除非坚持暗房放大，否则胶片必须先转成数字图像，才能被大多数人看见和分享。<br>
-> 可随着胶片实验室和冲洗店逐渐消失，这一环节能得到的支持也越来越少。
-> <br>
-> 这个项目始于我在不同工作流程里遇到的不便，也始于那些“要是有这个功能就好了”的念头。<br>
-> 我以使用 35mm 和中画幅胶片积累的经验为基础，从头到尾都由自己开发。<br>
-> 它最初只是一个给自己用的小项目，如今的 **negaflow** 已经不止于此。<br>
-> 归根到底，工具最重要的是好用、顺手、够快，并能把琐碎的事情正确处理好。<br>
-> **negaflow** 是独立开发的原生 macOS 应用，把胶片实验室和个人使用者的工作方式都融了进来。
+> 和最近模拟热潮的增长不同，如今模拟摄影的流程可以说停滞了。除非用模拟的方式印相，否则胶片要经过转成数字的过程，才终于能被我们看见。
 >
-> **谨以此夏，纪念尼埃普斯拍下人类第一张照片二百周年。**
+> 可是那整个过程都在停下来。冲扫店和实验室越来越少，厂商与产品的支持也在减少。
+>
+> 本项目起于我用这样那样的方式工作时感到的不便，以及觉得要是有这个功能就好了的想法。以使用 35mm 胶片和中画幅胶片时得到的经验和知识为基础，从一到十全都由我自己开发。一开始只是我一个人边用边做出来的小玩具项目，如今的 negaflow 已经成了不止于此的某种东西。
+>
+> 说到底最重要的是它「好」用、用着舒服、要够快，还有什么都自己妥当做出来的结果。独立开发的 **negaflow** 在 macOS 和 Windows 上各自原生运行，把冲扫店和个人的工作流都揉了进去。
+>
+>
+> **谨以此夏，纪念尼埃普斯拍下第一张照片二百周年。** 2026年7月25日。
+## negaflow for macOS and Windows
 
----
-
-## 两套分开做
-
-negaflow 在 macOS 和 Windows 上都能运行。两个应用不共用代码。
 
 | | macOS | Windows |
 |---|---|---|
 | 界面 | SwiftUI | WinUI 3 |
-| 引擎 | Swift 和 Core Image | C++ 和 Direct3D |
+| 引擎 | Swift + Core Image | C++ + Direct3D |
 | 色彩管理 | ColorSync | Windows ICM |
 
-同一张照片交给两边，出来的结果是一样的。macOS 版渲染出的基准图存在仓库里，
-Windows 的测试会读回来逐像素比对。
+两个应用作为原生应用，用不同的语言、不同的方式开发，即便如此功能和结果是一样的。
 
-每一边都按各自平台的方式写，不是移植过去再打补丁。代价是整套东西做了两遍，
-好处是两个版本在各自系统上都不显得别扭。
+也有同时做两套的方法(跨平台)，可那样两边都会变慢，而且没法好好运行。所以我按每个 OS 各自的方式，从头重新写了代码。哪些相同、哪些不同，[写在这里](docs/zh-Hans/platform/PLATFORM_DIFFERENCES.md)。
 
-- [macOS 文档](negaflow-mac/docs/README_zh-Hans.md)
-- [Windows 文档](negaflow-windows/docs/README_zh-Hans.md)
-- [两个版本的差异](docs/zh-Hans/platform/PLATFORM_DIFFERENCES.md)
+## 下载
 
----
+在 [GitHub Releases](https://github.com/habinsong/negaflow/releases) 拿就行。
 
-## 安装
-
-在 [GitHub Releases](https://github.com/habinsong/negaflow/releases) 下载当前版本。
-
-### macOS
-
-| 下载 | 适用的 Mac |
+| 安装文件 | 适用环境 |
 |---|---|
-| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon 和 Intel |
-| `negaflow-1.1.0-mac-arm64.pkg` | 仅 Apple Silicon |
+| `negaflow-1.1.0-mac-universal.pkg` | macOS 14 及以上，Apple Silicon 和 Intel |
+| `negaflow-1.1.0-mac-arm64.pkg` | macOS 14 及以上，仅 Apple Silicon |
+| `negaflow-1.1.0-win-x64.exe` | Windows 11 24H2 或更高，x64 |
 
-多数 Mac 用 Universal PKG 就可以。
+大多数 Mac 用 Universal PKG 就行。当然，Silicon 用的文件和 DMG、ZIP 也都放在同一个页面上。第一次运行时要在系统设置的隐私与安全性里点一次「仍要打开」。
 
-1. 下载与你的 Mac 匹配的 PKG。
-2. 打开后按安装程序提示操作。
-3. 从 `/Applications` 启动 **negaflow**。
+Windows 的安装在用户文件夹里就结束了，不会要管理员权限。没有签名，所以 SmartScreen 会拦一次。点更多信息再运行就行。卸载可以在控制面板里做。
 
-同一个发布页也提供 DMG 和 ZIP，可以自己手动安装。
-应用没有经过 Apple 公证，第一次启动需要在系统设置的隐私与安全性里点仍要打开。
-
-### Windows
-
-| 下载 | 适用的电脑 |
-|---|---|
-| `negaflow-1.1.0-win-x64.exe` | Windows 11 (x64) |
-
-1. 下载安装程序并运行。
-2. 选择语言，按提示操作。
-3. 从开始菜单启动 **negaflow**。
-
-只安装到用户目录，不需要管理员权限。
-卸载走开始菜单里的`卸载 negaflow`，或者设置里的应用列表。
-安装程序没有签名，SmartScreen 会提示一次。点更多信息，再点仍要运行。
-
-> 要连接实际的扫描仪，需要单独的插件。<br>
-> SANE 扫描仪由 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) 负责，macOS 和 Windows 都支持。
-
----
+接真的扫描仪需要另外的插件，SANE 扫描仪有 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)。当然，macOS 和 Windows 两边都能用。
 
 ## 功能
-
-- 测量片基并反相彩色或黑白胶片
-- 曝光、对比度、曲线、HSL、色彩分级和黑白调色
-- 锐化、降噪、颗粒、暗角和光晕
-- 使用 GrainMend 修复灰尘和划痕，包含由扫描仪红外通道驱动的 GrainMend IR
-- 胶卷、文件夹、收藏、星级、堆叠和虚拟副本
-- 缩放、裁剪、旋转、对比视图、直方图和剪切提示
-- 将相机、镜头、胶片与曝光记录写入导出文件的 EXIF
-- 按胶卷记录拍摄信息，并可按相机、镜头、胶片检索图库
-- 导出 JPEG 和 16-bit TIFF，支持 ICC 配置文件和打印版式
-- 各布局独立的黑、灰、白纸张，共用哑光、光面、绒面、丝绸纹预览，照片/ISO 纸张与可选 in/cm 标尺
-- C-print 冲印店与相纸设置，以及冲印店 ICC 软打样预览
-- 导入进度、按文件夹批量设置显影流程与目标，以及处理进度
-- 记住折叠状态的文件夹列表、照片拖放和 Finder 变更自动同步
-- 包含流程、目标、调整、裁剪和方向的预设及复制粘贴
-- 七种印相布局：单张图像、接触印相表、照片套版、自定义套版、蓝晒、玻璃干版和明胶银盐
-- 按成品页计数的印相导出与快速导出：39 张照片的 6 × 7 接触印相表输出为一个合成文件，
-  单张式布局则作为受限并发的 39 文件批处理，并显示线性进度与百分比
-
+> 把模拟胶片变成完成照片的所有功能都在里面。
+- 从测量片基、显影彩色与黑白的负片和正片开始
+- 曝光、对比度、曲线、HSL、调色等调整需要的一切
+- 锐化、降噪、颗粒、暗角、光晕这类附加选项
+- 去掉灰尘和划痕来修复照片的 GrainMend。
+- 有卷、文件夹、收藏集、星级、堆叠、虚拟副本，还能按相机、镜头、胶片搜索的图库
+- 把显影流程、目标、影调、色彩、细节、裁剪和方向一起带走的预设与复制粘贴
+- JPEG 和 16 位 TIFF 导出、ICC 配置文件，相机、镜头、胶片等记录保存进 EXIF
+- 七种印相版式和纸张预览、照片用与 ISO 纸张，连 C-print 功能都有。
 
 ## Chroma Engine
 
-Chroma Engine 是 `Chromabase` 模块中的胶片反相和显影引擎。<br>
-反相负片前，它会从未曝光区域测量片基。<br>
-自动测量不准确时，可以用吸管选择区域，也可以直接输入 RGB 数值。
+**Chroma Engine** 负责胶片的反相和显影。
 
-默认状态是 `MAIN` 和手动调整。<br>
-自动色调、自动白平衡、自动色阶和自动颜色只会在你主动运行时应用。
+显影负片之前先测片基。从光一次都没照到的区域读值。自动测量偏掉的地方，用吸管点一下或者调 RGB 值就行。
 
-显影目标包括：
+默认是 `MAIN` 加手动调整。自动影调、自动白平衡、自动色阶、自动色彩只在按下去的时候才动。
 
-- `MAIN`：常规显影
-- `PRINT`：使用打印机 ICC 的输出
-- `HS`、`SP`：迷你冲印设备风格
-- `F135`、`HR`：对应设备系列的显影风格
-- `EXPIRED`：老胶片修复
+其余的目标是这些。走打印机 ICC 的 `PRINT`，迷你冲扫系的 `HS` 和 `SP`，专业冲扫机系的 `F135` 和 `HR`，试着救回老胶片的 `EXPIRED`。输出可以从 sRGB、Display P3、Adobe RGB，还有自己用的 RGB ICC 里选。
 
-输出可使用 sRGB、Display P3、Adobe RGB 或自定义 RGB ICC。<br>
-反相和色彩处理顺序见 [Chroma Engine](docs/zh-Hans/product/CHROMA_ENGINE.md)。
+反相和色彩处理的顺序在[Chroma Engine 文档](docs/zh-Hans/product/CHROMA_ENGINE.md)里。
 
 ## GrainMend
 
-**GrainMend 用于修复胶片上的灰尘、针孔、划痕和乳剂损伤等缺陷。** <br>
+> **GrainMend** 修复灰尘、针孔、划痕和乳剂损伤。
+
+**GrainMend RGB** 是软件方式，和硬件 IR 不一样。 <br> <br>
+`自动` 扫过整张照片。省事，但会有误检。 <br>
+`引导` 只看指定的范围。对扫描时沾上的灰尘最管用。 <br>
+`画笔` 是自己涂掉自动漏掉的地方的工具，仿制图章把选中位置的像素原样搬过来。<br>
+`仿制图章` 是让你选好想要的质感再自己涂上去的图章功能。 <br>
+
+自动和引导看着周围的纹理来填补缺陷。填之前先看方向和周边结构。要是把照片里的栏杆或者砖缝当成划痕擦掉了，那就不是修复而是破坏了。
+
+修改结果以图层留下。可以改强度、看蒙版，也可以一个个关掉或删掉。<br>
+**GrainMend IR** 把扫描仪插件传过来的红外通道检测结果加进同一份记录。
 
 
-| GrainMend RGB | 使用方式 |
-|---|---|
-| 自动 | 在整张照片中查找并修复缺陷。 |
-| 引导 | 在你标出的区域内查找缺陷。 |
-| 画笔 | 直接涂出需要修复的位置。 |
-| 仿制图章 | 把指定位置的像素复制到另一处。 |
 
+**GrainMend IR** 用扫描仪的红外通道(IR)，但它既不是 Digital ICE、iSRD、SRDx 的实现，也不是它们的兼容模式。工作方式和质量、性能标准整理在 [GrainMend 文档](docs/zh-Hans/product/GRAINMEND.md)里。
 
-**GrainMend RGB** 的自动和引导会参考周围纹理填补缺陷， <br>
-同时检查方向与附近结构，避免把画面中的线条或网格当成划痕抹掉。 <br>
-修复结果会保留为 GrainMend 图层。 <br><br>
-> 自动用于清除照片上常见的缺陷。当候选过于密集、无法安全应用时，它会在不修改图像的情况下停止，并提示改用引导。 <br>
-> 引导针对扫描过程中产生的各种灰尘。画笔用于补上自动没能发现的缺陷，仿制图章则复制你选定的来源像素。 <br>
-每个 **GrainMend RGB** 图层都可以调整强度、查看蒙版，也可以单独关闭或删除。
+## 从导入到印相
 
+1. 导入图像文件，或者用装好的插件扫描。
+2. 选好显影流程的种类，指定扫描目标。
+3. 在 Chroma Engine 里调色彩和影调。
+4. 给需要的照片用 GrainMend。
+5. 用对比视图和直方图确认之后印相或者导出。
 
-如果扫描仪插件提供红外通道，**GrainMend IR** 的检测结果也会加入同一份编辑记录。<br><br>
+只导入是不会显影的。要在给文件夹选好流程和目标后点**应用**，或者进到显影界面时才开始。也有单独一个自动跑的设置，默认是关的。
 
-**GrainMend RGB** 是有别于硬件红外除尘的独立软件方案， <br>
-**GrainMend IR** 使用扫描仪的红外通道，并非 Digital ICE、iSRD 或 SRDx 的实现或兼容模式。
-
-实现方式以及画质、性能标准见 [GrainMend](docs/zh-Hans/product/GRAINMEND.md)。
-
-## 胶片配置文件
-
-应用内置 15 个扫描仪配置文件，数据来自项目作者实际拍摄的胶片。<br>
-配置文件共记录 928 个图像观测值，目前全部标为 `realOnly`。<br>
-`realOnly` 表示它们来自真实扫描，但尚未通过独立成对参考图像的精度验证。
-
-配置文件不会只根据扫描仪名称自动套用，必须由用户手动选择。<br>
-应用也会检查每个文件和清单的 SHA-256。
-
-`928` 是各配置文件组观测数的总和，不代表 928 张互不相同的照片。<br>
-同一卷胶片可能在多个扫描仪组中重复统计。<br>
-我逐一检查了作为来源的 928 份扫描，并在测量前排除了存在误检或漏检的文件。<br>
-数据构成和生成过程见[胶片配置文件](docs/zh-Hans/product/FILM_PROFILES.md)。
-
-## 基本使用顺序
-
-1. 导入图像文件，或使用已安装的插件进行扫描。
-2. 选择胶片类型并测量片基。
-3. 在 Chroma Engine 中调整颜色和色调。
-4. 对需要的照片使用 GrainMend。
-5. 用对比视图和直方图检查结果，然后打印或导出。
+每个操作对原始文件做了什么，在[从图库到印相](docs/zh-Hans/product/WORKFLOW.md)里用表格整理好了。
 
 <p align="center">
   <picture>
@@ -222,123 +145,35 @@ Chroma Engine 是 `Chromabase` 模块中的胶片反相和显影引擎。<br>
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/zh-Hans/print-dark.webp">
-    <img src="docs/images/zh-Hans/print-light.webp" alt="negaflow 打印界面">
+    <img src="docs/images/zh-Hans/print-light.webp" alt="negaflow 印相界面">
   </picture>
 </p>
 
-界面是为真正处理照片的人做的，不是泛泛的 AI 生成样稿。<br>
-只要把摄影当作爱好，就应该能很快找到熟悉的操作方式。
+## 扫描仪与胶片配置文件
 
-## 从图库到打印
+negaflow 本体不会看扫描仪型号名就开功能。<br> 只用插件报上来的分辨率、位深、扫描范围、曝光、IR 支持。按名字猜的话，设备上没有的功能会被点亮。
 
-默认情况下，仅导入图片不会开始显影。negaflow 先建立原始缩略图和文件夹；在文件夹中选择流程
-与目标并点击应用，或进入显影页面时才开始处理。需要自动显影时，可在设置的工作流程中开启，
-默认值为关闭。
+SANE 设备由独立的 GPL 项目 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) 负责。插件跑在自己的进程里，来往的格式是 JSON。**negaflow** 里没有 SANE 代码，也没有链接它。
 
-文件夹的折叠状态会在重新打开应用后保留。照片可以拖到其他文件夹；目标位置已有同名文件时，
-应用会添加编号而不是覆盖原文件。在 Finder 中移动或重命名原图或文件夹后，图库只重新读取
-发生变化的文件夹并更新位置。
+内置里放了 15 个扫描仪配置文件。用我自己拍的胶片做的，记录的数据个数是 928 个。
 
-显影设置复制粘贴和用户预设包含流程、目标、胶片片基、色调、颜色、细节、裁剪、旋转、翻转和
-拉直。选择多张照片后，会应用到全部所选照片。
+状态全都是 `realOnly`。意思是确实用真实扫描做出来的，但还没到用独立基准验证过精度的阶段。没验证过的东西，我不想写成验证过了。配置文件不会看扫描仪名字自动挂上，得自己选。
 
-打印页面中的打印机输出配置文件会应用到排版完成后的整页。无论照片套装重复使用同一张照片，
-还是混合多张照片，所有位置都会得到相同的输出转换。它不会改变显影页面的预览。
-
-具体行为见[从图库到打印](docs/zh-Hans/product/WORKFLOW.md)。
-
-## 从源码构建
-
-两个平台需要的工具和命令不同，详细内容在各自的文档里。
-
-**macOS**
-
-```bash
-git clone https://github.com/habinsong/negaflow.git
-cd negaflow
-
-# 构建 Release 版本并启动
-bash scripts/run-app.sh
-
-# 只构建不启动
-bash scripts/run-app.sh build
-```
-
-需要 macOS 14 及以上和 Xcode 26。只构建引擎和 CLI 用 `swift build` 就够。
-更多内容见 [macOS 文档](negaflow-mac/docs/README_zh-Hans.md)。
-
-**Windows**
-
-```powershell
-git clone https://github.com/habinsong/negaflow.git
-cd negaflow\negaflow-windows
-
-# 构建引擎
-.\scripts\build.ps1 -Preset x64-release
-
-# 构建应用并启动
-.\scripts\run-app.ps1 -Architecture x64 -Configuration Release
-```
-
-需要 Windows 11、Visual Studio 2022 和 .NET 10 SDK。
-更多内容见 [Windows 文档](negaflow-windows/docs/README_zh-Hans.md)。
-
-## 扫描仪
-
-negaflow 不会根据扫描仪型号猜测功能。<br>
-它只使用插件报告的分辨率、位深、扫描区域、曝光和 IR 功能。
-
-SANE 设备由单独的 GPL 项目 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)负责。<br>
-插件在独立进程中运行，并通过 JSON 与主应用通信。<br>
-negaflow 主应用不包含或链接 SANE 代码。
-
-## 仓库结构
-
-```
-negaflow/
-├── negaflow-mac/       macOS 应用与引擎 (Swift)
-├── negaflow-windows/   Windows 应用与引擎 (C#, C++)
-└── docs/               共用文档
-```
-
-**macOS**
-
-| 模块 | 职责 |
-|---|---|
-| `Chromabase` | Chroma Engine、GrainMend、配置文件与导出 |
-| `ScannerKit` | 扫描仪能力检查与外部插件连接 |
-| `negaflowApp` | 图库、冲洗、扫描与导出界面 |
-| `negaflowCLI` | 冲洗、扫描、基准测试与自检命令 |
-
-**Windows**
-
-| 模块 | 职责 |
-|---|---|
-| `Native` | Chroma Engine、GrainMend、导出 (C++) |
-| `Interop` | 引擎与应用之间的桥接 |
-| `Catalog.Core` | 图库存储 |
-| `Shell.Core` | 冲洗、打印与导出逻辑 |
-| `Shell` | 图库、冲洗与打印界面 (WinUI 3) |
-
-模块之间的数据流向见[产品结构文档](docs/zh-Hans/architecture/PRODUCT_ARCHITECTURE.md)。
+详细内容写在[胶片配置文件文档](docs/zh-Hans/product/FILM_PROFILES.md)里。
 
 ## 文档
 
-| 文档 | 内容 |
-|---|---|
-| [Chroma Engine](docs/zh-Hans/product/CHROMA_ENGINE.md) | 片基、反转、色彩处理与冲洗顺序 |
-| [GrainMend](docs/zh-Hans/product/GRAINMEND.md) | 缺陷检测与修复、IR、编辑记录、质量与性能标准 |
-| [胶片配置文件](docs/zh-Hans/product/FILM_PROFILES.md) | 素材分析与配置文件生成 |
-| [从图库到打印](docs/zh-Hans/product/WORKFLOW.md) | 导入、文件夹同步、批量冲洗、设置复制与打印配置 |
-| [产品结构](docs/zh-Hans/architecture/PRODUCT_ARCHITECTURE.md) | 应用、引擎、扫描仪、存储与导出结构 |
-| [两个版本的差异](docs/zh-Hans/platform/PLATFORM_DIFFERENCES.md) | macOS 与 Windows 相同和不同的地方 |
-| [macOS 文档](negaflow-mac/docs/README_zh-Hans.md) | macOS 安装、构建与 CLI |
-| [Windows 文档](negaflow-windows/docs/README_zh-Hans.md) | Windows 安装、构建与引擎检查 |
+- [Chroma Engine](docs/zh-Hans/product/CHROMA_ENGINE.md) | 片基、反相、色彩处理与显影顺序
+- [GrainMend](docs/zh-Hans/product/GRAINMEND.md) | 缺陷检测与修复、IR、编辑记录
+- [胶片配置文件](docs/zh-Hans/product/FILM_PROFILES.md) | 素材分析与配置文件生成
+- [从图库到印相](docs/zh-Hans/product/WORKFLOW.md) | 导入、文件夹同步、批量显影、印相
+- [产品结构](docs/zh-Hans/architecture/PRODUCT_ARCHITECTURE.md) | 应用、引擎、存储与导出结构
+- [全部文档](docs/zh-Hans/README.md) | 多语言(6 种语言)
+
+## 自己构建
+
+每个平台需要的工具和命令不一样。完整步骤在各自的文档里。[macOS](negaflow-mac/docs/README_zh-Hans.md) 需要 macOS 14 及以上和 Xcode 26，[Windows](negaflow-windows/docs/README_zh-Hans.md) 需要 Windows 11 24H2、Visual Studio 2022 和 .NET 10 SDK。仓库的工作规则整理在 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
 
 ## 许可证
 
-negaflow 主项目采用 [Apache License 2.0](LICENSE) 发布。
-
-negaflow 与 Kodak、Fujifilm、Noritsu、LaserSoft Imaging 或其他商标权利人没有合作或赞助关系。<br>
-产品名称只用于标识测量对象或兼容目标。<br>
-详情见[商标声明](TRADEMARKS.md)。
+**negaflow** 以 [Apache License 2.0](LICENSE) 发布。与 Kodak、Fujifilm、Noritsu、LaserSoft Imaging 以及任何其他商标持有者都没有关联，也未获其赞助。产品名称只在指明兼容对象或测量对象时使用。[商标声明](TRADEMARKS.md)里写得更详细。

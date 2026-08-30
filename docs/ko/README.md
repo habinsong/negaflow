@@ -2,8 +2,7 @@
 
 필요한 문서부터 바로 찾을 수 있도록 내용별로 나눴습니다.
 
-[English](../README.md) · 한국어 · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md)
-· [Français](../fr/README.md) · [Deutsch](../de/README.md)
+[English](../README.md) · 한국어 · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [Français](../fr/README.md) · [Deutsch](../de/README.md)
 
 ```mermaid
 flowchart LR
@@ -13,8 +12,7 @@ flowchart LR
 ```
 
 > [!NOTE]
-> negaflow 1.1.0 은 macOS 와 Windows 에서 동작합니다. 두 앱은 각 플랫폼에 맞춰 따로
-> 만들었고, 같은 파일을 넣으면 같은 결과가 나옵니다.
+> negaflow 1.1.0 은 macOS 와 Windows 에서 동작합니다. 두 앱은 각 플랫폼에 맞춰 따로 만들었고, 같은 파일을 넣으면 같은 결과가 나옵니다.
 
 ## 플랫폼
 
@@ -69,3 +67,5 @@ flowchart LR
 - 구조 문서에는 책임과 데이터 이동을 적습니다.
 - 규격 문서의 코드값, 필드명, 해시는 원문 그대로 둡니다.
 - 검증 문서는 통과한 것과 아직 확인하지 않은 것을 나눠 적습니다.
+- 담백한 문장으로 씁니다. 마케팅 형용사, 마무리 요약 문단, 부정 대구를 쓰지 않습니다.
+- 한 언어에 있는 절은 여섯 언어에 다 있어야 합니다. 규칙은 [`AGENTS.md`](../../AGENTS.md)에 있습니다.

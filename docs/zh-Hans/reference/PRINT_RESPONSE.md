@@ -6,13 +6,11 @@
 
 - Swift：`Sources/Chromabase/Film/NegativeInversion.swift` 里的 `PrintResponse`
 - Metal：`negativeInvert` 内核
-- 固定检查：
-`NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
+- 固定检查： `NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
 
 ## 曲线
 
-胶片特性曲线把曝光和密度的关系分成趾部、直线部和肩部来说明。
-negaflow 用 stretched exponential 曲线近似密度域里的肩部。
+胶片特性曲线把曝光和密度的关系分成趾部、直线部和肩部来说明。 negaflow 用 stretched exponential 曲线近似密度域里的肩部。
 
 ```math
 \begin{aligned}
@@ -28,8 +26,7 @@ d &= \frac{D}{d_{\max}} \\
 - `d`：除以所用密度范围之后的值
 - `P`：线性输出亮度
 
-曲线在整个区间里一直上升。`d ≥ 0` 时输出落在 `[baseToe, ceiling)` 内。
-比片基更亮的背光或齿孔那种小于 0 的值不会被截成 0，而是继续保持有限的正值。
+曲线在整个区间里一直上升。`d ≥ 0` 时输出落在 `[baseToe, ceiling)` 内。 比片基更亮的背光或齿孔那种小于 0 的值不会被截成 0，而是继续保持有限的正值。
 
 ```math
 y(-|d|) = 2\log_{10}(P_{\mathrm{toe}}) - y(|d|)
@@ -69,8 +66,7 @@ r &= r_{\mathrm{white}}^{1/s}
 
 ## 默认密度范围
 
-`normalRange` 不是胶片的物理最大密度，而是正常曝光场景用到的范围。
-它主要在测不到片基、或场景对比度很低时起作用。
+`normalRange` 不是胶片的物理最大密度，而是正常曝光场景用到的范围。 它主要在测不到片基、或场景对比度很低时起作用。
 
 ```math
 \begin{aligned}
@@ -88,8 +84,7 @@ r &= r_{\mathrm{white}}^{1/s}
 
 ## v4 改了什么
 
-以前是分三段的函数加固定预设。
-v4 换成一条曲线加四个基准点，没有分段边界，每个值都能在代码和测试里追到。
+以前是分三段的函数加固定预设。 v4 换成一条曲线加四个基准点，没有分段边界，每个值都能在代码和测试里追到。
 
 和以前结果的差别：
 
@@ -101,8 +96,7 @@ v4 换成一条曲线加四个基准点，没有分段边界，每个值都能�
 
 ## 参考资料和范围
 
-趾部、直线部、肩部和伽马这套框架来自公开的感光学。
-文献里的曲线系数没有照抄，negaflow 的系数由上面四个基准点自己算出来。
+趾部、直线部、肩部和伽马这套框架来自公开的感光学。 文献里的曲线系数没有照抄，negaflow 的系数由上面四个基准点自己算出来。
 
 - [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)
 - [Hurter–Driffield Characteristic Curve](https://studyguides.com/study-methods/overview/cmpanf83znm1201neitjb4waw)

@@ -50,11 +50,9 @@
 | `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon, Intel |
 | `negaflow-1.1.0-mac-arm64.pkg` | Apple Silicon 전용 |
 
-대부분은 Universal PKG를 쓰면 됩니다. 열어서 안내를 따르면 앱이 `/Applications`에
-설치됩니다. 직접 옮기고 싶다면 같은 페이지의 DMG나 ZIP을 쓰면 됩니다.
+대부분은 Universal PKG를 쓰면 됩니다. `/Applications`에 설치됩니다. 직접 옮기려면 같은 페이지의 DMG나 ZIP을 쓰십시오.
 
-애플 공증을 받지 않아서 처음 실행할 때 macOS가 막습니다. 시스템 설정의 개인정보 보호 및
-보안에서 '그래도 열기'를 누르면 됩니다.
+애플 공증을 받지 않아서 처음 실행할 때 macOS가 막습니다. 시스템 설정의 개인정보 보호 및 보안에서 '그래도 열기'를 누르면 됩니다.
 
 라이브러리와 설정은 `~/Library/Application Support/negaflow`에 저장됩니다.
 
@@ -62,7 +60,7 @@
 
 ```bash
 git clone https://github.com/habinsong/negaflow.git
-cd negaflow
+cd negaflow/negaflow-mac
 
 # Release 빌드 후 실행
 bash scripts/run-app.sh
@@ -71,8 +69,7 @@ bash scripts/run-app.sh
 bash scripts/run-app.sh build
 ```
 
-`run-app.sh`가 `xcodebuild`를 부르고 앱 번들을 조립한 뒤 로컬 서명까지 합니다.
-엔진이나 CLI만 손볼 때는 `swift build`로 충분하고 Xcode 없이도 됩니다.
+`run-app.sh`가 `xcodebuild`를 부르고 앱 번들을 조립한 뒤 로컬 서명까지 합니다. 엔진이나 CLI만 손볼 때는 `swift build`로 충분합니다.
 
 배포 파일을 만들 때:
 
@@ -96,7 +93,7 @@ bash scripts/ci-gate.sh
 
 ## 명령줄
 
-macOS 버전에는 앱과 함께 쓸 수 있는 CLI가 들어 있습니다.
+macOS 버전에는 CLI가 들어 있습니다.
 
 ```bash
 swift build
@@ -121,9 +118,7 @@ swift build
 
 ## 스캐너
 
-플러그인을 설치하기 전까지 스캐너 조작은 나타나지 않습니다. SANE 장치는
-[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)이 담당하며
-따로 설치해야 합니다.
+플러그인을 설치하기 전까지 스캐너 조작은 나타나지 않습니다. SANE 장치는 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)이 담당하며 따로 설치해야 합니다.
 
 ## 모듈 구성
 
@@ -136,9 +131,7 @@ swift build
 
 ## 기준 이미지
 
-저장소 최상위의 `docs/verification/macos-golden`에는 이 빌드가 만든 이미지가 들어 있습니다.
-Windows 엔진 테스트가 이 파일들을 읽어 화소 단위로 비교합니다. 두 버전을 맞춰 두는 방법이
-이것입니다. macOS 출력이 바뀌어야 할 때만 다시 만드시면 됩니다.
+저장소 최상위의 `docs/verification/macos-golden`에는 이 빌드가 만든 이미지가 들어 있습니다. Windows 엔진 테스트가 이 파일들을 읽어 화소 단위로 비교합니다. macOS 출력이 바뀌어야 할 때만 다시 만들면 됩니다.
 
 ## 관련 문서
 

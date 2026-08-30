@@ -2,15 +2,10 @@
 
 [Dokumentationsstart](../README.md)
 
-negaflow ist eine macOS-App.
-Sie importieren oder scannen Filmbilder, danach folgen Umkehr, Entwicklung, GrainMend, Ausgabe und
-Aufbewahrung.
-Jede Bearbeitung wird getrennt vom Original abgelegt.
+negaflow ist eine macOS-App. Sie importieren oder scannen Filmbilder, danach folgen Umkehr, Entwicklung, GrainMend, Ausgabe und Aufbewahrung. Jede Bearbeitung wird getrennt vom Original abgelegt.
 
 > [!IMPORTANT]
-> Originale, Bearbeitungsverlauf, Caches und Ausgabedateien sind verschiedenes Material. Ein
-> verlorener Cache darf weder das Original noch den Verlauf kosten, und ein Export scheitert
-> lieber, als ein Ergebnis auszuliefern, das er nicht neu aufbauen kann.
+> Originale, Bearbeitungsverlauf, Caches und Ausgabedateien sind verschiedenes Material. Ein verlorener Cache darf weder das Original noch den Verlauf kosten, und ein Export scheitert lieber, als ein Ergebnis auszuliefern, das er nicht neu aufbauen kann.
 
 ## Sicherheitsregeln, die sich nicht ändern
 
@@ -18,13 +13,10 @@ Jede Bearbeitung wird getrennt vom Original abgelegt.
 2. Aus der Bibliothek entfernen und das Original in den Papierkorb legen sind zwei Dinge.
 3. Der Scanner-Bildschirm zeigt nur, was das Plugin gemeldet hat.
 4. Kein falscher Scanner springt ein, solange Sie die Demo nicht selbst wählen.
-5. Lässt sich ein bearbeitetes Ergebnis nicht neu aufbauen, wird nicht das Original an seiner Stelle
-exportiert.
-6. Ein langer Auftrag prüft Bild, Bearbeitungsversion und Sitzung erneut, kurz bevor er sein
-Ergebnis anwendet.
+5. Lässt sich ein bearbeitetes Ergebnis nicht neu aufbauen, wird nicht das Original an seiner Stelle exportiert.
+6. Ein langer Auftrag prüft Bild, Bearbeitungsversion und Sitzung erneut, kurz bevor er sein Ergebnis anwendet.
 7. Ein Cache muss sich aus Original und Bearbeitungsverlauf neu aufbauen lassen.
-8. Ungenügend geprüfte Profile, Ausgabepakete und Archive werden nicht als fertiges Ergebnis
-veröffentlicht.
+8. Ungenügend geprüfte Profile, Ausgabepakete und Archive werden nicht als fertiges Ergebnis veröffentlicht.
 
 ## Module
 
@@ -68,9 +60,7 @@ Kein Scannertreiber. Es trägt den Vertrag, der ein externes Plugin anbindet.
 - Scan-Sitzungen und Auftragsverlauf
 - Der Demo-Scanner, den Sie selbst einschalten müssen
 
-Die SANE-Umsetzung liegt in einem eigenen GPL-Projekt,
-[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane).
-App und Plugin sprechen ausschließlich über JSON und die CLI miteinander.
+Die SANE-Umsetzung liegt in einem eigenen GPL-Projekt, [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane). App und Plugin sprechen ausschließlich über JSON und die CLI miteinander.
 
 ### `negaflowCLI`
 
@@ -116,9 +106,7 @@ Jeder Schritt ergänzt Katalog und Bearbeitungsverlauf, statt das Original zu ä
 
 ### Dateien importieren
 
-Der übliche Weg hinein.
-Verarbeitet werden TIFF, JPEG, PNG und die Kamera-RAWs, die macOS Image I/O lesen kann.
-Eingebettetes ICC und Ausrichtung werden gelesen, und die Original-ID kommt in den Katalog.
+Der übliche Weg hinein. Verarbeitet werden TIFF, JPEG, PNG und die Kamera-RAWs, die macOS Image I/O lesen kann. Eingebettetes ICC und Ausrichtung werden gelesen, und die Original-ID kommt in den Katalog.
 
 ### Scannen
 
@@ -130,25 +118,17 @@ Ein installiertes Plugin kann diese Funktionen melden.
 - IR
 - Stapel- und Halterverhalten
 
-Die App erfindet nie eine Funktion aus einer Tabelle von Modellnamen.
-Nach einem Scan werden die tatsächlich angewandten Einstellungen des Plugins und die Ausgabedatei
-erneut geprüft.
+Die App erfindet nie eine Funktion aus einer Tabelle von Modellnamen. Nach einem Scan werden die tatsächlich angewandten Einstellungen des Plugins und die Ausgabedatei erneut geprüft.
 
 ### Original-ID
 
-Ein Dateipfad allein identifiziert kein Original.
-Aufbewahrt werden die Werte, die der aktuelle Vertrag braucht: Dateibeobachtungen, Bytezahl,
-Änderungszeit, SHA-256 und ein persistentes Bookmark.
+Ein Dateipfad allein identifiziert kein Original. Aufbewahrt werden die Werte, die der aktuelle Vertrag braucht: Dateibeobachtungen, Bytezahl, Änderungszeit, SHA-256 und ein persistentes Bookmark.
 
-Wurde eine Datei verschoben, ändert sich der Pfad nur, wenn Sie sie selbst neu verknüpfen oder die
-Bookmark-Wiederherstellung gelingt.
+Wurde eine Datei verschoben, ändert sich der Pfad nur, wenn Sie sie selbst neu verknüpfen oder die Bookmark-Wiederherstellung gelingt.
 
 ## Katalog
 
-Der Hauptspeicher ist `library.sqlite`.
-Die alte `library.json` dient nur dazu, geprüftes älteres Material herüberzuholen oder eine
-übertragbare Sicherung zu schreiben.
-Die beiden Speicher werden nie gleichzeitig aktualisiert.
+Der Hauptspeicher ist `library.sqlite`. Die alte `library.json` dient nur dazu, geprüftes älteres Material herüberzuholen oder eine übertragbare Sicherung zu schreiben. Die beiden Speicher werden nie gleichzeitig aktualisiert.
 
 Was in SQLite kommt:
 
@@ -172,8 +152,7 @@ Was nicht:
 5. SQLite-Integrität und die Sicherheitsbedingungen der App prüfen.
 6. Den Hauptspeicher erst umstellen, wenn alles zusammenpasst.
 
-Eine gescheiterte JSON gilt nicht als leerer Katalog.
-Zahlen und Entscheidung stehen in [Katalogspeicherung](CATALOG_STORAGE.md).
+Eine gescheiterte JSON gilt nicht als leerer Katalog. Zahlen und Entscheidung stehen in [Katalogspeicherung](CATALOG_STORAGE.md).
 
 ## Bibliothek
 
@@ -184,29 +163,15 @@ Zum Ordnen:
 - Raster, Vergleich, Auswahl
 - Doppelte Kandidaten durchsehen
 
-In der Ordneransicht trägt jeder Ordner ein Band: Dreieck, Ordner, Name, Anzahl,
-Entwicklungsprozess, Ziel, Anwenden. Das Dreieck klappt die Miniaturen darunter ein. Eingeklappte
-Ordner bleiben es beim nächsten Start, getrennt vom Einklappen der Dateiliste in der Seitenleiste.
+In der Ordneransicht trägt jeder Ordner ein Band: Dreieck, Ordner, Name, Anzahl, Entwicklungsprozess, Ziel, Anwenden. Das Dreieck klappt die Miniaturen darunter ein. Eingeklappte Ordner bleiben es beim nächsten Start, getrennt vom Einklappen der Dateiliste in der Seitenleiste.
 
-Die Ordneransicht ist **ein** Raster: jeder Ordner eine Sektion, sein Band deren Kopf. Diese
-Struktur muss so bleiben. Jedem Ordner ein eigenes Raster zu geben und diese zu stapeln hebt die
-Faulheit auf. Der Stapel muss die Höhe eines Ordners als Ganzes kennen, also baut ein Ordner alle
-seine Karten, sobald er ins Bild kommt. Mit einem Raster ist die Einheit der Faulheit eine Zeile,
-und genau das hält das Scrollen bei mehreren hundert Fotos flüssig.
+Die Ordneransicht ist **ein** Raster: jeder Ordner eine Sektion, sein Band deren Kopf. Diese Struktur muss so bleiben. Jedem Ordner ein eigenes Raster zu geben und diese zu stapeln hebt die Faulheit auf. Der Stapel muss die Höhe eines Ordners als Ganzes kennen, also baut ein Ordner alle seine Karten, sobald er ins Bild kommt. Mit einem Raster ist die Einheit der Faulheit eine Zeile, und genau das hält das Scrollen bei mehreren hundert Fotos flüssig.
 
-Mehrere virtuelle Kopien können ein Original teilen.
-Bevor ein Original gelöscht wird, werden zuerst seine Verweise geprüft.
-Aus der Bibliothek entfernen ändert nur Verweise im Katalog. Der Papierkorb ist eine eigene Aktion.
+Mehrere virtuelle Kopien können ein Original teilen. Bevor ein Original gelöscht wird, werden zuerst seine Verweise geprüft. Aus der Bibliothek entfernen ändert nur Verweise im Katalog. Der Papierkorb ist eine eigene Aktion.
 
-Bearbeitungen überleben eine getrennte externe Festplatte.
-Das Original wird als offline markiert, und Sie verknüpfen es je Datei oder je Ordner neu.
-Ist die ID nicht die erwartete, wird nichts automatisch getauscht.
+Bearbeitungen überleben eine getrennte externe Festplatte. Das Original wird als offline markiert, und Sie verknüpfen es je Datei oder je Ordner neu. Ist die ID nicht die erwartete, wird nichts automatisch getauscht.
 
-Jeder registrierte physische Quellordner erhält genau einen Dateisystem-Watcher. Ereignisse werden
-kurz zusammengefasst, danach wird nur der geänderte Ordner neu gelesen. Die erneute Verknüpfung über
-Bookmarks behält die Katalogordner-ID bei, wenn Finder eine Quelle verschiebt oder umbenennt.
-Direkt neu hinzugefügte Bilder werden ohne Polling und ohne erneuten Scan der ganzen Bibliothek
-importiert.
+Jeder registrierte physische Quellordner erhält genau einen Dateisystem-Watcher. Ereignisse werden kurz zusammengefasst, danach wird nur der geänderte Ordner neu gelesen. Die erneute Verknüpfung über Bookmarks behält die Katalogordner-ID bei, wenn Finder eine Quelle verschiebt oder umbenennt. Direkt neu hinzugefügte Bilder werden ohne Polling und ohne erneuten Scan der ganzen Bibliothek importiert.
 
 ## Entwicklung und GrainMend
 
@@ -219,27 +184,19 @@ Jedes Bild trägt:
 - Versionsverlauf
 - Exportstatus
 
-Während des Einstellens dient eine Vorschau in niedriger Auflösung.
-Ein fertiges Ergebnis erreicht den Bildschirm nur, wenn Bild-ID und Bearbeitungsversion noch zur
-aktuellen Auswahl passen.
+Während des Einstellens dient eine Vorschau in niedriger Auflösung. Ein fertiges Ergebnis erreicht den Bildschirm nur, wenn Bild-ID und Bearbeitungsversion noch zur aktuellen Auswahl passen.
 
-Der Export speichert nicht die Vorschau-Bitmap vom Bildschirm.
-Er baut das Bild in voller Auflösung aus dem Original und den festgehaltenen Bearbeitungswerten neu
-auf.
+Der Export speichert nicht die Vorschau-Bitmap vom Bildschirm. Er baut das Bild in voller Auflösung aus dem Original und den festgehaltenen Bearbeitungswerten neu auf.
 
-GrainMend führt automatisch, geführt, Pinsel, Klonstempel und IR in einer geordneten Liste.
-Caches sind abgeleitete Dateien.
-Lässt sich ein Ergebnis nicht aus Original und Verlauf neu aufbauen, scheitert der Export.
+GrainMend führt automatisch, geführt, Pinsel, Klonstempel und IR in einer geordneten Liste. Caches sind abgeleitete Dateien. Lässt sich ein Ergebnis nicht aus Original und Verlauf neu aufbauen, scheitert der Export.
 
 Mehr dazu in [GrainMend](../product/GRAINMEND.md).
 
 ## Versionen
 
-- **History und Snapshot:** Einen Entwicklungsstand selbst festhalten, dann vergleichen oder
-dorthin zurück.
+- **History und Snapshot:** Einen Entwicklungsstand selbst festhalten, dann vergleichen oder dorthin zurück.
 - **Virtual Copy:** Ein weiterer Bearbeitungszweig, ohne die Originaldatei zu verdoppeln.
-- **Copy/Paste:** Einen gewählten Bereich einfügen, etwa Tonwert, Farbe, Detail oder Geometrie. Bei
-Masken, die Originalkoordinaten brauchen, werden die Sicherheitsbedingungen geprüft.
+- **Copy/Paste:** Einen gewählten Bereich einfügen, etwa Tonwert, Farbe, Detail oder Geometrie. Bei Masken, die Originalkoordinaten brauchen, werden die Sicherheitsbedingungen geprüft.
 
 ## Export
 
@@ -279,8 +236,7 @@ Statt Pfaden hält es die SHA-256-Beziehungen zwischen diesen Werten fest.
 - Versionen von Decoder und Renderer
 - Ausgabebytes, Pixelgröße, Format
 
-Es gibt weder digitale Signatur noch Zertifikat, deshalb heißt das nicht C2PA Content Credentials.
-Mehr dazu in [Render-Protokoll](../reference/RENDER_MANIFEST.md).
+Es gibt weder digitale Signatur noch Zertifikat, deshalb heißt das nicht C2PA Content Credentials. Mehr dazu in [Render-Protokoll](../reference/RENDER_MANIFEST.md).
 
 ## Print und Softproof
 
@@ -294,24 +250,13 @@ Unterstützte Anordnungen:
 - Glasplatte
 - Gelatinesilber
 
-Einzelbild und die drei historischen Layouts erzeugen für jedes ausgewählte Foto eine untereinander
-angezeigte Seite. Kontaktbogen, Bildpaket und Benutzerpaket zeigen und exportieren ihre fertige
-Seitenzahl. Bei 39 Fotos sind das eine 6 × 7-Kontaktbogenseite, 10 Seiten mit je vier Bildern, eine
-Seite des voreingestellten Benutzerpakets oder 39 Einzeldateien.
+Einzelbild und die drei historischen Layouts erzeugen für jedes ausgewählte Foto eine untereinander angezeigte Seite. Kontaktbogen, Bildpaket und Benutzerpaket zeigen und exportieren ihre fertige Seitenzahl. Bei 39 Fotos sind das eine 6 × 7-Kontaktbogenseite, 10 Seiten mit je vier Bildern, eine Seite des voreingestellten Benutzerpakets oder 39 Einzeldateien.
 
-Die Paketvorschau verwendet vorhandene Miniaturen und entwickelte Bilder und erzeugt nur bei Bedarf
-eine kleine schnelle Vorschau. Der Export berechnet Platzierungen aus Metadaten, entwickelt nur die
-benötigten Pixel, bereitet gleichzeitig zwei bis vier eindeutige Quellen vor, hält den Core-Image-
-Graphen bis zur Seitenausgabe verbunden und begrenzt Quellraster auf 512 MiB pro Seite.
+Die Paketvorschau verwendet vorhandene Miniaturen und entwickelte Bilder und erzeugt nur bei Bedarf eine kleine schnelle Vorschau. Der Export berechnet Platzierungen aus Metadaten, entwickelt nur die benötigten Pixel, bereitet gleichzeitig zwei bis vier eindeutige Quellen vor, hält den Core-Image- Graphen bis zur Seitenausgabe verbunden und begrenzt Quellraster auf 512 MiB pro Seite.
 
-Jede Platzierung eines Bildpakets beobachtet das ihr zugewiesene Bild. Das Drucker-Ausgabe-ICC wird
-nach dem Layout einmal auf die vollständige fertige Seite angewandt. Dadurch folgen Pakete mit
-wiederholten und mit gemischten Bildern demselben Ausgabevertrag. Bibliothek und
-Entwicklungsvorschau bleiben davon unberührt.
-Weder das ursprüngliche Scan-TIFF noch `-main-flat` bekommt ein Druckerprofil.
+Jede Platzierung eines Bildpakets beobachtet das ihr zugewiesene Bild. Das Drucker-Ausgabe-ICC wird nach dem Layout einmal auf die vollständige fertige Seite angewandt. Dadurch folgen Pakete mit wiederholten und mit gemischten Bildern demselben Ausgabevertrag. Bibliothek und Entwicklungsvorschau bleiben davon unberührt. Weder das ursprüngliche Scan-TIFF noch `-main-flat` bekommt ein Druckerprofil.
 
-Ohne gültiges RGB-Druckerprofil wird kein anderes Profil untergeschoben.
-Bytes und SHA-256 des von Ihnen gewählten Profils kommen ins Ausgabeprotokoll.
+Ohne gültiges RGB-Druckerprofil wird kein anderes Profil untergeschoben. Bytes und SHA-256 des von Ihnen gewählten Profils kommen ins Ausgabeprotokoll.
 
 ## Aufbewahrungsarchiv
 
@@ -323,17 +268,13 @@ Was in `.negaflowarchive` kommt:
 - Der benötigte GrainMend-Verlauf
 - Die Beziehung zwischen virtuellen Kopien und dem geteilten Original
 
-Miniaturen, Vorschauen, GrainMend-Caches und exportierte Dateien lassen sich neu erzeugen, also
-bleiben sie draußen.
-Verwendet wird die BagIt-Struktur nach RFC 8493 mit einer SHA-256-Liste, und jede Datei und jede
-Beziehung wird geprüft, bevor das Paket an seinen endgültigen Ort wandert.
+Miniaturen, Vorschauen, GrainMend-Caches und exportierte Dateien lassen sich neu erzeugen, also bleiben sie draußen. Verwendet wird die BagIt-Struktur nach RFC 8493 mit einer SHA-256-Liste, und jede Datei und jede Beziehung wird geprüft, bevor das Paket an seinen endgültigen Ort wandert.
 
 - [Bibliotheksarchiv](LIBRARY_ARCHIVE.md)
 - [RFC 8493](https://www.rfc-editor.org/info/rfc8493/)
 - [PREMIS](https://www.loc.gov/standards/premis/)
 
-Langfristige Aufbewahrung braucht zusätzlich ein anderes Medium, eine Kopie an einem anderen Ort und
-regelmäßige Hash-Prüfungen.
+Langfristige Aufbewahrung braucht zusätzlich ein anderes Medium, eine Kopie an einem anderen Ort und regelmäßige Hash-Prüfungen.
 
 ## Sicherheit der Scanner-Plugins
 
@@ -347,13 +288,9 @@ Wird ein Plugin gefunden, wird dies geprüft.
 
 Hat sich die Datei geändert, wird die frühere Freigabe nicht weiterverwendet.
 
-Protokoll v2 nutzt eine Anfrage-ID und eine Folgenummer und verlangt genau ein Endergebnis.
-Die Ausgabegröße hat eine Obergrenze, und nach Zeitüberschreitung oder Abbruch werden Prozess und
-Pipes aufgeräumt.
+Protokoll v2 nutzt eine Anfrage-ID und eine Folgenummer und verlangt genau ein Endergebnis. Die Ausgabegröße hat eine Obergrenze, und nach Zeitüberschreitung oder Abbruch werden Prozess und Pipes aufgeräumt.
 
-Ein Plugin legt nie selbst eine Datei am endgültigen Ort offen.
-Die App gibt ihm einen temporären Ort, prüft Format, Größe, ID und die tatsächlich angewandten
-Einstellungen und verschiebt die Datei dann in den Speicher der App.
+Ein Plugin legt nie selbst eine Datei am endgültigen Ort offen. Die App gibt ihm einen temporären Ort, prüft Format, Größe, ID und die tatsächlich angewandten Einstellungen und verschiebt die Datei dann in den Speicher der App.
 
 Der vollständige Vertrag steht in [Scanner-Plugin-Struktur](SCANNER_PLUGINS.md).
 
@@ -375,12 +312,9 @@ Katalog:
 - Integritätsprüfungen
 - Bei 50.000 Bildern gemessen
 
-Heute wird beim Start der gesamte Katalog in den Speicher geladen.
-Auf demselben Mac dauerte das Lesen aus SQLite rund 7,4 Sekunden, nahe an JSON.
-Nur die benötigten Zeilen über einen Index zu lesen, ist der nächste Schritt.
+Heute wird beim Start der gesamte Katalog in den Speicher geladen. Auf demselben Mac dauerte das Lesen aus SQLite rund 7,4 Sekunden, nahe an JSON. Nur die benötigten Zeilen über einen Index zu lesen, ist der nächste Schritt.
 
-Die Leistungsgrenzen im Repository sind weite Obergrenzen, um große Rückschritte zu fangen.
-Sie sind kein Versprechen, dass sich jeder unterstützte Mac angenehm anfühlt.
+Die Leistungsgrenzen im Repository sind weite Obergrenzen, um große Rückschritte zu fangen. Sie sind kein Versprechen, dass sich jeder unterstützte Mac angenehm anfühlt.
 
 ## Was geprüft ist
 

@@ -2,8 +2,7 @@
 
 必要なドキュメントからすぐ開けるよう、内容ごとに分けています。
 
-[English](../README.md) · [한국어](../ko/README.md) · 日本語 · [简体中文](../zh-Hans/README.md)
-· [Français](../fr/README.md) · [Deutsch](../de/README.md)
+[English](../README.md) · [한국어](../ko/README.md) · 日本語 · [简体中文](../zh-Hans/README.md) · [Français](../fr/README.md) · [Deutsch](../de/README.md)
 
 ```mermaid
 flowchart LR
@@ -13,8 +12,7 @@ flowchart LR
 ```
 
 > [!NOTE]
-> negaflow 1.1.0 は macOS と Windows で動きます。二つのアプリはそれぞれのプラットフォーム
-> 向けに別々に作られ、同じファイルからは同じ絵が出ます。
+> negaflow 1.1.0 は macOS と Windows で動きます。二つのアプリはそれぞれのプラットフォーム向けに別々に作られ、同じファイルからは同じ絵が出ます。
 
 ## プラットフォーム
 
@@ -69,3 +67,5 @@ flowchart LR
 - 構造のドキュメントには、担当範囲とデータの移動を書きます。
 - 規格のコード値、フィールド名、ハッシュはそのまま残します。
 - 検証のドキュメントは、通ったものとまだ確認していないものを分けて書きます。
+- 平たい文で書きます。宣伝用の形容詞、締めのまとめ段落、否定の対句は使いません。
+- ある言語にある節は六言語すべてにあります。規則は [`AGENTS.md`](../../AGENTS.md) にあります。

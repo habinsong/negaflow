@@ -2,8 +2,7 @@
 
 按内容分开，方便直接打开需要的那一份。
 
-[English](../README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · 简体中文 ·
-[Français](../fr/README.md) · [Deutsch](../de/README.md)
+[English](../README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · 简体中文 · [Français](../fr/README.md) · [Deutsch](../de/README.md)
 
 ```mermaid
 flowchart LR
@@ -13,8 +12,7 @@ flowchart LR
 ```
 
 > [!NOTE]
-> negaflow 1.1.0 在 macOS 和 Windows 上都能运行。两个应用按各自平台分开编写，
-> 同一个文件在两边出来的结果一致。
+> negaflow 1.1.0 在 macOS 和 Windows 上都能运行。两个应用按各自平台分开编写， 同一个文件在两边出来的结果一致。
 
 ## 平台
 
@@ -69,3 +67,5 @@ flowchart LR
 - 结构文档写职责范围和数据流向。
 - 规格文档里的代码值、字段名和哈希保持原样。
 - 验证文档把通过的和还没确认的分开写。
+- 用平实的句子。不写宣传形容词，不写结尾总结段，不写否定对句。
+- 一种语言里有的小节，六种语言里都要有。规则写在 [`AGENTS.md`](../../AGENTS.md)。
