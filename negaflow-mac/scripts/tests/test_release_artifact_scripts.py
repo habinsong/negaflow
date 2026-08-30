@@ -20,8 +20,17 @@ class ReleaseArtifactScriptTests(unittest.TestCase):
         self.assertIn("pkgbuild", body)
         self.assertIn("PKG_NAME", body)
         self.assertIn("dSYM.zip", body)
-        self.assertIn("shasum -a 256", body)
+        self.assertIn("write-release-checksums.sh", body)
         self.assertIn("sips -g hasAlpha", body)
+
+    def test_checksum_script_writes_one_list_and_verifies_it(self) -> None:
+        body = (ROOT / "scripts/write-release-checksums.sh").read_text(encoding="utf-8")
+
+        self.assertIn("SHA256SUMS.txt", body)
+        self.assertIn('shasum -a 256 "${FILES[@]}"', body)
+        self.assertIn('shasum -a 256 -c "$CHECKSUM_NAME"', body)
+        # 릴리스에 올리지 않는 파일은 목록에서 빠진다.
+        self.assertIn("*.sha256|*.zip|*.exe|SHA256SUMS.txt", body)
 
     def test_distribution_mode_fails_before_build_without_credentials(self) -> None:
         environment = os.environ.copy()
@@ -72,7 +81,8 @@ class ReleaseArtifactScriptTests(unittest.TestCase):
         self.assertIn("publish_variant universal", body)
         self.assertIn('"$final_dmg"', body)
         self.assertIn('"$final_pkg"', body)
-        self.assertIn("shasum -a 256 -c", body)
+        # 공증 스테이플로 dmg/pkg 가 바뀌므로 체크섬을 다시 적는다.
+        self.assertIn("scripts/write-release-checksums.sh", body)
 
     def test_distribution_workflow_requires_signing_notarization_and_final_verification(self) -> None:
         body = (REPO_ROOT / ".github/workflows/distribution.yml").read_text(encoding="utf-8")
