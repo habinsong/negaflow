@@ -35,7 +35,7 @@ internal static class ShellPreferencesTests
         Check(preferences.SidebarWidth == 430, "sidebar_width");
         Check(preferences.InspectorWidth == 430, "inspector_width");
         Check(preferences.FilmstripHeight == 192, "filmstrip_height");
-        Check(preferences.Appearance == AppearanceMode.System, "appearance_system");
+        Check(preferences.Appearance == AppearanceMode.Dark, "appearance_dark");
         Check(preferences.ImageContentHash == ImageContentHashMode.Off, "image_hash_off");
         Check(preferences.SelectedSettingsCategory == SettingsCategory.General,
             "settings_category_general");
@@ -65,7 +65,7 @@ internal static class ShellPreferencesTests
         Check(normalized.InspectorWidth == 430, "normalize_inspector_width");
         Check(normalized.FilmstripHeight == 340, "normalize_filmstrip_height");
         Check(normalized.FilmstripItemScale == 0.56, "normalize_filmstrip_scale");
-        Check(normalized.Appearance == AppearanceMode.System, "normalize_appearance");
+        Check(normalized.Appearance == AppearanceMode.Dark, "normalize_appearance");
         Check(normalized.ImageContentHash == ImageContentHashMode.Off, "normalize_image_hash");
         Check(normalized.SelectedSettingsCategory == SettingsCategory.General,
             "normalize_settings_category");

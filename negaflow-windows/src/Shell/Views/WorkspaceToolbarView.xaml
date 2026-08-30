@@ -5,9 +5,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Negaflow.Shell.Views.Controls"
     xmlns:views="using:Negaflow.Shell.Views">
-    <!--  **첫 줄이 제목 표시줄입니다.** 메뉴, 가운데 사진 표시, 작업 전환과 보기 단추가
-          모두 여기 있고, 빈 곳을 두 번 누르면 창이 최대화됩니다. 둘째 줄에는 스캔·내보내기
-          단추만 놓입니다.
+    <!--  **첫 줄이 제목 표시줄입니다.** 메뉴와 작업 전환 탭이 여기 있고, 빈 곳을 두 번
+          누르면 창이 최대화됩니다. 둘째 줄에는 스캔·내보내기, 사진 정보, 보기 단추를 둡니다.
 
           두 줄을 이 화면이 함께 들고 있는 이유는 처리기 때문입니다 — 단추의 `Click` 은 여기
           코드가 들고 있으므로, 만들어 놓고 자리를 옮기면 WinUI 가 그 자리에서
@@ -19,210 +18,61 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!--  세로 여백을 두지 않습니다. `MenuBar` 는 제 높이를 가지는데 위아래 6 씩
-              깎으면 글자 아랫부분이 잘립니다. 각 요소가 스스로 가운데에 섭니다.  -->
+        <!--  메뉴는 왼쪽, 작업 전환 탭은 오른쪽에 고정합니다.  -->
         <Grid x:Name="TitleBarRoot" Grid.Row="0" Padding="12,0,10,0">
         <Grid.ColumnDefinitions>
             <ColumnDefinition x:Name="LeftCaptionInsetColumn" Width="0" />
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="502" />
+            <ColumnDefinition Width="Auto" />
             <ColumnDefinition x:Name="RightCaptionInsetColumn" Width="0" />
         </Grid.ColumnDefinitions>
 
         <views:AppMenuBarView x:Name="MenuBar" Grid.Column="1" VerticalAlignment="Center" />
 
-        <!--  macOS `RollToolbarStrip.swift` 그대로입니다.
-
-              HStack(spacing: 8)
-                Label(name, systemImage: "film.stack")  .font(.caption.weight(.semibold))
-                Divider().frame(height: 16)
-                HStack(spacing: 1) { 별 다섯 — 채우면 파랑, 비면 흐린 보조색 }
-                flag / flag.fill                        20x20
-                xmark.octagon.fill                      20x20
-              .padding(.horizontal, 9) .padding(.vertical, 4) .frame(maxWidth: 420)
-
-              **격자의 한 칸이 아니라 줄 전체에 걸칩니다.** 앞 판은 `*` 칸 안에서 가운데를
-              잡았는데, 왼쪽은 Auto 이고 오른쪽은 502 로 고정이라 그 칸의 가운데가 창의
-              가운데가 아니었습니다 — 그래서 늘 왼쪽으로 쏠려 보였습니다.  -->
-        <StackPanel
-            x:Name="ActiveFrameContainer"
-            Grid.Column="0"
-            Grid.ColumnSpan="5"
-            MaxWidth="420"
-            Padding="9,4"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Orientation="Horizontal"
-            Spacing="8">
-            <FontIcon
-                VerticalAlignment="Center"
-                FontSize="12"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                Glyph="&#xE8B9;" />
-            <TextBlock
-                x:Name="ActiveFrameText"
-                MaxWidth="220"
-                VerticalAlignment="Center"
-                FontSize="12"
-                FontWeight="SemiBold"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                TextTrimming="CharacterEllipsis" />
-            <Border
-                Width="1"
-                Height="16"
-                VerticalAlignment="Center"
-                Background="{ThemeResource NegaflowDividerBrush}" />
-            <controls:FrameRatingStars
-                x:Name="ActiveFrameRating"
-                VerticalAlignment="Center"
-                GlyphSize="11"
-                RatingCommitted="OnActiveFrameRatingCommitted" />
-            <Button
-                x:Name="ActiveFramePickButton"
-                Width="24"
-                Height="24"
-                Padding="0"
-                VerticalAlignment="Center"
-                Background="Transparent"
-                BorderThickness="0"
-                Click="OnActiveFramePickClick">
-                <FontIcon x:Name="ActiveFramePickIcon" FontSize="12" Glyph="&#xE129;" />
-            </Button>
-            <Button
-                x:Name="ActiveFrameRejectButton"
-                Width="24"
-                Height="24"
-                Padding="0"
-                VerticalAlignment="Center"
-                Background="Transparent"
-                BorderThickness="0"
-                Click="OnActiveFrameRejectClick">
-                <FontIcon x:Name="ActiveFrameRejectIcon" FontSize="12" Glyph="&#xEB90;" />
-            </Button>
-        </StackPanel>
-
-        <Grid x:Name="RightToolbarCluster" Grid.Column="3" ColumnSpacing="10">
+        <Grid x:Name="WorkspaceTabs" Grid.Column="3">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="266" />
-                <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="16" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="16" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <Grid Grid.Column="0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="9" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="9" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Button
-                    x:Name="LibraryButton"
-                    Grid.Column="0"
-                    AutomationProperties.AutomationId="negaflow.workspace.library"
-                    Click="OnLibraryClick"
-                    Style="{StaticResource NegaflowToolbarTextButtonStyle}" />
-                <Border Grid.Column="1" Width="1" Height="14" HorizontalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
-                <Button
-                    x:Name="DevelopButton"
-                    Grid.Column="2"
-                    AutomationProperties.AutomationId="negaflow.workspace.develop"
-                    Click="OnDevelopClick"
-                    Style="{StaticResource NegaflowToolbarTextButtonStyle}" />
-                <Border Grid.Column="3" Width="1" Height="14" HorizontalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
-                <Button
-                    x:Name="PrintButton"
-                    Grid.Column="4"
-                    AutomationProperties.AutomationId="negaflow.workspace.print"
-                    Click="OnPrintClick"
-                    Style="{StaticResource NegaflowToolbarTextButtonStyle}" />
-            </Grid>
-
-            <Border
+            <Button
+                x:Name="LibraryButton"
+                Grid.Column="0"
+                AutomationProperties.AutomationId="negaflow.workspace.library"
+                Click="OnLibraryClick"
+                Style="{StaticResource NegaflowToolbarTextButtonStyle}" />
+            <Border Grid.Column="1" Width="1" Height="14" HorizontalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
+            <Button
+                x:Name="DevelopButton"
                 Grid.Column="2"
-                Padding="1"
-                Background="{ThemeResource NegaflowSubtleFillBrush}"
-                CornerRadius="7">
-                <StackPanel Orientation="Horizontal" Spacing="2">
-                    <Button
-                        x:Name="SidebarButton"
-                        AutomationProperties.AutomationId="negaflow.panel.sidebar"
-                        Click="OnSidebarClick"
-                        Style="{StaticResource NegaflowToolbarIconButtonStyle}">
-                        <FontIcon FontSize="13" Glyph="&#xE90C;" />
-                    </Button>
-                    <Button
-                        x:Name="FilmstripButton"
-                        AutomationProperties.AutomationId="negaflow.panel.filmstrip"
-                        Click="OnFilmstripClick"
-                        Style="{StaticResource NegaflowToolbarIconButtonStyle}">
-                        <FontIcon FontSize="13" Glyph="&#xE90E;" />
-                    </Button>
-                    <Button
-                        x:Name="InspectorButton"
-                        AutomationProperties.AutomationId="negaflow.panel.inspector"
-                        Click="OnInspectorClick"
-                        Style="{StaticResource NegaflowToolbarIconButtonStyle}">
-                        <FontIcon FontSize="13" Glyph="&#xE90D;" />
-                    </Button>
-                </StackPanel>
-            </Border>
-
+                AutomationProperties.AutomationId="negaflow.workspace.develop"
+                Click="OnDevelopClick"
+                Style="{StaticResource NegaflowToolbarTextButtonStyle}" />
+            <Border Grid.Column="3" Width="1" Height="14" HorizontalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
             <Button
-                x:Name="AppearanceButton"
-                Grid.Column="3"
-                AutomationProperties.AutomationId="negaflow.appearance"
-                Style="{StaticResource NegaflowToolbarIconButtonStyle}">
-                <!--
-                    macOS AppAppearanceMode.systemImage 와 같은 셋입니다 -
-                    시스템 `circle.lefthalf.filled` · 밝게 `sun.max.fill` · 어둡게 `moon.fill`.
-                    고른 값에 따라 코드에서 글리프를 바꿉니다.
-                -->
-                <FontIcon x:Name="AppearanceIcon" FontSize="14" Glyph="&#xE706;" />
-                <Button.Flyout>
-                    <MenuFlyout>
-                        <MenuFlyoutItem
-                            x:Name="SystemAppearanceItem"
-                            AutomationProperties.AutomationId="negaflow.appearance.system"
-                            Click="OnSystemAppearanceClick" />
-                        <MenuFlyoutItem
-                            x:Name="DarkAppearanceItem"
-                            AutomationProperties.AutomationId="negaflow.appearance.dark"
-                            Click="OnDarkAppearanceClick" />
-                        <MenuFlyoutItem
-                            x:Name="LightAppearanceItem"
-                            AutomationProperties.AutomationId="negaflow.appearance.light"
-                            Click="OnLightAppearanceClick" />
-                    </MenuFlyout>
-                </Button.Flyout>
-            </Button>
-
-            <Button
-                x:Name="UtilityButton"
+                x:Name="PrintButton"
                 Grid.Column="4"
-                Style="{StaticResource NegaflowToolbarIconButtonStyle}">
-                <FontIcon FontSize="14" Glyph="&#xE712;" />
-                <Button.Flyout>
-                    <MenuFlyout>
-                        <MenuFlyoutItem x:Name="SettingsItem" Click="OnSettingsClick" Icon="Setting" />
-                        <MenuFlyoutSeparator />
-                        <MenuFlyoutItem
-                            x:Name="DiagnosticsItem"
-                            AutomationProperties.AutomationId="negaflow.menu.diagnostics"
-                            Click="OnDiagnosticsClick" />
-                    </MenuFlyout>
-                </Button.Flyout>
-            </Button>
+                AutomationProperties.AutomationId="negaflow.workspace.print"
+                Click="OnPrintClick"
+                Style="{StaticResource NegaflowToolbarTextButtonStyle}" />
         </Grid>
         </Grid>
+
+        <Grid Grid.Row="1" Margin="12,2,10,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
         <StackPanel
             x:Name="PrimaryControls"
-            Grid.Row="1"
-            Margin="12,2,10,6"
+            Grid.Column="0"
+            HorizontalAlignment="Left"
             Orientation="Horizontal"
             Spacing="3">
             <Button
@@ -278,5 +128,140 @@
                 Margin="8,0,0,0"
                 AutomationProperties.AutomationId="negaflow.export.progress" />
         </StackPanel>
+
+        <!--  사진 이름·별점·플래그·제외는 둘째 줄의 정확한 가운데에 둡니다.  -->
+        <StackPanel
+            x:Name="ActiveFrameContainer"
+            Grid.Column="1"
+            MaxWidth="420"
+            Padding="9,4"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Orientation="Horizontal"
+            Spacing="8">
+            <FontIcon
+                VerticalAlignment="Center"
+                FontSize="12"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Glyph="&#xE8B9;" />
+            <TextBlock
+                x:Name="ActiveFrameText"
+                MaxWidth="220"
+                VerticalAlignment="Center"
+                FontSize="12"
+                FontWeight="SemiBold"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                TextTrimming="CharacterEllipsis" />
+            <Border
+                Width="1"
+                Height="16"
+                VerticalAlignment="Center"
+                Background="{ThemeResource NegaflowDividerBrush}" />
+            <controls:FrameRatingStars
+                x:Name="ActiveFrameRating"
+                VerticalAlignment="Center"
+                GlyphSize="11"
+                RatingCommitted="OnActiveFrameRatingCommitted" />
+            <Button
+                x:Name="ActiveFramePickButton"
+                Width="24"
+                Height="24"
+                Padding="0"
+                VerticalAlignment="Center"
+                Background="Transparent"
+                BorderThickness="0"
+                Click="OnActiveFramePickClick">
+                <FontIcon x:Name="ActiveFramePickIcon" FontSize="12" Glyph="&#xE129;" />
+            </Button>
+            <Button
+                x:Name="ActiveFrameRejectButton"
+                Width="24"
+                Height="24"
+                Padding="0"
+                VerticalAlignment="Center"
+                Background="Transparent"
+                BorderThickness="0"
+                Click="OnActiveFrameRejectClick">
+                <FontIcon x:Name="ActiveFrameRejectIcon" FontSize="12" Glyph="&#xEB90;" />
+            </Button>
+        </StackPanel>
+
+        <!--  패널 표시·테마·더보기는 둘째 줄의 오른쪽 끝으로 보냅니다.  -->
+        <StackPanel
+            x:Name="SecondaryToolbarControls"
+            Grid.Column="2"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Center"
+            Orientation="Horizontal"
+            Spacing="10">
+            <Border
+                Padding="1"
+                Background="{ThemeResource NegaflowSubtleFillBrush}"
+                CornerRadius="7">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                    <Button
+                        x:Name="SidebarButton"
+                        AutomationProperties.AutomationId="negaflow.panel.sidebar"
+                        Click="OnSidebarClick"
+                        Style="{StaticResource NegaflowToolbarIconButtonStyle}">
+                        <FontIcon FontSize="13" Glyph="&#xE90C;" />
+                    </Button>
+                    <Button
+                        x:Name="FilmstripButton"
+                        AutomationProperties.AutomationId="negaflow.panel.filmstrip"
+                        Click="OnFilmstripClick"
+                        Style="{StaticResource NegaflowToolbarIconButtonStyle}">
+                        <FontIcon FontSize="13" Glyph="&#xE90E;" />
+                    </Button>
+                    <Button
+                        x:Name="InspectorButton"
+                        AutomationProperties.AutomationId="negaflow.panel.inspector"
+                        Click="OnInspectorClick"
+                        Style="{StaticResource NegaflowToolbarIconButtonStyle}">
+                        <FontIcon FontSize="13" Glyph="&#xE90D;" />
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <Button
+                x:Name="AppearanceButton"
+                AutomationProperties.AutomationId="negaflow.appearance"
+                Style="{StaticResource NegaflowToolbarIconButtonStyle}">
+                <FontIcon x:Name="AppearanceIcon" FontSize="14" Glyph="&#xE706;" />
+                <Button.Flyout>
+                    <MenuFlyout>
+                        <MenuFlyoutItem
+                            x:Name="SystemAppearanceItem"
+                            AutomationProperties.AutomationId="negaflow.appearance.system"
+                            Click="OnSystemAppearanceClick" />
+                        <MenuFlyoutItem
+                            x:Name="DarkAppearanceItem"
+                            AutomationProperties.AutomationId="negaflow.appearance.dark"
+                            Click="OnDarkAppearanceClick" />
+                        <MenuFlyoutItem
+                            x:Name="LightAppearanceItem"
+                            AutomationProperties.AutomationId="negaflow.appearance.light"
+                            Click="OnLightAppearanceClick" />
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+
+            <Button
+                x:Name="UtilityButton"
+                Style="{StaticResource NegaflowToolbarIconButtonStyle}">
+                <FontIcon FontSize="14" Glyph="&#xE712;" />
+                <Button.Flyout>
+                    <MenuFlyout>
+                        <MenuFlyoutItem x:Name="SettingsItem" Click="OnSettingsClick" Icon="Setting" />
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem
+                            x:Name="DiagnosticsItem"
+                            AutomationProperties.AutomationId="negaflow.menu.diagnostics"
+                            Click="OnDiagnosticsClick" />
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+        </StackPanel>
+        </Grid>
     </Grid>
 </UserControl>

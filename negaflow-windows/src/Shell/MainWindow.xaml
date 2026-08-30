@@ -54,16 +54,15 @@
                       산세리프라 **따로 싣지 않고 시스템 것을 그대로 쓰므로 라이선스 문제가
                       없습니다.** 없는 기계에서는 XAML 이 기본 글꼴로 물러납니다.
 
-                      색을 테마에 맡기지 않습니다. 이 화면은 시스템 배경 위에 떠 있어
-                      바탕 화면이 비치므로, 테마가 라이트면 검은 글자가 어두운 바탕에
-                      묻혀 사라집니다.  -->
+                      앱이 고른 테마를 따릅니다. 다크는 흰색, 라이트는 검정이며, 테마
+                      변경 뒤에도 `ThemeResource`가 즉시 다시 풉니다.  -->
                 <TextBlock
                     HorizontalAlignment="Center"
                     CharacterSpacing="420"
                     FontFamily="Bahnschrift"
                     FontSize="24"
                     FontWeight="Bold"
-                    Foreground="#FFFFFFFF"
+                    Foreground="{ThemeResource NegaflowStartupTextBrush}"
                     Text="NEGAFLOW" />
             </StackPanel>
         </Grid>

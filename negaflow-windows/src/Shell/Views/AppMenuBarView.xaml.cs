@@ -1,6 +1,8 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Negaflow.Catalog;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
@@ -15,6 +17,21 @@ namespace Negaflow.Shell.Views;
 /// </summary>
 public sealed partial class AppMenuBarView : UserControl
 {
+    private const double MinimumMenuItemHorizontalPadding = 2;
+    private const double MinimumMenuItemHorizontalMargin = 0;
+    private const double IconRestoreHysteresis = 8;
+    private const string AppMenuTextTitle = "negaflow";
+    private static readonly Uri AppMenuIconUri = new(
+        "ms-appx:///Assets/Square44x44Logo.targetsize-32_altform-unplated.png");
+
+    private double defaultMenuItemHorizontalPadding = double.NaN;
+    private double defaultMenuItemHorizontalMargin = double.NaN;
+    private double appliedMenuItemHorizontalPadding = double.NaN;
+    private double appliedMenuItemHorizontalMargin = double.NaN;
+    private double normalTextMenuWidth = double.NaN;
+    private bool appMenuUsesIcon;
+    private Image? appMenuIcon;
+
     public AppMenuBarView()
     {
         InitializeComponent();
@@ -29,6 +46,96 @@ public sealed partial class AppMenuBarView : UserControl
     public event EventHandler? KeyboardShortcutsRequested;
 
     public event EventHandler<WorkflowShortcutAction>? CommandRequested;
+
+    /// <summary>
+    /// 제목 표시줄에 남은 폭에 맞춰 메뉴 가로 여백을 줄입니다. 기본 폭이 더 넓으면
+    /// 앱 이름을 글자 높이 아이콘으로 바꿉니다. 언어가 달라도 항목이 서로 겹치지 않게
+    /// 실측 폭으로만 판단합니다.
+    /// </summary>
+    public bool FitAvailableWidth(double availableWidth)
+    {
+        if (!double.IsFinite(availableWidth) || availableWidth <= 0)
+        {
+            return false;
+        }
+
+        List<MenuBarItem> items = MenuItems();
+        List<Button> buttons = ContentButtons(items);
+        if (items.Count == 0 || items.Count != buttons.Count)
+        {
+            return false;
+        }
+
+        CaptureDefaultExtras(buttons, items);
+        double menuWidth = MeasuredMenuWidth(items);
+        if (menuWidth <= 0)
+        {
+            return false;
+        }
+
+        if (!appMenuUsesIcon && AtDefaultExtras())
+        {
+            normalTextMenuWidth = menuWidth;
+        }
+
+        bool shouldUseIcon = appMenuUsesIcon
+            ? !double.IsNaN(normalTextMenuWidth) &&
+                normalTextMenuWidth > availableWidth + IconRestoreHysteresis
+            : double.IsNaN(normalTextMenuWidth)
+                ? menuWidth > availableWidth
+                : normalTextMenuWidth > availableWidth;
+
+        bool changed = false;
+        if (appMenuUsesIcon != shouldUseIcon)
+        {
+            if (shouldUseIcon && double.IsNaN(normalTextMenuWidth))
+            {
+                double extraDelta = 2 * items.Count *
+                    (defaultMenuItemHorizontalPadding + defaultMenuItemHorizontalMargin
+                        - appliedMenuItemHorizontalPadding - appliedMenuItemHorizontalMargin);
+                normalTextMenuWidth = menuWidth + Math.Max(0, extraDelta);
+            }
+
+            appMenuUsesIcon = shouldUseIcon;
+            SetAppMenuPresentation(buttons[0]);
+            changed = true;
+        }
+
+        int count = items.Count;
+        double overflow = menuWidth - availableWidth;
+        double currentPerSide = appliedMenuItemHorizontalPadding + appliedMenuItemHorizontalMargin;
+        double defaultPerSide = defaultMenuItemHorizontalPadding + defaultMenuItemHorizontalMargin;
+        double minimumPerSide = MinimumMenuItemHorizontalPadding + MinimumMenuItemHorizontalMargin;
+        double targetPerSide;
+        if (overflow > 0.5)
+        {
+            double shrink = overflow / (2 * count);
+            targetPerSide = Math.Max(minimumPerSide, currentPerSide - shrink);
+        }
+        else
+        {
+            double slack = Math.Max(0, -overflow);
+            double grow = slack / (2 * count);
+            targetPerSide = Math.Min(defaultPerSide, currentPerSide + grow);
+        }
+
+        double targetMargin = Math.Clamp(
+            Math.Min(defaultMenuItemHorizontalMargin, targetPerSide - MinimumMenuItemHorizontalPadding),
+            MinimumMenuItemHorizontalMargin,
+            defaultMenuItemHorizontalMargin);
+        double targetPadding = Math.Clamp(
+            targetPerSide - targetMargin,
+            MinimumMenuItemHorizontalPadding,
+            defaultMenuItemHorizontalPadding);
+        if (Math.Abs(targetPadding - appliedMenuItemHorizontalPadding) >= 0.01 ||
+            Math.Abs(targetMargin - appliedMenuItemHorizontalMargin) >= 0.01)
+        {
+            ApplyHorizontalExtras(buttons, items, targetPadding, targetMargin);
+            changed = true;
+        }
+
+        return changed;
+    }
 
     public void Localize()
     {
@@ -218,6 +325,192 @@ public sealed partial class AppMenuBarView : UserControl
             ToggleBeforeAfterItem,
             "shortcutToggleBeforeAfter",
             WorkflowShortcutAction.ToggleBeforeAfter);
+
+        ResetMenuLayoutCache();
+    }
+
+    private void ResetMenuLayoutCache()
+    {
+        normalTextMenuWidth = double.NaN;
+        if (!appMenuUsesIcon)
+        {
+            return;
+        }
+
+        appMenuUsesIcon = false;
+        if (FindContentButton(AppMenu) is { } button)
+        {
+            SetAppMenuPresentation(button);
+        }
+    }
+
+    private void CaptureDefaultExtras(IReadOnlyList<Button> buttons, IReadOnlyList<MenuBarItem> items)
+    {
+        if (double.IsNaN(defaultMenuItemHorizontalPadding))
+        {
+            defaultMenuItemHorizontalPadding = buttons[0].Padding.Left;
+            appliedMenuItemHorizontalPadding = defaultMenuItemHorizontalPadding;
+        }
+
+        if (double.IsNaN(defaultMenuItemHorizontalMargin))
+        {
+            defaultMenuItemHorizontalMargin = items[0].Margin.Left;
+            appliedMenuItemHorizontalMargin = defaultMenuItemHorizontalMargin;
+        }
+    }
+
+    private bool AtDefaultExtras() =>
+        !double.IsNaN(appliedMenuItemHorizontalPadding) &&
+        !double.IsNaN(appliedMenuItemHorizontalMargin) &&
+        Math.Abs(appliedMenuItemHorizontalPadding - defaultMenuItemHorizontalPadding) < 0.01 &&
+        Math.Abs(appliedMenuItemHorizontalMargin - defaultMenuItemHorizontalMargin) < 0.01;
+
+    private static double MeasuredMenuWidth(IReadOnlyList<MenuBarItem> items)
+    {
+        double width = 0;
+        foreach (MenuBarItem item in items)
+        {
+            width += item.ActualWidth + item.Margin.Left + item.Margin.Right;
+        }
+
+        return width;
+    }
+
+    private void ApplyHorizontalExtras(
+        IReadOnlyList<Button> buttons,
+        IReadOnlyList<MenuBarItem> items,
+        double padding,
+        double margin)
+    {
+        foreach (Button button in buttons)
+        {
+            Thickness current = button.Padding;
+            button.MinWidth = 0;
+            button.Padding = new Thickness(padding, current.Top, padding, current.Bottom);
+        }
+
+        foreach (MenuBarItem item in items)
+        {
+            Thickness current = item.Margin;
+            item.Margin = new Thickness(margin, current.Top, margin, current.Bottom);
+        }
+
+        appliedMenuItemHorizontalPadding = padding;
+        appliedMenuItemHorizontalMargin = margin;
+    }
+
+    private List<MenuBarItem> MenuItems()
+    {
+        List<MenuBarItem> items = [];
+        foreach (object item in Host.Items)
+        {
+            if (item is MenuBarItem menuItem)
+            {
+                items.Add(menuItem);
+            }
+        }
+
+        return items;
+    }
+
+    private List<Button> ContentButtons(IReadOnlyList<MenuBarItem> items)
+    {
+        List<Button> buttons = [];
+        foreach (MenuBarItem item in items)
+        {
+            if (FindContentButton(item) is { } button)
+            {
+                buttons.Add(button);
+            }
+        }
+
+        return buttons;
+    }
+
+    private void SetAppMenuPresentation(Button appMenuButton)
+    {
+        appMenuButton.MinWidth = 0;
+
+        //  아이콘을 `Content` 에 지역값으로 넣는 순간 `Title` 의 TemplateBinding 이 끊깁니다.
+        //  그래서 `ClearValue` 로 지역값만 지우면 되살아날 바인딩이 없어 `Content` 가 비고,
+        //  폭을 다시 넓혔을 때 **글자도 아이콘도 없는 빈 칸**이 남았습니다. 두 상태 모두
+        //  `Content` 에 직접 넣어 되돌립니다. `Title` 은 자동화 이름으로 늘 들고 있습니다.
+        AppMenu.Title = AppMenuTextTitle;
+        if (!appMenuUsesIcon)
+        {
+            appMenuButton.Content = AppMenuTextTitle;
+            ToolTipService.SetToolTip(AppMenu, null);
+            return;
+        }
+
+        double iconSize = MeasureAppMenuTextHeight(appMenuButton);
+        appMenuIcon ??= new Image
+        {
+            Source = new BitmapImage(AppMenuIconUri),
+            Stretch = Stretch.Uniform,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        appMenuIcon.Width = iconSize;
+        appMenuIcon.Height = iconSize;
+        appMenuButton.Content = appMenuIcon;
+        ToolTipService.SetToolTip(AppMenu, AppMenuTextTitle);
+    }
+
+    private static double MeasureAppMenuTextHeight(Button appMenuButton)
+    {
+        if (FindTextBlock(appMenuButton) is { ActualHeight: > 1 } text)
+        {
+            return text.ActualHeight;
+        }
+
+        double contentHeight = appMenuButton.ActualHeight
+            - appMenuButton.Padding.Top
+            - appMenuButton.Padding.Bottom;
+        if (contentHeight > 1)
+        {
+            return contentHeight;
+        }
+
+        return Math.Max(1, appMenuButton.FontSize);
+    }
+
+    private static Button? FindContentButton(DependencyObject root)
+    {
+        for (int index = 0; index < VisualTreeHelper.GetChildrenCount(root); ++index)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(root, index);
+            if (child is Button { Name: "ContentButton" } button)
+            {
+                return button;
+            }
+
+            if (FindContentButton(child) is { } nested)
+            {
+                return nested;
+            }
+        }
+
+        return null;
+    }
+
+    private static TextBlock? FindTextBlock(DependencyObject root)
+    {
+        for (int index = 0; index < VisualTreeHelper.GetChildrenCount(root); ++index)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(root, index);
+            if (child is TextBlock text)
+            {
+                return text;
+            }
+
+            if (FindTextBlock(child) is { } nested)
+            {
+                return nested;
+            }
+        }
+
+        return null;
     }
 
     private static void SetItem(

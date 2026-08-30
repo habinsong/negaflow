@@ -12,12 +12,18 @@ public sealed partial class WorkspaceToolbarView : UserControl
 {
     private WorkspacePresentationState? workspaceState;
     private LibraryHostService? libraryHost;
+    private bool menuLayoutUpdateQueued;
 
     public WorkspaceToolbarView()
     {
         InitializeComponent();
         PreviewScanButton.Click += OnPreviewScanClick;
         ScanFrameButton.Click += OnScanFrameClick;
+        TitleBarRoot.SizeChanged += OnMenuLayoutMeasureChanged;
+        WorkspaceTabs.SizeChanged += OnMenuLayoutMeasureChanged;
+        MenuBar.Loaded += OnMenuLayoutMeasureChanged;
+        MenuBar.SizeChanged += OnMenuLayoutMeasureChanged;
+        Loaded += OnLoaded;
         LocalizeControls();
     }
 
@@ -51,13 +57,78 @@ public sealed partial class WorkspaceToolbarView : UserControl
     /// 여기 남겨 두면 제목 표시줄 밖의 좌표를 상호작용 영역으로 등록하게 됩니다.
     /// </remarks>
     public IReadOnlyList<FrameworkElement> TitleBarInteractiveElements =>
-        [MenuBar, ActiveFrameContainer, RightToolbarCluster];
+        [MenuBar, WorkspaceTabs];
 
 
     public void UpdateCaptionInsets(double left, double right)
     {
         LeftCaptionInsetColumn.Width = new GridLength(Math.Max(0, left));
         RightCaptionInsetColumn.Width = new GridLength(Math.Max(0, right));
+        QueueMenuLayoutUpdate();
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        QueueMenuLayoutUpdate();
+    }
+
+    private void OnMenuLayoutMeasureChanged(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        QueueMenuLayoutUpdate();
+    }
+
+    private void OnMenuLayoutMeasureChanged(object sender, SizeChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        QueueMenuLayoutUpdate();
+    }
+
+    private void QueueMenuLayoutUpdate()
+    {
+        if (menuLayoutUpdateQueued)
+        {
+            return;
+        }
+
+        menuLayoutUpdateQueued = true;
+        if (!DispatcherQueue.TryEnqueue(() =>
+        {
+            menuLayoutUpdateQueued = false;
+            const double menuToWorkspaceTabsGap = 8;
+            double availableWidth = TitleBarRoot.ActualWidth -
+                TitleBarRoot.Padding.Left -
+                TitleBarRoot.Padding.Right -
+                LeftCaptionInsetColumn.ActualWidth -
+                RightCaptionInsetColumn.ActualWidth -
+                WorkspaceTabs.ActualWidth -
+                menuToWorkspaceTabsGap;
+            if (availableWidth < 0)
+            {
+                availableWidth = 0;
+            }
+
+            if (availableWidth > 0)
+            {
+                MenuBar.MaxWidth = availableWidth;
+            }
+            else
+            {
+                MenuBar.ClearValue(MaxWidthProperty);
+            }
+
+            if (MenuBar.FitAvailableWidth(availableWidth))
+            {
+                TitleBarInteractiveRegionsChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }))
+        {
+            menuLayoutUpdateQueued = false;
+        }
     }
 
     public void SetQuickExportEnabled(bool isEnabled) => QuickExportButton.IsEnabled = isEnabled;
@@ -411,6 +482,8 @@ public sealed partial class WorkspaceToolbarView : UserControl
         {
             UpdateState(state.Current);
         }
+
+        QueueMenuLayoutUpdate();
     }
 
     /// <summary>

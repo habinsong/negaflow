@@ -76,7 +76,7 @@ public sealed record ShellPreferences
     /// </remarks>
     public IReadOnlyList<string> CollapsedGridFolders { get; init; } = [];
 
-    public AppearanceMode Appearance { get; init; } = AppearanceMode.System;
+    public AppearanceMode Appearance { get; init; } = AppearanceMode.Dark;
 
     public ImageContentHashMode ImageContentHash { get; init; } = ImageContentHashMode.Off;
 
@@ -242,7 +242,7 @@ public sealed record ShellPreferences
                 FiniteOrDefault(FilmstripItemScale, 1),
                 ShellLayoutMetrics.FilmstripMinimumItemScale,
                 ShellLayoutMetrics.FilmstripMaximumItemScale),
-            Appearance = Enum.IsDefined(Appearance) ? Appearance : AppearanceMode.System,
+            Appearance = Enum.IsDefined(Appearance) ? Appearance : AppearanceMode.Dark,
             ImageContentHash = Enum.IsDefined(ImageContentHash)
                 ? ImageContentHash
                 : ImageContentHashMode.Off,
