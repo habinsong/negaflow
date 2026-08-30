@@ -151,3 +151,7 @@ NEGAFLOW_LIGHTROOM_EXPANSION.md
 # 사용자의 로컬 LUT 자료입니다. 저장소에 둘 이유가 없어 추적만 뺐고, 파일은 그대로
 # 자리에 있습니다 (10 x 33^3 float64, 2.9 MB).
 /g33.npy
+
+# Gray 스캔 수집 진단 기록. 하드웨어 시험 기록이라 공개하지 않습니다. 파일은 로컬에
+# 그대로 있고 추적만 뺐습니다 (2026-08-30).
+/negaflow-mac/docs/gray-scan-ingest.md
