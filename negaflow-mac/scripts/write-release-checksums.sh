@@ -2,6 +2,7 @@
 # 릴리스 폴더에 있는 파일 전부를 체크섬 한 장에 다시 적는다.
 #
 # 아키텍처마다 체크섬을 따로 두면 릴리스 페이지에 같은 성격의 파일이 여러 개 걸린다.
+# dSYM 은 릴리스에 올리지 않으므로 목록에서 뺀다.
 # 이 스크립트는 지금 폴더에 있는 것만 보고 매번 새로 적으므로, 아키텍처를 하나 더
 # 만든 뒤에 다시 불러도 되고 공증으로 파일이 바뀐 뒤에 다시 불러도 된다.
 set -euo pipefail
@@ -25,7 +26,7 @@ FILES=()
 for name in *; do
   [ -f "$name" ] || continue
   case "$name" in
-    *.sha256|*.sha256.txt) continue ;;
+    *.sha256|*.sha256.txt|*.dSYM.zip) continue ;;
   esac
   FILES+=("$name")
 done
