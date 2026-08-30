@@ -111,18 +111,13 @@ publish_variant() {
   local saved_app="$variant_root/negaflow.app"
   local saved_dsym="$variant_root/negaflow.app.dSYM"
   local version
-  local build
   local base_name
   local notary_zip
-  local final_zip
   local final_dmg
   local final_pkg
-  local final_dsym
-  local final_checksums
 
   version="$(plutil -extract CFBundleShortVersionString raw "$saved_app/Contents/Info.plist")"
-  build="$(plutil -extract CFBundleVersion raw "$saved_app/Contents/Info.plist")"
-  base_name="negaflow-$version-$build-macOS-$architecture"
+  base_name="negaflow-$version-mac-$architecture"
 
   if [ "$RELEASE_MODE" = "distribution" ]; then
     notary_zip="$variant_root/$base_name-notary.zip"
@@ -138,23 +133,13 @@ publish_variant() {
       "$architecture"
 
   if [ "$RELEASE_MODE" = "distribution" ]; then
-    final_zip="$OUTPUT_DIR/$base_name.zip"
     final_dmg="$OUTPUT_DIR/$base_name.dmg"
     final_pkg="$OUTPUT_DIR/$base_name.pkg"
-    final_dsym="$OUTPUT_DIR/$base_name.symbols-dSYM.zip"
-    final_checksums="$OUTPUT_DIR/$base_name.sha256.txt"
 
     bash "$ROOT/scripts/notarize-app.sh" "$final_dmg" "$saved_app"
     bash "$ROOT/scripts/notarize-app.sh" "$final_pkg" "$saved_app"
-    (
-      cd "$OUTPUT_DIR"
-      shasum -a 256 \
-        "$(basename "$final_zip")" \
-        "$(basename "$final_dmg")" \
-        "$(basename "$final_pkg")" \
-        "$(basename "$final_dsym")" > "$(basename "$final_checksums")"
-    )
-    shasum -a 256 -c "$final_checksums"
+    # 공증 스테이플로 dmg/pkg 가 바뀌었으므로 체크섬을 다시 적는다.
+    bash "$ROOT/scripts/write-release-checksums.sh" "$OUTPUT_DIR" "$version"
   fi
 }
 

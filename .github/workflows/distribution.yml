@@ -84,7 +84,7 @@ jobs:
         run: bash negaflow-mac/scripts/build-release.sh
       - name: Verify final artifacts
         run: |
-          shasum -a 256 -c build/release-artifacts/*.sha256.txt
+          shasum -a 256 -c build/release-artifacts/*.sha256
           for app in build/release-apps/*/negaflow.app; do
             xcrun stapler validate "$app"
             spctl --assess --type execute --verbose=4 "$app"

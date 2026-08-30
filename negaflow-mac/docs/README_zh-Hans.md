@@ -47,8 +47,8 @@
 
 | 下载 | 适用的 Mac |
 |---|---|
-| `negaflow-1.1.0-1-macOS-universal.pkg` | Apple Silicon 和 Intel |
-| `negaflow-1.1.0-1-macOS-arm64.pkg` | 仅 Apple Silicon |
+| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon 和 Intel |
+| `negaflow-1.1.0-mac-arm64.pkg` | 仅 Apple Silicon |
 
 多数人用 Universal PKG 就行。打开后按提示操作，应用会进到 `/Applications`。
 同一页也有 DMG 和 ZIP，想自己拖放安装可以用它们。

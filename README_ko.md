@@ -94,8 +94,8 @@ Windows 쪽 테스트가 읽어서 화소 값까지 같은지 확인합니다.
 
 | 설치 파일 | 지원하는 Mac |
 |---|---|
-| `negaflow-1.1.0-1-macOS-universal.pkg` | Apple Silicon, Intel |
-| `negaflow-1.1.0-1-macOS-arm64.pkg` | Apple Silicon 전용 |
+| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon, Intel |
+| `negaflow-1.1.0-mac-arm64.pkg` | Apple Silicon 전용 |
 
 대부분의 Mac은 Universal PKG를 쓰면 됩니다. 실리콘 맥(M 시리즈)은 arm64 PKG를 써도 됩니다.
 
@@ -112,7 +112,7 @@ PKG는 `negaflow.app`을 `/Applications`에 바로 설치합니다.
 
 | 설치 파일 | 지원하는 PC |
 |---|---|
-| `negaflow-1.1.0-x64-setup.exe` | Windows 11 (x64) |
+| `negaflow-1.1.0-win-x64.exe` | Windows 11 (x64) |
 
 1. 설치 파일을 내려받아 실행합니다.
 2. 언어를 고르고 안내를 따릅니다.

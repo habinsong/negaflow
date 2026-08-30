@@ -90,8 +90,8 @@ Windows 的测试会读回来逐像素比对。
 
 | 下载 | 适用的 Mac |
 |---|---|
-| `negaflow-1.1.0-1-macOS-universal.pkg` | Apple Silicon 和 Intel |
-| `negaflow-1.1.0-1-macOS-arm64.pkg` | 仅 Apple Silicon |
+| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon 和 Intel |
+| `negaflow-1.1.0-mac-arm64.pkg` | 仅 Apple Silicon |
 
 多数 Mac 用 Universal PKG 就可以。
 
@@ -106,7 +106,7 @@ Windows 的测试会读回来逐像素比对。
 
 | 下载 | 适用的电脑 |
 |---|---|
-| `negaflow-1.1.0-x64-setup.exe` | Windows 11 (x64) |
+| `negaflow-1.1.0-win-x64.exe` | Windows 11 (x64) |
 
 1. 下载安装程序并运行。
 2. 选择语言，按提示操作。

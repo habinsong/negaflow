@@ -47,8 +47,8 @@ Herunterladen unter [Releases](https://github.com/habinsong/negaflow/releases).
 
 | Download | Mac |
 |---|---|
-| `negaflow-1.1.0-1-macOS-universal.pkg` | Apple Silicon und Intel |
-| `negaflow-1.1.0-1-macOS-arm64.pkg` | Nur Apple Silicon |
+| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon und Intel |
+| `negaflow-1.1.0-mac-arm64.pkg` | Nur Apple Silicon |
 
 Für die meisten passt das Universal-PKG. Öffnen, dem Installationsprogramm folgen, und die
 App landet in `/Applications`. Auf derselben Seite liegen DMG und ZIP, falls Sie die App

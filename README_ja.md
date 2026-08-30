@@ -90,8 +90,8 @@ negaflow は macOS でも Windows でも動きます。二つのアプリはコ�
 
 | ダウンロード | 対応するMac |
 |---|---|
-| `negaflow-1.1.0-1-macOS-universal.pkg` | Apple Silicon、Intel |
-| `negaflow-1.1.0-1-macOS-arm64.pkg` | Apple Siliconのみ |
+| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon、Intel |
+| `negaflow-1.1.0-mac-arm64.pkg` | Apple Siliconのみ |
 
 通常は Universal PKG を使ってください。
 
@@ -107,7 +107,7 @@ Appleの公証を受けていないため、初回起動時は**システム設�
 
 | ダウンロード | 対応するPC |
 |---|---|
-| `negaflow-1.1.0-x64-setup.exe` | Windows 11 (x64) |
+| `negaflow-1.1.0-win-x64.exe` | Windows 11 (x64) |
 
 1. インストーラをダウンロードして実行します。
 2. 言語を選び、案内に従います。

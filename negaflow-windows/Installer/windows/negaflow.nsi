@@ -37,7 +37,7 @@ SetCompressor /SOLID lzma
 !define APP_ICON "${__FILEDIR__}\..\..\src\Shell\Assets\Negaflow.ico"
 
 Name "${APPNAME}"
-OutFile "negaflow-${VERSION}-${ARCH}-setup.exe"
+OutFile "negaflow-${VERSION}-win-${ARCH}.exe"
 InstallDir "$LOCALAPPDATA\Negaflow\App"
 RequestExecutionLevel user
 ; 기본값은 NSIS 자기 이름과 판번호를 답니다. 이 제품의 것이 아닙니다.

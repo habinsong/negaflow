@@ -94,8 +94,8 @@ Téléchargez la version actuelle depuis [GitHub Releases](https://github.com/ha
 
 | Téléchargement | Mac |
 |---|---|
-| `negaflow-1.1.0-1-macOS-universal.pkg` | Apple Silicon et Intel |
-| `negaflow-1.1.0-1-macOS-arm64.pkg` | Apple Silicon uniquement |
+| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon et Intel |
+| `negaflow-1.1.0-mac-arm64.pkg` | Apple Silicon uniquement |
 
 Pour la plupart des Mac, prenez le PKG Universal.
 
@@ -111,7 +111,7 @@ allez dans Confidentialité et sécurité, et cliquez sur Ouvrir quand même.
 
 | Téléchargement | PC |
 |---|---|
-| `negaflow-1.1.0-x64-setup.exe` | Windows 11 (x64) |
+| `negaflow-1.1.0-win-x64.exe` | Windows 11 (x64) |
 
 1. Téléchargez l'installateur et lancez-le.
 2. Choisissez une langue et suivez les indications.

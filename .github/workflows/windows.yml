@@ -117,7 +117,7 @@ jobs:
       - name: Verify silent install and uninstall
         shell: pwsh
         run: |
-          $installer = Get-ChildItem .\out\release\win-x64\negaflow-*-x64-setup.exe | Select-Object -First 1
+          $installer = Get-ChildItem .\out\release\win-x64\negaflow-*-win-x64.exe | Select-Object -First 1
           if ($null -eq $installer) { throw 'Installer artifact was not created.' }
           powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-installer.ps1 -InstallerPath $installer.FullName
       - name: Upload installer artifact
@@ -125,8 +125,8 @@ jobs:
         with:
           name: Negaflow-x64-installer-${{ github.sha }}
           path: |
-            negaflow-windows/out/release/win-x64/negaflow-*-x64-setup.exe
-            negaflow-windows/out/release/win-x64/negaflow-*-x64-setup.exe.sha256
+            negaflow-windows/out/release/win-x64/negaflow-*-win-x64.exe
+            negaflow-windows/out/release/win-x64/negaflow-*-win-x64.sha256
           if-no-files-found: error
           retention-days: 14
 

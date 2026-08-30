@@ -47,8 +47,8 @@
 
 | 설치 파일 | 지원하는 Mac |
 |---|---|
-| `negaflow-1.1.0-1-macOS-universal.pkg` | Apple Silicon, Intel |
-| `negaflow-1.1.0-1-macOS-arm64.pkg` | Apple Silicon 전용 |
+| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon, Intel |
+| `negaflow-1.1.0-mac-arm64.pkg` | Apple Silicon 전용 |
 
 대부분은 Universal PKG를 쓰면 됩니다. 열어서 안내를 따르면 앱이 `/Applications`에
 설치됩니다. 직접 옮기고 싶다면 같은 페이지의 DMG나 ZIP을 쓰면 됩니다.

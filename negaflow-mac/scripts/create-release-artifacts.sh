@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 if [ "$#" -ne 4 ]; then
   echo "usage: $0 <signed-app> <dsym-bundle> <output-directory> <arm64|universal>" >&2
   exit 2
@@ -69,20 +71,18 @@ if [ -z "$APP_UUIDS" ] || [ "$APP_UUIDS" != "$DSYM_UUIDS" ]; then
 fi
 
 VERSION="$(plutil -extract CFBundleShortVersionString raw "$INFO_PLIST")"
-BUILD="$(plutil -extract CFBundleVersion raw "$INFO_PLIST")"
 BUNDLE_IDENTIFIER="$(plutil -extract CFBundleIdentifier raw "$INFO_PLIST")"
-BASE_NAME="negaflow-$VERSION-$BUILD-macOS-$ARCHITECTURE_LABEL"
+BASE_NAME="negaflow-$VERSION-mac-$ARCHITECTURE_LABEL"
 ZIP_NAME="$BASE_NAME.zip"
 DMG_NAME="$BASE_NAME.dmg"
 PKG_NAME="$BASE_NAME.pkg"
 # 릴리스 페이지는 파일 이름 순으로 늘어놓는다. 설치본(.dmg/.pkg)이 맨 위에 오도록
-# 나머지는 그 뒤로 정렬되는 이름을 쓴다 — 예전 이름은 "-SHA256SUMS.txt" 라서 하이픈이
-# 점보다 앞서 체크섬 파일이 목록 맨 위에 올라왔다.
-DSYM_NAME="$BASE_NAME.symbols-dSYM.zip"
-CHECKSUM_NAME="$BASE_NAME.sha256.txt"
+# 나머지는 그 뒤로 정렬되는 이름을 쓴다 — 하이픈은 점보다 앞서므로 "-dSYM.zip" 으로
+# 적으면 dSYM 이 설치본 위로 올라온다.
+DSYM_NAME="$BASE_NAME.dSYM.zip"
 
 mkdir -p "$OUTPUT_DIR"
-for name in "$ZIP_NAME" "$DMG_NAME" "$PKG_NAME" "$DSYM_NAME" "$CHECKSUM_NAME"; do
+for name in "$ZIP_NAME" "$DMG_NAME" "$PKG_NAME" "$DSYM_NAME"; do
   if [ -e "$OUTPUT_DIR/$name" ] && [ "${NEGAFLOW_OVERWRITE_RELEASE:-0}" != "1" ]; then
     echo "[release-artifacts] ERROR: 기존 artifact가 있습니다: $OUTPUT_DIR/$name" >&2
     exit 1
@@ -128,18 +128,14 @@ if [ -n "${NEGAFLOW_CODESIGN_IDENTITY:-}" ] \
   codesign --verify --verbose=2 "$STAGING_ROOT/$DMG_NAME"
 fi
 
-(
-  cd "$STAGING_ROOT"
-  shasum -a 256 "$ZIP_NAME" "$DMG_NAME" "$PKG_NAME" "$DSYM_NAME" \
-    | sed 's#  .*/#  #' > "$CHECKSUM_NAME"
-)
-
-for name in "$ZIP_NAME" "$DMG_NAME" "$PKG_NAME" "$DSYM_NAME" "$CHECKSUM_NAME"; do
+for name in "$ZIP_NAME" "$DMG_NAME" "$PKG_NAME" "$DSYM_NAME"; do
   mv -f "$STAGING_ROOT/$name" "$OUTPUT_DIR/$name"
 done
+
+# 체크섬은 아키텍처마다 따로 두지 않고 릴리스 폴더 전체를 한 장에 적는다.
+bash "$SCRIPT_DIR/write-release-checksums.sh" "$OUTPUT_DIR" "$VERSION"
 
 echo "[release-artifacts] zip: $OUTPUT_DIR/$ZIP_NAME"
 echo "[release-artifacts] dmg: $OUTPUT_DIR/$DMG_NAME"
 echo "[release-artifacts] pkg: $OUTPUT_DIR/$PKG_NAME"
 echo "[release-artifacts] dSYM: $OUTPUT_DIR/$DSYM_NAME"
-echo "[release-artifacts] checksums: $OUTPUT_DIR/$CHECKSUM_NAME"

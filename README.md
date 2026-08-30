@@ -93,8 +93,8 @@ Download the current release from [GitHub Releases](https://github.com/habinsong
 
 | Download | Mac |
 |---|---|
-| `negaflow-1.1.0-1-macOS-universal.pkg` | Apple Silicon and Intel |
-| `negaflow-1.1.0-1-macOS-arm64.pkg` | Apple Silicon only |
+| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon and Intel |
+| `negaflow-1.1.0-mac-arm64.pkg` | Apple Silicon only |
 
 Most Macs should use the Universal PKG. Apple Silicon Macs can use the arm64 PKG instead.
 
@@ -111,7 +111,7 @@ go to Privacy and Security, and click Open Anyway.
 
 | Download | PC |
 |---|---|
-| `negaflow-1.1.0-x64-setup.exe` | Windows 11 (x64) |
+| `negaflow-1.1.0-win-x64.exe` | Windows 11 (x64) |
 
 1. Download the installer and run it.
 2. Pick a language and follow the prompts.
