@@ -139,7 +139,7 @@ publish_variant() {
     bash "$ROOT/scripts/notarize-app.sh" "$final_dmg" "$saved_app"
     bash "$ROOT/scripts/notarize-app.sh" "$final_pkg" "$saved_app"
     # 공증 스테이플로 dmg/pkg 가 바뀌었으므로 체크섬을 다시 적는다.
-    bash "$ROOT/scripts/write-release-checksums.sh" "$OUTPUT_DIR" "$version"
+    bash "$ROOT/scripts/write-release-checksums.sh" "$OUTPUT_DIR"
   fi
 }
 

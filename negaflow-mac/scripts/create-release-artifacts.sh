@@ -133,7 +133,7 @@ for name in "$ZIP_NAME" "$DMG_NAME" "$PKG_NAME" "$DSYM_NAME"; do
 done
 
 # 체크섬은 아키텍처마다 따로 두지 않고 릴리스 폴더 전체를 한 장에 적는다.
-bash "$SCRIPT_DIR/write-release-checksums.sh" "$OUTPUT_DIR" "$VERSION"
+bash "$SCRIPT_DIR/write-release-checksums.sh" "$OUTPUT_DIR"
 
 echo "[release-artifacts] zip: $OUTPUT_DIR/$ZIP_NAME"
 echo "[release-artifacts] dmg: $OUTPUT_DIR/$DMG_NAME"
