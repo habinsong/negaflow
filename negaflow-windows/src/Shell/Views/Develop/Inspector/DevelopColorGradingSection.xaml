@@ -42,7 +42,19 @@
                         <FontIcon x:Name="ColorGradingChevron" Grid.Column="2" Margin="8,0,0,0" FontSize="12" Glyph="&#xE76C;" />
                     </Grid>
                 </controls:DisclosureButton>
-                <Button x:Name="ColorGradingResetButton" Grid.Column="1" Width="30" Height="26" Margin="6,0,0,0" Padding="0" Click="OnColorGradingResetClicked">
+                <Button
+                    x:Name="ColorGradingResetButton"
+                    Grid.Column="1"
+                    Width="30"
+                    Height="26"
+                    Margin="6,0,0,0"
+                    Padding="0"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
+                    CornerRadius="0"
+                    Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                    Click="OnColorGradingResetClicked">
                     <FontIcon FontSize="12" Glyph="&#xE777;" />
                 </Button>
             </Grid>

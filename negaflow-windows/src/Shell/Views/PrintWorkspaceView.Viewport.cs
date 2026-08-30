@@ -82,7 +82,8 @@ public sealed partial class PrintWorkspaceView
             state.Current.Print.LayoutMode,
             PrintSources.Count);
 
-    private void ApplyPrintViewport()
+    /// <summary>지금 배율과 이동을 담은 변환입니다. 요소마다 하나씩 만듭니다.</summary>
+    private TransformGroup PrintViewportTransform()
     {
         TransformGroup transform = new();
         transform.Children.Add(new ScaleTransform
@@ -95,8 +96,22 @@ public sealed partial class PrintWorkspaceView
             X = printViewport.OffsetX,
             Y = printViewport.OffsetY,
         });
+        return transform;
+    }
+
+    private void ApplyPrintViewport()
+    {
         PageBorder.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
-        PageBorder.RenderTransform = transform;
+        PageBorder.RenderTransform = PrintViewportTransform();
+        // **눈금자도 같은 변환을 탑니다.** 눈금자는 종이의 가장자리를 재는 것이므로 종이를
+        // 확대하면 함께 커지고 함께 움직여야 자리가 맞습니다. 앞 판은 이 변환을 판에만
+        // 걸어서, 확대하면 종이는 커지는데 눈금자는 확대 전 자리에 남아 둘이 떨어졌습니다.
+        //
+        // macOS `PrintCanvasView` 는 눈금자 오버레이를 `page()` 안에 두고 그 전체에
+        // `.scaleEffect` 와 `.offset` 을 겁니다. 판과 눈금자가 같은 중심(화면 가운데)에
+        // 놓이므로 같은 변환을 그대로 나눠 써도 결과가 같습니다.
+        RulerCanvas.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
+        RulerCanvas.RenderTransform = PrintViewportTransform();
         PrintZoomHud.RefreshZoomText();
     }
 

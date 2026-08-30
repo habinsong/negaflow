@@ -28,6 +28,7 @@ internal sealed class PrintSheetExportRunner
     private readonly Func<WorkspacePresentationState?> state;
     private readonly Panel textRasterHost;
     private readonly Action<string> report;
+    private readonly Action<ExportProgress> progress;
 
     private bool isRunning;
 
@@ -35,12 +36,14 @@ internal sealed class PrintSheetExportRunner
         Func<IReadOnlyList<LibraryFrameSnapshot>> sources,
         Func<WorkspacePresentationState?> state,
         Panel textRasterHost,
-        Action<string> report)
+        Action<string> report,
+        Action<ExportProgress>? progress = null)
     {
         this.sources = sources;
         this.state = state;
         this.textRasterHost = textRasterHost;
         this.report = report;
+        this.progress = progress ?? (_ => { });
     }
 
     /// <summary>출력 탭의 "내보내기" 폴더로, 고른 형식으로 판을 씁니다.</summary>
@@ -86,6 +89,9 @@ internal sealed class PrintSheetExportRunner
 
         isRunning = true;
         report(string.Empty);
+        // 판을 쓰는 동안 도구 모음의 원형 표시를 돌립니다. 장수를 알고 있으므로 현상뷰와
+        // 같은 방식으로 0/장수 에서 시작합니다.
+        progress(new ExportProgress(0, selection.Count));
         try
         {
             ExportTrace.Write(
@@ -130,6 +136,7 @@ internal sealed class PrintSheetExportRunner
         finally
         {
             isRunning = false;
+            progress(ExportProgress.Idle);
         }
     }
 }

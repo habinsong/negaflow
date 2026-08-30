@@ -165,7 +165,9 @@ public sealed partial class PrintWorkspaceView
             () => PrintSources,
             () => workspaceState,
             TextRasterHost,
-            PrintExportPanel.SetOutputStatus);
+            PrintExportPanel.SetOutputStatus,
+            // 도구 모음의 원형 표시를 인화뷰에서도 돌립니다. 현상뷰와 같은 통로입니다.
+            PrintExportPanel.ReportProgress);
         PrintExportPanel.UsesPaperLayout = true;
         // 나올 **파일 수**를 단추에 답니다. macOS `printExportOutputCount` 와 같은 계산이며,
         // 낱장 배치는 사진마다 한 판이고 콘택트 시트·사진 패키지·사용자 패키지는 한 판에

@@ -93,16 +93,38 @@ def main() -> int:
     return 0
 
 
+def trimmed(icon: Image.Image) -> Image.Image:
+    """그림 둘레의 빈 자리를 잘라 낸다.
+
+    원본은 macOS 앱 아이콘이라 캔버스 둘레에 여백을 두고 그려져 있다(실측 1024 판에서
+    그림이 106..916, 곧 가로의 79%). Dock 은 그 여백을 전제로 그리지만 Windows 작업
+    표시줄은 아이콘이 칸을 채운다고 보고 그린다. 그대로 줄이면 옆의 다른 아이콘보다
+    눈에 띄게 작아 보인다.
+
+    그림만 잘라 정사각으로 다시 감싼다. 가로세로 비율은 건드리지 않으므로 찌그러지거나
+    잘리지 않는다.
+    """
+    alpha = icon.split()[3]
+    box = alpha.getbbox()
+    if box is None:
+        return icon
+    art = icon.crop(box)
+    edge = max(art.width, art.height)
+    canvas = Image.new("RGBA", (edge, edge), (0, 0, 0, 0))
+    canvas.paste(art, ((edge - art.width) // 2, (edge - art.height) // 2), art)
+    return canvas
+
+
 def square(icon: Image.Image, size: int) -> Image.Image:
-    """정사각 로고. 원본이 이미 정사각이라 크기만 줄인다."""
-    return scaled(icon, size)
+    """정사각 로고. 여백을 걷어 낸 그림을 칸에 맞춘다."""
+    return scaled(trimmed(icon), size)
 
 
 def letterboxed(icon: Image.Image, width: int, height: int) -> Image.Image:
     """와이드 타일. 배경을 채우지 않고 **투명 캔버스 가운데**에 놓는다."""
     canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     edge = min(width, height)
-    art = scaled(icon, edge)
+    art = scaled(trimmed(icon), edge)
     canvas.paste(art, ((width - edge) // 2, (height - edge) // 2), art)
     return canvas
 
