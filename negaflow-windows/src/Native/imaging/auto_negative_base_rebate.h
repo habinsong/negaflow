@@ -45,16 +45,29 @@ namespace negaflow::imaging::auto_base_detail {
 /// 비율만큼 연속으로 이어지면서 모두 luma ≥ L 이면 그 줄은 수준 L 을 유지합니다. 먼지와
 /// 흠집은 짧아서 못 버티고 리베이트는 폭 전체를 가로지르므로 버팁니다. 길이로 정의하면
 /// 띠가 16 줄이든 400 줄이든 결과가 같습니다 — 고정 백분위가 깨지던 자리입니다.
+/// <param name="gate_open">
+/// 문지기가 열렸습니다 — 고른 값이 장면 높이에 앉아 있다는 뜻입니다.
+/// </param>
+///
+/// 문지기가 닫혀 있어도 **띠가 얇으면** 원본을 봅니다. 축소본에서 얇은 띠는 이웃과 평균되어
+/// 절반 값으로 뭉개지고, 추정기가 그 뭉개진 값을 고르면 사진이 어두워지는데 — 그 값은 장면
+/// 보다는 밝아서 문지기에 안 걸립니다. 얇은 띠는 그 자체로 "여기서 읽은 값은 못 믿는다" 는
+/// 표시이므로, 그때만 원본에서 확인합니다.
 [[nodiscard]] std::optional<film_base_detail::BaseMeasurement> rebate_base(
     const WorkingImage& image,
     const film_base_detail::SampleGrid& grid,
-    NegativeFilmType film_type);
+    NegativeFilmType film_type,
+    bool gate_open);
 
 /// <summary>다시 잰 값을 받아들일지입니다.</summary>
 ///
 /// 문지기는 넉넉하게 의심하므로(멀쩡한 사진도 걸립니다) 채택은 여기서 깐깐하게 봅니다.
 /// 받아들이지 않으면 기존 값이 그대로 남습니다 — 새 경로가 아무 답도 못 내는 사진은
 /// 구조적으로 지금과 똑같이 동작합니다.
+///
+/// 다시 잰 값이 지금 값보다 **뚜렷하게** 밝아야 받습니다. 띠 찾기를 늘 돌리게 되면서
+/// 멀쩡한 사진에서도 같은 자리를 다시 재게 되는데, 그때 나오는 값은 지금 값과 사실상
+/// 같습니다. 여유 없이 "밝기만 하면" 으로 두면 그 미세한 차이로 멀쩡한 사진이 바뀝니다.
 [[nodiscard]] bool accept_rebate_base(
     const film_base_detail::BaseMeasurement& rebate,
     const std::array<float, 3>& current) noexcept;

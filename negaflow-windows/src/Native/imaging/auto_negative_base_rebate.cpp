@@ -240,12 +240,22 @@ double brighter_than_base_fraction(
 std::optional<BaseMeasurement> rebate_base(
     const WorkingImage& image,
     const SampleGrid& grid,
-    const NegativeFilmType film_type) {
+    const NegativeFilmType film_type,
+    const bool gate_open) {
     if (!film_base_detail::has_compatible_layout(image) || grid.pixels.empty()) {
         return std::nullopt;
     }
     const std::optional<Band> band = locate_band(grid, film_type);
     if (!band.has_value()) {
+        return std::nullopt;
+    }
+    // 축소본에서 이만큼 얇은 띠는 이웃과 평균되어 값이 뭉개집니다. 뭉개진 값은 장면보다는
+    // 밝아 문지기에 안 걸리므로, 얇다는 것 자체를 원본을 볼 이유로 삼습니다.
+    const std::uint32_t span = band->last - band->first + 1U;
+    const std::uint32_t grid_count = band->horizontal ? grid.height : grid.width;
+    const std::uint32_t image_count = band->horizontal ? image.height : image.width;
+    const bool diluted = span <= 2U && grid_count > 0U && image_count / grid_count >= 3U;
+    if (!gate_open && !diluted) {
         return std::nullopt;
     }
     const std::optional<BaseMeasurement> measured =
@@ -283,7 +293,10 @@ bool accept_rebate_base(
         static_cast<float>(rebate[1]),
         static_cast<float>(rebate[2]),
         1.0F};
-    if (!film_base_detail::finite_rgb(now) || luma_of(next) <= luma_of(now)) {
+    // 여유를 둡니다. 띠 찾기를 늘 돌리므로 멀쩡한 사진에서도 같은 자리를 다시 재게 되는데,
+    // 그때 나오는 값은 지금 값과 사실상 같습니다(실측 20 장에서 1.00~1.05 배). 여유가 없으면
+    // 그 미세한 차이로 멀쩡한 사진이 바뀝니다. 실제로 고쳐야 하는 사진은 1.30 배 이상입니다.
+    if (!film_base_detail::finite_rgb(now) || luma_of(next) < luma_of(now) * 1.15) {
         return false;
     }
     // 맨 광원은 센서 최대치에 붙습니다. 필름 베이스는 자기도 밀도가 있어 절대 포화되지

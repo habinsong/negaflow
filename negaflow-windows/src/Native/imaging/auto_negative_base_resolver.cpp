@@ -184,12 +184,10 @@ AutoNegativeBaseResult resolve_auto_negative_base(
     try {
         result.brighter_than_base =
             auto_base_detail::brighter_than_base_fraction(*grid, result.dmin);
-        // 문지기입니다. 정상 사진은 여기서 끝나고 원본을 다시 읽지 않습니다.
-        if (result.brighter_than_base <= rebate_gate_fraction) {
-            return result;
-        }
-        const std::optional<BaseMeasurement> rebate =
-            auto_base_detail::rebate_base(image, *grid, film_type);
+        // 띠 찾기는 축소본 위에서만 도는 선형 두 번이라 늘 돌려도 쌉니다. 원본을 다시 읽을지는
+        // 그 안에서 정합니다 — 문지기가 열렸거나, 띠가 뭉개질 만큼 얇을 때만입니다.
+        const std::optional<BaseMeasurement> rebate = auto_base_detail::rebate_base(
+            image, *grid, film_type, result.brighter_than_base > rebate_gate_fraction);
         if (!rebate.has_value() ||
             !auto_base_detail::accept_rebate_base(*rebate, result.dmin)) {
             return result;

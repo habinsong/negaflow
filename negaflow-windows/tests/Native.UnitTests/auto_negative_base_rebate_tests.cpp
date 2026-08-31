@@ -93,7 +93,7 @@ void the_band_is_measured_at_full_resolution_not_on_the_grid() {
         return;
     }
     const std::optional<negaflow::imaging::film_base_detail::BaseMeasurement> measured =
-        rebate_base(image, *grid, negaflow::imaging::NegativeFilmType::color);
+        rebate_base(image, *grid, negaflow::imaging::NegativeFilmType::color, true);
     expect(measured.has_value(), "band: the rebate is found");
     if (!measured.has_value()) {
         return;
@@ -111,7 +111,7 @@ void a_photograph_without_a_rebate_yields_no_band() {
         return;
     }
     const std::optional<negaflow::imaging::film_base_detail::BaseMeasurement> measured =
-        rebate_base(image, *grid, negaflow::imaging::NegativeFilmType::color);
+        rebate_base(image, *grid, negaflow::imaging::NegativeFilmType::color, true);
     // 리베이트가 없으면 가장 밝은 유지 수준은 장면 자신입니다. 그 값이 지금 값보다 밝을 수는
     // 없으므로 채택 심사에서 걸리고, 사진은 손대지 않은 채 남습니다.
     if (measured.has_value()) {
@@ -154,17 +154,29 @@ void a_clipped_band_is_refused() {
         "clipped: a band darker than the current base is refused");
 }
 
-void the_resolver_reports_the_gate_reading() {
+void a_diluted_rebate_is_recovered_even_though_the_gate_stays_shut() {
+    // **문지기만으로는 못 잡는 경우입니다.** 이 스캔에서 추정기는 리베이트를 아예 놓치는
+    // 대신 축소본에서 뭉개진 절반 값(0.179)을 고릅니다. 그 값은 장면보다는 밝아서 "베이스
+    // 보다 밝은 화소" 가 거의 없고, 문지기가 열리지 않습니다. 그래도 사진은 두 배 어둡게
+    // 나옵니다.
+    //
+    // 얇은 띠는 그 자체로 "여기서 읽은 값은 못 믿는다" 는 표시이므로, 그때는 문지기와
+    // 무관하게 원본에서 확인합니다.
     const negaflow::imaging::WorkingImage image = make_scan(3U, 0.357F, 0.150F, 0.0763F);
     const negaflow::imaging::AutoNegativeBaseResult resolved =
         negaflow::imaging::resolve_auto_negative_base(
             image, negaflow::imaging::NegativeFilmType::color);
+
     expect(
         resolved.status == negaflow::imaging::AutoNegativeBaseStatus::ok,
-        "resolver: reports ok");
+        "diluted: the resolver reports ok");
     expect(
-        resolved.brighter_than_base >= 0.0 && resolved.brighter_than_base <= 1.0,
-        "resolver: the gate reading is a fraction");
+        resolved.brighter_than_base <= 0.05,
+        "diluted: the gate stays shut - this is the case the gate cannot see");
+    expect(resolved.rebate_rescued, "diluted: the thin band is checked at full resolution");
+    expect_near(resolved.dmin[0], 0.357, 0.01, "diluted: red is the undiluted rebate");
+    expect_near(resolved.dmin[1], 0.150, 0.01, "diluted: green is the undiluted rebate");
+    expect_near(resolved.dmin[2], 0.0763, 0.01, "diluted: blue is the undiluted rebate");
 }
 
 }  // namespace
@@ -174,7 +186,7 @@ int main() {
     a_photograph_without_a_rebate_yields_no_band();
     the_gate_counts_film_brighter_than_the_base();
     a_clipped_band_is_refused();
-    the_resolver_reports_the_gate_reading();
+    a_diluted_rebate_is_recovered_even_though_the_gate_stays_shut();
     if (failures != 0) {
         std::cerr << failures << " auto negative base rebate assertion(s) failed\n";
         return 1;
