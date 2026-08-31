@@ -893,7 +893,6 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developPasteScopeAll.Text" xml:space="preserve"><value>Tous les paramètres</value></data>
   <data name="developPasteScopeNone.Text" xml:space="preserve"><value>Aucun</value></data>
   <data name="developScopeBase.Text" xml:space="preserve"><value>Base</value></data>
-  <data name="developScopeBaseRgb.Text" xml:space="preserve"><value>Base R/G/B</value></data>
   <data name="developScopeTone.Text" xml:space="preserve"><value>Réglages de base</value></data>
   <data name="developScopeColor.Text" xml:space="preserve"><value>Couleur</value></data>
   <data name="developScopeDetail.Text" xml:space="preserve"><value>Détails et effets</value></data>

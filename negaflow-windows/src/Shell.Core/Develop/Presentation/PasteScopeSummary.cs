@@ -10,8 +10,7 @@ public sealed record PasteScopeText(
     string Tone,
     string Color,
     string Detail,
-    string Geometry,
-    string BaseRgb);
+    string Geometry);
 
 /// <summary>
 /// 붙여넣기 범위 단추의 요약 문구입니다. macOS 표기가 바뀔 때 바뀌므로 화면 배치·이벤트와
@@ -32,11 +31,6 @@ public static class PasteScopeSummary
         if (scope.Base)
         {
             groups.Add(text.Base);
-        }
-        // 베이스 바로 뒤입니다 - 같은 것을 다루는 두 묶음이라 목록에서도 붙어 있어야 읽힙니다.
-        if (scope.BaseRgb)
-        {
-            groups.Add(text.BaseRgb);
         }
         if (scope.Tone)
         {

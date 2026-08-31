@@ -72,7 +72,6 @@ public sealed partial class DevelopPresetsPanel : UserControl
         panel.PasteScope = group switch
         {
             "Base" => scope with { Base = item.IsChecked },
-            "BaseRgb" => scope with { BaseRgb = item.IsChecked },
             "Tone" => scope with { Tone = item.IsChecked },
             "Color" => scope with { Color = item.IsChecked },
             "Detail" => scope with { Detail = item.IsChecked },
@@ -206,7 +205,6 @@ public sealed partial class DevelopPresetsPanel : UserControl
         DeleteUserPresetButton.Content = AppResources.Get("developUserPresetDelete", "Content");
         PasteScopeAllItem.Text = AppResources.Get("developPasteScopeAll", "Text");
         PasteScopeBaseItem.Text = AppResources.Get("developScopeBase", "Text");
-        PasteScopeBaseRgbItem.Text = AppResources.Get("developScopeBaseRgb", "Text");
         UserPresetNameBox.PlaceholderText =
             AppResources.Get("developUserPresetNamePlaceholder", "PlaceholderText");
         PasteScopeToneItem.Text = AppResources.Get("developScopeTone", "Text");
@@ -228,7 +226,6 @@ public sealed partial class DevelopPresetsPanel : UserControl
 
         DevelopSettingsPasteScope scope = panel?.PasteScope ?? DevelopSettingsPasteScope.All;
         PasteScopeBaseItem.IsChecked = scope.Base;
-        PasteScopeBaseRgbItem.IsChecked = scope.BaseRgb;
         PasteScopeToneItem.IsChecked = scope.Tone;
         PasteScopeColorItem.IsChecked = scope.Color;
         PasteScopeDetailItem.IsChecked = scope.Detail;
@@ -280,6 +277,5 @@ public sealed partial class DevelopPresetsPanel : UserControl
                 AppResources.Get("developScopeTone", "Text"),
                 AppResources.Get("developScopeColor", "Text"),
                 AppResources.Get("developScopeDetail", "Text"),
-                AppResources.Get("developScopeGeometry", "Text"),
-                AppResources.Get("developScopeBaseRgb", "Text")));
+                AppResources.Get("developScopeGeometry", "Text")));
 }

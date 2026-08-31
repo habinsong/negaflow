@@ -893,7 +893,6 @@ Load a scanner from Library to scan film.</value>
   <data name="developPasteScopeAll.Text" xml:space="preserve"><value>All Settings</value></data>
   <data name="developPasteScopeNone.Text" xml:space="preserve"><value>None</value></data>
   <data name="developScopeBase.Text" xml:space="preserve"><value>Base</value></data>
-  <data name="developScopeBaseRgb.Text" xml:space="preserve"><value>Base R/G/B</value></data>
   <data name="developScopeTone.Text" xml:space="preserve"><value>Basic Tone</value></data>
   <data name="developScopeColor.Text" xml:space="preserve"><value>Color</value></data>
   <data name="developScopeDetail.Text" xml:space="preserve"><value>Detail &amp; Effects</value></data>

@@ -51,7 +51,7 @@ public static class DevelopUserPresetStore
             seed,
             frame,
             frame,
-            DevelopSettingsPasteScope.Preset);
+            DevelopSettingsPasteScope.All);
         return written.FrameRecord is { } recipe
             ? new DevelopUserPreset(Guid.NewGuid(), name, DateTimeOffset.Now, recipe)
             : null;
@@ -75,7 +75,7 @@ public static class DevelopUserPresetStore
                 destinationRecord,
                 source,
                 destination,
-                DevelopSettingsPasteScope.Preset)
+                DevelopSettingsPasteScope.All)
             : LibraryFrameWriteResult.Failure(read.Error);
     }
 

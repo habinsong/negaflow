@@ -893,7 +893,6 @@
   <data name="developPasteScopeAll.Text" xml:space="preserve"><value>すべての設定</value></data>
   <data name="developPasteScopeNone.Text" xml:space="preserve"><value>なし</value></data>
   <data name="developScopeBase.Text" xml:space="preserve"><value>ベース</value></data>
-  <data name="developScopeBaseRgb.Text" xml:space="preserve"><value>ベース R/G/B</value></data>
   <data name="developScopeTone.Text" xml:space="preserve"><value>基本補正</value></data>
   <data name="developScopeColor.Text" xml:space="preserve"><value>カラー</value></data>
   <data name="developScopeDetail.Text" xml:space="preserve"><value>ディテールと効果</value></data>

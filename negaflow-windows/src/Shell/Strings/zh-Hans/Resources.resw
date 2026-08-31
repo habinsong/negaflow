@@ -893,7 +893,6 @@
   <data name="developPasteScopeAll.Text" xml:space="preserve"><value>全部设置</value></data>
   <data name="developPasteScopeNone.Text" xml:space="preserve"><value>无</value></data>
   <data name="developScopeBase.Text" xml:space="preserve"><value>片基</value></data>
-  <data name="developScopeBaseRgb.Text" xml:space="preserve"><value>片基 R/G/B</value></data>
   <data name="developScopeTone.Text" xml:space="preserve"><value>基本色调</value></data>
   <data name="developScopeColor.Text" xml:space="preserve"><value>颜色</value></data>
   <data name="developScopeDetail.Text" xml:space="preserve"><value>细节与效果</value></data>

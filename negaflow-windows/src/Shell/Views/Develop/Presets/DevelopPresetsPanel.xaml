@@ -52,11 +52,6 @@
                                                 Click="OnPasteScopeToggled"
                                                 Tag="Base" />
                                             <ToggleMenuFlyoutItem
-                                                x:Name="PasteScopeBaseRgbItem"
-                                                AutomationProperties.AutomationId="negaflow.develop.presets.scope.baseRgb"
-                                                Click="OnPasteScopeToggled"
-                                                Tag="BaseRgb" />
-                                            <ToggleMenuFlyoutItem
                                                 x:Name="PasteScopeToneItem"
                                                 AutomationProperties.AutomationId="negaflow.develop.presets.scope.tone"
                                                 Click="OnPasteScopeToggled"

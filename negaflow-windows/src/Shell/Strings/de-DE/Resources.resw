@@ -893,7 +893,6 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developPasteScopeAll.Text" xml:space="preserve"><value>Alle Einstellungen</value></data>
   <data name="developPasteScopeNone.Text" xml:space="preserve"><value>Keine</value></data>
   <data name="developScopeBase.Text" xml:space="preserve"><value>Filmbasis</value></data>
-  <data name="developScopeBaseRgb.Text" xml:space="preserve"><value>Filmbasis R/G/B</value></data>
   <data name="developScopeTone.Text" xml:space="preserve"><value>Grundeinstellungen</value></data>
   <data name="developScopeColor.Text" xml:space="preserve"><value>Farbe</value></data>
   <data name="developScopeDetail.Text" xml:space="preserve"><value>Details &amp; Effekte</value></data>

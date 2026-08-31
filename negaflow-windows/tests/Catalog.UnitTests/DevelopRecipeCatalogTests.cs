@@ -242,40 +242,8 @@ internal static class DevelopRecipeCatalogTests
             "transfer_base_scope_moves_route_and_base");
         Check(baseOnly.Tone == destination.Tone, "transfer_base_scope_leaves_tone");
 
-        // 베이스 R/G/B 는 "어떻게 잴지" 가 아니라 **잰 값 자체**를 옮깁니다. 한 컷에서 제대로
-        // 잡아 둔 Dmin 을 같은 롤 나머지에 물리는 자리라, 받는 쪽이 수동으로 바뀌어야 합니다 -
-        // 자동인 채로 두면 받는 쪽이 자기 사진에서 다시 재서 컷마다 값이 달라집니다.
-        LibraryFrameSnapshot baseRgbOnly =
-            new DevelopSettingsPasteScope(false, false, false, false, false, true)
-                .Apply(source, destination);
-        Check(baseRgbOnly.Base.Mode == BaseEstimationMode.Manual,
-            "transfer_base_rgb_scope_switches_to_manual");
-        Check(baseRgbOnly.ManualBase == (source.AppliedBase ?? source.ManualBase),
-            "transfer_base_rgb_scope_moves_the_measured_value");
-        Check(baseRgbOnly.Tone == destination.Tone &&
-            baseRgbOnly.Route.FilmType == destination.Route.FilmType,
-            "transfer_base_rgb_scope_leaves_the_rest");
-        // 베이스 묶음만으로는 값이 따라가지 않습니다 - 모드만 갑니다.
-        Check(!new DevelopSettingsPasteScope(true, false, false, false, false).BaseRgb,
-            "transfer_base_scope_does_not_imply_base_rgb");
-        // 사용자 프리셋은 여러 사진에 다시 쓰는 것이라 한 컷의 Dmin 을 실으면 안 됩니다.
-        // 그것을 담으면 그 프리셋을 쓰는 모든 사진이 남의 필름 베이스로 현상됩니다.
-        Check(!DevelopSettingsPasteScope.Preset.BaseRgb,
-            "preset_scope_never_carries_one_frames_base_rgb");
-        Check(DevelopSettingsPasteScope.Preset.Base &&
-            DevelopSettingsPasteScope.Preset.Tone &&
-            DevelopSettingsPasteScope.Preset.Color &&
-            DevelopSettingsPasteScope.Preset.Detail &&
-            DevelopSettingsPasteScope.Preset.Geometry,
-            "preset_scope_carries_everything_else");
-
         LibraryFrameSnapshot everything =
             DevelopSettingsPasteScope.All.Apply(source, destination);
-        // "모든 설정" 은 베이스 R/G/B 도 데려가야 합니다.
-        Check(DevelopSettingsPasteScope.All.BaseRgb, "transfer_all_scope_includes_base_rgb");
-        Check(everything.Base.Mode == BaseEstimationMode.Manual &&
-            everything.ManualBase == (source.AppliedBase ?? source.ManualBase),
-            "transfer_all_scope_moves_the_measured_base");
         Check(everything.Id == destination.Id &&
             everything.SourcePath == destination.SourcePath &&
             everything.Rating == destination.Rating,

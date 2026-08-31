@@ -893,7 +893,6 @@
   <data name="developPasteScopeAll.Text" xml:space="preserve"><value>모든 설정</value></data>
   <data name="developPasteScopeNone.Text" xml:space="preserve"><value>없음</value></data>
   <data name="developScopeBase.Text" xml:space="preserve"><value>베이스</value></data>
-  <data name="developScopeBaseRgb.Text" xml:space="preserve"><value>베이스 R/G/B</value></data>
   <data name="developScopeTone.Text" xml:space="preserve"><value>기본 톤</value></data>
   <data name="developScopeColor.Text" xml:space="preserve"><value>색상</value></data>
   <data name="developScopeDetail.Text" xml:space="preserve"><value>디테일 및 효과</value></data>
