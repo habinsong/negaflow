@@ -12,7 +12,7 @@ flowchart LR
 ```
 
 > [!NOTE]
-> negaflow 1.1.0 läuft auf macOS und auf Windows. Beide Apps sind getrennt für ihre Plattform geschrieben und liefern aus derselben Datei dasselbe Bild.
+> negaflow 1.1.1 läuft auf macOS und auf Windows. Beide Apps sind getrennt für ihre Plattform geschrieben und liefern aus derselben Datei dasselbe Bild.
 
 ## Plattform
 

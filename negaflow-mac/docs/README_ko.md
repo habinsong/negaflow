@@ -7,7 +7,7 @@
 <p align="center">macOS 네이티브로 만든 negaflow입니다.</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="버전 1.1.0"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.1.1-EF8B26" alt="버전 1.1.1"></a>
   <a href="#"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 이상"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -47,8 +47,8 @@
 
 | 설치 파일 | 지원하는 Mac |
 |---|---|
-| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon, Intel |
-| `negaflow-1.1.0-mac-arm64.pkg` | Apple Silicon 전용 |
+| `negaflow-1.1.1-mac-universal.pkg` | Apple Silicon, Intel |
+| `negaflow-1.1.1-mac-arm64.pkg` | Apple Silicon 전용 |
 
 대부분은 Universal PKG를 쓰면 됩니다. `/Applications`에 설치됩니다. 직접 옮기려면 같은 페이지의 DMG나 ZIP을 쓰십시오.
 

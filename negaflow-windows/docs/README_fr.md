@@ -7,7 +7,7 @@
 <p align="center">negaflow, conçu nativement pour Windows.</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="version 1.1.0"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.1.1-EF8B26" alt="version 1.1.1"></a>
   <a href="#"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 ou plus récent"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -47,7 +47,7 @@ Cela tourne aussi sur les machines Arm64. Les versions Arm64 sont moins vérifi�
 
 ## Installation
 
-Téléchargez `negaflow-1.1.0-win-x64.exe` depuis [Releases](https://github.com/habinsong/negaflow/releases) et lancez-le.
+Téléchargez `negaflow-1.1.1-win-x64.exe` depuis [Releases](https://github.com/habinsong/negaflow/releases) et lancez-le.
 
 Aucun droit administrateur nécessaire. SmartScreen prévient une fois au premier lancement : cliquez sur Informations complémentaires, puis exécutez.
 

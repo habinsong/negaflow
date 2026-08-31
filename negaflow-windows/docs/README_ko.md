@@ -7,7 +7,7 @@
 <p align="center">Windows 네이티브로 만든 negaflow입니다.</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="버전 1.1.0"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.1.1-EF8B26" alt="버전 1.1.1"></a>
   <a href="#"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 이상"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -47,7 +47,7 @@ Arm64 기기에서도 동작합니다. 다만 Arm64 릴리즈는 x64만큼 확�
 
 ## 설치
 
-[Releases](https://github.com/habinsong/negaflow/releases)에서 `negaflow-1.1.0-win-x64.exe`를 내려받아 실행합니다.
+[Releases](https://github.com/habinsong/negaflow/releases)에서 `negaflow-1.1.1-win-x64.exe`를 내려받아 실행합니다.
 
 관리자 권한은 필요 없습니다. 처음 실행할 때 SmartScreen이 한 번 경고하는데, 추가 정보를 누르고 실행하면 됩니다.
 

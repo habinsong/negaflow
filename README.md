@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="website"></a>
-  <a href="#download"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="version 1.1.0"></a>
+  <a href="#download"><img src="https://img.shields.io/badge/version-1.1.1-EF8B26" alt="version 1.1.1"></a>
   <a href="negaflow-mac/docs/README.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 or later"></a>
   <a href="negaflow-windows/docs/README.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 or later"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 license"></a>
@@ -73,9 +73,9 @@ Get it from [GitHub Releases](https://github.com/habinsong/negaflow/releases).
 
 | File | Runs on |
 |---|---|
-| `negaflow-1.1.0-mac-universal.pkg` | macOS 14 or later, Apple Silicon and Intel |
-| `negaflow-1.1.0-mac-arm64.pkg` | macOS 14 or later, Apple Silicon only |
-| `negaflow-1.1.0-win-x64.exe` | Windows 11 24H2 or later, x64 |
+| `negaflow-1.1.1-mac-universal.pkg` | macOS 14 or later, Apple Silicon and Intel |
+| `negaflow-1.1.1-mac-arm64.pkg` | macOS 14 or later, Apple Silicon only |
+| `negaflow-1.1.1-win-x64.exe` | Windows 11 24H2 or later, x64 |
 
 Most Macs are fine with the Universal PKG. Of course, the Silicon build and a DMG and a ZIP are up on the same page too. On the first launch you have to open System Settings, go to Privacy and Security, and click Open Anyway once.
 

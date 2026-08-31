@@ -7,7 +7,7 @@
 <p align="center">negaflow, nativ für macOS gebaut.</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.1.0-EF8B26" alt="Version 1.1.0"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.1.1-EF8B26" alt="Version 1.1.1"></a>
   <a href="#"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 oder neuer"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -47,8 +47,8 @@ Laden Sie es von [Releases](https://github.com/habinsong/negaflow/releases) heru
 
 | Datei | Unterstützte Macs |
 |---|---|
-| `negaflow-1.1.0-mac-universal.pkg` | Apple Silicon, Intel |
-| `negaflow-1.1.0-mac-arm64.pkg` | Nur Apple Silicon |
+| `negaflow-1.1.1-mac-universal.pkg` | Apple Silicon, Intel |
+| `negaflow-1.1.1-mac-arm64.pkg` | Nur Apple Silicon |
 
 Für die meisten passt das Universal-PKG. Es installiert nach `/Applications`. Wer selbst verschieben will, nimmt das DMG oder das ZIP von derselben Seite.
 

@@ -12,7 +12,7 @@ flowchart LR
 ```
 
 > [!NOTE]
-> negaflow 1.1.0 在 macOS 和 Windows 上都能运行。两个应用按各自平台分开编写， 同一个文件在两边出来的结果一致。
+> negaflow 1.1.1 在 macOS 和 Windows 上都能运行。两个应用按各自平台分开编写， 同一个文件在两边出来的结果一致。
 
 ## 平台
 
