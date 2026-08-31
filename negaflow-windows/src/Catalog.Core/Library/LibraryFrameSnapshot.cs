@@ -292,7 +292,11 @@ public sealed record LibraryFrameSnapshot(
             Base.Mode switch
             {
                 BaseEstimationMode.Auto => true,
-                BaseEstimationMode.Preset => !string.IsNullOrWhiteSpace(Base.FilmStockDminId),
+                // 필름을 "없음" 으로 두면 모드는 preset 인 채 스톡만 빕니다. 그것을 현상
+                // 불가로 막으면 사진이 아예 안 보이고, 안 보이니 현상 패널이 그 프레임을
+                // 들지 못해 모드를 되돌릴 수도 없습니다. 표에서 가져올 값이 없다는 것이지
+                // 현상할 수 없다는 뜻이 아니므로, 네이티브가 측정한 베이스로 갑니다.
+                BaseEstimationMode.Preset => true,
                 BaseEstimationMode.Manual => ManualBase is not null,
                 _ => false,
             },

@@ -61,10 +61,19 @@ std::optional<DevelopExportOutcome> resolve_negative_base(
     }
     hint.measurement_method = method_of(resolved.source);
     hint.diagnostics = resolved.diagnostics;
-    if (request.base_estimation_mode == NegativeBaseEstimationMode::preset) {
-        if (!request.film_stock_preset.has_value()) {
-            return fail(DevelopExportStage::develop, "missing_film_stock_preset");
-        }
+    // 필름을 고르지 않은 프리셋 모드는 **자동으로 떨어집니다.**
+    //
+    // 필름 표에서 필름을 "없음" 으로 두면 모드는 preset 인 채 스톡만 비게 됩니다. 앞 판은
+    // 그 조합을 통째로 실패로 돌려보냈고, 화면에는 아무 설명 없이 빈 캔버스가 남았습니다.
+    // 게다가 사진이 안 보이니 현상 패널이 그 프레임을 들지 못해 모드를 되돌릴 수도 없는
+    // 막다른 골목이었습니다(2026-09-01 보고: 필름스톡을 없음으로 두고 재시작하면 그
+    // 사진만 프리뷰가 사라짐).
+    //
+    // 고를 필름이 없다는 것은 "표에서 가져올 값이 없다" 는 뜻이지 "현상할 수 없다" 는 뜻이
+    // 아닙니다. 측정한 베이스가 이미 있으므로 그것으로 갑니다 — 아래 측정 경로와 같은
+    // 자리입니다.
+    if (request.base_estimation_mode == NegativeBaseEstimationMode::preset &&
+        request.film_stock_preset.has_value()) {
         hint.use_preset_response = true;
         hint.preset_dmax_normalized = request.film_stock_preset->dmax_normalized;
         if (negaflow::imaging::confident_auto_negative_base_source(resolved.source)) {

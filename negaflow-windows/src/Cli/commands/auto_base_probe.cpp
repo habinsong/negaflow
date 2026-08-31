@@ -2,6 +2,8 @@
 
 #include "negaflow/imaging/auto_negative_base_resolver.h"
 #include "negaflow/imaging/scanner_tiff_to_working.h"
+#include "negaflow/imaging/scanner_to_working.h"
+#include "negaflow/imageio/wic_standard_image_decoder.h"
 
 #include <chrono>
 #include <cstddef>
@@ -49,15 +51,34 @@ int run_auto_base_probe(const int argument_count, const wchar_t* const arguments
     decode_control.rows_per_copy = 64U;
     auto prepared = negaflow::imaging::decode_scanner_tiff_to_working_rows(
         std::filesystem::path{arguments[2]}, {}, {}, decode_control);
-    if (prepared.decode.status != negaflow::imageio::WicTiffDecodeStatus::ok ||
-        prepared.working.status != negaflow::imaging::ScannerToWorkingStatus::ok) {
-        return print_error("decode_failed");
+    negaflow::imaging::WorkingImage image{};
+    if (prepared.decode.status == negaflow::imageio::WicTiffDecodeStatus::ok &&
+        prepared.working.status == negaflow::imaging::ScannerToWorkingStatus::ok) {
+        image = std::move(prepared.working.image);
+    } else {
+        // 스캐너 TIFF 가 아닌 원본입니다. 현상 파이프라인이 그런 파일에 쓰는 길을 그대로
+        // 탑니다(`stages/decode.cpp`) — RAW 는 함께 싣는 LibRaw 가 현상합니다. 진단이
+        // 앱과 다른 파일만 볼 수 있으면 카메라 스캔 보고를 여기서 못 좁힙니다.
+        const negaflow::imageio::WicStandardImageDecodeResult decoded =
+            negaflow::imageio::decode_standard_image_with_wic(
+                std::filesystem::path{arguments[2]}, {}, {}, {});
+        if (decoded.status != negaflow::imageio::WicStandardImageDecodeStatus::ok) {
+            return print_error(
+                negaflow::imageio::wic_standard_image_decode_status_name(decoded.status));
+        }
+        negaflow::imaging::ScannerToWorkingResult working =
+            negaflow::imaging::convert_scanner_to_working(decoded.image);
+        if (working.status != negaflow::imaging::ScannerToWorkingStatus::ok) {
+            return print_error(
+                negaflow::imaging::scanner_to_working_status_name(working.status));
+        }
+        image = std::move(working.image);
     }
 
     const auto started = std::chrono::steady_clock::now();
     const negaflow::imaging::AutoNegativeBaseResult resolved =
         negaflow::imaging::resolve_auto_negative_base(
-            prepared.working.image,
+            image,
             monochrome ? negaflow::imaging::NegativeFilmType::black_and_white
                        : negaflow::imaging::NegativeFilmType::color);
     const auto finished = std::chrono::steady_clock::now();
@@ -67,8 +88,8 @@ int run_auto_base_probe(const int argument_count, const wchar_t* const arguments
     }
 
     std::cout << "{\"status\":\"ok\",\"operation\":\"auto_base_probe\""
-              << ",\"width\":" << prepared.working.image.width
-              << ",\"height\":" << prepared.working.image.height
+              << ",\"width\":" << image.width
+              << ",\"height\":" << image.height
               << ",\"film\":\"" << (monochrome ? "bw" : "color") << '"'
               << ",\"source\":\"" << source_name(resolved.source) << '"'
               << ",\"dmin\":[" << resolved.dmin[0] << ',' << resolved.dmin[1]
