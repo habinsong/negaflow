@@ -14,12 +14,23 @@ import Foundation
 public enum RescueGrade {
     static let minimumEligibleBandCount = 3
     static let minimumCoveredTileCount = 6
-    static let maximumNeutralChroma = 18.0
+    /// 밴드가 앉은 자리로부터 이만큼 안쪽을 "중립이어야 할 것들" 로 본다. 원점에서의 거리가
+    /// 아니라 **쏠린 자리에서의 거리**다 — 그래야 캐스트 크기와 무관해진다.
+    static let maximumNeutralOffset = 18.0
     static let minimumNeutralPopulationFraction = 0.80
     static let maximumBandMAD = 3.0
     static let maximumHoldoutDelta = 2.0
     static let minimumMeasuredDrift = 1.5
-    static let maximumDriftLab = 12.0
+    /// 되돌릴 수 있는 쏠림의 상한.
+    ///
+    /// 12 는 약한 캐스트만 염두에 둔 값이라 오래된 필름의 노란 쏠림에서는 절반도 못 폈다.
+    /// 30 은 전역 캐스트가 물리적으로 닿을 수 있는 범위다 — 중성 면이 텅스텐과 주광 사이에서
+    /// 움직이는 폭이 대략 이만큼이다. 그보다 크게 옮기면 캐스트를 걷는 것이 아니라 피사체의
+    /// 색을 바꾸는 것이 된다.
+    ///
+    /// 이것은 **마지막 방어선**이다. 사진 전체가 진짜로 한 색인 경우(노란 벽 한 장) 앞의 증거
+    /// 검사들이 그것을 캐스트로 볼 수 있는데, 그때 얼마나 망가질 수 있는지를 이 값이 묶는다.
+    static let maximumDriftLab = 30.0
     static let bandEdges: [Double] = [0.06, 0.20, 0.34, 0.48, 0.62, 0.76, 0.92]
 
     struct Recovery: Equatable, Hashable {
@@ -118,10 +129,22 @@ public enum RescueGrade {
             let members = grid.samples.filter { $0.luma >= lower && $0.luma < upper }
             guard members.count >= minimumBandSamples else { continue }
 
-            let sortedChroma = members.map(\.chroma).sorted()
-            let lowerQuartile = sortedChroma[sortedChroma.count / 4]
-            let neutralCeiling = min(maximumNeutralChroma, max(5.0, lowerQuartile * 1.35))
-            let neutral = members.filter { $0.chroma <= neutralCeiling }
+            // 후보를 **원점에서의 거리**로 고르면 캐스트가 셀수록 아무도 못 들어온다. 노랗게
+            // 쏠린 사진에서는 원래 회색이던 벽도 원점에서 멀어지기 때문이다 — 세게 쏠린 사진
+            // 일수록 걷어낼 수 없게 되는 자기모순이고, 유통기한이 한참 지난 필름에서 EXPIRED
+            // 가 아무 일도 하지 않던 까닭이다.
+            //
+            // 그래서 **밴드가 실제로 앉은 자리**를 먼저 찾고, 그 주변에 얼마나 뭉쳐 있는지를
+            // 본다. 쏠린 거리와 무관해진다. 색이 있는 사진을 지켜 주는 것은 원점 상한이 아니라
+            // 아래의 검사들이다 — 여러 밝기대가 같은 방향이어야 하고(부호 변화 ≤1), 흩어짐이
+            // 작아야 하고(MAD), 떼어 둔 표본과 일치해야 한다. 노을은 그쪽에서 걸린다.
+            let centerA = median(members.map(\.a))
+            let centerB = median(members.map(\.b))
+            func offset(_ sample: Sample) -> Double { hypot(sample.a - centerA, sample.b - centerB) }
+            let sortedOffset = members.map(offset).sorted()
+            let lowerQuartile = sortedOffset[sortedOffset.count / 4]
+            let neutralCeiling = min(maximumNeutralOffset, max(5.0, lowerQuartile * 1.35))
+            let neutral = members.filter { offset($0) <= neutralCeiling }
             guard neutral.count >= minimumBandSamples,
                   Double(neutral.count) / Double(members.count) >= minimumNeutralPopulationFraction else {
                 continue
@@ -147,7 +170,7 @@ public enum RescueGrade {
             let holdoutDelta = hypot(holdoutA - trainingA, holdoutB - trainingB)
             guard holdoutDelta <= maximumHoldoutDelta else { continue }
 
-            let before = median(holdout.map { hypot($0.a, $0.b) })
+            let before = median(holdout.map(\.chroma))
             let after = median(holdout.map { hypot($0.a - trainingA, $0.b - trainingB) })
             guard after + 0.75 <= before, after <= before * 0.72 else { continue }
 

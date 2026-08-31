@@ -42,6 +42,8 @@ struct CLI {
             case "it8-bench":    try await it8Bench()
             case "scanner-relative-it8-bench": try await scannerRelativeIT8Bench()
             case "defect-bench":    try await defectBench()
+            case "auto-base-probe": try await autoBaseProbe()
+            case "rescue-probe":    try await rescueProbe()
             case "report":       try await report()
             case "selftest":     try await selftest()
             default:             printHelp()
@@ -105,6 +107,9 @@ struct CLI {
           scanner-relative-it8-bench <reference.txt>
             --sha256 sha256:<hex>        pin the exact A1-L22 IT8 Lab reference bytes
             --out <report.json>          MAIN/NORITSU/FUJI patch-level relative report
+          auto-base-probe <image> [bw]  what the automatic film base picked, and why
+          rescue-probe <image> [bw]     invert + EXPIRED, before/after cast numbers
+            NEGA_PROBE_DMIN=r,g,b        develop with a hand-entered base instead
           report [--demo]                export scanner report JSON without running scans
           selftest                       synthetic negative → develop (no hardware)
         """)

@@ -110,7 +110,11 @@ final class RescueTargetTests: XCTestCase {
         let recovery = RescueGrade.measureRecovery(in: image)
 
         XCTAssertFalse(recovery.isEligible, "recovery=\(recovery)")
-        XCTAssertLessThan(recovery.coveredTileCount, RescueGrade.minimumCoveredTileCount)
+        // 후보를 원점이 아니라 **밴드가 앉은 자리**에서 고르게 되면서, 프레임을 덮은 단색
+        // 영역도 자기 자리에 뭉친 무리로 잡힌다(설계상 의도된 결과 — 캐스트가 셀수록 후보가
+        // 사라지던 자기모순을 없앤 대가다). 그래서 이 픽스처를 물리치는 것은 이제 타일
+        // 커버리지가 아니라 통과 밴드 수다. 기각된다는 계약 자체는 그대로다.
+        XCTAssertLessThan(recovery.eligibleBandCount, RescueGrade.minimumEligibleBandCount)
     }
 
     func testEvidenceRejectsSpatiallyAlternatingColourVariation() {
@@ -164,6 +168,58 @@ final class RescueTargetTests: XCTestCase {
             meanLabChroma(corrected, width: width, height: height),
             meanLabChroma(image, width: width, height: height) * 0.65,
             "holdout으로 확인된 중립축 오차만 상대적으로 줄여야 합니다"
+        )
+    }
+
+    /// 오래된 필름이 실제로 내는 **센** 캐스트.
+    ///
+    /// 위 시험의 캐스트는 ±3.5% 로 약하다. 유통기한이 한참 지난 필름은 베이스 포그가 층마다
+    /// 다르게 쌓여 훨씬 크게 쏠리고(노랗게 보인다), 그때 EXPIRED 가 아무 일도 하지 않았다.
+    /// 쏠림의 크기만 다를 뿐 성질은 같다 — 모든 밝기대가 같은 방향으로, 낮은 흩어짐으로
+    /// 움직인다. 그러니 여기서도 걸려야 한다.
+    func testStrongCastIsReduced() {
+        let width = 192
+        let height = 120
+        let image = makeFloatImage(width: width, height: height) { x, _ in
+            let v = 0.03 + 0.80 * Double(x) / Double(width - 1)
+            return (v * 1.16, v * 1.05, v * 0.62)
+        }
+        let recovery = RescueGrade.measureRecovery(in: image)
+        XCTAssertTrue(recovery.isEligible, "recovery=\(recovery)")
+
+        // "줄기는 했다" 로는 부족하다. 눈에 띄게 펴져야 고쳤다고 할 수 있다.
+        let corrected = RescueGrade.apply(to: image, sampleColorSpace: linear)
+        let before = meanChannelSpread(image, width: width, height: height)
+        let after = meanChannelSpread(corrected, width: width, height: height)
+        XCTAssertLessThan(after, before * 0.5,
+                          "센 캐스트는 대부분 걷혀야 합니다 (\(before) → \(after))")
+    }
+
+    /// 진짜 색이 있는 사진은 건드리지 않아야 한다.
+    ///
+    /// 후보 선별에서 원점 거리 상한을 걷어냈으므로, 그 보호를 남은 검사들이 실제로 대신하는지
+    /// 여기서 증명한다. 캐스트는 **모든 밝기대가 같은 방향으로** 쏠린 것이고, 색이 있는 장면은
+    /// **자리마다 제각각**이다 — 흩어짐(MAD)과 홀드아웃 일치가 그 둘을 가른다. 노을 한 장이
+    /// 통째로 회색이 되면 그것은 복구가 아니라 파괴다.
+    func testSaturatedSceneIsUntouched() {
+        let width = 192
+        let height = 120
+        let image = makeFloatImage(width: width, height: height) { x, y in
+            let v = 0.05 + 0.80 * Double(x) / Double(width - 1)
+            // 가로로는 밝기가, 세로로는 색상이 바뀐다. 밴드마다 쏠린 방향이 제각각이라
+            // 한 방향으로 모이지 않는다.
+            let hue = (y / 8) % 6
+            let warm = hue < 3 ? 1.45 : 0.60
+            let cool = hue.isMultiple(of: 3) ? 0.55 : 1.40
+            return (v * warm, v * (hue.isMultiple(of: 2) ? 1.30 : 0.70), v * cool)
+        }
+        let recovery = RescueGrade.measureRecovery(in: image)
+        XCTAssertFalse(recovery.isEligible, "recovery=\(recovery)")
+        XCTAssertEqual(
+            renderFloat(RescueGrade.apply(to: image, sampleColorSpace: linear),
+                        width: width, height: height),
+            renderFloat(image, width: width, height: height),
+            "색이 진짜로 있는 장면은 화소 하나도 바뀌면 안 됩니다"
         )
     }
 
@@ -327,6 +383,19 @@ final class RescueTargetTests: XCTestCase {
             colorSpace: extendedLinear
         )
         return pixels
+    }
+
+    /// 화소별 max−min 의 평균. 캐스트가 걷히면 이 값이 내려간다.
+    private func meanChannelSpread(_ image: CIImage, width: Int, height: Int) -> Double {
+        let pixels = renderFloat(image, width: width, height: height)
+        var total = 0.0
+        for offset in stride(from: 0, to: pixels.count, by: 4) {
+            let r = Double(pixels[offset])
+            let g = Double(pixels[offset + 1])
+            let b = Double(pixels[offset + 2])
+            total += max(r, max(g, b)) - min(r, min(g, b))
+        }
+        return total / Double(width * height)
     }
 
     private func meanLabChroma(_ image: CIImage, width: Int, height: Int) -> Double {

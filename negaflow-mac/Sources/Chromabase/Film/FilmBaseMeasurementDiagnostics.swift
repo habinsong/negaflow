@@ -9,6 +9,8 @@ public struct FilmBaseMeasurementDiagnostics: Codable, Sendable, Equatable {
         case continuousBorder
         case distributedMask
         case stripFallback
+        /// 축소본에서 찾은 리베이트 띠를 **원본 해상도**로 다시 잰 값(FilmBaseRebate).
+        case rebateBand
     }
 
     public enum Anomaly: String, Codable, Sendable, CaseIterable {

@@ -400,13 +400,12 @@ public enum NegativeInversion {
         // 색/구도가 Dmin을 이동시켜 동일한 측정값도 auto/manual 여부에 따라 전 프레임 색과
         // 노출이 달라진다. 측정 신뢰도 판단과 폴백은 FilmBaseEstimator/resolveFilmBase가 맡는다.
         let dmin = clampedDmin(base.rgb)
-        let nominalRange = response(for: filmType).normalRange
 
         // Dmax = 이 네거티브가 **실제로 사용한** per-channel 밀도 범위. 장면 최농부(p0.2
         // 투과율 — 절대 최소가 아닌 강건 percentile 로 dust/스펙큘러 배제)로 측정한다.
         // densest 에 물성 하한(1.8D)을 둬 극단
         // 단색 장면(파란 하늘이 B 최농부만 비정상적으로 낮춰 dmax_B 를 폭발시키는 보라 shift)을
-        // 막고, 0.4 하한으로 저신호 폭주를 막는다. 채널별 dmax 가 필름 염료 기울기 차이를 독립
+        // 막고, 채널 바닥으로 저신호 폭주를 막는다. 채널별 dmax 가 필름 염료 기울기 차이를 독립
         // 정규화(= 자동 화이트밸런스)하며, 정규화 밀도(density/dmax)가 [0,1] 전 범위를 채워
         // 고정 dmax 가 만든 압축을 제거한다.
         let densest = SIMD3(
@@ -419,10 +418,14 @@ public enum NegativeInversion {
             max(densest.y, dmin.y * pow(10.0, -1.8)),
             max(densest.z, dmin.z * pow(10.0, -1.8))
         )
+        // 바닥은 **아무것도 안 찍힌 프레임을 막는 자리**이지 평평한 필름을 부풀리는 자리가
+        // 아니다. 0.4 는 바랜 필름의 파랑을 그대로 삼켰다 — 1980~90 년대 카메라 스캔에서
+        // 파랑이 정확히 0.40 으로 걸리고(실측 yokohama 진짜 값 0.178), 그만큼 파랑이 과하게
+        // 늘어나 사진이 노랗게 나왔다. 실제로 관측한 가장 평평한 채널이 0.13 이므로 그 아래로 둔다.
         let measuredDmax = SIMD3(
-            max(0.4, log10(dmin.x / densestFloor.x)),
-            max(0.4, log10(dmin.y / densestFloor.y)),
-            max(0.4, log10(dmin.z / densestFloor.z))
+            max(0.10, log10(dmin.x / densestFloor.x)),
+            max(0.10, log10(dmin.y / densestFloor.y)),
+            max(0.10, log10(dmin.z / densestFloor.z))
         )
         let dmaxGeo = pow(measuredDmax.x * measuredDmax.y * measuredDmax.z, 1.0 / 3.0)
         // Windows 포팅본과 축소본 표본을 대조하기 위한 진단(둘 다 opt-in — 평소에는 안 돈다).
@@ -443,24 +446,23 @@ public enum NegativeInversion {
             try? data.write(to: URL(fileURLWithPath: "/tmp/proxy-\(targetW)x\(targetH).f32"))
         }
 
-        // 저DR(평탄/흐린 날) 신뢰도 shrinkage. 측정 Dmax 기하평균이 필름 물성 범위보다 크게
-        // 낮으면 장면이 필름 밀도 범위를 거의 안 쓴 것(평탄/흐린 날)이고, per-channel 측정이
-        // 소표본·노이즈로 불안정해 (1) 좁은 대역을 풀레인지로 과다 스트레치(과다 밝기), (2)
-        // 채널별 skew 로 캐스트(빨강)를 만든다. 신뢰도 w(측정 기하평균 기반 smoothstep)로 스케일은
-        // nominal(고정 인화 응답)로, 채널 비는 중립(1)로 수축해 안전한 photometric 폴백으로 간다.
-        // 정상 DR 장면(w≈1)은 완전 측정값을 유지하므로 작업 scan 결과는 불변이다.
-        let drT = min(1.0, max(0.0, (dmaxGeo - 0.42) / (0.62 - 0.42)))
-        let drConfidence = drT * drT * (3.0 - 2.0 * drT)
-        let shrunkScale = nominalRange + (dmaxGeo - nominalRange) * drConfidence
-        func shrunkChannel(_ measured: Double) -> Double {
-            shrunkScale * (1.0 + (measured / dmaxGeo - 1.0) * drConfidence)
-        }
+        // **잰 값을 쓴다.**
+        //
+        // 앞 판은 잰 범위가 0.42 아래면 그것을 "측정 실패" 로 보고 nominalRange(1.55, 고대비
+        // 가정) 쪽으로 되돌렸다. 그런데 좁은 범위와 실패는 다르다 — 오래되어 바랜 필름은 실제로
+        // 평평하다. 측정이 맞는데 틀린 걸로 보고 버리고, 그 고대비 가정이 사진을 검게 눌렀다
+        // (실측 yokohama: 잰 범위 0.51 이 1.07 로 되돌려져 현상 평균 0.048/0.113/0.025).
+        //
+        // 측정이 정말 못 미더운 경우는 값이 작은 것이 아니라 **표본이 없는 것**이고, 그것은
+        // 위에서 이미 걸러진다(프록시 실패, 표본 64 개 미만). 남는 위험인 "아무것도 안 찍힌
+        // 프레임" 은 위 채널별 바닥이 묶는다.
+        //
+        // 앞 판의 `shrunkScale * (1 + (measured/geo − 1) * confidence)` 는 confidence 가 1 일 때
+        // `measuredDmax[channel]` 과 같은 식이다 — 건강한 스캔은 늘 그 자리였으므로 값이 달라지지 않는다.
         // B&W 는 단일 중립 곡선(세 채널 기하평균) — 채널별로 다르면 중립 회색이 R≠G≠B 로 틀어진다.
         let dmaxNorm: SIMD3<Double> = filmType == .bwNegative
-            ? SIMD3(repeating: shrunkScale)
-            : SIMD3(shrunkChannel(measuredDmax.x),
-                    shrunkChannel(measuredDmax.y),
-                    shrunkChannel(measuredDmax.z))
+            ? SIMD3(repeating: dmaxGeo)
+            : measuredDmax
         let paperBlackInput = SIMD3(pct(red, 0.90), pct(green, 0.90), pct(blue, 0.90)) * 0.97
 
         // 장면 중앙 밀도(above-base). 채널 median 투과율의 로그 평균(기하평균 밀도) — 디버그 지표.
@@ -470,7 +472,6 @@ public enum NegativeInversion {
             log10(dmin.y / max(medianT.y, 1e-5)) +
             log10(dmin.z / max(medianT.z, 1e-5))
         ) / 3.0)
-        _ = dmaxGeo
 
         // 노출(미드) 자동 리프트는 여기서 하지 않는다 — opt-in AutoTone(LATD)의 몫이다.
         // 실측 Dmax 는 범위·WB 만 되살리고 노출은 고정 인화 응답이 맡는다. 여기서 미드를

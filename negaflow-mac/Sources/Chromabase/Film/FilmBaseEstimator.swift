@@ -23,7 +23,61 @@ public enum FilmBaseEstimator {
         let extent = image.extent
         guard extent.width > 4, extent.height > 4 else { return nil }
 
+        // 축소본은 여기서 **한 번만** 짓는다. 뒤이어 도는 구조길(FilmBaseRebate)이 같은 격자를
+        // 보므로 그대로 넘겨준다 — 따로 지으면 큰 스캔 한 장에 축소 비용이 통째로 한 번 더 붙는다.
         let sampleGrid = FilmBaseSampleGrid(image: image)
+        // 비필름 마스크는 2 차 샘플러와 구조길이 함께 쓴다. 둘 다 안 부르는 경우(성분 검출이
+        // 곧바로 성공하고 구조길도 원본을 안 읽는 경우)가 대부분이라 값을 미뤄 둔다.
+        var cachedExclusion: [Bool]??
+        func exclusion() -> [Bool]? {
+            if let cachedExclusion { return cachedExclusion }
+            let value = sampleGrid.flatMap { nonFilmExclusion(for: $0, neutralBase: neutralBase) }
+            cachedExclusion = .some(value)
+            return value
+        }
+        guard let resolved = estimateWithoutRebate(
+            from: image, grid: sampleGrid, edgeFraction: edgeFraction,
+            neutralBase: neutralBase, confidentOnly: confidentOnly, exclusion: exclusion
+        ) else { return nil }
+        guard let sampleGrid else { return resolved }
+        return rescuedWithRebate(image: image, grid: sampleGrid, resolved: resolved,
+                                 neutralBase: neutralBase, exclusion: exclusion)
+    }
+
+    /// 이 지점을 넘으면 **틀렸다고 볼 이유가 있을 때만** 원본을 한 화소라도 더 읽는다.
+    static let rebateGateFraction = 0.05
+
+    /// 고른 값이 물리적으로 말이 되는지 보고, 안 되면 리베이트 띠에서 원본 해상도로 다시 잰다.
+    /// 받아들이지 않으면 기존 값이 그대로 남는다 — 구조길이 아무 답도 못 내는 사진은 앞 판과
+    /// 완전히 같게 동작한다.
+    static func rescuedWithRebate(
+        image: CIImage,
+        grid: FilmBaseSampleGrid,
+        resolved: FilmBase,
+        neutralBase: Bool,
+        exclusion: () -> [Bool]? = { nil }
+    ) -> FilmBase {
+        let brighter = FilmBaseRebate.brighterThanBaseFraction(grid: grid, dmin: resolved.rgb)
+        // 띠 찾기는 축소본 위에서만 도는 선형 두 번이라 늘 돌려도 싸다. 원본을 다시 읽을지는
+        // 그 안에서 정한다 — 문지기가 열렸거나, 띠가 뭉개질 만큼 얇을 때만이다.
+        guard let rebate = FilmBaseRebate.rebateBase(
+            image: image, grid: grid, neutralBase: neutralBase,
+            gateOpen: brighter > rebateGateFraction, nonFilmExclusion: exclusion
+        ), FilmBaseRebate.accept(rebate: rebate.rgb, current: resolved.rgb) else {
+            return resolved
+        }
+        return rebate.filmBase(source: resolved.source)
+    }
+
+    private static func estimateWithoutRebate(
+        from image: CIImage,
+        grid sampleGrid: FilmBaseSampleGrid?,
+        edgeFraction: Double,
+        neutralBase: Bool,
+        confidentOnly: Bool,
+        exclusion: () -> [Bool]?
+    ) -> FilmBase? {
+        let extent = image.extent
 
         // 1차: 연결 성분 기반 검출(2026-07-14 v3) — 공간 구조 불변량이라 percentile/고정
         // luma 창 방식과 달리 광원 불균일·경계 혼합 셀에 강하다.
@@ -34,15 +88,13 @@ public enum FilmBaseEstimator {
         }
 
         // 2차: 기존 샘플러(작은 이미지/후보 희소 등 성분 검출이 불가능한 경우).
-        let exclusion = sampleGrid.flatMap {
-            nonFilmExclusion(for: $0, neutralBase: neutralBase)
-        }
+        let excluded = exclusion()
         let edgeSample = sampleGrid.flatMap {
             sampleBrightOrangeBase(from: $0, edgeFraction: edgeFraction,
-                                   neutralBase: neutralBase, excluding: exclusion)
+                                   neutralBase: neutralBase, excluding: excluded)
         }
         let distributedSample = sampleGrid.flatMap {
-            sampleDistributedOrangeBase(from: $0, neutralBase: neutralBase, excluding: exclusion)
+            sampleDistributedOrangeBase(from: $0, neutralBase: neutralBase, excluding: excluded)
         }
         if let edgeSample, let distributedSample {
             let edgeLuma = (edgeSample.rgb.x + edgeSample.rgb.y + edgeSample.rgb.z) / 3
@@ -65,7 +117,7 @@ public enum FilmBaseEstimator {
         // 가져온 스캔(백라이트 위 필름)에서 베이스가 광원 쪽으로 새는 원인이었다.
         if let grid = sampleGrid {
             return borderFallback(from: grid, edgeFraction: edgeFraction,
-                                  neutralBase: neutralBase, excluding: exclusion)?
+                                  neutralBase: neutralBase, excluding: excluded)?
                 .filmBase(source: .border)
         }
 
