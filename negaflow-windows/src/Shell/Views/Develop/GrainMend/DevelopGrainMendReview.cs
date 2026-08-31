@@ -174,7 +174,6 @@ internal sealed class DevelopGrainMendReview
         int width = view.canvas.PreviewBitmap.PixelWidth;
         int height = view.canvas.PreviewBitmap.PixelHeight;
         if (GrainMendPaintOverlayRenderer.Render(
-                frame,
                 width,
                 height,
                 view.grainMend.Strokes.PaintedStrokes,

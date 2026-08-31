@@ -232,7 +232,6 @@ public static class DefectMaskOverlayRenderer
         double lineWidth,
         DefectOverlayColor color)
     {
-        double radius = lineWidth / 2.0;
         List<(int X, int Y)> located = [];
         foreach (DefectPoint point in points)
         {
@@ -241,6 +240,52 @@ public static class DefectMaskOverlayRenderer
                 located.Add((x, y));
             }
         }
+        DrawLocated(canvas, located, lineWidth, color);
+    }
+
+    /// <summary>
+    /// 점이 **이미 표시 정규 좌표**일 때 씁니다. 변환을 한 번 더 걸지 않습니다.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="DrawPath"/> 는 <see cref="DefectDisplayLocator"/> 로 <b>원본→표시</b> 변환을
+    /// 겁니다. 확정된 결함 레시피의 점은 원본 좌표라 그 길이 맞습니다. 그런데 아직 적용하지
+    /// 않은 <b>붓칠</b>은 포인터가 준 표시 좌표 그대로입니다 — 그것을 같은 길로 보내면 변환이
+    /// 두 번 걸려, 크롭·회전·뒤집기를 한 사진에서 <b>편집 전 자리</b>에 칠해집니다
+    /// (2026-08-31 보고). 크롭도 회전도 없으면 변환이 항등이라 여태 드러나지 않았습니다.
+    ///
+    /// macOS <c>BrushOverlay</c> 도 <c>canvasPoint(fromUnit:)</c> 로 표시 단위를 그대로
+    /// 화소로 옮깁니다 — base 로 되돌리는 자리가 없습니다.
+    /// </remarks>
+    internal static void DrawPathInDisplayUnits(
+        DefectCanvas canvas,
+        IReadOnlyList<DefectPoint> points,
+        double lineWidth,
+        DefectOverlayColor color)
+    {
+        List<(int X, int Y)> located = [];
+        foreach (DefectPoint point in points)
+        {
+            // 화소로 옮기는 규칙은 `DefectDisplayLocator.TryLocate` 와 같습니다 - 두 표면이
+            // 같은 자리를 가리켜야 합니다.
+            if (!double.IsFinite(point.X) || !double.IsFinite(point.Y) ||
+                point.X is < 0.0 or > 1.0 || point.Y is < 0.0 or > 1.0)
+            {
+                continue;
+            }
+            located.Add((
+                canvas.Width == 1 ? 0 : (int)Math.Round(point.X * (canvas.Width - 1)),
+                canvas.Height == 1 ? 0 : (int)Math.Round(point.Y * (canvas.Height - 1))));
+        }
+        DrawLocated(canvas, located, lineWidth, color);
+    }
+
+    private static void DrawLocated(
+        DefectCanvas canvas,
+        List<(int X, int Y)> located,
+        double lineWidth,
+        DefectOverlayColor color)
+    {
+        double radius = lineWidth / 2.0;
         if (located.Count == 0)
         {
             return;

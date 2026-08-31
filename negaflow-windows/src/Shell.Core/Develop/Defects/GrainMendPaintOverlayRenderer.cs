@@ -26,20 +26,20 @@ public static class GrainMendPaintOverlayRenderer
     /// <param name="inProgressThickness">
     /// 진행 중인 획의 굵기(짧은 변에 대한 비율) — macOS 는 지금 슬라이더 값을 씁니다.
     /// </param>
+    /// <remarks>
+    /// 프레임을 받지 않습니다. 이 표면이 그리는 획은 전부 <b>표시 정규 좌표</b>라 구도
+    /// 변환이 필요 없습니다 — 받아 두면 다음 사람이 그것으로 변환을 걸게 됩니다.
+    /// </remarks>
     public static byte[]? Render(
-        LibraryFrameSnapshot frame,
         int width,
         int height,
         IReadOnlyList<DefectStroke> strokes,
         IReadOnlyList<DefectPoint> inProgress,
         double inProgressThickness)
     {
-        ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(strokes);
         ArgumentNullException.ThrowIfNull(inProgress);
-        if (width <= 0 || height <= 0 ||
-            (strokes.Count == 0 && inProgress.Count == 0) ||
-            DefectDisplayLocator.Build(frame, width, height) is not { } locator)
+        if (width <= 0 || height <= 0 || (strokes.Count == 0 && inProgress.Count == 0))
         {
             return null;
         }
@@ -48,9 +48,9 @@ public static class GrainMendPaintOverlayRenderer
         DefectCanvas canvas = new(bgra, width, height);
         foreach (DefectStroke stroke in strokes)
         {
-            Paint(canvas, locator, stroke.Points, stroke.Thickness);
+            Paint(canvas, stroke.Points, stroke.Thickness);
         }
-        Paint(canvas, locator, inProgress, inProgressThickness);
+        Paint(canvas, inProgress, inProgressThickness);
         return canvas.Touched ? bgra : null;
     }
 
@@ -60,7 +60,6 @@ public static class GrainMendPaintOverlayRenderer
     /// </summary>
     private static void Paint(
         DefectCanvas canvas,
-        DefectDisplayLocator locator,
         IReadOnlyList<DefectPoint> points,
         double thickness)
     {
@@ -69,9 +68,11 @@ public static class GrainMendPaintOverlayRenderer
             return;
         }
         double lineWidth = Math.Max(1.0, thickness * Math.Min(canvas.Width, canvas.Height));
-        DefectMaskOverlayRenderer.DrawPath(
+        // **표시 좌표를 그대로 씁니다.** 이 획들은 아직 recipe 로 가지 않았고 포인터가 준
+        // 표시 정규 좌표 그대로입니다 - 여기서 원본→표시 변환을 한 번 더 걸면 크롭·회전·
+        // 뒤집기를 한 사진에서 편집 전 자리에 칠해집니다.
+        DefectMaskOverlayRenderer.DrawPathInDisplayUnits(
             canvas,
-            locator,
             points,
             lineWidth,
             DefectClassPalette.BrushPaint);
