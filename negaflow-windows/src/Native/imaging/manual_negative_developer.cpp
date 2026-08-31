@@ -52,7 +52,6 @@ void discard_pixels(WorkingImage& image) noexcept {
 [[nodiscard]] std::optional<std::array<float, 3>> scene_density_range(
     const WorkingImage& image,
     const std::array<float, 3>& dmin,
-    const negaflow::core::PrintResponse& response,
     const NegativeFilmType film_type,
     std::array<float, 3>* out_black_input = nullptr) noexcept {
     if (!has_compatible_layout(image)) {
@@ -177,8 +176,13 @@ void discard_pixels(WorkingImage& image) noexcept {
             densest_floor[channel] = std::max(
                 densest[channel],
                 dmin[channel] * std::pow(10.0F, -1.8F));
+            // 바닥은 **빈 프레임을 막는 자리**이지 평평한 필름을 부풀리는 자리가 아닙니다.
+            // 0.4 는 바랜 필름의 파랑을 그대로 삼켰습니다 - 1980~90 년대 카메라 스캔 다섯 장
+            // 중 넷이 파랑에서 정확히 0.40 으로 걸렸고(진짜 값 0.13~0.35), 그만큼 파랑이
+            // 과하게 늘어나 사진이 노랗게 나왔습니다. 실제로 관측한 가장 평평한 채널이 0.13
+            // 이므로, 그 아래는 필름이 아니라 아무것도 안 찍힌 프레임으로 봅니다.
             measured[channel] =
-                std::max(0.4F, std::log10(dmin[channel] / densest_floor[channel]));
+                std::max(0.10F, std::log10(dmin[channel] / densest_floor[channel]));
         }
         if (debug_enabled()) {
             std::fprintf(
@@ -197,18 +201,31 @@ void discard_pixels(WorkingImage& image) noexcept {
         const float geometric_mean = std::pow(
             measured[0] * measured[1] * measured[2],
             1.0F / 3.0F);
-        const float transition = std::clamp((geometric_mean - 0.42F) / 0.20F, 0.0F, 1.0F);
-        const float confidence = transition * transition * (3.0F - (2.0F * transition));
-        const float scale = response.normal_range +
-            ((geometric_mean - response.normal_range) * confidence);
+        // **잰 값을 씁니다.**
+        //
+        // 앞 판은 잰 범위가 0.42 아래면 그것을 "측정 실패" 로 보고 `normal_range`(≈1.55, 고대비
+        // 가정) 로 돌아갔습니다. 그런데 좁은 범위와 실패는 다릅니다 - 오래되어 바랜 필름은
+        // 실제로 평평합니다. 측정이 맞는데 틀린 걸로 보고 버리고, 그 고대비 가정이 사진을
+        // 검게 눌렀습니다. 1996 년 Kodak Gold 400 카메라 스캔에서 현상 결과가 정상의 13 분의
+        // 1 밝기로 나왔고, 그 어두움 때문에 EXPIRED 도 잴 화소가 없어 무력했습니다.
+        //
+        // 측정이 정말 못 미더운 경우는 값이 작은 것이 아니라 **표본이 없는 것**이고, 그것은
+        // 위에서 이미 걸러집니다(프록시 실패, 표본 64 개 미만). 남는 위험은 아무것도 안 찍힌
+        // 프레임인데, 그것은 위 채널별 바닥이 묶습니다.
+        //
+        // 실측: 이 변경으로 값이 달라지는 것은 **잰 범위가 0.42 아래인 파일뿐**입니다. 건강한
+        // 스캔은 이미 0.81~0.96 이라 앞 판에서도 confidence 가 1 이었고, 여기서도 비트 단위로
+        // 같은 값이 나옵니다.
+        const float scale = geometric_mean;
         std::array<float, 3> result{};
         if (film_type == NegativeFilmType::black_and_white) {
+            // 흑백은 채널을 갈라 볼 것이 없으므로 세 채널을 같은 값으로 둡니다.
             result = {scale, scale, scale};
         } else {
-            for (std::size_t channel = 0U; channel < result.size(); ++channel) {
-                result[channel] = scale *
-                    (1.0F + ((measured[channel] / geometric_mean) - 1.0F) * confidence);
-            }
+            // 잰 값을 그대로 씁니다. 앞 판의 `scale * (1 + (measured/gm - 1) * confidence)` 는
+            // confidence 가 1 일 때 `measured[channel]` 과 같은 식이었습니다 - 건강한 스캔은
+            // 늘 그 자리였으므로 값이 달라지지 않습니다.
+            result = measured;
         }
         // blackInput 은 지표 전용이라 반전 수식에 들어가지 않습니다. 채널이 이미
         // 정렬돼 있어 백분위 한 번이면 되므로 늘 담습니다 - 개발자 디버그 화면이 읽습니다.
@@ -278,7 +295,6 @@ ManualNegativeDevelopResult develop_manual_negative(
     const auto adaptive = scene_density_range(
         result.image,
         result.info.applied_dmin,
-        response,
         parameters.film_type,
         &result.info.black_input);
     if (!parameters.use_preset_response) {

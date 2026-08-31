@@ -78,6 +78,28 @@ negaflow::imaging::WorkingImage make_scene_working_image() {
     return image;
 }
 
+negaflow::imaging::WorkingImage make_faded_scene_working_image() {
+    // 오래되어 바랜 네거티브입니다. 밀도 범위가 진짜로 좁고, 파랑이 가장 먼저 바랩니다 -
+    // 1996 년 카메라 스캔에서 실측한 모양(R 0.47 / G 0.51 / B 0.13)을 줄여 옮겼습니다.
+    negaflow::imaging::WorkingImage image{};
+    image.width = 64U;
+    image.height = 16U;
+    image.stride_pixels = image.width;
+    image.pixels.resize(static_cast<std::size_t>(image.width) * image.height);
+    for (std::uint32_t row = 0U; row < image.height; ++row) {
+        for (std::uint32_t column = 0U; column < image.width; ++column) {
+            const float density = column < 8U ? 0.30F : 0.15F;
+            image.pixels[static_cast<std::size_t>(row) * image.width + column] = {
+                0.80F * std::pow(10.0F, -density),
+                0.60F * std::pow(10.0F, -(density * 0.95F)),
+                0.40F * std::pow(10.0F, -(density * 0.40F)),
+                1.0F,
+            };
+        }
+    }
+    return image;
+}
+
 negaflow::imaging::WorkingImage make_affine_proxy_scene_image() {
     negaflow::imaging::WorkingImage image{};
     image.width = 640U;

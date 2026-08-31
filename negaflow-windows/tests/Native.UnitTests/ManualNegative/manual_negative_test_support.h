@@ -28,6 +28,9 @@ void expect(bool condition, const char* message);
 // 가장자리·띠·장면 배치가 필요합니다.
 negaflow::imaging::WorkingImage make_working_image();
 negaflow::imaging::WorkingImage make_scene_working_image();
+
+// 바랜 네거티브 - 밀도 범위가 진짜로 좁습니다.
+negaflow::imaging::WorkingImage make_faded_scene_working_image();
 negaflow::imaging::WorkingImage make_affine_proxy_scene_image();
 negaflow::imaging::WorkingImage make_affine_auto_base_image();
 negaflow::imaging::WorkingImage make_auto_base_image(const negaflow::core::Rgba32F& base);

@@ -107,6 +107,30 @@ void test_manual_negative_development() {
             scene.info.muted_scene_vibrance.amount == 0.5,
         "non-preset color scene runs muted-scene vibrance after inversion");
 
+    // 바랜 필름은 밀도 범위가 **진짜로** 좁습니다. 앞 판은 좁은 범위를 "측정 실패" 로 보고
+    // `normal_range`(1.55, 고대비 가정) 로 돌아갔고, 그 가정이 사진을 검게 눌렀습니다 -
+    // 1996 년 카메라 스캔에서 현상 결과가 정상의 13 분의 1 밝기로 나왔습니다. 좁은 것과
+    // 실패한 것은 다릅니다. 잰 값을 그대로 씁니다.
+    const auto faded = negaflow::imaging::develop_manual_negative(
+        make_faded_scene_working_image(),
+        {{0.80F, 0.60F, 0.40F}, negaflow::imaging::NegativeFilmType::color});
+    expect(
+        faded.status == negaflow::imaging::ManualNegativeDevelopStatus::ok,
+        "faded manual development succeeds");
+    expect(
+        faded.info.dmax_normalized[0] < 0.42F,
+        "a genuinely flat negative keeps its measured range instead of snapping to normal");
+    expect(
+        faded.info.dmax_normalized[0] != faded.info.dmax_normalized[2],
+        "a faded negative keeps its per-channel range difference");
+    // 파랑이 가장 먼저 바래므로 파랑의 범위가 가장 좁아야 합니다. 앞 판의 `max(0.4)` 바닥은
+    // 그 차이를 통째로 삼켰습니다 - 카메라 스캔 다섯 장 중 넷이 파랑에서 정확히 0.40 이었고,
+    // 그만큼 파랑이 과하게 늘어나 사진이 노랗게 나왔습니다.
+    expect(
+        faded.info.dmax_normalized[2] < faded.info.dmax_normalized[1] &&
+            faded.info.dmax_normalized[2] > 0.0F,
+        "the faded blue layer keeps its own narrow range");
+
     const auto affine_proxy_scene = negaflow::imaging::develop_manual_negative(
         make_affine_proxy_scene_image(),
         {{0.80F, 0.80F, 0.80F}, negaflow::imaging::NegativeFilmType::color});
