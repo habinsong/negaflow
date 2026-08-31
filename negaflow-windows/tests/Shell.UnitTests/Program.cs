@@ -102,6 +102,7 @@ internal static class Program
         PrintExportOutputCountTests.Run();
         DevelopPanelTests.Run();
         FrameImportTests.Run();
+        SourceDeletionPlanTests.Run();
         GrainMendPaintOverlayTests.Run();
         PreviewAndAutoAdjustmentTests.Run();
         ExportBatchTests.Run();

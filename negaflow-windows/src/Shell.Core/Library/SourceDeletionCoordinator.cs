@@ -45,7 +45,9 @@ public static class SourceDeletionCoordinator
             return staged;
         }
 
-        if (library.RemoveFrames(frameIds) == 0)
+        // 원본은 이 시점에 이미 옆으로 치워졌습니다. 썸네일 캐시도 같이 버려야 합니다 —
+        // 되돌릴 수 있는 "제거" 와 달리 이 사진은 돌아오지 않습니다.
+        if (library.RemoveFrames(frameIds, sourceFilesRemoved: true) == 0)
         {
             IReadOnlyList<string> rollback = SourceTrashTransaction.Rollback(moves);
             return new SourceTrashResult(

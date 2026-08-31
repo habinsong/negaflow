@@ -282,7 +282,12 @@ public sealed partial class LibraryHostService : IDisposable
     /// 되살아난 사진이 결함 편집을 잃으면 그것은 되돌린 것이 아닙니다. 주인이 영영 없는
     /// sidecar 는 아무도 읽지 않는 파일일 뿐입니다.
     /// </remarks>
-    public int RemoveFrames(IEnumerable<string> frameIds)
+    /// <param name="sourceFilesRemoved">
+    /// 원본 파일까지 사라졌으면 <c>true</c> 입니다(휴지통 이동). 그때만 썸네일 캐시를
+    /// 버립니다 — 되돌릴 수 있는 그냥 "제거" 는 원본이 그대로라 캐시를 살려 둬야
+    /// 되돌린 격자가 빈 칸으로 뜨지 않습니다.
+    /// </param>
+    public int RemoveFrames(IEnumerable<string> frameIds, bool sourceFilesRemoved = false)
     {
         ArgumentNullException.ThrowIfNull(frameIds);
         if (document is not { } open)
@@ -298,6 +303,14 @@ public sealed partial class LibraryHostService : IDisposable
         }
         open.CommitPendingRemovalUndo(pendingUndo, removal);
         _ = SaveIfDirty();
+        // **여기서 알리지 않으면 현상·인화 필름스트립은 옛 목록에 머뭅니다.** 라이브러리
+        // 격자는 부르는 쪽이 직접 다시 그려서 살아났지만, 필름스트립은 그 자리에 없어서
+        // 지운 사진이 그대로 남았고 앱을 다시 켜야 사라졌습니다(QA 2026-08-31).
+        // macOS 는 프레임 관찰로 세 화면이 저절로 따라옵니다. 이 이벤트가 그 짝입니다.
+        LibraryContentChanged?.Invoke(this, new LibraryContentChangedEventArgs(
+            [],
+            sourceFilesRemoved ? removal.FrameIds : [],
+            []));
         return removal.Count;
     }
 

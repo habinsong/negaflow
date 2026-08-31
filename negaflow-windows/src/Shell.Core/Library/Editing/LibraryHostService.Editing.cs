@@ -65,8 +65,21 @@ public sealed partial class LibraryHostService
         {
             FrameEdited?.Invoke(this, EventArgs.Empty);
         }
+        // **사진 목록 자체가 달라지는 단계**는 세 화면을 다시 맞춰야 합니다. `FrameEdited` 는
+        // "같은 사진의 값이 바뀌었다" 는 알림이라 필름스트립의 목록을 다시 읽게 하지
+        // 않습니다 - 되돌린 "제거" 가 라이브러리 격자에만 돌아오고 필름스트립에는 없던
+        // 까닭입니다. 슬라이더 되돌리기도 이 길로 오므로 목록이 바뀌는 동작만 고릅니다.
+        if (ChangesFrameList(name))
+        {
+            LibraryContentChanged?.Invoke(this, new LibraryContentChangedEventArgs([], [], []));
+        }
         return name;
     }
+
+    /// <summary>되돌리기 한 단계가 사진 <b>목록</b>을 바꾸는지입니다.</summary>
+    private static bool ChangesFrameList(string actionName) => actionName is
+        UndoActions.RemoveFrames or UndoActions.VirtualCopy or
+        UndoActions.CreateStack or UndoActions.UngroupStack;
 
     private readonly FrameEditHistory frameEdits = new();
 
