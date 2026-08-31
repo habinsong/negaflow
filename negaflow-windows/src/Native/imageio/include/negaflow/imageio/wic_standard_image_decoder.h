@@ -11,6 +11,11 @@
 
 namespace negaflow::imageio {
 
+// `libraw_image_decoder.h` 는 **이 헤더의** 타입을 쓰므로 여기서 그것을 include 하면
+// 순환이 됩니다. 여기서 필요한 것은 열거형 하나뿐이고, 밑수를 못박아 둔 덕에 앞서
+// 선언만 해도 값으로 담을 수 있습니다.
+enum class LibRawDecodeStatus : std::uint8_t;
+
 enum class WicStandardImageDecodeStatus : std::uint8_t {
     ok = 0,
     invalid_argument,
@@ -55,6 +60,18 @@ struct WicStandardImageDecodeInfo final {
     // 설치된 WIC codec 이 이 파일을 열지 못해 함께 배포한 `libraw.dll` 이 대신 현상했습니다.
     // 진단이 어느 디코더가 화소를 만들었는지 구분할 수 있어야 하므로 남깁니다.
     bool libraw_fallback_used{false};
+    // LibRaw 대체를 **불러 보기는 했는지**, 그리고 그것이 내놓은 판정입니다.
+    //
+    // LibRaw 가 실패하면 호출자에게는 WIC 의 사유가 그대로 돌아갑니다(그래야 "codec 없음"
+    // 과 "파일 깨짐" 이 안 섞입니다). 그 바람에 **LibRaw 의 사유는 여태 그 자리에서
+    // 사라졌습니다** — 같은 파일이 한 기계에서만 안 열릴 때 LibRaw 가 무엇을 보고
+    // 물러났는지 알 길이 없었습니다(QA 2026-08-31 펜탁스 K-1 DNG). 사용자에게 보이는
+    // 판정은 건드리지 않고, 진단만 여기 실어 보냅니다.
+    // 열거형이 아직 불완전해 `LibRawDecodeStatus::ok` 라고 적을 수 없어 값 초기화를 씁니다
+    // (`ok` 가 0 입니다). 이 값이 뜻을 갖는 것은 `libraw_attempted` 가 true 일 때뿐입니다.
+    bool libraw_attempted{false};
+    LibRawDecodeStatus libraw_status{};
+    int libraw_native_error_code{0};
     // 프리뷰 크기로 줄여 풀었습니다. 캐시가 이것을 전체 해상도 결과와 섞지 않도록 남깁니다.
     bool reduced_for_preview{false};
     std::uint16_t exif_orientation{1U};

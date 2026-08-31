@@ -65,6 +65,13 @@ int run_probe_image(const int argument_count, const wchar_t* const arguments[]) 
               // 이 줄이 이 명령의 요점입니다. 같은 파일이 기계마다 다른 디코더로 열립니다.
               << ",\"libraw_fallback_used\":"
               << (decoded.info.libraw_fallback_used ? "true" : "false")
+              // 대체를 불렀는데 그것도 실패하면 화면에는 WIC 의 사유만 남습니다. LibRaw 가
+              // 무엇을 보고 물러났는지는 여기서만 볼 수 있습니다.
+              << ",\"libraw_attempted\":"
+              << (decoded.info.libraw_attempted ? "true" : "false")
+              << ",\"libraw_status\":\""
+              << negaflow::imageio::libraw_decode_status_name(decoded.info.libraw_status) << '"'
+              << ",\"libraw_native_error_code\":" << decoded.info.libraw_native_error_code
               << ",\"libraw_available\":"
               << (negaflow::imageio::libraw_decoder_available() ? "true" : "false")
               << ",\"libraw_version\":\"" << negaflow::imageio::libraw_decoder_version() << '"'

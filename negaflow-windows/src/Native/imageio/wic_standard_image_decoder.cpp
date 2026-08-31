@@ -525,6 +525,13 @@ WicStandardImageDecodeResult decode_standard_image_with_wic(
         // LibRaw 도 못 읽으면 **WIC 의 실패 사유를 그대로 돌려줍니다.** LibRaw 의 사유로
         // 덮으면 "codec 이 없다" 와 "파일이 깨졌다" 가 뒤섞여 사용자에게 엉뚱한 안내가
         // 나갑니다.
+        //
+        // 다만 **버리지는 않습니다.** 사용자에게 보이는 판정은 위 그대로 두고, LibRaw 가
+        // 무엇을 보고 물러났는지는 진단에 실어 보냅니다 - 그것이 없으면 "그 PC 에서만
+        // 안 된다" 를 볼 방법이 없습니다.
+        wic.info.libraw_attempted = true;
+        wic.info.libraw_status = raw.status;
+        wic.info.libraw_native_error_code = raw.native_error_code;
         return wic;
     }
 
@@ -534,6 +541,9 @@ WicStandardImageDecodeResult decode_standard_image_with_wic(
     result.info.frame_count = 1U;
     result.info.raw_development_used = true;
     result.info.libraw_fallback_used = true;
+    result.info.libraw_attempted = true;
+    result.info.libraw_status = LibRawDecodeStatus::ok;
+    result.info.libraw_native_error_code = raw.native_error_code;
     // LibRaw 가 파일의 flip 을 이미 적용해서 돌려줍니다. WIC RAW 경로가
     // `IWICDevelopRaw` 로 as-shot 회전을 적용하고 orientation 을 1 로 두는 것과 같습니다.
     result.info.exif_orientation = 1U;
