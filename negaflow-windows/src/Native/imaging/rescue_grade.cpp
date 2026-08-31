@@ -18,12 +18,24 @@ constexpr std::array<double, 7U> band_edges{
     0.06, 0.20, 0.34, 0.48, 0.62, 0.76, 0.92};
 constexpr std::size_t minimum_eligible_band_count = 3U;
 constexpr std::size_t minimum_covered_tile_count = 6U;
-constexpr double maximum_neutral_chroma = 18.0;
+// 밴드가 앉은 자리로부터 이만큼 안쪽을 "중립이어야 할 것들" 로 봅니다. 원점에서의 거리가
+// 아니라 **쏠린 자리에서의 거리** 입니다 — 그래야 캐스트 크기와 무관해집니다.
+constexpr double maximum_neutral_offset = 18.0;
 constexpr double minimum_neutral_population_fraction = 0.80;
 constexpr double maximum_band_mad = 3.0;
 constexpr double maximum_holdout_delta = 2.0;
 constexpr double minimum_measured_drift = 1.5;
-constexpr double maximum_drift_lab = 12.0;
+// 되돌릴 수 있는 쏠림의 상한입니다.
+//
+// 12 는 약한 캐스트만 염두에 둔 값이라, 오래된 필름의 노란 쏠림에서는 절반도 못 폈습니다
+// (실측: 색 벌어짐이 42% 만 줄어듦). 30 은 전역 캐스트가 물리적으로 닿을 수 있는 범위입니다
+// — 중성 면이 텅스텐과 주광 사이에서 움직이는 폭이 대략 이만큼입니다. 그보다 크게 옮기면
+// 캐스트를 걷는 것이 아니라 피사체의 색을 바꾸는 것이 됩니다.
+//
+// 이것은 **마지막 방어선**입니다. 사진 전체가 진짜로 한 색인 경우(노란 벽 한 장) 앞의
+// 증거 검사들이 그것을 캐스트로 볼 수 있는데, 그때 얼마나 망가질 수 있는지를 이 값이
+// 묶습니다.
+constexpr double maximum_drift_lab = 30.0;
 
 struct Lab final {
     double lightness;
@@ -279,15 +291,31 @@ template <typename Selector>
         if (members.size() < minimum_band_samples) {
             continue;
         }
-        std::vector<double> sorted_chroma = select_values(
-            members, [](const Sample& sample) { return sample.chroma; });
-        std::sort(sorted_chroma.begin(), sorted_chroma.end());
+        // 후보를 **원점에서의 거리**로 고르면 캐스트가 셀수록 아무도 못 들어옵니다. 노랗게
+        // 쏠린 사진에서는 원래 회색이던 벽도 원점에서 멀어지기 때문입니다 — 세게 쏠린
+        // 사진일수록 걸러낼 수 없게 되는 자기모순이고, 유통기한이 한참 지난 필름에서 EXPIRED
+        // 가 아무 일도 하지 않던 까닭입니다(2026-09-01 보고).
+        //
+        // 그래서 **밴드가 실제로 앉은 자리**를 먼저 찾고, 그 주변에 얼마나 뭉쳐 있는지를
+        // 봅니다. 쏠린 거리와 무관해집니다. 색이 있는 사진을 지켜 주는 것은 원점 상한이
+        // 아니라 아래의 검사들입니다 — 여러 밝기대가 같은 방향이어야 하고(부호 변화 ≤1),
+        // 흩어짐이 작아야 하고(MAD), 떼어 둔 표본과 일치해야 합니다. 노을은 그쪽에서
+        // 걸립니다.
+        const double center_a = median(select_values(
+            members, [](const Sample& sample) { return sample.a; }));
+        const double center_b = median(select_values(
+            members, [](const Sample& sample) { return sample.b; }));
+        const auto offset_of = [center_a, center_b](const Sample& sample) {
+            return std::hypot(sample.a - center_a, sample.b - center_b);
+        };
+        std::vector<double> sorted_offset = select_values(members, offset_of);
+        std::sort(sorted_offset.begin(), sorted_offset.end());
         const double neutral_ceiling = std::min(
-            maximum_neutral_chroma,
-            std::max(5.0, sorted_chroma[sorted_chroma.size() / 4U] * 1.35));
+            maximum_neutral_offset,
+            std::max(5.0, sorted_offset[sorted_offset.size() / 4U] * 1.35));
         std::vector<const Sample*> neutral{};
         for (const Sample* const sample : members) {
-            if (sample->chroma <= neutral_ceiling) {
+            if (offset_of(*sample) <= neutral_ceiling) {
                 neutral.push_back(sample);
             }
         }
