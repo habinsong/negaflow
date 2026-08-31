@@ -112,7 +112,8 @@ public static class ScannerPluginClient
             wire,
             out infraredPath,
             out artifactRequirements,
-            out appliedScanArea);
+            out appliedScanArea,
+            out _);
 
     public sealed record ScanWire(
         [property: JsonPropertyName("protocolVersion")] int ProtocolVersion,

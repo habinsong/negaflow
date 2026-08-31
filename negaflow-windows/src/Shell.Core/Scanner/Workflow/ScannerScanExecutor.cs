@@ -31,10 +31,18 @@ internal static class ScannerScanExecutor
         if (!ScannerScanCodec.TryBuild(
                 request,
                 out ScannerPluginClient.ScanWire? wire,
-                out string? stagingDirectory))
+                out string? stagingDirectory,
+                out string? refusal))
         {
+            // 거절한 **조건 이름**을 그대로 답니다. `CapabilityMismatch` 한 단어로는
+            // 열몇 가지 중 무엇이 걸렸는지 알 수 없습니다.
             ScannerDiagnosticsLog.WriteFailure(
-                "TryBuild (CapabilityMismatch)", plugin, request, null, null, null);
+                $"TryBuild (CapabilityMismatch: {refusal ?? "unknown"})",
+                plugin,
+                request,
+                null,
+                null,
+                null);
             return new(ScannerPluginScanStatus.CapabilityMismatch, null, null, null);
         }
         ScannerPluginClient.ScanWire scanWire = wire!;
@@ -122,10 +130,18 @@ internal static class ScannerScanExecutor
                     scanWire,
                     out string? infraredPath,
                     out ScannerArtifactRequirements? artifactRequirements,
-                    out ScannerPluginScanArea? appliedScanArea))
+                    out ScannerPluginScanArea? appliedScanArea,
+                    out string? mismatch))
             {
+                // **어긋난 필드 이름을 그대로 답니다.** `ResultMismatch` 한 단어만 남기면
+                // 열몇 가지 검사 중 무엇이 틀렸는지 기록으로 좁힐 수 없습니다.
                 ScannerDiagnosticsLog.WriteFailure(
-                    "ResultMismatch", plugin, request, wireJson, stagingDirectory, process);
+                    $"ResultMismatch ({mismatch ?? "unknown"})",
+                    plugin,
+                    request,
+                    wireJson,
+                    stagingDirectory,
+                    process);
                 return new(ScannerPluginScanStatus.ResultMismatch, process, stream.Status, null);
             }
 

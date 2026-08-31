@@ -82,6 +82,13 @@ internal static class ScanRunCoordinator
                 stopReason = $"no request at index={index} (device or capabilities missing)";
                 break;
             }
+            // **무엇으로 청했는지**를 매번 남깁니다. 성공한 회차도 남겨야 "이 값에서만
+            // 실패한다" 를 기록만으로 가릴 수 있습니다 - 필름 종류를 바꾸면 스캔이 안
+            // 된다는 보고를 앞 기록으로는 확인할 수 없었습니다(2026-08-31).
+            ScannerDiagnosticsLog.Write(
+                $"scan attempt index={index} preview={preview} process={request.Process} " +
+                $"dpi={request.ResolutionDpi} depth={request.BitDepth} mode={request.ColorMode} " +
+                $"ir={request.Infrared} rawTiff={request.OutputRawTiff}");
             InstalledScannerPlugin plugin = batchPlugin;
             ScannerPluginTrustIdentity identity = batchIdentity;
             if (preview)

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -55,11 +56,24 @@ internal static class ScannerScanCodec
     internal static bool TryBuild(
         ScannerPluginScanRequest request,
         out ScannerPluginClient.ScanWire? wire,
-        out string? stagingDirectory)
+        out string? stagingDirectory) =>
+        TryBuild(request, out wire, out stagingDirectory, out _);
+
+    /// <param name="refusal">
+    /// 요청을 만들지 못한 <b>이유</b>입니다. 만들었으면 <c>null</c> 입니다. 앞 판은 이유 없이
+    /// <c>false</c> 만 돌려줘서, 실패가 `CapabilityMismatch` 한 단어로만 남았습니다 — 열몇
+    /// 가지 조건 중 무엇이 걸렸는지 기록으로 좁힐 수 없었습니다(2026-08-31).
+    /// </param>
+    internal static bool TryBuild(
+        ScannerPluginScanRequest request,
+        out ScannerPluginClient.ScanWire? wire,
+        out string? stagingDirectory,
+        out string? refusal)
     {
         ArgumentNullException.ThrowIfNull(request);
         wire = null;
         stagingDirectory = null;
+        refusal = null;
         // 플러그인 protocol v2 의 상호 배타 계약입니다.
         // preview=true dpi 0 · outputRawTIFF=false · IR/다중노출/노출시간 없음
         // preview=false dpi > 0 · outputRawTIFF=true
@@ -71,22 +85,47 @@ internal static class ScannerScanCodec
             : request.ResolutionDpi > 0 && request.OutputRawTiff;
         // scanArea 는 protocol v2 의 **필수** 필드입니다. macOS 의 `ScanOptions.scanArea` 도
         // 옵셔널이 아닙니다. 비우면 요청 JSON 이 파싱에서 떨어져 ProcessFailed 로 보입니다.
-        if (!previewContract ||
-            request.ScanArea is not { } area || !IsValidScanArea(area) ||
-            !IsRequiredText(request.Device.Id) || !IsRequiredText(request.ColorMode) ||
-            !Path.IsPathFullyQualified(request.DestinationVisiblePath) ||
-            request.BitDepth is not (8 or 16) ||
-            request.HardwareExposureTime is <= 0 ||
-            request.BrightnessAdjustment is { } brightness && !double.IsFinite(brightness) ||
-            request.ContrastAdjustment is { } contrast && !double.IsFinite(contrast) ||
-            (request.ResolutionDpi != 0 &&
-                !request.Capabilities.ResolutionsDpi.Contains(request.ResolutionDpi)) ||
-            !request.Capabilities.BitDepths.Contains(request.BitDepth) ||
-            !request.Capabilities.Modes.Contains(request.ColorMode, StringComparer.Ordinal) ||
-            !request.Capabilities.OutputFormats.Contains("tiff", StringComparer.OrdinalIgnoreCase) ||
-            request.Preview && !request.Capabilities.SupportsPreview ||
-            request.Infrared && !request.Capabilities.SupportsInfrared ||
-            request.MultiExposure && !request.Capabilities.SupportsMultiExposure)
+        // **한 줄로 묶지 않습니다.** 묶으면 어느 조건이 걸렸는지 남길 자리가 없습니다.
+        refusal =
+            !previewContract
+                ? $"preview contract: preview={request.Preview} dpi={request.ResolutionDpi} " +
+                  $"rawTiff={request.OutputRawTiff} ir={request.Infrared} " +
+                  $"multiExposure={request.MultiExposure} " +
+                  $"exposure={request.HardwareExposureTime?.ToString(CultureInfo.InvariantCulture) ?? "none"}"
+            : request.ScanArea is not { } checkedArea ? "scanArea is required by protocol v2 but absent"
+            : !IsValidScanArea(checkedArea) ? $"scanArea is not usable: {DescribeArea(checkedArea)}"
+            : !IsRequiredText(request.Device.Id) ? "deviceID is empty or unusable"
+            : !IsRequiredText(request.ColorMode) ? "colorMode is empty or unusable"
+            : !Path.IsPathFullyQualified(request.DestinationVisiblePath)
+                ? $"destination is not a full path: {request.DestinationVisiblePath}"
+            : request.BitDepth is not (8 or 16) ? $"bitDepth {request.BitDepth} is neither 8 nor 16"
+            : request.HardwareExposureTime is <= 0
+                ? $"hardwareExposureTime {request.HardwareExposureTime} is not positive"
+            : request.BrightnessAdjustment is { } brightness && !double.IsFinite(brightness)
+                ? $"brightnessAdjustment {brightness} is not finite"
+            : request.ContrastAdjustment is { } contrast && !double.IsFinite(contrast)
+                ? $"contrastAdjustment {contrast} is not finite"
+            : request.ResolutionDpi != 0 &&
+              !request.Capabilities.ResolutionsDpi.Contains(request.ResolutionDpi)
+                ? $"the device does not offer {request.ResolutionDpi} dpi " +
+                  $"(offers {string.Join(",", request.Capabilities.ResolutionsDpi)})"
+            : !request.Capabilities.BitDepths.Contains(request.BitDepth)
+                ? $"the device does not offer {request.BitDepth} bit " +
+                  $"(offers {string.Join(",", request.Capabilities.BitDepths)})"
+            : !request.Capabilities.Modes.Contains(request.ColorMode, StringComparer.Ordinal)
+                ? $"the device does not offer colorMode '{request.ColorMode}' " +
+                  $"(offers {string.Join(",", request.Capabilities.Modes)})"
+            : !request.Capabilities.OutputFormats.Contains("tiff", StringComparer.OrdinalIgnoreCase)
+                ? $"the device does not output tiff " +
+                  $"(offers {string.Join(",", request.Capabilities.OutputFormats)})"
+            : request.Preview && !request.Capabilities.SupportsPreview
+                ? "a preview was asked for but the device does not support preview"
+            : request.Infrared && !request.Capabilities.SupportsInfrared
+                ? "infrared was asked for but the device does not support it"
+            : request.MultiExposure && !request.Capabilities.SupportsMultiExposure
+                ? "multi exposure was asked for but the device does not support it"
+            : null;
+        if (refusal is not null)
         {
             return false;
         }
@@ -99,12 +138,25 @@ internal static class ScannerScanCodec
         catch (Exception error) when (error is ArgumentException or NotSupportedException or
             PathTooLongException)
         {
+            refusal =
+                $"destination path is unusable: {request.DestinationVisiblePath} " +
+                $"({error.GetType().Name} {error.Message})";
             return false;
         }
         string? destinationDirectory = Path.GetDirectoryName(destination);
-        if (destinationDirectory is null || !Directory.Exists(destinationDirectory) ||
-            File.Exists(destination))
+        if (destinationDirectory is null)
         {
+            refusal = $"destination has no parent folder: {destination}";
+            return false;
+        }
+        if (!Directory.Exists(destinationDirectory))
+        {
+            refusal = $"destination folder does not exist: {destinationDirectory}";
+            return false;
+        }
+        if (File.Exists(destination))
+        {
+            refusal = $"destination file already exists: {destination}";
             return false;
         }
 
@@ -131,33 +183,67 @@ internal static class ScannerScanCodec
         return true;
     }
 
+    /// <param name="mismatch">
+    /// 어긋난 자리를 **이름과 두 값으로** 적어 돌려줍니다. 맞으면 <c>null</c> 입니다.
+    /// 앞 판은 이 정보가 없어 실패가 `ResultMismatch` 한 단어로만 남았고, 열몇 가지 검사 중
+    /// 무엇이 틀렸는지 알 수 없었습니다 — 필름 종류만 바꾸면 스캔이 안 된다는 보고를 그
+    /// 기록으로는 한 발짝도 좁히지 못했습니다(2026-08-31).
+    /// </param>
     internal static bool TryValidateV2Result(
         JsonElement payload,
         ScannerPluginClient.ScanWire wire,
         out string? infraredPath,
         out ScannerArtifactRequirements? artifactRequirements,
-        out ScannerPluginScanArea? appliedScanArea)
+        out ScannerPluginScanArea? appliedScanArea,
+        out string? mismatch)
     {
         infraredPath = null;
         artifactRequirements = null;
         appliedScanArea = null;
+        mismatch = null;
         try
         {
             if (!HasRequiredAppliedOptionNames(payload))
             {
+                mismatch = "appliedOptions is missing one of the required names";
                 return false;
             }
             ScanResultResponse? result = payload.Deserialize<ScanResultResponse>(Json);
-            if (result is null ||
-                !string.Equals(result.Path, wire.OutputPath, StringComparison.OrdinalIgnoreCase) ||
-                result.ResolutionDpi != wire.ResolutionDpi || result.BitDepth != wire.BitDepth ||
-                result.HasInfrared != wire.Infrared || !AppliedOptionsMatch(result.AppliedOptions, wire))
+            if (result is null)
             {
+                mismatch = "the result payload did not parse";
+                return false;
+            }
+            if (!string.Equals(result.Path, wire.OutputPath, StringComparison.OrdinalIgnoreCase))
+            {
+                mismatch = $"path: applied={result.Path ?? "null"} requested={wire.OutputPath}";
+                return false;
+            }
+            if (Differs("resolutionDPI", result.ResolutionDpi, wire.ResolutionDpi) is { } dpi)
+            {
+                mismatch = dpi;
+                return false;
+            }
+            if (Differs("bitDepth", result.BitDepth, wire.BitDepth) is { } depth)
+            {
+                mismatch = depth;
+                return false;
+            }
+            if (Differs("hasInfrared", result.HasInfrared, wire.Infrared) is { } ir)
+            {
+                mismatch = ir;
+                return false;
+            }
+            if (AppliedOptionsMismatch(result.AppliedOptions, wire) is { } applied)
+            {
+                mismatch = applied;
                 return false;
             }
             if (result.Width is not int width || width <= 0 ||
                 result.Height is not int height || height <= 0)
             {
+                mismatch =
+                    $"size: width={result.Width?.ToString() ?? "null"} height={result.Height?.ToString() ?? "null"}";
                 return false;
             }
 
@@ -169,37 +255,82 @@ internal static class ScannerScanCodec
             appliedScanArea = result.AppliedOptions!.ScanArea;
             if (!wire.Infrared)
             {
-                return result.IrPath is null;
+                if (result.IrPath is not null)
+                {
+                    mismatch = $"irPath: infrared was not requested but got {result.IrPath}";
+                    return false;
+                }
+                return true;
             }
             if (string.IsNullOrWhiteSpace(result.IrPath) ||
                 !IsContainedPath(Path.GetDirectoryName(wire.OutputPath)!, result.IrPath))
             {
+                mismatch = $"irPath: {result.IrPath ?? "null"} is missing or outside the staging folder";
                 return false;
             }
             infraredPath = Path.GetFullPath(result.IrPath);
             return true;
         }
-        catch (JsonException)
+        catch (JsonException error)
         {
+            mismatch = $"the result payload is not valid JSON: {error.Message}";
             return false;
         }
     }
 
-    private static bool AppliedOptionsMatch(
+    /// <summary>
+    /// 두 값이 다르면 <b>이름과 두 값</b>을 적어 돌려줍니다. 같으면 <c>null</c> 입니다.
+    /// </summary>
+    /// <remarks>
+    /// `object` 로 받아 `Equals` 로 봅니다 - `int` 와 `int?` 처럼 짝이 맞지 않는 자리가 많아
+    /// 제네릭으로 묶으면 호출부마다 타입을 적어야 합니다. 박싱은 스캔 한 장에 열몇 번이라
+    /// 잴 수 있는 비용이 아닙니다.
+    /// </remarks>
+    private static string? Differs(string name, object? applied, object? requested) =>
+        Equals(applied, requested)
+            ? null
+            : $"{name}: applied={applied ?? "null"} requested={requested ?? "null"}";
+
+    /// <summary>
+    /// 플러그인이 적용했다고 보고한 옵션이 우리가 청한 것과 어긋나면 <b>그 필드</b>를 적어
+    /// 돌려줍니다. 다 맞으면 <c>null</c> 입니다.
+    /// </summary>
+    private static string? AppliedOptionsMismatch(
         AppliedScanOptionsResponse? applied,
-        ScannerPluginClient.ScanWire requested) => applied is not null &&
-        applied.DeviceId == requested.DeviceId &&
-        applied.ResolutionDpi == requested.ResolutionDpi &&
-        applied.BitDepth == requested.BitDepth &&
-        applied.ColorMode == requested.ColorMode &&
-        applied.FilmType == requested.FilmType &&
-        applied.Infrared == requested.Infrared &&
-        applied.MultiExposure == requested.MultiExposure &&
-        applied.HardwareExposureTime == requested.HardwareExposureTime &&
-        applied.BrightnessAdjustment == requested.BrightnessAdjustment &&
-        applied.ContrastAdjustment == requested.ContrastAdjustment &&
-        applied.OutputRawTiff == requested.OutputRawTiff &&
-        ScanAreasMatch(applied.ScanArea, requested.ScanArea);
+        ScannerPluginClient.ScanWire requested)
+    {
+        if (applied is null)
+        {
+            return "appliedOptions is absent";
+        }
+        return Differs("deviceID", applied.DeviceId, requested.DeviceId)
+            ?? Differs("resolutionDPI", applied.ResolutionDpi, requested.ResolutionDpi)
+            ?? Differs("bitDepth", applied.BitDepth, requested.BitDepth)
+            ?? Differs("colorMode", applied.ColorMode, requested.ColorMode)
+            ?? Differs("filmType", applied.FilmType, requested.FilmType)
+            ?? Differs("infrared", applied.Infrared, requested.Infrared)
+            ?? Differs("multiExposure", applied.MultiExposure, requested.MultiExposure)
+            ?? Differs(
+                "hardwareExposureTime",
+                applied.HardwareExposureTime,
+                requested.HardwareExposureTime)
+            ?? Differs(
+                "brightnessAdjustment",
+                applied.BrightnessAdjustment,
+                requested.BrightnessAdjustment)
+            ?? Differs("contrastAdjustment", applied.ContrastAdjustment, requested.ContrastAdjustment)
+            ?? Differs("outputRawTIFF", applied.OutputRawTiff, requested.OutputRawTiff)
+            ?? (ScanAreasMatch(applied.ScanArea, requested.ScanArea)
+                ? null
+                : $"scanArea: applied={DescribeArea(applied.ScanArea)} " +
+                  $"requested={DescribeArea(requested.ScanArea)}");
+    }
+
+    private static string DescribeArea(ScannerPluginScanArea? area) => area is null
+        ? "null"
+        : string.Create(
+            CultureInfo.InvariantCulture,
+            $"{area.OriginXmm},{area.OriginYmm} {area.WidthMm}x{area.HeightMm}mm");
 
     private static bool HasRequiredAppliedOptionNames(JsonElement payload)
     {
