@@ -893,6 +893,7 @@
   <data name="developPasteScopeAll.Text" xml:space="preserve"><value>全部设置</value></data>
   <data name="developPasteScopeNone.Text" xml:space="preserve"><value>无</value></data>
   <data name="developScopeBase.Text" xml:space="preserve"><value>片基</value></data>
+  <data name="developScopeBaseRgb.Text" xml:space="preserve"><value>片基 R/G/B</value></data>
   <data name="developScopeTone.Text" xml:space="preserve"><value>基本色调</value></data>
   <data name="developScopeColor.Text" xml:space="preserve"><value>颜色</value></data>
   <data name="developScopeDetail.Text" xml:space="preserve"><value>细节与效果</value></data>
@@ -906,6 +907,7 @@
   <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>应用所选用户预设</value></data>
   <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>删除所选用户预设</value></data>
   <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>预设 %d</value></data>
+  <data name="developUserPresetNamePlaceholder.PlaceholderText" xml:space="preserve"><value>预设名称 (留空则自动)</value></data>
   <data name="developSectionColor.Text" xml:space="preserve"><value>颜色</value></data>
   <data name="developWarmth.Text" xml:space="preserve"><value>色温</value></data>
   <data name="developTint.Text" xml:space="preserve"><value>色调</value></data>

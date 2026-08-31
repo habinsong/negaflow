@@ -52,6 +52,11 @@
                                                 Click="OnPasteScopeToggled"
                                                 Tag="Base" />
                                             <ToggleMenuFlyoutItem
+                                                x:Name="PasteScopeBaseRgbItem"
+                                                AutomationProperties.AutomationId="negaflow.develop.presets.scope.baseRgb"
+                                                Click="OnPasteScopeToggled"
+                                                Tag="BaseRgb" />
+                                            <ToggleMenuFlyoutItem
                                                 x:Name="PasteScopeToneItem"
                                                 AutomationProperties.AutomationId="negaflow.develop.presets.scope.tone"
                                                 Click="OnPasteScopeToggled"
@@ -95,6 +100,15 @@
                                     AutomationProperties.AutomationId="negaflow.develop.presets.user"
                                     SelectionChanged="OnUserPresetSelectionChanged" />
                             </Grid>
+                            <!--
+                                이름 입력은 저장을 누를 때만 나옵니다. 비워 두고 넘기면 겹치지
+                                않는 번호 이름이 붙습니다. Enter 로 저장하고 Esc 로 물러납니다.
+                            -->
+                            <TextBox
+                                x:Name="UserPresetNameBox"
+                                Visibility="Collapsed"
+                                AutomationProperties.AutomationId="negaflow.develop.presets.name"
+                                KeyDown="OnUserPresetNameKeyDown" />
                             <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />

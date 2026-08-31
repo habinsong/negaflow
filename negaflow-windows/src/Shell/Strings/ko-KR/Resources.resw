@@ -893,6 +893,7 @@
   <data name="developPasteScopeAll.Text" xml:space="preserve"><value>모든 설정</value></data>
   <data name="developPasteScopeNone.Text" xml:space="preserve"><value>없음</value></data>
   <data name="developScopeBase.Text" xml:space="preserve"><value>베이스</value></data>
+  <data name="developScopeBaseRgb.Text" xml:space="preserve"><value>베이스 R/G/B</value></data>
   <data name="developScopeTone.Text" xml:space="preserve"><value>기본 톤</value></data>
   <data name="developScopeColor.Text" xml:space="preserve"><value>색상</value></data>
   <data name="developScopeDetail.Text" xml:space="preserve"><value>디테일 및 효과</value></data>
@@ -906,6 +907,7 @@
   <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>선택한 사용자 프리셋 적용</value></data>
   <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>선택한 사용자 프리셋 삭제</value></data>
   <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>프리셋 %d</value></data>
+  <data name="developUserPresetNamePlaceholder.PlaceholderText" xml:space="preserve"><value>프리셋 이름 (비우면 자동)</value></data>
   <data name="developSectionColor.Text" xml:space="preserve"><value>색상</value></data>
   <data name="developWarmth.Text" xml:space="preserve"><value>색온도</value></data>
   <data name="developTint.Text" xml:space="preserve"><value>틴트</value></data>

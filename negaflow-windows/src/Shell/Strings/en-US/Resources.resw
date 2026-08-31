@@ -893,6 +893,7 @@ Load a scanner from Library to scan film.</value>
   <data name="developPasteScopeAll.Text" xml:space="preserve"><value>All Settings</value></data>
   <data name="developPasteScopeNone.Text" xml:space="preserve"><value>None</value></data>
   <data name="developScopeBase.Text" xml:space="preserve"><value>Base</value></data>
+  <data name="developScopeBaseRgb.Text" xml:space="preserve"><value>Base R/G/B</value></data>
   <data name="developScopeTone.Text" xml:space="preserve"><value>Basic Tone</value></data>
   <data name="developScopeColor.Text" xml:space="preserve"><value>Color</value></data>
   <data name="developScopeDetail.Text" xml:space="preserve"><value>Detail &amp; Effects</value></data>
@@ -906,6 +907,7 @@ Load a scanner from Library to scan film.</value>
   <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>Apply the selected user preset</value></data>
   <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>Delete the selected user preset</value></data>
   <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>Preset %d</value></data>
+  <data name="developUserPresetNamePlaceholder.PlaceholderText" xml:space="preserve"><value>Preset name (blank for automatic)</value></data>
   <data name="developSectionColor.Text" xml:space="preserve"><value>Color</value></data>
   <data name="developWarmth.Text" xml:space="preserve"><value>Warmth</value></data>
   <data name="developTint.Text" xml:space="preserve"><value>Tint</value></data>

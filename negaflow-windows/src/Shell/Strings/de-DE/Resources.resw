@@ -893,6 +893,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developPasteScopeAll.Text" xml:space="preserve"><value>Alle Einstellungen</value></data>
   <data name="developPasteScopeNone.Text" xml:space="preserve"><value>Keine</value></data>
   <data name="developScopeBase.Text" xml:space="preserve"><value>Filmbasis</value></data>
+  <data name="developScopeBaseRgb.Text" xml:space="preserve"><value>Filmbasis R/G/B</value></data>
   <data name="developScopeTone.Text" xml:space="preserve"><value>Grundeinstellungen</value></data>
   <data name="developScopeColor.Text" xml:space="preserve"><value>Farbe</value></data>
   <data name="developScopeDetail.Text" xml:space="preserve"><value>Details &amp; Effekte</value></data>
@@ -906,6 +907,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>Wendet die ausgewählte Benutzervorgabe an</value></data>
   <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>Löscht die ausgewählte Benutzervorgabe</value></data>
   <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>Vorgabe %d</value></data>
+  <data name="developUserPresetNamePlaceholder.PlaceholderText" xml:space="preserve"><value>Vorgabenname (leer = automatisch)</value></data>
   <data name="developSectionColor.Text" xml:space="preserve"><value>Farbe</value></data>
   <data name="developWarmth.Text" xml:space="preserve"><value>Temperatur</value></data>
   <data name="developTint.Text" xml:space="preserve"><value>Tonung</value></data>

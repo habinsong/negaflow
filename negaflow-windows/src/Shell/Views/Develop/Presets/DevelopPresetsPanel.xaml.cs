@@ -1,9 +1,11 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Negaflow.Catalog;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
+using Windows.System;
 
 namespace Negaflow.Shell.Views.Develop.Presets;
 
@@ -70,6 +72,7 @@ public sealed partial class DevelopPresetsPanel : UserControl
         panel.PasteScope = group switch
         {
             "Base" => scope with { Base = item.IsChecked },
+            "BaseRgb" => scope with { BaseRgb = item.IsChecked },
             "Tone" => scope with { Tone = item.IsChecked },
             "Color" => scope with { Color = item.IsChecked },
             "Detail" => scope with { Detail = item.IsChecked },
@@ -86,6 +89,13 @@ public sealed partial class DevelopPresetsPanel : UserControl
         UpdateUserPresetButtons();
     }
 
+    /// <summary>
+    /// 저장을 누르면 <b>이름부터 묻습니다.</b> 이미 묻고 있으면 그 이름으로 저장합니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 묻지 않고 번호 이름을 붙여 버렸습니다. 프리셋은 나중에 목록에서 골라 쓰는
+    /// 것이라 이름이 곧 그 프리셋의 정체인데, 그 자리가 없었습니다.
+    /// </remarks>
     private void OnSaveUserPresetClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -94,16 +104,60 @@ public sealed partial class DevelopPresetsPanel : UserControl
         {
             return;
         }
-        string name = AppResources.FormatIntegers(
-            "developUserPresetNameFormat",
-            "Value",
-            panel.UserPresets.Count + 1);
+        if (UserPresetNameBox.Visibility != Visibility.Visible)
+        {
+            UserPresetNameBox.Text = string.Empty;
+            UserPresetNameBox.Visibility = Visibility.Visible;
+            _ = UserPresetNameBox.Focus(FocusState.Programmatic);
+            return;
+        }
+        CommitUserPresetName();
+    }
+
+    private void OnUserPresetNameKeyDown(object sender, KeyRoutedEventArgs args)
+    {
+        _ = sender;
+        // Enter 로 저장하고 Esc 로 물러납니다. 둘 다 여기서 멈춰야 캔버스 단축키로 새지
+        // 않습니다.
+        if (args.Key == VirtualKey.Enter)
+        {
+            CommitUserPresetName();
+            args.Handled = true;
+            return;
+        }
+        if (args.Key == VirtualKey.Escape)
+        {
+            CloseUserPresetName();
+            args.Handled = true;
+        }
+    }
+
+    private void CommitUserPresetName()
+    {
+        if (panel is null)
+        {
+            return;
+        }
+        // 비워 두면 겹치지 않는 번호 이름이 붙습니다. 적어 준 이름이 겹쳐도 번호가 붙습니다 -
+        // 목록에 같은 이름이 둘이면 어느 것을 지우는지 알 수 없습니다.
+        string name = DevelopPresetNaming.Resolve(
+            UserPresetNameBox.Text,
+            [.. panel.UserPresets.Select(preset => preset.Name)],
+            index => AppResources.FormatIntegers(
+                "developUserPresetNameFormat", "Value", index));
+        CloseUserPresetName();
         if (panel.SaveUserPreset(name) is not { } saved)
         {
             return;
         }
         // 방금 저장한 것을 고른 상태로 둡니다 — macOS 도 저장 직후 그 프리셋을 가리킵니다.
         Update(saved.Id);
+    }
+
+    private void CloseUserPresetName()
+    {
+        UserPresetNameBox.Text = string.Empty;
+        UserPresetNameBox.Visibility = Visibility.Collapsed;
     }
 
     private void OnApplyUserPresetClicked(object sender, RoutedEventArgs args)
@@ -152,6 +206,9 @@ public sealed partial class DevelopPresetsPanel : UserControl
         DeleteUserPresetButton.Content = AppResources.Get("developUserPresetDelete", "Content");
         PasteScopeAllItem.Text = AppResources.Get("developPasteScopeAll", "Text");
         PasteScopeBaseItem.Text = AppResources.Get("developScopeBase", "Text");
+        PasteScopeBaseRgbItem.Text = AppResources.Get("developScopeBaseRgb", "Text");
+        UserPresetNameBox.PlaceholderText =
+            AppResources.Get("developUserPresetNamePlaceholder", "PlaceholderText");
         PasteScopeToneItem.Text = AppResources.Get("developScopeTone", "Text");
         PasteScopeColorItem.Text = AppResources.Get("developScopeColor", "Text");
         PasteScopeDetailItem.Text = AppResources.Get("developScopeDetail", "Text");
@@ -171,6 +228,7 @@ public sealed partial class DevelopPresetsPanel : UserControl
 
         DevelopSettingsPasteScope scope = panel?.PasteScope ?? DevelopSettingsPasteScope.All;
         PasteScopeBaseItem.IsChecked = scope.Base;
+        PasteScopeBaseRgbItem.IsChecked = scope.BaseRgb;
         PasteScopeToneItem.IsChecked = scope.Tone;
         PasteScopeColorItem.IsChecked = scope.Color;
         PasteScopeDetailItem.IsChecked = scope.Detail;
@@ -222,5 +280,6 @@ public sealed partial class DevelopPresetsPanel : UserControl
                 AppResources.Get("developScopeTone", "Text"),
                 AppResources.Get("developScopeColor", "Text"),
                 AppResources.Get("developScopeDetail", "Text"),
-                AppResources.Get("developScopeGeometry", "Text")));
+                AppResources.Get("developScopeGeometry", "Text"),
+                AppResources.Get("developScopeBaseRgb", "Text")));
 }

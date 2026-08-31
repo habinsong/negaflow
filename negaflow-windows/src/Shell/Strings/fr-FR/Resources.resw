@@ -893,6 +893,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developPasteScopeAll.Text" xml:space="preserve"><value>Tous les paramètres</value></data>
   <data name="developPasteScopeNone.Text" xml:space="preserve"><value>Aucun</value></data>
   <data name="developScopeBase.Text" xml:space="preserve"><value>Base</value></data>
+  <data name="developScopeBaseRgb.Text" xml:space="preserve"><value>Base R/G/B</value></data>
   <data name="developScopeTone.Text" xml:space="preserve"><value>Réglages de base</value></data>
   <data name="developScopeColor.Text" xml:space="preserve"><value>Couleur</value></data>
   <data name="developScopeDetail.Text" xml:space="preserve"><value>Détails et effets</value></data>
@@ -906,6 +907,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>Applique le paramètre prédéfini utilisateur sélectionné</value></data>
   <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>Supprime le paramètre prédéfini utilisateur sélectionné</value></data>
   <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>Paramètre prédéfini %d</value></data>
+  <data name="developUserPresetNamePlaceholder.PlaceholderText" xml:space="preserve"><value>Nom du préréglage (vide = automatique)</value></data>
   <data name="developSectionColor.Text" xml:space="preserve"><value>Couleur</value></data>
   <data name="developWarmth.Text" xml:space="preserve"><value>Température</value></data>
   <data name="developTint.Text" xml:space="preserve"><value>Teinte</value></data>

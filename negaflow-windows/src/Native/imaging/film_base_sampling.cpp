@@ -324,6 +324,39 @@ namespace {
             "interior=%zu components=%zu\n",
             width, height, count, floor, floor * 10.0, minimum_size, interior_cells,
             components.size());
+        // 격자에서 **가장 밝은 칸들**이 후보 판정을 지나는지입니다. 베이스는 필름에서 가장
+        // 밝은 자리이므로, 여기 있는 칸이 후보가 아니라면 그 판정이 진짜 베이스를 밀어낸
+        // 것입니다 — 카메라 스캔처럼 마스크가 우리 가정과 다른 원본에서 그 자리를 봅니다.
+        std::vector<std::size_t> brightest(count);
+        for (std::size_t index = 0U; index < count; ++index) {
+            brightest[index] = index;
+        }
+        const std::size_t shown = std::min<std::size_t>(10U, count);
+        std::partial_sort(
+            brightest.begin(), brightest.begin() + static_cast<std::ptrdiff_t>(shown),
+            brightest.end(),
+            [&grid](const std::size_t left, const std::size_t right) {
+                return grid.lumas[left] > grid.lumas[right];
+            });
+        for (std::size_t rank = 0U; rank < shown; ++rank) {
+            const std::size_t index = brightest[rank];
+            const negaflow::core::Rgba32F& pixel = grid.pixels[index];
+            const double peak_channel = std::max(
+                static_cast<double>(pixel.red),
+                std::max(static_cast<double>(pixel.green),
+                         static_cast<double>(pixel.blue)));
+            std::fprintf(
+                stderr,
+                "[base-top] #%zu luma=%.4f rgb=(%.4f,%.4f,%.4f) r-b=%.4f need=%.4f "
+                "candidate=%d\n",
+                rank, grid.lumas[index],
+                static_cast<double>(pixel.red),
+                static_cast<double>(pixel.green),
+                static_cast<double>(pixel.blue),
+                static_cast<double>(pixel.red) - static_cast<double>(pixel.blue),
+                std::max(0.004, peak_channel * 0.10),
+                is_component_candidate(pixel, film_type) ? 1 : 0);
+        }
         for (std::size_t index = 0U; index < components.size() && index < 8U; ++index) {
             std::fprintf(
                 stderr,

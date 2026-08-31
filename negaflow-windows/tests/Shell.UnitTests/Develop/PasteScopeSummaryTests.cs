@@ -8,7 +8,7 @@ namespace Negaflow.Shell.UnitTests;
 internal static class PasteScopeSummaryTests
 {
     private static readonly PasteScopeText Text =
-        new("모든 설정", "없음", "베이스", "톤", "색상", "디테일", "기하");
+        new("모든 설정", "없음", "베이스", "톤", "색상", "디테일", "기하", "베이스 R/G/B");
 
     public static void Run()
     {
@@ -21,9 +21,23 @@ internal static class PasteScopeSummaryTests
             Color = false,
             Detail = false,
             Geometry = false,
+            BaseRgb = false,
         };
         Check(none.IsEmpty && PasteScopeSummary.Describe(none, Text) == "없음",
             "paste_scope_says_none_when_nothing_is_on");
+        // 베이스 R/G/B 는 베이스 바로 뒤에 옵니다 - 같은 것을 다루는 두 묶음이라 목록에서도
+        // 붙어 있어야 읽힙니다.
+        Check(PasteScopeSummary.Describe(none with { Base = true, BaseRgb = true }, Text) ==
+                "베이스/베이스 R/G/B",
+            "paste_scope_puts_base_rgb_next_to_base");
+        Check(PasteScopeSummary.Describe(none with { BaseRgb = true }, Text) == "베이스 R/G/B",
+            "paste_scope_names_base_rgb_alone");
+        // 다섯 묶음이 다 켜져 있어도 베이스 R/G/B 가 빠지면 "모든 설정" 이 아닙니다.
+        Check(!(none with
+            {
+                Base = true, Tone = true, Color = true, Detail = true, Geometry = true,
+            }).IsFullDevelopScope,
+            "paste_scope_is_not_full_without_base_rgb");
         // 켜진 묶음은 macOS 차례대로 이어 붙입니다.
         Check(PasteScopeSummary.Describe(none with { Tone = true, Base = true }, Text) ==
                 "베이스/톤",

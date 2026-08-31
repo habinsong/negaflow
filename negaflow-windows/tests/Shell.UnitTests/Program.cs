@@ -86,6 +86,7 @@ internal static class Program
         InfraredCleanStatusTests.Run();
         VersionListProjectionTests.Run();
         PasteScopeSummaryTests.Run();
+        DevelopPresetNamingTests.Run();
         ScanRotationDefaultTests.Run();
         PixelSamplerTests.Run();
         AppLanguageTests.Run();
