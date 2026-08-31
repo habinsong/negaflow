@@ -72,7 +72,12 @@ int run_auto_base_probe(const int argument_count, const wchar_t* const arguments
               << ",\"film\":\"" << (monochrome ? "bw" : "color") << '"'
               << ",\"source\":\"" << source_name(resolved.source) << '"'
               << ",\"dmin\":[" << resolved.dmin[0] << ',' << resolved.dmin[1]
-              << ',' << resolved.dmin[2] << ']';
+              << ',' << resolved.dmin[2] << ']'
+              // 고른 베이스보다 밝은 필름 화소의 비율과, 그래서 리베이트를 다시 쟀는지.
+              // 이 둘이 "왜 어둡게 나왔나" 를 기록만으로 되짚는 자리입니다.
+              << ",\"brighterThanBase\":" << resolved.brighter_than_base
+              << ",\"rebateRescued\":"
+              << (resolved.rebate_rescued ? "true" : "false");
     if (resolved.diagnostics.has_value()) {
         const auto& diagnostics = *resolved.diagnostics;
         std::cout << ",\"method\":\""

@@ -3,6 +3,7 @@
 #include "auto_negative_base_candidates.h"
 #include "auto_negative_base_exclusion.h"
 #include "auto_negative_base_fallback.h"
+#include "auto_negative_base_rebate.h"
 #include "film_base_sampling.h"
 
 #include <algorithm>
@@ -51,11 +52,18 @@ using film_base_detail::upper_median;
     };
 }
 
-}  // namespace
+// 이 지점을 넘으면 **틀렸다고 볼 이유가 있을 때만** 한 화소라도 더 읽습니다. 정상 20 장이
+// 0.44~2.32%, 잘못 고른 2 장이 10.6~11.0% 로 갈립니다(실측 22 장).
+constexpr double rebate_gate_fraction = 0.05;
 
-AutoNegativeBaseResult resolve_auto_negative_base(
+/// <param name="grid">
+/// 축소본을 **한 번만** 짓기 위한 자리입니다. 뒤이어 도는 문지기가 같은 격자를 보므로,
+/// 여기서 지어 두고 넘겨줍니다 — 따로 지으면 18 Mpx 한 장에 39 ms 가 더 붙습니다(실측).
+/// </param>
+[[nodiscard]] AutoNegativeBaseResult resolve_without_rebate(
     const WorkingImage& image,
-    const NegativeFilmType film_type) noexcept {
+    const NegativeFilmType film_type,
+    std::optional<SampleGrid>& grid) noexcept {
     AutoNegativeBaseResult result{};
     if (!has_compatible_layout(image)) {
         return result;
@@ -96,7 +104,9 @@ AutoNegativeBaseResult resolve_auto_negative_base(
     }
 
     try {
-        const std::optional<SampleGrid> grid = make_sample_grid(image);
+        if (!grid.has_value()) {
+            grid = make_sample_grid(image);
+        }
         if (!grid.has_value()) {
             return result;
         }
@@ -158,6 +168,38 @@ AutoNegativeBaseResult resolve_auto_negative_base(
         // noexcept ABI boundary. It remains distinguishable from a manual base in request mode.
     }
     return with_chromogenic_fallback(result);
+}
+
+}  // namespace
+
+AutoNegativeBaseResult resolve_auto_negative_base(
+    const WorkingImage& image,
+    const NegativeFilmType film_type) noexcept {
+    // 축소본은 기존 경로가 이미 지었습니다. 문지기가 그것을 그대로 봅니다.
+    std::optional<SampleGrid> grid;
+    AutoNegativeBaseResult result = resolve_without_rebate(image, film_type, grid);
+    if (result.status != AutoNegativeBaseStatus::ok || !grid.has_value()) {
+        return result;
+    }
+    try {
+        result.brighter_than_base =
+            auto_base_detail::brighter_than_base_fraction(*grid, result.dmin);
+        // 문지기입니다. 정상 사진은 여기서 끝나고 원본을 다시 읽지 않습니다.
+        if (result.brighter_than_base <= rebate_gate_fraction) {
+            return result;
+        }
+        const std::optional<BaseMeasurement> rebate =
+            auto_base_detail::rebate_base(image, *grid, film_type);
+        if (!rebate.has_value() ||
+            !auto_base_detail::accept_rebate_base(*rebate, result.dmin)) {
+            return result;
+        }
+        result.dmin = narrow_measurement(*rebate);
+        result.rebate_rescued = true;
+    } catch (...) {
+        // 구조길이 실패해도 기존 값은 그대로입니다. 고치려다 더 나쁘게 만들지 않습니다.
+    }
+    return result;
 }
 
 const char* auto_negative_base_status_name(const AutoNegativeBaseStatus status) noexcept {

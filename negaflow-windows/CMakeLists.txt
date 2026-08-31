@@ -585,6 +585,7 @@ add_library(negaflow_imaging STATIC
     src/Native/imaging/auto_negative_base_candidates.cpp
     src/Native/imaging/auto_negative_base_exclusion.cpp
     src/Native/imaging/auto_negative_base_fallback.cpp
+    src/Native/imaging/auto_negative_base_rebate.cpp
     src/Native/imaging/auto_negative_base_resolver.cpp
     src/Native/imaging/film_stock_base_resolver.cpp
     src/Native/imaging/color_grading.cpp
@@ -1175,6 +1176,23 @@ if(BUILD_TESTING)
         PRIVATE negaflow_imaging negaflow_project_options
     )
     add_test(NAME native.film_base_picker COMMAND negaflow_film_base_picker_tests)
+
+    add_executable(negaflow_auto_negative_base_rebate_tests
+        tests/Native.UnitTests/auto_negative_base_rebate_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_auto_negative_base_rebate_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    # 구조길의 조각들은 공개 헤더가 아닙니다. 계약을 조각마다 걸어 두려면 그 헤더가 필요합니다.
+    target_include_directories(
+        negaflow_auto_negative_base_rebate_tests
+        PRIVATE src/Native/imaging
+    )
+    add_test(
+        NAME native.auto_negative_base_rebate
+        COMMAND negaflow_auto_negative_base_rebate_tests
+    )
 
     add_executable(negaflow_film_base_measurement_diagnostics_tests
         tests/Native.UnitTests/film_base_measurement_diagnostics_tests.cpp

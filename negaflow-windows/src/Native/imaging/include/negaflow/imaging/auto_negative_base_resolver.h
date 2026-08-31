@@ -34,6 +34,12 @@ struct AutoNegativeBaseResult final {
     AutoNegativeBaseSource source{AutoNegativeBaseSource::fallback};
     std::array<float, 3> dmin{};
     std::optional<FilmBaseMeasurementDiagnostics> diagnostics{};
+    // 고른 베이스보다 밝은 필름 화소의 비율입니다. 필름에서 베이스보다 밝은 것은 없으므로
+    // 이 값이 크다는 것은 고른 값이 베이스가 아니라는 뜻입니다. 진단이 "왜 어둡게 나왔나" 를
+    // 되짚을 수 있어야 해서 남깁니다.
+    double brighter_than_base{};
+    // 위 비율이 커서 리베이트를 다시 재 값을 바꿨습니다.
+    bool rebate_rescued{false};
 };
 
 // The deterministic macOS-compatible automatic base resolver. It samples only the
