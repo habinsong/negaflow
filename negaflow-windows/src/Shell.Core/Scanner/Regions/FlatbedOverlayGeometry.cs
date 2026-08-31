@@ -221,6 +221,42 @@ public static class FlatbedOverlayGeometry
     }
 
     /// <summary>화면 자리를 프레임의 비율 좌표로 되돌립니다.</summary>
+    /// <summary>
+    /// 화면 사각형을 <b>옛 사진 자리</b> 기준에서 <b>새 사진 자리</b> 기준으로 옮깁니다.
+    /// </summary>
+    /// <remarks>
+    /// 끌기는 누른 순간의 화면 사각형을 기준으로 삼습니다. 그 사이 줌이나 창 크기가 바뀌면
+    /// 사진 자리만 움직이고 기준은 옛 자리에 남아, 다음 이동 때 옛 좌표를 새 자리에 대고
+    /// 재게 됩니다 — 손가락은 가만히 있는데 스캔 영역이 커지거나 작아집니다. 사진 위에서의
+    /// 비율은 그대로 두고 화면 좌표만 새 자리로 옮겨 그 어긋남을 없앱니다.
+    /// </remarks>
+    public static FlatbedOverlayRect Rebased(
+        FlatbedOverlayRect screenRect,
+        FlatbedOverlayRect from,
+        FlatbedOverlayRect to)
+    {
+        (double x, double y, double width, double height) = UnitRect(screenRect, from);
+        return new FlatbedOverlayRect(
+            to.X + (x * to.Width),
+            to.Y + (y * to.Height),
+            width * to.Width,
+            height * to.Height);
+    }
+
+    /// <summary>화면 한 점을 옛 사진 자리에서 새 사진 자리로 옮깁니다.</summary>
+    public static (double X, double Y) RebasedPoint(
+        double x,
+        double y,
+        FlatbedOverlayRect from,
+        FlatbedOverlayRect to)
+    {
+        double width = Math.Max(from.Width, 1);
+        double height = Math.Max(from.Height, 1);
+        return (
+            to.X + ((x - from.X) / width * to.Width),
+            to.Y + ((y - from.Y) / height * to.Height));
+    }
+
     public static (double X, double Y, double Width, double Height) UnitRect(
         FlatbedOverlayRect screenRect,
         FlatbedOverlayRect imageFrame)

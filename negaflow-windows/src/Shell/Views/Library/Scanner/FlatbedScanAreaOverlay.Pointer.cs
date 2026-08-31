@@ -33,6 +33,30 @@ public sealed partial class FlatbedScanAreaOverlay
 
     private HandleTag? resizingHandle;
 
+    /// <summary>
+    /// 끌기 기준을 새 사진 자리로 옮깁니다. 끌고 있지 않으면 아무것도 하지 않습니다.
+    /// </summary>
+    /// <remarks>
+    /// 기준(<see cref="dragStartRect"/>, <see cref="dragStartPoint"/>)은 누른 순간의 화면
+    /// 좌표입니다. 그 사이 휠 확대·축소나 창 크기 변경으로 사진 자리가 움직이면 기준만 옛
+    /// 자리에 남아, 다음 이동에서 옛 좌표를 새 자리에 대고 재게 됩니다 — 스캔 영역이 줌
+    /// 배율만큼 함께 커지거나 작아집니다. 사진 위에서의 비율은 그대로 두고 화면 좌표만
+    /// 옮겨 그 어긋남을 없앱니다.
+    /// </remarks>
+    private void RebaseDrag(FlatbedOverlayRect previousFrame)
+    {
+        if ((draggingRegionId is null && resizingHandle is null) ||
+            previousFrame.Width <= 0 || previousFrame.Height <= 0 ||
+            ImageFrame.Width <= 0 || ImageFrame.Height <= 0)
+        {
+            return;
+        }
+        dragStartRect = FlatbedOverlayGeometry.Rebased(dragStartRect, previousFrame, ImageFrame);
+        (double x, double y) = FlatbedOverlayGeometry.RebasedPoint(
+            dragStartPoint.X, dragStartPoint.Y, previousFrame, ImageFrame);
+        dragStartPoint = new Point(x, y);
+    }
+
     private void OnRegionPointerPressed(object sender, PointerRoutedEventArgs e)
     {
         if (sender is not Border body || body.Tag is not string regionId || session is null)

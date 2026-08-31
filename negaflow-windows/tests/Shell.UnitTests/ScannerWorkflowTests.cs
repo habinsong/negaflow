@@ -431,6 +431,40 @@ internal static class ScannerWorkflowTests
             Math.Abs(rawHeight - rawRegion.UnitHeight) < 1e-9,
             "flatbed_overlay_drag_maps_back_to_base_region");
 
+        // 끌고 있는 중에 사진 자리가 바뀌어도 스캔 영역은 사진 위에서 그대로여야 합니다.
+        // 기준을 옛 자리에 남겨 두면, 손가락이 가만히 있어도 다음 이동에서 옛 화면 좌표를
+        // 새 자리에 대고 재게 되어 영역이 줌 배율만큼 커지거나 작아집니다(휠 확대·축소).
+        FlatbedOverlayRect zoomedFrame = new(-90.0, -130.0, 400.0, 600.0);
+        FlatbedOverlayRect anchor = FlatbedOverlayGeometry.ScreenRect(rawRegion, imageFrame);
+        FlatbedOverlayRect rebased =
+            FlatbedOverlayGeometry.Rebased(anchor, imageFrame, zoomedFrame);
+        (double keptX, double keptY, double keptWidth, double keptHeight) =
+            FlatbedOverlayGeometry.UnitRect(rebased, zoomedFrame);
+        Check(
+            Math.Abs(keptX - rawRegion.UnitX) < 1e-9 &&
+            Math.Abs(keptY - rawRegion.UnitY) < 1e-9 &&
+            Math.Abs(keptWidth - rawRegion.UnitWidth) < 1e-9 &&
+            Math.Abs(keptHeight - rawRegion.UnitHeight) < 1e-9,
+            "flatbed_overlay_drag_anchor_survives_zoom");
+        // 기준을 안 옮겼을 때 실제로 어긋난다는 것도 함께 고정합니다 — 안 그러면 이 시험이
+        // 무엇을 막고 있는지 다음 사람이 알 수 없습니다.
+        (_, _, double staleWidth, double staleHeight) =
+            FlatbedOverlayGeometry.UnitRect(anchor, zoomedFrame);
+        Check(
+            Math.Abs(staleWidth - rawRegion.UnitWidth) > 1e-6 ||
+            Math.Abs(staleHeight - rawRegion.UnitHeight) > 1e-6,
+            "flatbed_overlay_stale_anchor_would_resize_the_region");
+
+        (double pointX, double pointY) = FlatbedOverlayGeometry.RebasedPoint(
+            imageFrame.X + (imageFrame.Width * 0.25),
+            imageFrame.Y + (imageFrame.Height * 0.75),
+            imageFrame,
+            zoomedFrame);
+        Check(
+            Math.Abs(pointX - (zoomedFrame.X + (zoomedFrame.Width * 0.25))) < 1e-9 &&
+            Math.Abs(pointY - (zoomedFrame.Y + (zoomedFrame.Height * 0.75))) < 1e-9,
+            "flatbed_overlay_drag_point_survives_zoom");
+
         ImageTransformRecipe combinedTransform = new(
             ImageRotation.Degrees270,
             true,

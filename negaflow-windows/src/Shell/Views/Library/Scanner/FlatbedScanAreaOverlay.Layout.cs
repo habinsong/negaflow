@@ -36,11 +36,16 @@ public sealed partial class FlatbedScanAreaOverlay
         // 현상 캔버스에 얹을 때는 사진을 캔버스가 그립니다. 줌·팬이 이미 들어간 그 자리를
         // 그대로 받아야 프레임이 사진을 따라갑니다 - macOS 도 `canvasFittedImageFrame` 하나를
         // `imageLayer` 와 `FlatbedScanAreaOverlay` 에 똑같이 넘깁니다(`CanvasView.swift`).
+        FlatbedOverlayRect previousFrame = ImageFrame;
         ImageFrame = externalImageFrame ?? FlatbedOverlayGeometry.FittedImageFrame(
             imagePixelWidth,
             imagePixelHeight,
             Host.ActualWidth,
             Host.ActualHeight);
+        // 끌고 있는 중에 사진 자리가 움직였으면 기준도 같이 옮깁니다. 안 그러면 다음 이동
+        // 때 옛 화면 좌표를 새 자리에 대고 재게 되어, 손가락은 가만히 있는데 스캔 영역이
+        // 줌 배율만큼 커지거나 작아집니다(휠로 확대·축소할 때 보고됨).
+        RebaseDrag(previousFrame);
         if (ImageFrame.Width <= 0 || ImageFrame.Height <= 0)
         {
             RegionLayer.Children.Clear();
