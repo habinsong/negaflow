@@ -853,6 +853,7 @@ add_executable(negaflow_cli
     src/Cli/commands/probe_image.cpp
     src/Cli/commands/develop_negative_tiff.cpp
     src/Cli/commands/auto_base_probe.cpp
+    src/Cli/commands/rescue_probe.cpp
     src/Cli/commands/pick_film_base.cpp
     src/Cli/commands/develop_timing.cpp
     src/Cli/commands/gpu_transfer_bench.cpp

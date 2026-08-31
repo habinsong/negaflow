@@ -5,6 +5,7 @@
 #include "commands/develop_negative_tiff.h"
 #include "commands/export_developed_png.h"
 #include "commands/auto_base_probe.h"
+#include "commands/rescue_probe.h"
 #include "commands/pick_film_base.h"
 #include "commands/develop_timing.h"
 #include "commands/gpu_transfer_bench.h"
@@ -336,6 +337,9 @@ int wmain(const int argument_count, const wchar_t* const arguments[]) {
     }
     if (command == L"--auto-base-probe") {
         return negaflow::cli::run_auto_base_probe(argument_count, arguments);
+    }
+    if (command == L"--rescue-probe") {
+        return negaflow::cli::run_rescue_probe(argument_count, arguments);
     }
     if (command == L"--pick-film-base") {
         return negaflow::cli::run_pick_film_base(argument_count, arguments);
