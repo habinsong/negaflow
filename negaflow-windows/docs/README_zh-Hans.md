@@ -7,7 +7,7 @@
 <p align="center">用 Windows 原生方式做的 negaflow。</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.1.1-EF8B26" alt="版本 1.1.1"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.1.2-EF8B26" alt="版本 1.1.2"></a>
   <a href="#"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 或更高"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -47,7 +47,7 @@ Arm64 机器上也能跑。只是 Arm64 的发布版没像 x64 那样确认过�
 
 ## 安装
 
-在 [Releases](https://github.com/habinsong/negaflow/releases) 下载 `negaflow-1.1.1-win-x64.exe` 并运行。
+在 [Releases](https://github.com/habinsong/negaflow/releases) 下载 `negaflow-1.1.2-win-x64.exe` 并运行。
 
 不需要管理员权限。第一次运行时 SmartScreen 会提示一次，点更多信息再运行就行。
 
