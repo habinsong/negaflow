@@ -253,4 +253,4 @@ Un bon résultat sur IT8 synthétique ne prouve pas la justesse absolue sur des 
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-La version produit actuelle est `1.1.1`. L'historique d'édition et les schémas de profils continueront de passer par une procédure de validation avant de changer.
+La version produit actuelle est `1.1.2`. L'historique d'édition et les schémas de profils continueront de passer par une procédure de validation avant de changer.
