@@ -64,8 +64,19 @@ internal static class SqliteCatalogStore
             {
                 return CatalogReadResult.Failure(CatalogStoreError.MalformedContent);
             }
-            if (catalogVersion != CatalogSnapshot.CurrentCatalogVersion ||
-                minimumReaderVersion != CatalogSnapshot.OldestReaderVersion)
+            // 예전 버전이 쓴 카탈로그는 사다리로 올려서 엽니다. 올릴 칸이 없거나 이 빌드보다
+            // 높은 버전이면 그대로 물러납니다 - 모르는 형식을 추측해서 읽지 않습니다.
+            bool needsPromotion = catalogVersion != CatalogSnapshot.CurrentCatalogVersion;
+            if (needsPromotion &&
+                (catalogVersion > CatalogSnapshot.CurrentCatalogVersion ||
+                 minimumReaderVersion > CatalogSnapshot.CurrentCatalogVersion ||
+                 !CatalogVersionMigration.CanPromote(catalogVersion)))
+            {
+                return CatalogReadResult.Failure(
+                    CatalogStoreError.UnsupportedCatalogVersion,
+                    catalogVersion);
+            }
+            if (!needsPromotion && minimumReaderVersion != CatalogSnapshot.OldestReaderVersion)
             {
                 return CatalogReadResult.Failure(
                     CatalogStoreError.UnsupportedCatalogVersion,
@@ -82,11 +93,25 @@ internal static class SqliteCatalogStore
                 tables[table] = rows;
             }
 
-            return CatalogReadResult.Success(new CatalogSnapshot(
+            CatalogSnapshot snapshot = new(
                 catalogVersion,
                 minimumReaderVersion,
                 activeRollId,
-                tables));
+                tables);
+            if (needsPromotion)
+            {
+                if (!CatalogVersionMigration.TryPromote(
+                        snapshot,
+                        catalogVersion,
+                        out CatalogSnapshot migrated))
+                {
+                    return CatalogReadResult.Failure(
+                        CatalogStoreError.UnsupportedCatalogVersion,
+                        catalogVersion);
+                }
+                snapshot = migrated;
+            }
+            return CatalogReadResult.Success(snapshot);
         }
         catch (SqliteException error)
         {

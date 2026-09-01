@@ -20,7 +20,59 @@ public enum LibraryBackupSchedule
 /// </remarks>
 public sealed record LibraryBackupSettings
 {
-    public LibraryBackupSchedule Schedule { get; init; } = LibraryBackupSchedule.Manual;
+    /// <summary>
+    /// 고른 적이 없으면 <see cref="LibraryBackupSchedule.OnTermination"/> 입니다. 수동이
+    /// 기본이면 설정을 한 번도 열지 않은 사용자는 백업 0 개인 채로 지내다가, 카탈로그가
+    /// 어긋나는 순간 되돌릴 것이 하나도 없게 됩니다. macOS <c>LibraryBackupScheduleStore.init</c>
+    /// 이 저장된 값이 없을 때 <c>.onTermination</c> 을 쓰는 것과 같은 자리입니다.
+    /// </summary>
+    public const LibraryBackupSchedule DefaultSchedule = LibraryBackupSchedule.OnTermination;
+
+    /// <summary>
+    /// <b>사용자가 고른</b> 일정입니다. <c>null</c> 은 고른 적이 없다는 뜻이고, 그때만
+    /// <see cref="DefaultSchedule"/> 을 적용합니다 — 이미 저장된 선택은 그대로 존중합니다.
+    /// 실제로 적용되는 값은 <see cref="EffectiveSchedule"/> 을 보십시오.
+    /// </summary>
+    public LibraryBackupSchedule? Schedule { get; init; }
+
+    /// <summary>지금 실제로 적용되는 일정입니다.</summary>
+    /// <remarks>
+    /// 계산 값이므로 <b>저장하지 않습니다.</b> 파일에 적히면 다음 사람이 그것을 저장된
+    /// 선택으로 읽습니다 — 읽을 때는 setter 가 없어 무시되지만, 그 헷갈림이 이 설정에서
+    /// 이미 한 번 비싸게 굴었습니다.
+    /// </remarks>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public LibraryBackupSchedule EffectiveSchedule => Schedule ?? DefaultSchedule;
+
+    /// <summary>
+    /// 죽은 기본값을 한 번 되돌렸는지입니다. <b>이 표시가 붙은 뒤에 고른 "수동" 은 영원히
+    /// 존중합니다.</b>
+    /// </summary>
+    public bool ScheduleDefaultUpgraded { get; init; }
+
+    /// <summary>
+    /// 저장돼 있는 "수동" 을 <b>딱 한 번</b> "고른 적 없음" 으로 되돌립니다.
+    /// </summary>
+    /// <remarks>
+    /// 예전 빌드는 이 설정을 읽고도 백업을 만들지 않았습니다 — 일정을 고르는 화면은 있었지만
+    /// <see cref="IsDue"/> 를 부르는 코드가 트리에 하나도 없었습니다. 그래서 파일에 남아 있는
+    /// <see cref="LibraryBackupSchedule.Manual"/> 은 사용자가 고른 값이 아니라 <b>한 번도
+    /// 동작한 적 없는 기본값이 직렬화된 것</b>입니다(설정을 하나라도 바꾸면 전체 객체가 함께
+    /// 저장됩니다). 실기에서 확인했습니다: <c>schedule=0</c>, <c>lastAttemptAt=null</c>,
+    /// <c>lastSuccessAt=null</c> — 켜 본 적도 없는 설정입니다.
+    /// <para>
+    /// 그 값 하나만 되돌리고 되돌렸다는 사실을 적습니다. 사용자가 실제로 고른 값은 건드리지
+    /// 않습니다 — Daily·Weekly·OnTermination 은 그대로 둡니다.
+    /// </para>
+    /// </remarks>
+    public LibraryBackupSettings UpgradeDeadScheduleDefault() =>
+        ScheduleDefaultUpgraded
+            ? this
+            : this with
+            {
+                Schedule = Schedule == LibraryBackupSchedule.Manual ? null : Schedule,
+                ScheduleDefaultUpgraded = true,
+            };
 
     /// <summary>외부 백업 대상 폴더입니다. 비어 있으면 설정 안 됨입니다.</summary>
     public string ExternalDestination { get; init; } = string.Empty;
@@ -40,7 +92,7 @@ public sealed record LibraryBackupSettings
     /// <summary>
     /// 일정에 따라 지금 백업할 때인지입니다. macOS <c>LibraryBackupScheduleStore.isDue</c>.
     /// </summary>
-    public bool IsDue(DateTimeOffset now, bool isTerminating) => Schedule switch
+    public bool IsDue(DateTimeOffset now, bool isTerminating) => EffectiveSchedule switch
     {
         LibraryBackupSchedule.Manual => false,
         LibraryBackupSchedule.OnTermination => isTerminating,
@@ -54,7 +106,8 @@ public sealed record LibraryBackupSettings
 
     public LibraryBackupSettings Normalize() => this with
     {
-        Schedule = Enum.IsDefined(Schedule) ? Schedule : LibraryBackupSchedule.Manual,
+        // 값이 깨졌으면 "고른 적 없음"으로 되돌립니다 - 그래야 기본값이 적용됩니다.
+        Schedule = Schedule is { } chosen && Enum.IsDefined(chosen) ? chosen : null,
         ExternalDestination =
             string.IsNullOrWhiteSpace(ExternalDestination) ||
             !Path.IsPathFullyQualified(ExternalDestination)

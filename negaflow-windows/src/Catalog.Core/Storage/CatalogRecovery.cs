@@ -13,4 +13,18 @@ public static class CatalogRecovery
     /// </summary>
     public static bool IsValidCatalogSource(string catalogPath) =>
         SqliteCatalogStore.IsValidRecoverySource(catalogPath);
+
+    /// <summary>
+    /// 다음 열기에 되돌릴 세대가 예약돼 있으면 그 id 입니다. 없으면 <c>null</c> 입니다 —
+    /// 복구 화면이 "다음 실행에 복원됩니다" 를 보여 줄지 판단합니다.
+    /// </summary>
+    public static string? PendingRestoreGenerationId(StorageRootSet roots)
+    {
+        ArgumentNullException.ThrowIfNull(roots);
+        return CatalogPendingRestoreFiles.TryReadMarker(
+            roots,
+            out CatalogPendingRestoreMarker marker)
+            ? marker.SourceGenerationId
+            : null;
+    }
 }

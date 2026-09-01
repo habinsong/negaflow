@@ -21,9 +21,24 @@ internal static class SqliteCatalogRows
         minimumReaderVersion = 0;
         activeRollId = null;
 
+        // 나중에 붙은 컬럼은 예전 파일에 없습니다. 읽기는 READONLY 라 ALTER 로 붙일 수 없으니
+        // 없으면 없는 대로 읽습니다 - 컬럼 하나 때문에 라이브러리 전체를 못 여는 일은
+        // 없어야 합니다. 빠진 컬럼은 다음 쓰기가 CreateTables 에서 붙입니다.
+        HashSet<string> columns = SqliteCatalogSchema.TableColumns(
+            connection,
+            SqliteCatalogSchema.MetadataTable);
+        foreach (string required in SqliteCatalogSchema.RequiredMetadataColumns)
+        {
+            if (!columns.Contains(required))
+            {
+                return false;
+            }
+        }
+        string activeRollSelector = columns.Contains("active_roll_id") ? "active_roll_id" : "NULL";
+
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT catalog_version, minimum_reader_version, active_roll_id
+        command.CommandText = $"""
+            SELECT catalog_version, minimum_reader_version, {activeRollSelector}
             FROM catalog_metadata WHERE singleton = 1
             """;
         using SqliteDataReader reader = command.ExecuteReader();
@@ -64,6 +79,9 @@ internal static class SqliteCatalogRows
     {
         List<CatalogEntityRow> decoded = [];
         rows = decoded;
+        // 뼈대 표는 한 줄이라도 못 읽으면 열지 않습니다. 부수 기록은 그 줄만 버립니다 -
+        // 어느 쪽인지는 CatalogEntityTables.IsStrict 가 정합니다.
+        bool strict = CatalogEntityTables.IsStrict(table);
 
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
@@ -73,7 +91,11 @@ internal static class SqliteCatalogRows
         {
             if (reader.IsDBNull(0) || reader.IsDBNull(1))
             {
-                return false;
+                if (strict)
+                {
+                    return false;
+                }
+                continue;
             }
             string id = reader.GetString(0);
             byte[] payload = (byte[])reader.GetValue(1);
@@ -84,11 +106,19 @@ internal static class SqliteCatalogRows
             }
             catch (JsonException)
             {
-                return false;
+                if (strict)
+                {
+                    return false;
+                }
+                continue;
             }
             if (node is not JsonObject payloadObject || id.Length == 0)
             {
-                return false;
+                if (strict)
+                {
+                    return false;
+                }
+                continue;
             }
             decoded.Add(new CatalogEntityRow(id, payloadObject));
         }

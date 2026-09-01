@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.LibraryRecoveryView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    AutomationProperties.AutomationId="negaflow.recovery">
+    <!--
+        macOS LibraryBlockedRecoveryView 와 같은 골격입니다 - 머리줄(경고·사유·카탈로그 경로·
+        다시 시도/탐색기/진단 복사), 구분선, 백업 구역(제목·새로고침·세대 목록), 예약 줄,
+        발줄(새 라이브러리로 시작 · 선택한 백업 복원). 수치도 그대로입니다:
+        바깥 여백 24 · 줄 사이 16 · 최대 폭 760.
+
+        **차단 상태에서만 보입니다.** 여기 있는 동안 라이브러리 편집 경로는 아예 만들어지지
+        않으므로, 사용자가 빈 라이브러리를 만지고 있다고 착각할 자리가 없습니다.
+    -->
+    <Grid Background="{ThemeResource NegaflowWindowBrush}">
+        <!--  macOS 는 `.frame(maxWidth: 760, minHeight: 480, maxHeight: 620)` 로 카드를 묶고
+              남는 자리에 가운데 세웁니다. 폭만 묶으면 최대화한 창에서 세로로 늘어져,
+              발줄의 두 단추가 화면 맨 아래까지 밀려납니다 - 실기 1545px 창에서 확인했습니다.  -->
+        <Grid
+            MaxWidth="760"
+            MinHeight="480"
+            MaxHeight="620"
+            Padding="24"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            RowSpacing="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!--  머리줄  -->
+            <StackPanel Grid.Row="0" Spacing="12">
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <FontIcon
+                        FontSize="18"
+                        Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                        Glyph="&#xE7BA;"
+                        VerticalAlignment="Top" />
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock
+                            x:Name="TitleText"
+                            FontSize="20"
+                            FontWeight="Bold"
+                            TextWrapping="Wrap" />
+                        <TextBlock
+                            x:Name="ReasonText"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Grid>
+                <!--  경로는 고른 글꼴로 적고 가운데를 줄입니다 - 끝의 파일 이름이 남아야
+                      사용자가 어느 라이브러리인지 알아봅니다.  -->
+                <TextBlock
+                    x:Name="CatalogPathText"
+                    FontFamily="Consolas"
+                    FontSize="11"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    IsTextSelectionEnabled="True"
+                    TextTrimming="CharacterEllipsis"
+                    TextWrapping="NoWrap" />
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Button
+                        x:Name="RetryButton"
+                        AutomationProperties.AutomationId="negaflow.recovery.retry"
+                        Click="OnRetryClick" />
+                    <Button
+                        x:Name="RevealButton"
+                        Grid.Column="1"
+                        AutomationProperties.AutomationId="negaflow.recovery.reveal"
+                        Click="OnRevealClick" />
+                    <Button
+                        x:Name="CopyDiagnosticsButton"
+                        Grid.Column="3"
+                        AutomationProperties.AutomationId="negaflow.recovery.diagnostics"
+                        Click="OnCopyDiagnosticsClick" />
+                </Grid>
+            </StackPanel>
+
+            <Border
+                Grid.Row="1"
+                Height="1"
+                Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+            <!--  백업 구역 머리줄  -->
+            <Grid Grid.Row="2" ColumnSpacing="8" VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    x:Name="BackupSectionText"
+                    FontWeight="SemiBold"
+                    VerticalAlignment="Center" />
+                <Button
+                    x:Name="RefreshButton"
+                    Grid.Column="1"
+                    Width="30"
+                    Height="30"
+                    Padding="0"
+                    AutomationProperties.AutomationId="negaflow.recovery.refresh"
+                    Click="OnRefreshClick">
+                    <FontIcon FontSize="13" Glyph="&#xE72C;" />
+                </Button>
+            </Grid>
+
+            <!--  세대 목록입니다. 비었거나 못 읽으면 같은 자리에 까닭을 적습니다.  -->
+            <Grid Grid.Row="3">
+                <ListView
+                    x:Name="GenerationList"
+                    AutomationProperties.AutomationId="negaflow.recovery.generations"
+                    SelectionChanged="OnGenerationSelectionChanged"
+                    SelectionMode="Single" />
+                <TextBlock
+                    x:Name="EmptyStateText"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    HorizontalAlignment="Center"
+                    TextAlignment="Center"
+                    TextWrapping="Wrap"
+                    VerticalAlignment="Center"
+                    Visibility="Collapsed" />
+            </Grid>
+
+            <!--  예약된 복원이 있을 때만 나타납니다.  -->
+            <Grid
+                x:Name="PendingRestoreRow"
+                Grid.Row="4"
+                ColumnSpacing="8"
+                Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    x:Name="PendingRestoreText"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    TextWrapping="Wrap"
+                    VerticalAlignment="Center" />
+                <Button
+                    x:Name="CancelPendingButton"
+                    Grid.Column="1"
+                    AutomationProperties.AutomationId="negaflow.recovery.cancelpending"
+                    Click="OnCancelPendingClick" />
+            </Grid>
+
+            <!--  발줄. 오른쪽 힌트는 복원이 왜 안 되는지를 **비활성 이유로** 적습니다 -
+                  까닭 없이 비활성인 단추는 버그로 보입니다.  -->
+            <Grid Grid.Row="5" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button
+                    x:Name="StartFreshButton"
+                    AutomationProperties.AutomationId="negaflow.recovery.startfresh"
+                    Click="OnStartFreshClick" />
+                <TextBlock
+                    x:Name="RestoreHintText"
+                    Grid.Column="1"
+                    FontSize="11"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    HorizontalAlignment="Right"
+                    TextAlignment="Right"
+                    TextWrapping="Wrap"
+                    VerticalAlignment="Center" />
+                <Button
+                    x:Name="RestoreButton"
+                    Grid.Column="2"
+                    Style="{ThemeResource AccentButtonStyle}"
+                    AutomationProperties.AutomationId="negaflow.recovery.restore"
+                    Click="OnRestoreClick" />
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

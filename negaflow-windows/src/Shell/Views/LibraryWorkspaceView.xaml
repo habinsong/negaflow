@@ -63,6 +63,8 @@
                 <RowDefinition Height="44" />
                 <RowDefinition Height="1" />
                 <RowDefinition Height="Auto" />
+                <!-- 이 버전이 읽지 못한 사진을 알리는 줄입니다. 평소에는 접혀 있습니다. -->
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
@@ -244,7 +246,18 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <Grid Grid.Row="3">
+            <!--  **읽기 실패가 사진을 지우지는 않습니다.** 투영에 실패한 사진도 payload 는
+                  그대로 보존되어 다음 저장에 다시 쓰입니다. 그래도 아무 말 없이 목록에서
+                  사라지면 사용자는 사진이 없어졌다고 봅니다 - 몇 장인지 알립니다.  -->
+            <InfoBar
+                x:Name="UnreadableFramesBar" x:FieldModifier="internal"
+                Grid.Row="3"
+                Margin="16,6,16,0"
+                AutomationProperties.AutomationId="negaflow.library.unreadable-frames"
+                IsOpen="False"
+                Severity="Warning" />
+
+            <Grid Grid.Row="4">
                 <StackPanel x:Name="EmptyLibraryPanel" x:FieldModifier="internal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="9">
                     <FontIcon FontSize="34" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8FD;" />
                     <TextBlock x:Name="NoImagesLocalized" x:FieldModifier="internal" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" />

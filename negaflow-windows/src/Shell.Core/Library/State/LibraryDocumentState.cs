@@ -74,6 +74,9 @@ internal sealed class LibraryDocumentState
 
     public List<LibraryFrameIssue> Issues => projection.Issues;
 
+    /// <summary>되돌려서 살린 사진의 수리 코드입니다.</summary>
+    public List<string> Repairs => projection.Repairs;
+
     public Dictionary<string, int> IndexById => projection.IndexById;
 
     public void ProjectAll()

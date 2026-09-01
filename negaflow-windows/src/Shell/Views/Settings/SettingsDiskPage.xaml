@@ -118,5 +118,14 @@
                             AutomationProperties.AutomationId="settings.disk.archive"
                             Click="OnCreateArchiveClick" />
                     </Grid>
+
+                    <!--  macOS LibraryRestoreBrowser 를 여는 자리입니다. 백업을 만들어 두고도
+                          앱 안에서 되돌릴 방법이 없어, 사용자가 탐색기로 파일을 직접 옮겨야
+                          했습니다.  -->
+                    <Button
+                        x:Name="BackupRestoreButton" x:FieldModifier="internal"
+                        HorizontalAlignment="Stretch"
+                        AutomationProperties.AutomationId="settings.disk.backup-restore"
+                        Click="OnRestoreBackupClick" />
     </StackPanel>
 </UserControl>

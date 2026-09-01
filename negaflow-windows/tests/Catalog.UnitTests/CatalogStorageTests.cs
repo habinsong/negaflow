@@ -24,6 +24,8 @@ internal static class CatalogStorageTests
         try
         {
             SqliteCatalogStoreTests.Run(roots);
+            CatalogSchemaCompatibilityTests.Run(roots);
+            CatalogVersionMigrationTests.Run(roots);
             DefectSidecarTests.Run(roots);
             DefectRecipeBatchTransactionTests.Run(roots);
             CatalogBackupRestoreTests.Run(roots);

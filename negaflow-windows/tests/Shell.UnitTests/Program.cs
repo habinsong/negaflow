@@ -93,6 +93,10 @@ internal static class Program
         WorkflowShortcutTests.Run();
         EditPersistenceTests.Run();
         LibraryHostTests.Run();
+        LibraryBackupScheduleTests.Run();
+        LibraryRecoveryTests.Run();
+        LibraryUnreadableFrameTests.Run();
+        LibraryCatalogRepairNeedTests.Run();
         FrameMarkSyncTests.Run();
         ExportConcurrencyTests.Run();
         PrintOutputProfileTests.Run();

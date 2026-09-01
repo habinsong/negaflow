@@ -219,8 +219,21 @@ public partial class App : Application
             return null;
         }
 
-        libraryHost = new LibraryHostService(dispatcher);
+        libraryHost = new LibraryHostService(dispatcher)
+        {
+            // 이어 주지 않으면 일정 백업은 한 번도 돌지 않습니다. 설정에서 "종료할 때" 를
+            // 골라 둔 사용자가 백업 0 개인 채로 지내는 자리가 바로 여기였습니다.
+            BackupSchedule = new Negaflow.Shell.Storage.LibraryBackupScheduleBinding(
+                () => (presentationSettings?.Current ?? new ShellPreferences()).Backup,
+                change => UpdateBackupSettingsOnUiThread(dispatcher, change)),
+        };
         libraryHost.Open(resolved);
+        // 밀린 일정 백업(매일·매주)을 따라잡습니다. 파일을 복사하므로 **UI 스레드에서 하지
+        // 않습니다** - 여기서 붙잡으면 첫 화면이 그만큼 늦게 그려집니다.
+        LibraryHostService scheduledBackupHost = libraryHost;
+        _ = Task.Run(() => scheduledBackupHost.RunScheduledBackupIfDue(
+            DateTimeOffset.Now,
+            isTerminating: false));
         // 썸네일도 설정 · 디스크 탭에서 고른 자리에 둡니다. 고른 적 없으면 기본 자리이며,
         // 그 기본 자리는 OneDrive\negaflow\Thumbnails 입니다.
         string thumbnailRoot = new Negaflow.Shell.Storage.DiskStorageLocations(
@@ -240,6 +253,26 @@ public partial class App : Application
         memoryPressureMonitor = WindowsMemoryPressureMonitor.TryStart(
             thumbnails.ApplyMemoryPressure);
         return libraryHost;
+    }
+
+    /// <summary>
+    /// 설정 저장은 <c>Changed</c> 로 창들을 깨웁니다. 그 구독자들이 XAML 을 건드리므로
+    /// 워커 스레드에서 부르면 WinUI 가 <c>COMException</c> 을 던집니다 - 반드시 UI 스레드로
+    /// 넘겨서 부릅니다.
+    /// </summary>
+    private void UpdateBackupSettingsOnUiThread(
+        IUiDispatcher dispatcher,
+        Func<Negaflow.Shell.Storage.LibraryBackupSettings,
+            Negaflow.Shell.Storage.LibraryBackupSettings> change)
+    {
+        void Apply() => presentationSettings?.Update(
+            current => current with { Backup = change(current.Backup) });
+        if (dispatcher.HasThreadAccess)
+        {
+            Apply();
+            return;
+        }
+        _ = dispatcher.TryEnqueue(Apply);
     }
 
     private void OnMainWindowClosed(object sender, WindowEventArgs args)

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -90,6 +90,7 @@ public sealed partial class MainWindow : Window
 
     }
 
+
     /// <summary>셸이 만들어진 뒤에 거는 것들입니다. 만들기 전에는 걸 대상이 없습니다.</summary>
     private void WireShell()
     {
@@ -150,23 +151,22 @@ public sealed partial class MainWindow : Window
         // 합니다.
         pendingInitialization = () =>
         {
-            using (Diagnostics.StartupTrace.Measure("ShellView 만들기"))
-            {
-                ShellView = new Views.WorkspaceShellView();
-                ShellHost.Children.Add(ShellView);
-            }
-            WireShell();
             using (Diagnostics.StartupTrace.Measure("OpenLibrary"))
             {
                 libraryHost = openLibrary();
             }
-            thumbnails = thumbnailsFactory();
-            ShellView.Initialize(
-                workspaceState,
-                nativeEngineStatusService,
-                libraryHost,
-                AppWindow.Id,
-                thumbnails);
+            // **못 열었으면 셸을 세우지 않습니다.** 세우면 사용자는 빈 라이브러리를 보고
+            // 사진이 전부 사라졌다고 생각합니다 - 무슨 일이 있었는지 먼저 말합니다.
+            if (libraryHost is { State: LibraryHostState.Unavailable or LibraryHostState.Busy })
+            {
+                ShowRecovery(
+                    libraryHost,
+                    workspaceState,
+                    nativeEngineStatusService,
+                    thumbnailsFactory);
+                return;
+            }
+            BuildShell(workspaceState, nativeEngineStatusService, thumbnailsFactory);
         };
 
         // **뜨는 동안 검은 창이 보이지 않게 합니다.**
@@ -220,9 +220,11 @@ public sealed partial class MainWindow : Window
         Microsoft.UI.Xaml.Input.KeyRoutedEventArgs args)
     {
         _ = sender;
-        if (!args.Handled)
+        // 복구 화면일 때는 셸이 아예 없습니다. 여기서 그냥 부르면 첫 키 입력에
+        // NullReferenceException 으로 창이 죽습니다.
+        if (!args.Handled && ShellView is { } shell)
         {
-            ShellView.HandleWindowKey(args);
+            shell.HandleWindowKey(args);
         }
     }
 
@@ -235,7 +237,10 @@ public sealed partial class MainWindow : Window
         Microsoft.UI.Xaml.Input.KeyRoutedEventArgs args)
     {
         _ = sender;
-        ShellView.HandleWindowKey(args);
+        if (ShellView is { } shell)
+        {
+            shell.HandleWindowKey(args);
+        }
     }
 
     private void OnShellLoaded(object sender, RoutedEventArgs args)

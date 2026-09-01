@@ -201,6 +201,8 @@ public sealed partial class LibraryHostService : IDisposable
         }
 
         DefectLiveStrengths.Clear();
+        // 실패해도 어디를 열려다 실패했는지는 남깁니다 - 복구 화면과 진단이 이것을 봅니다.
+        AttemptedRoots = roots;
 
         LibraryDocumentOpenResult opened = LibraryDocument.Open(roots);
         SessionError = opened.SessionError;
@@ -438,6 +440,8 @@ public sealed partial class LibraryHostService : IDisposable
     {
         // 놓아 주기 전에 마지막으로 씁니다. 여기서 빠지면 마지막 1.5 초의 편집이 사라집니다.
         _ = SaveIfDirty();
+        // 커밋이 끝난 **뒤에** 백업합니다. 실패해도 여기서 던지지 않으므로 종료를 막지 않습니다.
+        _ = RunScheduledBackupIfDue(DateTimeOffset.Now, isTerminating: true);
         folderMonitor.Dispose();
         autosave.Dispose();
         availability.Reset();

@@ -1534,4 +1534,33 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="scanProgressDisconnected.Text" xml:space="preserve"><value>Scanner déconnecté</value><comment>AppLocalizedPhrase.scanProgressDisconnected</comment></data>
   <data name="scanProgressError.Text" xml:space="preserve"><value>Erreur de numérisation</value><comment>AppLocalizedPhrase.scanProgressError</comment></data>
   <data name="scanProgressBackendFallbackActive.Text" xml:space="preserve"><value>Backend de secours actif</value><comment>AppLocalizedPhrase.scanProgressBackendFallbackActive</comment></data>
+  <data name="libraryRecoveryTitle.Text" xml:space="preserve"><value>Récupération de la bibliothèque</value><comment>LibraryRecoveryLocalizedText.title</comment></data>
+  <data name="libraryRecoveryRetry.Content" xml:space="preserve"><value>Réessayer</value><comment>LibraryRecoveryLocalizedText.retry</comment></data>
+  <data name="libraryRecoveryCopyDiagnostics.Content" xml:space="preserve"><value>Copier le diagnostic</value><comment>LibraryRecoveryLocalizedText.copyDiagnostics</comment></data>
+  <data name="libraryRecoveryNoBackupsHint.Text" xml:space="preserve"><value>Aucune sauvegarde du catalogue pour l’instant. Si vous en avez une ailleurs, placez son dossier dans le répertoire de sauvegarde puis actualisez ; sinon, démarrez une nouvelle bibliothèque — vos fichiers photo ne sont jamais touchés.</value><comment>LibraryRecoveryLocalizedText.noBackupsHint</comment></data>
+  <data name="libraryRecoverySelectBackupHint.Text" xml:space="preserve"><value>Sélectionnez d’abord une sauvegarde à restaurer.</value><comment>LibraryRecoveryLocalizedText.selectBackupHint</comment></data>
+  <data name="libraryRecoveryUnusableBackupHint.Text" xml:space="preserve"><value>Cette sauvegarde est illisible et ne peut pas être restaurée.</value><comment>LibraryRecoveryLocalizedText.unusableBackupHint</comment></data>
+  <data name="libraryRecoveryStartFresh.Content" xml:space="preserve"><value>Nouvelle bibliothèque</value><comment>LibraryRecoveryLocalizedText.startFresh</comment></data>
+  <data name="libraryRecoveryStartFreshConfirmTitle.Text" xml:space="preserve"><value>Démarrer une nouvelle bibliothèque ?</value><comment>LibraryRecoveryLocalizedText.startFreshConfirmationTitle</comment></data>
+  <data name="libraryRecoveryStartFreshConfirmMessage.Text" xml:space="preserve"><value>Le catalogue actuel est mis de côté à proximité, pas supprimé. Vos fichiers photo et vos sauvegardes restent en place ; seule la liste de la bibliothèque démarre vide.</value><comment>LibraryRecoveryLocalizedText.startFreshConfirmationMessage</comment></data>
+  <data name="libraryRecoveryStartFreshFailed.Text" xml:space="preserve"><value>Impossible de démarrer une nouvelle bibliothèque.</value><comment>LibraryRecoveryLocalizedText.startFreshFailed</comment></data>
+  <data name="libraryCatalogBlockedStatus.Text" xml:space="preserve"><value>Le catalogue n’a pas pu être ouvert en toute sécurité et a été conservé sans modification.</value><comment>AppLocalizedPhrase.libraryCatalogBlockedStatus</comment></data>
+  <data name="libraryBackupEmpty.Text" xml:space="preserve"><value>Aucune sauvegarde</value><comment>AppLocalizedPhrase.libraryBackupEmpty</comment></data>
+  <data name="libraryBackupLoadFailed.Text" xml:space="preserve"><value>Impossible de charger les sauvegardes</value><comment>AppLocalizedPhrase.libraryBackupLoadFailed</comment></data>
+  <data name="libraryBackupRefresh.Content" xml:space="preserve"><value>Actualiser</value><comment>AppLocalizedPhrase.libraryBackupRefresh</comment></data>
+  <data name="libraryBackupUnknownDate.Text" xml:space="preserve"><value>Date inconnue</value><comment>AppLocalizedPhrase.libraryBackupUnknownDate</comment></data>
+  <data name="libraryBackupChecksummed.Text" xml:space="preserve"><value>Somme de contrôle vérifiée</value><comment>AppLocalizedPhrase.libraryBackupChecksummed</comment></data>
+  <data name="libraryBackupDamaged.Text" xml:space="preserve"><value>Endommagée</value><comment>AppLocalizedPhrase.libraryBackupDamaged</comment></data>
+  <data name="libraryBackupCountsFormat.Text" xml:space="preserve"><value>%d photos · %d recettes de correction</value><comment>AppLocalizedPhrase.libraryBackupCountsFormat</comment></data>
+  <data name="libraryBackupRestoreSelected.Content" xml:space="preserve"><value>Restaurer la sauvegarde sélectionnée</value><comment>AppLocalizedPhrase.libraryBackupRestoreSelected</comment></data>
+  <data name="libraryBackupRestoreConfirmTitle.Text" xml:space="preserve"><value>Restaurer cette sauvegarde ?</value><comment>AppLocalizedPhrase.libraryBackupRestoreConfirmationTitle</comment></data>
+  <data name="libraryBackupRestoreConfirmMessage.Text" xml:space="preserve"><value>La bibliothèque actuelle sera conservée séparément. La restauration sera appliquée au prochain lancement.</value><comment>AppLocalizedPhrase.libraryBackupRestoreConfirmationMessage</comment></data>
+  <data name="libraryBackupRestorePending.Text" xml:space="preserve"><value>Restauration au prochain lancement</value><comment>AppLocalizedPhrase.libraryBackupRestorePending</comment></data>
+  <data name="libraryBackupCancelPending.Content" xml:space="preserve"><value>Annuler la restauration planifiée</value><comment>AppLocalizedPhrase.libraryBackupCancelPending</comment></data>
+  <data name="libraryBackupRestoreScheduleFailed.Text" xml:space="preserve"><value>Impossible de planifier la restauration</value><comment>AppLocalizedPhrase.libraryBackupRestoreScheduleFailed</comment></data>
+  <data name="libraryBackupScheduleRestore.Content" xml:space="preserve"><value>Planifier la restauration</value><comment>AppLocalizedPhrase.libraryBackupScheduleRestore</comment></data>
+  <data name="libraryBackupBrowseRestore.Content" xml:space="preserve"><value>Restaurer la sauvegarde sélectionnée</value><comment>macOS LibraryRestoreBrowser 를 여는 자리 (AppLocalizedPhrase.libraryBackupRestoreSelected 와 같은 문구)</comment></data>
+  <data name="libraryUnreadableFramesTitle.Text" xml:space="preserve"><value>%d photos n’ont pas pu être lues par cette version</value><comment>W10: 읽지 못한 사진 배너 제목</comment></data>
+  <data name="libraryUnreadableFramesMessage.Text" xml:space="preserve"><value>Leurs fichiers et entrées de catalogue sont intacts. Ils réapparaîtront dès qu’une version qui les comprend ouvrira la bibliothèque.</value><comment>W10: 파일과 카탈로그는 그대로라는 사실을 알립니다</comment></data>
+  <data name="commonDone.Content" xml:space="preserve"><value>Terminé</value><comment>AppLocalizedPhrase.done</comment></data>
 </root>

@@ -78,6 +78,20 @@ internal static class TestAssert
         }
     }
 
+    /// <summary>
+    /// 실패했을 때만 까닭을 덧붙입니다. 이름만 남는 실패는 다음 사람이 처음부터 다시
+    /// 재현해야 합니다 — 관측한 값은 그 자리에서 남겨야 합니다.
+    /// </summary>
+    public static void Check(bool condition, string name, Func<string> detail)
+    {
+        ArgumentNullException.ThrowIfNull(detail);
+        ++assertionCount;
+        if (!condition)
+        {
+            failures.Add($"{name} ({detail()})");
+        }
+    }
+
     public static bool Near(double actual, double expected) =>
         Math.Abs(actual - expected) <= 1e-9;
 

@@ -1534,4 +1534,33 @@ Load a scanner from Library to scan film.</value>
   <data name="scanProgressDisconnected.Text" xml:space="preserve"><value>Scanner disconnected</value><comment>AppLocalizedPhrase.scanProgressDisconnected</comment></data>
   <data name="scanProgressError.Text" xml:space="preserve"><value>Scan error</value><comment>AppLocalizedPhrase.scanProgressError</comment></data>
   <data name="scanProgressBackendFallbackActive.Text" xml:space="preserve"><value>Fallback backend active</value><comment>AppLocalizedPhrase.scanProgressBackendFallbackActive</comment></data>
+  <data name="libraryRecoveryTitle.Text" xml:space="preserve"><value>Library Recovery</value><comment>LibraryRecoveryLocalizedText.title</comment></data>
+  <data name="libraryRecoveryRetry.Content" xml:space="preserve"><value>Retry</value><comment>LibraryRecoveryLocalizedText.retry</comment></data>
+  <data name="libraryRecoveryCopyDiagnostics.Content" xml:space="preserve"><value>Copy Diagnostics</value><comment>LibraryRecoveryLocalizedText.copyDiagnostics</comment></data>
+  <data name="libraryRecoveryNoBackupsHint.Text" xml:space="preserve"><value>No catalog backups yet. If you have a backup elsewhere, put its folder in the backup directory and press Refresh; otherwise start a new library — your photo files are never touched.</value><comment>LibraryRecoveryLocalizedText.noBackupsHint</comment></data>
+  <data name="libraryRecoverySelectBackupHint.Text" xml:space="preserve"><value>Select a backup to restore.</value><comment>LibraryRecoveryLocalizedText.selectBackupHint</comment></data>
+  <data name="libraryRecoveryUnusableBackupHint.Text" xml:space="preserve"><value>This backup cannot be read and cannot be restored.</value><comment>LibraryRecoveryLocalizedText.unusableBackupHint</comment></data>
+  <data name="libraryRecoveryStartFresh.Content" xml:space="preserve"><value>Start New Library</value><comment>LibraryRecoveryLocalizedText.startFresh</comment></data>
+  <data name="libraryRecoveryStartFreshConfirmTitle.Text" xml:space="preserve"><value>Start a new library?</value><comment>LibraryRecoveryLocalizedText.startFreshConfirmationTitle</comment></data>
+  <data name="libraryRecoveryStartFreshConfirmMessage.Text" xml:space="preserve"><value>The current catalog is set aside next to it, not deleted, and your photo files and backups stay where they are. The library list starts empty.</value><comment>LibraryRecoveryLocalizedText.startFreshConfirmationMessage</comment></data>
+  <data name="libraryRecoveryStartFreshFailed.Text" xml:space="preserve"><value>Could not start a new library.</value><comment>LibraryRecoveryLocalizedText.startFreshFailed</comment></data>
+  <data name="libraryCatalogBlockedStatus.Text" xml:space="preserve"><value>The library catalog could not be opened safely and was left unchanged.</value><comment>AppLocalizedPhrase.libraryCatalogBlockedStatus</comment></data>
+  <data name="libraryBackupEmpty.Text" xml:space="preserve"><value>No Backups</value><comment>AppLocalizedPhrase.libraryBackupEmpty</comment></data>
+  <data name="libraryBackupLoadFailed.Text" xml:space="preserve"><value>Couldn’t Load Backups</value><comment>AppLocalizedPhrase.libraryBackupLoadFailed</comment></data>
+  <data name="libraryBackupRefresh.Content" xml:space="preserve"><value>Refresh</value><comment>AppLocalizedPhrase.libraryBackupRefresh</comment></data>
+  <data name="libraryBackupUnknownDate.Text" xml:space="preserve"><value>Unknown Date</value><comment>AppLocalizedPhrase.libraryBackupUnknownDate</comment></data>
+  <data name="libraryBackupChecksummed.Text" xml:space="preserve"><value>Checksum Verified</value><comment>AppLocalizedPhrase.libraryBackupChecksummed</comment></data>
+  <data name="libraryBackupDamaged.Text" xml:space="preserve"><value>Damaged</value><comment>AppLocalizedPhrase.libraryBackupDamaged</comment></data>
+  <data name="libraryBackupCountsFormat.Text" xml:space="preserve"><value>%d photos · %d repair recipes</value><comment>AppLocalizedPhrase.libraryBackupCountsFormat</comment></data>
+  <data name="libraryBackupRestoreSelected.Content" xml:space="preserve"><value>Restore Selected Backup</value><comment>AppLocalizedPhrase.libraryBackupRestoreSelected</comment></data>
+  <data name="libraryBackupRestoreConfirmTitle.Text" xml:space="preserve"><value>Restore This Backup?</value><comment>AppLocalizedPhrase.libraryBackupRestoreConfirmationTitle</comment></data>
+  <data name="libraryBackupRestoreConfirmMessage.Text" xml:space="preserve"><value>The current library will be preserved. The restore will be applied on the next launch.</value><comment>AppLocalizedPhrase.libraryBackupRestoreConfirmationMessage</comment></data>
+  <data name="libraryBackupRestorePending.Text" xml:space="preserve"><value>Restores on Next Launch</value><comment>AppLocalizedPhrase.libraryBackupRestorePending</comment></data>
+  <data name="libraryBackupCancelPending.Content" xml:space="preserve"><value>Cancel Scheduled Restore</value><comment>AppLocalizedPhrase.libraryBackupCancelPending</comment></data>
+  <data name="libraryBackupRestoreScheduleFailed.Text" xml:space="preserve"><value>Couldn’t Schedule Restore</value><comment>AppLocalizedPhrase.libraryBackupRestoreScheduleFailed</comment></data>
+  <data name="libraryBackupScheduleRestore.Content" xml:space="preserve"><value>Schedule Restore</value><comment>AppLocalizedPhrase.libraryBackupScheduleRestore</comment></data>
+  <data name="libraryBackupBrowseRestore.Content" xml:space="preserve"><value>Restore Selected Backup</value><comment>macOS LibraryRestoreBrowser 를 여는 자리 (AppLocalizedPhrase.libraryBackupRestoreSelected 와 같은 문구)</comment></data>
+  <data name="libraryUnreadableFramesTitle.Text" xml:space="preserve"><value>%d photos could not be read by this version</value><comment>W10: 읽지 못한 사진 배너 제목</comment></data>
+  <data name="libraryUnreadableFramesMessage.Text" xml:space="preserve"><value>Their files and catalog entries are untouched. They will reappear once a version that understands them opens the library.</value><comment>W10: 파일과 카탈로그는 그대로라는 사실을 알립니다</comment></data>
+  <data name="commonDone.Content" xml:space="preserve"><value>Done</value><comment>AppLocalizedPhrase.done</comment></data>
 </root>

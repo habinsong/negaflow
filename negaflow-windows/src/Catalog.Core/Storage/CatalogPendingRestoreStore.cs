@@ -301,12 +301,34 @@ internal static class CatalogPendingRestoreStore
                     CatalogPendingRestoreError.SafetyBackupFailed);
             }
         }
-        else
+        else if (current.Error == CatalogStoreError.AccessDenied)
         {
             return CatalogPendingRestoreApplicationResult.Failure(
-                current.Error == CatalogStoreError.AccessDenied
-                    ? CatalogPendingRestoreError.AccessDenied
-                    : CatalogPendingRestoreError.SafetyBackupFailed);
+                CatalogPendingRestoreError.AccessDenied);
+        }
+        else
+        {
+            // 지금 카탈로그를 읽지 못합니다. 여기서 물러나면 **복원이 필요한 바로 그 상황에서**
+            // 복원이 막힙니다 - 사용자는 백업을 갖고도 되돌릴 수 없습니다. 정식 백업 세대는
+            // 읽지 못하는 파일로 만들 수 없으므로, 원본을 그대로 옆에 복사해 두고 치웁니다.
+            // 잘못된 복원이었을 때 되돌릴 것은 그 사본입니다.
+            if (!CatalogSidelinedFiles.Preserve(roots))
+            {
+                return CatalogPendingRestoreApplicationResult.Failure(
+                    CatalogPendingRestoreError.SafetyBackupFailed);
+            }
+            try
+            {
+                File.Delete(roots.CatalogPath);
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                return CatalogPendingRestoreApplicationResult.Failure(
+                    CatalogPendingRestoreError.SafetyBackupFailed);
+            }
+            // 되돌릴 대상이 "읽을 수 없는 파일" 이 아니라 "없음" 이 되었습니다. 뒤의 원복
+            // 경로가 그 사실을 보고 판단해야 합니다.
+            current = CatalogReadResult.Failure(CatalogStoreError.NotFound);
         }
 
         CatalogDefectRestoreTransaction defectTransaction;

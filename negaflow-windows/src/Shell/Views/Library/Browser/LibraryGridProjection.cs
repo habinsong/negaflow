@@ -10,8 +10,31 @@ internal sealed class LibraryGridProjection
 
     internal LibraryGridProjection(LibraryWorkspaceView view) => this.view = view;
 
+    /// <summary>
+    /// 이 버전이 읽지 못한 사진이 몇 장인지 알립니다. 그 사진들은 목록에서 빠지지만
+    /// <b>파일도 카탈로그 기록도 지워지지 않습니다</b> — 아무 말 없이 사라지면 사용자는
+    /// 사진이 없어졌다고 봅니다.
+    /// </summary>
+    internal static void UpdateUnreadableFramesBar(LibraryWorkspaceView view)
+    {
+        int count = view.libraryHost?.UnreadableFrameCount ?? 0;
+        view.UnreadableFramesBar.IsOpen = count > 0;
+        if (count == 0)
+        {
+            return;
+        }
+        view.UnreadableFramesBar.Title = Negaflow.Shell.Localization.AppResources.FormatInteger(
+            "libraryUnreadableFramesTitle",
+            "Text",
+            count);
+        view.UnreadableFramesBar.Message = Negaflow.Shell.Localization.AppResources.Get(
+            "libraryUnreadableFramesMessage",
+            "Text");
+    }
+
     internal void Show()
     {
+        UpdateUnreadableFramesBar(view);
         IReadOnlyList<LibraryFrameListItem> items = LibrarySorter.Sort(
             view.quickFilters.Apply(
                 view.ControlsPanel.CollectionsPanel.Apply(

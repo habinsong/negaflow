@@ -1534,4 +1534,33 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="scanProgressDisconnected.Text" xml:space="preserve"><value>Scanner getrennt</value><comment>AppLocalizedPhrase.scanProgressDisconnected</comment></data>
   <data name="scanProgressError.Text" xml:space="preserve"><value>Scanfehler</value><comment>AppLocalizedPhrase.scanProgressError</comment></data>
   <data name="scanProgressBackendFallbackActive.Text" xml:space="preserve"><value>Fallback-Backend aktiv</value><comment>AppLocalizedPhrase.scanProgressBackendFallbackActive</comment></data>
+  <data name="libraryRecoveryTitle.Text" xml:space="preserve"><value>Mediathek wiederherstellen</value><comment>LibraryRecoveryLocalizedText.title</comment></data>
+  <data name="libraryRecoveryRetry.Content" xml:space="preserve"><value>Erneut versuchen</value><comment>LibraryRecoveryLocalizedText.retry</comment></data>
+  <data name="libraryRecoveryCopyDiagnostics.Content" xml:space="preserve"><value>Diagnose kopieren</value><comment>LibraryRecoveryLocalizedText.copyDiagnostics</comment></data>
+  <data name="libraryRecoveryNoBackupsHint.Text" xml:space="preserve"><value>Noch keine Katalogsicherungen. Wenn Sie anderswo eine Sicherung haben, legen Sie deren Ordner in das Sicherungsverzeichnis und aktualisieren Sie; andernfalls beginnen Sie eine neue Mediathek — Ihre Fotodateien bleiben unberührt.</value><comment>LibraryRecoveryLocalizedText.noBackupsHint</comment></data>
+  <data name="libraryRecoverySelectBackupHint.Text" xml:space="preserve"><value>Wählen Sie zuerst eine Sicherung zum Wiederherstellen.</value><comment>LibraryRecoveryLocalizedText.selectBackupHint</comment></data>
+  <data name="libraryRecoveryUnusableBackupHint.Text" xml:space="preserve"><value>Diese Sicherung ist nicht lesbar und kann nicht wiederhergestellt werden.</value><comment>LibraryRecoveryLocalizedText.unusableBackupHint</comment></data>
+  <data name="libraryRecoveryStartFresh.Content" xml:space="preserve"><value>Neue Mediathek beginnen</value><comment>LibraryRecoveryLocalizedText.startFresh</comment></data>
+  <data name="libraryRecoveryStartFreshConfirmTitle.Text" xml:space="preserve"><value>Neue Mediathek beginnen?</value><comment>LibraryRecoveryLocalizedText.startFreshConfirmationTitle</comment></data>
+  <data name="libraryRecoveryStartFreshConfirmMessage.Text" xml:space="preserve"><value>Der aktuelle Katalog wird daneben aufbewahrt, nicht gelöscht. Ihre Fotodateien und Sicherungen bleiben, nur die Mediathekliste beginnt leer.</value><comment>LibraryRecoveryLocalizedText.startFreshConfirmationMessage</comment></data>
+  <data name="libraryRecoveryStartFreshFailed.Text" xml:space="preserve"><value>Neue Mediathek konnte nicht begonnen werden.</value><comment>LibraryRecoveryLocalizedText.startFreshFailed</comment></data>
+  <data name="libraryCatalogBlockedStatus.Text" xml:space="preserve"><value>Der Mediathekskatalog konnte nicht sicher geöffnet werden und blieb unverändert.</value><comment>AppLocalizedPhrase.libraryCatalogBlockedStatus</comment></data>
+  <data name="libraryBackupEmpty.Text" xml:space="preserve"><value>Keine Sicherungen</value><comment>AppLocalizedPhrase.libraryBackupEmpty</comment></data>
+  <data name="libraryBackupLoadFailed.Text" xml:space="preserve"><value>Sicherungen konnten nicht geladen werden</value><comment>AppLocalizedPhrase.libraryBackupLoadFailed</comment></data>
+  <data name="libraryBackupRefresh.Content" xml:space="preserve"><value>Aktualisieren</value><comment>AppLocalizedPhrase.libraryBackupRefresh</comment></data>
+  <data name="libraryBackupUnknownDate.Text" xml:space="preserve"><value>Datum unbekannt</value><comment>AppLocalizedPhrase.libraryBackupUnknownDate</comment></data>
+  <data name="libraryBackupChecksummed.Text" xml:space="preserve"><value>Prüfsumme bestätigt</value><comment>AppLocalizedPhrase.libraryBackupChecksummed</comment></data>
+  <data name="libraryBackupDamaged.Text" xml:space="preserve"><value>Beschädigt</value><comment>AppLocalizedPhrase.libraryBackupDamaged</comment></data>
+  <data name="libraryBackupCountsFormat.Text" xml:space="preserve"><value>%d Fotos · %d Korrekturrezepte</value><comment>AppLocalizedPhrase.libraryBackupCountsFormat</comment></data>
+  <data name="libraryBackupRestoreSelected.Content" xml:space="preserve"><value>Ausgewählte Sicherung wiederherstellen</value><comment>AppLocalizedPhrase.libraryBackupRestoreSelected</comment></data>
+  <data name="libraryBackupRestoreConfirmTitle.Text" xml:space="preserve"><value>Diese Sicherung wiederherstellen?</value><comment>AppLocalizedPhrase.libraryBackupRestoreConfirmationTitle</comment></data>
+  <data name="libraryBackupRestoreConfirmMessage.Text" xml:space="preserve"><value>Die aktuelle Mediathek wird separat gesichert. Die Wiederherstellung erfolgt beim nächsten Start.</value><comment>AppLocalizedPhrase.libraryBackupRestoreConfirmationMessage</comment></data>
+  <data name="libraryBackupRestorePending.Text" xml:space="preserve"><value>Wiederherstellung beim nächsten Start</value><comment>AppLocalizedPhrase.libraryBackupRestorePending</comment></data>
+  <data name="libraryBackupCancelPending.Content" xml:space="preserve"><value>Geplante Wiederherstellung abbrechen</value><comment>AppLocalizedPhrase.libraryBackupCancelPending</comment></data>
+  <data name="libraryBackupRestoreScheduleFailed.Text" xml:space="preserve"><value>Wiederherstellung konnte nicht vorgemerkt werden</value><comment>AppLocalizedPhrase.libraryBackupRestoreScheduleFailed</comment></data>
+  <data name="libraryBackupScheduleRestore.Content" xml:space="preserve"><value>Wiederherstellung vormerken</value><comment>AppLocalizedPhrase.libraryBackupScheduleRestore</comment></data>
+  <data name="libraryBackupBrowseRestore.Content" xml:space="preserve"><value>Ausgewählte Sicherung wiederherstellen</value><comment>macOS LibraryRestoreBrowser 를 여는 자리 (AppLocalizedPhrase.libraryBackupRestoreSelected 와 같은 문구)</comment></data>
+  <data name="libraryUnreadableFramesTitle.Text" xml:space="preserve"><value>%d Fotos konnten von dieser Version nicht gelesen werden</value><comment>W10: 읽지 못한 사진 배너 제목</comment></data>
+  <data name="libraryUnreadableFramesMessage.Text" xml:space="preserve"><value>Ihre Dateien und Katalogeinträge bleiben unberührt. Sie erscheinen wieder, sobald eine Version sie versteht.</value><comment>W10: 파일과 카탈로그는 그대로라는 사실을 알립니다</comment></data>
+  <data name="commonDone.Content" xml:space="preserve"><value>Fertig</value><comment>AppLocalizedPhrase.done</comment></data>
 </root>

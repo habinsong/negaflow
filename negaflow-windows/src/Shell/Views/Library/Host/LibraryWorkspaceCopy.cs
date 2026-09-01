@@ -118,6 +118,9 @@ internal sealed class LibraryWorkspaceCopy
             "Value",
             0,
             0);
+        // 언어를 바꿔도 배너가 옛 언어로 남지 않게 여기서도 다시 씁니다.
+        Negaflow.Shell.Views.Library.Browser.LibraryGridProjection
+            .UpdateUnreadableFramesBar(view);
     }
 
     /// <summary>

@@ -146,6 +146,16 @@ public sealed partial class LibraryDocument : IDisposable
     public CatalogBackupCreateResult CreateBackup() => session.CreateBackup();
 
     /// <summary>
+    /// 고른 백업 세대로 되돌리도록 예약합니다. 치환은 다음 열기에 일어나므로 지금 열려 있는
+    /// 카탈로그는 그대로 둡니다.
+    /// </summary>
+    public CatalogPendingRestoreScheduleResult ScheduleRestore(string generationId) =>
+        session.ScheduleRestore(generationId);
+
+    public CatalogPendingRestoreOperationResult CancelScheduledRestore() =>
+        session.CancelScheduledRestore();
+
+    /// <summary>
     /// 마지막 저장 뒤에 바뀐 것이 있는지. 편집은 메모리에서 먼저 일어나므로 이 표시가 없으면
     /// 셸은 무엇을 저장해야 하는지 알 수 없고, 창을 닫을 때 조용히 잃습니다.
     /// </summary>
@@ -243,6 +253,12 @@ public sealed partial class LibraryDocument : IDisposable
     /// 것으로 보입니다.** 목록에서 빼는 것과 없어진 것은 다릅니다.
     /// </summary>
     public IReadOnlyList<LibraryFrameIssue> Issues => state.Issues;
+
+    /// <summary>
+    /// 필드 하나를 되돌려 살린 사진들입니다. 사진은 목록에 그대로 있고, 무엇을 되돌렸는지만
+    /// 남습니다 - macOS <c>repairSummary</c> 자리입니다.
+    /// </summary>
+    public IReadOnlyList<string> Repairs => state.Repairs;
 
     public int RecordCount => state.Payloads.Count;
 

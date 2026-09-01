@@ -307,9 +307,9 @@ public sealed partial class SettingsRootView
                     ? "cloudManaged"
                     : "local",
             Lifecycle = library?.State.ToString() ?? "notOpened",
-            BlockReason = library?.SessionError is { } sessionError and not CatalogSessionError.None
-                ? sessionError.ToString()
-                : null,
+            // 세션 코드만 담으면 "왜 못 열었는지" 를 좁힐 수 없습니다 - 카탈로그를 못 읽은
+            // 실제 이유(StoreError)와 결함 sidecar 판정도 함께 담습니다.
+            BlockReason = BlockReasonCode(library),
             FrameCount = library?.Frames.Count(frame => !frame.IsPreviewScan) ?? 0,
             RollCount = library?.Rolls.Count ?? 0,
             FolderCount = library?.Folders.Count ?? 0,
@@ -320,5 +320,31 @@ public sealed partial class SettingsRootView
             Limits = cache.EffectiveLimits(InstalledMemoryBytes),
             ResidentDevelopedCount = 0,
         };
+    }
+
+    /// <summary>
+    /// 열지 못한 까닭을 코드로 잇습니다. 셋 다 없으면 <c>null</c> 이고, 그것이 곧
+    /// "막힌 적 없음" 입니다.
+    /// </summary>
+    private static string? BlockReasonCode(LibraryHostService? library)
+    {
+        if (library is not { } host)
+        {
+            return null;
+        }
+        List<string> codes = [];
+        if (host.SessionError != CatalogSessionError.None)
+        {
+            codes.Add($"session:{host.SessionError}");
+        }
+        if (host.StoreError != CatalogStoreError.None)
+        {
+            codes.Add($"store:{host.StoreError}");
+        }
+        if (host.DefectSidecarError != DefectSidecarError.None)
+        {
+            codes.Add($"defectSidecar:{host.DefectSidecarError}");
+        }
+        return codes.Count == 0 ? null : string.Join(' ', codes);
     }
 }

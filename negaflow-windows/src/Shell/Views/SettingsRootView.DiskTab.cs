@@ -113,6 +113,8 @@ public sealed partial class SettingsRootView
         DiskPage.BackupNowButton.Content = AppResources.Get("diskLibraryBackupNow", "Content");
         DiskPage.BackupBrowseButton.Content = AppResources.Get("diskLibraryBackupBrowse", "Content");
         DiskPage.BackupArchiveButton.Content = AppResources.Get("libraryArchiveCreate", "Content");
+        DiskPage.BackupRestoreButton.Content =
+            AppResources.Get("libraryBackupBrowseRestore", "Content");
     }
 
     private void SynchronizeDiskTab(ShellPreferences preferences)
@@ -150,7 +152,7 @@ public sealed partial class SettingsRootView
             : Visibility.Visible;
         DiskPage.ExternalBackupStatusLine.Text = ExternalBackupStatusText(backup);
         DiskPage.ExternalBackupLastSuccessRow.ValueText = DateText(backup.ExternalLastSuccessAt);
-        DiskPage.BackupScheduleComboBox.SelectedIndex = (int)backup.Schedule;
+        DiskPage.BackupScheduleComboBox.SelectedIndex = (int)backup.EffectiveSchedule;
         DiskPage.BackupLastAttemptRow.ValueText = DateText(backup.LastAttemptAt);
         DiskPage.BackupLastSuccessRow.ValueText = DateText(backup.LastSuccessAt);
         DiskPage.BackupVerificationRow.ValueText = backup.LastRestoreDrillSucceeded is { } passed

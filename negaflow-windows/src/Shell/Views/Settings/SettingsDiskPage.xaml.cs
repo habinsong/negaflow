@@ -40,4 +40,7 @@ public sealed partial class SettingsDiskPage : UserControl
 
     private void OnCreateArchiveClick(object sender, RoutedEventArgs args) =>
         Owner?.OnCreateArchiveClick(sender, args);
+
+    private void OnRestoreBackupClick(object sender, RoutedEventArgs args) =>
+        Owner?.OnRestoreBackupClick(sender, args);
 }

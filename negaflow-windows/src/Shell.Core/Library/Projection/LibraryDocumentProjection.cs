@@ -39,6 +39,12 @@ internal sealed class LibraryDocumentProjection
     internal List<LibraryStoredSearchSnapshot> StoredSearches { get; } = [];
     internal List<LibraryFrameSnapshot> Frames { get; } = [];
     internal List<LibraryFrameIssue> Issues { get; } = [];
+
+    /// <summary>
+    /// 되돌려서 살린 사진의 수리 코드입니다. 사진은 목록에 그대로 있고, 무엇을 되돌렸는지만
+    /// 진단에 남습니다.
+    /// </summary>
+    internal List<string> Repairs { get; } = [];
     internal Dictionary<string, int> IndexById { get; } = new(StringComparer.Ordinal);
 
     internal void ProjectFrames()
@@ -47,11 +53,27 @@ internal sealed class LibraryDocumentProjection
         Frames.Clear();
         Issues.Clear();
         IndexById.Clear();
+        Repairs.Clear();
         for (int index = 0; index < payloads.Count; index++)
         {
             using JsonDocument document = JsonDocument.Parse(
                 CatalogJson.SerializeCanonical(payloads[index]));
             LibraryFrameReadResult read = LibraryFrameReader.Read(document.RootElement);
+            // 필드 하나가 규격을 벗어났다고 사진이 목록에서 사라져서는 안 됩니다. macOS 처럼
+            // 그 필드만 되돌리고 다시 읽습니다 - 되돌린 값은 payload 에 남아 다음 저장에
+            // 그대로 실립니다.
+            if (read.Frame is null &&
+                LibraryFrameRepair.TryRepair(payloads[index], read.Error, out string action))
+            {
+                using JsonDocument repaired = JsonDocument.Parse(
+                    CatalogJson.SerializeCanonical(payloads[index]));
+                LibraryFrameReadResult second = LibraryFrameReader.Read(repaired.RootElement);
+                if (second.Frame is not null)
+                {
+                    Repairs.Add(action);
+                    read = second;
+                }
+            }
             if (read.Frame is { } frame)
             {
                 if (DeclaresDefectEdits(payloads[index]))

@@ -74,16 +74,48 @@ internal static class SqliteCatalogSchema
             string.Equals(reader.GetString(0), "ok", StringComparison.Ordinal);
     }
 
+    internal const string MetadataTable = "catalog_metadata";
+
+    /// <summary>
+    /// <see cref="MetadataTable"/> 없이는 이 파일이 우리 것인지조차 판정할 수 없는 컬럼입니다.
+    /// 하나라도 없으면 <see cref="CatalogStoreError.MalformedContent"/> 로 물러납니다.
+    /// </summary>
+    internal static readonly string[] RequiredMetadataColumns =
+        ["singleton", "catalog_version", "minimum_reader_version"];
+
+    /// <summary>
+    /// <see cref="MetadataTable"/> 에서 <b>없을 수 있는</b> 컬럼입니다. 예전 빌드가 쓴 파일에는
+    /// 나중에 붙은 컬럼이 없고, 읽기는 READONLY 라 그때 ALTER 로 붙일 수 없습니다.
+    /// <para>
+    /// <b>앞으로 컬럼을 추가할 때의 규율입니다.</b> 새 metadata 컬럼은 반드시 NULL 을 허용하는
+    /// 선택 컬럼으로 만들어 여기에 올리십시오. 읽기 경로는 그 컬럼이 <b>없을 수 있다고 가정</b>
+    /// 하고, 쓰기 경로가 <see cref="CreateTables"/> 에서 뒤늦게 붙입니다. 이 규율을 어기고
+    /// 필수 컬럼을 추가하면, 그 순간 기존 사용자 전원이 라이브러리를 열지 못합니다.
+    /// </para>
+    /// </summary>
+    internal static readonly (string Name, string Declaration)[] OptionalMetadataColumns =
+        [("active_roll_id", "TEXT")];
+
     internal static void CreateTables(SqliteConnection connection)
     {
-        Execute(connection, """
-            CREATE TABLE IF NOT EXISTS catalog_metadata (
+        Execute(connection, $"""
+            CREATE TABLE IF NOT EXISTS {MetadataTable} (
               singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
               catalog_version INTEGER NOT NULL,
               minimum_reader_version INTEGER NOT NULL,
               active_roll_id TEXT
             )
             """);
+        // 예전 형태로 남은 파일에 빠진 선택 컬럼을 여기서 붙입니다. 쓰기 연결에서만 할 수 있고,
+        // 이것을 하지 않으면 예전 파일은 영영 예전 형태로 남습니다.
+        HashSet<string> metadataColumns = TableColumns(connection, MetadataTable);
+        foreach ((string name, string declaration) in OptionalMetadataColumns)
+        {
+            if (!metadataColumns.Contains(name))
+            {
+                Execute(connection, $"ALTER TABLE {MetadataTable} ADD COLUMN {name} {declaration}");
+            }
+        }
         foreach (CatalogEntityTable table in CatalogEntityTables.All)
         {
             Execute(connection, $"""
@@ -96,6 +128,25 @@ internal static class SqliteCatalogSchema
         }
     }
 
+
+    /// <summary>
+    /// 표에 실제로 있는 컬럼 이름입니다. READONLY 연결에서도 물을 수 있습니다.
+    /// </summary>
+    internal static HashSet<string> TableColumns(SqliteConnection connection, string table)
+    {
+        HashSet<string> columns = new(StringComparer.Ordinal);
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA table_info({table})";
+        using SqliteDataReader reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            if (!reader.IsDBNull(1))
+            {
+                columns.Add(reader.GetString(1));
+            }
+        }
+        return columns;
+    }
 
     internal static CatalogStoreError ClassifySqlite(SqliteException error) =>
         error.SqliteErrorCode switch

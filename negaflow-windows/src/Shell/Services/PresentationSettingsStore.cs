@@ -15,7 +15,10 @@ public sealed class PresentationSettingsStore
     public PresentationSettingsStore(string? settingsPath = null)
     {
         this.settingsPath = settingsPath ?? DefaultSettingsPath();
-        Current = Load(this.settingsPath);
+        // 저장된 설정을 고치는 자리는 여기 하나입니다. Normalize 는 저장할 때마다 도므로
+        // **한 번만** 해야 하는 승격을 거기 두면 사용자의 선택을 매번 덮습니다.
+        ShellPreferences loaded = Load(this.settingsPath);
+        Current = loaded with { Backup = loaded.Backup.UpgradeDeadScheduleDefault() };
     }
 
     public event EventHandler<ShellPreferences>? Changed;

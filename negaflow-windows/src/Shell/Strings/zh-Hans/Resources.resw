@@ -1534,4 +1534,33 @@
   <data name="scanProgressDisconnected.Text" xml:space="preserve"><value>扫描仪已断开</value><comment>AppLocalizedPhrase.scanProgressDisconnected</comment></data>
   <data name="scanProgressError.Text" xml:space="preserve"><value>扫描出错</value><comment>AppLocalizedPhrase.scanProgressError</comment></data>
   <data name="scanProgressBackendFallbackActive.Text" xml:space="preserve"><value>正在使用备用后端</value><comment>AppLocalizedPhrase.scanProgressBackendFallbackActive</comment></data>
+  <data name="libraryRecoveryTitle.Text" xml:space="preserve"><value>图库恢复</value><comment>LibraryRecoveryLocalizedText.title</comment></data>
+  <data name="libraryRecoveryRetry.Content" xml:space="preserve"><value>重试</value><comment>LibraryRecoveryLocalizedText.retry</comment></data>
+  <data name="libraryRecoveryCopyDiagnostics.Content" xml:space="preserve"><value>拷贝诊断信息</value><comment>LibraryRecoveryLocalizedText.copyDiagnostics</comment></data>
+  <data name="libraryRecoveryNoBackupsHint.Text" xml:space="preserve"><value>尚无图库目录备份。如果备份在别处，请将其文件夹放入备份目录后点按刷新；否则可以新建图库 — 照片文件不会被改动。</value><comment>LibraryRecoveryLocalizedText.noBackupsHint</comment></data>
+  <data name="libraryRecoverySelectBackupHint.Text" xml:space="preserve"><value>请先选择要恢复的备份。</value><comment>LibraryRecoveryLocalizedText.selectBackupHint</comment></data>
+  <data name="libraryRecoveryUnusableBackupHint.Text" xml:space="preserve"><value>此备份无法读取，因此无法恢复。</value><comment>LibraryRecoveryLocalizedText.unusableBackupHint</comment></data>
+  <data name="libraryRecoveryStartFresh.Content" xml:space="preserve"><value>新建图库</value><comment>LibraryRecoveryLocalizedText.startFresh</comment></data>
+  <data name="libraryRecoveryStartFreshConfirmTitle.Text" xml:space="preserve"><value>要新建图库吗？</value><comment>LibraryRecoveryLocalizedText.startFreshConfirmationTitle</comment></data>
+  <data name="libraryRecoveryStartFreshConfirmMessage.Text" xml:space="preserve"><value>当前目录不会删除，会保留在原处旁边。照片文件和备份保持不变，只有图库列表从空白开始。</value><comment>LibraryRecoveryLocalizedText.startFreshConfirmationMessage</comment></data>
+  <data name="libraryRecoveryStartFreshFailed.Text" xml:space="preserve"><value>无法新建图库。</value><comment>LibraryRecoveryLocalizedText.startFreshFailed</comment></data>
+  <data name="libraryCatalogBlockedStatus.Text" xml:space="preserve"><value>无法安全打开图库目录，已保持原文件不变。</value><comment>AppLocalizedPhrase.libraryCatalogBlockedStatus</comment></data>
+  <data name="libraryBackupEmpty.Text" xml:space="preserve"><value>没有备份</value><comment>AppLocalizedPhrase.libraryBackupEmpty</comment></data>
+  <data name="libraryBackupLoadFailed.Text" xml:space="preserve"><value>无法载入备份</value><comment>AppLocalizedPhrase.libraryBackupLoadFailed</comment></data>
+  <data name="libraryBackupRefresh.Content" xml:space="preserve"><value>刷新</value><comment>AppLocalizedPhrase.libraryBackupRefresh</comment></data>
+  <data name="libraryBackupUnknownDate.Text" xml:space="preserve"><value>日期未知</value><comment>AppLocalizedPhrase.libraryBackupUnknownDate</comment></data>
+  <data name="libraryBackupChecksummed.Text" xml:space="preserve"><value>校验和已验证</value><comment>AppLocalizedPhrase.libraryBackupChecksummed</comment></data>
+  <data name="libraryBackupDamaged.Text" xml:space="preserve"><value>已损坏</value><comment>AppLocalizedPhrase.libraryBackupDamaged</comment></data>
+  <data name="libraryBackupCountsFormat.Text" xml:space="preserve"><value>%d 张照片 · %d 个修复配方</value><comment>AppLocalizedPhrase.libraryBackupCountsFormat</comment></data>
+  <data name="libraryBackupRestoreSelected.Content" xml:space="preserve"><value>恢复所选备份</value><comment>AppLocalizedPhrase.libraryBackupRestoreSelected</comment></data>
+  <data name="libraryBackupRestoreConfirmTitle.Text" xml:space="preserve"><value>恢复所选备份？</value><comment>AppLocalizedPhrase.libraryBackupRestoreConfirmationTitle</comment></data>
+  <data name="libraryBackupRestoreConfirmMessage.Text" xml:space="preserve"><value>当前图库将另行保留，恢复将在下次启动时应用。</value><comment>AppLocalizedPhrase.libraryBackupRestoreConfirmationMessage</comment></data>
+  <data name="libraryBackupRestorePending.Text" xml:space="preserve"><value>将在下次启动时恢复</value><comment>AppLocalizedPhrase.libraryBackupRestorePending</comment></data>
+  <data name="libraryBackupCancelPending.Content" xml:space="preserve"><value>取消恢复计划</value><comment>AppLocalizedPhrase.libraryBackupCancelPending</comment></data>
+  <data name="libraryBackupRestoreScheduleFailed.Text" xml:space="preserve"><value>无法计划恢复</value><comment>AppLocalizedPhrase.libraryBackupRestoreScheduleFailed</comment></data>
+  <data name="libraryBackupScheduleRestore.Content" xml:space="preserve"><value>计划恢复</value><comment>AppLocalizedPhrase.libraryBackupScheduleRestore</comment></data>
+  <data name="libraryBackupBrowseRestore.Content" xml:space="preserve"><value>恢复所选备份</value><comment>macOS LibraryRestoreBrowser 를 여는 자리 (AppLocalizedPhrase.libraryBackupRestoreSelected 와 같은 문구)</comment></data>
+  <data name="libraryUnreadableFramesTitle.Text" xml:space="preserve"><value>此版本无法读取 %d 张照片</value><comment>W10: 읽지 못한 사진 배너 제목</comment></data>
+  <data name="libraryUnreadableFramesMessage.Text" xml:space="preserve"><value>照片文件与目录记录均未改动。使用能识别该格式的版本打开后会重新出现。</value><comment>W10: 파일과 카탈로그는 그대로라는 사실을 알립니다</comment></data>
+  <data name="commonDone.Content" xml:space="preserve"><value>完成</value><comment>AppLocalizedPhrase.done</comment></data>
 </root>

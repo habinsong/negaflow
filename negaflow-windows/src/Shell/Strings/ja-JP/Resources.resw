@@ -1534,4 +1534,33 @@
   <data name="scanProgressDisconnected.Text" xml:space="preserve"><value>スキャナーの接続が解除されました</value><comment>AppLocalizedPhrase.scanProgressDisconnected</comment></data>
   <data name="scanProgressError.Text" xml:space="preserve"><value>スキャンエラー</value><comment>AppLocalizedPhrase.scanProgressError</comment></data>
   <data name="scanProgressBackendFallbackActive.Text" xml:space="preserve"><value>代替バックエンドを使用中</value><comment>AppLocalizedPhrase.scanProgressBackendFallbackActive</comment></data>
+  <data name="libraryRecoveryTitle.Text" xml:space="preserve"><value>ライブラリの復旧</value><comment>LibraryRecoveryLocalizedText.title</comment></data>
+  <data name="libraryRecoveryRetry.Content" xml:space="preserve"><value>再試行</value><comment>LibraryRecoveryLocalizedText.retry</comment></data>
+  <data name="libraryRecoveryCopyDiagnostics.Content" xml:space="preserve"><value>診断情報をコピー</value><comment>LibraryRecoveryLocalizedText.copyDiagnostics</comment></data>
+  <data name="libraryRecoveryNoBackupsHint.Text" xml:space="preserve"><value>カタログのバックアップがまだありません。別の場所にバックアップがあれば、そのフォルダをバックアップ先に置いて更新してください。なければ新しいライブラリで始められます — 写真ファイルには触れません。</value><comment>LibraryRecoveryLocalizedText.noBackupsHint</comment></data>
+  <data name="libraryRecoverySelectBackupHint.Text" xml:space="preserve"><value>復元するバックアップを選んでください。</value><comment>LibraryRecoveryLocalizedText.selectBackupHint</comment></data>
+  <data name="libraryRecoveryUnusableBackupHint.Text" xml:space="preserve"><value>このバックアップは読み込めないため復元できません。</value><comment>LibraryRecoveryLocalizedText.unusableBackupHint</comment></data>
+  <data name="libraryRecoveryStartFresh.Content" xml:space="preserve"><value>新しいライブラリで開始</value><comment>LibraryRecoveryLocalizedText.startFresh</comment></data>
+  <data name="libraryRecoveryStartFreshConfirmTitle.Text" xml:space="preserve"><value>新しいライブラリで開始しますか？</value><comment>LibraryRecoveryLocalizedText.startFreshConfirmationTitle</comment></data>
+  <data name="libraryRecoveryStartFreshConfirmMessage.Text" xml:space="preserve"><value>現在のカタログは削除せず隣に保管します。写真ファイルとバックアップはそのままで、ライブラリの一覧だけが空の状態で始まります。</value><comment>LibraryRecoveryLocalizedText.startFreshConfirmationMessage</comment></data>
+  <data name="libraryRecoveryStartFreshFailed.Text" xml:space="preserve"><value>新しいライブラリを開始できませんでした。</value><comment>LibraryRecoveryLocalizedText.startFreshFailed</comment></data>
+  <data name="libraryCatalogBlockedStatus.Text" xml:space="preserve"><value>ライブラリカタログを安全に開けなかったため、変更せずに保持しました。</value><comment>AppLocalizedPhrase.libraryCatalogBlockedStatus</comment></data>
+  <data name="libraryBackupEmpty.Text" xml:space="preserve"><value>バックアップなし</value><comment>AppLocalizedPhrase.libraryBackupEmpty</comment></data>
+  <data name="libraryBackupLoadFailed.Text" xml:space="preserve"><value>バックアップを読み込めません</value><comment>AppLocalizedPhrase.libraryBackupLoadFailed</comment></data>
+  <data name="libraryBackupRefresh.Content" xml:space="preserve"><value>再読み込み</value><comment>AppLocalizedPhrase.libraryBackupRefresh</comment></data>
+  <data name="libraryBackupUnknownDate.Text" xml:space="preserve"><value>日付不明</value><comment>AppLocalizedPhrase.libraryBackupUnknownDate</comment></data>
+  <data name="libraryBackupChecksummed.Text" xml:space="preserve"><value>チェックサム確認済み</value><comment>AppLocalizedPhrase.libraryBackupChecksummed</comment></data>
+  <data name="libraryBackupDamaged.Text" xml:space="preserve"><value>破損</value><comment>AppLocalizedPhrase.libraryBackupDamaged</comment></data>
+  <data name="libraryBackupCountsFormat.Text" xml:space="preserve"><value>%d枚 · 修復レシピ%d件</value><comment>AppLocalizedPhrase.libraryBackupCountsFormat</comment></data>
+  <data name="libraryBackupRestoreSelected.Content" xml:space="preserve"><value>選択したバックアップを復元</value><comment>AppLocalizedPhrase.libraryBackupRestoreSelected</comment></data>
+  <data name="libraryBackupRestoreConfirmTitle.Text" xml:space="preserve"><value>選択したバックアップを復元しますか？</value><comment>AppLocalizedPhrase.libraryBackupRestoreConfirmationTitle</comment></data>
+  <data name="libraryBackupRestoreConfirmMessage.Text" xml:space="preserve"><value>現在のライブラリは別途保存され、次回起動時に復元が適用されます。</value><comment>AppLocalizedPhrase.libraryBackupRestoreConfirmationMessage</comment></data>
+  <data name="libraryBackupRestorePending.Text" xml:space="preserve"><value>次回起動時に復元</value><comment>AppLocalizedPhrase.libraryBackupRestorePending</comment></data>
+  <data name="libraryBackupCancelPending.Content" xml:space="preserve"><value>復元予約を取り消す</value><comment>AppLocalizedPhrase.libraryBackupCancelPending</comment></data>
+  <data name="libraryBackupRestoreScheduleFailed.Text" xml:space="preserve"><value>復元を予約できません</value><comment>AppLocalizedPhrase.libraryBackupRestoreScheduleFailed</comment></data>
+  <data name="libraryBackupScheduleRestore.Content" xml:space="preserve"><value>復元を予約</value><comment>AppLocalizedPhrase.libraryBackupScheduleRestore</comment></data>
+  <data name="libraryBackupBrowseRestore.Content" xml:space="preserve"><value>選択したバックアップを復元</value><comment>macOS LibraryRestoreBrowser 를 여는 자리 (AppLocalizedPhrase.libraryBackupRestoreSelected 와 같은 문구)</comment></data>
+  <data name="libraryUnreadableFramesTitle.Text" xml:space="preserve"><value>このバージョンで%d枚を読み込めませんでした</value><comment>W10: 읽지 못한 사진 배너 제목</comment></data>
+  <data name="libraryUnreadableFramesMessage.Text" xml:space="preserve"><value>ファイルとカタログの記録はそのままです。その形式を扱えるバージョンで開けば再び表示されます。</value><comment>W10: 파일과 카탈로그는 그대로라는 사실을 알립니다</comment></data>
+  <data name="commonDone.Content" xml:space="preserve"><value>完了</value><comment>AppLocalizedPhrase.done</comment></data>
 </root>
