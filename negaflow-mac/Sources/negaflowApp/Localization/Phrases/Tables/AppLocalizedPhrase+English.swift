@@ -29,6 +29,7 @@ extension AppLocalization {
             .diskLibraryBackupFailedStatus: "Library backup failed",
             .libraryRestoredFormat: "Library restored: %d photos",
             .libraryRecoveredFromBackupFormat: "Library recovered from backup: %d photos",
+            .libraryCatalogRepairedFormat: "Library opened after repairing %1$d inconsistent records: %2$d photos",
             .libraryCatalogMigratedFormat: "Library upgraded from catalog version %d: %d photos",
             .libraryCatalogBlockedStatus: "The library catalog could not be opened safely and was left unchanged.",
             .libraryCatalogLockedStatus: "This library is already open in another negaflow process.",

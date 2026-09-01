@@ -103,7 +103,7 @@ extension AppModel {
                         committedTransactionIDs: [],
                         in: exportJournalDirectory
                     )
-                case .loaded(let catalog, _, _):
+                case .loaded(let catalog, _, _, _):
                     let committedTransactionIDs = Set(catalog.frames.flatMap { record in
                         record.exportTracking.successfulEvents.map(\.id)
                     })
@@ -142,6 +142,7 @@ extension AppModel {
         let catalog: LibraryCatalog
         let recoveredFromBackup: Bool
         let migratedFromVersion: Int?
+        let repairReport: LibraryCatalogRepairReport?
         switch openResult {
         case .newLibrary:
             libraryCatalogBlockReason = nil
@@ -159,12 +160,14 @@ extension AppModel {
             statusMessage = libraryCatalogBlockMessage(reason)
             trace.fail(code: "catalog_open_blocked_\(String(describing: reason))")
             return
-        case let .loaded(loaded, recovered, migrated):
+        case let .loaded(loaded, recovered, migrated, repairs):
             catalog = loaded
             recoveredFromBackup = recovered
             migratedFromVersion = migrated
+            repairReport = repairs
             libraryCatalogBlockReason = nil
         }
+        libraryCatalogRepairReport = repairReport
 
         // 유효한 primary 또는 backup catalog를 읽었을 때만 orphan 정리를 허용한다. 손상/권한
         // 오류를 빈 catalog로 간주하면 복구 가능한 app-owned 데이터를 전부 지우게 된다.
@@ -232,6 +235,12 @@ extension AppModel {
         if appliedPendingRestore {
             statusMessage = text(
                 AppLocalizedPhrase.librarySelectedBackupAppliedFormat,
+                restored.count
+            )
+        } else if let repairReport, !repairReport.isEmpty {
+            statusMessage = text(
+                AppLocalizedPhrase.libraryCatalogRepairedFormat,
+                repairReport.totalCount,
                 restored.count
             )
         } else if recoveredFromBackup {

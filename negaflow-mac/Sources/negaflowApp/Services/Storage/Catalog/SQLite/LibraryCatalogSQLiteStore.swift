@@ -421,6 +421,12 @@ enum LibraryCatalogSQLiteStore {
         return encoder
     }
 
+    /// 사진과 그 소속은 라이브러리의 뼈대라 한 줄이라도 못 읽으면 열지 않는다. 반면 스캔
+    /// 이력이나 컬렉션 같은 부수 기록은 한 줄이 낡은 형식이어도 그 줄만 버리고 연다 —
+    /// 예전 버전이 쓴 payload 하나 때문에 라이브러리 전체를 못 여는 일은 없어야 한다.
+    /// (버려서 생기는 고아 참조는 `LibraryCatalogRepair` 가 정리한다.)
+    private static let strictTables: Set<String> = ["folders", "frames", "rolls"]
+
     private static func decodeRows<Value: Decodable & Sendable>(
         _ database: OpaquePointer,
         table: String
@@ -443,14 +449,20 @@ enum LibraryCatalogSQLiteStore {
             guard count > 0 else { throw StoreError.invalidValue }
             payloads.append(Data(bytes: bytes, count: count))
         }
-        return try decodePayloads(payloads)
+        return try decodePayloads(payloads, lenient: !strictTables.contains(table))
     }
 
-    private static func decodePayloads<Value: Decodable & Sendable>(_ payloads: [Data]) throws -> [Value] {
+    private static func decodePayloads<Value: Decodable & Sendable>(
+        _ payloads: [Data],
+        lenient: Bool = false
+    ) throws -> [Value] {
         let processorCount = max(1, ProcessInfo.processInfo.activeProcessorCount)
         let chunkCount = min(processorCount, max(1, payloads.count / 512))
         guard chunkCount > 1 else {
             let decoder = makeDecoder()
+            if lenient {
+                return payloads.compactMap { try? decoder.decode(Value.self, from: $0) }
+            }
             return try payloads.map { try decoder.decode(Value.self, from: $0) }
         }
 
@@ -461,6 +473,11 @@ enum LibraryCatalogSQLiteStore {
             do {
                 let decoded: [Value] = try autoreleasepool {
                     let decoder = makeDecoder()
+                    if lenient {
+                        return payloads[lowerBound..<upperBound].compactMap {
+                            try? decoder.decode(Value.self, from: $0)
+                        }
+                    }
                     return try payloads[lowerBound..<upperBound].map {
                         try decoder.decode(Value.self, from: $0)
                     }
@@ -487,9 +504,16 @@ enum LibraryCatalogSQLiteStore {
         activeRollID: UUID?,
         lastActiveFrameID: UUID?
     ) {
+        // 나중에 붙은 컬럼은 예전 파일에 없다. 읽기는 READONLY 라 ALTER 로 붙일 수 없으니,
+        // 없으면 없는 대로 읽는다 — 컬럼 하나 때문에 라이브러리 전체를 못 여는 일은 없어야 한다.
+        let hasLastActiveFrameID = columnExists(
+            database,
+            table: "catalog_metadata",
+            column: "last_active_frame_id"
+        )
         let statement = try prepare(database, """
             SELECT catalog_version, minimum_reader_version, active_roll_id,
-                   last_active_frame_id
+                   \(hasLastActiveFrameID ? "last_active_frame_id" : "NULL")
             FROM catalog_metadata WHERE singleton=1
             """)
         defer { sqlite3_finalize(statement) }
@@ -514,6 +538,22 @@ enum LibraryCatalogSQLiteStore {
         }
         guard sqlite3_step(statement) == SQLITE_DONE else { throw StoreError.invalidValue }
         return (version, minimumReaderVersion, activeRollID, lastActiveFrameID)
+    }
+
+    static func columnExists(
+        _ database: OpaquePointer,
+        table: String,
+        column: String
+    ) -> Bool {
+        guard let statement = try? prepare(database, "PRAGMA table_info(\(table))") else {
+            return false
+        }
+        defer { sqlite3_finalize(statement) }
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard let raw = sqlite3_column_text(statement, 1) else { continue }
+            if String(cString: raw) == column { return true }
+        }
+        return false
     }
 
     private static func requireIntegrity(_ database: OpaquePointer) throws {

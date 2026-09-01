@@ -23,31 +23,48 @@ extension LibraryCatalogFile {
                 defectDirectory: defectDirectory,
                 fileManager: fileManager
             )
-            guard health.canOpenSafely else {
-                if let recovered = try? LibraryBackupStore.restoreLatest(
-                    catalogURL: url,
+            if health.canOpenSafely {
+                return finalizePreparedCatalog(
+                    catalog,
+                    sourceVersion: sourceVersion,
+                    at: url,
+                    recoveredFromBackup: false,
                     defectDirectory: defectDirectory,
                     backupDirectory: backupDirectory,
                     fileManager: fileManager
-                ) {
-                    return finalizePreparedCatalog(
-                        recovered,
-                        at: url,
-                        recoveredFromBackup: true,
-                        fileManager: fileManager
-                    )
-                }
-                return .blocked(openFailure(for: health))
+                )
             }
-            return finalizePreparedCatalog(
-                catalog,
-                sourceVersion: sourceVersion,
-                at: url,
-                recoveredFromBackup: false,
+            // 되돌릴 수 있는 어긋남만 있으면 백업으로 물러나기 전에 카탈로그 안에서 고친다.
+            // 사진은 그대로 두고 소속·이력·지문만 맞추므로, 백업 복원보다 잃는 것이 적다.
+            if !health.blocksOpen,
+               let repaired = LibraryCatalogRepair.repairedCatalogIfOpenable(
+                   catalog,
+                   defectDirectory: defectDirectory,
+                   fileManager: fileManager
+               ) {
+                return finalizeRepairedCatalog(
+                    repaired,
+                    sourceVersion: sourceVersion,
+                    at: url,
+                    defectDirectory: defectDirectory,
+                    backupDirectory: backupDirectory,
+                    fileManager: fileManager
+                )
+            }
+            if let recovered = try? LibraryBackupStore.restoreLatest(
+                catalogURL: url,
                 defectDirectory: defectDirectory,
                 backupDirectory: backupDirectory,
                 fileManager: fileManager
-            )
+            ) {
+                return finalizePreparedCatalog(
+                    recovered,
+                    at: url,
+                    recoveredFromBackup: true,
+                    fileManager: fileManager
+                )
+            }
+            return .blocked(openFailure(for: health))
 
         case let .unsupportedVersion(version):
             return .blocked(.unsupportedVersion(version))
@@ -72,14 +89,25 @@ extension LibraryCatalogFile {
 
             let legacyBackup = read(from: backupURL(for: url), fileManager: fileManager)
             switch legacyBackup {
-            case let .loaded(catalog, sourceVersion):
+            case let .loaded(legacyCatalog, sourceVersion):
+                var catalog = legacyCatalog
+                var repairReport: LibraryCatalogRepairReport?
                 let health = LibraryCatalogHealthInspector.inspect(
                     catalog,
                     defectDirectory: defectDirectory,
                     fileManager: fileManager
                 )
-                guard health.canOpenSafely else {
-                    return .blocked(openFailure(for: health))
+                if !health.canOpenSafely {
+                    guard !health.blocksOpen,
+                          let repaired = LibraryCatalogRepair.repairedCatalogIfOpenable(
+                              catalog,
+                              defectDirectory: defectDirectory,
+                              fileManager: fileManager
+                          ) else {
+                        return .blocked(openFailure(for: health))
+                    }
+                    catalog = repaired.catalog
+                    repairReport = repaired.report
                 }
                 do {
                     _ = try LibraryBackupStore.createSnapshot(
@@ -100,7 +128,8 @@ extension LibraryCatalogFile {
                     recoveredFromBackup: true,
                     migratedFromVersion: sourceVersion < LibraryCatalog.currentVersion
                         ? sourceVersion
-                        : nil
+                        : nil,
+                    repairReport: repairReport
                 )
             case let .unsupportedVersion(version):
                 return .blocked(.unsupportedVersion(version))
@@ -113,6 +142,16 @@ extension LibraryCatalogFile {
             case .missing:
                 switch primary {
                 case .missing:
+                    // 백업도 legacy 사본도 없다. sqlite 로 옮기면서 옆에 둔 예전 JSON 이
+                    // 남아 있으면 그것이 마지막 원본이다.
+                    if let recovered = recoverFromPreservedLegacyJSON(
+                        at: url,
+                        defectDirectory: defectDirectory,
+                        backupDirectory: backupDirectory,
+                        fileManager: fileManager
+                    ) {
+                        return recovered
+                    }
                     return hasRecoveryArtifacts(
                         defectDirectory: defectDirectory,
                         backupDirectory: backupDirectory,
@@ -199,6 +238,57 @@ extension LibraryCatalogFile {
         )
     }
 
+    /// 수리 결과를 자리에 기록한다. 고치기 전 상태는 정식 백업 세대와 옆에 둔 사본 두 벌로
+    /// 남긴다 — 수리가 마음에 들지 않으면 사용자가 되돌릴 수 있어야 한다.
+    static func finalizeRepairedCatalog(
+        _ repaired: LibraryCatalogRepairResult,
+        sourceVersion: Int,
+        at url: URL,
+        defectDirectory: URL,
+        backupDirectory: URL,
+        fileManager: FileManager
+    ) -> LibraryCatalogOpenResult {
+        _ = try? LibraryBackupStore.createSnapshot(
+            catalogURL: url,
+            defectDirectory: defectDirectory,
+            backupDirectory: backupDirectory,
+            fileManager: fileManager
+        )
+        guard preserveRepairSource(at: url, fileManager: fileManager),
+              writeAndVerify(repaired.catalog, to: url, fileManager: fileManager) else {
+            return .blocked(.writeFailed)
+        }
+        return .loaded(
+            catalog: repaired.catalog,
+            recoveredFromBackup: false,
+            migratedFromVersion: sourceVersion < LibraryCatalog.currentVersion
+                ? sourceVersion
+                : nil,
+            repairReport: repaired.report
+        )
+    }
+
+    static func preserveRepairSource(
+        at url: URL,
+        fileManager: FileManager
+    ) -> Bool {
+        guard fileManager.fileExists(atPath: url.path) else { return true }
+        let fileExtension = url.pathExtension.isEmpty ? "" : ".\(url.pathExtension)"
+        let preserved = url.deletingLastPathComponent().appendingPathComponent(
+            "library.pre-repair-\(UUID().uuidString)\(fileExtension)"
+        )
+        do {
+            try fileManager.copyItem(at: url, to: preserved)
+            LibraryCatalogSidelinedFiles.prune(
+                in: url.deletingLastPathComponent(),
+                fileManager: fileManager
+            )
+            return true
+        } catch {
+            return false
+        }
+    }
+
     static func preservePrimaryIfPresent(
         at url: URL,
         fileManager: FileManager
@@ -246,6 +336,9 @@ extension LibraryCatalogFile {
         return try? encoder.encode(catalog)
     }
 
+    /// 되살릴 것이 남아 있으면 빈 라이브러리로 조용히 시작하지 않는다. 결함 기록은 아직
+    /// 이미지에 굽지 못한 사용자 편집일 수 있어서, 카탈로그가 없다고 그것을 버리면 안 된다.
+    /// 여기서 막힌 사용자는 복구 화면의 "새 라이브러리로 시작" 으로 빠져나올 수 있다.
     static func hasRecoveryArtifacts(
         defectDirectory: URL,
         backupDirectory: URL,
@@ -261,6 +354,57 @@ extension LibraryCatalogFile {
         }
     }
 
+    /// sqlite 로 옮기면서 `library.pre-sqlite-*.json` 으로 남겨 둔 원본에서 되살린다.
+    static func recoverFromPreservedLegacyJSON(
+        at url: URL,
+        defectDirectory: URL,
+        backupDirectory: URL,
+        fileManager: FileManager
+    ) -> LibraryCatalogOpenResult? {
+        guard LibraryCatalogSQLiteStore.isSQLiteURL(url) else { return nil }
+        let candidates = LibraryCatalogSQLiteMigration.preservedLegacyURLs(
+            besides: url,
+            fileManager: fileManager
+        )
+        for candidate in candidates {
+            guard case let .loaded(catalog, sourceVersion) = read(
+                from: candidate,
+                fileManager: fileManager
+            ) else { continue }
+            var recovered = catalog
+            let health = LibraryCatalogHealthInspector.inspect(
+                recovered,
+                defectDirectory: defectDirectory,
+                fileManager: fileManager
+            )
+            if !health.canOpenSafely {
+                guard !health.blocksOpen,
+                      let repaired = LibraryCatalogRepair.repairedCatalogIfOpenable(
+                          recovered,
+                          defectDirectory: defectDirectory,
+                          fileManager: fileManager
+                      ) else { continue }
+                recovered = repaired.catalog
+            }
+            guard writeAndVerify(recovered, to: url, fileManager: fileManager) else { continue }
+            _ = try? LibraryBackupStore.createSnapshot(
+                catalogURL: url,
+                defectDirectory: defectDirectory,
+                backupDirectory: backupDirectory,
+                fileManager: fileManager
+            )
+            return .loaded(
+                catalog: recovered,
+                recoveredFromBackup: true,
+                migratedFromVersion: sourceVersion < LibraryCatalog.currentVersion
+                    ? sourceVersion
+                    : nil,
+                repairReport: nil
+            )
+        }
+        return nil
+    }
+
     static func openFailure(
         for health: LibraryCatalogHealthReport
     ) -> LibraryCatalogOpenFailure {
@@ -268,11 +412,7 @@ extension LibraryCatalogFile {
             .missingDefectRecipe,
             .invalidDefectRecipe,
         ]
-        let errorCodes = Set(
-            health.issues
-                .filter { $0.severity == .error }
-                .map(\.code)
-        )
+        let errorCodes = Set(health.blockingIssues.map(\.code))
         return !errorCodes.isEmpty && errorCodes.isSubset(of: authoritativeCodes)
             ? .missingAuthoritativeData
             : .corrupt

@@ -15,7 +15,7 @@ extension LibraryPendingRestoreStore {
                 defectDirectory: defectDirectory,
                 fileManager: fileManager
             )
-            if health.canOpenSafely {
+            if !health.blocksOpen {
                 do {
                     _ = try LibraryBackupStore.createSnapshot(
                         catalogURL: catalogURL,

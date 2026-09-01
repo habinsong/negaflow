@@ -29,6 +29,7 @@ extension AppLocalization {
         .diskLibraryBackupFailedStatus: "图库备份失败",
         .libraryRestoredFormat: "已恢复图库：%d 张照片",
         .libraryRecoveredFromBackupFormat: "已从备份恢复图库：%d 张照片",
+        .libraryCatalogRepairedFormat: "已修复 %1$d 条不一致记录后打开图库：%2$d 张照片",
         .libraryCatalogMigratedFormat: "图库已从目录版本 %d 升级：%d 张照片",
         .libraryCatalogBlockedStatus: "无法安全打开图库目录，已保持原文件不变。",
         .libraryCatalogLockedStatus: "此图库已在另一个 negaflow 进程中打开。",

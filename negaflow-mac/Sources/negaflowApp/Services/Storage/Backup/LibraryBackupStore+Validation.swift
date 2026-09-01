@@ -28,9 +28,10 @@ extension LibraryBackupStore {
               (1...LibraryBackupManifest.currentVersion).contains(manifest.version),
               let catalogData = try? Data(contentsOf: catalogURL(in: directory)),
               let catalogSourceVersion = sourceCatalogVersion(in: catalogData),
-              let catalog = LibraryCatalogFile.decode(catalogData),
-              manifest.frameCount == catalog.frames.count else { return nil }
+              let storedCatalog = LibraryCatalogFile.decode(catalogData),
+              manifest.frameCount == storedCatalog.frames.count else { return nil }
 
+        var catalog = storedCatalog
         let expectedIDs = catalog.frames
             .filter { $0.hasDefectEdits == true }
             .map(\.id)
@@ -47,7 +48,17 @@ extension LibraryBackupStore {
             defectDirectory: snapshotDefectDirectory,
             fileManager: fileManager
         )
-        guard health.canOpenSafely else { return nil }
+        // 백업 세대도 되돌릴 수 있는 어긋남은 복원할 때 고친다. 그러지 않으면 스캔 이력
+        // 하나가 어긋났다는 이유로 멀쩡한 세대가 통째로 "복원 불가" 로 보인다.
+        if !health.canOpenSafely {
+            guard !health.blocksOpen,
+                  let repaired = LibraryCatalogRepair.repairedCatalogIfOpenable(
+                      catalog,
+                      defectDirectory: snapshotDefectDirectory,
+                      fileManager: fileManager
+                  ) else { return nil }
+            catalog = repaired.catalog
+        }
         let snapshotDirectory = directory
         let integrity: LibraryBackupIntegrity
         switch manifest.version {

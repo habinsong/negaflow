@@ -595,13 +595,26 @@ final class LibraryCatalogTests: XCTestCase {
         XCTAssertFalse(model.hasUnsavedLibraryChanges)
     }
 
+    @MainActor
+    private func makeManualBackupScheduleStore() throws -> LibraryBackupScheduleStore {
+        let defaults = try XCTUnwrap(
+            UserDefaults(suiteName: "LibraryCatalogTests-\(UUID().uuidString)")
+        )
+        let store = LibraryBackupScheduleStore(defaults: defaults)
+        store.schedule = .manual
+        return store
+    }
+
     func testApplicationTerminationWaitsForReadbackCommitApproval() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(
             "negaflow-termination-approval-\(UUID().uuidString)",
             isDirectory: true
         )
         defer { try? FileManager.default.removeItem(at: root) }
+        // 이 테스트가 보는 것은 종료 커밋 승인 흐름이다. 종료 시 자동 백업(기본값)이 끼면
+        // completion 이 백업 완료 뒤로 밀리므로, 백업은 끈 채로 검사한다.
         let model = AppModel(
+            backupScheduleStore: try makeManualBackupScheduleStore(),
             libraryCatalogURL: root.appendingPathComponent("library.json"),
             libraryDefectDirectoryURL: root.appendingPathComponent("defects", isDirectory: true),
             libraryBackupDirectoryURL: root.appendingPathComponent("backups", isDirectory: true)
@@ -744,6 +757,7 @@ final class LibraryCatalogTests: XCTestCase {
         )
         defer { try? FileManager.default.removeItem(at: root) }
         let model = AppModel(
+            backupScheduleStore: try makeManualBackupScheduleStore(),
             libraryCatalogURL: root.appendingPathComponent("library.json"),
             libraryDefectDirectoryURL: root.appendingPathComponent("defects", isDirectory: true),
             libraryBackupDirectoryURL: root.appendingPathComponent("backups", isDirectory: true)
@@ -1493,7 +1507,7 @@ final class LibraryCatalogTests: XCTestCase {
         let legacyData = try makeVersionOneData(catalog)
         try legacyData.write(to: catalogURL, options: .atomic)
 
-        guard case let .loaded(migrated, recovered, sourceVersion) = LibraryCatalogFile.prepareForUse(
+        guard case let .loaded(migrated, recovered, sourceVersion, _) = LibraryCatalogFile.prepareForUse(
             at: catalogURL,
             defectDirectory: defects,
             backupDirectory: backups
@@ -1512,7 +1526,7 @@ final class LibraryCatalogTests: XCTestCase {
         XCTAssertNotNil(LibraryBackupStore.latestValidSnapshot(in: backups))
 
         let generationCount = try backupGenerationCount(in: backups)
-        guard case let .loaded(_, recoveredAgain, migratedAgain) = LibraryCatalogFile.prepareForUse(
+        guard case let .loaded(_, recoveredAgain, migratedAgain, _) = LibraryCatalogFile.prepareForUse(
             at: catalogURL,
             defectDirectory: defects,
             backupDirectory: backups
@@ -1544,7 +1558,7 @@ final class LibraryCatalogTests: XCTestCase {
         ))
         try legacyData.write(to: catalogURL, options: .atomic)
 
-        guard case let .loaded(migrated, recovered, sourceVersion) = LibraryCatalogFile.prepareForUse(
+        guard case let .loaded(migrated, recovered, sourceVersion, _) = LibraryCatalogFile.prepareForUse(
             at: catalogURL,
             defectDirectory: defects,
             backupDirectory: backups
@@ -1557,7 +1571,7 @@ final class LibraryCatalogTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: LibraryCatalogFile.backupURL(for: catalogURL)), legacyData)
         let generationCount = try backupGenerationCount(in: backups)
 
-        guard case let .loaded(reopened, recoveredAgain, migratedAgain) = LibraryCatalogFile.prepareForUse(
+        guard case let .loaded(reopened, recoveredAgain, migratedAgain, _) = LibraryCatalogFile.prepareForUse(
             at: catalogURL,
             defectDirectory: defects,
             backupDirectory: backups
@@ -1625,7 +1639,7 @@ final class LibraryCatalogTests: XCTestCase {
         ))
         try legacyData.write(to: catalogURL, options: .atomic)
 
-        guard case let .loaded(migrated, recovered, sourceVersion) = LibraryCatalogFile.prepareForUse(
+        guard case let .loaded(migrated, recovered, sourceVersion, _) = LibraryCatalogFile.prepareForUse(
             at: catalogURL,
             defectDirectory: defects,
             backupDirectory: backups
@@ -1658,7 +1672,7 @@ final class LibraryCatalogTests: XCTestCase {
 
         let migratedPrimaryData = try Data(contentsOf: catalogURL)
         let generationCount = try backupGenerationCount(in: backups)
-        guard case let .loaded(reopened, recoveredAgain, migratedAgain) =
+        guard case let .loaded(reopened, recoveredAgain, migratedAgain, _) =
                 LibraryCatalogFile.prepareForUse(
                     at: catalogURL,
                     defectDirectory: defects,
@@ -1712,7 +1726,7 @@ final class LibraryCatalogTests: XCTestCase {
         ))
         try legacyData.write(to: catalogURL, options: .atomic)
 
-        guard case let .loaded(migrated, recovered, sourceVersion) =
+        guard case let .loaded(migrated, recovered, sourceVersion, _) =
                 LibraryCatalogFile.prepareForUse(
                     at: catalogURL,
                     defectDirectory: defects,
@@ -1733,7 +1747,7 @@ final class LibraryCatalogTests: XCTestCase {
 
         let migratedPrimaryData = try Data(contentsOf: catalogURL)
         let generationCount = try backupGenerationCount(in: backups)
-        guard case let .loaded(_, recoveredAgain, migratedAgain) =
+        guard case let .loaded(_, recoveredAgain, migratedAgain, _) =
                 LibraryCatalogFile.prepareForUse(
                     at: catalogURL,
                     defectDirectory: defects,

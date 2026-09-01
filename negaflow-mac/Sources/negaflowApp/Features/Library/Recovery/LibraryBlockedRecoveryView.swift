@@ -9,6 +9,8 @@ struct LibraryBlockedRecoveryView: View {
     @State private var isWorking = false
     @State private var showRestoreConfirmation = false
     @State private var showRestoreError = false
+    @State private var showStartFreshConfirmation = false
+    @State private var showStartFreshError = false
     @State private var ambiguousDeleteTransactionID: UUID?
     @State private var showAmbiguousDeleteConfirmation = false
     @State private var showAmbiguousRecoveryError = false
@@ -24,8 +26,10 @@ struct LibraryBlockedRecoveryView: View {
                 retry: { Task { await retryOpen() } },
                 reveal: { model.revealLibraryCatalogInFinder() },
                 copyDiagnostics: {
-                    model.copyLibraryRecoveryDiagnostics(generations: generations)
-                    copiedDiagnostics = true
+                    Task {
+                        await model.copyLibraryRecoveryDiagnostics(generations: generations)
+                        copiedDiagnostics = true
+                    }
                 }
             )
 
@@ -76,13 +80,26 @@ struct LibraryBlockedRecoveryView: View {
             }
 
             HStack {
+                Button(localized(.startFresh)) {
+                    showStartFreshConfirmation = true
+                }
+                .accessibilityIdentifier("negaflow.recovery.startfresh")
+                .disabled(isWorking)
+
                 Spacer()
+
+                if !canRestoreSelected {
+                    Text(localized(.selectBackupHint))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Button(model.text(AppLocalizedPhrase.libraryBackupRestoreSelected)) {
                     showRestoreConfirmation = true
                 }
                 .accessibilityIdentifier("negaflow.recovery.restore")
                 .keyboardShortcut(.defaultAction)
                 .disabled(!canRestoreSelected || isWorking)
+                .help(canRestoreSelected ? "" : localized(.selectBackupHint))
             }
         }
         .padding(24)
@@ -129,6 +146,25 @@ struct LibraryBlockedRecoveryView: View {
         ) {
             Button(model.text(AppLocalizedPhrase.done), role: .cancel) {}
         }
+        .alert(
+            localized(.startFreshConfirmationTitle),
+            isPresented: $showStartFreshConfirmation
+        ) {
+            Button(model.text(AppLocalizedPhrase.cancel), role: .cancel) {}
+            Button(localized(.startFresh)) {
+                Task { await startFresh() }
+            }
+            .accessibilityIdentifier("negaflow.recovery.startfresh.confirm")
+        } message: {
+            Text(localized(.startFreshConfirmationMessage))
+        }
+        .alert(localized(.startFreshFailed), isPresented: $showStartFreshError) {
+            Button(model.text(AppLocalizedPhrase.done), role: .cancel) {}
+        }
+    }
+
+    private func localized(_ key: LibraryRecoveryLocalizedText) -> String {
+        AppLocalization.libraryRecoveryText(key, language: model.appLanguage)
     }
 
     private var ambiguousExportRecoverySection: some View {
@@ -254,6 +290,17 @@ struct LibraryBlockedRecoveryView: View {
             }
         } catch {
             showRestoreError = true
+        }
+    }
+
+    @MainActor
+    private func startFresh() async {
+        isWorking = true
+        defer { isWorking = false }
+        guard await model.startFreshLibraryFromRecovery() else {
+            showStartFreshError = true
+            await reload()
+            return
         }
     }
 

@@ -579,6 +579,7 @@ enum AppLocalizedPhrase: CaseIterable {
     case diskLibraryBackupFailedStatus
     case libraryRestoredFormat
     case libraryRecoveredFromBackupFormat
+    case libraryCatalogRepairedFormat
     case libraryCatalogMigratedFormat
     case libraryCatalogBlockedStatus
     case libraryCatalogLockedStatus

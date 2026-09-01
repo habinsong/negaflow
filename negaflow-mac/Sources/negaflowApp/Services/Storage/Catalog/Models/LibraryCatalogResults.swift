@@ -26,9 +26,23 @@ enum LibraryCatalogOpenResult {
     case loaded(
         catalog: LibraryCatalog,
         recoveredFromBackup: Bool,
-        migratedFromVersion: Int?
+        migratedFromVersion: Int?,
+        repairReport: LibraryCatalogRepairReport?
     )
     case blocked(LibraryCatalogOpenFailure)
+
+    static func loaded(
+        catalog: LibraryCatalog,
+        recoveredFromBackup: Bool,
+        migratedFromVersion: Int?
+    ) -> LibraryCatalogOpenResult {
+        .loaded(
+            catalog: catalog,
+            recoveredFromBackup: recoveredFromBackup,
+            migratedFromVersion: migratedFromVersion,
+            repairReport: nil
+        )
+    }
 }
 
 enum LibraryCatalogCommitError: Error, Equatable {

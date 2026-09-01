@@ -107,6 +107,9 @@ enum LibraryCatalogSQLiteMigration {
                 try fileManager.moveItem(at: legacyURL, to: preservedURL)
             }
             try fileManager.moveItem(at: temporaryURL, to: sqliteURL)
+            // 마커는 여기서 수명이 끝난다. 남겨 두면 나중에 sqlite 가 사라졌을 때 "중단된
+            // 마이그레이션" 으로 오인돼 라이브러리가 영구히 열리지 않는다.
+            try? fileManager.removeItem(at: markerURL)
         } catch {
             if !fileManager.fileExists(atPath: legacyURL.path),
                fileManager.fileExists(atPath: preservedURL.path) {
@@ -141,6 +144,14 @@ enum LibraryCatalogSQLiteMigration {
         let temporaryURL = parent.appendingPathComponent(marker.temporaryDatabaseFileName)
         let preservedURL = parent.appendingPathComponent(marker.preservedLegacyFileName)
         let legacyURL = legacyJSONURL(for: sqliteURL)
+
+        // 옮기던 임시 DB 가 없으면 중단된 마이그레이션이 아니다 — 예전에 끝난 마이그레이션의
+        // 마커만 남은 것이다. 마커를 걷어내고 일반 경로(백업 복구/새 라이브러리)에 맡긴다.
+        guard fileManager.fileExists(atPath: temporaryURL.path) else {
+            try? fileManager.removeItem(at: markerURL)
+            return nil
+        }
+
         let sourceURL: URL
         if fileManager.fileExists(atPath: preservedURL.path) {
             sourceURL = preservedURL
@@ -165,6 +176,7 @@ enum LibraryCatalogSQLiteMigration {
                 try fileManager.moveItem(at: legacyURL, to: preservedURL)
             }
             try fileManager.moveItem(at: temporaryURL, to: sqliteURL)
+            try? fileManager.removeItem(at: markerURL)
         } catch {
             return .blocked(.writeFailed)
         }
@@ -175,6 +187,34 @@ enum LibraryCatalogSQLiteMigration {
                 ? sourceVersion
                 : nil
         )
+    }
+
+    /// sqlite 로 옮기면서 옆에 남겨 둔 예전 JSON 원본들. 최근 것부터 돌려준다.
+    static func preservedLegacyURLs(
+        besides sqliteURL: URL,
+        fileManager: FileManager = .default
+    ) -> [URL] {
+        let parent = sqliteURL.deletingLastPathComponent()
+        guard let contents = try? fileManager.contentsOfDirectory(
+            at: parent,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: [.skipsHiddenFiles]
+        ) else { return [] }
+        return contents
+            .filter {
+                $0.lastPathComponent.hasPrefix("library.pre-sqlite-")
+                    && $0.pathExtension == "json"
+            }
+            .sorted { lhs, rhs in
+                let lhsDate = (try? lhs.resourceValues(forKeys: [.contentModificationDateKey]))?
+                    .contentModificationDate ?? .distantPast
+                let rhsDate = (try? rhs.resourceValues(forKeys: [.contentModificationDateKey]))?
+                    .contentModificationDate ?? .distantPast
+                if lhsDate == rhsDate {
+                    return lhs.lastPathComponent < rhs.lastPathComponent
+                }
+                return lhsDate > rhsDate
+            }
     }
 
     private static func legacyJSONURL(for sqliteURL: URL) -> URL {

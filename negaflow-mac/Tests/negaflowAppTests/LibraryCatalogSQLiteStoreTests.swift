@@ -229,7 +229,7 @@ final class LibraryCatalogSQLiteStoreTests: XCTestCase {
         )
         try XCTUnwrap(LibraryCatalogFile.encode(catalog)).write(to: jsonURL, options: .atomic)
 
-        guard case let .loaded(migrated, recovered, _) = LibraryCatalogFile.prepareForUse(
+        guard case let .loaded(migrated, recovered, _, _) = LibraryCatalogFile.prepareForUse(
             at: sqliteURL,
             defectDirectory: defects,
             backupDirectory: backups
@@ -243,7 +243,9 @@ final class LibraryCatalogSQLiteStoreTests: XCTestCase {
         )
         XCTAssertTrue(FileManager.default.fileExists(atPath: sqliteURL.path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: jsonURL.path))
-        XCTAssertTrue(FileManager.default.fileExists(
+        // 마이그레이션이 끝나면 마커는 사라져야 한다. 남겨 두면 나중에 sqlite 가 없어졌을 때
+        // "중단된 마이그레이션" 으로 오인돼 라이브러리가 영구히 열리지 않는다.
+        XCTAssertFalse(FileManager.default.fileExists(
             atPath: root.appendingPathComponent("library.sqlite-migration.json").path
         ))
         XCTAssertEqual(try LibraryBackupStore.generations(in: backups).count, 1)
@@ -253,7 +255,7 @@ final class LibraryCatalogSQLiteStoreTests: XCTestCase {
             1
         )
 
-        guard case let .loaded(reopened, _, _) = LibraryCatalogFile.prepareForUse(
+        guard case let .loaded(reopened, _, _, _) = LibraryCatalogFile.prepareForUse(
             at: sqliteURL,
             defectDirectory: defects,
             backupDirectory: backups
@@ -294,7 +296,7 @@ final class LibraryCatalogSQLiteStoreTests: XCTestCase {
             options: .atomic
         )
 
-        guard case let .loaded(recovered, recoveredFromBackup, _) =
+        guard case let .loaded(recovered, recoveredFromBackup, _, _) =
                 LibraryCatalogFile.prepareForUse(
                     at: sqliteURL,
                     defectDirectory: root.appendingPathComponent("Defects"),

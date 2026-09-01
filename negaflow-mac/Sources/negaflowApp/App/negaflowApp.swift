@@ -149,6 +149,8 @@ final class AppModel: ObservableObject {
     var libraryProcessLock: LibraryProcessLock?
     var libraryPersistenceEnabled = false
     var libraryCatalogBlockReason: LibraryCatalogOpenFailure?
+    /// 이번에 열면서 카탈로그를 되돌린 내역. 진단에만 쓰고 저장하지는 않는다.
+    var libraryCatalogRepairReport: LibraryCatalogRepairReport?
     @Published var ambiguousExportCommitTransactionIDs: [UUID] = []
     @Published var preservableExportCommitTransactionIDs: [UUID] = []
     @Published var libraryLifecycleState: LibraryLifecycleState = .idle

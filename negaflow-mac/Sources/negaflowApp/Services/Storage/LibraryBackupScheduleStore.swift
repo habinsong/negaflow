@@ -28,8 +28,10 @@ final class LibraryBackupScheduleStore: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        // 기본값은 "종료할 때". 수동이 기본이면 설정을 한 번도 열지 않은 사용자는 백업이
+        // 0 개인 채로 지내다가, 카탈로그가 어긋나는 순간 되돌릴 것이 하나도 없게 된다.
         schedule = defaults.string(forKey: Keys.schedule)
-            .flatMap(LibraryBackupSchedule.init(rawValue:)) ?? .manual
+            .flatMap(LibraryBackupSchedule.init(rawValue:)) ?? .onTermination
         lastAttemptAt = defaults.object(forKey: Keys.lastAttempt) as? Date
         lastSuccessAt = defaults.object(forKey: Keys.lastSuccess) as? Date
         if let data = defaults.data(forKey: Keys.lastDrill) {

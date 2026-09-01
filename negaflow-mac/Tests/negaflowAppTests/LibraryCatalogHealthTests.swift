@@ -407,7 +407,7 @@ final class LibraryCatalogHealthTests: XCTestCase {
         )
         try data.write(to: catalogURL, options: .atomic)
 
-        guard case let .loaded(_, recovered, migrated) = LibraryCatalogFile.prepareForUse(
+        guard case let .loaded(_, recovered, migrated, _) = LibraryCatalogFile.prepareForUse(
             at: catalogURL,
             defectDirectory: root.appendingPathComponent("defects"),
             backupDirectory: root.appendingPathComponent("Backups")
@@ -440,7 +440,7 @@ final class LibraryCatalogHealthTests: XCTestCase {
         )))
         try data.write(to: catalogURL, options: .atomic)
 
-        guard case let .loaded(catalog, recovered, migrated) =
+        guard case let .loaded(catalog, recovered, migrated, _) =
                 LibraryCatalogFile.prepareForUse(
                     at: catalogURL,
                     defectDirectory: root.appendingPathComponent("defects"),
@@ -482,7 +482,7 @@ final class LibraryCatalogHealthTests: XCTestCase {
         )
         try brokenData.write(to: catalogURL, options: .atomic)
 
-        guard case let .loaded(restored, recovered, _) = LibraryCatalogFile.prepareForUse(
+        guard case let .loaded(restored, recovered, _, _) = LibraryCatalogFile.prepareForUse(
             at: catalogURL,
             defectDirectory: defects,
             backupDirectory: backups

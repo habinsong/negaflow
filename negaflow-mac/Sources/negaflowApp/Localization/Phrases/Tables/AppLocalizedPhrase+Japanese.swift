@@ -29,6 +29,7 @@ extension AppLocalization {
         .diskLibraryBackupFailedStatus: "ライブラリのバックアップに失敗しました",
         .libraryRestoredFormat: "ライブラリを復元: %d枚",
         .libraryRecoveredFromBackupFormat: "バックアップからライブラリを復元: %d枚",
+        .libraryCatalogRepairedFormat: "不整合な記録 %1$d件を修復してライブラリを開きました: %2$d枚",
         .libraryCatalogMigratedFormat: "カタログバージョン%dからライブラリを更新: %d枚",
         .libraryCatalogBlockedStatus: "ライブラリカタログを安全に開けなかったため、変更せずに保持しました。",
         .libraryCatalogLockedStatus: "このライブラリは別のnegaflowプロセスですでに開かれています。",

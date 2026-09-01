@@ -29,6 +29,7 @@ extension LibraryBackupStore {
                 try fileManager.copyItem(at: defectDirectory, to: preservedDefects)
                 created.append(preservedDefects)
             }
+            LibraryCatalogSidelinedFiles.prune(in: parent, fileManager: fileManager)
         } catch {
             for url in created.reversed() {
                 try? fileManager.removeItem(at: url)

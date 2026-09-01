@@ -29,6 +29,7 @@ extension AppLocalization {
         .diskLibraryBackupFailedStatus: "Mediathekssicherung fehlgeschlagen",
         .libraryRestoredFormat: "Bibliothek wiederhergestellt: %d Fotos",
         .libraryRecoveredFromBackupFormat: "Mediathek aus Sicherung wiederhergestellt: %d Fotos",
+        .libraryCatalogRepairedFormat: "Mediathek nach Reparatur von %1$d inkonsistenten Einträgen geöffnet: %2$d Fotos",
         .libraryCatalogMigratedFormat: "Mediathek von Katalogversion %d aktualisiert: %d Fotos",
         .libraryCatalogBlockedStatus: "Der Mediathekskatalog konnte nicht sicher geöffnet werden und blieb unverändert.",
         .libraryCatalogLockedStatus: "Diese Mediathek ist bereits in einem anderen negaflow-Prozess geöffnet.",

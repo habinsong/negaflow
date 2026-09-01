@@ -29,6 +29,7 @@ extension AppLocalization {
             .diskLibraryBackupFailedStatus: "라이브러리 백업에 실패했습니다",
             .libraryRestoredFormat: "라이브러리 복원: 사진 %d장",
             .libraryRecoveredFromBackupFormat: "백업에서 라이브러리 복구: 사진 %d장",
+            .libraryCatalogRepairedFormat: "어긋난 기록 %1$d건을 되돌리고 라이브러리를 열었습니다: 사진 %2$d장",
             .libraryCatalogMigratedFormat: "카탈로그 버전 %d에서 라이브러리 업그레이드: 사진 %d장",
             .libraryCatalogBlockedStatus: "라이브러리 카탈로그를 안전하게 열 수 없어 변경하지 않았습니다.",
             .libraryCatalogLockedStatus: "이 라이브러리는 다른 negaflow 프로세스에서 이미 열려 있습니다.",

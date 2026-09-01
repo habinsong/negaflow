@@ -130,9 +130,11 @@ extension AppModel {
             if backupScheduleStore.schedule == .onTermination {
                 Task { [weak self] in
                     guard let self else { return }
-                    let backupSucceeded = await self.createLibraryBackupNow()
+                    // 카탈로그 커밋은 이미 승인됐다. 백업은 덤이라, 실패했다고 종료를 막으면
+                    // 사용자는 앱을 끌 수 없게 된다 — 실패는 알리고 종료는 진행한다.
+                    _ = await self.createLibraryBackupNow()
                     self.removeOwnedPreviewFilesForTermination()
-                    completion(backupSucceeded)
+                    completion(true)
                 }
                 return
             }

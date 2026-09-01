@@ -18,15 +18,32 @@ struct LibraryRecoveryBackupList: View {
                 systemImage: "exclamationmark.triangle"
             )
         } else if generations.isEmpty {
-            ContentUnavailableView(
-                model.text(AppLocalizedPhrase.libraryBackupEmpty),
-                systemImage: "archivebox"
-            )
+            ContentUnavailableView {
+                Label(
+                    model.text(AppLocalizedPhrase.libraryBackupEmpty),
+                    systemImage: "archivebox"
+                )
+            } description: {
+                Text(
+                    AppLocalization.libraryRecoveryText(
+                        .noBackupsHint,
+                        language: model.appLanguage
+                    )
+                )
+            }
         } else {
             List(generations, selection: $selectedID) { generation in
                 LibraryBackupGenerationRow(generation: generation)
                     .tag(generation.id)
                     .disabled(!generation.state.isRestorable)
+                    .help(
+                        generation.state.isRestorable
+                            ? ""
+                            : AppLocalization.libraryRecoveryText(
+                                .unusableBackupHint,
+                                language: model.appLanguage
+                            )
+                    )
             }
         }
     }

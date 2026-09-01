@@ -115,24 +115,33 @@ extension LibraryCatalog {
         frames = try container.decode([LibraryFrameRecord].self, forKey: .frames)
         rolls = try container.decode([LibraryRoll].self, forKey: .rolls)
         activeRollID = try container.decodeIfPresent(UUID.self, forKey: .activeRollID)
-        scanSessions = try container.decode([ScanSession].self, forKey: .scanSessions)
-        scanRollAssignments = try container.decode(
-            [LibraryScanRollAssignment].self,
+        // 아래 목록은 키가 없으면 여전히 실패하지만(잘린 카탈로그를 빈 목록으로 오해하지
+        // 않기 위해), 원소 하나가 이 앱이 모르는 형식이면 그 원소만 버리고 연다. 부수 기록
+        // 한 줄 때문에 사진 전체를 못 여는 일은 없어야 한다 — 남는 고아 참조는 수리가 정리한다.
+        scanSessions = try container.decodeSkippingUnreadableElements(
+            ScanSession.self,
+            forKey: .scanSessions
+        )
+        scanRollAssignments = try container.decodeSkippingUnreadableElements(
+            LibraryScanRollAssignment.self,
             forKey: .scanRollAssignments
         )
-        manualCollections = try container.decode(
-            [LibraryManualCollection].self,
+        manualCollections = try container.decodeSkippingUnreadableElements(
+            LibraryManualCollection.self,
             forKey: .manualCollections
         )
-        smartCollections = try container.decode(
-            [LibrarySmartCollection].self,
+        smartCollections = try container.decodeSkippingUnreadableElements(
+            LibrarySmartCollection.self,
             forKey: .smartCollections
         )
-        savedSearches = try container.decode(
-            [LibrarySavedSearch].self,
+        savedSearches = try container.decodeSkippingUnreadableElements(
+            LibrarySavedSearch.self,
             forKey: .savedSearches
         )
-        stacks = try container.decode([LibraryPhotoStack].self, forKey: .stacks)
+        stacks = try container.decodeSkippingUnreadableElements(
+            LibraryPhotoStack.self,
+            forKey: .stacks
+        )
         // 나중에 추가된 선택 항목이라 예전 카탈로그에는 없다 — 없으면 nil 이면 된다.
         lastActiveFrameID = try container.decodeIfPresent(UUID.self, forKey: .lastActiveFrameID)
     }

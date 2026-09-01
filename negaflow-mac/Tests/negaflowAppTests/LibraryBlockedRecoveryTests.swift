@@ -64,7 +64,7 @@ final class LibraryBlockedRecoveryTests: XCTestCase {
             generations: [generation]
         ).text
 
-        XCTAssertTrue(diagnostics.hasPrefix("negaflow.library-recovery.v1\n"))
+        XCTAssertTrue(diagnostics.hasPrefix("negaflow.library-recovery.v2\n"))
         XCTAssertTrue(diagnostics.contains("failure=corrupt"))
         XCTAssertTrue(diagnostics.contains("backup[0].state=checksummed"))
         XCTAssertTrue(diagnostics.contains("backup[0].frames=12"))
@@ -72,13 +72,42 @@ final class LibraryBlockedRecoveryTests: XCTestCase {
         XCTAssertFalse(diagnostics.contains("/Users/"))
     }
 
+    func testStartingFreshEscapesABlockedLibraryAndKeepsTheOldCatalog() async throws {
+        let paths = try makePaths()
+        defer { try? FileManager.default.removeItem(at: paths.root) }
+        let corrupt = Data("not-json-and-no-backups".utf8)
+        try corrupt.write(to: paths.catalog, options: .atomic)
+        let model = makeModel(paths)
+
+        await model.restoreLibraryOnLaunch()
+        XCTAssertEqual(model.libraryLifecycleState, .blocked)
+        // 백업이 하나도 없어서 복원으로는 빠져나올 수 없는 상태다.
+        let generations = try await model.libraryBackupGenerations()
+        XCTAssertTrue(generations.isEmpty)
+
+        let started = await model.startFreshLibraryFromRecovery()
+
+        XCTAssertTrue(started)
+        XCTAssertEqual(model.libraryLifecycleState, .ready)
+        XCTAssertNil(model.libraryCatalogBlockReason)
+        XCTAssertTrue(model.libraryPersistenceEnabled)
+        XCTAssertTrue(model.allowsLibraryMutation)
+
+        // 열지 못한 카탈로그는 지우지 않고 옆에 보관한다.
+        let preserved = try FileManager.default
+            .contentsOfDirectory(atPath: paths.root.path)
+            .filter { $0.hasPrefix("library.corrupt-") }
+        XCTAssertEqual(preserved.count, 1)
+        let preservedURL = paths.root.appendingPathComponent(try XCTUnwrap(preserved.first))
+        XCTAssertEqual(try Data(contentsOf: preservedURL), corrupt)
+    }
+
     func testRecoveryActionsAreLocalizedInEverySupportedLanguage() {
         let languages: [AppLanguage] = [
             .english, .korean, .japanese, .simplifiedChinese, .french, .german,
         ]
-        let keys: [LibraryRecoveryLocalizedText] = [
-            .title, .retry, .revealInFinder, .copyDiagnostics,
-        ]
+        // allCases 로 도는 이유: 키를 새로 만들고 번역을 빼먹으면 여기서 걸려야 한다.
+        let keys = LibraryRecoveryLocalizedText.allCases
         for language in languages {
             for key in keys {
                 XCTAssertFalse(
