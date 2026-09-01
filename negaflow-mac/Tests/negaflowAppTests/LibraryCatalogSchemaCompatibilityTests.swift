@@ -121,6 +121,58 @@ final class LibraryCatalogSchemaCompatibilityTests: XCTestCase {
         }
     }
 
+    func testUnknownFieldValueLosesThatValueNotThePhoto() throws {
+        let records = [makeRecord(index: 1), makeRecord(index: 2)]
+        let encoded = try XCTUnwrap(LibraryCatalogFile.encode(makeCatalog(records)))
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        var frames = try XCTUnwrap(object["frames"] as? [[String: Any]])
+
+        // 뒤에 나온 빌드가 쓴 값, 형식이 어긋난 값, 낡은 이력 한 줄이 섞인 사진.
+        frames[0]["pickState"] = "somethingThisBuildDoesNotKnow"
+        frames[0]["customDisplayName"] = 42
+        frames[0]["scannedAt"] = "not-a-date"
+        frames[0]["developHistory"] = [["unreadable": true]]
+        object["frames"] = frames
+        let patched = try JSONSerialization.data(withJSONObject: object)
+
+        guard case let .loaded(decoded, _) = LibraryCatalogFile.decodeResult(patched) else {
+            return XCTFail("one unknown field value must not cost the whole library")
+        }
+        // 사진은 두 장 다 남는다. 건너뛰면 다음 저장에서 카탈로그에서 사라지기 때문이다.
+        XCTAssertEqual(decoded.frames.count, 2)
+        XCTAssertEqual(decoded.frames.map(\.id), records.map(\.id))
+
+        let repaired = decoded.frames[0]
+        XCTAssertEqual(repaired.pickState, .unflagged)
+        XCTAssertNil(repaired.customDisplayName)
+        XCTAssertEqual(repaired.scannedAt, .distantPast)
+        XCTAssertTrue(repaired.developHistory.isEmpty)
+        // 사진의 정체를 이루는 값은 되돌리지 않고 그대로 읽는다.
+        XCTAssertEqual(repaired.rawScanPath, records[0].rawScanPath)
+        XCTAssertEqual(repaired.filmType, records[0].filmType)
+    }
+
+    func testUnknownFilmTypeStillFailsClosed() throws {
+        let records = [makeRecord(index: 1)]
+        let encoded = try XCTUnwrap(LibraryCatalogFile.encode(makeCatalog(records)))
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        var frames = try XCTUnwrap(object["frames"] as? [[String: Any]])
+
+        // 필름 종류는 사진이 어떻게 현상되는지를 정한다. 임의로 되돌리면 사진을 살리는 것이
+        // 아니라 다른 사진으로 바꾸는 것이라, 여기서는 여전히 닫아야 한다.
+        frames[0]["filmType"] = "unknownProcess"
+        object["frames"] = frames
+        let patched = try JSONSerialization.data(withJSONObject: object)
+
+        guard case .invalid = LibraryCatalogFile.decodeResult(patched) else {
+            return XCTFail("a value that decides how the photo develops must fail closed")
+        }
+    }
+
     // MARK: 픽스처
 
     private func makeRecord(index: Int) -> LibraryFrameRecord {

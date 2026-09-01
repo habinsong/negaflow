@@ -50,18 +50,18 @@ struct LibraryFrameRecordV4: Decodable {
     var sourceMetadata: SourceMetadataSnapshot?
     var scanSessionID: UUID?
     var scanJobID: UUID?
-    var scannedAt: Date
+    var scannedAt: LenientScanDate
     var filmType: FilmType
     var presetID: String?
     var params: DevelopParameters
     var imageTransform: ImageTransform
     var baseRGB: [Double]?
     var rating: Int
-    var pickState: FramePickState
-    var customDisplayName: String?
+    var pickState: LenientPickState
+    var customDisplayName: LenientDisplayName?
     var hasDevelopedOnce: Bool
-    var developHistory: [DevelopHistoryEntry]
-    var developSnapshots: [DevelopSnapshot]
+    var developHistory: LenientArray<DevelopHistoryEntry>
+    var developSnapshots: LenientArray<DevelopSnapshot>
     var sourceFrameID: UUID?
     var sourceFrameDisplayName: String?
     var virtualCopyNumber: Int?
@@ -86,18 +86,18 @@ struct LibraryFrameRecordV4: Decodable {
             sourceMetadata: sourceMetadata,
             scanSessionID: scanSessionID,
             scanJobID: scanJobID,
-            scannedAt: scannedAt,
+            scannedAt: scannedAt.value,
             filmType: filmType,
             presetID: presetID,
             params: params,
             imageTransform: imageTransform,
             baseRGB: baseRGB,
             rating: rating,
-            pickState: pickState,
-            customDisplayName: customDisplayName,
+            pickState: pickState.value,
+            customDisplayName: customDisplayName?.value,
             hasDevelopedOnce: hasDevelopedOnce,
-            developHistory: developHistory,
-            developSnapshots: developSnapshots,
+            developHistory: developHistory.values,
+            developSnapshots: developSnapshots.values,
             sourceFrameID: sourceFrameID,
             sourceFrameDisplayName: sourceFrameDisplayName,
             virtualCopyNumber: virtualCopyNumber,
