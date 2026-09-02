@@ -46,6 +46,9 @@ struct LibRawDecodeResult final {
     LibRawDecodeStatus status{LibRawDecodeStatus::unavailable};
     // LibRaw 가 돌려준 오류 코드입니다. 0 이면 LibRaw 를 부르기 전에 끝난 것입니다.
     int native_error_code{0};
+    // 요청한 프리뷰 상자에 맞추느라 이미 줄여서 돌려주었는지입니다. 호출부가 뒤에서
+    // 한 번 더 줄이지 않도록 알립니다 - WIC 경로의 `reduced_for_preview` 와 같은 뜻입니다.
+    bool reduced_for_preview{false};
     DecodedImage image{};
 };
 

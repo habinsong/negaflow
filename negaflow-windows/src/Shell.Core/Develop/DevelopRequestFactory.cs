@@ -8,10 +8,15 @@ public enum DevelopRequestRefusal
 {
     None,
 
-    /// <summary>Manual 모드에 저장된 Dmin 이 없습니다.</summary>
-    MissingManualBase,
-
-    MissingFilmStock,
+    /// <summary>고른 사진이 없습니다.</summary>
+    /// <remarks>
+    /// 예전에는 이 자리에 <c>MissingManualBase</c>(수동인데 Dmin 이 없음)와
+    /// <c>MissingFilmStock</c>(preset 인데 필름이 없음)이 있었습니다. 두 상태 모두 macOS 는
+    /// 거절하지 않고 자동 추정으로 현상하므로 (<c>resolveFilmBase</c>,
+    /// <c>applyNegativeFilmPipeline</c>) 사유 자체가 없어졌습니다. 남아 있던 유일한 쓰임은
+    /// "고른 사진이 없다" 를 이 값으로 알리던 것이라, 그 뜻을 이름에 담습니다.
+    /// </remarks>
+    NoFrameSelected,
 
     UnsupportedBaseEstimationMode,
 
@@ -64,7 +69,7 @@ public readonly record struct DevelopRequestResult(
 /// 아는 유일한 곳이며, 그래서 <c>Shell.Core</c> 가 Interop 과 같은 아키텍처에 묶여 있습니다.
 /// XAML 을 참조하지 않으므로 UI 없이 그대로 시험할 수 있습니다.
 /// </summary>
-public static class DevelopRequestFactory
+public static partial class DevelopRequestFactory
 {
     /// <summary>
     /// 결함 편집이 걸린 사진을 현상할 때 **원본 파일 내용을 SHA-256 으로 검증**할지입니다.
@@ -153,15 +158,29 @@ public static class DevelopRequestFactory
                 baseMode = DevelopBaseEstimationMode.Manual;
                 manualBase = selectedManualBase;
                 break;
+            // 수동인데 고른 값이 없으면 자동으로 갑니다. macOS
+            // `ChromabaseEngine+NegativePipeline.resolveFilmBase` 가 그렇습니다:
+            //     if let manual = params.manualBaseRGB, params.baseEstimationMode == .manual {…}
+            // **값이 있을 때만** 수동을 쓰고, 없으면 그대로 자동 추정으로 흘러갑니다.
+            // `resetManualBase` 가 값을 지운 직후가 정확히 이 상태입니다.
             case BaseEstimationMode.Manual:
-                return DevelopRequestResult.Failure(DevelopRequestRefusal.MissingManualBase);
+                baseMode = DevelopBaseEstimationMode.Auto;
+                break;
             case BaseEstimationMode.Preset when !string.IsNullOrWhiteSpace(frame.Base.FilmStockDminId):
                 baseMode = DevelopBaseEstimationMode.Preset;
                 filmStockDminId = frame.Base.FilmStockDminId;
                 lightSourceProfileId = frame.Base.LightSourceProfileId;
                 break;
+            // 필름을 고르지 않은 preset 도 같습니다. macOS
+            // `ChromabaseEngine+NegativePipeline.applyNegativeFilmPipeline`:
+            //     let preset: FilmStockDmin? = (params.baseEstimationMode == .preset)
+            //         ? params.filmStockDminID.flatMap { FilmStockDminRegistry.find($0) } : nil
+            // `filmStockDminID` 가 없으면 `preset` 자체가 nil 이 되어 `resolveFilmBase` 는
+            // 자동 분기로, 반전도 `applySceneRanged`(자동 경로)로 갑니다. 광원 프로파일은
+            // preset 분기에서만 쓰이므로 여기서도 붙이지 않습니다.
             case BaseEstimationMode.Preset:
-                return DevelopRequestResult.Failure(DevelopRequestRefusal.MissingFilmStock);
+                baseMode = DevelopBaseEstimationMode.Auto;
+                break;
             default:
                 return DevelopRequestResult.Failure(
                     DevelopRequestRefusal.UnsupportedBaseEstimationMode);
@@ -452,202 +471,10 @@ public static class DevelopRequestFactory
         });
     }
 
-    private static NegativeFilmType MapFilmType(FilmType filmType) => filmType switch
-    {
-        FilmType.ColorNegative or FilmType.ColorPositive => NegativeFilmType.Color,
-        FilmType.BlackAndWhiteNegative or FilmType.BlackAndWhitePositive =>
-            NegativeFilmType.BlackAndWhite,
-        _ => throw new ArgumentOutOfRangeException(nameof(filmType)),
-    };
-
-    private static DevelopImageTransform MapImageTransform(ImageTransformRecipe transform) => new()
-    {
-        Rotation = transform.Rotation switch
-        {
-            ImageRotation.Degrees0 => DevelopImageRotation.Degrees0,
-            ImageRotation.Degrees90 => DevelopImageRotation.Degrees90,
-            ImageRotation.Degrees180 => DevelopImageRotation.Degrees180,
-            ImageRotation.Degrees270 => DevelopImageRotation.Degrees270,
-            _ => throw new ArgumentOutOfRangeException(nameof(transform)),
-        },
-        FlipHorizontal = transform.FlipHorizontal,
-        FlipVertical = transform.FlipVertical,
-        Crop = transform.Crop is { } crop
-            ? new DevelopCropRect(crop.X, crop.Y, crop.Width, crop.Height)
-            : null,
-        StraightenAngle = transform.StraightenAngle,
-    };
-
-    private static FilmScanDenoiseFilmProfile MapNoiseReductionFilmProfile(FilmType filmType) =>
-        filmType switch
-        {
-            FilmType.ColorNegative => FilmScanDenoiseFilmProfile.ColorNegative,
-            FilmType.ColorPositive => FilmScanDenoiseFilmProfile.ColorPositive,
-            FilmType.BlackAndWhiteNegative => FilmScanDenoiseFilmProfile.BlackAndWhiteNegative,
-            FilmType.BlackAndWhitePositive => FilmScanDenoiseFilmProfile.BlackAndWhitePositive,
-            _ => throw new ArgumentOutOfRangeException(nameof(filmType)),
-        };
-
-    private static DevelopColorGradeRegion MapColorGradeRegion(ColorGradeRegionRecipe region) =>
-        new((float)region.Hue, (float)region.Saturation, (float)region.Luminance);
-
-    private static DevelopLocalDodgeBurnAdjustment MapLocalDodgeBurn(
-        LocalDodgeBurnAdjustment adjustment) => new()
-    {
-        Mode = adjustment.Mode == LocalDodgeBurnMode.Dodge
-            ? DevelopLocalDodgeBurnMode.Dodge
-            : DevelopLocalDodgeBurnMode.Burn,
-        Amount = adjustment.Amount,
-        IsEnabled = adjustment.IsEnabled,
-        Mask = new DevelopLocalDodgeBurnMask
-        {
-            Kind = adjustment.Mask.Kind switch
-            {
-                LocalDodgeBurnMaskKind.Brush => DevelopLocalDodgeBurnMaskKind.Brush,
-                LocalDodgeBurnMaskKind.Radial => DevelopLocalDodgeBurnMaskKind.Radial,
-                LocalDodgeBurnMaskKind.Linear => DevelopLocalDodgeBurnMaskKind.Linear,
-                LocalDodgeBurnMaskKind.Polygon => DevelopLocalDodgeBurnMaskKind.Polygon,
-                _ => throw new ArgumentOutOfRangeException(nameof(adjustment)),
-            },
-            Strokes = adjustment.Mask.Strokes.Select(stroke =>
-                new DevelopLocalDodgeBurnStroke
-                {
-                    Points = stroke.Points.Select(MapLocalDodgeBurnPoint).ToArray(),
-                    Thickness = stroke.Thickness,
-                    Feather = stroke.Feather,
-                }).ToArray(),
-            Center = MapLocalDodgeBurnPoint(adjustment.Mask.Center),
-            Radius = adjustment.Mask.Radius,
-            Feather = adjustment.Mask.Feather,
-            Start = MapLocalDodgeBurnPoint(adjustment.Mask.Start),
-            End = MapLocalDodgeBurnPoint(adjustment.Mask.End),
-            Points = adjustment.Mask.Points.Select(MapLocalDodgeBurnPoint).ToArray(),
-        },
-    };
-
-    private static DevelopLocalDodgeBurnPoint MapLocalDodgeBurnPoint(
-        LocalDodgeBurnPoint point) => new(point.X, point.Y);
-
-    private static FilmEmulationProfile MapFilmEmulation(FilmEmulation emulation) =>
-        emulation switch
-        {
-            FilmEmulation.None => FilmEmulationProfile.None,
-            FilmEmulation.EktachromeE100 => FilmEmulationProfile.EktachromeE100,
-            FilmEmulation.Provia100F => FilmEmulationProfile.Provia100F,
-            FilmEmulation.Velvia50 => FilmEmulationProfile.Velvia50,
-            FilmEmulation.Portra160 => FilmEmulationProfile.Portra160,
-            FilmEmulation.Portra400 => FilmEmulationProfile.Portra400,
-            FilmEmulation.Portra800 => FilmEmulationProfile.Portra800,
-            FilmEmulation.Ektar100 => FilmEmulationProfile.Ektar100,
-            FilmEmulation.Ultramax400 => FilmEmulationProfile.Ultramax400,
-            FilmEmulation.ColorPlus200 => FilmEmulationProfile.ColorPlus200,
-            FilmEmulation.FujicolorC200 => FilmEmulationProfile.FujicolorC200,
-            FilmEmulation.Pro400H => FilmEmulationProfile.Pro400H,
-            FilmEmulation.TriX400 => FilmEmulationProfile.TriX400,
-            FilmEmulation.Hp5Plus => FilmEmulationProfile.Hp5Plus,
-            FilmEmulation.Fp4Plus => FilmEmulationProfile.Fp4Plus,
-            FilmEmulation.Delta100 => FilmEmulationProfile.Delta100,
-            FilmEmulation.Delta400 => FilmEmulationProfile.Delta400,
-            FilmEmulation.Delta3200 => FilmEmulationProfile.Delta3200,
-            FilmEmulation.TMax100 => FilmEmulationProfile.TMax100,
-            FilmEmulation.TMax400 => FilmEmulationProfile.TMax400,
-            FilmEmulation.TMaxP3200 => FilmEmulationProfile.TMaxP3200,
-            FilmEmulation.Kentmere400 => FilmEmulationProfile.Kentmere400,
-            FilmEmulation.OrthoPlus => FilmEmulationProfile.OrthoPlus,
-            FilmEmulation.Sfx200 => FilmEmulationProfile.Sfx200,
-            FilmEmulation.RolleiIR => FilmEmulationProfile.RolleiIR,
-            FilmEmulation.Scala200X => FilmEmulationProfile.Scala200X,
-            FilmEmulation.RolleiSuperpan => FilmEmulationProfile.RolleiSuperpan,
-            FilmEmulation.Velvia100 => FilmEmulationProfile.Velvia100,
-            FilmEmulation.E100VS => FilmEmulationProfile.E100VS,
-            FilmEmulation.Astia100F => FilmEmulationProfile.Astia100F,
-            FilmEmulation.Kodachrome64 => FilmEmulationProfile.Kodachrome64,
-            FilmEmulation.Gold200 => FilmEmulationProfile.Gold200,
-            FilmEmulation.ProImage100 => FilmEmulationProfile.ProImage100,
-            FilmEmulation.Superia400 => FilmEmulationProfile.Superia400,
-            FilmEmulation.SuperiaPremium400 =>
-                FilmEmulationProfile.SuperiaPremium400,
-            FilmEmulation.Superia200 => FilmEmulationProfile.Superia200,
-            FilmEmulation.Reala100 => FilmEmulationProfile.Reala100,
-            FilmEmulation.Industrial100 => FilmEmulationProfile.Industrial100,
-            FilmEmulation.LomoCn800 => FilmEmulationProfile.LomoCn800,
-            FilmEmulation.Vision3_500T => FilmEmulationProfile.Vision3_500T,
-            FilmEmulation.Vision3_250D => FilmEmulationProfile.Vision3_250D,
-            FilmEmulation.Vision3_50D => FilmEmulationProfile.Vision3_50D,
-            FilmEmulation.Vision3_200T => FilmEmulationProfile.Vision3_200T,
-            _ => throw new ArgumentOutOfRangeException(nameof(emulation)),
-        };
 
     private static DevelopRequestResult Succeed(
         bool droppedStaleDefectEdits,
         DevelopExportRequest request) =>
         DevelopRequestResult.Success(request, droppedStaleDefectEdits);
 
-    /// <summary>
-    /// 결함 편집을 기록할 때의 바이트 수와 지금 파일이 같은지입니다.
-    /// </summary>
-    /// <remarks>
-    /// 크기만 봅니다. 내용 해시는 렌더마다 원본을 통째로 다시 읽어야 하고(frame_1 104MB 에서
-    /// 슬라이더 틱당 약 140ms), 파일이 바뀌면 크기가 먼저 달라집니다. 읽지 못하면
-    /// <b>같다고 봅니다</b> — 못 읽는 것을 근거로 편집을 내려놓으면, 잠깐 잠긴 파일 때문에
-    /// 사용자의 편집이 사라진 것처럼 보입니다.
-    /// </remarks>
-    private static bool SourceStillMatches(string sourcePath, ulong recordedByteCount)
-    {
-        try
-        {
-            return new FileInfo(sourcePath) is { Exists: true } info
-                ? (ulong)info.Length == recordedByteCount
-                : true;
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException
-            or ArgumentException or NotSupportedException or PathTooLongException)
-        {
-            return true;
-        }
-    }
-
-    /// <summary>지금 파일의 바이트 수입니다. 못 읽으면 <see langword="null"/> 입니다.</summary>
-    private static ulong? CurrentSourceByteCount(string sourcePath)
-    {
-        try
-        {
-            return new FileInfo(sourcePath) is { Exists: true } info && info.Length > 0
-                ? (ulong)info.Length
-                : null;
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException
-            or ArgumentException or NotSupportedException or PathTooLongException)
-        {
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// 원본의 <b>화소 격자</b>가 가져올 때와 같은지입니다. 결함 마스크는 정규화 좌표로
-    /// 살아 있으므로, 가로·세로가 그대로면 같은 화소에 얹힙니다.
-    /// </summary>
-    /// <remarks>
-    /// 파일을 열지만 <b>바이트 수가 어긋난 그 한 번</b>만 옵니다 — 크기만 읽는 프로브라
-    /// 화소를 만들지 않습니다. 기록된 치수가 없으면 견줄 것이 없으므로 같지 않다고 봅니다.
-    /// </remarks>
-    private static bool SourcePixelGridUnchanged(LibraryFrameSnapshot frame)
-    {
-        if (frame.SourceMetadata is not { PixelWidth: > 0U, PixelHeight: > 0U } recorded)
-        {
-            return false;
-        }
-        try
-        {
-            return LibrarySourceMetadataReader.Read(frame.SourcePath) is { } current &&
-                current.PixelWidth == recorded.PixelWidth &&
-                current.PixelHeight == recorded.PixelHeight;
-        }
-        catch (Exception)
-        {
-            // 크기를 못 읽으면 **같다고 보지 않습니다.** 확인할 수 없는 것을 근거로 마스크를
-            // 얹으면 이 검사가 있는 이유가 없어집니다.
-            return false;
-        }
-    }
 }

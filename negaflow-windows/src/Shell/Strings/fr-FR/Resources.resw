@@ -860,6 +860,19 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developExportRunning.Text" xml:space="preserve"><value>Développement…</value></data>
   <data name="developExportSaveFailed.Text" xml:space="preserve"><value>Impossible d'enregistrer le catalogue.</value></data>
   <data name="developExportFolderFailed.Text" xml:space="preserve"><value>Impossible d'utiliser ce dossier.</value></data>
+  <data name="developExportCompleteFormat.Text" xml:space="preserve"><value>Exporté %d×%d en %d ms</value></data>
+  <data name="developExportFailedFormat.Text" xml:space="preserve"><value>Échec de l’exportation : %@</value></data>
+  <data name="developExportEngineFailedFormat.Text" xml:space="preserve"><value>Le moteur a échoué : %@</value></data>
+  <data name="developExportBusy.Text" xml:space="preserve"><value>Un développement est déjà en cours.</value></data>
+  <data name="developExportNoResult.Text" xml:space="preserve"><value>Le développement n’a produit aucun résultat.</value></data>
+  <data name="developExportRefused.Text" xml:space="preserve"><value>La demande de développement a été refusée.</value></data>
+  <data name="developExportRefusedNoFrame.Text" xml:space="preserve"><value>Sélectionnez d’abord une photo.</value></data>
+  <data name="developExportRefusedBaseMode.Text" xml:space="preserve"><value>Ce mode de base de film n’est pas encore pris en charge par le moteur Windows.</value></data>
+  <data name="developExportRefusedDigitalSource.Text" xml:space="preserve"><value>Cette image est une source numérique rendue, qui ne peut pas encore être développée.</value></data>
+  <data name="developExportRefusedPositiveFilm.Text" xml:space="preserve"><value>Le développement de film positif n’est pas encore pris en charge par le moteur Windows.</value></data>
+  <data name="developExportRefusedDestination.Text" xml:space="preserve"><value>Choisissez un chemin complet pour l’exportation.</value></data>
+  <data name="developExportRefusedOutputFormat.Text" xml:space="preserve"><value>Ce format d’exportation n’est pas pris en charge.</value></data>
+  <data name="developExportRefusedStaleDefectSource.Text" xml:space="preserve"><value>La taille du fichier de numérisation a changé depuis l’enregistrement des retouches. Reliez l’image au scan d’origine ou effacez les retouches, puis exportez à nouveau.</value></data>
   <data name="developSectionFilm.Text" xml:space="preserve"><value>Film</value></data>
   <data name="developFilmLookNone.Text" xml:space="preserve"><value>Aucun</value></data>
   <data name="developFilmGroupMotion.Text" xml:space="preserve"><value>Film cinéma</value></data>

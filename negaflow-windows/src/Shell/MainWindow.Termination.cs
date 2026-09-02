@@ -30,7 +30,15 @@ public sealed partial class MainWindow
         LibraryDefectTerminationResult result;
         try
         {
-            await ShellView.PrepareForTerminationAsync();
+            // **셸이 없을 수 있습니다.** 카탈로그를 열지 못하면 셸 자리에 복구 화면만 서고
+            // `ShellView` 는 끝까지 null 입니다(`MainWindow.Recovery.ShowRecovery`). 그런데 그
+            // 상태에서도 `libraryHost` 는 null 이 아니라 위 가드를 통과하므로, 여기서 그냥
+            // 부르면 닫을 때마다 `NullReferenceException` 으로 죽었습니다 — 실측으로
+            // 복구 화면에서 창을 닫으면 `startup-fault.txt` 에 그 예외가 남습니다.
+            if (ShellView is { } shell)
+            {
+                await shell.PrepareForTerminationAsync();
+            }
             string scansDirectory = new DiskStorageLocations(
                 settingsStore.Current.Disk).Scans;
             result = await libraryHost.PrepareForTerminationAsync(scansDirectory);

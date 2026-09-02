@@ -41,7 +41,6 @@ public sealed partial class ThumbnailService : IAsyncDisposable
     private readonly IThumbnailCodec codec;
     private readonly IUiDispatcher dispatcher;
     private readonly ThumbnailDiskCache disk;
-    private readonly DevelopedPreviewDiskCache developedDisk;
     private readonly string root;
     private readonly SemaphoreSlim renderSlots = new(MaximumConcurrentRenders, MaximumConcurrentRenders);
     private readonly ConcurrentDictionary<string, byte[]> memory = new(StringComparer.Ordinal);
@@ -75,21 +74,18 @@ public sealed partial class ThumbnailService : IAsyncDisposable
         IDevelopExporter exporter,
         IThumbnailCodec codec,
         IUiDispatcher dispatcher,
-        string thumbnailRoot,
-        string developedPreviewRoot)
+        string thumbnailRoot)
     {
         ArgumentNullException.ThrowIfNull(exporter);
         ArgumentNullException.ThrowIfNull(codec);
         ArgumentNullException.ThrowIfNull(dispatcher);
         ArgumentException.ThrowIfNullOrWhiteSpace(thumbnailRoot);
-        ArgumentException.ThrowIfNullOrWhiteSpace(developedPreviewRoot);
 
         this.exporter = exporter;
         this.codec = codec;
         this.dispatcher = dispatcher;
         root = thumbnailRoot;
         disk = new ThumbnailDiskCache();
-        developedDisk = new DevelopedPreviewDiskCache(developedPreviewRoot);
         installedMemoryBytes = InstalledMemoryBytes();
         FrameCacheLimits limits = FrameCacheBudget.AutomaticLimits(installedMemoryBytes);
         developedByteLimit = FrameCacheBudget.DevelopedDisplayBudgetBytes(limits);
@@ -337,28 +333,25 @@ public sealed partial class ThumbnailService : IAsyncDisposable
         // macOS `removeDevelopedResident`.
         developedResidency.Remove(frameId);
         disk.Remove(frameId, PathFor(frameId));
-        developedDisk.Remove(frameId);
     }
 
     /// <summary>디스크 캐시를 통째로 지웁니다. 메모리에 올라온 것은 그대로 쓰입니다.</summary>
     public async Task ClearDiskCacheAsync()
     {
-        await Task.WhenAll(disk.ClearAsync(root), developedDisk.ClearAsync()).ConfigureAwait(false);
+        await disk.ClearAsync(root).ConfigureAwait(false);
     }
 
     public long DiskCacheSizeBytes() =>
-        ThumbnailDiskCache.DirectorySize(root) + developedDisk.SizeBytes();
+        ThumbnailDiskCache.DirectorySize(root);
 
     public async Task WaitUntilIdleAsync()
     {
-        await Task.WhenAll(disk.WaitUntilIdleAsync(), developedDisk.WaitUntilIdleAsync())
-            .ConfigureAwait(false);
+        await disk.WaitUntilIdleAsync().ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync()
     {
         await disk.DisposeAsync().ConfigureAwait(false);
-        await developedDisk.DisposeAsync().ConfigureAwait(false);
         renderSlots.Dispose();
     }
 

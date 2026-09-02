@@ -115,7 +115,9 @@ internal static class PreviewAndAutoAdjustmentTests
         AutoAdjustCoordinator refusing = new(neverCalled, quiet);
         AutoAdjustOutcome? refusal = null;
         refusing.RunAsync(
-            Frame(null, baseRecipe: new BaseRecipe(BaseEstimationMode.Manual, null, null, null)),
+            // 경로가 어긋난 frame 입니다 — 베이스 모드는 macOS 처럼 자동으로 흘러가므로
+            // 더 이상 현상 불가가 아닙니다.
+            Frame(null, filmType: FilmType.ColorPositive),
             outcome => refusal = outcome).GetAwaiter().GetResult();
         Check(
             refusal?.Kind == DevelopExportOutcomeKind.Refused,
@@ -210,13 +212,15 @@ internal static class PreviewAndAutoAdjustmentTests
         FakeExporter neverCalled = new(_ => OkResult());
         PreviewCoordinator refusing = new(neverCalled, quiet, 64, 64);
         PreviewOutcome? refusal = null;
+        // 베이스 모드는 거절 사유가 아닙니다(macOS 처럼 자동으로 흘러갑니다). 여기서 쓰는
+        // "현상할 수 없는 frame" 은 네거티브 스캔에 포지티브 필름 종류가 붙은 것입니다.
         refusing.RequestAsync(Frame(
                 null,
-                baseRecipe: new BaseRecipe(BaseEstimationMode.Manual, null, null, null)), outcome => refusal = outcome)
+                filmType: FilmType.ColorPositive), outcome => refusal = outcome)
             .GetAwaiter().GetResult();
         Check(refusal?.Kind == DevelopExportOutcomeKind.Refused, "preview_refused");
         Check(
-            refusal?.Refusal == DevelopRequestRefusal.MissingManualBase,
+            refusal?.Refusal == DevelopRequestRefusal.UnsupportedPositiveFilm,
             "preview_refusal_reason");
         Check(neverCalled.CallCount == 0, "preview_refusal_skips_engine");
 

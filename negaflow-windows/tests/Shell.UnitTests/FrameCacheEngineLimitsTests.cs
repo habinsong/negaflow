@@ -37,8 +37,7 @@ internal static class FrameCacheEngineLimitsTests
                 new NativeDevelopExporterAdapter(),
                 new EngineLimitsCodec(),
                 dispatcher,
-                Path.Combine(root, "Thumbnails"),
-                Path.Combine(root, "DevelopedPreviews"));
+                Path.Combine(root, "Thumbnails"));
 
             cache.ApplyResidencySettings(new FrameCacheResidencySettings());
             MemoryReport? automatic = MemoryReportBridge.TryRead();

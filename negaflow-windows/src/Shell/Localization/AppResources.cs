@@ -84,6 +84,30 @@ internal static class AppResources
     public static string FormatInteger(string key, string property, int value) =>
         Get(key, property).Replace("%d", value.ToString(), StringComparison.Ordinal);
 
+    /// <summary>
+    /// macOS <c>String(format:)</c> 의 <c>%@</c> 자리를 앞에서부터 채웁니다. 정수 자리
+    /// (<c>%d</c>)와 나누어 두는 이유는 macOS 문구가 두 표시를 구분해 쓰기 때문입니다 —
+    /// 한 자리에 아무 값이나 넣으면 번역자가 어떤 값이 오는지 알 수 없습니다.
+    /// </summary>
+    public static string FormatText(string key, string property, params string[] values)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        string result = Get(key, property);
+        foreach (string value in values)
+        {
+            int marker = result.IndexOf("%@", StringComparison.Ordinal);
+            if (marker < 0)
+            {
+                throw new InvalidOperationException(
+                    $"Localized resource has fewer text markers than expected: {key}.{property}");
+            }
+
+            result = string.Concat(result.AsSpan(0, marker), value, result.AsSpan(marker + 2));
+        }
+
+        return result;
+    }
+
     public static string FormatIntegers(
         string key,
         string property,

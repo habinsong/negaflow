@@ -312,12 +312,11 @@ internal static class DevelopPanelStateTests
                 panel.ImageTransform.StraightenAngle == 45.0,
                 "panel_clamps_straighten_angle");
 
-            // 아직 base 를 고르지 않은 frame 에도 슬라이더 시작 위치는 있어야 하지만, 그것이
-            // catalog 에 저장되면 사용자가 고르지 않은 값으로 현상됩니다.
+            // 수동 값이 있으면 그것이, 없으면 마지막으로 잰 base 가, 그것도 없을 때만
+            // macOS 의 0.90/0.65/0.45 가 슬라이더에 섭니다.
             Check(
-                panel.SuggestedManualDmin >= panel.MinimumManualDmin &&
-                    panel.SuggestedManualDmin <= panel.MaximumManualDmin,
-                "panel_suggested_base_in_range");
+                panel.ManualBaseForDisplay == new ManualBaseRgb(0.21, 0.22, 0.23),
+                "panel_display_base_prefers_manual");
 
             Check(
                 panel.SetBaseMode(BaseEstimationMode.Auto) == LibraryFrameError.None,

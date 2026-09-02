@@ -170,13 +170,13 @@ internal static class LibraryHostTests
                 LibraryFrameListItems.IssueSummary(host.Issues) is null,
                 "library_item_no_issue_summary");
 
-            // 현상할 수 없는 frame 은 목록에서 그 이유가 보입니다. Export 가 조용히 아무것도
-            // 하지 않는 것보다 낫습니다.
+            // 수동인데 고른 값이 없어도 현상은 됩니다 — macOS `resolveFilmBase` 가 값이 없으면
+            // 자동 추정으로 흘러가기 때문입니다. 앞 판은 이것을 현상 불가로 막아,
+            // `resetManualBase` 로 값을 지운 사진이 목록에서 통째로 잠겼습니다.
             LibraryFrameListItem noBase = new(Frame(
                 null,
                 baseRecipe: new BaseRecipe(BaseEstimationMode.Manual, null, null, null)));
-            Check(!noBase.CanDevelop, "library_item_cannot_develop");
-            Check(noBase.Detail == "Dmin not set", "library_item_shows_reason");
+            Check(noBase.CanDevelop, "library_item_manual_without_base_can_develop");
 
             LibraryFrameListItem preset = new(Frame(
                 new ManualBaseRgb(0.2, 0.2, 0.2),

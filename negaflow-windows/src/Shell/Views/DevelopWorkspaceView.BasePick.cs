@@ -100,15 +100,23 @@ public sealed partial class DevelopWorkspaceView
         }
     }
 
-    /// <summary>macOS <c>resetManualBase</c> — 수동 Dmin 을 제안값으로 되돌립니다.</summary>
+    /// <summary>
+    /// macOS <c>resetManualBase</c>:
+    /// <code>
+    /// basePickerMode = false
+    /// frame.updateParams { $0.manualBaseRGB = nil }
+    /// </code>
+    /// 수동 값을 <b>지웁니다.</b> 앞 판은 대신 세 칸에 "제안값" 0.25 를 써 넣었는데, 그 숫자는
+    /// macOS 에 없고 되돌리기가 아니라 새 값을 고르는 것이었습니다.
+    /// </summary>
     private void ResetManualBase()
     {
         if (panel is null)
         {
             return;
         }
-        double suggested = panel.SuggestedManualDmin;
-        if (panel.SetManualBase(suggested, suggested, suggested) != LibraryFrameError.None)
+        BaseCard.CancelBasePicker();
+        if (panel.ClearManualBase() != LibraryFrameError.None)
         {
             return;
         }

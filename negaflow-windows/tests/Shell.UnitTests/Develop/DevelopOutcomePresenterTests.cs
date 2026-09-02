@@ -32,9 +32,9 @@ internal static class DevelopOutcomePresenterTests
 
         Check(
             DevelopPanelState.Describe(
-                DevelopExportOutcome.Refused(DevelopRequestRefusal.MissingManualBase))
-                .Contains("Dmin"),
-            "describe_missing_base_says_what_to_do");
+                DevelopExportOutcome.Refused(DevelopRequestRefusal.NoFrameSelected))
+                .Contains("Select a photo"),
+            "describe_no_frame_says_what_to_do");
         Check(
             DevelopPanelState.Describe(
                 DevelopExportOutcome.Refused(DevelopRequestRefusal.UnsupportedDigitalSource))

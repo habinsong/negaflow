@@ -860,6 +860,19 @@
   <data name="developExportRunning.Text" xml:space="preserve"><value>正在冲洗…</value></data>
   <data name="developExportSaveFailed.Text" xml:space="preserve"><value>无法保存目录。</value></data>
   <data name="developExportFolderFailed.Text" xml:space="preserve"><value>无法使用该文件夹。</value></data>
+  <data name="developExportCompleteFormat.Text" xml:space="preserve"><value>已在 %d 毫秒内导出 %d×%d</value></data>
+  <data name="developExportFailedFormat.Text" xml:space="preserve"><value>导出失败：%@</value></data>
+  <data name="developExportEngineFailedFormat.Text" xml:space="preserve"><value>引擎失败：%@</value></data>
+  <data name="developExportBusy.Text" xml:space="preserve"><value>已经在冲洗中。</value></data>
+  <data name="developExportNoResult.Text" xml:space="preserve"><value>冲洗没有产生结果。</value></data>
+  <data name="developExportRefused.Text" xml:space="preserve"><value>冲洗请求被拒绝。</value></data>
+  <data name="developExportRefusedNoFrame.Text" xml:space="preserve"><value>请先选择一张照片。</value></data>
+  <data name="developExportRefusedBaseMode.Text" xml:space="preserve"><value>Windows 引擎尚不支持该片基模式。</value></data>
+  <data name="developExportRefusedDigitalSource.Text" xml:space="preserve"><value>该照片是已渲染的数字原稿，暂时无法冲洗。</value></data>
+  <data name="developExportRefusedPositiveFilm.Text" xml:space="preserve"><value>Windows 引擎尚不支持正片冲洗。</value></data>
+  <data name="developExportRefusedDestination.Text" xml:space="preserve"><value>请选择完整的导出路径。</value></data>
+  <data name="developExportRefusedOutputFormat.Text" xml:space="preserve"><value>不支持该导出格式。</value></data>
+  <data name="developExportRefusedStaleDefectSource.Text" xml:space="preserve"><value>自记录污点修补以来，扫描文件的大小已改变。请将照片重新链接到原始扫描，或清除污点修补后再导出。</value></data>
   <data name="developSectionFilm.Text" xml:space="preserve"><value>胶片</value></data>
   <data name="developFilmLookNone.Text" xml:space="preserve"><value>无</value></data>
   <data name="developFilmGroupMotion.Text" xml:space="preserve"><value>电影胶片</value></data>

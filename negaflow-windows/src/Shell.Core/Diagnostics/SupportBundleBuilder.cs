@@ -145,8 +145,10 @@ public static partial class SupportBundleBuilder
 
     private static SupportBundleCacheSummary CacheSummary(SupportBundleInputs inputs) => new(
         ThumbnailDiskCache.DirectorySize(inputs.ThumbnailDirectory),
-        ThumbnailDiskCache.DirectorySize(
-            Path.Combine(inputs.Roots.CacheRoot, "DevelopedPreviews")),
+        // macOS `Caches/Cleaned Raw` 자리입니다. Windows 는 아직 이 캐시를 디스크에 두지
+        // 않으므로 늘 0 입니다 - 예전에는 여기에 현상 프리뷰 디스크 캐시 크기를 넣었는데,
+        // 그 캐시는 맥에 없는 창작이라 없앴습니다(`StaleCacheFolders`).
+        CleanedRawBytes: 0,
         ResidentCleanedRawCount: 0,
         inputs.ResidentDevelopedCount,
         inputs.Limits.CleanedRaw,

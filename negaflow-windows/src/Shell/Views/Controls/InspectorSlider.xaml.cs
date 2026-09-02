@@ -1,9 +1,10 @@
-using Microsoft.UI.Input;
+﻿using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
 using Windows.System;
@@ -19,6 +20,9 @@ public sealed partial class InspectorSlider : UserControl
     public InspectorSlider()
     {
         InitializeComponent();
+        // 값 툴팁의 자릿수입니다. XAML 의 `ThumbToolTipValueConverter` 만으로는 걸리지 않아
+        // (실측: 여전히 `0.3600`) 여기서 직접 붙입니다.
+        Slider.ThumbToolTipValueConverter = new InspectorSliderValueConverter();
         ApplyLayout();
         // 이름·도움말이 리소스에서 오므로 언어가 바뀌면 스스로 다시 겁니다.
         LocalizedElement.Track(this, SynchronizeControls);
@@ -137,7 +141,7 @@ public sealed partial class InspectorSlider : UserControl
         ValueText.Text = value.ToString("+0.00;-0.00;0.00", System.Globalization.CultureInfo.InvariantCulture);
         if (ValueEditor.Visibility == Visibility.Visible)
         {
-            ValueEditor.Text = value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+            ValueEditor.Text = InspectorSliderValue.InputText(value);
             draftEdited = false;
         }
         AutomationProperties.SetName(Slider, Label);
@@ -209,8 +213,7 @@ public sealed partial class InspectorSlider : UserControl
 
     private void BeginEditing()
     {
-        ValueEditor.Text = Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-        ValueEditor.ClearValue(ForegroundProperty);
+        ValueEditor.Text = InspectorSliderValue.InputText(Value);
         ClearEditorError();
         draftEdited = false;
         ValueEditor.Visibility = Visibility.Visible;
@@ -291,7 +294,7 @@ public sealed partial class InspectorSlider : UserControl
         {
             // macOS `EditableSliderValueText` 는 잘못된 값에 빨간 글자와 소리만 냅니다 —
             // 안내 문장을 따로 두지 않습니다.
-            ValueEditor.Style = (Style)Resources["InspectorSliderValueEditorErrorStyle"];
+            ShowEditorError();
             _ = MessageBeep(0);
             ValueEditor.Focus(FocusState.Programmatic);
             return;
@@ -324,12 +327,32 @@ public sealed partial class InspectorSlider : UserControl
         }
     }
 
-    private void ClearEditorError() =>
-        ValueEditor.Style = (Style)Resources["InspectorSliderValueEditorStyle"];
+    /// <summary>
+    /// macOS <c>.foregroundStyle(isInvalid ? Color.red : Color.primary)</c>.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 이것을 <c>UserControl.Resources</c> 의 두 <c>Style</c> 로 두고 잘못된 입력에서
+    /// 그 키를 찾았습니다. 그런데 오류 쪽 스타일이 <c>TextFillColorCriticalBrush</c> 를 걸고
+    /// 있었고 <b>WinUI 에 그런 이름은 없습니다</b>(이 저장소의 다른 여섯 곳은 모두
+    /// <c>SystemFillColorCriticalBrush</c> 를 씁니다). 값을 만들지 못한 사전은 그 키 자체를
+    /// 없다고 답하므로, 슬라이더 칸에 숫자가 아닌 것을 넣고 Enter 를 누르면
+    /// <c>COMException: Cannot find a resource with the given key</c> 로 <b>앱이 통째로
+    /// 죽었습니다.</b> 스타일 두 개를 없애고 macOS 처럼 글자색만 직접 겁니다.
+    /// </remarks>
+    private void ShowEditorError() =>
+        ValueEditor.Foreground =
+            (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
+
+    private void ClearEditorError() => ValueEditor.ClearValue(ForegroundProperty);
 
     private void SetControlValue(double value)
     {
-        double clamped = InspectorSliderValue.Clamp(value, Minimum, Maximum);
+        // 눈금은 여기 한 곳에서 겁니다 — 끌기·트랙 클릭·화살표·직접 입력이 모두 이 길로
+        // 들어오므로, 어느 길로 왔든 저장되는 값이 화면에 적힌 두 자리와 같아집니다.
+        double clamped = InspectorSliderValue.Clamp(
+            InspectorSliderValue.Quantize(value),
+            Minimum,
+            Maximum);
         if (Value == clamped)
         {
             SynchronizeControls();

@@ -242,8 +242,8 @@ public partial class App : Application
             new NativeDevelopExporterAdapter(),
             new WicThumbnailCodec(),
             dispatcher,
-            thumbnailRoot,
-            Path.Combine(resolved.CacheRoot, "DevelopedPreviews"));
+            thumbnailRoot);
+        StaleCacheFolders.Remove(resolved.CacheRoot);
         // 설정창에서 상주 한도를 바꾸면 지금 도는 캐시에 바로 걸립니다. 캐시는 상태를 만든
         // 뒤에 생기므로, 걸어 두는 것만으로는 **저장돼 있던 값이 한 번도 적용되지 않습니다.**
         ThumbnailService cache = thumbnails;

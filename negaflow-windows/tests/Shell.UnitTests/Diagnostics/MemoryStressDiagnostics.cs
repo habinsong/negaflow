@@ -318,8 +318,7 @@ internal static partial class MemoryStressDiagnostics
                 new NativeDevelopExporterAdapter(),
                 new StressThumbnailCodec(),
                 dispatcher,
-                Path.Combine(storageRoot, "Thumbnails"),
-                Path.Combine(storageRoot, "DevelopedPreviews"));
+                Path.Combine(storageRoot, "Thumbnails"));
             thumbnails.ApplyResidencySettings(new FrameCacheResidencySettings());
             PreviewCoordinator coordinator = new(
                 new NativeDevelopExporterAdapter(),

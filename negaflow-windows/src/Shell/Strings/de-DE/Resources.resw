@@ -860,6 +860,19 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developExportRunning.Text" xml:space="preserve"><value>Entwickeln…</value></data>
   <data name="developExportSaveFailed.Text" xml:space="preserve"><value>Der Katalog konnte nicht gespeichert werden.</value></data>
   <data name="developExportFolderFailed.Text" xml:space="preserve"><value>Dieser Ordner kann nicht verwendet werden.</value></data>
+  <data name="developExportCompleteFormat.Text" xml:space="preserve"><value>%d×%d in %d ms exportiert</value></data>
+  <data name="developExportFailedFormat.Text" xml:space="preserve"><value>Export fehlgeschlagen: %@</value></data>
+  <data name="developExportEngineFailedFormat.Text" xml:space="preserve"><value>Die Engine ist fehlgeschlagen: %@</value></data>
+  <data name="developExportBusy.Text" xml:space="preserve"><value>Es läuft bereits eine Entwicklung.</value></data>
+  <data name="developExportNoResult.Text" xml:space="preserve"><value>Die Entwicklung lieferte kein Ergebnis.</value></data>
+  <data name="developExportRefused.Text" xml:space="preserve"><value>Die Entwicklungsanforderung wurde abgelehnt.</value></data>
+  <data name="developExportRefusedNoFrame.Text" xml:space="preserve"><value>Wählen Sie zuerst ein Foto aus.</value></data>
+  <data name="developExportRefusedBaseMode.Text" xml:space="preserve"><value>Dieser Filmbasis-Modus wird von der Windows-Engine noch nicht unterstützt.</value></data>
+  <data name="developExportRefusedDigitalSource.Text" xml:space="preserve"><value>Dieses Bild ist eine gerenderte digitale Quelle und kann noch nicht entwickelt werden.</value></data>
+  <data name="developExportRefusedPositiveFilm.Text" xml:space="preserve"><value>Die Entwicklung von Positivfilm wird von der Windows-Engine noch nicht unterstützt.</value></data>
+  <data name="developExportRefusedDestination.Text" xml:space="preserve"><value>Wählen Sie einen vollständigen Exportpfad.</value></data>
+  <data name="developExportRefusedOutputFormat.Text" xml:space="preserve"><value>Dieses Exportformat wird nicht unterstützt.</value></data>
+  <data name="developExportRefusedStaleDefectSource.Text" xml:space="preserve"><value>Die Scandatei hat sich seit dem Aufzeichnen der Defektkorrekturen in der Größe geändert. Verknüpfen Sie das Bild erneut mit dem Originalscan oder verwerfen Sie die Defektkorrekturen, und exportieren Sie dann erneut.</value></data>
   <data name="developSectionFilm.Text" xml:space="preserve"><value>Film</value></data>
   <data name="developFilmLookNone.Text" xml:space="preserve"><value>Keine</value></data>
   <data name="developFilmGroupMotion.Text" xml:space="preserve"><value>Kinofilm</value></data>

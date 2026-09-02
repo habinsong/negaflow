@@ -564,6 +564,7 @@ add_library(negaflow_imageio STATIC
     src/Native/imageio/image_file_observation.cpp
     src/Native/imageio/wic_standard_image_decoder.cpp
     src/Native/imageio/libraw_image_decoder.cpp
+    src/Native/imageio/libraw_preview_reduce.cpp
     src/Native/imageio/wic_orientation.cpp
     src/Native/imageio/wic_tiff_decoder.cpp
     src/Native/imageio/wic_tiff_frame.cpp
@@ -2192,6 +2193,18 @@ if(BUILD_TESTING)
     set_tests_properties(
         cli.negative_invert
         PROPERTIES PASS_REGULAR_EXPRESSION "\"algorithm_version\":\"shoulder-print-response-v4\""
+    )
+
+    add_executable(negaflow_libraw_preview_reduce_tests
+        tests/Native.UnitTests/libraw_preview_reduce_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_libraw_preview_reduce_tests
+        PRIVATE negaflow_imageio negaflow_project_options
+    )
+    add_test(
+        NAME native.libraw_preview_reduce
+        COMMAND negaflow_libraw_preview_reduce_tests
     )
 
     add_executable(negaflow_wic_tiff_decoder_tests

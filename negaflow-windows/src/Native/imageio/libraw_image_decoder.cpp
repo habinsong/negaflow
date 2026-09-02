@@ -1,5 +1,7 @@
 #include "negaflow/imageio/libraw_image_decoder.h"
 
+#include "negaflow/imageio/libraw_preview_reduce.h"
+
 #include <atomic>
 #include <cstring>
 #include <limits>
@@ -410,34 +412,22 @@ LibRawDecodeResult decode_raw_with_libraw(
             return result;
         }
 
-        // 결과 계약은 WIC 경로와 같은 `rgba16` 입니다 — 화소당 8바이트.
-        const std::uint64_t stride = width * 8ULL;
-        const std::uint64_t bytes = stride * height;
-        if (stride > std::numeric_limits<std::uint32_t>::max() ||
-            bytes > limits.max_decoded_pixel_bytes ||
-            bytes / sizeof(std::uint16_t) > std::numeric_limits<std::size_t>::max()) {
+        // 결과 계약은 WIC 경로와 같은 `rgba16` 입니다 — 화소당 8바이트. 다만 **원본
+        // 크기로는 넓히지 않습니다.** 프리뷰가 요청한 상자까지 줄이면서 넓힙니다 —
+        // `reduce_libraw_rgb16_to_preview` 주석에 그 이유와 실측이 있습니다.
+        const LibRawPreviewReduceResult reduced = reduce_libraw_rgb16_to_preview(
+            reinterpret_cast<const std::uint16_t*>(produced.data),
+            static_cast<std::uint32_t>(width),
+            static_cast<std::uint32_t>(height),
+            control.max_output_width,
+            control.max_output_height,
+            limits.max_decoded_pixel_bytes,
+            result.image);
+        if (!reduced.ok) {
             result.status = LibRawDecodeStatus::memory_limit_exceeded;
             return result;
         }
-
-        result.image.width = static_cast<std::uint32_t>(width);
-        result.image.height = static_cast<std::uint32_t>(height);
-        result.image.stride_bytes = static_cast<std::uint32_t>(stride);
-        result.image.layout = DecodedPixelLayout::rgba16;
-        result.image.alpha_mode = AlphaMode::unassociated;
-        result.image.untagged_rgb_transfer = UntaggedRgbTransfer::srgb_encoded;
-        result.image.samples.resize(static_cast<std::size_t>(bytes / sizeof(std::uint16_t)));
-
-        const auto* const source = reinterpret_cast<const std::uint16_t*>(produced.data);
-        std::uint16_t* const destination = result.image.samples.data();
-        for (std::uint64_t index = 0U; index < width * height; ++index) {
-            const std::size_t in = static_cast<std::size_t>(index) * 3U;
-            const std::size_t out = static_cast<std::size_t>(index) * 4U;
-            destination[out] = source[in];
-            destination[out + 1U] = source[in + 1U];
-            destination[out + 2U] = source[in + 2U];
-            destination[out + 3U] = 65'535U;
-        }
+        result.reduced_for_preview = reduced.reduced;
 
         if (stop_token.stop_requested()) {
             std::vector<std::uint16_t>{}.swap(result.image.samples);

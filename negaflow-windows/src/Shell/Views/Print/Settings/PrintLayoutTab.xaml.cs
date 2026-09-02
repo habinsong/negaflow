@@ -15,7 +15,18 @@ public sealed partial class PrintLayoutTab : UserControl
 {
     internal PrintWorkspaceView? Owner;
 
-    public PrintLayoutTab() => InitializeComponent();
+    public PrintLayoutTab()
+    {
+        InitializeComponent();
+        // 여백·간격의 값 글자는 `10 mm` 인데 썸 툴팁은 붙이지 않으면 `10.0000` 으로 나옵니다.
+        // 같은 칸을 두 가지로 읽지 않도록 값 글자와 같은 규칙을 답니다. XAML 로 거는
+        // `ThumbToolTipValueConverter` 는 걸리지 않으므로 여기서 붙입니다.
+        foreach (Slider slider in new[] { MarginSlider, SpacingSlider, VerticalSpacingSlider })
+        {
+            slider.ThumbToolTipValueConverter =
+                new Negaflow.Shell.Views.Controls.MillimetreThumbConverter();
+        }
+    }
 
     private void OnPrintSettingChanged(object sender, SelectionChangedEventArgs args) =>
         Owner?.OnPrintSettingChanged(sender, args);

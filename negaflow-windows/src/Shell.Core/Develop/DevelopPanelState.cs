@@ -57,13 +57,15 @@ public sealed partial class DevelopPanelState
 
     public double MaximumManualDmin => baseEditor.MaximumManualDmin;
 
-    /// <summary>
-    /// 아직 수동 base 를 고르지 않은 frame 의 슬라이더 시작 위치입니다. **이 값이 catalog 에 저장되지는
-    /// 않습니다.** Auto 모드의 preview/export는 이 값이 아니라 native resolver를 사용합니다.
-    /// </summary>
-    public double SuggestedManualDmin => baseEditor.SuggestedManualDmin;
-
     public ManualBaseRgb? ManualBase => SelectedFrame?.ManualBase;
+
+    /// <summary>
+    /// 수동 슬라이더 세 칸이 서야 할 자리입니다. macOS
+    /// <c>frame.params.manualBaseRGB ?? frame.baseRGB ?? SIMD3(0.90, 0.65, 0.45)</c> 그대로이며,
+    /// 수동 값이 없으면 <b>마지막으로 잰 base</b> 를 이어받습니다.
+    /// </summary>
+    public ManualBaseRgb ManualBaseForDisplay =>
+        baseEditor.ManualBaseOrMeasured(ManualBase, LastAppliedBase);
 
     /// <summary>
     /// macOS <c>ScanFrame.baseRGB</c> — 마지막 미리보기가 쓴 Dmin 입니다. 카탈로그
@@ -103,7 +105,13 @@ public sealed partial class DevelopPanelState
 
     public LibraryFrameError SetBaseMode(BaseEstimationMode mode)
     {
-        return RefreshAfterEdit(baseEditor.SetMode(SelectedFrame, mode));
+        return RefreshAfterEdit(baseEditor.SetMode(SelectedFrame, mode, LastAppliedBase));
+    }
+
+    /// <summary>macOS <c>resetManualBase</c> — 수동 값을 지웁니다.</summary>
+    public LibraryFrameError ClearManualBase()
+    {
+        return RefreshAfterEdit(baseEditor.ClearManualBase(SelectedFrame));
     }
 
     public LibraryFrameError SetFilmStock(string? filmStockDminId)

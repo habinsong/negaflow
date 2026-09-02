@@ -860,6 +860,19 @@
   <data name="developExportRunning.Text" xml:space="preserve"><value>現像中…</value></data>
   <data name="developExportSaveFailed.Text" xml:space="preserve"><value>カタログを保存できませんでした。</value></data>
   <data name="developExportFolderFailed.Text" xml:space="preserve"><value>そのフォルダーは使えません。</value></data>
+  <data name="developExportCompleteFormat.Text" xml:space="preserve"><value>%d×%d を %d ms で書き出しました</value></data>
+  <data name="developExportFailedFormat.Text" xml:space="preserve"><value>書き出しに失敗しました: %@</value></data>
+  <data name="developExportEngineFailedFormat.Text" xml:space="preserve"><value>エンジンが失敗しました: %@</value></data>
+  <data name="developExportBusy.Text" xml:space="preserve"><value>すでに現像中です。</value></data>
+  <data name="developExportNoResult.Text" xml:space="preserve"><value>現像は結果を返しませんでした。</value></data>
+  <data name="developExportRefused.Text" xml:space="preserve"><value>現像リクエストが拒否されました。</value></data>
+  <data name="developExportRefusedNoFrame.Text" xml:space="preserve"><value>先に写真を選んでください。</value></data>
+  <data name="developExportRefusedBaseMode.Text" xml:space="preserve"><value>このフィルムベースモードは Windows エンジンではまだ対応していません。</value></data>
+  <data name="developExportRefusedDigitalSource.Text" xml:space="preserve"><value>この写真はレンダリング済みのデジタル原本のため、まだ現像できません。</value></data>
+  <data name="developExportRefusedPositiveFilm.Text" xml:space="preserve"><value>ポジフィルムの現像は Windows エンジンではまだ対応していません。</value></data>
+  <data name="developExportRefusedDestination.Text" xml:space="preserve"><value>書き出し先のフルパスを選んでください。</value></data>
+  <data name="developExportRefusedOutputFormat.Text" xml:space="preserve"><value>その書き出し形式には対応していません。</value></data>
+  <data name="developExportRefusedStaleDefectSource.Text" xml:space="preserve"><value>傷取り編集を記録した後にスキャンファイルのサイズが変わりました。写真を元のスキャンに再リンクするか、傷取り編集を消してから書き出し直してください。</value></data>
   <data name="developSectionFilm.Text" xml:space="preserve"><value>フィルム</value></data>
   <data name="developFilmLookNone.Text" xml:space="preserve"><value>なし</value></data>
   <data name="developFilmGroupMotion.Text" xml:space="preserve"><value>シネフィルム</value></data>

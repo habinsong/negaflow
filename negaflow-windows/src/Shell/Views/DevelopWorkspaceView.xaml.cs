@@ -377,13 +377,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return DevelopRequestRefusal.UnsupportedPositiveFilm;
         }
-        return frame.Base.Mode switch
-        {
-            BaseEstimationMode.Preset when string.IsNullOrWhiteSpace(frame.Base.FilmStockDminId) =>
-                DevelopRequestRefusal.MissingFilmStock,
-            BaseEstimationMode.Manual when frame.ManualBase is null => DevelopRequestRefusal.MissingManualBase,
-            _ => DevelopRequestRefusal.None,
-        };
+        // 베이스 모드는 거절 사유가 아닙니다. 수동에 고른 값이 없어도, preset 에 필름을
+        // 고르지 않았어도 macOS 는 자동 추정으로 현상합니다
+        // (`ChromabaseEngine+NegativePipeline.resolveFilmBase`, `DevelopRequestFactory` 의 같은 자리).
+        return DevelopRequestRefusal.None;
     }
 
     /// <summary>
@@ -419,8 +416,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         Task grainMendDrain = GrainMendPanel.PrepareForTerminationAsync();
         Task previewDrain = previewCoordinator?.CancelAndDrainAsync() ?? Task.CompletedTask;
-        Task neighborDrain = CancelNeighborWarmAsync();
-        await Task.WhenAll(grainMendDrain, previewDrain, neighborDrain);
+        await Task.WhenAll(grainMendDrain, previewDrain);
     }
 
     private void OnThumbnailReady(string frameId) => frames.OnThumbnailReady(frameId);

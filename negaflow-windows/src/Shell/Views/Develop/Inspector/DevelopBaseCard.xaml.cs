@@ -190,10 +190,10 @@ public sealed partial class DevelopBaseCard : UserControl
         isSynchronizing = true;
         try
         {
-            ManualBaseRgb shown = hostPanel.ManualBase ?? new ManualBaseRgb(
-                hostPanel.SuggestedManualDmin,
-                hostPanel.SuggestedManualDmin,
-                hostPanel.SuggestedManualDmin);
+            // macOS `manualBaseBinding` 의 get:
+            //     frame.params.manualBaseRGB ?? frame.baseRGB ?? SIMD3(0.90, 0.65, 0.45)
+            // 앞 판은 세 칸에 모두 같은 "제안값"(0.25) 을 넣었습니다 — macOS 에 없는 값입니다.
+            ManualBaseRgb shown = hostPanel.ManualBaseForDisplay;
             BaseRedControl.Value = shown.Red;
             BaseGreenControl.Value = shown.Green;
             BaseBlueControl.Value = shown.Blue;

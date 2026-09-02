@@ -7,16 +7,25 @@ using Negaflow.Shell.Localization;
 namespace Negaflow.Shell.Views;
 
 /// <summary>
-/// 비교 보기(원본·중립·MAIN·다른 사진)와 이웃 사진 미리 디코드입니다.
+/// 비교 보기입니다 — 원본·중립·MAIN·다른 사진.
 /// </summary>
 /// <remarks>
+/// <para>
 /// macOS <c>beforeAfterCompareActive</c> 갈래에 해당합니다. 비교 대상은 프레임마다 따로
 /// 기억하므로 사진을 옮기면 그 프레임의 비교 설정이 따라옵니다.
+/// </para>
+/// <para>
+/// 여기 있던 <b>이웃 사진 미리 디코드</b>는 걷어냈습니다. macOS 는 선택이 바뀌어도
+/// 고른 한 장만 현상하고(<c>AppModel+FrameSelection.handleSelectedFrameChange</c>),
+/// 이웃을 미리 그리는 자리가 없습니다. Windows 판은 "이웃"이라는 이름으로 실제로는
+/// <b>라이브러리 전체</b>를 돌았습니다 — 실측(2026-09-02, 114장): 정착 한 번마다 6~7분
+/// 동안 쉬지 않고 디코딩했고 private 이 천장 8,959MB 를 넘겨 9,890MB 까지 올라갔으며,
+/// 그 때문에 앞단 raw 예산이 2,910MB → 1,324MB 로 깎여 <b>정작 사용자가 고른 사진이
+/// 매번 캐시 미스</b>였습니다.
+/// </para>
 /// </remarks>
 public sealed partial class DevelopWorkspaceView
 {
-    private DevelopRun? neighborWarmRun;
-    private Task neighborWarmTask = Task.CompletedTask;
     private bool compareBeforeNeeded;
     private bool compareBeforeInFlight;
 
@@ -175,202 +184,4 @@ public sealed partial class DevelopWorkspaceView
         compareBeforeNeeded = false;
     }
 
-    /// <summary>
-    /// 현재 장의 정착 뒤 이웃 장의 3600px raw 프록시를 채웁니다. 새 선택이 오면 취소하며,
-    /// 선택된 장은 이 정착 슬롯에서 표시 크기 프록시를 파생하고 뒤따르는 정착에도 재사용합니다.
-    /// </summary>
-    private void WarmNeighborSettledPreviews(LibraryFrameSnapshot current)
-    {
-        if (libraryHost is null)
-        {
-            return;
-        }
-        IReadOnlyList<LibraryFrameSnapshot> all = libraryHost.Frames;
-        int index = -1;
-        for (int i = 0; i < all.Count; ++i)
-        {
-            if (string.Equals(all[i].Id, current.Id, StringComparison.Ordinal))
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index < 0)
-        {
-            return;
-        }
-        List<LibraryFrameSnapshot> warmOrder = [];
-        for (int distance = 1; warmOrder.Count + 1 < all.Count; ++distance)
-        {
-            if (index - distance >= 0)
-            {
-                warmOrder.Add(all[index - distance]);
-            }
-            if (index + distance < all.Count)
-            {
-                warmOrder.Add(all[index + distance]);
-            }
-        }
-        uint edge = DevelopPreviewProxy.BufferEdge(DevelopPreviewProxy.FullMaxDimension);
-        DevelopRun run = new();
-        System.Threading.Interlocked.Exchange(ref neighborWarmRun, run)?.Cancel();
-        Task previousWarmTask = neighborWarmTask;
-        neighborWarmTask = Task.Run(() =>
-        {
-            try
-            {
-                previousWarmTask.GetAwaiter().GetResult();
-            }
-            catch
-            {
-            }
-            ThreadPriority previousPriority = Thread.CurrentThread.Priority;
-            bool priorityChanged = false;
-            try
-            {
-                try
-                {
-                    Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
-                    priorityChanged = true;
-                }
-                catch (Exception error) when (error is ThreadStateException or
-                    System.Security.SecurityException)
-                {
-                }
-                int pixelBytes = checked((int)((ulong)edge * edge * 4UL));
-                byte[] pixels = new byte[pixelBytes];
-                for (int warmIndex = 0;
-                    warmIndex < warmOrder.Count && !run.IsCancelRequested;
-                    ++warmIndex)
-                {
-                    bool keepResident = warmIndex < 2;
-                    WarmSettledPreview(
-                        warmOrder[warmIndex], edge, pixels, run, keepResident);
-                    // 바로 이웃 두 장 뒤부터는 foreground 선택·조정을 위한 IO/GPU 유휴 구간을 둡니다.
-                    if (warmIndex >= 1 && !WaitForBackground(run, milliseconds: 1000))
-                    {
-                        break;
-                    }
-                }
-            }
-            finally
-            {
-                if (priorityChanged)
-                {
-                    try
-                    {
-                        Thread.CurrentThread.Priority = previousPriority;
-                    }
-                    catch (Exception error) when (error is ThreadStateException or
-                        System.Security.SecurityException)
-                    {
-                    }
-                }
-                _ = System.Threading.Interlocked.CompareExchange(
-                    ref neighborWarmRun, null, run);
-                run.Dispose();
-            }
-        });
-    }
-
-    private async Task CancelNeighborWarmAsync()
-    {
-        Interlocked.Exchange(ref neighborWarmRun, null)?.Cancel();
-        Task running = neighborWarmTask;
-        try
-        {
-            await running;
-        }
-        catch
-        {
-        }
-        if (ReferenceEquals(neighborWarmTask, running))
-        {
-            neighborWarmTask = Task.CompletedTask;
-        }
-    }
-
-    private void WarmSettledPreview(
-        LibraryFrameSnapshot? frame,
-        uint edge,
-        byte[] pixels,
-        DevelopRun run,
-        bool keepResident)
-    {
-        if (frame is null || frame.SourcePath is not { Length: > 0 } path)
-        {
-            return;
-        }
-        try
-        {
-            if (keepResident &&
-                thumbnails?.TryGetDeveloped(frame, out var cached) == true && cached.Settled)
-            {
-                PreviewTrace.Write(
-                    "warm preview cache HIT " + cached.Width + "x" + cached.Height + " " + path);
-                return;
-            }
-            if (!keepResident && thumbnails?.HasSettledDeveloped(frame) == true)
-            {
-                PreviewTrace.Write("warm preview disk HIT " + path);
-                return;
-            }
-            string unused = Path.ChangeExtension(path, ".warm-decode.png");
-            if (DevelopRequestFactory.Create(frame, unused).Request is not { } request)
-            {
-                return;
-            }
-            DevelopedPreviewCacheIdentity? identity =
-                ThumbnailService.CaptureDevelopedCacheIdentity(frame);
-            PreviewTrace.Write(
-                "warm preview start edge=" + edge +
-                " resident=" + keepResident + " " + path);
-            NativeDevelopExporterAdapter exporter = new();
-            DevelopExportResult result = keepResident
-                ? exporter.Preview(request, edge, edge, pixels, run)
-                : exporter.PreviewBackground(request, edge, edge, pixels, run);
-            PreviewTrace.Write(
-                "warm preview end ok=" + result.Succeeded +
-                " cancel=" + result.Cancelled +
-                " fail=" + (result.FailureName ?? ""));
-            if (result.Succeeded && result.ImageWidth > 0U && result.ImageHeight > 0U)
-            {
-                if (keepResident)
-                {
-                    thumbnails?.RememberDeveloped(
-                        frame,
-                        pixels,
-                        (int)result.ImageWidth,
-                        (int)result.ImageHeight,
-                        settled: true,
-                        identity);
-                }
-                else
-                {
-                    thumbnails?.StoreDevelopedOnDisk(
-                        frame,
-                        pixels,
-                        (int)result.ImageWidth,
-                        (int)result.ImageHeight,
-                        identity);
-                }
-            }
-        }
-        catch (Exception error)
-        {
-            PreviewTrace.Write("warm preview fault " + error.GetType().Name);
-        }
-    }
-
-    private static bool WaitForBackground(DevelopRun run, int milliseconds)
-    {
-        int remaining = milliseconds;
-        while (remaining > 0 && !run.IsCancelRequested)
-        {
-            int slice = Math.Min(50, remaining);
-            Thread.Sleep(slice);
-            remaining -= slice;
-        }
-        return !run.IsCancelRequested;
-    }
 }

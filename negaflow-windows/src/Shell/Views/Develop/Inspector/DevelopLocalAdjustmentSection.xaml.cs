@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -35,6 +35,13 @@ public sealed partial class DevelopLocalAdjustmentSection : UserControl
         // 기본값을 유효 범위 안으로 옮긴 뒤 최소값을 완성합니다.
         LocalSizeSlider.Value = 0.005;
         LocalSizeSlider.Minimum = 0.005;
+        // 세 줄은 값을 **퍼센트**로 적습니다(`Percent`). 썸 툴팁을 그대로 두면 WinUI 가 원래
+        // 0…1 값을 네 자리로 적어(`0.5000`) 같은 칸이 `50` 과 `0.5000` 두 가지로 읽힙니다.
+        // XAML 로 거는 `ThumbToolTipValueConverter` 는 걸리지 않으므로 여기서 붙입니다.
+        foreach (Slider slider in new[] { LocalAmountSlider, LocalFeatherSlider, LocalSizeSlider })
+        {
+            slider.ThumbToolTipValueConverter = new Negaflow.Shell.Views.Controls.UnitPercentThumbConverter();
+        }
         canvasInput = new DevelopLocalAdjustmentCanvasInput(this);
         Localize();
     }

@@ -3,17 +3,6 @@
     x:Class="Negaflow.Shell.Views.Controls.InspectorSlider"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <UserControl.Resources>
-        <Style x:Key="InspectorSliderValueEditorStyle" TargetType="TextBox">
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
-        </Style>
-        <Style
-            x:Key="InspectorSliderValueEditorErrorStyle"
-            BasedOn="{StaticResource InspectorSliderValueEditorStyle}"
-            TargetType="TextBox">
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorCriticalBrush}" />
-        </Style>
-    </UserControl.Resources>
     <!-- macOS 에는 같은 슬라이더가 두 모양으로 나옵니다.
            ① 기본  — `VStack { HStack { 이름, Spacer, 값 }, ResettableSlider }`
                      이름 줄이 위, 슬라이더가 아래. 대부분의 인스펙터 항목이 이 모양입니다.
@@ -87,7 +76,6 @@
             VerticalContentAlignment="Center"
             FontFamily="Consolas"
             FontSize="11"
-            Style="{StaticResource InspectorSliderValueEditorStyle}"
             TextAlignment="Right"
             Visibility="Collapsed"
             KeyDown="OnEditorKeyDown"
@@ -104,13 +92,21 @@
             DoubleTapped="OnSliderDoubleTapped">
             <!-- WinUI `StepFrequency` 의 기본값은 1 이고 `SnapsTo` 의 기본값은 StepValues 라,
                  적지 않으면 끌 때 정수로 스냅됩니다. macOS 는 `Slider(value:in:)` 를 step 없이
-                 쓰므로 연속입니다 — 화면에 두 자리로 적으므로 0.01 이 그 눈금입니다. -->
+                 쓰므로 연속입니다 — 화면에 두 자리로 적으므로 0.01 이 그 눈금입니다.
+
+                 `StepFrequency` 는 **끌 때만** 걸립니다. 트랙을 누르면 WinUI 는 눈금을 무시하고
+                 포인터 자리를 그대로 넣어 `0.37546181678772` 같은 값이 저장되는데, 화면·편집기·
+                 화살표는 모두 두 자리라 같은 칸이 길에 따라 다른 값이 됩니다. 그래서 눈금은
+                 `SetControlValue` 한 곳에서 다시 겁니다.
+
+                 값 툴팁의 자릿수는 `ThumbToolTipValueConverter` 가 정하는데, 여기 XAML 로
+                 걸면 걸리지 않습니다 — 실측으로 툴팁이 그대로 `0.3600` 이었습니다. 그래서
+                 코드비하인드 생성자에서 붙입니다. -->
             <Slider
                 x:Name="Slider"
                 StepFrequency="0.01"
                 SmallChange="0.01"
                 LargeChange="0.10"
-                ThumbToolTipValueConverter="{x:Null}"
                 KeyDown="OnSliderKeyDown"
                 ValueChanged="OnSliderValueChanged" />
         </Grid>

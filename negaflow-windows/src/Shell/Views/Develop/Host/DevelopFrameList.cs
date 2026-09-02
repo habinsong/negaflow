@@ -154,12 +154,25 @@ internal sealed class DevelopFrameList
         view.LeftPanel.ExportPanel.RefreshPreview();
     }
 
+    /// <summary>
+    /// 위 막대 가운데 줄입니다. 현상할 수 있으면 원본 경로를, 아니면 <b>왜 안 되는지</b>를
+    /// 지역화된 문구로 냅니다 — 목록에 있는데 내보내기가 조용히 아무 일도 하지 않는 것보다
+    /// 낫습니다.
+    /// </summary>
     internal void UpdateSelectedFrameText()
     {
-        if (view.panel?.SelectedFrame is { } frame)
+        if (view.panel?.SelectedFrame is not { } frame)
         {
-            view.SelectedFrameText.Text = new LibraryFrameListItem(frame).Detail;
+            return;
         }
+
+        view.SelectedFrameText.Text = frame.CanDevelop
+            ? new LibraryFrameListItem(frame).Detail
+            : DevelopExportOutcomeText.For(new DevelopExportOutcome(
+                DevelopExportOutcomeKind.Refused,
+                null,
+                DevelopWorkspaceView.RefusalFor(frame),
+                null));
     }
 
     /// <summary>
@@ -356,7 +369,7 @@ internal sealed class DevelopFrameList
         view.NotifyQuickExportAvailabilityChanged();
         view.ExportStatusText.Text = item.CanDevelop
             ? string.Empty
-            : DevelopPanelState.Describe(new DevelopExportOutcome(
+            : DevelopExportOutcomeText.For(new DevelopExportOutcome(
                 DevelopExportOutcomeKind.Refused,
                 null,
                 DevelopWorkspaceView.RefusalFor(item.Frame),

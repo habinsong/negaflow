@@ -106,11 +106,15 @@ public static class FrameImport
             }
         }
 
+        // 경로 풀이는 이 계획 하나 안에서 나눠 씁니다. 같은 폴더의 파일은 앞 조각이 전부
+        // 같으므로, 따로 풀면 파일 수만큼 같은 디렉터리를 다시 따라가게 됩니다.
+        InfraredImportPairing.IdentityScope identities = new();
         InfraredImportPairing.Resolution pairing = InfraredImportPairing.Resolve(
             filePaths,
-            [.. existingFrames.Select(frame => frame.SourcePath)]);
+            [.. existingFrames.Select(frame => frame.SourcePath)],
+            identities);
         HashSet<string> pairedInfrared = new(
-            pairing.PairedInfraredPaths.Select(InfraredImportPairing.ImportIdentity),
+            pairing.PairedInfraredPaths.Select(identities.Identity),
             StringComparer.OrdinalIgnoreCase);
         Dictionary<string, string> pendingInfrared = new(
             pairing.InfraredByBaseIdentity,
@@ -123,7 +127,7 @@ public static class FrameImport
 
         foreach (LibraryFrameSnapshot frame in existingFrames)
         {
-            string baseIdentity = InfraredImportPairing.ImportIdentity(frame.SourcePath);
+            string baseIdentity = identities.Identity(frame.SourcePath);
             if (!pendingInfrared.Remove(baseIdentity, out string? infraredPath) ||
                 frame.InfraredPath is not null)
             {
@@ -158,7 +162,7 @@ public static class FrameImport
 
         foreach (string path in filePaths)
         {
-            if (pairedInfrared.Contains(InfraredImportPairing.ImportIdentity(path)))
+            if (pairedInfrared.Contains(identities.Identity(path)))
             {
                 continue;
             }
@@ -218,7 +222,7 @@ public static class FrameImport
                 record[LibraryFrameReader.SourceMetadataName] = LibrarySourceMetadataJson.Write(metadata);
             }
             if (pendingInfrared.TryGetValue(
-                    InfraredImportPairing.ImportIdentity(path),
+                    identities.Identity(path),
                     out string? infraredPath))
             {
                 record[LibraryFrameReader.InfraredPathName] = infraredPath;

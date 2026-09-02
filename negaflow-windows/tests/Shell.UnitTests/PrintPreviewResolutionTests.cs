@@ -70,8 +70,7 @@ internal static class PrintPreviewResolutionTests
                 exporter,
                 new PassThroughThumbnailCodec(),
                 new FakeDispatcher(accepts: true),
-                root,
-                Path.Combine(root, "developed"));
+                root);
             byte[] pixels = new byte[8 * 6 * 4];
             pixels[0] = 0x11;
             service.RememberDeveloped("frame-a", pixels, 8, 6, settled: true);

@@ -29,7 +29,7 @@ internal sealed class DevelopExportController
             onCompleted(new DevelopExportOutcome(
                 DevelopExportOutcomeKind.Refused,
                 null,
-                DevelopRequestRefusal.MissingManualBase,
+                DevelopRequestRefusal.NoFrameSelected,
                 null));
             return Task.FromResult(true);
         }

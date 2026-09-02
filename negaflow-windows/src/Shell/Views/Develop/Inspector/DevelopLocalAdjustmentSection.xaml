@@ -165,7 +165,6 @@
                         Maximum="1"
                         Minimum="0"
                         StepFrequency="0.01"
-                        ThumbToolTipValueConverter="{x:Null}"
                         ValueChanged="OnAmountChanged" />
                     <TextBlock
                         x:Name="LocalAmountValue" x:FieldModifier="internal"
@@ -189,7 +188,6 @@
                         Maximum="1"
                         Minimum="0"
                         StepFrequency="0.01"
-                        ThumbToolTipValueConverter="{x:Null}"
                         ValueChanged="OnFeatherChanged" />
                     <TextBlock
                         x:Name="LocalFeatherValue" x:FieldModifier="internal"
@@ -213,7 +211,6 @@
                         AutomationProperties.AutomationId="negaflow.develop.local.size"
                         Maximum="0.25"
                         StepFrequency="0.005"
-                        ThumbToolTipValueConverter="{x:Null}"
                         ValueChanged="OnSizeChanged" />
                     <TextBlock
                         x:Name="LocalSizeValue" x:FieldModifier="internal"

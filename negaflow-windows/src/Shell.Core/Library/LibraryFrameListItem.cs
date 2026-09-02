@@ -27,15 +27,17 @@ public sealed class LibraryFrameListItem : INotifyPropertyChanged
     public string DisplayName => LibraryFrameNaming.DisplayName(Frame);
 
     /// <summary>
-    /// 현상할 수 없는 frame 은 그 이유를 경로 대신 보여 줍니다. 목록에 있는데 Export 가 조용히
-    /// 아무것도 하지 않는 것보다, 왜 안 되는지 그 자리에서 보이는 편이 낫습니다.
+    /// 카드 밑줄입니다 — 원본 경로입니다.
     /// </summary>
-    public string Detail => Frame.CanDevelop
-        ? Frame.SourcePath
-        : Frame.Base.Mode == BaseEstimationMode.Preset &&
-            string.IsNullOrWhiteSpace(Frame.Base.FilmStockDminId)
-            ? "Film base stock is not set"
-            : "Dmin not set";
+    /// <remarks>
+    /// 앞 판은 현상할 수 없는 frame 에 "Dmin not set"·"Film base stock is not set" 를 대신
+    /// 넣었습니다. 그런데 <see cref="LibraryFrameSnapshot.CanDevelop"/> 이 더 이상 베이스
+    /// 모드를 보지 않으므로 두 문구는 <b>닿지 않는 데다 사실과도 다릅니다</b> — 지금 현상할 수
+    /// 없는 것은 원본 성격과 필름 종류가 어긋난 경우뿐입니다. 게다가 이 계층은 지역화
+    /// 자원을 볼 수 없어 어느 언어로 켜든 영어가 나왔습니다. 사유 문구는 화면 쪽
+    /// (<c>Shell/Localization/DevelopExportOutcomeText.cs</c>)이 만듭니다.
+    /// </remarks>
+    public string Detail => Frame.SourcePath;
 
     public bool CanDevelop => Frame.CanDevelop;
 

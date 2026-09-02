@@ -186,7 +186,7 @@ internal sealed class DevelopExportRunner
                         ExportTrace.Write(
                             $"  outcome {outcome.Kind} -> {DevelopPanelState.Describe(outcome)} " +
                             $"path={exportedPath}");
-                        view.SetOutputStatus(DevelopPanelState.Describe(outcome));
+                        view.SetOutputStatus(DevelopExportOutcomeText.For(outcome));
                         if (outcome is { Kind: DevelopExportOutcomeKind.Completed, Result.Succeeded: true })
                         {
                             using (ExportTrace.Measure("  artifacts"))
@@ -294,7 +294,7 @@ internal sealed class DevelopExportRunner
                         ExportTrace.Write(
                             $"  outcome {outcome.Kind} -> {DevelopPanelState.Describe(outcome)} " +
                             $"path={quickPath}");
-                        view.SetOutputStatus(DevelopPanelState.Describe(outcome));
+                        view.SetOutputStatus(DevelopExportOutcomeText.For(outcome));
                     },
                     With(view.quickExportSettings.Encoding, profile));
             }
@@ -329,7 +329,7 @@ internal sealed class DevelopExportRunner
             ExportFlatMaster.Neutralize(frame),
             masterPath,
             view.exportSettings.Format,
-            outcome => view.SetOutputStatus(DevelopPanelState.Describe(outcome)),
+            outcome => view.SetOutputStatus(DevelopExportOutcomeText.For(outcome)),
             view.exportSettings.ToEncodingOptions());
     }
 

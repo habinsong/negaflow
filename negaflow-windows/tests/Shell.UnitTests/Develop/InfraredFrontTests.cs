@@ -87,6 +87,19 @@ internal static class InfraredFrontTests
                 linked.InfraredByBaseIdentity[
                     InfraredImportPairing.ImportIdentity(targetVisible)] == linkedInfrared,
                 "pair_resolves_directory_link_to_physical_bucket");
+
+            // **같은 파일의 다른 표기는 한 건입니다.** 등록 폴더를 훑어 나온 경로와 카탈로그에
+            // 적힌 경로가 링크를 사이에 두고 다르게 적혀 있을 수 있는데, 그 둘을 두 후보로
+            // 세면 IR 짝짓기가 "후보가 둘이라 못 고르겠다" 로 조용히 실패합니다. 중복 판정은
+            // 경로 글자가 아니라 **푼 물리 경로**로 합니다.
+            string duplicateVisibleThroughLink = Path.Combine(allUsersLink, "gm-link-base.tif");
+            InfraredImportPairing.Resolution deduped = InfraredImportPairing.Resolve(
+                [targetVisible, duplicateVisibleThroughLink, linkedInfrared]);
+            Check(
+                deduped.PairedInfraredPaths.SequenceEqual([linkedInfrared]) &&
+                deduped.InfraredByBaseIdentity[
+                    InfraredImportPairing.ImportIdentity(targetVisible)] == linkedInfrared,
+                "pair_treats_two_spellings_of_one_file_as_one_candidate");
         }
 
         InfraredImportPairing.Resolution stray = InfraredImportPairing.Resolve(

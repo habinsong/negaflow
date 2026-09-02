@@ -11,6 +11,30 @@ public static partial class InspectorSliderValue
     public const double FineStep = 0.01;
     public const double CoarseStep = 0.10;
 
+    /// <summary>
+    /// 화면에 적는 눈금 자릿수입니다. 값 글자·편집기·화살표·툴팁이 모두 이 자리를 씁니다.
+    /// </summary>
+    public const int DisplayDecimals = 2;
+
+    /// <summary>
+    /// macOS <c>sliderInputText</c>:
+    /// <c>abs(value) &lt; 0.005 ? "0" : String(format: "%.2f", value)</c>.
+    /// </summary>
+    public static string InputText(double value) =>
+        !double.IsFinite(value) || Math.Abs(value) < 0.005
+            ? "0"
+            : value.ToString("0.00", CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// 값을 화면 눈금에 맞춥니다. WinUI 슬라이더는 <c>StepFrequency</c> 를 끌 때만 걸고 트랙
+    /// 클릭에는 걸지 않아, 같은 칸이 <c>0.38</c> 이 되기도 <c>0.37546181678772</c> 가 되기도
+    /// 합니다. 들어오는 길이 무엇이든 여기 한 곳을 지나게 해서 저장값과 표시값을 같게 합니다.
+    /// </summary>
+    public static double Quantize(double value) =>
+        !double.IsFinite(value)
+            ? value
+            : Math.Round(value, DisplayDecimals, MidpointRounding.AwayFromZero);
+
     public static double Adjust(
         double value,
         double minimum,
@@ -20,10 +44,7 @@ public static partial class InspectorSliderValue
     {
         ValidateRange(minimum, maximum);
         double step = coarse ? CoarseStep : FineStep;
-        double adjusted = Math.Round(
-            Clamp(value, minimum, maximum) + (increase ? step : -step),
-            2,
-            MidpointRounding.AwayFromZero);
+        double adjusted = Quantize(Clamp(value, minimum, maximum) + (increase ? step : -step));
         return Clamp(adjusted, minimum, maximum);
     }
 

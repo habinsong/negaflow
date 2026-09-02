@@ -36,8 +36,11 @@ internal static class StrayInfraredFrameRepair
         IReadOnlyList<LibraryFrameSnapshot> frames)
     {
         ArgumentNullException.ThrowIfNull(frames);
+        InfraredImportPairing.IdentityScope identities = new();
         InfraredImportPairing.Resolution pairing = InfraredImportPairing.Resolve(
-            [.. frames.Select(frame => frame.SourcePath)]);
+            [.. frames.Select(frame => frame.SourcePath)],
+            null,
+            identities);
         if (pairing.PairedInfraredPaths.Count == 0)
         {
             return StrayInfraredFrameRepairPlan.Empty;
@@ -51,13 +54,13 @@ internal static class StrayInfraredFrameRepair
             StringComparer.OrdinalIgnoreCase);
         foreach (LibraryFrameSnapshot frame in frames)
         {
-            string identity = InfraredImportPairing.ImportIdentity(frame.SourcePath);
+            string identity = identities.Identity(frame.SourcePath);
             if (!pendingInfrared.Remove(identity, out string? infraredPath))
             {
                 continue;
             }
             baseFrameIdByInfraredIdentity[
-                InfraredImportPairing.ImportIdentity(infraredPath)] = frame.Id;
+                identities.Identity(infraredPath)] = frame.Id;
             if (frame.InfraredPath is null)
             {
                 attachments.Add(new FrameInfraredAttachment(frame.Id, infraredPath));
@@ -65,21 +68,21 @@ internal static class StrayInfraredFrameRepair
         }
 
         HashSet<string> strayIdentities = pairing.PairedInfraredPaths
-            .Select(InfraredImportPairing.ImportIdentity)
+            .Select(identities.Identity)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         string[] removedFrameIds = [.. frames
             .Where(frame => strayIdentities.Contains(
-                InfraredImportPairing.ImportIdentity(frame.SourcePath)))
+                identities.Identity(frame.SourcePath)))
             .Select(frame => frame.Id)];
         HashSet<string> removedFrameIdSet = removedFrameIds.ToHashSet(StringComparer.Ordinal);
         Dictionary<string, string> replacementByRemovedFrameId = frames
             .Where(frame => removedFrameIdSet.Contains(frame.Id))
             .Where(frame => baseFrameIdByInfraredIdentity.ContainsKey(
-                InfraredImportPairing.ImportIdentity(frame.SourcePath)))
+                identities.Identity(frame.SourcePath)))
             .ToDictionary(
                 frame => frame.Id,
                 frame => baseFrameIdByInfraredIdentity[
-                    InfraredImportPairing.ImportIdentity(frame.SourcePath)],
+                    identities.Identity(frame.SourcePath)],
                 StringComparer.Ordinal);
         return new(attachments, removedFrameIds, replacementByRemovedFrameId);
     }

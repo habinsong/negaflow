@@ -21,7 +21,13 @@ public sealed partial class ThumbnailService
     public bool TryGetDeveloped(string frameId, out DevelopedPreview preview) =>
         developed.TryGetValue(frameId, out preview);
 
-    /// <summary>원본·레시피·엔진 identity가 현재와 같은 memory/disk 정착본만 돌려줍니다.</summary>
+    /// <summary>원본·레시피·엔진 identity가 현재와 같은 상주 정착본만 돌려줍니다.</summary>
+    /// <remarks>
+    /// 예전에는 여기서 못 찾으면 디스크 캐시(<c>Cache\DevelopedPreviews</c>)까지 뒤졌습니다.
+    /// 그 캐시는 맥에 없는 Windows 창작이라 걷어냈습니다 — macOS 가 디스크에 두는 것은
+    /// 썸네일 · Cleaned Raw · Scan Previews 뿐이고, 현상 프리뷰는 <c>ScanFrame.developedImage</c>
+    /// 로 <b>메모리에만</b> 삽니다. 여기 남은 것이 그 자리입니다.
+    /// </remarks>
     public bool TryGetDeveloped(LibraryFrameSnapshot frame, out DevelopedPreview preview)
     {
         ArgumentNullException.ThrowIfNull(frame);
@@ -39,33 +45,7 @@ public sealed partial class ThumbnailService
         }
         EvictDeveloped(frame.Id);
         developedResidency.Remove(frame.Id);
-        if (developedDisk.Load(frame, expected) is not { } restored)
-        {
-            return false;
-        }
-        RememberResident(frame.Id, restored, expected);
-        preview = restored;
-        return true;
-    }
-
-    /// <summary>
-    /// Background 채움이 기존 정착본을 RAM으로 복원하지 않고 건너뛸 수 있는 검사입니다.
-    /// </summary>
-    public bool HasSettledDeveloped(LibraryFrameSnapshot frame)
-    {
-        ArgumentNullException.ThrowIfNull(frame);
-        if (!DevelopedPreviewCacheIdentityFactory.TryCreate(frame, out var expected))
-        {
-            return false;
-        }
-        if (developed.TryGetValue(frame.Id, out DevelopedPreview resident) &&
-            resident.Settled &&
-            developedIdentities.TryGetValue(frame.Id, out var residentIdentity) &&
-            residentIdentity.Matches(expected))
-        {
-            return true;
-        }
-        return developedDisk.Contains(frame, expected);
+        return false;
     }
 
     /// <summary>
@@ -120,15 +100,6 @@ public sealed partial class ThumbnailService
             renderedIdentity.Matches(current))
         {
             RememberResident(frame.Id, preview, renderedIdentity);
-            if (settled)
-            {
-                developedDisk.Store(
-                    frame,
-                    renderedIdentity,
-                    preview.Pixels,
-                    width,
-                    height);
-            }
         }
         else
         {
@@ -137,34 +108,6 @@ public sealed partial class ThumbnailService
             SyncDisplayCacheBudget();
             developedResidency.MarkResident(frame.Id, bytes, EvictDeveloped);
         }
-    }
-
-    /// <summary>
-    /// 먼 background 프레임은 lossless disk 결과만 보존합니다. managed resident와 native
-    /// raw를 함께 늘리지 않기 위한 경계이며, 호출자가 재사용하는 버퍼는 여기서 복사합니다.
-    /// </summary>
-    public void StoreDevelopedOnDisk(
-        LibraryFrameSnapshot frame,
-        ReadOnlySpan<byte> bgra,
-        int width,
-        int height,
-        DevelopedPreviewCacheIdentity? renderedIdentity)
-    {
-        ArgumentNullException.ThrowIfNull(frame);
-        long required = (long)width * height * 4;
-        if (renderedIdentity is null ||
-            width <= 0 || height <= 0 || required > int.MaxValue || bgra.Length < required ||
-            !DevelopedPreviewCacheIdentityFactory.TryCreate(frame, out var current) ||
-            !renderedIdentity.Matches(current))
-        {
-            return;
-        }
-        developedDisk.Store(
-            frame,
-            renderedIdentity,
-            bgra[..(int)required].ToArray(),
-            width,
-            height);
     }
 
     /// <summary>macOS <c>selectedFrameID</c> — 보고 있는 사진은 축출하지 않습니다.</summary>

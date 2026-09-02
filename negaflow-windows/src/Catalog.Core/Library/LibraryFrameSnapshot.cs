@@ -278,28 +278,29 @@ public sealed record LibraryFrameSnapshot(
     public ulong DefectRecipeRevision { get; init; }
 
     /// <summary>
-    /// Auto는 native resolver가 입력에서 base를 결정하므로 수동 Dmin 없이 현상할 수 있습니다.
-    /// Manual만 저장된 수동 base를 요구하고, 아직 resolver가 없는 Preset은 명시적으로 막습니다.
+    /// 현상할 수 있는지입니다. <b>원본의 성격과 필름 종류가 맞으면</b> 현상할 수 있습니다.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>베이스 모드는 여기서 보지 않습니다.</b> macOS
+    /// <c>ChromabaseEngine+NegativePipeline</c> 은 세 모드 어디에서도 현상을 거절하지
+    /// 않습니다 — <c>resolveFilmBase</c> 는 값이 있을 때만 수동을 쓰고
+    /// (<c>if let manual = params.manualBaseRGB, …</c>), <c>applyNegativeFilmPipeline</c> 은
+    /// 필름을 고르지 않은 preset 을 <c>preset = nil</c> 로 만들어 둘 다 자동 추정으로
+    /// 흘려보냅니다.
+    /// </para>
+    /// <para>
+    /// 앞 판은 그 두 상태를 여기서 막았고, 그래서 되돌리기로 수동 값을 지우거나 필름을
+    /// "없음" 으로 두면 <b>그 사진만 통째로 사라졌습니다</b>. 사진이 안 보이니 현상 패널이
+    /// 그 프레임을 들지 못해 모드를 되돌릴 수도 없는 막다른 골목이었습니다.
+    /// </para>
+    /// </remarks>
     public bool CanDevelop => Route.SourceSignalKind switch
     {
-        SourceSignalKind.RenderedDigital =>
-            Route.FilmType is FilmType.ColorPositive or FilmType.BlackAndWhitePositive,
-        SourceSignalKind.FilmPositiveScan =>
+        SourceSignalKind.RenderedDigital or SourceSignalKind.FilmPositiveScan =>
             Route.FilmType is FilmType.ColorPositive or FilmType.BlackAndWhitePositive,
         SourceSignalKind.FilmNegativeScan =>
-            (Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative) &&
-            Base.Mode switch
-            {
-                BaseEstimationMode.Auto => true,
-                // 필름을 "없음" 으로 두면 모드는 preset 인 채 스톡만 빕니다. 그것을 현상
-                // 불가로 막으면 사진이 아예 안 보이고, 안 보이니 현상 패널이 그 프레임을
-                // 들지 못해 모드를 되돌릴 수도 없습니다. 표에서 가져올 값이 없다는 것이지
-                // 현상할 수 없다는 뜻이 아니므로, 네이티브가 측정한 베이스로 갑니다.
-                BaseEstimationMode.Preset => true,
-                BaseEstimationMode.Manual => ManualBase is not null,
-                _ => false,
-            },
+            Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative,
         _ => false,
     };
 

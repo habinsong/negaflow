@@ -66,16 +66,20 @@ internal static class DevelopRequestRouteTests
                 autoWithStaleManual.Request?.DminRed == 0.0F,
             "develop_request_auto_ignores_stale_manual_base");
 
+        // 수동인데 고른 값이 없으면 거절이 아니라 **자동**입니다. macOS
+        // `resolveFilmBase` 는 `if let manual = params.manualBaseRGB, …` 로 값이 있을 때만
+        // 수동을 쓰고 없으면 자동 추정으로 흘러갑니다 — `resetManualBase` 직후가 이 상태이며,
+        // 여기서 막으면 값을 지운 사진이 통째로 보이지 않게 됩니다.
         DevelopRequestResult noBase = DevelopRequestFactory.Create(
             Frame(
                 null,
                 baseRecipe: new BaseRecipe(BaseEstimationMode.Manual, null, null, null)),
             destination);
-        Check(!noBase.IsSuccess, "develop_request_missing_base_refused");
+        Check(noBase.IsSuccess, "develop_request_manual_without_base_falls_back_to_auto");
         Check(
-            noBase.Refusal == DevelopRequestRefusal.MissingManualBase,
-            "develop_request_missing_base_reason");
-        Check(noBase.Request is null, "develop_request_no_partial_request");
+            noBase.Request?.BaseEstimationMode == DevelopBaseEstimationMode.Auto &&
+                noBase.Request?.DminRed == 0.0F,
+            "develop_request_manual_without_base_sends_auto");
 
         DevelopRequestResult preset = DevelopRequestFactory.Create(
             Frame(
@@ -94,13 +98,21 @@ internal static class DevelopRequestRouteTests
                 preset.Request?.ScannerProfileId ==
                     "noritsu__color-nega__kodak-portra-400",
             "develop_request_carries_film_and_scanner_profile_identifiers");
+        // 필름을 고르지 않은 preset 도 거절이 아니라 **자동**입니다. macOS
+        // `applyNegativeFilmPipeline` 은 `filmStockDminID` 가 없으면 `preset` 자체를 nil 로
+        // 두어 `resolveFilmBase` 와 반전이 모두 자동 경로로 갑니다.
+        DevelopRequestResult presetWithoutStock = DevelopRequestFactory.Create(
+            Frame(
+                new ManualBaseRgb(0.2, 0.2, 0.2),
+                baseRecipe: new BaseRecipe(BaseEstimationMode.Preset, null, "warm-led", null)),
+            destination);
+        Check(presetWithoutStock.IsSuccess, "develop_request_preset_without_stock_succeeds");
         Check(
-            DevelopRequestFactory.Create(
-                Frame(
-                    new ManualBaseRgb(0.2, 0.2, 0.2),
-                    baseRecipe: new BaseRecipe(BaseEstimationMode.Preset, null, null, null)),
-                destination).Refusal == DevelopRequestRefusal.MissingFilmStock,
-            "develop_request_preset_requires_film_stock");
+            presetWithoutStock.Request?.BaseEstimationMode == DevelopBaseEstimationMode.Auto &&
+                presetWithoutStock.Request?.FilmStockDminId is null &&
+                // 광원 트림은 macOS 에서 preset 분기 안에서만 걸립니다.
+                presetWithoutStock.Request?.LightSourceProfileId is null,
+            "develop_request_preset_without_stock_sends_auto");
 
         DevelopRequestResult digital = DevelopRequestFactory.Create(
             Frame(

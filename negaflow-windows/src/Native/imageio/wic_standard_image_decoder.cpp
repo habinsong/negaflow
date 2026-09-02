@@ -549,9 +549,11 @@ WicStandardImageDecodeResult decode_standard_image_with_wic(
     result.info.exif_orientation = 1U;
     result.info.orientation_applied = false;
     result.image = std::move(const_cast<LibRawDecodeResult&>(raw).image);
-    // WIC 경로가 디코드하면서 줄이는 것과 같은 자리입니다. LibRaw 는 다 만들어 놓고
-    // 돌려주므로 여기서 줄여야 그 뒤 단계 전부가 프리뷰 크기로 돕니다.
-    if (shrink_decoded_rgba16(result.image, control)) {
+    // LibRaw 경로는 넓히면서 이미 프리뷰 상자에 맞춰 돌려줍니다
+    // (`reduce_libraw_rgb16_to_preview`). 여기 남은 축소는 그 앞 판이 원본 크기로
+    // 넓힌 뒤에야 줄이던 자리였고, 지금은 **맞지 않은 경우의 안전망**입니다 —
+    // 이미 맞았으면 아무 일도 하지 않습니다.
+    if (raw.reduced_for_preview || shrink_decoded_rgba16(result.image, control)) {
         result.info.reduced_for_preview = true;
     }
     result.info.decoded_pixel_bytes =

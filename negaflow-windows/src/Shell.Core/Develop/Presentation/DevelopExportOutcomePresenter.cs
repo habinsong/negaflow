@@ -3,7 +3,14 @@ using Negaflow.Interop;
 
 namespace Negaflow.Shell.Develop;
 
-/// <summary>Formats stable user-facing export outcomes without owning panel state.</summary>
+/// <summary>
+/// 현상·내보내기 결과를 <b>기록용 한 줄</b>로 적습니다.
+/// </summary>
+/// <remarks>
+/// 이 글자는 <c>export-trace.txt</c> 같은 기록에만 들어갑니다. 기록은 어느 언어로 앱을 켰든
+/// 같은 글자여야 읽고 비교할 수 있으므로 번역하지 않습니다 — <b>화면에 적는 문구는
+/// <c>Shell/Localization/DevelopExportOutcomeText.cs</c> 가 만듭니다.</b>
+/// </remarks>
 internal static class DevelopExportOutcomePresenter
 {
     public static string Describe(DevelopExportOutcome outcome)
@@ -24,10 +31,8 @@ internal static class DevelopExportOutcomePresenter
             case DevelopExportOutcomeKind.Refused:
                 return outcome.Refusal switch
                 {
-                    DevelopRequestRefusal.MissingManualBase =>
-                        "Set the film base (Dmin) before developing this frame.",
-                    DevelopRequestRefusal.MissingFilmStock =>
-                        "Select a film stock before developing this frame.",
+                    DevelopRequestRefusal.NoFrameSelected =>
+                        "Select a photo first.",
                     DevelopRequestRefusal.UnsupportedBaseEstimationMode =>
                         "This film-base mode is not supported by the Windows engine yet.",
                     DevelopRequestRefusal.UnsupportedDigitalSource =>

@@ -860,6 +860,19 @@
   <data name="developExportRunning.Text" xml:space="preserve"><value>현상 중…</value></data>
   <data name="developExportSaveFailed.Text" xml:space="preserve"><value>카탈로그를 저장하지 못했습니다.</value></data>
   <data name="developExportFolderFailed.Text" xml:space="preserve"><value>그 폴더를 쓸 수 없습니다.</value></data>
+  <data name="developExportCompleteFormat.Text" xml:space="preserve"><value>%d×%d 를 %d ms 에 내보냈습니다</value></data>
+  <data name="developExportFailedFormat.Text" xml:space="preserve"><value>내보내기에 실패했습니다: %@</value></data>
+  <data name="developExportEngineFailedFormat.Text" xml:space="preserve"><value>엔진이 실패했습니다: %@</value></data>
+  <data name="developExportBusy.Text" xml:space="preserve"><value>이미 현상 중입니다.</value></data>
+  <data name="developExportNoResult.Text" xml:space="preserve"><value>현상이 아무 결과도 내지 않았습니다.</value></data>
+  <data name="developExportRefused.Text" xml:space="preserve"><value>현상 요청이 거절되었습니다.</value></data>
+  <data name="developExportRefusedNoFrame.Text" xml:space="preserve"><value>사진을 먼저 고르십시오.</value></data>
+  <data name="developExportRefusedBaseMode.Text" xml:space="preserve"><value>이 필름 베이스 모드는 Windows 엔진이 아직 지원하지 않습니다.</value></data>
+  <data name="developExportRefusedDigitalSource.Text" xml:space="preserve"><value>이 사진은 렌더된 디지털 원본이라 아직 현상할 수 없습니다.</value></data>
+  <data name="developExportRefusedPositiveFilm.Text" xml:space="preserve"><value>포지티브 필름 현상은 Windows 엔진이 아직 지원하지 않습니다.</value></data>
+  <data name="developExportRefusedDestination.Text" xml:space="preserve"><value>내보낼 전체 경로를 고르십시오.</value></data>
+  <data name="developExportRefusedOutputFormat.Text" xml:space="preserve"><value>그 내보내기 형식은 지원하지 않습니다.</value></data>
+  <data name="developExportRefusedStaleDefectSource.Text" xml:space="preserve"><value>결함 편집을 기록한 뒤로 스캔 파일의 크기가 달라졌습니다. 사진을 원래 스캔에 다시 연결하거나 결함 편집을 지운 뒤 다시 내보내십시오.</value></data>
   <data name="developSectionFilm.Text" xml:space="preserve"><value>필름</value></data>
   <data name="developFilmLookNone.Text" xml:space="preserve"><value>없음</value></data>
   <data name="developFilmGroupMotion.Text" xml:space="preserve"><value>시네 필름</value></data>

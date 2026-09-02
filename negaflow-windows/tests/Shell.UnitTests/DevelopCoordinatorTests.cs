@@ -50,14 +50,17 @@ internal static class DevelopCoordinatorTests
         DevelopExportCoordinator refusing = new(neverCalled, dispatcher);
         DevelopExportOutcome? refusal = null;
         Check(
+            // 현상할 수 없는 frame 은 **경로가 어긋난** 것입니다 — 네거티브 스캔으로 들어온
+            // 원본에 포지티브 필름 종류가 붙은 경우. 베이스 모드(수동에 값 없음, preset 에
+            // 필름 없음)는 macOS 처럼 자동으로 흘러가므로 거절 사유가 아닙니다.
             refusing.StartAsync(Frame(
                 null,
-                baseRecipe: new BaseRecipe(BaseEstimationMode.Manual, null, null, null)), destination, DevelopExportFormat.Png16,
+                filmType: FilmType.ColorPositive), destination, DevelopExportFormat.Png16,
                 outcome => refusal = outcome).GetAwaiter().GetResult(),
             "coordinator_delivers_refusal");
         Check(refusal?.Kind == DevelopExportOutcomeKind.Refused, "coordinator_refused_kind");
         Check(
-            refusal?.Refusal == DevelopRequestRefusal.MissingManualBase,
+            refusal?.Refusal == DevelopRequestRefusal.UnsupportedPositiveFilm,
             "coordinator_refusal_reason");
         Check(neverCalled.CallCount == 0, "coordinator_refusal_skips_native");
 
