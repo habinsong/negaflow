@@ -36,12 +36,16 @@ extension DevelopFrameRenderer {
                 )
                 : nil
             try Task.checkCancellation()
+            // 장면 측정은 반전 직전 입력에서 나온다 — 세 프리뷰가 같은 묶음을 공유하면
+            // 재측정도 없고 비교본끼리 반전 기준도 정확히 같아진다.
+            var measurements = snapshot.cachedSceneMeasurements
             let developedPair = try renderDeveloped(
                 input: rawInput,
                 base: base,
                 snapshot: snapshot,
                 engine: engine,
-                context: context
+                context: context,
+                measurements: &measurements
             )
             try Task.checkCancellation()
             let neutralPair = snapshot.needsNeutralPreview
@@ -50,7 +54,8 @@ extension DevelopFrameRenderer {
                     base: base,
                     snapshot: snapshot,
                     engine: engine,
-                    context: context
+                    context: context,
+                    measurements: &measurements
                 )
                 : nil
             let mainPair = snapshot.needsMainPreview
@@ -59,7 +64,8 @@ extension DevelopFrameRenderer {
                     base: base,
                     snapshot: snapshot,
                     engine: engine,
-                    context: context
+                    context: context,
+                    measurements: &measurements
                 )
                 : nil
             let debugPreviews = snapshot.needsDebugPreviews
@@ -90,7 +96,8 @@ extension DevelopFrameRenderer {
                 thumbnailBase: developedPair.thumbnailBase,
                 thumbnail: developedPair.thumbnail,
                 debugPreviews: debugPreviews,
-                previewRaw: input.generatedPreviewRaw
+                previewRaw: input.generatedPreviewRaw,
+                sceneMeasurements: measurements
             )
         }
     }
@@ -143,7 +150,8 @@ extension DevelopFrameRenderer {
         base: FilmBase?,
         snapshot: DevelopFrameSnapshot,
         engine: ChromabaseEngine,
-        context: CIContext
+        context: CIContext,
+        measurements: inout DevelopSceneMeasurements
     ) throws -> (transformed: CGImage, base: CGImage) {
         var neutral = DevelopParameters()
         neutral.filmType = snapshot.filmType
@@ -158,7 +166,8 @@ extension DevelopFrameRenderer {
             image: input,
             base: base,
             params: neutral,
-            maxDimension: snapshot.proxyMaxDimension
+            maxDimension: snapshot.proxyMaxDimension,
+            measurements: &measurements
         )
         guard let baseCG = renderDisplayCGImage(
             baseImage,
@@ -189,7 +198,8 @@ extension DevelopFrameRenderer {
         base: FilmBase?,
         snapshot: DevelopFrameSnapshot,
         engine: ChromabaseEngine,
-        context: CIContext
+        context: CIContext,
+        measurements: inout DevelopSceneMeasurements
     ) throws -> (transformed: CGImage, base: CGImage) {
         var main = snapshot.preset.map {
             DevelopParameters(preset: $0, overrides: snapshot.params)
@@ -201,7 +211,8 @@ extension DevelopFrameRenderer {
             image: input,
             base: base,
             params: main,
-            maxDimension: snapshot.proxyMaxDimension
+            maxDimension: snapshot.proxyMaxDimension,
+            measurements: &measurements
         )
         guard let baseCG = renderDisplayCGImage(
             baseImage,

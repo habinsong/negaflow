@@ -33,7 +33,7 @@ public enum RescueGrade {
     static let maximumDriftLab = 30.0
     static let bandEdges: [Double] = [0.06, 0.20, 0.34, 0.48, 0.62, 0.76, 0.92]
 
-    struct Recovery: Equatable, Hashable {
+    struct Recovery: Equatable, Hashable, Sendable {
         var bins: [ScannerTargetGrade.NeutralBin]
         var eligibleBandCount: Int
         var coveredTileCount: Int
@@ -86,13 +86,28 @@ public enum RescueGrade {
         filmType: FilmType = .colorNegative,
         recoverRange: Bool = true
     ) -> CIImage {
+        var recovery: Recovery?
+        return apply(to: image, sampleColorSpace: sampleColorSpace,
+                     filmType: filmType, recoverRange: recoverRange,
+                     recovery: &recovery)
+    }
+
+    /// 이미 잰 복구 증거가 있으면 다시 재지 않는 변형(DevelopSceneMeasurements).
+    static func apply(
+        to image: CIImage,
+        sampleColorSpace: CGColorSpace,
+        filmType: FilmType = .colorNegative,
+        recoverRange: Bool = true,
+        recovery cachedRecovery: inout Recovery?
+    ) -> CIImage {
         _ = recoverRange
         let alignChannels = filmType == .colorNegative || filmType == .colorPositive
-        let recovery = measureRecovery(
+        let recovery = cachedRecovery ?? measureRecovery(
             in: image,
             sampleColorSpace: sampleColorSpace,
             alignChannels: alignChannels
         )
+        cachedRecovery = recovery
         // EXPIRED = 열화 필름 **복구** 타겟(창의적 aged 룩이 아니다). 측정된 중립축 캐스트 증거가
         // 있을 때만 bounded 보정을 적용하고, 건강한 필름은 그대로(no-op = MAIN)다 — 복구할
         // 열화가 없으므로 아무것도 굽지 않는 것이 올바른 동작이다.

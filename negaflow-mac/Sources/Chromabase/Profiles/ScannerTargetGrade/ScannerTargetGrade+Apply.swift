@@ -6,6 +6,16 @@ extension ScannerTargetGrade {
     public static func apply(to image: CIImage,
                              target: DevelopTarget,
                              params: DevelopParameters) -> CIImage {
+        var anchor: SceneToneAnchor?
+        return apply(to: image, target: target, params: params, anchor: &anchor)
+    }
+
+    /// 이미 잰 장면 톤 앵커가 있으면 다시 재지 않는 변형. 앵커는 그레이드 **직전** 이미지에서
+    /// 나오므로 인스펙터 값과 무관하다 — 슬라이더를 움직이는 동안 재사용해도 결과가 같다.
+    static func apply(to image: CIImage,
+                      target: DevelopTarget,
+                      params: DevelopParameters,
+                      anchor cachedAnchor: inout SceneToneAnchor?) -> CIImage {
         let monochrome = params.filmType == .bwNegative || params.filmType == .bwPositive
         let positive = params.filmType == .colorPositive || params.filmType == .bwPositive
         // 톤 전이의 노출 앵커: 실측/문서 톤은 풀레인지 장면(캘리브레이션 corpus 의 developed
@@ -15,7 +25,8 @@ extension ScannerTargetGrade {
         // 장면 적응 노출/톤이라 재정규화). 장면 계조 폭이 지지보다 좁을수록, 장면
         // median 의 톤 델타를 상수로 빼서 median 노출을 앵커한다 — 형태(대비)·색 개성은
         // 유지되고 노출 성분만 제거된다. 풀레인지 장면은 가중치 0 = 기존 결과 불변.
-        let anchor = sceneToneAnchor(for: image)
+        let anchor = cachedAnchor ?? sceneToneAnchor(for: image)
+        cachedAnchor = anchor
         var img = image
         // 1. 문서 기반 절대 개성(scanner emulation 이면 항상 적용). MAIN 대비 시각적 구별의 주 동인.
         if let doc = documentedCharacter(target: target, filmType: params.filmType, monochrome: monochrome) {
@@ -33,7 +44,7 @@ extension ScannerTargetGrade {
         return img
     }
 
-    struct SceneToneAnchor {
+    struct SceneToneAnchor: Sendable, Equatable {
         var median: Double   // developed 감마 도메인 luma p50
         var weight: Double   // 0 = 풀레인지(앵커 없음), 1 = 평탄(전면 앵커)
     }

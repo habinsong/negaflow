@@ -59,6 +59,7 @@ extension DevelopFrameRenderer {
             if let proxy = materializedPreviewRaw(
                 displayProxy(fullImage, maxDimension: snapshot.proxyMaxDimension),
                 usesLinearSRGB: full.usesLinearSRGB,
+                sourceBitsPerComponent: sourceBitsPerComponent(snapshot, cleanedRawURL: verifiedCleanedRawURL),
                 context: rawProxyContext(usesLinearSRGB: full.usesLinearSRGB)
             ) {
                 return RenderInput(image: ciImage(from: proxy), generatedPreviewRaw: proxy)
@@ -78,6 +79,7 @@ extension DevelopFrameRenderer {
             if let proxy = materializedPreviewRaw(
                 displayProxy(fullImage, maxDimension: snapshot.proxyMaxDimension),
                 usesLinearSRGB: true,
+                sourceBitsPerComponent: sourceBitsPerComponent(snapshot, cleanedRawURL: verifiedCleanedRawURL),
                 context: rawProxyContext(usesLinearSRGB: true)
             ) {
                 return RenderInput(image: ciImage(from: proxy), generatedPreviewRaw: proxy)
@@ -90,6 +92,7 @@ extension DevelopFrameRenderer {
             let proxy = materializedPreviewRaw(
                 preview.image,
                 usesLinearSRGB: preview.usesLinearSRGB,
+                sourceBitsPerComponent: sourceBitsPerComponent(snapshot, cleanedRawURL: verifiedCleanedRawURL),
                 context: rawProxyContext(usesLinearSRGB: preview.usesLinearSRGB)
             )
             return RenderInput(
@@ -111,6 +114,7 @@ extension DevelopFrameRenderer {
         let proxy = materializedPreviewRaw(
             displayProxy(rawInput, maxDimension: snapshot.proxyMaxDimension),
             usesLinearSRGB: usesLinear,
+            sourceBitsPerComponent: sourceBitsPerComponent(snapshot, cleanedRawURL: verifiedCleanedRawURL),
             context: rawProxyContext(usesLinearSRGB: usesLinear)
         )
         return RenderInput(
@@ -150,16 +154,33 @@ extension DevelopFrameRenderer {
     private static func materializedPreviewRaw(
         _ input: CIImage,
         usesLinearSRGB: Bool,
+        sourceBitsPerComponent: Int,
         context: CIContext
     ) -> DevelopFramePreviewRaw? {
         let colorSpace = usesLinearSRGB
             ? CGColorSpace(name: CGColorSpace.linearSRGB)!
             : CGColorSpace(name: CGColorSpace.sRGB)!
-        let format: CIFormat = usesLinearSRGB ? .RGBA16 : .RGBA8
+        // 이 버퍼는 화면에 그대로 나가는 그림이 아니라 **현상 입력**이다. 8bit 로 내려앉으면
+        // 그 뒤의 반전·커브가 이미 사라진 계조 위에서 돈다 — sRGB 태그가 붙은 16bit 스캔
+        // (VueScan/SilverFast 출력이 흔히 그렇다)이 정확히 그 경우였다. 반대로 원본이 애초에
+        // 8bit 인 사진(JPEG 등)을 16bit 로 부풀리면 메모리만 두 배로 먹고 얻는 건 없다.
+        let format: CIFormat = sourceBitsPerComponent > 8 ? .RGBA16 : .RGBA8
         guard let cg = context.createCGImage(input, from: input.extent.integral, format: format, colorSpace: colorSpace) else {
             return nil
         }
         return DevelopFramePreviewRaw(image: cg, usesLinearSRGB: usesLinearSRGB)
+    }
+
+    /// 원본이 채널당 몇 비트인지. 못 읽으면 16 으로 본다 — 굳히는 쪽에서 계조를 깎는 것보다
+    /// 메모리를 조금 더 쓰는 편이 안전하다.
+    static func sourceBitsPerComponent(_ snapshot: DevelopFrameSnapshot, cleanedRawURL: URL?) -> Int {
+        if let preloaded = snapshot.preloadedRaw { return preloaded.bitsPerComponent }
+        let url = cleanedRawURL ?? snapshot.rawScanURL
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let depth = properties[kCGImagePropertyDepth] as? Int,
+              depth > 0 else { return 16 }
+        return depth
     }
 
     private static func ciImage(from preview: DevelopFramePreviewRaw) -> CIImage {
@@ -173,10 +194,14 @@ extension DevelopFrameRenderer {
         usesLinearSRGB ? linearRawProxyContext : srgbRawProxyContext
     }
 
+    /// 디코딩한 프리뷰 입력을 프레임에 굳혀 둘지.
+    ///
+    /// 예전에는 원본이 정착 상한(3600px)보다 **클 때만** 굳혔다. 그보다 작은 사진은 축소가
+    /// 필요 없다는 이유였는데, 축소가 필요 없다고 디코딩이 공짜인 건 아니다 — 그 경로는
+    /// 슬라이더를 한 칸 움직일 때마다 원본 파일을 처음부터 다시 디코딩했다(2816px 합성 스캔
+    /// 실측: 드래그 중 화면 갱신 8.5/s, 굳혀 두는 큰 원본은 23.9/s).
     private static func shouldCachePreviewInput(_ extent: CGRect, maxDimension: CGFloat) -> Bool {
-        guard maxDimension > 0, extent.width > 0, extent.height > 0 else { return false }
-        return max(extent.width, extent.height) > fullMaxDimension
-            && max(extent.width, extent.height) > maxDimension
+        maxDimension > 0 && extent.width > 0 && extent.height > 0
     }
 
     /// 우선순위: 결함 제거 메모리 raw → 결함 제거 디스크 백킹 → 원본 파일. 앞 둘이면 결함 제거가 반영된다.

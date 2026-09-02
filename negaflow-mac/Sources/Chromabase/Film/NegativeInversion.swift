@@ -123,7 +123,7 @@ public enum NegativeInversion {
     static let toeFloor = 0.003
 
     /// 채널별 밀도 통계. dmin/blackInput 은 raw 투과광(0...1 linear) 좌표계 기준.
-    struct ChannelStats {
+    struct ChannelStats: Sendable, Equatable {
         var dmin: SIMD3<Double>       // 필름 베이스 투과율(가장 밝은 = 가장 얇은 밀도)
         var dmaxNorm: SIMD3<Double>   // generic은 RGB 공통, 실측/프리셋만 채널별
         var blackInput: SIMD3<Double> // 장면 어두운 부분(p90 투과율) — 디버그 지표 전용
@@ -159,14 +159,35 @@ public enum NegativeInversion {
         base: FilmBase,
         filmType: FilmType = .colorNegative
     ) -> CIImage {
-        let stats = sampleStats(image, base: base, filmType: filmType)
+        var measurements = DevelopSceneMeasurements()
+        return applySceneRanged(
+            to: image, base: base, filmType: filmType, measurements: &measurements
+        )
+    }
+
+    /// 이미 잰 장면 측정이 있으면 다시 재지 않는 변형. 없으면 재서 `measurements` 에 채운다.
+    /// 측정은 입력 raw·베이스·필름 종류에만 의존하므로, 슬라이더만 움직이는 동안은 그대로
+    /// 유효하다(DevelopSceneMeasurements).
+    static func applySceneRanged(
+        to image: CIImage,
+        base: FilmBase,
+        filmType: FilmType,
+        measurements: inout DevelopSceneMeasurements
+    ) -> CIImage {
+        let stats = measurements.inversionStats
+            ?? sampleStats(image, base: base, filmType: filmType)
             ?? genericStats(base: base, filmType: filmType)
+        measurements.inversionStats = stats
         let inverted = applyDensityEncoding(
             to: image,
             stats: stats,
             response: response(for: filmType)
         )
-        return applyMutedSceneVibrance(to: inverted, monochrome: filmType == .bwNegative)
+        return applyMutedSceneVibrance(
+            to: inverted,
+            monochrome: filmType == .bwNegative,
+            amount: &measurements.mutedVibranceAmount
+        )
     }
 
     /// 흐린/평탄 장면(뮤트한 색)의 채도를 살린다. **scene-level 게이트 + per-pixel vibrance**:
@@ -175,20 +196,35 @@ public enum NegativeInversion {
     /// 캐스트를 만들지 않는다. 정상/유채색 장면은 사실상 불변 → 특정 컷 눈속임이 아니라
     /// "뮤트한 장면만 살리는" 일반 규칙이다. 흑백은 chroma 가 없어 무연산.
     static func applyMutedSceneVibrance(to image: CIImage, monochrome: Bool) -> CIImage {
+        var amount: Double?
+        return applyMutedSceneVibrance(to: image, monochrome: monochrome, amount: &amount)
+    }
+
+    static func applyMutedSceneVibrance(
+        to image: CIImage,
+        monochrome: Bool,
+        amount cachedAmount: inout Double?
+    ) -> CIImage {
         guard !monochrome else { return image }
         // Windows 포팅본이 CIVibrance 의 사상을 재현할 수 있도록 이 단계의 입출력을 남긴다.
         // Apple 내장 필터라 커널 소스가 없어, 값을 주고받는 것 말고는 맞출 방법이 없다.
         dumpProxy(image, name: "preview")
 
-        let meanSaturation = sceneMeanSaturation(image)
         // linear 채도 기준(실측 캘리브레이션): flat 흐린풍경≈0.037, 흐린/뮤트 풍경≈0.14~0.15,
         // 유채색 장면≈0.36. target 0.24 아래일수록 부스트(흐린 풍경 살림), 유채색(>0.24)은 0으로
         // 완전 보호 → 정상 유채색 컷 불변.
-        let amount = min(0.5, max(0.0, (0.24 - meanSaturation) * 3.0))
-        if ProcessInfo.processInfo.environment["NEGA_DEBUG"] != nil {
-            FileHandle.standardError.write(Data(
-                String(format: "[vib] meanSat=%.4f amount=%.3f\n", meanSaturation, amount).utf8))
+        let amount: Double
+        if let cached = cachedAmount {
+            amount = cached
+        } else {
+            let meanSaturation = sceneMeanSaturation(image)
+            amount = min(0.5, max(0.0, (0.24 - meanSaturation) * 3.0))
+            if ProcessInfo.processInfo.environment["NEGA_DEBUG"] != nil {
+                FileHandle.standardError.write(Data(
+                    String(format: "[vib] meanSat=%.4f amount=%.3f\n", meanSaturation, amount).utf8))
+            }
         }
+        cachedAmount = amount
         guard amount > 0.01 else {
             dumpProxy(image, name: "postvib")
             return image
@@ -269,7 +305,25 @@ public enum NegativeInversion {
         preset: FilmStockDmin,
         filmType: FilmType = .colorNegative
     ) -> CIImage {
-        let stats = presetStats(for: image, base: base, preset: preset, filmType: filmType)
+        var measurements = DevelopSceneMeasurements()
+        return apply(
+            to: image, base: base, preset: preset,
+            filmType: filmType, measurements: &measurements
+        )
+    }
+
+    /// 프리셋 경로의 측정 재사용 변형. `presetStats` 도 장면 실측(sampleStats)에 기대므로
+    /// auto 경로와 같은 슬롯에 담아 슬라이더 드래그 중 재측정을 없앤다.
+    static func apply(
+        to image: CIImage,
+        base: FilmBase,
+        preset: FilmStockDmin,
+        filmType: FilmType,
+        measurements: inout DevelopSceneMeasurements
+    ) -> CIImage {
+        let stats = measurements.inversionStats
+            ?? presetStats(for: image, base: base, preset: preset, filmType: filmType)
+        measurements.inversionStats = stats
         return applyDensityEncoding(to: image, stats: stats, response: response(for: filmType))
     }
 

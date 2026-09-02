@@ -99,7 +99,7 @@ final class AppModel: ObservableObject {
     let frameCacheResidencyStore = FrameCacheResidencyStore()
     private var memoryPressureMonitor: MemoryPressureMonitor?
     let pixelSamplerStore = PixelSamplerStore()
-    let developController = DevelopController()
+    let developController: DevelopController
     var selectedFrameDevelopTask: Task<Void, Never>?
     var sequentialLibraryDevelopmentTask: Task<Void, Never>?
     var printPackagePreviewTask: Task<Void, Never>?
@@ -266,8 +266,10 @@ final class AppModel: ObservableObject {
         scannerPluginTrustStore: ScannerPluginTrustStore? = ScannerPluginTrustStore.default,
         libraryCatalogURL: URL? = nil,
         libraryDefectDirectoryURL: URL? = nil,
-        libraryBackupDirectoryURL: URL? = nil
+        libraryBackupDirectoryURL: URL? = nil,
+        developController: DevelopController? = nil
     ) {
+        self.developController = developController ?? DevelopController()
         self.mockBackend = scannerDemoBackend ?? MockScannerBackend()
         self.scannerPluginTrustStore = scannerPluginTrustStore
         self.exportSettingsStore = exportSettingsStore ?? ExportSettingsStore()

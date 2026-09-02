@@ -74,8 +74,7 @@ extension DevelopWorkflowInspector {
     func syncBatchWBIfNeeded() { }   // Auto Sync WB(배치 WB 동기화) 제거됨 — 기존 호출부 호환용 no-op
 
     func scheduleRedevelop(_ frame: ScanFrame) {
-        // 레이트 throttle은 모델이 담당한다(리딩+트레일링 ~22fps). 매 틱 동기 리비전 증가로 루프를
-        // 무제한 렌더시키던 과거 방식이 GPU(IOSurface) 누적·간헐 블랭크 렌더의 원인이었다.
+        // 레이트 throttle은 모델이 담당한다(리딩+트레일링, 간격은 기기 실측 기반).
         model.requestDevelop(frame)
     }
 }

@@ -14,7 +14,8 @@ extension DevelopFrameRenderer {
         base: FilmBase?,
         snapshot: DevelopFrameSnapshot,
         engine: ChromabaseEngine,
-        context: CIContext
+        context: CIContext,
+        measurements: inout DevelopSceneMeasurements
     ) throws -> (
         transformed: CGImage,
         base: CGImage,
@@ -39,7 +40,8 @@ extension DevelopFrameRenderer {
             image: input,
             base: base,
             params: effectiveParams,
-            maxDimension: snapshot.proxyMaxDimension
+            maxDimension: snapshot.proxyMaxDimension,
+            measurements: &measurements
         )
         // 미리보기 8bit 변환 직전 dithering으로 명부/하늘 banding 완화(OutputDither). 출력 계층에서만.
         guard let baseCG = renderDisplayCGImage(

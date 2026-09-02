@@ -16,9 +16,20 @@ public enum NeutralBalance {
     public static func apply(to image: CIImage,
                              sampleColorSpace: CGColorSpace? = nil,
                              strength: Double = 0.8) -> CIImage {
-        guard let median = sampleMedian(image, sampleColorSpace: sampleColorSpace) else {
+        var median: SIMD3<Double>?
+        return apply(to: image, sampleColorSpace: sampleColorSpace,
+                     strength: strength, median: &median)
+    }
+
+    /// 이미 잰 장면 median 이 있으면 다시 재지 않는 변형(DevelopSceneMeasurements).
+    static func apply(to image: CIImage,
+                      sampleColorSpace: CGColorSpace? = nil,
+                      strength: Double = 0.8,
+                      median cachedMedian: inout SIMD3<Double>?) -> CIImage {
+        guard let median = cachedMedian ?? sampleMedian(image, sampleColorSpace: sampleColorSpace) else {
             return image
         }
+        cachedMedian = median
         // 너무 어둡거나 밝은 median은 신뢰도가 낮아 건너뛴다(감마 교정이 불안정).
         let m = median
         guard m.x > 0.04, m.y > 0.04, m.z > 0.04,

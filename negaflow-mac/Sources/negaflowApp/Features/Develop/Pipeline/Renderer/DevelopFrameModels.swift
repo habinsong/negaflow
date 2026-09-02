@@ -23,6 +23,8 @@ struct DevelopFrameSnapshot: @unchecked Sendable {
     let imageTransform: ImageTransform
     let cachedBase: FilmBase?
     let baseKey: FilmBaseCacheKey
+    /// 이전 현상에서 이미 잰 장면 측정. 비어 있으면 이번 렌더가 재서 결과로 돌려준다.
+    var cachedSceneMeasurements: DevelopSceneMeasurements = DevelopSceneMeasurements()
     let needsRawPreview: Bool
     let needsNeutralPreview: Bool
     var needsMainPreview: Bool = false
@@ -62,6 +64,9 @@ struct DevelopFrameRenderResult: @unchecked Sendable {
     let thumbnail: CGImage?        // 필름스트립용 경량 썸네일(긴 변 ~360px)
     let debugPreviews: [DevelopDebugPreview]
     let previewRaw: DevelopFramePreviewRaw?
+    /// 이번 렌더가 실제로 쓴 장면 측정(재사용분 + 새로 잰 분). 프레임이 보관했다가 다음
+    /// 현상에 돌려준다.
+    let sceneMeasurements: DevelopSceneMeasurements
 }
 
 struct DevelopFrameFastPreviewResult: @unchecked Sendable {

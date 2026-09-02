@@ -61,7 +61,10 @@ extension AppModel {
                     language: appLanguage
                 )
                 do {
+                    let renderStarted = Date()
                     let fast = try await renderDevelopmentSnapshot(interactive)
+                    // 라이브 갱신 간격을 이 기기의 실제 소요에 맞추기 위한 근거.
+                    developController.noteInteractiveDevelopDuration(-renderStarted.timeIntervalSinceNow)
                     guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else {
                         return
                     }
@@ -69,11 +72,23 @@ extension AppModel {
                         revision = frame.developRevision
                         continue
                     }
-                    guard frame.developRevision == revision else {
+                    // 결함 제거 세대가 뒤처진 결과는 화면에 올리지 않는다. 슬라이더 값이 한 틱
+                    // 낡은 건 곧 덮이지만, 방금 지운 먼지가 되살아나 보이는 건 다른 문제다.
+                    guard interactiveCleanRawRevision == frame.cleanRawRevision else {
                         revision = frame.developRevision
                         continue
                     }
+                    // 반면 인스펙터 값이 렌더 도는 사이 또 바뀐 것뿐이라면 이 장은 화면에 올린다.
+                    // 예전에는 여기서 통째로 버리고 다시 그렸는데, 그러면 드래그가 빠를수록 버리는
+                    // 비율이 올라가 화면이 오히려 덜 갱신됐다(실측: 요청 간격을 45→16 ms 로
+                    // 줄이면 갱신이 23.4→15.9/s 로 **떨어짐**). 한 틱 낡은 장을 잠깐 보여주고
+                    // 바로 아래에서 최신 값으로 다시 도는 편이 라이브 프리뷰답다 — 루프가
+                    // 순차라 옛 결과가 새 결과를 덮을 수는 없고, 마지막 값은 항상 반영된다.
                     applyBaseCache(fast, to: frame, baseKey: baseKey)
+                    applySceneMeasurementCache(
+                        fast, to: frame, baseKey: baseKey,
+                        proxyMaxDimension: interactive.proxyMaxDimension
+                    )
                     applyPreviewRawCache(fast, to: frame, maxDimension: interactive.proxyMaxDimension)
                     frame.noteDevelopedDisplaySize(
                         CGSize(width: fast.developed.width, height: fast.developed.height),
@@ -177,6 +192,10 @@ extension AppModel {
                     continue
                 }
                 applyBaseCache(result, to: frame, baseKey: baseKey)
+                applySceneMeasurementCache(
+                    result, to: frame, baseKey: baseKey,
+                    proxyMaxDimension: full.proxyMaxDimension
+                )
                 applyPreviewRawCache(result, to: frame, maxDimension: full.proxyMaxDimension)
                 frame.cachedDevelopedBase = result.developedBase   // 결함 제거 적용 전 base
                 if pixelSamplerStore.isEnabled {
@@ -307,6 +326,9 @@ extension AppModel {
             imageTransform: frame.imageTransform,
             cachedBase: frame.cachedBaseKey == baseKey ? frame.cachedBase : nil,
             baseKey: baseKey,
+            cachedSceneMeasurements: cachedSceneMeasurements(
+                for: frame, baseKey: baseKey, proxyMaxDimension: proxyMaxDimension
+            ),
             needsRawPreview: needsRawPreview,
             needsNeutralPreview: needsNeutralPreview,
             needsMainPreview: needsMainPreview,
@@ -330,12 +352,14 @@ extension AppModel {
     }
 
     /// 추가 편집 없이 settle 윈도(≈0.14s)가 지나면 true, 그 전에 새 리비전이 오면 false(드래그 진행).
-    /// 짧은 간격으로 폴링해 새 편집을 빠르게 감지 → 라이브 인터랙티브 갱신이 끊기지 않는다.
+    /// 폴링 간격은 이 화면의 프레임에서 뽑는다(developController.editPollInterval) — 고정 간격은
+    /// 빠른 기기에서 새 편집을 알아채는 데만 한 프레임 넘게 흘려보냈다.
     func waitForDevelopSettle(_ frame: ScanFrame, revision: Int) async -> Bool {
         let deadline = Date().addingTimeInterval(0.14)
+        let poll = UInt64(max(developController.editPollInterval, 0.001) * 1_000_000_000)
         while Date() < deadline {
             do {
-                try await Task.sleep(nanoseconds: 25_000_000)
+                try await Task.sleep(nanoseconds: poll)
             } catch {
                 return false
             }
@@ -348,6 +372,62 @@ extension AppModel {
         frame.cachedBase = result.base
         frame.cachedBaseKey = baseKey
         frame.baseRGB = result.base?.rgb
+    }
+
+    /// 장면 측정 캐시 키. 베이스 값까지 포함해야 한다 — auto 모드는 baseKey 가 같아도 입력이
+    /// 바뀌면 베이스가 달라지고, 그러면 반전 밀도역도 다시 재야 한다.
+    func sceneMeasurementCacheKey(
+        for frame: ScanFrame,
+        baseKey: FilmBaseCacheKey
+    ) -> SceneMeasurementCacheKey {
+        SceneMeasurementCacheKey(
+            baseKey: baseKey,
+            baseRGB: frame.cachedBaseKey == baseKey ? frame.cachedBase?.rgb : nil,
+            cleanRawRevision: frame.cleanRawRevision,
+            autoLevels: frame.params.autoLevels,
+            autoNeutralBalance: frame.params.autoNeutralBalance
+        )
+    }
+
+    /// 요청 치수에 해당하는 슬롯의 측정. 정착 치수 요청은 정착 슬롯을, 그보다 작은(드래그)
+    /// 요청은 같은 치수로 떴던 드래그 슬롯만 쓴다 — 프리뷰 raw 캐시와 같은 규칙이다.
+    func cachedSceneMeasurements(
+        for frame: ScanFrame,
+        baseKey: FilmBaseCacheKey,
+        proxyMaxDimension: CGFloat
+    ) -> DevelopSceneMeasurements {
+        guard frame.cachedSceneMeasurementsKey == sceneMeasurementCacheKey(for: frame, baseKey: baseKey) else {
+            return DevelopSceneMeasurements()
+        }
+        if proxyMaxDimension >= DevelopFrameRenderer.fullMaxDimension - 0.5 {
+            return frame.cachedSettledSceneMeasurements ?? DevelopSceneMeasurements()
+        }
+        guard abs(frame.cachedInteractiveSceneMeasurementsDimension - proxyMaxDimension) <= 0.5 else {
+            return DevelopSceneMeasurements()
+        }
+        return frame.cachedInteractiveSceneMeasurements ?? DevelopSceneMeasurements()
+    }
+
+    func applySceneMeasurementCache(
+        _ result: DevelopFrameRenderResult,
+        to frame: ScanFrame,
+        baseKey: FilmBaseCacheKey,
+        proxyMaxDimension: CGFloat
+    ) {
+        let key = sceneMeasurementCacheKey(for: frame, baseKey: baseKey)
+        if frame.cachedSceneMeasurementsKey != key {
+            // 입력 raw 나 베이스가 바뀌었다 — 두 슬롯 모두 옛 장면 것이다.
+            frame.cachedInteractiveSceneMeasurements = nil
+            frame.cachedInteractiveSceneMeasurementsDimension = 0
+            frame.cachedSettledSceneMeasurements = nil
+            frame.cachedSceneMeasurementsKey = key
+        }
+        if proxyMaxDimension >= DevelopFrameRenderer.fullMaxDimension - 0.5 {
+            frame.cachedSettledSceneMeasurements = result.sceneMeasurements
+        } else {
+            frame.cachedInteractiveSceneMeasurements = result.sceneMeasurements
+            frame.cachedInteractiveSceneMeasurementsDimension = proxyMaxDimension
+        }
     }
 
     /// 요청 치수와 일치하는 raw 프록시 캐시. 정착 치수(fullMaxDimension) 요청은 정착 슬롯을,

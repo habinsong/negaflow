@@ -27,12 +27,14 @@ final class DevelopTargetWholeFrameCompositionTests: XCTestCase {
                 params.baseEstimationMode = .manual
                 params.manualBaseRGB = baseRGB
 
+                var measurements = DevelopSceneMeasurements()
                 let actual = ChromabaseEngine().applyNegativeFilmPipeline(
                     to: input,
                     base: base,
                     params: params,
                     sampleColorSpace: linear,
-                    extent: input.extent
+                    extent: input.extent,
+                    measurements: &measurements
                 )
                 let expected = declaredTargetTransform(
                     input: input,

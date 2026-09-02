@@ -23,6 +23,26 @@ struct FilmBaseCacheKey: Equatable, Sendable {
     }
 }
 
+/// 장면 측정 캐시가 아직 유효한지 판단하는 키.
+///
+/// 측정은 반전 **직전** 입력과 필름 베이스에서 나온다. 그래서 인스펙터 값이 아무리 바뀌어도
+/// 유효하고, 다음 중 하나라도 달라지면 버려야 한다: 필름 베이스 결정 요소(baseKey), 실제
+/// 베이스 값, 결함 제거로 갈아끼운 입력 raw 세대, 반전 뒤에 걸리는 장면 적응 보정 토글.
+///
+/// 치수는 키가 아니라 **슬롯**으로 가른다(프리뷰 raw 캐시와 같은 방식). 드래그 패스는 창
+/// 크기로 줄인 프록시를, 정착 패스는 그보다 큰 프록시를 입력으로 쓰는데, 한 슬롯을 공유하면
+/// 정착본이 "자기가 현상하는 픽셀이 아닌 다른 픽셀에서 뜬 측정"으로 색을 잡아 화면과 내보낸
+/// 파일이 갈렸다(실측 평균 밝기 0.45 vs 0.42). 그렇다고 치수를 키에 넣어 하나만 들고 있으면,
+/// 정착이 캐시를 자기 것으로 덮은 뒤 **다시 잡는 첫 틱**이 재측정을 물어 41.8 ms 로 튄다 —
+/// 사용자가 값을 처음 움직일 때 바로 그 지연을 느낀다. 그래서 둘 다 들고 있는다.
+struct SceneMeasurementCacheKey: Equatable, Sendable {
+    let baseKey: FilmBaseCacheKey
+    let baseRGB: SIMD3<Double>?
+    let cleanRawRevision: Int
+    let autoLevels: Bool
+    let autoNeutralBalance: Bool
+}
+
 // MARK: - FrameSource (프레임 raw 입력의 출처)
 //
 // 로더가 원본 파일을 어떻게 해석할지 결정한다.
@@ -160,6 +180,14 @@ final class ScanFrame: ObservableObject, Identifiable {
     var developRevision: Int = 0
     var cachedBaseKey: FilmBaseCacheKey?
     var cachedBase: FilmBase?
+
+    // 슬라이더 값과 무관한 장면 측정(반전 밀도역·채도 게이트·스캐너 톤 앵커). 입력 raw 와
+    // 베이스가 그대로면 재사용한다 — 드래그 중 프리뷰 한 장 값의 3분의 2가 이 재측정이었다.
+    // 드래그용과 정착용을 따로 들고 있어야 두 패스가 서로의 측정을 밀어내지 않는다.
+    var cachedSceneMeasurementsKey: SceneMeasurementCacheKey?
+    var cachedInteractiveSceneMeasurements: DevelopSceneMeasurements?
+    var cachedInteractiveSceneMeasurementsDimension: CGFloat = 0
+    var cachedSettledSceneMeasurements: DevelopSceneMeasurements?
 
     // 변형(회전/플립/크롭) 전 display-proxy 결과. 변형은 순수 기하 연산이라 전체 현상
     // 파이프라인을 다시 돌릴 필요 없이 이 캐시에 ImageTransformStage만 다시 적용하면 된다.

@@ -8,7 +8,8 @@ extension ChromabaseEngine {
         base: FilmBase?,
         params: DevelopParameters,
         sampleColorSpace: CGColorSpace,
-        extent: CGRect
+        extent: CGRect,
+        measurements: inout DevelopSceneMeasurements
     ) -> CIImage {
         var img = input
         let preset: FilmStockDmin? = (params.baseEstimationMode == .preset)
@@ -16,12 +17,15 @@ extension ChromabaseEngine {
         let fb = resolveFilmBase(for: img, provided: base, preset: preset, params: params)
         if let preset {
             img = NegativeInversion.apply(
-                to: img, base: fb, preset: preset, filmType: params.filmType
+                to: img, base: fb, preset: preset,
+                filmType: params.filmType, measurements: &measurements
             )
         } else {
             // auto 경로: 이 네거티브가 실제 사용한 per-channel 밀도 범위를 측정해 정규화한다
             // (고정 dmax 는 얇은 실스캔을 압축·어둡게·탈색·캐스트로 만든다). 노출은 보존된다.
-            img = NegativeInversion.applySceneRanged(to: img, base: fb, filmType: params.filmType)
+            img = NegativeInversion.applySceneRanged(
+                to: img, base: fb, filmType: params.filmType, measurements: &measurements
+            )
         }
         // 장면 적응(자동) 보정은 opt-in — 명시적으로 켰을 때만 실행한다.
         // 반전(밀도 정규화)은 결정적이므로 색이 base/프리셋만으로 예측 가능해진다.
@@ -36,10 +40,12 @@ extension ChromabaseEngine {
             // 최암부 빈 0 벽을 다시 만든다(히스토그램 양끝 폭발의 재발 경로).
             img = AutoLevels.apply(to: img, sampleColorSpace: measureSpace,
                                    outputWhite: 0.95,
-                                   outputBlack: NegativeInversion.toeFloor)
+                                   outputBlack: NegativeInversion.toeFloor,
+                                   points: &measurements.autoLevelsPoints)
         }
         if params.autoNeutralBalance {
-            img = NeutralBalance.apply(to: img, sampleColorSpace: measureSpace)
+            img = NeutralBalance.apply(to: img, sampleColorSpace: measureSpace,
+                                       median: &measurements.neutralBalanceMedian)
         }
         // 타겟별 베이스 분기:
         //   main/print          — Dmin + 고정 인화 응답으로 만든 중립 기본 양화. 장면별 자동
@@ -52,14 +58,18 @@ extension ChromabaseEngine {
         //                         반전이 흡수 못 하는 채널별 계조 압축·크로스오버 캐스트·컨페티
         //                         노이즈를 scene-측정으로 보정한다.
         if params.developTarget.isScannerEmulation {
-            img = ScannerTargetGrade.apply(to: img, target: params.developTarget, params: params)
+            img = ScannerTargetGrade.apply(
+                to: img, target: params.developTarget, params: params,
+                anchor: &measurements.scannerSceneAnchor
+            )
         }
         if params.developTarget == .rescue {
             // EXPIRED 자체는 엔드포인트 스트레치/고정 커브/NR을 소유하지 않는다. 여러 휘도대와
             // 공간에서 holdout까지 통과한 중립축 증거가 있을 때만 bounded 상대 보정을 적용한다.
             img = RescueGrade.apply(to: img, sampleColorSpace: measureSpace,
                                     filmType: params.filmType,
-                                    recoverRange: false)
+                                    recoverRange: false,
+                                    recovery: &measurements.rescueRecovery)
         }
         // 타겟 프로파일 밖의 고정 NR·별도 명부 탈채도·추가 gamut 압축은 적용하지 않는다.
         // 현재 스캐너 자료에는 해당 공간 필터의 반경/강도나 고정 desaturation을 보정할

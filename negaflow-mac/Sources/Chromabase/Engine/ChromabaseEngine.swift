@@ -119,6 +119,7 @@ public final class ChromabaseEngine: @unchecked Sendable {
 
     /// 전체 현상 파이프라인을 돌려 결과 CIImage를 반환한다.
     public func develop(image input: CIImage, base: FilmBase?, params: DevelopParameters) -> CIImage {
+        var measurements = DevelopSceneMeasurements()
         let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
         let sampleColorSpace = input.colorSpace?.name == linear.name
             ? linear
@@ -127,18 +128,32 @@ public final class ChromabaseEngine: @unchecked Sendable {
             image: input,
             base: base,
             params: params,
-            sampleColorSpace: sampleColorSpace
+            sampleColorSpace: sampleColorSpace,
+            measurements: &measurements
         )
     }
 
     public func developScanner(image input: CIImage, base: FilmBase?, params: DevelopParameters) -> CIImage {
+        var measurements = DevelopSceneMeasurements()
+        return developScanner(
+            image: input, base: base, params: params, measurements: &measurements
+        )
+    }
+
+    public func developScanner(
+        image input: CIImage,
+        base: FilmBase?,
+        params: DevelopParameters,
+        measurements: inout DevelopSceneMeasurements
+    ) -> CIImage {
         // 노이즈 감소는 반전 전 raw(오렌지 상태)가 아니라 반전 후 positive에서 수행한다.
         // raw 네거티브의 chroma/luma 분리는 의미가 없어 데이터를 망가뜨린다.
         develop(
             image: input,
             base: base,
             params: params,
-            sampleColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!
+            sampleColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!,
+            measurements: &measurements
         )
     }
 
@@ -148,10 +163,27 @@ public final class ChromabaseEngine: @unchecked Sendable {
         params: DevelopParameters,
         maxDimension: CGFloat
     ) -> CIImage {
+        var measurements = DevelopSceneMeasurements()
+        return developScannerPreview(
+            image: input, base: base, params: params,
+            maxDimension: maxDimension, measurements: &measurements
+        )
+    }
+
+    /// 장면 측정을 재사용하는 프리뷰 현상. 슬라이더만 움직이는 동안 같은 묶음을 계속
+    /// 돌려주면 축소 렌더·정렬을 매번 다시 하지 않는다(DevelopSceneMeasurements).
+    public func developScannerPreview(
+        image input: CIImage,
+        base: FilmBase?,
+        params: DevelopParameters,
+        maxDimension: CGFloat,
+        measurements: inout DevelopSceneMeasurements
+    ) -> CIImage {
         developScanner(
             image: Self.scannerPreviewProxy(input, maxDimension: maxDimension),
             base: base,
-            params: params
+            params: params,
+            measurements: &measurements
         )
     }
 
@@ -184,7 +216,8 @@ public final class ChromabaseEngine: @unchecked Sendable {
     private func develop(image input: CIImage,
                          base: FilmBase?,
                          params: DevelopParameters,
-                         sampleColorSpace: CGColorSpace) -> CIImage {
+                         sampleColorSpace: CGColorSpace,
+                         measurements: inout DevelopSceneMeasurements) -> CIImage {
         var img = input
         let extent = input.extent
 
@@ -194,7 +227,8 @@ public final class ChromabaseEngine: @unchecked Sendable {
                 base: base,
                 params: params,
                 sampleColorSpace: sampleColorSpace,
-                extent: extent
+                extent: extent,
+                measurements: &measurements
             )
         } else {
             img = applyPositiveFilmPipeline(

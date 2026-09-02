@@ -27,16 +27,44 @@ public enum AutoLevels {
                              sampleColorSpace: CGColorSpace? = nil,
                              outputWhite outputWhiteOverride: Double? = nil,
                              outputBlack: Double = 0.0) -> CIImage {
+        var points: Points?
+        return apply(to: image, blackClip: blackClip, whiteClip: whiteClip,
+                     sampleColorSpace: sampleColorSpace,
+                     outputWhite: outputWhiteOverride, outputBlack: outputBlack,
+                     points: &points)
+    }
+
+    /// 검출한 끝점 한 쌍. 인스펙터 값이 걸리기 전 이미지에서 나오므로 슬라이더와 무관하다.
+    struct Points: Sendable, Equatable {
+        var black: SIMD3<Double>
+        var white: SIMD3<Double>
+    }
+
+    /// 이미 검출한 끝점이 있으면 다시 재지 않는 변형(DevelopSceneMeasurements).
+    static func apply(to image: CIImage,
+                      blackClip: Double = 0.005,
+                      whiteClip: Double = 0.001,
+                      sampleColorSpace: CGColorSpace? = nil,
+                      outputWhite outputWhiteOverride: Double? = nil,
+                      outputBlack: Double = 0.0,
+                      points cachedPoints: inout Points?) -> CIImage {
         // 샘플링을 위해 작은 영역으로 축소(CIAreaAverage 로는 히스토그램이 안 나옴).
         // 대신 작은 축소본을 렌더링해서 픽셀을 직접 읽는다.
-        guard let (black, white) = sampleBlackWhite(
+        let measured: Points
+        if let cached = cachedPoints {
+            measured = cached
+        } else if let sampled = sampleBlackWhite(
             image,
             blackClip: blackClip,
             whiteClip: whiteClip,
             sampleColorSpace: sampleColorSpace
-        ) else {
+        ) {
+            measured = Points(black: sampled.black, white: sampled.white)
+            cachedPoints = measured
+        } else {
             return image   // 샘플링 실패 시 원본 반환(무해)
         }
+        let (black, white) = (measured.black, measured.white)
         // 의미 있는 보정인지 검사(이미 펴져 있으면 건너뛴다 — 무해성).
         let whiteR = white.x, whiteG = white.y, whiteB = white.z
         let blackR = black.x, blackG = black.y, blackB = black.z

@@ -19,7 +19,7 @@ extension ScannerTargetGrade {
     /// 기반 toneXs 를 명시적으로 채운다.
     static var designToneXs: [Double] { designPercentiles.map(srgbEncode) }
 
-    struct NeutralBin: Equatable, Hashable {
+    struct NeutralBin: Equatable, Hashable, Sendable {
         var luma: Double     // 감마 도메인 Rec.709 luma bin 중심
         var a: Double        // Lab a* 실측 드리프트(중립 픽셀 기준)
         var b: Double        // Lab b*
