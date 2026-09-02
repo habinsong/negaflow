@@ -87,7 +87,7 @@
 |---|---|
 | `negaflow-1.1.3-mac-universal.pkg` | macOS 14 이상, Apple Silicon과 Intel |
 | `negaflow-1.1.3-mac-arm64.pkg` | macOS 14 이상, Apple Silicon 전용 |
-| `negaflow-1.1.1-win-x64.exe` | Windows 11 24H2 이상, x64 |
+| `negaflow-1.1.3-win-x64.exe` | Windows 11 24H2 이상, x64 |
 
 대부분의 Mac은 Universal PKG면 됩니다. 물론, Silicon 용 파일과 DMG와 ZIP도 같은 페이지에 올려 뒀습니다.
 처음 실행할 때 설정의 개인정보 보호 및 보안에서 '그래도 열기'를 한 번 눌러야 합니다.

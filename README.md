@@ -75,7 +75,7 @@ Get it from [GitHub Releases](https://github.com/habinsong/negaflow/releases).
 |---|---|
 | `negaflow-1.1.3-mac-universal.pkg` | macOS 14 or later, Apple Silicon and Intel |
 | `negaflow-1.1.3-mac-arm64.pkg` | macOS 14 or later, Apple Silicon only |
-| `negaflow-1.1.1-win-x64.exe` | Windows 11 24H2 or later, x64 |
+| `negaflow-1.1.3-win-x64.exe` | Windows 11 24H2 or later, x64 |
 
 Most Macs are fine with the Universal PKG. Of course, the Silicon build and a DMG and a ZIP are up on the same page too. On the first launch you have to open System Settings, go to Privacy and Security, and click Open Anyway once.
 
