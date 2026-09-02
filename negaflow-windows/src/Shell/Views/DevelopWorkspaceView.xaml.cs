@@ -409,6 +409,18 @@ public sealed partial class DevelopWorkspaceView : UserControl
         return LeftPanel.ExportPanel.runner.RunExportAsync();
     }
 
+    /// <summary>
+    /// 출력 패널의 두 단추를 지금 값으로 맞춥니다.
+    /// </summary>
+    /// <remarks>
+    /// 위 막대·메뉴는 <c>SyncExportMenu</c> 가 맞추는데 패널은 그 자리에 없었습니다.
+    /// 그래서 <b>부팅 직후 위 막대는 켜져 있고 패널의 내보내기·빠른 내보내기만 꺼진</b>
+    /// 상태가 됐고(실측 2026-09-03), 워크스페이스를 한 번 오가야 살아났습니다.
+    /// 잠금이 하나면 맞추는 자리도 하나여야 합니다.
+    /// </remarks>
+    public void SynchronizeExportControls() =>
+        LeftPanel.ExportPanel.SynchronizeExportControls();
+
     internal bool TryExitGrainMendInteraction() =>
         GrainMendPanel.TryExitRegionDefectInteraction();
 
@@ -416,7 +428,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         Task grainMendDrain = GrainMendPanel.PrepareForTerminationAsync();
         Task previewDrain = previewCoordinator?.CancelAndDrainAsync() ?? Task.CompletedTask;
-        await Task.WhenAll(grainMendDrain, previewDrain);
+        Task neighborDrain = CancelNeighborWarmAsync();
+        await Task.WhenAll(grainMendDrain, previewDrain, neighborDrain);
     }
 
     private void OnThumbnailReady(string frameId) => frames.OnThumbnailReady(frameId);

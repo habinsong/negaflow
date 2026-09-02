@@ -359,6 +359,13 @@ public sealed partial class PrintWorkspaceView : UserControl
     private DevelopPanelState? exportPanelState;
     private LibraryHostService? printExportHost;
 
+    /// <summary>
+    /// 인화뷰 출력 패널의 두 단추를 지금 값으로 맞춥니다. 현상뷰와 같은 이유입니다 —
+    /// 위 막대·메뉴만 맞추면 패널 단추가 부팅 직후 꺼진 채로 남습니다.
+    /// </summary>
+    public void SynchronizeExportControls() =>
+        PrintExportPanel.SynchronizeExportControls();
+
     /// <summary>인화뷰가 보고 있는 사진이 곧 내보낼 사진입니다.</summary>
     internal void SynchronizeExportSelection()
     {

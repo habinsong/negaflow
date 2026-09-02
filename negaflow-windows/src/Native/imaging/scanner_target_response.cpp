@@ -128,7 +128,7 @@ namespace negaflow::imaging::scanner_target_detail {
     const double mapped = relative_tone(input_luma, profile.tone_xs, tone);
     const double delta = mapped - input_luma;
     const double mapped_luma = clamp(input_luma + (reciprocal ? -delta : delta), 0.0, 1.0);
-    const double neutral_l = srgb_to_lab({input_luma, input_luma, input_luma}).lightness;
+    const double neutral_l = neutral_lab_lightness(input_luma);
     const double mapped_l = srgb_to_lab({mapped_luma, mapped_luma, mapped_luma}).lightness;
     lab.lightness += mapped_l - neutral_l;
 
@@ -166,6 +166,83 @@ namespace negaflow::imaging::scanner_target_detail {
         lab.b += drift[1] * taper * neutral_gate;
     }
     return lab_to_extended_srgb(lab);
+}
+
+TransformedPair transformed_srgb_pair(
+    const Rgb input,
+    const TargetProfile& profile,
+    const std::array<double, 9U>& tone,
+    const double scale,
+    const double chroma_keep,
+    const bool monochrome) noexcept {
+    // ── 방향과 무관한 것: 한 번만 ────────────────────────────────────────────
+    const double input_luma = luma(input);
+    const Lab base = srgb_to_lab(input);
+    const double mapped = relative_tone(input_luma, profile.tone_xs, tone);
+    const double delta = mapped - input_luma;
+    const double neutral_l = neutral_lab_lightness(input_luma);
+
+    const double chroma = monochrome ? 0.0 : std::hypot(base.a, base.b);
+    const bool has_chroma = !monochrome && chroma > 1.0e-6;
+    // 예전에는 이 `atan2` 가 한 호출 안에서 두 번, 두 호출로 네 번이었습니다.
+    const double base_angle = has_chroma ? std::atan2(base.b, base.a) : 0.0;
+    const double color_taper = monochrome
+        ? 0.0
+        : smoothstep(0.02, 0.10, input_luma) * (1.0 - smoothstep(0.90, 0.98, input_luma));
+    std::array<double, 2U> response{};
+    double band = 0.0;
+    if (has_chroma) {
+        response = hue_response(
+            base_angle * 180.0 / 3.14159265358979323846, profile, scale, chroma_keep);
+        band = std::pow(chroma_band_gain(input_luma, profile, chroma_keep), scale);
+    }
+    const std::array<double, 2U> base_drift =
+        monochrome ? std::array<double, 2U>{} : neutral_drift(input_luma, profile, scale);
+    const double taper = monochrome
+        ? 0.0
+        : smoothstep(0.03, 0.10, input_luma) * (1.0 - smoothstep(0.90, 0.97, input_luma));
+    const double neutral_gate = monochrome ? 0.0 : 1.0 - smoothstep(8.0, 28.0, chroma);
+    const double warm_gate = monochrome ? 0.0 : smoothstep(0.22, 0.52, input_luma);
+
+    // ── 방향에 따라 달라지는 것만 두 번 ─────────────────────────────────────
+    const auto build = [&](const bool reciprocal) noexcept {
+        Lab lab = base;
+        const double mapped_luma =
+            clamp(input_luma + (reciprocal ? -delta : delta), 0.0, 1.0);
+        const double mapped_l = neutral_lab_lightness(mapped_luma);
+        lab.lightness += mapped_l - neutral_l;
+
+        if (!monochrome) {
+            if (has_chroma) {
+                double gain_term = response[0];
+                double rotation = response[1];
+                double band_term = band;
+                if (reciprocal) {
+                    gain_term = 1.0 / std::max(gain_term, 1.0e-9);
+                    rotation = -rotation;
+                    band_term = 1.0 / std::max(band_term, 1.0e-9);
+                }
+                const double gain =
+                    std::exp(std::log(std::max(gain_term * band_term, 1.0e-9)) * color_taper);
+                const double angle =
+                    base_angle + (rotation * color_taper * 3.14159265358979323846 / 180.0);
+                lab.a = chroma * gain * std::cos(angle);
+                lab.b = chroma * gain * std::sin(angle);
+            }
+
+            std::array<double, 2U> drift = base_drift;
+            if (reciprocal) { drift[0] = -drift[0]; drift[1] = -drift[1]; }
+            drift[0] = clamp(drift[0], -4.0, 4.0);
+            drift[1] = clamp(drift[1], -4.0, 4.0);
+            if (drift[0] > 0.0) drift[0] *= warm_gate;
+            if (drift[1] > 0.0) drift[1] *= warm_gate;
+            lab.a += drift[0] * taper * neutral_gate;
+            lab.b += drift[1] * taper * neutral_gate;
+        }
+        return lab_to_extended_srgb(lab);
+    };
+
+    return {build(false), build(true)};
 }
 
 [[nodiscard]] double gamut_scale(

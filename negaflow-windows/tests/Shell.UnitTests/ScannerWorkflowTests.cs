@@ -318,7 +318,7 @@ internal static class ScannerWorkflowTests
     /// <summary>이 시험은 현상을 부르지 않습니다. 불리면 그것 자체가 실패입니다.</summary>
     internal sealed class ThrowingDevelopExporter : IDevelopExporter
     {
-        public DevelopExportResult Run(DevelopExportRequest request) =>
+        public DevelopExportResult Run(DevelopExportRequest request, DevelopRun? run = null) =>
             throw new NotSupportedException();
 
         public DevelopExportResult Preview(

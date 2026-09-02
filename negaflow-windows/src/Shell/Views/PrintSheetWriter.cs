@@ -45,7 +45,8 @@ public static partial class PrintSheetWriter
         Microsoft.UI.Xaml.Controls.Panel? textHost = null,
         DevelopExportFormat format = DevelopExportFormat.Png16,
         double jpegQuality = 1.0,
-        byte[]? outputIccProfile = null)
+        byte[]? outputIccProfile = null,
+        Action<int>? onSourceDeveloped = null)
     {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(print);
@@ -110,6 +111,10 @@ public static partial class PrintSheetWriter
                         .ConfigureAwait(true))
                     {
                         developedPaths[index] = path;
+                        // 판에 얹을 장이 하나 끝날 때마다 알립니다. 없으면 인화 내보내기가
+                        // 끝날 때까지 0% 에 붙박입니다 - 현상뷰와 같은 자리입니다.
+                        onSourceDeveloped?.Invoke(
+                            developedPaths.Count(path => !string.IsNullOrEmpty(path)));
                         return;
                     }
                     developFailed = true;

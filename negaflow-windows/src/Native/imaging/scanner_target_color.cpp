@@ -55,6 +55,15 @@ namespace negaflow::imaging::scanner_target_detail {
     return {116.0 * fy - 16.0, 500.0 * (fx - fy), 200.0 * (fy - fz)};
 }
 
+[[nodiscard]] double neutral_lab_lightness(const double value) noexcept {
+    // `srgb_to_lab({value, value, value})` 의 밝기와 같은 식·같은 차례입니다.
+    // 세 채널이 같으므로 `srgb_decode` 와 `lab_f` 를 한 번씩만 하고, a·b 를 쓰지
+    // 않으므로 x·z 는 구하지 않습니다.
+    const double r = srgb_decode(value);
+    const double y = (0.2126729 * r) + (0.7151522 * r) + (0.0721750 * r);
+    return 116.0 * lab_f(y) - 16.0;
+}
+
 [[nodiscard]] Rgb lab_to_extended_srgb(const Lab value) noexcept {
     const double fy = (value.lightness + 16.0) / 116.0;
     const double fx = fy + value.a / 500.0;

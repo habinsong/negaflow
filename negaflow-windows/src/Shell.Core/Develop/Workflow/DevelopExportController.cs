@@ -21,7 +21,8 @@ internal sealed class DevelopExportController
         string destinationPath,
         DevelopExportFormat format,
         Action<DevelopExportOutcome> onCompleted,
-        ExportEncodingOptions? encoding)
+        ExportEncodingOptions? encoding,
+        Action<double>? onProgress = null)
     {
         ArgumentNullException.ThrowIfNull(onCompleted);
         if (frame is null)
@@ -33,6 +34,7 @@ internal sealed class DevelopExportController
                 null));
             return Task.FromResult(true);
         }
-        return host.ExportAsync(frame, destinationPath, format, onCompleted, encoding);
+        return host.ExportAsync(
+            frame, destinationPath, format, onCompleted, encoding, 1, onProgress);
     }
 }

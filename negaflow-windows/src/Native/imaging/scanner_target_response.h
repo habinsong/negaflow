@@ -42,6 +42,29 @@ namespace negaflow::imaging::scanner_target_detail {
     bool monochrome,
     bool reciprocal) noexcept;
 
+// 같은 화소의 정방향과 역방향을 **한 번에** 냅니다.
+//
+// 등급 커널은 화소마다 `transformed_srgb` 를 두 번 부릅니다 — `reciprocal` 만 다르고
+// 입력은 완전히 같습니다. 그래서 두 호출이 하는 일의 대부분이 **똑같은 값을 두 번**
+// 구하는 것이었습니다: `srgb_to_lab(input)`, 중성 밝기, 톤 표 조회, 색상각, 색상 응답,
+// 채도 밴드, 중성 흐름. `atan2` 는 한 호출 안에서도 두 번 불려 화소당 **네 번**이었습니다.
+//
+// 여기서는 그 공통 부분을 한 번만 구하고 방향에 따라 달라지는 것만 두 번 합니다.
+// 각 값은 예전과 **같은 식·같은 차례**로 구하므로 결과는 비트 단위로 같습니다 —
+// 근사가 아니라 중복 제거입니다.
+struct TransformedPair final {
+    Rgb candidate{};
+    Rgb reciprocal{};
+};
+
+[[nodiscard]] TransformedPair transformed_srgb_pair(
+    Rgb input,
+    const TargetProfile& profile,
+    const std::array<double, 9U>& tone,
+    double scale,
+    double chroma_keep,
+    bool monochrome) noexcept;
+
 // 결과가 색역 밖으로 나갔을 때, 원본 쪽으로 얼마나 되돌려야 안으로 들어오는지입니다.
 // 그냥 자르면 색상이 돌아가므로 방향을 지키며 줄입니다.
 [[nodiscard]] double gamut_scale(

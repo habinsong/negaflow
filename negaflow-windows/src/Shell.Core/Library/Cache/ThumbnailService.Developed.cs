@@ -165,6 +165,49 @@ public sealed partial class ThumbnailService
     /// <summary>FIFO 가 지금 들고 있는 현상본 장수입니다.</summary>
     public int DevelopedResidentCount => developedResidency.Count;
 
+    /// <summary>
+    /// 지금 걸린 한도에서 <b>보고 있는 사진 말고</b> 더 들고 있을 수 있는 정착본 장수입니다.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 한도는 설정 · 메모리의 프레임 캐시(자동/수동)에서 옵니다 —
+    /// <see cref="FrameCacheResidencySettings.EffectiveLimits"/> 가 정하고
+    /// <see cref="ApplyResidencySettings"/> 가 FIFO 에 겁니다. 여기는 그 값을 읽기만 합니다.
+    /// </para>
+    /// <para>
+    /// 이웃 예열이 이 수를 넘겨 채우면 <b>자기가 넣은 것을 자기가 밀어냅니다.</b> FIFO 는
+    /// 앞(가장 오래된)부터 내보내므로, 한도가 3인데 이웃 4장을 밀어 넣으면 먼저 넣은 이웃이
+    /// 그대로 나가고 디코딩만 두 번 한 셈이 됩니다. 그래서 예열은 이 수만큼만 갑니다.
+    /// </para>
+    /// <para>
+    /// 장수와 바이트 두 한도를 함께 봅니다 — 68MP 스캔 한 장의 표시본이 35MB 라
+    /// 장수는 남아도 바이트가 먼저 차는 기계가 있습니다. <paramref name="bytesPerFrame"/>
+    /// 은 지금 보고 있는 사진의 표시본 크기를 넘겨받아 이웃도 그만하다고 봅니다 — 같은
+    /// 상자로 현상하므로 실제로 비슷합니다. 0 이면 장수만 봅니다.
+    /// </para>
+    /// </remarks>
+    public int SpareDevelopedSlots(long bytesPerFrame)
+    {
+        (int frames, long bytes) = DevelopedLimits();
+        // 보고 있는 사진이 한 자리를 씁니다. macOS `trimDeveloped` 도 그 자리는
+        // `selectedFrameID` 로 지켜 주므로 나머지가 이웃 몫입니다.
+        int slots = frames - 1;
+        if (slots <= 0)
+        {
+            return 0;
+        }
+        if (bytesPerFrame <= 0L)
+        {
+            return slots;
+        }
+        long spareBytes = bytes - bytesPerFrame;
+        if (spareBytes < bytesPerFrame)
+        {
+            return 0;
+        }
+        return (int)Math.Min(slots, spareBytes / bytesPerFrame);
+    }
+
     /// <summary>Windows 메모리 압력 알림을 실제 developed FIFO 한도에 반영합니다.</summary>
     public void ApplyMemoryPressure(FrameCachePressureLevel pressure)
     {

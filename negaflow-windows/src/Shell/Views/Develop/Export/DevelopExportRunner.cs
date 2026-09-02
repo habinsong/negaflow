@@ -13,6 +13,30 @@ internal sealed class DevelopExportRunner
 {
     private readonly DevelopExportPanel view;
 
+    /// <summary>
+    /// 한 장짜리 내보내기가 도는 동안 엔진 진행도를 알약·고리에 얹습니다.
+    /// </summary>
+    /// <remarks>
+    /// 없으면 <c>0/1</c> 로 시작해 끝날 때까지 그대로라 <b>0% 가 붙박여</b> 멈춘 것처럼
+    /// 보였습니다. 엔진은 이미 단계별 비용으로 진행도를 내고 있었고, 화면만 읽지 않았습니다.
+    /// 콜백은 워커 스레드에서 오므로 UI 스레드로 넘깁니다.
+    /// </remarks>
+    private Action<double> ReportSingleFrameProgress(bool quick)
+    {
+        return fraction =>
+        {
+            ExportProgress value = new(0, 1, fraction);
+            if (!view.DispatcherQueue.TryEnqueue(
+                    () => {
+                        if (quick) { view.ReportQuickExportProgress(value); }
+                        else { view.ReportExportProgress(value); }
+                    }))
+            {
+                // 창이 닫히는 중이면 큐가 받지 않습니다. 진행 표시는 그대로 두면 됩니다.
+            }
+        };
+    }
+
     internal DevelopExportRunner(DevelopExportPanel view) => this.view = view;
 
     /// <summary>어셈블리에 박힌 앱 판입니다. 사이드카가 어느 판이 만든 파일인지 남깁니다.</summary>
@@ -158,7 +182,7 @@ internal sealed class DevelopExportRunner
         view.ExportButton.IsActionEnabled = false;
         view.SetOutputStatus(AppResources.Get("developExportRunning", "Text"));
         string? completedPath = null;
-        view.ReportProgress(new ExportProgress(0, 1));
+        view.ReportExportProgress(new ExportProgress(0, 1));
         try
         {
             IReadOnlyList<LibraryFrameSnapshot> selection = SelectedExportFrames(frame);
@@ -196,12 +220,13 @@ internal sealed class DevelopExportRunner
                             completedPath = exportedPath;
                         }
                     },
-                    With(view.exportSettings.ToEncodingOptions(), profile));
+                    With(view.exportSettings.ToEncodingOptions(), profile),
+                    ReportSingleFrameProgress(quick: false));
             }
         }
         finally
         {
-            view.ReportProgress(ExportProgress.Idle);
+            view.ReportExportProgress(ExportProgress.Idle);
             using (ExportTrace.Measure("  refresh preview"))
             {
                 view.RefreshPreview();
@@ -263,7 +288,7 @@ internal sealed class DevelopExportRunner
 
         view.QuickExportButton.IsActionEnabled = false;
         view.SetOutputStatus(AppResources.Get("developExportRunning", "Text"));
-        view.ReportProgress(new ExportProgress(0, 1));
+        view.ReportQuickExportProgress(new ExportProgress(0, 1));
         try
         {
             IReadOnlyList<LibraryFrameSnapshot> selection = SelectedExportFrames(frame);
@@ -296,12 +321,13 @@ internal sealed class DevelopExportRunner
                             $"path={quickPath}");
                         view.SetOutputStatus(DevelopExportOutcomeText.For(outcome));
                     },
-                    With(view.quickExportSettings.Encoding, profile));
+                    With(view.quickExportSettings.Encoding, profile),
+                    ReportSingleFrameProgress(quick: true));
             }
         }
         finally
         {
-            view.ReportProgress(ExportProgress.Idle);
+            view.ReportQuickExportProgress(ExportProgress.Idle);
             using (ExportTrace.Measure("  refresh preview"))
             {
                 view.RefreshPreview();
@@ -351,7 +377,8 @@ internal sealed class DevelopExportRunner
         RunExportBatchAsync(
             frames,
             view.exportSettings,
-            With(view.exportSettings.ToEncodingOptions(), OutputProfileFor(frames)));
+            With(view.exportSettings.ToEncodingOptions(), OutputProfileFor(frames)),
+            quick: false);
 
     /// <summary>
     /// 본 내보내기와 빠른 내보내기가 같이 쓰는 배치입니다. macOS 도 <c>startExportBatch</c>
@@ -360,7 +387,8 @@ internal sealed class DevelopExportRunner
     internal async Task RunExportBatchAsync(
         IReadOnlyList<LibraryFrameSnapshot> frames,
         ExportSettings settings,
-        ExportEncodingOptions encoding)
+        ExportEncodingOptions encoding,
+        bool quick = true)
     {
         if (view.libraryHost is null)
         {
@@ -372,7 +400,7 @@ internal sealed class DevelopExportRunner
             frame => view.libraryHost.RollFor(frame.Id));
         var coordinator = new ExportBatchCoordinator(view.libraryHost);
         int finished = 0;
-        view.ReportProgress(new ExportProgress(0, plans.Count));
+        view.ReportBatchProgress(quick, new ExportProgress(0, plans.Count));
         coordinator.ItemChanged += (_, item) =>
         {
             if (item.State is ExportBatchItemState.Running)
@@ -380,7 +408,7 @@ internal sealed class DevelopExportRunner
                 return;
             }
             ++finished;
-            view.ReportProgress(new ExportProgress(finished, plans.Count));
+            view.ReportBatchProgress(quick, new ExportProgress(finished, plans.Count));
             view.SetOutputStatus(AppResources.FormatIntegers(
                 "exportBatchFrameProgress",
                 "Text",
@@ -402,7 +430,7 @@ internal sealed class DevelopExportRunner
         }
         finally
         {
-            view.ReportProgress(ExportProgress.Idle);
+            view.ReportBatchProgress(quick, ExportProgress.Idle);
         }
     }
 }

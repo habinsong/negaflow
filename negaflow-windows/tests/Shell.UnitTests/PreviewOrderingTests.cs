@@ -136,7 +136,7 @@ internal static class PreviewOrderingTests
             return OkResult();
         }
 
-        public DevelopExportResult Run(DevelopExportRequest request) => OkResult();
+        public DevelopExportResult Run(DevelopExportRequest request, DevelopRun? run = null) => OkResult();
 
         public GrainMendDetectionResult DetectGrainMend(
             DevelopExportRequest request,
@@ -183,7 +183,7 @@ internal static class PreviewOrderingTests
             return OkResult();
         }
 
-        public DevelopExportResult Run(DevelopExportRequest request) => OkResult();
+        public DevelopExportResult Run(DevelopExportRequest request, DevelopRun? run = null) => OkResult();
 
         public GrainMendDetectionResult DetectGrainMend(
             DevelopExportRequest request,

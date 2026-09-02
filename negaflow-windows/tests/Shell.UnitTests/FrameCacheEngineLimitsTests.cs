@@ -61,6 +61,34 @@ internal static class FrameCacheEngineLimitsTests
                 manual is { EngineCleanedRawFrames: 5U, EngineDevelopedFrames: 9U },
                 "수동이면 고른 장수를 그대로 겁니다");
 
+            // 이웃 예열이 채워도 되는 자리입니다. 지금 걸린 한도(수동 9장)에서 보고 있는
+            // 사진 한 자리를 뺀 나머지이며, 바이트 한도가 먼저 차면 그쪽을 따릅니다.
+            // 넘겨 채우면 FIFO 가 앞부터 내보내 방금 예열한 것이 그대로 나갑니다.
+            (int limitFrames, long limitBytes) = cache.DevelopedLimits();
+            Check(limitFrames == 9, "수동 장수 한도가 FIFO 에 걸립니다");
+            Check(
+                cache.SpareDevelopedSlots(0L) == limitFrames - 1,
+                "바이트를 안 보면 보고 있는 사진 한 자리만 뺍니다");
+            Check(
+                cache.SpareDevelopedSlots(limitBytes) == 0,
+                "예산이 보고 있는 사진 하나뿐이면 이웃 자리는 없습니다");
+            Check(
+                cache.SpareDevelopedSlots(limitBytes / 3L) == 2,
+                "바이트 한도가 장수보다 먼저 차면 그쪽을 따릅니다");
+            Check(
+                cache.SpareDevelopedSlots(limitBytes / 100L) == limitFrames - 1,
+                "바이트가 넉넉하면 장수 한도가 상한입니다");
+
+            cache.ApplyResidencySettings(new FrameCacheResidencySettings
+            {
+                Mode = FrameCacheResidencyMode.Manual,
+                ManualCleanedRaw = 2,
+                ManualDeveloped = FrameCacheBudget.MinimumDeveloped,
+            });
+            Check(
+                cache.SpareDevelopedSlots(0L) == FrameCacheBudget.MinimumDeveloped - 1,
+                "가장 낮은 한도에서도 이웃 자리를 한도 안에서 셉니다");
+
             // 다른 시험이 이어 돌므로 자동으로 되돌립니다.
             cache.ApplyResidencySettings(new FrameCacheResidencySettings());
             cache.DisposeAsync().AsTask().GetAwaiter().GetResult();

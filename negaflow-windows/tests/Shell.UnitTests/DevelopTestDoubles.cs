@@ -79,7 +79,7 @@ internal sealed class FakeExporter : IDevelopExporter, IDefectBakeExporter
             : DetectBehaviour();
     }
 
-    public DevelopExportResult Run(DevelopExportRequest request)
+    public DevelopExportResult Run(DevelopExportRequest request, DevelopRun? run = null)
     {
         Interlocked.Increment(ref CallCount);
         LastThreadId = Environment.CurrentManagedThreadId;

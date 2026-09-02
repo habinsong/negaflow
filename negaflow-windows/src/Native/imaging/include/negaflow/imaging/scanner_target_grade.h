@@ -89,4 +89,18 @@ struct ScannerTargetTextureSetup final {
     std::wstring_view scanner_profile_id,
     ScannerTargetGradeInfo& info) noexcept;
 
+// 이 단계가 GPU 로 갔는지 CPU 로 물러났는지 셉니다.
+//
+// 커널은 실패하면 **조용히** CPU 로 물러납니다 — 그래야 GPU 가 없는 기계에서도 결과가
+// 나오기 때문입니다. 그런데 그 조용함 때문에 "GPU 를 쓴다"고 믿으면서 실제로는 CPU 로
+// 도는 것을 알 방법이 없었습니다. `NEGA_TIMING` 표에 함께 찍습니다.
+struct TargetGradeRouteCounts final {
+    std::uint64_t gpu{0U};
+    std::uint64_t cpu{0U};
+};
+
+void note_target_grade_route(bool used_gpu) noexcept;
+
+[[nodiscard]] TargetGradeRouteCounts target_grade_route_counts() noexcept;
+
 } // namespace negaflow::imaging

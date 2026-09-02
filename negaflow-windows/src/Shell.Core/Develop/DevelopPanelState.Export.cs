@@ -13,14 +13,16 @@ public sealed partial class DevelopPanelState
         string destinationPath,
         DevelopExportFormat format,
         Action<DevelopExportOutcome> onCompleted,
-        ExportEncodingOptions? encoding = null)
+        ExportEncodingOptions? encoding = null,
+        Action<double>? onProgress = null)
     {
         return exports.ExportAsync(
             SelectedFrame,
             destinationPath,
             format,
             onCompleted,
-            encoding);
+            encoding,
+            onProgress);
     }
 
     /// <summary>

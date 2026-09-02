@@ -15,13 +15,9 @@ namespace Negaflow.Shell.Views;
 /// 기억하므로 사진을 옮기면 그 프레임의 비교 설정이 따라옵니다.
 /// </para>
 /// <para>
-/// 여기 있던 <b>이웃 사진 미리 디코드</b>는 걷어냈습니다. macOS 는 선택이 바뀌어도
-/// 고른 한 장만 현상하고(<c>AppModel+FrameSelection.handleSelectedFrameChange</c>),
-/// 이웃을 미리 그리는 자리가 없습니다. Windows 판은 "이웃"이라는 이름으로 실제로는
-/// <b>라이브러리 전체</b>를 돌았습니다 — 실측(2026-09-02, 114장): 정착 한 번마다 6~7분
-/// 동안 쉬지 않고 디코딩했고 private 이 천장 8,959MB 를 넘겨 9,890MB 까지 올라갔으며,
-/// 그 때문에 앞단 raw 예산이 2,910MB → 1,324MB 로 깎여 <b>정작 사용자가 고른 사진이
-/// 매번 캐시 미스</b>였습니다.
+/// 여기 있던 <b>이웃 사진 미리 디코드</b>는 자기 파일로 옮겼습니다 —
+/// <c>DevelopWorkspaceView.NeighborWarm.cs</c>. 비교 보기와 예열은 서로 아무 관계가
+/// 없는데 한 파일에 있었습니다.
 /// </para>
 /// </remarks>
 public sealed partial class DevelopWorkspaceView

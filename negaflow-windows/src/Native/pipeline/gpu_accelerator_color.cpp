@@ -125,19 +125,49 @@ bool GpuAccelerator::apply_scanner_target_grade(
     if (!state_->target_grade_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
-        return false;
-    }
-    gpu::GpuWorkingImage* const pool = state_->pool.images();
     auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
-    if (pool[0].upload_into(state_->device, rgba, stride_pixels) != gpu::GpuImageStatus::ok) {
+
+    // **한 장이 안 들어가면 가로 띠로 나눠 올립니다.**
+    //
+    // 이 커널은 화소마다 자기 값만 읽고 자기 자리에만 씁니다 — 이웃을 보지 않으므로
+    // 나눠 돌려도 결과가 비트 단위로 같습니다. 나누지 않았을 때 무슨 일이 벌어지는지는
+    // 실측했습니다(2026-09-03, 10176x6792 · RTX 4060 Ti): 전체 해상도는 풀을 못 잡아
+    // `ensure` 가 거짓을 내고 **조용히 CPU 로 물러났고**, 그 CPU 판이 내보내기 한 장에서
+    // 가장 비싼 단계였습니다(`target_grade route gpu=4 cpu=2`). 큰 사진일수록 정확히
+    // 그 자리에서 느려졌습니다.
+    //
+    // 띠 높이는 예산이 정합니다. 절반씩 줄여 보며 `ensure` 가 받아 주는 첫 높이를 씁니다 —
+    // 상수를 박지 않고 기계와 그때의 GPU 여유에서 얻습니다.
+    std::uint32_t band = height;
+    while (band > 0U && !state_->pool.ensure(state_->device, width, band)) {
+        band /= 2U;
+    }
+    if (band == 0U) {
         return false;
     }
-    if (state_->target_grade.dispatch(state_->device, pool[0], pool[1], *setup) !=
-        gpu::GpuKernelStatus::ok) {
-        return false;
+
+    for (std::uint32_t top = 0U; top < height; top += band) {
+        const std::uint32_t rows = std::min(band, height - top);
+        if (rows != state_->pool.height() &&
+            !state_->pool.ensure(state_->device, width, rows)) {
+            return false;
+        }
+        gpu::GpuWorkingImage* const images = state_->pool.images();
+        core::Rgba32F* const first = rgba + (static_cast<std::size_t>(top) * stride_pixels);
+        if (images[0].upload_into(state_->device, first, stride_pixels) !=
+            gpu::GpuImageStatus::ok) {
+            return false;
+        }
+        if (state_->target_grade.dispatch(state_->device, images[0], images[1], *setup) !=
+            gpu::GpuKernelStatus::ok) {
+            return false;
+        }
+        if (images[1].download(state_->device, first, stride_pixels) !=
+            gpu::GpuImageStatus::ok) {
+            return false;
+        }
     }
-    return pool[1].download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
+    return true;
 }
 
 bool GpuAccelerator::apply_noritsu_texture(

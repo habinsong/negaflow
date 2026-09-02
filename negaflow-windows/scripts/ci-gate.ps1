@@ -33,6 +33,15 @@ try {
         throw 'Localized key gate failed - a key used in code is missing from Resources.resw.'
     }
 
+    # XAML 슬라이더의 StepFrequency 가 0 이면 빌드는 통과하고 **손잡이를 잡는 순간** 창이
+    # NaN 으로 내려앉습니다 — 2026-09-03 에 GrainMend 브러시 두께가 그렇게 죽었습니다.
+    # 슬라이더를 하나하나 만져 보지 않으면 드러나지 않으므로 여기서 봅니다.
+    Write-Host '[windows-ci-gate] slider ranges' -ForegroundColor Cyan
+    & py -3 (Join-Path $PSScriptRoot 'check-slider-ranges.py')
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Slider range gate failed - a Slider would crash or refuse to move.'
+    }
+
     Write-Host "[windows-ci-gate] native: $Preset" -ForegroundColor Cyan
     & (Join-Path $PSScriptRoot 'test.ps1') -Preset $Preset
     if ($LASTEXITCODE -ne 0) {

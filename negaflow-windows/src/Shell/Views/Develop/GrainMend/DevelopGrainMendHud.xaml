@@ -263,13 +263,24 @@
                         FontSize="11"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Glyph="&#xE9E9;" />
+                    <!--
+                        StepFrequency 는 **0 이면 안 됩니다.** WinUI Slider 는 값을 이 간격으로
+                        스냅하므로 0 이면 나눗셈이 NaN 이 되고, 그 NaN 이 배치로 들어가
+                        `ArgumentException: The value cannot be infinite or Not a Number (NaN)`
+                        로 창이 통째로 내려앉습니다(실측 2026-09-03, 손잡이를 잡는 즉시).
+                        macOS `BrushControlBar` 는 `Slider(value:in:)` 라 연속인데 WinUI 에는
+                        연속이 없으므로, 화면에서 구분되지 않을 만큼 잘게 둡니다 — 폭 110px 에
+                        범위 0.056 이라 1px 이 약 0.0005 입니다.
+                    -->
                     <Slider
                         x:Name="BrushThicknessSlider"
                         Width="110"
                         VerticalAlignment="Center"
                         Minimum="0.004"
                         Maximum="0.06"
-                        StepFrequency="0"
+                        StepFrequency="0.0005"
+                        SmallChange="0.0005"
+                        LargeChange="0.005"
                         AutomationProperties.AutomationId="negaflow.canvas.grainmend.brush-thickness"
                         IsThumbToolTipEnabled="False"
                         ValueChanged="OnBrushThicknessChanged" />

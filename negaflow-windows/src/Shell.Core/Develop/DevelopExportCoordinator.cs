@@ -8,7 +8,12 @@ namespace Negaflow.Shell;
 /// <summary>현상 요청을 실제로 실행하는 것. 네이티브 호출을 시험에서 갈아 끼우기 위한 경계입니다.</summary>
 public interface IDevelopExporter
 {
-    DevelopExportResult Run(DevelopExportRequest request);
+    /// <param name="run">
+    /// 실행 중 취소하고 <b>진행도를 읽는</b> 손잡이입니다. null 이면 끝까지 블로킹합니다 —
+    /// 그러면 화면은 끝날 때까지 0% 에 붙박입니다. 네이티브 쪽은 처음부터 이 인자를
+    /// 받고 있었고(<c>NativeDevelopExportCommand.Run</c>), 이 경계에만 빠져 있었습니다.
+    /// </param>
+    DevelopExportResult Run(DevelopExportRequest request, DevelopRun? run = null);
 
     /// <param name="run">
     /// 실행 중 취소하고 진행도를 읽는 손잡이입니다. null 이면 끝까지 블로킹합니다.
@@ -42,8 +47,8 @@ public interface IDefectBakeExporter
 /// <summary>제품 구현. 블로킹이며 워커 스레드에서만 불러야 합니다.</summary>
 public sealed class NativeDevelopExporterAdapter : IDevelopExporter, IDefectBakeExporter
 {
-    public DevelopExportResult Run(DevelopExportRequest request) =>
-        NativeDevelopExporter.Run(request);
+    public DevelopExportResult Run(DevelopExportRequest request, DevelopRun? run = null) =>
+        NativeDevelopExporter.Run(request, run);
 
     public DevelopExportResult BakeDefects(DevelopExportRequest request) =>
         NativeDevelopExporter.BakeDefects(request);
@@ -297,13 +302,19 @@ public sealed class DevelopExportCoordinator
     /// 이미 한 장이 돌고 있으면 <see cref="DevelopExportOutcomeKind.Busy"/> 로 돌려보냅니다.
     /// 배치만 <see cref="MaximumConcurrentExports"/> 를 넘깁니다.
     /// </param>
+    /// <param name="onProgress">
+    /// 이 한 장이 얼마나 갔는지(0~1)를 <b>도는 동안</b> 알립니다. 엔진이
+    /// <c>progress_permille</c> 로 내는 값이며, 없으면 화면은 끝날 때까지 0% 에
+    /// 붙박입니다. 워커 스레드에서 부르므로 받는 쪽이 UI 스레드로 넘겨야 합니다.
+    /// </param>
     public async Task<bool> StartAsync(
         LibraryFrameSnapshot frame,
         string destinationPath,
         DevelopExportFormat format,
         Action<DevelopExportOutcome> onCompleted,
         ExportEncodingOptions? encoding = null,
-        int maximumConcurrent = 1)
+        int maximumConcurrent = 1,
+        Action<double>? onProgress = null)
     {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(onCompleted);
@@ -330,8 +341,36 @@ public sealed class DevelopExportCoordinator
             DevelopExportOutcome outcome;
             try
             {
-                outcome = DevelopExportOutcome.Completed(
-                    await Task.Run(() => exporter.Run(request)).ConfigureAwait(false));
+                if (onProgress is null)
+                {
+                    outcome = DevelopExportOutcome.Completed(
+                        await Task.Run(() => exporter.Run(request)).ConfigureAwait(false));
+                }
+                else
+                {
+                    // 엔진은 단계가 끝날 때마다 상태 칸에 진행도를 씁니다. 그 칸을 짧은
+                    // 간격으로 읽어 넘깁니다 — 엔진 쪽에 콜백을 새로 만들지 않습니다.
+                    using DevelopRun run = new();
+                    using CancellationTokenSource polling = new();
+                    Task watcher = PollProgressAsync(run, onProgress, polling.Token);
+                    try
+                    {
+                        outcome = DevelopExportOutcome.Completed(
+                            await Task.Run(() => exporter.Run(request, run)).ConfigureAwait(false));
+                    }
+                    finally
+                    {
+                        polling.Cancel();
+                        try
+                        {
+                            await watcher.ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                        }
+                    }
+                    onProgress(1.0);
+                }
             }
             catch (Exception error) when (error is not OperationCanceledException)
             {
@@ -344,6 +383,32 @@ public sealed class DevelopExportCoordinator
         finally
         {
             _ = Interlocked.Decrement(ref inFlight);
+        }
+    }
+
+    /// <summary>
+    /// 도는 동안 엔진의 진행도를 읽어 넘깁니다.
+    /// </summary>
+    /// <remarks>
+    /// 간격은 사람이 "움직인다" 고 느끼는 최소치에 맞춥니다. 더 짧게 잡으면 읽는 값이
+    /// 같은 채로 UI 만 깨우고, 더 길게 잡으면 8 초짜리 내보내기에서 눈금이 몇 칸밖에
+    /// 안 움직입니다.
+    /// </remarks>
+    private static async Task PollProgressAsync(
+        DevelopRun run,
+        Action<double> onProgress,
+        CancellationToken token)
+    {
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(120), token).ConfigureAwait(false);
+                onProgress(run.Progress);
+            }
+        }
+        catch (OperationCanceledException)
+        {
         }
     }
 

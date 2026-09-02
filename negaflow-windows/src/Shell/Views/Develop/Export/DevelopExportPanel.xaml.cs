@@ -106,26 +106,45 @@ public sealed partial class DevelopExportPanel : UserControl
     public Func<Task>? RunExport { get; set; }
 
     /// <summary>
-    /// 지금 몇 장 중 몇 장까지 갔는지입니다. 두 알약에 그대로 얹고, 셸이 위 막대에도
-    /// 같은 값을 보여 줍니다.
+    /// 지금 도는 내보내기가 몇 장 중 몇 장까지 갔는지입니다. 셸이 위 막대에도 같은 값을
+    /// 보여 줍니다.
     /// </summary>
-    public ExportProgress Progress
-    {
-        get;
-        private set
-        {
-            field = value;
-            ExportButton.Progress = value;
-            QuickExportButton.Progress = value;
-            ProgressChanged?.Invoke(this, value);
-        }
-    }
+    /// <remarks>
+    /// <b>어느 단추의 일인지 가립니다.</b> 앞 판은 이 값을 두 알약에 똑같이 얹어서,
+    /// 내보내기 하나만 눌러도 빠른 내보내기 알약까지 함께 차올랐습니다 — 무엇이 도는지
+    /// 화면이 거짓말을 했습니다.
+    /// </remarks>
+    public ExportProgress Progress { get; private set; }
 
     /// <summary>진행이 바뀌었습니다. 위 막대가 이 값을 씁니다.</summary>
     public event EventHandler<ExportProgress>? ProgressChanged;
 
-    /// <summary>내보내기가 시작·진행·끝났음을 알립니다. 러너만 부릅니다.</summary>
-    internal void ReportProgress(ExportProgress progress) => Progress = progress;
+    /// <summary>본 내보내기의 진행입니다. 그 알약에만 얹습니다.</summary>
+    internal void ReportExportProgress(ExportProgress progress)
+    {
+        Progress = progress;
+        ExportButton.Progress = progress;
+        ProgressChanged?.Invoke(this, progress);
+    }
+
+    /// <summary>빠른 내보내기의 진행입니다. 그 알약에만 얹습니다.</summary>
+    internal void ReportQuickExportProgress(ExportProgress progress)
+    {
+        Progress = progress;
+        QuickExportButton.Progress = progress;
+        ProgressChanged?.Invoke(this, progress);
+    }
+
+    /// <summary>배치는 어느 단추에서 시작했는지에 따라 그쪽에만 얹습니다.</summary>
+    internal void ReportBatchProgress(bool quick, ExportProgress progress)
+    {
+        if (quick)
+        {
+            ReportQuickExportProgress(progress);
+            return;
+        }
+        ReportExportProgress(progress);
+    }
 
     /// <summary>
     /// 인화뷰처럼 <b>종이 판</b>에 얹어 내보내는 화면인지입니다. macOS

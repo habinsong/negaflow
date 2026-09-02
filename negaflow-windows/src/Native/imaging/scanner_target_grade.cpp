@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -18,6 +19,26 @@
 #include <vector>
 
 namespace negaflow::imaging {
+
+namespace {
+std::atomic<std::uint64_t> target_grade_gpu_runs{0U};
+std::atomic<std::uint64_t> target_grade_cpu_runs{0U};
+} // namespace
+
+void note_target_grade_route(const bool used_gpu) noexcept {
+    if (used_gpu) {
+        target_grade_gpu_runs.fetch_add(1U, std::memory_order_relaxed);
+    } else {
+        target_grade_cpu_runs.fetch_add(1U, std::memory_order_relaxed);
+    }
+}
+
+TargetGradeRouteCounts target_grade_route_counts() noexcept {
+    return {
+        target_grade_gpu_runs.load(std::memory_order_relaxed),
+        target_grade_cpu_runs.load(std::memory_order_relaxed),
+    };
+}
 namespace {
 
 using namespace negaflow::imaging::scanner_target_detail;
@@ -96,9 +117,15 @@ void apply_profile_grade(
                     image.height,
                     static_cast<std::uint32_t>(image.stride_pixels),
                     &setup)) {
+                note_target_grade_route(true);
                 return;
             }
+            note_target_grade_route(false);
+        } else {
+            note_target_grade_route(false);
         }
+    } else {
+        note_target_grade_route(false);
     }
 
     // **행마다 독립입니다.** 화소는 자기 값만 읽고 자기 자리에만 씁니다 —
@@ -129,10 +156,12 @@ void apply_profile_grade(
                     const double domain_weight = smoothstep(0.0, 0.02, low) *
                         (1.0 - smoothstep(0.98, 1.0, high));
                     if (domain_weight <= 0.0) continue;
-                    const Rgb candidate = transformed_srgb(
-                        encoded, profile, tone, strength, chroma_keep, monochrome, false);
-                    const Rgb reciprocal = transformed_srgb(
-                        encoded, profile, tone, strength, chroma_keep, monochrome, true);
+                    // 정방향과 역방향은 입력이 같습니다 — 공통 계산을 한 번만 합니다.
+                    // 값은 예전과 비트 단위로 같습니다(`transformed_srgb_pair` 주석 참고).
+                    const auto pair = transformed_srgb_pair(
+                        encoded, profile, tone, strength, chroma_keep, monochrome);
+                    const Rgb candidate = pair.candidate;
+                    const Rgb reciprocal = pair.reciprocal;
                     const double scale = gamut_scale(encoded, candidate, reciprocal);
                     const Rgb graded{
                         srgb_decode(encoded.red + ((candidate.red - encoded.red) * scale)),

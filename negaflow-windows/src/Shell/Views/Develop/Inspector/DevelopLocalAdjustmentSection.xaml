@@ -205,6 +205,14 @@
                         <ColumnDefinition Width="28" />
                     </Grid.ColumnDefinitions>
                     <TextBlock x:Name="LocalSizeLabel" x:FieldModifier="internal" VerticalAlignment="Center" FontSize="12" />
+                    <!--
+                        macOS `sliderRow(size, range: 0.005...0.25)` — 아래끝은 0 이 아니라
+                        0.005 입니다. 그런데 그 값은 **여기 적지 않고** 생성자에서 겁니다
+                        (`DevelopLocalAdjustmentSection` 의 `LocalSizeSlider.Minimum`).
+                        XAML 은 속성을 적힌 차례대로 넣으므로, `Minimum` 을 `Maximum` 보다
+                        먼저 적으면 그 순간 `Maximum` 이 아직 기본값 1 이라 `Minimum > Maximum`
+                        으로 파싱이 터집니다.
+                    -->
                     <Slider
                         x:Name="LocalSizeSlider" x:FieldModifier="internal"
                         Grid.Column="1"

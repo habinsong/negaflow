@@ -383,6 +383,11 @@ public sealed partial class WorkspaceShellView : UserControl
         AppMenu.SyncExportState(canQuickExport, canExport);
         Toolbar.SetQuickExportEnabled(canQuickExport);
         Toolbar.SetExportEnabled(canExport);
+        // **두 뷰의 출력 패널도 같은 잠금입니다.** 여기서 함께 맞추지 않으면 위 막대는
+        // 켜져 있는데 패널의 내보내기·빠른 내보내기만 꺼진 채로 남습니다 — 부팅 직후가
+        // 정확히 그랬고, 워크스페이스를 한 번 오가야 살아났습니다(실측 2026-09-03).
+        DevelopWorkspace.SynchronizeExportControls();
+        PrintWorkspace.SynchronizeExportControls();
     }
 
     /// <summary>

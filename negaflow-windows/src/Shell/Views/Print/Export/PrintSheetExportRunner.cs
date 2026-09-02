@@ -28,7 +28,7 @@ internal sealed class PrintSheetExportRunner
     private readonly Func<WorkspacePresentationState?> state;
     private readonly Panel textRasterHost;
     private readonly Action<string> report;
-    private readonly Action<ExportProgress> progress;
+    private readonly Action<bool, ExportProgress> progress;
 
     private bool isRunning;
 
@@ -37,27 +37,28 @@ internal sealed class PrintSheetExportRunner
         Func<WorkspacePresentationState?> state,
         Panel textRasterHost,
         Action<string> report,
-        Action<ExportProgress>? progress = null)
+        Action<bool, ExportProgress>? progress = null)
     {
         this.sources = sources;
         this.state = state;
         this.textRasterHost = textRasterHost;
         this.report = report;
-        this.progress = progress ?? (_ => { });
+        this.progress = progress ?? ((_, _) => { });
     }
 
     /// <summary>출력 탭의 "내보내기" 폴더로, 고른 형식으로 판을 씁니다.</summary>
     internal Task RunExportAsync(ExportSettings settings) =>
-        RunAsync(settings.FolderPath, settings.Format, settings.JpegQuality);
+        RunAsync(settings.FolderPath, settings.Format, settings.JpegQuality, quick: false);
 
     /// <summary>출력 탭의 "빠른 내보내기" 폴더로, 고른 형식으로 판을 씁니다.</summary>
     internal Task RunQuickExportAsync(QuickExportSettings settings) =>
-        RunAsync(settings.FolderPath, settings.Format, settings.JpegQuality);
+        RunAsync(settings.FolderPath, settings.Format, settings.JpegQuality, quick: true);
 
     private async Task RunAsync(
         string destinationFolder,
         Negaflow.Interop.DevelopExportFormat format,
-        double jpegQuality)
+        double jpegQuality,
+        bool quick)
     {
         if (isRunning)
         {
@@ -91,7 +92,7 @@ internal sealed class PrintSheetExportRunner
         report(string.Empty);
         // 판을 쓰는 동안 도구 모음의 원형 표시를 돌립니다. 장수를 알고 있으므로 현상뷰와
         // 같은 방식으로 0/장수 에서 시작합니다.
-        progress(new ExportProgress(0, selection.Count));
+        progress(quick, new ExportProgress(0, selection.Count));
         try
         {
             ExportTrace.Write(
@@ -106,7 +107,10 @@ internal sealed class PrintSheetExportRunner
                 textRasterHost,
                 format,
                 jpegQuality,
-                profile.Profile);
+                profile.Profile,
+                // 장이 하나 끝날 때마다 눈금을 올립니다. 한 장짜리 판도 마지막에
+                // 1/1 로 차므로 "아무것도 안 움직인다" 가 없어집니다.
+                developed => progress(quick, new ExportProgress(developed, selection.Count)));
             // 실패는 어느 단계에서 멈췄는지를 남깁니다. "쓰지 못했습니다" 만으로는 다시
             // 눌러 보는 것 말고 사용자가 할 수 있는 일이 없습니다 - 스캔 실패 줄과 같은
             // 규칙입니다.
@@ -136,7 +140,7 @@ internal sealed class PrintSheetExportRunner
         finally
         {
             isRunning = false;
-            progress(ExportProgress.Idle);
+            progress(quick, ExportProgress.Idle);
         }
     }
 }

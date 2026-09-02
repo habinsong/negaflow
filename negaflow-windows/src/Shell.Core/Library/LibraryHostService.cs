@@ -432,9 +432,10 @@ public sealed partial class LibraryHostService : IDisposable
         DevelopExportFormat format,
         Action<DevelopExportOutcome> onCompleted,
         ExportEncodingOptions? encoding = null,
-        int maximumConcurrent = 1) =>
+        int maximumConcurrent = 1,
+        Action<double>? onProgress = null) =>
         coordinator.StartAsync(
-            frame, destinationPath, format, onCompleted, encoding, maximumConcurrent);
+            frame, destinationPath, format, onCompleted, encoding, maximumConcurrent, onProgress);
 
     public void Dispose()
     {

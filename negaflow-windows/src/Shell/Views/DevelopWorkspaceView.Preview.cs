@@ -42,6 +42,9 @@ public sealed partial class DevelopWorkspaceView
 
     internal void RequestPreviewNow(bool replaceActive = false)
     {
+        // 사용자가 새 사진이나 새 보정 상태를 요청하면 이웃 예열보다 현재 화면이 먼저입니다.
+        // 실행 중 포인터는 워커가 반환 뒤 Dispose 합니다.
+        CancelNeighborWarm();
         // 레이어 강도를 끄는 동안에는 아직 저장하지 않은 값을 얹은 사본을 그립니다 — 저장은
         // 원본 파일 전체를 다시 해싱하므로 드래그 중에 하면 슬라이더가 멈춥니다.
         if (previewCoordinator is null || panel?.DefectLayers.PreviewFrame is not { } frame)
@@ -112,6 +115,7 @@ public sealed partial class DevelopWorkspaceView
                 {
                     // 로그: 정착 HIT 직후 1536 interactive를 다시 돌리면 3600 캐시를 덮어
                     // 241–1147ms 동안 작게 보였습니다. 정착본은 캐시만 올립니다.
+                    WarmNeighborSettledPreviews(frame);
                     return;
                 }
             }
@@ -269,6 +273,7 @@ public sealed partial class DevelopWorkspaceView
             if (outcome.Settled)
             {
                 thumbnails?.PublishFromDeveloped(shown.Id);
+                WarmNeighborSettledPreviews(shown);
             }
         }
 
