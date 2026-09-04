@@ -7,7 +7,7 @@
 <p align="center">macOS ネイティブで作った negaflow です。</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.1.3-EF8B26" alt="バージョン 1.1.3"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.1.4-EF8B26" alt="バージョン 1.1.4"></a>
   <a href="#"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 以降"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -47,8 +47,8 @@
 
 | インストーラー | 対応する Mac |
 |---|---|
-| `negaflow-1.1.3-mac-universal.pkg` | Apple Silicon、Intel |
-| `negaflow-1.1.3-mac-arm64.pkg` | Apple Silicon のみ |
+| `negaflow-1.1.4-mac-universal.pkg` | Apple Silicon、Intel |
+| `negaflow-1.1.4-mac-arm64.pkg` | Apple Silicon のみ |
 
 たいていは Universal PKG で足ります。`/Applications` に入ります。自分で移すなら同じページの DMG か ZIP を使ってください。
 

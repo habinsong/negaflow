@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/ja/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="ウェブサイト"></a>
-  <a href="#ダウンロード"><img src="https://img.shields.io/badge/version-1.1.3-EF8B26" alt="バージョン 1.1.3"></a>
+  <a href="#ダウンロード"><img src="https://img.shields.io/badge/version-1.1.4-EF8B26" alt="バージョン 1.1.4"></a>
   <a href="negaflow-mac/docs/README_ja.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 以降"></a>
   <a href="negaflow-windows/docs/README_ja.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 以降"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 ライセンス"></a>
@@ -73,9 +73,9 @@
 
 | インストーラー | 対象 |
 |---|---|
-| `negaflow-1.1.3-mac-universal.pkg` | macOS 14 以降、Apple Silicon と Intel |
-| `negaflow-1.1.3-mac-arm64.pkg` | macOS 14 以降、Apple Silicon のみ |
-| `negaflow-1.1.3-win-x64.exe` | Windows 11 24H2 以降、x64 |
+| `negaflow-1.1.4-mac-universal.pkg` | macOS 14 以降、Apple Silicon と Intel |
+| `negaflow-1.1.4-mac-arm64.pkg` | macOS 14 以降、Apple Silicon のみ |
+| `negaflow-1.1.4-win-x64.exe` | Windows 11 24H2 以降、x64 |
 
 たいていの Mac は Universal PKG で大丈夫です。もちろん、Silicon 用のファイルと DMG と ZIP も同じページに上げてあります。初回起動のときはシステム設定のプライバシーとセキュリティで「このまま開く」を一度押す必要があります。
 
