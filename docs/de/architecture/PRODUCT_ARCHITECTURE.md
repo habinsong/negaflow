@@ -2,7 +2,7 @@
 
 [Dokumentationsstart](../README.md)
 
-negaflow ist eine macOS-App. Sie importieren oder scannen Filmbilder, danach folgen Umkehr, Entwicklung, GrainMend, Ausgabe und Aufbewahrung. Jede Bearbeitung wird getrennt vom Original abgelegt.
+negaflow ist eine App für macOS und Windows. Sie importieren oder scannen Filmbilder, danach folgen Umkehr, Entwicklung, GrainMend, Ausgabe und Aufbewahrung. Jede Bearbeitung wird getrennt vom Original abgelegt.
 
 > [!IMPORTANT]
 > Originale, Bearbeitungsverlauf, Caches und Ausgabedateien sind verschiedenes Material. Ein verlorener Cache darf weder das Original noch den Verlauf kosten, und ein Export scheitert lieber, als ein Ergebnis auszuliefern, das er nicht neu aufbauen kann.

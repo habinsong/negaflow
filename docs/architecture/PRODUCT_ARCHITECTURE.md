@@ -2,7 +2,7 @@
 
 [Docs home](../README.md)
 
-negaflow is a macOS app. You import or scan film images, then go through inversion, develop, GrainMend, output, and preservation. Every edit is kept apart from the original.
+negaflow is a macOS and Windows app. You import or scan film images, then go through inversion, develop, GrainMend, output, and preservation. Every edit is kept apart from the original.
 
 > [!IMPORTANT]
 > Originals, edit history, caches, and output files are different material. Losing a cache must not lose the original or the edit history, and an export fails rather than ship a result it cannot rebuild.
