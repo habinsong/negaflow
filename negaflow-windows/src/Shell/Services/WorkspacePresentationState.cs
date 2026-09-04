@@ -231,6 +231,12 @@ public sealed class WorkspacePresentationState
     /// </summary>
     public static Action<Library.FrameCacheResidencySettings>? FrameCacheLimitsChanged { get; set; }
 
+    /// <summary>
+    /// 썸네일 디스크 캐시의 자리를 거는 자리입니다. 위와 같은 이유로 만든 쪽(<c>App</c>)이
+    /// 채웁니다 — 설정에서 저장 위치를 바꿔도 재시작 전까지 옛 폴더에 쌓이던 자리입니다.
+    /// </summary>
+    public static Action<Storage.DiskStorageSettings>? ThumbnailRootChanged { get; set; }
+
     /// <summary>마지막으로 적용한 개발자 모드입니다. 처음에는 모름(null)입니다.</summary>
     private static bool? lastAppliedDeveloperMode;
 
@@ -239,6 +245,7 @@ public sealed class WorkspacePresentationState
         DevelopRequestFactory.VerifyDefectSourceContent =
             preferences.ImageContentHash == ImageContentHashMode.Sha256;
         FrameCacheLimitsChanged?.Invoke(preferences.FrameCache);
+        ThumbnailRootChanged?.Invoke(preferences.Disk);
         // GPU 쪽은 셸이 들고 있는 것이 없습니다 - 엔진 안 `GpuImagePool` 이 바로 읽으므로
         // 여기서 곧장 겁니다. 엔진을 못 부르면 엔진이 자동 예산으로 계속 돕니다.
         _ = Negaflow.Interop.GpuCacheBridge.Apply(preferences.GpuCache.LimitBytesToApply());

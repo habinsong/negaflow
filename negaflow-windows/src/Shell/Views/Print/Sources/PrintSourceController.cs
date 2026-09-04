@@ -242,16 +242,26 @@ internal sealed class PrintSourceController
         filmstripItems = [.. FilmstripPresentation
             .Project(libraryHost, surface.Presentation())
             .Where(item => !item.Frame.IsPreviewScan)];
-        int selectedIndex = 0;
+        // **기준이 목록에 없으면 가장 최근 사진입니다 — 첫 장이 아닙니다.**
+        // 앞 판은 `FirstOrDefault` 가 못 찾았을 때 튜플 기본값의 `index`(=0)를 그대로 써서,
+        // 스캔·가져오기 직후처럼 기준이 잠깐 목록 밖에 있으면 맨 앞 사진으로 접혔습니다.
+        // macOS `selectMostRecentAvailableFrameIfNeeded()` 와 같은 규칙을 씁니다 —
+        // 현상뷰 필름스트립과 같은 하나입니다.
+        int selectedIndex = -1;
         if (ActiveSourceFrameId is { } activeFrameId)
         {
-            int found = filmstripItems
-                .Select((item, index) => (item, index))
-                .FirstOrDefault(entry => string.Equals(
-                    entry.item.Id,
-                    activeFrameId,
-                    StringComparison.Ordinal)).index;
-            selectedIndex = found;
+            for (int index = 0; index < filmstripItems.Count; ++index)
+            {
+                if (string.Equals(filmstripItems[index].Id, activeFrameId, StringComparison.Ordinal))
+                {
+                    selectedIndex = index;
+                    break;
+                }
+            }
+        }
+        if (selectedIndex < 0)
+        {
+            selectedIndex = FilmstripScopes.MostRecentIndex(filmstripItems);
         }
         _ = LibraryThumbnailBinder.Hydrate(thumbnails, filmstripItems, "print");
         surface.Filmstrip.ShowFrames(filmstripItems, selectedIndex);

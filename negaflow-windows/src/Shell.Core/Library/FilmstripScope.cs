@@ -64,6 +64,50 @@ public static class FilmstripScopes
         };
     }
 
+    /// <summary>
+    /// 기준 사진이 목록에 없을 때 고를 자리입니다. macOS
+    /// <c>selectMostRecentAvailableFrameIfNeeded()</c> 와 같은 규칙 — <b>가장 최근에 찍힌</b>
+    /// 사진이며, 같은 시각이면 뒤에 있는 것입니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 첫 항목(<c>0</c>)을 골랐습니다. 그래서 스캔이나 가져오기 직후 기준이 잠시
+    /// 목록 밖으로 나가면 현상뷰가 방금 넣은 사진이 아니라 <b>맨 첫 장</b>으로 튀었고,
+    /// 무엇으로 튀는지가 넣은 차례와 정렬에 따라 달라졌습니다(사용자 보고 2026-09-04).
+    ///
+    /// 프리뷰 스캔은 macOS 처럼 뺍니다. 그것뿐이면 그때만 프리뷰까지 넣어 같은 규칙으로
+    /// 고릅니다 — 어느 경우에도 "첫 장" 으로 접지 않습니다. 원본 존재 여부는 필름스트립
+    /// 항목이 들고 있지 않으므로 여기서는 보지 않습니다.
+    /// </remarks>
+    public static int MostRecentIndex(IReadOnlyList<LibraryFrameListItem> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        int best = MostRecentIndex(items, skipPreviewScans: true);
+        return best >= 0 ? best : MostRecentIndex(items, skipPreviewScans: false);
+    }
+
+    private static int MostRecentIndex(
+        IReadOnlyList<LibraryFrameListItem> items,
+        bool skipPreviewScans)
+    {
+        int best = -1;
+        DateTimeOffset bestScannedAt = DateTimeOffset.MinValue;
+        for (int index = 0; index < items.Count; ++index)
+        {
+            LibraryFrameSnapshot frame = items[index].Frame;
+            if (skipPreviewScans && frame.IsPreviewScan)
+            {
+                continue;
+            }
+            DateTimeOffset scannedAt = frame.ScannedAt ?? DateTimeOffset.MinValue;
+            if (best < 0 || scannedAt >= bestScannedAt)
+            {
+                best = index;
+                bestScannedAt = scannedAt;
+            }
+        }
+        return best;
+    }
+
     private static string FolderPath(LibraryFrameSnapshot frame)
     {
         try

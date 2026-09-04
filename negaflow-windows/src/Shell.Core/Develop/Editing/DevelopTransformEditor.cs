@@ -92,6 +92,20 @@ internal sealed class DevelopTransformEditor
                     CropAspect = option.Ratio is { } ratio && ratio > 0.0 ? ratio : null,
                 });
 
+    /// <summary>
+    /// 크롭 세션을 열 때의 비율을 그대로 되돌립니다. 취소 전용이라 목록에 없는 값(예전에
+    /// 저장된 사용자 지정 비율)도 그대로 받습니다.
+    /// </summary>
+    public DevelopEditResult RestoreCropAspect(LibraryFrameSnapshot? frame, double? aspect) =>
+        frame is null
+            ? Missing()
+            : Set(
+                frame,
+                frame.ImageTransform with
+                {
+                    CropAspect = aspect is { } ratio && ratio > 0.0 ? ratio : null,
+                });
+
     private DevelopEditResult Set(
         LibraryFrameSnapshot frame,
         ImageTransformRecipe imageTransform)

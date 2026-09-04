@@ -26,9 +26,18 @@ internal sealed class DevelopCropSession
             return;
         }
         ImageCropRect? restore = view.crop.Cancel();
-        if (view.panel?.SetCrop(restore) != LibraryFrameError.None)
+        double? restoreAspect = view.crop.CancelAspect();
+        if (view.panel is not { } panel || panel.SetCrop(restore) != LibraryFrameError.None)
         {
             return;
+        }
+        // **비율도 되돌립니다.** 크롭 화면 안에서 고른 비율은 크롭 화면 안에서 한 일입니다.
+        // 사각형만 되돌리면 "비율은 3:2 인데 사각형은 전체" 인 어긋난 상태가 남고, 다음에
+        // 자르기로 들어간 사용자는 3:2 프레임을 기다리다 전체 프레임을 봅니다.
+        if (panel.ImageTransform.CropAspect != restoreAspect)
+        {
+            _ = panel.RestoreCropAspect(restoreAspect);
+            view.GeometryCard.UpdateAspectControls(panel, view.crop.IsAspectLocked);
         }
         End();
         view.RequestPreview();
@@ -200,11 +209,12 @@ internal sealed class DevelopCropSession
         // 뒤에 값을 읽어 세션이 늘 전체 사각형으로 시작했고, 내부 drag가 새 선택 생성으로
         // 잘못 들어갔습니다.
         ImageCropRect? previousCrop = view.panel.ImageTransform.Crop;
+        double? previousAspect = view.panel.ImageTransform.CropAspect;
         if (view.panel.SetCrop(null) != LibraryFrameError.None)
         {
             return;
         }
-        view.crop.Begin(previousCrop, lockedNormalizedAspect: null);
+        view.crop.Begin(previousCrop, previousAspect, lockedNormalizedAspect: null);
         view.crop.SyncLockedAspect(LockedNormalizedAspectRatio());
         view.GeometryCard.SetDialVisible(true);
         view.PreviewCanvas.FocusHost();

@@ -248,6 +248,10 @@ public partial class App : Application
         // 뒤에 생기므로, 걸어 두는 것만으로는 **저장돼 있던 값이 한 번도 적용되지 않습니다.**
         ThumbnailService cache = thumbnails;
         WorkspacePresentationState.FrameCacheLimitsChanged = cache.ApplyResidencySettings;
+        // 설정에서 저장 위치를 바꾸면 썸네일도 따라갑니다. 앞 판은 여기 값을 시작할 때
+        // 한 번만 읽어서, OneDrive 로 바꿔도 재시작 전까지 옛 폴더에 계속 쌓였습니다.
+        WorkspacePresentationState.ThumbnailRootChanged = disk =>
+            cache.ApplyThumbnailRoot(new Negaflow.Shell.Storage.DiskStorageLocations(disk).Thumbnails);
         cache.ApplyResidencySettings(
             (presentationSettings?.Current ?? new ShellPreferences()).FrameCache);
         memoryPressureMonitor = WindowsMemoryPressureMonitor.TryStart(

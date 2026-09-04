@@ -31,6 +31,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
+$repositoryRoot = Split-Path -Parent $projectRoot
 $packageName = 'Negaflow.Windows'
 $runtimeIdentifier = if ($Architecture -eq 'ARM64') { 'win-arm64' } else { 'win-x64' }
 $nativePreset = "$($Architecture.ToLowerInvariant())-$($Configuration.ToLowerInvariant())"
@@ -38,6 +39,36 @@ $layoutRoot = Join-Path $projectRoot "out\run\$runtimeIdentifier-$($Configuratio
 $payloadDirectory = Join-Path $layoutRoot 'payload'
 $packageDirectory = Join-Path $layoutRoot 'msix'
 $shellProject = Join-Path $projectRoot 'src\Shell\Negaflow.Shell.csproj'
+
+# 버전은 저장소에 하나뿐이다 - `negaflow-mac\Sources\Chromabase\ProductVersion.txt`.
+# 설치본(`build-release.ps1`)은 그 값을 manifest 의 Identity 에 박는데 개발 실행에는 그
+# 단계가 없어서, 저장소의 `Package.appxmanifest` 에 적힌 자리표시자 `1.0.0.0` 을 그대로
+# 달고 떴다. 앱 정보 창은 `Package.Current.Id.Version` 을 읽으므로 실제와 다른 값을
+# 보여 준다. 두 길이 같은 자리에서 같은 값을 쓰게 한다.
+function Resolve-ProductVersion {
+    $versionFile = Join-Path $repositoryRoot 'negaflow-mac\Sources\Chromabase\ProductVersion.txt'
+    if (-not (Test-Path -LiteralPath $versionFile)) {
+        throw "Product version file is missing: $versionFile"
+    }
+    $value = (Get-Content -LiteralPath $versionFile -Raw -Encoding UTF8).Trim()
+    if ($value -notmatch '^\d+\.\d+\.\d+$') {
+        throw "Product version '$value' must be x.y.z."
+    }
+    return $value
+}
+
+function Set-ManifestVersion {
+    param([string]$Path, [string]$ProductVersion)
+    [xml]$manifest = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
+    $namespace = New-Object System.Xml.XmlNamespaceManager($manifest.NameTable)
+    $namespace.AddNamespace('appx', 'http://schemas.microsoft.com/appx/manifest/foundation/windows10')
+    $identity = $manifest.SelectSingleNode('/appx:Package/appx:Identity', $namespace)
+    if ($null -eq $identity) {
+        throw "Packaged manifest has no Identity: $Path"
+    }
+    $identity.SetAttribute('Version', "$ProductVersion.0")
+    $manifest.Save($Path)
+}
 
 function Remove-Registration {
     $installed = Get-AppxPackage -Name $packageName -ErrorAction SilentlyContinue
@@ -97,6 +128,8 @@ function Resolve-MakeAppx {
     throw 'makeappx.exe was not found. Install the Windows 10/11 SDK first.'
 }
 
+$productVersion = Resolve-ProductVersion
+
 if (-not $SkipBuild) {
     Write-Host "[run-app] native: $nativePreset" -ForegroundColor Cyan
     & (Join-Path $PSScriptRoot 'build.ps1') -Preset $nativePreset
@@ -110,7 +143,8 @@ if (-not $SkipBuild) {
     }
     # 자체 포함으로 만든다. 등록된 패키지 안에서는 공유 런타임을 찾지 않기 때문이다.
     & dotnet build $shellProject --configuration $Configuration --runtime $runtimeIdentifier `
-        --self-contained true -p:Platform=$Architecture -p:WindowsAppSDKSelfContained=false `
+        --self-contained true -p:Platform=$Architecture -p:Version=$productVersion `
+        -p:WindowsAppSDKSelfContained=false `
         -p:WindowsPackageType=MSIX -p:EnableMsixTooling=true `
         -p:AppxPackageSigningEnabled=false -p:GenerateAppxPackageOnBuild=true `
         -p:AppxBundle=Never -p:UapAppxPackageBuildMode=SideloadOnly `
@@ -146,6 +180,10 @@ $manifestPath = Join-Path $payloadDirectory 'AppxManifest.xml'
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
     throw "Package manifest is missing: $manifestPath. Run without -SkipBuild first."
 }
+
+# 설치본과 같은 버전을 답니다. 이것이 없으면 앱 정보 창이 `1.0.0.0` 을 보여 줍니다.
+Set-ManifestVersion -Path $manifestPath -ProductVersion $productVersion
+Write-Host "[run-app] version $productVersion.0" -ForegroundColor DarkGray
 
 $previewTraceMarker = Join-Path $payloadDirectory 'preview-trace.on'
 if ($EnablePreviewTrace) {

@@ -25,6 +25,36 @@ internal static class CropAndLookTests
         VerifyCropHitTestingUsesTheDisplayedFrameAcrossZoom();
         VerifyAspectLockUsesTheCurrentRectangleWhenNoRatioIsChosen();
         VerifyRotateAndFlipKeepTheCropWhereItWas();
+        VerifyCancelRestoresTheRatioTheSessionStartedWith();
+    }
+
+    /// <summary>
+    /// 크롭 취소는 사각형만이 아니라 <b>종횡비도</b> 세션을 열 때의 값으로 되돌립니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 사각형만 되돌렸습니다. 그래서 "자르기 진입 → 3:2 → 자르지 않고 취소 → 다시
+    /// 진입" 하면 비율 고르개는 3:2 인데 사각형은 전체인, 서로 어긋난 상태가 남았습니다.
+    /// </remarks>
+    private static void VerifyCancelRestoresTheRatioTheSessionStartedWith()
+    {
+        var crop = new CropWorkspaceState();
+
+        // 자르지 않은 사진에서 열면 되돌릴 비율도 없습니다.
+        crop.Begin(currentCrop: null, currentAspect: null, lockedNormalizedAspect: null);
+        Check(crop.Cancel() is null, "cancel restores no crop when the session started without one");
+        Check(crop.CancelAspect() is null, "cancel restores no ratio when the session started without one");
+        crop.End();
+
+        // 이미 3:2 로 잘라 둔 사진에서 열면 그 둘을 그대로 되돌립니다.
+        ImageCropRect existing = new(0.1, 0.2, 0.3, 0.4);
+        crop.Begin(existing, currentAspect: 3.0 / 2.0, lockedNormalizedAspect: null);
+        Check(crop.Cancel() == existing, "cancel restores the crop the session started with");
+        Check(
+            crop.CancelAspect() is { } kept && Math.Abs(kept - (3.0 / 2.0)) < 1e-12,
+            "cancel restores the ratio the session started with");
+        crop.End();
+
+        Check(crop.CancelAspect() is null, "there is nothing to restore without a session");
     }
 
     /// <summary>
@@ -190,7 +220,7 @@ internal static class CropAndLookTests
     private static void VerifyCropHitTestingUsesTheDisplayedFrameAcrossZoom()
     {
         var crop = new CropWorkspaceState();
-        crop.Begin(new ImageCropRect(0.1, 0.5, 0.2, 0.3), lockedNormalizedAspect: null);
+        crop.Begin(new ImageCropRect(0.1, 0.5, 0.2, 0.3), currentAspect: null, lockedNormalizedAspect: null);
         crop.MarkPreviewReady();
 
         PreviewFrame displayed = new(100.0, 50.0, 700.0, 1000.0);

@@ -23,7 +23,7 @@ internal sealed class LibraryScanRunner
         {
             return;
         }
-        if (view.libraryHost.StorageRoots is not { } roots)
+        if (view.libraryHost.StorageRoots is null)
         {
             // 사유는 기록에만 남깁니다 - 스캔 단추 아래 빨간 줄은 사용자가 할 수 있는 일을
             // 알려 주지 않습니다.
@@ -53,21 +53,20 @@ internal sealed class LibraryScanRunner
                 // 그 자리는 실제로 늘 비어 있었습니다 - 그래서 프리뷰 한 장마다 롤 폴더에
                 // `GT-X900-0001.tif` 같은 원본 이름을 하나씩 차지하고 사진 번호를 먹었습니다.
                 // 되돌아갈 자리도 프리뷰 캐시여야 합니다.
-                directory = view.diskScanPreviewRoot is { Length: > 0 } previewRoot
-                    ? previewRoot
-                    : Path.Combine(roots.LibraryRoot, ScanStorageLayout.PreviewCacheFolderName);
+                directory = view.diskLocations.ScanPreviews;
                 _ = Directory.CreateDirectory(directory);
             }
             else
             {
                 // macOS `diskStorage.scansPath` — 스캔 패널에서 고른 자리가 우선이고, 없으면
-                // 설정 · 디스크 탭의 "스캔 원본" 폴더입니다. 둘 다 없을 때만 카탈로그 옆으로
-                // 갑니다 — 원본을 사용자가 모르는 곳에 두지 않기 위해서입니다.
+                // 설정 · 디스크 탭의 "스캔 원본" 폴더입니다.
+                //
+                // **카탈로그 옆으로 되돌아가는 갈래는 없습니다.** `diskLocations` 는 늘 값이
+                // 있고(기본 설정 = 바탕 화면), macOS 도 `diskStorage.scansURL` 하나만 봅니다.
+                // 되돌이표가 있던 동안 그것은 안전망이 아니라 실제 목적지였습니다.
                 string scanRoot = view.scanSession.ScanStorageRoot is { Length: > 0 } chosen
                     ? chosen
-                    : view.diskScanRoot is { Length: > 0 } configured
-                        ? configured
-                        : Path.Combine(roots.LibraryRoot, "Scans");
+                    : view.diskLocations.Scans;
                 directory = ScanStorageLayout.EnsureRollDirectory(
                     scanRoot,
                     view.scanSession.Options.FilmType,

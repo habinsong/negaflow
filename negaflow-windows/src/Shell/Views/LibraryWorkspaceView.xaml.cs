@@ -189,8 +189,10 @@ public sealed partial class LibraryWorkspaceView : UserControl
         // 좌측 "파일" 탭의 접기 상태는 세 화면이 함께 봅니다.
         ControlsPanel.FilesSourceTree.AttachPresentation(state);
         state.Changed += layout.OnStateChanged;
-        ControlsPanel.ScanPanel.ApplyDefaultRotation(state.Current.DefaultScanRotation);
-        layout.SynchronizeWidth(state.Current.LibraryControlsWidth);
+        // **저장해 둔 설정을 지금 한 번 흘립니다.** `Changed` 는 값이 바뀔 때만 오므로,
+        // 설정을 건드리지 않은 첫 세션에서는 스캔 원본·프리뷰 자리가 한 번도 걸리지
+        // 않았습니다. 시작과 변경이 같은 자리를 지나야 둘이 갈라지지 않습니다.
+        layout.OnStateChanged(this, state.Current);
         Unloaded += OnUnloaded;
     }
 
@@ -355,6 +357,12 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ShowFilteredItems();
     }
 
+    /// <summary>
+    /// 이 화면의 스캔·가져오기가 카탈로그의 <b>프레임 집합</b>을 바꿨습니다. 셸이 나머지 두
+    /// 화면을 맞춥니다 — macOS 는 프레임 관찰로 세 화면이 저절로 따라오는 자리입니다.
+    /// </summary>
+    public event EventHandler? LibraryFramesChanged;
+
     private void OnEmbeddedLibraryChanged(object? sender, EventArgs args)
     {
         _ = sender;
@@ -363,6 +371,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         {
             ShowLibrary(host, importWindowId ?? default);
         }
+        LibraryFramesChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnFrameRightTapped(object sender, RightTappedRoutedEventArgs args) =>

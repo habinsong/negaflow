@@ -38,11 +38,26 @@ public sealed class CropWorkspaceState
 
     public bool IsDragging => DragMode != CropDragMode.None;
 
-    public CropSession? Begin(ImageCropRect? currentCrop, double? lockedNormalizedAspect)
+    /// <summary>
+    /// 세션을 열 때의 종횡비입니다. 취소는 사각형만이 아니라 <b>이 값도</b> 되돌립니다 —
+    /// 크롭 화면 안에서 고른 비율은 크롭 화면 안에서 한 일이기 때문입니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 사각형만 되돌렸습니다. 그래서 "진입 → 3:2 → 자르지 않고 취소 → 다시 진입"
+    /// 하면 비율 고르개는 3:2 라고 적혀 있는데 사각형은 전체인, 서로 어긋난 상태가
+    /// 남았습니다(사용자 보고 2026-09-04).
+    /// </remarks>
+    private double? previousAspect;
+
+    public CropSession? Begin(
+        ImageCropRect? currentCrop,
+        double? currentAspect,
+        double? lockedNormalizedAspect)
     {
         CropSession next = CropSession.Start(currentCrop);
         next.LockedNormalizedAspectRatio = lockedNormalizedAspect;
         Session = next;
+        previousAspect = currentAspect;
         DragMode = CropDragMode.None;
         AwaitingPreview = true;
         OverlayFrame = null;
@@ -57,6 +72,7 @@ public sealed class CropWorkspaceState
     public void End()
     {
         Session = null;
+        previousAspect = null;
         DragMode = CropDragMode.None;
         AwaitingPreview = false;
         OverlayFrame = null;
@@ -74,6 +90,9 @@ public sealed class CropWorkspaceState
     {
         return Session?.Cancel();
     }
+
+    /// <summary>취소가 되돌릴 종횡비입니다. 세션이 없으면 되돌릴 것도 없습니다.</summary>
+    public double? CancelAspect() => Session is null ? null : previousAspect;
 
     public ImageCropRect? Apply()
     {

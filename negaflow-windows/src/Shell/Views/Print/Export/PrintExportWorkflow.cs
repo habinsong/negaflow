@@ -42,7 +42,10 @@ internal sealed class PrintExportWorkflow
         {
             return;
         }
-        // 디스크 탭의 "내보내기 폴더"에서 시작합니다 — 매번 처음부터 찾아 들어가지 않도록.
+        // **여기서 디스크 탭의 "내보내기 폴더"로 시작할 수는 없습니다.** WinAppSDK 1.8 의
+        // `FolderPicker` 는 시작 자리를 `PickerLocationId` 열거로만 받습니다(임의 경로를 받는
+        // `SuggestedFolder` 는 `FileSavePicker` 에만 있습니다). macOS 는 `panel.directoryURL`
+        // 로 정확한 폴더를 줍니다 — OS 가 강제하는 차이입니다.
         Microsoft.Windows.Storage.Pickers.FolderPicker picker = new(id)
         {
             SuggestedStartLocation =

@@ -41,7 +41,12 @@ public sealed partial class ThumbnailService : IAsyncDisposable
     private readonly IThumbnailCodec codec;
     private readonly IUiDispatcher dispatcher;
     private readonly ThumbnailDiskCache disk;
-    private readonly string root;
+    /// <summary>
+    /// 썸네일 디스크 캐시의 뿌리입니다. 설정 · 디스크 탭에서 자리를 바꾸면 <b>다음 쓰기부터</b>
+    /// 새 자리로 갑니다 — macOS 는 <c>diskStorage.thumbnailsURL</c> 을 쓸 때마다 다시
+    /// 계산하므로 재시작을 기다리지 않습니다.
+    /// </summary>
+    private volatile string root;
     private readonly SemaphoreSlim renderSlots = new(MaximumConcurrentRenders, MaximumConcurrentRenders);
     private readonly ConcurrentDictionary<string, byte[]> memory = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, Task> inFlight = new(StringComparer.Ordinal);
@@ -347,6 +352,16 @@ public sealed partial class ThumbnailService : IAsyncDisposable
     public async Task WaitUntilIdleAsync()
     {
         await disk.WaitUntilIdleAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 설정 · 디스크 탭이 정한 썸네일 자리를 겁니다. 앞 자리에 쌓인 것은 그대로 둡니다 —
+    /// 캐시이므로 원본에서 다시 만들어집니다.
+    /// </summary>
+    public void ApplyThumbnailRoot(string thumbnailRoot)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(thumbnailRoot);
+        root = thumbnailRoot;
     }
 
     public async ValueTask DisposeAsync()

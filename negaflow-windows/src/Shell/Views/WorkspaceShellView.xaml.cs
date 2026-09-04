@@ -196,6 +196,10 @@ public sealed partial class WorkspaceShellView : UserControl
         WireFilesTab(DevelopWorkspace.LeftPanel.FilesTab);
         LibraryWorkspace.FrameOpenRequested += OnLibraryFrameOpenRequested;
         LibraryWorkspace.FolderDevelopmentApplied += OnFolderDevelopmentApplied;
+        // 스캔·가져오기는 어느 화면에서 시작하든 카탈로그의 프레임 집합을 바꿉니다. 그 화면은
+        // 자기 목록만 다시 짓고 나머지 둘에게는 알리지 않았습니다.
+        LibraryWorkspace.LibraryFramesChanged += OnWorkspaceLibraryFramesChanged;
+        DevelopWorkspace.LibraryFramesChanged += OnWorkspaceLibraryFramesChanged;
         DevelopWorkspace.ScannerSetupRequested += OnDevelopScannerSetupRequested;
         Toolbar.QuickExportRequested += OnToolbarQuickExportRequested;
         Toolbar.ExportRequested += OnToolbarExportRequested;
@@ -308,6 +312,37 @@ public sealed partial class WorkspaceShellView : UserControl
             LibraryWorkspace.ShowLibrary(host, windowId);
         }
         DevelopWorkspace.ReloadFrames();
+        PrintWorkspace.ShowLibrary(host);
+        SyncDevelopMenu();
+        SyncExportMenu();
+    }
+
+    /// <summary>
+    /// 한 화면의 스캔·가져오기가 프레임 집합을 바꿨습니다. <b>나머지 두 화면</b>을 맞춥니다.
+    /// </summary>
+    /// <remarks>
+    /// macOS 는 <c>frames</c> 가 관찰 대상이라 세 화면이 저절로 따라옵니다. Windows 는 각
+    /// 화면이 열릴 때 읽은 스냅샷을 들고 있으므로, 신호를 낸 화면은 이미 스스로 다시
+    /// 지었고 여기서는 <b>나머지</b>만 맞춥니다 — 같은 화면을 두 번 짓지 않기 위해서입니다.
+    ///
+    /// 이 자리가 없어서 현상뷰에서 스캔하거나 가져온 뒤 라이브러리로 넘어가면 방금 만든
+    /// 폴더가 목록에 없었고, 폴더 머리줄도 옛 목록 그대로였습니다(사용자 보고 2026-09-04).
+    /// </remarks>
+    private void OnWorkspaceLibraryFramesChanged(object? sender, EventArgs args)
+    {
+        _ = args;
+        if (libraryHost is not { } host)
+        {
+            return;
+        }
+        if (!ReferenceEquals(sender, LibraryWorkspace) && hostWindowId is { } windowId)
+        {
+            LibraryWorkspace.ShowLibrary(host, windowId);
+        }
+        if (!ReferenceEquals(sender, DevelopWorkspace))
+        {
+            DevelopWorkspace.ReloadFrames();
+        }
         PrintWorkspace.ShowLibrary(host);
         SyncDevelopMenu();
         SyncExportMenu();
@@ -546,6 +581,8 @@ public sealed partial class WorkspaceShellView : UserControl
         DevelopWorkspace.QuickExportAvailabilityChanged -= OnQuickExportAvailabilityChanged;
         DevelopWorkspace.ScannerSetupRequested -= OnDevelopScannerSetupRequested;
         LibraryWorkspace.FolderDevelopmentApplied -= OnFolderDevelopmentApplied;
+        LibraryWorkspace.LibraryFramesChanged -= OnWorkspaceLibraryFramesChanged;
+        DevelopWorkspace.LibraryFramesChanged -= OnWorkspaceLibraryFramesChanged;
         if (workspaceState is not null)
         {
             workspaceState.Changed -= OnStateChanged;

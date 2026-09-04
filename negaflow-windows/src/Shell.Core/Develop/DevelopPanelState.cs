@@ -420,4 +420,8 @@ public sealed partial class DevelopPanelState
     /// <summary>크롭 화면이 열려 있을 때 씁니다. 비율만 적고 사각형은 그대로 둡니다.</summary>
     public LibraryFrameError SetCropAspectOnly(CropAspectOption option) =>
         RefreshAfterEdit(transformEditor.SetCropAspectOnly(SelectedFrame, option));
+
+    /// <summary>크롭 취소가 세션 시작 때의 비율을 되돌립니다.</summary>
+    public LibraryFrameError RestoreCropAspect(double? aspect) =>
+        RefreshAfterEdit(transformEditor.RestoreCropAspect(SelectedFrame, aspect));
 }

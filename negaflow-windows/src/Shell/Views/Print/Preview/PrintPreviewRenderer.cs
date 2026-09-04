@@ -99,6 +99,9 @@ internal sealed class PrintPreviewRenderer
     /// <summary>다시 그리기가 이미 예약되어 있는지입니다.</summary>
     private bool drawScheduled;
 
+    /// <summary>그리는 동안 들어온 요청입니다. 끝난 뒤 한 번만 더 그립니다.</summary>
+    private bool drawRequestedWhileDrawing;
+
     /// <summary>사진마다 마지막으로 청한 현상본의 긴 변입니다.</summary>
     private readonly Dictionary<string, int> requestedEdges = [];
 
@@ -114,20 +117,49 @@ internal sealed class PrintPreviewRenderer
     internal void Draw([System.Runtime.CompilerServices.CallerMemberName] string caller = "")
     {
         PreviewTrace.Write("print.ask from=" + caller);
-        if (surface.PageCanvas is null || drawScheduled)
+        if (surface.PageCanvas is null)
         {
             return;
         }
-        drawScheduled = true;
-        if (!surface.PageCanvas.DispatcherQueue.TryEnqueue(() =>
-            {
-                drawScheduled = false;
-                DrawNow();
-            }))
+        if (drawScheduled)
         {
-            drawScheduled = false;
+            drawRequestedWhileDrawing = true;
+            return;
+        }
+        drawScheduled = true;
+        if (!surface.PageCanvas.DispatcherQueue.TryEnqueue(RunScheduledDraw))
+        {
+            RunScheduledDraw();
+        }
+    }
+
+    /// <summary>
+    /// 예약된 한 번을 그립니다. <b>그리는 동안 들어온 요청은 한 번으로 접어</b> 뒤에
+    /// 다시 그립니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 <c>drawScheduled</c> 를 <c>DrawNow</c> <b>앞에서</b> 내렸습니다. 그래서 그리는
+    /// 도중에 올라온 요청 — 판 크기 바뀜, 썸네일 도착, 설정 되먹임 — 이 모두 새 예약이 되어
+    /// 묶임이 이름만 남았습니다. 이 파일이 이미 두 번 겪은 되풀이 그리기(초당 94회 · 230회)와
+    /// 같은 모양이며, 판 한 번에 타일마다 <c>WriteableBitmap</c> 을 만드는 자리라 되풀이가
+    /// 곧 GPU 표면 폭주입니다.
+    /// </remarks>
+    private void RunScheduledDraw()
+    {
+        try
+        {
             DrawNow();
         }
+        finally
+        {
+            drawScheduled = false;
+        }
+        if (!drawRequestedWhileDrawing)
+        {
+            return;
+        }
+        drawRequestedWhileDrawing = false;
+        Draw();
     }
 
     private void DrawNow()

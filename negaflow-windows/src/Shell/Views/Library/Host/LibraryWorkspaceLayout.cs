@@ -54,10 +54,7 @@ internal sealed class LibraryWorkspaceLayout
             view.ControlsPanel.ScanPanel.SimulatorPublisher ??= state.SetScannerSimulatorEnabled;
             _ = view.ControlsPanel.ScanPanel.ApplySimulatorEnabledAsync(preferences.ScannerSimulatorEnabled);
         }
-        Negaflow.Shell.Storage.DiskStorageLocations scanLocations =
-            new(preferences.Disk);
-        view.ControlsPanel.ScanPanel.ApplyScanStorageRoot(
-            scanLocations.Scans, scanLocations.ScanPreviews);
+        view.ControlsPanel.ScanPanel.ApplyDiskStorage(preferences.Disk);
         _ = sender;
         if (!view.isResizing)
         {

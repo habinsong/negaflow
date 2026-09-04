@@ -21,13 +21,16 @@ public sealed partial class LibraryScanPanel : UserControl
     internal ImageRotation defaultRotation = ImageRotation.Degrees0;
 
     /// <summary>
-    /// 설정 · 디스크 탭에서 고른 "스캔 원본" 폴더입니다. 스캔 패널에서 따로 고른 자리가
-    /// 없을 때 여기에 씁니다 — 예전에는 <c>%LOCALAPPDATA%</c> 아래로만 갔습니다.
+    /// 설정 · 디스크 탭이 정한 자리들입니다. 스캔 원본과 프리뷰 캐시가 여기서 나옵니다.
     /// </summary>
-    internal string diskScanRoot = string.Empty;
-
-    /// <summary>설정 · 디스크 탭의 "스캔 프리뷰 캐시 폴더" 입니다.</summary>
-    internal string diskScanPreviewRoot = string.Empty;
+    /// <remarks>
+    /// <b>빈 상태가 없습니다.</b> 앞 판은 경로 두 개를 문자열로 들고 있었고 그 문자열은
+    /// <c>Changed</c> 가 한 번 올 때까지 비어 있었습니다 — 설정을 건드리지 않은 첫 세션에서
+    /// 스캔 원본이 통째로 카탈로그 폴더 아래로 떨어진 자리입니다. macOS
+    /// <c>DiskStorageStore</c> 는 늘 값이 있으므로 여기도 기본 설정으로 시작합니다.
+    /// </remarks>
+    internal Negaflow.Shell.Storage.DiskStorageLocations diskLocations =
+        new(new Negaflow.Shell.Storage.DiskStorageSettings());
     internal readonly LibraryScanRenderer renderer;
     internal readonly LibraryScanRunner runner;
     internal readonly LibraryScanCopy copy;
@@ -209,11 +212,11 @@ public sealed partial class LibraryScanPanel : UserControl
     /// <summary>패널이나 메뉴에서 스위치를 움직이면 설정에도 적어 둡니다.</summary>
     public Action<bool>? SimulatorPublisher { get; set; }
 
-    /// <summary>설정 · 디스크 탭의 스캔 원본 자리를 겁니다.</summary>    /// <summary>설정 · 디스크 탭의 스캔 원본 자리를 겁니다.</summary>
-    public void ApplyScanStorageRoot(string root, string previewRoot)
+    /// <summary>설정 · 디스크 탭이 정한 자리를 겁니다(스캔 원본 · 프리뷰 캐시).</summary>
+    public void ApplyDiskStorage(Negaflow.Shell.Storage.DiskStorageSettings settings)
     {
-        diskScanRoot = root ?? string.Empty;
-        diskScanPreviewRoot = previewRoot ?? string.Empty;
+        ArgumentNullException.ThrowIfNull(settings);
+        diskLocations = new Negaflow.Shell.Storage.DiskStorageLocations(settings);
     }
 
     /// <summary>설정에서 고른 기본 스캔 회전입니다. 세션이 아직 없어도 기억해 둡니다.</summary>

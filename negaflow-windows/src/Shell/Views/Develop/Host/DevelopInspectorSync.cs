@@ -41,10 +41,15 @@ internal sealed class DevelopInspectorSync
         _ = args;
         if (view.DispatcherQueue is { } queue && !queue.HasThreadAccess)
         {
-            _ = queue.TryEnqueue(() => view.frames.Refresh());
+            _ = queue.TryEnqueue(() =>
+            {
+                view.frames.Refresh();
+                view.RaiseLibraryFramesChanged();
+            });
             return;
         }
         view.frames.Refresh();
+        view.RaiseLibraryFramesChanged();
     }
 
     /// <summary>

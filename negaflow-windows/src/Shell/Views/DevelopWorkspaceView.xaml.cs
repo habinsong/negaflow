@@ -141,6 +141,16 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// <summary>macOS의 스캐너 가져오기 명령을 공유 Library 소스에 요청합니다.</summary>
     public event EventHandler? ScannerSetupRequested;
 
+    /// <summary>
+    /// 현상뷰 좌측탭의 스캔·가져오기가 카탈로그의 <b>프레임 집합</b>을 바꿨습니다.
+    /// 라이브러리·인화 화면은 열릴 때 읽은 스냅샷에 머무르므로 셸이 알려 줘야 합니다 —
+    /// 이것이 없어 스캔하고 라이브러리로 넘어가면 방금 만든 폴더가 보이지 않았습니다.
+    /// </summary>
+    public event EventHandler? LibraryFramesChanged;
+
+    internal void RaiseLibraryFramesChanged() =>
+        LibraryFramesChanged?.Invoke(this, EventArgs.Empty);
+
     public bool CanQuickExport => panel?.CanExport == true;
 
     /// <summary>

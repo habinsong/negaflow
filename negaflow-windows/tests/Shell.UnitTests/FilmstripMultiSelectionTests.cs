@@ -25,8 +25,52 @@ namespace Negaflow.Shell.UnitTests;
 /// </remarks>
 internal static class FilmstripMultiSelectionTests
 {
+    /// <summary>
+    /// 기준 사진이 목록에 없으면 <b>가장 최근에 찍힌</b> 사진을 고릅니다 — 첫 장이 아닙니다.
+    /// macOS <c>selectMostRecentAvailableFrameIfNeeded()</c> 와 같은 규칙입니다.
+    /// </summary>
+    /// <remarks>
+    /// 앞 판은 첫 항목(<c>0</c>)으로 접었습니다. 그래서 스캔·가져오기 직후 기준이 잠깐 목록
+    /// 밖에 있으면 현상·인화뷰가 방금 넣은 사진 대신 맨 앞 사진을 열었습니다.
+    /// </remarks>
+    private static void VerifyMissingReferencePicksTheMostRecentFrame()
+    {
+        DateTimeOffset day = new(2026, 9, 4, 12, 0, 0, TimeSpan.Zero);
+        LibraryFrameListItem[] items =
+        [
+            new(Frame(null) with { Id = "old", ScannedAt = day.AddHours(-3) }),
+            new(Frame(null) with { Id = "newest", ScannedAt = day }),
+            new(Frame(null) with { Id = "middle", ScannedAt = day.AddHours(-1) }),
+        ];
+        Check(
+            FilmstripScopes.MostRecentIndex(items) == 1,
+            "the most recently scanned frame wins, whatever the display order is");
+
+        // 프리뷰 스캔은 macOS 처럼 뺍니다.
+        LibraryFrameListItem[] withPreview =
+        [
+            new(Frame(null) with { Id = "real", ScannedAt = day.AddHours(-3) }),
+            new(Frame(null) with { Id = "preview", ScannedAt = day, IsPreviewScan = true }),
+        ];
+        Check(
+            FilmstripScopes.MostRecentIndex(withPreview) == 0,
+            "a preview scan never becomes the fallback frame");
+
+        // 프리뷰뿐이면 그때만 프리뷰를 고릅니다 — 어느 경우에도 -1 로 접지 않습니다.
+        LibraryFrameListItem[] previewsOnly =
+        [
+            new(Frame(null) with { Id = "p1", ScannedAt = day.AddHours(-3), IsPreviewScan = true }),
+            new(Frame(null) with { Id = "p2", ScannedAt = day, IsPreviewScan = true }),
+        ];
+        Check(
+            FilmstripScopes.MostRecentIndex(previewsOnly) == 1,
+            "previews are used only when nothing else is left");
+        Check(FilmstripScopes.MostRecentIndex([]) < 0, "an empty strip has no fallback");
+    }
+
     public static void Run()
     {
+        VerifyMissingReferencePicksTheMostRecentFrame();
         string root = Path.Combine(
             Path.GetTempPath(), "negaflow-filmstrip-selection-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);

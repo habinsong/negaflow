@@ -58,9 +58,14 @@ internal sealed class DevelopFrameList
         }
 
         int selectedIndex = IndexOf(items, view.libraryHost.ActiveFrameId);
-        if (selectedIndex < 0)
+        // **기준이 목록에 없으면 가장 최근 사진입니다 — 첫 장이 아닙니다.**
+        // macOS `selectMostRecentAvailableFrameIfNeeded()` 자리입니다. 스캔·가져오기 직후에는
+        // 게시와 선택이 서로 다른 차례로 UI 스레드에 올라오므로 기준이 잠깐 목록 밖에
+        // 있습니다. 그때 첫 장으로 접으면 방금 넣은 사진 대신 맨 앞 사진이 열립니다.
+        bool activeFrameMissing = selectedIndex < 0;
+        if (activeFrameMissing)
         {
-            selectedIndex = 0;
+            selectedIndex = FilmstripScopes.MostRecentIndex(items);
         }
         view.isSynchronizingFrameSelection = true;
         try
@@ -79,7 +84,10 @@ internal sealed class DevelopFrameList
         {
             view.isSynchronizingFrameSelection = false;
         }
-        Activate(items[selectedIndex], selectedIndex, publishSelection: false);
+        // 기준을 새로 고른 것은 **선택을 옮긴 것**입니다. macOS 도 `selectedFrameID` 에
+        // 그대로 적습니다 — 여기서 적지 않으면 라이브러리·인화뷰가 없는 사진을 계속
+        // 가리켜 세 화면이 서로 다른 사진을 보여 줍니다.
+        Activate(items[selectedIndex], selectedIndex, publishSelection: activeFrameMissing);
         // 예전에는 캐시에 있는 프레임을 **건너뛰기만** 했습니다. `Request` 는 이미 들고 있는
         // 프레임에 아무 일도 하지 않으므로 `ThumbnailReady` 가 오지 않고, 방금 새로 만든
         // 항목의 `Thumbnail` 은 영원히 null 로 남습니다 — 폴더 일괄 적용이 모든 프레임을
@@ -274,6 +282,10 @@ internal sealed class DevelopFrameList
         _ = sender;
         _ = args;
         Refresh();
+        // 가져오기는 카탈로그의 프레임 집합을 바꿉니다. 라이브러리·인화 화면도 맞춰야
+        // 합니다 — 앞 판은 현상뷰만 알고 있어서, 라이브러리로 넘어가면 방금 가져온 폴더가
+        // 목록에 없었습니다.
+        view.RaiseLibraryFramesChanged();
     }
 
     private void OnSourceScannerSetupRequested(object? sender, EventArgs args)
