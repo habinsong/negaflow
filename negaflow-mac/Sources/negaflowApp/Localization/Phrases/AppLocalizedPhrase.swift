@@ -121,6 +121,8 @@ enum AppLocalizedPhrase: CaseIterable {
     case scanProgressError
     case scanProgressBackendFallbackActive
     case userPresetNameFormat
+    case userPresetNamePlaceholder
+    case userPresetNameDuplicate
     case userPresetSavedFormat
     case userPresetAppliedFormat
     case userPresetDeletedFormat

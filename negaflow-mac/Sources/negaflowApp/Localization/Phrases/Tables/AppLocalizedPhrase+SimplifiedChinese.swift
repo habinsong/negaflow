@@ -174,6 +174,8 @@ extension AppLocalization {
         .scanProgressError: "扫描出错",
         .scanProgressBackendFallbackActive: "正在使用备用后端",
         .userPresetNameFormat: "预设 %d",
+        .userPresetNamePlaceholder: "预设名称 (留空则自动)",
+        .userPresetNameDuplicate: "已有同名预设",
         .userPresetSavedFormat: "用户预设已存储：%@",
         .userPresetAppliedFormat: "用户预设已应用：%@",
         .userPresetDeletedFormat: "用户预设已删除：%@",

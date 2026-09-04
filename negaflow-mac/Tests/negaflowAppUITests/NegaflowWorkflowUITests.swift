@@ -323,6 +323,55 @@ final class NegaflowWorkflowUITests: XCTestCase {
         })
     }
 
+    /// 프리셋 이름은 사람이 적는 자리입니다. 저장을 누르면 이름부터 묻고, 적은 글자가 그대로
+    /// 남고, Esc 로 물러나지는지 실제 앱에서 확인합니다.
+    ///
+    /// 넣는 글자에 `x` 와 `y` 는 넣지 않습니다. 이 기계에서는 그 두 글자가 자동화의 어느
+    /// 경로로도(typeText·typeKey·앱 단위 typeText) 들어가지 않았고, 앱 메뉴의 한 글자 키
+    /// 등가물을 모두 비운 뒤에도 같았습니다 — 앱 밖의 사정입니다(2026-09-04, 손으로 친 QA 에서는
+    /// 정상 입력).
+    func testUserPresetNameFieldKeepsPlainLettersAndEscapeCloses() throws {
+        launch(importSyntheticNegative: true, demoScanner: false)
+
+        let presets = app.buttons["Presets"]
+        XCTAssertTrue(presets.waitForExistence(timeout: 20))
+        presets.click()
+
+        let save = app.buttons["negaflow.develop.presets.save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 10))
+        save.click()
+
+        let nameField = app.textFields["negaflow.develop.presets.name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 10))
+
+        let cancel = app.buttons["negaflow.develop.presets.name-cancel"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 5))
+
+        // 한 글자씩 넣고 매번 확인합니다. 한꺼번에 치면 자동화가 글자를 흘려, 무엇이 빠졌는지
+        // 가릴 수 없습니다.
+        nameField.click()
+        var expected = ""
+        var missed: [String] = []
+        for key in ["p", "o", "r", "t", "r", "a", " ", "4", "0", "0"] {
+            expected += key
+            nameField.typeText(key)
+            if (nameField.value as? String) != expected {
+                missed.append("\(key)→\(String(describing: nameField.value))")
+                expected = nameField.value as? String ?? expected
+            }
+        }
+        XCTAssertEqual(missed, [], "이름 입력에 들어가지 않은 글자")
+
+        cancel.click()
+        XCTAssertTrue(waitUntil(timeout: 5) { !nameField.exists })
+
+        // Esc 로도 물러날 수 있어야 합니다.
+        save.click()
+        XCTAssertTrue(nameField.waitForExistence(timeout: 10))
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(waitUntil(timeout: 5) { !nameField.exists })
+    }
+
     private func waitUntil(timeout: TimeInterval, condition: () -> Bool) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         repeat {

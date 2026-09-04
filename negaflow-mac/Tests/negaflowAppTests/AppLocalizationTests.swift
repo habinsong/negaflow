@@ -108,6 +108,17 @@ final class AppLocalizationTests: XCTestCase {
         }
     }
 
+    /// 자동 프리셋 이름은 번호가 붙어야 서로 다른 이름이 됩니다. 번호가 빠진 번역이 들어오면
+    /// 비어 있는 번호를 찾는 자리에서 같은 이름만 되풀이됩니다.
+    func testAutomaticUserPresetNameCarriesItsNumberInEveryLanguage() {
+        for language in AppLanguage.allCases where language != .system {
+            XCTAssertTrue(
+                AppLocalization.text(.userPresetNameFormat, language: language).contains("%d"),
+                "\(language.rawValue) preset name format lost its number"
+            )
+        }
+    }
+
     func testPhraseTranslationsChangeWithLanguageSelection() {
         XCTAssertEqual(AppLocalization.text(.userPreset, language: .english), "User Preset")
         XCTAssertEqual(AppLocalization.text(.userPreset, language: .korean), "사용자 프리셋")

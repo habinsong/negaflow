@@ -174,6 +174,8 @@ extension AppLocalization {
         .scanProgressError: "スキャンエラー",
         .scanProgressBackendFallbackActive: "代替バックエンドを使用中",
         .userPresetNameFormat: "プリセット %d",
+        .userPresetNamePlaceholder: "プリセット名 (空欄で自動)",
+        .userPresetNameDuplicate: "同じ名前のプリセットがすでにあります",
         .userPresetSavedFormat: "ユーザープリセットを保存しました: %@",
         .userPresetAppliedFormat: "ユーザープリセットを適用しました: %@",
         .userPresetDeletedFormat: "ユーザープリセットを削除しました: %@",

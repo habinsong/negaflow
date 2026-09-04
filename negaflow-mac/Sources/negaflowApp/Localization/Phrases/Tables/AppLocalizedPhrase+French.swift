@@ -174,6 +174,8 @@ extension AppLocalization {
         .scanProgressError: "Erreur de numérisation",
         .scanProgressBackendFallbackActive: "Backend de secours actif",
         .userPresetNameFormat: "Paramètre prédéfini %d",
+        .userPresetNamePlaceholder: "Nom du préréglage (vide = automatique)",
+        .userPresetNameDuplicate: "Un préréglage porte déjà ce nom",
         .userPresetSavedFormat: "Paramètre prédéfini utilisateur enregistré : %@",
         .userPresetAppliedFormat: "Paramètre prédéfini utilisateur appliqué : %@",
         .userPresetDeletedFormat: "Paramètre prédéfini utilisateur supprimé : %@",

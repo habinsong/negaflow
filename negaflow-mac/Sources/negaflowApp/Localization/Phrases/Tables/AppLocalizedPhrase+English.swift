@@ -174,6 +174,8 @@ extension AppLocalization {
             .scanProgressError: "Scan error",
             .scanProgressBackendFallbackActive: "Fallback backend active",
             .userPresetNameFormat: "Preset %d",
+            .userPresetNamePlaceholder: "Preset name (blank for automatic)",
+            .userPresetNameDuplicate: "A preset with this name already exists",
             .userPresetSavedFormat: "User preset saved: %@",
             .userPresetAppliedFormat: "User preset applied: %@",
             .userPresetDeletedFormat: "User preset deleted: %@",

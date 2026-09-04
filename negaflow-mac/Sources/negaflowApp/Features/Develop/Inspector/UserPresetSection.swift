@@ -5,6 +5,10 @@ struct UserPresetSection: View {
     @EnvironmentObject var model: AppModel
     @ObservedObject var frame: ScanFrame
     @State private var selectedPresetID: UUID?
+    @State private var isNamingPreset = false
+    @State private var presetName = ""
+    @State private var showsDuplicateWarning = false
+    @FocusState private var isNameFieldFocused: Bool
 
     var selectedPreset: DevelopUserPreset? {
         guard let selectedPresetID else { return model.userDevelopPresets.last }
@@ -23,6 +27,42 @@ struct UserPresetSection: View {
                 }
             }
             .disabled(model.userDevelopPresets.isEmpty)
+            .accessibilityIdentifier("negaflow.develop.presets.selector")
+
+            if isNamingPreset {
+                HStack(spacing: 8) {
+                    TextField(
+                        text: $presetName,
+                        prompt: Text(model.text(AppLocalizedPhrase.userPresetNamePlaceholder))
+                    ) {
+                        Text(model.text(AppLocalizedPhrase.userPresetNamePlaceholder))
+                    }
+                    .labelsHidden()
+                    .focused($isNameFieldFocused)
+                    .onSubmit { commitPresetName() }
+                    .onExitCommand { endNaming() }
+                    .onChange(of: presetName) { _, _ in showsDuplicateWarning = false }
+                    .accessibilityIdentifier("negaflow.develop.presets.name")
+
+                    // Esc 로도 물러날 수 있지만, 눌러서 닫는 자리도 있어야 합니다.
+                    Button { endNaming() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                    }
+                    .buttonStyle(.borderless)
+                    .help(model.text(AppLocalizedPhrase.cancel))
+                    .accessibilityLabel(model.text(AppLocalizedPhrase.cancel))
+                    .accessibilityIdentifier("negaflow.develop.presets.name-cancel")
+                }
+
+                if showsDuplicateWarning {
+                    Label(
+                        model.text(AppLocalizedPhrase.userPresetNameDuplicate),
+                        systemImage: "exclamationmark.triangle"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                }
+            }
 
             HStack(spacing: 8) {
                 TransferButton(
@@ -30,8 +70,14 @@ struct UserPresetSection: View {
                     systemName: "square.and.arrow.down",
                     help: model.text(AppLocalizedPhrase.saveUserPresetHelp)
                 ) {
-                    selectedPresetID = model.saveUserDevelopPreset(from: frame)
+                    // 저장을 누르면 이름부터 묻습니다. 이미 묻고 있으면 그 이름으로 저장합니다.
+                    if isNamingPreset {
+                        commitPresetName()
+                    } else {
+                        beginNaming()
+                    }
                 }
+                .accessibilityIdentifier("negaflow.develop.presets.save")
 
                 TransferButton(
                     title: model.text(AppLocalizedPhrase.apply),
@@ -59,6 +105,33 @@ struct UserPresetSection: View {
         }
         .onAppear { ensureSelection() }
         .onChange(of: model.userDevelopPresets.map(\.id)) { _, _ in ensureSelection() }
+        // 저장 대상은 지금 보고 있는 사진입니다. 사진이 바뀌면 적다 만 이름은 닫습니다.
+        .onChange(of: frame.id) { _, _ in endNaming() }
+    }
+
+    func beginNaming() {
+        presetName = ""
+        showsDuplicateWarning = false
+        isNamingPreset = true
+        isNameFieldFocused = true
+    }
+
+    func commitPresetName() {
+        guard let savedID = model.saveUserDevelopPreset(from: frame, name: presetName) else {
+            // 겹치는 이름은 저장하지 않고 입력란을 그대로 둡니다 — 다시 적을 자리가 필요합니다.
+            showsDuplicateWarning = true
+            isNameFieldFocused = true
+            return
+        }
+        selectedPresetID = savedID
+        endNaming()
+    }
+
+    func endNaming() {
+        presetName = ""
+        showsDuplicateWarning = false
+        isNamingPreset = false
+        isNameFieldFocused = false
     }
 
     func ensureSelection() {

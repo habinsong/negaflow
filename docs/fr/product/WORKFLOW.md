@@ -49,6 +49,8 @@ Toutes les photos du dossier sont recalculées, y compris celles déjà dévelop
 
 Un collage complet utilise les cinq groupes. Un collage partiel ne change que les groupes choisis. Avec plusieurs photos sélectionnées, il s’applique à toute la sélection. Les préréglages utilisateur conservent le même état de développement complet, géométrie comprise.
 
+L’enregistrement demande d’abord un nom. Laissé vide, il prend le premier numéro libre (`Paramètre prédéfini N`) ; un nom déjà utilisé n’est pas enregistré.
+
 ## Sans module scanner
 
 Si aucun module n’est installé au démarrage, la barre latérale commune de Photothèque et Développement n’affiche pas automatiquement l’explication d’absence, la recherche à nouveau et le simulateur. L’import d’images reste disponible. La recherche et le simulateur ne sont pas supprimés : on peut encore les ouvrir depuis l’entrée Scanner ou les Réglages.

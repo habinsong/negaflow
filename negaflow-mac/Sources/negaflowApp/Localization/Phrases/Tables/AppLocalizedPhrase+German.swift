@@ -174,6 +174,8 @@ extension AppLocalization {
         .scanProgressError: "Scanfehler",
         .scanProgressBackendFallbackActive: "Fallback-Backend aktiv",
         .userPresetNameFormat: "Vorgabe %d",
+        .userPresetNamePlaceholder: "Vorgabenname (leer = automatisch)",
+        .userPresetNameDuplicate: "Eine Vorgabe mit diesem Namen ist bereits vorhanden",
         .userPresetSavedFormat: "Benutzervorgabe gesichert: %@",
         .userPresetAppliedFormat: "Benutzervorgabe angewendet: %@",
         .userPresetDeletedFormat: "Benutzervorgabe gelöscht: %@",

@@ -24,10 +24,19 @@ extension AppModel {
         UserDevelopPresetStore.save(userDevelopPresets)
     }
 
+    /// 이름을 비워 두면 겹치지 않는 번호 이름이 붙고, 적어 준 이름이 이미 있으면 저장하지
+    /// 않습니다(`nil`). 목록에 같은 이름이 둘이면 어느 것을 고르는지 알 수 없습니다.
     @discardableResult
-    func saveUserDevelopPreset(from frame: ScanFrame) -> UUID {
-        let nextNumber = userDevelopPresets.count + 1
-        let preset = frame.makeUserDevelopPreset(name: text(AppLocalizedPhrase.userPresetNameFormat, nextNumber))
+    func saveUserDevelopPreset(from frame: ScanFrame, name: String) -> UUID? {
+        guard let resolvedName = DevelopUserPresetNaming.resolve(
+            requested: name,
+            existing: userDevelopPresets.map(\.name),
+            autoName: { text(AppLocalizedPhrase.userPresetNameFormat, $0) }
+        ) else {
+            statusMessage = text(AppLocalizedPhrase.userPresetNameDuplicate)
+            return nil
+        }
+        let preset = frame.makeUserDevelopPreset(name: resolvedName)
         userDevelopPresets.append(preset)
         statusMessage = text(AppLocalizedPhrase.userPresetSavedFormat, preset.name)
         return preset.id

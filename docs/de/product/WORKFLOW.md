@@ -49,6 +49,8 @@ Alle Fotos im Ordner werden neu gerendert, auch bereits entwickelte. Prozess und
 
 Vollständiges Einfügen verwendet alle Gruppen, eine Auswahl nur die gewählten. Bei mehreren markierten Fotos gilt es für die ganze Auswahl. Benutzervorgaben speichern denselben vollständigen Entwicklungszustand einschließlich Geometrie.
 
+Beim Sichern wird zuerst nach einem Namen gefragt. Bleibt das Feld leer, erhält die Vorgabe die erste freie Nummer (`Vorgabe N`); ein bereits vergebener Name wird nicht gesichert.
+
 ## Ohne Scanner-Plug-in
 
 Ist beim Start kein Plug-in installiert, zeigt die gemeinsame Seitenleiste von Bibliothek und Entwickeln den Hinweis, die erneute Suche und den Simulator nicht automatisch. Der Bildimport bleibt verfügbar. Suche und Simulator wurden nicht entfernt und können über den Scanner-Einstieg oder die Einstellungen geöffnet werden.
