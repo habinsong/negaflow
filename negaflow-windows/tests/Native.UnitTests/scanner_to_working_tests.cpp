@@ -313,10 +313,17 @@ void test_embedded_icc_path(const std::filesystem::path& path) {
     expect(decoded.image.samples == samples_before, "ICM color transform does not mutate samples");
     expect(decoded.image.icc_profile == profile_before, "ICM color transform does not mutate ICC");
     if (negaflow::imaging::is_input_gamma_source_supported(path)) {
-        for (const double power : {0.3, 1.8, 2.4, 4.0}) {
+        for (const double power : {0.3, 1.0, 1.8, 2.4, 4.0}) {
             const negaflow::color::InputGammaInterpretation gamma{1U, power};
             const auto fresh = negaflow::imaging::decode_scanner_tiff_to_working_rows(path, {}, {}, row_control, gamma);
             const auto cached = negaflow::imaging::convert_cached_scanner_rows(decoded.image, row_control, gamma);
+            std::cout << "ICC gamma=" << power
+                << " fresh=" << negaflow::imaging::scanner_to_working_status_name(fresh.working.status)
+                << " fresh_native=" << fresh.working.info.native_error_code
+                << " cached=" << negaflow::imaging::scanner_to_working_status_name(cached.status)
+                << " cached_native=" << cached.info.native_error_code
+                << " fresh_pixels=" << fresh.working.image.pixels.size()
+                << " cached_pixels=" << cached.image.pixels.size() << '\n';
             expect(cached.status == negaflow::imaging::ScannerToWorkingStatus::ok &&
                 working_images_equal(cached.image, fresh.working.image), "cached ICC gamma matches fresh streamed conversion");
         }

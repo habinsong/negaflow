@@ -183,16 +183,22 @@ int main(int argc, char** argv) {
         decoded_source_store_reset();
         const auto gamma_first = negaflow::pipeline::develop_preview(gamma_request,
             preview_box, preview_box, first_pixels.data(), first_pixels.size());
+        std::cout << "PNG gamma first=" << gamma_first.failure_name
+            << " native=" << gamma_first.native_error_code << '\n';
         const auto codes = encoded_source_try_take(gamma_request.source, observed.observation, 0U, 0U);
         expect(gamma_first.succeeded && codes != nullptr, "PNG manual gamma caches original RGB codes");
         gamma_request.input_gamma = {1U, 2.3};
         const auto gamma_second = negaflow::pipeline::develop_preview(gamma_request,
             preview_box, preview_box, second_pixels.data(), second_pixels.size());
+        std::cout << "PNG gamma cached=" << gamma_second.failure_name
+            << " native=" << gamma_second.native_error_code << '\n';
         expect(gamma_second.succeeded && codes == encoded_source_try_take(
             gamma_request.source, observed.observation, 0U, 0U), "PNG gamma change reuses immutable original codes");
         decoded_source_store_reset();
         const auto gamma_fresh = negaflow::pipeline::develop_preview(gamma_request,
             preview_box, preview_box, third_pixels.data(), third_pixels.size());
+        std::cout << "PNG gamma fresh=" << gamma_fresh.failure_name
+            << " native=" << gamma_fresh.native_error_code << '\n';
         expect(gamma_fresh.succeeded && second_pixels == third_pixels,
             "PNG cached gamma exactly matches a fresh decode");
     }
