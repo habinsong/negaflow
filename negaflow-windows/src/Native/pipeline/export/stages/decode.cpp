@@ -154,28 +154,22 @@ std::optional<DevelopExportOutcome> decode_source(
             standard_control.max_output_height = box_height;
             standard_control.prefer_speed = true;
         }
-        const bool cache_input_codes = preview != nullptr && request.input_gamma.mode != 0U;
-        const auto encoded = cache_input_codes
-            ? encoded_source_try_take(request.source, observed.before.observation, box_width, box_height)
-            : nullptr;
-        negaflow::imageio::WicStandardImageDecodeResult decoded{};
-        if (!encoded) {
-            decoded = negaflow::imageio::decode_standard_image_with_wic(
+        const negaflow::imageio::WicStandardImageDecodeResult decoded =
+            negaflow::imageio::decode_standard_image_with_wic(
                 request.source,
                 {},
                 stop.get_token(),
                 standard_control);
-        }
-        if (!encoded && decoded.status == negaflow::imageio::WicStandardImageDecodeStatus::cancelled) {
+        if (decoded.status == negaflow::imageio::WicStandardImageDecodeStatus::cancelled) {
             return cancelled_outcome(DevelopExportStage::decode);
         }
-        if (!encoded && decoded.status != negaflow::imageio::WicStandardImageDecodeStatus::ok) {
+        if (decoded.status != negaflow::imageio::WicStandardImageDecodeStatus::ok) {
             return fail(
                 DevelopExportStage::decode,
                 negaflow::imageio::wic_standard_image_decode_status_name(decoded.status));
         }
         negaflow::imaging::ScannerToWorkingResult working =
-            negaflow::imaging::convert_scanner_to_working(encoded ? *encoded : decoded.image, {}, request.input_gamma);
+            negaflow::imaging::convert_scanner_to_working(decoded.image, {}, request.input_gamma);
         if (working.status != negaflow::imaging::ScannerToWorkingStatus::ok) {
             return fail(
                 DevelopExportStage::decode,
@@ -183,16 +177,6 @@ std::optional<DevelopExportOutcome> decode_source(
                 working.info.native_error_code);
         }
         decoded_image = std::move(working.image);
-        if (cache_input_codes && !encoded && !stop.stop_requested()) {
-            const auto current = negaflow::imageio::observe_image_file(request.source);
-            if (current.status == negaflow::imageio::ImageFileObservationStatus::ok &&
-                negaflow::imageio::same_image_file_observation(observed.before.observation, current.observation)) {
-                try {
-                    encoded_source_put(request.source, current.observation, box_width, box_height,
-                        std::make_shared<const negaflow::imageio::DecodedImage>(std::move(decoded.image)));
-                } catch (...) { /* 캐시 할당 실패는 이미 계산한 결과를 버리지 않습니다. */ }
-            }
-        }
     }
 
     // 디코더가 줄여 주지 못한 형식은 **여기서** 줄입니다.

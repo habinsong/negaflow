@@ -112,6 +112,7 @@ public:
                 return false;
             }
             gamma_samples_ = std::move(gamma.linear_samples);
+            gamma_encoded_samples_ = std::move(gamma.encoded_samples);
             gamma_profile_ = std::move(gamma.profile);
             if (frame.icc_profile.empty()) {
                 result_.info.transform = ScannerWorkingTransform::linear_scanner_raw;
@@ -303,7 +304,7 @@ private:
         // ICM 변환은 RGB16 만 받습니다. rgba 는 alpha 를 떼고, gray 는 한 표본을 세 채널로
         // 펴서 같은 입력 모양으로 맞춥니다.
         const bool needs_rgb_copy =
-            layout_ != negaflow::imageio::DecodedPixelLayout::rgb16;
+            layout_ != negaflow::imageio::DecodedPixelLayout::rgb16 || !gamma_encoded_samples_.empty();
         if (needs_rgb_copy &&
             rgb_chunk_bytes > std::numeric_limits<std::uint64_t>::max() / 2U) {
             return ScannerToWorkingStatus::size_overflow;
@@ -360,6 +361,12 @@ private:
                             destination_row[destination_offset + 2U] = associated
                                 ? unassociate_component(source_row[source_offset + rgb.blue], alpha)
                                 : source_row[source_offset + rgb.blue];
+                            if (!gamma_encoded_samples_.empty()) {
+                                for (std::size_t channel = 0; channel < 3U; ++channel) {
+                                    auto& sample = destination_row[destination_offset + channel];
+                                    sample = gamma_encoded_samples_[sample];
+                                }
+                            }
                         }
                     }
                 });
@@ -432,6 +439,7 @@ private:
     ScannerToWorkingResult result_{};
     negaflow::color::InputGammaInterpretation input_gamma_{};
     std::vector<float> gamma_samples_{};
+    std::vector<std::uint16_t> gamma_encoded_samples_{};
     std::vector<std::uint8_t> gamma_profile_{};
     detail::IcmRgb16Transform transform_{};
     std::vector<std::uint16_t> packed_rgb_{};
@@ -464,7 +472,10 @@ ScannerToWorkingResult convert_cached_scanner_rows(const negaflow::imageio::Deco
         ScannerToWorkingResult result{}; result.status = ScannerToWorkingStatus::buffer_size_mismatch; return result;
     }
     if (!sink.begin({decoded.width, decoded.height, decoded.stride_bytes,
-        decoded.layout, decoded.alpha_mode, decoded.icc_profile})) { return sink.take_result(); }
+        decoded.layout, decoded.alpha_mode, decoded.icc_profile})) {
+        sink.complete(negaflow::imageio::WicTiffDecodeStatus::row_sink_failed);
+        return sink.take_result();
+    }
     const std::size_t stride = decoded.stride_bytes / sizeof(std::uint16_t);
     bool complete = true;
     for (std::uint32_t row = 0; row < decoded.height;) {

@@ -230,8 +230,13 @@ ScannerToWorkingStatus IcmRgb16Transform::translate(
 EncodedSrgb16Result convert_embedded_icc_to_srgb16(
     const negaflow::imageio::DecodedImage& decoded,
     const ScannerToWorkingLimits& limits,
-    const std::span<const std::uint8_t> profile_override) noexcept {
+    const std::span<const std::uint8_t> profile_override,
+    const std::span<const std::uint16_t> sample_table) noexcept {
     EncodedSrgb16Result result{};
+    if (!sample_table.empty() && sample_table.size() != 65536U) {
+        result.status = ScannerToWorkingStatus::invalid_input_gamma;
+        return result;
+    }
     try {
         const std::uint64_t rgb_stride_bytes =
             static_cast<std::uint64_t>(decoded.width) * 3ULL * sizeof(std::uint16_t);
@@ -241,7 +246,7 @@ EncodedSrgb16Result convert_embedded_icc_to_srgb16(
         // ICM 변환은 RGB16 만 받습니다. rgba 는 alpha 를 떼고, gray 는 한 표본을 세 채널로
         // 펴서 같은 입력 모양으로 맞춥니다.
         const bool needs_rgb_copy =
-            decoded.layout != negaflow::imageio::DecodedPixelLayout::rgb16;
+            decoded.layout != negaflow::imageio::DecodedPixelLayout::rgb16 || !sample_table.empty();
         const std::uint64_t additional_temporary_bytes =
             rgb_pixel_bytes + (needs_rgb_copy ? rgb_pixel_bytes : 0ULL);
         if (rgb_stride_bytes > std::numeric_limits<DWORD>::max() ||
@@ -290,6 +295,12 @@ EncodedSrgb16Result convert_embedded_icc_to_srgb16(
                     destination[destination_offset + 2U] = associated
                         ? unassociate_component(source[source_offset + rgb.blue], alpha)
                         : source[source_offset + rgb.blue];
+                    if (!sample_table.empty()) {
+                        for (std::size_t channel = 0; channel < 3U; ++channel) {
+                            auto& sample = destination[destination_offset + channel];
+                            sample = sample_table[sample];
+                        }
+                    }
                 }
             }
             source_samples = packed_rgb.data();

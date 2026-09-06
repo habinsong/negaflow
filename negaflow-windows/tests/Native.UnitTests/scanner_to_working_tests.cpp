@@ -201,6 +201,11 @@ void test_streamed_linear_scanner_path(const std::filesystem::path& root) {
         expect(cached.status == negaflow::imaging::ScannerToWorkingStatus::ok &&
             working_images_equal(cached.image, fresh.working.image), "cached raw codes preserve exact gamma conversion");
     }
+    auto malformed = decoded.image;
+    malformed.icc_profile = {0U, 1U, 2U, 3U};
+    const auto rejected = negaflow::imaging::convert_cached_scanner_rows(malformed, control, {1U, 1.8});
+    expect(rejected.status != negaflow::imaging::ScannerToWorkingStatus::ok && rejected.image.pixels.empty(),
+        "cached conversion initialization failure discards allocated pixels");
     std::stop_source stop;
     CancellingProgress cancel{stop, 2U};
     control.stop_token = stop.get_token(); control.progress_observer = &cancel;
@@ -317,6 +322,7 @@ void test_embedded_icc_path(const std::filesystem::path& path) {
             const negaflow::color::InputGammaInterpretation gamma{1U, power};
             const auto fresh = negaflow::imaging::decode_scanner_tiff_to_working_rows(path, {}, {}, row_control, gamma);
             const auto cached = negaflow::imaging::convert_cached_scanner_rows(decoded.image, row_control, gamma);
+            const auto full = negaflow::imaging::convert_scanner_to_working(decoded.image, {}, gamma);
             std::cout << "ICC gamma=" << power
                 << " fresh=" << negaflow::imaging::scanner_to_working_status_name(fresh.working.status)
                 << " fresh_native=" << fresh.working.info.native_error_code
@@ -326,6 +332,8 @@ void test_embedded_icc_path(const std::filesystem::path& path) {
                 << " cached_pixels=" << cached.image.pixels.size() << '\n';
             expect(cached.status == negaflow::imaging::ScannerToWorkingStatus::ok &&
                 working_images_equal(cached.image, fresh.working.image), "cached ICC gamma matches fresh streamed conversion");
+            expect(full.status == negaflow::imaging::ScannerToWorkingStatus::ok &&
+                working_images_equal(full.image, fresh.working.image), "full export ICC gamma matches streamed preview input");
         }
     }
     expect(

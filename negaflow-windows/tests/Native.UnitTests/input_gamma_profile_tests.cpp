@@ -2,6 +2,7 @@
 #include "negaflow/color/icc_profile.h"
 #include "negaflow/imaging/film_base_scale.h"
 #include "../fixtures/v1/synthetic_parity_icc_profile.h"
+#include "../../src/Native/imaging/input_gamma_preparation.h"
 
 #include <algorithm>
 #include <array>
@@ -23,6 +24,24 @@ std::uint32_t read32(const std::vector<std::uint8_t>& data, std::size_t at) {
 int main() {
     using namespace negaflow::color;
     const auto original = negaflow::fixtures::build_synthetic_parity_profile();
+    for (double gamma : {0.1, 0.3, 1.0, 1.8, 2.2, 4.0}) {
+        const negaflow::imaging::detail::InputGammaPreparation prepared(original, {1U, gamma});
+        expect(prepared.status == negaflow::imaging::ScannerToWorkingStatus::ok,
+            "ICC input gamma preparation succeeds");
+        expect(recorded_input_gamma(prepared.profile) == 1.0,
+            "CMM receives an identity TRC with original primaries");
+        expect(prepared.linear_samples.empty(), "ICC input still goes through color conversion");
+        if (gamma == 1.0) {
+            expect(prepared.encoded_samples.empty(), "identity ICC needs no source copy");
+            continue;
+        }
+        expect(prepared.encoded_samples.size() == 65536U, "all RGB16 codes have a gamma sample");
+        for (std::size_t code = 0; code < prepared.encoded_samples.size(); ++code) {
+            expect(std::abs(static_cast<double>(prepared.encoded_samples[code]) / 65535.0 -
+                std::pow(static_cast<double>(code) / 65535.0, gamma)) <= 0.50001 / 65535.0,
+                "pre-ICC gamma preserves power within one half of an RGB16 code");
+        }
+    }
     expect(InputGammaInterpretation{}.valid(), "automatic gamma");
     for (double value : {0.0, -1.0, 4.001, std::numeric_limits<double>::infinity(),
                          std::numeric_limits<double>::quiet_NaN()}) {

@@ -1086,7 +1086,7 @@ if(BUILD_TESTING)
 
     add_executable(negaflow_input_gamma_profile_tests tests/Native.UnitTests/input_gamma_profile_tests.cpp)
     target_link_libraries(negaflow_input_gamma_profile_tests PRIVATE negaflow_color negaflow_project_options)
-    target_include_directories(negaflow_input_gamma_profile_tests PRIVATE src/Native/imaging/include)
+    target_include_directories(negaflow_input_gamma_profile_tests PRIVATE src/Native/imaging/include src/Native/imageio/include)
     add_test(NAME native.input_gamma_profile COMMAND negaflow_input_gamma_profile_tests)
     add_executable(negaflow_input_gamma_estimator_tests tests/Native.UnitTests/input_gamma_estimator_tests.cpp)
     target_link_libraries(negaflow_input_gamma_estimator_tests PRIVATE negaflow_color negaflow_project_options)
@@ -1939,7 +1939,7 @@ if(BUILD_TESTING)
     add_test(NAME native.decoded_source_store COMMAND negaflow_decoded_source_store_tests)
     target_include_directories(
         negaflow_preview_proxy_cache_tests
-        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff" "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/pipeline"
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff"
     )
     target_link_libraries(
         negaflow_preview_proxy_cache_tests

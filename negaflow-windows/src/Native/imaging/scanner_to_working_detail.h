@@ -27,6 +27,7 @@ struct EncodedSrgb16Result final {
 [[nodiscard]] EncodedSrgb16Result convert_embedded_icc_to_srgb16(
     const negaflow::imageio::DecodedImage& decoded,
     const ScannerToWorkingLimits& limits,
-    std::span<const std::uint8_t> profile_override = {}) noexcept;
+    std::span<const std::uint8_t> profile_override = {},
+    std::span<const std::uint16_t> sample_table = {}) noexcept;
 
 }  // namespace negaflow::imaging::detail

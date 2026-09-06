@@ -257,7 +257,7 @@ ScannerToWorkingResult convert_scanner_to_working(
         }
 
         detail::EncodedSrgb16Result encoded =
-            detail::convert_embedded_icc_to_srgb16(decoded, limits, gamma.profile);
+            detail::convert_embedded_icc_to_srgb16(decoded, limits, gamma.profile, gamma.encoded_samples);
         result.info.native_error_code = encoded.native_error_code;
         if (encoded.status != ScannerToWorkingStatus::ok) {
             result.status = encoded.status;
