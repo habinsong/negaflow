@@ -45,8 +45,8 @@ internal static class LibraryRecoveryTests
         // W8 이 요구한 관측값들입니다 - 이것이 없으면 다음 사고에서 또 코드 하나로만 봅니다.
         Check(text.Contains("userVersion=1", StringComparison.Ordinal),
             "recovery_diagnostics_has_user_version");
-        Check(text.Contains("catalogVersion=1", StringComparison.Ordinal),
-            "recovery_diagnostics_has_catalog_version");
+        Check(text.Contains($"catalogVersion={CatalogSnapshot.CurrentCatalogVersion}", StringComparison.Ordinal),
+            "recovery_diagnostics_has_catalog_version", () => text);
         Check(text.Contains("integrityCheck=ok", StringComparison.Ordinal),
             "recovery_diagnostics_has_integrity_check");
         Check(text.Contains("rows.frames=1", StringComparison.Ordinal),

@@ -845,6 +845,7 @@ target_compile_definitions(negaflow_native PRIVATE NEGAFLOW_NATIVE_EXPORTS)
 target_include_directories(negaflow_native
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/abi/include"
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/abi"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/pipeline"
 )
 target_link_libraries(
     negaflow_native
