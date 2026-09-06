@@ -385,6 +385,7 @@ private:
 
         constexpr float u16_scale = 1.0F / 65'535.0F;
         const std::size_t encoded_stride = static_cast<std::size_t>(width_) * 3U;
+        const auto linear_samples = negaflow::color::srgb16_to_linear_table();
         const std::size_t channels = negaflow::imageio::channel_count(layout_);
         const std::size_t input_stride = source_stride_bytes_ / sizeof(std::uint16_t);
         const bool has_alpha =
@@ -411,12 +412,9 @@ private:
                         const std::size_t input_offset =
                             static_cast<std::size_t>(column) * channels;
                         destination[column] = {
-                            negaflow::color::srgb_encoded_to_linear(
-                                static_cast<float>(source_row[offset]) * u16_scale),
-                            negaflow::color::srgb_encoded_to_linear(
-                                static_cast<float>(source_row[offset + 1U]) * u16_scale),
-                            negaflow::color::srgb_encoded_to_linear(
-                                static_cast<float>(source_row[offset + 2U]) * u16_scale),
+                            linear_samples[source_row[offset]],
+                            linear_samples[source_row[offset + 1U]],
+                            linear_samples[source_row[offset + 2U]],
                             has_alpha
                                 ? static_cast<float>(input_row[input_offset + 3U]) * u16_scale
                                 : 1.0F,
@@ -451,6 +449,38 @@ private:
 };
 
 }  // namespace
+
+ScannerToWorkingResult convert_cached_scanner_rows(const negaflow::imageio::DecodedImage& decoded,
+    const negaflow::imageio::WicTiffDecodeControl& control,
+    const negaflow::color::InputGammaInterpretation input_gamma) noexcept {
+    if (control.progress_observer) { control.progress_observer->report({0U, decoded.height}); }
+    if (control.stop_token.stop_requested()) {
+        ScannerToWorkingResult result{}; result.status = ScannerToWorkingStatus::cancelled; return result;
+    }
+    ScannerWorkingRowSink sink{{}, control.stop_token, input_gamma};
+    const std::uint64_t bytes = static_cast<std::uint64_t>(decoded.stride_bytes) * decoded.height;
+    if (decoded.stride_bytes % sizeof(std::uint16_t) != 0U ||
+        bytes / sizeof(std::uint16_t) != decoded.samples.size() || control.rows_per_copy == 0U) {
+        ScannerToWorkingResult result{}; result.status = ScannerToWorkingStatus::buffer_size_mismatch; return result;
+    }
+    if (!sink.begin({decoded.width, decoded.height, decoded.stride_bytes,
+        decoded.layout, decoded.alpha_mode, decoded.icc_profile})) { return sink.take_result(); }
+    const std::size_t stride = decoded.stride_bytes / sizeof(std::uint16_t);
+    bool complete = true;
+    for (std::uint32_t row = 0; row < decoded.height;) {
+        const std::uint32_t count = std::min(control.rows_per_copy, decoded.height - row);
+        if (!sink.write({row, count, decoded.stride_bytes,
+            std::span(decoded.samples).subspan(static_cast<std::size_t>(row) * stride, count * stride)})) {
+            complete = false; break;
+        }
+        row += count;
+        if (control.progress_observer) { control.progress_observer->report({row, decoded.height}); }
+    }
+    sink.complete(control.stop_token.stop_requested() ? negaflow::imageio::WicTiffDecodeStatus::cancelled
+        : complete ? negaflow::imageio::WicTiffDecodeStatus::ok
+        : negaflow::imageio::WicTiffDecodeStatus::row_sink_failed);
+    return sink.take_result();
+}
 
 StreamedScannerToWorkingResult decode_scanner_tiff_to_working_rows(
     const std::filesystem::path& path,

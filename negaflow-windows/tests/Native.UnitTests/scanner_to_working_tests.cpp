@@ -194,6 +194,19 @@ void test_streamed_linear_scanner_path(const std::filesystem::path& root) {
     expect(
         working_images_equal(streamed.working.image, reference.image),
         "linear streaming pixels match full-frame conversion exactly");
+    for (const double power : {0.1, 0.3, 1.0, 1.8, 2.2, 4.0}) {
+        const negaflow::color::InputGammaInterpretation gamma{1U, power};
+        const auto fresh = negaflow::imaging::decode_scanner_tiff_to_working_rows(path, {}, {}, control, gamma);
+        const auto cached = negaflow::imaging::convert_cached_scanner_rows(decoded.image, control, gamma);
+        expect(cached.status == negaflow::imaging::ScannerToWorkingStatus::ok &&
+            working_images_equal(cached.image, fresh.working.image), "cached raw codes preserve exact gamma conversion");
+    }
+    std::stop_source stop;
+    CancellingProgress cancel{stop, 2U};
+    control.stop_token = stop.get_token(); control.progress_observer = &cancel;
+    const auto cancelled = negaflow::imaging::convert_cached_scanner_rows(decoded.image, control, {1U, 2.2});
+    expect(cancelled.status == negaflow::imaging::ScannerToWorkingStatus::cancelled && cancelled.image.pixels.empty(),
+        "cached conversion cancellation publishes no incomplete pixels");
 }
 
 void test_rejections() {
@@ -299,6 +312,15 @@ void test_embedded_icc_path(const std::filesystem::path& path) {
     }
     expect(decoded.image.samples == samples_before, "ICM color transform does not mutate samples");
     expect(decoded.image.icc_profile == profile_before, "ICM color transform does not mutate ICC");
+    if (negaflow::imaging::is_input_gamma_source_supported(path)) {
+        for (const double power : {0.3, 1.8, 2.4, 4.0}) {
+            const negaflow::color::InputGammaInterpretation gamma{1U, power};
+            const auto fresh = negaflow::imaging::decode_scanner_tiff_to_working_rows(path, {}, {}, row_control, gamma);
+            const auto cached = negaflow::imaging::convert_cached_scanner_rows(decoded.image, row_control, gamma);
+            expect(cached.status == negaflow::imaging::ScannerToWorkingStatus::ok &&
+                working_images_equal(cached.image, fresh.working.image), "cached ICC gamma matches fresh streamed conversion");
+        }
+    }
     expect(
         streamed.decode.status == negaflow::imageio::WicTiffDecodeStatus::ok &&
             streamed.working.status == negaflow::imaging::ScannerToWorkingStatus::ok &&

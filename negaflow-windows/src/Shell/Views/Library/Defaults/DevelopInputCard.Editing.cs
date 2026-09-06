@@ -91,10 +91,12 @@ public sealed partial class DevelopInputCard
         editFrame ??= selection?.Invoke();
         draft = InputGammaValueInput.Round(args.NewValue);
         ShowValue();
+        PreviewChanged?.Invoke(this, EventArgs.Empty);
         if (!pointerSession.IsActive && !keyboardEditing) { Commit(InputGammaInterpretation.Power(draft.Value)); }
     }
     private void OnSliderKeyDown(object sender, KeyRoutedEventArgs args)
     {
+        if (!GammaSlider.IsEnabled) { return; }
         if (args.Key == VirtualKey.Escape) { CancelDraft(); args.Handled = true; return; }
         if (args.Key == VirtualKey.Enter)
         {
@@ -112,6 +114,7 @@ public sealed partial class DevelopInputCard
         double current = InputGammaValueInput.Round(draft ?? pending?.Value ?? shownFrame?.InputGamma.Value ?? sourceInfo.ManualSeed);
         draft = Math.Clamp(InputGammaValueInput.Round(current + direction * InputGammaValueInput.Step * (shift ? 10 : 1)), 0.1, 4);
         ShowValue(); args.Handled = true;
+        PreviewChanged?.Invoke(this, EventArgs.Empty);
     }
     private void OnSliderKeyUp(object sender, KeyRoutedEventArgs args)
     {
@@ -126,11 +129,13 @@ public sealed partial class DevelopInputCard
 
     private void CancelDraft()
     {
+        bool hadDraft = draft is not null;
         draft = null; editFrame = null; pointerSession.Cancel(); keyboardEditing = false;
         AllowGammaUntrackedChanges();
         ValueEditor.Visibility = Visibility.Collapsed;
         ValueButton.Visibility = Visibility.Visible;
         ShowValue();
+        if (hadDraft) { PreviewChanged?.Invoke(this, EventArgs.Empty); }
     }
 
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Negaflow.Shell.Develop;
+using Negaflow.Catalog;
 using Negaflow.Shell.Localization;
 
 namespace Negaflow.Shell.Views.Develop.Sources;
@@ -92,6 +93,14 @@ public sealed partial class DevelopSourceSidebar : UserControl
         add => LibraryPanel.DevelopDefaultsChanged += value;
         remove => LibraryPanel.DevelopDefaultsChanged -= value;
     }
+
+    public event EventHandler? InputGammaPreviewChanged
+    {
+        add => LibraryPanel.InputGammaPreviewChanged += value;
+        remove => LibraryPanel.InputGammaPreviewChanged -= value;
+    }
+    public bool HasInputGammaPreview => LibraryPanel.HasInputGammaPreview;
+    public LibraryFrameSnapshot ApplyInputGammaPreview(LibraryFrameSnapshot frame) => LibraryPanel.ApplyInputGammaPreview(frame);
 
     public void Localize()
     {

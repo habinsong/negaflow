@@ -25,6 +25,12 @@ void expect_near(
 }  // namespace
 
 int main() {
+    constexpr float u16_scale = 1.0F / 65535.0F;
+    const auto table = negaflow::color::srgb16_to_linear_table();
+    for (std::uint32_t value = 0; value < 65536U; ++value) {
+        expect(table[value] == negaflow::color::srgb_encoded_to_linear(static_cast<float>(value) * u16_scale),
+            "RGB16 lookup preserves every code value exactly");
+    }
     expect_near(negaflow::color::srgb_encoded_to_linear(0.0F), 0.0F, 0.0F, "zero");
     expect_near(
         negaflow::color::srgb_encoded_to_linear(0.04045F),

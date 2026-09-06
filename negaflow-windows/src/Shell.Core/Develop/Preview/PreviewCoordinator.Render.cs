@@ -62,7 +62,7 @@ public sealed partial class PreviewCoordinator
         // 단계 그림은 최종 결과가 아니므로 정착본 캐시에 넣지 않습니다 - 넣으면 오버레이를
         // 끈 뒤에도 그 그림이 나옵니다.
         DevelopedPreviewCacheIdentity? cacheIdentity =
-            stage is null && !rawSource && proof is not { IsEnabled: true } && !clippingOverlay &&
+            !request.InputGammaPreview && stage is null && !rawSource && proof is not { IsEnabled: true } && !clippingOverlay &&
             DevelopedPreviewCacheIdentityFactory.TryCreate(frame, out var createdIdentity)
                 ? createdIdentity
                 : null;
@@ -73,8 +73,8 @@ public sealed partial class PreviewCoordinator
             PreviewTrace.Write("RenderAsync start rev=" + revision + " edge=" + interactiveEdge);
             // 인터랙티브 상자가 이미 정착 치수면 뒤따르는 정착 패스가 없습니다. 그때는
             // 이 결과가 곧 정착본입니다 — macOS `cachedPreviewRaw` 의 정착 갈래와 같은 판정.
-            bool interactiveIsFinal = !settleEnabled ||
-                interactiveEdge >= DevelopPreviewProxy.FullMaxDimension - 0.5;
+            bool interactiveIsFinal = !request.InputGammaPreview && (!settleEnabled ||
+                interactiveEdge >= DevelopPreviewProxy.FullMaxDimension - 0.5);
             lock (gate)
             {
                 activeRunIsSettled = false;
@@ -89,7 +89,8 @@ public sealed partial class PreviewCoordinator
                 clippingOverlay,
                 settled: interactiveIsFinal,
                 revision: revision,
-                cacheIdentity: cacheIdentity).ConfigureAwait(false);
+                cacheIdentity: cacheIdentity,
+                transientInputGamma: request.InputGammaPreview).ConfigureAwait(false);
             PreviewTrace.Write(
                 "RenderAsync interactive kind=" + interactive.Outcome.Kind +
                 " final=" + interactiveIsFinal +
@@ -97,7 +98,7 @@ public sealed partial class PreviewCoordinator
                 " w=" + interactive.Outcome.Width +
                 " h=" + interactive.Outcome.Height +
                 " cancel=" + run.IsCancelRequested);
-            if (interactiveIsFinal ||
+            if (interactiveIsFinal || request.InputGammaPreview ||
                 interactive.Outcome.Kind != DevelopExportOutcomeKind.Completed)
             {
                 return interactive;
@@ -260,7 +261,8 @@ public sealed partial class PreviewCoordinator
         bool clippingOverlay,
         bool settled,
         int revision,
-        DevelopedPreviewCacheIdentity? cacheIdentity)
+        DevelopedPreviewCacheIdentity? cacheIdentity,
+        bool transientInputGamma = false)
     {
         // 배달된 버퍼는 UI 스레드가 다 쓸 때까지 임대 중입니다. 여기서 기다리는 것이
         // "그리는 화소"와 "배달한 리비전"이 어긋나지 않게 하는 유일한 방법입니다.
@@ -277,7 +279,10 @@ public sealed partial class PreviewCoordinator
                 " settled=" + settled +
                 " rev=" + revision);
             System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
-            result = await Task.Run(() => exporter.Preview(
+            result = await Task.Run(() => transientInputGamma && proof is null && !clippingOverlay
+                && exporter is NativeDevelopExporterAdapter native
+                ? native.PreviewBackground(developRequest, width, height, pixels, run)
+                : exporter.Preview(
                 developRequest,
                 width,
                 height,

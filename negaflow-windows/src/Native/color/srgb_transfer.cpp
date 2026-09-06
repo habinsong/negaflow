@@ -1,6 +1,7 @@
 #include "negaflow/color/srgb_transfer.h"
 
 #include <cmath>
+#include <array>
 
 namespace negaflow::color {
 
@@ -23,5 +24,19 @@ float linear_to_srgb_encoded(const float linear) noexcept {
         1.055F * std::pow(magnitude, 1.0F / 2.4F) - 0.055F,
         linear);
 }
+
+std::span<const float, 65536U> srgb16_to_linear_table() noexcept {
+    static const std::array<float, 65536U> table = [] {
+        std::array<float, 65536U> values{};
+        constexpr float scale = 1.0F / 65535.0F;
+        for (std::size_t i = 0; i < values.size(); ++i) {
+            values[i] = srgb_encoded_to_linear(static_cast<float>(i) * scale);
+        }
+        return values;
+    }();
+    return table;
+}
+
+float srgb16_to_linear(const std::uint16_t encoded) noexcept { return srgb16_to_linear_table()[encoded]; }
 
 }  // namespace negaflow::color

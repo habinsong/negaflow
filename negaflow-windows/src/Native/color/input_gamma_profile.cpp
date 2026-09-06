@@ -111,7 +111,7 @@ InputGammaProfileResult make_input_gamma_profile(
             result.status = InputGammaProfileStatus::unsupported_profile;
             return result;
         }
-        std::fill(bytes.begin() + 84, bytes.begin() + 100, 0U);
+        std::fill(bytes.begin() + 84, bytes.begin() + 100, std::uint8_t{0});
         write32(bytes, 0U, static_cast<std::uint32_t>(bytes.size()));
         result.bytes = std::move(bytes);
         result.status = InputGammaProfileStatus::ok;

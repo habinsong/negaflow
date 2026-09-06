@@ -16,6 +16,7 @@ struct AutoAdjustRequest {
 
     func isCurrent(_ frame: ScanFrame) -> Bool {
         !Task.isCancelled && frame.autoAdjustRevision == revision
+            && frame.inputGammaPreviewOverride == nil
             && frame.sourceLocationRevision == sourceRevision && frame.cleanRawRevision == rawRevision
     }
 }

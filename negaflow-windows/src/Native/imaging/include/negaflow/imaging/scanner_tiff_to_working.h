@@ -40,4 +40,10 @@ struct StreamedScannerToWorkingResult final {
     const negaflow::imageio::WicTiffDecodeControl& control,
     negaflow::color::InputGammaInterpretation input_gamma = {}) noexcept;
 
+// 메모리의 원본 RGB 코드에 같은 행 단위 ICC/감마 변환을 적용합니다.
+[[nodiscard]] ScannerToWorkingResult convert_cached_scanner_rows(
+    const negaflow::imageio::DecodedImage& decoded,
+    const negaflow::imageio::WicTiffDecodeControl& control,
+    negaflow::color::InputGammaInterpretation input_gamma) noexcept;
+
 }  // namespace negaflow::imaging

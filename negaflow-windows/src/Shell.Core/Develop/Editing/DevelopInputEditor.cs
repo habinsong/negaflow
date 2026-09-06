@@ -25,6 +25,7 @@ public sealed class DevelopInputEditor
         Func<LibraryFrameSnapshot?> currentSelection, CancellationToken cancellation = default)
     {
         if (frame.InputGamma == gamma) { Cancel(); return LibraryFrameError.None; }
+        if (frame.IsPreviewScan) { Cancel(); return LibraryFrameError.InvalidBaseRecipe; }
         JsonObject? before = host.FrameRecord(frame.Id);
         if (before is null) { return LibraryFrameError.MissingId; }
         long revision = Interlocked.Increment(ref generation);
@@ -36,6 +37,7 @@ public sealed class DevelopInputEditor
         LibraryFrameSnapshot? selected = currentSelection();
         if (cancellation.IsCancellationRequested || revision != generation || current is null ||
             selected?.Id != frame.Id || selected.SourcePath != frame.SourcePath || selected.SourceMetadata != frame.SourceMetadata ||
+            selected.IsPreviewScan || !JsonNode.DeepEquals(before["isPreviewScan"], current["isPreviewScan"]) ||
             !JsonNode.DeepEquals(before["params"], current["params"]) ||
             !JsonNode.DeepEquals(before["imageTransform"], current["imageTransform"]) ||
             !JsonNode.DeepEquals(before["presetID"], current["presetID"]))
@@ -51,4 +53,13 @@ public sealed class DevelopInputEditor
             {
                 Mode = frame.Base.Mode == BaseEstimationMode.Manual ? BaseEstimationMode.Auto : frame.Base.Mode,
             }) { InputGamma = gamma };
+
+    public static LibraryFrameSnapshot Preview(LibraryFrameSnapshot frame, InputGammaInterpretation gamma) =>
+        frame.IsPreviewScan ? frame : frame with
+        {
+            InputGamma = gamma,
+            ManualBase = null,
+            AppliedBase = null,
+            Base = frame.Base with { Mode = frame.Base.Mode == BaseEstimationMode.Manual ? BaseEstimationMode.Auto : frame.Base.Mode },
+        };
 }

@@ -147,6 +147,90 @@ final class InputGammaWorkflowTests: XCTestCase {
         }
     }
 
+    func testDraftRequestsPreviewWithoutChangingStoredRecipeAndCancelRestoresSnapshot() throws {
+        let frame = try makeFrame()
+        let model = AppModel(libraryDefectDirectoryURL: directory.appendingPathComponent("defects"))
+        model.frames = [frame]
+        model.frameStore.selectedFrameID = frame.id
+        defer { model.frames = [] }
+        frame.inputGammaSupportChecked = true
+        frame.inputGammaPreviewSource = try InputGammaPreviewSource(url: frame.rawScanURL)
+        frame.params.baseScale = try FilmBaseScale(0.75)
+        let original = frame.params
+        let autoRequest = AutoAdjustRequest(frame)
+        var cancelledSettle = false
+        frame.cancelSettledDevelopRender = { cancelledSettle = true }
+        model.previewInputGamma(try .power(1.8), for: frame)
+        XCTAssertTrue(cancelledSettle)
+        XCTAssertEqual(frame.params, original)
+        XCTAssertFalse(autoRequest.isCurrent(frame))
+        let key = FilmBaseCacheKey(filmType: frame.filmType, mode: .auto, manualBaseRGB: nil, filmStockDminID: nil)
+        let snapshot = model.makeSnapshot(for: frame, baseKey: key, needsRawPreview: false,
+            needsNeutralPreview: false, needsDebugPreviews: false, needsThumbnail: true, proxyMaxDimension: 32)
+        XCTAssertTrue(snapshot.isInputGammaPreview)
+        XCTAssertEqual(snapshot.params.inputGamma.value, 1.8)
+        XCTAssertEqual(snapshot.params.baseScale.value, 0.75)
+        XCTAssertFalse(snapshot.needsThumbnail)
+        XCTAssertNil(snapshot.preloadedPreviewRaw)
+        XCTAssertNotNil(snapshot.inputGammaPreviewSource)
+        model.previewInputGamma(nil, for: frame)
+        XCTAssertNotEqual(snapshot.inputGammaPreviewSessionRevision, frame.inputGammaPreviewSessionRevision)
+        XCTAssertNil(frame.inputGammaPreviewOverride)
+        XCTAssertEqual(frame.params, original)
+        XCTAssertFalse(autoRequest.isCurrent(frame))
+    }
+
+    func testGammaChangeKeepsDisplayedImageUntilReplacementIsReady() throws {
+        let frame = try makeFrame()
+        let image = NSImage(size: NSSize(width: 32, height: 16))
+        frame.developedImage = image
+        frame.thumbnailImage = image
+        frame.hasDevelopedOnce = true
+        frame.params.inputGamma = try .power(1.8)
+        XCTAssertTrue(frame.developedImage === image)
+        XCTAssertTrue(frame.thumbnailImage === image)
+        XCTAssertTrue(frame.hasDevelopedOnce)
+        XCTAssertFalse(frame.developedIsSettled)
+        XCTAssertNil(frame.thumbnailRecipeID)
+        XCTAssertNil(frame.cachedBase)
+    }
+
+    func testLiveGammaRecomputesCloneFromNewInputWithoutReplacingStoredPatch() throws {
+        let frame = try makeFrame(gradient: true)
+        let model = AppModel(libraryDefectDirectoryURL: directory.appendingPathComponent("defects"))
+        model.frames = [frame]
+        model.selectedFrameID = frame.id
+        defer { model.frames = [] }
+        frame.inputGammaSupportChecked = true
+        frame.inputGammaPreviewSource = try InputGammaPreviewSource(url: frame.rawScanURL)
+        frame.params.inputGamma = try .power(2.2)
+        let stroke = CloneStampStroke(points: [CGPoint(x: 0.75, y: 0.5)], offset: CGVector(dx: -0.5, dy: 0),
+            diameter: 8, hardness: 1)
+        let wrong = try XCTUnwrap(ChromabaseEngine.sharedLinearRenderContext.createCGImage(
+            CIImage(color: CIColor(red: 1, green: 0, blue: 0)), from: CGRect(x: 0, y: 0, width: 8, height: 8)))
+        frame.defectEdits = [DefectEditItem(edit: .clone([stroke]), label: .clone(diameterPixels: 8),
+            summaryKind: .clone, preview: [], baseSize: CGSize(width: 32, height: 16),
+            cachedPatches: [DefectPatch(rect: CGRect(x: 20, y: 4, width: 8, height: 8), image: wrong)])]
+        let params = frame.params
+        let gamma = try InputGammaInterpretation.power(1.8)
+        model.previewInputGamma(gamma, for: frame)
+        let snapshot = model.makeSnapshot(for: frame,
+            baseKey: FilmBaseCacheKey(filmType: frame.filmType, mode: .auto, manualBaseRGB: nil, filmStockDminID: nil),
+            needsRawPreview: false, needsNeutralPreview: false, needsDebugPreviews: false,
+            needsThumbnail: false, proxyMaxDimension: 32)
+        XCTAssertTrue(snapshot.requiresCleanedRaw)
+        XCTAssertNil(snapshot.inputGammaPreviewDefects.first?.cachedPatches)
+        let result = try DevelopFrameRenderer.inputGammaDefectPreview(snapshot)
+        let reference = try ImageLoader.loadScannerTIFFDecoded(frame.rawScanURL, inputGamma: gamma)
+        let actual = pixels(result.image), expected = pixels(reference.image)
+        for channel in 0..<3 {
+            XCTAssertEqual(actual[(8 * 32 + 24) * 4 + channel], expected[(8 * 32 + 8) * 4 + channel], accuracy: 0.003)
+        }
+        XCTAssertEqual(frame.params, params)
+        XCTAssertTrue(frame.defectEdits.first?.cachedPatches?.first?.image === wrong)
+        model.previewInputGamma(nil, for: frame)
+    }
+
     func testUnsupportedSourceDoesNotCommitOrResetBase() async throws {
         let url = directory.appendingPathComponent("unsupported.png")
         try Data([0, 1, 2]).write(to: url)
@@ -160,6 +244,19 @@ final class InputGammaWorkflowTests: XCTestCase {
         XCTAssertFalse(changed)
         XCTAssertEqual(frame.params, original)
         XCTAssertFalse(frame.isApplyingInputGamma)
+    }
+
+    func testScannerPreviewCannotStartInputGammaDraft() throws {
+        let source = try makeFrame()
+        let frame = ScanFrame(scanIndex: 1, rawScanURL: source.rawScanURL, filmType: .colorNegative, isPreviewScan: true)
+        frame.inputGammaSupportChecked = true
+        let model = AppModel()
+        model.frames = [frame]
+        model.selectedFrameID = frame.id
+        defer { model.frames = [] }
+        model.previewInputGamma(try .power(1.8), for: frame)
+        XCTAssertNil(frame.inputGammaPreviewOverride)
+        XCTAssertEqual(frame.params.inputGamma, .automatic)
     }
 
     func testPickerPreviewAndPrintDecodeTheSameGammaWithoutModifyingSource() throws {

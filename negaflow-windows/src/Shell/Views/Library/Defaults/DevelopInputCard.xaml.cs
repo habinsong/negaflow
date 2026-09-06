@@ -25,7 +25,7 @@ public sealed partial class DevelopInputCard : UserControl
     private InputGammaSource.Info sourceInfo => inspection.Info;
     private bool synchronizing;
     private readonly SliderPointerSession pointerSession = new();
-    private bool supported => sourceInfo.Supported;
+    private bool supported => sourceInfo.Supported && shownFrame is { IsPreviewScan: false };
     private bool busy;
     private bool keyboardEditing;
     private long generation;
@@ -33,20 +33,36 @@ public sealed partial class DevelopInputCard : UserControl
     public DevelopInputCard()
     {
         InitializeComponent();
+        string modeGroup = "InputGammaMode-" + Guid.NewGuid().ToString("N");
+        AutoModeButton.GroupName = modeGroup;
+        ManualModeButton.GroupName = modeGroup;
         GammaSlider.AddHandler(PointerPressedEvent, new PointerEventHandler(OnPointerPressed), true);
         GammaSlider.AddHandler(PointerReleasedEvent, new PointerEventHandler(OnPointerReleased), true);
         GammaSlider.AddHandler(PointerCanceledEvent, new PointerEventHandler(OnPointerCancelled), true);
         GammaSlider.AddHandler(PointerCaptureLostEvent, new PointerEventHandler(OnPointerCaptureLost), true);
         Unloaded += (_, _) =>
         {
+            bool hadPreview = HasPreview;
             generation++; editor?.Cancel(); inspection.Invalidate();
             pointerSession.End(null, null, false);
             busy = false; pending = null; CancelDraft();
+            if (hadPreview) { PreviewChanged?.Invoke(this, EventArgs.Empty); }
         };
         Loaded += (_, _) => Synchronize();
     }
 
     public event EventHandler? Changed;
+    public event EventHandler? PreviewChanged;
+
+    public bool HasPreview => draft is not null || pending is not null;
+
+    public LibraryFrameSnapshot PreviewFrame(LibraryFrameSnapshot frame)
+    {
+        if (shownFrame?.Id != frame.Id || shownFrame.SourcePath != frame.SourcePath
+            || shownFrame.SourceMetadata != frame.SourceMetadata) { return frame; }
+        InputGammaInterpretation? gamma = draft is { } value ? InputGammaInterpretation.Power(value) : pending;
+        return gamma is { } preview ? DevelopInputEditor.Preview(frame, preview) : frame;
+    }
 
     public void Bind(LibraryHostService host, Func<LibraryFrameSnapshot?> selection)
     {
@@ -79,6 +95,7 @@ public sealed partial class DevelopInputCard : UserControl
         if (changed) { generation++; editor?.Cancel(); busy = false; pending = null; lastManual = null; CancelDraft(); }
         else if (pending is null && frame?.InputGamma != shownFrame?.InputGamma) { CancelDraft(); }
         shownFrame = frame;
+        if (frame?.InputGamma.Value is { } manualValue) { lastManual = manualValue; }
         if (frame is null) { inspection.Invalidate(); }
         IsEnabled = frame is not null;
         if (frame is not null && inspection.Begin(frame.SourcePath, frame.SourceMetadata) is { } request)
@@ -122,7 +139,7 @@ public sealed partial class DevelopInputCard : UserControl
             ? InputGammaValueInput.Format(automaticValue) : "—";
         ValueButton.Content = value is { } number ? InputGammaValueInput.Format(number) : null;
         ValueButton.IsEnabled = supported && !busy;
-        GammaSlider.IsEnabled = supported;
+        GammaSlider.IsEnabled = supported && !busy;
         ResetButton.IsEnabled = !gamma.IsAutomatic && !busy;
         synchronizing = false;
     }
@@ -156,6 +173,7 @@ public sealed partial class DevelopInputCard : UserControl
         long request = ++generation;
         ShowValue();
         LibraryFrameError error;
+        PreviewChanged?.Invoke(this, EventArgs.Empty);
         try { error = await editor.SetAsync(frame, gamma, selection); }
         catch (Exception failure) when (failure is IOException or ArgumentException or InvalidOperationException or
             DllNotFoundException or EntryPointNotFoundException or BadImageFormatException) { error = LibraryFrameError.InvalidBaseRecipe; }
@@ -166,5 +184,6 @@ public sealed partial class DevelopInputCard : UserControl
             error is LibraryFrameError.None or LibraryFrameError.MissingId ? "inputGammaHelp" : "inputGammaUnsupported", "Value"));
         Synchronize();
         if (error == LibraryFrameError.None) { Changed?.Invoke(this, EventArgs.Empty); }
+        else { PreviewChanged?.Invoke(this, EventArgs.Empty); }
     }
 }

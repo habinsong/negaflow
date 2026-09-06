@@ -2,7 +2,8 @@
 
 #include "../support/preview_proxy.h"
 
-#include "export/support/frame_cache_budget.h"
+#include "export/support/decoded_source_store.h"
+#include "export/support/input_gamma_preview_decode.h"
 #include "export/support/outcome.h"
 
 #include "negaflow/imageio/wic_standard_image_decoder.h"
@@ -24,247 +25,7 @@ namespace {
            _wcsicmp(extension.c_str(), L".tiff") == 0;
 }
 
-// macOS `ScanFrame.cleanedRawImage` 상주 자리(`FrameCacheManager.residentCleanedRawIDs`)에
-// 해당합니다. 같은 파일·같은 관측이면 디스크 TIFF 를 다시 읽지 않습니다.
-//
-// 앞 판은 **단일 슬롯 + 잠금 없음**이었습니다. 그런데 이 캐시를 지나는 것은 현상
-// 프리뷰만이 아닙니다 — `ThumbnailService` 가 프레임마다 `develop_preview` 를 부르고
-// (동시 3개), 자동 조정·검출·내보내기도 각자 스레드에서 들어옵니다. 그래서
-// ① 썸네일이 다른 프레임을 디코드할 때마다 현상 중인 프레임의 디코드가 날아갔고
-// ② 한쪽이 `image` 를 갈아 끼우는 동안 다른 쪽이 그것을 복사해 use-after-free 가 났습니다.
-// 프레임별로 나누고, 잠그고, `shared_ptr<const>` 로 넘깁니다.
-struct DecodedSourceEntry final {
-    std::filesystem::path path{};
-    negaflow::color::InputGammaInterpretation input_gamma{};
-    negaflow::imageio::ImageFileObservation observation{};
-    // **어느 크기로 푼 것인가.** 0 이면 원본 그대로입니다.
-    //
-    // 프리뷰는 프리뷰 크기로 풉니다. 그것을 크기 없이 담아 두면 내보내기가 작은 화상을
-    // 원본이라 믿고 집어갑니다. 반대로 크기를 담지 않는다고 캐시를 통째로 끄면, 슬라이더를
-    // 움직일 때마다 도는 정착 패스가 **디코드 도중에 취소돼** 아무것도 남기지 못하고
-    // 다음 번에 처음부터 다시 풉니다 - 실기 기록에서 같은 프레임의 정착 패스가
-    // 1,401 / 1,419 / 1,440 ms 로 세 번 연속 취소됐고, 그 사이에 낀 다음 조작이
-    // 그만큼 밀렸습니다(2026-08-26 `preview-trace.txt`). 크기를 함께 담아 둘 다 지킵니다.
-    std::uint32_t box_width{0U};
-    std::uint32_t box_height{0U};
-    std::shared_ptr<const negaflow::imaging::WorkingImage> source_image{};
-    std::optional<std::array<std::uint8_t, 32U>> cleaned_recipe_sha256{};
-    std::shared_ptr<const negaflow::imaging::WorkingImage> cleaned_image{};
-    DefectRecipeStageInfo cleaned_info{};
-};
-
-// 앞이 오래된 것 — macOS `residentCleanedRawIDs` 와 같은 차례입니다.
-std::vector<DecodedSourceEntry> g_decoded_sources{};
-std::mutex g_decoded_mutex{};
-
-[[nodiscard]] std::uint64_t decoded_bytes(
-    const std::shared_ptr<const negaflow::imaging::WorkingImage>& image) noexcept {
-    return image == nullptr
-        ? 0ULL
-        : static_cast<std::uint64_t>(image->pixels.size()) *
-              sizeof(negaflow::core::Rgba32F);
-}
-
-[[nodiscard]] std::uint64_t decoded_bytes(const DecodedSourceEntry& entry) noexcept {
-    return decoded_bytes(entry.source_image) + decoded_bytes(entry.cleaned_image);
-}
-
-[[nodiscard]] std::uint64_t decoded_budget_bytes() noexcept {
-    return decoded_source_budget_bytes();
-}
-
-// macOS `trimCleanedRaw` — 한도를 넘으면 오래된 것부터 내려놓습니다.
-// 방금 넣은 것을 곧바로 버리지 않도록 마지막 하나는 남깁니다.
-void trim_decoded_locked() noexcept {
-    std::uint64_t resident = 0ULL;
-    for (const DecodedSourceEntry& entry : g_decoded_sources) {
-        resident += decoded_bytes(entry);
-    }
-    // 예산을 물어보기 **전에** 알립니다. 자동 예산은 "프로세스 private 에서 캐시 몫을 뺀
-    // 나머지" 를 간접비로 보므로, 내 몫을 안 알리면 그것까지 간접비로 세어 예산이 두 배로
-    // 깎입니다.
-    report_cache_resident_bytes(FrameCacheKind::decoded_source, resident);
-    const std::uint64_t budget = decoded_budget_bytes();
-    while (g_decoded_sources.size() > 1U && resident > budget) {
-        resident -= decoded_bytes(g_decoded_sources.front());
-        g_decoded_sources.erase(g_decoded_sources.begin());
-    }
-    report_cache_resident_bytes(FrameCacheKind::decoded_source, resident);
-}
-
-// macOS `markCleanedRawResident` 의 FIFO 재등록 — 쓰인 것은 뒤로 갑니다. 그래서 현상
-// 중인 프레임은 썸네일이 아무리 흘러가도 가장 마지막에 밀려납니다.
-[[nodiscard]] std::shared_ptr<const negaflow::imaging::WorkingImage> take_decoded(
-    const std::filesystem::path& path,
-    const negaflow::imageio::ImageFileObservation& observation,
-    const std::uint32_t box_width,
-    const std::uint32_t box_height,
-    const negaflow::color::InputGammaInterpretation input_gamma) noexcept {
-    const std::lock_guard<std::mutex> guard{g_decoded_mutex};
-    // 새 할당이 없어도 시스템이 저메모리로 바뀌었으면 첫 재사용에서 과거 프레임을 내립니다.
-    trim_decoded_locked();
-    for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
-        DecodedSourceEntry& entry = g_decoded_sources[index];
-        if (entry.path != path || entry.input_gamma != input_gamma ||
-            entry.box_width != box_width || entry.box_height != box_height ||
-            !negaflow::imageio::same_image_file_observation(
-                entry.observation, observation)) {
-            continue;
-        }
-        if (entry.source_image == nullptr) {
-            continue;
-        }
-        std::shared_ptr<const negaflow::imaging::WorkingImage> image = entry.source_image;
-        try {
-            DecodedSourceEntry moved = std::move(entry);
-            g_decoded_sources.erase(
-                g_decoded_sources.begin() + static_cast<std::ptrdiff_t>(index));
-            g_decoded_sources.push_back(std::move(moved));
-        } catch (...) {
-            // 재등록에 실패해도 꺼낸 화상은 유효합니다.
-        }
-        return image;
-    }
-    return nullptr;
-}
-
-void put_decoded(
-    const std::filesystem::path& path,
-    const negaflow::imageio::ImageFileObservation& observation,
-    const std::uint32_t box_width,
-    const std::uint32_t box_height,
-    std::shared_ptr<const negaflow::imaging::WorkingImage> image,
-    const negaflow::color::InputGammaInterpretation input_gamma) noexcept {
-    if (image == nullptr) {
-        return;
-    }
-    try {
-        const std::lock_guard<std::mutex> guard{g_decoded_mutex};
-        for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
-            DecodedSourceEntry& existing = g_decoded_sources[index];
-            if (existing.path != path || existing.input_gamma != input_gamma ||
-                existing.box_width != box_width || existing.box_height != box_height) {
-                continue;
-            }
-            if (negaflow::imageio::same_image_file_observation(
-                    existing.observation, observation)) {
-                existing.source_image = std::move(image);
-                DecodedSourceEntry moved = std::move(existing);
-                g_decoded_sources.erase(
-                    g_decoded_sources.begin() + static_cast<std::ptrdiff_t>(index));
-                g_decoded_sources.push_back(std::move(moved));
-                trim_decoded_locked();
-                return;
-            }
-            g_decoded_sources.erase(
-                g_decoded_sources.begin() + static_cast<std::ptrdiff_t>(index));
-            break;
-        }
-        DecodedSourceEntry entry{};
-        entry.path = path;
-        entry.input_gamma = input_gamma;
-        entry.observation = observation;
-        entry.box_width = box_width;
-        entry.box_height = box_height;
-        entry.source_image = std::move(image);
-        g_decoded_sources.push_back(std::move(entry));
-        trim_decoded_locked();
-    } catch (...) {
-    }
-}
-
 } // namespace
-
-void decoded_source_store_reset() noexcept {
-    const std::lock_guard<std::mutex> guard{g_decoded_mutex};
-    g_decoded_sources.clear();
-}
-
-std::uint64_t decoded_source_store_resident_bytes() noexcept {
-    const std::lock_guard<std::mutex> guard{g_decoded_mutex};
-    std::uint64_t resident = 0ULL;
-    for (const DecodedSourceEntry& entry : g_decoded_sources) {
-        resident += decoded_bytes(entry);
-    }
-    return resident;
-}
-
-bool decoded_cleaned_raw_try_take(
-    const std::filesystem::path& path,
-    const negaflow::imageio::ImageFileObservation& observation,
-    const std::array<std::uint8_t, 32U>& recipe_sha256,
-    std::shared_ptr<const negaflow::imaging::WorkingImage>& image,
-    DefectRecipeStageInfo& info,
-    const negaflow::color::InputGammaInterpretation input_gamma) noexcept {
-    const std::lock_guard<std::mutex> guard{g_decoded_mutex};
-    trim_decoded_locked();
-    for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
-        DecodedSourceEntry& entry = g_decoded_sources[index];
-        if (entry.path != path || entry.input_gamma != input_gamma || entry.cleaned_image == nullptr ||
-            entry.cleaned_recipe_sha256 != recipe_sha256 ||
-            !negaflow::imageio::same_image_file_observation(
-                entry.observation, observation)) {
-            continue;
-        }
-        image = entry.cleaned_image;
-        info = entry.cleaned_info;
-        try {
-            DecodedSourceEntry moved = std::move(entry);
-            g_decoded_sources.erase(
-                g_decoded_sources.begin() + static_cast<std::ptrdiff_t>(index));
-            g_decoded_sources.push_back(std::move(moved));
-        } catch (...) {
-        }
-        return true;
-    }
-    return false;
-}
-
-void decoded_cleaned_raw_put(
-    const std::filesystem::path& path,
-    const negaflow::imageio::ImageFileObservation& observation,
-    const std::array<std::uint8_t, 32U>& recipe_sha256,
-    std::shared_ptr<const negaflow::imaging::WorkingImage> image,
-    const DefectRecipeStageInfo& info,
-    const negaflow::color::InputGammaInterpretation input_gamma) noexcept {
-    if (image == nullptr) {
-        return;
-    }
-    try {
-        const std::lock_guard<std::mutex> guard{g_decoded_mutex};
-        for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
-            DecodedSourceEntry& entry = g_decoded_sources[index];
-            if (entry.path != path || entry.input_gamma != input_gamma) {
-                continue;
-            }
-            if (!negaflow::imageio::same_image_file_observation(
-                    entry.observation, observation)) {
-                g_decoded_sources.erase(
-                    g_decoded_sources.begin() + static_cast<std::ptrdiff_t>(index));
-                break;
-            }
-            entry.cleaned_recipe_sha256 = recipe_sha256;
-            entry.cleaned_image = std::move(image);
-            entry.cleaned_info = info;
-            DecodedSourceEntry moved = std::move(entry);
-            g_decoded_sources.erase(
-                g_decoded_sources.begin() + static_cast<std::ptrdiff_t>(index));
-            g_decoded_sources.push_back(std::move(moved));
-            trim_decoded_locked();
-            return;
-        }
-        DecodedSourceEntry entry{};
-        entry.path = path;
-        entry.input_gamma = input_gamma;
-        entry.observation = observation;
-        entry.cleaned_recipe_sha256 = recipe_sha256;
-        entry.cleaned_image = std::move(image);
-        entry.cleaned_info = info;
-        g_decoded_sources.push_back(std::move(entry));
-        trim_decoded_locked();
-    } catch (...) {
-    }
-}
 
 std::optional<DevelopExportOutcome> decode_source(
     const DevelopExportRequest& request,
@@ -302,7 +63,7 @@ std::optional<DevelopExportOutcome> decode_source(
     // 잠금은 참조를 꺼낼 때만 잡습니다. 277MB 복사를 잠금 안에서 하면 다른 스레드가
     // 그동안 통째로 멈춥니다 — 참조를 들고 있으므로 복사 중에 해제되지 않습니다.
     if (const std::shared_ptr<const negaflow::imaging::WorkingImage> cached =
-            take_decoded(request.source, observed.before.observation, box_width, box_height, request.input_gamma)) {
+            decoded_source_try_take(request.source, observed.before.observation, box_width, box_height, request.input_gamma)) {
         try {
             decoded_image = *cached;
         } catch (...) {
@@ -335,7 +96,9 @@ std::optional<DevelopExportOutcome> decode_source(
         decode_control.validate_compressed_streams = false;
     }
     if (is_tiff_source(request.source)) {
-        auto prepared = negaflow::imaging::decode_scanner_tiff_to_working_rows(
+        auto prepared = preview != nullptr && request.input_gamma.mode != 0U
+            ? decode_input_gamma_preview(request, observed, decode_control, box_width, box_height)
+            : negaflow::imaging::decode_scanner_tiff_to_working_rows(
             request.source,
             {},
             {},
@@ -391,22 +154,28 @@ std::optional<DevelopExportOutcome> decode_source(
             standard_control.max_output_height = box_height;
             standard_control.prefer_speed = true;
         }
-        const negaflow::imageio::WicStandardImageDecodeResult decoded =
-            negaflow::imageio::decode_standard_image_with_wic(
+        const bool cache_input_codes = preview != nullptr && request.input_gamma.mode != 0U;
+        const auto encoded = cache_input_codes
+            ? encoded_source_try_take(request.source, observed.before.observation, box_width, box_height)
+            : nullptr;
+        negaflow::imageio::WicStandardImageDecodeResult decoded{};
+        if (!encoded) {
+            decoded = negaflow::imageio::decode_standard_image_with_wic(
                 request.source,
                 {},
                 stop.get_token(),
                 standard_control);
-        if (decoded.status == negaflow::imageio::WicStandardImageDecodeStatus::cancelled) {
+        }
+        if (!encoded && decoded.status == negaflow::imageio::WicStandardImageDecodeStatus::cancelled) {
             return cancelled_outcome(DevelopExportStage::decode);
         }
-        if (decoded.status != negaflow::imageio::WicStandardImageDecodeStatus::ok) {
+        if (!encoded && decoded.status != negaflow::imageio::WicStandardImageDecodeStatus::ok) {
             return fail(
                 DevelopExportStage::decode,
                 negaflow::imageio::wic_standard_image_decode_status_name(decoded.status));
         }
         negaflow::imaging::ScannerToWorkingResult working =
-            negaflow::imaging::convert_scanner_to_working(decoded.image, {}, request.input_gamma);
+            negaflow::imaging::convert_scanner_to_working(encoded ? *encoded : decoded.image, {}, request.input_gamma);
         if (working.status != negaflow::imaging::ScannerToWorkingStatus::ok) {
             return fail(
                 DevelopExportStage::decode,
@@ -414,6 +183,16 @@ std::optional<DevelopExportOutcome> decode_source(
                 working.info.native_error_code);
         }
         decoded_image = std::move(working.image);
+        if (cache_input_codes && !encoded && !stop.stop_requested()) {
+            const auto current = negaflow::imageio::observe_image_file(request.source);
+            if (current.status == negaflow::imageio::ImageFileObservationStatus::ok &&
+                negaflow::imageio::same_image_file_observation(observed.before.observation, current.observation)) {
+                try {
+                    encoded_source_put(request.source, current.observation, box_width, box_height,
+                        std::make_shared<const negaflow::imageio::DecodedImage>(std::move(decoded.image)));
+                } catch (...) { /* 캐시 할당 실패는 이미 계산한 결과를 버리지 않습니다. */ }
+            }
+        }
     }
 
     // 디코더가 줄여 주지 못한 형식은 **여기서** 줄입니다.
@@ -464,14 +243,14 @@ std::optional<DevelopExportOutcome> decode_source(
     // 풀지만, 붓질마다 같은 프레임을 다시 그립니다 — 담지 않으면 획 하나에 한 번씩 다시
     // 풉니다. 그래서 판정은 "전체 해상도냐"가 아니라 **"프리뷰냐"** 입니다.
     try {
-        if (preview == nullptr) {
+        if (preview == nullptr || !request.retain_preview_raw) {
             tracker.finish();
             if (tracker.cancelled()) {
                 return cancelled_outcome(DevelopExportStage::decode);
             }
             return std::nullopt;
         }
-        put_decoded(
+        decoded_source_put(
             request.source,
             observed.before.observation,
             box_width,

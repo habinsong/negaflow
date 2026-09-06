@@ -56,11 +56,10 @@ extension ScanFrame {
         rawPreviewImage = nil
         neutralPreviewImage = nil
         mainPreviewImage = nil
-        developedImage = nil
+        // 새 감마의 프리뷰가 준비될 때까지 현재 화면을 유지합니다.
         clippingOverlayImage = nil
         destinationGamutOverlayImage = nil
-        thumbnailImage = nil
-        thumbnailTransform = nil
+        thumbnailRecipeID = nil
         cachedRawBase = nil
         cachedNeutralBase = nil
         cachedMainBase = nil
@@ -70,7 +69,6 @@ extension ScanFrame {
         cachedThumbnailBase = nil
         neutralPreviewBaseKey = nil
         developedIsSettled = false
-        hasDevelopedOnce = false
         debugPreviewImages = [:]
         debugMetrics = [:]
     }

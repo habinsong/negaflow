@@ -31,6 +31,13 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
     }
 
     public event EventHandler? LibraryChanged;
+    public event EventHandler? InputGammaPreviewChanged
+    {
+        add => InputGammaCard.PreviewChanged += value;
+        remove => InputGammaCard.PreviewChanged -= value;
+    }
+    public bool HasInputGammaPreview => InputGammaCard.HasPreview;
+    public LibraryFrameSnapshot ApplyInputGammaPreview(LibraryFrameSnapshot frame) => InputGammaCard.PreviewFrame(frame);
 
     public void Bind(LibraryHostService host, Func<LibraryFrameSnapshot?> actionable, bool showInputGamma = false)
     {

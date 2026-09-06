@@ -66,6 +66,10 @@ void trim_locked() noexcept {
 
 // macOS `markDevelopedResident` 의 앞 두 줄 — 지우고 뒤에 다시 붙입니다.
 [[nodiscard]] PreviewRawEntry& promote_locked(const PreviewRawKey& key) {
+    // 감마가 다른 과거 raw를 한 파일에 계속 쌓지 않습니다. 진행 중 독자는 shared_ptr로 보호됩니다.
+    std::erase_if(g_entries, [&](const PreviewRawEntry& entry) {
+        return entry.key.path == key.path && entry.key.input_gamma != key.input_gamma;
+    });
     for (std::size_t index = 0U; index < g_entries.size(); ++index) {
         if (!same_preview_raw_key(g_entries[index].key, key)) {
             continue;

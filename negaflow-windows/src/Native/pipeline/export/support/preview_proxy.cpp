@@ -144,8 +144,10 @@ bool preview_proxy_try_take(
         return false;
     }
     // macOS `applyPreviewRawCache` — 파생한 프록시도 인터랙티브 슬롯에 남깁니다.
-    preview_raw_put_interactive(
-        key, preview.maximum_width, preview.maximum_height, std::move(derived), hint);
+    if (request.retain_preview_raw) {
+        preview_raw_put_interactive(
+            key, preview.maximum_width, preview.maximum_height, std::move(derived), hint);
+    }
     return true;
 }
 

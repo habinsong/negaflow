@@ -742,6 +742,8 @@ add_library(negaflow_pipeline STATIC
     src/Native/pipeline/defect_region_stage.cpp
     src/Native/pipeline/develop_export.cpp
     src/Native/pipeline/export/stages/decode.cpp
+    src/Native/pipeline/export/support/decoded_source_store.cpp
+    src/Native/pipeline/export/support/input_gamma_preview_decode.cpp
     src/Native/pipeline/export/stages/defect.cpp
     src/Native/pipeline/export/stages/finish.cpp
     src/Native/pipeline/export/stages/grade.cpp
@@ -1930,9 +1932,13 @@ if(BUILD_TESTING)
         tests/Native.UnitTests/preview_proxy_cache_tests.cpp
         tests/fixtures/tiff/synthetic_wic_tiff.cpp
     )
+    add_executable(negaflow_decoded_source_store_tests tests/Native.UnitTests/decoded_source_store_tests.cpp)
+    target_include_directories(negaflow_decoded_source_store_tests PRIVATE src/Native/pipeline)
+    target_link_libraries(negaflow_decoded_source_store_tests PRIVATE negaflow_pipeline negaflow_project_options)
+    add_test(NAME native.decoded_source_store COMMAND negaflow_decoded_source_store_tests)
     target_include_directories(
         negaflow_preview_proxy_cache_tests
-        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff"
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff" "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/pipeline"
     )
     target_link_libraries(
         negaflow_preview_proxy_cache_tests

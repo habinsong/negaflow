@@ -80,11 +80,13 @@ final class CommitSliderControl: NSSlider {
         initialValue = doubleValue
         editing = true
         cancelled = false
+        traceTracking("controlBegin")
     }
 
     func finishEditing() {
         guard editing else { return }
         editing = false
+        traceTracking(cancelled ? "controlCancelledEnd" : "controlEnd")
         if cancelled || !isEnabled { doubleValue = initialValue }
         else { doubleValue = snapped(doubleValue); onCommit(doubleValue) }
         onDraft(nil)
@@ -138,18 +140,28 @@ final class CommitSliderControl: NSSlider {
 
     override func cancelOperation(_ sender: Any?) {
         guard editing else { return }
+        traceTracking("controlCancel")
         cancelled = true
         doubleValue = initialValue
         onDraft(nil)
     }
 
     override func resignFirstResponder() -> Bool {
+        if editing { traceTracking("controlBlur") }
         if editing { cancelOperation(nil); finishEditing() }
         return super.resignFirstResponder()
     }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        if window == nil { cancelled = true; editing = false }
+        if window == nil {
+            traceTracking("controlDetach")
+            cancelled = true; editing = false
+        }
+    }
+
+    private func traceTracking(_ phase: String) {
+        guard snapsToStep, let ownerID else { return }
+        InputGammaPreviewTrace.emit(phase, frameID: ownerID, session: 0, value: doubleValue)
     }
 }

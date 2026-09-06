@@ -11,6 +11,8 @@ extension DevelopFrameRenderer {
         // 반복 createCGImage 루프는 autoreleasepool 로 감싸 메모리 급증을 막는다).
         return try autoreleasepool {
             try Task.checkCancellation()
+            if snapshot.isInputGammaPreview, let source = snapshot.inputGammaPreviewSource,
+               !source.matches(snapshot.rawScanURL) { throw DevelopFrameRenderError.loadFailed }
             let engine = ChromabaseEngine()
             let context = renderContext()
             guard let input = try resolveRenderInput(snapshot, engine: engine, context: context) else {
@@ -82,6 +84,8 @@ extension DevelopFrameRenderer {
                 )
                 : []
             try Task.checkCancellation()
+            if snapshot.isInputGammaPreview, let source = snapshot.inputGammaPreviewSource,
+               !source.matches(snapshot.rawScanURL) { throw DevelopFrameRenderError.loadFailed }
             return DevelopFrameRenderResult(
                 base: base,
                 rawPreview: rawPair?.transformed,

@@ -7,8 +7,10 @@ struct InputGammaControlSection: View {
     @State private var editingText = false
     @State private var draft: Double?
     @State private var pending: InputGammaInterpretation?
+    @State private var expectedCommit: InputGammaInterpretation?
     @State private var lastManual: Double?
     @State private var requestID = UUID()
+    @State private var sliderIdentity = UUID()
 
     private var gamma: InputGammaInterpretation { pending ?? frame.params.inputGamma }
     private var manual: Bool { gamma != .automatic }
@@ -16,7 +18,8 @@ struct InputGammaControlSection: View {
         sourceEditable && !frame.isApplyingInputGamma && pending == nil
     }
     private var sourceEditable: Bool {
-        frame.inputGammaSupportChecked && frame.inputGammaSourceError == nil && !frame.defectEditsNeedRestore
+        frame.inputGammaSupportChecked && frame.inputGammaSourceError == nil
+            && !frame.defectEditsNeedRestore && !frame.isPreviewScan
     }
     private var shownValue: Double {
         InputGammaValueInput.rounded(draft ?? gamma.value ?? frame.inputGammaSourceInfo?.manualSeed ?? 2.2)
@@ -58,10 +61,16 @@ struct InputGammaControlSection: View {
                 CommitSlider(value: shownValue, range: InputGammaInterpretation.range,
                     step: InputGammaValueInput.step, resetValue: 2.2, ownerID: frame.id,
                     label: model.text(.inputGamma), snapsToStep: true,
-                    onDraft: { draft = $0 }, onCommit: { value in
+                    onDraft: { value in
+                        draft = value
+                        if pending == nil {
+                            model.previewInputGamma(value.flatMap { try? .power(InputGammaValueInput.rounded($0)) }, for: frame)
+                        }
+                    }, onCommit: { value in
                         if let next = try? InputGammaInterpretation.power(InputGammaValueInput.rounded(value)) { apply(next) }
                     })
-                    .frame(height: 20).disabled(!sourceEditable)
+                    .id(sliderIdentity)
+                    .frame(height: 20).disabled(!canEdit)
             }
         }
         .frame(maxWidth: .infinity)
@@ -71,8 +80,18 @@ struct InputGammaControlSection: View {
         .onChange(of: frame.params.inputGamma) { _, value in
             editingText = false
             if let value = value.value { lastManual = value }
+            let isOwnCommit = expectedCommit == value
+            expectedCommit = nil
+            if pending == nil && !isOwnCommit {
+                draft = nil
+                sliderIdentity = UUID()
+                model.previewInputGamma(nil, for: frame)
+            }
         }
-        .onDisappear { requestID = UUID(); editingText = false; draft = nil; pending = nil }
+        .onDisappear {
+            requestID = UUID(); editingText = false; draft = nil; pending = nil; expectedCommit = nil
+            model.previewInputGamma(nil, for: frame)
+        }
     }
 
     private var automaticText: String {
@@ -91,15 +110,20 @@ struct InputGammaControlSection: View {
 
     private func apply(_ value: InputGammaInterpretation) {
         guard model.actionableFrame === frame, gamma != value else { return }
+        InputGammaPreviewTrace.emit("commit", frameID: frame.id,
+            session: frame.inputGammaPreviewSessionRevision, value: value.value)
         editingText = false
         pending = value
+        expectedCommit = value
         let request = UUID()
         requestID = request
         Task {
-            _ = await model.setInputGamma(value, for: frame)
+            let applied = await model.setInputGamma(value, for: frame)
             guard requestID == request else { return }
+            if !applied { expectedCommit = nil }
             pending = nil
             draft = nil
+            model.previewInputGamma(nil, for: frame)
         }
     }
 }

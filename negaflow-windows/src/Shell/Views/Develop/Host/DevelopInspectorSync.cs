@@ -28,6 +28,7 @@ internal sealed class DevelopInspectorSync
         view.LeftPanel.VersionsPanel.VersionRestored += OnVersionRestored;
         view.LeftPanel.FilmLookPanel.LookChanged += OnFilmLookChanged;
         view.LeftPanel.DevelopDefaultsChanged += OnDevelopDefaultsChanged;
+        view.LeftPanel.InputGammaPreviewChanged += (_, _) => view.RequestPreview();
         view.LeftPanel.LibraryFramesChanged += OnLibraryFramesChanged;
     }
 

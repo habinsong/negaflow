@@ -78,19 +78,30 @@ extension AppModel {
                         revision = frame.developRevision
                         continue
                     }
+                    if interactive.isInputGammaPreview && (frame.inputGammaPreviewOverride == nil
+                        || interactive.inputGammaPreviewSessionRevision != frame.inputGammaPreviewSessionRevision) {
+                        revision = frame.developRevision
+                        continue
+                    }
                     // 반면 인스펙터 값이 렌더 도는 사이 또 바뀐 것뿐이라면 이 장은 화면에 올린다.
                     // 예전에는 여기서 통째로 버리고 다시 그렸는데, 그러면 드래그가 빠를수록 버리는
                     // 비율이 올라가 화면이 오히려 덜 갱신됐다(실측: 요청 간격을 45→16 ms 로
                     // 줄이면 갱신이 23.4→15.9/s 로 **떨어짐**). 한 틱 낡은 장을 잠깐 보여주고
                     // 바로 아래에서 최신 값으로 다시 도는 편이 라이브 프리뷰답다 — 루프가
                     // 순차라 옛 결과가 새 결과를 덮을 수는 없고, 마지막 값은 항상 반영된다.
-                    applyBaseCache(fast, to: frame, baseKey: baseKey)
-                    applySceneMeasurementCache(
-                        fast, to: frame, baseKey: baseKey,
-                        proxyMaxDimension: interactive.proxyMaxDimension,
-                        renderedParams: interactive.params
-                    )
-                    applyPreviewRawCache(fast, to: frame, maxDimension: interactive.proxyMaxDimension)
+                    if !interactive.isInputGammaPreview {
+                        applyBaseCache(fast, to: frame, baseKey: baseKey)
+                        applySceneMeasurementCache(
+                            fast, to: frame, baseKey: baseKey,
+                            proxyMaxDimension: interactive.proxyMaxDimension,
+                            renderedParams: interactive.params
+                        )
+                        applyPreviewRawCache(fast, to: frame, maxDimension: interactive.proxyMaxDimension)
+                    } else if let key = interactive.inputGammaMeasurementKey,
+                              frame.inputGammaPreviewOverride != nil {
+                        frame.inputGammaPreviewMeasurements.store(
+                            .init(base: fast.base, measurements: fast.sceneMeasurements), for: key)
+                    }
                     frame.noteDevelopedDisplaySize(
                         CGSize(width: fast.developed.width, height: fast.developed.height),
                         authoritative: interactive.proxyMaxDimension >= DevelopFrameRenderer.fullMaxDimension - 0.5
@@ -99,6 +110,10 @@ extension AppModel {
                         cgImage: fast.developed,
                         size: NSSize(width: fast.developed.width, height: fast.developed.height)
                     )
+                    if interactive.isInputGammaPreview {
+                        InputGammaPreviewTrace.emit("present", frameID: frame.id,
+                            session: interactive.inputGammaPreviewSessionRevision, value: interactive.params.inputGamma.value)
+                    }
                     frame.clippingOverlayImage = fast.clippingOverlay.map {
                         NSImage(cgImage: $0, size: NSSize(width: $0.width, height: $0.height))
                     }
@@ -187,7 +202,7 @@ extension AppModel {
                 language: appLanguage
             )
             do {
-                let result = try await renderDevelopmentSnapshot(full)
+                let result = try await renderDevelopmentSnapshot(full, settledFrame: frame)
                 guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
                 guard softProofRenderRequestIsCurrent(full) else {
                     revision = frame.developRevision
@@ -284,7 +299,10 @@ extension AppModel {
                 // 결함 제거는 입력 raw(cleaned raw)에 이미 반영되어 있으므로 현상 결과에 그대로 포함된다.
                 return
             } catch is CancellationError {
-                return
+                guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID),
+                      frame.developRevision != revision else { return }
+                revision = frame.developRevision
+                continue
             } catch DevelopFrameRenderError.cleanedRawPending {
                 return
             } catch {
@@ -299,11 +317,13 @@ extension AppModel {
     }
 
     private func renderDevelopmentSnapshot(
-        _ snapshot: DevelopFrameSnapshot
+        _ snapshot: DevelopFrameSnapshot, settledFrame: ScanFrame? = nil
     ) async throws -> DevelopFrameRenderResult {
         let renderTask = Task.detached(priority: .userInitiated) {
             try DevelopFrameRenderer.render(snapshot)
         }
+        settledFrame?.cancelSettledDevelopRender = { renderTask.cancel() }
+        defer { settledFrame?.cancelSettledDevelopRender = nil }
         return try await withTaskCancellationHandler {
             try await renderTask.value
         } onCancel: {
@@ -322,22 +342,35 @@ extension AppModel {
         needsThumbnail: Bool,
         proxyMaxDimension: CGFloat
     ) -> DevelopFrameSnapshot {
-        let previewRaw = cachedPreviewRaw(for: frame, maxDimension: proxyMaxDimension)
+        let isInputPreview = frame.inputGammaPreviewOverride != nil
+        var params = frame.params
+        if let gamma = frame.inputGammaPreviewOverride {
+            params.inputGamma = gamma
+            params.manualBaseRGB = nil
+            if params.baseEstimationMode == .manual { params.baseEstimationMode = .auto }
+        }
+        let previewRaw = isInputPreview ? nil : cachedPreviewRaw(for: frame, maxDimension: proxyMaxDimension)
+        let gammaKey = isInputPreview ? frame.inputGammaPreviewSource.map {
+            InputGammaPreviewMeasurements.Key(source: ObjectIdentifier($0), sourceRevision: frame.sourceLocationRevision,
+                rawRevision: frame.cleanRawRevision, params: params, filmType: frame.filmType,
+                preset: frame.preset, dimension: proxyMaxDimension)
+        } : nil
+        let gammaMeasurements = gammaKey.flatMap { frame.inputGammaPreviewMeasurements.value(for: $0) }
         let cleanedIdentity = frame.boundDefectRecipeIdentity
         return DevelopFrameSnapshot(
             rawScanURL: frame.rawScanURL,
             sourceKind: frame.sourceKind,
             preloadedRaw: frame.identityMatchedCleanedRawImage,
             preloadedPreviewRaw: previewRaw,
-            preloadedFullPreviewRaw: previewRaw == nil ? cachedSettledPreviewRaw(for: frame) : nil,
+            preloadedFullPreviewRaw: !isInputPreview && previewRaw == nil ? cachedSettledPreviewRaw(for: frame) : nil,
             cleanedRawURL: frame.identityMatchedCleanedRawDiskURL,
             filmType: frame.filmType,
-            params: frame.params,
+            params: params,
             preset: frame.preset,
             imageTransform: frame.imageTransform,
-            cachedBase: frame.cachedBaseKey == baseKey ? frame.cachedBase : nil,
+            cachedBase: isInputPreview ? gammaMeasurements?.base : (frame.cachedBaseKey == baseKey ? frame.cachedBase : nil),
             baseKey: baseKey,
-            cachedSceneMeasurements: cachedSceneMeasurements(
+            cachedSceneMeasurements: isInputPreview ? gammaMeasurements?.measurements ?? DevelopSceneMeasurements() : cachedSceneMeasurements(
                 for: frame, baseKey: baseKey, proxyMaxDimension: proxyMaxDimension
             ),
             needsRawPreview: needsRawPreview,
@@ -351,10 +384,19 @@ extension AppModel {
             clippingOverlayEnabled: clippingOverlayEnabled,
             needsPixelSamplerBase: pixelSamplerStore.isEnabled,
             proxyMaxDimension: proxyMaxDimension,
-            needsThumbnail: needsThumbnail,
+            needsThumbnail: !isInputPreview && needsThumbnail,
             cleanedRawFrameID: cleanedIdentity == nil ? nil : frame.id,
             cleanedRawIdentity: cleanedIdentity,
-            requiresCleanedRaw: frame.requiresCleanedRawForActiveDefects
+            requiresCleanedRaw: frame.requiresCleanedRawForActiveDefects,
+            inputGammaPreviewSource: frame.inputGammaPreviewSource,
+            isInputGammaPreview: isInputPreview,
+            inputGammaPreviewDefects: isInputPreview ? frame.defectEdits.map {
+                var item = $0
+                item.cachedPatches = nil
+                return item
+            } : [],
+            inputGammaMeasurementKey: gammaKey,
+            inputGammaPreviewSessionRevision: frame.inputGammaPreviewSessionRevision
         )
     }
 
@@ -368,7 +410,7 @@ extension AppModel {
     func waitForDevelopSettle(_ frame: ScanFrame, revision: Int) async -> Bool {
         let deadline = Date().addingTimeInterval(0.14)
         let poll = UInt64(max(developController.editPollInterval, 0.001) * 1_000_000_000)
-        while Date() < deadline {
+        while Date() < deadline || frame.inputGammaPreviewOverride != nil {
             do {
                 try await Task.sleep(nanoseconds: poll)
             } catch {

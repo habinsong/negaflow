@@ -43,6 +43,11 @@ struct DevelopFrameSnapshot: @unchecked Sendable {
     var cleanedRawFrameID: UUID? = nil
     var cleanedRawIdentity: DefectRecipeIdentity? = nil
     var requiresCleanedRaw: Bool = false
+    var inputGammaPreviewSource: InputGammaPreviewSource? = nil
+    var isInputGammaPreview: Bool = false
+    var inputGammaPreviewDefects: [DefectEditItem] = []
+    var inputGammaMeasurementKey: InputGammaPreviewMeasurements.Key? = nil
+    var inputGammaPreviewSessionRevision: UInt64 = 0
 }
 
 struct DevelopFrameRenderResult: @unchecked Sendable {

@@ -84,7 +84,7 @@ extension ImageLoader {
         if let profile { _ = try InputGammaProfile.linearized(profile) }
     }
 
-    private static func gammaSource(_ url: URL) throws -> (CGImageSource, Data?) {
+    static func gammaSource(_ url: URL) throws -> (CGImageSource, Data?) {
         guard kind(of: url) != .rawDng,
               let source = imageSource(url),
               CGImageSourceGetType(source) as String? == "public.tiff" else {

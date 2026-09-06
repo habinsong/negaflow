@@ -21,6 +21,7 @@ extension AppModel {
         let frameID = frame.id
         let sourceKind = frame.sourceKind
         let inputGamma = frame.params.inputGamma
+        let gammaPreviewSource = frame.inputGammaPreviewSource
         // RAW 디코드 의도는 develop 과 같아야 한다 — 다르면 cleaned raw 가 현상 입력과 다른
         // 이미지가 된다.
         let rawRendering = ImageLoader.RAWRendering
@@ -93,9 +94,15 @@ extension AppModel {
                 } else {
                     let engine = ChromabaseEngine()                // 전체: 원본 raw 디코드
                     // 가져온 파일은 develop 과 동일 로더(방향·색 일치). 스캐너 TIFF는 기존 경로.
-                    let rawCI = sourceKind == .importedFile
-                        ? engine.loadImportedImage(rawURL, rawRendering: rawRendering, inputGamma: inputGamma)
-                        : engine.loadScannerImage(rawURL, inputGamma: inputGamma)
+                    let rawCI: CIImage?
+                    if let source = gammaPreviewSource, source.matches(rawURL) {
+                        rawCI = try? source.image(gamma: inputGamma, maxDimension: 0,
+                            applyOrientation: sourceKind == .importedFile)
+                    } else {
+                        rawCI = sourceKind == .importedFile
+                            ? engine.loadImportedImage(rawURL, rawRendering: rawRendering, inputGamma: inputGamma)
+                            : engine.loadScannerImage(rawURL, inputGamma: inputGamma)
+                    }
                     if let rawCI, !Task.isCancelled {
                         inputCG = cleanedRawContext.createCGImage(rawCI, from: rawCI.extent,
                                                                   format: .RGBA16, colorSpace: linearColorSpace)

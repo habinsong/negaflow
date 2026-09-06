@@ -37,6 +37,13 @@ public sealed partial class DevelopLibrarySourcePanel : UserControl
 
     /// <summary>현상 기본값(프로세스·타깃·필름 프로파일·룩)이 카탈로그를 고쳤을 때 올립니다.</summary>
     public event EventHandler? DevelopDefaultsChanged;
+    public event EventHandler? InputGammaPreviewChanged
+    {
+        add => DevelopDefaultsPanel.InputGammaPreviewChanged += value;
+        remove => DevelopDefaultsPanel.InputGammaPreviewChanged -= value;
+    }
+    public bool HasInputGammaPreview => DevelopDefaultsPanel.HasInputGammaPreview;
+    public LibraryFrameSnapshot ApplyInputGammaPreview(LibraryFrameSnapshot frame) => DevelopDefaultsPanel.ApplyInputGammaPreview(frame);
 
     /// <summary>목록에 들고 나는 것이 생겼습니다 — 필름스트립을 다시 지어야 합니다.</summary>
     public event EventHandler? LibraryFramesChanged;

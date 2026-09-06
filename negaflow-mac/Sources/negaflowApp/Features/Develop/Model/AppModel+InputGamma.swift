@@ -5,20 +5,47 @@ extension AppModel {
     func checkInputGammaSupport(for frame: ScanFrame) async {
         let revision = frame.sourceLocationRevision
         let url = frame.rawScanURL
+        let mayPreparePreview = !frame.isPreviewScan
         frame.inputGammaSupportChecked = false
         frame.inputGammaSourceInfo = nil
+        frame.inputGammaPreviewSource = nil
+        frame.inputGammaPreviewMeasurements.clear()
         let result = await Task.detached(priority: .userInitiated) {
-            Result { try ImageLoader.inputGammaSourceInfo(url) }
+            Result { () -> (InputGammaSourceInfo, InputGammaPreviewSource?) in
+                let info = try ImageLoader.inputGammaSourceInfo(url)
+                return (info, info.manualError == nil && mayPreparePreview ? try? InputGammaPreviewSource(url: url) : nil)
+            }
         }.value
         guard !Task.isCancelled, ownsFrame(frame), frame.sourceLocationRevision == revision else { return }
         switch result {
-        case .success(let info):
+        case .success(let (info, previewSource)):
             frame.inputGammaSourceInfo = info
             frame.inputGammaSourceError = info.manualError
+            frame.inputGammaPreviewSource = previewSource
+            if previewSource != nil { markDevelopedResident(frame) }
         case .failure(let error):
             frame.inputGammaSourceError = (error as? InputGammaDecodeError) ?? .decodeFailed
         }
         frame.inputGammaSupportChecked = true
+    }
+
+    /// 드래그 후보는 카탈로그/Undo에 쓰지 않고 기존 리딩·트레일링 렌더 요청으로 전달합니다.
+    func previewInputGamma(_ gamma: InputGammaInterpretation?, for frame: ScanFrame) {
+        guard ownsFrame(frame), frame.inputGammaPreviewOverride != gamma else { return }
+        guard gamma == nil || (actionableFrame === frame && !frame.isApplyingInputGamma
+            && !frame.isPreviewScan && !frame.defectEditsNeedRestore
+            && frame.inputGammaSourceError == nil && frame.inputGammaSupportChecked) else { return }
+        frame.autoAdjustRevision &+= 1
+        let previousSession = frame.inputGammaPreviewSessionRevision
+        if (gamma == nil) != (frame.inputGammaPreviewOverride == nil) {
+            frame.inputGammaPreviewSessionRevision &+= 1
+        }
+        frame.inputGammaPreviewOverride = gamma
+        InputGammaPreviewTrace.emit(gamma == nil ? "finish" : "request", frameID: frame.id,
+            session: gamma == nil ? previousSession : frame.inputGammaPreviewSessionRevision, value: gamma?.value)
+        frame.developRevision += 1
+        frame.cancelSettledDevelopRender?()
+        requestDevelop(frame)
     }
 
     private nonisolated static func inputGammaSourceFailure(_ url: URL) async -> InputGammaDecodeError? {
@@ -62,6 +89,7 @@ extension AppModel {
         guard inputGammaRequestIsCurrent(frame, requestRevision: requestRevision,
                 sourceRevision: sourceRevision, params: params, selectedID: selectedID) else { return false }
         cancelInfraredClean(frame)
+        frame.cancelSettledDevelopRender?()
         frame.inputGammaSourceError = frame.inputGammaSourceInfo?.manualError
         cancelRegionDefect(frame)
         // 감마는 이산 편집입니다. 이전 슬라이더와 다음 편집에 undo가 합쳐지지 않습니다.

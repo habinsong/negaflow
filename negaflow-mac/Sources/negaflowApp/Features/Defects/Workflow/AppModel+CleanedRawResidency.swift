@@ -88,6 +88,8 @@ extension AppModel {
     /// 비활성 프레임의 풀해상도 발색 버퍼를 해제한다(썸네일/현상완료 플래그/base는 유지).
     /// 재진입 시 raw(또는 cleaned raw)에서 재현상해 즉시 복원한다.
     func evictDevelopBuffers(_ frame: ScanFrame) {
+        frame.inputGammaPreviewSource = nil
+        frame.inputGammaPreviewMeasurements.clear()
         frame.developedImage = nil
         // 결과를 내려놓았으니 "정착 완료" 표시도 함께 내린다 — 이미지 없이 settled 로 남으면
         // 상태가 모순되고, 재진입 판정이 첫 조건을 스치는 경로에서 저해상도로 굳을 수 있다.

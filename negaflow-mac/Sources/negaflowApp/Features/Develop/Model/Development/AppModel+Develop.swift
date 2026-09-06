@@ -76,13 +76,15 @@ extension AppModel {
             reportError(text(AppLocalizedPhrase.removingDefectsFailedStatus))
             return
         }
-        if frame.requiresCleanedRawForActiveDefects,
+        if frame.inputGammaPreviewOverride == nil, frame.requiresCleanedRawForActiveDefects,
            frame.identityMatchedCleanedRawImage == nil,
            frame.identityMatchedCleanedRawDiskURL == nil {
             if frame.cleanRawTask == nil { rebuildCleanedRaw(frame) }
             return
         }
-        guard await prepareCleanedRawForConsumption(frame) else { return }
+        if frame.inputGammaPreviewOverride == nil {
+            guard await prepareCleanedRawForConsumption(frame) else { return }
+        }
         guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
         // filmType 동기화는 실제로 다를 때만(슬라이더 핫패스에서 불필요한 @Published 발행 방지).
         if frame.params.filmType != frame.filmType {

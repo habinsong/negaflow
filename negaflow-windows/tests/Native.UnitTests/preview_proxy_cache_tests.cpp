@@ -1,6 +1,7 @@
 #include "negaflow/pipeline/develop_export.h"
 #include "negaflow/pipeline/stage_timing.h"
 #include "synthetic_wic_tiff.h"
+#include "export/support/decoded_source_store.h"
 
 #include <algorithm>
 #include <array>
@@ -171,6 +172,29 @@ int main(int argc, char** argv) {
             exported.image_width > first.image_width &&
                 exported.image_height > first.image_height,
             "export stays larger than the preview proxy");
+    }
+    if (exported.succeeded) {
+        using namespace negaflow::pipeline::develop_export_detail;
+        auto gamma_request = request;
+        gamma_request.source = request.destination;
+        gamma_request.retain_preview_raw = false;
+        gamma_request.input_gamma = {1U, 1.8};
+        const auto observed = negaflow::imageio::observe_image_file(gamma_request.source);
+        decoded_source_store_reset();
+        const auto gamma_first = negaflow::pipeline::develop_preview(gamma_request,
+            preview_box, preview_box, first_pixels.data(), first_pixels.size());
+        const auto codes = encoded_source_try_take(gamma_request.source, observed.observation, 0U, 0U);
+        expect(gamma_first.succeeded && codes != nullptr, "PNG manual gamma caches original RGB codes");
+        gamma_request.input_gamma = {1U, 2.3};
+        const auto gamma_second = negaflow::pipeline::develop_preview(gamma_request,
+            preview_box, preview_box, second_pixels.data(), second_pixels.size());
+        expect(gamma_second.succeeded && codes == encoded_source_try_take(
+            gamma_request.source, observed.observation, 0U, 0U), "PNG gamma change reuses immutable original codes");
+        decoded_source_store_reset();
+        const auto gamma_fresh = negaflow::pipeline::develop_preview(gamma_request,
+            preview_box, preview_box, third_pixels.data(), third_pixels.size());
+        expect(gamma_fresh.succeeded && second_pixels == third_pixels,
+            "PNG cached gamma exactly matches a fresh decode");
     }
     std::filesystem::remove(request.destination, ignored);
 

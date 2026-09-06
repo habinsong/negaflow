@@ -39,6 +39,9 @@ extension DevelopFrameRenderer {
         engine: ChromabaseEngine,
         context: CIContext
     ) throws -> RenderInput? {
+        if snapshot.isInputGammaPreview && snapshot.requiresCleanedRaw {
+            return try inputGammaDefectPreview(snapshot)
+        }
         let verifiedCleanedRawURL = verifiedCleanedRawURL(snapshot)
         if snapshot.requiresCleanedRaw,
            snapshot.preloadedRaw == nil,
@@ -64,6 +67,17 @@ extension DevelopFrameRenderer {
             ) {
                 return RenderInput(image: ciImage(from: proxy), generatedPreviewRaw: proxy)
             }
+        }
+        if !snapshot.requiresCleanedRaw, let source = snapshot.inputGammaPreviewSource,
+           source.matches(snapshot.rawScanURL) {
+            let image = try source.image(gamma: snapshot.params.inputGamma,
+                maxDimension: snapshot.proxyMaxDimension, applyOrientation: snapshot.sourceKind == .importedFile)
+            if snapshot.isInputGammaPreview {
+                return RenderInput(image: image, generatedPreviewRaw: nil)
+            }
+            let proxy = materializedPreviewRaw(image, usesLinearSRGB: true,
+                sourceBitsPerComponent: 16, context: linearRawProxyContext)
+            return RenderInput(image: proxy.map(ciImage(from:)) ?? image, generatedPreviewRaw: proxy)
         }
         // 활성 프레임의 메모리 결함 제거 raw(cleanedRawImage)는 항상 최신이다 — 커밋 시 동기 갱신되는 반면
         // 디스크 백킹(cleanedRawURL)은 커밋 후 비동기로 저장된다. 여기서 메모리 raw 를 프록시로 파생해,

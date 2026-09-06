@@ -1,6 +1,7 @@
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
+using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
 using Microsoft.UI.Xaml.Media;
 
@@ -64,8 +65,9 @@ public sealed partial class DevelopWorkspaceView
             "RequestPreviewNow frame=" + frame.Id +
             " path=" + frame.SourcePath +
             " presentedFrame=" + (presentedFrameId ?? "null"));
+        frame = LeftPanel.ApplyInputGammaPreview(frame);
         // macOS `trimDeveloped(selectedFrameID:)` — 보고 있는 사진은 축출 대상에서 뺍니다.
-        if (thumbnails is not null)
+        if (thumbnails is not null && !LeftPanel.HasInputGammaPreview)
         {
             thumbnails.ObserveFrame(frame);
             thumbnails.SelectedFrameId = frame.Id;
@@ -128,7 +130,10 @@ public sealed partial class DevelopWorkspaceView
                     " hasThumb=" + (thumbnails is not null));
             }
         }
-        _ = replaceActive
+        _ = LeftPanel.HasInputGammaPreview
+            ? previewCoordinator.RequestInputGammaPreviewAsync(frame,
+                outcome => ShowPreview(outcome, clearPixelsOnFailure: false, frame))
+            : replaceActive
             ? previewCoordinator.RequestReplacingAsync(
                 frame,
                 outcome => ShowPreview(outcome, clearPixelsOnFailure: true, frame))

@@ -121,6 +121,11 @@ final class ScanFrame: ObservableObject, Identifiable {
     @Published var inputGammaSupportChecked = false
     @Published var inputGammaSourceError: InputGammaDecodeError?
     @Published var inputGammaSourceInfo: InputGammaSourceInfo?
+    var inputGammaPreviewSource: InputGammaPreviewSource?
+    var inputGammaPreviewOverride: InputGammaInterpretation?
+    var inputGammaPreviewSessionRevision: UInt64 = 0
+    var cancelSettledDevelopRender: (() -> Void)?
+    var inputGammaPreviewMeasurements = InputGammaPreviewMeasurements()
     var inputGammaRequestRevision: UInt64 = 0
     @Published var params: DevelopParameters {
         didSet {

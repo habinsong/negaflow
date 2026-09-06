@@ -60,6 +60,7 @@ public sealed partial class PreviewCoordinator
     private int developRevision;
     private int minimumDeliveryRevision;
     private LibraryFrameSnapshot? lastRequestedFrame;
+    private bool lastRequestWasInputGammaPreview;
 
     private bool isRunning;
     private PreviewRequest? pending;
@@ -134,7 +135,8 @@ public sealed partial class PreviewCoordinator
     private sealed record PreviewRequest(
         LibraryFrameSnapshot Frame,
         Action<PreviewOutcome> OnCompleted,
-        int Revision);
+        int Revision,
+        bool InputGammaPreview = false);
 
     /// <summary>렌더 한 번의 결과와, 그 화소가 들어 있는 버퍼의 임대입니다.</summary>
     private readonly record struct LeasedOutcome(PreviewOutcome Outcome, int Lease);
@@ -278,10 +280,13 @@ public sealed partial class PreviewCoordinator
         Action<PreviewOutcome> onCompleted) =>
         RequestAsync(frame, onCompleted, replaceActive: true);
 
+    public Task RequestInputGammaPreviewAsync(LibraryFrameSnapshot frame, Action<PreviewOutcome> onCompleted) =>
+        RequestAsync(frame, onCompleted, replaceActive: false, inputGammaPreview: true);
+
     private Task RequestAsync(
         LibraryFrameSnapshot frame,
         Action<PreviewOutcome> onCompleted,
-        bool replaceActive)
+        bool replaceActive, bool inputGammaPreview = false)
     {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(onCompleted);
@@ -291,11 +296,13 @@ public sealed partial class PreviewCoordinator
         lock (gate)
         {
             // 프로세스/타깃/원본 전환은 단순 슬라이더 중간값처럼 배달하지 않습니다.
-            replaceActive |= lastRequestedFrame is { } previous && PreviewRouteChanged(previous, frame);
+            replaceActive |= lastRequestedFrame is { } previous && PreviewRouteChanged(previous, frame, inputGammaPreview);
+            replaceActive |= lastRequestWasInputGammaPreview && !inputGammaPreview;
+            lastRequestWasInputGammaPreview = inputGammaPreview;
             lastRequestedFrame = frame;
             // 요청마다 하나씩 올라가는 번호입니다. 배달된 그림이 어느 편집 상태의 것인지
             // 화면이 판정하는 유일한 근거입니다.
-            request = new PreviewRequest(frame, onCompleted, ++developRevision);
+            request = new PreviewRequest(frame, onCompleted, ++developRevision, inputGammaPreview);
             if (replaceActive)
             {
                 minimumDeliveryRevision = request.Revision;
@@ -353,9 +360,9 @@ public sealed partial class PreviewCoordinator
         return RunLoopAsync(request, run);
     }
 
-    internal static bool PreviewRouteChanged(LibraryFrameSnapshot left, LibraryFrameSnapshot right) =>
+    internal static bool PreviewRouteChanged(LibraryFrameSnapshot left, LibraryFrameSnapshot right, bool continuousGamma = false) =>
         left.Id != right.Id || left.SourcePath != right.SourcePath || left.SourceMetadata != right.SourceMetadata ||
-        left.InputGamma != right.InputGamma || left.DevelopTarget != right.DevelopTarget ||
+        (!continuousGamma && left.InputGamma != right.InputGamma) || left.DevelopTarget != right.DevelopTarget ||
         left.Route.FilmType != right.Route.FilmType || left.Route.SourceSignalKind != right.Route.SourceSignalKind ||
         left.Route.FilmEmulation != right.Route.FilmEmulation || left.LookPresetId != right.LookPresetId ||
         left.Base.Mode != right.Base.Mode || left.Base.FilmStockDminId != right.Base.FilmStockDminId ||
