@@ -95,7 +95,7 @@ void trim_locked() noexcept {
 bool same_preview_raw_key(
     const PreviewRawKey& left,
     const PreviewRawKey& right) noexcept {
-    if (left.path != right.path ||
+    if (left.path != right.path || left.input_gamma != right.input_gamma ||
         !negaflow::imageio::same_image_file_observation(
             left.observation, right.observation) ||
         left.base_mode != right.base_mode ||

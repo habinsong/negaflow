@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -1576,4 +1576,15 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="libraryUnreadableFramesTitle.Text" xml:space="preserve"><value>%d photos n’ont pas pu être lues par cette version</value><comment>W10: 읽지 못한 사진 배너 제목</comment></data>
   <data name="libraryUnreadableFramesMessage.Text" xml:space="preserve"><value>Leurs fichiers et entrées de catalogue sont intacts. Ils réapparaîtront dès qu’une version qui les comprend ouvrira la bibliothèque.</value><comment>W10: 파일과 카탈로그는 그대로라는 사실을 알립니다</comment></data>
   <data name="commonDone.Content" xml:space="preserve"><value>Terminé</value><comment>AppLocalizedPhrase.done</comment></data>
+  <data name="developBaseScale.Text" xml:space="preserve"><value>Échelle de base</value></data>
+  <data name="inputGamma.Text" xml:space="preserve"><value>Gamma d’entrée</value></data>
+  <data name="inputGammaAuto.Value" xml:space="preserve"><value>Auto</value></data>
+  <data name="inputGammaRestore.Value" xml:space="preserve"><value>Rétablir le gamma d’entrée automatique</value></data>
+  <data name="inputGammaHelp.Value" xml:space="preserve"><value>0.1–4.0, par pas de 0.1. Utilisez un point décimal. Entrée applique ; Échap annule.</value></data>
+  <data name="inputGammaUnsupported.Value" xml:space="preserve"><value>Le gamma manuel accepte les TIFF RVB 8 ou 16 bits sans alpha, avec un profil ICC matriciel ou sans profil ICC.</value></data>
+  <data name="inputGammaRecorded.Value" xml:space="preserve"><value>Gamma du fichier {0:0.0}</value></data>
+  <data name="inputGammaProfile.Value" xml:space="preserve"><value>Profil couleur du fichier</value></data>
+  <data name="inputGammaAssumedLinear.Value" xml:space="preserve"><value>Supposé · linéaire 1.0</value></data>
+  <data name="inputGammaAssumedSRGB.Value" xml:space="preserve"><value>Supposé · sRGB</value></data>
+  <data name="inputGammaEstimated.Value" xml:space="preserve"><value>Gamma estimé {0:0.0}</value></data>
 </root>

@@ -29,16 +29,18 @@
                             </Grid>
                             <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock x:Name="PasteScopeLabel" VerticalAlignment="Center" FontSize="12" />
                                 <DropDownButton
                                     x:Name="PasteScopeButton"
                                     Grid.Column="1"
+                                    HorizontalAlignment="Stretch" MinWidth="0"
                                     Padding="8,2"
                                     AutomationProperties.AutomationId="negaflow.develop.presets.scope"
                                     FontSize="11">
+                                    <TextBlock x:Name="PasteScopeSummaryText" TextTrimming="CharacterEllipsis" />
                                     <DropDownButton.Flyout>
                                         <MenuFlyout Placement="Bottom">
                                             <MenuFlyoutItem
@@ -46,6 +48,14 @@
                                                 AutomationProperties.AutomationId="negaflow.develop.presets.scope.all"
                                                 Click="OnPasteScopeAllClicked" />
                                             <MenuFlyoutSeparator />
+                                            <ToggleMenuFlyoutItem
+                                                x:Name="PasteScopeInputGammaItem"
+                                                AutomationProperties.AutomationId="negaflow.develop.presets.scope.input-gamma"
+                                                Click="OnPasteScopeToggled" Tag="InputGamma" />
+                                            <ToggleMenuFlyoutItem
+                                                x:Name="PasteScopeBaseScaleItem"
+                                                AutomationProperties.AutomationId="negaflow.develop.presets.scope.base-scale"
+                                                Click="OnPasteScopeToggled" Tag="BaseScale" />
                                             <ToggleMenuFlyoutItem
                                                 x:Name="PasteScopeBaseItem"
                                                 AutomationProperties.AutomationId="negaflow.develop.presets.scope.base"

@@ -1,6 +1,7 @@
 import XCTest
 import CoreGraphics
 import Chromabase
+import ScannerKit
 @testable import negaflowApp
 
 final class ThumbnailDiskCacheTests: XCTestCase {
@@ -70,6 +71,40 @@ final class ThumbnailDiskCacheTests: XCTestCase {
 
         XCTAssertNotNil(ThumbnailDiskCache.load(at: rawURL))
         XCTAssertNotNil(ThumbnailDiskCache.load(at: developedURL))
+    }
+
+    func testRecipeMetadataRejectsOldOrUnidentifiedDevelopedThumbnail() async throws {
+        let cache = ThumbnailDiskCache()
+        let url = temporaryDirectory.appendingPathComponent("recipe.jpg")
+        let image = try XCTUnwrap(Self.makeImage())
+        let id = UUID()
+        cache.store(image, for: id, at: url, recipeID: "c41-main")
+        await cache.waitUntilIdle()
+        XCTAssertNotNil(ThumbnailDiskCache.load(at: url, matchingRecipe: "c41-main"))
+        XCTAssertNil(ThumbnailDiskCache.load(at: url, matchingRecipe: "digital-bw-hr"))
+        cache.store(image, for: id, at: url)
+        await cache.waitUntilIdle()
+        XCTAssertNil(ThumbnailDiskCache.load(at: url, matchingRecipe: "c41-main"))
+        XCTAssertNotNil(ThumbnailDiskCache.load(at: url))
+    }
+
+    @MainActor
+    func testDevelopedDigitalBWRestoresMissingThumbnailFromCurrentRecipe() async throws {
+        let url = temporaryDirectory.appendingPathComponent("digital.tiff")
+        try MockScannerBackend.writeSyntheticNegative(width: 24, height: 16, to: url)
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "thumbnail-review-\(UUID())"))
+        let storage = DiskStorageStore(defaults: defaults)
+        storage.thumbnailsPath = temporaryDirectory.appendingPathComponent("thumbs").path
+        let model = AppModel(diskStorageStore: storage)
+        let frame = ScanFrame(scanIndex: 1, rawScanURL: url, filmType: .bwPositive, sourceKind: .importedFile)
+        frame.updateParams { $0.filmType = .bwPositive; $0.isDigitalSource = true; $0.developTarget = .hr }
+        frame.hasDevelopedOnce = true
+        model.frames = [frame]
+        await model.loadThumbnailsFromDisk(for: [frame]).value
+        XCTAssertTrue(frame.developedIsSettled)
+        XCTAssertNotNil(frame.thumbnailImage)
+        XCTAssertFalse(frame.thumbnailImage === frame.rawPreviewImage)
+        XCTAssertEqual(frame.params.developTarget, .hr)
     }
 
     @MainActor

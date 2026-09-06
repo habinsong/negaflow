@@ -500,8 +500,13 @@ public sealed partial class PrintWorkspaceView : UserControl
         ToolTipService.SetToolTip(button, text);
     }
 
+    internal Task PrepareForTerminationAsync() => Task.WhenAll(
+        printSheetExport?.DrainAsync() ?? Task.CompletedTask,
+        PrintExportPanel.runner.DrainAsync());
+
     private void OnUnloaded(object sender, RoutedEventArgs args)
     {
+        printPreview?.InvalidateForRecipeChange();
         _ = sender;
         _ = args;
         if (workspaceState is not null)

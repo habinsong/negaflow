@@ -198,6 +198,10 @@ private struct DevelopDefaultsSection: View {
             }
 
             profileAndLookRow
+            if model.activeWorkspaceModule == .develop, let frame = model.actionableFrame {
+                InputGammaControlSection(frame: frame)
+                    .id("\(frame.id)-\(frame.sourceLocationRevision)")
+            }
         } header: {
             sectionHeader(model.text(.developDefaults), systemImage: "camera.filters")
         }

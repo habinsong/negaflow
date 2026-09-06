@@ -169,7 +169,7 @@ enum ExportDevelopedFrameRenderer {
                 selectedDecodeProvenance = cleaned.provenance
             } else if snapshot.requiresCleanedRaw {
                 throw ChromabaseError.loadFailed(cleanedRawURL.path)
-            } else if let source = loadSource(
+            } else if let source = try loadSource(
                 snapshot,
                 sourceURL: sourceAccessURL,
                 proxyLongEdge: decodeProxyLongEdge
@@ -182,7 +182,7 @@ enum ExportDevelopedFrameRenderer {
             }
         } else if snapshot.requiresCleanedRaw {
             throw ChromabaseError.loadFailed("required cleaned raw is unavailable")
-        } else if let source = loadSource(
+        } else if let source = try loadSource(
             snapshot,
             sourceURL: sourceAccessURL,
             proxyLongEdge: decodeProxyLongEdge
@@ -206,9 +206,14 @@ enum ExportDevelopedFrameRenderer {
                 filmType: snapshot.filmType
             )
             : nil
+        var measurements = DevelopSceneMeasurements()
+        if snapshot.format != .rawScanTIFF {
+            try InputGammaRenderReference.prepare(source: sourceAccessURL,
+                params: snapshot.params, measurements: &measurements)
+        }
         let developedImage = snapshot.format == .rawScanTIFF
             ? rawInput
-            : engine.developScanner(image: developInput, base: base, params: snapshot.params)
+            : engine.developScanner(image: developInput, base: base, params: snapshot.params, measurements: &measurements)
 
         return ExportDevelopedFrameRender(
             rawInput: rawInput,
@@ -286,29 +291,33 @@ enum ExportDevelopedFrameRenderer {
         _ snapshot: ExportFrameSnapshot,
         sourceURL: URL,
         proxyLongEdge: CGFloat?
-    ) -> LoadedSource? {
+    ) throws -> LoadedSource? {
         if let proxyLongEdge,
            let preview = snapshot.sourceKind == .importedFile
-            ? ImageLoader.loadImportedPreview(
+            ? try ImageLoader.loadImportedPreview(
                 sourceURL,
                 maxDimension: proxyLongEdge,
                 highResolutionThreshold: proxyLongEdge,
+                inputGamma: snapshot.params.inputGamma,
                 rawRendering: .forDigitalSource(snapshot.params.isDigitalSource)
             )
-            : ImageLoader.loadScannerPreview(
+            : try ImageLoader.loadScannerPreview(
                 sourceURL,
                 maxDimension: proxyLongEdge,
-                highResolutionThreshold: proxyLongEdge
+                highResolutionThreshold: proxyLongEdge,
+                inputGamma: snapshot.params.inputGamma
             ) {
-            return LoadedSource(image: preview.image, provenance: nil)
+            return LoadedSource(image: preview.image, provenance: snapshot.params.inputGamma == .automatic ? nil
+                : ImageLoader.DecodeProvenance(decoder: .imageIO, inputGamma: snapshot.params.inputGamma))
         }
         let decoded = snapshot.sourceKind == .importedFile
-            ? ImageLoader.loadImportedDecoded(
+            ? try ImageLoader.loadImportedDecoded(
                 sourceURL,
+                inputGamma: snapshot.params.inputGamma,
                 rawRendering: .forDigitalSource(snapshot.params.isDigitalSource)
             )
-            : ImageLoader.loadScannerTIFFDecoded(sourceURL)
-        return decoded.map { LoadedSource(image: $0.image, provenance: $0.provenance) }
+            : try ImageLoader.loadScannerTIFFDecoded(sourceURL, inputGamma: snapshot.params.inputGamma)
+        return LoadedSource(image: decoded.image, provenance: decoded.provenance)
     }
 
     private static func loadCleanedSource(

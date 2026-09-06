@@ -258,16 +258,16 @@ internal sealed class LibrarySourceRail
     /// 진행률은 렌더 스레드에서 올라옵니다. 글자를 거기서 바꾸면 WinUI 가
     /// 잘못된 스레드라고 던집니다.
     /// </summary>
-    private void ReportFolderProgress(
-        LibraryFolderHeader header,
-        LibraryFolderDevelopmentProgress update)
+    private void ReportFolderProgress(LibraryFolderHeader header, LibraryFolderDevelopmentProgress update)
     {
-        if (view.DispatcherQueue is not { } queue || queue.HasThreadAccess)
+        void Show()
         {
             header.ShowProgress(update);
-            return;
+            if (update.FailedCount > 0)
+            { view.ControlsPanel.ImportStatusText.Text = AppResources.Get("libraryProcessApplyFailed", "Text"); }
         }
-        _ = queue.TryEnqueue(() => header.ShowProgress(update));
+        if (view.DispatcherQueue is not { } queue || queue.HasThreadAccess) { Show(); }
+        else { _ = queue.TryEnqueue(Show); }
     }
 
     /// <summary>

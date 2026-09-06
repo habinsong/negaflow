@@ -229,7 +229,8 @@ ScannerToWorkingStatus IcmRgb16Transform::translate(
 
 EncodedSrgb16Result convert_embedded_icc_to_srgb16(
     const negaflow::imageio::DecodedImage& decoded,
-    const ScannerToWorkingLimits& limits) noexcept {
+    const ScannerToWorkingLimits& limits,
+    const std::span<const std::uint8_t> profile_override) noexcept {
     EncodedSrgb16Result result{};
     try {
         const std::uint64_t rgb_stride_bytes =
@@ -296,7 +297,9 @@ EncodedSrgb16Result convert_embedded_icc_to_srgb16(
         }
 
         IcmRgb16Transform transform{};
-        result.status = transform.initialize(decoded.icc_profile, result.native_error_code);
+        result.status = transform.initialize(profile_override.empty()
+            ? std::span<const std::uint8_t>(decoded.icc_profile) : profile_override,
+            result.native_error_code);
         if (result.status != ScannerToWorkingStatus::ok) {
             return result;
         }

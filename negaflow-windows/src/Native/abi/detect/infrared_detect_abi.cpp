@@ -139,7 +139,8 @@ namespace {
     const nf_infrared_detector_parameters_v1* const parameters,
     const uint32_t* const cancel_requested,
     nf_infrared_detection_summary_v1* const summary,
-    nf_infrared_detection_handle_v1** const handle) {
+    nf_infrared_detection_handle_v1** const handle,
+    const negaflow::color::InputGammaInterpretation input_gamma = {}) {
     if (summary == nullptr || handle == nullptr) return NF_STATUS_INVALID_ARGUMENT;
     *handle = nullptr;
     if (summary->struct_size < static_cast<std::uint32_t>(sizeof(*summary))) {
@@ -163,7 +164,7 @@ namespace {
         std::filesystem::path{infrared_path},
         visible_source_kind,
         infrared_parameters(*parameters),
-        negaflow::core::CancelFlag{cancel_requested});
+        negaflow::core::CancelFlag{cancel_requested}, input_gamma);
     return publish_infrared_detection(std::move(detection), summary, handle);
 }
 
@@ -300,6 +301,37 @@ nf_status_t NF_CALL nf_detect_infrared_defects_from_files_v2(
         cancel_requested,
         summary,
         handle);
+}
+nf_status_t NF_CALL nf_detect_infrared_defects_from_files_v3(
+    const wchar_t* const visible_path,
+    const wchar_t* const infrared_path,
+    const uint32_t visible_source_kind,
+    const uint32_t input_gamma_mode, const double input_gamma_value,
+    const nf_infrared_detector_parameters_v1* const parameters,
+    const uint32_t* const cancel_requested,
+    nf_infrared_detection_summary_v1* const summary,
+    nf_infrared_detection_handle_v1** const handle) {
+    const negaflow::color::InputGammaInterpretation gamma{input_gamma_mode, input_gamma_value};
+    if (!gamma.valid()) { return NF_STATUS_INVALID_ARGUMENT; }
+    negaflow::abi::detail::InfraredVisibleSourceKind source_kind{};
+    switch (visible_source_kind) {
+        case NF_INFRARED_VISIBLE_SOURCE_SCANNER_TIFF:
+            source_kind = negaflow::abi::detail::InfraredVisibleSourceKind::scanner_tiff;
+            break;
+        case NF_INFRARED_VISIBLE_SOURCE_IMPORTED_FILE:
+            source_kind = negaflow::abi::detail::InfraredVisibleSourceKind::imported_file;
+            break;
+        default:
+            return NF_STATUS_INVALID_ARGUMENT;
+    }
+    return detect_infrared_files(
+        visible_path,
+        infrared_path,
+        source_kind,
+        parameters,
+        cancel_requested,
+        summary,
+        handle, gamma);
 }
 
 nf_status_t NF_CALL nf_infrared_detection_get_cluster_v1(

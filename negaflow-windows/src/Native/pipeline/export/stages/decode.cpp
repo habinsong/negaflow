@@ -35,6 +35,7 @@ namespace {
 // 프레임별로 나누고, 잠그고, `shared_ptr<const>` 로 넘깁니다.
 struct DecodedSourceEntry final {
     std::filesystem::path path{};
+    negaflow::color::InputGammaInterpretation input_gamma{};
     negaflow::imageio::ImageFileObservation observation{};
     // **어느 크기로 푼 것인가.** 0 이면 원본 그대로입니다.
     //
@@ -97,13 +98,14 @@ void trim_decoded_locked() noexcept {
     const std::filesystem::path& path,
     const negaflow::imageio::ImageFileObservation& observation,
     const std::uint32_t box_width,
-    const std::uint32_t box_height) noexcept {
+    const std::uint32_t box_height,
+    const negaflow::color::InputGammaInterpretation input_gamma) noexcept {
     const std::lock_guard<std::mutex> guard{g_decoded_mutex};
     // 새 할당이 없어도 시스템이 저메모리로 바뀌었으면 첫 재사용에서 과거 프레임을 내립니다.
     trim_decoded_locked();
     for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
         DecodedSourceEntry& entry = g_decoded_sources[index];
-        if (entry.path != path ||
+        if (entry.path != path || entry.input_gamma != input_gamma ||
             entry.box_width != box_width || entry.box_height != box_height ||
             !negaflow::imageio::same_image_file_observation(
                 entry.observation, observation)) {
@@ -131,7 +133,8 @@ void put_decoded(
     const negaflow::imageio::ImageFileObservation& observation,
     const std::uint32_t box_width,
     const std::uint32_t box_height,
-    std::shared_ptr<const negaflow::imaging::WorkingImage> image) noexcept {
+    std::shared_ptr<const negaflow::imaging::WorkingImage> image,
+    const negaflow::color::InputGammaInterpretation input_gamma) noexcept {
     if (image == nullptr) {
         return;
     }
@@ -139,7 +142,7 @@ void put_decoded(
         const std::lock_guard<std::mutex> guard{g_decoded_mutex};
         for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
             DecodedSourceEntry& existing = g_decoded_sources[index];
-            if (existing.path != path ||
+            if (existing.path != path || existing.input_gamma != input_gamma ||
                 existing.box_width != box_width || existing.box_height != box_height) {
                 continue;
             }
@@ -159,6 +162,7 @@ void put_decoded(
         }
         DecodedSourceEntry entry{};
         entry.path = path;
+        entry.input_gamma = input_gamma;
         entry.observation = observation;
         entry.box_width = box_width;
         entry.box_height = box_height;
@@ -190,12 +194,13 @@ bool decoded_cleaned_raw_try_take(
     const negaflow::imageio::ImageFileObservation& observation,
     const std::array<std::uint8_t, 32U>& recipe_sha256,
     std::shared_ptr<const negaflow::imaging::WorkingImage>& image,
-    DefectRecipeStageInfo& info) noexcept {
+    DefectRecipeStageInfo& info,
+    const negaflow::color::InputGammaInterpretation input_gamma) noexcept {
     const std::lock_guard<std::mutex> guard{g_decoded_mutex};
     trim_decoded_locked();
     for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
         DecodedSourceEntry& entry = g_decoded_sources[index];
-        if (entry.path != path || entry.cleaned_image == nullptr ||
+        if (entry.path != path || entry.input_gamma != input_gamma || entry.cleaned_image == nullptr ||
             entry.cleaned_recipe_sha256 != recipe_sha256 ||
             !negaflow::imageio::same_image_file_observation(
                 entry.observation, observation)) {
@@ -220,7 +225,8 @@ void decoded_cleaned_raw_put(
     const negaflow::imageio::ImageFileObservation& observation,
     const std::array<std::uint8_t, 32U>& recipe_sha256,
     std::shared_ptr<const negaflow::imaging::WorkingImage> image,
-    const DefectRecipeStageInfo& info) noexcept {
+    const DefectRecipeStageInfo& info,
+    const negaflow::color::InputGammaInterpretation input_gamma) noexcept {
     if (image == nullptr) {
         return;
     }
@@ -228,7 +234,7 @@ void decoded_cleaned_raw_put(
         const std::lock_guard<std::mutex> guard{g_decoded_mutex};
         for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
             DecodedSourceEntry& entry = g_decoded_sources[index];
-            if (entry.path != path) {
+            if (entry.path != path || entry.input_gamma != input_gamma) {
                 continue;
             }
             if (!negaflow::imageio::same_image_file_observation(
@@ -249,6 +255,7 @@ void decoded_cleaned_raw_put(
         }
         DecodedSourceEntry entry{};
         entry.path = path;
+        entry.input_gamma = input_gamma;
         entry.observation = observation;
         entry.cleaned_recipe_sha256 = recipe_sha256;
         entry.cleaned_image = std::move(image);
@@ -267,6 +274,9 @@ std::optional<DevelopExportOutcome> decode_source(
     negaflow::imaging::WorkingImage& decoded_image,
     const PreviewTarget* preview) noexcept {
     tracker.begin(DevelopExportStage::decode, cost_of(decode_cost, true));
+    if (request.input_gamma.mode != 0U && !is_tiff_source(request.source)) {
+        return fail(DevelopExportStage::decode, "unsupported_input_gamma_source");
+    }
     // 전체 해상도가 필요한 조건은 아래 두 갈래가 같습니다 - defect 편집의 ROI 가 원본 화소
     // 좌표라 프리뷰 크기로 줄이면 그 좌표가 화상 밖으로 나갑니다.
     // 판에 얹을 프록시는 **풀 때부터** 그 크기로 풉니다. macOS
@@ -276,7 +286,7 @@ std::optional<DevelopExportOutcome> decode_source(
     const bool proxy_decode =
         preview == nullptr && request.proxy_input_long_edge != 0U;
     const bool decodes_full_resolution =
-        (preview == nullptr && !proxy_decode) || !request.defect_recipe.order.empty();
+        (preview == nullptr && !proxy_decode) || !request.defect_recipe.order.empty() || request.input_gamma.mode != 0U;
     // **요청 상자가 무엇이든 디코드는 정착 크기로 한 번만 합니다.**
     //
     // 앱은 한 프레임에 인터랙티브(2560)와 정착(3600)을 이어서 부릅니다. 요청 상자 그대로
@@ -292,7 +302,7 @@ std::optional<DevelopExportOutcome> decode_source(
     // 잠금은 참조를 꺼낼 때만 잡습니다. 277MB 복사를 잠금 안에서 하면 다른 스레드가
     // 그동안 통째로 멈춥니다 — 참조를 들고 있으므로 복사 중에 해제되지 않습니다.
     if (const std::shared_ptr<const negaflow::imaging::WorkingImage> cached =
-            take_decoded(request.source, observed.before.observation, box_width, box_height)) {
+            take_decoded(request.source, observed.before.observation, box_width, box_height, request.input_gamma)) {
         try {
             decoded_image = *cached;
         } catch (...) {
@@ -329,7 +339,7 @@ std::optional<DevelopExportOutcome> decode_source(
             request.source,
             {},
             {},
-            decode_control);
+            decode_control, request.input_gamma);
         // 줄여 푼 것이 실패하면 **원본 크기로 한 번 더** 시도합니다. 판 프록시도 같은
         // 물러섬을 씁니다 — 줄여 풀지 못한다는 이유로 판이 통째로 실패하면 안 됩니다.
         if (decode_control.max_output_width != 0U &&
@@ -342,7 +352,7 @@ std::optional<DevelopExportOutcome> decode_source(
                 request.source,
                 {},
                 {},
-                decode_control);
+                decode_control, request.input_gamma);
         }
         if (prepared.decode.status == negaflow::imageio::WicTiffDecodeStatus::cancelled) {
             return cancelled_outcome(DevelopExportStage::decode);
@@ -396,7 +406,7 @@ std::optional<DevelopExportOutcome> decode_source(
                 negaflow::imageio::wic_standard_image_decode_status_name(decoded.status));
         }
         negaflow::imaging::ScannerToWorkingResult working =
-            negaflow::imaging::convert_scanner_to_working(decoded.image);
+            negaflow::imaging::convert_scanner_to_working(decoded.image, {}, request.input_gamma);
         if (working.status != negaflow::imaging::ScannerToWorkingStatus::ok) {
             return fail(
                 DevelopExportStage::decode,
@@ -466,7 +476,7 @@ std::optional<DevelopExportOutcome> decode_source(
             observed.before.observation,
             box_width,
             box_height,
-            std::make_shared<const negaflow::imaging::WorkingImage>(decoded_image));
+            std::make_shared<const negaflow::imaging::WorkingImage>(decoded_image), request.input_gamma);
     } catch (...) {
         // 캐시에 못 남겨도 이번 디코드 결과는 `decoded_image` 에 있습니다.
     }

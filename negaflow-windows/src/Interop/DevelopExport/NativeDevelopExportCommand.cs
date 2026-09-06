@@ -46,8 +46,12 @@ internal static unsafe class NativeDevelopExportCommand
             throw new ArgumentException("A defect bake requires a non-empty recipe.", nameof(request));
         }
 
-        NativeDevelopExportResultV4 raw = default;
-        raw.StructSize = (uint)sizeof(NativeDevelopExportResultV4);
+        if (bakeDefects && NativeDevelopInput.RequiresV39(request))
+        {
+            throw new NotSupportedException("Input interpretation must be preserved with a non-destructive recipe.");
+        }
+        NativeDevelopExportResultV6 raw = default;
+        raw.StructSize = (uint)sizeof(NativeDevelopExportResultV6);
         uint status;
 
         // A null run state is the pre-v22 behaviour: the call simply runs to the end.
@@ -150,7 +154,14 @@ internal static unsafe class NativeDevelopExportCommand
                     request);
                 // 판 프록시는 v34 지름길을 쓸 수 없습니다 — 입력 해상도를 싣는 칸이 v38 에만
                 // 있기 때문입니다.
-                if (defectRecipeSha256.Length == 0 && outputIcc.Length == 0 &&
+                if (NativeDevelopInput.RequiresV39(request) && !bakeDefects)
+                {
+                    NativeDevelopExportRequestV39 v39 = NativeDevelopInput.Build(
+                        BuildRequestV36(BuildRequestV35(v34, defectRecipeDigest, checked((uint)defectRecipeSha256.Length)), null, 0U, 0U),
+                        request, outputIccProfile, checked((uint)outputIcc.Length));
+                    status = NativeDevelopInput.Export(&v39, runState, (NativeDevelopExportResultV3*)&raw);
+                }
+                else if (defectRecipeSha256.Length == 0 && outputIcc.Length == 0 &&
                     request.ProxyInputLongEdge == 0)
                 {
                     status = NativeDevelopRun.nf_develop_export_v34(
@@ -199,6 +210,7 @@ internal static unsafe class NativeDevelopExportCommand
         return Translate(
             status,
             raw,
+            NativeDevelopInput.RequiresV39(request) ? "nf_develop_export_v39" :
             defectRecipeSha256.Length == 0 && outputIcc.Length == 0 &&
                 request.ProxyInputLongEdge == 0
                 ? "nf_develop_export_v34"

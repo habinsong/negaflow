@@ -65,7 +65,7 @@ public sealed partial class DevelopPanelState
     /// 수동 값이 없으면 <b>마지막으로 잰 base</b> 를 이어받습니다.
     /// </summary>
     public ManualBaseRgb ManualBaseForDisplay =>
-        baseEditor.ManualBaseOrMeasured(ManualBase, LastAppliedBase);
+        baseEditor.ManualBaseOrMeasured(ManualBase, LastReferenceBase);
 
     /// <summary>
     /// macOS <c>ScanFrame.baseRGB</c> — 마지막 미리보기가 쓴 Dmin 입니다. 카탈로그
@@ -73,10 +73,11 @@ public sealed partial class DevelopPanelState
     /// </summary>
     public ManualBaseRgb? LastAppliedBase { get; private set; }
 
-    public void RememberAppliedBase(float red, float green, float blue)
+    public void RememberAppliedBase(float red, float green, float blue, DevelopReferenceBase? reference = null)
     {
         ManualBaseRgb rgb = new(red, green, blue);
         LastAppliedBase = rgb;
+        baseReference.Remember(SelectedFrame, rgb, reference);
         if (SelectedFrame is not { } frame)
         {
             return;
@@ -105,7 +106,7 @@ public sealed partial class DevelopPanelState
 
     public LibraryFrameError SetBaseMode(BaseEstimationMode mode)
     {
-        return RefreshAfterEdit(baseEditor.SetMode(SelectedFrame, mode, LastAppliedBase));
+        return RefreshAfterEdit(baseEditor.SetMode(SelectedFrame, mode, LastReferenceBase));
     }
 
     /// <summary>macOS <c>resetManualBase</c> — 수동 값을 지웁니다.</summary>
@@ -167,7 +168,7 @@ public sealed partial class DevelopPanelState
     public ImageTransformRecipe ImageTransform =>
         SelectedFrame?.ImageTransform ?? ImageTransformRecipe.Identity;
 
-    public bool CanExport => SelectedFrame is { CanDevelop: true } && !host.IsExporting;
+    public bool CanExport => SelectedFrame is { CanDevelop: true, IsPreviewScan: false } && !host.IsExporting;
 
     /// <summary>
     /// 이 프레임을 고를 때 IR 결함 제거가 낸 결과입니다. macOS <c>statusMessage</c> 자리이며,
@@ -205,6 +206,8 @@ public sealed partial class DevelopPanelState
                 return false;
             }
             SelectedFrame = frame;
+            BindReferenceInput(frame);
+            LastAppliedBase = frame.AppliedBase;
             return true;
         }
         return false;
@@ -220,6 +223,7 @@ public sealed partial class DevelopPanelState
             if (string.Equals(frame.Id, frameId, StringComparison.Ordinal))
             {
                 SelectedFrame = frame;
+                BindReferenceInput(frame);
                 LastAppliedBase = frame.AppliedBase;
                 InfraredClean.BindFrame(frame.Id);
                 // macOS 는 `showDeveloped` 가 프레임 객체에 붙어 있어 프레임을 옮기면 그
@@ -230,6 +234,7 @@ public sealed partial class DevelopPanelState
             }
         }
         SelectedFrame = null;
+        BindReferenceInput(null);
         LastAppliedBase = null;
         InfraredClean.BindFrame(null);
         Compare.BindFrame(null);

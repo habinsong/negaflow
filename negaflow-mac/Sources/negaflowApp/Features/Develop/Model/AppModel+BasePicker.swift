@@ -25,6 +25,8 @@ extension AppModel {
             let rawScanURL = frame.rawScanURL
             let sourceKind = frame.sourceKind
             let cleanRawRevision = frame.cleanRawRevision
+            let inputGamma = frame.params.inputGamma
+            let sourceRevision = frame.sourceLocationRevision
             let neutralBase = frame.filmType == .bwNegative
             let sampled = await Task.detached(priority: .userInitiated) { () -> SIMD3<Double>? in
                 guard let raw = Self.loadRawForBasePick(
@@ -34,7 +36,8 @@ extension AppModel {
                     cleanedRawIdentity: expectedDefectIdentity,
                     requiresCleanedRaw: requiresCleanedRaw,
                     rawScanURL: rawScanURL,
-                    sourceKind: sourceKind
+                    sourceKind: sourceKind,
+                    inputGamma: inputGamma
                 ) else { return nil }
                 return FilmBasePicker.sample(in: raw, atUnit: point, neutralBase: neutralBase)
             }.value
@@ -43,6 +46,8 @@ extension AppModel {
             // 조정·연속 픽에도 결과를 조용히 버려 "찍었는데 안 변함"의 원인이었다.
             guard self.ownsFrame(frame),
                   frame.cleanRawRevision == cleanRawRevision,
+                  frame.sourceLocationRevision == sourceRevision,
+                  frame.params.inputGamma == inputGamma,
                   frame.boundDefectRecipeIdentity == expectedDefectIdentity else { return }
             guard let sampled else {
                 self.statusMessage = self.text(AppLocalizedPhrase.filmBaseSampleFailed)
@@ -50,6 +55,7 @@ extension AppModel {
             }
             frame.updateParams {
                 $0.manualBaseRGB = sampled
+                $0.baseScale = .identity
                 $0.baseEstimationMode = .manual
             }
             self.statusMessage = self.text(AppLocalizedPhrase.filmBasePickedFormat, sampled.x, sampled.y, sampled.z)
@@ -65,7 +71,8 @@ extension AppModel {
         cleanedRawIdentity: DefectRecipeIdentity?,
         requiresCleanedRaw: Bool,
         rawScanURL: URL,
-        sourceKind: FrameSource
+        sourceKind: FrameSource,
+        inputGamma: InputGammaInterpretation = .automatic
     ) -> CIImage? {
         if let pre = preloadedRaw {
             let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
@@ -82,8 +89,8 @@ extension AppModel {
         if requiresCleanedRaw { return nil }
         let engine = ChromabaseEngine()
         switch sourceKind {
-        case .scannerTIFF:  return engine.loadScannerImage(rawScanURL)
-        case .importedFile: return engine.loadImportedImage(rawScanURL)
+        case .scannerTIFF:  return engine.loadScannerImage(rawScanURL, inputGamma: inputGamma)
+        case .importedFile: return engine.loadImportedImage(rawScanURL, inputGamma: inputGamma)
         }
     }
 }

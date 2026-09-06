@@ -21,8 +21,8 @@ struct LibraryScanRollAssignment: Codable, Equatable, Sendable {
 // 캐시에서 프레임 id 로 결정되는 경로를 쓰므로 카탈로그에 저장하지 않는다 — 썸네일 캐시를
 // 지워도 카탈로그와 원본은 무사하고, 다음 현상 때 다시 채워진다.
 struct LibraryCatalog: Codable, Equatable {
-    static let currentVersion = 6
-    static let oldestReaderVersion = 6
+    static let currentVersion = 7
+    static let oldestReaderVersion = 7
     var version: Int
     /// 이 스키마를 안전하게 해석할 수 있는 최소 reader 버전.
     var minimumReaderVersion: Int

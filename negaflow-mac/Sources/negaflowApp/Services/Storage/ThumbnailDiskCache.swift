@@ -22,7 +22,7 @@ final class ThumbnailDiskCache: @unchecked Sendable {
     private var clearGeneration: UInt64 = 0
 
     /// 썸네일을 디스크에 저장한다(같은 프레임·경로의 진행 중 요청은 최신 것으로 대체).
-    func store(_ image: CGImage, for frameID: UUID, at url: URL) {
+    func store(_ image: CGImage, for frameID: UUID, at url: URL, recipeID: String? = nil) {
         let key = StoreKey(frameID: frameID, path: url.standardizedFileURL.path)
         locked {
             let version = (versions[key] ?? 0) &+ 1
@@ -34,7 +34,7 @@ final class ThumbnailDiskCache: @unchecked Sendable {
                     self.clearGeneration == generation && self.versions[key] == version
                 }
                 guard isLatest else { return }
-                Self.write(image, to: url)
+                Self.write(image, to: url, recipeID: recipeID)
             }
         }
     }
@@ -46,8 +46,14 @@ final class ThumbnailDiskCache: @unchecked Sendable {
     }
 
     /// 디스크 썸네일 로드. 압축 데이터를 lazy 디코드하는 NSImage 로 돌려준다(대량 로드에 안전).
-    nonisolated static func load(at url: URL) -> NSImage? {
+    nonisolated static func load(at url: URL, matchingRecipe recipeID: String? = nil) -> NSImage? {
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        if let recipeID {
+            guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+                  let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+                  let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any],
+                  exif[kCGImagePropertyExifUserComment] as? String == recipeID else { return nil }
+        }
         return NSImage(contentsOf: url)
     }
 
@@ -96,7 +102,7 @@ final class ThumbnailDiskCache: @unchecked Sendable {
         return try body()
     }
 
-    private nonisolated static func write(_ image: CGImage, to url: URL) {
+    private nonisolated static func write(_ image: CGImage, to url: URL, recipeID: String?) {
         try? FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(), withIntermediateDirectories: true
         )
@@ -104,9 +110,9 @@ final class ThumbnailDiskCache: @unchecked Sendable {
         guard let destination = CGImageDestinationCreateWithData(
             data, UTType.jpeg.identifier as CFString, 1, nil
         ) else { return }
-        CGImageDestinationAddImage(destination, image, [
-            kCGImageDestinationLossyCompressionQuality: 0.85,
-        ] as CFDictionary)
+        var properties: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: 0.85]
+        if let recipeID { properties[kCGImagePropertyExifDictionary] = [kCGImagePropertyExifUserComment: recipeID] }
+        CGImageDestinationAddImage(destination, image, properties as CFDictionary)
         guard CGImageDestinationFinalize(destination) else { return }
         try? (data as Data).write(to: url, options: .atomic)
     }

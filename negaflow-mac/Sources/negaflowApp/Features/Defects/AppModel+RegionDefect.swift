@@ -62,6 +62,7 @@ extension AppModel {
         let sourceKind = frame.sourceKind
         // RAW 디코드 의도는 develop 과 같아야 한다 — 다르면 cleaned raw 와 현상 입력이 다른
         // 이미지가 된다.
+        let inputGamma = frame.params.inputGamma
         let rawRendering = ImageLoader.RAWRendering
             .forDigitalSource(frame.params.isDigitalSource)
         // 디스크 소스는 검출 렌더마다 풀 TIFF를 다시 디코드하므로, 세션 첫 검출에서 한 번만
@@ -81,7 +82,7 @@ extension AppModel {
                     raw = CIImage(cgImage: cachedSessionRaw, options: [.colorSpace: linearColorSpace])
                 } else if let lazy = Self.loadRegionSource(
                     preURL: preURL, rawURL: rawURL, sourceKind: sourceKind,
-                    rawRendering: rawRendering
+                    rawRendering: rawRendering, inputGamma: inputGamma
                 ) {
                     // 세션 첫 검출: ROI 영역만 굳혀 바로 검출한다 — 예전처럼 풀프레임 RGBA16
                     // 디코드/렌더가 끝나길 기다리지 않는다(작은 ROI 의 첫 검출이 이미지 크기와
@@ -376,12 +377,13 @@ extension AppModel {
               frame.defectSessionRaw == nil,
               frame.cleanRawRevision == cleanRevision,
               frame.defectActive || frame.defectIsDetecting else { return }
+        let inputGamma = frame.params.inputGamma
         let rawRendering = ImageLoader.RAWRendering
             .forDigitalSource(frame.params.isDigitalSource)
         frame.defectSessionSolidifyTask = Task.detached(priority: .utility) { [weak self, weak frame] in
             let decoded = Self.decodeRegionSessionRaw(
                 preURL: preURL, rawURL: rawURL, sourceKind: sourceKind,
-                rawRendering: rawRendering
+                rawRendering: rawRendering, inputGamma: inputGamma
             )
             await MainActor.run { [weak self, weak frame] in
                 guard let frame else { return }
@@ -404,15 +406,16 @@ extension AppModel {
     /// 동일 로더로 읽어 방향(EXIF)·색 해석을 일치시킨다. 렌더(굳히기)는 호출측이 결정한다.
     private nonisolated static func loadRegionSource(
         preURL: URL?, rawURL: URL, sourceKind: FrameSource,
-        rawRendering: ImageLoader.RAWRendering
+        rawRendering: ImageLoader.RAWRendering,
+        inputGamma: InputGammaInterpretation
     ) -> CIImage? {
         if let url = preURL, let loaded = ImageLoader.loadScannerTIFF(url) {
             return loaded
         }
         switch sourceKind {
-        case .scannerTIFF:  return ChromabaseEngine().loadScannerImage(rawURL)
+        case .scannerTIFF:  return ChromabaseEngine().loadScannerImage(rawURL, inputGamma: inputGamma)
         case .importedFile: return ChromabaseEngine().loadImportedImage(
-            rawURL, rawRendering: rawRendering
+            rawURL, rawRendering: rawRendering, inputGamma: inputGamma
         )
         }
     }
@@ -420,12 +423,13 @@ extension AppModel {
     /// 디스크 소스를 한 번에 풀해상도 CGImage 로 굳힌다(세션 캐시/커밋 베이스용).
     private nonisolated static func decodeRegionSessionRaw(
         preURL: URL?, rawURL: URL, sourceKind: FrameSource,
-        rawRendering: ImageLoader.RAWRendering
+        rawRendering: ImageLoader.RAWRendering,
+        inputGamma: InputGammaInterpretation
     ) -> CGImage? {
         autoreleasepool {
             guard let ci = loadRegionSource(
                 preURL: preURL, rawURL: rawURL, sourceKind: sourceKind,
-                rawRendering: rawRendering
+                rawRendering: rawRendering, inputGamma: inputGamma
             ) else {
                 return nil
             }

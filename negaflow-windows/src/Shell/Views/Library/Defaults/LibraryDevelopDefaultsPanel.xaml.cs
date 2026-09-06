@@ -24,16 +24,22 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
     private Func<LibraryFrameSnapshot?>? actionableFrame;
     private bool isSynchronizingDevelopDefaults;
 
-    public LibraryDevelopDefaultsPanel() => InitializeComponent();
+    public LibraryDevelopDefaultsPanel()
+    {
+        InitializeComponent();
+        InputGammaCard.Changed += (_, _) => LibraryChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     public event EventHandler? LibraryChanged;
 
-    public void Bind(LibraryHostService host, Func<LibraryFrameSnapshot?> actionable)
+    public void Bind(LibraryHostService host, Func<LibraryFrameSnapshot?> actionable, bool showInputGamma = false)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(actionable);
         libraryHost = host;
         actionableFrame = actionable;
+        InputGammaCard.Bind(host, actionable);
+        InputGammaCard.Visibility = showInputGamma ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>
@@ -44,6 +50,7 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
 
     public void Localize()
     {
+        InputGammaCard.Localize();
         DevelopDefaultsText.Text = AppResources.Get("libraryDevelopDefaults", "Text");
         DevelopProcessLabel.Text = AppResources.Get("libraryProcess", "Text");
         AutomationProperties.SetName(DevelopProcessSelector, DevelopProcessLabel.Text);
@@ -97,6 +104,7 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
     /// <summary>고른 사진의 값으로 구획을 맞춥니다.</summary>
     public void Synchronize()
     {
+        if (InputGammaCard.Visibility == Visibility.Visible) { InputGammaCard.Synchronize(); }
         if (DevelopTargetBar is null)
         {
             return;

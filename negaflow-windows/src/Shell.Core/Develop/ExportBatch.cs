@@ -18,12 +18,18 @@ public sealed record ExportBatchPlan(
     string DisplayName,
     string SourcePath,
     string DestinationPath,
-    DevelopExportFormat Format);
+    DevelopExportFormat Format)
+{
+    public LibraryFrameSnapshot? Snapshot { get; init; }
+}
 
 public sealed record ExportBatchItem(
     ExportBatchPlan Plan,
     ExportBatchItemState State,
-    string? FailureDetail);
+    string? FailureDetail)
+{
+    public DevelopExportResult? Result { get; init; }
+}
 
 public sealed record ExportBatchSummary(
     int Total,
@@ -86,6 +92,7 @@ public sealed class ExportBatchCoordinator
         for (int index = 0; index < frames.Count; ++index)
         {
             LibraryFrameSnapshot frame = frames[index];
+            if (frame.IsPreviewScan) { continue; }
             string path = destination.PathFor(
                 frame.SourcePath,
                 ExportNamingContexts.For(
@@ -97,8 +104,8 @@ public sealed class ExportBatchCoordinator
                 frame.Id,
                 Path.GetFileNameWithoutExtension(frame.SourcePath),
                 frame.SourcePath,
-                Unique(path, taken),
-                normalized.Format));
+                Unique(path, taken, normalized, frame.SourcePath),
+                normalized.Format) { Snapshot = frame });
         }
         return plans;
     }
@@ -113,19 +120,33 @@ public sealed class ExportBatchCoordinator
     /// 내보내면 <b>언제나</b> 실패했습니다 — 화면에는 "Develop stopped at writing the file:
     /// destination_exists" 만 떴고, 사용자가 할 수 있는 일이 없었습니다.
     /// </remarks>
-    public static string UniquePath(string path) => Unique(path, []);
+    public static string UniquePath(string path, ExportSettings? settings = null, string? sourcePath = null) =>
+        Unique(path, [], settings, sourcePath);
 
-    private static string Unique(string path, HashSet<string> taken)
+    private static IEnumerable<string> ArtifactPaths(string path, ExportSettings? settings, string? sourcePath)
+    {
+        yield return path;
+        if (settings?.WriteSidecar == true)
+        {
+            yield return ExportArtifactPairing.SidecarPath(path);
+            yield return ExportArtifactPairing.XmpPath(path);
+        }
+        if (settings?.WriteMainFlatMaster == true) { yield return ExportFlatMaster.PathFor(path); }
+        if (settings?.WriteOriginalRaw == true && sourcePath is not null)
+        { yield return ExportArtifactPairing.OriginalPath(path, sourcePath); }
+    }
+
+    private static string Unique(string path, HashSet<string> taken, ExportSettings? settings, string? sourcePath)
     {
         string directory = Path.GetDirectoryName(path) ?? string.Empty;
         string stem = Path.GetFileNameWithoutExtension(path);
         string extension = Path.GetExtension(path);
         string candidate = path;
-        for (int suffix = 2; taken.Contains(candidate) || File.Exists(candidate); ++suffix)
+        for (int suffix = 2; ArtifactPaths(candidate, settings, sourcePath).Any(item => taken.Contains(item) || Path.Exists(item)); ++suffix)
         {
             candidate = Path.Combine(directory, $"{stem}-{suffix}{extension}");
         }
-        taken.Add(candidate);
+        foreach (string item in ArtifactPaths(candidate, settings, sourcePath)) { taken.Add(item); }
         return candidate;
     }
 
@@ -166,8 +187,8 @@ public sealed class ExportBatchCoordinator
                             new ExportBatchItem(plan, ExportBatchItemState.Cancelled, null));
                         return;
                     }
-                    if (library.Frames.FirstOrDefault(frame =>
-                            string.Equals(frame.Id, plan.FrameId, StringComparison.Ordinal))
+                    if ((plan.Snapshot ?? library.Frames.FirstOrDefault(frame =>
+                            string.Equals(frame.Id, plan.FrameId, StringComparison.Ordinal)))
                         is not { } snapshot)
                     {
                         ++failed;
@@ -203,7 +224,7 @@ public sealed class ExportBatchCoordinator
                         ++succeeded;
                         ItemChanged?.Invoke(
                             this,
-                            new ExportBatchItem(plan, ExportBatchItemState.Succeeded, null));
+                            new ExportBatchItem(plan, ExportBatchItemState.Succeeded, null) { Result = outcome.Result });
                     }
                     else
                     {

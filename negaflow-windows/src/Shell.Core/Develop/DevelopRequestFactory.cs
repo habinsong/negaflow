@@ -352,6 +352,9 @@ public static partial class DevelopRequestFactory
                 ? FilmPolarity.Positive
                 : FilmPolarity.Negative,
             BaseEstimationMode = baseMode,
+            BaseScale = !positive && frame.Base.Mode == BaseEstimationMode.Auto ? frame.Base.Scale : 1.0,
+            InputGammaMode = frame.InputGamma.IsAutomatic ? 0U : 1U,
+            InputGammaValue = frame.InputGamma.Value ?? 0.0,
             DminRed = (float)manualBase.Red,
             DminGreen = (float)manualBase.Green,
             DminBlue = (float)manualBase.Blue,

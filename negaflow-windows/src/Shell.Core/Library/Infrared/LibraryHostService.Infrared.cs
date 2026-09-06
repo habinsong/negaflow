@@ -157,7 +157,7 @@ public sealed partial class LibraryHostService
             infraredPath,
             frame.SourceKind,
             frame.DefectRecipeRevision,
-            observation);
+            observation, frame.InputGamma);
     }
 
     private void CompleteScheduledInfraredClean(
@@ -169,7 +169,7 @@ public sealed partial class LibraryHostService
         if (document is not { } open ||
             Frames.FirstOrDefault(candidate =>
                 string.Equals(candidate.Id, work.FrameId, StringComparison.Ordinal)) is not { } frame ||
-            frame.DefectRecipeRevision != work.RecipeRevision ||
+            frame.DefectRecipeRevision != work.RecipeRevision || frame.InputGamma != work.InputGamma ||
             frame.DefectRecipe?.Items.Any(item => item.Kind == DefectEditKind.Infrared) == true ||
             !string.Equals(frame.SourcePath, work.VisiblePath, StringComparison.Ordinal))
         {

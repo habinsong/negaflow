@@ -66,6 +66,10 @@ internal sealed class DevelopBaseEditor
         ManualBaseRgb? manualBase = frame.ManualBase;
         if (mode == BaseEstimationMode.Manual && manualBase is null)
         {
+            if (frame.Base.Mode == BaseEstimationMode.Auto && frame.Base.Scale != 1.0 && measuredBase is null)
+            {
+                return new(LibraryFrameError.InvalidBaseRecipe, false);
+            }
             // macOS `DevelopInspectorBindings.baseMode`:
             //     params.manualBaseRGB = frame.baseRGB ?? SIMD3(0.90, 0.65, 0.45)
             // **자동으로 잰 base 가 먼저입니다.** 앞 판은 그 절반을 빠뜨리고 늘 0.90/0.65/0.45
@@ -154,7 +158,8 @@ internal sealed class DevelopBaseEditor
         LibraryFrameSnapshot? frame,
         double red,
         double green,
-        double blue)
+        double blue,
+        bool resetScale = false)
     {
         if (frame is null)
         {
@@ -174,7 +179,19 @@ internal sealed class DevelopBaseEditor
             new LibraryFrameEdit(
                 frame.Tone,
                 clamped,
-                frame.Base with { Mode = BaseEstimationMode.Manual }));
+                frame.Base with { Mode = BaseEstimationMode.Manual, Scale = resetScale ? 1.0 : frame.Base.Scale }));
+    }
+
+    public DevelopEditResult SetScale(LibraryFrameSnapshot? frame, double scale)
+    {
+        if (frame is null) { return new(LibraryFrameError.MissingId, false); }
+        if (!CanEdit(frame) || frame.Base.Mode != BaseEstimationMode.Auto ||
+            !double.IsFinite(scale) || scale is < 0.5 or > 1.5)
+        {
+            return new(LibraryFrameError.InvalidBaseRecipe, false);
+        }
+        if (frame.Base.Scale == scale) { return new(LibraryFrameError.None, false); }
+        return Edit(frame, new LibraryFrameEdit(frame.Tone, frame.ManualBase, frame.Base with { Scale = scale }));
     }
 
     /// <summary>

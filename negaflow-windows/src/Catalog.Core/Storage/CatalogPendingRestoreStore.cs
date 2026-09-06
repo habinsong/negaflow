@@ -251,6 +251,12 @@ internal static class CatalogPendingRestoreStore
                 CatalogPendingRestoreError.InvalidPendingSnapshot);
         }
 
+        if (!CatalogVersionMigration.TryPromote(snapshot, snapshot.CatalogVersion, out CatalogSnapshot promoted))
+        {
+            return CatalogPendingRestoreApplicationResult.Failure(CatalogPendingRestoreError.InvalidPendingSnapshot);
+        }
+        snapshot = promoted;
+
         if (CatalogCommitRollback.HasUnresolvedRollbackArtifact(roots))
         {
             return CatalogPendingRestoreApplicationResult.Failure(

@@ -48,7 +48,8 @@ enum LibraryCatalogFile {
         if LibraryCatalogSQLiteStore.isSQLiteURL(url) {
             switch LibraryCatalogSQLiteStore.read(from: url) {
             case let .loaded(catalog):
-                return .loaded(catalog: catalog, sourceVersion: catalog.version)
+                return .loaded(catalog: catalog.version == 6 ? migrateV6ToV7(catalog) : catalog,
+                               sourceVersion: catalog.version)
             case let .unsupportedStorageVersion(version):
                 return .unsupportedStorageVersion(version)
             case .invalid:
@@ -99,6 +100,10 @@ enum LibraryCatalogFile {
                 return .invalid
             }
             return .loaded(catalog: migrateV5ToV6(legacy), sourceVersion: 5)
+        case 6:
+            guard let legacy = try? decoder.decode(LibraryCatalog.self, from: data),
+                  legacy.minimumReaderVersion == 6 else { return .invalid }
+            return .loaded(catalog: migrateV6ToV7(legacy), sourceVersion: 6)
         case LibraryCatalog.currentVersion:
             guard let catalog = try? decoder.decode(LibraryCatalog.self, from: data),
                   catalog.minimumReaderVersion == LibraryCatalog.oldestReaderVersion else {

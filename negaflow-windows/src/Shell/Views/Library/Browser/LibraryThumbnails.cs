@@ -62,7 +62,7 @@ internal sealed class LibraryThumbnails
         {
             return;
         }
-        if (view.thumbnails.TryGet(item.Id) is { } jpeg)
+        if (view.thumbnails.TryGetOrLoad(item.Frame) is { } jpeg)
         {
             item.Thumbnail = Decode(jpeg);
         }

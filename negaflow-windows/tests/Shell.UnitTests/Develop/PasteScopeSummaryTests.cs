@@ -8,7 +8,7 @@ namespace Negaflow.Shell.UnitTests;
 internal static class PasteScopeSummaryTests
 {
     private static readonly PasteScopeText Text =
-        new("모든 설정", "없음", "베이스", "톤", "색상", "디테일", "기하");
+        new("모든 설정", "없음", "베이스", "톤", "색상", "디테일", "기하", "입력 감마", "베이스 배율");
 
     public static void Run()
     {
@@ -21,6 +21,8 @@ internal static class PasteScopeSummaryTests
             Color = false,
             Detail = false,
             Geometry = false,
+            InputGamma = false,
+            BaseScale = false,
         };
         Check(none.IsEmpty && PasteScopeSummary.Describe(none, Text) == "없음",
             "paste_scope_says_none_when_nothing_is_on");
@@ -30,6 +32,8 @@ internal static class PasteScopeSummaryTests
             "paste_scope_joins_the_on_groups_in_macos_order");
         Check(PasteScopeSummary.Describe(none with { Geometry = true }, Text) == "기하",
             "paste_scope_names_a_single_group");
+        Check(PasteScopeSummary.Describe(none with { InputGamma = true, BaseScale = true }, Text) == "입력 감마/베이스 배율",
+            "paste_scope_names_input_gamma_and_base_scale");
         Check(PasteScopeSummary.Describe(
                 none with { Color = true, Detail = true, Geometry = true }, Text) ==
                 "색상/디테일/기하",

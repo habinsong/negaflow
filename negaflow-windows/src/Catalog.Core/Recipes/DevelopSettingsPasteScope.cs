@@ -1,11 +1,11 @@
 namespace Negaflow.Catalog;
 
 /// <summary>
-/// 현상 설정 붙여넣기 범위입니다. macOS <c>DevelopSettingsPasteScope</c> 와 같은 다섯 묶음이며
+/// 현상 설정 붙여넣기 범위입니다. macOS <c>DevelopSettingsPasteScope</c> 와 같은 일곱 묶음이며
 /// 묶음에 무엇이 들어가는지도 같습니다.
 /// </summary>
 /// <remarks>
-/// <see langword="default"/> 는 다섯 개가 모두 꺼진 <see cref="Empty"/> 입니다. macOS 의 인자 없는
+/// <see langword="default"/> 는 모두 꺼진 <see cref="Empty"/> 입니다. macOS 의 인자 없는
 /// 생성자는 전부 켜진 값이므로, 이쪽에서 "기본값"을 원할 때는 <see cref="All"/> 를 쓰십시오.
 /// </remarks>
 public readonly record struct DevelopSettingsPasteScope(
@@ -13,15 +13,20 @@ public readonly record struct DevelopSettingsPasteScope(
     bool Tone,
     bool Color,
     bool Detail,
-    bool Geometry)
+    bool Geometry,
+    bool InputGamma,
+    bool BaseScale)
 {
-    public static DevelopSettingsPasteScope All { get; } = new(true, true, true, true, true);
+    public DevelopSettingsPasteScope(bool Base, bool Tone, bool Color, bool Detail, bool Geometry)
+        : this(Base, Tone, Color, Detail, Geometry, InputGamma: Base, BaseScale: Base) { }
+
+    public static DevelopSettingsPasteScope All { get; } = new(true, true, true, true, true, true, true);
 
     public static DevelopSettingsPasteScope Empty => default;
 
-    public bool IsEmpty => !Base && !Tone && !Color && !Detail && !Geometry;
+    public bool IsEmpty => !Base && !Tone && !Color && !Detail && !Geometry && !InputGamma && !BaseScale;
 
-    public bool IsFullDevelopScope => Base && Tone && Color && Detail && Geometry;
+    public bool IsFullDevelopScope => Base && Tone && Color && Detail && Geometry && InputGamma && BaseScale;
 
     /// <summary>
     /// <paramref name="source"/> 에서 고른 묶음만 <paramref name="destination"/> 위에 옮긴 사본입니다.
@@ -59,13 +64,16 @@ public readonly record struct DevelopSettingsPasteScope(
             };
             next = next with
             {
-                Base = source.Base,
+                Base = source.Base with { Scale = destination.Base.Scale },
                 ManualBase = source.ManualBase,
                 AutoLevels = source.AutoLevels,
                 AutoNeutralBalance = source.AutoNeutralBalance,
                 DevelopTarget = source.DevelopTarget,
             };
         }
+
+        if (InputGamma) { next = next with { InputGamma = source.InputGamma }; }
+        if (BaseScale) { next = next with { Base = next.Base with { Scale = source.Base.Scale } }; }
 
         if (Tone)
         {

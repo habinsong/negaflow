@@ -67,6 +67,9 @@ DevelopExportOutcome publish_developed(
     outcome.image_transform_applied = finish.transform.applied || finish.output_resized;
     outcome.output_sharpening_applied = output_sharpening.info.applied;
     outcome.applied_dmin = invert.developed_info.applied_dmin;
+    outcome.reference_base = invert.reference_base;
+    outcome.reference_base_present = invert.negative_source;
+    outcome.applied_input_gamma = request.input_gamma;
     outcome.dmax_normalized = invert.developed_info.dmax_normalized;
     outcome.black_input = invert.developed_info.black_input;
     outcome.debug_metrics_present =

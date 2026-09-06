@@ -18,7 +18,6 @@ public sealed partial class LibraryHostService : IDisposable
     private readonly LibraryAvailabilityController availability;
     private readonly IUiDispatcher dispatcher;
     private readonly DevelopExportCoordinator coordinator;
-    private readonly IDefectBakeExporter? defectBakeExporter;
     private readonly LibraryImportController importer;
     private readonly LibraryFolderMonitor folderMonitor;
     private readonly LibraryInfraredCleanCoordinator infraredClean;
@@ -73,7 +72,6 @@ public sealed partial class LibraryHostService : IDisposable
         sourceController = new LibrarySourceController(this.sourceMetadataReader);
         folderMonitor = new LibraryFolderMonitor(OnFolderChanges);
         coordinator = new DevelopExportCoordinator(exporter, dispatcher);
-        defectBakeExporter = exporter as IDefectBakeExporter;
         infraredClean = new LibraryInfraredCleanCoordinator(
             dispatcher,
             () => ActiveFrameId,
@@ -82,7 +80,7 @@ public sealed partial class LibraryHostService : IDisposable
                 work.VisiblePath,
                 work.InfraredPath,
                 work.SourceKind,
-                run: run),
+                run: run, inputGamma: work.InputGamma),
             CompleteScheduledInfraredClean,
             RearmInfraredClean,
             infraredSelectionDelay);
@@ -393,8 +391,6 @@ public sealed partial class LibraryHostService : IDisposable
         string scansDirectory) =>
         document is { } open
             ? new LibraryDefectTerminationService(
-                defectBakeExporter,
-                sourceMetadataReader,
                 frameId => DefectLiveStrengths.Clear(frameId))
                 .PrepareAsync(open, scansDirectory)
             : Task.FromResult(LibraryDefectTerminationResult.Success());

@@ -42,6 +42,7 @@ public sealed partial class DevelopWorkspaceView
 
     internal void RequestPreviewNow(bool replaceActive = false)
     {
+        autoAdjust.Cancel();
         // 사용자가 새 사진이나 새 보정 상태를 요청하면 이웃 예열보다 현재 화면이 먼저입니다.
         // 실행 중 포인터는 워커가 반환 뒤 Dispose 합니다.
         CancelNeighborWarm();
@@ -66,6 +67,7 @@ public sealed partial class DevelopWorkspaceView
         // macOS `trimDeveloped(selectedFrameID:)` — 보고 있는 사진은 축출 대상에서 뺍니다.
         if (thumbnails is not null)
         {
+            thumbnails.ObserveFrame(frame);
             thumbnails.SelectedFrameId = frame.Id;
         }
         // macOS 는 프레임에 붙은 developedImage/thumbnail 을 고르는 즉시 그립니다.
@@ -257,7 +259,9 @@ public sealed partial class DevelopWorkspaceView
         // 결과로만 채웁니다. 앞 판은 인터랙티브 패스에서도 했는데, 슬라이더를 끄는 동안
         // 한 칸마다 두 번씩 34.6MB 복사 + 866만 화소 축소를 **UI 스레드에서** 하느라
         // 슬라이더 자체가 멎었습니다.
-        if (panel?.SelectedFrame is { } shown &&
+        bool currentRecipe = panel?.SelectedFrame is { } current &&
+            ThumbnailService.MatchesRecipe(current, requestedFrame);
+        if (currentRecipe && panel?.SelectedFrame is { } shown &&
             outcome.CacheIdentity is not null &&
             Math.Max(width, height) >= (int)DevelopPreviewProxy.FastPreviewMaxDimension)
         {
@@ -277,12 +281,14 @@ public sealed partial class DevelopWorkspaceView
             }
         }
 
-        if (panel is not null && outcome.Result is { Succeeded: true } applied)
+        if (currentRecipe && previewCoordinator is { UninvertedSource: false, DebugStage: null } &&
+            panel is not null && outcome.Result is { Succeeded: true } applied)
         {
             panel.RememberAppliedBase(
                 applied.AppliedDminRed,
                 applied.AppliedDminGreen,
-                applied.AppliedDminBlue);
+                applied.AppliedDminBlue,
+                applied.ReferenceBase);
             BaseCard.Sync();
             // 개발자 디버그 구역에 이번 현상이 실제로 잰 값을 적습니다.
             Adjustments.ShowDebugMetrics(

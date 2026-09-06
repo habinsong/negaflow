@@ -7,6 +7,16 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
+        if (args is ["--develop-input-transfer-only"])
+        {
+            DevelopInputTransferTests.Run();
+            return Report("catalog_develop_input_transfer");
+        }
+        if (args is ["--input-gamma-migration-only"])
+        {
+            InputGammaMigrationTests.Run();
+            return Report("catalog_input_gamma_migration");
+        }
         if (args.Length == 2 && args[0] == CatalogProcessLockTests.LockContenderArgument)
         {
             return CatalogStorageTests.RunLockContender(args[1]);
@@ -26,7 +36,9 @@ internal static class Program
         using JsonDocument fixture = JsonDocument.Parse(File.ReadAllBytes(fixturePath));
 
         DevelopRouteTests.Run(fixture.RootElement);
+        InputGammaMigrationTests.Run();
         DevelopRecipeCatalogTests.Run();
+        DevelopInputTransferTests.Run();
         LibraryFrameTests.RunAppMetadataPersistence();
         CatalogStorageTests.Run();
         LibraryFrameTests.RunFrameBehavior();

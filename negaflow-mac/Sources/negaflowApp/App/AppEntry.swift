@@ -23,9 +23,9 @@ final class NegaflowApplicationDelegate: NSObject, NSApplicationDelegate {
             guard let self, self.hasPendingTerminationReply else { return }
             self.hasPendingTerminationReply = false
             if !shouldTerminate {
-                _ = self.model.saveLibraryOnTerminate()
+                self.model.reportError(self.model.libraryCatalogBlockMessage(.writeFailed))
             }
-            sender.reply(toApplicationShouldTerminate: true)
+            sender.reply(toApplicationShouldTerminate: shouldTerminate)
         }
         switch decision {
         case .terminateNow:
@@ -35,8 +35,8 @@ final class NegaflowApplicationDelegate: NSObject, NSApplicationDelegate {
             return .terminateLater
         case .terminateCancel:
             hasPendingTerminationReply = false
-            _ = model.saveLibraryOnTerminate()
-            return .terminateNow
+            model.reportError(model.libraryCatalogBlockMessage(.writeFailed))
+            return .terminateCancel
         }
     }
 

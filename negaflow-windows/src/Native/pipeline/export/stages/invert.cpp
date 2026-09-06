@@ -4,6 +4,7 @@
 
 #include "negaflow/core/pixel.h"
 #include "negaflow/imaging/auto_negative_base_resolver.h"
+#include "negaflow/imaging/film_base_scale.h"
 
 #include <utility>
 
@@ -125,8 +126,10 @@ std::optional<DevelopExportOutcome> invert_source(
     RunTracker& tracker,
     negaflow::imaging::WorkingImage decoded_image,
     InvertStageOutput& out,
-    const PreviewProxyHint* const hint) noexcept {
+    const PreviewProxyHint* const hint,
+    const std::optional<std::array<float, 3>>& input_gamma_reference) noexcept {
     out.negative = request.negative;
+    out.negative.input_gamma_reference_range = input_gamma_reference;
     out.base_source = DevelopBaseSource::manual;
     out.developed_info = {};
     out.positive = request.film_polarity == FilmPolarity::positive;
@@ -151,6 +154,10 @@ std::optional<DevelopExportOutcome> invert_source(
         }
     }
 
+    out.reference_base = out.negative.dmin;
+    if (out.negative_source && request.base_estimation_mode == NegativeBaseEstimationMode::auto_estimate) {
+        out.negative.dmin = negaflow::imaging::scale_auto_film_base(out.reference_base, request.base_scale);
+    }
     if (out.negative_source) {
         auto developed = negaflow::imaging::develop_manual_negative(
             std::move(decoded_image),

@@ -34,6 +34,7 @@ public static class ExportFlatMaster
         {
             // 프리셋은 톤·색의 바탕이므로 무보정본에서는 떼어냅니다.
             LookPresetId = null,
+            Route = frame.Route with { FilmEmulation = FilmEmulation.None, FilmEmulationIntensity = 0.0 },
             DevelopTarget = DevelopTarget.Main,
             Tone = new ToneAdjustment(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
             PointCurves = PointCurveRecipe.Identity,

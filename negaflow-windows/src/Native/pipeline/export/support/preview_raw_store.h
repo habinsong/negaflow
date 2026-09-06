@@ -32,6 +32,7 @@ using PreviewRawImage = std::shared_ptr<const negaflow::imaging::WorkingImage>;
 struct PreviewRawKey final {
     std::filesystem::path path{};
     negaflow::imageio::ImageFileObservation observation{};
+    negaflow::color::InputGammaInterpretation input_gamma{};
     NegativeBaseEstimationMode base_mode{NegativeBaseEstimationMode::manual};
     negaflow::imaging::NegativeFilmType film_type{
         negaflow::imaging::NegativeFilmType::color};

@@ -87,6 +87,8 @@ struct DevelopExportRequest final {
     DevelopExportFormat format{DevelopExportFormat::png16};
     FilmPolarity film_polarity{FilmPolarity::negative};
     NegativeBaseEstimationMode base_estimation_mode{NegativeBaseEstimationMode::manual};
+    double base_scale{1.0};
+    negaflow::color::InputGammaInterpretation input_gamma{};
     std::optional<negaflow::imaging::FilmStockBasePreset> film_stock_preset{};
     negaflow::imaging::ManualNegativeDevelopParameters negative{};
     negaflow::imaging::SceneCorrectionParameters scene_correction{};
@@ -260,6 +262,9 @@ struct DevelopExportOutcome final {
     bool output_sharpening_applied{false};
     std::uint64_t output_file_bytes{0U};
     std::array<float, 3> applied_dmin{};
+    std::array<float, 3> reference_base{};
+    bool reference_base_present{false};
+    negaflow::color::InputGammaInterpretation applied_input_gamma{};
     // 개발자 디버그 화면이 읽는 지표입니다. 네거티브 반전이 돈 호출에서만 채워집니다.
     std::array<float, 3> dmax_normalized{};
     std::array<float, 3> black_input{};

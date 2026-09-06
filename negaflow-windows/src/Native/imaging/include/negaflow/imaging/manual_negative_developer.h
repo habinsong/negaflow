@@ -6,6 +6,7 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 
 namespace negaflow::imaging {
 
@@ -33,6 +34,7 @@ struct ManualNegativeDevelopParameters final {
     // the channel ratio to the selected stock's Dmax curve.
     bool use_preset_response{false};
     std::array<float, 3> preset_dmax_normalized{};
+    std::optional<std::array<float, 3>> input_gamma_reference_range{};
 };
 
 struct ManualNegativeDevelopInfo final {

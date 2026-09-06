@@ -33,6 +33,7 @@ extension DefectSidecarFile {
             }
             if diskRevision == snapshot.identity.revision {
                 if current == snapshot {
+                    DefectSidecarCommitCache.shared.record(snapshot.identity, at: url(for: snapshot.frameID, in: directory))
                     revisionFloorState.values[key] = max(
                         revisionFloorState.values[key] ?? 0,
                         diskRevision
@@ -100,6 +101,7 @@ extension DefectSidecarFile {
             throw error
         }
         revisionFloorState.values[key] = snapshot.identity.revision
+        DefectSidecarCommitCache.shared.record(snapshot.identity, at: destination)
         return .written(destination)
     }
 

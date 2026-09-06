@@ -311,7 +311,7 @@ internal static class PrintCompositionTests
     /// </summary>
     private static void VerifyPrintCaptionText()
     {
-        LibraryFrameSnapshot frame = Frame(null, sourcePath: @"C:\scans\IMG_0007.tif") with
+        LibraryFrameSnapshot frame = Frame(null, sourcePath: OperatingSystem.IsWindows() ? @"C:\scans\IMG_0007.tif" : Path.Combine(Path.GetTempPath(), "IMG_0007.tif")) with
         {
             ScanIndex = 7,
             Rating = 3,

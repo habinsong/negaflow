@@ -6,6 +6,7 @@ struct BaseControlSection: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var frame: ScanFrame
     let baseMode: Binding<DevelopParameters.BaseMode>
+    let baseScale: Binding<Double>
     let manualBaseBinding: (Int) -> Binding<Double>
     /// 필름 Dmin/Dmax 프리셋 ID 바인딩 (preset 모드에서 사용). nil 가능.
     let filmStockDminID: Binding<String?>
@@ -34,6 +35,11 @@ struct BaseControlSection: View {
                 selection: baseMode
             )
             .disabled(!frame.filmType.requiresInversion)
+
+            if frame.filmType.requiresInversion, frame.params.baseEstimationMode == .auto {
+                BaseScaleSlider(title: model.text(.baseScale), ownerID: frame.id, value: baseScale)
+                    .id("\(frame.id)-\(frame.sourceLocationRevision)")
+            }
 
             if frame.params.baseEstimationMode == .preset {
                 basePresetPickerRow(model.text(AppLocalizedPhrase.filmStock)) {
@@ -85,7 +91,10 @@ struct BaseControlSection: View {
     }
 
     private var baseReadout: String? {
-        guard let base = frame.baseRGB else { return nil }
+        guard var base = frame.baseRGB else { return nil }
+        if frame.filmType.requiresInversion, frame.params.baseEstimationMode == .auto {
+            base = frame.params.baseScale.applied(to: base)
+        }
         return model.text(AppLocalizedPhrase.baseReadoutFormat, base.x, base.y, base.z)
     }
 

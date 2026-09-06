@@ -36,8 +36,7 @@ internal sealed class PrintPreviewRenderer
     ///
     /// 새 썸네일이나 현상본이 도착하면 <see cref="InvalidateTiles"/> 로 비웁니다.
     /// </remarks>
-    private readonly Dictionary<(string FrameId, PrintPresentationStyle Style, bool Developed,
-        string Proof), ImageSource> tileImages = [];
+    private readonly PrintPreviewTileCache<ImageSource> tileImages = new();
 
     internal PrintPreviewRenderer(
         PrintPreviewSurface surface,
@@ -623,7 +622,7 @@ internal sealed class PrintPreviewRenderer
         // macOS PrintSingleImagePageView: developedImage ?? rawPreviewImage ?? thumbnailImage.
         // 현상본이 있으면 그것을 쓰고, 칸이 더 크면 표시 크기로 올립니다.
         ThumbnailService.DevelopedPreview developed = default;
-        bool hasDeveloped = cache?.TryGetDeveloped(frame, out developed) == true;
+        bool hasDeveloped = cache?.TryGetPrintDeveloped(frame, out developed) == true;
         // 프루프가 바뀌면 풀어 둔 그림도 달라집니다 — 열쇠에 함께 넣습니다.
         (string, PrintPresentationStyle, bool, string) key = (
             frame.Id,
@@ -651,7 +650,7 @@ internal sealed class PrintPreviewRenderer
             // 현상본은 이미 프루프를 통과해서 옵니다(`ThumbnailService.PrintProof`).
             // 여기서 또 걸면 두 번 눌립니다.
             WriteableBitmap bitmap = BgraBitmap(developed, presentation, null);
-            tileImages[key] = bitmap;
+            tileImages.Store(key, bitmap);
             image.Source = bitmap;
         }
         else if (cache?.TryGet(frame.Id) is { } jpeg)
@@ -666,14 +665,15 @@ internal sealed class PrintPreviewRenderer
             if (PrintPresentationFilter.Transforms(presentation) ||
                 PrintSoftProofFilter.Transforms(proof))
             {
-                _ = ApplyPresentationAsync(image, jpeg, presentation, proof, source =>
+                long revision = tileImages.Revision;
+                _ = ApplyPresentationAsync(jpeg, presentation, proof, source =>
                 {
-                    tileImages[key] = source;
+                    if (tileImages.TryStore(revision, key, source)) { image.Source = source; }
                 });
             }
             else if (decoded is not null)
             {
-                tileImages[key] = decoded;
+                tileImages.Store(key, decoded);
             }
         }
         PreviewTrace.Write(System.FormattableString.Invariant(
@@ -721,7 +721,7 @@ internal sealed class PrintPreviewRenderer
         // macOS `printPackageDisplayImage` — developed ∪ packagePreview ∪ thumbnail ∪ raw.
         // 현상본이 없다고 current=0 으로 두면 콘택트 칸(360보다 작음)마다 develop_preview 가
         // 돕니다. 썸네일이 있으면 긴 변 360 으로 칩니다(`ThumbnailService.MaximumDimension`).
-        int? developedEdge = cache.TryGetDeveloped(frame, out ThumbnailService.DevelopedPreview developed)
+        int? developedEdge = cache.TryGetPrintDeveloped(frame, out ThumbnailService.DevelopedPreview developed)
             ? (int)PrintPreviewResolution.PixelDimension(developed.Width, developed.Height)
             : null;
         int? thumbnailEdge = cache.TryGet(frame.Id) is not null
@@ -798,7 +798,6 @@ internal sealed class PrintPreviewRenderer
     /// 순서입니다.
     /// </summary>
     private static async Task ApplyPresentationAsync(
-        Image image,
         byte[] jpeg,
         PrintPresentationStyle presentation,
         Negaflow.Interop.SoftProofSettings? proof,
@@ -825,7 +824,6 @@ internal sealed class PrintPreviewRenderer
                 buffer.Write(pixels, 0, Math.Min(pixels.Length, (int)bitmap.PixelBuffer.Capacity));
             }
             bitmap.Invalidate();
-            image.Source = bitmap;
             keep(bitmap);
         }
         catch (Exception error) when (error is IOException or ArgumentException or

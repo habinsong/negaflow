@@ -2,6 +2,7 @@
 
 #include "negaflow/color/srgb_transfer.h"
 #include "scanner_to_working_detail.h"
+#include "input_gamma_preparation.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -195,12 +196,40 @@ ScannerToWorkingStatus detail::validate_scanner_icc_profile(
 
 ScannerToWorkingResult convert_scanner_to_working(
     const negaflow::imageio::DecodedImage& decoded,
-    const ScannerToWorkingLimits& limits) noexcept {
+    const ScannerToWorkingLimits& limits,
+    const negaflow::color::InputGammaInterpretation input_gamma) noexcept {
     ScannerToWorkingResult result{};
+    result.info.input_gamma = input_gamma;
     try {
         const ScannerToWorkingStatus validation = validate_decoded_image(decoded, limits);
         if (validation != ScannerToWorkingStatus::ok) {
             result.status = validation;
+            return result;
+        }
+
+        if (input_gamma.mode != 0U && decoded.layout != negaflow::imageio::DecodedPixelLayout::rgb16) {
+            result.status = ScannerToWorkingStatus::unsupported_input_gamma;
+            return result;
+        }
+        const detail::InputGammaPreparation gamma(decoded.icc_profile, input_gamma);
+        if (gamma.status != ScannerToWorkingStatus::ok) { result.status = gamma.status; return result; }
+        if (!gamma.linear_samples.empty()) {
+            result.image.width = decoded.width;
+            result.image.height = decoded.height;
+            result.image.stride_pixels = decoded.width;
+            result.image.pixels.resize(static_cast<std::size_t>(decoded.width) * decoded.height);
+            const auto stride = decoded.stride_bytes / sizeof(std::uint16_t);
+            for (std::uint32_t y = 0; y < decoded.height; ++y) {
+                const auto* row = decoded.samples.data() + static_cast<std::size_t>(y) * stride;
+                for (std::uint32_t x = 0; x < decoded.width; ++x) {
+                    const auto offset = static_cast<std::size_t>(x) * 3U;
+                    result.image.pixels[static_cast<std::size_t>(y) * decoded.width + x] = {
+                        gamma.linear_samples[row[offset]], gamma.linear_samples[row[offset + 1U]],
+                        gamma.linear_samples[row[offset + 2U]], 1.0F};
+                }
+            }
+            result.status = ScannerToWorkingStatus::ok;
+            result.info.transform = ScannerWorkingTransform::explicit_input_gamma;
             return result;
         }
 
@@ -228,7 +257,7 @@ ScannerToWorkingResult convert_scanner_to_working(
         }
 
         detail::EncodedSrgb16Result encoded =
-            detail::convert_embedded_icc_to_srgb16(decoded, limits);
+            detail::convert_embedded_icc_to_srgb16(decoded, limits, gamma.profile);
         result.info.native_error_code = encoded.native_error_code;
         if (encoded.status != ScannerToWorkingStatus::ok) {
             result.status = encoded.status;
@@ -269,6 +298,10 @@ ScannerToWorkingResult convert_scanner_to_working(
 
 const char* scanner_to_working_status_name(const ScannerToWorkingStatus status) noexcept {
     switch (status) {
+        case ScannerToWorkingStatus::invalid_input_gamma:
+            return "invalid_input_gamma";
+        case ScannerToWorkingStatus::unsupported_input_gamma:
+            return "unsupported_input_gamma";
         case ScannerToWorkingStatus::ok:
             return "ok";
         case ScannerToWorkingStatus::invalid_argument:
@@ -309,6 +342,8 @@ const char* scanner_to_working_status_name(const ScannerToWorkingStatus status) 
 
 const char* scanner_working_transform_name(const ScannerWorkingTransform transform) noexcept {
     switch (transform) {
+        case ScannerWorkingTransform::explicit_input_gamma:
+            return "explicit_input_gamma_to_linear_srgb_f32";
         case ScannerWorkingTransform::none:
             return "none";
         case ScannerWorkingTransform::linear_scanner_raw:

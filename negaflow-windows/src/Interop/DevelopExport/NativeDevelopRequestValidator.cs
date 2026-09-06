@@ -10,6 +10,7 @@ internal static unsafe class NativeDevelopRequestValidator
 {
     internal static void ValidateLayoutAndEnums(DevelopExportRequest request)
     {
+        NativeDevelopInput.Validate(request);
         ArgumentNullException.ThrowIfNull(request.ImageTransform);
         if (sizeof(NativePointCurveV1) != PointCurveV1Size ||
             sizeof(NativeDevelopExportRequestV7) != RequestV7Size ||

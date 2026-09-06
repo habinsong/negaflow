@@ -155,6 +155,7 @@ struct DevelopWorkflowInspector: View {
         BaseControlSection(
             frame: frame,
             baseMode: baseModeBinding,
+            baseScale: baseScaleBinding,
             manualBaseBinding: manualBaseBinding(channel:),
             filmStockDminID: filmStockDminIDBinding,
             lightSourceProfileID: lightSourceProfileIDBinding,

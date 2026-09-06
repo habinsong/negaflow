@@ -4,6 +4,7 @@ struct BatchWBSettings {
     let filmType: FilmType
     let developTarget: DevelopTarget
     let baseEstimationMode: DevelopParameters.BaseMode
+    var baseScale: FilmBaseScale = .identity
     let manualBaseRGB: SIMD3<Double>?
     let filmStockDminID: String?
     let lightSourceProfileID: String?
@@ -20,6 +21,7 @@ extension ScanFrame {
             filmType: filmType,
             developTarget: params.developTarget,
             baseEstimationMode: params.baseEstimationMode,
+            baseScale: params.baseScale,
             manualBaseRGB: params.baseEstimationMode == .manual ? params.manualBaseRGB : nil,
             filmStockDminID: params.baseEstimationMode == .preset ? params.filmStockDminID : nil,
             lightSourceProfileID: params.lightSourceProfileID,
@@ -37,6 +39,7 @@ extension ScanFrame {
             $0.filmType = settings.filmType
             $0.developTarget = settings.developTarget
             $0.baseEstimationMode = settings.baseEstimationMode
+            $0.baseScale = settings.baseScale
             $0.manualBaseRGB = settings.manualBaseRGB
             $0.filmStockDminID = settings.filmStockDminID
             $0.lightSourceProfileID = settings.lightSourceProfileID

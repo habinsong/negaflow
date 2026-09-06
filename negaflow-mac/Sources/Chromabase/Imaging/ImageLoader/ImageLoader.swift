@@ -115,19 +115,22 @@ public enum ImageLoader {
         public let rawBoostAmount: Double?
         public let rawScaleFactor: Double?
         public let untaggedTIFFRole: UntaggedTIFFRole?
+        public let inputGamma: InputGammaInterpretation?
 
         public init(
             decoder: Decoder,
             rawDecoderVersion: String? = nil,
             rawBoostAmount: Double? = nil,
             rawScaleFactor: Double? = nil,
-            untaggedTIFFRole: UntaggedTIFFRole? = nil
+            untaggedTIFFRole: UntaggedTIFFRole? = nil,
+            inputGamma: InputGammaInterpretation? = nil
         ) {
             self.decoder = decoder
             self.rawDecoderVersion = rawDecoderVersion
             self.rawBoostAmount = rawBoostAmount
             self.rawScaleFactor = rawScaleFactor
             self.untaggedTIFFRole = untaggedTIFFRole
+            self.inputGamma = inputGamma
         }
     }
 

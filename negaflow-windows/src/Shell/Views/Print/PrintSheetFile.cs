@@ -12,7 +12,7 @@ internal static class PrintSheetFile
     {
         FileStream file = new(
             path,
-            access == FileAccess.Read ? FileMode.Open : FileMode.OpenOrCreate,
+            access == FileAccess.Read ? FileMode.Open : FileMode.CreateNew,
             access,
             FileShare.Read);
         return await Task.FromResult(file.AsRandomAccessStream());

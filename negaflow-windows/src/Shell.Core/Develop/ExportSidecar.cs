@@ -65,20 +65,39 @@ public static class ExportSidecarWriter
         ArgumentNullException.ThrowIfNull(content);
         try
         {
-            File.WriteAllText(
-                ExportArtifactPairing.SidecarPath(outputPath),
-                BuildJson(content),
-                new UTF8Encoding(false));
-            File.WriteAllText(
-                ExportArtifactPairing.XmpPath(outputPath),
-                BuildXmp(content),
-                new UTF8Encoding(false));
+            string jsonPath = ExportArtifactPairing.SidecarPath(outputPath);
+            string xmpPath = ExportArtifactPairing.XmpPath(outputPath);
+            if (Path.Exists(jsonPath) || Path.Exists(xmpPath)) { return "sidecar_write_failed"; }
+            string json = BuildJson(content);
+            string xmp = BuildXmp(content);
+            WriteNewFile(jsonPath, json);
+            WriteNewFile(xmpPath, xmp);
             return null;
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or
             PathTooLongException or NotSupportedException)
         {
             return "sidecar_write_failed";
+        }
+    }
+
+    private static void WriteNewFile(string path, string content)
+    {
+        string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                byte[] bytes = new UTF8Encoding(false).GetBytes(content);
+                stream.Write(bytes);
+                stream.Flush(flushToDisk: true);
+            }
+            // 사전 검사 뒤 파일이 생겨도 기존 외부 XMP/sidecar는 덮지 않습니다.
+            File.Move(temporary, path, overwrite: false);
+        }
+        finally
+        {
+            if (File.Exists(temporary)) { File.Delete(temporary); }
         }
     }
 

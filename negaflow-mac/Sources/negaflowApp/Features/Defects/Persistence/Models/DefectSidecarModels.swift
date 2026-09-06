@@ -12,6 +12,7 @@ struct DefectSidecarV2: Codable, Sendable {
     var recipeSHA256: String
     var sourceIdentity: DefectSourceIdentity?
     var items: [DefectEditItemRecord]
+    var payloadSHA256: String?
 
     init(snapshot: DefectRecipeSnapshot) {
         frameID = snapshot.frameID
@@ -19,7 +20,9 @@ struct DefectSidecarV2: Codable, Sendable {
         recipeRevision = snapshot.identity.revision
         recipeSHA256 = snapshot.identity.recipeSHA256
         sourceIdentity = snapshot.identity.sourceIdentity
-        items = snapshot.items.map { $0.compressedForStorage() }
+        // runtime fingerprint v2는 압축 표현도 포함하므로 저장 중 다시 압축하지 않습니다.
+        items = snapshot.items
+        payloadSHA256 = DefectSidecarPayloadDigest.sha256(items)
     }
 
     func validatedSnapshot(
@@ -35,6 +38,11 @@ struct DefectSidecarV2: Codable, Sendable {
         guard fingerprintVersion == DefectRecipeFingerprint.currentVersion else {
             throw DefectRecipeValidationError.unsupportedFingerprintVersion(fingerprintVersion)
         }
+        if let payloadSHA256, payloadSHA256 != DefectSidecarPayloadDigest.sha256(items) {
+            throw DefectRecipeValidationError.fingerprintMismatch
+        }
+        // 영속 파일은 세션 안에서 생성한 값과 달리 압축 스트림까지 검증합니다.
+        _ = try DefectSidecarResourcePolicy.normalizedItems(items, limits: limits)
         let snapshot = try DefectRecipeSnapshot(
             frameID: frameID,
             revision: recipeRevision,

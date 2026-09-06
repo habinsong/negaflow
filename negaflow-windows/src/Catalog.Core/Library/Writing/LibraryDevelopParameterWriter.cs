@@ -26,6 +26,7 @@ internal static class LibraryDevelopParameterWriter
 
         ToneRecipeJsonCodec.Write(parameters, edit.Tone);
         BaseRecipeJsonCodec.Write(parameters, edit.ManualBase, edit.Base);
+        InputGammaJsonCodec.Write(parameters, edit.InputGamma);
         ColorRecipeJsonCodec.Write(parameters, edit);
         if (edit.LocalDodgeBurn is { } localDodgeBurn)
         {

@@ -2,6 +2,19 @@ import Foundation
 
 extension AppLocalization {
     static let japanesePhraseTable: [AppLocalizedPhrase: String] = [
+            .inputGammaEstimated: "推定ガンマ %.1f",
+            .inputGammaRecorded: "ファイルガンマ %.1f",
+            .inputGammaProfile: "ファイルのカラープロファイル",
+            .inputGammaAssumedLinear: "推定 · リニア 1.0",
+            .inputGammaAssumedSRGB: "推定 · sRGB",
+            .inputGammaDecoder: "RAW デコーダー",
+            .inputGammaAutomatic: "自動",
+            .inputGamma: "入力ガンマ",
+            .inputGammaRestore: "入力ガンマを自動に戻す",
+            .inputGammaHelp: "0.1–4.0、0.1刻み。小数点はピリオドを使用。Enterで適用、Escで取消。",
+            .inputGammaUnsupported: "手動入力ガンマは、行列ICCまたはICCなしの8-bit・16-bit RGB TIFFに対応します。",
+            .inputGammaLoadFailed: "入力ガンマを適用する画像を読み込めませんでした。",
+
         .idleStatus: "待機中",
         .settingsDiskTab: "ディスク",
         .diskLocationICloud: "iCloud",
@@ -185,6 +198,7 @@ extension AppLocalization {
         .noSelection: "選択なし",
         .none: "なし",
         .baseSection: "ベース",
+        .baseScale: "ベース倍率",
         .inspectorTabBasic: "基本",
         .inspectorTabEdit: "編集",
         .inspectorTabDefect: "GrainMend",

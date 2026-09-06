@@ -192,7 +192,7 @@ public static class FrameImport
                 continue;
             }
             LibrarySourceMetadata? sourceMetadata = sourceMetadataReader?.Invoke(path);
-            if (sourceMetadataReader is not null && sourceMetadata is null)
+            if (sourceMetadataReader is not null && sourceMetadata is not { IsValid: true })
             {
                 rejected.Add(new FrameImportRejection(path, FrameImportRefusal.UndecodableImage));
                 continue;
@@ -339,7 +339,10 @@ public static class FrameImport
         }
         // 스캔한 frame 도 가져온 frame 과 같은 원본 성질을 적습니다. 이 값이 없으면 relink 가
         // 다른 사진을 같은 자리에 연결하는 것을 막지 못합니다.
-        if (sourceMetadataReader?.Invoke(scan.VisiblePath) is { IsValid: true } scannedMetadata)
+        LibrarySourceMetadata? scanned = sourceMetadataReader?.Invoke(scan.VisiblePath);
+        if (sourceMetadataReader is not null && scanned is not { IsValid: true })
+        { return Rejected(scan.VisiblePath, FrameImportRefusal.UndecodableImage); }
+        if (scanned is { IsValid: true } scannedMetadata)
         {
             record[LibraryFrameReader.SourceMetadataName] =
                 LibrarySourceMetadataJson.Write(scannedMetadata);

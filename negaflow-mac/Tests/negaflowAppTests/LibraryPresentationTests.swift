@@ -3,6 +3,7 @@ import AppKit
 import ImageIO
 import UniformTypeIdentifiers
 import Chromabase
+import ScannerKit
 @testable import negaflowApp
 
 @MainActor
@@ -463,6 +464,21 @@ final class LibraryPresentationTests: XCTestCase {
                 FrameStripPresentationMode.developed.previewImage(for: frame) === frame.thumbnailImage
             )
         }
+    }
+
+    func testLatePositiveSourceSeedDoesNotPublishRawAfterSwitchingToNegative() async throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("thumbnail-process-race-\(UUID()).tif")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try MockScannerBackend.writeSyntheticNegative(width: 24, height: 16, to: url)
+        let model = AppModel()
+        let frame = ScanFrame(scanIndex: 1, rawScanURL: url, filmType: .colorPositive, sourceKind: .importedFile)
+        model.frames = [frame]
+        model.seedInitialThumbnail(for: frame, from: url)
+        frame.filmType = .colorNegative
+        frame.updateParams { $0.filmType = .colorNegative }
+        await frame.initialThumbnailSeedTask?.value
+        XCTAssertNotNil(frame.rawPreviewImage)
+        XCTAssertNil(frame.thumbnailImage)
     }
 
     func testPositiveInitialThumbnailCanUseOriginalImage() async throws {

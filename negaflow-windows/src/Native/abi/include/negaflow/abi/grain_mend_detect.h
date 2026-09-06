@@ -260,6 +260,14 @@ NF_API void NF_CALL nf_grain_mend_accepted_region_destroy_v1(
 NF_API void NF_CALL nf_grain_mend_review_destroy_v1(
     nf_grain_mend_review_handle_v1* review);
 
+NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v8(
+    const nf_develop_export_request_v39* request,
+    const nf_grain_mend_detect_parameters_v3* parameters,
+    nf_develop_run_state_v1* run_state,
+    nf_grain_mend_detection_v4* detection,
+    nf_develop_export_result_v3* result,
+    nf_grain_mend_review_handle_v1** review);
+
 #ifdef __cplusplus
 }
 #endif

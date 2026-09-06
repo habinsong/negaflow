@@ -43,11 +43,11 @@ public sealed partial class DevelopWorkspaceView
             return true;
         }
 
-        bool monochrome = frame.Route.FilmType is FilmType.BlackAndWhiteNegative;
+        DevelopRequestResult request = DevelopRequestFactory.Create(frame, frame.SourcePath, uninvertedSource: true);
+        if (request.Request is not { } input) { return true; }
         // macOS `pickFilmBase` 는 `Task.detached` 로 샘플합니다. WIC 디코더는
         // COINIT_MULTITHREADED 를 요구하는데 WinUI 스레드는 STA 라서, 여기서 직접
         // 열면 `RPC_E_CHANGED_MODE` 로 디코드가 실패하고 Dmin 이 그대로입니다.
-        string path = sourcePath;
         double unitX = rawX;
         double unitY = rawY;
         Microsoft.UI.Dispatching.DispatcherQueue queue = DispatcherQueue;
@@ -59,13 +59,25 @@ public sealed partial class DevelopWorkspaceView
             FilmBasePick picked;
             try
             {
-                picked = FilmBasePick.Sample(path, unitX, unitY, monochrome);
+                picked = FilmBasePick.Sample(input, unitX, unitY);
             }
             catch
             {
                 picked = new FilmBasePick(FilmBasePickOutcome.SourceUnavailable, 0.0, 0.0, 0.0);
             }
-            _ = queue.TryEnqueue(() => ApplyPickedFilmBase(picked));
+            _ = queue.TryEnqueue(() =>
+            {
+                if (panel?.SelectedFrame is not { } current || current.Id != frame.Id ||
+                    current.SourcePath != frame.SourcePath || current.SourceMetadata != frame.SourceMetadata ||
+                    current.InputGamma != frame.InputGamma ||
+                    current.DefectRecipe?.RecipeRevision != frame.DefectRecipe?.RecipeRevision ||
+                    current.DefectRecipe?.RecipeSha256 != frame.DefectRecipe?.RecipeSha256)
+                {
+                    basePickInFlight = false;
+                    return;
+                }
+                ApplyPickedFilmBase(picked);
+            });
         });
         return true;
     }
@@ -84,7 +96,7 @@ public sealed partial class DevelopWorkspaceView
                 RequestPreview();
                 return;
             }
-            if (panel.SetManualBase(picked.Red, picked.Green, picked.Blue) != LibraryFrameError.None)
+            if (panel.SetPickedBase(picked.Red, picked.Green, picked.Blue) != LibraryFrameError.None)
             {
                 RequestPreview();
                 return;

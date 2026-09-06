@@ -61,7 +61,7 @@ public sealed partial class DevelopLibrarySourcePanel : UserControl
         // 방금 스캔한 사진이 안 나타나고, 이미 지운 프리뷰가 유령으로 남아 누르면
         // "선택 안 함" 이 됐습니다(선택은 지금 있는 프레임에서만 고를 수 있습니다).
         ScanPanel.LibraryChanged += (_, _) => LibraryFramesChanged?.Invoke(this, EventArgs.Empty);
-        DevelopDefaultsPanel.Bind(host, actionable);
+        DevelopDefaultsPanel.Bind(host, actionable, showInputGamma: true);
         DevelopDefaultsPanel.LibraryChanged += (_, _) =>
             DevelopDefaultsChanged?.Invoke(this, EventArgs.Empty);
     }

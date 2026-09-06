@@ -3,6 +3,14 @@ import Chromabase
 import ScannerKit
 
 extension LibraryCatalogFile {
+    /// v6と同じ構造を読み、旧readerが新しい入力設定を捨てないよう契約を昇格します。
+    static func migrateV6ToV7(_ legacy: LibraryCatalog) -> LibraryCatalog {
+        var current = legacy
+        current.version = LibraryCatalog.currentVersion
+        current.minimumReaderVersion = LibraryCatalog.oldestReaderVersion
+        return current
+    }
+
     static func migrateV1ToV6(_ legacy: LibraryCatalogV1) -> LibraryCatalog {
         migrateLegacy(folders: legacy.folders, frames: legacy.frames.map(\.currentRecord))
     }

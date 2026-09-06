@@ -30,10 +30,10 @@ public sealed class CatalogSnapshot
     /// ADR-0025 의 결정에 따라 두 플랫폼은 같은 파일을 열지 않으므로, macOS 파일(6)은 Windows 에서
     /// <see cref="CatalogStoreError.UnsupportedCatalogVersion"/> 으로 막힙니다.
     /// </summary>
-    public const int CurrentCatalogVersion = 1;
+    public const int CurrentCatalogVersion = 2;
 
     /// <summary>이 파일을 읽을 수 있는 가장 낮은 reader version 입니다.</summary>
-    public const int OldestReaderVersion = 1;
+    public const int OldestReaderVersion = 2;
 
     private readonly Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> tables;
 

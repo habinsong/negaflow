@@ -1,6 +1,7 @@
 #pragma once
 
 #include "negaflow/abi/grain_mend_detect.h"
+#include "negaflow/abi/develop_output.h"
 
 #include <cstdint>
 
@@ -29,6 +30,7 @@ namespace negaflow::abi::detail {
     nf_develop_run_state_v1* run_state,
     nf_grain_mend_detection_v2* detection,
     nf_develop_export_result_v3* result,
-    negaflow::pipeline::GrainMendDetectionOutcome* retained_detection = nullptr);
+    negaflow::pipeline::GrainMendDetectionOutcome* retained_detection = nullptr,
+    const nf_develop_export_request_v39* input_request = nullptr);
 
 }  // namespace negaflow::abi::detail

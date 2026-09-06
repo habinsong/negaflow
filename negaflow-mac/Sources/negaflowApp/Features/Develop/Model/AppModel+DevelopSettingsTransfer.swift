@@ -124,7 +124,7 @@ extension AppModel {
 
         let targetFrames = framesForContextAction(frame)
         guard !targetFrames.isEmpty else { return }
-        for targetFrame in targetFrames {
+        applyTransferredSettings(to: targetFrames) { targetFrame in
             targetFrame.applyDevelopSettingsSnapshot(copiedDevelopSettings, scope: scope)
         }
         let action = scope.isFullDevelopScope
@@ -140,6 +140,23 @@ extension AppModel {
             destination
         )
         developFramesAfterSettingsTransfer(targetFrames)
+    }
+
+    /// 선택한 프레임들의 recipe 교체를 기존 사진 편집 Undo의 한 단계로 묶습니다.
+    func applyTransferredSettings(to frames: [ScanFrame], update: (ScanFrame) -> Void) {
+        catalogUndoManager?.beginUndoGrouping()
+        defer { catalogUndoManager?.endUndoGrouping() }
+        for frame in frames {
+            frameEditCoalesceTasks[frame.id]?.cancel()
+            frameEditCoalesceTasks[frame.id] = nil
+            noteFrameEditBaseline(frame)
+            update(frame)
+            recordFrameEditIfChanged(frame)
+            frameEditCoalesceTasks[frame.id]?.cancel()
+            frameEditCoalesceTasks[frame.id] = nil
+            noteFrameEditBaseline(frame)
+        }
+        scheduleLibrarySave()
     }
 
     @discardableResult

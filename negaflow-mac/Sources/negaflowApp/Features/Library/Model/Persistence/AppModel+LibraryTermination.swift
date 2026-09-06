@@ -31,7 +31,7 @@ extension AppModel {
     }
 
     /// 정상 종료 요청을 최신 catalog generation의 read-back 승인까지 보류한다.
-    /// 먼저 결함 편집을 이미지에 굽고(기록 폐기), 그다음 catalog를 커밋한다.
+    /// 먼저 결함 recipe를 저장하고, 그다음 catalog를 커밋한다.
     /// scheduler는 테스트에서 completion 순서와 실패를 결정적으로 주입하기 위한 seam이다.
     func beginApplicationTermination(
         scheduleCommit: @escaping LibraryTerminationCommitScheduler,
@@ -44,7 +44,7 @@ extension AppModel {
         guard !isLibraryTerminationSaveInProgress else { return .terminateLater }
         isLibraryTerminationSaveInProgress = true
         // 결함 편집이 없으면 기존 동기 커밋 경로를 그대로 쓴다. 편집이 있으면 먼저 비동기로
-        // 이미지에 굽고(기록 폐기) 커밋한다 — 실패 시 종료를 취소해 적용된 편집을 지키게 한다.
+        // recipe를 저장하고 커밋한다 — 실패 시 종료를 취소해 적용된 편집을 지킵니다.
         let needsBake = frames.contains { !$0.isPreviewScan && !$0.defectEdits.isEmpty }
         guard needsBake else {
             guard startLibraryTerminationCommit(
@@ -167,11 +167,10 @@ extension AppModel {
             statusMessage = libraryCatalogBlockMessage(.writeFailed)
             return nil
         }
-        for frame in frames where frame.defectGestureRecipeAdvanced {
-            cancelPendingDefectRecipeRefresh(frame)
-            frame.defectGestureRecipeAdvanced = false
-            frame.defectGestureUndoPushed = false
-            frame.defectGestureSourceIdentity = nil
+        for frame in frames where !frame.isPreviewScan && !frame.defectEdits.isEmpty {
+            guard refreshDefectRecipeState(frame, advanceRevision: false, persist: true) != nil else {
+                return nil
+            }
         }
         guard let catalog = currentLibraryCatalogSnapshot() else {
             recordLibraryCatalogWriteResult(generation: generation, succeeded: false)

@@ -3,6 +3,8 @@
 #include "negaflow/pipeline/gpu_accelerator.h"
 
 #include "negaflow/imaging/kernel_accelerator.h"
+#include "negaflow/imaging/scanner_tiff_to_working.h"
+#include "export/support/input_gamma_reference.h"
 
 #include <optional>
 
@@ -124,13 +126,20 @@ using develop_export_detail::validate_request;
 //
 // **`noexcept` 가 아닙니다.** 아래 `run_develop` 이 감쌉니다 — 이유는 그쪽 주석에.
 [[nodiscard]] DevelopExportOutcome run_develop_unguarded(
-    const DevelopExportRequest& request,
+    const DevelopExportRequest& original_request,
     const PreviewTarget* const preview,
     const DevelopRunControl& control,
     const DetectTarget* const detect) {
-    if (auto failed = validate_request(request, preview, detect)) {
+    if (auto failed = validate_request(original_request, preview, detect)) {
         return *failed;
     }
+    std::optional<DevelopExportRequest> interpreted;
+    const auto resolved_gamma = negaflow::imaging::resolve_input_gamma_source(original_request.source, original_request.input_gamma);
+    if (resolved_gamma != original_request.input_gamma) {
+        interpreted = original_request;
+        interpreted->input_gamma = resolved_gamma;
+    }
+    const auto& request = interpreted ? *interpreted : original_request;
     // **내보내기도 GPU 를 씁니다. 맥이 그렇게 합니다.**
     //
     // 예전에는 여기서 내보내기만 `cpu_only` 로 묶었습니다 — "값이 바이트까지 같아야 한다" 는
@@ -190,6 +199,8 @@ using develop_export_detail::validate_request;
     if (auto failed = observe_source_before(request, tracker, stop, observed)) {
         return *failed;
     }
+    std::optional<std::array<float, 3>> input_gamma_reference;
+    if (auto failed = prepare_input_gamma_reference(original_request, control, observed, input_gamma_reference)) { return *failed; }
 
     // macOS `preloadedPreviewRaw` — 슬라이더는 디코드 0회, 프록시 raw 에서 현상.
     PreviewProxyHint proxy_hint{};
@@ -208,7 +219,7 @@ using develop_export_detail::validate_request;
             observed.before.observation,
             *request.defect_recipe_sha256,
             cleaned_raw,
-            defect_recipe.info);
+            defect_recipe.info, request.input_gamma);
     DefectRecipeStageInfo prefix_info{};
     std::shared_ptr<const negaflow::imaging::WorkingImage> prefix_cleaned_raw{};
     bool used_cleaned_prefix = false;
@@ -222,7 +233,7 @@ using develop_export_detail::validate_request;
             observed.before.observation,
             *request.defect_recipe_append_prefix_sha256,
             prefix_cleaned_raw,
-            prefix_info)) {
+            prefix_info, request.input_gamma)) {
         try {
             decoded_image = *prefix_cleaned_raw;
             used_cleaned_prefix = true;
@@ -264,7 +275,7 @@ using develop_export_detail::validate_request;
                     observed.before.observation,
                     *request.defect_recipe_sha256,
                     cleaned_raw,
-                    defect_recipe.info);
+                    defect_recipe.info, request.input_gamma);
             } catch (...) {
                 cleaned_raw.reset();
             }
@@ -348,7 +359,7 @@ using develop_export_detail::validate_request;
             tracker,
             std::move(decoded_image),
             invert,
-            proxy_hint.image_is_proxy || proxy_hint.has_base ? &proxy_hint : nullptr)) {
+            proxy_hint.image_is_proxy || proxy_hint.has_base ? &proxy_hint : nullptr, input_gamma_reference)) {
         return *failed;
     }
 

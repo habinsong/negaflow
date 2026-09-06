@@ -61,7 +61,7 @@ extension AppModel {
 
         librarySaveTask?.cancel()
         librarySaveTask = nil
-        guard let payload = makeManualBackupPayload() else {
+        guard let payload = await makeManualBackupPayload() else {
             return failManualBackup()
         }
         afterFreeze?()
@@ -101,7 +101,7 @@ extension AppModel {
         return false
     }
 
-    private func makeManualBackupPayload() -> LibraryManualBackupPayload? {
+    private func makeManualBackupPayload() async -> LibraryManualBackupPayload? {
         let persistentFrames = frames.filter { !$0.isPreviewScan }
         guard rollStore.hasExactMembership(for: persistentFrames.map(\.id)) else { return nil }
         let catalog = makeLibraryCatalogValue(
@@ -112,8 +112,32 @@ extension AppModel {
             scanRollAssignments: scanRollAssignments
         )
         guard let catalogData = LibraryCatalogFile.encode(catalog) else { return nil }
-        // 결함 기록은 세션 전용이라 백업에 sidecar를 담지 않는다(종료 시 이미지에 굽힘).
-        let defectDataByFrameID: [UUID: Data] = [:]
+        var recipes: [DefectRecipeSnapshot] = []
+        for frame in persistentFrames {
+            guard !frame.defectEditsNeedRestore else { return nil }
+            if !frame.defectEdits.isEmpty {
+                guard let snapshot = try? DefectRecipeSnapshot(
+                    frameID: frame.id, revision: max(1, frame.defectRecipeRevision),
+                    sourceIdentity: frame.defectRecipeIdentity?.sourceIdentity,
+                    items: frame.defectEdits.map { DefectEditItemRecord(item: $0) }
+                ) else { return nil }
+                recipes.append(snapshot)
+            }
+        }
+        let frozenRecipes = recipes
+        let encoded = await Task.detached(priority: .utility) { () -> [UUID: Data]? in
+            let encoder = PropertyListEncoder()
+            encoder.outputFormat = .binary
+            var result: [UUID: Data] = [:]
+            for recipe in frozenRecipes {
+                guard let data = try? encoder.encode(DefectSidecarV2(snapshot: recipe)),
+                      case .loaded = DefectSidecarFile.decode(data, expectedFrameID: recipe.frameID, limits: .standard)
+                else { return nil }
+                result[recipe.frameID] = data
+            }
+            return result
+        }.value
+        guard let defectDataByFrameID = encoded else { return nil }
         return LibraryManualBackupPayload(
             catalog: catalog,
             catalogData: catalogData,

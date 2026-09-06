@@ -87,7 +87,8 @@ internal static class PrintPreviewResolutionTests
                 !service.TryGetDeveloped("frame-a", out _),
                 "print_preview_forgets_developed_on_invalidate");
 
-            LibraryFrameSnapshot frame = Frame(new ManualBaseRgb(0.2, 0.2, 0.2));
+            LibraryFrameSnapshot frame = Frame(new ManualBaseRgb(0.2, 0.2, 0.2),
+                sourcePath: OperatingSystem.IsWindows() ? null : Path.Combine(root, "preview.tif"));
             service.RequestDeveloped(frame, 1024);
             service.WaitUntilIdleAsync().GetAwaiter().GetResult();
             // WaitUntilIdle 는 디스크만 기다립니다. 현상 요청은 슬롯이 풀릴 때까지 짧게 둡니다.

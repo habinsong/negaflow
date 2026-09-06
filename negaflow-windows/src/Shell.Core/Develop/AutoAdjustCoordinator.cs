@@ -45,12 +45,26 @@ public sealed class AutoAdjustCoordinator
     private readonly IDevelopExporter exporter;
     private readonly IUiDispatcher dispatcher;
     private readonly uint sampleExtent;
-    private readonly byte[] pixels;
+    private readonly Func<byte[], uint, uint, AutoAdjustSettings> compute;
+    private long revision;
+    private long runningRevision;
+
+    public bool IsRunning => Volatile.Read(ref runningRevision) != 0;
+    public void Cancel()
+    {
+        Interlocked.Increment(ref revision);
+        Interlocked.Exchange(ref runningRevision, 0);
+    }
 
     public AutoAdjustCoordinator(
         IDevelopExporter exporter,
         IUiDispatcher dispatcher,
         uint sampleExtent = 512U)
+        : this(exporter, dispatcher, sampleExtent, (pixels, width, height) => NativeAutoAdjust.Compute(pixels, width, height)) { }
+
+    internal AutoAdjustCoordinator(
+        IDevelopExporter exporter, IUiDispatcher dispatcher, uint sampleExtent,
+        Func<byte[], uint, uint, AutoAdjustSettings> compute)
     {
         ArgumentNullException.ThrowIfNull(exporter);
         ArgumentNullException.ThrowIfNull(dispatcher);
@@ -59,7 +73,7 @@ public sealed class AutoAdjustCoordinator
         this.exporter = exporter;
         this.dispatcher = dispatcher;
         this.sampleExtent = sampleExtent;
-        pixels = new byte[(long)sampleExtent * sampleExtent * 4];
+        this.compute = compute;
     }
 
     /// <summary>
@@ -167,7 +181,24 @@ public sealed class AutoAdjustCoordinator
     {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(onCompleted);
+        long requestRevision = Interlocked.Increment(ref revision);
+        Interlocked.Exchange(ref runningRevision, requestRevision);
 
+        AutoAdjustOutcome? outcome;
+        try { outcome = await MeasureAsync(frame, operation, requestRevision).ConfigureAwait(false); }
+        catch (OperationCanceledException)
+        {
+            outcome = new AutoAdjustOutcome(DevelopExportOutcomeKind.Cancelled, null, null,
+                DevelopRequestRefusal.None, null);
+        }
+        catch (Exception error) { outcome = AutoAdjustOutcome.Faulted(error.Message); }
+        // UI 콜백 예외를 측정 실패로 다시 전달하면 같은 완료 처리가 두 번 실행됩니다.
+        return outcome is null || Deliver(outcome, onCompleted, requestRevision);
+    }
+
+    private async Task<AutoAdjustOutcome?> MeasureAsync(
+        LibraryFrameSnapshot frame, AutoAdjustOperation operation, long requestRevision)
+    {
         LibraryFrameSnapshot neutral = operation switch
         {
             AutoAdjustOperation.Tone => NeutraliseTone(frame),
@@ -179,59 +210,65 @@ public sealed class AutoAdjustCoordinator
         DevelopRequestResult built = DevelopRequestFactory.Create(neutral, unusedDestination);
         if (built.Request is not { } request)
         {
-            return Deliver(AutoAdjustOutcome.Refused(built.Refusal), onCompleted);
+            return AutoAdjustOutcome.Refused(built.Refusal);
         }
 
-        try
+        // 새 감마/배율 요청이 겹쳐도 서로의 중립 렌더를 덮지 않습니다.
+        byte[] pixels = new byte[checked((int)((long)sampleExtent * sampleExtent * 4))];
+        // No soft proof. Automatic adjustment measures the develop, not a simulation of
+        // what some printer would make of it; proofing the input would bake the paper's
+        // dimness and cast into the tone and white balance it proposes.
+        DevelopExportResult render = await Task.Run(() => exporter.Preview(
+            request,
+            sampleExtent,
+            sampleExtent,
+            pixels)).ConfigureAwait(false);
+        if (!render.Succeeded)
         {
-            // No soft proof. Automatic adjustment measures the develop, not a simulation of
-            // what some printer would make of it; proofing the input would bake the paper's
-            // dimness and cast into the tone and white balance it proposes.
-            DevelopExportResult render = await Task.Run(() => exporter.Preview(
-                request,
-                sampleExtent,
-                sampleExtent,
-                pixels)).ConfigureAwait(false);
-            if (!render.Succeeded)
-            {
-                return Deliver(
-                    AutoAdjustOutcome.Faulted(
-                        $"The neutral develop failed at {render.FailedStage}: {render.FailureName}."),
-                    onCompleted);
-            }
+            return AutoAdjustOutcome.Faulted(
+                $"The neutral develop failed at {render.FailedStage}: {render.FailureName}.");
+        }
 
-            AutoAdjustSettings settings = NativeAutoAdjust.Compute(
-                pixels,
-                render.ImageWidth,
-                render.ImageHeight);
-            LibraryFrameSnapshot applied = operation switch
-            {
-                AutoAdjustOperation.Tone => ApplyTone(frame, settings),
-                AutoAdjustOperation.WhiteBalance => ApplyWhiteBalance(frame, settings),
-                _ => Apply(frame, settings),
-            };
-            return Deliver(
-                new AutoAdjustOutcome(
-                    DevelopExportOutcomeKind.Completed,
-                    applied,
-                    settings,
-                    DevelopRequestRefusal.None,
-                    null),
-                onCompleted);
-        }
-        catch (Exception error) when (error is not OperationCanceledException)
+        if (requestRevision != Volatile.Read(ref revision)) { return null; }
+        if (render.ImageWidth == 0 || render.ImageHeight == 0 ||
+            render.ImageWidth > sampleExtent || render.ImageHeight > sampleExtent)
         {
-            return Deliver(AutoAdjustOutcome.Faulted(error.Message), onCompleted);
+            return AutoAdjustOutcome.Faulted("Invalid automatic adjustment preview dimensions.");
         }
+
+        AutoAdjustSettings settings = compute(
+            pixels,
+            render.ImageWidth,
+            render.ImageHeight);
+        LibraryFrameSnapshot applied = operation switch
+        {
+            AutoAdjustOperation.Tone => ApplyTone(frame, settings),
+            AutoAdjustOperation.WhiteBalance => ApplyWhiteBalance(frame, settings),
+            _ => Apply(frame, settings),
+        };
+        return new AutoAdjustOutcome(
+            DevelopExportOutcomeKind.Completed,
+            applied,
+            settings,
+            DevelopRequestRefusal.None,
+            null);
     }
 
-    private bool Deliver(AutoAdjustOutcome outcome, Action<AutoAdjustOutcome> onCompleted)
+    private bool Deliver(AutoAdjustOutcome outcome, Action<AutoAdjustOutcome> onCompleted, long requestRevision)
     {
+        void Complete()
+        {
+            if (requestRevision != Volatile.Read(ref revision)) { return; }
+            Interlocked.CompareExchange(ref runningRevision, 0, requestRevision);
+            onCompleted(outcome);
+        }
         if (dispatcher.HasThreadAccess)
         {
-            onCompleted(outcome);
+            Complete();
             return true;
         }
-        return dispatcher.TryEnqueue(() => onCompleted(outcome));
+        bool delivered = dispatcher.TryEnqueue(Complete);
+        if (!delivered) { Interlocked.CompareExchange(ref runningRevision, 0, requestRevision); }
+        return delivered;
     }
 }

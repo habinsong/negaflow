@@ -46,7 +46,7 @@ extension AppModel {
         let restoredFrame = restoreSnapshotCompareState()
         let targetFrames = framesForContextAction(frame)
         guard !targetFrames.isEmpty else { return }
-        for targetFrame in targetFrames {
+        applyTransferredSettings(to: targetFrames) { targetFrame in
             targetFrame.applyUserDevelopPreset(preset, presets: presets)
         }
         let appliedName = targetFrames.count == 1

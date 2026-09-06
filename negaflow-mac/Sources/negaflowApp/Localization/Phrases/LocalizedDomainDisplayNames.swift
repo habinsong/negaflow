@@ -94,6 +94,8 @@ extension DevelopSettingsPasteScope {
             return AppLocalization.text(AppLocalizedPhrase.allSettings, language: language)
         }
         var groups: [String] = []
+        if inputGamma { groups.append(AppLocalization.text(.inputGamma, language: language)) }
+        if baseScale { groups.append(AppLocalization.text(.baseScale, language: language)) }
         if base { groups.append(AppLocalization.text(AppLocalizedPhrase.baseSection, language: language)) }
         if tone { groups.append(AppLocalization.text(AppLocalizedPhrase.basicTone, language: language)) }
         if color { groups.append(AppLocalization.text(AppLocalizedPhrase.color, language: language)) }

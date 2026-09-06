@@ -69,7 +69,7 @@ final class DefectBakeTests: XCTestCase {
         XCTAssertEqual(height, 24)
     }
 
-    func testCatalogRecordsNoDefectStateForFramesWithEdits() {
+    func testCatalogRecordsRecipePresenceWithoutBakedPixels() {
         let original = tempDir.appendingPathComponent("scan.tiff")
         let frame = ScanFrame(
             scanIndex: 1,
@@ -92,7 +92,7 @@ final class DefectBakeTests: XCTestCase {
         XCTAssertEqual(record.rawScanPath, original.path)
         XCTAssertNil(record.cleanedRawPath)
         XCTAssertNil(record.cleanedRawEditCount)
-        XCTAssertNil(record.hasDefectEdits)
+        XCTAssertEqual(record.hasDefectEdits, true)
         XCTAssertEqual(restored.rawScanURL, original)
     }
 

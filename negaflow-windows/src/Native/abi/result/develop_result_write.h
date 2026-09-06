@@ -211,4 +211,9 @@ void write_outcome_v3(
     const std::uint64_t wall_microseconds,
     nf_develop_export_result_v3& result) noexcept;
 
+[[nodiscard]] bool prepare_result_v39(
+    const nf_develop_export_request_v39* request,
+    nf_develop_export_result_v3* result,
+    nf_status_t& status) noexcept;
+
 }  // namespace negaflow::abi::detail

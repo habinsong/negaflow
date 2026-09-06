@@ -36,43 +36,53 @@ internal static class PrintSheetEncoder
         DevelopExportFormat format = DevelopExportFormat.Png16,
         double jpegQuality = 1.0)
     {
+        string temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(destination) ?? ".");
-            using IRandomAccessStream stream =
-                await PrintSheetFile.OpenAsync(destination, FileAccess.ReadWrite);
-            stream.Size = 0;
-            BitmapEncoder encoder = format == DevelopExportFormat.Jpeg8
-                ? await BitmapEncoder.CreateAsync(
-                    BitmapEncoder.JpegEncoderId,
-                    stream,
-                    [
-                        new KeyValuePair<string, BitmapTypedValue>(
-                            "ImageQuality",
-                            new BitmapTypedValue(
-                                (float)Math.Clamp(jpegQuality, 0.0, 1.0),
-                                Windows.Foundation.PropertyType.Single)),
-                    ])
-                : await BitmapEncoder.CreateAsync(
-                    format == DevelopExportFormat.Tiff16
-                        ? BitmapEncoder.TiffEncoderId
-                        : BitmapEncoder.PngEncoderId,
-                    stream);
-            encoder.SetPixelData(
-                BitmapPixelFormat.Bgra8,
-                BitmapAlphaMode.Ignore,
-                (uint)width,
-                (uint)height,
-                dpi,
-                dpi,
-                page);
-            await encoder.FlushAsync();
+            using (IRandomAccessStream stream =
+                await PrintSheetFile.OpenAsync(temporary, FileAccess.ReadWrite))
+            {
+                BitmapEncoder encoder = format == DevelopExportFormat.Jpeg8
+                    ? await BitmapEncoder.CreateAsync(
+                        BitmapEncoder.JpegEncoderId,
+                        stream,
+                        [
+                            new KeyValuePair<string, BitmapTypedValue>(
+                                "ImageQuality",
+                                new BitmapTypedValue(
+                                    (float)Math.Clamp(jpegQuality, 0.0, 1.0),
+                                    Windows.Foundation.PropertyType.Single)),
+                        ])
+                    : await BitmapEncoder.CreateAsync(
+                        format == DevelopExportFormat.Tiff16
+                            ? BitmapEncoder.TiffEncoderId
+                            : BitmapEncoder.PngEncoderId,
+                        stream);
+                encoder.SetPixelData(
+                    BitmapPixelFormat.Bgra8,
+                    BitmapAlphaMode.Ignore,
+                    (uint)width,
+                    (uint)height,
+                    dpi,
+                    dpi,
+                    page);
+                await encoder.FlushAsync();
+            }
+            File.Move(temporary, destination, overwrite: false);
             return true;
         }
         catch (Exception exception) when (
-            exception is IOException or UnauthorizedAccessException)
+            exception is IOException or UnauthorizedAccessException or ArgumentException or
+                System.Runtime.InteropServices.COMException)
         {
             return false;
+        }
+        finally
+        {
+            try { if (File.Exists(temporary)) { File.Delete(temporary); } }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            { ExportTrace.Write("print temporary cleanup failed: " + error.GetType().Name); }
         }
     }
 }

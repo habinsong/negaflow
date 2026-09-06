@@ -13,7 +13,7 @@ extension DevelopFrameRenderer {
             try Task.checkCancellation()
             let engine = ChromabaseEngine()
             let context = renderContext()
-            guard let input = resolveRenderInput(snapshot, engine: engine, context: context) else {
+            guard let input = try resolveRenderInput(snapshot, engine: engine, context: context) else {
                 throw loadError(for: snapshot)
             }
             try Task.checkCancellation()
@@ -39,6 +39,10 @@ extension DevelopFrameRenderer {
             // 장면 측정은 반전 직전 입력에서 나온다 — 세 프리뷰가 같은 묶음을 공유하면
             // 재측정도 없고 비교본끼리 반전 기준도 정확히 같아진다.
             var measurements = snapshot.cachedSceneMeasurements
+            var inputParams = snapshot.params
+            inputParams.filmType = snapshot.filmType
+            try InputGammaRenderReference.prepare(source: snapshot.rawScanURL,
+                params: inputParams, measurements: &measurements)
             let developedPair = try renderDeveloped(
                 input: rawInput,
                 base: base,
@@ -106,7 +110,7 @@ extension DevelopFrameRenderer {
         return try autoreleasepool {
             let engine = ChromabaseEngine()
             let context = renderContext()
-            guard let input = resolveRenderInput(snapshot, engine: engine, context: context) else {
+            guard let input = try resolveRenderInput(snapshot, engine: engine, context: context) else {
                 throw loadError(for: snapshot)
             }
             var effectiveParams = snapshot.preset.map {
@@ -115,11 +119,15 @@ extension DevelopFrameRenderer {
             effectiveParams.filmType = snapshot.filmType
             effectiveParams.developTarget = snapshot.params.developTarget
             effectiveParams.imageTransform = .identity
+            var measurements = DevelopSceneMeasurements()
+            try InputGammaRenderReference.prepare(source: snapshot.rawScanURL,
+                params: effectiveParams, measurements: &measurements)
             let baseImage = engine.developScannerPreview(
                 image: input.image,
                 base: snapshot.cachedBase,
                 params: effectiveParams,
-                maxDimension: snapshot.proxyMaxDimension
+                maxDimension: snapshot.proxyMaxDimension,
+                measurements: &measurements
             )
             let previewImage = snapshot.imageTransform.isIdentity
                 ? baseImage
@@ -157,6 +165,8 @@ extension DevelopFrameRenderer {
         neutral.filmType = snapshot.filmType
         neutral.developTarget = .main
         neutral.baseEstimationMode = snapshot.params.baseEstimationMode
+        neutral.baseScale = snapshot.params.baseScale
+        neutral.inputGamma = snapshot.params.inputGamma
         neutral.manualBaseRGB = snapshot.params.manualBaseRGB
         neutral.filmStockDminID = snapshot.params.filmStockDminID
         neutral.lightSourceProfileID = snapshot.params.lightSourceProfileID

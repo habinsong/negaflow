@@ -207,13 +207,16 @@ extension DevelopFrameRenderer {
         effectiveParams.filmType = snapshot.filmType
         effectiveParams.developTarget = snapshot.params.developTarget
         effectiveParams.imageTransform = .identity
+        var measurements = DevelopSceneMeasurements()
+        try InputGammaRenderReference.prepare(source: snapshot.rawScanURL, params: effectiveParams, measurements: &measurements)
         let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
         return try engine
             .developDebugFramesScannerPreview(
                 image: input,
                 base: base,
                 params: effectiveParams,
-                maxDimension: snapshot.proxyMaxDimension
+                maxDimension: snapshot.proxyMaxDimension,
+                measurements: measurements
             )
             .map { frame in
                 let proxy = ImageTransformStage.apply(

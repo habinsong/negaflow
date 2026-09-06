@@ -41,6 +41,7 @@ struct SceneMeasurementCacheKey: Equatable, Sendable {
     let cleanRawRevision: Int
     let autoLevels: Bool
     let autoNeutralBalance: Bool
+    var baseScale: FilmBaseScale = .identity
 }
 
 // MARK: - FrameSource (프레임 raw 입력의 출처)
@@ -109,10 +110,33 @@ final class ScanFrame: ObservableObject, Identifiable {
     /// 원본 래스터는 공유하고 현상 조정은 가상 사본 생성 시점부터 독립된다.
     @Published var proofCopyConfiguration: ProofCopyConfiguration?
 
-    @Published var filmType: FilmType
-    @Published var preset: LookPreset?
-    @Published var params: DevelopParameters
-    @Published var imageTransform: ImageTransform
+    @Published var filmType: FilmType {
+        didSet { if oldValue != filmType { autoAdjustRevision &+= 1 } }
+    }
+    @Published var preset: LookPreset? {
+        didSet { if oldValue?.id != preset?.id { autoAdjustRevision &+= 1 } }
+    }
+    var autoAdjustRevision: UInt64 = 0
+    @Published var isApplyingInputGamma = false
+    @Published var inputGammaSupportChecked = false
+    @Published var inputGammaSourceError: InputGammaDecodeError?
+    @Published var inputGammaSourceInfo: InputGammaSourceInfo?
+    var inputGammaRequestRevision: UInt64 = 0
+    @Published var params: DevelopParameters {
+        didSet {
+            if oldValue != params { autoAdjustRevision &+= 1 }
+            if oldValue.inputGamma != params.inputGamma { invalidateInputInterpretation() }
+            if oldValue.baseScale != params.baseScale {
+                developRevision += 1
+                neutralPreviewImage = nil
+                cachedNeutralBase = nil
+                neutralPreviewBaseKey = nil
+            }
+        }
+    }
+    @Published var imageTransform: ImageTransform {
+        didSet { if oldValue != imageTransform { autoAdjustRevision &+= 1 } }
+    }
     @Published var baseRGB: SIMD3<Double>?
     @Published private(set) var rating: Int = 0
     @Published var pickState: FramePickState = .unflagged
@@ -139,6 +163,7 @@ final class ScanFrame: ObservableObject, Identifiable {
     // 필름스트립용 경량 썸네일(긴 변 ~360px). developedImage 와 달리 비활성 프레임에서도 유지된다
     // (메모리 FIFO 제거 대상이 아님) — 풀해상도 버퍼를 내려놓아도 썸네일은 남아 스트립이 비지 않는다.
     @Published var thumbnailImage: NSImage?
+    var thumbnailRecipeID: String?
     /// 인화 패키지의 큰 셀이 360px 썸네일을 확대하지 않도록, 현재 표시 크기에 맞춰 만든
     /// 일시적 발색 프리뷰. 인화 작업공간을 벗어나면 버리고 내보내기 원본으로는 사용하지 않는다.
     @Published var printPackagePreviewImage: NSImage?
@@ -175,6 +200,7 @@ final class ScanFrame: ObservableObject, Identifiable {
     // 무보정 프리뷰 캐시 무효화 키. transform/baseKey가 바뀔 때만 재현상한다(슬라이더 조정엔 불변).
     var neutralPreviewTransform: ImageTransform?
     var neutralPreviewBaseKey: FilmBaseCacheKey?
+    var neutralPreviewBaseScale: FilmBaseScale = .identity
     var mainPreviewTransform: ImageTransform?
     var mainPreviewDevelopRevision: Int = -1
     var developRevision: Int = 0

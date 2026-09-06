@@ -129,6 +129,15 @@ typedef struct nf_develop_export_result_v5 {
     nf_develop_debug_metrics_v1 debug_metrics;
 } nf_develop_export_result_v5;
 
+typedef struct nf_develop_export_result_v6 {
+    nf_develop_export_result_v5 v5;
+    uint32_t reference_base_present;
+    uint32_t applied_input_gamma_mode;
+    float reference_base[3];
+    uint32_t input_interpretation_revision;
+    double applied_input_gamma_value;
+} nf_develop_export_result_v6;
+
 #define NF_DEVELOP_PROGRESS_COMPLETE 1000U
 
 /* Shared, caller-owned run state for one develop call.

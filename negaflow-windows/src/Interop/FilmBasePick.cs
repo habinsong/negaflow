@@ -39,6 +39,19 @@ public readonly record struct FilmBasePick(
     double Green,
     double Blue)
 {
+    public static unsafe FilmBasePick Sample(DevelopExportRequest request, double unitX, double unitY)
+    {
+        NativeFilmBasePickV1 raw = new() { StructSize = (uint)sizeof(NativeFilmBasePickV1) };
+        DevelopExportResult result = NativeDevelopPreviewRender.Render(request, 0U, 0U, Span<byte>.Empty,
+            null, null, null, filmBasePick: &raw, pickX: unitX, pickY: unitY).Result;
+        if (!result.Succeeded) { return new(FilmBasePickOutcome.SourceUnavailable, 0, 0, 0); }
+        return raw.Status switch
+        {
+            0U => new(FilmBasePickOutcome.Picked, raw.Red, raw.Green, raw.Blue),
+            2U => new(FilmBasePickOutcome.NotFilmBase, 0, 0, 0),
+            _ => new(FilmBasePickOutcome.SourceUnavailable, 0, 0, 0),
+        };
+    }
     /// <summary>
     /// macOS <c>AppModel.pickFilmBase</c> 와 같은 자리입니다 — 원본을 읽어 표시 정규 좌표
     /// <paramref name="unitX"/>/<paramref name="unitY"/>(0…1, y 아래로) 의 Dmin 을 냅니다.

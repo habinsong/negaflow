@@ -53,15 +53,18 @@ struct WorkspaceInspectorPane: View {
                 .font(.subheadline.weight(.semibold))
             Spacer(minLength: 8)
             if let frame = model.actionableFrame {
-                Text(DevelopInspectorHeaderSummary.text(
+                let summary = DevelopInspectorHeaderSummary.text(
                     for: frame,
                     language: model.appLanguage
-                ))
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(AppTypography.minimumScaleFactor)
-                    .multilineTextAlignment(.trailing)
+                )
+                if !summary.isEmpty {
+                    Text(summary)
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(AppTypography.minimumScaleFactor)
+                        .multilineTextAlignment(.trailing)
+                }
             } else {
                 Text(model.text(.noFrame))
                     .font(.caption2)
@@ -91,10 +94,12 @@ enum DevelopInspectorHeaderSummary {
     }
 
     static func importedMetadata(_ exif: SourceEXIFMetadata?) -> String {
-        let iso = exif?.isoSpeedRatings.first.map { "ISO \($0)" } ?? "ISO —"
-        let shutter = formatShutter(exif?.exposureTimeSeconds)
-        let aperture = exif?.fNumber.map { "f/\(formatNumber($0))" } ?? "f/—"
-        let focalLength = exif?.focalLengthMM.map { "\(formatNumber($0)) mm" } ?? "— mm"
+        guard let exif, !exif.isoSpeedRatings.isEmpty || exif.exposureTimeSeconds != nil
+                || exif.fNumber != nil || exif.focalLengthMM != nil else { return String() }
+        let iso = exif.isoSpeedRatings.first.map { "ISO \($0)" } ?? "ISO —"
+        let shutter = formatShutter(exif.exposureTimeSeconds)
+        let aperture = exif.fNumber.map { "f/\(formatNumber($0))" } ?? "f/—"
+        let focalLength = exif.focalLengthMM.map { "\(formatNumber($0)) mm" } ?? "— mm"
         return [iso, shutter, aperture, focalLength].joined(separator: " · ")
     }
 

@@ -7,17 +7,24 @@ import ScannerKit
 
 extension AppModel {
     // MARK: 썸네일 디스크 캐시
+    private static let thumbnailInputVersionSuffix = "-input2"
 
     /// 현상 썸네일과 원본 프리뷰는 서로 다른 파일에 저장한다. 한 경로를 공유하면 늦게 끝난
     /// 원본 시드가 현상 썸네일을 덮어써, 재실행 뒤 네거티브 전체가 원본으로 보일 수 있다.
     func thumbnailFileURL(for frame: ScanFrame) -> URL {
         thumbnailDirectoryURL(for: frame)
-            .appendingPathComponent("\(frame.id.uuidString)-developed.jpg")
+            .appendingPathComponent("\(frame.id.uuidString)\(thumbnailInputSuffix(frame.params, includeScale: true))-developed.jpg")
     }
 
     func rawThumbnailFileURL(for frame: ScanFrame) -> URL {
         thumbnailDirectoryURL(for: frame)
-            .appendingPathComponent("\(frame.id.uuidString)-raw.jpg")
+            .appendingPathComponent("\(frame.id.uuidString)\(thumbnailInputSuffix(frame.params, includeScale: false))-raw.jpg")
+    }
+
+    private func thumbnailInputSuffix(_ params: DevelopParameters, includeScale: Bool) -> String {
+        let gamma = params.inputGamma.value.map { "-g\($0.bitPattern)" } ?? ""
+        let scale = includeScale && params.baseScale != .identity ? "-b\(params.baseScale.value.bitPattern)" : ""
+        return Self.thumbnailInputVersionSuffix + gamma + scale
     }
 
     /// 분리 전 캐시 경로. 네거티브에서는 원본인지 현상본인지 판별할 수 없어 표시용으로
@@ -25,6 +32,11 @@ extension AppModel {
     func legacyThumbnailFileURL(for frame: ScanFrame) -> URL {
         thumbnailDirectoryURL(for: frame)
             .appendingPathComponent("\(frame.id.uuidString).jpg")
+    }
+
+    func unversionedThumbnailFileURL(for frame: ScanFrame, raw: Bool) -> URL {
+        thumbnailDirectoryURL(for: frame)
+            .appendingPathComponent("\(frame.id.uuidString)-\(raw ? "raw" : "developed").jpg")
     }
 
     /// 썸네일 캐시 경로는 저장된 그룹명을 그대로 쓴다. 내보내기 폴더처럼 `default` 를 원본
@@ -42,7 +54,8 @@ extension AppModel {
     /// 최신 썸네일을 디스크에 덮어쓴다(현상 정착/가져오기 시점). 백그라운드 코얼레싱 쓰기.
     func persistThumbnail(for frame: ScanFrame, cgImage: CGImage) {
         guard libraryPersistenceEnabled, !frame.isPreviewScan else { return }
-        thumbnailDiskCache.store(cgImage, for: frame.id, at: thumbnailFileURL(for: frame))
+        guard let recipeID = frame.currentThumbnailRecipeID() else { return }
+        thumbnailDiskCache.store(cgImage, for: frame.id, at: thumbnailFileURL(for: frame), recipeID: recipeID)
         thumbnailDiskCache.remove(for: frame.id, at: legacyThumbnailFileURL(for: frame))
     }
 
@@ -62,7 +75,8 @@ extension AppModel {
     /// developFrameAfterFastPreview 가 이 태스크를 await 해 기존과 동일하게 유지된다.
     func seedInitialThumbnail(for frame: ScanFrame, from url: URL) {
         let transform = frame.imageTransform
-        let shouldPublishRawThumbnail = !frame.filmType.requiresInversion
+        let inputGamma = frame.params.inputGamma
+        let sourceKind = frame.sourceKind
         frame.initialThumbnailSeedTask?.cancel()
         frame.initialThumbnailSeedGeneration &+= 1
         let seedGeneration = frame.initialThumbnailSeedGeneration
@@ -85,7 +99,8 @@ extension AppModel {
                     autoreleasepool {
                         AppModel.rawThumbnailCGImage(
                             for: url,
-                            maxPixelSize: Int(DevelopFrameRenderer.thumbnailMaxDimension)
+                            maxPixelSize: Int(DevelopFrameRenderer.thumbnailMaxDimension),
+                            inputGamma: inputGamma, sourceKind: sourceKind
                         )
                             .map { AppModel.orientedThumbnail($0, transform: transform) }
                     }
@@ -95,13 +110,17 @@ extension AppModel {
             guard let self, let frame, let cg,
                   !Task.isCancelled,
                   self.ownsFrame(frame),
+                  frame.initialThumbnailSeedGeneration == seedGeneration,
+                  frame.params.inputGamma == inputGamma,
+                  frame.imageTransform == transform,
                   frame.thumbnailImage == nil else { return }
             let image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
             frame.rawPreviewImage = image
             self.persistRawThumbnail(for: frame, cgImage: cg)
-            if shouldPublishRawThumbnail {
+            if !frame.filmType.requiresInversion {
                 frame.thumbnailImage = image
                 frame.thumbnailTransform = transform
+                frame.thumbnailRecipeID = nil
             }
         }
     }
@@ -122,12 +141,39 @@ extension AppModel {
         ) ?? cg
     }
 
+    nonisolated static func rawThumbnailCGImage(
+        for url: URL, maxPixelSize: Int,
+        inputGamma: InputGammaInterpretation, sourceKind: FrameSource
+    ) -> CGImage? {
+        if inputGamma == .automatic, (try? ImageLoader.inputGammaSourceInfo(url))?.estimatedGamma == nil {
+            return rawThumbnailCGImage(for: url, maxPixelSize: maxPixelSize)
+        }
+        let preview = sourceKind == .importedFile
+            ? try? ImageLoader.loadImportedPreview(url, maxDimension: CGFloat(maxPixelSize),
+                highResolutionThreshold: 0, inputGamma: inputGamma)
+            : try? ImageLoader.loadScannerPreview(url, maxDimension: CGFloat(maxPixelSize),
+                highResolutionThreshold: 0, inputGamma: inputGamma)
+        if let preview {
+            return thumbnailOrientContext.createCGImage(preview.image, from: preview.image.extent,
+                format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
+        }
+        let decoded = sourceKind == .importedFile
+            ? try? ImageLoader.loadImportedDecoded(url, inputGamma: inputGamma)
+            : try? ImageLoader.loadScannerTIFFDecoded(url, inputGamma: inputGamma)
+        guard let decoded else { return nil }
+        let proxy = DevelopFrameRenderer.displayProxy(decoded.image, maxDimension: CGFloat(maxPixelSize))
+        return thumbnailOrientContext.createCGImage(proxy, from: proxy.extent, format: .RGBA8,
+                                                   colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
+    }
+
     /// 프레임 삭제 시 디스크 썸네일도 제거한다.
     func removeThumbnailFile(for frame: ScanFrame) {
         for url in [
             thumbnailFileURL(for: frame),
             rawThumbnailFileURL(for: frame),
             legacyThumbnailFileURL(for: frame),
+            unversionedThumbnailFileURL(for: frame, raw: false),
+            unversionedThumbnailFileURL(for: frame, raw: true),
         ] {
             thumbnailDiskCache.remove(for: frame.id, at: url)
         }

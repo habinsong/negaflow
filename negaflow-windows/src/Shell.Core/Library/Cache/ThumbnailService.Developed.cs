@@ -18,8 +18,14 @@ public sealed partial class ThumbnailService
     /// 현상 워크스페이스가 그린 미리보기입니다. 인화는 이 화소를 먼저 쓰고, 없으면
     /// 360 JPEG 로 자리를 채웁니다.
     /// </summary>
-    public bool TryGetDeveloped(string frameId, out DevelopedPreview preview) =>
-        developed.TryGetValue(frameId, out preview);
+    public bool TryGetDeveloped(string frameId, out DevelopedPreview preview) => TryGetForProof(frameId, null, out preview);
+
+    internal bool TryGetForProof(string frameId, SoftProofSettings? proof, out DevelopedPreview preview)
+    {
+        if (developed.TryGetValue(frameId, out preview) && Same(preview.Proof, proof)) { return true; }
+        preview = default;
+        return false;
+    }
 
     /// <summary>원본·레시피·엔진 identity가 현재와 같은 상주 정착본만 돌려줍니다.</summary>
     /// <remarks>
@@ -28,23 +34,24 @@ public sealed partial class ThumbnailService
     /// 썸네일 · Cleaned Raw · Scan Previews 뿐이고, 현상 프리뷰는 <c>ScanFrame.developedImage</c>
     /// 로 <b>메모리에만</b> 삽니다. 여기 남은 것이 그 자리입니다.
     /// </remarks>
-    public bool TryGetDeveloped(LibraryFrameSnapshot frame, out DevelopedPreview preview)
+    public bool TryGetDeveloped(LibraryFrameSnapshot frame, out DevelopedPreview preview) =>
+        TryGetDeveloped(frame, null, out preview);
+
+    public bool TryGetPrintDeveloped(LibraryFrameSnapshot frame, out DevelopedPreview preview) =>
+        TryGetDeveloped(frame, PrintProof, out preview);
+
+    private bool TryGetDeveloped(LibraryFrameSnapshot frame, SoftProofSettings? proof, out DevelopedPreview preview)
     {
         ArgumentNullException.ThrowIfNull(frame);
         preview = default;
-        if (!DevelopedPreviewCacheIdentityFactory.TryCreate(frame, out var expected))
+        if (!DevelopedPreviewCacheIdentityFactory.TryCreate(frame, out var expected)) { return false; }
+        if (developed.TryGetValue(frame.Id, out var resident) && resident.Identity is { } identity && identity.Matches(expected))
         {
-            return false;
-        }
-        if (developed.TryGetValue(frame.Id, out DevelopedPreview resident) &&
-            developedIdentities.TryGetValue(frame.Id, out var residentIdentity) &&
-            residentIdentity.Matches(expected))
-        {
+            if (!Same(resident.Proof, proof)) { return false; }
             preview = resident;
             return true;
         }
-        EvictDeveloped(frame.Id);
-        developedResidency.Remove(frame.Id);
+        // 오래된 요청의 조회가 새 recipe의 캐시를 지우지 않습니다. 상주 한도가 회수합니다.
         return false;
     }
 
@@ -66,16 +73,9 @@ public sealed partial class ThumbnailService
             return;
         }
         int bytes = (int)required;
-
-        developed[frameId] = new DevelopedPreview(
-            bgra[..bytes].ToArray(),
-            width,
-            height,
-            settled);
-        developedIdentities.TryRemove(frameId, out _);
-        SyncDisplayCacheBudget();
-        // macOS `markDevelopedResident` — FIFO 재등록 뒤 한도 초과분을 내려놓습니다.
-        developedResidency.MarkResident(frameId, bytes, EvictDeveloped);
+        var ticket = work.Observe(frameId);
+        var preview = new DevelopedPreview(bgra[..bytes].ToArray(), width, height, settled);
+        work.Publish(ticket, () => RememberResident(frameId, preview, null));
     }
 
     public void RememberDeveloped(
@@ -94,20 +94,14 @@ public sealed partial class ThumbnailService
         }
         int bytes = (int)required;
 
-        DevelopedPreview preview = new(bgra[..bytes].ToArray(), width, height, settled);
+        var identity = ThumbnailCacheIdentity.Create(frame);
+        if (work.Knows(frame.Id) && work.Observe(frame.Id).Identity is { } desired && desired != identity) { return; }
+        ObserveFrame(frame);
+        var ticket = work.Observe(frame.Id);
+        var preview = new DevelopedPreview(bgra[..bytes].ToArray(), width, height, settled);
         if (renderedIdentity is not null &&
-            DevelopedPreviewCacheIdentityFactory.TryCreate(frame, out var current) &&
-            renderedIdentity.Matches(current))
-        {
-            RememberResident(frame.Id, preview, renderedIdentity);
-        }
-        else
-        {
-            developed[frame.Id] = preview;
-            developedIdentities.TryRemove(frame.Id, out _);
-            SyncDisplayCacheBudget();
-            developedResidency.MarkResident(frame.Id, bytes, EvictDeveloped);
-        }
+            (!DevelopedPreviewCacheIdentityFactory.TryCreate(frame, out var current) || !renderedIdentity.Matches(current))) { return; }
+        work.Publish(ticket, () => RememberResident(frame.Id, preview, renderedIdentity));
     }
 
     /// <summary>macOS <c>selectedFrameID</c> — 보고 있는 사진은 축출하지 않습니다.</summary>
@@ -235,41 +229,24 @@ public sealed partial class ThumbnailService
     public void PublishFromDeveloped(string frameId)
     {
         ArgumentException.ThrowIfNullOrEmpty(frameId);
-        if (!developed.TryGetValue(frameId, out DevelopedPreview preview))
+        if (!TryGetDeveloped(frameId, out var preview)) { return; }
+        var ticket = work.Observe(frameId, replace: true);
+        _ = work.Run(ticket, "thumbnail", "developed", () =>
         {
-            return;
-        }
-        _ = Task.Run(() =>
-        {
-            byte[] reduced = ThumbnailScaler.Reduce(
-                preview.Pixels,
-                preview.Width,
-                preview.Height,
-                MaximumDimension,
-                out int reducedWidth,
-                out int reducedHeight);
-            if (codec.EncodeJpeg(reduced, reducedWidth, reducedHeight) is not { } jpeg)
-            {
-                return;
-            }
-            Store(frameId, jpeg);
-            RaiseReady(frameId);
+            if (!work.Matches(ticket)) { return Task.CompletedTask; }
+            byte[] reduced = ThumbnailScaler.Reduce(preview.Pixels, preview.Width, preview.Height,
+                MaximumDimension, out int width, out int height);
+            if (codec.EncodeJpeg(reduced, width, height) is { } jpeg) { Store(ticket, jpeg); }
+            return Task.CompletedTask;
         });
     }
 
-    private void EvictDeveloped(string frameId)
-    {
-        developed.TryRemove(frameId, out _);
-        developedIdentities.TryRemove(frameId, out _);
-    }
+    private void EvictDeveloped(string frameId) => developed.TryRemove(frameId, out _);
 
-    private void RememberResident(
-        string frameId,
-        DevelopedPreview preview,
-        DevelopedPreviewCacheIdentity identity)
+    private void RememberResident(string frameId, DevelopedPreview preview, DevelopedPreviewCacheIdentity? identity)
     {
-        developed[frameId] = preview;
-        developedIdentities[frameId] = identity;
+        developed[frameId] = preview with { Identity = identity, RecipeIdentity = work.Observe(frameId).Identity };
+        SyncDisplayCacheBudget();
         developedResidency.MarkResident(frameId, preview.Pixels.LongLength, EvictDeveloped);
     }
 
@@ -293,21 +270,31 @@ public sealed partial class ThumbnailService
     /// <summary>
     /// 프루프를 갈아 끼웁니다. 값이 달라지면 현상본을 버려 다음 그리기에서 다시 만듭니다.
     /// </summary>
+    private readonly Lock proofGate = new();
+    private long proofRevision;
     public bool SetPrintProof(SoftProofSettings? proof)
     {
-        if (Same(PrintProof, proof))
+        proof = EffectiveProof(proof);
+        lock (proofGate)
         {
-            return false;
+            if (Same(PrintProof, proof)) { return false; }
+            PrintProof = proof;
+            proofRevision++;
+            foreach (var pair in developed)
+            {
+                if (pair.Value.Proof is null) { continue; }
+                EvictDeveloped(pair.Key);
+                developedResidency.Remove(pair.Key);
+            }
+            return true;
         }
-        PrintProof = proof;
-        // 프루프가 달라지면 지금 들고 있는 현상본은 옛 색입니다. 버려야 다음 그리기에서
-        // 새 프로파일로 다시 만듭니다.
-        developed.Clear();
-        return true;
     }
+    private static SoftProofSettings? EffectiveProof(SoftProofSettings? proof) =>
+        proof is { IsEnabled: true } or { WarnOutOfGamut: true } ? proof : null;
 
     private static bool Same(SoftProofSettings? left, SoftProofSettings? right)
     {
+        left = EffectiveProof(left); right = EffectiveProof(right);
         if (left is null || right is null)
         {
             return left is null && right is null;
@@ -326,37 +313,22 @@ public sealed partial class ThumbnailService
     public void RequestDeveloped(LibraryFrameSnapshot frame, int maxDimension)
     {
         ArgumentNullException.ThrowIfNull(frame);
-        if (maxDimension <= 0)
-        {
-            return;
-        }
-        if (TryGetDeveloped(frame, out DevelopedPreview existing) &&
-            !PrintPreviewResolution.NeedsUpgrade(
-                (int)PrintPreviewResolution.PixelDimension(existing.Width, existing.Height),
-                maxDimension))
-        {
-            return;
-        }
-        string frameId = frame.Id;
-        if (developedInFlight.ContainsKey(frameId))
-        {
-            return;
-        }
-        Task job = Task.Run(() => ProduceDevelopedAsync(frame, maxDimension));
-        if (!developedInFlight.TryAdd(frameId, job))
-        {
-            return;
-        }
-        _ = job.ContinueWith(
-            _ => developedInFlight.TryRemove(frameId, out Task? _),
-            CancellationToken.None,
-            TaskContinuationOptions.ExecuteSynchronously,
-            TaskScheduler.Default);
+        if (maxDimension <= 0) { return; }
+        ObserveFrame(frame);
+        if (TryGetPrintDeveloped(frame, out var existing) &&
+            !PrintPreviewResolution.NeedsUpgrade((int)PrintPreviewResolution.PixelDimension(existing.Width, existing.Height), maxDimension)) { return; }
+        var ticket = work.Observe(frame.Id);
+        long revision;
+        SoftProofSettings? proof;
+        lock (proofGate) { revision = proofRevision; proof = PrintProof; }
+        _ = work.Run(ticket, "developed", $"{maxDimension}:{revision}",
+            () => ProduceDevelopedAsync(frame, maxDimension, ticket, revision, proof));
     }
 
-    private async Task ProduceDevelopedAsync(LibraryFrameSnapshot frame, int maxDimension)
+    private async Task ProduceDevelopedAsync(LibraryFrameSnapshot frame, int maxDimension,
+        ThumbnailWorkTracker.Ticket ticket, long revision, SoftProofSettings? proof)
     {
-        if (!frame.CanDevelop)
+        if (!frame.CanDevelop || !work.Matches(ticket))
         {
             return;
         }
@@ -364,7 +336,8 @@ public sealed partial class ThumbnailService
         await renderSlots.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (TryGetDeveloped(frame, out DevelopedPreview existing) &&
+            if (!work.Matches(ticket)) { return; }
+            if (TryGetDeveloped(frame, proof, out DevelopedPreview existing) &&
                 !PrintPreviewResolution.NeedsUpgrade(
                     (int)PrintPreviewResolution.PixelDimension(existing.Width, existing.Height),
                     maxDimension))
@@ -392,8 +365,9 @@ public sealed partial class ThumbnailService
                 $"contrast={request.Contrast} look={request.FilmEmulation} edge={edge} " +
                 $"proof={(PrintProof is { IsEnabled: true } ? PrintProof.Simulation.ToString() : "off")}");
             DevelopExportResult result = exporter.Preview(
-                request, edge, edge, pixels, null, PrintProof);
-            if (!result.Succeeded || result.ImageWidth == 0U || result.ImageHeight == 0U)
+                request, edge, edge, pixels, null, proof);
+            if (!result.Succeeded || result.Cancelled || result.ImageWidth == 0U || result.ImageHeight == 0U ||
+                result.ImageWidth > edge || result.ImageHeight > edge)
             {
                 return;
             }
@@ -405,14 +379,23 @@ public sealed partial class ThumbnailService
                         pixels, (int)result.ImageWidth, (int)result.ImageHeight));
             }
 
-            RememberDeveloped(
-                frame,
-                pixels,
-                (int)result.ImageWidth,
-                (int)result.ImageHeight,
-                settled: false,
-                identity);
-            RaiseReady(frame.Id);
+            if (ticket.Identity != ThumbnailCacheIdentity.Create(frame)) { return; }
+            int count = checked((int)(result.ImageWidth * result.ImageHeight * 4));
+            var preview = new DevelopedPreview(pixels.AsSpan(0, count).ToArray(),
+                (int)result.ImageWidth, (int)result.ImageHeight, false) { Proof = proof };
+            bool stored = false;
+            work.Publish(ticket, () =>
+            {
+                lock (proofGate)
+                {
+                    if (revision != proofRevision) { return; }
+                    if (developed.TryGetValue(frame.Id, out var newer) && newer.RecipeIdentity == ticket.Identity &&
+                        Same(newer.Proof, proof) && (newer.Settled || newer.Width >= preview.Width && newer.Height >= preview.Height)) { return; }
+                    RememberResident(frame.Id, preview, identity);
+                    stored = true;
+                }
+            });
+            if (stored) { RaiseReady(ticket); }
         }
         catch (Exception error) when (error is not OperationCanceledException)
         {

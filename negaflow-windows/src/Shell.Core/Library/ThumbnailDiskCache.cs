@@ -78,7 +78,7 @@ public sealed class ThumbnailDiskCache : IAsyncDisposable
         Interlocked.Increment(ref clearGeneration);
         versions.Clear();
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        Enqueue(() =>
+        if (!Enqueue(() =>
         {
             try
             {
@@ -93,7 +93,7 @@ public sealed class ThumbnailDiskCache : IAsyncDisposable
             }
             completion.TrySetResult();
             return Task.CompletedTask;
-        });
+        })) { completion.TrySetResult(); }
         return completion.Task;
     }
 
@@ -101,24 +101,25 @@ public sealed class ThumbnailDiskCache : IAsyncDisposable
     public Task WaitUntilIdleAsync()
     {
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        Enqueue(() =>
+        if (!Enqueue(() =>
         {
             completion.TrySetResult();
             return Task.CompletedTask;
-        });
+        })) { completion.TrySetResult(); }
         return completion.Task;
     }
 
-    public static byte[]? Load(string path)
+    public static byte[]? Load(string path) => LoadEntry(path)?.Jpeg;
+
+    internal static ThumbnailCacheEntry? LoadEntry(string path)
     {
         try
         {
-            return File.Exists(path) ? File.ReadAllBytes(path) : null;
+            var file = new FileInfo(path);
+            return file.Exists && file.Length is > 0 and <= 4194304
+                ? ThumbnailCachePayload.Decode(File.ReadAllBytes(path)) : null;
         }
-        catch (Exception error) when (IsExpectedIoFailure(error))
-        {
-            return null;
-        }
+        catch (Exception error) when (IsExpectedIoFailure(error)) { return null; }
     }
 
     /// <summary>캐시 폴더가 지금 차지하는 바이트입니다. 설정의 디스크 탭이 읽습니다.</summary>
@@ -163,7 +164,7 @@ public sealed class ThumbnailDiskCache : IAsyncDisposable
         }
     }
 
-    private void Enqueue(Func<Task> work) => _ = queue.Writer.TryWrite(work);
+    private bool Enqueue(Func<Task> work) => queue.Writer.TryWrite(work);
 
     private async Task RunAsync()
     {

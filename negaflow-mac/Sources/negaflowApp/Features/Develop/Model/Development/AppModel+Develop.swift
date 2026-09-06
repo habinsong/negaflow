@@ -72,6 +72,16 @@ extension AppModel {
         // 뒤따르는 현상이 전부 멈춘다.
         guard await materializeDevelopSourceIfNeeded(frame) else { return }
         guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
+        guard !frame.defectEditsNeedRestore else {
+            reportError(text(AppLocalizedPhrase.removingDefectsFailedStatus))
+            return
+        }
+        if frame.requiresCleanedRawForActiveDefects,
+           frame.identityMatchedCleanedRawImage == nil,
+           frame.identityMatchedCleanedRawDiskURL == nil {
+            if frame.cleanRawTask == nil { rebuildCleanedRaw(frame) }
+            return
+        }
         guard await prepareCleanedRawForConsumption(frame) else { return }
         guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
         // filmType 동기화는 실제로 다를 때만(슬라이더 핫패스에서 불필요한 @Published 발행 방지).
@@ -143,17 +153,22 @@ extension AppModel {
             needsThumbnail: true,
             proxyMaxDimension: DevelopFrameRenderer.fastPreviewMaxDimension
         )
+        let inputRevision = frame.cleanRawRevision
         do {
             let preview = try await Task.detached(priority: .utility) {
                 try DevelopFrameRenderer.renderFastPreview(snapshot)
             }.value
-            guard ownsFrame(frame), frame.thumbnailImage == nil else { return }
+            guard ownsFrame(frame), frame.thumbnailImage == nil,
+                  frame.cleanRawRevision == inputRevision, frame.params == snapshot.params,
+                  frame.filmType == snapshot.filmType, frame.preset?.id == snapshot.preset?.id,
+                  frame.imageTransform == snapshot.imageTransform else { return }
             let thumbnail = preview.thumbnail ?? preview.preview
             frame.thumbnailImage = NSImage(
                 cgImage: thumbnail,
                 size: NSSize(width: thumbnail.width, height: thumbnail.height)
             )
             frame.thumbnailTransform = snapshot.imageTransform
+            frame.thumbnailRecipeID = frame.currentThumbnailRecipeID()
             persistThumbnail(for: frame, cgImage: thumbnail)
             applyPreviewRawCache(preview, to: frame, maxDimension: snapshot.proxyMaxDimension)
         } catch {

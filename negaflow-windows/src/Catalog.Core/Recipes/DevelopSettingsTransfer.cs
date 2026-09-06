@@ -69,7 +69,8 @@ public static class DevelopSettingsTransfer
                 NoiseReduction: merged.NoiseReduction,
                 BwToning: merged.BwToning,
                 DefectRemovalStrength: merged.DefectRemovalStrength,
-                LookPreset: new LookPresetSelection(merged.LookPresetId)));
+                LookPreset: new LookPresetSelection(merged.LookPresetId))
+            { InputGamma = merged.InputGamma });
     }
 
     /// <summary>

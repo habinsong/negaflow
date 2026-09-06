@@ -47,12 +47,14 @@ final class LibraryBackupPointInTimeTests: XCTestCase {
         XCTAssertTrue(succeeded)
         let snapshot = try XCTUnwrap(LibraryBackupStore.latestValidSnapshot(in: backups))
         XCTAssertEqual(snapshot.catalog.frames.first?.customDisplayName, "Before freeze")
-        // 결함 기록은 세션 전용이라 백업에도 sidecar가 없다(종료 시 이미지에 굽힘).
-        XCTAssertNil(DefectSidecarFile.load(
+        let frozen = try XCTUnwrap(DefectSidecarFile.load(
             for: frame.id,
             in: snapshot.directoryURL.appendingPathComponent("defects", isDirectory: true)
         ))
-        XCTAssertNil(DefectSidecarFile.load(for: frame.id, in: defects))
+        XCTAssertEqual(frozen.first?.id, before.id)
+        XCTAssertEqual(frozen.first?.enabled, true)
+        DefectSidecarFile.flushSync()
+        XCTAssertEqual(DefectSidecarFile.load(for: frame.id, in: defects)?.first?.enabled, false)
         XCTAssertTrue(LibraryCatalogHealthInspector.inspect(
             snapshot.catalog,
             defectDirectory: snapshot.directoryURL.appendingPathComponent("defects", isDirectory: true)

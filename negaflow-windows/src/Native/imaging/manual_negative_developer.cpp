@@ -292,7 +292,7 @@ ManualNegativeDevelopResult develop_manual_negative(
             std::clamp(parameters.dmin[channel], minimum_manual_dmin, maximum_manual_dmin);
         result.info.dmax_normalized[channel] = response.normal_range;
     }
-    const auto adaptive = scene_density_range(
+    const auto adaptive = parameters.input_gamma_reference_range ? std::nullopt : scene_density_range(
         result.image,
         result.info.applied_dmin,
         parameters.film_type,
@@ -326,6 +326,12 @@ ManualNegativeDevelopResult develop_manual_negative(
         }
     }
 
+    if (parameters.input_gamma_reference_range) {
+        for (const auto value : *parameters.input_gamma_reference_range) {
+            if (!std::isfinite(value) || value <= 0.0F) { discard_pixels(result.image); return result; }
+        }
+        result.info.dmax_normalized = *parameters.input_gamma_reference_range;
+    }
     const negaflow::core::NegativeInversionParameters kernel_parameters{
         result.info.applied_dmin,
         result.info.dmax_normalized,

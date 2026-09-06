@@ -2,7 +2,8 @@
 <UserControl
     x:Class="Negaflow.Shell.Views.Library.Defaults.LibraryDevelopDefaultsPanel"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Negaflow.Shell.Views.Library.Defaults">
     <!-- macOS `DevelopDefaultsSection` (현상뷰 좌측탭 · 스크린샷 `현상뷰_기본.png`).
          구성은 위에서 아래로 세 줄입니다.
            ① 프로세스 — 라벨 왼쪽, 고르개 오른쪽 (한 줄)
@@ -94,6 +95,7 @@
                     <TextBlock x:Name="DevelopFilmProfileLabel" x:FieldModifier="internal" Visibility="Collapsed" />
                     <TextBlock x:Name="DevelopLookLabel" x:FieldModifier="internal" Visibility="Collapsed" />
                 </Grid>
+                <local:DevelopInputCard x:Name="InputGammaCard" Visibility="Collapsed" />
             </StackPanel>
         </Border>
     </StackPanel>

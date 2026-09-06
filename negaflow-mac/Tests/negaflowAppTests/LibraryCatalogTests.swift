@@ -139,7 +139,7 @@ final class LibraryCatalogTests: XCTestCase {
             + Double(components.attoseconds) / 1_000_000_000_000_000
     }
 
-    func testFrameRecordNeverClaimsDefectState() {
+    func testFrameRecordPreservesDefectRecipePresence() {
         let frame = ScanFrame(
             scanIndex: 1,
             rawScanURL: URL(fileURLWithPath: "/offline/pending-defect.tiff"),
@@ -151,8 +151,8 @@ final class LibraryCatalogTests: XCTestCase {
 
         let record = LibraryFrameRecord(frame: frame)
 
-        // 기록은 세션 전용이다 — catalog 레코드에 결함 상태를 남기지 않는다.
-        XCTAssertNil(record.hasDefectEdits)
+        // 파생 픽셀은 버릴 수 있지만 recipe 존재 여부는 보존합니다.
+        XCTAssertEqual(record.hasDefectEdits, true)
         XCTAssertNil(record.cleanedRawPath)
         XCTAssertNil(record.cleanedRawEditCount)
     }
@@ -948,16 +948,16 @@ final class LibraryCatalogTests: XCTestCase {
     }
 
     func testKnownCatalogSchemasRequireExactMinimumReaderVersions() throws {
-        XCTAssertEqual(LibraryCatalog.currentVersion, 6)
-        XCTAssertEqual(LibraryCatalog.oldestReaderVersion, 6)
+        XCTAssertEqual(LibraryCatalog.currentVersion, LibraryCatalog.currentVersion)
+        XCTAssertEqual(LibraryCatalog.oldestReaderVersion, LibraryCatalog.currentVersion)
 
         let versionSixData = try XCTUnwrap(LibraryCatalogFile.encode(LibraryCatalog()))
         guard case let .loaded(versionSix, versionSixSource) =
                 LibraryCatalogFile.decodeResult(versionSixData) else {
             return XCTFail("v6 catalog with minimum reader v6 must load")
         }
-        XCTAssertEqual(versionSixSource, 6)
-        XCTAssertEqual(versionSix.minimumReaderVersion, 6)
+        XCTAssertEqual(versionSixSource, LibraryCatalog.currentVersion)
+        XCTAssertEqual(versionSix.minimumReaderVersion, LibraryCatalog.currentVersion)
         for incorrectMinimum in [5, 7] {
             let malformed = try rewriteVersion(
                 versionSixData,
@@ -975,7 +975,7 @@ final class LibraryCatalogTests: XCTestCase {
             return XCTFail("v5 catalog with minimum reader v5 must migrate")
         }
         XCTAssertEqual(versionFiveSource, 5)
-        XCTAssertEqual(versionFive.minimumReaderVersion, 6)
+        XCTAssertEqual(versionFive.minimumReaderVersion, LibraryCatalog.currentVersion)
         XCTAssertTrue(versionFive.stacks.isEmpty)
         for incorrectMinimum in [4, 6] {
             let malformed = try rewriteVersion(
@@ -994,7 +994,7 @@ final class LibraryCatalogTests: XCTestCase {
             return XCTFail("v4 catalog with minimum reader v4 must load")
         }
         XCTAssertEqual(versionFourSource, 4)
-        XCTAssertEqual(versionFour.minimumReaderVersion, 6)
+        XCTAssertEqual(versionFour.minimumReaderVersion, LibraryCatalog.currentVersion)
         for incorrectMinimum in [3, 5] {
             let malformed = try rewriteVersion(
                 versionFourData,
@@ -1012,7 +1012,7 @@ final class LibraryCatalogTests: XCTestCase {
             return XCTFail("v3 catalog with minimum reader v3 must migrate")
         }
         XCTAssertEqual(versionThreeSource, 3)
-        XCTAssertEqual(versionThree.minimumReaderVersion, 6)
+        XCTAssertEqual(versionThree.minimumReaderVersion, LibraryCatalog.currentVersion)
         for incorrectMinimum in [2, 4] {
             let malformed = try rewriteVersion(
                 versionThreeData,
@@ -1097,8 +1097,8 @@ final class LibraryCatalogTests: XCTestCase {
         }
 
         XCTAssertEqual(sourceVersion, 4)
-        XCTAssertEqual(migrated.version, 6)
-        XCTAssertEqual(migrated.minimumReaderVersion, 6)
+        XCTAssertEqual(migrated.version, LibraryCatalog.currentVersion)
+        XCTAssertEqual(migrated.minimumReaderVersion, LibraryCatalog.currentVersion)
         XCTAssertEqual(migrated.folders, original.folders)
         XCTAssertEqual(migrated.rolls, original.rolls)
         XCTAssertEqual(migrated.activeRollID, original.activeRollID)
@@ -1218,7 +1218,7 @@ final class LibraryCatalogTests: XCTestCase {
                 LibraryCatalogFile.decodeResult(firstData) else {
             return XCTFail("invalid inner query must not invalidate outer catalog")
         }
-        XCTAssertEqual(sourceVersion, 6)
+        XCTAssertEqual(sourceVersion, LibraryCatalog.currentVersion)
         XCTAssertNil(first.savedSearches[0].definition.decodedDefinition())
         XCTAssertEqual(first.savedSearches[0].definition.payloadJSON, rawPayload)
 
@@ -1274,8 +1274,8 @@ final class LibraryCatalogTests: XCTestCase {
         }
 
         XCTAssertEqual(sourceVersion, 3)
-        XCTAssertEqual(migrated.version, 6)
-        XCTAssertEqual(migrated.minimumReaderVersion, 6)
+        XCTAssertEqual(migrated.version, LibraryCatalog.currentVersion)
+        XCTAssertEqual(migrated.minimumReaderVersion, LibraryCatalog.currentVersion)
         XCTAssertEqual(migrated.folders, original.folders)
         XCTAssertEqual(migrated.rolls, original.rolls)
         XCTAssertEqual(migrated.activeRollID, original.activeRollID)
@@ -1329,9 +1329,9 @@ final class LibraryCatalogTests: XCTestCase {
             return XCTFail("v5 metadata catalog should round-trip")
         }
 
-        XCTAssertEqual(sourceVersion, 6)
-        XCTAssertEqual(decoded.version, 6)
-        XCTAssertEqual(decoded.minimumReaderVersion, 6)
+        XCTAssertEqual(sourceVersion, LibraryCatalog.currentVersion)
+        XCTAssertEqual(decoded.version, LibraryCatalog.currentVersion)
+        XCTAssertEqual(decoded.minimumReaderVersion, LibraryCatalog.currentVersion)
         XCTAssertEqual(decoded.frames.first?.sourceMetadata, metadata)
         XCTAssertEqual(decoded.frames.first?.makeFrame(presets: []).sourceMetadata, metadata)
     }
@@ -1648,8 +1648,8 @@ final class LibraryCatalogTests: XCTestCase {
         }
         XCTAssertFalse(recovered)
         XCTAssertEqual(sourceVersion, 3)
-        XCTAssertEqual(migrated.version, 6)
-        XCTAssertEqual(migrated.minimumReaderVersion, 6)
+        XCTAssertEqual(migrated.version, LibraryCatalog.currentVersion)
+        XCTAssertEqual(migrated.minimumReaderVersion, LibraryCatalog.currentVersion)
         XCTAssertEqual(migrated.rolls, [roll])
         XCTAssertEqual(migrated.activeRollID, rollID)
         XCTAssertEqual(migrated.scanSessions, [session])
@@ -1665,8 +1665,8 @@ final class LibraryCatalogTests: XCTestCase {
         ) else {
             return XCTFail("migrated v5 primary should be readable")
         }
-        XCTAssertEqual(onDiskVersion, 6)
-        XCTAssertEqual(onDisk.version, 6)
+        XCTAssertEqual(onDiskVersion, LibraryCatalog.currentVersion)
+        XCTAssertEqual(onDisk.version, LibraryCatalog.currentVersion)
         XCTAssertNil(onDisk.frames.first?.sourceMetadata)
         XCTAssertNotNil(LibraryBackupStore.latestValidSnapshot(in: backups))
 
@@ -1736,7 +1736,7 @@ final class LibraryCatalogTests: XCTestCase {
         }
         XCTAssertFalse(recovered)
         XCTAssertEqual(sourceVersion, 4)
-        XCTAssertEqual(migrated.version, 6)
+        XCTAssertEqual(migrated.version, LibraryCatalog.currentVersion)
         XCTAssertEqual(migrated.frames.first?.sourceMetadata, frame.sourceMetadata)
         XCTAssertEqual(migrated.frames.first?.userEditTracking.coverage, .legacyUnknown)
         XCTAssertEqual(

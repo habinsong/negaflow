@@ -5,7 +5,7 @@ import AppKit
 
 extension AppModel {
     func prepareCleanedRawForConsumption(_ frame: ScanFrame) async -> Bool {
-        guard ownsFrame(frame) else { return false }
+        guard ownsFrame(frame), !frame.defectEditsNeedRestore else { return false }
         guard frame.requiresCleanedRawForActiveDefects else { return true }
         guard let expectedIdentity = frame.boundDefectRecipeIdentity,
               let expectedSourceIdentity = expectedIdentity.sourceIdentity else {

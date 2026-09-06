@@ -409,14 +409,18 @@ final class AppLocalizationTests: XCTestCase {
         XCTAssertEqual(scope.displayName(language: .japanese), "すべての設定")
 
         scope.detail = false
-        XCTAssertEqual(scope.displayName(language: .korean), "베이스/기본 톤/색상/편집")
-        XCTAssertEqual(scope.displayName(language: .simplifiedChinese), "片基/基本色调/颜色/几何")
-        XCTAssertEqual(scope.displayName(language: .german), "Filmbasis/Grundeinstellungen/Farbe/Geometrie")
+        XCTAssertEqual(scope.displayName(language: .korean), "입력 감마/베이스 배율/베이스/기본 톤/색상/편집")
+        for language in [AppLanguage.simplifiedChinese, .german] {
+            XCTAssertTrue(scope.displayName(language: language).hasPrefix(
+                AppLocalization.text(.inputGamma, language: language) + "/" + AppLocalization.text(.baseScale, language: language)))
+        }
 
         scope.base = false
         scope.tone = false
         scope.color = false
         scope.geometry = false
+        scope.inputGamma = false
+        scope.baseScale = false
         XCTAssertEqual(scope.displayName(language: .korean), "없음")
     }
 

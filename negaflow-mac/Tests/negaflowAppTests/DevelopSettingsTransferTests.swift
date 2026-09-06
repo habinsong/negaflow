@@ -4,6 +4,57 @@ import Chromabase
 
 @MainActor
 final class DevelopSettingsTransferTests: XCTestCase {
+    func testInputPasteAndUserPresetAreDistinctUndoStepsAcrossSelection() throws {
+        let model = AppModel()
+        let source = makeFrame(index: 1, filmType: .colorNegative)
+        let first = makeFrame(index: 2, filmType: .colorNegative)
+        let second = makeFrame(index: 3, filmType: .colorNegative)
+        source.params.inputGamma = try .power(1.8)
+        source.params.baseScale = try FilmBaseScale(0.75)
+        first.params.inputGamma = try .power(2.4)
+        first.params.baseScale = try FilmBaseScale(1.25)
+        let beforeFirst = first.params, beforeSecond = second.params
+        model.frames = [source, first, second]
+        defer { model.frames = [] }
+        model.selectedFrameID = first.id; model.selectedFrameIDs = [first.id, second.id]
+        model.copyDevelopSettings(from: source)
+        let scope = DevelopSettingsPasteScope(base: false, tone: false, color: false, detail: false,
+            geometry: false, inputGamma: true, baseScale: true)
+        model.pasteDevelopSettings(to: first, scope: scope)
+        for frame in [first, second] {
+            XCTAssertEqual(frame.params.inputGamma.value, 1.8)
+            XCTAssertEqual(frame.params.baseScale.value, 0.75)
+        }
+        model.performUndo()
+        XCTAssertEqual(first.params, beforeFirst); XCTAssertEqual(second.params, beforeSecond)
+        model.performRedo()
+        XCTAssertEqual(first.params.inputGamma.value, 1.8); XCTAssertEqual(second.params.baseScale.value, 0.75)
+        source.params.inputGamma = try .power(1.6)
+        source.params.baseScale = try FilmBaseScale(1.1)
+        let preset = source.makeUserDevelopPreset(name: "입력 프리셋")
+        let restored = try JSONDecoder().decode(DevelopUserPreset.self, from: JSONEncoder().encode(preset))
+        model.applyUserDevelopPreset(restored, to: first)
+        XCTAssertEqual(first.params.inputGamma.value, 1.6); XCTAssertEqual(second.params.baseScale.value, 1.1)
+        model.performUndo()
+        XCTAssertEqual(first.params.inputGamma.value, 1.8); XCTAssertEqual(second.params.baseScale.value, 0.75)
+        model.performRedo()
+        XCTAssertEqual(first.params.inputGamma.value, 1.6); XCTAssertEqual(second.params.baseScale.value, 1.1)
+    }
+
+    func testFullDevelopPasteWithInputFlagsOffKeepsDestinationInput() throws {
+        let source = makeFrame(index: 1, filmType: .colorNegative)
+        let target = makeFrame(index: 2, filmType: .colorNegative)
+        source.params.inputGamma = try .power(1.8); source.params.baseScale = try FilmBaseScale(0.75)
+        source.params.exposure = 0.4
+        target.params.inputGamma = try .power(2.4); target.params.baseScale = try FilmBaseScale(1.25)
+        var scope = DevelopSettingsPasteScope.all
+        scope.inputGamma = false; scope.baseScale = false
+        target.applyDevelopSettingsSnapshot(source.developSettingsSnapshot, scope: scope)
+        XCTAssertEqual(target.params.inputGamma.value, 2.4)
+        XCTAssertEqual(target.params.baseScale.value, 1.25)
+        XCTAssertEqual(target.params.exposure, 0.4)
+    }
+
     func testFullCopyPasteAppliesProcessTargetAndGeometryToSelectedFrames() {
         let model = AppModel()
         let source = makeFrame(index: 1, filmType: .colorPositive)

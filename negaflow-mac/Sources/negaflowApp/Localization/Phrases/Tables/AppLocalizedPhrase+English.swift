@@ -2,6 +2,19 @@ import Foundation
 
 extension AppLocalization {
     static let englishPhraseTable: [AppLocalizedPhrase: String] = [
+            .inputGammaEstimated: "Estimated gamma %.1f",
+            .inputGammaRecorded: "File gamma %.1f",
+            .inputGammaProfile: "File color profile",
+            .inputGammaAssumedLinear: "Assumed · linear 1.0",
+            .inputGammaAssumedSRGB: "Assumed · sRGB",
+            .inputGammaDecoder: "RAW decoder",
+            .inputGammaAutomatic: "Auto",
+            .inputGamma: "Input Gamma",
+            .inputGammaRestore: "Restore automatic input gamma",
+            .inputGammaHelp: "0.1–4.0, in 0.1 steps. Use a decimal point. Enter applies; Esc cancels.",
+            .inputGammaUnsupported: "Manual input gamma requires an 8-bit or 16-bit RGB TIFF with a matrix ICC profile or no ICC profile.",
+            .inputGammaLoadFailed: "Could not read the image for input gamma.",
+
             .idleStatus: "Idle",
             .settingsDiskTab: "Disk",
             .diskLocationICloud: "iCloud",
@@ -185,6 +198,7 @@ extension AppLocalization {
             .noSelection: "None",
             .none: "None",
             .baseSection: "Base",
+            .baseScale: "Base scale",
             .inspectorTabBasic: "Basic",
             .inspectorTabEdit: "Edit",
             .inspectorTabDefect: "GrainMend",

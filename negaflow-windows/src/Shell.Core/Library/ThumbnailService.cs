@@ -48,12 +48,10 @@ public sealed partial class ThumbnailService : IAsyncDisposable
     /// </summary>
     private volatile string root;
     private readonly SemaphoreSlim renderSlots = new(MaximumConcurrentRenders, MaximumConcurrentRenders);
-    private readonly ConcurrentDictionary<string, byte[]> memory = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, Task> inFlight = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, ThumbnailCacheEntry> memory = new(StringComparer.Ordinal);
+    private readonly ThumbnailWorkTracker work = new();
+    private readonly ConcurrentDictionary<string, LibraryFrameSnapshot> observedFrames = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, DevelopedPreview> developed = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, DevelopedPreviewCacheIdentity> developedIdentities =
-        new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, Task> developedInFlight = new(StringComparer.Ordinal);
 
     /// <summary>
     /// macOS <c>FrameCacheManager.residentDevelopedIDs</c>. 이것이 없어서
@@ -73,7 +71,12 @@ public sealed partial class ThumbnailService : IAsyncDisposable
         byte[] Pixels,
         int Width,
         int Height,
-        bool Settled);
+        bool Settled)
+    {
+        internal DevelopedPreviewCacheIdentity? Identity { get; init; }
+        internal SoftProofSettings? Proof { get; init; }
+        internal ThumbnailCacheIdentity? RecipeIdentity { get; init; }
+    }
 
     public ThumbnailService(
         IDevelopExporter exporter,
@@ -168,7 +171,7 @@ public sealed partial class ThumbnailService : IAsyncDisposable
 
     /// <summary>이미 들고 있는 썸네일 JPEG 입니다. 없으면 null 이며 렌더를 시작하지 않습니다.</summary>
     public byte[]? TryGet(string frameId) =>
-        memory.TryGetValue(frameId, out byte[]? jpeg) ? jpeg : null;
+        memory.TryGetValue(frameId, out var entry) ? entry.Jpeg : null;
 
     /// <summary>
     /// 메모리에 없으면 <b>디스크를 그 자리에서</b> 봅니다. 있으면 메모리에도 올립니다.
@@ -190,17 +193,43 @@ public sealed partial class ThumbnailService : IAsyncDisposable
     public byte[]? TryGetOrLoad(string frameId)
     {
         ArgumentException.ThrowIfNullOrEmpty(frameId);
-        if (memory.TryGetValue(frameId, out byte[]? jpeg))
-        {
-            return jpeg;
-        }
-        if (ThumbnailDiskCache.Load(PathFor(frameId)) is not { Length: > 0 } cached)
-        {
-            return null;
-        }
-        memory[frameId] = cached;
-        return cached;
+        if (memory.TryGetValue(frameId, out var entry)) { return entry.Jpeg; }
+        var ticket = work.Observe(frameId);
+        var cached = LoadEntry(frameId);
+        if (cached is null) { return null; }
+        return work.Publish(ticket, () => memory[frameId] = cached) ? cached.Jpeg : null;
     }
+
+    public byte[]? TryGetOrLoad(LibraryFrameSnapshot frame)
+    {
+        ObserveFrame(frame);
+        var jpeg = TryGetOrLoad(frame.Id);
+        // 구형/오프라인 캐시는 표시용이며 현재 recipe의 성공으로 취급하지 않습니다.
+        Request(frame);
+        return jpeg;
+    }
+
+    public static bool MatchesRecipe(LibraryFrameSnapshot left, LibraryFrameSnapshot right) =>
+        ThumbnailCacheIdentity.Create(left) is { } identity && identity == ThumbnailCacheIdentity.Create(right);
+
+    public void ObserveFrame(LibraryFrameSnapshot frame)
+    {
+        observedFrames[frame.Id] = frame;
+        work.Observe(frame.Id, ThumbnailCacheIdentity.Create(frame), updateIdentity: true);
+    }
+
+    public void RefreshRecipes(IReadOnlyList<LibraryFrameSnapshot> frames)
+    {
+        foreach (var frame in frames)
+        {
+            if (observedFrames.TryGetValue(frame.Id, out var previous) && !ReferenceEquals(previous, frame))
+            { Request(frame); }
+        }
+    }
+
+    private ThumbnailCacheEntry? LoadEntry(string frameId) =>
+        ThumbnailDiskCache.LoadEntry(PathFor(frameId)) ??
+        ThumbnailDiskCache.LoadEntry(Path.ChangeExtension(PathFor(frameId), ".jpg"));
 
     /// <summary>
     /// 썸네일을 확보합니다. 이미 있으면 아무 일도 하지 않고, 없으면 디스크를 거쳐 현상까지
@@ -209,24 +238,10 @@ public sealed partial class ThumbnailService : IAsyncDisposable
     public void Request(LibraryFrameSnapshot frame)
     {
         ArgumentNullException.ThrowIfNull(frame);
-        if (memory.ContainsKey(frame.Id) || inFlight.ContainsKey(frame.Id))
-        {
-            return;
-        }
-        string frameId = frame.Id;
-        // 예산이 어떻게 도는지 남깁니다. 표시 파일이 없으면 아무 일도 하지 않고, 있어도
-        // 초당 한 줄입니다 - 현상본 등록만으로는 라이브러리뷰에서 한 줄도 안 남았습니다.
-        Diagnostics.MemoryBudgetLog.Sample("thumbnail");
-        Task job = Task.Run(() => ProduceAsync(frame));
-        if (!inFlight.TryAdd(frameId, job))
-        {
-            return;
-        }
-        _ = job.ContinueWith(
-            _ => inFlight.TryRemove(frameId, out Task? _),
-            CancellationToken.None,
-            TaskContinuationOptions.ExecuteSynchronously,
-            TaskScheduler.Default);
+        ObserveFrame(frame);
+        var ticket = work.Observe(frame.Id);
+        if (memory.TryGetValue(frame.Id, out var cached) && ticket.Identity?.Accepts(cached.Identity) == true) { return; }
+        _ = work.Run(ticket, "thumbnail", "load", () => ProduceAsync(frame, ticket));
     }
 
     /// <summary>
@@ -244,14 +259,12 @@ public sealed partial class ThumbnailService : IAsyncDisposable
         // 기다리게 하지 않고 작아진 복사본만 워커로 넘깁니다.
         byte[] reduced = ThumbnailScaler.Reduce(
             bgra, width, height, MaximumDimension, out int reducedWidth, out int reducedHeight);
-        _ = Task.Run(() =>
+        var ticket = work.Observe(frameId, replace: true);
+        _ = work.Run(ticket, "thumbnail", "publish", () =>
         {
-            if (codec.EncodeJpeg(reduced, reducedWidth, reducedHeight) is not { } jpeg)
-            {
-                return;
-            }
-            Store(frameId, jpeg);
-            RaiseReady(frameId);
+            if (work.Matches(ticket) && codec.EncodeJpeg(reduced, reducedWidth, reducedHeight) is { } jpeg)
+            { Store(ticket, jpeg); }
+            return Task.CompletedTask;
         });
     }
 
@@ -277,54 +290,27 @@ public sealed partial class ThumbnailService : IAsyncDisposable
     /// macOS <c>maxConcurrentDevelopments</c> 와 같습니다.
     /// </para>
     /// </remarks>
-    public async Task RerenderAsync(
-        LibraryFrameSnapshot frame,
-        CancellationToken cancellationToken = default)
+    public async Task<bool> RerenderAsync(LibraryFrameSnapshot frame, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(frame);
-        // 전체 해상도 현상본은 옛 설정으로 만든 것이라 인화 미리보기가 다시 뜨게 버립니다.
-        developed.TryRemove(frame.Id, out _);
-        developedIdentities.TryRemove(frame.Id, out _);
-        developedResidency.Remove(frame.Id);
-        if (!frame.CanDevelop)
+        observedFrames[frame.Id] = frame;
+        var ticket = work.Observe(frame.Id, ThumbnailCacheIdentity.Create(frame), replace: true, updateIdentity: true);
+        work.Publish(ticket, () => { EvictDeveloped(frame.Id); developedResidency.Remove(frame.Id); });
+        bool published = false;
+        await work.Run(ticket, "thumbnail", "render", async () =>
         {
-            return;
-        }
-
-        await renderSlots.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            // **네이티브 디코더는 MTA 를 요구합니다.** `wic_tiff_decoder` 는
-            // `CoInitializeEx(nullptr, COINIT_MULTITHREADED)` 를 걸고, 실패하면
-            // `com_apartment_mismatch` 로 디코드를 거부합니다. WinUI UI 스레드는 STA 라
-            // 거기서 부르면 **모든 프레임이 1ms 만에 실패합니다.**
-            //
-            // 이 메서드는 다른 렌더 경로와 달리 호출자가 `await` 로 직접 부릅니다
-            // (폴더 일괄 적용). 세마포어에 빈 자리가 있으면 `WaitAsync` 가 동기로 끝나
-            // `Render` 가 **호출자 스레드에서 그대로** 돌았고, 그 호출자가 UI 스레드였습니다.
-            // 자리가 막혔을 때만 이어지는 프레임이 스레드풀로 넘어가 성공했으므로,
-            // 한 폴더 안에서 몇 장만 바뀌는 것처럼 보였습니다(실측 로그 확인).
-            //
-            // `Request` 는 `Task.Run(() => ProduceAsync(frame))` 으로 이미 풀에서만 돌고,
-            // `DevelopExportCoordinator` 도 `Task.Run(() => exporter.Run(...))` 입니다.
-            // 여기만 예외였습니다.
-            byte[]? jpeg = await Task.Run(() => Render(frame), cancellationToken)
-                .ConfigureAwait(false);
-            if (jpeg is null)
+            if (!frame.CanDevelop) { return; }
+            await renderSlots.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
             {
-                ThumbnailTrace.Write(
-                    $"rerender FAILED {frame.Id} {Path.GetFileName(frame.SourcePath)}");
-                return;
+                if (!work.Matches(ticket)) { return; }
+                var jpeg = Render(frame);
+                cancellationToken.ThrowIfCancellationRequested();
+                if (jpeg is not null) { published = Store(ticket, jpeg); }
             }
-            Store(frame.Id, jpeg);
-            ThumbnailTrace.Write(
-                $"rerender stored {frame.Id} {Path.GetFileName(frame.SourcePath)} {jpeg.Length}B");
-            RaiseReady(frame.Id);
-        }
-        finally
-        {
-            renderSlots.Release();
-        }
+            finally { renderSlots.Release(); }
+        }).ConfigureAwait(false);
+        return published;
     }
 
     /// <summary>프레임이 라이브러리에서 사라질 때 메모리와 디스크 양쪽에서 지웁니다.</summary>
@@ -332,12 +318,15 @@ public sealed partial class ThumbnailService : IAsyncDisposable
     {
         ArgumentException.ThrowIfNullOrEmpty(frameId);
         Diagnostics.StartupTrace.Mark($"thumbnail invalidate {frameId}");
-        memory.TryRemove(frameId, out _);
-        developed.TryRemove(frameId, out _);
-        developedIdentities.TryRemove(frameId, out _);
-        // macOS `removeDevelopedResident`.
-        developedResidency.Remove(frameId);
-        disk.Remove(frameId, PathFor(frameId));
+        work.Invalidate(frameId, () =>
+        {
+            observedFrames.TryRemove(frameId, out _);
+            memory.TryRemove(frameId, out _);
+            EvictDeveloped(frameId);
+            developedResidency.Remove(frameId);
+            disk.Remove(frameId, PathFor(frameId));
+            disk.Remove(frameId, Path.ChangeExtension(PathFor(frameId), ".jpg"));
+        });
     }
 
     /// <summary>디스크 캐시를 통째로 지웁니다. 메모리에 올라온 것은 그대로 쓰입니다.</summary>
@@ -351,6 +340,7 @@ public sealed partial class ThumbnailService : IAsyncDisposable
 
     public async Task WaitUntilIdleAsync()
     {
+        await work.DrainAsync().ConfigureAwait(false);
         await disk.WaitUntilIdleAsync().ConfigureAwait(false);
     }
 
@@ -366,18 +356,19 @@ public sealed partial class ThumbnailService : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        await work.DrainAsync(stop: true).ConfigureAwait(false);
         await disk.DisposeAsync().ConfigureAwait(false);
         renderSlots.Dispose();
     }
 
-    private async Task ProduceAsync(LibraryFrameSnapshot frame)
+    private async Task ProduceAsync(LibraryFrameSnapshot frame, ThumbnailWorkTracker.Ticket ticket)
     {
         // 디스크에 남은 것은 이전 실행의 정착본입니다. 슬롯을 잡기 전에 먼저 봅니다 — 재실행
         // 직후 그리드가 회색으로 남아 있지 않게 하는 것이 여기서 가장 중요합니다.
-        if (ThumbnailDiskCache.Load(PathFor(frame.Id)) is { Length: > 0 } cached)
+        if (!work.Matches(ticket)) { return; }
+        if (LoadEntry(frame.Id) is { } cached && ticket.Identity?.Accepts(cached.Identity) == true)
         {
-            memory[frame.Id] = cached;
-            RaiseReady(frame.Id);
+            if (work.Publish(ticket, () => memory[frame.Id] = cached)) { RaiseReady(ticket); }
             return;
         }
         if (!frame.CanDevelop)
@@ -388,12 +379,11 @@ public sealed partial class ThumbnailService : IAsyncDisposable
         await renderSlots.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (Render(frame) is not { } jpeg)
+            if (!work.Matches(ticket) || Render(frame) is not { } jpeg)
             {
                 return;
             }
-            Store(frame.Id, jpeg);
-            RaiseReady(frame.Id);
+            Store(ticket, jpeg);
         }
         finally
         {
@@ -433,7 +423,8 @@ public sealed partial class ThumbnailService : IAsyncDisposable
                 MaximumDimension,
                 MaximumDimension,
                 pixels);
-            if (!result.Succeeded || result.ImageWidth == 0U || result.ImageHeight == 0U)
+            if (!result.Succeeded || result.Cancelled || result.ImageWidth == 0U || result.ImageHeight == 0U ||
+                result.ImageWidth > MaximumDimension || result.ImageHeight > MaximumDimension)
             {
                 ThumbnailTrace.Write(
                     $"render NATIVE-FAIL {Path.GetFileName(frame.SourcePath)} " +
@@ -450,27 +441,24 @@ public sealed partial class ThumbnailService : IAsyncDisposable
         }
     }
 
-    private void Store(string frameId, byte[] jpeg)
+    private bool Store(ThumbnailWorkTracker.Ticket ticket, byte[] jpeg)
     {
-        memory[frameId] = jpeg;
-        disk.Store(frameId, PathFor(frameId), jpeg);
+        if (observedFrames.TryGetValue(ticket.FrameId, out var frame) &&
+            ticket.Identity is { } identity && identity != ThumbnailCacheIdentity.Create(frame)) { return false; }
+        byte[] payload = ThumbnailCachePayload.Encode(jpeg, ticket.Identity);
+        if (work.Publish(ticket, () =>
+            {
+                memory[ticket.FrameId] = new(jpeg, ticket.Identity);
+                disk.Store(ticket.FrameId, PathFor(ticket.FrameId), payload);
+            })) { RaiseReady(ticket); return true; }
+        return false;
     }
 
-    private void RaiseReady(string frameId)
+    private void RaiseReady(ThumbnailWorkTracker.Ticket ticket)
     {
-        if (ThumbnailReady is null)
-        {
-            ThumbnailTrace.Write($"ready NO-SUBSCRIBER {frameId}");
-            return;
-        }
-        if (dispatcher.HasThreadAccess)
-        {
-            ThumbnailReady.Invoke(frameId);
-            return;
-        }
-        // 큐가 닫혔다는 것은 창이 사라지는 중이라는 뜻이므로, 배달 실패는 그대로 둡니다.
-        bool queued = dispatcher.TryEnqueue(() => ThumbnailReady?.Invoke(frameId));
-        ThumbnailTrace.Write($"ready queued={queued} {frameId}");
+        void PublishReady() { if (work.Matches(ticket)) { ThumbnailReady?.Invoke(ticket.FrameId); } }
+        if (dispatcher.HasThreadAccess) { PublishReady(); }
+        else { _ = dispatcher.TryEnqueue(PublishReady); }
     }
 
     /// <summary>
@@ -481,7 +469,7 @@ public sealed partial class ThumbnailService : IAsyncDisposable
     {
         string safe = Sanitize(frameId);
         string shard = safe.Length >= 2 ? safe[..2] : "__";
-        return Path.Combine(root, shard, safe + ".jpg");
+        return Path.Combine(root, shard, safe + ".thumb");
     }
 
     private static string Sanitize(string value)

@@ -5,22 +5,20 @@ namespace Negaflow.Catalog;
 /// 형태로 한 칸씩 올립니다. macOS <c>LibraryCatalogFile.decodeResult</c> 의 <c>migrateV1ToV6</c>
 /// 계열과 같은 자리입니다.
 /// </summary>
-/// <remarks>
-/// <b>지금은 비어 있습니다.</b> <see cref="CatalogSnapshot.CurrentCatalogVersion"/> 이 1 이라
-/// 올릴 것이 없습니다. 그래도 자리를 먼저 두는 이유는, 버전을 올린 <b>뒤에</b> 만들면 이미
-/// 늦기 때문입니다 — 올리는 순간 기존 사용자 전원이 라이브러리를 열지 못합니다.
-/// <para>
-/// <b>칸을 더할 때의 규율입니다.</b> <see cref="Ladder"/> 에 <c>from → (To, Promote)</c> 를
-/// 한 줄 넣고, 그 칸을 지나는 회귀 시험을 함께 두십시오. 승격은 <b>여는 경로에서만</b>
-/// 일어나며, 새로 쓰는 카탈로그는 언제나 최신 버전입니다.
-/// </para>
-/// </remarks>
 internal static class CatalogVersionMigration
 {
     /// <summary>한 칸을 올립니다. 올릴 수 없으면 <c>null</c> 입니다.</summary>
     internal delegate CatalogSnapshot? Promotion(CatalogSnapshot source);
 
-    private static readonly Dictionary<int, (int To, Promotion Promote)> Ladder = [];
+    private static readonly Dictionary<int, (int To, Promotion Promote)> Ladder = new()
+    {
+        [1] = (2, source => source.CatalogVersion == 1 && source.MinimumReaderVersion == 1
+            ? new CatalogSnapshot(2, 2, source.ActiveRollId,
+                CatalogEntityTables.All.ToDictionary(table => table,
+                    table => (IReadOnlyList<CatalogEntityRow>)source.Rows(table)
+                        .Select(row => new CatalogEntityRow(row.Id, row.Payload.DeepClone().AsObject())).ToArray()))
+            : null),
+    };
 
     /// <summary>
     /// 사다리를 갈아 끼우는 시험 이음매입니다. 칸이 하나도 없는 동안에도 승격 경로 자체를

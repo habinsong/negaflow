@@ -63,6 +63,12 @@ enum DevelopInspectorResetter {
         let defaults = DevelopParameters()
         frame.preset = neutralPreset
         frame.updateParams { params in
+            params.baseScale = .identity
+            if params.inputGamma != .automatic {
+                params.manualBaseRGB = nil
+                if params.baseEstimationMode == .manual { params.baseEstimationMode = .auto }
+            }
+            params.inputGamma = .automatic
             params.exposure = defaults.exposure
             params.contrast = defaults.contrast
             params.density = defaults.density

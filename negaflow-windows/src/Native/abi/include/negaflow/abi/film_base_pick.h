@@ -3,6 +3,8 @@
 /* The film base eyedropper: Dmin transmittance under one canvas click. */
 
 #include "negaflow/abi/platform.h"
+#include "negaflow/abi/develop_output.h"
+#include "negaflow/abi/develop_result.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,6 +35,11 @@ NF_API nf_status_t NF_CALL nf_pick_film_base_v1(
     double unit_y,
     uint32_t film_type,
     nf_film_base_pick_v1* result);
+
+NF_API nf_status_t NF_CALL nf_pick_film_base_v2(
+    const nf_develop_export_request_v39* request, double unit_x, double unit_y,
+    nf_develop_run_state_v1* run_state, nf_develop_export_result_v3* result,
+    nf_film_base_pick_v1* picked);
 
 #ifdef __cplusplus
 }

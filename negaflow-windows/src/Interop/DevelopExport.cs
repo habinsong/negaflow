@@ -2,6 +2,9 @@ namespace Negaflow.Interop;
 
 public sealed class DevelopExportRequest
 {
+    public double BaseScale { get; init; } = 1.0;
+    public uint InputGammaMode { get; init; }
+    public double InputGammaValue { get; init; }
     public required string SourcePath { get; init; }
 
     public required string DestinationPath { get; init; }

@@ -10,7 +10,9 @@ public sealed record PasteScopeText(
     string Tone,
     string Color,
     string Detail,
-    string Geometry);
+    string Geometry,
+    string InputGamma,
+    string BaseScale);
 
 /// <summary>
 /// 붙여넣기 범위 단추의 요약 문구입니다. macOS 표기가 바뀔 때 바뀌므로 화면 배치·이벤트와
@@ -28,6 +30,8 @@ public static class PasteScopeSummary
             return text.All;
         }
         List<string> groups = [];
+        if (scope.InputGamma) { groups.Add(text.InputGamma); }
+        if (scope.BaseScale) { groups.Add(text.BaseScale); }
         if (scope.Base)
         {
             groups.Add(text.Base);

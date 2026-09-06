@@ -37,7 +37,8 @@ internal static unsafe class NativeDevelopPreviewRender
         double* automaticCandidateFraction = null,
         nint* grainMendReview = null,
         bool clippingOverlay = false,
-        bool retainPreviewRaw = true)
+        bool retainPreviewRaw = true,
+        NativeFilmBasePickV1* filmBasePick = null, double pickX = 0.0, double pickY = 0.0)
     {
         ValidateLayoutAndEnums(request);
         if (!retainPreviewRaw &&
@@ -90,8 +91,8 @@ internal static unsafe class NativeDevelopPreviewRender
         // 미리보기도 v4 자리를 줍니다. 네이티브는 struct_size 를 보고 채우므로, 작게 주면
         // 필름 베이스 실측과 개발자 디버그 지표가 통째로 빠집니다 - 현상 화면에서 dmin·
         // dmaxNorm 이 비어 있던 이유가 이것이었습니다.
-        NativeDevelopExportResultV4 raw = default;
-        raw.StructSize = (uint)sizeof(NativeDevelopExportResultV4);
+        NativeDevelopExportResultV6 raw = default;
+        raw.StructSize = (uint)sizeof(NativeDevelopExportResultV6);
         uint status;
 
         // A null run state is the pre-v22 behaviour: the call simply runs to the end.
@@ -192,7 +193,15 @@ internal static unsafe class NativeDevelopPreviewRender
                 checked((uint)defects.InfraredItems.Length));
             NativeDevelopExportRequestV26 v26 = BuildRequestV26(v25, request);
             NativeDevelopExportRequestV27 v27 = BuildRequestV27(v26, request);
-            if (detection is not null)
+            if (filmBasePick is not null)
+            {
+                NativeDevelopExportRequestV39 pickInput = NativeDevelopInput.Build(
+                    BuildRequestV36(BuildRequestV35(NativeDevelopInput.BuildDisplayRequest(v27, request),
+                        defectRecipeDigest, checked((uint)defectRecipeSha256.Length)), null, 0U, 0U), request);
+                status = NativeDevelopInput.Pick(&pickInput, pickX, pickY, runState,
+                    (NativeDevelopExportResultV3*)&raw, filmBasePick);
+            }
+            else if (detection is not null)
             {
                 NativeGrainMendDetectParametersV3 detectionParameters = new()
                 {
@@ -218,7 +227,13 @@ internal static unsafe class NativeDevelopPreviewRender
                 NativeGrainMendDetectionV4 detectionV4 = default;
                 detectionV4.V3.V2.StructSize = (uint)sizeof(NativeGrainMendDetectionV4);
                 *grainMendReview = 0;
-                status = NativeGrainMendDetect.nf_develop_detect_grain_mend_v7(
+                NativeDevelopExportRequestV39 detectionInput = NativeDevelopInput.Build(
+                    BuildRequestV36(BuildRequestV35(NativeDevelopInput.BuildDisplayRequest(v27, request),
+                        defectRecipeDigest, checked((uint)defectRecipeSha256.Length)), null, 0U, 0U), request);
+                status = NativeDevelopInput.RequiresV39(request)
+                    ? NativeDevelopInput.Detect(&detectionInput, &detectionParameters, runState, &detectionV4,
+                        (NativeDevelopExportResultV3*)&raw, grainMendReview)
+                    : NativeGrainMendDetect.nf_develop_detect_grain_mend_v7(
                     &v27,
                     &detectionParameters,
                     runState,
@@ -261,7 +276,19 @@ internal static unsafe class NativeDevelopPreviewRender
                         request,
                         null, null, null, null, null, null, null, null),
                     request);
-                if (!retainPreviewRaw)
+                if (NativeDevelopInput.RequiresV39(request))
+                {
+                    NativeDevelopExportRequestV39 v39 = NativeDevelopInput.Build(
+                        BuildRequestV36(BuildRequestV35(v34, defectRecipeDigest, checked((uint)defectRecipeSha256.Length)),
+                            defectRecipeAppendPrefixDigest, checked((uint)defectRecipeAppendPrefixSha256.Length),
+                            checked((uint)request.DefectRecipeAppendPrefixEditCount)), request);
+                    status = retainPreviewRaw
+                        ? NativeDevelopInput.Preview(&v39, proofPointer, maximumWidth, maximumHeight, pixelBuffer,
+                            checked((uint)pixels.Length), runState, (NativeDevelopExportResultV3*)&raw)
+                        : NativeDevelopInput.Background(&v39, maximumWidth, maximumHeight, pixelBuffer,
+                            checked((uint)pixels.Length), runState, (NativeDevelopExportResultV3*)&raw);
+                }
+                else if (!retainPreviewRaw)
                 {
                     NativeDevelopExportRequestV35 v35 = BuildRequestV35(
                         v34, defectRecipeDigest, checked((uint)defectRecipeSha256.Length));
@@ -294,7 +321,10 @@ internal static unsafe class NativeDevelopPreviewRender
         return new RenderOutcome(Translate(
             status,
             raw,
-            detection is not null
+            filmBasePick is not null ? "nf_pick_film_base_v2" : NativeDevelopInput.RequiresV39(request)
+                ? (detection is not null ? "nf_develop_detect_grain_mend_v8" :
+                    retainPreviewRaw ? "nf_develop_preview_v39" : "nf_develop_preview_background_v2")
+                : detection is not null
                 ? NativeGrainMendDetect.CurrentEntryPoint
                 : !retainPreviewRaw
                     ? "nf_develop_preview_background_v1"

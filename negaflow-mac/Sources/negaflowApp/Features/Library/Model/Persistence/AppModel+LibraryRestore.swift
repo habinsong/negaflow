@@ -201,20 +201,25 @@ extension AppModel {
         frameQueryObservations.removeAll()
         libraryFrameRecordCache.removeAll()
         dirtyLibraryFrameRecordIDs.removeAll()
+        let defectRecords = catalog.frames.filter { $0.hasDefectEdits == true }
+        let restoredRecipes = await Task.detached(priority: .utility) {
+            Dictionary(uniqueKeysWithValues: defectRecords.map { record in
+                (record.id, DefectRecipeRestoration.read(frameID: record.id, in: defectDirectory))
+            })
+        }.value
         var restored: [ScanFrame] = []
         for record in catalog.frames {
             let frame = record.makeFrame(presets: presets)
+            if let recipe = restoredRecipes[record.id] { recipe.apply(to: frame) }
             libraryFrameRecordCache[record.id] = record
-            // 결함 기록/캐시 필드는 더 이상 복원하지 않는다(기록은 세션 종료 시 이미지에
-            // 구워진다). 남아 있는 legacy 필드는 다음 저장에서 nil로 재기록되도록 dirty 처리.
+            // 파생 픽셀은 이전 감마를 설명하지 못하므로 재사용하지 않습니다.
             if frame.rawScanURL.path != record.rawScanPath
                 || frame.infraredScanURL?.path != record.infraredScanPath
                 || frame.rawScanBookmarkData != record.rawScanBookmarkData
                 || frame.infraredScanBookmarkData != record.infraredScanBookmarkData
                 || frame.preset?.id != record.presetID
                 || record.cleanedRawPath != nil
-                || record.cleanedRawEditCount != nil
-                || record.hasDefectEdits != nil {
+                || record.cleanedRawEditCount != nil {
                 dirtyLibraryFrameRecordIDs.insert(record.id)
             }
             restored.append(frame)

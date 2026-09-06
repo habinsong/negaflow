@@ -1,6 +1,6 @@
 #pragma once
 
-#include <wincodec.h>
+struct IWICBitmapFrameEncode;
 
 #include <cstdint>
 #include <string>

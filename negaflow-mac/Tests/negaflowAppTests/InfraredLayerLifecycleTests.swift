@@ -3,11 +3,7 @@ import CoreGraphics
 import XCTest
 @testable import negaflowApp
 
-/// GrainMend IR 레이어의 수명: 종료 시 굽지 않고, 다음 실행에서 IR 파일로 되살린다.
-///
-/// 브러시·복제도장은 사람이 그린 기록이라 굽지 않으면 사라지지만, IR 은 원본 옆의 IR 스캔에서
-/// 언제든 똑같이 다시 만들 수 있다. 구워 버리면 다음 실행에서 레이어가 없어져 켜기/끄기와
-/// 강도 조절이 불가능해지고, 원본도 되돌릴 수 없게 된다.
+/// IR·사용자 결함 레이어는 원본과 분리해 저장하고 다시 복원합니다.
 @MainActor
 final class InfraredLayerLifecycleTests: XCTestCase {
     private var tempDir: URL!
@@ -25,20 +21,32 @@ final class InfraredLayerLifecycleTests: XCTestCase {
         try await super.tearDown()
     }
 
-    func testInfraredLayerIsNotBakedButBrushIs() {
+    func testTerminationPreservesInfraredAndBrushRecipesWithoutChangingSource() async throws {
+        let model = AppModel(libraryDefectDirectoryURL: tempDir.appendingPathComponent("defects"))
         let frame = makeFrame()
         frame.defectEdits = [infraredEdit(), brushEdit()]
-
-        let bakeable = frame.bakeableDefectEdits
-        XCTAssertEqual(bakeable.count, 1, "구울 대상은 브러시뿐이어야 한다.")
-        XCTAssertFalse(bakeable.contains { $0.isInfrared })
+        model.frames = [frame]
+        let original = try Data(contentsOf: frame.rawScanURL)
+        let originalURL = frame.rawScanURL
+        let saved = await model.bakeDefectEditsForTermination()
+        XCTAssertTrue(saved)
+        XCTAssertEqual(try Data(contentsOf: originalURL), original)
+        XCTAssertEqual(frame.rawScanURL, originalURL)
+        XCTAssertEqual(frame.defectEdits.count, 2)
+        let restored = DefectRecipeRestoration.read(frameID: frame.id, in: model.libraryDefectDirectoryURL)
+        XCTAssertEqual(restored.items.map(\.id), frame.defectEdits.map(\.id))
     }
 
-    func testFrameWithOnlyInfraredHasNothingToBake() {
+    func testTerminationPreservesStandaloneInfraredRecipe() async throws {
+        let model = AppModel(libraryDefectDirectoryURL: tempDir.appendingPathComponent("defects"))
         let frame = makeFrame()
         frame.defectEdits = [infraredEdit()]
-        XCTAssertTrue(frame.bakeableDefectEdits.isEmpty,
-                      "IR 만 있는 프레임은 원본을 건드릴 이유가 없다.")
+        model.frames = [frame]
+        let saved = await model.bakeDefectEditsForTermination()
+        XCTAssertTrue(saved)
+        let restored = DefectRecipeRestoration.read(frameID: frame.id, in: model.libraryDefectDirectoryURL)
+        XCTAssertEqual(restored.items.count, 1)
+        XCTAssertTrue(try XCTUnwrap(restored.items.first).isInfrared)
     }
 
     /// IR 쌍이 있는데 레이어가 없으면(= 앱을 다시 켠 직후) 되살린다. 한 세션에 한 번만이다 —

@@ -87,7 +87,8 @@ extension AppModel {
                     applyBaseCache(fast, to: frame, baseKey: baseKey)
                     applySceneMeasurementCache(
                         fast, to: frame, baseKey: baseKey,
-                        proxyMaxDimension: interactive.proxyMaxDimension
+                        proxyMaxDimension: interactive.proxyMaxDimension,
+                        renderedParams: interactive.params
                     )
                     applyPreviewRawCache(fast, to: frame, maxDimension: interactive.proxyMaxDimension)
                     frame.noteDevelopedDisplaySize(
@@ -117,6 +118,8 @@ extension AppModel {
                             size: NSSize(width: thumb.width, height: thumb.height)
                         )
                         frame.thumbnailTransform = interactive.imageTransform
+                        frame.thumbnailRecipeID = frame.params == interactive.params
+                            ? frame.currentThumbnailRecipeID() : nil
                     }
                     frame.hasDevelopedOnce = true
                     frame.displayedCleanRawRevision = max(
@@ -161,7 +164,8 @@ extension AppModel {
                 needsNeutralPreview: beforeAfterCompareActive
                     && (frame.neutralPreviewImage == nil
                         || frame.neutralPreviewTransform != frame.imageTransform
-                        || frame.neutralPreviewBaseKey != baseKey),
+                        || frame.neutralPreviewBaseKey != baseKey
+                        || frame.neutralPreviewBaseScale != frame.params.baseScale),
                 needsMainPreview: beforeAfterMainCompareActive
                     && frame.params.developTarget != .main
                     && (frame.mainPreviewImage == nil
@@ -171,6 +175,8 @@ extension AppModel {
                 // 방향이 어긋난 썸네일은 preserveThumbnail 이어도 다시 그린다 — 프레임을 회전한
                 // 뒤(또는 시드 시점과 변형이 달라진 뒤) 썸네일만 옛 방향으로 남던 문제를 막는다.
                 needsThumbnail: !preserveThumbnail
+                    || frame.thumbnailImage == nil
+                    || frame.thumbnailRecipeID != frame.currentThumbnailRecipeID()
                     || frame.thumbnailTransform != frame.imageTransform,
                 proxyMaxDimension: DevelopFrameRenderer.fullMaxDimension
             )
@@ -187,14 +193,17 @@ extension AppModel {
                     revision = frame.developRevision
                     continue
                 }
-                guard frame.developRevision == revision else {
+                guard frame.developRevision == revision,
+                      frame.params == full.params, frame.filmType == full.filmType,
+                      frame.preset?.id == full.preset?.id, frame.imageTransform == full.imageTransform else {
                     revision = frame.developRevision
                     continue
                 }
                 applyBaseCache(result, to: frame, baseKey: baseKey)
                 applySceneMeasurementCache(
                     result, to: frame, baseKey: baseKey,
-                    proxyMaxDimension: full.proxyMaxDimension
+                    proxyMaxDimension: full.proxyMaxDimension,
+                    renderedParams: full.params
                 )
                 applyPreviewRawCache(result, to: frame, maxDimension: full.proxyMaxDimension)
                 frame.cachedDevelopedBase = result.developedBase   // 결함 제거 적용 전 base
@@ -222,6 +231,7 @@ extension AppModel {
                     )
                     frame.neutralPreviewTransform = full.imageTransform
                     frame.neutralPreviewBaseKey = full.baseKey
+                    frame.neutralPreviewBaseScale = full.params.baseScale
                 }
                 if let mainBase = result.mainBase { frame.cachedMainBase = mainBase }
                 if let mainPreview = result.mainPreview {
@@ -252,6 +262,7 @@ extension AppModel {
                 if let thumb = result.thumbnail {
                     frame.thumbnailImage = NSImage(cgImage: thumb, size: NSSize(width: thumb.width, height: thumb.height))
                     frame.thumbnailTransform = full.imageTransform
+                    frame.thumbnailRecipeID = frame.currentThumbnailRecipeID()
                     // 정착 패스마다 디스크 썸네일을 현상 결과로 덮어쓴다(표준 방식 — 라이브러리/
                     // 필름스트립이 재시작 후에도 마지막 현상 상태를 보여준다). 드래그 중 인터랙티브
                     // 패스는 건너뛰므로 디스크 IO 는 정착 시점 1회다.
@@ -385,7 +396,9 @@ extension AppModel {
             baseRGB: frame.cachedBaseKey == baseKey ? frame.cachedBase?.rgb : nil,
             cleanRawRevision: frame.cleanRawRevision,
             autoLevels: frame.params.autoLevels,
-            autoNeutralBalance: frame.params.autoNeutralBalance
+            autoNeutralBalance: frame.params.autoNeutralBalance,
+            baseScale: frame.filmType.requiresInversion && frame.params.baseEstimationMode == .auto
+                ? frame.params.baseScale : .identity
         )
     }
 
@@ -412,8 +425,14 @@ extension AppModel {
         _ result: DevelopFrameRenderResult,
         to frame: ScanFrame,
         baseKey: FilmBaseCacheKey,
-        proxyMaxDimension: CGFloat
+        proxyMaxDimension: CGFloat,
+        renderedParams: DevelopParameters? = nil
     ) {
+        if let renderedParams {
+            guard renderedParams.baseScale == frame.params.baseScale,
+                  renderedParams.autoLevels == frame.params.autoLevels,
+                  renderedParams.autoNeutralBalance == frame.params.autoNeutralBalance else { return }
+        }
         let key = sceneMeasurementCacheKey(for: frame, baseKey: baseKey)
         if frame.cachedSceneMeasurementsKey != key {
             // 입력 raw 나 베이스가 바뀌었다 — 두 슬롯 모두 옛 장면 것이다.

@@ -75,7 +75,7 @@ final class DefectRecipeRuntimeTests: XCTestCase {
         XCTAssertNotEqual(tracking.reviewedRecipeSHA256, edited.identity.recipeSHA256)
     }
 
-    func testRecipeStateRefreshWritesNoSidecar() throws {
+    func testRecipeStateRefreshPersistsMatchingSidecar() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(
             "negaflow-defect-runtime-\(UUID().uuidString)",
             isDirectory: true
@@ -98,16 +98,16 @@ final class DefectRecipeRuntimeTests: XCTestCase {
         ))
         DefectSidecarFile.flushSync()
 
-        // 기록은 세션 메모리에만 있다 — persist 요청과 무관하게 sidecar가 생기지 않는다.
         XCTAssertEqual(refreshed.identity, frame.defectRecipeIdentity)
-        guard case .missing = DefectSidecarFile.read(for: frame.id, in: defects) else {
-            return XCTFail("defect recipes must not persist to disk")
+        guard case .loaded(.currentV2(_, let stored)) = DefectSidecarFile.read(for: frame.id, in: defects) else {
+            return XCTFail("결함 recipe 저장이 필요합니다.")
         }
+        XCTAssertEqual(stored, refreshed)
         XCTAssertNil(frame.cleanedRawDiskURL)
         XCTAssertNil(frame.cleanedRawDiskIdentity)
     }
 
-    func testLibraryRestoreIgnoresLegacyDefectRecordsAndSweepsStorage() async throws {
+    func testLibraryRestorePreservesDefectRecordsAndDiscardsUnidentifiedPixels() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(
             "negaflow-async-cache-restore-\(UUID().uuidString)",
             isDirectory: true
@@ -160,15 +160,15 @@ final class DefectRecipeRuntimeTests: XCTestCase {
         }
         let restored = try XCTUnwrap(model.frames.first)
 
-        // 기록은 세션을 넘지 않는다: 복원 프레임에 결함 상태가 없고, 잔재 sidecar는 청소된다.
         XCTAssertFalse(restored.defectEditsNeedRestore)
-        XCTAssertTrue(restored.defectEdits.isEmpty)
-        XCTAssertNil(restored.defectRecipeIdentity)
+        XCTAssertEqual(restored.defectEdits.map(\.id), [edit.id])
+        XCTAssertEqual(restored.defectRecipeIdentity, snapshot.identity)
         XCTAssertNil(restored.cleanedRawDiskURL)
         XCTAssertNil(restored.cleanedRawDiskIdentity)
-        guard case .missing = DefectSidecarFile.read(for: source.id, in: defects) else {
-            return XCTFail("leftover sidecars must be swept at launch")
+        guard case .loaded(.currentV2(_, let stored)) = DefectSidecarFile.read(for: source.id, in: defects) else {
+            return XCTFail("카탈로그가 소유한 sidecar는 보존해야 합니다.")
         }
+        XCTAssertEqual(stored, snapshot)
     }
 
     func testLiveDefectGestureDefersCatalogAndAcknowledgedCommit() throws {
@@ -209,7 +209,7 @@ final class DefectRecipeRuntimeTests: XCTestCase {
         XCTAssertTrue(model.saveLibrary(synchronous: true))
     }
 
-    func testCatalogSaveSucceedsWithInMemoryEditsAndNoSidecar() throws {
+    func testCatalogSaveRequiresPersistedRecipeGeneration() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(
             "negaflow-defect-generation-\(UUID().uuidString)",
             isDirectory: true
@@ -242,11 +242,13 @@ final class DefectRecipeRuntimeTests: XCTestCase {
         model.librarySaveTask?.cancel()
         model.librarySaveTask = nil
 
-        // 결함 기록이 메모리에만 있어도 catalog 저장은 성공하고, 결함 상태는 기록되지 않는다.
+        XCTAssertFalse(model.saveLibrary(synchronous: true))
+        _ = model.refreshDefectRecipeState(frame, advanceRevision: false, persist: true)
+        DefectSidecarFile.flushSync()
         XCTAssertTrue(model.saveLibrary(synchronous: true))
         XCTAssertTrue(FileManager.default.fileExists(atPath: model.libraryCatalogURL.path))
         let record = try XCTUnwrap(model.libraryFrameRecordCache[frame.id])
-        XCTAssertNil(record.hasDefectEdits)
+        XCTAssertEqual(record.hasDefectEdits, true)
         XCTAssertNil(record.cleanedRawPath)
         XCTAssertNil(record.cleanedRawEditCount)
     }
@@ -482,10 +484,11 @@ final class DefectRecipeRuntimeTests: XCTestCase {
         XCTAssertFalse(frame.defectGestureUndoPushed)
         XCTAssertNil(frame.defectGestureSourceIdentity)
         XCTAssertNil(frame.defectRecipeRefreshTask)
-        // 기록은 디스크에 남지 않고 catalog 저장은 성공한다.
-        guard case .missing = DefectSidecarFile.read(for: frame.id, in: defects) else {
-            return XCTFail("termination must not persist defect recipes")
+        guard case .loaded(.currentV2(_, let stored)) = DefectSidecarFile.read(for: frame.id, in: defects) else {
+            return XCTFail("종료 전에 최신 recipe 저장이 필요합니다.")
         }
+        XCTAssertEqual(stored.identity, frame.defectRecipeIdentity)
+        XCTAssertEqual(stored.items.first?.strength, 0.37)
         XCTAssertTrue(FileManager.default.fileExists(atPath: model.libraryCatalogURL.path))
     }
 

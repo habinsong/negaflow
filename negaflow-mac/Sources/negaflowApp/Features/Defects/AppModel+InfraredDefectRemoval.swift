@@ -58,6 +58,7 @@ extension AppModel {
         let trace = AppDiagnostics.start(.infraredDefect, category: .defects)
         let rawURL = frame.rawScanURL
         let sourceKind = frame.sourceKind
+        let inputGamma = frame.params.inputGamma
         // 검출은 cleaned raw 빌드와 **같은 픽셀**을 봐야 한다 — 로더가 다르면 방향(EXIF)과
         // 색 해석이 갈려 마스크가 엉뚱한 자리에 얹힌다.
         let rawRendering = ImageLoader.RAWRendering
@@ -69,8 +70,8 @@ extension AppModel {
                 guard !Task.isCancelled else { return .failure(.unreadable) }
                 let engine = ChromabaseEngine()
                 let rawImage = sourceKind == .importedFile
-                    ? engine.loadImportedImage(rawURL, rawRendering: rawRendering)
-                    : engine.loadScannerImage(rawURL)
+                    ? engine.loadImportedImage(rawURL, rawRendering: rawRendering, inputGamma: inputGamma)
+                    : engine.loadScannerImage(rawURL, inputGamma: inputGamma)
                 guard let raw = rawImage,
                       let infrared = ImageLoader.loadScannerTIFF(irURL) else {
                     return .failure(.unreadable)

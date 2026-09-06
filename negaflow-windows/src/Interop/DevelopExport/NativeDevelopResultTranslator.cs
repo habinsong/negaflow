@@ -5,6 +5,25 @@ using static NativeDevelopExportLimits;
 /// <summary>네이티브 결과를 managed 결과로 바꿉니다.</summary>
 internal static class NativeDevelopResultTranslator
 {
+    internal static DevelopExportResult Translate(uint status, NativeDevelopExportResultV6 raw, string functionName)
+    {
+        DevelopExportResult result = Translate(status, raw.V5, functionName);
+        if (raw.ReferenceBasePresent > 1U || !NativeDevelopInput.ValidGamma(raw.AppliedInputGammaMode, raw.AppliedInputGammaValue))
+        {
+            throw new NativeBootstrapException(NativeBootstrapFailure.ContractViolation, "Invalid input interpretation result.");
+        }
+        if (result.Succeeded && raw.ReferenceBasePresent == 1U)
+        {
+            if (!float.IsFinite(raw.ReferenceBaseRed) || !float.IsFinite(raw.ReferenceBaseGreen) || !float.IsFinite(raw.ReferenceBaseBlue))
+            {
+                throw new NativeBootstrapException(NativeBootstrapFailure.ContractViolation, "Invalid reference base result.");
+            }
+            result.ReferenceBase = new(raw.ReferenceBaseRed, raw.ReferenceBaseGreen, raw.ReferenceBaseBlue);
+        }
+        result.AppliedInputGammaMode = raw.AppliedInputGammaMode;
+        result.AppliedInputGammaValue = raw.AppliedInputGammaValue;
+        return result;
+    }
     /// <summary>재지 않은 호출에서는 아무 것도 만들지 않습니다.</summary>
     private static DevelopDebugMetrics? ReadDebugMetrics(NativeDevelopDebugMetricsV1 raw) =>
         raw.Present == 0

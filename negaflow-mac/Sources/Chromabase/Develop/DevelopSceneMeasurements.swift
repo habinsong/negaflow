@@ -10,6 +10,7 @@ import Foundation
 /// 그래서 호출부가 이 묶음을 들고 있다가 다음 현상에 되돌려준다. 값이 채워져 있으면 그대로
 /// 쓰고, 비어 있으면 재서 채운다. 입력 raw 나 베이스가 바뀌면 호출부가 통째로 버린다.
 public struct DevelopSceneMeasurements: Sendable, Equatable {
+    var inputGammaReferenceRange: SIMD3<Double>?
     /// 네거티브 반전이 쓰는 채널별 밀도 범위. auto 경로는 sampleStats, 프리셋 경로는
     /// presetStats 결과가 들어간다 — 둘 다 장면 실측에 기대므로 같은 슬롯을 쓴다.
     /// 베이스 추정 모드가 바뀌면 호출부가 묶음째 버린다.

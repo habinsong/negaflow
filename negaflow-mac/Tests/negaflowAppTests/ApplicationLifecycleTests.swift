@@ -12,7 +12,7 @@ final class ApplicationLifecycleTests: XCTestCase {
         )
     }
 
-    func testExplicitQuitIsNotCancelledWhenTerminationSnapshotCannotBePrepared() {
+    func testQuitIsCancelledWhenTerminationSnapshotCannotBePrepared() {
         let model = AppModel()
         model.frames = [ScanFrame(
             scanIndex: 1,
@@ -24,7 +24,8 @@ final class ApplicationLifecycleTests: XCTestCase {
 
         XCTAssertEqual(
             delegate.applicationShouldTerminate(NSApplication.shared),
-            .terminateNow
+            .terminateCancel
         )
+        XCTAssertEqual(model.frames.count, 1)
     }
 }

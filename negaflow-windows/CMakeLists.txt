@@ -545,6 +545,8 @@ target_link_libraries(negaflow_gpu PRIVATE negaflow_project_options)
 target_link_libraries(negaflow_gpu PUBLIC negaflow_core negaflow_imaging d3d11 dxgi)
 
 add_library(negaflow_color STATIC
+    src/Native/color/input_gamma_estimator.cpp
+    src/Native/color/input_gamma_profile.cpp
     src/Native/color/icc_profile.cpp
     src/Native/color/soft_proof.cpp
     src/Native/color/gamut_check.cpp
@@ -686,6 +688,7 @@ add_library(negaflow_imaging STATIC
     src/Native/imaging/point_curve.cpp
     src/Native/imaging/primary_calibration.cpp
     src/Native/imaging/scanner_tiff_to_working.cpp
+    src/Native/imaging/input_gamma_source.cpp
     src/Native/imaging/scanner_to_working.cpp
     src/Native/imaging/tone_curve_measurement.cpp
     src/Native/imaging/tone_mapping.cpp
@@ -744,6 +747,7 @@ add_library(negaflow_pipeline STATIC
     src/Native/pipeline/export/stages/grade.cpp
     src/Native/pipeline/export/stages/grain.cpp
     src/Native/pipeline/export/stages/invert.cpp
+    src/Native/pipeline/export/support/input_gamma_reference.cpp
     src/Native/pipeline/export/stages/look.cpp
     src/Native/pipeline/export/stages/observe.cpp
     src/Native/pipeline/export/stages/publish.cpp
@@ -800,6 +804,7 @@ add_library(negaflow_native SHARED
     src/Native/abi/probe/standard_image_probe_abi.cpp
     src/Native/abi/probe/tiff_probe_abi.cpp
     src/Native/abi/pick/film_base_pick_abi.cpp
+    src/Native/abi/pick/film_base_pick_v2.cpp
     src/Native/abi/proof/gamut_check_abi.cpp
     src/Native/abi/proof/soft_proof_abi.cpp
     src/Native/abi/request/develop_request_enums.cpp
@@ -814,6 +819,9 @@ add_library(negaflow_native SHARED
     src/Native/abi/request/develop_request_v36.cpp
     src/Native/abi/request/develop_request_v37.cpp
     src/Native/abi/request/develop_request_v38.cpp
+    src/Native/abi/request/develop_request_v39.cpp
+    src/Native/abi/result/develop_result_prepare_v39.cpp
+    src/Native/abi/input_gamma_source_abi.cpp
     src/Native/abi/result/develop_result_prepare_v1_v12.cpp
     src/Native/abi/result/develop_result_prepare_v13_v21.cpp
     src/Native/abi/result/develop_result_prepare_v22_v34.cpp
@@ -824,6 +832,7 @@ add_library(negaflow_native SHARED
     src/Native/abi/run/develop_run_v36.cpp
     src/Native/abi/run/develop_run_v37.cpp
     src/Native/abi/run/develop_run_v38.cpp
+    src/Native/abi/run/develop_run_v39.cpp
     src/Native/abi/support/abi_layout.cpp
     src/Native/abi/support/crash_log.cpp
     src/Native/abi/support/abi_text.cpp
@@ -1072,6 +1081,14 @@ if(BUILD_TESTING)
     )
     add_test(NAME native.gamut_check COMMAND negaflow_gamut_check_tests)
 
+    add_executable(negaflow_input_gamma_profile_tests tests/Native.UnitTests/input_gamma_profile_tests.cpp)
+    target_link_libraries(negaflow_input_gamma_profile_tests PRIVATE negaflow_color negaflow_project_options)
+    target_include_directories(negaflow_input_gamma_profile_tests PRIVATE src/Native/imaging/include)
+    add_test(NAME native.input_gamma_profile COMMAND negaflow_input_gamma_profile_tests)
+    add_executable(negaflow_input_gamma_estimator_tests tests/Native.UnitTests/input_gamma_estimator_tests.cpp)
+    target_link_libraries(negaflow_input_gamma_estimator_tests PRIVATE negaflow_color negaflow_project_options)
+    add_test(NAME native.input_gamma_estimator COMMAND negaflow_input_gamma_estimator_tests)
+
     add_executable(negaflow_icc_profile_tests
         tests/Native.UnitTests/icc_profile_tests.cpp
     )
@@ -1156,6 +1173,7 @@ if(BUILD_TESTING)
         tests/Native.UnitTests/ManualNegative/manual_negative_develop_tests.cpp
         tests/Native.UnitTests/ManualNegative/manual_negative_auto_base_tests.cpp
         tests/Native.UnitTests/ManualNegative/manual_negative_failure_tests.cpp
+        tests/Native.UnitTests/ManualNegative/manual_negative_input_gamma_tests.cpp
     )
     target_include_directories(
         negaflow_manual_negative_developer_tests

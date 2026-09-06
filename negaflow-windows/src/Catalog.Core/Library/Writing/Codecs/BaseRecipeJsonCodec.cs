@@ -14,6 +14,7 @@ internal static class BaseRecipeJsonCodec
 
     internal static bool IsValid(BaseRecipe recipe) =>
         Enum.IsDefined(recipe.Mode) &&
+        double.IsFinite(recipe.Scale) && recipe.Scale is >= 0.5 and <= 1.5 &&
         IsValidOptionalIdentifier(recipe.FilmStockDminId) &&
         IsValidOptionalIdentifier(recipe.LightSourceProfileId) &&
         IsValidOptionalIdentifier(recipe.ScannerProfileId);
@@ -40,6 +41,8 @@ internal static class BaseRecipeJsonCodec
             return;
         }
         parameters[LibraryFrameReader.BaseEstimationModeName] = ToStorageName(baseRecipe.Mode);
+        if (baseRecipe.Scale == 1.0) { parameters.Remove("baseScale"); }
+        else { parameters["baseScale"] = baseRecipe.Scale; }
         WriteOptionalIdentifier(
             parameters,
             LibraryFrameReader.FilmStockDminIdName,

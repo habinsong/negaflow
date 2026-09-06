@@ -57,7 +57,8 @@ public sealed partial class WorkspaceShellView : UserControl
         Toolbar.UpdateCaptionInsets(left, right);
 
     internal Task PrepareForTerminationAsync() =>
-        DevelopWorkspace.PrepareForTerminationAsync();
+        Task.WhenAll(DevelopWorkspace.PrepareForTerminationAsync(),
+            PrintWorkspace?.PrepareForTerminationAsync() ?? Task.CompletedTask);
 
     /// <summary>
     /// <c>x:Load="False"</c> 로 미뤄 둔 세 화면을 실제로 만듭니다.
@@ -283,6 +284,7 @@ public sealed partial class WorkspaceShellView : UserControl
         // 때문입니다. 값을 그 자리에서 갈아 끼우면 두 문제가 함께 사라집니다.
         if (libraryHost is { } host)
         {
+            thumbnails?.RefreshRecipes(host.Frames);
             LibraryWorkspace.RefreshFrameMarks();
             DevelopWorkspace.RefreshFrameMarks();
             PrintWorkspace.RefreshFrameMarks(host);

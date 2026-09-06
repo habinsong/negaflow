@@ -51,5 +51,6 @@ void test_film_stock_presets();
 void test_manual_negative_development();
 void test_auto_negative_base_resolution();
 void test_invalid_manual_inputs_fail_closed();
+void test_input_gamma_density_reference();
 
 }  // namespace manual_negative_tests

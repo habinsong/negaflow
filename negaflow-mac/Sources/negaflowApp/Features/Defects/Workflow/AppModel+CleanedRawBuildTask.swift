@@ -20,6 +20,7 @@ extension AppModel {
         let rawURL = frame.rawScanURL
         let frameID = frame.id
         let sourceKind = frame.sourceKind
+        let inputGamma = frame.params.inputGamma
         // RAW 디코드 의도는 develop 과 같아야 한다 — 다르면 cleaned raw 가 현상 입력과 다른
         // 이미지가 된다.
         let rawRendering = ImageLoader.RAWRendering
@@ -93,8 +94,8 @@ extension AppModel {
                     let engine = ChromabaseEngine()                // 전체: 원본 raw 디코드
                     // 가져온 파일은 develop 과 동일 로더(방향·색 일치). 스캐너 TIFF는 기존 경로.
                     let rawCI = sourceKind == .importedFile
-                        ? engine.loadImportedImage(rawURL, rawRendering: rawRendering)
-                        : engine.loadScannerImage(rawURL)
+                        ? engine.loadImportedImage(rawURL, rawRendering: rawRendering, inputGamma: inputGamma)
+                        : engine.loadScannerImage(rawURL, inputGamma: inputGamma)
                     if let rawCI, !Task.isCancelled {
                         inputCG = cleanedRawContext.createCGImage(rawCI, from: rawCI.extent,
                                                                   format: .RGBA16, colorSpace: linearColorSpace)
@@ -178,6 +179,7 @@ extension AppModel {
                     return false
                 }
                 self.installDefectRecipeIdentity(boundSnapshot.identity, on: frame)
+                self.persistDefectRecipe(boundSnapshot, for: frame)
                 frame.cleanedRawImage = built.cleaned
                 frame.cleanedRawMemoryIdentity = boundSnapshot.identity
                 frame.cleanedRawEditCount = totalEditCount

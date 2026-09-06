@@ -109,7 +109,7 @@ internal sealed class DevelopVersionPresetController
         }
         return EditFrameRecord(
             destination,
-            record => DevelopSettingsTransfer.Paste(record, source, destination, PasteScope));
+            record => DevelopSettingsTransfer.Paste(record, source, destination, PasteScope), undoable: true);
     }
 
     public void OpenUserPresets(string? path)
@@ -142,7 +142,7 @@ internal sealed class DevelopVersionPresetController
         }
         return EditFrameRecord(
             destination,
-            record => DevelopUserPresetStore.Apply(record, chosen, destination));
+            record => DevelopUserPresetStore.Apply(record, chosen, destination), undoable: true);
     }
 
     public bool DeleteUserPreset(Guid id)
@@ -159,13 +159,16 @@ internal sealed class DevelopVersionPresetController
 
     private DevelopEditResult EditFrameRecord(
         LibraryFrameSnapshot? frame,
-        Func<System.Text.Json.Nodes.JsonObject, LibraryFrameWriteResult> edit)
+        Func<System.Text.Json.Nodes.JsonObject, LibraryFrameWriteResult> edit,
+        bool undoable = false)
     {
         if (frame is null)
         {
             return new(LibraryFrameError.MissingId, false);
         }
-        LibraryFrameError error = host.EditFrameRecord(frame.Id, edit);
+        LibraryFrameError error = undoable
+            ? host.EditUndoable(frame.Id, LibraryHostService.UndoActions.DevelopAdjustment, edit)
+            : host.EditFrameRecord(frame.Id, edit);
         return new(error, error == LibraryFrameError.None);
     }
 

@@ -11,6 +11,12 @@ internal sealed class DevelopAutoAdjustActions
 
     internal DevelopAutoAdjustActions(DevelopWorkspaceView view) => this.view = view;
 
+    internal void Cancel()
+    {
+        view.autoAdjustCoordinator?.Cancel();
+        view.SyncToneControls();
+    }
+
     internal void Hook()
     {
         view.Adjustments.AutoColorToggled += OnAutoColorToggled;
@@ -43,6 +49,7 @@ internal sealed class DevelopAutoAdjustActions
     /// </summary>
     private void Apply(Func<DevelopPanelState, LibraryFrameError> edit)
     {
+        Cancel();
         if (view.panel is null || edit(view.panel) != LibraryFrameError.None)
         {
             return;
@@ -105,24 +112,32 @@ internal sealed class DevelopAutoAdjustActions
         view.Adjustments.SetAutoAdjustStatus(string.Empty);
         Action<AutoAdjustOutcome> completed = outcome =>
         {
-            if (outcome.Kind == DevelopExportOutcomeKind.Completed && outcome.Settings is not null &&
-                view.panel?.SelectedFrame == frame)
+            try
             {
-                LibraryFrameError error = operation == AutoAdjustOperation.Tone
-                    ? view.panel.Tone.ApplyAutoTone(outcome.Settings)
-                    : view.panel.Tone.ApplyAutoWhiteBalance(outcome.Settings);
-                if (error == LibraryFrameError.None)
+                if (outcome.Kind == DevelopExportOutcomeKind.Completed && outcome.Settings is not null &&
+                    view.panel?.SelectedFrame == frame)
                 {
-                    view.SynchronizeInspectorValues();
-                    view.RequestPreviewReplacingCurrent();
+                    LibraryFrameError error = operation == AutoAdjustOperation.Tone
+                        ? view.panel.Tone.ApplyAutoTone(outcome.Settings)
+                        : view.panel.Tone.ApplyAutoWhiteBalance(outcome.Settings);
+                    if (error == LibraryFrameError.None)
+                    {
+                        view.SynchronizeInspectorValues();
+                        view.RequestPreviewReplacingCurrent();
+                    }
+                    else
+                    {
+                        view.Adjustments.SetAutoAdjustStatus(AppResources.Get("developAutoAdjustFailed", "Text"));
+                    }
                 }
-                else
+                else if (outcome.Kind is not (DevelopExportOutcomeKind.Completed or DevelopExportOutcomeKind.Cancelled))
                 {
                     view.Adjustments.SetAutoAdjustStatus(AppResources.Get("developAutoAdjustFailed", "Text"));
                 }
             }
-            else if (outcome.Kind != DevelopExportOutcomeKind.Completed)
+            catch (Exception error)
             {
+                Diagnostics.AppErrorLog.Shared.Record(error.Message);
                 view.Adjustments.SetAutoAdjustStatus(AppResources.Get("developAutoAdjustFailed", "Text"));
             }
             view.SyncToneControls();

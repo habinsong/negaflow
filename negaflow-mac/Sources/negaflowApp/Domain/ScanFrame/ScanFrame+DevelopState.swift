@@ -43,6 +43,12 @@ extension ScanFrame {
         return sha256
     }
 
+    func currentThumbnailRecipeID() -> String? {
+        currentLibraryDevelopRecipeSHA256().map {
+            "input2-" + $0 + "-" + (boundDefectRecipeIdentity?.recipeSHA256 ?? "none")
+        }
+    }
+
     func updateTransform(_ body: (inout ImageTransform) -> Void) {
         var next = imageTransform
         body(&next)

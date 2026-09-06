@@ -23,7 +23,9 @@ internal static class DevelopInspectorResetter
         ArgumentNullException.ThrowIfNull(frame);
         return new LibraryFrameEdit(
             ToneAdjustment.Neutral,
-            frame.ManualBase,
+            frame.InputGamma.IsAutomatic ? frame.ManualBase : null,
+            Base: frame.Base with { Scale = 1.0, Mode = !frame.InputGamma.IsAutomatic && frame.Base.Mode == BaseEstimationMode.Manual
+                ? BaseEstimationMode.Auto : frame.Base.Mode },
             PointCurves: PointCurveRecipe.Identity,
             ColorMixer: ColorMixerRecipe.Identity,
             ColorGrading: ColorGradingRecipe.Identity,
@@ -33,6 +35,6 @@ internal static class DevelopInspectorResetter
             Texture: TextureRecipe.Identity,
             NoiseReduction: NoiseReductionRecipe.Identity,
             BwToning: BwToningRecipe.None,
-            LookPreset: new LookPresetSelection(neutralPresetId));
+            LookPreset: new LookPresetSelection(neutralPresetId)) { InputGamma = InputGammaInterpretation.Automatic };
     }
 }

@@ -16,6 +16,44 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
+        if (args is ["--preview-thumbnail-only"])
+        {
+            DevelopRouteRestoreTests.Run();
+            ThumbnailLifecycleTests.Run();
+            ThumbnailCacheRegressionTests.Run();
+            PreviewRouteDeliveryTests.Run();
+            PreviewOrderingTests.Run();
+            return Report("preview_thumbnail_tests");
+        }
+        if (args is ["--input-workflow-only"])
+        {
+            InputWorkflowRegressionTests.Run();
+            InputWorkflowRouteTests.Run();
+            ExportArtifactSafetyTests.Run();
+            PrintOutputTests.Run();
+            ExportUniqueDestinationTests.Run();
+            ExportBatchTests.Run();
+            PrintOutputProfileTests.Run();
+            PrintCompositionTests.Run();
+            PrintCustomPackageTests.Run();
+            PrintPreviewResolutionTests.Run();
+            ScanProgressTests.Run();
+            ScannerMenuStateTests.Run();
+            ScanRotationDefaultTests.Run();
+            return Report("input_workflow_tests");
+        }
+        if (args is ["--auto-input-only"])
+        {
+            AutoAdjustInputTests.Run();
+            return Report("auto_input_tests");
+        }
+        if (args is ["--input-gamma-only"])
+        {
+            SliderPointerSessionTests.Run();
+            InputGammaWorkflowTests.Run();
+            PasteScopeSummaryTests.Run();
+            return Report("shell_input_gamma_tests");
+        }
         if (args is ["--defect-source-identity-only"])
         {
             DefectSourceIdentityTests.Run();
@@ -25,6 +63,16 @@ internal static class Program
         {
             return diagnosticExitCode;
         }
+        DevelopRouteRestoreTests.Run();
+        ThumbnailLifecycleTests.Run();
+        ThumbnailCacheRegressionTests.Run();
+        PreviewRouteDeliveryTests.Run();
+        InputWorkflowRegressionTests.Run();
+        InputWorkflowRouteTests.Run();
+        ExportArtifactSafetyTests.Run();
+        InputGammaWorkflowTests.Run();
+        SliderPointerSessionTests.Run();
+        AutoAdjustInputTests.Run();
         ResourceFileTests.Run();
         LocalizedTextTests.Run();
         ShellPreferencesTests.Run();

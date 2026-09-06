@@ -3,6 +3,19 @@ import AppKit
 import Chromabase
 
 extension DevelopWorkflowInspector {
+    var baseScaleBinding: Binding<Double> {
+        Binding(
+            get: { frame.params.baseScale.value },
+            set: { value in
+                guard model.actionableFrame === frame, frame.params.baseEstimationMode == .auto,
+                      let scale = try? FilmBaseScale(value),
+                      frame.params.baseScale != scale else { return }
+                frame.updateParams { $0.baseScale = scale }
+                scheduleRedevelop(frame)
+            }
+        )
+    }
+
     func batchWBBinding(_ keyPath: WritableKeyPath<DevelopParameters, Double>) -> Binding<Double> {
         DevelopInspectorBindings.batchWhiteBalance(
             frame: frame,

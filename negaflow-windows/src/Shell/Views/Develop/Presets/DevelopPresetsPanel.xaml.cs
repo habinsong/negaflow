@@ -71,6 +71,8 @@ public sealed partial class DevelopPresetsPanel : UserControl
         DevelopSettingsPasteScope scope = panel.PasteScope;
         panel.PasteScope = group switch
         {
+            "InputGamma" => scope with { InputGamma = item.IsChecked },
+            "BaseScale" => scope with { BaseScale = item.IsChecked },
             "Base" => scope with { Base = item.IsChecked },
             "Tone" => scope with { Tone = item.IsChecked },
             "Color" => scope with { Color = item.IsChecked },
@@ -205,6 +207,8 @@ public sealed partial class DevelopPresetsPanel : UserControl
         DeleteUserPresetButton.Content = AppResources.Get("developUserPresetDelete", "Content");
         PasteScopeAllItem.Text = AppResources.Get("developPasteScopeAll", "Text");
         PasteScopeBaseItem.Text = AppResources.Get("developScopeBase", "Text");
+        PasteScopeInputGammaItem.Text = AppResources.Get("inputGamma", "Text");
+        PasteScopeBaseScaleItem.Text = AppResources.Get("developBaseScale", "Text");
         UserPresetNameBox.PlaceholderText =
             AppResources.Get("developUserPresetNamePlaceholder", "PlaceholderText");
         PasteScopeToneItem.Text = AppResources.Get("developScopeTone", "Text");
@@ -226,11 +230,15 @@ public sealed partial class DevelopPresetsPanel : UserControl
 
         DevelopSettingsPasteScope scope = panel?.PasteScope ?? DevelopSettingsPasteScope.All;
         PasteScopeBaseItem.IsChecked = scope.Base;
+        PasteScopeInputGammaItem.IsChecked = scope.InputGamma;
+        PasteScopeBaseScaleItem.IsChecked = scope.BaseScale;
         PasteScopeToneItem.IsChecked = scope.Tone;
         PasteScopeColorItem.IsChecked = scope.Color;
         PasteScopeDetailItem.IsChecked = scope.Detail;
         PasteScopeGeometryItem.IsChecked = scope.Geometry;
-        PasteScopeButton.Content = DescribePasteScope(scope);
+        PasteScopeSummaryText.Text = DescribePasteScope(scope);
+        ToolTipService.SetToolTip(PasteScopeButton, PasteScopeSummaryText.Text);
+        AutomationProperties.SetName(PasteScopeButton, PasteScopeSummaryText.Text);
 
         CopyDevelopSettingsButton.IsEnabled = panel?.SelectedFrame is not null;
         PasteDevelopSettingsButton.IsEnabled =
@@ -277,5 +285,7 @@ public sealed partial class DevelopPresetsPanel : UserControl
                 AppResources.Get("developScopeTone", "Text"),
                 AppResources.Get("developScopeColor", "Text"),
                 AppResources.Get("developScopeDetail", "Text"),
-                AppResources.Get("developScopeGeometry", "Text")));
+                AppResources.Get("developScopeGeometry", "Text"),
+                AppResources.Get("inputGamma", "Text"),
+                AppResources.Get("developBaseScale", "Text")));
 }

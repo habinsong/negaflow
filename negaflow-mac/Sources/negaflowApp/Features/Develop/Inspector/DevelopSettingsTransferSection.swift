@@ -38,6 +38,8 @@ struct DevelopSettingsTransferSection: View {
                         Label(model.text(AppLocalizedPhrase.allSettings), systemImage: pasteScope.isFullDevelopScope ? "checkmark" : "circle")
                     }
                     Divider()
+                    Toggle(model.text(.inputGamma), isOn: scopeBinding(\.inputGamma))
+                    Toggle(model.text(.baseScale), isOn: scopeBinding(\.baseScale))
                     Toggle(model.text(AppLocalizedPhrase.baseSection), isOn: scopeBinding(\.base))
                     Toggle(model.text(AppLocalizedPhrase.basicTone), isOn: scopeBinding(\.tone))
                     Toggle(model.text(AppLocalizedPhrase.color), isOn: scopeBinding(\.color))
@@ -45,10 +47,11 @@ struct DevelopSettingsTransferSection: View {
                     Toggle(model.text(AppLocalizedPhrase.geometry), isOn: scopeBinding(\.geometry))
                 } label: {
                     Text(pasteScope.displayName(language: model.appLanguage))
+                        .lineLimit(1).truncationMode(.tail)
                 }
                 .menuStyle(.borderlessButton)
-                .fixedSize()
-                .help(model.text(AppLocalizedPhrase.pasteScopeHelp))
+                .fixedSize(horizontal: false, vertical: true)
+                .help(model.text(.pasteScopeHelp) + "\n" + pasteScope.displayName(language: model.appLanguage))
             }
         } header: {
             sectionHeader(model.text(AppLocalizedPhrase.copyPaste), systemImage: "doc.on.doc")

@@ -2,6 +2,9 @@ namespace Negaflow.Interop;
 
 public sealed class DevelopExportResult
 {
+    public DevelopReferenceBase? ReferenceBase { get; internal set; }
+    public uint AppliedInputGammaMode { get; internal set; }
+    public double AppliedInputGammaValue { get; internal set; }
     internal DevelopExportResult(
         bool succeeded,
         DevelopExportStage failedStage,
@@ -111,3 +114,5 @@ public sealed class DevelopExportResult
     /// </summary>
     public string? MeasurementMethod { get; }
 }
+
+public readonly record struct DevelopReferenceBase(float Red, float Green, float Blue);

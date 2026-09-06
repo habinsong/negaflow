@@ -118,14 +118,16 @@ public static class LibraryVersions
             }
         }
 
-        versions.Add(new JsonObject
+        JsonObject captured = new()
         {
             [VersionIdName] = versionId,
             [VersionNameName] = name.Trim(),
             [VersionCreatedAtName] = createdAt.ToString("O", CultureInfo.InvariantCulture),
             [VersionPresetIdName] = updated["presetID"]?.DeepClone(),
             [VersionParametersName] = parameters.DeepClone(),
-        });
+        };
+        DevelopVersionRouteCodec.Capture(captured, frameRecord);
+        versions.Add(captured);
         updated[listName] = versions;
         return LibraryFrameWriteResult.Success(updated);
     }
@@ -162,8 +164,12 @@ public static class LibraryVersions
             {
                 return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidVersion);
             }
-            updated[VersionParametersName] = storedParameters.DeepClone();
+            var restoredParameters = storedParameters.DeepClone().AsObject();
+            if (!DevelopVersionRouteCodec.Restore(updated, entry, restoredParameters))
+            { return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidVersion); }
+            updated[VersionParametersName] = restoredParameters;
             updated["presetID"] = entry[VersionPresetIdName]?.DeepClone();
+            AppliedBaseInvalidation.Apply(frameRecord, updated);
             return LibraryFrameWriteResult.Success(updated);
         }
         return LibraryFrameWriteResult.Failure(LibraryFrameError.MissingVersion);

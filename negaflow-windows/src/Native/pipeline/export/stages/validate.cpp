@@ -1,4 +1,5 @@
 #include "validate.h"
+#include "negaflow/imaging/film_base_scale.h"
 
 #include "export/support/outcome.h"
 
@@ -72,6 +73,9 @@ std::optional<DevelopExportOutcome> validate_request(
     }
     if (request.rows_per_copy == 0U) {
         return fail(DevelopExportStage::request_validation, "invalid_rows_per_copy");
+    }
+    if (!negaflow::imaging::valid_film_base_scale(request.base_scale) || !request.input_gamma.valid()) {
+        return fail(DevelopExportStage::request_validation, "invalid_input_gamma_or_base_scale");
     }
     if (request.base_estimation_mode != NegativeBaseEstimationMode::manual &&
         request.base_estimation_mode != NegativeBaseEstimationMode::auto_estimate &&

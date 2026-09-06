@@ -14,9 +14,7 @@ extension AppModel {
         frame.defectRecipeRefreshChangedEditID = nil
     }
 
-    /// 렌더에 영향을 주는 defect state가 바뀐 직후 호출한다. 기록은 세션 메모리에만 있고
-    /// 디스크에 저장하지 않는다 — 종료 시 cleaned raw가 이미지로 구워지고 기록은 사라진다.
-    /// persist 파라미터는 호출부 호환용이며 더 이상 디스크 IO를 일으키지 않는다.
+    /// 편집 recipe는 앱 소유 sidecar에 직렬·원자 저장합니다. 원본 픽셀은 보존합니다.
     @discardableResult
     func refreshDefectRecipeState(
         _ frame: ScanFrame,
@@ -27,6 +25,7 @@ extension AppModel {
         // 승계해야 한다. 먼저 캡은 뒤 worker를 취소하고 제스처를 종료해,
         // enabled/remove/clear/undo 같은 다른 semantic mutation이 와도 저장 guard가
         // 영구적으로 닫히지 않게 한다.
+        guard !frame.defectEditsNeedRestore else { return nil }
         let sourceIdentity = frame.defectGestureRecipeAdvanced
             ? frame.defectGestureSourceIdentity
             : frame.defectRecipeIdentity?.sourceIdentity
@@ -45,6 +44,10 @@ extension AppModel {
         }
 
         guard !frame.defectEdits.isEmpty else {
+            if persist {
+                DefectSidecarFile.removeAsync(for: frame.id, atRevision: frame.defectRecipeRevision,
+                                             in: libraryDefectDirectoryURL)
+            }
             frame.defectRecipeIdentity = nil
             updateDefectReviewTracking(frame, identity: nil)
             invalidateLibraryQueryContext()
@@ -68,6 +71,7 @@ extension AppModel {
             return nil
         }
         installDefectRecipeIdentity(snapshot.identity, on: frame)
+        if persist { persistDefectRecipe(snapshot, for: frame) }
         invalidateLibraryQueryContext()
         scheduleLibrarySave()
         return snapshot
@@ -116,9 +120,8 @@ extension AppModel {
         scheduleLibrarySave()
     }
 
-    /// 기록이 세션을 넘어 보존되지 않으므로(종료 시 이미지에 굽기) 콘텐츠 SHA-256 대신
-    /// 파일시스템 관찰값(device/inode/size/mtime/ctime) 다이제스트를 쓴다 — 대형 TIFF를
-    /// 읽거나 해시하지 않고도 같은 세션 안의 원본 교체를 감지한다.
+    /// 파일시스템 관찰값으로 캐시의 원본 세대를 확인합니다. 복구·재연결로 inode 등이
+    /// 바뀌면 recipe를 보존하고 캐시만 새 원본에서 재생성합니다.
     nonisolated static func defectSourceIdentity(for url: URL) throws -> DefectSourceIdentity {
         let observation = try CaptureFileObservation.capture(for: url)
         let canonical = [

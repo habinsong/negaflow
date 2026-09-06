@@ -31,6 +31,8 @@ internal sealed class PrintSheetExportRunner
     private readonly Action<bool, ExportProgress> progress;
 
     private bool isRunning;
+    private readonly OutputTaskGroup outputTasks = new();
+    internal Task DrainAsync() => outputTasks.DrainAsync();
 
     internal PrintSheetExportRunner(
         Func<IReadOnlyList<LibraryFrameSnapshot>> sources,
@@ -48,11 +50,11 @@ internal sealed class PrintSheetExportRunner
 
     /// <summary>출력 탭의 "내보내기" 폴더로, 고른 형식으로 판을 씁니다.</summary>
     internal Task RunExportAsync(ExportSettings settings) =>
-        RunAsync(settings.FolderPath, settings.Format, settings.JpegQuality, quick: false);
+        outputTasks.RunAsync(() => RunAsync(settings.FolderPath, settings.Format, settings.JpegQuality, quick: false));
 
     /// <summary>출력 탭의 "빠른 내보내기" 폴더로, 고른 형식으로 판을 씁니다.</summary>
     internal Task RunQuickExportAsync(QuickExportSettings settings) =>
-        RunAsync(settings.FolderPath, settings.Format, settings.JpegQuality, quick: true);
+        outputTasks.RunAsync(() => RunAsync(settings.FolderPath, settings.Format, settings.JpegQuality, quick: true));
 
     private async Task RunAsync(
         string destinationFolder,

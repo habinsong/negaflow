@@ -64,6 +64,18 @@ final class SourceMetadataInspectorModelTests: XCTestCase {
         )
     }
 
+    func testImportedHeaderHidesMissingExposureMetadata() {
+        XCTAssertEqual(DevelopInspectorHeaderSummary.importedMetadata(nil), "")
+        // 카메라명과 날짜만 있는 EXIF도 촬영 수치가 없는 헤더는 비웁니다.
+        XCTAssertEqual(DevelopInspectorHeaderSummary.importedMetadata(snapshot(sidecarState: .loaded).exif), "")
+    }
+
+    func testImportedHeaderKeepsExistingFormatWhenSomeValuesExist() {
+        var exif = snapshot(sidecarState: .loaded).exif!
+        exif.isoSpeedRatings = [400]
+        XCTAssertEqual(DevelopInspectorHeaderSummary.importedMetadata(exif), "ISO 400 · — s · f/— · — mm")
+    }
+
     private func snapshot(sidecarState: SourceXMPReadState) -> SourceMetadataSnapshot {
         SourceMetadataSnapshot(
             exif: SourceEXIFMetadata(

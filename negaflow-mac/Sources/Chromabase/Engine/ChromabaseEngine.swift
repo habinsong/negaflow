@@ -190,13 +190,15 @@ public final class ChromabaseEngine: @unchecked Sendable {
     public func developDebugFramesScanner(
         image input: CIImage,
         base: FilmBase?,
-        params: DevelopParameters
+        params: DevelopParameters,
+        measurements: DevelopSceneMeasurements = .init()
     ) -> [DevelopDebugFrame] {
         developDebugFrames(
             image: input,
             base: base,
             params: params,
-            sampleColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!
+            sampleColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!,
+            measurements: measurements
         )
     }
 
@@ -204,12 +206,14 @@ public final class ChromabaseEngine: @unchecked Sendable {
         image input: CIImage,
         base: FilmBase?,
         params: DevelopParameters,
-        maxDimension: CGFloat
+        maxDimension: CGFloat,
+        measurements: DevelopSceneMeasurements = .init()
     ) -> [DevelopDebugFrame] {
         developDebugFramesScanner(
             image: Self.scannerPreviewProxy(input, maxDimension: maxDimension),
             base: base,
-            params: params
+            params: params,
+            measurements: measurements
         )
     }
 
@@ -248,24 +252,29 @@ public final class ChromabaseEngine: @unchecked Sendable {
         image input: CIImage,
         base: FilmBase?,
         params: DevelopParameters,
-        sampleColorSpace: CGColorSpace
+        sampleColorSpace: CGColorSpace,
+        measurements: DevelopSceneMeasurements
     ) -> [DevelopDebugFrame] {
         guard params.filmType.requiresInversion else { return [] }
         var img = input
         let extent = input.extent
         let preset: FilmStockDmin? = (params.baseEstimationMode == .preset)
             ? params.filmStockDminID.flatMap { FilmStockDminRegistry.find($0) } : nil
-        let fb = resolveFilmBase(for: img, provided: base, preset: preset, params: params)
+        let reference = resolveFilmBase(for: img, provided: base, preset: preset, params: params)
+        let fb = params.baseEstimationMode == .auto
+            ? params.baseScale.applied(to: reference) : reference
 
+        var state = measurements
+        prepareInputGammaStatistics(base: fb, preset: preset, params: params, measurements: &state)
         let stats = negativeDebugMetrics(
-            for: img, base: fb, preset: preset, filmType: params.filmType
+            for: img, base: fb, preset: preset, filmType: params.filmType, measured: state.inversionStats
         )
         if let preset {
             img = NegativeInversion.apply(
-                to: img, base: fb, preset: preset, filmType: params.filmType
+                to: img, base: fb, preset: preset, filmType: params.filmType, measurements: &state
             )
         } else {
-            img = NegativeInversion.applySceneRanged(to: img, base: fb, filmType: params.filmType)
+            img = NegativeInversion.applySceneRanged(to: img, base: fb, filmType: params.filmType, measurements: &state)
         }
 
         var frames = [
@@ -327,12 +336,14 @@ public final class ChromabaseEngine: @unchecked Sendable {
                 "PRINT export requires a valid RGB printer-class ICC profile"
             )
         }
-        guard let inputImg = loadImage(input) else {
-            throw ChromabaseError.loadFailed(input.path)
+        let inputImg = try ImageLoader.loadImportedDecoded(input, inputGamma: params.inputGamma).image
+        var measurements = DevelopSceneMeasurements()
+        if format != .rawScanTIFF {
+            try InputGammaRenderReference.prepare(source: input, params: params, measurements: &measurements)
         }
         let outputImage = format == .rawScanTIFF
             ? inputImg
-            : develop(image: inputImg, base: base, params: params)
+            : developScanner(image: inputImg, base: base, params: params, measurements: &measurements)
         try ExportEngine.write(
             outputImage,
             to: output,
@@ -361,12 +372,14 @@ public final class ChromabaseEngine: @unchecked Sendable {
                 "PRINT export requires a valid RGB printer-class ICC profile"
             )
         }
-        guard let inputImg = loadScannerImage(input) else {
-            throw ChromabaseError.loadFailed(input.path)
+        let inputImg = try ImageLoader.loadScannerTIFFDecoded(input, inputGamma: params.inputGamma).image
+        var measurements = DevelopSceneMeasurements()
+        if format != .rawScanTIFF {
+            try InputGammaRenderReference.prepare(source: input, params: params, measurements: &measurements)
         }
         let outputImage = format == .rawScanTIFF
             ? inputImg
-            : developScanner(image: inputImg, base: base, params: params)
+            : developScanner(image: inputImg, base: base, params: params, measurements: &measurements)
         try ExportEngine.write(
             outputImage,
             to: output,
@@ -386,24 +399,26 @@ public final class ChromabaseEngine: @unchecked Sendable {
         ImageLoader.load(url, allowRaw: true, rawRendering: rawRendering)
     }
 
-    public func loadScannerImage(_ url: URL) -> CIImage? {
-        ImageLoader.loadScannerTIFF(url)
+    public func loadScannerImage(_ url: URL, inputGamma: InputGammaInterpretation = .automatic) -> CIImage? {
+        try? ImageLoader.loadScannerTIFFDecoded(url, inputGamma: inputGamma).image
     }
 
     /// 가져온 파일(사용자 이미지) 전용 로더. 카메라 RAW/DNG 데모사이크 + 임베디드 색상 프로필 존중
     /// + 프로필 없는 16bit 스캐너 raw(VueScan/SilverFast)를 linear 로 해석한다.
     public func loadImportedImage(
         _ url: URL,
-        rawRendering: ImageLoader.RAWRendering = .sceneLinear
+        rawRendering: ImageLoader.RAWRendering = .sceneLinear,
+        inputGamma: InputGammaInterpretation = .automatic
     ) -> CIImage? {
-        ImageLoader.loadImported(url, rawRendering: rawRendering)
+        try? ImageLoader.loadImportedDecoded(url, inputGamma: inputGamma, rawRendering: rawRendering).image
     }
 
     /// 프레임 파라미터가 곧 디코드 의도다 — 호출부가 매번 같은 판단을 반복하지 않게 한 곳에 둔다.
     public func loadImportedImage(_ url: URL, params: DevelopParameters) -> CIImage? {
         loadImportedImage(
             url,
-            rawRendering: .forDigitalSource(params.isDigitalSource)
+            rawRendering: .forDigitalSource(params.isDigitalSource),
+            inputGamma: params.inputGamma
         )
     }
 

@@ -6,6 +6,7 @@ namespace Negaflow.Shell.Library;
 /// <summary>한 번의 폴더 적용이 어디까지 갔는지입니다. macOS <c>LibraryTaskProgress</c>.</summary>
 public readonly record struct LibraryFolderDevelopmentProgress(int CompletedCount, int TotalCount)
 {
+    public int FailedCount { get; init; }
     public int Percent => TotalCount == 0 ? 0 : (int)Math.Round(100.0 * CompletedCount / TotalCount);
 }
 
@@ -57,7 +58,7 @@ public static class LibraryFolderDevelopment
 
         // 부르는 쪽이 host.Frames 같은 살아 있는 목록을 넘길 수 있습니다. 편집이 그 목록을
         // 다시 만들면 훑던 중에 깨지므로 먼저 사본을 뜹니다.
-        LibraryFrameSnapshot[] targets = [.. frames];
+        LibraryFrameSnapshot[] targets = [.. frames.Where(frame => !frame.IsPreviewScan)];
         FilmType filmType = DevelopRouteSelection.FromProcess(process).FilmType;
         List<LibraryFrameSnapshot> configured = new(targets.Length);
         foreach (LibraryFrameSnapshot frame in targets)
@@ -160,6 +161,7 @@ public static class LibraryFolderDevelopment
         }
 
         int completed = 0;
+        int failed = 0;
         List<Task> renders = new(configured.Count);
         foreach (LibraryFrameSnapshot frame in configured)
         {
@@ -168,7 +170,7 @@ public static class LibraryFolderDevelopment
         await Task.WhenAll(renders).ConfigureAwait(false);
         if (completed < total)
         {
-            progress?.Invoke(new LibraryFolderDevelopmentProgress(total, total));
+            progress?.Invoke(new LibraryFolderDevelopmentProgress(total, total) { FailedCount = failed });
         }
         return configured.Count;
 
@@ -176,15 +178,16 @@ public static class LibraryFolderDevelopment
         {
             try
             {
-                await thumbnails.RerenderAsync(frame, cancellationToken).ConfigureAwait(false);
+                if (!await thumbnails.RerenderAsync(frame, cancellationToken).ConfigureAwait(false))
+                { Interlocked.Increment(ref failed); }
             }
             catch (OperationCanceledException)
             {
-                // 취소는 실패가 아닙니다. 남은 장수만 진행률에서 마저 세 줍니다.
+                Interlocked.Increment(ref failed);
             }
             progress?.Invoke(new LibraryFolderDevelopmentProgress(
                 Interlocked.Increment(ref completed),
-                total));
+                total) { FailedCount = Volatile.Read(ref failed) });
         }
     }
 

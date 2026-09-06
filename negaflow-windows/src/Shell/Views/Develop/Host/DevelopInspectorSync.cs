@@ -110,7 +110,7 @@ internal sealed class DevelopInspectorSync
     {
         bool canEdit = view.panel?.CanEditTone == true;
         bool canAutoAdjust = view.panel?.SelectedFrame?.CanDevelop == true &&
-                             view.autoAdjustCoordinator is not null;
+                             view.autoAdjustCoordinator is { IsRunning: false };
         view.Adjustments.SetEnabled(canEdit, canAutoAdjust);
         view.GeometryCard.SetEnabled(canEdit);
         view.HistogramView.IsEnabled = canEdit;

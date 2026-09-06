@@ -360,7 +360,8 @@ negaflow::imaging::InfraredDetectionResult detect_infrared_defects_from_files(
     const std::filesystem::path& infrared_path,
     InfraredVisibleSourceKind visible_source_kind,
     const negaflow::imaging::InfraredDetectorParameters& parameters,
-    const negaflow::core::CancelFlag cancel) noexcept {
+    const negaflow::core::CancelFlag cancel,
+    const negaflow::color::InputGammaInterpretation requested_gamma) noexcept {
     if (visible_path.empty() || infrared_path.empty()) {
         return failure(
                 negaflow::imaging::InfraredDetectionStatus::unreadable,
@@ -372,9 +373,15 @@ negaflow::imaging::InfraredDetectionResult detect_infrared_defects_from_files(
                 InfraredFileFailureDetail::cancelled_before_start);
     }
     try {
+        const auto input_gamma = negaflow::imaging::resolve_input_gamma_source(visible_path, requested_gamma);
         const bool trace = negaflow::pipeline::stage_timing_enabled();
         const auto started = trace ? TimingClock::now() : TimingClock::time_point{};
         const bool visible_is_tiff = is_tiff_path(visible_path);
+        if (!input_gamma.valid() || (input_gamma.mode != 0U && !visible_is_tiff)) {
+            return failure(negaflow::imaging::InfraredDetectionStatus::unreadable,
+                InfraredFileFailureDetail::visible_full_working_failed,
+                static_cast<std::uint32_t>(negaflow::imaging::ScannerToWorkingStatus::unsupported_input_gamma));
+        }
         if (visible_source_kind == InfraredVisibleSourceKind::infer_from_extension) {
             visible_source_kind = visible_is_tiff
                 ? InfraredVisibleSourceKind::scanner_tiff
@@ -404,7 +411,8 @@ negaflow::imaging::InfraredDetectionResult detect_infrared_defects_from_files(
         std::uint32_t visible_width = 0U;
         std::uint32_t visible_height = 0U;
         if (visible_is_tiff) {
-            auto direct = decode_working_red_plane(visible_path, visible_control, cancel);
+            auto direct = input_gamma.mode == 0U
+                ? decode_working_red_plane(visible_path, visible_control, cancel) : DecodedWorkingRedPlane{};
             if (direct.status == WorkingRedDecodeStatus::ok) {
                 visible_values = std::move(direct.values);
                 visible_width = direct.width;
@@ -440,7 +448,7 @@ negaflow::imaging::InfraredDetectionResult detect_infrared_defects_from_files(
                 full_control.validate_compressed_streams =
                     direct.status != WorkingRedDecodeStatus::requires_full_working_conversion;
                 const auto visible = negaflow::imaging::decode_scanner_tiff_to_working_rows(
-                    visible_path, {}, {}, full_control);
+                    visible_path, {}, {}, full_control, input_gamma);
                 if (visible.decode.status != negaflow::imageio::WicTiffDecodeStatus::ok) {
                     return failure(
                         negaflow::imaging::InfraredDetectionStatus::unreadable,

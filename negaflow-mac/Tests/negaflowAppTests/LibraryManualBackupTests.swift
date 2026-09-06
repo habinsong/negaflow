@@ -39,8 +39,8 @@ final class LibraryManualBackupTests: XCTestCase {
 
         let catalog = try XCTUnwrap(LibraryCatalogFile.loadPrimary(from: paths.catalog))
         XCTAssertEqual(catalog.frames.map(\.id), [frame.id])
-        // 기록은 디스크에 남지 않는다 — sidecar 없이도 catalog health가 통과해야 한다.
-        XCTAssertNil(DefectSidecarFile.load(for: frame.id, in: paths.defects))
+        // 종료 전에 recipe를 저장하여 catalog와 같은 세대를 복원합니다.
+        XCTAssertNotNil(DefectSidecarFile.load(for: frame.id, in: paths.defects))
         XCTAssertTrue(
             LibraryCatalogHealthInspector.inspect(
                 catalog,
@@ -93,8 +93,8 @@ final class LibraryManualBackupTests: XCTestCase {
         XCTAssertEqual(snapshot.catalog.frames.map(\.id), [frame.id])
         XCTAssertEqual(snapshot.catalog.rolls, model.rolls)
         XCTAssertEqual(snapshot.catalog.activeRollID, roll.id)
-        XCTAssertNil(snapshot.catalog.frames.first?.hasDefectEdits)
-        XCTAssertNil(DefectSidecarFile.load(
+        XCTAssertEqual(snapshot.catalog.frames.first?.hasDefectEdits, true)
+        XCTAssertNotNil(DefectSidecarFile.load(
             for: frame.id,
             in: snapshot.directoryURL.appendingPathComponent("defects", isDirectory: true)
         ))

@@ -121,6 +121,15 @@ NF_API nf_status_t NF_CALL nf_detect_infrared_defects_from_files_v2(
     const uint32_t* cancel_requested,
     nf_infrared_detection_summary_v1* summary,
     nf_infrared_detection_handle_v1** handle);
+NF_API nf_status_t NF_CALL nf_detect_infrared_defects_from_files_v3(
+    const wchar_t* visible_path,
+    const wchar_t* infrared_path,
+    uint32_t visible_source_kind,
+    uint32_t input_gamma_mode, double input_gamma_value,
+    const nf_infrared_detector_parameters_v1* parameters,
+    const uint32_t* cancel_requested,
+    nf_infrared_detection_summary_v1* summary,
+    nf_infrared_detection_handle_v1** handle);
 NF_API nf_status_t NF_CALL nf_infrared_detection_get_cluster_v1(
     const nf_infrared_detection_handle_v1* handle,
     uint64_t index,

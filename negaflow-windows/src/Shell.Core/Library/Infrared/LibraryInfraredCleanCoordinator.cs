@@ -13,7 +13,8 @@ internal sealed record LibraryInfraredCleanWork(
     string InfraredPath,
     FrameSourceKind SourceKind,
     ulong RecipeRevision,
-    DefectSourceObservation? SourceObservation = null);
+    DefectSourceObservation? SourceObservation = null,
+    InputGammaInterpretation InputGamma = default);
 
 /// <summary>
 /// 선택 debounce와 frame별 IR native run 수명을 소유합니다. catalog 준비·적용은 UI dispatcher에서,

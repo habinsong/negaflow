@@ -14,6 +14,15 @@ internal static class ContractTestRunner
 
         ContractTestContext context = new();
         ManagedLayoutContractTests.Verify(context);
+        if (args[0] == "--managed-layout-only")
+        {
+            Console.WriteLine(JsonSerializer.Serialize(new {
+                status = context.Failures.Count == 0 ? "ok" : "failed", operation = "interop_managed_layout",
+                assertions = context.AssertionCount, failures = context.Failures,
+                skipped = new[] { "native DLL runtime and Windows path contracts" }
+            }));
+            return context.Failures.Count == 0 ? 0 : 1;
+        }
         PathPolicyContractTests.Verify(context);
 
         NativeBuildInfo? buildInfo = null;

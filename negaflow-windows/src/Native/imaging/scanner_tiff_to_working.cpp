@@ -4,6 +4,7 @@
 #include "negaflow/color/srgb_transfer.h"
 #include "negaflow/core/parallel_rows.h"
 #include "scanner_to_working_detail.h"
+#include "input_gamma_preparation.h"
 
 #include <Windows.h>
 
@@ -33,8 +34,9 @@ class ScannerWorkingRowSink final : public negaflow::imageio::WicTiffRowSink {
 public:
     ScannerWorkingRowSink(
         const ScannerToWorkingLimits& limits,
-        const std::stop_token stop_token) noexcept
-        : limits_(limits), stop_token_(stop_token) {}
+        const std::stop_token stop_token,
+        const negaflow::color::InputGammaInterpretation input_gamma) noexcept
+        : limits_(limits), stop_token_(stop_token), input_gamma_(input_gamma) {}
 
     bool begin(const negaflow::imageio::WicTiffFrameView& frame) noexcept override {
         try {
@@ -99,6 +101,18 @@ public:
             result_.image.stride_pixels = frame.width;
             result_.image.pixels.resize(static_cast<std::size_t>(pixel_count));
 
+            result_.info.input_gamma = input_gamma_;
+            if (input_gamma_.mode != 0U && frame.layout != negaflow::imageio::DecodedPixelLayout::rgb16) {
+                result_.status = ScannerToWorkingStatus::unsupported_input_gamma;
+                return false;
+            }
+            detail::InputGammaPreparation gamma(frame.icc_profile, input_gamma_);
+            if (gamma.status != ScannerToWorkingStatus::ok) {
+                result_.status = gamma.status;
+                return false;
+            }
+            gamma_samples_ = std::move(gamma.linear_samples);
+            gamma_profile_ = std::move(gamma.profile);
             if (frame.icc_profile.empty()) {
                 result_.info.transform = ScannerWorkingTransform::linear_scanner_raw;
             } else {
@@ -111,7 +125,8 @@ public:
                     return false;
                 }
                 result_.status =
-                    transform_.initialize(frame.icc_profile, result_.info.native_error_code);
+                    transform_.initialize(gamma_profile_.empty() ? frame.icc_profile
+                        : std::span<const std::uint8_t>(gamma_profile_), result_.info.native_error_code);
                 if (result_.status != ScannerToWorkingStatus::ok) {
                     return false;
                 }
@@ -248,6 +263,11 @@ private:
                         static_cast<std::size_t>(rows.first_row + row) * width_;
                     for (std::uint32_t column = 0U; column < width_; ++column) {
                         const std::size_t offset = static_cast<std::size_t>(column) * channels;
+                        if (!gamma_samples_.empty()) {
+                            destination[column] = {gamma_samples_[source[offset + rgb.red]],
+                                gamma_samples_[source[offset + rgb.green]], gamma_samples_[source[offset + rgb.blue]], 1.0F};
+                            continue;
+                        }
                         const std::uint16_t alpha16 = has_alpha ? source[offset + 3U] : 65'535U;
                         destination[column] = {
                             associated ? static_cast<float>(unassociate_component(source[offset + rgb.red], alpha16)) * u16_scale
@@ -412,6 +432,9 @@ private:
     ScannerToWorkingLimits limits_{};
     std::stop_token stop_token_{};
     ScannerToWorkingResult result_{};
+    negaflow::color::InputGammaInterpretation input_gamma_{};
+    std::vector<float> gamma_samples_{};
+    std::vector<std::uint8_t> gamma_profile_{};
     detail::IcmRgb16Transform transform_{};
     std::vector<std::uint16_t> packed_rgb_{};
     std::vector<std::uint16_t> encoded_srgb_{};
@@ -433,9 +456,18 @@ StreamedScannerToWorkingResult decode_scanner_tiff_to_working_rows(
     const std::filesystem::path& path,
     const negaflow::imageio::WicTiffDecodeLimits& decode_limits,
     const ScannerToWorkingLimits& working_limits,
-    const negaflow::imageio::WicTiffDecodeControl& control) noexcept {
+    const negaflow::imageio::WicTiffDecodeControl& control,
+    const negaflow::color::InputGammaInterpretation input_gamma) noexcept {
     StreamedScannerToWorkingResult result{};
-    ScannerWorkingRowSink sink{working_limits, control.stop_token};
+    if (input_gamma.mode != 0U) {
+        const auto probe = negaflow::core::probe_tiff_file(path);
+        if (probe.status != negaflow::core::TiffProbeStatus::ok || !supports_input_gamma_layout(probe.info)) {
+            result.working.status = ScannerToWorkingStatus::unsupported_input_gamma;
+            result.decode.status = negaflow::imageio::WicTiffDecodeStatus::row_sink_failed;
+            return result;
+        }
+    }
+    ScannerWorkingRowSink sink{working_limits, control.stop_token, input_gamma};
     result.decode = negaflow::imageio::decode_tiff_rows_with_wic(
         path,
         sink,

@@ -42,6 +42,8 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
     public var developTarget: DevelopTarget = .main
     public var scannerProfileID: String?
     public var baseEstimationMode: BaseMode = .auto
+    public var baseScale: FilmBaseScale = .identity
+    public var inputGamma: InputGammaInterpretation = .automatic
     public var manualBaseRGB: SIMD3<Double>? = nil   // 수동 base picker 결과
     public var filmStockDminID: String? = nil   // 필름 Dmin/Dmax 프리셋(제조사 데이터시트). preset 모드에서 사용.
     /// 스캔 광원 프로파일(LightSourceProfileRegistry id). 실측 base가 없을 때 필름 프리셋 Dmin에
@@ -126,6 +128,7 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
     enum CodingKeys: String, CodingKey {
         case filmType, isDigitalSource, developTarget, scannerProfileID, baseEstimationMode
         case manualBaseRGB, filmStockDminID
+        case baseScale, inputGamma
         case lightSourceProfileID, autoLevels, autoNeutralBalance
         case exposure, contrast, density, highlight, shadow, whites, blacks
         case curveHighlights, curveLights, curveDarks, curveShadows
@@ -148,6 +151,8 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
         developTarget = try c.decodeIfPresent(DevelopTarget.self, forKey: .developTarget) ?? .main
         scannerProfileID = try c.decodeIfPresent(String.self, forKey: .scannerProfileID)
         baseEstimationMode = try c.decodeIfPresent(BaseMode.self, forKey: .baseEstimationMode) ?? .auto
+        baseScale = c.contains(.baseScale) ? try c.decode(FilmBaseScale.self, forKey: .baseScale) : .identity
+        inputGamma = c.contains(.inputGamma) ? try c.decode(InputGammaInterpretation.self, forKey: .inputGamma) : .automatic
         manualBaseRGB = try c.decodeIfPresent(SIMD3<Double>.self, forKey: .manualBaseRGB)
         filmStockDminID = try c.decodeIfPresent(String.self, forKey: .filmStockDminID)
         lightSourceProfileID = try c.decodeIfPresent(String.self, forKey: .lightSourceProfileID)
@@ -248,6 +253,8 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
         developTarget = overrides.developTarget
         scannerProfileID = overrides.scannerProfileID
         baseEstimationMode = overrides.baseEstimationMode
+        baseScale = overrides.baseScale
+        inputGamma = overrides.inputGamma
         manualBaseRGB = overrides.manualBaseRGB
         filmStockDminID = overrides.filmStockDminID
         lightSourceProfileID = overrides.lightSourceProfileID

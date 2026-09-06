@@ -90,12 +90,48 @@ void test_negative_auto_correction_changes_cast_range() {
     expect(info.neutral_balance_applied, "Neutral Balance applies to a cast scan");
 }
 
+void test_changed_gamma_and_base_inputs_do_not_reuse_previous_correction() {
+    constexpr std::uint32_t width = 64U, height = 32U;
+    negaflow::imaging::SceneCorrectionInfo reused_info{};
+    for (const double gamma : {1.8, 2.4}) {
+        for (const double scale : {0.75, 1.25}) {
+            for (const bool levels : {false, true}) {
+                for (const bool color : {false, true}) {
+                    std::vector<negaflow::core::Rgba32F> first(width * height);
+                    for (std::size_t i = 0; i < first.size(); ++i) {
+                        const double t = static_cast<double>(i % width) / (width - 1U);
+                        first[i] = {static_cast<float>(std::pow(0.12 + 0.5 * t, gamma) * scale),
+                            static_cast<float>(std::pow(0.2 + 0.5 * t, gamma) * scale),
+                            static_cast<float>(std::pow(0.28 + 0.5 * t, gamma) * scale), 1.0F};
+                    }
+                    auto fresh = first;
+                    negaflow::imaging::SceneCorrectionInfo fresh_info{};
+                    const negaflow::imaging::SceneCorrectionParameters parameters{levels, color, true};
+                    expect(negaflow::imaging::apply_scene_correction(view(first, width, height), parameters, reused_info)
+                        == negaflow::core::KernelStatus::ok, "changed input correction succeeds");
+                    expect(negaflow::imaging::apply_scene_correction(view(fresh, width, height), parameters, fresh_info)
+                        == negaflow::core::KernelStatus::ok, "fresh input correction succeeds");
+                    expect(reused_info.auto_levels_applied == fresh_info.auto_levels_applied &&
+                        reused_info.neutral_balance_applied == fresh_info.neutral_balance_applied,
+                        "correction status must not leak across changed inputs");
+                    for (std::size_t i = 0; i < first.size(); ++i) {
+                        expect(first[i].red == fresh[i].red && first[i].green == fresh[i].green &&
+                            first[i].blue == fresh[i].blue && first[i].alpha == 1.0F,
+                            "changed gamma/base input must match fresh scene correction pixels");
+                    }
+                }
+            }
+        }
+    }
+}
+
 }  // namespace
 
 int main() {
     try {
         test_disabled_is_identity();
         test_negative_auto_correction_changes_cast_range();
+        test_changed_gamma_and_base_inputs_do_not_reuse_previous_correction();
         std::cout << "Scene correction tests passed\n";
         return 0;
     } catch (const std::exception& exception) {

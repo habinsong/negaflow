@@ -195,7 +195,8 @@ internal static class PreviewOrderingTests
 
     private static LibraryFrameSnapshot FrameWithExposure(double stops)
     {
-        LibraryFrameSnapshot frame = Frame(new ManualBaseRgb(0.2, 0.2, 0.2));
+        LibraryFrameSnapshot frame = Frame(new ManualBaseRgb(0.2, 0.2, 0.2),
+            sourcePath: OperatingSystem.IsWindows() ? null : Path.Combine(Path.GetTempPath(), "preview-ordering.tif"));
         return frame with { Tone = frame.Tone with { Exposure = stops } };
     }
 

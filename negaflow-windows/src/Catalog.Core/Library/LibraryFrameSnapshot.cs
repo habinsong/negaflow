@@ -114,6 +114,7 @@ public sealed record BaseRecipe(
     string? LightSourceProfileId,
     string? ScannerProfileId)
 {
+    public double Scale { get; init; } = 1.0;
     public static BaseRecipe Auto { get; } = new(
         BaseEstimationMode.Auto,
         null,
@@ -190,6 +191,7 @@ public sealed record LibraryFrameSnapshot(
     /// from <see cref="ManualBase"/> because changing modes does not erase a manual sample.
     /// </summary>
     public BaseRecipe Base { get; init; } = BaseRecipe.Auto;
+    public InputGammaInterpretation InputGamma { get; init; } = InputGammaInterpretation.Automatic;
 
     /// <summary>
     /// 이 frame 에 걸린 룩 프로파일의 id 입니다. macOS catalog 의 <c>presetID</c> 와 같은 자리이며

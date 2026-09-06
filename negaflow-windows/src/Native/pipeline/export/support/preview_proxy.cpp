@@ -37,6 +37,7 @@ constexpr double full_max_dimension =
     const ObservedSource& observed) {
     PreviewRawKey key{};
     key.path = request.source;
+    key.input_gamma = request.input_gamma;
     key.observation = observed.before.observation;
     key.base_mode = request.base_estimation_mode;
     key.film_type = request.negative.film_type;

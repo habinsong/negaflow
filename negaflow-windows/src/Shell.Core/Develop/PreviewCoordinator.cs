@@ -59,6 +59,7 @@ public sealed partial class PreviewCoordinator
     private readonly bool settleEnabled;
     private int developRevision;
     private int minimumDeliveryRevision;
+    private LibraryFrameSnapshot? lastRequestedFrame;
 
     private bool isRunning;
     private PreviewRequest? pending;
@@ -289,6 +290,9 @@ public sealed partial class PreviewCoordinator
         PreviewRequest request;
         lock (gate)
         {
+            // 프로세스/타깃/원본 전환은 단순 슬라이더 중간값처럼 배달하지 않습니다.
+            replaceActive |= lastRequestedFrame is { } previous && PreviewRouteChanged(previous, frame);
+            lastRequestedFrame = frame;
             // 요청마다 하나씩 올라가는 번호입니다. 배달된 그림이 어느 편집 상태의 것인지
             // 화면이 판정하는 유일한 근거입니다.
             request = new PreviewRequest(frame, onCompleted, ++developRevision);
@@ -348,6 +352,14 @@ public sealed partial class PreviewCoordinator
         }
         return RunLoopAsync(request, run);
     }
+
+    internal static bool PreviewRouteChanged(LibraryFrameSnapshot left, LibraryFrameSnapshot right) =>
+        left.Id != right.Id || left.SourcePath != right.SourcePath || left.SourceMetadata != right.SourceMetadata ||
+        left.InputGamma != right.InputGamma || left.DevelopTarget != right.DevelopTarget ||
+        left.Route.FilmType != right.Route.FilmType || left.Route.SourceSignalKind != right.Route.SourceSignalKind ||
+        left.Route.FilmEmulation != right.Route.FilmEmulation || left.LookPresetId != right.LookPresetId ||
+        left.Base.Mode != right.Base.Mode || left.Base.FilmStockDminId != right.Base.FilmStockDminId ||
+        left.Base.LightSourceProfileId != right.Base.LightSourceProfileId || left.Base.ScannerProfileId != right.Base.ScannerProfileId;
 
     private async Task RunLoopAsync(PreviewRequest request, DevelopRun run)
     {

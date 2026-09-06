@@ -41,6 +41,7 @@ public static class LibraryFrameWriter
         JsonObject updated = frameRecord.DeepClone().AsObject();
         LibraryFrameMetadataWriter.Apply(updated, edit);
         LibraryFrameError parameters = LibraryDevelopParameterWriter.Apply(updated, edit);
+        if (parameters == LibraryFrameError.None) { AppliedBaseInvalidation.Apply(frameRecord, updated); }
         return parameters == LibraryFrameError.None
             ? LibraryFrameWriteResult.Success(updated)
             : LibraryFrameWriteResult.Failure(parameters);

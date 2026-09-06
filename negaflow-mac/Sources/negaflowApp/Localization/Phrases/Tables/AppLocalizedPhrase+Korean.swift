@@ -2,6 +2,19 @@ import Foundation
 
 extension AppLocalization {
     static let koreanPhraseTable: [AppLocalizedPhrase: String] = [
+            .inputGammaEstimated: "추정 감마 %.1f",
+            .inputGammaRecorded: "파일 감마 %.1f",
+            .inputGammaProfile: "파일 색상 프로파일",
+            .inputGammaAssumedLinear: "기본 추정 · 선형 1.0",
+            .inputGammaAssumedSRGB: "기본 추정 · sRGB",
+            .inputGammaDecoder: "RAW 디코더",
+            .inputGammaAutomatic: "자동",
+            .inputGamma: "입력 감마",
+            .inputGammaRestore: "입력 감마 자동으로 복원",
+            .inputGammaHelp: "0.1–4.0, 0.1 단위. 소수점은 점(.)으로 입력합니다. Enter 적용, Esc 취소.",
+            .inputGammaUnsupported: "수동 입력 감마는 행렬 ICC 또는 무ICC의 8-bit·16-bit RGB TIFF를 지원합니다.",
+            .inputGammaLoadFailed: "입력 감마를 적용할 이미지를 읽지 못했습니다.",
+
             .idleStatus: "대기",
             .settingsDiskTab: "디스크",
             .diskLocationICloud: "아이 클라우드",
@@ -185,6 +198,7 @@ extension AppLocalization {
             .noSelection: "선택 안 함",
             .none: "없음",
             .baseSection: "베이스",
+            .baseScale: "베이스 배율",
             .inspectorTabBasic: "기본",
             .inspectorTabEdit: "편집",
             .inspectorTabDefect: "GrainMend",

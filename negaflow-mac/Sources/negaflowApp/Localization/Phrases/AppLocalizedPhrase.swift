@@ -2,6 +2,8 @@ import Foundation
 import Chromabase
 
 enum AppLocalizedPhrase: CaseIterable {
+    case inputGammaEstimated, inputGammaRecorded, inputGammaProfile, inputGammaAssumedLinear, inputGammaAssumedSRGB, inputGammaDecoder
+    case inputGammaAutomatic, inputGamma, inputGammaRestore, inputGammaHelp, inputGammaUnsupported, inputGammaLoadFailed
     case idleStatus
     case noScannerStatus
     case autoWhiteBalanceStatus
@@ -132,6 +134,7 @@ enum AppLocalizedPhrase: CaseIterable {
     case noSelection
     case none
     case baseSection
+    case baseScale
     case inspectorTabBasic
     case inspectorTabEdit
     case inspectorTabDefect

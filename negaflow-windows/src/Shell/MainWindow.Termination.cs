@@ -57,28 +57,27 @@ public sealed partial class MainWindow
         if (!result.IsSuccess)
         {
             TerminationLog.Write(
-                $"defect bake on quit failed: {result.Error}" +
+                $"recipe save on quit failed: {result.Error}" +
                 (result.FrameId is { Length: > 0 } frameId ? $" frame={frameId}" : string.Empty) +
                 (result.NativeFailureName is { Length: > 0 } native
                     ? $" ({native})"
                     : string.Empty));
         }
 
-        // **실패해도 닫습니다.**
-        //
-        // macOS `applicationShouldTerminate` 은 어느 갈래로 가든 종료합니다 — 굽기가
-        // 실패하면 `saveLibraryOnTerminate()` 로 카탈로그를 저장하고
-        // `reply(toApplicationShouldTerminate: true)` 를 보냅니다(`AppEntry.swift`).
-        // 굽지 못한 결함 편집은 카탈로그에 그대로 남으므로 잃는 것이 없고, 다음에 열면
-        // 다시 시도합니다.
-        //
-        // 윈도우는 성공했을 때만 닫고 실패하면 모달을 띄웠습니다. 그 창은 닫기 단추뿐이라
-        // **앱을 아예 끝낼 수 없었습니다** — 실기에서 "GrainMend / 현상 프로세스를 저장하지
-        // 못했습니다" 가 뜨고 종료가 막혔습니다. 실패 사유는 개발자 모드에서만 켜지는
-        // 기록에만 적혀 있어 왜 막혔는지 볼 수도 없었습니다.
         if (!result.IsSuccess)
         {
-            _ = libraryHost.SaveIfDirty();
+            terminationInProgress = false;
+            if (Content is Microsoft.UI.Xaml.FrameworkElement root && root.XamlRoot is { } xamlRoot)
+            {
+                await new Microsoft.UI.Xaml.Controls.ContentDialog
+                {
+                    XamlRoot = xamlRoot,
+                    Title = "Negaflow",
+                    Content = Localization.AppResources.Get("developExportSaveFailed", "Text"),
+                    CloseButtonText = Localization.AppResources.Get("commonDone", "Content"),
+                }.ShowAsync();
+            }
+            return;
         }
         terminationApproved = true;
         terminationInProgress = false;

@@ -19,6 +19,7 @@ struct InvertStageOutput final {
     negaflow::imaging::ManualNegativeDevelopInfo developed_info{};
     std::optional<negaflow::imaging::FilmBaseMeasurementMethod> measurement_method{};
     std::optional<negaflow::imaging::FilmBaseMeasurementDiagnostics> diagnostics{};
+    std::array<float, 3> reference_base{};
     bool negative_source{false};
     bool positive{false};
 };
@@ -34,6 +35,7 @@ struct InvertStageOutput final {
     RunTracker& tracker,
     negaflow::imaging::WorkingImage decoded,
     InvertStageOutput& out,
-    const PreviewProxyHint* hint = nullptr) noexcept;
+    const PreviewProxyHint* hint = nullptr,
+    const std::optional<std::array<float, 3>>& input_gamma_reference = std::nullopt) noexcept;
 
 }  // namespace negaflow::pipeline::develop_export_detail

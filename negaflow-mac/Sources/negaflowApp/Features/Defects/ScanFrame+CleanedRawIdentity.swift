@@ -3,7 +3,7 @@ import Foundation
 
 extension ScanFrame {
     var requiresCleanedRawForActiveDefects: Bool {
-        defectEdits.contains { $0.enabled && $0.strength > 1e-3 }
+        defectEditsNeedRestore || defectEdits.contains { $0.enabled && $0.strength > 1e-3 }
     }
 
     var boundDefectRecipeIdentity: DefectRecipeIdentity? {

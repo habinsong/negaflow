@@ -14,7 +14,10 @@ extension ChromabaseEngine {
         var img = input
         let preset: FilmStockDmin? = (params.baseEstimationMode == .preset)
             ? params.filmStockDminID.flatMap { FilmStockDminRegistry.find($0) } : nil
-        let fb = resolveFilmBase(for: img, provided: base, preset: preset, params: params)
+        let reference = resolveFilmBase(for: img, provided: base, preset: preset, params: params)
+        let fb = params.baseEstimationMode == .auto
+            ? params.baseScale.applied(to: reference) : reference
+        prepareInputGammaStatistics(base: fb, preset: preset, params: params, measurements: &measurements)
         if let preset {
             img = NegativeInversion.apply(
                 to: img, base: fb, preset: preset,
@@ -119,14 +122,30 @@ extension ChromabaseEngine {
         return estimateFallbackBaseFromScene(image, neutralBase: neutralBase)
     }
 
+    func prepareInputGammaStatistics(
+        base: FilmBase, preset: FilmStockDmin?, params: DevelopParameters,
+        measurements: inout DevelopSceneMeasurements
+    ) {
+        if params.inputGamma != .automatic || measurements.inputGammaReferenceRange != nil {
+            // 수동 power와 함께 다시 측정한 Dmax로 나누면 분자·분모의 감마가 상쇄됩니다.
+            // 파일 경로는 원본 기본 해석의 범위, 파일 없는 API는 명목 물성 범위를 사용합니다.
+            var stats = NegativeInversion.genericStats(base: base, filmType: params.filmType)
+            stats.dmaxNorm = measurements.inputGammaReferenceRange
+                ?? preset?.dmaxNorm ?? stats.dmaxNorm
+            measurements.inversionStats = stats
+        }
+    }
+
     func negativeDebugMetrics(
         for image: CIImage,
         base: FilmBase,
         preset: FilmStockDmin?,
-        filmType: FilmType
+        filmType: FilmType,
+        measured: NegativeInversion.ChannelStats? = nil
     ) -> DevelopDebugMetrics {
         let stats: NegativeInversion.ChannelStats
-        if let preset {
+        if let measured { stats = measured }
+        else if let preset {
             stats = NegativeInversion.presetStats(
                 for: image, base: base, preset: preset, filmType: filmType
             )

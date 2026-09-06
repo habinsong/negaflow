@@ -9,7 +9,7 @@ extension DevelopFrameRenderer {
     static func renderRawPreview(_ snapshot: DevelopFrameSnapshot) throws -> CGImage {
         let engine = ChromabaseEngine()
         let context = renderContext()
-        guard let input = resolveRenderInput(snapshot, engine: engine, context: context) else {
+        guard let input = try resolveRenderInput(snapshot, engine: engine, context: context) else {
             throw loadError(for: snapshot)
         }
         return try renderRawPreview(
@@ -38,7 +38,7 @@ extension DevelopFrameRenderer {
         _ snapshot: DevelopFrameSnapshot,
         engine: ChromabaseEngine,
         context: CIContext
-    ) -> RenderInput? {
+    ) throws -> RenderInput? {
         let verifiedCleanedRawURL = verifiedCleanedRawURL(snapshot)
         if snapshot.requiresCleanedRaw,
            snapshot.preloadedRaw == nil,
@@ -85,7 +85,7 @@ extension DevelopFrameRenderer {
                 return RenderInput(image: ciImage(from: proxy), generatedPreviewRaw: proxy)
             }
         }
-        if let preview = resolvePreviewInput(
+        if let preview = try resolvePreviewInput(
             snapshot,
             cleanedRawURL: verifiedCleanedRawURL
         ) {
@@ -108,7 +108,8 @@ extension DevelopFrameRenderer {
         guard shouldCachePreviewInput(rawInput.extent, maxDimension: snapshot.proxyMaxDimension) else {
             return RenderInput(image: rawInput, generatedPreviewRaw: nil)
         }
-        let usesLinear = snapshot.preloadedRaw != nil
+        let usesLinear = snapshot.params.inputGamma != .automatic
+            || snapshot.preloadedRaw != nil
             || verifiedCleanedRawURL != nil
             || rawInput.colorSpace?.name == CGColorSpace(name: CGColorSpace.linearSRGB)?.name
         let proxy = materializedPreviewRaw(
@@ -126,7 +127,7 @@ extension DevelopFrameRenderer {
     private static func resolvePreviewInput(
         _ snapshot: DevelopFrameSnapshot,
         cleanedRawURL: URL?
-    ) -> ImageLoader.PreviewImage? {
+    ) throws -> ImageLoader.PreviewImage? {
         if let url = cleanedRawURL {
             return ImageLoader.loadScannerPreview(
                 url,
@@ -136,16 +137,18 @@ extension DevelopFrameRenderer {
         }
         switch snapshot.sourceKind {
         case .scannerTIFF:
-            return ImageLoader.loadScannerPreview(
-                snapshot.rawScanURL,
-                maxDimension: snapshot.proxyMaxDimension,
-                highResolutionThreshold: fullMaxDimension
-            )
-        case .importedFile:
-            return ImageLoader.loadImportedPreview(
+            return try ImageLoader.loadScannerPreview(
                 snapshot.rawScanURL,
                 maxDimension: snapshot.proxyMaxDimension,
                 highResolutionThreshold: fullMaxDimension,
+                inputGamma: snapshot.params.inputGamma
+            )
+        case .importedFile:
+            return try ImageLoader.loadImportedPreview(
+                snapshot.rawScanURL,
+                maxDimension: snapshot.proxyMaxDimension,
+                highResolutionThreshold: fullMaxDimension,
+                inputGamma: snapshot.params.inputGamma,
                 rawRendering: .forDigitalSource(snapshot.params.isDigitalSource)
             )
         }
@@ -174,6 +177,8 @@ extension DevelopFrameRenderer {
     /// 원본이 채널당 몇 비트인지. 못 읽으면 16 으로 본다 — 굳히는 쪽에서 계조를 깎는 것보다
     /// 메모리를 조금 더 쓰는 편이 안전하다.
     static func sourceBitsPerComponent(_ snapshot: DevelopFrameSnapshot, cleanedRawURL: URL?) -> Int {
+        if snapshot.params.inputGamma != .automatic { return 16 }
+        if (try? ImageLoader.inputGammaSourceInfo(snapshot.rawScanURL))?.estimatedGamma != nil { return 16 }
         if let preloaded = snapshot.preloadedRaw { return preloaded.bitsPerComponent }
         let url = cleanedRawURL ?? snapshot.rawScanURL
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
@@ -221,7 +226,7 @@ extension DevelopFrameRenderer {
         // 원본 파일 로드는 출처에 따라 분기한다. 스캐너 TIFF는 임베디드 ICC를 존중하고 프로필 없는
         // 16bit raw만 linear로 해석한다. 가져온 파일은 RAW 데모사이크와 동일한 프로필 규칙을 쓴다.
         switch snapshot.sourceKind {
-        case .scannerTIFF:  return engine.loadScannerImage(snapshot.rawScanURL)
+        case .scannerTIFF:  return engine.loadScannerImage(snapshot.rawScanURL, inputGamma: snapshot.params.inputGamma)
         case .importedFile: return engine.loadImportedImage(snapshot.rawScanURL,
                                                             params: snapshot.params)
         }

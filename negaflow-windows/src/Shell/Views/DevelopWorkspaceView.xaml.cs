@@ -329,6 +329,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     private async Task NotifyFrameEditedAsync()
     {
+        autoAdjust.Cancel();
         long generation = checked(++frameEditRefreshGeneration);
         if (libraryHost is not { } host || panel?.SelectedFrame is not { } selected ||
             host.Frames.FirstOrDefault(candidate =>
@@ -439,7 +440,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         Task grainMendDrain = GrainMendPanel.PrepareForTerminationAsync();
         Task previewDrain = previewCoordinator?.CancelAndDrainAsync() ?? Task.CompletedTask;
         Task neighborDrain = CancelNeighborWarmAsync();
-        await Task.WhenAll(grainMendDrain, previewDrain, neighborDrain);
+        Task outputDrain = LeftPanel.ExportPanel.runner.DrainAsync();
+        await Task.WhenAll(grainMendDrain, previewDrain, neighborDrain, outputDrain);
     }
 
     private void OnThumbnailReady(string frameId) => frames.OnThumbnailReady(frameId);
@@ -461,6 +463,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         _ = sender;
         _ = args;
         cropSession.Cancel();
+        autoAdjust.Cancel();
         if (workspaceState is not null)
         {
             workspaceState.Changed -= OnStateChanged;

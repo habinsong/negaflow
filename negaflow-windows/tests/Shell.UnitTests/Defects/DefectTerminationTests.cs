@@ -13,14 +13,14 @@ internal static class DefectTerminationTests
 {
     internal static void Run()
     {
-        InfraredOnlyIsDiscarded();
-        ScannerAutoBakesInPlaceAndExcludesInfrared();
-        SharedScannerBakesToOwnedScan();
-        ImportedGuidedBakesToOwnedScan();
-        CatalogFailureRestoresScannerSource();
+        InfraredRecipeIsRetained();
+        ScannerRecipesAreRetainedWithoutChangingSource();
+        SharedScannerSourceIsPreserved();
+        ImportedGuidedRecipeIsRetained();
+        CatalogFailureKeepsSourceAndRecipe();
     }
 
-    private static void SharedScannerBakesToOwnedScan()
+    private static void SharedScannerSourceIsPreserved()
     {
         RunIsolated("shared-scanner", (isolatedBase, roots) =>
         {
@@ -57,16 +57,16 @@ internal static class DefectTerminationTests
                 frame.Id == sharedId.ToString("D"));
             Check(result.IsSuccess &&
                   File.ReadAllBytes(sourcePath).SequenceEqual(original) &&
-                  File.ReadAllBytes(expected).SequenceEqual(baked) &&
-                  editedFrame.SourcePath == expected &&
-                  editedFrame.DefectRecipe is null &&
+                  !File.Exists(expected) && exporter.BakeCallCount == 0 &&
+                  editedFrame.SourcePath == sourcePath &&
+                  editedFrame.DefectRecipe?.Items.Count == 1 &&
                   sharedFrame.SourcePath == sourcePath &&
-                  !SidecarExists(roots, editedId),
+                  SidecarExists(roots, editedId),
                 "defect_termination_shared_scanner_preserves_other_frame_source");
         });
     }
 
-    private static void InfraredOnlyIsDiscarded()
+    private static void InfraredRecipeIsRetained()
     {
         RunIsolated("ir-only", (isolatedBase, roots) =>
         {
@@ -87,21 +87,21 @@ internal static class DefectTerminationTests
                     .GetResult();
                 Check(result.IsSuccess &&
                       exporter.BakeCallCount == 0 &&
-                      host.Frames.Single().DefectRecipe is null &&
+                      host.Frames.Single().DefectRecipe?.Items.Count == 1 &&
                       File.ReadAllBytes(sourcePath).SequenceEqual(
                           new byte[] { 1, 3, 5, 7 }) &&
-                      !SidecarExists(roots, frameId),
-                    "defect_termination_ir_discards_recipe_without_bake");
+                      SidecarExists(roots, frameId),
+                    "defect_termination_ir_preserves_recipe_without_bake");
             }
 
             using LibraryHostService reopened = Host(BakeExporter([8]));
             Check(reopened.Open(roots) == LibraryHostState.Open &&
-                  reopened.Frames.Single().DefectRecipe is null,
-                "defect_termination_ir_reopen_has_no_persisted_layer");
+                  reopened.Frames.Single().DefectRecipe?.Items.Count == 1,
+                "defect_termination_ir_reopen_restores_persisted_layer");
         });
     }
 
-    private static void ScannerAutoBakesInPlaceAndExcludesInfrared()
+    private static void ScannerRecipesAreRetainedWithoutChangingSource()
     {
         RunIsolated("scanner-auto", (isolatedBase, roots) =>
         {
@@ -121,32 +121,22 @@ internal static class DefectTerminationTests
                     "defect_termination_scanner_open");
                 _ = InstallRecipe(host, frameId, recipe.Items);
                 host.DefectLiveStrengths.Set(frameId.ToString("D"), automatic.Id, 0.4);
-                int callerThread = Environment.CurrentManagedThreadId;
                 LibraryDefectTerminationResult result = host
                     .PrepareForTerminationAsync(Scans(isolatedBase))
                     .GetAwaiter()
                     .GetResult();
                 Check(result.IsSuccess &&
-                      exporter.BakeCallCount == 1 &&
-                      exporter.BakeThreadId != callerThread &&
-                      exporter.LastBakeRequest is
-                      {
-                          DefectRegions.Count: 1,
-                          DefectInfrared.Count: 0,
-                          DefectEditOrder.Count: 1,
-                      } request &&
-                      request.DefectEditOrder[0].Kind == DevelopDefectEditKind.Region &&
-                      request.SourcePath == sourcePath &&
-                      File.ReadAllBytes(sourcePath).SequenceEqual(baked) &&
+                      exporter.BakeCallCount == 0 &&
+                      File.ReadAllBytes(sourcePath).SequenceEqual(original) &&
+                      host.Frames.Single().DefectRecipe?.Items.Count == 2 &&
                       host.Frames.Single() is
                       {
                           SourcePath: var currentPath,
-                          DefectRecipe: null,
                       } &&
                       currentPath == sourcePath &&
                       host.DefectLiveStrengths.Get(frameId.ToString("D")) is null &&
-                      !SidecarExists(roots, frameId),
-                    "defect_termination_scanner_bakes_auto_in_place_without_ir");
+                      SidecarExists(roots, frameId),
+                    "defect_termination_scanner_preserves_region_and_ir_without_baking");
             }
 
             using LibraryHostService reopened = Host(BakeExporter([8]));
@@ -154,14 +144,13 @@ internal static class DefectTerminationTests
                   reopened.Frames.Single() is
                   {
                       SourcePath: var reopenedPath,
-                      DefectRecipe: null,
                   } &&
-                  reopenedPath == sourcePath,
-                "defect_termination_scanner_reopen_keeps_baked_source_only");
+                  reopenedPath == sourcePath && reopened.Frames.Single().DefectRecipe?.Items.Count == 2,
+                "defect_termination_scanner_reopen_restores_original_and_recipes");
         });
     }
 
-    private static void ImportedGuidedBakesToOwnedScan()
+    private static void ImportedGuidedRecipeIsRetained()
     {
         RunIsolated("imported-guided", (isolatedBase, roots) =>
         {
@@ -187,18 +176,16 @@ internal static class DefectTerminationTests
                     .GetAwaiter()
                     .GetResult();
                 Check(result.IsSuccess &&
-                      exporter.BakeCallCount == 1 &&
+                      exporter.BakeCallCount == 0 &&
                       File.ReadAllBytes(sourcePath).SequenceEqual(original) &&
-                      File.Exists(expected) &&
-                      File.ReadAllBytes(expected).SequenceEqual(baked) &&
+                      !File.Exists(expected) && host.Frames.Single().DefectRecipe?.Items.Count == 1 &&
                       host.Frames.Single() is
                       {
                           SourcePath: var currentPath,
-                          DefectRecipe: null,
                       } &&
-                      currentPath == expected &&
-                      !SidecarExists(roots, frameId),
-                    "defect_termination_imported_repoints_guided_to_owned_scan");
+                      currentPath == sourcePath &&
+                      SidecarExists(roots, frameId),
+                    "defect_termination_imported_preserves_original_path_and_guided_recipe");
             }
 
             using LibraryHostService reopened = Host(BakeExporter([8]));
@@ -206,14 +193,13 @@ internal static class DefectTerminationTests
                   reopened.Frames.Single() is
                   {
                       SourcePath: var reopenedPath,
-                      DefectRecipe: null,
                   } &&
-                  reopenedPath == expected,
-                "defect_termination_imported_reopen_uses_owned_scan_only");
+                  reopenedPath == sourcePath && reopened.Frames.Single().DefectRecipe?.Items.Count == 1,
+                "defect_termination_imported_reopen_keeps_source_and_recipe");
         });
     }
 
-    private static void CatalogFailureRestoresScannerSource()
+    private static void CatalogFailureKeepsSourceAndRecipe()
     {
         RunIsolated("rollback", (isolatedBase, roots) =>
         {
@@ -229,21 +215,18 @@ internal static class DefectTerminationTests
             Check(host.Open(roots) == LibraryHostState.Open,
                 "defect_termination_rollback_open");
             DefectRecipeSnapshot installed = InstallRecipe(host, frameId, recipe.Items);
-            using FileStream sidecarLock = new(
-                Path.Combine(roots.DefectRecipeRoot, $"{frameId:D}.json"),
-                FileMode.Open,
-                FileAccess.Read,
-                FileShare.Read);
+            using FileStream catalogLock = new(
+                roots.CatalogPath, FileMode.Open, FileAccess.Read, FileShare.None);
             LibraryDefectTerminationResult result = host
                 .PrepareForTerminationAsync(Scans(isolatedBase))
                 .GetAwaiter()
                 .GetResult();
             Check(result.Error == LibraryDefectTerminationError.CatalogCommitFailed &&
-                  exporter.BakeCallCount == 1 &&
+                  exporter.BakeCallCount == 0 &&
                   File.ReadAllBytes(sourcePath).SequenceEqual(original) &&
                   host.Frames.Single().DefectRecipe?.RecipeSha256 == installed.RecipeSha256 &&
                   SidecarExists(roots, frameId),
-                "defect_termination_catalog_failure_rolls_back_source_and_recipe");
+                "defect_termination_catalog_failure_keeps_source_and_recipe");
         });
     }
 

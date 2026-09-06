@@ -164,6 +164,14 @@ typedef struct nf_develop_export_request_v38 {
     uint32_t proxy_reserved;
 } nf_develop_export_request_v38;
 
+typedef struct nf_develop_export_request_v39 {
+    nf_develop_export_request_v38 v38;
+    double base_scale;
+    uint32_t input_gamma_mode;
+    uint32_t reserved;
+    double input_gamma_value;
+} nf_develop_export_request_v39;
+
 #ifdef __cplusplus
 }
 #endif

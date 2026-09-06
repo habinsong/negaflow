@@ -80,7 +80,7 @@ internal static class DevelopedPreviewCacheIdentityFactory
         }
     }
 
-    private static bool TryObserve(string path, out DevelopedFileObservation observation)
+    internal static bool TryObserve(string path, out DevelopedFileObservation observation)
     {
         observation = default;
         try

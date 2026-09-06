@@ -82,6 +82,18 @@
                     Checked="OnBaseManualModeChecked" />
             </Grid>
         </Border>
+        <Grid x:Name="BaseScaleRow" ColumnSpacing="8" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="42" />
+            </Grid.ColumnDefinitions>
+            <Slider x:Name="BaseScaleSlider" Maximum="150" Minimum="50" Value="100"
+                    SmallChange="1" LargeChange="10" StepFrequency="1"
+                    AutomationProperties.AutomationId="negaflow.develop.base.scale"
+                    ValueChanged="OnBaseScaleChanged" DoubleTapped="OnBaseScaleReset" />
+            <TextBlock x:Name="BaseScaleValueText" Grid.Column="1" VerticalAlignment="Center"
+                       FontSize="11" TextAlignment="Right" />
+        </Grid>
         <!-- macOS `basePresetPickerRow`: 라벨 폭 86, 피커 maxWidth 276, 줄 간격 12, 최소 높이 26. -->
         <StackPanel x:Name="FilmBaseControls" Spacing="8">
             <Grid MinHeight="26" ColumnSpacing="12">

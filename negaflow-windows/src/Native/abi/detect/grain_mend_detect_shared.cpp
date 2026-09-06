@@ -35,9 +35,11 @@ nf_status_t detect_grain_mend_shared(
     nf_develop_run_state_v1* const run_state,
     nf_grain_mend_detection_v2* const detection,
     nf_develop_export_result_v3* const result,
-    negaflow::pipeline::GrainMendDetectionOutcome* const retained_detection) {
+    negaflow::pipeline::GrainMendDetectionOutcome* const retained_detection,
+    const nf_develop_export_request_v39* const input_request) {
     nf_status_t status = NF_STATUS_OK;
-    if (!prepare_result_v27(request, result, status)) {
+    if (!(input_request != nullptr ? prepare_result_v39(input_request, result, status)
+                                  : prepare_result_v27(request, result, status))) {
         return status;
     }
     if (parameters == nullptr ||
@@ -87,7 +89,8 @@ nf_status_t detect_grain_mend_shared(
     nf_develop_export_result_v2 mapping_result{};
     mapping_result.struct_size = static_cast<std::uint32_t>(sizeof(mapping_result));
     copy_failure_name("ok", mapping_result.failure_name);
-    if (!map_request_v27(*request, false, pipeline_request, mapping_result)) {
+    if (!(input_request != nullptr ? map_request_v39(*input_request, false, pipeline_request, mapping_result)
+                                  : map_request_v27(*request, false, pipeline_request, mapping_result))) {
         write_request_rejection_v3(mapping_result, *result);
         return NF_STATUS_OK;
     }

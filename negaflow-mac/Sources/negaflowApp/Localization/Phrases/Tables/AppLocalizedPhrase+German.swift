@@ -2,6 +2,19 @@ import Foundation
 
 extension AppLocalization {
     static let germanPhraseTable: [AppLocalizedPhrase: String] = [
+            .inputGammaEstimated: "Geschätztes Gamma %.1f",
+            .inputGammaRecorded: "Dateigamma %.1f",
+            .inputGammaProfile: "Farbprofil der Datei",
+            .inputGammaAssumedLinear: "Annahme · linear 1.0",
+            .inputGammaAssumedSRGB: "Annahme · sRGB",
+            .inputGammaDecoder: "RAW-Decoder",
+            .inputGammaAutomatic: "Auto",
+            .inputGamma: "Eingangsgamma",
+            .inputGammaRestore: "Automatisches Eingangsgamma wiederherstellen",
+            .inputGammaHelp: "0.1–4.0, in Schritten von 0.1. Dezimalpunkt verwenden. Eingabe übernimmt, Esc verwirft.",
+            .inputGammaUnsupported: "Manuelles Eingangsgamma unterstützt RGB-TIFFs mit 8 oder 16 Bit und Matrix-ICC-Profil oder ohne ICC-Profil.",
+            .inputGammaLoadFailed: "Das Bild für das Eingangsgamma konnte nicht gelesen werden.",
+
         .idleStatus: "Inaktiv",
         .settingsDiskTab: "Datenträger",
         .diskLocationICloud: "iCloud",
@@ -185,6 +198,7 @@ extension AppLocalization {
         .noSelection: "Keine Auswahl",
         .none: "Keine",
         .baseSection: "Filmbasis",
+        .baseScale: "Basisfaktor",
         .inspectorTabBasic: "Basis",
         .inspectorTabEdit: "Bearb.",
         .inspectorTabDefect: "GrainMend",

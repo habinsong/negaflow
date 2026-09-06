@@ -71,7 +71,11 @@ internal static class BaseRecipeJsonReader
             return false;
         }
 
-        baseRecipe = new BaseRecipe(mode, filmStockDminId, lightSourceProfileId, scannerProfileId);
+        double scale = 1.0;
+        if (parameters.TryGetProperty("baseScale", out JsonElement scaleElement) &&
+            (scaleElement.ValueKind != JsonValueKind.Number || !scaleElement.TryGetDouble(out scale) ||
+             !double.IsFinite(scale) || scale is < 0.5 or > 1.5)) { return false; }
+        baseRecipe = new BaseRecipe(mode, filmStockDminId, lightSourceProfileId, scannerProfileId) { Scale = scale };
         return true;
     }
 

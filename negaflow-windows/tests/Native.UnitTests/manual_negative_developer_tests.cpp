@@ -10,6 +10,7 @@ int main() {
     test_manual_negative_development();
     test_auto_negative_base_resolution();
     test_invalid_manual_inputs_fail_closed();
+    test_input_gamma_density_reference();
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"manual_negative_developer\",\"failures\":"

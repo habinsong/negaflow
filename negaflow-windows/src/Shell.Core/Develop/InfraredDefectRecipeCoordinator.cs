@@ -114,7 +114,7 @@ public static class InfraredDefectRecipeCoordinator
             infraredPath,
             frame.SourceKind,
             parameters,
-            run);
+            run, frame.InputGamma);
         return outcome.Detection is { } detection && !outcome.IsFaulted
             ? ApplyDetection(document, frame, frameId, sourceIdentity, detection)
             : Result(InfraredDefectApplyStatus.DetectionFailed);
@@ -125,7 +125,7 @@ public static class InfraredDefectRecipeCoordinator
         string infraredPath,
         FrameSourceKind sourceKind = FrameSourceKind.ImportedFile,
         InfraredDetectorParameters? parameters = null,
-        DevelopRun? run = null)
+        DevelopRun? run = null, InputGammaInterpretation inputGamma = default)
     {
         bool trace = InfraredPerformanceTrace.Enabled;
         Stopwatch? timing = trace ? Stopwatch.StartNew() : null;
@@ -135,7 +135,7 @@ public static class InfraredDefectRecipeCoordinator
                 ? InfraredVisibleSourceKind.ScannerTiff
                 : InfraredVisibleSourceKind.ImportedFile;
             InfraredDetectionResult detection = OnMultiThreadedApartment(
-                () => DetectWithRetry(visiblePath, infraredPath, kind, parameters, run));
+                () => DetectWithRetry(visiblePath, infraredPath, kind, parameters, run, inputGamma));
             if (trace)
             {
                 InfraredPerformanceTrace.Write(
@@ -207,11 +207,11 @@ public static class InfraredDefectRecipeCoordinator
         string infraredPath,
         InfraredVisibleSourceKind kind,
         InfraredDetectorParameters? parameters,
-        DevelopRun? run)
+        DevelopRun? run, InputGammaInterpretation inputGamma)
     {
         (long, long, long, long) stamp = FileStamp(visiblePath, infraredPath);
         InfraredDetectionResult detection = NativeInfraredDefectDetector.DetectFiles(
-            visiblePath, infraredPath, kind, parameters, run);
+            visiblePath, infraredPath, kind, parameters, run, inputGamma.IsAutomatic ? 0U : 1U, inputGamma.Value ?? 0.0);
         while (detection.Status == InfraredDetectionStatus.Unreadable)
         {
             (long, long, long, long) latest = FileStamp(visiblePath, infraredPath);
@@ -225,7 +225,7 @@ public static class InfraredDefectRecipeCoordinator
                 $"visible={visiblePath} infrared={infraredPath}");
             stamp = latest;
             detection = NativeInfraredDefectDetector.DetectFiles(
-                visiblePath, infraredPath, kind, parameters, run);
+                visiblePath, infraredPath, kind, parameters, run, inputGamma.IsAutomatic ? 0U : 1U, inputGamma.Value ?? 0.0);
         }
         return detection;
     }
@@ -258,6 +258,11 @@ public static class InfraredDefectRecipeCoordinator
         InfraredDetectionResult detection)
     {
 
+        LibraryFrameSnapshot? current = document.Frames.FirstOrDefault(candidate => candidate.Id == frame.Id);
+        if (current is null || current.InputGamma != frame.InputGamma || current.SourcePath != frame.SourcePath)
+        {
+            return Result(InfraredDefectApplyStatus.SourceMismatch);
+        }
         InfraredDefectApplyStatus detectionStatus = detection.Status switch
         {
             InfraredDetectionStatus.Ok => InfraredDefectApplyStatus.Applied,

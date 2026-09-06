@@ -224,10 +224,11 @@ public static unsafe class NativeInfraredDefectDetector
         string infraredPath,
         InfraredVisibleSourceKind visibleSourceKind = InfraredVisibleSourceKind.ImportedFile,
         InfraredDetectorParameters? parameters = null,
-        DevelopRun? run = null)
+        DevelopRun? run = null, uint inputGammaMode = 0U, double inputGammaValue = 0.0)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(visiblePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(infraredPath);
+        if (!NativeDevelopInput.ValidGamma(inputGammaMode, inputGammaValue)) { throw new ArgumentOutOfRangeException(nameof(inputGammaValue)); }
         if (!Enum.IsDefined(visibleSourceKind))
         {
             throw new ArgumentOutOfRangeException(nameof(visibleSourceKind));
@@ -237,7 +238,7 @@ public static unsafe class NativeInfraredDefectDetector
             // WIC 는 STA 에서 못 씁니다 - `NativeApartment` 주석 참고. 부르는 쪽 전부를 고치는
             // 대신 경계 한 자리에서 막습니다.
             return NativeApartment.Run(() =>
-                DetectFiles(visiblePath, infraredPath, visibleSourceKind, parameters, run));
+                DetectFiles(visiblePath, infraredPath, visibleSourceKind, parameters, run, inputGammaMode, inputGammaValue));
         }
         NativeInfraredDetectorParametersV1 nativeParameters = CreateParameters(parameters);
         NativeInfraredDetectionSummaryV1 summary = default;
@@ -254,7 +255,11 @@ public static unsafe class NativeInfraredDefectDetector
         {
             NativeDevelopRunStateV1* state = run is null ? null : run.StatePointer;
             uint* cancel = state is null ? null : &state->CancelRequested;
-            status = NativeInfraredDetect.nf_detect_infrared_defects_from_files_v2(
+            status = inputGammaMode != 0U
+                ? NativeInfraredDetect.nf_detect_infrared_defects_from_files_v3(
+                    visible, infrared, (uint)visibleSourceKind, inputGammaMode, inputGammaValue,
+                    &nativeParameters, cancel, &summary, &handle)
+                : NativeInfraredDetect.nf_detect_infrared_defects_from_files_v2(
                 visible,
                 infrared,
                 (uint)visibleSourceKind,

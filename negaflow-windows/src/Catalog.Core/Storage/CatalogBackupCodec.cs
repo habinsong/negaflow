@@ -52,8 +52,8 @@ internal static class CatalogBackupCodec
                     "entities") ||
                 !TryInt32(root["version"], out int version) ||
                 !TryInt32(root["minimumReaderVersion"], out int minimumReaderVersion) ||
-                version != CatalogSnapshot.CurrentCatalogVersion ||
-                minimumReaderVersion != CatalogSnapshot.OldestReaderVersion ||
+                !((version == CatalogSnapshot.CurrentCatalogVersion && minimumReaderVersion == CatalogSnapshot.OldestReaderVersion) ||
+                  (version == 1 && minimumReaderVersion == 1)) ||
                 root["entities"] is not JsonObject entities ||
                 entities.Count != CatalogEntityTables.All.Count)
             {

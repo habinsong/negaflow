@@ -159,6 +159,24 @@ public sealed partial class LibraryHostService
             ? LibraryFrameError.MissingId
             : document.EditFrameRecord(frameId, edit));
 
+    /// <summary>검증된 recipe 교체를 기존 Undo에 한 단계로 남깁니다.</summary>
+    public LibraryFrameError EditUndoable(
+        string frameId,
+        string actionName,
+        Func<System.Text.Json.Nodes.JsonObject, LibraryFrameWriteResult> edit)
+    {
+        if (document is not { } open || open.FrameRecord(frameId) is not { } before)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        LibraryFrameWriteResult written = edit(before.DeepClone().AsObject());
+        if (written.FrameRecord is not { } after) { return written.Error; }
+        if (System.Text.Json.Nodes.JsonNode.DeepEquals(before, after)) { return LibraryFrameError.None; }
+        frameEdits.Clear(frameId);
+        open.CaptureUndo(actionName);
+        return AfterEdit(open.EditFrameRecord(frameId, _ => written));
+    }
+
     private LibraryFrameError AfterEdit(LibraryFrameError error)
     {
         if (error == LibraryFrameError.None)

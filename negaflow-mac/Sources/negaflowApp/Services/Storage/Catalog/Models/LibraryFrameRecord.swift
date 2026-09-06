@@ -142,11 +142,10 @@ extension LibraryFrameRecord {
         sourceFrameDisplayName = frame.sourceFrameDisplayName
         virtualCopyNumber = frame.virtualCopyNumber
         proofCopyConfiguration = frame.proofCopyConfiguration
-        // 결함 기록은 세션 메모리에만 존재한다(종료 시 cleaned raw가 이미지에 구워짐).
-        // catalog에는 결함 상태를 남기지 않는다 — legacy 디코드 필드만 유지한다.
+        // recipe만 영속화하고 파생 픽셀은 복원 시 현재 입력 감마로 다시 만듭니다.
         cleanedRawPath = nil
         cleanedRawEditCount = nil
-        hasDefectEdits = nil
+        hasDefectEdits = frame.defectEditsNeedRestore || !frame.defectEdits.isEmpty ? true : nil
         let currentRecipeSHA256 = frame.currentLibraryDevelopRecipeSHA256()
         let trackingState: LibraryFrameWorkflowTrackingState
         if let currentRecipeSHA256 {
@@ -211,6 +210,7 @@ extension LibraryFrameRecord {
         )
         frame.preset = presetID.flatMap { id in presets.first(where: { $0.id == id }) }
         frame.params = params
+        frame.defectEditsNeedRestore = hasDefectEdits == true
         frame.imageTransform = imageTransform
         if let baseRGB, baseRGB.count == 3 {
             frame.baseRGB = SIMD3(baseRGB[0], baseRGB[1], baseRGB[2])

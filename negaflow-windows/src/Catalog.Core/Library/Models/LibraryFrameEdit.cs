@@ -37,4 +37,7 @@ public sealed record LibraryFrameEdit(
     int? Rating = null,
     LookPresetSelection? LookPreset = null,
     FramePickState? PickState = null,
-    DisplayNameSelection? DisplayName = null);
+    DisplayNameSelection? DisplayName = null)
+{
+    public InputGammaInterpretation? InputGamma { get; init; }
+}

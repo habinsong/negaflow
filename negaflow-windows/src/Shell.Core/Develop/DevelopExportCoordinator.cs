@@ -318,6 +318,8 @@ public sealed class DevelopExportCoordinator
     {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(onCompleted);
+        if (frame.IsPreviewScan)
+        { return Deliver(DevelopExportOutcome.Refused(DevelopRequestRefusal.NoFrameSelected), onCompleted); }
 
         if (!TryEnter(maximumConcurrent))
         {

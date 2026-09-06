@@ -17,7 +17,11 @@ public sealed partial class DevelopBaseCard : UserControl
     private DevelopPanelState? panel;
     private bool isSynchronizing;
 
-    public DevelopBaseCard() => InitializeComponent();
+    public DevelopBaseCard()
+    {
+        InitializeComponent();
+        ConfigureBaseScaleTracking();
+    }
 
     /// <summary>모드·필름·광원·스캐너가 바뀐 뒤 목록과 미리보기를 맞출 때 올립니다.</summary>
     public event EventHandler? RecipeChanged;
@@ -85,6 +89,7 @@ public sealed partial class DevelopBaseCard : UserControl
     {
         string baseTitle = AppResources.Get("developTabBase", "Value");
         BaseSectionTitleText.Text = baseTitle;
+        AutomationProperties.SetName(BaseScaleSlider, AppResources.Get("developBaseScale", "Text"));
         AutomationProperties.SetName(BaseControlCard, baseTitle);
         // 앞 판은 XAML 에 "Film base mode" 가 박혀 있어 어떤 언어에서도 그대로였습니다.
         // macOS `SegmentedPicker` 에는 따로 이름이 없으므로 구역 이름을 그대로 씁니다.
@@ -153,8 +158,11 @@ public sealed partial class DevelopBaseCard : UserControl
         bool canEdit = panel.CanEditBase;
         BaseAutoModeButton.IsEnabled = canEdit;
         BaseFilmModeButton.IsEnabled = canEdit;
-        BaseManualModeButton.IsEnabled = canEdit;
+        BaseManualModeButton.IsEnabled = canEdit && (panel.BaseMode != BaseEstimationMode.Auto || panel.BaseScale == 1.0
+            || panel.ManualBase is not null || panel.LastReferenceBase is not null);
         isSynchronizing = true;
+        BaseScaleRow.Visibility = canEdit && panel.BaseMode == BaseEstimationMode.Auto ? Visibility.Visible : Visibility.Collapsed;
+        SynchronizeBaseScale();
         BaseAutoModeButton.IsChecked = panel.BaseMode == BaseEstimationMode.Auto;
         BaseFilmModeButton.IsChecked = panel.BaseMode == BaseEstimationMode.Preset;
         BaseManualModeButton.IsChecked = panel.BaseMode == BaseEstimationMode.Manual;

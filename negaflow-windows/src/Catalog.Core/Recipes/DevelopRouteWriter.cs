@@ -81,6 +81,7 @@ public static class DevelopRouteWriter
             selection.FilmEmulation);
         parameters["filmEmulationIntensity"] = selection.FilmEmulationIntensity;
 
+        AppliedBaseInvalidation.Apply(frameRecord, updated);
         return DevelopRouteWriteResult.Success(updated);
     }
 

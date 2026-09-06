@@ -2,6 +2,7 @@
 
 #include "export_metadata_rules.h"
 
+#include <wincodec.h>
 #include <wrl/client.h>
 
 #include <algorithm>

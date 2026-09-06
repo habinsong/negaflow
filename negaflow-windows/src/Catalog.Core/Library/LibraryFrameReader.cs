@@ -267,6 +267,10 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidManualBase);
         }
+        if (!InputGammaJsonCodec.TryRead(parameters, out InputGammaInterpretation inputGamma))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidBaseRecipe);
+        }
         if (!TryReadBaseRecipe(parameters, out BaseRecipe baseRecipe))
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidBaseRecipe);
@@ -357,6 +361,7 @@ public static class LibraryFrameReader
             AppMetadata = appMetadata,
             AppliedBase = appliedBase,
             Base = baseRecipe,
+            InputGamma = inputGamma,
             LookPresetId = lookPresetId,
             PointCurves = pointCurves,
             ColorMixer = colorMixer,

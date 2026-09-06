@@ -181,13 +181,14 @@ nf_status_t NF_CALL nf_develop_detect_grain_mend_v6(
         result);
 }
 
-nf_status_t NF_CALL nf_develop_detect_grain_mend_v7(
+static nf_status_t detect_retained_with_input(
     const nf_develop_export_request_v27* const request,
     const nf_grain_mend_detect_parameters_v3* const parameters,
     nf_develop_run_state_v1* const run_state,
     nf_grain_mend_detection_v4* const detection,
     nf_develop_export_result_v3* const result,
-    nf_grain_mend_review_handle_v1** const review) {
+    nf_grain_mend_review_handle_v1** const review,
+    const nf_develop_export_request_v39* input_request) {
     if (review == nullptr) return NF_STATUS_INVALID_ARGUMENT;
     *review = nullptr;
     if (detection == nullptr ||
@@ -212,7 +213,7 @@ nf_status_t NF_CALL nf_develop_detect_grain_mend_v7(
         run_state,
         &detection->v3.v2,
         result,
-        &retained);
+        &retained, input_request);
     if (status != NF_STATUS_OK || result == nullptr || result->succeeded == 0U ||
         retained.components.empty()) {
         return status;
@@ -397,4 +398,22 @@ void NF_CALL nf_grain_mend_accepted_region_destroy_v1(
 void NF_CALL nf_grain_mend_review_destroy_v1(
     nf_grain_mend_review_handle_v1* const review) {
     delete review;
+}
+
+nf_status_t NF_CALL nf_develop_detect_grain_mend_v7(
+    const nf_develop_export_request_v27* request,
+    const nf_grain_mend_detect_parameters_v3* parameters,
+    nf_develop_run_state_v1* run_state, nf_grain_mend_detection_v4* detection,
+    nf_develop_export_result_v3* result, nf_grain_mend_review_handle_v1** review) {
+    return detect_retained_with_input(request, parameters, run_state, detection, result, review, nullptr);
+}
+
+nf_status_t NF_CALL nf_develop_detect_grain_mend_v8(
+    const nf_develop_export_request_v39* request,
+    const nf_grain_mend_detect_parameters_v3* parameters,
+    nf_develop_run_state_v1* run_state, nf_grain_mend_detection_v4* detection,
+    nf_develop_export_result_v3* result, nf_grain_mend_review_handle_v1** review) {
+    if (request == nullptr) { return NF_STATUS_INVALID_ARGUMENT; }
+    return detect_retained_with_input(&request->v38.v37.v36.v35.v34.v33.v32.v31.v30.v29.v28.v27,
+        parameters, run_state, detection, result, review, request);
 }

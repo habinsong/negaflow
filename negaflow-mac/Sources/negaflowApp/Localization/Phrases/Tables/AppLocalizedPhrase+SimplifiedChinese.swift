@@ -2,6 +2,19 @@ import Foundation
 
 extension AppLocalization {
     static let simplifiedChinesePhraseTable: [AppLocalizedPhrase: String] = [
+            .inputGammaEstimated: "估计伽马 %.1f",
+            .inputGammaRecorded: "文件伽马 %.1f",
+            .inputGammaProfile: "文件色彩配置文件",
+            .inputGammaAssumedLinear: "默认估计 · 线性 1.0",
+            .inputGammaAssumedSRGB: "默认估计 · sRGB",
+            .inputGammaDecoder: "RAW 解码器",
+            .inputGammaAutomatic: "自动",
+            .inputGamma: "输入伽马",
+            .inputGammaRestore: "恢复自动输入伽马",
+            .inputGammaHelp: "0.1–4.0，步长0.1。使用英文小数点。Enter应用，Esc取消。",
+            .inputGammaUnsupported: "手动输入伽马支持带矩阵ICC或无ICC的8-bit、16-bit RGB TIFF。",
+            .inputGammaLoadFailed: "无法读取要应用输入伽马的图像。",
+
         .idleStatus: "空闲",
         .settingsDiskTab: "磁盘",
         .diskLocationICloud: "iCloud",
@@ -185,6 +198,7 @@ extension AppLocalization {
         .noSelection: "未选择",
         .none: "无",
         .baseSection: "片基",
+        .baseScale: "片基倍率",
         .inspectorTabBasic: "基础",
         .inspectorTabEdit: "编辑",
         .inspectorTabDefect: "GrainMend",

@@ -59,8 +59,9 @@ enum LibraryCatalogSQLiteStore {
             }
             let metadata = try metadataRow(database)
             let version = metadata.version
-            guard version == LibraryCatalog.currentVersion,
-                  metadata.minimumReaderVersion == LibraryCatalog.oldestReaderVersion else {
+            guard (version == LibraryCatalog.currentVersion
+                    && metadata.minimumReaderVersion == LibraryCatalog.oldestReaderVersion)
+                    || (version == 6 && metadata.minimumReaderVersion == 6) else {
                 return .invalid
             }
             let folders: [String] = try decodeRows(database, table: "folders")
@@ -126,8 +127,9 @@ enum LibraryCatalogSQLiteStore {
             guard try int32Scalar(database, sql: "PRAGMA user_version")
                     == storageSchemaVersion else { return false }
             let metadata = try metadataRow(database)
-            return metadata.version == LibraryCatalog.currentVersion
-                && metadata.minimumReaderVersion == LibraryCatalog.oldestReaderVersion
+            return (metadata.version == LibraryCatalog.currentVersion
+                && metadata.minimumReaderVersion == LibraryCatalog.oldestReaderVersion)
+                || (metadata.version == 6 && metadata.minimumReaderVersion == 6)
         } catch {
             return false
         }

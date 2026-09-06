@@ -472,6 +472,24 @@ NF_API nf_status_t NF_CALL nf_develop_preview_v30(
     nf_develop_run_state_v1* run_state,
     nf_develop_export_result_v3* result);
 
+NF_API nf_status_t NF_CALL nf_develop_export_v39(
+    const nf_develop_export_request_v39* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v39(
+    const nf_develop_export_request_v39* request,
+    const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width, uint32_t maximum_height,
+    uint8_t* pixels, uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_background_v2(
+    const nf_develop_export_request_v39* request,
+    uint32_t maximum_width, uint32_t maximum_height,
+    uint8_t* pixels, uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+
 #ifdef __cplusplus
 }
 #endif

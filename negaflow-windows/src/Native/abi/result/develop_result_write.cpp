@@ -164,6 +164,16 @@ void write_outcome_v3(
     result.cancelled = outcome.cancelled ? 1U : 0U;
     result.reserved = 0U;
     result.struct_size = declared_size;
+    if (declared_size >= static_cast<std::uint32_t>(sizeof(nf_develop_export_result_v6))) {
+        auto& input = reinterpret_cast<nf_develop_export_result_v6&>(result);
+        input.reference_base_present = outcome.succeeded && outcome.reference_base_present ? 1U : 0U;
+        input.applied_input_gamma_mode = outcome.applied_input_gamma.mode;
+        input.applied_input_gamma_value = outcome.applied_input_gamma.value;
+        input.input_interpretation_revision = 1U;
+        for (std::size_t channel = 0U; channel < 3U; ++channel) {
+            input.reference_base[channel] = outcome.reference_base[channel];
+        }
+    }
     // v5 는 v4 뒤에 디버그 지표를 답니다. 부르는 쪽이 그만큼의 자리를 준 경우에만 씁니다.
     if (declared_size >= static_cast<std::uint32_t>(sizeof(nf_develop_export_result_v5))) {
         auto& metrics = reinterpret_cast<nf_develop_export_result_v5&>(result).debug_metrics;

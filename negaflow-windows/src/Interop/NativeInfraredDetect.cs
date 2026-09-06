@@ -43,6 +43,18 @@ internal static partial class NativeInfraredDetect
         NativeInfraredDetectionSummaryV1* summary,
         nint* handle);
 
+    [LibraryImport(LibraryName, EntryPoint = "nf_detect_infrared_defects_from_files_v3")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_detect_infrared_defects_from_files_v3(
+        char* visiblePath,
+        char* infraredPath,
+        uint visibleSourceKind,
+        uint inputGammaMode, double inputGammaValue,
+        NativeInfraredDetectorParametersV1* parameters,
+        uint* cancelRequested,
+        NativeInfraredDetectionSummaryV1* summary,
+        nint* handle);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_infrared_detection_get_cluster_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static unsafe partial uint nf_infrared_detection_get_cluster_v1(

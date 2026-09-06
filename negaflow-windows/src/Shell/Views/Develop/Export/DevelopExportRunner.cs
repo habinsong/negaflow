@@ -1,4 +1,3 @@
-using System.IO;
 using System.Text.Json.Nodes;
 using Negaflow.Catalog;
 using Negaflow.Interop;
@@ -12,6 +11,16 @@ namespace Negaflow.Shell.Views.Develop.Export;
 internal sealed class DevelopExportRunner
 {
     private readonly DevelopExportPanel view;
+    private readonly OutputTaskGroup outputTasks = new();
+    internal Task DrainAsync() => outputTasks.DrainAsync();
+    internal bool IsRunning => outputTasks.IsRunning;
+    internal Task RunExportAsync() => RunTrackedAsync(RunExportCoreAsync);
+    internal Task RunQuickExportAsync() => RunTrackedAsync(RunQuickExportCoreAsync);
+    private async Task RunTrackedAsync(Func<Task> operation)
+    {
+        try { await outputTasks.RunAsync(operation); }
+        finally { view.RefreshPreview(); }
+    }
 
     /// <summary>
     /// 한 장짜리 내보내기가 도는 동안 엔진 진행도를 알약·고리에 얹습니다.
@@ -43,83 +52,19 @@ internal sealed class DevelopExportRunner
     internal static string ShellVersion =>
         typeof(DevelopExportPanel).Assembly.GetName().Version?.ToString() ?? "0.0.0";
 
-    /// <summary>
-    /// 산출물 옆에 놓는 것들입니다. macOS 처럼 **산출물 옆에만** 쓰며, 원본 옆의 기존 사이드카를
-    /// 병합 없이 덮어쓰지 않습니다. 사진 자체는 이미 게시된 뒤이므로 여기서 실패해도 사진은
-    /// 남습니다 — 실패는 상태 줄로만 알립니다.
-    /// </summary>
-    internal void WriteExportArtifacts(
-        LibraryFrameSnapshot frame,
-        string outputPath,
-        DevelopExportResult? exported = null)
+    private ExportArtifactSnapshot CaptureArtifacts(LibraryFrameSnapshot frame, string outputPath,
+        ExportSettings settings, ExportEncodingOptions encoding) =>
+        ExportArtifactSnapshot.Capture(frame, outputPath, settings, encoding,
+            settings.WriteSidecar ? view.libraryHost?.FrameRecord(frame.Id)?["params"] as JsonObject : null,
+            ShellVersion, view.engineVersion);
+
+    private async Task<bool> WriteExportArtifactsAsync(ExportArtifactSnapshot snapshot, DevelopExportResult? result)
     {
-        if (view.libraryHost is null || (!view.exportSettings.WriteSidecar && !view.exportSettings.WriteOriginalRaw))
-        {
-            return;
-        }
-        if (view.exportSettings.WriteOriginalRaw)
-        {
-            try
-            {
-                string original = ExportArtifactPairing.OriginalPath(outputPath, frame.SourcePath);
-                // 이미 있는 파일은 덮지 않습니다. 보관용 사본이 서로를 지우면 뜻이 없습니다.
-                if (!File.Exists(original))
-                {
-                    File.Copy(frame.SourcePath, original);
-                }
-            }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException or
-                PathTooLongException or NotSupportedException)
-            {
-                view.SetOutputStatus(AppResources.Get("developExportFolderFailed", "Text"));
-            }
-        }
-        if (!view.exportSettings.WriteSidecar)
-        {
-            return;
-        }
-        FilmBaseSampleSidecar? baseSample = null;
-        FilmBaseDiagnosticsSidecar? filmBase = null;
-        if (exported is { Succeeded: true } result &&
-            (result.AppliedDminRed > 0 || result.AppliedDminGreen > 0 ||
-             result.AppliedDminBlue > 0))
-        {
-            string source = FilmBaseDiagnosticsSidecar.SourceName(
-                result.BaseSource,
-                result.MeasurementMethod);
-            baseSample = FilmBaseDiagnosticsSidecar.Sample(
-                result.AppliedDminRed,
-                result.AppliedDminGreen,
-                result.AppliedDminBlue,
-                source);
-            filmBase = FilmBaseDiagnosticsSidecar.From(
-                result.AppliedDminRed,
-                result.AppliedDminGreen,
-                result.AppliedDminBlue,
-                source,
-                result.Measurement);
-        }
-        JsonObject? record = view.libraryHost.FrameRecord(frame.Id);
-        ExportSidecarContent content = new()
-        {
-            OutputPath = outputPath,
-            Format = view.exportSettings.Format,
-            Encoding = view.exportSettings.ToEncodingOptions(),
-            AppVersion = ShellVersion,
-            EngineVersion = view.engineVersion,
-            FilmType = frame.Route.FilmType.ToString(),
-            PickState = frame.PickState.ToString().ToLowerInvariant(),
-            Rating = frame.Rating,
-            PresetName = frame.LookPresetId,
-            Parameters = record?["params"] as JsonObject,
-            AppMetadata = frame.AppMetadata,
-            BaseSample = baseSample,
-            FilmBaseDiagnostics = filmBase,
-        };
-        if (ExportSidecarWriter.Write(outputPath, content) is { } failure)
-        {
-            view.SetOutputStatus(failure);
-        }
+        string? failure = await Task.Run(() => ExportArtifactWriter.Write(snapshot, result));
+        if (failure is null) { return true; }
+        ExportTrace.Write("  artifacts failed: " + failure);
+        view.SetOutputStatus(AppResources.Get("developExportFolderFailed", "Text"));
+        return false;
     }
 
     /// <summary>
@@ -147,12 +92,13 @@ internal sealed class DevelopExportRunner
     /// 출력 패널의 내보내기입니다. 빠른 내보내기와 같은 경로를 쓰되 목적지와 형식을 사용자가
     /// 정한 값으로 씁니다.
     /// </summary>
-    internal async Task RunExportAsync()
+    private async Task RunExportCoreAsync()
     {
         if (view.panel?.SelectedFrame is not { } frame)
         {
             return;
         }
+        ExportSettings settings = view.exportSettings;
         PrintOutputProfileChoice profile = OutputProfileFor(SelectedExportFrames(frame));
         if (profile.Missing)
         {
@@ -160,10 +106,10 @@ internal sealed class DevelopExportRunner
             return;
         }
         ExportTrace.Write(
-            $"export press frame={frame.Id} format={view.exportSettings.Format} " +
+            $"export press frame={frame.Id} format={settings.Format} " +
             $"icc={(profile.Profile is { } profileBytes ? profileBytes.Length : 0)} " +
-            $"sidecar={view.exportSettings.WriteSidecar} raw={view.exportSettings.WriteOriginalRaw} " +
-            $"flat={view.exportSettings.WriteMainFlatMaster}");
+            $"sidecar={settings.WriteSidecar} raw={settings.WriteOriginalRaw} " +
+            $"flat={settings.WriteMainFlatMaster}");
         using IDisposable _pressed = ExportTrace.Measure("export total");
         // 편집은 메모리에만 있었으므로, 현상하기 전에 저장해 파일과 catalog 가 어긋나지 않게 합니다.
         using (ExportTrace.Measure("  save"))
@@ -193,15 +139,18 @@ internal sealed class DevelopExportRunner
             }
             // 이미 있는 파일이면 빈 이름을 찾습니다. 배치는 이 자리를 지나는데 한 장은
             // 지나지 않아, 같은 사진을 두 번째로 내보내면 언제나 `destination_exists` 였습니다.
+            ExportEncodingOptions encoding = With(settings.ToEncodingOptions(), profile);
             string exportedPath = Negaflow.Shell.Develop.ExportBatchCoordinator.UniquePath(
-                view.exportSettings.Destination.PathFor(
+                settings.Destination.PathFor(
                     frame.SourcePath,
-                    view.sync.NamingContextFor(frame)));
+                    view.sync.NamingContextFor(frame)), settings, frame.SourcePath);
+            var artifacts = CaptureArtifacts(frame, exportedPath, settings, encoding);
+            DevelopExportResult? completedResult = null;
             using (ExportTrace.Measure("  develop+encode"))
             {
                 _ = await view.panel.ExportAsync(
                     exportedPath,
-                    view.exportSettings.Format,
+                    settings.Format,
                     outcome =>
                     {
                         // **결과를 기록에 남깁니다.** 앞 판은 걸린 시간만 적어서, 내보내기가
@@ -213,15 +162,14 @@ internal sealed class DevelopExportRunner
                         view.SetOutputStatus(DevelopExportOutcomeText.For(outcome));
                         if (outcome is { Kind: DevelopExportOutcomeKind.Completed, Result.Succeeded: true })
                         {
-                            using (ExportTrace.Measure("  artifacts"))
-                            {
-                                WriteExportArtifacts(frame, exportedPath, outcome.Result);
-                            }
+                            completedResult = outcome.Result;
                             completedPath = exportedPath;
                         }
                     },
-                    With(view.exportSettings.ToEncodingOptions(), profile),
+                    encoding,
                     ReportSingleFrameProgress(quick: false));
+                if (completedPath is not null && !await WriteExportArtifactsAsync(artifacts, completedResult))
+                { completedPath = null; }
             }
         }
         finally
@@ -234,13 +182,13 @@ internal sealed class DevelopExportRunner
         }
 
         // 무보정본은 사진이 나간 뒤에 한 장 더 냅니다. 여기서 실패해도 사진은 남습니다.
-        if (completedPath is { } published && view.exportSettings.WriteMainFlatMaster)
+        if (completedPath is { } published && settings.WriteMainFlatMaster)
         {
             // **한 장을 두 번 현상하는 자리입니다.** 무보정본을 켜 두면 단추 한 번에 현상이
             // 두 번 돕니다 — 걸린 시간이 갑절로 보이는 이유가 여기라면 이 줄이 말해 줍니다.
             using (ExportTrace.Measure("  flat master (두 번째 현상)"))
             {
-                await WriteMainFlatMasterAsync(frame, published);
+                await WriteMainFlatMasterAsync(frame, published, settings, With(settings.ToEncodingOptions(), profile));
             }
         }
     }
@@ -260,7 +208,7 @@ internal sealed class DevelopExportRunner
     /// 패널이 스스로 들고 있어야 두 화면이 같이 삽니다.
     /// </para>
     /// </remarks>
-    internal async Task RunQuickExportAsync()
+    private async Task RunQuickExportCoreAsync()
     {
         if (view.panel?.SelectedFrame is not { } frame)
         {
@@ -339,24 +287,20 @@ internal sealed class DevelopExportRunner
     /// 같은 원본을 조정 없이 MAIN 으로 한 번 더 현상합니다. 인코딩은 본 산출물과 같게 두어
     /// 두 파일이 같은 형식·같은 크기로 나란히 놓이게 합니다.
     /// </summary>
-    internal async Task WriteMainFlatMasterAsync(LibraryFrameSnapshot frame, string outputPath)
+    internal async Task<bool> WriteMainFlatMasterAsync(LibraryFrameSnapshot frame, string outputPath,
+        ExportSettings settings, ExportEncodingOptions encoding)
     {
-        if (view.panel is null || view.libraryHost is null)
-        {
-            return;
-        }
+        if (view.libraryHost is null) { return false; }
         string masterPath = ExportFlatMaster.PathFor(outputPath);
-        if (File.Exists(masterPath))
-        {
-            // 이미 있는 무보정본은 덮지 않습니다. 보관용 사본이 서로를 지우면 뜻이 없습니다.
-            return;
-        }
+        bool succeeded = false;
         _ = await view.libraryHost.ExportAsync(
-            ExportFlatMaster.Neutralize(frame),
-            masterPath,
-            view.exportSettings.Format,
-            outcome => view.SetOutputStatus(DevelopExportOutcomeText.For(outcome)),
-            view.exportSettings.ToEncodingOptions());
+            ExportFlatMaster.Neutralize(frame), masterPath, settings.Format,
+            outcome =>
+            {
+                succeeded = outcome is { Kind: DevelopExportOutcomeKind.Completed, Result.Succeeded: true };
+                view.SetOutputStatus(DevelopExportOutcomeText.For(outcome));
+            }, encoding);
+        return succeeded;
     }
 
     /// <summary>
@@ -398,6 +342,10 @@ internal sealed class DevelopExportRunner
             frames,
             settings,
             frame => view.libraryHost.RollFor(frame.Id));
+        var artifacts = plans.ToDictionary(plan => plan.DestinationPath,
+            plan => CaptureArtifacts(plan.Snapshot!, plan.DestinationPath, settings, encoding),
+            StringComparer.OrdinalIgnoreCase);
+        List<ExportBatchItem> completed = [];
         var coordinator = new ExportBatchCoordinator(view.libraryHost);
         int finished = 0;
         view.ReportBatchProgress(quick, new ExportProgress(0, plans.Count));
@@ -407,6 +355,7 @@ internal sealed class DevelopExportRunner
             {
                 return;
             }
+            if (item.State == ExportBatchItemState.Succeeded) { completed.Add(item); }
             ++finished;
             view.ReportBatchProgress(quick, new ExportProgress(finished, plans.Count));
             view.SetOutputStatus(AppResources.FormatIntegers(
@@ -421,7 +370,22 @@ internal sealed class DevelopExportRunner
                 $"  batch start frames={plans.Count} slots={DevelopExportCoordinator.MaximumConcurrentExports}");
             using IDisposable _batch = ExportTrace.Measure("  batch");
             ExportBatchSummary summary = await coordinator.RunAsync(plans, encoding);
-            ExportTrace.Write($"  batch done ok={summary.Succeeded}/{summary.Total}");
+            int artifactFailures = 0;
+            foreach (var item in completed)
+            {
+                bool success = await WriteExportArtifactsAsync(artifacts[item.Plan.DestinationPath], item.Result);
+                if (success && settings.WriteMainFlatMaster)
+                {
+                    success = await WriteMainFlatMasterAsync(item.Plan.Snapshot!, item.Plan.DestinationPath, settings, encoding);
+                }
+                if (!success) { artifactFailures++; }
+            }
+            ExportTrace.Write($"  batch done ok={summary.Succeeded}/{summary.Total} artifacts_failed={artifactFailures}");
+            if (artifactFailures > 0)
+            {
+                view.SetOutputStatus(AppResources.Get("developExportFolderFailed", "Text"));
+                return;
+            }
             view.SetOutputStatus(AppResources.FormatIntegers(
                 "exportBatchFrameProgress",
                 "Text",

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "negaflow/color/icc_profile.h"
+#include "negaflow/color/input_gamma_profile.h"
 #include "negaflow/core/pixel.h"
 #include "negaflow/imageio/decoded_image.h"
 
@@ -16,6 +17,7 @@ enum class ScannerWorkingTransform : std::uint8_t {
     linear_scanner_raw,
     untagged_srgb_to_linear,
     embedded_icc_windows_icm_srgb16,
+    explicit_input_gamma,
 };
 
 enum class ScannerToWorkingStatus : std::uint8_t {
@@ -36,6 +38,8 @@ enum class ScannerToWorkingStatus : std::uint8_t {
     color_transform_failed,
     allocation_failed,
     cancelled,
+    invalid_input_gamma,
+    unsupported_input_gamma,
 };
 
 struct ScannerToWorkingLimits final {
@@ -54,6 +58,7 @@ struct WorkingImage final {
 };
 
 struct ScannerToWorkingInfo final {
+    negaflow::color::InputGammaInterpretation input_gamma{};
     ScannerWorkingTransform transform{ScannerWorkingTransform::none};
     std::uint8_t intermediate_bits_per_color_channel{0};
     std::uint32_t native_error_code{0};
@@ -74,7 +79,8 @@ struct ScannerToWorkingResult final {
 // - untagged standard desktop images are decoded as sRGB.
 [[nodiscard]] ScannerToWorkingResult convert_scanner_to_working(
     const negaflow::imageio::DecodedImage& decoded,
-    const ScannerToWorkingLimits& limits = {}) noexcept;
+    const ScannerToWorkingLimits& limits = {},
+    negaflow::color::InputGammaInterpretation input_gamma = {}) noexcept;
 
 [[nodiscard]] const char* scanner_to_working_status_name(ScannerToWorkingStatus status) noexcept;
 [[nodiscard]] const char* scanner_working_transform_name(ScannerWorkingTransform transform) noexcept;
