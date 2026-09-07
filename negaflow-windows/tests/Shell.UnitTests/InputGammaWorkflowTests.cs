@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Negaflow.Catalog;
 using Negaflow.Shell.Develop;
 using static Negaflow.Shell.UnitTests.TestAssert;
@@ -182,7 +182,86 @@ internal static class InputGammaWorkflowTests
             host.Redo();
             Check(current().InputGamma.Value == 1.8 && current().Base.Scale == 1.25,
                 "gamma_paste_redo_restores_both_fields");
+
+            await VerifyLateValidationCannotOverwrite(host, current);
         }
         finally { if (Directory.Exists(directory)) { Directory.Delete(directory, recursive: true); } }
+    }
+
+    /// <summary>
+    /// 원본 지원 검사가 도는 동안 <b>화면이 다른 데로 갔으면</b> 그 결과는 버려야 합니다(W76).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 검사는 파일을 읽으므로 느립니다 - 70MB TIFF 로 실측 약 10초입니다. 그동안 사용자는
+    /// 다른 사진을 고르거나, 가상 사본을 만들거나, 프로세스·타깃을 바꿉니다. 늦게 돌아온
+    /// 검사가 그때 골라 둔 사진에 <b>예전 사진의 감마</b>를 쓰면, 사용자는 건드리지도 않은
+    /// 사진이 바뀐 것을 나중에야 발견합니다.
+    /// </para>
+    /// <para>
+    /// <see cref="DevelopInputEditor.SetAsync"/> 는 검사 전후의 기록과 그 순간의 선택을
+    /// 견줍니다. 여기서는 그 네 가지 - 다른 사진 / <c>params</c>(프로세스·타깃) /
+    /// <c>imageTransform</c>(기하) / <c>presetID</c>(룩) - 가 각각 게시를 막는지 봅니다.
+    /// </para>
+    /// </remarks>
+    private static async Task VerifyLateValidationCannotOverwrite(
+        LibraryHostService host,
+        Func<LibraryFrameSnapshot> current)
+    {
+        string id = current().Id;
+
+        // ① 검사 도중 다른 사진으로 옮겨 갔습니다.
+        await VerifyBlocked(host, current, "selection",
+            () => { },
+            () => current() with { Id = "another-frame" });
+
+        // ② 검사 도중 `params` 가 바뀌었습니다 - 베이스 배율이 그 안에 있습니다.
+        await VerifyBlocked(host, current, "params",
+            () => Check(host.Edit(id, new LibraryFrameEdit(
+                    current().Tone,
+                    current().ManualBase,
+                    current().Base with { Scale = 0.9 })) == LibraryFrameError.None,
+                "gamma_late_params_edit"),
+            current);
+
+        // ③ 검사 도중 기하가 바뀌었습니다.
+        await VerifyBlocked(host, current, "transform",
+            () => Check(host.Edit(id, new LibraryFrameEdit(current().Tone, current().ManualBase, current().Base)
+                {
+                    ImageTransform = current().ImageTransform with { StraightenAngle = 2.5 },
+                }) == LibraryFrameError.None, "gamma_late_transform_edit"),
+            current);
+
+        // ④ 검사 도중 룩 프리셋이 바뀌었습니다.
+        await VerifyBlocked(host, current, "preset",
+            () => Check(host.Edit(id, new LibraryFrameEdit(current().Tone, current().ManualBase, current().Base,
+                LookPreset: new LookPresetSelection("rich-neutral"))) == LibraryFrameError.None,
+                "gamma_late_preset_edit"),
+            current);
+    }
+
+    /// <summary>검사가 도는 동안 <paramref name="disturb"/> 가 일어나면 게시되지 않아야 합니다.</summary>
+    private static async Task VerifyBlocked(
+        LibraryHostService host,
+        Func<LibraryFrameSnapshot> current,
+        string what,
+        Action disturb,
+        Func<LibraryFrameSnapshot?> selection)
+    {
+        LibraryFrameSnapshot frame = current();
+        InputGammaInterpretation before = frame.InputGamma;
+        InputGammaInterpretation wanted = before.Value == 3.7
+            ? InputGammaInterpretation.Power(3.6)
+            : InputGammaInterpretation.Power(3.7);
+
+        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        DevelopInputEditor editor = new(host, (_, _) => gate.Task);
+        Task<LibraryFrameError> pending = editor.SetAsync(frame, wanted, selection);
+        disturb();
+        gate.SetResult(true);
+
+        Check(await pending == LibraryFrameError.MissingId, $"gamma_late_{what}_change_blocks_publish");
+        Check(current().InputGamma != wanted, $"gamma_late_{what}_change_keeps_the_old_value",
+            () => current().InputGamma.ToString());
     }
 }
