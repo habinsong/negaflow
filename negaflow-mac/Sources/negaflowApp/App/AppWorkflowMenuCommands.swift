@@ -190,21 +190,36 @@ struct AppWorkflowMenuCommands: Commands {
             }
 
             Menu(model.text(AppLocalizedPhrase.target)) {
-                ForEach(DevelopTarget.allCases, id: \.self) { target in
-                    let action = WorkflowShortcutAction.developTargetAction(target)
-                    Button {
-                        model.performWorkflowShortcutAction(action)
-                    } label: {
-                        if (model.actionableFrame?.params.developTarget ?? model.developTarget) == target {
-                            Label(
-                                target.displayName(language: model.appLanguage),
-                                systemImage: "checkmark"
-                            )
-                        } else {
-                            Text(target.displayName(language: model.appLanguage))
+                ForEach(DevelopTarget.standardTargets, id: \.self) { target in
+                    if let action = WorkflowShortcutAction.developTargetAction(target) {
+                        Button {
+                            model.performWorkflowShortcutAction(action)
+                        } label: {
+                            if (model.actionableFrame?.params.developTarget ?? model.developTarget) == target {
+                                Label(
+                                    target.displayName(language: model.appLanguage),
+                                    systemImage: "checkmark"
+                                )
+                            } else {
+                                Text(target.displayName(language: model.appLanguage))
+                            }
+                        }
+                        .workflowKeyboardShortcut(model.shortcut(for: action))
+                    }
+                }
+                ForEach(DevelopTarget.customGroups.indices, id: \.self) { index in
+                    Divider()
+                    ForEach(DevelopTarget.customGroups[index], id: \.self) { target in
+                        Button {
+                            model.applyDevelopTarget(target, to: model.actionableFrame)
+                        } label: {
+                            if (model.actionableFrame?.params.developTarget ?? model.developTarget) == target {
+                                Label(target.displayName, systemImage: "checkmark")
+                            } else {
+                                Text(target.displayName)
+                            }
                         }
                     }
-                    .workflowKeyboardShortcut(model.shortcut(for: action))
                 }
             }
 

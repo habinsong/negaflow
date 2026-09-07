@@ -2,6 +2,7 @@ import Foundation
 
 extension AppLocalization {
     static let japanesePhraseTable: [AppLocalizedPhrase: String] = [
+            .customTargetTitle: "Custom",
             .inputGammaEstimated: "推定ガンマ %.1f",
             .inputGammaRecorded: "ファイルガンマ %.1f",
             .inputGammaProfile: "ファイルのカラープロファイル",

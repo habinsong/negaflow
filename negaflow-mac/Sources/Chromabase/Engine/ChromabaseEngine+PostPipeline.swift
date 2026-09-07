@@ -17,6 +17,8 @@ extension ChromabaseEngine {
         img = ColorGradingStage.apply(to: img, grading: params.colorGrading)
         img = CalibrationStage.apply(to: img, calibration: params.calibration)
 
+        img = CustomColorTarget.apply(to: img, target: params.developTarget)
+
         // 8.4.y 슬라이드 필름 특성 룩(좌측 Film 탭). 모든 사용자 색/톤 보정 뒤, 텍스처/그레인 전에
         //   얹는 창의적 최종 룩(데이터시트 유도 E100 / Velvia 50). 채도 부스트가 만든 out-of-gamut 는
         //   아래 최종 gamutSoftClip 이 hue 보존하며 정리한다.

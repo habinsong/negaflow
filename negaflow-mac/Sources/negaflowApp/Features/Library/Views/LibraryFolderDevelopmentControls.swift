@@ -40,8 +40,9 @@ struct LibraryFolderDevelopmentControls: View {
             LibraryFolderBatchPicker(
                 title: target.displayName(language: model.appLanguage),
                 help: model.text(AppLocalizedPhrase.target),
-                width: 84,
+                width: target.isCustom ? 154 : 84,
                 options: Self.visibleTargets,
+                separatorsBefore: [.emulsion, .wetzlar, .slideShow],
                 selection: $target,
                 optionTitle: { $0.displayName(language: model.appLanguage) }
             )
@@ -101,7 +102,7 @@ struct LibraryFolderDevelopmentControls: View {
 
     private static let visibleTargets: [DevelopTarget] = [
         .main, .noritsu, .sp3000, .f135, .hr,
-    ]
+    ] + DevelopTarget.customTargets
 }
 
 private struct LibraryFolderDevelopmentSelection: Equatable {
@@ -137,6 +138,7 @@ private struct LibraryFolderBatchPicker<Option: Hashable>: View {
     let help: String
     let width: CGFloat
     let options: [Option]
+    var separatorsBefore: Set<Option> = []
     @Binding var selection: Option
     let optionTitle: (Option) -> String
 
@@ -165,28 +167,31 @@ private struct LibraryFolderBatchPicker<Option: Hashable>: View {
         }
         .buttonStyle(.plain)
         .popover(isPresented: $isPresented, arrowEdge: .bottom) {
-            VStack(alignment: .leading, spacing: 2) {
-                ForEach(options, id: \.self) { option in
-                    Button {
-                        selection = option
-                        isPresented = false
-                    } label: {
-                        HStack {
-                            Text(optionTitle(option))
-                            Spacer(minLength: 12)
-                            if option == selection {
-                                Image(systemName: "checkmark")
+            ScrollView {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(options, id: \.self) { option in
+                        if separatorsBefore.contains(option) { Divider() }
+                        Button {
+                            selection = option
+                            isPresented = false
+                        } label: {
+                            HStack {
+                                Text(optionTitle(option))
+                                Spacer(minLength: 12)
+                                if option == selection {
+                                    Image(systemName: "checkmark")
+                                }
                             }
+                            .contentShape(Rectangle())
                         }
-                        .contentShape(Rectangle())
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 8)
+                        .frame(minHeight: 28)
                     }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 8)
-                    .frame(minHeight: 28)
                 }
+                .padding(6)
             }
-            .padding(6)
-            .frame(minWidth: max(width + 48, 150))
+            .frame(width: max(width + 48, 150), height: min(CGFloat(options.count) * 32 + 12, 480))
             // 팝오버가 열릴 때 첫 항목이 초기 포커스를 받아 파란 테두리가 그려진다.
             // 목록에서 고르는 UI라 포커스 표시가 선택으로 오해된다.
             .focusEffectDisabled()

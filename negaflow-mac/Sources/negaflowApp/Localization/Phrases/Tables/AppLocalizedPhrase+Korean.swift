@@ -2,6 +2,7 @@ import Foundation
 
 extension AppLocalization {
     static let koreanPhraseTable: [AppLocalizedPhrase: String] = [
+            .customTargetTitle: "Custom",
             .inputGammaEstimated: "추정 감마 %.1f",
             .inputGammaRecorded: "파일 감마 %.1f",
             .inputGammaProfile: "파일 색상 프로파일",

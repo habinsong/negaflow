@@ -234,7 +234,7 @@ enum WorkflowShortcutAction: String, CaseIterable, Codable, Identifiable {
         }
     }
 
-    static func developTargetAction(_ target: DevelopTarget) -> WorkflowShortcutAction {
+    static func developTargetAction(_ target: DevelopTarget) -> WorkflowShortcutAction? {
         switch target {
         case .main: return .targetMain
         case .print: return .targetPrint
@@ -243,6 +243,7 @@ enum WorkflowShortcutAction: String, CaseIterable, Codable, Identifiable {
         case .f135: return .targetF135
         case .hr: return .targetHR
         case .rescue: return .targetExpired
+        default: return nil
         }
     }
 

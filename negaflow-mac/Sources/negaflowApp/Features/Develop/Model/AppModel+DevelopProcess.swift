@@ -49,6 +49,7 @@ extension AppModel {
     }
 
     func applyDevelopTarget(_ target: DevelopTarget, to frame: ScanFrame?) {
+        if target.isCustom, (frame?.params.developTarget ?? developTarget) == target { return }
         developTarget = target
         let filmType = frame?.filmType ?? self.filmType
         let currentProfileID = frame?.params.scannerProfileID ?? scannerProfileID

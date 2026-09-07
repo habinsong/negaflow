@@ -91,6 +91,14 @@ bash scripts/run-app.sh build
 bash scripts/ci-gate.sh
 ```
 
+## Custom 컬러 타깃
+
+타깃 캡슐은 MAIN, HS, SP, F135, HR, CS입니다. CS를 선택한 뒤 기존 하단 왼쪽 선택기에서 2열로 표시되는 Custom 18개를 고릅니다. 오른쪽 룩 선택기는 유지합니다. CS 진입 시 Emulsion을 선택하며 이미 Custom을 사용하는 사진은 현재 선택을 유지합니다.
+
+메뉴는 Emulsion~Dichroic, Wetzlar~Rochester, Slide Show~Point & Shoot 사이에 구분선을 둡니다. Custom은 인물과 풍경에 custom-3의 톤·농도·채도 응답을 적용합니다. 저장·미리보기·썸네일·내보내기는 선택된 타깃 ID를 사용합니다. 기존 타깃의 처리는 유지합니다.
+
+CLI에서도 같은 ID를 사용합니다. 예: `--target classic`, `--target dye-transfer`, `--target point-and-shoot`.
+
 ## 명령줄
 
 macOS 버전에는 CLI가 들어 있습니다.

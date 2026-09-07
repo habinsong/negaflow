@@ -91,6 +91,14 @@ bash scripts/run-app.sh build
 bash scripts/ci-gate.sh
 ```
 
+## Cibles de couleur Custom
+
+Les boutons de cible sont MAIN, HS, SP, F135, HR et CS. Sélectionnez CS, puis l’une des 18 cibles Custom dans la liste à deux colonnes du sélecteur existant en bas à gauche. Le sélecteur de rendu reste à droite. Le passage à CS choisit Emulsion ; une photo utilisant déjà une cible Custom conserve sa sélection.
+
+Le menu sépare Emulsion–Dichroic, Wetzlar–Rochester et Slide Show–Point & Shoot. Custom applique aux portraits et aux paysages les courbes de tons, de densité et de chroma de custom-3. L’enregistrement, les aperçus, les vignettes et l’export utilisent l’identifiant de la cible sélectionnée. Le traitement des cibles existantes reste inchangé.
+
+La CLI accepte les mêmes identifiants, par exemple `--target classic`, `--target dye-transfer` et `--target point-and-shoot`.
+
 ## Ligne de commande
 
 La version macOS embarque une CLI.

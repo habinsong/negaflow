@@ -91,6 +91,14 @@ bash scripts/run-app.sh build
 bash scripts/ci-gate.sh
 ```
 
+## Custom color targets
+
+The target capsules are MAIN, HS, SP, F135, HR, and CS. Select CS, then choose one of the 18 Custom targets in the existing lower-left selector, which opens a two-column list. The look selector stays on the right. Entering CS selects Emulsion; an image already using a Custom target keeps its selection.
+
+The menu separates Emulsion–Dichroic, Wetzlar–Rochester, and Slide Show–Point & Shoot. Custom targets apply the custom-3 tone, density, and chroma response to portraits and landscapes. Saving, previews, thumbnails, and exports use the selected target ID. Existing targets keep their processing.
+
+The CLI accepts the same IDs, for example `--target classic`, `--target dye-transfer`, and `--target point-and-shoot`.
+
 ## Command line
 
 The macOS build ships a CLI.

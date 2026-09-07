@@ -55,12 +55,12 @@ public enum ScannerProfileMatcher {
 
     private static func scannerNames(for target: DevelopTarget) -> [String] {
         switch target {
-        case .main, .print, .rescue, .f135, .hr:
-            return []
         case .noritsu:
             return ["NORITSU"]
         case .sp3000:
             return ["SP-3000"]
+        default:
+            return []
         }
     }
 

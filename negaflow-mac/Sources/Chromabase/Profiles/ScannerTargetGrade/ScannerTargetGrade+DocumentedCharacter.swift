@@ -99,7 +99,7 @@ extension ScannerTargetGrade {
         case .noritsu: return noritsuDocumentedProfile
         case .f135: return f135DocumentedProfile
         case .hr: return hr500DocumentedProfile
-        case .main, .print, .rescue: return nil
+        default: return nil
         }
     }
 

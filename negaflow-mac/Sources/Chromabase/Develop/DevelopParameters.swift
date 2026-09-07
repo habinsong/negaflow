@@ -1,37 +1,5 @@
 import Foundation
 
-/// 사용자가 조절하는 현상 파라미터. plan §8.7/§8.8.
-public enum DevelopTarget: String, Codable, Sendable, CaseIterable {
-    case main
-    case print
-    case noritsu
-    case sp3000 = "sp-3000"
-    case f135
-    case hr
-    case rescue
-
-    public var displayName: String {
-        switch self {
-        case .main: return "MAIN"
-        case .print: return "PRINT"
-        case .noritsu: return "HS"
-        case .sp3000: return "SP"
-        case .f135: return "F135"
-        case .hr: return "HR"
-        case .rescue: return "EXPIRED"
-        }
-    }
-
-    /// 실기 미니랩 스캐너 재현 타겟인지. true 면 네거티브 파이프라인이 main 그레이드 대신
-    /// ScannerTargetGrade(실측 프로파일 기반 독자 베이스)를 쓴다.
-    public var isScannerEmulation: Bool {
-        switch self {
-        case .noritsu, .sp3000, .f135, .hr: return true
-        case .main, .print, .rescue: return false
-        }
-    }
-}
-
 public struct DevelopParameters: Codable, Sendable, Equatable {
     // Base
     public var filmType: FilmType = .colorNegative

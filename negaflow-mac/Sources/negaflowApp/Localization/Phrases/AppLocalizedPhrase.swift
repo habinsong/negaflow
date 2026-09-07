@@ -351,6 +351,7 @@ enum AppLocalizedPhrase: CaseIterable {
     case geometry
     case original
     case custom
+    case customTargetTitle
     case aspectRatio
     case unlockCropAspect
     case lockCropAspect

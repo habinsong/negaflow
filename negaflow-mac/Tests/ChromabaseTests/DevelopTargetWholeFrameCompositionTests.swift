@@ -229,6 +229,9 @@ final class DevelopTargetWholeFrameCompositionTests: XCTestCase {
                 filmType: params.filmType,
                 recoverRange: true
             )
+        default:
+            // Custom은 반전 단계가 아닌 공통 후처리에만 적용합니다.
+            XCTAssertTrue(params.developTarget.isCustom)
         }
 
         image = ColorModel.apply(to: image, params: params)

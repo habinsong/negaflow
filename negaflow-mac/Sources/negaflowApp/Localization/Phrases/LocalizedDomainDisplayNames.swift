@@ -8,15 +8,7 @@ extension DevelopTarget {
             return AppLocalization.text(AppLocalizedPhrase.developTargetMain, language: language)
         case .print:
             return AppLocalization.text(AppLocalizedPhrase.developTargetPrint, language: language)
-        case .noritsu:
-            return displayName
-        case .sp3000:
-            return displayName
-        case .f135:
-            return displayName
-        case .hr:
-            return displayName
-        case .rescue:
+        default:
             return displayName
         }
     }
@@ -114,5 +106,14 @@ extension AppModel {
 
     func text(_ key: AppLocalizedPhrase, _ arguments: CVarArg...) -> String {
         AppLocalization.format(key, language: appLanguage, arguments: arguments)
+    }
+}
+
+extension DevelopTargetFamily {
+    var displayName: String {
+        switch self {
+        case .custom: return "CS"
+        default: return selection(from: .main).displayName
+        }
     }
 }

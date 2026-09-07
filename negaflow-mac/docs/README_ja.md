@@ -91,6 +91,14 @@ bash scripts/run-app.sh build
 bash scripts/ci-gate.sh
 ```
 
+## Custom カラーターゲット
+
+ターゲットの選択肢は MAIN、HS、SP、F135、HR、CS です。CS を選ぶと、既存の左下のセレクターから開く 2 列のリストで、18 個の Custom ターゲットを選べます。右側のルック選択はそのままです。CS に切り替えると Emulsion が選ばれ、すでに Custom を使っている写真では現在の選択を維持します。
+
+メニューは Emulsion〜Dichroic、Wetzlar〜Rochester、Slide Show〜Point & Shoot の間に区切り線を表示します。Custom は人物と風景に custom-3 の階調・色濃度・彩度応答を適用します。保存、プレビュー、サムネイル、書き出しは選択したターゲット ID を使います。既存ターゲットの処理は変わりません。
+
+CLI でも同じ ID を使えます。例: `--target classic`、`--target dye-transfer`、`--target point-and-shoot`。
+
 ## コマンドライン
 
 macOS 版には CLI が入っています。

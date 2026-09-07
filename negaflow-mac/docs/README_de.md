@@ -91,6 +91,14 @@ bash scripts/run-app.sh build
 bash scripts/ci-gate.sh
 ```
 
+## Custom-Farbziele
+
+Die Zielauswahl enthält MAIN, HS, SP, F135, HR und CS. Nach der Wahl von CS stehen die 18 Custom-Ziele in einer zweispaltigen Liste im vorhandenen Auswahlfeld unten links bereit. Die Look-Auswahl bleibt rechts. Beim Wechsel zu CS wird Emulsion gewählt; ein Bild mit einem Custom-Ziel behält seine Auswahl.
+
+Trennlinien gliedern Emulsion–Dichroic, Wetzlar–Rochester und Slide Show–Point & Shoot. Custom wendet die Tonwert-, Farbdichte- und Chroma-Abbildung von custom-3 auf Porträts und Landschaften an. Speichern, Vorschau, Miniaturen und Export verwenden die gewählte Ziel-ID. Die Verarbeitung bestehender Ziele bleibt erhalten.
+
+Die CLI akzeptiert dieselben IDs, etwa `--target classic`, `--target dye-transfer` und `--target point-and-shoot`.
+
 ## Kommandozeile
 
 Die macOS-Version bringt eine CLI mit.

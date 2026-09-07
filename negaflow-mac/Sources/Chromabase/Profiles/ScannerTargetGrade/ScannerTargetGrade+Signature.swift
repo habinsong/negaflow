@@ -392,7 +392,7 @@ extension ScannerTargetGrade {
         case .noritsu: return "NORITSU"
         case .sp3000: return "SP-3000"
         // F135/HR 는 번들 실측 corpus 가 없다 → 실측 상대 차분 레이어 없이 문서 개성만 적용.
-        case .main, .print, .rescue, .f135, .hr: return nil
+        default: return nil
         }
     }
 

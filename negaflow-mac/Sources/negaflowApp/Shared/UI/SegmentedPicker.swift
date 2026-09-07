@@ -7,6 +7,8 @@ struct SegmentedPicker<Value: Hashable>: View {
     let options: [Value]
     let label: (Value) -> String
     @Binding var selection: Value
+    var compressLabels = false
+    var accessibilityName: ((Value) -> String)? = nil
 
     var body: some View {
         HStack(spacing: 3) {
@@ -19,8 +21,8 @@ struct SegmentedPicker<Value: Hashable>: View {
                         .font(.callout.weight(isSelected ? .semibold : .regular))
                         .foregroundStyle(isSelected ? Color.primary : Color.secondary)
                         .lineLimit(1)
-                        .minimumScaleFactor(AppTypography.minimumScaleFactor)
-                        .frame(maxWidth: .infinity)
+                        .minimumScaleFactor(compressLabels ? 0.6 : AppTypography.minimumScaleFactor)
+                        .frame(minWidth: compressLabels ? 0 : nil, maxWidth: .infinity)
                         .frame(height: 28)
                         .background {
                             if isSelected {
@@ -31,7 +33,7 @@ struct SegmentedPicker<Value: Hashable>: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(label(option))
+                .accessibilityLabel(accessibilityName?(option) ?? label(option))
                 .accessibilitySelectionState(
                     isSelected,
                     selectedValue: model.accessibilityText(.selected),

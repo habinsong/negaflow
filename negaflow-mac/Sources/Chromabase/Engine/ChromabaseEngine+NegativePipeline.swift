@@ -177,7 +177,7 @@ extension ChromabaseEngine {
     }
 
     func scannerProfile(for params: DevelopParameters) -> ScannerProfile? {
-        guard let id = params.scannerProfileID else { return nil }
+        guard !params.developTarget.isCustom, let id = params.scannerProfileID else { return nil }
         return ScannerProfileRegistry.load(named: id)
     }
 

@@ -91,6 +91,14 @@ bash scripts/run-app.sh build
 bash scripts/ci-gate.sh
 ```
 
+## Custom 色彩目标
+
+目标选项为 MAIN、HS、SP、F135、HR 和 CS。选择 CS 后，在原有左下方选择器打开的双列列表中选择 18 个 Custom 目标之一，右侧的风格选择器保持不变。切换到 CS 时选择 Emulsion；已使用 Custom 的照片保留当前选择。
+
+菜单在 Emulsion–Dichroic、Wetzlar–Rochester、Slide Show–Point & Shoot 之间显示分隔线。Custom 为人像和风景应用 custom-3 的色调、色彩浓度和彩度响应。保存、预览、缩略图和导出使用所选目标 ID。现有目标的处理保持不变。
+
+CLI 也接受相同的 ID，例如 `--target classic`、`--target dye-transfer` 和 `--target point-and-shoot`。
+
 ## 命令行
 
 macOS 版里带了 CLI。
