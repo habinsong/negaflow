@@ -171,6 +171,7 @@ extension LibraryWorkspaceView {
             thumbnailAspectRatio: LibraryGridCardLayout.thumbnailAspectRatio,
             thumbnailTitleSpacing: LibraryGridCardLayout.thumbnailTitleSpacing,
             ratingControlHeight: LibraryGridCardLayout.ratingControlHeight,
+            usesGlassSurface: false,
             onSelect: {
                 if let folderID { selectedFolderID = folderID }
                 model.selectFrame(frame, orderedFrameIDs: orderedFrameIDs)

@@ -2,10 +2,11 @@ import SwiftUI
 import AppKit
 
 extension View {
-    func liquidSurface(cornerRadius: CGFloat, interactive: Bool = false) -> some View {
+    func liquidSurface(cornerRadius: CGFloat, interactive: Bool = false, glassEnabled: Bool = true) -> some View {
         modifier(LiquidSurfaceModifier(
             cornerRadius: cornerRadius,
-            interactive: interactive
+            interactive: interactive,
+            glassEnabled: glassEnabled
         ))
     }
 }
@@ -15,6 +16,7 @@ private struct LiquidSurfaceModifier: ViewModifier {
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     let cornerRadius: CGFloat
     let interactive: Bool
+    let glassEnabled: Bool
 
     @ViewBuilder
     func body(content: Content) -> some View {
@@ -30,7 +32,7 @@ private struct LiquidSurfaceModifier: ViewModifier {
 
     @ViewBuilder
     private func glass(_ content: Content) -> some View {
-        if #available(macOS 26.0, *) {
+        if #available(macOS 26.0, *), glassEnabled {
             if interactive {
                 decorated(content
                     .glassEffect(.clear.interactive(), in: .rect(cornerRadius: cornerRadius))

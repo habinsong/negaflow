@@ -82,9 +82,13 @@ extension AppModel {
         activeRollID snapshotActiveRollID: UUID?,
         scanSessions snapshotScanSessions: [ScanSession],
         scanRollAssignments snapshotAssignments: [LibraryScanRollAssignment],
-        manualCollections snapshotManualCollections: [LibraryManualCollection]? = nil
+        manualCollections snapshotManualCollections: [LibraryManualCollection]? = nil,
+        onInvalid: (String) -> Void = { _ in }
     ) -> LibraryCatalog? {
-        guard defectSidecarsMatchCurrentFrames(snapshotFrames) else { return nil }
+        if let failure = defectSidecarValidationFailure(snapshotFrames) {
+            onInvalid(failure)
+            return nil
+        }
         let catalog = makeLibraryCatalogValue(
             frames: snapshotFrames,
             rolls: snapshotRolls,
@@ -101,13 +105,21 @@ extension AppModel {
             validatedPreviousCatalog: LibraryCatalogSQLiteWriteCache.shared
                 .safetyValidatedCatalog(for: libraryCatalogURL)
         )
-        return health.canOpenSafely ? catalog : nil
+        if let issue = health.issues.first(where: { $0.severity == .error }) {
+            onInvalid(issue.code.rawValue)
+            return nil
+        }
+        return catalog
     }
 
-    func currentLibraryCatalogSnapshot() -> LibraryCatalog? {
-        guard !hasUncommittedDefectGesture else { return nil }
+    func currentLibraryCatalogSnapshot(onInvalid: (String) -> Void = { _ in }) -> LibraryCatalog? {
+        guard !hasUncommittedDefectGesture else {
+            onInvalid("defect_gesture_pending")
+            return nil
+        }
         let persistentFrames = frames.filter { !$0.isPreviewScan }
         guard rollStore.hasExactMembership(for: persistentFrames.map(\.id)) else {
+            onInvalid("roll_membership_mismatch")
             return nil
         }
         return makeLibraryCatalogSnapshot(
@@ -115,7 +127,8 @@ extension AppModel {
             rolls: rolls,
             activeRollID: activeRollID,
             scanSessions: scanSessions,
-            scanRollAssignments: scanRollAssignments
+            scanRollAssignments: scanRollAssignments,
+            onInvalid: onInvalid
         )
     }
 

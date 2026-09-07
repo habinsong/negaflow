@@ -78,6 +78,7 @@ struct FrameStripItemView: View {
     var thumbnailAspectRatio: CGFloat? = nil
     var thumbnailTitleSpacing: CGFloat? = nil
     var ratingControlHeight: CGFloat? = nil
+    var usesGlassSurface = true
     let onSelect: () -> Void
 
     /// 프레임을 관찰하는 이 뷰 안에서 판단한다 — 현상이 끝나면 곧바로 현상 결과로 바뀐다.
@@ -174,7 +175,7 @@ struct FrameStripItemView: View {
         .contentShape(RoundedRectangle(cornerRadius: 9))
         // 카드는 스크롤에서 수십 장이 동시에 살아 있다. interactive 글래스는 카드마다 포인터를
         // 따라가는 실시간 변형을 돌려 스크롤 프레임을 갉아먹으므로 정적 표면을 쓴다.
-        .liquidSurface(cornerRadius: 9)
+        .liquidSurface(cornerRadius: 9, glassEnabled: usesGlassSurface)
         // 카드 하나가 접근성 요소 하나다. 안쪽 요소를 따로 노출하면 카드 수만큼 노드가
         // 곱해지고, 그 트리를 레이아웃마다 훑는 비용이 모듈 전환을 초 단위로 늘린다.
         .accessibilityElement(children: .combine)

@@ -243,6 +243,9 @@ final class DefectRecipeRuntimeTests: XCTestCase {
         model.librarySaveTask = nil
 
         XCTAssertFalse(model.saveLibrary(synchronous: true))
+        XCTAssertEqual(AppDiagnostics.recentEvents.last(where: {
+            $0.operation == .catalogSave && $0.phase == .error
+        })?.code, "catalog_snapshot_invalid.defect_sidecar_mismatch")
         _ = model.refreshDefectRecipeState(frame, advanceRevision: false, persist: true)
         DefectSidecarFile.flushSync()
         XCTAssertTrue(model.saveLibrary(synchronous: true))
@@ -251,6 +254,29 @@ final class DefectRecipeRuntimeTests: XCTestCase {
         XCTAssertEqual(record.hasDefectEdits, true)
         XCTAssertNil(record.cleanedRawPath)
         XCTAssertNil(record.cleanedRawEditCount)
+    }
+
+    func testSnapshotDiagnosticsDistinguishMissingRestoreIdentityAndMembership() throws {
+        let model = AppModel()
+        let frame = makeFrame()
+        frame.defectEditsNeedRestore = true
+        XCTAssertEqual(model.defectSidecarValidationFailure([frame]), "defect_restore_pending")
+        frame.defectEditsNeedRestore = false
+        frame.defectEdits = [makeEdit(strength: 1)]
+        XCTAssertEqual(model.defectSidecarValidationFailure([frame]), "defect_identity_missing")
+
+        model.frames = [frame]
+        var failure: String?
+        XCTAssertNil(model.currentLibraryCatalogSnapshot(onInvalid: { failure = $0 }))
+        XCTAssertEqual(failure, "roll_membership_mismatch")
+
+        frame.defectEdits = []
+        frame.defectEditsNeedRestore = true
+        let roll = try XCTUnwrap(model.createPhysicalRoll(name: "Missing recipe", filmType: .colorNegative, activate: true))
+        XCTAssertTrue(model.assignNewPersistentFrames([frame], toRollID: roll.id))
+        XCTAssertNil(model.currentLibraryCatalogSnapshot(onInvalid: { failure = $0 }))
+        XCTAssertEqual(failure, "defect_restore_pending")
+        XCTAssertTrue(frame.defectEditsNeedRestore, "저장 검사가 누락된 보정 기록을 지우면 안 됩니다.")
     }
 
     func testRapidLiveStrengthTicksCoalesceAndFinalPersistUsesLatestRecipe() async throws {

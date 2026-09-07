@@ -66,10 +66,11 @@ extension AppModel {
         } else {
             writeGeneration = markLibraryCatalogDirty()
         }
-        guard let catalog = currentLibraryCatalogSnapshot() else {
+        var snapshotFailure = "unknown"
+        guard let catalog = currentLibraryCatalogSnapshot(onInvalid: { snapshotFailure = $0 }) else {
             statusMessage = libraryCatalogBlockMessage(.corrupt)
             recordLibraryCatalogWriteResult(generation: writeGeneration, succeeded: false)
-            trace.fail(code: "catalog_snapshot_invalid")
+            trace.fail(code: "catalog_snapshot_invalid.\(snapshotFailure)")
             return false
         }
         let url = libraryCatalogURL
