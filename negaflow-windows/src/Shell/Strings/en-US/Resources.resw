@@ -1579,7 +1579,7 @@ Load a scanner from Library to scan film.</value>
   <data name="developBaseScale.Text" xml:space="preserve"><value>Base Scale</value></data>
   <data name="inputGamma.Text" xml:space="preserve"><value>Input Gamma</value></data>
   <data name="inputGammaAuto.Value" xml:space="preserve"><value>Auto</value></data>
-  <data name="inputGammaRestore.Value" xml:space="preserve"><value>Restore automatic input gamma</value></data>
+  <data name="inputGammaRestore.Value" xml:space="preserve"><value>Restore the original input gamma</value></data>
   <data name="inputGammaHelp.Value" xml:space="preserve"><value>0.1–4.0, in 0.1 steps. Use a decimal point. Enter applies; Esc cancels.</value></data>
   <data name="inputGammaUnsupported.Value" xml:space="preserve"><value>Manual input gamma requires an 8-bit or 16-bit RGB TIFF without alpha, with a matrix ICC profile or no ICC profile.</value></data>
   <data name="inputGammaRecorded.Value" xml:space="preserve"><value>File gamma {0:0.0}</value></data>

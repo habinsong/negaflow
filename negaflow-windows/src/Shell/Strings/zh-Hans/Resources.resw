@@ -1579,7 +1579,7 @@
   <data name="developBaseScale.Text" xml:space="preserve"><value>片基倍率</value></data>
   <data name="inputGamma.Text" xml:space="preserve"><value>输入伽马</value></data>
   <data name="inputGammaAuto.Value" xml:space="preserve"><value>自动</value></data>
-  <data name="inputGammaRestore.Value" xml:space="preserve"><value>恢复自动输入伽马</value></data>
+  <data name="inputGammaRestore.Value" xml:space="preserve"><value>恢复原始输入伽马</value></data>
   <data name="inputGammaHelp.Value" xml:space="preserve"><value>0.1–4.0，步长0.1。使用英文小数点。Enter应用，Esc取消。</value></data>
   <data name="inputGammaUnsupported.Value" xml:space="preserve"><value>手动输入伽马支持无Alpha通道、带矩阵ICC或无ICC的8-bit、16-bit RGB TIFF。</value></data>
   <data name="inputGammaRecorded.Value" xml:space="preserve"><value>文件伽马 {0:0.0}</value></data>

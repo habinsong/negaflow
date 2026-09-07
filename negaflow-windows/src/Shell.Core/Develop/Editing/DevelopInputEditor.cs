@@ -1,4 +1,4 @@
-using Negaflow.Catalog;
+﻿using Negaflow.Catalog;
 using Negaflow.Interop;
 using System.Text.Json.Nodes;
 

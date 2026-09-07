@@ -93,10 +93,17 @@ WicTiffDecodeResult decode_tiff_with_wic_impl(
         std::uint64_t output_stride = oriented_stride;
         std::uint64_t output_bytes = oriented_bytes;
         ComPtr<IWICBitmapScaler> scaler{};
-        // 48bpp RGB 비압축(frame_1)은 스케일러+행 CopyPixels 가 invalid_argument 로
-        // 끝났습니다. 이 형식은 원본 디코드가 174ms 라 스케일이 필요 없습니다.
+        // 48bpp RGB 비압축(frame_1)은 스케일러 + **행 단위** CopyPixels 가
+        // invalid_argument 로 끝났습니다. 통짜로 한 번 복사하는 경로(row_sink 없음)에는 그
+        // 문제가 없으므로 거기서는 허용합니다.
+        //
+        // 수동 감마 프리뷰가 바로 그 경로입니다. 여기서 줄여 풀지 않으면 원본이 통째로
+        // 캐시되고, 감마를 한 칸 움직일 때마다 5959x3692(22MP) 전체에 LUT + ICM 을 다시
+        // 겁니다 - 실측 한 프레임 580 ms(그 중 ICM 330 ms 이상)입니다. 같은 화면 크기의
+        // 노출 슬라이더는 프리뷰 크기 working 이미지를 재사용해 36 ms 입니다.
+        // 줄여 푸는 데 실패하면 부르는 쪽(`decode_source`)이 원본 크기로 한 번 더 시도합니다.
         const bool allow_scaler =
-            result.image.layout != DecodedPixelLayout::rgb16;
+            result.image.layout != DecodedPixelLayout::rgb16 || row_sink == nullptr;
         if (allow_scaler &&
             control.max_output_width > 0U && control.max_output_height > 0U &&
             (selected.width > control.max_output_width ||

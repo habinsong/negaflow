@@ -1579,7 +1579,7 @@
   <data name="developBaseScale.Text" xml:space="preserve"><value>베이스 배율</value></data>
   <data name="inputGamma.Text" xml:space="preserve"><value>입력 감마</value></data>
   <data name="inputGammaAuto.Value" xml:space="preserve"><value>자동</value></data>
-  <data name="inputGammaRestore.Value" xml:space="preserve"><value>입력 감마 자동으로 복원</value></data>
+  <data name="inputGammaRestore.Value" xml:space="preserve"><value>입력 감마를 원래 값으로 복원</value></data>
   <data name="inputGammaHelp.Value" xml:space="preserve"><value>0.1–4.0, 0.1 단위. 소수점은 점(.)으로 입력합니다. Enter 적용, Esc 취소.</value></data>
   <data name="inputGammaUnsupported.Value" xml:space="preserve"><value>수동 입력 감마는 알파 채널이 없고 행렬 ICC 또는 무ICC인 8-bit·16-bit RGB TIFF를 지원합니다.</value></data>
   <data name="inputGammaRecorded.Value" xml:space="preserve"><value>파일 감마 {0:0.0}</value></data>

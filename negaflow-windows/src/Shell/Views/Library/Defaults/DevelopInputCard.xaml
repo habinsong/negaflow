@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <UserControl
     x:Class="Negaflow.Shell.Views.Library.Defaults.DevelopInputCard"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -7,20 +7,23 @@
         <Grid ColumnSpacing="6">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="72" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock x:Name="GammaLabel" FontSize="12" VerticalAlignment="Center" />
-            <TextBlock x:Name="AutomaticReadout" Grid.Column="2" FontSize="12"
+            <TextBlock x:Name="AutomaticReadout" Grid.Column="1" FontSize="12"
                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="3,1" />
-            <Button x:Name="ValueButton" Grid.Column="2" HorizontalAlignment="Right" FontSize="12"
+            <Button x:Name="ValueButton" Grid.Column="1" HorizontalAlignment="Right" FontSize="12"
                     Padding="3,1" Background="Transparent" BorderThickness="0" Click="OnEditValue" />
-            <TextBox x:Name="ValueEditor" Grid.Column="2" Visibility="Collapsed" MinWidth="0"
+            <TextBox x:Name="ValueEditor" Grid.Column="1" Visibility="Collapsed" MinWidth="0"
                      MinHeight="0" Padding="3,1" FontSize="12" TextAlignment="Right"
                      BeforeTextChanging="OnBeforeTextChanging" KeyDown="OnEditorKeyDown" LostFocus="OnEditorLostFocus" />
-            <Button x:Name="ResetButton" Grid.Column="1" Padding="3,1" Background="Transparent"
+            <!-- 초기화는 숫자 **오른쪽**입니다. 숫자 왼쪽에 두면 값과 제목 사이에 끼어
+                 눌러야 할 것으로 보이지 않습니다. -->
+            <Button x:Name="ResetButton" Grid.Column="2" Padding="2,0" MinWidth="0" MinHeight="0"
+                    Width="18" Height="18" VerticalAlignment="Center" Background="Transparent"
                     BorderThickness="0" Click="OnReset">
-                <FontIcon Glyph="&#xE777;" FontSize="12" />
+                <FontIcon Glyph="&#xE777;" FontSize="10" />
             </Button>
         </Grid>
         <Border Style="{StaticResource NegaflowSegmentTrackStyle}">

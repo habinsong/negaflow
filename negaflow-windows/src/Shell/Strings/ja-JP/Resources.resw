@@ -1579,7 +1579,7 @@
   <data name="developBaseScale.Text" xml:space="preserve"><value>ベース倍率</value></data>
   <data name="inputGamma.Text" xml:space="preserve"><value>入力ガンマ</value></data>
   <data name="inputGammaAuto.Value" xml:space="preserve"><value>自動</value></data>
-  <data name="inputGammaRestore.Value" xml:space="preserve"><value>入力ガンマを自動に戻す</value></data>
+  <data name="inputGammaRestore.Value" xml:space="preserve"><value>入力ガンマを元の値に戻す</value></data>
   <data name="inputGammaHelp.Value" xml:space="preserve"><value>0.1–4.0、0.1刻み。小数点はピリオドを使用。Enterで適用、Escで取消。</value></data>
   <data name="inputGammaUnsupported.Value" xml:space="preserve"><value>手動入力ガンマは、アルファなしで行列ICCまたはICCなしの8-bit・16-bit RGB TIFFに対応します。</value></data>
   <data name="inputGammaRecorded.Value" xml:space="preserve"><value>ファイルガンマ {0:0.0}</value></data>

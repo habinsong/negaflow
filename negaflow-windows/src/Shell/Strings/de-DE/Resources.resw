@@ -1579,7 +1579,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developBaseScale.Text" xml:space="preserve"><value>Basisskalierung</value></data>
   <data name="inputGamma.Text" xml:space="preserve"><value>Eingangsgamma</value></data>
   <data name="inputGammaAuto.Value" xml:space="preserve"><value>Auto</value></data>
-  <data name="inputGammaRestore.Value" xml:space="preserve"><value>Automatisches Eingangsgamma wiederherstellen</value></data>
+  <data name="inputGammaRestore.Value" xml:space="preserve"><value>Ursprüngliches Eingangsgamma wiederherstellen</value></data>
   <data name="inputGammaHelp.Value" xml:space="preserve"><value>0.1–4.0, in Schritten von 0.1. Dezimalpunkt verwenden. Eingabe übernimmt, Esc verwirft.</value></data>
   <data name="inputGammaUnsupported.Value" xml:space="preserve"><value>Manuelles Eingangsgamma unterstützt RGB-TIFFs mit 8 oder 16 Bit ohne Alpha und mit Matrix-ICC-Profil oder ohne ICC-Profil.</value></data>
   <data name="inputGammaRecorded.Value" xml:space="preserve"><value>Dateigamma {0:0.0}</value></data>

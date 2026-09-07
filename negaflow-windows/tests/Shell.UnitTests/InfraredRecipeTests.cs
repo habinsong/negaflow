@@ -180,11 +180,19 @@ internal static class InfraredRecipeTests
                         frameB,
                         identity,
                         detection);
-                Check(failed.Status == InfraredDefectApplyStatus.PersistenceFailed &&
-                      document.CanRedo &&
-                      document.RedoActionName == redoActionBeforeFailure &&
-                      document.Frames.All(frame => frame.Id != frameB.ToString("D")),
+                // **없어진 프레임의 늦은 적용은 쓰기 전에 물러납니다.** 앞 판은 쓰기까지 가서
+                // `PersistenceFailed` 로 돌아왔는데, `ApplyDetection` 이 문서에 그 프레임이
+                // 아직 있는지 먼저 보게 되면서(d0aa9935) 그보다 앞에서 `SourceMismatch` 로
+                // 끝납니다. 두 갈래 모두 쓰지 않고 되돌리기 칸도 그대로 두므로 사용자가 보는
+                // 결과는 같지만, 물러나는 자리가 달라졌으므로 기대값을 그 자리로 옮깁니다.
+                // 조건은 하나씩 이름을 답니다 - 뭉쳐 두면 어느 것이 어긋났는지 알 수 없습니다.
+                Check(failed.Status == InfraredDefectApplyStatus.SourceMismatch,
+                    "infrared_history_late_apply_on_removed_frame_refused_before_write");
+                Check(document.CanRedo &&
+                      document.RedoActionName == redoActionBeforeFailure,
                     "infrared_history_failed_write_preserves_existing_redo");
+                Check(document.Frames.All(frame => frame.Id != frameB.ToString("D")),
+                    "infrared_history_failed_write_does_not_resurrect_removed_frame");
 
                 Check(document.Redo() == LibraryHostService.UndoActions.DefectEdit &&
                       document.Frames.Single(frame => frame.Id == frameA.ToString("D"))

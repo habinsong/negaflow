@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -124,7 +124,16 @@ public sealed partial class DevelopInputCard
             Commit(InputGammaInterpretation.Power(value)); args.Handled = true;
         }
     }
-    private void OnReset(object sender, RoutedEventArgs args) { editFrame = selection?.Invoke(); Commit(InputGammaInterpretation.Automatic); }
+    /// <summary>
+    /// 수동 값을 <b>원본이 알려준 값</b>으로 되돌립니다. 자동으로 넘어가지 않습니다 — 모드는
+    /// 캡슐이 정하고, 이 단추는 그 안에서 값만 제자리로 돌립니다.
+    /// </summary>
+    private void OnReset(object sender, RoutedEventArgs args)
+    {
+        if ((pending ?? shownFrame?.InputGamma)?.IsAutomatic != false) { return; }
+        editFrame = selection?.Invoke();
+        Commit(InputGammaInterpretation.Power(InputGammaValueInput.Round(sourceInfo.ManualSeed)));
+    }
     private void OnResetTrack(object sender, DoubleTappedRoutedEventArgs args) { OnReset(sender, args); args.Handled = true; }
 
     private void CancelDraft()

@@ -46,8 +46,16 @@ std::optional<DevelopExportOutcome> decode_source(
     // 한 칸을 채우려고 원본을 통째로 푸는 일이 맥에는 없습니다.
     const bool proxy_decode =
         preview == nullptr && request.proxy_input_long_edge != 0U;
+    // **수동 감마는 프리뷰를 원본 크기로 묶지 않습니다.** 감마는 화소마다 거는 LUT 라
+    // defect ROI 처럼 원본 화소 좌표를 요구하지 않습니다. 그런데 이 조건에 들어가 있어
+    // 슬라이더를 끌 때마다 5959x3692(22MP) 전체를 다시 변환했습니다 — 실측 한 프레임
+    // 580 ms(그 중 ICM 330 ms)이며, 같은 화면 크기의 노출 슬라이더는 36 ms 였습니다.
+    // 노출이 빠른 이유는 프리뷰 크기 working 이미지를 캐시에서 그대로 쓰기 때문입니다.
+    // 프리뷰는 다른 편집과 같은 상자로 풀고, 줄여 푼 것이 감마 지원 layout 을 못 내면
+    // 아래 fallback 이 원본 크기로 한 번 더 시도합니다.
     const bool decodes_full_resolution =
-        (preview == nullptr && !proxy_decode) || !request.defect_recipe.order.empty() || request.input_gamma.mode != 0U;
+        (preview == nullptr && !proxy_decode) || !request.defect_recipe.order.empty() ||
+        (preview == nullptr && request.input_gamma.mode != 0U);
     // **요청 상자가 무엇이든 디코드는 정착 크기로 한 번만 합니다.**
     //
     // 앱은 한 프레임에 인터랙티브(2560)와 정착(3600)을 이어서 부릅니다. 요청 상자 그대로

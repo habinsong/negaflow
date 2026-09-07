@@ -1579,7 +1579,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developBaseScale.Text" xml:space="preserve"><value>Échelle de base</value></data>
   <data name="inputGamma.Text" xml:space="preserve"><value>Gamma d’entrée</value></data>
   <data name="inputGammaAuto.Value" xml:space="preserve"><value>Auto</value></data>
-  <data name="inputGammaRestore.Value" xml:space="preserve"><value>Rétablir le gamma d’entrée automatique</value></data>
+  <data name="inputGammaRestore.Value" xml:space="preserve"><value>Rétablir le gamma d’entrée d’origine</value></data>
   <data name="inputGammaHelp.Value" xml:space="preserve"><value>0.1–4.0, par pas de 0.1. Utilisez un point décimal. Entrée applique ; Échap annule.</value></data>
   <data name="inputGammaUnsupported.Value" xml:space="preserve"><value>Le gamma manuel accepte les TIFF RVB 8 ou 16 bits sans alpha, avec un profil ICC matriciel ou sans profil ICC.</value></data>
   <data name="inputGammaRecorded.Value" xml:space="preserve"><value>Gamma du fichier {0:0.0}</value></data>
