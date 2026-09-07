@@ -101,6 +101,7 @@ struct CustomTargetPicker: View {
         }
         .buttonStyle(.plain)
         .focusable()
+        .focusEffectDisabled()
         .focused($focusedTarget, equals: target)
         .onKeyPress(phases: [.down, .repeat]) { press in
             handleKey(press, target: target)
