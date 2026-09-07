@@ -42,8 +42,78 @@ def describe(attributes):
     return attributes.get("AutomationProperties.AutomationId", "<unnamed>")
 
 
-def main():
+# macOS 가 정한 값과 어긋나면 안 되는 슬라이더입니다.
+#
+# `x:Name` -> (스위프트 파일, 범위 상수 무늬, 스텝 상수 무늬)
+#
+# **맥 소스에서 직접 읽습니다.** 여기에 숫자를 베껴 두면 맥이 바뀌었을 때 아무도 모릅니다 -
+# 두 쪽이 조용히 갈라지는 것이 정확히 이 규칙이 막으려는 것입니다.
+MAC_BOUND_SLIDERS = {
+    "GammaSlider": (
+        "Sources/Chromabase/Develop/InputGammaInterpretation.swift",
+        r"static let range\s*=\s*([0-9.]+)\s*\.\.\.\s*([0-9.]+)",
+        "Sources/negaflowApp/Features/Develop/Inspector/Controls/InputGammaValueInput.swift",
+        r"static let step\s*=\s*([0-9.]+)",
+    ),
+}
+
+# macOS `CommitSlider.keyDown`: `step * (shift ? 10 : 1)`.
+MAC_SHIFT_MULTIPLIER = 10.0
+
+
+def mac_parity_problems():
+    """맥 상수와 XAML 이 어긋나면 알립니다. 맥 트리가 없으면 조용히 넘어갑니다."""
+    mac = ROOT.parent / "negaflow-mac"
+    if not mac.is_dir():
+        return []
+    found = {}
+    for path in sorted(VIEWS.rglob("*.xaml")):
+        text = path.read_text(encoding="utf-8")
+        for opening in SLIDER.findall(text):
+            attributes = dict(ATTRIBUTE.findall(opening))
+            name = attributes.get("x:Name")
+            if name in MAC_BOUND_SLIDERS:
+                found[name] = (path, attributes)
+
     problems = []
+    for name, (range_file, range_pattern, step_file, step_pattern) in MAC_BOUND_SLIDERS.items():
+        if name not in found:
+            problems.append(f"{name}: XAML 에서 찾지 못했습니다 - 이름이 바뀌었으면 이 표도 고치십시오.")
+            continue
+        path, attributes = found[name]
+        where = f"{path.relative_to(ROOT)} · {name}"
+
+        range_source = mac / range_file
+        step_source = mac / step_file
+        if not range_source.is_file() or not step_source.is_file():
+            problems.append(f"{where}: 맥 원본을 찾지 못했습니다 ({range_file} / {step_file}).")
+            continue
+        range_match = re.search(range_pattern, range_source.read_text(encoding="utf-8"))
+        step_match = re.search(step_pattern, step_source.read_text(encoding="utf-8"))
+        if not range_match or not step_match:
+            problems.append(f"{where}: 맥 상수를 읽지 못했습니다 - 무늬가 낡았습니다.")
+            continue
+
+        expected = {
+            "Minimum": float(range_match.group(1)),
+            "Maximum": float(range_match.group(2)),
+            "StepFrequency": float(step_match.group(1)),
+            "SmallChange": float(step_match.group(1)),
+            "LargeChange": float(step_match.group(1)) * MAC_SHIFT_MULTIPLIER,
+        }
+        for attribute, want in expected.items():
+            got = number(attributes.get(attribute, ""))
+            if got is None:
+                problems.append(f"{where}: {attribute} 가 없습니다 (맥 값 {want:g}).")
+            elif abs(got - want) > 1e-9:
+                problems.append(
+                    f"{where}: {attribute}={got:g} 인데 맥은 {want:g} 입니다."
+                )
+    return problems
+
+
+def main():
+    problems = mac_parity_problems()
     for path in sorted(VIEWS.rglob("*.xaml")):
         text = path.read_text(encoding="utf-8")
         for opening in SLIDER.findall(text):

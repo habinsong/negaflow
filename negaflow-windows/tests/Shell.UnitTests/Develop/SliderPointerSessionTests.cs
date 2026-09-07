@@ -42,7 +42,35 @@ internal static class SliderPointerSessionTests
         disabled.Validate("frame", "source.tif", true);
         Check(!disabled.End("frame", "source.tif", true), "slider_disable_then_enable_cancels_gesture");
 
+        VerifyPlainSyncKeepsTheDraft();
         VerifySourceInspectionKeepsSupportWhileRechecking();
+    }
+
+    /// <summary>
+    /// **손잡이가 스프링처럼 튀던 자리입니다.** 같은 사진·같은 원본을 그대로 다시 그리는
+    /// 단순 Sync 는 <b>잡고 있는 draft 를 건드리면 안 됩니다.</b>
+    /// </summary>
+    /// <remarks>
+    /// 카드는 값이 바뀔 때마다 <c>Synchronize()</c> 로 화면을 다시 그리고, 그 안에서
+    /// <see cref="SliderPointerSession.Validate"/> 를 부릅니다. 주인도 원본도 그대로인데
+    /// 여기서 취소되면 draft 가 사라지고 손잡이가 모델 값(2.2)으로 되돌아갑니다 — 사용자가
+    /// "슬라이더가 스프링처럼 튄다 / 계속 2.2 로 되돌아간다" 로 보고한 것이 이 모양입니다.
+    ///
+    /// 끌고 있는 동안 여러 번 다시 그려도 draft 가 살아 있어야 하고, 놓으면 그때 commit
+    /// 되어야 합니다.
+    /// </remarks>
+    private static void VerifyPlainSyncKeepsTheDraft()
+    {
+        var state = new SliderPointerSession();
+        state.Begin("frame-1", "frame-1.tif");
+        for (int redraw = 0; redraw < 20; ++redraw)
+        {
+            state.Validate("frame-1", "frame-1.tif", true);
+            Check(state.HasDraft, $"slider_plain_sync_keeps_draft_{redraw}");
+        }
+        Check(
+            state.End("frame-1", "frame-1.tif", true),
+            "slider_plain_sync_still_commits_on_release");
     }
 
     /// <summary>
