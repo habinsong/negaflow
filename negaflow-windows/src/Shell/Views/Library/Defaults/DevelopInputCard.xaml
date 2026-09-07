@@ -10,7 +10,12 @@
                 <ColumnDefinition Width="72" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock x:Name="GammaLabel" FontSize="12" VerticalAlignment="Center" />
+            <!-- 최소 창 폭(1350px)에서 긴 언어는 제목이 잘립니다. 말줄임 없이 자르면
+                 "Eingangsg" 처럼 단어 중간에서 끊겨 무슨 줄인지 알 수 없습니다 - macOS
+                 `Text` 는 꼬리 말줄임이 기본이고, 이 저장소의 다른 카드도 모두
+                 `CharacterEllipsis` 를 씁니다(DevelopBaseCard). -->
+            <TextBlock x:Name="GammaLabel" FontSize="12" VerticalAlignment="Center"
+                       TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
             <TextBlock x:Name="AutomaticReadout" Grid.Column="1" FontSize="12"
                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="3,1" />
             <Button x:Name="ValueButton" Grid.Column="1" HorizontalAlignment="Right" FontSize="12"

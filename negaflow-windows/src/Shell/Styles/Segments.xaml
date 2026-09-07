@@ -49,6 +49,18 @@
         <Setter Property="Background" Value="{ThemeResource NegaflowSegmentTrackBrush}" />
     </Style>
 
+    <!--
+        칸 글자는 **말줄임**입니다. `ContentPresenter` 에는 `TextTrimming` 이 없으므로
+        (WinUI: `Unknown member 'TextTrimming' on element 'ContentPresenter'`) 판형으로
+        넣습니다. 없으면 좁은 창에서 "Automatisc" 처럼 단어 중간이 그대로 잘립니다 —
+        실측: 최소 창 폭 1350px · 독일어. macOS `SegmentedPicker` 의 `Text` 는 꼬리
+        말줄임이 기본입니다.
+    -->
+    <DataTemplate x:Key="NegaflowSegmentLabelTemplate">
+        <TextBlock Text="{Binding}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+    </DataTemplate>
+
     <Style x:Key="NegaflowSegmentStyle" TargetType="RadioButton">
         <Setter Property="MinWidth" Value="0" />
         <Setter Property="MinHeight" Value="28" />
@@ -62,6 +74,7 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="UseSystemFocusVisuals" Value="True" />
+        <Setter Property="ContentTemplate" Value="{StaticResource NegaflowSegmentLabelTemplate}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
