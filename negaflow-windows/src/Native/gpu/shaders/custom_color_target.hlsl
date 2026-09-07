@@ -13,7 +13,7 @@ cbuffer CustomColorTargetConstants : register(b0) {
 static const float Knots[10] = {0, 5, 10, 20, 35, 50, 65, 80, 90, 100};
 
 float LabTransfer(float x) {
-    if (x > 216.0 / 24389.0) { return pow(x, 1.0 / 3.0); }
+    if (x > 216.0 / 24389.0) { return pow(abs(x), 1.0 / 3.0); }
     return ((24389.0 / 27.0) * x + 16) / 116;
 }
 float InverseLabTransfer(float x) {

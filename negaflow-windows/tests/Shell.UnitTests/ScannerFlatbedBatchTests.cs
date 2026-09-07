@@ -48,7 +48,7 @@ internal static class ScannerFlatbedBatchTests
     /// </summary>
     /// <remarks>
     /// 실기: OpticFilm 8100 이 물려 두 번 연속 실패했는데 화면에는 <b>아무것도</b> 뜨지
-    /// 않았습니다. 사유(<c>ioFailure: scanimage exit 9: sane_read: Error during device I/O</c>)는
+    /// 않았습니다. 구체적인 장치 읽기 실패 사유는
     /// 플러그인이 보냈지만 <c>PluginError</c> 라는 이름만 남기고 문구는 버려졌고, 상태줄은
     /// 빈 문자열을 받아 숨었습니다.
     ///
@@ -60,7 +60,7 @@ internal static class ScannerFlatbedBatchTests
     private static void VerifyPluginErrorTextReachesTheCaller()
     {
         const string detail =
-            "ioFailure: scanimage exit 9: sane_read: Error during device I/O";
+            "ioFailure: test backend exit 9: device read failed";
         string parent = Path.Combine(AppContext.BaseDirectory, "scan-batch-error-tests");
         string isolatedBase = Path.Combine(parent, $"{Environment.ProcessId}-{Guid.NewGuid():N}");
         if (StorageRootResolver.ResolveForTests(isolatedBase).Roots is not { } roots)

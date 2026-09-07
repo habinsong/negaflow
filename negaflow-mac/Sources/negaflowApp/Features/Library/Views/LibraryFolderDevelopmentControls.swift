@@ -166,6 +166,7 @@ private struct LibraryFolderBatchPicker<Option: Hashable>: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .focusEffectDisabled()
         .popover(isPresented: $isPresented, arrowEdge: .bottom) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 2) {
@@ -185,6 +186,7 @@ private struct LibraryFolderBatchPicker<Option: Hashable>: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .focusEffectDisabled()
                         .padding(.horizontal, 8)
                         .frame(minHeight: 28)
                     }

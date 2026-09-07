@@ -15,6 +15,7 @@ struct DevelopDefaultsSection: View {
                     Text(process.displayName).tag(process)
                 }
             }
+            .focusEffectDisabled()
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(model.text(AppLocalizedPhrase.target))
@@ -31,6 +32,7 @@ struct DevelopDefaultsSection: View {
 
             profileAndLookRow
                 .frame(width: controlsWidth)
+                .focusEffectDisabled()
             if model.activeWorkspaceModule == .develop, let frame = model.actionableFrame {
                 InputGammaControlSection(frame: frame)
                     .id("\(frame.id)-\(frame.sourceLocationRevision)")

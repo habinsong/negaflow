@@ -18,10 +18,10 @@ struct SegmentedPicker<Value: Hashable>: View {
                     if option != selection { selection = option }
                 } label: {
                     Text(label(option))
-                        .font(.callout.weight(isSelected ? .semibold : .regular))
+                        .font((compressLabels ? Font.caption : Font.callout).weight(isSelected ? .semibold : .regular))
                         .foregroundStyle(isSelected ? Color.primary : Color.secondary)
                         .lineLimit(1)
-                        .minimumScaleFactor(compressLabels ? 0.6 : AppTypography.minimumScaleFactor)
+                        .minimumScaleFactor(AppTypography.minimumScaleFactor)
                         .frame(minWidth: compressLabels ? 0 : nil, maxWidth: .infinity)
                         .frame(height: 28)
                         .background {

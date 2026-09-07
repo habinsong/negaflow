@@ -17,7 +17,7 @@ struct CustomTargetPicker: View {
                 Text(selection.displayName)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .minimumScaleFactor(0.7)
+                    .minimumScaleFactor(AppTypography.minimumScaleFactor)
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.caption2)
