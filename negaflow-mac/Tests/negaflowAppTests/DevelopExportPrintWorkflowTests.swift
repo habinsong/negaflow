@@ -124,7 +124,11 @@ final class DevelopExportPrintWorkflowTests: XCTestCase {
         model.selectedFrameID = frame.id
 
         await model.developFrame(frame)
-        XCTAssertTrue(frame.hasDevelopedOnce)
+        // developFrame 은 조용히 물러나는 길이 여럿이다 — 원본 확보 실패, 결함 복원 대기,
+        // cleaned raw 대기, 코얼레싱(이미 진행 중), 슬롯 미획득, 렌더 오류(developFailed).
+        // 어느 쪽이든 여기서는 "false" 하나로만 보여 원격 CI 에서 원인을 알 수 없었다.
+        // 실패 자리에서 앱이 실제로 남긴 것을 같이 낸다.
+        XCTAssertTrue(frame.hasDevelopedOnce, Self.developDiagnosis(model, frame))
 
         // 스캐너 타겟으로 바꾸고(측정 캐시가 타겟 전환을 넘어 살아남는 경로) 보정까지.
         frame.updateParams {
@@ -194,6 +198,23 @@ final class DevelopExportPrintWorkflowTests: XCTestCase {
     }
 
     /// 오렌지 마스크 위에 장면 밀도가 실린 합성 네거티브(실사진 미사용).
+    /// 현상이 안 끝났을 때 앱이 남긴 것을 한 줄로 모은다. reportError 가 statusMessage 와
+    /// errorLog 양쪽에 적으므로, 렌더 오류(developFailed)는 errorLog 에 남고 원본 확보 실패는
+    /// statusMessage 에 남는다. 아무것도 없으면 코얼레싱이나 슬롯 미획득으로 물러난 것이다.
+    private static func developDiagnosis(_ model: AppModel, _ frame: ScanFrame) -> String {
+        let errors = model.errorLog.entries.map(\.message).joined(separator: " | ")
+        return [
+            "현상이 끝나지 않았다",
+            "isDeveloping=\(frame.isDeveloping)",
+            "developRevision=\(frame.developRevision)",
+            "developedImage=\(frame.developedImage != nil)",
+            "isDevelopingFrame=\(model.developController.isDevelopingFrame(frame))",
+            "scanPhase=\(model.scanPhase)",
+            "status=\(model.statusMessage)",
+            "errorLog=[\(errors)]",
+        ].joined(separator: " ")
+    }
+
     private static func writeSyntheticNegativeTIFF(width: Int, height: Int) throws -> URL {
         var pixels = [UInt16](repeating: 0, count: width * height * 4)
         for y in 0..<height {
