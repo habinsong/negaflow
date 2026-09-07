@@ -153,12 +153,11 @@ internal static class LibraryFolderDevelopmentTests
             {
                 thumbnails.Publish(frame.Id, before, 4, 4);
             }
-            for (int attempt = 0;
-                attempt < 100 && host.Frames.Any(frame => thumbnails.TryGet(frame.Id) is null);
-                ++attempt)
-            {
-                Thread.Sleep(20);
-            }
+            // 씨앗이 <b>끝나기까지</b> 기다립니다. `TryGet` 이 차는 것과 작업 큐가 비는 것은
+            // 다릅니다 - 씨앗 티켓이 아직 살아 있으면 바로 뒤에 걸리는 적용의 렌더가
+            // `work.Matches` 에서 밀려 <c>RerenderAsync</c> 가 false 를 냅니다. 그러면 진행률이
+            // 실패 한 장을 달고 끝나, 이 시험이 원격 CI 에서 가끔 깨졌습니다.
+            thumbnails.WaitUntilIdleAsync().GetAwaiter().GetResult();
             byte[]?[] seeded = [.. host.Frames.Select(frame => thumbnails.TryGet(frame.Id))];
             Check(
                 seeded.Length == 2 && seeded.All(jpeg => jpeg is not null),
@@ -184,11 +183,19 @@ internal static class LibraryFolderDevelopmentTests
             Check(
                 exporter.CallCount - rendersBefore == 2,
                 "library_folder_apply_rerenders_every_frame");
+            // macOS 는 `while await group.next()` 한 흐름에서 세고 곧바로 알려 0,1,...,N 으로만
+            // 올라갑니다. 마지막 보고만 보면 순서가 뒤집힌 것을 놓칩니다.
             Check(
                 updates.Count > 0 &&
                 updates[^1] == new LibraryFolderDevelopmentProgress(2, 2) &&
-                updates[^1].Percent == 100,
-                "library_folder_apply_async_reports_progress");
+                updates[^1].Percent == 100 &&
+                updates.Zip(updates.Skip(1)).All(pair =>
+                    pair.Second.CompletedCount >= pair.First.CompletedCount),
+                "library_folder_apply_async_reports_progress",
+                () => string.Join(
+                    " ",
+                    updates.Select(update =>
+                        $"{update.CompletedCount}/{update.TotalCount}!{update.FailedCount}")));
 
             byte[]?[] after = [.. host.Frames.Select(frame => thumbnails.TryGet(frame.Id))];
             Check(

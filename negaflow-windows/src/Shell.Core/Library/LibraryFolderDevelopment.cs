@@ -163,32 +163,44 @@ public static class LibraryFolderDevelopment
 
         int completed = 0;
         int failed = 0;
+        // macOS 는 `while await group.next()` 한 흐름에서 세고 곧바로 알립니다 - 값과 보고가 같은
+        // 차례로 나갑니다. 세는 일과 알리는 일을 렌더 작업마다 흩어 놓으면 `Interlocked` 로
+        // 값은 맞아도 <b>부르는 차례가 뒤집혀</b>, 막대가 뒤로 가고 마지막이 50% 로 끝납니다.
+        Lock gate = new();
         List<Task> renders = new(configured.Count);
         foreach (LibraryFrameSnapshot frame in configured)
         {
             renders.Add(RenderOneAsync(frame));
         }
         await Task.WhenAll(renders).ConfigureAwait(false);
-        if (completed < total)
+        lock (gate)
         {
-            progress?.Invoke(new LibraryFolderDevelopmentProgress(total, total) { FailedCount = failed });
+            if (completed < total)
+            {
+                progress?.Invoke(new LibraryFolderDevelopmentProgress(total, total) { FailedCount = failed });
+            }
         }
+
         return configured.Count;
 
         async Task RenderOneAsync(LibraryFrameSnapshot frame)
         {
+            bool rendered;
             try
             {
-                if (!await thumbnails.RerenderAsync(frame, cancellationToken).ConfigureAwait(false))
-                { Interlocked.Increment(ref failed); }
+                rendered = await thumbnails.RerenderAsync(frame, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
-                Interlocked.Increment(ref failed);
+                rendered = false;
             }
-            progress?.Invoke(new LibraryFolderDevelopmentProgress(
-                Interlocked.Increment(ref completed),
-                total) { FailedCount = Volatile.Read(ref failed) });
+
+            lock (gate)
+            {
+                if (!rendered) { failed++; }
+                progress?.Invoke(
+                    new LibraryFolderDevelopmentProgress(++completed, total) { FailedCount = failed });
+            }
         }
     }
 
