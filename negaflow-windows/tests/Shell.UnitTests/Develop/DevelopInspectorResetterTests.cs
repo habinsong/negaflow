@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
@@ -93,6 +93,7 @@ internal static class DevelopInspectorResetterTests
 
             VerifyNeutralPresetComesBack(panel, host);
             VerifyPhotoAngleReset(panel);
+            VerifyBaseScaleContract(panel);
         }
         finally
         {
@@ -171,6 +172,62 @@ internal static class DevelopInspectorResetterTests
             panel.SelectedFrame.ImageTransform.Crop is { Width: 0.8 },
             "reset_angle_keeps_crop");
         Check(!panel.CanResetPhotoAngle, "reset_angle_locked_after_reset");
+    }
+
+    /// <summary>
+    /// 베이스 배율의 계약입니다 — <b>자동에서만·[0.5, 1.5]·비누적·전체 초기화는 100%</b>
+    /// (W28·W29·W56).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 배율은 잰 base 에 곱하는 값이라 <b>쌓이면 안 됩니다.</b> 같은 값을 두 번 넣었을 때
+    /// 곱해지면 사용자가 슬라이더를 놓을 때마다 그림이 계속 어두워집니다.
+    /// </para>
+    /// <para>
+    /// 수동 base 에서는 아예 받지 않습니다 — 손으로 찍은 값에 배율을 곱하면 사용자가 찍은
+    /// 그 자리가 아니게 됩니다. macOS 도 자동일 때만 이 줄을 보여 줍니다.
+    /// </para>
+    /// <para>
+    /// 배율만 바꾸는 편집은 잰 base(<c>ManualBase</c>)를 지우지 않아야 합니다. 지우면
+    /// 배율을 만질 때마다 base 를 다시 재게 되어, 같은 사진에서 값이 흔들립니다.
+    /// </para>
+    /// </remarks>
+    private static void VerifyBaseScaleContract(DevelopPanelState panel)
+    {
+        // 앞 시험이 base 를 수동으로 남겨 두므로 자동으로 돌려놓고 시작합니다 - 배율은
+        // 자동에서만 받습니다.
+        Check(panel.SetBaseMode(BaseEstimationMode.Auto) == LibraryFrameError.None,
+            "scale_needs_auto_base");
+        Check(panel.SelectedFrame!.Base.Mode == BaseEstimationMode.Auto, "scale_base_is_auto");
+
+        foreach (double scale in new[] { 0.5, 0.75, 1.0, 1.25, 1.5 })
+        {
+            Check(panel.SetBaseScale(scale) == LibraryFrameError.None, $"scale_accepts_{scale}");
+            Check(panel.BaseScale == scale, $"scale_stores_{scale}", () => panel.BaseScale.ToString());
+            // **비누적** — 같은 값을 다시 넣어도 곱해지지 않습니다.
+            Check(panel.SetBaseScale(scale) == LibraryFrameError.None, $"scale_repeat_{scale}");
+            Check(panel.BaseScale == scale, $"scale_does_not_accumulate_{scale}",
+                () => panel.BaseScale.ToString());
+        }
+
+        Check(panel.SetBaseScale(1.25) == LibraryFrameError.None, "scale_set_before_range_checks");
+        foreach (double outside in new[] { 0.49, 1.51, double.NaN, double.PositiveInfinity })
+        {
+            Check(panel.SetBaseScale(outside) == LibraryFrameError.InvalidBaseRecipe,
+                $"scale_refuses_{outside}");
+            Check(panel.BaseScale == 1.25, $"scale_keeps_value_after_refusing_{outside}",
+                () => panel.BaseScale.ToString());
+        }
+
+        // 잰 base 는 배율 편집으로 사라지지 않습니다.
+        Check(panel.SetPickedBase(0.31, 0.42, 0.53) == LibraryFrameError.None, "scale_pick_base");
+        Check(panel.SelectedFrame!.Base.Mode == BaseEstimationMode.Manual, "scale_pick_switches_to_manual");
+        Check(panel.SetBaseScale(1.25) == LibraryFrameError.InvalidBaseRecipe,
+            "scale_refused_while_base_is_manual");
+
+        Check(panel.ResetAllAdjustments() == LibraryFrameError.None, "scale_reset_all_ok");
+        Check(panel.BaseScale == 1.0, "scale_reset_all_returns_to_100",
+            () => panel.BaseScale.ToString());
     }
 
     private static bool PickLook(DevelopPanelState panel, LibraryHostService host, string id)
