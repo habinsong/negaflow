@@ -29,7 +29,7 @@
               `x:Load="False"` 는 `FindName` 이 부를 때까지 만들지 않습니다. 실체화는
               `Initialize` 가 하고, 그 `Initialize` 는 창을 띄운 뒤에 돕니다.  -->
         <Grid Grid.Row="2">
-            <views:LibraryWorkspaceView x:Name="LibraryWorkspace" Visibility="Collapsed" />
+            <views:LibraryWorkspaceView x:Name="LibraryWorkspace" x:FieldModifier="internal" Visibility="Collapsed" />
             <views:DevelopWorkspaceView x:Name="DevelopWorkspace" />
             <views:PrintWorkspaceView x:Name="PrintWorkspace" Visibility="Collapsed" />
         </Grid>

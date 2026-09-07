@@ -155,7 +155,100 @@ internal static class LibraryTerminationDiagnostics
                     terminationError = closing.Error.ToString(),
                     terminationFrame = closing.FrameId ?? string.Empty,
                     nativeFailure = closing.NativeFailureName ?? string.Empty,
+                    // `CatalogCommitFailed` 만으로는 왜 멈췄는지 알 수 없습니다 - 잠금인지,
+                    // 권한인지, read-back 불일치인지가 여기서 갈립니다.
+                    catalogError = closing.CatalogError.ToString(),
+                    sidecarError = closing.SidecarError.ToString(),
                     recipes,
+                },
+                Options));
+            return passed ? 0 : 1;
+        }
+        finally
+        {
+            TryDeleteTree(copyBase);
+        }
+    }
+
+    /// <summary>
+    /// 종료 경로의 <b>첫 걸음인 catalog 저장만</b> 사본으로 재현합니다.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Run"/> 은 굽기까지 보므로 사본 밖 원본을 가리키는 프레임이 하나만 있어도
+    /// 거부합니다 — 실기 카탈로그는 늘 그렇습니다. 그런데 실기에서 종료를 막은 것은
+    /// <c>CatalogCommitFailed</c>, 즉 <c>document.Save()</c> 였고 그 경로는 화소를 건드리지
+    /// 않습니다(<c>LibraryDefectTerminationService.PrepareAsync</c> 는 <c>scansDirectory</c> 를
+    /// 쓰지 않습니다). 그래서 여기서는 저장만 돌려 <b>어떤 <see cref="CatalogStoreError"/></b>
+    /// 인지를 밝힙니다.
+    /// </remarks>
+    internal static bool TryRunSaveCheck(string[] args, out int exitCode)
+    {
+        exitCode = 0;
+        if (args.Length != 2 || args[0] != "--library-catalog-save-check")
+        {
+            return false;
+        }
+        exitCode = RunSaveCheck(args[1]);
+        return true;
+    }
+
+    private static int RunSaveCheck(string sourceApplicationDataRoot)
+    {
+        string source = Path.GetFullPath(sourceApplicationDataRoot);
+        if (!Directory.Exists(source))
+        {
+            Console.Error.WriteLine("application data root not found: " + source);
+            return 2;
+        }
+
+        string copyBase = Path.Combine(
+            Path.GetTempPath(),
+            $"negaflow-catalog-save-{Guid.NewGuid():N}");
+        try
+        {
+            CopyTree(source, Path.Combine(copyBase, Path.GetFileName(source)));
+            if (StorageRootResolver.ResolveForTests(copyBase).Roots is not { } roots)
+            {
+                Console.Error.WriteLine("storage root refused");
+                return 2;
+            }
+
+            using PumpDispatcher dispatcher = new();
+            using LibraryHostService host = new(
+                dispatcher,
+                new NativeDevelopExporterAdapter(),
+                sourceMetadataReader: null,
+                token => Task.Delay(Timeout.Infinite, token));
+            LibraryHostState state = host.Open(roots);
+            if (state != LibraryHostState.Open)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(
+                    new { status = "failed", operation = "library_catalog_save_check", open = state.ToString() },
+                    Options));
+                return 1;
+            }
+
+            // 열자마자 한 번, 그리고 종료 경로가 부르는 그대로 한 번.
+            CatalogStoreError direct = host.Save();
+            LibraryDefectTerminationResult closing = host
+                .PrepareForTerminationAsync(Path.Combine(copyBase, "Scans"))
+                .GetAwaiter()
+                .GetResult();
+
+            bool passed = direct == CatalogStoreError.None && closing.Error ==
+                LibraryDefectTerminationError.None;
+            Console.WriteLine(JsonSerializer.Serialize(
+                new
+                {
+                    status = passed ? "ok" : "failed",
+                    operation = "library_catalog_save_check",
+                    frames = host.Frames.Count,
+                    previewFrames = host.Frames.Count(frame => frame.IsPreviewScan),
+                    framesWithRecipe = host.Frames.Count(frame => frame.DefectRecipe is not null),
+                    directSave = direct.ToString(),
+                    terminationError = closing.Error.ToString(),
+                    catalogError = closing.CatalogError.ToString(),
+                    sidecarError = closing.SidecarError.ToString(),
                 },
                 Options));
             return passed ? 0 : 1;

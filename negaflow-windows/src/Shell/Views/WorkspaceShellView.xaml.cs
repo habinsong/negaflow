@@ -60,6 +60,18 @@ public sealed partial class WorkspaceShellView : UserControl
         Task.WhenAll(DevelopWorkspace.PrepareForTerminationAsync(),
             PrintWorkspace?.PrepareForTerminationAsync() ?? Task.CompletedTask);
 
+    /// <summary>카탈로그를 쓰지 못했다는 것을 <b>상태 줄로만</b> 알립니다.</summary>
+    /// <remarks>
+    /// macOS 는 이 자리에서 <c>AppModel.reportError</c> 로 <c>statusMessage</c> 를 세울 뿐입니다
+    /// (<c>AppEntry.applicationShouldTerminate</c> 의 <c>.terminateCancel</c> 갈래). 모달은
+    /// 띄우지 않습니다 — 저장이 계속 실패하는 동안 모달을 띄우면 사용자는 그 벽 뒤에서
+    /// 아무것도 할 수 없습니다. 실기에서 정확히 그렇게 됐습니다: 닫으려 할 때마다
+    /// "카탈로그를 저장하지 못했습니다" 가 뜨고, 닫기 버튼을 눌러도 아무 일도 일어나지
+    /// 않았습니다.
+    /// </remarks>
+    internal void ReportCatalogWriteFailure(string message) =>
+        LibraryWorkspace?.ControlsPanel?.ScanPanel?.SetScanStatus(message);
+
     /// <summary>
     /// <c>x:Load="False"</c> 로 미뤄 둔 세 화면을 실제로 만듭니다.
     /// </summary>

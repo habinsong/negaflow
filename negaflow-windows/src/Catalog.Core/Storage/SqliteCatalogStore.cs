@@ -67,16 +67,7 @@ internal static class SqliteCatalogStore
             // 예전 버전이 쓴 카탈로그는 사다리로 올려서 엽니다. 올릴 칸이 없거나 이 빌드보다
             // 높은 버전이면 그대로 물러납니다 - 모르는 형식을 추측해서 읽지 않습니다.
             bool needsPromotion = catalogVersion != CatalogSnapshot.CurrentCatalogVersion;
-            if (needsPromotion &&
-                (catalogVersion > CatalogSnapshot.CurrentCatalogVersion ||
-                 minimumReaderVersion > CatalogSnapshot.CurrentCatalogVersion ||
-                 !CatalogVersionMigration.CanPromote(catalogVersion)))
-            {
-                return CatalogReadResult.Failure(
-                    CatalogStoreError.UnsupportedCatalogVersion,
-                    catalogVersion);
-            }
-            if (!needsPromotion && minimumReaderVersion != CatalogSnapshot.OldestReaderVersion)
+            if (!IsOpenableCatalogVersion(catalogVersion, minimumReaderVersion))
             {
                 return CatalogReadResult.Failure(
                     CatalogStoreError.UnsupportedCatalogVersion,
@@ -125,6 +116,38 @@ internal static class SqliteCatalogStore
         {
             return CatalogReadResult.Failure(CatalogStoreError.IoFailure);
         }
+    }
+
+    /// <summary>
+    /// 이 빌드가 <b>열 수 있는</b> 논리 catalog version 인지입니다.
+    /// </summary>
+    /// <remarks>
+    /// **읽기와 보존이 같은 규칙을 써야 하는 자리입니다.**
+    ///
+    /// 예전 판이 쓴 catalog 는 <see cref="Read"/> 가 승격 사다리로 올려서 엽니다. 그런데
+    /// <see cref="IsValidRecoverySource"/> 는 디스크의 <b>원시</b> version 이 현재 상수와
+    /// 정확히 같은지만 봤습니다. commit 은 새 primary 를 쓰기 <b>전에</b> 직전 primary 를
+    /// 백업으로 보존하고, 그 보존이 이 검사를 통과해야 합니다. 그래서 catalog version 이 1
+    /// 이던 사용자가 2 를 쓰는 빌드로 올라오면:
+    ///
+    /// - 읽기는 됩니다(사다리로 1 → 2). 사진도 다 보입니다.
+    /// - 저장은 <b>전부</b> <see cref="CatalogStoreError.IoFailure"/> 로 막힙니다.
+    /// - 보존이 먼저라 2 로 다시 쓸 기회가 영영 오지 않습니다. 교착입니다.
+    /// - 종료 경로도 저장부터 하므로 <b>앱을 끌 수 없게 됩니다</b>.
+    ///
+    /// 실기에서 그대로 났습니다 — 130장 카탈로그가 catalogVersion=1 인 채로 열렸고,
+    /// 종료할 때마다 `CatalogCommitFailed` 로 막혔습니다(termination.txt 12:57~12:58).
+    /// 이 빌드가 읽어서 올릴 수 있는 catalog 는 보존 대상으로도 유효합니다.
+    /// </remarks>
+    internal static bool IsOpenableCatalogVersion(int catalogVersion, int minimumReaderVersion)
+    {
+        if (catalogVersion == CatalogSnapshot.CurrentCatalogVersion)
+        {
+            return minimumReaderVersion == CatalogSnapshot.OldestReaderVersion;
+        }
+        return catalogVersion < CatalogSnapshot.CurrentCatalogVersion &&
+            minimumReaderVersion <= CatalogSnapshot.CurrentCatalogVersion &&
+            CatalogVersionMigration.CanPromote(catalogVersion);
     }
 
     public static CatalogWriteResult Write(CatalogSnapshot snapshot, string catalogPath)
@@ -253,8 +276,7 @@ internal static class SqliteCatalogStore
                     out int catalogVersion,
                     out int minimumReaderVersion,
                     out _) &&
-                catalogVersion == CatalogSnapshot.CurrentCatalogVersion &&
-                minimumReaderVersion == CatalogSnapshot.OldestReaderVersion;
+                IsOpenableCatalogVersion(catalogVersion, minimumReaderVersion);
         }
         catch (Exception error) when (error is SqliteException or IOException or
             UnauthorizedAccessException)
