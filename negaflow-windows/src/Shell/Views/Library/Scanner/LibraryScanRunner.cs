@@ -224,16 +224,29 @@ internal sealed class LibraryScanRunner
     ///
     /// 사유는 `scanner-failure.txt` 에 그대로 남습니다 — 진단은 거기서 봅니다.
     /// </remarks>
+    /// <summary>스캔이 끝난 뒤 상태줄에 적을 말입니다.</summary>
+    /// <remarks>
+    /// **실패를 화면에 냅니다.** macOS 는 컷마다
+    /// <c>reportError(text(.frameScanErrorFormat, i + 1, error.localizedDescription))</c> 로
+    /// 사유를 그대로 보여 줍니다(<c>AppModel+PreviewScanning</c>). 윈도우는 빈 문자열을
+    ///돌려주어 상태줄을 숨겼고, 그래서 스캐너가 물렸을 때 사용자 화면에는 <b>아무것도</b>
+    /// 뜨지 않았습니다 — 실기에서 두 번 연속 실패했는데 사유(<c>sane_read: Error during
+    /// device I/O</c>)는 진단 파일에만 있었습니다.
+    ///
+    /// 사용자가 멈춘 것은 실패가 아니므로 여기까지 오지 않습니다(호출부가 먼저 돌아갑니다).
+    /// </remarks>
     private string Describe(ScanRunOutcome outcome)
     {
-        if (!outcome.IsSuccess)
+        if (outcome.IsSuccess)
         {
-            ScannerDiagnosticsLog.Write(
-                "scan run failed: " +
-                (view.scanSession?.LastFailureName ??
-                    outcome.LastScanStatus?.ToString() ??
-                    "unavailable"));
+            return string.Empty;
         }
-        return string.Empty;
+        string reason = view.scanSession?.LastFailureDetail ??
+            view.scanSession?.LastFailureName ??
+            outcome.LastScanStatus?.ToString() ??
+            "unavailable";
+        ScannerDiagnosticsLog.Write("scan run failed: " + reason);
+        return AppResources.FormatIntegerAndText(
+            "frameScanErrorFormat", "Text", outcome.Published + 1, reason);
     }
 }

@@ -108,6 +108,31 @@ internal static class AppResources
         return result;
     }
 
+    /// <summary>
+    /// <c>%d</c> 하나와 <c>%@</c> 하나를 그 차례로 채웁니다 — macOS 의
+    /// <c>text(.frameScanErrorFormat, i + 1, error.localizedDescription)</c> 자리입니다.
+    /// </summary>
+    /// <remarks>
+    /// 두 표시가 섞인 문구는 <see cref="FormatInteger"/> 나 <see cref="FormatText"/> 하나로는
+    /// 채울 수 없습니다. 부르는 쪽에서 손으로 이어 붙이면 자리마다 다르게 틀리므로 여기에
+    /// 둡니다.
+    /// </remarks>
+    public static string FormatIntegerAndText(
+        string key,
+        string property,
+        int number,
+        string text)
+    {
+        string result = FormatInteger(key, property, number);
+        int marker = result.IndexOf("%@", StringComparison.Ordinal);
+        if (marker < 0)
+        {
+            throw new InvalidOperationException(
+                $"Localized resource has no text marker: {key}.{property}");
+        }
+        return string.Concat(result.AsSpan(0, marker), text, result.AsSpan(marker + 2));
+    }
+
     public static string FormatIntegers(
         string key,
         string property,

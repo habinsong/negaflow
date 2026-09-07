@@ -2,6 +2,24 @@ namespace Negaflow.Shell;
 
 internal static class ScannerScanExecutor
 {
+    /// <summary>플러그인이 보낸 오류 이벤트에서 사람이 읽을 문구를 꺼냅니다.</summary>
+    /// <remarks>
+    /// wire v2 의 오류 이벤트는 <c>{"type":"error", ..., "message":"..."}</c> 입니다.
+    /// 없거나 빈 문자열이면 <see langword="null"/> 을 돌려주고, 부르는 쪽이 이름으로 물러섭니다 —
+    /// 빈 따옴표를 화면에 내는 것보다 낫습니다.
+    /// </remarks>
+    private static string? PluginErrorMessage(System.Text.Json.JsonElement payload)
+    {
+        if (payload.ValueKind != System.Text.Json.JsonValueKind.Object ||
+            !payload.TryGetProperty("message", out System.Text.Json.JsonElement message) ||
+            message.ValueKind != System.Text.Json.JsonValueKind.String)
+        {
+            return null;
+        }
+        string? text = message.GetString();
+        return string.IsNullOrWhiteSpace(text) ? null : text;
+    }
+
     /// <summary>진행 줄을 읽어 넘기는 손입니다. 듣는 쪽이 없으면 만들지 않습니다.</summary>
     private static Action<string>? ProgressLineReader(
         Guid requestId,
@@ -121,9 +139,16 @@ internal static class ScannerScanExecutor
             ScannerPluginStreamEvent terminal = stream.TerminalEvent!;
             if (terminal.Type == "error")
             {
+                // **원문을 들고 나갑니다.** macOS 는 이 문구를 상태줄에 그대로 냅니다.
+                // 앞 판은 `PluginError` 라는 이름만 남겨, 스캐너가 물렸을 때 화면에는 아무
+                // 것도 뜨지 않았습니다.
+                string? detail = PluginErrorMessage(terminal.Payload);
                 ScannerDiagnosticsLog.WriteFailure(
-                    "PluginError", plugin, request, wireJson, stagingDirectory, process);
-                return new(ScannerPluginScanStatus.PluginError, process, stream.Status, null);
+                    $"PluginError ({detail ?? "no message"})",
+                    plugin, request, wireJson, stagingDirectory, process);
+                return new(
+                    ScannerPluginScanStatus.PluginError, process, stream.Status, null,
+                    FailureDetail: detail);
             }
             if (!ScannerScanCodec.TryValidateV2Result(
                     terminal.Payload,

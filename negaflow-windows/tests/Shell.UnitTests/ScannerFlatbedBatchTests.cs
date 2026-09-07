@@ -40,6 +40,150 @@ internal static class ScannerFlatbedBatchTests
             RunOne(frameCount);
         }
         VerifyPluginResolvedOncePerBatch();
+        VerifyPluginErrorTextReachesTheCaller();
+    }
+
+    /// <summary>
+    /// 스캔이 실패하면 <b>플러그인이 보낸 원문</b>이 부르는 쪽까지 와야 합니다.
+    /// </summary>
+    /// <remarks>
+    /// 실기: OpticFilm 8100 이 물려 두 번 연속 실패했는데 화면에는 <b>아무것도</b> 뜨지
+    /// 않았습니다. 사유(<c>ioFailure: scanimage exit 9: sane_read: Error during device I/O</c>)는
+    /// 플러그인이 보냈지만 <c>PluginError</c> 라는 이름만 남기고 문구는 버려졌고, 상태줄은
+    /// 빈 문자열을 받아 숨었습니다.
+    ///
+    /// macOS 는 컷마다
+    /// <c>reportError(text(.frameScanErrorFormat, i + 1, error.localizedDescription))</c> 로
+    /// 그 문구를 그대로 보여 줍니다. 여기서는 문구가 <c>ScanRunExecution.FailureDetail</c> 까지
+    /// 살아 오는지를 못 박습니다 — 상태줄은 그 값을 <c>frameScanErrorFormat</c> 에 끼웁니다.
+    /// </remarks>
+    private static void VerifyPluginErrorTextReachesTheCaller()
+    {
+        const string detail =
+            "ioFailure: scanimage exit 9: sane_read: Error during device I/O";
+        string parent = Path.Combine(AppContext.BaseDirectory, "scan-batch-error-tests");
+        string isolatedBase = Path.Combine(parent, $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        if (StorageRootResolver.ResolveForTests(isolatedBase).Roots is not { } roots)
+        {
+            Check(false, "scan_error_text_storage_root");
+            return;
+        }
+        var dispatcher = new ImmediateUiDispatcher();
+        try
+        {
+            using (CatalogSession session = CatalogSession.Open(roots).Session!)
+            {
+                Check(session.ReadOrCreate().IsSuccess, "scan_error_text_catalog_create");
+            }
+            var trust = new ScannerPluginTrustStore(Path.Combine(isolatedBase, "trust.json"));
+            var session2 = new ScanSessionController(
+                new FakeScannerGateway(Path.Combine(isolatedBase, "no-plugins")),
+                trust,
+                dispatcher,
+                new SimulatedScannerGateway(ScannerWorkflowTests.ReadTiffHeaderForTests));
+            session2.SetSimulatorEnabled(true);
+            session2.RefreshDevicesAsync().GetAwaiter().GetResult();
+            session2.SelectDeviceAsync(SimulatedScannerGateway.FilmScannerId)
+                .GetAwaiter().GetResult();
+            using var library = new LibraryHostService(
+                dispatcher,
+                new ScannerWorkflowTests.ThrowingDevelopExporter(),
+                ScannerWorkflowTests.ReadTiffHeaderForTests);
+            Check(library.Open(roots) == LibraryHostState.Open, "scan_error_text_library_open");
+            string rollDirectory = ScanStorageLayout.EnsureRollDirectory(
+                Path.Combine(roots.LibraryRoot, "Scans"),
+                FilmType.ColorNegative,
+                "ScanError",
+                DateTime.Now);
+
+            InstalledScannerPlugin? plugin = session2.Plugins.FirstOrDefault();
+            ScanRunExecution execution = ScanRunCoordinator.RunAsync(
+                new FailingScanGateway(detail),
+                () => (plugin, plugin?.TrustIdentity),
+                library,
+                _ => ScanStorageLayout.NextAvailablePath(rollDirectory, "ScanError"),
+                session2.BuildRequest,
+                preview: false,
+                requested: 1,
+                _ => null,
+                null,
+                null,
+                null,
+                CancellationToken.None).GetAwaiter().GetResult();
+
+            Check(execution.Outcome.Published == 0, "scan_error_text_publishes_nothing");
+            Check(
+                execution.FailureName == ScannerPluginScanStatus.PluginError.ToString(),
+                "scan_error_text_keeps_the_status_name",
+                () => execution.FailureName ?? "null");
+            // **이 한 줄이 사용자가 보는 것입니다.** 앞 판은 여기가 null 이었습니다.
+            Check(
+                execution.FailureDetail == detail,
+                "scan_error_text_keeps_the_plugin_message",
+                () => execution.FailureDetail ?? "null");
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(isolatedBase) &&
+                    StoragePathPolicy.IsLexicallyContained(parent, isolatedBase))
+                {
+                    Directory.Delete(isolatedBase, recursive: true);
+                }
+            }
+            catch (IOException)
+            {
+            }
+        }
+    }
+
+    /// <summary>플러그인 오류를 문구와 함께 돌려주는 관문입니다.</summary>
+    private sealed class FailingScanGateway(string detail) : IScannerPluginGateway
+    {
+        public IReadOnlyList<InstalledScannerPlugin> Discover() => [];
+
+        public Task<ScannerPluginDetectResult> DetectAsync(
+            InstalledScannerPlugin plugin,
+            ScannerPluginTrustIdentity approvedIdentity,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<ScannerPluginCapabilitiesResult> GetCapabilitiesAsync(
+            InstalledScannerPlugin plugin,
+            ScannerPluginTrustIdentity approvedIdentity,
+            ScannerPluginDevice device,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<ScannerPluginLibraryScanResult> ScanAndPublishAsync(
+            InstalledScannerPlugin plugin,
+            ScannerPluginTrustIdentity approvedIdentity,
+            ScannerPluginScanRequest request,
+            LibraryHostService library,
+            ImageTransformRecipe? initialTransform,
+            bool isPreviewScan,
+            CancellationToken cancellationToken,
+            Action<ScanProgressReport>? onProgress = null) =>
+            Task.FromResult(new ScannerPluginLibraryScanResult(
+                ScannerPluginLibraryScanStatus.ScanFailed,
+                new ScannerPluginScanResult(
+                    ScannerPluginScanStatus.PluginError,
+                    null,
+                    null,
+                    null,
+                    null,
+                    detail),
+                null));
+
+        public Task<ScannerPluginScanResult> ScanAsync(
+            InstalledScannerPlugin plugin,
+            ScannerPluginTrustIdentity approvedIdentity,
+            ScannerPluginScanRequest request,
+            CancellationToken cancellationToken,
+            Action<ScanProgressReport>? onProgress = null) =>
+            Task.FromResult(new ScannerPluginScanResult(
+                ScannerPluginScanStatus.PluginError, null, null, null, null, detail));
     }
 
     /// <summary>

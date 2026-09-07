@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -1036,6 +1036,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="scanSection.Text" xml:space="preserve"><value>Scannen</value><comment>AppLocalizedPhrase.scanSection</comment></data>
   <data name="scanStart.Content" xml:space="preserve"><value>Scannen</value><comment>AppLocalizedPhrase.scan</comment></data>
   <data name="scanUntitledFilm.Text" xml:space="preserve"><value>Unbenannter Film</value><comment>AppLocalizedPhrase.untitledFilm</comment></data>
+  <data name="frameScanErrorFormat.Text" xml:space="preserve"><value>Scanfehler bei Bild %d: %@</value><comment>AppLocalizedPhrase.frameScanErrorFormat</comment></data>
   <data name="scanBusy.Text" xml:space="preserve"><value>Ein Scan läuft bereits.</value><comment>AppLocalizedPhrase.scanBusy</comment></data>
   <data name="scanWaitingStatus.Text" xml:space="preserve"><value>Warten auf Scannerverbindung</value><comment>AppLocalizedPhrase.scannerWaitingStatus</comment></data>
   <data name="exportBatchFrameProgress.Text" xml:space="preserve"><value>Bild %d/%d</value><comment>AppLocalizedPhrase.batchFrameProgressFormat</comment></data>

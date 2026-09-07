@@ -17,8 +17,15 @@ namespace Negaflow.Shell.UnitTests;
 internal static class ResourceFileTests
 {
     /// <summary>부르는 자리를 찾는 무늬입니다. 열쇠와 속성 두 조각을 잡습니다.</summary>
+    /// <remarks>
+    /// <c>Format\w*</c> 로 **모든** 서식 손을 받습니다. 앞 판은
+    /// <c>(?:Get|FormatInteger|FormatIntegers)</c> 처럼 이름을 하나씩 적어, 새 손을 만들면
+    /// (<c>FormatText</c>·<c>FormatIntegerAndText</c>) 그 자리의 열쇠가 검사를 통째로
+    /// 빠져나갔습니다 — 없는 열쇠는 빌드도 통과하고 화면을 여는 순간 창을 죽입니다.
+    /// <c>scripts/check-localized-keys.py</c> 도 같은 무늬를 씁니다.
+    /// </remarks>
     private const string RawPattern =
-        """AppResources\.(?:Get|FormatInteger|FormatIntegers)\(\s*"([^"]+)"\s*,\s*"([^"]+)""";
+        """AppResources\.(?:Get|Format\w*)\(\s*"([^"]+)"\s*,\s*"([^"]+)""";
 
     private static readonly string[] Languages =
         ["en-US", "ko-KR", "ja-JP", "de-DE", "fr-FR", "zh-Hans"];

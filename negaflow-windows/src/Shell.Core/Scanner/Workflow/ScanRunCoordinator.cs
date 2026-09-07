@@ -9,12 +9,17 @@ namespace Negaflow.Shell;
 /// <param name="PreviewScanArea">
 /// 프리뷰를 찍을 때 스캐너에 보낸 영역입니다. 프리뷰 안의 비율을 밀리미터로 되돌리는 자입니다.
 /// </param>
+/// <param name="FailureDetail">
+/// 플러그인이 보낸 오류 원문입니다. 이름(<paramref name="FailureName"/>)만으로는 사용자가
+/// 무엇을 해야 하는지 알 수 없습니다 — macOS 는 이 원문을 상태줄에 그대로 냅니다.
+/// </param>
 internal sealed record ScanRunExecution(
     ScanRunOutcome Outcome,
     string? FailureName,
     string? PreviewPath,
     string? PreviewFrameId = null,
-    ScannerPluginScanArea? PreviewScanArea = null);
+    ScannerPluginScanArea? PreviewScanArea = null,
+    string? FailureDetail = null);
 
 internal static class ScanRunCoordinator
 {
@@ -36,6 +41,7 @@ internal static class ScanRunCoordinator
         ArgumentNullException.ThrowIfNull(initialTransformForIndex);
         int published = 0;
         string? failureName = null;
+        string? failureDetail = null;
         string? previewPath = null;
         string? previewFrameId = null;
         ScannerPluginScanArea? previewScanArea = null;
@@ -123,6 +129,7 @@ internal static class ScanRunCoordinator
                         break;
                     }
                     failureName = scanned.Status.ToString();
+                    failureDetail = scanned.FailureDetail;
                     stopReason = $"preview scan failed at index={index}: {failureName}";
                     break;
                 }
@@ -211,6 +218,7 @@ internal static class ScanRunCoordinator
                 failureName = result.Scan.Status == ScannerPluginScanStatus.Completed
                     ? result.Status.ToString()
                     : result.Scan.Status.ToString();
+                failureDetail = result.Scan.FailureDetail;
                 stopReason = $"scan failed at index={index}: {failureName}";
                 break;
             }
@@ -234,6 +242,7 @@ internal static class ScanRunCoordinator
             failureName,
             previewPath,
             previewFrameId,
-            previewScanArea);
+            previewScanArea,
+            failureDetail);
     }
 }

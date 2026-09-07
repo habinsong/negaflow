@@ -213,12 +213,19 @@ public enum ScannerPluginScanStatus
     ArtifactCommitFailed,
 }
 
+/// <param name="FailureDetail">
+/// 플러그인이 보낸 오류 <b>원문</b>입니다. macOS 는 이것을 화면에 그대로 냅니다
+/// (<c>frameScanErrorFormat</c> 의 <c>%@</c> = <c>error.localizedDescription</c>).
+/// 이름만 남기면 사용자는 스캔이 왜 죽었는지 알 길이 없습니다 — 실기에서 OpticFilm 8100 이
+/// 물렸을 때 화면에는 아무것도 뜨지 않았고, 사유는 진단 파일에만 있었습니다.
+/// </param>
 public sealed record ScannerPluginScanResult(
     ScannerPluginScanStatus Status,
     ScannerPluginProcessResult? Process,
     ScannerPluginStreamStatus? ProtocolStatus,
     ScannerArtifactCommitResult? ArtifactCommit,
-    ScannerPluginScanArea? AppliedScanArea = null)
+    ScannerPluginScanArea? AppliedScanArea = null,
+    string? FailureDetail = null)
 {
     public bool IsSuccess => Status == ScannerPluginScanStatus.Completed &&
         ArtifactCommit is { IsSuccess: true };

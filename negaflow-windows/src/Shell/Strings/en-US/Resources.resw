@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -1036,6 +1036,7 @@ Load a scanner from Library to scan film.</value>
   <data name="scanSection.Text" xml:space="preserve"><value>Scan</value><comment>AppLocalizedPhrase.scanSection</comment></data>
   <data name="scanStart.Content" xml:space="preserve"><value>Scan</value><comment>AppLocalizedPhrase.scan</comment></data>
   <data name="scanUntitledFilm.Text" xml:space="preserve"><value>Untitled Film</value><comment>AppLocalizedPhrase.untitledFilm</comment></data>
+  <data name="frameScanErrorFormat.Text" xml:space="preserve"><value>Frame %d scan error: %@</value><comment>AppLocalizedPhrase.frameScanErrorFormat</comment></data>
   <data name="scanBusy.Text" xml:space="preserve"><value>A scan is already running.</value><comment>AppLocalizedPhrase.scanBusy</comment></data>
   <data name="scanWaitingStatus.Text" xml:space="preserve"><value>Waiting for scanner connection</value><comment>AppLocalizedPhrase.scannerWaitingStatus</comment></data>
   <data name="exportBatchFrameProgress.Text" xml:space="preserve"><value>Frame %d/%d</value><comment>AppLocalizedPhrase.batchFrameProgressFormat</comment></data>

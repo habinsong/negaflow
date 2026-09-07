@@ -1,4 +1,4 @@
-using Negaflow.Catalog;
+﻿using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
 
@@ -80,6 +80,17 @@ public sealed class ScanSessionController
 
     /// <summary>마지막 실패의 이유입니다. 성공하면 지웁니다.</summary>
     public string? LastFailureName { get; private set; }
+
+    /// <summary>
+    /// 마지막 실패에서 플러그인이 보낸 <b>원문</b>입니다. 성공하면 지웁니다.
+    /// </summary>
+    /// <remarks>
+    /// macOS 는 이 문구를 상태줄에 그대로 냅니다(<c>frameScanErrorFormat</c>). 이름만으로는
+    /// 사용자가 무엇을 해야 하는지 알 수 없습니다 — 실기에서 OpticFilm 8100 이 물렸을 때
+    /// 화면에는 아무것도 뜨지 않았고, 사유(<c>sane_read: Error during device I/O</c>)는
+    /// 진단 파일에만 있었습니다.
+    /// </remarks>
+    public string? LastFailureDetail { get; private set; }
 
     /// <summary>
     /// 마지막 프리뷰 스캔이 남긴 파일입니다. 자동 프레임 찾기가 이 그림에서 프레임을 셉니다.
@@ -296,6 +307,7 @@ public sealed class ScanSessionController
         }
         IsDetecting = true;
         LastFailureName = null;
+        LastFailureDetail = null;
         RaiseChanged();
         var found = new List<ScannerPluginDevice>();
         ScannerDiagnosticsLog.Write(
@@ -480,6 +492,7 @@ public sealed class ScanSessionController
             : null;
         IsScanning = true;
         LastFailureName = null;
+        LastFailureDetail = null;
         RaiseChanged();
         // **취소권은 세션이 가집니다.** 스캔 패널은 라이브러리뷰와 현상뷰 양쪽에 하나씩
         // 있고 각자 자기 실행을 들고 있었습니다. 그런데 취소 단추가 보이는 조건은 공유되는
@@ -505,6 +518,7 @@ public sealed class ScanSessionController
                 run.Token,
                 Progress).ConfigureAwait(false);
             LastFailureName = execution.FailureName;
+            LastFailureDetail = execution.FailureDetail;
             if (execution.PreviewPath is not null)
             {
                 LastPreviewPath = execution.PreviewPath;
