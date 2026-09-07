@@ -111,7 +111,7 @@ public enum PrintPackageRenderer {
         pixelsPerPoint: CGFloat
     ) -> CIImage? {
         var image = normalize(source)
-        // 90° 씩 필요한 횟수만큼 돌린다. 시트 방향 통일은 180°/270° 도 쓴다.
+        // 레이아웃이 지정한 90° 회전 횟수를 적용한다.
         for _ in 0..<max(0, min(3, item.quarterTurns)) {
             let height = image.extent.height
             image = image.transformed(by: CGAffineTransform(

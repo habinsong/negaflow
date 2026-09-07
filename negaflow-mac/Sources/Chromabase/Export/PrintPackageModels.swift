@@ -101,8 +101,8 @@ public struct PrintPackageSettings: Codable, Equatable, Sendable {
     public var contentMode: PrintPackageContentMode
     public var rotateToFit: Bool
     public var repeatOnePhotoPerPage: Bool
-    /// 켜면 시트에 올라간 모든 사진을 같은 방향(앱의 스캔 기본 방향)으로 돌려 배치한다.
-    /// 프레임 자체의 방향은 건드리지 않는다 — 이 시트에서만 보이는 배치다.
+    /// 켜면 현상 결과의 가로·세로를 첫 번째 비정사각형 사진에 맞춰 시트에 배치한다.
+    /// 스캔 기본 방향은 사용하지 않으며 프레임 자체의 방향은 그대로 둔다.
     public var normalizesSourceOrientation: Bool
     public var pictureTemplate: PrintPicturePackageTemplate
     public var customItems: [PrintCustomPackageItem]

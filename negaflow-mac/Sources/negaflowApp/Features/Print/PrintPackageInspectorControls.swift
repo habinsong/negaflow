@@ -76,7 +76,7 @@ struct PrintPackageInspectorControls: View {
         }
     }
 
-    /// 시트에 올라간 사진을 스캔 기본 방향으로 통일해 배치한다. 프레임 자체의 방향은 그대로다.
+    /// 현상 결과의 가로·세로를 맞춰 배치한다. 프레임 자체의 방향은 그대로다.
     private var normalizeOrientationField: some View {
         PrintInspectorBooleanSegmentedField(
             label: model.text(.printNormalizeOrientation),

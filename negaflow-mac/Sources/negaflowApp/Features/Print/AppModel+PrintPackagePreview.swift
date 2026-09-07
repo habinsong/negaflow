@@ -75,17 +75,21 @@ extension AppModel {
         )
     }
 
-    /// 시트 방향 통일이 켜져 있을 때, 사진마다 배치 단계에서 더 돌려야 할 90° 횟수.
-    /// 표시 중인 그림은 프레임의 회전이 이미 적용된 상태이므로, 스캔 기본 방향까지의 차이만 돌린다.
-    /// 프레임 자체(현상뷰·인화 단일 레이아웃)의 방향은 그대로 둔다.
+    /// 방향 통일은 현상 결과의 가로·세로를 첫 번째 비정사각형 사진에 맞춘다.
+    /// 회전과 크롭이 이미 적용된 크기를 기준으로 필요한 사진만 90° 돌린다.
     func printPackageForcedQuarterTurns(
         for frames: [ScanFrame],
         package: PrintPackageSettings
     ) -> [Int]? {
         guard package.normalizesSourceOrientation else { return nil }
-        let target = defaultScanRotation.rawValue
-        return frames.map { frame in
-            ((target - frame.imageTransform.rotation.rawValue) % 4 + 4) % 4
+        let sizes = frames.map { printPackageLayoutSize(for: $0) }
+        guard let reference = sizes.compactMap({ $0 }).first(where: { $0.width != $0.height }) else {
+            return frames.map { _ in 0 }
+        }
+        let landscape = reference.width > reference.height
+        return sizes.map { size in
+            guard let size, size.width != size.height else { return 0 }
+            return (size.width > size.height) == landscape ? 0 : 1
         }
     }
 

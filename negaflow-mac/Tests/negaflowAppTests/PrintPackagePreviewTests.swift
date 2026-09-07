@@ -1,5 +1,6 @@
 import Chromabase
 import CoreGraphics
+import CoreImage
 import Foundation
 import AppKit
 import XCTest
@@ -195,25 +196,121 @@ final class PrintPackagePreviewTests: XCTestCase {
         XCTAssertEqual(pages[0].items.map(\.sourceIndex), [0, 1, 2, 3, 4])
     }
 
-    /// 시트 방향 통일 — 프레임마다 회전이 달라도 배치 단계에서 스캔 기본 방향까지만 더 돌린다.
-    /// 프레임 자체의 회전은 건드리지 않는다.
-    func testOrientationNormalizationTurnsEverySourceToTheDefaultScanRotation() {
+    func testOrientationNormalizationUsesDevelopedAspectIncludingCrop() {
         let model = AppModel()
-        model.defaultScanRotation = .deg180
-        let upright = makeFrame(width: 6000, height: 4000)
-        let quarter = makeFrame(width: 6000, height: 4000, rotation: .deg90)
-        let flipped = makeFrame(width: 6000, height: 4000, rotation: .deg180)
+        let square = makeFrame(width: 4000, height: 4000, rotation: .deg180)
+        let landscape = makeFrame(width: 6000, height: 4000, rotation: .deg180)
+        let portrait = makeFrame(width: 6000, height: 4000, rotation: .deg90)
+        let rotatedLandscape = makeFrame(width: 4000, height: 6000, rotation: .deg270)
+        let croppedPortrait = makeFrame(width: 6000, height: 4000)
+        croppedPortrait.imageTransform.cropRect = SIMD4(0.1, 0, 0.4, 1)
+        let frames = [square, landscape, portrait, rotatedLandscape, croppedPortrait]
+        let transforms = frames.map(\.imageTransform)
         var package = PrintPackageSettings(mode: .contactSheet)
         package.normalizesSourceOrientation = true
 
-        let turns = model.printPackageForcedQuarterTurns(
-            for: [upright, quarter, flipped],
+        XCTAssertEqual(model.printPackageForcedQuarterTurns(
+            for: frames,
             package: package
+        ), [0, 0, 1, 0, 1])
+        XCTAssertEqual(model.printPackageForcedQuarterTurns(
+            for: [portrait, square, landscape, croppedPortrait, rotatedLandscape],
+            package: package
+        ), [0, 0, 1, 0, 1])
+        XCTAssertEqual(frames.map(\.imageTransform), transforms)
+    }
+
+    func testOrientationNormalizationDoesNotRotateSquareOrUnknownSources() {
+        let model = AppModel()
+        let package = PrintPackageSettings(normalizesSourceOrientation: true)
+        XCTAssertEqual(model.printPackageForcedQuarterTurns(
+            for: [
+                makeFrame(width: 4000, height: 4000, rotation: .deg90),
+                makeFrame(width: 0, height: 0),
+            ],
+            package: package
+        ), [0, 0])
+    }
+
+    func testPackagePagesPreserveDevelopedPixelsRegardlessOfDefaultScanRotation() throws {
+        let suiteName = "negaflow-print-orientation-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let model = AppModel(
+            presentationPreferencesStore: PresentationPreferencesStore(defaults: defaults)
+        )
+        let context = CIContext(options: [.useSoftwareRenderer: true])
+        let colorSpace = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB))
+        let source = CIImage(color: .red).cropped(to: CGRect(x: 0, y: 0, width: 40, height: 20))
+            .composited(over: CIImage(color: .green)
+                .cropped(to: CGRect(x: 40, y: 0, width: 40, height: 20)))
+            .composited(over: CIImage(color: .blue)
+                .cropped(to: CGRect(x: 0, y: 20, width: 40, height: 20)))
+            .composited(over: CIImage(color: CIColor(red: 1, green: 1, blue: 0))
+                .cropped(to: CGRect(x: 40, y: 20, width: 40, height: 20)))
+        let composition = PrintCompositionSettings(
+            paperSize: .fourBySix,
+            orientation: .landscape,
+            marginMM: 5,
+            dpi: 72,
+            perforationStyle: .none
         )
 
-        XCTAssertEqual(turns, [2, 1, 0])
-        XCTAssertEqual(upright.imageTransform.rotation, .deg0)
-        XCTAssertEqual(quarter.imageTransform.rotation, .deg90)
+        for sourceKind in [FrameSource.scannerTIFF, .importedFile] {
+            for rotation in ImageRotation.allCases {
+                let frame = makeFrame(width: 80, height: 40, rotation: rotation, sourceKind: sourceKind)
+                frame.imageTransform.flipHorizontal = true
+                let transform = frame.imageTransform
+                let developed = ImageTransformStage.apply(to: source, transform: transform)
+                let size = try XCTUnwrap(model.printPackageLayoutSize(for: frame))
+                XCTAssertEqual(size, developed.extent.size)
+
+                for scanRotation in ImageRotation.allCases {
+                    model.defaultScanRotation = scanRotation
+                    for mode in PrintPackageLayoutMode.allCases {
+                        for normalizes in [false, true] {
+                            let package = PrintPackageSettings(
+                                mode: mode,
+                                contactRows: 1,
+                                contactColumns: 1,
+                                normalizesSourceOrientation: normalizes
+                            )
+                            let page = try XCTUnwrap(PrintPackageLayout.make(
+                                sourceSizes: [size],
+                                composition: composition,
+                                package: package,
+                                forcedQuarterTurns: model.printPackageForcedQuarterTurns(
+                                    for: [frame],
+                                    package: package
+                                )
+                            )?.first)
+                            let message = "\(sourceKind), \(mode), rotation=\(rotation), scan=\(scanRotation), normalize=\(normalizes)"
+                            XCTAssertTrue(page.items.allSatisfy { $0.quarterTurns == 0 }, message)
+                            let rendered = try XCTUnwrap(PrintPackageRenderer.renderPage(
+                                sources: [PrintPackageRenderSource(image: developed)],
+                                layout: page,
+                                dpi: composition.dpi
+                            ))
+                            let destination = try XCTUnwrap(page.items.first?.destinationRectPoints)
+                            for x in [0.25, 0.75] {
+                                for y in [0.25, 0.75] {
+                                    let expected = pixel(
+                                        in: developed, rect: developed.extent, x: x, y: y,
+                                        context: context, colorSpace: colorSpace
+                                    )
+                                    let actual = pixel(
+                                        in: rendered, rect: destination, x: x, y: y,
+                                        context: context, colorSpace: colorSpace
+                                    )
+                                    XCTAssertEqual(actual, expected, message)
+                                }
+                            }
+                            XCTAssertEqual(frame.imageTransform, transform)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     func testOrientationNormalizationIsOffByDefault() {
@@ -255,7 +352,8 @@ final class PrintPackagePreviewTests: XCTestCase {
     private func makeFrame(
         width: Int,
         height: Int,
-        rotation: ImageRotation = .deg0
+        rotation: ImageRotation = .deg0,
+        sourceKind: FrameSource = .importedFile
     ) -> ScanFrame {
         var transform = ImageTransform.identity
         transform.rotation = rotation
@@ -263,11 +361,36 @@ final class PrintPackagePreviewTests: XCTestCase {
             scanIndex: 1,
             rawScanURL: URL(fileURLWithPath: "/tmp/negaflow-print-\(UUID().uuidString).tiff"),
             filmType: .colorNegative,
-            sourceKind: .importedFile,
+            sourceKind: sourceKind,
             sourcePixelWidth: width,
             sourcePixelHeight: height,
             initialTransform: transform
         )
+    }
+
+    private func pixel(
+        in image: CIImage,
+        rect: CGRect,
+        x: CGFloat,
+        y: CGFloat,
+        context: CIContext,
+        colorSpace: CGColorSpace
+    ) -> [UInt8] {
+        var bytes = [UInt8](repeating: 0, count: 4)
+        context.render(
+            image,
+            toBitmap: &bytes,
+            rowBytes: 4,
+            bounds: CGRect(
+                x: floor(rect.minX + rect.width * x),
+                y: floor(rect.minY + rect.height * y),
+                width: 1,
+                height: 1
+            ),
+            format: .RGBA8,
+            colorSpace: colorSpace
+        )
+        return bytes
     }
 
     private func makeImage(pixelWidth: Int, logicalWidth: CGFloat? = nil) throws -> NSImage {
