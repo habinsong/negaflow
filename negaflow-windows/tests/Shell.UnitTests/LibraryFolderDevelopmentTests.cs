@@ -17,7 +17,8 @@ internal static class LibraryFolderDevelopmentTests
         VerifyVisibleTargets();
         VerifyApply();
         VerifyApplyRerendersThumbnails();
-        VerifyPreviewScansAndFailuresAreSeparated();
+        VerifyPreviewScansAndFailedRendersAreCounted();
+        VerifyProgressArithmeticMatchesMac();
     }
 
     /// <summary>macOS 는 폴더 머리줄에 MAIN·HS·SP·F135·HR 다섯만 냅니다.</summary>
@@ -195,7 +196,7 @@ internal static class LibraryFolderDevelopmentTests
                 () => string.Join(
                     " ",
                     updates.Select(update =>
-                        $"{update.CompletedCount}/{update.TotalCount}!{update.FailedCount}")));
+                        $"{update.CompletedCount}/{update.TotalCount}")));
 
             byte[]?[] after = [.. host.Frames.Select(frame => thumbnails.TryGet(frame.Id))];
             Check(
@@ -225,7 +226,8 @@ internal static class LibraryFolderDevelopmentTests
     }
 
     /// <summary>
-    /// 폴더 적용은 <b>임시 스캔 프리뷰를 건너뛰고</b>, 실패한 장은 성공과 갈라 셉니다(W73).
+    /// 폴더 적용은 <b>임시 스캔 프리뷰를 건너뛰고</b>, 렌더가 밀리거나 실패한 장도 macOS 처럼
+    /// 그냥 하나 셉니다.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -234,15 +236,19 @@ internal static class LibraryFolderDevelopmentTests
     /// 목록에 두 장이 남습니다.
     /// </para>
     /// <para>
-    /// 실패도 성공과 섞으면 안 됩니다. 열 장 중 셋이 디코드에 실패했는데 진행률이 100%
-    /// 로만 끝나면 사용자는 다 됐다고 믿고 넘어갑니다 - 그래서 마지막 진행률이
-    /// <c>FailedCount</c> 를 들고 옵니다.
+    /// 예전에는 실패를 따로 세어 <c>FailedCount</c> 로 올리고 상태줄에 "적용 실패"를 냈습니다(W73).
+    /// macOS 에 없는 Windows 전용이었고, <b>실패로 세던 것이 실은 밀린 렌더</b>였습니다 —
+    /// <see cref="ThumbnailService.RerenderAsync"/> 는 그 사이 같은 프레임에 더 새 티켓이 걸리면
+    /// 자기 결과를 버리고 <c>false</c> 를 냅니다. 곧 새 그림이 오는 정상 경로인데 사용자에게는
+    /// 실패로 보였습니다. macOS <c>developLibraryFolderFrame</c> 은 아무것도 돌려주지 않고
+    /// 그룹 작업이 끝나면 하나 올릴 뿐이라, 여기서도 렌더가 <c>false</c> 를 내도 진행률은
+    /// 그대로 N/N 으로 끝나야 합니다.
     /// </para>
     /// <para>
     /// 취소도 같은 자리입니다. 누른 즉시 남은 장을 걸지 않아야 합니다.
     /// </para>
     /// </remarks>
-    private static void VerifyPreviewScansAndFailuresAreSeparated()
+    private static void VerifyPreviewScansAndFailedRendersAreCounted()
     {
         string isolatedBase = Path.Combine(
             Path.Combine(AppContext.BaseDirectory, "library-folder-preview-tests"),
@@ -302,9 +308,19 @@ internal static class LibraryFolderDevelopmentTests
 
             Check(changed == 2, "library_folder_apply_counts_only_real_frames",
                 () => changed.ToString());
-            Check(updates.Count > 0 && updates[^1].FailedCount > 0,
-                "library_folder_apply_reports_failures_apart_from_success",
-                () => updates.Count > 0 ? updates[^1].FailedCount.ToString() : "no updates");
+            // 두 번째 장은 렌더가 false 를 냅니다. macOS 는 그래도 하나 세므로 진행률은
+            // 0,1,2 로 올라가 2/2 로 끝나야 합니다 - 도중에 멈추거나 되돌아가면 안 됩니다.
+            LibraryFolderDevelopmentProgress[] seen;
+            lock (updates) { seen = [.. updates]; }
+            Check(
+                seen.Length > 0 &&
+                seen[^1] == new LibraryFolderDevelopmentProgress(2, 2) &&
+                seen[^1].Percent == 100 &&
+                seen.Zip(seen.Skip(1)).All(pair =>
+                    pair.Second.CompletedCount >= pair.First.CompletedCount),
+                "library_folder_apply_counts_a_failed_render_like_mac",
+                () => string.Join(
+                    " ", seen.Select(update => $"{update.CompletedCount}/{update.TotalCount}")));
 
             // 이미 취소된 토큰이면 렌더를 아예 걸지 않습니다.
             using CancellationTokenSource cancelled = new();
@@ -332,6 +348,37 @@ internal static class LibraryFolderDevelopmentTests
                 Directory.Delete(isolatedBase, recursive: true);
             }
         }
+    }
+
+    /// <summary>
+    /// 진행률의 셈이 macOS <c>LibraryTaskProgress</c> 그대로인지 봅니다 — 값 자르기,
+    /// <c>fraction</c>, 그리고 <c>percent</c> 의 반올림 방향.
+    /// </summary>
+    /// <remarks>
+    /// Swift 의 <c>rounded()</c> 는 0.5 를 0 에서 <b>먼 쪽</b>으로 올립니다. C# <c>Math.Round</c>
+    /// 의 기본은 짝수로 붙이므로, 그냥 옮기면 여덟 장 중 한 장에서 맥은 13% 여기는 12% 가
+    /// 됩니다. 눈에 잘 안 띄는 대신 한 번 갈리면 계속 갈리는 자리라 값으로 못박습니다.
+    /// </remarks>
+    private static void VerifyProgressArithmeticMatchesMac()
+    {
+        Check(
+            new LibraryFolderDevelopmentProgress(1, 8).Percent == 13 &&
+            new LibraryFolderDevelopmentProgress(3, 8).Percent == 38,
+            "library_folder_progress_percent_rounds_away_from_zero",
+            () => $"{new LibraryFolderDevelopmentProgress(1, 8).Percent}/" +
+                  $"{new LibraryFolderDevelopmentProgress(3, 8).Percent}");
+        Check(
+            new LibraryFolderDevelopmentProgress(0, 0).Percent == 0 &&
+            new LibraryFolderDevelopmentProgress(0, 0).Fraction == 0.0,
+            "library_folder_progress_empty_folder_is_zero");
+        Check(
+            new LibraryFolderDevelopmentProgress(1, 4).Fraction == 0.25,
+            "library_folder_progress_fraction_matches_mac");
+        // macOS init 은 값을 자릅니다 — totalCount = max(0,·), completedCount = min(max(0,·), total).
+        Check(
+            new LibraryFolderDevelopmentProgress(5, 2) == new LibraryFolderDevelopmentProgress(2, 2) &&
+            new LibraryFolderDevelopmentProgress(-1, -4) == new LibraryFolderDevelopmentProgress(0, 0),
+            "library_folder_progress_clamps_like_mac");
     }
 
     /// <summary>부를 때마다 다른 바이트를 내어 썸네일이 실제로 갈렸는지 보이게 합니다.</summary>

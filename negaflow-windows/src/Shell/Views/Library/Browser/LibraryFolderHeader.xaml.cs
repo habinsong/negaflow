@@ -60,9 +60,7 @@ public sealed partial class LibraryFolderHeader : UserControl
     public void ShowProgress(LibraryFolderDevelopmentProgress update)
     {
         ProgressPanel.Visibility = Visibility.Visible;
-        ProgressBarControl.Value = update.TotalCount == 0
-            ? 0.0
-            : (double)update.CompletedCount / update.TotalCount;
+        ProgressBarControl.Value = update.Fraction;
         ProgressPercentText.Text = string.Create(
             System.Globalization.CultureInfo.CurrentCulture,
             $"{update.Percent}%");

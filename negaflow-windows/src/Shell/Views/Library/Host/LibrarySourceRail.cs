@@ -260,12 +260,7 @@ internal sealed class LibrarySourceRail
     /// </summary>
     private void ReportFolderProgress(LibraryFolderHeader header, LibraryFolderDevelopmentProgress update)
     {
-        void Show()
-        {
-            header.ShowProgress(update);
-            if (update.FailedCount > 0)
-            { view.ControlsPanel.ImportStatusText.Text = AppResources.Get("libraryProcessApplyFailed", "Text"); }
-        }
+        void Show() => header.ShowProgress(update);
         if (view.DispatcherQueue is not { } queue || queue.HasThreadAccess) { Show(); }
         else { _ = queue.TryEnqueue(Show); }
     }

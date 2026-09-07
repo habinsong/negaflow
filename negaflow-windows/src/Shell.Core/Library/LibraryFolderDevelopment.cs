@@ -3,11 +3,39 @@ using Negaflow.Shell.Develop;
 
 namespace Negaflow.Shell.Library;
 
-/// <summary>한 번의 폴더 적용이 어디까지 갔는지입니다. macOS <c>LibraryTaskProgress</c>.</summary>
-public readonly record struct LibraryFolderDevelopmentProgress(int CompletedCount, int TotalCount)
+/// <summary>
+/// 한 번의 폴더 적용이 어디까지 갔는지입니다. macOS <c>LibraryTaskProgress</c> 그대로 —
+/// 센 것과 전체, 둘뿐입니다.
+/// </summary>
+/// <remarks>
+/// 예전에는 <c>FailedCount</c> 도 들고 다녔습니다. macOS 에 없는 Windows 전용이었고, 실패로
+/// 세던 것이 실은 <b>밀린 렌더</b>였습니다 — <see cref="ThumbnailService.RerenderAsync"/> 는
+/// 그 사이 같은 프레임에 더 새 티켓이 걸리면 자기 결과를 버리고 <c>false</c> 를 냅니다.
+/// 실패가 아니라 "곧 새 것이 온다"는 뜻인데, 화면에는 "적용 실패"로 나갔습니다. macOS
+/// <c>developLibraryFolderFrame</c> 은 아무것도 돌려주지 않고, 그룹 작업이 끝나면 그저 하나
+/// 올립니다 — 여기도 같게 둡니다.
+/// </remarks>
+public readonly record struct LibraryFolderDevelopmentProgress
 {
-    public int FailedCount { get; init; }
-    public int Percent => TotalCount == 0 ? 0 : (int)Math.Round(100.0 * CompletedCount / TotalCount);
+    public LibraryFolderDevelopmentProgress(int completedCount, int totalCount)
+    {
+        TotalCount = Math.Max(0, totalCount);
+        CompletedCount = Math.Min(Math.Max(0, completedCount), TotalCount);
+    }
+
+    public int CompletedCount { get; }
+
+    public int TotalCount { get; }
+
+    /// <summary>macOS <c>fraction</c>.</summary>
+    public double Fraction => TotalCount == 0 ? 0.0 : (double)CompletedCount / TotalCount;
+
+    /// <summary>
+    /// macOS <c>percent</c> — <c>Int((fraction * 100).rounded())</c> 입니다. Swift 의
+    /// <c>rounded()</c> 는 0.5 를 0 에서 <b>먼 쪽</b>으로 올립니다. <c>Math.Round</c> 의 기본은
+    /// 짝수로 붙이므로, 여덟 장 중 한 장(12.5%)에서 맥은 13% 여기는 12% 로 갈렸습니다.
+    /// </summary>
+    public int Percent => (int)Math.Round(Fraction * 100.0, MidpointRounding.AwayFromZero);
 }
 
 /// <summary>
@@ -118,7 +146,10 @@ public static class LibraryFolderDevelopment
         Action<LibraryFolderDevelopmentProgress>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(frames);
-        int total = frames.Count;
+        // macOS 는 프리뷰 스캔을 <b>먼저 걸러낸 뒤</b> 그 수를 분모로 씁니다
+        // (`applyLibraryFolderDevelopment` 의 `frames.count`). 프리뷰까지 세면 폴더에 임시
+        // 스캔이 하나 섞여 있을 때 맥은 "2/2" 로 끝나는 자리가 여기서는 "2/3" 이 됩니다.
+        int total = frames.Count(frame => !frame.IsPreviewScan);
         progress?.Invoke(new LibraryFolderDevelopmentProgress(0, total));
         IReadOnlyList<LibraryFrameSnapshot> configured = Configure(host, frames, process, target);
         for (int completed = 1; completed <= total; completed++)
@@ -147,7 +178,10 @@ public static class LibraryFolderDevelopment
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(frames);
-        int total = frames.Count;
+        // macOS 는 프리뷰 스캔을 <b>먼저 걸러낸 뒤</b> 그 수를 분모로 씁니다
+        // (`applyLibraryFolderDevelopment` 의 `frames.count`). 프리뷰까지 세면 폴더에 임시
+        // 스캔이 하나 섞여 있을 때 맥은 "2/2" 로 끝나는 자리가 여기서는 "2/3" 이 됩니다.
+        int total = frames.Count(frame => !frame.IsPreviewScan);
         // 사용자가 적용을 누른 시점에 선택을 먼저 기록합니다. 렌더를 기다린 뒤 기록하면 그
         // 사이 현상뷰에서 더 최근에 고른 값을 오래된 폴더 작업이 덮어씁니다.
         IReadOnlyList<LibraryFrameSnapshot> configured = Configure(host, frames, process, target);
@@ -162,7 +196,6 @@ public static class LibraryFolderDevelopment
         }
 
         int completed = 0;
-        int failed = 0;
         // macOS 는 `while await group.next()` 한 흐름에서 세고 곧바로 알립니다 - 값과 보고가 같은
         // 차례로 나갑니다. 세는 일과 알리는 일을 렌더 작업마다 흩어 놓으면 `Interlocked` 로
         // 값은 맞아도 <b>부르는 차례가 뒤집혀</b>, 막대가 뒤로 가고 마지막이 50% 로 끝납니다.
@@ -177,7 +210,7 @@ public static class LibraryFolderDevelopment
         {
             if (completed < total)
             {
-                progress?.Invoke(new LibraryFolderDevelopmentProgress(total, total) { FailedCount = failed });
+                progress?.Invoke(new LibraryFolderDevelopmentProgress(total, total));
             }
         }
 
@@ -185,21 +218,19 @@ public static class LibraryFolderDevelopment
 
         async Task RenderOneAsync(LibraryFrameSnapshot frame)
         {
-            bool rendered;
+            // macOS `developLibraryFolderFrame` 은 아무것도 돌려주지 않습니다. 렌더가 밀렸든
+            // 실패했든 그룹 작업이 끝나면 하나 올릴 뿐입니다 - 여기도 같습니다.
             try
             {
-                rendered = await thumbnails.RerenderAsync(frame, cancellationToken).ConfigureAwait(false);
+                _ = await thumbnails.RerenderAsync(frame, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
-                rendered = false;
             }
 
             lock (gate)
             {
-                if (!rendered) { failed++; }
-                progress?.Invoke(
-                    new LibraryFolderDevelopmentProgress(++completed, total) { FailedCount = failed });
+                progress?.Invoke(new LibraryFolderDevelopmentProgress(++completed, total));
             }
         }
     }
