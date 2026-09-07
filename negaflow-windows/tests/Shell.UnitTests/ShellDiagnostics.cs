@@ -16,6 +16,7 @@ internal static class ShellDiagnostics
             LibraryViewingMemoryDiagnostics.TryRun(args, out exitCode) ||
             LibraryTerminationDiagnostics.TryRun(args, out exitCode) ||
             LibraryTerminationDiagnostics.TryRunSaveCheck(args, out exitCode) ||
+            GammaPathDiagnostics.TryRun(args, out exitCode) ||
             CatalogSeedDiagnostics.TryRun(args, out exitCode) ||
             CatalogInspectionDiagnostics.TryRun(args, out exitCode) ||
             DevelopPipelineDiagnostics.TryRun(args, out exitCode) ||
