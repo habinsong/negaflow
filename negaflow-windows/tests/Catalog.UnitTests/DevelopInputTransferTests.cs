@@ -72,6 +72,100 @@ internal static class DevelopInputTransferTests
             }
         }
         finally { if (Directory.Exists(directory)) { Directory.Delete(directory, recursive: true); } }
+
+        VerifyEveryInputScopeCombination();
+        VerifyEmptyScopeIsANoOp();
+        VerifyStoredPrecisionSurvivesTransfer();
+    }
+
+    /// <summary>
+    /// 입력 감마와 베이스 배율은 <b>서로 독립</b>이어야 합니다 — 네 조합을 모두 봅니다(W30).
+    /// </summary>
+    /// <remarks>
+    /// `Base` 를 함께 켜도 결과가 달라지면 안 됩니다. 앞 판의 생성자는 `Base` 하나로 셋을
+    /// 다 켰고(legacy), 그래서 "베이스만" 을 고른 사용자가 감마까지 덮어썼습니다. 여기서는
+    /// `Base` 를 켠 경우와 끈 경우를 나란히 돌려 그 사고가 다시 나지 않게 못 박습니다.
+    /// </remarks>
+    private static void VerifyEveryInputScopeCombination()
+    {
+        var source = Read(Record("combo-source", 1.8, 0.75));
+        var target = Read(Record("combo-target", 2.4, 1.25));
+        foreach (bool withBase in new[] { false, true })
+        foreach (bool gamma in new[] { false, true })
+        foreach (bool scale in new[] { false, true })
+        {
+            var scope = DevelopSettingsPasteScope.Empty with
+            {
+                Base = withBase,
+                InputGamma = gamma,
+                BaseScale = scale,
+            };
+            var result = scope.Apply(source, target);
+            string name = $"combo_base{withBase}_gamma{gamma}_scale{scale}";
+            Check(
+                result.InputGamma == (gamma ? source.InputGamma : target.InputGamma),
+                name + "_gamma",
+                () => result.InputGamma.ToString());
+            Check(
+                result.Base.Scale == (scale ? source.Base.Scale : target.Base.Scale),
+                name + "_scale",
+                () => result.Base.Scale.ToString());
+        }
+    }
+
+    /// <summary>모든 범위를 끄면 아무 것도 하지 않아야 합니다(W31).</summary>
+    /// <remarks>
+    /// 빈 범위가 조용히 "전체 붙여넣기" 로 흐르면 사용자는 아무 것도 고르지 않고 사진을
+    /// 통째로 덮어씁니다. 되돌리기 한 번으로 못 돌아오는 자리입니다.
+    /// </remarks>
+    private static void VerifyEmptyScopeIsANoOp()
+    {
+        JsonObject targetRecord = Record("empty-target", 2.4, 1.25);
+        var source = Read(Record("empty-source", 1.8, 0.75));
+        var target = Read(targetRecord);
+        var empty = DevelopSettingsPasteScope.Empty;
+        Check(empty.IsEmpty, "empty_scope_reports_empty");
+        var applied = empty.Apply(source, target);
+        Check(applied.InputGamma == target.InputGamma && applied.Base == target.Base,
+            "empty_scope_changes_nothing");
+        var written = DevelopSettingsTransfer.Paste(targetRecord, source, target, empty);
+        Check(Read(targetRecord).InputGamma == target.InputGamma &&
+            Read(targetRecord).Base.Scale == target.Base.Scale,
+            "empty_scope_leaves_the_record_alone",
+            () => written.IsSuccess.ToString());
+    }
+
+    /// <summary>
+    /// 화면은 한 자리로 보여 주지만 <b>저장값은 그대로</b>여야 합니다(W33).
+    /// </summary>
+    /// <remarks>
+    /// <c>InputGammaValueInput.Round</c> 는 <b>사용자가 입력하거나 화면에 적을 때만</b> 씁니다.
+    /// 옮기는 길에서 반올림이 끼면 2.25 로 저장된 사진을 다른 사진에 붙여넣을 때마다 값이
+    /// 조금씩 움직입니다 — 붙여넣기를 반복하면 눈에 보이게 밀립니다.
+    /// </remarks>
+    private static void VerifyStoredPrecisionSurvivesTransfer()
+    {
+        const double precise = 2.253_75;
+        JsonObject sourceRecord = Record("precise-source", precise, 0.815);
+        JsonObject targetRecord = Record("precise-target", 2.4, 1.25);
+        var source = Read(sourceRecord);
+        var target = Read(targetRecord);
+        Check(source.InputGamma.Value == precise, "precision_survives_the_record_read",
+            () => source.InputGamma.Value?.ToString() ?? "null");
+
+        var scope = DevelopSettingsPasteScope.Empty with { InputGamma = true, BaseScale = true };
+        var applied = scope.Apply(source, target);
+        Check(applied.InputGamma.Value == precise, "precision_survives_apply",
+            () => applied.InputGamma.Value?.ToString() ?? "null");
+        Check(applied.Base.Scale == 0.815, "precision_survives_apply_for_scale",
+            () => applied.Base.Scale.ToString());
+
+        var result = DevelopSettingsTransfer.Paste(targetRecord, source, target, scope);
+        Check(result.FrameRecord is { } record && Read(record).InputGamma.Value == precise,
+            "precision_survives_the_record_write",
+            () => result.FrameRecord is { } written
+                ? Read(written).InputGamma.Value?.ToString() ?? "null"
+                : "no record");
     }
 
     private static LibraryFrameSnapshot Read(JsonObject record) =>

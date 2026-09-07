@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Negaflow.Catalog;
 using Negaflow.Interop;
@@ -17,6 +17,7 @@ internal static class ShellDiagnostics
             LibraryTerminationDiagnostics.TryRun(args, out exitCode) ||
             LibraryTerminationDiagnostics.TryRunSaveCheck(args, out exitCode) ||
             GammaPathDiagnostics.TryRun(args, out exitCode) ||
+            AutoAdjustCorpusDiagnostics.TryRun(args, out exitCode) ||
             CatalogSeedDiagnostics.TryRun(args, out exitCode) ||
             CatalogInspectionDiagnostics.TryRun(args, out exitCode) ||
             DevelopPipelineDiagnostics.TryRun(args, out exitCode) ||
