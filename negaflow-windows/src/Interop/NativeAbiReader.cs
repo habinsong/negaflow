@@ -98,9 +98,21 @@ internal static unsafe class NativeAbiReader
             sourceCommitSha1);
     }
 
+    /// <summary>
+    /// 이 셸이 그 엔진과 이야기할 수 있는지입니다.
+    /// </summary>
+    /// <remarks>
+    /// **경계를 시험할 수 있게 꺼내 둡니다.** 이 판정이 느슨해지면 예전 엔진이 그대로 실려
+    /// 입력 감마·베이스 배율을 <b>조용히 무시</b>합니다 — 사용자에게는 슬라이더를 움직여도
+    /// 그림이 안 바뀌는 것으로만 보이고, 어디에도 오류가 남지 않습니다. 그래서 호출 자리가
+    /// 아니라 <b>적재 시점</b>에서 막고, 그 막힘 자체를 시험합니다.
+    /// </remarks>
+    internal static bool IsCompatible(NativeAbiVersion version) =>
+        version.Major == SupportedMajor && version.Minor >= MinimumMinor;
+
     private static void ValidateVersion(NativeAbiVersion version)
     {
-        if (version.Major != SupportedMajor || version.Minor < MinimumMinor)
+        if (!IsCompatible(version))
         {
             throw new NativeBootstrapException(
                 NativeBootstrapFailure.AbiIncompatible,
