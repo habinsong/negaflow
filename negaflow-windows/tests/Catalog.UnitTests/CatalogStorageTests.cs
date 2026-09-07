@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
@@ -27,6 +27,7 @@ internal static class CatalogStorageTests
             CatalogSchemaCompatibilityTests.Run(roots);
             CatalogVersionMigrationTests.Run(roots);
             CatalogUpgradeSaveTests.Run(roots);
+            CatalogLongPathTests.Run(roots);
             DefectSidecarTests.Run(roots);
             DefectRecipeBatchTransactionTests.Run(roots);
             CatalogBackupRestoreTests.Run(roots);

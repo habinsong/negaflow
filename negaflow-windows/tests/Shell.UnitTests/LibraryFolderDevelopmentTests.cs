@@ -1,4 +1,4 @@
-using Negaflow.Catalog;
+﻿using Negaflow.Catalog;
 using Negaflow.Shell.Library;
 using static Negaflow.Shell.UnitTests.DevelopTestResults;
 using static Negaflow.Shell.UnitTests.TestAssert;
@@ -17,6 +17,7 @@ internal static class LibraryFolderDevelopmentTests
         VerifyVisibleTargets();
         VerifyApply();
         VerifyApplyRerendersThumbnails();
+        VerifyPreviewScansAndFailuresAreSeparated();
     }
 
     /// <summary>macOS 는 폴더 머리줄에 MAIN·HS·SP·F135·HR 다섯만 냅니다.</summary>
@@ -204,6 +205,116 @@ internal static class LibraryFolderDevelopmentTests
                     frame.Route.FilmType == FilmType.BlackAndWhiteNegative,
                     "library_folder_apply_async_wrote_process_and_target");
             }
+
+            thumbnails.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+        finally
+        {
+            if (Directory.Exists(isolatedBase))
+            {
+                Directory.Delete(isolatedBase, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 폴더 적용은 <b>임시 스캔 프리뷰를 건너뛰고</b>, 실패한 장은 성공과 갈라 셉니다(W73).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 프리뷰는 카탈로그에 올리지 않는 세션 프레임입니다. 폴더 적용이 그것까지 건드리면
+    /// 사용자가 아직 고르지도 않은 임시 그림에 프로세스가 박히고, 그 뒤 본 스캔이 오면
+    /// 목록에 두 장이 남습니다.
+    /// </para>
+    /// <para>
+    /// 실패도 성공과 섞으면 안 됩니다. 열 장 중 셋이 디코드에 실패했는데 진행률이 100%
+    /// 로만 끝나면 사용자는 다 됐다고 믿고 넘어갑니다 - 그래서 마지막 진행률이
+    /// <c>FailedCount</c> 를 들고 옵니다.
+    /// </para>
+    /// <para>
+    /// 취소도 같은 자리입니다. 누른 즉시 남은 장을 걸지 않아야 합니다.
+    /// </para>
+    /// </remarks>
+    private static void VerifyPreviewScansAndFailuresAreSeparated()
+    {
+        string isolatedBase = Path.Combine(
+            Path.Combine(AppContext.BaseDirectory, "library-folder-preview-tests"),
+            $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(isolatedBase).Roots!;
+        string thumbnailRoot = Path.Combine(isolatedBase, "thumbnails");
+        Directory.CreateDirectory(thumbnailRoot);
+        try
+        {
+            using (CatalogSession seed = CatalogSession.Open(roots).Session!)
+            {
+                seed.Write(new CatalogSnapshot(
+                    null,
+                    new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                    {
+                        [CatalogEntityTable.Frames] =
+                        [
+                            new("frame-1", FrameRecord("frame-1", "IMG_0001.tif", 0.0)),
+                            new("frame-2", FrameRecord("frame-2", "IMG_0002.tif", 0.0)),
+                        ],
+                    }));
+            }
+
+            FakeDispatcher dispatcher = new(accepts: true);
+            // 두 번째 장만 렌더에 실패합니다 - 실기의 "일부 디코드 실패" 자리입니다.
+            int call = 0;
+            FakeExporter exporter = new(_ =>
+                Interlocked.Increment(ref call) == 2 ? FailedResult("folder_apply_render") : OkResult());
+            using LibraryHostService host = new(dispatcher, exporter);
+            host.Open(roots);
+
+            // 프리뷰 프레임을 하나 섞습니다. 카탈로그에는 올라가지 않습니다.
+            LibraryFrameSnapshot preview = host.Frames[0] with
+            {
+                Id = "preview-frame",
+                IsPreviewScan = true,
+            };
+            List<LibraryFrameSnapshot> frames = [.. host.Frames, preview];
+
+            IReadOnlyList<LibraryFrameSnapshot> configured = LibraryFolderDevelopment.Configure(
+                host, frames, DevelopmentProcess.D76, DevelopTarget.Sp3000);
+            Check(configured.Count == 2, "library_folder_skips_the_preview_scan",
+                () => configured.Count.ToString());
+            Check(configured.All(frame => frame.Id != "preview-frame"),
+                "library_folder_never_returns_the_preview_scan");
+
+            CountingThumbnailCodec codec = new();
+            ThumbnailService thumbnails = new(exporter, codec, dispatcher, thumbnailRoot);
+            List<LibraryFolderDevelopmentProgress> updates = [];
+            int changed = LibraryFolderDevelopment.ApplyAsync(
+                host,
+                frames,
+                DevelopmentProcess.C41,
+                DevelopTarget.Main,
+                thumbnails,
+                update => { lock (updates) { updates.Add(update); } }).GetAwaiter().GetResult();
+
+            Check(changed == 2, "library_folder_apply_counts_only_real_frames",
+                () => changed.ToString());
+            Check(updates.Count > 0 && updates[^1].FailedCount > 0,
+                "library_folder_apply_reports_failures_apart_from_success",
+                () => updates.Count > 0 ? updates[^1].FailedCount.ToString() : "no updates");
+
+            // 이미 취소된 토큰이면 렌더를 아예 걸지 않습니다.
+            using CancellationTokenSource cancelled = new();
+            cancelled.Cancel();
+            int before = exporter.CallCount;
+            int afterCancel = LibraryFolderDevelopment.ApplyAsync(
+                host,
+                frames,
+                DevelopmentProcess.E6,
+                DevelopTarget.Main,
+                thumbnails,
+                null,
+                cancelled.Token).GetAwaiter().GetResult();
+            Check(exporter.CallCount == before,
+                "library_folder_cancelled_apply_renders_nothing",
+                () => (exporter.CallCount - before).ToString());
+            _ = afterCancel;
 
             thumbnails.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
