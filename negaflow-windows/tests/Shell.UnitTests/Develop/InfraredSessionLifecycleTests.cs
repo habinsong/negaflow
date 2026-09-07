@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Negaflow.Catalog;
 using Negaflow.Shell.Develop;
@@ -81,6 +81,8 @@ internal static class InfraredSessionLifecycleTests
             Check(reopened.Frames.Single() is
                   { DefectRecipe: { RecipeRevision: 2 }, DefectRecipeRevision: 2 },
                 "infrared_session_next_open_restores_new_session_recipe");
+
+            VerifyGammaKeepsDefectsAndInfrared(reopened, frameIdText, infraredPath, identity);
         }
         finally
         {
@@ -89,6 +91,71 @@ internal static class InfraredSessionLifecycleTests
             {
                 Directory.Delete(isolatedBase, recursive: true);
             }
+        }
+    }
+
+    /// <summary>
+    /// 입력 감마를 바꿔도 <b>결함 recipe 와 IR 은 그대로</b>여야 합니다(W46·W47·W77).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 감마는 원본을 <b>어떻게 읽을지</b>를 정할 뿐 원본 파일을 바꾸지 않습니다. 그런데
+    /// 감마 편집이 결함 recipe 를 무르면 사용자가 찍어 둔 먼지·긁힘이 통째로 사라지고,
+    /// 다시 칠하는 것 말고는 되돌릴 길이 없습니다. 반대로 recipe 를 들고 있으면서
+    /// <b>원본 신원</b>까지 새로 쓰면 다음 굽기가 엉뚱한 화소에 패치를 붙입니다.
+    /// </para>
+    /// <para>
+    /// IR 경로도 같습니다 — IR 파일은 RGB 와 별개로 스캔한 것이라 RGB 의 감마 해석이
+    /// 바뀌었다고 다시 잡을 이유가 없습니다.
+    /// </para>
+    /// <para>
+    /// 함께 확인하는 것: 감마 편집이 잰 base 는 무릅니다(<c>DevelopInputEditor.CreateEdit</c>).
+    /// 그것은 새 해석에서 base 를 다시 재야 하기 때문이며, 결함과는 다른 이야기입니다.
+    /// </para>
+    /// </remarks>
+    private static void VerifyGammaKeepsDefectsAndInfrared(
+        LibraryDocument document,
+        string frameIdText,
+        string infraredPath,
+        DefectSourceIdentity identity)
+    {
+        LibraryFrameSnapshot before = document.Frames.Single();
+        Check(before.DefectRecipe is not null, "gamma_defects_start_with_a_recipe");
+        int itemsBefore = before.DefectRecipe!.Items.Count;
+        ulong revisionBefore = before.DefectRecipeRevision;
+
+        foreach (InputGammaInterpretation gamma in new[]
+        {
+            InputGammaInterpretation.Power(1.8),
+            InputGammaInterpretation.Power(3.0),
+            InputGammaInterpretation.Automatic,
+        })
+        {
+            LibraryFrameSnapshot frame = document.Frames.Single();
+            Check(
+                document.Edit(frameIdText, DevelopInputEditor.CreateEdit(frame, gamma)) ==
+                    LibraryFrameError.None,
+                $"gamma_defects_edit_{gamma}");
+
+            LibraryFrameSnapshot after = document.Frames.Single();
+            Check(after.InputGamma == gamma, $"gamma_defects_applies_{gamma}",
+                () => after.InputGamma.ToString());
+            Check(after.DefectRecipe is not null, $"gamma_defects_recipe_survives_{gamma}");
+            Check(after.DefectRecipe!.Items.Count == itemsBefore,
+                $"gamma_defects_item_count_survives_{gamma}",
+                () => after.DefectRecipe!.Items.Count.ToString());
+            Check(after.DefectRecipeRevision == revisionBefore,
+                $"gamma_defects_revision_is_not_bumped_{gamma}",
+                () => after.DefectRecipeRevision.ToString());
+            // **원본 신원은 그대로입니다** - 감마는 파일을 바꾸지 않습니다.
+            Check(after.DefectRecipe!.SourceIdentity?.Sha256 == identity.Sha256 &&
+                  after.DefectRecipe!.SourceIdentity?.ByteCount == identity.ByteCount,
+                $"gamma_defects_keep_the_source_identity_{gamma}");
+            Check(after.InfraredPath == infraredPath, $"gamma_keeps_the_infrared_path_{gamma}",
+                () => after.InfraredPath ?? "null");
+            // 잰 base 는 무릅니다 - 새 해석에서 다시 재야 합니다.
+            Check(after.ManualBase is null && after.Base.Mode != BaseEstimationMode.Manual,
+                $"gamma_still_remeasures_the_base_{gamma}");
         }
     }
 
