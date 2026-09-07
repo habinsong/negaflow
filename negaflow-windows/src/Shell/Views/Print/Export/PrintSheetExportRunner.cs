@@ -29,6 +29,8 @@ internal sealed class PrintSheetExportRunner
     private readonly Panel textRasterHost;
     private readonly Action<string> report;
     private readonly Action<bool, ExportProgress> progress;
+    private readonly Func<string, System.Text.Json.Nodes.JsonObject?> frameParameters;
+    private readonly Func<string> engineVersion;
 
     private bool isRunning;
     private readonly OutputTaskGroup outputTasks = new();
@@ -39,29 +41,40 @@ internal sealed class PrintSheetExportRunner
         Func<WorkspacePresentationState?> state,
         Panel textRasterHost,
         Action<string> report,
-        Action<bool, ExportProgress>? progress = null)
+        Action<bool, ExportProgress>? progress = null,
+        Func<string, System.Text.Json.Nodes.JsonObject?>? frameParameters = null,
+        Func<string>? engineVersion = null)
     {
         this.sources = sources;
         this.state = state;
         this.textRasterHost = textRasterHost;
         this.report = report;
         this.progress = progress ?? ((_, _) => { });
+        this.frameParameters = frameParameters ?? (_ => null);
+        this.engineVersion = engineVersion ?? (() => "unknown");
     }
 
     /// <summary>출력 탭의 "내보내기" 폴더로, 고른 형식으로 판을 씁니다.</summary>
     internal Task RunExportAsync(ExportSettings settings) =>
-        outputTasks.RunAsync(() => RunAsync(settings.FolderPath, settings.Format, settings.JpegQuality, quick: false));
+        outputTasks.RunAsync(() => RunAsync(settings, quick: false));
 
     /// <summary>출력 탭의 "빠른 내보내기" 폴더로, 고른 형식으로 판을 씁니다.</summary>
     internal Task RunQuickExportAsync(QuickExportSettings settings) =>
-        outputTasks.RunAsync(() => RunAsync(settings.FolderPath, settings.Format, settings.JpegQuality, quick: true));
+        // 빠른 내보내기는 폴더·형식·품질만 다릅니다. 부속 파일은 macOS 와 같이 전부 끕니다.
+        outputTasks.RunAsync(() => RunAsync(
+            new ExportSettings
+            {
+                FolderPath = settings.FolderPath,
+                Format = settings.Format,
+                JpegQuality = settings.JpegQuality,
+            },
+            quick: true));
 
-    private async Task RunAsync(
-        string destinationFolder,
-        Negaflow.Interop.DevelopExportFormat format,
-        double jpegQuality,
-        bool quick)
+    private async Task RunAsync(ExportSettings settings, bool quick)
     {
+        string destinationFolder = settings.FolderPath;
+        Negaflow.Interop.DevelopExportFormat format = settings.Format;
+        double jpegQuality = settings.JpegQuality;
         if (isRunning)
         {
             return;
@@ -90,6 +103,13 @@ internal sealed class PrintSheetExportRunner
             return;
         }
 
+        // 낱장이냐 패키지냐로 부속 파일 정책이 갈립니다. macOS 도 같은 자리에서 갈라
+        // 패키지에는 사이드카·원본 사본·MAIN 을 넘기지 않습니다.
+        bool package = PrintPreferences.PackageModeFor(presentation.Current.Print.LayoutMode)
+            is not null;
+        ExportSettings artifactSettings =
+            PrintSheetArtifactPolicy.For(settings, quick, package);
+
         isRunning = true;
         report(string.Empty);
         // 판을 쓰는 동안 도구 모음의 원형 표시를 돌립니다. 장수를 알고 있으므로 현상뷰와
@@ -112,7 +132,8 @@ internal sealed class PrintSheetExportRunner
                 profile.Profile,
                 // 장이 하나 끝날 때마다 눈금을 올립니다. 한 장짜리 판도 마지막에
                 // 1/1 로 차므로 "아무것도 안 움직인다" 가 없어집니다.
-                developed => progress(quick, new ExportProgress(developed, selection.Count)));
+                developed => progress(quick, new ExportProgress(developed, selection.Count)),
+                settings.TiffCompression);
             // 실패는 어느 단계에서 멈췄는지를 남깁니다. "쓰지 못했습니다" 만으로는 다시
             // 눌러 보는 것 말고 사용자가 할 수 있는 일이 없습니다 - 스캔 실패 줄과 같은
             // 규칙입니다.
@@ -133,16 +154,73 @@ internal sealed class PrintSheetExportRunner
             PreviewTrace.Write(
                 $"print sheet export status={result.Status} count={result.Paths.Count} " +
                 $"sources={selection.Count} folder={destinationFolder}");
-            report(result.IsSuccess
+            // **부속 파일은 그림이 나간 뒤입니다.** 낱장은 사진 하나에 판 하나이므로 판마다
+            // 그 사진의 사이드카·원본 사본·MAIN 을 놓습니다. 실패하면 성공으로 적지 않습니다.
+            string? artifactFailure = result.IsSuccess && !package &&
+                PrintSheetArtifactPolicy.WritesAnything(artifactSettings)
+                ? await WriteArtifactsAsync(
+                    selection, result.Paths, artifactSettings, profile.Profile)
+                : null;
+            report(result.IsSuccess && artifactFailure is null
                 ? AppResources
                     .Get("printExportDone", "Text")
                     .Replace("{0}", destinationFolder, StringComparison.Ordinal)
-                : AppResources.Get("printExportFailed", "Text") + " - " + result.Status);
+                : AppResources.Get("printExportFailed", "Text") + " - " +
+                    (artifactFailure ?? result.Status.ToString()));
         }
         finally
         {
             isRunning = false;
             progress(quick, ExportProgress.Idle);
         }
+    }
+
+    /// <summary>
+    /// 낱장 판마다 부속 파일을 냅니다. 실패한 첫 이유를 돌려주고, 없으면 <c>null</c> 입니다.
+    /// </summary>
+    /// <remarks>
+    /// 레시피는 <b>판이 나가기 전</b>에 붙잡습니다. 굽는 동안 사용자가 감마나 배율을 바꿔도
+    /// 사이드카는 나간 그림과 같은 값을 답니다 - 현상뷰 내보내기와 같은 규칙입니다.
+    /// </remarks>
+    private async Task<string?> WriteArtifactsAsync(
+        IReadOnlyList<LibraryFrameSnapshot> selection,
+        IReadOnlyList<string> sheetPaths,
+        ExportSettings settings,
+        byte[]? outputIccProfile)
+    {
+        ExportEncodingOptions encoding = settings.ToEncodingOptions() with
+        {
+            OutputIccProfile = outputIccProfile,
+        };
+        int pairs = Math.Min(selection.Count, sheetPaths.Count);
+        List<ExportArtifactSnapshot> snapshots = new(pairs);
+        for (int index = 0; index < pairs; ++index)
+        {
+            snapshots.Add(PrintSheetArtifacts.Capture(
+                selection[index],
+                sheetPaths[index],
+                settings,
+                encoding,
+                frameParameters(selection[index].Id),
+                Negaflow.Shell.Views.Develop.Export.DevelopExportRunner.ShellVersion,
+                engineVersion()));
+        }
+        IReadOnlyList<string> failures = await PrintSheetArtifacts.WriteAsync(snapshots);
+        if (settings.WriteMainFlatMaster)
+        {
+            for (int index = 0; index < pairs; ++index)
+            {
+                if (!await PrintSheetArtifacts.WriteMainFlatMasterAsync(
+                        selection[index], sheetPaths[index], settings, outputIccProfile))
+                {
+                    return "main_flat_master_failed";
+                }
+            }
+        }
+        foreach (string written in sheetPaths)
+        {
+            ExportTrace.Write($"    artifacts beside {written}");
+        }
+        return failures.Count > 0 ? failures[0] : null;
     }
 }

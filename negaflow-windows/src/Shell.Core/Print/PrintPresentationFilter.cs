@@ -58,9 +58,49 @@ public static class PrintPresentationFilter
         }
     }
 
+    /// <summary>
+    /// 같은 계산을 16-bit 3 채널 RGB 위에서 합니다. 인화 판은 16-bit 로 합성되므로 여기서
+    /// 8-bit 로 접었다 펴면 그 판의 계조가 그 자리에서 사라집니다.
+    /// </summary>
+    /// <remarks>
+    /// 밝기는 위와 같은 Rec.709 이고 화면 감마도 되돌리지 않습니다 - 두 경로가 같은 사진을
+    /// 다르게 물들이면 미리보기와 파일이 갈립니다.
+    /// </remarks>
+    public static void Apply(Span<ushort> pixels, PrintPresentationStyle style)
+    {
+        if (!Transforms(style))
+        {
+            return;
+        }
+        PrintPresentationAppearance appearance = PrintPresentationAppearance.For(style);
+        for (int index = 0; index + 2 < pixels.Length; index += 3)
+        {
+            double red = pixels[index] / 65535.0;
+            double green = pixels[index + 1] / 65535.0;
+            double blue = pixels[index + 2] / 65535.0;
+            double luminance = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
+            (double r, double g, double b) = style switch
+            {
+                PrintPresentationStyle.Cyanotype => (
+                    Mix(appearance.ShadowRed, appearance.HighlightRed, luminance),
+                    Mix(appearance.ShadowGreen, appearance.HighlightGreen, luminance),
+                    Mix(appearance.ShadowBlue, appearance.HighlightBlue, luminance)),
+                PrintPresentationStyle.GlassPlate => (
+                    1 - luminance, 1 - luminance, 1 - luminance),
+                _ => (luminance, luminance, luminance),
+            };
+            pixels[index] = ToUInt16(r);
+            pixels[index + 1] = ToUInt16(g);
+            pixels[index + 2] = ToUInt16(b);
+        }
+    }
+
     private static double Mix(double shadow, double highlight, double amount) =>
         shadow + ((highlight - shadow) * Math.Clamp(amount, 0.0, 1.0));
 
     private static byte ToByte(double value) =>
         (byte)Math.Clamp(Math.Round(value * 255.0), 0, 255);
+
+    private static ushort ToUInt16(double value) =>
+        (ushort)Math.Clamp(Math.Round(value * 65535.0), 0, 65535);
 }

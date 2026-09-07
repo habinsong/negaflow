@@ -712,6 +712,7 @@ add_library(negaflow_output STATIC
     src/Native/output/atomic_output_file.cpp
     src/Native/output/export_metadata.cpp
     src/Native/output/png_structure_reader.cpp
+    src/Native/output/print_sheet_publish.cpp
     src/Native/output/tiff_ifd_allowlist.cpp
     src/Native/output/wic_jpeg_export.cpp
     src/Native/output/wic_jpeg_encode.cpp
@@ -805,6 +806,7 @@ add_library(negaflow_native SHARED
     src/Native/abi/preview/develop_preview_v11_v21.cpp
     src/Native/abi/probe/standard_image_probe_abi.cpp
     src/Native/abi/probe/tiff_probe_abi.cpp
+    src/Native/abi/output/print_sheet_publish_abi.cpp
     src/Native/abi/pick/film_base_pick_abi.cpp
     src/Native/abi/pick/film_base_pick_v2.cpp
     src/Native/abi/proof/gamut_check_abi.cpp
@@ -1139,6 +1141,19 @@ if(BUILD_TESTING)
         PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/output"
     )
     add_test(NAME native.wic_png_export COMMAND negaflow_wic_png_export_tests)
+
+    add_executable(negaflow_print_sheet_publish_tests
+        tests/Native.UnitTests/print_sheet_publish_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_print_sheet_publish_tests
+        PRIVATE negaflow_output negaflow_color negaflow_project_options
+    )
+    target_include_directories(
+        negaflow_print_sheet_publish_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/output"
+    )
+    add_test(NAME native.print_sheet_publish COMMAND negaflow_print_sheet_publish_tests)
 
     add_executable(negaflow_wic_jpeg_export_tests
         tests/Native.UnitTests/wic_jpeg_export_tests.cpp

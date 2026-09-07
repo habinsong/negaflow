@@ -18,6 +18,133 @@ internal static class PrintOutputTests
     {
         VerifyMainFlatMaster();
         VerifyExportSidecar();
+        VerifyPrintSheetArtifactPolicy();
+        RunIfNativeIsPresent(VerifyPrintSheetPublishesSixteenBitsAndProfile,
+            nameof(VerifyPrintSheetPublishesSixteenBitsAndProfile));
+    }
+
+    /// <summary>
+    /// 낱장 인화의 부속 파일 정책입니다. macOS <c>AppModel+PrintExport</c> 와 같은 갈래입니다 —
+    /// 낱장 본 내보내기만 사용자의 선택을 그대로 넘기고, 빠른 내보내기와 패키지는 셋 다 끕니다.
+    /// </summary>
+    private static void VerifyPrintSheetArtifactPolicy()
+    {
+        ExportSettings all = new()
+        {
+            WriteSidecar = true,
+            WriteOriginalRaw = true,
+            WriteMainFlatMaster = true,
+        };
+
+        ExportSettings single = PrintSheetArtifactPolicy.For(all, quick: false, package: false);
+        Check(
+            single.WriteSidecar && single.WriteOriginalRaw && single.WriteMainFlatMaster,
+            "print_single_sheet_export_carries_the_chosen_artifacts");
+        Check(
+            PrintSheetArtifactPolicy.WritesAnything(single),
+            "print_single_sheet_export_reports_it_writes_artifacts");
+
+        ExportSettings quick = PrintSheetArtifactPolicy.For(all, quick: true, package: false);
+        Check(
+            !quick.WriteSidecar && !quick.WriteOriginalRaw && !quick.WriteMainFlatMaster,
+            "print_quick_export_writes_no_artifacts");
+
+        ExportSettings package = PrintSheetArtifactPolicy.For(all, quick: false, package: true);
+        Check(
+            !package.WriteSidecar && !package.WriteOriginalRaw && !package.WriteMainFlatMaster,
+            "print_package_export_writes_no_artifacts");
+        Check(
+            !PrintSheetArtifactPolicy.WritesAnything(package),
+            "print_package_export_reports_no_artifacts");
+
+        // 형식·폴더 같은 나머지 값은 그대로 남아야 합니다 - 정책은 세 스위치만 봅니다.
+        Check(
+            quick.Format == all.Format && quick.FolderPath == all.FolderPath,
+            "print_artifact_policy_leaves_the_rest_of_the_settings_alone");
+    }
+
+    /// <summary>
+    /// 인화 판이 <b>실제 파일로</b> 16-bit 와 고른 ICC 를 들고 나가는지입니다. 앞 판은 BGRA8 로
+    /// 합성하고 WinRT 인코더로 구워, 16-bit 를 골라도 8-bit 가 나오고 랩 프로파일은 붙지
+    /// 않았습니다. 네이티브 DLL 이 있을 때만 돕니다.
+    /// </summary>
+    private static void VerifyPrintSheetPublishesSixteenBitsAndProfile()
+    {
+        string folder = Path.Combine(
+            Path.GetTempPath(), "negaflow-print-sheet-managed", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        try
+        {
+            const int width = 8;
+            const int height = 4;
+            ushort[] page = new ushort[width * height * 3];
+            for (int y = 0; y < height; ++y)
+            {
+                for (int x = 0; x < width; ++x)
+                {
+                    int at = ((y * width) + x) * 3;
+                    // 8-bit 로 접히면 한 행이 전부 같은 값이 되는 폭입니다.
+                    page[at] = (ushort)(1000 + x);
+                    page[at + 1] = (ushort)(30000 + (x * 3));
+                    page[at + 2] = (ushort)(65000 + x);
+                }
+            }
+
+            string png = Path.Combine(folder, "sheet.png");
+            PrintSheetPublishOutcome outcome = NativePrintSheetPublisher.Publish(
+                png, page, width, height, DevelopExportFormat.Png16, dpi: 300);
+            Check(
+                outcome.IsSuccess && outcome.BitsPerSample == 16,
+                "print_sheet_png_publishes_sixteen_bits");
+            Check(File.Exists(png) && new FileInfo(png).Length > 0,
+                "print_sheet_png_lands_on_disk");
+
+            // 같은 이름으로 두 번째는 거절합니다. 인화 판이 남의 파일을 덮으면 안 됩니다.
+            PrintSheetPublishOutcome again = NativePrintSheetPublisher.Publish(
+                png, page, width, height, DevelopExportFormat.Png16, dpi: 300);
+            Check(
+                !again.IsSuccess &&
+                PrintSheetPublishStatusName.For(again.Status) == "destination_exists",
+                "print_sheet_never_replaces_an_existing_file");
+
+            string tiff = Path.Combine(folder, "sheet.tif");
+            PrintSheetPublishOutcome tiffOutcome = NativePrintSheetPublisher.Publish(
+                tiff, page, width, height, DevelopExportFormat.Tiff16, dpi: 300);
+            Check(
+                tiffOutcome.IsSuccess && tiffOutcome.BitsPerSample == 16,
+                "print_sheet_tiff_publishes_sixteen_bits");
+
+            string jpeg = Path.Combine(folder, "sheet.jpg");
+            PrintSheetPublishOutcome jpegOutcome = NativePrintSheetPublisher.Publish(
+                jpeg, page, width, height, DevelopExportFormat.Jpeg8, dpi: 300);
+            Check(
+                jpegOutcome.IsSuccess && jpegOutcome.BitsPerSample == 8,
+                "print_sheet_jpeg_publishes_eight_bits");
+
+            // 프로파일이 없으면 시스템 sRGB 가 붙습니다 - 태그 없는 파일을 내보내지 않습니다.
+            Check(
+                outcome.ColorProfileBytes > 0 && tiffOutcome.ColorProfileBytes > 0 &&
+                jpegOutcome.ColorProfileBytes > 0,
+                "print_sheet_always_carries_a_profile");
+
+            // 짧은 버퍼는 읽고 지나가지 않고 거절합니다.
+            PrintSheetPublishOutcome shortBuffer = NativePrintSheetPublisher.Publish(
+                Path.Combine(folder, "short.png"),
+                page.AsSpan(0, page.Length - 3),
+                width,
+                height,
+                DevelopExportFormat.Png16,
+                dpi: 300);
+            Check(
+                !shortBuffer.IsSuccess &&
+                PrintSheetPublishStatusName.For(shortBuffer.Status) == "buffer_size_mismatch",
+                "print_sheet_refuses_a_short_buffer");
+        }
+        finally
+        {
+            try { Directory.Delete(folder, recursive: true); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+        }
     }
 
     private static void VerifyMainFlatMaster()

@@ -46,7 +46,8 @@ public static partial class PrintSheetWriter
         DevelopExportFormat format = DevelopExportFormat.Png16,
         double jpegQuality = 1.0,
         byte[]? outputIccProfile = null,
-        Action<int>? onSourceDeveloped = null)
+        Action<int>? onSourceDeveloped = null,
+        DevelopTiffCompression tiffCompression = DevelopTiffCompression.Lzw)
     {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(print);
@@ -179,7 +180,9 @@ public static partial class PrintSheetWriter
                             print.CaptionAlignment,
                             textHost,
                             format,
-                            jpegQuality))
+                            jpegQuality,
+                            outputIccProfile,
+                            tiffCompression))
                     {
                         return new PrintSheetWriteResult(PrintSheetWriteStatus.WriteFailed, written);
                     }
@@ -206,7 +209,8 @@ public static partial class PrintSheetWriter
                 string path = PagePath(
                     destinationFolder, baseName, index, developed.Count, format);
                 if (!await WriteSingleAsync(
-                        path, layout, pageSettings, developed[index], format, jpegQuality))
+                        path, layout, pageSettings, developed[index], format, jpegQuality,
+                        outputIccProfile, tiffCompression))
                 {
                     return new PrintSheetWriteResult(PrintSheetWriteStatus.WriteFailed, written);
                 }
@@ -324,16 +328,18 @@ public static partial class PrintSheetWriter
         PrintCompositionSettings composition,
         string developedPath,
         DevelopExportFormat format,
-        double jpegQuality)
+        double jpegQuality,
+        byte[]? outputIccProfile,
+        DevelopTiffCompression tiffCompression)
     {
         int width = (int)layout.CanvasSize.Width;
         int height = (int)layout.CanvasSize.Height;
-        byte[] page = PrintPageCanvas.NewPage(width, height, composition.SheetBackground);
+        ushort[] page = PrintPageCanvas.NewPage(width, height, composition.SheetBackground);
 
         if (layout.FilmRect is { } film)
         {
             // 현상된 컬러 네거티브의 마스크가 남은 비노광 가장자리입니다.
-            PrintPageCanvas.Fill(page, width, height, film, 0x0E, 0x2B, 0x70);
+            PrintPageCanvas.Fill(page, width, height, film, 0x70, 0x2B, 0x0E);
         }
         if (!await PrintPageCanvas.BlitAsync(
                 page, width, height, developedPath, layout.ImageRect, 0,
@@ -346,7 +352,8 @@ public static partial class PrintSheetWriter
             PrintPageCanvas.Fill(page, width, height, hole, 0xFF, 0xFF, 0xFF);
         }
         return await PrintSheetEncoder.EncodeAsync(
-            destination, page, width, height, composition.Dpi, format, jpegQuality);
+            destination, page, width, height, composition.Dpi, format, jpegQuality,
+            outputIccProfile, tiffCompression);
     }
 
     private static async Task<bool> WritePageAsync(
@@ -359,11 +366,13 @@ public static partial class PrintSheetWriter
         PrintPackageCaptionAlignment captionAlignment,
         Microsoft.UI.Xaml.Controls.Panel? textHost,
         DevelopExportFormat format,
-        double jpegQuality)
+        double jpegQuality,
+        byte[]? outputIccProfile,
+        DevelopTiffCompression tiffCompression)
     {
         int width = (int)layout.CanvasSize.Width;
         int height = (int)layout.CanvasSize.Height;
-        byte[] page = PrintPageCanvas.NewPage(width, height, composition.SheetBackground);
+        ushort[] page = PrintPageCanvas.NewPage(width, height, composition.SheetBackground);
         foreach (PrintPackageItemLayout item in layout.Items)
         {
             if (!await PrintPageCanvas.BlitAsync(
@@ -415,7 +424,8 @@ public static partial class PrintSheetWriter
             PrintPageCanvas.DrawLine(page, width, height, segment, light);
         }
         return await PrintSheetEncoder.EncodeAsync(
-            destination, page, width, height, composition.Dpi, format, jpegQuality);
+            destination, page, width, height, composition.Dpi, format, jpegQuality,
+            outputIccProfile, tiffCompression);
     }
 
 }

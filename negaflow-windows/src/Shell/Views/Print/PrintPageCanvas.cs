@@ -9,10 +9,22 @@ namespace Negaflow.Shell.Views;
 /// <see cref="PrintCompositionLayout"/> 이 정하고, 여기서는 그 자리에 칠하기만 합니다.
 /// 판을 어떻게 굽는지(<see cref="PrintSheetEncoder"/>)와는 다른 이유로 바뀝니다.
 /// </summary>
+/// <remarks>
+/// 판은 <b>16-bit 3 채널 RGB</b> 입니다. 앞 판은 BGRA8 로 합성해서, 출력 탭에서 16-bit PNG/TIFF
+/// 를 골라도 판이 만들어지는 이 자리에서 이미 8-bit 로 접혔습니다 - 그 뒤 어떤 컨테이너에 담아도
+/// 잃은 계조는 돌아오지 않습니다. macOS 는 이 합성을 부동소수 CIImage 로 하고 마지막 인코딩에서만
+/// 심도를 정합니다.
+/// </remarks>
 internal static class PrintPageCanvas
 {
-    /// <summary>BGRA8 한 장입니다. 종이 색으로 채워 시작합니다.</summary>
-    public static byte[] NewPage(int width, int height, PrintSheetBackground background)
+    /// <summary>한 화소가 차지하는 <c>ushort</c> 개수입니다.</summary>
+    internal const int Channels = 3;
+
+    /// <summary>8-bit 표시값을 16-bit 코드값으로 폅니다. 0→0, 255→65535 로 정확히 갑니다.</summary>
+    private static ushort Widen(byte value) => (ushort)(value * 257);
+
+    /// <summary>RGB16 한 장입니다. 종이 색으로 채워 시작합니다.</summary>
+    public static ushort[] NewPage(int width, int height, PrintSheetBackground background)
     {
         byte level = background switch
         {
@@ -20,40 +32,40 @@ internal static class PrintPageCanvas
             PrintSheetBackground.Gray => 0x80,
             _ => 0xFF,
         };
-        byte[] page = new byte[checked(width * height * 4)];
-        for (int index = 0; index < page.Length; index += 4)
+        ushort code = Widen(level);
+        ushort[] page = new ushort[checked(width * height * Channels)];
+        if (code != 0)
         {
-            page[index] = level;
-            page[index + 1] = level;
-            page[index + 2] = level;
-            page[index + 3] = 0xFF;
+            page.AsSpan().Fill(code);
         }
         return page;
     }
 
     public static void Fill(
-        byte[] page,
+        ushort[] page,
         int width,
         int height,
         PrintRect rect,
-        byte blue,
+        byte red,
         byte green,
-        byte red)
+        byte blue)
     {
         int left = Math.Max(0, (int)Math.Round(rect.X));
         int top = Math.Max(0, (int)Math.Round(rect.Y));
         int right = Math.Min(width, (int)Math.Round(rect.MaxX));
         int bottom = Math.Min(height, (int)Math.Round(rect.MaxY));
+        ushort r = Widen(red);
+        ushort g = Widen(green);
+        ushort b = Widen(blue);
         for (int y = top; y < bottom; ++y)
         {
-            int row = y * width * 4;
+            int row = y * width * Channels;
             for (int x = left; x < right; ++x)
             {
-                int at = row + (x * 4);
-                page[at] = blue;
-                page[at + 1] = green;
-                page[at + 2] = red;
-                page[at + 3] = 0xFF;
+                int at = row + (x * Channels);
+                page[at] = r;
+                page[at + 1] = g;
+                page[at + 2] = b;
             }
         }
     }
@@ -63,7 +75,7 @@ internal static class PrintPageCanvas
     /// 칸 모서리에서 수평·수직으로만 뻗습니다.
     /// </summary>
     public static void DrawLine(
-        byte[] page,
+        ushort[] page,
         int width,
         int height,
         PrintLineSegment segment,
@@ -90,7 +102,7 @@ internal static class PrintPageCanvas
     /// 이어집니다 — 알파를 무시하면 글자마다 네모난 상자가 남습니다.
     /// </summary>
     public static async Task DrawCaptionAsync(
-        byte[] page,
+        ushort[] page,
         int pageWidth,
         int pageHeight,
         Microsoft.UI.Xaml.Controls.Panel textHost,
@@ -128,12 +140,15 @@ internal static class PrintPageCanvas
                 {
                     continue;
                 }
-                int to = ((pageY * pageWidth) + pageX) * 4;
-                for (int channel = 0; channel < 3; ++channel)
+                int to = ((pageY * pageWidth) + pageX) * Channels;
+                // 글자는 8-bit 로 래스터되므로 섞기 전에 16-bit 로 폅니다. 판을 8-bit 로
+                // 내려서 섞으면 글자 한 줄 때문에 판 전체 계조를 잃습니다.
+                for (int channel = 0; channel < Channels; ++channel)
                 {
-                    page[to + channel] = (byte)(
-                        ((rendered.Pixels[from + channel] * alpha) +
-                            (page[to + channel] * (255 - alpha))) / 255);
+                    // rendered 는 BGRA 이므로 R·G·B 를 거꾸로 읽습니다.
+                    ushort source = Widen(rendered.Pixels[from + (2 - channel)]);
+                    page[to + channel] = (ushort)(
+                        ((source * alpha) + (page[to + channel] * (255 - alpha))) / 255);
                 }
             }
         }
@@ -144,7 +159,7 @@ internal static class PrintPageCanvas
     /// 내보내기의 긴 변 축소와 다른 결과가 나옵니다.
     /// </summary>
     public static async Task<bool> BlitAsync(
-        byte[] page,
+        ushort[] page,
         int pageWidth,
         int pageHeight,
         string sourcePath,
@@ -179,17 +194,28 @@ internal static class PrintPageCanvas
         using IRandomAccessStream stream =
             await PrintSheetFile.OpenAsync(sourcePath, FileAccess.Read);
         BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
+        // **16-bit 로 뽑습니다.** 중간 현상본은 16-bit TIFF 이고, 여기서 8-bit 로 받으면 판이
+        // 그 자리에서 8-bit 가 됩니다. 색 관리는 하지 않습니다 - 중간본은 이미 게시할
+        // 프로파일 안에 있고, 최종 파일에 같은 프로파일을 답니다.
         PixelDataProvider pixels = await decoder.GetPixelDataAsync(
-            BitmapPixelFormat.Bgra8,
+            BitmapPixelFormat.Rgba16,
             BitmapAlphaMode.Ignore,
             transform,
             ExifOrientationMode.IgnoreExifOrientation,
             ColorManagementMode.DoNotColorManage);
-        byte[] tile = pixels.DetachPixelData();
+        byte[] raw = pixels.DetachPixelData();
         decodeSpan.Dispose();
-        if (tile.Length < width * height * 4)
+        // RGBA16 은 화소마다 8 바이트입니다.
+        if (raw.Length < checked(width * height * 8))
         {
             return false;
+        }
+        ushort[] tile = new ushort[width * height * Channels];
+        for (int index = 0, source = 0; index < tile.Length; index += Channels, source += 8)
+        {
+            tile[index] = (ushort)(raw[source] | (raw[source + 1] << 8));
+            tile[index + 1] = (ushort)(raw[source + 2] | (raw[source + 3] << 8));
+            tile[index + 2] = (ushort)(raw[source + 4] | (raw[source + 5] << 8));
         }
 
         // 시아노타입 · 유리건판 · 젤라틴은 여기서 화소를 바꿉니다. 미리보기와 파일이
@@ -205,8 +231,8 @@ internal static class PrintPageCanvas
             {
                 continue;
             }
-            int sourceRow = y * width * 4;
-            int pageRow = pageY * pageWidth * 4;
+            int sourceRow = y * width * Channels;
+            int pageRow = pageY * pageWidth * Channels;
             for (int x = 0; x < width; ++x)
             {
                 int pageX = left + x;
@@ -214,12 +240,11 @@ internal static class PrintPageCanvas
                 {
                     continue;
                 }
-                int from = sourceRow + (x * 4);
-                int to = pageRow + (pageX * 4);
+                int from = sourceRow + (x * Channels);
+                int to = pageRow + (pageX * Channels);
                 page[to] = tile[from];
                 page[to + 1] = tile[from + 1];
                 page[to + 2] = tile[from + 2];
-                page[to + 3] = 0xFF;
             }
         }
         return true;

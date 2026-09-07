@@ -350,6 +350,7 @@ public sealed partial class PrintWorkspaceView : UserControl
         ArgumentNullException.ThrowIfNull(negativeLimits);
         ArgumentNullException.ThrowIfNull(engineVersion);
         printExportHost = host;
+        printExportEngineVersion = engineVersion;
         exportPanelState = new DevelopPanelState(host, limits, negativeLimits);
         PrintExportPanel.Bind(exportPanelState, host, windowId, engineVersion);
         PrintExportPanel.Localize();
@@ -358,6 +359,9 @@ public sealed partial class PrintWorkspaceView : UserControl
 
     private DevelopPanelState? exportPanelState;
     private LibraryHostService? printExportHost;
+
+    /// <summary>낱장 인화 사이드카가 "어느 엔진이 만든 파일인지" 적을 값입니다.</summary>
+    private string printExportEngineVersion = "unknown";
 
     /// <summary>
     /// 인화뷰 출력 패널의 두 단추를 지금 값으로 맞춥니다. 현상뷰와 같은 이유입니다 —

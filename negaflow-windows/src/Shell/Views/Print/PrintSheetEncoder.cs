@@ -1,6 +1,4 @@
 using Negaflow.Interop;
-using Windows.Graphics.Imaging;
-using Windows.Storage.Streams;
 
 namespace Negaflow.Shell.Views;
 
@@ -23,66 +21,69 @@ internal static class PrintSheetEncoder
     /// 크기를 정하므로, 빠뜨리면 300dpi 로 짠 판이 72dpi 로 인쇄됩니다.
     /// </summary>
     /// <remarks>
-    /// 형식은 출력 탭에서 고른 것을 그대로 씁니다. macOS 도 인화 배치에
-    /// <c>exportFormat</c> · <c>quickExportFormat</c> 을 그대로 넘깁니다 - 여기서 PNG 로
-    /// 못 박으면 TIFF 를 골라도 PNG 가 나옵니다.
+    /// <para>
+    /// 굽는 일은 <b>네이티브 엔진</b>이 합니다. WinRT <c>BitmapEncoder</c> 에는 색 문맥을 받는
+    /// 자리가 없어서, 앞 판은 랩이 고른 ICC 안의 화소를 프로파일 없이 내보냈습니다 — 파일을 받은
+    /// 쪽은 그것을 sRGB 로 읽습니다. 엔진 쪽은 현상 내보내기에서 이미
+    /// <c>IWICBitmapFrameEncode::SetColorContexts</c> 로 같은 일을 하고 있습니다.
+    /// </para>
+    /// <para>
+    /// **워커에서 부릅니다.** 네이티브 WIC 는 <c>COINIT_MULTITHREADED</c> 를 걸므로 WinUI 의
+    /// STA 스레드에서는 <c>com_apartment_mismatch</c> 로 물러납니다.
+    /// </para>
+    /// <para>
+    /// 화소는 16-bit 그대로 넘어갑니다. 형식이 심도를 정합니다 — PNG·TIFF 는 16-bit, JPEG 만
+    /// 8-bit 로 떨어뜨립니다.
+    /// </para>
     /// </remarks>
     public static async Task<bool> EncodeAsync(
         string destination,
-        byte[] page,
+        ushort[] page,
         int width,
         int height,
         int dpi,
         DevelopExportFormat format = DevelopExportFormat.Png16,
-        double jpegQuality = 1.0)
+        double jpegQuality = 1.0,
+        byte[]? outputIccProfile = null,
+        DevelopTiffCompression tiffCompression = DevelopTiffCompression.Lzw)
     {
-        string temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(destination) ?? ".");
-            using (IRandomAccessStream stream =
-                await PrintSheetFile.OpenAsync(temporary, FileAccess.ReadWrite))
-            {
-                BitmapEncoder encoder = format == DevelopExportFormat.Jpeg8
-                    ? await BitmapEncoder.CreateAsync(
-                        BitmapEncoder.JpegEncoderId,
-                        stream,
-                        [
-                            new KeyValuePair<string, BitmapTypedValue>(
-                                "ImageQuality",
-                                new BitmapTypedValue(
-                                    (float)Math.Clamp(jpegQuality, 0.0, 1.0),
-                                    Windows.Foundation.PropertyType.Single)),
-                        ])
-                    : await BitmapEncoder.CreateAsync(
-                        format == DevelopExportFormat.Tiff16
-                            ? BitmapEncoder.TiffEncoderId
-                            : BitmapEncoder.PngEncoderId,
-                        stream);
-                encoder.SetPixelData(
-                    BitmapPixelFormat.Bgra8,
-                    BitmapAlphaMode.Ignore,
-                    (uint)width,
-                    (uint)height,
-                    dpi,
-                    dpi,
-                    page);
-                await encoder.FlushAsync();
-            }
-            File.Move(temporary, destination, overwrite: false);
-            return true;
         }
-        catch (Exception exception) when (
-            exception is IOException or UnauthorizedAccessException or ArgumentException or
-                System.Runtime.InteropServices.COMException)
+        catch (Exception error) when (
+            error is IOException or UnauthorizedAccessException or ArgumentException)
         {
+            ExportTrace.Write("print destination folder failed: " + error.GetType().Name);
             return false;
         }
-        finally
+
+        PrintSheetPublishOutcome outcome = await Task.Run(() =>
+            NativePrintSheetPublisher.Publish(
+                destination,
+                page,
+                width,
+                height,
+                format,
+                dpi,
+                jpegQuality,
+                tiffCompression,
+                outputIccProfile ?? []))
+            .ConfigureAwait(true);
+
+        if (outcome.IsSuccess)
         {
-            try { if (File.Exists(temporary)) { File.Delete(temporary); } }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-            { ExportTrace.Write("print temporary cleanup failed: " + error.GetType().Name); }
+            ExportTrace.Write(
+                $"    sheet published bits={outcome.BitsPerSample} " +
+                $"icc={outcome.ColorProfileBytes} bytes={outcome.ArtifactBytes} " +
+                $"path={destination}");
+            return true;
         }
+        // 어느 자리에서 멈췄는지 남깁니다. "쓰지 못했습니다" 만으로는 사용자가 할 수 있는 일이
+        // 다시 눌러 보는 것밖에 없습니다.
+        ExportTrace.Write(
+            $"    sheet publish failed status={PrintSheetPublishStatusName.For(outcome.Status)} " +
+            $"native=0x{outcome.NativeErrorCode:X} path={destination}");
+        return false;
     }
 }
