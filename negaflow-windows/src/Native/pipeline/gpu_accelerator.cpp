@@ -2,7 +2,10 @@
 
 #include "gpu_accelerator_state.h"
 
+#include <chrono>
 #include <cstdlib>
+#include <ctime>
+#include <io.h>
 #include <mutex>
 #include <new>
 
@@ -22,6 +25,34 @@ namespace {
     return value[0] == 48;  // 48 == 0
 }
 
+/// GPU 초기화 단계를 한 줄씩 남깁니다. `NEGA_GPU_INIT_TRACE=<경로>` 일 때만 씁니다.
+///
+/// **디스크까지 밀어넣습니다.** 실기에서 이 자리를 지나다 기기 전원이 통째로 끊겼고, 그때
+/// 다른 로그는 파일 크기와 수정 시각만 남고 내용이 하나도 남지 않았습니다 - 버퍼에 있던
+/// 것이 그대로 사라졌기 때문입니다. 여기서는 그러면 아무것도 못 건집니다. 그래서 줄마다
+/// 열고 쓰고 `FlushFileBuffers` 까지 부르고 닫습니다. 느리지만, 느린 것이 이 계측의 값입니다.
+void gpu_init_step(const char* what) noexcept {
+    char path[512]{};
+    std::size_t length = 0U;
+    if (getenv_s(&length, path, sizeof(path), "NEGA_GPU_INIT_TRACE") != 0 || length == 0U) {
+        return;
+    }
+    std::FILE* file = nullptr;
+    if (fopen_s(&file, path, "a") != 0 || file == nullptr) {
+        return;
+    }
+    const auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::tm parts{};
+    (void)localtime_s(&parts, &now);
+    (void)std::fprintf(file, "%02d:%02d:%02d %s\n", parts.tm_hour, parts.tm_min, parts.tm_sec, what);
+    (void)std::fflush(file);
+    const int descriptor = _fileno(file);
+    if (descriptor >= 0) {
+        (void)_commit(descriptor);
+    }
+    (void)std::fclose(file);
+}
+
 }  // namespace
 
 GpuAccelerator::GpuAccelerator() noexcept {
@@ -34,45 +65,59 @@ GpuAccelerator::GpuAccelerator() noexcept {
         return;
     }
     // `automatic` — 하드웨어를 먼저 찾고 없으면 WARP 입니다. 벤더로 거르지 않습니다.
+    gpu_init_step("device create begin");
     state->device = gpu::GpuDevice::create(gpu::GpuDevicePreference::automatic);
+    gpu_init_step(state->device.is_usable() ? "device create ok" : "device create unusable");
     if (state->device.is_usable() &&
         gpu::GpuToneStage::create(state->device, state->tone) == gpu::GpuKernelStatus::ok &&
         gpu::GpuFilmScanDenoiseStage::create(state->device, state->denoise) ==
             gpu::GpuKernelStatus::ok) {
+        gpu_init_step("usable begin");
         state->usable = true;
+        gpu_init_step("custom_color_target_ready begin");
         state->custom_color_target_ready =
             gpu::GpuCustomColorTarget::create(state->device, state->custom_color_target) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("adapter begin");
         state->adapter = state->device.capability().adapter.description.data();
         // 형태학은 따로 만듭니다. 이것만 실패해도 톤·디노이즈는 그대로 돕니다.
+        gpu_init_step("morphology_ready begin");
         state->morphology_ready =
             gpu::GpuMorphology::create(state->device, state->morphology) ==
             gpu::GpuKernelStatus::ok;
         // 반전은 현상에서 가장 비싼 단계입니다(실측 41%). 따로 만들어 이것만 실패해도
         // 나머지가 그대로 돌게 합니다.
+        gpu_init_step("invert_ready begin");
         state->invert_ready =
             gpu::GpuNegativeInvert::create(state->device, state->invert) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("halation_ready begin");
         state->halation_ready =
             gpu::GpuGaussianBlur::create(state->device, state->gaussian) ==
                 gpu::GpuKernelStatus::ok &&
             gpu::GpuDigitalHalation::create(state->device, state->halation) ==
                 gpu::GpuKernelStatus::ok;
+        gpu_init_step("grain_ready begin");
         state->grain_ready =
             gpu::GpuDigitalFilmGrain::create(state->device, state->grain) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("preset_ready begin");
         state->preset_ready =
             gpu::GpuDigitalFilmColorPreset::create(state->device, state->preset) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("cube_ready begin");
         state->cube_ready =
             gpu::GpuFilmEmulationCube::create(state->device, state->cube) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("acutance_ready begin");
         state->acutance_ready =
             gpu::GpuFilmEmulationAcutance::create(state->device, state->acutance) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("film_look_ready begin");
         state->film_look_ready =
             gpu::GpuFilmLookStage::create(state->device, state->film_look) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("vibrance_ready begin");
         state->vibrance_ready =
             gpu::GpuVibranceTable::create(state->device, state->vibrance_table) ==
                 gpu::GpuKernelStatus::ok &&
@@ -80,34 +125,44 @@ GpuAccelerator::GpuAccelerator() noexcept {
                 gpu::GpuKernelStatus::ok &&
             gpu::GpuColorModel::create(state->device, state->color_model) ==
                 gpu::GpuKernelStatus::ok;
+        gpu_init_step("target_grade_ready begin");
         state->target_grade_ready =
             gpu::GpuScannerTargetGrade::create(state->device, state->target_grade) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("noritsu_texture_ready begin");
         state->noritsu_texture_ready =
             gpu::GpuNoritsuTexture::create(state->device, state->noritsu_texture) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("texture_grain_ready begin");
         state->texture_grain_ready =
             gpu::GpuTextureGrain::create(state->device, state->texture_grain) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("clipping_overlay_ready begin");
         state->clipping_overlay_ready =
             gpu::GpuChannelClippingOverlay::create(
                 state->device, state->clipping_overlay) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("area_average_ready begin");
         state->area_average_ready =
             gpu::GpuAreaAverage::create(state->device, state->area_average) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("scene_correction_ready begin");
         state->scene_correction_ready =
             gpu::GpuSceneCorrection::create(state->device, state->scene_correction) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("mip_halve_ready begin");
         state->mip_halve_ready =
             gpu::GpuMipHalve::create(state->device, state->mip_halve) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("scratch_angle_ready begin");
         state->scratch_angle_ready =
             gpu::GpuScratchAngle::create(state->device, state->scratch_angle) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("finite_ready begin");
         state->finite_ready =
             gpu::GpuFiniteCheck::create(state->device, state->finite) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("preview_encode_ready begin");
         state->preview_encode_ready =
             gpu::GpuPreviewDisplayEncode::create(
                 state->device, state->preview_encode) ==
