@@ -75,6 +75,7 @@ internal static class Program
         AutoAdjustInputTests.Run();
         ResourceFileTests.Run();
         LocalizedTextTests.Run();
+        ThemeDictionaryTests.Run();
         ShellPreferencesTests.Run();
         LibraryBrowsingTests.Run();
         ScanProgressTests.Run();
