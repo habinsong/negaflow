@@ -483,6 +483,11 @@ bool accelerate_resident_finite(
 }
 
 // 프로세스 수명 동안 살아 있어야 합니다 — `install_kernel_accelerator` 는 포인터만 갖습니다.
+bool accelerate_custom_color_target(float* pixels, std::uint32_t width, std::uint32_t height,
+    std::uint32_t stride_pixels, std::uint32_t target) noexcept {
+    return GpuAccelerator::shared().apply_custom_color_target(pixels, width, height, stride_pixels, target);
+}
+
 const imaging::KernelAccelerator kernel_table{
     accelerate_opening,
     accelerate_closing,
@@ -510,6 +515,7 @@ const imaging::KernelAccelerator kernel_table{
     accelerate_area_average,
     accelerate_mip_halve_levels,
     accelerate_resident_finite,
+    accelerate_custom_color_target,
 };
 
 } // namespace

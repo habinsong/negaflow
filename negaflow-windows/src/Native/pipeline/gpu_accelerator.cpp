@@ -40,6 +40,9 @@ GpuAccelerator::GpuAccelerator() noexcept {
         gpu::GpuFilmScanDenoiseStage::create(state->device, state->denoise) ==
             gpu::GpuKernelStatus::ok) {
         state->usable = true;
+        state->custom_color_target_ready =
+            gpu::GpuCustomColorTarget::create(state->device, state->custom_color_target) ==
+            gpu::GpuKernelStatus::ok;
         state->adapter = state->device.capability().adapter.description.data();
         // 형태학은 따로 만듭니다. 이것만 실패해도 톤·디노이즈는 그대로 돕니다.
         state->morphology_ready =

@@ -66,6 +66,8 @@ public:
     [[nodiscard]] static GpuAccelerator& shared() noexcept;
 
     [[nodiscard]] bool available() const noexcept;
+    [[nodiscard]] bool apply_custom_color_target(float* pixels, std::uint32_t width,
+        std::uint32_t height, std::uint32_t stride_pixels, std::uint32_t target) noexcept;
     // 프리뷰 사슬을 GPU 에 묶습니다. 스코프가 살아 있는 동안 D3D11 자물쇠를 들고,
     // 끝에서 호스트가 낡았으면 한 번 내립니다. macOS `CIImage` 지연 평가.
     // `DevelopFrameRenderer.sharedRenderContext`.

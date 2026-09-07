@@ -1588,4 +1588,5 @@ Load a scanner from Library to scan film.</value>
   <data name="inputGammaAssumedLinear.Value" xml:space="preserve"><value>Assumed · linear 1.0</value></data>
   <data name="inputGammaAssumedSRGB.Value" xml:space="preserve"><value>Assumed · sRGB</value></data>
   <data name="inputGammaEstimated.Value" xml:space="preserve"><value>Estimated gamma {0:0.0}</value></data>
+  <data name="customTarget.Text" xml:space="preserve"><value>Custom</value><comment>AppLocalizedPhrase.customTargetTitle</comment></data>
 </root>

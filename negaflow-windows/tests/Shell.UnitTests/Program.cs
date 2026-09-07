@@ -16,6 +16,13 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
+        if (args is ["--custom-targets-only"])
+        {
+            CustomTargetTests.Run();
+            DevelopTargetTests.Run();
+            ResourceFileTests.Run();
+            return Report("custom_target_tests");
+        }
         if (args is ["--preview-thumbnail-only"])
         {
             DevelopRouteRestoreTests.Run();
@@ -110,6 +117,7 @@ internal static class Program
         GrainMendOverlayMappingTests.Run();
         GrainMendGuidedGestureTests.Run();
         DevelopTargetTests.Run();
+        CustomTargetTests.Run();
         LibraryCullingTests.Run();
         PrintCompositionTests.Run();
         PrintPreviewResolutionTests.Run();

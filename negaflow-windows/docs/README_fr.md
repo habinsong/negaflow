@@ -96,6 +96,12 @@ ctest --preset x64-release --output-on-failure
 
 Les tests du moteur comprennent une comparaison aux images de référence. Ils lisent les fichiers produits par la version macOS et vérifient que le moteur Windows sort les mêmes pixels.
 
+## Cibles couleur Custom
+
+CS suit MAIN, HS, SP, F135 et HR. Après avoir choisi CS, sélectionnez une des 18 cibles Custom dans le sélecteur à deux colonnes en bas à gauche. Des séparateurs divisent les groupes de 11, 4 et 3 entrées ; le sélecteur Look reste à droite. Le passage à CS choisit Emulsion. Une photo utilisant déjà Custom conserve sa cible.
+
+Custom emploie les mêmes coefficients custom-3 et identifiants que macOS. La cible est enregistrée dans les réglages de la photo et le catalogue. L’aperçu et l’export appliquent la même étape. Le bouton d’application existant dans l’en-tête du dossier applique la cible choisie au dossier.
+
 ## Vérifier le moteur en ligne de commande
 
 `negaflow-cli.exe` montre comment le moteur traite un fichier. Il prend des drapeaux plutôt que des sous-commandes.

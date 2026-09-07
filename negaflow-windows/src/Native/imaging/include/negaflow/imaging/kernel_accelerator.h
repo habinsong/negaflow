@@ -312,6 +312,9 @@ using MipHalveLevelsFunction = bool (*)(
     std::uint32_t* out_width,
     std::uint32_t* out_height) noexcept;
 
+using CustomColorTargetFunction = bool (*)(float*, std::uint32_t, std::uint32_t,
+    std::uint32_t, std::uint32_t) noexcept;
+
 struct KernelAccelerator final {
     // ── 정확한 것 (언제나 켭니다) ────────────────────────────────────────────
     MorphologyPlaneFunction opening{nullptr};
@@ -342,6 +345,7 @@ struct KernelAccelerator final {
     AreaAverageFunction area_average{nullptr};
     MipHalveLevelsFunction mip_halve_levels{nullptr};
     ResidentFiniteFunction resident_finite_check{nullptr};
+    CustomColorTargetFunction custom_color_target{nullptr};
 };
 
 // 프로세스 시작에 한 번 설치합니다. `nullptr` 을 주면 해제합니다.

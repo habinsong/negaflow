@@ -96,6 +96,12 @@ ctest --preset x64-release --output-on-failure
 
 Die Engine-Tests enthalten einen Vergleich mit Referenzbildern. Sie lesen die aus dem macOS-Build gewonnenen Dateien und prüfen, ob die Windows-Engine dieselben Pixel liefert.
 
+## Custom-Farbziele
+
+CS steht hinter MAIN, HS, SP, F135 und HR. Nach der Auswahl von CS bietet die Auswahl unten links 18 Custom-Ziele in zwei Spalten. Trennlinien teilen die Gruppen mit 11, 4 und 3 Einträgen; die Look-Auswahl bleibt rechts. Beim Wechsel zu CS wird Emulsion gewählt. Verwendet das Foto bereits Custom, bleibt sein Ziel erhalten.
+
+Custom verwendet dieselben custom-3-Koeffizienten und Zeichenketten-IDs wie macOS. Das Ziel wird in den Fotoeinstellungen und im Katalog gespeichert. Vorschau und Export wenden dieselbe Stufe an. Über die bestehende Schaltfläche zum Anwenden im Ordnerkopf wird das gewählte Ziel auf den Ordner angewendet.
+
 ## Die Engine über die Kommandozeile prüfen
 
 `negaflow-cli.exe` zeigt, wie die Engine eine einzelne Datei behandelt. Es nimmt Flags statt Unterbefehlen.

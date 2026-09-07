@@ -3,6 +3,7 @@
 #include "export/support/outcome.h"
 
 #include "negaflow/core/pixel.h"
+#include "negaflow/imaging/custom_color_target.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
 #include "negaflow/pipeline/gpu_accelerator.h"
 
@@ -81,6 +82,31 @@ std::optional<DevelopExportOutcome> apply_look_stages(
     if (tracker.cancelled()) {
         return unbind_resident_and(
             adjusted.image, cancelled_outcome(DevelopExportStage::tone_adjust));
+    }
+
+    // 톤·캘리브레이션 뒤, film look의 identity 조기 반환보다 먼저 한 번 적용합니다.
+    const auto target = static_cast<std::uint32_t>(request.develop_target);
+    if (imaging::custom_color_target_profile(target) != nullptr) {
+        const auto* table = imaging::kernel_accelerator();
+        const bool handled = gpu_policy == GpuUsePolicy::allowed && table != nullptr &&
+            table->custom_color_target != nullptr && table->custom_color_target(
+                reinterpret_cast<float*>(adjusted.image.pixels.data()), adjusted.image.width,
+                adjusted.image.height, adjusted.image.stride_pixels, target);
+        if (!handled) {
+            GpuAccelerator::shared().flush_resident();
+            const core::ImageView pixels{adjusted.image.pixels.data(), adjusted.image.pixels.size(),
+                adjusted.image.width, adjusted.image.height, adjusted.image.stride_pixels};
+            const auto status = imaging::apply_custom_color_target(
+                {pixels.pixels, pixels.pixel_capacity, pixels.width, pixels.height, pixels.stride_pixels}, pixels, target);
+            if (status != core::KernelStatus::ok) {
+                return unbind_resident_and(adjusted.image, fail(
+                    DevelopExportStage::tone_adjust, core::kernel_status_name(status)));
+            }
+        }
+    }
+
+    if (tracker.cancelled()) {
+        return unbind_resident_and(adjusted.image, cancelled_outcome(DevelopExportStage::tone_adjust));
     }
 
     tracker.begin(

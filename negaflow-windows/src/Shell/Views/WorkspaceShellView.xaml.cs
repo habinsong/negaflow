@@ -248,6 +248,7 @@ public sealed partial class WorkspaceShellView : UserControl
         AppMenu.SettingsRequested += OnToolbarSettingsRequested;
         AppMenu.KeyboardShortcutsRequested += OnKeyboardShortcutsRequested;
         AppMenu.CommandRequested += OnAppMenuCommandRequested;
+        AppMenu.CustomTargetRequested += OnCustomTargetRequested;
         state.Changed += OnStateChanged;
         AppResources.LanguageChanged += OnLanguageChanged;
         LibraryWorkspace.ScannerMenuStateChanged += OnScannerMenuStateChanged;
@@ -491,6 +492,15 @@ public sealed partial class WorkspaceShellView : UserControl
         AboutRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    private void OnCustomTargetRequested(object? sender, DevelopTarget target)
+    {
+        _ = sender;
+        if (!DevelopTargets.IsCustom(target)) { return; }
+        LibraryWorkspace.ApplyDevelopTargetShortcut(target);
+        SyncDevelopMenu();
+        SyncExportMenu();
+    }
+
     private void OnAppMenuCommandRequested(object? sender, WorkflowShortcutAction action)
     {
         _ = sender;
@@ -582,6 +592,7 @@ public sealed partial class WorkspaceShellView : UserControl
         AppMenu.SettingsRequested -= OnToolbarSettingsRequested;
         AppMenu.KeyboardShortcutsRequested -= OnKeyboardShortcutsRequested;
         AppMenu.CommandRequested -= OnAppMenuCommandRequested;
+        AppMenu.CustomTargetRequested -= OnCustomTargetRequested;
         Toolbar.ScannerCommandRequested -= OnAppMenuCommandRequested;
         LibraryWorkspace.ScannerMenuStateChanged -= OnScannerMenuStateChanged;
         AppResources.LanguageChanged -= OnLanguageChanged;

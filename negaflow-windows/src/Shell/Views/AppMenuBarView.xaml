@@ -338,6 +338,8 @@
                     x:Name="TargetExpiredItem"
                     AutomationProperties.AutomationId="negaflow.menu.develop.target.expired"
                     Click="OnTargetExpiredClick" />
+                <MenuFlyoutSeparator />
+                <MenuFlyoutSubItem x:Name="CustomTargetSubmenu" AutomationProperties.AutomationId="negaflow.menu.develop.custom-targets" />
             </MenuFlyoutSubItem>
             <MenuFlyoutSeparator />
             <MenuFlyoutItem

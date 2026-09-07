@@ -7,7 +7,7 @@
     <!-- macOS `DevelopDefaultsSection` (현상뷰 좌측탭 · 스크린샷 `현상뷰_기본.png`).
          구성은 위에서 아래로 세 줄입니다.
            ① 프로세스 — 라벨 왼쪽, 고르개 오른쪽 (한 줄)
-           ② 타깃    — 라벨 한 줄, 그 아래 다섯 칸 세그먼트가 폭을 똑같이 나눠 가짐
+           ② 타깃    — 라벨 한 줄, 그 아래 여섯 칸 세그먼트가 폭을 똑같이 나눠 가짐
            ③ 필름 프로파일 + 룩 — 한 줄. 프로파일이 남는 폭을 먹고, 룩은 오른쪽 고정폭.
          macOS 는 ②③ 의 라벨을 `labelsHidden()` 으로 숨깁니다. 여기서도 숨기되 요소는
          남겨 두어 화면 낭독기가 읽을 이름을 그대로 유지합니다. -->
@@ -48,10 +48,11 @@
                     x:Name="DevelopTargetLabel" x:FieldModifier="internal"
                     FontSize="12" />
                 <!-- macOS `SegmentedPicker` — 트랙 라운딩 11 · 여백 3 · 칸 사이 3 ·
-                     칸 높이 28 · 고른 칸 라운딩 8. 다섯 칸이 폭을 똑같이 나눠 가집니다. -->
+                     칸 높이 28 · 고른 칸 라운딩 8. 여섯 칸이 폭을 똑같이 나눠 가집니다. -->
                 <Border Style="{StaticResource NegaflowSegmentTrackStyle}">
                     <Grid x:Name="DevelopTargetBar" x:FieldModifier="internal" ColumnSpacing="3">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
@@ -84,6 +85,21 @@
                         DisplayMemberPath="Label"
                         FontSize="12"
                         SelectionChanged="OnDevelopFilmProfileChanged" />
+                    <Button x:Name="CustomTargetButton"
+                            Visibility="Collapsed"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            FontSize="12"
+                            AutomationProperties.AutomationId="negaflow.develop.custom-target">
+                        <Grid ColumnSpacing="6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="CustomTargetName" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                            <FontIcon Grid.Column="1" Glyph="&#xE70D;" FontSize="10" />
+                        </Grid>
+                    </Button>
                     <ComboBox
                         x:Name="DevelopLookSelector" x:FieldModifier="internal"
                         Grid.Column="1"

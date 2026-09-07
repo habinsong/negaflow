@@ -24,7 +24,7 @@ internal static class LibraryFolderDevelopmentTests
     private static void VerifyVisibleTargets()
     {
         Check(
-            LibraryFolderDevelopment.VisibleTargets.Count == 5 &&
+            LibraryFolderDevelopment.VisibleTargets.Count == 23 &&
             LibraryFolderDevelopment.VisibleTargets[0] == DevelopTarget.Main &&
             LibraryFolderDevelopment.VisibleTargets[1] == DevelopTarget.Noritsu &&
             LibraryFolderDevelopment.VisibleTargets[2] == DevelopTarget.Sp3000 &&

@@ -9,7 +9,7 @@ namespace Negaflow.Shell.Develop;
 /// 이름은 번역하지 않습니다 — MAIN·HS·SP·F135·HR 은 미니랩 기종·출력 규격의 이름이고 macOS 도
 /// 언어와 무관하게 그대로 씁니다.
 /// </remarks>
-public static class DevelopTargets
+public static partial class DevelopTargets
 {
     /// <summary>
     /// 고르개에 나오는 다섯입니다. PRINT 와 EXPIRED 는 MAIN 갈래 안에서 다시 고르므로 여기에
@@ -40,7 +40,7 @@ public static class DevelopTargets
         DevelopTarget.F135 => "F135",
         DevelopTarget.Hr => "HR",
         DevelopTarget.Rescue => "EXPIRED",
-        _ => "MAIN",
+        _ => CustomName(target) ?? "MAIN",
     };
 
     /// <summary>

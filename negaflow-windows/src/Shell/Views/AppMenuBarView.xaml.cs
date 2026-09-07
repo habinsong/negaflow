@@ -255,6 +255,7 @@ public sealed partial class AppMenuBarView : UserControl
             WorkflowShortcutAction.ProcessBwPositive);
         string target = AppResources.Get("libraryTarget", "Text");
         TargetSubmenu.Text = target;
+        BuildCustomTargetMenu();
         AutomationProperties.SetName(TargetSubmenu, target);
         SetCaption(TargetMainItem, DevelopTargets.DisplayName(DevelopTarget.Main),
             WorkflowShortcutAction.TargetMain);

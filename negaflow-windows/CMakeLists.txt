@@ -447,7 +447,16 @@ negaflow_compile_compute_shader(
     NEGAFLOW_PREVIEW_DISPLAY_ENCODE_HEADER
 )
 
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/custom_color_target.hlsl"
+    CustomColorTargetMain
+    negaflow_custom_color_target_cs
+    NEGAFLOW_CUSTOM_COLOR_TARGET_HEADER
+)
+
 add_library(negaflow_gpu STATIC
+    "${NEGAFLOW_CUSTOM_COLOR_TARGET_HEADER}"
+    src/Native/gpu/gpu_custom_color_target.cpp
     "${NEGAFLOW_BASIC_TONE_HEADER}"
     "${NEGAFLOW_COLOR_GRADE_HEADER}"
     "${NEGAFLOW_COLOR_MIXER_HEADER}"
@@ -584,6 +593,8 @@ target_link_libraries(
 )
 
 add_library(negaflow_imaging STATIC
+    src/Native/imaging/custom_color_target.cpp
+    src/Native/imaging/custom_color_target_profiles.cpp
     src/Native/imaging/auto_adjust.cpp
     src/Native/imaging/auto_negative_base_candidates.cpp
     src/Native/imaging/auto_negative_base_exclusion.cpp
@@ -769,6 +780,7 @@ add_library(negaflow_pipeline STATIC
     src/Native/pipeline/gpu_accelerator_scene.cpp
     src/Native/pipeline/gpu_accelerator_film_look.cpp
     src/Native/pipeline/gpu_accelerator_color.cpp
+    src/Native/pipeline/gpu_accelerator_custom_target.cpp
     src/Native/pipeline/gpu_accelerator_scratch.cpp
     src/Native/pipeline/gpu_kernel_table.cpp
     src/Native/pipeline/stage_timing.cpp
@@ -1617,6 +1629,14 @@ if(BUILD_TESTING)
         PRIVATE negaflow_imaging negaflow_project_options
     )
     add_test(NAME native.color_grading COMMAND negaflow_color_grading_tests)
+
+    add_executable(negaflow_custom_color_target_tests tests/Native.UnitTests/custom_color_target_tests.cpp)
+    target_link_libraries(negaflow_custom_color_target_tests PRIVATE negaflow_imaging negaflow_project_options)
+    add_test(NAME native.custom_color_target COMMAND negaflow_custom_color_target_tests)
+    add_executable(negaflow_gpu_custom_color_target_tests tests/Native.UnitTests/gpu_custom_color_target_tests.cpp)
+    target_link_libraries(negaflow_gpu_custom_color_target_tests PRIVATE negaflow_pipeline negaflow_project_options)
+    add_test(NAME native.gpu_custom_color_target COMMAND negaflow_gpu_custom_color_target_tests)
+    set_tests_properties(native.gpu_custom_color_target PROPERTIES SKIP_RETURN_CODE 77)
 
     add_executable(negaflow_primary_calibration_tests
         tests/Native.UnitTests/primary_calibration_tests.cpp

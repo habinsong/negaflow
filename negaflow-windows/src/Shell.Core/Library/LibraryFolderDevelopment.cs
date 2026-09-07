@@ -31,7 +31,7 @@ public readonly record struct LibraryFolderDevelopmentProgress(int CompletedCoun
 public static class LibraryFolderDevelopment
 {
     /// <summary>
-    /// macOS 폴더 머리줄 타깃 고르개가 내는 다섯입니다
+    /// macOS 폴더 머리줄 타깃 고르개와 같은 기존 5개와 Custom 18개입니다
     /// (<c>LibraryFolderDevelopmentControls.visibleTargets</c>) — PRINT 와 EXPIRED 는 없습니다.
     /// </summary>
     public static IReadOnlyList<DevelopTarget> VisibleTargets { get; } =
@@ -41,6 +41,7 @@ public static class LibraryFolderDevelopment
         DevelopTarget.Sp3000,
         DevelopTarget.F135,
         DevelopTarget.Hr,
+        .. DevelopTargets.Custom,
     ];
 
     /// <summary>

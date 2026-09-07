@@ -80,16 +80,18 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
     {
         DevelopTargetBar.Children.Clear();
         int column = 0;
-        foreach (DevelopTarget target in DevelopTargets.Visible)
+        foreach (DevelopTargetFamily target in DevelopTargets.Families)
         {
-            DevelopTarget value = target;
+            DevelopTargetFamily value = target;
             RadioButton segment = new()
             {
-                Content = DevelopTargets.DisplayName(target),
+                Content = DevelopTargets.FamilyName(target),
                 Style = (Style)Application.Current.Resources["NegaflowSegmentStyle"],
                 GroupName = "DevelopTarget",
                 Tag = target,
             };
+            AutomationProperties.SetName(segment, target == DevelopTargetFamily.Custom
+                ? AppResources.Get("customTarget", "Text") : DevelopTargets.FamilyName(target));
             AutomationProperties.SetAutomationId(
                 segment,
                 "negaflow.library.develop.target." + target.ToString().ToLowerInvariant());
@@ -101,7 +103,7 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
                 {
                     return;
                 }
-                ApplyDevelopTarget(value);
+                ApplyDevelopTarget(DevelopTargets.TargetForFamily(value, ActionableFrame?.DevelopTarget ?? DevelopTarget.Main));
             };
             Grid.SetColumn(segment, column++);
             DevelopTargetBar.Children.Add(segment);
@@ -131,7 +133,7 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
             foreach (RadioButton segment in DevelopTargetBar.Children.OfType<RadioButton>())
             {
                 segment.IsEnabled = enabled;
-                segment.IsChecked = segment.Tag is DevelopTarget candidate && candidate == family;
+                segment.IsChecked = segment.Tag is DevelopTargetFamily candidate && candidate == DevelopTargets.CapsuleFamily(target);
             }
 
             DevelopProcessSelector.SelectedItem = ProcessChoices
@@ -164,6 +166,15 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
     /// </summary>
     private void BuildFilmProfileChoices(LibraryFrameSnapshot? frame, DevelopTarget family)
     {
+        SynchronizeCustomTarget(frame);
+        CustomTargetButton.Visibility = Visibility.Collapsed;
+        if (DevelopTargets.IsCustom(family))
+        {
+            CustomTargetButton.Visibility = Visibility.Visible;
+            DevelopFilmProfileText.Visibility = Visibility.Collapsed;
+            DevelopFilmProfileSelector.Visibility = Visibility.Collapsed;
+            return;
+        }
         List<ScannerProfileChoice> choices = [];
         // 고를 것이 있는 갈래로 돌아오면 고르개를 다시 보입니다.
         DevelopFilmProfileText.Visibility = Visibility.Collapsed;

@@ -7,6 +7,7 @@
 // `gpu_accelerator_film_look.cpp` 가 맡습니다. 둘이 **같은 상태 하나**를 봐야 하므로
 // 정의를 여기 둡니다.
 
+#include "negaflow/gpu/gpu_custom_color_target.h"
 #include <mutex>
 #include <vector>
 
@@ -45,6 +46,8 @@ struct GpuAccelerator::State final {
     std::recursive_mutex lock{};
     gpu::GpuDevice device{};
     gpu::GpuToneStage tone{};
+    gpu::GpuCustomColorTarget custom_color_target{};
+    bool custom_color_target_ready{false};
     gpu::GpuFilmScanDenoiseStage denoise{};
     gpu::GpuMorphology morphology{};
     bool morphology_ready{false};

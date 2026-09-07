@@ -28,6 +28,7 @@ public sealed partial class AppMenuBarView
         TargetF135Item.IsChecked = state.IsTargetChecked(DevelopTarget.F135);
         TargetHrItem.IsChecked = state.IsTargetChecked(DevelopTarget.Hr);
         TargetExpiredItem.IsChecked = state.IsTargetChecked(DevelopTarget.Rescue);
+        SyncCustomTargetMenu(state);
     }
 
     /// <summary>

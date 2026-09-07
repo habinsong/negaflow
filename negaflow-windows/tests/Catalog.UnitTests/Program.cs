@@ -7,6 +7,11 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
+        if (args is ["--custom-targets-only"])
+        {
+            CustomTargetCatalogTests.Run();
+            return Report("custom_target_tests");
+        }
         if (args is ["--develop-input-transfer-only"])
         {
             DevelopInputTransferTests.Run();
@@ -38,6 +43,7 @@ internal static class Program
         DevelopRouteTests.Run(fixture.RootElement);
         InputGammaMigrationTests.Run();
         DevelopRecipeCatalogTests.Run();
+        CustomTargetCatalogTests.Run();
         DevelopInputTransferTests.Run();
         LibraryFrameTests.RunAppMetadataPersistence();
         CatalogStorageTests.Run();

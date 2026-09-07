@@ -96,6 +96,12 @@ ctest --preset x64-release --output-on-failure
 
 引擎测试里含有基准图像比对。它读 macOS 版导出的基准文件，确认 Windows 引擎给出同样的像素。
 
+## Custom 色彩目标
+
+CS 位于 MAIN、HS、SP、F135、HR 之后。选择 CS 后，可在左下方的双列选择器中选择 18 个 Custom 目标。11、4、3 个条目的分组之间有分隔线，右侧的 Look 选择器保持原位。切换到 CS 时默认选择 Emulsion；已经使用 Custom 的照片保留当前目标。
+
+Custom 使用与 macOS 相同的 custom-3 系数和字符串 ID。实际目标保存在照片设置和目录中，预览与导出使用同一处理阶段。文件夹标题中的现有应用按钮可将所选目标应用到整个文件夹。
+
 ## 用命令行确认引擎
 
 `negaflow-cli.exe` 用来看引擎怎么处理一个文件。它用标志而不是子命令。

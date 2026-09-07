@@ -96,6 +96,12 @@ ctest --preset x64-release --output-on-failure
 
 The engine tests include a golden image comparison. They read the reference files rendered by the macOS build and check that the Windows engine produces the same pixels.
 
+## Custom color targets
+
+CS follows MAIN, HS, SP, F135, and HR in the target capsules. Select CS, then choose one of 18 Custom targets in the lower-left two-column picker. Separators divide the groups of 11, 4, and 3; the Look picker stays on the right. Entering CS selects Emulsion, while a photo already using Custom keeps its current target.
+
+Custom uses the same custom-3 coefficients and string IDs as macOS. The actual target is stored in photo settings and the catalog, and the same stage runs in preview and export. Folder headers use the existing Apply button to apply a chosen target to the folder.
+
 ## Checking the engine from the command line
 
 `negaflow-cli.exe` shows how the engine handles a single file. It takes flags rather than subcommands.

@@ -38,7 +38,7 @@ internal static unsafe class NativeAbiReader
       // cache sync) - the shell calls all four, so an engine below 52 leaves the budget off.
       
     // An engine below this is refused at load, not at the call.
-    internal const ushort MinimumMinor = 52;
+    internal const ushort MinimumMinor = 53; // Custom 18개 타깃을 해석할 수 있는 엔진입니다.
 
     private const uint StatusOk = 0;
 

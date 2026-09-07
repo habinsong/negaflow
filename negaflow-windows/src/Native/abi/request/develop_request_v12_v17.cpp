@@ -251,7 +251,7 @@ void fail_local_dodge_burn_request(
             result)) {
         return false;
     }
-    if (request.reserved != 0U || request.develop_target > NF_DEVELOP_TARGET_RESCUE) {
+    if (request.reserved != 0U || request.develop_target > NF_DEVELOP_TARGET_POINT_AND_SHOOT) {
         result.succeeded = 0U;
         result.failed_stage = NF_DEVELOP_STAGE_REQUEST_VALIDATION;
         copy_failure_name("invalid_develop_target", result.failure_name);
