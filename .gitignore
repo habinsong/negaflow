@@ -124,6 +124,7 @@ NEGAFLOW_LIGHTROOM_EXPANSION.md
 /docs/*/validation/
 /docs/product/PROJECT_STATUS.md
 /docs/*/product/PROJECT_STATUS.md
+/docs/local/
 
 # 골든 자료 자체는 공개한다. 테스트가 읽기 때문이다. 다만 그 폴더에 같이 있던 글은
 # 맥 쪽에 값을 찍어 달라고 부탁한 기록과 그 진행 메모라서 공개하지 않는다.
