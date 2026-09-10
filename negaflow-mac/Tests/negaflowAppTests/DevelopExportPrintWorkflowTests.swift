@@ -40,7 +40,7 @@ final class DevelopExportPrintWorkflowTests: XCTestCase {
 
         // 1) 현상.
         await model.developFrame(frame)
-        XCTAssertTrue(frame.hasDevelopedOnce, "가져온 네거티브가 현상되지 않았다")
+        try await Self.waitUntilDevelopedOnce(model, frame)
         let developedNeutral = try XCTUnwrap(frame.developedImage)
         XCTAssertGreaterThan(developedNeutral.size.width, 0)
 
@@ -126,9 +126,9 @@ final class DevelopExportPrintWorkflowTests: XCTestCase {
         await model.developFrame(frame)
         // developFrame 은 조용히 물러나는 길이 여럿이다 — 원본 확보 실패, 결함 복원 대기,
         // cleaned raw 대기, 코얼레싱(이미 진행 중), 슬롯 미획득, 렌더 오류(developFailed).
-        // 어느 쪽이든 여기서는 "false" 하나로만 보여 원격 CI 에서 원인을 알 수 없었다.
-        // 실패 자리에서 앱이 실제로 남긴 것을 같이 낸다.
-        XCTAssertTrue(frame.hasDevelopedOnce, Self.developDiagnosis(model, frame))
+        // 코얼레싱은 그중 실패가 아닌 길이라 기다리면 끝난다. 나머지는 대기가 시간을 다
+        // 쓰고 같은 진단을 낸다.
+        try await Self.waitUntilDevelopedOnce(model, frame)
 
         // 스캐너 타겟으로 바꾸고(측정 캐시가 타겟 전환을 넘어 살아남는 경로) 보정까지.
         frame.updateParams {
@@ -160,6 +160,21 @@ final class DevelopExportPrintWorkflowTests: XCTestCase {
 
     /// 요청이 throttle 을 지나 실제로 새 리비전으로 돌기 시작한 뒤의 정착을 기다린다.
     /// 리비전을 안 보면 "아직 시작도 안 한" 직전 정착 상태를 끝난 것으로 오인한다.
+    /// developFrame 은 같은 프레임의 현상이 이미 진행 중이면 리비전만 올리고 곧바로
+    /// 돌아온다(DevelopController.beginFrame 코얼레싱). 그때는 await 가 끝나도 결과가
+    /// 아직 없다 — 진행 중이던 패스가 끝나는 것을 기다린 뒤에 본다. 첫 현상은 원본 확보와
+    /// 풀해상도 렌더까지 포함하므로 정착 대기보다 여유를 둔다.
+    private static func waitUntilDevelopedOnce(
+        _ model: AppModel, _ frame: ScanFrame, timeout: TimeInterval = 30
+    ) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if frame.hasDevelopedOnce { return }
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+        XCTFail(developDiagnosis(model, frame))
+    }
+
     private static func waitUntilSettled(
         _ frame: ScanFrame, afterRevision revision: Int, timeout: TimeInterval = 20
     ) async throws {
