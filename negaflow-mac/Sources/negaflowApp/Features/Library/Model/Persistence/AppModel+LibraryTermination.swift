@@ -157,13 +157,13 @@ extension AppModel {
     )? {
         librarySaveTask?.cancel()
         librarySaveTask = nil
-        // 별도 approval generation을 써서 앞서 enqueue된 일반 write completion이 종료
-        // read-back 실패를 성공 상태로 덮지 못하게 한다.
-        let generation = markLibraryCatalogDirty()
         let persistentFrameIDs = frames.lazy.filter { !$0.isPreviewScan }.map(\.id)
         guard !isAcknowledgedLibraryTransactionActive,
               rollStore.hasExactMembership(for: Array(persistentFrameIDs)) else {
-            recordLibraryCatalogWriteResult(generation: generation, succeeded: false)
+            recordLibraryCatalogWriteResult(
+                generation: markLibraryCatalogDirty(),
+                succeeded: false
+            )
             statusMessage = libraryCatalogBlockMessage(.writeFailed)
             return nil
         }
@@ -172,6 +172,14 @@ extension AppModel {
                 return nil
             }
         }
+        // recipe 저장이 예약한 지연 저장은 종료 커밋과 같은 catalog를 두고 경쟁한다.
+        librarySaveTask?.cancel()
+        librarySaveTask = nil
+        // 별도 approval generation을 써서 앞서 enqueue된 일반 write completion이 종료
+        // read-back 실패를 성공 상태로 덮지 못하게 한다. recipe 저장이 스스로 catalog를
+        // dirty로 올리므로 그 뒤에 확정한다 — 먼저 잡으면 종료 커밋이 자기가 만든 dirty를
+        // 사용자 변경으로 보고 끝없이 재커밋한다.
+        let generation = markLibraryCatalogDirty()
         guard let catalog = currentLibraryCatalogSnapshot() else {
             recordLibraryCatalogWriteResult(generation: generation, succeeded: false)
             statusMessage = libraryCatalogBlockMessage(.writeFailed)

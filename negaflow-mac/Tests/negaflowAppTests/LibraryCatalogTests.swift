@@ -804,6 +804,69 @@ final class LibraryCatalogTests: XCTestCase {
         XCTAssertFalse(model.isLibraryTerminationSaveInProgress)
     }
 
+    func testTerminationWithDefectEditsCommitsPreparedGenerationAndLaterChanges() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "negaflow-termination-defects-\(UUID().uuidString)", isDirectory: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = AppModel(
+            backupScheduleStore: try makeManualBackupScheduleStore(),
+            libraryCatalogURL: root.appendingPathComponent("library.json"),
+            libraryDefectDirectoryURL: root.appendingPathComponent("defects"),
+            libraryBackupDirectoryURL: root.appendingPathComponent("backups")
+        )
+        let frame = ScanFrame(
+            scanIndex: 1, rawScanURL: URL(fileURLWithPath: "/offline/termination.tiff"),
+            filmType: .colorNegative
+        )
+        frame.establishLibraryWorkflowBaselineIfNeeded()
+        frame.defectEdits = [DefectEditItem(
+            edit: .brush([DefectStroke(points: [CGPoint(x: 0.2, y: 0.3)], thickness: 0.05)]),
+            label: .brush(strokeCount: 1),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
+            preview: [], baseSize: nil
+        )]
+        model.frames = [frame]
+        XCTAssertTrue(model.assignNewPersistentFrames([frame]))
+        model.libraryPersistenceEnabled = true
+        defer {
+            model.libraryPersistenceEnabled = false
+            model.librarySaveTask?.cancel()
+            model.sourceAvailabilityRefreshTask?.cancel()
+        }
+        let scheduled = expectation(description: "종료 카탈로그 준비")
+        var catalogs: [LibraryCatalog] = []
+        var generations: [UInt64] = []
+        var completions: [LibraryTerminationCommitCompletion] = []
+        var replies: [Bool] = []
+        XCTAssertEqual(model.beginApplicationTermination(
+            scheduleCommit: { catalog, generation, _, _, completion in
+                catalogs.append(catalog)
+                generations.append(generation)
+                completions.append(completion)
+                if catalogs.count == 1 { scheduled.fulfill() }
+            }, completion: { replies.append($0) }
+        ), .terminateLater)
+        await fulfillment(of: [scheduled], timeout: 5)
+        XCTAssertEqual(generations.last, model.libraryCatalogDirtyGeneration)
+        XCTAssertNil(model.librarySaveTask)
+        XCTAssertTrue(replies.isEmpty)
+
+        // 저장을 기다리는 동안 실제 편집이 생기면 최신 값으로 한 번 더 승인합니다.
+        frame.customDisplayName = "changed while saving"
+        try XCTUnwrap(completions.first)(.success(()))
+        XCTAssertEqual(catalogs.count, 2)
+        XCTAssertEqual(catalogs.last?.frames.first?.customDisplayName, "changed while saving")
+        XCTAssertEqual(generations.last, model.libraryCatalogDirtyGeneration)
+        XCTAssertTrue(replies.isEmpty)
+        try XCTUnwrap(completions.last)(.success(()))
+        XCTAssertEqual(catalogs.count, 2)
+        XCTAssertEqual(replies, [true])
+        XCTAssertFalse(model.hasUnsavedLibraryChanges)
+        XCTAssertFalse(model.isLibraryTerminationSaveInProgress)
+        XCTAssertNil(model.librarySaveTask)
+    }
+
     func testFrameRecordPreservesImmutableScanWorkflowReference() {
         let sessionID = UUID()
         let jobID = UUID()
