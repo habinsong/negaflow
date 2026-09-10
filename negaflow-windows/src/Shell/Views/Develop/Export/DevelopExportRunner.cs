@@ -48,9 +48,12 @@ internal sealed class DevelopExportRunner
 
     internal DevelopExportRunner(DevelopExportPanel view) => this.view = view;
 
-    /// <summary>어셈블리에 박힌 앱 판입니다. 사이드카가 어느 판이 만든 파일인지 남깁니다.</summary>
-    internal static string ShellVersion =>
-        typeof(DevelopExportPanel).Assembly.GetName().Version?.ToString() ?? "0.0.0";
+    /// <summary>
+    /// 사이드카가 어느 판이 만든 파일인지 남깁니다. macOS 사이드카는
+    /// <c>NegaflowProductVersion.applicationVersion()</c> — 곧 세 자리를 적으므로 같은 자리를
+    /// 씁니다. 어셈블리 판을 그대로 쓰면 같은 빌드가 낸 파일이 두 플랫폼에서 다르게 적힙니다.
+    /// </summary>
+    internal static string ShellVersion => NegaflowProductVersion.Current;
 
     private ExportArtifactSnapshot CaptureArtifacts(LibraryFrameSnapshot frame, string outputPath,
         ExportSettings settings, ExportEncodingOptions encoding) =>

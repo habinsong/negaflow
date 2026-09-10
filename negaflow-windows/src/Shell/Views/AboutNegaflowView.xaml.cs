@@ -21,17 +21,6 @@ public sealed partial class AboutNegaflowView : UserControl
         CopyrightText.Text = "Copyright 2026 Song Habin";
     }
 
-    internal static string ApplicationVersion()
-    {
-        try
-        {
-            Windows.ApplicationModel.PackageVersion version =
-                Windows.ApplicationModel.Package.Current.Id.Version;
-            return $"{version.Major}.{version.Minor}.{version.Build}.{version.Revision}";
-        }
-        catch (Exception)
-        {
-            return "1.0.0.0";
-        }
-    }
+    /// <summary>macOS 는 <c>CFBundleShortVersionString</c> 을 그대로 보여 줍니다 — 세 자리입니다.</summary>
+    internal static string ApplicationVersion() => NegaflowProductVersion.Current;
 }
