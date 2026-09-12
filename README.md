@@ -38,9 +38,9 @@
   </picture>
 </p>
 
-**negaflow** is an app that takes in film you scanned or copied with a camera and develops it. Color or black and white, negative or positive, all of it works. From the library through developing to printing, it all finishes inside one app. Edit values are stored separately from the original, so the original file stays as it is.
+**negaflow** develops film scans and camera copies, whether color or black and white, negative or positive. You can organize, develop, and print your photos in one app. Adjustments are saved separately, leaving the original file unchanged.
 
-The develop engine is called **Chroma Engine**, and dust and scratch repair is called **GrainMend**. It's fine if you don't have a scanner. Import image files and you can still develop and export. Scanner connection only opens up once you install a separate plugin.
+The develop engine is **Chroma Engine**. **GrainMend** repairs dust and scratches. You can import, develop, and export image files without a scanner. Connecting a scanner requires a separate plugin.
 
 > Unlike the way the analog revival keeps growing, the analog photography process itself is at a standstill. Unless you print it the analog way, film has to go through a conversion into digital before it finally reaches our eyes.
 >
@@ -61,7 +61,7 @@ The develop engine is called **Chroma Engine**, and dust and scratch repair is c
 | Engine | Swift + Core Image | C++ + Direct3D |
 | Color management | ColorSync | Windows ICM |
 
-The two apps are native apps developed in different languages and in different ways, and even so the features and the results are the same.
+The two native apps use different languages and implementations but have the same features and produce the same results.
 
 The engine code lives in the `Chromabase` module on macOS and the `Native` module on Windows.
 
@@ -77,32 +77,32 @@ Get it from [GitHub Releases](https://github.com/habinsong/negaflow/releases).
 | `negaflow-1.1.6-mac-arm64.pkg` | macOS 14 or later, Apple Silicon only |
 | `negaflow-1.1.6-win-x64.exe` | Windows 11 24H2 or later, x64 |
 
-Most Macs are fine with the Universal PKG. Of course, the Silicon build and a DMG and a ZIP are up on the same page too. On the first launch you have to open System Settings, go to Privacy and Security, and click Open Anyway once.
+The Universal PKG works on most Macs. The same page also has the Silicon build, a DMG, and a ZIP. On the first launch you have to open System Settings, go to Privacy and Security, and click Open Anyway once.
 
-The Windows install finishes inside your user folder and never asks for administrator rights. It isn't signed, so SmartScreen blocks it once. Click More info, then run it. You can uninstall it from Control Panel.
+The Windows installer installs into your user folder without asking for administrator rights. It isn't signed, so SmartScreen blocks it once. Click More info, then run it. You can uninstall it from Control Panel.
 
-Attaching a real scanner needs a separate plugin, and for SANE scanners there is [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane). Naturally, it works on both macOS and Windows.
+Connecting a scanner requires a separate plugin. For SANE scanners, use [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane). It works on both macOS and Windows.
 
 ## Features
 > Everything for turning analog film into a finished photograph is in here.
-- Starting from measuring the film base and developing color and black-and-white negatives and positives
-- Everything adjustment needs, such as exposure, contrast, curves, HSL, and color grading
+- Film-base measurement and development of color and black-and-white negatives and positives
+- Exposure, contrast, curves, HSL, and color grading
 - Extra options like sharpening, noise reduction, grain, vignette, and halation
 - GrainMend, which restores photos by removing dust and scratches.
 - A library with rolls, folders, collections, ratings, stacks, virtual copies, and search by camera, lens, or film
 - Presets and copy-paste that carry the develop process, target, tone, color, detail, crop, and orientation together
 - JPEG and 16-bit TIFF export, ICC profiles, and records such as camera, lens, and film saved into EXIF
-- Seven print layouts, paper previews, photo and ISO paper sizes, and C-print features on top of that.
+- Seven print layouts, paper previews, photo and ISO paper sizes, and C-print features.
 
 ## Chroma Engine
 
-**Chroma Engine** takes on film inversion and development.
+**Chroma Engine** handles film inversion and development.
 
-Before developing a negative it measures the film base first. It reads the value from an area the light never once reached. Where the automatic measurement is off, use the eyedropper or adjust the RGB values.
+Before developing a negative, it measures the film base in an unexposed area. If the automatic measurement is off, use the eyedropper or adjust the RGB values.
 
 The default is `MAIN` with manual adjustments. Auto tone, auto white balance, auto levels, and auto color only run when you press them.
 
-The rest of the targets are these. `PRINT` for output through a printer ICC profile, `HS` and `SP` in the minilab family, `F135` and `HR` in the lab-equipment family, and `EXPIRED` for bringing back old film. For output you can pick sRGB, Display P3, Adobe RGB, or an RGB ICC profile of your own.
+Other targets are `PRINT` for output through a printer ICC profile, `HS` and `SP` in the minilab family, `F135` and `HR` in the lab-equipment family, and `EXPIRED` for restoring old film. For output you can pick sRGB, Display P3, Adobe RGB, or an RGB ICC profile of your own.
 
 The order of inversion and color processing is in the [Chroma Engine doc](docs/product/CHROMA_ENGINE.md).
 
@@ -116,7 +116,7 @@ The order of inversion and color processing is in the [Chroma Engine doc](docs/p
 `Brush` is the tool for painting over spots Auto missed, and clone stamp copies pixels from a position you choose.<br>
 `Clone stamp` is a stamping feature where you pick the texture you want and paint it on yourself. <br>
 
-Auto and Guided fill defects by looking at the surrounding texture. Before filling, they look at direction and the surrounding structure first. Mistake a railing or a tile joint in the photo for a scratch and erase it, and that is damage rather than repair.
+Auto and Guided fill defects using the surrounding texture, checking its direction and structure first. Mistaking a railing or a tile joint for a scratch and erasing it damages the photo.
 
 Edits stay as layers. You can change the strength, check the mask, and switch each one off or delete it.<br>
 **GrainMend IR** adds detection results from the infrared channel a scanner plugin hands over into the same record.
@@ -153,13 +153,13 @@ What each action does to your original files is laid out as a table in [From lib
 
 ## Scanners and film profiles
 
-negaflow itself does not open features off a scanner model name.<br> It only uses the resolution, bit depth, scan area, exposure, and IR support the plugin reports. Guess from the name and features the device does not have get switched on.
+negaflow uses only the resolution, bit depth, scan area, exposure, and IR support reported by the plugin. It does not infer features from a scanner model name, which could enable controls the device does not support.
 
 SANE devices are handled by [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), a separate GPL project. The plugin runs as its own process and the exchange format is JSON. **negaflow** contains no SANE code and links none.
 
-The bundle ships 15 scanner profiles. They were built from film I shot myself, and the number of recorded data points is 928.
+The bundle includes 15 scanner profiles, built from film I shot myself, with 928 recorded data points.
 
-All of them are `realOnly`. It means they were built from real scans, but they have not reached the stage of having their accuracy verified against an independent reference. I did not want to write up something unverified as verified. Profiles do not attach automatically from a scanner name, so you have to pick them yourself.
+All of them are `realOnly`: they were built from real scans, but their accuracy has not been verified against an independent reference. I did not want to write up something unverified as verified. Profiles are selected manually; they are not applied automatically based on a scanner name.
 
 The details are in [the film profiles doc](docs/product/FILM_PROFILES.md).
 
@@ -178,4 +178,4 @@ The tools and commands differ per platform. The full procedure is in each doc. [
 
 ## License
 
-**negaflow** is released under the [Apache License 2.0](LICENSE). It is not affiliated with or sponsored by Kodak, Fujifilm, Noritsu, LaserSoft Imaging, or any other trademark holder. Product names are used only to point to what something is compatible with or measured against. The [trademark notice](TRADEMARKS.md) has the detail.
+**negaflow** is released under the [Apache License 2.0](LICENSE). It is not affiliated with or sponsored by Kodak, Fujifilm, Noritsu, LaserSoft Imaging, or any other trademark holder. Product names identify compatibility or measurement references. The [trademark notice](TRADEMARKS.md) has the detail.

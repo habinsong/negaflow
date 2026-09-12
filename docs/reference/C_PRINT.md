@@ -8,7 +8,7 @@ The Print workspace combines page layout, page export, and output-process previe
 
 New contact sheets start with a black sheet, 6 columns × 7 rows, and 2 mm horizontal and vertical gaps. Every other layout starts with a white sheet. Every layout can switch its sheet independently between black, gray, and white; captions, custom text, crop marks, and page outlines automatically use a contrasting color.
 
-Margins, row and column counts, and horizontal and vertical gaps use one physical layout contract. Impossible combinations are reduced to the largest valid spacing instead of producing a broken preview. Automatic orientation follows the grid rather than the first selected photo. With **Fit**, the full photo remains visible and unused space may remain inside its cell; **Fill Cell** crops each photo to the common cell and makes the visible gutters uniform.
+Margins, row and column counts, and horizontal and vertical gaps use one physical layout contract. Impossible combinations are reduced to the largest valid spacing instead of producing a broken preview. Automatic orientation follows the grid. With **Fit**, the full photo remains visible and unused space may remain inside its cell; **Fill Cell** crops each photo to the common cell and makes the visible gutters uniform.
 
 Caption choices are file name, original frame number, sequence number starting at 1 in the current image order, rating, and custom text. When captions are enabled, any installed Mac font can be selected and the same font is used in the preview and print export. Per-image captions can be aligned left, center, or right. Custom text supports multiple independent text boxes; each box has its own text, alignment, position, width, and height anywhere on the sheet.
 

@@ -29,7 +29,7 @@ flowchart LR
 | [Library to print workflow](product/WORKFLOW.md) | You need import, folder development, copy/paste, and print behavior |
 | [Chroma Engine](product/CHROMA_ENGINE.md) | You want the film inversion and develop order |
 | [GrainMend](product/GRAINMEND.md) | You want to see how dust and scratch repair works |
-| [Film profiles](product/FILM_PROFILES.md) | You want where the bundled profiles came from, and their limits |
+| [Film profiles](product/FILM_PROFILES.md) | You want to know where the bundled profiles came from and their limits |
 
 ## Architecture
 
@@ -37,7 +37,7 @@ flowchart LR
 |---|---|
 | [Product architecture](architecture/PRODUCT_ARCHITECTURE.md) | Data flow between app, engine, storage, and export |
 | [Catalog storage](architecture/CATALOG_STORAGE.md) | Why SQLite, the old format, and the measurements |
-| [Scanner plugin architecture](architecture/SCANNER_PLUGINS.md) | External process, approval, scan file disclosure |
+| [Scanner plugin architecture](architecture/SCANNER_PLUGINS.md) | External process, approval, scan file publication |
 | [Library archive](architecture/LIBRARY_ARCHIVE.md) | How originals and edit history are stored together |
 
 ## Reference

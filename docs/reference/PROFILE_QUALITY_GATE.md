@@ -2,9 +2,9 @@
 
 [Docs home](../README.md)
 
-`scripts/evaluate_profile_quality.py` checks that a change to a scanner profile did not come out worse than the accepted baseline. It compares two `SOURCE/summary.json` files produced by `LUT_target/analyze_lut_target.py`, and only the validation cases that were kept out of profile tuning count toward the decision.
+`scripts/evaluate_profile_quality.py` checks whether a scanner profile change performs worse than the accepted baseline. It compares two `SOURCE/summary.json` files produced by `LUT_target/analyze_lut_target.py`, and only the validation cases that were kept out of profile tuning count toward the decision.
 
-The tool does not decide what "good color" is. Which numbers should go down, which should go up, and how much movement is acceptable are written into the corpus manifest by a person. No default pass values are handed out.
+The tool does not decide what "good color" is. Which numbers should go down, which should go up, and how much movement is acceptable are written into the corpus manifest by a person. There are no default passing thresholds.
 
 There is no REAL/TARGET image pair in this repository today. So there is no real corpus manifest, no accepted baseline, and no pass result from a real device either. The synthetic tests check the checker's code and nothing else.
 
@@ -39,7 +39,7 @@ Rules for applying it:
 - [Noritsu HS-1800 product information](https://www.noritsu.eu/hardware/noritsu-film-scanner.html) lists supported formats, resolution, and throughput, but gives no fixed color transfer function.
 - [Noritsu patent US 7,589,863](https://patents.google.com/patent/US7589863/en) describes the minilab flow where an operator chooses density, gradation, and sharpening.
 
-This material shows that processing changes with the scene and the operator. It does not hand over constants for reproducing an HS-1800 or an SP-3000. negaflow does not guess such values from a product name.
+This material shows that processing changes with the scene and the operator. It does not supply constants for reproducing an HS-1800 or an SP-3000. negaflow does not guess such values from a product name.
 
 ## Corpus manifest schema v1
 

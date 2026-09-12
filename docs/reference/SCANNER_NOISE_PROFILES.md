@@ -4,7 +4,7 @@
 
 You cannot build a noise profile from one ordinary photograph. The high-frequency part of a photograph mixes the subject with film grain.
 
-Scan a flat or stepped target at least three times with the same settings. How much the pixel at the same position moves gives the variance per signal level.
+Scan a flat or stepped target at least three times with the same settings. Changes in the pixel value at the same position give the variance per signal level.
 
 - [ISO 15739:2023](https://www.iso.org/standard/82233.html) sets how noise per signal is measured and reported for digital imaging devices.
 - [ISO 21550:2004](https://www.iso.org/standard/35939.html) sets how the dynamic range of transmissive and reflective scanners is measured.

@@ -19,7 +19,7 @@ Belege:
 
 ## Wo es automatisch greift
 
-Entscheidend ist nicht, ob der Film negativ oder positiv ist, sondern **was das Bild bildet**. Farbfilm bleicht sein Silber bei der Entwicklung heraus und behält nur Farbstoff, und Farbstoff ist für Infrarot durchlässig. Schwarzweißfilm ist ein Silberbild und blockt Infrarot ab; die Korrektur würde die Aufnahme selbst als einen einzigen großen Defekt lesen und löschen.
+Entscheidend ist, **was das Bild bildet**. Farbfilm bleicht sein Silber bei der Entwicklung heraus und behält nur Farbstoff, und Farbstoff ist für Infrarot durchlässig. Schwarzweißfilm ist ein Silberbild und blockt Infrarot ab; die Korrektur würde die Aufnahme selbst als einen einzigen großen Defekt lesen und löschen.
 
 | Filmtyp | Automatisches IR | Grund |
 |---|---|---|

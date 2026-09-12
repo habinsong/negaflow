@@ -57,7 +57,7 @@ negaflow capabilities <scannerID> [--demo] --json
 - `minScanArea`、`maxScanArea`、`scanAreaUnit`
 - `outputFormats`、`estimatedScanSpeeds`
 
-装置が知らせなかった値は推測しません。 値に応じて`null`、空の配列、`false`、またはプラグインが送った`disabledReasons`をそのまま使います 。
+装置が知らせなかった値は推測しません。 値に応じて`null`、空の配列、`false`、またはプラグインが送った`disabledReasons`をそのまま使います。
 
 `estimatedScanSpeeds`は次のオブジェクトの配列で、DPIの昇順です。
 

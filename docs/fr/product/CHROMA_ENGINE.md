@@ -63,7 +63,7 @@ Les données Portra 400 de Kodak consignent elles aussi séparément la densité
 
 ### Mesure automatique
 
-`FilmBaseEstimator` ne se contente pas de moyenner quelques pixels très clairs.
+`FilmBaseEstimator` analyse la distribution spatiale des pixels clairs pour identifier le support non exposé.
 
 - Un pixel de film ne peut pas être plus clair que le support non exposé.
 - Bien plus clair, cela peut être le rétroéclairage, les perforations ou l'extérieur du film.
@@ -107,7 +107,7 @@ Certaines valeurs approchent des courbes lues dans des documents publics, d'autr
 
 ### Réponse de tirage fixe
 
-`MAIN` transforme la densité, support soustrait, en une courbe strictement croissante. Les coefficients ne sont pas un préréglage caché : ils viennent de quatre points d'ancrage.
+`MAIN` transforme la densité, support soustrait, en une courbe strictement croissante. Les coefficients proviennent de quatre points d'ancrage.
 
 - Le point noir du support
 - Le gris moyen 18 %
@@ -164,7 +164,7 @@ Tous les profils actuels sont `realOnly`.
 
 ### `F135`, `HR`
 
-Ce sont deux styles de minilab construits par le projet, pas des clones de machines mesurées. `F135` emploie une courbe en S proche du tirage avec des tons moyens chauds ; `HR` des noirs profonds et une direction neutre et bleue plus calme. Aucune prétention à avoir validé et cloné une machine précise.
+Ce sont deux styles de minilab développés par le projet. `F135` emploie une courbe en S proche du tirage avec des tons moyens chauds ; `HR` des noirs profonds et une direction neutre et bleue plus calme. Aucune prétention à avoir validé et cloné une machine précise.
 
 ### `EXPIRED`
 

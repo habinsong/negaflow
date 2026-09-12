@@ -121,7 +121,7 @@ flowchart LR
 v2 的 `result` 必须带 `appliedOptions`。
 
 - `deviceID`、`resolutionDPI`、`bitDepth`、`colorMode`、`filmType`
-- `scanArea`：`originXMM`、`originYMM`、`widthMM`、`heightMM`。是插件实际发送给后端的区域， 而不是请求的副本。为规避会算错扫描尺寸的后端，该值可能被调整不到 1 mm。应用会用返回的像素尺寸与该区域比对，因此直接复制请求会使这项检查失效。
+- `scanArea`：`originXMM`、`originYMM`、`widthMM`、`heightMM`。是插件实际发送给后端的区域。为规避会算错扫描尺寸的后端，该值可能被调整不到 1 mm。应用会用返回的像素尺寸与该区域比对，因此直接复制请求会使这项检查失效。
 - `infrared`、`multiExposure`
 - `hardwareExposureTime`、`brightnessAdjustment`、`contrastAdjustment`
 - `outputRawTIFF`

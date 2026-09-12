@@ -2,7 +2,7 @@
 
 [Docs home](../README.md)
 
-The bundled scanner profiles are not downloaded LUTs or presets with a name slapped on. The project author shot and sorted the film scans, analyzed them, and turned the result into JSON.
+The bundled scanner profiles are built from film scans shot, sorted, and analyzed by the project author, and formatted as JSON.
 
 | Item | Current value |
 |---|---:|
@@ -87,7 +87,7 @@ These are scene observations. One frame's exposure or subject is never declared 
 
 ### 3. Scene grouping
 
-Scenes are grouped by brightness, contrast, saturation, and hue range. The count and distribution per group are recorded so one kind of scene cannot drag the whole profile.
+Scenes are grouped by brightness, contrast, saturation, and hue range. The count and distribution per group are recorded so one kind of scene does not dominate the whole profile.
 
 ### 4. Representative frames
 
@@ -100,7 +100,7 @@ These frames are recorded separately so a person can go back to the source.
 
 ### 5. Roll and group aggregation
 
-`scripts/compile_scanner_profiles.py` groups per-roll data into film and scanner groups. Empty bins are not dressed up as zero observations. It confirms that every value is finite and that the sample counts are real.
+`scripts/compile_scanner_profiles.py` groups per-roll data into film and scanner groups. Empty bins are not represented as zero-valued observations. It confirms that every value is finite and that the sample counts are real.
 
 ### 6. JSON and hashes
 

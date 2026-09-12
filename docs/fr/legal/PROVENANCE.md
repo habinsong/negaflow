@@ -2,7 +2,7 @@
 
 [Accueil de la documentation](../README.md)
 
-On note ici le périmètre de distribution Apache-2.0 de l'application negaflow. Ce n'est pas un avis juridique. C'est un relevé de provenance, pour pouvoir revérifier le dépôt et les artefacts de publication.
+Ce document consigne le périmètre de distribution Apache-2.0 de l'application negaflow. C'est un relevé de provenance pour revérifier le dépôt et les artefacts de publication, sans valeur d'avis juridique.
 
 ## Code
 

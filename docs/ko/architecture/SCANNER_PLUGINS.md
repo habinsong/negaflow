@@ -98,9 +98,9 @@ flowchart LR
 
 `capabilities` 응답은 선택 필드 `capabilityToken`을 돌려줄 수 있습니다. 앱은 이 값을 해석하지 않고 같은 장치의 다음 v2 `scan` 요청에만 그대로 전달합니다. v1 요청에는 넣지 않으며, 다른 장치의 토큰을 섞지 않습니다. 플러그인은 토큰의 형식과 유효성을 직접 검사해야 합니다.
 
-앱은 같은 backend에 속한 다른 모델로 잘못 재연결되는 일을 막을 수 있도록, 직전 `detect`가 보고한 `deviceID`, `vendor`, `model`을 `capabilities`의 선택적 stdin JSON으로 다시 전달합니다. 기존 플러그인은 이 입력을 무시할 수 있으며, 장치 주소가 바뀔 수 있는 플러그인은 capability 스냅샷에 이 동일성을 묶어 다음 `scan`에서도 검증해야 합니다.
+같은 backend의 다른 모델로 잘못 재연결되지 않도록 앱은 직전 `detect`가 보고한 `deviceID`, `vendor`, `model`을 `capabilities`의 선택적 stdin JSON으로 다시 전달합니다. 기존 플러그인은 이 입력을 무시할 수 있으며 장치 주소가 바뀔 수 있는 플러그인은 capability 스냅샷에 이 동일성을 묶어 다음 `scan`에서도 검증해야 합니다.
 
-각 NDJSON 이벤트는 같은 버전과 요청 ID를 반복하고, 이전보다 큰 0 이상의 `sequence`를 가져야 합니다. 이벤트는 `progress`, `result`, `error`만 허용합니다.
+각 NDJSON 이벤트는 같은 버전과 요청 ID를 반복하고 이전보다 큰 0 이상의 `sequence`를 가져야 합니다. 이벤트는 `progress`, `result`, `error`만 허용합니다.
 
 `result`와 `error`는 마지막 이벤트입니다. 뒤에 이벤트가 오면 실패합니다. 오류로 끝나지 않은 스캔에는 `result`가 정확히 하나 있어야 합니다.
 
@@ -121,7 +121,7 @@ v2 규격 위반은 일반 시간 제한을 기다리지 않고 플러그인을 
 v2 `result`에는 `appliedOptions`가 꼭 있어야 합니다.
 
 - `deviceID`, `resolutionDPI`, `bitDepth`, `colorMode`, `filmType`
-- `scanArea`: `originXMM`, `originYMM`, `widthMM`, `heightMM`. 요청을 복사한 값이 아니라 플러그인이 실제로 백엔드에 보낸 영역이다. 스캔 크기를 잘못 계산하는 백엔드를 우회하려고 1mm 미만으로 조정될 수 있다. 앱은 반환된 픽셀 크기를 이 영역과 대조하므로, 요청을 그대로 복사하면 검사가 무의미해진다.
+- `scanArea`: `originXMM`, `originYMM`, `widthMM`, `heightMM`. 플러그인이 실제로 백엔드에 보낸 영역이다. 스캔 크기를 잘못 계산하는 백엔드를 우회하려고 1mm 미만으로 조정될 수 있다. 앱은 반환된 픽셀 크기를 이 영역과 대조하므로 요청을 그대로 복사하면 검사가 무의미해진다.
 - `infrared`, `multiExposure`
 - `hardwareExposureTime`, `brightnessAdjustment`, `contrastAdjustment`
 - `outputRawTIFF`
@@ -130,7 +130,7 @@ v2 `result`에는 `appliedOptions`가 꼭 있어야 합니다.
 
 `resolutionDPI: 0`은 미리보기라는 뜻입니다. 미리보기가 0이 아니거나 본 스캔이 0이면 거부합니다. 모르는 값, 다른 장치, 결과 상단과 `appliedOptions`가 다른 해상도·비트 심도·IR 상태도 거부합니다.
 
-검사를 통과하면 플러그인 ID 대신 앱의 스캐너 ID와 요청 ID를 기록하고, 최종 출력 경로를 남깁니다. 이때만 `.verified(options)`로 표시합니다.
+검사를 통과하면 플러그인 ID 대신 앱의 스캐너 ID와 요청 ID를 기록하고 최종 출력 경로를 남깁니다. 이때만 `.verified(options)`로 표시합니다.
 
 `ScanResult.resolution`과 `bitDepth`는 v1에서 요청값을 임시 동작값으로 쓸 수 있습니다. 출처를 나타내는 `reportedResolution`, `reportedBitDepth`는 결과가 직접 보고한 올바른 값만 넣습니다.
 

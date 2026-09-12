@@ -4,7 +4,7 @@
 
 On ne fabrique pas un profil de bruit à partir d'une seule photographie ordinaire. Dans une photographie, le contenu haute fréquence mêle le sujet et le grain du film.
 
-Numérisez une mire plate ou à échelons au moins trois fois avec les mêmes réglages. La façon dont bouge le pixel au même endroit donne la variance par niveau de signal.
+Numérisez une mire plate ou à échelons au moins trois fois avec les mêmes réglages. Les variations de la valeur du pixel au même endroit donnent la variance par niveau de signal.
 
 - [ISO 15739:2023](https://www.iso.org/standard/82233.html) fixe la mesure et la présentation du bruit par signal pour les appareils d'imagerie numérique.
 - [ISO 21550:2004](https://www.iso.org/standard/35939.html) fixe la mesure de la plage dynamique des scanners à transmission et à réflexion.

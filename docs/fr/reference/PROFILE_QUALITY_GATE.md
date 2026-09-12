@@ -2,7 +2,7 @@
 
 [Accueil de la documentation](../README.md)
 
-`scripts/evaluate_profile_quality.py` vérifie qu'une modification de profil scanner n'est pas sortie moins bonne que la référence acceptée. Il compare deux `SOURCE/summary.json` produits par `LUT_target/analyze_lut_target.py`, et seuls les cas de validation tenus à l'écart du réglage comptent dans la décision.
+`scripts/evaluate_profile_quality.py` vérifie si une modification du profil scanner dégrade les résultats par rapport à la référence acceptée. Il compare deux `SOURCE/summary.json` produits par `LUT_target/analyze_lut_target.py`, et seuls les cas de validation tenus à l'écart du réglage comptent dans la décision.
 
 Cet outil ne décide pas ce qu'est une « bonne couleur ». Quels chiffres doivent baisser, lesquels doivent monter et quelle variation reste acceptable, c'est une personne qui l'écrit dans le manifeste du corpus. Aucune valeur de réussite par défaut n'est fournie.
 
@@ -166,7 +166,7 @@ Modes de vérification des fichiers :
 | `holdout` | Vérifie seulement les fichiers de validation | Pour un diagnostic rapide |
 | `none` | Ne vérifie pas les fichiers image | Non |
 
-Le défaut est `all`. Le rapport consigne le mode utilisé, les empreintes du manifeste et des fichiers de résumé, le résultat de la vérification des fichiers, ainsi que la comparaison et les comptes par cas de validation. Le même JSON part sur stdout et dans le fichier `--report`. Le fichier est enregistré de façon atomique.
+Le mode par défaut est `all`. Le rapport consigne le mode utilisé, les empreintes du manifeste et des fichiers de résumé, le résultat de la vérification des fichiers, ainsi que la comparaison et les comptes par cas de validation. Le même JSON part sur stdout et dans le fichier `--report`. Le fichier est enregistré de façon atomique.
 
 Codes de sortie :
 

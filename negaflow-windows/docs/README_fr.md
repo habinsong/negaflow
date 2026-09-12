@@ -104,7 +104,7 @@ Custom emploie les mêmes coefficients custom-3 et identifiants que macOS. La ci
 
 ## Vérifier le moteur en ligne de commande
 
-`negaflow-cli.exe` montre comment le moteur traite un fichier. Il prend des drapeaux plutôt que des sous-commandes.
+`negaflow-cli.exe` montre comment le moteur traite un fichier. Il utilise des options plutôt que des sous-commandes.
 
 ```powershell
 $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"

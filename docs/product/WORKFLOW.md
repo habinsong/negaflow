@@ -2,7 +2,7 @@
 
 [Docs home](../README.md)
 
-This guide covers import, folder development, settings transfer, scanner thumbnails, and print output. A library folder follows the physical parent folder of each source; it is not only a catalog label.
+This guide covers import, folder development, settings transfer, scanner thumbnails, and print output. A library folder follows the physical parent folder of each source.
 
 > [!IMPORTANT]
 > Source files stay unchanged unless you explicitly move a photo to another folder. Removing a folder from the library and deleting a file in Finder are separate actions.
@@ -81,7 +81,7 @@ Scanner rescan and simulator support have not been removed. They remain availabl
 
 Print has seven layouts: single image, contact sheet, picture package, custom package, cyanotype, glass plate, and gelatin silver. Cyanotype, glass plate, and gelatin silver reuse the single-image controls. With several photos selected, the four individual-image layouts show one full print page after another in a vertical scroll.
 
-Export and Quick Export count finished pages, not selected source photos. For example, 39 photos in a 6 × 7 contact sheet become one composed file; a four-up picture package becomes 10 pages; the default custom package becomes one page; and the four individual-image layouts become 39 files in a bounded batch.
+Export and Quick Export count finished pages. For example, 39 photos in a 6 × 7 contact sheet become one composed file; a four-up picture package becomes 10 pages; the default custom package becomes one page; and the four individual-image layouts become 39 files in a bounded batch.
 
 Package preview reuses an existing thumbnail, developed image, or raw preview and creates only a small fast preview when none exists. Final export calculates each placement from source metadata, develops only the pixels required by that placement, prepares two to four sources concurrently, and keeps the Core Image graph connected until the final page render. A shared render context and a 512 MiB per-page source-raster budget prevent one page from expanding into an unbounded set of full-resolution intermediate images.
 

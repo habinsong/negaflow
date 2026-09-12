@@ -66,7 +66,7 @@ r &= r_{\mathrm{white}}^{1/s}
 
 ## Default density range
 
-`normalRange` is not the film's physical maximum density. It is the range a normally exposed scene uses. It mostly matters when the base could not be measured, or when scene contrast is very low.
+`normalRange` is the density range a normally exposed scene uses. It mostly matters when the base could not be measured, or when scene contrast is very low.
 
 ```math
 \begin{aligned}
@@ -75,12 +75,18 @@ r &= r_{\mathrm{white}}^{1/s}
 \end{aligned}
 ```
 
+When base measurement succeeds, `targetDmax` is calculated from the base and `normalRange`:
+
+```math
+\mathrm{targetDmax} = \mathrm{baseD} + \operatorname{normalRange}
+```
+
 - `0.62`: rough slope of the straight-line section on a C-41 characteristic curve
 - Color `2.5`: about 7⅓ stops of diffuse luminance plus highlight headroom
 - Black and white `3.5`: black and white printing practice of using a longer straight line
 - `0.60D`: mid gray density of a normally exposed scene
 
-`applySceneRanged` measures the density range the frame actually uses per channel instead of taking this value.
+`applySceneRanged` measures the density range the frame actually uses per channel.
 
 ## What changed in v4
 

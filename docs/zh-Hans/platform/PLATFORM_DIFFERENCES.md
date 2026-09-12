@@ -58,7 +58,7 @@ Windows 不要管理员权限，装在用户目录里。卸载走开始菜单的
 
 macOS 带一个叫 `negaflow` 的 CLI，能找扫描仪、冲洗文件、跑 GrainMend、做性能测试，是给人日常用的。
 
-Windows 带的是 `negaflow-cli.exe`，用来看引擎怎么处理某一个文件。它接受参数标志而不是子命令， 为排查问题准备，不是日常工具。
+Windows 带的是 `negaflow-cli.exe`，用来看引擎怎么处理某一个文件。它接受参数标志而不是子命令，用于排查问题。
 
 ### 签名
 
@@ -72,6 +72,6 @@ Windows 带的是 `negaflow-cli.exe`，用来看引擎怎么处理某一个文�
 
 ## 怎么保持一致
 
-功能先落在 macOS，Windows 这边照着 macOS 的实际行为做，而不是照着写好的规格文档。凡是能测输出的部分，由 macOS 的基准图判定 Windows 是否正确。
+功能先落在 macOS，Windows 这边照着 macOS 的实际行为做。凡是能测输出的部分，由 macOS 的基准图判定 Windows 是否正确。
 
 两边对不上时，macOS 是标准答案，Windows 是 bug。

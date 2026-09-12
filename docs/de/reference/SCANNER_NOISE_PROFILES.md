@@ -4,7 +4,7 @@
 
 Aus einer gewöhnlichen Aufnahme lässt sich kein Rauschprofil bauen. Im hochfrequenten Anteil einer Aufnahme stecken Motiv und Filmkorn zugleich.
 
-Scannen Sie ein flaches oder gestuftes Target mindestens dreimal mit denselben Einstellungen. Wie stark das Pixel an derselben Stelle wandert, ergibt die Varianz je Signalhelligkeit.
+Scannen Sie ein flaches oder gestuftes Target mindestens dreimal mit denselben Einstellungen. Die Änderungen des Pixelwerts an derselben Stelle ergeben die Varianz je Signalhelligkeit.
 
 - [ISO 15739:2023](https://www.iso.org/standard/82233.html) regelt Messung und Angabe von Rauschen je Signal bei digitalen Bildaufnahmegeräten.
 - [ISO 21550:2004](https://www.iso.org/standard/35939.html) regelt die Messung des Dynamikumfangs von Durchlicht- und Auflichtscannern.

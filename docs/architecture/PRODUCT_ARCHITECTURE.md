@@ -5,18 +5,18 @@
 negaflow is a macOS and Windows app. You import or scan film images, then go through inversion, develop, GrainMend, output, and preservation. Every edit is kept apart from the original.
 
 > [!IMPORTANT]
-> Originals, edit history, caches, and output files are different material. Losing a cache must not lose the original or the edit history, and an export fails rather than ship a result it cannot rebuild.
+> Originals, edit history, caches, and output files are different material. Losing a cache must not lose the original or the edit history, and an export fails if a required result cannot be rebuilt.
 
 ## Safety rules that do not change
 
 1. Original images and third-party sidecars are never overwritten automatically.
 2. Removing something from the library and moving the original to the Trash are separate actions.
 3. The scanner screen shows only what the plugin reported.
-4. A fake scanner never stands in unless you pick the demo yourself.
+4. The demo scanner is used only when you explicitly select it.
 5. If an edited result cannot be rebuilt, the original is not exported in its place.
 6. A long job re-checks the frame, edit version, and session right before it applies its result.
 7. A cache has to be rebuildable from the original and the edit history.
-8. Under-verified profiles, output bundles, and archives are not published as a finished result.
+8. Profiles, output bundles, and archives are published only after the required checks pass.
 
 ## Modules
 
@@ -50,7 +50,7 @@ More detail:
 
 ### `ScannerKit`
 
-Not a scanner driver. It owns the contract that connects an external plugin.
+It owns the contract that connects an external plugin.
 
 - Scanner ID and capabilities
 - Request and response JSON
@@ -75,7 +75,7 @@ Uses the same engine and `ScannerKit` as the GUI.
 
 ### `negaflowApp`
 
-The app people use, built with SwiftUI and AppKit.
+The user interface, built with SwiftUI and AppKit.
 
 - Library, develop, print, canvas
 - Scan, GrainMend, export
@@ -100,7 +100,7 @@ flowchart LR
     G --> J["Preservation archive"]
 ```
 
-Each step adds to the catalog and the edit history instead of changing the original.
+Each step leaves the original untouched and adds to the catalog and edit history.
 
 ## Input and originals
 
@@ -165,11 +165,11 @@ Organizing:
 
 In the folder view each folder shows a band with a disclosure triangle, folder, name, count, develop process, target, and apply. The band collapses the thumbnails under it. Collapsed folders are remembered across launches, separately from the file list in the sidebar.
 
-The folder view is **one** grid, with each folder as a section and its band as the section header. It must stay that way. Giving every folder its own grid and stacking those grids defeats laziness: the stack has to size each folder as a whole, so a folder builds all of its cards the moment it comes into view. With one grid the unit of laziness is a row, which is what keeps scrolling smooth in a library of several hundred photos.
+The folder view uses **one** grid. Each folder is a section, with its band as the section header. Keep this structure: stacking a separate grid for each folder forces the layout to calculate the full height of every visible folder and create all its cards at once. A single grid creates cards one row at a time as they come into view. This keeps scrolling smooth across several hundred photos.
 
-Several virtual copies can share one original. Before an original is deleted, its references are checked first. Removing something from the library only changes catalog references. Moving to the Trash is a separate action.
+Several virtual copies can share one original. References to an original are checked before deletion. Removing something from the library only changes catalog references. Moving to the Trash is a separate action.
 
-Edits survive an external disk going away. The original is marked offline and you relink it by file or by folder. If the ID is not the one expected, nothing is swapped automatically.
+Edits are preserved when an external disk is disconnected. The original is marked offline and you relink it by file or by folder. If the ID is not the one expected, nothing is swapped automatically.
 
 Each registered physical source folder has one file-system watcher. Events are coalesced briefly, then only the changed folder is rescanned. Bookmark-based relinking preserves the catalog folder ID when Finder moves or renames a source, and newly added direct-child images are imported without polling or rescanning the whole library.
 
@@ -194,9 +194,9 @@ More detail is in [GrainMend](../product/GRAINMEND.md).
 
 ## Versions
 
-- **History and Snapshot:** record a develop state yourself, then compare it or go back to it.
-- **Virtual Copy:** another branch of edits without duplicating the original file.
-- **Copy/Paste:** paste a chosen range such as tone, color, detail, or geometry. Masks that need original coordinates get their safety conditions checked.
+- History and Snapshot: record a develop state yourself, then compare it or go back to it.
+- Virtual Copy: another branch of edits without duplicating the original file.
+- Copy/Paste: paste a chosen range such as tone, color, detail, or geometry. Masks that need original coordinates get their safety conditions checked.
 
 ## Export
 
@@ -227,7 +227,7 @@ A partial set of files is never marked as success.
 
 ### Render record v3
 
-Instead of paths, it records the SHA-256 relationships between:
+It records the SHA-256 relationships between:
 
 - Original bytes
 - The actual render input
@@ -314,7 +314,7 @@ Catalog:
 
 Today the whole catalog is loaded into memory at startup. On the same Mac, reading SQLite took about 7.4 seconds, close to JSON. Reading only the rows needed, through an index, is the next step.
 
-The performance limits in the repository are wide ceilings meant to catch a large regression. They are not a promise that every supported Mac feels comfortable.
+The repository uses broad performance limits to catch large regressions. They do not guarantee responsiveness on every supported Mac.
 
 ## What is verified
 

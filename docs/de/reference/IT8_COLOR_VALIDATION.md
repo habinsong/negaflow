@@ -113,7 +113,7 @@ y_{\mathrm{ceil}} -
 \exp\left(-(\mathrm{rate}\,d)^{\mathrm{shape}}\right)
 ```
 
-`d` ist die optische Dichte nach Abzug von Dmin, danach normiert. Die Koeffizienten sind keine gespeicherten Presets, sondern werden aus diesen vier Ankerpunkten berechnet.
+`d` ist die optische Dichte nach Abzug von Dmin, danach normiert. Die Koeffizienten werden aus diesen vier Ankerpunkten berechnet:
 
 | Ankerpunkt | Wert |
 |---|---:|

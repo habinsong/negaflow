@@ -2,9 +2,9 @@
 
 [Accueil de la documentation](../README.md)
 
-Le stockage principal est `library.sqlite`. L'ancien `library.json` ne sert plus qu'à reprendre d'anciens éléments ou à écrire un fichier de diagnostic. Rien ne met à jour les deux fichiers en même temps, donc pas de `dual-write`.
+Le stockage principal est `library.sqlite`. L'ancien `library.json` ne sert plus qu'à importer d'anciens catalogues ou à écrire un fichier de diagnostic. Rien ne met à jour les deux fichiers en même temps, donc pas de `dual-write`.
 
-Les sauvegardes et les archives de conservation contiennent une forme JSON qui se déplace d'une machine à l'autre. Le fichier SQLite en cours d'utilisation n'y entre pas.
+Les sauvegardes et les archives de conservation utilisent un format JSON portable. Elles excluent le fichier SQLite en cours d'utilisation.
 
 | Type | Format | Sert à |
 |---|---|---|
@@ -38,7 +38,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 
 </details>
 
-Mesuré le 2026-07-12 : Mac14,3, arm64, 8 cœurs, 24 Gio de mémoire, macOS 26.5, build Swift Release. Ces chiffres ne disent rien d'un autre Mac. Ils servent de référence pour repérer une régression dans le même environnement.
+Mesuré le 2026-07-12 : Mac14,3, arm64, 8 cœurs, 24 Gio de mémoire, macOS 26.5, build Swift Release. Ces chiffres ne prédisent pas les performances d'un autre Mac. Ils servent de référence pour repérer une régression dans le même environnement.
 
 | Images | Taille JSON | Encodage p50 | Décodage p50 | Lecture fichier p50 |
 |---:|---:|---:|---:|---:|
@@ -57,7 +57,7 @@ Magasin de lignes SQLite, 50 000 images, p95 en Release :
 | Commit sans modification | 3 856 ms |
 | Taille par image | environ 4 211 octets |
 
-Une sauvegarde ne tire pas toute la base dans `Data`. Elle fabrique une copie temporaire compatible avec la réplication, puis l'échange de façon atomique. Le contrôle préalable ne décode pas toutes les images non plus : il vérifie l'intégrité SQLite et le schéma. Le p95 d'un commit sans modification est ainsi passé de 11 245 ms à 3 856 ms.
+Une sauvegarde ne charge pas toute la base dans `Data`. Elle fabrique une copie temporaire compatible avec la réplication, puis l'échange de façon atomique. Le contrôle préalable ne décode pas toutes les images non plus : il vérifie l'intégrité SQLite et le schéma. Le p95 d'un commit sans modification est ainsi passé de 11 245 ms à 3 856 ms.
 
 ## Pourquoi SQLite
 
@@ -66,7 +66,7 @@ Une sauvegarde ne tire pas toute la base dans `Data`. Elle fabrique une copie te
 - L'API C SQLite de macOS évite un nouveau paquet.
 - La règle de récupération actuelle tient : un magasin endommagé n'est jamais pris pour une bibliothèque vide.
 
-Aujourd'hui, `journal_mode=DELETE` et `synchronous=FULL`. WAL obligerait à traiter la base et le fichier `-wal` comme un tout. La base en service n'est jamais copiée au hasard. Seul le fichier principal, vérifié après fermeture de la connexion, devient une copie de récupération.
+Aujourd'hui, `journal_mode=DELETE` et `synchronous=FULL`. WAL obligerait à traiter la base et le fichier `-wal` comme un tout. La base en service n'est pas copiée directement. Seul le fichier principal, vérifié après fermeture de la connexion, devient une copie de récupération.
 
 ## Qui fait quoi dans le code
 
@@ -102,9 +102,9 @@ Après le passage, aucun retour automatique au JSON. Pour empêcher une ancienne
 
 ## Ce qui n'a pas été retenu
 
-- **Tout le catalogue dans un fichier JSON :** simple, mais lire 50 000 images prend environ 7,4 secondes, et chaque enregistrement réécrit le fichier.
-- **Un fichier JSON par image :** certaines écritures diminuent, mais il faut écrire soi-même le code qui enregistre plusieurs entités d'un coup et valide leurs relations.
-- **Passer à Core Data maintenant :** possible, mais cela veut dire refaire d'un coup la conversion Codable et le contrat de récupération. À reconsidérer si un prototype réel mesure mieux que SQLite brut.
+- Tout le catalogue dans un fichier JSON : simple, mais lire 50 000 images prend environ 7,4 secondes, et chaque enregistrement réécrit le fichier.
+- Un fichier JSON par image : certaines écritures diminuent, mais il faut écrire soi-même le code qui enregistre plusieurs entités d'un coup et valide leurs relations.
+- Passer à Core Data maintenant : possible, mais cela veut dire refaire d'un coup la conversion Codable et le contrat de récupération. À reconsidérer si un prototype réel mesure mieux que SQLite brut.
 
 ## Sources
 

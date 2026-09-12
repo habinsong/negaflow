@@ -63,7 +63,7 @@ Kodak's Portra 400 data also records minimum density, characteristic curves, and
 
 ### Automatic measurement
 
-`FilmBaseEstimator` does not just average the few brightest pixels.
+`FilmBaseEstimator` evaluates the spatial distribution of bright pixels across the frame to identify the unexposed base.
 
 - A film pixel cannot be brighter than the unexposed base.
 - Anything much brighter may be backlight, perforation, or outside the film.
@@ -101,13 +101,13 @@ What the data is for:
 
 - The Dmin default when the base cannot be measured
 - Per-channel density range
-- A safe range when low contrast makes automatic measurement wobble
+- A safe range when low contrast makes automatic measurement unstable
 
 Some values were approximated by reading curves in public material, and some were set conservatively. 27 names do not mean 27 validated color profiles. Once the base is measured, the measurement wins.
 
 ### Fixed print response
 
-`MAIN` turns base-subtracted density into a monotonically rising curve. The coefficients are not a hidden preset; they are computed from four anchors.
+`MAIN` turns base-subtracted density into a monotonically rising curve. The coefficients are computed from four anchors.
 
 - The black point of the base
 - 18% mid gray
@@ -164,7 +164,7 @@ Every profile today is `realOnly`.
 
 ### `F135`, `HR`
 
-These are two minilab styles built by the project, not measured machine clones. `F135` uses a print-like S-curve with warm midtones; `HR` uses deep blacks and a calm neutral and blue direction. No claim is made of validating and cloning a specific machine.
+These are two minilab styles built by the project. `F135` uses a print-like S-curve with warm midtones; `HR` uses deep blacks and a calm neutral and blue direction. No claim is made of validating and cloning a specific machine.
 
 ### `EXPIRED`
 
@@ -174,19 +174,19 @@ A recovery target for old film. It does not blanket-desaturate or stretch the ra
 
 The left Film tab offers slide and color negative stocks. For a scan these are a color transform only, because the scan already carries the film's own latitude, density response, scatter, and grain in its pixels.
 
-A digital photograph carries none of that. Measurement showed what a color transform alone does there: on camera-rendered input the highlight steps collapsed to 0.0031, about one fourteenth of the same steps on flat input, while saturation still rose. The result reads as a filter, not as film.
+A digital photograph carries none of that. Measurement showed what a color transform alone does there: on camera-rendered input the highlight steps collapsed to 0.0031, about one fourteenth of the same steps on flat input, while saturation still rose. The result reads as a digital filter.
 
 So a source marked `Digital Color` or `Digital B&W` runs a separate chain that redoes what film does, in order:
 
-1. Undo the camera's display rendering to estimate the exposure the film would receive. Clipped detail does not come back; this is a plausible reconstruction, not recovery.
-2. Add scatter and halation while the image is still linear light, before any density exists. Returning light strikes the red layer first, so the glow is red-weighted, and the light is redistributed rather than added.
-3. Virtual development. A characteristic curve builds density, DIR couplers inhibit neighbouring layers, and a negative then goes through RA-4 paper. A negative's low gamma and the paper's high gamma are two separate curves, which is why highlights lie down instead of clipping.
+1. Undo the camera's display rendering to estimate the exposure the film would receive. Clipped detail does not come back; this is a plausible reconstruction.
+2. Add scatter and halation while the image is still linear light, before any density exists. Returning light strikes the red layer first, producing a red-weighted glow, and redistributes light without adding energy.
+3. Virtual development. A characteristic curve builds density, DIR couplers inhibit neighbouring layers, and a negative then goes through RA-4 paper. A negative's low gamma and the paper's high gamma are two separate curves, which lets highlights roll off without clipping.
 4. The stock's color signature, since contrast already came from step 3.
 5. Grain that follows density, and edge response from the datasheet MTF.
 
 Scan sources never enter this chain. The switch is the source flag alone, and the scan path is unchanged.
 
-Exposure is rescaled to the latitude of each emulsion. A reversal stock is white about a stop above mid grey, so pushing a six-stop digital scene into it unchanged leaves no highlight detail at all. The rescale keeps each stock's contrast ranking rather than flattening every film to the same response.
+Exposure is rescaled to the latitude of each emulsion. A reversal stock is white about a stop above mid grey, so pushing a six-stop digital scene into it unchanged leaves no highlight detail at all. The rescale preserves each stock's contrast ranking.
 
 Grain and halation become film properties once a stock is selected, so the texture sliders set their strength instead of adding a second, separate effect.
 
@@ -228,7 +228,7 @@ PNG and TIFF are lossless and never subsample. Their only quality control is bit
 
 - `CIContext` is reused per purpose.
 - Adjustments use a lower-resolution preview; export rebuilds from the source.
-- A result that took a while re-checks the frame ID, edit version, and session right before it is applied.
+- Long-running tasks re-check the frame ID, edit version, and session immediately before applying a result.
 - When memory runs low, caches such as thumbnails and previews are dropped.
 - Originals and edit history are kept apart from caches.
 
@@ -253,4 +253,4 @@ A good synthetic IT8 result does not prove absolute accuracy on real negatives. 
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-The current product version is `1.1.6`. The edit history and profile schemas will keep going through a validation process before they change in later versions.
+The current product version is `1.1.6`. Changes to the edit history and profile schemas will require validation in later versions.

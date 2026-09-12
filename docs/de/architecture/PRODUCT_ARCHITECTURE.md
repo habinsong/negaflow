@@ -12,7 +12,7 @@ negaflow ist eine App für macOS und Windows. Sie importieren oder scannen Filmb
 1. Originalbilder und Sidecars Dritter werden nie automatisch überschrieben.
 2. Aus der Bibliothek entfernen und das Original in den Papierkorb legen sind zwei Dinge.
 3. Der Scanner-Bildschirm zeigt nur, was das Plugin gemeldet hat.
-4. Kein falscher Scanner springt ein, solange Sie die Demo nicht selbst wählen.
+4. Der Demo-Scanner wird nur verwendet, wenn Sie ihn ausdrücklich wählen.
 5. Lässt sich ein bearbeitetes Ergebnis nicht neu aufbauen, wird nicht das Original an seiner Stelle exportiert.
 6. Ein langer Auftrag prüft Bild, Bearbeitungsversion und Sitzung erneut, kurz bevor er sein Ergebnis anwendet.
 7. Ein Cache muss sich aus Original und Bearbeitungsverlauf neu aufbauen lassen.
@@ -50,7 +50,7 @@ Mehr dazu:
 
 ### `ScannerKit`
 
-Kein Scannertreiber. Es trägt den Vertrag, der ein externes Plugin anbindet.
+Es trägt den Vertrag, der ein externes Plugin anbindet.
 
 - Scanner-ID und Funktionen
 - Anfrage- und Antwort-JSON
@@ -100,7 +100,7 @@ flowchart LR
     G --> J["Aufbewahrungsarchiv"]
 ```
 
-Jeder Schritt ergänzt Katalog und Bearbeitungsverlauf, statt das Original zu ändern.
+Jeder Schritt lässt das Original unberührt und erweitert Katalog sowie Bearbeitungsverlauf.
 
 ## Eingabe und Originale
 
@@ -165,9 +165,9 @@ Zum Ordnen:
 
 In der Ordneransicht trägt jeder Ordner ein Band: Dreieck, Ordner, Name, Anzahl, Entwicklungsprozess, Ziel, Anwenden. Das Dreieck klappt die Miniaturen darunter ein. Eingeklappte Ordner bleiben es beim nächsten Start, getrennt vom Einklappen der Dateiliste in der Seitenleiste.
 
-Die Ordneransicht ist **ein** Raster: jeder Ordner eine Sektion, sein Band deren Kopf. Diese Struktur muss so bleiben. Jedem Ordner ein eigenes Raster zu geben und diese zu stapeln hebt die Faulheit auf. Der Stapel muss die Höhe eines Ordners als Ganzes kennen, also baut ein Ordner alle seine Karten, sobald er ins Bild kommt. Mit einem Raster ist die Einheit der Faulheit eine Zeile, und genau das hält das Scrollen bei mehreren hundert Fotos flüssig.
+Die Ordneransicht verwendet **ein** Raster. Jeder Ordner bildet eine Sektion mit seinem Band als Kopf. Diese Struktur muss erhalten bleiben: Stapelt man ein eigenes Raster pro Ordner, muss das Layout die gesamte Höhe jedes sichtbaren Ordners berechnen und alle seine Karten auf einmal erstellen. Ein gemeinsames Raster erstellt die Karten zeilenweise, sobald sie sichtbar werden. So bleibt das Scrollen bei mehreren hundert Fotos flüssig.
 
-Mehrere virtuelle Kopien können ein Original teilen. Bevor ein Original gelöscht wird, werden zuerst seine Verweise geprüft. Aus der Bibliothek entfernen ändert nur Verweise im Katalog. Der Papierkorb ist eine eigene Aktion.
+Mehrere virtuelle Kopien können ein Original teilen. Vor dem Löschen eines Originals werden seine Verweise geprüft. Aus der Bibliothek entfernen ändert nur Verweise im Katalog. Der Papierkorb ist eine eigene Aktion.
 
 Bearbeitungen überleben eine getrennte externe Festplatte. Das Original wird als offline markiert, und Sie verknüpfen es je Datei oder je Ordner neu. Ist die ID nicht die erwartete, wird nichts automatisch getauscht.
 
@@ -194,9 +194,9 @@ Mehr dazu in [GrainMend](../product/GRAINMEND.md).
 
 ## Versionen
 
-- **History und Snapshot:** Einen Entwicklungsstand selbst festhalten, dann vergleichen oder dorthin zurück.
-- **Virtual Copy:** Ein weiterer Bearbeitungszweig, ohne die Originaldatei zu verdoppeln.
-- **Copy/Paste:** Einen gewählten Bereich einfügen, etwa Tonwert, Farbe, Detail oder Geometrie. Bei Masken, die Originalkoordinaten brauchen, werden die Sicherheitsbedingungen geprüft.
+- History und Snapshot: Einen Entwicklungsstand selbst festhalten, dann vergleichen oder dorthin zurück.
+- Virtual Copy: Ein weiterer Bearbeitungszweig, ohne die Originaldatei zu verdoppeln.
+- Copy/Paste: Einen gewählten Bereich einfügen, etwa Tonwert, Farbe, Detail oder Geometrie. Bei Masken, die Originalkoordinaten brauchen, werden die Sicherheitsbedingungen geprüft.
 
 ## Export
 
@@ -227,7 +227,7 @@ Ein unvollständiger Satz Dateien wird nie als Erfolg vermerkt.
 
 ### Render-Protokoll v3
 
-Statt Pfaden hält es die SHA-256-Beziehungen zwischen diesen Werten fest.
+Es hält die SHA-256-Beziehungen zwischen diesen Werten fest.
 
 - Bytes des Originals
 - Die tatsächliche Render-Eingabe

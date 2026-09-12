@@ -2,7 +2,7 @@
 
 [Docs home](../README.md)
 
-This is where the Apache-2.0 distribution scope of the negaflow app is written down. It is not a legal opinion. It is a provenance record so the repository and the release artifacts can be checked again.
+This document records the Apache-2.0 distribution scope of the negaflow app. It is a provenance record to verify the repository and release artifacts, and does not constitute legal advice.
 
 ## Code
 

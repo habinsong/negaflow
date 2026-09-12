@@ -58,7 +58,7 @@ Windows liefert ein Installationsprogramm, das ohne Administratorrechte in Ihren
 
 macOS liefert `negaflow`, eine vollständige CLI, die Scanner findet, Dateien entwickelt, GrainMend ausführt und Messungen macht. Sie ist zum Benutzen gedacht.
 
-Windows liefert `negaflow-cli.exe`, ein kleineres Werkzeug, um zu sehen, was die Engine mit einer Datei tut. Es nimmt Schalter statt Unterbefehlen und dient der Fehlersuche, nicht der täglichen Arbeit.
+Windows liefert `negaflow-cli.exe`, ein kleineres Werkzeug, um zu sehen, was die Engine mit einer Datei tut. Es nimmt Schalter statt Unterbefehlen und dient der Fehlersuche.
 
 ### Signatur
 
@@ -72,6 +72,6 @@ Unter Windows nutzt das Plug-in den Scanner-Treiberpfad, den Windows ohnehin ber
 
 ## Wie beide zusammenbleiben
 
-Jede Funktion kommt zuerst auf macOS und dann auf Windows, ausgerichtet am tatsächlichen Verhalten von macOS statt an einer geschriebenen Spezifikation. Wo sich die Ausgabe messen lässt, entscheiden die macOS-Referenzbilder, ob die Windows-Seite stimmt.
+Jede Funktion kommt zuerst auf macOS und dann auf Windows, ausgerichtet am tatsächlichen Verhalten von macOS. Wo sich die Ausgabe messen lässt, entscheiden die macOS-Referenzbilder, ob die Windows-Seite stimmt.
 
 Wenn beide auseinandergehen, hat macOS recht und Windows einen Fehler.

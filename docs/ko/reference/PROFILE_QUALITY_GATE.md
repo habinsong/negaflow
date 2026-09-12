@@ -2,7 +2,7 @@
 
 [문서 홈](../README.md)
 
-`scripts/evaluate_profile_quality.py`는 스캐너 프로파일 변경이 승인된 기준보다 나빠지지 않았는지 검사합니다. `LUT_target/analyze_lut_target.py`가 만든 `SOURCE/summary.json` 두 개를 비교하며, 프로파일 조정에 쓰지 않은 검증 사례만 판정에 사용합니다.
+`scripts/evaluate_profile_quality.py`는 스캐너 프로파일 변경이 승인된 기준보다 나빠지지 않았는지 검사합니다. `LUT_target/analyze_lut_target.py`가 만든 `SOURCE/summary.json` 두 개를 비교하며 프로파일 조정에 쓰지 않은 검증 사례만 판정에 사용합니다.
 
 이 도구가 “좋은 색”을 정해 주지는 않습니다. 어떤 수치를 낮춰야 하는지, 높여야 하는지, 얼마까지 변해도 되는지는 자료 목록에 사람이 직접 적어야 합니다. 기본 합격값을 임의로 제공하지 않습니다.
 

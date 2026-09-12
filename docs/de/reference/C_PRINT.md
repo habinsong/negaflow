@@ -8,7 +8,7 @@ Der Druckbereich verbindet Seitenlayout, Seitenexport und Vorschau des Ausgabeve
 
 Ein neuer Kontaktbogen startet mit schwarzem Hintergrund, 6 Spalten × 7 Zeilen und horizontalen sowie vertikalen Abständen von 2 mm. Alle anderen Layouts starten mit Weiß. Jedes Layout kann unabhängig Schwarz, Grau oder Weiß wählen. Beschriftungen, freie Texte, Schnittmarken und Seitenkonturen wechseln automatisch zu einer kontrastierenden Farbe.
 
-Rand, Zeilen, Spalten und beide Abstände verwenden dieselbe physische Berechnung. Zu große Kombinationen werden auf den größten gültigen Abstand begrenzt, statt die Vorschau zu beschädigen. Die automatische Ausrichtung richtet sich nach dem Raster und nicht nach dem ersten Foto. **Einpassen** zeigt das ganze Bild und kann freien Raum in der Zelle lassen; **Zelle füllen** beschneidet auf eine einheitliche Zelle und erzeugt gleichmäßige sichtbare Zwischenräume.
+Rand, Zeilen, Spalten und beide Abstände verwenden dieselbe physische Berechnung. Zu große Kombinationen werden auf den größten gültigen Abstand begrenzt, statt die Vorschau zu beschädigen. Die automatische Ausrichtung richtet sich nach dem Raster. **Einpassen** zeigt das ganze Bild und kann freien Raum in der Zelle lassen; **Zelle füllen** beschneidet auf eine einheitliche Zelle und erzeugt gleichmäßige sichtbare Zwischenräume.
 
 Beschriftungen unterstützen Dateiname, ursprüngliche Bildnummer, eine bei 1 beginnende Reihenfolgennummer, Bewertung und benutzerdefinierten Text. Bildbeschriftungen lassen sich links, mittig oder rechts ausrichten. Mehrere freie Textfelder können mit eigenem Text, eigener Ausrichtung, Position, Breite und Höhe beliebig auf dem Bogen platziert werden.
 

@@ -2,7 +2,7 @@
 
 [Docs home](../README.md)
 
-This is the shape a script or another app reads scanner information from. It stays separate from the scanner implementation. The CLI only turns the device information and capabilities that `ScannerKit` received into JSON.
+This document describes the JSON format used by scripts and other apps to read scanner information. It stays separate from the scanner implementation. The CLI only turns the device information and capabilities that `ScannerKit` received into JSON.
 
 | Item | Contract |
 |---|---|
@@ -40,7 +40,7 @@ Success and failure both write one JSON document to stdout, with a newline at th
 
 </details>
 
-On failure `status` is `error` and `payload` is `null`. `error` carries a machine code that does not change and a description for people. Diagnostic logs go to stderr. Logs and progress never get mixed into stdout.
+On failure `status` is `error` and `payload` is `null`. `error` contains a stable machine-readable code and a human-readable description. Diagnostic logs go to stderr. Logs and progress never get mixed into stdout.
 
 ## Capability information
 
@@ -65,7 +65,7 @@ Values the device did not report are not guessed. Depending on the value it uses
 { "dpi": 3600, "seconds": 42.0 }
 ```
 
-The app screen and the CLI read the same `ScannerCapabilities`. The consistency check confirms that the controls opened on screen follow the same values as the JSON fields.
+The app screen and the CLI read the same `ScannerCapabilities`. The consistency check confirms that the controls available on screen follow the same values as the JSON fields.
 
 ## Version rules
 

@@ -121,7 +121,7 @@ Une violation de la spécification v2 termine le plugin tout de suite, sans atte
 Un `result` v2 doit porter `appliedOptions`.
 
 - `deviceID`, `resolutionDPI`, `bitDepth`, `colorMode`, `filmType`
-- `scanArea` : `originXMM`, `originYMM`, `widthMM`, `heightMM`, la zone réellement envoyée au backend par le plug-in, et non une copie de la demande. Elle peut être ajustée de moins de 1 mm pour contourner un backend qui calcule mal la taille de numérisation. L'application compare les pixels renvoyés à cette zone ; une copie de la demande annulerait ce contrôle.
+- `scanArea` : `originXMM`, `originYMM`, `widthMM`, `heightMM`, la zone réellement envoyée au backend par le plug-in. Elle peut être ajustée de moins de 1 mm pour contourner un backend qui calcule mal la taille de numérisation. L'application compare les pixels renvoyés à cette zone ; une copie de la demande annulerait ce contrôle.
 - `infrared`, `multiExposure`
 - `hardwareExposureTime`, `brightnessAdjustment`, `contrastAdjustment`
 - `outputRawTIFF`

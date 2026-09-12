@@ -6,7 +6,7 @@ A flatbed preview shows a holder, the light that gets past it, and whatever film
 
 The detector knows the real size of the previewed area in millimetres, so it can convert a film format into pixels exactly instead of guessing from proportions.
 
-## Film is found by its texture, not by its brightness
+## Film is found by texture
 
 Brightness cannot tell film from an empty holder window. Measured on an Epson GT-X900 preview:
 
@@ -44,7 +44,7 @@ The gap is an order of magnitude and it does not change sign with the film type,
 | Holder with one strip in three windows | Only the loaded window |
 | Window cut in half by the scan area | Dropped |
 | A cut that falls off the end of the film | Dropped; interior cuts are kept even when unexposed |
-| A strip with no periodic gap evidence | Nothing, rather than an arbitrary grid |
+| A strip with no periodic gap evidence | Nothing |
 
 ## Formats
 

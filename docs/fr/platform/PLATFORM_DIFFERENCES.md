@@ -58,7 +58,7 @@ Windows livre un installateur qui écrit dans votre dossier utilisateur sans dem
 
 macOS livre `negaflow`, une CLI complète qui détecte les scanners, développe des fichiers, lance GrainMend et mesure les performances. Elle est faite pour être utilisée.
 
-Windows livre `negaflow-cli.exe`, un outil plus petit pour observer ce que le moteur fait d'un fichier. Il prend des indicateurs plutôt que des sous-commandes et sert au diagnostic, pas au travail quotidien.
+Windows livre `negaflow-cli.exe`, un outil plus petit pour observer ce que le moteur fait d'un fichier. Il prend des indicateurs plutôt que des sous-commandes et sert au diagnostic.
 
 ### Signature
 
@@ -72,6 +72,6 @@ Sous Windows, le module passe par le chemin de pilote scanner que Windows fourni
 
 ## Comment les deux restent alignés
 
-Chaque fonction arrive d'abord sur macOS, puis sur Windows en se réglant sur le comportement macOS plutôt que sur une spécification écrite. Là où la sortie se mesure, ce sont les images de référence macOS qui décident si le côté Windows a raison.
+Chaque fonction arrive d'abord sur macOS, puis sur Windows en se réglant sur le comportement réel de macOS. Là où la sortie se mesure, ce sont les images de référence macOS qui décident si le côté Windows a raison.
 
 Quand les deux divergent, macOS a raison et Windows a un bug.

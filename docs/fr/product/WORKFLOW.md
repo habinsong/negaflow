@@ -2,7 +2,7 @@
 
 [Accueil de la documentation](../README.md)
 
-Ce guide décrit l’import, le développement par dossier, le transfert de réglages, les vignettes de scanner et la sortie d’impression. Un dossier de la photothèque correspond au dossier physique de la source ; ce n’est pas seulement une catégorie interne.
+Ce guide décrit l’import, le développement par dossier, le transfert de réglages, les vignettes de scanner et la sortie d’impression. Un dossier de la photothèque correspond au dossier physique de la source.
 
 > [!IMPORTANT]
 > Les sources restent intactes, sauf lorsque vous déplacez explicitement une photo vers un autre dossier. Retirer un dossier de la photothèque et supprimer un fichier dans le Finder sont deux opérations distinctes.
@@ -59,7 +59,7 @@ Si aucun module n’est installé au démarrage, la barre latérale commune de P
 
 Impression propose sept mises en page : image unique, planche-contact, package d’images, package personnalisé, cyanotype, plaque de verre et gélatino-argentique. Les trois dernières réutilisent l’inspecteur de l’image unique. Avec plusieurs photos, les quatre dispositions individuelles présentent une page terminée par photo dans un défilement vertical.
 
-L’export du tirage et l’exportation rapide comptent les pages finies, pas les sources sélectionnées. Ainsi, 39 photos sur une planche 6 × 7 donnent un fichier composé ; un package de quatre images donne 10 pages ; le package personnalisé par défaut donne une page ; les dispositions individuelles donnent un lot borné de 39 fichiers.
+L’export du tirage et l’exportation rapide comptent les pages finies. Ainsi, 39 photos sur une planche 6 × 7 donnent un fichier composé ; un package de quatre images donne 10 pages ; le package personnalisé par défaut donne une page ; les dispositions individuelles donnent un lot borné de 39 fichiers.
 
 L’aperçu réutilise toute vignette, image développée ou prévisualisation source disponible et ne crée une petite prévisualisation rapide qu’en leur absence. L’export final calcule les placements depuis les métadonnées, ne développe que les pixels nécessaires, prépare deux à quatre sources à la fois et conserve le graphe Core Image jusqu’au rendu final. Un contexte partagé et une limite de 512 Mio de rastérisation source par page évitent les intermédiaires pleine résolution non bornés.
 

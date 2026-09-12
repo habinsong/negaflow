@@ -19,7 +19,7 @@ Evidence:
 
 ## Where it applies automatically
 
-What decides this is what forms the image, not whether the film is negative or positive. Colour film bleaches its silver away during processing and keeps only dye, and dye is transparent to infrared. Black and white film is a silver image and blocks infrared, so the correction would read the photograph itself as one large defect and erase it.
+What decides this is **what forms the image**. Colour film bleaches its silver away during processing and keeps only dye, and dye is transparent to infrared. Black and white film is a silver image and blocks infrared, so the correction would read the photograph itself as one large defect and erase it.
 
 | Film type | Automatic IR | Why |
 |---|---|---|

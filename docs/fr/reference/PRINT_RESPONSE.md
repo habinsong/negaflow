@@ -66,7 +66,7 @@ r &= r_{\mathrm{white}}^{1/s}
 
 ## Plage de densité par défaut
 
-`normalRange` n'est pas la densité maximale physique du film. C'est la plage qu'utilise une scène normalement exposée. Elle compte surtout quand le support n'a pas pu être mesuré, ou quand le contraste de la scène est très faible.
+`normalRange` est la plage de densité qu'utilise une scène normalement exposée. Elle compte surtout quand le support n'a pas pu être mesuré, ou quand le contraste de la scène est très faible.
 
 ```math
 \begin{aligned}
@@ -80,7 +80,7 @@ r &= r_{\mathrm{white}}^{1/s}
 - Noir et blanc `3.5` : habitude du tirage noir et blanc, qui utilise une partie droite plus longue
 - `0.60D` : densité du gris moyen d'une scène normalement exposée
 
-`applySceneRanged` mesure la plage de densité que l'image utilise réellement, canal par canal, au lieu de prendre cette valeur.
+`applySceneRanged` mesure la plage de densité que l'image utilise réellement, canal par canal.
 
 ## Ce qui a changé en v4
 

@@ -8,7 +8,7 @@ L’espace Impression réunit la mise en page, l’export de la page et l’aper
 
 Une nouvelle planche-contact utilise par défaut un fond noir, 6 colonnes × 7 lignes et des espacements horizontaux et verticaux de 2 mm. Les autres mises en page commencent en blanc. Chaque mise en page peut choisir séparément un fond noir, gris ou blanc ; les légendes, textes personnalisés, repères de coupe et contours adoptent automatiquement une couleur contrastée.
 
-Les marges, le nombre de lignes et de colonnes et les deux espacements partagent le même calcul physique. Une combinaison trop grande est limitée au maximum valide au lieu de casser l’aperçu. L’orientation automatique dépend de la grille et non de la première photo. **Ajuster** conserve l’image entière et peut laisser de l’espace dans la cellule ; **Remplir la cellule** recadre l’image et rend les gouttières visibles régulières.
+Les marges, le nombre de lignes et de colonnes et les deux espacements partagent le même calcul physique. Une combinaison trop grande est limitée au maximum valide au lieu de casser l’aperçu. L’orientation automatique dépend de la grille. **Ajuster** conserve l’image entière et peut laisser de l’espace dans la cellule ; **Remplir la cellule** recadre l’image et rend les gouttières visibles régulières.
 
 Les légendes peuvent afficher le nom du fichier, le numéro de vue original, un numéro d’ordre repartant de 1, la note ou un texte personnalisé. Les légendes par image s’alignent à gauche, au centre ou à droite. Plusieurs zones de texte personnalisé peuvent être ajoutées, chacune avec son texte, son alignement, sa position, sa largeur et sa hauteur.
 

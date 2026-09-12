@@ -2,7 +2,7 @@
 
 [Dokumentationsstart](../README.md)
 
-Hier steht der Apache-2.0-Auslieferungsumfang der negaflow-App. Das ist kein Rechtsgutachten, sondern ein Herkunftsnachweis, damit Repository und Release-Artefakte erneut geprüft werden können.
+Hier steht der Apache-2.0-Auslieferungsumfang der negaflow-App. Es ist ein Herkunftsnachweis zur Überprüfung von Repository und Release-Artefakten und stellt kein Rechtsgutachten dar.
 
 ## Code
 

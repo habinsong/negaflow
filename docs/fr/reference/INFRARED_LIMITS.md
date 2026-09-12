@@ -19,7 +19,7 @@ Justification :
 
 ## Où il s'applique automatiquement
 
-Ce qui décide ici n'est pas que le film soit négatif ou positif, mais **ce qui forme l'image**. Le film couleur blanchit son argent au traitement et ne garde que des colorants, transparents à l'infrarouge. Le film noir et blanc est une image argentique qui bloque l'infrarouge : la correction lirait la photographie elle-même comme un immense défaut et l'effacerait.
+Ce qui décide ici est **ce qui forme l'image**. Le film couleur blanchit son argent au traitement et ne garde que des colorants, transparents à l'infrarouge. Le film noir et blanc est une image argentique qui bloque l'infrarouge : la correction lirait la photographie elle-même comme un immense défaut et l'effacerait.
 
 | Type de film | IR automatique | Pourquoi |
 |---|---|---|

@@ -2,7 +2,7 @@
 
 [Dokumentationsstart](../README.md)
 
-Die mitgelieferten Scannerprofile sind keine heruntergeladenen LUTs und keine Presets mit einem neuen Namen. Der Autor des Projekts hat die Filmscans fotografiert und sortiert, sie ausgewertet und das Ergebnis in JSON überführt.
+Die mitgelieferten Scannerprofile wurden vom Autor des Projekts aus selbst aufgenommenen und sortierten Filmscans erstellt und in JSON überführt.
 
 | Posten | Aktueller Wert |
 |---|---:|

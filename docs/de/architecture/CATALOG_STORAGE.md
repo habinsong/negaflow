@@ -4,7 +4,7 @@
 
 Der Hauptspeicher ist `library.sqlite`. Das alte `library.json` dient nur noch dazu, ältere Bestände zu übernehmen oder eine Diagnosedatei zu schreiben. Nichts aktualisiert beide Dateien gleichzeitig, also gibt es kein `dual-write`.
 
-Sicherungen und Erhaltungsarchive enthalten eine JSON-Form, die sich zwischen Geräten bewegen lässt. Die laufende SQLite-Datei kommt nicht hinein.
+Sicherungen und Erhaltungsarchive verwenden ein portables JSON-Format. Die laufende SQLite-Datei ist nicht enthalten.
 
 | Art | Format | Wofür |
 |---|---|---|
@@ -57,7 +57,7 @@ SQLite-Zeilenspeicher, 50.000 Bilder, Release-p95:
 | Commit ohne Änderungen | 3.856 ms |
 | Größe je Bild | etwa 4.211 Byte |
 
-Eine Sicherung zieht nicht die ganze Datenbank in `Data`. Sie legt eine replizierbare temporäre Kopie an und tauscht sie atomar aus. Auch die Prüfung davor dekodiert nicht jedes Bild, sondern sieht sich SQLite-Integrität und Schema an. Damit fiel der p95 eines Commits ohne Änderungen von 11.245 ms auf 3.856 ms.
+Eine Sicherung lädt nicht die ganze Datenbank in `Data`. Sie legt eine replizierbare temporäre Kopie an und tauscht sie atomar aus. Auch die Prüfung davor dekodiert nicht jedes Bild, sondern sieht sich SQLite-Integrität und Schema an. Damit fiel der p95 eines Commits ohne Änderungen von 11.245 ms auf 3.856 ms.
 
 ## Warum SQLite
 
@@ -98,13 +98,13 @@ flowchart LR
 
 Scheitert ein Schritt, bleibt das vorhandene JSON, wie es ist. Es startet nie mit leerem Katalog. Auch wenn Zwischendateien und Markierungen liegen bleiben, geht es nur weiter, wenn der Quell-SHA-256 und beide Kataloge übereinstimmen.
 
-Nach dem Umzug gibt es keinen automatischen Rückweg zu JSON. Damit eine ältere App das JSON nicht verändert und den Speicher teilt, werden Mindestleseversion und Migrationsmarkierung geprüft.
+Nach der Migration gibt es keinen automatischen Rückweg zu JSON. Damit eine ältere App das JSON nicht verändert und den Speicher teilt, werden Mindestleseversion und Migrationsmarkierung geprüft.
 
 ## Was nicht gewählt wurde
 
-- **Den ganzen Katalog in einer JSON-Datei:** einfach, aber 50.000 Bilder zu lesen dauert rund 7,4 Sekunden, und jedes Speichern schreibt die Datei neu.
-- **Eine JSON-Datei je Bild:** einige Schreibvorgänge schrumpfen, aber der Code zum Speichern mehrerer Entitäten auf einmal und zum Prüfen ihrer Beziehungen müsste von Hand entstehen.
-- **Jetzt zu Core Data wechseln:** möglich, bedeutet aber, Codable-Umwandlung und Wiederherstellungsvertrag in einem Zug neu zu bauen. Wieder ein Thema, wenn ein echter Prototyp besser misst als reines SQLite.
+- Den ganzen Katalog in einer JSON-Datei: einfach, aber 50.000 Bilder zu lesen dauert rund 7,4 Sekunden, und jedes Speichern schreibt die Datei neu.
+- Eine JSON-Datei je Bild: einige Schreibvorgänge schrumpfen, aber der Code zum Speichern mehrerer Entitäten auf einmal und zum Prüfen ihrer Beziehungen müsste von Hand entstehen.
+- Jetzt zu Core Data wechseln: möglich, bedeutet aber, Codable-Umwandlung und Wiederherstellungsvertrag in einem Zug neu zu bauen. Wieder ein Thema, wenn ein echter Prototyp besser misst als reines SQLite.
 
 ## Quellen
 

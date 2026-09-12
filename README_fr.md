@@ -38,9 +38,9 @@
   </picture>
 </p>
 
-**negaflow** est une application qui reçoit la pellicule que vous avez numérisée ou reproduite au boîtier, et la développe. Couleur ou noir et blanc, négatif ou positif, tout passe. De la photothèque au développement puis au tirage, tout se termine dans une seule application. Les valeurs de retouche sont enregistrées à part de l'original, donc le fichier d'origine reste tel quel.
+**negaflow** développe les pellicules numérisées ou reproduites au boîtier, en couleur ou en noir et blanc, négatives ou positives. Vous pouvez organiser, développer et tirer vos photos dans la même application. Les réglages sont enregistrés séparément ; le fichier d'origine reste intact.
 
-Le moteur de développement s'appelle **Chroma Engine**, et la réparation des poussières et rayures s'appelle **GrainMend**. Ce n'est pas grave si vous n'avez pas de scanner. En important seulement des fichiers image, vous pouvez développer et exporter. La connexion au scanner ne s'ouvre qu'une fois un module installé à part.
+Le moteur de développement s'appelle **Chroma Engine**. **GrainMend** répare les poussières et les rayures. Sans scanner, vous pouvez importer des fichiers image, les développer et les exporter. La connexion à un scanner nécessite un module séparé.
 
 > Contrairement à la façon dont l'engouement pour l'argentique continue de croître, le processus de la photographie argentique, lui, est à l'arrêt. À moins de tirer la pellicule à la manière argentique, il faut passer par une conversion en numérique pour qu'elle parvienne enfin à nos yeux.
 >
@@ -61,7 +61,7 @@ Le moteur de développement s'appelle **Chroma Engine**, et la réparation des p
 | Moteur | Swift + Core Image | C++ + Direct3D |
 | Gestion des couleurs | ColorSync | Windows ICM |
 
-Les deux applications sont des applications natives développées dans des langages différents et de manières différentes, et malgré cela les fonctions et les résultats sont identiques.
+Les deux applications natives utilisent des langages et des implémentations différents, avec les mêmes fonctions et les mêmes résultats.
 
 Le code du moteur se trouve dans le module `Chromabase` sur macOS et dans le module `Native` sur Windows.
 
@@ -77,32 +77,32 @@ Il suffit de le prendre sur [GitHub Releases](https://github.com/habinsong/negaf
 | `negaflow-1.1.6-mac-arm64.pkg` | macOS 14 ou ultérieur, Apple Silicon uniquement |
 | `negaflow-1.1.6-win-x64.exe` | Windows 11 24H2 ou plus récent, x64 |
 
-La plupart des Mac se contentent du PKG Universal. Bien sûr, le fichier pour Silicon ainsi qu'un DMG et un ZIP sont aussi déposés sur la même page. Au premier lancement, il faut ouvrir Réglages Système, aller dans Confidentialité et sécurité, et cliquer une fois sur Ouvrir quand même.
+La plupart des Mac se contentent du PKG Universal. La même page propose aussi le fichier pour Silicon, un DMG et un ZIP. Au premier lancement, il faut ouvrir Réglages Système, aller dans Confidentialité et sécurité, et cliquer une fois sur Ouvrir quand même.
 
-L'installation Windows se termine à l'intérieur de votre dossier utilisateur et ne demande pas de droits administrateur. Comme il n'y a pas de signature, SmartScreen bloque une fois. Cliquez sur Informations complémentaires puis exécutez. La désinstallation se fait depuis le Panneau de configuration.
+L'application Windows s'installe dans votre dossier utilisateur sans droits administrateur. Comme il n'y a pas de signature, SmartScreen bloque une fois. Cliquez sur Informations complémentaires puis exécutez. La désinstallation se fait depuis le Panneau de configuration.
 
-Brancher un vrai scanner demande un module à part, et pour les scanners SANE il y a [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane). Naturellement, cela fonctionne sur macOS comme sur Windows.
+Brancher un vrai scanner demande un module à part, et pour les scanners SANE il y a [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane). Ce module fonctionne sur macOS et Windows.
 
 ## Fonctions
 > Tout ce qu'il faut pour transformer la pellicule argentique en photographie finie est là.
-- À commencer par mesurer la base du film et développer les négatifs et positifs couleur et noir et blanc
-- Tout ce que demande la retouche : exposition, contraste, courbes, TSL, étalonnage
+- Mesure de la base du film et développement des négatifs et positifs couleur et noir et blanc
+- Exposition, contraste, courbes, TSL et étalonnage
 - Des options supplémentaires comme l'accentuation, la réduction de bruit, le grain, le vignetage, la halation
 - GrainMend, qui restaure les photos en retirant poussières et rayures.
 - Une photothèque avec bobines, dossiers, collections, notes, piles, copies virtuelles, et recherche par boîtier, objectif ou film
 - Des préréglages et un copier-coller qui emportent ensemble procédé, cible, tonalité, couleur, détail, recadrage et orientation
 - Export JPEG et TIFF 16 bits, profils ICC, et enregistrement dans l'EXIF des notes de boîtier, objectif, film
-- Sept mises en page d'impression et aperçus de papier, formats photo et ISO, jusqu'à la fonction C-print.
+- Sept mises en page d'impression, aperçus de papier, formats photo et ISO, et fonction C-print.
 
 ## Chroma Engine
 
 **Chroma Engine** prend en charge l'inversion et le développement de la pellicule.
 
-Avant de développer un négatif, il mesure d'abord la base du film. Il lit la valeur dans une zone que la lumière n'a jamais atteinte. Là où la mesure automatique est décalée, il suffit de piquer à la pipette ou d'ajuster les valeurs RVB.
+Avant de développer un négatif, il mesure la base du film dans une zone non exposée. Là où la mesure automatique est décalée, il suffit de piquer à la pipette ou d'ajuster les valeurs RVB.
 
 La valeur par défaut est `MAIN` avec des corrections manuelles. Tonalité auto, balance des blancs auto, niveaux auto et couleur auto ne s'exécutent que lorsqu'on appuie dessus.
 
-Les autres cibles sont celles-ci. `PRINT` qui sort par un profil ICC d'imprimante, `HS` et `SP` de la famille minilab, `F135` et `HR` de la famille des équipements de laboratoire, `EXPIRED` qui tente de rattraper les vieux films. Pour la sortie, on choisit entre sRGB, Display P3, Adobe RGB, et un profil ICC RVB à soi.
+Les autres cibles sont `PRINT` pour la sortie via un profil ICC d'imprimante, `HS` et `SP` de la famille minilab, `F135` et `HR` de la famille des équipements de laboratoire, `EXPIRED` qui tente de rattraper les vieux films. Pour la sortie, on choisit entre sRGB, Display P3, Adobe RGB, et un profil ICC RVB à soi.
 
 L'ordre de l'inversion et du traitement des couleurs est dans la [documentation Chroma Engine](docs/fr/product/CHROMA_ENGINE.md).
 
@@ -116,7 +116,7 @@ L'ordre de l'inversion et du traitement des couleurs est dans la [documentation 
 `Pinceau` est l'outil pour peindre soi-même les endroits qu'Automatique a manqués, et le tampon de clonage déplace tels quels les pixels d'une position choisie.<br>
 `Tampon de clonage` est une fonction de tampon où l'on choisit la texture voulue et où l'on peint soi-même. <br>
 
-Automatique et Guidé comblent les défauts en regardant la texture alentour. Avant de combler, ils regardent d'abord la direction et la structure environnante. Prendre une rambarde ou un joint de carrelage dans la photo pour une rayure et l'effacer, ce n'est pas une réparation mais un dégât.
+Automatique et Guidé comblent les défauts avec la texture environnante, après en avoir examiné la direction et la structure. Effacer une rambarde ou un joint de carrelage pris pour une rayure endommage la photo.
 
 Le résultat des corrections reste sous forme de calques. On peut changer l'intensité, vérifier le masque, en désactiver ou en supprimer un par un.<br>
 **GrainMend IR** ajoute au même relevé les résultats de détection du canal infrarouge transmis par un module scanner.
@@ -157,7 +157,7 @@ negaflow lui-même n'ouvre pas de fonctions d'après le nom de modèle d'un scan
 
 Les appareils SANE sont pris en charge par [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), un projet GPL séparé. Le module tourne dans son propre processus et le format d'échange est JSON. **negaflow** ne contient aucun code SANE et n'en lie aucun.
 
-Le paquet contient 15 profils de scanner. Ils ont été construits à partir de films que j'ai photographiés moi-même, et le nombre de données enregistrées est de 928.
+Le paquet contient 15 profils de scanner. Je les ai construits à partir de films que j'ai photographiés moi-même, avec 928 points de données enregistrés.
 
 L'état est partout `realOnly`. Cela signifie qu'ils ont bien été construits à partir de vraies numérisations, mais qu'ils n'en sont pas au stade d'une précision vérifiée par une référence indépendante. Je ne voulais pas présenter comme vérifié ce qui ne l'est pas. Les profils ne s'attachent pas automatiquement d'après un nom de scanner, il faut donc les choisir soi-même.
 

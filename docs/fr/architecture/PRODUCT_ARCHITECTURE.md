@@ -50,7 +50,7 @@ Plus de détail :
 
 ### `ScannerKit`
 
-Ce n'est pas un pilote de scanner. Il porte le contrat qui relie un plugin externe.
+Il porte le contrat qui relie un plugin externe.
 
 - Identifiant et fonctions du scanner
 - JSON de requête et de réponse
@@ -100,7 +100,7 @@ flowchart LR
     G --> J["Archive de conservation"]
 ```
 
-Chaque étape ajoute au catalogue et à l'historique d'édition au lieu de changer l'original.
+Chaque étape conserve l'original intact et ajoute au catalogue et à l'historique d'édition.
 
 ## Entrée et originaux
 
@@ -165,13 +165,13 @@ Pour organiser :
 
 Dans la vue par dossier, chaque dossier porte un bandeau : triangle, dossier, nom, nombre, procédé de développement, cible, appliquer. Le triangle replie les vignettes en dessous. Les dossiers repliés le restent au lancement suivant, indépendamment du repli de la liste de fichiers de la barre latérale.
 
-La vue par dossier est **une seule** grille : chaque dossier est une section et son bandeau en est l'en-tête. Il faut conserver cette structure. Donner une grille à chaque dossier puis les empiler supprime la paresse. La pile doit connaître la hauteur entière d'un dossier, donc celui-ci construit toutes ses cartes dès qu'il entre dans le champ. Avec une seule grille, l'unité de paresse est une rangée, et c'est ce qui garde le défilement fluide sur plusieurs centaines de photos.
+La vue par dossier utilise **une seule** grille. Chaque dossier est une section, avec son bandeau comme en-tête. Il faut conserver cette structure : empiler une grille par dossier oblige à calculer la hauteur entière de chaque dossier visible et à créer toutes ses cartes d'un coup. Une grille unique crée les cartes rangée par rangée à mesure qu'elles apparaissent, ce qui garde le défilement fluide sur plusieurs centaines de photos.
 
-Plusieurs copies virtuelles peuvent partager un même original. Avant de supprimer un original, ses références sont vérifiées d'abord. Retirer de la bibliothèque ne change que des références du catalogue. La mise à la corbeille est une action séparée.
+Plusieurs copies virtuelles peuvent partager un même original. Les références à un original sont vérifiées avant sa suppression. Retirer de la bibliothèque ne change que des références du catalogue. La mise à la corbeille est une action séparée.
 
 Les modifications survivent au débranchement d'un disque externe. L'original est marqué hors ligne et vous le reliez par fichier ou par dossier. Si l'identifiant n'est pas celui attendu, rien n'est remplacé automatiquement.
 
-Chaque dossier source physique enregistré utilise un seul observateur du système de fichiers. Les événements sont regroupés brièvement, puis seul le dossier modifié est relu. Le reliaison par signet conserve l’identifiant du dossier de catalogue après un déplacement ou un renommage dans le Finder, et les nouvelles images ajoutées directement au dossier sont importées sans sondage ni nouvelle analyse de toute la bibliothèque.
+Chaque dossier source physique enregistré utilise un seul observateur du système de fichiers. Les événements sont regroupés brièvement, puis seul le dossier modifié est relu. La reconnexion par signet conserve l’identifiant du dossier de catalogue après un déplacement ou un renommage dans le Finder, et les nouvelles images ajoutées directement au dossier sont importées sans sondage ni nouvelle analyse de toute la bibliothèque.
 
 ## Développement et GrainMend
 
@@ -194,9 +194,9 @@ Plus de détail dans [GrainMend](../product/GRAINMEND.md).
 
 ## Versions
 
-- **History et Snapshot :** enregistrez vous-même un état de développement, puis comparez-le ou revenez-y.
-- **Virtual Copy :** une autre branche d'édition sans dupliquer le fichier original.
-- **Copy/Paste :** collez une plage choisie, tonalité, couleur, détail ou géométrie. Les masques qui ont besoin des coordonnées d'origine voient leurs conditions de sécurité vérifiées.
+- History et Snapshot : enregistrez vous-même un état de développement, puis comparez-le ou revenez-y.
+- Virtual Copy : une autre branche d'édition sans dupliquer le fichier original.
+- Copy/Paste : collez une plage choisie, tonalité, couleur, détail ou géométrie. Les masques qui ont besoin des coordonnées d'origine voient leurs conditions de sécurité vérifiées.
 
 ## Export
 
@@ -227,7 +227,7 @@ Un ensemble partiel de fichiers n'est jamais marqué comme réussi.
 
 ### Manifeste de rendu v3
 
-Au lieu de chemins, il enregistre les relations SHA-256 entre :
+Il enregistre les relations SHA-256 entre :
 
 - Les octets de l'original
 - L'entrée de rendu réellement utilisée

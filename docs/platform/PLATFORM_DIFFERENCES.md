@@ -58,7 +58,7 @@ Windows ships an installer that writes into your user folder without asking for 
 
 macOS ships `negaflow`, a full CLI that can detect scanners, develop files, run GrainMend, and benchmark. It is meant to be used.
 
-Windows ships `negaflow-cli.exe`, which is a smaller tool for checking what the engine does with one file. It takes flags rather than subcommands and exists for diagnosis, not for daily work.
+Windows ships `negaflow-cli.exe`, which is a smaller tool for checking what the engine does with one file. It takes flags rather than subcommands and is used for diagnosis.
 
 ### Signing
 
@@ -72,6 +72,6 @@ On Windows the plugin goes through the scanner driver path Windows already provi
 
 ## Keeping them matched
 
-Every feature lands on macOS first, then on Windows against the macOS behavior rather than against a written spec. Where output can be measured, the macOS reference images decide whether the Windows side is correct.
+Every feature lands on macOS first, then on Windows against the actual macOS behavior. Where output can be measured, the macOS reference images decide whether the Windows side is correct.
 
 When the two disagree, macOS is the answer and the Windows side is the bug.

@@ -6,7 +6,7 @@ Un aperçu de scanner à plat montre un porte-films, la lumière qui passe à c�
 
 Le détecteur connaît la taille réelle de la zone prévisualisée en millimètres : il convertit donc un format de film en pixels exactement, au lieu de le deviner à partir de proportions.
 
-## Le film se reconnaît à son grain, pas à sa luminosité
+## Le film se reconnaît à son grain
 
 La luminosité ne distingue pas le film d'une fenêtre vide du porte-films. Mesures sur un aperçu Epson GT-X900 :
 
@@ -44,7 +44,7 @@ L'écart dépasse un ordre de grandeur et ne change pas de sens selon le type de
 | Une seule bande dans trois fenêtres | Uniquement la fenêtre chargée |
 | Fenêtre coupée en deux par la zone de scan | Écartée |
 | Vue qui dépasse l'extrémité du film | Écartée ; les vues intérieures sont gardées même vierges |
-| Bande sans preuve d'interstices périodiques | Rien, plutôt qu'une grille arbitraire |
+| Bande sans preuve d'interstices périodiques | Rien |
 
 ## Formats
 

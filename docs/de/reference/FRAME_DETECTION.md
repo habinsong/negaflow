@@ -6,35 +6,35 @@ Eine Flachbett-Vorschau zeigt den Halter, das Licht, das daran vorbeikommt, und 
 
 Der Detektor kennt die tatsächliche Größe des vorgeschauten Bereichs in Millimetern und rechnet ein Filmformat deshalb exakt in Pixel um, statt es aus Seitenverhältnissen zu raten.
 
-## Film erkennt man am Korn, nicht an der Helligkeit
+## Film erkennt man am Korn
 
-Helligkeit unterscheidet Film nicht von einem leeren Halterfenster. Gemessen an einer Vorschau eines Epson GT-X900:
+An der Helligkeit lassen sich Film und leere Fenster nicht unterscheiden. Messwerte aus einer Epson GT-X900-Vorschau:
 
-| Was in der Spalte steht | Mittlere Helligkeit |
+| Was in der Spalte liegt | Mittlere Helligkeit |
 |---|---|
-| Leeres Halterfenster, Lampe scheint direkt hindurch | 0,92 |
+| Leeres Halterfenster, Licht geht ungehindert durch | 0,92 |
 | Film im Nachbarfenster | 0,10 |
-| Maske des Halters | 0,002 |
-| Fremdhalter mit weißem Hintergrund | 1,00 |
+| Haltermaske | 0,002 |
+| Zubehörhalter mit weißem Hintergrund | 1,00 |
 
-Nach Helligkeit zu sortieren greift also die leeren Fenster heraus und verwirft den Film, und ein Halter mit weißem Hintergrund kehrt die Reihenfolge komplett um.
+Wer nach Helligkeit sucht, wählt leere Fenster und verwirft den Film. Bei einem Halter mit weißem Grund kippt die Reihenfolge komplett um.
 
-Korn kennt diese Zweideutigkeit nicht, denn Korn und Bild gibt es nur auf Film:
+Das Korn trennt beides eindeutig, denn Filmkorn und Motiv gibt es nur auf dem Film:
 
-| Was in der Spalte steht | Vertikales Detail |
+| Was in der Spalte liegt | Detail senkrecht |
 |---|---|
 | Film | 0,0044 bis 0,032 |
-| Maske, leeres Fenster, weißer Hintergrund | 0,00005 bis 0,001 |
+| Haltermaske, leeres Fenster, weißer Hintergrund | 0,00005 bis 0,001 |
 
-Der Abstand beträgt mehr als eine Größenordnung und dreht sich weder mit der Filmart noch mit dem Halter oder der Polarität um. Alle folgenden Stufen bauen darauf auf.
+Der Unterschied beträgt über eine Zehnerpotenz und wechselt das Vorzeichen bei keinem Filmtyp, Halter oder Positiv/Negativ. Alle folgenden Schritte bauen darauf auf.
 
 ## Stufen
 
-1. **Spaltenkorn.** Das Detail wird entlang jeder Spalte der Vorschau gemessen. Spalten mit Korn und Bild werden zu Fensterkandidaten.
-2. **Fenster.** Die Kandidaten werden bis zum Filmrand erweitert und mit der Breite des gewählten Formats verglichen. Ein Fenster, das den Rand des gescannten Bereichs berührt, fällt heraus: der Scanbereich hat es halbiert und der eigentliche Scan würde die falsche Stelle aufnehmen.
-3. **Bänder.** Innerhalb eines Fensters werden die Zeilen mit Film vom Halter darüber und darunter getrennt. Eine Zeile gilt als Film, wenn sie sich vom Halter daneben unterscheidet **oder** Korn trägt; Helligkeit allein verliert die dichten Bilder eines Dias, Korn allein verliert die Zwischenräume und die flachen Bilder.
-4. **Raster.** Ein Kamm aus Zwischenraumpositionen wird über die gesamte Ebene (Abstand, Phase) angepasst. Bewertet wird der Kontrast zwischen dem Inneren eines Bildes und dem Zwischenraum; die Anpassung hängt also nicht davon ab, ob der Zwischenraum klarer Träger, maximale Dichte oder eine ihn verdeckende Halterstrebe ist.
-5. **Feinabgleich.** Jede Grenze wird auf den nächsten Zwischenraum gezogen, danach wird der ganze Satz auf gleichmäßigen Abstand neu angepasst, denn die Bilder eines Streifens liegen gleichmäßig. Zweimaliges Scannen desselben Streifens liegt innerhalb von 0,2 mm.
+1. **Spaltenkorn.** Das Detail wird spaltenweise über die Vorschau gemessen. Spalten mit Korn und Motiv werden zu Fensterkandidaten.
+2. **Fenster.** Kandidatenspalten wachsen bis zum Filmrand und werden mit der Breite des gewählten Formats abgeglichen. Fenster, die den Rand des Scanbereichs berühren, werden verworfen. Sie sind vom Scanbereich abgeschnitten, der Hauptscan würde die falsche Stelle erfassen.
+3. **Abschnitte.** Im Fenster werden die Bildzeilen von den Stegen oben und unten getrennt. Eine Zeile zählt als Film, wenn sie sich von den Stegen daneben unterscheidet **oder** Korn trägt. Helligkeit allein verliert dichte Dias, Korn allein verliert Zwischenräume und strukturlose Bilder.
+4. **Raster.** Ein Kamm aus Stegpositionen wird über die gesamte (Abstand, Phase)-Ebene eingepasst. Bewertet wird der Kontrast zwischen Bild und Steg, sodass es keine Rolle spielt, ob der Zwischenraum klarer Träger, Maximaldichte oder von einer Halterrippe verdeckt ist.
+5. **Korrektur.** Jede Grenze springt an den nächsten Zwischenraum, anschließend wird der Satz wieder auf gleichen Abstand ausgerichtet. Die Bilder eines Streifens liegen in gleichem Abstand. Zwei Scans desselben Streifens landen innerhalb von 0,2 mm an derselben Stelle.
 
 ## Was abgelehnt wird
 
@@ -44,7 +44,7 @@ Der Abstand beträgt mehr als eine Größenordnung und dreht sich weder mit der 
 | Nur ein Streifen in drei Fenstern | Nur das bestückte Fenster |
 | Vom Scanbereich halbiertes Fenster | Verworfen |
 | Bild, das über das Filmende hinausragt | Verworfen; innenliegende Bilder bleiben auch unbelichtet |
-| Streifen ohne Beleg für periodische Zwischenräume | Nichts statt eines willkürlichen Rasters |
+| Streifen ohne Beleg für periodische Zwischenräume | Nichts |
 
 ## Formate
 

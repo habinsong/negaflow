@@ -2,7 +2,7 @@
 
 [Accueil de la documentation](../README.md)
 
-Les profils de scanner fournis ne sont pas des LUT téléchargées ni des préréglages rebaptisés. L'auteur du projet a photographié et trié les scans de film, les a analysés, et a transformé le résultat en JSON.
+Les profils de scanner fournis sont issus de scans de film photographiés, triés et analysés par l'auteur du projet, puis convertis en JSON.
 
 | Élément | Valeur actuelle |
 |---|---:|

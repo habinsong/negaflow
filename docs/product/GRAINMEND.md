@@ -102,7 +102,7 @@ The result is split into dust, pinhole, scratches by direction, emulsion damage,
 
 ### Not erasing lines that belong to the photo
 
-Wires, railings, building corners, window frames, and lettering must not be read as scratches. Parallel lines, grids, continuity of edges, and lines attached to scene structure get their own check. Automatic blocks false positives harder; guided also weighs the fact that you chose the location.
+Wires, railings, building corners, window frames, and lettering must not be read as scratches. Parallel lines, grids, continuity of edges, and lines attached to scene structure get their own check. Automatic rejects false positives more strictly; guided also accounts for your choice of location.
 
 ## Repair
 
@@ -137,7 +137,7 @@ Low confidence, or a best point stuck at the end of the search, does not count a
 
 Film dye and density can show through into IR. The log brightness of the red channel is split into 64 bins, and in each bin the mean is taken after dropping the top and bottom 10% of IR values. Empty bins are interpolated from their neighbors and smoothed with a short symmetric kernel. Subtracting this non-parametric curve reduces the scene pattern, and sparse dark dust is kept out of the bin statistics.
 
-What is left is converted to contrast relative to the local mean. So a large defect cannot raise the noise floor around itself, the noise input is clipped at the minimum detection contrast before the adaptive threshold is computed. Connected dark regions at the holder and the film edge are removed from the mask.
+What is left is converted to contrast relative to the local mean. To prevent a large defect from raising the surrounding noise floor, the noise input is clipped at the minimum detection contrast before the adaptive threshold is computed. Connected dark regions at the holder and the film edge are removed from the mask.
 
 ### Safety conditions
 

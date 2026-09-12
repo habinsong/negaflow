@@ -85,7 +85,7 @@ flowchart LR
 
 ### バージョン1
 
-以前からの互換規格です。要求とNDJSONに`protocolVersion`、`requestID`、`sequence`がありません。 実際に適用した設定を報告できないので、結果は`.unknownLegacy(protocolVersion: 1)`として記録します 。 要求値を検証済みの適用値のように写すことはしません。
+以前からの互換規格です。要求とNDJSONに`protocolVersion`、`requestID`、`sequence`がありません。 実際に適用した設定を報告できないので、結果は`.unknownLegacy(protocolVersion: 1)`として記録します。 要求値を検証済みの適用値のように写すことはしません。
 
 ### バージョン2
 
@@ -98,7 +98,7 @@ flowchart LR
 
 `capabilities`の応答は、任意フィールドの`capabilityToken`を返せます。 アプリはこの値を解釈せず、同じ装置の次のv2 `scan`要求にだけそのまま渡します。 v1の要求には入れず、別の装置のトークンを混ぜません。 トークンの形式と有効性は、プラグインが自分で確認します。
 
-同じbackendの別モデルへ誤って再接続するのを防ぐため、アプリは直前の`detect`が報告した `deviceID` 、`vendor`、`model`を、`capabilities`の任意のstdin JSONとして渡し直します。 既存のプラグインはこの入力を無視できます。 装置アドレスが変わり得るプラグインは、この同一性をcapability のスナップショットに結び付け、次の `scan`でも確認してください。
+同じbackendの別モデルへ誤って再接続するのを防ぐため、アプリは直前の`detect`が報告した `deviceID`、`vendor`、`model`を、`capabilities`の任意のstdin JSONとして渡し直します。 既存のプラグインはこの入力を無視できます。 装置アドレスが変わり得るプラグインは、この同一性をcapability のスナップショットに結び付け、次の `scan`でも確認してください。
 
 各NDJSONイベントは、同じバージョンと要求IDを繰り返し、前より大きい0以上の`sequence`を持ちます。 イベントは`progress`、`result`、`error`だけです。
 
@@ -121,7 +121,7 @@ v2規格の違反は、通常の時間制限を待たずにプラグインをす
 v2の`result`には`appliedOptions`が必ず要ります。
 
 - `deviceID`、`resolutionDPI`、`bitDepth`、`colorMode`、`filmType`
-- `scanArea`: `originXMM`、`originYMM`、`widthMM`、`heightMM`。要求のコピーではなく、 プラグインが実際にバックエンドへ送った領域。スキャンサイズを誤計算するバックエンドを回避するため1mm未満で調整されることがある。アプリは返却されたピクセルサイズをこの領域と照合するため、要求をそのまま複製すると検査が無意味になる。
+- `scanArea`: `originXMM`、`originYMM`、`widthMM`、`heightMM`。プラグインが実際にバックエンドへ送った領域。スキャンサイズを誤計算するバックエンドを回避するため1mm未満で調整されることがある。アプリは返却されたピクセルサイズをこの領域と照合するため、要求をそのまま複製すると検査が無意味になる。
 - `infrared`、`multiExposure`
 - `hardwareExposureTime`、`brightnessAdjustment`、`contrastAdjustment`
 - `outputRawTIFF`
@@ -130,7 +130,7 @@ v2の`result`には`appliedOptions`が必ず要ります。
 
 `resolutionDPI: 0`はプレビューという意味です。 プレビューが0でない、または本スキャンが0のときは拒否します。 知らない値、別の装置、結果の先頭と`appliedOptions`で食い違う解像度・ビット深度・IR の状態も拒否します。
 
-検査を通ると、プラグインIDではなくアプリのスキャナーIDと要求IDを記録し、最終の出力パスを残します 。 このときだけ`.verified(options)`と表示します。
+検査を通ると、プラグインIDではなくアプリのスキャナーIDと要求IDを記録し、最終の出力パスを残します。 このときだけ`.verified(options)`と表示します。
 
 `ScanResult.resolution`と`bitDepth`は、v1では要求値を一時的な動作値として使えます。 出どころを示す`reportedResolution`、`reportedBitDepth`には、結果が自分で報告した正しい値だけを入れます。
 

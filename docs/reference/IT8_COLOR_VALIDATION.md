@@ -2,7 +2,7 @@
 
 [Docs home](../README.md)
 
-Color accuracy is not passed by looking at a screen. An IT8 image and the reference file that belongs to its physical target are pinned as a pair, and every patch is written down as numbers.
+Color accuracy checks require measurements, not visual inspection alone. An IT8 image is paired with the reference file for its physical target, and numerical results are recorded for every patch.
 
 > [!IMPORTANT]
 > Public IT8 material can confirm regressions in the checker and the color math. It cannot prove the accuracy of a real scanner or of color negative film. Judging a device needs a confirmed physical target and real measurements from that device.
@@ -113,7 +113,7 @@ y_{\mathrm{ceil}} -
 \exp\left(-(\mathrm{rate}\,d)^{\mathrm{shape}}\right)
 ```
 
-`d` is optical density with Dmin removed, then normalized. The coefficients are not stored presets; they are computed from these four anchors.
+`d` is optical density with Dmin removed, then normalized. The coefficients are computed from these four anchors:
 
 | Anchor | Value |
 |---|---:|

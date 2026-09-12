@@ -63,7 +63,7 @@ Auch Kodaks Daten zu Portra 400 halten Mindestdichte, Kennlinien und spektrale F
 
 ### Automatische Messung
 
-`FilmBaseEstimator` mittelt nicht einfach ein paar der hellsten Pixel.
+`FilmBaseEstimator` analysiert die räumliche Verteilung heller Pixel, um den unbelichteten Träger zu bestimmen.
 
 - Ein Filmpixel kann nicht heller sein als der unbelichtete Träger.
 - Deutlich Helleres kann Hintergrundlicht, Perforation oder außerhalb des Films sein.
@@ -107,7 +107,7 @@ Manche Werte nähern Kurven aus öffentlichem Material an, manche sind bewusst k
 
 ### Feste Printantwort
 
-`MAIN` überführt die um den Träger verringerte Dichte in eine monoton steigende Kurve. Die Koeffizienten sind kein verstecktes Preset, sondern folgen aus vier Ankerpunkten.
+`MAIN` überführt die um den Träger verringerte Dichte in eine monoton steigende Kurve. Die Koeffizienten folgen aus vier Ankerpunkten.
 
 - Der Schwarzpunkt des Trägers
 - 18-%-Mittelgrau
@@ -164,7 +164,7 @@ Alle heutigen Profile sind `realOnly`.
 
 ### `F135`, `HR`
 
-Das sind zwei vom Projekt gebaute Minilab-Stile, keine vermessenen Maschinenklone. `F135` nutzt eine printnahe S-Kurve mit warmen Mitten, `HR` tiefe Schwarztöne und eine ruhige neutrale, bläuliche Richtung. Es wird nicht behauptet, eine bestimmte Maschine geprüft und nachgebaut zu haben.
+Das sind zwei vom Projekt entwickelte Minilab-Stile. `F135` nutzt eine printnahe S-Kurve mit warmen Mitten, `HR` tiefe Schwarztöne und eine ruhige neutrale, bläuliche Richtung. Es wird nicht behauptet, eine bestimmte Maschine geprüft und nachgebaut zu haben.
 
 ### `EXPIRED`
 

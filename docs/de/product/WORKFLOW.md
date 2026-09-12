@@ -2,7 +2,7 @@
 
 [Dokumentationsstart](../README.md)
 
-Diese Anleitung beschreibt Import, Ordnerentwicklung, Übertragen von Einstellungen, Scanner-Vorschaubilder und Druckausgabe. Ein Bibliotheksordner folgt dem tatsächlichen Quellordner eines Fotos und ist nicht nur eine interne Kategorie.
+Diese Anleitung beschreibt Import, Ordnerentwicklung, Übertragen von Einstellungen, Scanner-Vorschaubilder und Druckausgabe. Ein Bibliotheksordner folgt dem tatsächlichen Quellordner eines Fotos.
 
 > [!IMPORTANT]
 > Quelldateien bleiben unverändert, außer ein Foto wird ausdrücklich in einen anderen Ordner verschoben. Aus der Bibliothek entfernen und im Finder löschen sind getrennte Vorgänge.
@@ -59,7 +59,7 @@ Ist beim Start kein Plug-in installiert, zeigt die gemeinsame Seitenleiste von B
 
 Der Druckbereich bietet sieben Layouts: Einzelbild, Kontaktbogen, Bildpaket, Benutzerpaket, Cyanotypie, Glasplatte und Silbergelatine. Die letzten drei verwenden denselben Inspektor wie das Einzelbild. Bei mehreren Fotos zeigen die vier Einzelbildlayouts je Foto eine vollständige Abzugsseite in einer vertikal scrollbaren Folge.
 
-Abzugsexport und Schnellexport zählen fertige Seiten statt ausgewählter Quellen. 39 Fotos auf einem 6 × 7-Kontaktbogen ergeben eine zusammengesetzte Datei, ein Vierer-Bildpaket 10 Seiten, das vorgegebene Benutzerpaket eine Seite und die Einzelbildlayouts einen begrenzten Stapel mit 39 Dateien.
+Abzugsexport und Schnellexport zählen fertige Seiten. 39 Fotos auf einem 6 × 7-Kontaktbogen ergeben eine zusammengesetzte Datei, ein Vierer-Bildpaket 10 Seiten, das vorgegebene Benutzerpaket eine Seite und die Einzelbildlayouts einen begrenzten Stapel mit 39 Dateien.
 
 Die Vorschau verwendet vorhandene Miniaturen, entwickelte Bilder oder Quellvorschauen und erzeugt nur bei Bedarf eine kleine schnelle Vorschau. Der finale Export berechnet die Platzierungen aus Metadaten, entwickelt nur die benötigten Pixel, bereitet zwei bis vier Quellen gleichzeitig vor und hält den Core-Image-Graphen bis zum Seitenrendering verbunden. Ein gemeinsamer Kontext und ein Rasterbudget von 512 MiB pro Seite verhindern unbegrenzte Vollauflösungs-Zwischenbilder.
 

@@ -66,7 +66,7 @@ r &= r_{\mathrm{white}}^{1/s}
 
 ## Standard-Dichtebereich
 
-`normalRange` ist nicht die physikalische Maximaldichte des Films. Es ist der Bereich, den eine normal belichtete Szene nutzt. Er zählt vor allem, wenn der Träger nicht gemessen werden konnte oder der Szenenkontrast sehr gering ist.
+`normalRange` ist der Dichtebereich, den eine normal belichtete Szene nutzt. Er zählt vor allem, wenn der Träger nicht gemessen werden konnte oder der Szenenkontrast sehr gering ist.
 
 ```math
 \begin{aligned}
@@ -80,7 +80,7 @@ r &= r_{\mathrm{white}}^{1/s}
 - Schwarzweiß `3.5`: Praxis der Schwarzweißvergrößerung mit längerem Geradenteil
 - `0.60D`: Mittelgraudichte einer normal belichteten Szene
 
-`applySceneRanged` misst statt dieses Werts den Dichtebereich, den das Bild je Kanal wirklich nutzt.
+`applySceneRanged` misst den Dichtebereich, den das Bild je Kanal wirklich nutzt.
 
 ## Was sich in v4 geändert hat
 

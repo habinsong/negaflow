@@ -113,7 +113,7 @@ y_{\mathrm{ceil}} -
 \exp\left(-(\mathrm{rate}\,d)^{\mathrm{shape}}\right)
 ```
 
-`d` est la densité optique après retrait de Dmin, puis normalisée. Les coefficients ne sont pas des préréglages stockés : ils se calculent à partir de ces quatre points d'ancrage.
+`d` est la densité optique après retrait de Dmin, puis normalisée. Les coefficients se calculent à partir de ces quatre points d'ancrage :
 
 | Point d'ancrage | Valeur |
 |---|---:|

@@ -38,9 +38,9 @@
   </picture>
 </p>
 
-**negaflow** ist eine App, die Film, den Sie gescannt oder mit der Kamera abfotografiert haben, hereinnimmt und entwickelt. Farbe wie Schwarzweiß, Negativ wie Positiv, alles geht. Von der Bibliothek über das Entwickeln bis zum Abzug ist alles in einer App erledigt. Die Bearbeitungswerte werden getrennt vom Original gespeichert, die Originaldatei bleibt also, wie sie ist.
+**negaflow** entwickelt gescannte oder mit der Kamera abfotografierte Filme: Farb- und Schwarzweißfilme, Negative und Positive. Bibliothek, Entwicklung und Abzug sind in einer App vereint. Die Bearbeitungswerte werden separat gespeichert; die Originaldatei bleibt unverändert.
 
-Die Entwicklungs-Engine heißt **Chroma Engine**, die Reparatur von Staub und Kratzern heißt **GrainMend**. Es macht nichts, wenn Sie keinen Scanner haben. Auch wenn Sie nur Bilddateien importieren, können Sie entwickeln und exportieren. Die Scanner-Verbindung öffnet sich erst, wenn Sie ein Plug-in separat installieren.
+Die Entwicklungs-Engine heißt **Chroma Engine**. **GrainMend** repariert Staub und Kratzer. Auch ohne Scanner können Sie Bilddateien importieren, entwickeln und exportieren. Für den Scanneranschluss brauchen Sie ein separates Plug-in.
 
 > Anders als das Wachstum der analogen Mode in letzter Zeit steckt der Prozess der analogen Fotografie derzeit fest. Solange man den Film nicht analog vergrößert, muss er den Weg der Umwandlung ins Digitale gehen, damit er uns endlich vor Augen kommt.
 >
@@ -61,7 +61,7 @@ Die Entwicklungs-Engine heißt **Chroma Engine**, die Reparatur von Staub und Kr
 | Engine | Swift + Core Image | C++ + Direct3D |
 | Farbmanagement | ColorSync | Windows ICM |
 
-Die beiden Apps sind native Apps, in unterschiedlichen Sprachen und auf unterschiedliche Weise entwickelt, und trotzdem sind Funktionen und Ergebnisse gleich.
+Die beiden nativen Apps verwenden unterschiedliche Sprachen und Implementierungen, bieten aber dieselben Funktionen und Ergebnisse.
 
 Der Engine-Code liegt unter macOS im Modul `Chromabase` und unter Windows im Modul `Native`.
 
@@ -77,32 +77,32 @@ Sie holen es sich bei [GitHub Releases](https://github.com/habinsong/negaflow/re
 | `negaflow-1.1.6-mac-arm64.pkg` | macOS 14 oder neuer, nur Apple Silicon |
 | `negaflow-1.1.6-win-x64.exe` | Windows 11 24H2 oder neuer, x64 |
 
-Für die meisten Macs genügt das Universal-PKG. Natürlich liegen die Datei für Silicon sowie ein DMG und ein ZIP auf derselben Seite. Beim ersten Start müssen Sie in den Systemeinstellungen unter Datenschutz und Sicherheit einmal auf Trotzdem öffnen klicken.
+Für die meisten Macs genügt das Universal-PKG. Auf derselben Seite finden Sie auch die Datei für Silicon sowie ein DMG und ein ZIP. Beim ersten Start müssen Sie in den Systemeinstellungen unter Datenschutz und Sicherheit einmal auf Trotzdem öffnen klicken.
 
-Die Windows-Installation endet innerhalb Ihres Benutzerordners und fragt nicht nach Administratorrechten. Da es keine Signatur gibt, blockt SmartScreen einmal. Klicken Sie auf Weitere Informationen und führen Sie es aus. Entfernen können Sie es über die Systemsteuerung.
+Die Windows-App wird ohne Administratorrechte in Ihrem Benutzerordner installiert. Da es keine Signatur gibt, blockt SmartScreen einmal. Klicken Sie auf Weitere Informationen und führen Sie es aus. Entfernen können Sie es über die Systemsteuerung.
 
-Um einen echten Scanner anzuschließen, braucht es ein separates Plug-in, und für SANE-Scanner gibt es [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane). Selbstverständlich läuft es auf macOS wie auf Windows.
+Um einen echten Scanner anzuschließen, braucht es ein separates Plug-in, und für SANE-Scanner gibt es [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane). Es läuft auf macOS und Windows.
 
 ## Funktionen
 > Alles, was analogen Film zu einem fertigen Foto macht, steckt darin.
-- Angefangen bei der Messung der Filmbasis und der Entwicklung von Farb- und Schwarzweißnegativen und -positiven
-- Alles, was die Korrektur braucht: Belichtung, Kontrast, Kurven, HSL, Colorgrading
+- Messung der Filmbasis und Entwicklung von Farb- und Schwarzweißnegativen und -positiven
+- Belichtung, Kontrast, Kurven, HSL und Colorgrading
 - Zusatzoptionen wie Schärfung, Rauschminderung, Korn, Vignette, Halation
 - GrainMend, das Fotos wiederherstellt, indem es Staub und Kratzer entfernt.
 - Eine Bibliothek mit Filmen, Ordnern, Sammlungen, Bewertungen, Stapeln, virtuellen Kopien und Suche nach Kamera, Objektiv oder Film
 - Vorgaben und Kopieren/Einfügen, die Entwicklungsprozess, Ziel, Tonwert, Farbe, Detail, Ausschnitt und Ausrichtung gemeinsam mitnehmen
 - Export als JPEG und 16-Bit-TIFF, ICC-Profile, und Angaben wie Kamera, Objektiv und Film ins EXIF geschrieben
-- Sieben Abzugslayouts und Papiervorschauen, Foto- und ISO-Papiere, bis hin zur C-Print-Funktion.
+- Sieben Abzugslayouts, Papiervorschauen, Foto- und ISO-Papiere sowie die C-Print-Funktion.
 
 ## Chroma Engine
 
 **Chroma Engine** übernimmt Invertierung und Entwicklung des Films.
 
-Bevor ein Negativ entwickelt wird, misst sie zuerst die Filmbasis. Sie liest den Wert aus einem Bereich, den das Licht nie erreicht hat. Wo die automatische Messung danebenliegt, tippen Sie einfach mit der Pipette oder passen die RGB-Werte an.
+Vor der Entwicklung eines Negativs misst sie die Filmbasis in einem unbelichteten Bereich. Wo die automatische Messung danebenliegt, tippen Sie einfach mit der Pipette oder passen die RGB-Werte an.
 
 Voreingestellt sind `MAIN` und manuelle Korrekturen. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe laufen nur, wenn Sie sie drücken.
 
-Die übrigen Ziele sind diese. `PRINT`, das über ein Drucker-ICC ausgibt, `HS` und `SP` aus der Minilab-Familie, `F135` und `HR` aus der Familie der Laborgeräte, `EXPIRED`, das alten Film zurückzuholen versucht. Bei der Ausgabe wählen Sie zwischen sRGB, Display P3, Adobe RGB und einem eigenen RGB-ICC.
+Weitere Ziele sind `PRINT` für die Ausgabe über ein Drucker-ICC, `HS` und `SP` aus der Minilab-Familie, `F135` und `HR` aus der Familie der Laborgeräte, `EXPIRED`, das alten Film zurückzuholen versucht. Bei der Ausgabe wählen Sie zwischen sRGB, Display P3, Adobe RGB und einem eigenen RGB-ICC.
 
 Die Reihenfolge von Invertierung und Farbverarbeitung steht in der [Chroma-Engine-Dokumentation](docs/de/product/CHROMA_ENGINE.md).
 
@@ -116,7 +116,7 @@ Die Reihenfolge von Invertierung und Farbverarbeitung steht in der [Chroma-Engin
 `Pinsel` ist das Werkzeug, um die von Automatisch übersehenen Stellen selbst zu übermalen, und der Klonstempel überträgt die Pixel einer gewählten Position unverändert.<br>
 `Klonstempel` ist eine Stempelfunktion, bei der Sie die gewünschte Textur auswählen und selbst auftragen. <br>
 
-Automatisch und Geführt füllen Defekte, indem sie die umgebende Textur ansehen. Vor dem Füllen sehen sie zuerst Richtung und umgebende Struktur an. Hält man ein Geländer oder eine Fliesenfuge im Foto für einen Kratzer und löscht sie, dann ist das keine Wiederherstellung, sondern ein Schaden.
+Automatisch und Geführt füllen Defekte mit der umgebenden Textur und prüfen zuvor deren Richtung und Struktur. Wird ein Geländer oder eine Fliesenfuge irrtümlich als Kratzer entfernt, beschädigt das das Foto.
 
 Das Ergebnis der Korrekturen bleibt als Ebenen erhalten. Sie können die Stärke ändern, die Maske prüfen und einzelne abschalten oder löschen.<br>
 **GrainMend IR** fügt die Erkennungsergebnisse aus dem Infrarotkanal, den ein Scanner-Plug-in übergibt, demselben Verlauf hinzu.
@@ -157,7 +157,7 @@ negaflow selbst schaltet keine Funktionen anhand eines Scanner-Modellnamens frei
 
 SANE-Geräte übernimmt [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), ein eigenständiges GPL-Projekt. Das Plug-in läuft als eigener Prozess, das Austauschformat ist JSON. In **negaflow** steckt kein SANE-Code, und es wird auch keiner eingebunden.
 
-Im Paket sind 15 Scannerprofile enthalten. Sie sind aus Film entstanden, den ich selbst fotografiert habe, und die Zahl der erfassten Daten beträgt 928.
+Im Paket sind 15 Scannerprofile enthalten. Sie stammen aus Filmen, die ich selbst fotografiert habe, mit 928 erfassten Datenpunkten.
 
 Der Status ist überall `realOnly`. Das heißt, sie wurden zwar aus echten Scans gebaut, sind aber nicht so weit, dass die Genauigkeit gegen eine unabhängige Referenz geprüft wäre. Ich wollte Ungeprüftes nicht als geprüft hinschreiben. Profile greifen nicht automatisch anhand eines Scannernamens, Sie müssen sie selbst wählen.
 
