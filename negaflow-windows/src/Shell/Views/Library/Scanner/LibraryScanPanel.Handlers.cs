@@ -208,16 +208,35 @@ public sealed partial class LibraryScanPanel
         scanSession?.UpdateOptions(options => options with { Infrared = ScanInfraredToggle.IsOn });
     }
 
-    private void OnScanFrameFormatChanged(object sender, SelectionChangedEventArgs args)
+    /// <summary>
+    /// 규격이나 목록 맨 아래 "수동 비율" 을 골랐습니다. 바뀌었으면 찾아 둔 프레임을 새 치수로
+    /// 다시 찾습니다(macOS <c>selectScanFrameFormatChoice</c>).
+    /// </summary>
+    private async void OnScanFrameFormatChanged(object sender, SelectionChangedEventArgs args)
     {
         _ = sender;
         _ = args;
-        if (isSynchronizingScan ||
-            ScanFrameFormatSelector.SelectedItem is not ComboBoxItem { Tag: FlatbedFrameFormat format })
+        if (isSynchronizingScan || scanSession is null ||
+            ScanFrameFormatSelector.SelectedItem is not ComboBoxItem { Tag: { } tag })
         {
             return;
         }
-        scanSession?.UpdateOptions(options => options with { FrameFormat = format });
+        bool changed = tag switch
+        {
+            FlatbedFrameFormat format => scanSession.SelectFrameFormat(format),
+            _ when ReferenceEquals(tag, ScanFrameFormatChoice.Custom) =>
+                scanSession.SelectCustomFrameRatio(),
+            _ => false,
+        };
+        if (changed)
+        {
+            await customRatio.ApplyFrameSizeChangeAsync();
+        }
+        else
+        {
+            // 받지 않았으면(스캔 중 등) 고르개를 지금 값으로 되돌립니다.
+            renderer.Render();
+        }
     }
 
     private void OnScanDetectionModeChecked(object sender, RoutedEventArgs args)
@@ -250,11 +269,11 @@ public sealed partial class LibraryScanPanel
         }
         // 프리뷰 픽셀이 아직 없으면 찾을 근거가 없습니다. macOS 도 프리뷰 전에는 잠급니다.
         _ = scanSession.RefreshRegions(
-            flatbedPreview.Values,
-            flatbedPreview.Width,
-            flatbedPreview.Height,
-            flatbedPreview.PhysicalWidthMm,
-            flatbedPreview.PhysicalHeightMm);
+            FlatbedPreview.Values,
+            FlatbedPreview.Width,
+            FlatbedPreview.Height,
+            FlatbedPreview.PhysicalWidthMm,
+            FlatbedPreview.PhysicalHeightMm);
         renderer.Render();
     }
 

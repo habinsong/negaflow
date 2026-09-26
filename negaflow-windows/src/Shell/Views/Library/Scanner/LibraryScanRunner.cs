@@ -137,18 +137,18 @@ internal sealed class LibraryScanRunner
         {
             RemoveStalePreviewFrames(view.libraryHost?.ActiveFrameId);
             // 프리뷰는 카탈로그에 올리지 않습니다. 그림만 읽어 두었다가 프레임 찾기에 넘깁니다.
-            view.flatbedPreview = view.scanSession.LastPreviewPath is { } previewPath
+            view.FlatbedPreview = view.scanSession.LastPreviewPath is { } previewPath
                 ? await PreviewLuminanceReader.ReadAsync(previewPath)
                 : PreviewLuminance.None;
-            if (!view.flatbedPreview.IsEmpty &&
+            if (!view.FlatbedPreview.IsEmpty &&
                 view.scanSession.Options.FrameDetectionMode == FlatbedFrameDetectionMode.Automatic)
             {
                 _ = view.scanSession.RefreshRegions(
-                    view.flatbedPreview.Values,
-                    view.flatbedPreview.Width,
-                    view.flatbedPreview.Height,
-                    view.flatbedPreview.PhysicalWidthMm,
-                    view.flatbedPreview.PhysicalHeightMm);
+                    view.FlatbedPreview.Values,
+                    view.FlatbedPreview.Width,
+                    view.FlatbedPreview.Height,
+                    view.FlatbedPreview.PhysicalWidthMm,
+                    view.FlatbedPreview.PhysicalHeightMm);
             }
             view.renderer.Render();
             view.RequestLibraryReload();
@@ -163,7 +163,7 @@ internal sealed class LibraryScanRunner
         if (outcome.Published > 0)
         {
             RemoveStalePreviewFrames(keep: null);
-            view.flatbedPreview = PreviewLuminance.None;
+            view.FlatbedPreview = PreviewLuminance.None;
         }
         view.RequestLibraryReload();
     }

@@ -46,6 +46,11 @@ internal sealed class LibraryScanCopy
         view.ScanBitDepthUnavailableText.Text = AppResources.Get("scanBitDepthUnavailable", "Text");
         view.ScanFrameFormatLabel.Text = AppResources.Get("scanFrameFormat", "Text");
         AutomationProperties.SetName(view.ScanFrameFormatSelector, view.ScanFrameFormatLabel.Text);
+        view.ScanCustomFrameRatioLabel.Text = AppResources.Get("scanCustomFrameRatio", "Text");
+        AutomationProperties.SetName(
+            view.ScanCustomFrameWidthBox, AppResources.Get("scanCustomFrameWidth", "Text"));
+        AutomationProperties.SetName(
+            view.ScanCustomFrameHeightBox, AppResources.Get("scanCustomFrameHeight", "Text"));
         view.ScanDetectionModeLabel.Text = AppResources.Get("scanDetectionMode", "Text");
         SetRadioText(
             view.ScanDetectionAutomaticButton,

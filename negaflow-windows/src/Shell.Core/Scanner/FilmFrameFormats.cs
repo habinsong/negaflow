@@ -3,17 +3,28 @@ using Negaflow.Interop;
 namespace Negaflow.Shell;
 
 /// <summary>
-/// 필름 프레임 규격의 치수와 표기입니다. macOS <c>FilmFrameFormat</c> 과 같은 열 가지, 같은
+/// 필름 프레임 규격의 치수와 표기입니다. macOS <c>FilmFrameFormat</c> 과 같은 열두 가지, 같은
 /// 순서, 같은 치수, 같은 표기입니다. 표기는 숫자와 단위뿐이라 번역하지 않습니다 — macOS 도
 /// 언어와 무관하게 같은 문자열을 냅니다.
 /// </summary>
+/// <remarks>
+/// 치수는 <see cref="Dimensions"/> 한 곳에 있고 나머지는 그것을 읽습니다. 모르는 값은
+/// 던집니다 — 예전 판은 <c>_ =&gt; 36</c> 같은 기본 가지가 새 규격을 조용히 삼켜, 표에서
+/// 빠뜨려도 빌드와 화면이 멀쩡해 보였습니다.
+/// </remarks>
 public static class FilmFrameFormats
 {
+    /// <summary>
+    /// 표시 차례입니다. enum 번호 차례와 다릅니다 — 35mm 파노라마 두 규격은 ABI 끝에 붙은
+    /// 번호지만 macOS 목록처럼 35mm 하프 다음에 옵니다.
+    /// </summary>
     public static IReadOnlyList<FlatbedFrameFormat> All { get; } =
     [
         FlatbedFrameFormat.FullFrame35mm,
         FlatbedFrameFormat.Square35mm,
         FlatbedFrameFormat.HalfFrame35mm,
+        FlatbedFrameFormat.Panorama35mm56x24,
+        FlatbedFrameFormat.Panorama35mm65x24,
         FlatbedFrameFormat.Medium645,
         FlatbedFrameFormat.Medium66,
         FlatbedFrameFormat.Medium67,
@@ -23,37 +34,43 @@ public static class FilmFrameFormats
         FlatbedFrameFormat.Medium617,
     ];
 
-    /// <summary>필름 스트립을 가로로 놓았을 때 프레임이 진행되는 축의 공칭 길이입니다.</summary>
-    public static double StripWidthMm(FlatbedFrameFormat format) => format switch
+    /// <summary>
+    /// 규격의 치수입니다. macOS <c>stripWidthMM</c> · <c>stripHeightMM</c> · <c>is35mm</c> 와
+    /// 같고, 네이티브 <c>flatbed_frame_dimensions</c> 와 같은 표입니다.
+    /// </summary>
+    public static FlatbedFrameDimensions Dimensions(FlatbedFrameFormat format) => format switch
     {
-        FlatbedFrameFormat.FullFrame35mm => 36,
-        FlatbedFrameFormat.Square35mm => 24,
-        FlatbedFrameFormat.HalfFrame35mm => 18,
-        FlatbedFrameFormat.Medium645 => 41.5,
-        FlatbedFrameFormat.Medium66 => 56,
-        FlatbedFrameFormat.Medium67 => 69,
-        FlatbedFrameFormat.Medium68 => 76,
-        FlatbedFrameFormat.Medium69 => 84,
-        FlatbedFrameFormat.Medium612 => 112,
-        FlatbedFrameFormat.Medium617 => 168,
-        _ => 36,
+        FlatbedFrameFormat.FullFrame35mm => new(36, 24, true),
+        FlatbedFrameFormat.Square35mm => new(24, 24, true),
+        FlatbedFrameFormat.HalfFrame35mm => new(18, 24, true),
+        FlatbedFrameFormat.Panorama35mm56x24 => new(56, 24, true),
+        FlatbedFrameFormat.Panorama35mm65x24 => new(65, 24, true),
+        FlatbedFrameFormat.Medium645 => new(41.5, 56, false),
+        FlatbedFrameFormat.Medium66 => new(56, 56, false),
+        FlatbedFrameFormat.Medium67 => new(69, 55, false),
+        FlatbedFrameFormat.Medium68 => new(76, 56, false),
+        FlatbedFrameFormat.Medium69 => new(84, 56, false),
+        FlatbedFrameFormat.Medium612 => new(112, 56, false),
+        FlatbedFrameFormat.Medium617 => new(168, 56, false),
+        _ => throw new ArgumentOutOfRangeException(nameof(format)),
     };
 
+    /// <summary>필름 스트립을 가로로 놓았을 때 프레임이 진행되는 축의 공칭 길이입니다.</summary>
+    public static double StripWidthMm(FlatbedFrameFormat format) => Dimensions(format).AlongMm;
+
     /// <summary>필름 스트립 폭 방향의 공칭 이미지 길이입니다.</summary>
-    public static double StripHeightMm(FlatbedFrameFormat format) => format switch
-    {
-        FlatbedFrameFormat.FullFrame35mm or
-        FlatbedFrameFormat.Square35mm or
-        FlatbedFrameFormat.HalfFrame35mm => 24,
-        FlatbedFrameFormat.Medium67 => 55,
-        _ => 56,
-    };
+    public static double StripHeightMm(FlatbedFrameFormat format) => Dimensions(format).AcrossMm;
+
+    /// <summary>퍼포레이션 이송(35mm)인지입니다. 프레임 간격과 피치 허용폭이 여기서 갈립니다.</summary>
+    public static bool Is35mm(FlatbedFrameFormat format) => Dimensions(format).Is35mm;
 
     public static string DisplayName(FlatbedFrameFormat format) => format switch
     {
         FlatbedFrameFormat.FullFrame35mm => "35 mm · 36 × 24",
         FlatbedFrameFormat.Square35mm => "35 mm · 24 × 24",
         FlatbedFrameFormat.HalfFrame35mm => "35 mm · 24 × 18",
+        FlatbedFrameFormat.Panorama35mm56x24 => "35 mm · 56 × 24",
+        FlatbedFrameFormat.Panorama35mm65x24 => "35 mm · 65 × 24",
         FlatbedFrameFormat.Medium645 => "120 · 6 × 4.5",
         FlatbedFrameFormat.Medium66 => "120 · 6 × 6",
         FlatbedFrameFormat.Medium67 => "120 · 6 × 7",
@@ -61,7 +78,7 @@ public static class FilmFrameFormats
         FlatbedFrameFormat.Medium69 => "120 · 6 × 9",
         FlatbedFrameFormat.Medium612 => "120 · 6 × 12",
         FlatbedFrameFormat.Medium617 => "120 · 6 × 17",
-        _ => "35 mm · 36 × 24",
+        _ => throw new ArgumentOutOfRangeException(nameof(format)),
     };
 
     /// <summary>
@@ -76,14 +93,16 @@ public static class FilmFrameFormats
         {
             return All;
         }
-        return [.. All.Where(format =>
-        {
-            double stripWidth = StripWidthMm(format);
-            double stripHeight = StripHeightMm(format);
-            return (stripWidth <= width && stripHeight <= height) ||
-                (stripHeight <= width && stripWidth <= height);
-        })];
+        return [.. All.Where(format => Fits(Dimensions(format), width, height))];
     }
+
+    /// <summary>
+    /// macOS <c>AppModel.frame(_:fitsIn:)</c> — 스트립을 가로로 놓든 세로로 놓든 스캐너 최대
+    /// 영역 안에 들어가는지입니다.
+    /// </summary>
+    public static bool Fits(FlatbedFrameDimensions frame, double maxWidthMm, double maxHeightMm) =>
+        (frame.AlongMm <= maxWidthMm && frame.AcrossMm <= maxHeightMm) ||
+        (frame.AcrossMm <= maxWidthMm && frame.AlongMm <= maxHeightMm);
 }
 
 /// <summary>프레임을 앱이 찾을지 사용자가 놓을지입니다.</summary>

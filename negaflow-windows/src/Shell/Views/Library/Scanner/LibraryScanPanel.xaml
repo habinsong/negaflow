@@ -242,6 +242,7 @@
                                             x:Name="ScanFrameFormatSelector" x:FieldModifier="internal"
                                             Grid.Column="1"
                                             MinWidth="152"
+                                            MaxDropDownHeight="720"
                                             AutomationProperties.AutomationId="negaflow.library.scan.frame-format"
                                             SelectionChanged="OnScanFrameFormatChanged" />
                                     </Grid>
@@ -250,6 +251,54 @@
                                         Margin="0,1"
                                         Background="{ThemeResource NegaflowDividerBrush}"
                                         Visibility="{Binding Visibility, ElementName=ScanFrameFormatRow}" />
+                                    <!-- macOS `ScanCustomFrameSizeRow` — 수동 비율(가로 : 세로, 단위 없음).
+                                         HStack(spacing: 6) 에 라벨, Spacer, 폭 56 입력칸 둘과 사이의
+                                         ":" 입니다. 설명 문구는 두지 않습니다. 입력하는 동안에는
+                                         적용하지 않고 Enter 나 두 칸 밖으로 포커스가 빠질 때 한 번
+                                         적용하며, Esc 는 입력을 버립니다(LibraryScanCustomRatio). -->
+                                    <Grid x:Name="ScanCustomFrameRatioRow" x:FieldModifier="internal" ColumnSpacing="6" Visibility="Collapsed">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock
+                                            x:Name="ScanCustomFrameRatioLabel" x:FieldModifier="internal"
+                                            Margin="0,0,8,0"
+                                            VerticalAlignment="Center"
+                                            FontSize="12"
+                                            IsTabStop="False" />
+                                        <TextBox
+                                            x:Name="ScanCustomFrameWidthBox" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            Width="56"
+                                            MinWidth="0"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.custom-frame.width"
+                                            InputScope="Number"
+                                            TextAlignment="Right"
+                                            VerticalAlignment="Center" />
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            VerticalAlignment="Center"
+                                            FontSize="12"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Text=":" />
+                                        <TextBox
+                                            x:Name="ScanCustomFrameHeightBox" x:FieldModifier="internal"
+                                            Grid.Column="3"
+                                            Width="56"
+                                            MinWidth="0"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.custom-frame.height"
+                                            InputScope="Number"
+                                            TextAlignment="Right"
+                                            VerticalAlignment="Center" />
+                                    </Grid>
+                                    <Border
+                                        Height="1"
+                                        Margin="0,1"
+                                        Background="{ThemeResource NegaflowDividerBrush}"
+                                        Visibility="{Binding Visibility, ElementName=ScanCustomFrameRatioRow}" />
                                     <Grid x:Name="ScanDetectionModeRow" x:FieldModifier="internal" ColumnSpacing="6" Visibility="Collapsed">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />

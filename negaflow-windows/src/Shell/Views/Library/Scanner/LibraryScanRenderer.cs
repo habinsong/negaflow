@@ -108,11 +108,17 @@ internal sealed class LibraryScanRenderer
                 view.ScanFolderNameBox.Text = view.scanSession.Options.FolderName;
             }
             view.ScanFrameCountBox.Value = view.scanSession.Options.BatchCount;
+            // macOS: 규격들, Divider(), "수동 비율" 차례입니다.
             FillTagged(
                 view.ScanFrameFormatSelector,
                 [.. view.scanSession.AvailableFrameFormats.Select(format =>
-                    ((object)FilmFrameFormats.DisplayName(format), (object)format))],
-                view.scanSession.Options.FrameFormat);
+                    ((object)FilmFrameFormats.DisplayName(format), (object)format)),
+                    ((object)string.Empty, ScanFrameFormatChoice.Separator),
+                    ((object)AppResources.Get("scanCustomFrameFormat", "Text"),
+                        ScanFrameFormatChoice.Custom)],
+                view.scanSession.Options.UsesCustomFrameRatio
+                    ? ScanFrameFormatChoice.Custom
+                    : view.scanSession.Options.FrameFormat);
             view.ScanDetectionAutomaticButton.IsChecked =
                 view.scanSession.Options.FrameDetectionMode == FlatbedFrameDetectionMode.Automatic;
             view.ScanDetectionManualButton.IsChecked =
@@ -128,6 +134,12 @@ internal sealed class LibraryScanRenderer
         view.ScanFrameFormatRow.Visibility = view.scanSession.AvailableFrameFormats.Count > 0
             ? Visibility.Visible
             : Visibility.Collapsed;
+        bool customRatio = view.ScanFrameFormatRow.Visibility == Visibility.Visible &&
+            view.scanSession.Options.UsesCustomFrameRatio;
+        view.ScanCustomFrameRatioRow.Visibility = customRatio
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        view.customRatio.Sync(customRatio);
         view.ScanDetectionModeRow.Visibility = flatbed ? Visibility.Visible : Visibility.Collapsed;
         view.ScanRegionsRow.Visibility = view.ScanDetectionModeRow.Visibility;
         // 평판에서는 판 위에 놓인 프레임 수가 곧 스캔 수이므로 사진 수 줄이 없습니다.
@@ -141,7 +153,7 @@ internal sealed class LibraryScanRenderer
         view.ScanRemoveFrameButton.IsEnabled = hasSelectedRegion;
         view.ScanPasteFrameButton.IsEnabled = view.scanSession.CopiedRegion is not null;
         // 프리뷰 픽셀이 없으면 찾을 근거가 없습니다.
-        view.ScanRefreshFramesButton.IsEnabled = !view.flatbedPreview.IsEmpty ||
+        view.ScanRefreshFramesButton.IsEnabled = !view.FlatbedPreview.IsEmpty ||
             view.scanSession.Options.FrameDetectionMode == FlatbedFrameDetectionMode.Manual;
 
         bool hasDepths = view.scanSession.BitDepths.Count > 0;
@@ -253,7 +265,9 @@ internal sealed class LibraryScanRenderer
         selector.Items.Clear();
         foreach ((object text, object tag) in items)
         {
-            selector.Items.Add(new ComboBoxItem { Content = text, Tag = tag });
+            selector.Items.Add(ReferenceEquals(tag, ScanFrameFormatChoice.Separator)
+                ? SeparatorItem()
+                : new ComboBoxItem { Content = text, Tag = tag });
         }
 
         SelectTagged(selector, selectedTag);
@@ -271,7 +285,11 @@ internal sealed class LibraryScanRenderer
         for (int index = 0; index < items.Count; index++)
         {
             if (selector.Items[index] is not ComboBoxItem existing ||
-                !Equals(existing.Tag, items[index].Tag) ||
+                !Equals(existing.Tag, items[index].Tag))
+            {
+                return true;
+            }
+            if (!ReferenceEquals(existing.Tag, ScanFrameFormatChoice.Separator) &&
                 !Equals(existing.Content, items[index].Text))
             {
                 return true;
@@ -279,6 +297,35 @@ internal sealed class LibraryScanRenderer
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// macOS 메뉴의 <c>Divider()</c> 자리입니다. 고를 수도, 탭으로 갈 수도, 읽힐 수도 없는 줄
+    /// 하나입니다. 색은 비활성 글자색을 따라가 밝은·어두운 테마 모두에서 보입니다.
+    /// </summary>
+    private static ComboBoxItem SeparatorItem()
+    {
+        var line = new Microsoft.UI.Xaml.Shapes.Rectangle { Height = 1, Opacity = 0.35 };
+        var item = new ComboBoxItem
+        {
+            Tag = ScanFrameFormatChoice.Separator,
+            Content = line,
+            IsEnabled = false,
+            IsTabStop = false,
+            MinHeight = 0,
+            Padding = new Thickness(12, 3, 12, 3),
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+        };
+        line.SetBinding(
+            Microsoft.UI.Xaml.Shapes.Shape.FillProperty,
+            new Microsoft.UI.Xaml.Data.Binding
+            {
+                Source = item,
+                Path = new PropertyPath(nameof(ComboBoxItem.Foreground)),
+            });
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAccessibilityView(
+            item, Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
+        return item;
     }
 
     private static void SelectTagged(ComboBox selector, object? selectedTag)

@@ -1086,6 +1086,10 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="scanDetectionMode.Text" xml:space="preserve"><value>Bilderkennung</value><comment>AppLocalizedPhrase.flatbedDetectionMode</comment></data>
   <data name="scanFlatbedFramesFormat.Text" xml:space="preserve"><value>Ausgewählt: %d</value><comment>AppLocalizedPhrase.flatbedFramesFormat</comment></data>
   <data name="scanFrameFormat.Text" xml:space="preserve"><value>Bildformat</value><comment>AppLocalizedPhrase.filmFrameFormat</comment></data>
+  <data name="scanCustomFrameFormat.Text" xml:space="preserve"><value>Eigenes Verhältnis</value><comment>AppLocalizedPhrase.scanCustomFrameFormat</comment></data>
+  <data name="scanCustomFrameRatio.Text" xml:space="preserve"><value>Breite : Höhe</value><comment>AppLocalizedPhrase.scanCustomFrameRatio</comment></data>
+  <data name="scanCustomFrameWidth.Text" xml:space="preserve"><value>Breite</value><comment>AppLocalizedPhrase.scanCustomFrameWidth</comment></data>
+  <data name="scanCustomFrameHeight.Text" xml:space="preserve"><value>Höhe</value><comment>AppLocalizedPhrase.scanCustomFrameHeight</comment></data>
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>Bild einfügen</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>Bilder neu suchen</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
   <data name="scanRemoveFrame.Text" xml:space="preserve"><value>Bild entfernen</value><comment>AppLocalizedPhrase.flatbedRemoveFrame</comment></data>

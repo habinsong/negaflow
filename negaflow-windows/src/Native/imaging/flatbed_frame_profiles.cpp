@@ -6,26 +6,50 @@
 #include <cmath>
 #include <cstddef>
 
+namespace negaflow::imaging {
+
+// 규격 치수표는 여기 하나입니다. 격자 검출과 가장자리 검출이 같은 표를 읽어야 두 검출이 다른
+// 크기를 쓰지 않습니다. 값은 macOS `FilmFrameFormat` 의 stripWidthMM · stripHeightMM · is35mm
+// 그대로이고, 35mm 여부는 enum 차례가 아니라 여기서 명시합니다 — 끝에 붙인 파노라마 두
+// 규격이 enum 차례로는 120 뒤에 옵니다.
+std::optional<FlatbedFrameDimensions> flatbed_frame_dimensions(
+    const FlatbedFrameFormat format) noexcept {
+    switch (format) {
+        case FlatbedFrameFormat::full_frame_35mm: return FlatbedFrameDimensions{36.0, 24.0, true};
+        case FlatbedFrameFormat::square_35mm: return FlatbedFrameDimensions{24.0, 24.0, true};
+        case FlatbedFrameFormat::half_frame_35mm: return FlatbedFrameDimensions{18.0, 24.0, true};
+        case FlatbedFrameFormat::panorama_35mm_56x24: return FlatbedFrameDimensions{56.0, 24.0, true};
+        case FlatbedFrameFormat::panorama_35mm_65x24: return FlatbedFrameDimensions{65.0, 24.0, true};
+        case FlatbedFrameFormat::medium_645: return FlatbedFrameDimensions{41.5, 56.0, false};
+        case FlatbedFrameFormat::medium_66: return FlatbedFrameDimensions{56.0, 56.0, false};
+        case FlatbedFrameFormat::medium_67: return FlatbedFrameDimensions{69.0, 55.0, false};
+        case FlatbedFrameFormat::medium_68: return FlatbedFrameDimensions{76.0, 56.0, false};
+        case FlatbedFrameFormat::medium_69: return FlatbedFrameDimensions{84.0, 56.0, false};
+        case FlatbedFrameFormat::medium_612: return FlatbedFrameDimensions{112.0, 56.0, false};
+        case FlatbedFrameFormat::medium_617: return FlatbedFrameDimensions{168.0, 56.0, false};
+    }
+    return std::nullopt;
+}
+
+}  // namespace negaflow::imaging
+
 namespace negaflow::imaging::flatbed_detail {
+
+bool valid_dimensions(const FlatbedFrameDimensions& dimensions) noexcept {
+    return std::isfinite(dimensions.along_mm) && std::isfinite(dimensions.across_mm) &&
+        dimensions.along_mm > 0.0 && dimensions.across_mm > 0.0;
+}
 
 [[nodiscard]] std::optional<Geometry> make_geometry(
     const FlatbedFramePreview& preview,
-    const FlatbedFrameFormat format) noexcept {
+    const FlatbedFrameDimensions& dimensions) noexcept {
+    if (!valid_dimensions(dimensions)) return std::nullopt;
     Geometry geometry{};
-    switch (format) {
-        case FlatbedFrameFormat::full_frame_35mm: geometry.along_mm = 36.0; geometry.across_mm = 24.0; break;
-        case FlatbedFrameFormat::square_35mm: geometry.along_mm = 24.0; geometry.across_mm = 24.0; break;
-        case FlatbedFrameFormat::half_frame_35mm: geometry.along_mm = 18.0; geometry.across_mm = 24.0; break;
-        case FlatbedFrameFormat::medium_645: geometry.along_mm = 41.5; geometry.across_mm = 56.0; break;
-        case FlatbedFrameFormat::medium_66: geometry.along_mm = 56.0; geometry.across_mm = 56.0; break;
-        case FlatbedFrameFormat::medium_67: geometry.along_mm = 69.0; geometry.across_mm = 55.0; break;
-        case FlatbedFrameFormat::medium_68: geometry.along_mm = 76.0; geometry.across_mm = 56.0; break;
-        case FlatbedFrameFormat::medium_69: geometry.along_mm = 84.0; geometry.across_mm = 56.0; break;
-        case FlatbedFrameFormat::medium_612: geometry.along_mm = 112.0; geometry.across_mm = 56.0; break;
-        case FlatbedFrameFormat::medium_617: geometry.along_mm = 168.0; geometry.across_mm = 56.0; break;
-        default: return std::nullopt;
-    }
-    geometry.rigid_pitch = format <= FlatbedFrameFormat::half_frame_35mm;
+    geometry.along_mm = dimensions.along_mm;
+    geometry.across_mm = dimensions.across_mm;
+    // macOS `gapRangeMM(for:)` — 35mm 는 퍼포레이션 이송이 정하므로 사실상 고정이고, 120 은
+    // 카메라 이송 기구에 달려 있어 넓게 잡습니다.
+    geometry.rigid_pitch = dimensions.is_35mm;
     geometry.gap_min_mm = geometry.rigid_pitch ? 1.0 : 2.0;
     geometry.gap_max_mm = geometry.rigid_pitch ? 3.5 : 9.0;
     geometry.pixels_per_mm_x = static_cast<double>(preview.width) / preview.physical_width_mm;

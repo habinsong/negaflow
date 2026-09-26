@@ -9,11 +9,13 @@
 
 namespace negaflow::imaging::flatbed_detail {
 
-// 포맷이 정한 물리 치수를 이 미리보기의 화소 치수로 바꿉니다. 미리보기 해상도가
-// 터무니없으면 답하지 않습니다.
+// 치수가 유한한 양수인지입니다. 수동 비율이 ABI 로 들어오는 자리라 따로 봅니다.
+[[nodiscard]] bool valid_dimensions(const FlatbedFrameDimensions& dimensions) noexcept;
+
+// 프레임 치수를 이 미리보기의 화소 치수로 바꿉니다. 치수가 터무니없으면 답하지 않습니다.
 [[nodiscard]] std::optional<Geometry> make_geometry(
     const FlatbedFramePreview& preview,
-    FlatbedFrameFormat format) noexcept;
+    const FlatbedFrameDimensions& dimensions) noexcept;
 
 // 세로줄마다의 평균과 국소 대비입니다. 필름 스트립이 놓인 열을 찾는 데 씁니다.
 [[nodiscard]] ColumnProfiles column_profiles(const FlatbedFramePreview& preview);

@@ -30,8 +30,44 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
     public const string FlatbedScannerId = "simulated-negaflow-flatbed";
     public const string PluginId = "negaflow.simulator";
 
-    /// <summary>합성 프리뷰의 스트립에 놓는 컷 수입니다. 35mm 다섯 컷이 A4 폭에 들어갑니다.</summary>
+    /// <summary>
+    /// 합성 프리뷰의 스트립에 놓는 컷 수의 상한입니다. 35mm 다섯 컷이 A4 에 들어가고, 긴
+    /// 컷은 판에 들어가는 만큼만 놓습니다(<see cref="SyntheticFilmStrip.FittingFrameCount"/>).
+    /// </summary>
     public const int SimulatedStripFrameCount = 5;
+
+    private FlatbedFrameDimensions frameSize = FilmFrameFormats.Dimensions(
+        FlatbedFrameFormat.FullFrame35mm);
+
+    /// <summary>
+    /// 합성 프리뷰가 그릴 컷 치수입니다. macOS <c>MockScannerBackend.setSimulatorFrameSize</c>
+    /// 자리이며 세션이 고른 규격·수동 비율을 넣습니다. 프리뷰는 워커에서 그리므로 잠급니다.
+    /// </summary>
+    public FlatbedFrameDimensions FrameSize
+    {
+        get
+        {
+            lock (frameSizeLock)
+            {
+                return frameSize;
+            }
+        }
+        set
+        {
+            lock (frameSizeLock)
+            {
+                frameSize = value;
+            }
+        }
+    }
+
+    private readonly Lock frameSizeLock = new();
+
+    /// <summary>
+    /// 합성 프리뷰에 놓을 컷 수입니다(판에 들어가는 만큼으로 줄입니다). macOS
+    /// <c>setSimulatorFrameCount</c> 자리이며, 시험이 맥과 같은 3컷을 청할 때 씁니다.
+    /// </summary>
+    public int FrameCount { get; set; } = SimulatedStripFrameCount;
 
     private static readonly ScannerPluginTrustIdentity Identity = new(
         PluginId,
@@ -187,10 +223,22 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
     /// 합성 네거티브를 staging 에 쓰고 실제 스캔과 같은 트랜잭션으로 커밋합니다. 프리뷰는
     /// 짧은 변 기준으로 작게 냅니다 — 실제 프리뷰도 본 스캔보다 훨씬 거칩니다.
     /// </summary>
+    /// <summary>요청 영역이 판 최대 영역 전체인지입니다(0.5mm 안).</summary>
+    private static bool CoversPlate(ScannerPluginScanRequest request) =>
+        request.ScanArea is { } area &&
+        request.Capabilities.PhysicalScanAreaBounds?.Maximum is { } plate &&
+        Math.Abs(area.WidthMm - plate.WidthMm) < 0.5 &&
+        Math.Abs(area.HeightMm - plate.HeightMm) < 0.5;
+
     private ScannerArtifactCommitResult? Stage(ScannerPluginScanRequest request)
     {
-        bool platePreview = request.Preview && request.Capabilities.SupportsPositionedScanArea;
-        int longEdge = request.Preview ? 900 : Math.Clamp(request.ResolutionDpi / 2, 600, 5400);
+        // 평판 프리뷰는 판 전체를 담는 저해상도 **본 스캔**으로도 옵니다 — 플러그인 계약이
+        // 해상도를 준 요청을 `preview=false` 로 보내기 때문입니다(ScanOptionPolicy.BuildRequest).
+        // `Preview` 만 보면 그 프리뷰가 색막대 한 장으로 나와 데모에서 프레임을 하나도 못
+        // 찾았습니다. macOS 목업도 요청한 영역의 판 그림을 그립니다(`writeFlatbedRegion`).
+        bool platePreview = request.Capabilities.SupportsPositionedScanArea &&
+            (request.Preview || CoversPlate(request));
+        int longEdge = platePreview ? 900 : Math.Clamp(request.ResolutionDpi / 2, 600, 5400);
         int width = longEdge;
         // 평판 프리뷰는 유리판 비율(A4)로, 필름 스캐너는 35mm 한 컷 비율로 냅니다.
         double aspect = platePreview
@@ -209,17 +257,19 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
         {
             Directory.CreateDirectory(staging);
             string stagedPath = Path.Combine(staging, Path.GetFileName(destination));
-            if (request.Preview && request.Capabilities.SupportsPositionedScanArea)
+            if (platePreview)
             {
                 // 평판 프리뷰는 판 위에 놓인 필름 스트립을 훑은 그림이어야 합니다. 한 장짜리
                 // 장면을 내면 자동 프레임 찾기가 셀 대상이 아예 없습니다.
+                FlatbedFrameDimensions frame = FrameSize;
+                double plateHeightMm = request.Capabilities.MaxScanHeightMm ?? 297.0;
                 float[] strip = SyntheticFilmStrip.Luminance(
                     width,
                     height,
                     request.Capabilities.MaxScanWidthMm ?? 210.0,
-                    request.Capabilities.MaxScanHeightMm ?? 297.0,
-                    FlatbedFrameFormat.FullFrame35mm,
-                    SimulatedStripFrameCount);
+                    plateHeightMm,
+                    frame,
+                    SyntheticFilmStrip.FittingFrameCount(plateHeightMm, frame, FrameCount));
                 SyntheticNegativeTiff.WriteLuminance(
                     stagedPath,
                     strip,

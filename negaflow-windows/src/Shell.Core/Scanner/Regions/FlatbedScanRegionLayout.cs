@@ -31,6 +31,15 @@ public static class FlatbedScanRegionLayout
         IReadOnlyList<FlatbedScanRegion> existing,
         FlatbedFrameFormat frameFormat,
         FlatbedPreviewArea previewArea,
+        (double Width, double Height)? overrideSize = null) =>
+        ProposedRect(
+            existing, FilmFrameFormats.Dimensions(frameFormat), previewArea, overrideSize);
+
+    /// <inheritdoc cref="ProposedRect(IReadOnlyList{FlatbedScanRegion}, FlatbedFrameFormat, FlatbedPreviewArea, ValueTuple{double, double}?)"/>
+    public static FlatbedScanRegion? ProposedRect(
+        IReadOnlyList<FlatbedScanRegion> existing,
+        FlatbedFrameDimensions frameSize,
+        FlatbedPreviewArea previewArea,
         (double Width, double Height)? overrideSize = null)
     {
         ArgumentNullException.ThrowIfNull(existing);
@@ -43,7 +52,7 @@ public static class FlatbedScanRegionLayout
         if (existing.Count == 0)
         {
             (double firstWidth, double firstHeight) =
-                overrideSize ?? FirstFrameSize(frameFormat, previewArea);
+                overrideSize ?? FirstFrameSize(frameSize, previewArea);
             return Centered(firstWidth, firstHeight);
         }
 
@@ -100,6 +109,16 @@ public static class FlatbedScanRegionLayout
         FlatbedScanRegion anchoredTo,
         FlatbedFrameFormat frameFormat,
         FlatbedPreviewArea previewArea,
+        double epsilon = 0.000_1) =>
+        SnappedToFrameAspect(
+            rect, anchoredTo, FilmFrameFormats.Dimensions(frameFormat), previewArea, epsilon);
+
+    /// <inheritdoc cref="SnappedToFrameAspect(FlatbedScanRegion, FlatbedScanRegion, FlatbedFrameFormat, FlatbedPreviewArea, double)"/>
+    public static FlatbedScanRegion SnappedToFrameAspect(
+        FlatbedScanRegion rect,
+        FlatbedScanRegion anchoredTo,
+        FlatbedFrameDimensions frameSize,
+        FlatbedPreviewArea previewArea,
         double epsilon = 0.000_1)
     {
         ArgumentNullException.ThrowIfNull(rect);
@@ -125,7 +144,7 @@ public static class FlatbedScanRegionLayout
         {
             return rect;
         }
-        double target = NearestAspect(frameFormat, aspect);
+        double target = NearestAspect(frameSize, aspect);
         double aspectWidth = heightMm * target / previewArea.WidthMm;
         double aspectHeight = widthMm / target / previewArea.HeightMm;
 
@@ -168,19 +187,22 @@ public static class FlatbedScanRegionLayout
     /// <summary>
     /// 규격의 비율 후보입니다. 가로로 놓은 것과 세로로 놓은 것 둘 다이며, 정사각은 하나입니다.
     /// </summary>
-    public static IReadOnlyList<double> FrameAspectCandidates(FlatbedFrameFormat format)
+    public static IReadOnlyList<double> FrameAspectCandidates(FlatbedFrameFormat format) =>
+        FrameAspectCandidates(FilmFrameFormats.Dimensions(format));
+
+    /// <inheritdoc cref="FrameAspectCandidates(FlatbedFrameFormat)"/>
+    public static IReadOnlyList<double> FrameAspectCandidates(FlatbedFrameDimensions frameSize)
     {
-        double aspect = FilmFrameFormats.StripWidthMm(format) /
-            FilmFrameFormats.StripHeightMm(format);
+        double aspect = frameSize.StripFrameAspect;
         double rotated = 1.0 / aspect;
         return Math.Abs(aspect - rotated) < 0.000_001 ? [aspect] : [aspect, rotated];
     }
 
-    private static double NearestAspect(FlatbedFrameFormat format, double aspect)
+    private static double NearestAspect(FlatbedFrameDimensions frameSize, double aspect)
     {
         double best = aspect;
         double bestDistance = double.PositiveInfinity;
-        foreach (double candidate in FrameAspectCandidates(format))
+        foreach (double candidate in FrameAspectCandidates(frameSize))
         {
             double distance = Math.Abs(Math.Log(candidate) - Math.Log(aspect));
             if (distance < bestDistance)
@@ -213,16 +235,12 @@ public static class FlatbedScanRegionLayout
     }
 
     private static (double Width, double Height) FirstFrameSize(
-        FlatbedFrameFormat frameFormat,
+        FlatbedFrameDimensions frameSize,
         FlatbedPreviewArea previewArea)
     {
         bool stripAdvancesAlongY = previewArea.HeightMm > previewArea.WidthMm;
-        double widthMm = stripAdvancesAlongY
-            ? FilmFrameFormats.StripHeightMm(frameFormat)
-            : FilmFrameFormats.StripWidthMm(frameFormat);
-        double heightMm = stripAdvancesAlongY
-            ? FilmFrameFormats.StripWidthMm(frameFormat)
-            : FilmFrameFormats.StripHeightMm(frameFormat);
+        double widthMm = stripAdvancesAlongY ? frameSize.AcrossMm : frameSize.AlongMm;
+        double heightMm = stripAdvancesAlongY ? frameSize.AlongMm : frameSize.AcrossMm;
         return (
             Math.Clamp(widthMm / previewArea.WidthMm, 0.02, 1.0),
             Math.Clamp(heightMm / previewArea.HeightMm, 0.02, 1.0));

@@ -1086,6 +1086,10 @@
   <data name="scanDetectionMode.Text" xml:space="preserve"><value>コマ検出</value><comment>AppLocalizedPhrase.flatbedDetectionMode</comment></data>
   <data name="scanFlatbedFramesFormat.Text" xml:space="preserve"><value>選択中: %d</value><comment>AppLocalizedPhrase.flatbedFramesFormat</comment></data>
   <data name="scanFrameFormat.Text" xml:space="preserve"><value>フレーム形式</value><comment>AppLocalizedPhrase.filmFrameFormat</comment></data>
+  <data name="scanCustomFrameFormat.Text" xml:space="preserve"><value>カスタム比率</value><comment>AppLocalizedPhrase.scanCustomFrameFormat</comment></data>
+  <data name="scanCustomFrameRatio.Text" xml:space="preserve"><value>横 : 縦</value><comment>AppLocalizedPhrase.scanCustomFrameRatio</comment></data>
+  <data name="scanCustomFrameWidth.Text" xml:space="preserve"><value>横</value><comment>AppLocalizedPhrase.scanCustomFrameWidth</comment></data>
+  <data name="scanCustomFrameHeight.Text" xml:space="preserve"><value>縦</value><comment>AppLocalizedPhrase.scanCustomFrameHeight</comment></data>
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>コマをペースト</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>コマを検出し直す</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
   <data name="scanRemoveFrame.Text" xml:space="preserve"><value>コマを削除</value><comment>AppLocalizedPhrase.flatbedRemoveFrame</comment></data>

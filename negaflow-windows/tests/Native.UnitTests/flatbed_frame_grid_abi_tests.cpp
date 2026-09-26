@@ -79,6 +79,97 @@ void test_flatbed_grid_lifecycle() {
            "flatbed_cancelled_no_handle");
 }
 
+// 10·11 은 끝에 붙인 파노라마 규격이고 12 부터는 모르는 값입니다. 치수 입구는 규격 입구와
+// 같은 검출기를 부르므로 같은 치수면 같은 답이어야 합니다.
+void test_flatbed_formats_and_dimensions() {
+    static_assert(sizeof(nf_flatbed_frame_dimensions_v1) == 32U);
+    static_assert(NF_FLATBED_FRAME_PANORAMA_35MM_56X24 == 10U);
+    static_assert(NF_FLATBED_FRAME_PANORAMA_35MM_65X24 == 11U);
+    constexpr std::uint32_t width = 640U;
+    constexpr std::uint32_t height = 1'680U;
+    std::vector<float> luminance(static_cast<std::size_t>(width) * height, 0.05F);
+    for (std::uint32_t y = 120U; y < 1'304U; ++y) {
+        for (std::uint32_t x = 80U; x < 272U; ++x) {
+            const float texture = std::sin(static_cast<float>(x) * 0.051F) *
+                std::cos(static_cast<float>(y) * 0.041F);
+            luminance[static_cast<std::size_t>(y) * width + x] = 0.42F + texture * 0.18F;
+        }
+    }
+    const auto grid = [&](const std::uint32_t format) {
+        nf_flatbed_frame_grid_summary_v1 summary{};
+        summary.struct_size = sizeof(summary);
+        nf_flatbed_frame_grid_handle_v1* handle = nullptr;
+        const nf_status_t status = nf_detect_flatbed_frame_grid_v1(
+            luminance.data(), width * sizeof(float), width, height, 80.0, 210.0, format,
+            nullptr, &summary, &handle);
+        if (handle != nullptr) nf_flatbed_frame_grid_destroy_v1(handle);
+        return status;
+    };
+    expect(grid(NF_FLATBED_FRAME_PANORAMA_35MM_56X24) == NF_STATUS_OK &&
+               grid(NF_FLATBED_FRAME_PANORAMA_35MM_65X24) == NF_STATUS_OK,
+           "flatbed_accepts_panorama_formats");
+    expect(grid(12U) == NF_STATUS_INVALID_ARGUMENT, "flatbed_rejects_format_after_65x24");
+
+    const auto by_dimensions = [&](const nf_flatbed_frame_dimensions_v1* const dimensions,
+                                   std::uint64_t* const count) {
+        nf_flatbed_frame_grid_summary_v1 summary{};
+        summary.struct_size = sizeof(summary);
+        nf_flatbed_frame_grid_handle_v1* handle = nullptr;
+        const nf_status_t status = nf_detect_flatbed_frame_grid_dimensions_v1(
+            luminance.data(), width * sizeof(float), width, height, 80.0, 210.0, dimensions,
+            nullptr, &summary, &handle);
+        if (count != nullptr) *count = summary.detection_count;
+        if (handle != nullptr) nf_flatbed_frame_grid_destroy_v1(handle);
+        return status;
+    };
+    nf_flatbed_frame_dimensions_v1 full_frame{};
+    full_frame.struct_size = sizeof(full_frame);
+    full_frame.along_mm = 36.0;
+    full_frame.across_mm = 24.0;
+    full_frame.is_35mm = 1U;
+    std::uint64_t by_size = 0U;
+    expect(by_dimensions(&full_frame, &by_size) == NF_STATUS_OK,
+           "flatbed_dimensions_call_ok");
+    nf_flatbed_frame_grid_summary_v1 summary{};
+    summary.struct_size = sizeof(summary);
+    nf_flatbed_frame_grid_handle_v1* handle = nullptr;
+    expect(nf_detect_flatbed_frame_grid_v1(
+               luminance.data(), width * sizeof(float), width, height, 80.0, 210.0,
+               NF_FLATBED_FRAME_FULL_FRAME_35MM, nullptr, &summary, &handle) == NF_STATUS_OK &&
+               summary.detection_count == by_size && by_size != 0U,
+           "flatbed_dimensions_match_the_preset_entry");
+    if (handle != nullptr) nf_flatbed_frame_grid_destroy_v1(handle);
+
+    nf_flatbed_frame_dimensions_v1 broken = full_frame;
+    broken.across_mm = 0.0;
+    expect(by_dimensions(&broken, nullptr) == NF_STATUS_INVALID_ARGUMENT,
+           "flatbed_dimensions_reject_zero");
+    broken = full_frame;
+    broken.along_mm = std::nan("");
+    expect(by_dimensions(&broken, nullptr) == NF_STATUS_INVALID_ARGUMENT,
+           "flatbed_dimensions_reject_nan");
+    broken = full_frame;
+    broken.is_35mm = 2U;
+    expect(by_dimensions(&broken, nullptr) == NF_STATUS_INVALID_ARGUMENT,
+           "flatbed_dimensions_reject_unknown_class");
+    broken = full_frame;
+    broken.struct_size = 8U;
+    expect(by_dimensions(&broken, nullptr) == NF_STATUS_INVALID_ARGUMENT,
+           "flatbed_dimensions_reject_short_struct");
+    expect(by_dimensions(nullptr, nullptr) == NF_STATUS_INVALID_ARGUMENT,
+           "flatbed_dimensions_reject_null");
+
+    summary = {};
+    summary.struct_size = sizeof(summary);
+    handle = nullptr;
+    expect(nf_detect_flatbed_frame_edges_dimensions_v1(
+               luminance.data(), width * sizeof(float), width, height, &full_frame, nullptr,
+               &summary, &handle) == NF_STATUS_OK &&
+               summary.status == NF_FLATBED_FRAME_GRID_OK,
+           "flatbed_edge_dimensions_call_ok");
+    if (handle != nullptr) nf_flatbed_frame_grid_destroy_v1(handle);
+}
+
 std::vector<float> make_luminance(const negaflow::imageio::DecodedImage& image) {
     const std::size_t row_samples = image.stride_bytes / sizeof(std::uint16_t);
     const std::size_t channels = negaflow::imageio::channel_count(image.layout);
@@ -281,6 +372,7 @@ void test_scanner_simulator_transforms(const std::filesystem::path& path) {
 
 int main(const int argc, const char* const argv[]) {
     test_flatbed_grid_lifecycle();
+    test_flatbed_formats_and_dimensions();
     if (argc >= 3) {
         test_scanner_simulator_fixture(argv[1], 1U, 6U, {0.087});
         test_scanner_simulator_fixture(argv[2], 3U, 6U, {-0.092, 0.120, 0.084});

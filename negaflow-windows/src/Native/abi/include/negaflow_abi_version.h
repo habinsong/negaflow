@@ -34,5 +34,7 @@
    instead of at the first missing entry point. */
 #define NF_ABI_VERSION_MAJOR 0U
 // 0.53 adds the Custom 18 develop-target vocabulary without changing request layouts.
-#define NF_ABI_VERSION_MINOR 53U
+// 0.54 appends the 56x24 and 65x24 flatbed frame formats and the dimension-sized flatbed
+// detectors nf_detect_flatbed_frame_grid_dimensions_v1 / nf_detect_flatbed_frame_edges_dimensions_v1.
+#define NF_ABI_VERSION_MINOR 54U
 #define NF_ABI_VERSION ((NF_ABI_VERSION_MAJOR << 16U) | NF_ABI_VERSION_MINOR)

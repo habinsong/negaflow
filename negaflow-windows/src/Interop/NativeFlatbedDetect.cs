@@ -34,6 +34,32 @@ internal static partial class NativeFlatbedDetect
         NativeFlatbedFrameGridSummaryV1* summary,
         nint* handle);
 
+    [LibraryImport(LibraryName, EntryPoint = "nf_detect_flatbed_frame_grid_dimensions_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_detect_flatbed_frame_grid_dimensions_v1(
+        float* luminance,
+        uint strideBytes,
+        uint width,
+        uint height,
+        double physicalWidthMm,
+        double physicalHeightMm,
+        NativeFlatbedFrameDimensionsV1* dimensions,
+        uint* cancelRequested,
+        NativeFlatbedFrameGridSummaryV1* summary,
+        nint* handle);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_detect_flatbed_frame_edges_dimensions_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_detect_flatbed_frame_edges_dimensions_v1(
+        float* luminance,
+        uint strideBytes,
+        uint width,
+        uint height,
+        NativeFlatbedFrameDimensionsV1* dimensions,
+        uint* cancelRequested,
+        NativeFlatbedFrameGridSummaryV1* summary,
+        nint* handle);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_flatbed_frame_grid_get_detection_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static unsafe partial uint nf_flatbed_frame_grid_get_detection_v1(

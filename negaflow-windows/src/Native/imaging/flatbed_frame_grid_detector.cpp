@@ -795,35 +795,17 @@ struct EdgeRect final {
         std::abs(interior / count - exterior / exterior_count) >= 6.0;
 }
 
-[[nodiscard]] std::pair<double, double> aperture_dimensions(
-    const FlatbedFrameFormat format) noexcept {
-    switch (format) {
-        case FlatbedFrameFormat::full_frame_35mm: return {36.0, 24.0};
-        case FlatbedFrameFormat::square_35mm: return {24.0, 24.0};
-        case FlatbedFrameFormat::half_frame_35mm: return {18.0, 24.0};
-        case FlatbedFrameFormat::medium_645: return {41.5, 56.0};
-        case FlatbedFrameFormat::medium_66: return {56.0, 56.0};
-        case FlatbedFrameFormat::medium_67: return {69.0, 55.0};
-        case FlatbedFrameFormat::medium_68: return {76.0, 56.0};
-        case FlatbedFrameFormat::medium_69: return {84.0, 56.0};
-        case FlatbedFrameFormat::medium_612: return {112.0, 56.0};
-        case FlatbedFrameFormat::medium_617: return {168.0, 56.0};
-    }
-    return {36.0, 24.0};
-}
-
 [[nodiscard]] std::vector<FlatbedFrameDetection> detect_edges_horizontal(
     const EdgeImage& image,
-    const FlatbedFrameFormat format,
+    const FlatbedFrameDimensions& dimensions,
     const negaflow::core::CancelFlag cancel) {
     const std::vector<double> row_energy = horizontal_gradient_row_means(image);
     const std::vector<IntRange> partitions = inferred_strip_ranges(image, row_energy);
     if (partitions.empty() || partitions.size() > 12U) return {};
     const std::vector<double> horizontal_scores = moving_average(
         vertical_gradient_row_quantiles(image), 1);
-    const auto [aperture_width, aperture_height] = aperture_dimensions(format);
-    const double aspects[2] = {aperture_width / aperture_height,
-                               aperture_height / aperture_width};
+    const double aspects[2] = {dimensions.along_mm / dimensions.across_mm,
+                               dimensions.across_mm / dimensions.along_mm};
     std::vector<FlatbedFrameDetection> preferred{};
     for (const double aspect : aspects) {
         if (cancel.requested()) return {};
@@ -939,12 +921,12 @@ void constrain_to_unit_square(std::vector<FlatbedFrameDetection>& detections) no
 
 [[nodiscard]] std::vector<FlatbedFrameDetection> detect_edges_aligned(
     const EdgeImage& image,
-    const FlatbedFrameFormat format,
+    const FlatbedFrameDimensions& dimensions,
     const negaflow::core::CancelFlag cancel) {
-    auto direct = detect_edges_horizontal(image, format, cancel);
+    auto direct = detect_edges_horizontal(image, dimensions, cancel);
     if (!direct.empty() || cancel.requested()) return normalized_topology(std::move(direct));
     const EdgeImage counter_clockwise = rotated_counter_clockwise(image);
-    auto rotated_detections = detect_edges_horizontal(counter_clockwise, format, cancel);
+    auto rotated_detections = detect_edges_horizontal(counter_clockwise, dimensions, cancel);
     for (auto& detection : rotated_detections) {
         const double x = 1.0 - detection.y - detection.height;
         const double y = detection.x;
@@ -1021,9 +1003,9 @@ void constrain_to_unit_square(std::vector<FlatbedFrameDetection>& detections) no
 
 [[nodiscard]] std::vector<FlatbedFrameDetection> detect_edges(
     const EdgeImage& image,
-    const FlatbedFrameFormat format,
+    const FlatbedFrameDimensions& dimensions,
     const negaflow::core::CancelFlag cancel) {
-    auto aligned = detect_edges_aligned(image, format, cancel);
+    auto aligned = detect_edges_aligned(image, dimensions, cancel);
     if (!aligned.empty() || cancel.requested()) return aligned;
     const auto foreground = foreground_bounds(image);
     if (!foreground) return {};
@@ -1039,7 +1021,7 @@ void constrain_to_unit_square(std::vector<FlatbedFrameDetection>& detections) no
     const EdgeImage fallback = resized(cropped(image, crop), 1'024);
     const auto estimated = estimated_deskew_angle(fallback);
     if (!estimated) {
-        auto cropped_aligned = detect_edges_aligned(fallback, format, cancel);
+        auto cropped_aligned = detect_edges_aligned(fallback, dimensions, cancel);
         if (!cropped_aligned.empty()) {
             return normalized_topology(map_from_crop(
                 std::move(cropped_aligned), crop, image.width, image.height));
@@ -1054,7 +1036,7 @@ void constrain_to_unit_square(std::vector<FlatbedFrameDetection>& detections) no
     }
     for (const double angle : angles) {
         if (cancel.requested()) return {};
-        auto detections = detect_edges_aligned(rotated(fallback, angle), format, cancel);
+        auto detections = detect_edges_aligned(rotated(fallback, angle), dimensions, cancel);
         if (detections.empty()) continue;
         detections = map_from_rotated_canvas(
             std::move(detections), angle, fallback.width, fallback.height);
@@ -1070,8 +1052,17 @@ FlatbedFrameGridResult detect_flatbed_frame_grid(
     const FlatbedFramePreview& preview,
     const FlatbedFrameFormat format,
     const negaflow::core::CancelFlag cancel) noexcept {
+    const auto dimensions = flatbed_frame_dimensions(format);
+    if (!dimensions) return {FlatbedFrameGridStatus::invalid_input, {}};
+    return detect_flatbed_frame_grid(preview, *dimensions, cancel);
+}
+
+FlatbedFrameGridResult detect_flatbed_frame_grid(
+    const FlatbedFramePreview& preview,
+    const FlatbedFrameDimensions& dimensions,
+    const negaflow::core::CancelFlag cancel) noexcept {
     FlatbedFrameGridResult result{};
-    if (!valid_preview(preview)) {
+    if (!valid_preview(preview) || !valid_dimensions(dimensions)) {
         result.status = FlatbedFrameGridStatus::invalid_input;
         return result;
     }
@@ -1080,7 +1071,7 @@ FlatbedFrameGridResult detect_flatbed_frame_grid(
         return result;
     }
     try {
-        const auto geometry = make_geometry(preview, format);
+        const auto geometry = make_geometry(preview, dimensions);
         if (!geometry || geometry->along_pixels_y() < 8.0 || geometry->across_pixels_x() < 8.0) {
             result.status = FlatbedFrameGridStatus::invalid_input;
             return result;
@@ -1142,8 +1133,17 @@ FlatbedFrameGridResult detect_flatbed_frame_edges(
     const FlatbedFramePreview& preview,
     const FlatbedFrameFormat format,
     const negaflow::core::CancelFlag cancel) noexcept {
+    const auto dimensions = flatbed_frame_dimensions(format);
+    if (!dimensions) return {FlatbedFrameGridStatus::invalid_input, {}};
+    return detect_flatbed_frame_edges(preview, *dimensions, cancel);
+}
+
+FlatbedFrameGridResult detect_flatbed_frame_edges(
+    const FlatbedFramePreview& preview,
+    const FlatbedFrameDimensions& dimensions,
+    const negaflow::core::CancelFlag cancel) noexcept {
     FlatbedFrameGridResult result{};
-    if (!valid_edge_preview(preview)) {
+    if (!valid_edge_preview(preview) || !valid_dimensions(dimensions)) {
         result.status = FlatbedFrameGridStatus::invalid_input;
         return result;
     }
@@ -1152,7 +1152,7 @@ FlatbedFrameGridResult detect_flatbed_frame_edges(
         return result;
     }
     try {
-        result.detections = detect_edges(make_edge_image(preview), format, cancel);
+        result.detections = detect_edges(make_edge_image(preview), dimensions, cancel);
         if (cancel.requested()) {
             result.detections.clear();
             result.status = FlatbedFrameGridStatus::cancelled;

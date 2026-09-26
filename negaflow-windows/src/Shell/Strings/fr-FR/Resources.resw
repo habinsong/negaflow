@@ -1086,6 +1086,10 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="scanDetectionMode.Text" xml:space="preserve"><value>Détection</value><comment>AppLocalizedPhrase.flatbedDetectionMode</comment></data>
   <data name="scanFlatbedFramesFormat.Text" xml:space="preserve"><value>Sélection : %d</value><comment>AppLocalizedPhrase.flatbedFramesFormat</comment></data>
   <data name="scanFrameFormat.Text" xml:space="preserve"><value>Format d’image</value><comment>AppLocalizedPhrase.filmFrameFormat</comment></data>
+  <data name="scanCustomFrameFormat.Text" xml:space="preserve"><value>Ratio personnalisé</value><comment>AppLocalizedPhrase.scanCustomFrameFormat</comment></data>
+  <data name="scanCustomFrameRatio.Text" xml:space="preserve"><value>Largeur : Hauteur</value><comment>AppLocalizedPhrase.scanCustomFrameRatio</comment></data>
+  <data name="scanCustomFrameWidth.Text" xml:space="preserve"><value>Largeur</value><comment>AppLocalizedPhrase.scanCustomFrameWidth</comment></data>
+  <data name="scanCustomFrameHeight.Text" xml:space="preserve"><value>Hauteur</value><comment>AppLocalizedPhrase.scanCustomFrameHeight</comment></data>
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>Coller l'image</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>Redétecter les images</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
   <data name="scanRemoveFrame.Text" xml:space="preserve"><value>Supprimer l'image</value><comment>AppLocalizedPhrase.flatbedRemoveFrame</comment></data>

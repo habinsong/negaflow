@@ -16,8 +16,27 @@ public sealed partial class LibraryScanPanel : UserControl
     internal ScanSessionHost? sessionHost;
     internal bool initialScannerDetectionStarted;
     internal bool isSynchronizingScan;
-    /// <summary>마지막 프리뷰 스캔의 밝기 값입니다. 자동 프레임 찾기가 이것으로 셉니다.</summary>
-    internal PreviewLuminance flatbedPreview = PreviewLuminance.None;
+    private PreviewLuminance detachedFlatbedPreview = PreviewLuminance.None;
+
+    /// <summary>
+    /// 마지막 프리뷰 스캔의 밝기 값입니다. 두 사이드바가 같은 값을 보도록 세션 호스트에
+    /// 둡니다(<see cref="ScanSessionHost.FlatbedPreview"/>). 호스트가 붙기 전에는 패널에 둡니다.
+    /// </summary>
+    internal PreviewLuminance FlatbedPreview
+    {
+        get => sessionHost?.FlatbedPreview ?? detachedFlatbedPreview;
+        set
+        {
+            if (sessionHost is { } host)
+            {
+                host.FlatbedPreview = value;
+            }
+            else
+            {
+                detachedFlatbedPreview = value;
+            }
+        }
+    }
     internal ImageRotation defaultRotation = ImageRotation.Degrees0;
 
     /// <summary>
@@ -34,6 +53,7 @@ public sealed partial class LibraryScanPanel : UserControl
     internal readonly LibraryScanRenderer renderer;
     internal readonly LibraryScanRunner runner;
     internal readonly LibraryScanCopy copy;
+    internal readonly LibraryScanCustomRatio customRatio;
 
     public LibraryScanPanel()
     {
@@ -41,6 +61,7 @@ public sealed partial class LibraryScanPanel : UserControl
         renderer = new LibraryScanRenderer(this);
         runner = new LibraryScanRunner(this);
         copy = new LibraryScanCopy(this);
+        customRatio = new LibraryScanCustomRatio(this);
     }
 
     /// <summary>가져오기 스캐너 단추가 켜져 있는지. 절 가시성이 이 값에 따릅니다.</summary>
@@ -209,8 +230,24 @@ public sealed partial class LibraryScanPanel : UserControl
     /// <summary>세션이 아직 없을 때 받아 둔 값입니다. 세션이 생기면 그때 겁니다.</summary>
     internal bool pendingSimulatorEnabled;
 
-    /// <summary>패널이나 메뉴에서 스위치를 움직이면 설정에도 적어 둡니다.</summary>
-    public Action<bool>? SimulatorPublisher { get; set; }
+    private Action<bool>? detachedSimulatorPublisher;
+
+    /// <summary>
+    /// 패널이나 메뉴에서 스위치를 움직이면 설정에도 적어 둡니다. 두 사이드바가 같은 것을 쓰도록
+    /// 세션 호스트에 둡니다(<see cref="ScanSessionHost.SimulatorPublisher"/>).
+    /// </summary>
+    public Action<bool>? SimulatorPublisher
+    {
+        get => sessionHost?.SimulatorPublisher ?? detachedSimulatorPublisher;
+        set
+        {
+            detachedSimulatorPublisher = value;
+            if (sessionHost is { } host)
+            {
+                host.SimulatorPublisher = value;
+            }
+        }
+    }
 
     /// <summary>설정 · 디스크 탭이 정한 자리를 겁니다(스캔 원본 · 프리뷰 캐시).</summary>
     public void ApplyDiskStorage(Negaflow.Shell.Storage.DiskStorageSettings settings)
@@ -318,6 +355,7 @@ public sealed partial class LibraryScanPanel : UserControl
             sessionHost.ShowScannerControlsChanged -= OnHostSessionCreated;
         }
         sessionHost = host;
+        sessionHost.SimulatorPublisher ??= detachedSimulatorPublisher;
         sessionHost.SessionCreated += OnHostSessionCreated;
         sessionHost.ShowScannerControlsChanged += OnHostSessionCreated;
         sessionHost.ApplyDefaultRotation(defaultRotation);

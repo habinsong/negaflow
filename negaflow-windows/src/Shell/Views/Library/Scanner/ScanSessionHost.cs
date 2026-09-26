@@ -100,6 +100,24 @@ public sealed class ScanSessionHost
         return session;
     }
 
+    /// <summary>
+    /// 마지막 평판 프리뷰의 밝기 값입니다. 자동 프레임 찾기가 이것으로 셉니다.
+    /// </summary>
+    /// <remarks>
+    /// <b>두 사이드바가 나눠 씁니다.</b> 예전에는 패널마다 따로 들어, 라이브러리뷰에서 찍은
+    /// 프리뷰를 현상뷰 패널은 모른다고 보았습니다 — 현상뷰에서 규격이나 수동 비율을 바꾸면
+    /// 프레임이 지워지기만 하고 다시 찾지 않았고, "프레임 다시 찾기" 도 꺼져 있었습니다.
+    /// macOS 는 모델 하나가 프리뷰 하나를 듭니다.
+    /// </remarks>
+    public PreviewLuminance FlatbedPreview { get; set; } = PreviewLuminance.None;
+
+    /// <summary>
+    /// 시뮬레이터 스위치를 설정에 적는 자리입니다. 설정값은 하나이므로 두 사이드바가 같은 것을
+    /// 씁니다 — 예전에는 라이브러리뷰 패널에만 걸려, 현상뷰에서 켠 시뮬레이터가 설정에 남지 않았고
+    /// 다음 설정 갱신이 저장된 옛 값(끔)을 세션에 다시 걸어 스캔 도중 시뮬레이터가 꺼졌습니다.
+    /// </summary>
+    public Action<bool>? SimulatorPublisher { get; set; }
+
     /// <summary>승인 저장소입니다. 세션과 같은 수명을 씁니다.</summary>
     public ScannerPluginTrustStore? Trust { get; private set; }
 

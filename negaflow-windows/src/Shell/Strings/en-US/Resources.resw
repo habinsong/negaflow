@@ -1086,6 +1086,10 @@ Load a scanner from Library to scan film.</value>
   <data name="scanDetectionMode.Text" xml:space="preserve"><value>Find Frames</value><comment>AppLocalizedPhrase.flatbedDetectionMode</comment></data>
   <data name="scanFlatbedFramesFormat.Text" xml:space="preserve"><value>Selected: %d</value><comment>AppLocalizedPhrase.flatbedFramesFormat</comment></data>
   <data name="scanFrameFormat.Text" xml:space="preserve"><value>Frame Format</value><comment>AppLocalizedPhrase.filmFrameFormat</comment></data>
+  <data name="scanCustomFrameFormat.Text" xml:space="preserve"><value>Custom Ratio</value><comment>AppLocalizedPhrase.scanCustomFrameFormat</comment></data>
+  <data name="scanCustomFrameRatio.Text" xml:space="preserve"><value>Width : Height</value><comment>AppLocalizedPhrase.scanCustomFrameRatio</comment></data>
+  <data name="scanCustomFrameWidth.Text" xml:space="preserve"><value>Width</value><comment>AppLocalizedPhrase.scanCustomFrameWidth</comment></data>
+  <data name="scanCustomFrameHeight.Text" xml:space="preserve"><value>Height</value><comment>AppLocalizedPhrase.scanCustomFrameHeight</comment></data>
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>Paste Frame</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>Find Frames Again</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
   <data name="scanRemoveFrame.Text" xml:space="preserve"><value>Remove Frame</value><comment>AppLocalizedPhrase.flatbedRemoveFrame</comment></data>

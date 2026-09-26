@@ -1086,6 +1086,10 @@
   <data name="scanDetectionMode.Text" xml:space="preserve"><value>프레임 찾기</value><comment>AppLocalizedPhrase.flatbedDetectionMode</comment></data>
   <data name="scanFlatbedFramesFormat.Text" xml:space="preserve"><value>선택: %d</value><comment>AppLocalizedPhrase.flatbedFramesFormat</comment></data>
   <data name="scanFrameFormat.Text" xml:space="preserve"><value>프레임 규격</value><comment>AppLocalizedPhrase.filmFrameFormat</comment></data>
+  <data name="scanCustomFrameFormat.Text" xml:space="preserve"><value>수동 비율</value><comment>AppLocalizedPhrase.scanCustomFrameFormat</comment></data>
+  <data name="scanCustomFrameRatio.Text" xml:space="preserve"><value>가로 : 세로</value><comment>AppLocalizedPhrase.scanCustomFrameRatio</comment></data>
+  <data name="scanCustomFrameWidth.Text" xml:space="preserve"><value>가로</value><comment>AppLocalizedPhrase.scanCustomFrameWidth</comment></data>
+  <data name="scanCustomFrameHeight.Text" xml:space="preserve"><value>세로</value><comment>AppLocalizedPhrase.scanCustomFrameHeight</comment></data>
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>프레임 붙여넣기</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>프레임 다시 찾기</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
   <data name="scanRemoveFrame.Text" xml:space="preserve"><value>프레임 제거</value><comment>AppLocalizedPhrase.flatbedRemoveFrame</comment></data>

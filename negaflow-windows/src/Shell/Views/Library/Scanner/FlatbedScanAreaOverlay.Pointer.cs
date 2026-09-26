@@ -239,7 +239,7 @@ public sealed partial class FlatbedScanAreaOverlay
             moved = FlatbedScanRegionLayout.SnappedToFrameAspect(
                 moved,
                 ToRegion(regionId, anchor),
-                session.Options.FrameFormat,
+                session.FrameSize,
                 session.PreviewArea);
         }
         if (session.UpdateRegion(regionId, moved))

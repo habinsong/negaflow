@@ -14,6 +14,25 @@ public enum FlatbedFrameFormat : uint
     Medium69 = 7,
     Medium612 = 8,
     Medium617 = 9,
+    // 끝에 붙인 번호입니다. 표시 차례와 35mm 여부는 이 번호가 아니라 셸의 표가 정합니다.
+    Panorama35mm56x24 = 10,
+    Panorama35mm65x24 = 11,
+}
+
+/// <summary>
+/// 프레임 한 장의 공칭 치수(mm)입니다. macOS <c>FilmFrameSize</c> 자리입니다 — 규격에서 오거나
+/// 수동 비율을 필름 폭에 대어 만듭니다. 검출과 배치는 이것만 읽습니다.
+/// </summary>
+/// <param name="AlongMm">필름 스트립을 가로로 놓았을 때 프레임이 진행되는 축의 길이입니다.</param>
+/// <param name="AcrossMm">필름 스트립 폭 방향의 이미지 길이입니다.</param>
+/// <param name="Is35mm">퍼포레이션 이송이면 피치가 사실상 고정이고 간격이 좁습니다.</param>
+public readonly record struct FlatbedFrameDimensions(double AlongMm, double AcrossMm, bool Is35mm)
+{
+    public bool IsValid =>
+        double.IsFinite(AlongMm) && double.IsFinite(AcrossMm) && AlongMm > 0.0 && AcrossMm > 0.0;
+
+    /// <summary>가로(진행) ÷ 세로(폭)입니다.</summary>
+    public double StripFrameAspect => AlongMm / AcrossMm;
 }
 
 public enum FlatbedFrameGridStatus : uint
@@ -46,6 +65,17 @@ internal struct NativeFlatbedFrameGridSummaryV1
     internal uint Status;
     internal uint Reserved2;
     internal ulong DetectionCount;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeFlatbedFrameDimensionsV1
+{
+    internal uint StructSize;
+    internal uint Reserved;
+    internal double AlongMm;
+    internal double AcrossMm;
+    internal uint Is35mm;
+    internal uint Reserved2;
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -87,6 +117,28 @@ public static unsafe class NativeFlatbedFrameGridDetector
         DevelopRun? run = null) =>
         DetectCore(luminance, width, height, 0.0, 0.0, format, run, edges: true);
 
+    /// <summary>수동 비율처럼 규격 목록에 없는 치수로 찾습니다.</summary>
+    public static FlatbedFrameGridResult Detect(
+        ReadOnlySpan<float> luminance,
+        uint width,
+        uint height,
+        double physicalWidthMm,
+        double physicalHeightMm,
+        FlatbedFrameDimensions dimensions,
+        DevelopRun? run = null) =>
+        DetectCore(
+            luminance, width, height, physicalWidthMm, physicalHeightMm,
+            dimensions, run, edges: false);
+
+    /// <summary>가장자리 검출은 치수의 비율만 씁니다.</summary>
+    public static FlatbedFrameGridResult DetectEdges(
+        ReadOnlySpan<float> luminance,
+        uint width,
+        uint height,
+        FlatbedFrameDimensions dimensions,
+        DevelopRun? run = null) =>
+        DetectCore(luminance, width, height, 0.0, 0.0, dimensions, run, edges: true);
+
     private static FlatbedFrameGridResult DetectCore(
         ReadOnlySpan<float> luminance,
         uint width,
@@ -97,6 +149,51 @@ public static unsafe class NativeFlatbedFrameGridDetector
         DevelopRun? run,
         bool edges)
     {
+        if (!Enum.IsDefined(format))
+        {
+            throw new ArgumentOutOfRangeException(nameof(format));
+        }
+        return DetectCore(
+            luminance, width, height, physicalWidthMm, physicalHeightMm,
+            (uint)format, default, run, edges);
+    }
+
+    private static FlatbedFrameGridResult DetectCore(
+        ReadOnlySpan<float> luminance,
+        uint width,
+        uint height,
+        double physicalWidthMm,
+        double physicalHeightMm,
+        FlatbedFrameDimensions dimensions,
+        DevelopRun? run,
+        bool edges)
+    {
+        if (!dimensions.IsValid)
+        {
+            throw new ArgumentOutOfRangeException(nameof(dimensions));
+        }
+        NativeFlatbedFrameDimensionsV1 native = default;
+        native.StructSize = (uint)sizeof(NativeFlatbedFrameDimensionsV1);
+        native.AlongMm = dimensions.AlongMm;
+        native.AcrossMm = dimensions.AcrossMm;
+        native.Is35mm = dimensions.Is35mm ? 1U : 0U;
+        return DetectCore(
+            luminance, width, height, physicalWidthMm, physicalHeightMm,
+            null, native, run, edges);
+    }
+
+    /// <param name="format">규격 번호입니다. <see langword="null"/> 이면 <paramref name="dimensions"/> 로 찾습니다.</param>
+    private static FlatbedFrameGridResult DetectCore(
+        ReadOnlySpan<float> luminance,
+        uint width,
+        uint height,
+        double physicalWidthMm,
+        double physicalHeightMm,
+        uint? format,
+        NativeFlatbedFrameDimensionsV1 dimensions,
+        DevelopRun? run,
+        bool edges)
+    {
         ArgumentOutOfRangeException.ThrowIfZero(width);
         ArgumentOutOfRangeException.ThrowIfZero(height);
         if (!edges &&
@@ -104,10 +201,6 @@ public static unsafe class NativeFlatbedFrameGridDetector
              physicalWidthMm <= 0.0 || physicalHeightMm <= 0.0))
         {
             throw new ArgumentOutOfRangeException(nameof(physicalWidthMm));
-        }
-        if (!Enum.IsDefined(format))
-        {
-            throw new ArgumentOutOfRangeException(nameof(format));
         }
         int area = checked((int)((ulong)width * height));
         if (luminance.Length != area)
@@ -123,32 +216,31 @@ public static unsafe class NativeFlatbedFrameGridDetector
         {
             NativeDevelopRunStateV1* state = run is null ? null : run.StatePointer;
             uint* cancel = state is null ? null : &state->CancelRequested;
-            status = edges
-                ? NativeFlatbedDetect.nf_detect_flatbed_frame_edges_v1(
-                    pixels,
-                    checked(width * (uint)sizeof(float)),
-                    width,
-                    height,
-                    (uint)format,
-                    cancel,
-                    &summary,
-                    &handle)
-                : NativeFlatbedDetect.nf_detect_flatbed_frame_grid_v1(
-                    pixels,
-                    checked(width * (uint)sizeof(float)),
-                    width,
-                    height,
-                    physicalWidthMm,
-                    physicalHeightMm,
-                    (uint)format,
-                    cancel,
-                    &summary,
-                    &handle);
+            uint stride = checked(width * (uint)sizeof(float));
+            status = (format, edges) switch
+            {
+                ({ } preset, true) => NativeFlatbedDetect.nf_detect_flatbed_frame_edges_v1(
+                    pixels, stride, width, height, preset, cancel, &summary, &handle),
+                ({ } preset, false) => NativeFlatbedDetect.nf_detect_flatbed_frame_grid_v1(
+                    pixels, stride, width, height, physicalWidthMm, physicalHeightMm,
+                    preset, cancel, &summary, &handle),
+                (null, true) => NativeFlatbedDetect.nf_detect_flatbed_frame_edges_dimensions_v1(
+                    pixels, stride, width, height, &dimensions, cancel, &summary, &handle),
+                (null, false) => NativeFlatbedDetect.nf_detect_flatbed_frame_grid_dimensions_v1(
+                    pixels, stride, width, height, physicalWidthMm, physicalHeightMm,
+                    &dimensions, cancel, &summary, &handle),
+            };
         }
         if (status != StatusOk)
         {
             throw NativeFailure(
-                edges ? "nf_detect_flatbed_frame_edges_v1" : "nf_detect_flatbed_frame_grid_v1",
+                (format, edges) switch
+                {
+                    (not null, true) => "nf_detect_flatbed_frame_edges_v1",
+                    (not null, false) => "nf_detect_flatbed_frame_grid_v1",
+                    (null, true) => "nf_detect_flatbed_frame_edges_dimensions_v1",
+                    (null, false) => "nf_detect_flatbed_frame_grid_dimensions_v1",
+                },
                 status);
         }
         try

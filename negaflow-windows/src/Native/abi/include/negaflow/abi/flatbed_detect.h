@@ -23,6 +23,21 @@ extern "C" {
 #define NF_FLATBED_FRAME_MEDIUM_69 7U
 #define NF_FLATBED_FRAME_MEDIUM_612 8U
 #define NF_FLATBED_FRAME_MEDIUM_617 9U
+/* Appended 2026-09-27. Numbers are ABI; display order and the 35 mm class are not implied. */
+#define NF_FLATBED_FRAME_PANORAMA_35MM_56X24 10U
+#define NF_FLATBED_FRAME_PANORAMA_35MM_65X24 11U
+
+/* One frame's nominal size in millimetres: along the strip, across the strip, and whether it
+   rides a 35 mm perforated film (fixed pitch, narrow gaps). A custom ratio has no preset
+   number, so callers pass its size directly. */
+typedef struct nf_flatbed_frame_dimensions_v1 {
+    uint32_t struct_size;
+    uint32_t reserved;
+    double along_mm;
+    double across_mm;
+    uint32_t is_35mm;
+    uint32_t reserved2;
+} nf_flatbed_frame_dimensions_v1;
 
 typedef struct nf_flatbed_frame_grid_summary_v1 {
     uint32_t struct_size;
@@ -68,6 +83,28 @@ NF_API nf_status_t NF_CALL nf_detect_flatbed_frame_edges_v1(
     uint32_t width,
     uint32_t height,
     uint32_t format,
+    const uint32_t* cancel_requested,
+    nf_flatbed_frame_grid_summary_v1* summary,
+    nf_flatbed_frame_grid_handle_v1** handle);
+/* Same detectors, sized by explicit dimensions instead of a preset number. The edge detector
+   reads only the aspect ratio. */
+NF_API nf_status_t NF_CALL nf_detect_flatbed_frame_grid_dimensions_v1(
+    const float* luminance,
+    uint32_t stride_bytes,
+    uint32_t width,
+    uint32_t height,
+    double physical_width_mm,
+    double physical_height_mm,
+    const nf_flatbed_frame_dimensions_v1* dimensions,
+    const uint32_t* cancel_requested,
+    nf_flatbed_frame_grid_summary_v1* summary,
+    nf_flatbed_frame_grid_handle_v1** handle);
+NF_API nf_status_t NF_CALL nf_detect_flatbed_frame_edges_dimensions_v1(
+    const float* luminance,
+    uint32_t stride_bytes,
+    uint32_t width,
+    uint32_t height,
+    const nf_flatbed_frame_dimensions_v1* dimensions,
     const uint32_t* cancel_requested,
     nf_flatbed_frame_grid_summary_v1* summary,
     nf_flatbed_frame_grid_handle_v1** handle);

@@ -175,6 +175,7 @@ internal static class Program
         ScannerCapabilityMatrixTests.Run();
         FilmFrameFormatTests.Run();
         LocalAdjustmentTests.Run();
+        ScannerCustomFrameRatioTests.Run();
         PrintLayoutTemplateTests.Run();
 
         return Report("shell_unit_tests");

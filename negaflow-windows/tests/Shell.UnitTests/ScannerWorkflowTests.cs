@@ -345,7 +345,8 @@ internal static class ScannerWorkflowTests
     /// </summary>
     private static void VerifyFlatbedRegions()
     {
-        // 필름 스캐너(36×24)에는 35mm 세 규격만 올라갑니다.
+        // 필름 스캐너(36×24)에는 35mm 세 규격만 올라갑니다. 56×24·65×24 파노라마는 36mm 를
+        // 넘어 빠집니다.
         Check(
             FilmFrameFormats.Available(36.0, 24.0).SequenceEqual([
                 FlatbedFrameFormat.FullFrame35mm,
@@ -353,28 +354,29 @@ internal static class ScannerWorkflowTests
                 FlatbedFrameFormat.HalfFrame35mm,
             ]),
             "frame_formats_narrow_to_the_device");
-        // A4 평판에는 열 규격이 모두 올라갑니다 — 617 도 눕히면 들어갑니다.
+        // A4 평판에는 열두 규격이 모두 올라갑니다 — 617 도 눕히면 들어갑니다.
         Check(
-            FilmFrameFormats.Available(210.0, 297.0).Count == 10,
+            FilmFrameFormats.Available(210.0, 297.0).SequenceEqual(FilmFrameFormats.All) &&
+            FilmFrameFormats.All.Count == 12,
             "frame_formats_fit_a_flatbed");
         // 크기를 모르면 좁히지 않습니다.
-        Check(FilmFrameFormats.Available(null, null).Count == 10, "frame_formats_unknown_bounds");
+        Check(FilmFrameFormats.Available(null, null).Count == 12, "frame_formats_unknown_bounds");
 
         var overhang = new FlatbedFrameDetection(
             0.016, 0.857, 0.161, 0.1463, 0.9, 0, 5, StraightenAngle: 0.12);
-        FlatbedFrameDetection? clamped = FlatbedRegionEditor.UsableDetection(overhang);
+        FlatbedFrameDetection? clamped = FlatbedRegionDetector.UsableDetection(overhang);
         Check(clamped is { } accepted &&
               Math.Abs((accepted.Y + accepted.Height) - 1.0) < 1e-9 &&
               Math.Abs(accepted.StraightenAngle - overhang.StraightenAngle) < 1e-12 &&
               accepted.Row == overhang.Row && accepted.Column == overhang.Column,
             "flatbed_edge_frame_is_clamped_not_dropped");
-        Check(FlatbedRegionEditor.UsableDetection(
+        Check(FlatbedRegionDetector.UsableDetection(
                   new FlatbedFrameDetection(0.02, 0.95, 0.16, 0.146, 0.9, 0, 0)) is null &&
-              FlatbedRegionEditor.UsableDetection(
+              FlatbedRegionDetector.UsableDetection(
                   new FlatbedFrameDetection(double.NaN, 0.1, 0.16, 0.146, 0.9, 0, 0)) is null &&
-              FlatbedRegionEditor.UsableDetection(
+              FlatbedRegionDetector.UsableDetection(
                   new FlatbedFrameDetection(0.02, 0.1, 0.16, 0.146, 1.4, 0, 0)) is null &&
-              FlatbedRegionEditor.UsableDetection(
+              FlatbedRegionDetector.UsableDetection(
                   new FlatbedFrameDetection(
                       0.02, 0.1, 0.16, 0.146, 0.9, 0, 0,
                       StraightenAngle: double.NaN)) is null,
@@ -388,7 +390,7 @@ internal static class ScannerWorkflowTests
             new ImageCropRect(0.05, 0.08, 0.80, 0.75),
             3.5,
             4.0 / 3.0);
-        ImageTransformRecipe regionTransform = ScanSessionController.FlatbedInitialTransform(
+        ImageTransformRecipe regionTransform = FlatbedRegionTransform.Initial(
             previewOrientation,
             ImageRotation.Degrees180,
             automaticRegion);
@@ -398,7 +400,7 @@ internal static class ScannerWorkflowTests
             regionTransform.Crop is null && regionTransform.CropAspect is null &&
             Math.Abs(regionTransform.StraightenAngle + 1.25) < 1e-12,
             "flatbed_initial_transform_keeps_orientation_and_applies_detected_angle");
-        ImageTransformRecipe defaultTransform = ScanSessionController.FlatbedInitialTransform(
+        ImageTransformRecipe defaultTransform = FlatbedRegionTransform.Initial(
             null,
             ImageRotation.Degrees180,
             automaticRegion);

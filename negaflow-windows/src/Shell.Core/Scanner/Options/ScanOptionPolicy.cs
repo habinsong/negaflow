@@ -114,7 +114,8 @@ internal static class ScanOptionPolicy
             capabilities?.SupportsInfrared == true &&
             AllowsInfrared(options.FilmType);
         IReadOnlyList<FlatbedFrameFormat> formats = AvailableFrameFormats(capabilities);
-        return options with
+        // 좁은 스캐너로 바꿔 수동 비율이 어떤 필름 폭으로도 들어가지 않으면 규격으로 돌아갑니다.
+        return ScanFrameSizing.ClampCustom(options with
         {
             FrameFormat = formats.Count == 0 || formats.Contains(options.FrameFormat)
                 ? options.FrameFormat
@@ -125,7 +126,7 @@ internal static class ScanOptionPolicy
             Infrared = infrared,
             BatchCount = Math.Clamp(options.BatchCount, 1, MaximumBatchCount),
             FolderName = ExportNamingTemplate.SanitizeComponent(options.FolderName),
-        };
+        }, capabilities, formats);
     }
 
     /// <summary>macOS 필름 스캔 기본 해상도 목표값(<c>targetScanDPI</c>)입니다.</summary>

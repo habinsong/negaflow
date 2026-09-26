@@ -130,6 +130,63 @@ public sealed class ScanSessionController
     public IReadOnlyList<FlatbedFrameFormat> AvailableFrameFormats =>
         ScanOptionPolicy.AvailableFrameFormats(Capabilities);
 
+    /// <summary>
+    /// 배치·비율 맞춤·시뮬레이터가 쓰는 치수입니다. 규격이거나, 수동 비율을 기억해 둔 필름
+    /// 폭에 맞춰 세운 것입니다. macOS <c>scanFrameSize</c>.
+    /// </summary>
+    public FlatbedFrameDimensions FrameSize => ScanFrameSizing.Current(Options);
+
+    /// <summary>규격으로 바꿉니다. 바뀌었으면 찾아 둔 프레임을 다시 찾아야 합니다.</summary>
+    public bool SelectFrameFormat(FlatbedFrameFormat format) =>
+        !IsScanning && ApplyFrameChoice(
+            ScanFrameSizing.SelectPreset(Options, format, AvailableFrameFormats));
+
+    /// <summary>수동 비율로 바꿉니다. 처음이면 지금 규격의 비율로 채웁니다.</summary>
+    public bool SelectCustomFrameRatio() =>
+        !IsScanning && ApplyFrameChoice(
+            ScanFrameSizing.SelectCustom(Options, AvailableFrameFormats));
+
+    /// <summary>
+    /// 수동 비율 값을 바꿉니다. macOS <c>updateScanCustomFrameRatio(width:height:)</c>.
+    /// 받은 값이 수동 비율을 쓰는 중에 바뀌면 찾아 둔 프레임을 다시 찾아야 합니다.
+    /// </summary>
+    public CustomFrameRatioUpdate UpdateCustomFrameRatio(double width, double height)
+    {
+        if (IsScanning)
+        {
+            return CustomFrameRatioUpdate.Rejected;
+        }
+        (CustomFrameRatioUpdate result, ScanOptions next) =
+            ScanFrameSizing.UpdateCustom(Options, width, height, Capabilities);
+        if (result == CustomFrameRatioUpdate.Changed)
+        {
+            SetOptions(next);
+            RaiseChanged();
+        }
+        return result;
+    }
+
+    private bool ApplyFrameChoice(ScanOptions? next)
+    {
+        if (next is null)
+        {
+            return false;
+        }
+        SetOptions(next);
+        RaiseChanged();
+        return true;
+    }
+
+    /// <summary>
+    /// 옵션을 바꾸는 한 자리입니다. 시뮬레이터가 고른 치수로 프리뷰를 그리게 같이 넣습니다
+    /// (macOS <c>setSimulatorFrameSize</c>).
+    /// </summary>
+    private void SetOptions(ScanOptions next)
+    {
+        Options = next;
+        simulator.FrameSize = ScanFrameSizing.Current(next);
+    }
+
     public IReadOnlyList<FlatbedScanRegion> Regions => regionEditor.Regions;
 
     public string? SelectedRegionId => regionEditor.SelectedRegionId;
@@ -208,6 +265,9 @@ public sealed class ScanSessionController
 
     public bool DeleteSelectedRegion() => regionEditor.DeleteSelected();
 
+    /// <summary>찾아 둔 프레임만 비웁니다. 프리뷰는 그대로 둡니다.</summary>
+    public void ClearRegions() => regionEditor.ClearRegions();
+
     public bool CopySelectedRegion() => regionEditor.CopySelected();
 
     public bool PasteRegion() => regionEditor.Paste(Capabilities, Options);
@@ -217,15 +277,24 @@ public sealed class ScanSessionController
         uint previewWidth,
         uint previewHeight,
         double previewPhysicalWidthMm = 0,
-        double previewPhysicalHeightMm = 0) =>
-        regionEditor.Refresh(
+        double previewPhysicalHeightMm = 0)
+    {
+        FlatbedFrameGridStatus status = regionEditor.Refresh(
             Capabilities,
             Options,
             previewLuminance,
             previewWidth,
             previewHeight,
             previewPhysicalWidthMm,
-            previewPhysicalHeightMm);
+            previewPhysicalHeightMm,
+            out FlatbedFrameDimensions? matched);
+        // 수동 비율이면 맞은 필름 폭을 기억해 다음에 손으로 놓는 프레임도 그 크기로 제안합니다.
+        if (Options.UsesCustomFrameRatio && matched is { } size)
+        {
+            SetOptions(Options with { CustomFrameAcrossMm = size.AcrossMm });
+        }
+        return status;
+    }
 
     public ScanSessionState State
     {
@@ -309,48 +378,15 @@ public sealed class ScanSessionController
         LastFailureName = null;
         LastFailureDetail = null;
         RaiseChanged();
-        var found = new List<ScannerPluginDevice>();
         ScannerDiagnosticsLog.Write(
             $"detect start plugins={Plugins.Count} simulator={SimulatorEnabled}");
+        IReadOnlyList<ScannerPluginDevice> found;
         try
         {
-            foreach (InstalledScannerPlugin plugin in Plugins)
-            {
-                if (ApprovedIdentityFor(plugin) is not { } identity)
-                {
-                    ScannerDiagnosticsLog.Write(
-                        $"detect skip {plugin.Manifest.Id} - not approved");
-                    continue;
-                }
-                ScannerPluginDetectResult result =
-                    await ActiveGateway.DetectAsync(plugin, identity, cancellationToken)
-                        .ConfigureAwait(false);
-                if (result.IsSuccess)
-                {
-                    found.AddRange(result.Devices);
-                    ScannerDiagnosticsLog.Write(
-                        $"detect ok {plugin.Manifest.Id} devices={result.Devices.Count}");
-                }
-                else
-                {
-                    LastFailureName ??= result.IsMalformedResponse
-                        ? "malformed_detect_response"
-                        : result.Process.Status.ToString();
-                    ScannerDiagnosticsLog.Write(
-                        $"detect failed {plugin.Manifest.Id} - {LastFailureName} " +
-                        $"(malformed={result.IsMalformedResponse} " +
-                        $"process={result.Process.Status} exit={result.Process.ExitCode?.ToString() ?? "none"})");
-                    // **무엇을 하면 되는지 여기에 적습니다.** 화면에는 오류를 내지 않으므로
-                    // (사용자가 그 글자로 할 수 있는 일이 없습니다) 진단에서 읽습니다.
-                    if (result.Process.Status == ScannerPluginProcessStatus.TimedOut)
-                    {
-                        ScannerDiagnosticsLog.Write(
-                            "detect hint: the plugin did not answer in time. Another scan or " +
-                            "detect usually still holds the device - close other scanning apps, " +
-                            "then power-cycle the scanner if it stays quiet.");
-                    }
-                }
-            }
+            (found, string? failureName) = await ScannerDeviceDiscovery.DetectAsync(
+                ActiveGateway, Plugins, ApprovedIdentityFor, cancellationToken)
+                .ConfigureAwait(false);
+            LastFailureName ??= failureName;
         }
         finally
         {
@@ -400,26 +436,17 @@ public sealed class ScanSessionController
         {
             return;
         }
-        foreach (InstalledScannerPlugin plugin in Plugins)
+        Capabilities = await ScannerDeviceDiscovery.CapabilitiesAsync(
+            ActiveGateway, Plugins, ApprovedIdentityFor, device, cancellationToken)
+            .ConfigureAwait(false);
+        if (Capabilities is null)
         {
-            if (ApprovedIdentityFor(plugin) is not { } identity)
-            {
-                continue;
-            }
-            ScannerPluginCapabilitiesResult result = await ActiveGateway
-                .GetCapabilitiesAsync(plugin, identity, device, cancellationToken)
-                .ConfigureAwait(false);
-            if (!result.IsSuccess)
-            {
-                continue;
-            }
-            Capabilities = result.Capabilities;
-            Options = ClampToCapabilities(Options);
-            RaiseChanged();
-            return;
+            LastFailureName ??= "capabilities_unavailable";
         }
-        Capabilities = null;
-        LastFailureName ??= "capabilities_unavailable";
+        else
+        {
+            SetOptions(ClampToCapabilities(Options));
+        }
         RaiseChanged();
     }
 
@@ -431,7 +458,7 @@ public sealed class ScanSessionController
         {
             return;
         }
-        Options = next;
+        SetOptions(next);
         RaiseChanged();
     }
 
@@ -589,35 +616,7 @@ public sealed class ScanSessionController
             ? library.Frames.FirstOrDefault(frame =>
                 string.Equals(frame.Id, frameId, StringComparison.Ordinal))?.ImageTransform
             : null;
-        return FlatbedInitialTransform(previewTransform, DefaultRotation, region);
-    }
-
-    internal static ImageTransformRecipe FlatbedInitialTransform(
-        ImageTransformRecipe? previewTransform,
-        ImageRotation defaultRotation,
-        FlatbedScanRegion region)
-    {
-        ArgumentNullException.ThrowIfNull(region);
-        ImageTransformRecipe orientation = previewTransform is null
-            ? ImageTransformRecipe.Identity
-            : previewTransform with
-            {
-                Crop = null,
-                StraightenAngle = 0.0,
-                CropAspect = null,
-            };
-        if (orientation == ImageTransformRecipe.Identity)
-        {
-            orientation = ImageTransformRecipe.Identity with { Rotation = defaultRotation };
-        }
-        return orientation with
-        {
-            Crop = null,
-            StraightenAngle = orientation.FlipHorizontal != orientation.FlipVertical
-                ? -region.StraightenAngle
-                : region.StraightenAngle,
-            CropAspect = null,
-        };
+        return FlatbedRegionTransform.Initial(previewTransform, DefaultRotation, region);
     }
 
     private (InstalledScannerPlugin? Plugin, ScannerPluginTrustIdentity? Identity)
