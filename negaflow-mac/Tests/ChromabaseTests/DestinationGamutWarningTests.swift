@@ -58,6 +58,30 @@ final class DestinationGamutWarningTests: XCTestCase {
         XCTAssertGreaterThan(maximumAlpha(in: result.overlay), 0)
     }
 
+    /// LUT형 대상은 macOS 27에서 1-bit 요청에도 픽셀당 4바이트를 썼다. 보정으로 고른 방식이
+    /// 요청 크기 안에서만 쓰고, 재현 불가 색을 실제로 가려내야 한다.
+    func testLookupTableDestinationUsesCalibratedMaskWithinRequestedSize() throws {
+        let cmyk = try XCTUnwrap(
+            CGColorSpace(name: CGColorSpace.genericCMYK)?.copyICCData() as Data?
+        )
+        let check = try XCTUnwrap(DestinationGamutCheck.make(destinationICC: cmyk))
+        XCTAssertNotEqual(check.mode, .deviceRange)
+
+        let width = 37
+        let height = 3
+        var rgbx: [UInt8] = []
+        for index in 0..<(width * height) {
+            rgbx += index.isMultiple(of: 2) ? [128, 128, 128, 255] : [1, 1, 254, 255]
+        }
+        let mask = try XCTUnwrap(check.outOfGamutMask(rgbx: rgbx, width: width, height: height))
+
+        XCTAssertEqual(mask.count, width * height)
+        XCTAssertTrue(mask.allSatisfy { $0 == 0 || $0 == 1 })
+        for index in 0..<(width * height) {
+            XCTAssertEqual(mask[index], index.isMultiple(of: 2) ? 0 : 1, "pixel \(index)")
+        }
+    }
+
     func testMalformedOrDisabledProfileFailsClosed() {
         let image = makeImage([[254, 1, 1, 255]])
         let malformed = SoftProofSettings(
