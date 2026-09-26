@@ -256,6 +256,73 @@ final class DefectRecipeRuntimeTests: XCTestCase {
         XCTAssertNil(record.cleanedRawEditCount)
     }
 
+    /// 시스템이 sidecar에 `com.apple.provenance` 같은 확장 속성을 붙이면 내용은 그대로인데
+    /// ctime만 바뀐다. 이것을 세대 변경으로 보면 그 뒤 카탈로그 저장과 스캔 발행이 전부 막힌다.
+    func testCatalogSaveAcceptsExtendedAttributeOnlyChangeOnSidecar() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "negaflow-defect-sidecar-xattr-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        let defects = root.appendingPathComponent("defects", isDirectory: true)
+        let model = AppModel(
+            libraryCatalogURL: root.appendingPathComponent("library.json"),
+            libraryDefectDirectoryURL: defects,
+            libraryBackupDirectoryURL: root.appendingPathComponent("Backups")
+        )
+        model.libraryPersistenceEnabled = false
+        let roll = try XCTUnwrap(model.createPhysicalRoll(
+            name: "Provenance",
+            filmType: .colorNegative,
+            activate: true
+        ))
+        let frame = makeFrame()
+        frame.defectEdits = [makeEdit(strength: 1)]
+        model.frames = [frame]
+        XCTAssertTrue(model.assignNewPersistentFrames([frame], toRollID: roll.id))
+        _ = try XCTUnwrap(model.refreshDefectRecipeState(
+            frame,
+            advanceRevision: true,
+            persist: true
+        ))
+        DefectSidecarFile.flushSync()
+
+        model.libraryPersistenceEnabled = true
+        model.transitionLibraryLifecycle(to: .ready)
+        model.librarySaveTask?.cancel()
+        model.librarySaveTask = nil
+        XCTAssertTrue(model.saveLibrary(synchronous: true))
+
+        let sidecar = DefectSidecarFile.url(for: frame.id, in: defects)
+        let changedBefore = try changedTime(of: sidecar)
+        var value: UInt8 = 1
+        try XCTSkipIf(
+            setxattr(sidecar.path, "com.apple.provenance", &value, 1, 0, 0) != 0,
+            "이 파일시스템은 확장 속성을 지원하지 않는다"
+        )
+        XCTAssertNotEqual(
+            changedBefore,
+            try changedTime(of: sidecar),
+            "확장 속성을 붙였는데 ctime이 그대로면 이 테스트는 회귀를 잡지 못한다"
+        )
+        // 디스크를 다시 읽는 대체 확인에 기대지 않고, 기억해 둔 관찰값만으로 같은 세대여야 한다.
+        XCTAssertTrue(DefectSidecarCommitCache.shared.matches(
+            try XCTUnwrap(frame.defectRecipeIdentity),
+            at: sidecar
+        ))
+
+        XCTAssertTrue(model.saveLibrary(synchronous: true))
+    }
+
+    private func changedTime(of url: URL) throws -> Int64 {
+        var info = stat()
+        guard stat(url.path, &info) == 0 else {
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+        }
+        return Int64(info.st_ctimespec.tv_sec) * 1_000_000_000
+            + Int64(info.st_ctimespec.tv_nsec)
+    }
+
     func testSnapshotDiagnosticsDistinguishMissingRestoreIdentityAndMembership() throws {
         let model = AppModel()
         let frame = makeFrame()

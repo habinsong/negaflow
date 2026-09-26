@@ -18,8 +18,10 @@ extension AppModel {
             guard !frame.defectEditsNeedRestore else { return DefectSidecarValidationCode.restorePending.rawValue }
             guard !frame.defectEdits.isEmpty else { continue }
             guard let identity = frame.defectRecipeIdentity else { return DefectSidecarValidationCode.identityMissing.rawValue }
-            guard DefectSidecarCommitCache.shared.matches(identity, at:
-                DefectSidecarFile.url(for: frame.id, in: libraryDefectDirectoryURL)) else {
+            let cache = DefectSidecarCommitCache.shared
+            guard cache.matches(identity, at:
+                DefectSidecarFile.url(for: frame.id, in: libraryDefectDirectoryURL))
+                || cache.revalidate(identity, frameID: frame.id, in: libraryDefectDirectoryURL) else {
                 return DefectSidecarValidationCode.sidecarMismatch.rawValue
             }
         }
