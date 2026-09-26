@@ -23,6 +23,9 @@ TRANSLATIONS = ("ko", "ja", "zh-Hans", "fr", "de")
 # (측정 수치·해시·재현 명령)이라 5개 언어로 복제할 내용이 없다. 마크다운 블록 검사 등
 # 나머지 문서 계약은 그대로 적용된다.
 UNTRANSLATED_DIRECTORIES = ("verification",)
+# 로컬 전용 작업 메모(.gitignore 대상). 깨끗한 체크아웃에는 없으므로 문서 계약에서 뺀다 —
+# scripts/check-docs.py 도 같은 폴더를 건너뛴다.
+LOCAL_ONLY_DIRECTORIES = ("local",)
 DOCS_HOME_LINKS = {
     "": "[Docs home](../README.md)",
     "ko": "[문서 홈](../README.md)",
@@ -53,12 +56,24 @@ def docs_root(language: str) -> Path:
     return ROOT / "docs" / language if language else ROOT / "docs"
 
 
+def docs_markdown() -> list[Path]:
+    """docs/ 아래 마크다운 중 저장소에 올라가는 것만."""
+    docs = ROOT / "docs"
+    return [
+        document
+        for document in sorted(docs.rglob("*.md"))
+        if document.relative_to(docs).parts[0] not in LOCAL_ONLY_DIRECTORIES
+    ]
+
+
 def documents_in(language: str) -> list[Path]:
     base = docs_root(language)
     found = []
     for document in sorted(base.rglob("*.md")):
         head = document.relative_to(base).parts[0]
         if not language and head in TRANSLATIONS:
+            continue
+        if not language and head in LOCAL_ONLY_DIRECTORIES:
             continue
         if head in UNTRANSLATED_DIRECTORIES:
             continue
@@ -86,7 +101,7 @@ def without_fenced_code(text: str) -> str:
 
 class DocumentationStateTests(unittest.TestCase):
     def test_local_markdown_links_resolve_in_a_clean_checkout(self) -> None:
-        documents = sorted(ROOT.glob("*.md")) + sorted((ROOT / "docs").rglob("*.md"))
+        documents = sorted(ROOT.glob("*.md")) + docs_markdown()
         markdown_link_pattern = re.compile(r"\[[^\]]+\]\(([^)#]+)(?:#[^)]+)?\)")
         html_link_pattern = re.compile(r'(?:href|src)="([^"#]+)(?:#[^"]*)?"')
         missing: list[str] = []
@@ -144,7 +159,7 @@ class DocumentationStateTests(unittest.TestCase):
                 self.assertEqual(translated, english)
 
     def test_docs_use_balanced_supported_markdown_blocks(self) -> None:
-        for document in sorted((ROOT / "docs").rglob("*.md")):
+        for document in docs_markdown():
             text = document.read_text(encoding="utf-8")
             with self.subTest(document=document.relative_to(ROOT).as_posix()):
                 self.assertEqual(text.count("```") % 2, 0)
