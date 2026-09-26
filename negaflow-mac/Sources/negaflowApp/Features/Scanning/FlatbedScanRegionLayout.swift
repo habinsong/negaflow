@@ -22,6 +22,20 @@ enum FlatbedScanRegionLayout {
         previewArea: ScanArea,
         size overrideSize: CGSize? = nil
     ) -> CGRect? {
+        proposedRect(
+            existing: existing,
+            frameSize: FilmFrameSize(frameFormat),
+            previewArea: previewArea,
+            size: overrideSize
+        )
+    }
+
+    static func proposedRect(
+        existing: [CGRect],
+        frameSize frameFormat: FilmFrameSize,
+        previewArea: ScanArea,
+        size overrideSize: CGSize? = nil
+    ) -> CGRect? {
         guard previewArea.widthMM.isFinite,
               previewArea.heightMM.isFinite,
               previewArea.widthMM > 0,
@@ -88,6 +102,22 @@ enum FlatbedScanRegionLayout {
         _ rect: CGRect,
         anchoredTo previous: CGRect,
         frameFormat: FilmFrameFormat,
+        previewArea: ScanArea,
+        epsilon: CGFloat = 0.000_1
+    ) -> CGRect {
+        snappedToFrameAspect(
+            rect,
+            anchoredTo: previous,
+            frameSize: FilmFrameSize(frameFormat),
+            previewArea: previewArea,
+            epsilon: epsilon
+        )
+    }
+
+    static func snappedToFrameAspect(
+        _ rect: CGRect,
+        anchoredTo previous: CGRect,
+        frameSize frameFormat: FilmFrameSize,
         previewArea: ScanArea,
         epsilon: CGFloat = 0.000_1
     ) -> CGRect {
@@ -167,7 +197,7 @@ enum FlatbedScanRegionLayout {
     }
 
     private static func firstFrameSize(
-        frameFormat: FilmFrameFormat,
+        frameFormat: FilmFrameSize,
         previewArea: ScanArea
     ) -> CGSize {
         let stripAdvancesAlongY = previewArea.heightMM > previewArea.widthMM

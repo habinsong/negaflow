@@ -9,13 +9,16 @@ extension AppModel {
               capabilities.supportsPositionedScanArea != true
                 || capabilities.supportsPreview,
               let maximum = hardwareScanAreaBounds?.maximum else { return [] }
-        return FilmFrameFormat.allCases.filter { format in
-            let standard = format.stripWidthMM <= maximum.widthMM
-                && format.stripHeightMM <= maximum.heightMM
-            let rotated = format.stripHeightMM <= maximum.widthMM
-                && format.stripWidthMM <= maximum.heightMM
-            return standard || rotated
-        }
+        return FilmFrameFormat.allCases.filter { Self.frame($0, fitsIn: maximum) }
+    }
+
+    /// 스트립을 가로로 놓든 세로로 놓든 스캐너 최대 영역 안에 들어가는지.
+    static func frame(_ frame: some FilmFrameDimensions, fitsIn maximum: ScanArea) -> Bool {
+        let standard = frame.stripWidthMM <= maximum.widthMM
+            && frame.stripHeightMM <= maximum.heightMM
+        let rotated = frame.stripHeightMM <= maximum.widthMM
+            && frame.stripWidthMM <= maximum.heightMM
+        return standard || rotated
     }
 
     var usesFlatbedRegionWorkflow: Bool {
@@ -48,14 +51,22 @@ extension AppModel {
     func selectScanFrameFormat(_ frameFormat: FilmFrameFormat) async {
         guard !isScanning,
               availableScanFrameFormats.contains(frameFormat),
-              scanFrameFormat != frameFormat else { return }
-        let existingPreview = flatbedPreviewFrame
+              scanUsesCustomFrameSize || scanFrameFormat != frameFormat else { return }
         scanFrameFormat = frameFormat
-        if !frameFormat.is35mm {
+        scanUsesCustomFrameSize = false
+        await applyScanFrameSizeChange()
+    }
+
+    /// 규격이나 수동 비율이 바뀐 뒤 공통으로 할 일: 시뮬레이터 치수, 찾아 둔 프레임 다시 찾기,
+    /// 고정 영역 스캐너의 스캔 영역.
+    func applyScanFrameSizeChange() async {
+        let frameSize = scanFrameSize
+        let existingPreview = flatbedPreviewFrame
+        if !frameSize.is35mm {
             scannerSimulatorIncludesPerforation = false
             (mockBackend as? MockScannerBackend)?.setSimulatorIncludesPerforation(false)
         }
-        (mockBackend as? MockScannerBackend)?.setSimulatorFrameFormat(frameFormat)
+        (mockBackend as? MockScannerBackend)?.setSimulatorFrameSize(frameSize)
 
         if usesFlatbedRegionWorkflow {
             flatbedScanRegions = []
@@ -71,7 +82,7 @@ extension AppModel {
                 )
             }
         } else if capabilities?.supportsPositionedScanArea != true {
-            applyFixedScannerArea(for: frameFormat)
+            applyFixedScannerArea(for: frameSize)
         }
     }
 
@@ -81,13 +92,20 @@ extension AppModel {
             ? scanFrameFormat
             : formats.first else { return }
         scanFrameFormat = selected
-        (mockBackend as? MockScannerBackend)?.setSimulatorFrameFormat(selected)
+        // 수동 비율이 새 스캐너 영역에 들어가지 않으면 규격으로 돌아간다.
+        if scanUsesCustomFrameSize,
+           let maximum = hardwareScanAreaBounds?.maximum,
+           !Self.frame(scanFrameSize, fitsIn: maximum) {
+            scanUsesCustomFrameSize = false
+        }
+        let frameSize = scanFrameSize
+        (mockBackend as? MockScannerBackend)?.setSimulatorFrameSize(frameSize)
         if capabilities?.supportsPositionedScanArea != true {
-            applyFixedScannerArea(for: selected)
+            applyFixedScannerArea(for: frameSize)
         }
     }
 
-    private func applyFixedScannerArea(for frameFormat: FilmFrameFormat) {
+    private func applyFixedScannerArea(for frameFormat: some FilmFrameDimensions) {
         guard let capabilities,
               capabilities.supportsPositionedScanArea != true,
               let maximum = capabilities.physicalScanAreaBounds?.maximum else { return }
@@ -141,12 +159,13 @@ extension AppModel {
               flatbedScanRegions.isEmpty else { return }
         let regionRevision = flatbedScanRegionRevision
         let sourceURL = frame.rawScanURL
-        let requestedFrameFormat = scanFrameFormat
+        let requestedFrameSizes = scanFrameSizeCandidates
         // 프리뷰가 담은 실제 영역을 알면 36×24mm 가 몇 px인지 계산할 수 있어, 프레임 규격과
         // 이송 피치를 그대로 단서로 쓸 수 있다. 영역을 모르는 경우에만 예전 에지 기반 검출로
         // 물러난다.
         let previewArea = flatbedPreviewScanArea
-        let detections = await Task.detached(priority: .userInitiated) { () -> [FlatbedFrameDetection] in
+        let detected = await Task.detached(priority: .userInitiated) {
+            () -> (frames: [FlatbedFrameDetection], frameSize: FilmFrameSize?) in
             // 크기 후보는 프리뷰 파일이 스스로 밝히는 값(픽셀 ÷ 해상도)이 먼저다. 스캐너가
             // 보고한 스캔 영역은 값이 비거나 기준이 달라 mm↔px 환산을 어긋나게 할 수 있고,
             // 그러면 36×24mm 가 몇 px 인지가 틀려 아무것도 못 찾는다(실기: 35mm 3슬롯 프리뷰가
@@ -160,24 +179,35 @@ extension AppModel {
                     CGSize(width: previewArea.widthMM, height: previewArea.heightMM)
                 )
             }
-            for size in physicalSizes {
-                let grid = FlatbedFrameGridDetector.detect(
-                    url: sourceURL,
-                    physicalSize: size,
-                    frameFormat: requestedFrameFormat
-                )
-                if !grid.isEmpty { return grid }
+            // 수동 비율은 필름 폭 후보마다 찾아 보고 가장 많이 찾은 쪽을 쓴다(같으면 앞쪽).
+            var best: (frames: [FlatbedFrameDetection], frameSize: FilmFrameSize?) = ([], nil)
+            for frameSize in requestedFrameSizes {
+                for size in physicalSizes {
+                    let grid = FlatbedFrameGridDetector.detect(
+                        url: sourceURL,
+                        physicalSize: size,
+                        frameSize: frameSize
+                    )
+                    if grid.isEmpty { continue }
+                    if grid.count > best.frames.count { best = (grid, frameSize) }
+                    break
+                }
             }
-            return (try? FlatbedFrameDetector.detect(
+            if !best.frames.isEmpty { return best }
+            // 에지 기반 검출은 비율만 쓰므로 필름 폭 후보가 몇이든 한 번이면 된다.
+            guard let first = requestedFrameSizes.first else { return ([], nil) }
+            let frames = (try? FlatbedFrameDetector.detect(
                 url: sourceURL,
-                frameFormat: requestedFrameFormat
+                frameSize: first
             )) ?? []
+            return (frames, frames.isEmpty ? nil : first)
         }.value
+        let detections = detected.frames
 
         // 경계에 걸친 컷은 프리뷰 안으로 잘라 쓰고, 망가진 것만 걸러낸다.
         let usable = detections.compactMap(Self.usableFlatbedFrameDetection)
         guard requiredSessionID == nil || activeScanSessionID == requiredSessionID,
-              scanFrameFormat == requestedFrameFormat,
+              scanFrameSizeCandidates == requestedFrameSizes,
               flatbedPreviewFrameID == frameID,
               flatbedPreviewFrame?.id == frameID,
               flatbedScanRegions.isEmpty,
@@ -199,6 +229,10 @@ extension AppModel {
             }
         flatbedScanRegions = regions
         selectedFlatbedScanRegionID = regions.first?.id
+        // 수동 비율이면 맞은 필름 폭을 기억해 다음에 손으로 놓는 프레임도 그 크기로 제안한다.
+        if scanUsesCustomFrameSize, let matched = detected.frameSize {
+            scanCustomFrameAcrossMM = matched.stripHeightMM
+        }
     }
 
     func addFlatbedScanRegion(unitRect: CGRect? = nil) {
@@ -210,7 +244,7 @@ extension AppModel {
             ?? previewArea.flatMap {
                 FlatbedScanRegionLayout.proposedRect(
                     existing: flatbedScanRegions.map(\.unitRect),
-                    frameFormat: scanFrameFormat,
+                    frameSize: scanFrameSize,
                     previewArea: $0
                 )
             }
@@ -279,7 +313,7 @@ extension AppModel {
         let proposed = previewArea.flatMap {
             FlatbedScanRegionLayout.proposedRect(
                 existing: flatbedScanRegions.map(\.unitRect),
-                frameFormat: scanFrameFormat,
+                frameSize: scanFrameSize,
                 previewArea: $0,
                 size: size
             )

@@ -622,4 +622,8 @@ enum AppLocalizedPhrase: CaseIterable {
     case libraryCatalogRelaunchingStatus
     case libraryCatalogRepairFailedStatus
     case libraryCatalogReinstallFailedStatus
+    case scanCustomFrameFormat
+    case scanCustomFrameRatio
+    case scanCustomFrameWidth
+    case scanCustomFrameHeight
 }

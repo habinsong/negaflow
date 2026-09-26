@@ -315,7 +315,7 @@ struct FlatbedScanAreaOverlay: View {
         return clampedUnitRect(FlatbedScanRegionLayout.snappedToFrameAspect(
             rect,
             anchoredTo: previous,
-            frameFormat: model.scanFrameFormat,
+            frameSize: model.scanFrameSize,
             previewArea: previewArea
         ))
     }

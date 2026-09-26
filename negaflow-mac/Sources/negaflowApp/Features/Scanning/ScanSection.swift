@@ -117,8 +117,15 @@ struct ScannerControlsSection: View {
                     selection: scanFrameFormatBinding
                 ) {
                     ForEach(model.availableScanFrameFormats, id: \.self) { frameFormat in
-                        Text(verbatim: frameFormat.displayName).tag(frameFormat)
+                        Text(verbatim: frameFormat.displayName)
+                            .tag(ScanFrameFormatChoice.preset(frameFormat))
                     }
+                    Divider()
+                    Text(model.text(AppLocalizedPhrase.scanCustomFrameFormat))
+                        .tag(ScanFrameFormatChoice.custom)
+                }
+                if model.scanUsesCustomFrameSize {
+                    ScanCustomFrameSizeRow()
                 }
             }
 
@@ -126,7 +133,7 @@ struct ScannerControlsSection: View {
                 flatbedDetectionModeControls
             }
 
-            if model.demoMode, model.scanFrameFormat.is35mm {
+            if model.demoMode, model.scanFrameSize.is35mm {
                 Toggle(
                     model.text(AppLocalizedPhrase.perforation),
                     isOn: Binding(
@@ -302,11 +309,11 @@ struct ScannerControlsSection: View {
         )
     }
 
-    private var scanFrameFormatBinding: Binding<FilmFrameFormat> {
+    private var scanFrameFormatBinding: Binding<ScanFrameFormatChoice> {
         Binding(
-            get: { model.scanFrameFormat },
-            set: { frameFormat in
-                Task { await model.selectScanFrameFormat(frameFormat) }
+            get: { model.scanFrameFormatChoice },
+            set: { choice in
+                Task { await model.selectScanFrameFormatChoice(choice) }
             }
         )
     }

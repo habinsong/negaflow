@@ -387,6 +387,8 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
             (.fullFrame35mm, 6),
             (.square35mm, 8),
             (.halfFrame35mm, 11),
+            (.panorama35mm56x24, 3),
+            (.panorama35mm65x24, 3),
             (.medium645, 4),
             (.medium66, 3),
             (.medium67, 2),
@@ -506,6 +508,90 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
 
         XCTAssertTrue(model.usesFlatbedRegionWorkflow)
         XCTAssertEqual(model.availableScanFrameFormats, FilmFrameFormat.allCases)
+    }
+
+    /// 규격 목록에 없는 파노라마(예: 58×24)를 수동 비율로 넣어도 자동 검출과 본 스캔이 이어져야 한다.
+    func testMockFlatbedCustomFrameSizeAutomaticallyDetectsAndFullScans() async throws {
+        let backend = MockScannerBackend()
+        let fixture = try await makePersistentFixture(backend: backend)
+        defer { fixture.cleanup() }
+        let model = fixture.model
+        model.demoMode = true
+        model.selectedDeviceID = MockScannerBackend.flatbedScannerID
+        await model.loadCapabilities()
+
+        await model.selectScanFrameFormatChoice(.custom)
+        let accepted = await model.updateScanCustomFrameRatio(width: 58, height: 24)
+        XCTAssertTrue(accepted)
+        model.setScannerSimulatorFrameCount(3)
+        XCTAssertEqual(model.scanFrameFormatChoice, .custom)
+        let horizon = try XCTUnwrap(FilmFrameRatio(width: 58, height: 24))
+        XCTAssertEqual(model.scanFrameSize, FilmFrameSize(ratio: horizon, acrossMM: 24))
+
+        await model.runScan(preview: true)
+
+        let capabilities: ScannerCapabilities = try XCTUnwrap(model.capabilities)
+        let previewScanArea = try XCTUnwrap(model.flatbedPreviewScanArea)
+        XCTAssertEqual(model.flatbedScanRegions.count, 3)
+        for region in model.flatbedScanRegions {
+            let area = try XCTUnwrap(FlatbedScanRegionGeometry.physicalArea(
+                for: region,
+                previewScanArea: previewScanArea,
+                capabilities: capabilities
+            ))
+            XCTAssertEqual(max(area.widthMM, area.heightMM), 58, accuracy: 3)
+            XCTAssertEqual(min(area.widthMM, area.heightMM), 24, accuracy: 3)
+        }
+
+        await model.runScan(preview: false)
+
+        let session = try XCTUnwrap(model.scanSessions.last)
+        XCTAssertEqual(session.jobs.count, 3)
+        XCTAssertTrue(session.jobs.allSatisfy { $0.state == .succeeded })
+        XCTAssertEqual(model.frames.count, 3)
+    }
+
+    func testCustomFrameRatioStartsFromPresetAndRejectsRatiosThatCannotBeScanned() async throws {
+        let backend = MockScannerBackend()
+        let fixture = try await makePersistentFixture(backend: backend)
+        defer { fixture.cleanup() }
+        let model = fixture.model
+        model.demoMode = true
+        model.selectedDeviceID = MockScannerBackend.flatbedScannerID
+        await model.loadCapabilities()
+
+        await model.selectScanFrameFormat(.panorama35mm65x24)
+        await model.selectScanFrameFormatChoice(.custom)
+        XCTAssertEqual(model.scanCustomFrameRatio, FilmFrameRatio(width: 65, height: 24))
+        XCTAssertEqual(model.scanFrameSize, FilmFrameSize(.panorama35mm65x24))
+
+        let zero = await model.updateScanCustomFrameRatio(width: 0, height: 24)
+        let notANumber = await model.updateScanCustomFrameRatio(width: .nan, height: 24)
+        let tooNarrow = await model.updateScanCustomFrameRatio(width: 1, height: 20)
+        XCTAssertFalse(zero)
+        XCTAssertFalse(notANumber)
+        XCTAssertFalse(tooNarrow)
+        XCTAssertEqual(model.scanCustomFrameRatio, FilmFrameRatio(width: 65, height: 24))
+
+        // 단위 없는 비율: 4 : 5 는 4mm × 5mm 가 아니다.
+        let fourByFive = await model.updateScanCustomFrameRatio(width: 4, height: 5)
+        XCTAssertTrue(fourByFive)
+        XCTAssertEqual(model.scanFrameSize.stripFrameAspect, 0.8, accuracy: 0.000_001)
+        XCTAssertGreaterThan(model.scanFrameSize.stripHeightMM, 5)
+
+        await model.selectScanFrameFormatChoice(.preset(.medium66))
+        XCTAssertEqual(model.scanFrameFormatChoice, .preset(.medium66))
+        XCTAssertEqual(model.scanFrameSize, FilmFrameSize(.medium66))
+
+        // 다시 켜면 마지막으로 넣은 비율이 돌아온다.
+        await model.selectScanFrameFormatChoice(.custom)
+        XCTAssertEqual(model.scanCustomFrameRatio, FilmFrameRatio(width: 4, height: 5))
+
+        // 스캐너 영역이 좁은 필름 스캐너에서는 어떤 필름 폭으로도 들어가지 않는 비율을 받지 않는다.
+        model.selectedDeviceID = MockScannerBackend.filmScannerID
+        await model.loadCapabilities()
+        let panorama = await model.updateScanCustomFrameRatio(width: 65, height: 24)
+        XCTAssertFalse(panorama)
     }
 
     func testManualFlatbedRegionEditInvalidatesDetectedStraightenAngle() {

@@ -451,6 +451,67 @@ final class FlatbedFrameGridDetectorTests: XCTestCase {
         }
     }
 
+    func testCustomFrameRatioIsUnitlessAndSizedByFilmWidth() throws {
+        XCTAssertNil(FilmFrameRatio(width: 0, height: 5))
+        XCTAssertNil(FilmFrameRatio(width: 1, height: 20))
+        XCTAssertNil(FilmFrameRatio(width: .infinity, height: 24))
+        let fourByFive = try XCTUnwrap(FilmFrameRatio(width: 4, height: 5))
+        XCTAssertEqual(fourByFive.aspect, 0.8, accuracy: 0.000_001)
+        XCTAssertEqual(fourByFive.displayName, "4 : 5")
+        XCTAssertEqual(FilmFrameRatio(width: 4.5, height: 6)?.displayName, "4.5 : 6")
+
+        let sizes = fourByFive.candidateSizes
+        XCTAssertEqual(sizes.map(\.stripHeightMM), [24, 56])
+        XCTAssertEqual(sizes.map(\.is35mm), [true, false])
+        XCTAssertEqual(sizes[0].stripWidthMM, 19.2, accuracy: 0.000_001)
+
+        let panorama = try XCTUnwrap(FilmFrameRatio(width: 65, height: 24))
+        XCTAssertEqual(
+            FilmFrameSize(ratio: panorama, acrossMM: 24),
+            FilmFrameSize(.panorama35mm65x24)
+        )
+    }
+
+    func testFindsFramesOfACustomSize() throws {
+        let horizon = try XCTUnwrap(FilmFrameRatio(width: 58, height: 24))
+        let sixByEight = try XCTUnwrap(FilmFrameRatio(width: 8, height: 6))
+        let cases: [(size: FilmFrameSize, gapMM: Double, frames: Int, slotPitchMM: Double)] = [
+            (FilmFrameSize(ratio: horizon, acrossMM: 24), 2, 3, 36),
+            (FilmFrameSize(ratio: sixByEight, acrossMM: 56), 4, 2, 70),
+        ]
+        for testCase in cases {
+            let holder = makeHolder(
+                slotCount: 1,
+                framesPerSlot: testCase.frames,
+                frameLengthMM: testCase.size.stripWidthMM,
+                frameWidthMM: testCase.size.stripHeightMM,
+                gapMM: testCase.gapMM,
+                slotPitchMM: testCase.slotPitchMM,
+                leadingMM: 8,
+                stripTopMM: 8
+            )
+            let found = FlatbedFrameGridDetector.detect(
+                preview: holder.preview,
+                frameSize: testCase.size
+            )
+            XCTAssertEqual(found.count, testCase.frames, "\(testCase.size.stripWidthMM)x\(testCase.size.stripHeightMM)")
+            for detection in found {
+                XCTAssertEqual(
+                    detection.normalizedRect.height * physical.height,
+                    testCase.size.stripWidthMM,
+                    accuracy: 2.5,
+                    "\(testCase.size.stripWidthMM)x\(testCase.size.stripHeightMM)"
+                )
+                XCTAssertEqual(
+                    detection.normalizedRect.width * physical.width,
+                    testCase.size.stripHeightMM,
+                    accuracy: 2.5,
+                    "\(testCase.size.stripWidthMM)x\(testCase.size.stripHeightMM)"
+                )
+            }
+        }
+    }
+
     func testRejectsEmptyOrDegenerateInput() {
         let empty = FlatbedFrameGridDetector.Preview(
             luminance: [],

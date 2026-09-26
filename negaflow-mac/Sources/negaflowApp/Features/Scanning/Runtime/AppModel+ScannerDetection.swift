@@ -210,7 +210,7 @@ extension AppModel {
     }
 
     func setScannerSimulatorIncludesPerforation(_ includesPerforation: Bool) {
-        guard demoMode, !isScanning, scanFrameFormat.is35mm else { return }
+        guard demoMode, !isScanning, scanFrameSize.is35mm else { return }
         let shouldRefreshPreview = actionableFrame?.isPreviewScan == true
         scannerSimulatorIncludesPerforation = includesPerforation
         (mockBackend as? MockScannerBackend)?

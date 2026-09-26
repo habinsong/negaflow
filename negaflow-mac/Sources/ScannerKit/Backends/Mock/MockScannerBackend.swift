@@ -42,7 +42,7 @@ public final class MockScannerBackend: ScannerBackend, @unchecked Sendable {
     private var lastError: ScannerError?
     private var cancelled = false
     public private(set) var simulatorIncludesPerforation = false
-    public private(set) var simulatorFrameFormat: FilmFrameFormat = .fullFrame35mm
+    public private(set) var simulatorFrameSize = FilmFrameSize(.fullFrame35mm)
     public private(set) var simulatorFrameOrientation: FilmFrameOrientation = .landscape
     public private(set) var simulatorFrameCount = 6
     public private(set) var simulatorFrameOrientations: [FilmFrameOrientation]?
@@ -58,7 +58,11 @@ public final class MockScannerBackend: ScannerBackend, @unchecked Sendable {
     }
 
     public func setSimulatorFrameFormat(_ frameFormat: FilmFrameFormat) {
-        simulatorFrameFormat = frameFormat
+        simulatorFrameSize = FilmFrameSize(frameFormat)
+    }
+
+    public func setSimulatorFrameSize(_ frameSize: FilmFrameSize) {
+        simulatorFrameSize = frameSize
     }
 
     public func setSimulatorFrameOrientation(_ orientation: FilmFrameOrientation) {
@@ -167,7 +171,7 @@ public final class MockScannerBackend: ScannerBackend, @unchecked Sendable {
         progress(ScanProgress(phase: .connecting, fraction: 0.05, message: "Connecting scanner"))
         try Self.writeFlatbedPreview(
             includesPerforation: simulatorIncludesPerforation,
-            frameFormat: simulatorFrameFormat,
+            frameFormat: simulatorFrameSize,
             frameOrientation: simulatorFrameOrientation,
             frameCount: simulatorFrameCount,
             frameOrientations: simulatorFrameOrientations,
@@ -209,7 +213,7 @@ public final class MockScannerBackend: ScannerBackend, @unchecked Sendable {
             let size = try Self.writeFlatbedRegion(
                 options.scanArea,
                 includesPerforation: simulatorIncludesPerforation,
-                frameFormat: simulatorFrameFormat,
+                frameFormat: simulatorFrameSize,
                 frameOrientation: simulatorFrameOrientation,
                 frameCount: simulatorFrameCount,
                 frameOrientations: simulatorFrameOrientations,

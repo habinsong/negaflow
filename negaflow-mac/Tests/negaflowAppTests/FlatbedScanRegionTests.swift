@@ -259,6 +259,8 @@ final class FlatbedScanRegionTests: XCTestCase {
             (.fullFrame35mm, 6),
             (.square35mm, 8),
             (.halfFrame35mm, 11),
+            (.panorama35mm56x24, 3),
+            (.panorama35mm65x24, 3),
             (.medium645, 4),
             (.medium66, 3),
             (.medium67, 2),

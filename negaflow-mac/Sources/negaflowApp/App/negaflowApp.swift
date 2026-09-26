@@ -224,6 +224,13 @@ final class AppModel: ObservableObject {
     @Published var scannerBrightness: Double = 0
     @Published var scannerContrast: Double = 0
     @Published var scanFrameFormat: FilmFrameFormat = .fullFrame35mm
+    /// 규격 목록에 없는 필름용 수동 비율(가로 : 세로, 단위 없음). 켜져 있으면 규격 대신 쓴다.
+    @Published var scanUsesCustomFrameSize = false
+    /// 처음 켤 때 그때 고른 규격의 비율로 채우고, 이후에는 마지막으로 넣은 값을 기억한다.
+    @Published var scanCustomFrameRatio: FilmFrameRatio?
+    /// 수동 비율을 실제 크기로 세울 필름 폭(mm). 자동 검출이 맞춘 쪽을 기억해 다음 프레임
+    /// 제안에도 쓴다.
+    var scanCustomFrameAcrossMM: Double = FilmFrameRatio.candidateAcrossMM[0]
     @Published var scannerSimulatorIncludesPerforation = false
     @Published var scannerSimulatorFrameOrientation: FilmFrameOrientation = .landscape
     @Published var scannerSimulatorFrameCount = 6

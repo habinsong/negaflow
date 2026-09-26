@@ -2,10 +2,35 @@ import CoreGraphics
 import Foundation
 import ImageIO
 
-public enum FilmFrameFormat: String, CaseIterable, Codable, Sendable {
+/// 프레임 검출과 배치가 쓰는 치수. 프리셋 규격(`FilmFrameFormat`)과 사용자가 넣은 수동
+/// 치수(`FilmFrameSize`)가 같이 따른다.
+public protocol FilmFrameDimensions: Sendable {
+    /// 필름 스트립을 가로로 놓았을 때 프레임이 진행되는 축의 공칭 길이입니다.
+    var stripWidthMM: Double { get }
+    /// 필름 스트립 폭 방향의 공칭 이미지 길이입니다.
+    var stripHeightMM: Double { get }
+    /// 퍼포레이션 이송(35mm)이면 프레임 피치가 사실상 고정이고 간격이 좁다.
+    var is35mm: Bool { get }
+}
+
+extension FilmFrameDimensions {
+    public var stripFrameAspect: Double {
+        stripWidthMM / stripHeightMM
+    }
+
+    public var frameAspectCandidates: [Double] {
+        let aspect = stripFrameAspect
+        let rotated = 1 / aspect
+        return abs(aspect - rotated) < 0.000_001 ? [aspect] : [aspect, rotated]
+    }
+}
+
+public enum FilmFrameFormat: String, CaseIterable, Codable, Sendable, FilmFrameDimensions {
     case fullFrame35mm
     case square35mm
     case halfFrame35mm
+    case panorama35mm56x24
+    case panorama35mm65x24
     case medium645
     case medium66
     case medium67
@@ -20,6 +45,8 @@ public enum FilmFrameFormat: String, CaseIterable, Codable, Sendable {
         case .fullFrame35mm: return 36
         case .square35mm: return 24
         case .halfFrame35mm: return 18
+        case .panorama35mm56x24: return 56
+        case .panorama35mm65x24: return 65
         case .medium645: return 41.5
         case .medium66: return 56
         case .medium67: return 69
@@ -33,7 +60,8 @@ public enum FilmFrameFormat: String, CaseIterable, Codable, Sendable {
     /// 필름 스트립 폭 방향의 공칭 이미지 길이입니다.
     public var stripHeightMM: Double {
         switch self {
-        case .fullFrame35mm, .square35mm, .halfFrame35mm:
+        case .fullFrame35mm, .square35mm, .halfFrame35mm, .panorama35mm56x24,
+             .panorama35mm65x24:
             return 24
         case .medium645, .medium66, .medium68, .medium69, .medium612, .medium617:
             return 56
@@ -42,19 +70,10 @@ public enum FilmFrameFormat: String, CaseIterable, Codable, Sendable {
         }
     }
 
-    public var stripFrameAspect: Double {
-        stripWidthMM / stripHeightMM
-    }
-
-    public var frameAspectCandidates: [Double] {
-        let aspect = stripFrameAspect
-        let rotated = 1 / aspect
-        return abs(aspect - rotated) < 0.000_001 ? [aspect] : [aspect, rotated]
-    }
-
     public var is35mm: Bool {
         switch self {
-        case .fullFrame35mm, .square35mm, .halfFrame35mm:
+        case .fullFrame35mm, .square35mm, .halfFrame35mm, .panorama35mm56x24,
+             .panorama35mm65x24:
             return true
         case .medium645, .medium66, .medium67, .medium68, .medium69, .medium612,
              .medium617:
@@ -68,6 +87,8 @@ public enum FilmFrameFormat: String, CaseIterable, Codable, Sendable {
         case .fullFrame35mm: return "35 mm · 36 × 24"
         case .square35mm: return "35 mm · 24 × 24"
         case .halfFrame35mm: return "35 mm · 24 × 18"
+        case .panorama35mm56x24: return "35 mm · 56 × 24"
+        case .panorama35mm65x24: return "35 mm · 65 × 24"
         case .medium645: return "120 · 6 × 4.5"
         case .medium66: return "120 · 6 × 6"
         case .medium67: return "120 · 6 × 7"
@@ -84,6 +105,10 @@ public enum FilmFrameOrientation: String, CaseIterable, Codable, Hashable, Senda
     case portrait
 
     public func aspect(for format: FilmFrameFormat) -> Double {
+        aspect(for: FilmFrameSize(format))
+    }
+
+    public func aspect(for format: some FilmFrameDimensions) -> Double {
         let aspect = format.stripFrameAspect
         let landscapeAspect = max(aspect, 1 / aspect)
         return self == .landscape ? landscapeAspect : 1 / landscapeAspect
@@ -129,6 +154,19 @@ public enum FlatbedFrameDetector {
         frameFormat: FilmFrameFormat = .fullFrame35mm,
         maxAnalysisDimension: Int = 2_048
     ) throws -> [FlatbedFrameDetection] {
+        try detect(
+            url: url,
+            frameSize: FilmFrameSize(frameFormat),
+            maxAnalysisDimension: maxAnalysisDimension
+        )
+    }
+
+    /// 수동 비율처럼 규격 목록에 없는 치수로 찾는다.
+    public static func detect(
+        url: URL,
+        frameSize frameFormat: FilmFrameSize,
+        maxAnalysisDimension: Int = 2_048
+    ) throws -> [FlatbedFrameDetection] {
         guard maxAnalysisDimension >= 256,
               let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let image = CGImageSourceCreateThumbnailAtIndex(
@@ -144,7 +182,7 @@ public enum FlatbedFrameDetector {
         }
         return detect(
             image: image,
-            frameFormat: frameFormat,
+            frameSize: frameFormat,
             maxAnalysisDimension: maxAnalysisDimension
         )
     }
@@ -152,6 +190,18 @@ public enum FlatbedFrameDetector {
     public static func detect(
         image: CGImage,
         frameFormat: FilmFrameFormat = .fullFrame35mm,
+        maxAnalysisDimension: Int = 2_048
+    ) -> [FlatbedFrameDetection] {
+        detect(
+            image: image,
+            frameSize: FilmFrameSize(frameFormat),
+            maxAnalysisDimension: maxAnalysisDimension
+        )
+    }
+
+    public static func detect(
+        image: CGImage,
+        frameSize frameFormat: FilmFrameSize,
         maxAnalysisDimension: Int = 2_048
     ) -> [FlatbedFrameDetection] {
         guard maxAnalysisDimension >= 256,
@@ -163,7 +213,7 @@ public enum FlatbedFrameDetector {
 
     private static func detect(
         image: AnalysisImage,
-        frameFormat: FilmFrameFormat
+        frameFormat: some FilmFrameDimensions
     ) -> [FlatbedFrameDetection] {
         let aligned = detectAligned(image: image, frameFormat: frameFormat)
         if !aligned.isEmpty { return aligned }
@@ -229,7 +279,7 @@ public enum FlatbedFrameDetector {
 
     private static func detectAligned(
         image: AnalysisImage,
-        frameFormat: FilmFrameFormat
+        frameFormat: some FilmFrameDimensions
     ) -> [FlatbedFrameDetection] {
         var candidates: [[FlatbedFrameDetection]] = []
         let separatedRects = image.backgroundSeparatedFrameRects(

@@ -28,7 +28,7 @@ extension MockScannerBackend {
 
     static func writeFlatbedPreview(
         includesPerforation: Bool,
-        frameFormat: FilmFrameFormat = .fullFrame35mm,
+        frameFormat: some FilmFrameDimensions = FilmFrameFormat.fullFrame35mm,
         frameOrientation: FilmFrameOrientation = .landscape,
         frameCount: Int = 6,
         frameOrientations: [FilmFrameOrientation]? = nil,
@@ -62,7 +62,7 @@ extension MockScannerBackend {
     static func writeFlatbedRegion(
         _ area: ScanArea,
         includesPerforation: Bool,
-        frameFormat: FilmFrameFormat = .fullFrame35mm,
+        frameFormat: some FilmFrameDimensions = FilmFrameFormat.fullFrame35mm,
         frameOrientation: FilmFrameOrientation = .landscape,
         frameCount: Int = 6,
         frameOrientations: [FilmFrameOrientation]? = nil,
@@ -116,7 +116,7 @@ extension MockScannerBackend {
     }
 
     private static func flatbedPreviewImage(
-        frameFormat: FilmFrameFormat,
+        frameFormat: some FilmFrameDimensions,
         frameOrientation: FilmFrameOrientation,
         frameCount: Int,
         frameOrientations: [FilmFrameOrientation]?,
@@ -183,7 +183,7 @@ extension MockScannerBackend {
     }
 
     private static func syntheticFlatbedPreviewImage(
-        frameFormat: FilmFrameFormat,
+        frameFormat: some FilmFrameDimensions,
         frameOrientation: FilmFrameOrientation,
         frameCount: Int,
         frameOrientations: [FilmFrameOrientation]?,

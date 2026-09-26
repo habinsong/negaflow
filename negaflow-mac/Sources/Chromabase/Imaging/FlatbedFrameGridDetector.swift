@@ -101,6 +101,10 @@ public enum FlatbedFrameGridDetector {
         let pixelsPerMillimeterY: Double
 
         init(format: FilmFrameFormat, preview: Preview) {
+            self.init(format: FilmFrameSize(format), preview: preview)
+        }
+
+        init(format: FilmFrameSize, preview: Preview) {
             alongMM = format.stripWidthMM
             acrossMM = format.stripHeightMM
             gapRangeMM = FlatbedFrameGridDetector.gapRangeMM(for: format)
@@ -129,7 +133,7 @@ public enum FlatbedFrameGridDetector {
 
     /// 프레임 사이 여백. 35mm 는 퍼포레이션 이송이 정하므로 사실상 고정(38mm 피치 → 2mm)이고,
     /// 120 은 카메라 이송 기구에 달려 있어 표준이 없다. 그래서 120 은 넓게 잡는다.
-    static func gapRangeMM(for format: FilmFrameFormat) -> ClosedRange<Double> {
+    static func gapRangeMM(for format: FilmFrameSize) -> ClosedRange<Double> {
         format.is35mm ? 1.0...3.5 : 2.0...9.0
     }
 
@@ -162,17 +166,39 @@ public enum FlatbedFrameGridDetector {
         frameFormat: FilmFrameFormat,
         maxAnalysisDimension: Int = 2_048
     ) -> [FlatbedFrameDetection] {
+        detect(
+            url: url,
+            physicalSize: physicalSize,
+            frameSize: FilmFrameSize(frameFormat),
+            maxAnalysisDimension: maxAnalysisDimension
+        )
+    }
+
+    /// 수동 비율처럼 규격 목록에 없는 치수로 찾는다.
+    public static func detect(
+        url: URL,
+        physicalSize: CGSize,
+        frameSize frameFormat: FilmFrameSize,
+        maxAnalysisDimension: Int = 2_048
+    ) -> [FlatbedFrameDetection] {
         guard let preview = Preview(
             url: url,
             physicalSize: physicalSize,
             maxAnalysisDimension: maxAnalysisDimension
         ) else { return [] }
-        return detect(preview: preview, frameFormat: frameFormat)
+        return detect(preview: preview, frameSize: frameFormat)
     }
 
     public static func detect(
         preview: Preview,
         frameFormat: FilmFrameFormat
+    ) -> [FlatbedFrameDetection] {
+        detect(preview: preview, frameSize: FilmFrameSize(frameFormat))
+    }
+
+    public static func detect(
+        preview: Preview,
+        frameSize frameFormat: FilmFrameSize
     ) -> [FlatbedFrameDetection] {
         guard preview.width > 32,
               preview.height > 32,
