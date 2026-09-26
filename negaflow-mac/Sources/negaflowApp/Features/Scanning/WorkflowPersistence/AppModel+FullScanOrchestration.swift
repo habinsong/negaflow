@@ -107,9 +107,9 @@ extension AppModel {
                 let result = try await Task.detached(priority: .userInitiated) {
                     try await backend.startFullScan(
                         requestedOptions,
-                        progress: { [weak self] progress in
+                        progress: { progress in
                             Task { @MainActor in
-                                self?.update(progress, sessionID: sessionID)
+                                self.update(progress, sessionID: sessionID)
                             }
                         }
                     )

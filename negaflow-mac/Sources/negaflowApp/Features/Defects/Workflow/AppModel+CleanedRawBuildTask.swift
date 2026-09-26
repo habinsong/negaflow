@@ -216,9 +216,10 @@ extension AppModel {
             // cleanRawTask 를 develop 완료 신호로 쓰는 종료/테스트 시퀀스와, 정착 렌더가 소유
             // 정리 전에 끝나는 기존 수명을 보존한다.
             let developFinished = MainActorCompletionFlag()
-            let developTask = Task { @MainActor [weak self, weak frame] in
+            // 바깥 작업이 self·frame 을 강하게 잡고 develop 끝까지 기다리므로 여기서 약하게
+            // 잡아도 수명은 같다(Xcode 27 ImplicitStrongCapture 진단).
+            let developTask = Task { @MainActor in
                 defer { developFinished.value = true }
-                guard let self, let frame else { return }
                 await self.developFrame(frame)
             }
             while await MainActor.run(body: {

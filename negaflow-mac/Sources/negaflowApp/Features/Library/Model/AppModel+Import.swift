@@ -222,8 +222,8 @@ extension AppModel {
         )
         let metadata = await Task.detached(priority: .userInitiated) {
             Self.readImportMetadata(importURLs) { completedCount in
-                Task { @MainActor [weak progressStore] in
-                    progressStore?.update(
+                Task { @MainActor in
+                    progressStore.update(
                         id: progressID,
                         completedCount: completedCount,
                         phase: .reading
@@ -268,8 +268,8 @@ extension AppModel {
     ) async {
         let progressStore = libraryImportProgressStore
         _ = await ExportSourceMaterialization.materialize(urls) { progress in
-            Task { @MainActor [weak progressStore] in
-                progressStore?.update(
+            Task { @MainActor in
+                progressStore.update(
                     id: progressID,
                     completedCount: progress.ready,
                     totalCount: progress.total,
