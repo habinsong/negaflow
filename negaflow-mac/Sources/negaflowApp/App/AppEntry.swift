@@ -16,6 +16,10 @@ final class NegaflowApplicationDelegate: NSObject, NSApplicationDelegate {
         super.init()
     }
 
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        TextEntryKeyRouter.install()
+    }
+
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard !hasPendingTerminationReply else { return .terminateLater }
         hasPendingTerminationReply = true
