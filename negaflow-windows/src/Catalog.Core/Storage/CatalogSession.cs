@@ -206,6 +206,34 @@ public sealed partial class CatalogSession : IDisposable
         }
     }
 
+    /// <summary>
+    /// 열린 문서의 메모리 상태로 검증된 세대를 만듭니다. 디스크 기록이 어긋나 저장이 막혀
+    /// 있을 때 카탈로그 재설치가 씁니다.
+    /// </summary>
+    public CatalogBackupCreateResult CreateBackupFromMemory(
+        CatalogSnapshot snapshot,
+        IReadOnlyDictionary<Guid, DefectRecipeSnapshot> recipes,
+        int retentionCount = CatalogBackupStore.DefaultRetentionCount)
+    {
+        lock (writeGate)
+        {
+            RequireOpen();
+            if (mutationBlocked ||
+                CatalogCommitRollback.HasUnresolvedRollbackArtifact(roots))
+            {
+                mutationBlocked = true;
+                return CatalogBackupCreateResult.Failure(
+                    CatalogBackupError.RecoveryRequired);
+            }
+            return CatalogBackupStore.CreateFromMemory(
+                roots,
+                snapshot,
+                recipes,
+                DateTimeOffset.UtcNow,
+                retentionCount);
+        }
+    }
+
     public CatalogPendingRestoreScheduleResult ScheduleRestore(
         string generationId)
     {

@@ -10,6 +10,20 @@ namespace Negaflow.Shell.Views;
 public sealed partial class WorkspaceShellView
 {
     /// <summary>
+    /// 카탈로그 수동 복구·재설치를 막는 진행 중 작업입니다(macOS
+    /// <c>canRunLibraryCatalogMaintenance</c> 의 스캔·내보내기·인쇄 패키지 몫). 종료·유지보수
+    /// 여부는 창이 채웁니다.
+    /// </summary>
+    public LibraryCatalogMaintenanceBusy CatalogMaintenanceBusy(LibraryHostService? host) => new(
+        Scanning: scanSessionHost.Session?.IsScanning == true,
+        Exporting: host?.IsExporting == true ||
+            DevelopWorkspace.LeftPanel.ExportPanel.runner.IsRunning ||
+            PrintWorkspace?.PrintExportPanel.runner.IsRunning == true,
+        PrintExporting: PrintWorkspace?.IsSheetExportRunning == true,
+        Terminating: false,
+        MaintenanceRunning: false);
+
+    /// <summary>
     /// UI 스레드에서만 읽을 수 있는 것만 집습니다. 디스크를 읽는 부분은
     /// <see cref="DiagnosticsCollector"/> 가 워커에서 합니다.
     /// </summary>

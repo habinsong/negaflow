@@ -1563,6 +1563,13 @@
   <data name="libraryRecoveryStartFreshConfirmMessage.Text" xml:space="preserve"><value>現在のカタログは削除せず隣に保管します。写真ファイルとバックアップはそのままで、ライブラリの一覧だけが空の状態で始まります。</value><comment>LibraryRecoveryLocalizedText.startFreshConfirmationMessage</comment></data>
   <data name="libraryRecoveryStartFreshFailed.Text" xml:space="preserve"><value>新しいライブラリを開始できませんでした。</value><comment>LibraryRecoveryLocalizedText.startFreshFailed</comment></data>
   <data name="libraryCatalogBlockedStatus.Text" xml:space="preserve"><value>ライブラリカタログを安全に開けなかったため、変更せずに保持しました。</value><comment>AppLocalizedPhrase.libraryCatalogBlockedStatus</comment></data>
+  <data name="libraryCatalogRepairAction.Text" xml:space="preserve"><value>カタログを修復</value><comment>AppLocalizedPhrase.libraryCatalogRepairAction</comment></data>
+  <data name="libraryCatalogReinstallAction.Text" xml:space="preserve"><value>カタログを再インストール</value><comment>AppLocalizedPhrase.libraryCatalogReinstallAction</comment></data>
+  <data name="libraryCatalogRepairHelp.Text" xml:space="preserve"><value>カタログファイルはそのままにして、修復レシピと保存状態を合わせ直してから negaflow を再起動します。</value><comment>AppLocalizedPhrase.libraryCatalogRepairHelp</comment></data>
+  <data name="libraryCatalogReinstallHelp.Text" xml:space="preserve"><value>現在のライブラリから検証済みのバックアップを作成し、negaflow を再起動してカタログと修復レシピを新しくインストールします。以前のファイルは別に保管されます。</value><comment>AppLocalizedPhrase.libraryCatalogReinstallHelp</comment></data>
+  <data name="libraryCatalogRelaunchingStatus.Text" xml:space="preserve"><value>ライブラリカタログを整えました。negaflow を再起動します。</value><comment>AppLocalizedPhrase.libraryCatalogRelaunchingStatus</comment></data>
+  <data name="libraryCatalogRepairFailedStatus.Text" xml:space="preserve"><value>カタログの修復に失敗しました。「カタログを再インストール」を試してください。</value><comment>AppLocalizedPhrase.libraryCatalogRepairFailedStatus</comment></data>
+  <data name="libraryCatalogReinstallFailedStatus.Text" xml:space="preserve"><value>カタログの再インストールを準備できませんでした。</value><comment>AppLocalizedPhrase.libraryCatalogReinstallFailedStatus</comment></data>
   <data name="libraryBackupEmpty.Text" xml:space="preserve"><value>バックアップなし</value><comment>AppLocalizedPhrase.libraryBackupEmpty</comment></data>
   <data name="libraryBackupLoadFailed.Text" xml:space="preserve"><value>バックアップを読み込めません</value><comment>AppLocalizedPhrase.libraryBackupLoadFailed</comment></data>
   <data name="libraryBackupRefresh.Content" xml:space="preserve"><value>再読み込み</value><comment>AppLocalizedPhrase.libraryBackupRefresh</comment></data>

@@ -129,6 +129,24 @@ internal static class DefectSidecarStore
         }
     }
 
+    /// <summary>
+    /// 이 사진에 대해 디스크와 이번 프로세스가 이미 본 가장 높은 revision 입니다. 사라졌거나
+    /// 어긋난 기록을 다시 쓸 때 이보다 높은 revision 을 써야 floor 에 막히지 않습니다.
+    /// macOS <c>DefectSidecarFile.highestKnownRevision(for:in:)</c>.
+    /// </summary>
+    public static ulong HighestKnownRevision(StorageRootSet roots, Guid frameId)
+    {
+        ArgumentNullException.ThrowIfNull(roots);
+        lock (Gate)
+        {
+            string path = PathFor(roots, frameId);
+            ulong floor = RevisionFloors.GetValueOrDefault(DefectSidecarFile.RevisionKey(path));
+            return DefectSidecarFile.ReadFile(path, frameId).Snapshot is { } stored
+                ? Math.Max(floor, stored.RecipeRevision)
+                : floor;
+        }
+    }
+
     public static bool HasAnyArtifact(StorageRootSet roots)
     {
         ArgumentNullException.ThrowIfNull(roots);

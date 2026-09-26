@@ -291,7 +291,11 @@ internal static class CatalogPendingRestoreStore
                     roots,
                     now,
                     CatalogBackupStore.DefaultRetentionCount);
-                if (!safetyBackup.IsSuccess)
+                // 검증된 세대로 못 만들면(예: 카탈로그가 선언한 결함 기록 파일이 사라짐) 복원을
+                // 포기하지 않고 지금 파일을 원본 그대로 옆에 보관합니다. 그것마저 실패할 때만
+                // 멈춥니다. macOS `preserveCurrentState` 와 같은 규칙이며, 예전에는 여기서 멈춰
+                // 카탈로그 재설치 뒤 다음 실행이 차단 화면에 갇혔습니다.
+                if (!safetyBackup.IsSuccess && !CatalogSidelinedFiles.Preserve(roots))
                 {
                     return CatalogPendingRestoreApplicationResult.Failure(
                         MapSafetyBackupError(safetyBackup.Error));

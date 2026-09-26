@@ -77,6 +77,9 @@ public sealed partial class MainWindow
         if (!result.IsSuccess)
         {
             terminationInProgress = false;
+            // 재실행을 청한 종료였다면 되돌립니다. 종료가 취소됐는데 헬퍼가 남으면 앱이 엉뚱한
+            // 때 다시 뜹니다(macOS terminateCancel 갈래).
+            CancelCatalogRelaunch();
             // **모달을 띄우지 않습니다.** macOS 는 여기서 `reportError` 로 상태 문구만 세우고
             // 종료를 취소합니다(`AppEntry.applicationShouldTerminate`). 윈도우는 대신
             // `ContentDialog` 를 띄웠고, 저장이 계속 실패하면 닫으려 할 때마다 같은 대화상자가

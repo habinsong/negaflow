@@ -14,7 +14,8 @@ public sealed partial class DiagnosticsWindow : Window
 
     public DiagnosticsWindow(
         PresentationSettingsStore settingsStore,
-        Func<Task<DiagnosticsReport>> reportSource)
+        Func<Task<DiagnosticsReport>> reportSource,
+        Views.DiagnosticsCatalogMaintenance? maintenance = null)
     {
         ArgumentNullException.ThrowIfNull(settingsStore);
         ArgumentNullException.ThrowIfNull(reportSource);
@@ -25,8 +26,10 @@ public sealed partial class DiagnosticsWindow : Window
             this,
             () => Title = AppResources.Get("commandDiagnostics", "Text"));
         ReportView.ReportSource = reportSource;
-        // macOS 팝오버 폭 500 + 좌우 여백 20. 높이는 네 구역이 스크롤 없이 들어가는 값입니다.
-        WindowDpiSizing.ResizeClientToContent(this, 540, 640);
+        ReportView.Maintenance = maintenance;
+        // macOS 팝오버 폭 500 + 좌우 여백 20. 높이는 네 구역이 스크롤 없이 들어가는 값에 맨 아래
+        // 카탈로그 줄(알약 32 + 구역 사이 14)을 더한 값입니다.
+        WindowDpiSizing.ResizeClientToContent(this, 540, 686);
         ApplyAppearance(settingsStore.Current.Appearance);
         settingsStore.Changed += OnSettingsChanged;
         Closed += OnClosed;

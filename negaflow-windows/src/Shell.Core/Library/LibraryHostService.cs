@@ -389,7 +389,7 @@ public sealed partial class LibraryHostService : IDisposable
 
     public Task<LibraryDefectTerminationResult> PrepareForTerminationAsync(
         string scansDirectory) =>
-        document is { } open
+        document is { } open && !IsCatalogReinstallPendingRelaunch
             ? new LibraryDefectTerminationService(
                 frameId => DefectLiveStrengths.Clear(frameId))
                 .PrepareAsync(open, scansDirectory)

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    주 동작 + 오른쪽 작은 보조 단추를 한 알약에 담습니다. macOS `QuickActionPill` 자리이며,
+    현상 탭의 자동 톤/자동 화이트 밸런스 알약(`DevelopQuickActionsCard`)과 같은 틀입니다:
+    모서리 15 · 옅은 채움 · 주 단추(아이콘 13 + 제목) · 오른쪽 24x24 원 단추(아이콘 11, 오른쪽 여백 3).
+    주 단추만 막을 수 있고 보조 단추는 늘 누를 수 있습니다.
+-->
+<UserControl
+    x:Class="Negaflow.Shell.Views.Controls.QuickActionPill"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border Background="{ThemeResource NegaflowSubtleFillBrush}" CornerRadius="15">
+        <Grid ColumnSpacing="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button
+                x:Name="ActionButton"
+                Grid.ColumnSpan="2"
+                Click="OnActionClicked"
+                Padding="0"
+                Style="{StaticResource NegaflowPillButtonStyle}">
+                <StackPanel
+                    HorizontalAlignment="Center"
+                    Orientation="Horizontal"
+                    Spacing="6">
+                    <FontIcon
+                        x:Name="ActionIcon"
+                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                        FontSize="13" />
+                    <TextBlock
+                        x:Name="ActionText"
+                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Button>
+            <Button
+                x:Name="TrailingButton"
+                Grid.Column="1"
+                Margin="0,0,3,0"
+                Click="OnTrailingClicked"
+                Style="{StaticResource NegaflowPillResetButtonStyle}">
+                <FontIcon
+                    x:Name="TrailingIcon"
+                    Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                    FontSize="11" />
+            </Button>
+        </Grid>
+    </Border>
+</UserControl>

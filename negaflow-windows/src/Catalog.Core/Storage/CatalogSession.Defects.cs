@@ -13,6 +13,66 @@ public sealed partial class CatalogSession
     }
 
     /// <summary>
+    /// 이 사진에 대해 디스크와 이번 프로세스가 이미 본 가장 높은 revision 입니다. 카탈로그
+    /// 수동 복구가 사라지거나 어긋난 기록을 floor 에 막히지 않게 다시 쓸 때 씁니다.
+    /// </summary>
+    public ulong HighestKnownDefectRevision(Guid frameId)
+    {
+        lock (writeGate)
+        {
+            RequireOpen();
+            return DefectSidecarStore.HighestKnownRevision(roots, frameId);
+        }
+    }
+
+    /// <summary>
+    /// 카탈로그 수동 복구의 다시 쓰기입니다. 평소 쓰기와 같지만, 디스크 기록이 <b>깨져</b>
+    /// 읽히지 않으면 지금 카탈로그와 결함 폴더를 원본 그대로 보관(<c>library.corrupt-*</c>)한
+    /// 뒤 그 파일만 치우고 씁니다. 평소 쓰기는 읽을 수 없는 기록 위에 쓰지 않습니다. 읽기
+    /// 권한 오류나 더 새 버전 기록은 여기서도 건드리지 않습니다.
+    /// </summary>
+    public DefectSidecarWriteResult RewriteDefectRecipeForRepair(DefectRecipeSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        lock (writeGate)
+        {
+            RequireOpen();
+            if (mutationBlocked)
+            {
+                return DefectSidecarWriteResult.Failure(DefectSidecarError.IoFailure);
+            }
+            lock (DefectSidecarStore.Gate)
+            {
+                string path = DefectSidecarStore.PathFor(roots, snapshot.FrameId);
+                DefectSidecarError existing =
+                    DefectSidecarFile.ReadFile(path, snapshot.FrameId).Error;
+                if (existing is DefectSidecarError.InvalidContent or
+                    DefectSidecarError.InvalidSnapshot or DefectSidecarError.InvalidFrameId)
+                {
+                    if (!CatalogSidelinedFiles.Preserve(roots))
+                    {
+                        return DefectSidecarWriteResult.Failure(DefectSidecarError.IoFailure);
+                    }
+                    try
+                    {
+                        File.Delete(path);
+                        DefectSidecarValidationCache.Invalidate(path);
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        return DefectSidecarWriteResult.Failure(DefectSidecarError.AccessDenied);
+                    }
+                    catch (IOException)
+                    {
+                        return DefectSidecarWriteResult.Failure(DefectSidecarError.IoFailure);
+                    }
+                }
+                return DefectSidecarStore.WriteLocked(roots, snapshot);
+            }
+        }
+    }
+
+    /// <summary>
     /// sidecar를 먼저 durable하게 기록합니다. 호출자는 이 성공 뒤 catalog의
     /// hasDefectEdits를 true로 commit해야 하며, 반대 순서는 Write가 거부합니다.
     /// </summary>

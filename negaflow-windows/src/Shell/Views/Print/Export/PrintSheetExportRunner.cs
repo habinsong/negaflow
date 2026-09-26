@@ -36,6 +36,9 @@ internal sealed class PrintSheetExportRunner
     private readonly OutputTaskGroup outputTasks = new();
     internal Task DrainAsync() => outputTasks.DrainAsync();
 
+    /// <summary>인화 패키지를 쓰는 중인지입니다. 카탈로그 수동 복구·재설치가 이 동안 기다립니다.</summary>
+    internal bool IsRunning => isRunning || outputTasks.IsRunning;
+
     internal PrintSheetExportRunner(
         Func<IReadOnlyList<LibraryFrameSnapshot>> sources,
         Func<WorkspacePresentationState?> state,

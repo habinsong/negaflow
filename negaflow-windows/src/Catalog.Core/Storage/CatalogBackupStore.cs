@@ -44,7 +44,74 @@ internal static class CatalogBackupStore
             return CatalogBackupCreateResult.Failure(
                 CatalogBackupError.DefectSidecarUnavailable);
         }
+        return CreateGeneration(
+            roots, snapshot, defectFrameIds, defectEntries, fromMemory: false,
+            createdAt, retentionCount, beforeValidation);
+    }
 
+    /// <summary>
+    /// 열린 문서의 <b>메모리 상태</b>로 세대를 만듭니다. 디스크의 카탈로그나 결함 기록이
+    /// 어긋나 있어도 쓸 수 있어야 하는 자리(카탈로그 재설치)가 씁니다 — macOS 도 재설치는
+    /// <c>makeManualBackupPayload()</c> 로 메모리 카탈로그와 recipe 를 담습니다.
+    /// </summary>
+    /// <param name="recipes">결함 편집을 선언한 사진마다의 recipe 입니다.</param>
+    public static CatalogBackupCreateResult CreateFromMemory(
+        StorageRootSet roots,
+        CatalogSnapshot snapshot,
+        IReadOnlyDictionary<Guid, DefectRecipeSnapshot> recipes,
+        DateTimeOffset createdAt,
+        int retentionCount)
+    {
+        ArgumentNullException.ThrowIfNull(roots);
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(recipes);
+        if (retentionCount < 1)
+        {
+            return CatalogBackupCreateResult.Failure(CatalogBackupError.InvalidRetention);
+        }
+        if (!CatalogBackupFiles.HasValidRoots(roots))
+        {
+            return CatalogBackupCreateResult.Failure(
+                CatalogBackupError.InvalidStorageRoots);
+        }
+        if (!CatalogBackupCodec.TryGetDefectFrameIds(snapshot, out IReadOnlyList<string>? defectFrameIds))
+        {
+            return CatalogBackupCreateResult.Failure(CatalogBackupError.InvalidCatalog);
+        }
+        List<DefectSidecarCatalogEntry> entries = [];
+        foreach (string frameId in defectFrameIds)
+        {
+            if (!Guid.TryParseExact(frameId, "D", out Guid parsed) ||
+                !recipes.TryGetValue(parsed, out DefectRecipeSnapshot? recipe) ||
+                recipe.FrameId != parsed)
+            {
+                return CatalogBackupCreateResult.Failure(
+                    CatalogBackupError.DefectSidecarUnavailable);
+            }
+            entries.Add(new DefectSidecarCatalogEntry(frameId, parsed, string.Empty, recipe));
+        }
+        entries.Sort((left, right) => StringComparer.Ordinal.Compare(
+            left.CatalogFrameId,
+            right.CatalogFrameId));
+        return CreateGeneration(
+            roots, snapshot, defectFrameIds, entries, fromMemory: true,
+            createdAt, retentionCount, beforeValidation: null);
+    }
+
+    /// <param name="fromMemory">
+    /// 결함 기록을 디스크에서 복사하지 않고 <see cref="DefectSidecarCatalogEntry.Snapshot"/> 을
+    /// sidecar 와 같은 바이트로 직렬화해 씁니다.
+    /// </param>
+    private static CatalogBackupCreateResult CreateGeneration(
+        StorageRootSet roots,
+        CatalogSnapshot snapshot,
+        IReadOnlyList<string> defectFrameIds,
+        IReadOnlyList<DefectSidecarCatalogEntry> defectEntries,
+        bool fromMemory,
+        DateTimeOffset createdAt,
+        int retentionCount,
+        Action<string>? beforeValidation)
+    {
         string? stagingPath = null;
         bool promoted = false;
         try
@@ -86,7 +153,16 @@ internal static class CatalogBackupStore
             {
                 string fileName = DefectSidecarStore.FileName(entry.FrameId);
                 string destination = Path.Combine(defectsPath, fileName);
-                CatalogBackupFiles.CopyDurable(entry.Path, destination);
+                if (fromMemory)
+                {
+                    CatalogBackupFiles.WriteDurable(
+                        destination,
+                        DefectSidecarCodec.Serialize(entry.Snapshot));
+                }
+                else
+                {
+                    CatalogBackupFiles.CopyDurable(entry.Path, destination);
+                }
                 DefectSidecarReadResult copied = DefectSidecarFile.ReadFile(
                     destination,
                     entry.FrameId);

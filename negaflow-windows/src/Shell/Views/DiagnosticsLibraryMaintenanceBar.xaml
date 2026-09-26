@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    진단 패널 맨 아래 한 줄입니다. macOS `DiagnosticsLibraryMaintenanceBar` —
+    `LazyVGrid` 두 칸(같은 폭, 사이 8): 왼쪽 카탈로그 수동 복구, 오른쪽 카탈로그 재설치.
+    각 알약 오른쪽 작은 단추는 카탈로그 파일을 탐색기에서 엽니다.
+-->
+<UserControl
+    x:Class="Negaflow.Shell.Views.DiagnosticsLibraryMaintenanceBar"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
+    <Grid ColumnSpacing="8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <controls:QuickActionPill x:Name="RepairPill" />
+        <controls:QuickActionPill x:Name="ReinstallPill" Grid.Column="1" />
+    </Grid>
+</UserControl>

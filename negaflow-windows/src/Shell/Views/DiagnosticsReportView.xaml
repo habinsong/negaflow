@@ -3,16 +3,19 @@
     x:Class="Negaflow.Shell.Views.DiagnosticsReportView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Negaflow.Shell.Views"
     AutomationProperties.AutomationId="negaflow.diagnostics.panel">
     <!--
         macOS DiagnosticsReportView 와 같은 골격입니다 - 머리줄(제목·생성 시각·전체 복사·
         새로고침) 아래 구역 카드 넷: 최근 문제 · 최근 실패 이벤트 · 라이브러리 상태 · 스캐너.
+        맨 아래 한 줄은 스크롤 밖에 고정한 카탈로그 수동 복구 · 재설치입니다.
         수치도 그대로입니다: 안쪽 여백 20 · 구역 사이 14 · 내용 폭 500.
     -->
     <Grid Background="{ThemeResource NegaflowWindowBrush}" Padding="20" RowSpacing="14">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0" ColumnSpacing="10" VerticalAlignment="Center">
@@ -63,5 +66,7 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="Sections" Spacing="14" />
         </ScrollViewer>
+
+        <local:DiagnosticsLibraryMaintenanceBar x:Name="MaintenanceBar" Grid.Row="2" />
     </Grid>
 </UserControl>

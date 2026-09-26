@@ -109,6 +109,7 @@ internal static class Program
         SourceRelinkDefectTests.Run();
         VirtualCopyDefectReviewTests.Run();
         DefectTerminationTests.Run();
+        LibraryCatalogMaintenanceTests.Run();
         RemovedDefectSidecarTests.Run();
         Negaflow.Shell.UnitTests.Defects.ColdExportDefectCoverageTests.Run();
         Negaflow.Shell.UnitTests.Develop.CropAspectExactnessTests.Run();

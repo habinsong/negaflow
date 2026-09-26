@@ -1563,6 +1563,13 @@
   <data name="libraryRecoveryStartFreshConfirmMessage.Text" xml:space="preserve"><value>当前目录不会删除，会保留在原处旁边。照片文件和备份保持不变，只有图库列表从空白开始。</value><comment>LibraryRecoveryLocalizedText.startFreshConfirmationMessage</comment></data>
   <data name="libraryRecoveryStartFreshFailed.Text" xml:space="preserve"><value>无法新建图库。</value><comment>LibraryRecoveryLocalizedText.startFreshFailed</comment></data>
   <data name="libraryCatalogBlockedStatus.Text" xml:space="preserve"><value>无法安全打开图库目录，已保持原文件不变。</value><comment>AppLocalizedPhrase.libraryCatalogBlockedStatus</comment></data>
+  <data name="libraryCatalogRepairAction.Text" xml:space="preserve"><value>修复目录</value><comment>AppLocalizedPhrase.libraryCatalogRepairAction</comment></data>
+  <data name="libraryCatalogReinstallAction.Text" xml:space="preserve"><value>重新安装目录</value><comment>AppLocalizedPhrase.libraryCatalogReinstallAction</comment></data>
+  <data name="libraryCatalogRepairHelp.Text" xml:space="preserve"><value>保留目录文件，重新同步修复配方和保存状态，然后重新启动 negaflow。</value><comment>AppLocalizedPhrase.libraryCatalogRepairHelp</comment></data>
+  <data name="libraryCatalogReinstallHelp.Text" xml:space="preserve"><value>用当前图库创建一个经过验证的备份，然后重新启动 negaflow 并用它重新安装目录和修复配方。原有文件会另行保留。</value><comment>AppLocalizedPhrase.libraryCatalogReinstallHelp</comment></data>
+  <data name="libraryCatalogRelaunchingStatus.Text" xml:space="preserve"><value>图库目录已整理。正在重新启动 negaflow。</value><comment>AppLocalizedPhrase.libraryCatalogRelaunchingStatus</comment></data>
+  <data name="libraryCatalogRepairFailedStatus.Text" xml:space="preserve"><value>目录修复失败。请尝试“重新安装目录”。</value><comment>AppLocalizedPhrase.libraryCatalogRepairFailedStatus</comment></data>
+  <data name="libraryCatalogReinstallFailedStatus.Text" xml:space="preserve"><value>无法准备重新安装目录。</value><comment>AppLocalizedPhrase.libraryCatalogReinstallFailedStatus</comment></data>
   <data name="libraryBackupEmpty.Text" xml:space="preserve"><value>没有备份</value><comment>AppLocalizedPhrase.libraryBackupEmpty</comment></data>
   <data name="libraryBackupLoadFailed.Text" xml:space="preserve"><value>无法载入备份</value><comment>AppLocalizedPhrase.libraryBackupLoadFailed</comment></data>
   <data name="libraryBackupRefresh.Content" xml:space="preserve"><value>刷新</value><comment>AppLocalizedPhrase.libraryBackupRefresh</comment></data>

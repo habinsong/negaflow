@@ -329,7 +329,8 @@ public sealed partial class MainWindow : Window
         _ = args;
         if (diagnosticsWindow is null)
         {
-            diagnosticsWindow = new DiagnosticsWindow(settingsStore, CollectDiagnosticsAsync);
+            diagnosticsWindow = new DiagnosticsWindow(
+                settingsStore, CollectDiagnosticsAsync, CatalogMaintenanceActions());
             diagnosticsWindow.Closed += OnDiagnosticsWindowClosed;
         }
         diagnosticsWindow.Activate();
@@ -465,6 +466,12 @@ public sealed partial class MainWindow : Window
     {
         _ = sender;
         _ = args;
+        // 곁창이 남으면 프로세스가 끝나지 않아 재실행 헬퍼가 기다리기만 합니다.
+        diagnosticsWindow?.Close();
+        diagnosticsWindow = null;
+        quickStartHelpWindow?.Close();
+        quickStartHelpWindow = null;
+        RelaunchIfRequested();
         if (ShellView is null)
         {
             return;

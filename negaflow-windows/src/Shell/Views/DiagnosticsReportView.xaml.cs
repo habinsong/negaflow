@@ -24,6 +24,13 @@ public sealed partial class DiagnosticsReportView : UserControl
     /// <summary>보고서를 다시 만들어 달라는 요청입니다. 창이 채워 줍니다.</summary>
     public Func<Task<DiagnosticsReport>>? ReportSource { get; set; }
 
+    /// <summary>맨 아래 카탈로그 수동 복구·재설치 동작입니다. 창이 채워 줍니다.</summary>
+    public DiagnosticsCatalogMaintenance? Maintenance
+    {
+        get => MaintenanceBar.Maintenance;
+        set => MaintenanceBar.Maintenance = value;
+    }
+
     public async Task RefreshAsync()
     {
         if (ReportSource is not { } source)

@@ -1563,6 +1563,13 @@
   <data name="libraryRecoveryStartFreshConfirmMessage.Text" xml:space="preserve"><value>지금 카탈로그는 지우지 않고 옆에 보관합니다. 사진 파일과 백업은 그대로 두고, 라이브러리 목록만 빈 채로 시작합니다.</value><comment>LibraryRecoveryLocalizedText.startFreshConfirmationMessage</comment></data>
   <data name="libraryRecoveryStartFreshFailed.Text" xml:space="preserve"><value>새 라이브러리를 시작하지 못했습니다.</value><comment>LibraryRecoveryLocalizedText.startFreshFailed</comment></data>
   <data name="libraryCatalogBlockedStatus.Text" xml:space="preserve"><value>라이브러리 카탈로그를 안전하게 열 수 없어 변경하지 않았습니다.</value><comment>AppLocalizedPhrase.libraryCatalogBlockedStatus</comment></data>
+  <data name="libraryCatalogRepairAction.Text" xml:space="preserve"><value>카탈로그 수동 복구</value><comment>AppLocalizedPhrase.libraryCatalogRepairAction</comment></data>
+  <data name="libraryCatalogReinstallAction.Text" xml:space="preserve"><value>카탈로그 재설치</value><comment>AppLocalizedPhrase.libraryCatalogReinstallAction</comment></data>
+  <data name="libraryCatalogRepairHelp.Text" xml:space="preserve"><value>카탈로그 파일은 그대로 두고 결함 보정 레시피와 저장 상태를 다시 맞춘 뒤 앱을 다시 실행합니다.</value><comment>AppLocalizedPhrase.libraryCatalogRepairHelp</comment></data>
+  <data name="libraryCatalogReinstallHelp.Text" xml:space="preserve"><value>지금 라이브러리로 검증된 백업을 만들고, 앱을 다시 실행하면서 카탈로그와 결함 보정 레시피를 새로 설치합니다. 기존 파일은 따로 보관됩니다.</value><comment>AppLocalizedPhrase.libraryCatalogReinstallHelp</comment></data>
+  <data name="libraryCatalogRelaunchingStatus.Text" xml:space="preserve"><value>라이브러리 카탈로그를 정리했습니다. 앱을 다시 실행합니다.</value><comment>AppLocalizedPhrase.libraryCatalogRelaunchingStatus</comment></data>
+  <data name="libraryCatalogRepairFailedStatus.Text" xml:space="preserve"><value>카탈로그 수동 복구에 실패했습니다. 카탈로그 재설치를 시도해 보세요.</value><comment>AppLocalizedPhrase.libraryCatalogRepairFailedStatus</comment></data>
+  <data name="libraryCatalogReinstallFailedStatus.Text" xml:space="preserve"><value>카탈로그 재설치를 준비하지 못했습니다.</value><comment>AppLocalizedPhrase.libraryCatalogReinstallFailedStatus</comment></data>
   <data name="libraryBackupEmpty.Text" xml:space="preserve"><value>백업 없음</value><comment>AppLocalizedPhrase.libraryBackupEmpty</comment></data>
   <data name="libraryBackupLoadFailed.Text" xml:space="preserve"><value>백업을 불러올 수 없습니다</value><comment>AppLocalizedPhrase.libraryBackupLoadFailed</comment></data>
   <data name="libraryBackupRefresh.Content" xml:space="preserve"><value>새로고침</value><comment>AppLocalizedPhrase.libraryBackupRefresh</comment></data>
