@@ -167,9 +167,18 @@ final class FlatbedFrameDetectorTests: XCTestCase {
     }
 
     func testEveryFilmFormatDetectsLandscapeAndPortraitFrames() throws {
-        for (formatIndex, frameFormat) in FilmFrameFormat.allCases.enumerated() {
+        // 규격마다 1·4·6컷을 돌려 쓴다. 목록 순번으로 정하면 규격을 끼워 넣을 때마다 뒤쪽
+        // 규격의 컷 수가 바뀌어(6×17 이 6컷이 되는 식) 시험이 뜻하지 않게 달라지므로 고정한다.
+        let frameCounts: [FilmFrameFormat: Int] = [
+            .fullFrame35mm: 1, .square35mm: 4, .halfFrame35mm: 6,
+            .panorama35mm56x24: 6, .panorama35mm65x24: 4,
+            .medium645: 1, .medium66: 4, .medium67: 6,
+            .medium68: 1, .medium69: 4, .medium612: 6, .medium617: 1,
+        ]
+        XCTAssertEqual(Set(frameCounts.keys), Set(FilmFrameFormat.allCases))
+        for frameFormat in FilmFrameFormat.allCases {
             for orientation in FilmFrameOrientation.allCases {
-                let frameCount = [1, 4, 6][formatIndex % 3]
+                let frameCount = try XCTUnwrap(frameCounts[frameFormat])
                 let image = try makeFlexibleOverview(
                     frameFormat: frameFormat,
                     rows: [Array(repeating: orientation, count: frameCount)]
