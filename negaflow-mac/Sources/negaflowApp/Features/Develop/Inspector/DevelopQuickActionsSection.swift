@@ -51,9 +51,9 @@ struct DevelopQuickActionsSection: View {
                     title: model.text(.commandAutoTone),
                     systemImage: "circle.lefthalf.filled",
                     help: model.text(AppLocalizedPhrase.autoToneHelp),
-                    resetTitle: model.text(AppLocalizedPhrase.reset),
+                    trailingHelp: model.text(AppLocalizedPhrase.reset),
                     action: onAutoTone,
-                    reset: onResetAutoTone
+                    trailingAction: onResetAutoTone
                 )
                 .disabled(!canAutoAdjust)
 
@@ -61,9 +61,9 @@ struct DevelopQuickActionsSection: View {
                     title: model.text(.commandAutoWhiteBalance),
                     systemImage: "thermometer.medium",
                     help: model.text(AppLocalizedPhrase.autoWhiteBalanceHelp),
-                    resetTitle: model.text(AppLocalizedPhrase.reset),
+                    trailingHelp: model.text(AppLocalizedPhrase.reset),
                     action: onAutoWhiteBalance,
-                    reset: onResetAutoWhiteBalance
+                    trailingAction: onResetAutoWhiteBalance
                 )
                 .disabled(!canAutoAdjust)
             }
@@ -109,50 +109,5 @@ private struct QuickTogglePill: View {
             unselectedValue: model.accessibilityText(.notSelected),
             unselectedHint: model.accessibilityText(.select)
         )
-    }
-}
-
-private struct QuickActionPill: View {
-    let title: String
-    let systemImage: String
-    let help: String
-    let resetTitle: String
-    let action: () -> Void
-    let reset: () -> Void
-    @State private var actionHovered = false
-    @State private var resetHovered = false
-
-    var body: some View {
-        HStack(spacing: 2) {
-            Button(action: action) {
-                Label(title, systemImage: systemImage)
-                    .lineLimit(1)
-                    .minimumScaleFactor(AppTypography.minimumScaleFactor)
-                    .frame(maxWidth: .infinity, minHeight: 32)
-                    .padding(.leading, 8)
-                    .background(
-                        Color.primary.opacity(actionHovered ? 0.12 : 0),
-                        in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    )
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .onHover { actionHovered = $0 }
-
-            Button(action: reset) {
-                Image(systemName: "arrow.counterclockwise")
-                    .font(.caption.weight(.semibold))
-                    .frame(width: 24, height: 24)
-                    .background(Color.primary.opacity(resetHovered ? 0.12 : 0), in: Circle())
-            }
-            .buttonStyle(.plain)
-            .onHover { resetHovered = $0 }
-            .help(resetTitle)
-            .accessibilityLabel(resetTitle)
-            .padding(.trailing, 3)
-        }
-        .frame(maxWidth: .infinity)
-        .liquidSurface(cornerRadius: 15, interactive: true)
-        .help(help)
     }
 }

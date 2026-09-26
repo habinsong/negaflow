@@ -1,6 +1,6 @@
 import Foundation
 
-private struct LibraryManualBackupPayload: Sendable {
+struct LibraryManualBackupPayload: Sendable {
     let catalog: LibraryCatalog
     let catalogData: Data
     let defectDataByFrameID: [UUID: Data]
@@ -13,7 +13,7 @@ private struct LibraryManualBackupPayload: Sendable {
     }
 }
 
-private struct LibraryManualBackupResult: Sendable {
+struct LibraryManualBackupResult: Sendable {
     let generationURL: URL
     let drill: LibraryBackupRestoreDrillResult
 }
@@ -101,7 +101,7 @@ extension AppModel {
         return false
     }
 
-    private func makeManualBackupPayload() async -> LibraryManualBackupPayload? {
+    func makeManualBackupPayload() async -> LibraryManualBackupPayload? {
         let persistentFrames = frames.filter { !$0.isPreviewScan }
         guard rollStore.hasExactMembership(for: persistentFrames.map(\.id)) else { return nil }
         let catalog = makeLibraryCatalogValue(
@@ -145,7 +145,7 @@ extension AppModel {
         )
     }
 
-    private func createManualBackupSnapshot(
+    func createManualBackupSnapshot(
         _ payload: LibraryManualBackupPayload,
         backupDirectory: URL,
         verificationDate: Date

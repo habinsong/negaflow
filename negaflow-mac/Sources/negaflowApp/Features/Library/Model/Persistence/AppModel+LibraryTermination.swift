@@ -41,6 +41,14 @@ extension AppModel {
             removeOwnedPreviewFilesForTermination()
             return .terminateNow
         }
+        // 재설치가 다음 실행에 적용할 세대를 이미 예약했다. 지금 커밋해도 그 세대가 통째로
+        // 덮으므로 건너뛴다 — 여기서 커밋이 실패해 재설치의 재실행이 막히지 않게 한다.
+        if isLibraryReinstallPendingRelaunch {
+            librarySaveTask?.cancel()
+            librarySaveTask = nil
+            removeOwnedPreviewFilesForTermination()
+            return .terminateNow
+        }
         guard !isLibraryTerminationSaveInProgress else { return .terminateLater }
         isLibraryTerminationSaveInProgress = true
         // 결함 편집이 없으면 기존 동기 커밋 경로를 그대로 쓴다. 편집이 있으면 먼저 비동기로

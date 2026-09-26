@@ -37,6 +37,7 @@ struct DiagnosticsReportView: View {
                     .controlSize(.large)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            DiagnosticsLibraryMaintenanceBar(exportBatchStore: model.exportBatchStore)
         }
         .padding(outerPadding)
         .frame(width: contentWidth)

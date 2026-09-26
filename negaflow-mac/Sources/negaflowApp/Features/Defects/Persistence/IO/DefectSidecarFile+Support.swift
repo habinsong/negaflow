@@ -74,6 +74,18 @@ extension DefectSidecarFile {
         )
     }
 
+    /// 이 frame 에 대해 디스크와 이번 프로세스가 이미 본 가장 높은 revision. 기록이 사라졌거나
+    /// 어긋난 recipe 를 다시 쓸 때 이보다 높은 revision 을 써야 revision floor 에 막히지 않는다.
+    static func highestKnownRevision(for frameID: UUID, in directory: URL) -> UInt64 {
+        syncOnIOQueue {
+            let floor = revisionFloorState.values[sidecarKey(frameID: frameID, directory: directory)] ?? 0
+            guard case .loaded(.currentV2(_, let stored)) = read(for: frameID, in: directory) else {
+                return floor
+            }
+            return max(floor, stored.identity.revision)
+        }
+    }
+
     static func syncOnIOQueue<T>(_ body: () throws -> T) rethrows -> T {
         _ = configuredQueue
         if DispatchQueue.getSpecific(key: ioQueueKey) == 1 {

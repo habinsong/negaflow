@@ -23,6 +23,8 @@ final class NegaflowApplicationDelegate: NSObject, NSApplicationDelegate {
             guard let self, self.hasPendingTerminationReply else { return }
             self.hasPendingTerminationReply = false
             if !shouldTerminate {
+                self.model.isRelaunchRequested = false
+                self.model.isLibraryReinstallPendingRelaunch = false
                 self.model.reportError(self.model.libraryCatalogBlockMessage(.writeFailed))
             }
             sender.reply(toApplicationShouldTerminate: shouldTerminate)
@@ -35,9 +37,18 @@ final class NegaflowApplicationDelegate: NSObject, NSApplicationDelegate {
             return .terminateLater
         case .terminateCancel:
             hasPendingTerminationReply = false
+            model.isRelaunchRequested = false
+            model.isLibraryReinstallPendingRelaunch = false
             model.reportError(model.libraryCatalogBlockMessage(.writeFailed))
             return .terminateCancel
         }
+    }
+
+    /// 종료가 승인된 뒤에만 불린다. 재실행 요청은 여기서 실행해야 종료가 취소됐을 때 앱이
+    /// 뒤늦게 다시 열리지 않는다.
+    func applicationWillTerminate(_ notification: Notification) {
+        guard model.isRelaunchRequested else { return }
+        try? AppRelauncher.relaunchAfterExit()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

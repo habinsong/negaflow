@@ -615,4 +615,11 @@ enum AppLocalizedPhrase: CaseIterable {
     case settingsScanTab
     case settingsDefaultScanRotationPicker
     case settingsDefaultScanRotationHelp
+    case libraryCatalogRepairAction
+    case libraryCatalogReinstallAction
+    case libraryCatalogRepairHelp
+    case libraryCatalogReinstallHelp
+    case libraryCatalogRelaunchingStatus
+    case libraryCatalogRepairFailedStatus
+    case libraryCatalogReinstallFailedStatus
 }

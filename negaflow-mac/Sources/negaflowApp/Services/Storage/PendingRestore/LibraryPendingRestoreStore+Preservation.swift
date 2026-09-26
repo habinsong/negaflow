@@ -15,18 +15,16 @@ extension LibraryPendingRestoreStore {
                 defectDirectory: defectDirectory,
                 fileManager: fileManager
             )
-            if !health.blocksOpen {
-                do {
-                    _ = try LibraryBackupStore.createSnapshot(
-                        catalogURL: catalogURL,
-                        defectDirectory: defectDirectory,
-                        backupDirectory: backupDirectory,
-                        fileManager: fileManager
-                    )
-                    return
-                } catch {
-                    throw LibraryPendingRestoreError.safetyBackupFailed
-                }
+            // 검증된 세대로 못 만들면(예: 카탈로그가 선언한 결함 기록 파일이 사라짐) 복원을
+            // 포기하지 않고 지금 파일을 원본 그대로 옆에 보관한다. 그것마저 실패할 때만 멈춘다.
+            if !health.blocksOpen,
+               (try? LibraryBackupStore.createSnapshot(
+                   catalogURL: catalogURL,
+                   defectDirectory: defectDirectory,
+                   backupDirectory: backupDirectory,
+                   fileManager: fileManager
+               )) != nil {
+                return
             }
             try preserveUnsafeState(
                 catalogURL: catalogURL,

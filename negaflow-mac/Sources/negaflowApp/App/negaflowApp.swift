@@ -167,6 +167,17 @@ final class AppModel: ObservableObject {
     @Published var savedSearches: [LibrarySavedSearch] = []
     @Published var libraryPendingRestoreMarker: LibraryPendingRestoreMarker?
     @Published var isLibraryMaintenanceInProgress = false
+    /// 진단 패널의 카탈로그 복구/재설치가 요청한 재실행. 종료가 취소되면 되돌린다.
+    var isRelaunchRequested = false
+    /// 재설치가 다음 실행에 적용할 세대를 예약하고 재실행을 요청했다. 종료 커밋을 건너뛴다.
+    var isLibraryReinstallPendingRelaunch = false
+    /// 재실행을 위한 종료 요청. 테스트는 실제 종료 대신 호출 여부만 본다.
+    /// 지금 도는 MainActor 작업 안에서 바로 부르면 AppKit의 종료 대기(terminateLater) 루프가 그
+    /// 작업 안에 중첩돼, 종료 커밋 완료를 알리는 다음 MainActor 작업이 돌지 못하고 멈춘다. 메뉴의
+    /// 종료처럼 런루프 차례에서 부른다.
+    var requestTerminationForRelaunch: @MainActor () -> Void = {
+        NSApp.perform(#selector(NSApplication.terminate(_:)), with: nil, afterDelay: 0)
+    }
     var didRestoreLibrary = false
     var librarySaveTask: Task<Void, Never>?
     var isAcknowledgedLibraryTransactionActive = false
