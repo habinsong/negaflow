@@ -168,14 +168,35 @@ internal sealed class LibraryCatalogPersistence(LibraryDocumentState state)
 
     public CatalogStoreError Save()
     {
+        // macOS `saveLibrary` 와 같은 추적입니다. 진단 패널의 "최근 실패 이벤트" 가 이것을
+        // 읽습니다 — 예전에는 아무도 남기지 않아, 결함 기록이 사라져 저장과 종료가 전부 막힌
+        // 동안에도 그 칸은 "문제 없음" 이었습니다.
+        Diagnostics.AppOperationTrace trace = Diagnostics.AppDiagnostics.Start(
+            Diagnostics.AppDiagnosticOperation.CatalogSave,
+            Diagnostics.AppDiagnosticCategory.Catalog);
         CatalogStoreError error = state.Session.Write(
             state.CreateSnapshot(PersistentFrameRows())).Error;
         if (error == CatalogStoreError.None)
         {
             state.IsDirty = false;
+            trace.Finish();
+        }
+        else
+        {
+            trace.Fail(SaveFailureCode(error));
         }
         return error;
     }
+
+    /// <summary>
+    /// macOS 와 같은 실패 코드입니다. 커밋 전 검증이 선언된 결함 기록을 읽지 못해 거부한 것은
+    /// macOS 의 <c>catalog_snapshot_invalid.defect_sidecar_mismatch</c> 자리이고, 나머지는 쓰기
+    /// 실패입니다. 자세한 사유는 종료 기록과 카탈로그 오류 이름에 남습니다.
+    /// </summary>
+    internal static string SaveFailureCode(CatalogStoreError error) =>
+        error == CatalogStoreError.MissingAuthoritativeData
+            ? "catalog_snapshot_invalid.defect_sidecar_mismatch"
+            : "catalog_write_failed";
 
     /// <summary>
     /// 저장한 뒤 메모리 목록을 다시 짓되, <b>있던 차례를 지킵니다</b>.

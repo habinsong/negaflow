@@ -84,6 +84,12 @@ public static class CatalogSidelinedFiles
             {
                 File.Delete(roots.CatalogPath);
             }
+            // 한 번이라도 저장한 라이브러리에는 직전 판 사본이 늘 남아, 이것을 치우지 않으면 빈
+            // 카탈로그 쓰기가 거부되어 "새 라이브러리로 시작" 이 실패했습니다.
+            if (!SidelinePreviousCopy(roots, retentionCount))
+            {
+                return false;
+            }
             // junction 이면 그 안을 지우지 않고 연결만 끊습니다.
             if (Directory.Exists(roots.DefectRecipeRoot))
             {
@@ -93,6 +99,35 @@ public static class CatalogSidelinedFiles
             }
             Directory.CreateDirectory(roots.DefectRecipeRoot);
             return true;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 주 카탈로그가 없을 때, 커밋이 남긴 직전 판 사본(<c>library.backup.sqlite</c>)을 보관
+    /// 사본(<c>library.corrupt-*</c>)으로 옮깁니다. 주 파일 없이 사본만 남은 자리는 커밋이 멈춘
+    /// 것으로 보아 새 카탈로그 쓰기를 거부하는데, 주 파일이 없을 때 그 사본을 읽는 곳은 없으므로
+    /// 지우지 않고 옆에 두면 잃는 것이 없습니다. macOS 에는 이 사본이 없고, 카탈로그가 없으면
+    /// 그대로 진행합니다(<c>.missing</c>).
+    /// </summary>
+    /// <returns>옮긴 뒤 새 카탈로그를 막는 것이 남지 않았으면 <c>true</c> 입니다.</returns>
+    internal static bool SidelinePreviousCopy(
+        StorageRootSet roots,
+        int retentionCount = DefaultRetentionCount)
+    {
+        try
+        {
+            if (File.Exists(roots.CatalogBackupPath))
+            {
+                File.Move(roots.CatalogBackupPath, Path.Combine(
+                    roots.LibraryRoot,
+                    $"{CatalogPrefix}{Guid.NewGuid():N}{Path.GetExtension(roots.CatalogPath)}"));
+                Prune(roots.LibraryRoot, retentionCount);
+            }
+            return !CatalogCommitRollback.HasBlockingArtifactWhenPrimaryMissing(roots);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {

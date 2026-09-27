@@ -22,6 +22,8 @@ internal static class LibraryCatalogMaintenanceTests
         RepairRewritesCorruptSidecarFromMemory();
         RepairLeavesRecipeThatCannotBeReplaced();
         ReinstallSchedulesVerifiedRestoreThatNextOpenApplies();
+        RecoveryScreenRestoresWhenSidecarIsMissingAtOpen();
+        RecoveryScreenStartsFreshAfterCommittedLibrary();
         MaintenanceDoesNothingWhileBusy();
     }
 
@@ -50,6 +52,10 @@ internal static class LibraryCatalogMaintenanceTests
                 File.Delete(Sidecar(roots, frameId));
                 Check(host.Save() == CatalogStoreError.MissingAuthoritativeData,
                     "maintenance_missing_sidecar_blocks_save");
+                // 진단 패널의 "최근 실패 이벤트" 에 macOS 와 같은 코드로 남아야 합니다.
+                Check(LastCatalogSaveFailureCode() == "catalog_snapshot_invalid.defect_sidecar_mismatch",
+                    "maintenance_missing_sidecar_is_reported",
+                    () => LastCatalogSaveFailureCode() ?? "none");
                 Check(!Quit(host).IsSuccess, "maintenance_missing_sidecar_blocks_quit");
 
                 LibraryCatalogMaintenanceResult repaired = host.RepairCatalog(Idle);
@@ -174,6 +180,66 @@ internal static class LibraryCatalogMaintenanceTests
         });
     }
 
+    /// <summary>
+    /// 앱을 끈 사이 결함 기록이 사라져 열기부터 막힌 경우입니다. 복구 화면에서 백업을 골라
+    /// 되돌릴 수 있어야 합니다 — 예전에는 예약하려고 연 임시 세션이 같은 까닭으로 막혀
+    /// "복원을 예약할 수 없습니다" 로만 끝났습니다(macOS 는 카탈로그를 열지 않고 예약합니다).
+    /// </summary>
+    private static void RecoveryScreenRestoresWhenSidecarIsMissingAtOpen()
+    {
+        RunIsolated("blocked-restore", (roots, frameId) =>
+        {
+            string generationId;
+            using (LibraryHostService host = OpenHost(roots, "maintenance_blocked_restore_open"))
+            {
+                Check(host.CreateBackup().IsSuccess, "maintenance_blocked_restore_backup");
+                generationId = host.BackupGenerations()[0].Id;
+            }
+            File.Delete(Sidecar(roots, frameId));
+
+            using var blocked = new LibraryHostService(
+                new FakeDispatcher(accepts: true),
+                new ScannerWorkflowTests.ThrowingDevelopExporter(),
+                ReadMetadata);
+            Check(blocked.Open(roots) == LibraryHostState.Unavailable,
+                "maintenance_blocked_restore_is_blocked", () => blocked.State.ToString());
+            CatalogPendingRestoreScheduleResult scheduled = blocked.ScheduleRestore(generationId);
+            Check(scheduled.IsSuccess, "maintenance_blocked_restore_schedules",
+                () => scheduled.Error.ToString());
+            Check(blocked.RetryOpen() == LibraryHostState.Open,
+                "maintenance_blocked_restore_reopens",
+                () => $"{blocked.State}/session={blocked.SessionError}/defect={blocked.DefectSidecarError}");
+            Check(blocked.Frames.SingleOrDefault()?.DefectRecipe?.Items.Count == 1,
+                "maintenance_blocked_restore_returns_the_edits");
+        });
+    }
+
+    /// <summary>
+    /// 같은 막힌 라이브러리에서 "새 라이브러리로 시작" 입니다. 한 번이라도 저장한 라이브러리에는
+    /// 직전 판 사본(<c>library.backup.sqlite</c>)이 늘 남아 있어, 그것까지 치우지 않으면 빈
+    /// 카탈로그 쓰기가 "주 파일 없이 사본만 남음" 으로 거부됩니다.
+    /// </summary>
+    private static void RecoveryScreenStartsFreshAfterCommittedLibrary()
+    {
+        RunIsolated("blocked-fresh", (roots, frameId) =>
+        {
+            File.Delete(Sidecar(roots, frameId));
+            Check(File.Exists(roots.CatalogBackupPath), "maintenance_blocked_fresh_has_previous_copy");
+            using var blocked = new LibraryHostService(
+                new FakeDispatcher(accepts: true),
+                new ScannerWorkflowTests.ThrowingDevelopExporter(),
+                ReadMetadata);
+            Check(blocked.Open(roots) == LibraryHostState.Unavailable,
+                "maintenance_blocked_fresh_is_blocked", () => blocked.State.ToString());
+            Check(blocked.StartFreshLibrary() && blocked.State == LibraryHostState.Open,
+                "maintenance_blocked_fresh_starts",
+                () => $"{blocked.State}/session={blocked.SessionError}/store={blocked.StoreError}");
+            Check(blocked.Frames.Count == 0, "maintenance_blocked_fresh_is_empty");
+            Check(Directory.EnumerateFiles(roots.LibraryRoot, "library.corrupt-*").Any(),
+                "maintenance_blocked_fresh_preserves_the_catalog");
+        });
+    }
+
     private static void MaintenanceDoesNothingWhileBusy()
     {
         RunIsolated("busy", (roots, frameId) =>
@@ -199,6 +265,11 @@ internal static class LibraryCatalogMaintenanceTests
               closed.RepairCatalog(Idle).Error == LibraryCatalogMaintenanceError.Unavailable,
             "maintenance_needs_an_open_library");
     }
+
+    private static string? LastCatalogSaveFailureCode() =>
+        Negaflow.Shell.Diagnostics.AppDiagnostics.RecentEvents.LastOrDefault(item =>
+            item.Operation == Negaflow.Shell.Diagnostics.AppDiagnosticOperation.CatalogSave &&
+            item.Phase == Negaflow.Shell.Diagnostics.AppDiagnosticPhase.Error)?.Code;
 
     private static LibraryDefectTerminationResult Quit(LibraryHostService host) =>
         host.PrepareForTerminationAsync(Path.GetTempPath()).GetAwaiter().GetResult();

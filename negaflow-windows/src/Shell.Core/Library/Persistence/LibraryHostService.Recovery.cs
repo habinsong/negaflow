@@ -83,19 +83,23 @@ public sealed partial class LibraryHostService
     /// 고른 세대로 되돌리도록 예약합니다. 실제 치환은 <b>다음 열기</b>에 일어납니다 —
     /// 지금 열려 있는 카탈로그를 발밑에서 갈아 끼우지 않습니다.
     /// </summary>
+    /// <remarks>
+    /// 못 열었을 때는 카탈로그를 열지 않고 예약만 적습니다(<see cref="CatalogRecovery.ScheduleRestore"/>).
+    /// 예전에는 임시 세션을 열어 예약했는데, 그 열기가 막힌 까닭에 똑같이 걸려 복구 화면의
+    /// "선택한 백업 복원" 이 늘 "복원을 예약할 수 없습니다" 로 끝났습니다.
+    /// </remarks>
     public CatalogPendingRestoreScheduleResult ScheduleRestore(string generationId)
     {
         if (document is { } open)
         {
             return open.ScheduleRestore(generationId);
         }
-        using CatalogSession? session = OpenTemporarySession();
-        return session is null
-            ? new CatalogPendingRestoreScheduleResult(
+        return AttemptedRoots is { } roots
+            ? CatalogRecovery.ScheduleRestore(roots, generationId)
+            : new CatalogPendingRestoreScheduleResult(
                 null,
                 default,
-                CatalogPendingRestoreError.InvalidStorageRoots)
-            : session.ScheduleRestore(generationId);
+                CatalogPendingRestoreError.InvalidStorageRoots);
     }
 
     public CatalogPendingRestoreOperationResult CancelScheduledRestore()
@@ -104,11 +108,10 @@ public sealed partial class LibraryHostService
         {
             return open.CancelScheduledRestore();
         }
-        using CatalogSession? session = OpenTemporarySession();
-        return session is null
-            ? new CatalogPendingRestoreOperationResult(
-                CatalogPendingRestoreError.InvalidStorageRoots)
-            : session.CancelScheduledRestore();
+        return AttemptedRoots is { } roots
+            ? CatalogRecovery.CancelScheduledRestore(roots)
+            : new CatalogPendingRestoreOperationResult(
+                CatalogPendingRestoreError.InvalidStorageRoots);
     }
 
     /// <summary>
@@ -142,7 +145,4 @@ public sealed partial class LibraryHostService
         using CatalogSession? session = CatalogSession.Open(roots).Session;
         return session is not null && session.Write(CatalogSnapshot.Empty).IsSuccess;
     }
-
-    private CatalogSession? OpenTemporarySession() =>
-        AttemptedRoots is { } roots ? CatalogSession.Open(roots).Session : null;
 }
