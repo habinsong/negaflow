@@ -121,18 +121,19 @@ extension ContentView {
             Button(model.text(AppLocalizedPhrase.ascending)) { filmstripSortAscending = true }
             Button(model.text(AppLocalizedPhrase.descending)) { filmstripSortAscending = false }
         } label: {
-            HStack(spacing: 4) {
-                Text(bottomSortKey.displayName(language: model.appLanguage))
-                    .lineLimit(1)
-                Image(systemName: filmstripSortAscending ? "arrow.up" : "arrow.down")
-                    .font(.caption2.weight(.semibold))
-            }
+            // 한 줄 텍스트로 그린다. macOS 27 SDK 의 테두리 없는 메뉴는 HStack 라벨을 아이콘이
+            // 앞에 오게 다시 배치해, 원래의 "이름 ↑" 순서가 뒤집혔다.
+            Text("\(Text(bottomSortKey.displayName(language: model.appLanguage))) \(Image(systemName: filmstripSortAscending ? "arrow.up" : "arrow.down"))")
+            .lineLimit(1)
             .font(.caption2.weight(.semibold))
             .padding(.horizontal, 4)
             .frame(height: 22)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
+        // macOS 27 SDK 부터 테두리 없는 메뉴가 남는 폭을 차지해 하단바 오른쪽 묶음이 흩어진다.
+        // 내용 크기로 고정해 오른쪽 정렬을 지킨다.
+        .fixedSize()
         .help(model.text(AppLocalizedPhrase.sortBy))
     }
 
@@ -152,18 +153,15 @@ extension ContentView {
                 }
             }
         } label: {
-            HStack(spacing: 4) {
-                Text(bottomFilmstripScope.displayName(language: model.appLanguage))
-                    .lineLimit(1)
-                Image(systemName: "line.3.horizontal.decrease")
-                    .font(.caption2.weight(.semibold))
-            }
+            Text("\(Text(bottomFilmstripScope.displayName(language: model.appLanguage))) \(Image(systemName: "line.3.horizontal.decrease"))")
+            .lineLimit(1)
             .font(.caption2.weight(.semibold))
             .padding(.horizontal, 4)
             .frame(height: 22)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
+        .fixedSize()
         .help(model.text(AppLocalizedPhrase.filmstripScope))
         .accessibilityIdentifier("negaflow.filmstrip.scope")
     }

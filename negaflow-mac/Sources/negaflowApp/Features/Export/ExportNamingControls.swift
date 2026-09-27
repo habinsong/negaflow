@@ -31,6 +31,7 @@ struct ExportNamingControls: View {
                 Image(systemName: "plus")
             }
             .menuStyle(.borderlessButton)
+            .fixedSize()
             .help(localized(.namingOptions))
         }
         if ExportNamingTemplate.usesSequence(model.exportNamingTemplate) {

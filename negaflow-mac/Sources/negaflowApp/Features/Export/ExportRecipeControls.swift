@@ -47,6 +47,7 @@ struct ExportRecipeControls: View {
                     Image(systemName: "ellipsis.circle")
                 }
                 .menuStyle(.borderlessButton)
+                .fixedSize()
                 .help(model.localizedExportRecipe(.title))
             }
 

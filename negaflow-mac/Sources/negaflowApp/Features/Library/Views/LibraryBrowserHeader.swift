@@ -168,18 +168,16 @@ struct LibraryBrowserHeader: View {
                 unselectedHint: model.accessibilityText(.select)
             )
         } label: {
-            HStack(spacing: 4) {
-                Text(effectiveSortKey.displayName(language: model.appLanguage))
-                    .lineLimit(1)
-                Image(systemName: effectiveSortAscending ? "arrow.up" : "arrow.down")
-                    .font(.caption2.weight(.semibold))
-            }
+            // 한 줄 텍스트로 그려 "이름 ↑" 순서를 지킨다(macOS 27 SDK 메뉴 라벨 재배치 방지).
+            Text("\(Text(effectiveSortKey.displayName(language: model.appLanguage))) \(Text(Image(systemName: effectiveSortAscending ? "arrow.up" : "arrow.down")).font(.caption2.weight(.semibold)))")
+            .lineLimit(1)
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 4)
             .frame(height: 22)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
+        .fixedSize()
         .disabled(usesStoredDefinition)
     }
 
