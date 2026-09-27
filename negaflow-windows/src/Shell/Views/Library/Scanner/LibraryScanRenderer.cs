@@ -176,8 +176,13 @@ internal sealed class LibraryScanRenderer
         view.ScanPreviewButton.IsEnabled = view.scanSession.CanPreview;
         view.ScanStartButton.IsEnabled = view.scanSession.CanScan;
         view.ScanRescanButton.IsEnabled = !view.scanSession.IsDetecting && !view.scanSession.IsScanning;
+        // 평판은 프리뷰로 프레임을 찾기 전에는 스캔할 것이 없습니다. 그동안은 프리뷰 단추만
+        // 둡니다 — 예전에는 스캔 단추가 켜져 있어 누르면 "사진 1 스캔 오류: unavailable" 이었습니다.
+        bool flatbedWaitsForPreview = view.scanSession.UsesFlatbedRegionWorkflow &&
+            view.scanSession.Regions.Count == 0;
+        Grid.SetColumnSpan(view.ScanPreviewButton, flatbedWaitsForPreview ? 2 : 1);
         // macOS 는 스캔 중이면 스캔 단추 자리를 취소로 바꿉니다.
-        view.ScanStartButton.Visibility = view.scanSession.IsScanning
+        view.ScanStartButton.Visibility = view.scanSession.IsScanning || flatbedWaitsForPreview
             ? Visibility.Collapsed
             : Visibility.Visible;
         // macOS `.disabled(model.isScanning)` 은 옵션 Section 에만 걸립니다. 단추 줄까지 잠그면
