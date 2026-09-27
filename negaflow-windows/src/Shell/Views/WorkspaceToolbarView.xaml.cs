@@ -428,8 +428,11 @@ public sealed partial class WorkspaceToolbarView : UserControl
         bool showPreview = hasScanner && supportsPreview;
         PreviewScanButton.Visibility = showPreview ? Visibility.Visible : Visibility.Collapsed;
         PreviewScanDivider.Visibility = showPreview ? Visibility.Visible : Visibility.Collapsed;
-        ScanFrameButton.Visibility = hasScanner ? Visibility.Visible : Visibility.Collapsed;
-        ScannerExportDivider.Visibility = hasScanner ? Visibility.Visible : Visibility.Collapsed;
+        // 평판은 프리뷰로 프레임을 찾기 전까지 "프리뷰 스캔" 만 둡니다. 예전에는 이때 "사진 스캔"
+        // 을 누르면 프레임 0개로 돌다가 "사진 1 스캔 오류: unavailable" 이 났습니다.
+        bool showScan = hasScanner && !state.FlatbedWaitsForPreview;
+        ScanFrameButton.Visibility = showScan ? Visibility.Visible : Visibility.Collapsed;
+        ScannerExportDivider.Visibility = showScan ? Visibility.Visible : Visibility.Collapsed;
         PreviewScanButton.IsEnabled = state.CanPreview;
         ScanFrameButton.IsEnabled = state.CanScan;
         TitleBarInteractiveRegionsChanged?.Invoke(this, EventArgs.Empty);

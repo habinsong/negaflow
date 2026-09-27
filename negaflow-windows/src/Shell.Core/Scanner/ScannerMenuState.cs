@@ -14,12 +14,17 @@ namespace Negaflow.Shell;
 /// <param name="CanPreview">macOS <c>model.canPreview</c>.</param>
 /// <param name="CanScan">macOS <c>model.canScan</c>.</param>
 /// <param name="UsesFlatbedRegionWorkflow">macOS <c>model.usesFlatbedRegionWorkflow</c>.</param>
+/// <param name="FlatbedWaitsForPreview">
+/// 평판인데 프리뷰로 찾은 프레임이 아직 없습니다. 스캔할 것이 없으므로 "사진 스캔" 단추를
+/// 숨깁니다 — 스캔 패널과 같은 규칙입니다.
+/// </param>
 public readonly record struct ScannerMenuState(
     bool CanDetect,
     bool SimulatorEnabled,
     bool CanPreview,
     bool CanScan,
-    bool UsesFlatbedRegionWorkflow)
+    bool UsesFlatbedRegionWorkflow,
+    bool FlatbedWaitsForPreview = false)
 {
     /// <summary>
     /// 아직 스캔 세션이 없는 상태입니다. 장치를 찾는 것만 할 수 있고 나머지는 잠깁니다 —

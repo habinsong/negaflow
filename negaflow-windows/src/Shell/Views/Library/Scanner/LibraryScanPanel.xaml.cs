@@ -95,7 +95,8 @@ public sealed partial class LibraryScanPanel : UserControl
             session.SimulatorEnabled,
             session.CanPreview,
             session.CanScan,
-            session.UsesFlatbedRegionWorkflow)
+            session.UsesFlatbedRegionWorkflow,
+            session.UsesFlatbedRegionWorkflow && session.Regions.Count == 0)
         : ScannerMenuState.Empty;
 
     /// <summary>
