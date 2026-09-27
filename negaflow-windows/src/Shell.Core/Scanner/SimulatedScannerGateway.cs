@@ -151,11 +151,19 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
                 ["tiff"],
                 "simulator",
                 // macOS mock 과 같은 크기입니다. 필름 스캐너는 35mm 한 컷, 평판은 A4 입니다.
+                // 최소 영역도 같습니다(필름 4×4, 평판 5×5). 예전에는 두 장치 모두 최소가 36×24 라
+                // 필름 스캐너의 스캔 영역을 규격 크기로 줄일 수 없었습니다.
                 maxWidth,
                 maxHeight,
-                new ScannerPluginScanArea(0.0, 0.0, 36.0, 24.0),
+                flatbed
+                    ? new ScannerPluginScanArea(0.0, 0.0, 5.0, 5.0)
+                    : new ScannerPluginScanArea(0.0, 0.0, 4.0, 4.0),
                 new ScannerPluginScanArea(0.0, 0.0, maxWidth, maxHeight),
-                "millimeter"),
+                "millimeter",
+                ScanOriginXRange: flatbed ? new ScannerOptionRange(0, 205, 0.1) : null,
+                ScanOriginYRange: flatbed ? new ScannerOptionRange(0, 292, 0.1) : null,
+                ScanWidthRange: flatbed ? new ScannerOptionRange(5, 210, 0.1) : null,
+                ScanHeightRange: flatbed ? new ScannerOptionRange(5, 297, 0.1) : null),
             false));
     }
 

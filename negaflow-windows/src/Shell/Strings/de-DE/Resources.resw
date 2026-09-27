@@ -1090,6 +1090,10 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="scanCustomFrameRatio.Text" xml:space="preserve"><value>Breite : Höhe</value><comment>AppLocalizedPhrase.scanCustomFrameRatio</comment></data>
   <data name="scanCustomFrameWidth.Text" xml:space="preserve"><value>Breite</value><comment>AppLocalizedPhrase.scanCustomFrameWidth</comment></data>
   <data name="scanCustomFrameHeight.Text" xml:space="preserve"><value>Höhe</value><comment>AppLocalizedPhrase.scanCustomFrameHeight</comment></data>
+  <data name="hardwareScanArea.Text" xml:space="preserve"><value>Hardware-Scanbereich</value><comment>AppLocalizedPhrase.hardwareScanArea</comment></data>
+  <data name="scanAreaFull.Text" xml:space="preserve"><value>Ganzes Bild</value><comment>AppLocalizedPhrase.full</comment></data>
+  <data name="scanAreaWidth.Text" xml:space="preserve"><value>Breite</value><comment>AppLocalizedPhrase.scanAreaWidth</comment></data>
+  <data name="scanAreaHeight.Text" xml:space="preserve"><value>Höhe</value><comment>AppLocalizedPhrase.scanAreaHeight</comment></data>
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>Bild einfügen</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>Bilder neu suchen</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
   <data name="scanRemoveFrame.Text" xml:space="preserve"><value>Bild entfernen</value><comment>AppLocalizedPhrase.flatbedRemoveFrame</comment></data>

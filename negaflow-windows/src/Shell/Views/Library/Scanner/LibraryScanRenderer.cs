@@ -140,6 +140,8 @@ internal sealed class LibraryScanRenderer
             ? Visibility.Visible
             : Visibility.Collapsed;
         view.customRatio.Sync(customRatio);
+        view.ScanHardwareArea.Session = view.scanSession;
+        view.ScanHardwareArea.Render();
         view.ScanDetectionModeRow.Visibility = flatbed ? Visibility.Visible : Visibility.Collapsed;
         view.ScanRegionsRow.Visibility = view.ScanDetectionModeRow.Visibility;
         // 평판에서는 판 위에 놓인 프레임 수가 곧 스캔 수이므로 사진 수 줄이 없습니다.

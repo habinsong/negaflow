@@ -160,7 +160,7 @@ public sealed class ScanSessionController
             ScanFrameSizing.UpdateCustom(Options, width, height, Capabilities);
         if (result == CustomFrameRatioUpdate.Changed)
         {
-            SetOptions(next);
+            SetOptions(ScanHardwareArea.AfterFrameSizeChange(next, Capabilities));
             RaiseChanged();
         }
         return result;
@@ -172,7 +172,7 @@ public sealed class ScanSessionController
         {
             return false;
         }
-        SetOptions(next);
+        SetOptions(ScanHardwareArea.AfterFrameSizeChange(next, Capabilities));
         RaiseChanged();
         return true;
     }
@@ -445,7 +445,7 @@ public sealed class ScanSessionController
         }
         else
         {
-            SetOptions(ClampToCapabilities(Options));
+            SetOptions(ScanHardwareArea.AfterFrameSizeChange(ClampToCapabilities(Options), Capabilities));
         }
         RaiseChanged();
     }

@@ -2,7 +2,8 @@
 <UserControl
     x:Class="Negaflow.Shell.Views.Library.Scanner.LibraryScanPanel"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Negaflow.Shell.Views.Library.Scanner">
     <UserControl.Resources>
         <ResourceDictionary>
             <Style x:Key="NegaflowScannerComboBoxStyle" TargetType="ComboBox">
@@ -374,6 +375,13 @@
                                         Margin="0,1"
                                         Background="{ThemeResource NegaflowDividerBrush}"
                                         Visibility="{Binding Visibility, ElementName=ScanRegionsRow}" />
+                                    <!-- macOS `hardwareScanAreaControls` — 평판 영역 워크플로가 아닐 때 사진 수 앞. -->
+                                    <local:ScanHardwareAreaControl x:Name="ScanHardwareArea" x:FieldModifier="internal" Visibility="Collapsed" />
+                                    <Border
+                                        Height="1"
+                                        Margin="0,1"
+                                        Background="{ThemeResource NegaflowDividerBrush}"
+                                        Visibility="{Binding Visibility, ElementName=ScanHardwareArea}" />
                                     <Grid x:Name="ScanFrameCountRow" x:FieldModifier="internal" ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />

@@ -126,6 +126,7 @@ internal static class ScanOptionPolicy
             Infrared = infrared,
             BatchCount = Math.Clamp(options.BatchCount, 1, MaximumBatchCount),
             FolderName = ExportNamingTemplate.SanitizeComponent(options.FolderName),
+            HardwareScanArea = ScanHardwareArea.Clamp(capabilities, options.HardwareScanArea),
         }, capabilities, formats);
     }
 
@@ -191,15 +192,15 @@ internal static class ScanOptionPolicy
     internal static ScannerPluginScanArea FullFrame35mm { get; } = new(0.0, 0.0, 36.0, 24.0);
 
     /// <summary>
-    /// macOS <c>resolvedHardwareScanArea(for:)</c> — 판 최대 영역을 장치 격자에 맞춰 접습니다.
+    /// macOS <c>resolvedHardwareScanArea(for:)</c> — 고른 스캔 영역(없으면 판 최대 영역)을 장치
+    /// 격자에 맞춰 접습니다.
     /// </summary>
     internal static ScannerPluginScanArea? ResolvedHardwareScanArea(
-        ScannerPluginCapabilities capabilities)
+        ScannerPluginCapabilities capabilities,
+        ScannerPluginScanArea? selected = null)
     {
         ArgumentNullException.ThrowIfNull(capabilities);
-        return capabilities.PhysicalScanAreaBounds is not { } bounds
-            ? null
-            : capabilities.ClampedPhysicalScanArea(bounds.Maximum);
+        return ScanHardwareArea.Clamp(capabilities, selected);
     }
 
     /// <summary>
@@ -272,7 +273,7 @@ internal static class ScanOptionPolicy
             ScannerPluginScanArea? requested = flatbed ? region?.ToScanArea(previewArea) : null;
             scanArea = requested is not null
                 ? capabilities.ClampedPhysicalScanArea(requested) ?? requested
-                : ResolvedHardwareScanArea(capabilities) ?? FullFrame35mm;
+                : ResolvedHardwareScanArea(capabilities, options.HardwareScanArea) ?? FullFrame35mm;
         }
 
         // wire 의 `preview` 는 **화면의 의도가 아니라 해상도를 따릅니다.** macOS 도

@@ -39,6 +39,13 @@ public sealed record ScanOptions
     /// </summary>
     public double CustomFrameAcrossMm { get; init; } = FilmFrameRatio.CandidateAcrossMm[0];
 
+    /// <summary>
+    /// 위치 지정이 안 되는 장치(필름 스캐너)의 스캔 영역입니다. 규격·수동 비율 크기로 가운데에
+    /// 맞춰지고 사용자가 "하드웨어 스캔 영역" 에서 고칠 수 있습니다. macOS
+    /// <c>selectedHardwareScanArea</c>(<see cref="ScanHardwareArea"/>).
+    /// </summary>
+    public ScannerPluginScanArea? HardwareScanArea { get; init; }
+
     public FlatbedFrameDetectionMode FrameDetectionMode { get; init; } =
         FlatbedFrameDetectionMode.Automatic;
 }

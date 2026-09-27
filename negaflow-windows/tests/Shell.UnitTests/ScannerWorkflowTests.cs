@@ -567,8 +567,9 @@ internal static class ScannerWorkflowTests
             false,
             Path.Combine(isolatedBase, "a.tif"),
             1);
-        // 요청에는 비율이 아니라 밀리미터가 실립니다. 프리뷰가 담은 영역이 그 자입니다.
-        ScannerPluginScanArea? expected = session.Regions[1].ToScanArea(session.PreviewArea);
+        // 요청에는 밀리미터가 실립니다 — 프리뷰가 담은 영역을 장치 격자(macOS mock 0.1mm)에 맞춘 값.
+        ScannerPluginScanArea? expected = session.Capabilities?.ClampedPhysicalScanArea(
+            session.Regions[1].ToScanArea(session.PreviewArea)!);
         Check(
             request?.ScanArea is { } area && expected is { } want &&
             Math.Abs(area.HeightMm - want.HeightMm) < 1e-9 &&
