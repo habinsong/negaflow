@@ -77,6 +77,8 @@ Get it from [GitHub Releases](https://github.com/habinsong/negaflow/releases).
 | `negaflow-1.1.7-mac-arm64.pkg` | macOS 14 or later, Apple Silicon only |
 | `negaflow-1.1.7-win-x64.exe` | Windows 11 24H2 or later, x64 |
 
+Compatible with macOS 14, 26 and 27.
+
 The Universal PKG works on most Macs. The same page also has the Silicon build, a DMG, and a ZIP. On the first launch you have to open System Settings, go to Privacy and Security, and click Open Anyway once.
 
 The Windows installer installs into your user folder without asking for administrator rights. It isn't signed, so SmartScreen blocks it once. Click More info, then run it. You can uninstall it from Control Panel.
@@ -174,7 +176,7 @@ The details are in [the film profiles doc](docs/product/FILM_PROFILES.md).
 
 ## Building
 
-The tools and commands differ per platform. The full procedure is in each doc. [macOS](negaflow-mac/docs/README.md) needs macOS 14 or later and Xcode 26, [Windows](negaflow-windows/docs/README.md) needs Windows 11 24H2, Visual Studio 2022, and the .NET 10 SDK. The working rules for the repository are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+The tools and commands differ per platform. The full procedure is in each doc. [macOS](negaflow-mac/docs/README.md) needs macOS 14 or later and Xcode 26 or later, [Windows](negaflow-windows/docs/README.md) needs Windows 11 24H2, Visual Studio 2022, and the .NET 10 SDK. The working rules for the repository are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 

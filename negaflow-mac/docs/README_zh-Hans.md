@@ -32,13 +32,13 @@
 
 运行时：
 
-- macOS 14.0 及以上
+- macOS 14.0 及以上（兼容 macOS 14、26、27）
 - Apple Silicon 或 Intel
 - 处理 35mm 需要 8GB 内存，中画幅有 16GB 会舒服些
 
 构建时：
 
-- 应用需要 Xcode 26
+- 应用需要 Xcode 26 及以上
 - 引擎和 CLI 需要 Swift 5.9 及以上
 
 ## 安装

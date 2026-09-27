@@ -32,13 +32,13 @@
 
 Pour l'exécuter :
 
-- macOS 14.0 ou ultérieur
+- macOS 14.0 ou ultérieur (compatible avec macOS 14, 26 et 27)
 - Apple Silicon ou Intel
 - 8 Go de mémoire pour du 35 mm, 16 Go plus confortables en moyen format
 
 Pour le compiler :
 
-- Xcode 26 pour l'application
+- Xcode 26 ou ultérieur pour l'application
 - Swift 5.9 ou ultérieur pour le moteur et la CLI
 
 ## Installation

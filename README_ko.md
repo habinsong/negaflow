@@ -89,6 +89,8 @@
 | `negaflow-1.1.7-mac-arm64.pkg` | macOS 14 이상, Apple Silicon 전용 |
 | `negaflow-1.1.7-win-x64.exe` | Windows 11 24H2 이상, x64 |
 
+macOS 14, 26, 27과 호환됩니다.
+
 대부분의 Mac은 Universal PKG면 됩니다. 물론, Silicon 용 파일과 DMG와 ZIP도 같은 페이지에 올려 뒀습니다.
 처음 실행할 때 설정의 개인정보 보호 및 보안에서 '그래도 열기'를 한 번 눌러야 합니다.
 
@@ -207,7 +209,7 @@ SANE 장치는 별도 GPL 프로젝트인
 ## 직접 빌드하기
 
 플랫폼마다 필요한 도구와 명령이 다릅니다. 전체 절차는 각 문서에 있습니다.
-[macOS](negaflow-mac/docs/README_ko.md)는 macOS 14 이상과 Xcode 26,
+[macOS](negaflow-mac/docs/README_ko.md)는 macOS 14 이상과 Xcode 26 이상,
 [Windows](negaflow-windows/docs/README_ko.md)는 Windows 11 24H2와 Visual Studio 2022, .NET 10 SDK가
 필요합니다. 저장소 작업 규칙은 [`CONTRIBUTING.md`](CONTRIBUTING.md)에 정리해 뒀습니다.
 

@@ -77,6 +77,8 @@
 | `negaflow-1.1.7-mac-arm64.pkg` | macOS 14 及以上，仅 Apple Silicon |
 | `negaflow-1.1.7-win-x64.exe` | Windows 11 24H2 或更高，x64 |
 
+兼容 macOS 14、26、27。
+
 大多数 Mac 用 Universal PKG 就行。当然，Silicon 用的文件和 DMG、ZIP 也都放在同一个页面上。第一次运行时要在系统设置的隐私与安全性里点一次「仍要打开」。
 
 Windows 的安装在用户文件夹里就结束了，不会要管理员权限。没有签名，所以 SmartScreen 会拦一次。点更多信息再运行就行。卸载可以在控制面板里做。
@@ -174,7 +176,7 @@ SANE 设备由独立的 GPL 项目 [`negaflow-scanner-sane`](https://github.com/
 
 ## 自己构建
 
-每个平台需要的工具和命令不一样。完整步骤在各自的文档里。[macOS](negaflow-mac/docs/README_zh-Hans.md) 需要 macOS 14 及以上和 Xcode 26，[Windows](negaflow-windows/docs/README_zh-Hans.md) 需要 Windows 11 24H2、Visual Studio 2022 和 .NET 10 SDK。仓库的工作规则整理在 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
+每个平台需要的工具和命令不一样。完整步骤在各自的文档里。[macOS](negaflow-mac/docs/README_zh-Hans.md) 需要 macOS 14 及以上和 Xcode 26 及以上，[Windows](negaflow-windows/docs/README_zh-Hans.md) 需要 Windows 11 24H2、Visual Studio 2022 和 .NET 10 SDK。仓库的工作规则整理在 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
 
 ## 许可证
 

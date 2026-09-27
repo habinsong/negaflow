@@ -11,7 +11,7 @@ Thank you for helping improve negaflow. Small, focused changes with clear verifi
 
 ## Development setup
 
-The project requires macOS 14 or later. The GUI build uses Xcode 26, and the engine and CLI require Swift 5.9 or later.
+The project requires macOS 14 or later and is compatible with macOS 14, 26 and 27. The GUI build uses Xcode 26 or later, and the engine and CLI require Swift 5.9 or later.
 
 ```bash
 git clone https://github.com/habinsong/negaflow.git

@@ -32,13 +32,13 @@
 
 Zum Ausführen:
 
-- macOS 14.0 oder neuer
+- macOS 14.0 oder neuer (kompatibel mit macOS 14, 26 und 27)
 - Apple Silicon oder Intel
 - 8 GB Arbeitsspeicher für Kleinbild, mit 16 GB arbeitet es sich im Mittelformat angenehmer
 
 Zum Bauen:
 
-- Xcode 26 für die App
+- Xcode 26 oder neuer für die App
 - Swift 5.9 oder neuer für Engine und CLI
 
 ## Installation

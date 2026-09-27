@@ -32,13 +32,13 @@
 
 To run it:
 
-- macOS 14.0 or later
+- macOS 14.0 or later (compatible with macOS 14, 26 and 27)
 - Apple Silicon or Intel
 - 8 GB of memory for 35mm work, 16 GB is more comfortable with medium format
 
 To build it:
 
-- Xcode 26 for the app
+- Xcode 26 or later for the app
 - Swift 5.9 or later for the engine and CLI
 
 ## Installing

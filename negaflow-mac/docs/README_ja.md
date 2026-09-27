@@ -32,13 +32,13 @@
 
 動かすとき:
 
-- macOS 14.0 以降
+- macOS 14.0 以降（macOS 14、26、27 に対応）
 - Apple Silicon または Intel
 - 35mm ならメモリ 8GB、中判を扱うなら 16GB が楽です
 
 ビルドするとき:
 
-- アプリは Xcode 26
+- アプリは Xcode 26 以降
 - エンジンと CLI は Swift 5.9 以降
 
 ## インストール

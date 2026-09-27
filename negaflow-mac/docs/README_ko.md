@@ -32,13 +32,13 @@
 
 실행할 때:
 
-- macOS 14.0 이상
+- macOS 14.0 이상 (macOS 14, 26, 27 호환)
 - Apple Silicon 또는 Intel
 - 35mm 작업은 메모리 8GB, 중형 필름을 다루면 16GB가 편합니다
 
 빌드할 때:
 
-- 앱은 Xcode 26
+- 앱은 Xcode 26 이상
 - 엔진과 CLI는 Swift 5.9 이상
 
 ## 설치

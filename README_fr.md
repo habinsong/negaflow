@@ -77,6 +77,8 @@ Il suffit de le prendre sur [GitHub Releases](https://github.com/habinsong/negaf
 | `negaflow-1.1.7-mac-arm64.pkg` | macOS 14 ou ultérieur, Apple Silicon uniquement |
 | `negaflow-1.1.7-win-x64.exe` | Windows 11 24H2 ou plus récent, x64 |
 
+Compatible avec macOS 14, 26 et 27.
+
 La plupart des Mac se contentent du PKG Universal. La même page propose aussi le fichier pour Silicon, un DMG et un ZIP. Au premier lancement, il faut ouvrir Réglages Système, aller dans Confidentialité et sécurité, et cliquer une fois sur Ouvrir quand même.
 
 L'application Windows s'installe dans votre dossier utilisateur sans droits administrateur. Comme il n'y a pas de signature, SmartScreen bloque une fois. Cliquez sur Informations complémentaires puis exécutez. La désinstallation se fait depuis le Panneau de configuration.
@@ -174,7 +176,7 @@ Le détail est écrit dans la [documentation des profils de film](docs/fr/produc
 
 ## Compiler soi-même
 
-Les outils et les commandes diffèrent selon la plateforme. La procédure complète est dans chaque documentation. [macOS](negaflow-mac/docs/README_fr.md) demande macOS 14 ou ultérieur et Xcode 26, [Windows](negaflow-windows/docs/README_fr.md) demande Windows 11 24H2, Visual Studio 2022 et le SDK .NET 10. Les règles de travail du dépôt sont réunies dans [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Les outils et les commandes diffèrent selon la plateforme. La procédure complète est dans chaque documentation. [macOS](negaflow-mac/docs/README_fr.md) demande macOS 14 ou ultérieur et Xcode 26 ou ultérieur, [Windows](negaflow-windows/docs/README_fr.md) demande Windows 11 24H2, Visual Studio 2022 et le SDK .NET 10. Les règles de travail du dépôt sont réunies dans [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Licence
 

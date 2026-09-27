@@ -77,6 +77,8 @@
 | `negaflow-1.1.7-mac-arm64.pkg` | macOS 14 以降、Apple Silicon のみ |
 | `negaflow-1.1.7-win-x64.exe` | Windows 11 24H2 以降、x64 |
 
+macOS 14、26、27 に対応しています。
+
 たいていの Mac は Universal PKG で大丈夫です。もちろん、Silicon 用のファイルと DMG と ZIP も同じページに上げてあります。初回起動のときはシステム設定のプライバシーとセキュリティで「このまま開く」を一度押す必要があります。
 
 Windows のインストールはユーザーフォルダーの中で終わり、管理者権限を聞いてきません。署名がないので SmartScreen が一度止めます。詳細情報を押して実行すれば大丈夫です。削除はコントロールパネルからできます。
@@ -174,7 +176,7 @@ SANE 機器は別の GPL プロジェクトである [`negaflow-scanner-sane`](h
 
 ## 自分でビルドする
 
-プラットフォームごとに必要な道具とコマンドが違います。全体の手順は各ドキュメントにあります。[macOS](negaflow-mac/docs/README_ja.md) は macOS 14 以降と Xcode 26、[Windows](negaflow-windows/docs/README_ja.md) は Windows 11 24H2 と Visual Studio 2022、.NET 10 SDK が必要です。リポジトリでの作業のきまりは [`CONTRIBUTING.md`](CONTRIBUTING.md) にまとめてあります。
+プラットフォームごとに必要な道具とコマンドが違います。全体の手順は各ドキュメントにあります。[macOS](negaflow-mac/docs/README_ja.md) は macOS 14 以降と Xcode 26 以降、[Windows](negaflow-windows/docs/README_ja.md) は Windows 11 24H2 と Visual Studio 2022、.NET 10 SDK が必要です。リポジトリでの作業のきまりは [`CONTRIBUTING.md`](CONTRIBUTING.md) にまとめてあります。
 
 ## ライセンス
 
