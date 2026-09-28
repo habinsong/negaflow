@@ -38,8 +38,11 @@ internal static class DefectRecordRecovery
                 }
                 using WindowsIdentity user = WindowsIdentity.GetCurrent();
                 FileSecurity security = file.GetAccessControl();
+                // 이 프로세스가 만든 파일의 소유자는 사용자이거나, 관리자 권한으로 돌면 토큰의 기본
+                // 소유자(Administrators)입니다 — 그래서 둘 다 "자기 파일" 입니다.
+                IdentityReference? owner = security.GetOwner(typeof(SecurityIdentifier));
                 if (user.User is not { } sid ||
-                    !sid.Equals(security.GetOwner(typeof(SecurityIdentifier))))
+                    !(sid.Equals(owner) || user.Owner?.Equals(owner) == true))
                 {
                     return false;
                 }

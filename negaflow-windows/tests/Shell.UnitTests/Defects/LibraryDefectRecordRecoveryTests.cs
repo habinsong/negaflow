@@ -50,7 +50,9 @@ internal static class LibraryDefectRecordRecoveryTests
                 using LibraryHostService host = OpenHost(roots, "record_access_opens");
                 Check(host.Frames.Single() is { DefectRestorePending: false, DefectRecipe.Items.Count: 1 },
                     "record_access_restores_the_owner_access_and_keeps_the_edits",
-                    () => $"pending={host.Frames.Single().DefectRestorePending}");
+                    () => $"pending={host.Frames.Single().DefectRestorePending} " +
+                          $"owner={sidecar.GetAccessControl().GetOwner(typeof(System.Security.Principal.SecurityIdentifier))} " +
+                          $"user={user} tokenOwner={System.Security.Principal.WindowsIdentity.GetCurrent().Owner}");
                 sidecar.Refresh();
                 Check(CanRead(sidecar.FullName) && !sidecar.IsReadOnly,
                     "record_access_file_is_readable_and_writable_again");
