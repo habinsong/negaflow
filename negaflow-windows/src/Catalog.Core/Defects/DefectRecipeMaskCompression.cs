@@ -21,6 +21,12 @@ internal static class DefectRecipeMaskCompression
             {
                 return items;
             }
+            if (item.RegionMask is { } region &&
+                item.RegionWidth is { } regionWidth &&
+                item.RegionHeight is { } regionHeight)
+            {
+                RequireRawSize(region, regionWidth, regionHeight, bytesPerPixel: 4);
+            }
             DefectMask? regionMask = item.RegionMask is { } mask
                 ? Compress(mask)
                 : null;
@@ -43,6 +49,11 @@ internal static class DefectRecipeMaskCompression
         long rawBytes = 0L;
         foreach (DefectCluster cluster in source)
         {
+            RequireRawSize(cluster.Mask, cluster.Width, cluster.Height, bytesPerPixel: 4);
+            if (cluster.AttenuationR16 is { } attenuation)
+            {
+                RequireRawSize(attenuation, cluster.Width, cluster.Height, bytesPerPixel: 2);
+            }
             rawBytes += cluster.Mask.Data.LongLength;
             rawBytes += cluster.AttenuationR16?.Data.LongLength ?? 0L;
         }
@@ -78,6 +89,20 @@ internal static class DefectRecipeMaskCompression
                 ? Compress(attenuation)
                 : null,
         };
+
+    /// <summary>
+    /// 압축 전 원본은 폭 × 높이 × 화소당 바이트여야 합니다(마스크 4, 적외선 감쇠 창 2). 압축부터
+    /// 하면 틀린 크기도 받아들이고 읽을 때에야 거부해, 기록이 저장되지 않습니다 — macOS 1.1.8
+    /// <c>checkAttenuationShape</c> 도 만들 때 봅니다. 폭·높이 자체가 틀린 것은 검증기가 거부합니다.
+    /// </summary>
+    private static void RequireRawSize(DefectMask mask, int width, int height, int bytesPerPixel)
+    {
+        if (mask.Data is { } data && !mask.IsZlib && width > 0 && height > 0 &&
+            data.LongLength != (long)width * height * bytesPerPixel)
+        {
+            throw new InvalidDataException("Defects mask size does not match its dimensions.");
+        }
+    }
 
     internal static DefectMask Compress(DefectMask mask)
     {

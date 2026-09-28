@@ -29,6 +29,7 @@ internal static class CatalogStorageTests
             CatalogUpgradeSaveTests.Run(roots);
             CatalogLongPathTests.Run(roots);
             DefectSidecarTests.Run(roots);
+            DefectRecipeShapeTests.Run(roots);
             DefectRecipeBatchTransactionTests.Run(roots);
             CatalogBackupRestoreTests.Run(roots);
             PendingRestorePreservationTests.Run(roots);
