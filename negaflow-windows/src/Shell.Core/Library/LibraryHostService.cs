@@ -202,12 +202,13 @@ public sealed partial class LibraryHostService : IDisposable
         // 실패해도 어디를 열려다 실패했는지는 남깁니다 - 복구 화면과 진단이 이것을 봅니다.
         AttemptedRoots = roots;
 
-        LibraryDocumentOpenResult opened = LibraryDocument.Open(roots);
+        LibraryDocumentOpenResult opened = OpenRecoveringFromLatestBackup(roots);
         SessionError = opened.SessionError;
         StoreError = opened.StoreError;
         DefectSidecarError = opened.DefectSidecarError;
         if (opened.Document is { } loaded)
         {
+            autosave.ForgetSaveError();
             document = loaded;
             storageRoots = roots;
             State = LibraryHostState.Open;
@@ -378,8 +379,8 @@ public sealed partial class LibraryHostService : IDisposable
 
     public CatalogStoreError Save() => autosave.Save();
 
-    /// <summary>마지막 자동 저장 실패 사유입니다.</summary>
-    public CatalogStoreError LastAutomaticSaveError => autosave.LastAutomaticSaveError;
+    /// <summary>마지막 저장(자동 저장 포함)이 실패한 까닭입니다. 성공하면 None 입니다.</summary>
+    public CatalogStoreError LastSaveError => autosave.LastSaveError;
 
     /// <summary>macOS와 같은 1.5초 debounce 뒤 catalog 저장을 예약합니다.</summary>
     public void ScheduleSave() => autosave.Schedule();

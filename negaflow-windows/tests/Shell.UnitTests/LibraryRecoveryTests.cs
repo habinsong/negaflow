@@ -60,8 +60,12 @@ internal static class LibraryRecoveryTests
             "recovery_diagnostics_omits_file_names");
 
         // 못 여는 카탈로그에서도 판정이 남아야 합니다 - 그때가 지원 요청이 오는 때입니다.
+        // 검증된 백업이 있으면 그 세대로 자동 복원되므로(macOS restoreLatest), 세대까지 망가뜨려
+        // 되돌릴 것이 없는 상태를 만듭니다.
+        string generationId = fixture.Host.BackupGenerations()[0].Id;
         fixture.Host.Dispose();
         LibraryHostService blocked = fixture.NewHost();
+        fixture.DamageGeneration(generationId);
         fixture.CorruptCatalog();
         Check(blocked.Open(fixture.Roots) == LibraryHostState.Unavailable,
             "recovery_diagnostics_blocked_open");
@@ -137,28 +141,24 @@ internal static class LibraryRecoveryTests
             "recovery_list_damaged_still_reports_counts");
     }
 
-    /// <summary>차단된 상태에서 백업을 골라 되돌리면 사진이 돌아와야 합니다.</summary>
+    /// <summary>
+    /// 카탈로그가 깨졌어도 검증된 백업이 있으면 그 세대로 되돌려 사진이 돌아와야 합니다 — macOS
+    /// <c>restoreLatest</c> 와 같이 복구 화면을 거치지 않습니다. 깨진 원본은 옆에 남습니다.
+    /// </summary>
     private static void VerifyRestoreFromBlockedState()
     {
         using RecoveryFixture fixture = new();
         Check(fixture.Host.Open(fixture.Roots) == LibraryHostState.Open, "recovery_restore_open");
         Check(fixture.Host.CreateBackup().IsSuccess, "recovery_restore_backup");
-        string generationId = fixture.Host.BackupGenerations()[0].Id;
         fixture.Host.Dispose();
 
-        LibraryHostService blocked = fixture.NewHost();
+        LibraryHostService reopened = fixture.NewHost();
         fixture.CorruptCatalog();
-        Check(blocked.Open(fixture.Roots) == LibraryHostState.Unavailable,
-            "recovery_restore_blocked");
-        Check(blocked.Frames.Count == 0, "recovery_restore_blocked_has_no_frames");
-
-        CatalogPendingRestoreScheduleResult scheduled = blocked.ScheduleRestore(generationId);
-        Check(scheduled.IsSuccess, "recovery_restore_schedules",
-            () => scheduled.Error.ToString());
-        Check(blocked.RetryOpen() == LibraryHostState.Open, "recovery_restore_reopens",
-            () => $"{blocked.State}/session={blocked.SessionError}/store={blocked.StoreError}/defect={blocked.DefectSidecarError}");
-        Check(blocked.Frames.Count == 1, "recovery_restore_returns_frames",
-            () => $"frames={blocked.Frames.Count}");
+        Check(reopened.Open(fixture.Roots) == LibraryHostState.Open, "recovery_restore_reopens",
+            () => $"{reopened.State}/session={reopened.SessionError}/store={reopened.StoreError}/defect={reopened.DefectSidecarError}");
+        Check(reopened.Frames.Count == 1, "recovery_restore_returns_frames",
+            () => $"frames={reopened.Frames.Count}");
+        Check(fixture.PreservedCatalogCount() >= 1, "recovery_restore_preserves_the_broken_catalog");
     }
 
     /// <summary>

@@ -38,10 +38,13 @@ public sealed partial class WorkspaceShellView
             FrameCount = host?.Frames.Count(frame => !frame.IsPreviewScan) ?? 0,
             HasUnsavedChanges = host?.HasUnsavedChanges ?? false,
             Lifecycle = host?.State.ToString() ?? "notOpened",
-            SaveErrorGeneration = host?.StoreError is { } storeError and not
+            SaveErrorGeneration = host?.LastSaveError is { } saveError and not
                 Negaflow.Catalog.CatalogStoreError.None
-                ? storeError.ToString()
-                : null,
+                ? saveError.ToString()
+                : host?.StoreError is { } storeError and not
+                    Negaflow.Catalog.CatalogStoreError.None
+                    ? storeError.ToString()
+                    : null,
             ScannerName = scan?.SelectedDeviceNameForDiagnostics ?? string.Empty,
             // macOS backend.backendType.rawValue - 시뮬레이터인지 플러그인인지.
             BackendName = simulator ? "simulator" : "plugin",

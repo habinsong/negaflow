@@ -80,6 +80,39 @@ public sealed partial class LibraryHostService
         AttemptedRoots is { } roots ? CatalogBackupInspector.Enumerate(roots) : [];
 
     /// <summary>
+    /// macOS <c>LibraryCatalogFile.prepareForUse</c> 의 <c>restoreLatest</c> 갈래입니다. 카탈로그가
+    /// 없거나, 깨졌거나, 되돌리지 못한 커밋의 흔적이 남아 열 수 없으면 가장 최근의 검증된 백업
+    /// 세대로 되돌려 엽니다. 지금 상태는 복원이 <c>library.corrupt-*</c> 로 보관합니다. 예전에는
+    /// 카탈로그가 사라지면 백업이 있어도 빈 라이브러리로 열렸고, 깨지면 복구 화면에서 멈췄습니다.
+    /// </summary>
+    /// <remarks>
+    /// 결함 기록 문제, 더 새 버전, 잠금·권한, 이미 예약된 복원의 실패는 되돌릴 까닭이 아니므로
+    /// 그대로 둡니다(macOS 도 <c>unsupportedVersion</c> 은 막고 백업으로 가지 않습니다).
+    /// </remarks>
+    private static LibraryDocumentOpenResult OpenRecoveringFromLatestBackup(StorageRootSet roots)
+    {
+        if (!File.Exists(roots.CatalogPath) && ScheduleLatestBackup(roots))
+        {
+            return LibraryDocument.Open(roots);
+        }
+        LibraryDocumentOpenResult opened = LibraryDocument.Open(roots);
+        bool recoverable = opened.Document is null &&
+            opened.DefectSidecarError == DefectSidecarError.None &&
+            (opened.SessionError == CatalogSessionError.MissingAuthoritativeData ||
+             opened.StoreError is CatalogStoreError.CorruptDatabase or
+                 CatalogStoreError.MalformedContent or
+                 CatalogStoreError.MissingAuthoritativeData);
+        return recoverable && ScheduleLatestBackup(roots) ? LibraryDocument.Open(roots) : opened;
+    }
+
+    /// <summary>사용자가 이미 고른 복원이 있으면 덮지 않습니다.</summary>
+    private static bool ScheduleLatestBackup(StorageRootSet roots) =>
+        CatalogRecovery.PendingRestoreGenerationId(roots) is null &&
+        CatalogBackupInspector.Enumerate(roots).FirstOrDefault(generation => generation.IsRestorable) is
+            { } latest &&
+        CatalogRecovery.ScheduleRestore(roots, latest.Id).IsSuccess;
+
+    /// <summary>
     /// 고른 세대로 되돌리도록 예약합니다. 실제 치환은 <b>다음 열기</b>에 일어납니다 —
     /// 지금 열려 있는 카탈로그를 발밑에서 갈아 끼우지 않습니다.
     /// </summary>

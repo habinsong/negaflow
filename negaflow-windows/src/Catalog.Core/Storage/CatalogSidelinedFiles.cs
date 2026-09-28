@@ -86,7 +86,7 @@ public static class CatalogSidelinedFiles
             }
             // 한 번이라도 저장한 라이브러리에는 직전 판 사본이 늘 남아, 이것을 치우지 않으면 빈
             // 카탈로그 쓰기가 거부되어 "새 라이브러리로 시작" 이 실패했습니다.
-            if (!SidelinePreviousCopy(roots, retentionCount))
+            if (!SidelineLeftovers(roots, retentionCount))
             {
                 return false;
             }
@@ -107,26 +107,34 @@ public static class CatalogSidelinedFiles
     }
 
     /// <summary>
-    /// 주 카탈로그가 없을 때, 커밋이 남긴 직전 판 사본(<c>library.backup.sqlite</c>)을 보관
-    /// 사본(<c>library.corrupt-*</c>)으로 옮깁니다. 주 파일 없이 사본만 남은 자리는 커밋이 멈춘
-    /// 것으로 보아 새 카탈로그 쓰기를 거부하는데, 주 파일이 없을 때 그 사본을 읽는 곳은 없으므로
-    /// 지우지 않고 옆에 두면 잃는 것이 없습니다. macOS 에는 이 사본이 없고, 카탈로그가 없으면
-    /// 그대로 진행합니다(<c>.missing</c>).
+    /// 주 카탈로그가 없을 때 남은 것들 — 커밋이 남긴 직전 판 사본(<c>library.backup.sqlite</c>),
+    /// SQLite 동반 파일(<c>-journal</c>·<c>-wal</c>·<c>-shm</c>), 롤백 흔적 — 을 보관 사본
+    /// (<c>library.corrupt-*</c>)으로 옮깁니다. 주 파일 없이 이것들이 남은 자리는 커밋이 멈춘 것으로
+    /// 보아 새 카탈로그 쓰기를 거부하는데, 주 파일이 없을 때 이것을 읽는 곳은 없으므로 지우지 않고
+    /// 옆에 두면 잃는 것이 없습니다. 카탈로그를 통째로 바꿀 때(복원·새로 시작)만 부릅니다. macOS 는
+    /// 지금 상태를 보관하고 진행합니다(<c>preserveUnsafeState</c>).
     /// </summary>
     /// <returns>옮긴 뒤 새 카탈로그를 막는 것이 남지 않았으면 <c>true</c> 입니다.</returns>
-    internal static bool SidelinePreviousCopy(
+    internal static bool SidelineLeftovers(
         StorageRootSet roots,
         int retentionCount = DefaultRetentionCount)
     {
         try
         {
-            if (File.Exists(roots.CatalogBackupPath))
+            string[] leftovers =
+                [roots.CatalogBackupPath, .. CatalogCommitFiles.CatalogCompanionPaths(roots)];
+            foreach (string leftover in leftovers.Where(File.Exists))
             {
-                File.Move(roots.CatalogBackupPath, Path.Combine(
-                    roots.LibraryRoot,
-                    $"{CatalogPrefix}{Guid.NewGuid():N}{Path.GetExtension(roots.CatalogPath)}"));
-                Prune(roots.LibraryRoot, retentionCount);
+                string suffix = leftover.StartsWith(roots.CatalogPath, StringComparison.OrdinalIgnoreCase)
+                    ? leftover[roots.CatalogPath.Length..]
+                    : string.Empty;
+                File.Move(leftover, SidelinedCatalogPath(roots, suffix));
             }
+            if (!SidelineRollbackArtifacts(roots, retentionCount))
+            {
+                return false;
+            }
+            Prune(roots.LibraryRoot, retentionCount);
             return !CatalogCommitRollback.HasBlockingArtifactWhenPrimaryMissing(roots);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
@@ -134,6 +142,67 @@ public static class CatalogSidelinedFiles
             return false;
         }
     }
+
+    /// <summary>
+    /// 되돌리지 못한 커밋의 흔적 — <c>.rollback-required</c> 표식과 <c>.catalog-*.rollback</c>
+    /// 사본 — 을 치웁니다. 사본은 커밋 직전 카탈로그라 보관 사본으로 옮기고, 표식만 지웁니다.
+    /// 카탈로그를 통째로 바꿀 때(복원·새로 시작)만 부릅니다. 예전에는 이 흔적이 남으면 열기·복원·
+    /// 새로 시작이 모두 거부돼 앱 안에서 빠져나갈 길이 없었습니다.
+    /// </summary>
+    internal static bool SidelineRollbackArtifacts(
+        StorageRootSet roots,
+        int retentionCount = DefaultRetentionCount)
+    {
+        try
+        {
+            if (Directory.Exists(roots.LibraryRoot))
+            {
+                foreach (string rollback in Directory
+                    .EnumerateFiles(roots.LibraryRoot, ".catalog-*.rollback", SearchOption.TopDirectoryOnly)
+                    .ToArray())
+                {
+                    File.Move(rollback, SidelinedCatalogPath(roots, string.Empty));
+                }
+            }
+            string marker = $"{roots.CatalogPath}.rollback-required";
+            if (File.Exists(marker))
+            {
+                File.Delete(marker);
+            }
+            Prune(roots.LibraryRoot, retentionCount);
+            return !CatalogCommitRollback.HasUnresolvedRollbackArtifact(roots);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 읽지 못하는 주 카탈로그를 원본 그대로 보관한 뒤 치우고, 남은 것들도 옮깁니다. 복원이 그
+    /// 자리에 검증된 세대를 씁니다 — 예전에는 직전 판 사본이 남아 그 쓰기가 거부됐습니다.
+    /// </summary>
+    internal static bool DiscardUnreadablePrimary(StorageRootSet roots)
+    {
+        if (!Preserve(roots))
+        {
+            return false;
+        }
+        try
+        {
+            File.Delete(roots.CatalogPath);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+        return SidelineLeftovers(roots);
+    }
+
+    private static string SidelinedCatalogPath(StorageRootSet roots, string suffix) =>
+        Path.Combine(
+            roots.LibraryRoot,
+            $"{CatalogPrefix}{Guid.NewGuid():N}{Path.GetExtension(roots.CatalogPath)}{suffix}");
 
     /// <summary>최근 <paramref name="retentionCount"/> 개만 남기고 나머지를 지웁니다.</summary>
     public static void Prune(string directory, int retentionCount = DefaultRetentionCount)

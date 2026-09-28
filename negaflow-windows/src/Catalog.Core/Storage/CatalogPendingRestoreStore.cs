@@ -257,7 +257,9 @@ internal static class CatalogPendingRestoreStore
         }
         snapshot = promoted;
 
-        if (CatalogCommitRollback.HasUnresolvedRollbackArtifact(roots))
+        // 되돌리지 못한 커밋의 흔적은 보관하고 치웁니다. 그 자리를 검증된 세대가 덮습니다.
+        if (CatalogCommitRollback.HasUnresolvedRollbackArtifact(roots) &&
+            !CatalogSidelinedFiles.SidelineRollbackArtifacts(roots))
         {
             return CatalogPendingRestoreApplicationResult.Failure(
                 CatalogPendingRestoreError.SafetyBackupFailed);
@@ -304,7 +306,7 @@ internal static class CatalogPendingRestoreStore
         {
             // 카탈로그 없이 직전 판 사본·결함 기록만 남았으면 원본 그대로 보관하고 진행합니다(macOS
             // `.missing` 갈래). 멈춘 커밋의 흔적, 파일·연결점인 결함 폴더 자리는 보관할 수 없어 멈춥니다.
-            if (!CatalogSidelinedFiles.SidelinePreviousCopy(roots))
+            if (!CatalogSidelinedFiles.SidelineLeftovers(roots))
             {
                 return CatalogPendingRestoreApplicationResult.Failure(
                     CatalogPendingRestoreError.SafetyBackupFailed);
@@ -326,19 +328,9 @@ internal static class CatalogPendingRestoreStore
         else
         {
             // 지금 카탈로그를 읽지 못합니다. 여기서 물러나면 **복원이 필요한 바로 그 상황에서**
-            // 복원이 막힙니다 - 사용자는 백업을 갖고도 되돌릴 수 없습니다. 정식 백업 세대는
-            // 읽지 못하는 파일로 만들 수 없으므로, 원본을 그대로 옆에 복사해 두고 치웁니다.
-            // 잘못된 복원이었을 때 되돌릴 것은 그 사본입니다.
-            if (!CatalogSidelinedFiles.Preserve(roots))
-            {
-                return CatalogPendingRestoreApplicationResult.Failure(
-                    CatalogPendingRestoreError.SafetyBackupFailed);
-            }
-            try
-            {
-                File.Delete(roots.CatalogPath);
-            }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            // 복원이 막힙니다. 정식 백업 세대는 읽지 못하는 파일로 만들 수 없으므로, 원본을 그대로
+            // 옆에 복사해 두고 직전 판 사본과 함께 치웁니다(예전에는 사본이 남아 쓰기가 거부됐습니다).
+            if (!CatalogSidelinedFiles.DiscardUnreadablePrimary(roots))
             {
                 return CatalogPendingRestoreApplicationResult.Failure(
                     CatalogPendingRestoreError.SafetyBackupFailed);
