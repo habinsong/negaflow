@@ -52,7 +52,14 @@ internal static class LibraryStartupDefectRecipeCleanup
                     CatalogStoreError.MissingAuthoritativeData);
             }
 
+            // macOS 처럼 읽기 전에 자기 기록의 빠진 권한을 되돌립니다.
+            _ = session.RestoreDefectRecordAccess(frameId);
             DefectSidecarReadResult read = session.ReadDefectRecipe(frameId);
+            // macOS 처럼 백업에 같은 사진의 기록이 남아 있으면 되살린 뒤 다시 읽습니다.
+            if (read.Snapshot is null && session.RestoreDefectRecipeFromBackup(frameId))
+            {
+                read = session.ReadDefectRecipe(frameId);
+            }
             if (read.Snapshot is not { } recipe)
             {
                 restorePending.Add(row.Id);

@@ -34,7 +34,9 @@ internal static class CatalogStorageTests
             CatalogBackupRestoreTests.Run(roots);
             PendingRestorePreservationTests.Run(roots);
             DefectCatalogRecoveryTests.Run(roots);
+            DefectUndeclaredSidecarTests.Run(roots);
             CatalogSessionTests.Run(roots);
+            CatalogHotJournalTests.Run(roots);
         }
         finally
         {

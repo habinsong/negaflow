@@ -271,6 +271,32 @@ public sealed partial class CatalogSession
     }
 
     /// <summary>
+    /// 사라졌거나 깨진 결함 기록을 가장 새 검증된 백업 세대의 같은 사진 기록으로 되살립니다. 열 때와
+    /// 수동 복구가 편집을 비우기 전에 부릅니다(macOS <c>DefectRecordRecovery.restoreFromBackup</c>).
+    /// </summary>
+    public bool RestoreDefectRecipeFromBackup(Guid frameId)
+    {
+        lock (writeGate)
+        {
+            RequireOpen();
+            return !mutationBlocked && DefectRecordRecovery.RestoreFromBackup(roots, frameId);
+        }
+    }
+
+    /// <summary>
+    /// 앱이 쓴 결함 기록의 읽기 권한이 빠졌거나 읽기 전용이면 소유자 권한을 되돌립니다(macOS
+    /// <c>DefectRecordRecovery.restoreOwnerAccessIfNeeded</c>). 열 때와 수동 복구가 읽기 전에 부릅니다.
+    /// </summary>
+    public bool RestoreDefectRecordAccess(Guid frameId)
+    {
+        lock (writeGate)
+        {
+            RequireOpen();
+            return !mutationBlocked && DefectRecordRecovery.RestoreOwnerAccessIfNeeded(roots, frameId);
+        }
+    }
+
+    /// <summary>
     /// 카탈로그가 더는 선언하지 않는 사진의 깨진 결함 기록을 치웁니다. 먼저
     /// <see cref="PreserveCurrentFiles"/> 로 원본을 보관해야 합니다.
     /// </summary>

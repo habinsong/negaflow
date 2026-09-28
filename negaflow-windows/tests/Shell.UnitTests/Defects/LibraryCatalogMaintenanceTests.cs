@@ -13,7 +13,7 @@ namespace Negaflow.Shell.UnitTests;
 /// </summary>
 internal static class LibraryCatalogMaintenanceTests
 {
-    private static readonly LibraryCatalogMaintenanceBusy Idle = default;
+    internal static readonly LibraryCatalogMaintenanceBusy Idle = default;
 
     internal static void Run()
     {
@@ -332,10 +332,10 @@ internal static class LibraryCatalogMaintenanceTests
             item.Operation == Negaflow.Shell.Diagnostics.AppDiagnosticOperation.CatalogSave &&
             item.Phase == Negaflow.Shell.Diagnostics.AppDiagnosticPhase.Error)?.Code;
 
-    private static LibraryDefectTerminationResult Quit(LibraryHostService host) =>
+    internal static LibraryDefectTerminationResult Quit(LibraryHostService host) =>
         host.PrepareForTerminationAsync(Path.GetTempPath()).GetAwaiter().GetResult();
 
-    private static LibraryHostService OpenHost(StorageRootSet roots, string label)
+    internal static LibraryHostService OpenHost(StorageRootSet roots, string label)
     {
         var host = new LibraryHostService(
             new FakeDispatcher(accepts: true),
@@ -345,7 +345,7 @@ internal static class LibraryCatalogMaintenanceTests
         return host;
     }
 
-    private static string Sidecar(StorageRootSet roots, Guid frameId) =>
+    internal static string Sidecar(StorageRootSet roots, Guid frameId) =>
         Path.Combine(roots.DefectRecipeRoot, $"{frameId:D}.json");
 
     /// <summary>
@@ -375,7 +375,7 @@ internal static class LibraryCatalogMaintenanceTests
         new LibrarySourceMetadata(16, 4, 2, 3, 16, 1, 1);
 
     /// <summary>결함 편집이 하나 있는 사진 한 장짜리 라이브러리를 만듭니다.</summary>
-    private static void RunIsolated(string name, Action<StorageRootSet, Guid> test)
+    internal static void RunIsolated(string name, Action<StorageRootSet, Guid> test)
     {
         string parent = Path.Combine(Path.GetTempPath(), "negaflow-catalog-maintenance-tests");
         string isolatedBase = Path.Combine(parent, $"{name}-{Guid.NewGuid():N}");

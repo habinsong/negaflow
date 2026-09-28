@@ -27,6 +27,12 @@ public readonly record struct CatalogSessionOpenResult(
 
     public DefectSidecarError DefectSidecarError { get; init; }
 
+    /// <summary>
+    /// 카탈로그 행 자체가 깨져 막혔을 때 <see cref="CatalogStoreError.MalformedContent"/> 입니다.
+    /// 결함 기록 문제와 달리 백업으로 되돌릴 까닭입니다(macOS 는 행을 못 읽으면 <c>.invalid</c>).
+    /// </summary>
+    public CatalogStoreError StoreError { get; init; }
+
     public bool IsSuccess => Error == CatalogSessionError.None && Session is not null;
 
     internal static CatalogSessionOpenResult Success(CatalogSession session) =>
@@ -134,7 +140,10 @@ public sealed partial class CatalogSession : IDisposable
                 held.Dispose();
                 return CatalogSessionOpenResult.Failure(
                     CatalogSessionError.MissingAuthoritativeData,
-                    defectSidecarError: health);
+                    defectSidecarError: health) with
+                {
+                    StoreError = CatalogStoreError.MalformedContent,
+                };
             }
             // 선언한 기록을 못 읽는 사진이 있으면 그 사진은 "복원 대기" 로 열립니다. 그때는 선언되지
             // 않은 기록을 치우지 않습니다 — 카탈로그와 기록이 어긋난 상태라 그것이 진짜 기록일 수

@@ -31,14 +31,15 @@ public readonly record struct LibraryDocumentOpenResult(
 
     internal static LibraryDocumentOpenResult SessionFailure(
         CatalogSessionError error,
-        DefectSidecarError defectSidecarError) =>
+        DefectSidecarError defectSidecarError,
+        CatalogStoreError storeError = CatalogStoreError.None) =>
         new(
             null,
             error == CatalogSessionError.Busy
                 ? LibraryDocumentError.SessionBusy
                 : LibraryDocumentError.SessionUnavailable,
             error,
-            CatalogStoreError.None,
+            storeError,
             defectSidecarError);
 
     internal static LibraryDocumentOpenResult StoreFailure(

@@ -15,7 +15,8 @@ internal static class LibraryDocumentOpener
         {
             return LibraryDocumentOpenResult.SessionFailure(
                 opened.Error,
-                opened.DefectSidecarError);
+                opened.DefectSidecarError,
+                opened.StoreError);
         }
 
         CatalogReadResult read = session.ReadOrCreate();

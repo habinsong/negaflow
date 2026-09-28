@@ -29,6 +29,11 @@ internal static class PendingRestorePreservationTests
             Check(File.Exists(roots.CatalogBackupPath), "preservation_previous_copy_exists");
             File.Delete(roots.CatalogPath);
         });
+        // 깨진 카탈로그 위에 고른 복원입니다. 제자리에 쓰면 실패하므로 원본을 보관한 뒤 치우고 새로
+        // 씁니다(macOS 31531f36). 0 바이트는 저장 버전 0 인 빈 데이터베이스로 열립니다.
+        Verify(parentRoots, "catalog-random-bytes", (roots, _) =>
+            File.WriteAllBytes(roots.CatalogPath, System.Security.Cryptography.RandomNumberGenerator.GetBytes(4096)));
+        Verify(parentRoots, "catalog-zero-bytes", (roots, _) => File.WriteAllBytes(roots.CatalogPath, []));
         // 복구 화면에서 고르는 경우입니다. 되돌리지 못한 커밋의 흔적으로 이미 막힌 라이브러리라
         // 세션을 열 수 없으므로 예약은 카탈로그를 열지 않고 해야 합니다(macOS
         // `LibraryPendingRestoreStore.schedule`). 적용은 그 흔적을 보관하고 진행합니다.

@@ -28,11 +28,16 @@ internal static class LibraryCatalogAutoRecoveryTests
             byte[] bytes = File.ReadAllBytes(roots.CatalogPath);
             File.WriteAllBytes(roots.CatalogPath, bytes[..(bytes.Length / 2)]);
         });
+        // 쓰다 끊긴 0 바이트 파일입니다. SQLite 는 빈 데이터베이스로 열어 저장 버전 0 을 읽습니다.
+        Recovers("primary-zero-bytes", roots => File.WriteAllBytes(roots.CatalogPath, []));
+        // 사진 행의 결함 선언이 bool 이 아닙니다 — 카탈로그 행이 깨진 것이라 백업으로 되돌립니다.
+        Recovers("frame-declaration-malformed", BreakDeclaration);
         // 쓸 수 있는 롤백 사본이 있으면 백업이 아니라 그 사본으로 되돌리기를 마칩니다.
         Recovers("rollback-required", AddRollbackArtifacts, LibraryOpenOutcome.Restored);
 
         // 백업 세대가 없으면 막고, 사용자가 고르는 탈출구(새로 시작)가 통해야 합니다.
         StartsFreshWithoutBackup("primary-corrupt", Corrupt);
+        StartsFreshWithoutBackup("frame-declaration-malformed", BreakDeclaration);
         // 되돌릴 사본도 쓸 수 없는 표식입니다 — 이때만 막힙니다.
         StartsFreshWithoutBackup("rollback-required", roots =>
         {
@@ -89,7 +94,7 @@ internal static class LibraryCatalogAutoRecoveryTests
     }
 
     /// <summary>
-    /// 커밋 중 강제 종료로 롤백 사본만 남았습니다(표식 없음). 주 카탈로그는 원자적 교체라 온전하므로
+    /// 커밋 중 강제 종료로 롤백 사본만 남았습니다(표식 없음). 주 카탈로그는 트랜잭션이라 온전하므로
     /// 그대로 열고 사본은 보관합니다.
     /// </summary>
     private static void KeepsNewerStateAfterInterruptedCommit()
@@ -152,6 +157,34 @@ internal static class LibraryCatalogAutoRecoveryTests
 
     private static void Corrupt(StorageRootSet roots) =>
         File.WriteAllBytes(roots.CatalogPath, "this is not a database"u8.ToArray());
+
+    private static void BreakDeclaration(StorageRootSet roots)
+    {
+        Microsoft.Data.Sqlite.SqliteConnectionStringBuilder builder = new()
+        {
+            DataSource = roots.CatalogPath,
+            Mode = Microsoft.Data.Sqlite.SqliteOpenMode.ReadWrite,
+            Pooling = false,
+        };
+        using Microsoft.Data.Sqlite.SqliteConnection connection = new(builder.ConnectionString);
+        connection.Open();
+        using Microsoft.Data.Sqlite.SqliteCommand read = connection.CreateCommand();
+        read.CommandText = "SELECT id, payload FROM frames LIMIT 1";
+        string id;
+        System.Text.Json.Nodes.JsonObject payload;
+        using (Microsoft.Data.Sqlite.SqliteDataReader row = read.ExecuteReader())
+        {
+            row.Read();
+            id = row.GetString(0);
+            payload = System.Text.Json.Nodes.JsonNode.Parse((byte[])row.GetValue(1))!.AsObject();
+        }
+        payload["hasDefectEdits"] = "yes";
+        using Microsoft.Data.Sqlite.SqliteCommand write = connection.CreateCommand();
+        write.CommandText = "UPDATE frames SET payload = $payload WHERE id = $id";
+        write.Parameters.AddWithValue("$payload", System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()));
+        write.Parameters.AddWithValue("$id", id);
+        write.ExecuteNonQuery();
+    }
 
     /// <summary>커밋이 실패하고 되돌리기도 실패한 자리입니다. 사본은 커밋 직전 카탈로그입니다.</summary>
     private static void AddRollbackArtifacts(StorageRootSet roots)

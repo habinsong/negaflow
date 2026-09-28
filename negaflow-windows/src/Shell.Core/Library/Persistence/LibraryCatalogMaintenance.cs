@@ -177,8 +177,8 @@ internal sealed class LibraryCatalogMaintenance(
 
     /// <summary>
     /// macOS <c>settleDefectRecipesForCatalogMaintenance</c> — 복원 대기 사진의 기록을 다시 읽어
-    /// 되살리고, 사라졌거나 깨져 되살릴 수 없으면 지금 카탈로그와 결함 폴더를 한 번 보관한 뒤 그
-    /// 사진의 결함 편집만 비웁니다. 읽기 권한 오류나 더 새 버전 기록은 건드리지 않고 실패합니다.
+    /// (없거나 깨졌으면 백업의 같은 사진 기록으로 먼저 되살려) 되살리고, 그래도 안 되면 지금
+    /// 카탈로그와 결함 폴더를 한 번 보관한 뒤 그 사진의 결함 편집만 비웁니다. 읽기 권한 오류나 더 새 버전 기록은 건드리지 않고 실패합니다.
     /// </summary>
     private LibraryCatalogMaintenanceResult SettlePendingRestores(out List<Guid> cleared)
     {
@@ -191,6 +191,10 @@ internal sealed class LibraryCatalogMaintenance(
             {
                 continue;
             }
+            // 비우기 전에 자기 기록의 권한을 되돌리고, 백업에 남은 같은 사진의 기록부터 되살립니다
+            // (macOS 도 같은 차례).
+            _ = state.Session.RestoreDefectRecordAccess(frameId);
+            _ = state.Session.RestoreDefectRecipeFromBackup(frameId);
             DefectSidecarReadResult read = state.Session.ReadDefectRecipe(frameId);
             if (read.Snapshot is { } restored)
             {

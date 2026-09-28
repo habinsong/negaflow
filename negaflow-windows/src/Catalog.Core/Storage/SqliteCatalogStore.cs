@@ -49,6 +49,12 @@ internal static class SqliteCatalogStore
             }
 
             long storageVersion = SqliteCatalogSchema.ScalarInt64(connection, "PRAGMA user_version");
+            // 0 은 우리 schema 를 한 번도 쓰지 않은 빈 데이터베이스입니다 — 쓰다 끊긴 0 바이트 파일이
+            // 이렇게 열립니다. 더 새 버전으로 보면 백업이 있어도 복구 화면에서 멈췄습니다.
+            if (storageVersion == 0)
+            {
+                return CatalogReadResult.Failure(CatalogStoreError.MalformedContent);
+            }
             if (storageVersion != StorageSchemaVersion)
             {
                 return CatalogReadResult.Failure(

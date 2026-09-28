@@ -114,6 +114,14 @@ internal static class SqliteCatalogStoreTests
             "store_refuses_write_over_future_storage_version");
         SetStorageVersion(catalogPath, 1);
 
+        // 0 바이트 파일은 저장 버전 0 인 빈 데이터베이스로 열립니다. 더 새 버전이 아니라 카탈로그가
+        // 아니므로 깨진 파일로 봅니다 — 그래야 열기가 백업으로 되돌립니다.
+        string emptyPath = Path.Combine(Path.GetDirectoryName(catalogPath)!, "empty.sqlite");
+        File.WriteAllBytes(emptyPath, []);
+        Check(SqliteCatalogStore.Read(emptyPath).Error == CatalogStoreError.MalformedContent,
+            "store_reads_zero_byte_file_as_malformed", () => SqliteCatalogStore.Read(emptyPath).Error.ToString());
+        File.Delete(emptyPath);
+
         // macOS 파일은 논리 version 6 입니다. 조용히 읽지 않고 그 값을 보고합니다.
         SetCatalogVersion(catalogPath, 6);
         CatalogReadResult foreign = SqliteCatalogStore.Read(catalogPath);

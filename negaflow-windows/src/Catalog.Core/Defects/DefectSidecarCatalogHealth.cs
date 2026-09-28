@@ -79,14 +79,25 @@ internal static class DefectSidecarCatalogHealth
                 }
             }
 
-            foreach (Guid frameId in cleanupTargets)
+            // 선언하지 않은 사진 자리의 못 읽는 기록은 라이브러리를 막지 않습니다 — macOS 는 알 수 없는
+            // 파일을 두고 엽니다. 쓰레기는 한 번 보관한 뒤 치우고(남기면 그 사진의 새 편집이 거부됩니다),
+            // 더 새 버전·권한·입출력 오류는 지우지 않고 그대로 둡니다.
+            bool preserved = false;
+            foreach (Guid frameId in cleanupTargets.ToArray())
             {
                 DefectSidecarReadResult read = DefectSidecarFile.ReadFile(
                     DefectSidecarStore.PathFor(roots, frameId),
                     frameId);
-                if (read.Snapshot is null && read.Error != DefectSidecarError.NotFound)
+                if (read.Snapshot is not null || read.Error == DefectSidecarError.NotFound)
                 {
-                    return read.Error;
+                    continue;
+                }
+                bool garbage = read.Error is DefectSidecarError.InvalidContent or
+                    DefectSidecarError.InvalidSnapshot or DefectSidecarError.InvalidFrameId or
+                    DefectSidecarError.ConflictingSameRevision;
+                if (!garbage || !(preserved || (preserved = CatalogSidelinedFiles.Preserve(roots))))
+                {
+                    cleanupTargets.Remove(frameId);
                 }
             }
             foreach (Guid frameId in cleanupTargets)

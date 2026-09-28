@@ -91,6 +91,11 @@ public sealed partial class LibraryRecoveryView : UserControl
     /// </summary>
     private static string BlockMessage(LibraryHostService open)
     {
+        // 카탈로그 행이 깨진 것은 macOS `.corrupt` 입니다 — 결함 기록 문구가 아닙니다.
+        if (open.StoreError is CatalogStoreError.CorruptDatabase or CatalogStoreError.MalformedContent)
+        {
+            return AppResources.Get("libraryCatalogBlockedStatus", "Text");
+        }
         string? key = open.SessionError switch
         {
             CatalogSessionError.Busy => "libraryCatalogLockedStatus",

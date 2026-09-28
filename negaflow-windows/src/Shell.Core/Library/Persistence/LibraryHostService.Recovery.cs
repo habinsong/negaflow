@@ -97,12 +97,14 @@ public sealed partial class LibraryHostService
             return (LibraryDocument.Open(roots), true);
         }
         LibraryDocumentOpenResult opened = LibraryDocument.Open(roots);
+        // 결함 선언이 깨진 행은 결함 기록 문제가 아니라 카탈로그가 깨진 것입니다 — macOS 도 그 행을
+        // 못 읽어 백업으로 되돌립니다. 예전에는 백업이 있어도 "유효한 백업도 없다" 며 멈췄습니다.
         bool recoverable = opened.Document is null &&
-            opened.DefectSidecarError == DefectSidecarError.None &&
-            (opened.SessionError == CatalogSessionError.MissingAuthoritativeData ||
-             opened.StoreError is CatalogStoreError.CorruptDatabase or
-                 CatalogStoreError.MalformedContent or
-                 CatalogStoreError.MissingAuthoritativeData);
+            (opened.StoreError == CatalogStoreError.MalformedContent ||
+             opened.DefectSidecarError == DefectSidecarError.None &&
+             (opened.SessionError == CatalogSessionError.MissingAuthoritativeData ||
+              opened.StoreError is CatalogStoreError.CorruptDatabase or
+                  CatalogStoreError.MissingAuthoritativeData));
         return recoverable && ScheduleLatestBackup(roots)
             ? (LibraryDocument.Open(roots), true)
             : (opened, false);
