@@ -1,6 +1,7 @@
 #include "negaflow/pipeline/defect_infrared_stage.h"
 
 #include "defect_patch_quantization.h"
+#include "negaflow/core/parallel_rows.h"
 #include "negaflow/core/pixel.h"
 
 #include <algorithm>
@@ -132,6 +133,161 @@ struct InfraredPatch final {
     };
 }
 
+// 덩어리 하나를 고쳐 패치로 만듭니다. 원본 화상은 **읽기만** 합니다 - 패치는 모든 덩어리를
+// 만든 뒤 차례대로 합성하므로, 덩어리끼리는 서로의 결과를 보지 않습니다. 그래서 덩어리를
+// 나눠 동시에 만들어도 한 줄로 만든 것과 값이 같습니다.
+struct ClusterOutcome final {
+    DefectInfraredStageStatus status{DefectInfraredStageStatus::ok};
+    negaflow::imaging::DefectComponentRepairStatus repair_status{};
+    bool repaired{false};
+    bool has_patch{false};
+    std::size_t attenuated_pixels{0U};
+    std::size_t repaired_pixels{0U};
+    InfraredPatch patch{};
+};
+
+[[nodiscard]] ClusterOutcome repair_cluster(
+    const WorkingImage& image,
+    const DefectInfraredEdit& edit) noexcept {
+    ClusterOutcome outcome{};
+    try {
+        const std::uint32_t image_top =
+            image.height - edit.roi_y - edit.height;
+        WorkingImage roi{};
+        roi.width = edit.width;
+        roi.height = edit.height;
+        roi.stride_pixels = edit.width;
+        roi.pixels.resize(
+            static_cast<std::size_t>(edit.width) * edit.height);
+        for (std::uint32_t y = 0U; y < edit.height; ++y) {
+            const auto source = image.pixels.begin() +
+                static_cast<std::ptrdiff_t>(
+                    static_cast<std::size_t>(image_top + y) *
+                        image.stride_pixels +
+                    edit.roi_x);
+            std::copy_n(
+                source,
+                edit.width,
+                roi.pixels.begin() +
+                    static_cast<std::ptrdiff_t>(
+                        static_cast<std::size_t>(y) * edit.width));
+        }
+        if (negaflow::core::validate_finite_pixels(
+                const_view(roi)) !=
+            negaflow::core::KernelStatus::ok) {
+            outcome.status = DefectInfraredStageStatus::kernel_failed;
+            return outcome;
+        }
+        CorrectionBounds bounds{};
+        bool has_core = false;
+
+        if (!edit.attenuation_r16.empty()) {
+            for (std::uint32_t y = 0U; y < edit.height; ++y) {
+                const std::size_t attenuation_row =
+                    static_cast<std::size_t>(y) *
+                    edit.attenuation_stride_bytes;
+                const std::size_t pixel_row =
+                    static_cast<std::size_t>(y) * roi.stride_pixels;
+                for (std::uint32_t x = 0U; x < edit.width; ++x) {
+                    const std::size_t offset = attenuation_row +
+                        static_cast<std::size_t>(x) * 2U;
+                    const std::uint16_t attenuation =
+                        static_cast<std::uint16_t>(
+                            edit.attenuation_r16[offset]) |
+                        static_cast<std::uint16_t>(
+                            static_cast<std::uint16_t>(
+                                edit.attenuation_r16[offset + 1U])
+                            << 8U);
+                    if (attenuation == 0U) {
+                        continue;
+                    }
+                    bounds.include(x, y);
+                    const double transmittance = std::max(
+                        1.0 - static_cast<double>(attenuation) / 65535.0,
+                        0.5);
+                    Rgba32F& pixel = roi.pixels[pixel_row + x];
+                    pixel.red = safe_restore(pixel.red, transmittance);
+                    pixel.green = safe_restore(pixel.green, transmittance);
+                    pixel.blue = safe_restore(pixel.blue, transmittance);
+                    ++outcome.attenuated_pixels;
+                }
+            }
+        }
+
+        for (std::uint32_t y = 0U; y < edit.height; ++y) {
+            const std::size_t row =
+                static_cast<std::size_t>(y) * edit.core_mask_stride_bytes;
+            for (std::uint32_t x = 0U; x < edit.width; ++x) {
+                if (edit.core_mask[row + x] > 8U) {
+                    has_core = true;
+                    bounds.include(x, y);
+                }
+            }
+        }
+        if (has_core) {
+            auto repaired = negaflow::imaging::repair_defect_components(
+                std::move(roi),
+                edit.core_mask,
+                edit.core_mask_stride_bytes,
+                {});
+            outcome.repaired = true;
+            outcome.repair_status = repaired.status;
+            if (repaired.status !=
+                negaflow::imaging::DefectComponentRepairStatus::ok) {
+                outcome.status = DefectInfraredStageStatus::repair_failed;
+                return outcome;
+            }
+            outcome.repaired_pixels = repaired.info.repaired_pixels;
+            roi = std::move(repaired.image);
+        }
+
+        if (!bounds.has_pixels) {
+            return outcome;
+        }
+        InfraredPatch& patch = outcome.patch;
+        patch.image_left = edit.roi_x + bounds.left;
+        patch.image_top = image_top + bounds.top;
+        patch.width = bounds.right - bounds.left;
+        patch.height = bounds.bottom - bounds.top;
+        if (patch.width > std::numeric_limits<std::size_t>::max() /
+                              patch.height) {
+            outcome.status = DefectInfraredStageStatus::allocation_failed;
+            return outcome;
+        }
+        const std::size_t patch_pixels =
+            static_cast<std::size_t>(patch.width) * patch.height;
+        if (patch_pixels > std::numeric_limits<std::size_t>::max() /
+                               (3U * sizeof(std::uint16_t))) {
+            outcome.status = DefectInfraredStageStatus::allocation_failed;
+            return outcome;
+        }
+        patch.rgb16.resize(patch_pixels * 3U);
+        for (std::uint32_t y = 0U; y < patch.height; ++y) {
+            const auto source = roi.pixels.begin() +
+                static_cast<std::ptrdiff_t>(
+                    static_cast<std::size_t>(bounds.top + y) *
+                        roi.stride_pixels +
+                    bounds.left);
+            auto destination = patch.rgb16.begin() +
+                static_cast<std::ptrdiff_t>(
+                    static_cast<std::size_t>(y) * patch.width * 3U);
+            for (std::uint32_t x = 0U; x < patch.width; ++x) {
+                destination[static_cast<std::size_t>(x) * 3U] =
+                    defect_patch_detail::encode_linear16(source[x].red);
+                destination[static_cast<std::size_t>(x) * 3U + 1U] =
+                    defect_patch_detail::encode_linear16(source[x].green);
+                destination[static_cast<std::size_t>(x) * 3U + 2U] =
+                    defect_patch_detail::encode_linear16(source[x].blue);
+            }
+        }
+        outcome.has_patch = true;
+        return outcome;
+    } catch (...) {
+        outcome.status = DefectInfraredStageStatus::allocation_failed;
+        return outcome;
+    }
+}
+
 }  // namespace
 
 DefectInfraredStageResult apply_defect_infrared_edit(
@@ -173,147 +329,50 @@ DefectInfraredStageResult apply_defect_infrared_item(
     }
 
     try {
-        std::vector<InfraredPatch> patches{};
-        patches.reserve(item.clusters.size());
+        // 덩어리마다 따로 고칩니다(`repair_cluster`). 먼지 한 장에 덩어리가 수십~수백 개라
+        // 한 줄로 돌면 IR 편집 하나가 70~200 ms 였습니다. 결과는 차례대로 모아 첫 실패와
+        // 합산 수치, 합성 순서를 한 줄로 돌 때와 같게 둡니다.
+        const std::size_t cluster_count = item.clusters.size();
+        if (cluster_count > std::numeric_limits<std::uint32_t>::max()) {
+            result.status = DefectInfraredStageStatus::allocation_failed;
+            discard_pixels(result.image);
+            return result;
+        }
+        std::vector<ClusterOutcome> outcomes(cluster_count);
+        std::uint64_t work_units = 0U;
         for (const DefectInfraredEdit& edit : item.clusters) {
-            const std::uint32_t image_top =
-                result.image.height - edit.roi_y - edit.height;
-            WorkingImage roi{};
-            roi.width = edit.width;
-            roi.height = edit.height;
-            roi.stride_pixels = edit.width;
-            roi.pixels.resize(
-                static_cast<std::size_t>(edit.width) * edit.height);
-            for (std::uint32_t y = 0U; y < edit.height; ++y) {
-                const auto source = result.image.pixels.begin() +
-                    static_cast<std::ptrdiff_t>(
-                        static_cast<std::size_t>(image_top + y) *
-                            result.image.stride_pixels +
-                        edit.roi_x);
-                std::copy_n(
-                    source,
-                    edit.width,
-                    roi.pixels.begin() +
-                        static_cast<std::ptrdiff_t>(
-                            static_cast<std::size_t>(y) * edit.width));
+            // 덩어리 수리는 화소마다 sRGB 왕복과 구조 탐색을 하므로 화소 수에 무게를 둡니다.
+            work_units += static_cast<std::uint64_t>(edit.width) * edit.height * 64U;
+        }
+        const WorkingImage& source_image = result.image;
+        negaflow::core::for_each_row_block(
+            static_cast<std::uint32_t>(cluster_count),
+            work_units,
+            [&](const std::uint32_t first, const std::uint32_t count) noexcept {
+                for (std::uint32_t index = first; index < first + count; ++index) {
+                    outcomes[index] = repair_cluster(source_image, item.clusters[index]);
+                }
+            });
+        for (const ClusterOutcome& outcome : outcomes) {
+            result.info.attenuated_pixels += outcome.attenuated_pixels;
+            if (outcome.repaired) {
+                result.info.repair_status = outcome.repair_status;
+                result.info.repaired_pixels += outcome.repaired_pixels;
             }
-            if (negaflow::core::validate_finite_pixels(
-                    const_view(roi)) !=
-                negaflow::core::KernelStatus::ok) {
-                result.status = DefectInfraredStageStatus::kernel_failed;
+            if (outcome.status != DefectInfraredStageStatus::ok) {
+                result.status = outcome.status;
                 discard_pixels(result.image);
                 return result;
             }
-            CorrectionBounds bounds{};
-            bool has_core = false;
-
-            if (!edit.attenuation_r16.empty()) {
-                for (std::uint32_t y = 0U; y < edit.height; ++y) {
-                    const std::size_t attenuation_row =
-                        static_cast<std::size_t>(y) *
-                        edit.attenuation_stride_bytes;
-                    const std::size_t pixel_row =
-                        static_cast<std::size_t>(y) * roi.stride_pixels;
-                    for (std::uint32_t x = 0U; x < edit.width; ++x) {
-                        const std::size_t offset = attenuation_row +
-                            static_cast<std::size_t>(x) * 2U;
-                        const std::uint16_t attenuation =
-                            static_cast<std::uint16_t>(
-                                edit.attenuation_r16[offset]) |
-                            static_cast<std::uint16_t>(
-                                static_cast<std::uint16_t>(
-                                    edit.attenuation_r16[offset + 1U])
-                                << 8U);
-                        if (attenuation == 0U) {
-                            continue;
-                        }
-                        bounds.include(x, y);
-                        const double transmittance = std::max(
-                            1.0 - static_cast<double>(attenuation) / 65535.0,
-                            0.5);
-                        Rgba32F& pixel = roi.pixels[pixel_row + x];
-                        pixel.red = safe_restore(pixel.red, transmittance);
-                        pixel.green = safe_restore(pixel.green, transmittance);
-                        pixel.blue = safe_restore(pixel.blue, transmittance);
-                        ++result.info.attenuated_pixels;
-                    }
-                }
-            }
-
-            for (std::uint32_t y = 0U; y < edit.height; ++y) {
-                const std::size_t row =
-                    static_cast<std::size_t>(y) * edit.core_mask_stride_bytes;
-                for (std::uint32_t x = 0U; x < edit.width; ++x) {
-                    if (edit.core_mask[row + x] > 8U) {
-                        has_core = true;
-                        bounds.include(x, y);
-                    }
-                }
-            }
-            if (has_core) {
-                auto repaired = negaflow::imaging::repair_defect_components(
-                    std::move(roi),
-                    edit.core_mask,
-                    edit.core_mask_stride_bytes,
-                    {});
-                result.info.repair_status = repaired.status;
-                if (repaired.status !=
-                    negaflow::imaging::DefectComponentRepairStatus::ok) {
-                    result.status = DefectInfraredStageStatus::repair_failed;
-                    discard_pixels(result.image);
-                    return result;
-                }
-                result.info.repaired_pixels += repaired.info.repaired_pixels;
-                roi = std::move(repaired.image);
-            }
-
-            if (!bounds.has_pixels) {
-                continue;
-            }
-            InfraredPatch patch{};
-            patch.image_left = edit.roi_x + bounds.left;
-            patch.image_top = image_top + bounds.top;
-            patch.width = bounds.right - bounds.left;
-            patch.height = bounds.bottom - bounds.top;
-            if (patch.width > std::numeric_limits<std::size_t>::max() /
-                                  patch.height) {
-                result.status = DefectInfraredStageStatus::allocation_failed;
-                discard_pixels(result.image);
-                return result;
-            }
-            const std::size_t patch_pixels =
-                static_cast<std::size_t>(patch.width) * patch.height;
-            if (patch_pixels > std::numeric_limits<std::size_t>::max() /
-                                   (3U * sizeof(std::uint16_t))) {
-                result.status = DefectInfraredStageStatus::allocation_failed;
-                discard_pixels(result.image);
-                return result;
-            }
-            patch.rgb16.resize(patch_pixels * 3U);
-            for (std::uint32_t y = 0U; y < patch.height; ++y) {
-                const auto source = roi.pixels.begin() +
-                    static_cast<std::ptrdiff_t>(
-                        static_cast<std::size_t>(bounds.top + y) *
-                            roi.stride_pixels +
-                        bounds.left);
-                auto destination = patch.rgb16.begin() +
-                    static_cast<std::ptrdiff_t>(
-                        static_cast<std::size_t>(y) * patch.width * 3U);
-                for (std::uint32_t x = 0U; x < patch.width; ++x) {
-                    destination[static_cast<std::size_t>(x) * 3U] =
-                        defect_patch_detail::encode_linear16(source[x].red);
-                    destination[static_cast<std::size_t>(x) * 3U + 1U] =
-                        defect_patch_detail::encode_linear16(source[x].green);
-                    destination[static_cast<std::size_t>(x) * 3U + 2U] =
-                        defect_patch_detail::encode_linear16(source[x].blue);
-                }
-            }
-            patches.push_back(std::move(patch));
         }
 
         const float strength =
             defect_patch_detail::composited_patch_strength(item.strength);
-        for (const InfraredPatch& patch : patches) {
+        for (const ClusterOutcome& outcome : outcomes) {
+            if (!outcome.has_patch) {
+                continue;
+            }
+            const InfraredPatch& patch = outcome.patch;
             for (std::uint32_t y = 0U; y < patch.height; ++y) {
                 const std::size_t patch_row =
                     static_cast<std::size_t>(y) * patch.width * 3U;

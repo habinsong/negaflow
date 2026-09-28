@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <span>
 #include <string_view>
@@ -373,6 +374,82 @@ void test_malformed_payload_fails_closed() {
            "oversized_r16_is_rejected_and_discarded");
 }
 
+// 덩어리는 원본에서만 읽고 합성은 마지막에 차례대로 하므로, 서로 떨어진 덩어리 여럿을 한 번에
+// 고친 결과는 하나씩 차례로 고친 결과와 비트 단위로 같아야 합니다. 덩어리를 나눠 동시에
+// 고치게 바꾼 뒤에도 그 성질이 남는지 봅니다(겹치는 덩어리의 합성 순서는 위 시험이 봅니다).
+void test_many_disjoint_clusters_match_one_by_one() {
+    constexpr std::uint32_t width = 320U;
+    constexpr std::uint32_t height = 240U;
+    constexpr std::uint32_t side = 24U;
+    const WorkingImage original = make_image(width, height);
+    DefectInfraredItem item{};
+    item.enabled = true;
+    item.strength = 0.85;
+    // 편집은 마스크를 span 으로 봅니다. 버퍼는 여기서 들고 있습니다.
+    std::vector<std::vector<std::uint8_t>> cores(35U);
+    std::vector<std::vector<std::uint8_t>> attenuations(35U);
+    for (std::uint32_t row = 0U; row < 5U; ++row) {
+        for (std::uint32_t column = 0U; column < 7U; ++column) {
+            const std::size_t at = static_cast<std::size_t>(row) * 7U + column;
+            std::vector<std::uint8_t>& core = cores[at];
+            std::vector<std::uint8_t>& attenuation = attenuations[at];
+            core.assign(static_cast<std::size_t>(side) * side, 0U);
+            attenuation.assign(static_cast<std::size_t>(side) * side * 2U, 0U);
+            // 덩어리마다 모양이 조금씩 다르게: 가운데 얼룩과 아래쪽 옅은 감쇠.
+            const std::uint32_t center = 8U + (row + column) % 6U;
+            for (std::uint32_t y = center - 3U; y < center + 3U; ++y) {
+                for (std::uint32_t x = center - 2U; x < center + 4U; ++x) {
+                    core[static_cast<std::size_t>(y) * side + x] = 255U;
+                }
+            }
+            for (std::uint32_t x = 2U; x < side - 2U; ++x) {
+                write_r16(
+                    attenuation,
+                    static_cast<std::size_t>(side - 4U) * side + x,
+                    static_cast<std::uint16_t>(9000U + (x * 1000U)));
+            }
+            DefectInfraredEdit edit{};
+            edit.roi_x = 8U + column * 44U;
+            edit.roi_y = 8U + row * 46U;
+            edit.width = side;
+            edit.height = side;
+            edit.core_mask = core;
+            edit.core_mask_stride_bytes = side;
+            edit.attenuation_r16 = attenuation;
+            edit.attenuation_stride_bytes = side * 2U;
+            edit.strength = item.strength;
+            item.clusters.push_back(edit);
+        }
+    }
+    const auto together = negaflow::pipeline::apply_defect_infrared_item(original, item);
+    WorkingImage one_by_one = original;
+    std::size_t attenuated = 0U;
+    std::size_t repaired = 0U;
+    bool each_ok = true;
+    for (const DefectInfraredEdit& edit : item.clusters) {
+        DefectInfraredItem single{};
+        single.enabled = true;
+        single.strength = item.strength;
+        single.clusters.push_back(edit);
+        auto step = negaflow::pipeline::apply_defect_infrared_item(std::move(one_by_one), single);
+        each_ok = each_ok && step.status == DefectInfraredStageStatus::ok;
+        attenuated += step.info.attenuated_pixels;
+        repaired += step.info.repaired_pixels;
+        one_by_one = std::move(step.image);
+    }
+    expect(together.status == DefectInfraredStageStatus::ok && each_ok,
+           "many_disjoint_clusters_status_ok");
+    expect(together.info.attenuated_pixels == attenuated &&
+               together.info.repaired_pixels == repaired && repaired != 0U,
+           "many_disjoint_clusters_counters_match");
+    expect(together.image.pixels.size() == one_by_one.pixels.size() &&
+               std::memcmp(
+                   together.image.pixels.data(),
+                   one_by_one.pixels.data(),
+                   one_by_one.pixels.size() * sizeof(Rgba32F)) == 0,
+           "many_disjoint_clusters_match_one_by_one_bitwise");
+}
+
 }  // namespace
 
 int main(const int argc, const char* const* const argv) {
@@ -383,6 +460,7 @@ int main(const int argc, const char* const* const argv) {
         test_core_repair_reads_attenuation_corrected_context();
         test_legacy_mask_only_matches_component_repair();
         test_item_clusters_share_base_and_publish_only_correction_bounds();
+        test_many_disjoint_clusters_match_one_by_one();
         test_valid_item_can_exceed_old_rgba32_patch_storage_limit();
         test_malformed_payload_fails_closed();
     }
