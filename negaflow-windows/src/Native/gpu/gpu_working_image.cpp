@@ -329,7 +329,7 @@ GpuImageStatus GpuWorkingImage::upload_into(
                 static_cast<std::size_t>(width_) * sizeof(core::Rgba32F),
                 height_);
             device.context()->Unmap(staging, 0U);
-            device.context()->CopyResource(texture_, staging);
+            staging_detail::copy_to_texture(device.context(), texture_, staging, width_, height_);
             note_upload(width_, height_);
             return GpuImageStatus::ok;
         }
@@ -387,7 +387,7 @@ GpuImageStatus GpuWorkingImage::upload_planes_into(
             }
         });
     device.context()->Unmap(staging, 0U);
-    device.context()->CopyResource(texture_, staging);
+    staging_detail::copy_to_texture(device.context(), texture_, staging, width_, height_);
     note_upload(width_, height_);
     return GpuImageStatus::ok;
 }
@@ -407,7 +407,7 @@ GpuImageStatus GpuWorkingImage::download(
     if (staging == nullptr) {
         return GpuImageStatus::allocation_failed;
     }
-    device.context()->CopyResource(staging, texture_);
+    staging_detail::copy_to_staging(device.context(), staging, texture_, width_, height_);
     const GpuImageStatus status =
         read_staging(device, staging, pixels, width_, height_, stride_pixels);
     if (status == GpuImageStatus::ok) {
@@ -436,7 +436,7 @@ GpuImageStatus GpuWorkingImage::download_planes(
     if (staging == nullptr) {
         return GpuImageStatus::allocation_failed;
     }
-    device.context()->CopyResource(staging, texture_);
+    staging_detail::copy_to_staging(device.context(), staging, texture_, width_, height_);
     D3D11_MAPPED_SUBRESOURCE mapped{};
     if (FAILED(device.context()->Map(staging, 0U, D3D11_MAP_READ, 0U, &mapped))) {
         return GpuImageStatus::map_failed;

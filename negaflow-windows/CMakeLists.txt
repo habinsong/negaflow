@@ -105,6 +105,13 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_sample_grid.hlsl"
+    PointSampleGridMain
+    negaflow_point_sample_grid_cs
+    NEGAFLOW_POINT_SAMPLE_GRID_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
@@ -473,6 +480,7 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_GUIDED_APPLY_HEADER}"
     "${NEGAFLOW_MIP_HALVE_HEADER}"
     "${NEGAFLOW_FINITE_CHECK_HEADER}"
+    "${NEGAFLOW_POINT_SAMPLE_GRID_HEADER}"
     "${NEGAFLOW_PREVIEW_DISPLAY_ENCODE_HEADER}"
     "${NEGAFLOW_GAUSSIAN_H_HEADER}"
     "${NEGAFLOW_GAUSSIAN_V_HEADER}"
@@ -511,6 +519,7 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_negative_invert.cpp
     src/Native/gpu/gpu_guided_filter.cpp
     src/Native/gpu/gpu_finite_check.cpp
+    src/Native/gpu/gpu_point_sample.cpp
     src/Native/gpu/gpu_mip_halve.cpp
     src/Native/gpu/gpu_gaussian_blur.cpp
     src/Native/gpu/gpu_film_scan.cpp
@@ -787,6 +796,7 @@ add_library(negaflow_pipeline STATIC
     src/Native/pipeline/gpu_accelerator_custom_target.cpp
     src/Native/pipeline/gpu_accelerator_scratch.cpp
     src/Native/pipeline/gpu_kernel_table.cpp
+    src/Native/pipeline/gpu_kernel_table_resident.cpp
     src/Native/pipeline/stage_timing.cpp
 )
 target_include_directories(negaflow_pipeline
@@ -2029,6 +2039,23 @@ if(BUILD_TESTING)
     add_test(
         NAME native.preview_raw_store
         COMMAND negaflow_preview_raw_store_tests
+    )
+
+    add_executable(negaflow_gpu_resident_budget_tests
+        tests/Native.UnitTests/gpu_resident_budget_tests.cpp
+        tests/fixtures/tiff/synthetic_wic_tiff.cpp
+    )
+    target_include_directories(
+        negaflow_gpu_resident_budget_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff"
+    )
+    target_link_libraries(
+        negaflow_gpu_resident_budget_tests
+        PRIVATE negaflow_pipeline negaflow_gpu negaflow_project_options
+    )
+    add_test(
+        NAME native.gpu_resident_budget
+        COMMAND negaflow_gpu_resident_budget_tests
     )
 
     add_executable(negaflow_preview_auto_levels_stress_tests

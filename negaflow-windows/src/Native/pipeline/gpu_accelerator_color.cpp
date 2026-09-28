@@ -125,6 +125,24 @@ bool GpuAccelerator::apply_scanner_target_grade(
     if (!state_->target_grade_ready) {
         return false;
     }
+    // 사슬이 GPU 에 머물러 있으면 그 화상을 그대로 씁니다. 예전에는 여기서 화상 전체를
+    // 내렸다 올려(7.8MP 한 장 왕복 34 ms) 뒤따르는 노리츠·톤까지 전부 왕복했고, 유휴 클럭에서는
+    // 그 몇 배였습니다. 못 하면 화상을 내리고 상주를 끊어 CPU 판이 최신 화소를 보게 합니다.
+    if (state_->resident_matches(pixels, width, height)) {
+        const int read_slot = state_->resident.read_slot;
+        if ((read_slot == 0 || read_slot == 1) &&
+            state_->pool.ensure(state_->device, width, height, 2)) {
+            gpu::GpuWorkingImage* const resident = state_->pool.images();
+            if (state_->target_grade.dispatch(
+                    state_->device, resident[read_slot], resident[1 - read_slot], *setup) ==
+                gpu::GpuKernelStatus::ok) {
+                state_->bind_resident(pixels, width, height, stride_pixels, 1 - read_slot);
+                return true;
+            }
+        }
+        flush_resident();
+        return false;
+    }
     auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
 
     // **한 장이 안 들어가면 가로 띠로 나눠 올립니다.**
@@ -184,6 +202,25 @@ bool GpuAccelerator::apply_noritsu_texture(
     }
     const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->noritsu_texture_ready) {
+        return false;
+    }
+    // 타깃 그레이드와 같은 규칙입니다 — 상주면 올리고 내리지 않습니다.
+    if (state_->resident_matches(pixels, width, height)) {
+        const int read_slot = state_->resident.read_slot;
+        if ((read_slot == 0 || read_slot == 1) &&
+            state_->pool.ensure(state_->device, width, height, 3)) {
+            gpu::GpuWorkingImage* const resident = state_->pool.images();
+            if (state_->noritsu_texture.dispatch(
+                    state_->device,
+                    resident[read_slot],
+                    &resident[gpu::GpuImagePool::scratch_first],
+                    resident[1 - read_slot],
+                    *setup) == gpu::GpuKernelStatus::ok) {
+                state_->bind_resident(pixels, width, height, stride_pixels, 1 - read_slot);
+                return true;
+            }
+        }
+        flush_resident();
         return false;
     }
     if (!state_->pool.ensure(state_->device, width, height, 3)) {

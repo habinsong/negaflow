@@ -92,6 +92,17 @@ public:
         std::uint32_t height,
         std::uint32_t stride_pixels,
         bool* all_finite) noexcept;
+    // 상주 화상에서 점 표본 격자(칸마다 원본 화소 하나, `gpu_point_sample.h`)를 뽑아
+    // `out` 에 칸마다 RGBA float 넷으로 씁니다. 격자는 `sample_width` x
+    // max(`sample_height`, 2) 칸입니다. 상주가 아니면 거짓이고 호스트가 최신입니다.
+    // 상주인데 뽑지 못하면 화상을 내려 호스트를 최신으로 만든 뒤 거짓을 돌려줍니다.
+    [[nodiscard]] bool sample_resident_points(
+        const float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t sample_width,
+        std::uint32_t sample_height,
+        float* out) noexcept;
     // 상주 작업 화상을 표시용 BGRA8 로 내립니다. macOS
     // `createCGImage(..., format: .RGBA8)`. 상자 평균·클리핑 오버레이가 없을 때만
     // 호출부가 부릅니다. 성공하면 호스트 float 을 다시 내리지 않습니다.

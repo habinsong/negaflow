@@ -1,5 +1,7 @@
 #include "negaflow/pipeline/gpu_accelerator.h"
 
+#include "gpu_kernel_table_resident.h"
+
 // `imaging` 안쪽 커널을 GPU 로 보내는 **함수 표**입니다. 클래스 본체(`gpu_accelerator.cpp`)와
 // 나눠 둔 이유는 둘이 하는 일이 다르기 때문입니다 — 저쪽은 장치·자물쇠·텍스처를 들고
 // 실제 디스패치를 하고, 여기는 **무엇을 표에 걸지**를 정합니다. 정책이 바뀌는 것은 늘 이쪽입니다.
@@ -483,11 +485,6 @@ bool accelerate_resident_finite(
 }
 
 // 프로세스 수명 동안 살아 있어야 합니다 — `install_kernel_accelerator` 는 포인터만 갖습니다.
-bool accelerate_custom_color_target(float* pixels, std::uint32_t width, std::uint32_t height,
-    std::uint32_t stride_pixels, std::uint32_t target) noexcept {
-    return GpuAccelerator::shared().apply_custom_color_target(pixels, width, height, stride_pixels, target);
-}
-
 const imaging::KernelAccelerator kernel_table{
     accelerate_opening,
     accelerate_closing,
@@ -515,7 +512,7 @@ const imaging::KernelAccelerator kernel_table{
     accelerate_area_average,
     accelerate_mip_halve_levels,
     accelerate_resident_finite,
-    accelerate_custom_color_target,
+    gpu_table_detail::accelerate_custom_color_target,
 };
 
 } // namespace
@@ -562,6 +559,7 @@ void install_gpu_kernel_accelerator() noexcept {
             effective.closing_rgb = nullptr;
             effective.close_open_rgb = nullptr;
         }
+        gpu_table_detail::attach_resident_kernels(effective);
         imaging::install_kernel_accelerator(&effective);
     });
 }

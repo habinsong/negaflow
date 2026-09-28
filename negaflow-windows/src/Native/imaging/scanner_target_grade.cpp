@@ -311,6 +311,32 @@ negaflow::core::KernelStatus apply_noritsu_texture(
     return negaflow::core::KernelStatus::ok;
 }
 
+namespace {
+
+// 화상이 GPU 에 머물러 있으면 유한성도 거기서 봅니다. 호스트 화소는 낡았을 수 있고, 전체를
+// 내려 CPU 로 훑으면 사슬이 GPU 에서 끊깁니다(`muted_scene_vibrance.cpp` 와 같은 규칙).
+[[nodiscard]] negaflow::core::KernelStatus validate_finite(
+    const negaflow::core::ImageView image) noexcept {
+    if (const KernelAccelerator* const table = kernel_accelerator();
+        table != nullptr && table->resident_finite_check != nullptr &&
+        image.stride_pixels <= 0xFFFFFFFFULL) {
+        bool all_finite = false;
+        if (table->resident_finite_check(
+                reinterpret_cast<const float*>(image.pixels),
+                image.width,
+                image.height,
+                static_cast<std::uint32_t>(image.stride_pixels),
+                &all_finite)) {
+            return all_finite ? negaflow::core::KernelStatus::ok
+                              : negaflow::core::KernelStatus::non_finite_input;
+        }
+    }
+    return negaflow::core::validate_finite_pixels(negaflow::core::ConstImageView{
+        image.pixels, image.pixel_capacity, image.width, image.height, image.stride_pixels});
+}
+
+}  // namespace
+
 negaflow::core::KernelStatus apply_scanner_target_grade(
     const negaflow::core::ImageView image,
     const ScannerTargetStyle target,
@@ -319,11 +345,9 @@ negaflow::core::KernelStatus apply_scanner_target_grade(
     const std::wstring_view scanner_profile_id,
     ScannerTargetGradeInfo& info) noexcept {
     info = {};
-    const auto input = negaflow::core::ConstImageView{
-        image.pixels, image.pixel_capacity, image.width, image.height, image.stride_pixels};
     const auto view_status = negaflow::core::validate_image_view(image);
     if (view_status != negaflow::core::KernelStatus::ok) return view_status;
-    const auto finite_status = negaflow::core::validate_finite_pixels(input);
+    const auto finite_status = validate_finite(image);
     if (finite_status != negaflow::core::KernelStatus::ok) return finite_status;
 
     try {
@@ -366,7 +390,7 @@ negaflow::core::KernelStatus apply_scanner_target_grade(
         return negaflow::core::KernelStatus::buffer_too_small;
     }
 
-    const auto output_status = negaflow::core::validate_finite_pixels(input);
+    const auto output_status = validate_finite(image);
     if (output_status != negaflow::core::KernelStatus::ok) {
         return negaflow::core::KernelStatus::non_finite_output;
     }

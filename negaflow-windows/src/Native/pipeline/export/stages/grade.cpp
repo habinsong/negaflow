@@ -79,13 +79,19 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
         ((request.develop_target == DevelopTarget::main ||
           request.develop_target == DevelopTarget::print) &&
          !request.scanner_profile_id.empty());
-    if (target_active) {
-        GpuAccelerator::shared().flush_resident();
-    }
-    if (request.develop_target == DevelopTarget::noritsu ||
+    const bool scanner_target = request.develop_target == DevelopTarget::noritsu ||
         request.develop_target == DevelopTarget::sp3000 ||
         request.develop_target == DevelopTarget::f135 ||
-        request.develop_target == DevelopTarget::hr) {
+        request.develop_target == DevelopTarget::hr;
+    const bool monochrome =
+        negative.film_type == negaflow::imaging::NegativeFilmType::black_and_white;
+    // 스캐너 타깃은 화상이 GPU 에 머문 채로 끝납니다(장면 기준값·유한성 검사까지). 흑백 변환과
+    // 레스큐·프로필 그레이드는 CPU 판뿐이라 그때만 화상을 내립니다. 예전에는 여기서 늘 내려,
+    // 뒤따르는 노리츠·톤 단계까지 한 장에 왕복이 네 번 더 붙었습니다.
+    if (target_active && (!scanner_target || monochrome)) {
+        GpuAccelerator::shared().flush_resident();
+    }
+    if (scanner_target) {
         negaflow::imaging::ScannerTargetStyle target_style =
             negaflow::imaging::ScannerTargetStyle::noritsu;
         switch (request.develop_target) {
@@ -112,7 +118,7 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
                     developed_image.stride_pixels,
                 },
                 target_style,
-                negative.film_type == negaflow::imaging::NegativeFilmType::black_and_white,
+                monochrome,
                 positive,
                 request.scanner_profile_id,
                 target_info);

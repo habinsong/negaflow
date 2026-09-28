@@ -315,6 +315,18 @@ using MipHalveLevelsFunction = bool (*)(
 using CustomColorTargetFunction = bool (*)(float*, std::uint32_t, std::uint32_t,
     std::uint32_t, std::uint32_t) noexcept;
 
+// 화상이 GPU 에 머물러 있으면 거기서 점 표본 격자를 뽑습니다(칸마다 RGBA float 넷).
+// 칸 (x, y) 는 원본 (min(w-1, x*w/sample_width), min(h-1, y*h/sample_height)) 화소이고,
+// 격자는 `sample_width` x max(`sample_height`, 2) 칸입니다.
+// 거짓이면 호스트 화소가 최신이므로 호스트에서 뽑으면 됩니다.
+using ResidentPointSamplesFunction = bool (*)(
+    const float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t sample_width,
+    std::uint32_t sample_height,
+    float* out) noexcept;
+
 struct KernelAccelerator final {
     // ── 정확한 것 (언제나 켭니다) ────────────────────────────────────────────
     MorphologyPlaneFunction opening{nullptr};
@@ -346,6 +358,7 @@ struct KernelAccelerator final {
     MipHalveLevelsFunction mip_halve_levels{nullptr};
     ResidentFiniteFunction resident_finite_check{nullptr};
     CustomColorTargetFunction custom_color_target{nullptr};
+    ResidentPointSamplesFunction resident_point_samples{nullptr};
 };
 
 // 프로세스 시작에 한 번 설치합니다. `nullptr` 을 주면 해제합니다.

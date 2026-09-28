@@ -1,10 +1,14 @@
 #include "negaflow/pipeline/gpu_accelerator.h"
 
+#include "negaflow/gpu/gpu_cache_budget.h"
 #include "negaflow/gpu/gpu_kernel_timing.h"
 
 #include "gpu_accelerator_state.h"
 
 #include "negaflow/gpu/gpu_working_image.h"
+
+#include <algorithm>
+#include <cstring>
 
 namespace negaflow::pipeline {
 
@@ -34,6 +38,16 @@ bool GpuAccelerator::begin_resident() noexcept {
         return false;
     }
     state_->lock.lock();
+    // 풀은 상한을 넘는 텍스처를 새로 만들지 않을 뿐, 이미 든 것은 놓지 않습니다. 설정 창에서
+    // 수동 상한을 낮추거나 다른 앱이 VRAM 을 가져가 자동 상한이 줄면 그대로 넘친 채 남습니다.
+    // 사슬을 새로 열 때는 상주 화상이 없으므로 여기서 상한 안으로 되돌립니다.
+    if (state_->resident.scope_depth == 0) {
+        const std::uint64_t limit = gpu::GpuCacheBudget::effective_bytes(state_->device);
+        if (limit > 0ULL && gpu::gpu_pool_resident_bytes() > limit) {
+            state_->pool.clear();
+            (void)state_->device.flush_released_resources();
+        }
+    }
     ++state_->resident.scope_depth;
     return true;
 }
@@ -204,6 +218,48 @@ bool GpuAccelerator::check_resident_finite(
     }
     *all_finite = finite;
     return true;
+}
+
+bool GpuAccelerator::sample_resident_points(
+    const float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t sample_width,
+    const std::uint32_t sample_height,
+    float* const out) noexcept {
+    if (!available() || pixels == nullptr || out == nullptr) {
+        return false;
+    }
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
+    if (!state_->resident_matches(pixels, width, height)) {
+        return false;
+    }
+    if (!state_->point_samples_tried) {
+        state_->point_samples_tried = true;
+        state_->point_samples_ready =
+            gpu::GpuPointSampleGrid::create(state_->device, state_->point_samples) ==
+            gpu::GpuKernelStatus::ok;
+    }
+    gpu::GpuWorkingImage& image = state_->pool.images()[state_->resident.read_slot];
+    if (state_->point_samples_ready &&
+        state_->point_samples.dispatch(
+            state_->device,
+            image,
+            sample_width,
+            sample_height,
+            sample_width,
+            std::max(sample_height, 2U),
+            state_->point_sample_values) ==
+            gpu::GpuKernelStatus::ok) {
+        std::memcpy(
+            out,
+            state_->point_sample_values.data(),
+            state_->point_sample_values.size() * sizeof(core::Rgba32F));
+        return true;
+    }
+    // 못 뽑았으면 호출부가 호스트에서 뽑습니다. 그 화소가 최신이어야 합니다.
+    flush_resident();
+    return false;
 }
 
 GpuResidentScope::GpuResidentScope() noexcept {

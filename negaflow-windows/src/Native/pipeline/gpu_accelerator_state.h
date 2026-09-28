@@ -18,6 +18,7 @@
 #include "negaflow/gpu/gpu_film_emulation_acutance.h"
 #include "negaflow/gpu/gpu_film_emulation_cube.h"
 #include "negaflow/gpu/gpu_film_look_stage.h"
+#include "negaflow/gpu/gpu_point_sample.h"
 #include "negaflow/gpu/gpu_image_pool.h"
 #include "negaflow/gpu/gpu_film_scan_stage.h"
 #include "negaflow/gpu/gpu_morphology.h"
@@ -100,6 +101,11 @@ struct GpuAccelerator::State final {
     // 다운로드 시간의 큰 몫이었습니다. 필름 룩 오케스트레이터도 이 묶음을 받습니다.
     gpu::GpuImagePool pool{};
     gpu::GpuFiniteCheck finite{};
+    // 타깃 그레이드 장면 기준값의 점 표본. 처음 쓸 때 만듭니다.
+    gpu::GpuPointSampleGrid point_samples{};
+    std::vector<core::Rgba32F> point_sample_values{};
+    bool point_samples_tried{false};
+    bool point_samples_ready{false};
     bool finite_ready{false};
     gpu::GpuPreviewDisplayEncode preview_encode{};
     bool preview_encode_ready{false};
