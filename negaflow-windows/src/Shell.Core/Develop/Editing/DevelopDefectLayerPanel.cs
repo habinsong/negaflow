@@ -199,6 +199,16 @@ public sealed class DevelopDefectLayerPanel
             DefectLayerProjection.SurvivingMaskPreview(frame, MaskPreviewId));
     }
 
+    /// <summary>
+    /// 끄는 중이던 강도를 지금 값으로 저장합니다. 놓을 때와 같은 길입니다. 종료 때 부릅니다 —
+    /// macOS 1.1.8 <c>settleOpenDefectGestures</c> 처럼 드래그 중에 창을 닫아도 그 값을 잃지
+    /// 않습니다. 예전에는 종료 저장이 이 값을 빼고 저장한 뒤 지웠습니다.
+    /// </summary>
+    public LibraryFrameError CommitLiveStrength() =>
+        panel.SelectedFrame is { } frame && interactions.LiveStrength(frame.Id) is { } live
+            ? SetStrength(live.ItemId, live.Strength, live: false)
+            : LibraryFrameError.None;
+
     /// <summary>끄는 중이던 값을 버립니다. 사진을 바꾸거나 다른 편집이 끼어들 때 부릅니다.</summary>
     public void EndGesture()
     {

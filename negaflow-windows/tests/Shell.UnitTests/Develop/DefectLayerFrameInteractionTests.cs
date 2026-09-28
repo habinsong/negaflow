@@ -255,6 +255,18 @@ internal static class DefectLayerFrameInteractionTests
                     "grain_mend_failed_brush_apply_keeps_the_painted_draft");
             }
 
+            // 드래그 중에 창을 닫는 경우입니다(macOS 1.1.8 settleOpenDefectGestures). 종료 준비가
+            // 그 값을 놓을 때와 같이 저장해야 합니다.
+            Check(panel.DefectLayers.SetStrength(item.Id, 0.7, live: true) ==
+                      LibraryFrameError.None &&
+                  panel.DefectLayers.CommitLiveStrength() == LibraryFrameError.None &&
+                  !panel.DefectLayers.HasLiveStrength &&
+                  Strength(host.Frames.Single(frame => frame.Id == sourceIdText)) == 0.7,
+                "defect_layer_commits_open_drag_on_quit");
+            Check(panel.DefectLayers.CommitLiveStrength() == LibraryFrameError.None &&
+                  Strength(host.Frames.Single(frame => frame.Id == sourceIdText)) == 0.7,
+                "defect_layer_commit_without_drag_changes_nothing");
+
             Check(host.EditFrameRecord(
                     copyId,
                     record =>

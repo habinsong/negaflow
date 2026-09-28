@@ -437,6 +437,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     internal async Task PrepareForTerminationAsync()
     {
+        // 드래그 중이던 결함 강도를 먼저 확정합니다. 아래 라이브러리 종료 저장은 저장된 recipe 만
+        // 씁니다.
+        _ = panel?.DefectLayers.CommitLiveStrength();
         Task grainMendDrain = GrainMendPanel.PrepareForTerminationAsync();
         Task previewDrain = previewCoordinator?.CancelAndDrainAsync() ?? Task.CompletedTask;
         Task neighborDrain = CancelNeighborWarmAsync();
