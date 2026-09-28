@@ -7,6 +7,8 @@
 #include <filesystem>
 #include <stop_token>
 
+#include "negaflow/core/machine_memory.h"
+
 namespace negaflow::core {
 
 enum class TiffProbeStatus : std::uint8_t {
@@ -60,8 +62,12 @@ struct TiffProbeLimits final {
     std::uint64_t max_segments{1'048'576ULL};
     std::uint64_t max_single_tag_bytes{64ULL * 1024ULL * 1024ULL};
     std::uint64_t max_icc_profile_bytes{16ULL * 1024ULL * 1024ULL};
-    std::uint64_t max_lzw_compressed_bytes{512ULL * 1024ULL * 1024ULL};
-    std::uint64_t max_deflate_compressed_bytes{512ULL * 1024ULL * 1024ULL};
+    // 압축 데이터 상한도 화상 버퍼와 같이 이 기계의 설치 메모리에서 옵니다
+    // (`default_max_pixel_bytes`). 512MB 상수는 필름 입자 때문에 잘 줄지 않는 16bit 대형
+    // 스캔(예: 128MP LZW)을 필름 베이스 찍기·적외선 검출에서 거부했습니다. 검증은 세그먼트
+    // 단위로 읽어 가며 하므로 이 값만큼 메모리를 잡지 않습니다.
+    std::uint64_t max_lzw_compressed_bytes{default_max_pixel_bytes()};
+    std::uint64_t max_deflate_compressed_bytes{default_max_pixel_bytes()};
     std::uint64_t max_working_rgba32f_bytes{32ULL * 1024ULL * 1024ULL * 1024ULL};
 };
 

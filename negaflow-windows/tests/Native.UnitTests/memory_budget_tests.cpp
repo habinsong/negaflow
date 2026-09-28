@@ -155,6 +155,18 @@ int main() {
     expect(
         negaflow::output::WorkingToSrgb16Limits{}.max_encoded_pixel_bytes == pixel_limit,
         "sRGB16 내보내기가 그 상한을 씁니다");
+    // 압축 TIFF 의 압축 데이터 상한도 같습니다. 512MB 상수는 필름 베이스 찍기·적외선 검출에서
+    // 잘 줄지 않는 16bit 대형 LZW/Deflate 스캔을 거부했습니다.
+    expect(
+        negaflow::core::TiffProbeLimits{}.max_lzw_compressed_bytes == pixel_limit &&
+            negaflow::core::TiffProbeLimits{}.max_deflate_compressed_bytes == pixel_limit,
+        "TIFF 압축 데이터 상한이 그 상한을 씁니다");
+    if (installed > 0ULL) {
+        // 16bit RGB 128MP 가 압축 없이 768MB 입니다. 압축이 거의 안 돼도 상한 안이어야 합니다.
+        expect(
+            128ULL * 1000000ULL * 6ULL < negaflow::core::TiffProbeLimits{}.max_lzw_compressed_bytes,
+            "잘 줄지 않는 128MP 압축 스캔도 상한 안입니다");
+    }
 
     if (failures == 0) {
         std::cout << "memory_budget_tests ok\n";
