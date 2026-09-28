@@ -24,6 +24,7 @@ internal static class LibraryCatalogMaintenanceTests
         ReinstallSchedulesVerifiedRestoreThatNextOpenApplies();
         RecoveryScreenRestoresWhenSidecarIsMissingAtOpen();
         RecoveryScreenStartsFreshAfterCommittedLibrary();
+        RecipeWriteFailuresAreReported();
         MaintenanceDoesNothingWhileBusy();
     }
 
@@ -237,6 +238,38 @@ internal static class LibraryCatalogMaintenanceTests
             Check(blocked.Frames.Count == 0, "maintenance_blocked_fresh_is_empty");
             Check(Directory.EnumerateFiles(roots.LibraryRoot, "library.corrupt-*").Any(),
                 "maintenance_blocked_fresh_preserves_the_catalog");
+        });
+    }
+
+    /// <summary>
+    /// macOS <c>recordDefectSidecarWriteFailure</c> 처럼, 결함 기록이 저장되지 않은 까닭이 진단
+    /// "최근 실패 이벤트" 에 남아야 합니다. 다음 revision 이 아닌 기록도 저장되지 않은 것입니다.
+    /// </summary>
+    private static void RecipeWriteFailuresAreReported()
+    {
+        RunIsolated("write-failure", (roots, frameId) =>
+        {
+            using LibraryDocument document = LibraryDocument.Open(roots).Document!;
+            DefectRecipeSnapshot same = DefectRecipeSnapshot.Create(
+                frameId, 4, null, [DefectRecipeSamples.Edit(DefectEditKind.Brush)]);
+            Check(!document.WriteDefectRecipe(frameId.ToString("D"), same).IsSuccess &&
+                  LastCatalogSaveFailureCode() == "defect_sidecar_write_failed.RevisionNotNext",
+                "maintenance_recipe_revision_rejection_is_reported",
+                () => LastCatalogSaveFailureCode() ?? "none");
+
+            // 결함 폴더 자리가 파일이면 기록을 쓸 수 없습니다.
+            Directory.Delete(roots.DefectRecipeRoot, recursive: true);
+            File.WriteAllText(roots.DefectRecipeRoot, "not a folder");
+            DefectRecipeSnapshot next = DefectRecipeSnapshot.Create(
+                frameId, 5, null, [DefectRecipeSamples.Edit(DefectEditKind.Brush)]);
+            bool written = document.WriteDefectRecipe(frameId.ToString("D"), next).IsSuccess;
+            string? code = LastCatalogSaveFailureCode();
+            Check(!written &&
+                  code is not null &&
+                  code.StartsWith("defect_sidecar_write_failed.", StringComparison.Ordinal) &&
+                  code != "defect_sidecar_write_failed.RevisionNotNext",
+                "maintenance_recipe_write_failure_is_reported",
+                () => code ?? "none");
         });
     }
 

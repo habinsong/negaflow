@@ -29,6 +29,7 @@ internal sealed class LibraryDefectRecipeStore(
         }
         if (!state.DefectRevisions.IsNext(frameId, recipe.RecipeRevision))
         {
+            RecordWriteFailure("RevisionNotNext");
             return new(null, LibraryFrameError.None,
                 DefectSidecarError.InvalidSnapshot, CatalogStoreError.None);
         }
@@ -61,8 +62,7 @@ internal sealed class LibraryDefectRecipeStore(
         double commitMilliseconds = trace ? Split() : 0.0;
         if (!committed.IsSuccess || committed.Snapshot is not { } stored)
         {
-            return new(null, LibraryFrameError.None,
-                committed.Sidecar.Error, committed.CatalogError);
+            return Failed(committed.Sidecar.Error, committed.CatalogError);
         }
 
         state.Payloads[index] = updatedPayload;
@@ -106,8 +106,7 @@ internal sealed class LibraryDefectRecipeStore(
                 state.CreateSnapshot(candidateRows));
         if (!committed.IsSuccess)
         {
-            return new(null, LibraryFrameError.None,
-                committed.SidecarError, committed.CatalogError);
+            return Failed(committed.SidecarError, committed.CatalogError);
         }
 
         state.Payloads[index] = updatedPayload;
@@ -205,8 +204,7 @@ internal sealed class LibraryDefectRecipeStore(
                 state.CreateSnapshot(candidateRows));
         if (!committed.IsSuccess)
         {
-            return new(null, LibraryFrameError.None,
-                committed.SidecarError, committed.CatalogError);
+            return Failed(committed.SidecarError, committed.CatalogError);
         }
 
         state.Payloads[index] = updatedPayload;
@@ -220,6 +218,25 @@ internal sealed class LibraryDefectRecipeStore(
             IsDeleted = true,
         };
     }
+
+    private static LibraryDefectRecipeWriteResult Failed(
+        DefectSidecarError sidecar,
+        CatalogStoreError catalog)
+    {
+        RecordWriteFailure(sidecar != DefectSidecarError.None
+            ? sidecar.ToString()
+            : $"Catalog{catalog}");
+        return new(null, LibraryFrameError.None, sidecar, catalog);
+    }
+
+    /// <summary>
+    /// macOS <c>recordDefectSidecarWriteFailure</c> — 기록이 저장되지 않은 까닭을 진단 "최근 실패
+    /// 이벤트" 에 남깁니다. 예전에는 IR 적용 실패가 까닭 없이 끝나 사용자가 이유를 알 수 없었습니다.
+    /// </summary>
+    private static void RecordWriteFailure(string reason) =>
+        Diagnostics.AppDiagnostics.Start(
+            Diagnostics.AppDiagnosticOperation.CatalogSave,
+            Diagnostics.AppDiagnosticCategory.Catalog).Fail($"defect_sidecar_write_failed.{reason}");
 
     public void Purge(LibraryFrameRemoval removal)
     {
