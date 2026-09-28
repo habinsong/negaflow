@@ -288,7 +288,10 @@ struct LibraryViewModePicker: View {
                     } label: {
                         modeLabel(mode)
                     }
-                    .menuStyle(.borderlessButton)
+                    // 테두리 없는 메뉴는 라벨을 AppKit 팝업 제목으로 그려 글자가 칸 왼쪽에 붙는다.
+                    // 버튼 모양 메뉴는 다른 칸과 같은 라벨 뷰를 그대로 그려 가운데에 선다.
+                    .menuStyle(.button)
+                    .buttonStyle(.plain)
                     .menuIndicator(.hidden)
                     .frame(maxWidth: .infinity)
                     .accessibilityLabel(mode.displayName(language: model.appLanguage))
