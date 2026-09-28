@@ -61,6 +61,71 @@ final class DefectSidecarResourceLimitTests: XCTestCase {
         )
     }
 
+    /// 쓰기(recipe 생성)와 읽기(기록 검증)는 같은 상한을 써야 한다. 한쪽만 거부하면 쓰인
+    /// 기록을 읽지 못해 메모리 recipe 만 남는다.
+    func testRecipeCreationRejectsWhatTheReaderWouldReject() {
+        var budget = DefectSidecarResourceLimits.standard
+        budget.maxDecompressedBytesPerRecipe = 4 * 4 * 4 * 2 - 1
+        assertBothSidesReject(
+            .resourceLimitExceeded(.decompressedBytes),
+            items: [region(width: 4, height: 4), region(width: 4, height: 4)],
+            limits: budget
+        )
+
+        var wrongAttenuation = infrared(clusterCount: 1)
+        wrongAttenuation.clusters?[0].attenuation = .raw(Data(count: 3))
+        assertBothSidesReject(.invalidMask, items: [wrongAttenuation], limits: .standard)
+    }
+
+    /// 파일 상한은 다른 상한이 허용하는 가장 큰 recipe 를 담아야 한다. 마스크(RGBA8) 예산,
+    /// 그 절반인 적외선 감쇠 창, 점 하나당 binary plist 40바이트(5백만 개 실측)를 더한 값이다.
+    func testFileCapCoversTheLargestRecipeTheOtherCapsAllow() {
+        let limits = DefectSidecarResourceLimits.standard
+        let masks = limits.maxDecompressedBytesPerRecipe
+        let attenuation = masks / 2
+        let points = (limits.maxPointsPerRecipe + limits.maxPreviewPointsPerRecipe) * 40
+        XCTAssertGreaterThanOrEqual(limits.maxFileBytes, masks + attenuation + points)
+    }
+
+    /// 고해상도 적외선 스캔의 먼지 타일(768+여백 40)이 프레임을 넓게 덮는 recipe 가
+    /// v2 기록으로 쓰이고 다시 읽혀야 한다. 쓰기가 받아들인 기록을 읽기가 거부하면 메모리
+    /// recipe 만 남아 카탈로그 저장·스캔·종료가 전부 막힌다.
+    func testLargeInfraredRecipeRoundTripsThroughV2Sidecar() throws {
+        let root = temporaryDirectory("large-infrared")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let side = 848
+        var item = record(kind: .infrared)
+        // 타일마다 내용이 달라야 한다. 같은 Data 를 공유하면 binary plist 가 한 번만 저장해
+        // 실제 크기가 재현되지 않는다.
+        item.clusters = (0..<32).map { index in
+            var mask = Data(count: side * side * 4)
+            mask[index] = 255
+            var attenuation = Data(count: side * side * 2)
+            attenuation[index] = 1
+            return DefectClusterRecord(
+                roi: CGRect(x: index * 768, y: 0, width: side, height: side),
+                mask: .raw(mask),
+                attenuation: .raw(attenuation),
+                width: side,
+                height: side
+            )
+        }
+        let snapshot = try DefectRecipeSnapshot(
+            frameID: UUID(), revision: 1, sourceIdentity: nil, items: [item]
+        )
+
+        XCTAssertEqual(
+            try DefectSidecarFile.write(snapshot, in: root),
+            .written(DefectSidecarFile.url(for: snapshot.frameID, in: root))
+        )
+        guard case .loaded(.currentV2(_, let stored)) = DefectSidecarFile.read(
+            for: snapshot.frameID, in: root
+        ) else {
+            return XCTFail("large infrared recipe must read back")
+        }
+        XCTAssertEqual(stored, snapshot)
+    }
+
     private func assertLimit(
         _ resource: DefectSidecarResource,
         items: [DefectEditItemRecord],
@@ -76,6 +141,24 @@ final class DefectSidecarResourceLimitTests: XCTestCase {
                 error as? DefectRecipeValidationError,
                 .resourceLimitExceeded(resource)
             )
+        }
+    }
+
+    private func assertBothSidesReject(
+        _ expected: DefectRecipeValidationError,
+        items: [DefectEditItemRecord],
+        limits: DefectSidecarResourceLimits,
+        line: UInt = #line
+    ) {
+        XCTAssertThrowsError(try DefectRecipeSnapshot(
+            frameID: UUID(), revision: 1, sourceIdentity: nil, items: items, limits: limits
+        ), line: line) { error in
+            XCTAssertEqual(error as? DefectRecipeValidationError, expected, line: line)
+        }
+        XCTAssertThrowsError(try DefectSidecarResourcePolicy.normalizedItems(
+            items, limits: limits
+        ), line: line) { error in
+            XCTAssertEqual(error as? DefectRecipeValidationError, expected, line: line)
         }
     }
 

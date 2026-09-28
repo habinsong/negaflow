@@ -40,6 +40,29 @@ final class InputGammaPreviewSourceTests: XCTestCase {
         }
     }
 
+    /// iCloud 업로드·태그처럼 확장 속성만 바뀌면(ctime 만 변함) 같은 원본으로 봐야 한다.
+    func testMetadataOnlyChangeKeepsTheSourceUsable() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("frame.tiff")
+        let data = Data((0..<(16 * 16 * 6)).map { UInt8(truncatingIfNeeded: $0 &* 37) })
+        let provider = try XCTUnwrap(CGDataProvider(data: data as CFData))
+        let cg = try XCTUnwrap(CGImage(width: 16, height: 16, bitsPerComponent: 16, bitsPerPixel: 48,
+            bytesPerRow: 16 * 6, space: CGColorSpace(name: CGColorSpace.linearSRGB)!,
+            bitmapInfo: [.byteOrder16Little], provider: provider,
+            decode: nil, shouldInterpolate: false, intent: .defaultIntent))
+        XCTAssertTrue(ImageLoader.saveScannerTIFF(cg, to: url))
+        let source = try InputGammaPreviewSource(url: url)
+        let before = try InputGammaFileObservation.read(url)
+
+        Thread.sleep(forTimeInterval: 0.01)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+
+        XCTAssertEqual(try InputGammaFileObservation.read(url), before)
+        XCTAssertTrue(source.matches(url))
+    }
+
     private func pixels(_ image: CIImage) -> [Float] {
         let width = Int(image.extent.width), height = Int(image.extent.height)
         var result = [Float](repeating: 0, count: width * height * 4)

@@ -70,7 +70,7 @@ extension AppModel {
             guard await self.bakeDefectEditsForTermination() else {
                 self.isLibraryTerminationSaveInProgress = false
                 self.libraryTerminationAttemptGeneration = nil
-                self.statusMessage = self.libraryCatalogBlockMessage(.writeFailed)
+                self.statusMessage = self.text(AppLocalizedPhrase.librarySaveFailed)
                 completion(false)
                 return
             }
@@ -152,7 +152,7 @@ extension AppModel {
             librarySaveTask?.cancel()
             librarySaveTask = nil
             recordLibraryCatalogWriteResult(generation: generation, succeeded: false)
-            statusMessage = libraryCatalogBlockMessage(.writeFailed)
+            statusMessage = text(AppLocalizedPhrase.librarySaveFailed)
             isLibraryTerminationSaveInProgress = false
             libraryTerminationAttemptGeneration = nil
             completion(false)
@@ -172,7 +172,7 @@ extension AppModel {
                 generation: markLibraryCatalogDirty(),
                 succeeded: false
             )
-            statusMessage = libraryCatalogBlockMessage(.writeFailed)
+            statusMessage = text(AppLocalizedPhrase.librarySaveFailed)
             return nil
         }
         for frame in frames where !frame.isPreviewScan && !frame.defectEdits.isEmpty {
@@ -190,7 +190,7 @@ extension AppModel {
         let generation = markLibraryCatalogDirty()
         guard let catalog = currentLibraryCatalogSnapshot() else {
             recordLibraryCatalogWriteResult(generation: generation, succeeded: false)
-            statusMessage = libraryCatalogBlockMessage(.writeFailed)
+            statusMessage = text(AppLocalizedPhrase.librarySaveFailed)
             return nil
         }
         return (catalog, generation)
@@ -226,7 +226,7 @@ extension AppModel {
                 generation: prepared.generation,
                 succeeded: false
             )
-            statusMessage = libraryCatalogBlockMessage(.writeFailed)
+            statusMessage = text(AppLocalizedPhrase.librarySaveFailed)
             return false
         }
     }

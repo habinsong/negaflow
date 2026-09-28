@@ -3,7 +3,7 @@ import Foundation
 private struct DefectRecipeRelinkPlan {
     let frame: ScanFrame
     let revision: UInt64
-    let identity: DefectRecipeIdentity?
+    let snapshot: DefectRecipeSnapshot?
 }
 
 extension AppModel {
@@ -15,7 +15,8 @@ extension AppModel {
     }
 
     /// 한 source family의 모든 recipe invalidation을 먼저 계산한 뒤 일괄 반영한다.
-    /// 기록은 세션 메모리에만 있으므로(종료 시 이미지에 굽고 폐기) 디스크 반영은 없다.
+    /// 새 세대는 디스크 기록에도 남긴다. 카탈로그 저장은 메모리 recipe 와 디스크 기록이 같은
+    /// 세대인지 확인하므로, 재빌드 없이 끝나는 재연결(원본 이동·폴더 감시)도 여기서 저장해야 한다.
     @discardableResult
     func invalidateDefectRecipeSourceBindingsForRelink(_ family: [ScanFrame]) -> Bool {
         do {
@@ -38,7 +39,7 @@ extension AppModel {
                 return DefectRecipeRelinkPlan(
                     frame: frame,
                     revision: frame.defectRecipeRevision,
-                    identity: nil
+                    snapshot: nil
                 )
             }
             guard frame.defectRecipeRevision < UInt64.max else {
@@ -47,7 +48,7 @@ extension AppModel {
             return DefectRecipeRelinkPlan(
                 frame: frame,
                 revision: frame.defectRecipeRevision + 1,
-                identity: nil
+                snapshot: nil
             )
         }
 
@@ -63,7 +64,7 @@ extension AppModel {
         return DefectRecipeRelinkPlan(
             frame: frame,
             revision: snapshot.identity.revision,
-            identity: snapshot.identity
+            snapshot: snapshot
         )
     }
 
@@ -76,8 +77,9 @@ extension AppModel {
         }
         for plan in plans {
             plan.frame.defectRecipeRevision = plan.revision
-            if let identity = plan.identity {
-                installDefectRecipeIdentity(identity, on: plan.frame)
+            if let snapshot = plan.snapshot {
+                installDefectRecipeIdentity(snapshot.identity, on: plan.frame)
+                persistDefectRecipe(snapshot, for: plan.frame)
             } else {
                 plan.frame.defectRecipeIdentity = nil
                 updateDefectReviewTracking(plan.frame, identity: nil)

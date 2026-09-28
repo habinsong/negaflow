@@ -5,6 +5,8 @@ import SwiftUI
 final class NegaflowApplicationDelegate: NSObject, NSApplicationDelegate {
     let model: AppModel
     private var hasPendingTerminationReply = false
+    /// 종료 저장이 실패했을 때 저장 없이 끝낼지 묻는다. 테스트는 확인창 대신 답을 주입한다.
+    var confirmQuitWithoutSaving: @MainActor (AppModel) -> Bool = NegaflowApplicationDelegate.askToQuitWithoutSaving
 
     override init() {
         model = AppModelFactory.make()
@@ -26,12 +28,7 @@ final class NegaflowApplicationDelegate: NSObject, NSApplicationDelegate {
         let decision = model.beginApplicationTermination { [weak self] shouldTerminate in
             guard let self, self.hasPendingTerminationReply else { return }
             self.hasPendingTerminationReply = false
-            if !shouldTerminate {
-                self.model.isRelaunchRequested = false
-                self.model.isLibraryReinstallPendingRelaunch = false
-                self.model.reportError(self.model.libraryCatalogBlockMessage(.writeFailed))
-            }
-            sender.reply(toApplicationShouldTerminate: shouldTerminate)
+            sender.reply(toApplicationShouldTerminate: shouldTerminate || self.quitAfterFailedSave())
         }
         switch decision {
         case .terminateNow:
@@ -41,11 +38,30 @@ final class NegaflowApplicationDelegate: NSObject, NSApplicationDelegate {
             return .terminateLater
         case .terminateCancel:
             hasPendingTerminationReply = false
-            model.isRelaunchRequested = false
-            model.isLibraryReinstallPendingRelaunch = false
-            model.reportError(model.libraryCatalogBlockMessage(.writeFailed))
-            return .terminateCancel
+            return quitAfterFailedSave() ? .terminateNow : .terminateCancel
         }
+    }
+
+    /// 저장이 실패해도 종료를 무조건 막으면 강제 종료 말고는 앱을 끌 수 없다. 재실행 요청은
+    /// 거두고, 사용자가 고르면 저장 없이 끝낸다.
+    private func quitAfterFailedSave() -> Bool {
+        model.isRelaunchRequested = false
+        model.isLibraryReinstallPendingRelaunch = false
+        guard confirmQuitWithoutSaving(model) else {
+            model.reportError(model.text(AppLocalizedPhrase.librarySaveFailed))
+            return false
+        }
+        return true
+    }
+
+    /// 기본 단추는 취소다 — 실수로 눌러도 기록을 잃지 않는다.
+    private static func askToQuitWithoutSaving(_ model: AppModel) -> Bool {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = model.text(AppLocalizedPhrase.librarySaveFailed)
+        alert.addButton(withTitle: model.text(AppLocalizedPhrase.cancel))
+        alert.addButton(withTitle: model.text(AppLocalizedPhrase.quitWithoutSaving))
+        return alert.runModal() == .alertSecondButtonReturn
     }
 
     /// 종료가 승인된 뒤에만 불린다. 재실행 요청은 여기서 실행해야 종료가 취소됐을 때 앱이

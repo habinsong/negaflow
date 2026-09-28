@@ -25,7 +25,10 @@ extension AppModel {
                 guard let sourceIdentity = expectedIdentity.sourceIdentity else {
                     return (source: CaptureFileVerificationResult.unavailable, image: nil as CGImage?)
                 }
-                guard let currentIdentity = try? AppModel.defectSourceIdentity(for: rawURL) else {
+                guard let currentIdentity = try? AppModel.defectSourceIdentity(
+                    for: rawURL,
+                    bound: sourceIdentity
+                ) else {
                     return (source: CaptureFileVerificationResult.unavailable, image: nil as CGImage?)
                 }
                 guard currentIdentity == sourceIdentity else {

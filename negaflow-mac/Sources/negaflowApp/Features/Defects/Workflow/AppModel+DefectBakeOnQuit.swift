@@ -18,7 +18,10 @@ extension AppModel {
                     case .written, .alreadyCurrent: return true
                     case .skippedNewer: return false
                     }
-                } catch { return false }
+                } catch {
+                    AppModel.recordDefectSidecarWriteFailure("\(error)")
+                    return false
+                }
             }.value
             guard saved, ownsFrame(frame), frame.defectRecipeIdentity == identity else { return false }
         }

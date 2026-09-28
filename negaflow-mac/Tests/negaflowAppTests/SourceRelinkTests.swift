@@ -298,7 +298,13 @@ final class SourceRelinkTests: XCTestCase {
         XCTAssertEqual(relinkedIdentity.recipeSHA256, boundSnapshot.identity.recipeSHA256)
         XCTAssertNil(relinkedIdentity.sourceIdentity)
 
-        // 기록은 디스크에 남지 않는다 — relink 후에도 메모리 recipe만 유지된다.
+        // 재빌드 없이 끝나는 재연결도 새 세대를 디스크에 남긴다 — 카탈로그 저장이 둘을 대조한다.
+        guard case .loaded(.currentV2(_, let stored)) = DefectSidecarFile.read(
+            for: frame.id, in: defectDirectory
+        ) else {
+            return XCTFail("재연결한 recipe 가 디스크에 남아야 합니다.")
+        }
+        XCTAssertEqual(stored.identity, relinkedIdentity)
         XCTAssertEqual(
             frame.defectEdits.map(DefectEditItemRecord.init(item:)),
             [DefectEditItemRecord(item: item)]

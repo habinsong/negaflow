@@ -138,8 +138,8 @@ extension AppModel {
               libraryCatalogBlockReason == nil,
               libraryLifecycleState == .ready,
               !isLibraryMaintenanceInProgress,
-              !hasUncommittedDefectGesture,
-              !isAcknowledgedLibraryTransactionActive else {
+              !isAcknowledgedLibraryTransactionActive,
+              settleOpenDefectGestures(in: frames) else {
             return false
         }
         librarySaveTask?.cancel()
@@ -147,6 +147,18 @@ extension AppModel {
         isAcknowledgedLibraryTransactionActive = true
         librarySaveRequestedDuringTransaction = false
         return true
+    }
+
+    /// 강도 드래그가 열려 있으면 그 recipe 는 메모리에만 있어 확정 커밋의 검증이 막는다. 스캔
+    /// 발행처럼 드래그 끝을 기다릴 수 없는 커밋이 그 때문에 실패하면 방금 스캔한 사진을 잃으므로,
+    /// 지금 값으로 확정·저장하고 진행한다. 드래그가 이어지면 다음 값은 새 revision 으로 이어진다.
+    private func settleOpenDefectGestures(in snapshotFrames: [ScanFrame]) -> Bool {
+        for frame in snapshotFrames where frame.defectGestureRecipeAdvanced {
+            guard refreshDefectRecipeState(frame, advanceRevision: false, persist: true) != nil else {
+                return false
+            }
+        }
+        return !hasUncommittedDefectGesture
     }
 
     func commitAcknowledgedLibrarySnapshot(
@@ -158,6 +170,9 @@ extension AppModel {
         manualCollections snapshotManualCollections: [LibraryManualCollection]? = nil
     ) -> Result<Void, LibraryCatalogCommitError> {
         guard isAcknowledgedLibraryTransactionActive else {
+            return .failure(.invalidCatalog)
+        }
+        guard settleOpenDefectGestures(in: snapshotFrames) else {
             return .failure(.invalidCatalog)
         }
         guard let catalog = makeLibraryCatalogSnapshot(

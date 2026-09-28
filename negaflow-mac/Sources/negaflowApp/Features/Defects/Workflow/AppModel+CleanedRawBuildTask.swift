@@ -42,7 +42,10 @@ extension AppModel {
             category: .defects
         )
         let task = Task.detached(priority: .userInitiated) {
-            guard let sourceIdentity = try? AppModel.defectSourceIdentity(for: rawURL) else {
+            guard let sourceIdentity = try? AppModel.defectSourceIdentity(
+                for: rawURL,
+                bound: recipeSnapshot.identity.sourceIdentity ?? baseIdentity?.sourceIdentity
+            ) else {
                 await self.finishFailedCleanedRawBuild(
                     frame,
                     revision: revision,
@@ -154,7 +157,10 @@ extension AppModel {
                 return (flat, computed, nil)
             }
             guard !Task.isCancelled,
-                  let sourceAfter = try? AppModel.defectSourceIdentity(for: rawURL) else {
+                  let sourceAfter = try? AppModel.defectSourceIdentity(
+                      for: rawURL,
+                      bound: sourceIdentity
+                  ) else {
                 await self.finishFailedCleanedRawBuild(
                     frame,
                     revision: revision,
@@ -186,7 +192,12 @@ extension AppModel {
                     return false
                 }
                 self.installDefectRecipeIdentity(boundSnapshot.identity, on: frame)
-                self.persistDefectRecipe(boundSnapshot, for: frame)
+                // 강도 드래그는 revision 을 시작할 때 한 번만 올린다. 드래그 중 커밋마다 같은
+                // revision 의 다른 recipe 를 쓰면 충돌로 실패해 기록이 어긋난 채 남으므로,
+                // 디스크 기록은 드래그가 끝날 때 한 번 확정한다.
+                if !frame.defectGestureRecipeAdvanced {
+                    self.persistDefectRecipe(boundSnapshot, for: frame)
+                }
                 frame.cleanedRawImage = built.cleaned
                 frame.cleanedRawMemoryIdentity = boundSnapshot.identity
                 frame.cleanedRawEditCount = totalEditCount

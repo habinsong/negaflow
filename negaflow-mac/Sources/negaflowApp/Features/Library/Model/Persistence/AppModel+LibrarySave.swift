@@ -68,7 +68,7 @@ extension AppModel {
         }
         var snapshotFailure = "unknown"
         guard let catalog = currentLibraryCatalogSnapshot(onInvalid: { snapshotFailure = $0 }) else {
-            statusMessage = libraryCatalogBlockMessage(.corrupt)
+            statusMessage = text(AppLocalizedPhrase.librarySaveFailed)
             recordLibraryCatalogWriteResult(generation: writeGeneration, succeeded: false)
             trace.fail(code: "catalog_snapshot_invalid.\(snapshotFailure)")
             return false

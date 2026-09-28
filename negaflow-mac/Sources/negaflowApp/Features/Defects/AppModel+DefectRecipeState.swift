@@ -122,20 +122,35 @@ extension AppModel {
 
     /// 파일시스템 관찰값으로 캐시의 원본 세대를 확인합니다. 복구·재연결로 inode 등이
     /// 바뀌면 recipe를 보존하고 캐시만 새 원본에서 재생성합니다.
-    nonisolated static func defectSourceIdentity(for url: URL) throws -> DefectSourceIdentity {
+    ///
+    /// ctime 은 넣지 않는다. 기본 저장소인 iCloud 의 업로드·태그·백업이 확장 속성만 바꿔도
+    /// ctime 이 바뀌어, 내용이 같은 원본을 바뀐 것으로 보고 결함 제거를 처음부터 다시 만들고
+    /// 검토 표시까지 지웠다. `bound` 는 recipe 에 이미 묶인 값이다 — 예전(ctime 포함) 형식으로
+    /// 묶였어도 그때와 같은 상태면 그 값을 돌려줘, 형식이 바뀌었다는 이유만으로 다시 만들지 않는다.
+    nonisolated static func defectSourceIdentity(
+        for url: URL,
+        bound: DefectSourceIdentity? = nil
+    ) throws -> DefectSourceIdentity {
         let observation = try CaptureFileObservation.capture(for: url)
-        let canonical = [
+        var components = [
             "\(observation.device)", "\(observation.inode)", "\(observation.byteCount)",
             "\(observation.modifiedSeconds).\(observation.modifiedNanoseconds)",
-            "\(observation.changedSeconds).\(observation.changedNanoseconds)",
-        ].joined(separator: "/")
-        let digest = SHA256.hash(data: Data(canonical.utf8))
+        ]
+        let current = try sourceIdentity(components, byteCount: observation.byteCount)
+        guard let bound, bound != current else { return current }
+        components.append("\(observation.changedSeconds).\(observation.changedNanoseconds)")
+        let legacy = try sourceIdentity(components, byteCount: observation.byteCount)
+        return bound == legacy ? bound : current
+    }
+
+    private nonisolated static func sourceIdentity(
+        _ components: [String],
+        byteCount: UInt64
+    ) throws -> DefectSourceIdentity {
+        let digest = SHA256.hash(data: Data(components.joined(separator: "/").utf8))
             .map { String(format: "%02x", $0) }
             .joined()
-        return try DefectSourceIdentity(
-            byteCount: observation.byteCount,
-            sha256: digest
-        )
+        return try DefectSourceIdentity(byteCount: byteCount, sha256: digest)
     }
 
     func updateDefectReviewTracking(

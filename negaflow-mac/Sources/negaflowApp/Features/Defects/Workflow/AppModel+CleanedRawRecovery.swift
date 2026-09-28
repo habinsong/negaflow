@@ -14,7 +14,10 @@ extension AppModel {
         let rawURL = frame.rawScanURL
         let revision = frame.cleanRawRevision
         let verification: CaptureFileVerificationResult = await Task.detached(priority: .utility) {
-            guard let currentIdentity = try? AppModel.defectSourceIdentity(for: rawURL) else {
+            guard let currentIdentity = try? AppModel.defectSourceIdentity(
+                for: rawURL,
+                bound: expectedSourceIdentity
+            ) else {
                 return .unavailable
             }
             return currentIdentity == expectedSourceIdentity ? .match : .mismatch

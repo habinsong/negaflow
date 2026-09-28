@@ -297,6 +297,8 @@ extension AppLocalization {
         .infraredHelp: "赤外線チャンネルをスキャンしてゴミやキズを検出します。赤外線対応機のみに表示されます。",
         .scanSection: "スキャン",
         .cancel: "キャンセル",
+        .librarySaveFailed: "ライブラリを保存できませんでした。",
+        .quitWithoutSaving: "保存せずに終了",
         .scan: "スキャン",
         .importSource: "読み込み",
         .scanNext: "次をスキャン",

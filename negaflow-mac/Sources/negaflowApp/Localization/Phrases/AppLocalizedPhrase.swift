@@ -221,6 +221,8 @@ enum AppLocalizedPhrase: CaseIterable {
     case infraredHelp
     case scanSection
     case cancel
+    case librarySaveFailed
+    case quitWithoutSaving
     case scan
     case importSource
     case scanNext

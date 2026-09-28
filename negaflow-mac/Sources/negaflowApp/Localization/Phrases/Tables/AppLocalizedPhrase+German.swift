@@ -297,6 +297,8 @@ extension AppLocalization {
         .infraredHelp: "Scannt den Infrarotkanal zur Staub- und Kratzererkennung. Nur bei IR-fähigen Geräten sichtbar.",
         .scanSection: "Scannen",
         .cancel: "Abbrechen",
+        .librarySaveFailed: "Die Mediathek konnte nicht gesichert werden.",
+        .quitWithoutSaving: "Beenden ohne Sichern",
         .scan: "Scannen",
         .importSource: "Importieren",
         .scanNext: "Nächstes Bild scannen",

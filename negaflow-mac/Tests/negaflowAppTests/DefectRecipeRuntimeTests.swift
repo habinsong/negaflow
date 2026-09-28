@@ -1,3 +1,5 @@
+import Chromabase
+import CoreGraphics
 import XCTest
 @testable import negaflowApp
 
@@ -583,6 +585,65 @@ final class DefectRecipeRuntimeTests: XCTestCase {
         XCTAssertEqual(stored.identity, frame.defectRecipeIdentity)
         XCTAssertEqual(stored.items.first?.strength, 0.37)
         XCTAssertTrue(FileManager.default.fileExists(atPath: model.libraryCatalogURL.path))
+    }
+
+    /// 강도 드래그 중 live 빌드가 실제로 커밋되는 경우. 드래그는 revision 을 한 번만 올리므로
+    /// 커밋마다 같은 revision 의 다른 recipe 를 디스크에 쓰면 충돌로 실패하고, 드래그가 끝난
+    /// 뒤에도 메모리와 디스크가 어긋나 카탈로그 저장이 막힌다.
+    func testLiveStrengthDragWithCommittedBuildsKeepsSidecarInSync() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "negaflow-live-drag-commit-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let defects = root.appendingPathComponent("defects", isDirectory: true)
+        let raw = root.appendingPathComponent("frame.tiff")
+        let context = try XCTUnwrap(CGContext(
+            data: nil, width: 64, height: 64, bitsPerComponent: 16, bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.linearSRGB)!,
+            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue | CGBitmapInfo.byteOrder16Little.rawValue
+        ))
+        context.setFillColor(CGColor(red: 0.4, green: 0.5, blue: 0.6, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: 64, height: 64))
+        XCTAssertTrue(ImageLoader.saveScannerTIFF(try XCTUnwrap(context.makeImage()), to: raw))
+
+        let model = AppModel(
+            libraryCatalogURL: root.appendingPathComponent("library.sqlite"),
+            libraryDefectDirectoryURL: defects,
+            libraryBackupDirectoryURL: root.appendingPathComponent("Backups", isDirectory: true)
+        )
+        let frame = ScanFrame(scanIndex: 1, rawScanURL: raw, filmType: .colorNegative)
+        frame.establishLibraryWorkflowBaselineIfNeeded()
+        frame.defectEdits = [makeEdit(strength: 1)]
+        model.frames = [frame]
+        let editID = try XCTUnwrap(frame.defectEdits.first?.id)
+
+        model.rebuildCleanedRaw(frame)
+        try await waitForCommittedBuild(frame)
+        XCTAssertNotNil(frame.defectRecipeIdentity?.sourceIdentity)
+
+        for strength in [0.6, 0.3] {
+            model.setDefectEditStrength(frame, id: editID, strength: strength, live: true)
+            for _ in 0..<400 where frame.defectRecipeRefreshTask != nil {
+                try await Task.sleep(nanoseconds: 5_000_000)
+            }
+            try await waitForCommittedBuild(frame)
+        }
+        model.setDefectEditStrength(frame, id: editID, strength: 0.3)
+        try await waitForCommittedBuild(frame)
+        DefectSidecarFile.flushSync()
+
+        XCTAssertNil(model.defectSidecarValidationFailure(model.frames))
+    }
+
+    private func waitForCommittedBuild(_ frame: ScanFrame) async throws {
+        for _ in 0..<1_000 where frame.cleanRawTask != nil {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertNil(frame.cleanRawTask)
+        XCTAssertNotNil(frame.cleanedRawMemoryIdentity)
+        XCTAssertEqual(frame.cleanedRawMemoryIdentity, frame.defectRecipeIdentity)
     }
 
     private func makeFrame() -> ScanFrame {

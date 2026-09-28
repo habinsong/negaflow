@@ -128,9 +128,14 @@ extension AppModel {
                 frame, advanceRevision: true, persist: false
             ) else { return false }
             let written = await Task.detached(priority: .userInitiated) {
-                switch try? DefectSidecarFile.write(snapshot, in: directory) {
-                case .some(.written), .some(.alreadyCurrent): return true
-                case .some(.skippedNewer), .none: return false
+                do {
+                    switch try DefectSidecarFile.write(snapshot, in: directory) {
+                    case .written, .alreadyCurrent: return true
+                    case .skippedNewer: return false
+                    }
+                } catch {
+                    AppModel.recordDefectSidecarWriteFailure("\(error)")
+                    return false
                 }
             }.value
             guard written, ownsFrame(frame), frame.defectRecipeIdentity == snapshot.identity else {

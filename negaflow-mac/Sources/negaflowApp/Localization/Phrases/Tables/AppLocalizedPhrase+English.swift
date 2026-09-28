@@ -297,6 +297,8 @@ extension AppLocalization {
             .infraredHelp: "Scan the infrared channel for dust and scratch detection. Shown only on IR-capable devices.",
             .scanSection: "Scan",
             .cancel: "Cancel",
+            .librarySaveFailed: "The library could not be saved.",
+            .quitWithoutSaving: "Quit Without Saving",
             .scan: "Scan",
             .importSource: "Import",
             .scanNext: "Scan Next",

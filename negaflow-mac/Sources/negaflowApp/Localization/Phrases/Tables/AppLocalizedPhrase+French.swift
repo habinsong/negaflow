@@ -297,6 +297,8 @@ extension AppLocalization {
         .infraredHelp: "Numérise le canal infrarouge pour détecter poussières et rayures. Affiché uniquement sur les appareils compatibles IR.",
         .scanSection: "Numérisation",
         .cancel: "Annuler",
+        .librarySaveFailed: "La bibliothèque n’a pas pu être enregistrée.",
+        .quitWithoutSaving: "Quitter sans enregistrer",
         .scan: "Numériser",
         .importSource: "Importer",
         .scanNext: "Numériser la suivante",

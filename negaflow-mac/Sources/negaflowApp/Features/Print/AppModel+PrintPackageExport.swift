@@ -354,7 +354,7 @@ extension AppModel {
                 )
                 throw ChromabaseError.writeFailed("print package catalog commit rejected")
             case .indeterminate:
-                statusMessage = libraryCatalogBlockMessage(.writeFailed)
+                statusMessage = text(AppLocalizedPhrase.librarySaveFailed)
                 return
             }
 

@@ -297,6 +297,8 @@ extension AppLocalization {
         .infraredHelp: "扫描红外通道以检测灰尘和划痕。仅在支持红外的设备上显示。",
         .scanSection: "扫描",
         .cancel: "取消",
+        .librarySaveFailed: "无法保存图库。",
+        .quitWithoutSaving: "不保存并退出",
         .scan: "扫描",
         .importSource: "导入",
         .scanNext: "扫描下一张",

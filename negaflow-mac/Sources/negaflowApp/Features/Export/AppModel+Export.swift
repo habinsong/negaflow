@@ -311,7 +311,7 @@ extension AppModel {
         libraryCatalogBlockReason = .writeFailed
         libraryPersistenceEnabled = false
         transitionLibraryLifecycle(to: .blocked)
-        statusMessage = libraryCatalogBlockMessage(.writeFailed)
+        statusMessage = text(AppLocalizedPhrase.librarySaveFailed)
     }
 
     @discardableResult
@@ -443,7 +443,10 @@ extension AppModel {
         // 곧바로 이어지는 내보내기가 같은 cleaned raw TIFF 를 처음부터 다시 디코드했다.
         let decoded = await Task.detached(priority: .userInitiated) { () -> CGImage? in
             guard CleanedRawCacheFile.isOwnedCacheURL(url, frameID: frameID),
-                  (try? AppModel.defectSourceIdentity(for: rawURL)) == expectedSourceIdentity else {
+                  (try? AppModel.defectSourceIdentity(
+                      for: rawURL,
+                      bound: expectedSourceIdentity
+                  )) == expectedSourceIdentity else {
                 return nil
             }
             return decodeCleanedRaw(url)

@@ -297,6 +297,8 @@ extension AppLocalization {
             .infraredHelp: "먼지·스크래치 감지를 위해 적외선 채널로 스캔합니다. IR 지원 기기에서만 표시됩니다.",
             .scanSection: "스캔",
             .cancel: "취소",
+            .librarySaveFailed: "라이브러리를 저장하지 못했습니다.",
+            .quitWithoutSaving: "저장하지 않고 종료",
             .scan: "스캔",
             .importSource: "가져오기",
             .scanNext: "다음 스캔",

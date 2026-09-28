@@ -1,3 +1,4 @@
+import Chromabase
 import XCTest
 @testable import negaflowApp
 
@@ -146,6 +147,73 @@ final class LibraryCatalogMaintenanceTests: XCTestCase {
         XCTAssertTrue(relaunched.saveLibrary(synchronous: true))
     }
 
+    /// QA 제보(1.1.7, GT-X980 적외선 본스캔) 재현. 고해상도 컷의 적외선 먼지 타일은 원본
+    /// 크기 그대로 기록되므로 기록이 커진다. 이 기록이 저장·복구·재설치·종료를 모두 통과해야 한다.
+    func testLargeInfraredRecipeDoesNotBlockSaveRepairReinstallOrQuit() async throws {
+        let (model, frame) = try makeReadyModelWithDefectFrame(edit: makeLargeInfraredEdit())
+
+        XCTAssertTrue(model.saveLibrary(synchronous: true), String(describing: lastCatalogSaveFailureCode()))
+        if case .loaded(.currentV2(_, let stored)) = DefectSidecarFile.read(
+            for: frame.id, in: defectDirectory
+        ) {
+            XCTAssertEqual(stored.identity, frame.defectRecipeIdentity)
+        } else {
+            XCTFail("적외선 기록이 디스크에 남아야 합니다.")
+        }
+
+        let repaired = await model.repairLibraryCatalogAndRelaunch()
+        XCTAssertTrue(repaired)
+        model.isRelaunchRequested = false
+
+        let reinstalled = await model.reinstallLibraryCatalogAndRelaunch()
+        XCTAssertTrue(reinstalled)
+        model.isRelaunchRequested = false
+        model.isLibraryReinstallPendingRelaunch = false
+
+        let terminated = await terminate(model)
+        XCTAssertTrue(terminated)
+    }
+
+    /// 원본 이동·폴더 감시의 재연결은 재빌드 없이(reprocess: false) recipe 의 원본 연결만 끊는다.
+    /// 그 새 세대가 디스크에 남지 않으면 다음 저장부터 전부 막힌다.
+    func testSourceRelinkWithoutRebuildKeepsCatalogSavable() throws {
+        let (model, frame) = try makeReadyModelWithDefectFrame()
+
+        XCTAssertTrue(model.invalidateDefectRecipeSourceBindingsForRelink([frame]))
+
+        XCTAssertTrue(model.saveLibrary(synchronous: true), String(describing: lastCatalogSaveFailureCode()))
+        guard case .loaded(.currentV2(_, let stored)) = DefectSidecarFile.read(
+            for: frame.id, in: defectDirectory
+        ) else {
+            return XCTFail("재연결한 recipe 가 디스크에 남아야 합니다.")
+        }
+        XCTAssertEqual(stored.identity, frame.defectRecipeIdentity)
+    }
+
+    /// 사진 1 의 결함 강도를 드래그하는 도중에 사진 2 가 발행되는 경우. 드래그 중 recipe 는
+    /// 메모리에만 있으므로, 발행이 그것 때문에 실패하면 방금 스캔한 사진을 잃는다.
+    func testScanPublicationSettlesAnOpenStrengthDrag() throws {
+        let (model, frame) = try makeReadyModelWithDefectFrame()
+        let editID = try XCTUnwrap(frame.defectEdits.first?.id)
+        model.setDefectEditStrength(frame, id: editID, strength: 0.4, live: true)
+        XCTAssertTrue(frame.defectGestureRecipeAdvanced)
+
+        XCTAssertTrue(model.publishScanGeneration(
+            frames: model.frames,
+            rolls: model.rolls,
+            activeRollID: model.activeRollID,
+            sessions: model.scanSessions,
+            assignments: model.scanRollAssignments
+        ), String(describing: lastCatalogSaveFailureCode()))
+        guard case .loaded(.currentV2(_, let stored)) = DefectSidecarFile.read(
+            for: frame.id, in: defectDirectory
+        ) else {
+            return XCTFail("드래그 중이던 recipe 가 확정돼 디스크에 남아야 합니다.")
+        }
+        XCTAssertEqual(stored.identity, frame.defectRecipeIdentity)
+        XCTAssertEqual(stored.items.first?.strength, 0.4)
+    }
+
     func testMaintenanceDoesNothingWhileScanning() async throws {
         let (model, _) = try makeReadyModelWithDefectFrame()
         model.isScanning = true
@@ -178,7 +246,9 @@ final class LibraryCatalogMaintenanceTests: XCTestCase {
         return model
     }
 
-    private func makeReadyModelWithDefectFrame() throws -> (AppModel, ScanFrame) {
+    private func makeReadyModelWithDefectFrame(
+        edit: DefectEditItem? = nil
+    ) throws -> (AppModel, ScanFrame) {
         let model = makeModel()
         model.libraryPersistenceEnabled = false
         let roll = try XCTUnwrap(model.createPhysicalRoll(
@@ -192,7 +262,7 @@ final class LibraryCatalogMaintenanceTests: XCTestCase {
             filmType: .colorNegative
         )
         frame.establishLibraryWorkflowBaselineIfNeeded()
-        frame.defectEdits = [makeEdit()]
+        frame.defectEdits = [edit ?? makeEdit()]
         model.frames = [frame]
         XCTAssertTrue(model.assignNewPersistentFrames([frame], toRollID: roll.id))
         _ = try XCTUnwrap(model.refreshDefectRecipeState(frame, advanceRevision: true, persist: true))
@@ -226,6 +296,34 @@ final class LibraryCatalogMaintenanceTests: XCTestCase {
         AppDiagnostics.recentEvents.last(where: {
             $0.operation == .catalogSave && $0.phase == .error
         })?.code
+    }
+
+    /// 4800dpi 급 컷에서 먼지 타일(768+여백 40) 32개. 원본 크기 그대로면 기록이 약 138MB 다.
+    /// 타일마다 내용이 달라야 binary plist 가 중복을 한 번만 저장하지 않는다.
+    private func makeLargeInfraredEdit() -> DefectEditItem {
+        let side = 848
+        let clusters = (0..<32).map { index in
+            var mask = Data(count: side * side * 4)
+            mask[index] = 255
+            var attenuation = Data(count: side * side * 2)
+            attenuation[index] = 1
+            return InfraredDefectRemoval.Cluster(
+                roiYup: CGRect(x: index * 768, y: 0, width: side, height: side),
+                maskRGBA8: mask,
+                attenuationR16: attenuation,
+                width: side,
+                height: side
+            )
+        }
+        return DefectEditItem(
+            edit: .infrared(clusters: clusters),
+            enabled: true,
+            strength: 1,
+            label: .infrared(count: clusters.count),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
+            preview: [],
+            baseSize: CGSize(width: 24_576, height: 848)
+        )
     }
 
     private func makeEdit() -> DefectEditItem {
