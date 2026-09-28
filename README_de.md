@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/de/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="Website"></a>
-  <a href="#download"><img src="https://img.shields.io/badge/version-1.1.7-EF8B26" alt="Version 1.1.7"></a>
+  <a href="#download"><img src="https://img.shields.io/badge/version-1.1.8-EF8B26" alt="Version 1.1.8"></a>
   <a href="negaflow-mac/docs/README_de.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 oder neuer"></a>
   <a href="negaflow-windows/docs/README_de.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 oder neuer"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache-2.0-Lizenz"></a>
@@ -73,9 +73,9 @@ Sie holen es sich bei [GitHub Releases](https://github.com/habinsong/negaflow/re
 
 | Datei | Umgebung |
 |---|---|
-| `negaflow-1.1.7-mac-universal.pkg` | macOS 14 oder neuer, Apple Silicon und Intel |
-| `negaflow-1.1.7-mac-arm64.pkg` | macOS 14 oder neuer, nur Apple Silicon |
-| `negaflow-1.1.7-win-x64.exe` | Windows 11 24H2 oder neuer, x64 |
+| `negaflow-1.1.8-mac-universal.pkg` | macOS 14 oder neuer, Apple Silicon und Intel |
+| `negaflow-1.1.8-mac-arm64.pkg` | macOS 14 oder neuer, nur Apple Silicon |
+| `negaflow-1.1.8-win-x64.exe` | Windows 11 24H2 oder neuer, x64 |
 
 Kompatibel mit macOS 14, 26 und 27.
 

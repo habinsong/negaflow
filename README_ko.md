@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/ko/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="웹사이트"></a>
-  <a href="#다운로드"><img src="https://img.shields.io/badge/version-1.1.7-EF8B26" alt="버전 1.1.7"></a>
+  <a href="#다운로드"><img src="https://img.shields.io/badge/version-1.1.8-EF8B26" alt="버전 1.1.8"></a>
   <a href="negaflow-mac/docs/README_ko.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 이상"></a>
   <a href="negaflow-windows/docs/README_ko.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 이상"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 라이선스"></a>
@@ -85,9 +85,9 @@
 
 | 설치 파일 | 사용 환경 |
 |---|---|
-| `negaflow-1.1.7-mac-universal.pkg` | macOS 14 이상, Apple Silicon과 Intel |
-| `negaflow-1.1.7-mac-arm64.pkg` | macOS 14 이상, Apple Silicon 전용 |
-| `negaflow-1.1.7-win-x64.exe` | Windows 11 24H2 이상, x64 |
+| `negaflow-1.1.8-mac-universal.pkg` | macOS 14 이상, Apple Silicon과 Intel |
+| `negaflow-1.1.8-mac-arm64.pkg` | macOS 14 이상, Apple Silicon 전용 |
+| `negaflow-1.1.8-win-x64.exe` | Windows 11 24H2 이상, x64 |
 
 macOS 14, 26, 27과 호환됩니다.
 
