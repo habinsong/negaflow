@@ -63,6 +63,29 @@ final class InputGammaPreviewSourceTests: XCTestCase {
         XCTAssertTrue(source.matches(url))
     }
 
+    /// 필름 스트립 통째 스캔처럼 한 변이 GPU 텍스처 한도(16384px)를 넘는 원본. 원본 크기 그대로
+    /// 텍스처를 만들면 Metal 이 abort 로 앱을 죽이고, 다음 실행도 같은 사진을 열다 죽는다.
+    func testSourceLongerThanTheGPUTextureLimitStillDecodes() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("strip.tiff")
+        let width = 8, height = 16_400
+        let data = Data((0..<(width * height * 6)).map { UInt8(truncatingIfNeeded: $0 &* 31) })
+        let provider = try XCTUnwrap(CGDataProvider(data: data as CFData))
+        let cg = try XCTUnwrap(CGImage(width: width, height: height, bitsPerComponent: 16, bitsPerPixel: 48,
+            bytesPerRow: width * 6, space: CGColorSpace(name: CGColorSpace.linearSRGB)!,
+            bitmapInfo: [.byteOrder16Little], provider: provider,
+            decode: nil, shouldInterpolate: false, intent: .defaultIntent))
+        XCTAssertTrue(ImageLoader.saveScannerTIFF(cg, to: url))
+
+        let source = try InputGammaPreviewSource(url: url)
+        let full = try source.image(gamma: try .power(2.2), maxDimension: 0, applyOrientation: true)
+
+        XCTAssertEqual(full.extent.width, CGFloat(width))
+        XCTAssertEqual(full.extent.height, CGFloat(height))
+    }
+
     private func pixels(_ image: CIImage) -> [Float] {
         let width = Int(image.extent.width), height = Int(image.extent.height)
         var result = [Float](repeating: 0, count: width * height * 4)

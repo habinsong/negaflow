@@ -73,7 +73,9 @@ public final class InputGammaPreviewSource: @unchecked Sendable {
         if let power = resolved.value {
             let powered = encoded.applyingFilter("CIGammaAdjust", parameters: ["inputPower": power])
             let proxy = Self.proxy(powered, maxDimension: maxDimension)
-            if let queue = Self.queue, let buffer = queue.makeCommandBuffer() {
+            if let queue = Self.queue,
+               Self.fitsTexture(width: Int(proxy.extent.width), height: Int(proxy.extent.height)),
+               let buffer = queue.makeCommandBuffer() {
                 let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba32Float,
                     width: Int(proxy.extent.width), height: Int(proxy.extent.height), mipmapped: false)
                 descriptor.storageMode = .private
@@ -106,7 +108,8 @@ public final class InputGammaPreviewSource: @unchecked Sendable {
     /// 같은 원본을 매 틱 GPU로 다시 전송하지 않습니다. 성공하면 CPU 디코드 버퍼는 놓습니다.
     private static func cacheEncodedTexture(_ cg: CGImage, linearSpace: CGColorSpace, automaticSpace: CGColorSpace)
         -> (encoded: CIImage, automatic: CIImage, cost: Int)? {
-        guard let queue, let buffer = queue.makeCommandBuffer() else { return nil }
+        guard fitsTexture(width: cg.width, height: cg.height),
+              let queue, let buffer = queue.makeCommandBuffer() else { return nil }
         let descriptor = MTLTextureDescriptor.texture2DDescriptor(
             pixelFormat: cg.bitsPerComponent == 8 ? .rgba8Unorm : .rgba16Unorm,
             width: cg.width, height: cg.height, mipmapped: false)
@@ -121,6 +124,16 @@ public final class InputGammaPreviewSource: @unchecked Sendable {
               let encoded = CIImage(mtlTexture: texture, options: [.colorSpace: NSNull()]),
               let automatic = CIImage(mtlTexture: texture, options: [.colorSpace: automaticSpace]) else { return nil }
         return (encoded, automatic, texture.allocatedSize)
+    }
+
+    /// Apple GPU 2D 텍스처 한 변의 상한. 필름 스트립 통째 스캔처럼 이보다 긴 원본으로 텍스처를
+    /// 만들면 Metal 이 검증에서 abort 로 앱을 죽이고, 다음 실행도 같은 사진을 열다 죽는다.
+    /// 넘는 원본은 CPU 경로로 처리한다.
+    private static let maximumTextureDimension = 16_384
+
+    private static func fitsTexture(width: Int, height: Int) -> Bool {
+        width > 0 && height > 0
+            && width <= maximumTextureDimension && height <= maximumTextureDimension
     }
 
     private static func proxy(_ source: CIImage, maxDimension: CGFloat) -> CIImage {
