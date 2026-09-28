@@ -1,9 +1,12 @@
+using System.Runtime.InteropServices.WindowsRuntime;
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
 using Microsoft.UI.Xaml.Media;
+using Windows.Graphics.Imaging;
+using Windows.Storage.Streams;
 
 namespace Negaflow.Shell.Views;
 
@@ -159,6 +162,75 @@ public sealed partial class DevelopWorkspaceView
     /// <summary>화면에 올라가 있는 그림의 리비전입니다.</summary>
     private int presentedRevision;
 
+    /// <summary>같은 사진을 여러 번 그려도 문제 목록에 한 번만 남깁니다.</summary>
+    private string? reportedRestorePendingFrameId;
+
+    /// <summary>
+    /// macOS 는 복원 대기 사진을 현상하지 않고 <c>reportError(removingDefectsFailedStatus)</c> 를
+    /// 냅니다 — 상태바에 잠시 뜨고 최근 문제에 남습니다. 예전에는 빈 캔버스만 보였습니다.
+    /// </summary>
+    private void ReportRestorePending(PreviewOutcome outcome, LibraryFrameSnapshot requestedFrame)
+    {
+        if (outcome.Refusal != DevelopRequestRefusal.DefectRestorePending ||
+            string.Equals(reportedRestorePendingFrameId, requestedFrame.Id, StringComparison.Ordinal))
+        {
+            return;
+        }
+        reportedRestorePendingFrameId = requestedFrame.Id;
+        string message = AppResources.Get("removingDefectsFailedStatus", "Text");
+        Diagnostics.AppErrorLog.Shared.Record(message);
+        Diagnostics.AppStatusMessage.Shared.Post(message);
+    }
+
+    /// <summary>
+    /// macOS 캔버스와 히스토그램은 <c>developedImage ?? thumbnailImage</c> 를 그립니다. 복원 대기
+    /// 사진은 현상하지 않으므로 카드 썸네일이 그 자리를 채웁니다. 예전에는 빈 캔버스나 앞 사진이
+    /// 남았습니다. 썸네일도 없으면 비웁니다 — 다른 사진의 그림을 남기지 않습니다.
+    /// </summary>
+    private async void PresentRestorePendingThumbnail(LibraryFrameSnapshot frame)
+    {
+        byte[]? jpeg = thumbnails?.TryGetOrLoad(frame.Id);
+        (byte[] Pixels, int Width, int Height)? image = jpeg is null ? null : await DecodeBgraAsync(jpeg);
+        if (!string.Equals(panel?.SelectedFrame?.Id, frame.Id, StringComparison.Ordinal))
+        {
+            return;
+        }
+        if (image is not { } shown)
+        {
+            PreviewCanvas.KeepPreviewPixels(null, 0U, 0U);
+            PreviewCanvas.ShowEmpty();
+            HistogramView.Clear();
+            return;
+        }
+        // 샘플러도 화면에 그린 것과 같은 버퍼를 읽어야 합니다.
+        PreviewCanvas.KeepPreviewPixels(shown.Pixels, (uint)shown.Width, (uint)shown.Height);
+        PreviewCanvas.Present(shown.Pixels, shown.Width, shown.Height);
+        HistogramView.UpdatePixels(shown.Pixels, shown.Width, shown.Height);
+    }
+
+    private static async Task<(byte[] Pixels, int Width, int Height)?> DecodeBgraAsync(byte[] jpeg)
+    {
+        try
+        {
+            using InMemoryRandomAccessStream stream = new();
+            await stream.WriteAsync(jpeg.AsBuffer());
+            stream.Seek(0);
+            BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
+            PixelDataProvider provider = await decoder.GetPixelDataAsync(
+                BitmapPixelFormat.Bgra8,
+                BitmapAlphaMode.Ignore,
+                new BitmapTransform(),
+                ExifOrientationMode.IgnoreExifOrientation,
+                ColorManagementMode.DoNotColorManage);
+            return (provider.DetachPixelData(), (int)decoder.PixelWidth, (int)decoder.PixelHeight);
+        }
+        catch (Exception error) when (error is IOException or ArgumentException or
+            NotSupportedException or System.Runtime.InteropServices.COMException)
+        {
+            return null;
+        }
+    }
+
     private void ShowPreview(
         PreviewOutcome outcome,
         bool clearPixelsOnFailure,
@@ -210,6 +282,14 @@ public sealed partial class DevelopWorkspaceView
             // 겹친 요청이 빈 캔버스("이미지를 가져오세요")를 남깁니다.
             if (outcome.Kind == DevelopExportOutcomeKind.Cancelled)
             {
+                GrainMendPanel.CancelDevelopedPresentation(requestedFrame);
+                return;
+            }
+            if (outcome.Refusal == DevelopRequestRefusal.DefectRestorePending)
+            {
+                ReportRestorePending(outcome, requestedFrame);
+                PresentRestorePendingThumbnail(requestedFrame);
+                GrainMendPanel.CompleteDefectPreview(requestedFrame);
                 GrainMendPanel.CancelDevelopedPresentation(requestedFrame);
                 return;
             }

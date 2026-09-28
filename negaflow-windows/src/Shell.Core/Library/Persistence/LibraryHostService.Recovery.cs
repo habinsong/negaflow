@@ -89,11 +89,12 @@ public sealed partial class LibraryHostService
     /// 결함 기록 문제, 더 새 버전, 잠금·권한, 이미 예약된 복원의 실패는 되돌릴 까닭이 아니므로
     /// 그대로 둡니다(macOS 도 <c>unsupportedVersion</c> 은 막고 백업으로 가지 않습니다).
     /// </remarks>
-    private static LibraryDocumentOpenResult OpenRecoveringFromLatestBackup(StorageRootSet roots)
+    private static (LibraryDocumentOpenResult Result, bool Recovered) OpenRecoveringFromLatestBackup(
+        StorageRootSet roots)
     {
         if (!File.Exists(roots.CatalogPath) && ScheduleLatestBackup(roots))
         {
-            return LibraryDocument.Open(roots);
+            return (LibraryDocument.Open(roots), true);
         }
         LibraryDocumentOpenResult opened = LibraryDocument.Open(roots);
         bool recoverable = opened.Document is null &&
@@ -102,7 +103,32 @@ public sealed partial class LibraryHostService
              opened.StoreError is CatalogStoreError.CorruptDatabase or
                  CatalogStoreError.MalformedContent or
                  CatalogStoreError.MissingAuthoritativeData);
-        return recoverable && ScheduleLatestBackup(roots) ? LibraryDocument.Open(roots) : opened;
+        return recoverable && ScheduleLatestBackup(roots)
+            ? (LibraryDocument.Open(roots), true)
+            : (opened, false);
+    }
+
+    /// <summary>
+    /// 마지막으로 연 결과입니다. 셸이 하단 상태바에 알립니다(macOS <c>statusMessage</c>). 사진이
+    /// 없으면 <c>null</c> 입니다 — macOS 도 빈 라이브러리에는 알리지 않습니다.
+    /// </summary>
+    public LibraryOpenStatus? OpenStatus { get; private set; }
+
+    /// <summary>macOS <c>restoreLibraryOnLaunch</c> 의 알림 차례 그대로입니다.</summary>
+    private LibraryOpenStatus? DescribeOpen(LibraryDocumentOpenResult opened, bool recovered)
+    {
+        int frames = Frames.Count(frame => !frame.IsPreviewScan);
+        if (frames == 0)
+        {
+            return null;
+        }
+        int repairs = document?.Repairs.Count ?? 0;
+        LibraryOpenOutcome outcome = recovered
+            ? LibraryOpenOutcome.RecoveredFromBackup
+            : opened.AppliedPendingRestore
+                ? LibraryOpenOutcome.SelectedBackupApplied
+                : repairs > 0 ? LibraryOpenOutcome.Repaired : LibraryOpenOutcome.Restored;
+        return new LibraryOpenStatus(outcome, frames, repairs);
     }
 
     /// <summary>사용자가 이미 고른 복원이 있으면 덮지 않습니다.</summary>

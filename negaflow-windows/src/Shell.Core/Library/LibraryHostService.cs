@@ -202,7 +202,7 @@ public sealed partial class LibraryHostService : IDisposable
         // 실패해도 어디를 열려다 실패했는지는 남깁니다 - 복구 화면과 진단이 이것을 봅니다.
         AttemptedRoots = roots;
 
-        LibraryDocumentOpenResult opened = OpenRecoveringFromLatestBackup(roots);
+        (LibraryDocumentOpenResult opened, bool recovered) = OpenRecoveringFromLatestBackup(roots);
         SessionError = opened.SessionError;
         StoreError = opened.StoreError;
         DefectSidecarError = opened.DefectSidecarError;
@@ -210,6 +210,7 @@ public sealed partial class LibraryHostService : IDisposable
         {
             autosave.ForgetSaveError();
             document = loaded;
+            OpenStatus = DescribeOpen(opened, recovered);
             storageRoots = roots;
             State = LibraryHostState.Open;
             scannerPublisher.Recover(document, storageRoots);

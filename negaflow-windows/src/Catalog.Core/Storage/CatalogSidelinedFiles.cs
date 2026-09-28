@@ -199,6 +199,31 @@ public static class CatalogSidelinedFiles
         return SidelineLeftovers(roots);
     }
 
+    /// <summary>
+    /// 교체 도중 남은 <c>.catalog-*.tmp</c>·<c>.catalog-*.displaced</c> 를 보관 사본으로 옮깁니다.
+    /// 프로세스 lock 을 잡은 열기에서만 부릅니다 — 그때는 진행 중인 커밋이 없습니다.
+    /// </summary>
+    internal static void SidelineInterruptedCommitFiles(
+        StorageRootSet roots,
+        int retentionCount = DefaultRetentionCount)
+    {
+        bool moved = false;
+        foreach (string pattern in (string[])[".catalog-*.tmp", ".catalog-*.displaced"])
+        {
+            foreach (string leftover in Directory
+                .EnumerateFiles(roots.LibraryRoot, pattern, SearchOption.TopDirectoryOnly)
+                .ToArray())
+            {
+                File.Move(leftover, SidelinedCatalogPath(roots, string.Empty));
+                moved = true;
+            }
+        }
+        if (moved)
+        {
+            Prune(roots.LibraryRoot, retentionCount);
+        }
+    }
+
     private static string SidelinedCatalogPath(StorageRootSet roots, string suffix) =>
         Path.Combine(
             roots.LibraryRoot,

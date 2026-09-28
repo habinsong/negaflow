@@ -13,8 +13,47 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal" Spacing="10">
-            <!--  macOS `StatusPhaseIndicator` — 점은 8, 글자와 사이 간격 10.  -->
-            <Ellipse x:Name="StateIndicator" Width="8" Height="8" />
+            <!--  macOS `StatusPhaseIndicator` — 점은 8, 글자와 사이 간격 10. 최근 문제가 있으면
+                  빨갛고, 올리면 최신 문제를, 누르면 최근 문제 목록을 보여 줍니다. 누를 자리는
+                  사방 4 씩 넓히되 배치 크기는 그대로 둡니다(macOS `.padding(4)` / `.padding(-4)`).  -->
+            <Border
+                x:Name="StateIndicatorHitArea"
+                Margin="-4"
+                Padding="4"
+                VerticalAlignment="Center"
+                Background="Transparent"
+                AutomationProperties.AutomationId="negaflow.status.problems"
+                Tapped="OnIndicatorTapped">
+                <Ellipse x:Name="StateIndicator" Width="8" Height="8" />
+                <FlyoutBase.AttachedFlyout>
+                    <!--  macOS `RecentErrorsPopover` — 폭 320, 제목과 지우기, 구분선, 최신이 위인 목록.  -->
+                    <Flyout>
+                        <StackPanel Width="320" Spacing="8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="ProblemsTitle" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                <Button
+                                    x:Name="ClearProblemsButton"
+                                    Grid.Column="1"
+                                    Padding="4"
+                                    AutomationProperties.AutomationId="negaflow.status.problems.clear"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Click="OnClearProblemsClicked">
+                                    <FontIcon FontSize="12" Glyph="&#xE74D;" />
+                                </Button>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                            <ScrollViewer MaxHeight="220">
+                                <StackPanel x:Name="ProblemsList" Spacing="8" />
+                            </ScrollViewer>
+                        </StackPanel>
+                    </Flyout>
+                </FlyoutBase.AttachedFlyout>
+            </Border>
             <!--  **글자는 3초 뒤 사라집니다.** macOS 주석 그대로 - 상태가 계속 붙어 있으면
                   하단 바가 늘 지저분하고 가운데 메시지와 겹칠 여지도 커집니다. 폭 92 는
                   유지해 오른쪽 칸이 밀리지 않게 합니다.  -->
@@ -106,5 +145,20 @@
                 </DropDownButton.Flyout>
             </DropDownButton>
         </StackPanel>
+
+        <!--  macOS `StatusBarMessageRow` 의 가운데 상태 메시지 — caption, 한 줄, 최대 폭 320.
+              3 초 뒤 사라집니다.  -->
+        <TextBlock
+            x:Name="MessageText"
+            Grid.ColumnSpan="2"
+            MaxWidth="320"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            FontSize="11"
+            IsHitTestVisible="False"
+            TextAlignment="Center"
+            TextTrimming="CharacterEllipsis"
+            Visibility="Collapsed"
+            AutomationProperties.AutomationId="negaflow.status.message" />
     </Grid>
 </UserControl>

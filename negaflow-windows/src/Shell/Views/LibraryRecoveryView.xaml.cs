@@ -63,11 +63,11 @@ public sealed partial class LibraryRecoveryView : UserControl
     /// </summary>
     private string ReasonForBlock()
     {
-        string blocked = AppResources.Get("libraryCatalogBlockedStatus", "Text");
         if (host is not { } open)
         {
-            return blocked;
+            return AppResources.Get("libraryCatalogBlockedStatus", "Text");
         }
+        string blocked = BlockMessage(open);
         List<string> codes = [];
         if (open.SessionError != CatalogSessionError.None)
         {
@@ -82,6 +82,44 @@ public sealed partial class LibraryRecoveryView : UserControl
             codes.Add(open.DefectSidecarError.ToString());
         }
         return codes.Count == 0 ? blocked : $"{blocked} ({string.Join(" · ", codes)})";
+    }
+
+    /// <summary>
+    /// macOS <c>libraryCatalogBlockMessage</c> 의 갈래 그대로입니다. 예전에는 잠김 말고는 모두
+    /// "안전하게 열 수 없다" 한 줄이었습니다. 잠금 단계의 실패(권한·입출력·재분석 지점)는 macOS
+    /// <c>lockUnavailable</c> 입니다.
+    /// </summary>
+    private static string BlockMessage(LibraryHostService open)
+    {
+        string? key = open.SessionError switch
+        {
+            CatalogSessionError.Busy => "libraryCatalogLockedStatus",
+            CatalogSessionError.AccessDenied or CatalogSessionError.IoFailure or
+                CatalogSessionError.ReparsePointNotAllowed => "libraryCatalogLockUnavailableStatus",
+            CatalogSessionError.PendingRestoreFailed => "libraryPendingRestoreFailedStatus",
+            CatalogSessionError.MissingAuthoritativeData => "libraryCatalogMissingAuthoritativeDataStatus",
+            _ when open.StoreError == CatalogStoreError.MissingAuthoritativeData =>
+                "libraryCatalogMissingAuthoritativeDataStatus",
+            _ => null,
+        };
+        if (key is not null)
+        {
+            return AppResources.Get(key, "Text");
+        }
+        if (open.StoreError is CatalogStoreError.UnsupportedCatalogVersion or
+                CatalogStoreError.UnsupportedStorageVersion &&
+            open.AttemptedRoots is { } roots)
+        {
+            CatalogFileInspection inspection = CatalogFileInspector.Inspect(roots.CatalogPath);
+            long? version = open.StoreError == CatalogStoreError.UnsupportedCatalogVersion
+                ? inspection.CatalogVersion
+                : inspection.StorageVersion;
+            if (version is { } newer && newer is > 0 and <= int.MaxValue)
+            {
+                return AppResources.FormatInteger("libraryCatalogNewerVersionFormat", "Text", (int)newer);
+            }
+        }
+        return AppResources.Get("libraryCatalogBlockedStatus", "Text");
     }
 
     private void Reload()

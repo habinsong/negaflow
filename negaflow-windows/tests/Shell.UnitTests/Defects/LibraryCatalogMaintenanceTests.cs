@@ -175,6 +175,9 @@ internal static class LibraryCatalogMaintenanceTests
             }
 
             using LibraryHostService relaunched = OpenHost(roots, "maintenance_reinstall_reopen");
+            Check(relaunched.OpenStatus?.Outcome == LibraryOpenOutcome.SelectedBackupApplied,
+                "maintenance_reinstall_reports_the_applied_backup",
+                () => relaunched.OpenStatus?.ToString() ?? "none");
             Check(CatalogRecovery.PendingRestoreGenerationId(roots) is null,
                 "maintenance_reinstall_is_applied_on_open");
             LibraryFrameSnapshot restored = relaunched.Frames.Single();

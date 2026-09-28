@@ -1118,6 +1118,15 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="libraryRemoveFromLibrary.Content" xml:space="preserve"><value>Entfernen</value><comment>AppLocalizedPhrase.removeFromLibrary</comment></data>
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>Im Explorer anzeigen</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>Abbrechen</value><comment>AppLocalizedPhrase.cancel</comment></data>
+  <data name="libraryRestoredFormat.Text" xml:space="preserve"><value>Bibliothek wiederhergestellt: %d Fotos</value><comment>AppLocalizedPhrase.libraryRestoredFormat</comment></data>
+  <data name="libraryRecoveredFromBackupFormat.Text" xml:space="preserve"><value>Mediathek aus Sicherung wiederhergestellt: %d Fotos</value><comment>AppLocalizedPhrase.libraryRecoveredFromBackupFormat</comment></data>
+  <data name="librarySelectedBackupAppliedFormat.Text" xml:space="preserve"><value>Ausgewählte Mediathekssicherung wiederhergestellt: %d Fotos</value><comment>AppLocalizedPhrase.librarySelectedBackupAppliedFormat</comment></data>
+  <data name="libraryCatalogRepairedFormat.Text" xml:space="preserve"><value>Mediathek nach Reparatur von %1$d inkonsistenten Einträgen geöffnet: %2$d Fotos</value><comment>AppLocalizedPhrase.libraryCatalogRepairedFormat</comment></data>
+  <data name="libraryCatalogLockedStatus.Text" xml:space="preserve"><value>Diese Mediathek ist bereits in einem anderen negaflow-Prozess geöffnet.</value><comment>AppLocalizedPhrase.libraryCatalogLockedStatus</comment></data>
+  <data name="libraryCatalogLockUnavailableStatus.Text" xml:space="preserve"><value>negaflow konnte die Schreibsperre nicht übernehmen. Der Katalog blieb unverändert.</value><comment>AppLocalizedPhrase.libraryCatalogLockUnavailableStatus</comment></data>
+  <data name="libraryCatalogNewerVersionFormat.Text" xml:space="preserve"><value>Diese Mediathek verwendet die neuere Katalogversion %d und blieb unverändert.</value><comment>AppLocalizedPhrase.libraryCatalogNewerVersionFormat</comment></data>
+  <data name="libraryCatalogMissingAuthoritativeDataStatus.Text" xml:space="preserve"><value>Korrekturrezepte fehlen und es wurde keine gültige Sicherung gefunden. Der Katalog blieb unverändert.</value><comment>AppLocalizedPhrase.libraryCatalogMissingAuthoritativeDataStatus</comment></data>
+  <data name="libraryPendingRestoreFailedStatus.Text" xml:space="preserve"><value>Die geplante Wiederherstellung konnte nicht angewendet werden und bleibt vorgemerkt.</value><comment>AppLocalizedPhrase.libraryPendingRestoreFailedStatus</comment></data>
   <data name="removingDefectsFailedStatus.Text" xml:space="preserve"><value>Entfernen der Defekte fehlgeschlagen</value><comment>AppLocalizedPhrase.removingDefectsFailedStatus</comment></data>
   <data name="librarySaveFailed.Text" xml:space="preserve"><value>Die Mediathek konnte nicht gesichert werden.</value><comment>AppLocalizedPhrase.librarySaveFailed</comment></data>
   <data name="quitWithoutSaving.Text" xml:space="preserve"><value>Beenden ohne Sichern</value><comment>AppLocalizedPhrase.quitWithoutSaving</comment></data>
@@ -1456,6 +1465,8 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="diagnosticsReportLibrarySection.Text" xml:space="preserve"><value>Bibliotheksstatus</value><comment>AppLocalizedText.diagnosticsReportLibrarySection</comment></data>
   <data name="diagnosticsReportScannerSection.Text" xml:space="preserve"><value>Scanner</value><comment>AppLocalizedText.diagnosticsReportScannerSection</comment></data>
   <data name="diagnosticsNoProblems.Text" xml:space="preserve"><value>Keine Probleme</value><comment>AppLocalizedText.diagnosticsNoProblems</comment></data>
+  <data name="diagnosticsRecentProblemsTitle.Text" xml:space="preserve"><value>Letzte Probleme</value><comment>AppLocalizedText.diagnosticsRecentProblemsTitle</comment></data>
+  <data name="diagnosticsClearProblems.Text" xml:space="preserve"><value>Löschen</value><comment>AppLocalizedText.diagnosticsClearProblems</comment></data>
   <data name="diagnosticsGeneratedAt.Text" xml:space="preserve"><value>Erstellt</value><comment>AppLocalizedText.diagnosticsGeneratedAt</comment></data>
   <data name="diagnosticsStatSaveError.Text" xml:space="preserve"><value>Speicherfehler</value><comment>AppLocalizedText.diagnosticsStatSaveError</comment></data>
   <data name="noActiveScanner.Text" xml:space="preserve"><value>Kein aktiver Scanner.</value><comment>AppLocalizedText.noActiveScanner</comment></data>

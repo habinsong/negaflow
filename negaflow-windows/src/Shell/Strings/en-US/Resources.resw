@@ -1118,6 +1118,15 @@ Load a scanner from Library to scan film.</value>
   <data name="libraryRemoveFromLibrary.Content" xml:space="preserve"><value>Remove</value><comment>AppLocalizedPhrase.removeFromLibrary</comment></data>
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>Show in File Explorer</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>Cancel</value><comment>AppLocalizedPhrase.cancel</comment></data>
+  <data name="libraryRestoredFormat.Text" xml:space="preserve"><value>Library restored: %d photos</value><comment>AppLocalizedPhrase.libraryRestoredFormat</comment></data>
+  <data name="libraryRecoveredFromBackupFormat.Text" xml:space="preserve"><value>Library recovered from backup: %d photos</value><comment>AppLocalizedPhrase.libraryRecoveredFromBackupFormat</comment></data>
+  <data name="librarySelectedBackupAppliedFormat.Text" xml:space="preserve"><value>Selected library backup restored: %d photos</value><comment>AppLocalizedPhrase.librarySelectedBackupAppliedFormat</comment></data>
+  <data name="libraryCatalogRepairedFormat.Text" xml:space="preserve"><value>Library opened after repairing %1$d inconsistent records: %2$d photos</value><comment>AppLocalizedPhrase.libraryCatalogRepairedFormat</comment></data>
+  <data name="libraryCatalogLockedStatus.Text" xml:space="preserve"><value>This library is already open in another negaflow process.</value><comment>AppLocalizedPhrase.libraryCatalogLockedStatus</comment></data>
+  <data name="libraryCatalogLockUnavailableStatus.Text" xml:space="preserve"><value>negaflow could not acquire the library write lock. The catalog was left unchanged.</value><comment>AppLocalizedPhrase.libraryCatalogLockUnavailableStatus</comment></data>
+  <data name="libraryCatalogNewerVersionFormat.Text" xml:space="preserve"><value>This library uses newer catalog version %d and was left unchanged.</value><comment>AppLocalizedPhrase.libraryCatalogNewerVersionFormat</comment></data>
+  <data name="libraryCatalogMissingAuthoritativeDataStatus.Text" xml:space="preserve"><value>Library defect recipes are incomplete and no valid backup was found. The catalog was left unchanged.</value><comment>AppLocalizedPhrase.libraryCatalogMissingAuthoritativeDataStatus</comment></data>
+  <data name="libraryPendingRestoreFailedStatus.Text" xml:space="preserve"><value>The scheduled library restore could not be applied and was left pending.</value><comment>AppLocalizedPhrase.libraryPendingRestoreFailedStatus</comment></data>
   <data name="removingDefectsFailedStatus.Text" xml:space="preserve"><value>Defect removal failed</value><comment>AppLocalizedPhrase.removingDefectsFailedStatus</comment></data>
   <data name="librarySaveFailed.Text" xml:space="preserve"><value>The library could not be saved.</value><comment>AppLocalizedPhrase.librarySaveFailed</comment></data>
   <data name="quitWithoutSaving.Text" xml:space="preserve"><value>Quit Without Saving</value><comment>AppLocalizedPhrase.quitWithoutSaving</comment></data>
@@ -1456,6 +1465,8 @@ Load a scanner from Library to scan film.</value>
   <data name="diagnosticsReportLibrarySection.Text" xml:space="preserve"><value>Library status</value><comment>AppLocalizedText.diagnosticsReportLibrarySection</comment></data>
   <data name="diagnosticsReportScannerSection.Text" xml:space="preserve"><value>Scanner</value><comment>AppLocalizedText.diagnosticsReportScannerSection</comment></data>
   <data name="diagnosticsNoProblems.Text" xml:space="preserve"><value>No problems</value><comment>AppLocalizedText.diagnosticsNoProblems</comment></data>
+  <data name="diagnosticsRecentProblemsTitle.Text" xml:space="preserve"><value>Recent problems</value><comment>AppLocalizedText.diagnosticsRecentProblemsTitle</comment></data>
+  <data name="diagnosticsClearProblems.Text" xml:space="preserve"><value>Clear</value><comment>AppLocalizedText.diagnosticsClearProblems</comment></data>
   <data name="diagnosticsGeneratedAt.Text" xml:space="preserve"><value>Generated</value><comment>AppLocalizedText.diagnosticsGeneratedAt</comment></data>
   <data name="diagnosticsStatSaveError.Text" xml:space="preserve"><value>Save error</value><comment>AppLocalizedText.diagnosticsStatSaveError</comment></data>
   <data name="noActiveScanner.Text" xml:space="preserve"><value>No active scanner.</value><comment>AppLocalizedText.noActiveScanner</comment></data>

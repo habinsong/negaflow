@@ -66,6 +66,9 @@ internal static class LibraryDocumentOpener
                 payloads,
                 retainedRows,
                 snapshot.ActiveRollId,
-                cleanup));
+                cleanup)) with
+        {
+            AppliedPendingRestore = session.PendingRestoreApplication.DidApplyRestore,
+        };
     }
 }

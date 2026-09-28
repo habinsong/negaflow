@@ -77,11 +77,10 @@ public sealed partial class MainWindow
                 ? AppResources.Get("libraryCatalogReinstallFailedStatus", "Text")
                 : AppResources.Get("libraryCatalogRepairFailedStatus", "Text");
             AppErrorLog.Shared.Record(failed);
-            ShellView?.ReportCatalogWriteFailure(failed);
+            ShowCatalogStatus(failed);
             return Task.CompletedTask;
         }
-        ShellView?.ReportCatalogWriteFailure(
-            AppResources.Get("libraryCatalogRelaunchingStatus", "Text"));
+        ShowCatalogStatus(AppResources.Get("libraryCatalogRelaunchingStatus", "Text"));
         relaunchRequested = true;
         // **한 박자 미룹니다.** macOS 는 MainActor 작업 안에서 종료를 바로 부르면 종료 대기가 그
         // 작업 안에 중첩돼 종료 커밋이 끝나지 못했습니다(`perform(afterDelay: 0)`). 여기서도 단추
@@ -92,6 +91,15 @@ public sealed partial class MainWindow
             host.CancelCatalogRelaunch();
         }
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// 카탈로그 상태를 스캔 상태 줄과 하단 상태바 가운데에 함께 띄웁니다(macOS <c>statusMessage</c>).
+    /// </summary>
+    private void ShowCatalogStatus(string message)
+    {
+        ShellView?.ReportCatalogWriteFailure(message);
+        AppStatusMessage.Shared.Post(message);
     }
 
     /// <summary>종료가 취소됐습니다. 재실행과 재설치의 커밋 건너뛰기를 되돌립니다.</summary>

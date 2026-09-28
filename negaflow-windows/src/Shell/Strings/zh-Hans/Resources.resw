@@ -1118,6 +1118,15 @@
   <data name="libraryRemoveFromLibrary.Content" xml:space="preserve"><value>移除</value><comment>AppLocalizedPhrase.removeFromLibrary</comment></data>
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>在文件资源管理器中显示</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>取消</value><comment>AppLocalizedPhrase.cancel</comment></data>
+  <data name="libraryRestoredFormat.Text" xml:space="preserve"><value>已恢复图库：%d 张照片</value><comment>AppLocalizedPhrase.libraryRestoredFormat</comment></data>
+  <data name="libraryRecoveredFromBackupFormat.Text" xml:space="preserve"><value>已从备份恢复图库：%d 张照片</value><comment>AppLocalizedPhrase.libraryRecoveredFromBackupFormat</comment></data>
+  <data name="librarySelectedBackupAppliedFormat.Text" xml:space="preserve"><value>已恢复所选图库备份：%d 张照片</value><comment>AppLocalizedPhrase.librarySelectedBackupAppliedFormat</comment></data>
+  <data name="libraryCatalogRepairedFormat.Text" xml:space="preserve"><value>已修复 %1$d 条不一致记录后打开图库：%2$d 张照片</value><comment>AppLocalizedPhrase.libraryCatalogRepairedFormat</comment></data>
+  <data name="libraryCatalogLockedStatus.Text" xml:space="preserve"><value>此图库已在另一个 negaflow 进程中打开。</value><comment>AppLocalizedPhrase.libraryCatalogLockedStatus</comment></data>
+  <data name="libraryCatalogLockUnavailableStatus.Text" xml:space="preserve"><value>无法获取图库写入锁，目录未被更改。</value><comment>AppLocalizedPhrase.libraryCatalogLockUnavailableStatus</comment></data>
+  <data name="libraryCatalogNewerVersionFormat.Text" xml:space="preserve"><value>此图库使用较新的目录版本 %d，已保持原文件不变。</value><comment>AppLocalizedPhrase.libraryCatalogNewerVersionFormat</comment></data>
+  <data name="libraryCatalogMissingAuthoritativeDataStatus.Text" xml:space="preserve"><value>图库修复配方不完整且未找到有效备份，已保持目录不变。</value><comment>AppLocalizedPhrase.libraryCatalogMissingAuthoritativeDataStatus</comment></data>
+  <data name="libraryPendingRestoreFailedStatus.Text" xml:space="preserve"><value>无法应用已计划的图库恢复，恢复计划已保留。</value><comment>AppLocalizedPhrase.libraryPendingRestoreFailedStatus</comment></data>
   <data name="removingDefectsFailedStatus.Text" xml:space="preserve"><value>瑕疵移除失败</value><comment>AppLocalizedPhrase.removingDefectsFailedStatus</comment></data>
   <data name="librarySaveFailed.Text" xml:space="preserve"><value>无法保存图库。</value><comment>AppLocalizedPhrase.librarySaveFailed</comment></data>
   <data name="quitWithoutSaving.Text" xml:space="preserve"><value>不保存并退出</value><comment>AppLocalizedPhrase.quitWithoutSaving</comment></data>
@@ -1456,6 +1465,8 @@
   <data name="diagnosticsReportLibrarySection.Text" xml:space="preserve"><value>库状态</value><comment>AppLocalizedText.diagnosticsReportLibrarySection</comment></data>
   <data name="diagnosticsReportScannerSection.Text" xml:space="preserve"><value>扫描仪</value><comment>AppLocalizedText.diagnosticsReportScannerSection</comment></data>
   <data name="diagnosticsNoProblems.Text" xml:space="preserve"><value>无问题</value><comment>AppLocalizedText.diagnosticsNoProblems</comment></data>
+  <data name="diagnosticsRecentProblemsTitle.Text" xml:space="preserve"><value>最近的问题</value><comment>AppLocalizedText.diagnosticsRecentProblemsTitle</comment></data>
+  <data name="diagnosticsClearProblems.Text" xml:space="preserve"><value>清除</value><comment>AppLocalizedText.diagnosticsClearProblems</comment></data>
   <data name="diagnosticsGeneratedAt.Text" xml:space="preserve"><value>生成时间</value><comment>AppLocalizedText.diagnosticsGeneratedAt</comment></data>
   <data name="diagnosticsStatSaveError.Text" xml:space="preserve"><value>保存错误</value><comment>AppLocalizedText.diagnosticsStatSaveError</comment></data>
   <data name="noActiveScanner.Text" xml:space="preserve"><value>没有正在使用的扫描仪。</value><comment>AppLocalizedText.noActiveScanner</comment></data>

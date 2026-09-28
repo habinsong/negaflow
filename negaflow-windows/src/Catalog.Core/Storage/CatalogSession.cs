@@ -99,6 +99,7 @@ public sealed partial class CatalogSession : IDisposable
             return CatalogSessionOpenResult.Failure(Translate(acquired.Error));
         }
 
+        CatalogInterruptedCommit.Resolve(roots);
         CatalogPendingRestoreApplicationResult pending = cleanup is { } injected
             ? CatalogPendingRestoreStore.ApplyIfScheduled(
                 roots,

@@ -10,50 +10,6 @@ public sealed record LibraryFrameIssue(
     LibraryFrameError Error,
     DevelopRouteError RouteError);
 
-public enum LibraryDocumentError
-{
-    None,
-    SessionBusy,
-    SessionUnavailable,
-    CatalogUnreadable,
-}
-
-public readonly record struct LibraryDocumentOpenResult(
-    LibraryDocument? Document,
-    LibraryDocumentError Error,
-    CatalogSessionError SessionError,
-    CatalogStoreError StoreError,
-    DefectSidecarError DefectSidecarError)
-{
-    public bool IsSuccess => Error == LibraryDocumentError.None && Document is not null;
-
-    internal static LibraryDocumentOpenResult Success(LibraryDocument document) =>
-        new(document, LibraryDocumentError.None, CatalogSessionError.None,
-            CatalogStoreError.None, DefectSidecarError.None);
-
-    internal static LibraryDocumentOpenResult SessionFailure(
-        CatalogSessionError error,
-        DefectSidecarError defectSidecarError) =>
-        new(
-            null,
-            error == CatalogSessionError.Busy
-                ? LibraryDocumentError.SessionBusy
-                : LibraryDocumentError.SessionUnavailable,
-            error,
-            CatalogStoreError.None,
-            defectSidecarError);
-
-    internal static LibraryDocumentOpenResult StoreFailure(
-        CatalogStoreError error,
-        DefectSidecarError defectSidecarError = DefectSidecarError.None) =>
-        new(
-            null,
-            LibraryDocumentError.CatalogUnreadable,
-            CatalogSessionError.None,
-            error,
-            defectSidecarError);
-}
-
 public readonly record struct LibraryDefectRecipeWriteResult(
     DefectRecipeSnapshot? Recipe,
     LibraryFrameError FrameError,

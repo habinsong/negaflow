@@ -26,12 +26,39 @@ public sealed partial class MainWindow : Window
         }
         WireShell();
         thumbnails = thumbnailsFactory();
+        // 셸을 세우는 동안 첫 사진이 그려지며 오류를 알릴 수 있습니다. macOS 처럼 열기 알림이
+        // 먼저여야 그 오류가 덮이지 않습니다.
+        PostLibraryOpenStatus();
         ShellView.Initialize(
             workspaceState,
             nativeEngineStatusService,
             libraryHost,
             AppWindow.Id,
             thumbnails);
+    }
+
+    /// <summary>
+    /// macOS <c>restoreLibraryOnLaunch</c> 가 띄우는 상태 메시지입니다. 백업에서 되돌렸으면 그
+    /// 사실을 알려야 합니다 — 마지막 백업 뒤의 편집은 보관 사본에만 남습니다.
+    /// </summary>
+    private void PostLibraryOpenStatus()
+    {
+        string? text = libraryHost?.OpenStatus switch
+        {
+            { Outcome: LibraryOpenOutcome.RecoveredFromBackup } status =>
+                Localization.AppResources.FormatInteger("libraryRecoveredFromBackupFormat", "Text", status.FrameCount),
+            { Outcome: LibraryOpenOutcome.SelectedBackupApplied } status =>
+                Localization.AppResources.FormatInteger("librarySelectedBackupAppliedFormat", "Text", status.FrameCount),
+            { Outcome: LibraryOpenOutcome.Repaired } status =>
+                Localization.AppResources.FormatIntegers(
+                    "libraryCatalogRepairedFormat", "Text", status.RepairCount, status.FrameCount),
+            { } status => Localization.AppResources.FormatInteger("libraryRestoredFormat", "Text", status.FrameCount),
+            null => null,
+        };
+        if (text is not null)
+        {
+            Diagnostics.AppStatusMessage.Shared.Post(text);
+        }
     }
 
     /// <summary>

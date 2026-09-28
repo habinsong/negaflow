@@ -1118,6 +1118,15 @@
   <data name="libraryRemoveFromLibrary.Content" xml:space="preserve"><value>제거</value><comment>AppLocalizedPhrase.removeFromLibrary</comment></data>
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>파일 탐색기에서 보기</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>취소</value><comment>AppLocalizedPhrase.cancel</comment></data>
+  <data name="libraryRestoredFormat.Text" xml:space="preserve"><value>라이브러리 복원: 사진 %d장</value><comment>AppLocalizedPhrase.libraryRestoredFormat</comment></data>
+  <data name="libraryRecoveredFromBackupFormat.Text" xml:space="preserve"><value>백업에서 라이브러리 복구: 사진 %d장</value><comment>AppLocalizedPhrase.libraryRecoveredFromBackupFormat</comment></data>
+  <data name="librarySelectedBackupAppliedFormat.Text" xml:space="preserve"><value>선택한 라이브러리 백업 복원: 사진 %d장</value><comment>AppLocalizedPhrase.librarySelectedBackupAppliedFormat</comment></data>
+  <data name="libraryCatalogRepairedFormat.Text" xml:space="preserve"><value>어긋난 기록 %1$d건을 되돌리고 라이브러리를 열었습니다: 사진 %2$d장</value><comment>AppLocalizedPhrase.libraryCatalogRepairedFormat</comment></data>
+  <data name="libraryCatalogLockedStatus.Text" xml:space="preserve"><value>이 라이브러리는 다른 negaflow 프로세스에서 이미 열려 있습니다.</value><comment>AppLocalizedPhrase.libraryCatalogLockedStatus</comment></data>
+  <data name="libraryCatalogLockUnavailableStatus.Text" xml:space="preserve"><value>라이브러리 쓰기 잠금을 얻지 못해 카탈로그를 변경하지 않았습니다.</value><comment>AppLocalizedPhrase.libraryCatalogLockUnavailableStatus</comment></data>
+  <data name="libraryCatalogNewerVersionFormat.Text" xml:space="preserve"><value>이 라이브러리는 더 새로운 카탈로그 버전 %d을 사용하므로 변경하지 않았습니다.</value><comment>AppLocalizedPhrase.libraryCatalogNewerVersionFormat</comment></data>
+  <data name="libraryCatalogMissingAuthoritativeDataStatus.Text" xml:space="preserve"><value>라이브러리 결함 보정 레시피가 불완전하고 유효한 백업도 없어 카탈로그를 변경하지 않았습니다.</value><comment>AppLocalizedPhrase.libraryCatalogMissingAuthoritativeDataStatus</comment></data>
+  <data name="libraryPendingRestoreFailedStatus.Text" xml:space="preserve"><value>예약한 라이브러리 복원을 적용하지 못해 예약 상태를 유지했습니다.</value><comment>AppLocalizedPhrase.libraryPendingRestoreFailedStatus</comment></data>
   <data name="removingDefectsFailedStatus.Text" xml:space="preserve"><value>결함 제거 실패</value><comment>AppLocalizedPhrase.removingDefectsFailedStatus</comment></data>
   <data name="librarySaveFailed.Text" xml:space="preserve"><value>라이브러리를 저장하지 못했습니다.</value><comment>AppLocalizedPhrase.librarySaveFailed</comment></data>
   <data name="quitWithoutSaving.Text" xml:space="preserve"><value>저장하지 않고 종료</value><comment>AppLocalizedPhrase.quitWithoutSaving</comment></data>
@@ -1456,6 +1465,8 @@
   <data name="diagnosticsReportLibrarySection.Text" xml:space="preserve"><value>라이브러리 상태</value><comment>AppLocalizedText.diagnosticsReportLibrarySection</comment></data>
   <data name="diagnosticsReportScannerSection.Text" xml:space="preserve"><value>스캐너</value><comment>AppLocalizedText.diagnosticsReportScannerSection</comment></data>
   <data name="diagnosticsNoProblems.Text" xml:space="preserve"><value>문제 없음</value><comment>AppLocalizedText.diagnosticsNoProblems</comment></data>
+  <data name="diagnosticsRecentProblemsTitle.Text" xml:space="preserve"><value>최근 문제</value><comment>AppLocalizedText.diagnosticsRecentProblemsTitle</comment></data>
+  <data name="diagnosticsClearProblems.Text" xml:space="preserve"><value>지우기</value><comment>AppLocalizedText.diagnosticsClearProblems</comment></data>
   <data name="diagnosticsGeneratedAt.Text" xml:space="preserve"><value>생성 시각</value><comment>AppLocalizedText.diagnosticsGeneratedAt</comment></data>
   <data name="diagnosticsStatSaveError.Text" xml:space="preserve"><value>저장 오류</value><comment>AppLocalizedText.diagnosticsStatSaveError</comment></data>
   <data name="noActiveScanner.Text" xml:space="preserve"><value>활성 스캐너가 없습니다.</value><comment>AppLocalizedText.noActiveScanner</comment></data>

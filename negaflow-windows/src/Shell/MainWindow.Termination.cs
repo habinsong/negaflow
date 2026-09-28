@@ -115,6 +115,6 @@ public sealed partial class MainWindow
     {
         string message = Localization.AppResources.Get("librarySaveFailed", "Text");
         AppErrorLog.Shared.Record(message);
-        ShellView?.ReportCatalogWriteFailure(message);
+        ShowCatalogStatus(message);
     }
 }

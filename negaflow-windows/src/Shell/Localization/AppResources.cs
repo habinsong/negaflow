@@ -139,6 +139,21 @@ internal static class AppResources
         params int[] values)
     {
         string result = Get(key, property);
+        // macOS 문구는 차례를 바꾸는 언어를 위해 `%1$d` 처럼 자리를 적기도 합니다.
+        if (result.Contains("%1$d", StringComparison.Ordinal))
+        {
+            for (int index = 0; index < values.Length; index++)
+            {
+                string positional = $"%{index + 1}$d";
+                if (!result.Contains(positional, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Localized resource has fewer integer markers than expected: {key}.{property}");
+                }
+                result = result.Replace(positional, values[index].ToString(), StringComparison.Ordinal);
+            }
+            return result;
+        }
         foreach (int value in values)
         {
             int marker = result.IndexOf("%d", StringComparison.Ordinal);

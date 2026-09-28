@@ -1,6 +1,10 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Negaflow.Shell.Diagnostics;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
 
@@ -33,7 +37,144 @@ public sealed partial class StatusBarView : UserControl
             stateHideTimer.Stop();
             StateText.Text = string.Empty;
         };
+        messageHideTimer.Tick += (_, _) =>
+        {
+            messageHideTimer.Stop();
+            MessageText.Visibility = Visibility.Collapsed;
+        };
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
         Localize();
+    }
+
+    private static readonly TimeSpan MessageDuration = TimeSpan.FromSeconds(3);
+
+    private readonly DispatcherTimer messageHideTimer = new()
+    {
+        Interval = MessageDuration,
+    };
+
+    private void OnLoaded(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        AppStatusMessage.Shared.Changed += OnStatusMessageChanged;
+        AppErrorLog.Shared.Changed += OnErrorLogChanged;
+        RenderIndicator();
+        // 현상 화면은 늦게 세워집니다. 열기 알림은 그 전에 오므로, 3 초가 지나지 않았으면
+        // 남은 시간만큼 띄웁니다 — macOS 는 막대가 먼저 떠 있어 이 차이가 없습니다.
+        TimeSpan remaining = MessageDuration - (DateTimeOffset.UtcNow - AppStatusMessage.Shared.PostedAt);
+        if (remaining > TimeSpan.Zero)
+        {
+            ShowMessage(remaining);
+        }
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        AppStatusMessage.Shared.Changed -= OnStatusMessageChanged;
+        AppErrorLog.Shared.Changed -= OnErrorLogChanged;
+        messageHideTimer.Stop();
+    }
+
+    private void OnStatusMessageChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        _ = DispatcherQueue.TryEnqueue(() => ShowMessage(MessageDuration));
+    }
+
+    private void OnErrorLogChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        _ = DispatcherQueue.TryEnqueue(RenderIndicator);
+    }
+
+    /// <summary>macOS <c>StatusBarMessageRow.scheduleDismissal</c> — 띄우고 3 초 뒤 사라집니다.</summary>
+    private void ShowMessage(TimeSpan duration)
+    {
+        string message = AppStatusMessage.Shared.Message;
+        messageHideTimer.Stop();
+        MessageText.Text = message;
+        MessageText.Visibility = message.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+        if (message.Length != 0)
+        {
+            messageHideTimer.Interval = duration;
+            messageHideTimer.Start();
+        }
+    }
+
+    /// <summary>
+    /// macOS <c>StatusPhaseIndicator</c> — 최근 문제가 있으면 점이 빨갛고, 올리면 최신 문제가
+    /// 보입니다. 없으면 엔진 상태 색 그대로입니다.
+    /// </summary>
+    private void RenderIndicator()
+    {
+        AppErrorEntry? latest = AppErrorLog.Shared.Latest;
+        string help = latest?.Message ?? AppResources.Get("diagnosticsNoProblems", "Text");
+        ToolTipService.SetToolTip(StateIndicatorHitArea, help);
+        AutomationProperties.SetName(StateIndicatorHitArea, help);
+        StateIndicator.Fill = latest is not null
+            ? new SolidColorBrush(Microsoft.UI.Colors.Red)
+            : new SolidColorBrush(status?.IsAvailable == false
+                ? Microsoft.UI.Colors.OrangeRed
+                : Microsoft.UI.Colors.LimeGreen);
+    }
+
+    /// <summary>macOS <c>RecentErrorsPopover</c> — 최근 문제가 있을 때만 엽니다.</summary>
+    private void OnIndicatorTapped(object sender, TappedRoutedEventArgs args)
+    {
+        _ = args;
+        if (!AppErrorLog.Shared.HasEntries)
+        {
+            return;
+        }
+        FillProblemsList();
+        FlyoutBase.ShowAttachedFlyout((FrameworkElement)sender);
+    }
+
+    private void OnClearProblemsClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        AppErrorLog.Shared.Clear();
+        FillProblemsList();
+    }
+
+    /// <summary>최신이 위입니다. 비면 "문제 없음" 한 줄입니다(macOS 와 같음).</summary>
+    private void FillProblemsList()
+    {
+        ProblemsTitle.Text = AppResources.Get("diagnosticsRecentProblemsTitle", "Text");
+        string clear = AppResources.Get("diagnosticsClearProblems", "Text");
+        ToolTipService.SetToolTip(ClearProblemsButton, clear);
+        AutomationProperties.SetName(ClearProblemsButton, clear);
+        IReadOnlyList<AppErrorEntry> entries = AppErrorLog.Shared.Entries;
+        ClearProblemsButton.IsEnabled = entries.Count != 0;
+        ProblemsList.Children.Clear();
+        if (entries.Count == 0)
+        {
+            ProblemsList.Children.Add(new TextBlock
+            {
+                Text = AppResources.Get("diagnosticsNoProblems", "Text"),
+                Opacity = 0.6,
+            });
+            return;
+        }
+        foreach (AppErrorEntry entry in entries.Reverse())
+        {
+            StackPanel item = new() { Spacing = 2 };
+            item.Children.Add(new TextBlock { Text = entry.Message, TextWrapping = TextWrapping.Wrap });
+            item.Children.Add(new TextBlock
+            {
+                Text = entry.At.LocalDateTime.ToString("t", System.Globalization.CultureInfo.CurrentCulture),
+                FontSize = 10,
+                Opacity = 0.6,
+            });
+            ProblemsList.Children.Add(item);
+        }
     }
 
     /// <summary>필름스트립의 크기·차례·범위가 바뀌었습니다. 두 화면이 목록을 다시 냅니다.</summary>
@@ -83,8 +224,7 @@ public sealed partial class StatusBarView : UserControl
             status.IsAvailable ? "idleStatus" : "capabilityUnavailable",
             "Value"));
         StateDetail.Text = status.Detail;
-        StateIndicator.Fill = new SolidColorBrush(
-            status.IsAvailable ? Microsoft.UI.Colors.LimeGreen : Microsoft.UI.Colors.OrangeRed);
+        RenderIndicator();
     }
 
     /// <summary>저장된 값을 읽고 쓰는 자리입니다. 셸이 꽂아 줍니다.</summary>

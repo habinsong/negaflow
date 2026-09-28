@@ -1118,6 +1118,15 @@
   <data name="libraryRemoveFromLibrary.Content" xml:space="preserve"><value>取り除く</value><comment>AppLocalizedPhrase.removeFromLibrary</comment></data>
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>エクスプローラーで表示</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>キャンセル</value><comment>AppLocalizedPhrase.cancel</comment></data>
+  <data name="libraryRestoredFormat.Text" xml:space="preserve"><value>ライブラリを復元: %d枚</value><comment>AppLocalizedPhrase.libraryRestoredFormat</comment></data>
+  <data name="libraryRecoveredFromBackupFormat.Text" xml:space="preserve"><value>バックアップからライブラリを復元: %d枚</value><comment>AppLocalizedPhrase.libraryRecoveredFromBackupFormat</comment></data>
+  <data name="librarySelectedBackupAppliedFormat.Text" xml:space="preserve"><value>選択したライブラリのバックアップを復元: %d枚</value><comment>AppLocalizedPhrase.librarySelectedBackupAppliedFormat</comment></data>
+  <data name="libraryCatalogRepairedFormat.Text" xml:space="preserve"><value>不整合な記録 %1$d件を修復してライブラリを開きました: %2$d枚</value><comment>AppLocalizedPhrase.libraryCatalogRepairedFormat</comment></data>
+  <data name="libraryCatalogLockedStatus.Text" xml:space="preserve"><value>このライブラリは別のnegaflowプロセスですでに開かれています。</value><comment>AppLocalizedPhrase.libraryCatalogLockedStatus</comment></data>
+  <data name="libraryCatalogLockUnavailableStatus.Text" xml:space="preserve"><value>ライブラリの書き込みロックを取得できなかったため、カタログは変更されていません。</value><comment>AppLocalizedPhrase.libraryCatalogLockUnavailableStatus</comment></data>
+  <data name="libraryCatalogNewerVersionFormat.Text" xml:space="preserve"><value>このライブラリは新しいカタログバージョン%dを使用しているため、変更せずに保持しました。</value><comment>AppLocalizedPhrase.libraryCatalogNewerVersionFormat</comment></data>
+  <data name="libraryCatalogMissingAuthoritativeDataStatus.Text" xml:space="preserve"><value>ライブラリの修復レシピが不足しており、有効なバックアップも見つからないため、カタログは変更せずに保持しました。</value><comment>AppLocalizedPhrase.libraryCatalogMissingAuthoritativeDataStatus</comment></data>
+  <data name="libraryPendingRestoreFailedStatus.Text" xml:space="preserve"><value>予約したライブラリの復元を適用できなかったため、予約状態を保持しました。</value><comment>AppLocalizedPhrase.libraryPendingRestoreFailedStatus</comment></data>
   <data name="removingDefectsFailedStatus.Text" xml:space="preserve"><value>ゴミ・キズ除去に失敗しました</value><comment>AppLocalizedPhrase.removingDefectsFailedStatus</comment></data>
   <data name="librarySaveFailed.Text" xml:space="preserve"><value>ライブラリを保存できませんでした。</value><comment>AppLocalizedPhrase.librarySaveFailed</comment></data>
   <data name="quitWithoutSaving.Text" xml:space="preserve"><value>保存せずに終了</value><comment>AppLocalizedPhrase.quitWithoutSaving</comment></data>
@@ -1456,6 +1465,8 @@
   <data name="diagnosticsReportLibrarySection.Text" xml:space="preserve"><value>ライブラリの状態</value><comment>AppLocalizedText.diagnosticsReportLibrarySection</comment></data>
   <data name="diagnosticsReportScannerSection.Text" xml:space="preserve"><value>スキャナー</value><comment>AppLocalizedText.diagnosticsReportScannerSection</comment></data>
   <data name="diagnosticsNoProblems.Text" xml:space="preserve"><value>問題なし</value><comment>AppLocalizedText.diagnosticsNoProblems</comment></data>
+  <data name="diagnosticsRecentProblemsTitle.Text" xml:space="preserve"><value>最近の問題</value><comment>AppLocalizedText.diagnosticsRecentProblemsTitle</comment></data>
+  <data name="diagnosticsClearProblems.Text" xml:space="preserve"><value>消去</value><comment>AppLocalizedText.diagnosticsClearProblems</comment></data>
   <data name="diagnosticsGeneratedAt.Text" xml:space="preserve"><value>生成時刻</value><comment>AppLocalizedText.diagnosticsGeneratedAt</comment></data>
   <data name="diagnosticsStatSaveError.Text" xml:space="preserve"><value>保存エラー</value><comment>AppLocalizedText.diagnosticsStatSaveError</comment></data>
   <data name="noActiveScanner.Text" xml:space="preserve"><value>使用中のスキャナーがありません。</value><comment>AppLocalizedText.noActiveScanner</comment></data>
