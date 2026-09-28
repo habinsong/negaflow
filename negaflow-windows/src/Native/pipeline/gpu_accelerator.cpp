@@ -469,7 +469,7 @@ bool GpuAccelerator::apply_negative_inversion(
         return false;
     }
 
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->pool.ensure(state_->device, width, height, 2)) {
         return false;
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();

@@ -1,4 +1,4 @@
-#include "icm_rgb16_transform.h"
+#include "icm_rgb16_parallel.h"
 #include "scanner_to_working_detail.h"
 
 #include <Windows.h>
@@ -307,7 +307,7 @@ EncodedSrgb16Result convert_embedded_icc_to_srgb16(
             source_stride_bytes = static_cast<std::uint32_t>(rgb_stride_bytes);
         }
 
-        IcmRgb16Transform transform{};
+        ParallelIcmRgb16Transform transform{};
         result.status = transform.initialize(profile_override.empty()
             ? std::span<const std::uint8_t>(decoded.icc_profile) : profile_override,
             result.native_error_code);

@@ -55,15 +55,6 @@ void release_images(const GpuDevice& device, GpuWorkingImage* const images) noex
     return true;
 }
 
-// 이 묶음이 시스템 RAM 에서 쓰는 바이트입니다 - 스테이징 두 장이 여기 들어갑니다.
-[[nodiscard]] std::uint64_t system_bytes(const GpuWorkingImage* const images) noexcept {
-    std::uint64_t bytes = 0ULL;
-    for (int index = 0; index < GpuImagePool::size; ++index) {
-        bytes += images[index].system_memory_bytes();
-    }
-    return bytes;
-}
-
 // 유효한 장 수만큼의 텍스처 바이트입니다. 치수를 모르면(풀이 비었으면) 0 입니다.
 [[nodiscard]] std::uint64_t live_bytes(
     const GpuWorkingImage* const images,
@@ -155,9 +146,9 @@ void GpuImagePool::sync_resident_bytes() noexcept {
         remove_gpu_pool_resident_bytes(reported_bytes_ - total);
     }
     reported_bytes_ = total;
-    // 시스템 RAM 몫은 **스테이징 두 장**입니다(항상 CPU 접근이라 RAM 에 있습니다).
+    // 시스템 RAM 몫은 **스테이징**입니다(항상 CPU 접근이라 RAM 에 있습니다).
     // 내장 그래픽이면 텍스처까지 시스템 RAM 이므로 전부 셉니다.
-    const std::uint64_t staging = system_bytes(images_) + system_bytes(retained_);
+    const std::uint64_t staging = gpu_staging_system_memory_bytes();
     set_gpu_pool_system_memory_bytes(
         system_memory_backed_ ? staging + total : staging);
 }

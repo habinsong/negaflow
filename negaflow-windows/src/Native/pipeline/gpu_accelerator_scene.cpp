@@ -39,7 +39,7 @@ bool GpuAccelerator::apply_scene_correction(
 
     const std::lock_guard<std::recursive_mutex> guard{state_->lock};
     if (!state_->scene_correction_ready ||
-        !state_->pool.ensure(state_->device, image.width, image.height)) {
+        !state_->pool.ensure(state_->device, image.width, image.height, 2)) {
         return false;
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();

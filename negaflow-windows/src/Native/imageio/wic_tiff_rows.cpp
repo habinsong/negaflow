@@ -9,6 +9,93 @@
 #include <vector>
 
 namespace negaflow::imageio::wic_tiff_detail {
+namespace {
+
+WicTiffDecodeStatus copy_tiff_row_bands(
+    IWICBitmapSource* const pixel_source,
+    const std::uint64_t stride_bytes,
+    const UINT width,
+    const UINT height,
+    const std::span<const WicTiffRowBand> bands,
+    const WicTiffDecodeControl& control,
+    WicTiffRowSink* const row_sink,
+    bool& sink_started,
+    WicTiffDecodeResult& result) {
+    const auto complete_sink = [&](const WicTiffDecodeStatus status) noexcept {
+        if (sink_started) {
+            row_sink->complete(status);
+            sink_started = false;
+        }
+    };
+    if (width > static_cast<UINT>(std::numeric_limits<INT>::max()) ||
+        height > static_cast<UINT>(std::numeric_limits<INT>::max())) {
+        complete_sink(WicTiffDecodeStatus::memory_limit_exceeded);
+        return WicTiffDecodeStatus::memory_limit_exceeded;
+    }
+    std::uint32_t largest = 0U;
+    std::uint32_t next_row = 0U;
+    for (const WicTiffRowBand& band : bands) {
+        if (band.row_count == 0U || band.first_row < next_row || band.first_row > height ||
+            band.row_count > height - band.first_row) {
+            complete_sink(WicTiffDecodeStatus::invalid_argument);
+            return WicTiffDecodeStatus::invalid_argument;
+        }
+        next_row = band.first_row + band.row_count;
+        largest = std::max(largest, band.row_count);
+    }
+    const std::uint64_t buffer_bytes = stride_bytes * largest;
+    if (buffer_bytes > std::numeric_limits<UINT>::max()) {
+        complete_sink(WicTiffDecodeStatus::memory_limit_exceeded);
+        return WicTiffDecodeStatus::memory_limit_exceeded;
+    }
+    std::vector<std::uint16_t> row_buffer(static_cast<std::size_t>(buffer_bytes / sizeof(std::uint16_t)));
+    for (const WicTiffRowBand& band : bands) {
+        if (control.stop_token.stop_requested()) {
+            complete_sink(WicTiffDecodeStatus::cancelled);
+            return WicTiffDecodeStatus::cancelled;
+        }
+        const std::uint64_t copy_bytes = stride_bytes * band.row_count;
+        const WICRect rectangle{
+            0,
+            static_cast<INT>(band.first_row),
+            static_cast<INT>(width),
+            static_cast<INT>(band.row_count),
+        };
+        const HRESULT status = pixel_source->CopyPixels(
+            &rectangle,
+            static_cast<UINT>(stride_bytes),
+            static_cast<UINT>(copy_bytes),
+            reinterpret_cast<BYTE*>(row_buffer.data()));
+        if (FAILED(status)) {
+            complete_sink(WicTiffDecodeStatus::pixel_decode_failed);
+            return WicTiffDecodeStatus::pixel_decode_failed;
+        }
+        ++result.info.copy_operation_count;
+        result.info.peak_copy_pixel_bytes = std::max(result.info.peak_copy_pixel_bytes, copy_bytes);
+        const WicTiffRowChunk chunk{
+            band.first_row,
+            band.row_count,
+            result.image.stride_bytes,
+            std::span<const std::uint16_t>{
+                row_buffer.data(), static_cast<std::size_t>(copy_bytes / sizeof(std::uint16_t))},
+        };
+        if (!row_sink->write(chunk)) {
+            const WicTiffDecodeStatus sink_status = control.stop_token.stop_requested()
+                ? WicTiffDecodeStatus::cancelled
+                : WicTiffDecodeStatus::row_sink_failed;
+            complete_sink(sink_status);
+            return sink_status;
+        }
+        result.info.completed_rows = band.first_row + band.row_count;
+        if (control.progress_observer != nullptr) {
+            control.progress_observer->report({result.info.completed_rows, height});
+        }
+    }
+    complete_sink(WicTiffDecodeStatus::ok);
+    return WicTiffDecodeStatus::ok;
+}
+
+}  // namespace
 
 WicTiffDecodeStatus copy_tiff_rows(
     IWICBitmapSource* const pixel_source,
@@ -18,6 +105,7 @@ WicTiffDecodeStatus copy_tiff_rows(
     const UINT height,
     const WicTiffDecodeControl& control,
     WicTiffRowSink* const row_sink,
+    const WicTiffLanePlan& lanes,
     bool& sink_started,
     WicTiffDecodeResult& result) {
     const auto complete_sink = [&](const WicTiffDecodeStatus status) noexcept {
@@ -71,6 +159,19 @@ WicTiffDecodeStatus copy_tiff_rows(
     if (control.stop_token.stop_requested()) {
         complete_sink(WicTiffDecodeStatus::cancelled);
         return WicTiffDecodeStatus::cancelled;
+    }
+
+    // 싱크가 일부 줄만 원하면 그 띠만 풉니다. 입력 감마 추정은 64 곳의 9 줄만 보는데,
+    // 예전에는 그것을 얻으려고 사진을 통째로 한 번 더 풀었습니다(사진을 열 때마다 수백 ms).
+    const std::span<const WicTiffRowBand> bands =
+        row_sink != nullptr ? row_sink->wanted_rows() : std::span<const WicTiffRowBand>{};
+    if (!bands.empty()) {
+        return copy_tiff_row_bands(
+            pixel_source, stride_bytes, width, height, bands, control, row_sink, sink_started, result);
+    }
+    if (row_sink != nullptr && lanes.lane_count > 1U) {
+        return copy_tiff_rows_in_lanes(
+            pixel_source, lanes, stride_bytes, width, height, control, *row_sink, sink_started, result);
     }
 
     std::vector<std::uint16_t> row_buffer{};

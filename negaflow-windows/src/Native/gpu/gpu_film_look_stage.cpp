@@ -18,6 +18,26 @@ namespace {
 
 constexpr int scratch_first = GpuImagePool::scratch_first;
 
+// 이 룩이 실제로 쓰는 풀 장수입니다. 헐레이션은 스크래치 넷, 색 프리셋은 둘, 아큐턴스는
+// 하나를 핑퐁 두 장 뒤에 씁니다. 늘 여섯 장을 잡으면 3600 한 장에 쓰지 않는 텍스처가
+// 138 MB 씩 VRAM 과 커밋에 남습니다.
+[[nodiscard]] int color_pool_images(const imaging::DigitalFilmLookPlan& plan) noexcept {
+    if (plan.halation_requested) {
+        return GpuImagePool::size;
+    }
+    if (plan.preset != nullptr) {
+        return scratch_first + 2;
+    }
+    return plan.acutance.applied ? scratch_first + 1 : scratch_first;
+}
+
+[[nodiscard]] int bw_pool_images(const imaging::DigitalBwFilmLookPlan& plan) noexcept {
+    if (plan.halation_requested) {
+        return GpuImagePool::size;
+    }
+    return plan.acutance.applied ? scratch_first + 1 : scratch_first;
+}
+
 } // namespace
 
 struct GpuFilmLookStage::State final {
@@ -79,7 +99,7 @@ GpuFilmLookResult GpuFilmLookStage::apply(
     if (width == 0U || height == 0U || stride_pixels < width) {
         return result;
     }
-    if (!pool_holder.ensure(device, width, height)) {
+    if (!pool_holder.ensure(device, width, height, color_pool_images(plan))) {
         return result;
     }
 
@@ -193,7 +213,7 @@ GpuFilmLookStage::BwResult GpuFilmLookStage::apply_bw(
     if (width == 0U || height == 0U || stride_pixels < width) {
         return result;
     }
-    if (!pool_holder.ensure(device, width, height)) {
+    if (!pool_holder.ensure(device, width, height, bw_pool_images(plan))) {
         return result;
     }
 

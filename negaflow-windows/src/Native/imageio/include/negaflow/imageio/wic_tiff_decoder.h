@@ -103,6 +103,11 @@ struct WicTiffRowChunk final {
     std::span<const std::uint16_t> samples{};
 };
 
+struct WicTiffRowBand final {
+    std::uint32_t first_row{0};
+    std::uint32_t row_count{0};
+};
+
 class WicTiffRowSink {
 public:
     WicTiffRowSink() noexcept = default;
@@ -115,6 +120,9 @@ public:
     [[nodiscard]] virtual bool begin(const WicTiffFrameView& frame) noexcept = 0;
     [[nodiscard]] virtual bool write(const WicTiffRowChunk& rows) noexcept = 0;
     virtual void complete(WicTiffDecodeStatus status) noexcept = 0;
+    // Read after begin(). A non-empty list decodes only these rows, in order and without
+    // overlap; the default decodes every row.
+    [[nodiscard]] virtual std::span<const WicTiffRowBand> wanted_rows() const noexcept { return {}; }
 };
 
 struct WicTiffDecodeLimits final {

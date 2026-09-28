@@ -7,7 +7,7 @@ bool GpuAccelerator::apply_custom_color_target(float* pixels, std::uint32_t widt
     if (!available() || pixels == nullptr || profile == nullptr || width == 0U ||
         height == 0U || stride_pixels < width) { return false; }
     const std::lock_guard<std::recursive_mutex> guard{state_->lock};
-    if (!state_->custom_color_target_ready || !state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->custom_color_target_ready || !state_->pool.ensure(state_->device, width, height, 2)) {
         return false;
     }
     auto* pool = state_->pool.images();

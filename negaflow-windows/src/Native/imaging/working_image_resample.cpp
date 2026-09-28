@@ -1,6 +1,9 @@
 #include "negaflow/imaging/working_image_resample.h"
 
+#include "negaflow/core/parallel_rows.h"
+
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -151,6 +154,47 @@ struct CachedRow final {
     return cache.back();
 }
 
+void resample_output_row(
+    const WorkingImage& source,
+    const AxisKernel& horizontal,
+    const AxisKernel& vertical,
+    const std::uint32_t output_y,
+    const std::uint32_t output_width,
+    std::vector<CachedRow>& cache,
+    std::vector<const CachedRow*>& rows,
+    negaflow::core::Rgba32F* const destination) {
+    const AxisSpan vertical_span = vertical.spans[output_y];
+    std::uint32_t minimum_source_y = source.height - 1U;
+    for (std::size_t tap = 0U; tap < vertical_span.count; ++tap) {
+        minimum_source_y = std::min(
+            minimum_source_y,
+            vertical.sources[vertical_span.first + tap]);
+    }
+    cache.erase(
+        std::remove_if(
+            cache.begin(), cache.end(),
+            [&](const CachedRow& row) { return row.source_y < minimum_source_y; }),
+        cache.end());
+    rows.clear();
+    for (std::size_t tap = 0U; tap < vertical_span.count; ++tap) {
+        const std::uint32_t source_y = vertical.sources[vertical_span.first + tap];
+        rows.push_back(&cached_horizontal_row(
+            cache, source, source_y, horizontal, output_width));
+    }
+    for (std::uint32_t output_x = 0U; output_x < output_width; ++output_x) {
+        negaflow::core::Rgba32F sum{};
+        for (std::size_t tap = 0U; tap < vertical_span.count; ++tap) {
+            const float weight = vertical.weights[vertical_span.first + tap];
+            const auto pixel = rows[tap]->pixels[output_x];
+            sum.red += pixel.red * weight;
+            sum.green += pixel.green * weight;
+            sum.blue += pixel.blue * weight;
+        }
+        sum.alpha = 1.0F;
+        destination[output_x] = sum;
+    }
+}
+
 }  // namespace
 
 WorkingImageResampleResult resample_working_image_lanczos3(
@@ -192,46 +236,37 @@ WorkingImageResampleResult resample_working_image_lanczos3(
         result.image.height = output_height;
         result.image.stride_pixels = output_width;
         result.image.pixels.resize(output_count);
-        std::vector<CachedRow> cache{};
         std::size_t maximum_vertical_taps = 0U;
         for (const AxisSpan span : vertical.spans) {
             maximum_vertical_taps = std::max(maximum_vertical_taps, span.count);
         }
-        cache.reserve(maximum_vertical_taps);
-        std::vector<const CachedRow*> rows{};
-        rows.reserve(maximum_vertical_taps);
-        for (std::uint32_t output_y = 0U; output_y < output_height; ++output_y) {
-            const AxisSpan vertical_span = vertical.spans[output_y];
-            std::uint32_t minimum_source_y = source.height - 1U;
-            for (std::size_t tap = 0U; tap < vertical_span.count; ++tap) {
-                minimum_source_y = std::min(
-                    minimum_source_y,
-                    vertical.sources[vertical_span.first + tap]);
-            }
-            cache.erase(
-                std::remove_if(
-                    cache.begin(), cache.end(),
-                    [&](const CachedRow& row) { return row.source_y < minimum_source_y; }),
-                cache.end());
-            rows.clear();
-            for (std::size_t tap = 0U; tap < vertical_span.count; ++tap) {
-                const std::uint32_t source_y = vertical.sources[vertical_span.first + tap];
-                rows.push_back(&cached_horizontal_row(
-                    cache, source, source_y, horizontal, output_width));
-            }
-            for (std::uint32_t output_x = 0U; output_x < output_width; ++output_x) {
-                negaflow::core::Rgba32F sum{};
-                for (std::size_t tap = 0U; tap < vertical_span.count; ++tap) {
-                    const float weight = vertical.weights[vertical_span.first + tap];
-                    const auto pixel = rows[tap]->pixels[output_x];
-                    sum.red += pixel.red * weight;
-                    sum.green += pixel.green * weight;
-                    sum.blue += pixel.blue * weight;
+        // 출력 행은 서로 독립이라 행 블록으로 나눕니다. 블록마다 자기 가로 행 캐시를 두고,
+        // 화소마다 더하는 순서는 한 스레드일 때와 같아 결과가 같습니다. 5088x3401 을 3600 으로
+        // 줄이는 데 한 스레드로 240 ms 였습니다.
+        std::atomic<bool> allocation_failed{false};
+        negaflow::core::for_each_row_block(
+            output_height,
+            static_cast<std::uint64_t>(source_count) +
+                static_cast<std::uint64_t>(output_count) * maximum_vertical_taps,
+            [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+                try {
+                    std::vector<CachedRow> cache{};
+                    cache.reserve(maximum_vertical_taps);
+                    std::vector<const CachedRow*> rows{};
+                    rows.reserve(maximum_vertical_taps);
+                    for (std::uint32_t output_y = first_row; output_y < first_row + row_count;
+                         ++output_y) {
+                        resample_output_row(
+                            source, horizontal, vertical, output_y, output_width, cache, rows,
+                            result.image.pixels.data() +
+                                static_cast<std::size_t>(output_y) * output_width);
+                    }
+                } catch (...) {
+                    allocation_failed.store(true, std::memory_order_relaxed);
                 }
-                sum.alpha = 1.0F;
-                result.image.pixels[static_cast<std::size_t>(output_y) * output_width + output_x] =
-                    sum;
-            }
+            });
+        if (allocation_failed.load(std::memory_order_relaxed)) {
+            throw std::bad_alloc{};
         }
         result.status = WorkingImageResampleStatus::ok;
         return result;

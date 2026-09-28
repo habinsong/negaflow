@@ -135,19 +135,6 @@ public:
     [[nodiscard]] std::uint32_t width() const noexcept { return width_; }
     [[nodiscard]] std::uint32_t height() const noexcept { return height_; }
 
-    /// <summary>이 이미지가 <b>시스템 RAM</b> 에서 차지하는 바이트입니다.</summary>
-    /// <remarks>
-    /// 텍스처 자체는 `DEFAULT` 라 외장 그래픽에서는 VRAM 에 있습니다. 그런데 스테이징 두
-    /// 장은 CPU 접근이라 **언제나 시스템 RAM** 입니다. 실측으로 8MP 스트레스에서 이 몫이
-    /// 3.2GB 였고, 어느 예산에도 들어 있지 않아 프로세스 총량이 상한을 넘었습니다.
-    /// </remarks>
-    [[nodiscard]] std::uint64_t system_memory_bytes() const noexcept {
-        const std::uint64_t one = static_cast<std::uint64_t>(width_) *
-            static_cast<std::uint64_t>(height_) * 16ULL;
-        return (staging_ == nullptr ? 0ULL : one) +
-            (upload_staging_ == nullptr ? 0ULL : one);
-    }
-
     [[nodiscard]] ID3D11Texture2D* texture() const noexcept { return texture_; }
     [[nodiscard]] ID3D11ShaderResourceView* srv() const noexcept { return srv_; }
     [[nodiscard]] ID3D11UnorderedAccessView* uav() const noexcept { return uav_; }
@@ -158,17 +145,19 @@ private:
     ID3D11Texture2D* texture_{nullptr};
     ID3D11ShaderResourceView* srv_{nullptr};
     ID3D11UnorderedAccessView* uav_{nullptr};
-    // 회수용 스테이징을 **들고 있습니다.** 앞 판은 `download` 마다 만들고 지웠는데,
-    // 24MP 에서 그것이 264 MB 할당·해제입니다. 실측으로 다운로드가 76~133 ms 였고
-    // 업로드는 45 ms 였습니다 — 그 차이의 큰 몫이 이 할당이었습니다.
-    // `mutable` 인 이유는 `download` 가 `const` 이기 때문입니다(이미지 내용은 안 바뀝니다).
-    mutable ID3D11Texture2D* staging_{nullptr};
-    // 올리기용 스테이징. 읽기용과 나눠 두는 이유는 CPU 접근 플래그가 반대이고,
-    // 한 텍스처에 READ|WRITE 를 같이 주면 드라이버가 읽기 쪽 캐시 정책을 낮추기 때문입니다.
-    mutable ID3D11Texture2D* upload_staging_{nullptr};
     std::uint32_t width_{0};
     std::uint32_t height_{0};
 };
+
+/// <summary>올리기·내리기 스테이징이 <b>시스템 RAM</b> 에서 차지하는 바이트입니다.</summary>
+/// <remarks>
+/// 텍스처 자체는 `DEFAULT` 라 외장 그래픽에서는 VRAM 에 있습니다. 스테이징은 CPU 접근이라
+/// **언제나 시스템 RAM** 입니다. 예전에 텍스처마다 두 장씩 들던 때는 8MP 스트레스에서 이 몫이
+/// 3.2GB 였습니다. 지금은 장치·방향마다 크기 두 벌만 둡니다(`gpu_shared_staging.h`).
+/// 읽기와 쓰기를 한 장에 겸하지 않는 것은 READ|WRITE 를 같이 주면 드라이버가 읽기 쪽 캐시
+/// 정책을 낮추기 때문입니다.
+/// </remarks>
+[[nodiscard]] std::uint64_t gpu_staging_system_memory_bytes() noexcept;
 
 // 스테이징 텍스처를 여러 장 돌려 씁니다. N 프레임을 GPU 가 쓰는 동안 N−1 프레임을 CPU 가 읽어
 // `Map` 의 동기화 정지를 피합니다. 한 장만 쓰면 프리뷰가 매 프레임 GPU 를 기다립니다.

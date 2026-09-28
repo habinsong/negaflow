@@ -67,7 +67,7 @@ bool GpuAccelerator::apply_scratch_angle_maps(
     if (!state_->scratch_angle_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->pool.ensure(state_->device, width, height, 3)) {
         return false;
     }
     const std::size_t count = static_cast<std::size_t>(width) * height;
@@ -119,7 +119,7 @@ bool GpuAccelerator::apply_scratch_angle_stack(
     if (!state_->scratch_angle_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->pool.ensure(state_->device, width, height, 4)) {
         return false;
     }
     const std::size_t count = static_cast<std::size_t>(width) * height;

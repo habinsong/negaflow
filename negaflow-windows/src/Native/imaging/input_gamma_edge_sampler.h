@@ -11,6 +11,17 @@ public:
         try {
             width_ = frame.width;
             height_ = frame.height;
+            // 표본 줄마다 위아래 4 줄씩, 64 곳의 9 줄만 씁니다. 디코더가 이 띠만 풀게 알려 줍니다.
+            bands_.clear();
+            for (std::uint32_t row = 0; row < 64U; ++row) {
+                const auto y = 8U + static_cast<std::uint32_t>(static_cast<std::uint64_t>(row) * (height_ - 17U) / 63U);
+                const std::uint32_t first = y - 4U;
+                if (!bands_.empty() && first <= bands_.back().first_row + bands_.back().row_count) {
+                    bands_.back().row_count = y + 5U - bands_.back().first_row;
+                } else {
+                    bands_.push_back({first, 9U});
+                }
+            }
             edges_.resize(64U * 96U * 2U);
             for (std::uint32_t y = 0; y < 64U; ++y) {
                 for (std::uint32_t x = 0; x < 96U; ++x) {
@@ -54,8 +65,10 @@ public:
     std::optional<negaflow::color::InputGammaEstimate> estimate() const noexcept {
         return negaflow::color::estimate_input_gamma(edges_);
     }
+    [[nodiscard]] std::span<const negaflow::imageio::WicTiffRowBand> bands() const noexcept { return bands_; }
 private:
     std::uint32_t width_{0}, height_{0};
     std::vector<negaflow::color::InputGammaEdge> edges_{};
+    std::vector<negaflow::imageio::WicTiffRowBand> bands_{};
 };
 }  // namespace negaflow::imaging

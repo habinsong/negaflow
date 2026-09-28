@@ -370,6 +370,8 @@ public sealed partial class PreviewCoordinator
 
     private async Task RunLoopAsync(PreviewRequest request, DevelopRun run)
     {
+        // 이 루프가 도는 동안 썸네일 같은 뒤 작업은 새 렌더를 시작하지 않습니다.
+        using IDisposable foreground = Develop.ForegroundRenderGate.Enter();
         PreviewRequest? current = request;
         DevelopRun currentRun = run;
         try

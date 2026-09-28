@@ -2,6 +2,8 @@
 
 #include "synthetic_wic_tiff.h"
 
+#include "negaflow/core/parallel_rows.h"
+
 #include <Windows.h>
 
 #include <algorithm>
@@ -272,6 +274,105 @@ void test_repository_fixture(const std::filesystem::path& path) {
         std::filesystem::file_size(path) == size_before &&
             std::filesystem::last_write_time(path) == modified_before,
         "repository fixture remains unchanged");
+}
+
+}  // namespace wic_tiff_decoder_tests
+
+namespace wic_tiff_decoder_tests {
+namespace {
+
+// 일부 줄만 원하는 싱크입니다. 입력 감마 추정처럼 띠만 받고, 받은 띠를 그대로 모읍니다.
+class BandSink final : public negaflow::imageio::WicTiffRowSink {
+public:
+    explicit BandSink(std::vector<negaflow::imageio::WicTiffRowBand> bands) : bands_(std::move(bands)) {}
+
+    bool begin(const negaflow::imageio::WicTiffFrameView& frame) noexcept override {
+        stride_samples_ = frame.stride_bytes / sizeof(std::uint16_t);
+        return true;
+    }
+    bool write(const negaflow::imageio::WicTiffRowChunk& rows) noexcept override {
+        firsts_.push_back(rows.first_row);
+        counts_.push_back(rows.row_count);
+        samples_.insert(samples_.end(), rows.samples.begin(), rows.samples.end());
+        return true;
+    }
+    void complete(const negaflow::imageio::WicTiffDecodeStatus status) noexcept override {
+        ++terminal_count_;
+        terminal_status_ = status;
+    }
+    std::span<const negaflow::imageio::WicTiffRowBand> wanted_rows() const noexcept override { return bands_; }
+
+    std::vector<negaflow::imageio::WicTiffRowBand> bands_;
+    std::uint32_t stride_samples_{0};
+    std::vector<std::uint32_t> firsts_{};
+    std::vector<std::uint32_t> counts_{};
+    std::vector<std::uint16_t> samples_{};
+    std::uint32_t terminal_count_{0};
+    negaflow::imageio::WicTiffDecodeStatus terminal_status_{negaflow::imageio::WicTiffDecodeStatus::invalid_argument};
+};
+
+}  // namespace
+
+void test_row_bands(const std::filesystem::path& root) {
+    const std::filesystem::path path = root / L"row-bands-lzw-rgb16.tiff";
+    write_fixture(path, negaflow::test_fixtures::make_lzw_rgb16_rows_tiff(12U));
+    const auto whole = negaflow::imageio::decode_tiff_with_wic(path);
+    expect(whole.status == negaflow::imageio::WicTiffDecodeStatus::ok, "row band fixture decodes whole");
+
+    negaflow::imageio::WicTiffDecodeControl control{};
+    control.rows_per_copy = 4U;
+    BandSink sink{{{1U, 2U}, {5U, 3U}, {11U, 1U}}};
+    const auto decoded = negaflow::imageio::decode_tiff_rows_with_wic(path, sink, {}, control);
+    std::vector<std::uint16_t> expected{};
+    for (const auto& band : sink.bands_) {
+        const auto first = whole.image.samples.begin() + static_cast<std::ptrdiff_t>(band.first_row * sink.stride_samples_);
+        expected.insert(expected.end(), first, first + static_cast<std::ptrdiff_t>(band.row_count * sink.stride_samples_));
+    }
+    expect(decoded.status == negaflow::imageio::WicTiffDecodeStatus::ok && sink.terminal_count_ == 1U &&
+               sink.terminal_status_ == negaflow::imageio::WicTiffDecodeStatus::ok,
+        "row bands decode and complete once");
+    expect(sink.firsts_ == std::vector<std::uint32_t>{1U, 5U, 11U} &&
+               sink.counts_ == std::vector<std::uint32_t>{2U, 3U, 1U} &&
+               decoded.info.copy_operation_count == 3U,
+        "only the wanted row bands are copied");
+    expect(sink.samples_ == expected, "row band pixels match the whole-frame decode");
+
+    for (const auto& invalid : std::vector<std::vector<negaflow::imageio::WicTiffRowBand>>{
+             {{4U, 3U}, {5U, 2U}}, {{10U, 3U}}, {{2U, 0U}}}) {
+        BandSink rejected{invalid};
+        const auto result = negaflow::imageio::decode_tiff_rows_with_wic(path, rejected, {}, control);
+        expect(result.status == negaflow::imageio::WicTiffDecodeStatus::invalid_argument &&
+                   rejected.terminal_count_ == 1U && rejected.firsts_.empty(),
+            "overlapping, out-of-range, or empty row bands are rejected before copying");
+    }
+}
+
+// 줄 묶음을 여러 레인이 동시에 풀어도 한 소스가 순서대로 푼 것과 화소가 같아야 합니다.
+// 레인은 덩이를 모아 한 번에 넘기므로, 코어가 둘 이상인 기계에서는 쓰기 횟수가 줄어듭니다.
+void test_row_lanes(const std::filesystem::path& root) {
+    // 압축 스트립 하나짜리는 레인을 쓰지 않습니다(`plan_tiff_lanes`). 비압축은 줄마다 따로 읽힙니다.
+    const std::filesystem::path path = root / L"row-lanes-rgb16.tiff";
+    write_fixture(path, negaflow::test_fixtures::make_uncompressed_rgb16_defect_tiff(16U, 24U));
+    const auto whole = negaflow::imageio::decode_tiff_with_wic(path);
+    expect(whole.status == negaflow::imageio::WicTiffDecodeStatus::ok, "row lane fixture decodes whole");
+
+    negaflow::imageio::WicTiffDecodeControl control{};
+    control.rows_per_copy = 1U;
+    BandSink sink{{}};
+    const auto decoded = negaflow::imageio::decode_tiff_rows_with_wic(path, sink, {}, control);
+    expect(decoded.status == negaflow::imageio::WicTiffDecodeStatus::ok && sink.terminal_count_ == 1U &&
+               sink.terminal_status_ == negaflow::imageio::WicTiffDecodeStatus::ok,
+        "row lanes decode and complete once");
+    expect(sink.samples_ == whole.image.samples, "row lane pixels match the whole-frame decode");
+    std::uint32_t next = 0U;
+    for (std::size_t index = 0U; index < sink.firsts_.size(); ++index) {
+        expect(sink.firsts_[index] == next, "row lane chunks arrive in row order");
+        next += sink.counts_[index];
+    }
+    expect(next == 24U, "row lanes cover every row");
+    if (negaflow::core::physical_cores() >= 2U) {
+        expect(sink.firsts_.size() < 24U, "row lanes hand several rows over per write");
+    }
 }
 
 }  // namespace wic_tiff_decoder_tests

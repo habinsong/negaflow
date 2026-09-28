@@ -19,6 +19,8 @@ int main(const int argument_count, const char* const arguments[]) {
     test_lzw_code_width_transition(temporary.path());
     test_lzw_dictionary_limit_and_forward_reference(temporary.path());
     test_row_copy_progress_and_cancellation(temporary.path());
+    test_row_bands(temporary.path());
+    test_row_lanes(temporary.path());
     test_malformed_lzw(temporary.path());
     test_semantically_invalid_lzw(temporary.path());
     test_deflate_preflight(temporary.path());

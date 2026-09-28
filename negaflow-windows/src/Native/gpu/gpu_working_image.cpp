@@ -8,6 +8,8 @@
 
 #include "negaflow/core/parallel_rows.h"
 #include "negaflow/gpu/gpu_device.h"
+#include "gpu_shared_staging.h"
+
 
 namespace negaflow::gpu {
 namespace {
@@ -117,29 +119,6 @@ void copy_rows(
         });
 }
 
-[[nodiscard]] ID3D11Texture2D* make_staging(
-    const GpuDevice& device,
-    const std::uint32_t width,
-    const std::uint32_t height,
-    const UINT cpu_access = D3D11_CPU_ACCESS_READ) noexcept {
-    D3D11_TEXTURE2D_DESC description{};
-    description.Width = width;
-    description.Height = height;
-    description.MipLevels = 1U;
-    description.ArraySize = 1U;
-    description.Format = working_format;
-    description.SampleDesc.Count = 1U;
-    description.Usage = D3D11_USAGE_STAGING;
-    description.BindFlags = 0U;
-    description.CPUAccessFlags = cpu_access;
-
-    ID3D11Texture2D* texture = nullptr;
-    if (FAILED(device.device()->CreateTexture2D(&description, nullptr, &texture))) {
-        return nullptr;
-    }
-    return texture;
-}
-
 // 스테이징 한 장을 읽어 호스트로 옮깁니다.
 [[nodiscard]] GpuImageStatus read_staging(
     const GpuDevice& device,
@@ -198,15 +177,11 @@ GpuWorkingImage::GpuWorkingImage(GpuWorkingImage&& other) noexcept
     : texture_(other.texture_),
       srv_(other.srv_),
       uav_(other.uav_),
-      staging_(other.staging_),
-      upload_staging_(other.upload_staging_),
       width_(other.width_),
       height_(other.height_) {
     other.texture_ = nullptr;
     other.srv_ = nullptr;
     other.uav_ = nullptr;
-    other.staging_ = nullptr;
-    other.upload_staging_ = nullptr;
     other.width_ = 0U;
     other.height_ = 0U;
 }
@@ -217,15 +192,11 @@ GpuWorkingImage& GpuWorkingImage::operator=(GpuWorkingImage&& other) noexcept {
         texture_ = other.texture_;
         srv_ = other.srv_;
         uav_ = other.uav_;
-        staging_ = other.staging_;
-        upload_staging_ = other.upload_staging_;
         width_ = other.width_;
         height_ = other.height_;
         other.texture_ = nullptr;
         other.srv_ = nullptr;
         other.uav_ = nullptr;
-        other.staging_ = nullptr;
-        other.upload_staging_ = nullptr;
         other.width_ = 0U;
         other.height_ = 0U;
     }
@@ -233,14 +204,6 @@ GpuWorkingImage& GpuWorkingImage::operator=(GpuWorkingImage&& other) noexcept {
 }
 
 void GpuWorkingImage::reset() noexcept {
-    if (upload_staging_ != nullptr) {
-        upload_staging_->Release();
-        upload_staging_ = nullptr;
-    }
-    if (staging_ != nullptr) {
-        staging_->Release();
-        staging_ = nullptr;
-    }
     if (uav_ != nullptr) {
         uav_->Release();
         uav_ = nullptr;
@@ -353,12 +316,11 @@ GpuImageStatus GpuWorkingImage::upload_into(
     // 복사합니다. 24MP(264 MB)에서 실측 44 ms 였습니다. 쓰기 스테이징에 직접
     // `Map` 해서 **행 블록으로 나눠** 채우면 그 복사가 코어를 나눠 씁니다.
     // 스테이징을 못 만들면 `UpdateSubresource` 로 돌아갑니다 — 값은 같습니다.
-    if (upload_staging_ == nullptr) {
-        upload_staging_ = make_staging(device, width_, height_, D3D11_CPU_ACCESS_WRITE);
-    }
-    if (upload_staging_ != nullptr) {
+    ID3D11Texture2D* const staging =
+        staging_detail::shared_staging(device, width_, height_, D3D11_CPU_ACCESS_WRITE);
+    if (staging != nullptr) {
         D3D11_MAPPED_SUBRESOURCE mapped{};
-        if (SUCCEEDED(device.context()->Map(upload_staging_, 0U, D3D11_MAP_WRITE, 0U, &mapped))) {
+        if (SUCCEEDED(device.context()->Map(staging, 0U, D3D11_MAP_WRITE, 0U, &mapped))) {
             copy_rows(
                 reinterpret_cast<std::byte*>(mapped.pData),
                 static_cast<std::size_t>(mapped.RowPitch),
@@ -366,8 +328,8 @@ GpuImageStatus GpuWorkingImage::upload_into(
                 static_cast<std::size_t>(stride_pixels) * sizeof(core::Rgba32F),
                 static_cast<std::size_t>(width_) * sizeof(core::Rgba32F),
                 height_);
-            device.context()->Unmap(upload_staging_, 0U);
-            device.context()->CopyResource(texture_, upload_staging_);
+            device.context()->Unmap(staging, 0U);
+            device.context()->CopyResource(texture_, staging);
             note_upload(width_, height_);
             return GpuImageStatus::ok;
         }
@@ -395,15 +357,14 @@ GpuImageStatus GpuWorkingImage::upload_planes_into(
     if (stride_pixels < width_) {
         return GpuImageStatus::invalid_dimensions;
     }
-    if (upload_staging_ == nullptr) {
-        upload_staging_ = make_staging(device, width_, height_, D3D11_CPU_ACCESS_WRITE);
-    }
-    if (upload_staging_ == nullptr) {
+    ID3D11Texture2D* const staging =
+        staging_detail::shared_staging(device, width_, height_, D3D11_CPU_ACCESS_WRITE);
+    if (staging == nullptr) {
         return GpuImageStatus::allocation_failed;
     }
     D3D11_MAPPED_SUBRESOURCE mapped{};
     if (FAILED(device.context()->Map(
-            upload_staging_, 0U, D3D11_MAP_WRITE, 0U, &mapped))) {
+            staging, 0U, D3D11_MAP_WRITE, 0U, &mapped))) {
         return GpuImageStatus::map_failed;
     }
     negaflow::core::for_each_row_block(
@@ -425,8 +386,8 @@ GpuImageStatus GpuWorkingImage::upload_planes_into(
                 }
             }
         });
-    device.context()->Unmap(upload_staging_, 0U);
-    device.context()->CopyResource(texture_, upload_staging_);
+    device.context()->Unmap(staging, 0U);
+    device.context()->CopyResource(texture_, staging);
     note_upload(width_, height_);
     return GpuImageStatus::ok;
 }
@@ -441,15 +402,14 @@ GpuImageStatus GpuWorkingImage::download(
     if (texture_ == nullptr) {
         return GpuImageStatus::invalid_dimensions;
     }
-    if (staging_ == nullptr) {
-        staging_ = make_staging(device, width_, height_);
-        if (staging_ == nullptr) {
-            return GpuImageStatus::allocation_failed;
-        }
+    ID3D11Texture2D* const staging =
+        staging_detail::shared_staging(device, width_, height_, D3D11_CPU_ACCESS_READ);
+    if (staging == nullptr) {
+        return GpuImageStatus::allocation_failed;
     }
-    device.context()->CopyResource(staging_, texture_);
+    device.context()->CopyResource(staging, texture_);
     const GpuImageStatus status =
-        read_staging(device, staging_, pixels, width_, height_, stride_pixels);
+        read_staging(device, staging, pixels, width_, height_, stride_pixels);
     if (status == GpuImageStatus::ok) {
         note_download(width_, height_);
     }
@@ -471,15 +431,14 @@ GpuImageStatus GpuWorkingImage::download_planes(
     if (stride_pixels < width_) {
         return GpuImageStatus::invalid_dimensions;
     }
-    if (staging_ == nullptr) {
-        staging_ = make_staging(device, width_, height_);
-        if (staging_ == nullptr) {
-            return GpuImageStatus::allocation_failed;
-        }
+    ID3D11Texture2D* const staging =
+        staging_detail::shared_staging(device, width_, height_, D3D11_CPU_ACCESS_READ);
+    if (staging == nullptr) {
+        return GpuImageStatus::allocation_failed;
     }
-    device.context()->CopyResource(staging_, texture_);
+    device.context()->CopyResource(staging, texture_);
     D3D11_MAPPED_SUBRESOURCE mapped{};
-    if (FAILED(device.context()->Map(staging_, 0U, D3D11_MAP_READ, 0U, &mapped))) {
+    if (FAILED(device.context()->Map(staging, 0U, D3D11_MAP_READ, 0U, &mapped))) {
         return GpuImageStatus::map_failed;
     }
     negaflow::core::for_each_row_block(
@@ -500,7 +459,7 @@ GpuImageStatus GpuWorkingImage::download_planes(
                 }
             }
         });
-    device.context()->Unmap(staging_, 0U);
+    device.context()->Unmap(staging, 0U);
     note_download(width_, height_);
     return GpuImageStatus::ok;
 }
@@ -586,7 +545,7 @@ GpuImageStatus GpuStagingRing::create(
 
     ring.slots_.reserve(effective);
     for (std::size_t index = 0U; index < effective; ++index) {
-        ID3D11Texture2D* slot = make_staging(device, width, height);
+        ID3D11Texture2D* slot = staging_detail::make_staging(device, width, height, D3D11_CPU_ACCESS_READ);
         if (slot == nullptr) {
             ring.reset();
             return GpuImageStatus::allocation_failed;

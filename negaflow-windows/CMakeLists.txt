@@ -531,6 +531,7 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_lookup_table.cpp
     src/Native/gpu/gpu_cache_budget.cpp
     src/Native/gpu/gpu_image_pool.cpp
+    src/Native/gpu/gpu_shared_staging.cpp
     src/Native/gpu/gpu_kernel_timing.cpp
     src/Native/gpu/gpu_morphology.cpp
     src/Native/gpu/gpu_tone_stage.cpp
@@ -577,8 +578,10 @@ add_library(negaflow_imageio STATIC
     src/Native/imageio/libraw_image_decoder.cpp
     src/Native/imageio/libraw_preview_reduce.cpp
     src/Native/imageio/wic_orientation.cpp
+    src/Native/imageio/wic_raw_development.cpp
     src/Native/imageio/wic_tiff_decoder.cpp
     src/Native/imageio/wic_tiff_frame.cpp
+    src/Native/imageio/wic_tiff_lanes.cpp
     src/Native/imageio/wic_tiff_preflight.cpp
     src/Native/imageio/wic_tiff_rows.cpp
     src/Native/imageio/wic_tiff_support.cpp
@@ -678,6 +681,7 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/infrared_plane_resample.cpp
       src/Native/imaging/infrared_planes.cpp
       src/Native/imaging/icm_icc_converter.cpp
+      src/Native/imaging/icm_rgb16_parallel.cpp
       src/Native/imaging/image_transform.cpp
       src/Native/imaging/working_image_resample.cpp
     src/Native/imaging/linear_scanner_converter.cpp

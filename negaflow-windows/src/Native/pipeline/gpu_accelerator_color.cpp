@@ -33,7 +33,7 @@ bool GpuAccelerator::apply_muted_scene_vibrance(
     if (!state_->vibrance_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->pool.ensure(state_->device, width, height, 2)) {
         return false;
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();
@@ -79,7 +79,7 @@ bool GpuAccelerator::apply_color_model(
     if (!state_->vibrance_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->pool.ensure(state_->device, width, height, 2)) {
         return false;
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();
@@ -139,7 +139,7 @@ bool GpuAccelerator::apply_scanner_target_grade(
     // 띠 높이는 예산이 정합니다. 절반씩 줄여 보며 `ensure` 가 받아 주는 첫 높이를 씁니다 —
     // 상수를 박지 않고 기계와 그때의 GPU 여유에서 얻습니다.
     std::uint32_t band = height;
-    while (band > 0U && !state_->pool.ensure(state_->device, width, band)) {
+    while (band > 0U && !state_->pool.ensure(state_->device, width, band, 2)) {
         band /= 2U;
     }
     if (band == 0U) {
@@ -149,7 +149,7 @@ bool GpuAccelerator::apply_scanner_target_grade(
     for (std::uint32_t top = 0U; top < height; top += band) {
         const std::uint32_t rows = std::min(band, height - top);
         if (rows != state_->pool.height() &&
-            !state_->pool.ensure(state_->device, width, rows)) {
+            !state_->pool.ensure(state_->device, width, rows, 2)) {
             return false;
         }
         gpu::GpuWorkingImage* const images = state_->pool.images();
@@ -186,7 +186,7 @@ bool GpuAccelerator::apply_noritsu_texture(
     if (!state_->noritsu_texture_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->pool.ensure(state_->device, width, height, 3)) {
         return false;
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();
@@ -221,7 +221,7 @@ bool GpuAccelerator::apply_texture_grain(
     if (!state_->texture_grain_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->pool.ensure(state_->device, width, height, 2)) {
         return false;
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();
@@ -254,7 +254,7 @@ bool GpuAccelerator::apply_channel_clipping_overlay(
     if (!state_->clipping_overlay_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->pool.ensure(state_->device, width, height, 2)) {
         return false;
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();
@@ -293,7 +293,7 @@ bool GpuAccelerator::apply_area_average(
     if (!state_->area_average_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->pool.ensure(state_->device, width, height, 1)) {
         return false;
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();
@@ -353,7 +353,7 @@ bool GpuAccelerator::apply_mip_halve_levels(
     if (!state_->mip_halve_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->pool.ensure(state_->device, width, height, 2)) {
         return false;
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();

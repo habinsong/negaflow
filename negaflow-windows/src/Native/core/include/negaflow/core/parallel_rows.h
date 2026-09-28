@@ -69,6 +69,11 @@ void for_each_row_block(
         static_cast<void*>(&body));
 }
 
+// Physical cores (a core with two hardware threads counts once). Work whose threads each
+// hold their own decoder or transform uses this rather than every logical thread: past the
+// physical cores the second hardware thread mostly adds CPU time, not speed.
+[[nodiscard]] std::uint32_t physical_cores() noexcept;
+
 // Extra threads this process has handed out right now. Test-only observation point.
 [[nodiscard]] std::uint32_t active_row_block_threads() noexcept;
 

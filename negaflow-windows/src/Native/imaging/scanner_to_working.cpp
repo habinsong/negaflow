@@ -1,6 +1,7 @@
 #include "negaflow/imaging/scanner_to_working.h"
 
 #include "negaflow/color/srgb_transfer.h"
+#include "negaflow/core/parallel_rows.h"
 #include "scanner_to_working_detail.h"
 #include "input_gamma_preparation.h"
 
@@ -110,64 +111,70 @@ constexpr std::uint32_t color_space_profile_signature = 0x73706163U;
     if (expected_samples != encoded.size()) {
         return ScannerToWorkingStatus::buffer_size_mismatch;
     }
-    constexpr float u16_scale = 1.0F / 65'535.0F;
     output.width = width;
     output.height = height;
     output.stride_pixels = width;
     output.pixels.resize(
         static_cast<std::size_t>(width) * static_cast<std::size_t>(height));
-    for (std::size_t index = 0U; index < output.pixels.size(); ++index) {
-        const std::size_t source = index * 3U;
-        output.pixels[index] = {
-            negaflow::color::srgb_encoded_to_linear(
-                static_cast<float>(encoded[source]) * u16_scale),
-            negaflow::color::srgb_encoded_to_linear(
-                static_cast<float>(encoded[source + 1U]) * u16_scale),
-            negaflow::color::srgb_encoded_to_linear(
-                static_cast<float>(encoded[source + 2U]) * u16_scale),
-            1.0F,
-        };
-    }
+    const auto linear = negaflow::color::srgb16_to_linear_table();
+    negaflow::core::for_each_row_block(
+        height,
+        static_cast<std::uint64_t>(width) * height,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            const std::size_t first = static_cast<std::size_t>(first_row) * width;
+            const std::size_t last = static_cast<std::size_t>(first_row + row_count) * width;
+            for (std::size_t index = first; index < last; ++index) {
+                const std::size_t source = index * 3U;
+                output.pixels[index] = {
+                    linear[encoded[source]], linear[encoded[source + 1U]],
+                    linear[encoded[source + 2U]], 1.0F};
+            }
+        });
     return ScannerToWorkingStatus::ok;
 }
 
+// 16-bit 표본은 65536 가지뿐이라 표를 한 번 만들어 씁니다. 표는 이 함수가 화소마다 하던
+// `srgb_encoded_to_linear(x / 65535)` 와 같은 식으로 채워져 값이 같습니다. RAW 한 장을
+// 한 스레드에서 화소마다 pow 로 풀던 것이 305 ms 였습니다.
 [[nodiscard]] ScannerToWorkingStatus decode_untagged_srgb_to_working(
     const negaflow::imageio::DecodedImage& decoded,
     WorkingImage& output) {
-    constexpr float u16_scale = 1.0F / 65'535.0F;
     const std::size_t channels = negaflow::imageio::channel_count(decoded.layout);
     const negaflow::imageio::RgbSampleOffsets rgb =
         negaflow::imageio::rgb_sample_offsets(decoded.layout);
     const std::size_t source_stride = decoded.stride_bytes / sizeof(std::uint16_t);
+    const bool associated = decoded.alpha_mode == negaflow::imageio::AlphaMode::associated;
+    const auto linear = negaflow::color::srgb16_to_linear_table();
     output.width = decoded.width;
     output.height = decoded.height;
     output.stride_pixels = decoded.width;
     output.pixels.resize(
         static_cast<std::size_t>(decoded.width) * static_cast<std::size_t>(decoded.height));
-    for (std::uint32_t row = 0U; row < decoded.height; ++row) {
-        const std::uint16_t* const source =
-            decoded.samples.data() + static_cast<std::size_t>(row) * source_stride;
-        negaflow::core::Rgba32F* const destination =
-            output.pixels.data() + static_cast<std::size_t>(row) * output.stride_pixels;
-        for (std::uint32_t column = 0U; column < decoded.width; ++column) {
-            const std::size_t offset = static_cast<std::size_t>(column) * channels;
-            destination[column] = {
-                negaflow::color::srgb_encoded_to_linear(static_cast<float>(
-                    decoded.alpha_mode == negaflow::imageio::AlphaMode::associated
-                        ? unassociate_component(source[offset + rgb.red], source[offset + 3U])
-                        : source[offset + rgb.red]) * u16_scale),
-                negaflow::color::srgb_encoded_to_linear(static_cast<float>(
-                    decoded.alpha_mode == negaflow::imageio::AlphaMode::associated
-                        ? unassociate_component(source[offset + rgb.green], source[offset + 3U])
-                        : source[offset + rgb.green]) * u16_scale),
-                negaflow::color::srgb_encoded_to_linear(static_cast<float>(
-                    decoded.alpha_mode == negaflow::imageio::AlphaMode::associated
-                        ? unassociate_component(source[offset + rgb.blue], source[offset + 3U])
-                        : source[offset + rgb.blue]) * u16_scale),
-                decoded_alpha(decoded, source, offset),
-            };
-        }
-    }
+    negaflow::core::for_each_row_block(
+        decoded.height,
+        static_cast<std::uint64_t>(decoded.width) * decoded.height * channels,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t row = first_row; row < first_row + row_count; ++row) {
+                const std::uint16_t* const source =
+                    decoded.samples.data() + static_cast<std::size_t>(row) * source_stride;
+                negaflow::core::Rgba32F* const destination =
+                    output.pixels.data() + static_cast<std::size_t>(row) * output.stride_pixels;
+                for (std::uint32_t column = 0U; column < decoded.width; ++column) {
+                    const std::size_t offset = static_cast<std::size_t>(column) * channels;
+                    const auto sample = [&](const std::size_t channel) noexcept {
+                        return linear[associated
+                            ? unassociate_component(source[offset + channel], source[offset + 3U])
+                            : source[offset + channel]];
+                    };
+                    destination[column] = {
+                        sample(rgb.red),
+                        sample(rgb.green),
+                        sample(rgb.blue),
+                        decoded_alpha(decoded, source, offset),
+                    };
+                }
+            }
+        });
     return ScannerToWorkingStatus::ok;
 }
 
@@ -219,15 +226,20 @@ ScannerToWorkingResult convert_scanner_to_working(
             result.image.stride_pixels = decoded.width;
             result.image.pixels.resize(static_cast<std::size_t>(decoded.width) * decoded.height);
             const auto stride = decoded.stride_bytes / sizeof(std::uint16_t);
-            for (std::uint32_t y = 0; y < decoded.height; ++y) {
-                const auto* row = decoded.samples.data() + static_cast<std::size_t>(y) * stride;
-                for (std::uint32_t x = 0; x < decoded.width; ++x) {
-                    const auto offset = static_cast<std::size_t>(x) * 3U;
-                    result.image.pixels[static_cast<std::size_t>(y) * decoded.width + x] = {
-                        gamma.linear_samples[row[offset]], gamma.linear_samples[row[offset + 1U]],
-                        gamma.linear_samples[row[offset + 2U]], 1.0F};
-                }
-            }
+            negaflow::core::for_each_row_block(
+                decoded.height,
+                static_cast<std::uint64_t>(decoded.width) * decoded.height * 3U,
+                [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+                    for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
+                        const auto* row = decoded.samples.data() + static_cast<std::size_t>(y) * stride;
+                        for (std::uint32_t x = 0; x < decoded.width; ++x) {
+                            const auto offset = static_cast<std::size_t>(x) * 3U;
+                            result.image.pixels[static_cast<std::size_t>(y) * decoded.width + x] = {
+                                gamma.linear_samples[row[offset]], gamma.linear_samples[row[offset + 1U]],
+                                gamma.linear_samples[row[offset + 2U]], 1.0F};
+                        }
+                    }
+                });
             result.status = ScannerToWorkingStatus::ok;
             result.info.transform = ScannerWorkingTransform::explicit_input_gamma;
             return result;

@@ -51,7 +51,7 @@ bool GpuAccelerator::apply_digital_halation(
     if (!state_->halation_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->pool.ensure(state_->device, width, height, gpu::GpuImagePool::size)) {
         return false;
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();
@@ -98,7 +98,7 @@ bool GpuAccelerator::apply_digital_film_grain(
     parameters.size = size;
     parameters.applied = true;
 
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->pool.ensure(state_->device, width, height, 2)) {
         return false;
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();
@@ -130,7 +130,7 @@ bool GpuAccelerator::apply_digital_film_color_preset(
     if (!state_->preset_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->pool.ensure(state_->device, width, height, 4)) {
         return false;
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();
@@ -168,7 +168,7 @@ bool GpuAccelerator::apply_film_emulation_cube(
     if (!state_->cube_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->pool.ensure(state_->device, width, height, 2)) {
         return false;
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();
@@ -199,7 +199,7 @@ bool GpuAccelerator::apply_film_emulation_acutance(
     if (!state_->acutance_ready) {
         return false;
     }
-    if (!state_->pool.ensure(state_->device, width, height)) {
+    if (!state_->pool.ensure(state_->device, width, height, 3)) {
         return false;
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();

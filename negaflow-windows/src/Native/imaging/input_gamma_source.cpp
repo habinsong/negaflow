@@ -40,6 +40,7 @@ public:
         return layout_supported && info.supported && frame.icc_profile.empty() && sampler.begin(frame);
     }
     bool write(const negaflow::imageio::WicTiffRowChunk& chunk) noexcept override { return sampler.write(chunk); }
+    std::span<const negaflow::imageio::WicTiffRowBand> wanted_rows() const noexcept override { return sampler.bands(); }
     void complete(negaflow::imageio::WicTiffDecodeStatus status) noexcept override {
         if (status != negaflow::imageio::WicTiffDecodeStatus::ok) { return; }
         if (const auto estimate = sampler.estimate()) {
@@ -114,7 +115,7 @@ InputGammaSourceInfo inspect_input_gamma_source(const std::filesystem::path& pat
             !negaflow::imageio::same_image_file_observation(observed.observation, after.observation)) { return {}; }
         {
             const std::lock_guard store_lock(source_info_mutex);
-            if (source_infos.size() >= 64U) { source_infos.clear(); }
+            if (source_infos.size() >= 1024U) { source_infos.clear(); }
             source_infos.push_back({path, observed.observation, sink.info});
         }
         return sink.info;

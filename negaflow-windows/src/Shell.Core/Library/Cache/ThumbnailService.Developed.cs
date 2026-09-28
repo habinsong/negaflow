@@ -333,6 +333,7 @@ public sealed partial class ThumbnailService
             return;
         }
 
+        await Develop.ForegroundRenderGate.WaitForIdleAsync().ConfigureAwait(false);
         await renderSlots.WaitAsync().ConfigureAwait(false);
         try
         {

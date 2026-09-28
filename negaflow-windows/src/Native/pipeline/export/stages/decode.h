@@ -14,13 +14,18 @@
 namespace negaflow::pipeline::develop_export_detail {
 
 // TIFF 는 스캐너 경로, 그 외는 WIC 표준 화상. 디코드 직후 파일이 바뀌었는지도 확인한다.
+//
+// `shared` 를 주면 결과를 사본 없이 그 자리에 돌려줍니다 - 캐시에 담긴 것과 같은 한 벌이며
+// 읽기 전용입니다. 그때 `image` 는 비어 있습니다. 캐시에 담지 못했으면 `shared` 는 null 이고
+// 결과는 여느 때처럼 `image` 에 있습니다.
 [[nodiscard]] std::optional<DevelopExportOutcome> decode_source(
     const DevelopExportRequest& request,
     RunTracker& tracker,
     std::stop_source& stop,
     const ObservedSource& observed,
     negaflow::imaging::WorkingImage& image,
-    const PreviewTarget* preview = nullptr) noexcept;
+    const PreviewTarget* preview = nullptr,
+    std::shared_ptr<const negaflow::imaging::WorkingImage>* shared = nullptr) noexcept;
 
 // 판에 놓을 크기로 줄입니다. 0 이면 그대로 둡니다.
 //

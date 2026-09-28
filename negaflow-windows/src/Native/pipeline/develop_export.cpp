@@ -246,8 +246,8 @@ using develop_export_detail::validate_request;
         defect_recipe.status = DefectRecipeStageStatus::ok;
     } else if (!used_preview_proxy) {
         if (!used_cleaned_prefix) {
-            if (auto failed = decode_source(
-                    request, tracker, stop, observed, decoded_image, preview)) {
+            if (auto failed = decode_source(request, tracker, stop, observed, decoded_image, preview,
+                    preview != nullptr && detect == nullptr && request.defect_recipe.order.empty() ? &cleaned_raw : nullptr)) {
                 return *failed;
             }
         }

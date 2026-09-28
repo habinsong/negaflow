@@ -2,11 +2,14 @@
 
 #include "row_block_pool.h"
 
+#include <Windows.h>
+
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstdio>
 #include <thread>
+#include <vector>
 
 namespace negaflow::core {
 namespace {
@@ -75,6 +78,35 @@ struct RowBlock final {
 }
 
 } // namespace
+
+std::uint32_t physical_cores() noexcept {
+    static const std::uint32_t cores = []() noexcept {
+        DWORD bytes = 0U;
+        (void)::GetLogicalProcessorInformationEx(RelationProcessorCore, nullptr, &bytes);
+        std::vector<std::byte> buffer{};
+        try {
+            buffer.resize(bytes);
+        } catch (...) {
+            return hardware_threads();
+        }
+        if (bytes == 0U ||
+            ::GetLogicalProcessorInformationEx(
+                RelationProcessorCore,
+                reinterpret_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(buffer.data()),
+                &bytes) == FALSE) {
+            return hardware_threads();
+        }
+        std::uint32_t count = 0U;
+        for (DWORD offset = 0U; offset < bytes;) {
+            const auto* const entry =
+                reinterpret_cast<const SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*>(buffer.data() + offset);
+            ++count;
+            offset += entry->Size;
+        }
+        return std::clamp(count, 1U, hardware_threads());
+    }();
+    return cores;
+}
 
 std::uint32_t active_row_block_threads() noexcept {
     return g_active_extra_threads.load(std::memory_order_relaxed);

@@ -1,6 +1,6 @@
 #include "negaflow/imaging/scanner_tiff_to_working.h"
 
-#include "icm_rgb16_transform.h"
+#include "icm_rgb16_parallel.h"
 #include "negaflow/color/srgb_transfer.h"
 #include "negaflow/core/parallel_rows.h"
 #include "scanner_to_working_detail.h"
@@ -441,7 +441,7 @@ private:
     std::vector<float> gamma_samples_{};
     std::vector<std::uint16_t> gamma_encoded_samples_{};
     std::vector<std::uint8_t> gamma_profile_{};
-    detail::IcmRgb16Transform transform_{};
+    detail::ParallelIcmRgb16Transform transform_{};
     std::vector<std::uint16_t> packed_rgb_{};
     std::vector<std::uint16_t> encoded_srgb_{};
     std::uint64_t peak_temporary_pixel_bytes_{0};

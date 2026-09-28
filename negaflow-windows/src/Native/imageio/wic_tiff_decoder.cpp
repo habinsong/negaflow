@@ -6,6 +6,7 @@
 #include "wic_tiff_support.h"
 
 #include <Windows.h>
+#include <Shlwapi.h>
 #include <wincodec.h>
 #include <wrl/client.h>
 
@@ -16,6 +17,76 @@ namespace {
 
 using Microsoft::WRL::ComPtr;
 using namespace negaflow::imageio::wic_tiff_detail;
+
+// 레인 하나는 첫 소스와 똑같은 사슬(스트림 → 디코더 → 프레임 → 형식 변환 → 축소)을 따로
+// 세운 것입니다. 준비 단계의 검사는 이미 끝났으므로 파일을 다시 열어 프레임만 고릅니다.
+class FileLaneOpener final : public WicTiffLaneOpener {
+public:
+    FileLaneOpener(
+        const std::filesystem::path& path,
+        const TiffPreflight& preflight,
+        const WicTiffDecodeLimits& limits,
+        const WicTiffDecodeControl& control,
+        const UINT scaled_width,
+        const UINT scaled_height) noexcept
+        : path_(path),
+          preflight_(preflight),
+          limits_(limits),
+          control_(control),
+          scaled_width_(scaled_width),
+          scaled_height_(scaled_height) {}
+
+    [[nodiscard]] ComPtr<IWICBitmapSource> open() const noexcept override {
+        try {
+            TiffPreflight lane{};
+            if (FAILED(SHCreateStreamOnFileEx(
+                    path_.c_str(),
+                    STGM_READ | STGM_SHARE_DENY_WRITE,
+                    FILE_ATTRIBUTE_NORMAL,
+                    FALSE,
+                    nullptr,
+                    &lane.stream))) {
+                return {};
+            }
+            lane.info = preflight_.info;
+            lane.stride_bytes = preflight_.stride_bytes;
+            lane.pixel_bytes = preflight_.pixel_bytes;
+            WicTiffDecodeResult scratch{};
+            SelectedFrame selected{};
+            ComPtr<IWICBitmapSource> source{};
+            if (select_tiff_frame(lane, limits_, control_.select_first_frame, selected, scratch) !=
+                    WicTiffDecodeStatus::ok ||
+                open_pixel_source(
+                    selected, lane, limits_, control_.orientation_policy, source, scratch) !=
+                    WicTiffDecodeStatus::ok) {
+                return {};
+            }
+            if (scaled_width_ != 0U) {
+                ComPtr<IWICBitmapScaler> scaler{};
+                if (FAILED(selected.factory->CreateBitmapScaler(&scaler)) ||
+                    FAILED(scaler->Initialize(
+                        source.Get(),
+                        scaled_width_,
+                        scaled_height_,
+                        WICBitmapInterpolationModeHighQualityCubic))) {
+                    return {};
+                }
+                source = scaler;
+            }
+            return source;
+        } catch (...) {
+            return {};
+        }
+    }
+
+private:
+    const std::filesystem::path& path_;
+    const TiffPreflight& preflight_;
+    const WicTiffDecodeLimits& limits_;
+    const WicTiffDecodeControl& control_;
+    UINT scaled_width_{0U};
+    UINT scaled_height_{0U};
+};
 
 // 디코드 한 번의 순서만 여기 있습니다. 준비·프레임 선택·화소 소스·행 복사는 각자
 // 자기 번역 단위가 소유하며, 이 함수는 그 넷을 순서대로 부르고 실패를 그대로 전합니다.
@@ -165,6 +236,19 @@ WicTiffDecodeResult decode_tiff_with_wic_impl(
         if (scaler) {
             row_control.rows_per_copy = output_height;
         }
+        const FileLaneOpener opener{
+            path,
+            preflight,
+            limits,
+            control,
+            scaler ? output_width : 0U,
+            scaler ? output_height : 0U,
+        };
+        WicTiffLanePlan lanes{};
+        if (row_sink != nullptr) {
+            lanes = plan_tiff_lanes(preflight.info, control, output_height, scaler != nullptr);
+            lanes.opener = &opener;
+        }
         result.status = copy_tiff_rows(
             pixel_source.Get(),
             output_stride,
@@ -173,6 +257,7 @@ WicTiffDecodeResult decode_tiff_with_wic_impl(
             output_height,
             row_control,
             row_sink,
+            lanes,
             sink_started,
             result);
         return result;

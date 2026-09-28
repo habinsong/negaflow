@@ -300,6 +300,7 @@ public sealed partial class ThumbnailService : IAsyncDisposable
         await work.Run(ticket, "thumbnail", "render", async () =>
         {
             if (!frame.CanDevelop) { return; }
+            await Develop.ForegroundRenderGate.WaitForIdleAsync(cancellationToken).ConfigureAwait(false);
             await renderSlots.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
@@ -376,6 +377,7 @@ public sealed partial class ThumbnailService : IAsyncDisposable
             return;
         }
 
+        await Develop.ForegroundRenderGate.WaitForIdleAsync().ConfigureAwait(false);
         await renderSlots.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -418,11 +420,16 @@ public sealed partial class ThumbnailService : IAsyncDisposable
         byte[] pixels = new byte[MaximumDimension * MaximumDimension * 4];
         try
         {
-            DevelopExportResult result = exporter.Preview(
-                request,
-                MaximumDimension,
-                MaximumDimension,
-                pixels);
+            // 썸네일은 백그라운드 채움입니다. 화면용 렌더처럼 디코드 결과(장당 138~277 MB)를
+            // 캐시에 남기면, 썸네일을 다시 만드는 동안 캐시가 상한(이 기계 6 GB 남짓)까지 찹니다.
+            // 화소는 같습니다 - 남기지만 않습니다.
+            DevelopExportResult result = exporter is NativeDevelopExporterAdapter native
+                ? native.PreviewBackground(request, MaximumDimension, MaximumDimension, pixels)
+                : exporter.Preview(
+                    request,
+                    MaximumDimension,
+                    MaximumDimension,
+                    pixels);
             if (!result.Succeeded || result.Cancelled || result.ImageWidth == 0U || result.ImageHeight == 0U ||
                 result.ImageWidth > MaximumDimension || result.ImageHeight > MaximumDimension)
             {

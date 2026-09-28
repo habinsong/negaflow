@@ -3,6 +3,7 @@
 #include "negaflow/imageio/libraw_image_decoder.h"
 
 #include "wic_orientation.h"
+#include "wic_raw_development.h"
 
 #include <Windows.h>
 #include <wincodec.h>
@@ -46,24 +47,6 @@ void discard_samples(WicStandardImageDecodeResult& result) noexcept {
     return IsEqualGUID(format, GUID_ContainerFormatJpeg) != 0 ||
            IsEqualGUID(format, GUID_ContainerFormatPng) != 0 ||
            IsEqualGUID(format, GUID_ContainerFormatRaw) != 0;
-}
-
-[[nodiscard]] WicStandardImageDecodeStatus configure_raw_development(
-    IWICImagingFactory* const factory,
-    IWICBitmapFrameDecode* const frame) noexcept {
-    ComPtr<IWICDevelopRaw> raw{};
-    if (FAILED(frame->QueryInterface(IID_PPV_ARGS(&raw))) ||
-        FAILED(raw->LoadParameterSet(WICAsShotParameterSet)) ||
-        FAILED(raw->SetRenderMode(WICRawRenderModeBestQuality))) {
-        return WicStandardImageDecodeStatus::raw_development_failed;
-    }
-    ComPtr<IWICColorContext> srgb{};
-    if (FAILED(factory->CreateColorContext(&srgb)) ||
-        FAILED(srgb->InitializeFromExifColorSpace(1U)) ||
-        FAILED(raw->SetDestinationColorContext(srgb.Get()))) {
-        return WicStandardImageDecodeStatus::raw_development_failed;
-    }
-    return WicStandardImageDecodeStatus::ok;
 }
 
 [[nodiscard]] std::uint16_t exif_orientation(
@@ -513,8 +496,12 @@ WicStandardImageDecodeResult decode_standard_image_with_wic(
     const WicStandardImageDecodeLimits& limits,
     const std::stop_token stop_token,
     const WicStandardImageDecodeControl& control) noexcept {
-    WicStandardImageDecodeResult wic =
-        decode_standard_image_with_wic_only(path, limits, stop_token, control);
+    WicStandardImageDecodeResult wic{};
+    if (wic_detail::raw_development_known_unavailable(path)) {
+        wic.status = WicStandardImageDecodeStatus::raw_development_failed;
+    } else {
+        wic = decode_standard_image_with_wic_only(path, limits, stop_token, control);
+    }
     if (wic.status == WicStandardImageDecodeStatus::ok || !missing_codec(wic.status) ||
         !libraw_decoder_available()) {
         return wic;
@@ -624,7 +611,7 @@ WicStandardImageDecodeResult decode_standard_image_with_wic_only(
         }
         if (is_raw) {
             const WicStandardImageDecodeStatus raw_status =
-                configure_raw_development(factory.Get(), frame.Get());
+                wic_detail::configure_raw_development(factory.Get(), frame.Get(), path);
             if (raw_status != WicStandardImageDecodeStatus::ok) {
                 result.status = raw_status;
                 return result;

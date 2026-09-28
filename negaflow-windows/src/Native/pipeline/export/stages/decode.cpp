@@ -33,7 +33,8 @@ std::optional<DevelopExportOutcome> decode_source(
     std::stop_source& stop,
     const ObservedSource& observed,
     negaflow::imaging::WorkingImage& decoded_image,
-    const PreviewTarget* preview) noexcept {
+    const PreviewTarget* preview,
+    std::shared_ptr<const negaflow::imaging::WorkingImage>* const shared) noexcept {
     tracker.begin(DevelopExportStage::decode, cost_of(decode_cost, true));
     if (request.input_gamma.mode != 0U && !is_tiff_source(request.source)) {
         return fail(DevelopExportStage::decode, "unsupported_input_gamma_source");
@@ -73,7 +74,11 @@ std::optional<DevelopExportOutcome> decode_source(
     if (const std::shared_ptr<const negaflow::imaging::WorkingImage> cached =
             decoded_source_try_take(request.source, observed.before.observation, box_width, box_height, request.input_gamma)) {
         try {
-            decoded_image = *cached;
+            if (shared != nullptr) {
+                *shared = cached;
+            } else {
+                decoded_image = *cached;
+            }
         } catch (...) {
             return fail(DevelopExportStage::decode, "decoded_source_copy_failed");
         }
@@ -242,12 +247,20 @@ std::optional<DevelopExportOutcome> decode_source(
             }
             return std::nullopt;
         }
+        // 읽기만 할 호출자에게는 캐시에 담는 그 한 벌을 그대로 넘깁니다. 예전에는 늘 사본을
+        // 담아, 원본 크기로 푸는 스캔(5088x3401)마다 277 MB 와 44 ms 를 한 번 더 썼습니다.
+        std::shared_ptr<const negaflow::imaging::WorkingImage> stored = shared != nullptr
+            ? std::make_shared<const negaflow::imaging::WorkingImage>(std::move(decoded_image))
+            : std::make_shared<const negaflow::imaging::WorkingImage>(decoded_image);
         decoded_source_put(
             request.source,
             observed.before.observation,
             box_width,
             box_height,
-            std::make_shared<const negaflow::imaging::WorkingImage>(decoded_image), request.input_gamma);
+            stored, request.input_gamma);
+        if (shared != nullptr) {
+            *shared = std::move(stored);
+        }
     } catch (...) {
         // 캐시에 못 남겨도 이번 디코드 결과는 `decoded_image` 에 있습니다.
     }

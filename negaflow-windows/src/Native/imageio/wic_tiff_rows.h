@@ -2,6 +2,8 @@
 
 #include "negaflow/imageio/wic_tiff_decoder.h"
 
+#include "wic_tiff_lanes.h"
+
 #include <Windows.h>
 #include <wincodec.h>
 
@@ -22,6 +24,7 @@ namespace negaflow::imageio::wic_tiff_detail {
     UINT height,
     const WicTiffDecodeControl& control,
     WicTiffRowSink* row_sink,
+    const WicTiffLanePlan& lanes,
     bool& sink_started,
     WicTiffDecodeResult& result);
 

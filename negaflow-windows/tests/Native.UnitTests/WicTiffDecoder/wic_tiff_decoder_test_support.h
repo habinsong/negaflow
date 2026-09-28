@@ -195,5 +195,7 @@ void test_row_copy_progress_and_cancellation(const std::filesystem::path& root);
 void test_deflate_preflight(const std::filesystem::path& root);
 void test_decoded_byte_limit(const std::filesystem::path& root);
 void test_repository_fixture(const std::filesystem::path& path);
+void test_row_bands(const std::filesystem::path& root);
+void test_row_lanes(const std::filesystem::path& root);
 
 }  // namespace wic_tiff_decoder_tests

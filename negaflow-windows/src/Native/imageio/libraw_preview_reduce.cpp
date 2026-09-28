@@ -4,7 +4,12 @@
 #include <wincodec.h>
 #include <wrl/client.h>
 
+#include "negaflow/core/parallel_rows.h"
+
 #include <algorithm>
+#include <atomic>
+#include <cstring>
+#include <new>
 #include <cstddef>
 #include <limits>
 #include <thread>
@@ -176,18 +181,115 @@ void widen_to_rgba16(
     }
 }
 
-/// 48bpp 그대로 WIC 스케일러에 넘깁니다. 넓히지 않으므로 원본 크기 버퍼가 생기지 않습니다.
-[[nodiscard]] bool scale_rgb16(
+/// WIC 스케일러가 읽을 원본입니다. 우리 버퍼를 **그대로** 가리킵니다.
+///
+/// `CreateBitmapFromMemory` 는 버퍼를 통째로 복사합니다(6000x4000 이면 144 MB). 읽기만 하는
+/// 원본이라 그 사본은 메모리와 시간만 씁니다. 읽기 전용이므로 여러 스케일러가 동시에 읽어도
+/// 됩니다.
+class MemoryRgb16Source final : public IWICBitmapSource {
+public:
+    MemoryRgb16Source(const std::uint16_t* const pixels, const UINT width, const UINT height) noexcept
+        : pixels_(pixels), width_(width), height_(height) {}
+    MemoryRgb16Source(const MemoryRgb16Source&) = delete;
+    MemoryRgb16Source& operator=(const MemoryRgb16Source&) = delete;
+
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID id, void** const out) noexcept override {
+        if (out == nullptr) {
+            return E_POINTER;
+        }
+        if (IsEqualIID(id, __uuidof(IUnknown)) != 0 ||
+            IsEqualIID(id, __uuidof(IWICBitmapSource)) != 0) {
+            *out = static_cast<IWICBitmapSource*>(this);
+            AddRef();
+            return S_OK;
+        }
+        *out = nullptr;
+        return E_NOINTERFACE;
+    }
+    ULONG STDMETHODCALLTYPE AddRef() noexcept override { return ++references_; }
+    ULONG STDMETHODCALLTYPE Release() noexcept override {
+        const ULONG left = --references_;
+        if (left == 0U) {
+            delete this;
+        }
+        return left;
+    }
+    HRESULT STDMETHODCALLTYPE GetSize(UINT* const width, UINT* const height) noexcept override {
+        if (width == nullptr || height == nullptr) {
+            return E_INVALIDARG;
+        }
+        *width = width_;
+        *height = height_;
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE GetPixelFormat(WICPixelFormatGUID* const format) noexcept override {
+        if (format == nullptr) {
+            return E_INVALIDARG;
+        }
+        *format = GUID_WICPixelFormat48bppRGB;
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE GetResolution(double* const x, double* const y) noexcept override {
+        if (x == nullptr || y == nullptr) {
+            return E_INVALIDARG;
+        }
+        *x = 96.0;
+        *y = 96.0;
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE CopyPalette(IWICPalette*) noexcept override {
+        return WINCODEC_ERR_PALETTEUNAVAILABLE;
+    }
+    HRESULT STDMETHODCALLTYPE CopyPixels(
+        const WICRect* const rectangle,
+        const UINT stride,
+        const UINT buffer_size,
+        BYTE* const buffer) noexcept override {
+        const WICRect area = rectangle != nullptr
+            ? *rectangle
+            : WICRect{0, 0, static_cast<INT>(width_), static_cast<INT>(height_)};
+        if (buffer == nullptr || area.X < 0 || area.Y < 0 || area.Width <= 0 || area.Height <= 0 ||
+            static_cast<UINT>(area.X) + static_cast<UINT>(area.Width) > width_ ||
+            static_cast<UINT>(area.Y) + static_cast<UINT>(area.Height) > height_) {
+            return E_INVALIDARG;
+        }
+        const std::size_t row_bytes = static_cast<std::size_t>(area.Width) * 6U;
+        if (stride < row_bytes ||
+            buffer_size < static_cast<std::uint64_t>(stride) * (area.Height - 1) + row_bytes) {
+            return WINCODEC_ERR_INSUFFICIENTBUFFER;
+        }
+        for (INT row = 0; row < area.Height; ++row) {
+            const std::size_t first =
+                (static_cast<std::size_t>(area.Y + row) * width_ + static_cast<std::size_t>(area.X)) * 3U;
+            std::memcpy(buffer + static_cast<std::size_t>(row) * stride, pixels_ + first, row_bytes);
+        }
+        return S_OK;
+    }
+
+private:
+    ~MemoryRgb16Source() = default;
+
+    std::atomic<ULONG> references_{1U};
+    const std::uint16_t* pixels_{nullptr};
+    UINT width_{0U};
+    UINT height_{0U};
+};
+
+/// 48bpp 원본을 WIC 스케일러로 줄여 `rgba16` 으로 넓혀 둡니다.
+///
+/// 출력 행을 띠로 나눠 띠마다 스케일러를 따로 둡니다. 스케일러는 출력 행마다 같은 원본 행과
+/// 같은 가중치를 쓰므로 나눠 받아도 한 번에 받은 것과 화소가 같습니다. 한 스레드로 받던
+/// 10056x6792 DNG 의 축소가 이 자리의 대부분이었습니다.
+[[nodiscard]] bool scale_rgb16_to_rgba16(
     const std::uint16_t* const source,
     const std::uint32_t width,
     const std::uint32_t height,
     const FittedSize& fitted,
-    std::vector<std::uint16_t>& scaled) {
-    const std::uint64_t source_bytes =
-        static_cast<std::uint64_t>(width) * height * 3ULL * sizeof(std::uint16_t);
+    std::uint16_t* const destination) {
     const std::uint64_t source_stride = static_cast<std::uint64_t>(width) * 6ULL;
-    if (source_bytes > std::numeric_limits<UINT>::max() ||
-        source_stride > std::numeric_limits<UINT>::max()) {
+    const std::uint64_t stride = static_cast<std::uint64_t>(fitted.width) * 6ULL;
+    if (source_stride > std::numeric_limits<UINT>::max() ||
+        stride * fitted.height > std::numeric_limits<UINT>::max()) {
         return false;
     }
     const ComApartment apartment{};
@@ -199,38 +301,59 @@ void widen_to_rgba16(
             CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&factory)))) {
         return false;
     }
-    ComPtr<IWICBitmap> bitmap{};
-    if (FAILED(factory->CreateBitmapFromMemory(
-            width,
-            height,
-            GUID_WICPixelFormat48bppRGB,
-            static_cast<UINT>(source_stride),
-            static_cast<UINT>(source_bytes),
-            reinterpret_cast<BYTE*>(const_cast<std::uint16_t*>(source)),
-            &bitmap))) {
+    ComPtr<IWICBitmapSource> memory{};
+    memory.Attach(new (std::nothrow) MemoryRgb16Source(source, width, height));
+    if (!memory) {
         return false;
     }
-    ComPtr<IWICBitmapScaler> scaler{};
-    if (FAILED(factory->CreateBitmapScaler(&scaler)) ||
-        FAILED(scaler->Initialize(
-            bitmap.Get(),
-            fitted.width,
-            fitted.height,
-            WICBitmapInterpolationModeHighQualityCubic))) {
-        return false;
+    const std::uint32_t lanes = std::min(negaflow::core::physical_cores(), fitted.height);
+    const std::uint32_t rows_per_lane = (fitted.height + lanes - 1U) / lanes;
+    std::vector<ComPtr<IWICBitmapScaler>> scalers(lanes);
+    for (ComPtr<IWICBitmapScaler>& scaler : scalers) {
+        if (FAILED(factory->CreateBitmapScaler(&scaler)) ||
+            FAILED(scaler->Initialize(
+                memory.Get(),
+                fitted.width,
+                fitted.height,
+                WICBitmapInterpolationModeHighQualityCubic))) {
+            return false;
+        }
     }
-    const std::uint64_t stride = static_cast<std::uint64_t>(fitted.width) * 6ULL;
-    const std::uint64_t bytes = stride * fitted.height;
-    if (stride > std::numeric_limits<UINT>::max() ||
-        bytes > std::numeric_limits<UINT>::max()) {
-        return false;
-    }
-    scaled.resize(static_cast<std::size_t>(bytes / sizeof(std::uint16_t)));
-    return SUCCEEDED(scaler->CopyPixels(
-        nullptr,
-        static_cast<UINT>(stride),
-        static_cast<UINT>(bytes),
-        reinterpret_cast<BYTE*>(scaled.data())));
+    std::atomic<bool> failed{false};
+    negaflow::core::for_each_row_block(
+        lanes,
+        source_stride * height,
+        [&](const std::uint32_t first_lane, const std::uint32_t lane_count) noexcept {
+            const ComApartment lane_apartment{};
+            try {
+                std::vector<std::uint16_t> band(
+                    static_cast<std::size_t>(rows_per_lane) * fitted.width * 3U);
+                for (std::uint32_t lane = first_lane; lane < first_lane + lane_count; ++lane) {
+                    const std::uint32_t top = lane * rows_per_lane;
+                    if (top >= fitted.height || failed.load(std::memory_order_relaxed)) {
+                        return;
+                    }
+                    const std::uint32_t rows = std::min(rows_per_lane, fitted.height - top);
+                    const WICRect rectangle{
+                        0, static_cast<INT>(top), static_cast<INT>(fitted.width), static_cast<INT>(rows)};
+                    if (FAILED(scalers[lane]->CopyPixels(
+                            &rectangle,
+                            static_cast<UINT>(stride),
+                            static_cast<UINT>(stride * rows),
+                            reinterpret_cast<BYTE*>(band.data())))) {
+                        failed.store(true, std::memory_order_relaxed);
+                        return;
+                    }
+                    widen_to_rgba16(
+                        band.data(),
+                        static_cast<std::size_t>(rows) * fitted.width,
+                        destination + static_cast<std::size_t>(top) * fitted.width * 4U);
+                }
+            } catch (...) {
+                failed.store(true, std::memory_order_relaxed);
+            }
+        });
+    return !failed.load(std::memory_order_relaxed);
 }
 
 }  // namespace
@@ -280,13 +403,15 @@ LibRawPreviewReduceResult reduce_libraw_rgb16_to_preview(
             }
         }
 
-        std::vector<std::uint16_t> scaled{};
+        std::vector<std::uint16_t> samples(static_cast<std::size_t>(bytes / sizeof(std::uint16_t)));
         if (pixels_width != fitted.width || pixels_height != fitted.height) {
-            if (!scale_rgb16(pixels, pixels_width, pixels_height, fitted, scaled)) {
+            if (!scale_rgb16_to_rgba16(pixels, pixels_width, pixels_height, fitted, samples.data())) {
                 return result;
             }
-            pixels = scaled.data();
             result.reduced = true;
+        } else {
+            widen_to_rgba16(
+                pixels, static_cast<std::size_t>(fitted.width) * fitted.height, samples.data());
         }
 
         destination.width = fitted.width;
@@ -295,11 +420,7 @@ LibRawPreviewReduceResult reduce_libraw_rgb16_to_preview(
         destination.layout = DecodedPixelLayout::rgba16;
         destination.alpha_mode = AlphaMode::unassociated;
         destination.untagged_rgb_transfer = UntaggedRgbTransfer::srgb_encoded;
-        destination.samples.resize(static_cast<std::size_t>(bytes / sizeof(std::uint16_t)));
-        widen_to_rgba16(
-            pixels,
-            static_cast<std::size_t>(fitted.width) * fitted.height,
-            destination.samples.data());
+        destination.samples = std::move(samples);
         result.reduced = result.reduced || fitted.width != width || fitted.height != height;
         result.ok = true;
         return result;
