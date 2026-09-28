@@ -33,4 +33,10 @@ public sealed class DispatcherQueueUiDispatcher : IUiDispatcher
         ArgumentNullException.ThrowIfNull(callback);
         return queue.TryEnqueue(() => callback());
     }
+
+    public bool TryEnqueueIdle(Action callback)
+    {
+        ArgumentNullException.ThrowIfNull(callback);
+        return queue.TryEnqueue(DispatcherQueuePriority.Low, () => callback());
+    }
 }

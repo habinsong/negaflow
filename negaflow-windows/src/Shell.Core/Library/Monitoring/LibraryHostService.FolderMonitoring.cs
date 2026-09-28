@@ -59,7 +59,9 @@ public sealed partial class LibraryHostService
         }
         else
         {
-            _ = dispatcher.TryEnqueue(Apply);
+            // 폴더 재조정은 급하지 않습니다. 켤 때의 전수 재조정(폴더 11개에 0.45 초)이 셸을
+            // 짓는 사이 만기되어 첫 레이아웃 **앞에** 끼어들었고, 로고가 그만큼 오래 떠 있었습니다.
+            _ = dispatcher.TryEnqueueIdle(Apply);
         }
     }
 

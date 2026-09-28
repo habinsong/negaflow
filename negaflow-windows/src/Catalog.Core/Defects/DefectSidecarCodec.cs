@@ -22,15 +22,25 @@ internal static class DefectSidecarCodec
         });
     }
 
+    /// <summary>중복 키는 파싱에서 거절합니다 - <see cref="DefectSidecarDecoder"/> 참고.</summary>
+    private static readonly JsonDocumentOptions StrictDocument = new()
+    {
+        AllowDuplicateProperties = false,
+    };
+
     public static DefectSidecarReadResult Decode(
-        ReadOnlySpan<byte> data,
+        ReadOnlyMemory<byte> data,
         Guid expectedFrameId,
         bool validateCompressedMasks = false)
     {
         try
         {
-            if (JsonNode.Parse(data) is not JsonObject root ||
-                !DefectSidecarDecoder.TryInt32(root["version"], out int version))
+            using JsonDocument document = JsonDocument.Parse(data, StrictDocument);
+            JsonElement root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !DefectSidecarDecoder.TryInt32(
+                    DefectSidecarDecoder.Property(root, "version"),
+                    out int version))
             {
                 return DefectSidecarReadResult.Failure(
                     DefectSidecarError.InvalidContent);
@@ -50,16 +60,25 @@ internal static class DefectSidecarCodec
                     "recipeSHA256",
                     "sourceIdentity",
                     "items") ||
-                !DefectSidecarDecoder.TryString(root["frameID"], out string? frameText) ||
+                !DefectSidecarDecoder.TryString(
+                    DefectSidecarDecoder.Property(root, "frameID"),
+                    out string? frameText) ||
                 !Guid.TryParseExact(frameText, "D", out Guid frameId) ||
-                !DefectSidecarDecoder.TryInt32(root["fingerprintVersion"], out int fingerprintVersion) ||
-                !DefectSidecarDecoder.TryUInt64(root["recipeRevision"], out ulong recipeRevision) ||
-                !DefectSidecarDecoder.TryString(root["recipeSHA256"], out string? recipeSha256) ||
+                !DefectSidecarDecoder.TryInt32(
+                    DefectSidecarDecoder.Property(root, "fingerprintVersion"),
+                    out int fingerprintVersion) ||
+                !DefectSidecarDecoder.TryUInt64(
+                    DefectSidecarDecoder.Property(root, "recipeRevision"),
+                    out ulong recipeRevision) ||
+                !DefectSidecarDecoder.TryString(
+                    DefectSidecarDecoder.Property(root, "recipeSHA256"),
+                    out string? recipeSha256) ||
                 !DefectSidecarDecoder.TryReadSourceIdentity(
-                    root["sourceIdentity"],
+                    DefectSidecarDecoder.Property(root, "sourceIdentity"),
                     out DefectSourceIdentity? sourceIdentity) ||
-                root["items"] is not JsonArray itemNodes ||
-                itemNodes.Count > DefectRecipeValidator.MaximumItems ||
+                DefectSidecarDecoder.Property(root, "items") is not
+                    { ValueKind: JsonValueKind.Array } itemNodes ||
+                itemNodes.GetArrayLength() > DefectRecipeValidator.MaximumItems ||
                 !DefectSidecarDecoder.TryReadItems(itemNodes, out IReadOnlyList<DefectEditItem> items) ||
                 !DefectRecipeValidator.TryCreateDecodedSnapshot(
                     expectedFrameId,

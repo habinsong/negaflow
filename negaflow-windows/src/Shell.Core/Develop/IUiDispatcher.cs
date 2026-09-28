@@ -19,4 +19,11 @@ public interface IUiDispatcher
     /// 아닙니다.
     /// </summary>
     bool TryEnqueue(Action callback);
+
+    /// <summary>
+    /// 급하지 않은 일을 넣습니다. WinUI 에서는 낮은 우선순위라 레이아웃·그리기·입력이 먼저
+    /// 돕니다. 반환값의 뜻은 <see cref="TryEnqueue"/> 와 같고, 우선순위가 없는 곳에서는 그것과
+    /// 같습니다.
+    /// </summary>
+    bool TryEnqueueIdle(Action callback) => TryEnqueue(callback);
 }

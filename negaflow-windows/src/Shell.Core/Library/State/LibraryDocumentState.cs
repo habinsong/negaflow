@@ -18,7 +18,8 @@ internal sealed class LibraryDocumentState
         Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows,
         string? activeRollId,
         IReadOnlyDictionary<string, ulong>? initialDefectRevisions = null,
-        IEnumerable<string>? defectRestorePending = null)
+        IEnumerable<string>? defectRestorePending = null,
+        IReadOnlyDictionary<string, DefectRecipeSnapshot>? initialDefectRecipes = null)
     {
         Session = session;
         RowIds = rowIds;
@@ -33,6 +34,12 @@ internal sealed class LibraryDocumentState
             }
         }
         DefectRestorePending.UnionWith(defectRestorePending ?? []);
+        // 켤 때 방금 읽은 기록입니다. 투영은 여기 없는 사진만 디스크에서 읽습니다.
+        foreach ((string frameId, DefectRecipeSnapshot recipe) in
+            initialDefectRecipes ?? new Dictionary<string, DefectRecipeSnapshot>())
+        {
+            DefectRecipes[frameId] = recipe;
+        }
         projection = new LibraryDocumentProjection(
             session,
             rowIds,

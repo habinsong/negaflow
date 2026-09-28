@@ -10,7 +10,13 @@ internal static class LibraryDocumentOpener
     {
         ArgumentNullException.ThrowIfNull(roots);
 
-        CatalogSessionOpenResult opened = CatalogSession.Open(roots);
+        // 켤 때 로고가 떠 있는 동안 도는 구간입니다. 결함 기록 복호가 여기서 2 초를 먹던 것을
+        // 이 두 구간으로 잡았습니다.
+        CatalogSessionOpenResult opened;
+        using (Diagnostics.StartupTrace.Measure("catalog session open"))
+        {
+            opened = CatalogSession.Open(roots);
+        }
         if (opened.Session is not { } session)
         {
             return LibraryDocumentOpenResult.SessionFailure(
@@ -25,8 +31,11 @@ internal static class LibraryDocumentOpener
             session.Dispose();
             return LibraryDocumentOpenResult.StoreFailure(read.Error);
         }
-        LibraryStartupDefectRecipeCleanupResult cleanup =
-            LibraryStartupDefectRecipeCleanup.Run(session, snapshot);
+        LibraryStartupDefectRecipeCleanupResult cleanup;
+        using (Diagnostics.StartupTrace.Measure("defect recipe cleanup"))
+        {
+            cleanup = LibraryStartupDefectRecipeCleanup.Run(session, snapshot);
+        }
         if (!cleanup.IsSuccess || cleanup.Snapshot is not { } cleanedSnapshot)
         {
             session.Dispose();

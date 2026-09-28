@@ -478,7 +478,7 @@ public static class FrameImport
     private static string FolderOf(string path) =>
         NormalizePath(Path.GetDirectoryName(path) ?? string.Empty);
 
-    private static string NormalizePath(string path)
+    internal static string NormalizePath(string path)
     {
         try
         {

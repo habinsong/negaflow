@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace Negaflow.Catalog;
 
@@ -7,17 +6,21 @@ namespace Negaflow.Catalog;
 /// sidecar JSON 을 읽어 defect recipe 항목으로 되돌립니다. 알 수 없는 필드나 범위를
 /// 벗어난 값은 실패이며, 반쯤 읽은 결과를 내지 않습니다.
 /// </summary>
+/// <remarks>
+/// <see cref="JsonElement"/> 를 그대로 읽습니다 - 예전 <c>JsonNode</c> 는 미리보기 점마다 노드를 만들어
+/// 결함 기록 43장(22.5 MB)에 440 MB 를 할당했습니다. 규칙은 같고 중복 키는 파싱에서 거절합니다.
+/// </remarks>
 internal static class DefectSidecarDecoder
 {
     internal static bool TryReadItems(
-        JsonArray nodes,
+        JsonElement nodes,
         out IReadOnlyList<DefectEditItem> items)
     {
         items = [];
-        List<DefectEditItem> values = new(nodes.Count);
-        foreach (JsonNode? node in nodes)
+        List<DefectEditItem> values = new(nodes.GetArrayLength());
+        foreach (JsonElement item in nodes.EnumerateArray())
         {
-            if (node is not JsonObject item ||
+            if (item.ValueKind != JsonValueKind.Object ||
                 !HasExactProperties(
                     item,
                     "id",
@@ -35,29 +38,29 @@ internal static class DefectSidecarDecoder
                     "regionWidth",
                     "regionHeight",
                     "clusters") ||
-                !TryString(item["id"], out string? idText) ||
+                !TryString(Property(item, "id"), out string? idText) ||
                 !Guid.TryParseExact(idText, "D", out Guid id) ||
-                !TryString(item["kind"], out string? kindText) ||
+                !TryString(Property(item, "kind"), out string? kindText) ||
                 !DefectSidecarNames.TryEditKind(kindText, out DefectEditKind kind) ||
-                !TryBoolean(item["enabled"], out bool enabled) ||
-                !TryDouble(item["strength"], out double strength) ||
-                !TryReadLabel(item["label"], out DefectEditLabel label) ||
-                !TryReadSummary(item["summary"], out DefectEditSummary summary) ||
-                !TryReadNullableSize(item["baseSize"], out DefectSize? baseSize) ||
-                item["preview"] is not JsonArray previewNodes ||
+                !TryBoolean(Property(item, "enabled"), out bool enabled) ||
+                !TryDouble(Property(item, "strength"), out double strength) ||
+                !TryReadLabel(Property(item, "label"), out DefectEditLabel label) ||
+                !TryReadSummary(Property(item, "summary"), out DefectEditSummary summary) ||
+                !TryReadNullableSize(Property(item, "baseSize"), out DefectSize? baseSize) ||
+                Property(item, "preview") is not { ValueKind: JsonValueKind.Array } previewNodes ||
                 !TryReadPreview(previewNodes, out IReadOnlyList<DefectPreviewComponent> preview) ||
                 !TryReadNullableStrokes(
-                    item["strokes"],
+                    Property(item, "strokes"),
                     out IReadOnlyList<DefectStroke>? strokes) ||
                 !TryReadNullableCloneStrokes(
-                    item["cloneStrokes"],
+                    Property(item, "cloneStrokes"),
                     out IReadOnlyList<DefectCloneStroke>? cloneStrokes) ||
-                !TryReadNullableMask(item["regionMask"], out DefectMask? regionMask) ||
-                !TryReadNullableRect(item["regionROI"], out DefectRect? regionRoi) ||
-                !TryNullableInt32(item["regionWidth"], out int? regionWidth) ||
-                !TryNullableInt32(item["regionHeight"], out int? regionHeight) ||
+                !TryReadNullableMask(Property(item, "regionMask"), out DefectMask? regionMask) ||
+                !TryReadNullableRect(Property(item, "regionROI"), out DefectRect? regionRoi) ||
+                !TryNullableInt32(Property(item, "regionWidth"), out int? regionWidth) ||
+                !TryNullableInt32(Property(item, "regionHeight"), out int? regionHeight) ||
                 !TryReadNullableClusters(
-                    item["clusters"],
+                    Property(item, "clusters"),
                     out IReadOnlyList<DefectCluster>? clusters))
             {
                 return false;
@@ -87,18 +90,18 @@ internal static class DefectSidecarDecoder
     }
 
     internal static bool TryReadSourceIdentity(
-        JsonNode? node,
+        JsonElement node,
         out DefectSourceIdentity? identity)
     {
         identity = null;
-        if (node is null)
+        if (IsAbsent(node))
         {
             return true;
         }
-        if (node is not JsonObject value ||
-            !HasExactProperties(value, "byteCount", "sha256") ||
-            !TryUInt64(value["byteCount"], out ulong byteCount) ||
-            !TryString(value["sha256"], out string? sha256))
+        if (node.ValueKind != JsonValueKind.Object ||
+            !HasExactProperties(node, "byteCount", "sha256") ||
+            !TryUInt64(Property(node, "byteCount"), out ulong byteCount) ||
+            !TryString(Property(node, "sha256"), out string? sha256))
         {
             return false;
         }
@@ -106,14 +109,14 @@ internal static class DefectSidecarDecoder
         return true;
     }
 
-    internal static bool TryReadLabel(JsonNode? node, out DefectEditLabel label)
+    internal static bool TryReadLabel(JsonElement node, out DefectEditLabel label)
     {
         label = default;
-        if (node is not JsonObject value ||
-            !HasExactProperties(value, "kind", "value") ||
-            !TryString(value["kind"], out string? kindText) ||
+        if (node.ValueKind != JsonValueKind.Object ||
+            !HasExactProperties(node, "kind", "value") ||
+            !TryString(Property(node, "kind"), out string? kindText) ||
             !DefectSidecarNames.TryLabelKind(kindText, out DefectEditLabelKind kind) ||
-            !TryInt32(value["value"], out int count))
+            !TryInt32(Property(node, "value"), out int count))
         {
             return false;
         }
@@ -122,41 +125,42 @@ internal static class DefectSidecarDecoder
     }
 
     internal static bool TryReadSummary(
-        JsonNode? node,
+        JsonElement node,
         out DefectEditSummary summary)
     {
         summary = null!;
-        if (node is not JsonObject value ||
-            !HasExactProperties(value, "kind", "classBreakdown") ||
-            !TryString(value["kind"], out string? kindText) ||
+        if (node.ValueKind != JsonValueKind.Object ||
+            !HasExactProperties(node, "kind", "classBreakdown") ||
+            !TryString(Property(node, "kind"), out string? kindText) ||
             !DefectSidecarNames.TrySummaryKind(
                 kindText,
                 out DefectEditSummaryKind kind))
         {
             return false;
         }
-        if (value["classBreakdown"] is null)
+        JsonElement breakdown = Property(node, "classBreakdown");
+        if (IsAbsent(breakdown))
         {
             summary = new DefectEditSummary(kind);
             return true;
         }
-        if (value["classBreakdown"] is not JsonObject breakdown ||
+        if (breakdown.ValueKind != JsonValueKind.Object ||
             !HasExactProperties(breakdown, "counts", "meanConfidence") ||
-            breakdown["counts"] is not JsonArray countNodes ||
-            !TryDouble(breakdown["meanConfidence"], out double confidence))
+            Property(breakdown, "counts") is not { ValueKind: JsonValueKind.Array } countNodes ||
+            !TryDouble(Property(breakdown, "meanConfidence"), out double confidence))
         {
             return false;
         }
-        List<DefectClassCount> counts = new(countNodes.Count);
-        foreach (JsonNode? countNode in countNodes)
+        List<DefectClassCount> counts = new(countNodes.GetArrayLength());
+        foreach (JsonElement count in countNodes.EnumerateArray())
         {
-            if (countNode is not JsonObject count ||
+            if (count.ValueKind != JsonValueKind.Object ||
                 !HasExactProperties(count, "classification", "count") ||
-                !TryString(count["classification"], out string? classText) ||
+                !TryString(Property(count, "classification"), out string? classText) ||
                 !DefectSidecarNames.TryClassification(
                     classText,
                     out DefectClassification classification) ||
-                !TryInt32(count["count"], out int countValue))
+                !TryInt32(Property(count, "count"), out int countValue))
             {
                 return false;
             }
@@ -168,17 +172,17 @@ internal static class DefectSidecarDecoder
         return true;
     }
 
-    internal static bool TryReadNullableSize(JsonNode? node, out DefectSize? size)
+    internal static bool TryReadNullableSize(JsonElement node, out DefectSize? size)
     {
         size = null;
-        if (node is null)
+        if (IsAbsent(node))
         {
             return true;
         }
-        if (node is not JsonObject value ||
-            !HasExactProperties(value, "width", "height") ||
-            !TryDouble(value["width"], out double width) ||
-            !TryDouble(value["height"], out double height))
+        if (node.ValueKind != JsonValueKind.Object ||
+            !HasExactProperties(node, "width", "height") ||
+            !TryDouble(Property(node, "width"), out double width) ||
+            !TryDouble(Property(node, "height"), out double height))
         {
             return false;
         }
@@ -187,25 +191,25 @@ internal static class DefectSidecarDecoder
     }
 
     internal static bool TryReadPreview(
-        JsonArray nodes,
+        JsonElement nodes,
         out IReadOnlyList<DefectPreviewComponent> preview)
     {
         preview = [];
-        if (nodes.Count > DefectRecipeValidator.MaximumPreviewComponentsPerItem)
+        if (nodes.GetArrayLength() > DefectRecipeValidator.MaximumPreviewComponentsPerItem)
         {
             return false;
         }
-        List<DefectPreviewComponent> values = new(nodes.Count);
-        foreach (JsonNode? node in nodes)
+        List<DefectPreviewComponent> values = new(nodes.GetArrayLength());
+        foreach (JsonElement component in nodes.EnumerateArray())
         {
-            if (node is not JsonObject component ||
+            if (component.ValueKind != JsonValueKind.Object ||
                 !HasExactProperties(component, "classification", "confidence", "points") ||
-                !TryString(component["classification"], out string? classText) ||
+                !TryString(Property(component, "classification"), out string? classText) ||
                 !DefectSidecarNames.TryClassification(
                     classText,
                     out DefectClassification classification) ||
-                !TryDouble(component["confidence"], out double confidence) ||
-                component["points"] is not JsonArray pointNodes ||
+                !TryDouble(Property(component, "confidence"), out double confidence) ||
+                Property(component, "points") is not { ValueKind: JsonValueKind.Array } pointNodes ||
                 !TryReadPoints(pointNodes, out IReadOnlyList<DefectPoint> points))
             {
                 return false;
@@ -217,27 +221,27 @@ internal static class DefectSidecarDecoder
     }
 
     internal static bool TryReadNullableStrokes(
-        JsonNode? node,
+        JsonElement node,
         out IReadOnlyList<DefectStroke>? strokes)
     {
         strokes = null;
-        if (node is null)
+        if (IsAbsent(node))
         {
             return true;
         }
-        if (node is not JsonArray nodes ||
-            nodes.Count > DefectRecipeValidator.MaximumStrokesPerItem)
+        if (node.ValueKind != JsonValueKind.Array ||
+            node.GetArrayLength() > DefectRecipeValidator.MaximumStrokesPerItem)
         {
             return false;
         }
-        List<DefectStroke> values = new(nodes.Count);
-        foreach (JsonNode? strokeNode in nodes)
+        List<DefectStroke> values = new(node.GetArrayLength());
+        foreach (JsonElement stroke in node.EnumerateArray())
         {
-            if (strokeNode is not JsonObject stroke ||
+            if (stroke.ValueKind != JsonValueKind.Object ||
                 !HasExactProperties(stroke, "points", "thickness") ||
-                stroke["points"] is not JsonArray pointNodes ||
+                Property(stroke, "points") is not { ValueKind: JsonValueKind.Array } pointNodes ||
                 !TryReadPoints(pointNodes, out IReadOnlyList<DefectPoint> points) ||
-                !TryDouble(stroke["thickness"], out double thickness))
+                !TryDouble(Property(stroke, "thickness"), out double thickness))
             {
                 return false;
             }
@@ -248,23 +252,23 @@ internal static class DefectSidecarDecoder
     }
 
     internal static bool TryReadNullableCloneStrokes(
-        JsonNode? node,
+        JsonElement node,
         out IReadOnlyList<DefectCloneStroke>? strokes)
     {
         strokes = null;
-        if (node is null)
+        if (IsAbsent(node))
         {
             return true;
         }
-        if (node is not JsonArray nodes ||
-            nodes.Count > DefectRecipeValidator.MaximumStrokesPerItem)
+        if (node.ValueKind != JsonValueKind.Array ||
+            node.GetArrayLength() > DefectRecipeValidator.MaximumStrokesPerItem)
         {
             return false;
         }
-        List<DefectCloneStroke> values = new(nodes.Count);
-        foreach (JsonNode? strokeNode in nodes)
+        List<DefectCloneStroke> values = new(node.GetArrayLength());
+        foreach (JsonElement stroke in node.EnumerateArray())
         {
-            if (strokeNode is not JsonObject stroke ||
+            if (stroke.ValueKind != JsonValueKind.Object ||
                 !HasExactProperties(
                     stroke,
                     "points",
@@ -272,12 +276,12 @@ internal static class DefectSidecarDecoder
                     "offsetY",
                     "diameter",
                     "hardness") ||
-                stroke["points"] is not JsonArray pointNodes ||
+                Property(stroke, "points") is not { ValueKind: JsonValueKind.Array } pointNodes ||
                 !TryReadPoints(pointNodes, out IReadOnlyList<DefectPoint> points) ||
-                !TryDouble(stroke["offsetX"], out double offsetX) ||
-                !TryDouble(stroke["offsetY"], out double offsetY) ||
-                !TryDouble(stroke["diameter"], out double diameter) ||
-                !TryDouble(stroke["hardness"], out double hardness))
+                !TryDouble(Property(stroke, "offsetX"), out double offsetX) ||
+                !TryDouble(Property(stroke, "offsetY"), out double offsetY) ||
+                !TryDouble(Property(stroke, "diameter"), out double diameter) ||
+                !TryDouble(Property(stroke, "hardness"), out double hardness))
             {
                 return false;
             }
@@ -292,28 +296,25 @@ internal static class DefectSidecarDecoder
         return true;
     }
 
-    internal static bool TryReadNullableMask(JsonNode? node, out DefectMask? mask)
+    internal static bool TryReadNullableMask(JsonElement node, out DefectMask? mask)
     {
         mask = null;
-        if (node is null)
+        if (IsAbsent(node))
         {
             return true;
         }
-        if (!TryReadMask(node, out DefectMask value))
-        {
-            return false;
-        }
-        mask = value;
-        return true;
+        bool read = TryReadMask(node, out DefectMask value);
+        mask = read ? value : null;
+        return read;
     }
 
-    internal static bool TryReadMask(JsonNode? node, out DefectMask mask)
+    internal static bool TryReadMask(JsonElement node, out DefectMask mask)
     {
         mask = null!;
-        if (node is not JsonObject value ||
-            !HasExactProperties(value, "zlib", "data") ||
-            !TryBoolean(value["zlib"], out bool zlib) ||
-            !TryString(value["data"], out string? dataText))
+        if (node.ValueKind != JsonValueKind.Object ||
+            !HasExactProperties(node, "zlib", "data") ||
+            !TryBoolean(Property(node, "zlib"), out bool zlib) ||
+            !TryString(Property(node, "data"), out string? dataText))
         {
             return false;
         }
@@ -321,30 +322,27 @@ internal static class DefectSidecarDecoder
         return true;
     }
 
-    internal static bool TryReadNullableRect(JsonNode? node, out DefectRect? rect)
+    internal static bool TryReadNullableRect(JsonElement node, out DefectRect? rect)
     {
         rect = null;
-        if (node is null)
+        if (IsAbsent(node))
         {
             return true;
         }
-        if (!TryReadRect(node, out DefectRect value))
-        {
-            return false;
-        }
-        rect = value;
-        return true;
+        bool read = TryReadRect(node, out DefectRect value);
+        rect = read ? value : null;
+        return read;
     }
 
-    internal static bool TryReadRect(JsonNode? node, out DefectRect rect)
+    internal static bool TryReadRect(JsonElement node, out DefectRect rect)
     {
         rect = default;
-        if (node is not JsonObject value ||
-            !HasExactProperties(value, "x", "y", "width", "height") ||
-            !TryDouble(value["x"], out double x) ||
-            !TryDouble(value["y"], out double y) ||
-            !TryDouble(value["width"], out double width) ||
-            !TryDouble(value["height"], out double height))
+        if (node.ValueKind != JsonValueKind.Object ||
+            !HasExactProperties(node, "x", "y", "width", "height") ||
+            !TryDouble(Property(node, "x"), out double x) ||
+            !TryDouble(Property(node, "y"), out double y) ||
+            !TryDouble(Property(node, "width"), out double width) ||
+            !TryDouble(Property(node, "height"), out double height))
         {
             return false;
         }
@@ -353,23 +351,23 @@ internal static class DefectSidecarDecoder
     }
 
     internal static bool TryReadNullableClusters(
-        JsonNode? node,
+        JsonElement node,
         out IReadOnlyList<DefectCluster>? clusters)
     {
         clusters = null;
-        if (node is null)
+        if (IsAbsent(node))
         {
             return true;
         }
-        if (node is not JsonArray nodes ||
-            nodes.Count > DefectRecipeValidator.MaximumClustersPerItem)
+        if (node.ValueKind != JsonValueKind.Array ||
+            node.GetArrayLength() > DefectRecipeValidator.MaximumClustersPerItem)
         {
             return false;
         }
-        List<DefectCluster> values = new(nodes.Count);
-        foreach (JsonNode? clusterNode in nodes)
+        List<DefectCluster> values = new(node.GetArrayLength());
+        foreach (JsonElement cluster in node.EnumerateArray())
         {
-            if (clusterNode is not JsonObject cluster ||
+            if (cluster.ValueKind != JsonValueKind.Object ||
                 !(HasExactProperties(cluster, "roi", "mask", "width", "height") ||
                   HasExactProperties(
                       cluster,
@@ -378,13 +376,13 @@ internal static class DefectSidecarDecoder
                       "attenuationR16",
                       "width",
                       "height")) ||
-                !TryReadRect(cluster["roi"], out DefectRect roi) ||
-                !TryReadMask(cluster["mask"], out DefectMask mask) ||
+                !TryReadRect(Property(cluster, "roi"), out DefectRect roi) ||
+                !TryReadMask(Property(cluster, "mask"), out DefectMask mask) ||
                 !TryReadNullableMask(
-                    cluster["attenuationR16"],
+                    Property(cluster, "attenuationR16"),
                     out DefectMask? attenuation) ||
-                !TryInt32(cluster["width"], out int width) ||
-                !TryInt32(cluster["height"], out int height))
+                !TryInt32(Property(cluster, "width"), out int width) ||
+                !TryInt32(Property(cluster, "height"), out int height))
             {
                 return false;
             }
@@ -395,82 +393,105 @@ internal static class DefectSidecarDecoder
     }
 
     internal static bool TryReadPoints(
-        JsonArray nodes,
+        JsonElement nodes,
         out IReadOnlyList<DefectPoint> points)
     {
         points = [];
-        if (nodes.Count > DefectRecipeValidator.MaximumPointsPerStroke)
+        int count = nodes.GetArrayLength();
+        if (count > DefectRecipeValidator.MaximumPointsPerStroke)
         {
             return false;
         }
-        DefectPoint[] values = new DefectPoint[nodes.Count];
-        for (int index = 0; index < nodes.Count; ++index)
+        DefectPoint[] values = new DefectPoint[count];
+        int index = 0;
+        foreach (JsonElement point in nodes.EnumerateArray())
         {
-            if (nodes[index] is not JsonObject point ||
+            if (point.ValueKind != JsonValueKind.Object ||
                 !HasExactProperties(point, "x", "y") ||
-                !TryDouble(point["x"], out double x) ||
-                !TryDouble(point["y"], out double y))
+                !TryDouble(Property(point, "x"), out double x) ||
+                !TryDouble(Property(point, "y"), out double y))
             {
                 return false;
             }
-            values[index] = new DefectPoint(x, y);
+            values[index++] = new DefectPoint(x, y);
         }
         points = values;
         return true;
     }
 
-    internal static bool HasExactProperties(JsonObject value, params string[] names)
+    /// <summary>키 집합이 정확히 <paramref name="names"/> 인지 봅니다. 키 이름을 문자열로 만들지 않습니다.</summary>
+    internal static bool HasExactProperties(JsonElement value, params string[] names)
     {
-        if (value.Count != names.Length)
+        int count = 0;
+        foreach (JsonProperty property in value.EnumerateObject())
         {
-            return false;
+            if (++count > names.Length || !IsOneOf(property, names))
+            {
+                return false;
+            }
         }
-        HashSet<string> expected = new(names, StringComparer.Ordinal);
-        return value.All(property => expected.Contains(property.Key));
+        return count == names.Length;
     }
 
-    internal static bool TryString(JsonNode? node, out string value)
+    private static bool IsOneOf(JsonProperty property, string[] names)
     {
-        value = string.Empty;
-        return node is JsonValue jsonValue && jsonValue.TryGetValue(out value!);
+        foreach (string name in names)
+        {
+            if (property.NameEquals(name))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
-    internal static bool TryBoolean(JsonNode? node, out bool value)
+    /// <summary>키가 없으면 <see cref="JsonValueKind.Undefined"/> 인 값을 돌려줍니다.</summary>
+    internal static JsonElement Property(JsonElement value, string name) =>
+        value.TryGetProperty(name, out JsonElement found) ? found : default;
+
+    /// <summary>예전 <c>JsonNode</c> 의 <c>null</c> 자리입니다 - 빠진 키와 JSON null.</summary>
+    internal static bool IsAbsent(JsonElement node) =>
+        node.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null;
+
+    internal static bool TryString(JsonElement node, out string value)
     {
-        value = false;
-        return node is JsonValue jsonValue && jsonValue.TryGetValue(out value);
+        value = node.ValueKind == JsonValueKind.String ? node.GetString()! : string.Empty;
+        return node.ValueKind == JsonValueKind.String;
     }
 
-    internal static bool TryDouble(JsonNode? node, out double value)
+    internal static bool TryBoolean(JsonElement node, out bool value)
+    {
+        value = node.ValueKind == JsonValueKind.True;
+        return node.ValueKind is JsonValueKind.True or JsonValueKind.False;
+    }
+
+    internal static bool TryDouble(JsonElement node, out double value)
     {
         value = 0;
-        return node is JsonValue jsonValue && jsonValue.TryGetValue(out value);
+        return node.ValueKind == JsonValueKind.Number && node.TryGetDouble(out value);
     }
 
-    internal static bool TryInt32(JsonNode? node, out int value)
+    internal static bool TryInt32(JsonElement node, out int value)
     {
         value = 0;
-        return node is JsonValue jsonValue && jsonValue.TryGetValue(out value);
+        return node.ValueKind == JsonValueKind.Number && node.TryGetInt32(out value);
     }
 
-    internal static bool TryUInt64(JsonNode? node, out ulong value)
+    internal static bool TryUInt64(JsonElement node, out ulong value)
     {
         value = 0;
-        return node is JsonValue jsonValue && jsonValue.TryGetValue(out value);
+        return node.ValueKind == JsonValueKind.Number && node.TryGetUInt64(out value);
     }
 
-    internal static bool TryNullableInt32(JsonNode? node, out int? value)
+    internal static bool TryNullableInt32(JsonElement node, out int? value)
     {
         value = null;
-        if (node is null)
+        if (IsAbsent(node))
         {
             return true;
         }
-        if (!TryInt32(node, out int decoded))
-        {
-            return false;
-        }
-        value = decoded;
-        return true;
+        bool read = TryInt32(node, out int decoded);
+        value = read ? decoded : null;
+        return read;
     }
 }

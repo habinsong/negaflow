@@ -63,6 +63,19 @@ public static class FolderImport
             new(StringComparer.OrdinalIgnoreCase);
         HashSet<string> seenFolders = new(StringComparer.OrdinalIgnoreCase);
         DateTimeOffset timestamp = addedAt ?? DateTimeOffset.UtcNow;
+        // 이미 라이브러리에 있는 원본과 거기 붙은 IR 은 탐침하지 않습니다. 가져오기 관문은 새로
+        // 들어올 파일을 거르는 자리이고, 기존 원본은 `FrameImport.Plan` 이 경로만으로 중복을
+        // 확정합니다. 예전에는 켤 때 등록 폴더를 다시 훑으며 기존 RAW/TIFF 를 전부 다시 열어,
+        // 첫 화면이 2.3 초 늦게 떴습니다.
+        HashSet<string> imported = new(StringComparer.OrdinalIgnoreCase);
+        foreach (LibraryFrameSnapshot frame in existingFrames)
+        {
+            imported.Add(FrameImport.NormalizePath(frame.SourcePath));
+            if (frame.InfraredPath is { } infraredPath)
+            {
+                imported.Add(FrameImport.NormalizePath(infraredPath));
+            }
+        }
 
         foreach (string folderPath in folderPaths)
         {
@@ -95,6 +108,10 @@ public static class FolderImport
             {
                 candidates = [.. candidates.Where(path =>
                 {
+                    if (imported.Contains(FrameImport.NormalizePath(path)))
+                    {
+                        return true;
+                    }
                     LibrarySourceMetadata? value = sourceMetadataReader(path);
                     metadata[path] = value;
                     return value is not null;

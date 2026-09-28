@@ -15,6 +15,13 @@ internal readonly record struct LibraryStartupDefectRecipeCleanupResult(
     /// </summary>
     internal IReadOnlyCollection<string> RestorePending { get; init; } = [];
 
+    /// <summary>
+    /// 여기서 읽은 편집이 남은 기록입니다. 문서 투영이 같은 파일을 다시 복호하지 않고 이것을
+    /// 씁니다 - 예전에는 켤 때마다 같은 기록을 두 번 풀었습니다.
+    /// </summary>
+    internal IReadOnlyDictionary<string, DefectRecipeSnapshot> Recipes { get; init; } =
+        new Dictionary<string, DefectRecipeSnapshot>(StringComparer.Ordinal);
+
     internal bool IsSuccess => Snapshot is not null &&
         SidecarError == DefectSidecarError.None &&
         CatalogError == CatalogStoreError.None;
@@ -35,26 +42,40 @@ internal static class LibraryStartupDefectRecipeCleanup
 
         CatalogSnapshot current = initial;
         Dictionary<string, ulong> revisions = new(StringComparer.Ordinal);
+        Dictionary<string, DefectRecipeSnapshot> recipes = new(StringComparer.Ordinal);
         List<string> restorePending = [];
-        int frameCount = current.Rows(CatalogEntityTable.Frames).Count;
-        for (int index = 0; index < frameCount; ++index)
+
+        // 선언한 사진을 차례대로 모으고 기록은 한꺼번에 읽습니다(`ReadDefectRecipes`). 사진마다
+        // 파일이 따로라 읽는 차례가 결과를 바꾸지 않습니다. 사진 id 가 틀린 줄에서는 모으기를
+        // 멈추고, 그 앞 사진까지 처리한 뒤 실패합니다 - 한 장씩 읽던 때와 같습니다.
+        IReadOnlyList<CatalogEntityRow> frames = current.Rows(CatalogEntityTable.Frames);
+        List<int> declaredIndices = [];
+        List<Guid> declaredIds = [];
+        bool invalidFrameId = false;
+        for (int index = 0; index < frames.Count; ++index)
         {
-            CatalogEntityRow row = current.Rows(CatalogEntityTable.Frames)[index];
-            if (!DeclaresDefectEdits(row.Payload))
+            if (!DeclaresDefectEdits(frames[index].Payload))
             {
                 continue;
             }
-            if (!Guid.TryParseExact(row.Id, "D", out Guid frameId))
+            if (!Guid.TryParseExact(frames[index].Id, "D", out Guid frameId))
             {
-                return Failure(
-                    revisions,
-                    DefectSidecarError.InvalidFrameId,
-                    CatalogStoreError.MissingAuthoritativeData);
+                invalidFrameId = true;
+                break;
             }
-
             // macOS 처럼 읽기 전에 자기 기록의 빠진 권한을 되돌립니다.
             _ = session.RestoreDefectRecordAccess(frameId);
-            DefectSidecarReadResult read = session.ReadDefectRecipe(frameId);
+            declaredIndices.Add(index);
+            declaredIds.Add(frameId);
+        }
+        IReadOnlyList<DefectSidecarReadResult> reads = session.ReadDefectRecipes(declaredIds);
+
+        for (int slot = 0; slot < declaredIndices.Count; ++slot)
+        {
+            int index = declaredIndices[slot];
+            Guid frameId = declaredIds[slot];
+            CatalogEntityRow row = current.Rows(CatalogEntityTable.Frames)[index];
+            DefectSidecarReadResult read = reads[slot];
             // macOS 처럼 백업에 같은 사진의 기록이 남아 있으면 되살린 뒤 다시 읽습니다.
             if (read.Snapshot is null && session.RestoreDefectRecipeFromBackup(frameId))
             {
@@ -87,6 +108,14 @@ internal static class LibraryStartupDefectRecipeCleanup
                 continue;
             }
             revisions[row.Id] = recipe.RecipeRevision;
+            recipes[row.Id] = recipe;
+        }
+        if (invalidFrameId)
+        {
+            return Failure(
+                revisions,
+                DefectSidecarError.InvalidFrameId,
+                CatalogStoreError.MissingAuthoritativeData);
         }
 
         return new(
@@ -96,6 +125,7 @@ internal static class LibraryStartupDefectRecipeCleanup
             CatalogStoreError.None)
         {
             RestorePending = restorePending,
+            Recipes = recipes,
         };
     }
 

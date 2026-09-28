@@ -81,7 +81,7 @@ public sealed partial class LibraryDocument : IDisposable
             payloads,
             retainedRows,
             activeRollId,
-            startup?.Revisions, startup?.RestorePending);
+            startup?.Revisions, startup?.RestorePending, startup?.Recipes);
         organization = new LibraryOrganizationService(state);
         persistence = new LibraryCatalogPersistence(state);
         sourceRelinker = new LibrarySourceRelinker(state, persistence);

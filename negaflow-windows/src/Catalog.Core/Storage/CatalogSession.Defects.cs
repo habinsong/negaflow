@@ -13,6 +13,20 @@ public sealed partial class CatalogSession
     }
 
     /// <summary>
+    /// <see cref="ReadDefectRecipe"/> 를 여러 사진에 한꺼번에 합니다. 파일마다 따로 복호하므로
+    /// 켤 때 결함 기록을 모두 읽는 자리가 씁니다. 결과는 넘긴 차례 그대로입니다.
+    /// </summary>
+    public IReadOnlyList<DefectSidecarReadResult> ReadDefectRecipes(IReadOnlyList<Guid> frameIds)
+    {
+        ArgumentNullException.ThrowIfNull(frameIds);
+        lock (writeGate)
+        {
+            RequireOpen();
+            return DefectSidecarStore.ReadMany(roots, frameIds);
+        }
+    }
+
+    /// <summary>
     /// 이 사진에 대해 디스크와 이번 프로세스가 이미 본 가장 높은 revision 입니다. 카탈로그
     /// 수동 복구가 사라지거나 어긋난 기록을 floor 에 막히지 않게 다시 쓸 때 씁니다.
     /// </summary>

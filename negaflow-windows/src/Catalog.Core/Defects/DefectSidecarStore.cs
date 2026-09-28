@@ -46,6 +46,47 @@ internal static class DefectSidecarStore
         }
     }
 
+    /// <summary>
+    /// <see cref="Read"/> 를 여러 사진에 한꺼번에 합니다. 결과는 넘긴 차례 그대로입니다.
+    /// </summary>
+    public static DefectSidecarReadResult[] ReadMany(
+        StorageRootSet roots,
+        IReadOnlyList<Guid> frameIds)
+    {
+        ArgumentNullException.ThrowIfNull(roots);
+        ArgumentNullException.ThrowIfNull(frameIds);
+        lock (Gate)
+        {
+            if (!DefectSidecarFile.HasValidRoots(roots))
+            {
+                return frameIds
+                    .Select(_ => DefectSidecarReadResult.Failure(
+                        DefectSidecarError.InvalidStorageRoots))
+                    .ToArray();
+            }
+            List<int> readable = [];
+            DefectSidecarReadResult[] results = new DefectSidecarReadResult[frameIds.Count];
+            for (int index = 0; index < frameIds.Count; ++index)
+            {
+                if (frameIds[index] == Guid.Empty)
+                {
+                    results[index] = DefectSidecarReadResult.Failure(
+                        DefectSidecarError.InvalidFrameId);
+                    continue;
+                }
+                readable.Add(index);
+            }
+            DefectSidecarReadResult[] reads = DefectSidecarFile.ReadFiles(
+                readable.Select(index => PathFor(roots, frameIds[index])).ToArray(),
+                readable.Select(index => frameIds[index]).ToArray());
+            for (int slot = 0; slot < readable.Count; ++slot)
+            {
+                results[readable[slot]] = reads[slot];
+            }
+            return results;
+        }
+    }
+
     public static DefectSidecarWriteResult Write(
         StorageRootSet roots,
         DefectRecipeSnapshot snapshot)

@@ -22,7 +22,7 @@ try {
         -SkipNativeBuild -Overwrite
 
     $version = (Get-Content -LiteralPath $versionPath -Raw -Encoding UTF8).Trim()
-    $installer = Join-Path $projectRoot "out\release\win-x64\negaflow-$version-x64-setup.exe"
+    $installer = Join-Path $projectRoot "out\release\win-x64\negaflow-$version-win-x64.exe"
     Write-Host '[local-ci] install, package identity, window launch, uninstall' -ForegroundColor Cyan
     & (Join-Path $PSScriptRoot 'verify-installer.ps1') -InstallerPath $installer
 

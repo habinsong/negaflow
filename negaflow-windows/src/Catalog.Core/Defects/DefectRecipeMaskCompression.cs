@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.IO.Compression;
 
 namespace Negaflow.Catalog;
@@ -123,11 +124,13 @@ internal static class DefectRecipeMaskCompression
 
     internal static bool HasExactZlibOutput(byte[] data, long expectedBytes)
     {
+        // 풀어 낸 바이트는 세기만 하므로 버퍼는 빌려 씁니다. 켤 때 적외선 덩어리 마스크 1,300개를
+        // 검증하며 마스크마다 64 KB 를 새로 잡아 그것만으로 80 MB 를 할당했습니다.
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(64 * 1_024);
         try
         {
             using MemoryStream source = new(data, writable: false);
             using ZLibStream zlib = new(source, CompressionMode.Decompress, leaveOpen: false);
-            byte[] buffer = new byte[64 * 1_024];
             long total = 0;
             while (true)
             {
@@ -147,6 +150,10 @@ internal static class DefectRecipeMaskCompression
         catch (Exception error) when (error is InvalidDataException or IOException)
         {
             return false;
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
         }
     }
 }

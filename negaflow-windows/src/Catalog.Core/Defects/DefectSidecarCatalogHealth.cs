@@ -136,12 +136,21 @@ internal static class DefectSidecarCatalogHealth
                 return DefectSidecarError.ReparsePointNotAllowed;
             }
 
+            // 먼저 선언을 차례대로 훑어 읽을 파일을 모으고, 모은 것을 한꺼번에 복호합니다
+            // (`DefectSidecarFile.ReadFiles`). 선언이 어긋난 줄을 만나면 거기서 모으기를 멈추고,
+            // 그 앞 파일의 오류가 먼저 나가도록 복호 결과를 본 뒤에 그 오류를 돌려줍니다 - 한 장씩
+            // 읽던 때와 같은 오류가 같은 차례로 나갑니다.
+            DefectSidecarError declarationError = DefectSidecarError.None;
             HashSet<Guid> frameIds = [];
+            List<Guid> pendingIds = [];
+            List<string> pendingPaths = [];
+            List<(bool Stamped, long Length, long Ticks)> pendingStamps = [];
             foreach (CatalogEntityRow frame in snapshot.Rows(CatalogEntityTable.Frames))
             {
                 if (!DeclaresDefectEdits(frame, out bool hasEdits))
                 {
-                    return DefectSidecarError.InvalidContent;
+                    declarationError = DefectSidecarError.InvalidContent;
+                    break;
                 }
                 if (!hasEdits)
                 {
@@ -151,7 +160,8 @@ internal static class DefectSidecarCatalogHealth
                     frameId == Guid.Empty ||
                     !frameIds.Add(frameId))
                 {
-                    return DefectSidecarError.InvalidFrameId;
+                    declarationError = DefectSidecarError.InvalidFrameId;
+                    break;
                 }
 
                 string path = DefectSidecarStore.PathFor(roots, frameId);
@@ -164,25 +174,34 @@ internal static class DefectSidecarCatalogHealth
                 {
                     continue;
                 }
-                DefectSidecarReadResult read = DefectSidecarFile.ReadFile(path, frameId);
-                if (read.Snapshot is null)
+                pendingIds.Add(frameId);
+                pendingPaths.Add(path);
+                pendingStamps.Add((stamped, length, ticks));
+            }
+
+            DefectSidecarReadResult[] reads =
+                DefectSidecarFile.ReadFiles(pendingPaths, pendingIds);
+            for (int index = 0; index < reads.Length; ++index)
+            {
+                if (reads[index].Snapshot is null)
                 {
-                    return read.Error;
+                    return reads[index].Error;
                 }
                 // 복호 중에 파일이 바뀌었으면 어느 내용을 통과시킨 것인지 알 수 없으므로
                 // 캐시에 넣지 않습니다 - 다음 gate 에서 다시 읽습니다.
+                (bool stamped, long length, long ticks) = pendingStamps[index];
                 if (stamped &&
                     DefectSidecarValidationCache.TryStamp(
-                        path,
+                        pendingPaths[index],
                         out long afterLength,
                         out long afterTicks) &&
                     afterLength == length &&
                     afterTicks == ticks)
                 {
-                    DefectSidecarValidationCache.Record(path, length, ticks);
+                    DefectSidecarValidationCache.Record(pendingPaths[index], length, ticks);
                 }
             }
-            return DefectSidecarError.None;
+            return declarationError;
         }
     }
 

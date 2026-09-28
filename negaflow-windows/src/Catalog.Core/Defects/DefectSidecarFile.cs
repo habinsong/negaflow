@@ -58,6 +58,63 @@ internal static class DefectSidecarFile
         }
     }
 
+    /// <summary>
+    /// 여러 장을 <see cref="ReadFile"/> 와 똑같이 읽되, 파일마다 따로 복호합니다. 결과는 넘긴
+    /// 차례 그대로입니다.
+    /// </summary>
+    /// <remarks>
+    /// 켤 때 결함 기록 43장(22.5 MB)을 한 장씩 풀면 1초가 넘었습니다 - 파일끼리는 서로를 보지
+    /// 않으므로 나눠 풀어도 결과가 같습니다. 동시에 푸는 장수는 <b>가장 큰 파일 기준으로 한도 두
+    /// 장 분량</b>까지만 둡니다. 복호 중 메모리는 파일 크기에 비례하므로, 한도 가까운 기록이
+    /// 섞이면 한 장씩 읽는 것과 같은 규모로 내려갑니다.
+    /// </remarks>
+    internal static DefectSidecarReadResult[] ReadFiles(
+        IReadOnlyList<string> paths,
+        IReadOnlyList<Guid> expectedFrameIds)
+    {
+        if (paths.Count != expectedFrameIds.Count)
+        {
+            throw new ArgumentException("Every path needs its frame id.", nameof(expectedFrameIds));
+        }
+        DefectSidecarReadResult[] results = new DefectSidecarReadResult[paths.Count];
+        long largest = 1L;
+        foreach (string path in paths)
+        {
+            try
+            {
+                FileInfo info = new(path);
+                if (info.Exists)
+                {
+                    largest = Math.Max(largest, info.Length);
+                }
+            }
+            catch (Exception error) when (error is
+                IOException or UnauthorizedAccessException or ArgumentException or
+                NotSupportedException or PathTooLongException)
+            {
+                // ReadFile 이 같은 파일에서 같은 오류를 돌려줍니다.
+            }
+        }
+        long byInput = Math.Max(1L, 2L * DefectSidecarStore.MaximumFileBytes / largest);
+        int degree = (int)Math.Min(
+            Math.Min(Environment.ProcessorCount, paths.Count),
+            byInput);
+        if (degree <= 1)
+        {
+            for (int index = 0; index < paths.Count; ++index)
+            {
+                results[index] = ReadFile(paths[index], expectedFrameIds[index]);
+            }
+            return results;
+        }
+        Parallel.For(
+            0,
+            paths.Count,
+            new ParallelOptions { MaxDegreeOfParallelism = degree },
+            index => results[index] = ReadFile(paths[index], expectedFrameIds[index]));
+        return results;
+    }
+
     internal static void PrepareDirectory(string directory)
     {
         if (File.Exists(directory))
