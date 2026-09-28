@@ -12,6 +12,7 @@ internal sealed class LibraryDocumentProjection
     private readonly Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows;
     private readonly Dictionary<string, DefectRecipeSnapshot> defectRecipes;
     private readonly LibraryDefectRevisionTracker defectRevisions;
+    private readonly HashSet<string> defectRestorePending;
     private readonly Action markDirty;
 
     internal LibraryDocumentProjection(
@@ -21,6 +22,7 @@ internal sealed class LibraryDocumentProjection
         Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows,
         Dictionary<string, DefectRecipeSnapshot> defectRecipes,
         LibraryDefectRevisionTracker defectRevisions,
+        HashSet<string> defectRestorePending,
         Action markDirty)
     {
         this.session = session;
@@ -29,6 +31,7 @@ internal sealed class LibraryDocumentProjection
         this.retainedRows = retainedRows;
         this.defectRecipes = defectRecipes;
         this.defectRevisions = defectRevisions;
+        this.defectRestorePending = defectRestorePending;
         this.markDirty = markDirty;
     }
 
@@ -78,27 +81,38 @@ internal sealed class LibraryDocumentProjection
             {
                 if (DeclaresDefectEdits(payloads[index]))
                 {
-                    if (!defectRecipes.TryGetValue(rowIds[index], out DefectRecipeSnapshot? recipe))
+                    // 기록을 읽지 못한 사진도 목록에 둡니다(macOS defectEditsNeedRestore). 예전에는
+                    // "읽지 못한 사진" 으로 빠져 라이브러리에서 사라졌습니다.
+                    DefectRecipeSnapshot? recipe = null;
+                    if (!defectRestorePending.Contains(rowIds[index]) &&
+                        !defectRecipes.TryGetValue(rowIds[index], out recipe))
                     {
-                        if (!Guid.TryParseExact(rowIds[index], "D", out Guid frameId) ||
-                            session.ReadDefectRecipe(frameId).Snapshot is not { } loadedRecipe)
+                        recipe = Guid.TryParseExact(rowIds[index], "D", out Guid frameId)
+                            ? session.ReadDefectRecipe(frameId).Snapshot
+                            : null;
+                        if (recipe is not null)
                         {
-                            Issues.Add(new LibraryFrameIssue(
-                                index,
-                                rowIds[index],
-                                LibraryFrameError.InvalidDefectRecipe,
-                                DevelopRouteError.None));
-                            continue;
+                            defectRecipes[rowIds[index]] = recipe;
                         }
-                        recipe = loadedRecipe;
-                        defectRecipes[rowIds[index]] = recipe;
+                        else
+                        {
+                            defectRestorePending.Add(rowIds[index]);
+                        }
                     }
-                    defectRevisions.Observe(rowIds[index], recipe.RecipeRevision);
-                    frame = frame with { DefectRecipe = recipe };
+                    if (recipe is not null)
+                    {
+                        defectRevisions.Observe(rowIds[index], recipe.RecipeRevision);
+                    }
+                    frame = frame with
+                    {
+                        DefectRecipe = recipe,
+                        DefectRestorePending = recipe is null,
+                    };
                 }
                 else
                 {
                     defectRecipes.Remove(rowIds[index]);
+                    defectRestorePending.Remove(rowIds[index]);
                 }
                 frame = frame with
                 {

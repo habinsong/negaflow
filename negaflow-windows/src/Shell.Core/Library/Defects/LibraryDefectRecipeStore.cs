@@ -21,6 +21,14 @@ internal sealed class LibraryDefectRecipeStore(
             return new(null, LibraryFrameError.MissingId,
                 DefectSidecarError.None, CatalogStoreError.None);
         }
+        // 복원 대기 사진은 기록을 쓰지 않습니다(macOS refreshDefectRecipeState). 읽지 못한 기록 위에
+        // 새 편집을 얹으면 수동 복구가 되살릴 것을 덮습니다.
+        if (state.DefectRestorePending.Contains(frameId))
+        {
+            RecordWriteFailure("RestorePending");
+            return new(null, LibraryFrameError.None,
+                DefectSidecarError.InvalidSnapshot, CatalogStoreError.None);
+        }
         CatalogStoreError prerequisite = FlushDirtyCatalog();
         if (prerequisite != CatalogStoreError.None)
         {

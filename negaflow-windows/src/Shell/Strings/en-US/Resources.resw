@@ -1118,6 +1118,7 @@ Load a scanner from Library to scan film.</value>
   <data name="libraryRemoveFromLibrary.Content" xml:space="preserve"><value>Remove</value><comment>AppLocalizedPhrase.removeFromLibrary</comment></data>
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>Show in File Explorer</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>Cancel</value><comment>AppLocalizedPhrase.cancel</comment></data>
+  <data name="removingDefectsFailedStatus.Text" xml:space="preserve"><value>Defect removal failed</value><comment>AppLocalizedPhrase.removingDefectsFailedStatus</comment></data>
   <data name="librarySaveFailed.Text" xml:space="preserve"><value>The library could not be saved.</value><comment>AppLocalizedPhrase.librarySaveFailed</comment></data>
   <data name="quitWithoutSaving.Text" xml:space="preserve"><value>Quit Without Saving</value><comment>AppLocalizedPhrase.quitWithoutSaving</comment></data>
   <data name="developScannerProfile.Text" xml:space="preserve"><value>Profile</value><comment>AppLocalizedPhrase.profile</comment></data>

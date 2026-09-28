@@ -84,6 +84,8 @@ public static class DevelopExportOutcomeText
             AppResources.Get("developExportRefusedOutputFormat", "Text"),
         DevelopRequestRefusal.StaleDefectSource =>
             AppResources.Get("developExportRefusedStaleDefectSource", "Text"),
+        DevelopRequestRefusal.DefectRestorePending =>
+            AppResources.Get("removingDefectsFailedStatus", "Text"),
         _ => AppResources.Get("developExportRefused", "Text"),
     };
 }

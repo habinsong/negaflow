@@ -66,6 +66,6 @@ internal static class LibraryDocumentOpener
                 payloads,
                 retainedRows,
                 snapshot.ActiveRollId,
-                cleanup.Revisions));
+                cleanup));
     }
 }

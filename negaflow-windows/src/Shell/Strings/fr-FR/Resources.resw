@@ -1118,6 +1118,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="libraryRemoveFromLibrary.Content" xml:space="preserve"><value>Retirer</value><comment>AppLocalizedPhrase.removeFromLibrary</comment></data>
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>Afficher dans l’Explorateur de fichiers</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>Annuler</value><comment>AppLocalizedPhrase.cancel</comment></data>
+  <data name="removingDefectsFailedStatus.Text" xml:space="preserve"><value>Échec de la suppression des défauts</value><comment>AppLocalizedPhrase.removingDefectsFailedStatus</comment></data>
   <data name="librarySaveFailed.Text" xml:space="preserve"><value>La bibliothèque n’a pas pu être enregistrée.</value><comment>AppLocalizedPhrase.librarySaveFailed</comment></data>
   <data name="quitWithoutSaving.Text" xml:space="preserve"><value>Quitter sans enregistrer</value><comment>AppLocalizedPhrase.quitWithoutSaving</comment></data>
   <data name="developScannerProfile.Text" xml:space="preserve"><value>Profil</value><comment>AppLocalizedPhrase.profile</comment></data>

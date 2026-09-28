@@ -1118,6 +1118,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="libraryRemoveFromLibrary.Content" xml:space="preserve"><value>Entfernen</value><comment>AppLocalizedPhrase.removeFromLibrary</comment></data>
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>Im Explorer anzeigen</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>Abbrechen</value><comment>AppLocalizedPhrase.cancel</comment></data>
+  <data name="removingDefectsFailedStatus.Text" xml:space="preserve"><value>Entfernen der Defekte fehlgeschlagen</value><comment>AppLocalizedPhrase.removingDefectsFailedStatus</comment></data>
   <data name="librarySaveFailed.Text" xml:space="preserve"><value>Die Mediathek konnte nicht gesichert werden.</value><comment>AppLocalizedPhrase.librarySaveFailed</comment></data>
   <data name="quitWithoutSaving.Text" xml:space="preserve"><value>Beenden ohne Sichern</value><comment>AppLocalizedPhrase.quitWithoutSaving</comment></data>
   <data name="developScannerProfile.Text" xml:space="preserve"><value>Profil</value><comment>AppLocalizedPhrase.profile</comment></data>

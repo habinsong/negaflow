@@ -48,11 +48,10 @@ public readonly record struct LibraryCatalogMaintenanceResult(
 /// 막혀 앱을 닫을 수도 없습니다. 수동 복구는 그 불일치를 메모리 기준으로 풉니다.
 /// </para>
 /// <para>
-/// macOS 의 "복원 대기"(선언은 있는데 메모리 recipe 가 없는 사진)를 되살리거나 비우는 단계는
-/// 옮기지 않았습니다. Windows 는 열 때 선언된 sidecar 를 모두 검사해 하나라도 못 읽으면 열기를
-/// 거부하므로(<c>CatalogSession.Open</c> → <c>MissingAuthoritativeData</c>), 열린 라이브러리에는
-/// 그런 사진이 없습니다. 열린 뒤 sidecar 가 사라지거나 깨지면 메모리 recipe 로 다시 쓰므로
-/// 편집을 잃지 않고, 읽기 권한이 없거나 더 새 버전인 기록은 쓰기가 거부해 그대로 둡니다.
+/// 열 때 기록을 읽지 못한 사진은 "복원 대기"(<see cref="LibraryDocumentState.DefectRestorePending"/>)
+/// 로 열립니다. 두 동작 모두 먼저 그것을 풉니다(macOS <c>settleDefectRecipesForCatalogMaintenance</c>).
+/// 열린 뒤 sidecar 가 사라지거나 깨지면 메모리 recipe 로 다시 쓰므로 편집을 잃지 않고, 읽기 권한이
+/// 없거나 더 새 버전인 기록은 건드리지 않고 실패합니다.
 /// </para>
 /// </remarks>
 internal sealed class LibraryCatalogMaintenance(
@@ -67,6 +66,11 @@ internal sealed class LibraryCatalogMaintenance(
     /// </summary>
     internal LibraryCatalogMaintenanceResult Repair()
     {
+        LibraryCatalogMaintenanceResult settled = SettlePendingRestores(out List<Guid> cleared);
+        if (!settled.IsSuccess)
+        {
+            return settled;
+        }
         LibraryCatalogMaintenanceResult rewritten = RewriteMismatchedRecipes();
         if (!rewritten.IsSuccess)
         {
@@ -74,9 +78,17 @@ internal sealed class LibraryCatalogMaintenance(
         }
         state.MarkDirty();
         CatalogStoreError saved = save();
-        return saved == CatalogStoreError.None
-            ? new(LibraryCatalogMaintenanceError.None)
-            : new(LibraryCatalogMaintenanceError.CatalogSaveFailed, CatalogError: saved);
+        if (saved != CatalogStoreError.None)
+        {
+            return new(LibraryCatalogMaintenanceError.CatalogSaveFailed, CatalogError: saved);
+        }
+        // 카탈로그가 더는 선언하지 않으니 깨진 기록을 치웁니다. 남겨 두면 그 사진에 새 편집을
+        // 쓸 때 읽을 수 없는 기록 위라 거부됩니다. 원본은 위에서 보관했습니다.
+        foreach (Guid frameId in cleared)
+        {
+            _ = state.Session.DiscardUnreadableDefectRecipe(frameId);
+        }
+        return new(LibraryCatalogMaintenanceError.None);
     }
 
     /// <summary>
@@ -85,6 +97,11 @@ internal sealed class LibraryCatalogMaintenance(
     /// </summary>
     internal LibraryCatalogMaintenanceResult PrepareReinstall()
     {
+        LibraryCatalogMaintenanceResult settled = SettlePendingRestores(out _);
+        if (!settled.IsSuccess)
+        {
+            return settled;
+        }
         List<CatalogEntityRow> rows = [.. state.FrameRows().Where(row => !IsPreviewFrame(row.Payload))];
         Dictionary<Guid, DefectRecipeSnapshot> recipes = [];
         foreach (CatalogEntityRow row in rows)
@@ -155,6 +172,51 @@ internal sealed class LibraryCatalogMaintenance(
         {
             state.ProjectFrames();
         }
+        return new(LibraryCatalogMaintenanceError.None);
+    }
+
+    /// <summary>
+    /// macOS <c>settleDefectRecipesForCatalogMaintenance</c> — 복원 대기 사진의 기록을 다시 읽어
+    /// 되살리고, 사라졌거나 깨져 되살릴 수 없으면 지금 카탈로그와 결함 폴더를 한 번 보관한 뒤 그
+    /// 사진의 결함 편집만 비웁니다. 읽기 권한 오류나 더 새 버전 기록은 건드리지 않고 실패합니다.
+    /// </summary>
+    private LibraryCatalogMaintenanceResult SettlePendingRestores(out List<Guid> cleared)
+    {
+        cleared = [];
+        bool preserved = false;
+        foreach (string rowId in state.DefectRestorePending.ToArray())
+        {
+            if (!state.IndexById.TryGetValue(rowId, out int index) ||
+                !Guid.TryParseExact(rowId, "D", out Guid frameId))
+            {
+                continue;
+            }
+            DefectSidecarReadResult read = state.Session.ReadDefectRecipe(frameId);
+            if (read.Snapshot is { } restored)
+            {
+                state.DefectRecipes[rowId] = restored;
+                state.DefectRevisions.Observe(rowId, restored.RecipeRevision);
+                state.DefectRestorePending.Remove(rowId);
+                continue;
+            }
+            if (read.Error is not (DefectSidecarError.NotFound or DefectSidecarError.InvalidContent))
+            {
+                return new(LibraryCatalogMaintenanceError.DefectRecipeRewriteFailed, SidecarError: read.Error);
+            }
+            if (!preserved && !(preserved = state.Session.PreserveCurrentFiles()))
+            {
+                return new(
+                    LibraryCatalogMaintenanceError.DefectRecipeRewriteFailed,
+                    SidecarError: DefectSidecarError.IoFailure);
+            }
+            JsonObject payload = (JsonObject)state.Payloads[index].DeepClone();
+            payload.Remove(HasDefectEditsName);
+            state.Payloads[index] = DefectReviewTrackingCodec.Apply(payload, mark: null).FrameRecord!;
+            state.DefectRevisions.Observe(rowId, state.Session.HighestKnownDefectRevision(frameId));
+            state.DefectRestorePending.Remove(rowId);
+            cleared.Add(frameId);
+        }
+        state.ProjectFrames();
         return new(LibraryCatalogMaintenanceError.None);
     }
 

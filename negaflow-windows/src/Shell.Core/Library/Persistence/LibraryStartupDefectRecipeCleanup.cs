@@ -9,6 +9,12 @@ internal readonly record struct LibraryStartupDefectRecipeCleanupResult(
     DefectSidecarError SidecarError,
     CatalogStoreError CatalogError)
 {
+    /// <summary>
+    /// 카탈로그가 결함 편집을 선언하는데 기록을 읽지 못한 사진입니다. macOS
+    /// <c>defectEditsNeedRestore</c> 처럼 그 사진만 "복원 대기" 로 두고 라이브러리는 엽니다.
+    /// </summary>
+    internal IReadOnlyCollection<string> RestorePending { get; init; } = [];
+
     internal bool IsSuccess => Snapshot is not null &&
         SidecarError == DefectSidecarError.None &&
         CatalogError == CatalogStoreError.None;
@@ -29,6 +35,7 @@ internal static class LibraryStartupDefectRecipeCleanup
 
         CatalogSnapshot current = initial;
         Dictionary<string, ulong> revisions = new(StringComparer.Ordinal);
+        List<string> restorePending = [];
         int frameCount = current.Rows(CatalogEntityTable.Frames).Count;
         for (int index = 0; index < frameCount; ++index)
         {
@@ -48,7 +55,8 @@ internal static class LibraryStartupDefectRecipeCleanup
             DefectSidecarReadResult read = session.ReadDefectRecipe(frameId);
             if (read.Snapshot is not { } recipe)
             {
-                return Failure(revisions, read.Error, CatalogStoreError.None);
+                restorePending.Add(row.Id);
+                continue;
             }
             if (recipe.Items.Count == 0)
             {
@@ -78,7 +86,10 @@ internal static class LibraryStartupDefectRecipeCleanup
             current,
             revisions,
             DefectSidecarError.None,
-            CatalogStoreError.None);
+            CatalogStoreError.None)
+        {
+            RestorePending = restorePending,
+        };
     }
 
     private static CatalogSnapshot WithoutRecipeState(

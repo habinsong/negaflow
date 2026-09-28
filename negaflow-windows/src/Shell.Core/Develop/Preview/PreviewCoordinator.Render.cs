@@ -43,6 +43,14 @@ public sealed partial class PreviewCoordinator
         if (built.Request is not { } developRequest)
         {
             PreviewTrace.Write("RenderAsync refused " + built.Refusal + " rev=" + revision);
+            // macOS developFrame 과 같이 현상 시도에서만 남깁니다. 요청 공장에서 남기면 썸네일·이웃
+            // 미리 읽기까지 같은 사건을 적어 진단 목록을 덮습니다.
+            if (built.Refusal == DevelopRequestRefusal.DefectRestorePending)
+            {
+                Diagnostics.AppDiagnostics.Start(
+                    Diagnostics.AppDiagnosticOperation.DevelopFrame,
+                    Diagnostics.AppDiagnosticCategory.Develop).Fail("defect_restore_pending");
+            }
             return new LeasedOutcome(PreviewOutcome.Refused(built.Refusal, revision), -1);
         }
 

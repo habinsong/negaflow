@@ -146,6 +146,49 @@ internal sealed class DefectRecipeCatalogTransaction(StorageRootSet roots)
         return DefectSidecarStore.Remove(roots, frameId, minimumRevision);
     }
 
+    /// <summary>
+    /// 카탈로그가 더는 선언하지 않는 사진의 <b>깨진</b> 기록만 치웁니다. <see cref="RemoveUndeclared"/>
+    /// 는 읽을 수 없는 기록을 건드리지 않으므로, 수동 복구가 비운 사진에 새 편집을 쓸 수 있게 여기서
+    /// 치웁니다. 원본 보관은 부르는 쪽이 먼저 합니다.
+    /// </summary>
+    internal DefectSidecarDeleteResult DiscardUndeclaredUnreadable(Guid frameId)
+    {
+        CatalogReadResult current = SqliteCatalogStore.Read(roots.CatalogPath);
+        if (current.Snapshot is not { } snapshot || CatalogDeclaresDefectEdits(snapshot, frameId))
+        {
+            return DefectSidecarDeleteResult.Failure(DefectSidecarError.InvalidSnapshot);
+        }
+        lock (DefectSidecarStore.Gate)
+        {
+            string path = DefectSidecarStore.PathFor(roots, frameId);
+            DefectSidecarError existing = DefectSidecarFile.ReadFile(path, frameId).Error;
+            if (existing == DefectSidecarError.NotFound)
+            {
+                return DefectSidecarDeleteResult.Success();
+            }
+            if (existing is not (DefectSidecarError.InvalidContent or
+                DefectSidecarError.InvalidSnapshot or DefectSidecarError.InvalidFrameId))
+            {
+                return DefectSidecarDeleteResult.Failure(
+                    existing == DefectSidecarError.None ? DefectSidecarError.InvalidSnapshot : existing);
+            }
+            try
+            {
+                File.Delete(path);
+                DefectSidecarValidationCache.Invalidate(path);
+                return DefectSidecarDeleteResult.Success();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return DefectSidecarDeleteResult.Failure(DefectSidecarError.AccessDenied);
+            }
+            catch (IOException)
+            {
+                return DefectSidecarDeleteResult.Failure(DefectSidecarError.IoFailure);
+            }
+        }
+    }
+
     private static bool IsSafeWriteTransition(
         CatalogSnapshot current,
         CatalogSnapshot target,

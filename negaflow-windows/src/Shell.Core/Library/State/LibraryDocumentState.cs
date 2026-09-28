@@ -17,7 +17,8 @@ internal sealed class LibraryDocumentState
         List<JsonObject> payloads,
         Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows,
         string? activeRollId,
-        IReadOnlyDictionary<string, ulong>? initialDefectRevisions = null)
+        IReadOnlyDictionary<string, ulong>? initialDefectRevisions = null,
+        IEnumerable<string>? defectRestorePending = null)
     {
         Session = session;
         RowIds = rowIds;
@@ -31,6 +32,7 @@ internal sealed class LibraryDocumentState
                 DefectRevisions.Observe(frameId, revision);
             }
         }
+        DefectRestorePending.UnionWith(defectRestorePending ?? []);
         projection = new LibraryDocumentProjection(
             session,
             rowIds,
@@ -38,6 +40,7 @@ internal sealed class LibraryDocumentState
             retainedRows,
             DefectRecipes,
             DefectRevisions,
+            DefectRestorePending,
             MarkDirty);
         ProjectAll();
         IsDirty = false;
@@ -55,6 +58,12 @@ internal sealed class LibraryDocumentState
         new(StringComparer.Ordinal);
 
     public LibraryDefectRevisionTracker DefectRevisions { get; } = new();
+
+    /// <summary>
+    /// 결함 편집을 선언하는데 기록을 읽지 못한 사진입니다. macOS <c>defectEditsNeedRestore</c>
+    /// 자리로, 카탈로그 수동 복구가 되살리거나 비울 때까지 그 사진의 기록 쓰기와 현상을 막습니다.
+    /// </summary>
+    public HashSet<string> DefectRestorePending { get; } = new(StringComparer.Ordinal);
 
     public string? ActiveRollId { get; set; }
 

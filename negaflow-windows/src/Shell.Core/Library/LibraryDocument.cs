@@ -117,7 +117,7 @@ public sealed partial class LibraryDocument : IDisposable
         List<JsonObject> payloads,
         Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows,
         string? activeRollId,
-        IReadOnlyDictionary<string, ulong>? initialDefectRevisions = null)
+        LibraryStartupDefectRecipeCleanupResult? startup = null)
     {
         state = new LibraryDocumentState(
             session,
@@ -125,7 +125,7 @@ public sealed partial class LibraryDocument : IDisposable
             payloads,
             retainedRows,
             activeRollId,
-            initialDefectRevisions);
+            startup?.Revisions, startup?.RestorePending);
         organization = new LibraryOrganizationService(state);
         persistence = new LibraryCatalogPersistence(state);
         sourceRelinker = new LibrarySourceRelinker(state, persistence);

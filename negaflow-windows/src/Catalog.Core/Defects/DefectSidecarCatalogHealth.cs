@@ -176,6 +176,33 @@ internal static class DefectSidecarCatalogHealth
     }
 
     /// <summary>
+    /// 선언의 모양만 봅니다 — <c>hasDefectEdits</c> 가 bool 이고, 선언한 사진 id 가 서로 다른
+    /// GUID 인지. 기록 파일은 읽지 않습니다. 열기는 이것만 막고, 읽지 못하는 기록은 그 사진만
+    /// "복원 대기" 로 둡니다(macOS <c>DefectRecipeRestoration</c>). 예전에는 기록 하나를 못 읽어도
+    /// 라이브러리 전체를 열지 않았습니다.
+    /// </summary>
+    public static DefectSidecarError ValidateDeclarationShape(CatalogSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        HashSet<Guid> frameIds = [];
+        foreach (CatalogEntityRow frame in snapshot.Rows(CatalogEntityTable.Frames))
+        {
+            if (!DeclaresDefectEdits(frame, out bool hasEdits))
+            {
+                return DefectSidecarError.InvalidContent;
+            }
+            if (hasEdits &&
+                (!Guid.TryParseExact(frame.Id, "D", out Guid frameId) ||
+                 frameId == Guid.Empty ||
+                 !frameIds.Add(frameId)))
+            {
+                return DefectSidecarError.InvalidFrameId;
+            }
+        }
+        return DefectSidecarError.None;
+    }
+
+    /// <summary>
     /// `hasDefectEdits` 를 읽습니다. 값이 bool 이 아니면 <c>false</c> 를 내고, 없으면
     /// 선언하지 않은 것으로 봅니다.
     /// </summary>

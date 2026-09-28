@@ -1118,6 +1118,7 @@
   <data name="libraryRemoveFromLibrary.Content" xml:space="preserve"><value>移除</value><comment>AppLocalizedPhrase.removeFromLibrary</comment></data>
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>在文件资源管理器中显示</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>取消</value><comment>AppLocalizedPhrase.cancel</comment></data>
+  <data name="removingDefectsFailedStatus.Text" xml:space="preserve"><value>瑕疵移除失败</value><comment>AppLocalizedPhrase.removingDefectsFailedStatus</comment></data>
   <data name="librarySaveFailed.Text" xml:space="preserve"><value>无法保存图库。</value><comment>AppLocalizedPhrase.librarySaveFailed</comment></data>
   <data name="quitWithoutSaving.Text" xml:space="preserve"><value>不保存并退出</value><comment>AppLocalizedPhrase.quitWithoutSaving</comment></data>
   <data name="developScannerProfile.Text" xml:space="preserve"><value>配置文件</value><comment>AppLocalizedPhrase.profile</comment></data>

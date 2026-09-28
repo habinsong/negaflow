@@ -578,13 +578,12 @@ internal static class DefectSidecarTests
                 }), mixedHealthRoots.CatalogPath).IsSuccess,
             "defect_orphan_mixed_health_catalog_seed");
         string mixedOrphanPath = DefectSidecarStore.PathFor(mixedHealthRoots, orphanFrameId);
+        // 선언한 기록 하나를 못 읽는 어긋난 상태에서는 열되, 선언되지 않은 기록은 치우지 않습니다 —
+        // 그것이 진짜 기록일 수 있습니다.
         CatalogSessionOpenResult mixedHealthOpen = CatalogSession.Open(mixedHealthRoots);
         mixedHealthOpen.Session?.Dispose();
-        Check(!mixedHealthOpen.IsSuccess &&
-              mixedHealthOpen.Error == CatalogSessionError.MissingAuthoritativeData &&
-              mixedHealthOpen.DefectSidecarError == DefectSidecarError.NotFound &&
-              File.Exists(mixedOrphanPath),
-            "defect_orphan_authoritative_health_fails_before_cleanup");
+        Check(mixedHealthOpen.IsSuccess && File.Exists(mixedOrphanPath),
+            "defect_orphan_kept_while_a_declared_record_is_unreadable");
 
         Guid markedFrameId = Guid.Parse("98308931-0756-41df-bdbf-93ef558b2c57");
         DefectRecipeSnapshot markedRecipe = DefectRecipeSnapshot.Create(

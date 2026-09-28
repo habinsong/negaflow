@@ -70,11 +70,16 @@ internal static class DefectCatalogRecoveryTests
             healthFrameId);
         byte[] healthyBytes = File.ReadAllBytes(healthSidecarPath);
         File.Delete(healthSidecarPath);
+        // macOS 처럼 기록 하나 때문에 라이브러리 전체를 막지 않습니다. 세션은 열리고, 그 기록이
+        // 돌아오거나 수동 복구가 풀 때까지 커밋 게이트가 저장을 막습니다.
         CatalogSessionOpenResult missingOpen = CatalogSession.Open(healthRoots);
-        missingOpen.Session?.Dispose();
-        Check(missingOpen.Error == CatalogSessionError.MissingAuthoritativeData &&
-              missingOpen.DefectSidecarError == DefectSidecarError.NotFound,
-            "defect_health_missing_sidecar_blocks_library_open");
+        using (CatalogSession? missing = missingOpen.Session)
+        {
+            Check(missingOpen.IsSuccess &&
+                  missing!.Write(missing.Read().Snapshot!).Error ==
+                      CatalogStoreError.MissingAuthoritativeData,
+                "defect_health_missing_sidecar_opens_and_blocks_commits");
+        }
 
         File.WriteAllBytes(healthSidecarPath, healthyBytes);
         JsonObject damaged = JsonNode.Parse(healthyBytes)!.AsObject();
@@ -83,10 +88,13 @@ internal static class DefectCatalogRecoveryTests
             healthSidecarPath,
             CatalogJson.SerializeCanonical(damaged));
         CatalogSessionOpenResult damagedOpen = CatalogSession.Open(healthRoots);
-        damagedOpen.Session?.Dispose();
-        Check(damagedOpen.Error == CatalogSessionError.MissingAuthoritativeData &&
-              damagedOpen.DefectSidecarError == DefectSidecarError.InvalidContent,
-            "defect_health_damaged_sidecar_blocks_library_open");
+        using (CatalogSession? damagedSession = damagedOpen.Session)
+        {
+            Check(damagedOpen.IsSuccess &&
+                  damagedSession!.Write(damagedSession.Read().Snapshot!).Error ==
+                      CatalogStoreError.MissingAuthoritativeData,
+                "defect_health_damaged_sidecar_opens_and_blocks_commits");
+        }
         File.WriteAllBytes(healthSidecarPath, healthyBytes);
 
         string restoreBase = Path.Combine(

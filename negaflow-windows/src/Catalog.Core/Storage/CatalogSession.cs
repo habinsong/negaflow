@@ -127,7 +127,7 @@ public sealed partial class CatalogSession : IDisposable
         if (catalog.Snapshot is { } snapshot)
         {
             DefectSidecarError health =
-                DefectSidecarCatalogHealth.ValidateDeclaredSidecars(roots, snapshot);
+                DefectSidecarCatalogHealth.ValidateDeclarationShape(snapshot);
             if (health != DefectSidecarError.None)
             {
                 held.Dispose();
@@ -135,8 +135,13 @@ public sealed partial class CatalogSession : IDisposable
                     CatalogSessionError.MissingAuthoritativeData,
                     defectSidecarError: health);
             }
+            // 선언한 기록을 못 읽는 사진이 있으면 그 사진은 "복원 대기" 로 열립니다. 그때는 선언되지
+            // 않은 기록을 치우지 않습니다 — 카탈로그와 기록이 어긋난 상태라 그것이 진짜 기록일 수
+            // 있습니다.
             DefectSidecarError defectCleanup =
-                DefectSidecarCatalogHealth.CleanupUndeclaredFrameSidecars(roots, snapshot);
+                DefectSidecarCatalogHealth.ValidateDeclaredSidecars(roots, snapshot) == DefectSidecarError.None
+                    ? DefectSidecarCatalogHealth.CleanupUndeclaredFrameSidecars(roots, snapshot)
+                    : DefectSidecarError.None;
             if (defectCleanup != DefectSidecarError.None)
             {
                 held.Dispose();

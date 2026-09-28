@@ -257,6 +257,34 @@ public sealed partial class CatalogSession
         }
     }
 
+    /// <summary>
+    /// 지금 카탈로그와 결함 폴더를 원본 그대로 옆에 보관합니다(<c>library.corrupt-*</c>). 수동 복구가
+    /// 되살릴 수 없는 결함 기록을 비우기 전에 부릅니다(macOS <c>preserveUnsafeState</c>).
+    /// </summary>
+    public bool PreserveCurrentFiles()
+    {
+        lock (writeGate)
+        {
+            RequireOpen();
+            return CatalogSidelinedFiles.Preserve(roots);
+        }
+    }
+
+    /// <summary>
+    /// 카탈로그가 더는 선언하지 않는 사진의 깨진 결함 기록을 치웁니다. 먼저
+    /// <see cref="PreserveCurrentFiles"/> 로 원본을 보관해야 합니다.
+    /// </summary>
+    public DefectSidecarDeleteResult DiscardUnreadableDefectRecipe(Guid frameId)
+    {
+        lock (writeGate)
+        {
+            RequireOpen();
+            return mutationBlocked
+                ? DefectSidecarDeleteResult.Failure(DefectSidecarError.IoFailure)
+                : defectRecipes.DiscardUndeclaredUnreadable(frameId);
+        }
+    }
+
     private DefectRecipeCatalogWriteResult ObserveDefectWrite(
         DefectRecipeCatalogWriteResult result)
     {

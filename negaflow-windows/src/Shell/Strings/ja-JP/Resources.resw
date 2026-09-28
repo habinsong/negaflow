@@ -1118,6 +1118,7 @@
   <data name="libraryRemoveFromLibrary.Content" xml:space="preserve"><value>取り除く</value><comment>AppLocalizedPhrase.removeFromLibrary</comment></data>
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>エクスプローラーで表示</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>キャンセル</value><comment>AppLocalizedPhrase.cancel</comment></data>
+  <data name="removingDefectsFailedStatus.Text" xml:space="preserve"><value>ゴミ・キズ除去に失敗しました</value><comment>AppLocalizedPhrase.removingDefectsFailedStatus</comment></data>
   <data name="librarySaveFailed.Text" xml:space="preserve"><value>ライブラリを保存できませんでした。</value><comment>AppLocalizedPhrase.librarySaveFailed</comment></data>
   <data name="quitWithoutSaving.Text" xml:space="preserve"><value>保存せずに終了</value><comment>AppLocalizedPhrase.quitWithoutSaving</comment></data>
   <data name="developScannerProfile.Text" xml:space="preserve"><value>プロファイル</value><comment>AppLocalizedPhrase.profile</comment></data>

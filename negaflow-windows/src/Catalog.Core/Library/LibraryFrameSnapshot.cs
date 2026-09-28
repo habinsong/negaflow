@@ -180,6 +180,13 @@ public sealed record LibraryFrameSnapshot(
     public LibrarySourceMetadata? SourceMetadata { get; init; }
 
     /// <summary>
+    /// 카탈로그가 결함 편집을 선언하는데 그 기록을 읽지 못했습니다. macOS
+    /// <c>defectEditsNeedRestore</c> 자리로, 카탈로그 수동 복구가 되살리거나 비울 때까지 이
+    /// 사진은 결함 편집을 바꾸거나 현상하지 않습니다.
+    /// </summary>
+    public bool DefectRestorePending { get; init; }
+
+    /// <summary>
     /// 스캐너가 RGB 본 스캔과 함께 생성한 IR TIFF입니다. 선택적 필드라 기존 import/legacy
     /// frame은 null로 유지됩니다. 원본과 마찬가지로 현상 결과를 여기에 쓰지 않습니다.
     /// </summary>

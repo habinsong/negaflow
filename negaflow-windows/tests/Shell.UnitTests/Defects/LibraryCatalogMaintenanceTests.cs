@@ -22,8 +22,9 @@ internal static class LibraryCatalogMaintenanceTests
         RepairRewritesCorruptSidecarFromMemory();
         RepairLeavesRecipeThatCannotBeReplaced();
         ReinstallSchedulesVerifiedRestoreThatNextOpenApplies();
-        RecoveryScreenRestoresWhenSidecarIsMissingAtOpen();
-        RecoveryScreenStartsFreshAfterCommittedLibrary();
+        MissingRecordAtOpenIsRestorePending();
+        RestorePendingComesBackWhenRecordReturns();
+        RestorePendingKeepsNewerRecord();
         RecipeWriteFailuresAreReported();
         MaintenanceDoesNothingWhileBusy();
     }
@@ -53,6 +54,10 @@ internal static class LibraryCatalogMaintenanceTests
                 File.Delete(Sidecar(roots, frameId));
                 Check(host.Save() == CatalogStoreError.MissingAuthoritativeData,
                     "maintenance_missing_sidecar_blocks_save");
+                // 진단 "저장 오류" 줄이 읽는 값입니다(macOS libraryCatalogPersistenceError).
+                Check(host.LastSaveError == CatalogStoreError.MissingAuthoritativeData,
+                    "maintenance_missing_sidecar_save_error_is_kept",
+                    () => host.LastSaveError.ToString());
                 // 진단 패널의 "최근 실패 이벤트" 에 macOS 와 같은 코드로 남아야 합니다.
                 Check(LastCatalogSaveFailureCode() == "catalog_snapshot_invalid.defect_sidecar_mismatch",
                     "maintenance_missing_sidecar_is_reported",
@@ -71,7 +76,9 @@ internal static class LibraryCatalogMaintenanceTests
                       stored.Revision == memory.RecipeRevision &&
                       stored.Sha256 == memory.RecipeSha256 && stored.Items == 1,
                     "maintenance_repair_rewrites_the_sidecar");
-                Check(host.Save() == CatalogStoreError.None, "maintenance_repair_unblocks_save");
+                Check(host.Save() == CatalogStoreError.None &&
+                      host.LastSaveError == CatalogStoreError.None,
+                    "maintenance_repair_unblocks_save");
                 // 재실행은 정상 종료 경로(카탈로그 커밋)를 거칩니다. 그게 통과해야 앱이 다시 열립니다.
                 Check(Quit(host).IsSuccess, "maintenance_repair_lets_quit_commit");
             }
@@ -182,62 +189,80 @@ internal static class LibraryCatalogMaintenanceTests
     }
 
     /// <summary>
-    /// 앱을 끈 사이 결함 기록이 사라져 열기부터 막힌 경우입니다. 복구 화면에서 백업을 골라
-    /// 되돌릴 수 있어야 합니다 — 예전에는 예약하려고 연 임시 세션이 같은 까닭으로 막혀
-    /// "복원을 예약할 수 없습니다" 로만 끝났습니다(macOS 는 카탈로그를 열지 않고 예약합니다).
+    /// 앱을 끈 사이 결함 기록이 사라진 경우입니다. macOS 처럼 라이브러리는 열리고 그 사진만 "복원
+    /// 대기" 입니다 — 예전에는 기록 하나 때문에 라이브러리 전체가 열리지 않았습니다. 복원 대기
+    /// 사진은 현상하지 않고, 저장은 막히며, 수동 복구가 원본을 보관한 뒤 그 사진의 편집만 비웁니다.
     /// </summary>
-    private static void RecoveryScreenRestoresWhenSidecarIsMissingAtOpen()
+    private static void MissingRecordAtOpenIsRestorePending()
     {
-        RunIsolated("blocked-restore", (roots, frameId) =>
+        RunIsolated("pending-lost", (roots, frameId) =>
         {
-            string generationId;
-            using (LibraryHostService host = OpenHost(roots, "maintenance_blocked_restore_open"))
-            {
-                Check(host.CreateBackup().IsSuccess, "maintenance_blocked_restore_backup");
-                generationId = host.BackupGenerations()[0].Id;
-            }
             File.Delete(Sidecar(roots, frameId));
+            using (LibraryHostService host = OpenHost(roots, "maintenance_pending_opens"))
+            {
+                LibraryFrameSnapshot frame = host.Frames.Single();
+                Check(frame.DefectRestorePending && frame.DefectRecipe is null,
+                    "maintenance_pending_frame_stays_in_the_library");
+                Check(DevelopRequestFactory.Create(frame, Path.Combine(Path.GetTempPath(), "pending.png"))
+                        .Refusal == DevelopRequestRefusal.DefectRestorePending,
+                    "maintenance_pending_frame_is_not_developed");
+                Check(host.Save() == CatalogStoreError.MissingAuthoritativeData,
+                    "maintenance_pending_frame_blocks_save");
 
-            using var blocked = new LibraryHostService(
-                new FakeDispatcher(accepts: true),
-                new ScannerWorkflowTests.ThrowingDevelopExporter(),
-                ReadMetadata);
-            Check(blocked.Open(roots) == LibraryHostState.Unavailable,
-                "maintenance_blocked_restore_is_blocked", () => blocked.State.ToString());
-            CatalogPendingRestoreScheduleResult scheduled = blocked.ScheduleRestore(generationId);
-            Check(scheduled.IsSuccess, "maintenance_blocked_restore_schedules",
-                () => scheduled.Error.ToString());
-            Check(blocked.RetryOpen() == LibraryHostState.Open,
-                "maintenance_blocked_restore_reopens",
-                () => $"{blocked.State}/session={blocked.SessionError}/defect={blocked.DefectSidecarError}");
-            Check(blocked.Frames.SingleOrDefault()?.DefectRecipe?.Items.Count == 1,
-                "maintenance_blocked_restore_returns_the_edits");
+                LibraryCatalogMaintenanceResult repaired = host.RepairCatalog(Idle);
+                Check(repaired.IsSuccess, "maintenance_pending_repair_succeeds",
+                    () => $"{repaired.Error} {repaired.CatalogError} {repaired.SidecarError}");
+                LibraryFrameSnapshot settled = host.Frames.Single();
+                Check(!settled.DefectRestorePending && settled.DefectRecipe is null,
+                    "maintenance_pending_repair_clears_the_lost_edits");
+                Check(Directory.EnumerateFiles(roots.LibraryRoot, "library.corrupt-*").Any(),
+                    "maintenance_pending_repair_preserves_the_catalog");
+                Check(host.Save() == CatalogStoreError.None && Quit(host).IsSuccess,
+                    "maintenance_pending_repair_unblocks_save_and_quit");
+            }
+            using LibraryHostService reopened = OpenHost(roots, "maintenance_pending_reopens");
+            Check(reopened.Frames.Single() is { DefectRestorePending: false, DefectRecipe: null },
+                "maintenance_pending_repair_survives_reopen");
         });
     }
 
-    /// <summary>
-    /// 같은 막힌 라이브러리에서 "새 라이브러리로 시작" 입니다. 한 번이라도 저장한 라이브러리에는
-    /// 직전 판 사본(<c>library.backup.sqlite</c>)이 늘 남아 있어, 그것까지 치우지 않으면 빈
-    /// 카탈로그 쓰기가 "주 파일 없이 사본만 남음" 으로 거부됩니다.
-    /// </summary>
-    private static void RecoveryScreenStartsFreshAfterCommittedLibrary()
+    /// <summary>기록이 돌아오면(동기화 도구가 되살림 등) 수동 복구가 편집을 그대로 되살립니다.</summary>
+    private static void RestorePendingComesBackWhenRecordReturns()
     {
-        RunIsolated("blocked-fresh", (roots, frameId) =>
+        RunIsolated("pending-restored", (roots, frameId) =>
         {
-            File.Delete(Sidecar(roots, frameId));
-            Check(File.Exists(roots.CatalogBackupPath), "maintenance_blocked_fresh_has_previous_copy");
-            using var blocked = new LibraryHostService(
-                new FakeDispatcher(accepts: true),
-                new ScannerWorkflowTests.ThrowingDevelopExporter(),
-                ReadMetadata);
-            Check(blocked.Open(roots) == LibraryHostState.Unavailable,
-                "maintenance_blocked_fresh_is_blocked", () => blocked.State.ToString());
-            Check(blocked.StartFreshLibrary() && blocked.State == LibraryHostState.Open,
-                "maintenance_blocked_fresh_starts",
-                () => $"{blocked.State}/session={blocked.SessionError}/store={blocked.StoreError}");
-            Check(blocked.Frames.Count == 0, "maintenance_blocked_fresh_is_empty");
-            Check(Directory.EnumerateFiles(roots.LibraryRoot, "library.corrupt-*").Any(),
-                "maintenance_blocked_fresh_preserves_the_catalog");
+            string sidecar = Sidecar(roots, frameId);
+            byte[] kept = File.ReadAllBytes(sidecar);
+            File.Delete(sidecar);
+            using LibraryHostService host = OpenHost(roots, "maintenance_pending_restored_opens");
+            Check(host.Frames.Single().DefectRestorePending, "maintenance_pending_restored_starts_pending");
+            File.WriteAllBytes(sidecar, kept);
+            Check(host.RepairCatalog(Idle).IsSuccess &&
+                  host.Frames.Single() is { DefectRestorePending: false, DefectRecipe.Items.Count: 1 },
+                "maintenance_pending_restored_brings_the_edits_back");
+            Check(host.Save() == CatalogStoreError.None, "maintenance_pending_restored_saves");
+        });
+    }
+
+    /// <summary>더 새 버전 기록은 되살리지도 비우지도 않고 실패합니다 — 비우면 되돌릴 수 없습니다.</summary>
+    private static void RestorePendingKeepsNewerRecord()
+    {
+        RunIsolated("pending-newer", (roots, frameId) =>
+        {
+            string path = Sidecar(roots, frameId);
+            JsonObject newer = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+            newer["version"] = newer["version"]!.GetValue<int>() + 1;
+            File.WriteAllText(path, newer.ToJsonString());
+            byte[] before = File.ReadAllBytes(path);
+            using LibraryHostService host = OpenHost(roots, "maintenance_pending_newer_opens");
+            Check(host.Frames.Single().DefectRestorePending, "maintenance_pending_newer_starts_pending");
+            LibraryCatalogMaintenanceResult result = host.RepairCatalog(Idle);
+            Check(result.Error == LibraryCatalogMaintenanceError.DefectRecipeRewriteFailed &&
+                  result.SidecarError == DefectSidecarError.UnsupportedVersion &&
+                  host.Frames.Single().DefectRestorePending &&
+                  File.ReadAllBytes(path).AsSpan().SequenceEqual(before),
+                "maintenance_pending_newer_is_left_alone",
+                () => $"{result.Error} {result.SidecarError}");
         });
     }
 
