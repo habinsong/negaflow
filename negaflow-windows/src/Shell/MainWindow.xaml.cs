@@ -106,6 +106,7 @@ public sealed partial class MainWindow : Window
             Diagnostics.StartupTrace.Mark("shell Loaded (첫 레이아웃)");
             // 셸이 자리를 잡았으니 이제 로고를 걷습니다.
             LoadingOverlay.Visibility = Visibility.Collapsed;
+            Diagnostics.AppStatusMessage.Shared.Reannounce();
         };
         SetTitleBar(ShellView.TitleBarElement);
     }

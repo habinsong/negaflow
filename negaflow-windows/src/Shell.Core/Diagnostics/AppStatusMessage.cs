@@ -47,4 +47,22 @@ public sealed class AppStatusMessage
         }
         Changed?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>
+    /// 화면이 처음 보였습니다. 그 전에 온 메시지는 시작 로고에 가려 아무도 보지 못했으므로 지금부터
+    /// 다시 셉니다 — 사진이 많으면 셸을 세우는 데 몇 초가 걸려 열기 알림이 보이기도 전에 지나갔습니다.
+    /// macOS 는 상태바가 먼저 떠 있어 이 차이가 없습니다.
+    /// </summary>
+    public void Reannounce()
+    {
+        lock (gate)
+        {
+            if (message.Length == 0)
+            {
+                return;
+            }
+            postedAt = DateTimeOffset.UtcNow;
+        }
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
 }

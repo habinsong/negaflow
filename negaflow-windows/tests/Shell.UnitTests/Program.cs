@@ -111,6 +111,7 @@ internal static class Program
         DefectTerminationTests.Run();
         LibraryCatalogMaintenanceTests.Run();
         LibraryDefectRecordRecoveryTests.Run();
+        AppStatusMessageTests.Run();
         RemovedDefectSidecarTests.Run();
         Negaflow.Shell.UnitTests.Defects.ColdExportDefectCoverageTests.Run();
         Negaflow.Shell.UnitTests.Develop.CropAspectExactnessTests.Run();
