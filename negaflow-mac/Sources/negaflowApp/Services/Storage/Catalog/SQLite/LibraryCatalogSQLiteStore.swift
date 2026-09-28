@@ -39,6 +39,29 @@ enum LibraryCatalogSQLiteStore {
     }
 
     static func read(from url: URL) -> LibraryCatalogSQLiteReadResult {
+        let result = readOnce(from: url)
+        guard case .invalid = result, recoverJournal(at: url) else { return result }
+        return readOnce(from: url)
+    }
+
+    /// 읽기 전용 연결은 헤더가 깨진 저널(크래시·정전으로 쓰다 만 것)을 지우지 못해 멀쩡한
+    /// 카탈로그를 여는 데 실패한다. 그러면 마지막 백업으로 물러나 그 뒤의 변경을 잃는다.
+    /// 저널이 있을 때만 SQLite 표준 복구(읽기·쓰기로 한 번 열기 — 유효한 저널은 되돌리고
+    /// 깨진 저널은 지운다)를 거친다.
+    private static func recoverJournal(at url: URL) -> Bool {
+        guard FileManager.default.fileExists(atPath: url.path + "-journal") else { return false }
+        var database: OpaquePointer?
+        defer { if let database { sqlite3_close(database) } }
+        guard sqlite3_open_v2(
+            url.path,
+            &database,
+            SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX,
+            nil
+        ) == SQLITE_OK, let database else { return false }
+        return sqlite3_exec(database, "SELECT count(*) FROM sqlite_master", nil, nil, nil) == SQLITE_OK
+    }
+
+    private static func readOnce(from url: URL) -> LibraryCatalogSQLiteReadResult {
         var database: OpaquePointer?
         guard sqlite3_open_v2(
             url.path,
@@ -55,7 +78,12 @@ enum LibraryCatalogSQLiteStore {
             try requireIntegrity(database)
             let storageVersion = try int32Scalar(database, sql: "PRAGMA user_version")
             guard storageVersion == storageSchemaVersion else {
-                return .unsupportedStorageVersion(Int(storageVersion))
+                // 0 은 스키마를 한 번도 쓰지 않은 파일(0바이트로 잘림 등)이다. 더 새 버전이
+                // 아니라 손상이므로 백업 복원으로 보낸다 — 새 버전으로 보면 자동 복원도, 사용자가
+                // 고른 백업 복원도 "현재 카탈로그 보호"에 막혀 라이브러리를 열 방법이 없었다.
+                return storageVersion > storageSchemaVersion
+                    ? .unsupportedStorageVersion(Int(storageVersion))
+                    : .invalid
             }
             let metadata = try metadataRow(database)
             let version = metadata.version

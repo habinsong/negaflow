@@ -204,7 +204,11 @@ extension AppModel {
         let defectRecords = catalog.frames.filter { $0.hasDefectEdits == true }
         let restoredRecipes = await Task.detached(priority: .utility) {
             Dictionary(uniqueKeysWithValues: defectRecords.map { record in
-                (record.id, DefectRecipeRestoration.read(frameID: record.id, in: defectDirectory))
+                (record.id, DefectRecipeRestoration.read(
+                    frameID: record.id,
+                    in: defectDirectory,
+                    backupDirectory: backupDirectory
+                ))
             })
         }.value
         var restored: [ScanFrame] = []

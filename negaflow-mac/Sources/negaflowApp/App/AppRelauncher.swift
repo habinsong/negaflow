@@ -10,7 +10,8 @@ enum AppRelauncher {
 
     static func relaunchAfterExit(
         bundleURL: URL = Bundle.main.bundleURL,
-        processID: Int32 = ProcessInfo.processInfo.processIdentifier
+        processID: Int32 = ProcessInfo.processInfo.processIdentifier,
+        environment: [String: String] = AppLaunchConfiguration.relaunchEnvironment()
     ) throws {
         guard bundleURL.pathExtension == "app" else { return }
         let process = Process()
@@ -29,6 +30,8 @@ enum AppRelauncher {
             String(processID),
             bundleURL.path,
         ]
+        // `open` 은 부른 쪽의 환경을 새 앱에 그대로 넘긴다(실측). 이 셸이 넘길 환경을 정한다.
+        process.environment = environment
         process.standardInput = FileHandle.nullDevice
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice

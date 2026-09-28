@@ -76,12 +76,17 @@ extension AppModel {
         guard !pending.isEmpty else { return true }
         let directory = libraryDefectDirectoryURL
         let catalogURL = libraryCatalogURL
+        let backupDirectory = libraryBackupDirectoryURL
         var didPreserve = false
         for frame in pending {
             let frameID = frame.id
             let outcome = await Task.detached(priority: .userInitiated) {
                 DefectSidecarFile.flushSync()
-                return DefectRecipeMaintenanceOutcome.read(frameID: frameID, in: directory)
+                return DefectRecipeMaintenanceOutcome.read(
+                    frameID: frameID,
+                    in: directory,
+                    backupDirectory: backupDirectory
+                )
             }.value
             guard ownsFrame(frame), frame.defectEditsNeedRestore else { continue }
             switch outcome {
@@ -177,7 +182,16 @@ enum DefectRecipeMaintenanceOutcome: @unchecked Sendable {
     /// 읽지 못했거나 더 새 버전이라 건드리면 안 된다.
     case keep
 
-    static func read(frameID: UUID, in directory: URL) -> Self {
+    static func read(frameID: UUID, in directory: URL, backupDirectory: URL? = nil) -> Self {
+        // 백업에 같은 사진의 기록이 남아 있으면 비우기 전에 그것으로 되살린다.
+        DefectRecordRecovery.restoreOwnerAccessIfNeeded(for: frameID, in: directory)
+        if let backupDirectory {
+            _ = DefectRecordRecovery.restoreFromBackup(
+                for: frameID,
+                in: directory,
+                backupDirectory: backupDirectory
+            )
+        }
         switch DefectSidecarFile.read(for: frameID, in: directory) {
         case .missing, .invalid:
             return .lost

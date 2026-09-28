@@ -384,6 +384,100 @@ final class LibraryCatalogSQLiteStoreTests: XCTestCase {
         XCTAssertEqual(LibraryCatalogFile.loadPrimary(from: sqliteURL)?.folders, ["/restorable"])
     }
 
+    /// 0바이트로 잘린 카탈로그는 "더 새 저장 버전 0" 이 아니라 손상이다. 새 버전으로 보면 자동
+    /// 복원도, 복구 화면에서 고른 백업 복원도 막혀 라이브러리를 열 방법이 없었다.
+    func testTruncatedCatalogRestoresLatestBackupAndAcceptsAChosenRestore() throws {
+        let root = temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let url = root.appendingPathComponent("library.sqlite")
+        let defects = root.appendingPathComponent("Defects")
+        let backups = root.appendingPathComponent("Backups")
+        XCTAssertTrue(LibraryCatalogFile.writeCatalogSync(LibraryCatalog(folders: ["/kept"]), to: url))
+        let generation = try LibraryBackupStore.createSnapshot(
+            catalogURL: url, defectDirectory: defects, backupDirectory: backups
+        )
+        try Data().write(to: url)
+
+        guard case .invalid = LibraryCatalogFile.read(from: url) else {
+            return XCTFail("a truncated catalog is damage, not a newer storage version")
+        }
+        _ = try LibraryPendingRestoreStore.schedule(
+            generationID: generation.lastPathComponent, catalogURL: url, backupDirectory: backups
+        )
+        XCTAssertNoThrow(try LibraryPendingRestoreStore.applyIfScheduled(
+            catalogURL: url, defectDirectory: defects, backupDirectory: backups
+        ))
+        XCTAssertEqual(LibraryCatalogFile.loadPrimary(from: url)?.folders, ["/kept"])
+
+        // 무작위 바이트로 깨진 카탈로그 위에도 고른 백업을 적용할 수 있어야 한다.
+        try Data((0..<50_000).map { UInt8(truncatingIfNeeded: $0 &* 197 &+ 3) }).write(to: url)
+        _ = try LibraryPendingRestoreStore.schedule(
+            generationID: generation.lastPathComponent, catalogURL: url, backupDirectory: backups
+        )
+        XCTAssertNoThrow(try LibraryPendingRestoreStore.applyIfScheduled(
+            catalogURL: url, defectDirectory: defects, backupDirectory: backups
+        ))
+        XCTAssertEqual(LibraryCatalogFile.loadPrimary(from: url)?.folders, ["/kept"])
+
+        try Data().write(to: url)
+        guard case let .loaded(catalog, recoveredFromBackup, _, _) = LibraryCatalogFile.prepareForUse(
+            at: url, defectDirectory: defects, backupDirectory: backups
+        ) else {
+            return XCTFail("a truncated catalog must restore the latest backup")
+        }
+        XCTAssertTrue(recoveredFromBackup)
+        XCTAssertEqual(catalog.folders, ["/kept"])
+    }
+
+    /// 크래시·정전으로 헤더가 깨진 저널이 남아도 멀쩡한 카탈로그를 버리고 백업으로 물러나면 안 된다.
+    func testJunkJournalDoesNotDiscardAValidCatalog() throws {
+        let root = temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let url = root.appendingPathComponent("library.sqlite")
+        XCTAssertTrue(LibraryCatalogFile.writeCatalogSync(LibraryCatalog(folders: ["/latest"]), to: url))
+        try Data((0..<4_096).map { UInt8(truncatingIfNeeded: $0 &* 131 &+ 7) })
+            .write(to: URL(fileURLWithPath: url.path + "-journal"))
+
+        guard case let .loaded(catalog, recoveredFromBackup, _, _) = LibraryCatalogFile.prepareForUse(
+            at: url,
+            defectDirectory: root.appendingPathComponent("Defects"),
+            backupDirectory: root.appendingPathComponent("Backups")
+        ) else {
+            return XCTFail("a valid catalog next to a junk journal must open")
+        }
+        XCTAssertFalse(recoveredFromBackup)
+        XCTAssertEqual(catalog.folders, ["/latest"])
+    }
+
+    /// 쓰는 도중 앱이 죽은 상태(진짜 저널)는 마지막 커밋으로 되돌아가야 한다. 트랜잭션을 연 채
+    /// 두 파일을 복사하면 그 복사본이 크래시 순간의 디스크다.
+    func testCrashDuringCatalogWriteRollsBackToTheLastCommit() throws {
+        let root = temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let live = root.appendingPathComponent("live.sqlite")
+        let crashed = root.appendingPathComponent("library.sqlite")
+        XCTAssertTrue(LibraryCatalogFile.writeCatalogSync(LibraryCatalog(folders: ["/committed"]), to: live))
+        var database: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(live.path, &database), SQLITE_OK)
+        defer { sqlite3_close(database) }
+        XCTAssertEqual(sqlite3_exec(database, "PRAGMA journal_mode=DELETE; PRAGMA cache_size=1", nil, nil, nil), SQLITE_OK)
+        XCTAssertEqual(sqlite3_exec(database, "BEGIN IMMEDIATE; DELETE FROM folders", nil, nil, nil), SQLITE_OK)
+        let journal = URL(fileURLWithPath: live.path + "-journal")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: journal.path))
+        try FileManager.default.copyItem(at: live, to: crashed)
+        try FileManager.default.copyItem(at: journal, to: URL(fileURLWithPath: crashed.path + "-journal"))
+
+        guard case let .loaded(catalog, recoveredFromBackup, _, _) = LibraryCatalogFile.prepareForUse(
+            at: crashed,
+            defectDirectory: root.appendingPathComponent("Defects"),
+            backupDirectory: root.appendingPathComponent("Backups")
+        ) else {
+            return XCTFail("an interrupted write must roll back and open")
+        }
+        XCTAssertFalse(recoveredFromBackup)
+        XCTAssertEqual(catalog.folders, ["/committed"])
+    }
+
     private func temporaryRoot() -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(
             "negaflow-sqlite-tests-\(UUID().uuidString)",

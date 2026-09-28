@@ -28,6 +28,26 @@ final class AppLaunchConfigurationTests: XCTestCase {
         XCTAssertEqual(configuration?.selectsAllFrames, true)
     }
 
+    /// `open` 은 부른 쪽의 환경을 새 앱에 넘긴다. 격리 루트는 이어져야 하고, 한 번만 할 유지보수
+    /// 지시는 빠져야 한다 — 남으면 재실행할 때마다 복구가 다시 돌아 끝나지 않았다(실측).
+    func testRelaunchKeepsTheTestRootButNotTheMaintenanceRequest() {
+        let environment = [
+            "NEGAFLOW_UI_TEST_MODE": "1",
+            "NEGAFLOW_UI_TEST_ROOT": "/tmp/negaflow-e2e",
+            "NEGAFLOW_UI_TEST_DEMO": "1",
+            "NEGAFLOW_UI_TEST_MAINTENANCE": "repair",
+            "HOME": "/Users/someone",
+        ]
+
+        XCTAssertEqual(AppLaunchConfiguration.from(environment: environment)?.libraryMaintenance, .repair)
+        XCTAssertEqual(AppLaunchConfiguration.relaunchEnvironment(from: environment), [
+            "NEGAFLOW_UI_TEST_MODE": "1",
+            "NEGAFLOW_UI_TEST_ROOT": "/tmp/negaflow-e2e",
+            "NEGAFLOW_UI_TEST_DEMO": "1",
+            "HOME": "/Users/someone",
+        ])
+    }
+
     @MainActor
     func testFactoryIsolatesPersistentPaths() {
         let root = FileManager.default.temporaryDirectory

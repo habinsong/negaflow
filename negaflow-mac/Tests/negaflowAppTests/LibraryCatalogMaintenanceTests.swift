@@ -85,7 +85,9 @@ final class LibraryCatalogMaintenanceTests: XCTestCase {
         XCTAssertTrue(model.saveLibrary(synchronous: true))
     }
 
-    func testRepairKeepsRecipeThatCannotBeReadYet() async throws {
+    /// 읽기 권한만 빠진 앱 자신의 기록은 비우지 않고 권한을 되돌려 되살린다(예전에는 복구가
+    /// 실패로 끝나 저장이 계속 막혔다). 남의 소유라 되돌릴 수 없는 기록은 여전히 건드리지 않는다.
+    func testRepairRestoresOwnRecordThatLostReadPermission() async throws {
         let (model, frame) = try makeReadyModelWithDefectFrame()
         let sidecar = DefectSidecarFile.url(for: frame.id, in: defectDirectory)
         try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: sidecar.path)
@@ -102,12 +104,11 @@ final class LibraryCatalogMaintenanceTests: XCTestCase {
 
         let repaired = await model.repairLibraryCatalogAndRelaunch()
 
-        XCTAssertFalse(repaired)
-        XCTAssertEqual(terminationRequests, 0)
-        XCTAssertFalse(model.isRelaunchRequested)
-        XCTAssertTrue(frame.defectEditsNeedRestore)
+        XCTAssertTrue(repaired)
+        XCTAssertFalse(frame.defectEditsNeedRestore)
+        XCTAssertEqual(frame.defectEdits.count, 1)
         XCTAssertFalse(model.isLibraryMaintenanceInProgress)
-        XCTAssertTrue(FileManager.default.fileExists(atPath: sidecar.path))
+        XCTAssertTrue(FileManager.default.isReadableFile(atPath: sidecar.path))
     }
 
     func testReinstallSchedulesVerifiedRestoreThatNextLaunchApplies() async throws {
@@ -214,6 +215,55 @@ final class LibraryCatalogMaintenanceTests: XCTestCase {
         XCTAssertEqual(stored.items.first?.strength, 0.4)
     }
 
+    /// 동기화·정리 도구가 결함 기록 하나를 지웠는데 백업에는 남아 있는 경우. 열 때 그 기록을
+    /// 되살려야 한다 — 비우면 사용자가 한 결함 제거를 통째로 잃고, 그동안 저장도 막힌다.
+    func testDeletedRecordIsRestoredFromTheNewestBackup() throws {
+        let (_, frame) = try makeReadyModelWithDefectFrame()
+        let identity = try XCTUnwrap(frame.defectRecipeIdentity)
+        _ = try LibraryBackupStore.createSnapshot(
+            catalogURL: catalogURL, defectDirectory: defectDirectory, backupDirectory: backupDirectory
+        )
+        try FileManager.default.removeItem(at: DefectSidecarFile.url(for: frame.id, in: defectDirectory))
+
+        let restored = DefectRecipeRestoration.read(
+            frameID: frame.id, in: defectDirectory, backupDirectory: backupDirectory
+        )
+
+        XCTAssertEqual(restored.snapshot?.identity, identity)
+        XCTAssertEqual(restored.items.count, 1)
+    }
+
+    /// 수동 복구도 편집을 비우기 전에 백업의 기록부터 찾아야 한다.
+    func testRepairRestoresADeletedRecordFromBackupInsteadOfClearingEdits() async throws {
+        let (model, frame) = try makeReadyModelWithDefectFrame()
+        _ = try LibraryBackupStore.createSnapshot(
+            catalogURL: catalogURL, defectDirectory: defectDirectory, backupDirectory: backupDirectory
+        )
+        try FileManager.default.removeItem(at: DefectSidecarFile.url(for: frame.id, in: defectDirectory))
+        frame.defectEditsNeedRestore = true
+        frame.defectEdits = []
+
+        let repaired = await model.repairLibraryCatalogAndRelaunch()
+
+        XCTAssertTrue(repaired)
+        XCTAssertFalse(frame.defectEditsNeedRestore)
+        XCTAssertEqual(frame.defectEdits.count, 1)
+    }
+
+    /// 앱이 쓴 기록인데 읽기 권한만 빠진 경우는 권한을 되돌려 그대로 연다.
+    func testOwnRecordWithoutReadPermissionOpensAgain() throws {
+        let (_, frame) = try makeReadyModelWithDefectFrame()
+        let sidecar = DefectSidecarFile.url(for: frame.id, in: defectDirectory)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: sidecar.path)
+        addTeardownBlock {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: sidecar.path)
+        }
+
+        let restored = DefectRecipeRestoration.read(frameID: frame.id, in: defectDirectory)
+
+        XCTAssertEqual(restored.snapshot?.identity, frame.defectRecipeIdentity)
+    }
+
     func testMaintenanceDoesNothingWhileScanning() async throws {
         let (model, _) = try makeReadyModelWithDefectFrame()
         model.isScanning = true
@@ -233,6 +283,7 @@ final class LibraryCatalogMaintenanceTests: XCTestCase {
 
     private var catalogURL: URL { root.appendingPathComponent("library.sqlite") }
     private var defectDirectory: URL { root.appendingPathComponent("defects", isDirectory: true) }
+    private var backupDirectory: URL { root.appendingPathComponent("Backups", isDirectory: true) }
 
     private func makeModel() -> AppModel {
         let root = root

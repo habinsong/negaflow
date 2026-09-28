@@ -138,6 +138,13 @@ extension LibraryPendingRestoreStore {
             }
             try fileManager.moveItem(at: replacement, to: defectDirectory)
             installedReplacement = true
+            // 열 수 없는 카탈로그(잘림·손상) 위에는 쓸 수 없다. 원본은 앞서 RestoreRollbacks 에
+            // 그대로 보관했고 실패하면 아래에서 되돌리므로, 치우고 새로 쓴다.
+            if case .loaded = LibraryCatalogFile.read(from: catalogURL, fileManager: fileManager) {
+            } else {
+                try? fileManager.removeItem(at: catalogURL)
+                try? fileManager.removeItem(at: URL(fileURLWithPath: catalogURL.path + "-journal"))
+            }
             guard LibraryCatalogFile.writeSync(catalogData, to: catalogURL),
                   case let .loaded(applied, sourceVersion) = LibraryCatalogFile.read(
                     from: catalogURL,

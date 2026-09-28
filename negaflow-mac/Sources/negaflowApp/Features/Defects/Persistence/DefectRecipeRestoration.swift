@@ -5,7 +5,21 @@ struct DefectRecipeRestoration: @unchecked Sendable {
     let snapshot: DefectRecipeSnapshot?
     let items: [DefectEditItem]
 
-    static func read(frameID: UUID, in directory: URL) -> Self {
+    /// `backupDirectory` 가 있으면 사라졌거나 깨진 기록을 백업의 같은 사진 기록으로 되살린 뒤 읽는다.
+    static func read(frameID: UUID, in directory: URL, backupDirectory: URL? = nil) -> Self {
+        DefectRecordRecovery.restoreOwnerAccessIfNeeded(for: frameID, in: directory)
+        let current = readCurrent(frameID: frameID, in: directory)
+        guard current.snapshot == nil,
+              let backupDirectory,
+              DefectRecordRecovery.restoreFromBackup(
+                  for: frameID,
+                  in: directory,
+                  backupDirectory: backupDirectory
+              ) else { return current }
+        return readCurrent(frameID: frameID, in: directory)
+    }
+
+    private static func readCurrent(frameID: UUID, in directory: URL) -> Self {
         let snapshot: DefectRecipeSnapshot?
         switch DefectSidecarFile.read(for: frameID, in: directory) {
         case .loaded(.currentV2(_, let stored)):

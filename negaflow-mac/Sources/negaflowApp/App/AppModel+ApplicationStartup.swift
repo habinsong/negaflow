@@ -19,6 +19,11 @@ extension AppModel {
         if configuration == nil {
             await runScheduledBackupIfDue()
         }
+        switch configuration?.libraryMaintenance {
+        case .repair: await repairLibraryCatalogAndRelaunch()
+        case .reinstall: await reinstallLibraryCatalogAndRelaunch()
+        case nil: break
+        }
     }
 
     private func prepareUITestFixture(_ configuration: AppLaunchConfiguration?) {
