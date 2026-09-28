@@ -62,12 +62,8 @@ public sealed partial class WorkspaceShellView : UserControl
 
     /// <summary>카탈로그를 쓰지 못했다는 것을 <b>상태 줄로만</b> 알립니다.</summary>
     /// <remarks>
-    /// macOS 는 이 자리에서 <c>AppModel.reportError</c> 로 <c>statusMessage</c> 를 세울 뿐입니다
-    /// (<c>AppEntry.applicationShouldTerminate</c> 의 <c>.terminateCancel</c> 갈래). 모달은
-    /// 띄우지 않습니다 — 저장이 계속 실패하는 동안 모달을 띄우면 사용자는 그 벽 뒤에서
-    /// 아무것도 할 수 없습니다. 실기에서 정확히 그렇게 됐습니다: 닫으려 할 때마다
-    /// "카탈로그를 저장하지 못했습니다" 가 뜨고, 닫기 버튼을 눌러도 아무 일도 일어나지
-    /// 않았습니다.
+    /// macOS <c>AppModel.reportError</c> 의 <c>statusMessage</c> 자리입니다. 종료 저장이 실패했을
+    /// 때 저장 없이 끝낼지 묻는 것은 <c>MainWindow.ConfirmQuitWithoutSavingAsync</c> 가 따로 합니다.
     /// </remarks>
     internal void ReportCatalogWriteFailure(string message) =>
         LibraryWorkspace?.ControlsPanel?.ScanPanel?.SetScanStatus(message);

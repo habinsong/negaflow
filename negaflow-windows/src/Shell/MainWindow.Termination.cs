@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml.Controls;
 using Negaflow.Catalog;
 using Negaflow.Shell.Diagnostics;
 using Negaflow.Shell.Storage;
@@ -74,22 +75,46 @@ public sealed partial class MainWindow
                     : string.Empty));
         }
 
-        if (!result.IsSuccess)
+        // macOS 1.1.8 `quitAfterFailedSave`: 재실행 요청은 거두고 저장 없이 끝낼지 묻습니다.
+        // 예전에는 묻지 않고 종료만 취소해, 저장이 계속 실패하면 작업 관리자 말고는 끌 수
+        // 없었습니다. 기본 단추는 취소이고, 취소하면 다음 종료 때 다시 묻습니다.
+        if (!result.IsSuccess &&
+            !await QuitAfterFailedSave.DecideAsync(
+                CancelCatalogRelaunch,
+                ConfirmQuitWithoutSavingAsync,
+                ReportSaveFailure))
         {
             terminationInProgress = false;
-            // 재실행을 청한 종료였다면 되돌립니다. 종료가 취소됐는데 헬퍼가 남으면 앱이 엉뚱한
-            // 때 다시 뜹니다(macOS terminateCancel 갈래).
-            CancelCatalogRelaunch();
-            // **모달을 띄우지 않습니다.** macOS 는 여기서 `reportError` 로 상태 문구만 세우고
-            // 종료를 취소합니다(`AppEntry.applicationShouldTerminate`). 윈도우는 대신
-            // `ContentDialog` 를 띄웠고, 저장이 계속 실패하면 닫으려 할 때마다 같은 대화상자가
-            // 다시 떠서 앱을 끌 수도 화면을 쓸 수도 없는 벽이 됐습니다.
-            ShellView?.ReportCatalogWriteFailure(
-                Localization.AppResources.Get("libraryCatalogBlockedStatus", "Text"));
             return;
         }
         terminationApproved = true;
         terminationInProgress = false;
         Close();
+    }
+
+    /// <summary>macOS <c>askToQuitWithoutSaving</c> — 기본 단추는 취소입니다.</summary>
+    private async Task<bool> ConfirmQuitWithoutSavingAsync()
+    {
+        if (Content?.XamlRoot is not { } root)
+        {
+            return false;
+        }
+        ContentDialog dialog = new()
+        {
+            XamlRoot = root,
+            Title = Localization.AppResources.Get("librarySaveFailed", "Text"),
+            PrimaryButtonText = Localization.AppResources.Get("quitWithoutSaving", "Text"),
+            CloseButtonText = Localization.AppResources.Get("commonCancel", "Content"),
+            DefaultButton = ContentDialogButton.Close,
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
+    /// <summary>macOS <c>reportError(librarySaveFailed)</c> — 상태 문구와 "최근 문제" 에 남깁니다.</summary>
+    private void ReportSaveFailure()
+    {
+        string message = Localization.AppResources.Get("librarySaveFailed", "Text");
+        AppErrorLog.Shared.Record(message);
+        ShellView?.ReportCatalogWriteFailure(message);
     }
 }

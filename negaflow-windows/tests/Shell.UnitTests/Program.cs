@@ -178,6 +178,7 @@ internal static class Program
         LocalAdjustmentTests.Run();
         ScannerCustomFrameRatioTests.Run();
         ScannerHardwareAreaTests.Run();
+        QuitAfterFailedSaveTests.Run();
         PrintLayoutTemplateTests.Run();
 
         return Report("shell_unit_tests");
