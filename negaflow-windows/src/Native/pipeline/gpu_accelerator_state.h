@@ -8,6 +8,7 @@
 // 정의를 여기 둡니다.
 
 #include "negaflow/gpu/gpu_custom_color_target.h"
+#include <array>
 #include <mutex>
 #include <vector>
 
@@ -98,8 +99,9 @@ struct GpuAccelerator::State final {
     bool mip_halve_ready{false};
     gpu::GpuScratchAngle scratch_angle{};
     bool scratch_angle_ready{false};
-    gpu::GpuWorkingImage mip_a{};
-    gpu::GpuWorkingImage mip_b{};
+    // 밉 축소는 단계마다 한 장입니다. 두 장을 번갈아 쓰면 홀수 단계(절반·1/8)가 같은 칸을
+    // 써서 렌더마다 다시 만들었고, 놓은 텍스처가 쌓여 7.8MP 에서 렌더마다 33 MB 씩 늘었습니다.
+    std::array<gpu::GpuWorkingImage, 16> mip_levels{};
     // **작업 텍스처는 하나의 묶음을 나눠 씁니다.** 진입점마다 자기 것을 만들면
     // 24MP 에서 264 MB 텍스처를 호출마다 할당·해제하고, 실측으로 그 할당이
     // 다운로드 시간의 큰 몫이었습니다. 필름 룩 오케스트레이터도 이 묶음을 받습니다.

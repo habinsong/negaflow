@@ -363,7 +363,12 @@ namespace {
     if (gpu::GpuWorkingImage::create(device, width, height, next) != gpu::GpuImageStatus::ok) {
         return false;
     }
+    const bool replaced = image.is_valid();
     image = std::move(next);
+    // 놓은 텍스처는 제출해야 드라이버가 돌려줍니다(`gpu_image_pool.cpp` 의 release_images).
+    if (replaced) {
+        (void)device.flush_released_resources();
+    }
     return true;
 }
 
@@ -404,8 +409,6 @@ bool GpuAccelerator::apply_mip_halve_levels(
             return false;
         }
     }
-    gpu::GpuWorkingImage* scratch[2] = {&state_->mip_a, &state_->mip_b};
-    int scratch_index = 0;
     std::uint32_t current_width = width;
     std::uint32_t current_height = height;
     int steps = 0;
@@ -413,9 +416,12 @@ bool GpuAccelerator::apply_mip_halve_levels(
         if (current_width < 2U || current_height < 2U) {
             break;
         }
+        if (static_cast<std::size_t>(step) >= state_->mip_levels.size()) {
+            return false;
+        }
         const std::uint32_t child_width = std::max(1U, current_width / 2U);
         const std::uint32_t child_height = std::max(1U, current_height / 2U);
-        gpu::GpuWorkingImage& dest = *scratch[scratch_index];
+        gpu::GpuWorkingImage& dest = state_->mip_levels[static_cast<std::size_t>(step)];
         if (!ensure_mip_image(state_->device, dest, child_width, child_height)) {
             return false;
         }
@@ -426,7 +432,6 @@ bool GpuAccelerator::apply_mip_halve_levels(
         current = &dest;
         current_width = child_width;
         current_height = child_height;
-        scratch_index ^= 1;
         ++steps;
     }
     if (steps == 0) {
