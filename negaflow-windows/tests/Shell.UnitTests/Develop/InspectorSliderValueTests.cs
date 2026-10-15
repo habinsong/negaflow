@@ -49,8 +49,9 @@ internal static class InspectorSliderValueTests
             roundTrips &= Math.Abs(InspectorSliderValue.ValueFromPosition(position, 4.0, exponent) - value) < 1e-9;
         }
         Check(roundTrips, "white_balance_position_scale_round_trips");
+        // 같은 ±4 범위의 선형 눈금(위치 0.1 → 0.4)보다 가운데에서 값이 덜 움직여야 한다.
         Check(
-            InspectorSliderValue.ValueFromPosition(0.1, 4.0, exponent) < 0.1,
+            InspectorSliderValue.ValueFromPosition(0.1, 4.0, exponent) < 0.1 * 4.0,
             "white_balance_position_scale_is_finer_near_center");
     }
 }

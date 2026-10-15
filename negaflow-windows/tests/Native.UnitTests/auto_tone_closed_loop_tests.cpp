@@ -165,7 +165,8 @@ void test_refinement_absorbs_a_user_curve() {
                refined.highlights == first.highlights && refined.shadows == first.shadows &&
                refined.blacks == first.blacks && refined.vibrance == first.vibrance,
            "refinement only touches exposure and whites");
-    if (std::getenv("NEGAFLOW_AUTO_TONE_TRACE") != nullptr) {
+    std::size_t trace_length = 0U;
+    if (getenv_s(&trace_length, nullptr, 0U, "NEGAFLOW_AUTO_TONE_TRACE") == 0 && trace_length > 0U) {
         std::cout << "first ev " << first.exposure << " whites " << first.whites << " | refined ev "
                   << refined.exposure << " whites " << refined.whites << " | p995 curve "
                   << p995_bin(with_curve) << " after " << p995_bin(after) << " target " << target << '\n';
