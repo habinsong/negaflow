@@ -70,6 +70,9 @@ public sealed partial class DevelopAdjustmentStack : UserControl
             AutoToneResetClicked?.Invoke(this, EventArgs.Empty);
         QuickActions.AutoWhiteBalanceResetClicked += (_, _) =>
             AutoWhiteBalanceResetClicked?.Invoke(this, EventArgs.Empty);
+        // macOS 중립 스포이드 캡슐의 되돌리기도 같은 resetAutoWhiteBalance 입니다.
+        Color.WhiteBalanceResetRequested += (_, _) =>
+            AutoWhiteBalanceResetClicked?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>디버그 오버레이나 단계가 바뀌었습니다. 미리보기를 다시 그려야 합니다.</summary>

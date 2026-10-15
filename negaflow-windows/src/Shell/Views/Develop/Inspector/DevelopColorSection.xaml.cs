@@ -38,6 +38,9 @@ public sealed partial class DevelopColorSection : UserControl
 
     public event EventHandler? NeutralPickerModeChanged;
 
+    /// <summary>중립 스포이드 캡슐의 되돌리기입니다(macOS <c>resetAutoWhiteBalance</c>).</summary>
+    public event EventHandler? WhiteBalanceResetRequested;
+
     public void CancelNeutralPicker()
     {
         if (!IsNeutralPickerActive)
@@ -72,6 +75,9 @@ public sealed partial class DevelopColorSection : UserControl
         string pickHelp = AppResources.Get("developPickNeutralHelp", "Value");
         AutomationProperties.SetName(NeutralPickerButton, pickHelp);
         ToolTipService.SetToolTip(NeutralPickerButton, pickHelp);
+        string reset = AppResources.Get("developReset", "Value");
+        AutomationProperties.SetName(NeutralPickerResetButton, reset);
+        ToolTipService.SetToolTip(NeutralPickerResetButton, reset);
         ApplyNeutralPickerVisual();
     }
 
@@ -125,6 +131,13 @@ public sealed partial class DevelopColorSection : UserControl
         IsNeutralPickerActive = !IsNeutralPickerActive;
         ApplyNeutralPickerVisual();
         NeutralPickerModeChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnNeutralPickerResetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        WhiteBalanceResetRequested?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>베이스 스포이드 캡슐과 같은 강조(<c>DevelopBaseCard.ApplyBasePickerVisual</c>)입니다.</summary>
