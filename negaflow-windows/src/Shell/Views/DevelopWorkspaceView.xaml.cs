@@ -112,6 +112,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 ExitCanvasToolsForBasePicker();
             }
             PreviewCanvas.ShowNeutralPickerPrompt(Adjustments.Color.IsNeutralPickerActive);
+            // macOS 는 중립 스포이드도 `basePickerMode` 라 평판 프레임 사각형이 곧바로 숨습니다.
+            // 베이스 스포이드처럼 미리보기를 다시 그리지 않으므로 여기서 다시 판정합니다.
+            SyncFlatbedOverlay();
         };
         BaseCard.ManualBaseResetRequested += (_, _) => ResetManualBase();
         PreviewCanvas.TryHandlePointerMoved = args =>
