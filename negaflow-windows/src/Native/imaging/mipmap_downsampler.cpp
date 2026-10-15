@@ -84,15 +84,18 @@ struct Level final {
     };
 }
 
-}  // namespace
-
-DownsampledProxy downsample_for_statistics(
+// `region` 은 원본 위의 측정 사각형입니다. 전체 화상이면 (0, 0, 폭, 높이) 이고, 그때 식은
+// 사각형을 쓰기 전과 비트 단위로 같습니다(오프셋 항이 정확히 0 입니다).
+[[nodiscard]] DownsampledProxy downsample(
     const negaflow::core::ConstImageView source,
+    const AnalysisPixelRect region,
+    const bool is_region,
     const std::uint32_t target_width,
     const std::uint32_t target_height) {
     DownsampledProxy proxy{};
     if (source.pixels == nullptr || source.width == 0U || source.height == 0U ||
-        target_width == 0U || target_height == 0U) {
+        target_width == 0U || target_height == 0U || region.width == 0U ||
+        region.height == 0U) {
         return proxy;
     }
     proxy.width = target_width;
@@ -101,7 +104,7 @@ DownsampledProxy downsample_for_statistics(
 
     // 고를 밉맵 단계. 축소가 아니면 0 단계(원본)에서 바로 뽑는다.
     const double ratio =
-        static_cast<double>(source.width) / static_cast<double>(target_width);
+        static_cast<double>(region.width) / static_cast<double>(target_width);
     const int wanted = ratio > 1.0 ? static_cast<int>(std::floor(std::log2(ratio))) : 0;
 
     std::vector<Level> levels;
@@ -159,6 +162,13 @@ DownsampledProxy downsample_for_statistics(
         }
     }
 
+    if (!used_gpu && is_region && approximate_acceleration_allowed()) {
+        // 부분 측정은 호스트에서 읽습니다. 화상이 GPU 에 머물러 있으면 그 전에 내립니다.
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->resident_flush != nullptr) {
+            table->resident_flush(reinterpret_cast<const float*>(source.pixels));
+        }
+    }
     if (!used_gpu) {
         for (int step = 0; step < wanted; ++step) {
             if (current_width < 2U || current_height < 2U) {
@@ -178,21 +188,23 @@ DownsampledProxy downsample_for_statistics(
     // 잘립니다. 종전 코드는 target_height로 v를 다시 정규화해 전체 높이를 늘였고, 그 한 칸
     // 미만의 위상 오차가 얇은 필름 베이스 성분을 살려 Dmin과 장면 대비를 바꿨습니다.
     const double uniform_scale =
-        static_cast<double>(target_width) / static_cast<double>(source.width);
+        static_cast<double>(target_width) / static_cast<double>(region.width);
     const double level_factor = std::ldexp(1.0, applied_levels);
     const double effective_scale = uniform_scale * level_factor;
     const double source_height_remainder =
-        static_cast<double>(source.height) -
+        static_cast<double>(region.height) -
         (static_cast<double>(target_height) / uniform_scale);
     const double current_top_crop = source_height_remainder / level_factor;
+    const double region_left = static_cast<double>(region.x) / level_factor;
+    const double region_top = static_cast<double>(region.y) / level_factor;
 
     for (std::uint32_t y = 0U; y < target_height; ++y) {
         const double source_y =
             ((static_cast<double>(y) + 0.5) / effective_scale) - 0.5 +
-            current_top_crop;
+            current_top_crop + region_top;
         for (std::uint32_t x = 0U; x < target_width; ++x) {
             const double source_x =
-                ((static_cast<double>(x) + 0.5) / effective_scale) - 0.5;
+                ((static_cast<double>(x) + 0.5) / effective_scale) - 0.5 + region_left;
             proxy.pixels[(static_cast<std::size_t>(y) * target_width) + x] =
                 bilinear_at(
                     current,
@@ -204,6 +216,28 @@ DownsampledProxy downsample_for_statistics(
         }
     }
     return proxy;
+}
+
+}  // namespace
+
+DownsampledProxy downsample_for_statistics(
+    const negaflow::core::ConstImageView source,
+    const std::uint32_t target_width,
+    const std::uint32_t target_height) {
+    return downsample(
+        source, AnalysisPixelRect{0U, 0U, source.width, source.height}, false,
+        target_width, target_height);
+}
+
+DownsampledProxy downsample_region_for_statistics(
+    const negaflow::core::ConstImageView source,
+    const AnalysisPixelRect& rect,
+    const std::uint32_t target_width,
+    const std::uint32_t target_height) {
+    if (rect.x + rect.width > source.width || rect.y + rect.height > source.height) {
+        return {};
+    }
+    return downsample(source, rect, true, target_width, target_height);
 }
 
 }  // namespace negaflow::imaging

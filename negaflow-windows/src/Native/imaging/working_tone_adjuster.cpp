@@ -46,6 +46,8 @@ void discard_pixels(WorkingImage& image) noexcept {
 bool valid_working_tone_adjust_parameters(
     const WorkingToneAdjustParameters& parameters) noexcept {
     return finite_in_range(parameters.exposure_stops, maximum_exposure_stops) &&
+           std::isfinite(parameters.exposure_headroom_stops) &&
+           parameters.exposure_headroom_stops > 0.0F &&
            finite_in_range(parameters.basic.contrast, maximum_tone_control) &&
            finite_in_range(parameters.basic.density, maximum_tone_control) &&
            finite_in_range(parameters.basic.highlights, maximum_tone_control) &&
@@ -106,7 +108,8 @@ WorkingToneAdjustResult apply_working_tone_adjustments(
         result.info.kernel_status = negaflow::core::apply_exposure(
             const_view(result.image),
             mutable_view(result.image),
-            parameters.exposure_stops);
+            parameters.exposure_stops,
+            parameters.exposure_headroom_stops);
         if (result.info.kernel_status != negaflow::core::KernelStatus::ok) {
             result.status = WorkingToneAdjustStatus::kernel_failed;
             discard_pixels(result.image);
@@ -129,8 +132,12 @@ WorkingToneAdjustResult apply_working_tone_adjustments(
     }
 
     if (curve_changes) {
+        // 크롭한 사진 영역이 있으면 대역을 그 안에서 잽니다(macOS `applyToneCurves(region:)`).
+        const negaflow::core::ConstImageView full = const_view(result.image);
+        const std::optional<AnalysisPixelRect> rect = analysis_measurement_rect(
+            parameters.analysis_region, full.width, full.height);
         result.info.measurement = measure_parametric_tone_curve_bands(
-            const_view(result.image),
+            rect ? analysis_subview(full, *rect) : full,
             measurement_limits);
         if (result.info.measurement.status != ToneCurveMeasurementStatus::ok) {
             result.info.kernel_status = result.info.measurement.kernel_status;

@@ -3,6 +3,7 @@
 #include "vibrance_math.h"
 
 #include "negaflow/imaging/kernel_accelerator.h"
+#include "negaflow/imaging/white_balance.h"
 
 #include "negaflow/core/pointwise.h"
 
@@ -53,6 +54,21 @@ struct Rgb final {
         if (!std::isfinite(value)) {
             return negaflow::core::KernelStatus::non_finite_parameter;
         }
+    }
+    // 온도·틴트만 ±4(로그 연장 구간), 나머지는 ±1 입니다.
+    for (const float value : {parameters.warmth, parameters.tint}) {
+        if (std::abs(value) > maximum_white_balance_control) {
+            return negaflow::core::KernelStatus::invalid_parameter;
+        }
+    }
+    for (const float value : {
+             parameters.color_depth,
+             parameters.vibrance,
+             parameters.saturation,
+             parameters.red_primary,
+             parameters.green_primary,
+             parameters.blue_primary,
+         }) {
         if (value < -1.0F || value > 1.0F) {
             return negaflow::core::KernelStatus::invalid_parameter;
         }
@@ -62,17 +78,12 @@ struct Rgb final {
 
 [[nodiscard]] Rgb apply_pixel(
     Rgb color,
-    const ColorModelParameters& parameters) noexcept {
-    if (std::abs(parameters.warmth) > identity_threshold) {
-        color.red *= 1.0F + (parameters.warmth * 0.18F);
-        color.green *= 1.0F + (parameters.warmth * 0.03F);
-        color.blue *= 1.0F - (parameters.warmth * 0.18F);
-    }
-    if (std::abs(parameters.tint) > identity_threshold) {
-        const float red_blue = 1.0F - (parameters.tint * 0.12F);
-        color.red *= red_blue;
-        color.green *= 1.0F + (parameters.tint * 0.24F);
-        color.blue *= red_blue;
+    const ColorModelParameters& parameters,
+    const WhiteBalanceGains& white_balance) noexcept {
+    if (white_balance.active) {
+        color.red *= white_balance.red;
+        color.green *= white_balance.green;
+        color.blue *= white_balance.blue;
     }
     if (std::abs(parameters.color_depth) > identity_threshold) {
         color = apply_saturation(
@@ -166,12 +177,15 @@ negaflow::core::KernelStatus apply_color_model(
             }
         }
     }
+    // 게인은 호출마다 한 번만 계산합니다(로그·지수는 화소 루프 밖).
+    const WhiteBalanceGains white_balance =
+        white_balance_gains(parameters.warmth, parameters.tint);
     return negaflow::core::transform_validated_pointwise(
         input,
         output,
-        [active, &parameters](const negaflow::core::Rgba32F source) noexcept {
+        [active, &parameters, white_balance](const negaflow::core::Rgba32F source) noexcept {
             const Rgb color = active
-                ? apply_pixel({source.red, source.green, source.blue}, parameters)
+                ? apply_pixel({source.red, source.green, source.blue}, parameters, white_balance)
                 : Rgb{source.red, source.green, source.blue};
             return negaflow::core::Rgba32F{
                 color.red,

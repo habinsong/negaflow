@@ -1,5 +1,6 @@
 #pragma once
 
+#include "negaflow/core/negative_inversion.h"
 #include "negaflow/core/parallel_rows.h"
 #include "negaflow/core/pixel.h"
 
@@ -125,10 +126,45 @@ struct ColorMatrix3x4 final {
     }
 };
 
+// 노출 + 쪽 숄더 — macOS `ExposureShoulder` 와 같은 식입니다. 무릎은 컬러 마스터의 확산
+// 화이트(측정 최농부 출력 0.70), 헤드룸은 log2(1 / 필름 화이트)입니다(컬러 0.515, 흑백 0.234).
+// 무릎 아래는 정확히 2^stops, 그 위 휘도는 1.0 에 점근하는 지수 숄더로 접고 RGB 는 휘도 비로
+// 함께 늘려 색비를 지킵니다. stops <= 0 은 숄더 없이 순수 선형 곱입니다.
+// log2(1 / 0.70). 집합 초기화 기본값으로 쓰려고 상수로 둡니다 — 계산값과 같은지 단위 시험이 묶습니다.
+inline constexpr float color_exposure_headroom_stops = 0.514573173F;
+
+[[nodiscard]] inline double exposure_headroom_stops(const bool black_and_white_negative) noexcept {
+    const PrintResponse response = black_and_white_negative
+                                       ? black_and_white_negative_print_response()
+                                       : color_negative_print_response();
+    return std::log2(1.0 / static_cast<double>(response.white_output));
+}
+
+[[nodiscard]] inline float exposure_shoulder_knee() noexcept {
+    return color_negative_print_response().white_output;
+}
+
+[[nodiscard]] inline float exposure_shoulder_blend(
+    const float stops,
+    const float headroom_stops) noexcept {
+    if (!(stops > 0.0F) || !(headroom_stops > 0.0F)) {
+        return 0.0F;
+    }
+    return static_cast<float>(std::clamp(
+        static_cast<double>(stops) / static_cast<double>(headroom_stops), 0.0, 1.0));
+}
+
+// CPU 참조 — 휘도 하나의 노출 결과. 자동 톤의 순방향 모델이 공유합니다.
+[[nodiscard]] double exposed_luminance(
+    double luminance,
+    double stops,
+    double headroom_stops) noexcept;
+
 [[nodiscard]] KernelStatus apply_exposure(
     ConstImageView input,
     ImageView output,
-    float stops) noexcept;
+    float stops,
+    float headroom_stops = color_exposure_headroom_stops) noexcept;
 
 [[nodiscard]] KernelStatus apply_color_matrix(
     ConstImageView input,

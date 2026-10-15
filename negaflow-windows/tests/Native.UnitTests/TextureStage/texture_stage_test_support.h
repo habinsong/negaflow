@@ -65,16 +65,14 @@ void expect_coreimage_close(
     const negaflow::imaging::WorkingImage& expected,
     const char* message);
 
-[[nodiscard]] negaflow::imaging::WorkingImage mixed(
-    const negaflow::imaging::WorkingImage& source,
-    const negaflow::imaging::WorkingImage& blurred,
-    float amount);
-
 // 조작 계약: 항등·잘못된 값·그레인·디테일·헐레이션·비네트·출력 샤프닝.
 void test_identity_and_invalid_controls();
 void test_grain_and_detail_controls();
 void test_halation_and_vignette();
 void test_output_sharpening();
+
+// 선명도·부분 대비 계약(macOS `DetailEnhancementTests` 와 같은 픽스처).
+void test_detail_enhancement();
 
 // golden 대조: macOS CoreImage 필터와 화소로 맞춥니다.
 void test_coreimage_filter_goldens(const std::filesystem::path& golden_root);

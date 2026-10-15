@@ -1,6 +1,7 @@
 #pragma once
 
 #include "negaflow/core/pixel.h"
+#include "negaflow/imaging/analysis_region.h"
 #include "negaflow/imaging/muted_scene_vibrance.h"
 #include "negaflow/imaging/scanner_to_working.h"
 
@@ -30,11 +31,15 @@ inline constexpr float maximum_manual_dmin = 1.0F;
 struct ManualNegativeDevelopParameters final {
     std::array<float, 3> dmin;
     NegativeFilmType film_type{NegativeFilmType::color};
-    // Film base mode keeps the scene-derived overall density scale while anchoring
-    // the channel ratio to the selected stock's Dmax curve.
+    // Film base mode = the auto path's measured per-channel density range times the selected
+    // stock's relative range factor (`FilmStockBasePreset::range_factor`, geometric mean 1). The
+    // datasheet's Status M ratio itself does not transfer to scanner channels — replacing the
+    // measured ratio with it turned every stock blue (macOS 2026-10-15 measurement).
     bool use_preset_response{false};
-    std::array<float, 3> preset_dmax_normalized{};
+    std::array<float, 3> preset_range_factor{};
     std::optional<std::array<float, 3>> input_gamma_reference_range{};
+    // 크롭한 사진 영역(원본 정규 좌표). 있으면 장면 밀도 범위와 뮤트 채도를 그 안에서만 잽니다.
+    std::optional<AnalysisRegion> analysis_region{};
 };
 
 struct ManualNegativeDevelopInfo final {

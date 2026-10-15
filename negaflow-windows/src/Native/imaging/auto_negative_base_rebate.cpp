@@ -237,6 +237,36 @@ double brighter_than_base_fraction(
     return static_cast<double>(brighter) / static_cast<double>(grid.lumas.size());
 }
 
+double contradicting_fraction(
+    const SampleGrid& grid,
+    const std::array<float, 3>& dmin,
+    const NegativeFilmType film_type,
+    const AnalysisRegion* interior_of,
+    const std::vector<bool>* excluded) noexcept {
+    const negaflow::core::Rgba32F base{dmin[0], dmin[1], dmin[2], 1.0F};
+    if (!film_base_detail::finite_rgb(base)) {
+        return 1.0;
+    }
+    const double ceiling = luma_of(base) * 1.15;
+    std::size_t counted = 0U;
+    std::size_t brighter = 0U;
+    for (std::uint32_t y = 0U; y < grid.height; ++y) {
+        for (std::uint32_t x = 0U; x < grid.width; ++x) {
+            const std::size_t index = static_cast<std::size_t>(y) * grid.width + x;
+            if ((interior_of != nullptr && !film_base_detail::is_interior(grid, *interior_of, x, y)) ||
+                (excluded != nullptr && (*excluded)[index])) {
+                continue;
+            }
+            ++counted;
+            if (grid.lumas[index] > ceiling &&
+                film_base_detail::is_component_candidate(grid.pixels[index], film_type)) {
+                ++brighter;
+            }
+        }
+    }
+    return counted > 0U ? static_cast<double>(brighter) / static_cast<double>(counted) : 0.0;
+}
+
 std::optional<BaseMeasurement> rebate_base(
     const WorkingImage& image,
     const SampleGrid& grid,

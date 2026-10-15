@@ -3,8 +3,9 @@ using Negaflow.Catalog;
 namespace Negaflow.Shell.Develop;
 
 /// <summary>
-/// macOS <c>DevelopInspectorResetter</c>. 모든 보정 초기화는 슬라이더·룩만 되돌리고
-/// 베이스와 기하(<c>imageTransform</c>)는 건드리지 않습니다.
+/// macOS <c>DevelopInspectorResetter</c>. 모든 보정 초기화는 슬라이더·룩과 크롭·수평 각도를
+/// 되돌립니다(라이트룸 초기화와 같습니다 — 크롭이 남으면 초기화 뒤에도 크롭 바깥 띠로 베이스를
+/// 재는 등 결과가 초기 상태와 달랐습니다, 2026-10-15). 베이스와 필름 방향(90° 회전·뒤집기)은 둡니다.
 /// </summary>
 internal static class DevelopInspectorResetter
 {
@@ -35,6 +36,8 @@ internal static class DevelopInspectorResetter
             Texture: TextureRecipe.Identity,
             NoiseReduction: NoiseReductionRecipe.Identity,
             BwToning: BwToningRecipe.None,
-            LookPreset: new LookPresetSelection(neutralPresetId)) { InputGamma = InputGammaInterpretation.Automatic };
+            LookPreset: new LookPresetSelection(neutralPresetId),
+            ImageTransform: frame.ImageTransform with { Crop = null, CropAspect = null, StraightenAngle = 0.0 })
+        { InputGamma = InputGammaInterpretation.Automatic };
     }
 }

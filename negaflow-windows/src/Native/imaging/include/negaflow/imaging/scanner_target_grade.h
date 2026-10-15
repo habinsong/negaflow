@@ -1,9 +1,11 @@
 #pragma once
 
 #include "negaflow/core/pixel.h"
+#include "negaflow/imaging/analysis_region.h"
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string_view>
 
 namespace negaflow::imaging {
@@ -51,6 +53,8 @@ struct ScannerTargetGradeSetup final {
     float strength{0.0F};
     float chroma_keep{0.0F};
     bool monochrome{false};
+    // 세기·평탄 장면 감쇠 전의 색 밀도입니다. 셰이더가 `strength × chroma_keep` 을 곱합니다.
+    float color_density{0.0F};
 };
 
 // NORITSU 장치 질감(감마 도메인 luminance USM)의 값들입니다.
@@ -81,13 +85,15 @@ struct ScannerTargetTextureSetup final {
 // the matched NORITSU/SP-3000 relative signature in gamma-domain tone and Lab
 // color, then the NORITSU-only bounded luminance texture. Positive sources use
 // half documented strength and monochrome sources retain only tone and texture.
+// `region` 이 있으면 장면 기준값(대비 가중치·중앙값)을 크롭한 사진 영역 안에서 잽니다.
 [[nodiscard]] negaflow::core::KernelStatus apply_scanner_target_grade(
     negaflow::core::ImageView image,
     ScannerTargetStyle target,
     bool monochrome,
     bool positive,
     std::wstring_view scanner_profile_id,
-    ScannerTargetGradeInfo& info) noexcept;
+    ScannerTargetGradeInfo& info,
+    const std::optional<AnalysisRegion>& region = std::nullopt) noexcept;
 
 // 이 단계가 GPU 로 갔는지 CPU 로 물러났는지 셉니다.
 //

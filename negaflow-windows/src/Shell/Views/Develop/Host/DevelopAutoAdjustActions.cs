@@ -108,14 +108,14 @@ internal sealed class DevelopAutoAdjustActions
             return;
         }
 
-        view.Adjustments.SetAutoAdjustEnabled(false);
         view.Adjustments.SetAutoAdjustStatus(string.Empty);
         Action<AutoAdjustOutcome> completed = outcome =>
         {
             try
             {
+                // 같은 사진인지는 id 로 봅니다 — 먼저 끝난 다른 자동 보정이 값을 바꿨어도 같은 사진입니다.
                 if (outcome.Kind == DevelopExportOutcomeKind.Completed && outcome.Settings is not null &&
-                    view.panel?.SelectedFrame == frame)
+                    view.panel?.SelectedFrame?.Id == frame.Id)
                 {
                     LibraryFrameError error = operation == AutoAdjustOperation.Tone
                         ? view.panel.Tone.ApplyAutoTone(outcome.Settings)
@@ -143,9 +143,12 @@ internal sealed class DevelopAutoAdjustActions
             view.SyncToneControls();
         };
 
+        // 시작할 때 지금 프레임(같은 사진)을 읽습니다 — 앞서 누른 다른 자동 보정의 결과 위에서 잽니다.
+        LibraryFrameSnapshot? Current() =>
+            view.panel?.SelectedFrame is { } current && current.Id == frame.Id ? current : null;
         bool delivered = operation == AutoAdjustOperation.Tone
-            ? await view.autoAdjustCoordinator.RunToneAsync(frame, completed)
-            : await view.autoAdjustCoordinator.RunWhiteBalanceAsync(frame, completed);
+            ? await view.autoAdjustCoordinator.RunToneAsync(Current, completed)
+            : await view.autoAdjustCoordinator.RunWhiteBalanceAsync(Current, completed);
         if (!delivered)
         {
             view.Adjustments.SetAutoAdjustStatus(AppResources.Get("developAutoAdjustFailed", "Text"));

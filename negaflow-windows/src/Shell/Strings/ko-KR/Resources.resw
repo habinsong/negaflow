@@ -1308,6 +1308,11 @@
   <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>미노광 필름 베이스(사진 사이/가장자리)를 클릭하세요 · Esc 취소</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
   <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>그 자리는 필름 베이스가 아닙니다. 사진 사이나 가장자리의 미노광 베이스를 클릭하세요.</value></data>
   <data name="developBasePickFailed.Text" xml:space="preserve"><value>원본을 읽지 못해 베이스를 집지 못했습니다.</value></data>
+  <data name="developPickNeutral.Text" xml:space="preserve"><value>중립 스포이드</value><comment>AppLocalizedPhrase.pickNeutral</comment></data>
+  <data name="developPickNeutralHelp.Value" xml:space="preserve"><value>사진에서 회색이나 흰색이어야 할 곳을 클릭해 색온도·틴트를 맞춥니다.</value><comment>AppLocalizedPhrase.pickNeutralHelp</comment></data>
+  <data name="developNeutralPickerPrompt.Text" xml:space="preserve"><value>회색이나 흰색이어야 할 곳을 클릭하세요 · Esc 취소</value><comment>AppLocalizedPhrase.neutralPickerOverlayPrompt</comment></data>
+  <data name="developNeutralPickFailed.Text" xml:space="preserve"><value>중립을 잴 수 없는 지점입니다 — 너무 어둡거나 밝은 곳은 피해 주세요</value><comment>AppLocalizedPhrase.neutralPickFailed</comment></data>
+  <data name="developNeutralPickedFormat.Text" xml:space="preserve"><value>중립 스포이드: 색온도 %.2f · 틴트 %.2f</value><comment>AppLocalizedPhrase.neutralPickedFormat</comment></data>
   <data name="canvasZoomOut.Text" xml:space="preserve"><value>축소</value><comment>AppLocalizedPhrase.zoomOut</comment></data>
   <data name="canvasZoomIn.Text" xml:space="preserve"><value>확대</value><comment>AppLocalizedPhrase.zoomIn</comment></data>
   <data name="canvasZoomPercentHelp.Text" xml:space="preserve"><value>확대율 입력</value><comment>AppLocalizedPhrase.zoomPercentHelp</comment></data>
@@ -1338,7 +1343,7 @@
   <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>빠른 시작</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>단축키</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>사진 각도 초기화</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
-  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>편집(회전/크롭)을 제외한 모든 보정 값을 초기화합니다.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
+  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>크롭·각도를 포함한 모든 보정 값을 초기화합니다. 회전·뒤집기는 유지합니다.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
   <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>시스템 디스플레이 프로파일</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
   <data name="developAutoToneHelp.Text" xml:space="preserve"><value>자동 톤 Command-U — 히스토그램으로 노출, 대비, 밝은 영역, 어두운 영역, 흰색 계열, 검정 계열, 생동감을 보정합니다.</value><comment>AppLocalizedPhrase.autoToneHelp</comment></data>
   <data name="developAutoWhiteBalanceHelp.Text" xml:space="preserve"><value>자동 화이트 밸런스 Shift-Command-U — 그레이 월드 방식으로 색온도와 틴트를 중립화합니다.</value><comment>AppLocalizedPhrase.autoWhiteBalanceHelp</comment></data>

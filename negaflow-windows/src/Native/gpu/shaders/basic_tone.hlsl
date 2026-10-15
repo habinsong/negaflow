@@ -82,10 +82,5 @@ void BasicToneMain(uint3 id : SV_DispatchThreadID) {
     target += clamp(BlacksAmount, -2.0, 2.0) * 0.06 * blackMask;
 
     float newLuma = SrgbEncodedToLinear(clamp(target, 0.0, 1.0));
-    float delta = newLuma - sourceLuma;
-    Destination[coordinate] = float4(
-        clamp(safeRgb.r + delta, 0.0, 1.0),
-        clamp(safeRgb.g + delta, 0.0, 1.0),
-        clamp(safeRgb.b + delta, 0.0, 1.0),
-        source.a);
+    Destination[coordinate] = float4(WithLuma(safeRgb, sourceLuma, newLuma), source.a);
 }

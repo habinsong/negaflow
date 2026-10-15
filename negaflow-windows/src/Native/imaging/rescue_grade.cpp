@@ -140,7 +140,7 @@ struct NeutralBin final {
     return std::max(0.0, std::min(a1, b1) - std::max(a0, b0));
 }
 
-[[nodiscard]] SampleGrid sample_grid(const negaflow::core::ImageView image) {
+[[nodiscard]] SampleGrid sample_grid(const negaflow::core::ConstImageView image) {
     SampleGrid grid{};
     if (image.width <= 8U || image.height <= 8U) {
         return grid;
@@ -476,7 +476,8 @@ void apply_recovery(
 negaflow::core::KernelStatus apply_rescue_grade(
     const negaflow::core::ImageView image,
     const bool color_film,
-    RescueGradeInfo& info) noexcept {
+    RescueGradeInfo& info,
+    const std::optional<AnalysisRegion>& region) noexcept {
     info = {};
     const negaflow::core::KernelStatus view_status =
         negaflow::core::validate_image_view(image);
@@ -494,7 +495,12 @@ negaflow::core::KernelStatus apply_rescue_grade(
         return negaflow::core::KernelStatus::ok;
     }
     try {
-        const SampleGrid grid = sample_grid(image);
+        // 크롭한 사진 영역이 있으면 그 안만 잽니다(macOS `measurementImage`).
+        const std::optional<AnalysisPixelRect> rect =
+            analysis_measurement_rect(region, image.width, image.height);
+        const negaflow::core::ConstImageView full{
+            image.pixels, image.pixel_capacity, image.width, image.height, image.stride_pixels};
+        const SampleGrid grid = sample_grid(rect ? analysis_subview(full, *rect) : full);
         const std::vector<NeutralBin> bins = measure_recovery(grid, info);
         if (bins.empty()) {
             return negaflow::core::KernelStatus::ok;

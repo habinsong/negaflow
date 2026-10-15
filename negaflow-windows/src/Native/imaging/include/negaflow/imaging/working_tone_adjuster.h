@@ -1,6 +1,8 @@
 #pragma once
 
 #include "negaflow/core/pixel.h"
+#include "negaflow/core/pointwise.h"
+#include "negaflow/imaging/analysis_region.h"
 #include "negaflow/imaging/color_grading.h"
 #include "negaflow/imaging/color_mixer.h"
 #include "negaflow/imaging/point_curve.h"
@@ -10,6 +12,7 @@
 #include "negaflow/imaging/tone_mapping.h"
 
 #include <cstdint>
+#include <optional>
 
 namespace negaflow::imaging {
 
@@ -43,6 +46,11 @@ struct WorkingToneAdjustParameters final {
     ColorMixerParameters color_mixer{};
     ColorGradingParameters color_grading{};
     PrimaryCalibrationParameters primary_calibration{};
+    // + 노출 숄더의 헤드룸(log2(1 / 필름 화이트)). 현상 단계가 필름 종류로 채웁니다. 기존
+    // 위치 초기화(픽스처의 constexpr 집합 초기화)를 깨지 않도록 맨 뒤에 둡니다.
+    float exposure_headroom_stops{negaflow::core::color_exposure_headroom_stops};
+    // 크롭한 사진 영역(원본 정규 좌표). 있으면 파라메트릭 커브의 대역을 그 안에서 잽니다.
+    std::optional<AnalysisRegion> analysis_region{};
 };
 
 struct WorkingToneAdjustInfo final {

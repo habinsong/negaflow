@@ -23,12 +23,19 @@ struct SampleGrid final {
     std::vector<negaflow::core::Rgba32F> pixels{};
 };
 
-[[nodiscard]] SampleGrid sample_grid(const negaflow::core::ImageView image) {
+// `rect` 가 있으면 그 사각형(크롭한 사진 영역)을 원본처럼 나눕니다.
+[[nodiscard]] SampleGrid sample_grid(
+    const negaflow::core::ImageView image,
+    const std::optional<AnalysisPixelRect>& rect = std::nullopt) {
+    const std::uint32_t origin_x = rect ? rect->x : 0U;
+    const std::uint32_t origin_y = rect ? rect->y : 0U;
+    const std::uint32_t extent_width = rect ? rect->width : image.width;
+    const std::uint32_t extent_height = rect ? rect->height : image.height;
     SampleGrid grid{};
-    grid.width = std::min(160U, image.width);
+    grid.width = std::min(160U, extent_width);
     grid.height = std::max(
         1U, static_cast<std::uint32_t>(std::round(
-            static_cast<double>(image.height) * grid.width / image.width)));
+            static_cast<double>(extent_height) * grid.width / extent_width)));
     grid.rows = std::max(grid.height, 2U);
     grid.pixels.resize(static_cast<std::size_t>(grid.width) * grid.rows);
     // 화상이 GPU 에 머물러 있으면 호스트 화소는 낡았습니다. 거기서 같은 점을 뽑아 옵니다 -
@@ -39,19 +46,23 @@ struct SampleGrid final {
             reinterpret_cast<const float*>(image.pixels),
             image.width,
             image.height,
+            origin_x,
+            origin_y,
+            extent_width,
+            extent_height,
             grid.width,
             grid.height,
             reinterpret_cast<float*>(grid.pixels.data()))) {
         return grid;
     }
     for (std::uint32_t y = 0U; y < grid.rows; ++y) {
-        const std::uint32_t source_y = std::min(
-            image.height - 1U,
-            static_cast<std::uint32_t>((static_cast<std::uint64_t>(y) * image.height) / grid.height));
+        const std::uint32_t source_y = origin_y + std::min(
+            extent_height - 1U,
+            static_cast<std::uint32_t>((static_cast<std::uint64_t>(y) * extent_height) / grid.height));
         for (std::uint32_t x = 0U; x < grid.width; ++x) {
-            const std::uint32_t source_x = std::min(
-                image.width - 1U,
-                static_cast<std::uint32_t>((static_cast<std::uint64_t>(x) * image.width) / grid.width));
+            const std::uint32_t source_x = origin_x + std::min(
+                extent_width - 1U,
+                static_cast<std::uint32_t>((static_cast<std::uint64_t>(x) * extent_width) / grid.width));
             grid.pixels[static_cast<std::size_t>(y) * grid.width + x] =
                 image.pixels[static_cast<std::size_t>(source_y) * image.stride_pixels + source_x];
         }
@@ -99,13 +110,16 @@ bool measure_inset(
 
 [[nodiscard]] double scene_anchor_weight(
     const negaflow::core::ImageView image,
-    double& median) {
+    double& median,
+    const std::optional<AnalysisRegion>& region) {
     if (image.width <= 8U || image.height <= 8U) {
         median = 0.5;
         return 0.0;
     }
     // 두 안쪽 사각형은 같은 격자에서 잽니다. 격자 크기가 원본 치수로만 정해지기 때문입니다.
-    const SampleGrid grid = sample_grid(image);
+    // 크롭한 사진 영역이 있으면 그 안을 원본으로 봅니다(macOS `measurementImage`).
+    const SampleGrid grid = sample_grid(
+        image, analysis_measurement_rect(region, image.width, image.height));
     InsetStats outer{};
     if (!measure_grid_inset(grid, 0.06, outer)) {
         median = 0.5;

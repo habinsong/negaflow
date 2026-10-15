@@ -85,6 +85,77 @@ public static unsafe class NativeAutoAdjust
         uint width,
         uint height)
     {
+        uint strideBytes = CheckBitmap(pixels, width, height);
+        NativeAutoAdjustResultV1 raw = Empty();
+        uint status;
+        fixed (byte* buffer = pixels)
+        {
+            status = NativeAutoAdjustEntry.nf_auto_adjust_v1(buffer, width, height, strideBytes, &raw);
+        }
+        ThrowOnFailure(status, "nf_auto_adjust_v1");
+        return ToSettings(raw);
+    }
+
+    /// <summary>
+    /// <see cref="Compute(ReadOnlySpan{byte}, uint, uint)"/> 와 같되 필름 종류를 받습니다. 자동 톤은
+    /// 노출 뒤 백분위를 엔진과 같은 노출 숄더로 예측하는데, 숄더의 헤드룸이 흑백 네거티브만 다릅니다.
+    /// </summary>
+    public static AutoAdjustSettings Compute(
+        ReadOnlySpan<byte> pixels,
+        uint width,
+        uint height,
+        bool blackAndWhiteNegative)
+    {
+        uint strideBytes = CheckBitmap(pixels, width, height);
+        NativeAutoAdjustResultV1 raw = Empty();
+        uint status;
+        fixed (byte* buffer = pixels)
+        {
+            status = NativeAutoAdjustEntry.nf_auto_adjust_v2(
+                buffer, width, height, strideBytes, blackAndWhiteNegative ? 1U : 0U, &raw);
+        }
+        ThrowOnFailure(status, "nf_auto_adjust_v2");
+        return ToSettings(raw);
+    }
+
+    /// <summary>
+    /// 자동 톤 폐루프 한 번입니다. <paramref name="first"/> 를 프레임의 나머지 설정과 함께 실제로
+    /// 적용해 렌더한 비트맵을 넘기면, 노출(밝힌 경우만)과 화이트를 바로잡은 값을 돌려줍니다. 나머지
+    /// 값은 <paramref name="first"/> 그대로입니다.
+    /// </summary>
+    public static AutoAdjustSettings Refine(
+        ReadOnlySpan<byte> pixels,
+        uint width,
+        uint height,
+        bool blackAndWhiteNegative,
+        AutoAdjustSettings first)
+    {
+        ArgumentNullException.ThrowIfNull(first);
+        uint strideBytes = CheckBitmap(pixels, width, height);
+        NativeAutoAdjustResultV1 given = Empty();
+        given.Exposure = first.Exposure;
+        given.Contrast = first.Contrast;
+        given.Highlights = first.Highlights;
+        given.Shadows = first.Shadows;
+        given.Whites = first.Whites;
+        given.Blacks = first.Blacks;
+        given.Density = first.Density;
+        given.Vibrance = first.Vibrance;
+        given.Warmth = first.Warmth;
+        given.Tint = first.Tint;
+        NativeAutoAdjustResultV1 raw = Empty();
+        uint status;
+        fixed (byte* buffer = pixels)
+        {
+            status = NativeAutoAdjustEntry.nf_auto_tone_refine_v1(
+                buffer, width, height, strideBytes, blackAndWhiteNegative ? 1U : 0U, &given, &raw);
+        }
+        ThrowOnFailure(status, "nf_auto_tone_refine_v1");
+        return ToSettings(raw);
+    }
+
+    private static uint CheckBitmap(ReadOnlySpan<byte> pixels, uint width, uint height)
+    {
         ArgumentOutOfRangeException.ThrowIfZero(width);
         ArgumentOutOfRangeException.ThrowIfZero(height);
         uint strideBytes = checked(width * 4U);
@@ -94,30 +165,34 @@ public static unsafe class NativeAutoAdjust
                 "The bitmap is smaller than the stated dimensions.",
                 nameof(pixels));
         }
+        return strideBytes;
+    }
 
+    private static NativeAutoAdjustResultV1 Empty()
+    {
         NativeAutoAdjustResultV1 raw = default;
         raw.StructSize = (uint)sizeof(NativeAutoAdjustResultV1);
-        uint status;
-        fixed (byte* buffer = pixels)
-        {
-            status = NativeAutoAdjustEntry.nf_auto_adjust_v1(buffer, width, height, strideBytes, &raw);
-        }
+        return raw;
+    }
 
-        if (status != StatusOk)
+    private static void ThrowOnFailure(uint status, string entryPoint)
+    {
+        if (status == StatusOk)
         {
-            throw new NativeBootstrapException(
-                NativeBootstrapFailure.NativeCallFailed,
-                status switch
-                {
-                    StatusInvalidArgument =>
-                        "nf_auto_adjust_v1 rejected the bitmap as malformed.",
-                    StatusStructTooSmall =>
-                        "nf_auto_adjust_v1 rejected the struct size.",
-                    _ => $"nf_auto_adjust_v1 failed with status {status}.",
-                });
+            return;
         }
+        throw new NativeBootstrapException(
+            NativeBootstrapFailure.NativeCallFailed,
+            status switch
+            {
+                StatusInvalidArgument => $"{entryPoint} rejected the bitmap as malformed.",
+                StatusStructTooSmall => $"{entryPoint} rejected the struct size.",
+                _ => $"{entryPoint} failed with status {status}.",
+            });
+    }
 
-        return new AutoAdjustSettings(
+    private static AutoAdjustSettings ToSettings(NativeAutoAdjustResultV1 raw) =>
+        new(
             raw.Exposure,
             raw.Contrast,
             raw.Highlights,
@@ -128,5 +203,4 @@ public static unsafe class NativeAutoAdjust
             raw.Vibrance,
             raw.Warmth,
             raw.Tint);
-    }
 }

@@ -10,9 +10,9 @@ Texture2D<float4> Source : register(t0);
 RWStructuredBuffer<float4> Samples : register(u0);
 
 cbuffer PointSampleGridConstants : register(b0) {
-    // GpuPointwiseExtent — 16바이트.
+    // 표본할 사각형의 크기와 원점 — 16바이트. 크롭이 없으면 화상 전체, 원점 0 입니다.
     uint2 Extent;
-    float2 ExtentPad;
+    uint2 Origin;
     // 채울 격자 칸 수와, 자리를 정하는 나눗수입니다. CPU 판은 안쪽 사각형이 격자보다
     // 작은 극단 비율에서 나눗수보다 한 줄 아래를 읽으므로 둘을 나눠 받습니다.
     uint2 SampleExtent;
@@ -27,5 +27,5 @@ void PointSampleGridMain(uint3 id : SV_DispatchThreadID) {
     // CPU: min(width - 1, (x * width) / sample_width). 격자가 작아 32비트 곱이 넘치지 않습니다.
     uint x = min(Extent.x - 1u, (id.x * Extent.x) / Divisor.x);
     uint y = min(Extent.y - 1u, (id.y * Extent.y) / Divisor.y);
-    Samples[id.y * SampleExtent.x + id.x] = Source[uint2(x, y)];
+    Samples[id.y * SampleExtent.x + id.x] = Source[uint2(x, y) + Origin];
 }

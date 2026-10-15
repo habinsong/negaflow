@@ -10,6 +10,7 @@ int main(const int argc, char** argv) {
     test_grain_and_detail_controls();
     test_halation_and_vignette();
     test_output_sharpening();
+    test_detail_enhancement();
     expect(argc == 2, "texture-stage CTest receives the Core Image golden directory");
     if (argc == 2) {
         test_coreimage_filter_goldens(argv[1]);

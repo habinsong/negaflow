@@ -1,4 +1,5 @@
 #include "negaflow/imaging/scanner_profile_grade.h"
+#include "negaflow/color/srgb_transfer.h"
 
 #include "vibrance_math.h"
 
@@ -253,6 +254,10 @@ negaflow::core::KernelStatus apply_scanner_profile_grade(
     }
     info.profile_found = true;
 
+    // 그레이드의 모든 연산(감마·대비 피벗 0.5·톤 커브 점·틴트 마스크)은 프로파일 통계가 잰 sRGB
+    // 감마(표시) 도메인 값을 전제로 합니다. 예전엔 linear 작업공간에 그대로 걸어 대비 피벗 0.5
+    // (= 감마 0.73)가 암부를 통째로 눌렀습니다(macOS 2026-10-15 실측: 하위 10% 지점 29 → 6).
+    // macOS `ScannerProfileGrade.apply` 와 같이 인코딩해서 걸고 마지막에 linear 로 돌립니다.
     try {
         const ToneCurve curve = make_tone_curve(grade);
         std::vector<Rgb> scratch;
@@ -264,7 +269,10 @@ negaflow::core::KernelStatus apply_scanner_profile_grade(
                 auto& pixel = image.pixels[
                     static_cast<std::size_t>(y) * image.stride_pixels + x];
                 const Rgb result = point_grade(
-                    {pixel.red, pixel.green, pixel.blue}, grade, curve);
+                    {negaflow::color::linear_to_srgb_encoded(pixel.red),
+                     negaflow::color::linear_to_srgb_encoded(pixel.green),
+                     negaflow::color::linear_to_srgb_encoded(pixel.blue)},
+                    grade, curve);
                 pixel.red = result.red;
                 pixel.green = result.green;
                 pixel.blue = result.blue;
@@ -285,9 +293,9 @@ negaflow::core::KernelStatus apply_scanner_profile_grade(
                 !std::isfinite(pixel.blue)) {
                 return negaflow::core::KernelStatus::non_finite_output;
             }
-            pixel.red = std::clamp(pixel.red, 0.0F, 1.0F);
-            pixel.green = std::clamp(pixel.green, 0.0F, 1.0F);
-            pixel.blue = std::clamp(pixel.blue, 0.0F, 1.0F);
+            pixel.red = negaflow::color::srgb_encoded_to_linear(std::clamp(pixel.red, 0.0F, 1.0F));
+            pixel.green = negaflow::color::srgb_encoded_to_linear(std::clamp(pixel.green, 0.0F, 1.0F));
+            pixel.blue = negaflow::color::srgb_encoded_to_linear(std::clamp(pixel.blue, 0.0F, 1.0F));
         }
     }
     info.applied = true;

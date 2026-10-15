@@ -12,6 +12,30 @@ inline constexpr char texture_stage_algorithm_version[] =
     "chromabase-texture-stage-cpu-v1";
 inline constexpr float texture_stage_identity_threshold = 1.0e-3F;
 inline constexpr std::uint32_t texture_stage_tile_side = 512U;
+// SP 타겟이 사용자 부분 대비와 별개로 기본으로 얹는 부분 대비입니다(macOS
+// `ScannerTargetGrade.spLocalContrast`). 그레이드 단계가 아니라 여기서 걸어야 GPU 상주 사슬이
+// 그레이드에서 끊기지 않습니다 — 두 플랫폼 모두 질감 단계, 사용자 부분 대비 바로 앞입니다.
+inline constexpr float sp_target_local_contrast = 0.2F;
+
+// 부분 대비 한 번의 계획입니다(macOS `DetailEnhancement.localContrast`). CPU 판
+// (`detail_enhancement.cpp`)과 GPU 판(`gpu_local_contrast.cpp`)이 같은 값을 쓰도록 여기서만
+// 정합니다. 경계 보존 베이스는 `factor` 배로 줄인 해상도의 자기 안내 가이디드 필터입니다.
+inline constexpr float local_contrast_epsilon = 0.01F;
+inline constexpr float local_contrast_halo = 0.18F;
+
+struct LocalContrastPlan final {
+    std::uint32_t factor{1U};
+    std::uint32_t low_width{0U};
+    std::uint32_t low_height{0U};
+    // 축소 평면의 가우시안 시그마(Core Image 의미).
+    float low_sigma{0.0F};
+    float amount{0.0F};
+};
+
+[[nodiscard]] LocalContrastPlan plan_local_contrast(
+    std::uint32_t width,
+    std::uint32_t height,
+    float clarity) noexcept;
 
 struct TextureStageParameters final {
     float grain{0.0F};
@@ -19,6 +43,8 @@ struct TextureStageParameters final {
     float halation{0.0F};
     float clarity{0.0F};
     float vignette{0.0F};
+    // 현상 타겟이 기본으로 얹는 부분 대비(0…1). 사용자 `clarity` 앞에 따로 겁니다.
+    float target_clarity{0.0F};
 };
 
 enum class TextureStageStatus : std::uint8_t {

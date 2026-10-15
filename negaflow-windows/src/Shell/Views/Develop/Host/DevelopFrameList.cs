@@ -321,6 +321,7 @@ internal sealed class DevelopFrameList
     private void RebindPerFrameCanvasTools()
     {
         view.BaseCard.CancelBasePicker();
+        view.Adjustments.Color.CancelNeutralPicker();
         if (view.previewCoordinator is not null)
         {
             view.previewCoordinator.UninvertedSource =

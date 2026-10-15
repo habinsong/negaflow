@@ -37,52 +37,9 @@ void test_coreimage_filter_goldens(const std::filesystem::path& golden_root) {
             "Core Image Gaussian radius follows the macOS golden");
     }
 
-    struct ClarityCase final {
-        float clarity;
-        const wchar_t* file;
-    };
-    constexpr ClarityCase clarity_cases[]{
-        {0.01F, L"ciunsharpmask-clarity-0.01-256x256.f32"},
-        {0.50F, L"ciunsharpmask-clarity-0.50-256x256.f32"},
-        {1.00F, L"ciunsharpmask-clarity-1.00-256x256.f32"},
-    };
-    for (const ClarityCase& entry : clarity_cases) {
-        negaflow::imaging::TextureStageParameters parameters{};
-        parameters.clarity = entry.clarity;
-        const auto actual = negaflow::imaging::apply_texture_stage(input, parameters);
-        const auto expected = load_rgba_f32(golden_root / entry.file);
-        expect(actual.status == negaflow::imaging::TextureStageStatus::ok,
-               "positive clarity execution succeeds");
-        expect_coreimage_close(
-            actual.image,
-            expected,
-            "positive clarity follows the Core Image unsharp golden");
-    }
-
-    struct NegativeClarityCase final {
-        float clarity;
-        float dissolve_amount;
-        const wchar_t* blur_file;
-    };
-    constexpr NegativeClarityCase negative_clarity_cases[]{
-        {-0.50F, 0.40F, L"cigaussianblur-clarity-0.50-radius7.0-256x256.f32"},
-        {-1.00F, 0.80F, L"cigaussianblur-clarity-1.00-radius10.0-256x256.f32"},
-    };
-    for (const NegativeClarityCase& entry : negative_clarity_cases) {
-        negaflow::imaging::TextureStageParameters negative{};
-        negative.clarity = entry.clarity;
-        const auto actual_negative = negaflow::imaging::apply_texture_stage(input, negative);
-        const auto expected_negative = mixed(
-            input,
-            load_rgba_f32(golden_root / entry.blur_file),
-            entry.dissolve_amount);
-        expect(actual_negative.status == negaflow::imaging::TextureStageStatus::ok,
-               "negative clarity execution succeeds");
-        expect_coreimage_close(
-            actual_negative.image,
-            expected_negative,
-            "negative clarity follows the Core Image Gaussian golden and dissolve amount");
-    }
+    // 부분 대비는 2026-10-15 부터 감마 휘도 가이디드 필터(detail_enhancement)라 Core Image 언샤프·
+    // 흐림 섞기 기준값이 없습니다 — 동작 계약은 macOS `DetailEnhancementTests` 와 같은 픽스처의
+    // `detail_enhancement_tests.cpp` 가 묶습니다.
 
     struct OutputCase final {
         negaflow::imaging::OutputSharpeningMedium medium;

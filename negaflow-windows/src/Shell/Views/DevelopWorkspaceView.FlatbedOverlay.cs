@@ -129,7 +129,8 @@ public sealed partial class DevelopWorkspaceView
         !crop.IsActive &&
         GrainMendPanel.grainMend.Strokes.Tool == GrainMendTool.None &&
         !GrainMendPanel.grainMend.IsDetecting &&
-        !BaseCard.IsBasePickerActive;
+        !BaseCard.IsBasePickerActive &&
+        !Adjustments.Color.IsNeutralPickerActive;
 
     internal void SyncFlatbedOverlay()
     {

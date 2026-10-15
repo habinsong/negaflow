@@ -451,6 +451,18 @@ public sealed partial class DevelopPreviewCanvas : UserControl
     /// </summary>
     public void ShowBasePickerPrompt(bool visible)
     {
+        BasePickerPromptText.Text = AppResources.Get("developBasePickerPrompt", "Text");
+        BasePickerPrompt.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// macOS 중립 스포이드 안내 — 베이스 스포이드와 같은 캡슐에 문구만 바꿔 띄웁니다(두 스포이드는
+    /// 동시에 켜지지 않습니다).
+    /// </summary>
+    public void ShowNeutralPickerPrompt(bool visible)
+    {
+        BasePickerPromptText.Text = AppResources.Get(
+            visible ? "developNeutralPickerPrompt" : "developBasePickerPrompt", "Text");
         BasePickerPrompt.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
     }
 

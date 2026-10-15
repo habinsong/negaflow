@@ -42,7 +42,9 @@ cbuffer ScannerTargetGradeConstants : register(b0) {
     float Strength;
     float ChromaKeep;
     uint Monochrome;
-    float3 Padding1;
+    // 세기·평탄 장면 감쇠 전 색 밀도(채도 1 당 L* 감소). `Strength × ChromaKeep` 을 곱해 씁니다.
+    float ColorDensity;
+    float2 Padding1;
 };
 
 static const float NegaflowPi = 3.14159265358979323846;
@@ -236,6 +238,14 @@ float3 TransformedSrgb(float3 input, bool reciprocal) {
             float angle = atan2(lab.z, lab.y) + (response.y * colorTaper * NegaflowPi / 180.0);
             lab.y = chroma * gain * cos(angle);
             lab.z = chroma * gain * sin(angle);
+        }
+        // 색 밀도(`scanner_target_response.cpp` `density_taper`). 변조 뒤 채도에 비례하고 60 에서 묶습니다.
+        float density = ColorDensity * Strength * ChromaKeep;
+        if (density != 0.0) {
+            float densityTaper = Smoothstep2(0.04, 0.16, inputLuma) *
+                (1.0 - Smoothstep2(0.86, 0.97, inputLuma));
+            lab.x -= (reciprocal ? -density : density) *
+                min(sqrt((lab.y * lab.y) + (lab.z * lab.z)), 60.0) * densityTaper;
         }
 
         float2 drift = NeutralDrift(inputLuma, Strength);

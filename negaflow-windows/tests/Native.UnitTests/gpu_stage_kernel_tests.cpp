@@ -91,10 +91,16 @@ void exposure_matches_cpu(const GpuDevice& device, const char* const label) {
         return;
     }
 
-    // macOS `DevelopToneRange.exposure` 는 ±5 입니다. 양 끝과 0 을 봅니다.
-    const float stop_cases[] = {0.0F, 0.5F, -0.5F, 2.75F, -3.25F, 5.0F, -5.0F};
+    // macOS `DevelopToneRange.exposure` 는 ±5 입니다. 양 끝과 0 을 보고, + 쪽 숄더는
+    // 컬러(0.515)·흑백(0.234) 헤드룸 둘 다 봅니다.
+    const float stop_cases[] = {0.0F, 0.25F, 0.5F, -0.5F, 1.0F, 2.75F, -3.25F, 5.0F, -5.0F};
+    const float headroom_cases[] = {
+        static_cast<float>(negaflow::core::exposure_headroom_stops(false)),
+        static_cast<float>(negaflow::core::exposure_headroom_stops(true)),
+    };
+    for (const float headroom : headroom_cases) {
     for (const float stops : stop_cases) {
-        if (kernel.dispatch(device, input, output, stops) != GpuKernelStatus::ok) {
+        if (kernel.dispatch(device, input, output, stops, headroom) != GpuKernelStatus::ok) {
             expect(false, "exposure dispatch must succeed");
             continue;
         }
@@ -109,27 +115,30 @@ void exposure_matches_cpu(const GpuDevice& device, const char* const label) {
             source.data(), source.size(), width, height, width};
         const negaflow::core::ImageView out{
             cpu_pixels.data(), cpu_pixels.size(), width, height, width};
-        (void)negaflow::core::apply_exposure(view, out, stops);
+        (void)negaflow::core::apply_exposure(view, out, stops, headroom);
 
         const float worst = worst_delta(cpu_pixels, gpu_pixels);
         if (worst > tolerance) {
-            std::cerr << "FAIL: " << label << " exposure " << stops << " max delta " << worst
-                      << '\n';
+            std::cerr << "FAIL: " << label << " exposure " << stops << " headroom " << headroom
+                      << " max delta " << worst << '\n';
             ++failures;
         } else {
-            std::cout << "[gpu] " << label << " exposure " << stops << " max delta " << worst
-                      << '\n';
+            std::cout << "[gpu] " << label << " exposure " << stops << " headroom " << headroom
+                      << " max delta " << worst << '\n';
         }
+    }
     }
 
     expect(
         kernel.dispatch(
-            device, input, output, std::numeric_limits<float>::quiet_NaN()) ==
+            device, input, output, std::numeric_limits<float>::quiet_NaN(),
+            headroom_cases[0]) ==
             GpuKernelStatus::non_finite_parameter,
         "NaN stops are rejected like the CPU path");
     // 큰 스톱은 `exp2` 에서 무한이 됩니다. CPU 판이 거부하므로 GPU 도 거부해야 합니다.
     expect(
-        kernel.dispatch(device, input, output, 4000.0F) == GpuKernelStatus::non_finite_parameter,
+        kernel.dispatch(device, input, output, 4000.0F, headroom_cases[0]) ==
+            GpuKernelStatus::non_finite_parameter,
         "an infinite multiplier is rejected");
 }
 

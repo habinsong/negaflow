@@ -3,6 +3,7 @@
 #include "negaflow/pipeline/gpu_accelerator.h"
 
 #include "negaflow/imaging/kernel_accelerator.h"
+#include "negaflow/imaging/neutral_white_balance_picker.h"
 #include "negaflow/imaging/scanner_tiff_to_working.h"
 #include "export/support/input_gamma_reference.h"
 
@@ -122,6 +123,13 @@ using develop_export_detail::stage_trace_image;
 using develop_export_detail::stage_trace_invert;
 using develop_export_detail::validate_request;
 
+// 중립 스포이드: 색 모델 직전에서 멈추고 찍은 점을 잽니다. preview(정착 상자)와 함께 씁니다.
+struct WhiteBalanceProbe final {
+    double unit_x{0.0};
+    double unit_y{0.0};
+    DevelopWhiteBalanceSample* result{nullptr};
+};
+
 // 공개 진입점은 여기로 모인다. 단계 본문은 export/ 아래 번역 단위가 소유한다.
 //
 // **`noexcept` 가 아닙니다.** 아래 `run_develop` 이 감쌉니다 — 이유는 그쪽 주석에.
@@ -129,7 +137,8 @@ using develop_export_detail::validate_request;
     const DevelopExportRequest& original_request,
     const PreviewTarget* const preview,
     const DevelopRunControl& control,
-    const DetectTarget* const detect) {
+    const DetectTarget* const detect,
+    const WhiteBalanceProbe* const probe) {
     if (auto failed = validate_request(original_request, preview, detect)) {
         return *failed;
     }
@@ -366,8 +375,37 @@ using develop_export_detail::validate_request;
     stage_trace_invert(invert);
     stage_trace_image("invert", invert.image);
 
-    if (auto failed = apply_grade_stages(request, tracker, gpu_policy, invert)) {
+    if (auto failed = apply_grade_stages(
+            request, tracker, gpu_policy, invert, probe != nullptr)) {
         return *failed;
+    }
+    if (probe != nullptr) {
+        // 상주 화상은 호스트 사본이 낡았을 수 있으므로 먼저 내립니다.
+        GpuAccelerator::shared().flush_resident();
+        const negaflow::core::ConstImageView view{
+            invert.image.pixels.data(),
+            invert.image.pixels.size(),
+            invert.image.width,
+            invert.image.height,
+            invert.image.stride_pixels,
+        };
+        if (const auto reference = negaflow::imaging::sample_neutral_white_balance_reference(
+                view, probe->unit_x, probe->unit_y)) {
+            if (const auto solved = negaflow::imaging::solve_neutral_white_balance(*reference)) {
+                probe->result->sampled = true;
+                probe->result->reference = *reference;
+                probe->result->warmth = solved->warmth;
+                probe->result->tint = solved->tint;
+            }
+        }
+        tracker.complete();
+        DevelopExportOutcome sampled{};
+        sampled.succeeded = true;
+        sampled.failure_name = "ok";
+        sampled.applied_input_gamma = request.input_gamma;
+        sampled.image_width = invert.image.width;
+        sampled.image_height = invert.image.height;
+        return sampled;
     }
 
     stage_trace_image("grade", invert.image);
@@ -388,6 +426,7 @@ using develop_export_detail::validate_request;
             look_workspace,
             std::move(invert.image),
             gpu_policy,
+            invert.analysis_region,
             look)) {
         return *failed;
     }
@@ -449,9 +488,10 @@ using develop_export_detail::validate_request;
     const DevelopExportRequest& request,
     const PreviewTarget* const preview,
     const DevelopRunControl& control,
-    const DetectTarget* const detect = nullptr) noexcept {
+    const DetectTarget* const detect = nullptr,
+    const WhiteBalanceProbe* const probe = nullptr) noexcept {
     try {
-        return run_develop_unguarded(request, preview, control, detect);
+        return run_develop_unguarded(request, preview, control, detect, probe);
     } catch (const std::bad_alloc&) {
         return fail(DevelopExportStage::none, "out_of_memory");
     } catch (...) {
@@ -477,6 +517,30 @@ GrainMendDetectionOutcome develop_detect_grain_mend(
     const DetectTarget target{mask, mask_capacity_bytes, &detection, roi};
     detection.outcome = run_develop(request, nullptr, control, &target);
     return detection;
+}
+
+DevelopWhiteBalanceSample develop_white_balance_sample(
+    const DevelopExportRequest& request,
+    const double unit_x,
+    const double unit_y,
+    const DevelopRunControl& control) noexcept {
+    DevelopWhiteBalanceSample sample{};
+    // 화면 정착 프리뷰와 같은 상자입니다 — 같은 raw 슬롯·같은 베이스·같은 장면 측정을 씁니다.
+    // 화소는 쓰지 않으므로 버퍼가 없습니다(게시 전에 멈춥니다).
+    const PreviewTarget settled{
+        develop_export_detail::preview_full_max_dimension,
+        develop_export_detail::preview_full_max_dimension,
+        nullptr,
+        0U,
+        negaflow::color::SoftProofTransfer{},
+        false,
+    };
+    const WhiteBalanceProbe probe{unit_x, unit_y, &sample};
+    sample.outcome = run_develop(request, &settled, control, nullptr, &probe);
+    if (!sample.outcome.succeeded) {
+        sample.sampled = false;
+    }
+    return sample;
 }
 
 DevelopExportOutcome develop_preview(

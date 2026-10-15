@@ -36,6 +36,22 @@ public sealed partial class InspectorSliderValueConverter : IValueConverter
 }
 
 /// <summary>
+/// 거듭제곱 눈금 슬라이더(온도·틴트) — 손잡이 위치를 저장값으로 되돌려 두 자리로 적습니다.
+/// </summary>
+public sealed partial class ScaledInspectorSliderValueConverter(double maximum, double exponent)
+    : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, string language) =>
+        value is double position
+            ? InspectorSliderValue.InputText(
+                InspectorSliderValue.ValueFromPosition(position, maximum, exponent))
+            : string.Empty;
+
+    public object ConvertBack(object value, Type targetType, object parameter, string language) =>
+        throw new NotSupportedException();
+}
+
+/// <summary>
 /// 부분 보정(양·페더·크기) — 값 글자가 0…1 을 퍼센트 정수로 적습니다(<c>35</c>).
 /// </summary>
 public sealed partial class UnitPercentThumbConverter : IValueConverter

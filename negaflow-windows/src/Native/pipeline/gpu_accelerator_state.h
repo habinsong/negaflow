@@ -21,6 +21,7 @@
 #include "negaflow/gpu/gpu_point_sample.h"
 #include "negaflow/gpu/gpu_image_pool.h"
 #include "negaflow/gpu/gpu_film_scan_stage.h"
+#include "negaflow/gpu/gpu_local_contrast.h"
 #include "negaflow/gpu/gpu_morphology.h"
 #include "negaflow/gpu/gpu_negative_invert.h"
 #include "negaflow/gpu/gpu_tone_stage.h"
@@ -83,6 +84,9 @@ struct GpuAccelerator::State final {
     bool noritsu_texture_ready{false};
     gpu::GpuTextureGrain texture_grain{};
     bool texture_grain_ready{false};
+    // 부분 대비(SP 기본 부분 대비 포함). 축소 평면의 가우시안은 위 `gaussian` 을 씁니다.
+    gpu::GpuLocalContrast local_contrast{};
+    bool local_contrast_ready{false};
     gpu::GpuChannelClippingOverlay clipping_overlay{};
     bool clipping_overlay_ready{false};
     gpu::GpuAreaAverage area_average{};

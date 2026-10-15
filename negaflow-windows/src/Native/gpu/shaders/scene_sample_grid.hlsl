@@ -21,9 +21,9 @@ struct SampleCell {
 RWStructuredBuffer<SampleCell> SampleGrid : register(u0);
 
 cbuffer SceneSampleGridConstants : register(b0) {
-    // GpuPointwiseExtent — 16바이트.
+    // 측정 사각형의 크기와 원점 — 16바이트. 크롭이 없으면 화상 전체, 원점 0 입니다.
     uint2 Extent;
-    float2 ExtentPad;
+    uint2 Origin;
     uint2 SampleExtent;
     // 원본 화소 / 격자 칸. CPU 의 `inverse_scale` 과 같은 자리입니다.
     float InverseScale;
@@ -54,7 +54,7 @@ void SceneSampleGridMain(uint3 id : SV_DispatchThreadID) {
         float yWeight = Overlap(top, bottom, float(y), float(y + 1u));
         for (uint x = firstX; x < lastX; ++x) {
             float weight = yWeight * Overlap(left, right, float(x), float(x + 1u));
-            float4 pixel = Source[uint2(x, y)];
+            float4 pixel = Source[uint2(x, y) + Origin];
             sum += pixel.rgb * weight;
             weightSum += weight;
         }

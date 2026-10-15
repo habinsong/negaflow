@@ -336,8 +336,12 @@ public static partial class DevelopRequestFactory
             Lights = (float)tone.CurveLights,
             Darks = (float)tone.CurveDarks,
             Shadows = (float)tone.CurveShadows,
-            Warmth = (float)colorModel.Warmth,
-            Tint = (float)colorModel.Tint,
+            // 룩 프리셋의 온도·틴트가 더해져 저장 범위를 조금 넘을 수 있습니다. native 검증이
+            // 범위 밖을 거부하므로 여기서 묶습니다(macOS 는 같은 식을 그대로 이어 계산합니다).
+            Warmth = (float)Math.Clamp(
+                colorModel.Warmth, -ColorModelRecipe.MaximumWhiteBalance, ColorModelRecipe.MaximumWhiteBalance),
+            Tint = (float)Math.Clamp(
+                colorModel.Tint, -ColorModelRecipe.MaximumWhiteBalance, ColorModelRecipe.MaximumWhiteBalance),
             ColorDepth = (float)colorModel.ColorDepth,
             Vibrance = (float)colorModel.Vibrance,
             Saturation = (float)colorModel.Saturation,

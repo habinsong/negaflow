@@ -214,10 +214,65 @@ void test_target_tone_knots_interpolate_to_the_physical_endpoints() {
 
     const auto& highlight = pixels[width - 1U];
     const float encoded_highlight = negaflow::color::linear_to_srgb_encoded(highlight.red);
-    // The last SP-3000 measured knot is (0.94, 0.955).  macOS adds (1, 1),
-    // so the 0.97 sample must continue toward white rather than pinning at 0.955.
-    expect(encoded_highlight > 0.97F && highlight.alpha == 0.63F,
-           "SP-3000 highlights continue from the last measured knot to white");
+    // The last SP knot is (0.94, 0.936).  macOS adds (1, 1), so the 0.97 sample must
+    // continue toward white (≈0.968) rather than pinning at the knot output 0.936.
+    expect(encoded_highlight > 0.955F && highlight.alpha == 0.63F,
+           "SP highlights continue from the last knot to white");
+}
+
+double lab_lightness(const negaflow::core::Rgba32F& pixel) {
+    const double y = (0.2126 * pixel.red) + (0.7152 * pixel.green) + (0.0722 * pixel.blue);
+    const double f = y > 216.0 / 24389.0 ? std::cbrt(y) : (y * 24389.0 / 27.0 + 16.0) / 116.0;
+    return (116.0 * f) - 16.0;
+}
+
+// SP(2026-10-15 개편, macOS `testDocumentedCharacterExpressesEachScannerSignatureDirection`):
+// 프로파일을 고르지 않으면 실측 차분을 얹지 않고(고르면 얹는다), 중립은 파랗게 가지 않으며,
+// 진한 색은 같은 밝기의 회색보다 깊어진다(색 밀도).
+void test_sp_design_character() {
+    constexpr std::uint32_t width = 4U;
+    constexpr std::uint32_t height = 1U;
+    const auto linear = [](const double encoded) {
+        return negaflow::color::srgb_encoded_to_linear(static_cast<float>(encoded));
+    };
+    // 진한 오렌지와 같은 감마 휘도(≈0.61)의 회색, 미드 회색, 섀도 회색.
+    const double orange_luma = (0.2126 * 0.82) + (0.7152 * 0.58) + (0.0722 * 0.32);
+    std::vector<negaflow::core::Rgba32F> source{
+        {linear(0.82), linear(0.58), linear(0.32), 1.0F},
+        {linear(orange_luma), linear(orange_luma), linear(orange_luma), 1.0F},
+        {linear(0.50), linear(0.50), linear(0.50), 1.0F},
+        {linear(0.28), linear(0.28), linear(0.28), 1.0F},
+    };
+    auto graded = source;
+    negaflow::imaging::ScannerTargetGradeInfo info{};
+    expect(negaflow::imaging::apply_scanner_target_grade(
+               view(graded, width, height),
+               negaflow::imaging::ScannerTargetStyle::sp3000,
+               false, false, {}, info) == negaflow::core::KernelStatus::ok,
+           "SP grade succeeds");
+    expect(!info.relative_signature_applied,
+           "SP without a chosen profile applies no measured relative signature");
+
+    const double orange_shift = lab_lightness(graded[0]) - lab_lightness(source[0]);
+    const double gray_shift = lab_lightness(graded[1]) - lab_lightness(source[1]);
+    expect(orange_shift < gray_shift - 2.0,
+           "SP deepens saturated colors more than a gray of the same luma (color density)");
+    for (const std::size_t i : {std::size_t{2U}, std::size_t{3U}}) {
+        expect(graded[i].blue <= graded[i].red + 1.0e-4F,
+               "SP neutrals never drift blue");
+    }
+
+    auto chosen = source;
+    negaflow::imaging::ScannerTargetGradeInfo chosen_info{};
+    expect(negaflow::imaging::apply_scanner_target_grade(
+               view(chosen, width, height),
+               negaflow::imaging::ScannerTargetStyle::sp3000,
+               false, false,
+               L"sp-3000__color-nega__kodak-ektar-100",
+               chosen_info) == negaflow::core::KernelStatus::ok,
+           "SP with a bundled profile succeeds");
+    expect(chosen_info.relative_signature_applied,
+           "a bundled SP profile the user picks still applies its measured signature");
 }
 
 }  // namespace
@@ -228,6 +283,7 @@ int main() {
         test_positive_is_weaker_and_monochrome_stays_neutral();
         test_matched_profile_relative_signature_selection();
         test_target_tone_knots_interpolate_to_the_physical_endpoints();
+        test_sp_design_character();
         std::cout << "Scanner target grade tests passed\n";
         return 0;
     } catch (const std::exception& exception) {

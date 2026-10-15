@@ -21,4 +21,5 @@
 #include "negaflow/abi/limits.h"
 #include "negaflow/abi/grain_mend_detect.h"
 #include "negaflow/abi/film_base_pick.h"
+#include "negaflow/abi/neutral_white_balance_pick.h"
 #include "negaflow/abi/develop_entry.h"

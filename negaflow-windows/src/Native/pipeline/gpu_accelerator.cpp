@@ -137,6 +137,11 @@ GpuAccelerator::GpuAccelerator() noexcept {
         state->texture_grain_ready =
             gpu::GpuTextureGrain::create(state->device, state->texture_grain) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("local_contrast_ready begin");
+        state->local_contrast_ready =
+            state->gaussian.is_valid() &&
+            gpu::GpuLocalContrast::create(state->device, state->local_contrast) ==
+                gpu::GpuKernelStatus::ok;
         gpu_init_step("clipping_overlay_ready begin");
         state->clipping_overlay_ready =
             gpu::GpuChannelClippingOverlay::create(

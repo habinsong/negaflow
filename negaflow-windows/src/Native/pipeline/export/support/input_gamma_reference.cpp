@@ -44,6 +44,9 @@ std::optional<DevelopExportOutcome> prepare_input_gamma_reference(
         auto baseline = request;
         baseline.input_gamma = negaflow::imaging::resolve_input_gamma_source(request.source, {});
         baseline.base_scale = 1;
+        // 기준은 크롭과 무관한 전체 프레임 측정입니다(macOS `InputGammaRenderReference` 는
+        // 영역 없이 잽니다). 캐시 키에도 크롭이 없습니다.
+        baseline.image_transform = {};
         baseline.base_estimation_mode = preset ? NegativeBaseEstimationMode::preset : NegativeBaseEstimationMode::auto_estimate;
         baseline.defect_recipe = {};
         baseline.defect_recipe_sha256.reset();
@@ -60,7 +63,7 @@ std::optional<DevelopExportOutcome> prepare_input_gamma_reference(
         if (auto failed = resolve_negative_base(baseline, image, hint)) { return failed; }
         negaflow::imaging::ManualNegativeDevelopParameters parameters{hint.dmin, baseline.negative.film_type};
         parameters.use_preset_response = hint.use_preset_response;
-        parameters.preset_dmax_normalized = hint.preset_dmax_normalized;
+        parameters.preset_range_factor = hint.preset_range_factor;
         auto measured = negaflow::imaging::develop_manual_negative(std::move(image), parameters);
         if (measured.status != negaflow::imaging::ManualNegativeDevelopStatus::ok) {
             return fail(DevelopExportStage::develop, "input_gamma_reference_failed");

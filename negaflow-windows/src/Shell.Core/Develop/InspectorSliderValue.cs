@@ -74,6 +74,34 @@ public static partial class InspectorSliderValue
         return true;
     }
 
+    /// <summary>
+    /// 대칭 범위(±<paramref name="maximum"/>)에서 값 → 손잡이 위치(−1…1). 위치는 거듭제곱 눈금입니다:
+    /// 값 = maximum·sign(p)·|p|^exponent. 온도·틴트가 가운데를 세밀하게 쓰려고 씁니다
+    /// (macOS <c>SliderPositionScale</c>). exponent 1 이면 선형입니다.
+    /// </summary>
+    public static double PositionFromValue(double value, double maximum, double exponent)
+    {
+        ValidateScale(maximum, exponent);
+        double unit = Math.Clamp(double.IsFinite(value) ? value / maximum : 0.0, -1.0, 1.0);
+        return Math.Sign(unit) * Math.Pow(Math.Abs(unit), 1.0 / exponent);
+    }
+
+    /// <summary><see cref="PositionFromValue"/> 의 역 — 손잡이 위치(−1…1) → 값.</summary>
+    public static double ValueFromPosition(double position, double maximum, double exponent)
+    {
+        ValidateScale(maximum, exponent);
+        double unit = Math.Clamp(double.IsFinite(position) ? position : 0.0, -1.0, 1.0);
+        return maximum * Math.Sign(unit) * Math.Pow(Math.Abs(unit), exponent);
+    }
+
+    private static void ValidateScale(double maximum, double exponent)
+    {
+        if (!double.IsFinite(maximum) || maximum <= 0 || !double.IsFinite(exponent) || exponent <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maximum));
+        }
+    }
+
     public static double Clamp(double value, double minimum, double maximum)
     {
         ValidateRange(minimum, maximum);

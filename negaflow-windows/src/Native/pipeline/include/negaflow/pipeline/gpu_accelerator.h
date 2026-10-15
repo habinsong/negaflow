@@ -92,14 +92,27 @@ public:
         std::uint32_t height,
         std::uint32_t stride_pixels,
         bool* all_finite) noexcept;
+    // 상주 화상에 부분 대비(`gpu_local_contrast.h`)를 겁니다. 상주가 아니면 거짓이고 호스트가
+    // 최신입니다. 상주인데 걸지 못하면(비유한 화소 포함 — CPU 질감 단계가 그때 실패를 보고합니다)
+    // 화상을 내려 호스트를 최신으로 만든 뒤 거짓을 돌려줍니다. 참이면 결과가 상주 화상입니다.
+    [[nodiscard]] bool apply_resident_local_contrast(
+        const float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        float clarity) noexcept;
     // 상주 화상에서 점 표본 격자(칸마다 원본 화소 하나, `gpu_point_sample.h`)를 뽑아
     // `out` 에 칸마다 RGBA float 넷으로 씁니다. 격자는 `sample_width` x
     // max(`sample_height`, 2) 칸입니다. 상주가 아니면 거짓이고 호스트가 최신입니다.
     // 상주인데 뽑지 못하면 화상을 내려 호스트를 최신으로 만든 뒤 거짓을 돌려줍니다.
+    // `origin`·`extent` 는 표본할 사각형입니다(크롭한 사진 영역, 없으면 화상 전체).
     [[nodiscard]] bool sample_resident_points(
         const float* pixels,
         std::uint32_t width,
         std::uint32_t height,
+        std::uint32_t origin_x,
+        std::uint32_t origin_y,
+        std::uint32_t extent_width,
+        std::uint32_t extent_height,
         std::uint32_t sample_width,
         std::uint32_t sample_height,
         float* out) noexcept;

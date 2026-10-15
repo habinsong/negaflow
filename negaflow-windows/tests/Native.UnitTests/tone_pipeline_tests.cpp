@@ -114,10 +114,12 @@ void test_thresholds_noop_and_user_bounds() {
     const auto exposed = negaflow::imaging::apply_working_tone_adjustments(source, exposure);
     expect(exposed.status == negaflow::imaging::WorkingToneAdjustStatus::ok, "bounded exposure succeeds");
     expect(exposed.info.exposure_applied, "bounded exposure is reported");
+    // 휘도 0.2415×4 = 0.966 이 무릎(0.70) 위라 숄더로 접히되, 채널비와 1 초과 값은 유지됩니다.
+    // 기대값은 macOS Metal 경로(ToneMapper.applyExposure, +2EV)의 결과입니다.
     expect_pixel_near(
         exposed.image.pixels[0],
-        {0.5F, 1.0F, 2.0F, 0.75F},
-        "exposure remains scene-linear and extended range");
+        {0.453644663F, 0.907289326F, 1.81457865F, 0.75F},
+        "positive exposure folds into the shoulder and keeps channel ratios and extended range");
 
     exposure.exposure_stops = 5.01F;
     const auto excessive = negaflow::imaging::apply_working_tone_adjustments(source, exposure);

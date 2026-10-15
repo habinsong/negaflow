@@ -1308,6 +1308,11 @@
   <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>点按未曝光的片基（画幅之间或片边） · 按 Esc 取消</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
   <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>该位置不是片基。请点按画幅之间或片边的未曝光片基。</value></data>
   <data name="developBasePickFailed.Text" xml:space="preserve"><value>无法读取原始数据，未能取得片基。</value></data>
+  <data name="developPickNeutral.Text" xml:space="preserve"><value>中性吸管</value><comment>AppLocalizedPhrase.pickNeutral</comment></data>
+  <data name="developPickNeutralHelp.Value" xml:space="preserve"><value>点按画面中应为灰色或白色的位置，以设定色温和色调。</value><comment>AppLocalizedPhrase.pickNeutralHelp</comment></data>
+  <data name="developNeutralPickerPrompt.Text" xml:space="preserve"><value>点按应为灰色或白色的位置 · 按 Esc 取消</value><comment>AppLocalizedPhrase.neutralPickerOverlayPrompt</comment></data>
+  <data name="developNeutralPickFailed.Text" xml:space="preserve"><value>无法在此处测量中性色 — 请避开过暗或过亮的位置</value><comment>AppLocalizedPhrase.neutralPickFailed</comment></data>
+  <data name="developNeutralPickedFormat.Text" xml:space="preserve"><value>中性吸管：色温 %.2f · 色调 %.2f</value><comment>AppLocalizedPhrase.neutralPickedFormat</comment></data>
   <data name="canvasZoomOut.Text" xml:space="preserve"><value>缩小</value><comment>AppLocalizedPhrase.zoomOut</comment></data>
   <data name="canvasZoomIn.Text" xml:space="preserve"><value>放大</value><comment>AppLocalizedPhrase.zoomIn</comment></data>
   <data name="canvasZoomPercentHelp.Text" xml:space="preserve"><value>输入缩放百分比</value><comment>AppLocalizedPhrase.zoomPercentHelp</comment></data>
@@ -1338,7 +1343,7 @@
   <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>快速入门</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>键盘快捷键</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>重置照片角度</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
-  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>重置除几何（旋转/裁剪）外的所有调整值。</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
+  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>重置所有调整值，包括裁剪和拉直。保留旋转和翻转。</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
   <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>系统显示配置文件</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
   <data name="developAutoToneHelp.Text" xml:space="preserve"><value>自动色调 Command-U — 依据直方图调整曝光度、对比度、高光、阴影、白色色阶、黑色色阶和鲜艳度。</value><comment>AppLocalizedPhrase.autoToneHelp</comment></data>
   <data name="developAutoWhiteBalanceHelp.Text" xml:space="preserve"><value>自动白平衡 Shift-Command-U — 使用灰度世界算法中和色温与色调。</value><comment>AppLocalizedPhrase.autoWhiteBalanceHelp</comment></data>

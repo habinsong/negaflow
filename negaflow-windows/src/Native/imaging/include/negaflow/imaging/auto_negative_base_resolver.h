@@ -1,5 +1,6 @@
 #pragma once
 
+#include "negaflow/imaging/analysis_region.h"
 #include "negaflow/imaging/film_base_measurement.h"
 #include "negaflow/imaging/manual_negative_developer.h"
 
@@ -45,9 +46,16 @@ struct AutoNegativeBaseResult final {
 // The deterministic macOS-compatible automatic base resolver. It samples only the
 // original linear working image and never invents a manual base; an invalid layout is
 // reported to the pipeline instead.
+//
+// `region` 은 사용자가 크롭한 사진 영역입니다. 있으면 베이스를 **크롭 바깥 띠**(리베이트)에서
+// 먼저 찾고, 거기서 확신 있는 답이 없을 때만 프레임 전체로 돌아갑니다. 크롭 안에서는 찾지
+// 않습니다 — 크롭 안의 가장 얇은 곳은 베이스가 아니라 장면 최암부입니다(2026-10-14 실측:
+// 유채색 그림자를 베이스로 잡아 중립 웨지 암부 R/B 3.47). macOS `FilmBaseEstimator.estimate
+// (excludingInterior:)` 와 같습니다.
 [[nodiscard]] AutoNegativeBaseResult resolve_auto_negative_base(
     const WorkingImage& image,
-    NegativeFilmType film_type) noexcept;
+    NegativeFilmType film_type,
+    const std::optional<AnalysisRegion>& region = std::nullopt) noexcept;
 
 [[nodiscard]] const char* auto_negative_base_status_name(
     AutoNegativeBaseStatus status) noexcept;

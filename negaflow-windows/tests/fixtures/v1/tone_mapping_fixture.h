@@ -30,13 +30,15 @@ inline constexpr negaflow::imaging::WorkingToneAdjustParameters
         {0.30F, -0.25F, 0.20F, 0.40F},
     };
 
+// 2026-10-14: + 노출 숄더와 채널비 보존 어둡힘 이후 값. macOS Metal 경로(ToneMapper.applyExposure +
+// applyToneCurves, 같은 입력·알파 1)로 계산한 결과이며 Windows CPU 판과 3e-7 안에서 일치했습니다.
 inline constexpr std::array<negaflow::core::Rgba32F, 6> tone_mapping_expected{{
-    {0.0739795268F, 0.284240693F, 0.967186987F, 0.25F},
+    {0.0958984569F, 0.284710646F, 0.897988856F, 0.25F},
     {0.0F, 0.0F, 0.0F, 1.0F},
-    {0.0893102735F, 0.122946128F, 0.156581998F, 0.5F},
-    {0.281710774F, 0.281710774F, 0.281710774F, 1.0F},
-    {0.681074917F, 0.344716340F, 0.176537052F, 1.0F},
-    {1.0F, 1.0F, 1.0F, 0.75F},
+    {0.0931359679F, 0.122321256F, 0.151506543F, 0.5F},
+    {0.281710714F, 0.281710714F, 0.281710714F, 1.0F},
+    {0.669849932F, 0.347121775F, 0.185757712F, 1.0F},
+    {1.0F, 0.998171985F, 0.979872048F, 0.75F},
 }};
 
 }  // namespace negaflow::fixtures

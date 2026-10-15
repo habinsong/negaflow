@@ -1,7 +1,11 @@
 #include "negaflow/imaging/auto_adjust.h"
+#include "negaflow/imaging/white_balance.h"
+
+#include "negaflow/core/pointwise.h"
 
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 namespace negaflow::imaging {
 namespace {
@@ -31,18 +35,14 @@ namespace {
                               : (1.055 * std::pow(value, 1.0 / 2.4)) - 0.055;
 }
 
-// Both sides of the white-balance inversion. These are ColorModel's linear gains read
-// backwards, so they must move together with that stage.
-constexpr double warmth_red_gain = 0.18;
-constexpr double warmth_green_gain = 0.03;
-constexpr double tint_green_gain = 0.24;
-constexpr double tint_opposite_gain = 0.12;
-
 // Only 85% of the measured cast is removed. Neutralising fully overshoots into the
 // opposite cast whenever the scene is legitimately dominated by one colour, and reads
 // cold even when it does not.
 constexpr double white_balance_strength = 0.85;
-constexpr double white_balance_clamp = 0.60;
+// 슬라이더 전 범위(±4)가 아니라 잔차 캐스트 상한(±1 = 예전 슬라이더 끝, R/B ±0.525 스톱)까지만
+// 움직입니다. 반전이 채널 정규화(WB 의 대부분)를 이미 하므로 여기서 다루는 것은 잔차입니다.
+// 휘도대별 중립축 증거로 지배색 장면의 폭주가 줄어 ±0.6 에서 넓혔습니다(macOS `wbClamp`).
+constexpr double white_balance_clamp = 1.0;
 // Below roughly 1.5% channel-ratio error the frame is already neutral; moving it would
 // be noise, not correction.
 constexpr double white_balance_deadband = 0.015;
@@ -57,6 +57,46 @@ constexpr double black_point_linear = 0.005;
 // highlight recovery slider's job, not a reason to darken the whole frame.
 constexpr double clip_recovery_threshold = 0.05;
 constexpr double auto_exposure_limit = 3.0;
+
+[[nodiscard]] double histogram_percentile(
+    const std::array<double, auto_adjust_histogram_bins>& histogram,
+    const double fraction) noexcept {
+    double accumulated = 0.0;
+    for (std::size_t index = 0U; index < histogram.size(); ++index) {
+        accumulated += histogram[index];
+        if (accumulated >= fraction) {
+            return static_cast<double>(index) / 255.0;
+        }
+    }
+    return 1.0;
+}
+
+// 잰 휘도(노출 숄더에 이미 접힌 값)를 노출 전 휘도로 되돌립니다. 숄더는 단조 증가라 이분법으로
+// 풉니다. ÷2^EV 로 되돌리면 한 번 접힌 값을 다시 숄더에 넣어 두 번 접게 되고, 그러면 백점을 낮게
+// 예측해 화이트를 거꾸로 올립니다(2026-10-14 실측: 커브로 247 인 백점을 250 으로 밀었습니다 —
+// 목표 243).
+[[nodiscard]] double unexposed_luminance(
+    const double exposed,
+    const double stops,
+    const double headroom_stops) noexcept {
+    double low = exposed / std::exp2(stops);
+    if (!(stops > 0.0) || negaflow::core::exposed_luminance(low, stops, headroom_stops) >= exposed) {
+        return low;
+    }
+    double high = std::max(low * 2.0, 64.0);
+    if (negaflow::core::exposed_luminance(high, stops, headroom_stops) < exposed) {
+        return high;
+    }
+    for (int iteration = 0; iteration < 60; ++iteration) {
+        const double middle = 0.5 * (low + high);
+        if (negaflow::core::exposed_luminance(middle, stops, headroom_stops) < exposed) {
+            low = middle;
+        } else {
+            high = middle;
+        }
+    }
+    return 0.5 * (low + high);
+}
 
 }  // namespace
 
@@ -103,6 +143,13 @@ bool compute_auto_adjust_stats(
     double minkowski_blue = 0.0;
 
     stats.luma_histogram.fill(0.0);
+    // 중립축 증거는 화소별 linear 값에서 잽니다(macOS `imageStats` 의 `linearPixels`).
+    std::vector<std::array<double, 3>> linear_pixels{};
+    try {
+        linear_pixels.reserve(static_cast<std::size_t>(sample_width) * sample_height);
+    } catch (...) {
+        return false;
+    }
 
     for (std::uint32_t y = 0U; y < sample_height; ++y) {
         const std::uint32_t source_y = static_cast<std::uint32_t>(
@@ -124,6 +171,7 @@ bool compute_auto_adjust_stats(
             const double linear_red = decode_table[red_byte];
             const double linear_green = decode_table[green_byte];
             const double linear_blue = decode_table[blue_byte];
+            linear_pixels.push_back({linear_red, linear_green, linear_blue});
 
             sum_red += red;
             sum_green += green;
@@ -200,24 +248,42 @@ bool compute_auto_adjust_stats(
     stats.minkowski_linear_red = std::pow(minkowski_red / std::max(1.0, total), 1.0 / 6.0);
     stats.minkowski_linear_green = std::pow(minkowski_green / std::max(1.0, total), 1.0 / 6.0);
     stats.minkowski_linear_blue = std::pow(minkowski_blue / std::max(1.0, total), 1.0 / 6.0);
+    try {
+        stats.neutral_axis = measure_neutral_axis(linear_pixels);
+    } catch (...) {
+        stats.neutral_axis.reset();
+    }
     return true;
 }
 
 AutoWhiteBalanceResult auto_white_balance(const AutoAdjustStats& stats) noexcept {
-    const bool use_neutral =
-        stats.neutral_pixel_fraction >= neutral_subset_minimum_fraction;
-    const double red = use_neutral ? stats.neutral_linear_red : stats.minkowski_linear_red;
-    const double green =
-        use_neutral ? stats.neutral_linear_green : stats.minkowski_linear_green;
-    const double blue = use_neutral ? stats.neutral_linear_blue : stats.minkowski_linear_blue;
+    double red = 0.0;
+    double green = 0.0;
+    double blue = 0.0;
+    if (stats.neutral_axis.has_value() && !stats.neutral_axis->is_fallback) {
+        // 휘도대마다 한 표 — 한 휘도대를 차지한 따뜻한 조명 면이 평균을 끌지 못합니다.
+        const std::array<double, 3> cast = neutral_axis_median_cast(*stats.neutral_axis);
+        red = std::exp(cast[0]);
+        green = std::exp(cast[1]);
+        blue = std::exp(cast[2]);
+    } else {
+        const bool use_neutral =
+            stats.neutral_pixel_fraction >= neutral_subset_minimum_fraction;
+        red = use_neutral ? stats.neutral_linear_red : stats.minkowski_linear_red;
+        green = use_neutral ? stats.neutral_linear_green : stats.minkowski_linear_green;
+        blue = use_neutral ? stats.neutral_linear_blue : stats.minkowski_linear_blue;
+    }
     if (red <= 1.0e-5 || green <= 1.0e-5 || blue <= 1.0e-5) {
         return {};
     }
 
-    // Warmth: R(1 + 0.18w) = B(1 - 0.18w). A frame that is already warm gets a negative
-    // warmth, which cools it.
-    const double warmth_denominator = warmth_red_gain * (red + blue);
-    double warmth = warmth_denominator > 1.0e-6 ? (blue - red) / warmth_denominator : 0.0;
+    // ColorModel 의 화이트밸런스 게인(white_balance.h)을 거꾸로 풉니다. 온도는 R/B 를,
+    // 틴트는 온도가 남긴 G/√(R·B) 를 맞춥니다. |w| <= 1 에서 온도 해는 예전
+    // R(1 + 0.18w) = B(1 − 0.18w) 의 해와 같습니다(같은 식의 로그). 이미 따뜻한 프레임은
+    // 음수 온도로 식힙니다.
+    double warmth = solve_white_balance(std::log2(blue / red), [](const double value) noexcept {
+        return warmth_red_blue_stops(value);
+    });
     if (std::abs(blue - red) / std::max(red + blue, 1.0e-6) * 2.0 < white_balance_deadband) {
         warmth = 0.0;
     }
@@ -226,16 +292,14 @@ AutoWhiteBalanceResult auto_white_balance(const AutoAdjustStats& stats) noexcept
         -white_balance_clamp,
         white_balance_clamp);
 
-    // Tint is solved on the residual after warmth, including warmth's own effect on green.
-    const double warmed_red = red * (1.0 + (warmth_red_gain * warmth));
-    const double warmed_green = green * (1.0 + (warmth_green_gain * warmth));
-    const double warmed_blue = blue * (1.0 - (warmth_red_gain * warmth));
-    const double mean = (warmed_red + warmed_blue) / 2.0;
-    const double tint_denominator =
-        (tint_green_gain * warmed_green) + (tint_opposite_gain * mean);
-    double tint = tint_denominator > 1.0e-6 ? (mean - warmed_green) / tint_denominator : 0.0;
-    if (std::abs(mean - warmed_green) / std::max(mean + warmed_green, 1.0e-6) * 2.0 <
-        white_balance_deadband) {
+    // 틴트는 온도를 적용한 뒤의 잔차로 풉니다(온도 자신의 녹색 성분 포함).
+    const double warmed_green_stops =
+        (0.5 * (std::log2(red) + std::log2(blue))) - std::log2(green) -
+        warmth_green_stops(warmth);
+    double tint = solve_white_balance(warmed_green_stops, [](const double value) noexcept {
+        return tint_green_stops(value);
+    });
+    if (std::abs(warmed_green_stops) * std::log(2.0) < white_balance_deadband) {
         tint = 0.0;
     }
     tint = clamp_range(
@@ -246,18 +310,11 @@ AutoWhiteBalanceResult auto_white_balance(const AutoAdjustStats& stats) noexcept
     return {warmth, tint};
 }
 
-AutoToneResult auto_tone(const AutoAdjustStats& stats) noexcept {
+AutoToneResult auto_tone(const AutoAdjustStats& stats, const double headroom_stops) noexcept {
     AutoToneResult result{};
 
     const auto percentile = [&stats](const double fraction) noexcept {
-        double accumulated = 0.0;
-        for (std::size_t index = 0U; index < stats.luma_histogram.size(); ++index) {
-            accumulated += stats.luma_histogram[index];
-            if (accumulated >= fraction) {
-                return static_cast<double>(index) / 255.0;
-            }
-        }
-        return 1.0;
+        return histogram_percentile(stats.luma_histogram, fraction);
     };
 
     const double clip_high = stats.luma_histogram[255];
@@ -293,9 +350,10 @@ AutoToneResult auto_tone(const AutoAdjustStats& stats) noexcept {
     }
     result.exposure = exposure;
 
-    const double gain = std::pow(2.0, exposure);
-    const auto after_exposure = [gain](const double srgb) noexcept {
-        return srgb_encode(std::min(srgb_decode(srgb) * gain, 1.0));
+    // 노출 뒤 백분위는 엔진과 같은 노출 연산자(EV>0 명부 숄더)로 예측합니다.
+    const auto after_exposure = [exposure, headroom_stops](const double srgb) noexcept {
+        return srgb_encode(std::min(
+            negaflow::core::exposed_luminance(srgb_decode(srgb), exposure, headroom_stops), 1.0));
     };
     const double black_after = after_exposure(black_srgb);
     const double shadow_after = after_exposure(shadow_srgb);
@@ -334,13 +392,15 @@ AutoToneResult auto_tone(const AutoAdjustStats& stats) noexcept {
             (std::max(0.0, p975_after - 0.89) * 0.5 / (0.10 * highlight_mask)),
         -1.0,
         0.0);
-    const double shadow_mask = std::max(
-        smoothstep(0.02, 0.08, shadow_after) *
-            (1.0 - smoothstep(0.32, 0.46, shadow_after)),
-        0.3);
+    // 섀도는 그 톤에서 슬라이더가 실제로 먹는 만큼(마스크)만 반응하고 초과분의 절반만 회수합니다.
+    // 예전엔 마스크를 하한(0.3)으로 나눠 역산해, 슬라이더가 거의 안 닿는 깊은 검정(흑백 프린트의
+    // 검정·스캔 테두리)을 끌어올리려 최대치(0.8)로 밀었고 그 위의 중간 암부가 통째로 들렸습니다
+    // (2026-10-15 macOS 실측: 흑백 7 장 중 5 장·컬러 19 장 중 8 장이 0.8).
+    const double shadow_mask =
+        smoothstep(0.02, 0.08, shadow_after) * (1.0 - smoothstep(0.32, 0.46, shadow_after));
     result.shadows = clamp_range(
         (std::min(clip_low, 0.05) * 4.0) +
-            (std::max(0.0, 0.10 - shadow_after) / (0.10 * shadow_mask)),
+            (std::max(0.0, 0.10 - shadow_after) * 0.5 / 0.10 * shadow_mask),
         0.0,
         0.8);
 
@@ -352,18 +412,65 @@ AutoToneResult auto_tone(const AutoAdjustStats& stats) noexcept {
             smoothstep(0.18, 0.36, mid_after) * (1.0 - smoothstep(0.58, 0.76, mid_after)),
             0.3);
         result.density = clamp_range(mid_residual / (0.10 * mid_mask), -0.4, 0.4);
+        // 밝히는 방향만 원칙(노출과 같습니다): 노출이 밝히지 않았다면 미드를 어둡게 하지
+        // 않습니다 — 하이키·설경을 회색으로 끌어내립니다(2026-10-14 macOS 실측: 미드 127 → 116).
+        // 노출 과잉을 되돌리는 양수 농도와 클리핑 복구만 남깁니다.
+        if (exposure <= 0.0 && clip_high < clip_recovery_threshold) {
+            result.density = std::min(result.density, 0.0);
+        }
     }
 
-    // Contrast targets a perceptual spread, measured after the exposure move.
+    // Contrast targets a perceptual spread, measured after the exposure move. 평평한 장면은
+    // 올리되 깎는 쪽은 소량만 — 스프레드 목표는 평균적인 컬러 장면의 값이라 원래 대비가 큰 장면
+    // (흑백 프린트·역광)을 그 값까지 깎으면 계조가 무너집니다. 양 끝 복구는 하이라이트/섀도의 몫입니다.
     const double p10_after = after_exposure(p10_srgb);
     const double p90_after = after_exposure(p90_srgb);
     result.contrast = clamp_range(
         (0.52 - (p90_after - p10_after)) * 1.15,
-        -0.45,
+        -0.15,
         0.55);
 
     // Vibrance only ever increases, which is what every other auto tool does too.
     result.vibrance = clamp_range((0.42 - stats.average_saturation) * 1.0, 0.0, 0.6);
+    return result;
+}
+
+AutoToneResult refine_auto_tone(
+    const AutoToneResult& first,
+    const AutoAdjustStats& measured,
+    const double headroom_stops) noexcept {
+    AutoToneResult result = first;
+    const auto percentile = [&measured](const double fraction) noexcept {
+        return histogram_percentile(measured.luma_histogram, fraction);
+    };
+    const double mid = srgb_decode(percentile(0.50));
+    const double p98 = srgb_decode(percentile(0.98));
+    double p995_srgb = percentile(0.995);
+
+    // 미드: 노출이 밝혔다면 남은 오차만큼 더/덜 밝힙니다(헤드룸·한도 안에서).
+    if (result.exposure > 0.0) {
+        double residual = std::log2(mid_grey_linear / std::max(mid, 1.0e-4));
+        if (residual > 0.0) {
+            residual = std::min(residual, std::max(0.0, std::log2(0.95 / std::max(p98, 1.0e-4))));
+        }
+        const double refined = clamp_range(result.exposure + residual, 0.0, auto_exposure_limit);
+        if (std::abs(refined - result.exposure) > 0.02) {
+            // 노출이 바뀌면 백점도 같이 움직입니다 — 같은 연산자로 되돌린 뒤 다시 예측합니다.
+            const double unexposed =
+                unexposed_luminance(srgb_decode(p995_srgb), result.exposure, headroom_stops);
+            p995_srgb = srgb_encode(std::min(
+                negaflow::core::exposed_luminance(unexposed, refined, headroom_stops), 1.0));
+            result.exposure = refined;
+        }
+    }
+
+    // 백점: 확산 화이트 목표(linear 0.90)에 남은 오차를 Whites 계수로 메웁니다.
+    const double residual_white = srgb_encode(diffuse_white_linear) - p995_srgb;
+    if (std::abs(residual_white) > 0.01 &&
+        (measured.luma_histogram[255] <= 0.001 || residual_white < 0.0)) {
+        const double mask = std::max(smoothstep(0.68, 0.92, p995_srgb), 0.25);
+        result.whites = clamp_range(result.whites + (residual_white / (0.12 * mask)), -1.0, 1.0);
+    }
     return result;
 }
 

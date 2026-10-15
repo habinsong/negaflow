@@ -1,8 +1,10 @@
 #pragma once
 
 #include "negaflow/core/pixel.h"
+#include "negaflow/imaging/analysis_region.h"
 
 #include <cstdint>
+#include <optional>
 
 namespace negaflow::imaging {
 
@@ -32,8 +34,10 @@ struct VibrancePlaneSelection final {
 
 // Measures HSV saturation from a small linear proxy and applies a bounded
 // low-chroma-first boost in place. Monochrome inputs are an explicit identity.
+// `region` 이 있으면 장면 채도를 크롭한 사진 영역 안에서만 잽니다(적용은 전체).
 [[nodiscard]] MutedSceneVibranceResult apply_muted_scene_vibrance(
     negaflow::core::ImageView image,
-    bool monochrome) noexcept;
+    bool monochrome,
+    const std::optional<AnalysisRegion>& region = std::nullopt) noexcept;
 
 } // namespace negaflow::imaging

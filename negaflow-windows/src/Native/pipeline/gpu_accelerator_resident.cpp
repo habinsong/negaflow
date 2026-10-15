@@ -130,6 +130,7 @@ void GpuAccelerator::release_transient_resources() noexcept {
     flush_unlocked();
     state_->resident = State::ResidentFrame{};
     state_->pool.clear();
+    state_->local_contrast.release_scratch();
     std::vector<core::Rgba32F>{}.swap(state_->morphology_staging);
     (void)state_->device.trim_idle();
 }
@@ -220,10 +221,52 @@ bool GpuAccelerator::check_resident_finite(
     return true;
 }
 
+bool GpuAccelerator::apply_resident_local_contrast(
+    const float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const float clarity) noexcept {
+    if (!available() || pixels == nullptr) {
+        return false;
+    }
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
+    if (!state_->resident_matches(pixels, width, height)) {
+        return false;
+    }
+    const int read_slot = state_->resident.read_slot;
+    // CPU 질감 단계는 비유한 화소가 있으면 실패를 보고합니다. 같은 판정을 하려면 그때는 CPU 로
+    // 넘겨야 합니다 — GPU 에서 걸면 NaN 이 조용히 퍼집니다.
+    bool all_finite = false;
+    if (state_->local_contrast_ready && state_->finite_ready &&
+        (read_slot == 0 || read_slot == 1) &&
+        state_->finite.dispatch(
+            state_->device, state_->pool.images()[read_slot], all_finite) ==
+            gpu::GpuKernelStatus::ok &&
+        all_finite && state_->pool.ensure(state_->device, width, height, 2)) {
+        gpu::GpuWorkingImage* const resident = state_->pool.images();
+        if (state_->local_contrast.dispatch(
+                state_->device,
+                state_->gaussian,
+                resident[read_slot],
+                resident[1 - read_slot],
+                clarity) == gpu::GpuKernelStatus::ok) {
+            state_->bind_resident(
+                pixels, width, height, state_->resident.stride, 1 - read_slot);
+            return true;
+        }
+    }
+    flush_resident();
+    return false;
+}
+
 bool GpuAccelerator::sample_resident_points(
     const float* const pixels,
     const std::uint32_t width,
     const std::uint32_t height,
+    const std::uint32_t origin_x,
+    const std::uint32_t origin_y,
+    const std::uint32_t extent_width,
+    const std::uint32_t extent_height,
     const std::uint32_t sample_width,
     const std::uint32_t sample_height,
     float* const out) noexcept {
@@ -245,6 +288,10 @@ bool GpuAccelerator::sample_resident_points(
         state_->point_samples.dispatch(
             state_->device,
             image,
+            origin_x,
+            origin_y,
+            extent_width,
+            extent_height,
             sample_width,
             sample_height,
             sample_width,

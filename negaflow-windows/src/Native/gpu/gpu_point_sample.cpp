@@ -12,9 +12,13 @@
 namespace negaflow::gpu {
 namespace {
 
-// HLSL `cbuffer PointSampleGridConstants` 와 같은 배치여야 합니다.
+// HLSL `cbuffer PointSampleGridConstants` 와 같은 배치여야 합니다. 첫 레지스터는 표본할
+// 사각형의 크기와 원점입니다.
 struct alignas(16) PointSampleGridConstants final {
-    GpuPointwiseExtent extent{};
+    std::uint32_t extent_width{0U};
+    std::uint32_t extent_height{0U};
+    std::uint32_t origin_x{0U};
+    std::uint32_t origin_y{0U};
     std::uint32_t grid_width{0U};
     std::uint32_t grid_height{0U};
     std::uint32_t divisor_width{0U};
@@ -119,6 +123,10 @@ bool GpuPointSampleGrid::ensure_capacity(
 GpuKernelStatus GpuPointSampleGrid::dispatch(
     const GpuDevice& device,
     const GpuWorkingImage& source,
+    const std::uint32_t origin_x,
+    const std::uint32_t origin_y,
+    const std::uint32_t extent_width,
+    const std::uint32_t extent_height,
     const std::uint32_t divisor_width,
     const std::uint32_t divisor_height,
     const std::uint32_t grid_width,
@@ -130,7 +138,9 @@ GpuKernelStatus GpuPointSampleGrid::dispatch(
     const std::uint64_t count = static_cast<std::uint64_t>(grid_width) * grid_height;
     // 격자는 표본이라 작습니다. 원본보다 크거나 버퍼 한도를 넘는 요청은 표본이 아닙니다.
     if (!source.is_valid() || count == 0U || divisor_width == 0U || divisor_height == 0U ||
-        divisor_width > source.width() || divisor_height > source.height() ||
+        extent_width == 0U || extent_height == 0U ||
+        origin_x + extent_width > source.width() || origin_y + extent_height > source.height() ||
+        divisor_width > extent_width || divisor_height > extent_height ||
         count * sizeof(core::Rgba32F) > D3D11_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024ULL * 1024ULL) {
         return GpuKernelStatus::invalid_arguments;
     }
@@ -145,8 +155,10 @@ GpuKernelStatus GpuPointSampleGrid::dispatch(
 
     ID3D11DeviceContext* const context = device.context();
     PointSampleGridConstants payload{};
-    payload.extent.width = source.width();
-    payload.extent.height = source.height();
+    payload.extent_width = extent_width;
+    payload.extent_height = extent_height;
+    payload.origin_x = origin_x;
+    payload.origin_y = origin_y;
     payload.grid_width = grid_width;
     payload.grid_height = grid_height;
     payload.divisor_width = divisor_width;

@@ -19,7 +19,7 @@ namespace {
     const float threshold = negaflow::imaging::texture_stage_identity_threshold;
     return parameters.sharpness <= threshold && parameters.grain <= threshold &&
         std::abs(parameters.clarity) <= threshold && parameters.halation <= threshold &&
-        std::abs(parameters.vignette) <= threshold;
+        std::abs(parameters.vignette) <= threshold && parameters.target_clarity <= threshold;
 }
 
 [[nodiscard]] bool image_transform_is_identity(
@@ -44,6 +44,9 @@ std::optional<DevelopExportOutcome> apply_finish_stages(
     const auto& negative = invert.negative;
 
     negaflow::imaging::TextureStageParameters texture_parameters = request.texture;
+    if (request.develop_target == DevelopTarget::sp3000) {
+        texture_parameters.target_clarity = negaflow::imaging::sp_target_local_contrast;
+    }
     if (film_look_info.route ==
         negaflow::imaging::FilmLookRoute::digital_film_look) {
         texture_parameters.grain = 0.0F;
@@ -63,17 +66,44 @@ std::optional<DevelopExportOutcome> apply_finish_stages(
             grain_image.width,
             grain_image.height,
             out.deferred_transform);
-    const bool identity_finish =
+    const bool denoise_identity =
         request.film_scan_denoise.strength <=
-            negaflow::imaging::film_scan_denoise_identity_threshold &&
+        negaflow::imaging::film_scan_denoise_identity_threshold;
+    const float* const resident_pixels =
+        reinterpret_cast<const float*>(grain_image.pixels.data());
+    // 부분 대비(SP 기본 몫과 사용자 몫)는 화상이 GPU 에 머물러 있으면 거기서 겁니다 — CPU 질감
+    // 단계로 가면 SP 프리뷰마다 화상을 통째로 내리고 발행까지 CPU 로 떨어집니다. 질감 단계에서
+    // 부분 대비가 맨 앞이므로 그 앞 단계(디노이즈·닷지/번)가 없을 때만 순서가 같습니다. 건 몫은
+    // 질감 매개변수에서 빼 CPU 질감 단계가 다시 걸지 않게 합니다. 걸지 못하면 가속기가 화상을
+    // 내려 두므로 아래 CPU 사슬이 그대로 겁니다.
+    bool clarity_on_gpu = false;
+    if (denoise_identity && request.local_dodge_burn.adjustments.empty() &&
+        negaflow::imaging::valid_texture_stage_parameters(texture_parameters)) {
+        const float threshold = negaflow::imaging::texture_stage_identity_threshold;
+        if (texture_parameters.target_clarity > threshold &&
+            GpuAccelerator::shared().apply_resident_local_contrast(
+                resident_pixels, grain_image.width, grain_image.height,
+                texture_parameters.target_clarity)) {
+            texture_parameters.target_clarity = 0.0F;
+            clarity_on_gpu = true;
+        }
+        if (texture_parameters.target_clarity <= threshold &&
+            std::abs(texture_parameters.clarity) > threshold &&
+            GpuAccelerator::shared().apply_resident_local_contrast(
+                resident_pixels, grain_image.width, grain_image.height,
+                texture_parameters.clarity)) {
+            texture_parameters.clarity = 0.0F;
+            clarity_on_gpu = true;
+        }
+    }
+    const bool identity_finish =
+        denoise_identity &&
         request.local_dodge_burn.adjustments.empty() &&
         texture_stage_is_identity(texture_parameters) &&
         negative.film_type != negaflow::imaging::NegativeFilmType::black_and_white &&
         (image_transform_is_identity(request.image_transform) || can_defer_transform) &&
         !(preview == nullptr && detect == nullptr && request.output_long_edge != 0U) &&
         sharpen_identity;
-    const float* const resident_pixels =
-        reinterpret_cast<const float*>(grain_image.pixels.data());
     const bool resident = GpuAccelerator::shared().has_resident_image(
         resident_pixels, grain_image.width, grain_image.height);
     if (resident && identity_finish) {
@@ -97,6 +127,8 @@ std::optional<DevelopExportOutcome> apply_finish_stages(
             out.transform.applied = true;
             out.transform.resampled = false;
         }
+        out.texture.clarity_applied = clarity_on_gpu;
+        out.texture.applied = clarity_on_gpu;
         out.sharpening.status = negaflow::imaging::TextureStageStatus::ok;
         out.sharpening.info.kernel_status = negaflow::core::KernelStatus::ok;
         out.sharpening.image = std::move(grain_image);
@@ -291,6 +323,8 @@ std::optional<DevelopExportOutcome> apply_finish_stages(
     out.denoise = film_scan_denoise.info;
     out.dodge = local_dodge_burn.info;
     out.texture = texture.info;
+    out.texture.clarity_applied = out.texture.clarity_applied || clarity_on_gpu;
+    out.texture.applied = out.texture.applied || clarity_on_gpu;
     out.bw = black_and_white.info;
     out.transform = image_transform.info;
     return std::nullopt;

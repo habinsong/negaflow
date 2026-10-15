@@ -169,6 +169,46 @@ internal sealed class DevelopToneEditor
                     frame.ManualBase,
                     ColorModel: frame.ColorModel with { Warmth = 0, Tint = 0 }));
 
+    /// <summary>
+    /// macOS <c>AppModel.pickNeutralWhiteBalance</c> — 중립 스포이드가 푼 온도·틴트를 대입합니다.
+    /// 되돌리기 한 단계입니다.
+    /// </summary>
+    public DevelopEditResult ApplyNeutralWhiteBalance(
+        LibraryFrameSnapshot? frame,
+        double solvedWarmth,
+        double solvedTint)
+    {
+        if (frame is null)
+        {
+            return new(LibraryFrameError.MissingId, false);
+        }
+        (double warmth, double tint) = UserWhiteBalance(frame.LookPresetId, solvedWarmth, solvedTint);
+        LibraryFrameError error = host.EditUndoable(
+            frame.Id,
+            LibraryHostService.UndoActions.DevelopAdjustment,
+            new LibraryFrameEdit(
+                frame.Tone,
+                frame.ManualBase,
+                ColorModel: frame.ColorModel with { Warmth = warmth, Tint = tint }));
+        return new(error, error == LibraryFrameError.None);
+    }
+
+    /// <summary>
+    /// 룩 프리셋의 온도·틴트에 사용자 값이 더해집니다(<see cref="LookPresetComposition"/>). 합이 풀어낸
+    /// 값이 되도록 프리셋 몫을 빼고 슬라이더 범위로 자릅니다(macOS <c>userWhiteBalance</c>).
+    /// </summary>
+    internal static (double Warmth, double Tint) UserWhiteBalance(
+        string? lookPresetId,
+        double solvedWarmth,
+        double solvedTint)
+    {
+        LookPreset? preset = LookPresetLibrary.Resolve(lookPresetId);
+        double limit = ColorModelRecipe.MaximumWhiteBalance;
+        return (
+            Math.Clamp(solvedWarmth - (preset?.Color.Warmth ?? 0.0), -limit, limit),
+            Math.Clamp(solvedTint - (preset?.Color.Tint ?? 0.0), -limit, limit));
+    }
+
     private DevelopEditResult ApplyAutoAdjusted(LibraryFrameSnapshot adjusted) =>
         Edit(
             adjusted,

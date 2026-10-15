@@ -88,28 +88,6 @@ void apply_grain(WorkingImage& image, const float strength) noexcept {
         });
 }
 
-void apply_negative_clarity(
-    WorkingImage& image,
-    const float clarity,
-    std::size_t& scratch_peak_bytes) {
-    const float amount = std::min(0.9F, -clarity * 0.8F);
-    gaussian_transform(
-        image,
-        4.0F - clarity * 6.0F,
-        GaussianEdgeMode::transparent,
-        [](const negaflow::core::Rgba32F source) noexcept {
-            return FilterSample{rgb(source), source.alpha};
-        },
-        [amount](const negaflow::core::Rgba32F source,
-                 const FilterSample blurred) noexcept {
-            return FilterSample{
-                mix(rgb(source), blurred.color, amount),
-                source.alpha + ((blurred.alpha - source.alpha) * amount),
-            };
-        },
-        scratch_peak_bytes);
-}
-
 void apply_halation(
     WorkingImage& image,
     const float strength,

@@ -292,6 +292,51 @@ void test_negative_inversion_validation_and_bw_anchor() {
         "non-finite density range is rejected");
 }
 
+void test_exposure_shoulder() {
+    // macOS `ExposureShoulderTests` 와 같은 계약입니다. + 쪽은 무릎(컬러 확산 화이트 0.70) 아래를
+    // 정확히 2^EV 로, 그 위 휘도를 1.0 에 점근하는 숄더로 접고 색비를 지킵니다.
+    const float color = static_cast<float>(negaflow::core::exposure_headroom_stops(false));
+    const float bw = static_cast<float>(negaflow::core::exposure_headroom_stops(true));
+    expect(std::abs(color - 0.514573F) < 1.0e-5F, "colour headroom is log2(1/0.70)");
+    expect(std::abs(color - negaflow::core::color_exposure_headroom_stops) < 1.0e-7F,
+           "the aggregate default equals the derived colour headroom");
+    expect(std::abs(bw - 0.234465F) < 1.0e-5F, "B&W headroom is log2(1/0.85)");
+
+    // 플랫폼 간 앵커: 휘도 0.5, +1EV, 컬러 → 1 − 0.3·exp(−1) = 0.889636 (macOS 와 같은 식).
+    // macOS 참조는 무릎 0.70 을 double 로, 여기는 float 상수로 들고 있어 1e-8 수준만 다릅니다.
+    expect(std::abs(negaflow::core::exposed_luminance(0.5, 1.0, color) - 0.8896361676485673) < 1.0e-6,
+           "exposed luminance matches the macOS anchor");
+
+    std::array<negaflow::core::Rgba32F, 4> input{{
+        {0.10F, 0.10F, 0.10F, 1.0F},
+        {0.50F, 0.50F, 0.50F, 1.0F},
+        {0.70F, 0.50F, 0.40F, 1.0F},
+        {0.90F, 0.90F, 0.90F, 1.0F},
+    }};
+    std::array<negaflow::core::Rgba32F, 4> output{};
+    const negaflow::core::ConstImageView in{input.data(), input.size(), 4U, 1U, 4U};
+    const negaflow::core::ImageView out{output.data(), output.size(), 4U, 1U, 4U};
+    expect_status(negaflow::core::apply_exposure(in, out, 1.0F, color),
+                  negaflow::core::KernelStatus::ok, "shoulder exposure succeeds");
+    expect(nearly_equal(output[0].green, 0.20F), "below the knee is an exact doubling");
+    expect(std::abs(output[1].green - 0.889636F) < 1.0e-5F, "above the knee follows the shoulder");
+    expect(output[3].green < 1.0F && output[3].green > output[1].green,
+           "the shoulder stays monotone and below one");
+    expect(std::abs((output[2].red / output[2].blue) - (0.70F / 0.40F)) < 1.0e-5F,
+           "the shoulder keeps channel ratios (white balance)");
+
+    expect_status(negaflow::core::apply_exposure(in, out, -1.0F, color),
+                  negaflow::core::KernelStatus::ok, "negative exposure succeeds");
+    expect(nearly_equal(output[3].green, 0.45F), "negative exposure stays a pure multiply");
+
+    expect_status(negaflow::core::apply_exposure(in, out, 1.0F, 0.0F),
+                  negaflow::core::KernelStatus::invalid_parameter, "zero headroom is rejected");
+    expect_status(negaflow::core::apply_exposure(in, out, 1.0F, bw),
+                  negaflow::core::KernelStatus::ok, "B&W headroom succeeds");
+    expect(std::abs(output[1].green - 0.889636F) < 1.0e-5F,
+           "B&W shares the knee; only the blend ramp differs below its headroom");
+}
+
 }  // namespace
 
 int main() {
@@ -301,6 +346,7 @@ int main() {
     test_response_constant_bits();
     test_negative_inversion_color_fixture();
     test_negative_inversion_validation_and_bw_anchor();
+    test_exposure_shoulder();
 
     if (failures != 0) {
         std::cerr << failures << " scalar kernel assertion(s) failed\n";

@@ -1,7 +1,11 @@
 #pragma once
 
+#include "negaflow/core/pointwise.h"
+#include "negaflow/imaging/neutral_axis_evidence.h"
+
 #include <array>
 #include <cstdint>
+#include <optional>
 
 namespace negaflow::imaging {
 
@@ -47,6 +51,11 @@ struct AutoAdjustStats final {
     // Luma histogram in the sRGB gamma domain, normalised to sum to 1.
     std::array<double, auto_adjust_histogram_bins> luma_histogram{};
     double average_saturation{0.0};
+
+    // 휘도대별 중립축 증거입니다. 있으면(그리고 고전 gray-world 폴백이 아니면) 자동 WB 가 대역
+    // 중앙값의 중앙값을 씁니다 — 한 휘도대를 차지한 따뜻한 조명 면이 평균을 끌지 못합니다
+    // (macOS `ImageStats.neutralAxis`).
+    std::optional<NeutralAxisEvidence> neutral_axis{};
 };
 
 struct AutoWhiteBalanceResult final {
@@ -81,12 +90,28 @@ inline constexpr std::uint32_t auto_adjust_sample_extent = 200U;
 // Sends the near-neutral linear mean to grey by inverting ColorModel's warmth and tint
 // gains. Deliberately partial: a full correction runs away into the opposite cast on
 // scenes where the grey-world assumption fails, such as a sunset or a forest.
+// 중립축 증거가 있으면 그 대역 중앙값을 씁니다. 결과는 ±1(예전 슬라이더 끝)로 묶습니다.
 [[nodiscard]] AutoWhiteBalanceResult auto_white_balance(
     const AutoAdjustStats& stats) noexcept;
 
 // Exposure, then whites/blacks, then highlights/shadows, then density, then contrast.
 // Each step predicts where the previous one moved the percentiles, so the answers
 // compose instead of fighting each other.
-[[nodiscard]] AutoToneResult auto_tone(const AutoAdjustStats& stats) noexcept;
+// `exposure_headroom_stops` 는 노출 + 쪽 숄더의 헤드룸입니다(`core::exposure_headroom_stops` —
+// 흑백 네거티브만 다릅니다). 노출 뒤 백분위를 엔진과 같은 숄더 연산자로 예측합니다.
+[[nodiscard]] AutoToneResult auto_tone(
+    const AutoAdjustStats& stats,
+    double exposure_headroom_stops =
+        static_cast<double>(negaflow::core::color_exposure_headroom_stops)) noexcept;
+
+// 자동 톤 폐루프 한 번입니다(macOS `AutoAdjust.refineTone`). `auto_tone` 은 슬라이더 전달함수를
+// 모형으로 거꾸로 풀지만 사용자 커브·색 깊이·스캐너 타깃과의 상호작용은 모형 밖입니다. 첫 값을
+// 실제로 적용해 다시 렌더한 통계(`measured`)로 미드(노출이 밝힌 경우만)와 백점을 한 번 바로잡습니다.
+// 다른 값은 `first` 그대로입니다.
+[[nodiscard]] AutoToneResult refine_auto_tone(
+    const AutoToneResult& first,
+    const AutoAdjustStats& measured,
+    double exposure_headroom_stops =
+        static_cast<double>(negaflow::core::color_exposure_headroom_stops)) noexcept;
 
 }  // namespace negaflow::imaging

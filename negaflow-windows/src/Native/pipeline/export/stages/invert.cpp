@@ -3,6 +3,7 @@
 #include "export/support/outcome.h"
 
 #include "negaflow/core/pixel.h"
+#include "negaflow/imaging/analysis_region.h"
 #include "negaflow/imaging/auto_negative_base_resolver.h"
 #include "negaflow/imaging/film_base_scale.h"
 
@@ -15,7 +16,7 @@ void apply_resolved_base(InvertStageOutput& out, const PreviewProxyHint& hint) n
     out.negative.dmin = hint.dmin;
     out.base_source = hint.base_source;
     out.negative.use_preset_response = hint.use_preset_response;
-    out.negative.preset_dmax_normalized = hint.preset_dmax_normalized;
+    out.negative.preset_range_factor = hint.preset_range_factor;
     out.measurement_method = hint.measurement_method;
     out.diagnostics = hint.diagnostics;
 }
@@ -52,9 +53,16 @@ std::optional<DevelopExportOutcome> resolve_negative_base(
     PreviewProxyHint& hint) noexcept {
     hint.has_base = false;
     hint.use_preset_response = false;
-    hint.preset_dmax_normalized = {};
+    hint.preset_range_factor = {};
+    // 크롭이 있으면 베이스를 크롭 바깥 띠(리베이트)에서 먼저 찾습니다(macOS `developBase`
+    // 의 `analysisRegion`). 정규 좌표라 원본이든 프록시든 같은 영역입니다.
+    hint.base_region = negaflow::imaging::analysis_region_from_transform(
+        request.image_transform, image.width, image.height);
+    hint.base_image_width = image.width;
+    hint.base_image_height = image.height;
     const negaflow::imaging::AutoNegativeBaseResult resolved =
-        negaflow::imaging::resolve_auto_negative_base(image, request.negative.film_type);
+        negaflow::imaging::resolve_auto_negative_base(
+            image, request.negative.film_type, hint.base_region);
     if (resolved.status != negaflow::imaging::AutoNegativeBaseStatus::ok) {
         return fail(
             DevelopExportStage::develop,
@@ -76,7 +84,7 @@ std::optional<DevelopExportOutcome> resolve_negative_base(
     if (request.base_estimation_mode == NegativeBaseEstimationMode::preset &&
         request.film_stock_preset.has_value()) {
         hint.use_preset_response = true;
-        hint.preset_dmax_normalized = request.film_stock_preset->dmax_normalized;
+        hint.preset_range_factor = request.film_stock_preset->range_factor;
         if (negaflow::imaging::confident_auto_negative_base_source(resolved.source)) {
             hint.dmin = resolved.dmin;
             hint.base_source = DevelopBaseSource::preset_measured;
@@ -134,6 +142,9 @@ std::optional<DevelopExportOutcome> invert_source(
     out.developed_info = {};
     out.positive = request.film_polarity == FilmPolarity::positive;
     out.negative_source = !out.positive;
+    out.analysis_region = negaflow::imaging::analysis_region_from_transform(
+        request.image_transform, decoded_image.width, decoded_image.height);
+    out.negative.analysis_region = out.analysis_region;
     const bool needs_base =
         out.negative_source &&
         (request.base_estimation_mode == NegativeBaseEstimationMode::auto_estimate ||

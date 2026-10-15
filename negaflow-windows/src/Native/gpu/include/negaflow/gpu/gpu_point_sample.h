@@ -33,10 +33,15 @@ public:
         GpuPointSampleGrid& kernel) noexcept;
 
     // `samples` 는 `grid_width * grid_height` 칸으로 채워집니다(행 우선). 자리는 나눗수
-    // `divisor_width`·`divisor_height` 로 정합니다.
+    // `divisor_width`·`divisor_height` 로 정하며, 원본 대신 사각형(`origin`, `extent` —
+    // 크롭한 사진 영역, 없으면 화상 전체)을 나눕니다.
     [[nodiscard]] GpuKernelStatus dispatch(
         const GpuDevice& device,
         const GpuWorkingImage& source,
+        std::uint32_t origin_x,
+        std::uint32_t origin_y,
+        std::uint32_t extent_width,
+        std::uint32_t extent_height,
         std::uint32_t divisor_width,
         std::uint32_t divisor_height,
         std::uint32_t grid_width,

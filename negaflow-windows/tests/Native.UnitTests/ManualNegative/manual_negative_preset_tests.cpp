@@ -40,6 +40,20 @@ void test_film_stock_presets() {
         L"warm-led",
         negaflow::imaging::NegativeFilmType::color);
     expect(portra.has_value(), "known bundled film stock resolves");
+    // 필름 상대 계수(기하평균 1)는 macOS `FilmStockDmin.relativeRangeFactor` 와 같은 값입니다.
+    for (const auto& [id, expected] : std::array<std::pair<const wchar_t*, std::array<float, 3>>, 3>{{
+             {L"kodak-portra-400", {1.000566F, 1.000327F, 0.999108F}},
+             {L"vision3-250d", {0.974887F, 1.013416F, 1.012181F}},
+             {L"harman-phoenix-200", {1.004084F, 0.918315F, 1.084522F}},
+         }}) {
+        const auto stock = negaflow::imaging::resolve_film_stock_base_preset(
+            id, L"neutral", negaflow::imaging::NegativeFilmType::color);
+        bool matches = stock.has_value();
+        for (std::size_t channel = 0U; matches && channel < 3U; ++channel) {
+            matches = std::abs(stock->range_factor[channel] - expected[channel]) < 2.0e-5F;
+        }
+        expect(matches, "stock relative range factor matches macOS");
+    }
     if (portra) {
         expect(
             std::abs(portra->dmin[0] - std::pow(10.0F, -0.21F)) < 1.0e-5F &&

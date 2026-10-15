@@ -110,8 +110,9 @@ internal sealed class DevelopInspectorSync
     internal void SyncTone()
     {
         bool canEdit = view.panel?.CanEditTone == true;
+        // 실행 중에도 누를 수 있습니다 — 톤과 화이트밸런스는 서로를 취소하지 않고 둘 다 반영됩니다.
         bool canAutoAdjust = view.panel?.SelectedFrame?.CanDevelop == true &&
-                             view.autoAdjustCoordinator is { IsRunning: false };
+                             view.autoAdjustCoordinator is not null;
         view.Adjustments.SetEnabled(canEdit, canAutoAdjust);
         view.GeometryCard.SetEnabled(canEdit);
         view.HistogramView.IsEnabled = canEdit;

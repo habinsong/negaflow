@@ -192,6 +192,21 @@ void preview_raw_put_interactive(
     }
 }
 
+void preview_raw_update_base(
+    const PreviewRawKey& key,
+    const PreviewProxyHint& hint) noexcept {
+    const std::lock_guard<std::mutex> guard{g_mutex};
+    PreviewRawEntry* const entry = find_locked(key);
+    if (entry == nullptr) {
+        return;
+    }
+    for (PreviewRawSlot* slot : {&entry->settled, &entry->interactive}) {
+        if (slot->image != nullptr) {
+            slot->hint = hint;
+        }
+    }
+}
+
 void preview_raw_store_reset() noexcept {
     const std::lock_guard<std::mutex> guard{g_mutex};
     g_entries.clear();

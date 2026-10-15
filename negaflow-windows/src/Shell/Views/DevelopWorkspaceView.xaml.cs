@@ -80,11 +80,14 @@ public sealed partial class DevelopWorkspaceView : UserControl
         PreviewCanvas.TryHandlePointerPressed = args =>
             TryHandleLocalAdjustment(args, LocalPointerPhase.Pressed) ||
             TryHandleBasePick(args) ||
+            TryHandleNeutralPick(args) ||
             GrainMendPanel.TryHandlePointerPressed(args);
         BaseCard.BasePickerModeChanged += (_, _) =>
         {
             if (BaseCard.IsBasePickerActive)
             {
+                // 두 스포이드는 캔버스 도구 자리 하나를 나눠 씁니다(macOS `eyedropperTarget`).
+                Adjustments.Color.CancelNeutralPicker();
                 ExitCanvasToolsForBasePicker();
             }
             PreviewCanvas.ShowBasePickerPrompt(BaseCard.IsBasePickerActive);
@@ -100,6 +103,15 @@ public sealed partial class DevelopWorkspaceView : UserControl
             {
                 RequestPreview();
             }
+        };
+        Adjustments.Color.NeutralPickerModeChanged += (_, _) =>
+        {
+            if (Adjustments.Color.IsNeutralPickerActive)
+            {
+                BaseCard.CancelBasePicker();
+                ExitCanvasToolsForBasePicker();
+            }
+            PreviewCanvas.ShowNeutralPickerPrompt(Adjustments.Color.IsNeutralPickerActive);
         };
         BaseCard.ManualBaseResetRequested += (_, _) => ResetManualBase();
         PreviewCanvas.TryHandlePointerMoved = args =>

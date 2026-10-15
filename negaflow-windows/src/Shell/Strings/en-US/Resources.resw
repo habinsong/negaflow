@@ -1308,6 +1308,11 @@ Load a scanner from Library to scan film.</value>
   <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>Click unexposed film base (between frames or edge) · Esc to cancel</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
   <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>That spot is not film base. Click the unexposed base between frames or at the edge.</value></data>
   <data name="developBasePickFailed.Text" xml:space="preserve"><value>Could not read the source, so no base was picked.</value></data>
+  <data name="developPickNeutral.Text" xml:space="preserve"><value>Neutral Eyedropper</value><comment>AppLocalizedPhrase.pickNeutral</comment></data>
+  <data name="developPickNeutralHelp.Value" xml:space="preserve"><value>Click something that should be gray or white to set Warmth and Tint.</value><comment>AppLocalizedPhrase.pickNeutralHelp</comment></data>
+  <data name="developNeutralPickerPrompt.Text" xml:space="preserve"><value>Click something that should be gray or white · Esc to cancel</value><comment>AppLocalizedPhrase.neutralPickerOverlayPrompt</comment></data>
+  <data name="developNeutralPickFailed.Text" xml:space="preserve"><value>Can't measure a neutral here — avoid spots that are too dark or too bright</value><comment>AppLocalizedPhrase.neutralPickFailed</comment></data>
+  <data name="developNeutralPickedFormat.Text" xml:space="preserve"><value>Neutral eyedropper: Warmth %.2f · Tint %.2f</value><comment>AppLocalizedPhrase.neutralPickedFormat</comment></data>
   <data name="canvasZoomOut.Text" xml:space="preserve"><value>Zoom Out</value><comment>AppLocalizedPhrase.zoomOut</comment></data>
   <data name="canvasZoomIn.Text" xml:space="preserve"><value>Zoom In</value><comment>AppLocalizedPhrase.zoomIn</comment></data>
   <data name="canvasZoomPercentHelp.Text" xml:space="preserve"><value>Enter zoom percentage</value><comment>AppLocalizedPhrase.zoomPercentHelp</comment></data>
@@ -1338,7 +1343,7 @@ Load a scanner from Library to scan film.</value>
   <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>Quick Start</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>Keyboard Shortcuts</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>Reset Photo Angle</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
-  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Reset all adjustment values except geometry (rotate/crop).</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
+  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Reset all adjustment values, including crop and straighten. Rotation and flips are kept.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
   <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>System display profile</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
   <data name="developAutoToneHelp.Text" xml:space="preserve"><value>Auto Tone Command-U — use the histogram to adjust exposure, contrast, highlights, shadows, whites, blacks, and vibrance.</value><comment>AppLocalizedPhrase.autoToneHelp</comment></data>
   <data name="developAutoWhiteBalanceHelp.Text" xml:space="preserve"><value>Auto White Balance Shift-Command-U — neutralize Warmth and Tint using gray-world.</value><comment>AppLocalizedPhrase.autoWhiteBalanceHelp</comment></data>

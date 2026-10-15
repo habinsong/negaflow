@@ -53,10 +53,16 @@ void discard_pixels(WorkingImage& image) noexcept {
     const WorkingImage& image,
     const std::array<float, 3>& dmin,
     const NegativeFilmType film_type,
+    const std::optional<AnalysisRegion>& region,
     std::array<float, 3>* out_black_input = nullptr) noexcept {
     if (!has_compatible_layout(image)) {
         return std::nullopt;
     }
+    // 크롭한 사진 영역이 있으면 그 안만 잽니다(홀더·백라이트·이웃 프레임 배제).
+    const std::optional<AnalysisPixelRect> rect =
+        analysis_measurement_rect(region, image.width, image.height);
+    const std::uint32_t measured_width = rect ? rect->width : image.width;
+    const std::uint32_t measured_height = rect ? rect->height : image.height;
 
     // This mirrors the macOS sampleStats geometry and affine sampling: a 64...320-wide
     // uniform-scale linear proxy, pixel-centre bilinear sampling, and a 6% frame inset.
@@ -72,12 +78,12 @@ void discard_pixels(WorkingImage& image) noexcept {
     // a 1:4 frame so the guard catches only what it was written for.
     constexpr std::size_t maximum_sample_count = 320U * 1280U;
     std::uint64_t sample_width = std::clamp(
-        image.width,
+        measured_width,
         minimum_sample_width,
         maximum_sample_width);
     std::uint64_t sample_height = std::max<std::uint64_t>(
         1U,
-        (static_cast<std::uint64_t>(image.height) * sample_width) / image.width);
+        (static_cast<std::uint64_t>(measured_height) * sample_width) / measured_width);
     const std::uint64_t sample_count = sample_width * sample_height;
     if (sample_count > maximum_sample_count) {
         const double scale = std::sqrt(
@@ -86,16 +92,21 @@ void discard_pixels(WorkingImage& image) noexcept {
             1U,
             static_cast<std::uint64_t>(sample_width * scale));
         const double uniform_scale =
-            static_cast<double>(sample_width) / static_cast<double>(image.width);
+            static_cast<double>(sample_width) / static_cast<double>(measured_width);
         sample_height = std::max<std::uint64_t>(1U, static_cast<std::uint64_t>(
-            static_cast<double>(image.height) * uniform_scale));
+            static_cast<double>(measured_height) * uniform_scale));
     }
 
     const std::uint32_t bounded_width = static_cast<std::uint32_t>(sample_width);
     const std::uint32_t bounded_height = static_cast<std::uint32_t>(sample_height);
 
-    const std::uint32_t inset_x = std::max(1U, static_cast<std::uint32_t>(bounded_width * 0.06));
-    const std::uint32_t inset_y = std::max(1U, static_cast<std::uint32_t>(bounded_height * 0.06));
+    // 홀더 그림자를 빼려는 6% 인셋입니다. 크롭 영역이면 경계는 이미 잘려 나갔으므로 축소
+    // 보간이 크롭 가장자리에서 섞는 두 칸만 버립니다 — 6% 를 그대로 두면 사진 가장자리의
+    // 실제 명부가 Dmax 측정에서 빠집니다(macOS `sampleStats` 와 같습니다).
+    const std::uint32_t inset_x = rect
+        ? 2U : std::max(1U, static_cast<std::uint32_t>(bounded_width * 0.06));
+    const std::uint32_t inset_y = rect
+        ? 2U : std::max(1U, static_cast<std::uint32_t>(bounded_height * 0.06));
     if (bounded_width <= inset_x * 2U || bounded_height <= inset_y * 2U) {
         return std::nullopt;
     }
@@ -111,8 +122,9 @@ void discard_pixels(WorkingImage& image) noexcept {
             image.height,
             image.stride_pixels,
         };
-        const DownsampledProxy proxy = downsample_for_statistics(
-            source, bounded_width, bounded_height);
+        const DownsampledProxy proxy = rect
+            ? downsample_region_for_statistics(source, *rect, bounded_width, bounded_height)
+            : downsample_for_statistics(source, bounded_width, bounded_height);
         if (proxy.pixels.empty()) {
             return std::nullopt;
         }
@@ -140,16 +152,85 @@ void discard_pixels(WorkingImage& image) noexcept {
             base_ratio >= 1.5F
             ? std::optional<float>{base_ratio * 0.55F}
             : std::nullopt;
-        std::vector<negaflow::core::Rgba32F> film;
-        film.reserve(pixels.size());
-        for (const negaflow::core::Rgba32F pixel : pixels) {
+        const std::uint32_t inner_width = bounded_width - (inset_x * 2U);
+        const std::uint32_t inner_height = bounded_height - (inset_y * 2U);
+        std::vector<bool> non_film(pixels.size(), false);
+        bool any_non_film = false;
+        for (std::size_t index = 0U; index < pixels.size(); ++index) {
+            const negaflow::core::Rgba32F pixel = pixels[index];
             const float luma = (pixel.red + pixel.green + pixel.blue) / 3.0F;
-            if (luma > gate ||
+            non_film[index] = luma > gate ||
                 (neutral_dark_ratio_cut && luma < dark_cut &&
-                 pixel.red / std::max(pixel.blue, 1.0e-4F) < *neutral_dark_ratio_cut)) {
-                continue;
+                 pixel.red / std::max(pixel.blue, 1.0e-4F) < *neutral_dark_ratio_cut);
+            any_non_film = any_non_film || non_film[index];
+        }
+        // 홀더·백라이트 같은 **두께 있는** 비필름 영역의 가장자리 띠(2 칸)도 버립니다. 축소 보간이
+        // 그 가장자리를 필름과 섞은 칸은 게이트를 통과하면서 최농부(p0.2)를 차지합니다 — 2026-10-14
+        // 실측: 홀더가 리베이트를 가린 디카 스캔에서 혼합 칸이 Dmax 를 1.8D 바닥으로 채널마다 다르게
+        // 잡아 중립 웨지가 R/B 0.72~0.98 로 틀어졌습니다.
+        // 먼저 3x3 침식으로 흩어진 점을 지웁니다. 베이스 근처 밝기의 넓은 면에서는 양자화·그레인
+        // 수준의 차이로 게이트 판정이 점점이 뒤집히는데, 그 점마다 이웃을 지우면 필름의 91% 가
+        // 사라져 남은 칸의 최농부가 입력의 미세한 차이에 크게 흔들렸습니다(macOS 실측: 같은 화상의
+        // 원본과 화면용 sRGB 사본에서 Dmax R 0.146 vs 0.238 → 화면·내보내기 불일치). 혼합 띠는
+        // 두께 있는 영역 옆에만 생깁니다. macOS `sampleStats` 와 같습니다.
+        std::vector<bool> near_non_film = non_film;
+        if (any_non_film) {
+            std::vector<bool> solid(non_film.size(), false);
+            bool any_solid = false;
+            for (std::uint32_t y = 0U; y < inner_height; ++y) {
+                for (std::uint32_t x = 0U; x < inner_width; ++x) {
+                    if (!non_film[static_cast<std::size_t>(y) * inner_width + x]) {
+                        continue;
+                    }
+                    bool all_non_film = true;
+                    const std::uint32_t y0 = y > 0U ? y - 1U : 0U;
+                    const std::uint32_t y1 = std::min(inner_height - 1U, y + 1U);
+                    const std::uint32_t x0 = x > 0U ? x - 1U : 0U;
+                    const std::uint32_t x1 = std::min(inner_width - 1U, x + 1U);
+                    for (std::uint32_t ny = y0; ny <= y1 && all_non_film; ++ny) {
+                        for (std::uint32_t nx = x0; nx <= x1; ++nx) {
+                            if (!non_film[static_cast<std::size_t>(ny) * inner_width + nx]) {
+                                all_non_film = false;
+                                break;
+                            }
+                        }
+                    }
+                    solid[static_cast<std::size_t>(y) * inner_width + x] = all_non_film;
+                    any_solid = any_solid || all_non_film;
+                }
             }
-            film.push_back(pixel);
+            // 침식된 핵에서 3 칸 = 원래 경계에서 2 칸 띠.
+            constexpr std::uint32_t radius = 3U;
+            for (std::uint32_t y = 0U; any_solid && y < inner_height; ++y) {
+                for (std::uint32_t x = 0U; x < inner_width; ++x) {
+                    if (!solid[static_cast<std::size_t>(y) * inner_width + x]) {
+                        continue;
+                    }
+                    const std::uint32_t y0 = y > radius ? y - radius : 0U;
+                    const std::uint32_t y1 = std::min(inner_height - 1U, y + radius);
+                    const std::uint32_t x0 = x > radius ? x - radius : 0U;
+                    const std::uint32_t x1 = std::min(inner_width - 1U, x + radius);
+                    for (std::uint32_t ny = y0; ny <= y1; ++ny) {
+                        for (std::uint32_t nx = x0; nx <= x1; ++nx) {
+                            near_non_film[static_cast<std::size_t>(ny) * inner_width + nx] = true;
+                        }
+                    }
+                }
+            }
+        }
+        const auto keep = [&pixels](const std::vector<bool>& excluded) {
+            std::vector<negaflow::core::Rgba32F> kept;
+            kept.reserve(pixels.size());
+            for (std::size_t index = 0U; index < pixels.size(); ++index) {
+                if (!excluded[index]) {
+                    kept.push_back(pixels[index]);
+                }
+            }
+            return kept;
+        };
+        std::vector<negaflow::core::Rgba32F> film = keep(near_non_film);
+        if (film.size() < 64U) {
+            film = keep(non_film);
         }
         if (film.size() < 64U) {
             film = std::move(pixels);
@@ -296,32 +377,25 @@ ManualNegativeDevelopResult develop_manual_negative(
         result.image,
         result.info.applied_dmin,
         parameters.film_type,
+        parameters.analysis_region,
         &result.info.black_input);
     if (!parameters.use_preset_response) {
         if (adaptive) {
             result.info.dmax_normalized = *adaptive;
         }
     } else {
-        for (const float dmax : parameters.preset_dmax_normalized) {
-            if (!std::isfinite(dmax) || dmax <= 0.0F) {
+        for (const float factor : parameters.preset_range_factor) {
+            if (!std::isfinite(factor) || factor <= 0.0F) {
                 discard_pixels(result.image);
                 return result;
             }
         }
-        const float scene_scale = adaptive
-            ? std::pow((*adaptive)[0] * (*adaptive)[1] * (*adaptive)[2], 1.0F / 3.0F)
-            : response.normal_range;
-        if (parameters.film_type == NegativeFilmType::black_and_white) {
-            result.info.dmax_normalized = {scene_scale, scene_scale, scene_scale};
-        } else {
-            const float preset_scale = std::pow(
-                parameters.preset_dmax_normalized[0] *
-                    parameters.preset_dmax_normalized[1] *
-                    parameters.preset_dmax_normalized[2],
-                1.0F / 3.0F);
+        if (adaptive) {
+            result.info.dmax_normalized = *adaptive;
+        }
+        if (parameters.film_type != NegativeFilmType::black_and_white) {
             for (std::size_t channel = 0U; channel < 3U; ++channel) {
-                result.info.dmax_normalized[channel] = scene_scale *
-                    parameters.preset_dmax_normalized[channel] / preset_scale;
+                result.info.dmax_normalized[channel] *= parameters.preset_range_factor[channel];
             }
         }
     }
@@ -385,10 +459,12 @@ ManualNegativeDevelopResult develop_manual_negative(
         return result;
     }
 
-    if (!parameters.use_preset_response) {
+    {
+        // 필름 모드도 자동 경로와 같은 반전이라 뮤트 장면 생동감을 함께 겁니다(macOS 와 같습니다).
         auto vibrance = apply_muted_scene_vibrance(
             output,
-            parameters.film_type == NegativeFilmType::black_and_white);
+            parameters.film_type == NegativeFilmType::black_and_white,
+            parameters.analysis_region);
         result.info.muted_scene_vibrance = vibrance.info;
         if (vibrance.status != negaflow::core::KernelStatus::ok) {
             result.info.kernel_status = vibrance.status;

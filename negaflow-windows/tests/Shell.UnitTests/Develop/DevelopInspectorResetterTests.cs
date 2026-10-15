@@ -73,7 +73,9 @@ internal static class DevelopInspectorResetterTests
             Check(
                 panel.ManualBase is { Red: 0.3, Green: 0.4, Blue: 0.5 },
                 "reset_all_preserves_manual_base");
-            Check(panel.SelectedFrame.ImageTransform.StraightenAngle == 3.5, "reset_all_preserves_geometry");
+            Check(panel.SelectedFrame.ImageTransform.StraightenAngle == 0.0 &&
+                    panel.SelectedFrame.ImageTransform.Crop is null,
+                "reset_all_clears_crop_and_angle");
             Check(host.CanUndo, "reset_all_is_undoable");
             Check(
                 host.UndoActionName == LibraryHostService.UndoActions.ResetAdjustments,
@@ -84,6 +86,7 @@ internal static class DevelopInspectorResetterTests
             Check(panel.Tone.Exposure == 1.0, "reset_undo_restores_exposure");
             Check(panel.Color.ColorModel.Warmth == 0.8, "reset_undo_restores_warmth");
             Check(panel.NoiseReduction.Strength == 0.9, "reset_undo_restores_nr");
+            Check(panel.SelectedFrame!.ImageTransform.StraightenAngle == 3.5, "reset_undo_restores_angle");
             Check(host.CanRedo, "reset_undo_can_redo");
 
             Check(host.Redo() == LibraryHostService.UndoActions.ResetAdjustments, "reset_redo");

@@ -14,6 +14,7 @@
 #include "gpu_accelerator_state.h"
 
 #include <mutex>
+#include <optional>
 
 namespace negaflow::pipeline {
 
@@ -44,6 +45,15 @@ bool GpuAccelerator::apply_scene_correction(
     }
     gpu::GpuWorkingImage* const pool = state_->pool.images();
     auto* const rgba = image.pixels.data();
+    // 크롭한 사진 영역이 있으면 그 안만 표본합니다. 없으면 격자 가장자리를 버립니다 — CPU 판
+    // `collect_measured_samples` 와 같은 규칙입니다.
+    const std::optional<imaging::AnalysisPixelRect> rect =
+        imaging::analysis_measurement_rect(parameters.analysis_region, image.width, image.height);
+    const auto finish_samples = [&rect](imaging::SceneSampleGrid& samples, const std::uint32_t width) {
+        if (!rect) {
+            imaging::inset_scene_samples(samples, width, imaging::scene_frame_border_inset);
+        }
+    };
     float* const host = reinterpret_cast<float*>(rgba);
     int read_slot = 0;
     if (state_->resident_matches(host, image.width, image.height)) {
@@ -64,10 +74,12 @@ bool GpuAccelerator::apply_scene_correction(
                 state_->device,
                 pool[read_slot],
                 imaging::scene_auto_levels_sample_width,
+                rect,
                 samples) != gpu::GpuKernelStatus::ok) {
             // 아직 아무것도 적용하지 않았습니다. 호출부가 CPU 판을 그대로 부르면 됩니다.
             return false;
         }
+        finish_samples(samples, imaging::scene_auto_levels_sample_width);
         info.sampled_pixels += samples.red.size();
         const imaging::SceneAutoLevelsPlan plan =
             imaging::plan_scene_auto_levels(samples, parameters.negative_source);
@@ -91,7 +103,9 @@ bool GpuAccelerator::apply_scene_correction(
                 state_->device,
                 pool[read_slot],
                 imaging::scene_neutral_balance_sample_width,
+                rect,
                 samples) == gpu::GpuKernelStatus::ok) {
+            finish_samples(samples, imaging::scene_neutral_balance_sample_width);
             info.sampled_pixels += samples.red.size();
             const imaging::SceneNeutralBalancePlan plan =
                 imaging::plan_scene_neutral_balance(samples);

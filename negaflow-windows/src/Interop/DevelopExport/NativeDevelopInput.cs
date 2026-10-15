@@ -44,6 +44,11 @@ internal static unsafe partial class NativeDevelopInput
     internal static partial uint Pick(NativeDevelopExportRequestV39* request, double unitX, double unitY,
         NativeDevelopRunStateV1* state, NativeDevelopExportResultV3* result, NativeFilmBasePickV1* picked);
 
+    [LibraryImport(NativeMethods.LibraryName, EntryPoint = "nf_pick_neutral_white_balance_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial uint PickNeutral(NativeDevelopExportRequestV39* request, double unitX, double unitY,
+        NativeDevelopRunStateV1* state, NativeDevelopExportResultV3* result, NativeNeutralWhiteBalancePickV1* picked);
+
     [LibraryImport(NativeMethods.LibraryName, EntryPoint = "nf_develop_export_v39")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial uint Export(NativeDevelopExportRequestV39* request,

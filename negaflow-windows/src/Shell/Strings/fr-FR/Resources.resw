@@ -1308,6 +1308,11 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>Cliquez sur la base non exposée du film (entre les vues ou sur le bord) · Échap pour annuler</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
   <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>Cet endroit n'est pas la base du film. Cliquez sur la base non exposée entre les vues ou sur le bord.</value></data>
   <data name="developBasePickFailed.Text" xml:space="preserve"><value>Impossible de lire la source, aucune base n'a été relevée.</value></data>
+  <data name="developPickNeutral.Text" xml:space="preserve"><value>Pipette neutre</value><comment>AppLocalizedPhrase.pickNeutral</comment></data>
+  <data name="developPickNeutralHelp.Value" xml:space="preserve"><value>Cliquez sur une zone qui devrait être grise ou blanche pour régler la température et la teinte.</value><comment>AppLocalizedPhrase.pickNeutralHelp</comment></data>
+  <data name="developNeutralPickerPrompt.Text" xml:space="preserve"><value>Cliquez sur une zone qui devrait être grise ou blanche · Échap pour annuler</value><comment>AppLocalizedPhrase.neutralPickerOverlayPrompt</comment></data>
+  <data name="developNeutralPickFailed.Text" xml:space="preserve"><value>Impossible de mesurer un neutre ici — évitez les zones trop sombres ou trop claires</value><comment>AppLocalizedPhrase.neutralPickFailed</comment></data>
+  <data name="developNeutralPickedFormat.Text" xml:space="preserve"><value>Pipette neutre : température %.2f · teinte %.2f</value><comment>AppLocalizedPhrase.neutralPickedFormat</comment></data>
   <data name="canvasZoomOut.Text" xml:space="preserve"><value>Zoom arrière</value><comment>AppLocalizedPhrase.zoomOut</comment></data>
   <data name="canvasZoomIn.Text" xml:space="preserve"><value>Zoom avant</value><comment>AppLocalizedPhrase.zoomIn</comment></data>
   <data name="canvasZoomPercentHelp.Text" xml:space="preserve"><value>Saisissez le pourcentage de zoom</value><comment>AppLocalizedPhrase.zoomPercentHelp</comment></data>
@@ -1338,7 +1343,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>Démarrage rapide</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>Raccourcis clavier</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>Réinitialiser l’angle</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
-  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Réinitialise tous les réglages, à l'exception de la géométrie (rotation/recadrage).</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
+  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Réinitialise tous les réglages, y compris le recadrage et le redressement. La rotation et les retournements sont conservés.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
   <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>Profil d'affichage du système</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
   <data name="developAutoToneHelp.Text" xml:space="preserve"><value>Tonalité automatique Cmd-U — ajuste l'exposition, le contraste, les hautes lumières, les ombres, les blancs, les noirs et la vibrance d'après l'histogramme.</value><comment>AppLocalizedPhrase.autoToneHelp</comment></data>
   <data name="developAutoWhiteBalanceHelp.Text" xml:space="preserve"><value>Balance des blancs automatique Maj-Cmd-U — neutralise la température et la teinte selon l'hypothèse du monde gris.</value><comment>AppLocalizedPhrase.autoWhiteBalanceHelp</comment></data>

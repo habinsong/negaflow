@@ -1,6 +1,7 @@
 #pragma once
 
 #include "negaflow/core/pixel.h"
+#include "negaflow/imaging/analysis_region.h"
 
 #include <cstdint>
 #include <vector>
@@ -27,6 +28,20 @@ struct DownsampledProxy final {
 // 나머지 여덟 지점도 함께 좋아졌다 — 한 지점을 위해 다른 지점을 내준 것이 아니다.
 [[nodiscard]] DownsampledProxy downsample_for_statistics(
     negaflow::core::ConstImageView source,
+    std::uint32_t target_width,
+    std::uint32_t target_height);
+
+// 크롭 사각형(`rect`, 원본 화소 y-down)만 줄인 통계 프록시입니다 — macOS 의 "측정 영역으로
+// 자른 뒤 축소" 자리입니다. 단계 선택과 표본 위치는 위 함수가 사각형을 원본으로 보았을 때와
+// 같습니다.
+//
+// 밉맵은 **전체 화상**에서 짓고 사각형 좌표로 이중선형 표본을 뽑습니다. 화상이 GPU 에 머물러
+// 있으면 호스트 사본이 낡아 부분 뷰로는 읽을 수 없고, 상주 밉맵(전체 화상 기준)은 그대로
+// 쓸 수 있기 때문입니다. GPU 밉맵을 못 쓰는 갈래(축소 단계 0, GPU 실패)에서는 호스트에서
+// 읽기 전에 상주 화상을 내립니다.
+[[nodiscard]] DownsampledProxy downsample_region_for_statistics(
+    negaflow::core::ConstImageView source,
+    const AnalysisPixelRect& rect,
     std::uint32_t target_width,
     std::uint32_t target_height);
 

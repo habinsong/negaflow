@@ -63,8 +63,28 @@
                 HorizontalAlignment="Stretch"
                 Spacing="10"
                 TabFocusNavigation="Cycle">
-                <controls:InspectorSlider x:Name="WarmthControl" HorizontalAlignment="Stretch" Maximum="1" Minimum="-1" ResetValue="0" SliderAutomationId="negaflow.develop.warmth" ValueChanged="OnColorModelChanged" />
-                <controls:InspectorSlider x:Name="TintControl" HorizontalAlignment="Stretch" Maximum="1" Minimum="-1" ResetValue="0" SliderAutomationId="negaflow.develop.tint" ValueChanged="OnColorModelChanged" />
+                <!-- macOS 색 섹션의 "중립 스포이드" — 베이스 스포이드와 같은 캡슐(InspectorActionPill)입니다.
+                     켜면 캔버스 클릭이 그 점을 중립으로 만드는 색온도·틴트를 앉힙니다. -->
+                <Border
+                    x:Name="NeutralPickerPill"
+                    HorizontalAlignment="Stretch"
+                    BorderThickness="1"
+                    CornerRadius="16">
+                    <Button
+                        x:Name="NeutralPickerButton"
+                        MinHeight="31"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        AutomationProperties.AutomationId="negaflow.develop.color.pick-neutral"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="OnNeutralPickerToggled"
+                        CornerRadius="12">
+                        <TextBlock x:Name="NeutralPickerText" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    </Button>
+                </Border>
+                <controls:InspectorSlider x:Name="WarmthControl" HorizontalAlignment="Stretch" Maximum="4" Minimum="-4" ResetValue="0" SliderAutomationId="negaflow.develop.warmth" ValueChanged="OnColorModelChanged" />
+                <controls:InspectorSlider x:Name="TintControl" HorizontalAlignment="Stretch" Maximum="4" Minimum="-4" ResetValue="0" SliderAutomationId="negaflow.develop.tint" ValueChanged="OnColorModelChanged" />
                 <controls:InspectorSlider x:Name="VibranceControl" HorizontalAlignment="Stretch" Maximum="1" Minimum="-1" ResetValue="0" SliderAutomationId="negaflow.develop.vibrance" ValueChanged="OnColorModelChanged" />
                 <controls:InspectorSlider x:Name="SaturationControl" HorizontalAlignment="Stretch" Maximum="1" Minimum="-1" ResetValue="0" SliderAutomationId="negaflow.develop.saturation" ValueChanged="OnColorModelChanged" />
                 <controls:InspectorSlider x:Name="ColorDepthControl" HorizontalAlignment="Stretch" Maximum="1" Minimum="-1" ResetValue="0" SliderAutomationId="negaflow.develop.color-depth" ValueChanged="OnColorModelChanged" />

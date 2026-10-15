@@ -19,6 +19,7 @@
 #include "negaflow/imaging/scene_correction.h"
 
 #include <cstdint>
+#include <optional>
 
 struct ID3D11ComputeShader;
 struct ID3D11Buffer;
@@ -45,10 +46,12 @@ public:
 
     // 격자를 모아 `samples` 를 채웁니다. 칸 하나라도 무효면 false 와 같은 뜻으로
     // `invalid_arguments` 를 돌려줍니다 — CPU 의 `weight_sum <= 0` 갈래와 같습니다.
+    // `rect` 가 있으면 그 사각형(크롭한 사진 영역)만 격자로 나눕니다.
     [[nodiscard]] GpuKernelStatus collect_samples(
         const GpuDevice& device,
         const GpuWorkingImage& source,
         std::uint32_t target_width,
+        const std::optional<imaging::AnalysisPixelRect>& rect,
         imaging::SceneSampleGrid& samples) const noexcept;
 
     [[nodiscard]] GpuKernelStatus apply_auto_levels(

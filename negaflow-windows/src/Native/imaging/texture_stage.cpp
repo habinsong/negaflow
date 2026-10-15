@@ -1,5 +1,6 @@
 #include "negaflow/imaging/texture_stage.h"
 
+#include "detail_enhancement.h"
 #include "texture_stage_effects.h"
 #include "texture_stage_math.h"
 
@@ -45,7 +46,8 @@ bool valid_texture_stage_parameters(
            normalized(parameters.sharpness) &&
            normalized(parameters.halation) &&
            signed_normalized(parameters.clarity) &&
-           signed_normalized(parameters.vignette);
+           signed_normalized(parameters.vignette) &&
+           normalized(parameters.target_clarity);
 }
 
 TextureStageResult apply_texture_stage(
@@ -66,33 +68,27 @@ TextureStageResult apply_texture_stage(
     }
 
     try {
+        // 부분 대비 → 선명도 → 그레인 순서입니다(macOS TextureStage). 그레인은 합성 질감이라 앞의 두
+        // 단계가 키우지 않게 마지막에 얹습니다.
+        if (parameters.target_clarity > texture_stage_identity_threshold) {
+            apply_local_contrast(result.image, parameters.target_clarity);
+            result.info.clarity_applied = true;
+        }
+        if (std::abs(parameters.clarity) >
+            texture_stage_identity_threshold) {
+            apply_local_contrast(result.image, parameters.clarity);
+            result.info.clarity_applied = true;
+        }
         if (parameters.sharpness > texture_stage_identity_threshold) {
-            apply_unsharp(
+            apply_detail_sharpen(
                 result.image,
-                1.0F + parameters.sharpness * 1.2F,
-                0.18F + parameters.sharpness * 0.42F,
+                parameters.sharpness,
                 result.info.output_scratch_peak_bytes);
             result.info.sharpness_applied = true;
         }
         if (parameters.grain > texture_stage_identity_threshold) {
             apply_grain(result.image, parameters.grain);
             result.info.grain_applied = true;
-        }
-        if (std::abs(parameters.clarity) >
-            texture_stage_identity_threshold) {
-            if (parameters.clarity > 0.0F) {
-                apply_unsharp(
-                    result.image,
-                    6.0F + parameters.clarity * 5.0F,
-                    0.10F + parameters.clarity * 0.18F,
-                    result.info.output_scratch_peak_bytes);
-            } else {
-                apply_negative_clarity(
-                    result.image,
-                    parameters.clarity,
-                    result.info.output_scratch_peak_bytes);
-            }
-            result.info.clarity_applied = true;
         }
         if (parameters.halation > texture_stage_identity_threshold) {
             apply_halation(

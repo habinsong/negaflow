@@ -1,5 +1,6 @@
 #include "film_base_sampling.h"
 
+#include "negaflow/imaging/film_stock_base_resolver.h"
 #include "negaflow/imaging/mipmap_downsampler.h"
 
 #include <algorithm>
@@ -221,9 +222,93 @@ namespace {
     return median(std::move(values));
 }
 
+RingMaskChroma ring_mask_chroma() noexcept {
+    const FilmStockMaskChroma mask = bundled_mask_chroma_median();
+    return {0.5 * mask.red_green, 0.5 * mask.green_blue, 0.5 * mask.red_blue};
+}
+
+double median_log_red_blue(const SampleGrid& grid, const std::vector<std::size_t>& cells) {
+    std::vector<double> values;
+    values.reserve(cells.size());
+    for (const std::size_t cell : cells) {
+        const negaflow::core::Rgba32F& pixel = grid.pixels[cell];
+        values.push_back(std::log10(
+            std::max(static_cast<double>(pixel.red), 1.0e-5) /
+            std::max(static_cast<double>(pixel.blue), 1.0e-5)));
+    }
+    return upper_median(std::move(values));
+}
+
+namespace {
+
+// 채널별 log10 중앙값(밀도의 음수)입니다. 두 성분의 차가 채널별 밀도 차입니다.
+[[nodiscard]] std::array<double, 3> median_log_channels(
+    const SampleGrid& grid,
+    const std::vector<std::size_t>& cells) {
+    std::array<double, 3> result{};
+    for (std::size_t channel = 0U; channel < 3U; ++channel) {
+        std::vector<double> values;
+        values.reserve(cells.size());
+        for (const std::size_t cell : cells) {
+            const negaflow::core::Rgba32F& pixel = grid.pixels[cell];
+            const float value = channel == 0U ? pixel.red : channel == 1U ? pixel.green : pixel.blue;
+            values.push_back(std::log10(std::max(static_cast<double>(value), 1.0e-5)));
+        }
+        result[channel] = upper_median(std::move(values));
+    }
+    return result;
+}
+
+}  // namespace
+
+bool is_interior(
+    const SampleGrid& grid, const AnalysisRegion& region, const std::uint32_t x, const std::uint32_t y) noexcept {
+    const double width = static_cast<double>(grid.width);
+    const double height = static_cast<double>(grid.height);
+    // 격자 행 0 = 위. 영역도 y-down 입니다.
+    const double x0 = std::floor(region.left * width);
+    const double x1 = std::ceil((region.left + region.width) * width);
+    const double y0 = std::floor(region.top * height);
+    const double y1 = std::ceil((region.top + region.height) * height);
+    return static_cast<double>(x) >= x0 && static_cast<double>(x) < x1 &&
+        static_cast<double>(y) >= y0 && static_cast<double>(y) < y1;
+}
+
+SampleGrid excluding_interior(const SampleGrid& grid, const AnalysisRegion& region) {
+    SampleGrid masked = grid;
+    for (std::uint32_t y = 0U; y < grid.height; ++y) {
+        for (std::uint32_t x = 0U; x < grid.width; ++x) {
+            if (!is_interior(grid, region, x, y)) {
+                continue;
+            }
+            const std::size_t index = static_cast<std::size_t>(y) * grid.width + x;
+            masked.pixels[index] = {0.0F, 0.0F, 0.0F, 1.0F};
+            masked.lumas[index] = 0.0;
+        }
+    }
+    return masked;
+}
+
+SampleGrid keeping_interior(const SampleGrid& grid, const AnalysisRegion& region) {
+    SampleGrid masked = grid;
+    for (std::uint32_t y = 0U; y < grid.height; ++y) {
+        for (std::uint32_t x = 0U; x < grid.width; ++x) {
+            if (is_interior(grid, region, x, y)) {
+                continue;
+            }
+            const std::size_t index = static_cast<std::size_t>(y) * grid.width + x;
+            masked.pixels[index] = {0.0F, 0.0F, 0.0F, 1.0F};
+            masked.lumas[index] = 0.0;
+        }
+    }
+    return masked;
+}
+
 [[nodiscard]] std::optional<FilmBaseMeasurement> connected_component_base(
     const SampleGrid& grid,
-    const NegativeFilmType film_type) {
+    const NegativeFilmType film_type,
+    const BaseSearchScope scope,
+    const bool demotes) {
     const std::uint32_t width = grid.width;
     const std::uint32_t height = grid.height;
     const std::size_t count = grid.pixels.size();
@@ -370,7 +455,8 @@ namespace {
         }
     }
     std::size_t selected_index = 0U;
-    if (film_type == NegativeFilmType::color && components.front().p75 >= 0.60) {
+    if (film_type == NegativeFilmType::color && scope == BaseSearchScope::frame && demotes &&
+        components.front().p75 >= 0.60) {
         const auto median_red_minus_blue = [&grid](const Component& component) {
             std::vector<double> values;
             values.reserve(component.cells.size());
@@ -396,11 +482,39 @@ namespace {
             }
         }
     }
+    // 크롭 바깥 띠에는 주로 리베이트·백라이트·홀더가 남습니다. 그래서 밝기 사전확률(≥0.6)과
+    // 밝기 비 창 없이 **"베이스 = 광원 × 마스크" 의 색도 관계**로 광원을 가릅니다. 오렌지
+    // 마스크는 초록과 파랑을 함께 깎습니다 — 베이스는 광원보다 log10(R/G) 가 Dmin_G − Dmin_R,
+    // log10(G/B) 가 Dmin_B − Dmin_G 만큼 큽니다. 색도는 조도와 무관해 비네팅·패널 가장자리로
+    // 광원이 베이스만큼 어두워져도 그대로 성립합니다. R/B 하나만 보면 안 됩니다 — 홀더가
+    // 광원을 가려 최상위가 진짜 베이스일 때, 띠에 걸친 이웃 프레임의 얇은 푸른 그림자도
+    // 베이스보다 R/B 가 큽니다(2026-10-14 실측: 그 면을 베이스로 잡아 암부 R/B 수천 배). 그런
+    // 면은 파랑만 깎여 R/G 관계를 채우지 못합니다. 프레임 전체 탐색에서는 쓰지 않습니다.
+    const bool ring_chroma = scope == BaseSearchScope::ring && film_type == NegativeFilmType::color;
+    const RingMaskChroma mask = ring_mask_chroma();
+    if (ring_chroma && demotes && selected_index == 0U) {
+        const std::array<double, 3> top = median_log_channels(grid, components.front().cells);
+        for (std::size_t index = 1U; index < components.size(); ++index) {
+            const std::array<double, 3> candidate = median_log_channels(grid, components[index].cells);
+            const double red_green = (candidate[0] - candidate[1]) - (top[0] - top[1]);
+            const double green_blue = (candidate[1] - candidate[2]) - (top[1] - top[2]);
+            if (components[index].p75 >= components.front().p75 * 0.12 &&
+                red_green >= mask.red_green && green_blue >= mask.green_blue) {
+                selected_index = index;
+                break;
+            }
+        }
+    }
     const double selected_p75 = components[selected_index].p75;
+    const double selected_log_red_blue =
+        ring_chroma ? median_log_red_blue(grid, components[selected_index].cells) : 0.0;
 
     std::vector<std::size_t> members;
     for (const Component& component : components) {
-        if (component.p75 >= selected_p75 * 0.90 && component.p75 <= selected_p75 / 0.90) {
+        if (component.p75 >= selected_p75 * 0.90 && component.p75 <= selected_p75 / 0.90 &&
+            (!ring_chroma ||
+             std::abs(median_log_red_blue(grid, component.cells) - selected_log_red_blue) <
+                 mask.red_blue)) {
             members.insert(members.end(), component.cells.begin(), component.cells.end());
         }
     }

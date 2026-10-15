@@ -53,7 +53,50 @@ constexpr std::array<FilmStock, 27> stocks{{
     return std::nullopt;
 }
 
+template <typename Value>
+[[nodiscard]] double mask_median(Value value) noexcept {
+    std::array<double, stocks.size()> values{};
+    for (std::size_t index = 0U; index < stocks.size(); ++index) {
+        values[index] = value(stocks[index].dmin_density);
+    }
+    std::sort(values.begin(), values.end());
+    return values[values.size() / 2U];
+}
+
+[[nodiscard]] std::array<double, 3> range_shape(const FilmStock& stock) noexcept {
+    std::array<double, 3> range{};
+    for (std::size_t channel = 0U; channel < 3U; ++channel) {
+        range[channel] = std::max(
+            static_cast<double>(stock.dmax_density[channel]) - stock.dmin_density[channel], 1.0e-4);
+    }
+    const double geo = std::cbrt(range[0] * range[1] * range[2]);
+    return {range[0] / geo, range[1] / geo, range[2] / geo};
+}
+
+// 번들 컬러 네거티브의 채널별 밀도 범위 모양(기하평균 1)의 채널별 중앙값입니다.
+[[nodiscard]] std::array<double, 3> typical_range_shape() noexcept {
+    std::array<double, 3> typical{};
+    for (std::size_t channel = 0U; channel < 3U; ++channel) {
+        std::array<double, stocks.size()> values{};
+        for (std::size_t index = 0U; index < stocks.size(); ++index) {
+            values[index] = range_shape(stocks[index])[channel];
+        }
+        std::sort(values.begin(), values.end());
+        typical[channel] = values[values.size() / 2U];
+    }
+    return typical;
+}
+
 }  // namespace
+
+FilmStockMaskChroma bundled_mask_chroma_median() noexcept {
+    // 표의 모든 항목이 컬러 네거티브(C-41·ECN-2)입니다.
+    return {
+        mask_median([](const std::array<float, 3>& d) { return static_cast<double>(d[1]) - d[0]; }),
+        mask_median([](const std::array<float, 3>& d) { return static_cast<double>(d[2]) - d[1]; }),
+        mask_median([](const std::array<float, 3>& d) { return static_cast<double>(d[2]) - d[0]; }),
+    };
+}
 
 std::optional<FilmStockBasePreset> resolve_film_stock_base_preset(
     const std::wstring_view film_stock_id,
@@ -66,9 +109,17 @@ std::optional<FilmStockBasePreset> resolve_film_stock_base_preset(
     if (stock == stocks.end() || !gain) return std::nullopt;
 
     FilmStockBasePreset result{};
+    const std::array<double, 3> shape = range_shape(*stock);
+    const std::array<double, 3> typical = typical_range_shape();
+    std::array<double, 3> relative{};
+    for (std::size_t channel = 0U; channel < 3U; ++channel) {
+        relative[channel] = shape[channel] / typical[channel];
+    }
+    const double relative_geo = std::cbrt(relative[0] * relative[1] * relative[2]);
     for (std::size_t channel = 0U; channel < 3U; ++channel) {
         result.dmin[channel] = std::pow(10.0F, -stock->dmin_density[channel]);
         result.dmax_normalized[channel] = stock->dmax_density[channel] - stock->dmin_density[channel];
+        result.range_factor[channel] = static_cast<float>(relative[channel] / relative_geo);
         result.light_gain[channel] = film_type == NegativeFilmType::black_and_white
             ? 1.0F
             : (*gain)[channel];

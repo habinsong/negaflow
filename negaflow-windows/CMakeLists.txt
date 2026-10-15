@@ -461,8 +461,33 @@ negaflow_compile_compute_shader(
     NEGAFLOW_CUSTOM_COLOR_TARGET_HEADER
 )
 
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/local_contrast.hlsl"
+    LocalContrastGuideMain
+    negaflow_local_contrast_guide_cs
+    NEGAFLOW_LOCAL_CONTRAST_GUIDE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/local_contrast.hlsl"
+    LocalContrastCoefficientsMain
+    negaflow_local_contrast_coefficients_cs
+    NEGAFLOW_LOCAL_CONTRAST_COEFFICIENTS_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/local_contrast.hlsl"
+    LocalContrastApplyMain
+    negaflow_local_contrast_apply_cs
+    NEGAFLOW_LOCAL_CONTRAST_APPLY_HEADER
+)
+
 add_library(negaflow_gpu STATIC
     "${NEGAFLOW_CUSTOM_COLOR_TARGET_HEADER}"
+    "${NEGAFLOW_LOCAL_CONTRAST_GUIDE_HEADER}"
+    "${NEGAFLOW_LOCAL_CONTRAST_COEFFICIENTS_HEADER}"
+    "${NEGAFLOW_LOCAL_CONTRAST_APPLY_HEADER}"
+    src/Native/gpu/gpu_local_contrast.cpp
     src/Native/gpu/gpu_custom_color_target.cpp
     "${NEGAFLOW_BASIC_TONE_HEADER}"
     "${NEGAFLOW_COLOR_GRADE_HEADER}"
@@ -617,6 +642,7 @@ add_library(negaflow_imaging STATIC
     src/Native/imaging/color_grading.cpp
     src/Native/imaging/color_mixer.cpp
     src/Native/imaging/film_base_picker.cpp
+    src/Native/imaging/neutral_white_balance_picker.cpp
     src/Native/imaging/film_base_measurement.cpp
     src/Native/imaging/film_base_sampling.cpp
     src/Native/imaging/film_emulation_acutance.cpp
@@ -709,6 +735,8 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/scanner_target_response.cpp
     src/Native/imaging/manual_negative_developer.cpp
     src/Native/imaging/mipmap_downsampler.cpp
+    src/Native/imaging/analysis_region.cpp
+    src/Native/imaging/neutral_axis_evidence.cpp
     src/Native/imaging/point_curve.cpp
     src/Native/imaging/primary_calibration.cpp
     src/Native/imaging/scanner_tiff_to_working.cpp
@@ -720,6 +748,7 @@ add_library(negaflow_imaging STATIC
     src/Native/imaging/channel_clipping_overlay.cpp
     src/Native/imaging/texture_stage.cpp
     src/Native/imaging/texture_stage_effects.cpp
+    src/Native/imaging/detail_enhancement.cpp
     src/Native/imaging/working_film_look.cpp
     src/Native/imaging/working_tone_adjuster.cpp
 )
@@ -835,6 +864,7 @@ add_library(negaflow_native SHARED
     src/Native/abi/output/print_sheet_publish_abi.cpp
     src/Native/abi/pick/film_base_pick_abi.cpp
     src/Native/abi/pick/film_base_pick_v2.cpp
+    src/Native/abi/pick/neutral_white_balance_pick_v1.cpp
     src/Native/abi/proof/gamut_check_abi.cpp
     src/Native/abi/proof/soft_proof_abi.cpp
     src/Native/abi/request/develop_request_enums.cpp
@@ -1240,6 +1270,15 @@ if(BUILD_TESTING)
     )
     add_test(NAME native.film_base_picker COMMAND negaflow_film_base_picker_tests)
 
+    add_executable(negaflow_neutral_white_balance_picker_tests
+        tests/Native.UnitTests/neutral_white_balance_picker_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_neutral_white_balance_picker_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.neutral_white_balance_picker COMMAND negaflow_neutral_white_balance_picker_tests)
+
     add_executable(negaflow_auto_negative_base_rebate_tests
         tests/Native.UnitTests/auto_negative_base_rebate_tests.cpp
     )
@@ -1334,6 +1373,15 @@ if(BUILD_TESTING)
         PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
     )
     add_test(NAME native.gpu_stage_kernels COMMAND negaflow_gpu_stage_kernel_tests)
+
+    add_executable(negaflow_gpu_local_contrast_tests
+        tests/Native.UnitTests/gpu_local_contrast_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_local_contrast_tests
+        PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
+    )
+    add_test(NAME native.gpu_local_contrast COMMAND negaflow_gpu_local_contrast_tests)
 
     add_executable(negaflow_gpu_neighborhood_tests
         tests/Native.UnitTests/gpu_neighborhood_tests.cpp
@@ -1930,6 +1978,7 @@ if(BUILD_TESTING)
         tests/Native.UnitTests/TextureStage/texture_stage_test_support.cpp
         tests/Native.UnitTests/TextureStage/texture_stage_control_tests.cpp
         tests/Native.UnitTests/TextureStage/texture_stage_golden_tests.cpp
+        tests/Native.UnitTests/TextureStage/detail_enhancement_tests.cpp
     )
     target_include_directories(
         negaflow_texture_stage_tests
@@ -1955,6 +2004,40 @@ if(BUILD_TESTING)
         PRIVATE negaflow_imaging negaflow_project_options
     )
     add_test(NAME native.bw_toning COMMAND negaflow_bw_toning_tests)
+
+    add_executable(negaflow_camera_scan_measurement_tests
+        tests/Native.UnitTests/camera_scan_measurement_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_camera_scan_measurement_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.camera_scan_measurement COMMAND negaflow_camera_scan_measurement_tests)
+
+    add_executable(negaflow_camera_scan_pipeline_region_tests
+        tests/Native.UnitTests/camera_scan_pipeline_region_tests.cpp
+    )
+    target_include_directories(
+        negaflow_camera_scan_pipeline_region_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/pipeline"
+    )
+    target_link_libraries(
+        negaflow_camera_scan_pipeline_region_tests
+        PRIVATE negaflow_pipeline negaflow_project_options
+    )
+    add_test(
+        NAME native.camera_scan_pipeline_region
+        COMMAND negaflow_camera_scan_pipeline_region_tests
+    )
+
+    add_executable(negaflow_analysis_region_tests
+        tests/Native.UnitTests/analysis_region_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_analysis_region_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.analysis_region COMMAND negaflow_analysis_region_tests)
 
     add_executable(negaflow_image_transform_tests
         tests/Native.UnitTests/image_transform_tests.cpp
@@ -2126,6 +2209,15 @@ if(BUILD_TESTING)
         PRIVATE negaflow_imaging negaflow_project_options
     )
     add_test(NAME native.auto_adjust COMMAND negaflow_auto_adjust_tests)
+
+    add_executable(negaflow_auto_tone_closed_loop_tests
+        tests/Native.UnitTests/auto_tone_closed_loop_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_auto_tone_closed_loop_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.auto_tone_closed_loop COMMAND negaflow_auto_tone_closed_loop_tests)
 
     add_executable(negaflow_display_gamut_map_tests
         tests/Native.UnitTests/display_gamut_map_tests.cpp

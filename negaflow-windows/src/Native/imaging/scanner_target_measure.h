@@ -1,6 +1,9 @@
 #pragma once
 
 #include "negaflow/core/pixel.h"
+#include "negaflow/imaging/analysis_region.h"
+
+#include <optional>
 
 namespace negaflow::imaging::scanner_target_detail {
 
@@ -16,9 +19,11 @@ struct InsetStats final { double median; double p05; double p95; };
 
 // 이 장면에 룩을 얼마나 실을지의 가중치입니다. 대비가 이미 큰 장면은 덜 싣습니다 -
 // 룩은 스캐너의 톤 곡선을 흉내 내는 것이지 대비를 더하는 것이 아닙니다.
-// `median` 에는 고른 안쪽 사각형의 중앙값을 씁니다.
+// `median` 에는 고른 안쪽 사각형의 중앙값을 씁니다. `region` 이 있으면 크롭한 사진 영역
+// 안에서만 잽니다.
 [[nodiscard]] double scene_anchor_weight(
     negaflow::core::ImageView image,
-    double& median);
+    double& median,
+    const std::optional<AnalysisRegion>& region = std::nullopt);
 
 }  // namespace negaflow::imaging::scanner_target_detail

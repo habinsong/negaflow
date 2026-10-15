@@ -101,6 +101,7 @@ void apply_profile_grade(
     setup.strength = static_cast<float>(strength);
     setup.chroma_keep = static_cast<float>(chroma_keep);
     setup.monochrome = monochrome;
+    setup.color_density = static_cast<float>(profile.color_density);
 
     // **엔진에서 가장 비싼 화소별 커널입니다** — 노리츠 프리뷰 실측 58,995 ms
     // (병렬화 뒤 16,201 ms)로 전체의 90% 를 넘었습니다. 화소마다 `transformed_srgb`
@@ -343,7 +344,8 @@ negaflow::core::KernelStatus apply_scanner_target_grade(
     const bool monochrome,
     const bool positive,
     const std::wstring_view scanner_profile_id,
-    ScannerTargetGradeInfo& info) noexcept {
+    ScannerTargetGradeInfo& info,
+    const std::optional<AnalysisRegion>& region) noexcept {
     info = {};
     const auto view_status = negaflow::core::validate_image_view(image);
     if (view_status != negaflow::core::KernelStatus::ok) return view_status;
@@ -354,7 +356,7 @@ negaflow::core::KernelStatus apply_scanner_target_grade(
         const TargetProfile& profile = profile_for(target);
         const double strength = positive ? 0.5 : 1.0;
         double scene_median = 0.5;
-        const double anchor_weight = scene_anchor_weight(image, scene_median);
+        const double anchor_weight = scene_anchor_weight(image, scene_median, region);
         info.scene_anchor_weight = static_cast<float>(anchor_weight);
 
         if (monochrome) {

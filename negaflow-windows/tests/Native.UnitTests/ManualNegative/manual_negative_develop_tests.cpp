@@ -144,18 +144,21 @@ void test_manual_negative_development() {
 
     negaflow::imaging::ManualNegativeDevelopParameters preset_parameters = scene_parameters;
     preset_parameters.use_preset_response = true;
-    preset_parameters.preset_dmax_normalized = {2.04F, 2.23F, 2.23F};
+    preset_parameters.preset_range_factor = {0.95F, 1.02F, 1.032F};
     const auto preset_scene = negaflow::imaging::develop_manual_negative(
         make_scene_working_image(),
         preset_parameters);
+    bool preset_follows_measured = preset_scene.status == negaflow::imaging::ManualNegativeDevelopStatus::ok;
+    for (std::size_t channel = 0U; channel < 3U; ++channel) {
+        preset_follows_measured = preset_follows_measured &&
+            std::abs(preset_scene.info.dmax_normalized[channel] -
+                     scene.info.dmax_normalized[channel] * preset_parameters.preset_range_factor[channel]) < 1.0e-5F;
+    }
+    // 필름 모드 = 자동 실측 범위 × 필름 상대 계수(macOS `testPresetChannelRangeIsMeasuredTimesFilmRelativeFactor`).
+    expect(preset_follows_measured, "preset multiplies the measured channel range by the stock's relative factor");
     expect(
-        preset_scene.status == negaflow::imaging::ManualNegativeDevelopStatus::ok &&
-            preset_scene.info.dmax_normalized[0] < preset_scene.info.dmax_normalized[1] &&
-            std::abs(preset_scene.info.dmax_normalized[1] - preset_scene.info.dmax_normalized[2]) < 1.0e-5F,
-        "preset keeps the measured density scale and stock channel ratio");
-    expect(
-        !preset_scene.info.muted_scene_vibrance.applied,
-        "preset color scene bypasses muted-scene vibrance");
+        preset_scene.info.muted_scene_vibrance.applied == scene.info.muted_scene_vibrance.applied,
+        "preset scene shares the auto path's muted-scene vibrance");
 
     const auto scene_bw = negaflow::imaging::develop_manual_negative(
         make_scene_working_image(),

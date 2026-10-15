@@ -35,6 +35,20 @@ namespace negaflow::imaging::auto_base_detail {
     const film_base_detail::SampleGrid& grid,
     const std::array<float, 3>& dmin) noexcept;
 
+/// <summary>고른 베이스보다 **뚜렷이** 밝은 필름 칸의 비율입니다 — 0 이 아니면 고른 값은 베이스일 수 없습니다.</summary>
+///
+/// 필름 안 조도 차(비네팅)는 경계 혼합 칸 판정과 같은 15% 를 넘지 않으므로 그만큼은 봐주고, 필름으로
+/// 보이는 칸(베이스 후보 색)만 셉니다 — 중립 백라이트·준클리핑 광원은 세지 않습니다. `interior_of` 가
+/// 있으면 그 크롭 안 칸만, `excluded` 가 있으면 그 칸을 빼고 셉니다(macOS
+/// `FilmBaseRebate.contradictingFraction`). 실측(2026-10-15, 컬러 네거 52 장): 정상 50 장 0%,
+/// 0.8% 한 장, 베이스가 화면에 없는 컷 7.1%.
+[[nodiscard]] double contradicting_fraction(
+    const film_base_detail::SampleGrid& grid,
+    const std::array<float, 3>& dmin,
+    NegativeFilmType film_type,
+    const AnalysisRegion* interior_of,
+    const std::vector<bool>* excluded) noexcept;
+
 /// <summary>리베이트 띠에서 다시 잰 베이스입니다. 띠가 없으면 <c>nullopt</c> 입니다.</summary>
 ///
 /// 두 단계입니다. **찾기** 는 축소본에서 하고 — 띠의 자리만 알면 되므로 축소본으로

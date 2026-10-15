@@ -11,6 +11,10 @@ bool accelerate_resident_point_samples(
     const float* const pixels,
     const std::uint32_t width,
     const std::uint32_t height,
+    const std::uint32_t origin_x,
+    const std::uint32_t origin_y,
+    const std::uint32_t extent_width,
+    const std::uint32_t extent_height,
     const std::uint32_t sample_width,
     const std::uint32_t sample_height,
     float* const out) noexcept {
@@ -19,7 +23,12 @@ bool accelerate_resident_point_samples(
         return false;
     }
     return accelerator.sample_resident_points(
-        pixels, width, height, sample_width, sample_height, out);
+        pixels, width, height, origin_x, origin_y, extent_width, extent_height,
+        sample_width, sample_height, out);
+}
+
+void accelerate_resident_flush(const float* const pixels) noexcept {
+    GpuAccelerator::shared().flush_resident_if(pixels);
 }
 
 }  // namespace
@@ -36,6 +45,7 @@ bool accelerate_custom_color_target(
 
 void attach_resident_kernels(imaging::KernelAccelerator& table) noexcept {
     table.resident_point_samples = accelerate_resident_point_samples;
+    table.resident_flush = accelerate_resident_flush;
 }
 
 }  // namespace negaflow::pipeline::gpu_table_detail

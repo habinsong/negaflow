@@ -13,6 +13,7 @@
 #include "negaflow/gpu/shaders/muted_scene_vibrance_MutedSceneVibranceMain.h"
 #include "negaflow/imaging/muted_scene_vibrance.h"
 #include "negaflow/imaging/muted_scene_vibrance_table.h"
+#include "negaflow/imaging/white_balance.h"
 
 namespace negaflow::gpu {
 namespace {
@@ -38,8 +39,9 @@ static_assert(sizeof(MutedSceneVibranceConstants) == 32U, "two constant register
 // HLSL `cbuffer ColorModelConstants` 와 같은 배치여야 합니다.
 struct alignas(16) ColorModelConstants final {
     GpuPointwiseExtent extent{};
-    float warmth{0.0F};
-    float tint{0.0F};
+    float white_balance_red{1.0F};
+    float white_balance_green{1.0F};
+    float white_balance_blue{1.0F};
     float color_depth{0.0F};
     float vibrance{0.0F};
     float saturation{0.0F};
@@ -51,7 +53,7 @@ struct alignas(16) ColorModelConstants final {
     float vibrance_blend{0.0F};
     float vibrance_quantum{0.0F};
     float vibrance_amount{0.0F};
-    float padding[3]{0.0F, 0.0F, 0.0F};
+    float padding[2]{0.0F, 0.0F};
 };
 
 static_assert(sizeof(ColorModelConstants) == 80U, "five constant registers");
@@ -146,8 +148,12 @@ GpuKernelStatus GpuColorModel::dispatch(
     }
 
     ColorModelConstants payload{};
-    payload.warmth = parameters.warmth;
-    payload.tint = parameters.tint;
+    // 온도·틴트는 CPU 판(`white_balance_gains`)과 같은 게인 셋을 호스트가 한 번 계산해 넘깁니다.
+    const imaging::WhiteBalanceGains white_balance =
+        imaging::white_balance_gains(parameters.warmth, parameters.tint);
+    payload.white_balance_red = white_balance.red;
+    payload.white_balance_green = white_balance.green;
+    payload.white_balance_blue = white_balance.blue;
     payload.color_depth = parameters.color_depth;
     payload.vibrance = parameters.vibrance;
     payload.saturation = parameters.saturation;
@@ -158,8 +164,7 @@ GpuKernelStatus GpuColorModel::dispatch(
     // 게이트는 **호스트가** 판정합니다. CPU 판(`apply_pixel`)의 조건과 같아야 합니다 —
     // 임계 이하이면 그 항목을 아예 건너뜁니다. 돌리면 `1 + 0` 곱셈의 반올림이 붙습니다.
     std::uint32_t gates = 0U;
-    if (std::abs(parameters.warmth) > identity_threshold) gates |= 1U;
-    if (std::abs(parameters.tint) > identity_threshold) gates |= 2U;
+    if (white_balance.active) gates |= 1U;
     if (std::abs(parameters.color_depth) > identity_threshold) gates |= 4U;
     if (std::abs(parameters.vibrance) > identity_threshold) gates |= 8U;
     if (std::abs(parameters.saturation) > identity_threshold) gates |= 16U;

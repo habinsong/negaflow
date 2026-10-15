@@ -22,16 +22,21 @@ constexpr TargetProfile noritsu_profile{
     {{{0.165, 1.00}, {0.495, 0.98}, {0.83, 0.88}}},
 };
 
+// SP 는 측정값이 아니라 설계 캐릭터입니다(2026-10-15 개편, macOS `spDocumentedProfile`).
+// 토우·숄더를 눌러 양끝 계조를 압축하고 직선부를 세운 미드, 중립 섀도와 은은한 웜 명부,
+// 웜(레드·스킨·옐로) 앞·쿨(그린·시안) 깊게의 색 대비, 색 밀도.
 constexpr TargetProfile sp3000_profile{
-    {0.08, 0.16, 0.28, 0.40, 0.52, 0.64, 0.76, 0.86, 0.94},
-    {0.020, 0.006, 0.014, 0.045, 0.094, 0.115, 0.112, 0.082, 0.015},
-    {{{0.13, -3.2, 0.0}, {0.27, -3.2, 0.0}, {0.41, -3.0, 0.0},
-      {0.55, -1.5, 0.0}, {0.69, 0.1, 0.0}, {0.83, 1.4, 0.0}}},
-    6U,
-    {{{20.0, 1.0, 0.0}, {55.0, 0.98, 2.85}, {95.0, 1.0, 0.0},
-      {200.0, 1.0, 0.0}, {320.0, 1.0, 0.0}, {}, {}}},
+    {0.06, 0.14, 0.26, 0.38, 0.50, 0.62, 0.74, 0.86, 0.94},
+    {0.008, -0.002, -0.015, -0.018, -0.010, 0.006, 0.016, 0.010, -0.004},
+    {{{0.16, 0.0, 0.0}, {0.40, 0.0, 0.5}, {0.60, 0.2, 1.0},
+      {0.80, 0.3, 1.4}, {0.90, 0.2, 1.0}, {}}},
     5U,
-    {{{0.165, 1.00}, {0.495, 1.25}, {0.83, 1.60}}},
+    {{{20.0, 1.06, 0.0}, {55.0, 1.04, 3.0}, {85.0, 1.08, 0.0},
+      {135.0, 1.06, 2.0}, {200.0, 1.04, 0.0}, {265.0, 1.00, -2.0},
+      {320.0, 0.94, 0.0}}},
+    7U,
+    {{{0.165, 1.08}, {0.495, 1.20}, {0.83, 1.12}}},
+    0.06,
 };
 
 constexpr TargetProfile f135_profile{
@@ -173,9 +178,9 @@ constexpr TargetProfile sp3000_relative_portra160{
     if (target != ScannerTargetStyle::noritsu &&
         target != ScannerTargetStyle::sp3000) return nullptr;
     if (profile_id.empty()) {
-        return target == ScannerTargetStyle::noritsu
-            ? &noritsu_relative_common
-            : &sp3000_relative_common;
+        // SP 는 설계 캐릭터가 기본입니다. 번들 실측 프로파일은 사용자가 직접 고를 때만
+        // 얹습니다 — 공통 차분을 기본으로 깔면 파랗고 과채도였습니다(macOS 와 같은 규칙).
+        return target == ScannerTargetStyle::noritsu ? &noritsu_relative_common : nullptr;
     }
     if (target == ScannerTargetStyle::noritsu) {
         if (profile_id == L"noritsu__color-nega__kodak-ektar-100") {

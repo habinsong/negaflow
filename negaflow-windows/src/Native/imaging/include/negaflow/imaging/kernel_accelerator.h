@@ -316,16 +316,27 @@ using CustomColorTargetFunction = bool (*)(float*, std::uint32_t, std::uint32_t,
     std::uint32_t, std::uint32_t) noexcept;
 
 // 화상이 GPU 에 머물러 있으면 거기서 점 표본 격자를 뽑습니다(칸마다 RGBA float 넷).
-// 칸 (x, y) 는 원본 (min(w-1, x*w/sample_width), min(h-1, y*h/sample_height)) 화소이고,
-// 격자는 `sample_width` x max(`sample_height`, 2) 칸입니다.
+// 표본은 사각형(`origin`, `extent` — 크롭한 사진 영역, 없으면 화상 전체) 안에서 뽑습니다:
+// 칸 (x, y) 는 (origin_x + min(ew-1, x*ew/sample_width), origin_y + min(eh-1, y*eh/sample_height))
+// 화소이고, 격자는 `sample_width` x max(`sample_height`, 2) 칸입니다. `width`·`height` 는
+// 상주 화상을 알아보는 원본 크기입니다.
 // 거짓이면 호스트 화소가 최신이므로 호스트에서 뽑으면 됩니다.
 using ResidentPointSamplesFunction = bool (*)(
     const float* pixels,
     std::uint32_t width,
     std::uint32_t height,
+    std::uint32_t origin_x,
+    std::uint32_t origin_y,
+    std::uint32_t extent_width,
+    std::uint32_t extent_height,
     std::uint32_t sample_width,
     std::uint32_t sample_height,
     float* out) noexcept;
+
+// 화상이 GPU 에 머물러 있으면 호스트로 내려 호스트 화소를 최신으로 만듭니다(상주는 끊깁니다).
+// 머물러 있지 않으면 아무것도 하지 않습니다. 크롭 사각형처럼 GPU 판이 없는 부분 측정이
+// 호스트에서 읽기 전에 부릅니다.
+using ResidentFlushFunction = void (*)(const float* pixels) noexcept;
 
 struct KernelAccelerator final {
     // ── 정확한 것 (언제나 켭니다) ────────────────────────────────────────────
@@ -359,6 +370,7 @@ struct KernelAccelerator final {
     ResidentFiniteFunction resident_finite_check{nullptr};
     CustomColorTargetFunction custom_color_target{nullptr};
     ResidentPointSamplesFunction resident_point_samples{nullptr};
+    ResidentFlushFunction resident_flush{nullptr};
 };
 
 // 프로세스 시작에 한 번 설치합니다. `nullptr` 을 주면 해제합니다.

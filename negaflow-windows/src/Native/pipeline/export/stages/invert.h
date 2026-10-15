@@ -20,6 +20,9 @@ struct InvertStageOutput final {
     std::optional<negaflow::imaging::FilmBaseMeasurementMethod> measurement_method{};
     std::optional<negaflow::imaging::FilmBaseMeasurementDiagnostics> diagnostics{};
     std::array<float, 3> reference_base{};
+    // 크롭한 사진 영역(변형 전 원본 정규 좌표)입니다. 반전·장면 보정·타깃·톤 측정이 이 안을
+    // 잽니다. 크롭·수평 보정이 없으면 비어 있고 측정은 예전과 같습니다.
+    std::optional<negaflow::imaging::AnalysisRegion> analysis_region{};
     bool negative_source{false};
     bool positive{false};
 };

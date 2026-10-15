@@ -1,5 +1,6 @@
 #include "negaflow/imaging/scene_correction.h"
 
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <iostream>
@@ -125,6 +126,156 @@ void test_changed_gamma_and_base_inputs_do_not_reuse_previous_correction() {
     }
 }
 
+// ── 자동 색상 v2 (macOS AutoColorNeutralAxisTests 와 같은 픽스처) ─────────────────────
+
+// 로그 간격 톤 14 개(0.005…0.70) — 휘도대가 여럿 생깁니다. 톤마다 16 화소 폭.
+constexpr std::size_t wedge_tones = 14U;
+
+[[nodiscard]] double wedge_tone(const std::size_t index) {
+    return 0.005 * std::pow(0.70 / 0.005, static_cast<double>(index) / 13.0);
+}
+
+template <typename Channel>
+[[nodiscard]] std::vector<negaflow::core::Rgba32F> wedge(Channel channel, const std::uint32_t height = 16U) {
+    const std::uint32_t width = static_cast<std::uint32_t>(wedge_tones * 16U);
+    std::vector<negaflow::core::Rgba32F> pixels(static_cast<std::size_t>(width) * height);
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            const auto c = channel(wedge_tone(x / 16U), y);
+            pixels[static_cast<std::size_t>(y) * width + x] = {
+                static_cast<float>(c[0]), static_cast<float>(c[1]), static_cast<float>(c[2]), 1.0F};
+        }
+    }
+    return pixels;
+}
+
+[[nodiscard]] negaflow::core::Rgba32F tone_center(
+    const std::vector<negaflow::core::Rgba32F>& pixels, const std::size_t tone, const std::uint32_t row) {
+    const std::uint32_t width = static_cast<std::uint32_t>(wedge_tones * 16U);
+    return pixels[static_cast<std::size_t>(row) * width + tone * 16U + 8U];
+}
+
+void balance(std::vector<negaflow::core::Rgba32F>& pixels, const std::uint32_t height = 16U) {
+    negaflow::imaging::SceneCorrectionInfo info{};
+    const negaflow::imaging::SceneCorrectionParameters parameters{false, true, true};
+    expect(negaflow::imaging::apply_scene_correction(
+               view(pixels, static_cast<std::uint32_t>(wedge_tones * 16U), height), parameters, info) ==
+               negaflow::core::KernelStatus::ok,
+           "neutral balance succeeds");
+}
+
+[[nodiscard]] double red_blue(const negaflow::core::Rgba32F p) { return std::log2(p.red / p.blue); }
+[[nodiscard]] double green_cast(const negaflow::core::Rgba32F p) {
+    return std::log2(p.green / std::sqrt(static_cast<double>(p.red) * p.blue));
+}
+
+// 균일 캐스트(광원·WB 성분)는 모든 톤에서 걷혀야 합니다. 예전 감마 보정은 암부 과보정·명부 미보정.
+void test_uniform_cast_is_removed_at_every_tone() {
+    auto pixels = wedge([](const double t, std::uint32_t) {
+        return std::array<double, 3>{0.80 * t, 1.0 * t, 1.20 * t};
+    });
+    balance(pixels);
+    for (std::size_t tone = 0U; tone < wedge_tones; ++tone) {
+        if (wedge_tone(tone) < 0.02) continue;
+        const auto p = tone_center(pixels, tone, 8U);
+        expect(std::abs(red_blue(p)) < 0.05, "uniform cast R/B removed");
+        expect(std::abs(green_cast(p)) < 0.05, "uniform cast G removed");
+    }
+}
+
+// 끝점이 중립이고 미드만 휜 캐스트는 미드를 고치되 화이트(0.70) 중립을 깨지 않습니다.
+void test_midtone_bow_is_removed_without_breaking_white() {
+    auto pixels = wedge([](const double t, std::uint32_t) {
+        return std::array<double, 3>{0.70 * std::pow(t / 0.70, 1.12), t, t};
+    });
+    balance(pixels);
+    const auto white = tone_center(pixels, wedge_tones - 1U, 8U);
+    expect(std::abs(white.red / white.blue - 1.0) < 0.01, "white stays neutral");
+    for (std::size_t tone = 0U; tone < wedge_tones; ++tone) {
+        if (wedge_tone(tone) < 0.05) continue;
+        expect(std::abs(red_blue(tone_center(pixels, tone, 8U))) < 0.03, "midtone bow removed");
+    }
+}
+
+// 이미 중립인 장면은 건드리지 않습니다.
+void test_neutral_scene_is_untouched() {
+    auto pixels = wedge([](const double t, std::uint32_t) { return std::array<double, 3>{t, t, t}; });
+    const auto before = pixels;
+    balance(pixels);
+    for (std::size_t index = 0U; index < pixels.size(); ++index) {
+        expect(pixels[index].red == before[index].red && pixels[index].blue == before[index].blue,
+               "neutral scene is identity");
+    }
+}
+
+// 지배색(숲 초록 70%) 장면에서도 중립 패치는 중립으로 남고 초록은 회색으로 끌리지 않습니다.
+void test_dominant_foliage_does_not_pull_the_neutral_axis() {
+    constexpr std::uint32_t height = 40U;
+    auto pixels = wedge([](const double t, const std::uint32_t y) {
+        return y < 28U ? std::array<double, 3>{0.35 * t, 1.0 * t, 0.28 * t} : std::array<double, 3>{t, t, t};
+    }, height);
+    balance(pixels, height);
+    for (std::size_t tone = 0U; tone < wedge_tones; ++tone) {
+        if (wedge_tone(tone) < 0.02) continue;
+        expect(std::abs(red_blue(tone_center(pixels, tone, 36U))) < 0.05, "neutral rows stay neutral");
+        const auto foliage = tone_center(pixels, tone, 10U);
+        expect(std::abs(std::log2(foliage.green / foliage.red) - std::log2(1.0 / 0.35)) < 0.1,
+               "foliage keeps its colour");
+    }
+}
+
+// ── 측정 영역 · 가장자리 인셋 · 위쪽 묶음 ───────────────────────────────────────────
+
+// 따뜻한 홀더 가장자리(3 화소)가 있는 중립 램프. 가장자리가 화이트포인트가 되면 캐스트가 생깁니다.
+[[nodiscard]] std::vector<negaflow::core::Rgba32F> framed_ramp(const std::uint32_t width, const std::uint32_t height) {
+    std::vector<negaflow::core::Rgba32F> pixels(static_cast<std::size_t>(width) * height);
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            const bool border = x < 3U || y < 3U || x >= width - 3U || y >= height - 3U;
+            const float t = 0.08F + 0.50F * static_cast<float>(x) / static_cast<float>(width);
+            pixels[static_cast<std::size_t>(y) * width + x] =
+                border ? negaflow::core::Rgba32F{0.98F, 0.80F, 0.66F, 1.0F} : negaflow::core::Rgba32F{t, t, t, 1.0F};
+        }
+    }
+    return pixels;
+}
+
+void test_auto_levels_ignores_frame_border_and_measures_inside_region() {
+    constexpr std::uint32_t width = 300U, height = 200U;
+    for (const bool with_region : {false, true}) {
+        auto pixels = framed_ramp(width, height);
+        negaflow::imaging::SceneCorrectionParameters parameters{true, false, true};
+        if (with_region) {
+            parameters.analysis_region = negaflow::imaging::make_analysis_region(0.05, 0.05, 0.9, 0.9);
+        }
+        negaflow::imaging::SceneCorrectionInfo info{};
+        expect(negaflow::imaging::apply_scene_correction(view(pixels, width, height), parameters, info) ==
+                   negaflow::core::KernelStatus::ok,
+               "framed auto levels succeeds");
+        const auto p = pixels[static_cast<std::size_t>(height / 2U) * width + width * 3U / 4U];
+        expect(std::abs(p.red / p.blue - 1.0F) < 0.01F, "the warm holder border does not become the white point");
+    }
+}
+
+void test_auto_levels_keeps_values_above_the_white_point() {
+    constexpr std::uint32_t width = 64U, height = 32U;
+    std::vector<negaflow::core::Rgba32F> pixels(width * height);
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            const float t = 0.1F + 0.4F * static_cast<float>(x) / static_cast<float>(width - 1U);
+            pixels[static_cast<std::size_t>(y) * width + x] = {t, t, t, 1.0F};
+        }
+    }
+    pixels[static_cast<std::size_t>(16U) * width + 32U] = {0.9F, 0.9F, 0.9F, 1.0F};   // 스펙큘러 한 점
+    negaflow::imaging::SceneCorrectionInfo info{};
+    const negaflow::imaging::SceneCorrectionParameters parameters{true, false, true};
+    expect(negaflow::imaging::apply_scene_correction(view(pixels, width, height), parameters, info) ==
+               negaflow::core::KernelStatus::ok && info.auto_levels_applied,
+           "auto levels applies");
+    expect(pixels[static_cast<std::size_t>(16U) * width + 32U].red > 1.0F,
+           "a specular above the white point keeps its headroom instead of clipping at 1");
+}
+
 }  // namespace
 
 int main() {
@@ -132,6 +283,12 @@ int main() {
         test_disabled_is_identity();
         test_negative_auto_correction_changes_cast_range();
         test_changed_gamma_and_base_inputs_do_not_reuse_previous_correction();
+        test_uniform_cast_is_removed_at_every_tone();
+        test_midtone_bow_is_removed_without_breaking_white();
+        test_neutral_scene_is_untouched();
+        test_dominant_foliage_does_not_pull_the_neutral_axis();
+        test_auto_levels_ignores_frame_border_and_measures_inside_region();
+        test_auto_levels_keeps_values_above_the_white_point();
         std::cout << "Scene correction tests passed\n";
         return 0;
     } catch (const std::exception& exception) {

@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Negaflow.Catalog;
 using Negaflow.Shell.Develop;
@@ -15,7 +16,14 @@ public sealed partial class DevelopColorSection : UserControl
     private DevelopPanelState? panel;
     private bool isSynchronizing;
 
-    public DevelopColorSection() => InitializeComponent();
+    public DevelopColorSection()
+    {
+        InitializeComponent();
+        // 온도·틴트는 ±4 범위를 거듭제곱 눈금으로 씁니다 — 예전 끝값(±1)이 손잡이 40% 지점에
+        // 오고 가운데는 더 세밀합니다(macOS `SliderPositionScale.whiteBalance`).
+        WarmthControl.PositionExponent = ColorModelRecipe.WhiteBalancePositionExponent;
+        TintControl.PositionExponent = ColorModelRecipe.WhiteBalancePositionExponent;
+    }
 
     public event EventHandler? PreviewRequested;
 
@@ -24,6 +32,22 @@ public sealed partial class DevelopColorSection : UserControl
     public event EventHandler<DisclosureExpansionRequestedEventArgs>? ExpansionRequested;
 
     public event EventHandler<Func<DevelopPanelState, LibraryFrameError>>? ResetRequested;
+
+    /// <summary>중립 스포이드가 켜져 있습니다. 베이스 스포이드와 캔버스 도구 자리를 나눠 씁니다.</summary>
+    public bool IsNeutralPickerActive { get; private set; }
+
+    public event EventHandler? NeutralPickerModeChanged;
+
+    public void CancelNeutralPicker()
+    {
+        if (!IsNeutralPickerActive)
+        {
+            return;
+        }
+        IsNeutralPickerActive = false;
+        ApplyNeutralPickerVisual();
+        NeutralPickerModeChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     public void Bind(DevelopPanelState hostPanel)
     {
@@ -44,6 +68,11 @@ public sealed partial class DevelopColorSection : UserControl
         VibranceControl.Label = AppResources.Get("developVibrance", "Text");
         SaturationControl.Label = AppResources.Get("developSaturation", "Text");
         ColorDepthControl.Label = AppResources.Get("developColorDepth", "Text");
+        NeutralPickerText.Text = AppResources.Get("developPickNeutral", "Text");
+        string pickHelp = AppResources.Get("developPickNeutralHelp", "Value");
+        AutomationProperties.SetName(NeutralPickerButton, pickHelp);
+        ToolTipService.SetToolTip(NeutralPickerButton, pickHelp);
+        ApplyNeutralPickerVisual();
     }
 
     public void Show(DevelopPanelState hostPanel)
@@ -87,6 +116,27 @@ public sealed partial class DevelopColorSection : UserControl
         {
             PreviewRequested?.Invoke(this, EventArgs.Empty);
         }
+    }
+
+    private void OnNeutralPickerToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        IsNeutralPickerActive = !IsNeutralPickerActive;
+        ApplyNeutralPickerVisual();
+        NeutralPickerModeChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>베이스 스포이드 캡슐과 같은 강조(<c>DevelopBaseCard.ApplyBasePickerVisual</c>)입니다.</summary>
+    private void ApplyNeutralPickerVisual()
+    {
+        NeutralPickerPill.Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources[
+            IsNeutralPickerActive ? "NegaflowSelectionBrush" : "NegaflowSubtleFillBrush"];
+        NeutralPickerPill.BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources[
+            IsNeutralPickerActive ? "NegaflowSelectionBrush" : "NegaflowDividerBrush"];
+        AutomationProperties.SetItemStatus(
+            NeutralPickerButton,
+            AppResources.Get(IsNeutralPickerActive ? "selected" : "notSelected", "Value"));
     }
 
     private void OnColorResetClicked(object sender, RoutedEventArgs args)

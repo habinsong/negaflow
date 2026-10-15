@@ -15,8 +15,10 @@
 cbuffer ColorModelConstants : register(b0) {
     uint2 Extent;
     float2 Padding0;
-    float Warmth;
-    float Tint;
+    // 온도·틴트 게인 — 호스트가 `white_balance_gains` 로 한 번 계산합니다(휘도 1 정규화).
+    float WhiteBalanceRed;
+    float WhiteBalanceGreen;
+    float WhiteBalanceBlue;
     float ColorDepth;
     float Vibrance;
     float Saturation;
@@ -24,14 +26,14 @@ cbuffer ColorModelConstants : register(b0) {
     float GreenPrimary;
     float BluePrimary;
     // 호스트가 판정한 게이트. 비트 하나씩 씁니다:
-    // 1=warmth 2=tint 4=colorDepth 8=vibrance 16=saturation 32=primaries
+    // 1=white balance(온도·틴트) 4=colorDepth 8=vibrance 16=saturation 32=primaries
     uint Gates;
     uint VibranceLow;
     float VibranceBlend;
     float VibranceQuantum;
     // vibrance 커널이 받는 amount 는 슬라이더의 0.8배입니다(`color_model.cpp:81`).
     float VibranceAmount;
-    float3 Padding1;
+    float2 Padding1;
 };
 
 // `apply_saturation` 과 같습니다 — 앵커가 **Rec.709 휘도**입니다.
@@ -51,15 +53,7 @@ void ColorModelMain(uint3 id : SV_DispatchThreadID) {
     float3 color = source.rgb;
 
     if ((Gates & 1u) != 0u) {
-        color.r *= 1.0 + (Warmth * 0.18);
-        color.g *= 1.0 + (Warmth * 0.03);
-        color.b *= 1.0 - (Warmth * 0.18);
-    }
-    if ((Gates & 2u) != 0u) {
-        float redBlue = 1.0 - (Tint * 0.12);
-        color.r *= redBlue;
-        color.g *= 1.0 + (Tint * 0.24);
-        color.b *= redBlue;
+        color *= float3(WhiteBalanceRed, WhiteBalanceGreen, WhiteBalanceBlue);
     }
     if ((Gates & 4u) != 0u) {
         color = ApplySaturation(color, 1.0 + (ColorDepth * 0.35));

@@ -17,6 +17,16 @@ public static class DevelopBaseReadout
         return Replace(Replace(Replace(template, rgb.Red), rgb.Green), rgb.Blue);
     }
 
+    /// <summary>
+    /// 같은 <c>%.2f</c> 채우기입니다. 중립 스포이드 결과(<c>neutralPickedFormat</c> — 온도·틴트)가
+    /// 씁니다.
+    /// </summary>
+    public static string FormatValues(string template, double first, double second)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(template);
+        return Replace(Replace(template, first), second);
+    }
+
     private static string Replace(string template, double value)
     {
         int marker = template.IndexOf(Fixed2Marker, StringComparison.Ordinal);

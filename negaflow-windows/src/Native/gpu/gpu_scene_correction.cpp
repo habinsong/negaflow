@@ -21,8 +21,13 @@ struct alignas(16) SampleCell final {
 
 static_assert(sizeof(SampleCell) == 16U, "float4");
 
+// HLSL `SceneSampleGridConstants` 와 같은 배치입니다. 첫 레지스터는 측정 사각형의 크기와
+// 원점입니다(크롭이 없으면 화상 전체, 원점 0).
 struct alignas(16) SampleGridConstants final {
-    GpuPointwiseExtent extent{};
+    std::uint32_t extent_width{0};
+    std::uint32_t extent_height{0};
+    std::uint32_t origin_x{0};
+    std::uint32_t origin_y{0};
     std::uint32_t sample_width{0};
     std::uint32_t sample_height{0};
     float inverse_scale{0.0F};
@@ -31,7 +36,8 @@ struct alignas(16) SampleGridConstants final {
 
 static_assert(sizeof(SampleGridConstants) == 32U, "two constant registers");
 
-// 셰이더의 `Cube[24]` 와 같은 모양입니다 — 채널마다 float4 여덟 개.
+// 셰이더의 `Cube[24]` 와 같은 모양입니다. 자동 색상은 앞 두 칸만 씁니다 — `Cube[0]` 이
+// 채널별 지수, `Cube[1]` 이 채널별 게인입니다(c' = gain·c^exponent).
 struct alignas(16) SceneCorrectionConstants final {
     GpuPointwiseExtent extent{};
     float level_scale[4]{1.0F, 1.0F, 1.0F, 1.0F};
@@ -72,17 +78,6 @@ void release_buffer(ID3D11Buffer*& buffer) noexcept {
     std::memcpy(mapped.pData, payload, bytes);
     context->Unmap(constants, 0U);
     return true;
-}
-
-void fill_cube(
-    float (&destination)[24][4],
-    const std::size_t channel,
-    const double (&source)[imaging::scene_cube_dimension]) noexcept {
-    const std::size_t base = channel * 8U;
-    for (std::size_t index = 0U; index < imaging::scene_cube_dimension; ++index) {
-        destination[base + (index >> 2U)][index & 3U] =
-            static_cast<float>(source[index]);
-    }
 }
 
 } // namespace
@@ -220,13 +215,20 @@ GpuKernelStatus GpuSceneCorrection::collect_samples(
     const GpuDevice& device,
     const GpuWorkingImage& source,
     const std::uint32_t target_width,
+    const std::optional<imaging::AnalysisPixelRect>& rect,
     imaging::SceneSampleGrid& samples) const noexcept {
     if (!device.is_usable() || grid_ == nullptr || !source.is_valid()) {
         return GpuKernelStatus::invalid_arguments;
     }
+    if (rect && (rect->x + rect->width > source.width() ||
+                 rect->y + rect->height > source.height())) {
+        return GpuKernelStatus::invalid_arguments;
+    }
+    const std::uint32_t measured_width = rect ? rect->width : source.width();
+    const std::uint32_t measured_height = rect ? rect->height : source.height();
     std::uint32_t target_height = 0U;
     if (!imaging::scene_sample_grid_extent(
-            source.width(), source.height(), target_width, target_height)) {
+            measured_width, measured_height, target_width, target_height)) {
         return GpuKernelStatus::invalid_arguments;
     }
     const std::uint32_t count = target_width * target_height;
@@ -235,13 +237,15 @@ GpuKernelStatus GpuSceneCorrection::collect_samples(
     }
 
     SampleGridConstants payload{};
-    payload.extent.width = source.width();
-    payload.extent.height = source.height();
+    payload.extent_width = measured_width;
+    payload.extent_height = measured_height;
+    payload.origin_x = rect ? rect->x : 0U;
+    payload.origin_y = rect ? rect->y : 0U;
     payload.sample_width = target_width;
     payload.sample_height = target_height;
     // CPU 와 같은 두 단계 나눗셈입니다(`scene_correction.cpp` 주석 참고).
     const double scale =
-        static_cast<double>(target_width) / static_cast<double>(source.width());
+        static_cast<double>(target_width) / static_cast<double>(measured_width);
     payload.inverse_scale = static_cast<float>(1.0 / scale);
 
     ID3D11DeviceContext* const context = device.context();
@@ -313,9 +317,10 @@ GpuKernelStatus GpuSceneCorrection::apply_neutral_balance(
     GpuWorkingImage& destination,
     const imaging::SceneNeutralBalancePlan& plan) const noexcept {
     SceneCorrectionConstants payload{};
-    fill_cube(payload.cube, 0U, plan.cube[0]);
-    fill_cube(payload.cube, 1U, plan.cube[1]);
-    fill_cube(payload.cube, 2U, plan.cube[2]);
+    for (std::size_t channel = 0U; channel < 3U; ++channel) {
+        payload.cube[0][channel] = static_cast<float>(plan.exponent[channel]);
+        payload.cube[1][channel] = static_cast<float>(plan.gain[channel]);
+    }
     return balance_.dispatch(device, source, destination, &payload, sizeof(payload));
 }
 

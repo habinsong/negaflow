@@ -9,6 +9,10 @@
 //   ③ 거의 0         — 전부 CPU
 // GPU·CPU 판은 근사가 달라 비트 단위로는 다르지만 평균 차이는 1 단계 안팎입니다. 낡은
 // 화소를 쓰면 평균 차이가 수십 단계로 벌어집니다.
+//
+// SP 타겟은 질감 단계에서 기본 부분 대비를 얹습니다. 그것도 상주 화상 위에서 돌아야 합니다 —
+// CPU 질감 단계로 가면 마무리 단계에서 화상을 float32 로 통째로 내리고 발행까지 CPU 로
+// 떨어집니다. 질감이 없는 노리츠 사슬보다 전송이 많지 않은지로 봅니다.
 
 #include "negaflow/gpu/gpu_cache_budget.h"
 #include "negaflow/pipeline/develop_export.h"
@@ -49,13 +53,26 @@ constexpr std::uint32_t box = 1024U;
     return request;
 }
 
+[[nodiscard]] negaflow::pipeline::DevelopExportRequest sp_request(
+    const std::filesystem::path& source) {
+    negaflow::pipeline::DevelopExportRequest request = noritsu_request(source);
+    request.develop_target = negaflow::pipeline::DevelopTarget::sp3000;
+    return request;
+}
+
 [[nodiscard]] bool render(
-    const std::filesystem::path& source,
+    const negaflow::pipeline::DevelopExportRequest& request,
     std::vector<std::uint8_t>& pixels) {
     pixels.assign(static_cast<std::size_t>(box) * box * 4U, 0U);
     return negaflow::pipeline::develop_preview(
-               noritsu_request(source), box, box, pixels.data(), pixels.size())
+               request, box, box, pixels.data(), pixels.size())
         .succeeded;
+}
+
+[[nodiscard]] bool render(
+    const std::filesystem::path& source,
+    std::vector<std::uint8_t>& pixels) {
+    return render(noritsu_request(source), pixels);
 }
 
 [[nodiscard]] double mean_difference(
@@ -129,10 +146,33 @@ int main() {
     const double cpu_difference = mean_difference(gpu_chain, cpu_chain);
     expect(cpu_difference < 3.0, "the CPU chain matches the GPU chain within rounding");
 
+    // ④ SP 기본 부분 대비. 자동 상한에서 노리츠와 SP 를 한 번씩 그려 전송을 대봅니다.
+    negaflow::gpu::set_gpu_cache_limit_bytes(0U);
+    negaflow::pipeline::reset_gpu_host_transfer_stats();
+    std::vector<std::uint8_t> noritsu_again{};
+    expect(render(source, noritsu_again), "the Noritsu preview renders again");
+    const auto noritsu_stats = negaflow::pipeline::gpu_host_transfer_stats();
+    negaflow::pipeline::reset_gpu_host_transfer_stats();
+    std::vector<std::uint8_t> sp_gpu{};
+    expect(render(sp_request(source), sp_gpu), "an SP preview renders with the automatic limit");
+    const auto sp_stats = negaflow::pipeline::gpu_host_transfer_stats();
+    expect(
+        sp_stats.downloads <= noritsu_stats.downloads &&
+            sp_stats.downloaded_bytes <= noritsu_stats.downloaded_bytes,
+        "the SP baseline local contrast stays on the resident GPU image");
+    negaflow::gpu::set_gpu_cache_limit_bytes(1U);
+    std::vector<std::uint8_t> sp_cpu{};
+    expect(render(sp_request(source), sp_cpu), "an SP preview renders on the CPU");
+    const double sp_difference = mean_difference(sp_gpu, sp_cpu);
+    expect(sp_difference < 3.0, "the SP GPU chain matches the CPU chain within rounding");
+
     negaflow::gpu::set_gpu_cache_limit_bytes(0U);
     std::error_code ignored{};
     std::filesystem::remove(source, ignored);
     std::cout << "gpu_resident_budget partial=" << partial_difference
-              << " cpu=" << cpu_difference << (failures == 0 ? " ok" : " FAILED") << '\n';
+              << " cpu=" << cpu_difference << " sp=" << sp_difference
+              << " sp_downloads=" << sp_stats.downloads << '/' << sp_stats.downloaded_bytes
+              << " noritsu_downloads=" << noritsu_stats.downloads << '/'
+              << noritsu_stats.downloaded_bytes << (failures == 0 ? " ok" : " FAILED") << '\n';
     return failures == 0 ? 0 : 1;
 }

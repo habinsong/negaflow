@@ -619,8 +619,8 @@ void scene_correction_path_runs_on_gpu() {
     }
 }
 
-// 위 시험의 합성 화상은 중앙값 게이트에 걸려 **중성 균형이 적용되지 않습니다.** 그러면
-// 32칸 큐브 커널이 한 번도 안 돕니다. 색이 확실히 치우친 화상으로 그 갈래를 따로 덮습니다.
+// 위 시험의 합성 화상은 중성 균형이 적용되지 않을 수 있습니다. 그러면 채널 거듭제곱 커널이
+// 한 번도 안 돕니다. 색이 확실히 치우친 화상으로 그 갈래를 따로 덮습니다.
 void scene_neutral_balance_runs_on_gpu() {
     negaflow::imaging::SceneCorrectionParameters parameters{};
     parameters.auto_neutral_balance = true;

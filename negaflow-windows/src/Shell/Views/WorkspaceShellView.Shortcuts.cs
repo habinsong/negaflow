@@ -135,6 +135,14 @@ public sealed partial class WorkspaceShellView
             Trace("invoke escape action=exit-grain-mend handled=True");
             return;
         }
+        if (args.Key == VirtualKey.Escape &&
+            workspaceState.Current.SelectedWorkspace == WorkspaceModule.Develop &&
+            DevelopWorkspace.TryExitNeutralPicker())
+        {
+            args.Handled = true;
+            Trace("invoke escape action=exit-neutral-picker handled=True");
+            return;
+        }
         WorkflowShortcutModifiers modifiers = PressedModifiers();
         object? focused = FocusManager.GetFocusedElement(XamlRoot);
         if (modifiers == WorkflowShortcutModifiers.None && IsTypingTarget(focused))

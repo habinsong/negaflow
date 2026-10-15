@@ -1308,6 +1308,11 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>Unbelichtete Filmbasis anklicken (zwischen den Bildern oder am Rand) · Esc zum Abbrechen</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
   <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>Diese Stelle ist keine Filmbasis. Klicken Sie auf unbelichtete Basis zwischen den Bildern oder am Rand.</value></data>
   <data name="developBasePickFailed.Text" xml:space="preserve"><value>Die Quelle konnte nicht gelesen werden, daher wurde keine Basis ermittelt.</value></data>
+  <data name="developPickNeutral.Text" xml:space="preserve"><value>Neutral-Pipette</value><comment>AppLocalizedPhrase.pickNeutral</comment></data>
+  <data name="developPickNeutralHelp.Value" xml:space="preserve"><value>Klicken Sie auf eine Stelle, die grau oder weiß sein sollte, um Temperatur und Tonung einzustellen.</value><comment>AppLocalizedPhrase.pickNeutralHelp</comment></data>
+  <data name="developNeutralPickerPrompt.Text" xml:space="preserve"><value>Stelle anklicken, die grau oder weiß sein sollte · Esc zum Abbrechen</value><comment>AppLocalizedPhrase.neutralPickerOverlayPrompt</comment></data>
+  <data name="developNeutralPickFailed.Text" xml:space="preserve"><value>Hier lässt sich kein Neutralton messen — zu dunkle oder zu helle Stellen vermeiden</value><comment>AppLocalizedPhrase.neutralPickFailed</comment></data>
+  <data name="developNeutralPickedFormat.Text" xml:space="preserve"><value>Neutral-Pipette: Temperatur %.2f · Tonung %.2f</value><comment>AppLocalizedPhrase.neutralPickedFormat</comment></data>
   <data name="canvasZoomOut.Text" xml:space="preserve"><value>Verkleinern</value><comment>AppLocalizedPhrase.zoomOut</comment></data>
   <data name="canvasZoomIn.Text" xml:space="preserve"><value>Vergrößern</value><comment>AppLocalizedPhrase.zoomIn</comment></data>
   <data name="canvasZoomPercentHelp.Text" xml:space="preserve"><value>Zoomstufe in Prozent eingeben</value><comment>AppLocalizedPhrase.zoomPercentHelp</comment></data>
@@ -1338,7 +1343,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>Schnellstart</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>Tastaturkurzbefehle</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>Bildwinkel zurücksetzen</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
-  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Setzt alle Anpassungen außer der Geometrie (Drehen/Zuschneiden) zurück.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
+  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Setzt alle Anpassungen einschließlich Zuschnitt und Ausrichtung zurück. Drehung und Spiegelung bleiben erhalten.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
   <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>System-Anzeigeprofil</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
   <data name="developAutoToneHelp.Text" xml:space="preserve"><value>Automatische Tonwerte Befehl-U — passt Belichtung, Kontrast, Lichter, Tiefen, Weiß, Schwarz und Dynamik anhand des Histogramms an.</value><comment>AppLocalizedPhrase.autoToneHelp</comment></data>
   <data name="developAutoWhiteBalanceHelp.Text" xml:space="preserve"><value>Automatischer Weißabgleich Umschalt-Befehl-U — neutralisiert Temperatur und Tonung nach der Grauwelt-Methode.</value><comment>AppLocalizedPhrase.autoWhiteBalanceHelp</comment></data>

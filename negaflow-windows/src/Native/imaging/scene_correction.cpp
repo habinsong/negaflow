@@ -1,6 +1,7 @@
 #include "negaflow/imaging/scene_correction.h"
 
 #include "negaflow/core/parallel_rows.h"
+#include "negaflow/imaging/neutral_axis_evidence.h"
 
 #include <algorithm>
 #include <array>
@@ -31,7 +32,7 @@ constexpr double positive_output_white = 0.86;
 // 목표 격자 한 행입니다. 원본에서 겹치는 만큼 가중 평균해 자기 칸에만 씁니다 —
 // 다른 행과 겹치는 자리가 없으므로 행끼리 순서가 필요 없습니다.
 [[nodiscard]] bool collect_sample_row(
-    const negaflow::core::ImageView image,
+    const negaflow::core::ConstImageView image,
     const std::uint32_t target_width,
     const std::uint32_t target_y,
     const double inverse_scale,
@@ -78,7 +79,7 @@ constexpr double positive_output_white = 0.86;
 }
 
 [[nodiscard]] bool collect_area_samples(
-    const negaflow::core::ImageView image,
+    const negaflow::core::ConstImageView image,
     const std::uint32_t target_width,
     SceneSampleGrid& samples) {
     std::uint32_t target_height = 0U;
@@ -128,25 +129,40 @@ constexpr double positive_output_white = 0.86;
     return values[index];
 }
 
-[[nodiscard]] float cube_curve(
-    const float value,
-    const double (&table)[scene_cube_dimension]) noexcept {
-    const double position = static_cast<double>(std::clamp(value, 0.0F, 1.0F)) *
-                            static_cast<double>(scene_cube_dimension - 1U);
-    const std::size_t lower = static_cast<std::size_t>(position);
-    const std::size_t upper = std::min(scene_cube_dimension - 1U, lower + 1U);
-    const double t = position - static_cast<double>(lower);
-    const double a = table[lower];
-    const double b = table[upper];
-    return static_cast<float>(a + ((b - a) * t));
+// 표본을 모을 자리입니다 — 크롭 영역이 있으면 그 안, 없으면 전체 화상입니다. 호스트 화소가
+// 최신일 때만 부릅니다(CPU 판은 호출부가 상주 화상을 먼저 내립니다).
+[[nodiscard]] negaflow::core::ConstImageView measurement_view(
+    const negaflow::core::ImageView image,
+    const std::optional<AnalysisPixelRect>& rect) noexcept {
+    const negaflow::core::ConstImageView full{
+        image.pixels, image.pixel_capacity, image.width, image.height, image.stride_pixels};
+    return rect ? analysis_subview(full, *rect) : full;
+}
+
+// 크롭이 없으면 프레임 가장자리를 버립니다. 크롭이면 경계는 이미 잘려 나갔습니다.
+[[nodiscard]] bool collect_measured_samples(
+    const negaflow::core::ImageView image,
+    const std::optional<AnalysisRegion>& region,
+    const std::uint32_t target_width,
+    SceneSampleGrid& samples) {
+    const std::optional<AnalysisPixelRect> rect =
+        analysis_measurement_rect(region, image.width, image.height);
+    if (!collect_area_samples(measurement_view(image, rect), target_width, samples)) {
+        return false;
+    }
+    if (!rect) {
+        inset_scene_samples(samples, target_width, scene_frame_border_inset);
+    }
+    return true;
 }
 
 [[nodiscard]] bool apply_auto_levels(
     const negaflow::core::ImageView image,
     const bool negative_source,
+    const std::optional<AnalysisRegion>& region,
     SceneCorrectionInfo& info) {
     SceneSampleGrid samples{};
-    if (!collect_area_samples(image, scene_auto_levels_sample_width, samples)) {
+    if (!collect_measured_samples(image, region, scene_auto_levels_sample_width, samples)) {
         return false;
     }
     info.sampled_pixels += samples.red.size();
@@ -167,27 +183,37 @@ constexpr double positive_output_white = 0.86;
                     negaflow::core::Rgba32F& pixel = image.pixels[row + x];
                     pixel.red = static_cast<float>(std::clamp(
                         (static_cast<double>(pixel.red) * plan.scale[0]) + plan.bias[0],
-                        0.0, 1.0));
+                        0.0, scene_auto_levels_upper_clamp));
                     pixel.green = static_cast<float>(std::clamp(
                         (static_cast<double>(pixel.green) * plan.scale[1]) + plan.bias[1],
-                        0.0, 1.0));
+                        0.0, scene_auto_levels_upper_clamp));
                     pixel.blue = static_cast<float>(std::clamp(
                         (static_cast<double>(pixel.blue) * plan.scale[2]) + plan.bias[2],
-                        0.0, 1.0));
+                        0.0, scene_auto_levels_upper_clamp));
                 }
             }
         });
     return true;
 }
 
+[[nodiscard]] float power_gain(
+    const float value,
+    const double exponent,
+    const double gain) noexcept {
+    return value > 0.0F
+        ? static_cast<float>(gain * std::pow(static_cast<double>(value), exponent))
+        : value;
+}
+
 [[nodiscard]] bool apply_neutral_balance(
     const negaflow::core::ImageView image,
+    const std::optional<AnalysisRegion>& region,
     SceneCorrectionInfo& info) {
     if (image.width <= 8U || image.height <= 8U) {
         return false;
     }
     SceneSampleGrid samples{};
-    if (!collect_area_samples(image, scene_neutral_balance_sample_width, samples)) {
+    if (!collect_measured_samples(image, region, scene_neutral_balance_sample_width, samples)) {
         return false;
     }
     info.sampled_pixels += samples.red.size();
@@ -204,9 +230,9 @@ constexpr double positive_output_white = 0.86;
                 const std::size_t row = static_cast<std::size_t>(y) * image.stride_pixels;
                 for (std::uint32_t x = 0U; x < image.width; ++x) {
                     negaflow::core::Rgba32F& pixel = image.pixels[row + x];
-                    pixel.red = cube_curve(pixel.red, plan.cube[0]);
-                    pixel.green = cube_curve(pixel.green, plan.cube[1]);
-                    pixel.blue = cube_curve(pixel.blue, plan.cube[2]);
+                    pixel.red = power_gain(pixel.red, plan.exponent[0], plan.gain[0]);
+                    pixel.green = power_gain(pixel.green, plan.exponent[1], plan.gain[1]);
+                    pixel.blue = power_gain(pixel.blue, plan.exponent[2], plan.gain[2]);
                 }
             }
         });
@@ -290,54 +316,118 @@ SceneAutoLevelsPlan plan_scene_auto_levels(
     return plan;
 }
 
+void inset_scene_samples(
+    SceneSampleGrid& samples,
+    const std::uint32_t grid_width,
+    const double fraction) {
+    const std::size_t count = samples.red.size();
+    if (grid_width == 0U || count == 0U || count % grid_width != 0U ||
+        samples.green.size() != count || samples.blue.size() != count) {
+        return;
+    }
+    const std::uint32_t grid_height = static_cast<std::uint32_t>(count / grid_width);
+    const std::uint32_t inset_x = static_cast<std::uint32_t>(static_cast<double>(grid_width) * fraction);
+    const std::uint32_t inset_y = static_cast<std::uint32_t>(static_cast<double>(grid_height) * fraction);
+    SceneSampleGrid kept{};
+    kept.red.reserve(count);
+    kept.green.reserve(count);
+    kept.blue.reserve(count);
+    const std::uint32_t last_y = std::max(inset_y + 1U, grid_height > inset_y ? grid_height - inset_y : 0U);
+    const std::uint32_t last_x = std::max(inset_x + 1U, grid_width > inset_x ? grid_width - inset_x : 0U);
+    for (std::uint32_t y = inset_y; y < last_y; ++y) {
+        for (std::uint32_t x = inset_x; x < last_x; ++x) {
+            const std::size_t index =
+                (static_cast<std::size_t>(std::min(y, grid_height - 1U)) * grid_width) +
+                std::min(x, grid_width - 1U);
+            kept.red.push_back(samples.red[index]);
+            kept.green.push_back(samples.green[index]);
+            kept.blue.push_back(samples.blue[index]);
+        }
+    }
+    samples = std::move(kept);
+}
+
+namespace {
+
+// 한 채널 보정의 상한 — 게인 ±1 스톱(ln 0.7), 감마 0.8…1.25 입니다.
+constexpr double maximum_offset = 0.7;
+constexpr double minimum_slope = 0.8;
+constexpr double maximum_slope = 1.25;
+// 감마까지 맞추는 최소 근거: 대역 셋, 휘도 폭 2 스톱입니다.
+constexpr std::size_t minimum_bands_for_slope = 3U;
+const double minimum_span_for_slope = std::log(4.0);
+// 중립 근처 후보가 없어 장면 중앙값 주위에서 고른 경우(한 색 장면일 수 있습니다)의 보정 비율.
+constexpr double fallback_strength = 0.5;
+// 이보다 작은 보정은 항등으로 봅니다.
+constexpr double identity_tolerance = 0.003;
+
+}  // namespace
+
 SceneNeutralBalancePlan plan_scene_neutral_balance(SceneSampleGrid& samples) noexcept {
     SceneNeutralBalancePlan plan{};
-    if (samples.red.empty() || samples.red.size() != samples.green.size() ||
+    if (samples.red.size() < 64U || samples.red.size() != samples.green.size() ||
         samples.red.size() != samples.blue.size()) {
         return plan;
     }
-    std::sort(samples.red.begin(), samples.red.end());
-    std::sort(samples.green.begin(), samples.green.end());
-    std::sort(samples.blue.begin(), samples.blue.end());
-
-    const std::size_t middle = samples.red.size() / 2U;
-    const std::array<double, 3> median{
-        samples.red[middle], samples.green[middle], samples.blue[middle]};
-    for (const double value : median) {
-        if (value <= 0.04 || value >= 0.96) {
+    try {
+        std::vector<std::array<double, 3>> pixels;
+        pixels.reserve(samples.red.size());
+        for (std::size_t index = 0U; index < samples.red.size(); ++index) {
+            pixels.push_back({samples.red[index], samples.green[index], samples.blue[index]});
+        }
+        const std::optional<NeutralAxisEvidence> evidence = measure_neutral_axis(pixels);
+        if (!evidence) {
             return plan;
         }
-    }
-    const double target = std::pow(median[0] * median[1] * median[2], 1.0 / 3.0);
-    for (std::size_t channel = 0U; channel < 3U; ++channel) {
-        const double raw = std::log(target) / std::log(median[channel]);
-        plan.gamma[channel] = std::clamp(1.0 + ((raw - 1.0) * 0.8), 0.80, 1.25);
-    }
-    if (std::abs(plan.gamma[0] - 1.0) <= 0.01 &&
-        std::abs(plan.gamma[1] - 1.0) <= 0.01 &&
-        std::abs(plan.gamma[2] - 1.0) <= 0.01) {
-        plan.gamma[0] = 1.0;
-        plan.gamma[1] = 1.0;
-        plan.gamma[2] = 1.0;
-        return plan;
-    }
-    // 큐브 항목은 **칸 번호와 gamma 로만** 정해집니다. 그런데 예전 `cube_curve` 는
-    // 화소마다 그 두 항목을 `std::pow` 로 다시 구했습니다 — 1536x1026 한 장이면
-    // 채널마다 315만 번, 세 채널이면 946만 번입니다. 실측으로 이 루프 하나가 슬라이더
-    // 한 틱 200ms 중 105ms 였습니다(3600 정착 패스에서는 618ms).
-    //
-    // **화소 값은 그대로입니다.** 같은 `std::pow` 에 같은 인자를 넣어 나온 같은 double 을
-    // 표에 담아 두고 꺼내 쓸 뿐이며, 보간식과 float 축소도 그대로입니다.
-    for (std::size_t channel = 0U; channel < 3U; ++channel) {
-        for (std::size_t index = 0U; index < scene_cube_dimension; ++index) {
-            plan.cube[channel][index] = std::pow(
-                static_cast<double>(index) /
-                    static_cast<double>(scene_cube_dimension - 1U),
-                plan.gamma[channel]);
+        const double strength = evidence->is_fallback ? fallback_strength : 1.0;
+        // 대역 중앙 캐스트에 채널별 직선(cast = a + b·ln Ȳ)을 맞춥니다 — 대역마다 같은 무게.
+        const auto& bands = evidence->bands;
+        double minimum_x = bands.front().log_luminance;
+        double maximum_x = bands.front().log_luminance;
+        double mean_x = 0.0;
+        for (const NeutralAxisBand& band : bands) {
+            minimum_x = std::min(minimum_x, band.log_luminance);
+            maximum_x = std::max(maximum_x, band.log_luminance);
+            mean_x += band.log_luminance;
         }
+        const double n = static_cast<double>(bands.size());
+        mean_x /= n;
+        const bool use_slope =
+            bands.size() >= minimum_bands_for_slope && maximum_x - minimum_x >= minimum_span_for_slope;
+        bool identity = true;
+        for (std::size_t channel = 0U; channel < 3U; ++channel) {
+            double mean_y = 0.0;
+            for (const NeutralAxisBand& band : bands) {
+                mean_y += band.cast[channel];
+            }
+            mean_y /= n;
+            double slope = 0.0;
+            if (use_slope) {
+                double sxy = 0.0;
+                double sxx = 0.0;
+                for (const NeutralAxisBand& band : bands) {
+                    sxy += (band.log_luminance - mean_x) * (band.cast[channel] - mean_y);
+                    sxx += (band.log_luminance - mean_x) * (band.log_luminance - mean_x);
+                }
+                slope = sxx > 1.0e-12 ? sxy / sxx : 0.0;
+            }
+            const double intercept = use_slope ? mean_y - (slope * mean_x) : mean_y;
+            const double offset = std::clamp(intercept * strength, -maximum_offset, maximum_offset);
+            const double beta = std::clamp(1.0 + (slope * strength), minimum_slope, maximum_slope);
+            identity = identity && std::abs(offset) < identity_tolerance &&
+                       std::abs(beta - 1.0) < identity_tolerance;
+            // c' = exp((ln c − α)/β) = exp(−α/β) · c^(1/β)
+            plan.exponent[channel] = 1.0 / beta;
+            plan.gain[channel] = std::exp(-offset * plan.exponent[channel]);
+        }
+        if (identity) {
+            return SceneNeutralBalancePlan{};
+        }
+        plan.apply = true;
+        return plan;
+    } catch (...) {
+        return SceneNeutralBalancePlan{};
     }
-    plan.apply = true;
-    return plan;
 }
 
 negaflow::core::KernelStatus apply_scene_correction(
@@ -359,11 +449,12 @@ negaflow::core::KernelStatus apply_scene_correction(
     }
     try {
         if (parameters.auto_levels) {
-            info.auto_levels_applied =
-                apply_auto_levels(image, parameters.negative_source, info);
+            info.auto_levels_applied = apply_auto_levels(
+                image, parameters.negative_source, parameters.analysis_region, info);
         }
         if (parameters.auto_neutral_balance && parameters.negative_source) {
-            info.neutral_balance_applied = apply_neutral_balance(image, info);
+            info.neutral_balance_applied =
+                apply_neutral_balance(image, parameters.analysis_region, info);
         }
     } catch (const std::bad_alloc&) {
         return negaflow::core::KernelStatus::buffer_too_small;

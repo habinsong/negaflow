@@ -6,7 +6,7 @@
 //
 // | | macOS | Windows CPU | 셰이더 |
 // |---|---|---|---|
-// | 노출 | Core Image 곱셈(전용 커널 없음) | `core/pointwise.cpp` `apply_exposure` | `shaders/exposure.hlsl` |
+// | 노출 | `exposureShoulder`(EV<=0 은 Core Image 곱셈) | `core/pointwise.cpp` `apply_exposure` | `shaders/exposure.hlsl` |
 // | 포인트 커브 | `PointCurveStage` | `imaging/point_curve.cpp` `apply_point_curves` | `shaders/point_curve.hlsl` |
 
 #include <cstddef>
@@ -24,13 +24,14 @@ public:
         const GpuDevice& device,
         GpuExposure& kernel) noexcept;
 
-    // `stops` 는 CPU 판과 같은 스톱 값입니다. 배수(`exp2`)는 여기서 한 번 계산합니다 —
-    // 셰이더에서 계산하면 `exp2` 구현 차이가 화소마다 실립니다.
+    // `stops`·`headroom_stops` 는 CPU 판과 같은 값입니다. 배수(`exp2`)와 숄더 혼합 비율은
+    // 여기서 한 번 계산합니다 — 셰이더에서 계산하면 구현 차이가 화소마다 실립니다.
     [[nodiscard]] GpuKernelStatus dispatch(
         const GpuDevice& device,
         const GpuWorkingImage& source,
         GpuWorkingImage& destination,
-        float stops) const noexcept;
+        float stops,
+        float headroom_stops) const noexcept;
 
     [[nodiscard]] bool is_valid() const noexcept { return kernel_.is_valid(); }
 

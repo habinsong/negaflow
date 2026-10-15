@@ -8,6 +8,16 @@
 
 namespace negaflow::imaging::scanner_target_detail {
 
+namespace {
+
+// 색 밀도가 실리는 밝기 범위입니다. 암부는 크러시를 막으려 빠르게 들어오고, 명부는 종이 화이트
+// 근처에서 0 으로 돌아갑니다(macOS `transformedSRGB` 의 `densityTaper`).
+[[nodiscard]] double density_taper(const double luma) noexcept {
+    return smoothstep(0.04, 0.16, luma) * (1.0 - smoothstep(0.86, 0.97, luma));
+}
+
+}  // namespace
+
 [[nodiscard]] double relative_tone(
     const double value,
     const std::array<double, 9U>& xs,
@@ -151,6 +161,11 @@ namespace negaflow::imaging::scanner_target_detail {
             lab.a = chroma * gain * std::cos(angle);
             lab.b = chroma * gain * std::sin(angle);
         }
+        const double density = profile.color_density * scale * chroma_keep;
+        if (density != 0.0) {
+            lab.lightness -= (reciprocal ? -density : density) *
+                std::min(std::hypot(lab.a, lab.b), 60.0) * density_taper(input_luma);
+        }
 
         auto drift = neutral_drift(input_luma, profile, scale);
         if (reciprocal) { drift[0] = -drift[0]; drift[1] = -drift[1]; }
@@ -203,6 +218,9 @@ TransformedPair transformed_srgb_pair(
         : smoothstep(0.03, 0.10, input_luma) * (1.0 - smoothstep(0.90, 0.97, input_luma));
     const double neutral_gate = monochrome ? 0.0 : 1.0 - smoothstep(8.0, 28.0, chroma);
     const double warm_gate = monochrome ? 0.0 : smoothstep(0.22, 0.52, input_luma);
+    const double density =
+        monochrome ? 0.0 : profile.color_density * scale * chroma_keep;
+    const double density_weight = density != 0.0 ? density_taper(input_luma) : 0.0;
 
     // ── 방향에 따라 달라지는 것만 두 번 ─────────────────────────────────────
     const auto build = [&](const bool reciprocal) noexcept {
@@ -228,6 +246,10 @@ TransformedPair transformed_srgb_pair(
                     base_angle + (rotation * color_taper * 3.14159265358979323846 / 180.0);
                 lab.a = chroma * gain * std::cos(angle);
                 lab.b = chroma * gain * std::sin(angle);
+            }
+            if (density != 0.0) {
+                lab.lightness -= (reciprocal ? -density : density) *
+                    std::min(std::hypot(lab.a, lab.b), 60.0) * density_weight;
             }
 
             std::array<double, 2U> drift = base_drift;

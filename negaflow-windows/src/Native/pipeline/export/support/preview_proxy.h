@@ -5,6 +5,7 @@
 #include "export/stages/observe.h"
 #include "export/support/preview.h"
 
+#include "negaflow/imaging/analysis_region.h"
 #include "negaflow/imaging/film_base_measurement.h"
 #include "negaflow/pipeline/develop_export.h"
 
@@ -25,9 +26,15 @@ struct PreviewProxyHint final {
     std::array<float, 3> dmin{};
     DevelopBaseSource base_source{DevelopBaseSource::manual};
     bool use_preset_response{false};
-    std::array<float, 3> preset_dmax_normalized{};
+    std::array<float, 3> preset_range_factor{};
     std::optional<negaflow::imaging::FilmBaseMeasurementMethod> measurement_method{};
     std::optional<negaflow::imaging::FilmBaseMeasurementDiagnostics> diagnostics{};
+    // 베이스를 찾은 측정 영역(크롭)과 그때 화상의 크기입니다. 베이스는 크롭 바깥 띠에서 찾으므로
+    // 크롭이 바뀌면 캐시된 베이스는 낡습니다. 크롭은 raw 키에 넣지 않습니다 — 넣으면 크롭을 바꿀
+    // 때마다 원본을 다시 디코드합니다. 대신 꺼낼 때 이 값으로 비교해 베이스만 다시 풉니다.
+    std::optional<negaflow::imaging::AnalysisRegion> base_region{};
+    std::uint32_t base_image_width{0U};
+    std::uint32_t base_image_height{0U};
 };
 
 // 같은 파일·관측·상자·베이스 모드이면 작은 raw 를 돌려주고 디코드를 건너뜁니다.

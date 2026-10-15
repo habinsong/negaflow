@@ -110,4 +110,8 @@ public sealed class DevelopTonePanel
 
     public LibraryFrameError ApplyAutoWhiteBalance(AutoAdjustSettings settings) =>
         panel.RefreshAfterEdit(editor.ApplyAutoWhiteBalance(panel.SelectedFrame, settings));
+
+    /// <summary>macOS <c>pickNeutralWhiteBalance</c> — 스포이드가 푼 값(프리셋 포함 합)을 대입합니다.</summary>
+    public LibraryFrameError ApplyNeutralWhiteBalance(double solvedWarmth, double solvedTint) =>
+        panel.RefreshAfterEdit(editor.ApplyNeutralWhiteBalance(panel.SelectedFrame, solvedWarmth, solvedTint));
 }

@@ -38,7 +38,8 @@ internal static unsafe class NativeDevelopPreviewRender
         nint* grainMendReview = null,
         bool clippingOverlay = false,
         bool retainPreviewRaw = true,
-        NativeFilmBasePickV1* filmBasePick = null, double pickX = 0.0, double pickY = 0.0)
+        NativeFilmBasePickV1* filmBasePick = null, double pickX = 0.0, double pickY = 0.0,
+        NativeNeutralWhiteBalancePickV1* neutralPick = null)
     {
         ValidateLayoutAndEnums(request);
         if (!retainPreviewRaw &&
@@ -193,13 +194,16 @@ internal static unsafe class NativeDevelopPreviewRender
                 checked((uint)defects.InfraredItems.Length));
             NativeDevelopExportRequestV26 v26 = BuildRequestV26(v25, request);
             NativeDevelopExportRequestV27 v27 = BuildRequestV27(v26, request);
-            if (filmBasePick is not null)
+            if (filmBasePick is not null || neutralPick is not null)
             {
                 NativeDevelopExportRequestV39 pickInput = NativeDevelopInput.Build(
                     BuildRequestV36(BuildRequestV35(NativeDevelopInput.BuildDisplayRequest(v27, request),
                         defectRecipeDigest, checked((uint)defectRecipeSha256.Length)), null, 0U, 0U), request);
-                status = NativeDevelopInput.Pick(&pickInput, pickX, pickY, runState,
-                    (NativeDevelopExportResultV3*)&raw, filmBasePick);
+                status = filmBasePick is not null
+                    ? NativeDevelopInput.Pick(&pickInput, pickX, pickY, runState,
+                        (NativeDevelopExportResultV3*)&raw, filmBasePick)
+                    : NativeDevelopInput.PickNeutral(&pickInput, pickX, pickY, runState,
+                        (NativeDevelopExportResultV3*)&raw, neutralPick);
             }
             else if (detection is not null)
             {
@@ -321,7 +325,8 @@ internal static unsafe class NativeDevelopPreviewRender
         return new RenderOutcome(Translate(
             status,
             raw,
-            filmBasePick is not null ? "nf_pick_film_base_v2" : NativeDevelopInput.RequiresV39(request)
+            filmBasePick is not null ? "nf_pick_film_base_v2"
+                : neutralPick is not null ? "nf_pick_neutral_white_balance_v1" : NativeDevelopInput.RequiresV39(request)
                 ? (detection is not null ? "nf_develop_detect_grain_mend_v8" :
                     retainPreviewRaw ? "nf_develop_preview_v39" : "nf_develop_preview_background_v2")
                 : detection is not null

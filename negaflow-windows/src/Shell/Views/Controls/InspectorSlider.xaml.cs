@@ -64,6 +64,16 @@ public sealed partial class InspectorSlider : UserControl
         typeof(InspectorSlider),
         new PropertyMetadata(true));
 
+    /// <summary>
+    /// 1 이 아니면 손잡이 위치를 거듭제곱 눈금으로 씁니다(대칭 범위 전용). 값 글자·입력·화살표는
+    /// 그대로 저장값 단위입니다.
+    /// </summary>
+    public static readonly DependencyProperty PositionExponentProperty = DependencyProperty.Register(
+        nameof(PositionExponent),
+        typeof(double),
+        typeof(InspectorSlider),
+        new PropertyMetadata(1d, OnPropertyChanged));
+
     public static readonly DependencyProperty SliderAutomationIdProperty = DependencyProperty.Register(
         nameof(SliderAutomationId),
         typeof(string),
@@ -106,6 +116,17 @@ public sealed partial class InspectorSlider : UserControl
         set => SetValue(CanResetProperty, value);
     }
 
+    public double PositionExponent
+    {
+        get => (double)GetValue(PositionExponentProperty);
+        set => SetValue(PositionExponentProperty, value);
+    }
+
+    /// <summary>거듭제곱 눈금을 쓰는지 — 대칭 범위이고 지수가 1 이 아닐 때만입니다.</summary>
+    private bool UsesPositionScale =>
+        PositionExponent != 1.0 && double.IsFinite(PositionExponent) && PositionExponent > 0 &&
+        Maximum > 0 && Minimum == -Maximum;
+
     public string SliderAutomationId
     {
         get => (string)GetValue(SliderAutomationIdProperty);
@@ -135,9 +156,20 @@ public sealed partial class InspectorSlider : UserControl
         }
 
         LabelText.Text = Label;
-        Slider.Minimum = Minimum;
-        Slider.Maximum = Maximum;
-        Slider.Value = value;
+        if (UsesPositionScale)
+        {
+            Slider.Minimum = -1.0;
+            Slider.Maximum = 1.0;
+            Slider.Value = InspectorSliderValue.PositionFromValue(value, Maximum, PositionExponent);
+            Slider.ThumbToolTipValueConverter =
+                new ScaledInspectorSliderValueConverter(Maximum, PositionExponent);
+        }
+        else
+        {
+            Slider.Minimum = Minimum;
+            Slider.Maximum = Maximum;
+            Slider.Value = value;
+        }
         ValueText.Text = value.ToString("+0.00;-0.00;0.00", System.Globalization.CultureInfo.InvariantCulture);
         if (ValueEditor.Visibility == Visibility.Visible)
         {
@@ -168,7 +200,9 @@ public sealed partial class InspectorSlider : UserControl
         _ = sender;
         if (!isSynchronizing)
         {
-            SetControlValue(args.NewValue);
+            SetControlValue(UsesPositionScale
+                ? InspectorSliderValue.ValueFromPosition(args.NewValue, Maximum, PositionExponent)
+                : args.NewValue);
         }
     }
 

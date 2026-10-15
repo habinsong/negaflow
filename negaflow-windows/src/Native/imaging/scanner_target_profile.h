@@ -32,6 +32,9 @@ struct TargetProfile final {
     std::array<HueAnchor, 8U> hue_anchors;
     std::size_t hue_count;
     std::array<ChromaBand, 3U> chroma_bands;
+    // 색 밀도: 채도 1 당 L* 를 얼마나 낮추는지(macOS `Signature.colorDensity`). 진한 색이
+    // 감법 염료처럼 깊어져 채도를 올려도 형광처럼 뜨지 않습니다. SP 만 씁니다.
+    double color_density{0.0};
 };
 
 // 이 스캐너 룩의 절대 프로파일입니다.

@@ -1,5 +1,7 @@
 #include "negaflow/gpu/gpu_stage_kernels.h"
 
+#include "negaflow/core/pointwise.h"
+
 // fxc 가 만든 헤더는 `const BYTE ...[]` 로 나오므로 Windows 타입이 먼저 보여야 합니다.
 #include <windows.h>
 
@@ -17,7 +19,9 @@ namespace {
 struct alignas(16) ExposureConstants final {
     GpuPointwiseExtent extent{};
     float multiplier{1.0F};
-    float padding[3]{0.0F, 0.0F, 0.0F};
+    float knee{0.0F};
+    float blend{0.0F};
+    float padding{0.0F};
 };
 
 static_assert(sizeof(ExposureConstants) == 32U, "two constant registers");
@@ -63,18 +67,21 @@ GpuKernelStatus GpuExposure::dispatch(
     const GpuDevice& device,
     const GpuWorkingImage& source,
     GpuWorkingImage& destination,
-    const float stops) const noexcept {
+    const float stops,
+    const float headroom_stops) const noexcept {
     // CPU 판 `apply_exposure` 와 같은 두 단계 판정입니다 — 스톱이 유한한지 보고,
     // 그 다음 배수가 유한한지 봅니다. 큰 스톱은 `exp2` 에서 무한이 될 수 있습니다.
-    if (!std::isfinite(stops)) {
+    if (!std::isfinite(stops) || !std::isfinite(headroom_stops)) {
         return GpuKernelStatus::non_finite_parameter;
     }
     const float multiplier = std::exp2(stops);
-    if (!std::isfinite(multiplier)) {
+    if (!std::isfinite(multiplier) || !(headroom_stops > 0.0F)) {
         return GpuKernelStatus::non_finite_parameter;
     }
     ExposureConstants payload{};
     payload.multiplier = multiplier;
+    payload.knee = negaflow::core::exposure_shoulder_knee();
+    payload.blend = negaflow::core::exposure_shoulder_blend(stops, headroom_stops);
     return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
 }
 

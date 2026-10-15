@@ -329,20 +329,4 @@ void expect_coreimage_close(
     expect(difference < coreimage_abs_error_budget, message);
 }
 
-[[nodiscard]] negaflow::imaging::WorkingImage mixed(
-    const negaflow::imaging::WorkingImage& source,
-    const negaflow::imaging::WorkingImage& blurred,
-    const float amount) {
-    auto result = source;
-    for (std::size_t index = 0U; index < result.pixels.size(); ++index) {
-        auto& destination = result.pixels[index];
-        const auto& target = blurred.pixels[index];
-        destination.red += (target.red - destination.red) * amount;
-        destination.green += (target.green - destination.green) * amount;
-        destination.blue += (target.blue - destination.blue) * amount;
-        destination.alpha += (target.alpha - destination.alpha) * amount;
-    }
-    return result;
-}
-
 }  // namespace texture_stage_tests

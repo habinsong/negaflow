@@ -52,6 +52,36 @@ void test_unknown_profile_is_exact_identity() {
         "unknown scanner profile is exact identity");
 }
 
+// 프로파일 그레이드는 감마(표시) 도메인 연산입니다 — linear 에 그대로 걸면 대비 피벗 0.5 가 암부를
+// 통째로 눌렀습니다(macOS `testScannerProfileGradeDoesNotCrushShadows` 와 같은 램프·문턱).
+void test_profile_grade_does_not_crush_shadows() {
+    constexpr std::uint32_t width = 64U;
+    std::vector<negaflow::core::Rgba32F> pixels(width);
+    const auto encode = [](const float v) {
+        const double d = std::max(static_cast<double>(v), 0.0);
+        return d <= 0.0031308 ? d * 12.92 : 1.055 * std::pow(d, 1.0 / 2.4) - 0.055;
+    };
+    for (std::uint32_t x = 0U; x < width; ++x) {
+        const double gamma = 0.10 + 0.50 * static_cast<double>(x) / static_cast<double>(width - 1U);
+        const auto linear = static_cast<float>(
+            gamma <= 0.04045 ? gamma / 12.92 : std::pow((gamma + 0.055) / 1.055, 2.4));
+        pixels[x] = {linear, linear, linear, 1.0F};
+    }
+    const auto input = pixels;
+    negaflow::imaging::ScannerProfileGradeInfo info{};
+    expect(negaflow::imaging::apply_scanner_profile_grade(
+               view(pixels, width, 1U), L"noritsu__color-nega__kodak-portra-160", info) ==
+               negaflow::core::KernelStatus::ok && info.applied,
+           "Portra 160 scanner profile grade succeeds");
+    double dark_in = 0.0;
+    double dark_out = 0.0;
+    for (std::uint32_t x = 0U; x < 16U; ++x) {
+        dark_in += encode(input[x].green) / 16.0;
+        dark_out += encode(pixels[x].green) / 16.0;
+    }
+    expect(dark_out > dark_in * 0.85, "scanner profile grade keeps the shadows");
+}
+
 void test_profiles_produce_distinct_bounded_grades() {
     constexpr std::uint32_t width = 8U;
     constexpr std::uint32_t height = 8U;
@@ -106,6 +136,7 @@ int main() {
         test_registry_resolves_canonical_profile();
         test_unknown_profile_is_exact_identity();
         test_profiles_produce_distinct_bounded_grades();
+    test_profile_grade_does_not_crush_shadows();
         std::cout << "Scanner profile grade tests passed\n";
         return 0;
     } catch (const std::exception& exception) {

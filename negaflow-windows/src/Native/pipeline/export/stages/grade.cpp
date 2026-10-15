@@ -16,7 +16,8 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
     const DevelopExportRequest& request,
     RunTracker& tracker,
     const GpuUsePolicy gpu_policy,
-    InvertStageOutput& invert) noexcept {
+    InvertStageOutput& invert,
+    const bool stop_before_color_model) noexcept {
     negaflow::imaging::WorkingImage& developed_image = invert.image;
     const bool negative_source = invert.negative_source;
     const bool positive = invert.positive;
@@ -27,6 +28,7 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
     negaflow::imaging::SceneCorrectionParameters scene_correction =
         request.scene_correction;
     scene_correction.negative_source = negative_source;
+    scene_correction.analysis_region = invert.analysis_region;
     const bool scene_active =
         scene_correction.auto_levels ||
         (scene_correction.auto_neutral_balance && negative_source);
@@ -121,7 +123,8 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
                 monochrome,
                 positive,
                 request.scanner_profile_id,
-                target_info);
+                target_info,
+                invert.analysis_region);
         if (target_status != negaflow::core::KernelStatus::ok) {
             return fail(
                 DevelopExportStage::target_grade,
@@ -140,7 +143,8 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
                     developed_image.stride_pixels,
                 },
                 negative.film_type == negaflow::imaging::NegativeFilmType::color,
-                rescue_info);
+                rescue_info,
+                invert.analysis_region);
         if (rescue_status != negaflow::core::KernelStatus::ok) {
             return fail(
                 DevelopExportStage::target_grade,
@@ -172,6 +176,9 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
     tracker.finish();
     if (tracker.cancelled()) {
         return cancelled_outcome(DevelopExportStage::target_grade);
+    }
+    if (stop_before_color_model) {
+        return std::nullopt;
     }
 
     tracker.begin(DevelopExportStage::color_model, cost_of(color_model_cost, true));

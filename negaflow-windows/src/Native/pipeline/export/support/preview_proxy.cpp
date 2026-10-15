@@ -71,6 +71,62 @@ constexpr double full_max_dimension =
     return true;
 }
 
+[[nodiscard]] bool same_region(
+    const std::optional<negaflow::imaging::AnalysisRegion>& left,
+    const std::optional<negaflow::imaging::AnalysisRegion>& right) noexcept {
+    if (left.has_value() != right.has_value()) {
+        return false;
+    }
+    return !left.has_value() ||
+        (left->left == right->left && left->top == right->top &&
+         left->width == right->width && left->height == right->height);
+}
+
+// 캐시된 베이스가 지금 크롭의 바깥 띠에서 찾은 것인지 봅니다. 베이스를 풀 때 쓴 화상 크기로
+// 다시 계산하므로 같은 크롭이면 값이 정확히 같습니다.
+[[nodiscard]] bool base_fits_request(
+    const DevelopExportRequest& request,
+    const PreviewProxyHint& hint) noexcept {
+    return !hint.has_base ||
+        same_region(
+            hint.base_region,
+            negaflow::imaging::analysis_region_from_transform(
+                request.image_transform, hint.base_image_width, hint.base_image_height));
+}
+
+// 크롭이 바뀌었으면 화상은 그대로 두고 베이스만 다시 풉니다. 정착본이 있으면 그것에서
+// 풉니다 — 화소가 더 많고, 두 슬롯이 같은 베이스를 쓰게 됩니다. 푼 값은 슬롯에 남겨 다음
+// 틱부터는 다시 풀지 않습니다(백그라운드 렌더는 슬롯을 바꾸지 않습니다).
+[[nodiscard]] bool refresh_base_for_crop(
+    const DevelopExportRequest& request,
+    const PreviewRawKey& key,
+    const PreviewRawImage& cached,
+    PreviewProxyHint& cached_hint) noexcept {
+    if (base_fits_request(request, cached_hint)) {
+        return true;
+    }
+    PreviewRawImage source = cached;
+    PreviewRawImage settled{};
+    PreviewProxyHint settled_hint{};
+    PreviewProxyHint fresh = cached_hint;
+    if (preview_raw_take_settled(key, settled, settled_hint) && settled_hint.has_base &&
+        base_fits_request(request, settled_hint)) {
+        fresh = settled_hint;
+    } else {
+        if (settled != nullptr) {
+            source = settled;
+        }
+        if (resolve_negative_base(request, *source, fresh).has_value()) {
+            return false;
+        }
+    }
+    if (request.retain_preview_raw) {
+        preview_raw_update_base(key, fresh);
+    }
+    cached_hint = fresh;
+    return true;
+}
+
 }  // namespace
 
 bool preview_proxy_try_take(
@@ -95,19 +151,22 @@ bool preview_proxy_try_take(
     PreviewProxyHint cached_hint{};
     if (is_settled_box(preview.maximum_width, preview.maximum_height)) {
         return preview_raw_take_settled(key, cached, cached_hint) &&
+            refresh_base_for_crop(request, key, cached, cached_hint) &&
             copy_into(cached, cached_hint, image, hint);
     }
 
     if (preview_raw_take_interactive(
             key, preview.maximum_width, preview.maximum_height, cached, cached_hint)) {
-        return copy_into(cached, cached_hint, image, hint);
+        return refresh_base_for_crop(request, key, cached, cached_hint) &&
+            copy_into(cached, cached_hint, image, hint);
     }
 
     // macOS `DevelopFrameRenderer+Input.swift:51-52` 주석 원문:
     //   "요청 치수 캐시가 없어도 정착(풀) raw 프록시가 있으면 GPU 다운스케일로 파생한다.
     //    수십 MP 원본을 디스크에서 재디코딩(수백 ms)하는 대신 한 번의 Lanczos 축소로 끝난다."
     // `makeSnapshot` 의 `preloadedFullPreviewRaw` 자리입니다.
-    if (!preview_raw_take_settled(key, cached, cached_hint)) {
+    if (!preview_raw_take_settled(key, cached, cached_hint) ||
+        !refresh_base_for_crop(request, key, cached, cached_hint)) {
         return false;
     }
 

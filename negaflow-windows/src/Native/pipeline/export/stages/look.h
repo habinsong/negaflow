@@ -3,6 +3,7 @@
 #include "negaflow/pipeline/develop_export.h"
 
 #include "export/support/progress.h"
+#include "negaflow/imaging/analysis_region.h"
 #include "negaflow/imaging/scanner_to_working.h"
 #include "negaflow/imaging/working_film_look.h"
 #include "negaflow/pipeline/film_look_workspace.h"
@@ -43,6 +44,7 @@ struct LookStageOutput final {
     LookWorkspaceOutput& workspace,
     negaflow::imaging::WorkingImage developed,
     GpuUsePolicy gpu_policy,
+    const std::optional<negaflow::imaging::AnalysisRegion>& analysis_region,
     LookStageOutput& out) noexcept;
 
 }  // namespace negaflow::pipeline::develop_export_detail

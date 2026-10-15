@@ -316,7 +316,8 @@ GpuToneStageResult GpuToneStage::apply_on(
 
     if (exposure_changes) {
         if (swap_after(state_->exposure.dispatch(
-                device, *read, *write, parameters.exposure_stops)) != GpuKernelStatus::ok) {
+                device, *read, *write, parameters.exposure_stops,
+                parameters.exposure_headroom_stops)) != GpuKernelStatus::ok) {
             return result;
         }
         result.info.exposure_applied = true;
@@ -357,8 +358,12 @@ GpuToneStageResult GpuToneStage::apply_on(
         if (state_->finite.dispatch(device, *read, all_finite) != GpuKernelStatus::ok) {
             all_finite = false;
         }
+        // 크롭한 사진 영역이 있으면 대역을 그 안에서 잽니다 — CPU 판과 같은 사각형입니다.
+        const std::optional<imaging::AnalysisPixelRect> rect = imaging::analysis_measurement_rect(
+            parameters.analysis_region, image.width, image.height);
         result.info.measurement = imaging::measure_parametric_tone_curve_bands(
-            snapshot, measurement_limits, all_finite);
+            rect ? imaging::analysis_subview(snapshot, *rect) : snapshot,
+            measurement_limits, all_finite);
         if (result.info.measurement.status != ToneCurveMeasurementStatus::ok) {
             // CPU 판과 같은 실패입니다. 여기서 끝내면 CPU 로 다시 돌 이유가 없습니다 —
             // 이미지는 측정 직전 상태로 내려와 있으므로 CPU 판에 맡깁니다.

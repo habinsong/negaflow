@@ -31,7 +31,8 @@ struct alignas(16) ScannerTargetGradeConstants final {
     float strength{0.0F};
     float chroma_keep{0.0F};
     std::uint32_t monochrome{0U};
-    float padding[3]{0.0F, 0.0F, 0.0F};
+    float color_density{0.0F};
+    float padding[2]{0.0F, 0.0F};
 };
 
 static_assert(
@@ -65,7 +66,8 @@ static_assert((sizeof(ScannerTargetGradeConstants) % 16U) == 0U, "16-byte regist
             return false;
         }
     }
-    return std::isfinite(setup.strength) && std::isfinite(setup.chroma_keep);
+    return std::isfinite(setup.strength) && std::isfinite(setup.chroma_keep) &&
+        std::isfinite(setup.color_density);
 }
 
 } // namespace
@@ -131,6 +133,7 @@ GpuKernelStatus GpuScannerTargetGrade::dispatch(
     payload.strength = setup.strength;
     payload.chroma_keep = setup.chroma_keep;
     payload.monochrome = setup.monochrome ? 1U : 0U;
+    payload.color_density = setup.color_density;
 
     return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
 }

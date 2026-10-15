@@ -7,6 +7,7 @@ public sealed partial class DevelopWorkspaceView
     {
         cropSession.Cancel();
         BaseCard.CancelBasePicker();
+        Adjustments.Color.CancelNeutralPicker();
         LocalAdjustmentCard.StopDrawing();
         SyncLocalAdjustmentPrompt();
     }
@@ -23,6 +24,7 @@ public sealed partial class DevelopWorkspaceView
     {
         cropSession.Cancel();
         BaseCard.CancelBasePicker();
+        Adjustments.Color.CancelNeutralPicker();
         ExitGrainMendTools();
     }
 

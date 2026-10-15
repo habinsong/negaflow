@@ -76,6 +76,13 @@ void preview_raw_put_interactive(
     PreviewRawImage image,
     const PreviewProxyHint& hint) noexcept;
 
+// 화상은 그대로 두고 두 슬롯의 베이스 힌트만 바꿉니다. 크롭이 바뀌어 베이스를 다시 푼
+// 뒤 부릅니다 — 원본 재디코드 없이 다음 틱부터 새 베이스를 씁니다. 두 슬롯에 같은 값을
+// 넣어 정착·인터랙티브 프리뷰가 같은 베이스로 반전합니다(macOS 프레임당 베이스 캐시 하나).
+void preview_raw_update_base(
+    const PreviewRawKey& key,
+    const PreviewProxyHint& hint) noexcept;
+
 // 시험이 캐시를 비우고 시작할 수 있게 열어 둡니다.
 void preview_raw_store_reset() noexcept;
 

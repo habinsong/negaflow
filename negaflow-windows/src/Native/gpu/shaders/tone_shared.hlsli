@@ -25,6 +25,15 @@ float3 ToneSafeUnitRGB(float3 rgb) {
 }
 
 // `color/srgb_transfer.cpp`. 부호를 보존합니다 — 작업 이미지는 0 아래 값을 일부러 남깁니다.
+// 휘도 목표를 화소에 싣습니다(CPU `with_luma`, macOS `withLuma`). 어둡게 할 때는 채널 비율을
+// 보존하고, 밝힐 때는 같은 값을 더합니다.
+float3 WithLuma(float3 rgb, float luma, float newLuma) {
+    if (newLuma < luma && luma > 1.0e-6) {
+        return clamp(rgb * (newLuma / luma), 0.0, 1.0);
+    }
+    return clamp(rgb + (newLuma - luma), 0.0, 1.0);
+}
+
 float LinearToSrgbEncoded(float linearValue) {
     float magnitude = abs(linearValue);
     if (magnitude <= 0.0031308) {

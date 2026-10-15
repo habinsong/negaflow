@@ -1,5 +1,6 @@
 using Negaflow.Catalog;
 using Negaflow.Interop;
+using Negaflow.Shell.Develop;
 using static Negaflow.Shell.UnitTests.TestAssert;
 using static Negaflow.Shell.UnitTests.TestFrameFactory;
 using static Negaflow.Shell.UnitTests.DevelopTestResults;
@@ -13,6 +14,100 @@ internal static class AutoAdjustInputTests
         VerifyConcurrentBuffers().GetAwaiter().GetResult();
         VerifyQueuedCancellationAndInputMatrix().GetAwaiter().GetResult();
         VerifyFailureBoundaries().GetAwaiter().GetResult();
+        VerifyClosedLoop().GetAwaiter().GetResult();
+        VerifyNeutralPickUserValues();
+    }
+
+    // 중립 스포이드(macOS `AppModel.userWhiteBalance`): 네이티브가 푼 값은 룩 프리셋 몫까지 더한
+    // 합입니다. 저장할 사용자 값은 프리셋 몫을 빼고 슬라이더 범위(±4)로 자릅니다.
+    private static void VerifyNeutralPickUserValues()
+    {
+        try
+        {
+            LookPresetLibrary.SetForTests([new LookPreset(
+                "warm-look", "Warm", 1, [FilmType.ColorNegative],
+                new LookPresetTone(0, 0, 0, 0, 0, null),
+                new LookPresetColor(0.5, -0.25, 0, 0),
+                new LookPresetTexture(0, 0, 0))]);
+            (double warmth, double tint) = DevelopToneEditor.UserWhiteBalance("warm-look", -1.0, 0.75);
+            Check(Math.Abs(warmth - -1.5) < 1e-12 && Math.Abs(tint - 1.0) < 1e-12,
+                "neutral_pick_subtracts_the_look_preset_share");
+            (double plainWarmth, double plainTint) = DevelopToneEditor.UserWhiteBalance(null, -1.0, 0.75);
+            Check(plainWarmth == -1.0 && plainTint == 0.75, "neutral_pick_without_preset_assigns_the_solution");
+            (double clampedWarmth, _) = DevelopToneEditor.UserWhiteBalance("warm-look", -3.8, 0.0);
+            Check(clampedWarmth == -ColorModelRecipe.MaximumWhiteBalance, "neutral_pick_clamps_to_the_slider_range");
+        }
+        finally
+        {
+            LookPresetLibrary.SetForTests([]);
+        }
+        Check(DevelopBaseReadout.FormatValues("Warmth %.2f · Tint %.2f", -1.234, 0.5) ==
+            $"Warmth {(-1.234).ToString("0.00", System.Globalization.CultureInfo.CurrentCulture)} · Tint {0.5.ToString("0.00", System.Globalization.CultureInfo.CurrentCulture)}",
+            "neutral_pick_status_fills_both_values");
+    }
+
+    // 자동 톤 폐루프(macOS `AppModel.autoTone`): 중립 렌더로 첫 값을 계산하고, 그 값을 frame 의
+    // 나머지 설정과 함께 다시 그려 한 번 바로잡습니다. 자동 WB 는 한 번만 그립니다.
+    private static async Task VerifyClosedLoop()
+    {
+        var requests = new List<DevelopExportRequest>();
+        bool failVerification = false;
+        var exporter = new PixelExporter((request, pixels) =>
+        {
+            int index;
+            lock (requests) { requests.Add(request); index = requests.Count; }
+            pixels[0] = (byte)index;   // 몇 번째 렌더인지 화소로 넘깁니다.
+            return failVerification && index == 2 ? FailedResult("verify_failed") : OkResult();
+        });
+        bool? sawMonochrome = null;
+        var first = new AutoAdjustSettings(0.5, 0.1, -0.2, 0.1, 0.1, -0.05, 0.0, 0.2, -0.3, 0.1);
+        var coordinator = new AutoAdjustCoordinator(exporter, new FakeDispatcher(true), 128,
+            (pixels, _, _, monochrome) => { sawMonochrome = monochrome; return first; },
+            (pixels, _, _, _, given) => new AutoAdjustSettings(given.Exposure + (pixels[0] / 10.0), given.Contrast,
+                given.Highlights, given.Shadows, given.Whites + 0.05, given.Blacks, given.Density, given.Vibrance,
+                given.Warmth, given.Tint));
+        LibraryFrameSnapshot frame = Frame(new ManualBaseRgb(0.7, 0.3, 0.2)) with
+        {
+            SourcePath = Path.Combine(Path.GetTempPath(), "auto-loop.tif"),
+            Tone = new ToneAdjustment(1.0, 0.3, 0.6, 0, 0, 0),
+            ColorModel = ColorModelRecipe.Identity with { Saturation = 0.3, ColorDepth = 0.2 },
+        };
+        var outcomes = new List<AutoAdjustOutcome>();
+        await coordinator.RunToneAsync(frame, outcomes.Add);
+        Check(requests.Count == 2, "auto_tone_renders_neutral_then_verifies");
+        Check(requests[0].ExposureStops == 0F && requests[0].Highlights == 0F && requests[0].Saturation == 0F,
+            "auto_tone_first_render_is_tone_neutral");
+        Check(requests[1].ExposureStops == 0.5F && requests[1].Highlights == 0.6F &&
+            requests[1].Saturation == 0.3F && requests[1].ColorDepth == 0.2F,
+            "auto_tone_verifies_with_the_frames_other_settings");
+        LibraryFrameSnapshot tone = outcomes[0].Frame!;
+        Check(Math.Abs(tone.Tone.Exposure - 0.7) < 1e-12 && Math.Abs(tone.Tone.Whites - 0.15) < 1e-12 &&
+            tone.Tone.Contrast == 0.1 && tone.Tone.CurveHighlights == 0.6,
+            "auto_tone_applies_the_refined_values");
+        Check(tone.ColorModel.Saturation == 0.3 && tone.ColorModel.Vibrance == 0.2,
+            "auto_tone_keeps_user_saturation");
+        Check(sawMonochrome == false, "auto_tone_uses_the_colour_shoulder_for_colour_film");
+
+        requests.Clear();
+        outcomes.Clear();
+        await coordinator.RunWhiteBalanceAsync(frame, outcomes.Add);
+        Check(requests.Count == 1 && outcomes[0].Frame!.ColorModel.Warmth == -0.3 &&
+            outcomes[0].Frame!.Tone == frame.Tone, "auto_white_balance_renders_once_without_refinement");
+
+        requests.Clear();
+        outcomes.Clear();
+        await coordinator.RunToneAsync(Frame(new ManualBaseRgb(0.5, 0.5, 0.5), filmType: FilmType.BlackAndWhiteNegative) with
+            { SourcePath = Path.Combine(Path.GetTempPath(), "auto-loop-bw.tif") }, outcomes.Add);
+        Check(sawMonochrome == true, "auto_tone_uses_the_monochrome_shoulder_for_bw_negatives");
+
+        // 검증 렌더가 실패하면 첫 값을 그대로 씁니다 — 첫 값도 유효한 답입니다.
+        requests.Clear();
+        outcomes.Clear();
+        failVerification = true;
+        await coordinator.RunToneAsync(frame, outcomes.Add);
+        Check(requests.Count == 2 && outcomes is [{ Kind: DevelopExportOutcomeKind.Completed }] &&
+            outcomes[0].Frame!.Tone.Exposure == 0.5 && !coordinator.IsRunning,
+            "auto_tone_falls_back_to_the_first_answer_when_verification_fails");
     }
 
     private static async Task VerifyFailureBoundaries()
@@ -102,10 +197,31 @@ internal static class AutoAdjustInputTests
         coordinator.Cancel();
         dispatcher.Drain();
         Check(outcomes.Count == 0 && !coordinator.IsRunning, "auto_cancel_suppresses_queued_callback");
-        await coordinator.RunToneAsync(source, outcomes.Add);
-        await coordinator.RunWhiteBalanceAsync(source, outcomes.Add);
+        // 톤 뒤에 화이트밸런스를 눌러도 톤이 씹히지 않습니다 — 같은 종류의 새 요청만 앞 것을 대체하고,
+        // 화이트밸런스는 톤의 완료 처리가 돈 뒤에 시작합니다.
+        var bothTone = coordinator.RunToneAsync(source, outcomes.Add);
+        var bothBalance = coordinator.RunWhiteBalanceAsync(source, outcomes.Add);
+        await bothTone;
         dispatcher.Drain();
-        Check(outcomes.Count == 1 && !coordinator.IsRunning, "auto_new_request_suppresses_previous_queued_callback");
+        await bothBalance;
+        dispatcher.Drain();
+        Check(outcomes.Count == 2 && !coordinator.IsRunning, "auto_tone_and_white_balance_both_deliver");
+        // 화이트밸런스는 앞서 누른 톤이 반영된 프레임을 읽습니다.
+        outcomes.Clear();
+        var current = source;
+        var toneRun = coordinator.RunToneAsync(() => current, outcome => { outcomes.Add(outcome); current = outcome.Frame!; });
+        var balanceRun = coordinator.RunWhiteBalanceAsync(() => current, outcomes.Add);
+        await toneRun;
+        dispatcher.Drain();
+        await balanceRun;
+        dispatcher.Drain();
+        Check(outcomes.Count == 2 && outcomes[1].Frame!.Tone == outcomes[0].Frame!.Tone,
+            "auto_white_balance_measures_after_the_earlier_tone_result");
+        outcomes.Clear();
+        await coordinator.RunToneAsync(source, outcomes.Add);
+        await coordinator.RunToneAsync(source, outcomes.Add);
+        dispatcher.Drain();
+        Check(outcomes.Count == 1 && !coordinator.IsRunning, "auto_new_tone_request_suppresses_previous_queued_tone");
         var cancelled = new AutoAdjustCoordinator(new PixelExporter((_, _) => throw new OperationCanceledException()), dispatcher, 128,
             (_, _, _) => Settings(0));
         outcomes.Clear();

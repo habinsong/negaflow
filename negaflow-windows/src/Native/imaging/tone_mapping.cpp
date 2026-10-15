@@ -11,6 +11,32 @@
 namespace negaflow::imaging {
 namespace {
 
+// 휘도 목표를 화소에 싣습니다(macOS `withLuma`). 어둡게 할 때는 채널 비율을 보존합니다 — 같은
+// 값을 빼면 가장 작은 채널이 먼저 0 에 닿아 암부의 약한 색이 원색으로 폭주합니다(R/B 1.2 가
+// 대비 +1 에서 131). 밝힐 때는 기존처럼 같은 값을 더합니다.
+[[nodiscard]] negaflow::core::Rgba32F with_luma(
+    const negaflow::core::Rgba32F safe,
+    const float source_luma,
+    const float new_luma,
+    const float alpha) noexcept {
+    if (new_luma < source_luma && source_luma > 1.0e-6F) {
+        const float scale = new_luma / source_luma;
+        return {
+            std::clamp(safe.red * scale, 0.0F, 1.0F),
+            std::clamp(safe.green * scale, 0.0F, 1.0F),
+            std::clamp(safe.blue * scale, 0.0F, 1.0F),
+            alpha,
+        };
+    }
+    const float delta = new_luma - source_luma;
+    return {
+        std::clamp(safe.red + delta, 0.0F, 1.0F),
+        std::clamp(safe.green + delta, 0.0F, 1.0F),
+        std::clamp(safe.blue + delta, 0.0F, 1.0F),
+        alpha,
+    };
+}
+
 constexpr std::array<float, 3> luma_coefficients{0.2126F, 0.7152F, 0.0722F};
 
 [[nodiscard]] float clamp_unit(const float value) noexcept {
@@ -134,13 +160,7 @@ negaflow::core::KernelStatus apply_basic_tone(
 
         const float new_luma = negaflow::color::srgb_encoded_to_linear(
             clamp_unit(target));
-        const float delta = new_luma - source_luma;
-        return negaflow::core::Rgba32F{
-            clamp_unit(safe.red + delta),
-            clamp_unit(safe.green + delta),
-            clamp_unit(safe.blue + delta),
-            source.alpha,
-        };
+        return with_luma(safe, source_luma, new_luma, source.alpha);
     });
 }
 
@@ -176,13 +196,7 @@ negaflow::core::KernelStatus apply_parametric_tone_curve(
             (parameters.lights * 0.165F * light_mask) +
             (parameters.highlights * 0.150F * highlight_mask);
         const float target = clamp_unit(source_luma + delta);
-        const float luma_delta = target - source_luma;
-        return negaflow::core::Rgba32F{
-            clamp_unit(safe.red + luma_delta),
-            clamp_unit(safe.green + luma_delta),
-            clamp_unit(safe.blue + luma_delta),
-            source.alpha,
-        };
+        return with_luma(safe, source_luma, target, source.alpha);
     });
 }
 

@@ -367,6 +367,25 @@ struct GrainMendDetectionOutcome final {
     const DevelopRunControl& control = {},
     const negaflow::imaging::GrainMendRoi& roi = {}) noexcept;
 
+// 중립 스포이드입니다(macOS `DevelopFrameRenderer.whiteBalanceInputSample`). 화면의 정착 프리뷰와
+// 같은 입력(raw 프록시·결함 제거·베이스·장면 측정)으로 색 모델 직전까지 현상하고, 변형 전 원본 정규
+// 좌표(y-down) 점 주위의 linear 평균을 잽니다. 그 점을 중립으로 만드는 온도·틴트도 풀어 둡니다 —
+// 룩 프리셋의 온도·틴트는 요청에 이미 더해져 있으므로 그 몫을 빼는 것은 호출자 일입니다.
+struct DevelopWhiteBalanceSample final {
+    DevelopExportOutcome outcome{};
+    // 거의 검거나 클리핑에 가까워 채널비를 믿을 수 없으면 false 입니다(현상 자체는 성공).
+    bool sampled{false};
+    std::array<double, 3> reference{};
+    double warmth{0.0};
+    double tint{0.0};
+};
+
+[[nodiscard]] DevelopWhiteBalanceSample develop_white_balance_sample(
+    const DevelopExportRequest& request,
+    double unit_x,
+    double unit_y,
+    const DevelopRunControl& control = {}) noexcept;
+
 [[nodiscard]] const char* develop_export_stage_name(
     DevelopExportStage stage) noexcept;
 

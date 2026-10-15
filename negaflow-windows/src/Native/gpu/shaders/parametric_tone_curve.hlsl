@@ -51,11 +51,5 @@ void ParametricToneCurveMain(uint3 id : SV_DispatchThreadID) {
         (LightsAmount * 0.165 * lightMask) +
         (HighlightsAmount * 0.150 * highlightMask);
     float target = clamp(sourceLuma + delta, 0.0, 1.0);
-    float lumaDelta = target - sourceLuma;
-
-    Destination[coordinate] = float4(
-        clamp(safeRgb.r + lumaDelta, 0.0, 1.0),
-        clamp(safeRgb.g + lumaDelta, 0.0, 1.0),
-        clamp(safeRgb.b + lumaDelta, 0.0, 1.0),
-        source.a);
+    Destination[coordinate] = float4(WithLuma(safeRgb, sourceLuma, target), source.a);
 }

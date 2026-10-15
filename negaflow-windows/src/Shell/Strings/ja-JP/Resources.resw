@@ -1308,6 +1308,11 @@
   <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>未露光のフィルムベース（コマ間または端）をクリック · Esc でキャンセル</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
   <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>その位置はフィルムベースではありません。コマ間または端の未露光ベースをクリックしてください。</value></data>
   <data name="developBasePickFailed.Text" xml:space="preserve"><value>元データを読めなかったため、ベースを取得できませんでした。</value></data>
+  <data name="developPickNeutral.Text" xml:space="preserve"><value>ニュートラルスポイト</value><comment>AppLocalizedPhrase.pickNeutral</comment></data>
+  <data name="developPickNeutralHelp.Value" xml:space="preserve"><value>グレーや白であるべき場所をクリックして色温度と色かぶり補正を合わせます。</value><comment>AppLocalizedPhrase.pickNeutralHelp</comment></data>
+  <data name="developNeutralPickerPrompt.Text" xml:space="preserve"><value>グレーや白であるべき場所をクリック · Esc でキャンセル</value><comment>AppLocalizedPhrase.neutralPickerOverlayPrompt</comment></data>
+  <data name="developNeutralPickFailed.Text" xml:space="preserve"><value>この場所ではニュートラルを測定できません — 暗すぎる・明るすぎる場所は避けてください</value><comment>AppLocalizedPhrase.neutralPickFailed</comment></data>
+  <data name="developNeutralPickedFormat.Text" xml:space="preserve"><value>ニュートラルスポイト: 色温度 %.2f · 色かぶり補正 %.2f</value><comment>AppLocalizedPhrase.neutralPickedFormat</comment></data>
   <data name="canvasZoomOut.Text" xml:space="preserve"><value>縮小</value><comment>AppLocalizedPhrase.zoomOut</comment></data>
   <data name="canvasZoomIn.Text" xml:space="preserve"><value>拡大</value><comment>AppLocalizedPhrase.zoomIn</comment></data>
   <data name="canvasZoomPercentHelp.Text" xml:space="preserve"><value>表示倍率を入力</value><comment>AppLocalizedPhrase.zoomPercentHelp</comment></data>
@@ -1338,7 +1343,7 @@
   <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>クイックスタート</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>キーボードショートカット</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>写真の角度をリセット</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
-  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>ジオメトリ（回転/切り抜き）以外のすべての補正値をリセットします。</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
+  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>切り抜きと角度補正を含むすべての補正値をリセットします。回転と反転は保持します。</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
   <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>システムのディスプレイプロファイル</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
   <data name="developAutoToneHelp.Text" xml:space="preserve"><value>自動トーン Command-U — ヒストグラムに基づいて露光量、コントラスト、ハイライト、シャドウ、白レベル、黒レベル、自然な彩度を補正します。</value><comment>AppLocalizedPhrase.autoToneHelp</comment></data>
   <data name="developAutoWhiteBalanceHelp.Text" xml:space="preserve"><value>自動ホワイトバランス Shift-Command-U — グレーワールド法で色温度と色かぶりを中和します。</value><comment>AppLocalizedPhrase.autoWhiteBalanceHelp</comment></data>

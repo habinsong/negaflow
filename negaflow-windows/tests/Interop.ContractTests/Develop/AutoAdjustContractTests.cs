@@ -25,10 +25,31 @@ internal static unsafe class AutoAdjustContractTests
         context.Check(settings.Highlights <= 0.0, "auto_adjust_highlights_recover_only");
         context.Check(settings.Shadows >= 0.0, "auto_adjust_shadows_lift_only");
         context.Check(settings.Vibrance >= 0.0, "auto_adjust_vibrance_increases_only");
+        // 잔차 클램프는 ±1(예전 슬라이더 끝)입니다 — 2026-10-14 ±0.6 에서 넓혔습니다.
         context.Check(
-            settings.Warmth >= -0.6 && settings.Warmth <= 0.6 &&
-                settings.Tint >= -0.6 && settings.Tint <= 0.6,
+            settings.Warmth >= -1.0 && settings.Warmth <= 1.0 &&
+                settings.Tint >= -1.0 && settings.Tint <= 1.0,
             "auto_adjust_white_balance_inside_clamp");
+
+        // v2 는 필름 종류만 더 받습니다 — 컬러면 v1 과 같은 답입니다.
+        AutoAdjustSettings colour = NativeAutoAdjust.Compute(pixels, width, height, blackAndWhiteNegative: false);
+        context.Check(
+            colour.Exposure == settings.Exposure && colour.Whites == settings.Whites &&
+                colour.Warmth == settings.Warmth && colour.Tint == settings.Tint,
+            "auto_adjust_v2_colour_matches_v1");
+
+        // 폐루프는 노출과 화이트만 바로잡고 나머지는 첫 값 그대로 둡니다.
+        AutoAdjustSettings refined = NativeAutoAdjust.Refine(pixels, width, height, false, colour);
+        context.Check(
+            refined.Contrast == colour.Contrast && refined.Highlights == colour.Highlights &&
+                refined.Shadows == colour.Shadows && refined.Blacks == colour.Blacks &&
+                refined.Density == colour.Density && refined.Vibrance == colour.Vibrance &&
+                refined.Warmth == colour.Warmth && refined.Tint == colour.Tint,
+            "auto_tone_refine_moves_only_exposure_and_whites");
+        context.Check(
+            refined.Exposure >= -3.0 && refined.Exposure <= 3.0 &&
+                refined.Whites >= -1.0 && refined.Whites <= 1.0,
+            "auto_tone_refine_stays_inside_the_automatic_ranges");
 
         // Assigning twice must not drift, because the shell assigns rather than accumulates.
         AutoAdjustSettings again = NativeAutoAdjust.Compute(pixels, width, height);

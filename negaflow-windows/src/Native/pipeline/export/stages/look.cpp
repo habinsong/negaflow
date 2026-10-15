@@ -37,16 +37,24 @@ std::optional<DevelopExportOutcome> apply_look_stages(
     LookWorkspaceOutput& workspace,
     negaflow::imaging::WorkingImage developed_image,
     const GpuUsePolicy gpu_policy,
+    const std::optional<negaflow::imaging::AnalysisRegion>& analysis_region,
     LookStageOutput& out) noexcept {
     tracker.begin(DevelopExportStage::tone_adjust, cost_of(tone_cost, true));
 
     // **GPU 를 먼저 시도하고, 처리하지 못했으면 CPU 로 갑니다.**
     // 가속기는 실패할 때 이미지를 손대지 않으므로(`gpu_accelerator.h`) 그대로 이어서
     // CPU 판을 부르면 됩니다. 두 경로의 화소는 동치 시험이 `1e-5` 로 묶습니다.
+    // + 노출 숄더의 헤드룸은 필름 마스터 화이트에서 나옵니다(흑백 네거티브만 0.85 화이트).
+    negaflow::imaging::WorkingToneAdjustParameters tone = request.tone;
+    tone.exposure_headroom_stops = static_cast<float>(negaflow::core::exposure_headroom_stops(
+        request.film_polarity == FilmPolarity::negative &&
+        request.negative.film_type == negaflow::imaging::NegativeFilmType::black_and_white));
+    // 커브 대역은 크롭한 사진 영역 안에서 잽니다(macOS `applyToneCurves(region:)`).
+    tone.analysis_region = analysis_region;
     negaflow::imaging::WorkingToneAdjustResult adjusted{};
     const GpuToneOutcome accelerated =
         GpuAccelerator::shared().apply_working_tone_adjustments(
-            gpu_policy, developed_image, request.tone, {});
+            gpu_policy, developed_image, tone, {});
     if (accelerated.handled) {
         adjusted.status = negaflow::imaging::WorkingToneAdjustStatus::ok;
         adjusted.info = accelerated.info;
@@ -55,7 +63,7 @@ std::optional<DevelopExportOutcome> apply_look_stages(
         GpuAccelerator::shared().flush_resident();
         adjusted = negaflow::imaging::apply_working_tone_adjustments(
             std::move(developed_image),
-            request.tone);
+            tone);
     }
     if (adjusted.status != negaflow::imaging::WorkingToneAdjustStatus::ok) {
         // 여기서 돌아가면 `adjusted.image` 는 반환 뒤 사라집니다. 상주로 묶여 있으면

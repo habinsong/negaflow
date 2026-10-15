@@ -29,19 +29,25 @@ constexpr double vibrance_scale = 3.0;
 constexpr double activation_threshold = 0.01;
 
 [[nodiscard]] double scene_mean_saturation(
-    const negaflow::core::ImageView image) noexcept {
-    if (image.width <= 4U || image.height <= 4U) {
+    const negaflow::core::ImageView image,
+    const std::optional<AnalysisRegion>& region) noexcept {
+    // 크롭한 사진 영역이 있으면 그 안만 잽니다(홀더·백라이트 배제).
+    const std::optional<AnalysisPixelRect> rect =
+        analysis_measurement_rect(region, image.width, image.height);
+    const std::uint32_t measured_width = rect ? rect->width : image.width;
+    const std::uint32_t measured_height = rect ? rect->height : image.height;
+    if (measured_width <= 4U || measured_height <= 4U) {
         return 0.5;
     }
 
     const std::uint32_t target_width = std::max(
         minimum_proxy_width,
-        std::min(maximum_proxy_width, image.width));
+        std::min(maximum_proxy_width, measured_width));
     const double scale =
-        static_cast<double>(target_width) / static_cast<double>(image.width);
+        static_cast<double>(target_width) / static_cast<double>(measured_width);
     const std::uint64_t target_height = std::max<std::uint64_t>(
         1U,
-        static_cast<std::uint64_t>(static_cast<double>(image.height) * scale));
+        static_cast<std::uint64_t>(static_cast<double>(measured_height) * scale));
     const negaflow::core::ConstImageView source{
         image.pixels,
         image.pixel_capacity,
@@ -52,8 +58,11 @@ constexpr double activation_threshold = 0.01;
 
     // 장면 채도도 축소본에서 잽니다. 통계·base 격자와 **같은 축소기**를 써야 합니다 —
     // 점 표본은 입자를 그대로 남겨 채도를 실제보다 높게 재고, 그러면 vibrance 가 덜 걸립니다.
-    const DownsampledProxy proxy = downsample_for_statistics(
-        source, target_width, static_cast<std::uint32_t>(target_height));
+    const DownsampledProxy proxy = rect
+        ? downsample_region_for_statistics(
+              source, *rect, target_width, static_cast<std::uint32_t>(target_height))
+        : downsample_for_statistics(
+              source, target_width, static_cast<std::uint32_t>(target_height));
     if (proxy.pixels.empty()) {
         return 0.5;
     }
@@ -92,7 +101,8 @@ VibrancePlaneSelection select_vibrance_planes(const float amount) noexcept {
 
 MutedSceneVibranceResult apply_muted_scene_vibrance(
     const negaflow::core::ImageView image,
-    const bool monochrome) noexcept {
+    const bool monochrome,
+    const std::optional<AnalysisRegion>& region) noexcept {
     MutedSceneVibranceResult result{};
     if (monochrome) {
         result.status = negaflow::core::KernelStatus::ok;
@@ -134,7 +144,7 @@ MutedSceneVibranceResult apply_muted_scene_vibrance(
         result.status = negaflow::core::KernelStatus::ok;
     }
 
-    result.info.mean_saturation = scene_mean_saturation(image);
+    result.info.mean_saturation = scene_mean_saturation(image, region);
     result.info.amount = std::clamp(
         (saturation_target - result.info.mean_saturation) * vibrance_scale,
         0.0,

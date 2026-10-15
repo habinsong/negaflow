@@ -120,12 +120,38 @@ void test_recovery_sliders_move_one_way_only() {
         expect(tone.shadows >= 0.0, "shadows only ever lift");
         expect(tone.vibrance >= 0.0, "vibrance only ever increases");
         expect(
-            tone.contrast >= -0.45 && tone.contrast <= 0.55 &&
+            tone.contrast >= -0.15 && tone.contrast <= 0.55 &&
                 tone.whites >= -1.0 && tone.whites <= 1.0 &&
                 tone.blacks >= -1.0 && tone.blacks <= 0.15 &&
                 tone.density >= -0.4 && tone.density <= 0.4,
             "every automatic value stays inside its documented range");
     }
+}
+
+// 흑백 프린트형(깊은 검정이 넓고 대비가 큰) 분포: 슬라이더가 닿지 않는 검정을 끌어올리려 섀도를
+// 최대로 밀거나 대비를 크게 깎으면 계조가 무너집니다(macOS
+// `testAutoToneKeepsDeepBlacksAndContrastOfPrintLikeMonochrome` 과 같은 분포).
+void test_print_like_monochrome_keeps_blacks_and_contrast() {
+    constexpr std::uint32_t width = 100U;
+    constexpr std::uint32_t height = 100U;
+    std::vector<std::uint8_t> pixels(static_cast<std::size_t>(width) * height * 4U, 0xFFU);
+    const auto code_at = [](const double fraction) -> std::uint8_t {
+        if (fraction < 0.12) { return static_cast<std::uint8_t>(1.0 + fraction / 0.12 * 2.99); }
+        if (fraction < 0.40) { return static_cast<std::uint8_t>(4.0 + (fraction - 0.12) / 0.28 * 56.99); }
+        if (fraction < 0.50) { return static_cast<std::uint8_t>(61.0 + (fraction - 0.40) / 0.10 * 88.99); }
+        return static_cast<std::uint8_t>(150.0 + (fraction - 0.50) / 0.50 * 86.99);
+    };
+    const std::size_t count = static_cast<std::size_t>(width) * height;
+    for (std::size_t index = 0U; index < count; ++index) {
+        const std::uint8_t code = code_at(static_cast<double>(index) / static_cast<double>(count));
+        pixels[index * 4U] = code;
+        pixels[index * 4U + 1U] = code;
+        pixels[index * 4U + 2U] = code;
+    }
+    const auto tone = negaflow::imaging::auto_tone(
+        stats_of(pixels, width, height), negaflow::core::exposure_headroom_stops(true));
+    expect(tone.shadows <= 0.15, "deep blacks do not lift the shadows");
+    expect(tone.contrast >= -0.15, "a contrasty print is not flattened");
 }
 
 // A neutral frame must be left alone. An auto white balance that moves grey is worse
@@ -151,9 +177,10 @@ void test_white_balance_cools_a_warm_cast_partially() {
     const auto balance = negaflow::imaging::auto_white_balance(stats);
 
     expect(balance.warmth < 0.0, "a warm frame is cooled");
+    // 잔차 클램프는 ±1(예전 슬라이더 끝)입니다 — 2026-10-14 ±0.6 에서 넓혔습니다(macOS `wbClamp`).
     expect(
-        balance.warmth >= -0.60 && balance.warmth <= 0.60 &&
-            balance.tint >= -0.60 && balance.tint <= 0.60,
+        balance.warmth >= -1.0 && balance.warmth <= 1.0 &&
+            balance.tint >= -1.0 && balance.tint <= 1.0,
         "the correction stays inside the residual clamp");
 
     // Applying the returned gains must move the frame toward neutral without crossing it,
@@ -164,6 +191,18 @@ void test_white_balance_cools_a_warm_cast_partially() {
     const double after = red - blue;
     expect(after > 0.0, "the correction does not overshoot into a cool cast");
     expect(after < before, "the correction reduces the measured cast");
+}
+
+// 미드가 photometric 앵커(linear 0.18)보다 밝으면 노출은 0 이고, 농도로도 미드를 어둡게 하지
+// 않습니다. 예전에는 농도(+)가 하이키·설경을 회색으로 끌어내려 "밝히는 방향만" 원칙을
+// 우회했습니다(2026-10-14 macOS 실측: 미드 127 → 116). 클리핑 복구만 어둡게 합니다.
+void test_bright_midtones_are_not_darkened_by_density() {
+    constexpr std::uint32_t width = 32U;
+    constexpr std::uint32_t height = 32U;
+    const auto bright = flat_image(width, height, 158U, 158U, 158U);
+    const auto tone = negaflow::imaging::auto_tone(stats_of(bright, width, height));
+    expect(tone.exposure == 0.0, "a bright midtone is not exposed further");
+    expect(tone.density <= 0.0, "density does not darken a bright midtone");
 }
 
 // Pressing auto twice must give the same answer as pressing it once: the values are
@@ -213,8 +252,10 @@ int main() {
     test_statistics_describe_the_frame();
     test_exposure_only_brightens_unless_clipping();
     test_recovery_sliders_move_one_way_only();
+    test_print_like_monochrome_keeps_blacks_and_contrast();
     test_white_balance_leaves_neutral_alone();
     test_white_balance_cools_a_warm_cast_partially();
+    test_bright_midtones_are_not_darkened_by_density();
     test_results_are_deterministic();
     test_invalid_input_is_refused();
 
