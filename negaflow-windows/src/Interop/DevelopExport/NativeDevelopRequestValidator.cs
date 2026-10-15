@@ -115,8 +115,8 @@ internal static unsafe class NativeDevelopRequestValidator
             request.DefectEditOrder.Count,
             request.DefectRecipeAppendPrefixSha256,
             request.DefectRecipeAppendPrefixEditCount);
-        if (!SignedNormalized(request.Warmth) ||
-            !SignedNormalized(request.Tint) ||
+        if (!WhiteBalanceControl(request.Warmth) ||
+            !WhiteBalanceControl(request.Tint) ||
             !SignedNormalized(request.ColorDepth) ||
             !SignedNormalized(request.Vibrance) ||
             !SignedNormalized(request.Saturation) ||

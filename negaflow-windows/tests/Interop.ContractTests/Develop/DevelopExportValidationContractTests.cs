@@ -29,6 +29,28 @@ internal static unsafe class DevelopExportValidationContractTests
             colorModel.FailedStage == DevelopExportStage.ObserveSourceBefore,
             "develop_export_color_model_reaches_source_observation");
 
+        // 온도·틴트는 ±1 너머 로그 연장 구간(±4)까지 씁니다 — 중립 스포이드가 +2.68 을 넣자
+        // 프리뷰가 거부돼 캔버스가 비었습니다.
+        DevelopExportResult extendedWhiteBalance = NativeDevelopExporter.Run(new DevelopExportRequest
+        {
+            SourcePath = absentSource,
+            DestinationPath = destination,
+            Warmth = 2.68F,
+            Tint = -4.0F,
+        });
+        context.Check(
+            extendedWhiteBalance.FailedStage == DevelopExportStage.ObserveSourceBefore,
+            "develop_export_extended_white_balance_reaches_source_observation");
+
+        context.CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                Warmth = 4.01F,
+            }),
+            "develop_export_white_balance_beyond_range_rejected");
+
         context.CheckThrows<ArgumentException>(
             () => NativeDevelopExporter.Run(new DevelopExportRequest
             {

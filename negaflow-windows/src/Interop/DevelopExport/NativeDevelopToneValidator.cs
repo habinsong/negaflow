@@ -9,6 +9,13 @@ internal static class NativeDevelopToneValidator
     internal static bool SignedNormalized(float value) =>
         float.IsFinite(value) && value is >= -1.0F and <= 1.0F;
 
+    /// <summary>
+    /// 온도·틴트입니다. ±1 너머는 로그 연장 구간이라 native <c>maximum_white_balance_control</c>
+    /// (macOS <c>WhiteBalanceGains.maximum</c>)인 ±4 까지 받습니다.
+    /// </summary>
+    internal static bool WhiteBalanceControl(float value) =>
+        float.IsFinite(value) && value is >= -4.0F and <= 4.0F;
+
     internal static void ValidatePointCurves(DevelopPointCurves pointCurves)
     {
         ArgumentNullException.ThrowIfNull(pointCurves);
