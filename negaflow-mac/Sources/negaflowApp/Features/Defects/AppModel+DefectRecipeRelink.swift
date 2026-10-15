@@ -20,7 +20,9 @@ extension AppModel {
     @discardableResult
     func invalidateDefectRecipeSourceBindingsForRelink(_ family: [ScanFrame]) -> Bool {
         do {
-            let plans = try family.map(makeDefectRecipeRelinkPlan)
+            // 아직 읽지 않은 기록은 그대로 둔다. 메모리에 원본 증명(클린 raw)이 없고, 읽은 뒤 쓰기
+            // 전에 빌드·소비 경로가 지금 원본으로 묶음을 다시 확인한다(어긋나면 새 원본으로 다시 묶는다).
+            let plans = try family.filter { !$0.defectEditsLoadDeferred }.map(makeDefectRecipeRelinkPlan)
             applyDefectRecipeRelinkPlans(plans)
             invalidateLibraryQueryContext()
             scheduleLibrarySave()

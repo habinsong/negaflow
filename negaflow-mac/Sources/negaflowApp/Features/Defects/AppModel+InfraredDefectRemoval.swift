@@ -36,6 +36,8 @@ extension AppModel {
               frame.infraredScanURL != nil,
               frame.isSourceAvailable,
               !frame.isPreviewScan,
+              // 기록을 아직 읽지 않았으면 IR 레이어가 있는지 모른다 — 읽은 뒤 선택 처리가 다시 부른다.
+              !frame.defectEditsLoadDeferred,
               !frame.defectEdits.contains(where: { $0.isInfrared }),
               InfraredFilmCompatibility(filmType: frame.filmType).allowsAutomaticCorrection
         else { return }

@@ -406,6 +406,10 @@ extension AppModel {
     }
 
     func prepareCleanedRawForExport(_ frame: ScanFrame, format: ExportFormat) async -> Bool {
+        // 아직 읽지 않은 결함 기록을 "결함 없음"으로 보고 제거 없이 내보내지 않는다.
+        if format != .rawScanTIFF, frame.defectEditsLoadDeferred {
+            guard await loadDeferredDefectEdits(frame) else { return false }
+        }
         let requiresCleanedRaw = format != .rawScanTIFF && frame.defectEdits.contains {
             $0.enabled && $0.strength > 1e-3
         }

@@ -69,6 +69,15 @@ extension ScanFrame {
 
 extension AppModel {
     func createVirtualCopy(from frame: ScanFrame) {
+        // 원본의 결함 기록을 아직 읽지 않았으면 읽은 뒤 복사한다 — 빈 항목을 복사하면 사본이
+        // 결함 제거를 잃는다.
+        if frame.defectEditsLoadDeferred {
+            Task { [weak self, weak frame] in
+                guard let self, let frame, await self.loadDeferredDefectEdits(frame) else { return }
+                self.createVirtualCopy(from: frame)
+            }
+            return
+        }
         guard let copy = insertVirtualCopy(from: frame) else { return }
         statusMessage = text(AppLocalizedPhrase.virtualCopyCreatedFormat, copy.displayName)
     }
@@ -108,7 +117,8 @@ extension AppModel {
         from frame: ScanFrame,
         configure: (ScanFrame) -> Void = { _ in }
     ) -> ScanFrame? {
-        guard allowsLibraryMutation, ownsFrame(frame), !frame.isPreviewScan else { return nil }
+        guard allowsLibraryMutation, ownsFrame(frame), !frame.isPreviewScan,
+              !frame.defectEditsLoadDeferred else { return nil }
         let family = frames.filter {
             !$0.isPreviewScan && $0.rootFrameID == frame.rootFrameID
         }

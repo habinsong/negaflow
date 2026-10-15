@@ -45,6 +45,10 @@ struct LibraryFrameRecord: Codable, Equatable {
     var cleanedRawPath: String?
     var cleanedRawEditCount: Int?
     var hasDefectEdits: Bool?
+    /// 결함 기록(sidecar)의 세대. 시작할 때 기록 전체(IR 은 장당 수십 MB)를 읽지 않고도 썸네일
+    /// 레시피와 기록 식별을 맞추기 위한 값이다. 기록이 진실이며, 실제로 읽을 때 대조한다.
+    /// 없으면(예전 카탈로그) 시작할 때 기록을 읽어 채운다.
+    var defectRecipeIdentity: DefectRecipeIdentity? = nil
     /// v4 이하에서 과거 행동을 추정하지 않는다. runtime source-of-truth 연결 전까지
     /// `init(frame:)`도 안전하게 legacyUnknown으로 기록한다.
     var userEditTracking: LibraryUserEditTracking = .legacyUnknown()
@@ -59,6 +63,7 @@ extension LibraryFrameRecord {
         case defectReviewTracking
         case appMetadataOverlay
         case proofCopyConfiguration
+        case defectRecipeIdentity
     }
 
     /// 기존 frame payload는 frozen v4 decoder로 읽고 v5 tracking key만 별도로 강제한다.
@@ -86,6 +91,11 @@ extension LibraryFrameRecord {
             ProofCopyConfiguration.self,
             forKey: .proofCopyConfiguration
         )
+        // 읽기 지름길일 뿐이라 이 값이 모르는 형식이어도 사진을 버리지 않는다 — 없을 때처럼 기록을 읽는다.
+        defectRecipeIdentity = (try? container.decodeIfPresent(
+            DefectRecipeIdentity.self,
+            forKey: .defectRecipeIdentity
+        )) ?? nil
     }
 }
 
@@ -146,6 +156,7 @@ extension LibraryFrameRecord {
         cleanedRawPath = nil
         cleanedRawEditCount = nil
         hasDefectEdits = frame.defectEditsNeedRestore || !frame.defectEdits.isEmpty ? true : nil
+        defectRecipeIdentity = hasDefectEdits == true ? frame.defectRecipeIdentity : nil
         let currentRecipeSHA256 = frame.currentLibraryDevelopRecipeSHA256()
         let trackingState: LibraryFrameWorkflowTrackingState
         if let currentRecipeSHA256 {
@@ -211,6 +222,12 @@ extension LibraryFrameRecord {
         frame.preset = presetID.flatMap { id in presets.first(where: { $0.id == id }) }
         frame.params = params
         frame.defectEditsNeedRestore = hasDefectEdits == true
+        if hasDefectEdits == true, let defectRecipeIdentity {
+            // 항목은 사진을 쓸 때 읽는다(loadDeferredDefectEdits). 그 전까지도 썸네일·기록 식별은 맞는다.
+            frame.defectRecipeIdentity = defectRecipeIdentity
+            frame.defectRecipeRevision = defectRecipeIdentity.revision
+            frame.defectEditsLoadDeferred = true
+        }
         frame.imageTransform = imageTransform
         if let baseRGB, baseRGB.count == 3 {
             frame.baseRGB = SIMD3(baseRGB[0], baseRGB[1], baseRGB[2])

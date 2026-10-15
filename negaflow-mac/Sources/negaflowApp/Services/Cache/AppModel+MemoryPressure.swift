@@ -50,5 +50,7 @@ extension AppModel {
         frame.defectSessionRawRevision = -1
         frame.stripDefectPatchCaches()
         // 진행 중인 persist 는 취소하지 않는다 — 그 결과(디스크 백킹)가 곧 축출의 안전망이다.
+        // 결함 항목도 같은 한도를 따른다 — 확정된 기록은 내려놓고 다음에 쓸 때 다시 읽는다.
+        unloadCommittedDefectEditsIfIdle(frame)
     }
 }

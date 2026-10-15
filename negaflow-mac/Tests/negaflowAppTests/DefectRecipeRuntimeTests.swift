@@ -162,6 +162,11 @@ final class DefectRecipeRuntimeTests: XCTestCase {
         }
         let restored = try XCTUnwrap(model.frames.first)
 
+        // 항목은 사진을 쓸 때 읽는다. 그 전에도 기록 식별값은 카탈로그에서 온다.
+        XCTAssertTrue(restored.defectEditsLoadDeferred)
+        XCTAssertEqual(restored.defectRecipeIdentity, snapshot.identity)
+        let loaded = await model.loadDeferredDefectEdits(restored)
+        XCTAssertTrue(loaded)
         XCTAssertFalse(restored.defectEditsNeedRestore)
         XCTAssertEqual(restored.defectEdits.map(\.id), [edit.id])
         XCTAssertEqual(restored.defectRecipeIdentity, snapshot.identity)

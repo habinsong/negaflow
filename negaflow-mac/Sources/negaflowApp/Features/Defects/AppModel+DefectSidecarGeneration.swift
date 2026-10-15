@@ -15,7 +15,14 @@ extension AppModel {
     func defectSidecarValidationFailure(_ snapshotFrames: [ScanFrame]) -> String? {
         DefectSidecarFile.flushSync()
         for frame in snapshotFrames where !frame.isPreviewScan {
-            guard !frame.defectEditsNeedRestore else { return DefectSidecarValidationCode.restorePending.rawValue }
+            if frame.defectEditsNeedRestore {
+                // 아직 읽지 않았거나 확정된 뒤 내려놓은 기록은 메모리에서 바뀐 적이 없다 — 이미
+                // 확인된 식별값을 그대로 다시 쓴다. 읽기에 실패한 기록만 복구 전까지 저장을 막는다.
+                guard frame.defectEditsLoadDeferred else {
+                    return DefectSidecarValidationCode.restorePending.rawValue
+                }
+                continue
+            }
             guard !frame.defectEdits.isEmpty else { continue }
             guard let identity = frame.defectRecipeIdentity else { return DefectSidecarValidationCode.identityMissing.rawValue }
             let cache = DefectSidecarCommitCache.shared

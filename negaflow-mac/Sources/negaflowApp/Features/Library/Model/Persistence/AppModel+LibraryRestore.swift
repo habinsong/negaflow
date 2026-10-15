@@ -203,12 +203,15 @@ extension AppModel {
         libraryFrameRecordCache.removeAll()
         dirtyLibraryFrameRecordIDs.removeAll()
         let defectRecords = catalog.frames.filter { $0.hasDefectEdits == true }
-        let defectFrameIDs = defectRecords.map(\.id)
+        // 식별값이 카탈로그에 있는 결함 기록은 그 사진을 쓸 때 읽는다(loadDeferredDefectEdits) —
+        // 기록(IR 은 장당 수십 MB)을 전부 올리면 첫 사진이 늦고 상주 메모리가 기록 크기만큼 는다.
+        // 식별값이 없는 예전 카탈로그만 지금 읽어 채운다. 다음 저장부터는 지연 읽기로 연다.
+        let eagerDefectFrameIDs = defectRecords.filter { $0.defectRecipeIdentity == nil }.map(\.id)
         // 첫 사진이 이 읽기를 기다린다 — 사용자가 기다리는 작업 우선순위로 돌리고, 읽는 동안
         // 프레임을 만든다. 기록은 프레임을 다 만든 뒤 얹는다(아래 판정은 결함 기록과 무관하다).
         let recipeRead = Task.detached(priority: .userInitiated) {
             DefectRecipeRestoration.readAll(
-                frameIDs: defectFrameIDs,
+                frameIDs: eagerDefectFrameIDs,
                 in: defectDirectory,
                 backupDirectory: backupDirectory
             )
@@ -230,9 +233,12 @@ extension AppModel {
             restored.append(frame)
         }
         let restoredRecipes = await recipeRead.value
-        LaunchTrace.mark("defect recipes read \(defectRecords.count)")
+        LaunchTrace.mark("defect recipes read \(eagerDefectFrameIDs.count)/\(defectRecords.count)")
         for frame in restored {
-            if let recipe = restoredRecipes[frame.id] { recipe.apply(to: frame) }
+            guard let recipe = restoredRecipes[frame.id] else { continue }
+            recipe.apply(to: frame)
+            // 읽은 식별값을 카탈로그에 남긴다.
+            if recipe.snapshot != nil { dirtyLibraryFrameRecordIDs.insert(frame.id) }
         }
         libraryPersistenceEnabled = true
         frames = restored + transientPreviewFrames
@@ -241,6 +247,12 @@ extension AppModel {
         // 원본을 열 수 없으면 값을 버리고 기존 규칙(가장 최근 사진)에 맡긴다.
         restoredLastActiveFrameID = catalog.lastActiveFrameID.flatMap { id in
             restored.contains { $0.id == id } ? id : nil
+        }
+        // 곧 그 사진을 선택한다 — 선택 처리를 기다리지 않고 결함 기록부터 읽기 시작한다.
+        if let lastActiveFrameID = restoredLastActiveFrameID,
+           let lastActiveFrame = restored.first(where: { $0.id == lastActiveFrameID }),
+           lastActiveFrame.defectEditsLoadDeferred {
+            startDeferredDefectEditsLoad(lastActiveFrame)
         }
         guard !restored.isEmpty else {
             transitionLibraryLifecycle(to: .ready)

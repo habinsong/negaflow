@@ -280,9 +280,13 @@ final class ScanFrame: ObservableObject, Identifiable {
     /// 포함하지 않는다. sourceIdentity가 nil이면 recipe는 보존되지만 cleaned-raw 캐시는 신뢰하지 않는다.
     @Published var defectRecipeIdentity: DefectRecipeIdentity?
     var defectRecipeRevision: UInt64 = 0
-    // 카탈로그 복원 직후 사이드카가 아직 로드되지 않은 짧은 구간을 표시한다. 선택/편집 전에
-    // 동기 복원해 비동기 로드와 새 편집이 서로 덮어쓰지 않게 한다.
+    // 결함 기록이 있는데 항목이 메모리에 없다(아직 읽지 않았거나 읽기에 실패했다). 이 동안에는
+    // 편집·저장 경로가 빈 항목을 "결함 없음"으로 오해해 기록을 지우지 않도록 막는다.
     var defectEditsNeedRestore = false
+    // 그중 "아직 읽지 않음". identity 는 카탈로그 값이고 항목은 쓸 때 읽는다(loadDeferredDefectEdits).
+    // false 인데 defectEditsNeedRestore 면 읽기에 실패한 것이다(복구 경로가 다룬다).
+    var defectEditsLoadDeferred = false
+    var defectEditsLoadTask: Task<Bool, Never>?
     // 되돌리기 히스토리는 앱 공용 UndoManager 한 곳에 있다(카탈로그 편집과 같은 스택) —
     // ⌘Z/⇧⌘Z 가 마지막에 한 일을 순서대로 되돌리고 다시 실행한다. 스냅샷은 그 등록에 실려
     // 있으므로 프레임은 도구 버튼 활성화 판정에 쓸 깊이만 센다.

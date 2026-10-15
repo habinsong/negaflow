@@ -240,19 +240,11 @@ extension AppModel {
             frame.destinationGamutOverlayImage = nil
             return
         }
-        if !frame.defectEdits.isEmpty,
-           frame.identityMatchedCleanedRawImage == nil,
-           frame.identityMatchedCleanedRawDiskURL == nil,
-           frame.cleanRawTask == nil {
-            discardCleanedRaw(frame, preservingDefectSidecar: true)
-            rebuildCleanedRaw(frame)
-        }
+        prepareSelectedFrameDefects(frame)
+        warmNeighborDefectRecords(around: frame)
         markDevelopedResident(frame)
         // 이 사진의 편집 되돌리기 기준점. 없으면 첫 조정이 기준점 세우기로 소모돼 되돌릴 수 없다.
         if frameEditBaselines[frame.id] == nil { noteFrameEditBaseline(frame) }
-        // IR 쌍이 있으면 GrainMend IR 을 되살린다. 기록은 세션 메모리에만 살기 때문에,
-        // 앱을 다시 켠 뒤 처음 선택하는 프레임은 여기서 다시 만들어야 레이어가 보인다.
-        scheduleInfraredCleanForSelection(frame)
         if selectedFrameNeedsDevelopment(frame) || developmentWaitsForThumbnailSeed(frame) {
             let selectedID = frame.id
             // 방금 취소한 이전 선택 현상 루프가 정리(endFrame)될 때까지 기다린 뒤 시작한다.
@@ -289,6 +281,31 @@ extension AppModel {
                   frame.destinationGamutOverlayImage == nil {
             requestDevelop(frame)
         }
+    }
+
+    /// 선택한 사진의 결함 기록을 쓸 수 있게 한다. 아직 읽지 않은 기록은 지금 읽기 시작하고(현상
+    /// 준비와 겹친다), 다 읽은 뒤 이 선택에 머물러 있으면 나머지 준비를 이어간다.
+    private func prepareSelectedFrameDefects(_ frame: ScanFrame) {
+        if frame.defectEditsLoadDeferred {
+            let frameID = frame.id
+            let load = startDeferredDefectEditsLoad(frame)
+            Task { [weak self, weak frame] in
+                guard await load.value, let self, let frame,
+                      self.actionableFrame?.id == frameID else { return }
+                self.prepareSelectedFrameDefects(frame)
+            }
+            return
+        }
+        if !frame.defectEdits.isEmpty,
+           frame.identityMatchedCleanedRawImage == nil,
+           frame.identityMatchedCleanedRawDiskURL == nil,
+           frame.cleanRawTask == nil {
+            discardCleanedRaw(frame, preservingDefectSidecar: true)
+            rebuildCleanedRaw(frame)
+        }
+        // IR 쌍이 있으면 GrainMend IR 을 되살린다. 기록은 세션 메모리에만 살기 때문에,
+        // 앱을 다시 켠 뒤 처음 선택하는 프레임은 여기서 다시 만들어야 레이어가 보인다.
+        scheduleInfraredCleanForSelection(frame)
     }
 
     /// 선택된 프레임이 지금 현상(또는 정착 마무리)을 필요로 하는가.

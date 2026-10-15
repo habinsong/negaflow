@@ -143,6 +143,8 @@ final class LibraryCatalogMaintenanceTests: XCTestCase {
         XCTAssertEqual(relaunched.libraryLifecycleState, .ready)
         XCTAssertNil(LibraryPendingRestoreStore.pendingMarker(for: catalogURL))
         let restored = try XCTUnwrap(relaunched.frames.first { $0.id == frame.id })
+        let loaded = await relaunched.loadDeferredDefectEdits(restored)
+        XCTAssertTrue(loaded)
         XCTAssertFalse(restored.defectEditsNeedRestore)
         XCTAssertEqual(restored.defectEdits.map(\.id), editIDs)
         XCTAssertTrue(relaunched.saveLibrary(synchronous: true))

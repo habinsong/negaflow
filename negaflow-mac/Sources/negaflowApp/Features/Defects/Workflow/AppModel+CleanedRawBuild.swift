@@ -11,6 +11,20 @@ extension AppModel {
         quiet: Bool = false,
         preloadedOriginal: CGImage? = nil
     ) {
+        // 아직 읽지 않은 기록을 "편집 없음"으로 보고 캐시를 버리지 않게, 읽은 뒤 다시 시작한다.
+        if frame.defectEditsLoadDeferred {
+            Task { [weak self, weak frame] in
+                guard let self, let frame, await self.loadDeferredDefectEdits(frame) else { return }
+                self.rebuildCleanedRaw(
+                    frame,
+                    recipeSnapshot: suppliedSnapshot,
+                    persist: persist,
+                    quiet: quiet,
+                    preloadedOriginal: preloadedOriginal
+                )
+            }
+            return
+        }
         let edits = frame.defectEdits
         if edits.isEmpty {
             frame.cleanRawRevision += 1

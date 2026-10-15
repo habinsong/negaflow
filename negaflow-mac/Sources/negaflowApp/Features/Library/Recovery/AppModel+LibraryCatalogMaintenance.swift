@@ -72,7 +72,10 @@ extension AppModel {
     /// 그 사진의 결함 편집만 비운다(원본 픽셀은 원래 건드리지 않는다). 읽기 권한 오류나
     /// 더 새 버전 기록처럼 비우면 안 되는 경우는 실패로 돌려준다.
     func settleDefectRecipesForCatalogMaintenance() async -> Bool {
-        let pending = frames.filter { !$0.isPreviewScan && $0.defectEditsNeedRestore }
+        // 아직 읽지 않은 기록은 막힌 게 아니다 — 저장 검증도 백업도 디스크 기록을 그대로 쓴다.
+        let pending = frames.filter {
+            !$0.isPreviewScan && $0.defectEditsNeedRestore && !$0.defectEditsLoadDeferred
+        }
         guard !pending.isEmpty else { return true }
         let directory = libraryDefectDirectoryURL
         let catalogURL = libraryCatalogURL

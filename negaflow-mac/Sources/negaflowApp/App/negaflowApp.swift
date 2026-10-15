@@ -101,6 +101,8 @@ final class AppModel: ObservableObject {
     let pixelSamplerStore = PixelSamplerStore()
     let developController: DevelopController
     var selectedFrameDevelopTask: Task<Void, Never>?
+    /// 선택한 사진의 이웃 결함 기록 파일을 페이지 캐시에 올리는 작업. 선택이 바뀌면 취소한다.
+    var defectRecordWarmTask: Task<Void, Never>?
     var sequentialLibraryDevelopmentTask: Task<Void, Never>?
     var printPackagePreviewTask: Task<Void, Never>?
 

@@ -131,7 +131,13 @@ extension AppModel {
         // 메인에서는 값만 얼린다. recipe 지문(SHA-256)과 인코딩은 큰 마스크를 통째로 훑으므로
         // 백그라운드에서 한다 — 자동 백업이 실행 중에 돌아도 화면이 멈추지 않게.
         var recipes: [PendingBackupRecipe] = []
+        var deferredRecipeFrameIDs: [UUID] = []
         for frame in persistentFrames {
+            if frame.defectEditsLoadDeferred {
+                // 메모리에 올리지 않은 기록은 디스크 기록을 읽기 검증한 바이트 그대로 담는다.
+                deferredRecipeFrameIDs.append(frame.id)
+                continue
+            }
             guard !frame.defectEditsNeedRestore else { return nil }
             if !frame.defectEdits.isEmpty {
                 recipes.append(PendingBackupRecipe(
@@ -143,11 +149,20 @@ extension AppModel {
             }
         }
         let frozenRecipes = recipes
+        let frozenDeferredRecipeFrameIDs = deferredRecipeFrameIDs
+        let defectDirectory = libraryDefectDirectoryURL
         return await Task.detached(priority: .utility) { () -> LibraryManualBackupPayload? in
             guard let catalogData = LibraryCatalogFile.encode(catalog) else { return nil }
             let encoder = PropertyListEncoder()
             encoder.outputFormat = .binary
             var defectDataByFrameID: [UUID: Data] = [:]
+            DefectSidecarFile.flushSync()
+            for frameID in frozenDeferredRecipeFrameIDs {
+                guard let data = DefectSidecarFile.validatedRawData(for: frameID, in: defectDirectory) else {
+                    return nil
+                }
+                defectDataByFrameID[frameID] = data
+            }
             for recipe in frozenRecipes {
                 guard let snapshot = try? DefectRecipeSnapshot(
                     frameID: recipe.frameID, revision: recipe.revision,

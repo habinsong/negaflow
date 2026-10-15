@@ -74,6 +74,10 @@ extension AppModel {
         guard await materializeDevelopSourceIfNeeded(frame) else { return }
         guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
         guard await developSourceIsReachable(frame) else { return }
+        if frame.defectEditsLoadDeferred {
+            await loadDeferredDefectEdits(frame)
+            guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
+        }
         guard !frame.defectEditsNeedRestore else {
             AppDiagnostics.start(.developFrame, category: .develop)
                 .fail(code: "defect_restore_pending")
