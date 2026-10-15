@@ -141,6 +141,17 @@ if (-not $SkipBuild) {
     if (Test-Path -LiteralPath $packageDirectory) {
         Remove-Item -LiteralPath $packageDirectory -Recurse -Force
     }
+    # ReadyToRun 은 입력이 출력보다 새로울 때만 다시 컴파일한다. `build-managed.ps1` 의 솔루션
+    # 빌드(버전 없음)가 같은 R2R 폴더에 1.0.0.0 사본을 남기면, 여기서 1.x.y 로 빌드해도 바뀌지
+    # 않은 어셈블리는 그 사본이 그대로 패키지에 들어가 앱이 시작하자마자 죽는다(2026-10-15,
+    # Negaflow.Catalog.Core 1.0.0.0 FileNotFoundException). 설치본은 clean 으로 같은 일을 막으므로
+    # 여기서는 R2R 결과만 지워 이번 빌드의 어셈블리로 다시 만들게 한다.
+    $shellIntermediate = Join-Path $projectRoot "out\obj\managed\Negaflow.Shell\$Architecture\$Configuration"
+    if (Test-Path -LiteralPath $shellIntermediate) {
+        Get-ChildItem -LiteralPath $shellIntermediate -Directory -Recurse -Filter 'R2R' |
+            Where-Object { $_.Parent.Name -eq $runtimeIdentifier } |
+            Remove-Item -Recurse -Force
+    }
     # 자체 포함으로 만든다. 등록된 패키지 안에서는 공유 런타임을 찾지 않기 때문이다.
     & dotnet build $shellProject --configuration $Configuration --runtime $runtimeIdentifier `
         --self-contained true -p:Platform=$Architecture -p:Version=$productVersion `
