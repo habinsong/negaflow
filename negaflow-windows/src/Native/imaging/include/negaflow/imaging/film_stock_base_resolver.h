@@ -17,8 +17,8 @@ struct FilmStockBasePreset final {
     // 이 필름의 채널별 밀도 범위가 번들 컬러 네거티브의 전형(채널별 중앙값)보다 얼마나 넓고
     // 좁은가(기하평균 1) — macOS `FilmStockDmin.relativeRangeFactor`. 데이터시트는 Status M 농도라
     // 스캐너 채널의 절대 비율과 다르므로(실측 B/R 1.23~1.86 vs 1.10), 필름 모드는 실측 범위에 이
-    // 상대 계수만 곱합니다.
-    std::array<float, 3> range_factor{};
+    // 상대 계수만 곱합니다. 기본값은 "전형과 같음"(1) — 0 이면 실측 범위가 사라집니다.
+    std::array<float, 3> range_factor{1.0F, 1.0F, 1.0F};
     std::array<float, 3> light_gain{};
 };
 
