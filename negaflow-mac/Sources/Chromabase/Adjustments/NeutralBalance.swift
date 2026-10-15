@@ -2,109 +2,139 @@ import Foundation
 import CoreImage
 import CoreGraphics
 
-// MARK: - NeutralBalance (scene-adaptive 미드톤 화이트밸런스)
+// MARK: - NeutralBalance (자동 색상)
 //
-// 컬러 네거티브 반전은 채널별 정규화(dmaxNorm)로 오렌지 마스크를 제거하지만, 그 추정이
-// 채널마다 어긋나면 중간톤에 캐스트가 남는다(실측: Portra/Ektar/Vision3에서 빨강이 부족한
-// 시안/틸 캐스트). 끝점(흑/백)은 AutoLevels가 이미 채널별로 맞추므로, 여기서는 **채널별
-// 감마**로 중간톤만 중립으로 당긴다. 감마는 0→0, 1→1을 보존하므로 명부/암부에 새 캐스트를
-// 만들지 않고 중간톤 색만 교정한다.
+// 반전 뒤에 남은 캐스트를 장면의 **중립축 증거**(NeutralAxisEvidence)로 걷는다.
 //
-// 하드코딩이 아니라 장면에서 채널 median을 측정해 적용하는 scene-adaptive 방식이고,
-// strength와 감마 클램프로 채도 높은 장면을 과교정하지 않게 제한한다.
+// 2026-10-14 재설계(실측 결함):
+//  • 예전에는 전체 화소의 채널 중앙값을 목표로 채널별 감마(0·1 고정)를 걸었다. 감마는 균일한
+//    캐스트(광원·WB 성분)를 고치지 못하고 교차 캐스트로 바꿨다 — R/B 0.667 의 균일 캐스트가
+//    암부 +0.30 스톱 과보정, 명부 −0.49 스톱 미보정. 0·1 고정은 화이트가 0.70 인 이 파이프라인에서
+//    명부 중립도 깼다. 전체 중앙값은 지배색 장면(숲·노을)을 무채색으로 끌었다.
+//  • 이제 중립에 가까운 화소만 휘도대별로 모아, 채널마다 ln c = α + β·ln Ȳ 를 대역 중앙값에 맞춘다
+//    (대역마다 한 표). 균일 캐스트는 α(게인), 중간톤 휨은 β(감마)로 잡히고, 보정 c' = exp((ln c − α)/β)
+//    는 맞춘 중립축을 정확히 뒤집는다. 대역이 셋 미만이거나 휘도 폭이 2 스톱 미만이면 β 를 1 로
+//    두고 게인만 쓴다. 자동 레벨과 무관하게 혼자 돌아도 된다.
+//  • 적용은 정확한 Metal 커널(channelPowerGain) — 예전 32³ 큐브는 암부 거듭제곱을 양자화했다.
 public enum NeutralBalance {
+    /// 맞춘 중립축: 채널마다 ln c = offset + slope·ln Ȳ. 항등은 offset 0, slope 1.
+    public struct Correction: Sendable, Equatable {
+        public var offset: SIMD3<Double>
+        public var slope: SIMD3<Double>
+        public static let identity = Correction(offset: .zero, slope: SIMD3(repeating: 1))
+
+        var isIdentity: Bool {
+            let s = slope - SIMD3(repeating: 1)
+            return [offset.x, offset.y, offset.z, s.x, s.y, s.z].allSatisfy { Swift.abs($0) < 0.003 }
+        }
+    }
+
+    /// 한 채널 보정의 상한 — 게인 ±1 스톱(ln 0.7), 감마 0.8…1.25.
+    static let maximumOffset = 0.7
+    static let slopeRange = 0.8...1.25
+    /// 감마까지 맞추는 최소 근거: 대역 셋, 휘도 폭 2 스톱.
+    static let minimumBandsForSlope = 3
+    static let minimumSpanForSlope = log(4.0)
+    /// 중립 근처 후보가 없어 장면 중앙값 주위에서 고른 경우(한 색 장면일 수 있다)의 보정 비율.
+    static let fallbackStrength = 0.5
+
     public static func apply(to image: CIImage,
                              sampleColorSpace: CGColorSpace? = nil,
-                             strength: Double = 0.8) -> CIImage {
-        var median: SIMD3<Double>?
+                             strength: Double = 1.0) -> CIImage {
+        var correction: Correction?
         return apply(to: image, sampleColorSpace: sampleColorSpace,
-                     strength: strength, median: &median)
+                     strength: strength, correction: &correction)
     }
 
-    /// 이미 잰 장면 median 이 있으면 다시 재지 않는 변형(DevelopSceneMeasurements).
+    /// 이미 맞춘 보정이 있으면 다시 재지 않는 변형(DevelopSceneMeasurements). 근거가 없으면
+    /// 항등을 기록해 슬라이더를 움직이는 동안 다시 재지 않는다.
     static func apply(to image: CIImage,
                       sampleColorSpace: CGColorSpace? = nil,
-                      strength: Double = 0.8,
-                      median cachedMedian: inout SIMD3<Double>?) -> CIImage {
-        guard let median = cachedMedian ?? sampleMedian(image, sampleColorSpace: sampleColorSpace) else {
-            return image
-        }
-        cachedMedian = median
-        // 너무 어둡거나 밝은 median은 신뢰도가 낮아 건너뛴다(감마 교정이 불안정).
-        let m = median
-        guard m.x > 0.04, m.y > 0.04, m.z > 0.04,
-              m.x < 0.96, m.y < 0.96, m.z < 0.96 else { return image }
-
-        // 채널별 감마로 중립화. 감마는 0→0, 1→1을 보존하므로 흑/백 끝점을 건드리지 않고(새 캐스트
-        // 없이) 중간톤~명부의 채널 균형만 잡는다. 게인(곱셈)보다 안전하고 일반화가 잘 된다.
-        // 목표 = 세 채널 median의 기하평균(휘도 보존, 중립으로 수렴).
-        // clamp [0.80, 1.25] (2026-07-18 photometric 재캘리브레이션): linear 감마의 채널 이동량은
-        // 미드 위치에 비례한다 — 옛 클램프 [0.72, 1.4] 는 미드 linear 0.5 기준 최대 ≈0.4 스탑
-        // 설계였는데 photometric 미드(0.18)에서는 같은 값이 ≈0.85 스탑 폭주 여지가 됐다.
-        // [0.80, 1.25] = 미드 0.18 기준 최대 ≈0.55 스탑 — 옛 설계 의도 상한을 복원하면서
-        // 시안 bow 잔차 보정 여지는 유지한다.
-        let target = pow(m.x * m.y * m.z, 1.0 / 3.0)
-        func gamma(_ channelMedian: Double) -> Double {
-            let raw = Foundation.log(target) / Foundation.log(channelMedian)   // median→target 매핑 감마
-            let blended = 1.0 + (raw - 1.0) * strength
-            return min(max(blended, 0.80), 1.25)
-        }
-        let gR = gamma(m.x), gG = gamma(m.y), gB = gamma(m.z)
-        guard abs(gR - 1) > 0.01 || abs(gG - 1) > 0.01 || abs(gB - 1) > 0.01 else { return image }
-
-        return applyPerChannelGamma(to: image, gR: gR, gG: gG, gB: gB)
+                      strength: Double = 1.0,
+                      region: AnalysisRegion? = nil,
+                      correction cachedCorrection: inout Correction?) -> CIImage {
+        let correction = cachedCorrection ?? measure(
+            AnalysisRegion.measurementImage(image, region: region),
+            sampleColorSpace: sampleColorSpace,
+            insetFraction: region == nil ? AutoLevels.frameBorderInset : 0,
+            strength: strength
+        )
+        cachedCorrection = correction
+        guard !correction.isIdentity,
+              let kernel = ChromabaseMetalKernels.colorKernel(named: "channelPowerGain") else { return image }
+        // c' = exp((ln c − α)/β) = exp(−α/β) · c^(1/β)
+        let exponent = SIMD3<Double>(repeating: 1) / correction.slope
+        let gain = SIMD3(exp(-correction.offset.x * exponent.x),
+                         exp(-correction.offset.y * exponent.y),
+                         exp(-correction.offset.z * exponent.z))
+        return kernel.apply(extent: image.extent, arguments: [
+            image,
+            CIVector(x: CGFloat(exponent.x), y: CGFloat(exponent.y), z: CGFloat(exponent.z)),
+            CIVector(x: CGFloat(gain.x), y: CGFloat(gain.y), z: CGFloat(gain.z)),
+        ])?.cropped(to: image.extent) ?? image
     }
 
-    /// 채널별 감마를 CIColorCube로 적용(채널 분리 변환이라 정확).
-    private static func applyPerChannelGamma(to image: CIImage,
-                                             gR: Double, gG: Double, gB: Double) -> CIImage {
-        let dim = 32
-        func curve(_ g: Double) -> [Float] {
-            (0..<dim).map { Float(pow(Double($0) / Double(dim - 1), g)) }
-        }
-        let rC = curve(gR), gC = curve(gG), bC = curve(gB)
-        var cube = [Float](repeating: 0, count: dim * dim * dim * 4)
-        for b in 0..<dim {
-            for g in 0..<dim {
-                for r in 0..<dim {
-                    let o = ((b * dim + g) * dim + r) * 4
-                    cube[o] = rC[r]; cube[o + 1] = gC[g]; cube[o + 2] = bC[b]; cube[o + 3] = 1
-                }
-            }
-        }
-        return image.applyingFilter("CIColorCubeWithColorSpace", parameters: [
-            "inputCubeDimension": dim,
-            "inputCubeData": Data(bytes: cube, count: cube.count * MemoryLayout<Float>.size),
-            "inputColorSpace": CGColorSpace(name: CGColorSpace.linearSRGB) as Any,
-        ]).cropped(to: image.extent)
+    static func measure(_ image: CIImage, sampleColorSpace: CGColorSpace?,
+                        insetFraction: Double, strength: Double) -> Correction {
+        guard let pixels = samplePixels(image, sampleColorSpace: sampleColorSpace, insetFraction: insetFraction),
+              let evidence = NeutralAxisEstimator.measure(pixels) else { return .identity }
+        let applied = min(max(strength, 0), 1) * (evidence.isFallback ? fallbackStrength : 1)
+        return fit(evidence, strength: applied)
     }
 
-    /// 작은 축소본을 렌더해 채널별 median을 구한다.
-    static func sampleMedian(_ image: CIImage, sampleColorSpace: CGColorSpace?) -> SIMD3<Double>? {
+    /// 대역 중앙 캐스트에 채널별 직선(cast = a + b·ln Ȳ)을 맞춘다 — 대역마다 같은 무게.
+    static func fit(_ evidence: NeutralAxisEvidence, strength: Double) -> Correction {
+        let bands = evidence.bands
+        let xs = bands.map(\.logLuminance)
+        let span = (xs.max() ?? 0) - (xs.min() ?? 0)
+        let useSlope = bands.count >= minimumBandsForSlope && span >= minimumSpanForSlope
+        func line(_ ys: [Double]) -> (a: Double, b: Double) {
+            let n = Double(ys.count)
+            let mx = xs.reduce(0, +) / n, my = ys.reduce(0, +) / n
+            guard useSlope else { return (my, 0) }
+            var sxy = 0.0, sxx = 0.0
+            for (x, y) in zip(xs, ys) { sxy += (x - mx) * (y - my); sxx += (x - mx) * (x - mx) }
+            let b = sxx > 1e-12 ? sxy / sxx : 0
+            return (my - b * mx, b)
+        }
+        let r = line(bands.map(\.cast.x)), g = line(bands.map(\.cast.y)), b = line(bands.map(\.cast.z))
+        func clampOffset(_ v: Double) -> Double { min(max(v * strength, -maximumOffset), maximumOffset) }
+        func clampSlope(_ v: Double) -> Double {
+            min(max(1 + v * strength, slopeRange.lowerBound), slopeRange.upperBound)
+        }
+        return Correction(offset: SIMD3(clampOffset(r.a), clampOffset(g.a), clampOffset(b.a)),
+                          slope: SIMD3(clampSlope(r.b), clampSlope(g.b), clampSlope(b.b)))
+    }
+
+    /// 192 폭 축소본의 linear 화소(가장자리 인셋 제외).
+    static func samplePixels(_ image: CIImage, sampleColorSpace: CGColorSpace?,
+                             insetFraction: Double) -> [SIMD3<Double>]? {
         let extent = image.extent.integral
         guard extent.width > 8, extent.height > 8 else { return nil }
         let targetW = 192
         let scale = Double(targetW) / Double(extent.width)
         let targetH = max(1, Int(Double(extent.height) * scale))
-        let scaled = image.transformed(by: CGAffineTransform(scaleX: CGFloat(scale), y: CGFloat(scale)))
-        let cs = sampleColorSpace ?? CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+        let scaled = image
+            .transformed(by: CGAffineTransform(translationX: -extent.minX, y: -extent.minY))
+            .transformed(by: CGAffineTransform(scaleX: CGFloat(scale), y: CGFloat(scale)))
+        let cs = sampleColorSpace ?? CGColorSpace(name: CGColorSpace.linearSRGB) ?? CGColorSpaceCreateDeviceRGB()
         var bitmap = [Float](repeating: 0, count: targetW * targetH * 4)
-        // 작업공간은 항상 linear — 이 이미지에는 업스트림 필터 체인(반전 커널 등 linear
-        // 도메인 연산)이 걸려 있어, sampleColorSpace(입력 태그 유래 — sRGB 일 수 있음)를
-        // 작업공간으로 쓰면 체인이 감마 값 위에서 실행돼 측정이 왜곡된다. 측정 도메인
-        // (percentile 좌표계)은 출력 colorSpace 변환이 담당한다.
+        // 작업공간은 항상 linear — 걸린 필터 체인이 감마 값 위에서 돌면 측정이 왜곡된다.
         let workingLinear = CGColorSpace(name: CGColorSpace.linearSRGB) ?? cs
         SamplingContextPool.context(workingColorSpace: workingLinear).render(
             scaled, toBitmap: &bitmap,
             rowBytes: targetW * 4 * MemoryLayout<Float>.size,
             bounds: CGRect(x: 0, y: 0, width: targetW, height: targetH),
             format: .RGBAf, colorSpace: cs)
-        let n = targetW * targetH
-        guard n >= 64 else { return nil }
-        var r = [Double](repeating: 0, count: n), g = r, b = r
-        for i in 0..<n { r[i] = Double(bitmap[i*4]); g[i] = Double(bitmap[i*4+1]); b[i] = Double(bitmap[i*4+2]) }
-        r.sort(); g.sort(); b.sort()
-        let mid = n / 2
-        return SIMD3(r[mid], g[mid], b[mid])
+        let insetX = Int(Double(targetW) * insetFraction), insetY = Int(Double(targetH) * insetFraction)
+        var pixels: [SIMD3<Double>] = []
+        pixels.reserveCapacity(targetW * targetH)
+        for y in insetY..<max(insetY + 1, targetH - insetY) {
+            for x in insetX..<max(insetX + 1, targetW - insetX) {
+                let i = (min(y, targetH - 1) * targetW + min(x, targetW - 1)) * 4
+                pixels.append(SIMD3(Double(bitmap[i]), Double(bitmap[i + 1]), Double(bitmap[i + 2])))
+            }
+        }
+        return pixels.count >= 64 ? pixels : nil
     }
 }

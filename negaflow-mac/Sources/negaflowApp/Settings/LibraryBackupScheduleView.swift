@@ -46,7 +46,7 @@ struct LibraryBackupScheduleView: View {
     private func scheduleName(_ schedule: LibraryBackupSchedule) -> String {
         switch schedule {
         case .manual: localized(.manual)
-        case .onTermination: localized(.termination)
+        case .automatic: localized(.automatic)
         case .daily: localized(.daily)
         case .weekly: localized(.weekly)
         }

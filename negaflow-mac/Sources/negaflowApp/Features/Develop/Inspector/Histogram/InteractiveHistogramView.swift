@@ -270,7 +270,17 @@ struct InteractiveHistogramView: View {
         // 이미지가 해제된 뒤 새 이미지가 같은 주소를 재사용할 때 id 가 같아져 태스크가
         // 재실행되지 않는다(stale 히스토그램).
         .task(id: HistogramImageIdentity(image: image)) {
-            bins = HistogramSampler.compute(image)
+            // 축소·색 변환·집계는 메인 밖에서 한다 — 메인에서 돌면 사진이 바뀔 때마다(슬라이더
+            // 틱 포함) 화면 갱신과 현상 시작을 수십 ms 씩 붙잡는다.
+            guard let cg = HistogramSampler.cgImage(of: image) else {
+                bins = nil
+                return
+            }
+            let computed = await Task.detached(priority: .userInitiated) {
+                HistogramSampler.compute(cg)
+            }.value
+            guard !Task.isCancelled else { return }
+            bins = computed
         }
     }
 

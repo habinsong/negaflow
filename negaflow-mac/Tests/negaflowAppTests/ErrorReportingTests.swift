@@ -39,6 +39,56 @@ final class ErrorReportingTests: XCTestCase {
         XCTAssertEqual(model.errorLog.latest?.message, "이미지 로드 실패: test.svg")
     }
 
+    /// 원본이 지워진(오프라인) 사진의 현상 실패는 오류가 아니라 상태다 — 오류 기록·빨간 점에 쌓지
+    /// 않고 '원본 찾기' 안내만 한다. 원본이 있는데 실패한 것은 여전히 오류다.
+    func testDevelopFailureOfMissingOriginalIsNotRecordedAsError() async throws {
+        let model = AppModel()
+        let missing = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-missing-\(UUID().uuidString).tiff")
+        let frame = ScanFrame(scanIndex: 1, rawScanURL: missing, filmType: .colorNegative)
+        model.frames = [frame]
+        defer { model.frames = [] }
+        let idle = model.statusMessage
+        model.developFailed(frame, revision: frame.developRevision)
+        for _ in 0..<200 where model.statusMessage == idle { try await Task.sleep(nanoseconds: 5_000_000) }
+        XCTAssertFalse(model.errorLog.hasEntries, "오프라인 원본을 오류로 기록했다")
+        XCTAssertEqual(model.statusMessage,
+                       model.text(AppLocalizedPhrase.sourceOfflineDevelopFormat, missing.lastPathComponent))
+
+        let present = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-present-\(UUID().uuidString).tiff")
+        try Data([0x49, 0x49]).write(to: present)
+        defer { try? FileManager.default.removeItem(at: present) }
+        let broken = ScanFrame(scanIndex: 2, rawScanURL: present, filmType: .colorNegative)
+        model.frames = [broken]
+        model.developFailed(broken, revision: broken.developRevision)
+        for _ in 0..<200 where !model.errorLog.hasEntries { try await Task.sleep(nanoseconds: 5_000_000) }
+        XCTAssertEqual(model.errorLog.latest?.message,
+                       model.text(AppLocalizedPhrase.imageLoadFailedFormat, present.lastPathComponent))
+    }
+
+    /// 오프라인으로 알려진 사진은 현상을 시도하지 않는다(진단에 실패 이벤트가 쌓이지 않게). 캐시가
+    /// 낡아 파일이 되살아났으면 다시 확인해 시도한다.
+    func testKnownOfflineOriginalIsNotDeveloped() async throws {
+        let model = AppModel()
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-offline-\(UUID().uuidString).tiff")
+        let frame = ScanFrame(scanIndex: 1, rawScanURL: url, filmType: .colorNegative)
+        model.frames = [frame]
+        defer { model.frames = []; try? FileManager.default.removeItem(at: url) }
+        model.refreshSourceAvailability()
+        XCTAssertEqual(model.librarySourceAvailability(for: frame), .offline)
+        let reachable = await model.developSourceIsReachable(frame)
+        XCTAssertFalse(reachable)
+        XCTAssertFalse(model.errorLog.hasEntries)
+        XCTAssertEqual(model.statusMessage, model.text(AppLocalizedPhrase.sourceOfflineDevelopFormat, url.lastPathComponent))
+
+        try Data([0x49, 0x49]).write(to: url)
+        let restored = await model.developSourceIsReachable(frame)
+        XCTAssertTrue(restored)
+        XCTAssertEqual(model.librarySourceAvailability(for: frame), .online)
+    }
+
     /// statusMessage 토스트는 사라져도(facade 갱신) errorLog 는 오류를 유지한다.
     func testErrorLogSurvivesStatusMessageChange() {
         let model = AppModel()

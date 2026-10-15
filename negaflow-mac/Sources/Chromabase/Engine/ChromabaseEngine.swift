@@ -68,7 +68,8 @@ public final class ChromabaseEngine: @unchecked Sendable {
                                  manual: SIMD3<Double>? = nil,
                                  filmStockDminID: String? = nil,
                                  lightSourceProfileID: String? = nil,
-                                 filmType: FilmType = .colorNegative) -> FilmBase? {
+                                 filmType: FilmType = .colorNegative,
+                                 analysisRegion: AnalysisRegion? = nil) -> FilmBase? {
         let neutralBase = filmType == .bwNegative
         switch mode {
         case .manual:
@@ -81,7 +82,7 @@ public final class ChromabaseEngine: @unchecked Sendable {
             if let id = filmStockDminID, let preset = FilmStockDminRegistry.find(id) {
                 // base(Dmin): 실측 우선, 없으면 프리셋 폴백.
                 let resolved: FilmBase = Self.estimateBaseWithChromogenicFallback(
-                    from: image, neutralBase: neutralBase, confidentOnly: true)
+                    from: image, neutralBase: neutralBase, confidentOnly: true, region: analysisRegion)
                     ?? FilmBase(rgb: preset.dminTransmission, source: .manual)
                 // 광원 게인을 base(WB 앵커)에 적용 — 선택이 시각적으로 반영된다(실측/폴백 공통).
                 // neutral/미선택=무변경. 흑백은 단일 중립 곡선이라 무의미하므로 적용하지 않는다.
@@ -90,7 +91,8 @@ public final class ChromabaseEngine: @unchecked Sendable {
             }
             fallthrough
         case .auto:
-            return Self.estimateBaseWithChromogenicFallback(from: image, neutralBase: neutralBase)
+            return Self.estimateBaseWithChromogenicFallback(from: image, neutralBase: neutralBase,
+                                                            region: analysisRegion)
         }
     }
 
@@ -102,10 +104,12 @@ public final class ChromabaseEngine: @unchecked Sendable {
     /// 반전은 채널별 Dmin 정규화로 틴트를 흡수하고, 출력은 PostPipeline 이 흑백을 강제
     /// 중립화하므로 안전하다.
     static func estimateBaseWithChromogenicFallback(
-        from image: CIImage, neutralBase: Bool, confidentOnly: Bool = false
+        from image: CIImage, neutralBase: Bool, confidentOnly: Bool = false,
+        region: AnalysisRegion? = nil
     ) -> FilmBase? {
         let neutralEstimate = FilmBaseEstimator.estimate(from: image, neutralBase: neutralBase,
-                                                         confidentOnly: confidentOnly)
+                                                         confidentOnly: confidentOnly,
+                                                         excludingInterior: region)
         guard neutralBase else { return neutralEstimate }
         if let base = neutralEstimate {
             let mx = max(base.rgb.x, max(base.rgb.y, base.rgb.z))
@@ -114,7 +118,8 @@ public final class ChromabaseEngine: @unchecked Sendable {
         }
         // 틴트 베이스(크로모제닉) 의심 — 컬러 추정으로 재시도, 그마저 실패면 중립 결과 유지.
         return FilmBaseEstimator.estimate(from: image, neutralBase: false,
-                                          confidentOnly: confidentOnly) ?? neutralEstimate
+                                          confidentOnly: confidentOnly,
+                                          excludingInterior: region) ?? neutralEstimate
     }
 
     /// 전체 현상 파이프라인을 돌려 결과 CIImage를 반환한다.
@@ -187,6 +192,29 @@ public final class ChromabaseEngine: @unchecked Sendable {
         )
     }
 
+    /// 화이트밸런스(ColorModel) 직전의 작업 이미지(프리뷰 프록시, 변형 전). 중립 스포이드는 찍은 점을
+    /// 이 값으로 푼다 — 게인이 바로 이 값에 곱해지므로 뒤따르는 톤·커브·룩과 무관하게 역산이 정확하다.
+    public func developWhiteBalanceInputPreview(
+        image input: CIImage,
+        base: FilmBase?,
+        params: DevelopParameters,
+        maxDimension: CGFloat,
+        measurements: inout DevelopSceneMeasurements
+    ) -> CIImage {
+        let proxy = Self.scannerPreviewProxy(input, maxDimension: maxDimension)
+        let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
+        if measurements.analysisRegion == nil {
+            measurements.analysisRegion = AnalysisRegion(transform: params.imageTransform,
+                                                         imageSize: proxy.extent.size)
+        }
+        if params.filmType.requiresInversion {
+            return negativeWhiteBalanceInput(to: proxy, base: base, params: params,
+                                             sampleColorSpace: linear, measurements: &measurements)
+        }
+        return positiveWhiteBalanceInput(to: proxy, params: params, sampleColorSpace: linear,
+                                         region: measurements.analysisRegion)
+    }
+
     public func developDebugFramesScanner(
         image input: CIImage,
         base: FilmBase?,
@@ -224,6 +252,12 @@ public final class ChromabaseEngine: @unchecked Sendable {
                          measurements: inout DevelopSceneMeasurements) -> CIImage {
         var img = input
         let extent = input.extent
+        // 미리보기는 변형 없이 현상하고 영역을 직접 넘긴다. 내보내기·CLI 는 변형이 든 파라미터를
+        // 그대로 넘기므로 여기서 같은 규칙으로 영역을 만든다 — 두 길의 측정이 같은 픽셀을 본다.
+        if measurements.analysisRegion == nil {
+            measurements.analysisRegion = AnalysisRegion(transform: params.imageTransform,
+                                                         imageSize: input.extent.size)
+        }
 
         if params.filmType.requiresInversion {
             img = applyNegativeFilmPipeline(
@@ -239,7 +273,8 @@ public final class ChromabaseEngine: @unchecked Sendable {
                 to: img,
                 params: params,
                 sampleColorSpace: sampleColorSpace,
-                extent: extent
+                extent: extent,
+                region: measurements.analysisRegion
             )
         }
 
@@ -260,11 +295,16 @@ public final class ChromabaseEngine: @unchecked Sendable {
         let extent = input.extent
         let preset: FilmStockDmin? = (params.baseEstimationMode == .preset)
             ? params.filmStockDminID.flatMap { FilmStockDminRegistry.find($0) } : nil
-        let reference = resolveFilmBase(for: img, provided: base, preset: preset, params: params)
+        var state = measurements
+        if state.analysisRegion == nil {
+            state.analysisRegion = AnalysisRegion(transform: params.imageTransform, imageSize: input.extent.size)
+        }
+        let region = state.analysisRegion
+        let reference = resolveFilmBase(for: img, provided: base, preset: preset, params: params,
+                                        region: region)
         let fb = params.baseEstimationMode == .auto
             ? params.baseScale.applied(to: reference) : reference
 
-        var state = measurements
         prepareInputGammaStatistics(base: fb, preset: preset, params: params, measurements: &state)
         let stats = negativeDebugMetrics(
             for: img, base: fb, preset: preset, filmType: params.filmType, measured: state.inversionStats
@@ -286,21 +326,25 @@ public final class ChromabaseEngine: @unchecked Sendable {
         if params.autoLevels {
             img = AutoLevels.apply(to: img, sampleColorSpace: measureSpace,
                                    outputWhite: 0.95,
-                                   outputBlack: NegativeInversion.toeFloor)
+                                   outputBlack: NegativeInversion.toeFloor,
+                                   region: region, points: &state.autoLevelsPoints)
         }
         frames.append(DevelopDebugFrame(stage: .afterAutoLevels, image: img.cropped(to: extent), metrics: stats))
 
         if params.autoNeutralBalance {
-            img = NeutralBalance.apply(to: img, sampleColorSpace: measureSpace)
+            img = NeutralBalance.apply(to: img, sampleColorSpace: measureSpace,
+                                       region: region, correction: &state.neutralBalanceCorrection)
         }
         if params.developTarget.isScannerEmulation {
-            img = ScannerTargetGrade.apply(to: img, target: params.developTarget, params: params)
+            img = ScannerTargetGrade.apply(to: img, target: params.developTarget, params: params,
+                                           region: region, anchor: &state.scannerSceneAnchor)
         }
         if params.developTarget == .rescue {
             // 본 파이프라인과 동일: 검증된 중립축 증거가 있을 때만 bounded 상대 보정.
             img = RescueGrade.apply(to: img, sampleColorSpace: measureSpace,
                                     filmType: params.filmType,
-                                    recoverRange: false)
+                                    recoverRange: false,
+                                    region: region, recovery: &state.rescueRecovery)
         }
         // 본 파이프라인과 동일: 타겟 프로파일 밖의 고정 NR·명부 탈채도·gamut 압축 없음.
         frames.append(DevelopDebugFrame(stage: .afterPrintBase, image: img.cropped(to: extent), metrics: stats))
@@ -311,8 +355,8 @@ public final class ChromabaseEngine: @unchecked Sendable {
             img = ScannerProfileGrade.apply(to: img, profile: profile)
         }
         img = ColorModel.apply(to: img, params: params)
-        img = ToneMapper.applyExposure(to: img, stops: params.exposure)
-        img = ToneMapper.applyToneCurves(to: img, params: params)
+        img = ToneMapper.applyExposure(to: img, stops: params.exposure, filmType: params.filmType)
+        img = ToneMapper.applyToneCurves(to: img, params: params, region: region)
         frames.append(DevelopDebugFrame(stage: .finalTone, image: img.cropped(to: extent), metrics: stats))
         return frames
     }

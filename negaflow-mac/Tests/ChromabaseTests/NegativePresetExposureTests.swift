@@ -53,19 +53,55 @@ final class NegativePresetExposureTests: XCTestCase {
                           "고정 dmaxNorm(\(fixedGeo)) 압축이 제거되어야 함 (preset=\(presetGeo))")
     }
 
-    func testPresetChannelRatioFollowsPreset() {
-        // 채널 비율(염료 분리)은 프리셋을 따른다: dmaxNorm 채널비 ≈ preset.dmaxNorm 채널비.
+    /// 필름 모드의 채널 범위 = 자동 실측 범위 × 필름 상대 계수(데이터시트에서 믿을 수 있는 필름 사이
+    /// 상대 차이). 데이터시트(Status M) 비율로 통째로 바꾸면 스캐너 채널과 어긋나 파랗게 반전됐다.
+    func testPresetChannelRangeIsMeasuredTimesFilmRelativeFactor() throws {
         let img = thinNegative()
         let fb = FilmBase(rgb: base, source: .manual)
-        let preset = FilmStockDminRegistry.find("kodak-portra-400")!
-        let stats = NegativeInversion.presetStats(for: img, base: fb, preset: preset)
-        let sg = geo(stats.dmaxNorm), pg = geo(preset.dmaxNorm)
-        for c in 0..<3 {
-            let statsRatio = stats.dmaxNorm[c] / sg
-            let presetRatio = preset.dmaxNorm[c] / pg
-            XCTAssertEqual(statsRatio, presetRatio, accuracy: 0.02,
-                           "채널 \(c) 비율이 프리셋 물성을 따라야 함")
+        let measured = try XCTUnwrap(NegativeInversion.sampleStats(img, base: fb))
+        for id in ["kodak-portra-400", "fuji-c200", "vision3-250d"] {
+            let preset = try XCTUnwrap(FilmStockDminRegistry.find(id))
+            let stats = NegativeInversion.presetStats(for: img, base: fb, preset: preset)
+            let factor = preset.relativeRangeFactor
+            XCTAssertEqual(geo(factor), 1, accuracy: 1e-9)
+            for c in 0..<3 {
+                XCTAssertEqual(stats.dmaxNorm[c] / measured.dmaxNorm[c], factor[c], accuracy: 1e-9)
+            }
+            XCTAssertEqual(stats.blackInput, measured.blackInput)
+            XCTAssertEqual(stats.midDensity, measured.midDensity)
         }
+        XCTAssertNotEqual(FilmStockDminRegistry.find("fuji-c200")!.relativeRangeFactor,
+                          FilmStockDminRegistry.find("vision3-250d")!.relativeRangeFactor,
+                          "필름마다 상대 차이가 남아야 한다")
+    }
+
+    /// 스캐너 채널의 밀도 범위는 데이터시트와 다르다(실측 B/R 1.23~1.86 vs 1.10). 그래도 필름 모드가
+    /// 중립 웨지를 자동 모드만큼 중립으로 반전해야 한다 — 예전엔 b* −2~−13 파랗게 갔다.
+    func testFilmModeKeepsNeutralsWhenScannerRangesDifferFromDatasheet() throws {
+        let width = 420, height = 120
+        let slopes = SIMD3<Double>(0.85, 1.0, 1.30)   // 스캐너형 채널 기울기(파랑 범위가 넓다)
+        let image = SyntheticScan.makeImage(width: width, height: height) { x, _ in
+            let border = x < 20 || x >= width - 20
+            let d = border ? 0.0 : 0.05 + 1.2 * Double(x - 20) / Double(width - 41)
+            return SIMD3(base.x * pow(10, -d * slopes.x), base.y * pow(10, -d * slopes.y),
+                         base.z * pow(10, -d * slopes.z))
+        }
+        let engine = ChromabaseEngine()
+        func meanRB(_ configure: (inout DevelopParameters) -> Void) -> Double {
+            var p = DevelopParameters(); p.filmType = .colorNegative
+            configure(&p)
+            let out = engine.develop(image: image, base: FilmBase(rgb: base, source: .manual), params: p)
+            var bmp = [Float](repeating: 0, count: width * height * 4)
+            ChromabaseEngine.sharedLinearRenderContext.render(
+                out, toBitmap: &bmp, rowBytes: width * 16, bounds: image.extent, format: .RGBAf,
+                colorSpace: SyntheticScan.linear)
+            var r = 0.0, b = 0.0
+            for x in stride(from: 120, to: 300, by: 4) { let i = (60 * width + x) * 4; r += Double(bmp[i]); b += Double(bmp[i + 2]) }
+            return r / b
+        }
+        let auto = meanRB { _ in }
+        let film = meanRB { $0.baseEstimationMode = .preset; $0.filmStockDminID = "kodak-portra-400" }
+        XCTAssertEqual(film / auto, 1, accuracy: 0.05, "필름 모드가 중립을 기울였다 auto R/B \(auto) film \(film)")
     }
 
     // MARK: 광원 효과

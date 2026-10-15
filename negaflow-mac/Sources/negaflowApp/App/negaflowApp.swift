@@ -180,6 +180,8 @@ final class AppModel: ObservableObject {
     }
     var didRestoreLibrary = false
     var librarySaveTask: Task<Void, Never>?
+    /// 실행 중 자동 백업 예약. 종료는 이것을 기다리지 않는다.
+    var sessionBackupTask: Task<Void, Never>?
     var isAcknowledgedLibraryTransactionActive = false
     var librarySaveRequestedDuringTransaction = false
     var isLibraryTerminationSaveInProgress = false

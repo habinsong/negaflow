@@ -197,7 +197,8 @@ extension AppModel {
                 mode: frame.params.baseEstimationMode,
                 manualBaseRGB: frame.params.manualBaseRGB,
                 filmStockDminID: frame.params.filmStockDminID,
-                lightSourceProfileID: frame.params.lightSourceProfileID
+                lightSourceProfileID: frame.params.lightSourceProfileID,
+                imageTransform: frame.imageTransform
             )
             let snapshot = self.makeSnapshot(
                 for: frame,

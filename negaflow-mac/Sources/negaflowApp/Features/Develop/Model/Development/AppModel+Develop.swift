@@ -68,10 +68,12 @@ extension AppModel {
         selectionBoundFrameID: UUID? = nil
     ) async {
         guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
+        LaunchTrace.markOnce("first developFrame begin")
         // 원본을 읽기 전에 iCloud 사본을 먼저 확보한다. 현상 슬롯을 잡은 뒤 커널 대기에 걸리면
         // 뒤따르는 현상이 전부 멈춘다.
         guard await materializeDevelopSourceIfNeeded(frame) else { return }
         guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
+        guard await developSourceIsReachable(frame) else { return }
         guard !frame.defectEditsNeedRestore else {
             AppDiagnostics.start(.developFrame, category: .develop)
                 .fail(code: "defect_restore_pending")
@@ -146,7 +148,8 @@ extension AppModel {
             mode: frame.params.baseEstimationMode,
             manualBaseRGB: frame.params.manualBaseRGB,
             filmStockDminID: frame.params.filmStockDminID,
-            lightSourceProfileID: frame.params.lightSourceProfileID
+            lightSourceProfileID: frame.params.lightSourceProfileID,
+            imageTransform: frame.imageTransform
         )
         let snapshot = makeSnapshot(
             for: frame,

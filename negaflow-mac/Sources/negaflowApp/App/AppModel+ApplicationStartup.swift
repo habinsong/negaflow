@@ -5,11 +5,13 @@ extension AppModel {
     func startApplication(configuration: AppLaunchConfiguration? = .current) async {
         bindFrameCacheResidencySettings()
         await restoreLibraryOnLaunch()
+        LaunchTrace.mark("library restore returned")
         if configuration?.enablesDemoScanner == true {
             await refreshDevices()
         } else {
             await refreshDevicesOnStartup()
         }
+        LaunchTrace.mark("devices refreshed")
         prepareUITestFixture(configuration)
         if configuration?.selectsAllFrames == true {
             let frameIDs = frames.map(\.id)
@@ -18,6 +20,7 @@ extension AppModel {
         }
         if configuration == nil {
             await runScheduledBackupIfDue()
+            LaunchTrace.mark("scheduled backup checked")
         }
         switch configuration?.libraryMaintenance {
         case .repair: await repairLibraryCatalogAndRelaunch()

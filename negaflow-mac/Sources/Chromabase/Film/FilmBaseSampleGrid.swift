@@ -61,4 +61,40 @@ struct FilmBaseSampleGrid: Sendable {
         self.height = height
         self.samples = samples
     }
+
+    private init(width: Int, height: Int, samples: [FilmBaseSample]) {
+        self.width = width
+        self.height = height
+        self.samples = samples
+    }
+
+    /// 크롭(사진) 영역 안의 셀을 검정으로 지운 사본 — 베이스 후보를 크롭 바깥 띠에서만 찾는다.
+    /// 지운 셀은 후보 판정(최소 luma)을 통과하지 못해 성분·모드·바닥 계산에 끼지 않는다.
+    func excludingInterior(of region: AnalysisRegion) -> FilmBaseSampleGrid {
+        let masked = samples.map { sample -> FilmBaseSample in
+            guard isInterior(sample, of: region) else { return sample }
+            return FilmBaseSample(x: sample.x, y: sample.y, color: .zero)
+        }
+        return FilmBaseSampleGrid(width: width, height: height, samples: masked)
+    }
+
+    /// 크롭(사진) 영역 **밖**의 셀을 검정으로 지운 사본 — 띠에 베이스가 없을 때 사진 안에서만 찾는다.
+    func keepingInterior(of region: AnalysisRegion) -> FilmBaseSampleGrid {
+        let masked = samples.map { sample -> FilmBaseSample in
+            guard !isInterior(sample, of: region) else { return sample }
+            return FilmBaseSample(x: sample.x, y: sample.y, color: .zero)
+        }
+        return FilmBaseSampleGrid(width: width, height: height, samples: masked)
+    }
+
+    /// 셀이 크롭(사진) 영역에 걸치는가 — 바깥으로 정수화한 격자 사각형 기준.
+    func isInterior(_ sample: FilmBaseSample, of region: AnalysisRegion) -> Bool {
+        // 격자 행 0 = 위(CI y 최대). 영역은 CI y-up 정규 좌표다.
+        let rect = region.unitRect
+        let x0 = Int((rect.minX * Double(width)).rounded(.down))
+        let x1 = Int((rect.maxX * Double(width)).rounded(.up))
+        let y0 = Int(((1 - rect.maxY) * Double(height)).rounded(.down))
+        let y1 = Int(((1 - rect.minY) * Double(height)).rounded(.up))
+        return sample.x >= x0 && sample.x < x1 && sample.y >= y0 && sample.y < y1
+    }
 }

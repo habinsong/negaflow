@@ -59,6 +59,28 @@ enum FilmBaseRebate {
         return Double(brighter) / Double(grid.samples.count)
     }
 
+    /// 고른 베이스보다 **뚜렷이** 밝은 필름 셀의 비율 — 0 이 아니면 고른 값은 베이스일 수 없다.
+    /// 필름 안 조도 차(비네팅)는 경계 혼합 셀 판정과 같은 15% 를 넘지 않으므로 그만큼은 봐주고,
+    /// 필름으로 보이는 셀(베이스 후보 색)만 센다 — 중립 백라이트·준클리핑 광원은 세지 않는다.
+    /// 실측(2026-10-15, 컬러 네거 52 장): 정상 50 장 0%, 0.8% 한 장, 베이스가 화면에 없는 컷 7.1%.
+    static func contradictingFraction(
+        grid: FilmBaseSampleGrid, dmin: SIMD3<Double>, neutralBase: Bool,
+        counting include: (FilmBaseSample) -> Bool
+    ) -> Double {
+        guard dmin.x.isFinite, dmin.y.isFinite, dmin.z.isFinite else { return 1 }
+        let ceiling = (dmin.x + dmin.y + dmin.z) / 3 * FilmBaseEstimator.brighterNeighborRatio
+        var counted = 0, brighter = 0
+        for sample in grid.samples where include(sample) {
+            counted += 1
+            if sample.luma > ceiling,
+               FilmBaseEstimator.isFilmBaseCandidate(r: sample.color.x, g: sample.color.y, b: sample.color.z,
+                                                     neutralBase: neutralBase) {
+                brighter += 1
+            }
+        }
+        return counted > 0 ? Double(brighter) / Double(counted) : 0
+    }
+
     struct Band {
         var horizontal: Bool
         var first: Int

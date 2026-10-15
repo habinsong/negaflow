@@ -127,6 +127,7 @@ struct ContentView: View {
             }
         }
         .task {
+            LaunchTrace.mark("startApplication begin")
             await model.startApplication()
         }
         .onAppear {

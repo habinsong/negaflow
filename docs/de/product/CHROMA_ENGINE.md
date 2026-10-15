@@ -150,10 +150,10 @@ Das Arbeitsbild entspricht `MAIN`. Am Ende des Exports wird einmal ein gültiges
 
 Zwei Stufen.
 
-1. `documentedCharacter`: `SP` nutzt einen begrenzten Grundcharakter aus sechs Paaren desselben Negativs über SP-3000 und negaflow MAIN. `HS` baut Ton-, Neutral- und Farbcharakter aus veröffentlichter Richtung und den Entwurfswerten des Projekts.
-2. `scannerSignature`: Hinzu kommt nur die relative Differenz jener Gruppen, deren Filmnamen und Bildzahlen auf beiden Maschinen übereinstimmen.
+1. `documentedCharacter`: `SP` ist ein entworfener Charakter: eine filmartige Kurve, die Fuß und Schulter staucht und die Mitten steiler macht, neutrale Schatten mit leicht warmen Lichtern, warme Farben nach vorn und kühle Farben vertieft, dazu Farbdichte, die gesättigte Farben etwas abdunkelt. `HS` baut Ton-, Neutral- und Farbcharakter aus veröffentlichter Richtung und den Entwurfswerten des Projekts.
+2. `scannerSignature`: Hinzu kommt nur die relative Differenz jener Gruppen, deren Filmnamen und Bildzahlen auf beiden Maschinen übereinstimmen. `SP` fügt sie nur hinzu, wenn Sie eines seiner mitgelieferten Profile wählen.
 
-`HS` enthält eine Schärfung im Helligkeitskanal. Radius und Stärke stammen nicht aus einer Messung an der echten Maschine. `SP` enthält sie nicht.
+`HS` enthält eine Schärfung im Helligkeitskanal. Radius und Stärke stammen nicht aus einer Messung an der echten Maschine. `SP` enthält sie nicht; stattdessen legt die Texturstufe vor Ihrer eigenen Klarheit einen leichten lokalen Kontrast an.
 
 Alle heutigen Profile sind `realOnly`.
 

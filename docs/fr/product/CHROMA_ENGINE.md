@@ -150,10 +150,10 @@ L'image de travail est celle de `MAIN`. Un ICC imprimante RVB valide est appliqu
 
 Deux étapes.
 
-1. `documentedCharacter` : `SP` utilise un caractère de base limité, tiré de six paires du même négatif passées par SP-3000 et par negaflow MAIN. `HS` construit son caractère de tonalité, de neutre et de couleur à partir d'orientations publiées et des valeurs de conception du projet.
-2. `scannerSignature` : seule la différence relative des groupes dont les noms de films et le nombre d'images concordent sur les deux machines s'ajoute.
+1. `documentedCharacter` : `SP` est un caractère conçu : une courbe de type film qui comprime le pied et l'épaule et redresse les tons moyens, des ombres neutres avec des hautes lumières légèrement chaudes, les couleurs chaudes mises en avant et les froides approfondies, et une densité de couleur qui assombrit un peu les couleurs saturées. `HS` construit son caractère de tonalité, de neutre et de couleur à partir d'orientations publiées et des valeurs de conception du projet.
+2. `scannerSignature` : seule la différence relative des groupes dont les noms de films et le nombre d'images concordent sur les deux machines s'ajoute. `SP` ne l'ajoute que si vous choisissez l'un de ses profils fournis.
 
-`HS` comprend une accentuation sur le canal de luminosité. Ce rayon et cette intensité n'ont pas été mesurés sur la machine réelle. `SP` ne l'inclut pas.
+`HS` comprend une accentuation sur le canal de luminosité. Ce rayon et cette intensité n'ont pas été mesurés sur la machine réelle. `SP` ne l'inclut pas ; l'étape de texture ajoute à la place un léger contraste local avant votre propre clarté.
 
 Tous les profils actuels sont `realOnly`.
 

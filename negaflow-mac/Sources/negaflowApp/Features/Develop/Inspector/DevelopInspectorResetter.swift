@@ -62,6 +62,14 @@ enum DevelopInspectorResetter {
     static func resetAllAdjustments(frame: ScanFrame, neutralPreset: LookPreset?) {
         let defaults = DevelopParameters()
         frame.preset = neutralPreset
+        // 크롭·수평 각도도 보정이다(라이트룸 초기화와 같다) — 남겨 두면 초기화 뒤에도 크롭 바깥 띠로
+        // 베이스를 재는 등 결과가 초기 상태와 달랐다(2026-10-15 사용자 지적). 90° 회전·뒤집기는 필름을
+        // 홀더에 넣은 방향이라 그대로 둔다.
+        frame.updateTransform {
+            $0.cropRect = nil
+            $0.cropAspect = nil
+            $0.straightenAngle = 0
+        }
         frame.updateParams { params in
             params.baseScale = .identity
             if params.inputGamma != .automatic {

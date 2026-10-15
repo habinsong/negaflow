@@ -27,4 +27,25 @@ extension AppModel {
         }
         return ready
     }
+
+    /// 라이브러리가 오프라인(원본 없음)으로 아는 사진은 현상을 시도하지 않는다 — 시도하면 렌더가
+    /// 실패해 진단에 "현상 실패" 이벤트와 "이미지 로드 실패" 오류가 고를 때마다 쌓였다(2026-10-15
+    /// 사용자 보고). 결함 제거 raw 가 남아 있으면 그것으로 현상할 수 있으니 막지 않는다. 확인 캐시가
+    /// 낡았을 수 있어(사용자가 Finder 에서 되살림) 실제 존재를 한 번 더 본다.
+    func developSourceIsReachable(_ frame: ScanFrame) async -> Bool {
+        guard librarySourceAvailability(for: frame) == .offline,
+              frame.identityMatchedCleanedRawImage == nil,
+              frame.identityMatchedCleanedRawDiskURL == nil else { return true }
+        let url = frame.rawScanURL
+        let exists = await Task.detached(priority: .utility) {
+            FileManager.default.fileExists(atPath: url.path)
+        }.value
+        guard ownsFrame(frame), frame.rawScanURL == url else { return false }
+        if exists {
+            refreshSourceAvailability()
+            return true
+        }
+        statusMessage = text(AppLocalizedPhrase.sourceOfflineDevelopFormat, url.lastPathComponent)
+        return false
+    }
 }

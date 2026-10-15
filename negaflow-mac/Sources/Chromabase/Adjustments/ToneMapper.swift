@@ -6,12 +6,17 @@ import CoreImage
 // density / highlight roll-off / black softness / contrast를 다룬다.
 // 필름 스캔에서 중요한 건 density, roll-off, black softness다 (plan §8.7).
 public enum ToneMapper {
-    /// 노출(stops) 보정. 선형 광량에 2^stops를 곱한다.
-    public static func applyExposure(to image: CIImage, stops: Double) -> CIImage {
+    /// 노출(stops) 보정. −는 선형 광량에 2^stops 를 곱하고, +는 확산 화이트 아래를 2^stops 로
+    /// 정확히 올리되 명부를 숄더로 접는다(ExposureShoulder).
+    public static func applyExposure(to image: CIImage, stops: Double,
+                                     filmType: FilmType = .colorNegative) -> CIImage {
         guard stops.isFinite, abs(stops) > 1e-3 else { return image }
         // +1 stop = ×2 선형 = gamma 0.5 근사가 아님; 선형 곱이 정확.
         let factor = pow(2.0, stops)
         guard factor.isFinite, factor > 0 else { return image }
+        if let shouldered = ExposureShoulder.apply(to: image, gain: factor, stops: stops, filmType: filmType) {
+            return shouldered
+        }
         return image.applyingFilter("CIColorMatrix", parameters: [
             "inputRVector": CIVector(x: CGFloat(factor), y: 0, z: 0, w: 0),
             "inputGVector": CIVector(x: 0, y: CGFloat(factor), z: 0, w: 0),
@@ -22,7 +27,8 @@ public enum ToneMapper {
     }
 
     /// 톤 커브: density / highlight roll-off / shadow softness.
-    public static func applyToneCurves(to image: CIImage, params: DevelopParameters) -> CIImage {
+    public static func applyToneCurves(to image: CIImage, params: DevelopParameters,
+                                       region: AnalysisRegion? = nil) -> CIImage {
         var img = image
         let extent = image.extent
 
@@ -30,7 +36,7 @@ public enum ToneMapper {
             img = applyBasicTone(to: img, params: params)
         }
 
-        img = applyParametricCurve(to: img, params: params)
+        img = applyParametricCurve(to: img, params: params, region: region)
         return img.cropped(to: extent)
     }
 
@@ -58,7 +64,8 @@ public enum ToneMapper {
         ])?.cropped(to: image.extent) ?? image
     }
 
-    private static func applyParametricCurve(to image: CIImage, params: DevelopParameters) -> CIImage {
+    private static func applyParametricCurve(to image: CIImage, params: DevelopParameters,
+                                             region: AnalysisRegion?) -> CIImage {
         let values = [
             params.curveHighlights, params.curveLights,
             params.curveDarks, params.curveShadows,
@@ -68,7 +75,7 @@ public enum ToneMapper {
         }
 
         guard let kernel = ChromabaseMetalKernels.colorKernel(named: "parametricToneCurve") else { return image }
-        let bands = parametricCurveBands(for: image)
+        let bands = parametricCurveBands(for: AnalysisRegion.measurementImage(image, region: region))
         return kernel.apply(extent: image.extent, arguments: [
             image,
             Float(params.curveHighlights),

@@ -51,12 +51,14 @@ public enum ColorProcessProbe {
     }
 
     /// 자동 베이스가 무엇을 골랐는지.
-    public static func autoBase(for image: CIImage, filmType: FilmType) -> AutoBaseReport? {
+    /// - Parameter region: 앱이 크롭에서 만든 측정 영역 — 있으면 앱과 같이 크롭 바깥 띠부터 찾는다.
+    public static func autoBase(for image: CIImage, filmType: FilmType,
+                                region: AnalysisRegion? = nil) -> AutoBaseReport? {
         let extent = image.extent.integral
         let neutralBase = filmType == .bwNegative
         let started = DispatchTime.now().uptimeNanoseconds
         guard let base = ChromabaseEngine.estimateBaseWithChromogenicFallback(
-            from: image, neutralBase: neutralBase
+            from: image, neutralBase: neutralBase, region: region
         ) else { return nil }
         let elapsed = DispatchTime.now().uptimeNanoseconds - started
         let brighter = FilmBaseSampleGrid(image: image).map {

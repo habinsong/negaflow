@@ -206,9 +206,9 @@ final class ScannerTargetChromaFlatSceneGateTests: XCTestCase {
         let flatSpread = spFlat - norFlat
         XCTAssertLessThan(flatSpread, fullSpread * 0.45,
                           "평탄 장면의 FUJI↔NORITSU 채도 발산은 bounded 여야 한다")
-        XCTAssertGreaterThan(spFlat, baseFlat * 1.05, "평탄 FUJI 도 잔존 채도 개성이 남아야 한다")
-        // 실측 +22%(documented×measured 합성 잔존). 게이트 전 발산(밴드 ×1.6 스택)보다
-        // 뚜렷이 작아야 하며, 30% 를 넘으면 vibrance 스택 과채도 재발 위험.
+        XCTAssertGreaterThan(spFlat, baseFlat * 1.03, "평탄 SP 도 잔존 채도 개성이 남아야 한다")
+        // 2026-10-15 SP 개편 후 실측 +5%(설계 캐릭터만, 공통 실측 차분 없음). 30% 를 넘으면
+        // vibrance 스택 과채도 재발 위험.
         XCTAssertLessThan(spFlat, baseFlat * 1.30, "평탄 FUJI 과채도 재발 금지(bounded)")
         XCTAssertLessThan(norFlat, spFlat, "평탄에서도 FUJI 리치 > NORITSU 뮤트 방향 유지")
         XCTAssertGreaterThan(norFlat, baseFlat * 0.85, "평탄 NORITSU 과뮤트 재발 금지(bounded)")

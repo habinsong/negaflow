@@ -1,22 +1,25 @@
 import Chromabase
 import Foundation
 
-/// "모든 보정 초기화" 직전의 현상 설정. 되돌리기용 최소 스냅샷(값 타입 params + 룩 프리셋)이며,
-/// 기하(imageTransform)·베이스 설정은 초기화 대상이 아니라 담지 않는다.
+/// "모든 보정 초기화" 직전의 현상 설정. 되돌리기용 최소 스냅샷(값 타입 params + 룩 프리셋 +
+/// 크롭·각도가 든 기하)이다. 초기화가 크롭·각도도 지우므로 함께 되돌린다.
 struct DevelopAdjustmentSnapshot {
     let params: DevelopParameters
     let preset: LookPreset?
+    let imageTransform: ImageTransform
 
     @MainActor
     init(frame: ScanFrame) {
         params = frame.params
         preset = frame.preset
+        imageTransform = frame.imageTransform
     }
 
     @MainActor
     func apply(to frame: ScanFrame) {
         frame.preset = preset
         frame.params = params
+        frame.imageTransform = imageTransform
     }
 }
 

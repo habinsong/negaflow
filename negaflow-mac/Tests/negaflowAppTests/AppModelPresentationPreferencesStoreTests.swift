@@ -114,20 +114,28 @@ final class AppModelPresentationPreferencesStoreTests: XCTestCase {
             exportSettingsStore: ExportSettingsStore(defaults: defaults),
             presentationPreferencesStore: store
         )
-        let selected = makeFrame(index: 1)
-        let other = makeFrame(index: 2)
+        // 원본 파일이 있어야 한다 — 없는(오프라인) 원본은 현상 전에 막힌다(`developSourceIsReachable`).
+        let selected = try makeFrame(index: 1)
+        let other = try makeFrame(index: 2)
+        defer {
+            try? FileManager.default.removeItem(at: selected.rawScanURL)
+            try? FileManager.default.removeItem(at: other.rawScanURL)
+        }
         model.frames = [selected, other]
         model.selectedFrameID = selected.id
         selected.hasDevelopedOnce = true
         other.hasDevelopedOnce = true
+        // 원본이 있으면 선택 자체가 현상을 한 번 요청한다. 그것이 끝난 뒤의 증가분만 센다.
+        await model.selectedFrameDevelopTask?.value
+        let beforeToggle = selected.developRevision
 
         model.clippingOverlayEnabled = true
 
         let deadline = Date().addingTimeInterval(1)
-        while selected.developRevision == 0, Date() < deadline {
+        while selected.developRevision == beforeToggle, Date() < deadline {
             try await Task.sleep(nanoseconds: 10_000_000)
         }
-        XCTAssertEqual(selected.developRevision, 1)
+        XCTAssertEqual(selected.developRevision, beforeToggle + 1)
         XCTAssertEqual(other.developRevision, 0)
     }
 
@@ -150,12 +158,10 @@ final class AppModelPresentationPreferencesStoreTests: XCTestCase {
         }
     }
 
-    private func makeFrame(index: Int) -> ScanFrame {
-        ScanFrame(
-            scanIndex: index,
-            rawScanURL: FileManager.default.temporaryDirectory
-                .appendingPathComponent("negaflow-clipping-refresh-\(UUID().uuidString).tiff"),
-            filmType: .colorNegative
-        )
+    private func makeFrame(index: Int) throws -> ScanFrame {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-clipping-refresh-\(UUID().uuidString).tiff")
+        try Data().write(to: url)
+        return ScanFrame(scanIndex: index, rawScanURL: url, filmType: .colorNegative)
     }
 }

@@ -19,6 +19,25 @@ struct DefectRecipeRestoration: @unchecked Sendable {
         return readCurrent(frameID: frameID, in: directory)
     }
 
+    private final class Collected: @unchecked Sendable {
+        let lock = NSLock()
+        var values: [UUID: DefectRecipeRestoration] = [:]
+    }
+
+    /// 앱 시작 때 결함 기록을 가진 사진 전부를 읽는다. 사진마다 파일이 따로라 동시에 읽어도
+    /// 결과가 같다 — 순차로 읽으면 기록(IR 결함은 장당 수십 MB)이 쌓일수록 첫 사진이 늦게 뜬다.
+    static func readAll(frameIDs: [UUID], in directory: URL, backupDirectory: URL?) -> [UUID: Self] {
+        let collected = Collected()
+        DispatchQueue.concurrentPerform(iterations: frameIDs.count) { index in
+            let frameID = frameIDs[index]
+            let restored = read(frameID: frameID, in: directory, backupDirectory: backupDirectory)
+            collected.lock.lock()
+            collected.values[frameID] = restored
+            collected.lock.unlock()
+        }
+        return collected.values
+    }
+
     private static func readCurrent(frameID: UUID, in directory: URL) -> Self {
         let snapshot: DefectRecipeSnapshot?
         switch DefectSidecarFile.read(for: frameID, in: directory) {

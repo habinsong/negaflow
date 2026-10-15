@@ -9,27 +9,13 @@ public enum ColorModel {
     public static func apply(to image: CIImage, params: DevelopParameters) -> CIImage {
         var img = image
 
-        // Warmth: 온도. R/B 균형 이동. warmth > 0 → 따뜻하게(R↑ B↓).
-        if abs(params.warmth) > 1e-3 {
-            let r = 1.0 + params.warmth * 0.18
-            let b = 1.0 - params.warmth * 0.18
-            let g = 1.0 + params.warmth * 0.03
+        // Warmth(온도, + = 따뜻하게 R↑ B↓) · Tint(녹/마젠타, + = 녹색). 휘도 중립 게인 하나로 적용한다
+        // (WhiteBalanceGains — ±1 까지 예전 채널비, 그 너머는 로그 연장).
+        if let wb = WhiteBalanceGains.gains(warmth: params.warmth, tint: params.tint) {
             img = img.applyingFilter("CIColorMatrix", parameters: [
-                "inputRVector": CIVector(x: CGFloat(r), y: 0, z: 0, w: 0),
-                "inputGVector": CIVector(x: 0, y: CGFloat(g), z: 0, w: 0),
-                "inputBVector": CIVector(x: 0, y: 0, z: CGFloat(b), w: 0),
-                "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
-            ])
-        }
-
-        // Tint: 녹/마젠타 축. G vs (R+B) 균형.
-        if abs(params.tint) > 1e-3 {
-            let g = 1.0 + params.tint * 0.24
-            let rb = 1.0 - params.tint * 0.12
-            img = img.applyingFilter("CIColorMatrix", parameters: [
-                "inputGVector": CIVector(x: 0, y: CGFloat(g), z: 0, w: 0),
-                "inputRVector": CIVector(x: CGFloat(rb), y: 0, z: 0, w: 0),
-                "inputBVector": CIVector(x: 0, y: 0, z: CGFloat(rb), w: 0),
+                "inputRVector": CIVector(x: CGFloat(wb.x), y: 0, z: 0, w: 0),
+                "inputGVector": CIVector(x: 0, y: CGFloat(wb.y), z: 0, w: 0),
+                "inputBVector": CIVector(x: 0, y: 0, z: CGFloat(wb.z), w: 0),
                 "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
             ])
         }
@@ -87,21 +73,18 @@ public enum ColorModel {
 
 // MARK: - TextureStage (plan §8.10 texture)
 //
-// Grain / Sharpness / Halation. MVP에서는 가볍게.
+// Clarity / Sharpness / Grain / Halation / Vignette.
 public enum TextureStage {
     public static func apply(to image: CIImage, params: DevelopParameters) -> CIImage {
         var img = image
 
-        // Sharpness: 휘도 엣지 강조. 기존(radius 1.5~4.0, intensity 0.3~0.9)은 너무 공격적이라
-        // 스캐너 노이즈를 증폭해 "TV 화면 노이즈"처럼 보였다. radius/intensity를 낮춰 과증폭을 막는다.
-        if params.sharpness > 1e-3 {
-            let radius = 1.0 + params.sharpness * 1.2
-            let intensity = 0.18 + params.sharpness * 0.42
-            img = img.applyingFilter("CIUnsharpMask", parameters: [
-                "inputRadius": NSNumber(value: radius),
-                "inputIntensity": NSNumber(value: intensity),
-            ]).cropped(to: image.extent)
+        // 부분 대비 → 선명도 → 그레인 순서다. 그레인은 합성 질감이라 앞의 두 단계가 키우지 않게
+        // 마지막에 얹는다(라이트룸도 명료도는 기본 패널, 선명도는 디테일 패널 끝).
+        if params.developTarget == .sp3000 {
+            img = DetailEnhancement.localContrast(img, clarity: ScannerTargetGrade.spLocalContrast)
         }
+        img = DetailEnhancement.localContrast(img, clarity: params.clarity)
+        img = DetailEnhancement.sharpen(img, sharpness: params.sharpness)
 
         // Grain: zero-mean 휘도가중 노이즈 커널. CIRandomGenerator는 inputExtent를 지원하지
         // 않으므로 출력을 crop해 src와 좌표를 맞춘다.
@@ -111,29 +94,6 @@ public enum TextureStage {
             let amount = Float(params.grain * 0.055)
             img = kernel.apply(extent: image.extent, arguments: [img, noise, amount])?
                 .cropped(to: image.extent) ?? img
-        }
-
-        // Clarity: 국소(미드톤) 대비.
-        //  + : 큰 반경 언샤프로 국소 대비↑. 기존(intensity 최대 0.53)은 노이즈/샤픈처럼 과했다.
-        //  − : 전역 대비 축소(기존)는 흑·백점을 가운데로 당겨 화면 전체가 회색으로 떴다. 대신
-        //      블러본으로 수렴시켜 국소 대비만 부드럽게 낮춘다(흑/백점 보존).
-        if abs(params.clarity) > 1e-3 {
-            if params.clarity > 0 {
-                img = img.applyingFilter("CIUnsharpMask", parameters: [
-                    "inputRadius": NSNumber(value: 6.0 + params.clarity * 5.0),
-                    "inputIntensity": NSNumber(value: 0.10 + params.clarity * 0.18),
-                ]).cropped(to: image.extent)
-            } else {
-                let amount = min(0.9, -params.clarity * 0.8)
-                let blurred = img.applyingFilter("CIGaussianBlur", parameters: [
-                    "inputRadius": NSNumber(value: 4.0 - params.clarity * 6.0),
-                ]).cropped(to: image.extent)
-                img = CIFilter(name: "CIDissolveTransition", parameters: [
-                    kCIInputImageKey: img,
-                    kCIInputTargetImageKey: blurred,
-                    kCIInputTimeKey: amount,
-                ])?.outputImage?.cropped(to: image.extent) ?? img
-            }
         }
 
         // Halation: 필름 안티할레이션 층 특성 — 명부에서 새어나오는 **붉은/주황 글로우**.

@@ -42,10 +42,18 @@ final class DevelopInspectorResetterTests: XCTestCase {
         XCTAssertEqual(frame.params.vibrance, DevelopParameters().vibrance)
     }
 
-    func testResetAllAdjustmentsPreservesBaseAndGeometry() {
+    /// 모두 초기화는 크롭·종횡비·수평 각도도 지운다(2026-10-15 사용자 지시). 베이스와 필름 방향
+    /// (90° 회전·뒤집기)은 보정이 아니라 그대로 둔다.
+    func testResetAllAdjustmentsClearsCropButPreservesBaseAndOrientation() {
         let frame = Self.makeFrame()
         let crop = SIMD4<Double>(0.1, 0.2, 0.7, 0.6)
-        frame.updateTransform { $0.cropRect = crop }
+        frame.updateTransform {
+            $0.cropRect = crop
+            $0.cropAspect = 1.5
+            $0.straightenAngle = 2.5
+            $0.rotation = .deg270
+            $0.flipHorizontal = true
+        }
         frame.updateParams {
             $0.exposure = 1.0
             $0.warmth = 0.8
@@ -63,7 +71,11 @@ final class DevelopInspectorResetterTests: XCTestCase {
         XCTAssertEqual(frame.params.baseEstimationMode, .manual)
         XCTAssertEqual(frame.params.manualBaseRGB, SIMD3(0.3, 0.4, 0.5))
         XCTAssertEqual(frame.params.filmStockDminID, "kodak-gold-200")
-        XCTAssertEqual(frame.imageTransform.cropRect, crop)
+        XCTAssertNil(frame.imageTransform.cropRect)
+        XCTAssertNil(frame.imageTransform.cropAspect)
+        XCTAssertEqual(frame.imageTransform.straightenAngle, 0)
+        XCTAssertEqual(frame.imageTransform.rotation, .deg270)
+        XCTAssertTrue(frame.imageTransform.flipHorizontal)
     }
 
     private static func makeFrame() -> ScanFrame {

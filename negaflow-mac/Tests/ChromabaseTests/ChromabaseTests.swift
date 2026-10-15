@@ -264,7 +264,10 @@ final class ChromabaseTests: XCTestCase {
                              "Warm Lab 는 중립보다 따뜻(R/B↑)해야 한다.")
     }
 
-    /// end-to-end: Deep Slide 로 현상한 결과는 Neutral 보다 평균 채도(max-min)가 높아야 한다.
+    /// end-to-end: Deep Slide 로 현상한 결과는 Neutral 보다 평균 채도(HSV S = (max−min)/max)가 높아야 한다.
+    /// 절대 차(max−min)는 밝기에 끌려간다 — Deep Slide 는 농도·대비로 화면을 어둡게 하므로, 어둡게 하는
+    /// 톤 조정이 채널비를 보존하면(2026-10-14) 같은 채도에서도 절대 차가 줄어든다. 예전 절대 차 비교는
+    /// 같은 값을 빼 암부 채도를 부풀리던 결함 덕에 통과했다(상대 채도는 수정 전후 0.393 → 0.392 로 동일).
     func testDeepSlideRendersMoreSaturatedThanNeutralEndToEnd() {
         let fixture = makeSyntheticColorNegativeFixture()
         let engine = ChromabaseEngine()
@@ -277,7 +280,9 @@ final class ChromabaseTests: XCTestCase {
             var sum = 0.0, n = 0.0
             for i in stride(from: 0, to: px.count, by: 4) {
                 let r = Int(px[i]), g = Int(px[i + 1]), b = Int(px[i + 2])
-                sum += Double(max(r, max(g, b)) - min(r, min(g, b))); n += 1
+                let peak = max(r, max(g, b))
+                if peak > 0 { sum += Double(peak - min(r, min(g, b))) / Double(peak) }
+                n += 1
             }
             return sum / max(n, 1)
         }
@@ -702,6 +707,33 @@ final class ChromabaseTests: XCTestCase {
         let adjusted = renderRGBA8(output, width: 8, height: 8)
         XCTAssertEqual(output.extent.width, 8, accuracy: 0.001)
         XCTAssertNotEqual(adjusted[0], baseline[0])
+    }
+
+    /// 프로파일 그레이드는 감마(표시) 도메인 연산이다 — linear 작업공간에 그대로 걸면 대비 피벗 0.5
+    /// (= 감마 0.73)가 암부를 통째로 눌렀다(2026-10-15 실측: 하위 10% 지점 29 → 6).
+    func testScannerProfileGradeDoesNotCrushShadows() {
+        let profile = ScannerProfileRegistry.load(named: "noritsu__color-nega__kodak-portra-160")!
+        let width = 64
+        var pixels = [Float](repeating: 1, count: width * 4)
+        for x in 0..<width {
+            // 감마 0.10 ~ 0.60 램프(linear 0.010 ~ 0.319).
+            let gamma = 0.10 + 0.50 * Double(x) / Double(width - 1)
+            let linear = Float(gamma <= 0.04045 ? gamma / 12.92 : pow((gamma + 0.055) / 1.055, 2.4))
+            pixels[x * 4] = linear; pixels[x * 4 + 1] = linear; pixels[x * 4 + 2] = linear
+        }
+        let linearSpace = CGColorSpace(name: CGColorSpace.linearSRGB)!
+        let input = CIImage(bitmapData: Data(bytes: pixels, count: pixels.count * 4), bytesPerRow: width * 16,
+                            size: CGSize(width: width, height: 1), format: .RGBAf, colorSpace: linearSpace)
+        var out = [Float](repeating: 0, count: width * 4)
+        ChromabaseEngine.sharedLinearRenderContext.render(
+            ScannerProfileGrade.apply(to: input, profile: profile), toBitmap: &out, rowBytes: width * 16,
+            bounds: input.extent, format: .RGBAf, colorSpace: linearSpace)
+        func encode(_ v: Float) -> Double {
+            let d = Double(max(v, 0)); return d <= 0.0031308 ? d * 12.92 : 1.055 * pow(d, 1 / 2.4) - 0.055
+        }
+        let darkIn = (0..<16).map { encode(pixels[$0 * 4 + 1]) }.reduce(0, +) / 16
+        let darkOut = (0..<16).map { encode(out[$0 * 4 + 1]) }.reduce(0, +) / 16
+        XCTAssertGreaterThan(darkOut, darkIn * 0.85, "프로파일이 암부를 눌렀다 \(darkIn) → \(darkOut)")
     }
 
     func testScannerProfileKeepsPrintContrastAndColorAfterMainBaseGrade() {
@@ -1241,81 +1273,86 @@ final class ChromabaseTests: XCTestCase {
         // 극단 장면에서 채널별 dmaxNorm이 어긋나 보라/청록 hue shift가 생길 수 있다(spread ~37).
         // densest 하한으로 보라를 줄이지만 완전 제거는 불가능하다 — 수학적으로 "보라 방지(채널별 Dmax
         // 단일화)"와 "염료 분리 보존(채널별 Dmax)"을 Auto로 동시 만족시킬 수 없다.
-        // 완전 해결은 **필름 Dmin/Dmax 프리셋**(testNegativeInversionFilmPresetResolvesBlueSkyHueShift)
-        // 이 담당한다(spread 6 달성). 따라서 Auto 테스트는 "통제 불능 폭주(100+) 방지"만 검증.
+        // 필름(프리셋) 모드도 2026-10-15 부터 같은 장면 측정을 쓰므로(데이터시트 채널 비율은 스캐너
+        // 채널과 맞지 않아 모든 필름을 파랗게 반전했다) 이 한계를 공유한다
+        // (testNegativeInversionFilmPresetFollowsAutoSceneMeasurementOnBlueSky). 따라서 이 테스트는
+        // "통제 불능 폭주(100+) 방지"만 검증.
         XCTAssertLessThan(
             maxSpread, 100,
-            "Auto 모드는 보라 hue shift를 완전히 없앨 수는 없지만(필름 프리셋이 해결), " +
-            "통제 불능 폭주(100+)는 막아야 한다. R=\(r) G=\(g) B=\(b) spread=\(maxSpread). " +
-            "보라 완전 제거는 'Film' 모드(필름 Dmin/Dmax 프리셋) 사용."
+            "Auto 모드는 보라 hue shift를 완전히 없앨 수는 없지만 " +
+            "통제 불능 폭주(100+)는 막아야 한다. R=\(r) G=\(g) B=\(b) spread=\(maxSpread)."
         )
     }
 
-    /// **핵심 검증: 필름 Dmin/Dmax 프리셋이 보라 hue shift를 해결하는가?**
+    /// **필름(프리셋) 모드 = 자동 경로의 장면 측정 × 필름 상대 계수**(2026-10-15).
     ///
-    /// Auto 모드는 장면 히스토그램에서 Dmin/Dmax를 추정하므로, 파란 하늘 같은 극단 장면에서
-    /// 채널별 dmaxNorm이 어긋나 보라/청록 캐스트가 생긴다(위 testNegativeInversionPreservesNeutralGrayHue
-    /// 가 Auto로는 실패하는 게 그 증거). 필름 프리셋은 제조사 특성곡선에서 읽은 필름 물성 Dmin/Dmax를
-    /// 쓰므로 장면 독립적 → 보라와 염료 분리를 동시에 만족시킨다(Dmin/Dmax = 필름 고정값 모델).
-    /// 같은 파란 하늘 장면에서 Auto의 보라가 프리셋에서 사라지는지 검증한다.
-    func testNegativeInversionFilmPresetResolvesBlueSkyHueShift() {
+    /// 예전 필름 모드는 채널 비율을 데이터시트(Status M)로 통째로 바꿔, 파란 하늘이 최농부를
+    /// 차지하는 장면에서도 중립 회색을 지켰다. 그러나 스캐너 채널은 분광 감도가 달라 그 비율이
+    /// 체계적으로 어긋났고 모든 필름이 파랗고 과채도로 반전됐다(실사진 실측). 지금은 자동 경로의
+    /// 장면 측정을 그대로 쓰고 필름 사이의 상대 차이(`relativeRangeFactor`)만 얹는다. 그래서:
+    ///  - 하늘이 없는 장면에서는 중립 회색이 필름 특성 안쪽으로 중립이다.
+    ///  - 하늘보다 밝은 중립 명부가 없는 극단 장면의 캐스트는 자동과 같고(자동의 알려진 한계,
+    ///    testNegativeInversionPreservesNeutralGrayHue), 필름 모드는 그 위에 상대 차이만 얹는다.
+    func testNegativeInversionFilmPresetFollowsAutoSceneMeasurementOnBlueSky() {
         let width = 80
         let height = 48
-        // Fuji C200 프리셋(Dmin/Dmax 제조사 데이터시트값). 장면 독립적 필름 물성.
+        // Fuji C200 프리셋(Dmin/Dmax 제조사 데이터시트값).
         guard let fuji = FilmStockDminRegistry.find("fuji-c200") else {
             return XCTFail("Fuji C200 프리셋이 레지스트리에 있어야 한다")
         }
         // 픽스쳐의 베이스는 **프리셋 Dmin 투과율 그 자체**로 생성해야 한다(실제 필름 스캔과 일치).
-        // 베이스와 프리셋이 불일치하면 반전 자체가 캐스트를 만든다.
         let baseRGB = fuji.dminTransmission
-        // 중립 회색의 채널별 밀도는 같은 값이 아니라 채널 감마(∝ 프리셋 dmaxNorm 비율)에
-        // 비례한다 — 그래서 dmaxNorm 채널별 정규화가 WB 를 만드는 것이다. 같은 밀도를 세
-        // 채널에 넣는 픽스처는 프리셋 물성과 모순돼 반전이 캐스트를 "만든 것처럼" 보인다.
+        // 중립 회색의 채널별 밀도는 채널 감마(∝ 프리셋 dmaxNorm 비율)에 비례한다.
         let norm = fuji.dmaxNorm
         let grayDensity = (0.72 * norm.x / norm.y, 0.72, 0.72 * norm.z / norm.y)
-        // float 픽스처 — 8bit 는 딥밀도(하늘 B 1.30D → byte 3~4)의 채널 독립 반올림이
-        // photometric 지수(K)로 증폭돼, 프리셋의 하늘 오염 회피(이 테스트의 의도)가 아니라
-        // 입력 양자화를 재게 된다.
-        var floats = [Float](repeating: 0, count: width * height * 4)
-        for y in 0..<height {
-            for x in 0..<width {
-                let i = (y * width + x) * 4
-                let d: (Double, Double, Double)
-                if x < width * 3 / 4 {
-                    d = (0.12, 0.35, 1.30)   // 넓은 밝은 파란 하늘
-                } else {
-                    d = grayDensity          // 중립 중간톤(채널 감마 비례 밀도)
-                }
-                floats[i]     = Float(baseRGB.x * pow(10, -d.0))
-                floats[i + 1] = Float(baseRGB.y * pow(10, -d.1))
-                floats[i + 2] = Float(baseRGB.z * pow(10, -d.2))
-                floats[i + 3] = 1
-            }
-        }
         let cs = CGColorSpace(name: CGColorSpace.linearSRGB)!
-        let input = CIImage(
-            bitmapData: Data(bytes: floats, count: floats.count * MemoryLayout<Float>.size),
-            bytesPerRow: width * 4 * MemoryLayout<Float>.size,
-            size: CGSize(width: width, height: height),
-            format: .RGBAf,
-            colorSpace: cs
-        )
+        // float 픽스처 — 8bit 는 딥밀도(하늘 B 1.30D → byte 3~4)의 채널 독립 반올림이
+        // photometric 지수(K)로 증폭돼 입력 양자화를 재게 된다.
+        func scene(skyFraction: Double) -> CIImage {
+            var floats = [Float](repeating: 0, count: width * height * 4)
+            for y in 0..<height {
+                for x in 0..<width {
+                    let i = (y * width + x) * 4
+                    let d: (Double, Double, Double) = Double(x) < Double(width) * skyFraction
+                        ? (0.12, 0.35, 1.30)   // 넓은 밝은 파란 하늘
+                        : grayDensity          // 중립 중간톤(채널 감마 비례 밀도)
+                    floats[i]     = Float(baseRGB.x * pow(10, -d.0))
+                    floats[i + 1] = Float(baseRGB.y * pow(10, -d.1))
+                    floats[i + 2] = Float(baseRGB.z * pow(10, -d.2))
+                    floats[i + 3] = 1
+                }
+            }
+            return CIImage(
+                bitmapData: Data(bytes: floats, count: floats.count * MemoryLayout<Float>.size),
+                bytesPerRow: width * 4 * MemoryLayout<Float>.size,
+                size: CGSize(width: width, height: height),
+                format: .RGBAf,
+                colorSpace: cs
+            )
+        }
         let presetBase = FilmBase(rgb: fuji.dminTransmission, source: .manual)
-        let rendered = renderLinearRGBA8(
-            NegativeInversion.apply(to: input, base: presetBase, preset: fuji),
-            width: width, height: height, colorSpace: cs
-        )
-        let i = (height / 2 * width + width * 7 / 8) * 4
-        let r = Int(rendered[i])
-        let g = Int(rendered[i + 1])
-        let b = Int(rendered[i + 2])
-        let maxSpread = max(abs(r - g), max(abs(g - b), abs(r - b)))
-        // 프리셋은 장면 독립적 필름 물성 dmaxNorm을 쓰므로 보라 hue shift가 없어야 한다.
-        // (Auto 모드의 같은 장면은 위 hue 테스트처럼 편차 37+ 로 보라가 생긴다.)
-        print("[preset-diag] R=\(r) G=\(g) B=\(b) spread=\(maxSpread)")
-        XCTAssertLessThan(maxSpread, 12,
-            "필름 프리셋을 적용한 반전은 파란 하늘 장면에서도 보라/청록 hue shift가 없어야 한다. " +
-            "R=\(r) G=\(g) B=\(b) spread=\(maxSpread). Auto 추정의 한계를 프리셋이 해결함을 검증.")
+        func grayPatch(_ image: CIImage) -> SIMD3<Int> {
+            let rendered = renderLinearRGBA8(image, width: width, height: height, colorSpace: cs)
+            let i = (height / 2 * width + width * 7 / 8) * 4
+            return SIMD3(Int(rendered[i]), Int(rendered[i + 1]), Int(rendered[i + 2]))
+        }
+        func spread(_ p: SIMD3<Int>) -> Int { max(abs(p.x - p.y), max(abs(p.y - p.z), abs(p.x - p.z))) }
+
+        // 하늘이 없으면 필름 모드도 중립 회색을 필름 특성 안쪽으로 지킨다.
+        let neutral = grayPatch(NegativeInversion.apply(to: scene(skyFraction: 0), base: presetBase, preset: fuji))
+        print("[preset-diag] neutral R=\(neutral.x) G=\(neutral.y) B=\(neutral.z) spread=\(spread(neutral))")
+        XCTAssertLessThan(spread(neutral), 12,
+            "하늘 없는 장면의 필름 모드 중립 회색은 필름 특성 안쪽으로 중립이어야 한다. " +
+            "R=\(neutral.x) G=\(neutral.y) B=\(neutral.z)")
+
+        // 파란 하늘이 3/4 인 극단 장면 — 필름 모드는 자동과 같은 장면 측정 위에 상대 차이만 얹는다.
+        let sky = scene(skyFraction: 0.75)
+        let preset = grayPatch(NegativeInversion.apply(to: sky, base: presetBase, preset: fuji))
+        let auto = grayPatch(NegativeInversion.applySceneRanged(to: sky, base: presetBase))
+        let difference = max(abs(preset.x - auto.x), max(abs(preset.y - auto.y), abs(preset.z - auto.z)))
+        print("[preset-diag] sky preset=\(preset) auto=\(auto) difference=\(difference)")
+        XCTAssertLessThanOrEqual(difference, 6,
+            "필름 모드는 자동의 장면 측정에 필름 상대 차이만 얹어야 한다. preset=\(preset) auto=\(auto)")
     }
 
     // MARK: - 필름 Dmin/Dmax 프리셋 레지스트리
@@ -2487,16 +2524,25 @@ final class ChromabaseTests: XCTestCase {
                              "저신호 입력에서도 네거티브 밀도 순서가 뒤집히면 안 된다.")
     }
 
-    func testNegativeDevelopKeepsPixelToneWhenCropChanges() {
+    /// 크롭은 측정 영역(장면 측정을 크롭 안에서)과 공간 범위만 바꾼다(2026-10-14 사용자 확정 설계 —
+    /// 예전 계약 "크롭은 톤을 바꾸지 않는다"를 대체). 같은 영역으로 전체를 현상한 뒤 자른 것과 같아야 한다 —
+    /// 크롭이 그 밖의 현상 결과를 몰래 바꾸지 않는다.
+    func testNegativeDevelopChangesOnlyMeasurementRegionWhenCropChanges() {
         let fixture = makeSyntheticColorNegativeFixture()
         let engine = ChromabaseEngine()
         var identity = DevelopParameters()
         identity.filmType = .colorNegative
-        let developed = engine.develop(image: fixture.image, base: fixture.base, params: identity)
-
         var cropped = identity
         cropped.imageTransform.cropRect = SIMD4(0.25, 0.25, 0.5, 0.5)
-        let cropOutput = engine.develop(image: fixture.image, base: fixture.base, params: cropped)
+
+        var measurements = DevelopSceneMeasurements()
+        measurements.analysisRegion = AnalysisRegion(transform: cropped.imageTransform,
+                                                     imageSize: fixture.image.extent.size)
+        XCTAssertNotNil(measurements.analysisRegion)
+        let developed = engine.developScanner(image: fixture.image, base: fixture.base, params: identity,
+                                              measurements: &measurements)
+
+        let cropOutput = engine.developScanner(image: fixture.image, base: fixture.base, params: cropped)
         let expected = ImageTransformStage.apply(to: developed, transform: cropped.imageTransform)
 
         let width = Int(expected.extent.width)
@@ -2506,7 +2552,7 @@ final class ChromabaseTests: XCTestCase {
         XCTAssertLessThanOrEqual(
             meanChannelDifference(actualPixels, expectedPixels),
             1.0,
-            "크롭은 공간 범위만 바꿔야 하며 자동 레벨이나 색 현상 결과를 다시 계산하면 안 된다."
+            "크롭은 측정 영역과 공간 범위만 바꿔야 한다."
         )
     }
 
@@ -2621,7 +2667,14 @@ final class ChromabaseTests: XCTestCase {
             colorSpace: linear
         )
 
-        XCTAssertLessThanOrEqual(rendered[(width - 1) * 4], 0.72)
+        // 크롭이 없으면 프레임 가장자리 6%(홀더·백라이트 자리)는 측정에서 빠진다(2026-10-14,
+        // `AutoLevels.frameBorderInset`). 그래서 헤드룸은 측정 안쪽의 가장 밝은 열에서 본다 — 그 열이
+        // 출력 화이트(≈0.70) 근처로 가야 하고 1.0 으로 늘어나면 안 된다. 측정 밖 가장자리 열은 백포인트
+        // 너머 확장값으로 남되(위쪽 클램프 1e4) 여전히 1 에 닿지 않는다.
+        let measuredEdge = width - 1 - Int(Double(width) * AutoLevels.frameBorderInset)
+        XCTAssertLessThanOrEqual(rendered[measuredEdge * 4], 0.72)
+        XCTAssertGreaterThan(rendered[(width - 1) * 4], rendered[measuredEdge * 4])
+        XCTAssertLessThan(rendered[(width - 1) * 4], 1.0)
     }
 
     func testSoftwareDefectFillsAchromaticDustWithMedian() {

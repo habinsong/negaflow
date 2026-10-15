@@ -94,7 +94,7 @@ extension ContentView {
         case .cropTool:
             wasActive = cropFrameID == frame.id
         case .basePickerTool:
-            wasActive = basePickerFrameID == frame.id
+            wasActive = basePickerFrameID == frame.id && frame.eyedropperTarget == .filmBase
         case .autoDefectTool:
             wasActive = regionDefectFrameID == frame.id && frame.defectAutoMode
         case .guidedDefectTool:
@@ -115,6 +115,7 @@ extension ContentView {
             case .cropTool:
                 cropFrameID = frame.id
             case .basePickerTool:
+                frame.eyedropperTarget = .filmBase
                 basePickerFrameID = frame.id
             case .autoDefectTool:
                 frame.defectAutoMode = true

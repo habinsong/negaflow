@@ -20,6 +20,9 @@ struct DevelopAdjustmentSections: View {
 
     let toneBinding: (WritableKeyPath<DevelopParameters, Double>) -> Binding<Double>
     let batchWBBinding: (WritableKeyPath<DevelopParameters, Double>) -> Binding<Double>
+    let neutralPickerActive: Bool
+    let toggleNeutralPicker: () -> Void
+    let resetWhiteBalance: () -> Void
     let calibrationBinding: (WritableKeyPath<CalibrationAdjust, Double>) -> Binding<Double>
     let toggle: (InspectorPanel) -> Void
     let reset: (InspectorPanel) -> Void
@@ -84,8 +87,16 @@ struct DevelopAdjustmentSections: View {
             toggle: { toggle(.color) },
             reset: { reset(.color) }
         ) {
-            InspectorSlider(model.text(AppLocalizedPhrase.warmth), value: batchWBBinding(\.warmth), range: -1...1, focusID: .warmth, focusedSlider: focusedSlider)
-            InspectorSlider(model.text(AppLocalizedPhrase.tint), value: batchWBBinding(\.tint), range: -1...1, focusID: .tint, focusedSlider: focusedSlider)
+            InspectorActionPill(
+                title: model.text(AppLocalizedPhrase.pickNeutral),
+                help: model.text(AppLocalizedPhrase.pickNeutralHelp),
+                resetTitle: model.text(AppLocalizedPhrase.reset),
+                isActive: neutralPickerActive,
+                action: toggleNeutralPicker,
+                reset: resetWhiteBalance
+            )
+            InspectorSlider(model.text(AppLocalizedPhrase.warmth), value: batchWBBinding(\.warmth), range: -WhiteBalanceGains.maximum...WhiteBalanceGains.maximum, focusID: .warmth, focusedSlider: focusedSlider, positionScale: .whiteBalance)
+            InspectorSlider(model.text(AppLocalizedPhrase.tint), value: batchWBBinding(\.tint), range: -WhiteBalanceGains.maximum...WhiteBalanceGains.maximum, focusID: .tint, focusedSlider: focusedSlider, positionScale: .whiteBalance)
             InspectorSlider(model.text(AppLocalizedPhrase.vibrance), value: toneBinding(\.vibrance), range: -1...1, focusID: .vibrance, focusedSlider: focusedSlider)
             InspectorSlider(model.text(AppLocalizedPhrase.saturation), value: toneBinding(\.saturation), range: -1...1, focusID: .saturation, focusedSlider: focusedSlider)
             InspectorSlider(model.text(AppLocalizedPhrase.colorDepth), value: toneBinding(\.colorDepth), range: -1...1, focusID: .colorDepth, focusedSlider: focusedSlider)

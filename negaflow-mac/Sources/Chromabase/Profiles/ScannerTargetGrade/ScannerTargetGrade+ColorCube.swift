@@ -32,6 +32,7 @@ extension ScannerTargetGrade {
         var neutralBins: [NeutralBin]
         var hueAnchors: [HueAnchor]
         var chromaBands: [ChromaBand]
+        var colorDensity: Double
     }
 
     private static func preparedSignature(_ sig: Signature) -> PreparedSignature {
@@ -61,7 +62,8 @@ extension ScannerTargetGrade {
             tone: ys,
             neutralBins: sig.neutralBins.sorted { $0.luma < $1.luma },
             hueAnchors: sig.hueAnchors.sorted { $0.hueDegrees < $1.hueDegrees },
-            chromaBands: sig.chromaBands.sorted { $0.luma < $1.luma }
+            chromaBands: sig.chromaBands.sorted { $0.luma < $1.luma },
+            colorDensity: sig.colorDensity
         )
     }
 
@@ -86,7 +88,8 @@ extension ScannerTargetGrade {
                     luma: $0.luma,
                     gain: $0.gain.isFinite && $0.gain > 1e-9 ? 1.0 / $0.gain : 1.0
                 )
-            }
+            },
+            colorDensity: -sig.colorDensity
         )
     }
 
@@ -99,7 +102,8 @@ extension ScannerTargetGrade {
         let mappedLuma = relativeToneValue(at: inputLuma, xs: sig.toneXs, ys: sig.tone)
         let toneChanged = abs(mappedLuma - inputLuma) > 1e-12
         guard toneChanged || !sig.neutralBins.isEmpty
-                || !sig.hueAnchors.isEmpty || !sig.chromaBands.isEmpty else { return input }
+                || !sig.hueAnchors.isEmpty || !sig.chromaBands.isEmpty
+                || sig.colorDensity != 0 else { return input }
 
         var labL = inputLab.l
         var labA = inputLab.a
@@ -132,6 +136,14 @@ extension ScannerTargetGrade {
                 labA = newChroma * cos(newHue)
                 labB = newChroma * sin(newHue)
             }
+        }
+        if sig.colorDensity != 0 {
+            // 색 밀도는 변조 후 채도에 비례한다(무채색은 0). 암부는 크러시를 막으려 빠르게, 명부는
+            // 종이 화이트 근처에서 0 으로 되돌린다. 채도 60 이상은 같은 값으로 묶어 원색이 뭉개지지 않는다.
+            let densityTaper = smoothstep(0.04, 0.16, inputLuma)
+                * (1.0 - smoothstep(0.86, 0.97, inputLuma))
+            let chroma = min((labA * labA + labB * labB).squareRoot(), 60.0)
+            labL -= sig.colorDensity * chroma * densityTaper
         }
         if !sig.neutralBins.isEmpty {
             let taper = smoothstep(0.03, 0.10, inputLuma)

@@ -114,6 +114,7 @@ extension AppModel {
                !frame.isPreviewScan,
                isSourceAvailable(frame) {
                 restoredLastActiveFrameID = nil
+                LaunchTrace.markOnce("first selection (remembered frame)")
                 selectedFrameID = remembered
                 return true
             }
@@ -136,6 +137,7 @@ extension AppModel {
             }?
             .element
         guard let candidate else { return false }
+        LaunchTrace.markOnce("first selection (most recent frame)")
         selectedFrameID = candidate.id
         return true
     }

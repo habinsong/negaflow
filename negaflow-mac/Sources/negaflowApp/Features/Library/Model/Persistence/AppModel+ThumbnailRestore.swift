@@ -48,6 +48,7 @@ extension AppModel {
                     if let raw, job.frame.rawPreviewImage == nil { job.frame.rawPreviewImage = raw }
                     if job.frame.thumbnailImage == nil {
                         if let displayed = developed ?? (job.hasDevelopedOnce ? legacy : nil) {
+                            LaunchTrace.markOnce("first thumbnail (disk cache)")
                             job.frame.thumbnailImage = displayed
                             job.frame.thumbnailRecipeID = current == nil ? nil : job.recipeID
                         } else if !job.requiresInversion, let displayed = legacy ?? raw {
@@ -59,6 +60,7 @@ extension AppModel {
                 }
             }
 
+            LaunchTrace.mark("thumbnail disk pass done frames=\(jobs.count) developedMiss=\(developedIsMissing.filter { $0 }.count) rawMiss=\(rawIsMissing.filter { $0 }.count)")
             var framesToDevelop: [ScanFrame] = []
             for (index, job) in jobs.enumerated() {
                 guard !Task.isCancelled else { return }

@@ -203,7 +203,9 @@ enum ExportDevelopedFrameRenderer {
                 manual: snapshot.manualBaseRGB,
                 filmStockDminID: snapshot.params.filmStockDminID,
                 lightSourceProfileID: snapshot.params.lightSourceProfileID,
-                filmType: snapshot.filmType
+                filmType: snapshot.filmType,
+                analysisRegion: AnalysisRegion(transform: snapshot.params.imageTransform,
+                                               imageSize: developInput.extent.size)
             )
             : nil
         var measurements = DevelopSceneMeasurements()

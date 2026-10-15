@@ -104,9 +104,7 @@ final class CoreImageFilterMappingGoldenTests: XCTestCase {
             "ciUnsharpMask": unsharpRecords,
             "ciGaussianBlur": gaussianRecords,
             "pipelineParameterContracts": [
-                "clarityPositive": "radius = 6 + clarity*5; intensity = 0.10 + clarity*0.18; clarity in (0, 1]",
                 "outputSharpening": "screen: radius 0.45*sqrt(clamp(dpi/144, 0.5, 2)), intensity 0.22*strength; matte: 1.00*sqrt(clamp(dpi/300, 0.5, 2)), 0.34*strength; glossy: 0.75*sqrt(clamp(dpi/300, 0.5, 2)), 0.28*strength; strength in (0, 1]",
-                "clarityNegative": "radius = 4 - clarity*6 for clarity in [-1, 0); the blurred result is mixed at min(0.9, -clarity*0.8)",
                 "fixedGaussianAnchors": "1.0 software-defect fallback and heal-brush feather; 1.3 film-scan denoise fine band; 2.4 low-saturation chroma neutralization",
             ],
         ], to: directory.appendingPathComponent("manifest.json"))
@@ -125,14 +123,9 @@ final class CoreImageFilterMappingGoldenTests: XCTestCase {
             return FilterCase(name: name, radius: parameters.radius, intensity: parameters.intensity,
                               provenance: "ExportEngine output sharpening")
         }
-        return [
-            FilterCase(name: "clarity-0.01", radius: 6.05, intensity: 0.1018,
-                       provenance: "ColorModel positive clarity lower anchor"),
-            FilterCase(name: "clarity-0.50", radius: 8.5, intensity: 0.19,
-                       provenance: "ColorModel positive clarity midpoint"),
-            FilterCase(name: "clarity-1.00", radius: 11, intensity: 0.28,
-                       provenance: "ColorModel positive clarity upper anchor"),
-        ] + outputAnchors
+        // 부분 대비는 2026-10-15 부터 감마 휘도 가이디드 필터(DetailEnhancement)라 Core Image 언샤프
+        // 기준값이 없다 — 동작 계약은 양쪽 DetailEnhancement 테스트가 같은 픽스처로 묶는다.
+        return outputAnchors
     }
 
     private static func gaussianCases() -> [FilterCase] {
@@ -144,11 +137,11 @@ final class CoreImageFilterMappingGoldenTests: XCTestCase {
             FilterCase(name: "radius2.4", radius: 2.4, intensity: nil,
                        provenance: "ScannerNoiseReduction low-saturation chroma"),
             FilterCase(name: "clarity-0.00-radius4.0", radius: 4.0, intensity: nil,
-                       provenance: "ColorModel negative clarity lower endpoint"),
+                       provenance: "Gaussian anchor (former negative clarity lower endpoint)"),
             FilterCase(name: "clarity-0.50-radius7.0", radius: 7.0, intensity: nil,
-                       provenance: "ColorModel negative clarity midpoint"),
+                       provenance: "Gaussian anchor (former negative clarity midpoint)"),
             FilterCase(name: "clarity-1.00-radius10.0", radius: 10.0, intensity: nil,
-                       provenance: "ColorModel negative clarity upper endpoint"),
+                       provenance: "Gaussian anchor (former negative clarity upper endpoint)"),
         ]
     }
 

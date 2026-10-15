@@ -390,6 +390,7 @@ extension AppModel {
                 )
             }
             guard currentProbes == probes else { return }
+            LaunchTrace.markOnce("source availability resolved", "\(probes.count) frames")
             self.librarySourceAvailabilityCache = result
             self.sourceAvailabilityRefreshTask = nil
             self.advanceSourceAvailabilityRevision()

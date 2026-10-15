@@ -10,7 +10,11 @@ import Foundation
 extension CLI {
     func autoBaseProbe() async throws {
         let (image, filmType) = try probeInput()
-        guard let report = ColorProcessProbe.autoBase(for: image, filmType: filmType) else {
+        // 앱 카탈로그의 imageTransform JSON 을 그대로 넣으면 앱과 같은 측정 영역(크롭 바깥 띠)으로 잰다.
+        let region = ProcessInfo.processInfo.environment["NEGA_PROBE_TRANSFORM"]
+            .flatMap { try? JSONDecoder().decode(ImageTransform.self, from: Data($0.utf8)) }
+            .flatMap { AnalysisRegion(transform: $0, imageSize: image.extent.size) }
+        guard let report = ColorProcessProbe.autoBase(for: image, filmType: filmType, region: region) else {
             fail("auto base estimation failed", code: "auto_base_failed")
         }
         print("""

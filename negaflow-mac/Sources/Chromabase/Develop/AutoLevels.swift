@@ -47,6 +47,7 @@ public enum AutoLevels {
                       sampleColorSpace: CGColorSpace? = nil,
                       outputWhite outputWhiteOverride: Double? = nil,
                       outputBlack: Double = 0.0,
+                      region: AnalysisRegion? = nil,
                       points cachedPoints: inout Points?) -> CIImage {
         // 샘플링을 위해 작은 영역으로 축소(CIAreaAverage 로는 히스토그램이 안 나옴).
         // 대신 작은 축소본을 렌더링해서 픽셀을 직접 읽는다.
@@ -54,10 +55,11 @@ public enum AutoLevels {
         if let cached = cachedPoints {
             measured = cached
         } else if let sampled = sampleBlackWhite(
-            image,
+            AnalysisRegion.measurementImage(image, region: region),
             blackClip: blackClip,
             whiteClip: whiteClip,
-            sampleColorSpace: sampleColorSpace
+            sampleColorSpace: sampleColorSpace,
+            insetFraction: region == nil ? frameBorderInset : 0
         ) {
             measured = Points(black: sampled.black, white: sampled.white)
             cachedPoints = measured
@@ -103,18 +105,26 @@ public enum AutoLevels {
             "inputBiasVector": CIVector(x: CGFloat(red.bias), y: CGFloat(green.bias),
                                         z: CGFloat(blue.bias), w: 0),
         ])
+        // 아래만 묶는다. 위(백포인트 너머 스펙큘러)는 작업 이미지의 확장값 계약대로 남겨 노출
+        // 숄더와 출력 경계가 접게 한다 — 1 에서 자르면 명부 계조가 평탄면이 된다.
         stretched = stretched.applyingFilter("CIColorClamp", parameters: [
             "inputMinComponents": CIVector(x: 0, y: 0, z: 0, w: 1),
-            "inputMaxComponents": CIVector(x: 1, y: 1, z: 1, w: 1),
+            "inputMaxComponents": CIVector(x: 1e4, y: 1e4, z: 1e4, w: 1),
         ])
         return stretched.cropped(to: image.extent)
     }
+
+    /// 크롭 영역이 없을 때 버리는 프레임 가장자리 비율 — 반전 측정(NegativeInversion.sampleStats)과
+    /// 같다. 예전에는 전체 프레임을 재서 홀더·백라이트가 화이트/블랙포인트가 됐다(2026-10-14 실측
+    /// 디카 스캔 R/B 0.90 캐스트).
+    static let frameBorderInset = 0.06
 
     /// 작은 축소본을 렌더링해서 채널별 black/white 포인트(p백분위) 검출.
     static func sampleBlackWhite(_ image: CIImage,
                                  blackClip: Double,
                                  whiteClip: Double,
-                                 sampleColorSpace: CGColorSpace? = nil)
+                                 sampleColorSpace: CGColorSpace? = nil,
+                                 insetFraction: Double = 0)
         -> (black: SIMD3<Double>, white: SIMD3<Double>)? {
         let extent = image.extent
         guard extent.width > 4, extent.height > 4 else { return nil }
@@ -141,14 +151,18 @@ public enum AutoLevels {
                      bounds: CGRect(x: 0, y: 0, width: targetW, height: targetH),
                      format: .RGBAf, colorSpace: cs)
 
-        let n = targetW * targetH
-        var rVals = [Double](repeating: 0, count: n)
-        var gVals = [Double](repeating: 0, count: n)
-        var bVals = [Double](repeating: 0, count: n)
-        for i in 0..<n {
-            rVals[i] = Double(bitmap[i*4])
-            gVals[i] = Double(bitmap[i*4 + 1])
-            bVals[i] = Double(bitmap[i*4 + 2])
+        let insetX = Int(Double(targetW) * insetFraction), insetY = Int(Double(targetH) * insetFraction)
+        var rVals: [Double] = [], gVals: [Double] = [], bVals: [Double] = []
+        rVals.reserveCapacity(targetW * targetH)
+        gVals.reserveCapacity(targetW * targetH)
+        bVals.reserveCapacity(targetW * targetH)
+        for y in insetY..<max(insetY + 1, targetH - insetY) {
+            for x in insetX..<max(insetX + 1, targetW - insetX) {
+                let i = (min(y, targetH - 1) * targetW + min(x, targetW - 1)) * 4
+                rVals.append(Double(bitmap[i]))
+                gVals.append(Double(bitmap[i + 1]))
+                bVals.append(Double(bitmap[i + 2]))
+            }
         }
         _ = scaled
         rVals.sort(); gVals.sort(); bVals.sort()

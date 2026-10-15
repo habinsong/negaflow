@@ -150,10 +150,10 @@ The working image matches `MAIN`. A valid RGB printer ICC is applied once, at th
 
 Two stages.
 
-1. `documentedCharacter`: `SP` uses a limited base character taken from six pairs of the same negative through SP-3000 and negaflow MAIN. `HS` builds its tone, neutral, and color character from published direction plus this project's design values.
-2. `scannerSignature`: only the relative difference from groups whose roll names and image counts match across both machines is added.
+1. `documentedCharacter`: `SP` is a designed character: a film-style curve that compresses the toe and shoulder and steepens the midtones, neutral shadows with a slight warm highlight, warm colors brought forward and cool colors deepened, and color density that darkens saturated colors slightly. `HS` builds its tone, neutral, and color character from published direction plus this project's design values.
+2. `scannerSignature`: only the relative difference from groups whose roll names and image counts match across both machines is added. `SP` adds it only when you pick one of its bundled profiles.
 
-`HS` includes sharpening on the brightness channel. That radius and strength were not measured from the real machine. `SP` does not include it.
+`HS` includes sharpening on the brightness channel. That radius and strength were not measured from the real machine. `SP` does not include it; the texture stage instead adds a mild local contrast before your own Clarity.
 
 Every profile today is `realOnly`.
 

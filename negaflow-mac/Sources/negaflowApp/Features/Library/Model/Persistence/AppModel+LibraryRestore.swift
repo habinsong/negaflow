@@ -125,6 +125,7 @@ extension AppModel {
             }
         }.value
         let openResult = startupResult.0
+        LaunchTrace.mark("catalog opened")
         let appliedPendingRestore = startupResult.1
         let exportReconciliation = startupResult.2
         libraryPendingRestoreMarker = LibraryPendingRestoreStore.pendingMarker(for: url)
@@ -202,19 +203,19 @@ extension AppModel {
         libraryFrameRecordCache.removeAll()
         dirtyLibraryFrameRecordIDs.removeAll()
         let defectRecords = catalog.frames.filter { $0.hasDefectEdits == true }
-        let restoredRecipes = await Task.detached(priority: .utility) {
-            Dictionary(uniqueKeysWithValues: defectRecords.map { record in
-                (record.id, DefectRecipeRestoration.read(
-                    frameID: record.id,
-                    in: defectDirectory,
-                    backupDirectory: backupDirectory
-                ))
-            })
-        }.value
+        let defectFrameIDs = defectRecords.map(\.id)
+        // 첫 사진이 이 읽기를 기다린다 — 사용자가 기다리는 작업 우선순위로 돌리고, 읽는 동안
+        // 프레임을 만든다. 기록은 프레임을 다 만든 뒤 얹는다(아래 판정은 결함 기록과 무관하다).
+        let recipeRead = Task.detached(priority: .userInitiated) {
+            DefectRecipeRestoration.readAll(
+                frameIDs: defectFrameIDs,
+                in: defectDirectory,
+                backupDirectory: backupDirectory
+            )
+        }
         var restored: [ScanFrame] = []
         for record in catalog.frames {
             let frame = record.makeFrame(presets: presets)
-            if let recipe = restoredRecipes[record.id] { recipe.apply(to: frame) }
             libraryFrameRecordCache[record.id] = record
             // 파생 픽셀은 이전 감마를 설명하지 못하므로 재사용하지 않습니다.
             if frame.rawScanURL.path != record.rawScanPath
@@ -228,8 +229,14 @@ extension AppModel {
             }
             restored.append(frame)
         }
+        let restoredRecipes = await recipeRead.value
+        LaunchTrace.mark("defect recipes read \(defectRecords.count)")
+        for frame in restored {
+            if let recipe = restoredRecipes[frame.id] { recipe.apply(to: frame) }
+        }
         libraryPersistenceEnabled = true
         frames = restored + transientPreviewFrames
+        LaunchTrace.mark("frames assigned \(restored.count)")
         // 다시 켜면 마지막으로 작업하던 사진으로 돌아간다. 그 사진이 카탈로그에서 사라졌거나
         // 원본을 열 수 없으면 값을 버리고 기존 규칙(가장 최근 사진)에 맡긴다.
         restoredLastActiveFrameID = catalog.lastActiveFrameID.flatMap { id in

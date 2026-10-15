@@ -15,6 +15,7 @@ extension ScannerTargetGrade {
     static func apply(to image: CIImage,
                       target: DevelopTarget,
                       params: DevelopParameters,
+                      region: AnalysisRegion? = nil,
                       anchor cachedAnchor: inout SceneToneAnchor?) -> CIImage {
         let monochrome = params.filmType == .bwNegative || params.filmType == .bwPositive
         let positive = params.filmType == .colorPositive || params.filmType == .bwPositive
@@ -25,7 +26,7 @@ extension ScannerTargetGrade {
         // 장면 적응 노출/톤이라 재정규화). 장면 계조 폭이 지지보다 좁을수록, 장면
         // median 의 톤 델타를 상수로 빼서 median 노출을 앵커한다 — 형태(대비)·색 개성은
         // 유지되고 노출 성분만 제거된다. 풀레인지 장면은 가중치 0 = 기존 결과 불변.
-        let anchor = cachedAnchor ?? sceneToneAnchor(for: image)
+        let anchor = cachedAnchor ?? sceneToneAnchor(for: AnalysisRegion.measurementImage(image, region: region))
         cachedAnchor = anchor
         var img = image
         // 1. 문서 기반 절대 개성(scanner emulation 이면 항상 적용). MAIN 대비 시각적 구별의 주 동인.
@@ -162,6 +163,7 @@ extension ScannerTargetGrade {
                       chromaGain: pow($0.chromaGain, keep),
                       rotateDegrees: $0.rotateDegrees)
         }
+        s.colorDensity = sig.colorDensity * keep
         return s
     }
 

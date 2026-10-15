@@ -64,7 +64,19 @@ public enum ScannerProfileGrade {
         )
     }
 
+    /// 그레이드의 모든 연산(감마·대비 피벗 0.5·톤 커브 점·틴트 마스크 0.50~0.72)은 프로파일 통계가
+    /// 잰 sRGB 감마(표시) 도메인 값을 전제로 한다. 예전엔 이를 linear 작업공간에 그대로 걸어, 대비
+    /// 피벗 0.5(= 감마 0.73)가 대부분의 화소를 아래로 눌러 암부가 무너졌다(2026-10-15 실측: 하위 10%
+    /// 지점 29 → 6). 스캐너 타깃 시그니처와 같은 원칙으로 감마 도메인에서 적용하고 linear 로 돌린다.
     public static func apply(to image: CIImage, profile: ScannerProfile) -> CIImage {
+        let extent = image.extent
+        let encoded = image.applyingFilter("CILinearToSRGBToneCurve").cropped(to: extent)
+        return applyEncoded(to: encoded, profile: profile)
+            .applyingFilter("CISRGBToneCurveToLinear")
+            .cropped(to: extent)
+    }
+
+    private static func applyEncoded(to image: CIImage, profile: ScannerProfile) -> CIImage {
         let extent = image.extent
         let parameters = parameters(for: profile)
 

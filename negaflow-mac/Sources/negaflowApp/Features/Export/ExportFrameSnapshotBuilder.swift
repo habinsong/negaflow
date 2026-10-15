@@ -265,7 +265,8 @@ enum ExportFilmBaseCacheCommitter {
             mode: frame.params.baseEstimationMode,
             manualBaseRGB: frame.params.manualBaseRGB,
             filmStockDminID: frame.params.filmStockDminID,
-            lightSourceProfileID: frame.params.lightSourceProfileID
+            lightSourceProfileID: frame.params.lightSourceProfileID,
+            imageTransform: frame.imageTransform
         )
         guard currentBaseKey == baseKey,
               sourceGeneration.matchesCurrentState(
@@ -326,7 +327,8 @@ enum ExportFrameSnapshotBuilder {
             mode: frame.params.baseEstimationMode,
             manualBaseRGB: frame.params.manualBaseRGB,
             filmStockDminID: frame.params.filmStockDminID,
-            lightSourceProfileID: frame.params.lightSourceProfileID
+            lightSourceProfileID: frame.params.lightSourceProfileID,
+            imageTransform: frame.imageTransform
         )
         let cachedBase = frame.cachedBaseKey == baseKey ? frame.cachedBase : nil
         let useDefectRemoval = format != .rawScanTIFF

@@ -7,18 +7,37 @@ extension ChromabaseEngine {
         to input: CIImage,
         params: DevelopParameters,
         sampleColorSpace: CGColorSpace,
-        extent: CGRect
+        extent: CGRect,
+        region: AnalysisRegion? = nil
+    ) -> CIImage {
+        var img = positiveWhiteBalanceInput(to: input, params: params,
+                                            sampleColorSpace: sampleColorSpace, region: region)
+        img = ColorModel.apply(to: img, params: params)
+        img = ToneMapper.applyExposure(to: img, stops: params.exposure, filmType: params.filmType)
+        img = ToneMapper.applyToneCurves(to: img, params: params, region: region)
+        return img
+    }
+
+    /// 포지티브 입력부터 화이트밸런스(ColorModel) 직전까지 — 중립 스포이드가 이 단계의 값을 잰다.
+    func positiveWhiteBalanceInput(
+        to input: CIImage,
+        params: DevelopParameters,
+        sampleColorSpace: CGColorSpace,
+        region: AnalysisRegion?
     ) -> CIImage {
         var img = input
         // 레인지 스트레치는 명시적 opt-in 전용이다. EXPIRED라는 이름만으로 압축된 장면 범위를
         // 열화 증거로 간주해 엔드포인트를 움직이지 않는다.
         if params.autoLevels {
+            var points: AutoLevels.Points?
             img = AutoLevels.apply(
                 to: img,
                 blackClip: 0.002,
                 sampleColorSpace: sampleColorSpace,
                 outputWhite: 0.86,
-                outputBlack: 0.014
+                outputBlack: 0.014,
+                region: region,
+                points: &points
             )
         }
         // 스캐너 타겟은 해당 포지티브의 roll-label matched 상대 시그니처가 있을 때만
@@ -34,21 +53,22 @@ extension ChromabaseEngine {
         // EXPIRED는 명시적 중립축 측정 eligibility를 통과한 상대 보정만 적용한다.
         if params.developTarget == .rescue {
             let measureSpace = CGColorSpace(name: CGColorSpace.linearSRGB) ?? sampleColorSpace
+            var recovery: RescueGrade.Recovery?
             img = RescueGrade.apply(to: img, sampleColorSpace: measureSpace,
-                                    filmType: params.filmType, recoverRange: false)
+                                    filmType: params.filmType, recoverRange: false,
+                                    region: region, recovery: &recovery)
         }
         // 스캐너 타겟이면 문서 기반 개성을 항상 적용한다(포지티브도 감쇠 적용). applyBaseGrade(위)만
         // 보수적으로 실측 차분 증거에 게이팅해 독자 포지티브 베이스 중복을 막는다.
         if params.developTarget.isScannerEmulation {
-            img = ScannerTargetGrade.apply(to: img, target: params.developTarget, params: params)
+            var anchor: ScannerTargetGrade.SceneToneAnchor?
+            img = ScannerTargetGrade.apply(to: img, target: params.developTarget, params: params,
+                                           region: region, anchor: &anchor)
         } else if !params.developTarget.isScannerEmulation,
                   params.developTarget != .rescue,
                   let profile = scannerProfile(for: params) {
             img = ScannerProfileGrade.apply(to: img, profile: profile)
         }
-        img = ColorModel.apply(to: img, params: params)
-        img = ToneMapper.applyExposure(to: img, stops: params.exposure)
-        img = ToneMapper.applyToneCurves(to: img, params: params)
         return img
     }
 }

@@ -98,12 +98,13 @@ public enum RescueGrade {
         sampleColorSpace: CGColorSpace,
         filmType: FilmType = .colorNegative,
         recoverRange: Bool = true,
+        region: AnalysisRegion? = nil,
         recovery cachedRecovery: inout Recovery?
     ) -> CIImage {
         _ = recoverRange
         let alignChannels = filmType == .colorNegative || filmType == .colorPositive
         let recovery = cachedRecovery ?? measureRecovery(
-            in: image,
+            in: AnalysisRegion.measurementImage(image, region: region),
             sampleColorSpace: sampleColorSpace,
             alignChannels: alignChannels
         )

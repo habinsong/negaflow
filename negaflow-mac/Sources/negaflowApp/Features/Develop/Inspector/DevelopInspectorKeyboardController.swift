@@ -33,10 +33,10 @@ enum DevelopInspectorKeyboardController {
         case .curveShadows:
             nudgeParam(\.curveShadows, range: -1...1, frame: frame, direction: direction, coarse: coarse)
         case .warmth:
-            nudgeParam(\.warmth, range: -1...1, frame: frame, direction: direction, coarse: coarse)
+            nudgeParam(\.warmth, range: -WhiteBalanceGains.maximum...WhiteBalanceGains.maximum, frame: frame, direction: direction, coarse: coarse)
             return true
         case .tint:
-            nudgeParam(\.tint, range: -1...1, frame: frame, direction: direction, coarse: coarse)
+            nudgeParam(\.tint, range: -WhiteBalanceGains.maximum...WhiteBalanceGains.maximum, frame: frame, direction: direction, coarse: coarse)
             return true
         case .vibrance:
             nudgeParam(\.vibrance, range: -1...1, frame: frame, direction: direction, coarse: coarse)

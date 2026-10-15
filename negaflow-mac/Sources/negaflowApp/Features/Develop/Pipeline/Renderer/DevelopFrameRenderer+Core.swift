@@ -20,16 +20,11 @@ extension DevelopFrameRenderer {
             }
             try Task.checkCancellation()
             let rawInput = input.image
-            let base = snapshot.filmType.requiresInversion
-                ? snapshot.cachedBase ?? engine.estimateFilmBase(
-                    in: rawInput,
-                    mode: snapshot.params.baseEstimationMode,
-                    manual: snapshot.params.manualBaseRGB,
-                    filmStockDminID: snapshot.params.filmStockDminID,
-                    lightSourceProfileID: snapshot.params.lightSourceProfileID,
-                    filmType: snapshot.filmType
-                )
-                : nil
+            // 크롭한 사진 영역 — 장면 측정은 그 안에서, 베이스는 그 바깥 띠에서 찾는다.
+            let analysisRegion = AnalysisRegion(transform: snapshot.imageTransform,
+                                                imageSize: rawInput.extent.size)
+            let base = developBase(for: snapshot, input: rawInput, engine: engine,
+                                   analysisRegion: analysisRegion)
             let rawPair = snapshot.needsRawPreview
                 ? try renderRawPreview(
                     from: displayProxy(rawInput, maxDimension: snapshot.proxyMaxDimension),
@@ -41,6 +36,7 @@ extension DevelopFrameRenderer {
             // 장면 측정은 반전 직전 입력에서 나온다 — 세 프리뷰가 같은 묶음을 공유하면
             // 재측정도 없고 비교본끼리 반전 기준도 정확히 같아진다.
             var measurements = snapshot.cachedSceneMeasurements
+            measurements.analysisRegion = analysisRegion
             var inputParams = snapshot.params
             inputParams.filmType = snapshot.filmType
             try InputGammaRenderReference.prepare(source: snapshot.rawScanURL,
@@ -110,6 +106,25 @@ extension DevelopFrameRenderer {
         }
     }
 
+    /// 반전 기준 베이스 — 캐시가 있으면 그대로, 없으면 크롭 바깥 띠에서 잰다. 포지티브는 nil.
+    static func developBase(
+        for snapshot: DevelopFrameSnapshot,
+        input rawInput: CIImage,
+        engine: ChromabaseEngine,
+        analysisRegion: AnalysisRegion?
+    ) -> FilmBase? {
+        guard snapshot.filmType.requiresInversion else { return nil }
+        return snapshot.cachedBase ?? engine.estimateFilmBase(
+            in: rawInput,
+            mode: snapshot.params.baseEstimationMode,
+            manual: snapshot.params.manualBaseRGB,
+            filmStockDminID: snapshot.params.filmStockDminID,
+            lightSourceProfileID: snapshot.params.lightSourceProfileID,
+            filmType: snapshot.filmType,
+            analysisRegion: analysisRegion
+        )
+    }
+
     static func renderFastPreview(_ snapshot: DevelopFrameSnapshot) throws -> DevelopFrameFastPreviewResult {
         return try autoreleasepool {
             let engine = ChromabaseEngine()
@@ -124,6 +139,8 @@ extension DevelopFrameRenderer {
             effectiveParams.developTarget = snapshot.params.developTarget
             effectiveParams.imageTransform = .identity
             var measurements = DevelopSceneMeasurements()
+            measurements.analysisRegion = AnalysisRegion(transform: snapshot.imageTransform,
+                                                         imageSize: input.image.extent.size)
             try InputGammaRenderReference.prepare(source: snapshot.rawScanURL,
                 params: effectiveParams, measurements: &measurements)
             let baseImage = engine.developScannerPreview(

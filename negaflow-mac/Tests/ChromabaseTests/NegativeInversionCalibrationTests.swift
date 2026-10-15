@@ -217,14 +217,14 @@ final class NegativeInversionCalibrationTests: XCTestCase {
         let (image, centers) = makeNegative(width: width, height: height, patches: anchorPatches)
         // 타겟별 mid 허용 오차(스탑): MAIN/PRINT/EXPIRED 는 photometric mid 고정.
         // NORITSU 는 문서 기반 플랫(섀도 개방)이라 살짝 어둡게 허용.
-        // FUJI 는 SP-3000 실측 캘리브레이션(6쌍 히스토그램 매칭)으로 미드를 밝게 리프트하므로
-        // +0.85 까지 허용한다(실측 ~+0.63). 상한은 여전히 과거 로그-직결 회귀(+1.7~2.0)를 잠근다.
+        // SP 는 2026-10-15 개편으로 미드를 밝히지 않는다(밀도 있는 미드) — MAIN 근처 창을 쓴다.
+        // 상한은 여전히 과거 로그-직결 회귀(+1.7~2.0)를 잠근다.
         let cases: [(DevelopTarget, ClosedRange<Double>)] = [
             (.main, -0.35...0.35),
             (.print, -0.40...0.40),
             (.rescue, -0.40...0.40),
             (.noritsu, -0.60...0.35),
-            (.sp3000, -0.30...0.85),
+            (.sp3000, -0.40...0.40),
             // F135 는 미드 온건 리프트(+0.011 감마), HR 는 노출 규율(≈중립) — MAIN 창 재사용.
             (.f135, -0.35...0.50),
             (.hr, -0.40...0.40),
@@ -271,9 +271,12 @@ final class NegativeInversionCalibrationTests: XCTestCase {
                     "MAIN 플랫 마스터는 기록된 섀도를 0 으로 크러시하지 않는다(토우 보존). b2=\(b2)")
             }
         }
-        // 실기 간 실측 방향: SP-3000(FUJI) 미드가 NORITSU 보다 밝다(같은 롤 쌍 p50 실측).
-        XCTAssertGreaterThan(midStops[.sp3000]! - midStops[.noritsu]!, 0.2,
-            "실기 간 mid 차이(SP > NOR, 같은 롤 쌍 실측 ≈ 0.45~0.6 스탑)가 보존돼야 한다")
+        // SP(2026-10-15 개편)는 미드를 밝혀 씻어 내지 않는다(예전 실측 리프트 +0.45~0.6 스탑 폐기) —
+        // 밀도 있는 미드라 MAIN 보다 밝지 않고, 노출을 죽이지도 않는다.
+        XCTAssertLessThan(midStops[.sp3000]! - midStops[.main]!, 0.05,
+            "SP 미드가 MAIN 보다 밝아지면 안 된다 sp=\(midStops[.sp3000]!) main=\(midStops[.main]!)")
+        XCTAssertGreaterThan(midStops[.sp3000]! - midStops[.main]!, -0.25,
+            "SP 미드 밀도는 bounded sp=\(midStops[.sp3000]!) main=\(midStops[.main]!)")
     }
 
     // MARK: 흑백 네거티브 — 동일 앵커

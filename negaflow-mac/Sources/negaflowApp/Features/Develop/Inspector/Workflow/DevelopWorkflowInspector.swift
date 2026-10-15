@@ -222,6 +222,9 @@ struct DevelopWorkflowInspector: View {
             noiseReductionEnabled: noiseReductionEnabledBinding,
             toneBinding: toneBinding,
             batchWBBinding: batchWBBinding,
+            neutralPickerActive: basePickerMode && frame.eyedropperTarget == .neutralWhiteBalance,
+            toggleNeutralPicker: toggleNeutralPicker,
+            resetWhiteBalance: { model.resetAutoWhiteBalance(frame) },
             calibrationBinding: calibBinding,
             toggle: toggle,
             reset: reset,
@@ -250,6 +253,14 @@ struct DevelopWorkflowInspector: View {
 
     private var canAutoAdjust: Bool {
         displayedImage != nil
+    }
+
+    private func toggleNeutralPicker() {
+        let wasActive = basePickerMode && frame.eyedropperTarget == .neutralWhiteBalance
+        withAnimation(.snappy(duration: 0.18)) {
+            frame.eyedropperTarget = .neutralWhiteBalance
+            basePickerMode = !wasActive
+        }
     }
 
     private func cancelActiveInteraction() {

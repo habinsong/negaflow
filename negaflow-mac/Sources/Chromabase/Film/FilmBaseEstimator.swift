@@ -17,9 +17,14 @@ public enum FilmBaseEstimator {
     /// - Parameter confidentOnly: true 면 두 샘플러(가장자리/분산)의 확신 있는 실측만 반환하고,
     ///   마지막 폴백(스트립 평균 — 베이스 후보 판정 없이 밝기만 보는 약한 추정)은 건너뛴다.
     ///   preset 모드의 "실측 우선"은 약한 추정이 프리셋 물성을 덮어쓰면 안 되므로 이것을 쓴다.
+    /// - Parameter excludingInterior: 사용자가 크롭한 사진 영역. 있으면 베이스를 **크롭 바깥 띠**
+    ///   (리베이트)에서 먼저 찾고, 거기서 확신 있는 답이 없을 때만 프레임 전체로 돌아간다. 크롭
+    ///   안에서는 찾지 않는다 — 크롭 안의 가장 얇은 곳은 베이스가 아니라 장면 최암부다(2026-10-14
+    ///   실측: 유채색 그림자를 베이스로 잡아 중립 웨지 암부 R/B 3.47).
     public static func estimate(from image: CIImage, edgeFraction: Double = 0.06,
                                 neutralBase: Bool = false,
-                                confidentOnly: Bool = false) -> FilmBase? {
+                                confidentOnly: Bool = false,
+                                excludingInterior region: AnalysisRegion? = nil) -> FilmBase? {
         let extent = image.extent
         guard extent.width > 4, extent.height > 4 else { return nil }
 
@@ -35,13 +40,133 @@ public enum FilmBaseEstimator {
             cachedExclusion = .some(value)
             return value
         }
+        if let region, let sampleGrid,
+           let cropped = estimateAroundCrop(image: image, grid: sampleGrid, region: region,
+                                            edgeFraction: edgeFraction, neutralBase: neutralBase) {
+            return cropped
+        }
         guard let resolved = estimateWithoutRebate(
             from: image, grid: sampleGrid, edgeFraction: edgeFraction,
             neutralBase: neutralBase, confidentOnly: confidentOnly, exclusion: exclusion
         ) else { return nil }
         guard let sampleGrid else { return resolved }
-        return rescuedWithRebate(image: image, grid: sampleGrid, resolved: resolved,
-                                 neutralBase: neutralBase, exclusion: exclusion)
+        let rescued = rescuedWithRebate(image: image, grid: sampleGrid, resolved: resolved,
+                                        neutralBase: neutralBase, exclusion: exclusion)
+        let excluded = exclusion()
+        return liftedToFilmEnvelope(rescued, grid: sampleGrid, neutralBase: neutralBase, exclusion: excluded) {
+            excluded?[$0.y * sampleGrid.width + $0.x] != true
+        }
+    }
+
+    /// 베이스 판정의 모순 문턱 — `FilmBaseRebate.contradictingFraction` 의 실측(정상 0~0.8%, 모순 7.1%~).
+    static let contradictionFraction = 0.02
+
+    /// 고른 값보다 뚜렷이 밝은 필름이 있으면(모순) 필름에서 가장 밝은 5%(분산 샘플러)로 올린다.
+    /// 베이스가 화면에 없는 컷(리베이트 없이 사진만 스캔)에서 성분 검출은 결이 있는 얇은 면 — 이웃
+    /// 15% 문턱에 걸려 조각난다 — 을 놓치고 더 어두운 매끈한 면을 고른다(2026-10-15 실측: 같은 롤
+    /// 베이스 0.23/0.096/0.068, 고른 값 0.104/0.051/0.032, 그보다 밝은 필름 11% 가 반전에서 검정으로
+    /// 잘렸다). 필름에서 베이스에 가장 가까운 것은 가장 얇은 면이므로 그 위로는 올리지 않는다.
+    static func liftedToFilmEnvelope(
+        _ base: FilmBase, grid: FilmBaseSampleGrid, neutralBase: Bool, exclusion: [Bool]?,
+        counting include: (FilmBaseSample) -> Bool
+    ) -> FilmBase {
+        guard FilmBaseRebate.contradictingFraction(
+            grid: grid, dmin: base.rgb, neutralBase: neutralBase, counting: include
+        ) > contradictionFraction,
+            let envelope = sampleDistributedOrangeBase(from: grid, neutralBase: neutralBase, excluding: exclusion)
+        else { return base }
+        func luma(_ c: SIMD3<Double>) -> Double { (c.x + c.y + c.z) / 3 }
+        guard luma(envelope.rgb) > luma(base.rgb) else { return base }
+        return envelope.filmBase(source: base.source)
+    }
+
+    /// 베이스를 어디서 찾는가. 크롭이 있으면 크롭 바깥 띠(`ring`) → 크롭 안 사진(`photo`) 순서다.
+    enum SearchScope {
+        /// 프레임 전체 — 백라이트·퍼포레이션이 섞일 수 있어 밝기 사전확률 강등을 쓴다.
+        case frame
+        /// 크롭 바깥 띠 — 리베이트·백라이트·홀더가 남는다. 광원은 색도 관계로 가른다.
+        case ring
+        /// 크롭 안 사진 — 전부 필름이라 광원이 없다. 강등하지 않는다.
+        case photo
+    }
+
+    /// 크롭이 있을 때의 베이스. 디카 스캔은 원본에 퍼포레이션·백라이트·홀더가 함께 찍혀 프레임
+    /// 전체를 뒤지면 광원을 베이스로 잡기 쉽다 — 그래서 크롭이 있으면 프레임 전체로 가지 않는다.
+    ///  1. 크롭 바깥 띠(리베이트)에서 찾고, 그 값이 크롭 안 사진과 모순이 없으면 쓴다.
+    ///  2. 모순이면 띠의 광원 강등이 틀렸을 수 있다(진짜 리베이트를 광원으로, 더 오렌지인 짙은 장면을
+    ///     베이스로 본 경우) — 강등 없이 띠에서 가장 밝은 성분을 보고, 사진과 모순이 없고 광원처럼
+    ///     보이지도 않으면 쓴다.
+    ///  3. 띠에 베이스가 없으면(크롭이 리베이트를 잘라 냄) 크롭 안 사진에서 가장 얇은 필름 면을
+    ///     쓴다. 사진은 전부 필름이라 광원이 끼지 않고, 필름에서 베이스에 가장 가까운 것은 가장
+    ///     얇은 면이다 — 베이스가 보이지 않는 프레임에서 남는 가장 확실한 근사다.
+    /// 셋 다 없을 때만 nil — 그때는 예전처럼 프레임 전체에서 찾는다.
+    static func estimateAroundCrop(
+        image: CIImage,
+        grid: FilmBaseSampleGrid,
+        region: AnalysisRegion,
+        edgeFraction: Double,
+        neutralBase: Bool
+    ) -> FilmBase? {
+        let ringGrid = grid.excludingInterior(of: region)
+        var cachedRingExclusion: [Bool]??
+        func ringExclusion() -> [Bool]? {
+            if let cachedRingExclusion { return cachedRingExclusion }
+            let value = nonFilmExclusion(for: ringGrid, neutralBase: neutralBase)
+            cachedRingExclusion = .some(value)
+            return value
+        }
+        func ringBase(demotes: Bool) -> FilmBase? {
+            estimateWithoutRebate(
+                from: image, grid: ringGrid, edgeFraction: edgeFraction, neutralBase: neutralBase,
+                confidentOnly: true, scope: .ring, demotes: demotes, exclusion: ringExclusion
+            ).map {
+                rescuedWithRebate(image: image, grid: ringGrid, resolved: $0,
+                                  neutralBase: neutralBase, scope: .ring, exclusion: ringExclusion)
+            }
+        }
+        // 크롭 안은 사진, 곧 전부 필름이다. 필름에는 베이스보다 밝은 것이 없으므로 그 안에 고른
+        // 값보다 뚜렷이 밝은 곳이 많으면 띠에서 고른 것은 베이스가 아니다 — 크롭이 홀더와 리베이트를
+        // 잘라 띠에 베이스가 없을 때 띠 안의 짙은 하늘을 잡는다(2026-10-14 실측: 고른 값
+        // 0.034/0.013/0.006 보다 밝은 필름 60%). 느슨한 크롭에 걸린 광원은 비필름 마스크로 뺀다.
+        func contradicted(_ base: FilmBase) -> Bool {
+            FilmBaseRebate.contradictingFraction(grid: grid, dmin: base.rgb, neutralBase: neutralBase) {
+                grid.isInterior($0, of: region)
+            } > contradictionFraction
+        }
+        // 사진 안 탐색은 띠가 실패했을 때만 돈다(대부분의 프레임은 띠에서 끝난다).
+        var cachedPhoto: FilmBase??
+        func photo() -> FilmBase? {
+            if let cachedPhoto { return cachedPhoto }
+            let photoGrid = grid.keepingInterior(of: region)
+            let value = estimateWithoutRebate(
+                from: image, grid: photoGrid, edgeFraction: edgeFraction,
+                neutralBase: neutralBase, confidentOnly: true, scope: .photo, exclusion: { nil }
+            ).map {
+                liftedToFilmEnvelope($0, grid: photoGrid, neutralBase: neutralBase, exclusion: nil) {
+                    grid.isInterior($0, of: region)
+                }
+            }
+            cachedPhoto = .some(value)
+            return value
+        }
+        guard let ring = ringBase(demotes: true) else { return photo() }
+        if !contradicted(ring) { return ring }
+        // 2026-10-15 실측: 오른쪽 띠의 리베이트(0.34/0.158/0.092)를 광원으로 강등하고 짙은 장면
+        // (0.11/0.032/0.012)을 골랐다 — 사진의 97% 가 그보다 밝았다.
+        if !neutralBase, let top = ringBase(demotes: false), top.rgb != ring.rgb, !contradicted(top),
+           !(photo().map { looksLikeLight(top.rgb, comparedWith: $0.rgb) } ?? false) {
+            return top
+        }
+        return photo()
+    }
+
+    /// `candidate` 가 `film` 을 비춘 광원처럼 보이는가. 필름 = 광원 × 마스크 × 장면 염료라, 광원이면
+    /// 필름이 마스크 색도(띠 강등과 같은 문턱)만큼 두 축 모두 더 오렌지다.
+    static func looksLikeLight(_ candidate: SIMD3<Double>, comparedWith film: SIMD3<Double>) -> Bool {
+        func logRatio(_ a: Double, _ b: Double) -> Double { log10(max(a, 1e-5) / max(b, 1e-5)) }
+        let redGreen = logRatio(film.x, film.y) - logRatio(candidate.x, candidate.y)
+        let greenBlue = logRatio(film.y, film.z) - logRatio(candidate.y, candidate.z)
+        return redGreen >= ringMaskChroma.redGreen && greenBlue >= ringMaskChroma.greenBlue
     }
 
     /// 이 지점을 넘으면 **틀렸다고 볼 이유가 있을 때만** 원본을 한 화소라도 더 읽는다.
@@ -55,6 +180,7 @@ public enum FilmBaseEstimator {
         grid: FilmBaseSampleGrid,
         resolved: FilmBase,
         neutralBase: Bool,
+        scope: SearchScope = .frame,
         exclusion: () -> [Bool]? = { nil }
     ) -> FilmBase {
         let brighter = FilmBaseRebate.brighterThanBaseFraction(grid: grid, dmin: resolved.rgb)
@@ -66,6 +192,12 @@ public enum FilmBaseEstimator {
         ), FilmBaseRebate.accept(rebate: rebate.rgb, current: resolved.rgb) else {
             return resolved
         }
+        // 크롭 바깥 띠에서는 베이스를 색도 증거로 골랐다. 리베이트 띠는 베이스 그 자체라 색도가
+        // 같아야 한다 — 마스크 색도만큼 덜 오렌지인 "더 밝은 띠"는 광원이다(교체하지 않는다).
+        if scope == .ring, !neutralBase {
+            func logRB(_ c: SIMD3<Double>) -> Double { log10(max(c.x, 1e-5) / max(c.z, 1e-5)) }
+            guard logRB(rebate.rgb) >= logRB(resolved.rgb) - backlightMaskLogMargin else { return resolved }
+        }
         return rebate.filmBase(source: resolved.source)
     }
 
@@ -75,6 +207,8 @@ public enum FilmBaseEstimator {
         edgeFraction: Double,
         neutralBase: Bool,
         confidentOnly: Bool,
+        scope: SearchScope = .frame,
+        demotes: Bool = true,
         exclusion: () -> [Bool]?
     ) -> FilmBase? {
         let extent = image.extent
@@ -82,7 +216,7 @@ public enum FilmBaseEstimator {
         // 1차: 연결 성분 기반 검출(2026-07-14 v3) — 공간 구조 불변량이라 percentile/고정
         // luma 창 방식과 달리 광원 불균일·경계 혼합 셀에 강하다.
         if let componentSample = sampleGrid.flatMap({
-            connectedBaseComponent(from: $0, neutralBase: neutralBase)
+            connectedBaseComponent(from: $0, neutralBase: neutralBase, scope: scope, demotes: demotes)
         }) {
             return componentSample.filmBase(source: .auto)
         }
@@ -181,7 +315,9 @@ public enum FilmBaseEstimator {
 
     static func connectedBaseComponent(
         from grid: FilmBaseSampleGrid,
-        neutralBase: Bool
+        neutralBase: Bool,
+        scope: SearchScope = .frame,
+        demotes: Bool = true
     ) -> FilmBaseMeasurement? {
         let width = grid.width, height = grid.height
         let count = width * height
@@ -273,22 +409,66 @@ public enum FilmBaseEstimator {
         // 다음 성분이 있으며, 그 성분보다 뚜렷이 덜 오렌지(rb < 0.75×)면 광원이다 —
         // 베이스 = 백라이트 × 마스크 염료라 항상 백라이트보다 오렌지다. 스트립별로 분리된
         // 베이스 형제 성분(p75 유사)은 강등 후보에서 건너뛴다.
+        func medianLogRB(_ cells: [Int]) -> Double {
+            var values = cells.map { cell -> Double in
+                let color = grid.samples[cell].color
+                return log10(max(color.x, 1e-5) / max(color.z, 1e-5))
+            }
+            values.sort()
+            return values.isEmpty ? 0 : values[values.count / 2]
+        }
+        /// 채널별 log10 중앙값(밀도의 음수) — 두 성분의 차가 채널별 밀도 차다.
+        func medianLogChannels(_ cells: [Int]) -> SIMD3<Double> {
+            func median(_ channel: (SIMD3<Double>) -> Double) -> Double {
+                var values = cells.map { log10(max(channel(grid.samples[$0].color), 1e-5)) }
+                values.sort()
+                return values.isEmpty ? 0 : values[values.count / 2]
+            }
+            return SIMD3(median(\.x), median(\.y), median(\.z))
+        }
+
         var bestIndex = 0
-        if !neutralBase, components[0].p75 >= demoteMinLuma,
+        if !neutralBase, scope == .frame, demotes,
            let secondIndex = components.firstIndex(where: {
                $0.p75 < components[0].p75 * demoteRatioRange.upperBound
            }),
            demoteRatioRange.contains(components[secondIndex].p75 / components[0].p75),
+           components[0].p75 >= demoteMinLuma,
            medianRB(components[0].cells) < medianRB(components[secondIndex].cells) * demoteRBRatio {
             bestIndex = secondIndex
         }
+        // 크롭 바깥 띠에는 주로 리베이트·백라이트·홀더가 남는다. 그래서 밝기 사전확률(≥0.6)과
+        // 밝기 비 창 없이 **"베이스 = 광원 × 마스크" 의 색도 관계**로 광원을 가른다. 오렌지 마스크는
+        // 초록과 파랑을 함께 깎는다 — 베이스는 광원보다 log10(R/G) 가 Dmin_G − Dmin_R, log10(G/B) 가
+        // Dmin_B − Dmin_G 만큼 크다. 색도는 조도와 무관해 비네팅·패널 가장자리로 광원이 베이스만큼
+        // 어두워져도(실측 p75 0.40 vs 0.35, 광원 쪽 조도 −1.5EV) 그대로 성립한다(2026-10-14 실측
+        // 추정/실제 0.55/0.79/1.25 를 바로잡음). R/B 하나만 보면 안 된다 — 홀더가 광원을 가려 최상위가
+        // 진짜 베이스일 때, 띠에 걸친 이웃 프레임의 얇은 푸른 그림자도 베이스보다 R/B 가 크다(실측: 그
+        // 면을 베이스로 잡아 암부 R/B 수천 배). 그런 면은 파랑만 깎여 R/G 관계를 채우지 못한다.
+        // 장면이 섞이는 프레임 전체 탐색에서는 쓰지 않는다.
+        let ringChromaDemotion = scope == .ring && !neutralBase
+        if ringChromaDemotion, demotes, bestIndex == 0 {
+            let top = medianLogChannels(components[0].cells)
+            if let maskIndex = components.indices.dropFirst().first(where: { index in
+                let candidate = medianLogChannels(components[index].cells)
+                let redGreen = (candidate.x - candidate.y) - (top.x - top.y)
+                let greenBlue = (candidate.y - candidate.z) - (top.y - top.z)
+                return components[index].p75 >= components[0].p75 * demoteRatioRange.lowerBound
+                    && redGreen >= ringMaskChroma.redGreen && greenBlue >= ringMaskChroma.greenBlue
+            }) {
+                bestIndex = maskIndex
+            }
+        }
+        let bestLogRB = ringChromaDemotion ? medianLogRB(components[bestIndex].cells) : 0
 
         // 선택 성분 + 형제 성분(p75 ≥ 0.90×) 병합 — 멀티 스트립에서 스트립마다 분리된
         // 베이스 네트워크를 함께 쓴다(공간 커버리지·표본 수 ↑).
         let bestScore = components[bestIndex].p75
         var bestCells = components[bestIndex].cells
         for (index, component) in components.enumerated()
-        where index != bestIndex && component.p75 >= bestScore * 0.90 && component.p75 <= bestScore / 0.90 {
+        where index != bestIndex && component.p75 >= bestScore * 0.90 && component.p75 <= bestScore / 0.90
+            && (!ringChromaDemotion
+                || abs(medianLogRB(component.cells) - bestLogRB) < backlightMaskLogMargin) {
             bestCells.append(contentsOf: component.cells)
         }
 
@@ -347,6 +527,21 @@ public enum FilmBaseEstimator {
     static let demoteRatioRange = 0.12...0.87
     static let demoteGapMaxFraction = 0.002
     static let demoteRBRatio = 0.75
+    /// 크롭 바깥 띠에서 광원과 베이스를 가르는 문턱 — 번들 컬러 네거티브(C-41·ECN-2) 마스크
+    /// 색도의 전형값(중앙값)의 절반(측정 잡음·광원 색 여유). 강등은 두 색도 축(R/G, G/B)을 함께
+    /// 보고, 형제 병합·리베이트 교체는 R/B 차를 본다. 마스크가 약한 예외 필름(ORWO·Harman, R/G
+    /// 0.02–0.10)은 띠 강등에 걸리지 않고 밝기 사전확률 강등만 받는다.
+    static let backlightMaskLogMargin = 0.5 * colorNegativeMaskMedian { $0.z - $0.x }
+    static let ringMaskChroma = (redGreen: 0.5 * colorNegativeMaskMedian { $0.y - $0.x },
+                                 greenBlue: 0.5 * colorNegativeMaskMedian { $0.z - $0.y })
+
+    private static func colorNegativeMaskMedian(_ value: (SIMD3<Double>) -> Double) -> Double {
+        let values = FilmStockDminRegistry.all
+            .filter { $0.process == "C-41" || $0.process == "ECN-2" }
+            .map { value($0.dminDensity) }
+            .sorted()
+        return values.isEmpty ? 0 : values[values.count / 2]
+    }
 
     static func nonFilmExclusion(for grid: FilmBaseSampleGrid,
                                  neutralBase: Bool) -> [Bool]? {

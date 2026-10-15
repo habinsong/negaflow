@@ -93,8 +93,8 @@ extension CanvasView {
         }
     }
 
-    /// 베이스 스포이드 오버레이: 클릭 지점을 raw 정규좌표로 역변환해 Dmin을 실측한다.
-    /// 반전 전 raw 를 보면서 찍도록 진입 시 Raw 비교 모드로 전환한다(종료 시 복원).
+    /// 스포이드 오버레이: 클릭 지점을 raw 정규좌표로 역변환해 베이스(Dmin) 또는 중립 화이트밸런스를
+    /// 잰다(frame.eyedropperTarget). 베이스는 반전 전 raw 를 보면서 찍도록 Raw 비교 모드로 전환한다.
     @ViewBuilder
     func basePickerOverlay(imageFrame: CGRect) -> some View {
         Rectangle()
@@ -116,7 +116,9 @@ extension CanvasView {
             .overlay(alignment: .top) {
                 HStack(spacing: 6) {
                     Image(systemName: "eyedropper")
-                    Text(model.text(AppLocalizedPhrase.basePickerOverlayPrompt))
+                    Text(model.text(frame.eyedropperTarget == .filmBase
+                        ? AppLocalizedPhrase.basePickerOverlayPrompt
+                        : AppLocalizedPhrase.neutralPickerOverlayPrompt))
                 }
                 .font(.caption.weight(.semibold))
                 .padding(.horizontal, 10)
@@ -134,7 +136,10 @@ extension CanvasView {
             unit,
             baseSize: model.sourcePixelSize(for: frame)
         )
-        model.pickFilmBase(at: basePoint, frame: frame)
+        switch frame.eyedropperTarget {
+        case .filmBase: model.pickFilmBase(at: basePoint, frame: frame)
+        case .neutralWhiteBalance: model.pickNeutralWhiteBalance(at: basePoint, frame: frame)
+        }
         withAnimation(.snappy(duration: 0.18)) { basePickerMode = false }
     }
 

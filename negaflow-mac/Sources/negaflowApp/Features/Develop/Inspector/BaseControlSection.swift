@@ -75,10 +75,12 @@ struct BaseControlSection: View {
                     title: model.text(AppLocalizedPhrase.pickBase),
                     help: model.text(AppLocalizedPhrase.pickBaseHelp),
                     resetTitle: model.text(AppLocalizedPhrase.reset),
-                    isActive: basePickerMode.wrappedValue,
+                    isActive: basePickerMode.wrappedValue && frame.eyedropperTarget == .filmBase,
                     action: {
+                        let wasActive = basePickerMode.wrappedValue && frame.eyedropperTarget == .filmBase
                         withAnimation(.snappy(duration: 0.18)) {
-                            basePickerMode.wrappedValue.toggle()
+                            frame.eyedropperTarget = .filmBase
+                            basePickerMode.wrappedValue = !wasActive
                         }
                     },
                     reset: resetManualBase

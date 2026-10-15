@@ -18,7 +18,7 @@
       "exportColorSpace" : "sRGB",
       "file" : "b-main-scannerprofile-portra400-srgb.tif",
       "scannerProfile" : "noritsu__color-nega__kodak-portra-400",
-      "sha256" : "e2f1496a7e9899503a4ade28bde6b40f227ff698e8181f38660e125a98d29f24"
+      "sha256" : "7cbd6809f3153c0aa8cb6c7074769bbdc1cc86cea76ef47afafe546e0925fa92"
     },
     {
       "bytes" : 109191526,
@@ -38,7 +38,7 @@
       "exportColorSpace" : "sRGB",
       "file" : "c-target-sp-srgb.tif",
       "scannerProfile" : "none",
-      "sha256" : "16df704c1b33e88302fa4067eb346c29c14de3a7e67bbb0c341d32796666e898"
+      "sha256" : "7ecb2677c034ce6d690960132684754348184930340afedf2535eab5d7239e83"
     },
     {
       "bytes" : 109191526,

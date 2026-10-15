@@ -81,9 +81,40 @@ public struct FilmStockDmin: Codable, Sendable, Equatable, Identifiable {
     public var dmaxNorm: SIMD3<Double> {
         SIMD3(dmaxDensity.x - dminDensity.x, dmaxDensity.y - dminDensity.y, dmaxDensity.z - dminDensity.z)
     }
+
+    /// 이 필름의 채널별 밀도 범위가 **번들 컬러 네거티브의 전형(채널별 중앙값)보다** 얼마나 넓고
+    /// 좁은가(기하평균 1). 데이터시트는 Status M 농도라 스캐너 채널의 절대 비율과는 다르다 —
+    /// 실측(2026-10-15, 스캐너 2 종 6 장): 스캐너 B/R 범위비 1.23~1.86 vs 데이터시트 1.10. 그 비율을
+    /// 그대로 쓰면 모든 필름이 파랗고(b* −2~−13) 과채도(최대 ×2.6)로 반전됐다. 데이터시트가 정직하게
+    /// 말해 주는 것은 필름 사이의 **상대** 차이뿐이라, 실측 범위에 이 계수만 곱한다.
+    public var relativeRangeFactor: SIMD3<Double> {
+        let typical = FilmStockDminRegistry.typicalColorNegativeRangeShape
+        func shape(_ v: SIMD3<Double>) -> SIMD3<Double> {
+            let geo = pow(max(v.x, 1e-4) * max(v.y, 1e-4) * max(v.z, 1e-4), 1.0 / 3.0)
+            return v / geo
+        }
+        let mine = shape(dmaxNorm)
+        return shape(SIMD3(mine.x / typical.x, mine.y / typical.y, mine.z / typical.z))
+    }
 }
 
 public enum FilmStockDminRegistry {
+    /// 번들 컬러 네거티브(C-41·ECN-2)의 채널별 밀도 범위 모양(기하평균 1)의 채널별 중앙값.
+    static let typicalColorNegativeRangeShape: SIMD3<Double> = {
+        let shapes = all.filter { $0.process == "C-41" || $0.process == "ECN-2" }.map { stock -> SIMD3<Double> in
+            let v = stock.dmaxNorm
+            let geo = pow(max(v.x, 1e-4) * max(v.y, 1e-4) * max(v.z, 1e-4), 1.0 / 3.0)
+            return v / geo
+        }
+        func median(_ values: [Double]) -> Double {
+            let sorted = values.sorted()
+            guard !sorted.isEmpty else { return 1 }
+            return sorted.count % 2 == 1 ? sorted[sorted.count / 2]
+                : (sorted[sorted.count / 2 - 1] + sorted[sorted.count / 2]) / 2
+        }
+        return SIMD3(median(shapes.map(\.x)), median(shapes.map(\.y)), median(shapes.map(\.z)))
+    }()
+
     // 밀도(D) 중간값들을 저장. 투과율/정규화는 FilmStockDmin이 계산.
     //
     // 데이터 출처의 진실: 제조사 데이터시트에 D-min "수치 테이블"은 존재하지 않는다

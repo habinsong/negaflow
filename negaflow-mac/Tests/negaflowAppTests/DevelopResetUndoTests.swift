@@ -32,15 +32,20 @@ final class DevelopResetUndoTests: XCTestCase {
             $0.contrast = -0.4
             $0.saturation = 0.6
         }
+        let crop = SIMD4<Double>(0.05, 0.05, 0.9, 0.9)
+        frame.updateTransform { $0.cropRect = crop; $0.straightenAngle = 1.5 }
         let defaults = DevelopParameters()
 
         model.resetAllDevelopAdjustments(frame, neutralPreset: nil)
+        XCTAssertNil(frame.imageTransform.cropRect)
         XCTAssertEqual(frame.params.exposure, defaults.exposure)
         XCTAssertEqual(frame.params.contrast, defaults.contrast)
         XCTAssertEqual(frame.params.saturation, defaults.saturation)
         XCTAssertTrue(undoManager.canUndo, "초기화는 되돌릴 수 있어야 한다.")
 
         undoManager.undo()
+        XCTAssertEqual(frame.imageTransform.cropRect, crop, "되돌리기는 크롭도 되살린다.")
+        XCTAssertEqual(frame.imageTransform.straightenAngle, 1.5)
         XCTAssertEqual(frame.params.exposure, 1.25)
         XCTAssertEqual(frame.params.contrast, -0.4)
         XCTAssertEqual(frame.params.saturation, 0.6)

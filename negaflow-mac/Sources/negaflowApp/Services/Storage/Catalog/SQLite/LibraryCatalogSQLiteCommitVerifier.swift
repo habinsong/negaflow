@@ -30,6 +30,12 @@ extension LibraryCatalogFile {
             for: url,
             fileManager: fileManager
         )
+        // 디스크가 마지막으로 쓰거나 검증해 읽은 그 파일 그대로(크기·수정 시각·inode 일치)이고
+        // 내용도 같으면 쓸 것이 없다. 롤백 사본 복사·전체 비교·재검증을 건너뛴다 — 바뀐 것 없는
+        // 종료가 멈추지 않게. 같음의 기준은 read-back 검증과 같다(왕복에서 날짜 정밀도만 달라진다).
+        if let previousCatalog, hasSameContent(previousCatalog, catalog) {
+            return .success(())
+        }
         let snapshot: SQLitePrimarySnapshot
         do {
             snapshot = try makeSQLitePrimarySnapshot(at: url, fileManager: fileManager)
@@ -76,6 +82,13 @@ extension LibraryCatalogFile {
             fileManager: fileManager
         )
         return .success(())
+    }
+
+    /// read-back 검증과 같은 기준의 내용 비교. 인코딩에 실패하면 같다고 보지 않는다.
+    static func hasSameContent(_ lhs: LibraryCatalog, _ rhs: LibraryCatalog) -> Bool {
+        if lhs == rhs { return true }
+        guard let lhsData = canonicalData(lhs) else { return false }
+        return lhsData == canonicalData(rhs)
     }
 
     private static func sqliteReadbackMatches(

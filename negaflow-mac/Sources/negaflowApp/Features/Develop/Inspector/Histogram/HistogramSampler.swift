@@ -4,10 +4,20 @@ import Chromabase
 
 enum HistogramSampler {
     static func compute(_ image: NSImage) -> HistogramBins? {
+        cgImage(of: image).flatMap(compute)
+    }
+
+    /// 표시용 NSImage 에서 CGImage 를 꺼낸다. 현상 결과는 CGImage 로 만든 NSImage 라 대개 그것을
+    /// 그대로 돌려준다 — 화소 계산(`compute(_: CGImage)`)은 메인 밖에서 돌릴 수 있다.
+    static func cgImage(of image: NSImage) -> CGImage? {
         var proposedRect = NSRect(origin: .zero, size: image.size)
-        let directImage = image.cgImage(forProposedRect: &proposedRect, context: nil, hints: nil)
-        let bitmapImage = image.tiffRepresentation.flatMap(NSBitmapImageRep.init(data:))?.cgImage
-        guard let cg = directImage ?? bitmapImage else { return nil }
+        if let direct = image.cgImage(forProposedRect: &proposedRect, context: nil, hints: nil) {
+            return direct
+        }
+        return image.tiffRepresentation.flatMap(NSBitmapImageRep.init(data:))?.cgImage
+    }
+
+    static func compute(_ cg: CGImage) -> HistogramBins? {
         let targetW = 256, scale = Double(targetW) / Double(cg.width)
         let targetH = max(1, Int(Double(cg.height) * scale))
         var px = [UInt8](repeating: 0, count: targetW * targetH * 4)

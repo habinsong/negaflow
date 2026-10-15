@@ -175,7 +175,7 @@ public enum NegativeInversion {
         measurements: inout DevelopSceneMeasurements
     ) -> CIImage {
         let stats = measurements.inversionStats
-            ?? sampleStats(image, base: base, filmType: filmType)
+            ?? sampleStats(image, base: base, filmType: filmType, region: measurements.analysisRegion)
             ?? genericStats(base: base, filmType: filmType)
         measurements.inversionStats = stats
         let inverted = applyDensityEncoding(
@@ -186,6 +186,7 @@ public enum NegativeInversion {
         return applyMutedSceneVibrance(
             to: inverted,
             monochrome: filmType == .bwNegative,
+            region: measurements.analysisRegion,
             amount: &measurements.mutedVibranceAmount
         )
     }
@@ -203,6 +204,7 @@ public enum NegativeInversion {
     static func applyMutedSceneVibrance(
         to image: CIImage,
         monochrome: Bool,
+        region: AnalysisRegion? = nil,
         amount cachedAmount: inout Double?
     ) -> CIImage {
         guard !monochrome else { return image }
@@ -217,7 +219,7 @@ public enum NegativeInversion {
         if let cached = cachedAmount {
             amount = cached
         } else {
-            let meanSaturation = sceneMeanSaturation(image)
+            let meanSaturation = sceneMeanSaturation(AnalysisRegion.measurementImage(image, region: region))
             amount = min(0.5, max(0.0, (0.24 - meanSaturation) * 3.0))
             if ProcessInfo.processInfo.environment["NEGA_DEBUG"] != nil {
                 FileHandle.standardError.write(Data(
@@ -293,12 +295,11 @@ public enum NegativeInversion {
         return sum / Double(max(n, 1))
     }
 
-    /// 필름 Dmin/Dmax 프리셋을 적용한 반전. 프리셋의 역할(측정 base 우선 원칙):
-    ///   • dmin(베이스 투과율) — 호출측이 실측/프리셋으로 세팅해 전달.
-    ///   • dmaxNorm 채널 **비율**(필름 물성 = 염료 분리) — 장면 히스토그램의 채널별 왜곡
-    ///     (파란 하늘이 B dmaxNorm 을 폭발시키는 보라 hue shift)을 회피한다.
-    /// 전체 스케일도 프리셋의 공개 특성곡선 판독값을 그대로 쓴다. 장면 percentile로 다시
-    /// 늘리거나 줄이면 프레임 내용에 따라 같은 필름의 노출과 색 좌표가 바뀌기 때문이다.
+    /// 필름(프리셋) 모드의 반전 = 자동 경로(장면 실측 범위·톤·뮤트 장면 생동감) × 필름 상대 계수.
+    /// 예전엔 채널 비율을 데이터시트(Status M)로 통째로 바꿨는데, 스캐너 채널은 분광 감도가 달라
+    /// 파랑 범위가 체계적으로 더 넓어 모든 필름이 파랗고 과채도로 반전됐다(2026-10-15 실측 — 필름
+    /// 사이 차이는 ΔE≈1 인데 모드 전환만으로 ΔE 5~13). 데이터시트에서 믿을 수 있는 것은 필름 사이의
+    /// 상대 차이뿐이라 그것만 얹는다(`FilmStockDmin.relativeRangeFactor`).
     public static func apply(
         to image: CIImage,
         base: FilmBase,
@@ -322,34 +323,27 @@ public enum NegativeInversion {
         measurements: inout DevelopSceneMeasurements
     ) -> CIImage {
         let stats = measurements.inversionStats
-            ?? presetStats(for: image, base: base, preset: preset, filmType: filmType)
+            ?? presetStats(for: image, base: base, preset: preset, filmType: filmType,
+                           region: measurements.analysisRegion)
         measurements.inversionStats = stats
-        return applyDensityEncoding(to: image, stats: stats, response: response(for: filmType))
+        let inverted = applyDensityEncoding(to: image, stats: stats, response: response(for: filmType))
+        return applyMutedSceneVibrance(
+            to: inverted,
+            monochrome: filmType == .bwNegative,
+            region: measurements.analysisRegion,
+            amount: &measurements.mutedVibranceAmount
+        )
     }
 
     static func presetStats(for image: CIImage, base: FilmBase,
                             preset: FilmStockDmin,
-                            filmType: FilmType = .colorNegative) -> ChannelStats {
-        let dmin = clampedDmin(base.rgb)
-        // 스케일(노출역)은 **실측**한다. 고정 preset.dmaxNorm(데이터시트 밀도역 ~2.0D)로 정규화하면
-        // 얇은 실스캔(실제 사용역 ~0.85~1.5D)이 좁은 대역에 압축돼 어둡고 납작해진다(좌측 쏠림+상하
-        // 압축) — auto 경로(applySceneRanged)가 이미 실측으로 해결한 문제를 프리셋만 재현하던 버그.
-        // 채널 **비율**(염료 분리 = 필름 물성)은 프리셋을 앵커로 써 장면 의존 채널 왜곡(파란 하늘의
-        // 보라 shift)을 피한다 → 노출은 보존하면서 필름별 색 특성만 반영한다.
-        let measured = sampleStats(image, base: base, filmType: filmType)
-        let sceneScale = measured.map {
-            pow($0.dmaxNorm.x * $0.dmaxNorm.y * $0.dmaxNorm.z, 1.0 / 3.0)
-        } ?? response(for: filmType).normalRange
-        if filmType == .bwNegative {
-            return ChannelStats(dmin: dmin, dmaxNorm: SIMD3(repeating: sceneScale),
-                                blackInput: dmin, midDensity: 0)
-        }
-        let p = preset.dmaxNorm
-        let pGeo = pow(max(p.x, 1e-4) * max(p.y, 1e-4) * max(p.z, 1e-4), 1.0 / 3.0)
-        let dmaxNorm = SIMD3(sceneScale * p.x / pGeo,
-                             sceneScale * p.y / pGeo,
-                             sceneScale * p.z / pGeo)
-        return ChannelStats(dmin: dmin, dmaxNorm: dmaxNorm, blackInput: dmin, midDensity: 0)
+                            filmType: FilmType = .colorNegative,
+                            region: AnalysisRegion? = nil) -> ChannelStats {
+        var stats = sampleStats(image, base: base, filmType: filmType, region: region)
+            ?? genericStats(base: base, filmType: filmType)
+        guard filmType != .bwNegative else { return stats }
+        stats.dmaxNorm *= preset.relativeRangeFactor
+        return stats
     }
 
     static func genericStats(
@@ -376,10 +370,13 @@ public enum NegativeInversion {
     // MARK: 채널별 통계 샘플링
 
     static func sampleStats(
-        _ image: CIImage,
+        _ fullImage: CIImage,
         base: FilmBase,
-        filmType: FilmType = .colorNegative
+        filmType: FilmType = .colorNegative,
+        region: AnalysisRegion? = nil
     ) -> ChannelStats? {
+        // 크롭한 사진 영역이 있으면 그 안만 잰다(홀더·백라이트·이웃 프레임 배제).
+        let image = AnalysisRegion.measurementImage(fullImage, region: region)
         let extent = image.extent.integral
         guard extent.width > 8, extent.height > 8,
               let linear = CGColorSpace(name: CGColorSpace.linearSRGB) else { return nil }
@@ -400,14 +397,17 @@ public enum NegativeInversion {
             colorSpace: linear
         )
 
-        // 검은 프레임 경계(필름 홀더)를 제외하기 위해 내부 6% 인셋만 사용한다.
-        let insetX = max(1, Int(Double(targetW) * 0.06))
-        let insetY = max(1, Int(Double(targetH) * 0.06))
+        // 검은 프레임 경계(필름 홀더)를 제외하기 위해 내부 6% 인셋만 사용한다. 크롭 영역이면
+        // 경계는 이미 잘려 나갔으므로 축소 보간이 크롭 가장자리에서 섞는 두 화소만 버린다 — 6% 를
+        // 그대로 두면 사진 가장자리의 실제 명부가 Dmax 측정에서 빠진다.
+        let insetX = region == nil ? max(1, Int(Double(targetW) * 0.06)) : 2
+        let insetY = region == nil ? max(1, Int(Double(targetH) * 0.06)) : 2
+        let innerW = max(1, targetW - 2 * insetX), innerH = max(1, targetH - 2 * insetY)
         var pixels: [SIMD3<Double>] = []
-        pixels.reserveCapacity(targetW * targetH)
-        for y in insetY..<max(insetY + 1, targetH - insetY) {
-            for x in insetX..<max(insetX + 1, targetW - insetX) {
-                let i = (y * targetW + x) * 4
+        pixels.reserveCapacity(innerW * innerH)
+        for y in insetY..<(insetY + innerH) {
+            for x in insetX..<(insetX + innerW) {
+                let i = (min(y, targetH - 1) * targetW + min(x, targetW - 1)) * 4
                 pixels.append(SIMD3(
                     Double(bitmap[i]), Double(bitmap[i + 1]), Double(bitmap[i + 2])
                 ))
@@ -432,13 +432,51 @@ public enum NegativeInversion {
         let darkCut = baseLuma * 0.15
         let baseRatio = base.rgb.x / max(base.rgb.z, 1e-4)
         let neutralDarkRatioCut: Double? = baseRatio >= 1.5 ? baseRatio * 0.55 : nil
-        var film = pixels.filter { p in
+        func isNonFilm(_ p: SIMD3<Double>) -> Bool {
             let luma = (p.x + p.y + p.z) / 3
-            if luma > gate { return false }
+            if luma > gate { return true }
             if let ratioCut = neutralDarkRatioCut, luma < darkCut,
-               p.x / max(p.z, 1e-4) < ratioCut { return false }
-            return true
+               p.x / max(p.z, 1e-4) < ratioCut { return true }
+            return false
         }
+        // 홀더·백라이트 같은 **두께 있는** 비필름 영역의 가장자리 띠(2 화소)도 버린다. 축소 보간이
+        // 그 가장자리를 필름과 섞은 화소는 게이트를 통과하면서 최농부(p0.2)를 차지한다 — 2026-10-14
+        // 실측: 홀더가 리베이트를 가린 디카 스캔에서 혼합 화소가 Dmax 를 1.8D 바닥으로 채널마다 다르게
+        // 잡아 중립 웨지가 R/B 0.72~0.98 로 틀어졌다.
+        // 먼저 3×3 침식으로 흩어진 점을 지운다. 베이스 근처 밝기의 넓은 면에서는 양자화·그레인 수준의
+        // 차이로 게이트 판정이 점점이 뒤집히는데, 그 점마다 이웃을 지우면 필름의 91% 가 사라져 남은
+        // 화소의 최농부가 입력의 미세한 차이에 크게 흔들렸다(같은 화상의 원본과 화면용 sRGB 사본에서
+        // Dmax R 0.146 vs 0.238 → 화면·내보내기 불일치). 혼합 띠는 두께 있는 영역 옆에만 생긴다.
+        let nonFilm = pixels.map(isNonFilm)
+        var solid = [Bool](repeating: false, count: nonFilm.count)
+        for y in 0..<innerH {
+            for x in 0..<innerW where nonFilm[y * innerW + x] {
+                var allNonFilm = true
+                for ny in max(0, y - 1)...min(innerH - 1, y + 1) where allNonFilm {
+                    for nx in max(0, x - 1)...min(innerW - 1, x + 1) where !nonFilm[ny * innerW + nx] {
+                        allNonFilm = false
+                        break
+                    }
+                }
+                solid[y * innerW + x] = allNonFilm
+            }
+        }
+        // 침식된 핵에서 3 화소 = 원래 경계에서 2 화소 띠.
+        var nearNonFilm = nonFilm
+        if solid.contains(true) {
+            let radius = 3
+            for y in 0..<innerH {
+                for x in 0..<innerW where solid[y * innerW + x] {
+                    for ny in max(0, y - radius)...min(innerH - 1, y + radius) {
+                        for nx in max(0, x - radius)...min(innerW - 1, x + radius) {
+                            nearNonFilm[ny * innerW + nx] = true
+                        }
+                    }
+                }
+            }
+        }
+        var film = pixels.indices.filter { !nearNonFilm[$0] }.map { pixels[$0] }
+        if film.count < 64 { film = pixels.indices.filter { !nonFilm[$0] }.map { pixels[$0] } }
         if film.count < 64 { film = pixels }
         guard film.count >= 64 else { return nil }
         var red = film.map(\.x), green = film.map(\.y), blue = film.map(\.z)

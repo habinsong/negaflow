@@ -45,6 +45,7 @@ extension ScanFrame {
         copy.cachedBaseKey = cachedBaseKey
         copy.cachedBase = cachedBase
         copy.cachedDevelopedBase = cachedDevelopedBase
+        copy.cachedDevelopedAnalysisKey = cachedDevelopedAnalysisKey
         copy.cachedClippingOverlayBase = cachedClippingOverlayBase
         copy.cachedDestinationGamutOverlayBase = cachedDestinationGamutOverlayBase
         copy.cachedThumbnailBase = cachedThumbnailBase

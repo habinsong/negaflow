@@ -39,8 +39,8 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
     public var curveShadows: Double = 0.0
 
     // Color (plan §8.8) — 기본 UI
-    public var warmth: Double = 0.0          // -1...1
-    public var tint: Double = 0.0            // -1...1
+    public var warmth: Double = 0.0          // -4...4 (WhiteBalanceGains — ±1 까지 예전 게인)
+    public var tint: Double = 0.0            // -4...4
     public var colorDepth: Double = 0.0      // -1...1 (saturation)
     public var vibrance: Double = 0.0
     public var saturation: Double = 0.0

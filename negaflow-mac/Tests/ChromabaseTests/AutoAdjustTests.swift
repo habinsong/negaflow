@@ -117,15 +117,29 @@ final class AutoAdjustTests: XCTestCase {
             "검정 경계가 Blacks 를 크게 끌어올려 검정을 씻으면 안 된다. blacks=\(d.blacks)")
     }
 
+    /// 흑백 프린트형(깊은 검정이 넓고 대비가 큰) 분포: 슬라이더가 닿지 않는 검정을 끌어올리려 Shadows 를
+    /// 최대로 밀거나, 평균 컬러 장면의 스프레드에 맞추려 Contrast 를 크게 깎으면 계조가 무너진다
+    /// (2026-10-15 실측: D-76 흑백 7 장 중 5 장 shadow 0.8·contrast −0.45, 하위 25% 지점 2 배 상승).
+    func testAutoToneKeepsDeepBlacksAndContrastOfPrintLikeMonochrome() {
+        var h = [Double](repeating: 0, count: 256)
+        for i in 1...3 { h[i] = 0.04 }            // 12% 깊은 검정
+        for i in 4...60 { h[i] = 0.28 / 57 }      // 28% 암부
+        for i in 61...149 { h[i] = 0.10 / 89 }    // 10% 미드
+        for i in 150...236 { h[i] = 0.50 / 87 }   // 50% 밝은 면
+        let d = AutoAdjust.autoTone(stats(0.42, 0.42, 0.42, h, sat: 0.0), filmType: .bwNegative)
+        XCTAssertLessThanOrEqual(d.shadow, 0.15, "깊은 검정 때문에 암부를 들었다 shadow=\(d.shadow)")
+        XCTAssertGreaterThanOrEqual(d.contrast, -0.15, "대비를 크게 깎아 계조를 눌렀다 contrast=\(d.contrast)")
+    }
+
     // MARK: 2026-07-17 재설계 가드 — 부분 보정/클램프/density/하이키 보호/지배색 강건성
 
-    /// 강한 웜 캐스트: 보정은 클램프(±0.6) 이내여야 하고, 보정을 실제 게인으로 적용했을 때
-    /// 캐스트 부호가 뒤집히면(과보정 → 반대 파랑) 안 된다.
+    /// 강한 웜 캐스트: 보정은 클램프(±1 = 예전 슬라이더 끝, 2026-10-14 ±0.6 에서 넓힘) 이내여야
+    /// 하고, 보정을 실제 게인으로 적용했을 때 캐스트 부호가 뒤집히면(과보정 → 반대 파랑) 안 된다.
     func testAutoWBDoesNotOvershootStrongWarmCastIntoBlue() {
         let s = stats(0.72, 0.55, 0.38, flat(), sat: 0.2)
         let (w, _) = AutoAdjust.autoWhiteBalance(s)
         XCTAssertLessThan(w, 0, "웜 캐스트는 식혀야 한다")
-        XCTAssertGreaterThanOrEqual(w, -0.6, "Warmth 클램프(±0.6)를 넘으면 안 된다")
+        XCTAssertGreaterThanOrEqual(w, -1.0, "Warmth 클램프(±1)를 넘으면 안 된다")
         // 적용 시뮬레이션(ColorModel linear 게인): R'(1+0.18w) vs B'(1−0.18w) — 부호 유지.
         let rl = AutoAdjust.srgbDecode(0.72), bl = AutoAdjust.srgbDecode(0.38)
         let rAfter = rl * (1 + 0.18 * w), bAfter = bl * (1 - 0.18 * w)
@@ -156,13 +170,14 @@ final class AutoAdjustTests: XCTestCase {
         XCTAssertEqual(t, 0, accuracy: 0.15, "지배 빨강이 Tint 를 끌고 가면 안 된다. t=\(t)")
     }
 
-    /// 미드가 photometric 앵커(linear 0.18)보다 밝은 이미지: 노출은 밝히는 방향만이므로 0,
-    /// 미드 잔차는 density(+, 미드 국소 어둡히기)가 담당한다 — 하이라이트 불침범.
-    func testAutoToneUsesDensityForBrightMidtones() {
+    /// 미드가 photometric 앵커(linear 0.18)보다 밝은 이미지: 노출은 밝히는 방향만이므로 0이고,
+    /// density 로도 미드를 어둡게 하지 않는다(2026-10-14 — 예전에는 density(+)가 하이키·설경을
+    /// 회색으로 끌어내려 노출의 "밝히는 방향만" 원칙을 우회했다). 클리핑 복구만 어둡게 한다.
+    func testAutoToneDoesNotDarkenBrightMidtones() {
         // p50 sRGB ≈ 0.62 (linear ≈ 0.34) — 미드가 앵커보다 +0.9 스탑 밝은 중간톤 이미지.
         let d = AutoAdjust.autoTone(stats(0.62, 0.62, 0.62, spike(158), sat: 0.3))
         XCTAssertEqual(d.exposure, 0, accuracy: 1e-9, "밝히는 방향이 아니면 노출은 0")
-        XCTAssertGreaterThan(d.density, 0.1, "밝은 미드는 density(+) 로 국소 조정해야 한다")
+        XCTAssertLessThanOrEqual(d.density, 0, "밝은 미드를 density(+)로 어둡게 하면 안 된다")
     }
 
     /// 어두운 미드(노출 상한 이내): 노출이 미드 앵커를 채우면 density 잔차는 작아야 한다.

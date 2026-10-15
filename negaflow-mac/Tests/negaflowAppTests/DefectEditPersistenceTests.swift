@@ -288,6 +288,30 @@ final class DefectEditPersistenceTests: XCTestCase {
         XCTAssertNil(DefectSidecarFile.load(for: frameID, in: directory))
     }
 
+    /// 시작 때 결함 기록을 동시에 읽어도 사진마다 하나씩 읽은 것과 같아야 한다.
+    func testRestoreReadAllMatchesPerFrameReads() throws {
+        let directory = temporaryDirectory("v2-read-all")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let frameIDs = (1...6).map { UUID(uuidString: "5555555\($0)-5555-5555-5555-555555555555")! }
+        for (index, frameID) in frameIDs.dropLast().enumerated() {
+            _ = try DefectSidecarFile.write(
+                makeSnapshot(frameID: frameID, revision: UInt64(index + 1), strength: 0.2 + 0.1 * Double(index)),
+                in: directory
+            )
+        }
+
+        let restored = DefectRecipeRestoration.readAll(frameIDs: frameIDs, in: directory, backupDirectory: nil)
+
+        XCTAssertEqual(Set(restored.keys), Set(frameIDs))
+        for frameID in frameIDs {
+            let single = DefectRecipeRestoration.read(frameID: frameID, in: directory)
+            XCTAssertEqual(restored[frameID]?.snapshot, single.snapshot)
+            XCTAssertEqual(restored[frameID]?.items.count, single.items.count)
+        }
+        XCTAssertNil(restored[frameIDs[5]]?.snapshot, "기록이 없는 사진은 빈 복원이다")
+        XCTAssertEqual(restored[frameIDs[2]]?.snapshot?.identity.revision, 3)
+    }
+
     func testV2SynchronousWriteNeverRegressesRevision() throws {
         let directory = temporaryDirectory("v2-sync-revision")
         defer { try? FileManager.default.removeItem(at: directory) }

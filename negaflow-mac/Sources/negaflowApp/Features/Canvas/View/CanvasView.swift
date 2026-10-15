@@ -220,17 +220,23 @@ struct CanvasView: View {
                 resetViewport(animated: false)
             }
         }
-        .onChange(of: basePickerMode) { _, isOn in
-            // 베이스는 반전 전 raw 에서 보인다(오렌지 마스크). 진입 시 Raw 보기, 종료 시 복원.
-            if isOn {
-                selectCompareMode(.raw)
-            } else if activeCompareMode == .raw {
-                selectCompareMode(.developed)
-            }
+        .onChange(of: basePickerMode) { _, _ in syncEyedropperCompareMode() }
+        .onChange(of: frame.eyedropperTarget) { _, _ in
+            if basePickerMode { syncEyedropperCompareMode() }
         }
         .modifier(BeforeAfterToggleRequestModifier(model: model, action: toggleDevelopedShortcut))
         // ⌘Z/⇧⌘Z 는 편집 메뉴 한 곳에서만 받는다. 캔버스가 ⌘Z 를 가로채면 사진을 지운 직후의
         // 되돌리기가 지운 사진이 아니라 지금 사진의 GrainMend 로 가 버린다.
+    }
+
+    /// 베이스는 반전 전 raw 에서 보인다(오렌지 마스크) — 베이스 스포이드는 Raw 보기로 찍는다.
+    /// 중립 스포이드는 현상본을 보며 찍고, 스포이드를 끄면 Raw 보기에서 돌아온다.
+    private func syncEyedropperCompareMode() {
+        if basePickerMode, frame.eyedropperTarget == .filmBase {
+            selectCompareMode(.raw)
+        } else if activeCompareMode == .raw {
+            selectCompareMode(.developed)
+        }
     }
 
     /// 캔버스가 실제로 쓰는 픽셀 수를 모델에 반영한다.

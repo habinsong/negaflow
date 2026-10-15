@@ -27,4 +27,17 @@ extension AppModel {
         }
         return nil
     }
+
+    /// 지금 recipe 세대가 디스크 기록으로 이미 확인됐는지 해시 없이 본다. 제스처나 live 갱신이
+    /// 걸려 있거나 식별값이 비어 있으면 확정되지 않은 것이다 — 그때만 다시 해시해 저장한다.
+    func isDefectRecipeCommitted(_ frame: ScanFrame) -> Bool {
+        guard !frame.defectEditsNeedRestore,
+              !frame.defectGestureRecipeAdvanced,
+              frame.defectRecipeRefreshTask == nil,
+              let identity = frame.defectRecipeIdentity,
+              identity.revision == frame.defectRecipeRevision else { return false }
+        return DefectSidecarCommitCache.shared.matches(
+            identity, at: DefectSidecarFile.url(for: frame.id, in: libraryDefectDirectoryURL)
+        )
+    }
 }

@@ -782,7 +782,7 @@ final class LibraryCatalogTests: XCTestCase {
         XCTAssertEqual(decision, .terminateLater)
         XCTAssertEqual(scheduledGenerations.count, 1)
 
-        model.scheduleLibrarySave()
+        XCTAssertNotNil(model.createPhysicalRoll(name: "Added while saving", filmType: .colorNegative))
         let changedGeneration = model.libraryCatalogDirtyGeneration
         let firstCompletion = try XCTUnwrap(pendingCompletions.first)
         firstCompletion(.success(()))
@@ -802,6 +802,47 @@ final class LibraryCatalogTests: XCTestCase {
         )
         XCTAssertFalse(model.hasUnsavedLibraryChanges)
         XCTAssertFalse(model.isLibraryTerminationSaveInProgress)
+    }
+
+    func testApplicationTerminationApprovesDisplayOnlyChangeWithoutRecommit() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "negaflow-termination-display-only-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = AppModel(
+            backupScheduleStore: try makeManualBackupScheduleStore(),
+            libraryCatalogURL: root.appendingPathComponent("library.json"),
+            libraryDefectDirectoryURL: root.appendingPathComponent("defects", isDirectory: true),
+            libraryBackupDirectoryURL: root.appendingPathComponent("backups", isDirectory: true)
+        )
+        model.libraryPersistenceEnabled = true
+        defer {
+            model.libraryPersistenceEnabled = false
+            model.librarySaveTask?.cancel()
+            model.librarySaveTask = nil
+        }
+        var scheduledGenerations: [UInt64] = []
+        var pendingCompletions: [LibraryTerminationCommitCompletion] = []
+        var replies: [Bool] = []
+
+        XCTAssertEqual(model.beginApplicationTermination(
+            scheduleCommit: { _, generation, _, _, completion in
+                scheduledGenerations.append(generation)
+                pendingCompletions.append(completion)
+            },
+            completion: { replies.append($0) }
+        ), .terminateLater)
+
+        // 썸네일 도착처럼 카탈로그 내용과 무관한 변경 표시만 올라간 경우.
+        model.scheduleLibrarySave()
+        try XCTUnwrap(pendingCompletions.first)(.success(()))
+
+        XCTAssertEqual(scheduledGenerations.count, 1)
+        XCTAssertEqual(replies, [true])
+        XCTAssertFalse(model.hasUnsavedLibraryChanges)
+        XCTAssertFalse(model.isLibraryTerminationSaveInProgress)
+        XCTAssertNil(model.librarySaveTask)
     }
 
     func testTerminationWithDefectEditsCommitsPreparedGenerationAndLaterChanges() async throws {

@@ -11,10 +11,29 @@ extension ChromabaseEngine {
         extent: CGRect,
         measurements: inout DevelopSceneMeasurements
     ) -> CIImage {
+        var img = negativeWhiteBalanceInput(
+            to: input, base: base, params: params, sampleColorSpace: sampleColorSpace,
+            measurements: &measurements
+        )
+        img = ColorModel.apply(to: img, params: params)
+        img = ToneMapper.applyExposure(to: img, stops: params.exposure, filmType: params.filmType)
+        img = ToneMapper.applyToneCurves(to: img, params: params, region: measurements.analysisRegion)
+        return img
+    }
+
+    /// 반전부터 화이트밸런스(ColorModel) 직전까지 — 중립 스포이드가 이 단계의 값을 잰다.
+    func negativeWhiteBalanceInput(
+        to input: CIImage,
+        base: FilmBase?,
+        params: DevelopParameters,
+        sampleColorSpace: CGColorSpace,
+        measurements: inout DevelopSceneMeasurements
+    ) -> CIImage {
         var img = input
         let preset: FilmStockDmin? = (params.baseEstimationMode == .preset)
             ? params.filmStockDminID.flatMap { FilmStockDminRegistry.find($0) } : nil
-        let reference = resolveFilmBase(for: img, provided: base, preset: preset, params: params)
+        let reference = resolveFilmBase(for: img, provided: base, preset: preset, params: params,
+                                        region: measurements.analysisRegion)
         let fb = params.baseEstimationMode == .auto
             ? params.baseScale.applied(to: reference) : reference
         prepareInputGammaStatistics(base: fb, preset: preset, params: params, measurements: &measurements)
@@ -38,17 +57,20 @@ extension ChromabaseEngine {
         // median 을 재면 측정과 적용 도메인이 어긋나 섀도 크러시(블랙포인트가 sRGB 값으로
         // 측정돼 linear 에서 과대 감산)·감마 과보정(≈2.2×)이 생긴다.
         let measureSpace = CGColorSpace(name: CGColorSpace.linearSRGB) ?? sampleColorSpace
+        let region = measurements.analysisRegion
         if params.autoLevels {
             // outputBlack: 반전 토우 플로어(paper black) 보존 — 0 이면 p0.5 블랙포인트가
             // 최암부 빈 0 벽을 다시 만든다(히스토그램 양끝 폭발의 재발 경로).
             img = AutoLevels.apply(to: img, sampleColorSpace: measureSpace,
                                    outputWhite: 0.95,
                                    outputBlack: NegativeInversion.toeFloor,
+                                   region: region,
                                    points: &measurements.autoLevelsPoints)
         }
         if params.autoNeutralBalance {
             img = NeutralBalance.apply(to: img, sampleColorSpace: measureSpace,
-                                       median: &measurements.neutralBalanceMedian)
+                                       region: region,
+                                       correction: &measurements.neutralBalanceCorrection)
         }
         // 타겟별 베이스 분기:
         //   main/print          — Dmin + 고정 인화 응답으로 만든 중립 기본 양화. 장면별 자동
@@ -63,7 +85,7 @@ extension ChromabaseEngine {
         if params.developTarget.isScannerEmulation {
             img = ScannerTargetGrade.apply(
                 to: img, target: params.developTarget, params: params,
-                anchor: &measurements.scannerSceneAnchor
+                region: region, anchor: &measurements.scannerSceneAnchor
             )
         }
         if params.developTarget == .rescue {
@@ -72,6 +94,7 @@ extension ChromabaseEngine {
             img = RescueGrade.apply(to: img, sampleColorSpace: measureSpace,
                                     filmType: params.filmType,
                                     recoverRange: false,
+                                    region: region,
                                     recovery: &measurements.rescueRecovery)
         }
         // 타겟 프로파일 밖의 고정 NR·별도 명부 탈채도·추가 gamut 압축은 적용하지 않는다.
@@ -83,9 +106,6 @@ extension ChromabaseEngine {
            let profile = scannerProfile(for: params) {
             img = ScannerProfileGrade.apply(to: img, profile: profile)
         }
-        img = ColorModel.apply(to: img, params: params)
-        img = ToneMapper.applyExposure(to: img, stops: params.exposure)
-        img = ToneMapper.applyToneCurves(to: img, params: params)
         return img
     }
 
@@ -98,7 +118,8 @@ extension ChromabaseEngine {
         for image: CIImage,
         provided base: FilmBase?,
         preset: FilmStockDmin?,
-        params: DevelopParameters
+        params: DevelopParameters,
+        region: AnalysisRegion? = nil
     ) -> FilmBase {
         let neutralBase = params.filmType == .bwNegative
         if let manual = params.manualBaseRGB, params.baseEstimationMode == .manual {
@@ -109,14 +130,14 @@ extension ChromabaseEngine {
             // (재적용 금지 = 이중 적용 방지). provided 가 없을 때만(드묾) 여기서 fresh 측정+게인 적용.
             if let provided = base { return provided }
             let resolved: FilmBase = Self.estimateBaseWithChromogenicFallback(
-                from: image, neutralBase: neutralBase, confidentOnly: true)
+                from: image, neutralBase: neutralBase, confidentOnly: true, region: region)
                 ?? FilmBase(rgb: preset.dminTransmission, source: .manual)
             return Self.applyLightSourceGain(to: resolved,
                                              lightSourceProfileID: params.lightSourceProfileID,
                                              neutralBase: neutralBase)
         }
         if let provided = base
-            ?? Self.estimateBaseWithChromogenicFallback(from: image, neutralBase: neutralBase) {
+            ?? Self.estimateBaseWithChromogenicFallback(from: image, neutralBase: neutralBase, region: region) {
             return provided
         }
         return estimateFallbackBaseFromScene(image, neutralBase: neutralBase)

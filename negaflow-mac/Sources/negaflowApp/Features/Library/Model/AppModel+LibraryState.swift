@@ -29,6 +29,7 @@ extension AppModel {
                error.generation <= generation {
                 libraryCatalogPersistenceError = nil
             }
+            scheduleSessionBackupAfterSave()
             return
         }
 

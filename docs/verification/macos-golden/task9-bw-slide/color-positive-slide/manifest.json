@@ -16,7 +16,7 @@
       "exportColorSpace" : "sRGB",
       "file" : "b-main-scannerprofile-srgb.tif",
       "scannerProfile" : "noritsu__color-slide__kodak-ektachrome-100",
-      "sha256" : "5bb1747dc06cd612365a87cb565f015af54dc78d7f50573b597f7bcd50c3026a"
+      "sha256" : "aefac416016040ea5051c825bae38c3476f2891d9dbce80bff5da07b3ee25885"
     },
     {
       "bytes" : 30832142,
@@ -34,7 +34,7 @@
       "exportColorSpace" : "sRGB",
       "file" : "c-target-sp-srgb.tif",
       "scannerProfile" : "none",
-      "sha256" : "847f4836a9bbe82f097f0645dc4b84bbaa99143b8f8569dc1ee785eaf2e47b2e"
+      "sha256" : "ac6de0fc7a946d194d9913086915235c7aff551dba62acc2e64314d0316d6561"
     },
     {
       "bytes" : 30832142,

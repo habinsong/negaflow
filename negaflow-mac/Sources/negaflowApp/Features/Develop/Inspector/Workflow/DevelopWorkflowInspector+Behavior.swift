@@ -78,7 +78,7 @@ extension DevelopWorkflowInspector {
         DevelopInspectorBindings.calibration(frame: frame, keyPath: keyPath) { scheduleRedevelop(frame) }
     }
 
-    /// Geometry(imageTransform)·Base 설정을 제외한 모든 보정 값을 기본값으로 되돌린다(⌘Z 로 취소 가능).
+    /// Base 설정과 90° 회전·뒤집기를 제외한 모든 보정 값(크롭·수평 각도 포함)을 기본값으로 되돌린다(⌘Z 로 취소 가능).
     func resetAllAdjustments() {
         model.resetAllDevelopAdjustments(frame, neutralPreset: neutralPreset)
         syncBatchWBIfNeeded()

@@ -10,6 +10,9 @@ import Foundation
 /// 그래서 호출부가 이 묶음을 들고 있다가 다음 현상에 되돌려준다. 값이 채워져 있으면 그대로
 /// 쓰고, 비어 있으면 재서 채운다. 입력 raw 나 베이스가 바뀌면 호출부가 통째로 버린다.
 public struct DevelopSceneMeasurements: Sendable, Equatable {
+    /// 장면을 잴 영역(크롭한 사진 영역, 변형 전 원본 좌표). nil 이면 프레임 전체(기존 6% 인셋).
+    /// 측정값의 입력이므로 영역이 바뀌면 호출부가 묶음째 버린다.
+    public var analysisRegion: AnalysisRegion?
     var inputGammaReferenceRange: SIMD3<Double>?
     /// 네거티브 반전이 쓰는 채널별 밀도 범위. auto 경로는 sampleStats, 프리셋 경로는
     /// presetStats 결과가 들어간다 — 둘 다 장면 실측에 기대므로 같은 슬롯을 쓴다.
@@ -21,8 +24,8 @@ public struct DevelopSceneMeasurements: Sendable, Equatable {
     var scannerSceneAnchor: ScannerTargetGrade.SceneToneAnchor?
     /// 자동 레벨이 검출한 채널별 끝점.
     var autoLevelsPoints: AutoLevels.Points?
-    /// 자동 중립화가 쓰는 장면 median.
-    var neutralBalanceMedian: SIMD3<Double>?
+    /// 자동 색상이 장면 중립축에 맞춘 보정(근거가 없으면 항등).
+    var neutralBalanceCorrection: NeutralBalance.Correction?
     /// EXPIRED 복구가 쓰는 중립축 증거.
     var rescueRecovery: RescueGrade.Recovery?
 

@@ -51,9 +51,11 @@ extension AppModel {
         }
         guard !isLibraryTerminationSaveInProgress else { return .terminateLater }
         isLibraryTerminationSaveInProgress = true
-        // 결함 편집이 없으면 기존 동기 커밋 경로를 그대로 쓴다. 편집이 있으면 먼저 비동기로
-        // recipe를 저장하고 커밋한다 — 실패 시 종료를 취소해 적용된 편집을 지킵니다.
-        let needsBake = frames.contains { !$0.isPreviewScan && !$0.defectEdits.isEmpty }
+        // 저장이 확인되지 않은 결함 편집이 없으면 바로 커밋한다. 있으면 먼저 비동기로 그 recipe만
+        // 저장하고 커밋한다 — 실패 시 종료를 취소해 적용된 편집을 지킵니다.
+        let needsBake = frames.contains {
+            !$0.isPreviewScan && !$0.defectEdits.isEmpty && !isDefectRecipeCommitted($0)
+        }
         guard needsBake else {
             guard startLibraryTerminationCommit(
                 scheduleCommit: scheduleCommit,
@@ -102,6 +104,7 @@ extension AppModel {
             guard let self else { return }
             self.finishLibraryTerminationCommit(
                 result,
+                catalog: prepared.catalog,
                 generation: prepared.generation,
                 scheduleCommit: scheduleCommit,
                 completion: completion
@@ -112,6 +115,7 @@ extension AppModel {
 
     private func finishLibraryTerminationCommit(
         _ result: Result<Void, LibraryCatalogCommitError>,
+        catalog: LibraryCatalog,
         generation: UInt64,
         scheduleCommit: @escaping LibraryTerminationCommitScheduler,
         completion: @escaping LibraryTerminationReply
@@ -121,7 +125,19 @@ extension AppModel {
         switch result {
         case .success:
             recordLibraryCatalogWriteResult(generation: generation, succeeded: true)
-            if libraryCatalogDirtyGeneration > generation {
+            if libraryCatalogDirtyGeneration > generation,
+               terminationCatalogStillMatches(catalog) {
+                // 커밋하는 동안 썸네일 같은 화면 값만 바뀌어도 사진 변경 표시가 올라간다. 카탈로그
+                // 내용이 방금 승인된 것과 같으면 디스크가 이미 지금 상태다 — 다시 커밋하지 않는다.
+                // 실행 직후 썸네일이 들어오는 동안 종료하면 이 표시를 쫓아 수백 번 재커밋했다.
+                librarySaveTask?.cancel()
+                librarySaveTask = nil
+                recordLibraryCatalogWriteResult(
+                    generation: libraryCatalogDirtyGeneration,
+                    succeeded: true
+                )
+            }
+            if libraryCatalogDirtyGeneration > generation, hasUnsavedLibraryChanges {
                 guard startLibraryTerminationCommit(
                     scheduleCommit: scheduleCommit,
                     completion: completion
@@ -135,17 +151,7 @@ extension AppModel {
             }
             isLibraryTerminationSaveInProgress = false
             libraryTerminationAttemptGeneration = nil
-            if backupScheduleStore.schedule == .onTermination {
-                Task { [weak self] in
-                    guard let self else { return }
-                    // 카탈로그 커밋은 이미 승인됐다. 백업은 덤이라, 실패했다고 종료를 막으면
-                    // 사용자는 앱을 끌 수 없게 된다 — 실패는 알리고 종료는 진행한다.
-                    _ = await self.createLibraryBackupNow()
-                    self.removeOwnedPreviewFilesForTermination()
-                    completion(true)
-                }
-                return
-            }
+            // 백업은 종료를 기다리게 하지 않는다. 자동 백업은 실행 중에 이미 백그라운드로 돈다.
             removeOwnedPreviewFilesForTermination()
             completion(true)
         case .failure:
@@ -157,6 +163,17 @@ extension AppModel {
             libraryTerminationAttemptGeneration = nil
             completion(false)
         }
+    }
+
+    /// 종료 커밋을 다시 준비할 때와 같은 조건(진행 중 트랜잭션 없음, 롤 소속 일치, 결함 기록 확정)에서
+    /// 지금 카탈로그가 방금 커밋한 값과 같은지 본다. 조건이 하나라도 어긋나면 다시 커밋하는 원래 길로 간다.
+    private func terminationCatalogStillMatches(_ committed: LibraryCatalog) -> Bool {
+        let persistentFrames = frames.filter { !$0.isPreviewScan }
+        guard !isAcknowledgedLibraryTransactionActive,
+              rollStore.hasExactMembership(for: persistentFrames.map(\.id)),
+              persistentFrames.allSatisfy({ $0.defectEdits.isEmpty || isDefectRecipeCommitted($0) }),
+              let current = currentLibraryCatalogSnapshot() else { return false }
+        return LibraryCatalogFile.hasSameContent(current, committed)
     }
 
     private func prepareLibraryTerminationCommit() -> (
@@ -175,7 +192,8 @@ extension AppModel {
             statusMessage = text(AppLocalizedPhrase.librarySaveFailed)
             return nil
         }
-        for frame in frames where !frame.isPreviewScan && !frame.defectEdits.isEmpty {
+        for frame in frames where !frame.isPreviewScan && !frame.defectEdits.isEmpty
+            && !isDefectRecipeCommitted(frame) {
             guard refreshDefectRecipeState(frame, advanceRevision: false, persist: true) != nil else {
                 return nil
             }

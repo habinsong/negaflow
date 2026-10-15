@@ -35,7 +35,8 @@ extension AppModel {
                 mode: frame.params.baseEstimationMode,
                 manualBaseRGB: frame.params.manualBaseRGB,
                 filmStockDminID: frame.params.filmStockDminID,
-                lightSourceProfileID: frame.params.lightSourceProfileID
+                lightSourceProfileID: frame.params.lightSourceProfileID,
+                imageTransform: frame.imageTransform
             )
 
             if !skipInteractivePreview {
@@ -63,6 +64,7 @@ extension AppModel {
                 do {
                     let renderStarted = Date()
                     let fast = try await renderDevelopmentSnapshot(interactive)
+                    LaunchTrace.markOnce("first interactive render end", String(format: "%.0fms", -renderStarted.timeIntervalSinceNow * 1000))
                     // 라이브 갱신 간격을 이 기기의 실제 소요에 맞추기 위한 근거.
                     developController.noteInteractiveDevelopDuration(-renderStarted.timeIntervalSinceNow)
                     guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else {
@@ -202,7 +204,9 @@ extension AppModel {
                 language: appLanguage
             )
             do {
+                let settledStarted = Date()
                 let result = try await renderDevelopmentSnapshot(full, settledFrame: frame)
+                LaunchTrace.markOnce("first settled render end", String(format: "%.0fms", -settledStarted.timeIntervalSinceNow * 1000))
                 guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
                 guard softProofRenderRequestIsCurrent(full) else {
                     revision = frame.developRevision
@@ -222,6 +226,7 @@ extension AppModel {
                 )
                 applyPreviewRawCache(result, to: frame, maxDimension: full.proxyMaxDimension)
                 frame.cachedDevelopedBase = result.developedBase   // 결함 제거 적용 전 base
+                frame.cachedDevelopedAnalysisKey = AnalysisRegion.cacheKey(for: full.imageTransform)
                 if pixelSamplerStore.isEnabled {
                     pixelSamplerStore.setWorkingBase(result.workingBase, for: frame.id)
                 }
@@ -504,6 +509,13 @@ extension AppModel {
         return frame.cachedInteractivePreviewRaw
     }
 
+    /// 현재 raw 세대의 인터랙티브 프록시(치수 무관) — 더 작은 프록시를 파생하는 소스로 쓴다.
+    func cachedInteractivePreviewRaw(for frame: ScanFrame) -> DevelopFramePreviewRaw? {
+        frame.cachedInteractivePreviewRawRevision == frame.cleanRawRevision
+            ? frame.cachedInteractivePreviewRaw
+            : nil
+    }
+
     func cachedSettledPreviewRaw(for frame: ScanFrame) -> DevelopFramePreviewRaw? {
         frame.cachedSettledPreviewRawRevision == frame.cleanRawRevision
             ? frame.cachedSettledPreviewRaw
@@ -532,7 +544,22 @@ extension AppModel {
 
     func developFailed(_ frame: ScanFrame, revision: Int) {
         guard ownsFrame(frame), frame.developRevision == revision else { return }
-        reportError(text(AppLocalizedPhrase.imageLoadFailedFormat, frame.rawScanURL.lastPathComponent))
+        let url = frame.rawScanURL
+        // 원본이 지워졌거나 옮겨진 사진(오프라인)은 앱 오류가 아니라 상태다 — 썸네일은 남아 있고
+        // '원본 찾기'로 다시 잇는다. 예전엔 고를 때마다 "이미지 로드 실패" 가 오류 기록(빨간 점·진단
+        // 리포트)에 쌓였다(2026-10-15 사용자 보고). 존재 확인은 외장 볼륨에서 막힐 수 있어 밖에서 한다.
+        Task {
+            let exists = await Task.detached(priority: .utility) {
+                FileManager.default.fileExists(atPath: url.path)
+            }.value
+            guard ownsFrame(frame), frame.rawScanURL == url, frame.developRevision == revision else { return }
+            if exists {
+                reportError(text(AppLocalizedPhrase.imageLoadFailedFormat, url.lastPathComponent))
+            } else {
+                statusMessage = text(AppLocalizedPhrase.sourceOfflineDevelopFormat, url.lastPathComponent)
+                refreshSourceAvailability()
+            }
+        }
     }
 
 }

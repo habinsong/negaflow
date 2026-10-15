@@ -6,7 +6,7 @@ import CoreGraphics
 //
 // 2026-07-17 재설계(검증된 방법론 — 추측 아님):
 //  • Auto Tone — 히스토그램 percentile 을 **linear 도메인**으로 환산해, 각 슬라이더의 실제
-//    전달함수(ToneMapper.applyExposure 2^ev 선형 곱, basicTone 커널의 luma additive 마스크·계수)를
+//    전달함수(ToneMapper.applyExposure — ExposureShoulder 와 같은 식, basicTone 커널의 luma 마스크·계수)를
 //    **역산**한다. 노출→화이트/블랙→하이라이트/섀도→농도→대비 순서로, 앞 단계의 이동을 뒤 단계
 //    percentile 예측에 반영한다(순차 시뮬레이션). 클리핑 목표는 일반 Auto Levels/Curves 의
 //    0.1~0.5% 클리핑 관행을 따른다. 노출의 미드 앵커는 photometric mid(linear 0.18 — 반전
@@ -15,7 +15,7 @@ import CoreGraphics
 //  • Auto WB — 근중립 부분집합(근중립 미드톤 평균 기반) 우선,
 //    부족하면 gray-world(산술평균) 대신 **Minkowski p=6 norm 평균**(Shades-of-Gray,
 //    Finlayson & Trezzi 2004 — 밝은 픽셀 가중으로 지배색 장면에서 산술평균보다 강건)으로 추정.
-//    ColorModel 의 실제 linear 게인(warmth R±0.18/G+0.03/B∓0.18, tint G+0.24/RB−0.12)을
+//    ColorModel 의 화이트밸런스 게인(WhiteBalanceGains — ±1 까지 예전 선형 게인, 그 너머 로그 연장)을
 //    **linear 도메인 통계**로 역산하고, **부분 보정(85%) + 클램프(±0.6) + 데드밴드**를 둔다 —
 //    완전 중립화(full-correction)는 gray-world 가정이 깨지는 장면(노을·숲·단색 배경)에서
 //    반대 캐스트(과보정 노랑/파랑)로 폭주하고, 지각적으로도 차갑다(중립 회색 타겟의
@@ -31,6 +31,8 @@ public enum AutoAdjust {
         public var neutralLinearR: Double, neutralLinearG: Double, neutralLinearB: Double
         /// Minkowski p=6 norm **linear** 평균(Shades-of-Gray) — 중립 부족 시 폴백.
         public var minkowskiLinearR: Double, minkowskiLinearG: Double, minkowskiLinearB: Double
+        /// 휘도대별 중립축 증거(NeutralAxisEvidence). 있으면 자동 WB 가 대역 중앙값의 중앙값을 쓴다.
+        var neutralAxis: NeutralAxisEvidence?
 
         public init(
             avgR: Double,
@@ -101,10 +103,13 @@ public enum AutoAdjust {
         var mink6R = 0.0, mink6G = 0.0, mink6B = 0.0
         var hist = [Double](repeating: 0, count: 256)
         let n = w * h
+        var linearPixels: [SIMD3<Double>] = []
+        linearPixels.reserveCapacity(n)
         for i in 0..<n {
             let o = i * 4
             let r = Double(data[o]) / 255, g = Double(data[o + 1]) / 255, b = Double(data[o + 2]) / 255
             let rl = decodeLUT[Int(data[o])], gl = decodeLUT[Int(data[o + 1])], bl = decodeLUT[Int(data[o + 2])]
+            linearPixels.append(SIMD3(rl, gl, bl))
             sumR += r; sumG += g; sumB += b
             let luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
             hist[min(255, max(0, Int(luma * 255)))] += 1
@@ -128,7 +133,7 @@ public enum AutoAdjust {
         let neutralDen = Double(max(neutralCount, 1))
         let hasNeutralSamples = neutralCount >= max(16, n / 100)
         let mink6Count = max(1.0, nd)
-        return ImageStats(avgR: sumR / nd, avgG: sumG / nd, avgB: sumB / nd,
+        var stats = ImageStats(avgR: sumR / nd, avgG: sumG / nd, avgB: sumB / nd,
                           lumaHist: hist.map { $0 / nd }, avgSaturation: sumSat / nd,
                           neutralAvgR: hasNeutralSamples ? neutralR / neutralDen : sumR / nd,
                           neutralAvgG: hasNeutralSamples ? neutralG / neutralDen : sumG / nd,
@@ -140,6 +145,8 @@ public enum AutoAdjust {
                           minkowskiLinearR: pow(mink6R / mink6Count, 1.0 / 6.0),
                           minkowskiLinearG: pow(mink6G / mink6Count, 1.0 / 6.0),
                           minkowskiLinearB: pow(mink6B / mink6Count, 1.0 / 6.0))
+        stats.neutralAxis = NeutralAxisEstimator.measure(linearPixels)
+        return stats
     }
 
     // MARK: Auto White Balance (근중립 우선 + Shades-of-Gray 폴백, 부분 보정)
@@ -147,37 +154,40 @@ public enum AutoAdjust {
     /// WB 부분 보정 강도. 완전 중립화는 지배색 장면에서 반대 캐스트로 폭주하고 지각적으로
     /// 차갑다 — 측정 캐스트의 85% 만 걷는다(실무 관행; 중립 회색 타겟의 한계).
     static let wbCorrectionStrength = 0.85
-    /// Warmth/Tint 절대 클램프. 슬라이더 전 범위(±1)가 아니라 잔차 캐스트 상한(±0.6:
-    /// warmth 0.6 = R+10.8%/B−10.8% linear)까지만 — 반전이 채널 정규화(WB 의 대부분)를
-    /// 이미 수행하므로 여기서 다루는 건 잔차다. 과보정 "너무 노랗/너무 파랗" 폭주 방지.
-    static let wbClamp = 0.60
+    /// Warmth/Tint 절대 클램프. 슬라이더 전 범위(±4)가 아니라 잔차 캐스트 상한(±1 = 예전 슬라이더
+    /// 끝, R/B ±0.525 스톱)까지만 — 반전이 채널 정규화(WB 의 대부분)를 이미 수행하므로 여기서
+    /// 다루는 건 잔차다. 휘도대별 중립축 증거로 지배색 장면의 폭주가 줄어 ±0.6 에서 넓혔다.
+    static let wbClamp = 1.0
     /// 데드밴드: R/B 채널비 오차가 이 이하(≈1.5%)면 이미 중립 — 건드리지 않는다.
     static let wbDeadband = 0.015
 
     /// 근중립(부족 시 Minkowski p=6) linear 평균을 무채색으로 보내는 Warmth/Tint.
-    /// ColorModel 의 실제 linear 게인을 역산: Warmth 는 R(1+0.18w)=B(1−0.18w),
-    /// Tint 는 warmth 적용 후 G(1+0.03w)(1+0.24t) = (R'+B')/2·(1−0.12t).
+    /// ColorModel 의 화이트밸런스 게인(WhiteBalanceGains)을 거꾸로 푼다: 온도는 R/B 를, 틴트는
+    /// 온도가 남긴 G/√(R·B) 를 맞춘다. |w| ≤ 1 에서 온도 해는 예전 R(1+0.18w)=B(1−0.18w) 의 해와
+    /// 같다(같은 식의 로그). R>B(따뜻)면 음수(식힘).
     public static func autoWhiteBalance(_ s: ImageStats) -> (warmth: Double, tint: Double) {
-        let useNeutral = s.neutralPixelFraction >= 0.03
-        let r = useNeutral ? s.neutralLinearR : s.minkowskiLinearR
-        let g = useNeutral ? s.neutralLinearG : s.minkowskiLinearG
-        let b = useNeutral ? s.neutralLinearB : s.minkowskiLinearB
+        let r: Double, g: Double, b: Double
+        if let axis = s.neutralAxis, !axis.isFallback {
+            // 휘도대마다 한 표 — 한 휘도대를 차지한 따뜻한 조명 면이 평균을 끌지 못한다.
+            let cast = axis.medianCast
+            (r, g, b) = (exp(cast.x), exp(cast.y), exp(cast.z))
+        } else {
+            let useNeutral = s.neutralPixelFraction >= 0.03
+            r = useNeutral ? s.neutralLinearR : s.minkowskiLinearR
+            g = useNeutral ? s.neutralLinearG : s.minkowskiLinearG
+            b = useNeutral ? s.neutralLinearB : s.minkowskiLinearB
+        }
         guard r > 1e-5, g > 1e-5, b > 1e-5 else { return (0, 0) }
 
-        // Warmth: R(1+0.18w) = B(1−0.18w) → w = (B−R) / (0.18·(R+B)).  R>B(따뜻)면 음수(식힘).
-        let wDen = 0.18 * (r + b)
-        var warmth = wDen > 1e-6 ? (b - r) / wDen : 0
+        var warmth = WhiteBalanceGains.solve(log2(b / r), WhiteBalanceGains.warmthRedBlueStops)
         if abs(b - r) / max(r + b, 1e-6) * 2 < wbDeadband { warmth = 0 }
         warmth = clamp(warmth * wbCorrectionStrength, -wbClamp, wbClamp)
 
-        // Tint: warmth 적용 후 잔차로 역산(G 의 warmth 게인 +0.03w 포함).
-        let rw = r * (1 + 0.18 * warmth)
-        let gw = g * (1 + 0.03 * warmth)
-        let bw = b * (1 - 0.18 * warmth)
-        let mean = (rw + bw) / 2
-        let tDen = 0.24 * gw + 0.12 * mean
-        var tint = tDen > 1e-6 ? (mean - gw) / tDen : 0
-        if abs(mean - gw) / max(mean + gw, 1e-6) * 2 < wbDeadband { tint = 0 }
+        // Tint: 온도를 적용한 뒤의 잔차로 푼다(온도 자신의 녹색 성분 포함).
+        let residualGreenStops = 0.5 * (log2(r) + log2(b)) - log2(g)
+            - WhiteBalanceGains.warmthGreenStops(warmth)
+        var tint = WhiteBalanceGains.solve(residualGreenStops, WhiteBalanceGains.tintGreenStops)
+        if abs(residualGreenStops) * log(2.0) < wbDeadband { tint = 0 }
         tint = clamp(tint * wbCorrectionStrength, -wbClamp, wbClamp)
         return (warmth, tint)
     }
@@ -197,7 +207,7 @@ public enum AutoAdjust {
     /// 좁게 둬 자동 결과가 사용자가 손으로 갈 수 있는 끝까지 밀어붙이지는 않게 한다.
     static let autoExposureLimit = 3.0
 
-    public static func autoTone(_ s: ImageStats) -> ToneDelta {
+    public static func autoTone(_ s: ImageStats, filmType: FilmType = .colorNegative) -> ToneDelta {
         var d = ToneDelta()
         let hist = s.lumaHist
         func percentileSRGB(_ p: Double) -> Double {
@@ -232,10 +242,11 @@ public enum AutoAdjust {
             ev = clamp(log2(0.92 / max(p995, 1e-4)), -autoExposureLimit, 0)
         }
         d.exposure = ev
-        let gain = pow(2.0, ev)
 
-        // ── 2. 노출 적용 후 percentile 예측(2^ev 선형 곱)을 감마 도메인으로.
-        func afterEV(_ srgb: Double) -> Double { srgbEncode(min(lin(srgb) * gain, 1)) }
+        // ── 2. 노출 적용 후 percentile 예측(엔진과 같은 노출 연산자 — EV>0 명부 숄더)을 감마 도메인으로.
+        func afterEV(_ srgb: Double) -> Double {
+            srgbEncode(min(ExposureShoulder.exposedLuminance(lin(srgb), stops: ev, filmType: filmType), 1))
+        }
         let pBlackA = afterEV(pBlackS), pShadowA = afterEV(pShadowS)
         let p50a = afterEV(p50s)
         let p975a = afterEV(p975s), p995a = afterEV(p995s)
@@ -265,9 +276,13 @@ public enum AutoAdjust {
         // 회수 시작점 = sRGB 0.89(linear 0.75).
         d.highlight = clamp(-min(clipHigh, 0.05) * 4.0
             - max(0, p975a - 0.89) * 0.5 / (0.10 * hlMask), -1, 0)
-        let shMask = max(smoothstep(0.02, 0.08, pShadowA) * (1 - smoothstep(0.32, 0.46, pShadowA)), 0.3)
+        // 섀도는 그 톤에서 슬라이더가 실제로 먹는 만큼(마스크)만 반응하고 초과분의 절반만 회수한다.
+        // 예전엔 마스크를 하한(0.3)으로 나눠 역산해, 슬라이더가 거의 안 닿는 깊은 검정(흑백 프린트의
+        // 검정·스캔 테두리)을 끌어올리려 최대치(0.8)로 밀었고 그 위의 중간 암부가 통째로 들렸다
+        // (2026-10-15 실측: 흑백 7 장 중 5 장·컬러 19 장 중 8 장이 0.8, 하위 25% 지점 2 배 상승).
+        let shMask = smoothstep(0.02, 0.08, pShadowA) * (1 - smoothstep(0.32, 0.46, pShadowA))
         d.shadow = clamp(min(clipLow, 0.05) * 4.0
-            + max(0, 0.10 - pShadowA) / (0.10 * shMask), 0, 0.8)
+            + max(0, 0.10 - pShadowA) * 0.5 / 0.10 * shMask, 0, 0.8)
 
         // ── 5. Density — 미드 정밀 앵커. 노출이 헤드룸 cap 에 걸려 남긴/넘친 미드 잔차를
         //    미드 국소 마스크(하이라이트 불침범)로 마무리한다. density>0 = 어둡게.
@@ -275,15 +290,65 @@ public enum AutoAdjust {
         if abs(midResidual) > 0.02 {
             let mdMask = max(smoothstep(0.18, 0.36, p50a) * (1 - smoothstep(0.58, 0.76, p50a)), 0.3)
             d.density = clamp(midResidual / (0.10 * mdMask), -0.4, 0.4)
+            // 밝히는 방향만 원칙(노출과 같다): 노출이 밝히지 않았다면 미드를 어둡게 하지 않는다 —
+            // 하이키·설경을 회색으로 끌어내린다(2026-10-14 실측: 미드 127 → 116). 노출 과잉을
+            // 되돌리는 양수 농도와 클리핑 복구만 남긴다.
+            if ev <= 0, clipHigh < clipRecoveryThreshold { d.density = min(d.density, 0) }
         }
 
-        // ── 6. Contrast — 지각(감마) 도메인 스프레드 목표(노출 이동 예측 반영).
+        // ── 6. Contrast — 지각(감마) 도메인 스프레드 목표(노출 이동 예측 반영). 평평한 장면은
+        //    올리되 깎는 쪽은 소량만 — 스프레드 목표는 평균적인 컬러 장면의 값이라, 원래 대비가 큰
+        //    장면(흑백 프린트·역광)을 그 값까지 깎으면 계조가 무너진다(실측 −0.45 한계에 붙었다).
+        //    양 끝의 복구는 Highlights/Shadows 가 맡는다.
         let p10as = afterEV(p10s)
         let p90as = afterEV(p90s)
-        d.contrast = clamp((0.52 - (p90as - p10as)) * 1.15, -0.45, 0.55)
+        d.contrast = clamp((0.52 - (p90as - p10as)) * 1.15, -0.15, 0.55)
 
         // ── 7. Vibrance — 채도가 낮으면 부스트(+ only — 라이트룸 Auto 도 채도를 거의 올리기만 한다).
         d.vibrance = clamp((0.42 - s.avgSaturation) * 1.0, 0, 0.6)
+        return d
+    }
+
+    // MARK: Auto Tone 폐루프
+
+    /// 자동 톤 1 회 폐루프 보정. 첫 계산(autoTone)은 슬라이더 전달함수를 모형으로 역산하지만
+    /// 사용자 커브·색 깊이·스캐너 타겟·기본톤 상호작용은 모형 밖이다(2026-10-14 실측: 사용자
+    /// 커브 +0.6 이 있어도 같은 값을 냈고 결과만 어긋났다). 계산값을 실제로 적용해 다시 잰 통계로
+    /// 미드(노출이 밝힌 경우만 — 밝히는 방향만 원칙)와 백점을 한 번 바로잡는다. 결정적이다.
+    public static func refineTone(_ delta: ToneDelta, measured s: ImageStats,
+                                  filmType: FilmType = .colorNegative) -> ToneDelta {
+        var d = delta
+        let hist = s.lumaHist
+        func percentileSRGB(_ p: Double) -> Double {
+            var acc = 0.0
+            for i in 0..<256 { acc += hist[i]; if acc >= p { return Double(i) / 255 } }
+            return 1
+        }
+        let p50 = srgbDecode(percentileSRGB(0.50)), p98 = srgbDecode(percentileSRGB(0.98))
+        var p995s = percentileSRGB(0.995)
+
+        // 미드: 노출이 밝혔다면 남은 오차만큼 더/덜 밝힌다(헤드룸·한도 안에서).
+        if d.exposure > 0 {
+            var residual = log2(midGrayLinear / max(p50, 1e-4))
+            if residual > 0 { residual = min(residual, max(0, log2(0.95 / max(p98, 1e-4)))) }
+            let refined = clamp(d.exposure + residual, 0, autoExposureLimit)
+            if abs(refined - d.exposure) > 0.02 {
+                // 노출이 바뀌면 백점도 같이 움직인다 — 같은 연산자로 되돌린 뒤 다시 예측한다.
+                let p995 = srgbDecode(p995s)
+                let unexposed = ExposureShoulder.unexposedLuminance(p995, stops: d.exposure,
+                                                                     filmType: filmType)
+                p995s = srgbEncode(min(ExposureShoulder.exposedLuminance(unexposed, stops: refined,
+                                                                         filmType: filmType), 1))
+                d.exposure = refined
+            }
+        }
+
+        // 백점: 확산 화이트 목표(linear 0.90)에 남은 오차를 Whites 계수로 메운다.
+        let residualWhite = srgbEncode(diffuseWhiteLinear) - p995s
+        if abs(residualWhite) > 0.01, hist[255] <= 0.001 || residualWhite < 0 {
+            let mask = max(smoothstep(0.68, 0.92, p995s), 0.25)
+            d.whites = clamp(d.whites + residualWhite / (0.12 * mask), -1, 1)
+        }
         return d
     }
 

@@ -56,19 +56,24 @@ extension ScannerTargetGrade {
         var hueAnchors: [HueAnchor]
         /// 대역별 채도 배율(명시적 source roll 쌍 대칭 분배). 빈 배열 = 변조 없음.
         var chromaBands: [ChromaBand]
+        /// 색 밀도: 채도 1 당 L* 를 얼마나 낮추는지. 감법 염료처럼 진한 색이 더 깊어져 채도를
+        /// 올려도 형광처럼 뜨지 않는다. 0 = 변조 없음(실측 시그니처는 항상 0).
+        var colorDensity: Double
 
         init(
             toneXs: [Double]? = nil,
             tone: [Double],
             neutralBins: [NeutralBin],
             hueAnchors: [HueAnchor],
-            chromaBands: [ChromaBand] = []
+            chromaBands: [ChromaBand] = [],
+            colorDensity: Double = 0
         ) {
             self.toneXs = toneXs ?? ScannerTargetGrade.designToneXs
             self.tone = tone
             self.neutralBins = neutralBins
             self.hueAnchors = hueAnchors
             self.chromaBands = chromaBands
+            self.colorDensity = colorDensity
         }
     }
 
@@ -425,6 +430,14 @@ extension ScannerTargetGrade {
 
     static func resolveSignature(target: DevelopTarget, params: DevelopParameters) -> Signature? {
         guard let scanner = scannerName(for: target) else { return nil }
+        // SP 는 설계 캐릭터(documentedCharacter)가 기본 정체성이다. 번들 실측 프로파일은 사용자가
+        // 네거티브에서 직접 골랐을 때만 그 필름의 실측 차분으로 얹는다. 공통 차분을 기본으로 깔면
+        // 미드 채도 ×1.5·레드 ×0.63·블루 ×1.17 이 설계 위에 겹쳐 파랗고 과채도였다(2026-10-15).
+        if target == .sp3000,
+           params.scannerProfileID == nil
+            || !(params.filmType == .colorNegative || params.filmType == .bwNegative) {
+            return nil
+        }
         let cacheKey = "\(scanner)|\(params.scannerProfileID ?? "")|\(params.filmStockDminID ?? "")|\(params.filmType.rawValue)"
         signatureCacheLock.lock()
         if let cached = signatureCache[cacheKey] {

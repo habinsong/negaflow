@@ -9,17 +9,22 @@ struct FilmBaseCacheKey: Equatable, Sendable {
     let manualBaseRGB: SIMD3<Double>?
     let filmStockDminID: String?
     let lightSourceProfileID: String?
+    /// 측정 영역을 정하는 변형(크롭·수평 보정). 베이스는 크롭 바깥 띠에서, 장면 측정은 크롭
+    /// 안에서 하므로 크롭이 바뀌면 둘 다 다시 잰다(장면 측정 키도 이 키를 품는다).
+    let analysisTransform: ImageTransform?
 
     init(filmType: FilmType,
          mode: DevelopParameters.BaseMode,
          manualBaseRGB: SIMD3<Double>?,
          filmStockDminID: String?,
-         lightSourceProfileID: String? = nil) {
+         lightSourceProfileID: String? = nil,
+         imageTransform: ImageTransform = .identity) {
         self.filmType = filmType
         self.mode = mode
         self.manualBaseRGB = manualBaseRGB
         self.filmStockDminID = filmStockDminID
         self.lightSourceProfileID = lightSourceProfileID
+        self.analysisTransform = AnalysisRegion.cacheKey(for: imageTransform)
     }
 }
 
@@ -117,6 +122,12 @@ final class ScanFrame: ObservableObject, Identifiable {
         didSet { if oldValue?.id != preset?.id { autoAdjustRevision &+= 1 } }
     }
     var autoAdjustRevision: UInt64 = 0
+    /// 자동 톤·자동 화이트밸런스는 누른 순서대로 이어서 돈다(AppModel+AutoAdjust). 다른 종류는 앞
+    /// 요청이 반영된 뒤 시작하고, 같은 종류의 새 요청은 대기 중인 앞 요청을 건너뛰게 한다.
+    var autoToneTail: Task<Void, Never>?
+    var autoWhiteBalanceTail: Task<Void, Never>?
+    var autoToneTicket: UInt64 = 0
+    var autoWhiteBalanceTicket: UInt64 = 0
     @Published var isApplyingInputGamma = false
     @Published var inputGammaSupportChecked = false
     @Published var inputGammaSourceError: InputGammaDecodeError?
@@ -224,6 +235,9 @@ final class ScanFrame: ObservableObject, Identifiable {
     // 파이프라인을 다시 돌릴 필요 없이 이 캐시에 ImageTransformStage만 다시 적용하면 된다.
     // 입력 raw가 cleaned raw이므로 결함 제거도 이 결과에 이미 포함된다.
     var cachedDevelopedBase: CGImage?
+    /// `cachedDevelopedBase` 를 현상할 때의 측정 영역 키(AnalysisRegion.cacheKey). 크롭이 이 키를
+    /// 바꾸면 변형만 다시 얹어서는 안 된다 — 이전 영역에서 잰 색이 남는다(정착 때 다시 현상).
+    var cachedDevelopedAnalysisKey: ImageTransform?
     var cachedClippingOverlayBase: CGImage?
     var cachedDestinationGamutOverlayBase: CGImage?
     /// 프루프가 적용되지 않은 작은 변형 전 썸네일 베이스. 프루프 표시 픽셀이 영속 썸네일로
@@ -364,6 +378,8 @@ final class ScanFrame: ObservableObject, Identifiable {
     // 자동/가이드 구분: true면 진입 즉시 전체 프레임을 검출(ROI 드래그 없음), false면 ROI 드래그.
     // 두 모드는 같은 검출 오버레이(RegionDefectOverlay)·세션 저장소를 공유한다.
     @Published var defectAutoMode: Bool = false
+    /// 스포이드 도구가 켜졌을 때 찍는 대상(세션 상태, 저장하지 않는다).
+    @Published var eyedropperTarget: EyedropperTarget = .filmBase
     @Published var defectExcludedIDs: Set<Int32> = []   // 클릭으로 제외한 컴포넌트
     @Published var defectPreview: [DefectPreviewComponent] = []   // 화면 표시용(base 정규 점)
     var defectLabelField: DefectLabelField?                // base ROI 로컬 라벨맵

@@ -49,7 +49,7 @@ final class AutoAdjustInputRegressionTests: XCTestCase {
                         XCTAssertEqual(pixels(result.developed), pixels(try DevelopFrameRenderer.render(fresh).developed),
                             "gamma=\(String(describing: gamma.value)) scale=\(scale) levels=\(levels) color=\(color)")
                         XCTAssertEqual(result.sceneMeasurements.autoLevelsPoints != nil, levels)
-                        XCTAssertEqual(result.sceneMeasurements.neutralBalanceMedian != nil, color)
+                        XCTAssertEqual(result.sceneMeasurements.neutralBalanceCorrection != nil, color)
                         model.applyBaseCache(result, to: frame, baseKey: key)
                         model.applySceneMeasurementCache(result, to: frame, baseKey: key, proxyMaxDimension: 128,
                             renderedParams: snapshot.params)
@@ -70,8 +70,16 @@ final class AutoAdjustInputRegressionTests: XCTestCase {
                 frame.params.inputGamma = try .power(gamma)
                 frame.params.baseScale = try FilmBaseScale(scale)
                 frame.params.autoLevels = true; frame.params.autoNeutralBalance = true
+                // 자동 보정 입력은 화면이 메모리에 올린 raw 프록시에서 줄인다 — 기대값과 모델이 같은
+                // 입력을 보도록 현상을 먼저 끝낸다(뒤에서 끝나는 현상과 경쟁하지 않게).
+                await model.developFrame(frame)
+                // 자동 톤은 폐루프다: 중립본에서 계산 → 그 값으로 다시 그려 재고 한 번 바로잡는다.
                 let image = try DevelopFrameRenderer.render(model.neutralSnapshot(frame, clearTone: true)).developed
-                let expected = AutoAdjust.autoTone(try XCTUnwrap(AutoAdjust.imageStats(image)))
+                let first = AutoAdjust.autoTone(try XCTUnwrap(AutoAdjust.imageStats(image)), filmType: frame.filmType)
+                let verify = try DevelopFrameRenderer.render(model.autoAdjustSnapshot(
+                    frame, params: AppModel.applying(first, to: frame.params))).developed
+                let expected = AutoAdjust.refineTone(first, measured: try XCTUnwrap(AutoAdjust.imageStats(verify)),
+                                                     filmType: frame.filmType)
                 await model.autoTone(frame).value
                 XCTAssertEqual(frame.params.exposure, expected.exposure)
                 XCTAssertEqual(frame.params.whites, expected.whites)
@@ -110,6 +118,24 @@ final class AutoAdjustInputRegressionTests: XCTestCase {
             edit(frame)
             XCTAssertFalse(request.isCurrent(frame))
         }
+    }
+
+    /// 둘을 연달아 누르면 둘 다 반영되고, 하나씩 끝까지 기다려 누른 것과 같은 값이다.
+    func testPressingToneThenWhiteBalanceAppliesBothLikeSequentialPresses() async throws {
+        let (model, frame, root) = try fixture()
+        defer { model.frames = []; try? FileManager.default.removeItem(at: root) }
+        await model.developFrame(frame)
+        let start = frame.params
+        await model.autoTone(frame).value
+        await model.autoWhiteBalance(frame).value
+        let sequential = frame.params
+        XCTAssertNotEqual(sequential, start)
+        frame.params = start
+        let tone = model.autoTone(frame)
+        let balance = model.autoWhiteBalance(frame)
+        await tone.value
+        await balance.value
+        XCTAssertEqual(frame.params, sequential)
     }
 
     private func fixture() throws -> (AppModel, ScanFrame, URL) {

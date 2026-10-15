@@ -7,11 +7,9 @@ extension ScannerTargetGrade {
     // 상쇄한다 → NORITSU/FUJI 가 MAIN 과 median ΔE<1 로 구별되지 않았다. 이 단계는 각 스캐너의
     // **절대 개성**을 MAIN 위에 bounded 하게 얹어 시각적으로 구별되게 한다.
     //
-    //  • FUJI SP-3000: **실측 캘리브레이션**. 같은 컬러 네거티브를 SP-3000(실기)과 OpticFilm+negaflow
-    //    로 각각 스캔한 6쌍을 히스토그램 매칭(입력값 도메인 톤 전이) + Lab 중립축/대역 채도로 비교해
-    //    공통 변환을 도출했다(6쌍 median/일관성, 특정 컷 아님). 결과: 미드 리프트 + 명부 숄더,
-    //    하이라이트 채도↑, 섀도 약한 그린(MAIN 대비 덜 빨감), 스킨 미세 골든.
-    //    실측엔 섀도 탈채도도 있었으나 섀도 탈색을 유발해 의도적으로 미적용(사용자 지시, 2026-07-20).
+    //  • SP 스타일: 설계 캐릭터(2026-10-15 전면 개편) — 압축된 계조 + 밀도 있는 미드 대비,
+    //    은은한 웜 명부와 중립 섀도, 웜/쿨 색 대비, 색 밀도. 상세는 spDocumentedProfile 주석 참조.
+    //    번들 실측 프로파일은 사용자가 직접 고를 때만 그 위에 실측 차분으로 얹힌다.
     //  • HS-1800 스타일: 설계 캐릭터(자체 정의, 2026-07-23 전면 재설계) — 공개 랩 문헌
     //    다수가 수렴하는 방향(저대비 + 섀도 개방 + 명부 보존, 중립 섀도 + 웜-피치 미드,
     //    핑크 스킨, 미드 중심 색 에너지 + 파스텔 명부)을 bounded 로 얹는다. 과거의
@@ -43,9 +41,11 @@ extension ScannerTargetGrade {
         var neutralBins: [NeutralBin]           // 중립축 드리프트(Lab)
         var hueAnchors: [HueAnchor]             // 스킨 등 hue별 채도/회전
         var chromaBands: [ChromaBand]           // 대역 채도 배율
-        /// 전역 개성 강도. FUJI(실측)·NORITSU(문서 유효값 직접 기술) 모두 1.0 —
+        /// 전역 개성 강도. 모든 타겟이 유효값을 직접 기술해 1.0 —
         /// 포지티브 감쇠(documentedPositiveScale)에만 배율이 곱해진다.
         var strength: Double
+        /// 색 밀도(Signature.colorDensity). SP 만 쓴다.
+        var colorDensity: Double = 0
     }
 
     static func documentedCharacter(
@@ -90,12 +90,13 @@ extension ScannerTargetGrade {
                                    chromaBandGainRange.lowerBound, chromaBandGainRange.upperBound))
         }
         return Signature(toneXs: knots, tone: tone,
-                         neutralBins: neutralBins, hueAnchors: hueAnchors, chromaBands: chromaBands)
+                         neutralBins: neutralBins, hueAnchors: hueAnchors, chromaBands: chromaBands,
+                         colorDensity: profile.colorDensity * scale)
     }
 
     private static func documentedProfile(for target: DevelopTarget) -> DocumentedProfile? {
         switch target {
-        case .sp3000: return fujiMeasuredProfile
+        case .sp3000: return spDocumentedProfile
         case .noritsu: return noritsuDocumentedProfile
         case .f135: return f135DocumentedProfile
         case .hr: return hr500DocumentedProfile
@@ -103,34 +104,56 @@ extension ScannerTargetGrade {
         }
     }
 
-    // MARK: FUJI SP-3000 — 실측 캘리브레이션(6쌍 SP-3000 vs negaflow MAIN 히스토그램 매칭)
+    // MARK: SP 스타일 — 설계 캐릭터(2026-10-15 전면 개편, 유효값 = strength 1.0)
     //
-    // 톤: 입력값 도메인 히스토그램 매칭 커브(미드 리프트 + 명부 숄더). 커스텀 knot 위치 사용.
-    // 중립: 섀도~미드 a*− (MAIN 대비 덜 빨감), 하이라이트 a*+ 미세. b* 는 6쌍에서 비일관 → 0.
-    //   섀도 a*− 는 필름/현상 의존이 커 실측 median 을 0.7× 로 완화(과적합 방지).
-    // 채도: 하이라이트 채도↑(bounded). 실측의 섀도 탈채도는 섀도 탈색 방지를 위해 미적용(gain 1.0 핀).
-    // 스킨: 미세 골든(+회전).
-    private static var fujiMeasuredProfile: DocumentedProfile {
+    // 지향: 필름의 장점(압축된 계조, 부드러운 명부, 염료의 색 밀도)과 디지털의 장점(깨끗한 중립,
+    // 또렷한 색 분리)을 합친 "쫀득한" 룩. 방향은 공개 랩 비교 서술이 수렴하는 이 계열의 특징
+    // (펀치 있는 대비, 명부 보존, 진한 색, 골든 스킨, 푸른 잎)에서 가져오고, 크기는 합성 패치와
+    // 실제 네거티브 수치로 bounded 하게 정했다. 예전 실측 캘리브레이션(미드 +0.09~0.12 리프트,
+    // 명부 채도 1.60, 섀도 그린)은 밝은 장면을 씻어 내고 공통 실측 차분과 겹쳐 파랗고 과채도였다.
+    //  • 톤 — 필름 특성 곡선형: 토우와 숄더를 눌러 양끝 계조를 압축하고(순흑·순백으로 몰지 않음),
+    //    그 사이 직선부를 세워(기울기 ≈1.07~1.13) 미드에 밀도와 대비를 준다. 피벗은 0.58 근처라
+    //    photometric mid(0.46)는 약간 깊어지고(≈ −1 L*, 밀도) 밝은 미드는 살짝 올라간다.
+    //  • 중립축 — 섀도는 완전 중립(파란 그림자 금지), 미드→명부로 갈수록 은은한 웜(b*+ ≤1.4).
+    //  • 색 대비 — 따뜻한 색(레드·스킨·옐로)은 앞으로, 차가운 색(그린·시안)은 깊고 맑게.
+    //    스킨은 골든(+3°), 그린은 노란기를 덜어 낸 푸른 잎(+2°), 블루는 보라 쪽으로 가지 않게
+    //    시안 쪽으로 −2°, 마젠타는 덜어 깨끗하게.
+    //  • 채도 — 미드 중심으로 올리고(1.16) 섀도·명부는 약하게(1.06): 명부 채도는 필름처럼 눌러
+    //    둔다. 색 밀도(0.06 L*/채도)가 진한 색을 깊게 만들어 채도를 올려도 형광처럼 뜨지 않는다.
+    private static var spDocumentedProfile: DocumentedProfile {
         DocumentedProfile(
-            toneXs: [0.08, 0.16, 0.28, 0.40, 0.52, 0.64, 0.76, 0.86, 0.94],
-            // 실측 히스토그램 매칭 델타의 0.85× — 밝은 장면 명부 워시아웃(과다 리프트) 방지 마진.
-            toneDelta: [0.020, 0.006, 0.014, 0.045, 0.094, 0.115, 0.112, 0.082, 0.015],
+            toneXs: [0.06, 0.14, 0.26, 0.38, 0.50, 0.62, 0.74, 0.86, 0.94],
+            toneDelta: [0.008, -0.002, -0.015, -0.018, -0.010, 0.006, 0.016, 0.010, -0.004],
             neutralBins: [
-                NeutralBin(luma: 0.13, a: -3.2, b: 0.0),
-                NeutralBin(luma: 0.27, a: -3.2, b: 0.0),
-                NeutralBin(luma: 0.41, a: -3.0, b: 0.0),
-                NeutralBin(luma: 0.55, a: -1.5, b: 0.0),
-                NeutralBin(luma: 0.69, a: 0.1, b: 0.0),
-                NeutralBin(luma: 0.83, a: 1.4, b: 0.0),
+                NeutralBin(luma: 0.16, a: 0.0, b: 0.0),
+                NeutralBin(luma: 0.40, a: 0.0, b: 0.5),
+                NeutralBin(luma: 0.60, a: 0.2, b: 1.0),
+                NeutralBin(luma: 0.80, a: 0.3, b: 1.4),
+                NeutralBin(luma: 0.90, a: 0.2, b: 1.0),
             ],
-            hueAnchors: fujiSkinAnchors,
+            hueAnchors: spHueAnchors,
             chromaBands: [
-                ChromaBand(luma: 0.165, gain: 1.00),    // 섀도 채도 유지(실측 탈채도 미적용 — 탈색 금지)
-                ChromaBand(luma: 0.495, gain: 1.25),    // 미드 채도↑
-                ChromaBand(luma: 0.83, gain: 1.60),     // 하이라이트 채도↑(실측 ~2.5, cap 클램프)
+                ChromaBand(luma: 0.165, gain: 1.08),
+                ChromaBand(luma: 0.495, gain: 1.20),
+                ChromaBand(luma: 0.83, gain: 1.12),
             ],
-            strength: 1.0
+            strength: 1.0,
+            colorDensity: 0.06
         )
+    }
+
+    /// SP 색상 앵커: 웜(레드 20°·스킨 55°·옐로 85°)은 리치, 쿨(그린 135°·시안 200°)은 깊고 맑게,
+    /// 블루(265°)는 시안 쪽으로 살짝, 마젠타(320°)는 덜어 낸다.
+    private static var spHueAnchors: [HueAnchor] {
+        [
+            HueAnchor(hueDegrees: 20, chromaGain: 1.06, rotateDegrees: 0),
+            HueAnchor(hueDegrees: documentedSkinHueDegrees, chromaGain: 1.04, rotateDegrees: 3.0),
+            HueAnchor(hueDegrees: 85, chromaGain: 1.08, rotateDegrees: 0),
+            HueAnchor(hueDegrees: 135, chromaGain: 1.06, rotateDegrees: 2.0),
+            HueAnchor(hueDegrees: 200, chromaGain: 1.04, rotateDegrees: 0),
+            HueAnchor(hueDegrees: 265, chromaGain: 1.00, rotateDegrees: -2.0),
+            HueAnchor(hueDegrees: 320, chromaGain: 0.94, rotateDegrees: 0),
+        ]
     }
 
     // MARK: HS-1800 스타일 — 설계 캐릭터 직접 기술(2026-07-23 전면 재설계, 유효값 = strength 1.0)
@@ -318,18 +341,6 @@ extension ScannerTargetGrade {
             HueAnchor(hueDegrees: 200, chromaGain: 1.0, rotateDegrees: 0),
             HueAnchor(hueDegrees: 265, chromaGain: 1.18, rotateDegrees: 3.0),
             HueAnchor(hueDegrees: 330, chromaGain: 1.0, rotateDegrees: 0),
-        ]
-    }
-
-    /// 골든 스킨: 스킨 hue(55°)만 옐로 쪽(+회전)으로 국소 이동(실측 dHue≈+2.85°). 나머지 hue 는 중립
-    /// 앵커로 고정해 전역 회전을 막는다. 채도는 실측 dChroma≈−1.4 → 미세 감소.
-    private static var fujiSkinAnchors: [HueAnchor] {
-        [
-            HueAnchor(hueDegrees: 20, chromaGain: 1.0, rotateDegrees: 0),
-            HueAnchor(hueDegrees: documentedSkinHueDegrees, chromaGain: 0.98, rotateDegrees: 2.85),
-            HueAnchor(hueDegrees: 95, chromaGain: 1.0, rotateDegrees: 0),
-            HueAnchor(hueDegrees: 200, chromaGain: 1.0, rotateDegrees: 0),
-            HueAnchor(hueDegrees: 320, chromaGain: 1.0, rotateDegrees: 0),
         ]
     }
 }

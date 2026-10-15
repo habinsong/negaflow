@@ -182,7 +182,12 @@ extension AppModel {
                     frame.mainPreviewTransform = settledTransform
                 }
             }
-            if frame.debugOverlayEnabled {
+            // 크롭·수평 보정이 측정 영역을 바꿨으면 한 번 다시 현상한다 — 장면 측정(반전 Dmax·자동
+            // 레벨·커브 대역)은 크롭 안에서, 베이스는 크롭 바깥 띠에서 다시 잰다. 드래그 중에는
+            // 변형만 다시 얹는 빠른 길을 그대로 쓰고, 정착한 뒤에만 이 비용을 낸다.
+            let analysisChanged = AnalysisRegion.cacheKey(for: settledTransform)
+                != frame.cachedDevelopedAnalysisKey
+            if frame.debugOverlayEnabled || analysisChanged {
                 Task { await self.developFrame(frame) }
             }
             return

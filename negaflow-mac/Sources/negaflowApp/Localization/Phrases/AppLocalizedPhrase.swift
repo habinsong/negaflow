@@ -20,6 +20,7 @@ enum AppLocalizedPhrase: CaseIterable {
     case removingDefectsStatus
     case removingDefectsFailedStatus
     case imageLoadFailedFormat
+    case sourceOfflineDevelopFormat
     case historyNameFormat
     case historyRecordedFormat
     case historyAppliedFormat
@@ -191,6 +192,11 @@ enum AppLocalizedPhrase: CaseIterable {
     case canvasBackgroundMenu
     case debugBadgeFormat
     case basePickerOverlayPrompt
+    case pickNeutral
+    case pickNeutralHelp
+    case neutralPickerOverlayPrompt
+    case neutralPickFailed
+    case neutralPickedFormat
     case scannerLabel
     case resolution
     case preview

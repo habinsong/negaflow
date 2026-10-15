@@ -5,6 +5,9 @@ extension AppModel {
     func bakeDefectEditsForTermination() async -> Bool {
         for frame in frames where !frame.isPreviewScan {
             guard !frame.defectEditsNeedRestore else { return false }
+            // 이미 같은 세대로 저장이 확인된 recipe 는 다시 해시·기록하지 않는다 — 종료가 결함
+            // 기록 전체를 다시 읽고 SHA-256 을 돌리느라 몇 초씩 멈추던 원인이다.
+            if !frame.defectEdits.isEmpty, isDefectRecipeCommitted(frame) { continue }
             cancelPendingDefectRecipeRefresh(frame)
             guard !frame.defectEdits.isEmpty else { continue }
             guard let snapshot = refreshDefectRecipeState(

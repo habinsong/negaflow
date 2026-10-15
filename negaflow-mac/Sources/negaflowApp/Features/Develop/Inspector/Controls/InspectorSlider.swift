@@ -12,6 +12,8 @@ struct InspectorSlider: View {
     let doubleClickResetValue: Double?
     /// 0...1 값을 퍼센트로 보여주고 퍼센트로 입력받는다.
     let showsPercent: Bool
+    /// 손잡이 위치를 거듭제곱 눈금으로 쓴다(대칭 범위 전용). nil 이면 선형.
+    let positionScale: SliderPositionScale?
 
     init(
         _ title: String,
@@ -20,7 +22,8 @@ struct InspectorSlider: View {
         focusID: InspectorSliderFocus? = nil,
         focusedSlider: FocusState<InspectorSliderFocus?>.Binding? = nil,
         doubleClickResetValue: Double? = 0,
-        showsPercent: Bool = false
+        showsPercent: Bool = false,
+        positionScale: SliderPositionScale? = nil
     ) {
         self.title = title
         self._value = value
@@ -29,6 +32,7 @@ struct InspectorSlider: View {
         self.focusedSlider = focusedSlider
         self.doubleClickResetValue = doubleClickResetValue
         self.showsPercent = showsPercent
+        self.positionScale = positionScale
     }
 
     @ViewBuilder
@@ -68,7 +72,18 @@ struct InspectorSlider: View {
                     )
                 }
             }
-            ResettableSlider(value: $value, in: range, resetValue: doubleClickResetValue)
+            if let positionScale {
+                ResettableSlider(
+                    value: Binding(
+                        get: { positionScale.position(for: value) },
+                        set: { value = positionScale.value(for: $0) }
+                    ),
+                    in: -1...1,
+                    resetValue: doubleClickResetValue.map { positionScale.position(for: $0) }
+                )
+            } else {
+                ResettableSlider(value: $value, in: range, resetValue: doubleClickResetValue)
+            }
         }
         .padding(.vertical, focusID == nil ? 0 : 2)
         .padding(.horizontal, focusID == nil ? 0 : 4)
