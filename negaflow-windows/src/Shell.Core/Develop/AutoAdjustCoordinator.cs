@@ -234,6 +234,7 @@ public sealed class AutoAdjustCoordinator
             generation == Volatile.Read(ref cancelGeneration);
         var settled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         Task before;
+        bool waits;
         lock (tailGate)
         {
             before = operation switch
@@ -242,6 +243,7 @@ public sealed class AutoAdjustCoordinator
                 AutoAdjustOperation.WhiteBalance => toneTail,
                 _ => Task.WhenAll(toneTail, balanceTail),
             };
+            waits = !before.IsCompleted;
             if (operation != AutoAdjustOperation.WhiteBalance) { toneTail = settled.Task; }
             if (operation != AutoAdjustOperation.Tone) { balanceTail = settled.Task; }
         }
@@ -251,6 +253,9 @@ public sealed class AutoAdjustCoordinator
         {
             // 앞 요청의 꼬리는 그 완료 처리(대입)가 실제로 돈 뒤에 닫힙니다 — 그 대입이 끝난 프레임을 봅니다.
             await before;
+            // 기다렸으면 macOS 처럼 지금을 기준으로 다시 잡습니다(`request = AutoAdjustRequest(frame)`).
+            // 앞 결과를 반영하며 건 취소(그 결과의 미리보기 요청)에 이 요청이 버려지지 않습니다.
+            if (waits) { generation = Volatile.Read(ref cancelGeneration); }
             if (!IsCurrent() || currentFrame() is not { } frame) { return true; }
             AutoAdjustOutcome? outcome;
             try { outcome = await MeasureAsync(frame, operation, IsCurrent).ConfigureAwait(false); }

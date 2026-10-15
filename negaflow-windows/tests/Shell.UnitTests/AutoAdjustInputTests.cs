@@ -217,6 +217,23 @@ internal static class AutoAdjustInputTests
         dispatcher.Drain();
         Check(outcomes.Count == 2 && outcomes[1].Frame!.Tone == outcomes[0].Frame!.Tone,
             "auto_white_balance_measures_after_the_earlier_tone_result");
+        // 앱은 톤 결과를 반영하며 미리보기를 다시 요청하고, 그 요청이 Cancel() 을 부릅니다. 그 뒤를
+        // 기다리던 화이트밸런스가 버려지면 안 됩니다(41 ms 간격으로 누르면 씹혔다).
+        outcomes.Clear();
+        current = source;
+        var cancellingTone = coordinator.RunToneAsync(() => current, outcome =>
+        {
+            outcomes.Add(outcome);
+            current = outcome.Frame!;
+            coordinator.Cancel();
+        });
+        var waitingBalance = coordinator.RunWhiteBalanceAsync(() => current, outcomes.Add);
+        await cancellingTone;
+        dispatcher.Drain();
+        await waitingBalance;
+        dispatcher.Drain();
+        Check(outcomes.Count == 2 && outcomes[1].Frame!.Tone == outcomes[0].Frame!.Tone,
+            "auto_white_balance_survives_the_cancel_from_the_tone_result");
         outcomes.Clear();
         await coordinator.RunToneAsync(source, outcomes.Add);
         await coordinator.RunToneAsync(source, outcomes.Add);

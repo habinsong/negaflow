@@ -341,7 +341,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     private async Task NotifyFrameEditedAsync()
     {
-        autoAdjust.Cancel();
         long generation = checked(++frameEditRefreshGeneration);
         if (libraryHost is not { } host || panel?.SelectedFrame is not { } selected ||
             host.Frames.FirstOrDefault(candidate =>
@@ -372,6 +371,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
             _ = panel.RefreshSelectedFrame();
             return;
         }
+        // 다른 곳에서 현상 레시피가 바뀐 때만 진행 중인 자동 보정을 버립니다(macOS 는 params·필름
+        // 종류·프리셋·변형이 바뀔 때만 무효화합니다). 미리보기가 남기는 베이스 메모나 자동 보정 자신의
+        // 결과는 패널이 이미 반영해 위에서 빠집니다 — 그 알림마다 취소하면 연달아 누른 자동 톤·화이트
+        // 밸런스 중 하나가 씹혔습니다.
+        autoAdjust.Cancel();
         frames.Refresh();
     }
 
