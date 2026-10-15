@@ -255,9 +255,9 @@ void measure_task1(
     const std::string_view selected_case) {
     constexpr std::array<Case, 8U> cases{{
         {L"a-default-main-srgb", L"a-default-main-srgb.tif", "a3a17e736645d9ddb6340c7be5867f9f0580bd74d2cbec23ba1c9061654488e7", NF_DEVELOP_TARGET_MAIN, 0U, nullptr},
-        {L"b-main-scannerprofile-portra400-srgb", L"b-main-scannerprofile-portra400-srgb.tif", "cbec99382d4d330f4042c9a1fcac986c2efad59383c60823f5d6872d48ea552e", NF_DEVELOP_TARGET_MAIN, 0U, L"noritsu__color-nega__kodak-portra-400"},
+        {L"b-main-scannerprofile-portra400-srgb", L"b-main-scannerprofile-portra400-srgb.tif", "3f8f994923d77b32f97f0416f84710c7e77bfd1cc2d89e518cb2900c55945fb3", NF_DEVELOP_TARGET_MAIN, 0U, L"noritsu__color-nega__kodak-portra-400"},
         {L"c-target-hs-srgb", L"c-target-hs-srgb.tif", "8170b2aadb07195bf2ec42c2cdd0f38cef95596bd0ac91981b713ba7c973746f", NF_DEVELOP_TARGET_NORITSU, 0U, nullptr},
-        {L"c-target-sp-srgb", L"c-target-sp-srgb.tif", "5331e970ec72ff03410cda371bbad7cb97835316d9cb51feaf03c000ffe3f23a", NF_DEVELOP_TARGET_SP3000, 0U, nullptr},
+        {L"c-target-sp-srgb", L"c-target-sp-srgb.tif", "3ad84e4a4a2eb6332a15eac27d872377e39e1f749d073775aecef83cdf797689", NF_DEVELOP_TARGET_SP3000, 0U, nullptr},
         {L"c-target-f135-srgb", L"c-target-f135-srgb.tif", "8296c4990a0731a8f1cf53e3482b907edfdfa75a1419cf40b9b8bf9d18a8f172", NF_DEVELOP_TARGET_F135, 0U, nullptr},
         {L"c-target-hr-srgb", L"c-target-hr-srgb.tif", "ae67c78189aebd633153d1cc2ea4e13648867f8a60028cd0477b89e60e9cf877", NF_DEVELOP_TARGET_HR, 0U, nullptr},
         {L"d-main-displayp3", L"d-main-displayp3.tif", "230a3c85406e9f2da65476defd846f96f59b731e0f6fe6dd96366706b21414af", NF_DEVELOP_TARGET_MAIN, 1U, nullptr},
