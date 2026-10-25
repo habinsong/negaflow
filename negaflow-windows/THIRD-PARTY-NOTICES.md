@@ -307,6 +307,27 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
+## 8. NSIS installer
+
+The Windows installer contains the NSIS installer stub and plug-ins under the
+zlib/libpng license, and the LZMA compression module under CPL-1.0 with the
+NSIS LZMA linking exception. That exception permits Negaflow's linked code to
+retain its Apache-2.0 license.
+
+The original `COPYING` from the NSIS installation used to compile the installer
+is included as `licenses\nsis\COPYING`. It contains the copyright notices,
+license terms, and LZMA linking exception without modification.
+
+`licenses\nsis\SOURCE.txt` records the exact compiler version, source archive
+name, SHA-256, and source download URLs. To obtain the source, open the
+[Negaflow release](https://github.com/habinsong/negaflow/releases) matching the
+installed application version and download the archive named in `SOURCE.txt`.
+The version-specific upstream download URL is also recorded there.
+`scripts/build-release.ps1` writes that original NSIS source archive and its
+`.sha256` file beside the installer for publication with the same release.
+
+Upstream license reference: <https://nsis.sourceforge.io/Docs/AppendixI.html>.
+
 ## Deployment model
 
 `scripts/build-release.ps1` builds the shell `--self-contained true` (bundling the
@@ -322,4 +343,5 @@ This file records the notices for the dependency set pinned in
 [`third_party/manifest/components.json`](third_party/manifest/components.json),
 and `scripts/build-release.ps1` stages the corresponding license and source
 artifacts into `licenses\libraw\` and `licenses\nuget\` inside the installer
-payload.
+payload. NSIS license and source download information is installed under
+`licenses\nsis\`; the NSIS source archive is a separate release asset.

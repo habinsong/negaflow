@@ -130,6 +130,8 @@ foreach ($required in @(
     'NOTICE',
     'TRADEMARKS.md',
     'THIRD-PARTY-NOTICES.md',
+    'licenses\nsis\COPYING',
+    'licenses\nsis\SOURCE.txt',
     'libraw.dll',
     'vcomp140.dll',
     'licenses\libraw\LICENSE.LGPL',

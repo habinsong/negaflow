@@ -213,7 +213,7 @@ int main(const int argc, char** argv) {
     test_identity_and_fixed_matrix_controls();
     test_chroma_controls_and_validation();
     test_white_balance_law();
-    expect(argc == 2, "ColorModel CTest receives the vibrance golden directory");
+    expect(argc == 1 || argc == 2, "an optional external golden directory is accepted");
     if (argc == 2) {
         test_civibrance_goldens(argv[1]);
     }

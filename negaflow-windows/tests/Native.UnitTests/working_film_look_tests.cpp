@@ -293,7 +293,7 @@ int main(const int argc, char** argv) {
     test_film_scan_order_and_workspace_reuse();
     test_identity();
     test_fail_closed_routes_and_workspace_errors();
-    expect(argc == 2, "WorkingFilmLook CTest receives the DigitalFilmLook golden directory");
+    expect(argc == 1 || argc == 2, "an optional external golden directory is accepted");
     if (argc == 2) {
         test_digital_film_look_goldens(argv[1]);
     }

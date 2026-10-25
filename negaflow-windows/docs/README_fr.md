@@ -94,7 +94,7 @@ ctest --preset x64-release --output-on-failure
 .\scripts\local-ci.ps1
 ```
 
-Les tests du moteur comprennent une comparaison aux images de référence. Ils lisent les fichiers produits par la version macOS et vérifient que le moteur Windows sort les mêmes pixels.
+La CI exécute les tests du moteur sans fichiers externes. Les références macOS sont conservées hors de Git. Pour lancer les comparaisons, définissez `NEGAFLOW_MACOS_GOLDEN_ROOT` dans la configuration CMake avec le dossier des références. Celui-ci doit contenir `task6-metadata-policy`, `task9-bw-slide`, `task7-coreimage-filters`, `task8-digital-film-look` et `vibrance`. Un fichier absent ou illisible fait échouer la comparaison sélectionnée. `ctest --preset x64-release -L external-golden` lance ces comparaisons ; les tests unitaires restent enregistrés.
 
 ## Cibles couleur Custom
 

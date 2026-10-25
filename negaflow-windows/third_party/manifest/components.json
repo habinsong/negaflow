@@ -3,6 +3,18 @@
   "payload_state": "native-foundation-and-winui-shell-source",
   "components": [
     {
+      "name": "NSIS installer runtime",
+      "version_source": "licenses/nsis/SOURCE.txt, generated from makensis -VERSION by scripts/build-release.ps1",
+      "license": "Zlib AND CPL-1.0",
+      "license_exception": "Special exception for the NSIS LZMA compression module, included in COPYING",
+      "source": "https://sourceforge.net/projects/nsis/files/NSIS%203/",
+      "source_artifact": "The version-specific nsis source archive and SHA-256 file are produced beside the installer by scripts/build-release.ps1.",
+      "runtime_payload": true,
+      "payload": "Windows installer stub, plug-ins, and LZMA compression module",
+      "license_payload": "licenses/nsis/COPYING",
+      "notice": "THIRD-PARTY-NOTICES.md#8-nsis-installer"
+    },
+    {
       "name": "Negaflow Windows",
       "version": "0.1.0",
       "license": "Apache-2.0",

@@ -11,7 +11,7 @@ int main(const int argc, char** argv) {
     test_halation_and_vignette();
     test_output_sharpening();
     test_detail_enhancement();
-    expect(argc == 2, "texture-stage CTest receives the Core Image golden directory");
+    expect(argc == 1 || argc == 2, "an optional external golden directory is accepted");
     if (argc == 2) {
         test_coreimage_filter_goldens(argv[1]);
     }

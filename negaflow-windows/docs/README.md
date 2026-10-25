@@ -94,7 +94,7 @@ ctest --preset x64-release --output-on-failure
 .\scripts\local-ci.ps1
 ```
 
-The engine tests include a golden image comparison. They read the reference files rendered by the macOS build and check that the Windows engine produces the same pixels.
+CI runs the self-contained engine tests. External macOS reference files are kept outside Git. To run their comparisons, set `NEGAFLOW_MACOS_GOLDEN_ROOT` to the reference directory when configuring CMake. It must contain `task6-metadata-policy`, `task9-bw-slide`, `task7-coreimage-filters`, `task8-digital-film-look`, and `vibrance`. Missing or unreadable files fail the selected comparisons. `ctest --preset x64-release -L external-golden` runs those comparisons; the ordinary unit tests remain enabled.
 
 ## Custom color targets
 

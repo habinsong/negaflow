@@ -94,7 +94,7 @@ ctest --preset x64-release --output-on-failure
 .\scripts\local-ci.ps1
 ```
 
-引擎测试里含有基准图像比对。它读 macOS 版导出的基准文件，确认 Windows 引擎给出同样的像素。
+CI 运行不依赖外部文件的引擎测试。macOS 基准文件保存在 Git 之外。要运行比对，请在配置 CMake 时将 `NEGAFLOW_MACOS_GOLDEN_ROOT` 设为基准文件夹，其中须包含 `task6-metadata-policy`、`task9-bw-slide`、`task7-coreimage-filters`、`task8-digital-film-look` 和 `vibrance`。指定的文件缺失或无法读取时，比对会失败。`ctest --preset x64-release -L external-golden` 只运行这些比对，普通单元测试仍会注册。
 
 ## Custom 色彩目标
 

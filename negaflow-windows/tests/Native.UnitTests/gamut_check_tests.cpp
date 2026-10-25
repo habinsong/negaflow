@@ -61,15 +61,20 @@ int main() {
         same.out_of_gamut[3]);
     expect(same.out_of_gamut[0] == 0U, "mid grey is inside sRGB");
 
-    // 넓은 공간을 목표로 하면 sRGB 색은 전부 그 안에 들어갑니다 — sRGB 는 둘의 부분집합입니다.
+    // ICC TRC를 디코딩 방향으로 바로잡은 뒤 경계색의 ICM 판정도 달라졌습니다.
+    // 색역 포함 관계는 경계에서 떨어진 색으로 검사하고, 위 경계색은 API 성공을 검사합니다.
+    auto interior = pixels;
+    put(interior, 3U, 240U, 240U, 240U);
+    put(interior, 6U, 16U, 16U, 16U);
+    put(interior, 9U, 64U, 64U, 192U);
     for (const OutputColorSpace wider :
          {OutputColorSpace::display_p3, OutputColorSpace::adobe_rgb}) {
         const auto result = negaflow::color::check_gamut_bgr8(
-            pixels.data(), width, height, width * 3U, wider);
+            interior.data(), width, height, width * 3U, wider);
         expect(result.status == GamutCheckStatus::ok, "checking against a wider space succeeds");
         expect(
             result.out_of_gamut_count == 0U,
-            "sRGB colours are inside a space that contains sRGB");
+            "interior sRGB colours are inside a space that contains sRGB");
     }
 
     // 빈 입력은 판정하지 않습니다. 못 한 것과 "전부 안에 있다" 는 다릅니다.

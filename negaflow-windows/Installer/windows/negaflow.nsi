@@ -417,6 +417,8 @@ Section "Install"
 
   SetOutPath "$Staging"
   File /r "${PAYLOAD}\*.*"
+  SetOutPath "$Staging\licenses\nsis"
+  File /oname=COPYING "${NSISDIR}\COPYING"
   SetOutPath "$TEMP"
 
   ; 앱 패키지는 Windows App Runtime 프레임워크에 기대고 있습니다. 그것이 없는 기계에서는

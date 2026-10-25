@@ -94,7 +94,7 @@ ctest --preset x64-release --output-on-failure
 .\scripts\local-ci.ps1
 ```
 
-엔진 테스트에는 골든 이미지 비교가 들어 있습니다. macOS 버전에서 뽑아 둔 기준 파일을 읽어서 Windows 엔진이 같은 화소를 내는지 확인합니다.
+CI는 외부 파일 없이 실행하는 엔진 테스트를 돌립니다. macOS 기준 파일은 Git 밖에 보관합니다. 기준 이미지 비교를 실행하려면 CMake 설정에서 `NEGAFLOW_MACOS_GOLDEN_ROOT`를 기준 파일 폴더로 지정합니다. 그 아래에 `task6-metadata-policy`, `task9-bw-slide`, `task7-coreimage-filters`, `task8-digital-film-look`, `vibrance`가 있어야 합니다. 지정한 파일이 없거나 읽히지 않으면 비교 검사는 실패합니다. `ctest --preset x64-release -L external-golden`으로 이 비교 검사만 실행할 수 있으며 일반 단위 검사도 계속 등록됩니다.
 
 ## Custom 컬러 타깃
 

@@ -79,6 +79,15 @@ else {
     $makensis.FullName
 }
 
+$nsisVersionText = ((& $makensisPath '-VERSION') -join "`n").Trim()
+if ($LASTEXITCODE -ne 0 -or $nsisVersionText -notmatch '^v(?<Release>3\.\d+(?:\.\d+)?)$') {
+    throw "Expected a stable NSIS 3 release, got '$nsisVersionText'."
+}
+$nsisVersion = $Matches.Release
+$nsisSourceName = "nsis-$nsisVersion-src.tar.bz2"
+$nsisSourceUrl = "https://downloads.sourceforge.net/project/nsis/NSIS%203/$nsisVersion/$nsisSourceName"
+$nsisReleaseSourceUrl = "https://github.com/habinsong/negaflow/releases/download/v$Version/$nsisSourceName"
+
 $payloadDirectory = Join-Path $OutputDirectory ('.payload-' + [Guid]::NewGuid().ToString('N'))
 $packageDirectory = Join-Path $OutputDirectory ('.msix-' + [Guid]::NewGuid().ToString('N'))
 $shellProject = Join-Path $projectRoot 'src\Shell\Negaflow.Shell.csproj'
@@ -280,6 +289,29 @@ try {
         }
     }
 
+    # 설치기에 사용한 NSIS 버전의 원본 소스를 별도 릴리스 자산으로 준비한다.
+    $nsisSourceArchive = Join-Path $packageDirectory $nsisSourceName
+    Invoke-WebRequest -Uri $nsisSourceUrl -OutFile $nsisSourceArchive -UseBasicParsing
+    $nsisSourceEntries = @(& tar.exe -tjf $nsisSourceArchive "nsis-$nsisVersion-src/COPYING")
+    if ($LASTEXITCODE -ne 0 -or $nsisSourceEntries.Count -ne 1) {
+        throw "NSIS source archive is invalid: $nsisSourceUrl"
+    }
+    $nsisSourceHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $nsisSourceArchive).Hash.ToLowerInvariant()
+    $nsisNoticeDirectory = Join-Path $payloadDirectory 'licenses\nsis'
+    New-Item -ItemType Directory -Force -Path $nsisNoticeDirectory | Out-Null
+    $nsisSourceNotice = @"
+NSIS $nsisVersion
+
+The installer includes the NSIS installer stub and its LZMA compression module.
+The license terms, including CPL-1.0 and the LZMA linking exception, are in COPYING.
+
+Source archive: $nsisSourceName
+SHA-256: $nsisSourceHash
+Negaflow release source download: $nsisReleaseSourceUrl
+Upstream source download: $nsisSourceUrl
+"@
+    Set-Content -LiteralPath (Join-Path $nsisNoticeDirectory 'SOURCE.txt') -Encoding UTF8 -Value $nsisSourceNotice
+
     foreach ($notice in @('LICENSE', 'NOTICE', 'TRADEMARKS.md', 'negaflow-windows\\THIRD-PARTY-NOTICES.md')) {
         $source = Join-Path $repositoryRoot $notice
         if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
@@ -301,6 +333,7 @@ try {
         'NOTICE',
         'TRADEMARKS.md',
         'THIRD-PARTY-NOTICES.md',
+        'licenses\nsis\SOURCE.txt',
         'libraw.dll',
         'vcomp140.dll',
         'licenses\libraw\LICENSE.LGPL',
@@ -348,10 +381,15 @@ try {
     if (-not [string]::Equals($compiledInstaller, $installerPath, [StringComparison]::OrdinalIgnoreCase)) {
         Move-Item -LiteralPath $compiledInstaller -Destination $installerPath -Force
     }
+    $nsisPublishedSource = Join-Path $OutputDirectory $nsisSourceName
+    Move-Item -LiteralPath $nsisSourceArchive -Destination $nsisPublishedSource -Force
+    Set-Content -LiteralPath "$nsisPublishedSource.sha256" -Encoding ASCII -NoNewline `
+        -Value "$nsisSourceHash *$nsisSourceName`n"
     $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installerPath).Hash.ToLowerInvariant()
     Set-Content -LiteralPath ([System.IO.Path]::ChangeExtension($installerPath, '.sha256')) -Encoding ASCII -NoNewline -Value "$hash *$installerName`n"
     Write-Host "Installer: $installerPath" -ForegroundColor Green
     Write-Host "SHA-256: $hash" -ForegroundColor Green
+    Write-Host "NSIS source: $nsisPublishedSource" -ForegroundColor Green
 }
 finally {
     if (Test-Path -LiteralPath $payloadDirectory) {

@@ -8,6 +8,8 @@ project(
 )
 
 include(CTest)
+set(NEGAFLOW_MACOS_GOLDEN_ROOT "" CACHE PATH
+    "External macOS reference directory; empty runs self-contained tests only")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CompilerWarnings)
@@ -956,6 +958,29 @@ target_link_libraries(
 set_target_properties(negaflow_cli PROPERTIES OUTPUT_NAME "negaflow-cli")
 
 if(BUILD_TESTING)
+    if(NEGAFLOW_MACOS_GOLDEN_ROOT)
+        foreach(fixture_directory IN ITEMS task9-bw-slide task6-metadata-policy
+                task8-digital-film-look vibrance task7-coreimage-filters)
+            if(NOT IS_DIRECTORY "${NEGAFLOW_MACOS_GOLDEN_ROOT}/${fixture_directory}")
+                message(FATAL_ERROR "External macOS golden directory is missing: ${NEGAFLOW_MACOS_GOLDEN_ROOT}/${fixture_directory}")
+            endif()
+        endforeach()
+        add_test(NAME native.task9_bw_slide_golden
+            COMMAND negaflow_task9_bw_slide_golden_tests "${NEGAFLOW_MACOS_GOLDEN_ROOT}/task9-bw-slide")
+        add_test(NAME native.task6_metadata_golden
+            COMMAND negaflow_task6_metadata_golden_tests "${NEGAFLOW_MACOS_GOLDEN_ROOT}/task6-metadata-policy")
+        add_test(NAME native.working_film_look_golden
+            COMMAND negaflow_working_film_look_tests "${NEGAFLOW_MACOS_GOLDEN_ROOT}/task8-digital-film-look")
+        add_test(NAME native.color_model_golden
+            COMMAND negaflow_color_model_tests "${NEGAFLOW_MACOS_GOLDEN_ROOT}/vibrance")
+        add_test(NAME native.texture_stage_golden
+            COMMAND negaflow_texture_stage_tests "${NEGAFLOW_MACOS_GOLDEN_ROOT}/task7-coreimage-filters")
+        set_tests_properties(native.task9_bw_slide_golden native.task6_metadata_golden
+            native.working_film_look_golden native.color_model_golden native.texture_stage_golden
+            PROPERTIES LABELS "external-golden")
+    else()
+        message(STATUS "External macOS goldens not configured; self-contained tests remain enabled")
+    endif()
     add_executable(negaflow_native_tests
         tests/Native.UnitTests/build_info_tests.cpp
     )
@@ -1007,11 +1032,6 @@ if(BUILD_TESTING)
         negaflow_task9_bw_slide_golden_tests
         PRIVATE negaflow_native negaflow_color negaflow_imaging negaflow_project_options
     )
-    add_test(
-        NAME native.task9_bw_slide_golden
-        COMMAND negaflow_task9_bw_slide_golden_tests
-            "${CMAKE_CURRENT_SOURCE_DIR}/../docs/verification/macos-golden/task9-bw-slide"
-    )
 
     # Task 1's source TIFF is intentionally outside the repository. The
     # executable takes its source and golden directories as explicit arguments
@@ -1031,11 +1051,6 @@ if(BUILD_TESTING)
     target_link_libraries(
         negaflow_task6_metadata_golden_tests
         PRIVATE negaflow_output negaflow_project_options
-    )
-    add_test(
-        NAME native.task6_metadata_golden
-        COMMAND negaflow_task6_metadata_golden_tests
-            "${CMAKE_CURRENT_SOURCE_DIR}/../docs/verification/macos-golden/task6-metadata-policy"
     )
 
     add_executable(negaflow_infrared_detector_abi_tests
@@ -1762,7 +1777,6 @@ if(BUILD_TESTING)
     add_test(
         NAME native.working_film_look
         COMMAND negaflow_working_film_look_tests
-            "${CMAKE_CURRENT_SOURCE_DIR}/../docs/verification/macos-golden/task8-digital-film-look"
     )
 
     add_executable(negaflow_grain_mend_tests
@@ -1928,7 +1942,6 @@ if(BUILD_TESTING)
     add_test(
         NAME native.color_model
         COMMAND negaflow_color_model_tests
-            "${CMAKE_CURRENT_SOURCE_DIR}/../docs/verification/macos-golden/vibrance"
     )
 
     add_executable(negaflow_scene_correction_tests
@@ -1993,7 +2006,6 @@ if(BUILD_TESTING)
     add_test(
         NAME native.texture_stage
         COMMAND negaflow_texture_stage_tests
-            "${CMAKE_CURRENT_SOURCE_DIR}/../docs/verification/macos-golden/task7-coreimage-filters"
     )
 
     add_executable(negaflow_bw_toning_tests

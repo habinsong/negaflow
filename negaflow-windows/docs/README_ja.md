@@ -94,7 +94,7 @@ ctest --preset x64-release --output-on-failure
 .\scripts\local-ci.ps1
 ```
 
-エンジンのテストにはゴールデン画像の比較が入っています。macOS 版で書き出した基準ファイルを読み、Windows のエンジンが同じ画素を出すか確かめます。
+CI では外部ファイルに依存しないエンジンテストを実行します。macOS の基準ファイルは Git の外に保管します。比較を実行するには CMake の設定で `NEGAFLOW_MACOS_GOLDEN_ROOT` に基準フォルダーを指定します。その下には `task6-metadata-policy`、`task9-bw-slide`、`task7-coreimage-filters`、`task8-digital-film-look`、`vibrance` が必要です。指定したファイルがない場合や読み込めない場合は比較が失敗します。`ctest --preset x64-release -L external-golden` で比較のみを実行できます。通常の単体テストも引き続き登録されます。
 
 ## Customカラーターゲット
 
