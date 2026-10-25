@@ -23,6 +23,8 @@
 #>
 [CmdletBinding()]
 param(
+    [ValidateSet('x64', 'ARM64')]
+    [string]$Architecture = 'x64',
     [string]$OutputDirectory,
     [string]$WorkRoot,
     [switch]$Clean
@@ -52,8 +54,9 @@ $LibRawSha256 = '06a37602a3f80b3e309e7ce704e6bb277c8298e162cde81e925a784ddf0fce2
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path -Parent $scriptDir
 if (-not $WorkRoot) { $WorkRoot = Join-Path $repoRoot 'build-libraw' }
+$archLower = $Architecture.ToLowerInvariant()
 if (-not $OutputDirectory) {
-    $OutputDirectory = Join-Path $repoRoot 'out\build\native\x64-release\Release'
+    $OutputDirectory = Join-Path $repoRoot "out\build\native\$archLower-release\Release"
 }
 
 if ($Clean -and (Test-Path $WorkRoot)) { Remove-Item -Recurse -Force $WorkRoot }
@@ -92,10 +95,16 @@ if (-not (Test-Path $sourceDir)) {
 # cl 이 마지막 것을 쓴다(D9025). native 쪽 CMakeLists 도 같은 `MultiThreaded` 다.
 $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
 if (-not (Test-Path $vswhere)) { throw "vswhere 를 찾지 못했다: $vswhere" }
-$vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-if (-not $vsPath) { throw "MSVC x64 도구를 가진 Visual Studio 설치를 찾지 못했다." }
-$vcvars = Join-Path $vsPath 'VC\Auxiliary\Build\vcvars64.bat'
-if (-not (Test-Path $vcvars)) { throw "vcvars64.bat 을 찾지 못했다: $vcvars" }
+$vcComponent = if ($Architecture -eq 'ARM64') { 'Microsoft.VisualStudio.Component.VC.Tools.ARM64' } else { 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64' }
+$vsPath = & $vswhere -latest -products * -requires $vcComponent -property installationPath
+if (-not $vsPath) { throw "MSVC $Architecture 도구를 가진 Visual Studio 설치를 찾지 못했다." }
+$vcvars = if ($Architecture -eq 'ARM64') {
+    $arm64Native = Join-Path $vsPath 'VC\Auxiliary\Build\vcvarsarm64.bat'
+    if (Test-Path $arm64Native) { $arm64Native } else { Join-Path $vsPath 'VC\Auxiliary\Build\vcvarsamd64_arm64.bat' }
+} else {
+    Join-Path $vsPath 'VC\Auxiliary\Build\vcvars64.bat'
+}
+if (-not (Test-Path $vcvars)) { throw "vcvars 스크립트를 찾지 못했다: $vcvars" }
 
 foreach ($sub in @('bin', 'lib', 'object')) {
     New-Item -ItemType Directory -Force -Path (Join-Path $sourceDir $sub) | Out-Null
@@ -135,12 +144,13 @@ Write-Host "CRT 정적 링크 확인 · OpenMP 켜짐 (필요한 곁 DLL 은 vco
 
 # 그 vcomp140.dll 을 배포 자료와 같은 자리에 놓는다. 설치본을 만드는 쪽이 집어간다.
 $redistRoot = Join-Path $vsPath 'VC\Redist\MSVC'
+$openMpPattern = "\\$archLower\\"
 $openMpRuntime = Get-ChildItem -LiteralPath $redistRoot -Recurse -Filter 'vcomp140.dll' -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -match '\\x64\\' } |
+    Where-Object { $_.FullName -match $openMpPattern } |
     Sort-Object FullName |
     Select-Object -Last 1
 if ($null -eq $openMpRuntime) {
-    throw "vcomp140.dll (x64) 을 못 찾았다: $redistRoot. Visual Studio 의 OpenMP 재배포 구성 요소가 필요하다."
+    throw "vcomp140.dll ($Architecture) 을 못 찾았다: $redistRoot. Visual Studio 의 OpenMP 재배포 구성 요소가 필요하다."
 }
 Copy-Item -LiteralPath $openMpRuntime.FullName -Destination $OutputDirectory -Force
 Write-Host "OpenMP 런타임: $($openMpRuntime.FullName)"
@@ -184,6 +194,7 @@ foreach ($name in @('LICENSE.LGPL', 'LICENSE.CDDL', 'COPYRIGHT', 'Changelog.txt'
     if (Test-Path $file) { Copy-Item -LiteralPath $file -Destination $licenseDir -Force }
 }
 Copy-Item -LiteralPath $archive -Destination $licenseDir -Force
+Copy-Item -LiteralPath $MyInvocation.MyCommand.Path -Destination (Join-Path $licenseDir 'build-libraw.ps1') -Force
 
 $hash = (Get-FileHash -LiteralPath (Join-Path $OutputDirectory 'libraw.dll') -Algorithm SHA256).Hash.ToLowerInvariant()
 Write-Host "libraw.dll → $OutputDirectory"

@@ -75,6 +75,24 @@ class WindowsProvenancePolicyTests(unittest.TestCase):
             )
         )
 
+    def test_declared_windows_source_copyrights_reads_component_manifest(self) -> None:
+        notice = "Copyright " + "(c) Morgan McGuire and Williams College, 2006"
+        self.make_file(
+            "negaflow-windows/third_party/manifest/components.json",
+            (
+                '{"components":[{"name":"median3",'
+                '"local_path":"src/Native/gpu/shaders/median3.hlsl",'
+                f'"copyright":"{notice}"'
+                '}]}\n'
+            ).encode("utf-8"),
+        )
+        self.assertEqual(
+            VERIFIER.declared_windows_source_copyrights(),
+            {
+                "negaflow-windows/src/Native/gpu/shaders/median3.hlsl": notice.lower()
+            },
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

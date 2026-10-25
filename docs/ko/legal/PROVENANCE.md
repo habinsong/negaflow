@@ -6,11 +6,11 @@
 
 ## 코드
 
-`Sources`, `Tests`, `scripts`의 구현은 negaflow를 위해 작성한 Swift, Python, 셸 코드입니다. 본체에는 C/C++/Objective-C 소스, 외부 패키지, 정적·동적 라이브러리, vendored 소스 트리가 없습니다. Apple이 macOS에서 제공하는 시스템 프레임워크만 링크합니다.
+`negaflow-mac`의 `Sources`, `Tests`, `scripts` 구현은 negaflow를 위해 작성한 Swift, Python, 셸 코드입니다. macOS 본체에는 C/C++/Objective-C 소스, 외부 패키지, 정적·동적 라이브러리, vendored 소스 트리가 없으며 Apple이 macOS에서 제공하는 시스템 프레임워크만 링크합니다. `negaflow-windows`의 `src`, `tests`, `scripts`는 negaflow를 위해 작성한 C++, C#, PowerShell 코드이며 외부 런타임 구성 요소와 라이선스는 [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md)에 기록합니다.
 
 필름 반전은 공개된 사진 감광학의 밀도, 토우, 직선부, 숄더 개념을 사용합니다. 현재 구현의 곡선과 계수는 negaflow의 네 광도 기준점에서 유도하며 제3자 프로그램의 수식이나 상수를 복사하지 않습니다. 식과 유도 과정은 [고정 인화 응답](../reference/PRINT_RESPONSE.md)에 있습니다.
 
-필름별 Dmin·Dmax 프리셋은 공개된 제3자 자료가 배포 상수로 들어오는 유일한 지점입니다. 이 수치는 제조사 데이터시트의 특성곡선에서 읽은 근사값이며 `FilmStockDmin`은 항목마다 출처를 `datasheetCurve` 또는 `estimated`로 표시해 그 사실을 드러냅니다. 공개 차트에서 읽은 수치는 필름의 사실이지 남의 코드나 문장을 복사한 것이 아니며, 스캔에서 실측한 필름 베이스가 있으면 언제나 실측이 우선합니다.
+공개된 제조사 기술 데이터시트는 세 가지 필름 상수 묶음에 쓰입니다. 필름별 Dmin·Dmax 프리셋(`FilmStockDmin`), 흑백 분광 감도와 특성곡선 프리셋(`BWFilmProfile`), 입자와 MTF 물리 파라미터(`DigitalFilmPhysics`)가 여기에 해당합니다. 이 수치는 공개 기술 자료의 차트에서 읽거나 근사한 값이며 `FilmStockDmin`은 항목마다 출처를 `datasheetCurve` 또는 `estimated`로 표시해 그 사실을 드러냅니다. 공개 차트에서 읽은 수치는 필름의 사실이지 남의 코드나 문장을 복사한 것이 아니며 스캔에서 실측한 필름 베이스가 있으면 언제나 실측이 우선합니다.
 
 GrainMend IR은 다음 순서로 작동합니다.
 

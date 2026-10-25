@@ -4,9 +4,8 @@
 
 namespace negaflow::imaging {
 
-// Empirically measured from the fixed macOS Core Image radius anchors. Core
-// Image's small-radius CIGaussianBlur is slightly wider than a mathematical
-// Gaussian with sigma equal to inputRadius.
+// Cross-platform Gaussian variance bias for small-radius blurs so that
+// small-radius blur kernels match the reference pipeline width.
 inline constexpr float coreimage_gaussian_variance_bias = 0.08F;
 
 [[nodiscard]] inline float coreimage_gaussian_effective_sigma(

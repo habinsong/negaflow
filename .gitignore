@@ -33,7 +33,6 @@ xcuserdata/
 # 빠져 있어서 규칙이 걸리지 않았고, 스캐너 코드가 쓰는 리소스 네 개가 계속 제외
 # 대상으로 잡혀 있었다.
 !negaflow-mac/Sources/ScannerKit/Resources/*.tiff
-!docs/verification/macos-golden/**/*.tiff
 
 # macOS / 편집기 메타데이터
 .DS_Store
@@ -126,14 +125,8 @@ NEGAFLOW_LIGHTROOM_EXPANSION.md
 /docs/*/product/PROJECT_STATUS.md
 /docs/local/
 
-# 골든 자료 자체는 공개한다. 테스트가 읽기 때문이다. 다만 그 폴더에 같이 있던 글은
-# 맥 쪽에 값을 찍어 달라고 부탁한 기록과 그 진행 메모라서 공개하지 않는다.
-/docs/verification/macos-golden/*.md
-/docs/verification/macos-golden/*/README.md
-
-# docs/verification/macos-golden 은 공개한다. 개발 기록이 아니라 macOS 판에서 뽑아 둔
-# 골든 이미지이고, negaflow-windows/CMakeLists.txt 의 골든 테스트가 이 파일들을 읽는다.
-# 빼면 새로 받은 사람이 테스트를 돌릴 수 없다.
+# 로컬 검증·골든 자료 (저장소에 올리지 않고 로컬에만 둔다).
+/docs/verification/
 
 # 일회성 코드 감사 / 청크 생성물
 /all_swift_files.txt

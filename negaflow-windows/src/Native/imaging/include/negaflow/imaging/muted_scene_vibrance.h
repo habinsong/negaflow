@@ -20,7 +20,7 @@ struct MutedSceneVibranceResult final {
     MutedSceneVibranceInfo info{};
 };
 
-// 실측 `CIVibrance` 표에서 amount 판 두 장을 고르는 것. 화소마다 같은 값이라
+// 크로스플랫폼 Vibrance 3D 룩업 테이블에서 amount 판 두 장을 고르는 것. 화소마다 같은 값이라
 // 화소 루프 밖에서 한 번만 정해집니다.
 //
 // **GPU 판이 이것을 그대로 씁니다.** 두 곳에서 고르면 판이 어긋나는 순간 색이

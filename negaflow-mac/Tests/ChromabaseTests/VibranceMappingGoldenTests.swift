@@ -4,10 +4,9 @@ import Foundation
 import XCTest
 @testable import Chromabase
 
-/// `CIVibrance` 의 **사상**을 알려진 격자로 뽑아 준다(REQUEST-3 요청 A, REQUEST-4 요청 A·B).
+/// 크로스플랫폼 Vibrance 3D 룩업 테이블을 알려진 격자로 뽑아 준다.
 ///
-/// Apple 내장 필터라 커널 소스가 없다. 수식을 추측해 옮기는 대신 입출력 격자를 넘겨
-/// Windows 포팅본이 값으로 맞추게 한다.
+/// 입출력 격자를 파일로 내보내 Windows 엔진의 3D 룩업 테이블과 맞춘다.
 ///
 /// ```
 /// NEGAFLOW_VIBRANCE_GOLDEN_DIR=/path/to/docs/verification/macos-golden/vibrance \

@@ -213,8 +213,10 @@ swift run -c release negaflow defect-bench <input-dir> \
 
 RGBの後退測定には、FILM-R v2の破損版と専門家による復元版44ペアを使います。
 
+- データセット: Authentically damaged & manually restored film scans (FILM-R v2)
+- 著者: Daniela Ivanova
 - DOI: <https://doi.org/10.6084/m9.figshare.21803304.v2>
-- ライセンス: CC BY 4.0
+- ライセンス: CC BY 4.0 (<https://creativecommons.org/licenses/by/4.0/>)
 - ペア: 44
 - 全体のサイズ: 437,570,872バイト
 

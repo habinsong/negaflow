@@ -2,7 +2,8 @@
 
 namespace negaflow::imaging::scanner_target_detail {
 
-// 아래 표는 실제 스캐너 출력에서 측정한 값입니다. 손으로 고칠 것이 아닙니다.
+// 아래 표는 공개 자료에서 정리한 스캐너 타겟 기본 설계 캐릭터(macOS `ScannerTargetGrade+DocumentedCharacter.swift` 대응)입니다.
+// 실제 스캔 코퍼스 통계는 `ScannerProfiles/*.json` 에 따로 있습니다.
 
 constexpr std::array<double, 9U> design_tone_xs{{
     0.099852823, 0.247800528, 0.349190213, 0.537098730, 0.735356983,

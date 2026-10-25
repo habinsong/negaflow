@@ -1,10 +1,10 @@
 #pragma once
 
-// 실측 `CIVibrance` 표를 쓰는 커널들입니다.
+// 크로스플랫폼 Vibrance 3D 룩업 테이블을 쓰는 커널들입니다.
 //
 // | | macOS | Windows CPU | 셰이더 |
 // |---|---|---|---|
-// | 흐린 장면 vibrance | `ColorModel.swift` 의 `CIVibrance` | `imaging/muted_scene_vibrance.cpp` | `shaders/muted_scene_vibrance.hlsl` |
+// | 흐린 장면 vibrance | `ColorModel.swift` | `imaging/muted_scene_vibrance.cpp` | `shaders/muted_scene_vibrance.hlsl` |
 // | 컬러 모델(우측 슬라이더) | 〃 + 온도·틴트·채도·원색 | `imaging/color_model.cpp` `apply_color_model` | `shaders/color_model.hlsl` |
 //
 // **표는 한 벌만 올립니다.** 33³ × amount 판 6장 = 215,622 칸이고, 두 커널이 같은

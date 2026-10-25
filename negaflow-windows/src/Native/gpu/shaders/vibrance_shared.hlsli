@@ -1,18 +1,16 @@
 #ifndef NEGAFLOW_VIBRANCE_SHARED_HLSLI
 #define NEGAFLOW_VIBRANCE_SHARED_HLSLI
 
-// macOS `CIVibrance` 의 **실측 사상**입니다.
+// 크로스플랫폼 Vibrance 3D 룩업 테이블입니다.
 //
 // CPU 판 : `imaging/vibrance_math.h` `measured_vibrance_scale`
 // 표     : `imaging/muted_scene_vibrance_table.cpp` (생성 파일, 33³ × amount 판 6장)
 //
-// Apple 의 `CIVibrance` 는 비공개 커널이라 수식이 없습니다. 이 저장소는 맥이 렌더한
-// 격자를 재서 표로 옮겼고, 화소마다 **정확히 아핀**이라는 것을 확인했습니다:
+// 화소마다 산술 평균 `A = (R+G+B)/3` 을 기준으로 채널 편차를 스케일합니다:
 //
 //   out = A + (in − A) · f,   A = (R+G+B)/3,   f = 1 + amount · g
 //
-// `g` 만 표에서 읽습니다. 앵커는 **산술 평균**이고 Rec.709 휘도가 아닙니다 —
-// 휘도로 풀면 최대 0.38 어긋납니다(CPU 헤더의 측정 기록).
+// `g` 를 3D 룩업 테이블에서 읽습니다. 앵커는 **산술 평균**입니다.
 //
 // ☠️ **amount 판 두 장의 선택은 호스트가 합니다**(`imaging::select_vibrance_planes`).
 //    화소마다 같은 값이고, 두 곳에서 고르면 판이 어긋나는 순간 색이 통째로 달라집니다.

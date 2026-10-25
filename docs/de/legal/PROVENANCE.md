@@ -6,11 +6,11 @@ Hier steht der Apache-2.0-Auslieferungsumfang der negaflow-App. Es ist ein Herku
 
 ## Code
 
-`Sources`, `Tests` und `scripts` sind Swift-, Python- und Shell-Code, geschrieben für negaflow. Die App enthält keinen C/C++/Objective-C-Quelltext, kein externes Paket, keine statische oder dynamische Bibliothek und keinen fremden Quellbaum. Gebunden werden nur die Systemframeworks, die Apple mit macOS ausliefert.
+In `negaflow-mac` sind `Sources`, `Tests` und `scripts` Swift-, Python- und Shell-Code, geschrieben für negaflow. Die macOS-App enthält keinen C/C++/Objective-C-Quelltext, kein externes Paket, keine statische oder dynamische Bibliothek und keinen fremden Quellbaum; gebunden werden nur die Systemframeworks, die Apple mit macOS ausliefert. In `negaflow-windows` sind `src`, `tests` und `scripts` C++-, C#- und PowerShell-Code, geschrieben für negaflow; die Drittanbieter-Laufzeitkomponenten und ihre Lizenzen stehen in [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md).
 
 Die Filmumkehr nutzt die veröffentlichten Begriffe der Sensitometrie: Dichte, Fuß, Geradenteil, Schulter. Kurven und Koeffizienten stammen aus den vier photometrischen Ankerpunkten von negaflow, nicht aus Formeln oder Konstanten eines fremden Programms. Gleichungen und Herleitung stehen in [feste Printantwort](../reference/PRINT_RESPONSE.md).
 
-Die Dmin- und Dmax-Presets je Filmsorte sind die einzige Stelle, an der veröffentlichtes fremdes Material zu einer ausgelieferten Konstante wird. Diese Zahlen sind Näherungen, abgelesen aus den Kennlinien der Hersteller-Datenblätter, und `FilmStockDmin` markiert jeden Eintrag als `datasheetCurve` oder `estimated`, damit die Herkunft sichtbar bleibt. Eine aus einem veröffentlichten Diagramm abgelesene Zahl ist eine Tatsache über den Film und keine Kopie fremden Codes oder Textes; eine am Scan gemessene Filmbasis geht diesen Werten immer vor.
+Veröffentlichte Hersteller-Datenblätter fließen in drei Gruppen ausgelieferter Filmkonstanten ein: die Dmin- und Dmax-Presets je Filmsorte (`FilmStockDmin`), die Schwarzweiß-Spektral- und Kennlinien-Presets (`BWFilmProfile`) sowie die physikalischen Korn- und MTF-Parameter (`DigitalFilmPhysics`). Diese Zahlen sind Näherungen aus den Kennlinien der Hersteller-Datenblätter, und `FilmStockDmin` markiert jeden Eintrag als `datasheetCurve` oder `estimated`, damit die Herkunft sichtbar bleibt. Eine aus einem veröffentlichten Diagramm abgelesene Zahl ist eine Tatsache über den Film und keine Kopie fremden Codes oder Textes; eine am Scan gemessene Filmbasis geht diesen Werten immer vor.
 
 GrainMend IR arbeitet in dieser Reihenfolge.
 

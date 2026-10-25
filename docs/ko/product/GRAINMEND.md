@@ -213,8 +213,10 @@ swift run -c release negaflow defect-bench <input-dir> \
 
 RGB 회귀에는 FILM-R v2의 손상본과 전문가 복원본 44쌍을 씁니다.
 
+- 데이터셋: Authentically damaged & manually restored film scans (FILM-R v2)
+- 저자: Daniela Ivanova
 - DOI: <https://doi.org/10.6084/m9.figshare.21803304.v2>
-- 라이선스: CC BY 4.0
+- 라이선스: CC BY 4.0 (<https://creativecommons.org/licenses/by/4.0/>)
 - 쌍: 44
 - 전체 크기: 437,570,872바이트
 

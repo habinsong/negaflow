@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [ValidateSet('x64', 'ARM64')]
     [string]$Architecture = 'x64',
@@ -177,6 +177,7 @@ try {
     $librawDll = Join-Path $projectRoot "out\build\native\$nativePreset\Release\libraw.dll"
     if (-not (Test-Path -LiteralPath $librawDll)) {
         & (Join-Path $PSScriptRoot 'build-libraw.ps1') `
+            -Architecture $Architecture `
             -OutputDirectory (Split-Path -Parent $librawDll)
         if ($LASTEXITCODE -ne 0) { throw 'libraw.dll build failed.' }
     }
@@ -197,13 +198,15 @@ try {
     $librawLicenseDirectory = Join-Path $projectRoot 'build-libraw\redistributable'
     $librawNoticeDirectory = Join-Path $payloadDirectory 'licenses\libraw'
     New-Item -ItemType Directory -Force -Path $librawNoticeDirectory | Out-Null
-    foreach ($librawNotice in @('LICENSE.LGPL', 'LICENSE.CDDL', 'COPYRIGHT')) {
+    foreach ($librawNotice in @('LICENSE.LGPL', 'LICENSE.CDDL', 'COPYRIGHT', 'Changelog.txt')) {
         $source = Join-Path $librawLicenseDirectory $librawNotice
         if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
             throw "LibRaw redistribution file is missing: $source. Run scripts\build-libraw.ps1."
         }
         Copy-Item -LiteralPath $source -Destination $librawNoticeDirectory -Force
     }
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'build-libraw.ps1') `
+        -Destination (Join-Path $librawNoticeDirectory 'build-libraw.ps1') -Force
     # LGPL 대응 소스. 파일 이름을 여기 적어 두면 LibRaw 를 올릴 때마다 이 줄이 어긋나고,
     # 어긋난 것은 빌드가 아니라 배포 뒤에 드러납니다. `build-libraw.ps1` 이 놓아 둔 것을
     # 그대로 집되, 없거나 둘 이상이면 세웁니다.
@@ -214,6 +217,47 @@ try {
     }
     Copy-Item -LiteralPath $librawSource[0].FullName -Destination $librawNoticeDirectory -Force
     $librawSourceName = $librawSource[0].Name
+
+    # 복원된 NuGet 패키지 디렉터리에서 실제 배포 버전의 라이선스·NOTICE 원문을 수집한다.
+    $nugetGlobalPackages = if (-not [string]::IsNullOrWhiteSpace($env:NUGET_PACKAGES)) {
+        $env:NUGET_PACKAGES
+    }
+    else {
+        Join-Path $HOME '.nuget\packages'
+    }
+    $nugetLicenseDirectory = Join-Path $payloadDirectory 'licenses\nuget'
+    New-Item -ItemType Directory -Force -Path $nugetLicenseDirectory | Out-Null
+    $pinnedNuGetPackages = @(
+        @{ Id = 'microsoft.windowsappsdk.runtime'; Version = '1.8.260710003' },
+        @{ Id = 'microsoft.windowsappsdk.winui'; Version = '1.8.260709004' },
+        @{ Id = 'microsoft.windowsappsdk.base'; Version = '1.8.251216001' },
+        @{ Id = 'microsoft.windowsappsdk.foundation'; Version = '1.8.260709000' },
+        @{ Id = 'microsoft.windowsappsdk.interactiveexperiences'; Version = '1.8.260708001' },
+        @{ Id = 'microsoft.windowsappsdk.ai'; Version = '1.8.79' },
+        @{ Id = 'microsoft.windowsappsdk.dwrite'; Version = '1.8.25122902' },
+        @{ Id = 'microsoft.windowsappsdk.ml'; Version = '1.8.2197' },
+        @{ Id = 'microsoft.windowsappsdk.widgets'; Version = '1.8.251231004' },
+        @{ Id = 'microsoft.data.sqlite.core'; Version = '10.0.10' },
+        @{ Id = 'sqlitepclraw.config.e_sqlite3'; Version = '3.0.5' },
+        @{ Id = 'sqlitepclraw.provider.e_sqlite3'; Version = '3.0.5' },
+        @{ Id = 'sqlitepclraw.core'; Version = '3.0.5' },
+        @{ Id = 'sourcegear.sqlite3'; Version = '3.53.4' },
+        @{ Id = 'system.numerics.tensors'; Version = '9.0.0' }
+    )
+    foreach ($pkg in $pinnedNuGetPackages) {
+        $pkgRoot = Join-Path $nugetGlobalPackages "$($pkg.Id)\$($pkg.Version)"
+        if (Test-Path -LiteralPath $pkgRoot -PathType Container) {
+            $destDir = Join-Path $nugetLicenseDirectory "$($pkg.Id).$($pkg.Version)"
+            $licenseFiles = @(Get-ChildItem -LiteralPath $pkgRoot -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -match '^(license|notice|third[-_]?party[-_]?notices)(\.txt|\.md)?$' })
+            if ($licenseFiles.Count -gt 0) {
+                New-Item -ItemType Directory -Force -Path $destDir | Out-Null
+                foreach ($file in $licenseFiles) {
+                    Copy-Item -LiteralPath $file.FullName -Destination $destDir -Force
+                }
+            }
+        }
+    }
 
     foreach ($notice in @('LICENSE', 'NOTICE', 'negaflow-windows\\THIRD-PARTY-NOTICES.md')) {
         $source = Join-Path $repositoryRoot $notice
@@ -240,6 +284,8 @@ try {
         'licenses\libraw\LICENSE.LGPL',
         'licenses\libraw\LICENSE.CDDL',
         'licenses\libraw\COPYRIGHT',
+        'licenses\libraw\Changelog.txt',
+        'licenses\libraw\build-libraw.ps1',
         "licenses\libraw\$librawSourceName"
     )) {
         if (-not (Test-Path -LiteralPath (Join-Path $payloadDirectory $required))) {

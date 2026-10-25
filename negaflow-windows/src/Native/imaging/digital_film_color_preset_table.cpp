@@ -5,8 +5,8 @@
 namespace negaflow::imaging {
 namespace {
 
-// 아래 값은 필름별로 측정한 색 표입니다. 화소 처리는 이 파일에 없습니다 - 표가 늘어도
-// 적용 코드는 그대로여야 하기 때문입니다.
+// 아래 값은 공개 자료의 필름 색 성향 묘사를 슬라이더 숫자로 옮긴 기준치입니다(`DigitalFilmColorPreset.swift` 대응).
+// 화소 처리는 이 파일에 없습니다 - 표가 늘어도 적용 코드는 그대로여야 하기 때문입니다.
 
 class PresetBuilder final {
 public:

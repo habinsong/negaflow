@@ -42,6 +42,9 @@ rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS" "$RESOURCES_DIR"
 cp "$BIN" "$APP_BUNDLE/Contents/MacOS/$EXECUTABLE_NAME"
 cp "$ROOT/Sources/negaflowApp/Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
+for legal_file in LICENSE NOTICE TRADEMARKS.md; do
+  cp "$ROOT/../$legal_file" "$RESOURCES_DIR/$legal_file"
+done
 
 cp "$ROOT/Config/negaflowApp-Info.plist" "$INFO_PLIST"
 "$PLIST_BUDDY" -c "Set :CFBundleDevelopmentRegion en" "$INFO_PLIST"
@@ -154,6 +157,9 @@ fi
 $PLUTIL -lint "$INFO_PLIST" >/dev/null
 test -x "$APP_BUNDLE/Contents/MacOS/$EXECUTABLE_NAME"
 test -s "$RESOURCES_DIR/AppIcon.icns"
+for legal_file in LICENSE NOTICE TRADEMARKS.md; do
+  test -s "$RESOURCES_DIR/$legal_file"
+done
 for locale in en ko ja zh-Hans fr de; do
   test -s "$RESOURCES_DIR/$locale.lproj/InfoPlist.strings"
 done

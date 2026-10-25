@@ -73,7 +73,7 @@ struct GpuAccelerator::State final {
     // 사슬 밖에서 부르는 자리를 위해 그대로 둡니다.
     gpu::GpuFilmLookStage film_look{};
     bool film_look_ready{false};
-    // 실측 `CIVibrance` 표는 **한 벌만** 올립니다 — 두 커널이 나눠 씁니다.
+    // 크로스플랫폼 Vibrance 3D 룩업 테이블은 **한 벌만** 올립니다 — 두 커널이 나눠 씁니다.
     gpu::GpuVibranceTable vibrance_table{};
     gpu::GpuMutedSceneVibrance muted_vibrance{};
     gpu::GpuColorModel color_model{};

@@ -244,7 +244,7 @@ public:
         const imaging::DigitalBwFilmLookPlan* plan,
         imaging::DigitalBwFilmLookApplied* applied) noexcept;
 
-    // 실측 `CIVibrance` 표를 쓰는 둘입니다. 표는 프로세스에 **한 벌**만 올라갑니다.
+    // 크로스플랫폼 Vibrance 3D 룩업 테이블을 쓰는 둘입니다. 표는 프로세스에 **한 벌**만 올라갑니다.
     [[nodiscard]] bool apply_muted_scene_vibrance(
         float* pixels,
         std::uint32_t width,

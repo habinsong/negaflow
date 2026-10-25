@@ -46,6 +46,9 @@ class CIGateTests(unittest.TestCase):
         self.assertIn("resource hash changed without provenance review", verifier)
         self.assertIn("\"sanei_\"", verifier)
         self.assertIn("\"negadoctor\"", verifier)
+        self.assertIn("\"negaflow-mac/Sources\"", verifier)
+        self.assertIn("\"negaflow-mac/Tests\"", verifier)
+        self.assertIn("\"negaflow-mac/scripts\"", verifier)
 
     def test_workflow_is_read_only_and_release_smoke_is_gated(self) -> None:
         workflow = (REPO_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")

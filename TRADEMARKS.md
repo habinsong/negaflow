@@ -8,15 +8,15 @@ Film, scanner, minilab, laboratory, process, and target names that appear in thi
 
 ## No affiliation or endorsement
 
-negaflow is **not** affiliated with, endorsed by, sponsored by, certified by, or approved by Eastman Kodak Company, Kodak Alaris, FUJIFILM Corporation, Noritsu Koki Co., Ltd., CineStill Film, Lomographische AG / Lomography, Harman Technology Ltd, ORWO / ORWO Net, LaserSoft Imaging AG (SilverFast), Hamrick Software (VueScan), Adobe Inc., Capture One A/S, or any other trademark owner.
+negaflow is **not** affiliated with, endorsed by, sponsored by, certified by, or approved by Eastman Kodak Company, Kodak Alaris, FUJIFILM Corporation, Noritsu Koki Co., Ltd., Pakon, Inc., Plustek Inc., CineStill Film, Lomographische AG / Lomography, Harman Technology Ltd, Foma Bohemia, ADOX, Agfa-Gevaert / AgfaPhoto Holding GmbH, Maco Photo Products (Rollei), ORWO / ORWO Net, LaserSoft Imaging AG (SilverFast), Hamrick Software (VueScan), Adobe Inc., Capture One A/S, or any other trademark owner.
 
 All trademarks, service marks, trade names, logos, and product names are the property of their respective owners, including but not limited to:
 
-- **Kodak, Portra, Ektar, Gold, UltraMax, Pro Image, ColorPlus, Ektachrome, Vision3**, Eastman Kodak Company / Kodak Alaris.
-- **Fujifilm, Fujicolor, Superia, Velvia, Provia, Frontier, SP-3000**, FUJIFILM Corporation.
+- **Kodak, Kodak Professional, Portra, Ektar, Gold, UltraMax, Pro Image, ColorPlus, Ektachrome, Kodachrome, Tri-X, T-Max, Vision3, HR-500, Pakon, F135**, Eastman Kodak Company / Kodak Alaris / Pakon, Inc.
+- **Fujifilm, Fuji, Fujicolor, Fujichrome, Superia, Pro 400H, Reala, Velvia, Provia, Astia, Acros, Frontier, SP-3000**, FUJIFILM Corporation.
 - **Noritsu, HS-1800**, Noritsu Koki Co., Ltd.
-- **Plustek, OpticFilm**, Plustek Inc.; **Ilford**, Harman Technology Ltd; **Fomapan**, Foma Bohemia; **Adox**, ADOX; and the raw-format and camera names referenced for file interoperability (Canon, Nikon, Sony, Fujifilm, Panasonic, Olympus, Pentax, Samsung, Hasselblad, Leica, Phase One, Sigma, Epson, Mamiya, Leaf), their respective owners.
-- **CineStill**, CineStill Film; **Lomography**, Lomographische AG; **Phoenix**, Harman Technology Ltd; **Wolfen**, ORWO.
+- **Plustek, OpticFilm**, Plustek Inc.; **Ilford, HP5 Plus, FP4 Plus, Delta, Pan F Plus, XP2 Super, Ortho Plus, SFX, Kentmere, Harman, Phoenix**, Harman Technology Ltd; **Fomapan**, Foma Bohemia; **Adox**, ADOX; **Agfa, AgfaPhoto, APX, Scala, Vista**, Agfa-Gevaert / AgfaPhoto Holding GmbH; **Rollei, Retro, RPX, Infrared**, Maco Photo Products; and the raw-format and camera names referenced for file interoperability (Canon, Nikon, Sony, Fujifilm, Panasonic, Olympus, Pentax, Samsung, Hasselblad, Leica, Phase One, Sigma, Epson, Mamiya, Leaf), their respective owners.
+- **CineStill**, CineStill Film; **Lomography, Lomo**, Lomographische AG; **ORWO, Wolfen**, ORWO.
 - **Digital ICE**, Eastman Kodak Company (originally Applied Science Fiction); **iSRD, SRDx, SilverFast**, LaserSoft Imaging AG; **VueScan**, Hamrick Software; **Photoshop, Lightroom, Adobe RGB**, Adobe Inc.; **Capture One**, Capture One A/S.
 
 ## Bundled profile data

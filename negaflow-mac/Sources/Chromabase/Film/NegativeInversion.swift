@@ -208,8 +208,7 @@ public enum NegativeInversion {
         amount cachedAmount: inout Double?
     ) -> CIImage {
         guard !monochrome else { return image }
-        // Windows 포팅본이 CIVibrance 의 사상을 재현할 수 있도록 이 단계의 입출력을 남긴다.
-        // Apple 내장 필터라 커널 소스가 없어, 값을 주고받는 것 말고는 맞출 방법이 없다.
+        // 크로스플랫폼 Vibrance 검증을 위해 이 단계의 입출력을 남긴다.
         dumpProxy(image, name: "preview")
 
         // linear 채도 기준(실측 캘리브레이션): flat 흐린풍경≈0.037, 흐린/뮤트 풍경≈0.14~0.15,

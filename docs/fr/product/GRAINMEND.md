@@ -213,8 +213,10 @@ swift run -c release negaflow defect-bench <input-dir> \
 
 La régression RGB utilise les 44 paires endommagé/restauré par un expert de FILM-R v2.
 
+- Jeu de données : Authentically damaged & manually restored film scans (FILM-R v2)
+- Auteur : Daniela Ivanova
 - DOI : <https://doi.org/10.6084/m9.figshare.21803304.v2>
-- Licence : CC BY 4.0
+- Licence : CC BY 4.0 (<https://creativecommons.org/licenses/by/4.0/>)
 - Paires : 44
 - Taille totale : 437 570 872 octets
 

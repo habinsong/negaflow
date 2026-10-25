@@ -42,7 +42,7 @@
     <key>NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac</key>
     <true/>
     <key>NSHumanReadableCopyright</key>
-    <string>Copyright © 2026 Habin Song. All rights reserved.</string>
+    <string>Copyright 2026 Song Habin</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>NSSupportsAutomaticGraphicsSwitching</key>

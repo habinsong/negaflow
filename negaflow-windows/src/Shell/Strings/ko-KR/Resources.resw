@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -249,7 +249,7 @@
     <comment>AppLocalizedText.importSection</comment>
   </data>
   <data name="legalAffiliationBody.Text" xml:space="preserve">
-    <value>negaflow는 Eastman Kodak Company, Kodak Alaris, FUJIFILM Corporation, Noritsu Koki Co., Ltd., CineStill Film, Lomographische AG/Lomography, Harman Technology Ltd, ORWO/ORWO Net 또는 기타 상표권자와 제휴, 후원, 보증, 인증, 승인 관계가 없습니다. 모든 상표, 서비스표, 상호, 로고, 제품명은 각 소유자의 자산입니다.</value>
+    <value>negaflow는 Eastman Kodak Company, Kodak Alaris, FUJIFILM Corporation, Noritsu Koki Co., Ltd., Pakon, Inc., Plustek Inc., CineStill Film, Lomographische AG/Lomography, Harman Technology Ltd, Foma Bohemia, ADOX, Agfa-Gevaert/AgfaPhoto Holding GmbH, Maco Photo Products (Rollei), ORWO/ORWO Net 또는 기타 상표권자와 제휴, 후원, 보증, 인증, 승인 관계가 없습니다. 모든 상표, 서비스표, 상호, 로고, 제품명은 각 소유자의 자산입니다.</value>
     <comment>AppLocalizedText.legalAffiliationBody</comment>
   </data>
   <data name="legalAffiliationTitle.Text" xml:space="preserve">
@@ -265,7 +265,7 @@
     <comment>AppLocalizedText.legalLicenseTitle</comment>
   </data>
   <data name="legalNamesBody.Text" xml:space="preserve">
-    <value>언급되는 명칭에는 Kodak, Kodak Professional, Portra, Ektar, Gold, UltraMax, Pro Image, ColorPlus, Vision3, Ektachrome, Fujifilm, Fuji, Fujicolor, Fujichrome, Superia, Frontier, SP-3000, Noritsu, HS-1800, CineStill, Lomography, Lomo, Harman, Phoenix, ORWO, Wolfen 및 관련 필름, 스캐너, 미니랩, 공정명이 포함될 수 있습니다.</value>
+    <value>언급되는 명칭에는 Kodak, Kodak Professional, Portra, Ektar, Gold, UltraMax, Pro Image, ColorPlus, Vision3, Ektachrome, Kodachrome, Tri-X, T-Max, HR-500, Pakon, F135, Fujifilm, Fuji, Fujicolor, Fujichrome, Superia, Pro 400H, Reala, Velvia, Provia, Astia, Acros, Frontier, SP-3000, Noritsu, HS-1800, Plustek, OpticFilm, CineStill, Lomography, Lomo, Ilford, HP5 Plus, FP4 Plus, Delta, Pan F Plus, XP2 Super, Ortho Plus, SFX, Kentmere, Harman, Phoenix, Fomapan, Adox, Agfa, AgfaPhoto, APX, Scala, Vista, Rollei, ORWO, Wolfen 및 관련 필름, 스캐너, 미니랩, 공정명이 포함될 수 있습니다.</value>
     <comment>AppLocalizedText.legalNamesBody</comment>
   </data>
   <data name="legalNamesTitle.Text" xml:space="preserve">

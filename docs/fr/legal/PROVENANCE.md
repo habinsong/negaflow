@@ -6,11 +6,11 @@ Ce document consigne le périmètre de distribution Apache-2.0 de l'application 
 
 ## Code
 
-`Sources`, `Tests` et `scripts` sont du code Swift, Python et shell écrit pour negaflow. L'application n'a pas de source C/C++/Objective-C, pas de paquet externe, pas de bibliothèque statique ou dynamique, pas d'arborescence vendorisée. Seuls les frameworks système livrés par Apple avec macOS sont liés.
+Dans `negaflow-mac`, `Sources`, `Tests` et `scripts` sont du code Swift, Python et shell écrit pour negaflow. L'application macOS n'a pas de source C/C++/Objective-C, pas de paquet externe, pas de bibliothèque statique ou dynamique, pas d'arborescence vendorisée ; seuls les frameworks système livrés par Apple avec macOS sont liés. Dans `negaflow-windows`, `src`, `tests` et `scripts` sont du code C++, C# et PowerShell écrit pour negaflow, et les composants tiers d'exécution ainsi que leurs licences sont consignés dans [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md).
 
 L'inversion du film reprend les notions publiées de sensitométrie : densité, pied, partie droite, épaule. Les courbes et les coefficients viennent des quatre points d'ancrage photométriques de negaflow, pas des formules ou constantes d'un programme tiers. Les équations et la dérivation sont dans [réponse de tirage fixe](../reference/PRINT_RESPONSE.md).
 
-Les préréglages Dmin et Dmax par pellicule sont le seul endroit où un document tiers publié aboutit à une constante livrée. Ces valeurs sont des lectures approchées des courbes caractéristiques des fiches techniques constructeur, et `FilmStockDmin` marque chaque entrée `datasheetCurve` ou `estimated` pour que l'origine reste visible. Un nombre lu sur un graphique publié est un fait sur la pellicule, pas une copie du code ou du texte de quelqu'un, et une base film mesurée sur le scan l'emporte toujours sur ces valeurs.
+Les fiches techniques constructeur publiées alimentent trois groupes de constantes film livrées : les préréglages Dmin et Dmax par pellicule (`FilmStockDmin`), les préréglages spectraux et de courbes caractéristiques noir et blanc (`BWFilmProfile`), ainsi que les paramètres physiques de grain et de FTM (`DigitalFilmPhysics`). Ces valeurs sont des lectures approchées des graphiques publiés par les fabricants, et `FilmStockDmin` marque chaque entrée `datasheetCurve` ou `estimated` pour que l'origine reste visible. Un nombre lu sur un graphique publié est un fait sur la pellicule, pas une copie du code ou du texte de quelqu'un, et une base film mesurée sur le scan l'emporte toujours sur ces valeurs.
 
 GrainMend IR procède dans cet ordre.
 

@@ -213,8 +213,10 @@ swift run -c release negaflow defect-bench <input-dir> \
 
 RGB 回归用的是 FILM-R v2 的损伤版与专家修复版共 44 对。
 
+- 数据集：Authentically damaged & manually restored film scans (FILM-R v2)
+- 作者：Daniela Ivanova
 - DOI：<https://doi.org/10.6084/m9.figshare.21803304.v2>
-- 许可：CC BY 4.0
+- 许可：CC BY 4.0 (<https://creativecommons.org/licenses/by/4.0/>)
 - 对数：44
 - 总大小：437,570,872 字节
 

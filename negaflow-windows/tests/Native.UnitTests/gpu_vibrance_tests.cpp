@@ -1,4 +1,4 @@
-// CPU/GPU 동치 시험 — 실측 `CIVibrance` 표를 쓰는 커널 둘.
+// CPU/GPU 동치 시험 — 크로스플랫폼 Vibrance 3D 룩업 테이블을 쓰는 커널 둘.
 //
 // **참조를 옮겨 적지 않습니다.** 진짜 CPU 함수 `apply_muted_scene_vibrance` ·
 // `apply_color_model` 을 그대로 부르고 그 결과와 겨룹니다.

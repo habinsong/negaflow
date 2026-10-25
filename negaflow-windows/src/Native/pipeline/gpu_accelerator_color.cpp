@@ -1,6 +1,6 @@
 #include "negaflow/pipeline/gpu_accelerator.h"
 
-// 실측 `CIVibrance` 표를 쓰는 진입점 둘입니다 — 흐린 장면 vibrance 와 컬러 모델.
+// 크로스플랫폼 Vibrance 3D 룩업 테이블을 쓰는 진입점 둘입니다 — 흐린 장면 vibrance 와 컬러 모델.
 //
 // 왜 따로 뗐나 — 클래스 본체(`gpu_accelerator.cpp`)와 디지털 필름 룩
 // (`gpu_accelerator_film_look.cpp`)이 이미 각자 자리를 채웠고, 500줄 규칙이 있습니다.

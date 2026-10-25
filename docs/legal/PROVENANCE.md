@@ -6,11 +6,11 @@ This document records the Apache-2.0 distribution scope of the negaflow app. It 
 
 ## Code
 
-`Sources`, `Tests`, and `scripts` are Swift, Python, and shell code written for negaflow. The app has no C/C++/Objective-C source, no external package, no static or dynamic library, and no vendored source tree. Only the system frameworks Apple ships with macOS are linked.
+In `negaflow-mac`, `Sources`, `Tests`, and `scripts` are Swift, Python, and shell code written for negaflow. The macOS app has no C/C++/Objective-C source, no external package, no static or dynamic library, and no vendored source tree; it links only the system frameworks Apple ships with macOS. In `negaflow-windows`, `src`, `tests`, and `scripts` are C++, C#, and PowerShell code written for negaflow, with third-party runtime components and licenses recorded in [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../negaflow-windows/THIRD-PARTY-NOTICES.md).
 
 Film inversion uses the published sensitometry ideas of density, toe, straight line, and shoulder. The curves and coefficients here come from negaflow's four photometric anchors, not from a third-party program's formulas or constants. The equations and the derivation are in [fixed print response](../reference/PRINT_RESPONSE.md).
 
-The film-stock Dmin and Dmax presets are the one place where published third-party material reaches a shipped constant. Those numbers are approximate readings of the characteristic curves in manufacturer datasheets, and `FilmStockDmin` marks every entry as `datasheetCurve` or `estimated` so the origin stays visible. Numbers read off a published chart are facts about the film, not a copy of anyone's code or text, and a measured film base from the scan always wins over them.
+Published manufacturer datasheets inform three groups of shipped film constants: film-stock Dmin and Dmax presets (`FilmStockDmin`), black-and-white spectral and characteristic-curve presets (`BWFilmProfile`), and physical grain and MTF parameters (`DigitalFilmPhysics`). Those numbers are approximate readings or fits from published technical data sheets, and `FilmStockDmin` marks every entry as `datasheetCurve` or `estimated` so the origin stays visible. Numbers read off a published chart are facts about the film, not a copy of anyone's code or text, and a measured film base from the scan always wins over them.
 
 GrainMend IR runs in this order.
 

@@ -143,6 +143,24 @@ def verify_tree_policy(files: list[Path]) -> tuple[int, int]:
     return text_count, binary_count
 
 
+def declared_windows_source_copyrights() -> dict[str, str]:
+    manifest_path = ROOT / WINDOWS_THIRD_PARTY_MANIFEST_ROOT / "components.json"
+    if not manifest_path.is_file():
+        return {}
+    try:
+        document = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        fail(f"windows component manifest cannot be read: {error}")
+    declared: dict[str, str] = {}
+    for component in document.get("components", []):
+        local_path = component.get("local_path")
+        copyright_notice = component.get("copyright")
+        if isinstance(local_path, str) and isinstance(copyright_notice, str):
+            normalized = (Path("negaflow-windows") / local_path).as_posix()
+            declared[normalized] = copyright_notice.lower()
+    return declared
+
+
 def verify_implementation_boundary() -> None:
     forbidden = (
         "darktable",
@@ -156,15 +174,16 @@ def verify_implementation_boundary() -> None:
         "gnu general public license",
     )
     excluded = {
-        "scripts/ci/verify-boundaries.sh",
-        "scripts/ci/verify-provenance.py",
-        "scripts/tests/test_ci_gate.py",
+        "negaflow-mac/scripts/ci/verify-boundaries.sh",
+        "negaflow-mac/scripts/ci/verify-provenance.py",
+        "negaflow-mac/scripts/tests/test_ci_gate.py",
     }
+    declared_copyrights = declared_windows_source_copyrights()
     candidates = []
     for root_name in (
-        "Sources",
-        "Tests",
-        "scripts",
+        "negaflow-mac/Sources",
+        "negaflow-mac/Tests",
+        "negaflow-mac/scripts",
         "negaflow-windows/src",
         "negaflow-windows/tests",
         "negaflow-windows/scripts",
@@ -183,8 +202,16 @@ def verify_implementation_boundary() -> None:
         for marker in forbidden:
             if marker in text:
                 fail(f"external implementation marker {marker!r} found in {relative}")
-        if "spdx-license-identifier" in text or "copyright (c)" in text:
+        if "spdx-license-identifier" in text:
             fail(f"unexpected third-party source header found in {relative}")
+        if "copyright (c)" in text:
+            expected_copyright = declared_copyrights.get(relative)
+            if (
+                not expected_copyright
+                or expected_copyright not in text
+                or text.count("copyright (c)") != 1
+            ):
+                fail(f"unexpected third-party source header found in {relative}")
 
     release_scripts = "\n".join(
         (MAC_ROOT / relative).read_text(encoding="utf-8").lower()
@@ -230,13 +257,15 @@ def verify_reachable_history() -> int:
         "silverfast srdx 동일",
         "crnojevic",
     )
-    pattern = "|".join(forbidden)
+    pattern_args = [arg for marker in forbidden for arg in ("-e", marker)]
     for offset in range(0, len(commits), 64):
         result = subprocess.run(
             [
-                "git", "grep", "-I", "-i", "-n", "-E", pattern,
+                "git", "grep", "-I", "-i", "-n", "-F",
+                *pattern_args,
                 *commits[offset:offset + 64], "--",
                 "Sources", "Tests",
+                "negaflow-mac/Sources", "negaflow-mac/Tests",
                 "negaflow-windows/src", "negaflow-windows/tests",
             ],
             cwd=ROOT,

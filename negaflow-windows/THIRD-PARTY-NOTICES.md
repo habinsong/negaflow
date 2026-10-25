@@ -9,14 +9,10 @@ components require. It is generated from the pinned dependency set declared in
 [`third_party/manifest/components.json`](third_party/manifest/components.json)
 and must be reviewed against the exact release payload before any distribution.
 
-The native imaging engine (`Negaflow.Native.dll`, `negaflow-cli.exe`) links no
-third-party code. Its only imports are Windows system libraries
-(`kernel32`, `bcrypt`, `mscms`, `ole32`, `shlwapi`), so it contributes no
-obligations to this file.
-
-That zero-dependency statement is about **linking**, and about the native engine
-rather than the distribution as a whole. Two third-party **native** binaries do
-ship alongside it, and neither appears in the engine's import table:
+The native imaging engine embeds a GPU median-filter sorting network adapted
+from Morgan McGuire and Kyle Whitson; its BSD-2-Clause notice is in section 7.
+External DLL imports do not identify embedded third-party source. Two additional
+third-party native binaries ship alongside the engine:
 
 - `e_sqlite3.dll`, the managed catalog layer, as of 2026-08-07, section 3 below.
   See ADR-0025.
@@ -33,17 +29,22 @@ ship alongside it, and neither appears in the engine's import table:
   `Microsoft.WindowsAppSDK.WinUI` 1.8.260709004, and their pinned transitive
   packages `Microsoft.WindowsAppSDK.Base` 1.8.251216001,
   `Microsoft.WindowsAppSDK.Foundation` 1.8.260709000,
-  `Microsoft.WindowsAppSDK.InteractiveExperiences` 1.8.260708001.
+  `Microsoft.WindowsAppSDK.InteractiveExperiences` 1.8.260708001,
+  `Microsoft.WindowsAppSDK.AI` 1.8.79,
+  `Microsoft.WindowsAppSDK.DWrite` 1.8.25122902,
+  `Microsoft.WindowsAppSDK.ML` 1.8.2197,
+  `Microsoft.WindowsAppSDK.Widgets` 1.8.251231004.
 - License: **MICROSOFT SOFTWARE LICENSE TERMS, MICROSOFT WINDOWS APP SDK**
   (proprietary; not an open-source license).
 - Redistribution basis: Section 3(a)(i) of those terms states that files
   binplaced with the application by the Windows App SDK NuGet package are
   permitted to be redistributed, for both framework-dependent and self-contained
-  deployment.
+  deployment. The installer also chains the Microsoft-signed
+  `WindowsAppRuntime.msix` (1.8) produced by the MSIX build under `Dependencies\`.
 - Obligation: the full license terms must accompany the distribution. The
-  canonical text ships inside each package as `license.txt`; the packaging step
-  copies it from the restored package directory for the exact pinned version
-  rather than from a hand-copied excerpt, so that the shipped text always matches
+  canonical text ships inside each package as `license.txt`; `scripts/build-release.ps1`
+  copies the license files from the restored NuGet package directories into
+  `licenses\nuget\` in the installer payload so that the shipped text matches
   the shipped binaries.
 - Reference: <https://www.nuget.org/packages/Microsoft.WindowsAppSDK.WinUI/1.8.260709004/License>
 
@@ -125,19 +126,48 @@ matters here.
 | `SQLitePCLRaw.config.e_sqlite3` | 3.0.5 | Apache-2.0 | `SQLitePCLRaw.batteries_v2.dll` |
 | `SQLitePCLRaw.provider.e_sqlite3` | 3.0.5 | Apache-2.0 | `SQLitePCLRaw.provider.e_sqlite3.dll` |
 | `SQLitePCLRaw.core` | 3.0.5 | Apache-2.0 | `SQLitePCLRaw.core.dll` |
-| `SourceGear.sqlite3` | 3.53.4 | Apache-2.0 | `runtimes\win-x64\native\e_sqlite3.dll`, `runtimes\win-arm64\native\e_sqlite3.dll` |
+| `SourceGear.sqlite3` | 3.53.4 | Public Domain | `runtimes\win-x64\native\e_sqlite3.dll`, `runtimes\win-arm64\native\e_sqlite3.dll` |
+| `System.Numerics.Tensors` | 9.0.0 | MIT | `System.Numerics.Tensors.dll` (transitive) |
+| `.NET Runtime (self-contained)` | 10.0 | MIT | `coreclr.dll`, `hostfxr.dll`, `System.*.dll` |
 
-- **MIT** (`Microsoft.Data.Sqlite.Core`): the licence text and copyright notice
-  must accompany the distribution. Copy it from `LICENSE.txt` in the restored
-  package directory for the exact pinned version.
-- **Apache-2.0** (the four SQLitePCLRaw and SourceGear packages): section 4(a)
-  requires a copy of the licence with the distribution, and section 4(d)
-  requires that any `NOTICE` file carried by those packages be reproduced.
-  Take both from the restored package directories for the pinned versions
-  rather than from a hand-copied excerpt.
-- **SQLite itself is in the public domain** and imposes no obligation. The
-  Apache-2.0 terms above come from SourceGear's packaging of the build, not
-  from SQLite.
+- **MIT** (`Microsoft.Data.Sqlite.Core`, `System.Numerics.Tensors`, and the
+  self-contained `.NET 10` runtime): the licence text and copyright notice
+  appear below and `scripts/build-release.ps1` also copies `LICENSE.txt` /
+  `LICENSE.TXT` from the restored NuGet package directories into `licenses\nuget\`.
+
+```
+The MIT License (MIT)
+
+Copyright (c) .NET Foundation and Contributors
+
+All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+- **Apache-2.0** (the three `SQLitePCLRaw.*` packages, Copyright 2014-2022
+  SourceGear, LLC): section 4(a) requires a copy of the Apache License 2.0 with
+  the distribution (provided in the root `LICENSE` and copied from the restored
+  NuGet package directories into `licenses\nuget\`), and section 4(d) requires
+  any `NOTICE` file carried by those packages to be reproduced.
+- **Public Domain** (`SourceGear.sqlite3` and SQLite itself): dedicated to the
+  public domain and imposes no redistribution obligation.
 
 `SourceGear.sqlite3` carries native binaries for around 30 runtime identifiers.
 The `RestrictRuntimeTargetsToWindows` target in `Directory.Build.targets` keeps
@@ -191,9 +221,8 @@ installed WIC codecs cannot open a file.
   ship and install together.
 - The source is **not modified**. We build stock LibRaw at that commit.
 
-### Why this does not change the native engine's zero-dependency statement
+### Runtime loading of LibRaw
 
-`Negaflow.Native.dll` and `negaflow-cli.exe` still **link** no third-party code.
 `libraw.dll` is resolved at run time with `LoadLibraryExW` and `GetProcAddress`;
 it is not in the import table, and the product runs without it (RAW files then
 fail with the same message any undecodable file gets). This is the same
@@ -206,11 +235,13 @@ Visual C++ Redistributable licence that permits redistribution with an
 application. It is not LibRaw code and carries no LGPL obligation of its own.
 
 1. Ship the licence text. `LICENSE.LGPL` and `LICENSE.CDDL` come from the LibRaw
-   source archive; `scripts/build-libraw.ps1` copies both, plus `COPYRIGHT` and
-   `Changelog.txt`, into its `redistributable\` staging directory.
-2. Ship the complete corresponding source, or a written offer for it. The build
-   script places the exact pinned `LibRaw-0.22.2+df226ea.tar.gz` in the same directory.
-   Ship that archive; it is the source the shipped binary was built from.
+   source archive; `scripts/build-libraw.ps1` copies both, plus `COPYRIGHT`,
+   `Changelog.txt`, and `build-libraw.ps1`, into its `redistributable\` staging
+   directory, and `scripts/build-release.ps1` places them into `licenses\libraw\`.
+2. Ship the complete corresponding source, including the compilation script.
+   `scripts/build-libraw.ps1` places the exact pinned `LibRaw-0.22.2+df226ea.tar.gz`
+   and `build-libraw.ps1` in `licenses\libraw\`. Ship both; together they are the
+   complete corresponding source the shipped binary was built from.
 3. Allow the user to relink. Satisfied by shipping LibRaw as a separate DLL the
    user can replace with their own build of the same C API.
 4. State that LibRaw is used and is covered by the LGPL. This file does that.
@@ -234,17 +265,61 @@ no redistribution obligation.
 
 ---
 
-## Deployment prerequisites
+## 7. GPU median filter
 
-The current shell is framework-dependent and requires the .NET 10 runtime and the
-Windows App Runtime 1.8 on the target machine. Installing or chaining those
-runtimes is governed by their own Microsoft terms, which the installer must
-surface to the user.
+The 3x3 median sorting network in `src/Native/gpu/shaders/median3.hlsl` is
+adapted from Morgan McGuire and Kyle Whitson's implementation. The compute
+shader is compiled into the native engine. The adapted portion is covered by
+BSD-2-Clause. Negaflow changes the shader interface and texture sampling for
+its Windows compute pipeline.
+
+Source: [MedianFilter.shader in Morgan McGuire's repository](https://github.com/morgan3d/misc/blob/master/tachyon/Assets/Standard%20Assets/Effects/DepthOfField/Resources/MedianFilter.shader).
+
+```text
+3x3 Median
+Morgan McGuire and Kyle Whitson
+http://graphics.cs.williams.edu
+
+Copyright (c) Morgan McGuire and Williams College, 2006
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+
+Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
+## Deployment model
+
+`scripts/build-release.ps1` builds the shell `--self-contained true` (bundling the
+.NET 10 runtime libraries under the MIT license above) with
+`WindowsAppSDKSelfContained=false`, and includes the Microsoft-signed
+`WindowsAppRuntime.msix` (1.8) inside the NSIS installer so that
+`package-registration.ps1` can register the framework dependency for the current
+user before registering the application manifest.
 
 ## Review status
 
-This file closes the notice obligation for the dependency set pinned as of
-2026-08-06. It does **not** by itself make the product release-ready: an SBOM
-generated from the final installer payload, and a re-review of this file against
-that payload, remain required. See `distribution_gate` in
-[`third_party/manifest/components.json`](third_party/manifest/components.json).
+This file records the notices for the dependency set pinned in
+[`third_party/manifest/components.json`](third_party/manifest/components.json),
+and `scripts/build-release.ps1` stages the corresponding license and source
+artifacts into `licenses\libraw\` and `licenses\nuget\` inside the installer
+payload.

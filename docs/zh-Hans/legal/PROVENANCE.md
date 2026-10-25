@@ -6,11 +6,11 @@
 
 ## 代码
 
-`Sources`、`Tests`、`scripts` 是为 negaflow 写的 Swift、Python 和 Shell 代码。 主体里没有 C/C++/Objective-C 源码、外部包、静态或动态库，也没有 vendored 源码树，只链接 Apple 在 macOS 上提供的系统框架。
+`negaflow-mac` 里的 `Sources`、`Tests`、`scripts` 是为 negaflow 写的 Swift、Python 和 Shell 代码。 macOS 主体里没有 C/C++/Objective-C 源码、外部包、静态或动态库，也没有 vendored 源码树，只链接 Apple 在 macOS 上提供的系统框架。 `negaflow-windows` 里的 `src`、`tests`、`scripts` 是为 negaflow 写的 C++、C# 和 PowerShell 代码，第三方运行时组件与许可记录在 [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md)。
 
 胶片反转用的是公开感光学里的密度、趾部、直线部和肩部这套概念。 这里的曲线和系数出自 negaflow 自己的四个光度基准点，没有照抄第三方程序的公式或常数。 公式和推导见 [固定印相响应](../reference/PRINT_RESPONSE.md)。
 
-各胶片的 Dmin 与 Dmax 预设，是公开的第三方资料唯一进入随附常数的地方。 这些数值是从厂商数据表的特性曲线上读出的近似值，`FilmStockDmin` 会逐条把来源标成 `datasheetCurve` 或 `estimated`，让出处一直可见。 从公开图表读出的数值是关于胶片的事实，不是照抄别人的代码或文字；只要扫描里有实测的片基， 实测永远优先。
+公开的厂商技术数据表用于三组随附胶片常数：各胶片的 Dmin 与 Dmax 预设（`FilmStockDmin`）、黑白光谱灵敏度与特性曲线预设（`BWFilmProfile`），以及颗粒与 MTF 物理参数（`DigitalFilmPhysics`）。 这些数值是从公开数据表的图表上读出或拟合的近似值，`FilmStockDmin` 会逐条把来源标成 `datasheetCurve` 或 `estimated`，让出处一直可见。 从公开图表读出的数值是关于胶片的事实，不是照抄别人的代码或文字；只要扫描里有实测的片基， 实测永远优先。
 
 GrainMend IR 按这个顺序工作。
 

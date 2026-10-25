@@ -6,11 +6,11 @@
 
 ## コード
 
-`Sources`、`Tests`、`scripts`はnegaflowのために書いたSwift、Python、シェルのコードです。 本体にはC/C++/Objective-Cのソース、外部パッケージ、静的・動的ライブラリ、vendoredソースツリーはありません。 AppleがmacOSで提供するシステムフレームワークだけをリンクします。
+`negaflow-mac`の`Sources`、`Tests`、`scripts`はnegaflowのために書いたSwift、Python、シェルのコードです。 macOS本体にはC/C++/Objective-Cのソース、外部パッケージ、静的・動的ライブラリ、vendoredソースツリーはなく、AppleがmacOSで提供するシステムフレームワークだけをリンクします。 `negaflow-windows`の`src`、`tests`、`scripts`はnegaflowのために書いたC++、C#、PowerShellのコードで、外部ランタイム構成要素とライセンスは[`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md)に記録しています。
 
 フィルム反転は、公開された感光学の濃度、トウ、直線部、ショルダーの考え方を使います。 ここでの曲線と係数はnegaflowの4つの光度基準点から出したもので、他社プログラムの式や定数を写してはいません。 式と導出は[固定プリント応答](../reference/PRINT_RESPONSE.md)にあります。
 
-フィルムごとのDminとDmaxのプリセットは、公開された他社の資料が出荷する定数に入る唯一の場所です。 これらの数値はメーカーのデータシートにある特性曲線から読んだ近似値で、`FilmStockDmin`は項目ごとに出所を`datasheetCurve`か`estimated`として示します。 公開された図表から読んだ数値はフィルムについての事実であって、他人のコードや文章を写したものではありません。スキャンから実測したフィルムベースがあれば、常にそちらが優先します。
+公開されたメーカーの技術データシートは、フィルムごとのDminとDmaxのプリセット（`FilmStockDmin`）、モノクロの分光感度と特性曲線のプリセット（`BWFilmProfile`）、粒状とMTFの物理パラメータ（`DigitalFilmPhysics`）の3つの定数群で使います。 これらの数値はメーカーのデータシートにある図表から読んだ近似値で、`FilmStockDmin`は項目ごとに出所を`datasheetCurve`か`estimated`として示します。 公開された図表から読んだ数値はフィルムについての事実であって、他人のコードや文章を写したものではありません。スキャンから実測したフィルムベースがあれば、常にそちらが優先します。
 
 GrainMend IRは次の順で動きます。
 

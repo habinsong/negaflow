@@ -1,6 +1,5 @@
 // 흐린 장면 vibrance 입니다.
 //
-// macOS : `ColorModel.swift` 의 `CIVibrance`(비공개 커널 — 측정 이식)
 // CPU 판 : `imaging/muted_scene_vibrance.cpp` `apply_muted_scene_vibrance`
 //
 // **세기(`amount`)를 여기서 정하지 않습니다.** CPU 가 축소본에서 장면 평균 채도를

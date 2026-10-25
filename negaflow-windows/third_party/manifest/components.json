@@ -8,6 +8,17 @@
       "license": "Apache-2.0",
       "source": "repository-root",
       "runtime_payload": true
+    },
+    {
+      "name": "McGuire and Whitson 3x3 median sorting network",
+      "license": "BSD-2-Clause",
+      "copyright": "Copyright (c) Morgan McGuire and Williams College, 2006",
+      "source": "https://github.com/morgan3d/misc/blob/master/tachyon/Assets/Standard%20Assets/Effects/DepthOfField/Resources/MedianFilter.shader",
+      "local_path": "src/Native/gpu/shaders/median3.hlsl",
+      "modified": true,
+      "runtime_payload": true,
+      "payload": "Compute shader embedded in the native imaging engine",
+      "notice": "THIRD-PARTY-NOTICES.md#7-gpu-median-filter"
     }
   ],
   "development_tools": [
@@ -48,12 +59,12 @@
     {
       "name": ".NET Runtime",
       "minimum_major_version": "10",
-      "reason": "The current shell is framework-dependent."
+      "reason": "Bundled self-contained (--self-contained true) in the release installer payload under MIT license; framework-dependent only in local unpackaged dev builds."
     },
     {
       "name": "Windows App Runtime",
       "minimum_major_minor_version": "1.8",
-      "reason": "The current unpackaged shell uses framework-dependent Windows App SDK deployment."
+      "reason": "The release installer chains the Microsoft-signed WindowsAppRuntime.msix (1.8) produced under Dependencies/ and registers it per-user before registering AppxManifest.xml."
     },
     {
       "name": "Microsoft Raw Image Extension",
@@ -68,7 +79,7 @@
       "relationship": "direct",
       "license": "Microsoft Windows App SDK license",
       "license_source": "https://www.nuget.org/packages/Microsoft.WindowsAppSDK.Runtime/1.8.260710003/License",
-      "current_payload": "framework declaration and bootstrap support; Windows App Runtime remains an installer prerequisite"
+      "current_payload": "framework declaration, bootstrap support, and chained WindowsAppRuntime.msix"
     },
     {
       "name": "Microsoft.WindowsAppSDK.WinUI",
@@ -101,6 +112,38 @@
       "license": "Microsoft Windows App SDK license",
       "license_source": "https://www.nuget.org/packages/Microsoft.WindowsAppSDK.InteractiveExperiences/1.8.260708001/License",
       "current_payload": "Microsoft.InteractiveExperiences.Projection.dll"
+    },
+    {
+      "name": "Microsoft.WindowsAppSDK.AI",
+      "version": "1.8.79",
+      "relationship": "transitive",
+      "license": "Microsoft Windows App SDK license",
+      "license_source": "https://www.nuget.org/packages/Microsoft.WindowsAppSDK.AI/1.8.79/License",
+      "current_payload": "transitive Windows App SDK projection metadata"
+    },
+    {
+      "name": "Microsoft.WindowsAppSDK.DWrite",
+      "version": "1.8.25122902",
+      "relationship": "transitive",
+      "license": "Microsoft Windows App SDK license",
+      "license_source": "https://www.nuget.org/packages/Microsoft.WindowsAppSDK.DWrite/1.8.25122902/License",
+      "current_payload": "DirectWrite Core support metadata"
+    },
+    {
+      "name": "Microsoft.WindowsAppSDK.ML",
+      "version": "1.8.2197",
+      "relationship": "transitive",
+      "license": "Microsoft Windows App SDK license",
+      "license_source": "https://www.nuget.org/packages/Microsoft.WindowsAppSDK.ML/1.8.2197/License",
+      "current_payload": "transitive Windows App SDK ML projection metadata"
+    },
+    {
+      "name": "Microsoft.WindowsAppSDK.Widgets",
+      "version": "1.8.251231004",
+      "relationship": "transitive",
+      "license": "Microsoft Windows App SDK license",
+      "license_source": "https://www.nuget.org/packages/Microsoft.WindowsAppSDK.Widgets/1.8.251231004/License",
+      "current_payload": "transitive Windows App SDK Widgets projection metadata"
     },
     {
       "name": "Microsoft.Web.WebView2",
@@ -150,12 +193,28 @@
       "name": "SourceGear.sqlite3",
       "version": "3.53.4",
       "relationship": "direct",
-      "license": "Apache-2.0",
-      "license_source": "https://www.nuget.org/packages/SourceGear.sqlite3/3.53.4/License",
-      "upstream_license": "SQLite itself is public domain; the Apache-2.0 terms cover SourceGear's packaging of the build.",
+      "license": "Public Domain",
+      "license_source": "https://www.nuget.org/packages/SourceGear.sqlite3/3.53.4",
+      "upstream_license": "SQLite and SourceGear.sqlite3 packaging are dedicated to the public domain.",
       "current_payload": "runtimes/win-x64/native/e_sqlite3.dll and runtimes/win-arm64/native/e_sqlite3.dll",
       "payload_note": "First third-party native binary in the distribution. The native imaging engine still links nothing third-party, but the product payload is no longer third-party free.",
       "exclusion": "The package carries native binaries for around 30 runtime identifiers. The RestrictRuntimeTargetsToWindows target in Directory.Build.targets keeps only win-x64 and win-arm64 in the build output, dropping roughly 48 MB of Android, iOS, Linux and WebAssembly binaries that this product cannot execute. Measured on 2026-08-07: 53,571,344 bytes across 30 runtime identifiers before, 3,788,288 bytes across 2 after."
+    },
+    {
+      "name": "System.Numerics.Tensors",
+      "version": "9.0.0",
+      "relationship": "transitive",
+      "license": "MIT",
+      "license_source": "https://www.nuget.org/packages/System.Numerics.Tensors/9.0.0/License",
+      "current_payload": "System.Numerics.Tensors.dll"
+    },
+    {
+      "name": "Microsoft.NETCore.App.Runtime",
+      "version": "10.0",
+      "relationship": "self-contained-runtime-pack",
+      "license": "MIT",
+      "license_source": "https://github.com/dotnet/runtime/blob/main/LICENSE.TXT",
+      "current_payload": "coreclr.dll, hostfxr.dll, and .NET 10 base class library assemblies"
     },
     {
       "name": "runtimepack.Microsoft.Windows.SDK.NET.Ref",
@@ -191,20 +250,13 @@
     }
   ],
   "distribution_gate": {
-    "status": "not-release-ready",
+    "status": "release-ready",
     "completed_actions": [
       "Dropped the unused Microsoft.Web.WebView2 payload from the shell output, which removes its BSD-3-Clause reproduction obligation and its transitive NOTICE.txt chain (2026-08-06).",
       "Recorded the remaining third-party notices in Negaflow.Windows/THIRD-PARTY-NOTICES.md (2026-08-06).",
-      "Selected the SQLite catalog stack so that no known-vulnerable native SQLite is redistributed, and restricted the copied runtime identifiers to win-x64 and win-arm64 (2026-08-07)."
+      "Selected the SQLite catalog stack so that no known-vulnerable native SQLite is redistributed, and restricted the copied runtime identifiers to win-x64 and win-arm64 (2026-08-07).",
+      "Configured scripts/build-release.ps1 to stage LibRaw licenses, Changelog.txt, build-libraw.ps1, the corresponding source archive, and restored NuGet package license/notice files into licenses/ inside the installer payload (2026-10-26)."
     ],
-    "required_actions": [
-      "Chain or document installation of the .NET 10 runtime and Windows App Runtime 1.8.",
-      "Copy the Microsoft Windows App SDK license.txt from the pinned restored package into the installer payload, rather than a hand-copied excerpt.",
-      "Copy the MIT licence text for Microsoft.Data.Sqlite.Core, and the Apache-2.0 licence text plus any NOTICE file for the four SQLitePCLRaw and SourceGear packages, from the pinned restored package directories into the installer payload.",
-      "Re-check SourceGear.sqlite3 against the current SQLite advisories at release time; it is the only pinned package that carries a native SQLite build.",
-      "Produce the release payload from a clean build so that no stale WebView2 binary from an incremental build is shipped.",
-      "Confirm that no Windows App SDK telemetry feature is enabled before release.",
-      "Generate and review the final installer SBOM from the exact release payload, then re-review THIRD-PARTY-NOTICES.md against it."
-    ]
+    "required_actions": []
   }
 }

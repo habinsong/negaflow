@@ -10,19 +10,13 @@
 
 namespace negaflow::imaging::detail {
 
-/// macOS `CIVibrance` 의 실측 사상입니다.
+/// 크로스플랫폼 Vibrance 3D 룩업 테이블 사상입니다.
 ///
-/// 이 필터는 화소마다 **정확히 아핀**입니다 — 맥이 렌더한 격자에서 세 채널을 `α·in + β` 로
-/// 맞춘 잔차가 33³ 에서 1.2e-5, 65³ 274,625 점에서 6.3e-6 이었습니다(float32 반올림 수준).
-/// 그 앵커는 산술 평균이며, Rec.709 휘도가 아닙니다(휘도로 풀면 최대 0.38 어긋납니다).
-/// 그래서 화소마다 필요한 것은 스칼라 하나뿐입니다.
+/// 화소마다 산술 평균 `A = (R+G+B)/3` 을 기준으로 채널 편차를 스케일합니다:
 ///
 ///   out = A + (in − A) · f,   A = (R+G+B)/3,   f = 1 + amount · g
 ///
-/// `g` 는 채도·크로마·명도 어느 하나의 함수도 아니고 색상까지 얽혀 있어(구간 내 퍼짐이
-/// 0.122 → 0.033 으로 색상을 넣어야 줄어듭니다) 수식으로 되짚지 않습니다. 잰 값을 그대로
-/// 표에서 읽습니다. 이 조사에서 방향만 보고 세운 가설 여덟 개가 전부 측정에서 떨어졌습니다.
-///
+/// `g` 는 33³ × 6장 룩업 테이블에서 삼선형 보간으로 읽습니다.
 /// 이 표는 ColorModel 이 쓰는 −0.80…+0.80 전 범위와 scanner-profile의 작은 양수까지
 /// 덮습니다. muted-scene 단계는 그 안의 0…0.50만 씁니다
 /// (`min(0.5, max(0, (0.24 − meanSat) × 3))`).
@@ -95,7 +89,7 @@ inline void apply_measured_vibrance_to_channels(
     blue = anchor + ((blue - anchor) * scale);
 }
 
-/// ColorModel 의 vibrance 슬라이더도 같은 실측 CIVibrance 사상을 씁니다.
+/// ColorModel 의 vibrance 슬라이더도 같은 크로스플랫폼 Vibrance 3D 룩업 테이블을 씁니다.
 inline void apply_vibrance_to_channels(
     float& red,
     float& green,
