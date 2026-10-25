@@ -67,7 +67,7 @@ extension AppLocalization {
             .settingsShortcutsTab: "ショートカット",
             .settingsLegalTab: "法的情報",
             .legalLicenseTitle: "オープンソースライセンス",
-            .legalLicenseBody: "negaflow のソースコードは Apache License 2.0 の下で配布されています。このライセンスは本プロジェクトのコードに適用されるもので、第三者の商標、フィルム名、スキャナー名、製品名、公開データシート、参照スキャン、ロゴ、パッケージ、またはメーカー独自のスキャナーソフトウェアに対する権利を付与するものではありません。",
+            .legalLicenseBody: "negaflow のソースコードは Apache License 2.0 の下で配布されています。このライセンスは本プロジェクトのコードに適用されるもので、第三者の商標、フィルム名、スキャナー名、製品名、公開データシート、参照スキャン、ロゴ、パッケージ、またはメーカー独自のスキャナーソフトウェアに対する権利を付与するものではありません。オフラインの GrainMend 品質評価には vanhelene による FILM-R v2 データセット（2023、DOI 10.6084/m9.figshare.21803304.v2、CC BY 4.0）を使用しています。Windows 配布物には Morgan McGuire および Kyle Whitson による 3x3 GPU 中央値ソーティングネットワーク（2006、BSD-2-Clause）、LibRaw（libraw.dll、LGPL-2.1 または CDDL-1.0、動的読み込み・差し替え可能）、.NET 10 ランタイムおよび Microsoft.Data.Sqlite.Core（MIT）、SQLitePCLRaw（Apache-2.0）、SourceGear.sqlite3（Public Domain）、Microsoft 再頒布条件に基づく Windows App SDK および OpenMP ランタイム（vcomp140.dll）が含まれ、全文と対応ソースは LICENSE、NOTICE、THIRD-PARTY-NOTICES.md、および licenses/ に同梱されています。",
             .legalTrademarkTitle: "商標の使用",
             .legalTrademarkBody: "negaflow は独立したオープンソースのフィルムスキャンおよびカラープロファイリングツールです。フィルム、スキャナー、ミニラボ、処理方式、ターゲットの名称は、negaflow が近似、測定、または相互運用する対象の実在するフィルム、スキャナーモデル、ラボターゲットシステム、またはプロファイル系列を識別するためにのみ使用されます。",
             .legalNamesTitle: "参照される名称",

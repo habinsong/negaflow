@@ -67,7 +67,7 @@ extension AppLocalization {
             .settingsShortcutsTab: "快捷键",
             .settingsLegalTab: "法律声明",
             .legalLicenseTitle: "开源许可证",
-            .legalLicenseBody: "negaflow 源代码按照 Apache License 2.0 分发。该许可证仅覆盖本项目代码；并不授予任何第三方商标、胶片名称、扫描仪名称、产品名称、公开数据表、参考扫描、标志、包装或厂商专有扫描软件的权利。",
+            .legalLicenseBody: "negaflow 源代码按照 Apache License 2.0 分发。该许可证仅覆盖本项目代码；并不授予任何第三方商标、胶片名称、扫描仪名称、产品名称、公开数据表、参考扫描、标志、包装或厂商专有扫描软件的权利。离线 GrainMend 质量评估使用 vanhelene 的 FILM-R v2 数据集（2023，DOI 10.6084/m9.figshare.21803304.v2，CC BY 4.0）。Windows 发行版还包含改编自 Morgan McGuire 与 Kyle Whitson 的 3x3 GPU 中值排序网络（2006，BSD-2-Clause）、LibRaw（libraw.dll，LGPL-2.1 或 CDDL-1.0，动态加载且可由用户替换）、.NET 10 运行时与 Microsoft.Data.Sqlite.Core（MIT）、SQLitePCLRaw（Apache-2.0）、SourceGear.sqlite3（Public Domain），以及依据 Microsoft 再分发条款提供的 Windows App SDK 与 OpenMP 运行时（vcomp140.dll）；许可证全文与对应源码随附于 LICENSE、NOTICE、THIRD-PARTY-NOTICES.md 及 licenses/ 目录。",
             .legalTrademarkTitle: "商标使用",
             .legalTrademarkBody: "negaflow 是独立开发的开源胶片扫描与色彩配置工具。胶片、扫描仪、迷你冲印系统、工艺和目标名称仅用于识别 negaflow 近似、测量或互操作的实体胶片、扫描仪型号、实验室目标系统或配置文件系列。",
             .legalNamesTitle: "引用的名称",

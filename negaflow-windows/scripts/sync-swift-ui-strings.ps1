@@ -129,7 +129,7 @@ function New-ResourcesDocument {
     return ($lines -join "`n") + "`n"
 }
 
-$accessibilityPath = Join-Path $repositoryRoot "Sources/negaflowApp/Localization/AppLocalization+Accessibility.swift"
+$accessibilityPath = Join-Path $repositoryRoot "negaflow-mac/Sources/negaflowApp/Localization/AppLocalization+Accessibility.swift"
 $changed = $false
 foreach ($language in $languages) {
     $values = @{}
@@ -138,12 +138,12 @@ foreach ($language in $languages) {
         foreach ($entry in $domainProperty.Value) {
             if ($domain -eq "AppLocalizedText") {
                 $sourcePath = Join-Path $repositoryRoot (
-                    "Sources/negaflowApp/Localization/Core/Tables/AppLocalizedText+{0}.swift" -f $language.Suffix)
+                    "negaflow-mac/Sources/negaflowApp/Localization/Core/Tables/AppLocalizedText+{0}.swift" -f $language.Suffix)
                 $value = Get-SwiftTableValue -Path $sourcePath -Key $entry.key
             }
             elseif ($domain -eq "AppLocalizedPhrase") {
                 $sourcePath = Join-Path $repositoryRoot (
-                    "Sources/negaflowApp/Localization/Phrases/Tables/AppLocalizedPhrase+{0}.swift" -f $language.Suffix)
+                    "negaflow-mac/Sources/negaflowApp/Localization/Phrases/Tables/AppLocalizedPhrase+{0}.swift" -f $language.Suffix)
                 $value = Get-SwiftTableValue -Path $sourcePath -Key $entry.key
             }
             elseif ($domain -eq "AppAccessibilityPhrase") {

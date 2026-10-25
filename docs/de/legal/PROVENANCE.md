@@ -53,7 +53,7 @@ FILM-R-v2-Material wird nur während der Qualitätsmessung heruntergeladen. Die 
 
 ## Namen und Interoperabilität
 
-Namen von Filmen, Scannern, Farbräumen, XMP-Namespaces und Produkten kennzeichnen Ziele und halten Dateien interoperabel. Markenrechte oder eine Verbindung werden nicht behauptet. Der volle Umfang steht in [`TRADEMARKS.md`](../../../TRADEMARKS.md).
+Namen von Filmen, Scannern, Farbräumen, XMP-Namespaces und Produkten kennzeichnen Ziele und halten Dateien interoperabel. Von der Windows-Engine erzeugte Ausgabe-ICC-Profile tragen beschreibende Bezeichnungen (`"Negaflow Compatible P3"`, `"Compatible with Adobe RGB (1998)"`) und eine `CC0 1.0 Universal`-Freigabe, damit exportierte Bilder keinen Profil-Urheberrechtsbeschränkungen unterliegen. Markenrechte oder eine Verbindung werden nicht behauptet. Der volle Umfang steht in [`TRADEMARKS.md`](../../../TRADEMARKS.md).
 
 ## Automatische Prüfungen und ihre Lücken
 

@@ -24,7 +24,7 @@ $quantum = 3.8182479871e-5
 $inputPath = Join-Path $GoldenDirectory 'civibrance33-input-256x141.f32'
 $input = [System.IO.File]::ReadAllBytes($inputPath)
 if ($input.Length -lt $sampleCount * $bytesPerPixel) {
-    throw "Unexpected CIVibrance input length: $($input.Length)."
+    throw "Unexpected vibrance table input length: $($input.Length)."
 }
 
 $values = [System.Collections.Generic.List[UInt16]]::new($sampleCount * $planes.Count)
@@ -32,7 +32,7 @@ foreach ($plane in $planes) {
     $goldenOutputPath = Join-Path $GoldenDirectory $plane.File
     $output = [System.IO.File]::ReadAllBytes($goldenOutputPath)
     if ($output.Length -ne $input.Length) {
-        throw "Unexpected CIVibrance output length for $($plane.File): $($output.Length)."
+        throw "Unexpected vibrance table output length for $($plane.File): $($output.Length)."
     }
     for ($index = 0; $index -lt $sampleCount; ++$index) {
         $offset = $index * $bytesPerPixel
@@ -55,7 +55,7 @@ foreach ($plane in $planes) {
         }
         $encoded = [Math]::Round($slope / $quantum, [MidpointRounding]::AwayFromZero)
         if ($encoded -lt 0 -or $encoded -gt [UInt16]::MaxValue) {
-            throw "CIVibrance slope is outside UInt16 range at amount $($plane.Amount), sample $index."
+            throw "Vibrance table slope is outside UInt16 range at amount $($plane.Amount), sample $index."
         }
         [void]$values.Add([UInt16]$encoded)
     }

@@ -244,6 +244,14 @@ try {
         @{ Id = 'sourcegear.sqlite3'; Version = '3.53.4' },
         @{ Id = 'system.numerics.tensors'; Version = '9.0.0' }
     )
+    $dotnetRuntimePacks = @(Get-ChildItem -LiteralPath $nugetGlobalPackages -Directory -Filter "microsoft.netcore.app.runtime.$runtimeIdentifier" -ErrorAction SilentlyContinue)
+    foreach ($packDir in $dotnetRuntimePacks) {
+        $latestVer = Get-ChildItem -LiteralPath $packDir.FullName -Directory -ErrorAction SilentlyContinue |
+            Sort-Object Name -Descending | Select-Object -First 1
+        if ($null -ne $latestVer) {
+            $pinnedNuGetPackages += @{ Id = $packDir.Name; Version = $latestVer.Name }
+        }
+    }
     foreach ($pkg in $pinnedNuGetPackages) {
         $pkgRoot = Join-Path $nugetGlobalPackages "$($pkg.Id)\$($pkg.Version)"
         if (Test-Path -LiteralPath $pkgRoot -PathType Container) {
@@ -259,7 +267,20 @@ try {
         }
     }
 
-    foreach ($notice in @('LICENSE', 'NOTICE', 'negaflow-windows\\THIRD-PARTY-NOTICES.md')) {
+    $dotnetCommand = Get-Command dotnet -ErrorAction SilentlyContinue
+    if ($null -ne $dotnetCommand) {
+        $dotnetRoot = Split-Path -Parent $dotnetCommand.Source
+        $dotnetLicenseDest = Join-Path $payloadDirectory 'licenses\dotnet'
+        foreach ($dotnetNotice in @('LICENSE.txt', 'THIRD-PARTY-NOTICES.TXT')) {
+            $candidate = Join-Path $dotnetRoot $dotnetNotice
+            if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+                New-Item -ItemType Directory -Force -Path $dotnetLicenseDest | Out-Null
+                Copy-Item -LiteralPath $candidate -Destination $dotnetLicenseDest -Force
+            }
+        }
+    }
+
+    foreach ($notice in @('LICENSE', 'NOTICE', 'TRADEMARKS.md', 'negaflow-windows\\THIRD-PARTY-NOTICES.md')) {
         $source = Join-Path $repositoryRoot $notice
         if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
             throw "Release notice is missing: $source"
@@ -278,6 +299,7 @@ try {
         'package-registration.ps1',
         'LICENSE',
         'NOTICE',
+        'TRADEMARKS.md',
         'THIRD-PARTY-NOTICES.md',
         'libraw.dll',
         'vcomp140.dll',

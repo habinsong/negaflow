@@ -134,7 +134,7 @@ void test_core_image_golden_signatures() {
                     nearly_equal(actual.green, expected.green) &&
                     nearly_equal(actual.blue, expected.blue) &&
                     actual.alpha == expected.alpha,
-                "the fitted Gaussian response stays within the Core Image golden envelope");
+                "the Gaussian acutance response stays within the cross-platform golden envelope");
         }
     }
 }

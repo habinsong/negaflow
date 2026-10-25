@@ -304,8 +304,8 @@ void expect_coreimage_close(
     const char* const message) {
     const float difference = max_abs_difference(actual, expected);
     // The CPU implementation is within 0.008 (about two encoded 8-bit levels) of every
-    // supplied CIUnsharpMask/ CIGaussianBlur output. The remaining maximum is confined to
-    // Core Image's undocumented CIUnsharpMask boundary kernel, while interior and direct
+    // supplied unsharp-mask / Gaussian-blur reference output. The remaining maximum is confined
+    // to boundary clamping differences, while interior and direct
     // Gaussian values are substantially tighter; retain this executable ceiling so it cannot
     // silently drift farther from the golden contract.
     constexpr float coreimage_abs_error_budget = 0.0080F;

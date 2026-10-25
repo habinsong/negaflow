@@ -457,6 +457,15 @@ final class AppLocalizationTests: XCTestCase {
         XCTAssertEqual(AppLocalization.text(.settingsLegalTab, language: .korean), "법적 고지")
         XCTAssertEqual(AppLocalization.text(.settingsLegalTab, language: .french), "Mentions")
 
+        for language in AppLanguage.allCases where language != .system {
+            let licenseBody = AppLocalization.text(.legalLicenseBody, language: language)
+            XCTAssertTrue(licenseBody.contains("Apache License 2.0"))
+            XCTAssertTrue(licenseBody.contains("FILM-R v2"))
+            XCTAssertTrue(licenseBody.contains("BSD-2-Clause"))
+            XCTAssertTrue(licenseBody.contains("LGPL-2.1"))
+            XCTAssertTrue(licenseBody.contains("THIRD-PARTY-NOTICES.md"))
+        }
+
         XCTAssertTrue(AppLocalization.text(.legalAffiliationBody, language: .english).contains("not affiliated"))
         XCTAssertTrue(AppLocalization.text(.legalAffiliationBody, language: .korean).contains("제휴"))
         XCTAssertTrue(AppLocalization.text(.legalAffiliationBody, language: .german).contains("nicht"))

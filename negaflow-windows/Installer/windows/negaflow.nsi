@@ -118,6 +118,7 @@ VIAddVersionKey "LegalCopyright" "Copyright 2026 Song Habin"
 !define MUI_FINISHPAGE_SHOWREADME_FUNCTION OpenProjectPage
 
 !insertmacro MUI_PAGE_WELCOME
+!insertmacro MUI_PAGE_LICENSE "${PAYLOAD}\THIRD-PARTY-NOTICES.md"
 ; 고른 폴더가 안전한지 **다음을 누를 때** 봅니다. 아래 `VerifyInstallDirectory` 참고 —
 ; 제거가 이 폴더를 통째로 지우기 때문에 아무 폴더나 받으면 안 됩니다.
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE VerifyInstallDirectory
@@ -156,6 +157,7 @@ LangString NegaflowFinishStar   ${LANG_ENGLISH} "Star negaflow on GitHub"
 LangString NegaflowUninstallLink ${LANG_ENGLISH} "Uninstall negaflow"
 LangString NegaflowNeedsWindows ${LANG_ENGLISH} "negaflow needs Windows 11 build ${MIN_OS_BUILD} or later.$\r$\n$\r$\nNothing has been installed. This PC reports build:"
 LangString NegaflowRegisterFailed ${LANG_ENGLISH} "negaflow could not register its application package.$\r$\n$\r$\nThe error, and the file that keeps the full record:"
+LangString NegaflowUnlockPrompt ${LANG_ENGLISH} "Registering negaflow requires a one-time Windows setting change.$\r$\n$\r$\nThis enables registration of unsigned loose application packages and requires administrator confirmation. If skipped, package registration will fail.$\r$\n$\r$\nEnable it now?"
 
 LangString NegaflowWelcomeTitle ${LANG_KOREAN} "negaflow for Windows"
 LangString NegaflowWelcomeText  ${LANG_KOREAN} "스캔한 필름이나 카메라로 복사한 필름을 가져와 베이스를 재고, 반전하고, 현상합니다. 컬러와 흑백, 네거티브와 포지티브를 모두 다룹니다. 원본 파일은 고쳐 쓰지 않습니다.$\r$\n$\r$\nnegaflow 에 필요한 것은 이 설치 파일에 전부 들어 있고, 사용자 폴더에만 씁니다.$\r$\n$\r$\n스캐너 조작은 별도의 스캐너 플러그인을 설치하면 나타납니다."
@@ -166,6 +168,7 @@ LangString NegaflowFinishStar   ${LANG_KOREAN} "GitHub 에서 negaflow 에 별 �
 LangString NegaflowUninstallLink ${LANG_KOREAN} "negaflow 제거"
 LangString NegaflowNeedsWindows ${LANG_KOREAN} "negaflow 는 Windows 11 빌드 ${MIN_OS_BUILD} 이상이 필요합니다.$\r$\n$\r$\n아무것도 설치하지 않았습니다. 이 PC 의 빌드:"
 LangString NegaflowRegisterFailed ${LANG_KOREAN} "negaflow 가 앱 패키지를 등록하지 못했습니다.$\r$\n$\r$\n오류와, 전문이 남아 있는 파일입니다:"
+LangString NegaflowUnlockPrompt ${LANG_KOREAN} "negaflow 를 등록하려면 Windows 설정을 한 번 바꿔야 합니다.$\r$\n$\r$\n서명하지 않은 앱 패키지의 등록을 허용하는 설정이며 관리자 확인이 필요합니다. 건너뛰면 설치가 등록 단계에서 실패합니다.$\r$\n$\r$\n지금 바꿀까요?"
 
 LangString NegaflowWelcomeTitle ${LANG_JAPANESE} "negaflow for Windows"
 LangString NegaflowWelcomeText  ${LANG_JAPANESE} "スキャンしたフィルムやカメラで複写したフィルムを読み込み、ベースを測り、反転して現像します。カラーとモノクロ、ネガとポジのどちらにも対応します。元のファイルは書き換えません。$\r$\n$\r$\n必要なものはこのインストーラーに揃っており、ユーザーフォルダーだけに書き込みます。$\r$\n$\r$\nスキャナーの操作は、別のスキャナープラグインを入れると現れます。"
@@ -176,6 +179,7 @@ LangString NegaflowFinishStar   ${LANG_JAPANESE} "GitHub で negaflow にスタ�
 LangString NegaflowUninstallLink ${LANG_JAPANESE} "negaflow のアンインストール"
 LangString NegaflowNeedsWindows ${LANG_JAPANESE} "negaflow には Windows 11 ビルド ${MIN_OS_BUILD} 以降が必要です。$\r$\n$\r$\n何もインストールしていません。この PC のビルド:"
 LangString NegaflowRegisterFailed ${LANG_JAPANESE} "negaflow がアプリパッケージを登録できませんでした。$\r$\n$\r$\nエラーと、全文が残っているファイルです:"
+LangString NegaflowUnlockPrompt ${LANG_JAPANESE} "negaflow を登録するには Windows の設定を一度変更する必要があります。$\r$\n$\r$\n署名されていないアプリパッケージの登録を許可する設定であり、管理者の確認が必要です。スキップすると登録段階で失敗します。$\r$\n$\r$\n今すぐ変更しますか？"
 
 LangString NegaflowWelcomeTitle ${LANG_SIMPCHINESE} "negaflow for Windows"
 LangString NegaflowWelcomeText  ${LANG_SIMPCHINESE} "导入扫描的胶片或用相机翻拍的胶片，测量片基、反转并进行显影。彩色与黑白、负片与正片均可处理。原始文件不会被改写。$\r$\n$\r$\nnegaflow 所需的一切都包含在此安装程序中，且只写入你的用户目录。$\r$\n$\r$\n安装单独的扫描仪插件后，扫描仪控件才会出现。"
@@ -186,6 +190,7 @@ LangString NegaflowFinishStar   ${LANG_SIMPCHINESE} "在 GitHub 上为 negaflow 
 LangString NegaflowUninstallLink ${LANG_SIMPCHINESE} "卸载 negaflow"
 LangString NegaflowNeedsWindows ${LANG_SIMPCHINESE} "negaflow 需要 Windows 11 版本 ${MIN_OS_BUILD} 或更高。$\r$\n$\r$\n尚未安装任何内容。此电脑的版本："
 LangString NegaflowRegisterFailed ${LANG_SIMPCHINESE} "negaflow 无法注册其应用包。$\r$\n$\r$\n以下是错误，以及保存完整记录的文件："
+LangString NegaflowUnlockPrompt ${LANG_SIMPCHINESE} "注册 negaflow 需要更改一次 Windows 设置。$\r$\n$\r$\n该设置允许注册未签名的松散应用包，并需要管理员确认。如果跳过，安装将在注册阶段失败。$\r$\n$\r$\n现在更改吗？"
 
 LangString NegaflowWelcomeTitle ${LANG_FRENCH} "negaflow pour Windows"
 LangString NegaflowWelcomeText  ${LANG_FRENCH} "Importez un scan ou une reproduction au boîtier, mesurez la base du film, inversez-la et développez. Couleur et noir et blanc, négatif et positif. Votre fichier d'origine n'est jamais réécrit.$\r$\n$\r$\nTout ce dont negaflow a besoin se trouve dans ce programme d'installation, qui n'écrit que dans votre profil utilisateur.$\r$\n$\r$\nLes commandes du scanner apparaissent une fois le module scanner installé séparément."
@@ -196,6 +201,7 @@ LangString NegaflowFinishStar   ${LANG_FRENCH} "Mettre une étoile à negaflow s
 LangString NegaflowUninstallLink ${LANG_FRENCH} "Désinstaller negaflow"
 LangString NegaflowNeedsWindows ${LANG_FRENCH} "negaflow nécessite Windows 11 build ${MIN_OS_BUILD} ou plus récent.$\r$\n$\r$\nRien n'a été installé. Build de ce PC :"
 LangString NegaflowRegisterFailed ${LANG_FRENCH} "negaflow n'a pas pu enregistrer son package d'application.$\r$\n$\r$\nL'erreur, et le fichier qui conserve le relevé complet :"
+LangString NegaflowUnlockPrompt ${LANG_FRENCH} "L'enregistrement de negaflow nécessite une modification unique des paramètres Windows.$\r$\n$\r$\nCe réglage autorise l'enregistrement de packages d'application non signés et demande une confirmation administrateur. Si vous l'ignorez, l'enregistrement échouera.$\r$\n$\r$\nL'activer maintenant ?"
 
 LangString NegaflowWelcomeTitle ${LANG_GERMAN} "negaflow für Windows"
 LangString NegaflowWelcomeText  ${LANG_GERMAN} "Scan oder Kamera-Reproduktion importieren, die Filmbasis messen, invertieren und entwickeln. Farbe und Schwarzweiß, Negativ und Positiv. Ihre Originaldatei wird nie überschrieben.$\r$\n$\r$\nAlles, was negaflow braucht, steckt in diesem Installationsprogramm, und es schreibt ausschließlich in Ihr Benutzerprofil.$\r$\n$\r$\nScanner-Bedienelemente erscheinen, sobald das separate Scanner-Plug-in installiert ist."
@@ -206,6 +212,7 @@ LangString NegaflowFinishStar   ${LANG_GERMAN} "negaflow auf GitHub mit einem St
 LangString NegaflowUninstallLink ${LANG_GERMAN} "negaflow deinstallieren"
 LangString NegaflowNeedsWindows ${LANG_GERMAN} "negaflow benötigt Windows 11 Build ${MIN_OS_BUILD} oder neuer.$\r$\n$\r$\nEs wurde nichts installiert. Build dieses PCs:"
 LangString NegaflowRegisterFailed ${LANG_GERMAN} "negaflow konnte sein Anwendungspaket nicht registrieren.$\r$\n$\r$\nDer Fehler und die Datei mit dem vollständigen Protokoll:"
+LangString NegaflowUnlockPrompt ${LANG_GERMAN} "Für die Registrierung von negaflow muss einmalig eine Windows-Einstellung geändert werden.$\r$\n$\r$\nDiese Einstellung erlaubt das Registrieren unsignierter Anwendungspakete und erfordert eine Administratorbestätigung. Beim Überspringen schlägt die Registrierung fehl.$\r$\n$\r$\nJetzt aktivieren?"
 
 LangString NegaflowUninstallWelcomeTitle ${LANG_ENGLISH} "Remove negaflow"
 LangString NegaflowUninstallWelcomeText ${LANG_ENGLISH} "This removes negaflow from your user profile: the application folder, its package registration, and the Start-menu shortcut.$\r$\n$\r$\nYour photos, libraries, and settings are not touched, and the scanner plug-in negaflow-scanner-sane is removed separately."
@@ -450,7 +457,7 @@ Section "Install"
       ; 무인 설치는 관리자 확인을 띄울 수 없습니다. 건너뛰고 그 사실을 남깁니다.
       !insertmacro LogValue "loose-package-registration" "silent-skipped"
     ${Else}
-      MessageBox MB_YESNO|MB_ICONQUESTION "Negaflow 를 등록하려면 Windows 설정을 한 번 바꿔야 합니다.$\n$\n서명하지 않은 앱 패키지의 등록을 허용하는 설정이며 관리자 확인이 필요합니다. 건너뛰면 설치가 등록 단계에서 실패합니다.$\n$\n지금 바꿀까요?" /SD IDYES IDNO SkipUnlock
+      MessageBox MB_YESNO|MB_ICONQUESTION "$(NegaflowUnlockPrompt)" /SD IDYES IDNO SkipUnlock
       ExecShellWait "runas" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -ExecutionPolicy Bypass -File "$Staging\package-registration.ps1" -Action EnableLoosePackageRegistration' SW_SHOWMINIMIZED
       SkipUnlock:
     ${EndIf}

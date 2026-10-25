@@ -126,6 +126,14 @@ foreach ($required in @(
     'coreclr.dll',
     'Microsoft.WindowsAppRuntime.Bootstrap.dll',
     'package-registration.ps1',
+    'LICENSE',
+    'NOTICE',
+    'TRADEMARKS.md',
+    'THIRD-PARTY-NOTICES.md',
+    'libraw.dll',
+    'vcomp140.dll',
+    'licenses\libraw\LICENSE.LGPL',
+    'licenses\libraw\LICENSE.CDDL',
     'uninstall.exe'
 )) {
     $path = Join-Path $InstallDirectory $required

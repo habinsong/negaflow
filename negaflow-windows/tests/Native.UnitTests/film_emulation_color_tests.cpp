@@ -151,7 +151,7 @@ void test_fixed_fixture_and_in_place_parity() {
     expect(
         maximum_core_image_error <=
             negaflow::fixtures::film_emulation_core_image_color_absolute_tolerance,
-        "the platform-neutral cube stays within the measured Core Image envelope");
+        "the platform-neutral cube stays within the cross-platform golden envelope");
 
     auto in_place = negaflow::fixtures::film_emulation_color_input;
     expect(

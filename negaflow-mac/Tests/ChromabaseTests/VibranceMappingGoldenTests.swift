@@ -63,7 +63,7 @@ final class VibranceMappingGoldenTests: XCTestCase {
         try emit(Self.grid65, amounts: [0.25], writesInput: true)
     }
 
-    /// REQUEST-5 요청 A — ColorModel 슬라이더가 실제로 CIVibrance에 넘기는 범위 전체.
+    /// ColorModel 슬라이더가 실제로 Vibrance 단계에 넘기는 범위 전체.
     /// 기존 0.05...0.50 판은 유지하고, 아직 측정하지 않은 음수 및 0.5 초과 구간만 더한다.
     func testEmitsColorModelRangeMappingGrid() throws {
         try emit(

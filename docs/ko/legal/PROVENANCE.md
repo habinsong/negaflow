@@ -53,7 +53,7 @@ FILM-R v2 자료는 품질 측정 때만 내려받습니다. 이미지 자체는
 
 ## 이름과 상호운용 정보
 
-필름, 스캐너, 색공간, XMP namespace와 제품 이름은 대상 식별과 파일 상호운용을 위해 씁니다. 상표 소유권이나 제휴를 주장하지 않습니다. 자세한 범위는 [`TRADEMARKS.md`](../../../TRADEMARKS.md)에 있습니다.
+필름, 스캐너, 색공간, XMP namespace와 제품 이름은 대상 식별과 파일 상호운용을 위해 씁니다. Windows 엔진이 합성하는 출력 ICC 프로파일은 설명용 이름(`"Negaflow Compatible P3"`, `"Compatible with Adobe RGB (1998)"`)과 `CC0 1.0 Universal` 권리 포기 문구를 기록해 내보낸 사용자 이미지에 프로파일 저작권 제약이 남지 않게 합니다. 상표 소유권이나 제휴를 주장하지 않습니다. 자세한 범위는 [`TRADEMARKS.md`](../../../TRADEMARKS.md)에 있습니다.
 
 ## 자동 검사와 한계
 

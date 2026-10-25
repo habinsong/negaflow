@@ -116,7 +116,7 @@ void test_chroma_controls_and_validation() {
     expect(
         (input.good() || input.eof()) &&
             input.gcount() == static_cast<std::streamsize>(pixels.size() * sizeof(negaflow::core::Rgba32F)),
-        "CIVibrance f32 golden is readable");
+        "vibrance f32 golden is readable");
     pixels.resize(33U * 33U * 33U);
     return pixels;
 }
@@ -173,12 +173,12 @@ void test_civibrance_goldens(const std::filesystem::path& golden_root) {
         const auto expected = read_rgba_f32(golden_root / entry.file);
         const float difference = max_rgb_difference(actual, expected);
         if (difference >= 0.0020F) {
-            std::cerr << "  CIVibrance amount=" << entry.amount
+            std::cerr << "  vibrance amount=" << entry.amount
                       << " max_abs_difference=" << difference << '\n';
         }
         expect(
             status == negaflow::core::KernelStatus::ok && difference < 0.0020F,
-            "ColorModel vibrance follows the full macOS CIVibrance golden range");
+            "ColorModel vibrance follows the full cross-platform golden range");
     }
 }
 
@@ -213,7 +213,7 @@ int main(const int argc, char** argv) {
     test_identity_and_fixed_matrix_controls();
     test_chroma_controls_and_validation();
     test_white_balance_law();
-    expect(argc == 2, "ColorModel CTest receives the CIVibrance golden directory");
+    expect(argc == 2, "ColorModel CTest receives the vibrance golden directory");
     if (argc == 2) {
         test_civibrance_goldens(argv[1]);
     }

@@ -257,7 +257,7 @@ Load a scanner from Library to scan film.</value>
     <comment>AppLocalizedText.legalAffiliationTitle</comment>
   </data>
   <data name="legalLicenseBody.Text" xml:space="preserve">
-    <value>negaflow source code is distributed under the Apache License 2.0. That license covers this project&apos;s code; it does not grant rights to third-party trademarks, film names, scanner names, product names, published datasheets, reference scans, logos, packaging, or proprietary scanner software.</value>
+    <value>negaflow source code is distributed under the Apache License 2.0. That license covers this project&apos;s code; it does not grant rights to third-party trademarks, film names, scanner names, product names, published datasheets, reference scans, logos, packaging, or proprietary scanner software. Offline GrainMend evaluation metrics use the FILM-R v2 dataset by vanhelene (2023, DOI 10.6084/m9.figshare.21803304.v2, CC BY 4.0). The Windows distribution also includes the 3x3 GPU median sorting network adapted from Morgan McGuire and Kyle Whitson (2006, BSD-2-Clause), LibRaw (libraw.dll, LGPL-2.1 or CDDL-1.0, dynamically loaded and user-replaceable), the .NET 10 runtime and Microsoft.Data.Sqlite.Core (MIT), SQLitePCLRaw (Apache-2.0), SourceGear.sqlite3 (Public Domain), and Microsoft Windows App SDK and OpenMP runtime (vcomp140.dll) under Microsoft redistributable terms; full texts and corresponding sources ship in LICENSE, NOTICE, THIRD-PARTY-NOTICES.md, and licenses/.</value>
     <comment>AppLocalizedText.legalLicenseBody</comment>
   </data>
   <data name="legalLicenseTitle.Text" xml:space="preserve">

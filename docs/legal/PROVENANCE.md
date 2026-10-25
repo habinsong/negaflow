@@ -53,7 +53,7 @@ FILM-R v2 material is downloaded only during quality measurement. The images nev
 
 ## Names and interoperability
 
-Film, scanner, color space, XMP namespace, and product names identify targets and keep files interoperable. No trademark ownership or affiliation is claimed. The full scope is in [`TRADEMARKS.md`](../../TRADEMARKS.md).
+Film, scanner, color space, XMP namespace, and product names identify targets and keep files interoperable. Output ICC profiles synthesized by the Windows engine use descriptive labels (`"Negaflow Compatible P3"`, `"Compatible with Adobe RGB (1998)"`) and a `CC0 1.0 Universal` dedication so exported user images carry no profile copyright restrictions. No trademark ownership or affiliation is claimed. The full scope is in [`TRADEMARKS.md`](../../TRADEMARKS.md).
 
 ## Automated checks and what they miss
 

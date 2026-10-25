@@ -4,7 +4,7 @@ import Foundation
 import XCTest
 @testable import Chromabase
 
-/// REQUEST-5 요청 C·D의 Apple Core Image 필터 기준값을 방출한다.
+/// 크로스플랫폼 검증용 macOS 공간 필터 기준값을 생성한다.
 ///
 /// ```
 /// NEGAFLOW_COREIMAGE_FILTER_GOLDEN_DIR=/path/to/docs/verification/macos-golden/task7-coreimage-filters \

@@ -53,7 +53,7 @@ Le matériel FILM-R v2 n'est téléchargé que pendant la mesure de qualité. Le
 
 ## Noms et interopérabilité
 
-Les noms de films, scanners, espaces colorimétriques, namespaces XMP et produits identifient des cibles et gardent les fichiers interopérables. Aucune propriété de marque ni affiliation n'est revendiquée. Le périmètre complet est dans [`TRADEMARKS.md`](../../../TRADEMARKS.md).
+Les noms de films, scanners, espaces colorimétriques, namespaces XMP et produits identifient des cibles et gardent les fichiers interopérables. Les profils ICC de sortie synthétisés par le moteur Windows portent des libellés descriptifs (`"Negaflow Compatible P3"`, `"Compatible with Adobe RGB (1998)"`) et une mention `CC0 1.0 Universal` afin que les images exportées ne subissent aucune restriction de droit d'auteur liée au profil. Aucune propriété de marque ni affiliation n'est revendiquée. Le périmètre complet est dans [`TRADEMARKS.md`](../../../TRADEMARKS.md).
 
 ## Contrôles automatiques et ce qu'ils ne couvrent pas
 

@@ -257,7 +257,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
     <comment>AppLocalizedText.legalAffiliationTitle</comment>
   </data>
   <data name="legalLicenseBody.Text" xml:space="preserve">
-    <value>Le code source de negaflow est distribué sous licence Apache License 2.0. Cette licence couvre le code du projet ; elle n&apos;accorde aucun droit sur les marques, noms de films, noms de scanners, noms de produits, fiches techniques publiées, scans de référence, logos, emballages ou logiciels de scanner propriétaires de tiers.</value>
+    <value>Le code source de negaflow est distribué sous licence Apache License 2.0. Cette licence couvre le code du projet ; elle n&apos;accorde aucun droit sur les marques, noms de films, noms de scanners, noms de produits, fiches techniques publiées, scans de référence, logos, emballages ou logiciels de scanner propriétaires de tiers. L&apos;évaluation hors ligne de GrainMend utilise le jeu de données FILM-R v2 de vanhelene (2023, DOI 10.6084/m9.figshare.21803304.v2, CC BY 4.0). La distribution Windows comprend également le réseau de tri médian GPU 3x3 adapté de Morgan McGuire et Kyle Whitson (2006, BSD-2-Clause), LibRaw (libraw.dll, LGPL-2.1 ou CDDL-1.0, chargé dynamiquement et remplaçable), le runtime .NET 10 et Microsoft.Data.Sqlite.Core (MIT), SQLitePCLRaw (Apache-2.0), SourceGear.sqlite3 (Domaine public), ainsi que Microsoft Windows App SDK et le runtime OpenMP (vcomp140.dll) selon les conditions de redistribution Microsoft ; les textes complets et sources correspondantes figurent dans LICENSE, NOTICE, THIRD-PARTY-NOTICES.md et licenses/.</value>
     <comment>AppLocalizedText.legalLicenseBody</comment>
   </data>
   <data name="legalLicenseTitle.Text" xml:space="preserve">

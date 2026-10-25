@@ -53,7 +53,7 @@ FILM-R v2 素材只在做质量测量时下载，图像本身不会进仓库，�
 
 ## 名称与互操作
 
-胶片、扫描仪、色彩空间、XMP namespace 和产品名称，用于标识对象和保持文件互操作。 不主张商标所有权，也不主张合作关系。范围见 [`TRADEMARKS.md`](../../../TRADEMARKS.md)。
+胶片、扫描仪、色彩空间、XMP namespace 和产品名称，用于标识对象和保持文件互操作。 Windows 引擎合成的输出 ICC 配置文件写入描述性名称（`"Negaflow Compatible P3"`、`"Compatible with Adobe RGB (1998)"`）与 `CC0 1.0 Universal` 声明，使导出的图像不受配置文件版权限制。 不主张商标所有权，也不主张合作关系。范围见 [`TRADEMARKS.md`](../../../TRADEMARKS.md)。
 
 ## 自动检查和它管不到的部分
 

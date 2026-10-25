@@ -67,7 +67,7 @@ extension AppLocalization {
             .settingsShortcutsTab: "단축키",
             .settingsLegalTab: "법적 고지",
             .legalLicenseTitle: "오픈소스 라이선스",
-            .legalLicenseBody: "negaflow의 소스 코드는 Apache License 2.0에 따라 배포됩니다. 이 라이선스는 본 프로젝트의 코드에 적용되며, 제3자의 상표, 필름명, 스캐너명, 제품명, 공개 데이터시트, 참조 스캔, 로고, 패키지 디자인, 제조사 전용 스캐너 소프트웨어에 대한 권리를 부여하지 않습니다.",
+            .legalLicenseBody: "negaflow의 소스 코드는 Apache License 2.0에 따라 배포됩니다. 이 라이선스는 본 프로젝트의 코드에 적용되며, 제3자의 상표, 필름명, 스캐너명, 제품명, 공개 데이터시트, 참조 스캔, 로고, 패키지 디자인, 제조사 전용 스캐너 소프트웨어에 대한 권리를 부여하지 않습니다. 오프라인 GrainMend 품질 평가는 vanhelene의 FILM-R v2 데이터셋(2023, DOI 10.6084/m9.figshare.21803304.v2, CC BY 4.0)을 사용합니다. Windows 배포본에는 Morgan McGuire 및 Kyle Whitson의 3x3 GPU 중앙값 정렬 네트워크(2006, BSD-2-Clause), LibRaw(libraw.dll, LGPL-2.1 또는 CDDL-1.0, 사용자 교체 가능한 동적 로드 DLL), .NET 10 런타임 및 Microsoft.Data.Sqlite.Core(MIT), SQLitePCLRaw(Apache-2.0), SourceGear.sqlite3(Public Domain), Microsoft 재배포 조건에 따른 Windows App SDK 및 OpenMP 런타임(vcomp140.dll)이 포함되며, 전문과 대응 소스는 LICENSE, NOTICE, THIRD-PARTY-NOTICES.md 및 licenses/ 폴더에 함께 수록됩니다.",
             .legalTrademarkTitle: "상표 사용",
             .legalTrademarkBody: "negaflow는 독립적으로 개발된 오픈소스 필름 스캔 및 컬러 프로파일링 도구입니다. 필름, 스캐너, 미니랩, 현상 공정, 타겟 명칭은 negaflow가 근사하거나 측정하거나 연동하려는 실제 필름 스톡, 스캐너 모델, 랩 타겟 시스템 또는 프로파일 계열을 식별하기 위해서만 사용됩니다.",
             .legalNamesTitle: "언급되는 명칭",

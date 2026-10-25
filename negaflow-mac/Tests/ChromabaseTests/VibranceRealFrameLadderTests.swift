@@ -4,7 +4,7 @@ import Foundation
 import XCTest
 @testable import Chromabase
 
-/// 실제 사진 버퍼를 amount 사다리로 통과시킨 결과(REQUEST-4 요청 C 의 대체안).
+/// 실제 사진 버퍼를 amount 사다리로 통과시킨 크로스플랫폼 검증 결과.
 ///
 /// 요청 C 는 "다른 사진 한 쌍"을 원했지만, 지금 있는 스캔 중 vibrance 가 실제로 도는 것은
 /// `GT-X900_frame_4` 하나뿐이다 — 나머지는 전부 채도가 높아

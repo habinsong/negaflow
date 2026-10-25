@@ -53,7 +53,7 @@ FILM-R v2の資料は品質計測のときだけダウンロードします。 �
 
 ## 名称と相互運用
 
-フィルム、スキャナー、色空間、XMP namespace、製品名は、対象の識別とファイルの相互運用のために使います。 商標の所有や提携は主張しません。範囲は[`TRADEMARKS.md`](../../../TRADEMARKS.md)にあります。
+フィルム、スキャナー、色空間、XMP namespace、製品名は、対象の識別とファイルの相互運用のために使います。 Windowsエンジンが合成する出力ICCプロファイルは、説明用の名称（`"Negaflow Compatible P3"`、`"Compatible with Adobe RGB (1998)"`）と`CC0 1.0 Universal`の権利放棄を記し、書き出した画像にプロファイル著作権の制約を残しません。 商標の所有や提携は主張しません。範囲は[`TRADEMARKS.md`](../../../TRADEMARKS.md)にあります。
 
 ## 自動検査とその限界
 
