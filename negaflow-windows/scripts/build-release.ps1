@@ -291,7 +291,7 @@ try {
 
     # 설치기에 사용한 NSIS 버전의 원본 소스를 별도 릴리스 자산으로 준비한다.
     $nsisSourceArchive = Join-Path $packageDirectory $nsisSourceName
-    Invoke-WebRequest -Uri $nsisSourceUrl -OutFile $nsisSourceArchive -UseBasicParsing
+    Invoke-WebRequest -Uri $nsisSourceUrl -OutFile $nsisSourceArchive -UseBasicParsing -UserAgent 'Negaflow-license-packaging/1.0'
     $nsisSourceEntries = @(& tar.exe -tjf $nsisSourceArchive "nsis-$nsisVersion-src/COPYING")
     if ($LASTEXITCODE -ne 0 -or $nsisSourceEntries.Count -ne 1) {
         throw "NSIS source archive is invalid: $nsisSourceUrl"
