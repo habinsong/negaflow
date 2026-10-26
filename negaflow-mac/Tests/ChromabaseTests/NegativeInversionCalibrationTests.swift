@@ -537,14 +537,16 @@ final class NegativeInversionCalibrationTests: XCTestCase {
         func midImbalance(_ px: [Float]) -> Double {
             let i = (midCenter.y * width + midCenter.x) * 4
             let r = Double(px[i]), g = Double(px[i + 1]), b = Double(px[i + 2])
-            return max(abs(r - g), abs(b - g))
+            // NeutralBalance fits log-channel ratios. A luminance curve can change
+            // absolute RGB differences even when the multiplicative cast halves.
+            return max(abs(log(r / g)), abs(log(b / g)))
         }
         let off = midImbalance(develop(neutralBalance: false))
         let on = midImbalance(develop(neutralBalance: true))
         XCTAssertGreaterThan(off, 0.02,
-            "픽스처 검증: 크로스오버 필름은 반전만으로 미드 bow 가 남아야 한다. off=\(off)")
+            "픽스처 검증: 크로스오버 필름은 반전만으로 미드 log-ratio bow 가 남아야 한다. off=\(off)")
         XCTAssertLessThan(on, off * 0.55,
-            "NeutralBalance 는 크로스오버 bow 를 절반 이하로 줄여야 한다. on=\(on) off=\(off)")
+            "NeutralBalance 는 크로스오버 log-ratio bow 를 절반 이하로 줄여야 한다. on=\(on) off=\(off)")
     }
 
     // MARK: LATD 리프트 — HDR 복구 / 저조도 보호

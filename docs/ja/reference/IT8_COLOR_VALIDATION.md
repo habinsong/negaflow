@@ -104,29 +104,13 @@ IT8.7/1は入力装置向けです。 プリンター出力には、`printer + p
 
 ## `MAIN`の合成パッチ回帰
 
-カラーネガの既定経路は`shoulder-print-response-v4`を使います。
+`FixedNegativeResponseTests` / `fixed-density-linear-v6`
 
-```math
-\log_{10}(P) =
-y_{\mathrm{ceil}} -
-\mathrm{amplitude}\,
-\exp\left(-(\mathrm{rate}\,d)^{\mathrm{shape}}\right)
-```
+独立した直線部フィルムモデル、異なる背景の同一パッチ、中立階調の WB、高密度ハイライトを検査します。合成回帰は実フィルムの色精度を証明しません。既存レシピは修正したアルゴリズムで描画し、保存パラメーターと原本を維持します。macOS のレンダラー識別子とサムネイル接尾辞も新しい描画を区別します。
 
-`d`はDminを引いたあとに正規化した光学濃度です。 係数は次の4つの基準点から計算します。
+数式はこのリポジトリで実装しました。darktable、RawTherapee、NegPy の実装コードはコピーしていません。
 
-| 基準点 | 値 |
-|---|---:|
-| ベース黒点 | `0.001` |
-| 中間グレー | `0.18` |
-| 測定した最高濃度部の白 | `0.70` |
-| 反射光の余裕 | `0.90` |
-
-この曲線では`0D`がlinear `0.001`、`0.6D`が`0.18`、`3D`が`0.882836683855`です。 出力が開いた区間に入るので、通常の範囲の黒と白が8-bitの`0/255`にそのまま張り付きません。
-
-場面のヒストグラムから露出を自動調整する式ではなく、特定のフィルムや機材の正確さを表すものでもありません。 式は[固定プリント応答](PRINT_RESPONSE.md)にあります。
-
-`MainSyntheticIT8RoundTripTests`は、264個の基準パッチを逆関数でネガにしてから、`MAIN`の経路全体で戻します。 Lab D50/2°と`DeltaE00`をパッチごとに検査します。これは`syntheticModel`の回帰です。
+[fixed-density-linear-v6](PRINT_RESPONSE.md)
 
 ## NORITSU/FUJIの相対スタイル回帰
 

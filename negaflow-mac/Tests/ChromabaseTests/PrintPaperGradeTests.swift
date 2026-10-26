@@ -104,10 +104,8 @@ final class PrintPaperGradeTests: XCTestCase {
         return (img, (width / 2, height / 2))
     }
 
-    /// main 은 반전(플랫 마스터) 결과에 룩을 굽지 않는다 — 미드톤 in-gamut 패치에서
-    /// 최종 출력 ≈ 반전 직후(디버그 프레임) 출력. 과거의 muted 그레이드/상시 chroma NR/
-    /// Vibrance/UnsharpMask 는 이 등식을 깼다(탈색·정보 손실의 원인).
-    func testMainTargetBakesNoLookOntoInversionForMidtonePatch() {
+    /// The final diagnostic must follow the same fixed inversion and output tone as MAIN.
+    func testMainTargetMatchesItsFinalToneDiagnostic() {
         let width = 120, height = 40
         let (neg, patch) = makeRampWithColorPatch(width: width, height: height)
         var params = DevelopParameters()
@@ -119,15 +117,15 @@ final class PrintPaperGradeTests: XCTestCase {
         let final = renderSRGB(engine.develop(image: neg, base: base, params: params),
                                width: width, height: height)
         let frames = engine.developDebugFramesScanner(image: neg, base: base, params: params)
-        guard let inversion = frames.first(where: { $0.stage == .afterInversion })?.image else {
-            return XCTFail("afterInversion 디버그 프레임이 있어야 한다")
+        guard let inversion = frames.first(where: { $0.stage == .finalTone })?.image else {
+            return XCTFail("finalTone 디버그 프레임이 있어야 한다")
         }
         let inverted = renderSRGB(inversion, width: width, height: height)
 
         let i = (patch.y * width + patch.x) * 4
         for c in 0..<3 {
             XCTAssertEqual(Double(final[i + c]), Double(inverted[i + c]), accuracy: 0.02,
-                "main 최종 출력은 미드톤 in-gamut 색에서 반전 결과와 같아야 한다(굽는 룩 없음). " +
+                "MAIN output must match the fixed linear/output-tone diagnostic. " +
                 "ch=\(c) final=\(final[i + c]) inversion=\(inverted[i + c])")
         }
     }

@@ -19,7 +19,7 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
     public var lightSourceProfileID: String? = nil
 
     // 장면 적응(자동) 보정 — 명시적으로 켰을 때만 동작한다(opt-in).
-    // 반전 자체(Dmin/dmaxNorm 밀도 정규화)는 결정적이며 여기 포함되지 않는다.
+    // MAIN/PRINT inversion is fixed; scanner/recovery targets own their explicit scene analysis.
     /// 반전 후 채널별 black/white 히스토그램 스트레치(AutoLevels). 장면 의존적 자동 레벨.
     public var autoLevels: Bool = false
     /// 반전 후 gray-world 미드톤 중립화(NeutralBalance). 장면 의존적 자동 컬러 밸런스.

@@ -48,6 +48,7 @@ public enum AutoLevels {
                       outputWhite outputWhiteOverride: Double? = nil,
                       outputBlack: Double = 0.0,
                       region: AnalysisRegion? = nil,
+                      sceneLinearOutput: Bool = false,
                       points cachedPoints: inout Points?) -> CIImage {
         // 샘플링을 위해 작은 영역으로 축소(CIAreaAverage 로는 히스토그램이 안 나옴).
         // 대신 작은 축소본을 렌더링해서 픽셀을 직접 읽는다.
@@ -70,11 +71,16 @@ public enum AutoLevels {
         // 의미 있는 보정인지 검사(이미 펴져 있으면 건너뛴다 — 무해성).
         let whiteR = white.x, whiteG = white.y, whiteB = white.z
         let blackR = black.x, blackG = black.y, blackB = black.z
-        let minimumRange = 0.04
+        let peakWhite = max(whiteR, max(whiteG, whiteB))
+        if sceneLinearOutput && peakWhite <= 1e-5 { return image }
+        // Scene exposure has no fixed 0...1 range. A relative span keeps opt-in
+        // correction usable for an underexposed but non-uniform negative.
+        let minimumRange = sceneLinearOutput ? 0.04 * peakWhite : 0.04
         let maximumRange = max(whiteR - blackR, max(whiteG - blackG, whiteB - blackB))
         guard maximumRange >= minimumRange else { return image }
-        // white 가 이미 0.95 이상이고 black 이 0.05 이하면 보정 불필요.
-        if whiteR > 0.95 && whiteG > 0.95 && whiteB > 0.95 &&
+        // Skip an already normalized range; extended linear highlights still need the requested stretch.
+        if !sceneLinearOutput && whiteR > 0.95 && whiteG > 0.95 && whiteB > 0.95 &&
+           whiteR < 1.05 && whiteG < 1.05 && whiteB < 1.05 &&
            blackR < 0.05 && blackG < 0.05 && blackB < 0.05 {
             return image
         }

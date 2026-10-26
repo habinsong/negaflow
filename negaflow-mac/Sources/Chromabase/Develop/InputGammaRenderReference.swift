@@ -1,8 +1,8 @@
 import Foundation
 import CoreImage
 
-/// 수동 입력 감마의 밀도 변화를 장면 자동 정규화가 다시 지우지 않도록 기준 범위를 고정합니다.
-/// 원본의 기본 해석에서 한 번 측정한 작은 수치만 보관하며 현상 픽셀은 보관하지 않습니다.
+/// MAIN/PRINT uses fixed density units. Explicit scene-adaptive targets freeze the
+/// reference measured with the original transfer so manual gamma is not cancelled.
 public enum InputGammaRenderReference {
     private struct Key: Hashable {
         let url: URL
@@ -21,6 +21,14 @@ public enum InputGammaRenderReference {
         source: URL, params: DevelopParameters, measurements: inout DevelopSceneMeasurements
     ) throws {
         guard params.inputGamma != .automatic, params.filmType.requiresInversion else { return }
+        if !params.developTarget.isScannerEmulation && params.developTarget != .rescue {
+            let preset = params.baseEstimationMode == .preset
+                ? params.filmStockDminID.flatMap(FilmStockDminRegistry.find) : nil
+            measurements.inputGammaReferenceRange = NegativeLinearResponse.stats(
+                base: FilmBase(rgb: SIMD3(repeating: 1), source: .manual),
+                preset: preset, filmType: params.filmType).dmaxNorm
+            return
+        }
         let key = Key(url: source.standardizedFileURL, observation: try InputGammaFileObservation.read(source),
             filmType: params.filmType,
             stock: params.baseEstimationMode == .preset ? params.filmStockDminID : nil,

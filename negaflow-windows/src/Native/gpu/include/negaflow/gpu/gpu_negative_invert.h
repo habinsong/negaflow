@@ -31,6 +31,8 @@ struct GpuNegativeInvertParameters final {
     float response_amplitude{0.0F};
     float response_rate{0.0F};
     float response_shape{0.0F};
+    bool linear_output{false};
+    float normal_range{1.55F};
 };
 
 class GpuNegativeInvert final {

@@ -89,10 +89,11 @@ final class DevelopSceneMeasurementReuseTests: XCTestCase {
     }
 
     /// 입력이 바뀌면(결함 제거 등) 캐시를 버려야 한다는 근거: 같은 베이스라도 측정값이 달라진다.
-    func testMeasurementsDependOnInputPixels() throws {
+    func testExplicitScannerMeasurementsDependOnInputPixels() throws {
         let engine = ChromabaseEngine()
         var params = DevelopParameters()
         params.filmType = .colorNegative
+        params.developTarget = .sp3000
         let bright = try makeNegative(filmType: .colorNegative)
         let dark = try makeNegative(filmType: .colorNegative, densityScale: 0.6)
         let base = try XCTUnwrap(engine.estimateFilmBase(in: bright, mode: .auto))

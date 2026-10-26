@@ -7,7 +7,7 @@ import ScannerKit
 
 extension AppModel {
     // MARK: 썸네일 디스크 캐시
-    private static let thumbnailInputVersionSuffix = "-input2"
+    private static let thumbnailInputVersionSuffix = "-input3-density6"
 
     /// 현상 썸네일과 원본 프리뷰는 서로 다른 파일에 저장한다. 한 경로를 공유하면 늦게 끝난
     /// 원본 시드가 현상 썸네일을 덮어써, 재실행 뒤 네거티브 전체가 원본으로 보일 수 있다.

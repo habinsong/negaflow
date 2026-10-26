@@ -8,7 +8,7 @@ final class ExportProvenanceTests: XCTestCase {
         XCTAssertTrue(components.prefix(3).allSatisfy { Int($0) != nil })
         XCTAssertEqual(
             NegaflowProductVersion.rendererVersion,
-            "chromabase/\(NegaflowProductVersion.current)"
+            "chromabase/\(NegaflowProductVersion.current)/fixed-density-linear-v6"
         )
         XCTAssertEqual(NegaflowProductVersion.applicationVersion(), NegaflowProductVersion.current)
     }

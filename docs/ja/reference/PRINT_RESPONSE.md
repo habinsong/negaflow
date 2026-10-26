@@ -1,105 +1,77 @@
-# 固定プリント応答
+# 固定ネガ応答
 
 [ドキュメントホーム](../README.md)
 
-置き場所:
+## MAIN/PRINT
 
-- Swift: `Sources/Chromabase/Film/NegativeInversion.swift`の`PrintResponse`
-- Metal: `negativeInvert`カーネル
-- 固定検査: `NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
+`fixed-density-linear-v6` はスキャナープロファイルのないネガの `MAIN/PRINT` に適用します。密度補正値は固定です。ベースと設定が同じなら、周囲の画素、クロップ、ヒストグラムを変えても同じ透過率の反転結果は変わりません。シーン別の vibrance は適用しません。
 
-## 曲線
-
-フィルムの特性曲線は、露光と濃度の関係をトウ、直線部、ショルダーに分けて説明します。 negaflowは濃度領域のショルダーをstretched exponential曲線で近似します。
+`B` は測定したフィルムベースの透過率です。`f` は汎用応答では 1、フィルム選択時は固定の相対範囲係数です。`0.62` と `0.60D` は汎用モデルのガンマとグレー密度の基準です。各フィルムやスキャナーの測定値ではありません。Status M 密度をスキャナー RGB に直接置き換えることもできません。
 
 ```math
-\begin{aligned}
-D &= \log_{10}\left(\frac{D_{\min}}{T}\right) \\
-d &= \frac{D}{d_{\max}} \\
-\log_{10}(P) &= y_{\mathrm{ceil}} - A \exp\left(-(r d)^s\right)
-\end{aligned}
+D_c = \log_{10}(B_c / \max(T_c,10^{-5}))
 ```
-
-`A`、`r`、`s`はコードの`amplitude`、`rate`、`shape`を短く書いた記号です。 `d_{\max}`は `dmaxNorm`です。
-
-- `D`: フィルムベースを引いた光学濃度
-- `d`: 使う濃度範囲で割った値
-- `P`: 線形の出力の明るさ
-
-曲線は全区間で上がり続けます。`d ≥ 0`のとき出力は`[baseToe, ceiling)`に入ります。 ベースより明るいバックライトやパーフォレーションのような負の値も0で切らず、有限の正の値として続きます。
 
 ```math
-y(-|d|) = 2\log_{10}(P_{\mathrm{toe}}) - y(|d|)
+q_c = D_c/f_c,\quad k=0.045,\quad d_t=0.60+0.62\log_{10}(k/0.18),\quad p=d_t\ln(10)/0.62
 ```
-
-逆関数も閉じた式で書けます。合成ネガを作って往復検査をするときに使います。
 
 ```math
-d = \frac{\left[\ln\left(\frac{A}{y_{\mathrm{ceil}}-\log_{10}(P)}\right)\right]^{1/s}}{r}
+E_c=\begin{cases}
+k\,\operatorname{sgn}(q_c)(|q_c|/d_t)^p,&q_c<d_t\\
+0.18\times10^{(q_c-0.60)/0.62},&q_c\ge d_t
+\end{cases}
 ```
 
-## 4つの基準点
+フィルム濃度のトウは値と傾きを合わせて直線部につなぎます。未露光ベースはWB前のシーン露光0に反転します。このべき乗トウは汎用設計であり、フィルム別の実測曲線ではありません。ベース付近では濃度ノイズも増幅し得ます。
 
-曲線の係数は保存しません。次の値から計算します。
+自動補正は明示的に有効にした場合だけ適用します。自動カラーでは出力トウ前のフィルムベースを中性軸の標本から除外します。強い色かぶりには手動WBが必要な場合があります。
 
-| 基準点 | カラー | 白黒 | 用途 |
-|---|---:|---:|---|
-| `P(0)` ベース黒点 | 0.001 | 0.0005 | 8-bitコード0に貼り付かせない |
-| `P(midFraction)` 中間グレー | 0.18 | 0.18 | 18%グレー |
-| `P(1)` 白 | 0.70 | 0.85 | 測定した最高濃度部の明るさ |
-| `P(∞)` 天井 | 0.90 | 0.98 | 反射光の余裕 |
+## 出力カーブ
 
-`midFraction`は`0.60D / 1.55D`、およそ`0.387`です。
-
-係数の計算:
+チャンネルWBと露光はシーンリニアの `E` に適用します。WB後に同じ固定出力曲線を各チャンネルへ適用します。中間域ではRGB比を保ち、ショルダーではハイライトの色比が変わります。`0.045...0.70` は恒等です。`0.045` 未満では小さな黒レベルを加えます。カラーの `b` は `0.001`、白黒は `0.0005` です。`0.70` より上は有理関数のショルダーで1に近づけます。接続点の傾きはどちらも1です。フィルムトウの逆変換と出力の黒処理を分けています。
 
 ```math
-\begin{aligned}
-y_{\mathrm{ceil}} &= \log_{10}(P_{\mathrm{ceil}}) \\
-A &= y_{\mathrm{ceil}} - \log_{10}(P_{\mathrm{toe}}) \\
-r_X &= \ln\left(\frac{A}{y_{\mathrm{ceil}}-\log_{10}(X)}\right) \\
-s &= \frac{\ln(r_{\mathrm{white}}/r_{\mathrm{mid}})}
-          {\ln(1/f_{\mathrm{mid}})} \\
-r &= r_{\mathrm{white}}^{1/s}
-\end{aligned}
+F(x)=x+b(1-x/0.045)^2\quad(0<x<0.045),\qquad F(x)=b\quad(x\le0)
 ```
 
-## 既定の濃度範囲
+自動レベルは出力目標を出力曲線の逆関数で戻してから伸張します。出力の黒は `0.003`、白は `0.95` です。自動カラーはシーンリニア値 `0.004` 以下のチャンネルを持つ標本を除外します。未露光ベースは0なので、専用の境界値なしで除外されます。シーン解析をしないターゲットの入力ガンマ基準範囲は固定です。 シーンリニアのネガでは最小有効範囲を固定露光値0.04ではなく測定白の4%で判定します。
 
-`normalRange`は、適正露出の場面が使う濃度範囲です。 ベースを測れなかったときや、場面のコントラストがとても低いときに効いてきます。
+逆変換に `1.8D` 上限はありません。透過率の `1e-5` 下限は対数演算を保護します。色域処理は出力境界で行います。この段階の各チャンネルは黒レベルと1の間です。その後の手動補正では範囲を超える場合があります。
 
-```math
-\begin{aligned}
-\operatorname{normalRange}(\mathrm{color}) &= 0.62 \times 2.5 = 1.55\,D \\
-\operatorname{normalRange}(\mathrm{B\&W}) &= 0.62 \times 3.5 = 2.17\,D
-\end{aligned}
-```
+## その他のターゲット
 
-- `0.62`: C-41特性曲線の直線部の傾きのおおよその値
-- カラー`2.5`: 約7⅓段の拡散輝度範囲と明部の余裕
-- 白黒`3.5`: 長い直線部を使う白黒プリントの習慣
-- `0.60D`: 正常露光の場面の中間グレー濃度
+明示的なスキャナー・EXPIRED ターゲットはシーン解析と従来の `shoulder-print-response-v4` を使います。固定 primitive も互換用に残します。シーン解析にも共通の 1.8D 上限はありません。フィルムプリセットは固定相対係数を使い、フレームごとの自動正規化を行いません。
 
-`applySceneRanged`は、フレームがチャンネルごとに実際に使っている濃度範囲を測ります。
+フィルム RAW は API が対応する出力トーンを無効にします。macOS の scene-linear は全体・局所トーン、shadow bias、色域マッピングを無効にします。Windows は LibRaw の線形伝達を使い、デジタル写真の描画と区別します。測定済みのセンサー・フィルム色特性や、色行列のない RAW 出力を保証する設定ではありません。
 
-## v4で変えたところ
+## 検証と出典
 
-前の方式は3区間に分けた関数と固定プリセットでした。v4は1本の曲線と4つの基準点にしました。 区間の境目がなく、どの値もコードとテストで追えます。
+独立した直線部フィルムモデル、異なる背景の同一パッチ、中立階調の WB、高密度ハイライトを検査します。合成回帰は実フィルムの色精度を証明しません。既存レシピは修正したアルゴリズムで描画し、保存パラメーターと原本を維持します。macOS のレンダラー識別子とサムネイル接尾辞も新しい描画を区別します。
 
-前の結果との差:
+数式はこのリポジトリで実装しました。darktable、RawTherapee、NegPy の実装コードはコピーしていません。
 
-- カラーの中間・明部、正規化濃度0.3〜1.1: ±0.05段以内
-- カラーの深い暗部、0.1〜0.2: 約-0.2段
-- カラーのベース黒点: 約+0.25段
-- 白黒: 暗部が約-0.4段、中間部が約+0.1段
-- NORITSU/FUJIの中間グレー0.18の基準点はそのまま
+## 合成入力の比較測定
 
-## 参考資料と範囲
+保持しているv4の処理に1.8D範囲制限と自動vibranceを戻し、元の既定経路を再構成しました。固定ベースで濃度 `(0.48, 0.68, 0.70)` の同じパッチを4種類の背景で比較します。Redditの18コマ試験の再現ではありません。階調とWBには滑らかなトウを持つ別の理想フィルムモデルを使います。実フィルムの精度を示す結果ではありません。
 
-トウ、直線部、ショルダー、ガンマという枠組みは公開された感光学のものです。 文献の曲線係数は写していません。negaflowの係数は上の4つの基準点から自分で計算します。
+| 指標 | 元のコード | 最初の修正(v5) | 再検討(v6) |
+|---|---:|---:|---:|
+| コマ間L*の幅 | 40.49 | 0 | 0 |
+| コマ間b*の幅 | 35.22 | 0 | 0 |
+| −3 EVの局所コントラスト | 1.57 | 2.17 | 0.97 |
+| WB後の中性階調の最大C* | 8.89 | 0.99 | <0.001 |
 
-- [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)
-- [Hurter–Driffield Characteristic Curve](https://studyguides.com/study-methods/overview/cmpanf83znm1201neitjb4waw)
-- [RA-4用紙の比較](https://tinker.koraks.nl/photography/on-a-color-mission-comparing-two-ra4-color-papers/)
+v5とv6は同じ順方向トウモデルで比較しました。暗部の局所コントラストが1に近いと、入力1段の差が出力でもほぼ1段残ります。L*とC*はD50 Labです。固定ベースのパッチには色が残ります。一貫性は任意の濃度が中性になるという意味ではありません。`NEGAFLOW_RESPONSE_COMPARISON` にJSON出力先を指定して `FixedNegativeResponseTests` を実行すると測定を保存できます。
 
-RA-4資料で知られるコントラスト範囲はそのまま使いません。 この曲線のコントラストは、4つの基準点から出た`shape`が決めます。
+## 同梱ロールの検査
+
+`Roll_Perforation.tiff`で検出した18コマも比較しました。両方式で同じ補正済みロールベースを固定しています。同一濃度パッチのL*範囲は21.48から<0.001、b*範囲は30.94から<0.001になりました。従来の青1.8D制限は18/18コマで働きます。コメントの試験方法に沿った比較であり、相手の正確な設定の再現ではありません。
+
+この検査で別のベース推定不具合も見つかりました。バックライトとフィルムが混ざった境界が、フィルム測定値`(0.354, 0.109, 0.057)`を`(0.570, 0.510, 0.364)`へ置き換えていました。復旧と包絡処理では、マスク色度の両軸で光源に見える置換値を拒否します。出力曲線もWB後にチャンネル別で適用し、極端な青値が他チャンネルの輝度処理を動かすことを防ぎます。このロールには実測の色基準がありません。一貫性と出力範囲の検査は色精度の検証とは別です。`NEGAFLOW_RESPONSE_ROLL_DIR`に出力フォルダーを指定し、`testBundledRollFrameConsistency`を実行すると画像とJSONを保存します。
+
+- [Kodak H-740](https://www.kodak.com/content/products-brochures/Film/Basic-Photographic-Sensitometry-Workbook.pdf)
+- [Kodak VISION3 scanning](https://www.kodak.com/content/products-brochures/Film/Scanning-Recommendations-for-Extended-Dynamic-Range-Camera-Films-EN.pdf)
+- [Apple RAW linear processing](https://developer.apple.com/videos/play/wwdc2021/10160/)
+- [Apple RAW tone](https://developer.apple.com/documentation/coreimage/cirawfilter/localtonemapamount)
+- [LibRaw parameters](https://www.libraw.org/docs/API-datastruct-eng.html)

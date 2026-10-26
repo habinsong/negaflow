@@ -1,111 +1,77 @@
-# Fixed print response
+# Fixed negative response
 
 [Docs home](../README.md)
 
-Where it lives:
+## MAIN/PRINT
 
-- Swift: `PrintResponse` in `Sources/Chromabase/Film/NegativeInversion.swift`
-- Metal: the `negativeInvert` kernel
-- Pinning test: `NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
+`fixed-density-linear-v6` applies to negative `MAIN/PRINT` without a scanner profile. It uses a fixed density calibration. Changing the other pixels, crop or frame histogram does not change the inversion of a given transmittance with the same base and settings. No scene vibrance is applied.
 
-## The curve
-
-A film characteristic curve explains exposure against density as a toe, a straight line, and a shoulder. negaflow approximates the shoulder in the density domain with a stretched exponential curve.
+`B` is measured film-base transmittance. `f` is 1 for the generic response, or the selected stock's fixed relative range factor. `0.62` is the generic film-gamma reference and `0.60D` is its gray-density reference. These are design assumptions, not measured values for every stock or scanner. Manufacturer Status M densities do not directly characterize scanner RGB.
 
 ```math
-\begin{aligned}
-D &= \log_{10}\left(\frac{D_{\min}}{T}\right) \\
-d &= \frac{D}{d_{\max}} \\
-\log_{10}(P) &= y_{\mathrm{ceil}} - A \exp\left(-(r d)^s\right)
-\end{aligned}
+D_c = \log_{10}(B_c / \max(T_c,10^{-5}))
 ```
-
-`A`, `r`, and `s` are short forms of `amplitude`, `rate`, and `shape` in the code. `d_{\max}` is `dmaxNorm`.
-
-- `D`: optical density with the film base removed
-- `d`: that value divided by the density range in use
-- `P`: linear output brightness
-
-The curve rises across the whole range. For `d ≥ 0` the output lands inside `[baseToe, ceiling)`. Values below zero, such as a backlight brighter than the base or the perforation, are not clipped to zero. They carry on as finite positive numbers.
 
 ```math
-y(-|d|) = 2\log_{10}(P_{\mathrm{toe}}) - y(|d|)
+q_c = D_c/f_c,\quad k=0.045,\quad d_t=0.60+0.62\log_{10}(k/0.18),\quad p=d_t\ln(10)/0.62
 ```
-
-The inverse has a closed form too. It is used to build synthetic negatives and run round-trip checks.
 
 ```math
-d = \frac{\left[\ln\left(\frac{A}{y_{\mathrm{ceil}}-\log_{10}(P)}\right)\right]^{1/s}}{r}
+E_c=\begin{cases}
+k\,\operatorname{sgn}(q_c)(|q_c|/d_t)^p,&q_c<d_t\\
+0.18\times10^{(q_c-0.60)/0.62},&q_c\ge d_t
+\end{cases}
 ```
 
-## The four anchors
+The film-density toe joins the straight log-exposure section with matching value and slope. Unexposed base produces zero scene exposure before WB. This power toe is a generic design, not a measured stock curve. Near-base inversion can amplify density noise.
 
-Curve coefficients are not stored. They are computed from these values.
+Automatic controls remain opt-in. With Auto Color enabled, bare film base is excluded from neutral-axis samples before the output toe; strong scene casts may still require manual WB.
 
-| Anchor | Color | Black and white | What it is for |
-|---|---:|---:|---|
-| `P(0)` base black point | 0.001 | 0.0005 | Keeps it off 8-bit code 0 |
-| `P(midFraction)` mid gray | 0.18 | 0.18 | 18% gray |
-| `P(1)` white | 0.70 | 0.85 | Brightness of the densest area measured |
-| `P(∞)` ceiling | 0.90 | 0.98 | Headroom for reflected light |
+## Output curve
 
-`midFraction` is `0.60D / 1.55D`, about `0.387`.
-
-Computing the coefficients:
+Channel WB and exposure act on scene-linear `E`. The same fixed output curve runs on each channel after WB. The middle `0.045...0.70` is identity and preserves RGB ratios. The shoulder changes highlight color ratios. Below `0.045`, a small black floor is added: `b=0.001` for color and `0.0005` for B&W. Above `0.70`, the rational shoulder approaches 1. Both joins have slope 1. Film-toe inversion and output black rendering are separate stages.
 
 ```math
-\begin{aligned}
-y_{\mathrm{ceil}} &= \log_{10}(P_{\mathrm{ceil}}) \\
-A &= y_{\mathrm{ceil}} - \log_{10}(P_{\mathrm{toe}}) \\
-r_X &= \ln\left(\frac{A}{y_{\mathrm{ceil}}-\log_{10}(X)}\right) \\
-s &= \frac{\ln(r_{\mathrm{white}}/r_{\mathrm{mid}})}
-          {\ln(1/f_{\mathrm{mid}})} \\
-r &= r_{\mathrm{white}}^{1/s}
-\end{aligned}
+F(x)=x+b(1-x/0.045)^2\quad(0<x<0.045),\qquad F(x)=b\quad(x\le0)
 ```
 
-## Default density range
+Auto Levels maps its output targets back through the inverse output curve before stretching: output black `0.003`, white `0.95`. Auto Color excludes channels at or below scene-linear `0.004`; unexposed base is zero and is excluded without a special border threshold. Non-adaptive targets keep fixed input-gamma reference units. For scene-linear negatives, the minimum usable span is 4% of the measured white rather than a fixed 0.04 exposure value.
 
-`normalRange` is the density range a normally exposed scene uses. It mostly matters when the base could not be measured, or when scene contrast is very low.
+The inverse film stage has no `1.8D` cap. The `1e-5` transmission floor protects the logarithm. RGB gamut mapping belongs to the output boundary. Each channel is bounded by the black floor and 1 at this stage. Later user adjustments may extend that range.
 
-```math
-\begin{aligned}
-\operatorname{normalRange}(\mathrm{color}) &= 0.62 \times 2.5 = 1.55\,D \\
-\operatorname{normalRange}(\mathrm{B\&W}) &= 0.62 \times 3.5 = 2.17\,D
-\end{aligned}
-```
+## Other targets
 
-When base measurement succeeds, `targetDmax` is calculated from the base and `normalRange`:
+Explicit scanner and EXPIRED targets retain scene analysis and the legacy `shoulder-print-response-v4`. Its fixed primitive remains available for compatibility. Scene analysis has no universal 1.8D cap. A stock preset uses fixed relative factors; it does not silently normalize each frame.
 
-```math
-\mathrm{targetDmax} = \mathrm{baseD} + \operatorname{normalRange}
-```
+Film RAW decoding disables decoder output tone where the API supports it. macOS disables global/local tone, shadow bias and gamut mapping for scene-linear input. Windows film RAW uses LibRaw with linear transfer; digital-photo rendering stays separate. This does not provide a measured sensor-to-film characterization or guarantee matrix-free RAW output.
 
-- `0.62`: rough slope of the straight-line section on a C-41 characteristic curve
-- Color `2.5`: about 7⅓ stops of diffuse luminance plus highlight headroom
-- Black and white `3.5`: black and white printing practice of using a longer straight line
-- `0.60D`: mid gray density of a normally exposed scene
+## Validation and sources
 
-`applySceneRanged` measures the density range the frame actually uses per channel.
+Tests use an independent straight-line forward film model, the same patch in different backgrounds, WB across a neutral wedge, and dense highlights. Synthetic regressions do not establish real-film color accuracy. Existing recipes render with the corrected algorithm; stored parameters and source files are retained. The macOS renderer identifier and thumbnail suffix distinguish the new rendering.
 
-## What changed in v4
+The equations were implemented in this repository. No darktable, RawTherapee or NegPy implementation was copied.
 
-The old approach used a function split into three sections plus fixed presets. v4 uses one curve and four anchors. There are no section boundaries, and every value can be traced in the code and the tests.
+## Measured synthetic comparison
 
-Against the old result:
+The regression reconstructs the original default from the retained v4 primitive, including its 1.8D range cap and automatic vibrance. It compares the same density patch `(0.48, 0.68, 0.70)` in four backgrounds with one fixed base. This is not the Reddit 18-frame test. A separate idealized forward film with a smooth toe supplies the tone and WB tests; it does not establish real-film accuracy.
 
-- Color midtones and highlights, normalized density 0.3 to 1.1: within ±0.05 stop
-- Color deep shadows, 0.1 to 0.2: about −0.2 stop
-- Color base black point: about +0.25 stop
-- Black and white: shadows about −0.4 stop, midtones about +0.1 stop
-- The NORITSU/FUJI mid gray anchor at 0.18 stays
+| Metric | Original | First correction (v5) | Reviewed (v6) |
+|---|---:|---:|---:|
+| Frame-to-frame L* span | 40.49 | 0 | 0 |
+| Frame-to-frame b* span | 35.22 | 0 | 0 |
+| Local contrast at −3 EV | 1.57 | 2.17 | 0.97 |
+| Maximum neutral-wedge C* after WB | 8.89 | 0.99 | <0.001 |
 
-## Sources and scope
+The v5 and v6 comparison uses the same forward toe model. Shadow local contrast near 1 means one input stop remains about one output stop. L* and C* use D50 Lab. The fixed-base patch remains tinted; consistency does not mean an arbitrary density is neutral. Run `FixedNegativeResponseTests` with `NEGAFLOW_RESPONSE_COMPARISON` set to an output JSON path to retain the measurements.
 
-Toe, straight line, shoulder, and gamma come from published sensitometry. None of the curve coefficients in that literature were copied. negaflow computes its own from the four anchors above.
+## Bundled roll check
 
-- [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)
-- [Hurter–Driffield Characteristic Curve](https://studyguides.com/study-methods/overview/cmpanf83znm1201neitjb4waw)
-- [RA-4 paper comparison](https://tinker.koraks.nl/photography/on-a-color-mission-comparing-two-ra4-color-papers/)
+The 18 detected frames in `Roll_Perforation.tiff` were also compared. Both inversion methods use one corrected roll-base estimate held fixed. The identical density patch has an L* span of 21.48 before the change and <0.001 after it; the b* span falls from 30.94 to <0.001. The original blue 1.8D limit activates on 18/18 frames. This follows the reported test idea; it does not reproduce the commenter’s exact settings.
 
-The contrast ranges known for RA-4 material are not used directly. The contrast of this curve comes from the `shape` derived from the four anchors.
+This check exposed a separate base-estimation bug. A mixed backlight boundary replaced the film measurement `(0.354, 0.109, 0.057)` with `(0.570, 0.510, 0.364)`. The rescue and envelope stages now reject a replacement that looks like the light on both mask-chroma axes. The output curve also acts on each channel after WB: an extreme blue value no longer drives the luminance mapping of the other channels. There is no measured color reference for this roll. These checks establish consistency and bounded output, not calibrated color accuracy. Set `NEGAFLOW_RESPONSE_ROLL_DIR` to an output folder and run `testBundledRollFrameConsistency` to save the images and JSON.
+
+- [Kodak H-740](https://www.kodak.com/content/products-brochures/Film/Basic-Photographic-Sensitometry-Workbook.pdf)
+- [Kodak VISION3 scanning](https://www.kodak.com/content/products-brochures/Film/Scanning-Recommendations-for-Extended-Dynamic-Range-Camera-Films-EN.pdf)
+- [Apple RAW linear processing](https://developer.apple.com/videos/play/wwdc2021/10160/)
+- [Apple RAW tone](https://developer.apple.com/documentation/coreimage/cirawfilter/localtonemapamount)
+- [LibRaw parameters](https://www.libraw.org/docs/API-datastruct-eng.html)

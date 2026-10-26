@@ -161,13 +161,13 @@ bool accelerate_negative_inversion(
     const std::uint32_t stride_pixels,
     const float* const dmin,
     const float* const dmax_normalized,
-    const float* const response) noexcept {
+    const float* const response, const bool linear_output, const float normal_range) noexcept {
     GpuAccelerator& accelerator = GpuAccelerator::shared();
     if (!accelerator.available()) {
         return false;
     }
     return accelerator.apply_negative_inversion(
-        pixels, width, height, stride_pixels, dmin, dmax_normalized, response);
+        pixels, width, height, stride_pixels, dmin, dmax_normalized, response, linear_output, normal_range);
 }
 
 // 디지털 필름 룩의 재료 커널 둘입니다. 반전과 같은 이유로 왕복이 **한 번씩**이고

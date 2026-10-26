@@ -1,27 +1,10 @@
 import Foundation
 import CoreImage
 
-// MARK: - NegativeInversion
-//
-// 계측된 scanner/film characteristic curve가 없을 때의 결정적 기본 경로다.
-//
-//   D = log10(Dmin / transmission)               // 베이스를 뺀 광학 밀도
-//   d = D / dmaxNorm                             // 사용 밀도역 정규화(실측/프리셋/명목)
-//   log10(P) = yCeil − amplitude·exp(−(rate·d)^shape)   // 고정 인화 응답(H&D 숄더형)
-//
-// 인화 응답은 H&D 특성곡선(토우–직선부–숄더)의 숄더 포화 구간을 밀도 도메인에서 직접
-// 근사한 단일 해석 곡선이다. 곡선 계수는 저장된 매직 넘버가 아니라 negaflow 광도 계약
-// 4앵커(베이스 토우·미드그레이·화이트·천장)에서 닫힌형으로 유도된다(`PrintResponse`,
-// docs/reference/PRINT_RESPONSE.md, derivation-lock 테스트). Dmin 정규화와 고정 인화
-// 응답만 포함하며 장면 histogram을 읽는 자동 노출/레벨은 아니다.
-//
-// 설계 이력: 이전 v2는 번들 stock의 최대 Dmax-Dmin(2.23D)을 화면 white처럼 사용한 뒤
-// 근거 없는 역특성곡선을 적용해 정상 장면을 좌측에 압축했고, 범위 밖 값을 그대로 내보내
-// RGBA8 표시 단계에서 0/255 양끝 포화를 만들었다. 명목 범위는 필름 물성 최대가 아니라
-// "정상 노출 장면이 실제 사용하는 밀도역"이어야 한다는 교훈이 광도 계약의 근거다.
-//
-// 이 generic 경로는 특정 stock 또는 scanner의 색 정확도 주장이 아니다. 장치 정확도에는
-// scanner input characterization과 stock/process별 paired reference가 별도로 필요하다.
+// Legacy bounded v4 primitive and explicit scene-range analysis.
+// MAIN/PRINT without a scanner profile use NegativeLinearResponse instead.
+// Scene sampling is an intentional scanner/recovery-target operation; it changes
+// rendering across frames and does not preserve absolute exposure or color.
 public enum NegativeInversion {
     static let genericDensityEncodingVersion = "shoulder-print-response-v4"
     /// 스캐너 상대 타겟의 미드톤 설계 피벗. 자동 노출 기준이 아니라 타겟 LUT 좌표다.
@@ -29,13 +12,13 @@ public enum NegativeInversion {
 
     // MARK: 광도 계약 (자체 설계/판독 상수 — docs/reference/PRINT_RESPONSE.md)
 
-    /// C-41 특성곡선 직선부 기울기 근사(번들 스톡 데이터시트 곡선 판독; 공개 대역 0.55~0.65).
+    /// 일반 모델의 직선부 기울기 기준. 필름·공정별 실측 감마를 뜻하지 않는다.
     static let referenceFilmGamma = 0.62
     /// 명목 장면 로그 노출역 — 확산 휘도역(~7⅓스탑 ≈ 2.2 log10) + 딥 하이라이트/광원 여유.
     static let colorSceneLogRange = 2.5
     /// B&W 는 인화지 대비 제약이 없어 관례적으로 더 긴 직선부(짙은 명부까지)를 사용한다.
     static let bwSceneLogRange = 3.5
-    /// 정상 노출 장면의 미드그레이 밀도(above-base, 데이터시트 곡선 판독).
+    /// 일반 모델의 미드그레이 밀도 기준(above-base). 모든 필름의 실측값은 아니다.
     static let normalMidDensity = 0.60
     /// 미드그레이가 앉는 사용 밀도역 내 위치. 장면 기하이므로 필름 타입과 무관하게 공유한다
     /// — 정규화 좌표가 같아야 실측 경로(applySceneRanged)의 노출 앵커가 필름 타입 간 일치한다.
@@ -52,7 +35,7 @@ public enum NegativeInversion {
     ///   shape     = ln(rWhite/rMid) / ln(1/midRangeFraction)
     ///   rate      = rWhite^(1/shape)
     struct PrintResponse: Equatable {
-        /// 명목 정규화 밀도 범위. 측정 불가 폴백의 분모이자 flat 장면 수축 목표.
+        /// Legacy v4의 명목 밀도 단위. 고정 응답과 측정 실패 폴백에서 쓴다.
         let normalRange: Double
         /// d=0(필름 베이스) 출력 — 인화 토우. 정확히 0 금지(히스토그램 0 벽 방지).
         let baseToe: Double
@@ -132,8 +115,8 @@ public enum NegativeInversion {
 
     /// density-based 네거티브 반전(고정 인화 응답, byte-exact 결정적 primitive).
     /// 장면 히스토그램을 읽지 않으므로 같은 밀도는 프레임 내용과 무관하게 항상 같은 값이 된다
-    /// (독립 CPU 참조 = shoulder-print-response-v4). 실제 현상 파이프라인의 auto 경로는
-    /// `applySceneRanged` 로 이 네거티브가 사용한 밀도 범위를 측정해 정규화한다.
+    /// (독립 CPU 참조 = shoulder-print-response-v4). MAIN/PRINT는 NegativeLinearResponse를
+    /// 사용한다. `applySceneRanged`의 장면 정규화는 명시적인 스캐너·복구 타깃에만 남긴다.
     public static func apply(
         to image: CIImage,
         base: FilmBase,
@@ -146,14 +129,9 @@ public enum NegativeInversion {
         )
     }
 
-    /// auto(프리셋 없음) 현상 경로의 반전. 이 네거티브가 **실제 사용한 per-channel 밀도
-    /// 범위(Dmax)** 를 장면 최농부에서 측정해 정규화한다. 고정 명목 범위는 그 범위 근처의
-    /// 네거티브(정상 노출)만 올바르게 펴고, 얇은 실스캔(측정 ≈0.85~0.96)은 좁은 대역에
-    /// 압축해 어둡고 납작하게(좌측 쏠림+상하 압축) 만든다. 채널별 측정은 압축 제거와 동시에
-    /// 필름 염료 기울기 차이를 독립 정규화해 잔여 캐스트/탈채도를 없앤다(= 자동 화이트밸런스).
-    /// 미드그레이 정규화 좌표(midRangeFraction)가 고정이므로 노출 앵커는 보존되고,
-    /// ScannerTargetGrade 의 photometric 앵커 가정도 유지된다. 측정 불가(극소·저표본 합성
-    /// 입력)면 고정 primitive 로 폴백한다.
+    /// Explicit scene-adaptive inversion for scanner/recovery targets.
+    /// Per-channel percentile normalization changes both exposure and color.
+    /// The default MAIN/PRINT route does not call this function.
     public static func applySceneRanged(
         to image: CIImage,
         base: FilmBase,
@@ -294,11 +272,8 @@ public enum NegativeInversion {
         return sum / Double(max(n, 1))
     }
 
-    /// 필름(프리셋) 모드의 반전 = 자동 경로(장면 실측 범위·톤·뮤트 장면 생동감) × 필름 상대 계수.
-    /// 예전엔 채널 비율을 데이터시트(Status M)로 통째로 바꿨는데, 스캐너 채널은 분광 감도가 달라
-    /// 파랑 범위가 체계적으로 더 넓어 모든 필름이 파랗고 과채도로 반전됐다(2026-10-15 실측 — 필름
-    /// 사이 차이는 ΔE≈1 인데 모드 전환만으로 ΔE 5~13). 데이터시트에서 믿을 수 있는 것은 필름 사이의
-    /// 상대 차이뿐이라 그것만 얹는다(`FilmStockDmin.relativeRangeFactor`).
+    /// Legacy v4 response with fixed stock-relative density units. No frame
+    /// normalization or scene vibrance is applied by selecting a stock preset.
     public static func apply(
         to image: CIImage,
         base: FilmBase,
@@ -312,8 +287,7 @@ public enum NegativeInversion {
         )
     }
 
-    /// 프리셋 경로의 측정 재사용 변형. `presetStats` 도 장면 실측(sampleStats)에 기대므로
-    /// auto 경로와 같은 슬롯에 담아 슬라이더 드래그 중 재측정을 없앤다.
+    /// Fixed preset calibration. A stock selection does not authorize scene adaptation.
     static func apply(
         to image: CIImage,
         base: FilmBase,
@@ -326,20 +300,14 @@ public enum NegativeInversion {
                            region: measurements.analysisRegion)
         measurements.inversionStats = stats
         let inverted = applyDensityEncoding(to: image, stats: stats, response: response(for: filmType))
-        return applyMutedSceneVibrance(
-            to: inverted,
-            monochrome: filmType == .bwNegative,
-            region: measurements.analysisRegion,
-            amount: &measurements.mutedVibranceAmount
-        )
+        return inverted
     }
 
     static func presetStats(for image: CIImage, base: FilmBase,
                             preset: FilmStockDmin,
                             filmType: FilmType = .colorNegative,
                             region: AnalysisRegion? = nil) -> ChannelStats {
-        var stats = sampleStats(image, base: base, filmType: filmType, region: region)
-            ?? genericStats(base: base, filmType: filmType)
+        var stats = genericStats(base: base, filmType: filmType)
         guard filmType != .bwNegative else { return stats }
         stats.dmaxNorm *= preset.relativeRangeFactor
         return stats
@@ -424,7 +392,7 @@ public enum NegativeInversion {
         //    dmaxNorm 을 왜곡한다. 컬러 네거티브 필름 픽셀은 깊은 암부에서도 베이스의 채널
         //    로그비(오렌지)를 대체로 유지하므로, 깊은 어두움(< 베이스 휘도의 15%)이면서 R/B
         //    비가 베이스의 55% 미만(중립에 가까움)인 픽셀은 필름이 아니다. B&W 는 이 판별이
-        //    불가능해 두지 않는다(단일 곡선이라 색 캐스트가 없고 densestFloor 가 완충).
+        //    불가능해 두지 않는다. 저신호 로그 연산에는 투과율 바닥만 적용한다.
         // 게이팅이 표본을 전멸시키면(베이스가 크게 어긋난 경우) 무게이트로 폴백한다.
         let baseLuma = (base.rgb.x + base.rgb.y + base.rgb.z) / 3
         let gate = baseLuma * 1.12
@@ -439,9 +407,8 @@ public enum NegativeInversion {
             return false
         }
         // 홀더·백라이트 같은 **두께 있는** 비필름 영역의 가장자리 띠(2 화소)도 버린다. 축소 보간이
-        // 그 가장자리를 필름과 섞은 화소는 게이트를 통과하면서 최농부(p0.2)를 차지한다 — 2026-10-14
-        // 실측: 홀더가 리베이트를 가린 디카 스캔에서 혼합 화소가 Dmax 를 1.8D 바닥으로 채널마다 다르게
-        // 잡아 중립 웨지가 R/B 0.72~0.98 로 틀어졌다.
+        // 그 가장자리를 필름과 섞은 화소는 게이트를 통과하면서 최농부(p0.2)를 차지한다. 이 표본은
+        // 명시적 장면 분석 타깃의 채널별 범위와 색을 왜곡하므로 측정에서 제외한다.
         // 먼저 3×3 침식으로 흩어진 점을 지운다. 베이스 근처 밝기의 넓은 면에서는 양자화·그레인 수준의
         // 차이로 게이트 판정이 점점이 뒤집히는데, 그 점마다 이웃을 지우면 필름의 91% 가 사라져 남은
         // 화소의 최농부가 입력의 미세한 차이에 크게 흔들렸다(같은 화상의 원본과 화면용 sRGB 사본에서
@@ -492,22 +459,16 @@ public enum NegativeInversion {
         // 노출이 달라진다. 측정 신뢰도 판단과 폴백은 FilmBaseEstimator/resolveFilmBase가 맡는다.
         let dmin = clampedDmin(base.rgb)
 
-        // Dmax = 이 네거티브가 **실제로 사용한** per-channel 밀도 범위. 장면 최농부(p0.2
-        // 투과율 — 절대 최소가 아닌 강건 percentile 로 dust/스펙큘러 배제)로 측정한다.
-        // densest 에 물성 하한(1.8D)을 둬 극단
-        // 단색 장면(파란 하늘이 B 최농부만 비정상적으로 낮춰 dmax_B 를 폭발시키는 보라 shift)을
-        // 막고, 채널 바닥으로 저신호 폭주를 막는다. 채널별 dmax 가 필름 염료 기울기 차이를 독립
-        // 정규화(= 자동 화이트밸런스)하며, 정규화 밀도(density/dmax)가 [0,1] 전 범위를 채워
-        // 고정 dmax 가 만든 압축을 제거한다.
+        // Explicit scene analysis: robust range, without a film-independent density cap.
         let densest = SIMD3(
             max(pct(red, 0.002), 1e-5),
             max(pct(green, 0.002), 1e-5),
             max(pct(blue, 0.002), 1e-5)
         )
         let densestFloor = SIMD3(
-            max(densest.x, dmin.x * pow(10.0, -1.8)),
-            max(densest.y, dmin.y * pow(10.0, -1.8)),
-            max(densest.z, dmin.z * pow(10.0, -1.8))
+            densest.x,
+            densest.y,
+            densest.z
         )
         // 바닥은 **아무것도 안 찍힌 프레임을 막는 자리**이지 평평한 필름을 부풀리는 자리가
         // 아니다. 0.4 는 바랜 필름의 파랑을 그대로 삼켰다 — 1980~90 년대 카메라 스캔에서
@@ -564,11 +525,8 @@ public enum NegativeInversion {
             log10(dmin.z / max(medianT.z, 1e-5))
         ) / 3.0)
 
-        // 노출(미드) 자동 리프트는 여기서 하지 않는다 — opt-in AutoTone(LATD)의 몫이다.
-        // 실측 Dmax 는 범위·WB 만 되살리고 노출은 고정 인화 응답이 맡는다. 여기서 미드를
-        // 강제로 옮기면 (1) 밝은/어두운 장면을 회색으로 끌어당기는 gray-world 오류, (2)
-        // base 가 토우 아래로 밀려 히스토그램 양끝 폭발(베이스=정확히 0)이 재발한다.
-        // 고정 응답은 base 를 구조적으로 토우(baseToe)에 앉힌다.
+        // 장면별 Dmax 정규화 자체가 노출과 색을 바꾼다. 여기서는 미드톤을 추가로 옮기지 않는다.
+        // 출력은 legacy v4 응답이 맡으며 미노광 base는 그 응답의 토우에 놓인다.
         let stats = ChannelStats(dmin: dmin, dmaxNorm: dmaxNorm,
                                  blackInput: paperBlackInput, midDensity: midDensity)
         if ProcessInfo.processInfo.environment["NEGA_DEBUG"] != nil {

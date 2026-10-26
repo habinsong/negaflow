@@ -90,6 +90,22 @@ final class FilmBaseRebateTests: XCTestCase {
                        "지금 값보다 어두운 띠는 거절")
     }
 
+    func testWarmBacklightBandCannotReplaceMeasuredFilm() throws {
+        let light = SIMD3<Double>(0.57, 0.51, 0.36)
+        let image = makeFloatImage(width: width, height: height) { _, y in
+            let rgb = (16..<96).contains(y) ? light : self.rebateRGB
+            return (rgb.x, rgb.y, rgb.z)
+        }
+        let grid = try XCTUnwrap(FilmBaseSampleGrid(image: image))
+        let proposed = try XCTUnwrap(FilmBaseRebate.rebateBase(
+            image: image, grid: grid, neutralBase: false, gateOpen: true))
+        XCTAssertGreaterThan(proposed.rgb.y, rebateRGB.y * 2)
+        let resolved = FilmBase(rgb: rebateRGB, source: .auto)
+        let actual = FilmBaseEstimator.rescuedWithRebate(image: image, grid: grid,
+            resolved: resolved, neutralBase: false)
+        XCTAssertEqual(actual.rgb, resolved.rgb)
+    }
+
     /// **문지기만으로는 못 잡는 경우다.** 이 스캔에서 추정기는 리베이트를 아예 놓치는 대신
     /// 축소본에서 뭉개진 값을 고른다. 그 값은 장면보다는 밝아서 "베이스보다 밝은 화소" 가 거의
     /// 없고, 문지기가 열리지 않는다. 그래도 사진은 어둡게 나온다.

@@ -1,4 +1,5 @@
 #include "negaflow/imaging/scene_correction.h"
+#include "negaflow/core/negative_inversion.h"
 
 #include "negaflow/core/parallel_rows.h"
 #include "negaflow/imaging/neutral_axis_evidence.h"
@@ -159,6 +160,7 @@ constexpr double positive_output_white = 0.86;
 [[nodiscard]] bool apply_auto_levels(
     const negaflow::core::ImageView image,
     const bool negative_source,
+    const bool linear_negative_output, const bool monochrome,
     const std::optional<AnalysisRegion>& region,
     SceneCorrectionInfo& info) {
     SceneSampleGrid samples{};
@@ -166,7 +168,7 @@ constexpr double positive_output_white = 0.86;
         return false;
     }
     info.sampled_pixels += samples.red.size();
-    const SceneAutoLevelsPlan plan = plan_scene_auto_levels(samples, negative_source);
+    const SceneAutoLevelsPlan plan = plan_scene_auto_levels(samples, negative_source, linear_negative_output, monochrome);
     if (!plan.apply) {
         return false;
     }
@@ -269,7 +271,7 @@ bool scene_sample_grid_extent(
 
 SceneAutoLevelsPlan plan_scene_auto_levels(
     SceneSampleGrid& samples,
-    const bool negative_source) noexcept {
+    const bool negative_source, const bool linear_negative_output, const bool monochrome) noexcept {
     SceneAutoLevelsPlan plan{};
     if (samples.red.empty() || samples.red.size() != samples.green.size() ||
         samples.red.size() != samples.blue.size()) {
@@ -290,23 +292,27 @@ SceneAutoLevelsPlan plan_scene_auto_levels(
         percentile(samples.green, 0.999),
         percentile(samples.blue, 0.999),
     };
+    const double peak_white = std::max({white[0], white[1], white[2]});
+    if (linear_negative_output && peak_white <= 1e-5) { return plan; }
+    const double required_range = linear_negative_output ? minimum_range * peak_white : minimum_range;
     const double maximum_range = std::max({
         white[0] - black[0], white[1] - black[1], white[2] - black[2]});
-    if (maximum_range < minimum_range ||
-        (white[0] > 0.95 && white[1] > 0.95 && white[2] > 0.95 &&
+    if (maximum_range < required_range ||
+        (!linear_negative_output && white[0] > 0.95 && white[1] > 0.95 && white[2] > 0.95 &&
+        white[0] < 1.05 && white[1] < 1.05 && white[2] < 1.05 &&
          black[0] < 0.05 && black[1] < 0.05 && black[2] < 0.05)) {
         return plan;
     }
 
     const double output_black = negative_source
-        ? negative_output_black
+        ? (linear_negative_output ? core::negative_output_tone_input(negative_output_black, monochrome) : negative_output_black)
         : positive_output_black;
     const double output_white = negative_source
-        ? negative_output_white
+        ? (linear_negative_output ? core::negative_output_tone_input(negative_output_white, monochrome) : negative_output_white)
         : positive_output_white;
     for (std::size_t channel = 0U; channel < 3U; ++channel) {
         const double range = white[channel] - black[channel];
-        if (range >= minimum_range) {
+        if (range >= required_range) {
             plan.scale[channel] = (output_white - output_black) / range;
             plan.bias[channel] =
                 output_black - (black[channel] * plan.scale[channel]);
@@ -450,7 +456,7 @@ negaflow::core::KernelStatus apply_scene_correction(
     try {
         if (parameters.auto_levels) {
             info.auto_levels_applied = apply_auto_levels(
-                image, parameters.negative_source, parameters.analysis_region, info);
+                image, parameters.negative_source, parameters.linear_negative_output, parameters.monochrome, parameters.analysis_region, info);
         }
         if (parameters.auto_neutral_balance && parameters.negative_source) {
             info.neutral_balance_applied =

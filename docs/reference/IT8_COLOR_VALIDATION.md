@@ -104,29 +104,13 @@ No claim is made that the current Core Image and ColorSync path pins rendering i
 
 ## `MAIN` synthetic patch regression
 
-The default color negative path uses `shoulder-print-response-v4`.
+`FixedNegativeResponseTests` / `fixed-density-linear-v6`
 
-```math
-\log_{10}(P) =
-y_{\mathrm{ceil}} -
-\mathrm{amplitude}\,
-\exp\left(-(\mathrm{rate}\,d)^{\mathrm{shape}}\right)
-```
+Tests use an independent straight-line forward film model, the same patch in different backgrounds, WB across a neutral wedge, and dense highlights. Synthetic regressions do not establish real-film color accuracy. Existing recipes render with the corrected algorithm; stored parameters and source files are retained. The macOS renderer identifier and thumbnail suffix distinguish the new rendering.
 
-`d` is optical density with Dmin removed, then normalized. The coefficients are computed from these four anchors:
+The equations were implemented in this repository. No darktable, RawTherapee or NegPy implementation was copied.
 
-| Anchor | Value |
-|---|---:|
-| Base black point | `0.001` |
-| Mid gray | `0.18` |
-| White at the measured densest area | `0.70` |
-| Reflected light headroom | `0.90` |
-
-On this curve `0D` is linear `0.001`, `0.6D` is `0.18`, and `3D` is `0.882836683855`. The output stays inside an open interval, so black and white in the normal range do not clip straight to 8-bit `0/255`.
-
-It is not an exposure auto-adjustment from a scene histogram, and it does not stand for the accuracy of any particular film or machine. The equations are in [fixed print response](PRINT_RESPONSE.md).
-
-`MainSyntheticIT8RoundTripTests` turns the 264 reference patches into negatives with the inverse function, then brings them back through the whole `MAIN` path. Lab D50/2° and `DeltaE00` are checked per patch. This is a `syntheticModel` regression.
+[fixed-density-linear-v6](PRINT_RESPONSE.md)
 
 ## NORITSU/FUJI relative style regression
 

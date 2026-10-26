@@ -29,6 +29,8 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
         request.scene_correction;
     scene_correction.negative_source = negative_source;
     scene_correction.analysis_region = invert.analysis_region;
+    scene_correction.linear_negative_output = negative.linear_output;
+    scene_correction.monochrome = negative.film_type == imaging::NegativeFilmType::black_and_white;
     const bool scene_active =
         scene_correction.auto_levels ||
         (scene_correction.auto_neutral_balance && negative_source);

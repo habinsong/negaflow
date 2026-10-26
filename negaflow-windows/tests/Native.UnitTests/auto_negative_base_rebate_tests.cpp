@@ -179,6 +179,29 @@ void a_diluted_rebate_is_recovered_even_though_the_gate_stays_shut() {
     expect_near(resolved.dmin[2], 0.0763, 0.01, "diluted: blue is the undiluted rebate");
 }
 
+void a_warm_light_boundary_does_not_replace_measured_film() {
+    auto image = make_scan(0U, 0.357F, 0.150F, 0.0763F);
+    for (auto& pixel : image.pixels) { pixel = {0.357F, 0.150F, 0.0763F, 1}; }
+    // A short mixed edge can be too small for the connected-component base,
+    // while still spanning the rebate locator's minimum sustained run.
+    for (std::uint32_t y = 16; y < 24; ++y) {
+        for (std::uint32_t x = 16; x < 316; ++x) {
+            image.pixels[static_cast<std::size_t>(y) * width + x] = {0.57F, 0.51F, 0.36F, 1};
+        }
+    }
+    const auto grid = make_sample_grid(image);
+    expect(grid.has_value(), "warm light: sample grid exists");
+    if (!grid) { return; }
+    const auto proposed = rebate_base(image, *grid, negaflow::imaging::NegativeFilmType::color, true);
+    expect(proposed.has_value() && (*proposed)[1] > 0.30,
+        "warm light: the bright mixed boundary reaches rebate measurement");
+    const auto resolved = negaflow::imaging::resolve_auto_negative_base(
+        image, negaflow::imaging::NegativeFilmType::color);
+    expect_near(resolved.dmin[0], 0.357, 0.01, "warm light: retain measured film red");
+    expect_near(resolved.dmin[1], 0.150, 0.01, "warm light: retain measured film green");
+    expect_near(resolved.dmin[2], 0.0763, 0.01, "warm light: retain measured film blue");
+}
+
 }  // namespace
 
 int main() {
@@ -187,6 +210,7 @@ int main() {
     the_gate_counts_film_brighter_than_the_base();
     a_clipped_band_is_refused();
     a_diluted_rebate_is_recovered_even_though_the_gate_stays_shut();
+    a_warm_light_boundary_does_not_replace_measured_film();
     if (failures != 0) {
         std::cerr << failures << " auto negative base rebate assertion(s) failed\n";
         return 1;

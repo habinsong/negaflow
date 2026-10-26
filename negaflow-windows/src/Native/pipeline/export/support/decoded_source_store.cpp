@@ -19,6 +19,7 @@ namespace {
 struct DecodedSourceEntry final {
     std::filesystem::path path{};
     negaflow::color::InputGammaInterpretation input_gamma{};
+    bool scene_linear_raw{false};
     negaflow::imageio::ImageFileObservation observation{};
     // **어느 크기로 푼 것인가.** 0 이면 원본 그대로입니다.
     //
@@ -88,13 +89,14 @@ void trim_decoded_locked() noexcept {
     const negaflow::imageio::ImageFileObservation& observation,
     const std::uint32_t box_width,
     const std::uint32_t box_height,
-    const negaflow::color::InputGammaInterpretation input_gamma) noexcept {
+    const negaflow::color::InputGammaInterpretation input_gamma,
+    const bool scene_linear_raw) noexcept {
     const std::lock_guard<std::mutex> guard{g_decoded_mutex};
     // 새 할당이 없어도 시스템이 저메모리로 바뀌었으면 첫 재사용에서 과거 프레임을 내립니다.
     trim_decoded_locked();
     for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
         DecodedSourceEntry& entry = g_decoded_sources[index];
-        if (entry.path != path || entry.input_gamma != input_gamma ||
+        if (entry.path != path || entry.input_gamma != input_gamma || entry.scene_linear_raw != scene_linear_raw ||
             entry.box_width != box_width || entry.box_height != box_height ||
             !negaflow::imageio::same_image_file_observation(
                 entry.observation, observation)) {
@@ -123,7 +125,8 @@ void decoded_source_put(
     const std::uint32_t box_width,
     const std::uint32_t box_height,
     std::shared_ptr<const negaflow::imaging::WorkingImage> image,
-    const negaflow::color::InputGammaInterpretation input_gamma) noexcept {
+    const negaflow::color::InputGammaInterpretation input_gamma,
+    const bool scene_linear_raw) noexcept {
     if (image == nullptr) {
         return;
     }
@@ -138,8 +141,9 @@ void decoded_source_put(
             if (negaflow::imageio::same_image_file_observation(
                     existing.observation, observation)) {
                 existing.source_image = std::move(image);
-                if (existing.input_gamma != input_gamma) {
+                if (existing.input_gamma != input_gamma || existing.scene_linear_raw != scene_linear_raw) {
                     existing.input_gamma = input_gamma;
+                    existing.scene_linear_raw = scene_linear_raw;
                     existing.cleaned_image.reset();
                     existing.cleaned_recipe_sha256.reset();
                 }
@@ -157,6 +161,7 @@ void decoded_source_put(
         DecodedSourceEntry entry{};
         entry.path = path;
         entry.input_gamma = input_gamma;
+        entry.scene_linear_raw = scene_linear_raw;
         entry.observation = observation;
         entry.box_width = box_width;
         entry.box_height = box_height;

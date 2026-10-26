@@ -23,7 +23,8 @@ struct alignas(16) NegativeInvertConstants final {
     float response_amplitude{0.0F};
     float response_rate{0.0F};
     float response_shape{0.0F};
-    float padding[2]{0.0F, 0.0F};
+    float linear_output{0.0F};
+    float normal_range{1.55F};
 };
 
 static_assert(sizeof(NegativeInvertConstants) == 64U, "four constant registers");
@@ -41,7 +42,8 @@ static_assert(sizeof(NegativeInvertConstants) == 64U, "four constant registers")
             return false;
         }
     }
-    return std::isfinite(parameters.response_y_ceiling) &&
+    return std::isfinite(parameters.normal_range) && parameters.normal_range > 0.0F &&
+        std::isfinite(parameters.response_y_ceiling) &&
         std::isfinite(parameters.response_amplitude) &&
         std::isfinite(parameters.response_rate) && std::isfinite(parameters.response_shape);
 }
@@ -76,6 +78,8 @@ GpuKernelStatus GpuNegativeInvert::dispatch(
     payload.response_amplitude = parameters.response_amplitude;
     payload.response_rate = parameters.response_rate;
     payload.response_shape = parameters.response_shape;
+    payload.linear_output = parameters.linear_output ? 1.0F : 0.0F;
+    payload.normal_range = parameters.normal_range;
     return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
 }
 

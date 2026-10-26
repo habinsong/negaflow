@@ -137,6 +137,11 @@ std::optional<DevelopExportOutcome> invert_source(
     const PreviewProxyHint* const hint,
     const std::optional<std::array<float, 3>>& input_gamma_reference) noexcept {
     out.negative = request.negative;
+    out.negative.adaptive_density = request.develop_target == DevelopTarget::noritsu ||
+        request.develop_target == DevelopTarget::sp3000 || request.develop_target == DevelopTarget::f135 ||
+        request.develop_target == DevelopTarget::hr || request.develop_target == DevelopTarget::rescue;
+    out.negative.linear_output = (request.develop_target == DevelopTarget::main ||
+        request.develop_target == DevelopTarget::print) && request.scanner_profile_id.empty();
     out.negative.input_gamma_reference_range = input_gamma_reference;
     out.base_source = DevelopBaseSource::manual;
     out.developed_info = {};

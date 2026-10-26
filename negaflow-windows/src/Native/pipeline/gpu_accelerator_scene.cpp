@@ -82,7 +82,8 @@ bool GpuAccelerator::apply_scene_correction(
         finish_samples(samples, imaging::scene_auto_levels_sample_width);
         info.sampled_pixels += samples.red.size();
         const imaging::SceneAutoLevelsPlan plan =
-            imaging::plan_scene_auto_levels(samples, parameters.negative_source);
+            imaging::plan_scene_auto_levels(samples, parameters.negative_source,
+                    parameters.linear_negative_output, parameters.monochrome);
         if (plan.apply) {
             const int write_slot = 1 - read_slot;
             if (state_->scene_correction.apply_auto_levels(

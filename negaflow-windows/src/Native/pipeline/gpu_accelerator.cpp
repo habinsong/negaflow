@@ -461,7 +461,7 @@ bool GpuAccelerator::apply_negative_inversion(
     const std::uint32_t stride_pixels,
     const float* const dmin,
     const float* const dmax_normalized,
-    const float* const response) noexcept {
+    const float* const response, const bool linear_output, const float normal_range) noexcept {
     if (!available() || pixels == nullptr || dmin == nullptr || dmax_normalized == nullptr ||
         response == nullptr) {
         return false;
@@ -498,6 +498,8 @@ bool GpuAccelerator::apply_negative_inversion(
     parameters.response_amplitude = response[1];
     parameters.response_rate = response[2];
     parameters.response_shape = response[3];
+    parameters.linear_output = linear_output;
+    parameters.normal_range = normal_range;
 
     if (state_->invert.dispatch(
             state_->device, pool[read_slot], pool[write_slot], parameters) !=

@@ -100,29 +100,34 @@ Die aktuelle Tabelle führt 27 Filmnamen, darunter Farbnegative, Schwarzweiß un
 Wofür die Daten dienen:
 
 - Der Dmin-Standardwert, wenn der Träger nicht messbar ist
-- Der Dichtebereich je Kanal
-- Ein sicherer Bereich, wenn geringer Kontrast die automatische Messung schwanken lässt
+- Feste relative Dichtefaktoren je Film
 
 Manche Werte nähern Kurven aus öffentlichem Material an, manche sind bewusst konservativ gesetzt. 27 Namen bedeuten keine 27 geprüften Farbprofile. Sobald der Träger gemessen ist, gilt die Messung.
 
 ### Feste Printantwort
 
-`MAIN` überführt die um den Träger verringerte Dichte in eine monoton steigende Kurve. Die Koeffizienten folgen aus vier Ankerpunkten.
+`fixed-density-linear-v6` gilt für negative `MAIN/PRINT` ohne Scannerprofil. Die Dichtekorrektur ist fest. Bei gleicher Basis und gleichen Einstellungen ändern andere Pixel, Ausschnitt oder Histogramm die Inversion derselben Transmission nicht. Szenenabhängige Vibrance wird nicht angewandt.
 
-- Der Schwarzpunkt des Trägers
-- 18-%-Mittelgrau
-- Weiß am gemessenen Dichtebereich
-- Reserve für reflektiertes Licht
+`B` ist die gemessene Basistransmission. `f` ist bei der generischen Antwort 1 oder der feste relative Bereichsfaktor des gewählten Films. `0.62` und `0.60D` sind Gamma- und Graudichtereferenzen des generischen Modells. Sie sind keine Messwerte jedes Films oder Scanners. Status-M-Dichten beschreiben Scanner-RGB nicht direkt.
 
-Die heutige Kurve ist eine gestreckte Exponentialfunktion und hat über den ganzen Bereich eine Umkehrfunktion. Der Hin-und-zurück-Test mit synthetischen Negativen nutzt genau diese. Gleichungen und Zahlen stehen in [feste Printantwort](../reference/PRINT_RESPONSE.md).
+```math
+q_c = \log_{10}(B_c/\max(T_c,10^{-5}))/f_c,\quad k=0.045,\quad d_t=0.60+0.62\log_{10}(k/0.18),\quad p=d_t\ln(10)/0.62
+```
 
-Wo der Standardweg endet und die Automatik beginnt:
+```math
+E_c=\begin{cases}
+k\,\operatorname{sgn}(q_c)(|q_c|/d_t)^p,&q_c<d_t\\
+0.18\times10^{(q_c-0.60)/0.62},&q_c\ge d_t
+\end{cases}
+```
 
-- Die feste Kurve verschiebt die Belichtung nicht anhand des Szenenhistogramms.
-- `applySceneRanged` misst den genutzten Dichtebereich je Kanal, verschiebt aber die mittlere Belichtung nicht.
-- Ein begrenztes `CIVibrance` greift nur bei wenig gesättigten Szenen.
-- Auto Levels, Auto Color, Auto Tone und Auto White Balance führen Sie selbst aus.
-- Es wird nicht behauptet, ein bestimmtes Papier oder Minilab exakt nachzubilden.
+Der Dichtefuß schließt mit gleichem Wert und gleicher Steigung an den geraden Abschnitt an. Die unbelichtete Filmbasis ergibt vor dem Weißabgleich eine Szenenbelichtung von null. Dieser Potenzfuß ist ein allgemeiner Entwurf, keine je Film gemessene Kurve. Nahe der Filmbasis kann er auch Dichterauschen verstärken.
+
+Kanalweiser Weißabgleich und Belichtung wirken auf das szenenlineare `E`. Dieselbe feste Ausgabekurve wird nach dem Weißabgleich auf jeden Kanal angewendet. Der Mittelbereich erhält RGB-Verhältnisse; die Schulter verändert die Farbverhältnisse heller Bereiche. `0.045...0.70` bleibt identisch. Unter `0.045` wird ein kleiner Schwarzsockel addiert: `b=0.001` für Farbe und `0.0005` für Schwarzweiß. Über `0.70` nähert sich die rationale Schulter der 1. Beide Übergänge haben die Steigung 1. Die Umkehr des Filmfußes und die Schwarzdarstellung sind getrennte Schritte.
+
+Die Inversion hat keine `1.8D`-Obergrenze. Die Transmissionsuntergrenze `1e-5` schützt den Logarithmus. Die Gamut-Abbildung erfolgt an der Ausgabegrenze. In diesem Schritt liegt jeder Kanal zwischen Schwarzsockel und 1. Spätere manuelle Korrekturen können diesen Bereich überschreiten.
+
+[fixed-density-linear-v6](../reference/PRINT_RESPONSE.md)
 
 ## Drei Arten von Profilen
 
@@ -140,7 +145,7 @@ Die Daten beschreibt [Filmprofile](FILM_PROFILES.md).
 
 ### `MAIN`
 
-Der Standard für gewöhnliche Entwicklung. Weder ein nicht gewählter Scannerstil noch Auto Levels, Auto Color, Auto Tone oder Auto White Balance fließen ein. Die Messung von Träger und Dichtebereich sowie das begrenzte Vibrance bei wenig gesättigten Szenen gehören zur Grundumkehrung.
+Das Standardziel verwendet eine feste Dichtekalibrierung und eine feste kanalweise Ausgabekurve. Auto-Pegel, Auto-Farbe, Auto-Ton und automatischer Weißabgleich werden nur auf Wunsch ausgeführt.
 
 ### `PRINT`
 

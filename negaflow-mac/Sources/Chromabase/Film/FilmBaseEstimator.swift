@@ -75,6 +75,9 @@ public enum FilmBaseEstimator {
         ) > contradictionFraction,
             let envelope = sampleDistributedOrangeBase(from: grid, neutralBase: neutralBase, excluding: exclusion)
         else { return base }
+        // A bright backlight/film boundary can survive the geometric mask. A
+        // proposed base with the light's weaker mask chroma must not replace film.
+        if !neutralBase, looksLikeLight(envelope.rgb, comparedWith: base.rgb) { return base }
         func luma(_ c: SIMD3<Double>) -> Double { (c.x + c.y + c.z) / 3 }
         guard luma(envelope.rgb) > luma(base.rgb) else { return base }
         return envelope.filmBase(source: base.source)
@@ -192,6 +195,7 @@ public enum FilmBaseEstimator {
         ), FilmBaseRebate.accept(rebate: rebate.rgb, current: resolved.rgb) else {
             return resolved
         }
+        if !neutralBase, looksLikeLight(rebate.rgb, comparedWith: resolved.rgb) { return resolved }
         // 크롭 바깥 띠에서는 베이스를 색도 증거로 골랐다. 리베이트 띠는 베이스 그 자체라 색도가
         // 같아야 한다 — 마스크 색도만큼 덜 오렌지인 "더 밝은 띠"는 광원이다(교체하지 않는다).
         if scope == .ring, !neutralBase {

@@ -23,6 +23,6 @@ public enum NegaflowProductVersion {
     }
 
     public static var rendererVersion: String {
-        "chromabase/\(current)"
+        "chromabase/\(current)/fixed-density-linear-v6"
     }
 }

@@ -80,7 +80,7 @@ using NegativeInversionFunction = bool (*)(
     std::uint32_t stride_pixels,
     const float* dmin,
     const float* dmax_normalized,
-    const float* response) noexcept;
+    const float* response, bool linear_output, float normal_range) noexcept;
 
 // 밀도 의존 그레인입니다. CPU 판(`imaging/digital_film_grain.cpp`
 // `apply_digital_film_grain_material`)과 같은 셈이어야 합니다. `pixels` 는

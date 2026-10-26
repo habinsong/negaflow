@@ -1,12 +1,12 @@
 // CPU/GPU 동치 시험 — 네거티브 반전.
 //
-// macOS : `ChromabaseMetalKernels.swift:557` `negativeInvert`
+// macOS : `ChromabaseMetalKernels+ToneSources.swift` `negativeLinear` / legacy inverse
 // CPU 판 : `core/negative_inversion.cpp` `apply_negative_inversion`
 // GPU 판 : `gpu/shaders/negative_invert.hlsl` + `gpu/gpu_negative_invert.cpp`
 //
 // 이 커널은 화소마다 채널별로 `log10`·`pow`·`exp` 를 돕니다. 초월함수는 구현마다 마지막
-// 비트가 다를 수 있어 **오차가 다른 커널보다 큽니다.** 그래도 허용치는 `1e-5` 그대로입니다 —
-// 넘으면 반올림이 아니라 이식 실수입니다.
+// 비트가 다를 수 있습니다. 1 이하 값은 절대 오차 1e-5, 선형 HDR 값은 상대 오차 1e-5로
+// 비교합니다. 기존의 bounded v4 시나리오에는 절대 오차 기준이 그대로 적용됩니다.
 
 #include "negaflow/gpu/gpu_negative_invert.h"
 
@@ -70,6 +70,7 @@ struct Case final {
 
 // 실측 코퍼스에서 나온 dmin 범위 근처와, 채널이 크게 갈리는 경우를 함께 봅니다.
 const Case cases[] = {
+    {"invert_fixed_linear", {{0.36F, 0.20F, 0.11F}, {1.55F, 1.55F, 1.55F}, true}},
     {"invert_typical", {{0.1910F, 0.0940F, 0.0711F}, {1.0F, 1.0F, 1.0F}}},
     {"invert_narrow_range", {{0.1910F, 0.0940F, 0.0711F}, {0.42F, 0.40F, 0.38F}}},
     {"invert_wide_range", {{0.36F, 0.20F, 0.11F}, {1.8F, 1.7F, 1.6F}}},
@@ -112,6 +113,8 @@ void invert_matches_cpu(const GpuDevice& device, const char* const label) {
         gpu_parameters.response_amplitude = response.amplitude;
         gpu_parameters.response_rate = response.rate;
         gpu_parameters.response_shape = response.shape;
+        gpu_parameters.linear_output = scenario.parameters.linear_output;
+        gpu_parameters.normal_range = response.normal_range;
 
         if (kernel.dispatch(device, input, output, gpu_parameters) != GpuKernelStatus::ok) {
             expect(false, "invert dispatch must succeed");
@@ -137,9 +140,12 @@ void invert_matches_cpu(const GpuDevice& device, const char* const label) {
 
         float worst = 0.0F;
         for (std::size_t index = 0U; index < cpu_pixels.size(); ++index) {
-            worst = std::max(worst, std::abs(cpu_pixels[index].red - gpu_pixels[index].red));
-            worst = std::max(worst, std::abs(cpu_pixels[index].green - gpu_pixels[index].green));
-            worst = std::max(worst, std::abs(cpu_pixels[index].blue - gpu_pixels[index].blue));
+            worst = std::max(worst, std::abs(cpu_pixels[index].red - gpu_pixels[index].red) /
+                std::max(1.0F, std::abs(cpu_pixels[index].red)));
+            worst = std::max(worst, std::abs(cpu_pixels[index].green - gpu_pixels[index].green) /
+                std::max(1.0F, std::abs(cpu_pixels[index].green)));
+            worst = std::max(worst, std::abs(cpu_pixels[index].blue - gpu_pixels[index].blue) /
+                std::max(1.0F, std::abs(cpu_pixels[index].blue)));
             worst = std::max(worst, std::abs(cpu_pixels[index].alpha - gpu_pixels[index].alpha));
         }
         if (worst > tolerance) {

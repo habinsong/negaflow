@@ -337,6 +337,79 @@ void test_exposure_shoulder() {
            "B&W shares the knee; only the blend ramp differs below its headroom");
 }
 
+void test_fixed_linear_negative_response() {
+    const auto response = negaflow::core::color_negative_print_response();
+    const negaflow::core::NegativeInversionParameters parameters{{0.84F, 0.55F, 0.34F},
+        {1.55F, 1.55F, 1.55F}, true};
+    for (const float expected : {0.09F, 0.18F, 0.36F}) {
+        const float density = 0.60F + 0.62F * std::log10(expected / 0.18F);
+        const float t = std::pow(10.0F, -density);
+        std::array<negaflow::core::Rgba32F, 1> pixels{{{0.84F * t, 0.55F * t, 0.34F * t, 0.5F}}};
+        const negaflow::core::ImageView out{pixels.data(), 1U, 1U, 1U, 1U};
+        expect_status(negaflow::core::apply_negative_inversion(
+            {pixels.data(), 1U, 1U, 1U, 1U}, out, parameters, response),
+            negaflow::core::KernelStatus::ok, "linear negative inversion succeeds");
+        expect(nearly_equal(pixels[0].red, expected) && nearly_equal(pixels[0].green, expected) &&
+            nearly_equal(pixels[0].blue, expected), "independent forward film retains middle exposure");
+        expect_status(negaflow::core::apply_negative_output_tone(out, 0, false),
+            negaflow::core::KernelStatus::ok, "fixed output tone succeeds");
+        expect(nearly_equal(pixels[0].red, expected) && pixels[0].alpha == 0.5F,
+            "middle output is identity and alpha is preserved");
+    }
+    for (const float expected : {0.0F, 0.001F, 0.004F, 0.01125F, 0.0225F, 0.03F, 0.045F}) {
+        const float join = 0.60F + 0.62F * std::log10(0.045F / 0.18F);
+        const float density = join * std::pow(expected / 0.045F, 0.62F / (join * std::log(10.0F)));
+        const float t = std::pow(10.0F, -density);
+        std::array<negaflow::core::Rgba32F, 1> pixels{{{0.84F * t, 0.55F * t, 0.34F * t, 0.5F}}};
+        const negaflow::core::ImageView out{pixels.data(), 1U, 1U, 1U, 1U};
+        expect_status(negaflow::core::apply_negative_inversion(
+            {pixels.data(), 1U, 1U, 1U, 1U}, out, parameters, response),
+            negaflow::core::KernelStatus::ok, "film toe inversion succeeds");
+        expect(nearly_equal(pixels[0].red, expected) && nearly_equal(pixels[0].blue, expected),
+            "independent forward film toe restores deep exposure steps");
+        expect_status(negaflow::core::apply_negative_output_tone(out, 0, false),
+            negaflow::core::KernelStatus::ok, "film toe output succeeds");
+        if (expected == 0) { expect(nearly_equal(pixels[0].red, 0.001F), "unexposed base maps to black floor"); }
+    }
+    float previous = 0;
+    for (const float density : {1.7F, 1.8F, 1.9F, 2.0F, 2.2F, 3.0F}) {
+        const float t = std::pow(10.0F, -density);
+        std::array<negaflow::core::Rgba32F, 1> pixels{{{0.84F * t, 0.55F * t, 0.34F * t, 1.0F}}};
+        const negaflow::core::ImageView out{pixels.data(), 1U, 1U, 1U, 1U};
+        expect_status(negaflow::core::apply_negative_inversion(
+            {pixels.data(), 1U, 1U, 1U, 1U}, out, parameters, response),
+            negaflow::core::KernelStatus::ok, "dense linear inversion succeeds");
+        expect_status(negaflow::core::apply_negative_output_tone(out, 0, false),
+            negaflow::core::KernelStatus::ok, "dense output tone succeeds");
+        expect(pixels[0].green > previous && pixels[0].green < 1,
+            "densities beyond 1.8D remain distinct");
+        previous = pixels[0].green;
+    }
+    std::array<negaflow::core::Rgba32F, 1> color{{{0.12F, 0.24F, 0.30F, 1.0F}}};
+    expect_status(negaflow::core::apply_negative_output_tone(
+        {color.data(), 1U, 1U, 1U, 1U}, 1, false), negaflow::core::KernelStatus::ok,
+        "linear exposure before output succeeds");
+    expect(nearly_equal(color[0].green, 0.48F) && nearly_equal(color[0].red / color[0].blue, 0.4F),
+        "middle exposure doubles and RGB ratios are retained");
+    float previous_blue = 0;
+    for (const float blue : {0.8F, 2.0F, 20.0F, 20000.0F}) {
+        std::array<negaflow::core::Rgba32F, 1> bright{{{0.12F, 0.24F, blue, 0.5F}}};
+        expect_status(negaflow::core::apply_negative_output_tone(
+            {bright.data(), 1U, 1U, 1U, 1U}, 0, false), negaflow::core::KernelStatus::ok,
+            "strong single-channel output is finite");
+        expect(nearly_equal(bright[0].red, 0.12F) && nearly_equal(bright[0].green, 0.24F) &&
+            bright[0].blue > previous_blue && bright[0].blue < 1 && bright[0].alpha == 0.5F,
+            "bounded colored shoulder retains independent channel detail");
+        previous_blue = bright[0].blue;
+    }
+    std::array<negaflow::core::Rgba32F, 1> signed_color{{{0.03F, -0.008918F, 0, 1}}};
+    expect_status(negaflow::core::apply_negative_output_tone(
+        {signed_color.data(), 1U, 1U, 1U, 1U}, 0, false), negaflow::core::KernelStatus::ok,
+        "opposite signed channels have no zero-luminance division pole");
+    expect(signed_color[0].red < 0.031F && nearly_equal(signed_color[0].green, 0.001F),
+        "signed output remains bounded at the black floor");
+}
+
 }  // namespace
 
 int main() {
@@ -347,6 +420,7 @@ int main() {
     test_negative_inversion_color_fixture();
     test_negative_inversion_validation_and_bw_anchor();
     test_exposure_shoulder();
+    test_fixed_linear_negative_response();
 
     if (failures != 0) {
         std::cerr << failures << " scalar kernel assertion(s) failed\n";

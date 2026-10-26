@@ -167,7 +167,7 @@ public:
     // 처리했으면 `true`. `false` 면 호출부가 CPU 로 갑니다.
     // 네거티브 반전입니다. 현상에서 가장 비싼 단계입니다(실측 프리뷰 856ms 중 353ms).
     //
-    // **근사입니다**(곱셈·초월함수, 실측 오차 1.8e-07). 호출부가
+    // **근사입니다**(곱셈·초월함수). 호출부가
     // `ApproximateAcceleratorScope` 안에서만 부릅니다 — 내보내기·골든은 CPU 그대로입니다.
     // `response` 는 `{yCeil, amplitude, rate, shape}` 넷입니다.
     [[nodiscard]] bool apply_negative_inversion(
@@ -177,7 +177,7 @@ public:
         std::uint32_t stride_pixels,
         const float* dmin,
         const float* dmax_normalized,
-        const float* response) noexcept;
+        const float* response, bool linear_output = false, float normal_range = 1.55F) noexcept;
 
     // 디지털 필름 룩의 재료 커널 둘입니다. 필름 스캔이 아니라 **디지털 원본** 경로에서만
     // 돕니다 — 스캔본에는 이미 유제를 통과한 신호가 있어 같은 물리를 두 번 얹지 않습니다.

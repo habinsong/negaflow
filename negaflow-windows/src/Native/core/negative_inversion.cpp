@@ -51,10 +51,20 @@ namespace {
     const float transmission,
     const float dmin,
     const float dmax_normalized,
-    const PrintResponse& response) noexcept {
+    const PrintResponse& response,
+    const bool linear_output) noexcept {
     const float bounded_transmission = std::max(transmission, 1.0e-5F);
     const float density =
         std::log10(dmin / bounded_transmission) / std::max(dmax_normalized, 1.0e-6F);
+    if (linear_output) {
+        const float film_density = density * response.normal_range;
+        const float toe_density = 0.60F + 0.62F * std::log10(0.25F);
+        if (film_density < toe_density) {
+            const float power = toe_density * std::log(10.0F) / 0.62F;
+            return std::copysign(0.045F * std::pow(std::abs(film_density) / toe_density, power), film_density);
+        }
+        return 0.18F * std::pow(10.0F, (film_density - 0.60F) / 0.62F);
+    }
     const float argument = std::pow(
         std::max(response.rate * std::abs(density), 1.0e-12F),
         response.shape);
@@ -65,6 +75,64 @@ namespace {
 }
 
 }  // namespace
+
+double negative_output_tone_input(const double output, const bool monochrome) noexcept {
+    if (!std::isfinite(output) || output < 0 || output >= 1) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+    constexpr double shadow = 0.18 / 4;
+    constexpr double highlight = 0.70;
+    const double black = monochrome ? 0.0005 : 0.001;
+    if (output <= black) { return 0; }
+    if (output < shadow) {
+        const double a = black / (shadow * shadow);
+        const double b = 1 - 2 * black / shadow;
+        const double distance = output - black;
+        return 2 * distance / (b + std::sqrt(b * b + 4 * a * distance));
+    }
+    if (output > highlight) {
+        return highlight + (1 - highlight) * (output - highlight) / (1 - output);
+    }
+    return output;
+}
+
+KernelStatus apply_negative_output_tone(const ImageView image, const float stops,
+                                        const bool monochrome) noexcept {
+    if (!std::isfinite(stops)) { return KernelStatus::non_finite_parameter; }
+    const float gain = std::exp2(stops);
+    if (!std::isfinite(gain) || gain <= 0) { return KernelStatus::invalid_parameter; }
+    const ConstImageView input{image.pixels, image.pixel_capacity, image.width, image.height, image.stride_pixels};
+    const auto status = validate_compatible_views(input, image);
+    if (status != KernelStatus::ok) { return status; }
+    const auto finite = validate_finite_pixels(input);
+    if (finite != KernelStatus::ok) { return finite; }
+    constexpr float shadow = 0.18F / 4.0F;
+    constexpr float highlight = 0.70F;
+    const float black = monochrome ? 0.0005F : 0.001F;
+    for_each_row_block(image.height, static_cast<std::uint64_t>(image.width) * image.height,
+        [&](const std::uint32_t first, const std::uint32_t count) noexcept {
+            for (std::uint32_t row = first; row < first + count; ++row) {
+                for (std::uint32_t x = 0; x < image.width; ++x) {
+                    auto& p = image.pixels[static_cast<std::size_t>(row) * image.stride_pixels + x];
+                    const auto map = [=](const float value) noexcept {
+                        const float y = gain * value;
+                        if (y <= 0) { return black; }
+                        if (y < shadow) {
+                            const float d = 1 - y / shadow;
+                            return y + black * d * d;
+                        }
+                        if (y > highlight) {
+                            return highlight + (1 - highlight) *
+                                ((y - highlight) / (y - highlight + 1 - highlight));
+                        }
+                        return y;
+                    };
+                    p.red = map(p.red); p.green = map(p.green); p.blue = map(p.blue);
+                }
+            }
+        });
+    return validate_finite_pixels(input);
+}
 
 KernelStatus apply_negative_inversion(
     const ConstImageView input,
@@ -106,17 +174,17 @@ KernelStatus apply_negative_inversion(
                             source.red,
                             parameters.dmin[0],
                             parameters.dmax_normalized[0],
-                            response),
+                            response, parameters.linear_output),
                         invert_channel(
                             source.green,
                             parameters.dmin[1],
                             parameters.dmax_normalized[1],
-                            response),
+                            response, parameters.linear_output),
                         invert_channel(
                             source.blue,
                             parameters.dmin[2],
                             parameters.dmax_normalized[2],
-                            response),
+                            response, parameters.linear_output),
                         source.alpha,
                     };
                     if (!std::isfinite(result.red) || !std::isfinite(result.green) ||

@@ -1,4 +1,5 @@
 #include "negaflow/imaging/scene_correction.h"
+#include "negaflow/core/negative_inversion.h"
 
 #include <array>
 #include <cmath>
@@ -89,6 +90,56 @@ void test_negative_auto_correction_changes_cast_range() {
             negaflow::core::KernelStatus::ok,
         "Neutral Balance succeeds");
     expect(info.neutral_balance_applied, "Neutral Balance applies to a cast scan");
+}
+
+void test_linear_negative_levels_reach_output_targets() {
+    constexpr std::uint32_t width = 96U, height = 64U;
+    for (const bool monochrome : {false, true}) {
+        for (const float exposure_scale : {1.0F, 0.02F}) {
+            std::vector<negaflow::core::Rgba32F> pixels(width * height);
+            for (std::uint32_t y = 0; y < height; ++y) {
+                for (std::uint32_t x = 0; x < width; ++x) {
+                    const float t = (x < 32U ? 0.05F : (x < 64U ? 0.18F : 1.1F)) * exposure_scale;
+                    pixels[y * width + x] = {t, t, t, 1.0F};
+                }
+            }
+            negaflow::imaging::SceneCorrectionParameters parameters{true, false, true};
+            parameters.linear_negative_output = true;
+            parameters.monochrome = monochrome;
+            negaflow::imaging::SceneCorrectionInfo info{};
+            expect(negaflow::imaging::apply_scene_correction(view(pixels, width, height), parameters, info) ==
+                negaflow::core::KernelStatus::ok && info.auto_levels_applied, "linear levels apply");
+            expect(negaflow::core::apply_negative_output_tone(view(pixels, width, height), 0, monochrome) ==
+                negaflow::core::KernelStatus::ok, "linear levels pass through the output curve");
+            expect(std::abs(pixels[height / 2U * width + 16U].red - 0.003F) < 1e-5F,
+                "auto levels black target survives the output curve");
+            expect(std::abs(pixels[height / 2U * width + 80U].red - 0.95F) < 1e-5F,
+                "auto levels white target survives the output curve");
+        }
+    }
+}
+
+void test_linear_negative_base_does_not_dominate_neutral_evidence() {
+    constexpr std::uint32_t width = 192U, height = 96U;
+    std::vector<negaflow::core::Rgba32F> pixels(width * height);
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            const bool border = x < 24U || x >= width - 24U || y < 12U || y >= height - 12U;
+            const float t = x < width / 3U ? 0.06F : (x < width * 2U / 3U ? 0.18F : 0.50F);
+            pixels[static_cast<std::size_t>(y) * width + x] = border
+                ? negaflow::core::Rgba32F{0.0F, 0.0F, 0.0F, 1.0F}
+                : negaflow::core::Rgba32F{t * 0.65F, t, t * 1.45F, 1.0F};
+        }
+    }
+    negaflow::imaging::SceneCorrectionParameters parameters{false, true, true};
+    negaflow::imaging::SceneCorrectionInfo info{};
+    expect(negaflow::imaging::apply_scene_correction(view(pixels, width, height), parameters, info) ==
+               negaflow::core::KernelStatus::ok && info.neutral_balance_applied,
+           "bare base does not become the neutral axis of a linear negative");
+    const auto p = pixels[(height / 2U) * width + width / 2U];
+    const double before = std::max(std::abs(std::log(0.65)), std::abs(std::log(1.45)));
+    const double after = std::max(std::abs(std::log(p.red / p.green)), std::abs(std::log(p.blue / p.green)));
+    expect(after < before * 0.55, "neutral correction reduces the cast despite a neutral film border");
 }
 
 void test_changed_gamma_and_base_inputs_do_not_reuse_previous_correction() {
@@ -281,6 +332,8 @@ void test_auto_levels_keeps_values_above_the_white_point() {
 int main() {
     try {
         test_disabled_is_identity();
+        test_linear_negative_levels_reach_output_targets();
+        test_linear_negative_base_does_not_dominate_neutral_evidence();
         test_negative_auto_correction_changes_cast_range();
         test_changed_gamma_and_base_inputs_do_not_reuse_previous_correction();
         test_uniform_cast_is_removed_at_every_tone();

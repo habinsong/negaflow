@@ -1,105 +1,77 @@
-# Réponse de tirage fixe
+# Réponse négative fixe
 
-[Accueil de la documentation](../README.md)
+[Accueil des documents](../README.md)
 
-Où ça se trouve :
+## MAIN/PRINT
 
-- Swift : `PrintResponse` dans `Sources/Chromabase/Film/NegativeInversion.swift`
-- Metal : le noyau `negativeInvert`
-- Test de verrouillage : `NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
+`fixed-density-linear-v6` traite les négatifs `MAIN/PRINT` sans profil de scanner. Les valeurs de correction sont fixes. À base et réglages identiques, les pixels voisins, le recadrage et l’histogramme ne changent pas l’inversion d’une même transmittance. Aucune vibrance liée à la scène n’est appliquée.
 
-## La courbe
-
-Une courbe caractéristique de film explique l'exposition face à la densité en trois parties : pied, partie droite, épaule. negaflow approche l'épaule dans le domaine des densités par une exponentielle étirée.
+`B` est la transmittance mesurée du support. `f` vaut 1 pour la réponse générique ou le facteur relatif fixe du film choisi. `0.62` et `0.60D` sont les références de gamma et de densité grise du modèle générique. Ce ne sont pas des mesures de chaque film ou scanner. Les densités Status M ne caractérisent pas directement le RGB du scanner.
 
 ```math
-\begin{aligned}
-D &= \log_{10}\left(\frac{D_{\min}}{T}\right) \\
-d &= \frac{D}{d_{\max}} \\
-\log_{10}(P) &= y_{\mathrm{ceil}} - A \exp\left(-(r d)^s\right)
-\end{aligned}
+D_c = \log_{10}(B_c / \max(T_c,10^{-5}))
 ```
-
-`A`, `r` et `s` sont les formes courtes de `amplitude`, `rate` et `shape` dans le code. `d_{\max}` correspond à `dmaxNorm`.
-
-- `D` : densité optique une fois le support retiré
-- `d` : cette valeur divisée par la plage de densité utilisée
-- `P` : luminosité de sortie linéaire
-
-La courbe monte sur toute la plage. Pour `d ≥ 0`, la sortie tombe dans `[baseToe, ceiling)`. Les valeurs négatives, comme un rétroéclairage plus lumineux que le support ou les perforations, ne sont pas ramenées à zéro. Elles continuent en nombres positifs finis.
 
 ```math
-y(-|d|) = 2\log_{10}(P_{\mathrm{toe}}) - y(|d|)
+q_c = D_c/f_c,\quad k=0.045,\quad d_t=0.60+0.62\log_{10}(k/0.18),\quad p=d_t\ln(10)/0.62
 ```
-
-La réciproque a aussi une forme fermée. Elle sert à fabriquer des négatifs synthétiques et à faire des contrôles aller-retour.
 
 ```math
-d = \frac{\left[\ln\left(\frac{A}{y_{\mathrm{ceil}}-\log_{10}(P)}\right)\right]^{1/s}}{r}
+E_c=\begin{cases}
+k\,\operatorname{sgn}(q_c)(|q_c|/d_t)^p,&q_c<d_t\\
+0.18\times10^{(q_c-0.60)/0.62},&q_c\ge d_t
+\end{cases}
 ```
 
-## Les quatre points d'ancrage
+Le pied en densité rejoint la partie droite avec la même valeur et la même pente. Le support non exposé donne une exposition de scène nulle avant la balance des blancs. Ce pied en puissance est un choix générique, pas une courbe mesurée par film. Près du support, le bruit de densité peut aussi être amplifié.
 
-Les coefficients de la courbe ne sont pas stockés. Ils se calculent à partir de ces valeurs.
+Les corrections automatiques restent optionnelles. Avec Couleur automatique, le support du film est exclu des échantillons de l’axe neutre avant le pied de sortie. Une forte dominante peut encore demander une balance des blancs manuelle.
 
-| Point d'ancrage | Couleur | Noir et blanc | À quoi il sert |
-|---|---:|---:|---|
-| `P(0)` point noir du support | 0.001 | 0.0005 | Évite de coller au code 0 en 8 bits |
-| `P(midFraction)` gris moyen | 0.18 | 0.18 | Gris 18 % |
-| `P(1)` blanc | 0.70 | 0.85 | Luminosité de la zone la plus dense mesurée |
-| `P(∞)` plafond | 0.90 | 0.98 | Marge pour la lumière réfléchie |
+## Courbe de sortie
 
-`midFraction` vaut `0.60D / 1.55D`, soit environ `0.387`.
-
-Calcul des coefficients :
+La balance des blancs par canal et l’exposition agissent sur `E` linéaire. La même courbe fixe est appliquée à chaque canal après la balance des blancs. Sa partie médiane conserve les rapports RGB ; l’épaule modifie les rapports de couleur des hautes lumières. La plage `0.045...0.70` reste identique. Sous `0.045`, un faible plancher noir est ajouté : `b=0.001` en couleur et `0.0005` en noir et blanc. Au-dessus de `0.70`, l’épaule rationnelle tend vers 1. Les deux raccords ont une pente de 1. L’inversion du pied du film et le rendu du noir sont deux étapes distinctes.
 
 ```math
-\begin{aligned}
-y_{\mathrm{ceil}} &= \log_{10}(P_{\mathrm{ceil}}) \\
-A &= y_{\mathrm{ceil}} - \log_{10}(P_{\mathrm{toe}}) \\
-r_X &= \ln\left(\frac{A}{y_{\mathrm{ceil}}-\log_{10}(X)}\right) \\
-s &= \frac{\ln(r_{\mathrm{white}}/r_{\mathrm{mid}})}
-          {\ln(1/f_{\mathrm{mid}})} \\
-r &= r_{\mathrm{white}}^{1/s}
-\end{aligned}
+F(x)=x+b(1-x/0.045)^2\quad(0<x<0.045),\qquad F(x)=b\quad(x\le0)
 ```
 
-## Plage de densité par défaut
+Les niveaux automatiques ramènent leurs cibles par la courbe inverse avant l’étirement : noir de sortie `0.003`, blanc `0.95`. La couleur automatique exclut les échantillons ayant un canal linéaire inférieur ou égal à `0.004`. Le support non exposé vaut zéro et ne demande aucun seuil de bord distinct. Les cibles sans analyse de scène gardent des unités de référence fixes pour le gamma d’entrée. Pour les négatifs linéaires, la plage minimale vaut 4 % du blanc mesuré, plutôt qu’une exposition fixe de 0.04.
 
-`normalRange` est la plage de densité qu'utilise une scène normalement exposée. Elle compte surtout quand le support n'a pas pu être mesuré, ou quand le contraste de la scène est très faible.
+L’inversion n’a pas de plafond de `1.8D`. Le plancher de transmittance `1e-5` protège le logarithme. Le gamut est traité à la sortie. À cette étape, chaque canal reste entre le plancher noir et 1. Les réglages manuels suivants peuvent dépasser cette plage.
 
-```math
-\begin{aligned}
-\operatorname{normalRange}(\mathrm{color}) &= 0.62 \times 2.5 = 1.55\,D \\
-\operatorname{normalRange}(\mathrm{B\&W}) &= 0.62 \times 3.5 = 2.17\,D
-\end{aligned}
-```
+## Autres cibles
 
-- `0.62` : pente approximative de la partie droite sur une courbe C-41
-- Couleur `2.5` : environ 7⅓ diaphragmes de luminance diffuse, plus la marge des hautes lumières
-- Noir et blanc `3.5` : habitude du tirage noir et blanc, qui utilise une partie droite plus longue
-- `0.60D` : densité du gris moyen d'une scène normalement exposée
+Les cibles scanner et EXPIRED choisies explicitement conservent l’analyse de scène et `shoulder-print-response-v4`. La primitive fixe reste disponible. L’analyse n’utilise plus de plafond universel de 1.8D. Les préréglages de film utilisent des facteurs relatifs fixes sans normaliser chaque image.
 
-`applySceneRanged` mesure la plage de densité que l'image utilise réellement, canal par canal.
+Le RAW de film désactive les traitements de tonalité pris en charge par l’API. Sur macOS, scene-linear désactive les tons globaux et locaux, shadow bias et le gamut mapping. Windows utilise le transfert linéaire de LibRaw, séparément du rendu photo numérique. Ces réglages ne caractérisent pas le couple capteur-film et ne garantissent pas un RAW sans matrice couleur.
 
-## Ce qui a changé en v4
+## Validation et sources
 
-L'ancienne approche utilisait une fonction découpée en trois sections et des préréglages fixes. La v4 utilise une seule courbe et quatre points d'ancrage. Plus de frontières de sections, et chaque valeur se retrouve dans le code et les tests.
+Les tests utilisent un modèle indépendant de la portion droite du film, une même plage sur plusieurs fonds, une gamme neutre pour la WB et des hautes lumières denses. Les régressions synthétiques ne prouvent pas la précision sur film réel. Les recettes existantes utilisent l’algorithme corrigé et conservent leurs paramètres et originaux. L’identifiant du moteur macOS et le suffixe des vignettes distinguent aussi le nouveau rendu.
 
-Face à l'ancien résultat :
+Les équations ont été implémentées dans ce dépôt. Aucun code de darktable, RawTherapee ou NegPy n’a été copié.
 
-- Tons moyens et hautes lumières couleur, densité normalisée 0,3 à 1,1 : dans ±0,05 diaph
-- Ombres profondes couleur, 0,1 à 0,2 : environ −0,2 diaph
-- Point noir du support en couleur : environ +0,25 diaph
-- Noir et blanc : ombres environ −0,4 diaph, tons moyens environ +0,1 diaph
-- Le point d'ancrage gris moyen 0,18 de NORITSU/FUJI reste
+## Comparaison synthétique mesurée
 
-## Sources et périmètre
+La régression reconstitue le chemin initial à partir du traitement v4 conservé, avec sa limite de plage à 1.8D et sa vibrance automatique. La même plage de densité `(0.48, 0.68, 0.70)` est comparée dans quatre fonds avec un support fixe. Ce n’est pas le test Reddit de 18 vues. Un modèle idéal distinct avec un pied lisse fournit les tests de tonalité et de balance des blancs, sans prouver la précision sur film réel.
 
-Pied, partie droite, épaule et gamma viennent de la sensitométrie publiée. Aucun coefficient de courbe de cette littérature n'a été copié. negaflow calcule les siens à partir des quatre points d'ancrage ci-dessus.
+| Mesure | Code initial | Première correction(v5) | Révision(v6) |
+|---|---:|---:|---:|
+| Étendue L* entre vues | 40.49 | 0 | 0 |
+| Étendue b* entre vues | 35.22 | 0 | 0 |
+| Contraste local à −3 EV | 1.57 | 2.17 | 0.97 |
+| C* maximal de la gamme neutre après balance | 8.89 | 0.99 | <0.001 |
 
-- [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)
-- [Hurter–Driffield Characteristic Curve](https://studyguides.com/study-methods/overview/cmpanf83znm1201neitjb4waw)
-- [Comparaison de papiers RA-4](https://tinker.koraks.nl/photography/on-a-color-mission-comparing-two-ra4-color-papers/)
+Les versions v5 et v6 utilisent le même modèle de pied direct. Un contraste local proche de 1 préserve environ un diaphragme de sortie pour un diaphragme d’entrée. L* et C* sont en Lab D50. La plage à support fixe reste teintée ; la cohérence ne rend pas neutre une densité arbitraire. Exécuter `FixedNegativeResponseTests` avec `NEGAFLOW_RESPONSE_COMPARISON` défini sur un chemin JSON conserve les mesures.
 
-Les plages de contraste connues des matériaux RA-4 ne sont pas reprises telles quelles. Le contraste de cette courbe vient du `shape` issu des quatre points d'ancrage.
+## Contrôle du rouleau fourni
+
+Les 18 vues détectées dans `Roll_Perforation.tiff` ont aussi été comparées. Les deux méthodes utilisent la même estimation corrigée et fixe du support. L’étendue L* de la plage de même densité passe de 21.48 à <0.001 ; celle de b* passe de 30.94 à <0.001. La limite bleue initiale de 1.8D agit sur 18/18 vues. Ce contrôle suit l’idée du commentaire sans reproduire ses réglages exacts.
+
+Il a révélé un autre défaut d’estimation du support. Un bord mêlant rétroéclairage et film remplaçait la mesure `(0.354, 0.109, 0.057)` par `(0.570, 0.510, 0.364)`. Les étapes de récupération et d’enveloppe refusent désormais une mesure ressemblant à la lumière sur les deux axes chromatiques du masque. La courbe de sortie agit aussi par canal après la balance des blancs : une valeur bleue extrême ne commande plus le rendu des autres canaux. Ce rouleau ne possède pas de référence colorimétrique mesurée. La cohérence et les limites de sortie ne prouvent pas la précision des couleurs. Définir `NEGAFLOW_RESPONSE_ROLL_DIR` sur un dossier et lancer `testBundledRollFrameConsistency` enregistre les images et le JSON.
+
+- [Kodak H-740](https://www.kodak.com/content/products-brochures/Film/Basic-Photographic-Sensitometry-Workbook.pdf)
+- [Kodak VISION3 scanning](https://www.kodak.com/content/products-brochures/Film/Scanning-Recommendations-for-Extended-Dynamic-Range-Camera-Films-EN.pdf)
+- [Apple RAW linear processing](https://developer.apple.com/videos/play/wwdc2021/10160/)
+- [Apple RAW tone](https://developer.apple.com/documentation/coreimage/cirawfilter/localtonemapamount)
+- [LibRaw parameters](https://www.libraw.org/docs/API-datastruct-eng.html)

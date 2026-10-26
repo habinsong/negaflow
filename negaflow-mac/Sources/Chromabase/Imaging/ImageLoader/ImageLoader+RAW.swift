@@ -45,7 +45,7 @@ extension ImageLoader {
     ) -> DecodedImage? {
         guard rawImageSourceType(of: url) != nil else { return nil }
         guard let filter = CIRAWFilter(imageURL: url) else { return nil }
-        filter.boostAmount = Float(rendering.boostAmount)
+        configureRAW(filter, rendering: rendering)
         if let scaleFactor {
             guard scaleFactor.isFinite, scaleFactor > 0, scaleFactor <= 1 else { return nil }
             filter.scaleFactor = Float(scaleFactor)
@@ -73,9 +73,21 @@ extension ImageLoader {
               boost.isFinite,
               (0...1).contains(boost),
               let filter = CIRAWFilter(imageURL: url) else { return nil }
+        configureRAW(filter, rendering: boost == 0 ? .sceneLinear : .cameraRendered)
         filter.boostAmount = Float(boost)
         filter.exposure = Float(exposureEV)
         return filter.outputImage
+    }
+
+    private static func configureRAW(_ filter: CIRAWFilter, rendering: RAWRendering) {
+        filter.boostAmount = Float(rendering.boostAmount)
+        guard rendering == .sceneLinear else { return }
+        filter.exposure = 0
+        filter.baselineExposure = 0
+        filter.shadowBias = 0
+        filter.boostShadowAmount = 0
+        if filter.isLocalToneMapSupported { filter.localToneMapAmount = 0 }
+        filter.isGamutMappingEnabled = false
     }
 
 }

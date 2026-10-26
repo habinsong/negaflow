@@ -100,29 +100,34 @@ La table actuelle contient 27 noms de films : négatifs couleur, noir et blanc, 
 À quoi servent ces données :
 
 - La valeur Dmin par défaut quand le support n'est pas mesurable
-- La plage de densité par canal
-- Une plage sûre quand un faible contraste fait vaciller la mesure automatique
+- Les facteurs fixes de densité relative par film
 
 Certaines valeurs approchent des courbes lues dans des documents publics, d'autres ont été prises prudemment. 27 noms ne signifient pas 27 profils couleur validés. Dès que le support est mesuré, la mesure prime.
 
 ### Réponse de tirage fixe
 
-`MAIN` transforme la densité, support soustrait, en une courbe strictement croissante. Les coefficients proviennent de quatre points d'ancrage.
+`fixed-density-linear-v6` traite les négatifs `MAIN/PRINT` sans profil de scanner. Les valeurs de correction sont fixes. À base et réglages identiques, les pixels voisins, le recadrage et l’histogramme ne changent pas l’inversion d’une même transmittance. Aucune vibrance liée à la scène n’est appliquée.
 
-- Le point noir du support
-- Le gris moyen 18 %
-- Le blanc de la plage de densité mesurée
-- La marge pour la lumière réfléchie
+`B` est la transmittance mesurée du support. `f` vaut 1 pour la réponse générique ou le facteur relatif fixe du film choisi. `0.62` et `0.60D` sont les références de gamma et de densité grise du modèle générique. Ce ne sont pas des mesures de chaque film ou scanner. Les densités Status M ne caractérisent pas directement le RGB du scanner.
 
-La courbe actuelle est une exponentielle étirée et possède une réciproque sur toute la plage. Le test aller-retour sur négatifs synthétiques utilise cette réciproque. Équations et valeurs sont dans [réponse de tirage fixe](../reference/PRINT_RESPONSE.md).
+```math
+q_c = \log_{10}(B_c/\max(T_c,10^{-5}))/f_c,\quad k=0.045,\quad d_t=0.60+0.62\log_{10}(k/0.18),\quad p=d_t\ln(10)/0.62
+```
 
-Où s'arrête le chemin par défaut et où commencent les fonctions automatiques :
+```math
+E_c=\begin{cases}
+k\,\operatorname{sgn}(q_c)(|q_c|/d_t)^p,&q_c<d_t\\
+0.18\times10^{(q_c-0.60)/0.62},&q_c\ge d_t
+\end{cases}
+```
 
-- La courbe fixe ne déplace pas l'exposition d'après l'histogramme de la scène.
-- `applySceneRanged` mesure la plage de densité utilisée par canal, sans déplacer l'exposition moyenne.
-- Un `CIVibrance` limité n'intervient que sur les scènes peu saturées.
-- Auto Levels, Auto Color, Auto Tone et Auto White Balance sont des fonctions que vous lancez.
-- Aucune prétention à reproduire exactement un papier ou un minilab donné.
+Le pied en densité rejoint la partie droite avec la même valeur et la même pente. Le support non exposé donne une exposition de scène nulle avant la balance des blancs. Ce pied en puissance est un choix générique, pas une courbe mesurée par film. Près du support, le bruit de densité peut aussi être amplifié.
+
+La balance des blancs par canal et l’exposition agissent sur `E` linéaire. La même courbe fixe est appliquée à chaque canal après la balance des blancs. Sa partie médiane conserve les rapports RGB ; l’épaule modifie les rapports de couleur des hautes lumières. La plage `0.045...0.70` reste identique. Sous `0.045`, un faible plancher noir est ajouté : `b=0.001` en couleur et `0.0005` en noir et blanc. Au-dessus de `0.70`, l’épaule rationnelle tend vers 1. Les deux raccords ont une pente de 1. L’inversion du pied du film et le rendu du noir sont deux étapes distinctes.
+
+L’inversion n’a pas de plafond de `1.8D`. Le plancher de transmittance `1e-5` protège le logarithme. Le gamut est traité à la sortie. À cette étape, chaque canal reste entre le plancher noir et 1. Les réglages manuels suivants peuvent dépasser cette plage.
+
+[fixed-density-linear-v6](../reference/PRINT_RESPONSE.md)
 
 ## Trois sortes de profils
 
@@ -140,7 +145,7 @@ Les données sont décrites dans [profils de film](FILM_PROFILES.md).
 
 ### `MAIN`
 
-La valeur par défaut du développement courant. Elle n'intègre ni style de scanner non choisi, ni Auto Levels, Auto Color, Auto Tone ou Auto White Balance. La mesure du support et de la plage de densité, ainsi que le vibrance limité des scènes peu saturées, font partie de l'inversion de base.
+La cible de développement par défaut utilise un étalonnage fixe de densité et une courbe fixe par canal. Niveaux automatiques, Couleur automatique, Ton automatique et Balance des blancs automatique ne s’appliquent que sur demande.
 
 ### `PRINT`
 

@@ -1,19 +1,12 @@
 import Foundation
 import simd
 
-// MARK: - 필름별 Dmin/Dmax 레지스트리
+// MARK: - 필름별 밀도 참고값
 //
-// 자동 베이스 추정(FilmBaseEstimator + sampleStats)은 장면 의존적 한계가 있다: 파란 하늘·녹색 풀
-// 같은 장면 색 분포가 채널별 Dmin/Dmax 추정을 어긋나게 해 보라/시안 hue shift를 만든다. 수학적으로
-// "보라 방지(채널별 Dmax 단일화)"와 "염료 분리 보존(채널별 Dmax)"을 동시에 만족시킬 수 없다.
-//
-// 해결: 제조사 특성곡선에서 읽은 필름별 Dmin(오렌지 마스크 농도)과 Dmax(최대 밀도)를 제공한다.
-// 이 값들은 장면 독립적인 **필름 물성**이므로, 프리셋이 선택되면 자동 추정을 덮어쓴다 → 보라와
-// 염료 분리를 동시에 만족시킨다(Dmin/Dmax 를 필름 고정값으로 두는 업계 공통 모델).
-//
-// 출처: Kodak/Fuji 공식 데이터시트의 "Typical densities for D-min" 및 sensitometric curve
-// (Status M, C-41/ECN-2)에서 읽은 대략값. 스캐너 RGB 채널(650/550/450nm 근사)에 대응.
-// 밀도(D) → 투과율(T) 변환: T = 10^(-D). 현상 조건/로트/보관/스캐너 광원에 따라 ±0.05~0.15D 흔들림.
+// 제조사 특성곡선(Status M) 판독 또는 유사 필름에서 추정한 값이다. Status M은 스캐너 RGB의
+// 분광 응답과 다르므로 측정된 스캐너 교정값으로 취급하지 않는다. 실측 베이스를 우선하고,
+// 프리셋은 고정 상대 범위 계수로 사용한다. 실측 베이스가 없을 때 D-min이 폴백을 제공한다.
+// 밀도(D)에서 투과율(T)로의 변환은 T = 10^(-D)이다.
 
 /// 단일 필름의 밀도 특성(R/G/B 채널별 Dmin, Dmax).
 public struct FilmStockDmin: Codable, Sendable, Equatable, Identifiable {
@@ -72,12 +65,12 @@ public struct FilmStockDmin: Codable, Sendable, Equatable, Identifiable {
         SIMD3(pow(10.0, -dminDensity.x), pow(10.0, -dminDensity.y), pow(10.0, -dminDensity.z))
     }
 
-    /// D-max 밀도 → 투과율. 가장 어두운(밀도 높은) 픽셀의 하한.
+    /// 참고 D-max 밀도 → 투과율. 반전 화소의 하한이나 클리핑 한계로 쓰지 않는다.
     public var dmaxTransmission: SIMD3<Double> {
         SIMD3(pow(10.0, -dmaxDensity.x), pow(10.0, -dmaxDensity.y), pow(10.0, -dmaxDensity.z))
     }
 
-    /// 채널별 정규화 밀도 범위(Dmax - Dmin). dmaxNorm으로 사용 — 장면 독립적 필름 물성.
+    /// 채널별 정규화 밀도 범위(Dmax - Dmin). 특성곡선의 참고 범위이며 스캐너 RGB 교정값은 아니다.
     public var dmaxNorm: SIMD3<Double> {
         SIMD3(dmaxDensity.x - dminDensity.x, dmaxDensity.y - dminDensity.y, dmaxDensity.z - dminDensity.z)
     }
@@ -86,7 +79,7 @@ public struct FilmStockDmin: Codable, Sendable, Equatable, Identifiable {
     /// 좁은가(기하평균 1). 데이터시트는 Status M 농도라 스캐너 채널의 절대 비율과는 다르다 —
     /// 실측(2026-10-15, 스캐너 2 종 6 장): 스캐너 B/R 범위비 1.23~1.86 vs 데이터시트 1.10. 그 비율을
     /// 그대로 쓰면 모든 필름이 파랗고(b* −2~−13) 과채도(최대 ×2.6)로 반전됐다. 데이터시트가 정직하게
-    /// 말해 주는 것은 필름 사이의 **상대** 차이뿐이라, 실측 범위에 이 계수만 곱한다.
+    /// 말해 주는 것은 필름 사이의 **상대** 차이뿐이라, 고정 기준 범위에 이 계수만 곱한다.
     public var relativeRangeFactor: SIMD3<Double> {
         let typical = FilmStockDminRegistry.typicalColorNegativeRangeShape
         func shape(_ v: SIMD3<Double>) -> SIMD3<Double> {

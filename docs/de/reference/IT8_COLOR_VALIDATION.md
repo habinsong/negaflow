@@ -104,29 +104,13 @@ Es wird nicht behauptet, dass der heutige Weg über Core Image und ColorSync Ren
 
 ## `MAIN`-Regression mit synthetischen Feldern
 
-Der Standardweg für Farbnegative nutzt `shoulder-print-response-v4`.
+`FixedNegativeResponseTests` / `fixed-density-linear-v6`
 
-```math
-\log_{10}(P) =
-y_{\mathrm{ceil}} -
-\mathrm{amplitude}\,
-\exp\left(-(\mathrm{rate}\,d)^{\mathrm{shape}}\right)
-```
+Geprüft werden ein unabhängiges Modell des geraden Filmkurvenbereichs, gleiche Farbfelder auf anderen Hintergründen, WB auf einer Neutralrampe und dichte Lichter. Synthetische Regressionen belegen keine Farbgenauigkeit realen Films. Bestehende Rezepte nutzen den korrigierten Algorithmus; Parameter und Originale bleiben erhalten. Die macOS-Rendererkennung und das Vorschaubildsuffix unterscheiden das neue Rendering.
 
-`d` ist die optische Dichte nach Abzug von Dmin, danach normiert. Die Koeffizienten werden aus diesen vier Ankerpunkten berechnet:
+Die Gleichungen wurden in diesem Repository implementiert. Code aus darktable, RawTherapee oder NegPy wurde nicht kopiert.
 
-| Ankerpunkt | Wert |
-|---|---:|
-| Trägerschwarzpunkt | `0.001` |
-| Mittelgrau | `0.18` |
-| Weiß der gemessenen dichtesten Stelle | `0.70` |
-| Reserve für reflektiertes Licht | `0.90` |
-
-Auf dieser Kurve ist `0D` linear `0.001`, `0.6D` gleich `0.18` und `3D` gleich `0.882836683855`. Die Ausgabe bleibt in einem offenen Intervall, sodass Schwarz und Weiß im normalen Bereich nicht direkt auf 8-Bit `0/255` kleben.
-
-Es ist keine automatische Belichtungsanpassung nach Szenenhistogramm und steht für die Genauigkeit keines bestimmten Films und keiner bestimmten Maschine. Die Gleichungen stehen in [feste Printantwort](PRINT_RESPONSE.md).
-
-`MainSyntheticIT8RoundTripTests` macht aus den 264 Referenzfeldern über die Umkehrfunktion Negative und führt sie durch den gesamten `MAIN`-Weg zurück. Lab D50/2° und `DeltaE00` werden je Feld geprüft. Das ist eine `syntheticModel`-Regression.
+[fixed-density-linear-v6](PRINT_RESPONSE.md)
 
 ## Regression des relativen NORITSU/FUJI-Stils
 

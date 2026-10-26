@@ -104,29 +104,13 @@ IT8.7/1은 입력 장치용입니다. 프린터 출력은 `printer + paper + ink
 
 ## `MAIN` 합성 패치 회귀
 
-컬러 네거티브 기본 경로는 `shoulder-print-response-v4`를 씁니다.
+`FixedNegativeResponseTests` / `fixed-density-linear-v6`
 
-```math
-\log_{10}(P) =
-y_{\mathrm{ceil}} -
-\mathrm{amplitude}\,
-\exp\left(-(\mathrm{rate}\,d)^{\mathrm{shape}}\right)
-```
+독립적인 직선부 필름 모형, 서로 다른 배경의 같은 패치, 중립 계조의 WB, 고밀도 명부를 검사합니다. 합성 회귀는 실제 필름의 색 정확도를 입증하지 않습니다. 기존 레시피는 수정한 알고리즘으로 렌더링하며 저장된 파라미터와 원본은 유지합니다. macOS 렌더러 식별자와 썸네일 접미사도 새 결과를 구분합니다.
 
-`d`는 Dmin을 뺀 뒤 정규화한 광학 밀도입니다. 계수는 다음 네 기준점에서 계산합니다.
+수식은 이 저장소에서 직접 구현했습니다. darktable·RawTherapee·NegPy의 구현 코드는 가져오지 않았습니다.
 
-| 기준점 | 값 |
-|---|---:|
-| 베이스 검정점 | `0.001` |
-| 중간 회색 | `0.18` |
-| 측정한 최농부의 흰색 | `0.70` |
-| 반사광 여유 | `0.90` |
-
-이 곡선에서 `0D`는 linear `0.001`, `0.6D`는 `0.18`, `3D`는 `0.882836683855`입니다. 출력이 열린 구간 안에 있어 정상 범위의 검정과 흰색이 8-bit `0/255`로 바로 잘리지 않습니다.
-
-장면 히스토그램으로 노출을 자동 조정하는 식이 아니며, 특정 필름이나 장비의 정확도를 뜻하지 않습니다. 수식은 [고정 인화 응답](PRINT_RESPONSE.md)에 있습니다.
-
-`MainSyntheticIT8RoundTripTests`는 264개 기준 패치를 역함수로 네거티브화한 뒤 전체 `MAIN` 경로로 되돌립니다. Lab D50/2°와 `DeltaE00`을 패치마다 검사합니다. 이는 `syntheticModel` 회귀입니다.
+[fixed-density-linear-v6](PRINT_RESPONSE.md)
 
 ## NORITSU/FUJI 상대 스타일 회귀
 

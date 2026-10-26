@@ -73,11 +73,8 @@ final class DevelopTargetWholeFrameCompositionTests: XCTestCase {
         }
     }
 
-    /// scene-adaptive 반전은 **채널별** 측정 Dmax 로 필름 염료 기울기 차이를 독립 정규화한다
-    /// (= 자동 화이트밸런스, 오렌지/블루 캐스트·탈채도 제거). 단 물성 하한(densestFloor 1.8D)이
-    /// 극단 단색 장면의 채널 폭주(→ 보라 hue shift)를 막으므로, 채널 간 Dmax 비는 유계여야 한다.
-    /// 과거의 "RGB 공통 스케일" 계약은 이 채널별 WB 를 막아 잔여 캐스트를 남겼다(회귀 원인).
-    func testGenericDensityScaleIsPerChannelButBounded() throws {
+    /// Explicit scene sampling reports the measured channel ranges without a universal density cap.
+    func testExplicitSceneSamplingReportsDifferentChannelRanges() throws {
         let stats = try XCTUnwrap(
             NegativeInversion.sampleStats(
                 makeSpatialColorNegative(),
@@ -86,9 +83,9 @@ final class DevelopTargetWholeFrameCompositionTests: XCTestCase {
         )
         let mx = max(stats.dmaxNorm.x, max(stats.dmaxNorm.y, stats.dmaxNorm.z))
         let mn = min(stats.dmaxNorm.x, min(stats.dmaxNorm.y, stats.dmaxNorm.z))
-        XCTAssertGreaterThan(mn, 0.4, "채널 Dmax 하한(저신호 폭주 방지)")
+        XCTAssertGreaterThan(mn, 0.4, "fixture channel ranges")
         XCTAssertLessThan(mx / mn, 2.0,
-            "채널 간 Dmax 비가 유계여야 한다(물성 하한이 단색 장면 폭주를 막음). ratio=\(mx / mn)")
+            "fixture channel range ratio=\(mx / mn)")
     }
 
     func testGenericMainKeepsSubjectTileIndependentOfSurroundingScene() {
@@ -206,10 +203,17 @@ final class DevelopTargetWholeFrameCompositionTests: XCTestCase {
         base: FilmBase,
         params: DevelopParameters
     ) -> CIImage {
-        // auto(프리셋 없음) 파이프라인은 scene-adaptive 반전을 쓴다(applySceneRanged). 이 테스트의
-        // 계약은 "반전 뒤 타겟 변환 외에 미선언 공간필터·색변형이 없다" 이므로, 선언 조합의 반전도
-        // 파이프라인과 같은 applySceneRanged 를 사용한다(primitive apply 는 별도 결정적 참조).
-        var image = NegativeInversion.applySceneRanged(to: input, base: base)
+        let fixed = NegativeLinearResponse.applies(params)
+        var image: CIImage
+        if fixed {
+            image = NegativeLinearResponse.invert(input,
+                stats: NegativeLinearResponse.stats(base: base, preset: nil, filmType: params.filmType),
+                filmType: params.filmType)
+        } else if params.developTarget.isScannerEmulation || params.developTarget == .rescue {
+            image = NegativeInversion.applySceneRanged(to: input, base: base)
+        } else {
+            image = NegativeInversion.apply(to: input, base: base)
+        }
 
         switch params.developTarget {
         case .main:
@@ -235,7 +239,11 @@ final class DevelopTargetWholeFrameCompositionTests: XCTestCase {
         }
 
         image = ColorModel.apply(to: image, params: params)
-        image = ToneMapper.applyExposure(to: image, stops: params.exposure)
+        if fixed {
+            image = NegativeLinearResponse.output(image, exposure: params.exposure, filmType: params.filmType)
+        } else {
+            image = ToneMapper.applyExposure(to: image, stops: params.exposure)
+        }
         return ToneMapper.applyToneCurves(to: image, params: params)
     }
 

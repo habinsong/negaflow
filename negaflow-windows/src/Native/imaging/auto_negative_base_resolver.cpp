@@ -114,6 +114,9 @@ constexpr double rebate_gate_fraction = 0.05;
     return (static_cast<double>(dmin[0]) + static_cast<double>(dmin[1]) + static_cast<double>(dmin[2])) / 3.0;
 }
 
+[[nodiscard]] bool looks_like_light(
+    const std::array<float, 3>& candidate, const std::array<float, 3>& film);
+
 // 고른 값이 물리적으로 말이 되는지 보고, 안 되면 리베이트 띠에서 원본 해상도로 다시 잽니다.
 // 받아들이지 않으면 기존 값이 그대로 남습니다(macOS `rescuedWithRebate`).
 [[nodiscard]] AutoNegativeBaseResult rescued_with_rebate(
@@ -131,6 +134,12 @@ constexpr double rebate_gate_fraction = 0.05;
             image, searched, film_type, result.brighter_than_base > rebate_gate_fraction);
         if (!rebate.has_value() ||
             !auto_base_detail::accept_rebate_base(*rebate, result.dmin)) {
+            return result;
+        }
+        // Mixed backlight boundaries can survive geometric masking. Compare the
+        // two mask-chroma axes against the measured film in every search scope.
+        if (film_type == NegativeFilmType::color &&
+            looks_like_light(narrow_measurement(*rebate), result.dmin)) {
             return result;
         }
         // 띠에서는 베이스를 색도 증거로 골랐습니다. 리베이트 띠는 베이스 그 자체라 색도가
@@ -172,6 +181,10 @@ constexpr double contradiction_fraction = 0.02;
     const std::optional<FilmBaseMeasurement> envelope = distributed_base(grid, film_type, excluded);
     if (!envelope.has_value() ||
         luma_of_dmin(narrow_measurement(envelope->rgb)) <= luma_of_dmin(result.dmin)) {
+        return result;
+    }
+    if (film_type == NegativeFilmType::color &&
+        looks_like_light(narrow_measurement(envelope->rgb), result.dmin)) {
         return result;
     }
     result.dmin = narrow_measurement(envelope->rgb);

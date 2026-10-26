@@ -3,6 +3,7 @@
 #include "export/support/outcome.h"
 
 #include "negaflow/core/pixel.h"
+#include "negaflow/core/negative_inversion.h"
 #include "negaflow/imaging/custom_color_target.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
 #include "negaflow/pipeline/gpu_accelerator.h"
@@ -51,6 +52,22 @@ std::optional<DevelopExportOutcome> apply_look_stages(
         request.negative.film_type == negaflow::imaging::NegativeFilmType::black_and_white));
     // 커브 대역은 크롭한 사진 영역 안에서 잽니다(macOS `applyToneCurves(region:)`).
     tone.analysis_region = analysis_region;
+    if (request.film_polarity == FilmPolarity::negative &&
+        (request.develop_target == DevelopTarget::main || request.develop_target == DevelopTarget::print) &&
+        request.scanner_profile_id.empty()) {
+        // The fixed per-channel output curve currently runs on CPU after WB. Flush
+        // resident pixels before reading them; D3D throughput remains to be measured.
+        GpuAccelerator::shared().flush_resident();
+        const auto status = core::apply_negative_output_tone(
+            {developed_image.pixels.data(), developed_image.pixels.size(), developed_image.width,
+             developed_image.height, developed_image.stride_pixels}, tone.exposure_stops,
+            request.negative.film_type == imaging::NegativeFilmType::black_and_white);
+        if (status != core::KernelStatus::ok) {
+            return unbind_resident_and(developed_image,
+                fail(DevelopExportStage::tone_adjust, core::kernel_status_name(status)));
+        }
+        tone.exposure_stops = 0;
+    }
     negaflow::imaging::WorkingToneAdjustResult adjusted{};
     const GpuToneOutcome accelerated =
         GpuAccelerator::shared().apply_working_tone_adjustments(

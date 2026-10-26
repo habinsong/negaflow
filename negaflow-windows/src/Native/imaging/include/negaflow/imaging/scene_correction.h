@@ -18,6 +18,8 @@ struct SceneCorrectionParameters final {
     // 가장자리 6% 를 버립니다(홀더·백라이트가 화이트/블랙포인트가 되지 않게 — macOS
     // `AutoLevels.frameBorderInset`).
     std::optional<AnalysisRegion> analysis_region{};
+    bool linear_negative_output{false};
+    bool monochrome{false};
 };
 
 struct SceneCorrectionInfo final {
@@ -99,7 +101,7 @@ void inset_scene_samples(
 // 두 함수 모두 **표본을 자리에서 정렬하거나 소비합니다**(백분위·중앙값이 정렬을 요구합니다).
 [[nodiscard]] SceneAutoLevelsPlan plan_scene_auto_levels(
     SceneSampleGrid& samples,
-    bool negative_source) noexcept;
+    bool negative_source, bool linear_negative_output = false, bool monochrome = false) noexcept;
 
 [[nodiscard]] SceneNeutralBalancePlan plan_scene_neutral_balance(
     SceneSampleGrid& samples) noexcept;

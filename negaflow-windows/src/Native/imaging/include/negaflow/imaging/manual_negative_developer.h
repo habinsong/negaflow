@@ -31,15 +31,14 @@ inline constexpr float maximum_manual_dmin = 1.0F;
 struct ManualNegativeDevelopParameters final {
     std::array<float, 3> dmin;
     NegativeFilmType film_type{NegativeFilmType::color};
-    // Film base mode = the auto path's measured per-channel density range times the selected
-    // stock's relative range factor (`FilmStockBasePreset::range_factor`, geometric mean 1). The
-    // datasheet's Status M ratio itself does not transfer to scanner channels — replacing the
-    // measured ratio with it turned every stock blue (macOS 2026-10-15 measurement).
+    // Fixed stock-relative density units. Manufacturer Status M is not scanner RGB.
     bool use_preset_response{false};
     std::array<float, 3> preset_range_factor{};
     std::optional<std::array<float, 3>> input_gamma_reference_range{};
     // 크롭한 사진 영역(원본 정규 좌표). 있으면 장면 밀도 범위와 뮤트 채도를 그 안에서만 잽니다.
     std::optional<AnalysisRegion> analysis_region{};
+    bool adaptive_density{false}; // Only explicit scanner/recovery targets.
+    bool linear_output{false};   // MAIN/PRINT; output tone follows WB/exposure.
 };
 
 struct ManualNegativeDevelopInfo final {
@@ -59,12 +58,9 @@ struct ManualNegativeDevelopResult final {
     WorkingImage image{};
 };
 
-// Deterministic manual path aligned with the macOS scene-range calculation:
-// - Dmin is clamped to [1e-3, 1] per channel;
-// - a sufficiently large source uses its robust scene density range; tiny or malformed
-//   sources retain the selected fixed print response normal range;
-// - non-preset color output receives the macOS muted-scene vibrance gate;
-// - the owned WorkingImage is transformed in place, avoiding a second full-frame buffer.
+// Manual inversion uses fixed density units and no scene vibrance. Explicit
+// scanner/recovery targets set adaptive_density. linear_output defers output tone
+// until after WB/exposure. The owned image is transformed in place.
 [[nodiscard]] ManualNegativeDevelopResult develop_manual_negative(
     WorkingImage image,
     const ManualNegativeDevelopParameters& parameters) noexcept;

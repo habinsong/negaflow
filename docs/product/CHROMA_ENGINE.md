@@ -100,29 +100,34 @@ The current table holds 27 film names, covering color negative, black and white,
 What the data is for:
 
 - The Dmin default when the base cannot be measured
-- Per-channel density range
-- A safe range when low contrast makes automatic measurement unstable
+- Fixed stock-relative density factors
 
 Some values were approximated by reading curves in public material, and some were set conservatively. 27 names do not mean 27 validated color profiles. Once the base is measured, the measurement wins.
 
 ### Fixed print response
 
-`MAIN` turns base-subtracted density into a monotonically rising curve. The coefficients are computed from four anchors.
+`fixed-density-linear-v6` applies to negative `MAIN/PRINT` without a scanner profile. It uses a fixed density calibration. Changing the other pixels, crop or frame histogram does not change the inversion of a given transmittance with the same base and settings. No scene vibrance is applied.
 
-- The black point of the base
-- 18% mid gray
-- White at the measured density range
-- Headroom for reflected light
+`B` is measured film-base transmittance. `f` is 1 for the generic response, or the selected stock's fixed relative range factor. `0.62` is the generic film-gamma reference and `0.60D` is its gray-density reference. These are design assumptions, not measured values for every stock or scanner. Manufacturer Status M densities do not directly characterize scanner RGB.
 
-The current curve is a stretched exponential and has an inverse across the whole range. The round-trip test on synthetic negatives uses that inverse. The equations and numbers are in [fixed print response](../reference/PRINT_RESPONSE.md).
+```math
+q_c = \log_{10}(B_c/\max(T_c,10^{-5}))/f_c,\quad k=0.045,\quad d_t=0.60+0.62\log_{10}(k/0.18),\quad p=d_t\ln(10)/0.62
+```
 
-Where the default path ends and automatic features begin:
+```math
+E_c=\begin{cases}
+k\,\operatorname{sgn}(q_c)(|q_c|/d_t)^p,&q_c<d_t\\
+0.18\times10^{(q_c-0.60)/0.62},&q_c\ge d_t
+\end{cases}
+```
 
-- The fixed curve does not move exposure from a scene histogram.
-- `applySceneRanged` measures the per-channel density range in use, but does not move mid exposure.
-- A limited `CIVibrance` applies only to low-saturation scenes.
-- Auto Levels, Auto Color, Auto Tone, and Auto White Balance are features you run yourself.
-- No claim is made about exactly reproducing a particular paper or minilab.
+The film-density toe joins the straight log-exposure section with matching value and slope. Unexposed base produces zero scene exposure before WB. This power toe is a generic design, not a measured stock curve. Near-base inversion can amplify density noise.
+
+Channel WB and exposure act on scene-linear `E`. The same fixed output curve runs on each channel after WB. The middle `0.045...0.70` is identity and preserves RGB ratios. The shoulder changes highlight color ratios. Below `0.045`, a small black floor is added: `b=0.001` for color and `0.0005` for B&W. Above `0.70`, the rational shoulder approaches 1. Both joins have slope 1. Film-toe inversion and output black rendering are separate stages.
+
+The inverse film stage has no `1.8D` cap. The `1e-5` transmission floor protects the logarithm. RGB gamut mapping belongs to the output boundary. Each channel is bounded by the black floor and 1 at this stage. Later user adjustments may extend that range.
+
+[fixed-density-linear-v6](../reference/PRINT_RESPONSE.md)
 
 ## Profiles come in three kinds
 
@@ -140,7 +145,7 @@ The data is described in [film profiles](FILM_PROFILES.md).
 
 ### `MAIN`
 
-The default for ordinary development. It does not fold in an unselected scanner style, Auto Levels, Auto Color, Auto Tone, or Auto White Balance. Base and density range measurement and the limited low-saturation vibrance are part of the basic inversion.
+The default development target uses fixed density calibration and a fixed per-channel output curve. Auto Levels, Auto Color, Auto Tone and Auto White Balance run only when requested.
 
 ### `PRINT`
 

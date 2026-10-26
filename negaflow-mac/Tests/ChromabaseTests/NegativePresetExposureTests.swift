@@ -3,9 +3,7 @@ import CoreImage
 import simd
 @testable import Chromabase
 
-/// 필름 프리셋 선택 시 노출/광원 로직 검증 — 합성 픽스처 + 수치 측정.
-///   • 프리셋 경로가 실측 스케일로 정규화해 노출을 보존한다(고정 dmaxNorm 압축 제거).
-///   • 광원 프로파일 선택이 base(WB 앵커)에 실제로 반영된다(효과가 있다).
+/// Fixed stock calibration and light-source application; no per-frame range fitting.
 final class NegativePresetExposureTests: XCTestCase {
     private let base = SIMD3<Double>(0.72, 0.55, 0.40)   // 오렌지 마스크 베이스
 
@@ -34,45 +32,31 @@ final class NegativePresetExposureTests: XCTestCase {
 
     // MARK: 노출 보존
 
-    func testPresetScaleTracksMeasuredNotFixedDatasheet() {
-        let img = thinNegative()
-        let fb = FilmBase(rgb: base, source: .manual)
+    func testPresetScaleIsFixedAcrossDifferentDensityDistributions() {
         let preset = FilmStockDminRegistry.find("kodak-portra-400")!
-
-        let presetStats = NegativeInversion.presetStats(for: img, base: fb, preset: preset)
-        let measured = NegativeInversion.sampleStats(img, base: fb)!
-
-        let presetGeo = geo(presetStats.dmaxNorm)
-        let measuredGeo = geo(measured.dmaxNorm)
-        let fixedGeo = geo(preset.dmaxNorm)   // 데이터시트 밀도역(~2.5D)
-
-        // 스케일 = 실측(노출 보존). 고정 데이터시트 dmaxNorm 이 아니다.
-        XCTAssertEqual(presetGeo, measuredGeo, accuracy: max(0.05, measuredGeo * 0.1),
-                       "프리셋 스케일이 실측 스케일을 따라야 함 (preset=\(presetGeo) measured=\(measuredGeo))")
-        XCTAssertLessThan(presetGeo, fixedGeo * 0.7,
-                          "고정 dmaxNorm(\(fixedGeo)) 압축이 제거되어야 함 (preset=\(presetGeo))")
+        let fb = FilmBase(rgb: base, source: .manual)
+        let thin = thinNegative()
+        let dense = thin.applyingFilter("CIColorMatrix", parameters: [
+            "inputRVector": CIVector(x: 0.1, y: 0, z: 0, w: 0),
+            "inputGVector": CIVector(x: 0, y: 0.3, z: 0, w: 0),
+            "inputBVector": CIVector(x: 0, y: 0, z: 0.7, w: 0),
+        ])
+        let first = NegativeInversion.presetStats(for: thin, base: fb, preset: preset)
+        let second = NegativeInversion.presetStats(for: dense, base: fb, preset: preset)
+        XCTAssertEqual(first, second)
+        XCTAssertEqual(geo(first.dmaxNorm), 1.55, accuracy: 1e-9)
     }
 
-    /// 필름 모드의 채널 범위 = 자동 실측 범위 × 필름 상대 계수(데이터시트에서 믿을 수 있는 필름 사이
-    /// 상대 차이). 데이터시트(Status M) 비율로 통째로 바꾸면 스캐너 채널과 어긋나 파랗게 반전됐다.
-    func testPresetChannelRangeIsMeasuredTimesFilmRelativeFactor() throws {
+    func testPresetChannelRangeUsesFixedRelativeFactor() throws {
         let img = thinNegative()
         let fb = FilmBase(rgb: base, source: .manual)
-        let measured = try XCTUnwrap(NegativeInversion.sampleStats(img, base: fb))
         for id in ["kodak-portra-400", "fuji-c200", "vision3-250d"] {
             let preset = try XCTUnwrap(FilmStockDminRegistry.find(id))
             let stats = NegativeInversion.presetStats(for: img, base: fb, preset: preset)
-            let factor = preset.relativeRangeFactor
-            XCTAssertEqual(geo(factor), 1, accuracy: 1e-9)
             for c in 0..<3 {
-                XCTAssertEqual(stats.dmaxNorm[c] / measured.dmaxNorm[c], factor[c], accuracy: 1e-9)
+                XCTAssertEqual(stats.dmaxNorm[c] / 1.55, preset.relativeRangeFactor[c], accuracy: 1e-9)
             }
-            XCTAssertEqual(stats.blackInput, measured.blackInput)
-            XCTAssertEqual(stats.midDensity, measured.midDensity)
         }
-        XCTAssertNotEqual(FilmStockDminRegistry.find("fuji-c200")!.relativeRangeFactor,
-                          FilmStockDminRegistry.find("vision3-250d")!.relativeRangeFactor,
-                          "필름마다 상대 차이가 남아야 한다")
     }
 
     /// 스캐너 채널의 밀도 범위는 데이터시트와 다르다(실측 B/R 1.23~1.86 vs 1.10). 그래도 필름 모드가

@@ -104,29 +104,13 @@ IT8.7/1 面向输入设备。 打印输出需要用实测 `printer + paper + ink
 
 ## `MAIN` 合成色块回归
 
-彩色负片的默认路径用 `shoulder-print-response-v4`。
+`FixedNegativeResponseTests` / `fixed-density-linear-v6`
 
-```math
-\log_{10}(P) =
-y_{\mathrm{ceil}} -
-\mathrm{amplitude}\,
-\exp\left(-(\mathrm{rate}\,d)^{\mathrm{shape}}\right)
-```
+测试包括独立的胶片直线段模型、不同背景中的同一色块、中性灰阶 WB 及高密度高光。合成回归不能证明真实胶片的色彩准确度。现有配方使用修正后的算法渲染，保留已存参数和原始文件。macOS 渲染器标识和缩略图后缀也区分新结果。
 
-`d` 是扣掉 Dmin 后归一化的光学密度。系数由下面四个基准点计算得出：
+公式由本仓库直接实现。未复制 darktable、RawTherapee 或 NegPy 的实现代码。
 
-| 基准点 | 值 |
-|---|---:|
-| 片基黑点 | `0.001` |
-| 中灰 | `0.18` |
-| 实测最高密度处的白 | `0.70` |
-| 反射光余量 | `0.90` |
-
-在这条曲线上，`0D` 为 linear `0.001`，`0.6D` 为 `0.18`，`3D` 为 `0.882836683855`。 输出落在开区间内，所以正常范围的黑和白不会直接贴到 8-bit 的 `0/255`。
-
-它不是根据场景直方图自动调整曝光的公式，也不代表某种胶片或某台设备的准确度。 公式见 [固定印相响应](PRINT_RESPONSE.md)。
-
-`MainSyntheticIT8RoundTripTests` 先用反函数把 264 个参考色块变成负片，再走完整的 `MAIN` 路径还原回来，并逐色块检查 Lab D50/2° 和 `DeltaE00`。 这属于 `syntheticModel` 回归。
+[fixed-density-linear-v6](PRINT_RESPONSE.md)
 
 ## NORITSU/FUJI 相对风格回归
 

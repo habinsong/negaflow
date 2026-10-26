@@ -56,13 +56,8 @@ final class MainSyntheticIT8RoundTripTests: XCTestCase {
         XCTAssertEqual(measuredChannelCount, 264 * 3)
     }
 
-    /// MAIN 은 auto 경로의 scene-adaptive 반전(applySceneRanged)만 적용하고 별도 룩(탈색, 톤
-    /// 커브, gamut clamp)을 굽지 않는다. scene-adaptive 반전은 필름 염료 밀도 범위를 채널별로
-    /// 정규화(= 자동 화이트밸런스)하므로 고정 인화 응답과 절대색이 같지 않다(그게 캐스트/탈채도
-    /// 교정의 본질). 따라서 이 테스트는 (1) MAIN == 반전(추가 룩 없음), (2) 중립축이 중립으로
-    /// 유지(scene-adaptive 가 회색에 캐스트를 넣지 않음), (3) 유채색이 붕괴(탈채도)되지 않음을
-    /// 검증한다. 절대색 라운드트립은 primitive positiveValue 를 쓰는 위 테스트가 담당한다.
-    func testMainSyntheticIT8AppliesOnlySceneAdaptiveInversionKeepingNeutralsNeutral() {
+    /// Composition regression for fixed inversion and luminance output tone.
+    func testMainSyntheticIT8AppliesFixedResponseKeepingNeutralsNeutral() {
         XCTAssertEqual(NegativeInversion.genericDensityEncodingVersion, "shoulder-print-response-v4")
         XCTAssertEqual(NegativeInversion.colorResponse.normalRange, fixtureDmax, accuracy: 1e-12)
         let fixture = makeFixture()
@@ -78,10 +73,10 @@ final class MainSyntheticIT8RoundTripTests: XCTestCase {
             params: params
         )
         let pixels = render(output)
-        let inversion = render(NegativeInversion.applySceneRanged(
-            to: fixture.negative,
-            base: FilmBase(rgb: baseRGB, source: .manual)
-        ))
+        let fixed = NegativeLinearResponse.invert(fixture.negative,
+            stats: NegativeLinearResponse.stats(base: FilmBase(rgb: baseRGB, source: .manual),
+                preset: nil, filmType: .colorNegative), filmType: .colorNegative)
+        let inversion = render(NegativeLinearResponse.output(fixed, exposure: 0, filmType: .colorNegative))
 
         var measuredPatchCount = 0
         for row in 0..<rows {
@@ -100,14 +95,14 @@ final class MainSyntheticIT8RoundTripTests: XCTestCase {
                     ColorTargetColorimetry.linearSRGBToLabD50(inversionRGB)
                 )
                 XCTAssertLessThan(lookDelta, 0.05,
-                    "\(id): MAIN 이 scene-adaptive 반전 위에 선언되지 않은 룩을 추가했다(ΔE=\(lookDelta))")
+                    "\(id): MAIN 이 fixed-density 반전 위에 선언되지 않은 룩을 추가했다(ΔE=\(lookDelta))")
 
-                // (2) 중립축은 중립 유지 — scene-adaptive 가 회색에 캐스트를 넣지 않는다.
+                // (2) 중립축은 중립 유지 — fixed-density 가 회색에 캐스트를 넣지 않는다.
                 if row == rows - 1 {
                     let lab = ColorTargetColorimetry.linearSRGBToLabD50(measuredRGB)
                     let chroma = (lab.a * lab.a + lab.b * lab.b).squareRoot()
                     XCTAssertLessThan(chroma, 3.0,
-                        "\(id): 중립 패치가 scene-adaptive 반전에서 캐스트가 생겼다(chroma=\(chroma))")
+                        "\(id): 중립 패치가 fixed-density 반전에서 캐스트가 생겼다(chroma=\(chroma))")
                 }
                 measuredPatchCount += 1
             }
@@ -126,7 +121,7 @@ final class MainSyntheticIT8RoundTripTests: XCTestCase {
             }
         }
         XCTAssertGreaterThan(outChromaSum, refChromaSum * 0.5,
-            "scene-adaptive 반전이 유채색을 탈채도로 붕괴시키면 안 된다. out=\(outChromaSum) ref=\(refChromaSum)")
+            "fixed-density 반전이 유채색을 탈채도로 붕괴시키면 안 된다. out=\(outChromaSum) ref=\(refChromaSum)")
         XCTAssertEqual(measuredPatchCount, 264)
     }
 
@@ -147,9 +142,9 @@ final class MainSyntheticIT8RoundTripTests: XCTestCase {
                 )
                 referenceLab.append(ColorTargetColorimetry.linearSRGBToLabD50(expectedLinear))
                 let transmission = SIMD3<Double>(
-                    transmission(forLinear: expectedLinear.x, base: baseRGB.x),
-                    transmission(forLinear: expectedLinear.y, base: baseRGB.y),
-                    transmission(forLinear: expectedLinear.z, base: baseRGB.z)
+                    mainTransmission(forLinear: expectedLinear.x, base: baseRGB.x),
+                    mainTransmission(forLinear: expectedLinear.y, base: baseRGB.y),
+                    mainTransmission(forLinear: expectedLinear.z, base: baseRGB.z)
                 )
 
                 for localY in 0..<patchSize {
@@ -220,6 +215,12 @@ final class MainSyntheticIT8RoundTripTests: XCTestCase {
 
     /// `NegativeInversion` 구현을 호출하지 않고 고정한 공개 인화 응답의 역함수를 적는다.
     /// 응답: log10(P) = yCeil − amplitude·exp(−(rate·d)^shape), 계수는 앵커에서 닫힌형 유도.
+    // Independent straight-line forward film; separate from the retained v4 inverse fixture.
+    private func mainTransmission(forLinear value: Double, base: Double) -> Double {
+        let density = 0.60 + 0.62 * log10(max(value, 1e-6) / 0.18)
+        return base * pow(10, -density)
+    }
+
     private func transmission(forLinear value: Double, base: Double) -> Double {
         let yCeil = log10(fixtureCeiling)
         let amplitude = yCeil - log10(fixtureBaseToe)

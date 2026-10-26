@@ -22,7 +22,8 @@ cbuffer NegativeInvertConstants : register(b0) {
     float ResponseAmplitude;
     float ResponseRate;
     float ResponseShape;
-    float2 Padding1;
+    float LinearOutput;
+    float NormalRange;
 };
 
 [numthreads(8, 8, 1)]
@@ -36,6 +37,16 @@ void NegativeInvertMain(uint3 id : SV_DispatchThreadID) {
     // CPU 판 `invert_channel` 을 채널 셋에 한꺼번에 적용합니다. 채널 사이에 의존이 없습니다.
     float3 boundedTransmission = max(source.rgb, 1e-5);
     float3 density = log10(Dmin / boundedTransmission) / max(DmaxNormalized, 1e-6);
+    if (LinearOutput > 0.5) {
+        float3 filmDensity = density * NormalRange;
+        float toeDensity = 0.60 + 0.62 * log10(0.25);
+        float3 straight = 0.18 * pow(10.0, (filmDensity - 0.60) / 0.62);
+        float3 toe = sign(filmDensity) * 0.045 * pow(max(abs(filmDensity) / toeDensity, 1e-12),
+            toeDensity * log(10.0) / 0.62);
+        Destination[coordinate] = float4(
+            filmDensity < toeDensity ? toe : straight, source.a);
+        return;
+    }
     // `pow(0, shape)` 는 NaN 위험이라 CPU 와 같이 하한 1e-12 로 같은 극한값을 보장합니다.
     float3 argument = pow(max(ResponseRate * abs(density), 1e-12), ResponseShape);
     float3 y = ResponseYCeiling - (ResponseAmplitude * exp(-argument));

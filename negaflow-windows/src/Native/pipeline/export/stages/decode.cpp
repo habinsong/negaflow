@@ -36,6 +36,7 @@ std::optional<DevelopExportOutcome> decode_source(
     const PreviewTarget* preview,
     std::shared_ptr<const negaflow::imaging::WorkingImage>* const shared) noexcept {
     tracker.begin(DevelopExportStage::decode, cost_of(decode_cost, true));
+    const bool scene_linear_raw = request.film_polarity == FilmPolarity::negative && !is_tiff_source(request.source);
     if (request.input_gamma.mode != 0U && !is_tiff_source(request.source)) {
         return fail(DevelopExportStage::decode, "unsupported_input_gamma_source");
     }
@@ -72,7 +73,7 @@ std::optional<DevelopExportOutcome> decode_source(
     // 잠금은 참조를 꺼낼 때만 잡습니다. 277MB 복사를 잠금 안에서 하면 다른 스레드가
     // 그동안 통째로 멈춥니다 — 참조를 들고 있으므로 복사 중에 해제되지 않습니다.
     if (const std::shared_ptr<const negaflow::imaging::WorkingImage> cached =
-            decoded_source_try_take(request.source, observed.before.observation, box_width, box_height, request.input_gamma)) {
+            decoded_source_try_take(request.source, observed.before.observation, box_width, box_height, request.input_gamma, scene_linear_raw)) {
         try {
             if (shared != nullptr) {
                 *shared = cached;
@@ -167,6 +168,7 @@ std::optional<DevelopExportOutcome> decode_source(
             standard_control.max_output_height = box_height;
             standard_control.prefer_speed = true;
         }
+        standard_control.scene_linear_raw = scene_linear_raw;
         const negaflow::imageio::WicStandardImageDecodeResult decoded =
             negaflow::imageio::decode_standard_image_with_wic(
                 request.source,
@@ -257,7 +259,7 @@ std::optional<DevelopExportOutcome> decode_source(
             observed.before.observation,
             box_width,
             box_height,
-            stored, request.input_gamma);
+            stored, request.input_gamma, scene_linear_raw);
         if (shared != nullptr) {
             *shared = std::move(stored);
         }

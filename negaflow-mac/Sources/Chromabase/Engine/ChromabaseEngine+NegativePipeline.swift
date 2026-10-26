@@ -16,7 +16,11 @@ extension ChromabaseEngine {
             measurements: &measurements
         )
         img = ColorModel.apply(to: img, params: params)
-        img = ToneMapper.applyExposure(to: img, stops: params.exposure, filmType: params.filmType)
+        if NegativeLinearResponse.applies(params) {
+            img = NegativeLinearResponse.output(img, exposure: params.exposure, filmType: params.filmType)
+        } else {
+            img = ToneMapper.applyExposure(to: img, stops: params.exposure, filmType: params.filmType)
+        }
         img = ToneMapper.applyToneCurves(to: img, params: params, region: measurements.analysisRegion)
         return img
     }
@@ -37,20 +41,25 @@ extension ChromabaseEngine {
         let fb = params.baseEstimationMode == .auto
             ? params.baseScale.applied(to: reference) : reference
         prepareInputGammaStatistics(base: fb, preset: preset, params: params, measurements: &measurements)
-        if let preset {
+        if NegativeLinearResponse.applies(params) {
+            let stats = NegativeLinearResponse.stats(base: fb, preset: preset, filmType: params.filmType)
+            measurements.inversionStats = stats
+            img = NegativeLinearResponse.invert(img, stats: stats, filmType: params.filmType)
+        } else if let preset {
             img = NegativeInversion.apply(
                 to: img, base: fb, preset: preset,
                 filmType: params.filmType, measurements: &measurements
             )
-        } else {
-            // auto 경로: 이 네거티브가 실제 사용한 per-channel 밀도 범위를 측정해 정규화한다
-            // (고정 dmax 는 얇은 실스캔을 압축·어둡게·탈색·캐스트로 만든다). 노출은 보존된다.
+        } else if params.developTarget.isScannerEmulation || params.developTarget == .rescue {
+            // Explicit scanner/recovery targets retain their scene analysis.
             img = NegativeInversion.applySceneRanged(
                 to: img, base: fb, filmType: params.filmType, measurements: &measurements
             )
+        } else {
+            img = NegativeInversion.apply(to: img, base: fb, filmType: params.filmType)
         }
         // 장면 적응(자동) 보정은 opt-in — 명시적으로 켰을 때만 실행한다.
-        // 반전(밀도 정규화)은 결정적이므로 색이 base/프리셋만으로 예측 가능해진다.
+        // MAIN/PRINT inversion uses fixed calibration; explicit targets may analyze the scene.
         // 측정 도메인은 **입력 태그와 무관하게 linear** — 반전 후 작업공간 값은 항상
         // linear 이고 보정(CIColorMatrix 스트레치/linear cube 감마)도 linear 값에 적용된다.
         // 과거처럼 입력 태그 유래 sampleColorSpace(sRGB 태그 가져오기 → sRGB)로 percentile/
@@ -59,12 +68,13 @@ extension ChromabaseEngine {
         let measureSpace = CGColorSpace(name: CGColorSpace.linearSRGB) ?? sampleColorSpace
         let region = measurements.analysisRegion
         if params.autoLevels {
-            // outputBlack: 반전 토우 플로어(paper black) 보존 — 0 이면 p0.5 블랙포인트가
-            // 최암부 빈 0 벽을 다시 만든다(히스토그램 양끝 폭발의 재발 경로).
+            // MAIN/PRINT targets are specified after the output curve; map them back
+            // to scene-linear values before applying the requested level stretch.
+            let fixed = NegativeLinearResponse.applies(params)
             img = AutoLevels.apply(to: img, sampleColorSpace: measureSpace,
-                                   outputWhite: 0.95,
-                                   outputBlack: NegativeInversion.toeFloor,
-                                   region: region,
+                                   outputWhite: fixed ? NegativeLinearResponse.inputLuminance(forOutput: 0.95, filmType: params.filmType) : 0.95,
+                                   outputBlack: fixed ? NegativeLinearResponse.inputLuminance(forOutput: NegativeInversion.toeFloor, filmType: params.filmType) : NegativeInversion.toeFloor,
+                                   region: region, sceneLinearOutput: fixed,
                                    points: &measurements.autoLevelsPoints)
         }
         if params.autoNeutralBalance {
@@ -148,11 +158,10 @@ extension ChromabaseEngine {
         measurements: inout DevelopSceneMeasurements
     ) {
         if params.inputGamma != .automatic || measurements.inputGammaReferenceRange != nil {
-            // 수동 power와 함께 다시 측정한 Dmax로 나누면 분자·분모의 감마가 상쇄됩니다.
-            // 파일 경로는 원본 기본 해석의 범위, 파일 없는 API는 명목 물성 범위를 사용합니다.
+            // Fixed density units keep a manual transfer change from cancelling through resampling.
             var stats = NegativeInversion.genericStats(base: base, filmType: params.filmType)
-            stats.dmaxNorm = measurements.inputGammaReferenceRange
-                ?? preset?.dmaxNorm ?? stats.dmaxNorm
+            if params.filmType != .bwNegative, let preset { stats.dmaxNorm *= preset.relativeRangeFactor }
+            stats.dmaxNorm = measurements.inputGammaReferenceRange ?? stats.dmaxNorm
             measurements.inversionStats = stats
         }
     }
@@ -171,8 +180,7 @@ extension ChromabaseEngine {
                 for: image, base: base, preset: preset, filmType: filmType
             )
         } else {
-            stats = NegativeInversion.sampleStats(image, base: base, filmType: filmType)
-                ?? NegativeInversion.fallbackStats(base: base, filmType: filmType)
+            stats = NegativeInversion.genericStats(base: base, filmType: filmType)
         }
         return DevelopDebugMetrics(
             baseRGB: base.rgb,

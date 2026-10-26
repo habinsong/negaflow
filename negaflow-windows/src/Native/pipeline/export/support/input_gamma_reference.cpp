@@ -1,4 +1,5 @@
 #include "input_gamma_reference.h"
+#include "negaflow/core/negative_inversion.h"
 #include "export/stages/decode.h"
 #include "export/stages/invert.h"
 #include "export/support/outcome.h"
@@ -27,6 +28,18 @@ std::optional<DevelopExportOutcome> prepare_input_gamma_reference(
     const DevelopExportRequest& request, const DevelopRunControl& control, const ObservedSource& observed,
     std::optional<std::array<float, 3>>& range) noexcept {
     if (request.input_gamma.mode == 0U || request.film_polarity == FilmPolarity::positive) { return {}; }
+    if (request.develop_target != DevelopTarget::noritsu && request.develop_target != DevelopTarget::sp3000 &&
+        request.develop_target != DevelopTarget::f135 && request.develop_target != DevelopTarget::hr &&
+        request.develop_target != DevelopTarget::rescue) {
+        const auto response = request.negative.film_type == imaging::NegativeFilmType::black_and_white
+            ? core::black_and_white_negative_print_response() : core::color_negative_print_response();
+        range = std::array<float, 3>{response.normal_range, response.normal_range, response.normal_range};
+        if (request.base_estimation_mode == NegativeBaseEstimationMode::preset && request.film_stock_preset &&
+            request.negative.film_type != imaging::NegativeFilmType::black_and_white) {
+            for (std::size_t c = 0; c < 3; ++c) { (*range)[c] *= request.film_stock_preset->range_factor[c]; }
+        }
+        return {};
+    }
     try {
         const auto preset = request.base_estimation_mode == NegativeBaseEstimationMode::preset
             ? request.film_stock_preset : std::nullopt;
@@ -62,6 +75,9 @@ std::optional<DevelopExportOutcome> prepare_input_gamma_reference(
         PreviewProxyHint hint;
         if (auto failed = resolve_negative_base(baseline, image, hint)) { return failed; }
         negaflow::imaging::ManualNegativeDevelopParameters parameters{hint.dmin, baseline.negative.film_type};
+        parameters.adaptive_density = request.develop_target == DevelopTarget::noritsu ||
+            request.develop_target == DevelopTarget::sp3000 || request.develop_target == DevelopTarget::f135 ||
+            request.develop_target == DevelopTarget::hr || request.develop_target == DevelopTarget::rescue;
         parameters.use_preset_response = hint.use_preset_response;
         parameters.preset_range_factor = hint.preset_range_factor;
         auto measured = negaflow::imaging::develop_manual_negative(std::move(image), parameters);

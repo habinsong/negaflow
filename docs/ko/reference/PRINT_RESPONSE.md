@@ -1,105 +1,77 @@
-# 고정 인화 응답
+# 고정 네거티브 응답
 
 [문서 홈](../README.md)
 
-구현 위치:
+## MAIN/PRINT
 
-- Swift: `Sources/Chromabase/Film/NegativeInversion.swift`의 `PrintResponse`
-- Metal: `negativeInvert` 커널
-- 고정 검사: `NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
+`fixed-density-linear-v6`는 스캐너 프로파일이 없는 네거티브 `MAIN/PRINT`에 적용됩니다. 밀도 보정값은 고정입니다. 베이스와 설정이 같으면 주변 화소·크롭·프레임 히스토그램이 바뀌어도 같은 투과율의 반전 결과는 같습니다. 장면별 vibrance는 적용하지 않습니다.
 
-## 곡선
-
-필름의 특성곡선은 노출과 밀도의 관계를 검정점, 직선부, 숄더로 나눠 설명합니다. negaflow는 밀도 영역의 숄더를 stretched exponential 곡선으로 근사합니다.
+`B`는 측정한 필름 베이스 투과율입니다. `f`는 일반 경로에서 1이고 필름을 선택하면 해당 필름의 고정 상대 범위 계수입니다. `0.62`는 일반 필름 감마 기준, `0.60D`는 그 모델의 회색 밀도 기준입니다. 모든 필름·스캐너의 실측값을 뜻하지 않습니다. 제조사의 Status M 밀도가 스캐너 RGB를 직접 규정하지도 않습니다.
 
 ```math
-\begin{aligned}
-D &= \log_{10}\left(\frac{D_{\min}}{T}\right) \\
-d &= \frac{D}{d_{\max}} \\
-\log_{10}(P) &= y_{\mathrm{ceil}} - A \exp\left(-(r d)^s\right)
-\end{aligned}
+D_c = \log_{10}(B_c / \max(T_c,10^{-5}))
 ```
-
-식의 `A`, `r`, `s`는 코드의 `amplitude`, `rate`, `shape`를 짧게 쓴 기호입니다. `d_{\max}`는 `dmaxNorm`입니다.
-
-- `D`: 필름 베이스를 뺀 광학 밀도
-- `d`: 사용할 밀도 범위로 나눈 값
-- `P`: 선형 출력 밝기
-
-곡선은 전 구간에서 계속 증가합니다. `d ≥ 0`일 때 출력은 `[baseToe, ceiling)` 안에 있습니다. 베이스보다 밝은 백라이트나 퍼포레이션처럼 `d < 0`인 값도 0으로 잘라내지 않고 유한한 양수로 이어집니다.
 
 ```math
-y(-|d|) = 2\log_{10}(P_{\mathrm{toe}}) - y(|d|)
+q_c = D_c/f_c,\quad k=0.045,\quad d_t=0.60+0.62\log_{10}(k/0.18),\quad p=d_t\ln(10)/0.62
 ```
-
-역함수도 닫힌 식으로 구할 수 있습니다. 합성 네거티브를 만들고 왕복 검사할 때 씁니다.
 
 ```math
-d = \frac{\left[\ln\left(\frac{A}{y_{\mathrm{ceil}}-\log_{10}(P)}\right)\right]^{1/s}}{r}
+E_c=\begin{cases}
+k\,\operatorname{sgn}(q_c)(|q_c|/d_t)^p,&q_c<d_t\\
+0.18\times10^{(q_c-0.60)/0.62},&q_c\ge d_t
+\end{cases}
 ```
 
-## 네 기준점
+필름 밀도의 토우는 직선부와 값·기울기가 이어집니다. 미노광 베이스는 WB 전의 장면 노출 0으로 반전합니다. 이 거듭제곱 토우는 일반 설계이며 필름별 실측 곡선이 아닙니다. 베이스 근처에서는 밀도 잡음도 확대될 수 있습니다.
 
-곡선 계수를 저장하지 않고 다음 값에서 계산합니다.
+자동 보정은 사용자가 켰을 때만 적용합니다. 자동 색상을 켜면 출력 토우 전의 필름 베이스를 중립축 표본에서 제외합니다. 장면의 강한 캐스트에는 수동 WB가 필요할 수 있습니다.
 
-| 기준점 | 컬러 | 흑백 | 쓰임 |
-|---|---:|---:|---|
-| `P(0)` 베이스 검정점 | 0.001 | 0.0005 | 8-bit 코드 0에 붙지 않게 함 |
-| `P(midFraction)` 중간 회색 | 0.18 | 0.18 | 18% 회색 |
-| `P(1)` 흰색 | 0.70 | 0.85 | 측정한 최농부의 밝기 |
-| `P(∞)` 천장 | 0.90 | 0.98 | 반사광 여유 |
+## 출력 곡선
 
-`midFraction`은 `0.60D / 1.55D`, 약 `0.387`입니다.
-
-계수 계산:
+채널 WB와 노출은 장면 선형값 `E`에 적용합니다. WB 뒤에 같은 고정 출력 곡선을 채널별로 적용합니다. 중간 구간은 RGB 비율을 유지하며 숄더에서는 명부의 색 비율이 달라집니다. 중간 구간 `0.045...0.70`은 항등입니다. `0.045` 아래에서는 작은 검정 바닥값을 더합니다. 컬러의 `b`는 `0.001`, 흑백은 `0.0005`입니다. `0.70` 위의 유리함수 숄더는 1에 접근합니다. 두 접점의 기울기는 1입니다. 필름 토우의 역변환과 출력 검정 처리는 별도 단계입니다.
 
 ```math
-\begin{aligned}
-y_{\mathrm{ceil}} &= \log_{10}(P_{\mathrm{ceil}}) \\
-A &= y_{\mathrm{ceil}} - \log_{10}(P_{\mathrm{toe}}) \\
-r_X &= \ln\left(\frac{A}{y_{\mathrm{ceil}}-\log_{10}(X)}\right) \\
-s &= \frac{\ln(r_{\mathrm{white}}/r_{\mathrm{mid}})}
-          {\ln(1/f_{\mathrm{mid}})} \\
-r &= r_{\mathrm{white}}^{1/s}
-\end{aligned}
+F(x)=x+b(1-x/0.045)^2\quad(0<x<0.045),\qquad F(x)=b\quad(x\le0)
 ```
 
-## 기본 밀도 범위
+자동 레벨은 출력 목표를 곡선의 역함수로 환산한 뒤 스트레치합니다. 출력 검정은 `0.003`, 화이트는 `0.95`가 목표입니다. 자동 색상은 장면 선형값 `0.004` 이하의 채널을 가진 표본을 제외합니다. 미노광 베이스는 0이므로 별도 경계값 없이 제외됩니다. 장면 분석을 하지 않는 타깃의 입력 감마 기준 범위는 고정입니다. 장면 선형 네거티브의 최소 유효 범위는 고정 노출값 0.04 대신 측정 화이트의 4%로 판단합니다.
 
-`normalRange`는 정상 노출 장면이 쓰는 밀도 범위입니다. 베이스를 측정하지 못했거나 장면 대비가 매우 낮을 때만 주로 영향을 줍니다.
+필름 역변환에는 `1.8D` 상한이 없습니다. 투과율 `1e-5` 하한은 로그 계산을 보호합니다. RGB gamut 매핑은 출력 경계에서 처리합니다. 이 단계의 각 채널은 검정 바닥값과 1 사이에 놓입니다. 이후 수동 보정은 이 범위를 넘길 수 있습니다.
 
-```math
-\begin{aligned}
-\operatorname{normalRange}(\mathrm{color}) &= 0.62 \times 2.5 = 1.55\,D \\
-\operatorname{normalRange}(\mathrm{B\&W}) &= 0.62 \times 3.5 = 2.17\,D
-\end{aligned}
-```
+## 다른 타깃
 
-- `0.62`: C-41 특성곡선 직선부 기울기의 근삿값
-- 컬러 `2.5`: 약 7⅓스탑의 확산 휘도 범위와 밝은 영역 여유
-- 흑백 `3.5`: 더 긴 직선부를 쓰는 흑백 인화 관례
-- `0.60D`: 정상 노출 장면의 중간 회색 밀도
+명시적으로 선택한 스캐너·EXPIRED 타깃은 장면 분석과 기존 `shoulder-print-response-v4`를 사용합니다. 기존 고정 primitive도 호환용으로 유지합니다. 장면 분석에도 공통 1.8D 상한은 두지 않습니다. 필름 프리셋은 고정 상대 계수를 사용하고 매 프레임을 자동 정규화하지 않습니다.
 
-`applySceneRanged`는 프레임의 채널별 사용 밀도 범위를 잽니다.
+필름 RAW는 API가 지원하는 출력 톤을 끕니다. macOS의 scene-linear 입력은 전역·로컬 톤, shadow bias와 gamut 매핑을 끕니다. Windows 필름 RAW는 LibRaw의 선형 전달 함수를 사용하고 디지털 사진 렌더링과 구분합니다. 이 설정으로 센서와 필름 사이의 실측 색 특성이 생기거나 색행렬 없는 RAW 출력이 보장되지는 않습니다.
 
-## v4에서 바뀐 점
+## 검증과 출처
 
-이전 방식은 세 구간으로 나뉜 함수와 고정 프리셋을 썼습니다. v4는 한 곡선과 네 기준점으로 바꿨습니다. 구간 경계가 없고 모든 값의 유도를 코드와 테스트에서 확인할 수 있습니다.
+독립적인 직선부 필름 모형, 서로 다른 배경의 같은 패치, 중립 계조의 WB, 고밀도 명부를 검사합니다. 합성 회귀는 실제 필름의 색 정확도를 입증하지 않습니다. 기존 레시피는 수정한 알고리즘으로 렌더링하며 저장된 파라미터와 원본은 유지합니다. macOS 렌더러 식별자와 썸네일 접미사도 새 결과를 구분합니다.
 
-이전 결과와의 차이:
+수식은 이 저장소에서 직접 구현했습니다. darktable·RawTherapee·NegPy의 구현 코드는 가져오지 않았습니다.
 
-- 컬러 중간·밝은 영역, 정규화 밀도 0.3~1.1: ±0.05스탑 이내
-- 컬러 깊은 어두운 영역, 0.1~0.2: 약 -0.2스탑
-- 컬러 베이스 검정점: 약 +0.25스탑
-- 흑백: 어두운 영역 약 -0.4스탑, 중간 영역 약 +0.1스탑
-- NORITSU/FUJI의 중간 회색 0.18 기준점은 유지
+## 합성 입력 전후 측정
 
-## 참고 자료와 범위
+기존 v4 primitive에 1.8D 범위 제한과 자동 vibrance를 되살려 원래 기본 경로를 재구성했습니다. 고정 베이스 하나를 사용해 밀도 `(0.48, 0.68, 0.70)`인 같은 패치를 네 배경에서 비교합니다. 레딧의 18컷 시험을 재현한 결과는 아닙니다. 계조와 WB 시험에는 부드러운 토우를 가진 별도의 이상적 필름 모형을 씁니다. 실제 필름의 정확도를 입증하지는 않습니다.
 
-검정점, 직선부, 숄더와 감마라는 틀은 공개된 사진 감광학에서 가져왔습니다. 이 문헌의 곡선 계수를 복사하지 않았습니다. negaflow의 계수는 위 네 기준점에서 따로 계산합니다.
+| 지표 | 원래 코드 | 첫 수정(v5) | 재검토(v6) |
+|---|---:|---:|---:|
+| 프레임 간 L* 범위 | 40.49 | 0 | 0 |
+| 프레임 간 b* 범위 | 35.22 | 0 | 0 |
+| −3 EV의 국소 대비 | 1.57 | 2.17 | 0.97 |
+| WB 후 중립 계조의 최대 C* | 8.89 | 0.99 | <0.001 |
 
-- [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)
-- [Hurter–Driffield Characteristic Curve](https://studyguides.com/study-methods/overview/cmpanf83znm1201neitjb4waw)
-- [RA-4 용지 비교](https://tinker.koraks.nl/photography/on-a-color-mission-comparing-two-ra4-color-papers/)
+v5와 v6는 같은 순방향 토우 모형으로 비교했습니다. 암부 국소 대비가 1에 가까우면 입력 한 스톱의 차이가 출력에서도 약 한 스톱으로 남습니다. L*와 C*는 D50 Lab입니다. 고정 베이스 패치의 색조는 남습니다. 일관성이 임의 밀도의 중립색을 뜻하지는 않습니다. `NEGAFLOW_RESPONSE_COMPARISON`에 JSON 출력 경로를 지정해 `FixedNegativeResponseTests`를 실행하면 측정값이 저장됩니다.
 
-RA-4 자료에 알려진 대비 범위를 직접 쓰지 않습니다. 현재 곡선의 대비는 네 기준점에서 나온 `shape`가 정합니다.
+## 포함된 데모 롤 검사
+
+`Roll_Perforation.tiff`에서 검출한 18컷도 비교했습니다. 두 반전 방식에 같은 보정된 롤 베이스를 고정했습니다. 동일 밀도 패치의 L* 범위는 21.48에서 <0.001로, b* 범위는 30.94에서 <0.001로 줄었습니다. 기존 파랑 1.8D 제한은 18/18컷에 걸렸습니다. 댓글의 시험 방식을 따른 비교이며 상대방의 정확한 설정을 재현한 결과는 아닙니다.
+
+이 검사에서 별도의 베이스 추정 오류를 찾았습니다. 백라이트와 필름이 섞인 경계가 필름 측정값 `(0.354, 0.109, 0.057)`을 `(0.570, 0.510, 0.364)`로 바꿨습니다. 복구와 엔벌로프 단계는 두 마스크 색도 축에서 광원으로 보이는 교체값을 거절합니다. 출력 곡선도 WB 뒤에 채널별로 적용합니다. 파랑 값 하나가 극단적으로 커져도 다른 채널의 휘도 매핑을 끌고 가지 않습니다. 이 롤에는 실측 색 기준이 없습니다. 일관성과 출력 범위 검사는 색 정확도의 검증과 구분합니다. `NEGAFLOW_RESPONSE_ROLL_DIR`에 출력 폴더를 지정하고 `testBundledRollFrameConsistency`를 실행하면 이미지와 JSON을 저장합니다.
+
+- [Kodak H-740](https://www.kodak.com/content/products-brochures/Film/Basic-Photographic-Sensitometry-Workbook.pdf)
+- [Kodak VISION3 scanning](https://www.kodak.com/content/products-brochures/Film/Scanning-Recommendations-for-Extended-Dynamic-Range-Camera-Films-EN.pdf)
+- [Apple RAW linear processing](https://developer.apple.com/videos/play/wwdc2021/10160/)
+- [Apple RAW tone](https://developer.apple.com/documentation/coreimage/cirawfilter/localtonemapamount)
+- [LibRaw parameters](https://www.libraw.org/docs/API-datastruct-eng.html)

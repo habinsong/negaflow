@@ -610,6 +610,10 @@ WicStandardImageDecodeResult decode_standard_image_with_wic_only(
             return result;
         }
         if (is_raw) {
+            if (control.scene_linear_raw) {
+                result.status = WicStandardImageDecodeStatus::raw_development_failed;
+                return result; // Route film RAW through the explicit linear LibRaw contract.
+            }
             const WicStandardImageDecodeStatus raw_status =
                 wic_detail::configure_raw_development(factory.Get(), frame.Get(), path);
             if (raw_status != WicStandardImageDecodeStatus::ok) {

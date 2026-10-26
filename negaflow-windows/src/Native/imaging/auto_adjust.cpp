@@ -40,7 +40,8 @@ namespace {
 // cold even when it does not.
 constexpr double white_balance_strength = 0.85;
 // 슬라이더 전 범위(±4)가 아니라 잔차 캐스트 상한(±1 = 예전 슬라이더 끝, R/B ±0.525 스톱)까지만
-// 움직입니다. 반전이 채널 정규화(WB 의 대부분)를 이미 하므로 여기서 다루는 것은 잔차입니다.
+// 움직입니다. 고정 반전은 WB를 자동으로 맞추지 않습니다. 근거가 부족한 자동 추정은 제한하고
+// 큰 캐스트는 수동 WB로 맞춥니다.
 // 휘도대별 중립축 증거로 지배색 장면의 폭주가 줄어 ±0.6 에서 넓혔습니다(macOS `wbClamp`).
 constexpr double white_balance_clamp = 1.0;
 // Below roughly 1.5% channel-ratio error the frame is already neutral; moving it would

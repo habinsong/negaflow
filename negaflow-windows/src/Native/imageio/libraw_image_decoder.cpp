@@ -183,8 +183,8 @@ private:
 /// sRGB 색공간으로 내놓습니다. LibRaw 도 같게 맞춥니다.
 void configure_as_shot(const Api& functions, void* const handle) noexcept {
     functions.set_output_bps(handle, 16);
-    // 1 = sRGB primaries. 다운스트림이 `srgb_encoded` 로 해석하므로 전달 함수도 sRGB 여야
-    // 합니다. LibRaw 기본값 0.45/4.5 는 BT.709 라 그대로 두면 밝기가 어긋납니다.
+    // 1 = sRGB primaries. 사진 렌더링의 기본 전달 함수는 sRGB입니다.
+    // 필름 scene-linear 디코드는 호출부에서 gamma를 (1, 1)로 바꾸고 선형 태그를 기록합니다.
     functions.set_output_color(handle, 1);
     functions.set_gamma(handle, 0, 1.0F / 2.4F);
     functions.set_gamma(handle, 1, 12.92F);
@@ -366,6 +366,10 @@ LibRawDecodeResult decode_raw_with_libraw(
         }
 
         configure_as_shot(functions, handle.get());
+        if (control.scene_linear_raw) {
+            functions.set_gamma(handle.get(), 0, 1.0F);
+            functions.set_gamma(handle.get(), 1, 1.0F);
+        }
         // 프리뷰는 보간을 빠른 것으로 바꿉니다. LibRaw 기본은 AHD(3) 이고, 0 은 선형
         // 보간입니다 - 프리뷰 프록시는 어차피 줄여서 보는 그림이라 이 차이가 화면에서
         // 드러나지 않고, 정착본은 기본 보간을 그대로 씁니다.
@@ -430,6 +434,9 @@ LibRawDecodeResult decode_raw_with_libraw(
             return result;
         }
         result.reduced_for_preview = reduced.reduced;
+        if (control.scene_linear_raw) {
+            result.image.untagged_rgb_transfer = UntaggedRgbTransfer::linear_scanner;
+        }
 
         if (stop_token.stop_requested()) {
             std::vector<std::uint16_t>{}.swap(result.image.samples);

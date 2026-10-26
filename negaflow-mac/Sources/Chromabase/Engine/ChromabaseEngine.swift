@@ -306,16 +306,22 @@ public final class ChromabaseEngine: @unchecked Sendable {
             ? params.baseScale.applied(to: reference) : reference
 
         prepareInputGammaStatistics(base: fb, preset: preset, params: params, measurements: &state)
-        let stats = negativeDebugMetrics(
-            for: img, base: fb, preset: preset, filmType: params.filmType, measured: state.inversionStats
-        )
-        if let preset {
+        if NegativeLinearResponse.applies(params) {
+            let fixed = NegativeLinearResponse.stats(base: fb, preset: preset, filmType: params.filmType)
+            state.inversionStats = fixed
+            img = NegativeLinearResponse.invert(img, stats: fixed, filmType: params.filmType)
+        } else if let preset {
             img = NegativeInversion.apply(
                 to: img, base: fb, preset: preset, filmType: params.filmType, measurements: &state
             )
-        } else {
+        } else if params.developTarget.isScannerEmulation || params.developTarget == .rescue {
             img = NegativeInversion.applySceneRanged(to: img, base: fb, filmType: params.filmType, measurements: &state)
+        } else {
+            img = NegativeInversion.apply(to: img, base: fb, filmType: params.filmType)
         }
+        let stats = negativeDebugMetrics(
+            for: img, base: fb, preset: preset, filmType: params.filmType, measured: state.inversionStats
+        )
 
         var frames = [
             DevelopDebugFrame(stage: .afterInversion, image: img.cropped(to: extent), metrics: stats),
@@ -324,16 +330,18 @@ public final class ChromabaseEngine: @unchecked Sendable {
         // 측정 도메인은 본 파이프라인과 동일하게 입력 태그 무관 linear 고정.
         let measureSpace = CGColorSpace(name: CGColorSpace.linearSRGB) ?? sampleColorSpace
         if params.autoLevels {
+            let fixed = NegativeLinearResponse.applies(params)
             img = AutoLevels.apply(to: img, sampleColorSpace: measureSpace,
-                                   outputWhite: 0.95,
-                                   outputBlack: NegativeInversion.toeFloor,
-                                   region: region, points: &state.autoLevelsPoints)
+                                   outputWhite: fixed ? NegativeLinearResponse.inputLuminance(forOutput: 0.95, filmType: params.filmType) : 0.95,
+                                   outputBlack: fixed ? NegativeLinearResponse.inputLuminance(forOutput: NegativeInversion.toeFloor, filmType: params.filmType) : NegativeInversion.toeFloor,
+                                   region: region, sceneLinearOutput: fixed, points: &state.autoLevelsPoints)
         }
         frames.append(DevelopDebugFrame(stage: .afterAutoLevels, image: img.cropped(to: extent), metrics: stats))
 
         if params.autoNeutralBalance {
             img = NeutralBalance.apply(to: img, sampleColorSpace: measureSpace,
-                                       region: region, correction: &state.neutralBalanceCorrection)
+                                       region: region,
+                                       correction: &state.neutralBalanceCorrection)
         }
         if params.developTarget.isScannerEmulation {
             img = ScannerTargetGrade.apply(to: img, target: params.developTarget, params: params,
@@ -355,7 +363,11 @@ public final class ChromabaseEngine: @unchecked Sendable {
             img = ScannerProfileGrade.apply(to: img, profile: profile)
         }
         img = ColorModel.apply(to: img, params: params)
-        img = ToneMapper.applyExposure(to: img, stops: params.exposure, filmType: params.filmType)
+        if NegativeLinearResponse.applies(params) {
+            img = NegativeLinearResponse.output(img, exposure: params.exposure, filmType: params.filmType)
+        } else {
+            img = ToneMapper.applyExposure(to: img, stops: params.exposure, filmType: params.filmType)
+        }
         img = ToneMapper.applyToneCurves(to: img, params: params, region: region)
         frames.append(DevelopDebugFrame(stage: .finalTone, image: img.cropped(to: extent), metrics: stats))
         return frames

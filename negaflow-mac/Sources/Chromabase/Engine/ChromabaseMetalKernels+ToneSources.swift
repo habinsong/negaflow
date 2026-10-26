@@ -4,6 +4,29 @@ import CoreImage
 // 커널마다 독립 Metal 라이브러리로 컴파일된다(ChromabaseMetalKernels 참고).
 extension ChromabaseMetalKernels {
     static let toneKernelSources: [MetalKernelSource] = [
+        MetalKernelSource(name: "negativeLinear", body: """
+    [[stitchable]] float4 negativeLinear(coreimage::sample_t src, float3 base,
+                                        float3 scale, float grayDensity, float toeDensity, float knee) {
+        float3 density = log10(base / max(src.rgb, 1e-5)) * scale;
+        float3 straight = 0.18 * pow(10.0, density - grayDensity);
+        float3 toe = sign(density) * knee * pow(max(abs(density) / toeDensity, 1e-12), toeDensity * log(10.0));
+        return float4(select(straight, toe, density < float3(toeDensity)), src.a);
+    }
+    """),
+        MetalKernelSource(name: "negativeOutputTone", body: """
+    [[stitchable]] float4 negativeOutputTone(coreimage::sample_t src, float gain,
+                                            float shadowKnee, float highlightKnee, float black) {
+        float3 rgb = max(src.rgb * gain, float3(0.0));
+        float3 distance = 1.0 - rgb / shadowKnee;
+        float3 toe = rgb + black * distance * distance;
+        float room = 1.0 - highlightKnee;
+        float3 delta = max(rgb - highlightKnee, float3(0.0));
+        float3 shoulder = highlightKnee + room * delta / (delta + room);
+        float3 mapped = select(rgb, toe, rgb < float3(shadowKnee));
+        mapped = select(mapped, shoulder, rgb > float3(highlightKnee));
+        return float4(mapped, src.a);
+    }
+    """),
         MetalKernelSource(name: "colorMixerHSL", body: """
     // Color Mixer (HSL) — 8색 각각 hue/sat/lum. hueA/B = 빨강~자홍 8밴드를 float4 2개로 묶음.
     [[stitchable]] float4 colorMixerHSL(

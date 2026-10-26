@@ -88,12 +88,19 @@ final class ScannerRelativeIT8BenchmarkTests: XCTestCase {
                 patch.id
             )
 
-            for measurement in [patch.main, patch.noritsu, patch.fuji] {
+            for (targetIndex, measurement) in [patch.main, patch.noritsu, patch.fuji].enumerated() {
                 let rgb = try XCTUnwrap(measurement.linearRGB, patch.id)
                 let lab = try XCTUnwrap(measurement.labD50, patch.id)
                 let delta = try XCTUnwrap(measurement.deltaE00FromReference, patch.id)
                 XCTAssertTrue(rgb.allChannelsFinite, patch.id)
-                XCTAssertTrue(rgb.channels.allSatisfy { $0 >= -0.000_001 && $0 <= 1.000_001 }, patch.id)
+                XCTAssertTrue(rgb.channels.allSatisfy { $0 >= -0.000_001 }, patch.id)
+                if targetIndex == 0 {
+                    // MAIN bounds luminance while retaining extended RGB ratios.
+                    let y = 0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b
+                    XCTAssertLessThanOrEqual(y, 1.000_001, patch.id)
+                } else {
+                    XCTAssertTrue(rgb.channels.allSatisfy { $0 <= 1.000_001 }, patch.id)
+                }
                 XCTAssertTrue([lab.l, lab.a, lab.b, delta].allSatisfy(\.isFinite), patch.id)
                 XCTAssertFalse(
                     measurement.workingRangeFlags.contains(.containsNonFiniteChannel),
@@ -130,7 +137,6 @@ final class ScannerRelativeIT8BenchmarkTests: XCTestCase {
 
         let extended = report.summary.extendedRange
         XCTAssertEqual(extended.inputExcursionPatchCount, 146)
-        XCTAssertEqual(extended.mainExcursionDirectionPreservedPatchCount, 0)
         XCTAssertEqual(extended.noritsuExcursionDirectionPreservedPatchCount, 0)
         XCTAssertEqual(extended.fujiExcursionDirectionPreservedPatchCount, 0)
 

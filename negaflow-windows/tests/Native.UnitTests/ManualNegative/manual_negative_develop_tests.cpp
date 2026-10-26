@@ -84,10 +84,11 @@ void test_manual_negative_development() {
         clamped.info.dmax_normalized == std::array<float, 3>{2.17F, 2.17F, 2.17F},
         "B&W generic density range is fixed");
 
-    const negaflow::imaging::ManualNegativeDevelopParameters scene_parameters{
+    negaflow::imaging::ManualNegativeDevelopParameters scene_parameters{
         {0.80F, 0.60F, 0.40F},
         negaflow::imaging::NegativeFilmType::color,
     };
+    scene_parameters.adaptive_density = true;
     const auto scene = negaflow::imaging::develop_manual_negative(
         make_scene_working_image(),
         scene_parameters);
@@ -107,13 +108,31 @@ void test_manual_negative_development() {
             scene.info.muted_scene_vibrance.amount == 0.5,
         "non-preset color scene runs muted-scene vibrance after inversion");
 
+    auto fixed_parameters = scene_parameters;
+    fixed_parameters.adaptive_density = false;
+    fixed_parameters.linear_output = true;
+    auto first_frame = make_scene_working_image();
+    auto second_frame = make_faded_scene_working_image();
+    const negaflow::core::Rgba32F patch{0.08F, 0.06F, 0.04F, 1.0F};
+    first_frame.pixels[first_frame.pixels.size() / 2U] = patch;
+    second_frame.pixels[second_frame.pixels.size() / 2U] = patch;
+    const auto first_fixed = negaflow::imaging::develop_manual_negative(std::move(first_frame), fixed_parameters);
+    const auto second_fixed = negaflow::imaging::develop_manual_negative(std::move(second_frame), fixed_parameters);
+    expect(first_fixed.status == negaflow::imaging::ManualNegativeDevelopStatus::ok &&
+        second_fixed.status == negaflow::imaging::ManualNegativeDevelopStatus::ok &&
+        pixels_equal(first_fixed.image.pixels[first_fixed.image.pixels.size() / 2U],
+                     second_fixed.image.pixels[second_fixed.image.pixels.size() / 2U]),
+        "fixed inversion renders the same patch identically across frame distributions");
+    expect(!first_fixed.info.muted_scene_vibrance.applied && !second_fixed.info.muted_scene_vibrance.applied,
+        "fixed inversion does not add scene vibrance");
+
     // 바랜 필름은 밀도 범위가 **진짜로** 좁습니다. 앞 판은 좁은 범위를 "측정 실패" 로 보고
     // `normal_range`(1.55, 고대비 가정) 로 돌아갔고, 그 가정이 사진을 검게 눌렀습니다 -
     // 1996 년 카메라 스캔에서 현상 결과가 정상의 13 분의 1 밝기로 나왔습니다. 좁은 것과
     // 실패한 것은 다릅니다. 잰 값을 그대로 씁니다.
     const auto faded = negaflow::imaging::develop_manual_negative(
         make_faded_scene_working_image(),
-        {{0.80F, 0.60F, 0.40F}, negaflow::imaging::NegativeFilmType::color});
+        scene_parameters);
     expect(
         faded.status == negaflow::imaging::ManualNegativeDevelopStatus::ok,
         "faded manual development succeeds");
@@ -131,9 +150,11 @@ void test_manual_negative_development() {
             faded.info.dmax_normalized[2] > 0.0F,
         "the faded blue layer keeps its own narrow range");
 
+    auto affine_parameters = scene_parameters;
+    affine_parameters.dmin = {0.80F, 0.80F, 0.80F};
     const auto affine_proxy_scene = negaflow::imaging::develop_manual_negative(
         make_affine_proxy_scene_image(),
-        {{0.80F, 0.80F, 0.80F}, negaflow::imaging::NegativeFilmType::color});
+        affine_parameters);
     const float affine_proxy_expected = std::log10(0.80F / 0.12F);
     expect(
         affine_proxy_scene.status == negaflow::imaging::ManualNegativeDevelopStatus::ok &&
@@ -148,17 +169,17 @@ void test_manual_negative_development() {
     const auto preset_scene = negaflow::imaging::develop_manual_negative(
         make_scene_working_image(),
         preset_parameters);
-    bool preset_follows_measured = preset_scene.status == negaflow::imaging::ManualNegativeDevelopStatus::ok;
+    bool preset_is_fixed = preset_scene.status == negaflow::imaging::ManualNegativeDevelopStatus::ok;
     for (std::size_t channel = 0U; channel < 3U; ++channel) {
-        preset_follows_measured = preset_follows_measured &&
+        preset_is_fixed = preset_is_fixed &&
             std::abs(preset_scene.info.dmax_normalized[channel] -
-                     scene.info.dmax_normalized[channel] * preset_parameters.preset_range_factor[channel]) < 1.0e-5F;
+                     1.55F * preset_parameters.preset_range_factor[channel]) < 1.0e-5F;
     }
-    // 필름 모드 = 자동 실측 범위 × 필름 상대 계수(macOS `testPresetChannelRangeIsMeasuredTimesFilmRelativeFactor`).
-    expect(preset_follows_measured, "preset multiplies the measured channel range by the stock's relative factor");
+    // Preset selection uses fixed stock-relative calibration on both platforms.
+    expect(preset_is_fixed, "preset multiplies fixed density units by the stock relative factor");
     expect(
-        preset_scene.info.muted_scene_vibrance.applied == scene.info.muted_scene_vibrance.applied,
-        "preset scene shares the auto path's muted-scene vibrance");
+        !preset_scene.info.muted_scene_vibrance.applied,
+        "preset selection does not enable scene vibrance");
 
     const auto scene_bw = negaflow::imaging::develop_manual_negative(
         make_scene_working_image(),

@@ -64,7 +64,14 @@ static_assert(std::numeric_limits<float>::is_iec559);
 struct NegativeInversionParameters final {
     std::array<float, 3> dmin;
     std::array<float, 3> dmax_normalized;
+    bool linear_output{false};
 };
+
+// Maps an output target back to scene-linear input; output must be in [0, 1).
+[[nodiscard]] double negative_output_tone_input(double output, bool monochrome) noexcept;
+
+// Fixed MAIN/PRINT output curve after linear WB/exposure; operates in place.
+[[nodiscard]] KernelStatus apply_negative_output_tone(ImageView image, float stops, bool monochrome) noexcept;
 
 [[nodiscard]] KernelStatus apply_negative_inversion(
     ConstImageView input,

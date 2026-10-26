@@ -14,8 +14,8 @@ public struct DevelopSceneMeasurements: Sendable, Equatable {
     /// 측정값의 입력이므로 영역이 바뀌면 호출부가 묶음째 버린다.
     public var analysisRegion: AnalysisRegion?
     var inputGammaReferenceRange: SIMD3<Double>?
-    /// 네거티브 반전이 쓰는 채널별 밀도 범위. auto 경로는 sampleStats, 프리셋 경로는
-    /// presetStats 결과가 들어간다 — 둘 다 장면 실측에 기대므로 같은 슬롯을 쓴다.
+    /// MAIN/PRINT use fixed density units. Explicit scanner/recovery targets may
+    /// store scene measurements here. A stock preset is fixed calibration.
     /// 베이스 추정 모드가 바뀌면 호출부가 묶음째 버린다.
     var inversionStats: NegativeInversion.ChannelStats?
     /// 뮤트한 장면 채도 보정량(sceneMeanSaturation 에서 유도).

@@ -104,29 +104,13 @@ Rien n'affirme que le chemin actuel Core Image et ColorSync fige l'intention de 
 
 ## Régression sur patchs synthétiques `MAIN`
 
-Le chemin par défaut du négatif couleur utilise `shoulder-print-response-v4`.
+`FixedNegativeResponseTests` / `fixed-density-linear-v6`
 
-```math
-\log_{10}(P) =
-y_{\mathrm{ceil}} -
-\mathrm{amplitude}\,
-\exp\left(-(\mathrm{rate}\,d)^{\mathrm{shape}}\right)
-```
+Les tests utilisent un modèle indépendant de la portion droite du film, une même plage sur plusieurs fonds, une gamme neutre pour la WB et des hautes lumières denses. Les régressions synthétiques ne prouvent pas la précision sur film réel. Les recettes existantes utilisent l’algorithme corrigé et conservent leurs paramètres et originaux. L’identifiant du moteur macOS et le suffixe des vignettes distinguent aussi le nouveau rendu.
 
-`d` est la densité optique après retrait de Dmin, puis normalisée. Les coefficients se calculent à partir de ces quatre points d'ancrage :
+Les équations ont été implémentées dans ce dépôt. Aucun code de darktable, RawTherapee ou NegPy n’a été copié.
 
-| Point d'ancrage | Valeur |
-|---|---:|
-| Point noir du support | `0.001` |
-| Gris moyen | `0.18` |
-| Blanc de la zone la plus dense mesurée | `0.70` |
-| Marge de lumière réfléchie | `0.90` |
-
-Sur cette courbe, `0D` vaut `0.001` en linéaire, `0.6D` vaut `0.18` et `3D` vaut `0.882836683855`. La sortie reste dans un intervalle ouvert, si bien que le noir et le blanc de la plage normale ne s'écrasent pas directement sur `0/255` en 8 bits.
-
-Ce n'est pas une formule d'auto-exposition basée sur l'histogramme de la scène, et cela ne représente la justesse d'aucun film ni d'aucune machine en particulier. Les équations sont dans [réponse de tirage fixe](PRINT_RESPONSE.md).
-
-`MainSyntheticIT8RoundTripTests` transforme les 264 patchs de référence en négatifs par la fonction réciproque, puis les ramène par tout le chemin `MAIN`. Lab D50/2° et `DeltaE00` sont contrôlés patch par patch. C'est une régression `syntheticModel`.
+[fixed-density-linear-v6](PRINT_RESPONSE.md)
 
 ## Régression de style relatif NORITSU/FUJI
 
