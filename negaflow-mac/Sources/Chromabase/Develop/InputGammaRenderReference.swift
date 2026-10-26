@@ -21,7 +21,7 @@ public enum InputGammaRenderReference {
         source: URL, params: DevelopParameters, measurements: inout DevelopSceneMeasurements
     ) throws {
         guard params.inputGamma != .automatic, params.filmType.requiresInversion else { return }
-        if !params.developTarget.isScannerEmulation && params.developTarget != .rescue {
+        if !params.developTarget.isScannerEmulation {
             let preset = params.baseEstimationMode == .preset
                 ? params.filmStockDminID.flatMap(FilmStockDminRegistry.find) : nil
             measurements.inputGammaReferenceRange = NegativeLinearResponse.stats(

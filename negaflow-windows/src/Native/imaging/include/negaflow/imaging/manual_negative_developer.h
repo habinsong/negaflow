@@ -37,8 +37,8 @@ struct ManualNegativeDevelopParameters final {
     std::optional<std::array<float, 3>> input_gamma_reference_range{};
     // 크롭한 사진 영역(원본 정규 좌표). 있으면 장면 밀도 범위와 뮤트 채도를 그 안에서만 잽니다.
     std::optional<AnalysisRegion> analysis_region{};
-    bool adaptive_density{false}; // Only explicit scanner/recovery targets.
-    bool linear_output{false};   // MAIN/PRINT; output tone follows WB/exposure.
+    bool adaptive_density{false}; // Only explicit scanner targets.
+    bool linear_output{false};   // Fixed base; output tone follows WB/exposure.
 };
 
 struct ManualNegativeDevelopInfo final {
@@ -59,7 +59,7 @@ struct ManualNegativeDevelopResult final {
 };
 
 // Manual inversion uses fixed density units and no scene vibrance. Explicit
-// scanner/recovery targets set adaptive_density. linear_output defers output tone
+// scanner targets set adaptive_density. linear_output defers output tone
 // until after WB/exposure. The owned image is transformed in place.
 [[nodiscard]] ManualNegativeDevelopResult develop_manual_negative(
     WorkingImage image,

@@ -1,7 +1,7 @@
 import CoreImage
 import Foundation
 
-/// Fixed sensitometric inversion for MAIN/PRINT. The generic gamma and gray density
+/// Fixed sensitometric inversion for MAIN/PRINT, custom targets and EXPIRED. The generic gamma and gray density
 /// are design references, not a measured characterization of a scanner or film roll.
 enum NegativeLinearResponse {
     static let version = "fixed-density-linear-v6"
@@ -9,8 +9,9 @@ enum NegativeLinearResponse {
     static let highlightKnee = 0.70
 
     static func applies(_ params: DevelopParameters) -> Bool {
-        (params.developTarget == .main || params.developTarget == .print)
-            && (params.scannerProfileID?.isEmpty ?? true)
+        !params.developTarget.isScannerEmulation
+            && (params.developTarget.isCustom || params.developTarget == .rescue
+                || (params.scannerProfileID?.isEmpty ?? true))
     }
 
     static func stats(base: FilmBase, preset: FilmStockDmin?, filmType: FilmType)

@@ -41,6 +41,8 @@ final class ToneMapperControlsTests: XCTestCase {
                 "gfProduct",
                 "highlightDesaturate",
                 "negativeInvert",
+                "negativeLinear",
+                "negativeOutputTone",
                 "noritsuTexture",
                 "parametricToneCurve",
                 "filmScanShrink",

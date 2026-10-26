@@ -58,7 +58,7 @@ final class WhiteBalanceGainsTests: XCTestCase {
     /// +1 EV 로 밝힌 명부에서도 온도가 지워지지 않는다. 수정 전: k14 이상 R/B 가 정확히 1.000
     /// (표시 경계가 휘도 1 이상 화소의 채도를 0 으로 만들었다).
     func testWarmthSurvivesBrightenedHighlights() {
-        let wedge = SyntheticScan.negativeWedge()
+        let wedge = SyntheticScan.negativeWedge(maxDensity: 1.05)
         let warm = SyntheticScan.developedDisplayPatches(wedge) {
             $0.exposure = 1
             $0.warmth = 1

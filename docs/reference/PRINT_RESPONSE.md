@@ -2,9 +2,11 @@
 
 [Docs home](../README.md)
 
-## MAIN/PRINT
+## MAIN/PRINT and composed targets
 
 `fixed-density-linear-v6` applies to negative `MAIN/PRINT` without a scanner profile. It uses a fixed density calibration. Changing the other pixels, crop or frame histogram does not change the inversion of a given transmittance with the same base and settings. No scene vibrance is applied.
+
+Custom targets and EXPIRED use the same fixed inversion as MAIN. Custom color is applied after calibration. EXPIRED applies a correction only when its evidence gate passes; without eligible evidence its output matches MAIN. A stale scanner profile is ignored for these targets.
 
 `B` is measured film-base transmittance. `f` is 1 for the generic response, or the selected stock's fixed relative range factor. `0.62` is the generic film-gamma reference and `0.60D` is its gray-density reference. These are design assumptions, not measured values for every stock or scanner. Manufacturer Status M densities do not directly characterize scanner RGB.
 
@@ -41,7 +43,7 @@ The inverse film stage has no `1.8D` cap. The `1e-5` transmission floor protects
 
 ## Other targets
 
-Explicit scanner and EXPIRED targets retain scene analysis and the legacy `shoulder-print-response-v4`. Its fixed primitive remains available for compatibility. Scene analysis has no universal 1.8D cap. A stock preset uses fixed relative factors; it does not silently normalize each frame.
+Explicit scanner targets retain scene analysis and the legacy `shoulder-print-response-v4`. Its fixed primitive remains available for compatibility. Scene analysis has no universal 1.8D cap. A stock preset uses fixed relative factors; it does not silently normalize each frame.
 
 Film RAW decoding disables decoder output tone where the API supports it. macOS disables global/local tone, shadow bias and gamut mapping for scene-linear input. Windows film RAW uses LibRaw with linear transfer; digital-photo rendering stays separate. This does not provide a measured sensor-to-film characterization or guarantee matrix-free RAW output.
 

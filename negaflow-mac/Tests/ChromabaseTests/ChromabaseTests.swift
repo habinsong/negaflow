@@ -742,7 +742,7 @@ final class ChromabaseTests: XCTestCase {
         var mainParams = DevelopParameters()
         mainParams.filmType = .colorNegative
         let main = renderRGBA8(
-            engine.develop(image: fixture.image, base: fixture.base, params: mainParams),
+            NegativeInversion.apply(to: fixture.image, base: fixture.base),
             width: fixture.width,
             height: fixture.height
         )
@@ -1284,16 +1284,8 @@ final class ChromabaseTests: XCTestCase {
         )
     }
 
-    /// **필름(프리셋) 모드 = 자동 경로의 장면 측정 × 필름 상대 계수**(2026-10-15).
-    ///
-    /// 예전 필름 모드는 채널 비율을 데이터시트(Status M)로 통째로 바꿔, 파란 하늘이 최농부를
-    /// 차지하는 장면에서도 중립 회색을 지켰다. 그러나 스캐너 채널은 분광 감도가 달라 그 비율이
-    /// 체계적으로 어긋났고 모든 필름이 파랗고 과채도로 반전됐다(실사진 실측). 지금은 자동 경로의
-    /// 장면 측정을 그대로 쓰고 필름 사이의 상대 차이(`relativeRangeFactor`)만 얹는다. 그래서:
-    ///  - 하늘이 없는 장면에서는 중립 회색이 필름 특성 안쪽으로 중립이다.
-    ///  - 하늘보다 밝은 중립 명부가 없는 극단 장면의 캐스트는 자동과 같고(자동의 알려진 한계,
-    ///    testNegativeInversionPreservesNeutralGrayHue), 필름 모드는 그 위에 상대 차이만 얹는다.
-    func testNegativeInversionFilmPresetFollowsAutoSceneMeasurementOnBlueSky() {
+    /// 프리셋 반전은 고정 상대 계수를 쓰며 주변의 파란 하늘 면적이 회색을 바꾸지 않는다.
+    func testNegativeInversionFilmPresetKeepsGrayIndependentOfBlueSky() {
         let width = 80
         let height = 48
         // Fuji C200 프리셋(Dmin/Dmax 제조사 데이터시트값).
@@ -1345,14 +1337,9 @@ final class ChromabaseTests: XCTestCase {
             "하늘 없는 장면의 필름 모드 중립 회색은 필름 특성 안쪽으로 중립이어야 한다. " +
             "R=\(neutral.x) G=\(neutral.y) B=\(neutral.z)")
 
-        // 파란 하늘이 3/4 인 극단 장면 — 필름 모드는 자동과 같은 장면 측정 위에 상대 차이만 얹는다.
         let sky = scene(skyFraction: 0.75)
         let preset = grayPatch(NegativeInversion.apply(to: sky, base: presetBase, preset: fuji))
-        let auto = grayPatch(NegativeInversion.applySceneRanged(to: sky, base: presetBase))
-        let difference = max(abs(preset.x - auto.x), max(abs(preset.y - auto.y), abs(preset.z - auto.z)))
-        print("[preset-diag] sky preset=\(preset) auto=\(auto) difference=\(difference)")
-        XCTAssertLessThanOrEqual(difference, 6,
-            "필름 모드는 자동의 장면 측정에 필름 상대 차이만 얹어야 한다. preset=\(preset) auto=\(auto)")
+        XCTAssertEqual(preset, neutral, "프리셋의 같은 회색이 주변 장면에 따라 바뀌면 안 됩니다")
     }
 
     // MARK: - 필름 Dmin/Dmax 프리셋 레지스트리
@@ -2311,57 +2298,28 @@ final class ChromabaseTests: XCTestCase {
             "Manual=\(clipManual) Border=\(clipBorder). 과거 Manual 만 폭발하던 버그 회귀 방지.")
     }
 
-    /// **화이트홀(명부 뭉김) 검출**: 명부(하이라이트)에 해당하는 네거티브 입력 램프가 현상 후
-    /// 최소 계조 분산을 가져야 한다. gamma 0.74 + ToneCurve p3(0.78,0.82) 가 명부를 좁은 띠로
-    /// 압축해 디테일을 뭉개면(=화이트홀) 분산이 0에 수렴한다. 넓은 명부 분산 = 계조 보존.
+    /// 실수 투과율의 명부 램프는 출력 숄더에서도 계조를 유지한다.
     func testColorNegativeHighlightDetailPreserved() {
-        let width = 96
-        let height = 16
-        let baseRGB = SIMD3<Double>(0.82, 0.57, 0.38)   // 진한 주황 베이스
-        let base = FilmBase(rgb: baseRGB, source: .border)
-        // 전체 동적 범위를 갖는 네거티브 램프: 밀도 0.0(베이스/최밝) ~ 2.0(최암).
-        // 가장 밝은 절반(x ≥ width/2)이 반전 후 명부(0.8~1.0)에 매핑된다. 이 영역의 계조가
-        // 보존되는지(=화이트홀이 아닌지) 검증한다.
-        var bytes = [UInt8](repeating: 0, count: width * height * 4)
-        for y in 0..<height {
-            for x in 0..<width {
-                let i = (y * width + x) * 4
-                let ramp = Double(x) / Double(width - 1)
-                let density = ramp * 2.0   // 0.0(밝음) ~ 2.0(어두움)
-                let atten = pow(10.0, -density)
-                bytes[i]     = UInt8(min(255, max(0, Int(baseRGB.x * atten * 255))))
-                bytes[i + 1] = UInt8(min(255, max(0, Int(baseRGB.y * atten * 255))))
-                bytes[i + 2] = UInt8(min(255, max(0, Int(baseRGB.z * atten * 255))))
-                bytes[i + 3] = 255
-            }
+        let width = 96, height = 16
+        let rgb = SIMD3<Double>(0.82, 0.57, 0.38)
+        let base = FilmBase(rgb: rgb, source: .manual)
+        let input = SyntheticScan.makeImage(width: width, height: height) { x, _ in
+            // 독립 전방 모델: 장면 0.5~4.0의 3스톱을 음화 밀도로 기록한다.
+            let exposure = 0.5 * pow(2, 3 * Double(x) / Double(width - 1))
+            let density = 0.60 + 0.62 * log10(exposure / 0.18)
+            return rgb * pow(10, -density)
         }
-        let input = makeTestImage(bytes: bytes, width: width, height: height)
-        var params = DevelopParameters()
-        params.filmType = .colorNegative
-        params.developTarget = .main
-        let pixels = renderRGBA8(
-            ChromabaseEngine().develop(image: input, base: base, params: params),
-            width: width, height: height
-        )
-        // 명부 영역(밝은 절반)의 휘도 추출 → 분산. x ∈ [width*3/4, width) 는 가장 밝은 명부.
-        let midY = height / 2
-        var highlightLuma: [Double] = []
-        for x in (width * 3 / 4)..<width {
-            let i = (midY * width + x) * 4
-            let r = Double(pixels[i]) / 255.0
-            let g = Double(pixels[i + 1]) / 255.0
-            let b = Double(pixels[i + 2]) / 255.0
-            highlightLuma.append(0.299 * r + 0.587 * g + 0.114 * b)
-        }
-        let mean = highlightLuma.reduce(0, +) / Double(highlightLuma.count)
-        let variance = highlightLuma.map { ($0 - mean) * ($0 - mean) }.reduce(0, +) / Double(highlightLuma.count)
-        let stdev = sqrt(variance)
-        print("[whitehole-diag] 명부 luma 평균=\(mean) stdev=\(stdev)")
-        // 명부 램프(밀도 1.5~2.0 → 밝은 부분)가 계조 보존 시 stdev ≥ 0.04.
-        // 화이트홀(gamma 압축)이면 stdev ≈ 0.005~0.02.
-        XCTAssertGreaterThan(stdev, 0.035,
-            "명부 계조가 보존돼야 한다(화이트홀 없음). luma stdev=\(stdev). " +
-            "gamma 0.74 + ToneCurve 명부 압축이 stdev를 0.005~0.02로 떨어뜨리면 화이트홀.")
+        let output = ChromabaseEngine().developScanner(image: input, base: base, params: .init())
+        var pixels = [Float](repeating: 0, count: width * 4)
+        ChromabaseEngine.sharedLinearRenderContext.render(output, toBitmap: &pixels, rowBytes: width * 16,
+            bounds: CGRect(x: 0, y: 8, width: width, height: 1), format: .RGBAf,
+            colorSpace: SyntheticScan.linear)
+        let values = (0..<width).map { Double(pixels[$0 * 4]) }
+        for (lower, upper) in zip(values, values.dropFirst()) { XCTAssertGreaterThan(upper, lower) }
+        let mean = values.reduce(0, +) / Double(width)
+        let variance = values.map { pow($0 - mean, 2) }.reduce(0, +) / Double(width)
+        XCTAssertGreaterThan(sqrt(variance), 0.035)
+        XCTAssertLessThan(values.last!, 1)
     }
 
     /// main = 플랫 마스터 계약(2026-07-05 재설계): 룩(muted-red 그레이드)·상시 chroma NR 을
@@ -2380,10 +2338,11 @@ final class ChromabaseTests: XCTestCase {
             height: fixture.height
         )
 
-        // MAIN 은 auto 경로의 scene-adaptive 반전(applySceneRanged)만 적용하고 별도 룩을 굽지
-        // 않는다. reference 도 같은 반전을 써서 "MAIN = 반전 + 무룩" 계약을 검증한다.
+        // 기본 반전과 출력 커브 외의 룩·상시 NR이 섞이지 않는지 전체 화상으로 비교한다.
         let expectedMain = renderRGBA8(
-            NegativeInversion.applySceneRanged(to: fixture.image, base: fixture.base),
+            NegativeLinearResponse.output(NegativeLinearResponse.invert(fixture.image,
+                stats: NegativeLinearResponse.stats(base: fixture.base, preset: nil, filmType: .colorNegative),
+                filmType: .colorNegative), exposure: 0, filmType: .colorNegative),
             width: fixture.width,
             height: fixture.height
         )
@@ -2498,10 +2457,12 @@ final class ChromabaseTests: XCTestCase {
             params: params
         )
         let rendered = renderLinearRGBA8(output, width: width, height: height)
-        // 저신호(얇은) 프레임에서 auto 파이프라인은 scene-adaptive 반전(applySceneRanged)을 쓴다.
-        // MAIN 은 그 위에 별도 룩이 없으므로 전 프레임이 반전 결과와 일치해야 한다.
+        // 얇은 네거티브도 장면별 스트레치 없이 같은 고정 반전을 사용한다.
         let reference = renderLinearRGBA8(
-            NegativeInversion.applySceneRanged(to: image, base: FilmBase(rgb: base, source: .border)),
+            NegativeLinearResponse.output(NegativeLinearResponse.invert(image,
+                stats: NegativeLinearResponse.stats(base: FilmBase(rgb: base, source: .border),
+                    preset: nil, filmType: .colorNegative), filmType: .colorNegative),
+                exposure: 0, filmType: .colorNegative),
             width: width,
             height: height
         )
@@ -2509,7 +2470,7 @@ final class ChromabaseTests: XCTestCase {
             meanChannelDifference(rendered, reference),
             0,
             accuracy: 0.001,
-            "저신호 프레임 전체가 auto 반전(applySceneRanged) 결과와 일치해야 한다(MAIN 무룩)."
+            "저신호 프레임에 숨은 장면별 보정이 추가되면 안 됩니다."
         )
 
         let baseLuma = luma(rendered, x: 1, y: 1, width: width)
@@ -2517,7 +2478,7 @@ final class ChromabaseTests: XCTestCase {
         let thinLuma = luma(rendered, x: width - 5, y: height / 2, width: width)
         XCTAssertEqual(
             baseLuma,
-            genericDensityCodeByte(transmission: base.x, base: base.x),
+            luma(reference, x: 1, y: 1, width: width),
             accuracy: 2
         )
         XCTAssertGreaterThan(denseLuma, thinLuma,

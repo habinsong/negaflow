@@ -1,10 +1,12 @@
 # Réponse négative fixe
 
-[Accueil des documents](../README.md)
+[Accueil de la documentation](../README.md)
 
-## MAIN/PRINT
+## MAIN/PRINT et cibles dérivées
 
 `fixed-density-linear-v6` traite les négatifs `MAIN/PRINT` sans profil de scanner. Les valeurs de correction sont fixes. À base et réglages identiques, les pixels voisins, le recadrage et l’histogramme ne changent pas l’inversion d’une même transmittance. Aucune vibrance liée à la scène n’est appliquée.
+
+Les cibles personnalisées et EXPIRED utilisent la même inversion fixe que MAIN. La couleur personnalisée est appliquée après la calibration. EXPIRED ne corrige que si les critères de preuve sont remplis ; sans preuve admissible, sa sortie est identique à MAIN. Ces cibles ignorent un ancien profil scanner.
 
 `B` est la transmittance mesurée du support. `f` vaut 1 pour la réponse générique ou le facteur relatif fixe du film choisi. `0.62` et `0.60D` sont les références de gamma et de densité grise du modèle générique. Ce ne sont pas des mesures de chaque film ou scanner. Les densités Status M ne caractérisent pas directement le RGB du scanner.
 
@@ -41,7 +43,7 @@ L’inversion n’a pas de plafond de `1.8D`. Le plancher de transmittance `1e-5
 
 ## Autres cibles
 
-Les cibles scanner et EXPIRED choisies explicitement conservent l’analyse de scène et `shoulder-print-response-v4`. La primitive fixe reste disponible. L’analyse n’utilise plus de plafond universel de 1.8D. Les préréglages de film utilisent des facteurs relatifs fixes sans normaliser chaque image.
+Les cibles scanner choisies explicitement conservent l’analyse de scène et `shoulder-print-response-v4`. La primitive fixe reste disponible. L’analyse n’utilise plus de plafond universel de 1.8D. Les préréglages de film utilisent des facteurs relatifs fixes sans normaliser chaque image.
 
 Le RAW de film désactive les traitements de tonalité pris en charge par l’API. Sur macOS, scene-linear désactive les tons globaux et locaux, shadow bias et le gamut mapping. Windows utilise le transfert linéaire de LibRaw, séparément du rendu photo numérique. Ces réglages ne caractérisent pas le couple capteur-film et ne garantissent pas un RAW sans matrice couleur.
 

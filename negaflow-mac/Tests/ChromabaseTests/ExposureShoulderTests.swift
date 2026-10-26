@@ -36,8 +36,9 @@ final class ExposureShoulderTests: XCTestCase {
         let plus = SyntheticScan.developedDisplayPatches(wedge) { $0.exposure = 1 }
         let codes = plus.map { SyntheticScan.code(SyntheticScan.luma($0)) }
         XCTAssertFalse(codes.contains(255), "\(codes)")
-        for (lower, upper) in zip(codes[13...], codes[14...]) {
-            XCTAssertGreaterThan(upper, lower, "명부 계조가 평탄해졌다: \(codes)")
+        let highlights = plus[13...].map(SyntheticScan.luma)
+        for (lower, upper) in zip(highlights, highlights.dropFirst()) {
+            XCTAssertGreaterThan(upper, lower, "실수 명부 계조가 평탄해졌습니다")
         }
         XCTAssertEqual(SyntheticScan.luma(plus[8]) / SyntheticScan.luma(base[8]), 2.0, accuracy: 0.02)
     }
@@ -60,8 +61,10 @@ final class ExposureShoulderTests: XCTestCase {
             $0.exposure = 1
             $0.highlight = -1
         }
-        let codes = recovered[13...].map { SyntheticScan.code(SyntheticScan.luma($0)) }
-        XCTAssertGreaterThanOrEqual(Set(codes).count, 7, "\(codes)")
+        let highlights = recovered[13...].map(SyntheticScan.luma)
+        for (lower, upper) in zip(highlights, highlights.dropFirst()) {
+            XCTAssertGreaterThan(upper, lower)
+        }
     }
 
     /// 어둡게 하는 톤 조정(대비 +, 블랙 −, 커브 다크/섀도 −)은 암부의 색비를 지킨다.

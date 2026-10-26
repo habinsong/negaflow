@@ -41,7 +41,10 @@ final class CameraScanMeasurementTests: XCTestCase {
         frame.rebate = .betweenFramesOnly
         let result = develop(frame, crop: false)
         assertNeutral(result.patches)
-        XCTAssertEqual(SyntheticScan.code(SyntheticScan.luma(result.patches[20])), 218, accuracy: 3)
+        let isolated = SyntheticScan.negativeWedge(base: CameraScanFrame.base, maxDensity: 1.55, offset: 0.15)
+        let reference = SyntheticScan.developedDisplayPatches(isolated, base: CameraScanFrame.base)
+        XCTAssertEqual(SyntheticScan.code(SyntheticScan.luma(result.patches[20])),
+                       SyntheticScan.code(SyntheticScan.luma(reference[20])), accuracy: 3)
     }
 
     /// 가장자리 띠 제외는 두께 있는 비필름 영역에만 건다. 베이스 근처 밝기의 넓은 면에서는 게이트

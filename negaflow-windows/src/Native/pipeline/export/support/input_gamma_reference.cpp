@@ -29,8 +29,7 @@ std::optional<DevelopExportOutcome> prepare_input_gamma_reference(
     std::optional<std::array<float, 3>>& range) noexcept {
     if (request.input_gamma.mode == 0U || request.film_polarity == FilmPolarity::positive) { return {}; }
     if (request.develop_target != DevelopTarget::noritsu && request.develop_target != DevelopTarget::sp3000 &&
-        request.develop_target != DevelopTarget::f135 && request.develop_target != DevelopTarget::hr &&
-        request.develop_target != DevelopTarget::rescue) {
+        request.develop_target != DevelopTarget::f135 && request.develop_target != DevelopTarget::hr) {
         const auto response = request.negative.film_type == imaging::NegativeFilmType::black_and_white
             ? core::black_and_white_negative_print_response() : core::color_negative_print_response();
         range = std::array<float, 3>{response.normal_range, response.normal_range, response.normal_range};
@@ -77,7 +76,7 @@ std::optional<DevelopExportOutcome> prepare_input_gamma_reference(
         negaflow::imaging::ManualNegativeDevelopParameters parameters{hint.dmin, baseline.negative.film_type};
         parameters.adaptive_density = request.develop_target == DevelopTarget::noritsu ||
             request.develop_target == DevelopTarget::sp3000 || request.develop_target == DevelopTarget::f135 ||
-            request.develop_target == DevelopTarget::hr || request.develop_target == DevelopTarget::rescue;
+            request.develop_target == DevelopTarget::hr;
         parameters.use_preset_response = hint.use_preset_response;
         parameters.preset_range_factor = hint.preset_range_factor;
         auto measured = negaflow::imaging::develop_manual_negative(std::move(image), parameters);

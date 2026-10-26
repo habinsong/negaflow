@@ -1,10 +1,12 @@
 # Feste Negativantwort
 
-[Dokumentation](../README.md)
+[Dokumentationsstart](../README.md)
 
-## MAIN/PRINT
+## MAIN/PRINT und abgeleitete Ziele
 
 `fixed-density-linear-v6` gilt für negative `MAIN/PRINT` ohne Scannerprofil. Die Dichtekorrektur ist fest. Bei gleicher Basis und gleichen Einstellungen ändern andere Pixel, Ausschnitt oder Histogramm die Inversion derselben Transmission nicht. Szenenabhängige Vibrance wird nicht angewandt.
+
+Benutzerdefinierte Ziele und EXPIRED verwenden dieselbe feste Inversion wie MAIN. Die benutzerdefinierte Farbe folgt auf die Kalibrierung. EXPIRED korrigiert nur bei ausreichenden Belegen; ohne geeignete Belege entspricht die Ausgabe MAIN. Diese Ziele ignorieren ein verbliebenes Scannerprofil.
 
 `B` ist die gemessene Basistransmission. `f` ist bei der generischen Antwort 1 oder der feste relative Bereichsfaktor des gewählten Films. `0.62` und `0.60D` sind Gamma- und Graudichtereferenzen des generischen Modells. Sie sind keine Messwerte jedes Films oder Scanners. Status-M-Dichten beschreiben Scanner-RGB nicht direkt.
 
@@ -41,7 +43,7 @@ Die Inversion hat keine `1.8D`-Obergrenze. Die Transmissionsuntergrenze `1e-5` s
 
 ## Andere Ziele
 
-Explizite Scanner- und EXPIRED-Ziele behalten Szenenanalyse und `shoulder-print-response-v4`. Das feste Primitive bleibt verfügbar. Auch die Szenenanalyse hat keine allgemeine 1.8D-Obergrenze. Filmvorgaben verwenden feste relative Faktoren ohne automatische Einzelbildnormalisierung.
+Explizite Scannerziele behalten Szenenanalyse und `shoulder-print-response-v4`. Das feste Primitive bleibt verfügbar. Auch die Szenenanalyse hat keine allgemeine 1.8D-Obergrenze. Filmvorgaben verwenden feste relative Faktoren ohne automatische Einzelbildnormalisierung.
 
 Film-RAW deaktiviert die von der API unterstützte Ausgabetonung. macOS scene-linear deaktiviert globale und lokale Tonkurven, shadow bias und Gamut-Mapping. Windows verwendet den linearen LibRaw-Transfer getrennt vom Digitalfoto-Rendering. Diese Einstellungen liefern keine gemessene Sensor-Film-Charakterisierung und garantieren kein RAW ohne Farbmatrix.
 

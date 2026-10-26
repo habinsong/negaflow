@@ -985,7 +985,7 @@ final class ScannerTargetGradeTests: XCTestCase {
     /// 평탄/흐린 장면(developed 계조가 좁은 상부 대역에 몰림)은 스캐너 톤 전이의 지지
     /// (캘리브레이션 corpus p5~p95 spread≈0.70) 밖 — 노출 앵커가 장면 median 을 보존해
     /// FUJI 히스토그램 우측 밀림(≈1스탑 과노출)을 막아야 한다. 색 개성은 유지된다.
-    func testFlatSceneKeepsScannerTargetExposureAnchoredToMain() {
+    func testFlatSceneKeepsScannerTargetExposureAnchoredToItsInversion() {
         let width = 96, height = 48
         let base = SIMD3<Double>(0.82, 0.55, 0.34)
         // 경계 5% — 실사용 프레임(크롭 후)처럼 rebate 가 앵커 샘플러 인셋(6%) 안에 들어온다.
@@ -998,7 +998,8 @@ final class ScannerTargetGradeTests: XCTestCase {
             return (base.x * atten, base.y * atten, base.z * atten)
         }
         let fb = FilmBase(rgb: base, source: .border)
-        let main = developed(target: .main, input: flat, base: fb, width: width, height: height)
+        let main = renderSRGB8(NegativeInversion.applySceneRanged(to: flat, base: fb),
+                               width: width, height: height)
         let fuji = developed(target: .sp3000, input: flat, base: fb, width: width, height: height)
         let nor = developed(target: .noritsu, input: flat, base: fb, width: width, height: height)
 
@@ -1007,7 +1008,7 @@ final class ScannerTargetGradeTests: XCTestCase {
         let norL = interiorLumaPercentiles(nor, width: width, height: height)
 
         XCTAssertLessThanOrEqual(abs(fujiL.p50 - mainL.p50), 6.0,
-            "평탄 장면에서 FUJI median 노출은 MAIN 에 앵커돼야 한다")
+            "평탄 장면에서 FUJI median 노출은 스캐너 반전 기준 에 앵커돼야 한다")
         XCTAssertLessThanOrEqual(fujiL.p95, mainL.p95 + 6.0,
             "평탄 장면에서 FUJI 히스토그램이 우측으로 밀리면 안 된다")
         XCTAssertLessThanOrEqual(abs(norL.p50 - mainL.p50), 6.0,
@@ -1035,7 +1036,8 @@ final class ScannerTargetGradeTests: XCTestCase {
         }
         let input = grainNegative(base: base)
         let fb = FilmBase(rgb: base, source: .border)
-        let main = developed(target: .main, input: input, base: fb, width: width, height: height)
+        let main = renderSRGB8(NegativeInversion.applySceneRanged(to: input, base: fb),
+                               width: width, height: height)
         let nor = developed(target: .noritsu, input: input, base: fb, width: width, height: height)
         let fuji = developed(target: .sp3000, input: input, base: fb, width: width, height: height)
 
@@ -1246,7 +1248,8 @@ final class ScannerTargetGradeTests: XCTestCase {
         let base = SIMD3<Double>(0.82, 0.55, 0.34)
         let input = makeSyntheticNegative(width: width, height: height, base: base)
         let fb = FilmBase(rgb: base, source: .border)
-        let main = developed(target: .main, input: input, base: fb, width: width, height: height)
+        let main = renderSRGB8(NegativeInversion.applySceneRanged(to: input, base: fb),
+                               width: width, height: height)
         let sp = developed(target: .sp3000, input: input, base: fb, width: width, height: height)
 
         func scenePercentiles(_ px: [UInt8]) -> (p25: Double, p50: Double, p75: Double) {
@@ -1263,9 +1266,9 @@ final class ScannerTargetGradeTests: XCTestCase {
             return (pct(0.25), pct(0.5), pct(0.75))
         }
         let m = scenePercentiles(main), t = scenePercentiles(sp)
-        XCTAssertEqual(t.p50, m.p50, accuracy: 4.0, "SP 미드 노출은 MAIN 근처. sp=\(t.p50) main=\(m.p50)")
+        XCTAssertEqual(t.p50, m.p50, accuracy: 4.0, "SP 미드 노출은 스캐너 반전 기준 근처. sp=\(t.p50) main=\(m.p50)")
         XCTAssertGreaterThan(t.p75 - t.p25, (m.p75 - m.p25) + 2.0,
-            "SP 는 미드 대비가 MAIN 보다 커야 한다. sp=\(t.p75 - t.p25) main=\(m.p75 - m.p25)")
+            "SP 는 미드 대비가 스캐너 반전 기준 보다 커야 한다. sp=\(t.p75 - t.p25) main=\(m.p75 - m.p25)")
     }
 
     // MARK: 포지티브(슬라이드/흑백 양화) 시그니처
