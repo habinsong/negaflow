@@ -44,9 +44,14 @@
                 <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
 
                 <!-- ② 타깃 -->
-                <TextBlock
-                    x:Name="DevelopTargetLabel" x:FieldModifier="internal"
-                    FontSize="12" />
+                <Grid>
+                    <TextBlock x:Name="DevelopTargetLabel" x:FieldModifier="internal"
+                               FontSize="12" VerticalAlignment="Center" />
+                    <ToggleButton x:Name="AutoBalanceToggle" HorizontalAlignment="Right"
+                                  FontSize="11" Padding="8,3" MinHeight="24" MinWidth="0"
+                                  AutomationProperties.AutomationId="negaflow.develop.auto-balance"
+                                  Click="OnAutoBalanceClicked" />
+                </Grid>
                 <!-- macOS `SegmentedPicker` — 트랙 라운딩 11 · 여백 3 · 칸 사이 3 ·
                      칸 높이 28 · 고른 칸 라운딩 8. 여섯 칸이 폭을 똑같이 나눠 가집니다. -->
                 <Border Style="{StaticResource NegaflowSegmentTrackStyle}">

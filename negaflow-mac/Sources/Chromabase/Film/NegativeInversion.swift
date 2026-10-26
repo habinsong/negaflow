@@ -2,7 +2,7 @@ import Foundation
 import CoreImage
 
 // Legacy bounded v4 primitive and explicit scene-range analysis.
-// MAIN/PRINT without a scanner profile use NegativeLinearResponse instead.
+// MAIN/PRINT and CS use this v4 curve through NegativeAutoBalance.
 // Scene sampling is an intentional scanner/recovery-target operation; it changes
 // rendering across frames and does not preserve absolute exposure or color.
 public enum NegativeInversion {
@@ -340,7 +340,8 @@ public enum NegativeInversion {
         _ fullImage: CIImage,
         base: FilmBase,
         filmType: FilmType = .colorNegative,
-        region: AnalysisRegion? = nil
+        region: AnalysisRegion? = nil,
+        densityLimit: Double? = nil
     ) -> ChannelStats? {
         // 크롭한 사진 영역이 있으면 그 안만 잰다(홀더·백라이트·이웃 프레임 배제).
         let image = AnalysisRegion.measurementImage(fullImage, region: region)
@@ -459,16 +460,17 @@ public enum NegativeInversion {
         // 노출이 달라진다. 측정 신뢰도 판단과 폴백은 FilmBaseEstimator/resolveFilmBase가 맡는다.
         let dmin = clampedDmin(base.rgb)
 
-        // Explicit scene analysis: robust range, without a film-independent density cap.
+        // MAIN/CS restores the original 1.8D rendering limit when Auto Balance is on.
+        // Other callers retain uncapped scene measurements. This is not a film physical limit.
         let densest = SIMD3(
             max(pct(red, 0.002), 1e-5),
             max(pct(green, 0.002), 1e-5),
             max(pct(blue, 0.002), 1e-5)
         )
         let densestFloor = SIMD3(
-            densest.x,
-            densest.y,
-            densest.z
+            densityLimit.map { max(densest.x, dmin.x * pow(10, -$0)) } ?? densest.x,
+            densityLimit.map { max(densest.y, dmin.y * pow(10, -$0)) } ?? densest.y,
+            densityLimit.map { max(densest.z, dmin.z * pow(10, -$0)) } ?? densest.z
         )
         // 바닥은 **아무것도 안 찍힌 프레임을 막는 자리**이지 평평한 필름을 부풀리는 자리가
         // 아니다. 0.4 는 바랜 필름의 파랑을 그대로 삼켰다 — 1980~90 년대 카메라 스캔에서

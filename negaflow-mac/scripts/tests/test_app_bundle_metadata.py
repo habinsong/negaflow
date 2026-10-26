@@ -26,6 +26,9 @@ class AppBundleMetadataTests(unittest.TestCase):
                 chromabase_resources / "ScannerProfiles",
             )
             (products / "negaflow_negaflowApp.bundle").mkdir()
+            test_resources = products / "negaflow_ChromabaseTests.bundle"
+            test_resources.mkdir()
+            (test_resources / "CameraNativeRaw.dng").write_bytes(b"test fixture")
 
             app = temporary / "negaflow.app"
             subprocess.run(
@@ -70,6 +73,13 @@ class AppBundleMetadataTests(unittest.TestCase):
             self.assertGreater((resources / "AppIcon.icns").stat().st_size, 0)
             self.assertTrue((resources / "negaflow_Chromabase.bundle").is_dir())
             self.assertTrue((resources / "negaflow_negaflowApp.bundle").is_dir())
+            self.assertFalse((resources / "negaflow_ChromabaseTests.bundle").exists())
+            self.assertTrue((app / "Contents/Frameworks/libraw.dylib").is_file())
+            raw_licenses = resources / "licenses/libraw"
+            for required in ("LICENSE.CDDL", "COPYRIGHT", "LibRaw-Third-Party-Notices.txt", "build-libraw.sh"):
+                self.assertGreater((raw_licenses / required).stat().st_size, 0)
+            self.assertEqual(len(list(raw_licenses.glob("LibRaw-*.tar.gz"))), 1)
+            self.assertIn("this macOS distribution selects CDDL-1.0", (raw_licenses / "README.txt").read_text())
             packaged_profiles = (
                 resources
                 / "negaflow_Chromabase.bundle/Contents/Resources/ScannerProfiles"

@@ -182,13 +182,17 @@ enum ExportFrameWriter {
         } else {
             developed = frameRender.developedImage
         }
-        let mainFlatMaster = (snapshot.writeMainFlatMaster && snapshot.format != .rawScanTIFF)
-            ? ChromabaseEngine().developScanner(
-                image: frameRender.rawInput,
-                base: frameRender.base,
-                params: snapshot.params.mainFlatMasterParameters()
-            )
-            : nil
+        let mainFlatMaster: CIImage?
+        if snapshot.writeMainFlatMaster && snapshot.format != .rawScanTIFF {
+            let params = snapshot.params.mainFlatMasterParameters()
+            var measurements = DevelopSceneMeasurements()
+            try NativeCameraRAW.prepare(source: stagedSourceURL, params: params, measurements: &measurements)
+            try InputGammaRenderReference.prepare(source: stagedSourceURL, params: params, measurements: &measurements)
+            mainFlatMaster = ChromabaseEngine().developScanner(image: frameRender.rawInput,
+                base: frameRender.base, params: params, measurements: &measurements)
+        } else {
+            mainFlatMaster = nil
+        }
         _ = try ExportEngine.writePaired(
             developed,
             mainFlatMaster: mainFlatMaster,

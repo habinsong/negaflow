@@ -77,6 +77,7 @@ extension AppModel {
             && frame.cleanedRawEditCount == frame.defectEdits.count - 1
             && previousRecipeIdentity != nil
             && frame.cleanedRawImage == nil
+            && frame.cleanedRawDiskHasCurrentColorBasis
             && frame.cleanedRawDiskURL != nil
             && frame.cleanedRawDiskIdentity == previousRecipeIdentity
         if canIncrementFromDisk {
@@ -91,7 +92,7 @@ extension AppModel {
             // 에서 굳힌 세션 raw = 원본이고, revision 일치가 굳힌 뒤의 소스 교체/재빌드를 배제한다.
             let sessionOriginal: CGImage? = (frame.defectEdits.count == 1
                 && frame.cleanedRawImage == nil
-                && frame.cleanedRawDiskURL == nil
+                && frame.identityMatchedCleanedRawDiskURL == nil
                 && frame.defectSessionRawRevision == frame.cleanRawRevision)
                 ? frame.defectSessionRaw
                 : nil

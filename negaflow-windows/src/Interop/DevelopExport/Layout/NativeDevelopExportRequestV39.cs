@@ -13,6 +13,14 @@ internal unsafe struct NativeDevelopExportRequestV39
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV40
+{
+    internal NativeDevelopExportRequestV39 V39;
+    internal uint AutoBalance;
+    internal uint AutoBalanceReserved;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeDevelopExportResultV6
 {
     internal NativeDevelopExportResultV4 V5;

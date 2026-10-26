@@ -68,6 +68,8 @@ public sealed class DevelopExportRequest
 
     public float BluePrimary { get; init; }
 
+    public bool AutoBalance { get; init; }
+
     public bool AutoLevels { get; init; }
 
     public bool AutoNeutralBalance { get; init; }

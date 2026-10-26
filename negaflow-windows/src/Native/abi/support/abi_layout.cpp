@@ -55,6 +55,8 @@ static_assert(offsetof(nf_develop_export_request_v13, blue_primary) == 4628U);
 static_assert(sizeof(nf_develop_export_request_v14) == 4640U);
 static_assert(offsetof(nf_develop_export_request_v14, auto_levels) == 4632U);
 static_assert(offsetof(nf_develop_export_request_v14, auto_neutral_balance) == 4636U);
+static_assert(sizeof(nf_develop_export_request_v40) == 5192U);
+static_assert(offsetof(nf_develop_export_request_v40, auto_balance) == sizeof(nf_develop_export_request_v39));
 static_assert(sizeof(nf_develop_export_request_v15) == 4648U);
 static_assert(offsetof(nf_develop_export_request_v15, develop_target) == 4640U);
 static_assert(offsetof(nf_develop_export_request_v15, reserved) == 4644U);

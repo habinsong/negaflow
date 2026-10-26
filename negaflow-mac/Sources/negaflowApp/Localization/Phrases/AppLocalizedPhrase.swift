@@ -4,6 +4,7 @@ import Chromabase
 enum AppLocalizedPhrase: CaseIterable {
     case inputGammaEstimated, inputGammaRecorded, inputGammaProfile, inputGammaAssumedLinear, inputGammaAssumedSRGB, inputGammaDecoder
     case inputGammaAutomatic, inputGamma, inputGammaRestore, inputGammaHelp, inputGammaUnsupported, inputGammaLoadFailed
+    case autoBalance
     case idleStatus
     case noScannerStatus
     case autoWhiteBalanceStatus

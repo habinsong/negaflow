@@ -42,6 +42,7 @@ internal static unsafe class DevelopExportRoutingContractTests
         string destination = Path.Combine(temporaryRoot, "out.png");
         Directory.CreateDirectory(temporaryRoot);
 
+        VerifyAutoBalance(context, temporaryRoot);
         VerifyManagedGrainMendPayloadValidation(context);
         VerifyManagedGrainMendV7(context, temporaryRoot);
 
@@ -381,6 +382,31 @@ internal static unsafe class DevelopExportRoutingContractTests
             disposed = true;
         }
         context.Check(disposed, "grain_mend_v7_managed_review_release_is_terminal");
+    }
+
+    private static void VerifyAutoBalance(ContractTestContext context, string directory)
+    {
+        const uint width = 96, height = 64;
+        string source = Path.Combine(directory, "auto-balance.tif");
+        WriteSyntheticDefectTiff(source, width, height);
+        foreach (DevelopTargetMode target in new[] { DevelopTargetMode.Main, DevelopTargetMode.Print, DevelopTargetMode.Noritsu })
+        {
+            byte[][] rendered = [new byte[width * height * 4], new byte[width * height * 4]];
+            for (int i = 0; i < 2; i++)
+            {
+                var request = new DevelopExportRequest
+                {
+                    SourcePath = source, DestinationPath = Path.Combine(directory, "balance.png"),
+                    DminRed = 0.8F, DminGreen = 0.6F, DminBlue = 0.4F,
+                    DevelopTarget = target, AutoBalance = i == 1,
+                };
+                var result = NativeDevelopExporter.Preview(request, width, height, rendered[i]);
+                context.Check(result.Succeeded, "balance_preview_succeeds_" + target + "_" + i);
+            }
+            bool same = rendered[0].AsSpan().SequenceEqual(rendered[1]);
+            context.Check(target == DevelopTargetMode.Noritsu ? same : !same,
+                "balance_switch_target_scope_" + target);
+        }
     }
 
     private static void WriteSyntheticDefectTiff(string path, uint width, uint height)

@@ -57,6 +57,8 @@ namespace {
     const float density =
         std::log10(dmin / bounded_transmission) / std::max(dmax_normalized, 1.0e-6F);
     if (linear_output) {
+        // This common gamma is a reference response, not scanner/film calibration.
+        // Subtracting the base does not make real neutral densities equal in RGB.
         const float film_density = density * response.normal_range;
         const float toe_density = 0.60F + 0.62F * std::log10(0.25F);
         if (film_density < toe_density) {

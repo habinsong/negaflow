@@ -17,7 +17,7 @@ extension AppModel {
             frame.cleanedRawImage = nil
             frame.cleanedRawMemoryIdentity = nil
             frame.cleanedRawAppliedStamps = []
-            guard let url = frame.cleanedRawDiskURL,
+            guard let url = frame.identityMatchedCleanedRawDiskURL,
                   frame.cleanedRawDiskIdentity == expectedIdentity else { return }
             let rawURL = frame.rawScanURL
             let revision = frame.cleanRawRevision

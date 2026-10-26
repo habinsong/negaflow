@@ -1,0 +1,20 @@
+{
+  "source": "https://raw.pixls.us/getfile.php/2204/nice/Canon%20-%20EOS%205D%20Mark%20III%20-%2014bit%2014bit%20(2.3471882640587).dng",
+  "repositoryEntry": 2204,
+  "license": "CC0-1.0",
+  "licenseDeclaration": "https://raw.pixls.us/json/getrepository.php?set=all",
+  "sha256": "1d77dcc6cdb839b10c1948f0b4471984ab48cf15e973fb77520584cee72b603e",
+  "purpose": "Test-only camera RAW decoding and processing order; no measured color reference. Not distributed in the application.",
+  "licenseDeclarationRow": [
+    "Canon",
+    "EOS 5D Mark III",
+    "14bit 14bit (2.3471882640587)",
+    1.57,
+    "Compressed MLV",
+    "<a href='https://creativecommons.org/publicdomain/zero/1.0/' title='Creative Commons 0 - Public Domain' class='cc'>co</a>",
+    "2018-01-08",
+    "<a href='https://raw.pixls.us/getfile.php/2204/nice/Canon - EOS 5D Mark III - 14bit 14bit (2.3471882640587).dng'>Canon - EOS 5D Mark III - 14bit 14bit (2.3471882640587).dng</a><div class='checksumdata'><span title='sha256 Checksum'>1d77dcc6cdb839b10c1948f0b4471984ab48cf15e973fb77520584cee72b603e</span>&nbsp;(1.47MB)</div>",
+    "<a target='_blank' href='https://raw.pixls.us/getfile.php/2204/exif/compress.dng.exif.txt'>exifdata</a>"
+  ],
+  "licenseDeclarationRetrieved": "2026-10-26"
+}

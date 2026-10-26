@@ -64,7 +64,7 @@ extension AppModel {
         // 이미지가 된다.
         let inputGamma = frame.params.inputGamma
         let rawRendering = ImageLoader.RAWRendering
-            .forDigitalSource(frame.params.isDigitalSource)
+            .forDigitalSource(frame.params.isDigitalSource, filmType: frame.filmType)
         // 디스크 소스는 검출 렌더마다 풀 TIFF를 다시 디코드하므로, 세션 첫 검출에서 한 번만
         // 풀해상도로 굳혀 두고 같은 세션의 재드래그/민감도 재검출에 재사용한다.
         let cleanRevision = frame.cleanRawRevision
@@ -379,7 +379,7 @@ extension AppModel {
               frame.defectActive || frame.defectIsDetecting else { return }
         let inputGamma = frame.params.inputGamma
         let rawRendering = ImageLoader.RAWRendering
-            .forDigitalSource(frame.params.isDigitalSource)
+            .forDigitalSource(frame.params.isDigitalSource, filmType: frame.filmType)
         frame.defectSessionSolidifyTask = Task.detached(priority: .utility) { [weak self, weak frame] in
             let decoded = Self.decodeRegionSessionRaw(
                 preURL: preURL, rawURL: rawURL, sourceKind: sourceKind,

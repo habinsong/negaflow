@@ -66,6 +66,7 @@ public struct DevelopSettingsPasteScope: Codable, Sendable, Equatable {
             next.filmStockDminID = source.filmStockDminID
             next.lightSourceProfileID = source.lightSourceProfileID
             next.autoLevels = source.autoLevels
+            next.autoBalance = source.autoBalance
             next.autoNeutralBalance = source.autoNeutralBalance
         }
 

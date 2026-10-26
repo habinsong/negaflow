@@ -136,6 +136,7 @@ public static class LibraryFrameReader
     internal const string RedPrimaryName = "redPrimary";
     internal const string GreenPrimaryName = "greenPrimary";
     internal const string BluePrimaryName = "bluePrimary";
+    internal const string AutoBalanceName = "autoBalance";
     internal const string AutoLevelsName = "autoLevels";
     internal const string AutoNeutralBalanceName = "autoNeutralBalance";
     internal const string DevelopTargetName = "developTarget";
@@ -328,7 +329,8 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidBwToning);
         }
-        if (!TryReadOptionalBoolean(parameters, AutoLevelsName, false, out bool autoLevels) ||
+        if (!TryReadOptionalBoolean(parameters, AutoBalanceName, true, out bool autoBalance) ||
+            !TryReadOptionalBoolean(parameters, AutoLevelsName, false, out bool autoLevels) ||
             !TryReadOptionalBoolean(
                 parameters,
                 AutoNeutralBalanceName,
@@ -370,6 +372,7 @@ public static class LibraryFrameReader
             LocalDodgeBurn = localDodgeBurn,
             ColorModel = colorModel,
             AutoLevels = autoLevels,
+            AutoBalance = autoBalance,
             AutoNeutralBalance = autoNeutralBalance,
             DevelopTarget = developTarget,
             ImageTransform = imageTransform,

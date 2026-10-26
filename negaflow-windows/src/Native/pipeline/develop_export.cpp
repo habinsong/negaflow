@@ -228,7 +228,7 @@ struct WhiteBalanceProbe final {
             observed.before.observation,
             *request.defect_recipe_sha256,
             cleaned_raw,
-            defect_recipe.info, request.input_gamma);
+            defect_recipe.info, request.input_gamma, request.film_polarity == FilmPolarity::negative);
     DefectRecipeStageInfo prefix_info{};
     std::shared_ptr<const negaflow::imaging::WorkingImage> prefix_cleaned_raw{};
     bool used_cleaned_prefix = false;
@@ -242,7 +242,7 @@ struct WhiteBalanceProbe final {
             observed.before.observation,
             *request.defect_recipe_append_prefix_sha256,
             prefix_cleaned_raw,
-            prefix_info, request.input_gamma)) {
+            prefix_info, request.input_gamma, request.film_polarity == FilmPolarity::negative)) {
         try {
             decoded_image = *prefix_cleaned_raw;
             used_cleaned_prefix = true;
@@ -284,7 +284,7 @@ struct WhiteBalanceProbe final {
                     observed.before.observation,
                     *request.defect_recipe_sha256,
                     cleaned_raw,
-                    defect_recipe.info, request.input_gamma);
+                    defect_recipe.info, request.input_gamma, request.film_polarity == FilmPolarity::negative);
             } catch (...) {
                 cleaned_raw.reset();
             }

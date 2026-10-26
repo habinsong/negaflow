@@ -18,7 +18,18 @@ struct DevelopDefaultsSection: View {
             .focusEffectDisabled()
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(model.text(AppLocalizedPhrase.target))
+                HStack {
+                    Text(model.text(AppLocalizedPhrase.target))
+                    Spacer(minLength: 8)
+                    if activeDevelopTarget == .main || activeDevelopTarget == .print || activeDevelopTarget.isCustom {
+                        Toggle(model.text(.autoBalance), isOn: autoBalanceBinding)
+                            .toggleStyle(.button)
+                            .controlSize(.small)
+                            .fixedSize()
+                            .disabled(model.actionableFrame == nil || !activeFilmType.requiresInversion)
+                            .accessibilityIdentifier("negaflow.develop.auto-balance")
+                    }
+                }
                 SegmentedPicker(
                     options: DevelopTargetFamily.allCases,
                     label: { $0.displayName },
@@ -40,6 +51,14 @@ struct DevelopDefaultsSection: View {
         } header: {
             sectionHeader(model.text(.developDefaults), systemImage: "camera.filters")
         }
+    }
+
+    private var autoBalanceBinding: Binding<Bool> {
+        Binding(get: { model.actionableFrame?.params.autoBalance ?? true }, set: { enabled in
+            guard let frame = model.actionableFrame else { return }
+            frame.updateParams { $0.autoBalance = enabled }
+            model.requestDevelop(frame)
+        })
     }
 
     private var activeDevelopTarget: DevelopTarget {

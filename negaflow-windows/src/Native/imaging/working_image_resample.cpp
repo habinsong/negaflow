@@ -232,6 +232,7 @@ WorkingImageResampleResult resample_working_image_lanczos3(
             source.width, output_width, uniform_scale);
         const AxisKernel vertical = make_axis_kernel(
             source.height, output_height, uniform_scale);
+        result.image.camera_to_working = source.camera_to_working;
         result.image.width = output_width;
         result.image.height = output_height;
         result.image.stride_pixels = output_width;

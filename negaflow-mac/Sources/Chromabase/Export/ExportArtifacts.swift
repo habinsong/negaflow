@@ -119,6 +119,7 @@ public extension DevelopParameters {
         master.filmType = filmType
         master.developTarget = .main
         master.baseEstimationMode = baseEstimationMode
+        master.autoBalance = autoBalance
         master.baseScale = baseScale
         master.inputGamma = inputGamma
         master.manualBaseRGB = manualBaseRGB

@@ -60,6 +60,11 @@ using namespace develop_export_detail;
         return *failed;
     }
 
+    // A baked TIFF has an ordinary linear-sRGB tag, so materialize its color basis.
+    // It is an uninverted rendered image; native camera data remains in the source RAW.
+    if (!negaflow::imaging::apply_deferred_camera_transform(image)) {
+        return fail(DevelopExportStage::output, "invalid_camera_to_working_matrix");
+    }
     tracker.begin(DevelopExportStage::output, export_output_cost.active);
     negaflow::output::WicTiffExportLimits limits{};
     const negaflow::output::WicTiffExportResult exported =

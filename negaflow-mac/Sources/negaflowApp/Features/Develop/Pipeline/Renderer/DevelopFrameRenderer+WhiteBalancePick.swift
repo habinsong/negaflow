@@ -22,6 +22,8 @@ extension DevelopFrameRenderer {
             measurements.analysisRegion = analysisRegion
             var inputParams = snapshot.params
             inputParams.filmType = snapshot.filmType
+            try NativeCameraRAW.prepare(source: snapshot.rawScanURL,
+                params: inputParams, measurements: &measurements)
             try InputGammaRenderReference.prepare(source: snapshot.rawScanURL,
                 params: inputParams, measurements: &measurements)
             var params = snapshot.preset.map {

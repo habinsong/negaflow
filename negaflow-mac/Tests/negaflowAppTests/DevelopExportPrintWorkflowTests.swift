@@ -56,6 +56,8 @@ final class DevelopExportPrintWorkflowTests: XCTestCase {
         try await Self.waitUntilSettled(frame, afterRevision: revisionBefore)
         XCTAssertTrue(frame.developedIsSettled, "보정 뒤 정착 패스가 끝나지 않았다")
         let adjustedOnScreen = try XCTUnwrap(frame.cachedDevelopedBase)
+        XCTAssertEqual(frame.cachedSettledPreviewRaw?.usesLinearSRGB, true,
+                       "Negative preview caches must retain the linear input used by export")
         XCTAssertGreaterThan(
             Self.meanLuma(adjustedOnScreen), Self.meanLuma(developedNeutral.cgImageForTest()!),
             "노출을 +0.8 스탑 올렸는데 화면이 밝아지지 않았다"
@@ -154,6 +156,45 @@ final class DevelopExportPrintWorkflowTests: XCTestCase {
             Self.meanLuma(onScreen), Self.meanLuma(exportedImage), accuracy: 0.02,
             "스캐너 타겟에서 화면과 파일이 갈렸다"
         )
+    }
+
+    func testCameraNativeRawPreviewExportAndMainMasterAgree() async throws {
+        guard NativeCameraRAW.isAvailable else {
+            throw XCTSkip("Set NEGAFLOW_LIBRAW_LIBRARY to run camera RAW app workflow")
+        }
+        let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().appendingPathComponent("ChromabaseTests/Fixtures/CameraNativeRaw.dng")
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("native-raw-app-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = AppModel(libraryCatalogURL: root.appendingPathComponent("library.json"),
+            libraryDefectDirectoryURL: root.appendingPathComponent("defects"),
+            libraryBackupDirectoryURL: root.appendingPathComponent("Backups"))
+        await model.restoreLibraryOnLaunch()
+        model.activeWorkspaceModule = .develop
+        model.canvasDisplayTargetPixels = 1_280
+        let frame = ScanFrame(scanIndex: 1, rawScanURL: source, filmType: .colorNegative,
+                              sourceKind: .importedFile)
+        frame.params.baseEstimationMode = .manual
+        frame.params.manualBaseRGB = SIMD3(0.8, 0.55, 0.35)
+        model.frames = [frame]
+        XCTAssertTrue(model.assignNewPersistentFrames([frame]))
+        model.selectedFrameID = frame.id
+        await model.developFrame(frame)
+        try await Self.waitUntilDevelopedOnce(model, frame)
+        let screen = try XCTUnwrap(frame.cachedDevelopedBase)
+        let destination = root.appendingPathComponent("camera.tiff")
+        let result = await model.runExportFrameTransaction(frame, to: destination, format: .tiff16,
+            writeSidecar: false, writeMainFlatMaster: true, writeOriginalRaw: false,
+            options: .standard, recipeIdentity: nil, reportsGlobalStatus: false)
+        guard case .completed = result else { return XCTFail("RAW app export failed: \(result)") }
+        let exported = try XCTUnwrap(Self.loadCGImage(destination))
+        let main = try XCTUnwrap(Self.loadCGImage(ExportPairing.mainFlatMasterURL(for: destination)))
+        XCTAssertEqual(Self.meanLuma(screen), Self.meanLuma(exported), accuracy: 0.02)
+        XCTAssertEqual(Self.meanLuma(exported), Self.meanLuma(main), accuracy: 0.002,
+                       "MAIN master must retain the RAW camera matrix")
+        XCTAssertEqual(frame.rawScanURL, source)
+        model.frames = []
     }
 
     // MARK: helpers

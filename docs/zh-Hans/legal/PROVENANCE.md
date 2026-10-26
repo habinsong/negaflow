@@ -6,7 +6,9 @@
 
 ## 代码
 
-`negaflow-mac` 里的 `Sources`、`Tests`、`scripts` 是为 negaflow 写的 Swift、Python 和 Shell 代码。 macOS 主体里没有 C/C++/Objective-C 源码、外部包、静态或动态库，也没有 vendored 源码树，只链接 Apple 在 macOS 上提供的系统框架。 `negaflow-windows` 里的 `src`、`tests`、`scripts` 是为 negaflow 写的 C++、C# 和 PowerShell 代码，第三方运行时组件与许可记录在 [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md)。
+`negaflow-mac` 的 Swift、Python 和 Shell 集成代码由本项目编写。负片相机 RAW 解码使用未修改且固定版本的 LibRaw，以可替换的 `libraw.dylib` 按 CDDL-1.0 分发。应用的 `Contents/Resources/licenses/libraw/` 包含源码归档、构建脚本、版权与许可证文件。Apache 源码树不合并 LibRaw 源码。Windows 使用同一上游版本，其他组件记录在 [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md)。测试用 `CameraNativeRaw.dng` 来自 raw.pixls.us 条目 2204，许可为 CC0-1.0；相邻 JSON 记录来源，应用不包含该文件。
+
+补充声明文件缺失时，构建和打包会给出警告并继续。上游许可证和对应源码仍随包提供。
 
 胶片反转用的是公开感光学里的密度、趾部、直线部和肩部这套概念。 这里的曲线和系数出自 negaflow 自己的四个光度基准点，没有照抄第三方程序的公式或常数。 公式和推导见 [固定印相响应](../reference/PRINT_RESPONSE.md)。
 
@@ -34,7 +36,7 @@ GrainMend IR 按这个顺序工作。
 - [Apache License 2.0 and GPL compatibility](https://www.apache.org/licenses/GPL-compatibility)
 - [扫描仪插件结构](../architecture/SCANNER_PLUGINS.md)
 
-发布检查会再确认一次：应用包里没有混进插件、SANE 可执行文件或库。 插件那边自带 `LICENSE`、`COPYING`、完整的对应源码和第三方声明。
+发布检查会再确认一次：应用包里没有混进插件、SANE 可执行文件或 SANE 库。 插件那边自带 `LICENSE`、`COPYING`、完整的对应源码和第三方声明。
 
 ## 内置资源
 

@@ -6,6 +6,8 @@ internal static unsafe class ManagedLayoutContractTests
 {
     internal static void Verify(ContractTestContext context)
     {
+        context.Check(sizeof(NativeDevelopExportRequestV40) == 5192 &&
+            Marshal.OffsetOf<NativeDevelopExportRequestV40>(nameof(NativeDevelopExportRequestV40.AutoBalance)).ToInt32() == 5184, "auto_balance_tail_layout");
         context.Check(sizeof(NativeDevelopExportRequestV39) == 5184, "input_v39_request_size");
         context.Check(Marshal.OffsetOf<NativeDevelopExportRequestV39>(nameof(NativeDevelopExportRequestV39.BaseScale)).ToInt32() == 5160,
             "input_v39_preserves_v38_prefix");

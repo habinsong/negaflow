@@ -64,7 +64,7 @@ extension AppModel {
         // 검출은 cleaned raw 빌드와 **같은 픽셀**을 봐야 한다 — 로더가 다르면 방향(EXIF)과
         // 색 해석이 갈려 마스크가 엉뚱한 자리에 얹힌다.
         let rawRendering = ImageLoader.RAWRendering
-            .forDigitalSource(frame.params.isDigitalSource)
+            .forDigitalSource(frame.params.isDigitalSource, filmType: frame.filmType)
         let frameLifecycleRevision = frame.defectDetectRevision
         let session = beginInfraredCleanSession(for: frame)
         let task = Task.detached(priority: .userInitiated) {

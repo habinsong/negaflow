@@ -447,7 +447,8 @@ extension AppModel {
             developTarget: frame.params.developTarget,
             scannerProfileID: frame.params.scannerProfileID,
             baseScale: frame.filmType.requiresInversion && frame.params.baseEstimationMode == .auto
-                ? frame.params.baseScale : .identity
+                ? frame.params.baseScale : .identity,
+            autoBalance: frame.params.autoBalance
         )
     }
 
@@ -480,6 +481,7 @@ extension AppModel {
         if let renderedParams {
             guard renderedParams.baseScale == frame.params.baseScale,
                   renderedParams.autoLevels == frame.params.autoLevels,
+                  renderedParams.autoBalance == frame.params.autoBalance,
                   renderedParams.autoNeutralBalance == frame.params.autoNeutralBalance,
                   renderedParams.developTarget == frame.params.developTarget,
                   renderedParams.scannerProfileID == frame.params.scannerProfileID else { return }

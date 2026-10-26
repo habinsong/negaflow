@@ -1,7 +1,7 @@
 import Foundation
 import CoreImage
 
-/// MAIN/PRINT uses fixed density units. Explicit scene-adaptive targets freeze the
+/// Scene-adaptive targets, including MAIN/CS Auto Balance ON, freeze the
 /// reference measured with the original transfer so manual gamma is not cancelled.
 public enum InputGammaRenderReference {
     private struct Key: Hashable {
@@ -10,6 +10,7 @@ public enum InputGammaRenderReference {
         let filmType: FilmType
         let stock: String?
         let light: String?
+        let legacyRange: Bool
     }
     private final class Cache: @unchecked Sendable {
         let lock = NSLock()
@@ -21,7 +22,7 @@ public enum InputGammaRenderReference {
         source: URL, params: DevelopParameters, measurements: inout DevelopSceneMeasurements
     ) throws {
         guard params.inputGamma != .automatic, params.filmType.requiresInversion else { return }
-        if !params.developTarget.isScannerEmulation {
+        if !params.developTarget.isScannerEmulation && !(params.autoBalance && NegativeAutoBalance.supports(params.developTarget)) {
             let preset = params.baseEstimationMode == .preset
                 ? params.filmStockDminID.flatMap(FilmStockDminRegistry.find) : nil
             measurements.inputGammaReferenceRange = NegativeLinearResponse.stats(
@@ -32,7 +33,8 @@ public enum InputGammaRenderReference {
         let key = Key(url: source.standardizedFileURL, observation: try InputGammaFileObservation.read(source),
             filmType: params.filmType,
             stock: params.baseEstimationMode == .preset ? params.filmStockDminID : nil,
-            light: params.baseEstimationMode == .preset ? params.lightSourceProfileID : nil)
+            light: params.baseEstimationMode == .preset ? params.lightSourceProfileID : nil,
+            legacyRange: NegativeAutoBalance.supports(params.developTarget))
         if let value = cache.lock.withLock({ cache.values[key] }) {
             measurements.inputGammaReferenceRange = value
             return
@@ -53,9 +55,11 @@ public enum InputGammaRenderReference {
         try autoreleasepool {
             let image: CIImage
             if let preview = try ImageLoader.loadImportedPreview(source, maxDimension: 640,
-                highResolutionThreshold: 0, inputGamma: .automatic) {
+                highResolutionThreshold: 0, inputGamma: .automatic,
+                rawRendering: .forDigitalSource(params.isDigitalSource, filmType: params.filmType)) {
                 image = preview.image
-            } else { image = try ImageLoader.loadImportedDecoded(source, inputGamma: .automatic).image }
+            } else { image = try ImageLoader.loadImportedDecoded(source, inputGamma: .automatic,
+                rawRendering: .forDigitalSource(params.isDigitalSource, filmType: params.filmType)).image }
             let engine = ChromabaseEngine()
             let mode: DevelopParameters.BaseMode = params.baseEstimationMode == .preset ? .preset : .auto
             let stock = mode == .preset ? params.filmStockDminID.flatMap(FilmStockDminRegistry.find) : nil
@@ -63,12 +67,11 @@ public enum InputGammaRenderReference {
             referenceParams.baseEstimationMode = mode
             referenceParams.manualBaseRGB = nil
             let base = engine.resolveFilmBase(for: image, provided: nil, preset: stock, params: referenceParams)
-            if let stock {
-                return NegativeInversion.presetStats(for: image, base: base, preset: stock,
-                    filmType: params.filmType).dmaxNorm
-            }
-            return (NegativeInversion.sampleStats(image, base: base, filmType: params.filmType)
-                ?? NegativeInversion.genericStats(base: base, filmType: params.filmType)).dmaxNorm
+            var stats = NegativeInversion.sampleStats(image, base: base, filmType: params.filmType,
+                densityLimit: NegativeAutoBalance.supports(params.developTarget) ? 1.8 : nil)
+                ?? NegativeInversion.genericStats(base: base, filmType: params.filmType)
+            if params.filmType != .bwNegative, let stock { stats.dmaxNorm *= stock.relativeRangeFactor }
+            return stats.dmaxNorm
         }
     }
 }

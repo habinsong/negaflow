@@ -15,6 +15,17 @@ bool map_request_v39(const nf_develop_export_request_v39& request, bool require_
         return false;
     }
     if (!map_request_v38(request.v38, require_destination, pipeline_request, result)) { return false; }
+    std::uint32_t bytes = 0U;
+    std::memcpy(&bytes, &request, sizeof(bytes));
+    pipeline_request.auto_balance = false;
+    if (bytes >= sizeof(nf_develop_export_request_v40)) {
+        const auto* extended = reinterpret_cast<const nf_develop_export_request_v40*>(&request);
+        if (extended->auto_balance > 1U || extended->auto_balance_reserved != 0U) {
+            fail_defect_region_request(result, "invalid_auto_balance");
+            return false;
+        }
+        pipeline_request.auto_balance = extended->auto_balance == 1U;
+    }
     pipeline_request.input_gamma = gamma;
     pipeline_request.base_scale = request.base_scale;
     return true;

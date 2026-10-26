@@ -78,7 +78,7 @@ extension CLI {
         }
         let url = URL(fileURLWithPath: path)
         let engine = ChromabaseEngine()
-        guard let image = engine.loadScannerImage(url) ?? engine.loadImportedImage(url) else {
+        guard let image = engine.loadScannerImage(url) ?? engine.loadImportedImage(url, rawRendering: .forDigitalSource(false, filmType: filmType)) else {
             throw ChromabaseError.loadFailed(url.path)
         }
         return (image, filmType)

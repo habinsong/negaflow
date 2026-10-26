@@ -8,11 +8,11 @@ import ImageIO
 // 지원 입력:
 //   • TIFF(8/16bit)  — 필름 스캐너 원본
 //   • JPEG / PNG     — 카메라 스캔/테스트 입력
-//   • DNG / RAW      — 디지털 카메라 RAW, Core Image RAW pipeline으로 현상
+//   • DNG / RAW      — negative film uses LibRaw camera RGB; positive/digital uses Apple RAW.
 //
-// RAW는 CGImageSourceCreateImageAtIndex로 얻으면 임베디드 썸네일만 나온다.
-// 따라서 DNG/RAW는 CIRAWFilter(filterWithImageURL:)로 데모사이크 처리한다.
-// 이렇게 하면 16bit linear 영역 데이터를 얻어 Chromabase 파이프라인에 그대로 넣을 수 있다.
+// Negative camera RAW retains its camera basis through base measurement and inversion.
+// NativeCameraRAW supplies the deferred camera-to-working matrix. Embedded thumbnails
+// from CGImageSource are never used as developed RAW pixels.
 public enum ImageLoader {
     /// ImageIO의 기본 지연 디코드는 같은 CGImage를 여러 CIContext에서 읽을 때 압축 원본을
     /// context마다 다시 풀 수 있다. 풀해상도 현상/내보내기는 생성 시 한 번 디코드해 캐시한
@@ -100,6 +100,7 @@ public enum ImageLoader {
     public enum Decoder: String, Codable, Sendable {
         case imageIO
         case coreImageRAW
+        case libRaw
     }
 
     /// ICC가 없는 16-bit TIFF의 transfer function은 bit depth만으로 정할 수 없다.
@@ -116,6 +117,7 @@ public enum ImageLoader {
         public let rawScaleFactor: Double?
         public let untaggedTIFFRole: UntaggedTIFFRole?
         public let inputGamma: InputGammaInterpretation?
+        public let cameraToWorking: CameraToWorkingMatrix?
 
         public init(
             decoder: Decoder,
@@ -123,7 +125,8 @@ public enum ImageLoader {
             rawBoostAmount: Double? = nil,
             rawScaleFactor: Double? = nil,
             untaggedTIFFRole: UntaggedTIFFRole? = nil,
-            inputGamma: InputGammaInterpretation? = nil
+            inputGamma: InputGammaInterpretation? = nil,
+            cameraToWorking: CameraToWorkingMatrix? = nil
         ) {
             self.decoder = decoder
             self.rawDecoderVersion = rawDecoderVersion
@@ -131,6 +134,7 @@ public enum ImageLoader {
             self.rawScaleFactor = rawScaleFactor
             self.untaggedTIFFRole = untaggedTIFFRole
             self.inputGamma = inputGamma
+            self.cameraToWorking = cameraToWorking
         }
     }
 

@@ -60,6 +60,10 @@ internal static class ColorRecipeJsonCodec
             parameters[LibraryFrameReader.GreenPrimaryName] = colorModel.GreenPrimary;
             parameters[LibraryFrameReader.BluePrimaryName] = colorModel.BluePrimary;
         }
+        if (edit.AutoBalance is { } autoBalance)
+        {
+            parameters[LibraryFrameReader.AutoBalanceName] = autoBalance;
+        }
         if (edit.AutoLevels is { } autoLevels)
         {
             parameters[LibraryFrameReader.AutoLevelsName] = autoLevels;

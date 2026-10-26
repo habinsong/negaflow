@@ -7,11 +7,15 @@ on:
   pull_request:
     paths:
       - 'negaflow-windows/**'
+      - 'negaflow-mac/Config/LibRaw-Third-Party-Notices.txt'
+      - 'negaflow-mac/Tests/ChromabaseTests/Fixtures/CameraNativeRaw*'
       - '.github/workflows/windows.yml'
   push:
     branches: [main]
     paths:
       - 'negaflow-windows/**'
+      - 'negaflow-mac/Config/LibRaw-Third-Party-Notices.txt'
+      - 'negaflow-mac/Tests/ChromabaseTests/Fixtures/CameraNativeRaw*'
       - '.github/workflows/windows.yml'
   workflow_dispatch:
 
@@ -47,6 +51,8 @@ jobs:
         run: cmake --preset x64-release
       - name: Build
         run: cmake --build --preset x64-release
+      - name: Build camera RAW decoder
+        run: ./scripts/build-libraw.ps1
       - name: Test
         run: ctest --preset x64-release --output-on-failure
 

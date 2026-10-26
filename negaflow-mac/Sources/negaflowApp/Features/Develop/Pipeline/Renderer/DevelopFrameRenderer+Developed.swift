@@ -210,6 +210,7 @@ extension DevelopFrameRenderer {
         var measurements = DevelopSceneMeasurements()
         measurements.analysisRegion = AnalysisRegion(transform: snapshot.imageTransform,
                                                      imageSize: input.extent.size)
+        try NativeCameraRAW.prepare(source: snapshot.rawScanURL, params: effectiveParams, measurements: &measurements)
         try InputGammaRenderReference.prepare(source: snapshot.rawScanURL, params: effectiveParams, measurements: &measurements)
         let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
         return try engine

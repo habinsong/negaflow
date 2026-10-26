@@ -7,7 +7,7 @@ import XCTest
 ///
 /// 이 테스트는 색감의 미적 품질이나 스캐너 재현 정확도를 숫자로 판정하지 않는다. 그 판단에는
 /// 동일 네거티브의 실기 reference scan과 사람의 시각 QA가 필요하다. 여기서는 모든 픽셀에 대해
-/// `반전 -> 타겟 변환`으로 선언된 조합과 실제 엔진 조합이 같은지만 확인한다.
+/// `반전 -> 자동 밸런스(ON) -> 타겟 변환`으로 선언된 조합과 실제 엔진 조합이 같은지만 확인한다.
 final class DevelopTargetWholeFrameCompositionTests: XCTestCase {
     private let width = 192
     private let height = 128
@@ -205,7 +205,10 @@ final class DevelopTargetWholeFrameCompositionTests: XCTestCase {
     ) -> CIImage {
         let fixed = NegativeLinearResponse.applies(params)
         var image: CIImage
-        if fixed {
+        if NegativeAutoBalance.supports(params.developTarget) {
+            var state = DevelopSceneMeasurements()
+            image = NegativeAutoBalance.invert(input, base: base, preset: nil, params: params, measurements: &state)
+        } else if fixed {
             image = NegativeLinearResponse.invert(input,
                 stats: NegativeLinearResponse.stats(base: base, preset: nil, filmType: params.filmType),
                 filmType: params.filmType)

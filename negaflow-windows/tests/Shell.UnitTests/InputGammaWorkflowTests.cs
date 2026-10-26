@@ -21,6 +21,24 @@ internal static class InputGammaWorkflowTests
             Check(!InputGammaValueInput.Accepts(text), "gamma_input_rejects_" + text);
             Check(!InputGammaValueInput.TryValue(text, out _), "gamma_commit_rejects_" + text);
         }
+        JsonObject balanceRecord = FrameRecord("balance-frame", "balance.tiff", 0);
+        var balanceFrame = LibraryFrameReader.Read(System.Text.Json.JsonSerializer.SerializeToElement(balanceRecord)).Frame!;
+        Check(balanceFrame.AutoBalance, "balance_missing_defaults_on");
+        var balanceEdit = new LibraryFrameEdit(balanceFrame.Tone, balanceFrame.ManualBase) { AutoBalance = false };
+        var balancedRecord = LibraryFrameWriter.Apply(balanceRecord, balanceEdit);
+        var restoredBalance = LibraryFrameReader.Read(System.Text.Json.JsonSerializer.SerializeToElement(balancedRecord.FrameRecord)).Frame!;
+        Check(!restoredBalance.AutoBalance, "balance_explicit_off_roundtrips");
+        foreach (DevelopTarget target in new[] { DevelopTarget.Main, DevelopTarget.Print, DevelopTarget.Emulsion, DevelopTarget.Noritsu, DevelopTarget.Sp3000, DevelopTarget.F135, DevelopTarget.Hr, DevelopTarget.Rescue })
+        {
+            var negative = Frame(null, signal: SourceSignalKind.FilmNegativeScan, filmType: FilmType.ColorNegative,
+                sourcePath: Path.Combine(Path.GetTempPath(), "balance-source.tif")) with { DevelopTarget = target };
+            var request = DevelopRequestFactory.Create(negative, Path.Combine(Path.GetTempPath(), "balance-out.tif"));
+            Check(request.Request?.AutoBalance == (target is DevelopTarget.Main or DevelopTarget.Print || DevelopTargets.IsCustom(target)),
+                "balance_request_scope_" + target);
+            var disabled = DevelopRequestFactory.Create(negative with { AutoBalance = false }, Path.Combine(Path.GetTempPath(), "balance-out.tif"));
+            Check(disabled.Request?.AutoBalance == false, "balance_off_reaches_engine_" + target);
+        }
+
         var recorded = InputGammaInterpretation.Power(2.19921875);
         Check(InputGammaValueInput.Format(recorded.Value!.Value) == "2.2" && recorded.Value == 2.19921875,
             "gamma_display_uses_tenths_preserving_source_precision");

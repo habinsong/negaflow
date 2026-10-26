@@ -180,9 +180,8 @@ try {
 
     Copy-Item -LiteralPath $packageRegistrationScript -Destination $payloadDirectory -Force
 
-    # 카메라 RAW 디코더. Windows 는 RAW codec 을 기본 제공하지 않으므로 이것이 빠지면
-    # DNG/CR2/NEF 가져오기가 Microsoft Store 확장이 깔린 기계에서만 됩니다. LGPL-2.1 이라
-    # 라이선스 원문과 대응 소스를 같이 넣어야 합니다 — 셋 다 build-libraw.ps1 이 만듭니다.
+    # 음화 RAW는 LibRaw 카메라 RGB를 사용합니다. 업스트림의 CDDL-1.0을 선택하며
+    # 디코더와 라이선스 원문·대응 소스를 함께 패키징합니다.
     $librawDll = Join-Path $projectRoot "out\build\native\$nativePreset\Release\libraw.dll"
     if (-not (Test-Path -LiteralPath $librawDll)) {
         & (Join-Path $PSScriptRoot 'build-libraw.ps1') `
@@ -214,9 +213,15 @@ try {
         }
         Copy-Item -LiteralPath $source -Destination $librawNoticeDirectory -Force
     }
+    $additionalNotice = Join-Path $repositoryRoot 'negaflow-mac\Config\LibRaw-Third-Party-Notices.txt'
+    if (Test-Path -LiteralPath $additionalNotice -PathType Leaf) {
+        Copy-Item -LiteralPath $additionalNotice -Destination $librawNoticeDirectory -Force
+    } else {
+        Write-Warning 'Supplemental LibRaw notice is missing; upstream source and licence files are retained.'
+    }
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'build-libraw.ps1') `
         -Destination (Join-Path $librawNoticeDirectory 'build-libraw.ps1') -Force
-    # LGPL 대응 소스. 파일 이름을 여기 적어 두면 LibRaw 를 올릴 때마다 이 줄이 어긋나고,
+    # CDDL 배포 소스. 파일 이름을 여기 적어 두면 LibRaw 를 올릴 때마다 이 줄이 어긋나고,
     # 어긋난 것은 빌드가 아니라 배포 뒤에 드러납니다. `build-libraw.ps1` 이 놓아 둔 것을
     # 그대로 집되, 없거나 둘 이상이면 세웁니다.
     $librawSource = @(Get-ChildItem -LiteralPath $librawLicenseDirectory -Filter 'LibRaw-*.tar.gz' -File)

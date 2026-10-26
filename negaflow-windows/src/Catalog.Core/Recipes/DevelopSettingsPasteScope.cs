@@ -67,6 +67,7 @@ public readonly record struct DevelopSettingsPasteScope(
                 Base = source.Base with { Scale = destination.Base.Scale },
                 ManualBase = source.ManualBase,
                 AutoLevels = source.AutoLevels,
+                AutoBalance = source.AutoBalance,
                 AutoNeutralBalance = source.AutoNeutralBalance,
                 DevelopTarget = source.DevelopTarget,
             };

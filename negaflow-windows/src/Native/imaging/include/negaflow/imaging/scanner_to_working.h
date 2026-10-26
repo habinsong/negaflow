@@ -55,7 +55,11 @@ struct WorkingImage final {
     std::uint32_t height{0};
     std::uint32_t stride_pixels{0};
     std::vector<negaflow::core::Rgba32F> pixels{};
+    std::optional<negaflow::imageio::CameraToWorkingMatrix> camera_to_working{};
 };
+
+// Consume a deferred native-camera transform once. The caller synchronizes GPU pixels first.
+[[nodiscard]] bool apply_deferred_camera_transform(WorkingImage& image) noexcept;
 
 struct ScannerToWorkingInfo final {
     negaflow::color::InputGammaInterpretation input_gamma{};

@@ -184,7 +184,10 @@ public final class ChromabaseEngine: @unchecked Sendable {
         maxDimension: CGFloat,
         measurements: inout DevelopSceneMeasurements
     ) -> CIImage {
-        developScanner(
+        if measurements.cameraToWorking == nil {
+            measurements.cameraToWorking = NativeCameraRAW.matrix(in: input)
+        }
+        return developScanner(
             image: Self.scannerPreviewProxy(input, maxDimension: maxDimension),
             base: base,
             params: params,
@@ -201,6 +204,9 @@ public final class ChromabaseEngine: @unchecked Sendable {
         maxDimension: CGFloat,
         measurements: inout DevelopSceneMeasurements
     ) -> CIImage {
+        if measurements.cameraToWorking == nil {
+            measurements.cameraToWorking = NativeCameraRAW.matrix(in: input)
+        }
         let proxy = Self.scannerPreviewProxy(input, maxDimension: maxDimension)
         let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
         if measurements.analysisRegion == nil {
@@ -237,7 +243,11 @@ public final class ChromabaseEngine: @unchecked Sendable {
         maxDimension: CGFloat,
         measurements: DevelopSceneMeasurements = .init()
     ) -> [DevelopDebugFrame] {
-        developDebugFramesScanner(
+        var measurements = measurements
+        if measurements.cameraToWorking == nil {
+            measurements.cameraToWorking = NativeCameraRAW.matrix(in: input)
+        }
+        return developDebugFramesScanner(
             image: Self.scannerPreviewProxy(input, maxDimension: maxDimension),
             base: base,
             params: params,
@@ -306,7 +316,10 @@ public final class ChromabaseEngine: @unchecked Sendable {
             ? params.baseScale.applied(to: reference) : reference
 
         prepareInputGammaStatistics(base: fb, preset: preset, params: params, measurements: &state)
-        if NegativeLinearResponse.applies(params) {
+        if NegativeAutoBalance.supports(params.developTarget) {
+            img = NegativeAutoBalance.invert(img, base: fb, preset: preset,
+                params: params, measurements: &state)
+        } else if NegativeLinearResponse.applies(params) {
             let fixed = NegativeLinearResponse.stats(base: fb, preset: preset, filmType: params.filmType)
             state.inversionStats = fixed
             img = NegativeLinearResponse.invert(img, stats: fixed, filmType: params.filmType)
@@ -318,6 +331,9 @@ public final class ChromabaseEngine: @unchecked Sendable {
             img = NegativeInversion.applySceneRanged(to: img, base: fb, filmType: params.filmType, measurements: &state)
         } else {
             img = NegativeInversion.apply(to: img, base: fb, filmType: params.filmType)
+        }
+        if let matrix = state.cameraToWorking ?? NativeCameraRAW.matrix(in: input) {
+            img = matrix.apply(to: img)
         }
         let stats = negativeDebugMetrics(
             for: img, base: fb, preset: preset, filmType: params.filmType, measured: state.inversionStats
@@ -392,13 +408,15 @@ public final class ChromabaseEngine: @unchecked Sendable {
                 "PRINT export requires a valid RGB printer-class ICC profile"
             )
         }
-        let inputImg = try ImageLoader.loadImportedDecoded(input, inputGamma: params.inputGamma).image
+        let inputImg = try ImageLoader.loadImportedDecoded(input, inputGamma: params.inputGamma,
+            rawRendering: .forDigitalSource(params.isDigitalSource, filmType: params.filmType)).image
         var measurements = DevelopSceneMeasurements()
         if format != .rawScanTIFF {
+            try NativeCameraRAW.prepare(source: input, params: params, measurements: &measurements)
             try InputGammaRenderReference.prepare(source: input, params: params, measurements: &measurements)
         }
         let outputImage = format == .rawScanTIFF
-            ? inputImg
+            ? NativeCameraRAW.workingTransmittance(inputImg)
             : developScanner(image: inputImg, base: base, params: params, measurements: &measurements)
         try ExportEngine.write(
             outputImage,
@@ -431,10 +449,11 @@ public final class ChromabaseEngine: @unchecked Sendable {
         let inputImg = try ImageLoader.loadScannerTIFFDecoded(input, inputGamma: params.inputGamma).image
         var measurements = DevelopSceneMeasurements()
         if format != .rawScanTIFF {
+            try NativeCameraRAW.prepare(source: input, params: params, measurements: &measurements)
             try InputGammaRenderReference.prepare(source: input, params: params, measurements: &measurements)
         }
         let outputImage = format == .rawScanTIFF
-            ? inputImg
+            ? NativeCameraRAW.workingTransmittance(inputImg)
             : developScanner(image: inputImg, base: base, params: params, measurements: &measurements)
         try ExportEngine.write(
             outputImage,
@@ -473,7 +492,7 @@ public final class ChromabaseEngine: @unchecked Sendable {
     public func loadImportedImage(_ url: URL, params: DevelopParameters) -> CIImage? {
         loadImportedImage(
             url,
-            rawRendering: .forDigitalSource(params.isDigitalSource),
+            rawRendering: .forDigitalSource(params.isDigitalSource, filmType: params.filmType),
             inputGamma: params.inputGamma
         )
     }

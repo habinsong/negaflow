@@ -102,7 +102,7 @@ Connecting a scanner requires a separate plugin. For SANE scanners, use [`negafl
 
 Before developing a negative, it measures the film base in an unexposed area. If the automatic measurement is off, use the eyedropper or adjust the RGB values.
 
-The default is `MAIN` with manual adjustments. Auto tone, auto white balance, auto levels, and auto color only run when you press them.
+The default is `MAIN` with Auto Balance on. The switch sits at the right of the Target heading for MAIN (including PRINT) and CS. It adjusts color and brightness from the current picture; switching it off bypasses that step. Auto Tone, Auto White Balance, Auto Levels and Auto Color remain separate and off by default.
 
 Other targets are `PRINT` for output through a printer ICC profile, `HS` and `SP` in the minilab family, `F135` and `HR` in the lab-equipment family, and `EXPIRED` for restoring old film. For output you can pick sRGB, Display P3, Adobe RGB, or an RGB ICC profile of your own.
 

@@ -102,7 +102,7 @@ Um einen echten Scanner anzuschließen, braucht es ein separates Plug-in, und f�
 
 Vor der Entwicklung eines Negativs misst sie die Filmbasis in einem unbelichteten Bereich. Wo die automatische Messung danebenliegt, tippen Sie einfach mit der Pipette oder passen die RGB-Werte an.
 
-Voreingestellt sind `MAIN` und manuelle Korrekturen. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe laufen nur, wenn Sie sie drücken.
+Voreingestellt sind `MAIN` und Auto-Abgleich ON. Bei MAIN (einschließlich PRINT) und CS sitzt der Schalter rechts neben der Zielüberschrift. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF.
 
 Weitere Ziele sind `PRINT` für die Ausgabe über ein Drucker-ICC, `HS` und `SP` aus der Minilab-Familie, `F135` und `HR` aus der Familie der Laborgeräte, `EXPIRED`, das alten Film zurückzuholen versucht. Bei der Ausgabe wählen Sie zwischen sRGB, Display P3, Adobe RGB und einem eigenen RGB-ICC.
 

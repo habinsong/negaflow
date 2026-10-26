@@ -2,6 +2,7 @@ import Foundation
 
 extension AppLocalization {
     static let simplifiedChinesePhraseTable: [AppLocalizedPhrase: String] = [
+            .autoBalance: "自动平衡",
             .customTargetTitle: "Custom",
             .inputGammaEstimated: "估计伽马 %.1f",
             .inputGammaRecorded: "文件伽马 %.1f",

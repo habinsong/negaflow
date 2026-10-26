@@ -348,6 +348,8 @@ public static partial class DevelopRequestFactory
             RedPrimary = (float)colorModel.RedPrimary,
             GreenPrimary = (float)colorModel.GreenPrimary,
             BluePrimary = (float)colorModel.BluePrimary,
+            AutoBalance = !uninvertedSource && frame.AutoBalance &&
+                (developTarget is DevelopTarget.Main or DevelopTarget.Print || DevelopTargets.IsCustom(developTarget)),
             AutoLevels = !uninvertedSource && frame.AutoLevels,
             AutoNeutralBalance = !uninvertedSource && frame.AutoNeutralBalance,
             DevelopTarget = developTarget switch

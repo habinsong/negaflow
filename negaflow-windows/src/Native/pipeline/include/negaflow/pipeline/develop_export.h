@@ -105,6 +105,7 @@ struct DevelopExportRequest final {
     DevelopExportFormat format{DevelopExportFormat::png16};
     FilmPolarity film_polarity{FilmPolarity::negative};
     NegativeBaseEstimationMode base_estimation_mode{NegativeBaseEstimationMode::manual};
+    bool auto_balance{false};
     double base_scale{1.0};
     negaflow::color::InputGammaInterpretation input_gamma{};
     std::optional<negaflow::imaging::FilmStockBasePreset> film_stock_preset{};

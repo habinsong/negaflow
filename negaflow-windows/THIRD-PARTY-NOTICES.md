@@ -192,11 +192,12 @@ macOS has RAW decoding inside ImageIO, so without a decoder of our own the same
 file opens on macOS and fails on Windows.
 
 negaflow therefore redistributes LibRaw as `libraw.dll` and uses it whenever the
-installed WIC codecs cannot open a file.
+installed WIC codecs cannot open a file. Negative RAW processing uses LibRaw
+directly so inversion precedes the camera color matrix.
 
 | Component | Version | License | Shipped payload |
 |---|---|---|---|
-| LibRaw | 0.22.2+df226ea | **LGPL-2.1** or **CDDL-1.0** (dual; we distribute under LGPL-2.1) | `libraw.dll` |
+| LibRaw | 0.22.2+df226ea | **LGPL-2.1** or **CDDL-1.0** (dual; we distribute under CDDL-1.0) | `libraw.dll` |
 | Microsoft OpenMP runtime | 14.51.36231 (VC++ 2015-2022 redistributable) | Microsoft Visual C++ Redistributable licence (redistributable component) | `vcomp140.dll` |
 
 - Upstream source: <https://github.com/LibRaw/LibRaw/archive/df226ea4178ccd74245f4f13c23adddfa01411c9.tar.gz>
@@ -209,9 +210,10 @@ installed WIC codecs cannot open a file.
   downloaded twice and produced the same SHA-256.
 - Build recipe: [`scripts/build-libraw.ps1`](scripts/build-libraw.ps1). It pins the
   URL and hash above, builds with the `Makefile.msvc` that ships in the LibRaw
-  source, and verifies that the fifteen C API entry points negaflow resolves are
+  source, and verifies that the required C API entry points negaflow resolves are
   actually exported. No optional LibRaw dependency (RawSpeed, Adobe DNG SDK,
-  LCMS, libjpeg) is enabled, so `libraw.dll` pulls in no further third-party code.
+  LCMS, libjpeg) is enabled. Upstream still includes BSD and MIT portions, whose
+  notices are reproduced in `licenses/libraw/LibRaw-Third-Party-Notices.txt`.
 - **Built with `/openmp`.** LibRaw's demosaic carries 44 OpenMP regions and stock
   `Makefile.msvc` leaves them switched off, which left a Fuji X-Trans export at
   14.1 s where the same file takes 4.5 s with them on. The only added payload is
@@ -228,27 +230,22 @@ it is not in the import table, and the product runs without it (RAW files then
 fail with the same message any undecodable file gets). This is the same
 arrangement as `e_sqlite3.dll` in section 3.
 
-### LGPL-2.1 obligations a distribution must meet
+### LibRaw distribution under CDDL-1.0
 
 `vcomp140.dll` is Microsoft's redistributable OpenMP runtime, shipped under the
 Visual C++ Redistributable licence that permits redistribution with an
 application. It is not LibRaw code and carries no LGPL obligation of its own.
 
-1. Ship the licence text. `LICENSE.LGPL` and `LICENSE.CDDL` come from the LibRaw
-   source archive; `scripts/build-libraw.ps1` copies both, plus `COPYRIGHT`,
-   `Changelog.txt`, and `build-libraw.ps1`, into its `redistributable\` staging
-   directory, and `scripts/build-release.ps1` places them into `licenses\libraw\`.
-2. Ship the complete corresponding source, including the compilation script.
-   `scripts/build-libraw.ps1` places the exact pinned `LibRaw-0.22.2+df226ea.tar.gz`
-   and `build-libraw.ps1` in `licenses\libraw\`. Ship both; together they are the
-   complete corresponding source the shipped binary was built from.
-3. Allow the user to relink. Satisfied by shipping LibRaw as a separate DLL the
-   user can replace with their own build of the same C API.
-4. State that LibRaw is used and is covered by the LGPL. This file does that.
+This distribution selects CDDL-1.0 from upstream's dual licence. The library
+is unmodified and remains a separate, replaceable DLL. Negaflow source files
+retain their Apache-2.0 licence.
 
-**LibRaw is not linked into, and does not affect the licence of, any Apache-2.0
-negaflow code.** The dual licence also offers CDDL-1.0; we take LGPL-2.1 because
-dynamic linking under it is unambiguous and needs no per-file copyleft tracking.
+`scripts/build-libraw.ps1` stages the upstream `LICENSE.CDDL`, `LICENSE.LGPL`,
+`COPYRIGHT`, `Changelog.txt`, the exact source archive and build script.
+`scripts/build-release.ps1` includes them in `licenses/libraw/`, together with
+`LibRaw-Third-Party-Notices.txt` for upstream BSD and MIT portions. The LGPL
+text is retained as the upstream alternative. It is not the selected licence
+for this Windows distribution.
 
 ## 5. Windows platform APIs
 

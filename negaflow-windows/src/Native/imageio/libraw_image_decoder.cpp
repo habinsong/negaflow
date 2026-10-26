@@ -58,6 +58,8 @@ struct Api final {
     void(__cdecl* set_highlight)(void*, int){nullptr};
     void(__cdecl* set_user_mul)(void*, int, float){nullptr};
     float(__cdecl* get_cam_mul)(void*, int){nullptr};
+    float(__cdecl* get_rgb_cam)(void*, int, int){nullptr};
+    void(__cdecl* set_adjust_maximum_thr)(void*, float){nullptr};
     // 크기만 알면 되는 자리를 위한 것입니다. `libraw_unpack` 도 `dcraw_process` 도
     // 부르지 않고 헤더만 읽습니다 - 가져오기가 이것 때문에 파일 전체를 현상했습니다.
     int(__cdecl* get_iwidth)(void*){nullptr};
@@ -107,6 +109,8 @@ template <typename Fn>
         bind(api.module, "libraw_version", api.version);
     // 선택 심볼입니다. 실패해도 `bound` 를 깎지 않습니다.
     (void)bind(api.module, "libraw_get_imgother", api.get_imgother);
+    (void)bind(api.module, "libraw_get_rgb_cam", api.get_rgb_cam);
+    (void)bind(api.module, "libraw_set_adjust_maximum_thr", api.set_adjust_maximum_thr);
     if (!bound) {
         // 심볼이 하나라도 없으면 그 DLL 은 우리가 아는 LibRaw 가 아닙니다. 반쯤 쓰지 않고
         // 통째로 포기하고 WIC 실패 사유를 그대로 사용자에게 돌려줍니다.
@@ -367,13 +371,20 @@ LibRawDecodeResult decode_raw_with_libraw(
 
         configure_as_shot(functions, handle.get());
         if (control.scene_linear_raw) {
+            if (functions.get_rgb_cam == nullptr || functions.set_adjust_maximum_thr == nullptr) {
+                result.status = LibRawDecodeStatus::unsupported_output;
+                return result;
+            }
+            functions.set_output_color(handle.get(), 0);
+            functions.set_adjust_maximum_thr(handle.get(), 0);
+            functions.set_highlight(handle.get(), 1);
+            for (int c = 0; c < 4; ++c) { functions.set_user_mul(handle.get(), c, 1); }
             functions.set_gamma(handle.get(), 0, 1.0F);
             functions.set_gamma(handle.get(), 1, 1.0F);
         }
-        // 프리뷰는 보간을 빠른 것으로 바꿉니다. LibRaw 기본은 AHD(3) 이고, 0 은 선형
-        // 보간입니다 - 프리뷰 프록시는 어차피 줄여서 보는 그림이라 이 차이가 화면에서
-        // 드러나지 않고, 정착본은 기본 보간을 그대로 씁니다.
-        if (control.prefer_speed && functions.set_demosaic != nullptr) {
+        // 디지털 프리뷰만 선형 보간을 사용합니다. 음화는 프리뷰와 내보내기의
+        // 채널 값이 같도록 양쪽 모두 LibRaw 기본 보간을 유지합니다.
+        if (control.prefer_speed && !control.scene_linear_raw && functions.set_demosaic != nullptr) {
             functions.set_demosaic(handle.get(), 0);
         }
 
@@ -436,6 +447,14 @@ LibRawDecodeResult decode_raw_with_libraw(
         result.reduced_for_preview = reduced.reduced;
         if (control.scene_linear_raw) {
             result.image.untagged_rgb_transfer = UntaggedRgbTransfer::linear_scanner;
+            CameraToWorkingMatrix matrix{};
+            for (int row = 0; row < 3; ++row) {
+                for (int col = 0; col < 3; ++col) {
+                    matrix[static_cast<std::size_t>(row * 3 + col)] = functions.get_rgb_cam(handle.get(), row, col);
+                }
+            }
+            if (!valid_camera_matrix(matrix)) { result.status = LibRawDecodeStatus::unsupported_output; return result; }
+            result.image.camera_to_working = matrix;
         }
 
         if (stop_token.stop_requested()) {

@@ -70,7 +70,9 @@ extension CLI {
            let raw = engine.loadScannerImage(inURL) {
             base = engine.estimateFilmBase(in: raw, mode: .auto)
         } else if resolvedFilmType.requiresInversion {
-            base = engine.estimateFilmBase(at: inURL, mode: .auto)
+            let raw = try ImageLoader.loadImportedDecoded(inURL, inputGamma: .automatic,
+                rawRendering: .forDigitalSource(false, filmType: resolvedFilmType)).image
+            base = engine.estimateFilmBase(in: raw, mode: .auto)
         } else {
             base = nil
         }
@@ -141,7 +143,7 @@ extension CLI {
                               params: DevelopParameters,
                               maskURL: URL?,
                               overlayURL: URL?) throws {
-        let source = scannerRaw ? engine.loadScannerImage(input) : engine.loadImage(input)
+        let source = scannerRaw ? engine.loadScannerImage(input) : engine.loadImportedImage(input, params: params)
         guard let source else { throw ChromabaseError.loadFailed(input.path) }
         var debugParams = params
         debugParams.defectRemoval = 0

@@ -13,6 +13,7 @@ extension DevelopParameters {
         try c.encodeIfPresent(manualBaseRGB, forKey: .manualBaseRGB)
         try c.encodeIfPresent(filmStockDminID, forKey: .filmStockDminID)
         try c.encodeIfPresent(lightSourceProfileID, forKey: .lightSourceProfileID)
+        try c.encode(autoBalance, forKey: .autoBalance)
         try c.encode(autoLevels, forKey: .autoLevels)
         try c.encode(autoNeutralBalance, forKey: .autoNeutralBalance)
         try c.encode(exposure, forKey: .exposure)

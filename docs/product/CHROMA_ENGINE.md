@@ -6,14 +6,14 @@ Chroma Engine inverts and develops film. The code sits in the `Chromabase` modul
 
 | At a glance | Detail |
 |---|---|
-| Default develop | `MAIN`, manual correction |
+| Default develop | `MAIN`, Auto Balance ON |
 | Film base | Automatic measurement, eyedropper, direct RGB entry |
 | Internal color | 32-bit floating point linear color space |
-| Automatic features | Applied only when you run them |
+| Automatic features | Auto Balance ON |
 | Output color space | sRGB, Display P3, Adobe RGB, custom RGB ICC |
 
 > [!IMPORTANT]
-> Auto Tone, Auto White Balance, Auto Levels, and Auto Color never slip into the default develop.
+> The default is `MAIN` with Auto Balance on. The switch sits at the right of the Target heading for MAIN (including PRINT) and CS. It adjusts color and brightness from the current picture; switching it off bypasses that step. Auto Tone, Auto White Balance, Auto Levels and Auto Color remain separate and off by default.
 
 ## What comes first
 
@@ -28,13 +28,13 @@ Chroma Engine inverts and develops film. The code sits in the `Chromabase` modul
 ```mermaid
 flowchart LR
     A["Read the file"] --> B["Fix the orientation"]
-    B --> C["Linear working color space"]
+    B --> C["Linear input / camera RGB for RAW"]
     C --> D{"Film type"}
     D -->|positive| E["Positive processing"]
     D -->|negative| F["Measure the base"]
     F --> G["Optical density and inversion"]
     E --> H["Develop target and profiles"]
-    G --> H
+    G --> AB["Auto Balance ON/OFF"] --> M["RAW camera matrix after inversion"] --> H
     H --> I["Tone, color, local adjustment"]
     I --> J["Detail and effects"]
     J --> K["Display or output color space"]
@@ -104,30 +104,13 @@ What the data is for:
 
 Some values were approximated by reading curves in public material, and some were set conservatively. 27 names do not mean 27 validated color profiles. Once the base is measured, the measurement wins.
 
-### Fixed print response
+### MAIN/PRINT and CS
 
-`fixed-density-linear-v6` applies to negative `MAIN/PRINT` without a scanner profile. It uses a fixed density calibration. Changing the other pixels, crop or frame histogram does not change the inversion of a given transmittance with the same base and settings. No scene vibrance is applied.
+Auto Balance ON restores the MAIN/CS inversion from `412bb31`: each channel uses its densest 0.2% scene percentile, with a 1.8D range limit, followed by the original `shoulder-print-response-v4` curve and muted-scene vibrance. Film presets multiply that measured range by their relative channel factors. The 1.8D limit is a rendering safeguard retained for compatibility, not a measured property of every film. It can affect dense negatives.
 
-`B` is measured film-base transmittance. `f` is 1 for the generic response, or the selected stock's fixed relative range factor. `0.62` is the generic film-gamma reference and `0.60D` is its gray-density reference. These are design assumptions, not measured values for every stock or scanner. Manufacturer Status M densities do not directly characterize scanner RGB.
+OFF uses the same v4 curve with a fixed nominal range (color 1.55D, B&W 2.17D), multiplied by preset factors when selected. It skips scene range normalization and muted-scene vibrance. Equal transmittance with the same base and settings then gives the same result across frames. ON can change both brightness and color with scene content. Neither mode establishes measured film color accuracy.
 
-```math
-q_c = \log_{10}(B_c/\max(T_c,10^{-5}))/f_c,\quad k=0.045,\quad d_t=0.60+0.62\log_{10}(k/0.18),\quad p=d_t\ln(10)/0.62
-```
-
-```math
-E_c=\begin{cases}
-k\,\operatorname{sgn}(q_c)(|q_c|/d_t)^p,&q_c<d_t\\
-0.18\times10^{(q_c-0.60)/0.62},&q_c\ge d_t
-\end{cases}
-```
-
-The film-density toe joins the straight log-exposure section with matching value and slope. Unexposed base produces zero scene exposure before WB. This power toe is a generic design, not a measured stock curve. Near-base inversion can amplify density noise.
-
-Channel WB and exposure act on scene-linear `E`. The same fixed output curve runs on each channel after WB. The middle `0.045...0.70` is identity and preserves RGB ratios. The shoulder changes highlight color ratios. Below `0.045`, a small black floor is added: `b=0.001` for color and `0.0005` for B&W. Above `0.70`, the rational shoulder approaches 1. Both joins have slope 1. Film-toe inversion and output black rendering are separate stages.
-
-The inverse film stage has no `1.8D` cap. The `1e-5` transmission floor protects the logarithm. RGB gamut mapping belongs to the output boundary. Each channel is bounded by the black floor and 1 at this stage. Later user adjustments may extend that range.
-
-[fixed-density-linear-v6](../reference/PRINT_RESPONSE.md)
+[Negative response](../reference/PRINT_RESPONSE.md)
 
 ## Profiles come in three kinds
 
@@ -145,7 +128,7 @@ The data is described in [film profiles](FILM_PROFILES.md).
 
 ### `MAIN`
 
-The default development target uses fixed density calibration and a fixed per-channel output curve. Auto Levels, Auto Color, Auto Tone and Auto White Balance run only when requested.
+The default is `MAIN` with Auto Balance on. The switch sits at the right of the Target heading for MAIN (including PRINT) and CS. It adjusts color and brightness from the current picture; switching it off bypasses that step. Auto Tone, Auto White Balance, Auto Levels and Auto Color remain separate and off by default.
 
 ### `PRINT`
 

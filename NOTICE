@@ -2,7 +2,9 @@ negaflow
 Copyright 2026 Song Habin
 
 Licensed under the Apache License, Version 2.0. See LICENSE for the complete license text.
-See TRADEMARKS.md for third-party trademark and nominative-use notices, and negaflow-windows/THIRD-PARTY-NOTICES.md for Windows third-party component notices.
+See TRADEMARKS.md for third-party trademark and nominative-use notices, docs/legal/PROVENANCE.md for macOS LibRaw source and license material, and negaflow-windows/THIRD-PARTY-NOTICES.md for Windows third-party component notices.
+
+Negative camera RAW decoding uses the unmodified LibRaw library, Copyright LibRaw LLC and upstream contributors, under CDDL-1.0 on macOS and Windows, selected from upstream dual licensing. The macOS app contains the replaceable library and source/build/license material in Contents/Resources/licenses/libraw/. The test-only CameraNativeRaw.dng is CC0-1.0 material from raw.pixls.us entry 2204; see its adjacent .source.json.
 
 Verification and benchmark metadata in negaflow-mac/Config/defect-corpus-film-r-v2.json references the external dataset:
 "Authentically damaged & manually restored film scans" (FILM-R v2) by Daniela Ivanova, licensed under Creative Commons Attribution 4.0 International (CC BY 4.0, https://creativecommons.org/licenses/by/4.0/), https://doi.org/10.6084/m9.figshare.21803304.v2.

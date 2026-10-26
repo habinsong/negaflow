@@ -39,5 +39,6 @@ public sealed record LibraryFrameEdit(
     FramePickState? PickState = null,
     DisplayNameSelection? DisplayName = null)
 {
+    public bool? AutoBalance { get; init; }
     public InputGammaInterpretation? InputGamma { get; init; }
 }

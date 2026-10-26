@@ -14,6 +14,7 @@ struct Entry {
     negaflow::imageio::ImageFileObservation observation;
     negaflow::imaging::NegativeFilmType film_type;
     std::optional<negaflow::imaging::FilmStockBasePreset> preset;
+    bool legacy;
     std::array<float, 3> range;
 };
 std::mutex reference_mutex;
@@ -28,7 +29,9 @@ std::optional<DevelopExportOutcome> prepare_input_gamma_reference(
     const DevelopExportRequest& request, const DevelopRunControl& control, const ObservedSource& observed,
     std::optional<std::array<float, 3>>& range) noexcept {
     if (request.input_gamma.mode == 0U || request.film_polarity == FilmPolarity::positive) { return {}; }
-    if (request.develop_target != DevelopTarget::noritsu && request.develop_target != DevelopTarget::sp3000 &&
+    const bool legacy = request.auto_balance && (request.develop_target == DevelopTarget::main ||
+        request.develop_target == DevelopTarget::print || request.develop_target >= DevelopTarget::emulsion);
+    if (!legacy && request.develop_target != DevelopTarget::noritsu && request.develop_target != DevelopTarget::sp3000 &&
         request.develop_target != DevelopTarget::f135 && request.develop_target != DevelopTarget::hr) {
         const auto response = request.negative.film_type == imaging::NegativeFilmType::black_and_white
             ? core::black_and_white_negative_print_response() : core::color_negative_print_response();
@@ -45,7 +48,7 @@ std::optional<DevelopExportOutcome> prepare_input_gamma_reference(
         {
             const std::lock_guard lock(reference_mutex);
             for (const auto& entry : references) {
-                if (entry.path == request.source && entry.film_type == request.negative.film_type &&
+                if (entry.path == request.source && entry.film_type == request.negative.film_type && entry.legacy == legacy &&
                     same_preset(entry.preset, preset) &&
                     negaflow::imageio::same_image_file_observation(entry.observation, observed.before.observation)) {
                     range = entry.range;
@@ -74,7 +77,8 @@ std::optional<DevelopExportOutcome> prepare_input_gamma_reference(
         PreviewProxyHint hint;
         if (auto failed = resolve_negative_base(baseline, image, hint)) { return failed; }
         negaflow::imaging::ManualNegativeDevelopParameters parameters{hint.dmin, baseline.negative.film_type};
-        parameters.adaptive_density = request.develop_target == DevelopTarget::noritsu ||
+        parameters.legacy_scene_response = legacy;
+        parameters.adaptive_density = legacy || request.develop_target == DevelopTarget::noritsu ||
             request.develop_target == DevelopTarget::sp3000 || request.develop_target == DevelopTarget::f135 ||
             request.develop_target == DevelopTarget::hr;
         parameters.use_preset_response = hint.use_preset_response;
@@ -88,7 +92,7 @@ std::optional<DevelopExportOutcome> prepare_input_gamma_reference(
         {
             const std::lock_guard lock(reference_mutex);
             if (references.size() >= 64U) { references.clear(); }
-            references.push_back({request.source, observed.before.observation, request.negative.film_type, preset, *range});
+            references.push_back({request.source, observed.before.observation, request.negative.film_type, preset, legacy, *range});
         }
         return {};
     } catch (...) { return fail(DevelopExportStage::develop, "input_gamma_reference_failed"); }

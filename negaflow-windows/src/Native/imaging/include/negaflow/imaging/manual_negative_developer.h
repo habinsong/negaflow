@@ -31,13 +31,15 @@ inline constexpr float maximum_manual_dmin = 1.0F;
 struct ManualNegativeDevelopParameters final {
     std::array<float, 3> dmin;
     NegativeFilmType film_type{NegativeFilmType::color};
-    // Fixed stock-relative density units. Manufacturer Status M is not scanner RGB.
+    // Stock-relative factors multiply the selected scene or nominal density range.
+    // Manufacturer Status M is not scanner RGB.
     bool use_preset_response{false};
     std::array<float, 3> preset_range_factor{};
     std::optional<std::array<float, 3>> input_gamma_reference_range{};
     // 크롭한 사진 영역(원본 정규 좌표). 있으면 장면 밀도 범위와 뮤트 채도를 그 안에서만 잽니다.
     std::optional<AnalysisRegion> analysis_region{};
-    bool adaptive_density{false}; // Only explicit scanner targets.
+    bool adaptive_density{false};
+    bool legacy_scene_response{false}; // MAIN/CS Auto Balance: 412bb31 range cap and vibrance.
     bool linear_output{false};   // Fixed base; output tone follows WB/exposure.
 };
 

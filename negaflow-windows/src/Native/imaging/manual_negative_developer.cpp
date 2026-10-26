@@ -54,7 +54,8 @@ void discard_pixels(WorkingImage& image) noexcept {
     const std::array<float, 3>& dmin,
     const NegativeFilmType film_type,
     const std::optional<AnalysisRegion>& region,
-    std::array<float, 3>* out_black_input = nullptr) noexcept {
+    std::array<float, 3>* out_black_input = nullptr,
+    const bool legacy_scene_response = false) noexcept {
     if (!has_compatible_layout(image)) {
         return std::nullopt;
     }
@@ -253,7 +254,9 @@ void discard_pixels(WorkingImage& image) noexcept {
         std::array<float, 3> measured{};
         for (std::size_t channel = 0U; channel < measured.size(); ++channel) {
             densest[channel] = std::max(percentile(channels[channel], 0.002), 1.0e-5F);
-            densest_floor[channel] = densest[channel];
+            // Preserve 412bb31 rendering; the 1.8D limit is not a measured film property.
+            densest_floor[channel] = legacy_scene_response
+                ? std::max(densest[channel], dmin[channel] * std::pow(10.0F, -1.8F)) : densest[channel];
             // 바닥은 **빈 프레임을 막는 자리**이지 평평한 필름을 부풀리는 자리가 아닙니다.
             // 0.4 는 바랜 필름의 파랑을 그대로 삼켰습니다 - 1980~90 년대 카메라 스캔 다섯 장
             // 중 넷이 파랑에서 정확히 0.40 으로 걸렸고(진짜 값 0.13~0.35), 그만큼 파랑이
@@ -370,13 +373,13 @@ ManualNegativeDevelopResult develop_manual_negative(
             std::clamp(parameters.dmin[channel], minimum_manual_dmin, maximum_manual_dmin);
         result.info.dmax_normalized[channel] = response.normal_range;
     }
-    const auto adaptive = !parameters.adaptive_density || parameters.use_preset_response ||
+    const auto adaptive = !parameters.adaptive_density || (parameters.use_preset_response && !parameters.legacy_scene_response) ||
         parameters.input_gamma_reference_range ? std::nullopt : scene_density_range(
         result.image,
         result.info.applied_dmin,
         parameters.film_type,
         parameters.analysis_region,
-        &result.info.black_input);
+        &result.info.black_input, parameters.legacy_scene_response);
     if (!parameters.use_preset_response) {
         if (adaptive) {
             result.info.dmax_normalized = *adaptive;
@@ -458,7 +461,7 @@ ManualNegativeDevelopResult develop_manual_negative(
         return result;
     }
 
-    if (parameters.adaptive_density && !parameters.use_preset_response) {
+    if (parameters.adaptive_density && (!parameters.use_preset_response || parameters.legacy_scene_response)) {
         auto vibrance = apply_muted_scene_vibrance(
             output,
             parameters.film_type == NegativeFilmType::black_and_white,

@@ -19,6 +19,14 @@
 
 IT8.7/1 和 ISO 12641-1 的透射标板面向正片透射原稿。 这些结果说明不了彩色负片的橙色片基、染料干扰、C-41 偏差，也说明不了 NORITSU/FUJI 的输出准确度。 那些主张需要同一张彩色负片经两条路径处理的配对素材，以及独立的验证集合。
 
+对公开 FADGI OpenDICE 图像与参考文件的 264 个色块进行了测量：ΔE00 中位数 9.8815，p95 13.2745，最大值 15.5996。独立 LittleCMS 转换与评估器的 Lab 分量差最大为 0.105。这不是胶片色准合格结果：该资料是正片 IT8 扫描，实物序列号未核实，也没有负片拍摄的相机、光源和胶片实测数据。
+
+也检查了公开负片资料。FADGI 负片参考文件仅提供密度，没有实测颜色色块。BlueNeg 将其修复参考称为 pseudo ground truth。2024 年 ARRI AQUA 分光光度计研究的数据需要申请，不能公开下载。这些资料都不能为当前反转提供独立的原场景色彩基准。
+
+还检查了[公开的 Kodak ColorPlus 200 曝光对比资料](https://discuss.pixls.us/t/any-interest-in-a-film-negative-feature-in-rt/12569/262)，其中有5张 Sony ILCE-7 RAW 扫描，曝光为−1至+3 EV。图卡标签为 Grey White Balance Colour Card，因此未套用 X-Rite 参考值。解码后的相机 RGB 在120个采样色块区域内均无零值或满量程像素。这只是解码信号检查，不是传感器马赛克的直接测量或色彩准确度判定。内嵌 JPEG 预览含有相机白平衡。缺少该图卡及扫描配置的实测基准，无法将输出偏色归因于输入或应用缺陷。由于未确认再分发权利，这些文件不放入仓库或应用。
+
+[FADGI](https://www.digitizationguidelines.gov/guidelines/digitize-OpenDice.html) · [BlueNeg](https://huggingface.co/datasets/ttgroup/blueneg-release) · [Plutino 2024](https://doi.org/10.1002/col.22946)
+
 ## 公开的回归检查素材
 
 FADGI/OpenDICE 的下面两个文件作为一对使用。
@@ -104,13 +112,11 @@ IT8.7/1 面向输入设备。 打印输出需要用实测 `printer + paper + ink
 
 ## `MAIN` 合成色块回归
 
-`FixedNegativeResponseTests` / `fixed-density-linear-v6`
+`NegativeAutoBalanceTests` / `shoulder-print-response-v4`
 
-测试包括独立的胶片直线段模型、不同背景中的同一色块、中性灰阶 WB 及高密度高光。合成回归不能证明真实胶片的色彩准确度。现有配方使用修正后的算法渲染，保留已存参数和原始文件。macOS 渲染器标识和缩略图后缀也区分新结果。
+MAIN/CS 在 ON 和 OFF 下均使用 v4 曲线。保留的 v6 测试验证其固定 primitive，测试中的帧间差异 0 不代表自动平衡 ON 的结果。
 
-公式由本仓库直接实现。未复制 darktable、RawTherapee 或 NegPy 的实现代码。
-
-[fixed-density-linear-v6](PRINT_RESPONSE.md)
+[负片反转响应](PRINT_RESPONSE.md)
 
 ## NORITSU/FUJI 相对风格回归
 

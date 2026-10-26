@@ -7,7 +7,7 @@ import ScannerKit
 
 extension AppModel {
     // MARK: 썸네일 디스크 캐시
-    private static let thumbnailInputVersionSuffix = "-input3-density6"
+    private static let thumbnailInputVersionSuffix = "-input4-density6-native1-balance1"
 
     /// 현상 썸네일과 원본 프리뷰는 서로 다른 파일에 저장한다. 한 경로를 공유하면 늦게 끝난
     /// 원본 시드가 현상 썸네일을 덮어써, 재실행 뒤 네거티브 전체가 원본으로 보일 수 있다.
@@ -24,7 +24,8 @@ extension AppModel {
     private func thumbnailInputSuffix(_ params: DevelopParameters, includeScale: Bool) -> String {
         let gamma = params.inputGamma.value.map { "-g\($0.bitPattern)" } ?? ""
         let scale = includeScale && params.baseScale != .identity ? "-b\(params.baseScale.value.bitPattern)" : ""
-        return Self.thumbnailInputVersionSuffix + gamma + scale
+        let rawMode = ImageLoader.RAWRendering.forDigitalSource(params.isDigitalSource, filmType: params.filmType).rawValue
+        return Self.thumbnailInputVersionSuffix + "-" + rawMode + gamma + scale + (includeScale ? "-range2-ab\(params.autoBalance ? 1 : 0)" : "")
     }
 
     /// 분리 전 캐시 경로. 네거티브에서는 원본인지 현상본인지 판별할 수 없어 표시용으로

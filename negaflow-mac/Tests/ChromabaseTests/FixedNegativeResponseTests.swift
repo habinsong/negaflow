@@ -22,8 +22,13 @@ final class FixedNegativeResponseTests: XCTestCase {
     }
 
     private func develop(_ image: CIImage, _ params: DevelopParameters = .init()) -> SIMD3<Double> {
-        sample(ChromabaseEngine().developScanner(image: image,
-            base: FilmBase(rgb: base, source: .manual), params: params))
+        let fb = FilmBase(rgb: base, source: .manual)
+        var output = NegativeLinearResponse.invert(image,
+            stats: NegativeLinearResponse.stats(base: fb, preset: nil, filmType: params.filmType),
+            filmType: params.filmType)
+        output = ColorModel.apply(to: output, params: params)
+        output = NegativeLinearResponse.output(output, exposure: params.exposure, filmType: params.filmType)
+        return sample(ToneMapper.applyToneCurves(to: output, params: params))
     }
 
     // Independent idealized forward film: a smooth toe joins a straight D/logE line.
@@ -42,6 +47,7 @@ final class FixedNegativeResponseTests: XCTestCase {
         for target in [DevelopTarget.main, .print] {
             for stock in [nil, "vision3-250d"] as [String?] {
                 var params = DevelopParameters()
+                params.autoBalance = false
                 params.developTarget = target
                 params.baseEstimationMode = stock == nil ? .manual : .preset
                 params.manualBaseRGB = base
@@ -69,6 +75,7 @@ final class FixedNegativeResponseTests: XCTestCase {
 
     func testWBRemovesKnownChannelGainAcrossShadowMidAndHighlight() throws {
         var params = DevelopParameters()
+        params.autoBalance = false
         params.warmth = 0.7
         params.tint = -0.25
         let gain = try XCTUnwrap(WhiteBalanceGains.gains(warmth: params.warmth, tint: params.tint))
@@ -84,6 +91,7 @@ final class FixedNegativeResponseTests: XCTestCase {
 
     func testExposureIsAppliedBeforeOutputShoulder() {
         var params = DevelopParameters()
+        params.autoBalance = false
         params.exposure = 1
         let actual = develop(image(background: .init(repeating: 1.0), patch: .init(repeating: 0.60)), params)
         XCTAssertEqual(actual.x, 0.36, accuracy: 1e-5)
@@ -130,10 +138,17 @@ final class FixedNegativeResponseTests: XCTestCase {
                     return self.base * pow(10, -d)
                 }
                 var params = DevelopParameters()
+                params.autoBalance = false
                 params.filmType = filmType
                 params.autoLevels = true
-                let output = ChromabaseEngine().developScanner(image: source,
-                    base: FilmBase(rgb: base, source: .manual), params: params)
+                let stats = NegativeLinearResponse.stats(base: FilmBase(rgb: base, source: .manual), preset: nil, filmType: filmType)
+                var linear = NegativeLinearResponse.invert(source, stats: stats, filmType: filmType)
+                var points: AutoLevels.Points?
+                linear = AutoLevels.apply(to: linear, sampleColorSpace: space,
+                    outputWhite: NegativeLinearResponse.inputLuminance(forOutput: 0.95, filmType: filmType),
+                    outputBlack: NegativeLinearResponse.inputLuminance(forOutput: 0.003, filmType: filmType),
+                    sceneLinearOutput: true, points: &points)
+                let output = NegativeLinearResponse.output(linear, exposure: 0, filmType: filmType)
                 let black = sample(output, x: 16), white = sample(output, x: 80)
                 for channel in 0..<3 {
                     XCTAssertEqual(black[channel], 0.003, accuracy: 1e-5)
@@ -171,6 +186,7 @@ final class FixedNegativeResponseTests: XCTestCase {
     func testEmptyScannerProfileUsesSameResponseAsNoProfile() {
         let source = image(background: .init(repeating: 0.8), patch: .init(0.48, 0.68, 0.70))
         var params = DevelopParameters()
+        params.autoBalance = false
         let expected = develop(source, params)
         params.scannerProfileID = ""
         let actual = develop(source, params)
@@ -180,6 +196,7 @@ final class FixedNegativeResponseTests: XCTestCase {
     func testManualGammaReferenceStaysFixedForNonAdaptiveTargets() throws {
         for target in [DevelopTarget.main, .print, .emulsion] {
             var params = DevelopParameters()
+            params.autoBalance = false
             params.developTarget = target
             params.scannerProfileID = "profile-reference"
             params.inputGamma = try .power(1.8)
@@ -197,6 +214,7 @@ final class FixedNegativeResponseTests: XCTestCase {
         let expected = develop(source)
         for invalid in [Double.nan, .infinity, -.infinity, 2000, -2000] {
             var params = DevelopParameters()
+            params.autoBalance = false
             params.exposure = invalid
             let actual = develop(source, params)
             for channel in 0..<3 { XCTAssertEqual(actual[channel], expected[channel], accuracy: 1e-6) }
@@ -266,6 +284,7 @@ final class FixedNegativeResponseTests: XCTestCase {
                 "before_log_contrast": logContrast(e, oldCurve), "after_log_contrast": logContrast(e, currentCurve)]
         }
         var wbParams = DevelopParameters()
+        wbParams.autoBalance = false
         wbParams.warmth = 0.7; wbParams.tint = -0.25
         let gain = try XCTUnwrap(WhiteBalanceGains.gains(warmth: wbParams.warmth, tint: wbParams.tint))
         func castInput(_ y: Double) -> CIImage {

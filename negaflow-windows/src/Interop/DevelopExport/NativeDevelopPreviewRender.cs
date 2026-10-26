@@ -196,7 +196,7 @@ internal static unsafe class NativeDevelopPreviewRender
             NativeDevelopExportRequestV27 v27 = BuildRequestV27(v26, request);
             if (filmBasePick is not null || neutralPick is not null)
             {
-                NativeDevelopExportRequestV39 pickInput = NativeDevelopInput.Build(
+                NativeDevelopExportRequestV40 pickInput = NativeDevelopInput.Build(
                     BuildRequestV36(BuildRequestV35(NativeDevelopInput.BuildDisplayRequest(v27, request),
                         defectRecipeDigest, checked((uint)defectRecipeSha256.Length)), null, 0U, 0U), request);
                 status = filmBasePick is not null
@@ -231,7 +231,7 @@ internal static unsafe class NativeDevelopPreviewRender
                 NativeGrainMendDetectionV4 detectionV4 = default;
                 detectionV4.V3.V2.StructSize = (uint)sizeof(NativeGrainMendDetectionV4);
                 *grainMendReview = 0;
-                NativeDevelopExportRequestV39 detectionInput = NativeDevelopInput.Build(
+                NativeDevelopExportRequestV40 detectionInput = NativeDevelopInput.Build(
                     BuildRequestV36(BuildRequestV35(NativeDevelopInput.BuildDisplayRequest(v27, request),
                         defectRecipeDigest, checked((uint)defectRecipeSha256.Length)), null, 0U, 0U), request);
                 status = NativeDevelopInput.RequiresV39(request)
@@ -282,7 +282,7 @@ internal static unsafe class NativeDevelopPreviewRender
                     request);
                 if (NativeDevelopInput.RequiresV39(request))
                 {
-                    NativeDevelopExportRequestV39 v39 = NativeDevelopInput.Build(
+                    NativeDevelopExportRequestV40 v39 = NativeDevelopInput.Build(
                         BuildRequestV36(BuildRequestV35(v34, defectRecipeDigest, checked((uint)defectRecipeSha256.Length)),
                             defectRecipeAppendPrefixDigest, checked((uint)defectRecipeAppendPrefixSha256.Length),
                             checked((uint)request.DefectRecipeAppendPrefixEditCount)), request);

@@ -25,7 +25,7 @@ extension AppModel {
         // RAW 디코드 의도는 develop 과 같아야 한다 — 다르면 cleaned raw 가 현상 입력과 다른
         // 이미지가 된다.
         let rawRendering = ImageLoader.RAWRendering
-            .forDigitalSource(frame.params.isDigitalSource)
+            .forDigitalSource(frame.params.isDigitalSource, filmType: frame.filmType)
         // 커밋될 픽셀이 담게 될 편집 접두(totalEditCount개)의 현재 상태 스탬프.
         let appliedStamps = frame.defectEdits.prefix(totalEditCount).map(\.appliedStamp)
         let cachedPatchEditID = frame.defectEdits.prefix(totalEditCount).last?.id

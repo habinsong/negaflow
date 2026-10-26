@@ -19,6 +19,14 @@ Farbtreue wird nicht am Bildschirm freigegeben. Ein IT8-Bild und die Referenzdat
 
 Die Durchlicht-Targets IT8.7/1 und ISO 12641-1 gelten für positive Durchlichtvorlagen. Aus diesen Ergebnissen folgt nichts über die Orangemaske von Farbnegativen, Farbstoffwechselwirkungen, C-41-Streuung oder die Ausgabegenauigkeit von NORITSU/FUJI. Solche Aussagen brauchen Paarmaterial desselben Farbnegativs über beide Wege und einen eigenen Prüfsatz.
 
+Das öffentliche FADGI-OpenDICE-Bild mit Referenz wurde an 264 Feldern gemessen: ΔE00-Median 9.8815, p95 13.2745, Maximum 15.5996. Eine unabhängige LittleCMS-Konvertierung wich je Lab-Komponente um höchstens 0.105 ab. Diese Werte bestätigen keine Negativfilm-Farbgenauigkeit: Das Material ist ein positives IT8-Scanbild, die physische Seriennummer ist ungeprüft und Kamera/Licht/Negativfilm-Messungen fehlen.
+
+Öffentliche Negativdatensätze wurden ebenfalls geprüft. FADGI liefert für Negative nur Dichtewerte, keine gemessenen Farbfelder. BlueNeg bezeichnet die restaurierten Referenzen als pseudo ground truth. Die Daten der ARRI-AQUA-Spektrophotometerstudie von 2024 sind nur auf Anfrage erhältlich. Keiner dieser Datensätze liefert unabhängige Szenenfarbwerte für die aktuelle Inversion.
+
+Eine [öffentliche Kodak-ColorPlus-200-Belichtungsreihe](https://discuss.pixls.us/t/any-interest-in-a-film-negative-feature-in-rt/12569/262) enthält fünf Sony-ILCE-7-RAW-Scans von −1 bis +3 EV. Die Tafel trägt die Bezeichnung Grey White Balance Colour Card; X-Rite-Referenzwerte wurden deshalb verworfen. In den 120 untersuchten Patchbereichen erreichte kein Pixel des dekodierten Kamera-RGB den Wert null oder den Höchstwert. Dies prüft das dekodierte Signal, nicht direkt das Sensormosaik oder die Farbgenauigkeit. Die eingebettete JPEG-Vorschau enthält den Kamera-Weißabgleich. Ohne Messwerte dieser Tafel und des Scanaufbaus lassen sich Farbstiche nicht dem Eingang oder der Anwendung zuordnen. Die Weiterverbreitungsrechte sind ungeklärt; die Dateien bleiben außerhalb des Repositorys und der Anwendung.
+
+[FADGI](https://www.digitizationguidelines.gov/guidelines/digitize-OpenDice.html) · [BlueNeg](https://huggingface.co/datasets/ttgroup/blueneg-release) · [Plutino 2024](https://doi.org/10.1002/col.22946)
+
 ## Öffentliches Regressionsmaterial
 
 Diese zwei Dateien von FADGI/OpenDICE bilden ein Paar.
@@ -104,13 +112,11 @@ Es wird nicht behauptet, dass der heutige Weg über Core Image und ColorSync Ren
 
 ## `MAIN`-Regression mit synthetischen Feldern
 
-`FixedNegativeResponseTests` / `fixed-density-linear-v6`
+`NegativeAutoBalanceTests` / `shoulder-print-response-v4`
 
-Geprüft werden ein unabhängiges Modell des geraden Filmkurvenbereichs, gleiche Farbfelder auf anderen Hintergründen, WB auf einer Neutralrampe und dichte Lichter. Synthetische Regressionen belegen keine Farbgenauigkeit realen Films. Bestehende Rezepte nutzen den korrigierten Algorithmus; Parameter und Originale bleiben erhalten. Die macOS-Rendererkennung und das Vorschaubildsuffix unterscheiden das neue Rendering.
+MAIN/CS verwendet bei ON und OFF die v4-Kurve. Die beibehaltenen v6-Tests prüfen ihr festes Primitive. Deren Bildabweichung von 0 gilt nicht für Auto-Abgleich ON.
 
-Die Gleichungen wurden in diesem Repository implementiert. Code aus darktable, RawTherapee oder NegPy wurde nicht kopiert.
-
-[fixed-density-linear-v6](PRINT_RESPONSE.md)
+[Negativantwort](PRINT_RESPONSE.md)
 
 ## Regression des relativen NORITSU/FUJI-Stils
 

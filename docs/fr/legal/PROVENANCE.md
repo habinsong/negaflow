@@ -6,7 +6,9 @@ Ce document consigne le périmètre de distribution Apache-2.0 de l'application 
 
 ## Code
 
-Dans `negaflow-mac`, `Sources`, `Tests` et `scripts` sont du code Swift, Python et shell écrit pour negaflow. L'application macOS n'a pas de source C/C++/Objective-C, pas de paquet externe, pas de bibliothèque statique ou dynamique, pas d'arborescence vendorisée ; seuls les frameworks système livrés par Apple avec macOS sont liés. Dans `negaflow-windows`, `src`, `tests` et `scripts` sont du code C++, C# et PowerShell écrit pour negaflow, et les composants tiers d'exécution ainsi que leurs licences sont consignés dans [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md).
+Le code d’intégration Swift, Python et shell de `negaflow-mac` est écrit pour negaflow. Le décodage des RAW de négatifs utilise une révision fixe et non modifiée de LibRaw sous forme de `libraw.dylib` remplaçable, distribuée sous CDDL-1.0. L’application inclut l’archive source, le script de compilation et les textes de copyright et de licence dans `Contents/Resources/licenses/libraw/`. Le code LibRaw n’est pas fusionné dans l’arbre Apache. Windows utilise la même révision ; les autres composants sont décrits dans [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md). Le fichier de test `CameraNativeRaw.dng` vient de l’entrée 2204 de raw.pixls.us sous CC0-1.0, avec un JSON de provenance adjacent, et reste exclu de l’application.
+
+Si le fichier de mentions supplémentaires manque, la compilation et la création du paquet continuent avec un avertissement. Les licences amont et les sources correspondantes restent incluses.
 
 L'inversion du film reprend les notions publiées de sensitométrie : densité, pied, partie droite, épaule. Les courbes et les coefficients viennent des quatre points d'ancrage photométriques de negaflow, pas des formules ou constantes d'un programme tiers. Les équations et la dérivation sont dans [réponse de tirage fixe](../reference/PRINT_RESPONSE.md).
 
@@ -34,7 +36,7 @@ L'application n'a pas de `scanimage`, pas d'en-têtes SANE, pas de configuration
 - [Apache License 2.0 and GPL compatibility](https://www.apache.org/licenses/GPL-compatibility)
 - [Architecture des plugins scanner](../architecture/SCANNER_PLUGINS.md)
 
-Le contrôle de publication reconfirme qu'aucun plugin, exécutable SANE ou bibliothèque ne s'est glissé dans le bundle. Le plugin livre de son côté ses propres `LICENSE`, `COPYING`, le code source correspondant complet et les avis tiers.
+Le contrôle de publication reconfirme qu'aucun plugin, exécutable SANE ou bibliothèque SANE ne s'est glissé dans le bundle. Le plugin livre de son côté ses propres `LICENSE`, `COPYING`, le code source correspondant complet et les avis tiers.
 
 ## Ressources fournies
 

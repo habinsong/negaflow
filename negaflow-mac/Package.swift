@@ -76,7 +76,9 @@ let package = Package(
             name: "ChromabaseTests",
             dependencies: ["Chromabase"],
             path: "Tests/ChromabaseTests",
-            resources: [.copy("Fixtures/CustomColorTargets.json")]
+            resources: [.copy("Fixtures/CustomColorTargets.json"),
+                        .copy("Fixtures/CameraNativeRaw.dng"),
+                        .copy("Fixtures/CameraNativeRaw.source.json")]
         ),
         .testTarget(
             name: "negaflowAppTests",

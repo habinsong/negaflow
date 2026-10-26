@@ -6,14 +6,14 @@ Die Chroma Engine kehrt Film um und entwickelt ihn. Der Code liegt im Modul `Chr
 
 | Auf einen Blick | Inhalt |
 |---|---|
-| Standardentwicklung | `MAIN`, manuelle Korrektur |
+| Standardentwicklung | `MAIN`, Auto-Abgleich ON |
 | Filmträger | Automatische Messung, Pipette, direkte RGB-Eingabe |
 | Farbe intern | Linearer Farbraum in 32-Bit-Gleitkomma |
-| Automatikfunktionen | Nur wirksam, wenn Sie sie ausführen |
+| Automatikfunktionen | Auto-Abgleich ON |
 | Ausgabefarbraum | sRGB, Display P3, Adobe RGB, eigenes RGB-ICC |
 
 > [!IMPORTANT]
-> Auto Tone, Auto White Balance, Auto Levels und Auto Color schleichen sich nie in die Standardentwicklung.
+> Voreingestellt sind `MAIN` und Auto-Abgleich ON. Bei MAIN (einschließlich PRINT) und CS sitzt der Schalter rechts neben der Zielüberschrift. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF.
 
 ## Was zuerst gilt
 
@@ -28,13 +28,13 @@ Die Chroma Engine kehrt Film um und entwickelt ihn. Der Code liegt im Modul `Chr
 ```mermaid
 flowchart LR
     A["Datei lesen"] --> B["Ausrichtung korrigieren"]
-    B --> C["Linearer Arbeitsfarbraum"]
+    B --> C["Lineare Eingabe / Kamera-RGB bei RAW"]
     C --> D{"Filmtyp"}
     D -->|positiv| E["Positivverarbeitung"]
     D -->|negativ| F["Träger messen"]
     F --> G["Optische Dichte und Umkehr"]
     E --> H["Entwicklungsziel und Profile"]
-    G --> H
+    G --> AB["Auto-Abgleich ON/OFF"] --> M["RAW-Farbmatrix nach Inversion"] --> H
     H --> I["Tonwert, Farbe, lokale Korrektur"]
     I --> J["Detail und Effekte"]
     J --> K["Bildschirm- oder Ausgabefarbraum"]
@@ -104,30 +104,13 @@ Wofür die Daten dienen:
 
 Manche Werte nähern Kurven aus öffentlichem Material an, manche sind bewusst konservativ gesetzt. 27 Namen bedeuten keine 27 geprüften Farbprofile. Sobald der Träger gemessen ist, gilt die Messung.
 
-### Feste Printantwort
+### MAIN/PRINT und CS
 
-`fixed-density-linear-v6` gilt für negative `MAIN/PRINT` ohne Scannerprofil. Die Dichtekorrektur ist fest. Bei gleicher Basis und gleichen Einstellungen ändern andere Pixel, Ausschnitt oder Histogramm die Inversion derselben Transmission nicht. Szenenabhängige Vibrance wird nicht angewandt.
+Auto-Abgleich ON stellt die MAIN/CS-Inversion aus `412bb31` wieder her. Jeder Kanal misst seinen Dichtebereich am dichtesten 0.2%-Perzentil der Szene, begrenzt ihn auf 1.8D und verwendet danach die bisherige Kurve `shoulder-print-response-v4` und die Sättigungskorrektur für gedämpfte Szenen. Filmvorgaben multiplizieren den Bereich mit relativen Kanalfaktoren. Die Grenze von 1.8D bleibt für das bisherige Rendering erhalten; sie ist kein gemessener Materialwert aller Filme und kann dichte Negative beeinflussen.
 
-`B` ist die gemessene Basistransmission. `f` ist bei der generischen Antwort 1 oder der feste relative Bereichsfaktor des gewählten Films. `0.62` und `0.60D` sind Gamma- und Graudichtereferenzen des generischen Modells. Sie sind keine Messwerte jedes Films oder Scanners. Status-M-Dichten beschreiben Scanner-RGB nicht direkt.
+OFF verwendet dieselbe v4-Kurve mit festem Nennbereich (Farbe 1.55D, Schwarzweiß 2.17D), gegebenenfalls multipliziert mit den Faktoren der Filmvorgabe. Szenenabhängige Bereichsnormierung und Sättigungskorrektur entfallen. Bei gleicher Basis und gleichen Einstellungen ergibt dieselbe Transmission in verschiedenen Bildern denselben Wert. ON kann Helligkeit und Farbe mit dem Bildinhalt ändern. Keiner der Modi belegt gemessene Filmfarbgenauigkeit.
 
-```math
-q_c = \log_{10}(B_c/\max(T_c,10^{-5}))/f_c,\quad k=0.045,\quad d_t=0.60+0.62\log_{10}(k/0.18),\quad p=d_t\ln(10)/0.62
-```
-
-```math
-E_c=\begin{cases}
-k\,\operatorname{sgn}(q_c)(|q_c|/d_t)^p,&q_c<d_t\\
-0.18\times10^{(q_c-0.60)/0.62},&q_c\ge d_t
-\end{cases}
-```
-
-Der Dichtefuß schließt mit gleichem Wert und gleicher Steigung an den geraden Abschnitt an. Die unbelichtete Filmbasis ergibt vor dem Weißabgleich eine Szenenbelichtung von null. Dieser Potenzfuß ist ein allgemeiner Entwurf, keine je Film gemessene Kurve. Nahe der Filmbasis kann er auch Dichterauschen verstärken.
-
-Kanalweiser Weißabgleich und Belichtung wirken auf das szenenlineare `E`. Dieselbe feste Ausgabekurve wird nach dem Weißabgleich auf jeden Kanal angewendet. Der Mittelbereich erhält RGB-Verhältnisse; die Schulter verändert die Farbverhältnisse heller Bereiche. `0.045...0.70` bleibt identisch. Unter `0.045` wird ein kleiner Schwarzsockel addiert: `b=0.001` für Farbe und `0.0005` für Schwarzweiß. Über `0.70` nähert sich die rationale Schulter der 1. Beide Übergänge haben die Steigung 1. Die Umkehr des Filmfußes und die Schwarzdarstellung sind getrennte Schritte.
-
-Die Inversion hat keine `1.8D`-Obergrenze. Die Transmissionsuntergrenze `1e-5` schützt den Logarithmus. Die Gamut-Abbildung erfolgt an der Ausgabegrenze. In diesem Schritt liegt jeder Kanal zwischen Schwarzsockel und 1. Spätere manuelle Korrekturen können diesen Bereich überschreiten.
-
-[fixed-density-linear-v6](../reference/PRINT_RESPONSE.md)
+[Negativantwort](../reference/PRINT_RESPONSE.md)
 
 ## Drei Arten von Profilen
 
@@ -145,7 +128,7 @@ Die Daten beschreibt [Filmprofile](FILM_PROFILES.md).
 
 ### `MAIN`
 
-Das Standardziel verwendet eine feste Dichtekalibrierung und eine feste kanalweise Ausgabekurve. Auto-Pegel, Auto-Farbe, Auto-Ton und automatischer Weißabgleich werden nur auf Wunsch ausgeführt.
+Voreingestellt sind `MAIN` und Auto-Abgleich ON. Bei MAIN (einschließlich PRINT) und CS sitzt der Schalter rechts neben der Zielüberschrift. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF.
 
 ### `PRINT`
 

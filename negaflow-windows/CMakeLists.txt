@@ -2389,6 +2389,11 @@ if(BUILD_TESTING)
         PROPERTIES PASS_REGULAR_EXPRESSION "\"algorithm_version\":\"shoulder-print-response-v4\""
     )
 
+    add_executable(negaflow_native_camera_raw_tests tests/Native.UnitTests/native_camera_raw_tests.cpp)
+    target_link_libraries(negaflow_native_camera_raw_tests PRIVATE negaflow_pipeline negaflow_gpu negaflow_project_options)
+    add_test(NAME native.camera_native_raw COMMAND negaflow_native_camera_raw_tests
+        "${CMAKE_CURRENT_SOURCE_DIR}/../negaflow-mac/Tests/ChromabaseTests/Fixtures/CameraNativeRaw.dng")
+
     add_executable(negaflow_libraw_preview_reduce_tests
         tests/Native.UnitTests/libraw_preview_reduce_tests.cpp
     )

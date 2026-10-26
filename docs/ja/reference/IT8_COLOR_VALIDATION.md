@@ -19,6 +19,14 @@
 
 IT8.7/1とISO 12641-1の透過ターゲットは、ポジ透過原稿向けです。 この結果からカラーネガのオレンジマスク、色素の干渉、C-41のばらつき、NORITSU/FUJIの出力の正確さを語ることはできません。 それを言うには、同じカラーネガを両方の経路で処理したペア資料と、別の検証一式が必要です。
 
+公開 FADGI OpenDICE の画像と基準ファイルで 264 パッチを測定しました。ΔE00 は中央値 9.8815、p95 13.2745、最大 15.5996 です。独立した LittleCMS 変換と評価器の差は Lab 成分で最大 0.105 でした。フィルム色精度の合格結果にはしません。これはポジ IT8 スキャンで、実物のシリアル番号は未確認、ネガ撮影のカメラ・光源・フィルム実測値もありません。
+
+公開ネガ資料も確認しました。FADGI のネガ基準は密度だけで、実測色パッチはありません。BlueNeg の復元基準は pseudo ground truth です。2024 年 ARRI AQUA 分光光度計研究のデータは請求時のみ提供されます。現在の反転を独立に評価する撮影シーンの色基準には使えません。
+
+[公開された Kodak ColorPlus 200 の露出比較資料](https://discuss.pixls.us/t/any-interest-in-a-film-negative-feature-in-rt/12569/262)の Sony ILCE-7 RAW 5枚（−1〜+3 EV）も調べました。チャートの表記は Grey White Balance Colour Card のため、X-Rite の基準値は適用していません。デコード後のカメラ RGB では、測定した120のパッチ領域にゼロまたは最大値の画素はありませんでした。これはデコード信号の検査であり、センサーモザイクの直接測定や色精度の判定ではありません。埋め込み JPEG プレビューにはカメラの WB が適用されています。このチャートとスキャン構成の実測基準がないため、出力の色かぶりを入力やアプリの欠陥と断定しません。再配布権限を確認できていないため、ファイルはリポジトリとアプリに含めません。
+
+[FADGI](https://www.digitizationguidelines.gov/guidelines/digitize-OpenDice.html) · [BlueNeg](https://huggingface.co/datasets/ttgroup/blueneg-release) · [Plutino 2024](https://doi.org/10.1002/col.22946)
+
 ## 公開されている回帰検査の資料
 
 FADGI/OpenDICEの次の2ファイルを1組で使います。
@@ -104,13 +112,11 @@ IT8.7/1は入力装置向けです。 プリンター出力には、`printer + p
 
 ## `MAIN`の合成パッチ回帰
 
-`FixedNegativeResponseTests` / `fixed-density-linear-v6`
+`NegativeAutoBalanceTests` / `shoulder-print-response-v4`
 
-独立した直線部フィルムモデル、異なる背景の同一パッチ、中立階調の WB、高密度ハイライトを検査します。合成回帰は実フィルムの色精度を証明しません。既存レシピは修正したアルゴリズムで描画し、保存パラメーターと原本を維持します。macOS のレンダラー識別子とサムネイル接尾辞も新しい描画を区別します。
+MAIN/CS は ON と OFF の両方で v4 曲線を使います。残した v6 テストは固定 primitive を検査します。そのフレーム間差 0 は自動バランス ON の結果ではありません。
 
-数式はこのリポジトリで実装しました。darktable、RawTherapee、NegPy の実装コードはコピーしていません。
-
-[fixed-density-linear-v6](PRINT_RESPONSE.md)
+[ネガ反転応答](PRINT_RESPONSE.md)
 
 ## NORITSU/FUJIの相対スタイル回帰
 

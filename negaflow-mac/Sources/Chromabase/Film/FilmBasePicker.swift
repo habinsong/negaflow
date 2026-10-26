@@ -24,7 +24,8 @@ public enum FilmBasePicker {
     public static func sample(in image: CIImage,
                               atUnit unit: CGPoint,
                               regionFraction: Double = 0.01,
-                              neutralBase: Bool = false) -> SIMD3<Double>? {
+                              neutralBase: Bool = false,
+                              cameraNative: Bool = false) -> SIMD3<Double>? {
         let extent = image.extent
         guard extent.width > 2, extent.height > 2 else { return nil }
         let u = min(max(unit.x, 0), 1)
@@ -36,9 +37,13 @@ public enum FilmBasePicker {
         // 평판 프리뷰는 필름 밖(투과 광원 창 바깥의 검정 띠, 빈 베드)까지 담기 때문에,
         // 클릭이 조금만 빗나가도 필름이 아닌 픽셀이 Dmin 으로 앉아 현상 결과가 통째로
         // 검게 죽었다(실측: 검정 띠 클릭 → base 0.004 → 반전 전 구간 클리핑).
-        let reference = baseReference(in: image, neutralBase: neutralBase)
+        let native = cameraNative || NativeCameraRAW.matrix(in: image) != nil
+        // Unit-multiplier camera RGB has no R/G/B ordering. For an explicit
+        // native pick, measure the selected patch rather than snapping to an
+        // unrelated orange-looking component elsewhere in the local window.
+        let reference = native ? nil : baseReference(in: image, neutralBase: neutralBase)
 
-        if let snapped = snapToBase(in: image, centerX: cx, centerY: cy, neutralBase: neutralBase),
+        if !native, let snapped = snapToBase(in: image, centerX: cx, centerY: cy, neutralBase: neutralBase),
            isPlausibleBase(snapped, reference: reference, neutralBase: neutralBase) {
             return snapped
         }
@@ -61,7 +66,12 @@ public enum FilmBasePicker {
             min(max(rgb.y, 0), 1),
             min(max(rgb.z, 0), 1)
         )
-        guard isPlausibleBase(clamped, reference: reference, neutralBase: neutralBase) else {
+        let plausible = native
+            ? min(clamped.x, clamped.y, clamped.z) > 1e-5
+                && max(clamped.x, clamped.y, clamped.z) < 0.985
+                && (clamped.x + clamped.y + clamped.z) / 3 >= FilmBaseEstimator.minimumCandidateLuma
+            : isPlausibleBase(clamped, reference: reference, neutralBase: neutralBase)
+        guard plausible else {
             return nil
         }
         return clamped

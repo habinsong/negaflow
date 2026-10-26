@@ -3,6 +3,7 @@
 #include "export/support/outcome.h"
 
 #include "negaflow/core/pixel.h"
+#include "negaflow/pipeline/gpu_accelerator.h"
 #include "negaflow/imaging/analysis_region.h"
 #include "negaflow/imaging/auto_negative_base_resolver.h"
 #include "negaflow/imaging/film_base_scale.h"
@@ -137,12 +138,14 @@ std::optional<DevelopExportOutcome> invert_source(
     const PreviewProxyHint* const hint,
     const std::optional<std::array<float, 3>>& input_gamma_reference) noexcept {
     out.negative = request.negative;
-    out.negative.adaptive_density = request.develop_target == DevelopTarget::noritsu ||
-        request.develop_target == DevelopTarget::sp3000 || request.develop_target == DevelopTarget::f135 ||
-        request.develop_target == DevelopTarget::hr;
-    out.negative.linear_output = !out.negative.adaptive_density &&
-        (request.develop_target == DevelopTarget::rescue ||
-         request.develop_target >= DevelopTarget::emulsion || request.scanner_profile_id.empty());
+    const bool toggle_target = request.develop_target == DevelopTarget::main ||
+        request.develop_target == DevelopTarget::print || request.develop_target >= DevelopTarget::emulsion;
+    out.negative.legacy_scene_response = toggle_target && request.auto_balance;
+    out.negative.adaptive_density = out.negative.legacy_scene_response ||
+        request.develop_target == DevelopTarget::noritsu || request.develop_target == DevelopTarget::sp3000 ||
+        request.develop_target == DevelopTarget::f135 || request.develop_target == DevelopTarget::hr;
+    out.negative.linear_output = !toggle_target && !out.negative.adaptive_density &&
+        (request.develop_target == DevelopTarget::rescue || request.scanner_profile_id.empty());
     out.negative.input_gamma_reference_range = input_gamma_reference;
     out.base_source = DevelopBaseSource::manual;
     out.developed_info = {};
@@ -198,6 +201,13 @@ std::optional<DevelopExportOutcome> invert_source(
         // Positive film scans and rendered-digital input are already positive
         // working images. Negative base and inversion do not participate.
         out.image = std::move(decoded_image);
+    }
+
+    if (out.image.camera_to_working) {
+        GpuAccelerator::shared().flush_resident();
+        if (!negaflow::imaging::apply_deferred_camera_transform(out.image)) {
+            return fail(DevelopExportStage::develop, "invalid_camera_to_working_matrix");
+        }
     }
 
     tracker.finish();

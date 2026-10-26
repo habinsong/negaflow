@@ -70,7 +70,7 @@ public static class DevelopSettingsTransfer
                 BwToning: merged.BwToning,
                 DefectRemovalStrength: merged.DefectRemovalStrength,
                 LookPreset: new LookPresetSelection(merged.LookPresetId))
-            { InputGamma = merged.InputGamma });
+            { InputGamma = merged.InputGamma, AutoBalance = merged.AutoBalance });
     }
 
     /// <summary>

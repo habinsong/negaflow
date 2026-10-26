@@ -1,5 +1,8 @@
 #pragma once
 
+#include <array>
+#include <cmath>
+#include <optional>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -25,6 +28,16 @@ enum class UntaggedRgbTransfer : std::uint8_t {
     srgb_encoded,
 };
 
+using CameraToWorkingMatrix = std::array<float, 9>;
+
+[[nodiscard]] inline bool valid_camera_matrix(const CameraToWorkingMatrix& m) noexcept {
+    for (const float value : m) { if (!std::isfinite(value)) { return false; } }
+    const double determinant = static_cast<double>(m[0]) * (m[4] * m[8] - m[5] * m[7]) -
+        static_cast<double>(m[1]) * (m[3] * m[8] - m[5] * m[6]) +
+        static_cast<double>(m[2]) * (m[3] * m[7] - m[4] * m[6]);
+    return std::isfinite(determinant) && std::abs(determinant) > 1.0e-8;
+}
+
 struct DecodedImage final {
     std::uint32_t width{0};
     std::uint32_t height{0};
@@ -34,6 +47,8 @@ struct DecodedImage final {
     UntaggedRgbTransfer untagged_rgb_transfer{UntaggedRgbTransfer::linear_scanner};
     std::vector<std::uint16_t> samples{};
     std::vector<std::uint8_t> icc_profile{};
+    // Native camera RGB. The matrix is deferred until after negative inversion.
+    std::optional<CameraToWorkingMatrix> camera_to_working{};
 };
 
 /// 화소 하나 안에서 R·G·B 를 읽을 표본 위치입니다.

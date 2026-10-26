@@ -48,7 +48,8 @@ void decoded_source_store_reset() noexcept;
     const std::array<std::uint8_t, 32U>& recipe_sha256,
     std::shared_ptr<const negaflow::imaging::WorkingImage>& image,
     DefectRecipeStageInfo& info,
-    negaflow::color::InputGammaInterpretation input_gamma = {}) noexcept;
+    negaflow::color::InputGammaInterpretation input_gamma = {},
+    bool scene_linear_raw = false) noexcept;
 
 void decoded_cleaned_raw_put(
     const std::filesystem::path& path,
@@ -56,6 +57,7 @@ void decoded_cleaned_raw_put(
     const std::array<std::uint8_t, 32U>& recipe_sha256,
     std::shared_ptr<const negaflow::imaging::WorkingImage> image,
     const DefectRecipeStageInfo& info,
-    negaflow::color::InputGammaInterpretation input_gamma = {}) noexcept;
+    negaflow::color::InputGammaInterpretation input_gamma = {},
+    bool scene_linear_raw = false) noexcept;
 
 }  // namespace negaflow::pipeline::develop_export_detail

@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import Chromabase
 
 extension ScanFrame {
     var requiresCleanedRawForActiveDefects: Bool {
@@ -18,7 +19,14 @@ extension ScanFrame {
         return cleanedRawImage
     }
 
+    var cleanedRawDiskHasCurrentColorBasis: Bool {
+        !filmType.requiresInversion || params.isDigitalSource == true
+            || ImageLoader.kind(of: rawScanURL) != .rawDng
+            || cleanedRawDiskURL?.lastPathComponent.hasSuffix("_raw-v2.tiff") == true
+    }
+
     var identityMatchedCleanedRawDiskURL: URL? {
+        guard cleanedRawDiskHasCurrentColorBasis else { return nil }
         guard let identity = boundDefectRecipeIdentity,
               cleanedRawDiskIdentity == identity else { return nil }
         return cleanedRawDiskURL

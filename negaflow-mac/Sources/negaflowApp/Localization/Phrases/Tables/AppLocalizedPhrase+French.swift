@@ -2,6 +2,7 @@ import Foundation
 
 extension AppLocalization {
     static let frenchPhraseTable: [AppLocalizedPhrase: String] = [
+            .autoBalance: "Équilibre auto",
             .customTargetTitle: "Custom",
             .inputGammaEstimated: "Gamma estimé %.1f",
             .inputGammaRecorded: "Gamma du fichier %.1f",

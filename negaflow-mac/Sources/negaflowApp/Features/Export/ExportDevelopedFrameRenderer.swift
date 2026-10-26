@@ -210,11 +210,13 @@ enum ExportDevelopedFrameRenderer {
             : nil
         var measurements = DevelopSceneMeasurements()
         if snapshot.format != .rawScanTIFF {
+            try NativeCameraRAW.prepare(source: sourceAccessURL,
+                params: snapshot.params, measurements: &measurements)
             try InputGammaRenderReference.prepare(source: sourceAccessURL,
                 params: snapshot.params, measurements: &measurements)
         }
         let developedImage = snapshot.format == .rawScanTIFF
-            ? rawInput
+            ? (selectedDecodeProvenance?.cameraToWorking?.apply(to: rawInput) ?? NativeCameraRAW.workingTransmittance(rawInput))
             : engine.developScanner(image: developInput, base: base, params: snapshot.params, measurements: &measurements)
 
         return ExportDevelopedFrameRender(
@@ -301,7 +303,7 @@ enum ExportDevelopedFrameRenderer {
                 maxDimension: proxyLongEdge,
                 highResolutionThreshold: proxyLongEdge,
                 inputGamma: snapshot.params.inputGamma,
-                rawRendering: .forDigitalSource(snapshot.params.isDigitalSource)
+                rawRendering: .forDigitalSource(snapshot.params.isDigitalSource, filmType: snapshot.filmType)
             )
             : try ImageLoader.loadScannerPreview(
                 sourceURL,
@@ -316,7 +318,7 @@ enum ExportDevelopedFrameRenderer {
             ? try ImageLoader.loadImportedDecoded(
                 sourceURL,
                 inputGamma: snapshot.params.inputGamma,
-                rawRendering: .forDigitalSource(snapshot.params.isDigitalSource)
+                rawRendering: .forDigitalSource(snapshot.params.isDigitalSource, filmType: snapshot.filmType)
             )
             : try ImageLoader.loadScannerTIFFDecoded(sourceURL, inputGamma: snapshot.params.inputGamma)
         return LoadedSource(image: decoded.image, provenance: decoded.provenance)

@@ -54,6 +54,19 @@ int main() {
         });
     }
     for (auto& worker : workers) { worker.join(); }
+    auto native_cleaned = std::make_shared<WorkingImage>();
+    native_cleaned->width = 1U; native_cleaned->height = 1U; native_cleaned->stride_pixels = 1U;
+    native_cleaned->pixels.resize(1U);
+    native_cleaned->camera_to_working = negaflow::imageio::CameraToWorkingMatrix{1,0,0,0,1,0,0,0,1};
+    const std::array<std::uint8_t,32U> recipe{};
+    negaflow::pipeline::DefectRecipeStageInfo cleaned_info{};
+    std::shared_ptr<const WorkingImage> held_cleaned;
+    decoded_cleaned_raw_put(path, changed, recipe, native_cleaned, cleaned_info, {}, true);
+    expect(!decoded_cleaned_raw_try_take(path, changed, recipe, held_cleaned, cleaned_info, {}, false),
+        "rendered digital mode cannot reuse camera-native defect pixels");
+    expect(decoded_cleaned_raw_try_take(path, changed, recipe, held_cleaned, cleaned_info, {}, true) &&
+        held_cleaned->camera_to_working == native_cleaned->camera_to_working,
+        "negative defect cache retains its camera matrix");
     decoded_source_store_reset();
     expect(decoded_source_store_resident_bytes() == 0U, "reset releases all resident slots");
     expect(lease->samples[0] == 12345U, "reset cannot invalidate a reader lease");

@@ -6,7 +6,9 @@ Hier steht der Apache-2.0-Auslieferungsumfang der negaflow-App. Es ist ein Herku
 
 ## Code
 
-In `negaflow-mac` sind `Sources`, `Tests` und `scripts` Swift-, Python- und Shell-Code, geschrieben für negaflow. Die macOS-App enthält keinen C/C++/Objective-C-Quelltext, kein externes Paket, keine statische oder dynamische Bibliothek und keinen fremden Quellbaum; gebunden werden nur die Systemframeworks, die Apple mit macOS ausliefert. In `negaflow-windows` sind `src`, `tests` und `scripts` C++-, C#- und PowerShell-Code, geschrieben für negaflow; die Drittanbieter-Laufzeitkomponenten und ihre Lizenzen stehen in [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md).
+Der Swift-, Python- und Shell-Integrationscode in `negaflow-mac` wurde für negaflow geschrieben. Negativ-Kamera-RAW wird mit einer unveränderten, festgelegten LibRaw-Revision als austauschbarer `libraw.dylib` unter CDDL-1.0 dekodiert. Das App-Paket enthält Quellarchiv, Bauskript, Copyright- und Lizenztexte in `Contents/Resources/licenses/libraw/`. LibRaw-Quellcode wird nicht in den Apache-Quellbaum übernommen. Windows nutzt dieselbe Revision; weitere Komponenten stehen in [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md). Die Testdatei `CameraNativeRaw.dng` stammt aus raw.pixls.us, Eintrag 2204, unter CC0-1.0. Die benachbarte JSON-Datei nennt die Herkunft; die App enthält das Testbild nicht.
+
+Fehlt die zusätzliche Hinweisdatei, werden Build und Paketierung mit einer Warnung fortgesetzt. Die ursprünglichen Lizenzdateien und der zugehörige Quelltext bleiben enthalten.
 
 Die Filmumkehr nutzt die veröffentlichten Begriffe der Sensitometrie: Dichte, Fuß, Geradenteil, Schulter. Kurven und Koeffizienten stammen aus den vier photometrischen Ankerpunkten von negaflow, nicht aus Formeln oder Konstanten eines fremden Programms. Gleichungen und Herleitung stehen in [feste Printantwort](../reference/PRINT_RESPONSE.md).
 
@@ -34,7 +36,7 @@ Ein getrennter Prozess klärt die Lizenzfrage nicht allein. Die GNU-FAQ schreibt
 - [Apache License 2.0 and GPL compatibility](https://www.apache.org/licenses/GPL-compatibility)
 - [Scanner-Plugin-Struktur](../architecture/SCANNER_PLUGINS.md)
 
-Die Release-Prüfung bestätigt noch einmal, dass weder Plugin noch SANE-Programm oder Bibliothek ins App-Bundle gerutscht sind. Die Plugin-Seite liefert eigene `LICENSE`, `COPYING`, den vollständigen zugehörigen Quelltext und Fremdhinweise.
+Die Release-Prüfung bestätigt noch einmal, dass weder Plugin noch SANE-Programm oder SANE-Bibliothek ins App-Bundle gerutscht sind. Die Plugin-Seite liefert eigene `LICENSE`, `COPYING`, den vollständigen zugehörigen Quelltext und Fremdhinweise.
 
 ## Mitgelieferte Ressourcen
 

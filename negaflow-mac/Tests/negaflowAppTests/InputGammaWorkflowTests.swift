@@ -283,6 +283,22 @@ final class InputGammaWorkflowTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: frame.rawScanURL), original)
     }
 
+    func testNegativeRawBasePickerLoadsTheSameNativePixelsAsDevelop() throws {
+        guard NativeCameraRAW.isAvailable else {
+            throw XCTSkip("Set NEGAFLOW_LIBRAW_LIBRARY to run native RAW picker checks")
+        }
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().appendingPathComponent("ChromabaseTests/Fixtures/CameraNativeRaw.dng")
+        let expected = try ImageLoader.loadImportedDecoded(url, inputGamma: .automatic,
+                                                          rawRendering: .cameraNativeNegative)
+        let picked = try XCTUnwrap(AppModel.loadRawForBasePick(
+            preloadedRaw: nil, cleanedRawURL: nil, cleanedRawFrameID: nil, cleanedRawIdentity: nil,
+            requiresCleanedRaw: false, rawScanURL: url, sourceKind: .importedFile,
+            filmType: .colorNegative))
+        XCTAssertEqual(pixels(picked), pixels(expected.image))
+        XCTAssertNotNil(NativeCameraRAW.matrix(in: picked))
+    }
+
     private func makeFrame(gradient: Bool = false) throws -> ScanFrame {
         let url = directory.appendingPathComponent("\(UUID().uuidString).tiff")
         let source = gradient ? try XCTUnwrap(CIFilter(name: "CILinearGradient", parameters: [

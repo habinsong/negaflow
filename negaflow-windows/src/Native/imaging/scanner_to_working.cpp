@@ -214,6 +214,14 @@ ScannerToWorkingResult convert_scanner_to_working(
             return result;
         }
 
+        if (decoded.camera_to_working &&
+            (!negaflow::imageio::valid_camera_matrix(*decoded.camera_to_working) ||
+             !decoded.icc_profile.empty() || input_gamma.mode != 0U ||
+             decoded.untagged_rgb_transfer != negaflow::imageio::UntaggedRgbTransfer::linear_scanner)) {
+            result.status = ScannerToWorkingStatus::invalid_argument;
+            return result;
+        }
+        result.image.camera_to_working = decoded.camera_to_working;
         if (input_gamma.mode != 0U && decoded.layout != negaflow::imageio::DecodedPixelLayout::rgb16) {
             result.status = ScannerToWorkingStatus::unsupported_input_gamma;
             return result;
@@ -366,6 +374,29 @@ const char* scanner_working_transform_name(const ScannerWorkingTransform transfo
             return "embedded_icc_via_windows_icm_srgb16_to_linear_srgb_f32";
     }
     return "unknown_scanner_working_transform";
+}
+
+bool apply_deferred_camera_transform(WorkingImage& image) noexcept {
+    if (!image.camera_to_working) { return true; }
+    const auto m = *image.camera_to_working;
+    if (!negaflow::imageio::valid_camera_matrix(m) || image.width == 0U || image.height == 0U ||
+        image.stride_pixels < image.width ||
+        static_cast<std::uint64_t>(image.stride_pixels) * image.height > image.pixels.size()) { return false; }
+    negaflow::core::for_each_row_block(image.height,
+        static_cast<std::uint64_t>(image.width) * image.height,
+        [&](const std::uint32_t first, const std::uint32_t count) noexcept {
+            for (std::uint32_t y = first; y < first + count; ++y) {
+                for (std::uint32_t x = 0; x < image.width; ++x) {
+                    auto& p = image.pixels[static_cast<std::size_t>(y) * image.stride_pixels + x];
+                    const auto input = p;
+                    p.red = m[0] * input.red + m[1] * input.green + m[2] * input.blue;
+                    p.green = m[3] * input.red + m[4] * input.green + m[5] * input.blue;
+                    p.blue = m[6] * input.red + m[7] * input.green + m[8] * input.blue;
+                }
+            }
+        });
+    image.camera_to_working.reset();
+    return true;
 }
 
 }  // namespace negaflow::imaging

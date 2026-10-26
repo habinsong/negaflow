@@ -172,6 +172,14 @@ typedef struct nf_develop_export_request_v39 {
     double input_gamma_value;
 } nf_develop_export_request_v39;
 
+/* Optional sized tail accepted by the v39 entry points. Legacy v39 payloads
+   retain their fixed/manual behavior. Reserved fields remain zero. */
+typedef struct nf_develop_export_request_v40 {
+    nf_develop_export_request_v39 v39;
+    uint32_t auto_balance;
+    uint32_t auto_balance_reserved;
+} nf_develop_export_request_v40;
+
 #ifdef __cplusplus
 }
 #endif

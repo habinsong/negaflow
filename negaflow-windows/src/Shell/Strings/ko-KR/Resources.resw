@@ -1623,4 +1623,5 @@
   <data name="inputGammaAssumedSRGB.Value" xml:space="preserve"><value>기본 추정 · sRGB</value></data>
   <data name="inputGammaEstimated.Value" xml:space="preserve"><value>추정 감마 {0:0.0}</value></data>
   <data name="customTarget.Text" xml:space="preserve"><value>Custom</value><comment>AppLocalizedPhrase.customTargetTitle</comment></data>
+  <data name="autoBalance.Text" xml:space="preserve"><value>자동 밸런스</value></data>
 </root>

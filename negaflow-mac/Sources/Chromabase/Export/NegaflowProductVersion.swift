@@ -23,6 +23,6 @@ public enum NegaflowProductVersion {
     }
 
     public static var rendererVersion: String {
-        "chromabase/\(current)/fixed-density-linear-v6"
+        "chromabase/\(current)/shoulder-print-response-v4-native-raw-v1-balance2"
     }
 }

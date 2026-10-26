@@ -41,7 +41,10 @@ extension ChromabaseEngine {
         let fb = params.baseEstimationMode == .auto
             ? params.baseScale.applied(to: reference) : reference
         prepareInputGammaStatistics(base: fb, preset: preset, params: params, measurements: &measurements)
-        if NegativeLinearResponse.applies(params) {
+        if NegativeAutoBalance.supports(params.developTarget) {
+            img = NegativeAutoBalance.invert(img, base: fb, preset: preset,
+                params: params, measurements: &measurements)
+        } else if NegativeLinearResponse.applies(params) {
             let stats = NegativeLinearResponse.stats(base: fb, preset: preset, filmType: params.filmType)
             measurements.inversionStats = stats
             img = NegativeLinearResponse.invert(img, stats: stats, filmType: params.filmType)
@@ -58,8 +61,12 @@ extension ChromabaseEngine {
         } else {
             img = NegativeInversion.apply(to: img, base: fb, filmType: params.filmType)
         }
-        // 장면 적응(자동) 보정은 opt-in — 명시적으로 켰을 때만 실행한다.
-        // MAIN/PRINT inversion uses fixed calibration; explicit targets may analyze the scene.
+        if let matrix = measurements.cameraToWorking ?? NativeCameraRAW.matrix(in: input) {
+            img = matrix.apply(to: img)
+        }
+        // 자동 레벨·자동 색상은 자동 밸런스와 별개이며 기본 OFF입니다.
+        // MAIN/PRINT·CS uses the original v4 response; the switch owns scene normalization.
+        // Explicit scanner targets may analyze the scene.
         // 측정 도메인은 **입력 태그와 무관하게 linear** — 반전 후 작업공간 값은 항상
         // linear 이고 보정(CIColorMatrix 스트레치/linear cube 감마)도 linear 값에 적용된다.
         // 과거처럼 입력 태그 유래 sampleColorSpace(sRGB 태그 가져오기 → sRGB)로 percentile/
@@ -68,7 +75,7 @@ extension ChromabaseEngine {
         let measureSpace = CGColorSpace(name: CGColorSpace.linearSRGB) ?? sampleColorSpace
         let region = measurements.analysisRegion
         if params.autoLevels {
-            // MAIN/PRINT targets are specified after the output curve; map them back
+            // Fixed-model output targets are specified after the output curve; map them back
             // to scene-linear values before applying the requested level stretch.
             let fixed = NegativeLinearResponse.applies(params)
             img = AutoLevels.apply(to: img, sampleColorSpace: measureSpace,
@@ -83,8 +90,8 @@ extension ChromabaseEngine {
                                        correction: &measurements.neutralBalanceCorrection)
         }
         // 타겟별 베이스 분기:
-        //   main/print          — Dmin + 고정 인화 응답으로 만든 중립 기본 양화. 장면별 자동
-        //                         스트레치나 타겟 룩(채도 감쇠/커브/샤픈)은 굽지 않는다.
+        //   main/print          — 기존 v4 반전. 자동 밸런스로 밀도 정규화·채도 처리를 켜고 끈다.
+        //                         별도의 타깃 룩(채도 감쇠/커브/샤픈)은 추가하지 않는다.
         //   NORITSU HS-1800 /
         //   FUJI SP-3000        — 독자 베이스(실기 실측 프로파일 기반 ScannerTargetGrade).
         //                         main 룩을 섞지 않는다. 수동 프로파일 얹기(ScannerProfileGrade)도

@@ -204,10 +204,13 @@ FilmBasePickResult sample_film_base(
         // 이므로 표시 정규 좌표를 그대로 씁니다.
         const double center_x = clamp_unit(unit_x) * static_cast<double>(image.width);
         const double center_y = clamp_unit(unit_y) * static_cast<double>(image.height);
-        const std::optional<double> reference = base_reference(image, film_type);
+        // A native RAW pick measures the explicitly selected patch. Camera RGB
+        // does not have the orange-mask R >= G >= B ordering used for scanner RGB.
+        const bool native = image.camera_to_working.has_value();
+        const std::optional<double> reference = native ? std::nullopt : base_reference(image, film_type);
 
         const std::optional<BaseMeasurement> snapped =
-            snap_to_base(image, center_x, center_y, film_type);
+            native ? std::nullopt : snap_to_base(image, center_x, center_y, film_type);
         if (snapped.has_value() && is_plausible_base(*snapped, reference, film_type)) {
             result.status = FilmBasePickStatus::ok;
             result.rgb = {
@@ -234,7 +237,12 @@ FilmBasePickResult sample_film_base(
             return result;
         }
         const BaseMeasurement clamped = clamp_rgb(*sampled);
-        if (!is_plausible_base(clamped, reference, film_type)) {
+        const bool plausible = native
+            ? std::min({clamped[0], clamped[1], clamped[2]}) > 1.0e-5 &&
+              std::max({clamped[0], clamped[1], clamped[2]}) < 0.985 &&
+              (clamped[0] + clamped[1] + clamped[2]) / 3.0 >= 0.012
+            : is_plausible_base(clamped, reference, film_type);
+        if (!plausible) {
             result.status = FilmBasePickStatus::implausible;
             return result;
         }

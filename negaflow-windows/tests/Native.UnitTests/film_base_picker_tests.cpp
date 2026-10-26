@@ -186,6 +186,25 @@ void verify_picks_a_narrow_rebate_on_a_small_frame() {
         "film_base_picker_rejects_the_scene_inside_a_rebated_frame");
 }
 
+void verify_explicit_native_pick() {
+    auto image = make_image(128U, 128U);
+    const negaflow::core::Rgba32F native_base{0.30F, 0.43F, 0.21F, 1.0F};
+    image.pixels.assign(image.pixels.size(), native_base);
+    expect(negaflow::imaging::sample_film_base(image, 0.5, 0.5,
+        negaflow::imaging::NegativeFilmType::color).status ==
+        negaflow::imaging::FilmBasePickStatus::implausible, "scanner ordering rejects this camera RGB patch");
+    image.camera_to_working = negaflow::imageio::CameraToWorkingMatrix{1,0,0,0,1,0,0,0,1};
+    const auto picked = negaflow::imaging::sample_film_base(image, 0.5, 0.5,
+        negaflow::imaging::NegativeFilmType::color);
+    expect(picked.status == negaflow::imaging::FilmBasePickStatus::ok &&
+        near(picked.rgb[0], native_base.red) && near(picked.rgb[1], native_base.green) &&
+        near(picked.rgb[2], native_base.blue), "native pick retains camera RGB without orange ordering");
+    image.pixels.assign(image.pixels.size(), black_bar);
+    expect(negaflow::imaging::sample_film_base(image, 0.5, 0.5,
+        negaflow::imaging::NegativeFilmType::color).status ==
+        negaflow::imaging::FilmBasePickStatus::implausible, "native pick still rejects black holder pixels");
+}
+
 void verify_status_names() {
     expect(
         std::string_view{negaflow::imaging::film_base_pick_status_name(
@@ -204,6 +223,7 @@ int main() {
     verify_neutral_base();
     verify_picks_a_narrow_rebate_on_a_small_frame();
     verify_status_names();
+    verify_explicit_native_pick();
     if (failures != 0) {
         std::cerr << failures << " film base picker checks failed\n";
         return 1;

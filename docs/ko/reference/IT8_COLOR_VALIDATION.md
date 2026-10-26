@@ -19,6 +19,14 @@
 
 IT8.7/1과 ISO 12641-1 투과 타깃은 포지티브 투과 원고용입니다. 이 결과로 컬러 네거티브의 오렌지 마스크, 염료 간섭, C-41 편차, NORITSU/FUJI 출력 정확도를 말할 수 없습니다. 그 주장은 같은 컬러 네거티브를 두 경로에서 처리한 쌍 자료와 별도 검증 묶음이 필요합니다.
 
+공개 FADGI OpenDICE 이미지와 기준 파일의 264개 패치를 측정했습니다. ΔE00 중앙값은 9.8815, p95는 13.2745, 최댓값은 15.5996입니다. 별도 LittleCMS 변환과 평가기의 차이는 Lab 성분 기준 최대 0.105였습니다. 필름 색 정확도 검증을 통과한 결과로 쓰지 않습니다. 이 자료는 양화 IT8 스캔이고 실물 일련번호를 확인하지 못했으며 음화 촬영의 카메라·광원·필름 실측값도 없습니다.
+
+공개 음화 자료도 확인했습니다. FADGI 음화 기준 파일은 실측 색 패치가 아닌 밀도값만 제공합니다. BlueNeg의 복원 기준은 저자들이 pseudo ground truth로 명시합니다. 2024년 ARRI AQUA 분광광도계 연구는 데이터를 공개 다운로드하지 않고 요청 시 제공합니다. 어느 자료도 현재 반전의 독립적인 장면 색 기준값을 제공하지 않습니다.
+
+[공개 Kodak ColorPlus 200 노출 비교 자료](https://discuss.pixls.us/t/any-interest-in-a-film-negative-feature-in-rt/12569/262)의 Sony ILCE-7 RAW 5장(−1~+3 EV)도 확인했습니다. 차트 표기는 Grey White Balance Colour Card이므로 X-Rite 기준값을 적용하지 않았습니다. 디코드한 카메라 RGB의 패치 영역 120곳에서는 0이나 최댓값에 도달한 화소가 없었습니다. 이는 디코드 신호 검사이며 센서 모자이크 직접 측정이나 색 정확도 판정은 아닙니다. 내장 JPEG 프리뷰에는 카메라 WB가 적용돼 있습니다. 해당 차트와 스캔 구성의 실측 기준이 없으므로 출력의 색 편향을 입력이나 앱의 결함으로 단정하지 않습니다. 재배포 권한을 확인하지 못해 파일은 저장소와 앱에 넣지 않습니다.
+
+[FADGI](https://www.digitizationguidelines.gov/guidelines/digitize-OpenDice.html) · [BlueNeg](https://huggingface.co/datasets/ttgroup/blueneg-release) · [Plutino 2024](https://doi.org/10.1002/col.22946)
+
 ## 공개된 회귀 검사 자료
 
 FADGI/OpenDICE의 다음 두 파일을 한 쌍으로 씁니다.
@@ -104,13 +112,11 @@ IT8.7/1은 입력 장치용입니다. 프린터 출력은 `printer + paper + ink
 
 ## `MAIN` 합성 패치 회귀
 
-`FixedNegativeResponseTests` / `fixed-density-linear-v6`
+`NegativeAutoBalanceTests` / `shoulder-print-response-v4`
 
-독립적인 직선부 필름 모형, 서로 다른 배경의 같은 패치, 중립 계조의 WB, 고밀도 명부를 검사합니다. 합성 회귀는 실제 필름의 색 정확도를 입증하지 않습니다. 기존 레시피는 수정한 알고리즘으로 렌더링하며 저장된 파라미터와 원본은 유지합니다. macOS 렌더러 식별자와 썸네일 접미사도 새 결과를 구분합니다.
+MAIN/CS는 토글 ON과 OFF 모두 v4 곡선을 씁니다. 남겨 둔 v6 시험은 해당 고정 primitive를 검사합니다. 이 시험의 프레임 간 편차 0을 자동 밸런스 ON의 결과로 해석하지 않습니다.
 
-수식은 이 저장소에서 직접 구현했습니다. darktable·RawTherapee·NegPy의 구현 코드는 가져오지 않았습니다.
-
-[fixed-density-linear-v6](PRINT_RESPONSE.md)
+[네거티브 반전 응답](PRINT_RESPONSE.md)
 
 ## NORITSU/FUJI 상대 스타일 회귀
 

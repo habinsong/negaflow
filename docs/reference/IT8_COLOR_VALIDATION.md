@@ -19,6 +19,14 @@ Color accuracy checks require measurements, not visual inspection alone. An IT8 
 
 IT8.7/1 and ISO 12641-1 transmissive targets are for positive transmissive originals. These results say nothing about the orange mask of color negative, dye interaction, C-41 variation, or NORITSU/FUJI output accuracy. Those claims need paired material of the same color negative run through both paths, plus a separate validation set.
 
+The public FADGI OpenDICE image/reference pair was measured across 264 patches: median ΔE00 9.8815, p95 13.2745, maximum 15.5996. An independent LittleCMS conversion differed from the evaluator by at most 0.105 Lab units. These observations do not pass a film-accuracy gate: this is a positive IT8 scan, its physical serial is unverified, and no negative camera/light/film measurement is attached.
+
+Public negative datasets were also checked. The FADGI negative references contain density only, not measured color patches. BlueNeg labels its restored references pseudo ground truth. The 2024 ARRI AQUA spectrophotometer study makes its data available on request, not as an open download. None supplies an independent scene-color reference for the current inversion.
+
+A [public Kodak ColorPlus 200 exposure series](https://discuss.pixls.us/t/any-interest-in-a-film-negative-feature-in-rt/12569/262) supplied five Sony ILCE-7 RAW scans from −1 to +3 EV. The chart label identifies a Grey White Balance Colour Card, so X-Rite reference values were rejected. None of the 120 sampled patch regions reached zero or full scale in the decoded camera RGB. This is a decoded-signal check, not a direct sensor-mosaic measurement or a color-accuracy result. The embedded JPEG preview includes camera white balance. Without measured references for that chart and the scanning setup, output casts cannot be assigned to the input or the application. The files remain outside the repository and application because redistribution rights have not been established.
+
+[FADGI](https://www.digitizationguidelines.gov/guidelines/digitize-OpenDice.html) · [BlueNeg](https://huggingface.co/datasets/ttgroup/blueneg-release) · [Plutino 2024](https://doi.org/10.1002/col.22946)
+
 ## Public regression material
 
 These two FADGI/OpenDICE files are used as a pair.
@@ -104,13 +112,11 @@ No claim is made that the current Core Image and ColorSync path pins rendering i
 
 ## `MAIN` synthetic patch regression
 
-`FixedNegativeResponseTests` / `fixed-density-linear-v6`
+`NegativeAutoBalanceTests` / `shoulder-print-response-v4`
 
-Tests use an independent straight-line forward film model, the same patch in different backgrounds, WB across a neutral wedge, and dense highlights. Synthetic regressions do not establish real-film color accuracy. Existing recipes render with the corrected algorithm; stored parameters and source files are retained. The macOS renderer identifier and thumbnail suffix distinguish the new rendering.
+MAIN/CS uses the v4 curve in both switch states. The retained v6 tests check their own fixed primitive; zero frame variation in those tests is not a result for Auto Balance ON.
 
-The equations were implemented in this repository. No darktable, RawTherapee or NegPy implementation was copied.
-
-[fixed-density-linear-v6](PRINT_RESPONSE.md)
+[Negative response](PRINT_RESPONSE.md)
 
 ## NORITSU/FUJI relative style regression
 

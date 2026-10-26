@@ -6,7 +6,9 @@ This document records the Apache-2.0 distribution scope of the negaflow app. It 
 
 ## Code
 
-In `negaflow-mac`, `Sources`, `Tests`, and `scripts` are Swift, Python, and shell code written for negaflow. The macOS app has no C/C++/Objective-C source, no external package, no static or dynamic library, and no vendored source tree; it links only the system frameworks Apple ships with macOS. In `negaflow-windows`, `src`, `tests`, and `scripts` are C++, C#, and PowerShell code written for negaflow, with third-party runtime components and licenses recorded in [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../negaflow-windows/THIRD-PARTY-NOTICES.md).
+The Swift, Python and shell integration in `negaflow-mac` is written for negaflow. Negative camera RAW decoding uses an unmodified, pinned LibRaw revision as a replaceable `libraw.dylib`, distributed under CDDL-1.0. The app includes its source archive, build script, copyright and license files in `Contents/Resources/licenses/libraw/`. No LibRaw source is merged into the Apache source tree. Windows uses the same upstream revision; its other components are recorded in [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../negaflow-windows/THIRD-PARTY-NOTICES.md). The test-only `CameraNativeRaw.dng` is CC0-1.0 material from raw.pixls.us entry 2204, identified by its adjacent source JSON, and is excluded from the application.
+
+If the supplemental notice file is absent, the build and packaging steps warn and continue. Upstream licence files and corresponding source remain included.
 
 Film inversion uses the published sensitometry ideas of density, toe, straight line, and shoulder. The curves and coefficients here come from negaflow's four photometric anchors, not from a third-party program's formulas or constants. The equations and the derivation are in [fixed print response](../reference/PRINT_RESPONSE.md).
 
@@ -34,7 +36,7 @@ Being a separate process does not settle the license question by itself. The GNU
 - [Apache License 2.0 and GPL compatibility](https://www.apache.org/licenses/GPL-compatibility)
 - [Scanner plugin architecture](../architecture/SCANNER_PLUGINS.md)
 
-The release check confirms again that no plugin, SANE executable, or library slipped into the app bundle. The plugin side ships its own `LICENSE`, `COPYING`, complete corresponding source, and third-party notices.
+The release check confirms again that no plugin, SANE executable, or SANE library slipped into the app bundle. The plugin side ships its own `LICENSE`, `COPYING`, complete corresponding source, and third-party notices.
 
 ## Bundled resources
 

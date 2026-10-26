@@ -43,7 +43,7 @@ struct WicStandardImageDecodeControl final {
     std::uint32_t max_output_height{0U};
     // 프리뷰 프록시를 만드는 길입니다. 정확도보다 시간이 우선입니다.
     bool prefer_speed{false};
-    bool scene_linear_raw{false}; // Film input: no decoder output tone curve.
+    bool scene_linear_raw{false}; // Negative film: camera RGB, unit WB, deferred color matrix.
 };
 
 struct WicStandardImageDecodeLimits final {

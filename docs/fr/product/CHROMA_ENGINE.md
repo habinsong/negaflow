@@ -6,14 +6,14 @@ Chroma Engine inverse et développe le film. Le code se trouve dans le module `C
 
 | En bref | Détail |
 |---|---|
-| Développement par défaut | `MAIN`, correction manuelle |
+| Développement par défaut | `MAIN`, Équilibre auto ON |
 | Support du film | Mesure automatique, pipette, saisie RVB directe |
 | Couleur en interne | Espace colorimétrique linéaire en virgule flottante 32 bits |
-| Fonctions automatiques | Appliquées seulement quand vous les lancez |
+| Fonctions automatiques | Équilibre auto ON |
 | Espace de sortie | sRGB, Display P3, Adobe RGB, ICC RVB personnalisé |
 
 > [!IMPORTANT]
-> Auto Tone, Auto White Balance, Auto Levels et Auto Color ne se glissent jamais dans le développement par défaut.
+> Par défaut, `MAIN` utilise Équilibre auto sur ON. Pour MAIN (y compris PRINT) et CS, le bouton est à droite du titre Cible. Il ajuste la couleur et la luminosité à partir de la photo actuelle ; OFF saute cette étape. Tonalité auto, balance des blancs auto, niveaux auto et couleur auto restent des fonctions distinctes, désactivées par défaut.
 
 ## Ce qui prime
 
@@ -28,13 +28,13 @@ Chroma Engine inverse et développe le film. Le code se trouve dans le module `C
 ```mermaid
 flowchart LR
     A["Lire le fichier"] --> B["Corriger l'orientation"]
-    B --> C["Espace de travail linéaire"]
+    B --> C["Entrée linéaire / RGB caméra pour RAW"]
     C --> D{"Type de film"}
     D -->|positif| E["Traitement positif"]
     D -->|négatif| F["Mesurer le support"]
     F --> G["Densité optique et inversion"]
     E --> H["Cible de développement et profils"]
-    G --> H
+    G --> AB["Équilibre auto ON/OFF"] --> M["Matrice RAW après inversion"] --> H
     H --> I["Tonalité, couleur, correction locale"]
     I --> J["Détail et effets"]
     J --> K["Espace écran ou sortie"]
@@ -104,30 +104,13 @@ La table actuelle contient 27 noms de films : négatifs couleur, noir et blanc, 
 
 Certaines valeurs approchent des courbes lues dans des documents publics, d'autres ont été prises prudemment. 27 noms ne signifient pas 27 profils couleur validés. Dès que le support est mesuré, la mesure prime.
 
-### Réponse de tirage fixe
+### MAIN/PRINT et CS
 
-`fixed-density-linear-v6` traite les négatifs `MAIN/PRINT` sans profil de scanner. Les valeurs de correction sont fixes. À base et réglages identiques, les pixels voisins, le recadrage et l’histogramme ne changent pas l’inversion d’une même transmittance. Aucune vibrance liée à la scène n’est appliquée.
+Équilibre auto sur ON rétablit l’inversion MAIN/CS de `412bb31`. Chaque canal mesure sa plage de densité au percentile des 0.2% les plus denses, la limite à 1.8D, puis applique la courbe d’origine `shoulder-print-response-v4` et la correction de saturation des scènes ternes. Les préréglages de film multiplient cette plage par leurs facteurs relatifs par canal. La limite de 1.8D conserve le rendu précédent ; ce n’est pas une propriété mesurée de tous les films. Elle peut affecter les négatifs denses.
 
-`B` est la transmittance mesurée du support. `f` vaut 1 pour la réponse générique ou le facteur relatif fixe du film choisi. `0.62` et `0.60D` sont les références de gamma et de densité grise du modèle générique. Ce ne sont pas des mesures de chaque film ou scanner. Les densités Status M ne caractérisent pas directement le RGB du scanner.
+OFF utilise la même courbe v4 avec une plage nominale fixe (couleur 1.55D, noir et blanc 2.17D), multipliée par les facteurs du préréglage sélectionné. La normalisation par scène et la correction de saturation sont omises. À base et réglages identiques, une même transmittance produit le même résultat dans différentes images. ON peut modifier couleur et luminosité selon la scène. Aucun mode ne démontre une précision colorimétrique mesurée du film.
 
-```math
-q_c = \log_{10}(B_c/\max(T_c,10^{-5}))/f_c,\quad k=0.045,\quad d_t=0.60+0.62\log_{10}(k/0.18),\quad p=d_t\ln(10)/0.62
-```
-
-```math
-E_c=\begin{cases}
-k\,\operatorname{sgn}(q_c)(|q_c|/d_t)^p,&q_c<d_t\\
-0.18\times10^{(q_c-0.60)/0.62},&q_c\ge d_t
-\end{cases}
-```
-
-Le pied en densité rejoint la partie droite avec la même valeur et la même pente. Le support non exposé donne une exposition de scène nulle avant la balance des blancs. Ce pied en puissance est un choix générique, pas une courbe mesurée par film. Près du support, le bruit de densité peut aussi être amplifié.
-
-La balance des blancs par canal et l’exposition agissent sur `E` linéaire. La même courbe fixe est appliquée à chaque canal après la balance des blancs. Sa partie médiane conserve les rapports RGB ; l’épaule modifie les rapports de couleur des hautes lumières. La plage `0.045...0.70` reste identique. Sous `0.045`, un faible plancher noir est ajouté : `b=0.001` en couleur et `0.0005` en noir et blanc. Au-dessus de `0.70`, l’épaule rationnelle tend vers 1. Les deux raccords ont une pente de 1. L’inversion du pied du film et le rendu du noir sont deux étapes distinctes.
-
-L’inversion n’a pas de plafond de `1.8D`. Le plancher de transmittance `1e-5` protège le logarithme. Le gamut est traité à la sortie. À cette étape, chaque canal reste entre le plancher noir et 1. Les réglages manuels suivants peuvent dépasser cette plage.
-
-[fixed-density-linear-v6](../reference/PRINT_RESPONSE.md)
+[Réponse négative](../reference/PRINT_RESPONSE.md)
 
 ## Trois sortes de profils
 
@@ -145,7 +128,7 @@ Les données sont décrites dans [profils de film](FILM_PROFILES.md).
 
 ### `MAIN`
 
-La cible de développement par défaut utilise un étalonnage fixe de densité et une courbe fixe par canal. Niveaux automatiques, Couleur automatique, Ton automatique et Balance des blancs automatique ne s’appliquent que sur demande.
+Par défaut, `MAIN` utilise Équilibre auto sur ON. Pour MAIN (y compris PRINT) et CS, le bouton est à droite du titre Cible. Il ajuste la couleur et la luminosité à partir de la photo actuelle ; OFF saute cette étape. Tonalité auto, balance des blancs auto, niveaux auto et couleur auto restent des fonctions distinctes, désactivées par défaut.
 
 ### `PRINT`
 

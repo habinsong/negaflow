@@ -236,12 +236,13 @@ bool decoded_cleaned_raw_try_take(
     const std::array<std::uint8_t, 32U>& recipe_sha256,
     std::shared_ptr<const negaflow::imaging::WorkingImage>& image,
     DefectRecipeStageInfo& info,
-    const negaflow::color::InputGammaInterpretation input_gamma) noexcept {
+    const negaflow::color::InputGammaInterpretation input_gamma,
+    const bool scene_linear_raw) noexcept {
     const std::lock_guard<std::mutex> guard{g_decoded_mutex};
     trim_decoded_locked();
     for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
         DecodedSourceEntry& entry = g_decoded_sources[index];
-        if (entry.path != path || entry.input_gamma != input_gamma || entry.cleaned_image == nullptr ||
+        if (entry.path != path || entry.input_gamma != input_gamma || entry.scene_linear_raw != scene_linear_raw || entry.cleaned_image == nullptr ||
             entry.cleaned_recipe_sha256 != recipe_sha256 ||
             !negaflow::imageio::same_image_file_observation(
                 entry.observation, observation)) {
@@ -267,7 +268,8 @@ void decoded_cleaned_raw_put(
     const std::array<std::uint8_t, 32U>& recipe_sha256,
     std::shared_ptr<const negaflow::imaging::WorkingImage> image,
     const DefectRecipeStageInfo& info,
-    const negaflow::color::InputGammaInterpretation input_gamma) noexcept {
+    const negaflow::color::InputGammaInterpretation input_gamma,
+    const bool scene_linear_raw) noexcept {
     if (image == nullptr) {
         return;
     }
@@ -275,7 +277,7 @@ void decoded_cleaned_raw_put(
         const std::lock_guard<std::mutex> guard{g_decoded_mutex};
         for (std::size_t index = 0U; index < g_decoded_sources.size(); ++index) {
             DecodedSourceEntry& entry = g_decoded_sources[index];
-            if (entry.path != path || entry.input_gamma != input_gamma) {
+            if (entry.path != path || entry.input_gamma != input_gamma || entry.scene_linear_raw != scene_linear_raw) {
                 continue;
             }
             if (!negaflow::imageio::same_image_file_observation(
@@ -297,6 +299,7 @@ void decoded_cleaned_raw_put(
         DecodedSourceEntry entry{};
         entry.path = path;
         entry.input_gamma = input_gamma;
+        entry.scene_linear_raw = scene_linear_raw;
         entry.observation = observation;
         entry.cleaned_recipe_sha256 = recipe_sha256;
         entry.cleaned_image = std::move(image);

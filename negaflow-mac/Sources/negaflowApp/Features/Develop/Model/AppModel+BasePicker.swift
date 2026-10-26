@@ -26,6 +26,8 @@ extension AppModel {
             let sourceKind = frame.sourceKind
             let cleanRawRevision = frame.cleanRawRevision
             let inputGamma = frame.params.inputGamma
+            let filmType = frame.filmType
+            let isDigitalSource = frame.params.isDigitalSource
             let sourceRevision = frame.sourceLocationRevision
             let neutralBase = frame.filmType == .bwNegative
             let sampled = await Task.detached(priority: .userInitiated) { () -> SIMD3<Double>? in
@@ -37,9 +39,14 @@ extension AppModel {
                     requiresCleanedRaw: requiresCleanedRaw,
                     rawScanURL: rawScanURL,
                     sourceKind: sourceKind,
-                    inputGamma: inputGamma
+                    inputGamma: inputGamma,
+                    filmType: filmType,
+                    isDigitalSource: isDigitalSource
                 ) else { return nil }
-                return FilmBasePicker.sample(in: raw, atUnit: point, neutralBase: neutralBase)
+                let native = ImageLoader.kind(of: rawScanURL) == .rawDng
+                    && ImageLoader.RAWRendering.forDigitalSource(isDigitalSource, filmType: filmType) == .cameraNativeNegative
+                return FilmBasePicker.sample(in: raw, atUnit: point, neutralBase: neutralBase,
+                                             cameraNative: native)
             }.value
             // 픽 유효성은 raw 픽셀 상태에만 의존한다(cleanRawRevision + 결함 identity).
             // 과거의 params 전체 동일성 가드는 샘플링(대형 파일 디코드) 중 무관한 슬라이더
@@ -72,7 +79,9 @@ extension AppModel {
         requiresCleanedRaw: Bool,
         rawScanURL: URL,
         sourceKind: FrameSource,
-        inputGamma: InputGammaInterpretation = .automatic
+        inputGamma: InputGammaInterpretation = .automatic,
+        filmType: FilmType = .colorNegative,
+        isDigitalSource: Bool? = nil
     ) -> CIImage? {
         if let pre = preloadedRaw {
             let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
@@ -90,7 +99,10 @@ extension AppModel {
         let engine = ChromabaseEngine()
         switch sourceKind {
         case .scannerTIFF:  return engine.loadScannerImage(rawScanURL, inputGamma: inputGamma)
-        case .importedFile: return engine.loadImportedImage(rawScanURL, inputGamma: inputGamma)
+        case .importedFile:
+            return engine.loadImportedImage(rawScanURL,
+                rawRendering: .forDigitalSource(isDigitalSource, filmType: filmType),
+                inputGamma: inputGamma)
         }
     }
 }

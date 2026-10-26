@@ -126,6 +126,37 @@ void test_manual_negative_development() {
     expect(!first_fixed.info.muted_scene_vibrance.applied && !second_fixed.info.muted_scene_vibrance.applied,
         "fixed inversion does not add scene vibrance");
 
+    // MAIN/CS Auto Balance restores the original range limit and vibrance together.
+    auto legacy_parameters = scene_parameters;
+    legacy_parameters.legacy_scene_response = true;
+    legacy_parameters.use_preset_response = true;
+    legacy_parameters.preset_range_factor = {0.95F, 1.02F, 1.032F};
+    auto dense_source = make_scene_working_image();
+    for (auto& pixel : dense_source.pixels) {
+        pixel.red *= std::pow(10.0F, -1.2F);
+        pixel.green *= std::pow(10.0F, -1.2F);
+        pixel.blue *= std::pow(10.0F, -1.2F);
+    }
+    const auto restored = negaflow::imaging::develop_manual_negative(dense_source, legacy_parameters);
+    bool cap_matches = restored.status == negaflow::imaging::ManualNegativeDevelopStatus::ok;
+    for (std::size_t c = 0U; c < 3U; ++c) {
+        cap_matches = cap_matches && std::abs(restored.info.dmax_normalized[c] -
+            1.8F * legacy_parameters.preset_range_factor[c]) < 1.0e-5F;
+    }
+    expect(cap_matches, "MAIN/CS ON retains 412bb31 range cap before preset factors");
+    expect(restored.info.muted_scene_vibrance.applied,
+        "MAIN/CS ON includes scene vibrance even with a film preset");
+    legacy_parameters.adaptive_density = false;
+    legacy_parameters.legacy_scene_response = false;
+    const auto disabled = negaflow::imaging::develop_manual_negative(dense_source, legacy_parameters);
+    bool off_matches = disabled.status == negaflow::imaging::ManualNegativeDevelopStatus::ok;
+    for (std::size_t c = 0U; c < 3U; ++c) {
+        off_matches = off_matches && std::abs(disabled.info.dmax_normalized[c] -
+            1.55F * legacy_parameters.preset_range_factor[c]) < 1.0e-5F;
+    }
+    expect(off_matches && !disabled.info.muted_scene_vibrance.applied,
+        "MAIN/CS OFF retains the v4 curve with fixed range and no scene vibrance");
+
     // 바랜 필름은 밀도 범위가 **진짜로** 좁습니다. 앞 판은 좁은 범위를 "측정 실패" 로 보고
     // `normal_range`(1.55, 고대비 가정) 로 돌아갔고, 그 가정이 사진을 검게 눌렀습니다 -
     // 1996 년 카메라 스캔에서 현상 결과가 정상의 13 분의 1 밝기로 나왔습니다. 좁은 것과

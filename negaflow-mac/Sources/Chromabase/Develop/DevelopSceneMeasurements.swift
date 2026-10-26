@@ -13,8 +13,9 @@ public struct DevelopSceneMeasurements: Sendable, Equatable {
     /// 장면을 잴 영역(크롭한 사진 영역, 변형 전 원본 좌표). nil 이면 프레임 전체(기존 6% 인셋).
     /// 측정값의 입력이므로 영역이 바뀌면 호출부가 묶음째 버린다.
     public var analysisRegion: AnalysisRegion?
+    public internal(set) var cameraToWorking: CameraToWorkingMatrix?
     var inputGammaReferenceRange: SIMD3<Double>?
-    /// 기본 반전은 고정 밀도, 스캐너 타깃은 장면 측정값을 저장한다.
+    /// 자동 밸런스 ON과 스캐너 타깃은 장면 범위를, OFF는 고정 범위를 저장한다.
     /// 베이스·반전 타깃·스캐너 프로파일이 바뀌면 호출부가 묶음째 버린다.
     var inversionStats: NegativeInversion.ChannelStats?
     /// 뮤트한 장면 채도 보정량(sceneMeanSaturation 에서 유도).

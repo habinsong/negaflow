@@ -242,6 +242,8 @@ public sealed record LibraryFrameSnapshot(
 
     public ColorModelRecipe ColorModel { get; init; } = ColorModelRecipe.Identity;
 
+    public bool AutoBalance { get; init; } = true;
+
     public bool AutoLevels { get; init; }
 
     public bool AutoNeutralBalance { get; init; }

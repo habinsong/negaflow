@@ -156,7 +156,7 @@ internal static unsafe class NativeDevelopExportCommand
                 // 있기 때문입니다.
                 if (NativeDevelopInput.RequiresV39(request) && !bakeDefects)
                 {
-                    NativeDevelopExportRequestV39 v39 = NativeDevelopInput.Build(
+                    NativeDevelopExportRequestV40 v39 = NativeDevelopInput.Build(
                         BuildRequestV36(BuildRequestV35(v34, defectRecipeDigest, checked((uint)defectRecipeSha256.Length)), null, 0U, 0U),
                         request, outputIccProfile, checked((uint)outputIcc.Length));
                     status = NativeDevelopInput.Export(&v39, runState, (NativeDevelopExportResultV3*)&raw);

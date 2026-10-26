@@ -61,6 +61,8 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
         DevelopDefaultsText.Text = AppResources.Get("libraryDevelopDefaults", "Text");
         DevelopProcessLabel.Text = AppResources.Get("libraryProcess", "Text");
         AutomationProperties.SetName(DevelopProcessSelector, DevelopProcessLabel.Text);
+        AutoBalanceToggle.Content = AppResources.Get("autoBalance", "Text");
+        AutomationProperties.SetName(AutoBalanceToggle, (string)AutoBalanceToggle.Content);
         DevelopTargetLabel.Text = AppResources.Get("libraryTarget", "Text");
         AutomationProperties.SetName(DevelopTargetBar, DevelopTargetLabel.Text);
         DevelopFilmProfileLabel.Text = AppResources.Get("libraryFilmProfile", "Text");
@@ -126,6 +128,10 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
 
         DevelopTarget target = frame?.DevelopTarget ?? DevelopTarget.Main;
         DevelopTarget family = DevelopTargets.Family(target);
+        AutoBalanceToggle.Visibility = target is DevelopTarget.Main or DevelopTarget.Print || DevelopTargets.IsCustom(target)
+            ? Visibility.Visible : Visibility.Collapsed;
+        AutoBalanceToggle.IsEnabled = enabled && frame?.Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative;
+        AutoBalanceToggle.IsChecked = frame?.AutoBalance ?? true;
 
         isSynchronizingDevelopDefaults = true;
         try
@@ -274,6 +280,13 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
         {
             NotifyChanged();
         }
+    }
+
+    private void OnAutoBalanceClicked(object sender, RoutedEventArgs args)
+    {
+        if (isSynchronizingDevelopDefaults || libraryHost is null || ActionableFrame is not { } frame) { return; }
+        if (libraryHost.Edit(frame.Id, new LibraryFrameEdit(frame.Tone, frame.ManualBase)
+            { AutoBalance = AutoBalanceToggle.IsChecked == true }) == LibraryFrameError.None) { NotifyChanged(); }
     }
 
     /// <summary>

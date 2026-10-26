@@ -6,7 +6,9 @@
 
 ## 코드
 
-`negaflow-mac`의 `Sources`, `Tests`, `scripts` 구현은 negaflow를 위해 작성한 Swift, Python, 셸 코드입니다. macOS 본체에는 C/C++/Objective-C 소스, 외부 패키지, 정적·동적 라이브러리, vendored 소스 트리가 없으며 Apple이 macOS에서 제공하는 시스템 프레임워크만 링크합니다. `negaflow-windows`의 `src`, `tests`, `scripts`는 negaflow를 위해 작성한 C++, C#, PowerShell 코드이며 외부 런타임 구성 요소와 라이선스는 [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md)에 기록합니다.
+`negaflow-mac`의 Swift·Python·셸 연동 코드는 negaflow에서 작성했습니다. 음화 카메라 RAW 디코드는 수정하지 않은 고정 LibRaw 리비전을 교체 가능한 `libraw.dylib`로 사용하며 CDDL-1.0로 배포합니다. 앱의 `Contents/Resources/licenses/libraw/`에 소스 아카이브, 빌드 스크립트, 저작권·라이선스 파일을 넣습니다. Apache 소스 트리에 LibRaw 소스를 병합하지 않습니다. Windows도 같은 업스트림 리비전을 사용하며 다른 구성 요소는 [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md)에 기록합니다. 시험용 `CameraNativeRaw.dng`는 raw.pixls.us 항목 2204의 CC0-1.0 자료입니다. 출처 JSON을 함께 두고 앱에서는 제외합니다.
+
+추가 고지 파일이 없으면 경고를 남기고 빌드와 패키징을 계속합니다. 업스트림 라이선스와 대응 소스는 함께 둡니다.
 
 필름 반전은 공개된 사진 감광학의 밀도, 토우, 직선부, 숄더 개념을 사용합니다. 현재 구현의 곡선과 계수는 negaflow의 네 광도 기준점에서 유도하며 제3자 프로그램의 수식이나 상수를 복사하지 않습니다. 식과 유도 과정은 [고정 인화 응답](../reference/PRINT_RESPONSE.md)에 있습니다.
 
@@ -34,7 +36,7 @@ negaflow 본체에는 `scanimage`, SANE 헤더, 백엔드 설정, 장치별 처�
 - [Apache License 2.0 and GPL compatibility](https://www.apache.org/licenses/GPL-compatibility)
 - [스캐너 플러그인 구조](../architecture/SCANNER_PLUGINS.md)
 
-출시 검사는 본체 앱 번들에 플러그인, SANE 실행파일, 라이브러리가 들어가지 않았는지 다시 확인합니다. 플러그인 쪽은 자체 `LICENSE`, `COPYING`, 완전한 대응 소스와 제3자 고지를 별도로 제공합니다.
+출시 검사는 본체 앱 번들에 플러그인, SANE 실행파일, SANE 라이브러리가 들어가지 않았는지 다시 확인합니다. 플러그인 쪽은 자체 `LICENSE`, `COPYING`, 완전한 대응 소스와 제3자 고지를 별도로 제공합니다.
 
 ## 번들 리소스
 

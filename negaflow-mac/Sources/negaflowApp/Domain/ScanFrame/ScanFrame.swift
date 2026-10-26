@@ -48,6 +48,7 @@ struct SceneMeasurementCacheKey: Equatable, Sendable {
     let developTarget: DevelopTarget
     let scannerProfileID: String?
     var baseScale: FilmBaseScale = .identity
+    var autoBalance: Bool = true
 }
 
 // MARK: - FrameSource (프레임 raw 입력의 출처)
@@ -142,7 +143,12 @@ final class ScanFrame: ObservableObject, Identifiable {
     @Published var params: DevelopParameters {
         didSet {
             if oldValue != params { autoAdjustRevision &+= 1 }
-            if oldValue.inputGamma != params.inputGamma { invalidateInputInterpretation() }
+            if oldValue.inputGamma != params.inputGamma
+                || (ImageLoader.kind(of: rawScanURL) == .rawDng
+                    && ImageLoader.RAWRendering.forDigitalSource(oldValue.isDigitalSource, filmType: oldValue.filmType)
+                        != ImageLoader.RAWRendering.forDigitalSource(params.isDigitalSource, filmType: params.filmType)) {
+                invalidateInputInterpretation()
+            }
             if oldValue.baseScale != params.baseScale {
                 developRevision += 1
                 neutralPreviewImage = nil

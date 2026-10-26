@@ -12,8 +12,13 @@ extension DevelopFrameRenderer {
         guard let input = try resolveRenderInput(snapshot, engine: engine, context: context) else {
             throw loadError(for: snapshot)
         }
+        var measurements = DevelopSceneMeasurements()
+        var params = snapshot.params
+        params.filmType = snapshot.filmType
+        try NativeCameraRAW.prepare(source: snapshot.rawScanURL, params: params, measurements: &measurements)
         return try renderRawPreview(
-            from: displayProxy(input.image, maxDimension: snapshot.proxyMaxDimension),
+            from: displayProxy(measurements.cameraToWorking?.apply(to: input.image) ?? input.image,
+                               maxDimension: snapshot.proxyMaxDimension),
             transform: snapshot.imageTransform,
             context: context
         ).transformed
@@ -103,11 +108,12 @@ extension DevelopFrameRenderer {
             snapshot,
             cleanedRawURL: verifiedCleanedRawURL
         ) {
+            let usesLinear = snapshot.filmType.requiresInversion || preview.usesLinearSRGB
             let proxy = materializedPreviewRaw(
                 preview.image,
-                usesLinearSRGB: preview.usesLinearSRGB,
+                usesLinearSRGB: usesLinear,
                 sourceBitsPerComponent: sourceBitsPerComponent(snapshot, cleanedRawURL: verifiedCleanedRawURL),
-                context: rawProxyContext(usesLinearSRGB: preview.usesLinearSRGB)
+                context: rawProxyContext(usesLinearSRGB: usesLinear)
             )
             return RenderInput(
                 image: proxy.map(ciImage(from:)) ?? preview.image,
@@ -122,7 +128,9 @@ extension DevelopFrameRenderer {
         guard shouldCachePreviewInput(rawInput.extent, maxDimension: snapshot.proxyMaxDimension) else {
             return RenderInput(image: rawInput, generatedPreviewRaw: nil)
         }
-        let usesLinear = snapshot.params.inputGamma != .automatic
+        // Keep negative caches in the same linear space used by inversion and export.
+        let usesLinear = snapshot.filmType.requiresInversion
+            || snapshot.params.inputGamma != .automatic
             || snapshot.preloadedRaw != nil
             || verifiedCleanedRawURL != nil
             || rawInput.colorSpace?.name == CGColorSpace(name: CGColorSpace.linearSRGB)?.name
@@ -163,7 +171,7 @@ extension DevelopFrameRenderer {
                 maxDimension: snapshot.proxyMaxDimension,
                 highResolutionThreshold: fullMaxDimension,
                 inputGamma: snapshot.params.inputGamma,
-                rawRendering: .forDigitalSource(snapshot.params.isDigitalSource)
+                rawRendering: .forDigitalSource(snapshot.params.isDigitalSource, filmType: snapshot.filmType)
             )
         }
     }

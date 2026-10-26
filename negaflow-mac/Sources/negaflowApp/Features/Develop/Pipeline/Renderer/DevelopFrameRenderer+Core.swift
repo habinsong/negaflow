@@ -25,9 +25,18 @@ extension DevelopFrameRenderer {
                                                 imageSize: rawInput.extent.size)
             let base = developBase(for: snapshot, input: rawInput, engine: engine,
                                    analysisRegion: analysisRegion)
+            var measurements = snapshot.cachedSceneMeasurements
+            measurements.analysisRegion = analysisRegion
+            var inputParams = snapshot.params
+            inputParams.filmType = snapshot.filmType
+            try NativeCameraRAW.prepare(source: snapshot.rawScanURL,
+                params: inputParams, measurements: &measurements)
+            try InputGammaRenderReference.prepare(source: snapshot.rawScanURL,
+                params: inputParams, measurements: &measurements)
             let rawPair = snapshot.needsRawPreview
                 ? try renderRawPreview(
-                    from: displayProxy(rawInput, maxDimension: snapshot.proxyMaxDimension),
+                    from: displayProxy(measurements.cameraToWorking?.apply(to: rawInput) ?? rawInput,
+                                       maxDimension: snapshot.proxyMaxDimension),
                     transform: snapshot.imageTransform,
                     context: context
                 )
@@ -35,12 +44,6 @@ extension DevelopFrameRenderer {
             try Task.checkCancellation()
             // MAIN 비교본과 스캐너 타깃은 반전 도메인이 다르다. 선택한 타깃의 측정만
             // 캐시에 돌려주고 비교본이 그 통계를 덮어쓰지 않게 한다.
-            var measurements = snapshot.cachedSceneMeasurements
-            measurements.analysisRegion = analysisRegion
-            var inputParams = snapshot.params
-            inputParams.filmType = snapshot.filmType
-            try InputGammaRenderReference.prepare(source: snapshot.rawScanURL,
-                params: inputParams, measurements: &measurements)
             let developedPair = try renderDeveloped(
                 input: rawInput,
                 base: base,
@@ -55,6 +58,8 @@ extension DevelopFrameRenderer {
             var comparisonParams = inputParams
             comparisonParams.developTarget = .main
             comparisonParams.scannerProfileID = nil
+            try NativeCameraRAW.prepare(source: snapshot.rawScanURL,
+                params: comparisonParams, measurements: &comparisonMeasurements)
             try InputGammaRenderReference.prepare(source: snapshot.rawScanURL,
                 params: comparisonParams, measurements: &comparisonMeasurements)
             let neutralPair = snapshot.needsNeutralPreview
@@ -148,6 +153,8 @@ extension DevelopFrameRenderer {
             var measurements = DevelopSceneMeasurements()
             measurements.analysisRegion = AnalysisRegion(transform: snapshot.imageTransform,
                                                          imageSize: input.image.extent.size)
+            try NativeCameraRAW.prepare(source: snapshot.rawScanURL,
+                params: effectiveParams, measurements: &measurements)
             try InputGammaRenderReference.prepare(source: snapshot.rawScanURL,
                 params: effectiveParams, measurements: &measurements)
             let baseImage = engine.developScannerPreview(
@@ -193,6 +200,7 @@ extension DevelopFrameRenderer {
         neutral.filmType = snapshot.filmType
         neutral.developTarget = .main
         neutral.baseEstimationMode = snapshot.params.baseEstimationMode
+        neutral.autoBalance = snapshot.params.autoBalance
         neutral.baseScale = snapshot.params.baseScale
         neutral.inputGamma = snapshot.params.inputGamma
         neutral.manualBaseRGB = snapshot.params.manualBaseRGB

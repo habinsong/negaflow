@@ -6,6 +6,26 @@ import ScannerKit
 
 @MainActor
 final class AutoAdjustInputRegressionTests: XCTestCase {
+    func testChangingCameraRawIntentDropsPixelCachesButPreservesSource() throws {
+        let source = URL(fileURLWithPath: "/tmp/camera-native-cache.dng")
+        let frame = ScanFrame(scanIndex: 1, rawScanURL: source, filmType: .colorNegative)
+        let identity = try DefectRecipeIdentity(fingerprintVersion: DefectRecipeFingerprint.currentVersion,
+            revision: 1, recipeSHA256: String(repeating: "a", count: 64),
+            sourceIdentity: DefectSourceIdentity(byteCount: 100, sha256: String(repeating: "b", count: 64)))
+        frame.defectRecipeIdentity = identity
+        frame.cleanedRawDiskIdentity = identity
+        frame.cleanedRawDiskURL = URL(fileURLWithPath: "/tmp/old-working-raw.tiff")
+        XCTAssertNil(frame.identityMatchedCleanedRawDiskURL, "Old working-RGB cache cannot serve camera-native inversion")
+        frame.cleanedRawDiskURL = CleanedRawCacheFile.makeBuildURL(frameID: frame.id)
+        XCTAssertNotNil(frame.identityMatchedCleanedRawDiskURL)
+        frame.thumbnailRecipeID = "old-render"
+        frame.params.isDigitalSource = true
+        XCTAssertNil(frame.cleanedRawDiskURL)
+        XCTAssertNil(frame.thumbnailRecipeID)
+        XCTAssertEqual(frame.defectRecipeIdentity, identity)
+        XCTAssertEqual(frame.rawScanURL, source)
+    }
+
     func testAutomaticResultAndResetUndoPreserveInputSettings() async throws {
         let (model, frame, root) = try fixture()
         defer { model.frames = []; try? FileManager.default.removeItem(at: root) }

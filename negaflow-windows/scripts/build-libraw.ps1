@@ -163,7 +163,7 @@ $required = @(
     'libraw_dcraw_make_mem_image', 'libraw_dcraw_clear_mem', 'libraw_close',
     'libraw_set_output_bps', 'libraw_set_output_color', 'libraw_set_gamma',
     'libraw_set_no_auto_bright', 'libraw_set_highlight', 'libraw_set_user_mul',
-    'libraw_get_cam_mul', 'libraw_version')
+    'libraw_get_cam_mul', 'libraw_version', 'libraw_get_rgb_cam', 'libraw_set_adjust_maximum_thr')
 # 선택 심볼. 없어도 RAW 현상은 되고 촬영 기록만 비므로 여기서 배포를 막지 않는다 —
 # 다만 우리가 짓는 DLL 에서 빠졌다면 그것은 알아야 한다.
 $optional = @('libraw_get_imgother')
@@ -181,11 +181,11 @@ if ($missingOptional) {
     Write-Host "선택 C API 심볼 $($optional.Count) 개 확인"
 }
 
-# ── 5. 출력 폴더와 GPL/LGPL 고지 자료를 놓는다 ───────────────────────────────
+# ── 5. 출력 폴더와 LibRaw 고지 자료를 놓는다 ───────────────────────────────
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 Copy-Item -LiteralPath $built -Destination $OutputDirectory -Force
 
-# LGPL-2.1 은 라이선스 사본과 대응 소스를 함께 주어야 한다. 배포 payload 를 만드는 쪽이
+# CDDL-1.0으로 배포하며 라이선스 사본과 대응 소스를 함께 둔다. 배포 payload 를 만드는 쪽이
 # 집어갈 수 있도록 한곳에 모아 둔다.
 $licenseDir = Join-Path $WorkRoot 'redistributable'
 New-Item -ItemType Directory -Force -Path $licenseDir | Out-Null
@@ -196,7 +196,14 @@ foreach ($name in @('LICENSE.LGPL', 'LICENSE.CDDL', 'COPYRIGHT', 'Changelog.txt'
 Copy-Item -LiteralPath $archive -Destination $licenseDir -Force
 Copy-Item -LiteralPath $MyInvocation.MyCommand.Path -Destination (Join-Path $licenseDir 'build-libraw.ps1') -Force
 
+$additionalNotice = Join-Path $repoRoot '..\negaflow-mac\Config\LibRaw-Third-Party-Notices.txt'
+if (Test-Path -LiteralPath $additionalNotice -PathType Leaf) {
+    Copy-Item -LiteralPath $additionalNotice -Destination $licenseDir -Force
+} else {
+    Write-Warning 'Supplemental LibRaw notice is missing; upstream source and licence files are retained.'
+}
+
 $hash = (Get-FileHash -LiteralPath (Join-Path $OutputDirectory 'libraw.dll') -Algorithm SHA256).Hash.ToLowerInvariant()
 Write-Host "libraw.dll → $OutputDirectory"
 Write-Host "SHA-256: $hash"
-Write-Host "LGPL 배포 자료(라이선스 + 대응 소스): $licenseDir"
+Write-Host "CDDL 배포 자료(라이선스 + 대응 소스): $licenseDir"

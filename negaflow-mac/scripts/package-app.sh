@@ -46,6 +46,14 @@ for legal_file in LICENSE NOTICE TRADEMARKS.md; do
   cp "$ROOT/../$legal_file" "$RESOURCES_DIR/$legal_file"
 done
 
+LIBRAW_ARCHITECTURES="${NEGAFLOW_BUILD_ARCHITECTURES:-arm64}"
+LIBRAW_OUTPUT="$ROOT/../build/libraw/$LIBRAW_ARCHITECTURES"
+bash "$ROOT/scripts/build-libraw.sh" "$LIBRAW_ARCHITECTURES" "$LIBRAW_OUTPUT"
+mkdir -p "$APP_BUNDLE/Contents/Frameworks" "$RESOURCES_DIR/licenses/libraw"
+cp "$LIBRAW_OUTPUT/libraw.dylib" "$APP_BUNDLE/Contents/Frameworks/"
+chmod +x "$APP_BUNDLE/Contents/Frameworks/libraw.dylib"
+cp -R "$LIBRAW_OUTPUT/licenses/." "$RESOURCES_DIR/licenses/libraw/"
+
 cp "$ROOT/Config/negaflowApp-Info.plist" "$INFO_PLIST"
 "$PLIST_BUDDY" -c "Set :CFBundleDevelopmentRegion en" "$INFO_PLIST"
 "$PLIST_BUDDY" -c "Set :CFBundleExecutable $EXECUTABLE_NAME" "$INFO_PLIST"
@@ -62,6 +70,7 @@ for locale in en ko ja zh-Hans fr de; do
 done
 
 while IFS= read -r -d '' resource_bundle; do
+  case "$(basename "$resource_bundle")" in *Tests.bundle) continue ;; esac
   cp -R "$resource_bundle" "$RESOURCES_DIR/"
 done < <(find "$PRODUCTS_DIR" -maxdepth 2 -type d -name 'negaflow_*.bundle' -print0)
 

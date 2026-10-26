@@ -68,7 +68,7 @@ enum CleanedRawCacheFile {
 
     static func makeBuildURL(frameID: UUID, in directory: URL = defaultDirectoryURL()) -> URL {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return directory.appendingPathComponent("\(frameID.uuidString)_\(UUID().uuidString).tiff")
+        return directory.appendingPathComponent("\(frameID.uuidString)_\(UUID().uuidString)_raw-v2.tiff")
     }
 
     static func frameID(fromFileName name: String) -> UUID? {

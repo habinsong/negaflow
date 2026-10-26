@@ -6,7 +6,9 @@
 
 ## コード
 
-`negaflow-mac`の`Sources`、`Tests`、`scripts`はnegaflowのために書いたSwift、Python、シェルのコードです。 macOS本体にはC/C++/Objective-Cのソース、外部パッケージ、静的・動的ライブラリ、vendoredソースツリーはなく、AppleがmacOSで提供するシステムフレームワークだけをリンクします。 `negaflow-windows`の`src`、`tests`、`scripts`はnegaflowのために書いたC++、C#、PowerShellのコードで、外部ランタイム構成要素とライセンスは[`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md)に記録しています。
+`negaflow-mac` の Swift・Python・シェル連携コードは本プロジェクトで書いています。ネガのカメラ RAW デコードには、変更していない固定リビジョンの LibRaw を交換可能な `libraw.dylib` として使い、CDDL-1.0 で配布します。アプリの `Contents/Resources/licenses/libraw/` にソースアーカイブ、ビルドスクリプト、著作権・ライセンス文書を含めます。Apache ソースツリーに LibRaw ソースは統合しません。Windows も同じリビジョンを使い、他の構成要素は [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md) に記録します。テスト専用 `CameraNativeRaw.dng` は raw.pixls.us 項目 2204 の CC0-1.0 資料で、出典 JSON を隣に置き、アプリからは除外します。
+
+追加の告知ファイルがない場合も、警告を出してビルドとパッケージ作成を続けます。アップストリームのライセンスと対応するソースは同梱します。
 
 フィルム反転は、公開された感光学の濃度、トウ、直線部、ショルダーの考え方を使います。 ここでの曲線と係数はnegaflowの4つの光度基準点から出したもので、他社プログラムの式や定数を写してはいません。 式と導出は[固定プリント応答](../reference/PRINT_RESPONSE.md)にあります。
 
@@ -34,7 +36,7 @@ GrainMend IRは次の順で動きます。
 - [Apache License 2.0 and GPL compatibility](https://www.apache.org/licenses/GPL-compatibility)
 - [スキャナープラグイン構造](../architecture/SCANNER_PLUGINS.md)
 
-リリース検査では、アプリバンドルにプラグイン、SANE実行ファイル、ライブラリが紛れ込んでいないことをもう一度確認します。 プラグイン側は自分の`LICENSE`、`COPYING`、完全な対応ソース、他社の告知を配ります。
+リリース検査では、アプリバンドルにプラグイン、SANE実行ファイル、SANEライブラリが紛れ込んでいないことをもう一度確認します。 プラグイン側は自分の`LICENSE`、`COPYING`、完全な対応ソース、他社の告知を配ります。
 
 ## 同梱リソース
 
