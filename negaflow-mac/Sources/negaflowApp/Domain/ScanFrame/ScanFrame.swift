@@ -30,9 +30,8 @@ struct FilmBaseCacheKey: Equatable, Sendable {
 
 /// 장면 측정 캐시가 아직 유효한지 판단하는 키.
 ///
-/// 측정은 반전 **직전** 입력과 필름 베이스에서 나온다. 그래서 인스펙터 값이 아무리 바뀌어도
-/// 유효하고, 다음 중 하나라도 달라지면 버려야 한다: 필름 베이스 결정 요소(baseKey), 실제
-/// 베이스 값, 결함 제거로 갈아끼운 입력 raw 세대, 반전 뒤에 걸리는 장면 적응 보정 토글.
+/// 노출·대비 변경에는 재사용한다. 입력 raw 세대, 베이스, 반전 타깃·스캐너 프로파일과
+/// 자동 보정 토글은 측정 도메인을 바꾸므로 키에 포함한다.
 ///
 /// 치수는 키가 아니라 **슬롯**으로 가른다(프리뷰 raw 캐시와 같은 방식). 드래그 패스는 창
 /// 크기로 줄인 프록시를, 정착 패스는 그보다 큰 프록시를 입력으로 쓰는데, 한 슬롯을 공유하면
@@ -46,6 +45,8 @@ struct SceneMeasurementCacheKey: Equatable, Sendable {
     let cleanRawRevision: Int
     let autoLevels: Bool
     let autoNeutralBalance: Bool
+    let developTarget: DevelopTarget
+    let scannerProfileID: String?
     var baseScale: FilmBaseScale = .identity
 }
 

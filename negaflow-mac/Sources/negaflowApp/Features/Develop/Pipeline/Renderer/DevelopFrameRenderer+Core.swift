@@ -33,8 +33,8 @@ extension DevelopFrameRenderer {
                 )
                 : nil
             try Task.checkCancellation()
-            // 장면 측정은 반전 직전 입력에서 나온다 — 세 프리뷰가 같은 묶음을 공유하면
-            // 재측정도 없고 비교본끼리 반전 기준도 정확히 같아진다.
+            // MAIN 비교본과 스캐너 타깃은 반전 도메인이 다르다. 선택한 타깃의 측정만
+            // 캐시에 돌려주고 비교본이 그 통계를 덮어쓰지 않게 한다.
             var measurements = snapshot.cachedSceneMeasurements
             measurements.analysisRegion = analysisRegion
             var inputParams = snapshot.params
@@ -50,6 +50,13 @@ extension DevelopFrameRenderer {
                 measurements: &measurements
             )
             try Task.checkCancellation()
+            var comparisonMeasurements = DevelopSceneMeasurements()
+            comparisonMeasurements.analysisRegion = analysisRegion
+            var comparisonParams = inputParams
+            comparisonParams.developTarget = .main
+            comparisonParams.scannerProfileID = nil
+            try InputGammaRenderReference.prepare(source: snapshot.rawScanURL,
+                params: comparisonParams, measurements: &comparisonMeasurements)
             let neutralPair = snapshot.needsNeutralPreview
                 ? try renderNeutralPreview(
                     input: rawInput,
@@ -57,7 +64,7 @@ extension DevelopFrameRenderer {
                     snapshot: snapshot,
                     engine: engine,
                     context: context,
-                    measurements: &measurements
+                    measurements: &comparisonMeasurements
                 )
                 : nil
             let mainPair = snapshot.needsMainPreview
@@ -67,7 +74,7 @@ extension DevelopFrameRenderer {
                     snapshot: snapshot,
                     engine: engine,
                     context: context,
-                    measurements: &measurements
+                    measurements: &comparisonMeasurements
                 )
                 : nil
             let debugPreviews = snapshot.needsDebugPreviews

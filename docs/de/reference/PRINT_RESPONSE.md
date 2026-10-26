@@ -6,7 +6,7 @@
 
 `fixed-density-linear-v6` gilt für negative `MAIN/PRINT` ohne Scannerprofil. Die Dichtekorrektur ist fest. Bei gleicher Basis und gleichen Einstellungen ändern andere Pixel, Ausschnitt oder Histogramm die Inversion derselben Transmission nicht. Szenenabhängige Vibrance wird nicht angewandt.
 
-Benutzerdefinierte Ziele und EXPIRED verwenden dieselbe feste Inversion wie MAIN. Die benutzerdefinierte Farbe folgt auf die Kalibrierung. EXPIRED korrigiert nur bei ausreichenden Belegen; ohne geeignete Belege entspricht die Ausgabe MAIN. Diese Ziele ignorieren ein verbliebenes Scannerprofil.
+Benutzerdefinierte Ziele und EXPIRED verwenden dieselbe feste Inversion wie MAIN. Die benutzerdefinierte Farbe folgt auf die Kalibrierung. EXPIRED korrigiert nur bei ausreichenden Belegen; ohne geeignete Belege entspricht die Ausgabe MAIN. Diese Ziele ignorieren ein verbliebenes Scannerprofil. Der Messcache der Vorschau unterscheidet Ziel und Scannerprofil. Die MAIN-Vergleichsvorschau hält ihre Messungen getrennt, damit Zielwechsel oder Vergleichsansicht die gewählte Entwicklung und deren Export nicht verändern.
 
 `B` ist die gemessene Basistransmission. `f` ist bei der generischen Antwort 1 oder der feste relative Bereichsfaktor des gewählten Films. `0.62` und `0.60D` sind Gamma- und Graudichtereferenzen des generischen Modells. Sie sind keine Messwerte jedes Films oder Scanners. Status-M-Dichten beschreiben Scanner-RGB nicht direkt.
 

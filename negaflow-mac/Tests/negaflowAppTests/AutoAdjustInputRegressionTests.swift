@@ -62,6 +62,44 @@ final class AutoAdjustInputRegressionTests: XCTestCase {
         }
     }
 
+    func testTargetSwitchAndComparisonPreviewKeepSelectedMeasurements() throws {
+        let (model, frame, root) = try fixture()
+        defer { model.frames = []; try? FileManager.default.removeItem(at: root) }
+        let key = FilmBaseCacheKey(filmType: frame.filmType, mode: .auto,
+                                  manualBaseRGB: nil, filmStockDminID: nil)
+        let cases: [(DevelopTarget, String?)] = [
+            (.main, nil), (.sp3000, nil),
+            (.main, "noritsu__color-nega__kodak-ultramax-400"),
+            (.emulsion, nil), (.rescue, nil), (.main, nil),
+        ]
+        for (target, profile) in cases {
+            frame.updateParams {
+                $0.developTarget = target
+                $0.scannerProfileID = profile
+                $0.autoLevels = true
+            }
+            let snapshot = model.makeSnapshot(for: frame, baseKey: key, needsRawPreview: false,
+                needsNeutralPreview: true, needsMainPreview: true, needsDebugPreviews: false,
+                needsThumbnail: false, proxyMaxDimension: 128)
+            let result = try DevelopFrameRenderer.render(snapshot)
+            var fresh = model.makeSnapshot(for: frame, baseKey: key, needsRawPreview: false,
+                needsNeutralPreview: false, needsDebugPreviews: false,
+                needsThumbnail: false, proxyMaxDimension: 128)
+            fresh.cachedSceneMeasurements = DevelopSceneMeasurements()
+            let reference = try DevelopFrameRenderer.render(fresh)
+            XCTAssertEqual(pixels(result.developed), pixels(reference.developed), target.rawValue)
+            XCTAssertEqual(result.sceneMeasurements, reference.sceneMeasurements, target.rawValue)
+            model.applyBaseCache(result, to: frame, baseKey: key)
+            model.applySceneMeasurementCache(result, to: frame, baseKey: key, proxyMaxDimension: 128,
+                                            renderedParams: snapshot.params)
+            let reused = model.makeSnapshot(for: frame, baseKey: key, needsRawPreview: false,
+                needsNeutralPreview: false, needsDebugPreviews: false,
+                needsThumbnail: false, proxyMaxDimension: 128)
+            XCTAssertEqual(pixels(try DevelopFrameRenderer.render(reused).developed),
+                           pixels(reference.developed), target.rawValue)
+        }
+    }
+
     func testAutomaticToneAndWhiteBalanceUseCurrentInputAndRemainIdempotent() async throws {
         let (model, frame, root) = try fixture()
         defer { model.frames = []; try? FileManager.default.removeItem(at: root) }

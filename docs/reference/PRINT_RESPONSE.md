@@ -6,7 +6,7 @@
 
 `fixed-density-linear-v6` applies to negative `MAIN/PRINT` without a scanner profile. It uses a fixed density calibration. Changing the other pixels, crop or frame histogram does not change the inversion of a given transmittance with the same base and settings. No scene vibrance is applied.
 
-Custom targets and EXPIRED use the same fixed inversion as MAIN. Custom color is applied after calibration. EXPIRED applies a correction only when its evidence gate passes; without eligible evidence its output matches MAIN. A stale scanner profile is ignored for these targets.
+Custom targets and EXPIRED use the same fixed inversion as MAIN. Custom color is applied after calibration. EXPIRED applies a correction only when its evidence gate passes; without eligible evidence its output matches MAIN. A stale scanner profile is ignored for these targets. Preview measurement caches include the target and scanner profile. MAIN comparison previews keep separate measurements so switching targets or opening the comparison cannot alter the selected render or its export.
 
 `B` is measured film-base transmittance. `f` is 1 for the generic response, or the selected stock's fixed relative range factor. `0.62` is the generic film-gamma reference and `0.60D` is its gray-density reference. These are design assumptions, not measured values for every stock or scanner. Manufacturer Status M densities do not directly characterize scanner RGB.
 

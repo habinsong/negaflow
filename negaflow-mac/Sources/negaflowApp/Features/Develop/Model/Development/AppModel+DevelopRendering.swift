@@ -444,6 +444,8 @@ extension AppModel {
             cleanRawRevision: frame.cleanRawRevision,
             autoLevels: frame.params.autoLevels,
             autoNeutralBalance: frame.params.autoNeutralBalance,
+            developTarget: frame.params.developTarget,
+            scannerProfileID: frame.params.scannerProfileID,
             baseScale: frame.filmType.requiresInversion && frame.params.baseEstimationMode == .auto
                 ? frame.params.baseScale : .identity
         )
@@ -478,7 +480,9 @@ extension AppModel {
         if let renderedParams {
             guard renderedParams.baseScale == frame.params.baseScale,
                   renderedParams.autoLevels == frame.params.autoLevels,
-                  renderedParams.autoNeutralBalance == frame.params.autoNeutralBalance else { return }
+                  renderedParams.autoNeutralBalance == frame.params.autoNeutralBalance,
+                  renderedParams.developTarget == frame.params.developTarget,
+                  renderedParams.scannerProfileID == frame.params.scannerProfileID else { return }
         }
         let key = sceneMeasurementCacheKey(for: frame, baseKey: baseKey)
         if frame.cachedSceneMeasurementsKey != key {

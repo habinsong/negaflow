@@ -6,7 +6,7 @@
 
 `fixed-density-linear-v6` traite les négatifs `MAIN/PRINT` sans profil de scanner. Les valeurs de correction sont fixes. À base et réglages identiques, les pixels voisins, le recadrage et l’histogramme ne changent pas l’inversion d’une même transmittance. Aucune vibrance liée à la scène n’est appliquée.
 
-Les cibles personnalisées et EXPIRED utilisent la même inversion fixe que MAIN. La couleur personnalisée est appliquée après la calibration. EXPIRED ne corrige que si les critères de preuve sont remplis ; sans preuve admissible, sa sortie est identique à MAIN. Ces cibles ignorent un ancien profil scanner.
+Les cibles personnalisées et EXPIRED utilisent la même inversion fixe que MAIN. La couleur personnalisée est appliquée après la calibration. EXPIRED ne corrige que si les critères de preuve sont remplis ; sans preuve admissible, sa sortie est identique à MAIN. Ces cibles ignorent un ancien profil scanner. Le cache des mesures de prévisualisation distingue la cible et le profil scanner. Les mesures de la comparaison MAIN restent séparées : changer de cible ou ouvrir la comparaison ne modifie pas le rendu sélectionné ni son export.
 
 `B` est la transmittance mesurée du support. `f` vaut 1 pour la réponse générique ou le facteur relatif fixe du film choisi. `0.62` et `0.60D` sont les références de gamma et de densité grise du modèle générique. Ce ne sont pas des mesures de chaque film ou scanner. Les densités Status M ne caractérisent pas directement le RGB du scanner.
 
