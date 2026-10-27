@@ -872,6 +872,8 @@
   <data name="developExportRefusedPositiveFilm.Text" xml:space="preserve"><value>포지티브 필름 현상은 Windows 엔진이 아직 지원하지 않습니다.</value></data>
   <data name="developExportRefusedDestination.Text" xml:space="preserve"><value>내보낼 전체 경로를 고르십시오.</value></data>
   <data name="developExportRefusedOutputFormat.Text" xml:space="preserve"><value>그 내보내기 형식은 지원하지 않습니다.</value></data>
+  <data name="developExportRefusedDngTarget.Text" xml:space="preserve"><value>DNG 내보내기는 PRINT 타깃을 지원하지 않습니다. TIFF, PNG, JPEG 중에서 고르세요.</value></data>
+  <data name="developExportRefusedDngSource.Text" xml:space="preserve"><value>DNG 내보내기는 무압축 원본(TIFF, 카메라 RAW, DNG)에서만 됩니다. JPEG, PNG, HEIC 원본은 TIFF, PNG, JPEG 중에서 고르세요.</value></data>
   <data name="developExportRefusedStaleDefectSource.Text" xml:space="preserve"><value>결함 편집을 기록한 뒤로 스캔 파일의 크기가 달라졌습니다. 사진을 원래 스캔에 다시 연결하거나 결함 편집을 지운 뒤 다시 내보내십시오.</value></data>
   <data name="developSectionFilm.Text" xml:space="preserve"><value>필름</value></data>
   <data name="developFilmLookNone.Text" xml:space="preserve"><value>없음</value></data>

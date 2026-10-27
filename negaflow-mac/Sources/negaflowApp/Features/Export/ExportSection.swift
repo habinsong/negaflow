@@ -144,6 +144,19 @@ struct ExportSection: View {
         .liquidSurface(cornerRadius: 18, interactive: true)
         .onChange(of: usesCompositeLayout) { _, isComposite in
             if isComposite && selectedDetailPage == .source { selectedDetailPage = .file }
+            normalizeFormatForLayout()
+        }
+        .onChange(of: usesPaperLayout) { _, _ in normalizeFormatForLayout() }
+        .onChange(of: model.exportSelectionAllowsDNG) { _, _ in normalizeFormatForLayout() }
+        .onChange(of: model.exportFormat) { _, _ in normalizeFormatForLayout() }
+        .onAppear(perform: normalizeFormatForLayout)
+    }
+
+    /// 용지 배치·합성 화면은 DNG 를 고를 수 없고(페이지 합성의 입력이 아니다) JPEG · PNG · HEIC 원본이
+    /// 섞인 선택도 마찬가지다. 앞서 고른 DNG 가 남아 있으면 선택지에 없는 값이 보이지 않도록 TIFF 로 되돌린다.
+    private func normalizeFormatForLayout() {
+        if (usesPaperLayout || usesCompositeLayout || !model.exportSelectionAllowsDNG), model.exportFormat == .dng {
+            model.exportFormat = .tiff16
         }
     }
 
@@ -167,6 +180,9 @@ struct ExportSection: View {
                 Text("JPEG").tag(ExportFormat.jpeg)
                 Text("PNG").tag(ExportFormat.png)
                 Text(verbatim: "TIFF").tag(ExportFormat.tiff16)
+                if !usesPaperLayout && !usesCompositeLayout && model.exportSelectionAllowsDNG {
+                    Text(verbatim: "DNG").tag(ExportFormat.dng)
+                }
             }
             exportFolderRow
             ExportNamingControls()
@@ -270,7 +286,7 @@ struct ExportSection: View {
                 Text(verbatim: "16-bit").tag(ExportBitDepth.sixteen)
             }
             .pickerStyle(.segmented)
-        case .tiff16, .rawScanTIFF:
+        case .tiff16, .rawScanTIFF, .dng:
             EmptyView()
         }
     }

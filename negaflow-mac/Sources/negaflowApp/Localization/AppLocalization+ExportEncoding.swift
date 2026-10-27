@@ -9,6 +9,7 @@ enum ExportEncodingLocalizedText {
     case none
     case lzw
     case deflate
+    case dngDescription
 
     func resolved(language: AppLanguage) -> String {
         switch language.resolved {
@@ -22,6 +23,7 @@ enum ExportEncodingLocalizedText {
             case .none: "None"
             case .lzw: "LZW"
             case .deflate: "ZIP"
+            case .dngDescription: "16-bit linear · uncompressed"
             }
         case .korean:
             switch self {
@@ -33,6 +35,7 @@ enum ExportEncodingLocalizedText {
             case .none: "없음"
             case .lzw: "LZW"
             case .deflate: "ZIP"
+            case .dngDescription: "16비트 선형 · 무압축"
             }
         case .japanese:
             switch self {
@@ -44,6 +47,7 @@ enum ExportEncodingLocalizedText {
             case .none: "なし"
             case .lzw: "LZW"
             case .deflate: "ZIP"
+            case .dngDescription: "16ビット リニア・非圧縮"
             }
         case .simplifiedChinese:
             switch self {
@@ -55,6 +59,7 @@ enum ExportEncodingLocalizedText {
             case .none: "无"
             case .lzw: "LZW"
             case .deflate: "ZIP"
+            case .dngDescription: "16 位线性 · 未压缩"
             }
         case .french:
             switch self {
@@ -66,6 +71,7 @@ enum ExportEncodingLocalizedText {
             case .none: "Aucune"
             case .lzw: "LZW"
             case .deflate: "ZIP"
+            case .dngDescription: "16 bits linéaire · non compressé"
             }
         case .german:
             switch self {
@@ -77,6 +83,7 @@ enum ExportEncodingLocalizedText {
             case .none: "Keine"
             case .lzw: "LZW"
             case .deflate: "ZIP"
+            case .dngDescription: "16 Bit linear · unkomprimiert"
             }
         }
     }

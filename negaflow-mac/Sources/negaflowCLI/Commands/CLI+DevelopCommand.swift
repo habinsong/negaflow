@@ -88,6 +88,11 @@ extension CLI {
             format = .tiff16
         case "png":
             format = .png
+        case "dng":
+            if ImageLoader.isExcludedFromDNGExport(inURL) {
+                fail("--output .dng needs an uncompressed input (TIFF, camera RAW or DNG); use .tif, .png or .jpg for JPEG, PNG and HEIC inputs")
+            }
+            format = .dng
         default:
             format = .jpeg
         }

@@ -3,7 +3,9 @@
     x:Class="Negaflow.Shell.Views.Library.Defaults.LibraryDevelopDefaultsPanel"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:Negaflow.Shell.Views.Library.Defaults">
+    xmlns:local="using:Negaflow.Shell.Views.Library.Defaults"
+    xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
     <!-- macOS `DevelopDefaultsSection` (현상뷰 좌측탭 · 스크린샷 `현상뷰_기본.png`).
          구성은 위에서 아래로 세 줄입니다.
            ① 프로세스 — 라벨 왼쪽, 고르개 오른쪽 (한 줄)
@@ -47,10 +49,29 @@
                 <Grid>
                     <TextBlock x:Name="DevelopTargetLabel" x:FieldModifier="internal"
                                FontSize="12" VerticalAlignment="Center" />
-                    <ToggleButton x:Name="AutoBalanceToggle" HorizontalAlignment="Right"
-                                  FontSize="11" Padding="8,3" MinHeight="24" MinWidth="0"
-                                  AutomationProperties.AutomationId="negaflow.develop.auto-balance"
-                                  Click="OnAutoBalanceClicked" />
+                    <!-- 타깃 줄 맨 오른쪽에 작게 둡니다. 모양은 자동 색상·자동 레벨과 같은 알약
+                         (macOS QuickTogglePill): 켜지면 강조색 바탕과 글자, 바깥은 옅은 표면. -->
+                    <Border x:Name="AutoBalanceSurface" HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Background="{ThemeResource NegaflowSubtleFillBrush}" CornerRadius="11"
+                            Visibility="Collapsed">
+                        <primitives:ToggleButton x:Name="AutoBalanceToggle"
+                                                 Style="{StaticResource NegaflowPillToggleStyle}"
+                                                 HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                 FontSize="11" Padding="6,0" MinHeight="22"
+                                                 AutomationProperties.AutomationId="negaflow.develop.auto-balance"
+                                                 Click="OnAutoBalanceClicked">
+                            <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
+                                <controls:VectorIcon x:Name="AutoBalanceIcon" IconSize="11" Kind="Scale"
+                                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                <TextBlock x:Name="AutoBalanceText" TextTrimming="CharacterEllipsis"
+                                           Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                            </StackPanel>
+                        </primitives:ToggleButton>
+                    </Border>
+                    <TextBlock x:Name="AutoBalanceAccentProbe" Visibility="Collapsed"
+                               Foreground="{ThemeResource NegaflowAccentBrush}" />
+                    <TextBlock x:Name="AutoBalancePrimaryProbe" Visibility="Collapsed"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                 </Grid>
                 <!-- macOS `SegmentedPicker` — 트랙 라운딩 11 · 여백 3 · 칸 사이 3 ·
                      칸 높이 28 · 고른 칸 라운딩 8. 여섯 칸이 폭을 똑같이 나눠 가집니다. -->

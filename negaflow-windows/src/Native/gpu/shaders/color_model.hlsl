@@ -38,9 +38,11 @@ cbuffer ColorModelConstants : register(b0) {
 
 // `apply_saturation` 과 같습니다 — 앵커가 **Rec.709 휘도**입니다.
 // (vibrance 의 앵커는 산술 평균이라 다릅니다. 섞지 마십시오.)
+// 키우는 쪽은 채널이 0 또는 1 에 닿기 전에 접습니다(`BoundedChromaScale`, tone_shared.hlsli).
 float3 ApplySaturation(float3 color, float factor) {
     float y = dot(color, LumaCoefficients);
-    return y + ((color - y) * factor);
+    float3 chroma = color - y;
+    return y + (chroma * BoundedChromaScale(factor, y, chroma));
 }
 
 [numthreads(8, 8, 1)]

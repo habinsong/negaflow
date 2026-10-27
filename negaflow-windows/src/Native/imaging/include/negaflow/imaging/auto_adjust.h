@@ -48,11 +48,13 @@ struct AutoAdjustStats final {
     double minkowski_linear_green{0.0};
     double minkowski_linear_blue{0.0};
 
-    // Luma histogram in the sRGB gamma domain, normalised to sum to 1.
+    // sRGB-encoded linear luminance histogram, normalised to sum to 1.
     std::array<double, auto_adjust_histogram_bins> luma_histogram{};
     double average_saturation{0.0};
+    double clipped_fraction{0.0};
+    double white_balance_confidence{1.0};
 
-    // 휘도대별 중립축 증거입니다. 있으면(그리고 고전 gray-world 폴백이 아니면) 자동 WB 가 대역
+    // 휘도대별 중립축 증거입니다. 자동 WB가 신뢰도로 강도를 줄이고 대역
     // 중앙값의 중앙값을 씁니다 — 한 휘도대를 차지한 따뜻한 조명 면이 평균을 끌지 못합니다
     // (macOS `ImageStats.neutralAxis`).
     std::optional<NeutralAxisEvidence> neutral_axis{};
@@ -71,6 +73,7 @@ struct AutoToneResult final {
     double whites{0.0};
     double blacks{0.0};
     double density{0.0};
+    // Retained for compatibility; Auto Tone leaves color controls unchanged.
     double vibrance{0.0};
 };
 
@@ -113,5 +116,8 @@ inline constexpr std::uint32_t auto_adjust_sample_extent = 200U;
     const AutoAdjustStats& measured,
     double exposure_headroom_stops =
         static_cast<double>(negaflow::core::color_exposure_headroom_stops)) noexcept;
+
+// Ranks rendered tone candidates by middle tone, endpoints, range, and clipping.
+[[nodiscard]] double auto_tone_score(const AutoAdjustStats& stats, bool adjust_mid) noexcept;
 
 }  // namespace negaflow::imaging

@@ -3,6 +3,12 @@ namespace Negaflow.Interop;
 public sealed class DevelopExportResult
 {
     public DevelopReferenceBase? ReferenceBase { get; internal set; }
+
+    /// <summary>
+    /// 요청이 <see cref="DevelopExportRequest.MeasureRangeShape"/> 를 켰고 측정이 성립했을 때만 채워집니다
+    /// (기하평균 1). 한 채널이 밀도 상한에 닿았거나 비정상이면 비어 있습니다.
+    /// </summary>
+    public DevelopChannelRange? RangeShape { get; internal set; }
     public uint AppliedInputGammaMode { get; internal set; }
     public double AppliedInputGammaValue { get; internal set; }
     internal DevelopExportResult(
@@ -116,3 +122,9 @@ public sealed class DevelopExportResult
 }
 
 public readonly record struct DevelopReferenceBase(float Red, float Green, float Blue);
+
+/// <summary>
+/// 장치 × 필름의 채널 밀도 범위 모양 또는 교정값(R·G·B 곱, 기하평균 1). macOS
+/// <c>DevelopParameters.channelRange</c> 와 같은 뜻입니다.
+/// </summary>
+public readonly record struct DevelopChannelRange(float Red, float Green, float Blue);

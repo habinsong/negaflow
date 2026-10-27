@@ -70,6 +70,16 @@ public sealed class DevelopExportRequest
 
     public bool AutoBalance { get; init; }
 
+    /// <summary>
+    /// 장치 × 필름의 채널 밀도 범위 교정(R·G·B 곱, 기하평균 1). 자동 밸런스를 끈 고정 반전에서만
+    /// 쓰이고 컬러 네거티브 전용입니다. 비어 있으면 세 채널이 같은 범위입니다.
+    /// </summary>
+    public DevelopChannelRange? ChannelRange { get; init; }
+
+    /// <summary>이 프레임의 채널 밀도 범위 모양을 재서 결과로 돌려 달라고 요청합니다(롤 교정의 재료).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool MeasureRangeShape { get; init; }
+
     public bool AutoLevels { get; init; }
 
     public bool AutoNeutralBalance { get; init; }

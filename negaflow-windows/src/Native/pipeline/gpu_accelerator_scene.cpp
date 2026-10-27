@@ -49,9 +49,9 @@ bool GpuAccelerator::apply_scene_correction(
     // `collect_measured_samples` 와 같은 규칙입니다.
     const std::optional<imaging::AnalysisPixelRect> rect =
         imaging::analysis_measurement_rect(parameters.analysis_region, image.width, image.height);
-    const auto finish_samples = [&rect](imaging::SceneSampleGrid& samples, const std::uint32_t width) {
+    const auto finish_samples = [&rect](imaging::SceneSampleGrid& samples, const std::uint32_t /*width*/) {
         if (!rect) {
-            imaging::inset_scene_samples(samples, width, imaging::scene_frame_border_inset);
+            imaging::inset_scene_samples(samples, samples.width, imaging::scene_frame_border_inset);
         }
     };
     float* const host = reinterpret_cast<float*>(rgba);

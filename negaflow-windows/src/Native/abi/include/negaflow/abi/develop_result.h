@@ -138,6 +138,17 @@ typedef struct nf_develop_export_result_v6 {
     double applied_input_gamma_value;
 } nf_develop_export_result_v6;
 
+/* v7 keeps every v6 field at the same offset and appends the measured channel range shape
+   (R, G, B, geometric mean 1). `range_shape_present` is 1 only when the request asked for the
+   measurement and it was valid (not clipped at the density limit). */
+typedef struct nf_develop_export_result_v7 {
+    nf_develop_export_result_v6 v6;
+    uint32_t range_shape_present;
+    uint32_t range_shape_reserved;
+    float range_shape[3];
+    uint32_t range_shape_pad;
+} nf_develop_export_result_v7;
+
 #define NF_DEVELOP_PROGRESS_COMPLETE 1000U
 
 /* Shared, caller-owned run state for one develop call.

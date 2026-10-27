@@ -50,8 +50,8 @@ internal static unsafe class NativeDevelopExportCommand
         {
             throw new NotSupportedException("Input interpretation must be preserved with a non-destructive recipe.");
         }
-        NativeDevelopExportResultV6 raw = default;
-        raw.StructSize = (uint)sizeof(NativeDevelopExportResultV6);
+        NativeDevelopExportResultV7 raw = default;
+        raw.StructSize = (uint)sizeof(NativeDevelopExportResultV7);
         uint status;
 
         // A null run state is the pre-v22 behaviour: the call simply runs to the end.
@@ -156,7 +156,7 @@ internal static unsafe class NativeDevelopExportCommand
                 // 있기 때문입니다.
                 if (NativeDevelopInput.RequiresV39(request) && !bakeDefects)
                 {
-                    NativeDevelopExportRequestV40 v39 = NativeDevelopInput.Build(
+                    NativeDevelopExportRequestV41 v39 = NativeDevelopInput.Build(
                         BuildRequestV36(BuildRequestV35(v34, defectRecipeDigest, checked((uint)defectRecipeSha256.Length)), null, 0U, 0U),
                         request, outputIccProfile, checked((uint)outputIcc.Length));
                     status = NativeDevelopInput.Export(&v39, runState, (NativeDevelopExportResultV3*)&raw);

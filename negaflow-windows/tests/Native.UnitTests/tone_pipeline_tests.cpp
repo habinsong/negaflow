@@ -171,6 +171,78 @@ void test_basic_tone_black_anchor_and_stride() {
         "basic tone rejects non-finite parameters");
 }
 
+// 밝혀서 한 채널이 1 을 넘을 화소는 그 채널만 잘리지 않고, 목표 휘도를 지킨 채 chroma 만 줄어듭니다.
+// 목표 휘도는 같은 휘도의 무채색이 정합니다(무채색은 잘리지 않습니다). macOS
+// `ColorModelGamutBehaviorTests.testBrightenedPixelsReachTheTargetLumaInsideTheRange` 와 같은 계약입니다.
+void test_basic_tone_lift_folds_chroma_instead_of_clipping() {
+    const auto luma = [](const negaflow::core::Rgba32F pixel) noexcept {
+        return (0.2126F * pixel.red) + (0.7152F * pixel.green) + (0.0722F * pixel.blue);
+    };
+    const std::array<negaflow::core::Rgba32F, 3> colours{{
+        {0.95F, 0.45F, 0.10F, 1.0F},  // 밝은 주황 — R 이 먼저 1 을 넘는다
+        {0.30F, 0.70F, 0.80F, 1.0F},  // 밝은 청록
+        {0.70F, 0.45F, 0.35F, 1.0F},  // 연한 피부
+    }};
+    negaflow::imaging::BasicToneParameters parameters{};
+    parameters.highlights = 1.0F;
+    parameters.whites = 1.0F;
+
+    for (const negaflow::core::Rgba32F colour : colours) {
+        const float y = luma(colour);
+        std::array<negaflow::core::Rgba32F, 2> input{{colour, {y, y, y, 1.0F}}};
+        std::array<negaflow::core::Rgba32F, 2> output{};
+        expect(negaflow::imaging::apply_basic_tone(
+                   {input.data(), input.size(), 2U, 1U, 2U},
+                   {output.data(), output.size(), 2U, 1U, 2U}, parameters) ==
+                   negaflow::core::KernelStatus::ok,
+               "lift fixture succeeds");
+        const negaflow::core::Rgba32F lifted = output[0];
+        const float target = luma(output[1]);
+        expect(lifted.red >= 0.0F && lifted.red <= 1.0F && lifted.green >= 0.0F &&
+                   lifted.green <= 1.0F && lifted.blue >= 0.0F && lifted.blue <= 1.0F,
+               "lifted colour stays inside [0,1]");
+        expect(std::abs(luma(lifted) - target) < 1.0e-4F,
+               "lifted colour reaches the target luminance instead of clipping short");
+        // chroma 는 입력과 같은 방향이고 줄어들 뿐입니다(선형광 색조 보존).
+        const float before_red = colour.red - y;
+        const float before_green = colour.green - y;
+        const float before_blue = colour.blue - y;
+        const float after_red = lifted.red - luma(lifted);
+        const float after_green = lifted.green - luma(lifted);
+        const float after_blue = lifted.blue - luma(lifted);
+        const float before_norm_squared = (before_red * before_red) +
+            (before_green * before_green) + (before_blue * before_blue);
+        const float scale = ((after_red * before_red) + (after_green * before_green) +
+                             (after_blue * before_blue)) / before_norm_squared;
+        const float residual = std::sqrt(
+            std::pow(after_red - (before_red * scale), 2.0F) +
+            std::pow(after_green - (before_green * scale), 2.0F) +
+            std::pow(after_blue - (before_blue * scale), 2.0F));
+        expect(scale >= -1.0e-4F && scale <= 1.0F + 1.0e-3F,
+               "lift only shrinks chroma along its own direction");
+        expect(residual < 2.0e-4F, "lift keeps the linear hue");
+    }
+
+    // 더해도 범위 안에 머무는 리프트는 이전처럼 같은 값을 더한 결과입니다.
+    const negaflow::core::Rgba32F mild{0.55F, 0.50F, 0.40F, 1.0F};
+    const float mild_luma = luma(mild);
+    std::array<negaflow::core::Rgba32F, 2> mild_input{{mild, {mild_luma, mild_luma, mild_luma, 1.0F}}};
+    std::array<negaflow::core::Rgba32F, 2> mild_output{};
+    negaflow::imaging::BasicToneParameters whites_only{};
+    whites_only.whites = 0.5F;
+    expect(negaflow::imaging::apply_basic_tone(
+               {mild_input.data(), mild_input.size(), 2U, 1U, 2U},
+               {mild_output.data(), mild_output.size(), 2U, 1U, 2U}, whites_only) ==
+               negaflow::core::KernelStatus::ok,
+           "mild lift fixture succeeds");
+    const float delta = luma(mild_output[1]) - mild_luma;
+    expect(delta > 0.01F, "mild lift fixture reaches the whites mask");
+    expect(std::abs(mild_output[0].red - (mild.red + delta)) < 1.0e-5F &&
+               std::abs(mild_output[0].green - (mild.green + delta)) < 1.0e-5F &&
+               std::abs(mild_output[0].blue - (mild.blue + delta)) < 1.0e-5F,
+           "a lift that stays inside the range is still additive");
+}
+
 void test_curve_measurement_contract() {
     constexpr std::uint32_t width = 64U;
     constexpr std::uint32_t height = 64U;
@@ -274,6 +346,7 @@ int main() {
     test_fixed_scalar_pipeline_fixture();
     test_thresholds_noop_and_user_bounds();
     test_basic_tone_black_anchor_and_stride();
+    test_basic_tone_lift_folds_chroma_instead_of_clipping();
     test_curve_measurement_contract();
     test_curve_black_anchor_and_measurement_failure();
 

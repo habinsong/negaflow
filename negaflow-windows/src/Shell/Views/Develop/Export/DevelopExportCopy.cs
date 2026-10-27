@@ -38,7 +38,7 @@ internal sealed class DevelopExportCopy
         // 파일
         view.ExportFormatRow.Label = AppResources.Get("developExportFormat", "Text");
         AutomationProperties.SetName(view.ExportFormatSelector, view.ExportFormatRow.Label);
-        FillFormatSelector(view.ExportFormatSelector);
+        FillFormatSelector(view.ExportFormatSelector, view.sync.OffersDng);
         view.ExportFolderRow.Label = AppResources.Get("developExportFolder", "Text");
         SetButtonText(
             view.ExportFolderButton,
@@ -184,13 +184,24 @@ internal sealed class DevelopExportCopy
             ? AppResources.Get("developExportCompressionDeflate", "Content")
             : AppResources.Get("developExportCompressionNone", "Content");
 
-    /// <summary>내보낼 형식입니다. macOS <c>DevelopExportFormat.allCases</c> 와 같은 셋입니다.</summary>
-    internal static void FillFormatSelector(NegaflowPopupPicker selector) =>
-        DevelopExportControlSync.FillSelector(selector, [
-            ("TIFF", (object?)DevelopExportFormat.Tiff16.ToString()),
+    /// <summary>
+    /// 내보낼 형식입니다. macOS <c>DevelopExportFormat.allCases</c> 와 같은 넷입니다(DNG 는 인쇄 구성을 거치지 않는
+    /// 현상 내보내기에서만, 그리고 고른 사진이 모두 무압축 원본일 때만 고릅니다).
+    /// </summary>
+    internal static void FillFormatSelector(NegaflowPopupPicker selector, bool includesDng)
+    {
+        List<(string Text, object? Tag)> formats =
+        [
+            ("TIFF", DevelopExportFormat.Tiff16.ToString()),
             ("PNG", DevelopExportFormat.Png16.ToString()),
             ("JPEG", DevelopExportFormat.Jpeg8.ToString()),
-        ]);
+        ];
+        if (includesDng)
+        {
+            formats.Add(("DNG", DevelopExportFormat.Dng16.ToString()));
+        }
+        DevelopExportControlSync.FillSelector(selector, formats);
+    }
 
     /// <summary>채널당 비트입니다. 이름은 형식이 정하고 값은 같습니다.</summary>
     internal static void FillBitDepthSelector(NegaflowPopupPicker selector) =>

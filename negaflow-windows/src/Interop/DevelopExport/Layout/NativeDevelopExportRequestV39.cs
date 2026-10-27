@@ -21,6 +21,18 @@ internal unsafe struct NativeDevelopExportRequestV40
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV41
+{
+    internal NativeDevelopExportRequestV40 V40;
+    internal uint ChannelRangePresent;
+    internal uint MeasureRangeShape;
+    internal float ChannelRangeRed;
+    internal float ChannelRangeGreen;
+    internal float ChannelRangeBlue;
+    internal uint ChannelRangeReserved;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeDevelopExportResultV6
 {
     internal NativeDevelopExportResultV4 V5;
@@ -32,4 +44,17 @@ internal unsafe struct NativeDevelopExportResultV6
     internal uint InputInterpretationRevision;
     internal double AppliedInputGammaValue;
     internal uint StructSize { get => V5.StructSize; set => V5.StructSize = value; }
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportResultV7
+{
+    internal NativeDevelopExportResultV6 V6;
+    internal uint RangeShapePresent;
+    internal uint RangeShapeReserved;
+    internal float RangeShapeRed;
+    internal float RangeShapeGreen;
+    internal float RangeShapeBlue;
+    internal uint RangeShapePad;
+    internal uint StructSize { get => V6.StructSize; set => V6.StructSize = value; }
 }

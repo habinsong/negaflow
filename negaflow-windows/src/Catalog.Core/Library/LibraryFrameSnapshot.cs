@@ -205,6 +205,18 @@ public sealed record LibraryFrameSnapshot(
     public ManualBaseRgb? AppliedBase { get; init; }
 
     /// <summary>
+    /// 렌더가 잰 이 프레임의 채널 밀도 범위 모양(기하평균 1)입니다. 롤 교정의 재료이며 macOS
+    /// <c>ScanFrame.rangeShape</c> 와 같은 사실입니다. 아직 안 쟀으면 null 입니다.
+    /// </summary>
+    public ChannelRangeRgb? RangeShape { get; init; }
+
+    /// <summary>
+    /// 롤 교정이 찍은 장치 × 필름 채널 밀도 범위입니다. 자동 밸런스를 끈 고정 반전만 읽습니다.
+    /// macOS <c>DevelopParameters.channelRange</c> 와 같습니다. 없으면 세 채널이 같은 범위입니다.
+    /// </summary>
+    public ChannelRangeRgb? ChannelRange { get; init; }
+
+    /// <summary>
     /// 결함 검토를 마쳤을 때의 recipe 판입니다. macOS
     /// <c>LibraryDefectReviewTracking.reviewed*</c> 셋과 같습니다. 지금 recipe 와 세 값이
     /// 모두 같아야 "검토 완료"입니다.

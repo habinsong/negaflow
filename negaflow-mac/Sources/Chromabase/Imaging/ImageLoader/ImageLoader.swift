@@ -203,6 +203,26 @@ public enum ImageLoader {
         return .unknown
     }
 
+    /// DNG 내보내기를 허용하지 않는 입력 확장자. JPEG·HEIC·WebP·AVIF 는 손실 압축을 이미 거쳤고, PNG·GIF 는
+    /// 무손실이지만 카메라·스캐너 원본이 아니라 가공을 마친 파일이라 같은 취급을 한다.
+    /// TIFF·BMP·카메라 RAW·DNG 는 해당 없다.
+    public static let dngExportExcludedExtensions: Set<String> = [
+        "jpeg", "jpg", "jpe", "jfif", "png", "heic", "heif", "webp", "avif", "gif",
+    ]
+
+    /// 원본이 JPEG·PNG·HEIC 계열이라 DNG 로 내보낼 수 없는지. 확장자가 낯설면 UTI 로 판별한다.
+    public static func isExcludedFromDNGExport(_ url: URL) -> Bool {
+        let ext = url.pathExtension.lowercased()
+        if dngExportExcludedExtensions.contains(ext) { return true }
+        if rawExtensions.contains(ext) || standardExtensions.contains(ext) { return false }
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let uti = CGImageSourceGetType(src) as String? else { return false }
+        return [
+            "public.jpeg", "public.png", "public.heic", "public.heif", "public.avif",
+            "org.webmproject.webp", "com.compuserve.gif",
+        ].contains(uti)
+    }
+
     /// 파일을 CIImage로 로드. RAW/DNG면 데모사이크까지 수행.
     /// - Parameters:
     ///   - allowRaw: RAW 입력을 CIRAWFilter로 처리할지. false면 RAW를 거부한다.

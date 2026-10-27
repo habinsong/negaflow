@@ -34,7 +34,9 @@ public sealed partial class PreviewCoordinator
             rendered,
             unusedDestination,
             uninvertedSource: rawSource,
-            allowStaleDefectSource: true);
+            allowStaleDefectSource: true,
+            // 롤 교정의 재료입니다. 단계 그림과 임시 입력 감마 미리보기는 최종 해석이 아니라 잰 모양을 남기지 않습니다.
+            measureRangeShape: !request.InputGammaPreview && stage is null);
         if (built.DroppedStaleDefectEdits)
         {
             PreviewTrace.Write(

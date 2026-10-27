@@ -25,14 +25,14 @@ enum SamplingContextPool {
     /// 저장된 인코딩 값을 직독하므로, 소비 도메인이 명확한 측정에는 쓰지 말 것(base 실측이
     /// 이걸 쓰다 ICC 태그된 가져오기 파일에서 감마 값이 새어 들어갔다). 그 외엔 working/output
     /// 모두 해당 색공간으로 설정한다.
-    static func context(workingColorSpace cs: CGColorSpace?) -> CIContext {
-        let key = (cs?.name as String?) ?? "__unmanaged__"
+    static func context(workingColorSpace cs: CGColorSpace?, fullPrecision: Bool = false) -> CIContext {
+        let key = ((cs?.name as String?) ?? "__unmanaged__") + (fullPrecision ? "_f32" : "")
         state.lock.lock()
         defer { state.lock.unlock() }
         if let ctx = state.contexts[key] {
             return ctx
         }
-        let options: [CIContextOption: Any]
+        var options: [CIContextOption: Any]
         if let cs {
             options = [
                 .cacheIntermediates: false,
@@ -45,6 +45,7 @@ enum SamplingContextPool {
                 .workingColorSpace: NSNull(),
             ]
         }
+        if fullPrecision { options[.workingFormat] = CIFormat.RGBAf.rawValue }
         let ctx = CIContext(options: options)
         state.contexts[key] = ctx
         return ctx

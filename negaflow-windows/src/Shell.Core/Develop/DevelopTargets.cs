@@ -32,6 +32,22 @@ public static partial class DevelopTargets
         DevelopTarget.Rescue,
     ];
 
+    /// <summary>
+    /// 자동 밸런스 스위치가 반전 범위를 정하는 타깃: MAIN 갈래의 MAIN·PRINT, 그리고 커스텀입니다.
+    /// 스캐너 타깃과 EXPIRED 는 자기 반전 도메인을 쓰므로 스위치가 없습니다. macOS
+    /// <c>DevelopTarget.supportsAutoBalance</c> 와 같은 규칙이며 화면·요청이 이 한 곳을 읽습니다.
+    /// </summary>
+    public static bool HasAutoBalance(DevelopTarget target) =>
+        target is DevelopTarget.Main or DevelopTarget.Print || IsCustom(target);
+
+    /// <summary>
+    /// 자동 밸런스 스위치를 보이는 프레임: 반전하는 필름(컬러·흑백 네거티브)이고 스위치가 있는
+    /// 타깃(MAIN·PRINT·커스텀)일 때만입니다. macOS 와 같은 조건입니다.
+    /// </summary>
+    public static bool ShowsAutoBalance(LibraryFrameSnapshot? frame) =>
+        frame?.Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative
+        && HasAutoBalance(frame.DevelopTarget);
+
     public static string DisplayName(DevelopTarget target) => target switch
     {
         DevelopTarget.Print => "PRINT",

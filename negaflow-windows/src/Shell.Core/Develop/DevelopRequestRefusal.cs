@@ -26,6 +26,18 @@ public enum DevelopRequestRefusal
 
     UnsupportedAlpha,
 
+    /// <summary>
+    /// DNG 는 프린터 ICC 로 끝나는 PRINT 타깃을 담지 못합니다. 다른 출력으로 조용히 바꾸지 않고
+    /// 거절합니다(macOS 와 같다).
+    /// </summary>
+    UnsupportedDngTarget,
+
+    /// <summary>
+    /// DNG 는 무압축 입력(TIFF·카메라 RAW·DNG)에서만 냅니다. JPEG·PNG·HEIC 계열 원본은 다른 형식으로
+    /// 조용히 바꾸지 않고 거절합니다(macOS 와 같다).
+    /// </summary>
+    UnsupportedDngSource,
+
     /// <summary>출력 경로가 비었거나 절대 경로가 아닙니다.</summary>
     InvalidDestination,
 

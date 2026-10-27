@@ -30,6 +30,9 @@ namespace negaflow::abi::detail {
         case NF_EXPORT_FORMAT_JPEG8:
             format = negaflow::pipeline::DevelopExportFormat::jpeg8;
             return true;
+        case NF_EXPORT_FORMAT_DNG16:
+            format = negaflow::pipeline::DevelopExportFormat::dng16;
+            return true;
         default:
             return false;
     }

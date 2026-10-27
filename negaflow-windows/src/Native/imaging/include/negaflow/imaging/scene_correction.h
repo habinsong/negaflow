@@ -48,12 +48,14 @@ struct SceneCorrectionInfo final {
 
 // 면적 평균 표본 격자입니다. 세 채널 모두 목표 격자의 행 우선 순서로 채웁니다.
 struct SceneSampleGrid final {
+    std::uint32_t width{0U};
+    std::uint32_t height{0U};
     std::vector<double> red{};
     std::vector<double> green{};
     std::vector<double> blue{};
 };
 
-// 표본 격자의 가로 칸 수입니다. macOS 와 같은 값이며 두 보정이 서로 다릅니다.
+// 표본 격자의 긴 변 상한입니다. macOS 와 같은 값이며 두 보정이 서로 다릅니다.
 inline constexpr std::uint32_t scene_auto_levels_sample_width = 256U;
 inline constexpr std::uint32_t scene_neutral_balance_sample_width = 192U;
 
@@ -89,7 +91,7 @@ struct SceneNeutralBalancePlan final {
     std::uint32_t image_width,
     std::uint32_t image_height,
     std::uint32_t target_width,
-    std::uint32_t& out_height) noexcept;
+    std::uint32_t& out_width, std::uint32_t& out_height) noexcept;
 
 // 크롭 영역이 없을 때 격자 가장자리 `fraction` 을 버립니다(macOS `sampleBlackWhite` 의
 // `insetFraction` 과 같은 칸). `grid_width` 는 격자 가로 칸 수입니다.

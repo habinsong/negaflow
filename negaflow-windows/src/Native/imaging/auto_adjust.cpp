@@ -112,148 +112,74 @@ bool compute_auto_adjust_stats(
         return false;
     }
 
-    // Sample on a bounded grid rather than the whole frame. Percentiles and means are
-    // stable well below full resolution, and this keeps auto instant on a 17 MP scan.
-    const std::uint32_t longest = std::max(width, height);
-    const double scale = std::min(
-        1.0,
-        static_cast<double>(auto_adjust_sample_extent) / static_cast<double>(longest));
-    const std::uint32_t sample_width =
-        std::max(1U, static_cast<std::uint32_t>(static_cast<double>(width) * scale));
-    const std::uint32_t sample_height =
-        std::max(1U, static_cast<std::uint32_t>(static_cast<double>(height) * scale));
-
-    std::array<double, 256> decode_table{};
-    for (std::size_t index = 0U; index < decode_table.size(); ++index) {
-        decode_table[index] = srgb_decode(static_cast<double>(index) / 255.0);
-    }
-
-    double sum_red = 0.0;
-    double sum_green = 0.0;
-    double sum_blue = 0.0;
-    double sum_saturation = 0.0;
-    double neutral_red = 0.0;
-    double neutral_green = 0.0;
-    double neutral_blue = 0.0;
-    double neutral_linear_red = 0.0;
-    double neutral_linear_green = 0.0;
-    double neutral_linear_blue = 0.0;
-    std::uint64_t neutral_count = 0U;
-    double minkowski_red = 0.0;
-    double minkowski_green = 0.0;
-    double minkowski_blue = 0.0;
-
-    stats.luma_histogram.fill(0.0);
-    // 중립축 증거는 화소별 linear 값에서 잽니다(macOS `imageStats` 의 `linearPixels`).
-    std::vector<std::array<double, 3>> linear_pixels{};
-    try {
-        linear_pixels.reserve(static_cast<std::size_t>(sample_width) * sample_height);
-    } catch (...) {
-        return false;
-    }
-
-    for (std::uint32_t y = 0U; y < sample_height; ++y) {
-        const std::uint32_t source_y = static_cast<std::uint32_t>(
-            (static_cast<std::uint64_t>(y) * height) / sample_height);
-        const std::uint8_t* const row = pixels + (source_y * stride_bytes);
-        for (std::uint32_t x = 0U; x < sample_width; ++x) {
-            const std::uint32_t source_x = static_cast<std::uint32_t>(
-                (static_cast<std::uint64_t>(x) * width) / sample_width);
-            const std::uint8_t* const pixel = row + (static_cast<std::size_t>(source_x) * 4U);
-            const std::uint8_t blue_byte = pixel[0];
-            const std::uint8_t green_byte = pixel[1];
-            const std::uint8_t red_byte = pixel[2];
-
-            const double red = static_cast<double>(red_byte) / 255.0;
-            const double green = static_cast<double>(green_byte) / 255.0;
-            const double blue = static_cast<double>(blue_byte) / 255.0;
-            // Decoded per pixel, not from the mean: the mean of a decode is not the
-            // decode of a mean.
-            const double linear_red = decode_table[red_byte];
-            const double linear_green = decode_table[green_byte];
-            const double linear_blue = decode_table[blue_byte];
-            linear_pixels.push_back({linear_red, linear_green, linear_blue});
-
-            sum_red += red;
-            sum_green += green;
-            sum_blue += blue;
-
-            const double luma = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
-            const int bin = std::clamp(static_cast<int>(luma * 255.0), 0, 255);
-            stats.luma_histogram[static_cast<std::size_t>(bin)] += 1.0;
-
-            const double highest = std::max(red, std::max(green, blue));
-            const double lowest = std::min(red, std::min(green, blue));
-            const double saturation = highest > 1.0e-6 ? (highest - lowest) / highest : 0.0;
-            sum_saturation += saturation;
-
-            // Clipped and pure-black pixels carry no illuminant information.
-            if (luma > 0.02 && luma < 0.99) {
-                minkowski_red += std::pow(linear_red, 6.0);
-                minkowski_green += std::pow(linear_green, 6.0);
-                minkowski_blue += std::pow(linear_blue, 6.0);
+    // Area-weighted linear sampling, bounded by the long edge on both platforms.
+    const double scale = std::min(1.0, static_cast<double>(auto_adjust_sample_extent) / std::max(width, height));
+    const auto w = std::max(1U, static_cast<std::uint32_t>(width * scale));
+    const auto h = std::max(1U, static_cast<std::uint32_t>(height * scale));
+    std::array<double, 256> decode{};
+    for (std::size_t i = 0; i < decode.size(); ++i) { decode[i] = srgb_decode(static_cast<double>(i) / 255.0); }
+    std::array<double, 3> sum{}, neutral{}, neutral_linear{}, minkowski{};
+    std::size_t neutral_count = 0, eligible_count = 0;
+    double saturation_sum = 0, clipped = 0;
+    stats.luma_histogram.fill(0);
+    std::vector<std::array<double, 3>> eligible;
+    try { eligible.reserve(static_cast<std::size_t>(w) * h); } catch (...) { return false; }
+    const auto overlap = [](double a, double b, double c, double d) { return std::max(0.0, std::min(b,d) - std::max(a,c)); };
+    for (std::uint32_t y = 0; y < h; ++y) {
+        const double top = static_cast<double>(y) * height / h, bottom = static_cast<double>(y + 1U) * height / h;
+        for (std::uint32_t x = 0; x < w; ++x) {
+            const double left = static_cast<double>(x) * width / w, right = static_cast<double>(x + 1U) * width / w;
+            std::array<double, 3> p{};
+            double weight_sum = 0;
+            for (auto sy = static_cast<std::uint32_t>(std::floor(top)); sy < std::min(height, static_cast<std::uint32_t>(std::ceil(bottom))); ++sy) {
+                const double wy = overlap(top,bottom,sy,sy+1.0);
+                for (auto sx = static_cast<std::uint32_t>(std::floor(left)); sx < std::min(width, static_cast<std::uint32_t>(std::ceil(right))); ++sx) {
+                    const double weight = wy * overlap(left,right,sx,sx+1.0);
+                    const auto* q = pixels + static_cast<std::size_t>(sy) * stride_bytes + static_cast<std::size_t>(sx) * 4U;
+                    p[0] += decode[q[2]] * weight; p[1] += decode[q[1]] * weight; p[2] += decode[q[0]] * weight;
+                    weight_sum += weight;
+                }
             }
-            // Near-neutral candidates only, so a saturated subject cannot masquerade as
-            // the light source.
-            if (saturation <= 0.22 && luma > 0.10 && luma < 0.90) {
-                neutral_red += red;
-                neutral_green += green;
-                neutral_blue += blue;
-                neutral_linear_red += linear_red;
-                neutral_linear_green += linear_green;
-                neutral_linear_blue += linear_blue;
+            for (auto& c : p) { c /= weight_sum; }
+            const std::array<double, 3> rgb{srgb_encode(p[0]),srgb_encode(p[1]),srgb_encode(p[2])};
+            for (std::size_t c = 0; c < 3; ++c) { sum[c] += rgb[c]; }
+            const double luma = 0.2126*p[0] + 0.7152*p[1] + 0.0722*p[2];
+            const double encoded_y = srgb_encode(luma);
+            const auto bin = static_cast<std::size_t>(std::clamp(static_cast<int>(std::lround(encoded_y * 255)),0,255));
+            stats.luma_histogram[bin] += 1;
+            const double mx = std::max({rgb[0],rgb[1],rgb[2]}), mn = std::min({rgb[0],rgb[1],rgb[2]});
+            const double saturation = mx > 1e-6 ? (mx-mn)/mx : 0;
+            saturation_sum += saturation;
+            const bool channel_clipped = std::max({p[0],p[1],p[2]}) >= 0.995;
+            clipped += channel_clipped ? 1.0 : 0.0;
+            if (channel_clipped || std::min({p[0],p[1],p[2]}) <= 0.0003 || luma <= 0.002 || luma >= 0.90) { continue; }
+            eligible.push_back(p); ++eligible_count;
+            for (std::size_t c = 0; c < 3; ++c) { minkowski[c] += std::pow(p[c],6); }
+            if (saturation <= 0.22 && encoded_y > 0.10 && encoded_y < 0.90) {
+                for (std::size_t c = 0; c < 3; ++c) { neutral[c] += rgb[c]; neutral_linear[c] += p[c]; }
                 ++neutral_count;
             }
         }
     }
-
-    const double total =
-        static_cast<double>(sample_width) * static_cast<double>(sample_height);
-    const double neutral_denominator =
-        static_cast<double>(std::max<std::uint64_t>(neutral_count, 1U));
-    const bool has_neutral_samples =
-        neutral_count >= std::max<std::uint64_t>(
-            16U,
-            static_cast<std::uint64_t>(total) / 100U);
-
-    stats.average_red = sum_red / total;
-    stats.average_green = sum_green / total;
-    stats.average_blue = sum_blue / total;
-    stats.average_saturation = sum_saturation / total;
-    for (double& bin : stats.luma_histogram) {
-        bin /= total;
-    }
-
-    stats.neutral_average_red =
-        has_neutral_samples ? neutral_red / neutral_denominator : stats.average_red;
-    stats.neutral_average_green =
-        has_neutral_samples ? neutral_green / neutral_denominator : stats.average_green;
-    stats.neutral_average_blue =
-        has_neutral_samples ? neutral_blue / neutral_denominator : stats.average_blue;
-    stats.neutral_pixel_fraction = static_cast<double>(neutral_count) / total;
-
-    // Without a neutral subset the linear figures fall back to decoding the gamma means.
-    // The subset is low-saturation by construction, so the approximation is small.
-    stats.neutral_linear_red = has_neutral_samples
-        ? neutral_linear_red / neutral_denominator
-        : srgb_decode(stats.neutral_average_red);
-    stats.neutral_linear_green = has_neutral_samples
-        ? neutral_linear_green / neutral_denominator
-        : srgb_decode(stats.neutral_average_green);
-    stats.neutral_linear_blue = has_neutral_samples
-        ? neutral_linear_blue / neutral_denominator
-        : srgb_decode(stats.neutral_average_blue);
-
-    // Divided by every sampled pixel, not by the gated count: the gate removes a pixel's
-    // contribution without removing it from the population.
-    stats.minkowski_linear_red = std::pow(minkowski_red / std::max(1.0, total), 1.0 / 6.0);
-    stats.minkowski_linear_green = std::pow(minkowski_green / std::max(1.0, total), 1.0 / 6.0);
-    stats.minkowski_linear_blue = std::pow(minkowski_blue / std::max(1.0, total), 1.0 / 6.0);
-    try {
-        stats.neutral_axis = measure_neutral_axis(linear_pixels);
-    } catch (...) {
-        stats.neutral_axis.reset();
-    }
+    const double n = static_cast<double>(w) * h, nc = static_cast<double>(std::max<std::size_t>(neutral_count,1));
+    const double ec = static_cast<double>(std::max<std::size_t>(eligible_count,1));
+    const bool has_neutral = neutral_count >= std::max<std::size_t>(16U,static_cast<std::size_t>(n)/100U);
+    stats.average_red=sum[0]/n; stats.average_green=sum[1]/n; stats.average_blue=sum[2]/n;
+    stats.average_saturation=saturation_sum/n; stats.clipped_fraction=clipped/n;
+    for (auto& bin : stats.luma_histogram) { bin /= n; }
+    stats.neutral_average_red=has_neutral?neutral[0]/nc:stats.average_red;
+    stats.neutral_average_green=has_neutral?neutral[1]/nc:stats.average_green;
+    stats.neutral_average_blue=has_neutral?neutral[2]/nc:stats.average_blue;
+    stats.neutral_linear_red=has_neutral?neutral_linear[0]/nc:srgb_decode(stats.neutral_average_red);
+    stats.neutral_linear_green=has_neutral?neutral_linear[1]/nc:srgb_decode(stats.neutral_average_green);
+    stats.neutral_linear_blue=has_neutral?neutral_linear[2]/nc:srgb_decode(stats.neutral_average_blue);
+    stats.neutral_pixel_fraction=static_cast<double>(neutral_count)/n;
+    stats.minkowski_linear_red=std::pow(minkowski[0]/ec,1.0/6.0);
+    stats.minkowski_linear_green=std::pow(minkowski[1]/ec,1.0/6.0);
+    stats.minkowski_linear_blue=std::pow(minkowski[2]/ec,1.0/6.0);
+    try { stats.neutral_axis=measure_neutral_axis(eligible);
+        if(stats.neutral_axis){stats.neutral_axis->confidence*=std::min(1.0,static_cast<double>(eligible_count)/(n*0.10));} } catch (...) { stats.neutral_axis.reset(); }
+    stats.white_balance_confidence = stats.neutral_axis ? stats.neutral_axis->confidence : 0.0;
     return true;
 }
 
@@ -261,7 +187,9 @@ AutoWhiteBalanceResult auto_white_balance(const AutoAdjustStats& stats) noexcept
     double red = 0.0;
     double green = 0.0;
     double blue = 0.0;
-    if (stats.neutral_axis.has_value() && !stats.neutral_axis->is_fallback) {
+    double confidence = stats.white_balance_confidence;
+    if (stats.neutral_axis.has_value()) {
+        confidence = stats.neutral_axis->confidence;
         // 휘도대마다 한 표 — 한 휘도대를 차지한 따뜻한 조명 면이 평균을 끌지 못합니다.
         const std::array<double, 3> cast = neutral_axis_median_cast(*stats.neutral_axis);
         red = std::exp(cast[0]);
@@ -289,7 +217,7 @@ AutoWhiteBalanceResult auto_white_balance(const AutoAdjustStats& stats) noexcept
         warmth = 0.0;
     }
     warmth = clamp_range(
-        warmth * white_balance_strength,
+        warmth * white_balance_strength * confidence,
         -white_balance_clamp,
         white_balance_clamp);
 
@@ -304,7 +232,7 @@ AutoWhiteBalanceResult auto_white_balance(const AutoAdjustStats& stats) noexcept
         tint = 0.0;
     }
     tint = clamp_range(
-        tint * white_balance_strength,
+        tint * white_balance_strength * confidence,
         -white_balance_clamp,
         white_balance_clamp);
 
@@ -318,7 +246,7 @@ AutoToneResult auto_tone(const AutoAdjustStats& stats, const double headroom_sto
         return histogram_percentile(stats.luma_histogram, fraction);
     };
 
-    const double clip_high = stats.luma_histogram[255];
+    const double clip_high = std::max(stats.luma_histogram[255], stats.clipped_fraction);
     const double clip_low = stats.luma_histogram[0];
     // Black and shadow points use percentiles thick enough to step over a scan's black
     // frame border. A thinner one treats the border as the shadow point and hauls the
@@ -432,7 +360,7 @@ AutoToneResult auto_tone(const AutoAdjustStats& stats, const double headroom_sto
         0.55);
 
     // Vibrance only ever increases, which is what every other auto tool does too.
-    result.vibrance = clamp_range((0.42 - stats.average_saturation) * 1.0, 0.0, 0.6);
+    result.vibrance = 0.0;
     return result;
 }
 
@@ -468,7 +396,7 @@ AutoToneResult refine_auto_tone(
     // 백점: 확산 화이트 목표(linear 0.90)에 남은 오차를 Whites 계수로 메웁니다.
     const double residual_white = srgb_encode(diffuse_white_linear) - p995_srgb;
     if (std::abs(residual_white) > 0.01 &&
-        (measured.luma_histogram[255] <= 0.001 || residual_white < 0.0)) {
+        (std::max(measured.luma_histogram[255], measured.clipped_fraction) <= 0.001 || residual_white < 0.0)) {
         const double mask = std::max(smoothstep(0.68, 0.92, p995_srgb), 0.25);
         result.whites = clamp_range(result.whites + (residual_white / (0.12 * mask)), -1.0, 1.0);
     }
@@ -476,3 +404,15 @@ AutoToneResult refine_auto_tone(
 }
 
 }  // namespace negaflow::imaging
+
+namespace negaflow::imaging {
+double auto_tone_score(const AutoAdjustStats& stats, const bool adjust_mid) noexcept {
+    const auto p=[&stats](double fraction){return histogram_percentile(stats.luma_histogram,fraction);};
+    const double middle=srgb_decode(p(0.5)),white=srgb_decode(p(0.995)),black=srgb_decode(p(0.02));
+    const double mid_error=adjust_mid?std::abs(std::log2(std::max(middle,1e-4)/mid_grey_linear)):0;
+    const double white_error=0.25*std::abs(std::log2(std::max(white,1e-4)/diffuse_white_linear));
+    const double black_error=0.25*std::max(0.0,std::log2(std::max(black,1e-4)/black_point_linear));
+    const double flatness=0.5*std::max(0.0,0.52-(p(0.9)-p(0.1)));
+    return mid_error+white_error+black_error+flatness+4*stats.clipped_fraction+2*stats.luma_histogram[0];
+}
+}

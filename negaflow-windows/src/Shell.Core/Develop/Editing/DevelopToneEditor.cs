@@ -129,7 +129,7 @@ internal sealed class DevelopToneEditor
 
     /// <summary>
     /// macOS <c>AppModel.resetAutoTone</c>(`AppModel+AutoAdjust.swift:125-138`) — 노출·대비·
-    /// 농도·밝은 영역·어두운 영역·흰색·검정과 <b>생동감·채도</b>를 0 으로 돌립니다.
+    /// 농도·밝은 영역·어두운 영역·흰색·검정을 0으로 돌립니다. 색 조정은 유지합니다.
     /// 커브·베이스·기하는 건드리지 않습니다.
     /// </summary>
     public DevelopEditResult ResetAutoTone(LibraryFrameSnapshot? frame)
@@ -152,8 +152,7 @@ internal sealed class DevelopToneEditor
             frame,
             new LibraryFrameEdit(
                 tone,
-                frame.ManualBase,
-                ColorModel: frame.ColorModel with { Vibrance = 0, Saturation = 0 }));
+                frame.ManualBase));
     }
 
     /// <summary>

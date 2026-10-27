@@ -872,6 +872,8 @@
   <data name="developExportRefusedPositiveFilm.Text" xml:space="preserve"><value>ポジフィルムの現像は Windows エンジンではまだ対応していません。</value></data>
   <data name="developExportRefusedDestination.Text" xml:space="preserve"><value>書き出し先のフルパスを選んでください。</value></data>
   <data name="developExportRefusedOutputFormat.Text" xml:space="preserve"><value>その書き出し形式には対応していません。</value></data>
+  <data name="developExportRefusedDngTarget.Text" xml:space="preserve"><value>DNG の書き出しは PRINT ターゲットに対応していません。TIFF、PNG、JPEG を使ってください。</value></data>
+  <data name="developExportRefusedDngSource.Text" xml:space="preserve"><value>DNG の書き出しには無圧縮の元ファイル(TIFF、カメラ RAW、DNG)が必要です。JPEG、PNG、HEIC の元ファイルは TIFF、PNG、JPEG で書き出してください。</value></data>
   <data name="developExportRefusedStaleDefectSource.Text" xml:space="preserve"><value>傷取り編集を記録した後にスキャンファイルのサイズが変わりました。写真を元のスキャンに再リンクするか、傷取り編集を消してから書き出し直してください。</value></data>
   <data name="developSectionFilm.Text" xml:space="preserve"><value>フィルム</value></data>
   <data name="developFilmLookNone.Text" xml:space="preserve"><value>なし</value></data>

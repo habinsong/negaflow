@@ -2,6 +2,8 @@
 #include "result/develop_result_write.h"
 #include "negaflow/imaging/film_base_scale.h"
 
+#include <array>
+#include <cmath>
 #include <cstring>
 
 namespace negaflow::abi::detail {
@@ -25,6 +27,33 @@ bool map_request_v39(const nf_develop_export_request_v39& request, bool require_
             return false;
         }
         pipeline_request.auto_balance = extended->auto_balance == 1U;
+    }
+    pipeline_request.negative.channel_range.reset();
+    pipeline_request.measure_range_shape = false;
+    if (bytes >= sizeof(nf_develop_export_request_v41)) {
+        const auto* tail = reinterpret_cast<const nf_develop_export_request_v41*>(&request);
+        if (tail->channel_range_present > 1U || tail->measure_range_shape > 1U ||
+            tail->channel_range_reserved != 0U) {
+            fail_defect_region_request(result, "invalid_channel_range");
+            return false;
+        }
+        if (tail->channel_range_present == 1U) {
+            std::array<float, 3> range{tail->channel_range[0], tail->channel_range[1], tail->channel_range[2]};
+            for (const float multiplier : range) {
+                if (!std::isfinite(multiplier) ||
+                    multiplier < negaflow::imaging::minimum_channel_range_multiplier ||
+                    multiplier > negaflow::imaging::maximum_channel_range_multiplier) {
+                    fail_defect_region_request(result, "invalid_channel_range");
+                    return false;
+                }
+            }
+            pipeline_request.negative.channel_range = range;
+        } else if (tail->channel_range[0] != 0.0F || tail->channel_range[1] != 0.0F ||
+                   tail->channel_range[2] != 0.0F) {
+            fail_defect_region_request(result, "invalid_channel_range");
+            return false;
+        }
+        pipeline_request.measure_range_shape = tail->measure_range_shape == 1U;
     }
     pipeline_request.input_gamma = gamma;
     pipeline_request.base_scale = request.base_scale;

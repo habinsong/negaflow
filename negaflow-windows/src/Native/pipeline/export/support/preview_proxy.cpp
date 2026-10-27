@@ -262,6 +262,7 @@ bool preview_proxy_try_take(
     }
 
     hint.image_is_proxy = true;
+    hint.scene_memo = std::make_shared<SceneMeasurementMemo>();
     if (recipe_blocks_proxy(request) || !request.retain_preview_raw) {
         return std::nullopt;
     }

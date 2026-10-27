@@ -54,6 +54,22 @@ extension ChromabaseMetalKernels {
         return clamp(float3(y) + t * chroma, 0.0, 1.0);
     }
 
+    // 휘도 y 를 고정한 채 chroma 를 몇 배까지 키울 수 있는지. 가장 먼저 0 또는 1 에 닿는 채널이
+    // 정한다. [0,1] 안의 화소는 1 이상을, 이미 밖에 나간 화소는 1 미만을 돌려준다. chroma 가
+    // 0 에 가까워 어느 배율로도 경계에 닿지 않으면 아주 큰 값이다. 휘도 자체가 (0,1) 밖이면
+    // 경계까지의 거리를 정의할 수 없으므로 0 이다(호출 쪽은 "더 키우지 않음"으로 읽는다).
+    // toneSafeUnitRGB 는 같은 계산에 상한 1 을 씌운 것이라 따로 둔다.
+    inline float chromaScaleHeadroom(float y, float3 chroma) {
+        if (y <= 0.0 || y >= 1.0) { return 0.0; }
+        float t = 1.0e9;
+        for (int i = 0; i < 3; i++) {
+            float c = chroma[i];
+            if (c > 1e-5) { t = min(t, (1.0 - y) / c); }
+            else if (c < -1e-5) { t = min(t, -y / c); }
+        }
+        return t;
+    }
+
     inline float srgbEncodeLuma(float v) {
         return v <= 0.0031308 ? v * 12.92 : 1.055 * pow(v, 1.0 / 2.4) - 0.055;
     }
@@ -64,10 +80,18 @@ extension ChromabaseMetalKernels {
 
     // 휘도 목표를 화소에 싣는다. 어둡게 할 때는 채널 비율을 보존한다 — 같은 값을 빼면 가장 작은
     // 채널이 먼저 0 에 닿아 암부의 약한 색이 원색으로 폭주한다(R/B 1.2 → 대비 +1 에서 131).
-    // 밝힐 때는 기존처럼 같은 값을 더한다(끝점 앵커·옅은 리프트 질감 유지).
+    // 밝힐 때는 기존처럼 같은 값을 더한다(끝점 앵커·옅은 리프트 질감 유지). 더한 결과의 한
+    // 채널이 1 을 넘으면 그 채널만 잘라 내지 않는다 — 채널별로 자르면 목표 휘도에 못 미치고
+    // (하이라이트+화이트 +1 의 밝은 청록: 목표 0.952 에 0.921) 남은 두 채널의 비율이 깨져 색조가
+    // 돈다. 대신 목표 휘도를 지킨 채 chroma 만 1 에 맞게 줄인다. 더해도 [0,1] 안에 머무는
+    // 화소는 이전과 같다. 입력 rgb 는 [0,1] 안이어야 한다(호출 쪽이 toneSafeUnitRGB 로 맞춘다).
     inline float3 withLuma(float3 rgb, float y, float newY) {
         if (newY < y && y > 1e-6) { return rgb * (newY / y); }
-        return rgb + float3(newY - y);
+        float3 lifted = rgb + float3(newY - y);
+        if (all(lifted <= float3(1.0))) { return lifted; }
+        float3 chroma = rgb - float3(y);   // 같은 값을 더해도 휘도 기준 chroma 는 변하지 않는다
+        float t = min(1.0, chromaScaleHeadroom(newY, chroma));
+        return float3(newY) + chroma * t;
     }
 
     // ── 디지털 소스 전용 필름 시뮬레이션 ──

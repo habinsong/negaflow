@@ -736,6 +736,7 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/scanner_target_profile.cpp
       src/Native/imaging/scanner_target_response.cpp
     src/Native/imaging/manual_negative_developer.cpp
+    src/Native/imaging/channel_range_shape.cpp
     src/Native/imaging/mipmap_downsampler.cpp
     src/Native/imaging/analysis_region.cpp
     src/Native/imaging/neutral_axis_evidence.cpp
@@ -765,6 +766,8 @@ target_link_libraries(
 
 add_library(negaflow_output STATIC
     src/Native/output/atomic_output_file.cpp
+    src/Native/output/dng_linear_export.cpp
+    src/Native/output/dng_tiff_block.cpp
     src/Native/output/export_metadata.cpp
     src/Native/output/png_structure_reader.cpp
     src/Native/output/print_sheet_publish.cpp
@@ -1252,6 +1255,32 @@ if(BUILD_TESTING)
     )
     add_test(NAME native.wic_tiff_export COMMAND negaflow_wic_tiff_export_tests)
 
+    add_executable(negaflow_dng_tiff_block_tests
+        tests/Native.UnitTests/dng_tiff_block_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_dng_tiff_block_tests
+        PRIVATE negaflow_output negaflow_project_options
+    )
+    target_include_directories(
+        negaflow_dng_tiff_block_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/output"
+    )
+    add_test(NAME native.dng_tiff_block COMMAND negaflow_dng_tiff_block_tests)
+
+    add_executable(negaflow_dng_linear_export_tests
+        tests/Native.UnitTests/dng_linear_export_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_dng_linear_export_tests
+        PRIVATE negaflow_output negaflow_project_options
+    )
+    target_include_directories(
+        negaflow_dng_linear_export_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/output"
+    )
+    add_test(NAME native.dng_linear_export COMMAND negaflow_dng_linear_export_tests)
+
     # ??臾띠쓬? `aaedfe7` ?먯꽌 God object 瑜?履쇨컻硫?`ManualNegative/` 濡??섎돇?덈뒗???ш린?? # ?깅줉?섏? ?딆븘 洹몃븣遺??留곹겕媛 源⑥졇 ?덉뿀?듬땲?? ?ㅻⅨ 遺꾪븷 臾띠쓬怨?媛숈? 諛⑹떇?쇰줈 ?듬땲??
     add_executable(negaflow_manual_negative_developer_tests
         tests/Native.UnitTests/manual_negative_developer_tests.cpp
@@ -1262,6 +1291,7 @@ if(BUILD_TESTING)
         tests/Native.UnitTests/ManualNegative/manual_negative_auto_base_tests.cpp
         tests/Native.UnitTests/ManualNegative/manual_negative_failure_tests.cpp
         tests/Native.UnitTests/ManualNegative/manual_negative_input_gamma_tests.cpp
+        tests/Native.UnitTests/ManualNegative/manual_negative_channel_range_tests.cpp
     )
     target_include_directories(
         negaflow_manual_negative_developer_tests
@@ -1639,7 +1669,7 @@ if(BUILD_TESTING)
     )
     target_link_libraries(
         negaflow_gpu_accelerator_tests
-        PRIVATE negaflow_pipeline negaflow_imaging negaflow_color negaflow_core
+        PRIVATE negaflow_pipeline negaflow_gpu negaflow_imaging negaflow_color negaflow_core
             negaflow_project_options
     )
     add_test(NAME native.gpu_accelerator COMMAND negaflow_gpu_accelerator_tests)
@@ -2075,6 +2105,24 @@ if(BUILD_TESTING)
     add_executable(negaflow_preview_proxy_cache_tests
         tests/Native.UnitTests/preview_proxy_cache_tests.cpp
         tests/fixtures/tiff/synthetic_wic_tiff.cpp
+    )
+    add_executable(negaflow_preview_scene_measurement_memo_tests
+        tests/Native.UnitTests/preview_scene_measurement_memo_tests.cpp
+        tests/fixtures/tiff/synthetic_wic_tiff.cpp
+    )
+    target_include_directories(
+        negaflow_preview_scene_measurement_memo_tests
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/pipeline"
+    )
+    target_link_libraries(
+        negaflow_preview_scene_measurement_memo_tests
+        PRIVATE negaflow_pipeline negaflow_project_options
+    )
+    add_test(
+        NAME native.preview_scene_measurement_memo
+        COMMAND negaflow_preview_scene_measurement_memo_tests
     )
     add_executable(negaflow_decoded_source_store_tests tests/Native.UnitTests/decoded_source_store_tests.cpp)
     target_include_directories(negaflow_decoded_source_store_tests PRIVATE src/Native/pipeline)

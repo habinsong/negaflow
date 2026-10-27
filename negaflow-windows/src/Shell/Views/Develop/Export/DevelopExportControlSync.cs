@@ -17,6 +17,28 @@ internal sealed class DevelopExportControlSync
 
     internal DevelopExportControlSync(DevelopExportPanel view) => this.view = view;
 
+    /// <summary>형식 목록에 DNG 가 들어 있는지입니다.</summary>
+    internal bool OffersDng { get; private set; } = true;
+
+    /// <summary>
+    /// 고른 사진이 모두 무압축 원본(TIFF·카메라 RAW·DNG)일 때만 DNG 를 고르게 합니다. JPEG·PNG·HEIC 원본이
+    /// 끼면 선택지에서 빼고, 이미 DNG 를 골라 둔 상태였으면 TIFF 로 되돌립니다(macOS 와 같다).
+    /// </summary>
+    private void RefreshFormatChoices()
+    {
+        bool allowed = view.panel?.SelectedFrame is not { } current
+            || DngExportSources.AllowsAll(view.runner.SelectedExportFrames(current));
+        if (allowed != OffersDng)
+        {
+            OffersDng = allowed;
+            DevelopExportCopy.FillFormatSelector(view.ExportFormatSelector, allowed);
+        }
+        if (!allowed && view.exportSettings.Format == DevelopExportFormat.Dng16)
+        {
+            view.MutateExportSettings(value => value with { Format = DevelopExportFormat.Tiff16 });
+        }
+    }
+
     /// <summary>
     /// 저장된 값을 컨트롤에 되비춥니다. 형식마다 화질을 정하는 손잡이가 다르므로 보이는 줄도
     /// 형식이 정합니다 — macOS 와 같은 규칙입니다.
@@ -27,6 +49,7 @@ internal sealed class DevelopExportControlSync
         {
             return;
         }
+        RefreshFormatChoices();
         view.isSynchronizingExport = true;
         try
         {
@@ -141,11 +164,12 @@ internal sealed class DevelopExportControlSync
         {
             return format == DevelopExportFormat.Tiff16;
         }
-        // JPEG 은 정의상 8-bit 이라 고를 것이 없고 알파도 담지 못합니다.
+        // JPEG 은 정의상 8-bit 이라 고를 것이 없고 알파도 담지 못합니다. DNG 도 16-bit 선형 한
+        // 가지이고 알파를 담지 않습니다.
         if (ReferenceEquals(row, view.ExportBitDepthRow) ||
             ReferenceEquals(row, view.ExportPreserveAlphaRow))
         {
-            return format != DevelopExportFormat.Jpeg8;
+            return format is not (DevelopExportFormat.Jpeg8 or DevelopExportFormat.Dng16);
         }
         if (ReferenceEquals(row, view.ExportSequenceStartRow))
         {

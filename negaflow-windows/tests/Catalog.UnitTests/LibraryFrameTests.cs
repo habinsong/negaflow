@@ -15,6 +15,7 @@ internal static class LibraryFrameTests
     {
         LibraryAppMetadataTests.Run();
         LibraryAppliedBaseTests.Run();
+        LibraryChannelRangeTests.Run();
     }
 
     public static void RunFrameBehavior()

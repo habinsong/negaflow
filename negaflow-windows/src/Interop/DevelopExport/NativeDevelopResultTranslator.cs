@@ -5,7 +5,27 @@ using static NativeDevelopExportLimits;
 /// <summary>네이티브 결과를 managed 결과로 바꿉니다.</summary>
 internal static class NativeDevelopResultTranslator
 {
-    internal static DevelopExportResult Translate(uint status, NativeDevelopExportResultV6 raw, string functionName)
+    internal static DevelopExportResult Translate(uint status, NativeDevelopExportResultV7 raw, string functionName)
+    {
+        DevelopExportResult result = TranslateV6(status, raw.V6, functionName);
+        if (raw.RangeShapePresent > 1U || raw.RangeShapeReserved != 0U || raw.RangeShapePad != 0U)
+        {
+            throw new NativeBootstrapException(NativeBootstrapFailure.ContractViolation, "Invalid range shape result.");
+        }
+        if (result.Succeeded && raw.RangeShapePresent == 1U)
+        {
+            DevelopChannelRange shape = new(raw.RangeShapeRed, raw.RangeShapeGreen, raw.RangeShapeBlue);
+            if (!float.IsFinite(shape.Red) || !float.IsFinite(shape.Green) || !float.IsFinite(shape.Blue) ||
+                !NativeDevelopInput.ValidChannelRange(shape))
+            {
+                throw new NativeBootstrapException(NativeBootstrapFailure.ContractViolation, "Invalid range shape result.");
+            }
+            result.RangeShape = shape;
+        }
+        return result;
+    }
+
+    private static DevelopExportResult TranslateV6(uint status, NativeDevelopExportResultV6 raw, string functionName)
     {
         DevelopExportResult result = Translate(status, raw.V5, functionName);
         if (raw.ReferenceBasePresent > 1U || !NativeDevelopInput.ValidGamma(raw.AppliedInputGammaMode, raw.AppliedInputGammaValue))
@@ -24,6 +44,7 @@ internal static class NativeDevelopResultTranslator
         result.AppliedInputGammaValue = raw.AppliedInputGammaValue;
         return result;
     }
+
     /// <summary>재지 않은 호출에서는 아무 것도 만들지 않습니다.</summary>
     private static DevelopDebugMetrics? ReadDebugMetrics(NativeDevelopDebugMetricsV1 raw) =>
         raw.Present == 0

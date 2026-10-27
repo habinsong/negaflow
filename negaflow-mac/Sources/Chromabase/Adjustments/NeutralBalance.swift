@@ -13,8 +13,8 @@ import CoreGraphics
 //    명부 중립도 깼다. 전체 중앙값은 지배색 장면(숲·노을)을 무채색으로 끌었다.
 //  • 이제 중립에 가까운 화소만 휘도대별로 모아, 채널마다 ln c = α + β·ln Ȳ 를 대역 중앙값에 맞춘다
 //    (대역마다 한 표). 균일 캐스트는 α(게인), 중간톤 휨은 β(감마)로 잡히고, 보정 c' = exp((ln c − α)/β)
-//    는 맞춘 중립축을 정확히 뒤집는다. 대역이 셋 미만이거나 휘도 폭이 2 스톱 미만이면 β 를 1 로
-//    두고 게인만 쓴다. 자동 레벨과 무관하게 혼자 돌아도 된다.
+//    는 맞춘 중립축을 뒤집는다. 대역 수·휘도 폭이 부족하거나 분리한 대역에서 예측이 나빠지면
+//    β 를 1 로 두고 게인만 쓴다. 자동 레벨과 무관하게 혼자 돌아도 된다.
 //  • 적용은 정확한 Metal 커널(channelPowerGain) — 예전 32³ 큐브는 암부 거듭제곱을 양자화했다.
 public enum NeutralBalance {
     /// 맞춘 중립축: 채널마다 ln c = offset + slope·ln Ȳ. 항등은 offset 0, slope 1.
@@ -32,11 +32,9 @@ public enum NeutralBalance {
     /// 한 채널 보정의 상한 — 게인 ±1 스톱(ln 0.7), 감마 0.8…1.25.
     static let maximumOffset = 0.7
     static let slopeRange = 0.8...1.25
-    /// 감마까지 맞추는 최소 근거: 대역 셋, 휘도 폭 2 스톱.
+    /// 기울기 후보의 최소 범위. 별도 대역 검증도 통과해야 한다.
     static let minimumBandsForSlope = 3
     static let minimumSpanForSlope = log(4.0)
-    /// 중립 근처 후보가 없어 장면 중앙값 주위에서 고른 경우(한 색 장면일 수 있다)의 보정 비율.
-    static let fallbackStrength = 0.5
 
     public static func apply(to image: CIImage,
                              sampleColorSpace: CGColorSpace? = nil,
@@ -78,7 +76,7 @@ public enum NeutralBalance {
                         insetFraction: Double, strength: Double) -> Correction {
         guard let pixels = samplePixels(image, sampleColorSpace: sampleColorSpace, insetFraction: insetFraction),
               let evidence = NeutralAxisEstimator.measure(pixels) else { return .identity }
-        let applied = min(max(strength, 0), 1) * (evidence.isFallback ? fallbackStrength : 1)
+        let applied = min(max(strength, 0), 1) * evidence.confidence
         return fit(evidence, strength: applied)
     }
 
@@ -87,7 +85,7 @@ public enum NeutralBalance {
         let bands = evidence.bands
         let xs = bands.map(\.logLuminance)
         let span = (xs.max() ?? 0) - (xs.min() ?? 0)
-        let useSlope = bands.count >= minimumBandsForSlope && span >= minimumSpanForSlope
+        let useSlope = bands.count >= minimumBandsForSlope && span >= minimumSpanForSlope && slopeImprovesHoldout(bands)
         func line(_ ys: [Double]) -> (a: Double, b: Double) {
             let n = Double(ys.count)
             let mx = xs.reduce(0, +) / n, my = ys.reduce(0, +) / n
@@ -106,35 +104,29 @@ public enum NeutralBalance {
                           slope: SIMD3(clampSlope(r.b), clampSlope(g.b), clampSlope(b.b)))
     }
 
-    /// 192 폭 축소본의 linear 화소(가장자리 인셋 제외).
+    /// Fit even bands and validate odd bands before adding channel-dependent slopes.
+    private static func slopeImprovesHoldout(_ bands: [NeutralAxisEvidence.Band]) -> Bool {
+        guard bands.count >= 4 else { return false }
+        let train = bands.enumerated().filter { $0.offset % 2 == 0 }.map(\.element)
+        let holdout = bands.enumerated().filter { $0.offset % 2 == 1 }.map(\.element)
+        let mx = train.map(\.logLuminance).reduce(0, +) / Double(train.count)
+        let my = train.map(\.cast).reduce(.zero, +) / Double(train.count)
+        var sxx = 0.0, sxy = SIMD3<Double>(repeating: 0)
+        for p in train { sxx += pow(p.logLuminance - mx, 2); sxy += (p.logLuminance - mx) * (p.cast - my) }
+        guard sxx > 1e-12 else { return false }
+        let b = sxy / sxx, a = my - b * mx
+        var before = 0.0, after = 0.0
+        for p in holdout {
+            let residual = p.cast - a - b * p.logLuminance
+            before += p.cast.x * p.cast.x + p.cast.y * p.cast.y + p.cast.z * p.cast.z
+            after += residual.x * residual.x + residual.y * residual.y + residual.z * residual.z
+        }
+        return before > 1e-8 && after < before * 0.8
+    }
+
+    /// 긴 변이 최대 192인 linear 표본(가장자리 인셋 제외).
     static func samplePixels(_ image: CIImage, sampleColorSpace: CGColorSpace?,
                              insetFraction: Double) -> [SIMD3<Double>]? {
-        let extent = image.extent.integral
-        guard extent.width > 8, extent.height > 8 else { return nil }
-        let targetW = 192
-        let scale = Double(targetW) / Double(extent.width)
-        let targetH = max(1, Int(Double(extent.height) * scale))
-        let scaled = image
-            .transformed(by: CGAffineTransform(translationX: -extent.minX, y: -extent.minY))
-            .transformed(by: CGAffineTransform(scaleX: CGFloat(scale), y: CGFloat(scale)))
-        let cs = sampleColorSpace ?? CGColorSpace(name: CGColorSpace.linearSRGB) ?? CGColorSpaceCreateDeviceRGB()
-        var bitmap = [Float](repeating: 0, count: targetW * targetH * 4)
-        // 작업공간은 항상 linear — 걸린 필터 체인이 감마 값 위에서 돌면 측정이 왜곡된다.
-        let workingLinear = CGColorSpace(name: CGColorSpace.linearSRGB) ?? cs
-        SamplingContextPool.context(workingColorSpace: workingLinear).render(
-            scaled, toBitmap: &bitmap,
-            rowBytes: targetW * 4 * MemoryLayout<Float>.size,
-            bounds: CGRect(x: 0, y: 0, width: targetW, height: targetH),
-            format: .RGBAf, colorSpace: cs)
-        let insetX = Int(Double(targetW) * insetFraction), insetY = Int(Double(targetH) * insetFraction)
-        var pixels: [SIMD3<Double>] = []
-        pixels.reserveCapacity(targetW * targetH)
-        for y in insetY..<max(insetY + 1, targetH - insetY) {
-            for x in insetX..<max(insetX + 1, targetW - insetX) {
-                let i = (min(y, targetH - 1) * targetW + min(x, targetW - 1)) * 4
-                pixels.append(SIMD3(Double(bitmap[i]), Double(bitmap[i + 1]), Double(bitmap[i + 2])))
-            }
-        }
-        return pixels.count >= 64 ? pixels : nil
+        SceneAnalysisSampler.sample(image, longEdge: 192, inset: insetFraction)?.pixels
     }
 }

@@ -84,6 +84,8 @@ const Case cases[] = {
     {"whites", {0.0F, 0.0F, 0.0F, 0.0F, 1.8F, 0.0F}},
     {"blacks", {0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -1.7F}},
     {"all_together", {0.35F, -0.25F, 0.4F, -0.3F, 0.9F, 0.6F}},
+    // 밝힌 결과가 1 을 넘는 화소를 많이 만들어 chroma 접기 가지를 탑니다.
+    {"lift_beyond_one", {0.6F, 0.0F, 1.0F, 0.0F, 2.0F, 0.0F}},
 };
 
 [[nodiscard]] std::vector<Rgba32F> run_cpu(

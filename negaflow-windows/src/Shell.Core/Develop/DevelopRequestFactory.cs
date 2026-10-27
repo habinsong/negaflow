@@ -65,7 +65,8 @@ public static partial class DevelopRequestFactory
         bool uninvertedSource = false,
         bool forceDefectSourceContentVerification = false,
         bool allowStaleDefectSource = false,
-        uint proxyInputLongEdge = 0U)
+        uint proxyInputLongEdge = 0U,
+        bool measureRangeShape = false)
     {
         ArgumentNullException.ThrowIfNull(frame);
         if (frame.DefectRestorePending)
@@ -80,9 +81,17 @@ public static partial class DevelopRequestFactory
         {
             return DevelopRequestResult.Failure(DevelopRequestRefusal.UnknownOutputFormat);
         }
-        if (output.PreserveAlpha && format == DevelopExportFormat.Jpeg8)
+        if (output.PreserveAlpha && format is DevelopExportFormat.Jpeg8 or DevelopExportFormat.Dng16)
         {
             return DevelopRequestResult.Failure(DevelopRequestRefusal.UnsupportedAlpha);
+        }
+        if (format == DevelopExportFormat.Dng16 && frame.DevelopTarget == DevelopTarget.Print)
+        {
+            return DevelopRequestResult.Failure(DevelopRequestRefusal.UnsupportedDngTarget);
+        }
+        if (format == DevelopExportFormat.Dng16 && !DngExportSources.Allows(frame.SourcePath))
+        {
+            return DevelopRequestResult.Failure(DevelopRequestRefusal.UnsupportedDngSource);
         }
         if (string.IsNullOrWhiteSpace(destinationPath) ||
             !Path.IsPathFullyQualified(destinationPath))
@@ -290,6 +299,20 @@ public static partial class DevelopRequestFactory
                     : DefectSourceContentCheckOnly);
         }
 
+        // 자동 밸런스 스위치가 있는 타깃(MAIN·PRINT·커스텀)만 고정 범위를 쓴다. 스캐너 타깃과 EXPIRED 는
+        // 자기 반전 도메인이 있어 롤 교정을 읽지 않는다(macOS `NegativeAutoBalance.supports`).
+        bool balanceTarget = DevelopTargets.HasAutoBalance(developTarget);
+        bool autoBalance = !uninvertedSource && frame.AutoBalance && balanceTarget;
+        // 롤 교정은 컬러 네거티브의 **고정 범위**(자동 밸런스 OFF)에서만 그림을 바꿉니다. 켜져 있거나
+        // 직접 고른 입력 감마이면 엔진이 읽지 않으므로 싣지 않습니다 — 싣으면 그림이 같은데 캐시
+        // 식별만 바뀝니다. 모양 측정 요청은 식별에 넣지 않는 표시입니다(요청 쪽에서 직렬화 제외).
+        bool colorNegative = !positive && !uninvertedSource && frame.Route.FilmType == FilmType.ColorNegative;
+        DevelopChannelRange? channelRange =
+            colorNegative && balanceTarget && !autoBalance && frame.InputGamma.IsAutomatic &&
+            frame.ChannelRange is { } rolled
+                ? new DevelopChannelRange((float)rolled.Red, (float)rolled.Green, (float)rolled.Blue)
+                : null;
+
         return Succeed(droppedStaleDefectEdits, new DevelopExportRequest
         {
             SourcePath = frame.SourcePath,
@@ -303,7 +326,8 @@ public static partial class DevelopRequestFactory
             TiffCompression = output.TiffCompression,
             OutputBitDepth = (uint)output.BitDepth,
             OutputColorSpace = output.ColorSpace,
-            OutputIccProfile = output.OutputIccProfile,
+            // DNG 는 행렬로 적을 수 없는 프린터 프로파일을 담지 못한다(네이티브도 거절한다).
+            OutputIccProfile = format == DevelopExportFormat.Dng16 ? null : output.OutputIccProfile,
             PreserveAlpha = output.PreserveAlpha,
             MetadataPolicy = output.MetadataPolicy,
             Metadata = output.Metadata ?? new ExportMetadataValues(),
@@ -348,8 +372,9 @@ public static partial class DevelopRequestFactory
             RedPrimary = (float)colorModel.RedPrimary,
             GreenPrimary = (float)colorModel.GreenPrimary,
             BluePrimary = (float)colorModel.BluePrimary,
-            AutoBalance = !uninvertedSource && frame.AutoBalance &&
-                (developTarget is DevelopTarget.Main or DevelopTarget.Print || DevelopTargets.IsCustom(developTarget)),
+            AutoBalance = autoBalance,
+            ChannelRange = channelRange,
+            MeasureRangeShape = measureRangeShape && colorNegative && frame.RangeShape is null,
             AutoLevels = !uninvertedSource && frame.AutoLevels,
             AutoNeutralBalance = !uninvertedSource && frame.AutoNeutralBalance,
             DevelopTarget = developTarget switch

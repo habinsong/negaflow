@@ -9,6 +9,10 @@
 // ③ 처리한 결과가 CPU 판과 허용 오차 안입니다. 적용 플래그도 CPU 와 같아야 합니다 —
 // 게이트를 하나라도 빠뜨리면 여기서 걸립니다.
 
+#include "negaflow/gpu/gpu_scene_correction.h"
+#include "negaflow/gpu/gpu_device.h"
+#include "negaflow/gpu/gpu_working_image.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -667,6 +671,49 @@ void scene_neutral_balance_runs_on_gpu() {
     }
 }
 
+void scene_corrections_match_on_hardware_and_warp() {
+    using namespace negaflow;
+    constexpr std::uint32_t sample_width=256,sample_height=128;
+    std::vector<core::Rgba32F> source(sample_width*sample_height);
+    for(std::uint32_t y=0;y<sample_height;++y){for(std::uint32_t x=0;x<sample_width;++x){
+        const float t=static_cast<float>(x)/255.0F;
+        source[y*sample_width+x]=(x>=110 && x<145)?core::Rgba32F{.2F,.2F,.2F,1}:
+            core::Rgba32F{.05F+.35F*t,.05F+.65F*t,.05F+.90F*t,1};}}
+    auto expected=source;
+    imaging::SceneCorrectionInfo info{};
+    expect(imaging::apply_scene_correction({expected.data(),expected.size(),sample_width,sample_height,sample_width},{true,true,true},info)==core::KernelStatus::ok,"CPU auto correction reference");
+    for(const auto preference:{gpu::GpuDevicePreference::hardware_only,gpu::GpuDevicePreference::warp_only}) {
+        const auto device=gpu::GpuDevice::create(preference);
+        if(!device.is_usable()){expect(preference!=gpu::GpuDevicePreference::warp_only,"WARP executes the scene regression");continue;}
+        gpu::GpuSceneCorrection kernel{}; gpu::GpuWorkingImage images[2]{};
+        expect(gpu::GpuSceneCorrection::create(device,kernel)==gpu::GpuKernelStatus::ok &&
+            gpu::GpuWorkingImage::upload(device,source.data(),sample_width,sample_height,sample_width,images[0])==gpu::GpuImageStatus::ok &&
+            gpu::GpuWorkingImage::create(device,sample_width,sample_height,images[1])==gpu::GpuImageStatus::ok,"D3D scene setup");
+        int slot=0;
+        imaging::SceneSampleGrid samples{};
+        expect(kernel.collect_samples(device,images[slot],256,std::nullopt,samples)==gpu::GpuKernelStatus::ok,"D3D area samples");
+        imaging::inset_scene_samples(samples,samples.width,imaging::scene_frame_border_inset);
+        const auto levels=imaging::plan_scene_auto_levels(samples,true);
+        if(levels.apply){expect(kernel.apply_auto_levels(device,images[slot],images[1-slot],levels)==gpu::GpuKernelStatus::ok,"D3D luminance levels");slot=1-slot;}
+        auto levels_output = source;
+        expect(images[slot].download(device, levels_output.data(), sample_width) == gpu::GpuImageStatus::ok,
+            "D3D levels readback");
+        const auto neutral = levels_output[64 * sample_width + 128];
+        expect(std::abs(neutral.red - neutral.green) < 1e-5F && std::abs(neutral.green - neutral.blue) < 1e-5F,
+            "D3D auto levels keep the neutral patch neutral");
+        samples={};
+        expect(kernel.collect_samples(device,images[slot],192,std::nullopt,samples)==gpu::GpuKernelStatus::ok,"D3D neutral samples");
+        imaging::inset_scene_samples(samples,samples.width,imaging::scene_frame_border_inset);
+        const auto balance=imaging::plan_scene_neutral_balance(samples);
+        if(balance.apply){expect(kernel.apply_neutral_balance(device,images[slot],images[1-slot],balance)==gpu::GpuKernelStatus::ok,"D3D neutral balance");slot=1-slot;}
+        auto actual=source;
+        expect(images[slot].download(device,actual.data(),sample_width)==gpu::GpuImageStatus::ok,"D3D scene readback");
+        const float error=worst_delta(expected,actual);
+        std::cout<<"[auto-corrections] "<<device.capability().adapter.description.data()<<" max-delta="<<error<<'\n';
+        expect(error<=scene_tolerance,"auto corrections CPU/D3D parity");
+    }
+}
+
 } // namespace
 
 int main() {
@@ -682,6 +729,7 @@ int main() {
     denoise_path_runs_on_gpu();
     denoise_below_threshold_is_a_pass_through();
     scene_correction_path_runs_on_gpu();
+    scene_corrections_match_on_hardware_and_warp();
     scene_neutral_balance_runs_on_gpu();
     deferred_transform_preview_matches_cpu();
 

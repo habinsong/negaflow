@@ -166,8 +166,7 @@ extension ChromabaseEngine {
     ) {
         if params.inputGamma != .automatic || measurements.inputGammaReferenceRange != nil {
             // Fixed density units keep a manual transfer change from cancelling through resampling.
-            var stats = NegativeInversion.genericStats(base: base, filmType: params.filmType)
-            if params.filmType != .bwNegative, let preset { stats.dmaxNorm *= preset.relativeRangeFactor }
+            var stats = NegativeAutoBalance.fixedStats(base: base, preset: preset, params: params)
             stats.dmaxNorm = measurements.inputGammaReferenceRange ?? stats.dmaxNorm
             measurements.inversionStats = stats
         }

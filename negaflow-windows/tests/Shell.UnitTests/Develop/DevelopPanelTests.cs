@@ -5,6 +5,8 @@ internal static class DevelopPanelTests
     public static void Run()
     {
         DevelopPanelStateTests.Run();
+        ChannelRangeRollCalibrationTests.Run();
+        AutoBalanceAndDngTests.Run();
         DevelopInspectorResetterTests.Run();
         CanvasCompareStateTests.Run();
         CanvasCompareHudTests.Run();

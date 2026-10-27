@@ -230,6 +230,9 @@ enum LibraryDevelopRecipeFingerprint {
         var normalized = params
         normalized.filmType = filmType
         normalized.imageTransform = imageTransform
+        // 롤 교정(`channelRange`)은 자동 밸런스를 끈 프레임에서만 그림을 바꾼다. 켜져 있을 때 교정이
+        // 채워지는 것은 사용자 편집도 아니고 썸네일을 다시 만들 이유도 아니다.
+        if normalized.autoBalance { normalized.channelRange = nil }
         let payload = Payload(
             version: currentVersion,
             presetID: presetID,

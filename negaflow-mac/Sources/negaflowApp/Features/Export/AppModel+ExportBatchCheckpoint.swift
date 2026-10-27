@@ -99,7 +99,7 @@ extension AppModel {
                 outputSharpeningMedium: sharpeningMedium ?? .screen
             )
             guard (try? options.validate(for: format)) != nil else { continue }
-            let requiresPrinterOutputProfile = format != .rawScanTIFF
+            let requiresPrinterOutputProfile = format.appliesPrinterOutputProfile
                 && frame.params.developTarget == .print
             guard !requiresPrinterOutputProfile
                     || item.printerOutputProfileSHA256.flatMap({

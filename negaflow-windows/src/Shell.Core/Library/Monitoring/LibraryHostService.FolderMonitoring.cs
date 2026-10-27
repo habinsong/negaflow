@@ -299,6 +299,7 @@ public sealed partial class LibraryHostService
                     updated[LibraryFrameReader.SourceMetadataName] =
                         LibrarySourceMetadataJson.Write(metadata.Value);
                     updated.Remove(LibraryFrameReader.BaseRgbName);
+                    updated.Remove(LibraryFrameReader.RangeShapeName);
                     return DefectReviewTrackingCodec.Apply(updated, mark: null);
                 });
                 if (edit != LibraryFrameError.None)

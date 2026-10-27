@@ -6,8 +6,13 @@
 #include "negaflow/pipeline/gpu_accelerator.h"
 #include "negaflow/imaging/analysis_region.h"
 #include "negaflow/imaging/auto_negative_base_resolver.h"
+#include "negaflow/imaging/channel_range_shape.h"
 #include "negaflow/imaging/film_base_scale.h"
 
+#include "export/support/scene_measurement_memo.h"
+#include "export/support/preview_proxy.h"
+
+#include <memory>
 #include <utility>
 
 namespace negaflow::pipeline::develop_export_detail {
@@ -178,7 +183,58 @@ std::optional<DevelopExportOutcome> invert_source(
     if (out.negative_source && request.base_estimation_mode == NegativeBaseEstimationMode::auto_estimate) {
         out.negative.dmin = negaflow::imaging::scale_auto_film_base(out.reference_base, request.base_scale);
     }
+    // 롤 교정의 재료: 자동 밸런스가 켜져 있든 꺼져 있든 이 프레임의 채널 범위 모양을 잰다. 반전이
+    // 화상을 고치기 전에 재야 하고, 자동 밸런스 측정과 같은 키(legacy 켬)를 쓰므로 프록시 메모를
+    // 함께 쓴다. 베이스는 macOS `ChannelRangeCalibration.measure` 처럼 밑 크기 조정 전 추정값이다.
+    if (request.measure_range_shape && out.negative_source &&
+        out.negative.film_type == negaflow::imaging::NegativeFilmType::color) {
+        const std::shared_ptr<SceneMeasurementMemo> shape_memo =
+            hint != nullptr ? hint->scene_memo : nullptr;
+        SceneMeasurementInputs shape_inputs{};
+        shape_inputs.dmin = out.reference_base;
+        shape_inputs.film_type = out.negative.film_type;
+        shape_inputs.region = out.negative.analysis_region;
+        shape_inputs.legacy_scene_response = true;
+        shape_inputs.width = decoded_image.width;
+        shape_inputs.height = decoded_image.height;
+        std::optional<negaflow::imaging::SceneRangeMeasurement> measured =
+            shape_memo != nullptr ? shape_memo->find_range(shape_inputs) : std::nullopt;
+        if (!measured) {
+            measured = negaflow::imaging::measure_scene_range(
+                decoded_image, out.reference_base, out.negative.film_type,
+                out.negative.analysis_region, true);
+            if (measured && shape_memo != nullptr) {
+                shape_memo->store_range(shape_inputs, *measured);
+            }
+        }
+        if (measured) {
+            out.range_shape = negaflow::imaging::channel_range_shape(measured->dmax_normalized);
+        }
+    }
     if (out.negative_source) {
+        // 같은 프록시에서 이미 잰 장면 측정이 있으면 다시 재지 않는다(자동 밸런스 켠 슬라이더 조작과
+        // 껐다 켜기가 매번 두 측정을 반복했다). 키에 측정 입력을 모두 넣어 낡은 값을 쓰지 않는다.
+        const std::shared_ptr<SceneMeasurementMemo> memo = hint != nullptr ? hint->scene_memo : nullptr;
+        SceneMeasurementInputs range_inputs{};
+        SaturationInputs saturation_inputs{};
+        if (memo != nullptr && out.negative.adaptive_density) {
+            range_inputs.dmin = out.negative.dmin;
+            range_inputs.film_type = out.negative.film_type;
+            range_inputs.region = out.negative.analysis_region;
+            range_inputs.legacy_scene_response = out.negative.legacy_scene_response;
+            range_inputs.width = decoded_image.width;
+            range_inputs.height = decoded_image.height;
+            saturation_inputs.scene = range_inputs;
+            saturation_inputs.use_preset_response = out.negative.use_preset_response;
+            saturation_inputs.preset_range_factor = out.negative.preset_range_factor;
+            saturation_inputs.input_gamma_reference_range = out.negative.input_gamma_reference_range;
+            saturation_inputs.channel_range = out.negative.channel_range;
+            saturation_inputs.linear_output = out.negative.linear_output;
+            out.negative.reused_scene_range = memo->find_range(range_inputs);
+            out.negative.reused_mean_saturation = memo->find_saturation(saturation_inputs);
+        }
+        const bool reused_range = out.negative.reused_scene_range.has_value();
+        const bool reused_saturation = out.negative.reused_mean_saturation.has_value();
         auto developed = negaflow::imaging::develop_manual_negative(
             std::move(decoded_image),
             out.negative);
@@ -194,6 +250,15 @@ std::optional<DevelopExportOutcome> invert_source(
                 DevelopExportStage::develop,
                 negaflow::imaging::manual_negative_develop_status_name(
                     developed.status));
+        }
+        if (memo != nullptr && out.negative.adaptive_density) {
+            if (!reused_range && developed.info.scene_range) {
+                memo->store_range(range_inputs, *developed.info.scene_range);
+            }
+            if (!reused_saturation && developed.info.muted_scene_vibrance.saturation_measured) {
+                memo->store_saturation(
+                    saturation_inputs, developed.info.muted_scene_vibrance.mean_saturation);
+            }
         }
         out.developed_info = developed.info;
         out.image = std::move(developed.image);

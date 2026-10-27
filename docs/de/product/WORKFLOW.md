@@ -72,6 +72,12 @@ Die Vorschau verwendet vorhandene Miniaturen, entwickelte Bilder oder Quellvorsc
 
 Das Ausgabeprofil wird einmal nach der vollständigen Zusammensetzung von Kontaktbogen, Fotopaket oder benutzerdefiniertem Paket angewendet. Wiederholte Platzierungen und gemischte Fotos erhalten alle dieselbe Umwandlung. Mehr dazu unter [Drucklayouts und C-Print-Vorschau](../reference/C_PRINT.md).
 
+## DNG-Export
+
+Das DNG schreibt das entwickelte Bild als unkomprimierte lineare 16-Bit-RGB-Datei (`PhotometricInterpretation = LinearRaw`) im gewählten Ausgabefarbraum: sRGB, Display P3 oder Adobe RGB. Ton und Farbe sind bereits eingerechnet, andere Programme lesen die Datei daher als ausgabebezogen. Urheberrecht, Scanner, Software, Datum und Filmangaben folgen derselben Metadatenrichtlinie wie beim TIFF. EXIF, IPTC und GPS der Quellkamera werden nicht übernommen. Pro Pixel sind es 6 Byte, ein Bild mit 24 Megapixeln hat also etwa 144 MB.
+
+DNG lässt sich nur für unkomprimierte Quellen wählen: TIFF, Kamera-RAW und DNG. JPEG-, PNG- und HEIC-Quellen lassen sich nicht als DNG exportieren. Im Druckmodul ist DNG nicht wählbar, und das Ziel `PRINT` wird abgelehnt. Beide enden in einem Drucker-ICC-Profil, das ein DNG nicht tragen kann. negaflow bricht mit einer Meldung ab, statt etwas anderes zu exportieren. exiftool und Apples Bilddecoder lesen die Datei. Wie Lightroom oder Camera Raw sie darstellen, wurde nicht gemessen.
+
 ## Was die Originale verändert
 
 | Aktion | Original im Finder | Katalog und Bearbeitungen |

@@ -78,6 +78,7 @@ public sealed record ExportSettings
     {
         DevelopExportFormat.Tiff16 => TiffBitDepth,
         DevelopExportFormat.Png16 => PngBitDepth,
+        DevelopExportFormat.Dng16 => 16,
         _ => 8,
     };
 

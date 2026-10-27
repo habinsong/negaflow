@@ -49,6 +49,14 @@ void discard_pixels(WorkingImage& image) noexcept {
     return sorted[index];
 }
 
+// 정렬하지 않고 `percentile` 과 같은 순서 통계량을 고른다. 이 측정은 채널마다 두 위치(0.2%,
+// 90%)만 쓰므로 전체 정렬(채널당 약 5만 개 · 7 ms)보다 선택(O(n))이 싸다. 같은 k 번째 값이라
+// 정렬 판과 비트 단위로 같다. `values` 는 이 호출이 순서를 바꾼다.
+[[nodiscard]] std::size_t order_index(const std::size_t count, const double fraction) noexcept {
+    return std::min(
+        count - 1U, static_cast<std::size_t>(static_cast<double>(count - 1U) * fraction));
+}
+
 [[nodiscard]] std::optional<std::array<float, 3>> scene_density_range(
     const WorkingImage& image,
     const std::array<float, 3>& dmin,
@@ -245,8 +253,19 @@ void discard_pixels(WorkingImage& image) noexcept {
             channels[1].push_back(pixel.green);
             channels[2].push_back(pixel.blue);
         }
+        // 아래에서 읽는 위치는 0.2% 와 90%(디버그일 때만 50% 도)뿐이다. 그 두 위치만 선택한다.
+        const bool full_sort = debug_enabled();
         for (auto& channel : channels) {
-            std::sort(channel.begin(), channel.end());
+            if (full_sort) {
+                std::sort(channel.begin(), channel.end());
+                continue;
+            }
+            const std::size_t low = order_index(channel.size(), 0.002);
+            const std::size_t high = order_index(channel.size(), 0.90);
+            std::nth_element(channel.begin(), channel.begin() + low, channel.end());
+            if (high > low) {
+                std::nth_element(channel.begin() + low + 1, channel.begin() + high, channel.end());
+            }
         }
 
         std::array<float, 3> densest{};
@@ -373,13 +392,26 @@ ManualNegativeDevelopResult develop_manual_negative(
             std::clamp(parameters.dmin[channel], minimum_manual_dmin, maximum_manual_dmin);
         result.info.dmax_normalized[channel] = response.normal_range;
     }
-    const auto adaptive = !parameters.adaptive_density || (parameters.use_preset_response && !parameters.legacy_scene_response) ||
-        parameters.input_gamma_reference_range ? std::nullopt : scene_density_range(
-        result.image,
-        result.info.applied_dmin,
-        parameters.film_type,
-        parameters.analysis_region,
-        &result.info.black_input, parameters.legacy_scene_response);
+    std::optional<std::array<float, 3>> adaptive;
+    if (parameters.adaptive_density &&
+        !(parameters.use_preset_response && !parameters.legacy_scene_response) &&
+        !parameters.input_gamma_reference_range) {
+        if (parameters.reused_scene_range) {
+            adaptive = parameters.reused_scene_range->dmax_normalized;
+            result.info.black_input = parameters.reused_scene_range->black_input;
+            result.info.scene_range = parameters.reused_scene_range;
+        } else {
+            adaptive = scene_density_range(
+                result.image,
+                result.info.applied_dmin,
+                parameters.film_type,
+                parameters.analysis_region,
+                &result.info.black_input, parameters.legacy_scene_response);
+            if (adaptive) {
+                result.info.scene_range = SceneRangeMeasurement{*adaptive, result.info.black_input};
+            }
+        }
+    }
     if (!parameters.use_preset_response) {
         if (adaptive) {
             result.info.dmax_normalized = *adaptive;
@@ -398,6 +430,19 @@ ManualNegativeDevelopResult develop_manual_negative(
             for (std::size_t channel = 0U; channel < 3U; ++channel) {
                 result.info.dmax_normalized[channel] *= parameters.preset_range_factor[channel];
             }
+        }
+    }
+
+    if (!adaptive && parameters.channel_range && parameters.film_type == NegativeFilmType::color) {
+        for (const float multiplier : *parameters.channel_range) {
+            if (!std::isfinite(multiplier) || multiplier < minimum_channel_range_multiplier ||
+                multiplier > maximum_channel_range_multiplier) {
+                discard_pixels(result.image);
+                return result;
+            }
+        }
+        for (std::size_t channel = 0U; channel < 3U; ++channel) {
+            result.info.dmax_normalized[channel] *= (*parameters.channel_range)[channel];
         }
     }
 
@@ -465,7 +510,8 @@ ManualNegativeDevelopResult develop_manual_negative(
         auto vibrance = apply_muted_scene_vibrance(
             output,
             parameters.film_type == NegativeFilmType::black_and_white,
-            parameters.analysis_region);
+            parameters.analysis_region,
+            parameters.reused_mean_saturation);
         result.info.muted_scene_vibrance = vibrance.info;
         if (vibrance.status != negaflow::core::KernelStatus::ok) {
             result.info.kernel_status = vibrance.status;
@@ -477,6 +523,29 @@ ManualNegativeDevelopResult develop_manual_negative(
 
     result.status = ManualNegativeDevelopStatus::ok;
     return result;
+}
+
+std::optional<SceneRangeMeasurement> measure_scene_range(
+    const WorkingImage& image,
+    const std::array<float, 3>& dmin,
+    const NegativeFilmType film_type,
+    const std::optional<AnalysisRegion>& region,
+    const bool legacy_scene_response) noexcept {
+    std::array<float, 3> clamped{};
+    for (std::size_t channel = 0U; channel < 3U; ++channel) {
+        if (!std::isfinite(dmin[channel])) {
+            return std::nullopt;
+        }
+        clamped[channel] = std::clamp(dmin[channel], minimum_manual_dmin, maximum_manual_dmin);
+    }
+    SceneRangeMeasurement measurement{};
+    const auto range = scene_density_range(
+        image, clamped, film_type, region, &measurement.black_input, legacy_scene_response);
+    if (!range) {
+        return std::nullopt;
+    }
+    measurement.dmax_normalized = *range;
+    return measurement;
 }
 
 const char* manual_negative_develop_status_name(

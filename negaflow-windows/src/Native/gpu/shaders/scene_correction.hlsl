@@ -36,7 +36,9 @@ void SceneAutoLevelsMain(uint3 id : SV_DispatchThreadID) {
     uint2 coordinate = id.xy;
     float4 source = Source[coordinate];
     // 아래만 0 으로 묶고 위는 확장값으로 남깁니다 — CPU `scene_auto_levels_upper_clamp`.
-    float3 color = clamp((source.rgb * LevelScale.rgb) + LevelBias.rgb, 0.0, 10000.0);
+    float y = dot(source.rgb, float3(0.2126,0.7152,0.0722));
+    float mapped = clamp(y * LevelScale.r + LevelBias.r, 0.0, 10000.0);
+    float3 color = y > 1e-8 ? source.rgb * (mapped / y) : float3(max(LevelBias.r,0.0),max(LevelBias.r,0.0),max(LevelBias.r,0.0));
     Destination[coordinate] = float4(color, source.a);
 }
 

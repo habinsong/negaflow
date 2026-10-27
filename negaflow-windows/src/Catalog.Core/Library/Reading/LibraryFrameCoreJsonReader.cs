@@ -115,6 +115,31 @@ internal static class LibraryFrameCoreJsonReader
     /// macOS 와 같은 0...5 별점입니다. frame record 최상위에 있고, 키가 없는 legacy row 는 0 입니다.
     /// 범위를 벗어난 값은 조용히 자르지 않고 거부합니다 — 카탈로그가 손상됐다는 뜻입니다.
     /// </summary>
+    /// <summary>
+    /// 세 수의 배열을 읽어 기하평균 1 로 맞춥니다. 없거나 모르는 형식·범위 밖이면 null 입니다 —
+    /// 측정 캐시와 교정값은 틀렸을 때 그림이 아니라 "아직 없음" 으로 돌아가면 충분하기 때문입니다.
+    /// </summary>
+    internal static ChannelRangeRgb? TryReadChannelRange(JsonElement owner, string name)
+    {
+        if (!owner.TryGetProperty(name, out JsonElement element) ||
+            element.ValueKind != JsonValueKind.Array || element.GetArrayLength() != 3)
+        {
+            return null;
+        }
+        Span<double> channels = stackalloc double[3];
+        int index = 0;
+        foreach (JsonElement channel in element.EnumerateArray())
+        {
+            if (channel.ValueKind != JsonValueKind.Number ||
+                !channel.TryGetDouble(out double value) || !double.IsFinite(value))
+            {
+                return null;
+            }
+            channels[index++] = value;
+        }
+        return ChannelRangeCalibration.Sanitized(new ChannelRangeRgb(channels[0], channels[1], channels[2]));
+    }
+
     internal static bool TryReadAppliedBase(
         JsonElement frameRecord,
         out ManualBaseRgb? appliedBase)

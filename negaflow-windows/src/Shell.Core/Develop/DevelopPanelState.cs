@@ -98,6 +98,59 @@ public sealed partial class DevelopPanelState
         }
     }
 
+    // 롤 교정을 이미 시도한 프레임(이번 실행 동안)과, 교정이 찍힌 것을 본 프레임입니다. 교정이 찍혔다가
+    // 설정 초기화 등으로 사라진 프레임은 다시 시도합니다 — 렌더마다 묶음을 훑지 않으려는 장치입니다.
+    private readonly HashSet<string> rollCalibrationSettled = new(StringComparer.Ordinal);
+    private readonly HashSet<string> rollCalibrationSeen = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// 이번 렌더가 잰 채널 범위 모양을 프레임에 남기고 롤 교정을 시도합니다. macOS
+    /// <c>applyRangeCalibration</c> 입니다. 모양이 없으면(이미 쟀거나 측정이 안 성립) 이미 있는
+    /// 모양으로 교정만 시도합니다.
+    /// </summary>
+    public void RememberRangeShape(float red, float green, float blue, bool measured)
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return;
+        }
+        if (measured && frame.RangeShape is null &&
+            ChannelRangeCalibration.Sanitized(new ChannelRangeRgb(red, green, blue)) is { } shape)
+        {
+            if (host.EditFrameRecord(frame.Id, record => RangeShapeWriter.Apply(record, shape))
+                != LibraryFrameError.None)
+            {
+                return;
+            }
+            rollCalibrationSettled.Remove(frame.Id);
+        }
+        else if (frame.ChannelRange is not null)
+        {
+            rollCalibrationSeen.Add(frame.Id);
+            return;
+        }
+        else if (rollCalibrationSeen.Remove(frame.Id))
+        {
+            rollCalibrationSettled.Remove(frame.Id);
+        }
+        if (!rollCalibrationSettled.Add(frame.Id))
+        {
+            return;
+        }
+        if (ChannelRangeRollCalibrator.Calibrate(host, frame.Id) > 0)
+        {
+            rollCalibrationSeen.Add(frame.Id);
+        }
+        foreach (LibraryFrameSnapshot updated in host.Frames)
+        {
+            if (string.Equals(updated.Id, frame.Id, StringComparison.Ordinal))
+            {
+                SelectedFrame = updated;
+                return;
+            }
+        }
+    }
+
     public BaseEstimationMode BaseMode => SelectedFrame?.Base.Mode ?? BaseEstimationMode.Auto;
 
     public bool CanEditBase => DevelopBaseEditor.CanEdit(SelectedFrame);

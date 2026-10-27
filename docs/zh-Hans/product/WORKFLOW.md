@@ -72,6 +72,12 @@
 
 打印机输出配置文件会在接触印相表、照片套装或自定义套装完成整页排版后应用一次。同一张照片重复摆放或混合多张照片时，所有位置都会得到相同转换。详情见 [打印布局与 C-print 预览](../reference/C_PRINT.md)。
 
+## DNG 导出
+
+DNG 把显影后的照片写成不压缩的 16 位线性 RGB 文件（`PhotometricInterpretation = LinearRaw`）。色彩空间是导出时选的 sRGB、Display P3 或 Adobe RGB。影调和颜色已经烘焙进去，其他应用把它当作输出参考文件读取。版权、扫描仪、软件、日期和胶片记录按与 TIFF 相同的元数据策略写入，原始相机的 EXIF、IPTC 和 GPS 不会复制。每个像素 6 字节，一张 2400 万像素的照片约 144 MB。
+
+只有未压缩的源文件（TIFF、相机 RAW、DNG）才能选 DNG。JPEG、PNG 和 HEIC 源文件不能导出为 DNG。印相模块里不能选 DNG，`PRINT` 目标也会被拒绝。两者都以打印机 ICC 配置文件收尾，而 DNG 无法携带该配置文件。negaflow 不会换成别的格式导出，而是给出提示并停止。已用 exiftool 和 Apple 的图像解码器确认能读取该文件，Lightroom 或 Camera Raw 的显示效果没有实测。
+
 ## 对原始文件的影响
 
 | 操作 | Finder 中的原始文件 | 编目与编辑内容 |

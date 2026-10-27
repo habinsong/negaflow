@@ -29,6 +29,7 @@ public enum ExportOptionsError: Error, LocalizedError, Equatable {
     case invalidOutputSharpening
     case unsupportedAlpha(ExportFormat)
     case unsupportedRawTIFFOptions
+    case unsupportedDNGOptions
 
     public var errorDescription: String? {
         switch self {
@@ -38,6 +39,7 @@ public enum ExportOptionsError: Error, LocalizedError, Equatable {
         case .invalidOutputSharpening: "Output sharpening must be between 0 and 1."
         case .unsupportedAlpha(let format): "Alpha is not supported for \(format.rawValue)."
         case .unsupportedRawTIFFOptions: "Raw TIFF requires 16-bit uncompressed opaque output."
+        case .unsupportedDNGOptions: "DNG is 16-bit linear, uncompressed and opaque."
         }
     }
 }
@@ -56,6 +58,10 @@ public extension ExportOptions {
         }
         if format == .jpeg, preserveAlpha {
             throw ExportOptionsError.unsupportedAlpha(format)
+        }
+        // DNG 는 TIFF 의 비트 심도·압축 설정과 무관하게 16비트 무압축이다. 알파만 담을 수 없다.
+        if format == .dng, preserveAlpha {
+            throw ExportOptionsError.unsupportedDNGOptions
         }
         if format == .rawScanTIFF,
            (tiffBitDepth != .sixteen || tiffCompression != .none || preserveAlpha

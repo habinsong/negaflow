@@ -50,6 +50,8 @@ extension ScanFrame {
         cachedBase = nil
         cachedBaseKey = nil
         baseRGB = nil
+        rangeShape = nil
+        rangeShapeAttempted = false
         cachedSceneMeasurementsKey = nil
         cachedInteractiveSceneMeasurements = nil
         cachedSettledSceneMeasurements = nil

@@ -30,8 +30,7 @@ struct alignas(16) SampleGridConstants final {
     std::uint32_t origin_y{0};
     std::uint32_t sample_width{0};
     std::uint32_t sample_height{0};
-    float inverse_scale{0.0F};
-    float padding{0.0F};
+    float inverse_scale[2]{};
 };
 
 static_assert(sizeof(SampleGridConstants) == 32U, "two constant registers");
@@ -49,9 +48,8 @@ static_assert(
     sizeof(SceneCorrectionConstants) == 16U + 16U + 16U + (24U * 16U),
     "extent + scale + bias + three 32-entry cubes");
 
-// 가장 큰 격자는 256칸 가로입니다. 세로는 원본 비율을 따르므로 아주 긴 파노라마도
-// 들어가도록 넉넉히 잡습니다. 16바이트 × 256 × 1024 = 4MB.
-constexpr std::uint32_t grid_capacity = 256U * 1024U;
+// 긴 변을 256으로 제한합니다. 최대 표본 버퍼는 16바이트 × 256 × 256 = 1MiB입니다.
+constexpr std::uint32_t grid_capacity = 256U * 256U;
 
 [[nodiscard]] std::uint32_t groups_1d(
     const std::uint32_t extent,
@@ -226,12 +224,12 @@ GpuKernelStatus GpuSceneCorrection::collect_samples(
     }
     const std::uint32_t measured_width = rect ? rect->width : source.width();
     const std::uint32_t measured_height = rect ? rect->height : source.height();
-    std::uint32_t target_height = 0U;
+    std::uint32_t sample_width=0U, target_height = 0U;
     if (!imaging::scene_sample_grid_extent(
-            measured_width, measured_height, target_width, target_height)) {
+            measured_width, measured_height, target_width, sample_width, target_height)) {
         return GpuKernelStatus::invalid_arguments;
     }
-    const std::uint32_t count = target_width * target_height;
+    const std::uint32_t count = sample_width * target_height;
     if (count == 0U || count > grid_capacity_) {
         return GpuKernelStatus::invalid_arguments;
     }
@@ -241,12 +239,10 @@ GpuKernelStatus GpuSceneCorrection::collect_samples(
     payload.extent_height = measured_height;
     payload.origin_x = rect ? rect->x : 0U;
     payload.origin_y = rect ? rect->y : 0U;
-    payload.sample_width = target_width;
+    payload.sample_width = sample_width;
     payload.sample_height = target_height;
-    // CPU 와 같은 두 단계 나눗셈입니다(`scene_correction.cpp` 주석 참고).
-    const double scale =
-        static_cast<double>(target_width) / static_cast<double>(measured_width);
-    payload.inverse_scale = static_cast<float>(1.0 / scale);
+    payload.inverse_scale[0]=static_cast<float>(static_cast<double>(measured_width)/sample_width);
+    payload.inverse_scale[1]=static_cast<float>(static_cast<double>(measured_height)/target_height);
 
     ID3D11DeviceContext* const context = device.context();
     if (!write_constants(context, grid_constants_, &payload, sizeof(payload))) {
@@ -258,7 +254,7 @@ GpuKernelStatus GpuSceneCorrection::collect_samples(
     context->CSSetShaderResources(0U, 1U, &source_srv);
     context->CSSetUnorderedAccessViews(0U, 1U, &grid_uav_, nullptr);
     context->Dispatch(
-        groups_1d(target_width, gpu_thread_group_width),
+        groups_1d(sample_width, gpu_thread_group_width),
         groups_1d(target_height, gpu_thread_group_height),
         1U);
     ID3D11UnorderedAccessView* none_uav = nullptr;
@@ -279,6 +275,7 @@ GpuKernelStatus GpuSceneCorrection::collect_samples(
     const auto* const cells = static_cast<const SampleCell*>(mapped.pData);
     GpuKernelStatus status = GpuKernelStatus::ok;
     try {
+        samples.width=sample_width; samples.height=target_height;
         samples.red.resize(count);
         samples.green.resize(count);
         samples.blue.resize(count);

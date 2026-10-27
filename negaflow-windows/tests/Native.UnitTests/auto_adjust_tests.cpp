@@ -246,10 +246,28 @@ void test_invalid_input_is_refused() {
         "a stride shorter than one row is refused");
 }
 
+void test_luminance_confidence_and_color_scope() {
+    const auto gray=stats_of(flat_image(64,64,118,118,118),64,64);
+    const auto red=stats_of(flat_image(64,64,237,0,0),64,64);
+    const auto gray_tone=negaflow::imaging::auto_tone(gray), red_tone=negaflow::imaging::auto_tone(red);
+    expect(std::abs(gray_tone.exposure-red_tone.exposure)<0.03,"equal luminance colors receive the same exposure");
+    expect(gray_tone.vibrance==0 && red_tone.vibrance==0,"tone does not propose color edits");
+    const auto warm=negaflow::imaging::auto_white_balance(stats_of(flat_image(64,64,180,120,75),64,64));
+    expect(std::abs(warm.warmth)<0.4,"unsupported warm subject is not pushed to the WB limit");
+    const auto clipped=stats_of(flat_image(64,64,255,120,100),64,64);
+    const auto safe=stats_of(flat_image(64,64,245,120,100),64,64);
+    const auto wb=negaflow::imaging::auto_white_balance(clipped);
+    expect(clipped.clipped_fraction==1 && wb.warmth==0 && wb.tint==0,"single channel clipping is excluded from WB evidence");
+    const auto tiny = negaflow::imaging::auto_white_balance(stats_of(flat_image(4,4,180,120,75),4,4));
+    expect(tiny.warmth == 0 && tiny.tint == 0, "missing neutral evidence does not trigger full-strength fallback");
+    expect(negaflow::imaging::auto_tone_score(clipped,false)>negaflow::imaging::auto_tone_score(safe,false),"render objective penalizes clipped channels");
+}
+
 }  // namespace
 
 int main() {
     test_statistics_describe_the_frame();
+    test_luminance_confidence_and_color_scope();
     test_exposure_only_brightens_unless_clipping();
     test_recovery_sliders_move_one_way_only();
     test_print_like_monochrome_keeps_blacks_and_contrast();

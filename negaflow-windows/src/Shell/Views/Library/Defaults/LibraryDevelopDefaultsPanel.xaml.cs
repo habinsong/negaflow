@@ -61,8 +61,9 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
         DevelopDefaultsText.Text = AppResources.Get("libraryDevelopDefaults", "Text");
         DevelopProcessLabel.Text = AppResources.Get("libraryProcess", "Text");
         AutomationProperties.SetName(DevelopProcessSelector, DevelopProcessLabel.Text);
-        AutoBalanceToggle.Content = AppResources.Get("autoBalance", "Text");
-        AutomationProperties.SetName(AutoBalanceToggle, (string)AutoBalanceToggle.Content);
+        AutoBalanceText.Text = AppResources.Get("autoBalance", "Text");
+        AutomationProperties.SetName(AutoBalanceToggle, AutoBalanceText.Text);
+        ToolTipService.SetToolTip(AutoBalanceToggle, AutoBalanceText.Text);
         DevelopTargetLabel.Text = AppResources.Get("libraryTarget", "Text");
         AutomationProperties.SetName(DevelopTargetBar, DevelopTargetLabel.Text);
         DevelopFilmProfileLabel.Text = AppResources.Get("libraryFilmProfile", "Text");
@@ -128,10 +129,12 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
 
         DevelopTarget target = frame?.DevelopTarget ?? DevelopTarget.Main;
         DevelopTarget family = DevelopTargets.Family(target);
-        AutoBalanceToggle.Visibility = target is DevelopTarget.Main or DevelopTarget.Print || DevelopTargets.IsCustom(target)
+        // 반전하는 필름(컬러·흑백 네거티브)이고 MAIN 계열 또는 커스텀 타깃일 때만 보입니다.
+        AutoBalanceSurface.Visibility = DevelopTargets.ShowsAutoBalance(frame)
             ? Visibility.Visible : Visibility.Collapsed;
-        AutoBalanceToggle.IsEnabled = enabled && frame?.Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative;
+        AutoBalanceToggle.IsEnabled = enabled;
         AutoBalanceToggle.IsChecked = frame?.AutoBalance ?? true;
+        ApplyAutoBalanceForeground();
 
         isSynchronizingDevelopDefaults = true;
         try
@@ -284,9 +287,20 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
 
     private void OnAutoBalanceClicked(object sender, RoutedEventArgs args)
     {
+        ApplyAutoBalanceForeground();
         if (isSynchronizingDevelopDefaults || libraryHost is null || ActionableFrame is not { } frame) { return; }
         if (libraryHost.Edit(frame.Id, new LibraryFrameEdit(frame.Tone, frame.ManualBase)
             { AutoBalance = AutoBalanceToggle.IsChecked == true }) == LibraryFrameError.None) { NotifyChanged(); }
+    }
+
+    /// <summary>켜지면 아이콘과 글자가 강조색입니다(자동 색상·자동 레벨 알약과 같은 규칙).</summary>
+    private void ApplyAutoBalanceForeground()
+    {
+        Brush brush = AutoBalanceToggle.IsChecked == true
+            ? AutoBalanceAccentProbe.Foreground
+            : AutoBalancePrimaryProbe.Foreground;
+        AutoBalanceIcon.Foreground = brush;
+        AutoBalanceText.Foreground = brush;
     }
 
     /// <summary>

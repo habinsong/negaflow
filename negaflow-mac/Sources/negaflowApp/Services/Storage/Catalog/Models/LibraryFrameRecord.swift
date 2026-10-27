@@ -29,6 +29,8 @@ struct LibraryFrameRecord: Codable, Equatable {
     var params: DevelopParameters
     var imageTransform: ImageTransform
     var baseRGB: [Double]?
+    /// 렌더가 잰 채널 밀도 범위 모양(R·G·B, 기하평균 1). 롤 교정의 재료다. 없으면 아직 안 쟀다.
+    var rangeShapeRGB: [Double]? = nil
     var rating: Int
     var pickState: FramePickState
     var customDisplayName: String?
@@ -64,6 +66,7 @@ extension LibraryFrameRecord {
         case appMetadataOverlay
         case proofCopyConfiguration
         case defectRecipeIdentity
+        case rangeShapeRGB
     }
 
     /// 기존 frame payload는 frozen v4 decoder로 읽고 v5 tracking key만 별도로 강제한다.
@@ -96,6 +99,8 @@ extension LibraryFrameRecord {
             DefectRecipeIdentity.self,
             forKey: .defectRecipeIdentity
         )) ?? nil
+        // 측정 캐시일 뿐이라 모르는 형식이면 버리고 다시 잰다.
+        rangeShapeRGB = (try? container.decodeIfPresent([Double].self, forKey: .rangeShapeRGB)) ?? nil
     }
 }
 
@@ -142,6 +147,7 @@ extension LibraryFrameRecord {
         params = frame.params
         imageTransform = frame.imageTransform
         baseRGB = frame.baseRGB.map { [$0.x, $0.y, $0.z] }
+        rangeShapeRGB = frame.rangeShape.map { [$0.x, $0.y, $0.z] }
         rating = frame.rating
         pickState = frame.pickState
         customDisplayName = frame.customDisplayName
@@ -231,6 +237,11 @@ extension LibraryFrameRecord {
         frame.imageTransform = imageTransform
         if let baseRGB, baseRGB.count == 3 {
             frame.baseRGB = SIMD3(baseRGB[0], baseRGB[1], baseRGB[2])
+        }
+        if let rangeShapeRGB, rangeShapeRGB.count == 3,
+           let shape = ChannelRangeCalibration.sanitized(
+            SIMD3(rangeShapeRGB[0], rangeShapeRGB[1], rangeShapeRGB[2])) {
+            frame.rangeShape = shape
         }
         frame.setRating(rating)
         frame.pickState = pickState

@@ -102,7 +102,8 @@ VibrancePlaneSelection select_vibrance_planes(const float amount) noexcept {
 MutedSceneVibranceResult apply_muted_scene_vibrance(
     const negaflow::core::ImageView image,
     const bool monochrome,
-    const std::optional<AnalysisRegion>& region) noexcept {
+    const std::optional<AnalysisRegion>& region,
+    const std::optional<double>& reused_mean_saturation) noexcept {
     MutedSceneVibranceResult result{};
     if (monochrome) {
         result.status = negaflow::core::KernelStatus::ok;
@@ -144,7 +145,10 @@ MutedSceneVibranceResult apply_muted_scene_vibrance(
         result.status = negaflow::core::KernelStatus::ok;
     }
 
-    result.info.mean_saturation = scene_mean_saturation(image, region);
+    result.info.mean_saturation = reused_mean_saturation
+        ? *reused_mean_saturation
+        : scene_mean_saturation(image, region);
+    result.info.saturation_measured = true;
     result.info.amount = std::clamp(
         (saturation_target - result.info.mean_saturation) * vibrance_scale,
         0.0,

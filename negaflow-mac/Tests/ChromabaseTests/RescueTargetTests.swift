@@ -21,17 +21,26 @@ final class RescueTargetTests: XCTestCase {
     }
 
     /// EXPIRED 는 열화 필름 복구 타겟이다 — 측정된 캐스트 증거가 없는 건강한 네거티브에서는
-    /// 복구할 열화가 없으므로 MAIN 과 픽셀 동일(no-op)이 올바른 동작이다.
-    func testNegativeWithoutEligibleEvidenceIsPixelExactMain() {
+    /// 복구할 열화가 없으므로 보존된 고정 밀도 반전(`NegativeLinearResponse`)과 픽셀 동일한
+    /// no-op 이 올바른 동작이다. MAIN 은 v4 반전과 자동 밸런스를 쓰므로 기준이 다르다.
+    func testNegativeWithoutEligibleEvidenceIsPixelExactFixedInversion() {
         let width = 160
         let height = 96
         let input = makeNegativeNeutralRamp(width: width, height: height)
         let base = FilmBase(rgb: negativeBase, source: .manual)
 
-        let main = developed(input, base: base, filmType: .colorNegative, target: .main)
+        let fixed = NegativeLinearResponse.output(
+            NegativeLinearResponse.invert(
+                input,
+                stats: NegativeLinearResponse.stats(base: base, preset: nil, filmType: .colorNegative),
+                filmType: .colorNegative
+            ),
+            exposure: 0,
+            filmType: .colorNegative
+        )
         let expired = developed(input, base: base, filmType: .colorNegative, target: .rescue)
 
-        XCTAssertEqual(renderFloat(main, width: width, height: height),
+        XCTAssertEqual(renderFloat(fixed, width: width, height: height),
                        renderFloat(expired, width: width, height: height))
     }
 

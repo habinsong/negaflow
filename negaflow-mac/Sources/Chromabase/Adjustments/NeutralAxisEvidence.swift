@@ -2,13 +2,13 @@ import Foundation
 
 // MARK: - NeutralAxisEvidence
 //
-// 장면의 중립축 증거 — 무채색이어야 할 화소들의 채널 캐스트를 휘도대별로 모은다. 자동 색상
+// 장면의 중립축 증거 — 중립 후보 화소의 채널 캐스트를 휘도대별로 모은다. 자동 색상
 // (NeutralBalance)과 자동 화이트밸런스가 함께 쓴다.
 //
 // 중립에서 약 0.5 스톱 안의 화소를 첫 후보로 잡고, 후보의 중앙 캐스트 주위로 두 번 좁힌다.
 // 휘도대(1 스톱)마다 중앙값을 따로 내어 한 대역의 면적이 전체 보정을 지배하지 않게 한다.
-// 강한 캐스트와 장면의 지배색을 항상 구별할 수 있는 것은 아니다. MAIN/PRINT의 자동 색상
-// 보정에서 미노광 필름 베이스는 0이므로 중립 표본에 들어가지 않는다.
+// 강한 캐스트와 장면의 지배색을 항상 구별할 수 있는 것은 아니다. 토우 근처 표본은
+// 채널 하한으로 제외한다.
 struct NeutralAxisEvidence: Sendable, Equatable {
     struct Band: Sendable, Equatable {
         /// 대역 화소의 ln(기하평균 휘도) 중앙값.
@@ -21,8 +21,9 @@ struct NeutralAxisEvidence: Sendable, Equatable {
     var bands: [Band]
     /// 중립 후보로 고른 화소 비율.
     var selectedFraction: Double
-    /// 중립 근처에 후보가 거의 없어 장면 중앙 캐스트 주위에서 고른 경우(고전 gray-world).
-    /// 장면이 정말 한 색일 수 있으므로 쓰는 쪽이 보정을 줄인다.
+    /// 후보 비율과 휘도 범위에서 정한 보정 강도. 실측 확률을 뜻하지 않는다.
+    var confidence: Double = 1
+    /// 중립 후보가 부족해 장면 중앙 캐스트 주위에서 대신 고른 경우.
     var isFallback = false
 
     /// 대역 중앙값의 중앙값 — 대역마다 한 표(면적이 큰 대역이 지배하지 않는다).
@@ -52,6 +53,7 @@ enum NeutralAxisEstimator {
         logs.reserveCapacity(pixels.count)
         for p in pixels {
             guard p.x > minimumChannel, p.y > minimumChannel, p.z > minimumChannel,
+                  max(p.x, max(p.y, p.z)) < 0.995,
                   0.2126 * p.x + 0.7152 * p.y + 0.0722 * p.z < maximumLuminance else { continue }
             let l = SIMD3(log(p.x), log(p.y), log(p.z))
             let mean = (l.x + l.y + l.z) / 3
@@ -100,7 +102,12 @@ enum NeutralAxisEstimator {
             return .init(logLuminance: lum[lum.count / 2], cast: medianCast(members), count: members.count)
         }
         guard !bands.isEmpty else { return nil }
-        return NeutralAxisEvidence(bands: bands, selectedFraction: Double(selected.count) / Double(pixels.count),
+        let fraction = Double(selected.count) / Double(pixels.count)
+        let span = (bands.last?.logLuminance ?? 0) - (bands.first?.logLuminance ?? 0)
+        let t = min(max((span - log(1.25)) / (log(4) - log(1.25)), 0), 1)
+        let rangeSupport = t * t * (3 - 2 * t)
+        let confidence = min(1, fraction / 0.10) * (isFallback ? 0.05 + 0.50 * rangeSupport : 0.15 + 0.85 * rangeSupport)
+        return NeutralAxisEvidence(bands: bands, selectedFraction: fraction, confidence: confidence,
                                    isFallback: isFallback)
     }
 }

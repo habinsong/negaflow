@@ -872,6 +872,8 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developExportRefusedPositiveFilm.Text" xml:space="preserve"><value>Die Entwicklung von Positivfilm wird von der Windows-Engine noch nicht unterstützt.</value></data>
   <data name="developExportRefusedDestination.Text" xml:space="preserve"><value>Wählen Sie einen vollständigen Exportpfad.</value></data>
   <data name="developExportRefusedOutputFormat.Text" xml:space="preserve"><value>Dieses Exportformat wird nicht unterstützt.</value></data>
+  <data name="developExportRefusedDngTarget.Text" xml:space="preserve"><value>Der DNG-Export unterstützt das PRINT-Ziel nicht. Verwenden Sie TIFF, PNG oder JPEG.</value></data>
+  <data name="developExportRefusedDngSource.Text" xml:space="preserve"><value>Der DNG-Export braucht eine unkomprimierte Quelle (TIFF, Kamera-RAW oder DNG). Für JPEG-, PNG- und HEIC-Quellen verwenden Sie TIFF, PNG oder JPEG.</value></data>
   <data name="developExportRefusedStaleDefectSource.Text" xml:space="preserve"><value>Die Scandatei hat sich seit dem Aufzeichnen der Defektkorrekturen in der Größe geändert. Verknüpfen Sie das Bild erneut mit dem Originalscan oder verwerfen Sie die Defektkorrekturen, und exportieren Sie dann erneut.</value></data>
   <data name="developSectionFilm.Text" xml:space="preserve"><value>Film</value></data>
   <data name="developFilmLookNone.Text" xml:space="preserve"><value>Keine</value></data>

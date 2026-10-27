@@ -180,6 +180,20 @@ typedef struct nf_develop_export_request_v40 {
     uint32_t auto_balance_reserved;
 } nf_develop_export_request_v40;
 
+/* Optional sized tail accepted by the v39 entry points, after the v40 tail. A payload that
+   ends before it keeps the equal-range behavior and measures nothing. `channel_range` is the
+   device x film channel density-range calibration (R, G, B multipliers, geometric mean 1)
+   and is read only when `channel_range_present` is 1; the values must then be finite and
+   within [0.5, 2.0]. `measure_range_shape` asks the call to measure this frame's channel
+   range shape and return it in the v7 result tail. Reserved fields remain zero. */
+typedef struct nf_develop_export_request_v41 {
+    nf_develop_export_request_v40 v40;
+    uint32_t channel_range_present;
+    uint32_t measure_range_shape;
+    float channel_range[3];
+    uint32_t channel_range_reserved;
+} nf_develop_export_request_v41;
+
 #ifdef __cplusplus
 }
 #endif

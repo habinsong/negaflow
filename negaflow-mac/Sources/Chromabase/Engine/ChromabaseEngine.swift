@@ -532,4 +532,6 @@ public enum ExportFormat: String, Sendable, Codable {
     case png
     case tiff16
     case rawScanTIFF
+    /// 16비트 선형 RGB DNG(LinearRaw). 현상 결과를 다른 앱에서 다시 다듬을 수 있게 담는다.
+    case dng
 }

@@ -125,6 +125,9 @@ public extension DevelopParameters {
         master.manualBaseRGB = manualBaseRGB
         master.filmStockDminID = filmStockDminID
         master.lightSourceProfileID = lightSourceProfileID
+        // 롤 교정은 사용자 조정이 아니라 반전 기준이다. 빠지면 자동 밸런스를 끈 프레임의 무보정본만
+        // 교정 전 색으로 나가 본 내보내기와 갈라진다.
+        master.channelRange = channelRange
         master.imageTransform = imageTransform
         return master
     }

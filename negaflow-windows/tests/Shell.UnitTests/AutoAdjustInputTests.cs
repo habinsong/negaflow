@@ -52,6 +52,7 @@ internal static class AutoAdjustInputTests
     {
         var requests = new List<DevelopExportRequest>();
         bool failVerification = false;
+        bool rejectCandidate = false;
         var exporter = new PixelExporter((request, pixels) =>
         {
             int index;
@@ -65,17 +66,18 @@ internal static class AutoAdjustInputTests
             (pixels, _, _, monochrome) => { sawMonochrome = monochrome; return first; },
             (pixels, _, _, _, given) => new AutoAdjustSettings(given.Exposure + (pixels[0] / 10.0), given.Contrast,
                 given.Highlights, given.Shadows, given.Whites + 0.05, given.Blacks, given.Density, given.Vibrance,
-                given.Warmth, given.Tint));
+                given.Warmth, given.Tint),
+            (pixels, _, _, _) => pixels[0] == 3 ? (rejectCandidate ? 2 : 0) : 1);
         LibraryFrameSnapshot frame = Frame(new ManualBaseRgb(0.7, 0.3, 0.2)) with
         {
             SourcePath = Path.Combine(Path.GetTempPath(), "auto-loop.tif"),
             Tone = new ToneAdjustment(1.0, 0.3, 0.6, 0, 0, 0),
-            ColorModel = ColorModelRecipe.Identity with { Saturation = 0.3, ColorDepth = 0.2 },
+            ColorModel = ColorModelRecipe.Identity with { Saturation = 0.3, ColorDepth = 0.2, Vibrance = 0.4 },
         };
         var outcomes = new List<AutoAdjustOutcome>();
         await coordinator.RunToneAsync(frame, outcomes.Add);
-        Check(requests.Count == 2, "auto_tone_renders_neutral_then_verifies");
-        Check(requests[0].ExposureStops == 0F && requests[0].Highlights == 0F && requests[0].Saturation == 0F,
+        Check(requests.Count == 3, "auto_tone_checks_the_refined_render_before_applying_it");
+        Check(requests[0].ExposureStops == 0F && requests[0].Highlights == 0F && requests[0].Saturation == 0.3F,
             "auto_tone_first_render_is_tone_neutral");
         Check(requests[1].ExposureStops == 0.5F && requests[1].Highlights == 0.6F &&
             requests[1].Saturation == 0.3F && requests[1].ColorDepth == 0.2F,
@@ -84,9 +86,17 @@ internal static class AutoAdjustInputTests
         Check(Math.Abs(tone.Tone.Exposure - 0.7) < 1e-12 && Math.Abs(tone.Tone.Whites - 0.15) < 1e-12 &&
             tone.Tone.Contrast == 0.1 && tone.Tone.CurveHighlights == 0.6,
             "auto_tone_applies_the_refined_values");
-        Check(tone.ColorModel.Saturation == 0.3 && tone.ColorModel.Vibrance == 0.2,
+        Check(tone.ColorModel.Saturation == 0.3 && tone.ColorModel.Vibrance == frame.ColorModel.Vibrance,
             "auto_tone_keeps_user_saturation");
         Check(sawMonochrome == false, "auto_tone_uses_the_colour_shoulder_for_colour_film");
+
+        requests.Clear();
+        outcomes.Clear();
+        rejectCandidate = true;
+        await coordinator.RunToneAsync(frame, outcomes.Add);
+        Check(requests.Count == 3 && outcomes[0].Frame!.Tone.Exposure == first.Exposure,
+            "auto_tone_rejects_a_refinement_that_worsens_the_rendered_score");
+        rejectCandidate = false;
 
         requests.Clear();
         outcomes.Clear();

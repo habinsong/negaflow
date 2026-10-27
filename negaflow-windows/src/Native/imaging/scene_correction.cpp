@@ -36,18 +36,18 @@ constexpr double positive_output_white = 0.86;
     const negaflow::core::ConstImageView image,
     const std::uint32_t target_width,
     const std::uint32_t target_y,
-    const double inverse_scale,
+    const double inverse_scale_x, const double inverse_scale_y,
     SceneSampleGrid& samples) noexcept {
-    const double top = static_cast<double>(target_y) * inverse_scale;
-    const double bottom = static_cast<double>(target_y + 1U) * inverse_scale;
+    const double top = static_cast<double>(target_y) * inverse_scale_y;
+    const double bottom = static_cast<double>(target_y + 1U) * inverse_scale_y;
     const std::uint32_t first_y = static_cast<std::uint32_t>(std::floor(top));
     const std::uint32_t last_y = std::min(
         image.height,
         static_cast<std::uint32_t>(std::ceil(bottom)));
     const std::size_t sample_row = static_cast<std::size_t>(target_y) * target_width;
     for (std::uint32_t target_x = 0U; target_x < target_width; ++target_x) {
-        const double left = static_cast<double>(target_x) * inverse_scale;
-        const double right = static_cast<double>(target_x + 1U) * inverse_scale;
+        const double left = static_cast<double>(target_x) * inverse_scale_x;
+        const double right = static_cast<double>(target_x + 1U) * inverse_scale_x;
         const std::uint32_t first_x = static_cast<std::uint32_t>(std::floor(left));
         const std::uint32_t last_x = std::min(
             image.width,
@@ -81,25 +81,25 @@ constexpr double positive_output_white = 0.86;
 
 [[nodiscard]] bool collect_area_samples(
     const negaflow::core::ConstImageView image,
-    const std::uint32_t target_width,
+    const std::uint32_t long_edge,
     SceneSampleGrid& samples) {
-    std::uint32_t target_height = 0U;
-    if (!scene_sample_grid_extent(image.width, image.height, target_width, target_height)) {
+    std::uint32_t target_width = 0U, target_height = 0U;
+    if (!scene_sample_grid_extent(image.width, image.height, long_edge, target_width, target_height)) {
         return false;
     }
     const std::size_t count =
         static_cast<std::size_t>(target_width) * target_height;
     // 예전에는 `push_back` 이라 목표 행을 순서대로 돌아야 했습니다. 자리를 미리 잡아 두면
     // 행마다 자기 칸에만 쓰므로 순서가 필요 없어지고, 담기는 값과 담기는 자리는 그대로입니다.
+    samples.width = target_width; samples.height = target_height;
     samples.red.resize(count);
     samples.green.resize(count);
     samples.blue.resize(count);
 
     // `image.width / target_width` 로 줄이지 마십시오. 나눗셈 한 번과 두 번은 마지막
     // 비트가 다를 수 있고, 그러면 칸 경계가 한 화소 옮겨가 표본이 달라집니다.
-    const double scale =
-        static_cast<double>(target_width) / static_cast<double>(image.width);
-    const double inverse_scale = 1.0 / scale;
+    const double inverse_scale_x = static_cast<double>(image.width) / target_width;
+    const double inverse_scale_y = static_cast<double>(image.height) / target_height;
     // 목표 행 하나가 원본을 (1/scale)^2 배로 읽습니다. work_units 에 그 배율을 넣지 않으면
     // 문턱을 못 넘어 조용히 직렬로 돕니다(`parallel_rows.h` 경고).
     std::atomic<bool> degenerate{false};
@@ -112,7 +112,7 @@ constexpr double positive_output_white = 0.86;
                  target_y < first_row + row_count;
                  ++target_y) {
                 if (!collect_sample_row(
-                        image, target_width, target_y, inverse_scale, samples)) {
+                        image, target_width, target_y, inverse_scale_x, inverse_scale_y, samples)) {
                     degenerate.store(true, std::memory_order_relaxed);
                     return;
                 }
@@ -152,7 +152,7 @@ constexpr double positive_output_white = 0.86;
         return false;
     }
     if (!rect) {
-        inset_scene_samples(samples, target_width, scene_frame_border_inset);
+        inset_scene_samples(samples, samples.width, scene_frame_border_inset);
     }
     return true;
 }
@@ -183,15 +183,13 @@ constexpr double positive_output_white = 0.86;
                 const std::size_t row = static_cast<std::size_t>(y) * image.stride_pixels;
                 for (std::uint32_t x = 0U; x < image.width; ++x) {
                     negaflow::core::Rgba32F& pixel = image.pixels[row + x];
-                    pixel.red = static_cast<float>(std::clamp(
-                        (static_cast<double>(pixel.red) * plan.scale[0]) + plan.bias[0],
-                        0.0, scene_auto_levels_upper_clamp));
-                    pixel.green = static_cast<float>(std::clamp(
-                        (static_cast<double>(pixel.green) * plan.scale[1]) + plan.bias[1],
-                        0.0, scene_auto_levels_upper_clamp));
-                    pixel.blue = static_cast<float>(std::clamp(
-                        (static_cast<double>(pixel.blue) * plan.scale[2]) + plan.bias[2],
-                        0.0, scene_auto_levels_upper_clamp));
+                    const double luminance=0.2126*pixel.red+0.7152*pixel.green+0.0722*pixel.blue;
+                    const double mapped=std::clamp(luminance*plan.scale[0]+plan.bias[0],0.0,scene_auto_levels_upper_clamp);
+                    if (luminance>1e-8) {
+                        const double gain=mapped/luminance;
+                        pixel.red=static_cast<float>(pixel.red*gain); pixel.green=static_cast<float>(pixel.green*gain);
+                        pixel.blue=static_cast<float>(pixel.blue*gain);
+                    } else { pixel.red=pixel.green=pixel.blue=static_cast<float>(std::max(plan.bias[0],0.0)); }
                 }
             }
         });
@@ -244,29 +242,14 @@ constexpr double positive_output_white = 0.86;
 } // namespace
 
 bool scene_sample_grid_extent(
-    const std::uint32_t image_width,
-    const std::uint32_t image_height,
-    const std::uint32_t target_width,
-    std::uint32_t& out_height) noexcept {
-    out_height = 0U;
-    if (image_width <= 4U || image_height <= 4U || target_width == 0U) {
-        return false;
-    }
-    const double scale =
-        static_cast<double>(target_width) / static_cast<double>(image_width);
-    const double scaled_height = std::floor(static_cast<double>(image_height) * scale);
-    if (!std::isfinite(scaled_height) || scaled_height < 1.0 || scaled_height > 65536.0) {
-        return false;
-    }
-    const std::uint32_t target_height = static_cast<std::uint32_t>(scaled_height);
-    const std::uint64_t count64 =
-        static_cast<std::uint64_t>(target_width) * target_height;
-    if (count64 < 64U || count64 > 16U * 1024U * 1024U ||
-        count64 > std::numeric_limits<std::size_t>::max()) {
-        return false;
-    }
-    out_height = target_height;
-    return true;
+    const std::uint32_t image_width, const std::uint32_t image_height,
+    const std::uint32_t long_edge, std::uint32_t& out_width, std::uint32_t& out_height) noexcept {
+    out_width=0; out_height=0;
+    if (image_width <= 4 || image_height <= 4 || long_edge == 0 || long_edge > 512) { return false; }
+    const double scale=std::min(1.0,static_cast<double>(long_edge)/std::max(image_width,image_height));
+    out_width=std::max(1U,static_cast<std::uint32_t>(image_width*scale));
+    out_height=std::max(1U,static_cast<std::uint32_t>(image_height*scale));
+    return static_cast<std::uint64_t>(out_width)*out_height >= 64U;
 }
 
 SceneAutoLevelsPlan plan_scene_auto_levels(
@@ -277,33 +260,23 @@ SceneAutoLevelsPlan plan_scene_auto_levels(
         samples.red.size() != samples.blue.size()) {
         return plan;
     }
-    std::sort(samples.red.begin(), samples.red.end());
-    std::sort(samples.green.begin(), samples.green.end());
-    std::sort(samples.blue.begin(), samples.blue.end());
-
-    const double black_clip = negative_source ? 0.005 : 0.002;
-    const std::array<double, 3> black{
-        percentile(samples.red, black_clip),
-        percentile(samples.green, black_clip),
-        percentile(samples.blue, black_clip),
-    };
-    const std::array<double, 3> white{
-        percentile(samples.red, 0.999),
-        percentile(samples.green, 0.999),
-        percentile(samples.blue, 0.999),
-    };
-    const double peak_white = std::max({white[0], white[1], white[2]});
-    if (linear_negative_output && peak_white <= 1e-5) { return plan; }
-    const double required_range = linear_negative_output ? minimum_range * peak_white : minimum_range;
-    const double maximum_range = std::max({
-        white[0] - black[0], white[1] - black[1], white[2] - black[2]});
-    if (maximum_range < required_range ||
-        (!linear_negative_output && white[0] > 0.95 && white[1] > 0.95 && white[2] > 0.95 &&
-        white[0] < 1.05 && white[1] < 1.05 && white[2] < 1.05 &&
-         black[0] < 0.05 && black[1] < 0.05 && black[2] < 0.05)) {
+    std::vector<double> luminance;
+    try {
+        luminance.reserve(samples.red.size());
+        for (std::size_t i = 0; i < samples.red.size(); ++i) {
+            const double y = 0.2126 * samples.red[i] + 0.7152 * samples.green[i] + 0.0722 * samples.blue[i];
+            if (std::isfinite(y)) { luminance.push_back(y); }
+        }
+    } catch (...) {
         return plan;
     }
-
+    if (luminance.empty()) { return plan; }
+    std::sort(luminance.begin(),luminance.end());
+    const double black=percentile(luminance,negative_source?0.005:0.002);
+    const double white=percentile(luminance,0.999);
+    const double required_range=linear_negative_output?minimum_range*white:minimum_range;
+    if (white<=1e-5 || white-black<required_range ||
+        (!linear_negative_output && white>0.95 && white<1.05 && black<0.05)) { return plan; }
     const double output_black = negative_source
         ? (linear_negative_output ? core::negative_output_tone_input(negative_output_black, monochrome) : negative_output_black)
         : positive_output_black;
@@ -311,11 +284,11 @@ SceneAutoLevelsPlan plan_scene_auto_levels(
         ? (linear_negative_output ? core::negative_output_tone_input(negative_output_white, monochrome) : negative_output_white)
         : positive_output_white;
     for (std::size_t channel = 0U; channel < 3U; ++channel) {
-        const double range = white[channel] - black[channel];
+        const double range = white - black;
         if (range >= required_range) {
             plan.scale[channel] = (output_white - output_black) / range;
             plan.bias[channel] =
-                output_black - (black[channel] * plan.scale[channel]);
+                output_black - (black * plan.scale[channel]);
         }
     }
     plan.apply = true;
@@ -350,6 +323,7 @@ void inset_scene_samples(
             kept.blue.push_back(samples.blue[index]);
         }
     }
+    kept.width=last_x-inset_x; kept.height=last_y-inset_y;
     samples = std::move(kept);
 }
 
@@ -362,12 +336,29 @@ constexpr double maximum_slope = 1.25;
 // 감마까지 맞추는 최소 근거: 대역 셋, 휘도 폭 2 스톱입니다.
 constexpr std::size_t minimum_bands_for_slope = 3U;
 const double minimum_span_for_slope = std::log(4.0);
-// 중립 근처 후보가 없어 장면 중앙값 주위에서 고른 경우(한 색 장면일 수 있습니다)의 보정 비율.
-constexpr double fallback_strength = 0.5;
 // 이보다 작은 보정은 항등으로 봅니다.
 constexpr double identity_tolerance = 0.003;
 
 }  // namespace
+
+namespace {
+bool slope_improves_holdout(const std::vector<NeutralAxisBand>& bands) noexcept {
+    if (bands.size()<4U) { return false; }
+    double mx=0; std::array<double,3> my{}; std::size_t n=0;
+    for (std::size_t i=0;i<bands.size();i+=2U) { mx+=bands[i].log_luminance; for(std::size_t c=0;c<3;++c) {my[c]+=bands[i].cast[c];} ++n; }
+    mx/=static_cast<double>(n); for(auto& v:my){v/=static_cast<double>(n);}
+    double sxx=0;std::array<double,3> sxy{},a{},b{};
+    for(std::size_t i=0;i<bands.size();i+=2U){const double dx=bands[i].log_luminance-mx;sxx+=dx*dx;
+        for(std::size_t c=0;c<3;++c){sxy[c]+=dx*(bands[i].cast[c]-my[c]);}}
+    if(sxx<=1e-12){return false;}
+    for(std::size_t c=0;c<3;++c){b[c]=sxy[c]/sxx;a[c]=my[c]-b[c]*mx;}
+    double before=0,after=0;
+    for(std::size_t i=1;i<bands.size();i+=2U){for(std::size_t c=0;c<3;++c){
+        const double residual=bands[i].cast[c]-a[c]-b[c]*bands[i].log_luminance;
+        before+=bands[i].cast[c]*bands[i].cast[c];after+=residual*residual;}}
+    return before>1e-8 && after<before*0.8;
+}
+}
 
 SceneNeutralBalancePlan plan_scene_neutral_balance(SceneSampleGrid& samples) noexcept {
     SceneNeutralBalancePlan plan{};
@@ -385,7 +376,7 @@ SceneNeutralBalancePlan plan_scene_neutral_balance(SceneSampleGrid& samples) noe
         if (!evidence) {
             return plan;
         }
-        const double strength = evidence->is_fallback ? fallback_strength : 1.0;
+        const double strength = evidence->confidence;
         // 대역 중앙 캐스트에 채널별 직선(cast = a + b·ln Ȳ)을 맞춥니다 — 대역마다 같은 무게.
         const auto& bands = evidence->bands;
         double minimum_x = bands.front().log_luminance;
@@ -399,7 +390,8 @@ SceneNeutralBalancePlan plan_scene_neutral_balance(SceneSampleGrid& samples) noe
         const double n = static_cast<double>(bands.size());
         mean_x /= n;
         const bool use_slope =
-            bands.size() >= minimum_bands_for_slope && maximum_x - minimum_x >= minimum_span_for_slope;
+            bands.size() >= minimum_bands_for_slope && maximum_x - minimum_x >= minimum_span_for_slope &&
+            slope_improves_holdout(bands);
         bool identity = true;
         for (std::size_t channel = 0U; channel < 3U; ++channel) {
             double mean_y = 0.0;

@@ -9,11 +9,14 @@ final class ToneMapperControlsTests: XCTestCase {
             ChromabaseMetalKernels.availableKernelNames,
             [
                 "basicTone",
+                "sceneAreaSamples",
+                "luminanceLevels",
                 "boundedRelativeGrade",
                 "bwToning",
                 "calibrationPrimaries",
                 "channelPowerGain",
                 "channelClippingOverlay",
+                "chromaScaleBounded",
                 "colorGrade",
                 "colorMixerHSL",
                 // 디지털 소스 전용 필름 경로. 필름 스캔은 이 커널들을 호출하지 않는다.

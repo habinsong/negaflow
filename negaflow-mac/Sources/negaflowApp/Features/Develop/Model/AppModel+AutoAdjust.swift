@@ -2,12 +2,9 @@ import SwiftUI
 import Chromabase
 import AppKit
 
-// 라이트룸식 자동 보정. 핵심은 "결정적(1회)": 대상 슬라이더를 0 으로 리셋한 **중립 현상본**을 기준으로
-// 절대값을 계산해 슬라이더에 **대입**한다(누적 아님). 그래서 버튼을 여러 번 눌러도 같은 결과가 되고,
-// 중립(톤 매핑 전) 기준이라 노출뿐 아니라 대비·화이트·블랙·바이브런스 등 모든 슬라이더가 의미있게 변한다.
-// (현재 결과 기준 델타는 이미 보정된 상태라 노출 외에는 0 에 수렴 → 과거 버그였다.)
+// 대상 조정만 초기화한 현상본에서 절대값을 계산해 대입한다. 사용자 색 조정은 유지한다.
 extension AppModel {
-    /// 자동 화이트 밸런스(⇧⌘U) — Warmth/Tint 를 0 으로 둔 중립본의 평균색을 gray-world 로 무채색화.
+    /// 자동 화이트 밸런스(⇧⌘U) — Warmth/Tint 를 0으로 둔 현상본의 중립축 증거로 보정.
     @discardableResult
     func autoWhiteBalance(
         _ frame: ScanFrame,
@@ -79,9 +76,7 @@ extension AppModel {
         return task
     }
 
-    /// 자동 톤(⌘U) — 톤/색 조정을 0 으로 둔 중립본의 히스토그램으로 Exposure·Contrast·Density·
-    /// Highlights·Shadows·Whites·Blacks·Vibrance·Saturation 절대값을 계산해 대입. WB(Warmth/Tint)는
-    /// 건드리지 않는다.
+    /// 자동 톤(⌘U)은 톤 7개 값만 대입한다. 커브와 색 조정은 유지한다.
     @discardableResult
     func autoTone(
         _ frame: ScanFrame,
@@ -130,9 +125,18 @@ extension AppModel {
             }
             let verify = autoAdjustSnapshot(frame, params: Self.applying(first, to: frame.params))
             let adjustment = await Task.detached(priority: .userInitiated, operation: { () -> AutoAdjust.ToneDelta in
-                guard let cg = try? DevelopFrameRenderer.render(verify).developed,
-                      let verified = AutoAdjust.imageStats(cg) else { return first }
-                return AutoAdjust.refineTone(first, measured: verified, filmType: verify.filmType)
+                guard let result = try? DevelopFrameRenderer.render(verify),
+                      let measured = AutoAdjust.imageStats(result.developed) else { return first }
+                let candidate = AutoAdjust.refineTone(first, measured: measured, filmType: verify.filmType)
+                let before = AutoAdjust.refinementDistance(first, candidate)
+                guard before > 0.02 else { return first }
+                var candidateSnapshot = verify
+                candidateSnapshot.params = Self.applying(candidate, to: verify.params)
+                candidateSnapshot.cachedSceneMeasurements = result.sceneMeasurements
+                guard let rendered = try? DevelopFrameRenderer.render(candidateSnapshot).developed,
+                      let checked = AutoAdjust.imageStats(rendered) else { return first }
+                return AutoAdjust.toneScore(checked, adjustMid: first.exposure > 0) <
+                    AutoAdjust.toneScore(measured, adjustMid: first.exposure > 0) ? candidate : first
             }).value
             guard ownsFrame(frame) else {
                 return AutoAdjustTrace.stopped("autoTone", source: source, at: .frameNotOwned)
@@ -175,8 +179,6 @@ extension AppModel {
                 $0.shadow = 0
                 $0.whites = 0
                 $0.blacks = 0
-                $0.vibrance = 0
-                $0.saturation = 0
             }
         }
         Task { await developFrame(frame) }
@@ -206,7 +208,6 @@ extension AppModel {
         p.shadow = adjustment.shadow
         p.whites = adjustment.whites
         p.blacks = adjustment.blacks
-        p.vibrance = adjustment.vibrance
         return p
     }
 
@@ -218,7 +219,6 @@ extension AppModel {
             p.exposure = 0; p.contrast = 0; p.density = 0
             p.highlight = 0; p.shadow = 0; p.whites = 0; p.blacks = 0
             p.curveHighlights = 0; p.curveLights = 0; p.curveDarks = 0; p.curveShadows = 0
-            p.vibrance = 0; p.saturation = 0; p.colorDepth = 0
         }
         if clearWB { p.warmth = 0; p.tint = 0 }
         return autoAdjustSnapshot(frame, params: p)

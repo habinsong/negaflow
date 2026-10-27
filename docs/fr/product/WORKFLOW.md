@@ -72,6 +72,12 @@ L’aperçu réutilise toute vignette, image développée ou prévisualisation s
 
 Le profil de sortie est appliqué une fois, après la composition complète de la planche-contact, du paquet photo ou du paquet personnalisé. Les placements répétés et les mises en page à plusieurs photos reçoivent tous la même conversion. Voir [Mises en page et aperçu C-print](../reference/C_PRINT.md).
 
+## Export DNG
+
+Le DNG écrit la photo développée en RGB linéaire 16 bits (`PhotometricInterpretation = LinearRaw`), sans compression, dans l’espace colorimétrique choisi à l’export : sRGB, Display P3 ou Adobe RGB. Le ton et la couleur sont déjà appliqués, donc les autres applications lisent un fichier référencé sortie. Le fichier porte le droit d’auteur, le scanner, le logiciel, la date et les notes de film selon la même politique de métadonnées que le TIFF. L’EXIF, l’IPTC et le GPS de l’appareil source ne sont pas copiés. Il faut 6 octets par pixel : une photo de 24 mégapixels pèse environ 144 Mo.
+
+Le DNG n’est proposé que pour les sources non compressées : TIFF, RAW d’appareil et DNG. Les sources JPEG, PNG et HEIC ne s’exportent pas en DNG. Le DNG n’est pas proposé dans le module Impression et la cible `PRINT` est refusée. Les deux se terminent par un profil ICC d’imprimante, qu’un DNG ne peut pas contenir. negaflow s’arrête avec un message au lieu d’exporter autre chose. exiftool et le décodeur d’images d’Apple lisent le fichier. Le rendu dans Lightroom ou Camera Raw n’a pas été mesuré.
+
 ## Ce qui touche aux originaux
 
 | Action | Original dans le Finder | Catalogue et retouches |

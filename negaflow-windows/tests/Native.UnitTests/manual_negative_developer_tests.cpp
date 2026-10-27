@@ -11,6 +11,7 @@ int main() {
     test_auto_negative_base_resolution();
     test_invalid_manual_inputs_fail_closed();
     test_input_gamma_density_reference();
+    test_channel_range_and_measurement_reuse();
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"manual_negative_developer\",\"failures\":"

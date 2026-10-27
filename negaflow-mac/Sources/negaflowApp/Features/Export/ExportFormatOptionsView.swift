@@ -35,6 +35,11 @@ struct ExportFormatOptionsView: View {
             Toggle(localized(.preserveAlpha), isOn: $model.exportPreserveAlpha)
         case .rawScanTIFF:
             EmptyView()
+        case .dng:
+            // 비트 심도·압축을 고를 수 없다: 16비트 선형, 무압축 한 가지다.
+            LabeledContent(model.text(.exportFormatLabel)) {
+                Text(localized(.dngDescription)).foregroundStyle(.secondary)
+            }
         }
     }
 

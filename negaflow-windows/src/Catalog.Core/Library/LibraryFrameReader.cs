@@ -137,6 +137,10 @@ public static class LibraryFrameReader
     internal const string GreenPrimaryName = "greenPrimary";
     internal const string BluePrimaryName = "bluePrimary";
     internal const string AutoBalanceName = "autoBalance";
+    /// <summary>레시피(<c>params</c>) 안의 롤 교정값입니다. macOS <c>DevelopParameters.channelRange</c> 와 같은 키입니다.</summary>
+    public const string ChannelRangeName = "channelRange";
+    /// <summary>macOS <c>LibraryFrameRecord.rangeShapeRGB</c> — 렌더가 잰 채널 범위 모양. params 형제가 아닙니다.</summary>
+    public const string RangeShapeName = "rangeShapeRGB";
     internal const string AutoLevelsName = "autoLevels";
     internal const string AutoNeutralBalanceName = "autoNeutralBalance";
     internal const string DevelopTargetName = "developTarget";
@@ -234,6 +238,8 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidAppliedBase);
         }
+        // 측정 캐시와 교정값은 모르는 형식이면 버립니다 — 없는 것과 같고 다시 재면 됩니다.
+        ChannelRangeRgb? rangeShape = TryReadChannelRange(frameRecord, RangeShapeName);
         if (!TryReadRating(frameRecord, out int rating))
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidRating);
@@ -264,6 +270,7 @@ public static class LibraryFrameReader
             return LibraryFrameReadResult.Failure(LibraryFrameError.MissingParameters);
         }
 
+        ChannelRangeRgb? channelRange = TryReadChannelRange(parameters, ChannelRangeName);
         if (!TryReadManualBase(parameters, out ManualBaseRgb? manualBase))
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidManualBase);
@@ -362,6 +369,8 @@ public static class LibraryFrameReader
             SourceMetadata = sourceMetadata,
             AppMetadata = appMetadata,
             AppliedBase = appliedBase,
+            RangeShape = rangeShape,
+            ChannelRange = channelRange,
             Base = baseRecipe,
             InputGamma = inputGamma,
             LookPresetId = lookPresetId,

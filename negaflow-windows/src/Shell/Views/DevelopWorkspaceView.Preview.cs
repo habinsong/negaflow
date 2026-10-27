@@ -375,6 +375,12 @@ public sealed partial class DevelopWorkspaceView
                 applied.AppliedDminBlue,
                 applied.ReferenceBase);
             BaseCard.Sync();
+            // 롤 교정의 재료: 이번 렌더가 잰 채널 범위 모양을 남기고, 같은 롤의 교정을 시도합니다.
+            panel.RememberRangeShape(
+                applied.RangeShape?.Red ?? 0F,
+                applied.RangeShape?.Green ?? 0F,
+                applied.RangeShape?.Blue ?? 0F,
+                applied.RangeShape is not null);
             // 개발자 디버그 구역에 이번 현상이 실제로 잰 값을 적습니다.
             Adjustments.ShowDebugMetrics(
                 panel.LastAppliedBase,

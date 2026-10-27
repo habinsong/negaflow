@@ -6,6 +6,16 @@ internal static unsafe class ManagedLayoutContractTests
 {
     internal static void Verify(ContractTestContext context)
     {
+        context.Check(sizeof(NativeDevelopExportRequestV41) == 5216 &&
+            Marshal.OffsetOf<NativeDevelopExportRequestV41>(nameof(NativeDevelopExportRequestV41.ChannelRangePresent)).ToInt32() == 5192 &&
+            Marshal.OffsetOf<NativeDevelopExportRequestV41>(nameof(NativeDevelopExportRequestV41.MeasureRangeShape)).ToInt32() == 5196 &&
+            Marshal.OffsetOf<NativeDevelopExportRequestV41>(nameof(NativeDevelopExportRequestV41.ChannelRangeRed)).ToInt32() == 5200 &&
+            Marshal.OffsetOf<NativeDevelopExportRequestV41>(nameof(NativeDevelopExportRequestV41.ChannelRangeReserved)).ToInt32() == 5212,
+            "channel_range_tail_layout");
+        context.Check(sizeof(NativeDevelopExportResultV7) == sizeof(NativeDevelopExportResultV6) + 24 &&
+            Marshal.OffsetOf<NativeDevelopExportResultV7>(nameof(NativeDevelopExportResultV7.RangeShapePresent)).ToInt32() == sizeof(NativeDevelopExportResultV6) &&
+            Marshal.OffsetOf<NativeDevelopExportResultV7>(nameof(NativeDevelopExportResultV7.RangeShapeRed)).ToInt32() == sizeof(NativeDevelopExportResultV6) + 8,
+            "range_shape_tail_layout");
         context.Check(sizeof(NativeDevelopExportRequestV40) == 5192 &&
             Marshal.OffsetOf<NativeDevelopExportRequestV40>(nameof(NativeDevelopExportRequestV40.AutoBalance)).ToInt32() == 5184, "auto_balance_tail_layout");
         context.Check(sizeof(NativeDevelopExportRequestV39) == 5184, "input_v39_request_size");

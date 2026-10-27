@@ -18,7 +18,7 @@ struct DevelopFrameSnapshot: @unchecked Sendable {
     // 메모리 적재본이 없을 때의 디스크 백킹(결함 제거된 raw TIFF). 그래도 결함 제거가 유지된다.
     let cleanedRawURL: URL?
     let filmType: FilmType
-    let params: DevelopParameters
+    var params: DevelopParameters
     let preset: LookPreset?
     let imageTransform: ImageTransform
     let cachedBase: FilmBase?
@@ -34,6 +34,8 @@ struct DevelopFrameSnapshot: @unchecked Sendable {
     var destinationGamutWarningEnabled: Bool = false
     var clippingOverlayEnabled: Bool = false
     var needsPixelSamplerBase: Bool = false
+    /// 프레임에 채널 밀도 범위 모양이 아직 없다 — 이번 렌더가 한 번 재서 돌려준다(롤 교정의 재료).
+    var needsRangeShape: Bool = false
     // 현상 프록시 긴 변 상한. 인터랙티브(드래그 중) 패스는 작게, 정착(settle) 패스는 풀해상도로.
     var proxyMaxDimension: CGFloat = DevelopFrameRenderer.fullMaxDimension
     // 썸네일만 생성(인터랙티브 패스에서 부가 비용 없이 스트립용 썸네일 확보).
@@ -72,6 +74,10 @@ struct DevelopFrameRenderResult: @unchecked Sendable {
     /// 이번 렌더가 실제로 쓴 장면 측정(재사용분 + 새로 잰 분). 프레임이 보관했다가 다음
     /// 현상에 돌려준다.
     let sceneMeasurements: DevelopSceneMeasurements
+    /// `needsRangeShape` 를 요청했고 측정이 성립했을 때만 채워진다.
+    var rangeShape: SIMD3<Double>? = nil
+    /// 이번 렌더가 모양 측정을 실제로 시도했다(베이스가 있어 잴 수 있었다). 성립 여부와 무관하다.
+    var rangeShapeAttempted: Bool = false
 }
 
 struct DevelopFrameFastPreviewResult: @unchecked Sendable {

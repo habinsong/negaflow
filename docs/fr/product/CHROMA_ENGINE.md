@@ -13,7 +13,7 @@ Chroma Engine inverse et développe le film. Le code se trouve dans le module `C
 | Espace de sortie | sRGB, Display P3, Adobe RGB, ICC RVB personnalisé |
 
 > [!IMPORTANT]
-> Par défaut, `MAIN` utilise Équilibre auto sur ON. Pour MAIN (y compris PRINT) et CS, le bouton est à droite du titre Cible. Il ajuste la couleur et la luminosité à partir de la photo actuelle ; OFF saute cette étape. Tonalité auto, balance des blancs auto, niveaux auto et couleur auto restent des fonctions distinctes, désactivées par défaut.
+> Par défaut, `MAIN` utilise Équilibre auto sur ON. Le bouton est une petite pastille à droite du titre Cible. Il n’apparaît que pour les négatifs couleur et noir et blanc, avec MAIN (y compris PRINT) et CS. Il ajuste la couleur et la luminosité à partir de la photo actuelle ; OFF saute cette étape. Tonalité auto, balance des blancs auto, niveaux auto et couleur auto restent des fonctions distinctes, désactivées par défaut.
 
 ## Ce qui prime
 
@@ -108,7 +108,7 @@ Certaines valeurs approchent des courbes lues dans des documents publics, d'autr
 
 Équilibre auto sur ON rétablit l’inversion MAIN/CS de `412bb31`. Chaque canal mesure sa plage de densité au percentile des 0.2% les plus denses, la limite à 1.8D, puis applique la courbe d’origine `shoulder-print-response-v4` et la correction de saturation des scènes ternes. Les préréglages de film multiplient cette plage par leurs facteurs relatifs par canal. La limite de 1.8D conserve le rendu précédent ; ce n’est pas une propriété mesurée de tous les films. Elle peut affecter les négatifs denses.
 
-OFF utilise la même courbe v4 avec une plage nominale fixe (couleur 1.55D, noir et blanc 2.17D), multipliée par les facteurs du préréglage sélectionné. La normalisation par scène et la correction de saturation sont omises. À base et réglages identiques, une même transmittance produit le même résultat dans différentes images. ON peut modifier couleur et luminosité selon la scène. Aucun mode ne démontre une précision colorimétrique mesurée du film.
+OFF utilise la même courbe v4 avec une plage nominale fixe (couleur 1.55D, noir et blanc 2.17D), multipliée par les facteurs du préréglage sélectionné. La normalisation par scène et la correction de saturation sont omises. Pour un négatif couleur, OFF multiplie aussi par une calibration de plage par canal propre au scanner et au film. Elle prend la médiane d'au moins trois images à mesure valide dans le même rouleau (ou, sans rouleau, le même dossier de scan). La valeur choisie reste enregistrée sur chaque image. Avec moins d'images, ou avec des films mélangés, les trois canaux gardent la même plage. À base et réglages identiques, une même transmittance produit le même résultat dans les images d'un même rouleau. ON peut modifier couleur et luminosité selon la scène. Aucun mode ne démontre une précision colorimétrique mesurée du film.
 
 [Réponse négative](../reference/PRINT_RESPONSE.md)
 
@@ -128,7 +128,7 @@ Les données sont décrites dans [profils de film](FILM_PROFILES.md).
 
 ### `MAIN`
 
-Par défaut, `MAIN` utilise Équilibre auto sur ON. Pour MAIN (y compris PRINT) et CS, le bouton est à droite du titre Cible. Il ajuste la couleur et la luminosité à partir de la photo actuelle ; OFF saute cette étape. Tonalité auto, balance des blancs auto, niveaux auto et couleur auto restent des fonctions distinctes, désactivées par défaut.
+Par défaut, `MAIN` utilise Équilibre auto sur ON. Le bouton est une petite pastille à droite du titre Cible. Il n’apparaît que pour les négatifs couleur et noir et blanc, avec MAIN (y compris PRINT) et CS. Il ajuste la couleur et la luminosité à partir de la photo actuelle ; OFF saute cette étape. Tonalité auto, balance des blancs auto, niveaux auto et couleur auto restent des fonctions distinctes, désactivées par défaut.
 
 ### `PRINT`
 
@@ -188,6 +188,19 @@ Une fois l'émulsion choisie, grain et halation deviennent des propriétés de l
 | Correction locale | Masques radial, linéaire, polygonal, pinceau, plus densité plus et densité moins |
 
 Ces valeurs sont enregistrées comme un historique d'édition par étapes. GrainMend et la correction locale ordinaire diffèrent par leur but et par leur mode d'enregistrement.
+
+### Corrections automatiques
+
+| Commande | Comportement |
+|---|---|
+| Tonalité automatique | Affecte exposition, contraste, densité, hautes lumières, ombres, blancs et noirs. Conserve les réglages de couleur et les courbes de l’utilisateur. |
+| Balance des blancs automatique | Estime température et teinte à partir des candidats neutres par plage de luminance. Exclut les échantillons dont un canal RGB est écrêté et réduit la correction si les candidats sont rares ou couvrent une plage étroite. |
+| Niveaux automatiques | Mesure des extrémités de luminance communes et applique le même gain de luminance à RGB. Conserve les rapports entre canaux sans les étirer séparément. |
+| Couleur automatique | Ajuste les dominantes résiduelles aux candidats neutres. N’utilise des pentes par canal que si l’ajustement prédit aussi des plages de luminance laissées hors calcul ; sinon, applique des gains seuls. Réduit la correction lorsque les candidats de repli sont peu étayés. |
+
+La tonalité automatique mesure à nouveau l’aperçu rendu avec la première proposition. Si une correction supplémentaire d’exposition ou de blanc est proposée, elle est également rendue et retenue seulement si le score des tons moyens, des extrémités, de l’étendue tonale et de l’écrêtage s’améliore. Cette correction bornée ne recherche pas un rendu idéal unique. Une nouvelle exécution affecte les valeurs au lieu de les cumuler. La remise à zéro conserve les réglages de couleur.
+
+L’analyse utilise des moyennes pondérées par surface en linear RGB et limite le grand côté de la grille. Tonalité et WB utilisent un aperçu sRGB : l’écrêtage concerne les canaux de l’aperçu, pas la saturation du capteur. Ces estimations ne séparent pas toujours la couleur du sujet de celle de l’éclairage et ne prouvent pas la fidélité mesurée des couleurs du film. La balance automatique MAIN/CS et la correction de saturation des scènes peu saturées restent dans l’étape d’inversion précédente.
 
 ## Gestion des couleurs
 

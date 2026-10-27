@@ -872,6 +872,8 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developExportRefusedPositiveFilm.Text" xml:space="preserve"><value>Le développement de film positif n’est pas encore pris en charge par le moteur Windows.</value></data>
   <data name="developExportRefusedDestination.Text" xml:space="preserve"><value>Choisissez un chemin complet pour l’exportation.</value></data>
   <data name="developExportRefusedOutputFormat.Text" xml:space="preserve"><value>Ce format d’exportation n’est pas pris en charge.</value></data>
+  <data name="developExportRefusedDngTarget.Text" xml:space="preserve"><value>L’export DNG ne prend pas en charge la cible PRINT. Utilisez TIFF, PNG ou JPEG.</value></data>
+  <data name="developExportRefusedDngSource.Text" xml:space="preserve"><value>L’export DNG exige une source non compressée (TIFF, RAW d’appareil ou DNG). Pour les sources JPEG, PNG et HEIC, utilisez TIFF, PNG ou JPEG.</value></data>
   <data name="developExportRefusedStaleDefectSource.Text" xml:space="preserve"><value>La taille du fichier de numérisation a changé depuis l’enregistrement des retouches. Reliez l’image au scan d’origine ou effacez les retouches, puis exportez à nouveau.</value></data>
   <data name="developSectionFilm.Text" xml:space="preserve"><value>Film</value></data>
   <data name="developFilmLookNone.Text" xml:space="preserve"><value>Aucun</value></data>

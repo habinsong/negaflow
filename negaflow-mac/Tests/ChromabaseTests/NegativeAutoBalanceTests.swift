@@ -18,6 +18,18 @@ final class NegativeAutoBalanceTests: XCTestCase {
             colorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!)
         return data
     }
+    /// 화면은 이 규칙으로 자동 밸런스 스위치를 보인다: MAIN 계열(MAIN·PRINT)과 커스텀만이고,
+    /// 스캐너 타깃과 EXPIRED 는 자기 반전 도메인이 있어 스위치가 없다.
+    func testSwitchExistsOnlyForMainFamilyAndCustomTargets() {
+        for target in DevelopTarget.allCases {
+            let expected = target == .main || target == .print || target.isCustom
+            XCTAssertEqual(target.supportsAutoBalance, expected, "\(target.rawValue)")
+        }
+        XCTAssertFalse(DevelopTarget.rescue.supportsAutoBalance)
+        XCTAssertFalse(DevelopTarget.noritsu.supportsAutoBalance)
+        XCTAssertTrue(DevelopTarget.emulsion.supportsAutoBalance)
+    }
+
     func testDefaultAndExplicitOffRoundTrip() throws {
         XCTAssertTrue(DevelopParameters().autoBalance)
         XCTAssertTrue(try JSONDecoder().decode(DevelopParameters.self, from: Data("{}".utf8)).autoBalance)

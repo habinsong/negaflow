@@ -29,6 +29,8 @@ extension ScanFrame {
         copy.params = params
         copy.imageTransform = imageTransform
         copy.baseRGB = baseRGB
+        copy.rangeShape = rangeShape
+        copy.rangeShapeAttempted = rangeShapeAttempted
         copy.developHistory = developHistory
         copy.developSnapshots = developSnapshots
         copy.rawPreviewImage = rawPreviewImage

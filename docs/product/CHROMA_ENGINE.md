@@ -13,7 +13,7 @@ Chroma Engine inverts and develops film. The code sits in the `Chromabase` modul
 | Output color space | sRGB, Display P3, Adobe RGB, custom RGB ICC |
 
 > [!IMPORTANT]
-> The default is `MAIN` with Auto Balance on. The switch sits at the right of the Target heading for MAIN (including PRINT) and CS. It adjusts color and brightness from the current picture; switching it off bypasses that step. Auto Tone, Auto White Balance, Auto Levels and Auto Color remain separate and off by default.
+> The default is `MAIN` with Auto Balance on. The switch is a small pill at the right of the Target heading. It appears only for color and B&W negatives on MAIN (including PRINT) and CS. It adjusts color and brightness from the current picture; switching it off bypasses that step. Auto Tone, Auto White Balance, Auto Levels and Auto Color remain separate and off by default.
 
 ## What comes first
 
@@ -108,7 +108,7 @@ Some values were approximated by reading curves in public material, and some wer
 
 Auto Balance ON restores the MAIN/CS inversion from `412bb31`: each channel uses its densest 0.2% scene percentile, with a 1.8D range limit, followed by the original `shoulder-print-response-v4` curve and muted-scene vibrance. Film presets multiply that measured range by their relative channel factors. The 1.8D limit is a rendering safeguard retained for compatibility, not a measured property of every film. It can affect dense negatives.
 
-OFF uses the same v4 curve with a fixed nominal range (color 1.55D, B&W 2.17D), multiplied by preset factors when selected. It skips scene range normalization and muted-scene vibrance. Equal transmittance with the same base and settings then gives the same result across frames. ON can change both brightness and color with scene content. Neither mode establishes measured film color accuracy.
+OFF uses the same v4 curve with a fixed nominal range (color 1.55D, B&W 2.17D), multiplied by preset factors when selected. It skips scene range normalization and muted-scene vibrance. For color negatives, OFF also multiplies a channel range calibration for the scanner and film. It is the median of at least three frames with a valid measurement from the same roll, or from the same scan folder when no roll is set. The value, once chosen, stays on each frame. With fewer frames, or with mixed film, the three channels keep the same range. Equal transmittance with the same base and settings then gives the same result across the frames of one roll. ON can change both brightness and color with scene content. Neither mode establishes measured film color accuracy.
 
 [Negative response](../reference/PRINT_RESPONSE.md)
 
@@ -128,7 +128,7 @@ The data is described in [film profiles](FILM_PROFILES.md).
 
 ### `MAIN`
 
-The default is `MAIN` with Auto Balance on. The switch sits at the right of the Target heading for MAIN (including PRINT) and CS. It adjusts color and brightness from the current picture; switching it off bypasses that step. Auto Tone, Auto White Balance, Auto Levels and Auto Color remain separate and off by default.
+The default is `MAIN` with Auto Balance on. The switch is a small pill at the right of the Target heading. It appears only for color and B&W negatives on MAIN (including PRINT) and CS. It adjusts color and brightness from the current picture; switching it off bypasses that step. Auto Tone, Auto White Balance, Auto Levels and Auto Color remain separate and off by default.
 
 ### `PRINT`
 
@@ -188,6 +188,19 @@ Grain and halation become film properties once a stock is selected, so the textu
 | Local adjustment | Radial, linear, polygon, brush masks, dodge and burn |
 
 These values are stored as a step-by-step edit history. GrainMend and ordinary local adjustment differ in purpose and in how they are stored.
+
+### Automatic corrections
+
+| Control | Behavior |
+|---|---|
+| Auto Tone | Assigns exposure, contrast, density, highlights, shadows, whites and blacks. Keeps the user's color controls and curves. |
+| Auto White Balance | Estimates temperature and tint from near-neutral luminance bands. Rejects samples with a clipped RGB channel and reduces correction when neutral evidence is sparse or covers a narrow tonal range. |
+| Auto Levels | Measures common luminance endpoints and applies the same luminance gain to RGB. Preserves channel ratios instead of stretching each channel separately. |
+| Auto Color | Fits residual casts to neutral candidates. Uses channel slopes only when a fit predicts separate, unused luminance bands; otherwise uses gains. Weak fallback evidence receives less correction. |
+
+Auto Tone checks the first proposal on a rendered preview. If it proposes a further exposure or white-point change, it renders that candidate too and accepts it only when a score of middle tone, endpoints, tonal range and clipping improves. This is a bounded correction, not a search for a unique ideal rendering. Repeating the command assigns settings rather than accumulating them. Resetting Auto Tone keeps the user's color controls.
+
+Analysis uses area-weighted averages in linear RGB, with a bounded long edge. Tone and WB use an sRGB preview, so clipping means preview-channel clipping, not sensor saturation. These estimates cannot distinguish every subject color from an illuminant cast or establish measured film-color accuracy. MAIN/CS Auto Balance and its muted-scene vibrance remain part of the earlier inversion stage.
 
 ## Color management
 

@@ -24,7 +24,13 @@ internal static unsafe class AutoAdjustContractTests
             "auto_adjust_exposure_inside_engine_range");
         context.Check(settings.Highlights <= 0.0, "auto_adjust_highlights_recover_only");
         context.Check(settings.Shadows >= 0.0, "auto_adjust_shadows_lift_only");
-        context.Check(settings.Vibrance >= 0.0, "auto_adjust_vibrance_increases_only");
+        context.Check(settings.Vibrance == 0.0, "auto_tone_does_not_propose_a_vibrance_change");
+        double score = NativeAutoAdjust.ToneScore(pixels, width, height, adjustMid: true);
+        context.Check(double.IsFinite(score) && score >= 0,
+            "auto_tone_score_is_finite_for_a_valid_preview");
+        context.CheckThrows<ArgumentException>(
+            () => NativeAutoAdjust.ToneScore(new byte[16], width, height, adjustMid: true),
+            "auto_tone_score_refuses_an_undersized_bitmap");
         // 잔차 클램프는 ±1(예전 슬라이더 끝)입니다 — 2026-10-14 ±0.6 에서 넓혔습니다.
         context.Check(
             settings.Warmth >= -1.0 && settings.Warmth <= 1.0 &&

@@ -62,6 +62,8 @@ int usage() {
                  "단계를 재려면 이것이 있어야 합니다.\n"
                  " bwlook — 디지털 원본 흑백 룩(헐레이션·유제·아큐턴스·그레인)을 켭니다.\n"
                  " grain — TextureStage filmGrain 을 0.40 으로 켭니다(기본 0 이면 단계가 비어 있음).\n"
+                 " eachrun — 마지막 회차만이 아니라 매 회차의 단계 표를 찍습니다(회차가 쌓일수록 느려지는지 볼 때).\n"
+                 " balance — 자동 밸런스를 켭니다(장면 밀도 범위 측정과 채도 보정이 더해집니다). 기본은 끔.\n"
                  " areaavg — 디코드된 working 이미지에 CIAreaAverage 대응 면적 평균을 재어 stderr 에 찍습니다.\n"
                  " GPU 면적평균은 기본 끔. NEGA_GPU_AREA_AVERAGE=1 로만 켭니다.\n";
     return 2;
@@ -183,8 +185,17 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
         if (std::wstring_view{arguments[index]} == L"grain") {
             request.texture.grain = 0.40F;
         }
+        if (std::wstring_view{arguments[index]} == L"balance") {
+            request.auto_balance = true;
+        }
     }
 
+    bool each_run = false;
+    for (int index = 2; index < argument_count; ++index) {
+        if (std::wstring_view{arguments[index]} == L"eachrun") {
+            each_run = true;
+        }
+    }
     bool measure_area_average = false;
     for (int index = 2; index < argument_count; ++index) {
         if (std::wstring_view{arguments[index]} == L"areaavg") {
@@ -222,6 +233,10 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
                       << "\",\"failure\":\"" << outcome.failure_name << '"';
         }
         std::cout << '}';
+        if (each_run && run + 1 != repeats) {
+            std::cerr << "[timing] --- run " << run + 1 << '\n';
+            pipeline::dump_stage_timings();
+        }
         // 마지막 회차의 표만 찍습니다 — 앞 회차는 캐시가 차는 중이라 대표값이 아닙니다.
         if (run + 1 == repeats) {
             std::cout << "]}\n";

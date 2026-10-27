@@ -1,31 +1,15 @@
 import Foundation
 import CoreGraphics
+import CoreImage
 
-// 라이트룸식 자동 보정(고전 알고리즘, AI 아님). 호출측(AppModel)이 대상 슬라이더를 0 으로 리셋한
-// **중립 현상본**을 렌더해 그 통계를 넘기고, 여기 반환값을 슬라이더에 **대입**한다(누적 아님) → 1회 결정적.
-//
-// 2026-07-17 재설계(검증된 방법론 — 추측 아님):
-//  • Auto Tone — 히스토그램 percentile 을 **linear 도메인**으로 환산해, 각 슬라이더의 실제
-//    전달함수(ToneMapper.applyExposure — ExposureShoulder 와 같은 식, basicTone 커널의 luma 마스크·계수)를
-//    **역산**한다. 노출→화이트/블랙→하이라이트/섀도→농도→대비 순서로, 앞 단계의 이동을 뒤 단계
-//    percentile 예측에 반영한다(순차 시뮬레이션). 클리핑 목표는 일반 Auto Levels/Curves 의
-//    0.1~0.5% 클리핑 관행을 따른다. 노출의 미드 앵커는 photometric mid(linear 0.18 — 반전
-//    재설계와 동일 앵커)로, **밝히는 방향만** 움직인다(LATD "밝히는 방향만" 원리 — 설경/하이키를
-//    회색으로 끌어내리는 gray-world 실패 배제); 감광은 실질 하이라이트 클리핑(≥5%)의 복구 전용.
-//  • Auto WB — 근중립 부분집합(근중립 미드톤 평균 기반) 우선,
-//    부족하면 gray-world(산술평균) 대신 **Minkowski p=6 norm 평균**(Shades-of-Gray,
-//    Finlayson & Trezzi 2004 — 밝은 픽셀 가중으로 지배색 장면에서 산술평균보다 강건)으로 추정.
-//    ColorModel 의 화이트밸런스 게인(WhiteBalanceGains — ±1 까지 예전 선형 게인, 그 너머 로그 연장)을
-//    **linear 도메인 통계**로 역산하고, **부분 보정(85%) + 클램프(±0.6) + 데드밴드**를 둔다 —
-//    완전 중립화(full-correction)는 gray-world 가정이 깨지는 장면(노을·숲·단색 배경)에서
-//    반대 캐스트(과보정 노랑/파랑)로 폭주하고, 지각적으로도 차갑다(중립 회색 타겟의
-//    문서화된 한계와 동일).
+// Automatic tone uses linear luminance, encoded only for the tone masks' histogram.
+// WB uses bounded near-neutral evidence; neither operation changes saturation.
 public enum AutoAdjust {
     public struct ImageStats: Sendable, Equatable {
         public var avgR: Double, avgG: Double, avgB: Double   // 0..1 (sRGB 감마 도메인 평균)
         public var neutralAvgR: Double, neutralAvgG: Double, neutralAvgB: Double
         public var neutralPixelFraction: Double
-        public var lumaHist: [Double]                         // 256 bins (sRGB 감마 luma), 합=1
+        public var lumaHist: [Double]                         // 256 bins (encoded linear luminance), sum=1
         public var avgSaturation: Double                      // 0..1 (HSV S 평균)
         /// 근중립 부분집합의 **linear** 평균(WB 역산 도메인 — ColorModel 게인은 linear 곱).
         public var neutralLinearR: Double, neutralLinearG: Double, neutralLinearB: Double
@@ -33,6 +17,8 @@ public enum AutoAdjust {
         public var minkowskiLinearR: Double, minkowskiLinearG: Double, minkowskiLinearB: Double
         /// 휘도대별 중립축 증거(NeutralAxisEvidence). 있으면 자동 WB 가 대역 중앙값의 중앙값을 쓴다.
         var neutralAxis: NeutralAxisEvidence?
+        var whiteBalanceConfidence = 1.0
+        public var clippedFraction: Double = 0
 
         public init(
             avgR: Double,
@@ -67,7 +53,7 @@ public enum AutoAdjust {
         }
     }
 
-    /// 현상 결과 톤 보정 델타. 현재 DevelopParameters 위에 더한다(clamp는 호출측).
+    /// 대상 톤 슬라이더에 대입할 절대값. 색상 필드는 호환을 위해 0으로 남긴다.
     public struct ToneDelta: Sendable, Equatable {
         public var exposure = 0.0, contrast = 0.0, highlight = 0.0, shadow = 0.0
         public var whites = 0.0, blacks = 0.0, vibrance = 0.0, saturation = 0.0
@@ -77,85 +63,63 @@ public enum AutoAdjust {
         public init() {}
     }
 
-    // MARK: 이미지 통계 (다운샘플 RGBA8 → 평균색/luma 히스토그램/채도)
+    // MARK: 면적 평균 linear 표본 → 색 평균과 휘도 히스토그램
 
-    /// CGImage 를 작은 격자로 다운샘플해 통계를 낸다(전체 픽셀 순회 불필요 — Lanczos 없이 ctx.draw 보간).
+    /// CGImage를 linear RGB로 변환한 뒤 긴 변이 제한된 면적 평균 격자로 측정한다.
     public static func imageStats(_ cg: CGImage, sample: Int = 200) -> ImageStats? {
-        let longSide = max(cg.width, cg.height)
-        guard longSide > 0 else { return nil }
-        let scale = min(1.0, Double(sample) / Double(longSide))
-        let w = max(1, Int(Double(cg.width) * scale)), h = max(1, Int(Double(cg.height) * scale))
-        var data = [UInt8](repeating: 0, count: w * h * 4)
-        let cs = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
-        guard let ctx = CGContext(data: &data, width: w, height: h, bitsPerComponent: 8,
-                                  bytesPerRow: w * 4, space: cs,
-                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
-        ctx.interpolationQuality = .medium
-        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
-
-        // 8bit sRGB → linear 변환 LUT(256) — 픽셀별 정확 변환(평균의 decode ≠ decode 의 평균).
-        var decodeLUT = [Double](repeating: 0, count: 256)
-        for i in 0..<256 { decodeLUT[i] = srgbDecode(Double(i) / 255.0) }
-
-        var sumR = 0.0, sumG = 0.0, sumB = 0.0, sumSat = 0.0
-        var neutralR = 0.0, neutralG = 0.0, neutralB = 0.0, neutralCount = 0
-        var neutralLinR = 0.0, neutralLinG = 0.0, neutralLinB = 0.0
-        var mink6R = 0.0, mink6G = 0.0, mink6B = 0.0
+        guard let grid = SceneAnalysisSampler.sample(CIImage(cgImage: cg), longEdge: sample) else { return nil }
+        var sum = SIMD3<Double>(repeating: 0), neutral = sum, neutralLinear = sum, minkowski = sum
+        var neutralCount = 0, eligibleCount = 0, saturation = 0.0
         var hist = [Double](repeating: 0, count: 256)
-        let n = w * h
-        var linearPixels: [SIMD3<Double>] = []
-        linearPixels.reserveCapacity(n)
-        for i in 0..<n {
-            let o = i * 4
-            let r = Double(data[o]) / 255, g = Double(data[o + 1]) / 255, b = Double(data[o + 2]) / 255
-            let rl = decodeLUT[Int(data[o])], gl = decodeLUT[Int(data[o + 1])], bl = decodeLUT[Int(data[o + 2])]
-            linearPixels.append(SIMD3(rl, gl, bl))
-            sumR += r; sumG += g; sumB += b
-            let luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
-            hist[min(255, max(0, Int(luma * 255)))] += 1
-            let mx = max(r, max(g, b)), mn = min(r, min(g, b))
+        var eligible: [SIMD3<Double>] = []
+        eligible.reserveCapacity(grid.pixels.count)
+        for (index, p) in grid.pixels.enumerated() {
+            let rgb = SIMD3(srgbEncode(max(0, p.x)), srgbEncode(max(0, p.y)), srgbEncode(max(0, p.z)))
+            sum += rgb
+            let y = 0.2126 * p.x + 0.7152 * p.y + 0.0722 * p.z
+            let encodedY = srgbEncode(max(0, y))
+            hist[min(255, max(0, Int((encodedY * 255).rounded())))] += 1
+            let mx = max(rgb.x, max(rgb.y, rgb.z)), mn = min(rgb.x, min(rgb.y, rgb.z))
             let sat = mx > 1e-6 ? (mx - mn) / mx : 0
-            sumSat += sat
-            // Minkowski p=6 (linear): 지배색 장면에서 산술평균보다 강건한 광원 추정
-            // (Shades-of-Gray). 끝단(클립/순흑)은 정보가 없어 제외.
-            if luma > 0.02 && luma < 0.99 {
-                mink6R += pow(rl, 6); mink6G += pow(gl, 6); mink6B += pow(bl, 6)
-            }
-            // 근중립 후보: 채도·luma 대역을 좁혀 유채색/끝단 오염 배제
-            // (근중립 미드톤 평균을 중립화 근거로 쓴다).
-            if sat <= 0.22 && luma > 0.10 && luma < 0.90 {
-                neutralR += r; neutralG += g; neutralB += b
-                neutralLinR += rl; neutralLinG += gl; neutralLinB += bl
-                neutralCount += 1
+            saturation += sat
+            guard grid.clippedFractions[index] == 0, min(p.x, min(p.y, p.z)) > 0.0003,
+                  y > 0.002, y < 0.90 else { continue }
+            eligible.append(p); eligibleCount += 1
+            minkowski += SIMD3(pow(p.x, 6), pow(p.y, 6), pow(p.z, 6))
+            if sat <= 0.22, encodedY > 0.10, encodedY < 0.90 {
+                neutral += rgb; neutralLinear += p; neutralCount += 1
             }
         }
-        let nd = Double(n)
-        let neutralDen = Double(max(neutralCount, 1))
-        let hasNeutralSamples = neutralCount >= max(16, n / 100)
-        let mink6Count = max(1.0, nd)
-        var stats = ImageStats(avgR: sumR / nd, avgG: sumG / nd, avgB: sumB / nd,
-                          lumaHist: hist.map { $0 / nd }, avgSaturation: sumSat / nd,
-                          neutralAvgR: hasNeutralSamples ? neutralR / neutralDen : sumR / nd,
-                          neutralAvgG: hasNeutralSamples ? neutralG / neutralDen : sumG / nd,
-                          neutralAvgB: hasNeutralSamples ? neutralB / neutralDen : sumB / nd,
-                          neutralPixelFraction: Double(neutralCount) / nd,
-                          neutralLinearR: hasNeutralSamples ? neutralLinR / neutralDen : nil,
-                          neutralLinearG: hasNeutralSamples ? neutralLinG / neutralDen : nil,
-                          neutralLinearB: hasNeutralSamples ? neutralLinB / neutralDen : nil,
-                          minkowskiLinearR: pow(mink6R / mink6Count, 1.0 / 6.0),
-                          minkowskiLinearG: pow(mink6G / mink6Count, 1.0 / 6.0),
-                          minkowskiLinearB: pow(mink6B / mink6Count, 1.0 / 6.0))
-        stats.neutralAxis = NeutralAxisEstimator.measure(linearPixels)
+        let n = Double(grid.pixels.count), count = Double(max(neutralCount, 1))
+        let hasNeutral = neutralCount >= max(16, grid.pixels.count / 100)
+        let m = Double(max(eligibleCount, 1))
+        var stats = ImageStats(avgR: sum.x / n, avgG: sum.y / n, avgB: sum.z / n,
+            lumaHist: hist.map { $0 / n }, avgSaturation: saturation / n,
+            neutralAvgR: hasNeutral ? neutral.x / count : sum.x / n,
+            neutralAvgG: hasNeutral ? neutral.y / count : sum.y / n,
+            neutralAvgB: hasNeutral ? neutral.z / count : sum.z / n,
+            neutralPixelFraction: Double(neutralCount) / n,
+            neutralLinearR: hasNeutral ? neutralLinear.x / count : nil,
+            neutralLinearG: hasNeutral ? neutralLinear.y / count : nil,
+            neutralLinearB: hasNeutral ? neutralLinear.z / count : nil,
+            minkowskiLinearR: pow(minkowski.x / m, 1.0 / 6.0),
+            minkowskiLinearG: pow(minkowski.y / m, 1.0 / 6.0),
+            minkowskiLinearB: pow(minkowski.z / m, 1.0 / 6.0))
+        stats.neutralAxis = NeutralAxisEstimator.measure(eligible)
+        if stats.neutralAxis != nil {
+            stats.neutralAxis!.confidence *= min(1, Double(eligible.count) / (n * 0.10))
+        }
+        stats.whiteBalanceConfidence = stats.neutralAxis?.confidence ?? 0
+        stats.clippedFraction = grid.clippedFractions.reduce(0, +) / n
         return stats
     }
 
     // MARK: Auto White Balance (근중립 우선 + Shades-of-Gray 폴백, 부분 보정)
 
-    /// WB 부분 보정 강도. 완전 중립화는 지배색 장면에서 반대 캐스트로 폭주하고 지각적으로
-    /// 차갑다 — 측정 캐스트의 85% 만 걷는다(실무 관행; 중립 회색 타겟의 한계).
+    /// 최대 보정 강도. 실제 적용량은 중립 후보의 비율과 휘도 범위로 더 줄인다.
     static let wbCorrectionStrength = 0.85
     /// Warmth/Tint 절대 클램프. 슬라이더 전 범위(±4)가 아니라 잔차 캐스트 상한(±1 = 예전 슬라이더
-    /// 끝, R/B ±0.525 스톱)까지만 보정한다. 고정 반전은 WB를 자동으로 맞추지 않는다.
+    /// 끝)까지만 보정한다. 기본 반전의 자동 밸런스와는 별도 조정이다.
     /// 장면색과 광원색을 구분할 근거가 부족한 자동 추정은 제한하고 큰 캐스트는 수동 WB로 맞춘다.
     static let wbClamp = 1.0
     /// 데드밴드: R/B 채널비 오차가 이 이하(≈1.5%)면 이미 중립 — 건드리지 않는다.
@@ -167,7 +131,9 @@ public enum AutoAdjust {
     /// 같다(같은 식의 로그). R>B(따뜻)면 음수(식힘).
     public static func autoWhiteBalance(_ s: ImageStats) -> (warmth: Double, tint: Double) {
         let r: Double, g: Double, b: Double
-        if let axis = s.neutralAxis, !axis.isFallback {
+        var confidence = s.whiteBalanceConfidence
+        if let axis = s.neutralAxis {
+            confidence = axis.confidence
             // 휘도대마다 한 표 — 한 휘도대를 차지한 따뜻한 조명 면이 평균을 끌지 못한다.
             let cast = axis.medianCast
             (r, g, b) = (exp(cast.x), exp(cast.y), exp(cast.z))
@@ -181,14 +147,14 @@ public enum AutoAdjust {
 
         var warmth = WhiteBalanceGains.solve(log2(b / r), WhiteBalanceGains.warmthRedBlueStops)
         if abs(b - r) / max(r + b, 1e-6) * 2 < wbDeadband { warmth = 0 }
-        warmth = clamp(warmth * wbCorrectionStrength, -wbClamp, wbClamp)
+        warmth = clamp(warmth * wbCorrectionStrength * confidence, -wbClamp, wbClamp)
 
         // Tint: 온도를 적용한 뒤의 잔차로 푼다(온도 자신의 녹색 성분 포함).
         let residualGreenStops = 0.5 * (log2(r) + log2(b)) - log2(g)
             - WhiteBalanceGains.warmthGreenStops(warmth)
         var tint = WhiteBalanceGains.solve(residualGreenStops, WhiteBalanceGains.tintGreenStops)
         if abs(residualGreenStops) * log(2.0) < wbDeadband { tint = 0 }
-        tint = clamp(tint * wbCorrectionStrength, -wbClamp, wbClamp)
+        tint = clamp(tint * wbCorrectionStrength * confidence, -wbClamp, wbClamp)
         return (warmth, tint)
     }
 
@@ -198,7 +164,7 @@ public enum AutoAdjust {
     static let midGrayLinear = 0.18
     /// 확산 화이트 목표(linear) — 노출/화이트가 상위 percentile 을 이 근처로 보낸다.
     static let diffuseWhiteLinear = 0.90
-    /// 블랙 포인트 목표(linear ≈ sRGB 0.06) — 일반 Auto 의 0.1~0.5% 클리핑 관행.
+    /// 블랙 포인트 목표(linear ≈ sRGB 0.06).
     static let blackPointLinear = 0.005
     /// 감광(노출 −)을 발동하는 실질 클리핑 비율. 소수 스펙큘러(<5%)는 노출 대신
     /// Highlights 복구가 담당한다.
@@ -216,7 +182,7 @@ public enum AutoAdjust {
             return 1
         }
         func lin(_ srgb: Double) -> Double { srgbDecode(srgb) }
-        let clipHigh = hist[255], clipLow = hist[0]
+        let clipHigh = max(hist[255], s.clippedFraction), clipLow = hist[0]
         // 블랙/섀도 포인트는 스캔 프레임 경계(순흑 대량)에 강건한 percentile 을 쓴다. p005/p025 는
         // 경계가 2.5%만 넘어도 그 경계를 블랙/섀도 포인트로 잡아, 정상 노출 이미지의 암부까지
         // 목표점으로 끌어올려 이미지를 찢었다(사용자 증상). p02/p08 은 그보다 얇은 경계를 건너뛴다.
@@ -304,8 +270,9 @@ public enum AutoAdjust {
         let p90as = afterEV(p90s)
         d.contrast = clamp((0.52 - (p90as - p10as)) * 1.15, -0.15, 0.55)
 
-        // ── 7. Vibrance — 채도가 낮으면 부스트(+ only — 라이트룸 Auto 도 채도를 거의 올리기만 한다).
-        d.vibrance = clamp((0.42 - s.avgSaturation) * 1.0, 0, 0.6)
+        // Color controls belong to their own adjustment operation.
+        // Retained result field for compatibility; tone does not propose color edits.
+        d.vibrance = 0
         return d
     }
 
@@ -345,11 +312,30 @@ public enum AutoAdjust {
 
         // 백점: 확산 화이트 목표(linear 0.90)에 남은 오차를 Whites 계수로 메운다.
         let residualWhite = srgbEncode(diffuseWhiteLinear) - p995s
-        if abs(residualWhite) > 0.01, hist[255] <= 0.001 || residualWhite < 0 {
+        if abs(residualWhite) > 0.01, max(hist[255], s.clippedFraction) <= 0.001 || residualWhite < 0 {
             let mask = max(smoothstep(0.68, 0.92, p995s), 0.25)
             d.whites = clamp(d.whites + residualWhite / (0.12 * mask), -1, 1)
         }
         return d
+    }
+
+    /// A bounded rendering objective, not a claim about creative intent or measured color accuracy.
+    public static func toneScore(_ stats: ImageStats, adjustMid: Bool) -> Double {
+        func p(_ fraction: Double) -> Double {
+            var sum = 0.0
+            for i in 0..<256 { sum += stats.lumaHist[i]; if sum >= fraction { return Double(i) / 255 } }
+            return 1
+        }
+        let middle = srgbDecode(p(0.5)), white = srgbDecode(p(0.995)), black = srgbDecode(p(0.02))
+        let midError = adjustMid ? abs(log2(max(middle, 1e-4) / midGrayLinear)) : 0
+        let whiteError = 0.25 * abs(log2(max(white, 1e-4) / diffuseWhiteLinear))
+        let blackError = 0.25 * max(0, log2(max(black, 1e-4) / blackPointLinear))
+        let flatness = 0.5 * max(0, 0.52 - (p(0.9) - p(0.1)))
+        return midError + whiteError + blackError + flatness + 4 * stats.clippedFraction + 2 * stats.lumaHist[0]
+    }
+
+    public static func refinementDistance(_ first: ToneDelta, _ second: ToneDelta) -> Double {
+        abs(first.exposure - second.exposure) + 0.5 * abs(first.whites - second.whites)
     }
 
     // MARK: 수치 유틸

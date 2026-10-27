@@ -20,14 +20,11 @@ public enum ColorModel {
             ])
         }
 
-        // Color depth / saturation.
+        // Color depth / saturation. 둘 다 휘도 앵커 크로마 배율이고, 키우는 쪽은 채널이 0 또는
+        // 1 에 닿기 전에 접는다(BoundedChromaScale). 줄이는 쪽과 [0,1] 안에 머무는 결과는 이전과
+        // 사실상 같다(차이 ≤ 1.2e-4, 근거는 BoundedChromaScale 주석).
         if abs(params.colorDepth) > 1e-3 {
-            let sat = 1.0 + params.colorDepth * 0.35
-            img = img.applyingFilter("CIColorControls", parameters: [
-                "inputSaturation": NSNumber(value: sat),
-                "inputContrast": 1.0,
-                "inputBrightness": 0.0,
-            ])
+            img = BoundedChromaScale.apply(to: img, factor: 1.0 + params.colorDepth * 0.35)
         }
 
         if abs(params.vibrance) > 1e-3 {
@@ -35,11 +32,7 @@ public enum ColorModel {
         }
 
         if abs(params.saturation) > 1e-3 {
-            img = img.applyingFilter("CIColorControls", parameters: [
-                "inputSaturation": NSNumber(value: 1.0 + params.saturation * 0.6),
-                "inputContrast": 1.0,
-                "inputBrightness": 0.0,
-            ])
+            img = BoundedChromaScale.apply(to: img, factor: 1.0 + params.saturation * 0.6)
         }
 
         if abs(params.redPrimary) > 1e-3 || abs(params.greenPrimary) > 1e-3 || abs(params.bluePrimary) > 1e-3 {

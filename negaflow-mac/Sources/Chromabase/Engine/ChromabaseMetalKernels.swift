@@ -27,12 +27,14 @@ enum ChromabaseMetalKernels {
     )
 
     static var allKernelSources: [MetalKernelSource] {
-        toneKernelSources + filterKernelSources + digitalKernelSources + detailKernelSources
+        toneKernelSources + filterKernelSources + digitalKernelSources + detailKernelSources + analysisKernelSources
     }
 
     static func colorKernel(named name: String) -> CIColorKernel? {
         kernel(named: name) as? CIColorKernel
     }
+
+    static func generalKernel(named name: String) -> CIKernel? { kernel(named: name) }
 
     /// 모든 커널을 컴파일해 성공한 이름만 돌려준다(검증용).
     static var availableKernelNames: Set<String> {

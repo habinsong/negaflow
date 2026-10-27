@@ -53,6 +53,14 @@ TIFF에 보이는 카메라와 색공간 메타데이터는 촬영·인코딩 �
 
 FILM-R v2 자료는 품질 측정 때만 내려받습니다. 이미지 자체는 저장소나 앱에 넣지 않습니다. DOI 버전, CC BY 4.0, 파일 크기와 해시는 [`Config/defect-corpus-film-r-v2.json`](../../../negaflow-mac/Config/defect-corpus-film-r-v2.json)에 고정합니다.
 
+## DNG 내보내기
+
+DNG 기록기(`negaflow-mac`의 `DNGLinearWriter`, `negaflow-windows`의 `dng_linear_export`)는 Adobe가 공개한 Digital Negative Specification 1.6의 태그 번호와 색 모델만 보고 새로 작성했습니다. Adobe DNG SDK 코드와 LibRaw 등 다른 DNG 기록기의 코드는 들어 있지 않습니다. 색 행렬은 sRGB, Display P3, Adobe RGB (1998)의 공개된 색도 좌표에서 계산합니다. Adobe는 DNG 파일을 읽고 쓰는 소프트웨어에 로열티 없는 특허 라이선스를 제공하며, 이 제품은 그 라이선스를 씁니다. 라이선스가 아래 고지를 요구합니다.
+
+This product includes DNG technology under license by Adobe.
+
+DNG는 Adobe Inc.의 상표입니다. 이 이름은 파일 형식을 가리키는 데만 씁니다.
+
 ## 이름과 상호운용 정보
 
 필름, 스캐너, 색공간, XMP namespace와 제품 이름은 대상 식별과 파일 상호운용을 위해 씁니다. Windows 엔진이 합성하는 출력 ICC 프로파일은 설명용 이름(`"Negaflow Compatible P3"`, `"Compatible with Adobe RGB (1998)"`)과 `CC0 1.0 Universal` 권리 포기 문구를 기록해 내보낸 사용자 이미지에 프로파일 저작권 제약이 남지 않게 합니다. 상표 소유권이나 제휴를 주장하지 않습니다. 자세한 범위는 [`TRADEMARKS.md`](../../../TRADEMARKS.md)에 있습니다.

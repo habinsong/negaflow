@@ -43,6 +43,8 @@ internal static unsafe class DevelopExportRoutingContractTests
         Directory.CreateDirectory(temporaryRoot);
 
         VerifyAutoBalance(context, temporaryRoot);
+        VerifyChannelRange(context, temporaryRoot);
+        VerifyDngExport(context, temporaryRoot);
         VerifyManagedGrainMendPayloadValidation(context);
         VerifyManagedGrainMendV7(context, temporaryRoot);
 
@@ -407,6 +409,111 @@ internal static unsafe class DevelopExportRoutingContractTests
             context.Check(target == DevelopTargetMode.Noritsu ? same : !same,
                 "balance_switch_target_scope_" + target);
         }
+    }
+
+    // 롤 교정 꼬리(v41)와 결과 꼬리(v7)가 managed ↔ native 를 실제로 지나가는지 본다.
+    private static void VerifyChannelRange(ContractTestContext context, string directory)
+    {
+        const uint width = 96, height = 64;
+        string source = Path.Combine(directory, "channel-range.tif");
+        WriteSyntheticDefectTiff(source, width, height);
+        DevelopExportRequest Make(bool autoBalance, DevelopChannelRange? range, bool measure) => new()
+        {
+            SourcePath = source, DestinationPath = Path.Combine(directory, "range.png"),
+            DminRed = 0.8F, DminGreen = 0.6F, DminBlue = 0.4F,
+            AutoBalance = autoBalance, ChannelRange = range, MeasureRangeShape = measure,
+        };
+        byte[] Render(DevelopExportRequest request, out DevelopExportResult result)
+        {
+            byte[] pixels = new byte[width * height * 4];
+            result = NativeDevelopExporter.Preview(request, width, height, pixels);
+            return pixels;
+        }
+
+        DevelopChannelRange range = new(1.4F, 1.0F, 0.7F);
+        byte[] plain = Render(Make(false, null, false), out DevelopExportResult plainResult);
+        byte[] calibrated = Render(Make(false, range, false), out DevelopExportResult calibratedResult);
+        context.Check(plainResult.Succeeded && calibratedResult.Succeeded, "channel_range_preview_succeeds");
+        context.Check(!plain.AsSpan().SequenceEqual(calibrated), "channel_range_reaches_the_fixed_inversion");
+        context.Check(plainResult.RangeShape is null && calibratedResult.RangeShape is null,
+            "range_shape_absent_unless_requested");
+
+        byte[] autoPlain = Render(Make(true, null, false), out _);
+        byte[] autoWithRange = Render(Make(true, range, false), out _);
+        context.Check(autoPlain.AsSpan().SequenceEqual(autoWithRange), "channel_range_ignored_when_auto_balance_measures");
+
+        byte[] measured = Render(Make(false, null, true), out DevelopExportResult measuredResult);
+        context.Check(measuredResult.Succeeded && measured.AsSpan().SequenceEqual(plain),
+            "range_shape_measurement_leaves_pixels_unchanged");
+        if (measuredResult.RangeShape is { } shape)
+        {
+            double product = (double)shape.Red * shape.Green * shape.Blue;
+            context.Check(Math.Abs(product - 1.0) < 1.0e-4 &&
+                shape.Red is >= 0.5F and <= 2.0F && shape.Green is >= 0.5F and <= 2.0F && shape.Blue is >= 0.5F and <= 2.0F,
+                "range_shape_is_unit_geometric_mean");
+        }
+        else
+        {
+            context.Check(false, "range_shape_present_for_unclipped_negative");
+        }
+
+        bool rejected = false;
+        try { Render(Make(false, new DevelopChannelRange(9.0F, 1.0F, 0.1F), false), out _); }
+        catch (ArgumentOutOfRangeException) { rejected = true; }
+        context.Check(rejected, "invalid_channel_range_is_rejected");
+    }
+
+    // DNG 형식 값(3)이 managed ↔ native 를 실제로 지나 LinearRaw DNG 파일을 만들고, 알파·프린터 ICC 는
+    // 조용히 바꾸지 않고 거절하는지 본다.
+    private static void VerifyDngExport(ContractTestContext context, string directory)
+    {
+        const uint width = 96, height = 64;
+        string source = Path.Combine(directory, "dng-source.tif");
+        WriteSyntheticDefectTiff(source, width, height);
+        string destination = Path.Combine(directory, "contract.dng");
+        File.Delete(destination);
+        DevelopExportRequest Make(string path, bool alpha = false, byte[]? profile = null) => new()
+        {
+            SourcePath = source, DestinationPath = path, Format = DevelopExportFormat.Dng16,
+            DminRed = 0.8F, DminGreen = 0.6F, DminBlue = 0.4F,
+            PreserveAlpha = alpha, OutputIccProfile = profile,
+        };
+
+        DevelopExportResult result = NativeDevelopExporter.Run(Make(destination));
+        context.Check(result.Succeeded, "dng_export_succeeds");
+        context.Check(File.Exists(destination), "dng_export_publishes_the_file");
+        if (File.Exists(destination))
+        {
+            byte[] bytes = File.ReadAllBytes(destination);
+            context.Check(bytes.Length > 8 && bytes[0] == (byte)'I' && bytes[1] == (byte)'I' &&
+                BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(2)) == 42, "dng_file_has_a_little_endian_tiff_header");
+            context.Check(bytes.Length >= checked((int)(width * height * 6U)), "dng_file_holds_16_bit_rgb_pixels");
+            // 첫 IFD 에서 PhotometricInterpretation(262)이 LinearRaw(34892)인지 읽는다.
+            int ifd = checked((int)BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(4)));
+            int count = BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(ifd));
+            ushort photometric = 0;
+            for (int i = 0; i < count; i++)
+            {
+                int at = ifd + 2 + (i * 12);
+                if (BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(at)) == 262)
+                {
+                    photometric = BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(at + 8));
+                }
+            }
+            context.Check(photometric == 34892, "dng_file_is_linear_raw");
+        }
+
+        // 있는 파일 위에는 쓰지 않는다(원자적 게시 규칙은 다른 형식과 같다).
+        DevelopExportResult again = NativeDevelopExporter.Run(Make(destination));
+        context.Check(!again.Succeeded, "dng_export_does_not_overwrite_an_existing_file");
+
+        DevelopExportResult alphaResult = NativeDevelopExporter.Run(Make(Path.Combine(directory, "alpha.dng"), alpha: true));
+        context.Check(!alphaResult.Succeeded && !File.Exists(Path.Combine(directory, "alpha.dng")),
+            "dng_export_rejects_alpha");
+
+        DevelopExportResult iccResult = NativeDevelopExporter.Run(Make(Path.Combine(directory, "icc.dng"), profile: new byte[256]));
+        context.Check(!iccResult.Succeeded && !File.Exists(Path.Combine(directory, "icc.dng")),
+            "dng_export_rejects_a_printer_profile");
     }
 
     private static void WriteSyntheticDefectTiff(string path, uint width, uint height)

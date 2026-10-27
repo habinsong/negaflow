@@ -257,6 +257,10 @@ ColorMatrix linear_srgb_to(const OutputColorSpace space) noexcept {
     return result;
 }
 
+std::array<double, 9> d65_xyz_to_linear_rgb(const OutputColorSpace space) noexcept {
+    return invert(rgb_to_xyz(primaries_of(space), kD65X, kD65Y));
+}
+
 float encode_output_component(const float linear, const OutputColorSpace space) noexcept {
     if (space == OutputColorSpace::adobe_rgb) {
         // Adobe RGB (1998) states 563/256. Negatives cannot happen here - the caller

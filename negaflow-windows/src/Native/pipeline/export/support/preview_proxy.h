@@ -4,12 +4,14 @@
 
 #include "export/stages/observe.h"
 #include "export/support/preview.h"
+#include "export/support/scene_measurement_memo.h"
 
 #include "negaflow/imaging/analysis_region.h"
 #include "negaflow/imaging/film_base_measurement.h"
 #include "negaflow/pipeline/develop_export.h"
 
 #include <array>
+#include <memory>
 #include <optional>
 
 namespace negaflow::pipeline::develop_export_detail {
@@ -35,6 +37,9 @@ struct PreviewProxyHint final {
     std::optional<negaflow::imaging::AnalysisRegion> base_region{};
     std::uint32_t base_image_width{0U};
     std::uint32_t base_image_height{0U};
+    // 이 프록시(와 같은 항목에서 파생한 프록시)에서 이미 잰 장면 측정. 캐시 항목과 함께 복사돼도
+    // 같은 객체를 가리키므로 한 번 잰 값을 모든 요청이 본다. 프록시가 아닌 화상에는 없다.
+    std::shared_ptr<SceneMeasurementMemo> scene_memo{};
 };
 
 // 같은 파일·관측·상자·베이스 모드이면 작은 raw 를 돌려주고 디코드를 건너뜁니다.

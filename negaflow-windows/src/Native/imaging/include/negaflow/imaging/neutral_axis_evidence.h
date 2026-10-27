@@ -30,6 +30,7 @@ struct NeutralAxisEvidence final {
     double selected_fraction{0.0};
     // 중립 근처에 후보가 거의 없어 장면 중앙 캐스트 주위에서 고른 경우(고전 gray-world)입니다.
     // 장면이 정말 한 색일 수 있으므로 쓰는 쪽이 보정을 줄입니다.
+    double confidence{1.0};
     bool is_fallback{false};
 };
 

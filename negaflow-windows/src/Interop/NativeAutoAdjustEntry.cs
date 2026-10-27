@@ -37,4 +37,8 @@ internal static partial class NativeAutoAdjustEntry
         uint blackAndWhiteNegative,
         NativeAutoAdjustResultV1* first,
         NativeAutoAdjustResultV1* refined);
+    [LibraryImport(LibraryName, EntryPoint = "nf_auto_tone_score_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_auto_tone_score_v1(
+        byte* pixels, uint width, uint height, uint strideBytes, uint adjustMid, double* score);
 }

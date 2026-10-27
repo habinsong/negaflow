@@ -4,11 +4,11 @@
 
 ## MAIN/PRINT and CS
 
-The default is `MAIN` with Auto Balance on. The switch sits at the right of the Target heading for MAIN (including PRINT) and CS. It adjusts color and brightness from the current picture; switching it off bypasses that step. Auto Tone, Auto White Balance, Auto Levels and Auto Color remain separate and off by default.
+The default is `MAIN` with Auto Balance on. The switch is a small pill at the right of the Target heading. It appears only for color and B&W negatives on MAIN (including PRINT) and CS. It adjusts color and brightness from the current picture; switching it off bypasses that step. Auto Tone, Auto White Balance, Auto Levels and Auto Color remain separate and off by default.
 
 Auto Balance ON restores the MAIN/CS inversion from `412bb31`: each channel uses its densest 0.2% scene percentile, with a 1.8D range limit, followed by the original `shoulder-print-response-v4` curve and muted-scene vibrance. Film presets multiply that measured range by their relative channel factors. The 1.8D limit is a rendering safeguard retained for compatibility, not a measured property of every film. It can affect dense negatives.
 
-OFF uses the same v4 curve with a fixed nominal range (color 1.55D, B&W 2.17D), multiplied by preset factors when selected. It skips scene range normalization and muted-scene vibrance. Equal transmittance with the same base and settings then gives the same result across frames. ON can change both brightness and color with scene content. Neither mode establishes measured film color accuracy.
+OFF uses the same v4 curve with a fixed nominal range (color 1.55D, B&W 2.17D), multiplied by preset factors when selected. It skips scene range normalization and muted-scene vibrance. For color negatives, OFF also multiplies a channel range calibration for the scanner and film. It is the median of at least three frames with a valid measurement from the same roll, or from the same scan folder when no roll is set. The value, once chosen, stays on each frame. With fewer frames, or with mixed film, the three channels keep the same range. Equal transmittance with the same base and settings then gives the same result across the frames of one roll. ON can change both brightness and color with scene content. Neither mode establishes measured film color accuracy.
 
 Scene measurements are cached while manual sliders change. Windows retains the existing D3D inversion and vibrance preview path; export uses the CPU path. The discarded median-gain prototype and its timing measurements do not describe this implementation. RAW inversion still precedes the camera color matrix, and the separate film-base fixes remain; the whole application has not been rolled back to `412bb31`.
 

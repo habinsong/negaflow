@@ -29,7 +29,8 @@ std::optional<DevelopExportOutcome> validate_request(
     }
     if (request.format != DevelopExportFormat::png16 &&
         request.format != DevelopExportFormat::tiff16 &&
-        request.format != DevelopExportFormat::jpeg8) {
+        request.format != DevelopExportFormat::jpeg8 &&
+        request.format != DevelopExportFormat::dng16) {
         return fail(DevelopExportStage::request_validation, "unknown_export_format");
     }
     if (!std::isfinite(request.jpeg_quality) || request.jpeg_quality < 0.0F ||
@@ -59,6 +60,14 @@ std::optional<DevelopExportOutcome> validate_request(
     }
     if (request.format == DevelopExportFormat::jpeg8 && request.preserve_alpha) {
         return fail(DevelopExportStage::request_validation, "jpeg_does_not_support_alpha");
+    }
+    // DNG 는 알파를 담지 않고, 행렬로 적을 수 없는 프린터 ICC 를 담지 못합니다. 다른 출력으로
+    // 조용히 바꾸지 않고 거절합니다.
+    if (request.format == DevelopExportFormat::dng16 && request.preserve_alpha) {
+        return fail(DevelopExportStage::request_validation, "dng_does_not_support_alpha");
+    }
+    if (request.format == DevelopExportFormat::dng16 && !request.output_icc_profile.empty()) {
+        return fail(DevelopExportStage::request_validation, "dng_does_not_support_output_icc");
     }
     if (request.film_polarity != FilmPolarity::negative &&
         request.film_polarity != FilmPolarity::positive) {

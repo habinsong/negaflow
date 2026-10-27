@@ -145,7 +145,8 @@ enum ExportDevelopedFrameRenderer {
         // Image I/O thumbnail은 JPEG/PNG 최종 정밀도에는 충분하지만, 16-bit TIFF가 요구하는
         // 입력 정밀도까지 계약하지는 않는다. TIFF16은 원본 정밀도로 decode하고 CI graph의
         // scale을 develop 앞에 두어 계산량만 줄인다.
-        let decodeProxyLongEdge = snapshot.format == .tiff16 ? nil : proxyLongEdge
+        // DNG 도 16비트 선형 정밀도를 약속하므로 TIFF16 과 같이 원본 정밀도로 decode 한다.
+        let decodeProxyLongEdge = snapshot.format == .tiff16 || snapshot.format == .dng ? nil : proxyLongEdge
         if let preloaded = snapshot.preloadedRaw {
             guard !snapshot.requiresCleanedRaw || snapshot.cleanedRawIdentity?.sourceIdentity != nil else {
                 throw ChromabaseError.loadFailed("required cleaned raw identity is unavailable")

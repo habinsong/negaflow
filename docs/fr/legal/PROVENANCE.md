@@ -53,6 +53,14 @@ Les métadonnées d'appareil et d'espace colorimétrique visibles dans les TIFF 
 
 Le matériel FILM-R v2 n'est téléchargé que pendant la mesure de qualité. Les images n'entrent ni dans le dépôt ni dans l'application. La version DOI, la licence CC BY 4.0, les tailles de fichiers et les empreintes sont figées dans [`Config/defect-corpus-film-r-v2.json`](../../../negaflow-mac/Config/defect-corpus-film-r-v2.json).
 
+## Export DNG
+
+Les écrivains DNG (`DNGLinearWriter` dans `negaflow-mac`, `dng_linear_export` dans `negaflow-windows`) sont écrits à partir des numéros de balises et du modèle colorimétrique de la Digital Negative Specification 1.6 publiée par Adobe. Ils ne contiennent aucun code du SDK Adobe DNG, ni de LibRaw ou d’un autre écrivain DNG. Les matrices de couleur sont calculées à partir des chromaticités publiées de sRGB, Display P3 et Adobe RGB (1998). Adobe propose une licence de brevets sans redevance pour les logiciels qui lisent ou écrivent des fichiers DNG. Ce produit l’utilise, et la licence exige la mention ci-dessous.
+
+This product includes DNG technology under license by Adobe.
+
+DNG est une marque d’Adobe Inc. Ce nom sert seulement à désigner le format de fichier.
+
 ## Noms et interopérabilité
 
 Les noms de films, scanners, espaces colorimétriques, namespaces XMP et produits identifient des cibles et gardent les fichiers interopérables. Les profils ICC de sortie synthétisés par le moteur Windows portent des libellés descriptifs (`"Negaflow Compatible P3"`, `"Compatible with Adobe RGB (1998)"`) et une mention `CC0 1.0 Universal` afin que les images exportées ne subissent aucune restriction de droit d'auteur liée au profil. Aucune propriété de marque ni affiliation n'est revendiquée. Le périmètre complet est dans [`TRADEMARKS.md`](../../../TRADEMARKS.md).

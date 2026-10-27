@@ -80,10 +80,15 @@ internal sealed class DevelopExportRunner
     /// 이며 부르는 쪽이 멈춥니다.
     /// </remarks>
     private PrintOutputProfileChoice OutputProfileFor(
-        IReadOnlyList<LibraryFrameSnapshot> frames) =>
-        view.workspaceState is { } state
-            ? PrintOutputProfile.For(frames, state.Current.Print, state.Current.SoftProof)
-            : PrintOutputProfileChoice.None;
+        IReadOnlyList<LibraryFrameSnapshot> frames,
+        DevelopExportFormat format = DevelopExportFormat.Png16) =>
+        // DNG 는 프린터 ICC 를 담지 못한다. PRINT 타깃 프레임은 요청이 거절하므로 여기서 프로파일을
+        // 찾지 않는다(찾으면 DNG 와 무관한 "프린터 프로파일 필요" 안내가 먼저 뜬다).
+        format == DevelopExportFormat.Dng16
+            ? PrintOutputProfileChoice.None
+            : view.workspaceState is { } state
+                ? PrintOutputProfile.For(frames, state.Current.Print, state.Current.SoftProof)
+                : PrintOutputProfileChoice.None;
 
     /// <summary>고른 프로파일을 인코딩 값에 실어 줍니다.</summary>
     private static ExportEncodingOptions With(
@@ -102,7 +107,7 @@ internal sealed class DevelopExportRunner
             return;
         }
         ExportSettings settings = view.exportSettings;
-        PrintOutputProfileChoice profile = OutputProfileFor(SelectedExportFrames(frame));
+        PrintOutputProfileChoice profile = OutputProfileFor(SelectedExportFrames(frame), settings.Format);
         if (profile.Missing)
         {
             view.SetOutputStatus(AppResources.Get("printOutputProfileRequired", "Text"));
@@ -324,7 +329,7 @@ internal sealed class DevelopExportRunner
         RunExportBatchAsync(
             frames,
             view.exportSettings,
-            With(view.exportSettings.ToEncodingOptions(), OutputProfileFor(frames)),
+            With(view.exportSettings.ToEncodingOptions(), OutputProfileFor(frames, view.exportSettings.Format)),
             quick: false);
 
     /// <summary>

@@ -67,7 +67,7 @@ internal static class PreviewAndAutoAdjustmentTests
         Check(
             toneNeutral.Tone == ToneAdjustment.Neutral &&
                 toneNeutral.ColorModel.Warmth == corrected.ColorModel.Warmth &&
-                toneNeutral.ColorModel.Vibrance == 0.0 && toneNeutral.ColorModel.Saturation == 0.0,
+                toneNeutral.ColorModel == corrected.ColorModel,
             "auto_tone_neutralises_only_tone_corrections");
         Check(
             balanceNeutral.Tone == corrected.Tone &&
@@ -94,7 +94,7 @@ internal static class PreviewAndAutoAdjustmentTests
         Check(
             once.Tone.Exposure == 0.5 && once.Tone.Contrast == 0.2 &&
                 once.Tone.Highlight == -0.3 && once.Tone.Shadow == 0.4 &&
-                once.ColorModel.Warmth == -0.2 && once.ColorModel.Vibrance == 0.25,
+                once.ColorModel.Warmth == -0.2 && once.ColorModel.Vibrance == corrected.ColorModel.Vibrance,
             "auto_adjust_writes_every_value_it_computed");
         Check(
             once.Base == corrected.Base && once.PointCurves == corrected.PointCurves,
@@ -103,7 +103,7 @@ internal static class PreviewAndAutoAdjustmentTests
         LibraryFrameSnapshot balanceOnly = AutoAdjustCoordinator.ApplyWhiteBalance(corrected, settings);
         Check(
             toneOnly.ColorModel.Warmth == corrected.ColorModel.Warmth &&
-                toneOnly.ColorModel.Vibrance == settings.Vibrance &&
+                toneOnly.ColorModel.Vibrance == corrected.ColorModel.Vibrance &&
                 balanceOnly.Tone == corrected.Tone &&
                 balanceOnly.ColorModel.Warmth == settings.Warmth,
             "auto_tone_and_white_balance_apply_disjoint_recipe_fields");

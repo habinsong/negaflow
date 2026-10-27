@@ -491,6 +491,18 @@ final class ExportEngineTests: XCTestCase {
         XCTAssertTrue(master.localDodgeBurn.isEmpty)
     }
 
+    /// 롤 교정은 반전 기준이라 무보정본도 같이 받는다. 빠지면 자동 밸런스를 끈 프레임의 무보정본이
+    /// 본 내보내기와 다른 색으로 나간다.
+    func testMainFlatMasterKeepsRollChannelRange() throws {
+        var params = DevelopParameters()
+        params.filmType = .colorNegative
+        params.developTarget = .print
+        params.autoBalance = false
+        params.channelRange = try XCTUnwrap(ChannelRangeCalibration.sanitized(SIMD3(0.9, 1.0, 1.0 / 0.9)))
+
+        XCTAssertEqual(params.mainFlatMasterParameters().channelRange, params.channelRange)
+    }
+
     func testExportPreservesSourceDateAndSeparatesMetadataDate() throws {
         let url = temporaryURL(fileExtension: "tiff")
         defer { try? FileManager.default.removeItem(at: url) }

@@ -44,6 +44,9 @@ public enum ExportEngine {
             outputColorSpace = image.colorSpace
                 ?? CGColorSpace(name: CGColorSpace.linearSRGB)
                 ?? CGColorSpaceCreateDeviceRGB()
+        } else if format == .dng, outputProfile != nil {
+            // DNG 는 행렬로 적을 수 있는 RGB 공간만 담는다. 프린터 ICC(LUT) 출력은 조용히 바꾸지 않고 거절한다.
+            throw ChromabaseError.writeFailed("DNG does not support printer output ICC profiles")
         } else if let outputProfile {
             guard let validated = outputProfile.validatedColorSpace() else {
                 throw ChromabaseError.writeFailed("invalid printer output ICC profile")
@@ -95,6 +98,14 @@ public enum ExportEngine {
                 metadata: metadata,
                 options: options,
                 colorSpace: outputColorSpace
+            )
+        case .dng:
+            try DNGLinearWriter.write(
+                sharpened,
+                to: url,
+                using: context,
+                metadata: metadata,
+                options: options
             )
         }
     }
@@ -286,7 +297,7 @@ public enum ExportEngine {
         return props
     }
 
-    private static func exifTimestamp(_ date: Date) -> String {
+    static func exifTimestamp(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")

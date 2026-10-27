@@ -41,6 +41,8 @@ enum class DevelopExportFormat : std::uint8_t {
     png16 = 0,
     tiff16,
     jpeg8,
+    // 16비트 선형 RGB DNG(LinearRaw). 현상 결과를 다른 앱에서 다시 다듬을 수 있게 담는다.
+    dng16,
 };
 
 enum class NegativeBaseEstimationMode : std::uint8_t {
@@ -106,6 +108,9 @@ struct DevelopExportRequest final {
     FilmPolarity film_polarity{FilmPolarity::negative};
     NegativeBaseEstimationMode base_estimation_mode{NegativeBaseEstimationMode::manual};
     bool auto_balance{false};
+    // 이 프레임의 채널 밀도 범위 모양을 재서 결과로 돌려 달라는 요청(롤 교정의 재료). 네거티브
+    // 컬러 반전이 도는 호출에서만 뜻이 있다. 교정값 자체는 `negative.channel_range` 로 보낸다.
+    bool measure_range_shape{false};
     double base_scale{1.0};
     negaflow::color::InputGammaInterpretation input_gamma{};
     std::optional<negaflow::imaging::FilmStockBasePreset> film_stock_preset{};
@@ -288,6 +293,8 @@ struct DevelopExportOutcome final {
     std::array<float, 3> dmax_normalized{};
     std::array<float, 3> black_input{};
     bool debug_metrics_present{false};
+    // `measure_range_shape` 를 요청했고 측정이 성립했을 때만 채워진다(기하평균 1).
+    std::optional<std::array<float, 3>> range_shape{};
     DevelopBaseSource base_source{DevelopBaseSource::manual};
     std::optional<negaflow::imaging::FilmBaseMeasurementMethod> measurement_method{};
     std::optional<negaflow::imaging::FilmBaseMeasurementDiagnostics> measurement_diagnostics{};

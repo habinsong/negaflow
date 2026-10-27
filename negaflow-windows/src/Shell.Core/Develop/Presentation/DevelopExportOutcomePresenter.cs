@@ -43,6 +43,10 @@ internal static class DevelopExportOutcomePresenter
                         "Choose a full path to export to.",
                     DevelopRequestRefusal.UnknownOutputFormat =>
                         "That export format is not supported.",
+                    DevelopRequestRefusal.UnsupportedDngTarget =>
+                        "DNG export does not support the PRINT target. Use TIFF, PNG or JPEG.",
+                    DevelopRequestRefusal.UnsupportedDngSource =>
+                        "DNG export needs an uncompressed source (TIFF, camera RAW or DNG). Use TIFF, PNG or JPEG for JPEG, PNG and HEIC sources.",
                     DevelopRequestRefusal.StaleDefectSource =>
                         "The scan file changed size since the defect edits were recorded. " +
                         "Relink the frame to the original scan, or clear the defect edits, " +

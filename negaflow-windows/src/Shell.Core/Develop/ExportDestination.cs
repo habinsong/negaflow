@@ -19,6 +19,7 @@ public sealed record ExportDestination(string FolderPath, string NamePattern, De
         {
             DevelopExportFormat.Tiff16 => ".tif",
             DevelopExportFormat.Jpeg8 => ".jpg",
+            DevelopExportFormat.Dng16 => ".dng",
             _ => ".png",
         };
 

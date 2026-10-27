@@ -327,11 +327,33 @@ void test_auto_levels_keeps_values_above_the_white_point() {
            "a specular above the white point keeps its headroom instead of clipping at 1");
 }
 
+void test_levels_preserve_neutrals_and_hue() {
+    constexpr std::uint32_t width=256,height=128;
+    std::vector<negaflow::core::Rgba32F> pixels(width*height);
+    for(std::uint32_t y=0;y<height;++y){for(std::uint32_t x=0;x<width;++x){
+        const float t=static_cast<float>(x)/255.0F;
+        pixels[y*width+x]=(x>=110 && x<145)?negaflow::core::Rgba32F{.2F,.2F,.2F,1}:
+            negaflow::core::Rgba32F{.05F+.35F*t,.05F+.65F*t,.05F+.90F*t,1};}}
+    const auto before=pixels[64*width+180];
+    negaflow::imaging::SceneCorrectionInfo info{};
+    expect(negaflow::imaging::apply_scene_correction(view(pixels,width,height),{true,false,true},info)==negaflow::core::KernelStatus::ok,"luminance levels succeed");
+    const auto neutral=pixels[64*width+128],after=pixels[64*width+180];
+    expect(std::abs(neutral.red-neutral.green)<1e-5F && std::abs(neutral.green-neutral.blue)<1e-5F,"levels keep an existing neutral neutral");
+    expect(std::abs(before.red/before.blue-after.red/after.blue)<1e-5F && std::abs(before.green/before.blue-after.green/after.blue)<1e-5F,"levels preserve chromatic ratios");
+    std::uint32_t w=0,h=0;
+    expect(negaflow::imaging::scene_sample_grid_extent(16,4096,256,w,h) && w==1 && h==256,"portrait sampling is bounded by the long edge");
+    pixels.assign(width*height,{.4F,.2F,.1F,1});
+    expect(negaflow::imaging::apply_scene_correction(view(pixels,width,height),{false,true,true},info)==negaflow::core::KernelStatus::ok,"weak color evidence remains usable");
+    const auto p=pixels[64*width+128];
+    expect(std::abs(std::log(p.red/p.blue)-std::log(4.0))<.12,"auto color preserves an unsupported subject color");
+}
+
 }  // namespace
 
 int main() {
     try {
         test_disabled_is_identity();
+        test_levels_preserve_neutrals_and_hue();
         test_linear_negative_levels_reach_output_targets();
         test_linear_negative_base_does_not_dominate_neutral_evidence();
         test_negative_auto_correction_changes_cast_range();

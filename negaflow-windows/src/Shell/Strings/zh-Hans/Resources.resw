@@ -872,6 +872,8 @@
   <data name="developExportRefusedPositiveFilm.Text" xml:space="preserve"><value>Windows 引擎尚不支持正片冲洗。</value></data>
   <data name="developExportRefusedDestination.Text" xml:space="preserve"><value>请选择完整的导出路径。</value></data>
   <data name="developExportRefusedOutputFormat.Text" xml:space="preserve"><value>不支持该导出格式。</value></data>
+  <data name="developExportRefusedDngTarget.Text" xml:space="preserve"><value>DNG 导出不支持 PRINT 目标。请使用 TIFF、PNG 或 JPEG。</value></data>
+  <data name="developExportRefusedDngSource.Text" xml:space="preserve"><value>DNG 导出需要未压缩的源文件（TIFF、相机 RAW 或 DNG）。JPEG、PNG 和 HEIC 源文件请使用 TIFF、PNG 或 JPEG 导出。</value></data>
   <data name="developExportRefusedStaleDefectSource.Text" xml:space="preserve"><value>自记录污点修补以来，扫描文件的大小已改变。请将照片重新链接到原始扫描，或清除污点修补后再导出。</value></data>
   <data name="developSectionFilm.Text" xml:space="preserve"><value>胶片</value></data>
   <data name="developFilmLookNone.Text" xml:space="preserve"><value>无</value></data>

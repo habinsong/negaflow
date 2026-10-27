@@ -68,6 +68,11 @@ NF_API nf_status_t NF_CALL nf_auto_tone_refine_v1(
     const nf_auto_adjust_result_v1* first,
     nf_auto_adjust_result_v1* refined);
 
+/* Rendering objective for checking a proposed automatic tone refinement. */
+NF_API nf_status_t NF_CALL nf_auto_tone_score_v1(
+    const uint8_t* pixels, uint32_t width, uint32_t height, uint32_t stride_bytes,
+    uint32_t adjust_mid, double* score);
+
 #ifdef __cplusplus
 }
 #endif

@@ -53,6 +53,14 @@ Die Kamera- und Farbraum-Metadaten in den TIFF-Dateien sind Containerangaben aus
 
 FILM-R-v2-Material wird nur während der Qualitätsmessung heruntergeladen. Die Bilder gelangen weder ins Repository noch in die App. DOI-Version, CC BY 4.0, Dateigrößen und Hashes stehen fest in [`Config/defect-corpus-film-r-v2.json`](../../../negaflow-mac/Config/defect-corpus-film-r-v2.json).
 
+## DNG-Export
+
+Die DNG-Schreiber (`DNGLinearWriter` in `negaflow-mac`, `dng_linear_export` in `negaflow-windows`) sind nach den Tag-Nummern und dem Farbmodell der von Adobe veröffentlichten Digital Negative Specification 1.6 neu geschrieben. Sie enthalten keinen Code aus dem Adobe DNG SDK und keinen Code aus LibRaw oder einem anderen DNG-Schreiber. Die Farbmatrizen werden aus den veröffentlichten Farbörtern von sRGB, Display P3 und Adobe RGB (1998) berechnet. Adobe bietet für Software, die DNG-Dateien liest oder schreibt, eine lizenzgebührenfreie Patentlizenz an. Dieses Produkt nutzt sie, und die Lizenz verlangt den folgenden Hinweis.
+
+This product includes DNG technology under license by Adobe.
+
+DNG ist eine Marke von Adobe Inc. Der Name bezeichnet nur das Dateiformat.
+
 ## Namen und Interoperabilität
 
 Namen von Filmen, Scannern, Farbräumen, XMP-Namespaces und Produkten kennzeichnen Ziele und halten Dateien interoperabel. Von der Windows-Engine erzeugte Ausgabe-ICC-Profile tragen beschreibende Bezeichnungen (`"Negaflow Compatible P3"`, `"Compatible with Adobe RGB (1998)"`) und eine `CC0 1.0 Universal`-Freigabe, damit exportierte Bilder keinen Profil-Urheberrechtsbeschränkungen unterliegen. Markenrechte oder eine Verbindung werden nicht behauptet. Der volle Umfang steht in [`TRADEMARKS.md`](../../../TRADEMARKS.md).

@@ -37,13 +37,15 @@ struct DevelopQuickActionsSection: View {
                     QuickTogglePill(
                         title: model.text(AppLocalizedPhrase.autoColor),
                         systemImage: "camera.filters",
-                        isOn: autoNeutralBalance
+                        isOn: autoNeutralBalance,
+                        identifier: "negaflow.develop.auto-color"
                     )
 
                     QuickTogglePill(
                         title: model.text(AppLocalizedPhrase.autoLevels),
                         systemImage: "chart.bar.xaxis",
-                        isOn: autoLevels
+                        isOn: autoLevels,
+                        identifier: "negaflow.develop.auto-levels"
                     )
                 }
 
@@ -72,11 +74,14 @@ struct DevelopQuickActionsSection: View {
     }
 }
 
-private struct QuickTogglePill: View {
+/// 자동 컬러·자동 레벨·자동 밸런스가 함께 쓰는 켜짐/꺼짐 알약. `isCompact` 는 타깃 줄 끝에 작게 두는 크기입니다.
+struct QuickTogglePill: View {
     @EnvironmentObject private var model: AppModel
     let title: String
     let systemImage: String
     let isOn: Binding<Bool>
+    let identifier: String
+    var isCompact = false
     @State private var isHovered = false
 
     var body: some View {
@@ -84,24 +89,27 @@ private struct QuickTogglePill: View {
             isOn.wrappedValue.toggle()
         } label: {
             Label(title, systemImage: systemImage)
+                .font(isCompact ? .caption : nil)
                 .lineLimit(1)
                 .minimumScaleFactor(AppTypography.minimumScaleFactor)
-                .frame(maxWidth: .infinity, minHeight: 32)
-                .padding(.horizontal, 8)
+                .frame(maxWidth: isCompact ? nil : .infinity, minHeight: isCompact ? 22 : 32)
+                .padding(.horizontal, isCompact ? 6 : 8)
                 .foregroundStyle(isOn.wrappedValue ? Color.accentColor : Color.primary)
                 .background(
                     isOn.wrappedValue
                         ? Color.accentColor.opacity(0.2)
                         : Color.primary.opacity(isHovered ? 0.12 : 0),
-                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: isCompact ? 8 : 12, style: .continuous)
                 )
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
-        .frame(maxWidth: .infinity)
-        .liquidSurface(cornerRadius: 15, interactive: true)
+        .frame(maxWidth: isCompact ? nil : .infinity)
+        .fixedSize(horizontal: isCompact, vertical: false)
+        .liquidSurface(cornerRadius: isCompact ? 11 : 15, interactive: true)
         .help(title)
+        .accessibilityIdentifier(identifier)
         .accessibilityLabel(title)
         .accessibilitySelectionState(
             isOn.wrappedValue,

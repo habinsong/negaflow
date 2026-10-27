@@ -25,6 +25,11 @@ extension DevelopFrameRenderer {
                                                 imageSize: rawInput.extent.size)
             let base = developBase(for: snapshot, input: rawInput, engine: engine,
                                    analysisRegion: analysisRegion)
+            let rangeShapeAttempted = snapshot.needsRangeShape && snapshot.filmType == .colorNegative
+                && base != nil
+            let rangeShape = rangeShapeAttempted
+                ? base.flatMap { ChannelRangeCalibration.measure(in: rawInput, base: $0, region: analysisRegion) }
+                : nil
             var measurements = snapshot.cachedSceneMeasurements
             measurements.analysisRegion = analysisRegion
             var inputParams = snapshot.params
@@ -113,7 +118,9 @@ extension DevelopFrameRenderer {
                 thumbnail: developedPair.thumbnail,
                 debugPreviews: debugPreviews,
                 previewRaw: input.generatedPreviewRaw,
-                sceneMeasurements: measurements
+                sceneMeasurements: measurements,
+                rangeShape: rangeShape,
+                rangeShapeAttempted: rangeShapeAttempted
             )
         }
     }
@@ -206,6 +213,8 @@ extension DevelopFrameRenderer {
         neutral.manualBaseRGB = snapshot.params.manualBaseRGB
         neutral.filmStockDminID = snapshot.params.filmStockDminID
         neutral.lightSourceProfileID = snapshot.params.lightSourceProfileID
+        // 반전 기준이다 — 빠지면 자동 밸런스를 끈 프레임에서 Before 만 교정 전 색으로 나온다.
+        neutral.channelRange = snapshot.params.channelRange
         neutral.scannerProfileID = nil
         neutral.imageTransform = .identity
         let baseImage = engine.developScannerPreview(

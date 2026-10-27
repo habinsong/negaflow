@@ -388,6 +388,8 @@ extension AppModel {
                 && destinationGamutWarningAvailable,
             clippingOverlayEnabled: clippingOverlayEnabled,
             needsPixelSamplerBase: pixelSamplerStore.isEnabled,
+            needsRangeShape: !isInputPreview && frame.rangeShape == nil && !frame.rangeShapeAttempted
+                && frame.filmType == .colorNegative,
             proxyMaxDimension: proxyMaxDimension,
             needsThumbnail: !isInputPreview && needsThumbnail,
             cleanedRawFrameID: cleanedIdentity == nil ? nil : frame.id,
@@ -430,6 +432,7 @@ extension AppModel {
         frame.cachedBase = result.base
         frame.cachedBaseKey = baseKey
         frame.baseRGB = result.base?.rgb
+        applyRangeCalibration(result, to: frame)
     }
 
     /// 장면 측정 캐시 키. 베이스 값까지 포함해야 한다 — auto 모드는 baseKey 가 같아도 입력이
@@ -448,7 +451,8 @@ extension AppModel {
             scannerProfileID: frame.params.scannerProfileID,
             baseScale: frame.filmType.requiresInversion && frame.params.baseEstimationMode == .auto
                 ? frame.params.baseScale : .identity,
-            autoBalance: frame.params.autoBalance
+            autoBalance: frame.params.autoBalance,
+            channelRange: frame.params.autoBalance ? nil : frame.params.channelRange
         )
     }
 
@@ -484,7 +488,9 @@ extension AppModel {
                   renderedParams.autoBalance == frame.params.autoBalance,
                   renderedParams.autoNeutralBalance == frame.params.autoNeutralBalance,
                   renderedParams.developTarget == frame.params.developTarget,
-                  renderedParams.scannerProfileID == frame.params.scannerProfileID else { return }
+                  renderedParams.scannerProfileID == frame.params.scannerProfileID,
+                  renderedParams.autoBalance || renderedParams.channelRange == frame.params.channelRange
+            else { return }
         }
         let key = sceneMeasurementCacheKey(for: frame, baseKey: baseKey)
         if frame.cachedSceneMeasurementsKey != key {

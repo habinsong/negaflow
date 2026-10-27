@@ -325,6 +325,17 @@ The version-specific upstream download URL is also recorded there.
 
 Upstream license reference: <https://nsis.sourceforge.io/Docs/AppendixI.html>.
 
+## 9. DNG technology (Adobe)
+
+- Component: the DNG export writer (`src/Native/output/dng_linear_export.cpp`), written for negaflow
+  from the DNG Specification 1.6 published by Adobe Inc. It contains no Adobe DNG SDK code.
+- Terms: Adobe's DNG Specification patent license, a royalty-free grant for software that reads or
+  writes DNG files, https://helpx.adobe.com/camera-raw/digital-negative.html.
+
+This product includes DNG technology under license by Adobe.
+
+---
+
 ## Deployment model
 
 `scripts/build-release.ps1` builds the shell `--self-contained true` (bundling the

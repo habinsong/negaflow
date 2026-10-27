@@ -17,6 +17,10 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
     /// 스캔 광원 프로파일(LightSourceProfileRegistry id). 실측 base가 없을 때 필름 프리셋 Dmin에
     /// 채널별 트림을 적용한다. nil = 중립(보정 없음).
     public var lightSourceProfileID: String? = nil
+    /// 장치×필름의 채널 밀도 범위 교정(기하평균 1, R·G·B 곱). nil = 세 채널이 같은 범위(교정 없음).
+    /// 자동 밸런스 OFF 의 고정 범위(명목 1.55D)에 곱해진다. ON 은 장면에서 채널별 범위를 직접 재므로
+    /// 쓰지 않는다. 같은 롤의 여러 프레임에서 잰 값의 중앙값을 넣는다(ChannelRangeCalibration).
+    public var channelRange: SIMD3<Double>? = nil
 
     /// MAIN/PRINT·CS의 장면별 색·밝기 밸런스. 화면 토글과 함께 기본 ON.
     public var autoBalance: Bool = true
@@ -97,7 +101,7 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
         case filmType, isDigitalSource, developTarget, scannerProfileID, baseEstimationMode
         case manualBaseRGB, filmStockDminID
         case baseScale, inputGamma
-        case lightSourceProfileID, autoBalance, autoLevels, autoNeutralBalance
+        case lightSourceProfileID, channelRange, autoBalance, autoLevels, autoNeutralBalance
         case exposure, contrast, density, highlight, shadow, whites, blacks
         case curveHighlights, curveLights, curveDarks, curveShadows
         case warmth, tint, colorDepth, vibrance, saturation
@@ -124,6 +128,8 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
         manualBaseRGB = try c.decodeIfPresent(SIMD3<Double>.self, forKey: .manualBaseRGB)
         filmStockDminID = try c.decodeIfPresent(String.self, forKey: .filmStockDminID)
         lightSourceProfileID = try c.decodeIfPresent(String.self, forKey: .lightSourceProfileID)
+        channelRange = try c.decodeIfPresent(SIMD3<Double>.self, forKey: .channelRange)
+            .flatMap(ChannelRangeCalibration.sanitized)
         autoBalance = try c.decodeIfPresent(Bool.self, forKey: .autoBalance) ?? true
         autoLevels = try c.decodeIfPresent(Bool.self, forKey: .autoLevels) ?? false
         autoNeutralBalance = try c.decodeIfPresent(Bool.self, forKey: .autoNeutralBalance) ?? false
@@ -227,6 +233,7 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
         manualBaseRGB = overrides.manualBaseRGB
         filmStockDminID = overrides.filmStockDminID
         lightSourceProfileID = overrides.lightSourceProfileID
+        channelRange = overrides.channelRange
         autoLevels = overrides.autoLevels
         autoBalance = overrides.autoBalance
         autoNeutralBalance = overrides.autoNeutralBalance

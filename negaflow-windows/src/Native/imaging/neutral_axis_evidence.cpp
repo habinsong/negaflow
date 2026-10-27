@@ -91,6 +91,7 @@ std::optional<NeutralAxisEvidence> measure_neutral_axis(
     for (const auto& pixel : pixels) {
         if (!(pixel[0] > minimum_channel && pixel[1] > minimum_channel &&
               pixel[2] > minimum_channel) ||
+            std::max({pixel[0], pixel[1], pixel[2]}) >= 0.995 ||
             !((0.2126 * pixel[0]) + (0.7152 * pixel[1]) + (0.0722 * pixel[2]) <
               maximum_luminance)) {
             continue;
@@ -151,6 +152,11 @@ std::optional<NeutralAxisEvidence> measure_neutral_axis(
     evidence.selected_fraction =
         static_cast<double>(selected.size()) / static_cast<double>(pixels.size());
     evidence.is_fallback = is_fallback;
+    const double span = evidence.bands.back().log_luminance - evidence.bands.front().log_luminance;
+    const double t = std::clamp((span - std::log(1.25)) / (std::log(4.0) - std::log(1.25)), 0.0, 1.0);
+    const double range_support = t * t * (3.0 - 2.0 * t);
+    evidence.confidence = std::min(1.0, evidence.selected_fraction / 0.10) *
+        (is_fallback ? 0.05 + 0.50 * range_support : 0.15 + 0.85 * range_support);
     return evidence;
 }
 

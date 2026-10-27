@@ -55,9 +55,9 @@ final class AutoAdjustTests: XCTestCase {
         XCTAssertGreaterThan(d.whites, 0, "상위가 떠 있으면 Whites 를 올려야")
         XCTAssertLessThan(d.blacks, 0, "하위가 떠 있으면 Blacks 를 내려야")
     }
-    func testAutoToneBoostsLowSaturation() {
+    func testAutoToneLeavesColorToColorControls() {
         let d = AutoAdjust.autoTone(stats(0.5, 0.5, 0.5, flat(), sat: 0.1))
-        XCTAssertGreaterThan(d.vibrance, 0, "채도가 낮으면 Vibrance 를 올려야")
+        XCTAssertEqual(d.vibrance, 0, "자동 톤은 색상 값을 제안하지 않습니다")
     }
     func testAutoWBNeutralizesWarmCast() {
         let (w, _) = AutoAdjust.autoWhiteBalance(stats(0.6, 0.5, 0.4, flat(), sat: 0.2))

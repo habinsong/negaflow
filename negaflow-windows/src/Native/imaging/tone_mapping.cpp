@@ -2,6 +2,7 @@
 
 #include "negaflow/color/srgb_transfer.h"
 #include "negaflow/core/pointwise.h"
+#include "negaflow/imaging/bounded_chroma_scale.h"
 #include "negaflow/imaging/display_gamut_map.h"
 
 #include <algorithm>
@@ -13,7 +14,11 @@ namespace {
 
 // 휘도 목표를 화소에 싣습니다(macOS `withLuma`). 어둡게 할 때는 채널 비율을 보존합니다 — 같은
 // 값을 빼면 가장 작은 채널이 먼저 0 에 닿아 암부의 약한 색이 원색으로 폭주합니다(R/B 1.2 가
-// 대비 +1 에서 131). 밝힐 때는 기존처럼 같은 값을 더합니다.
+// 대비 +1 에서 131). 밝힐 때는 기존처럼 같은 값을 더합니다. 더한 결과의 한 채널이 1 을 넘으면
+// 그 채널만 잘라 내지 않습니다 — 채널별로 자르면 목표 휘도에 못 미치고 남은 두 채널의 비율이
+// 깨져 색조가 돕니다. 대신 목표 휘도를 지킨 채 chroma 만 1 에 맞게 줄입니다. 더해도 [0,1] 안에
+// 머무는 화소는 이전과 같습니다. 입력 `safe` 는 [0,1] 안이어야 합니다(호출 쪽이
+// `tone_safe_unit_rgb` 로 맞춥니다).
 [[nodiscard]] negaflow::core::Rgba32F with_luma(
     const negaflow::core::Rgba32F safe,
     const float source_luma,
@@ -29,10 +34,29 @@ namespace {
         };
     }
     const float delta = new_luma - source_luma;
+    const float lifted_red = safe.red + delta;
+    const float lifted_green = safe.green + delta;
+    const float lifted_blue = safe.blue + delta;
+    if (lifted_red <= 1.0F && lifted_green <= 1.0F && lifted_blue <= 1.0F) {
+        return {
+            std::clamp(lifted_red, 0.0F, 1.0F),
+            std::clamp(lifted_green, 0.0F, 1.0F),
+            std::clamp(lifted_blue, 0.0F, 1.0F),
+            alpha,
+        };
+    }
+    // 같은 값을 더해도 휘도 기준 chroma 는 변하지 않습니다.
+    const float chroma_red = safe.red - source_luma;
+    const float chroma_green = safe.green - source_luma;
+    const float chroma_blue = safe.blue - source_luma;
+    const float fold = std::min(
+        1.0F,
+        negaflow::imaging::chroma_scale_headroom(
+            new_luma, chroma_red, chroma_green, chroma_blue));
     return {
-        std::clamp(safe.red + delta, 0.0F, 1.0F),
-        std::clamp(safe.green + delta, 0.0F, 1.0F),
-        std::clamp(safe.blue + delta, 0.0F, 1.0F),
+        std::clamp(new_luma + (chroma_red * fold), 0.0F, 1.0F),
+        std::clamp(new_luma + (chroma_green * fold), 0.0F, 1.0F),
+        std::clamp(new_luma + (chroma_blue * fold), 0.0F, 1.0F),
         alpha,
     };
 }

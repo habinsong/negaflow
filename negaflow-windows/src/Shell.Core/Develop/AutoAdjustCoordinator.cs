@@ -42,7 +42,8 @@ public sealed record AutoAdjustOutcome(
 /// <para>
 /// 자동 톤은 <b>폐루프</b>입니다(macOS <c>AppModel.autoTone</c>). 첫 계산은 슬라이더 전달함수를
 /// 모형으로 거꾸로 풀지만 사용자 커브·색 깊이·스캐너 타깃과의 상호작용은 모형 밖입니다. 그래서
-/// 계산값을 frame 의 나머지 설정과 함께 한 번 더 그려 다시 재고, 노출과 화이트를 한 번 바로잡습니다.
+/// 계산값을 frame의 나머지 설정과 함께 다시 그려 노출과 화이트 후보를 구합니다.
+/// 후보도 렌더해 톤 점수가 좋아질 때만 채택합니다. 색 조정은 유지합니다.
 /// 결정적이라 같은 frame 이면 같은 답입니다.
 /// </para>
 /// </remarks>
@@ -53,6 +54,7 @@ public sealed class AutoAdjustCoordinator
     private readonly uint sampleExtent;
     private readonly Func<byte[], uint, uint, bool, AutoAdjustSettings> compute;
     private readonly Func<byte[], uint, uint, bool, AutoAdjustSettings, AutoAdjustSettings> refine;
+    private readonly Func<byte[], uint, uint, bool, double> quality;
     // 요청 종류마다 따로 셉니다. 같은 종류의 새 요청만 앞 요청을 대체합니다 — 자동 톤을 누른 뒤
     // 자동 화이트밸런스를 누르면 둘 다 반영돼야 합니다(예전: 공유 리비전이라 톤 결과가 버려졌다).
     // 다른 종류는 앞 요청이 반영된 뒤 그 값 위에서 잽니다 — 자동 WB 의 측정은 톤에 따라 달라지므로
@@ -74,7 +76,8 @@ public sealed class AutoAdjustCoordinator
         : this(exporter, dispatcher, sampleExtent,
             (pixels, width, height, monochrome) => NativeAutoAdjust.Compute(pixels, width, height, monochrome),
             (pixels, width, height, monochrome, first) =>
-                NativeAutoAdjust.Refine(pixels, width, height, monochrome, first)) { }
+                NativeAutoAdjust.Refine(pixels, width, height, monochrome, first),
+            (pixels, width, height, adjustMid) => NativeAutoAdjust.ToneScore(pixels, width, height, adjustMid)) { }
 
     /// <summary>계산만 바꿔 끼우는 시험용입니다. 폐루프 보정은 첫 값을 그대로 돌려줍니다.</summary>
     internal AutoAdjustCoordinator(
@@ -87,7 +90,8 @@ public sealed class AutoAdjustCoordinator
     internal AutoAdjustCoordinator(
         IDevelopExporter exporter, IUiDispatcher dispatcher, uint sampleExtent,
         Func<byte[], uint, uint, bool, AutoAdjustSettings> compute,
-        Func<byte[], uint, uint, bool, AutoAdjustSettings, AutoAdjustSettings> refine)
+        Func<byte[], uint, uint, bool, AutoAdjustSettings, AutoAdjustSettings> refine,
+        Func<byte[], uint, uint, bool, double>? quality = null)
     {
         ArgumentNullException.ThrowIfNull(exporter);
         ArgumentNullException.ThrowIfNull(dispatcher);
@@ -100,6 +104,7 @@ public sealed class AutoAdjustCoordinator
         this.sampleExtent = sampleExtent;
         this.compute = compute;
         this.refine = refine;
+        this.quality = quality ?? ((_, _, _, _) => 0);
     }
 
     /// <summary>
@@ -116,7 +121,6 @@ public sealed class AutoAdjustCoordinator
         frame with
         {
             Tone = ToneAdjustment.Neutral,
-            ColorModel = frame.ColorModel with { ColorDepth = 0.0, Vibrance = 0.0, Saturation = 0.0 },
         };
 
     internal static LibraryFrameSnapshot NeutraliseWhiteBalance(LibraryFrameSnapshot frame) =>
@@ -144,7 +148,6 @@ public sealed class AutoAdjustCoordinator
             {
                 Warmth = settings.Warmth,
                 Tint = settings.Tint,
-                Vibrance = settings.Vibrance,
             },
         };
 
@@ -162,12 +165,6 @@ public sealed class AutoAdjustCoordinator
                 Whites = settings.Whites,
                 Blacks = settings.Blacks,
                 Density = settings.Density,
-            },
-            // 채도는 대입하지 않습니다 — 자동 톤은 채도를 계산하지 않으므로 대입하면 사용자 값을
-            // 조용히 0 으로 지웁니다(macOS `AppModel.applying` 과 같습니다).
-            ColorModel = frame.ColorModel with
-            {
-                Vibrance = settings.Vibrance,
             },
         };
 
@@ -302,7 +299,21 @@ public sealed class AutoAdjustCoordinator
             Rendered verified = await RenderAsync(verify, frame.SourcePath, isCurrent).ConfigureAwait(false);
             if (verified.Pixels is not null)
             {
-                settings = refine(verified.Pixels, verified.Width, verified.Height, monochrome, settings);
+                AutoAdjustSettings candidate = refine(verified.Pixels, verified.Width, verified.Height, monochrome, settings);
+                double before = RefinementDistance(settings, candidate);
+                if (before > 0.02)
+                {
+                    LibraryFrameSnapshot candidateFrame = operation == AutoAdjustOperation.Tone
+                        ? ApplyTone(frame, candidate) : Apply(frame, candidate);
+                    Rendered checkedRender = await RenderAsync(candidateFrame, frame.SourcePath, isCurrent).ConfigureAwait(false);
+                    if (checkedRender.Pixels is not null)
+                    {
+                        double originalScore = quality(verified.Pixels, verified.Width, verified.Height, settings.Exposure > 0);
+                        double candidateScore = quality(checkedRender.Pixels, checkedRender.Width, checkedRender.Height, settings.Exposure > 0);
+                        if (candidateScore < originalScore) { settings = candidate; }
+                    }
+                    else if (checkedRender.Outcome is null) { return null; }
+                }
             }
             else if (verified.Outcome is null)
             {
@@ -322,6 +333,9 @@ public sealed class AutoAdjustCoordinator
             DevelopRequestRefusal.None,
             null);
     }
+
+    private static double RefinementDistance(AutoAdjustSettings first, AutoAdjustSettings second) =>
+        Math.Abs(first.Exposure - second.Exposure) + 0.5 * Math.Abs(first.Whites - second.Whites);
 
     /// <summary>한 번의 측정 렌더입니다. 화소가 있거나, 돌려줄 결과(거부·실패)가 있거나, 둘 다 없으면
     /// 더 새 요청에 밀린 것입니다.</summary>

@@ -14,6 +14,7 @@ internal static class AppliedBaseInvalidation
 
     internal static void Apply(JsonObject before, JsonObject after)
     {
+        ApplyRangeShape(before, after);
         if (!after.ContainsKey(LibraryFrameReader.BaseRgbName)) { return; }
         bool changed = !JsonNode.DeepEquals(before["filmType"], after["filmType"]) ||
             !JsonNode.DeepEquals(before["sourceSignalKind"], after["sourceSignalKind"]);
@@ -24,5 +25,18 @@ internal static class AppliedBaseInvalidation
             changed |= !JsonNode.DeepEquals(previous?[key], current?[key]);
         }
         if (changed) { after.Remove(LibraryFrameReader.BaseRgbName); }
+    }
+
+    // 채널 범위 모양은 입력 해석(감마)이나 필름·신호 종류가 바뀔 때만 낡습니다. 베이스 값이 바뀌어도
+    // 롤 교정의 재료로는 같은 사실이라 지우지 않습니다(macOS `invalidateInputInterpretation` 과 같다).
+    private static void ApplyRangeShape(JsonObject before, JsonObject after)
+    {
+        if (!after.ContainsKey(LibraryFrameReader.RangeShapeName)) { return; }
+        bool changed = !JsonNode.DeepEquals(before["filmType"], after["filmType"]) ||
+            !JsonNode.DeepEquals(before["sourceSignalKind"], after["sourceSignalKind"]);
+        var previous = before[LibraryFrameReader.ParametersName] as JsonObject;
+        var current = after[LibraryFrameReader.ParametersName] as JsonObject;
+        changed |= !JsonNode.DeepEquals(previous?["inputGamma"], current?["inputGamma"]);
+        if (changed) { after.Remove(LibraryFrameReader.RangeShapeName); }
     }
 }

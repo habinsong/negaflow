@@ -164,6 +164,16 @@ void write_outcome_v3(
     result.cancelled = outcome.cancelled ? 1U : 0U;
     result.reserved = 0U;
     result.struct_size = declared_size;
+    if (declared_size >= static_cast<std::uint32_t>(sizeof(nf_develop_export_result_v7))) {
+        auto& shape = reinterpret_cast<nf_develop_export_result_v7&>(result);
+        shape.range_shape_present = outcome.succeeded && outcome.range_shape.has_value() ? 1U : 0U;
+        shape.range_shape_reserved = 0U;
+        shape.range_shape_pad = 0U;
+        for (std::size_t channel = 0U; channel < 3U; ++channel) {
+            shape.range_shape[channel] =
+                shape.range_shape_present == 1U ? (*outcome.range_shape)[channel] : 0.0F;
+        }
+    }
     if (declared_size >= static_cast<std::uint32_t>(sizeof(nf_develop_export_result_v6))) {
         auto& input = reinterpret_cast<nf_develop_export_result_v6&>(result);
         input.reference_base_present = outcome.succeeded && outcome.reference_base_present ? 1U : 0U;

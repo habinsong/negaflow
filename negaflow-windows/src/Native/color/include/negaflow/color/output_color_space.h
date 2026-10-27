@@ -23,6 +23,11 @@ using ColorMatrix = std::array<float, 9>;
 // primaries. Adapting to D50 belongs in the profile, not in the pixels.
 [[nodiscard]] ColorMatrix linear_srgb_to(OutputColorSpace space) noexcept;
 
+// XYZ (D65 white, Y = 1) into the target's linear RGB, row-major. This is the inverse of the
+// space's RGB-to-XYZ matrix; the DNG writer stores it as ColorMatrix1 so a reader recovers the
+// colours of the space the linear samples are in.
+[[nodiscard]] std::array<double, 9> d65_xyz_to_linear_rgb(OutputColorSpace space) noexcept;
+
 // The target's encoding curve. Display P3 shares the sRGB curve; Adobe RGB is gamma
 // 563/256, which is the value the Adobe RGB (1998) specification states.
 [[nodiscard]] float encode_output_component(float linear, OutputColorSpace space) noexcept;

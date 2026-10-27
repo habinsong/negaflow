@@ -6,7 +6,7 @@ extension AppModel {
         get { exportSettingsStore.exportFormat }
         set {
             exportSettingsStore.exportFormat = newValue
-            if newValue == .jpeg || newValue == .rawScanTIFF {
+            if newValue == .jpeg || newValue == .rawScanTIFF || newValue == .dng {
                 exportPreserveAlpha = false
             }
             if newValue == .rawScanTIFF {

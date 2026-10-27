@@ -24,6 +24,7 @@ public enum LibraryFrameError
 
     /// <summary><c>baseRGB</c> 가 있으면 유한한 세 채널이어야 합니다.</summary>
     InvalidAppliedBase,
+    InvalidChannelRange,
 
     InvalidBaseRecipe,
 

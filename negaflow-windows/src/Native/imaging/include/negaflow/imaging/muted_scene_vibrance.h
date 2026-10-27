@@ -12,6 +12,8 @@ struct MutedSceneVibranceInfo final {
     double mean_saturation{0.5};
     double amount{0.0};
     bool applied{false};
+    // 평균 채도를 이번 호출이 쟀거나 받아 썼는가(흑백이거나 검증에서 일찍 끝나면 false).
+    bool saturation_measured{false};
 };
 
 struct MutedSceneVibranceResult final {
@@ -35,9 +37,12 @@ struct VibrancePlaneSelection final {
 // Measures HSV saturation from a small linear proxy and applies a bounded
 // low-chroma-first boost in place. Monochrome inputs are an explicit identity.
 // `region` 이 있으면 장면 채도를 크롭한 사진 영역 안에서만 잽니다(적용은 전체).
+// `reused_mean_saturation` 은 같은 화상·같은 영역에서 이미 잰 평균 채도입니다. 있으면 축소·측정을
+// 건너뛰고 그 값으로 세기를 정합니다(측정이 결정적이므로 결과 화소는 같습니다).
 [[nodiscard]] MutedSceneVibranceResult apply_muted_scene_vibrance(
     negaflow::core::ImageView image,
     bool monochrome,
-    const std::optional<AnalysisRegion>& region = std::nullopt) noexcept;
+    const std::optional<AnalysisRegion>& region = std::nullopt,
+    const std::optional<double>& reused_mean_saturation = std::nullopt) noexcept;
 
 } // namespace negaflow::imaging

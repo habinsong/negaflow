@@ -99,6 +99,12 @@ A printer output profile is not applied to one source before that source is dupl
 
 The C-print proof profile is the lab-supplied process preview. It is never silently substituted as the output profile. See [Print layouts and C-print preview](../reference/C_PRINT.md) for profile requirements and the accuracy boundary.
 
+## DNG export
+
+DNG writes the developed picture as an uncompressed 16-bit linear RGB file (`PhotometricInterpretation = LinearRaw`) in the output color space you pick: sRGB, Display P3 or Adobe RGB. Tone and color are already baked in, so other apps read it as an output-referred file. The file carries copyright, scanner, software, date and film notes under the same metadata policy as TIFF. Source camera EXIF, IPTC and GPS are not copied. It takes 6 bytes per pixel, so a 24-megapixel frame is about 144 MB.
+
+DNG is offered only for uncompressed sources: TIFF, camera RAW and DNG. JPEG, PNG and HEIC sources cannot be exported to DNG. DNG is not offered in the Print module, and the `PRINT` target is refused. Both end in a printer ICC profile, which a DNG cannot carry. negaflow stops with a message instead of exporting something else. exiftool and Apple's image decoder read the file. How Lightroom or Camera Raw render it has not been measured.
+
 ## What changes the source
 
 | Action | Source in Finder | Catalog and edits |

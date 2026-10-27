@@ -61,7 +61,7 @@ extension AppModel {
         var plannedPaths = Set<String>()
         let date = Date()
         return frames.enumerated().map { offset, frame in
-            let requiresPrinterOutputProfile = format != .rawScanTIFF
+            let requiresPrinterOutputProfile = format.appliesPrinterOutputProfile
                 && frame.params.developTarget == .print
             let frameRecipeIdentity = requiresPrinterOutputProfile
                 ? (printRecipeIdentity ?? recipeIdentity)

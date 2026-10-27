@@ -53,6 +53,14 @@ TIFF 里能看到的相机和色彩空间元数据，是拍摄与编码留下的
 
 FILM-R v2 素材只在做质量测量时下载，图像本身不会进仓库，也不会进应用。 DOI 版本、CC BY 4.0、文件大小和哈希固定在 [`Config/defect-corpus-film-r-v2.json`](../../../negaflow-mac/Config/defect-corpus-film-r-v2.json)。
 
+## DNG 导出
+
+DNG 写入器（`negaflow-mac` 中的 `DNGLinearWriter`，`negaflow-windows` 中的 `dng_linear_export`）只依据 Adobe 公开的 Digital Negative Specification 1.6 中的标签编号和色彩模型重新编写。其中没有 Adobe DNG SDK 的代码，也没有 LibRaw 或其他 DNG 写入器的代码。色彩矩阵由 sRGB、Display P3 和 Adobe RGB (1998) 公开的色度坐标计算得出。Adobe 为读写 DNG 文件的软件提供免版税的专利许可，本产品使用该许可，许可要求附上下面的声明。
+
+This product includes DNG technology under license by Adobe.
+
+DNG 是 Adobe Inc. 的商标。这个名称只用来指明文件格式。
+
 ## 名称与互操作
 
 胶片、扫描仪、色彩空间、XMP namespace 和产品名称，用于标识对象和保持文件互操作。 Windows 引擎合成的输出 ICC 配置文件写入描述性名称（`"Negaflow Compatible P3"`、`"Compatible with Adobe RGB (1998)"`）与 `CC0 1.0 Universal` 声明，使导出的图像不受配置文件版权限制。 不主张商标所有权，也不主张合作关系。范围见 [`TRADEMARKS.md`](../../../TRADEMARKS.md)。

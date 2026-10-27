@@ -26,8 +26,7 @@ cbuffer SceneSampleGridConstants : register(b0) {
     uint2 Origin;
     uint2 SampleExtent;
     // 원본 화소 / 격자 칸. CPU 의 `inverse_scale` 과 같은 자리입니다.
-    float InverseScale;
-    float SamplePad;
+    float2 InverseScale;
 };
 
 float Overlap(float a0, float a1, float b0, float b1) {
@@ -39,10 +38,10 @@ void SceneSampleGridMain(uint3 id : SV_DispatchThreadID) {
     if (id.x >= SampleExtent.x || id.y >= SampleExtent.y) {
         return;
     }
-    float top = float(id.y) * InverseScale;
-    float bottom = float(id.y + 1u) * InverseScale;
-    float left = float(id.x) * InverseScale;
-    float right = float(id.x + 1u) * InverseScale;
+    float top = float(id.y) * InverseScale.y;
+    float bottom = float(id.y + 1u) * InverseScale.y;
+    float left = float(id.x) * InverseScale.x;
+    float right = float(id.x + 1u) * InverseScale.x;
     uint firstY = uint(floor(top));
     uint lastY = min(Extent.y, uint(ceil(bottom)));
     uint firstX = uint(floor(left));

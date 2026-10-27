@@ -52,5 +52,6 @@ void test_manual_negative_development();
 void test_auto_negative_base_resolution();
 void test_invalid_manual_inputs_fail_closed();
 void test_input_gamma_density_reference();
+void test_channel_range_and_measurement_reuse();
 
 }  // namespace manual_negative_tests

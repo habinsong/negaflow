@@ -4,6 +4,11 @@ import Chromabase
 extension AppModel {
     var exportSelection: [ScanFrame] { actionableSelectedFrames }
 
+    /// DNG 는 선택한 프레임이 모두 무압축 입력(TIFF · 카메라 RAW · DNG)일 때만 고를 수 있다.
+    var exportSelectionAllowsDNG: Bool {
+        exportSelection.allSatisfy { !ImageLoader.isExcludedFromDNGExport($0.rawScanURL) }
+    }
+
     var canExportSelection: Bool {
         canQuickExportSelection && ExportNamingTemplate.isValid(exportNamingTemplate)
     }
@@ -93,7 +98,7 @@ extension AppModel {
             ? canQuickExportSelection
             : canQuickExportPrintSelection
         guard canStart else { return }
-        let requiresPrinterOutputProfile = format != .rawScanTIFF
+        let requiresPrinterOutputProfile = format.appliesPrinterOutputProfile
             && exportSelection.contains { $0.params.developTarget == .print }
         guard !requiresPrinterOutputProfile
                 || printerOutputProfile?.validatedColorSpace() != nil else {

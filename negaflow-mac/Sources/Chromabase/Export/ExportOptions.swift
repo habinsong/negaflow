@@ -124,7 +124,20 @@ extension ExportFormat {
         case .png: return "PNG"
         case .tiff16: return "TIFF"
         case .rawScanTIFF: return "Raw TIFF"
+        case .dng: return "DNG"
         }
+    }
+
+    /// 프린터 ICC 출력 경계(PRINT 타깃)를 거치는 형식. 원본 스캔 TIFF 는 현상하지 않고, DNG 는 행렬로
+    /// 적을 수 없는 프린터 프로파일을 담지 못한다.
+    public var appliesPrinterOutputProfile: Bool {
+        self != .rawScanTIFF && self != .dng
+    }
+
+    /// 인쇄 모듈의 용지 배치(페이지 합성)를 거치지 않고 프레임마다 파일 하나로 내보내는 형식.
+    /// 원본 스캔 TIFF 와 DNG 는 페이지 합성의 입력이 될 수 없다.
+    public var bypassesPrintLayout: Bool {
+        self == .rawScanTIFF || self == .dng
     }
 
     public var fileExtension: String {
@@ -132,6 +145,7 @@ extension ExportFormat {
         case .jpeg: return "jpg"
         case .png: return "png"
         case .tiff16, .rawScanTIFF: return "tif"
+        case .dng: return "dng"
         }
     }
 }

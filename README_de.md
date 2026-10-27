@@ -93,7 +93,7 @@ Um einen echten Scanner anzuschließen, braucht es ein separates Plug-in, und f�
 - GrainMend, das Fotos wiederherstellt, indem es Staub und Kratzer entfernt.
 - Eine Bibliothek mit Filmen, Ordnern, Sammlungen, Bewertungen, Stapeln, virtuellen Kopien und Suche nach Kamera, Objektiv oder Film
 - Vorgaben und Kopieren/Einfügen, die Entwicklungsprozess, Ziel, Tonwert, Farbe, Detail, Ausschnitt und Ausrichtung gemeinsam mitnehmen
-- Export als JPEG und 16-Bit-TIFF, ICC-Profile, und Angaben wie Kamera, Objektiv und Film ins EXIF geschrieben
+- Export als JPEG, PNG, 16-Bit-TIFF und lineares 16-Bit-DNG, ICC-Profile, und Angaben wie Kamera, Objektiv und Film ins EXIF geschrieben
 - Sieben Abzugslayouts, Papiervorschauen, Foto- und ISO-Papiere sowie die C-Print-Funktion.
 
 ## Chroma Engine
@@ -102,7 +102,7 @@ Um einen echten Scanner anzuschließen, braucht es ein separates Plug-in, und f�
 
 Vor der Entwicklung eines Negativs misst sie die Filmbasis in einem unbelichteten Bereich. Wo die automatische Messung danebenliegt, tippen Sie einfach mit der Pipette oder passen die RGB-Werte an.
 
-Voreingestellt sind `MAIN` und Auto-Abgleich ON. Bei MAIN (einschließlich PRINT) und CS sitzt der Schalter rechts neben der Zielüberschrift. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF.
+Voreingestellt sind `MAIN` und Auto-Abgleich ON. Der Schalter ist eine kleine Pille rechts neben der Zielüberschrift. Er erscheint nur bei Farb- und S/W-Negativen mit MAIN (einschließlich PRINT) und CS. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF.
 
 Weitere Ziele sind `PRINT` für die Ausgabe über ein Drucker-ICC, `HS` und `SP` aus der Minilab-Familie, `F135` und `HR` aus der Familie der Laborgeräte, `EXPIRED`, das alten Film zurückzuholen versucht. Bei der Ausgabe wählen Sie zwischen sRGB, Display P3, Adobe RGB und einem eigenen RGB-ICC.
 

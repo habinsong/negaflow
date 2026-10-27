@@ -55,7 +55,7 @@ public sealed class AutoAdjustSettings
 
     public double Density { get; }
 
-    /// <summary>올리기만 합니다.</summary>
+    /// <summary>호환용 필드입니다. 자동 톤은 색상 값을 변경하지 않습니다.</summary>
     public double Vibrance { get; }
 
     public double Warmth { get; }
@@ -152,6 +152,19 @@ public static unsafe class NativeAutoAdjust
         }
         ThrowOnFailure(status, "nf_auto_tone_refine_v1");
         return ToSettings(raw);
+    }
+
+    public static double ToneScore(ReadOnlySpan<byte> pixels, uint width, uint height, bool adjustMid)
+    {
+        uint stride = CheckBitmap(pixels, width, height);
+        double result = 0;
+        uint status;
+        fixed (byte* buffer = pixels)
+        {
+            status = NativeAutoAdjustEntry.nf_auto_tone_score_v1(buffer, width, height, stride, adjustMid ? 1U : 0U, &result);
+        }
+        ThrowOnFailure(status, "nf_auto_tone_score_v1");
+        return result;
     }
 
     private static uint CheckBitmap(ReadOnlySpan<byte> pixels, uint width, uint height)

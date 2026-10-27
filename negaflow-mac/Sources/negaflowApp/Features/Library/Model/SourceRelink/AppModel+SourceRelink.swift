@@ -240,6 +240,8 @@ extension AppModel {
         frame.cachedBaseKey = nil
         frame.cachedBase = nil
         frame.baseRGB = nil
+        frame.rangeShape = nil
+        frame.rangeShapeAttempted = false
         frame.hasDevelopedOnce = false
     }
 

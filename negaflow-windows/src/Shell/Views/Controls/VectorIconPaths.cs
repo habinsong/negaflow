@@ -38,6 +38,9 @@ public enum VectorIconKind
     /// <summary>macOS <c>thermometer.medium</c>. 자동 화이트 밸런스.</summary>
     Thermometer,
 
+    /// <summary>macOS <c>scalemass</c>. 양팔 저울 — 자동 밸런스.</summary>
+    Scale,
+
     /// <summary>macOS <c>circle.righthalf.filled</c>. 흑백 토닝.</summary>
     HalfCircleRight,
 
@@ -163,6 +166,12 @@ internal static class VectorIconPaths
             "M 12,8.5 m -4.5,0 a 4.5,4.5 0 1 0 9,0 a 4.5,4.5 0 1 0 -9,0 " +
             "M 8,15.5 m -4.5,0 a 4.5,4.5 0 1 0 9,0 a 4.5,4.5 0 1 0 -9,0 " +
             "M 16,15.5 m -4.5,0 a 4.5,4.5 0 1 0 9,0 a 4.5,4.5 0 1 0 -9,0",
+
+        // 양팔 저울 — 기둥과 받침, 수평 가로대, 줄에 매달린 두 접시.
+        VectorIconKind.Scale =>
+            "M 12,4 L 12,20 M 8,20 L 16,20 M 3.5,7.5 L 20.5,7.5 " +
+            "M 3.5,7.5 L 1.5,14 M 3.5,7.5 L 5.5,14 M 1.5,14 A 2,2 0 0 0 5.5,14 Z " +
+            "M 20.5,7.5 L 18.5,14 M 20.5,7.5 L 22.5,14 M 18.5,14 A 2,2 0 0 0 22.5,14 Z",
 
         // 바닥 축과 높이가 다른 막대 넷.
         VectorIconKind.LevelsChart =>

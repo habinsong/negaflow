@@ -56,7 +56,8 @@ final class MainSyntheticIT8RoundTripTests: XCTestCase {
         XCTAssertEqual(measuredChannelCount, 264 * 3)
     }
 
-    /// Composition regression for fixed inversion and luminance output tone.
+    /// 자동 밸런스를 끈 MAIN 은 고정 범위 v4 반전이다. v4 의 공개 응답을 닫힌형으로 거꾸로 적은
+    /// 음화 픽스처(`transmission(forLinear:base:)`)를 현상해 원래 코드값이 나오는지 패치별로 본다.
     func testMainSyntheticIT8AppliesFixedResponseKeepingNeutralsNeutral() {
         XCTAssertEqual(NegativeInversion.genericDensityEncodingVersion, "shoulder-print-response-v4")
         XCTAssertEqual(NegativeInversion.colorResponse.normalRange, fixtureDmax, accuracy: 1e-12)
@@ -64,6 +65,7 @@ final class MainSyntheticIT8RoundTripTests: XCTestCase {
         var params = DevelopParameters()
         params.filmType = .colorNegative
         params.developTarget = .main
+        params.autoBalance = false
         params.baseEstimationMode = .manual
         params.manualBaseRGB = baseRGB
 
@@ -73,16 +75,13 @@ final class MainSyntheticIT8RoundTripTests: XCTestCase {
             params: params
         )
         let pixels = render(output)
-        let fixed = NegativeLinearResponse.invert(fixture.negative,
-            stats: NegativeLinearResponse.stats(base: FilmBase(rgb: baseRGB, source: .manual),
-                preset: nil, filmType: .colorNegative), filmType: .colorNegative)
-        let inversion = render(NegativeLinearResponse.output(fixed, exposure: 0, filmType: .colorNegative))
 
         var measuredPatchCount = 0
         for row in 0..<rows {
             for column in 0..<columns {
                 let measuredRGB = patchMean(pixels, row: row, column: column)
-                let inversionRGB = patchMean(inversion, row: row, column: column)
+                let code = referenceCode(row: row, column: column)
+                let inversionRGB = SIMD3(sRGBDecode(code.x), sRGBDecode(code.y), sRGBDecode(code.z))
                 let id = patchID(row: row, column: column)
 
                 XCTAssertTrue(
@@ -95,7 +94,7 @@ final class MainSyntheticIT8RoundTripTests: XCTestCase {
                     ColorTargetColorimetry.linearSRGBToLabD50(inversionRGB)
                 )
                 XCTAssertLessThan(lookDelta, 0.05,
-                    "\(id): MAIN 이 fixed-density 반전 위에 선언되지 않은 룩을 추가했다(ΔE=\(lookDelta))")
+                    "\(id): MAIN 이 v4 반전 위에 선언되지 않은 룩을 추가했다(ΔE=\(lookDelta))")
 
                 // (2) 중립축은 중립 유지 — fixed-density 가 회색에 캐스트를 넣지 않는다.
                 if row == rows - 1 {
@@ -141,10 +140,10 @@ final class MainSyntheticIT8RoundTripTests: XCTestCase {
                     sRGBDecode(code.z)
                 )
                 referenceLab.append(ColorTargetColorimetry.linearSRGBToLabD50(expectedLinear))
-                let transmission = SIMD3<Double>(
-                    mainTransmission(forLinear: expectedLinear.x, base: baseRGB.x),
-                    mainTransmission(forLinear: expectedLinear.y, base: baseRGB.y),
-                    mainTransmission(forLinear: expectedLinear.z, base: baseRGB.z)
+                let negative = SIMD3<Double>(
+                    transmission(forLinear: expectedLinear.x, base: baseRGB.x),
+                    transmission(forLinear: expectedLinear.y, base: baseRGB.y),
+                    transmission(forLinear: expectedLinear.z, base: baseRGB.z)
                 )
 
                 for localY in 0..<patchSize {
@@ -152,9 +151,9 @@ final class MainSyntheticIT8RoundTripTests: XCTestCase {
                     for localX in 0..<patchSize {
                         let x = column * patchSize + localX
                         let offset = (y * width + x) * 4
-                        pixels[offset] = Float(transmission.x)
-                        pixels[offset + 1] = Float(transmission.y)
-                        pixels[offset + 2] = Float(transmission.z)
+                        pixels[offset] = Float(negative.x)
+                        pixels[offset + 1] = Float(negative.y)
+                        pixels[offset + 2] = Float(negative.z)
                     }
                 }
             }
@@ -215,12 +214,6 @@ final class MainSyntheticIT8RoundTripTests: XCTestCase {
 
     /// `NegativeInversion` 구현을 호출하지 않고 고정한 공개 인화 응답의 역함수를 적는다.
     /// 응답: log10(P) = yCeil − amplitude·exp(−(rate·d)^shape), 계수는 앵커에서 닫힌형 유도.
-    // Independent straight-line forward film; separate from the retained v4 inverse fixture.
-    private func mainTransmission(forLinear value: Double, base: Double) -> Double {
-        let density = 0.60 + 0.62 * log10(max(value, 1e-6) / 0.18)
-        return base * pow(10, -density)
-    }
-
     private func transmission(forLinear value: Double, base: Double) -> Double {
         let yCeil = log10(fixtureCeiling)
         let amplitude = yCeil - log10(fixtureBaseToe)

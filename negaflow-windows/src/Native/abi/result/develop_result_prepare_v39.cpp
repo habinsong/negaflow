@@ -7,7 +7,8 @@ bool prepare_result_v39(const nf_develop_export_request_v39* request,
     if (result == nullptr) { status = NF_STATUS_INVALID_ARGUMENT; return false; }
     const auto capacity = result->struct_size;
     if (capacity < sizeof(*result)) { status = NF_STATUS_STRUCT_TOO_SMALL; return false; }
-    const auto known_size = capacity >= sizeof(nf_develop_export_result_v6) ? sizeof(nf_develop_export_result_v6)
+    const auto known_size = capacity >= sizeof(nf_develop_export_result_v7) ? sizeof(nf_develop_export_result_v7)
+        : capacity >= sizeof(nf_develop_export_result_v6) ? sizeof(nf_develop_export_result_v6)
         : capacity >= sizeof(nf_develop_export_result_v5) ? sizeof(nf_develop_export_result_v5)
         : capacity >= sizeof(nf_develop_export_result_v4) ? sizeof(nf_develop_export_result_v4) : sizeof(*result);
     std::memset(result, 0, known_size);

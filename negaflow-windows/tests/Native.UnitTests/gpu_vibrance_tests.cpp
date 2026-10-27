@@ -230,6 +230,13 @@ void run_all(const GpuDevice& device, const char* const label) {
     full.blue_primary = 0.2F;
     color_model_matches_cpu(device, table, label, full, "color model (all)");
 
+    // 채도·색 깊이를 끝까지 올려 chroma 접기(숄더) 가지를 탑니다. 격자 가장자리의 원색·2차색은
+    // 한 채널이 0 이라 여유가 거의 없습니다.
+    ColorModelParameters boosted{};
+    boosted.saturation = 1.0F;
+    boosted.color_depth = 0.8F;
+    color_model_matches_cpu(device, table, label, boosted, "color model (chroma beyond knee)");
+
     ColorModelParameters vibrance_only{};
     vibrance_only.vibrance = -0.5F;
     color_model_matches_cpu(device, table, label, vibrance_only, "color model (negative vibrance)");

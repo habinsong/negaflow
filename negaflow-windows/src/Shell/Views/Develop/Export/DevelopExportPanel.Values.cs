@@ -22,7 +22,15 @@ public sealed partial class DevelopExportPanel
         {
             return;
         }
-        MutateExportSettings(value => value with { Format = format });
+        // JPEG·DNG 는 알파를 담지 못합니다. 알파 줄이 숨겨지므로 남은 값이 내보내기를 거절하게
+        // 두지 않고 형식을 고를 때 끕니다(macOS `exportFormat` 설정자와 같다).
+        MutateExportSettings(value => value with
+        {
+            Format = format,
+            PreserveAlpha = format is DevelopExportFormat.Jpeg8 or DevelopExportFormat.Dng16
+                ? false
+                : value.PreserveAlpha,
+        });
     }
 
     private void OnExportNamePatternChanged(object sender, TextChangedEventArgs args)

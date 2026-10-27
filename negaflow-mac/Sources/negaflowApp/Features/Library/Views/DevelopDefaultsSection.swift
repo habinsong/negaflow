@@ -21,13 +21,16 @@ struct DevelopDefaultsSection: View {
                 HStack {
                     Text(model.text(AppLocalizedPhrase.target))
                     Spacer(minLength: 8)
-                    if activeDevelopTarget == .main || activeDevelopTarget == .print || activeDevelopTarget.isCustom {
-                        Toggle(model.text(.autoBalance), isOn: autoBalanceBinding)
-                            .toggleStyle(.button)
-                            .controlSize(.small)
-                            .fixedSize()
-                            .disabled(model.actionableFrame == nil || !activeFilmType.requiresInversion)
-                            .accessibilityIdentifier("negaflow.develop.auto-balance")
+                    // 반전을 하는 필름(컬러·흑백 네거티브)이고 MAIN 계열 또는 커스텀 타깃일 때만 보입니다.
+                    if activeFilmType.requiresInversion && activeDevelopTarget.supportsAutoBalance {
+                        QuickTogglePill(
+                            title: model.text(.autoBalance),
+                            systemImage: "scalemass",
+                            isOn: autoBalanceBinding,
+                            identifier: "negaflow.develop.auto-balance",
+                            isCompact: true
+                        )
+                        .disabled(model.actionableFrame == nil)
                     }
                 }
                 SegmentedPicker(

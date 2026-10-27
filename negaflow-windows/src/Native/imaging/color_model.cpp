@@ -2,6 +2,7 @@
 
 #include "vibrance_math.h"
 
+#include "negaflow/imaging/bounded_chroma_scale.h"
 #include "negaflow/imaging/kernel_accelerator.h"
 #include "negaflow/imaging/white_balance.h"
 
@@ -28,14 +29,22 @@ struct Rgb final {
            (0.0722F * color.blue);
 }
 
+// 색 깊이와 채도가 같이 쓰는 휘도 앵커 chroma 배율입니다. 키우는 쪽은 채널이 0 또는 1 에 닿기
+// 전에 접습니다(`bounded_chroma_scale`). 줄이는 쪽과 [0,1] 안에 머무는 결과는 이전과 같습니다.
+// macOS `BoundedChromaScale.apply` 와 같은 식입니다.
 [[nodiscard]] Rgb apply_saturation(
     const Rgb color,
     const float factor) noexcept {
     const float y = luminance(color);
+    const float chroma_red = color.red - y;
+    const float chroma_green = color.green - y;
+    const float chroma_blue = color.blue - y;
+    const float scale = bounded_chroma_scale(
+        factor, y, chroma_red, chroma_green, chroma_blue);
     return {
-        y + ((color.red - y) * factor),
-        y + ((color.green - y) * factor),
-        y + ((color.blue - y) * factor),
+        y + (chroma_red * scale),
+        y + (chroma_green * scale),
+        y + (chroma_blue * scale),
     };
 }
 

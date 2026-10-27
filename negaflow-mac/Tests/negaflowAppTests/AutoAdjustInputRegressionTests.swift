@@ -31,16 +31,25 @@ final class AutoAdjustInputRegressionTests: XCTestCase {
         defer { model.frames = []; try? FileManager.default.removeItem(at: root) }
         frame.params.inputGamma = try .power(1.8)
         frame.params.baseScale = try FilmBaseScale(0.75)
+        frame.params.vibrance = 0.4
+        frame.params.saturation = 0.3
+        frame.params.colorDepth = 0.2
         let original = frame.params
         await model.autoTone(frame).value
         let adjusted = frame.params
         XCTAssertNotEqual(original, adjusted)
+        XCTAssertEqual(adjusted.vibrance, original.vibrance)
+        XCTAssertEqual(adjusted.saturation, original.saturation)
+        XCTAssertEqual(adjusted.colorDepth, original.colorDepth)
         model.performUndo(); XCTAssertEqual(frame.params, original)
         model.performRedo(); XCTAssertEqual(frame.params, adjusted)
         model.resetAutoTone(frame)
         XCTAssertEqual(frame.params.exposure, 0)
         XCTAssertEqual(frame.params.inputGamma, original.inputGamma)
         XCTAssertEqual(frame.params.baseScale, original.baseScale)
+        XCTAssertEqual(frame.params.vibrance, original.vibrance)
+        XCTAssertEqual(frame.params.saturation, original.saturation)
+        XCTAssertEqual(frame.params.colorDepth, original.colorDepth)
         model.performUndo(); XCTAssertEqual(frame.params, adjusted)
         let pending = model.autoWhiteBalance(frame)
         model.resetAutoWhiteBalance(frame)
@@ -136,8 +145,15 @@ final class AutoAdjustInputRegressionTests: XCTestCase {
                 let first = AutoAdjust.autoTone(try XCTUnwrap(AutoAdjust.imageStats(image)), filmType: frame.filmType)
                 let verify = try DevelopFrameRenderer.render(model.autoAdjustSnapshot(
                     frame, params: AppModel.applying(first, to: frame.params))).developed
-                let expected = AutoAdjust.refineTone(first, measured: try XCTUnwrap(AutoAdjust.imageStats(verify)),
-                                                     filmType: frame.filmType)
+                let measured = try XCTUnwrap(AutoAdjust.imageStats(verify))
+                let candidate = AutoAdjust.refineTone(first, measured: measured, filmType: frame.filmType)
+                let checked = try DevelopFrameRenderer.render(model.autoAdjustSnapshot(frame,
+                    params: AppModel.applying(candidate, to: frame.params))).developed
+                let checkedStats = try XCTUnwrap(AutoAdjust.imageStats(checked))
+                let accepted = AutoAdjust.refinementDistance(first, candidate) > 0.02 &&
+                    AutoAdjust.toneScore(checkedStats, adjustMid: first.exposure > 0) <
+                    AutoAdjust.toneScore(measured, adjustMid: first.exposure > 0)
+                let expected = accepted ? candidate : first
                 await model.autoTone(frame).value
                 XCTAssertEqual(frame.params.exposure, expected.exposure)
                 XCTAssertEqual(frame.params.whites, expected.whites)

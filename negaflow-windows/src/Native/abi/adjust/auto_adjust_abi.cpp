@@ -128,3 +128,21 @@ nf_status_t NF_CALL nf_auto_tone_refine_v1(
         *refined);
     return NF_STATUS_OK;
 }
+
+nf_status_t NF_CALL nf_auto_tone_score_v1(
+    const uint8_t* const pixels,
+    const uint32_t width,
+    const uint32_t height,
+    const uint32_t stride_bytes,
+    const uint32_t adjust_mid,
+    double* const score) {
+    if (pixels == nullptr || score == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    negaflow::imaging::AutoAdjustStats stats{};
+    if (!negaflow::imaging::compute_auto_adjust_stats(pixels, width, height, stride_bytes, stats)) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    *score = negaflow::imaging::auto_tone_score(stats, adjust_mid != 0U);
+    return NF_STATUS_OK;
+}

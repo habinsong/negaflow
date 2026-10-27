@@ -152,6 +152,35 @@ extension ChromabaseMetalKernels {
         return float4(rgb * (mix(y, shoulder, blend) / y), src.a);
     }
     """),
+        MetalKernelSource(name: "chromaScaleBounded", body: """
+    // 채도·색 깊이 배율. 휘도(Rec.709)를 앵커로 chroma 를 factor 배 하되, 키우는 쪽(factor>1)은
+    // 어느 채널이 0 또는 1 에 닿는 배율(limit)을 넘지 못하게 접는다. 선형 배율만 쓰면 채도가
+    // 높은 화소의 한 채널이 범위 밖으로 나가 뒤 단계에서 채널별로 잘리고, 그 채널의 비율이
+    // 깨져 색조가 돌아간다.
+    //   factor <= knee : 그대로 factor (knee = 1 + kneeFraction·(limit−1))
+    //   factor  > knee : knee + room·(1 − exp(−(factor−knee)/room)), room = limit − knee
+    // 접히는 구간은 knee 에서 기울기 1 로 이어지고 limit 에 점근하므로 슬라이더는 단조이며
+    // 경계에 정확히 닿지는 않는다. 이미 경계 밖인 화소(limit 1)는 더 키우지 않는다. 줄이는
+    // 쪽(factor<=1)은 경계 안에서 안전하므로 손대지 않는다. 휘도는 항상 보존한다.
+    // sample 은 곱해진 알파를 포함하므로 색을 먼저 되돌린 뒤 계산하고 다시 곱한다.
+    [[stitchable]] float4 chromaScaleBounded(coreimage::sample_t src, float factor, float kneeFraction) {
+        float alpha = src.a;
+        if (alpha <= 1e-6) { return src; }
+        float3 rgb = src.rgb / alpha;
+        float y = dot(rgb, float3(0.2126, 0.7152, 0.0722));
+        float3 chroma = rgb - float3(y);
+        float scale = factor;
+        if (factor > 1.0) {
+            float limit = max(chromaScaleHeadroom(y, chroma), 1.0);
+            float knee = 1.0 + kneeFraction * (limit - 1.0);
+            if (factor > knee) {
+                float room = limit - knee;
+                scale = room > 1e-6 ? knee + room * (1.0 - exp(-(factor - knee) / room)) : knee;
+            }
+        }
+        return float4((float3(y) + chroma * scale) * alpha, alpha);
+    }
+    """),
         MetalKernelSource(name: "basicTone", body: """
     // Basic Tone — photometric 렌더(적정 미드 = linear 0.18 = sRGB 0.46) 기준.
     // 마스크·델타·대비 피벗은 **sRGB 감마 도메인**(지각 균등)에서 정의하고, 목표 luma 를

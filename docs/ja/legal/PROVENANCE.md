@@ -53,6 +53,14 @@ TIFFに見えるカメラや色空間のメタデータは、撮影とエンコ�
 
 FILM-R v2の資料は品質計測のときだけダウンロードします。 画像そのものはリポジトリにもアプリにも入りません。 DOIバージョン、CC BY 4.0、ファイルサイズとハッシュは [`Config/defect-corpus-film-r-v2.json`](../../../negaflow-mac/Config/defect-corpus-film-r-v2.json)に固定します。
 
+## DNG の書き出し
+
+DNG 書き出し(`negaflow-mac` の `DNGLinearWriter`、`negaflow-windows` の `dng_linear_export`)は、Adobe が公開している Digital Negative Specification 1.6 のタグ番号と色モデルだけを見て新しく書きました。Adobe DNG SDK のコードも、LibRaw など他の DNG 書き出しのコードも含みません。色行列は sRGB、Display P3、Adobe RGB (1998) の公開された色度座標から計算します。Adobe は DNG ファイルを読み書きするソフトウェアにロイヤリティ不要の特許ライセンスを提供しており、この製品はそれを使っています。ライセンスは次の表示を求めています。
+
+This product includes DNG technology under license by Adobe.
+
+DNG は Adobe Inc. の商標です。この名称はファイル形式を指すためにだけ使います。
+
 ## 名称と相互運用
 
 フィルム、スキャナー、色空間、XMP namespace、製品名は、対象の識別とファイルの相互運用のために使います。 Windowsエンジンが合成する出力ICCプロファイルは、説明用の名称（`"Negaflow Compatible P3"`、`"Compatible with Adobe RGB (1998)"`）と`CC0 1.0 Universal`の権利放棄を記し、書き出した画像にプロファイル著作権の制約を残しません。 商標の所有や提携は主張しません。範囲は[`TRADEMARKS.md`](../../../TRADEMARKS.md)にあります。

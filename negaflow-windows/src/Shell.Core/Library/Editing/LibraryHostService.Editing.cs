@@ -159,6 +159,38 @@ public sealed partial class LibraryHostService
             ? LibraryFrameError.MissingId
             : document.EditFrameRecord(frameId, edit));
 
+    /// <summary>
+    /// 같은 편집을 여러 frame record 에 적용하고 저장 예약과 화면 알림은 마지막에 한 번만 합니다.
+    /// 되돌리기 칸을 만들지 않습니다 — 롤 교정처럼 사용자가 하지 않은 일을 한꺼번에 찍는 길입니다.
+    /// 하나라도 고쳐졌으면 첫 오류가 있어도 None 을 돌려주고, 아무것도 못 고쳤을 때만 오류를 돌려줍니다.
+    /// </summary>
+    public LibraryFrameError EditFrameRecords(
+        IReadOnlyList<string> frameIds,
+        Func<System.Text.Json.Nodes.JsonObject, LibraryFrameWriteResult> edit)
+    {
+        ArgumentNullException.ThrowIfNull(frameIds);
+        ArgumentNullException.ThrowIfNull(edit);
+        if (document is not { } open)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        bool changed = false;
+        LibraryFrameError firstError = LibraryFrameError.None;
+        foreach (string frameId in frameIds)
+        {
+            LibraryFrameError error = open.EditFrameRecord(frameId, edit);
+            if (error == LibraryFrameError.None)
+            {
+                changed = true;
+            }
+            else if (firstError == LibraryFrameError.None)
+            {
+                firstError = error;
+            }
+        }
+        return changed ? AfterEdit(LibraryFrameError.None) : firstError;
+    }
+
     /// <summary>검증된 recipe 교체를 기존 Undo에 한 단계로 남깁니다.</summary>
     public LibraryFrameError EditUndoable(
         string frameId,

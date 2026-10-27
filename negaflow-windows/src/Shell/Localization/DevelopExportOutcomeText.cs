@@ -82,6 +82,10 @@ public static class DevelopExportOutcomeText
             AppResources.Get("developExportRefusedDestination", "Text"),
         DevelopRequestRefusal.UnknownOutputFormat =>
             AppResources.Get("developExportRefusedOutputFormat", "Text"),
+        DevelopRequestRefusal.UnsupportedDngTarget =>
+            AppResources.Get("developExportRefusedDngTarget", "Text"),
+        DevelopRequestRefusal.UnsupportedDngSource =>
+            AppResources.Get("developExportRefusedDngSource", "Text"),
         DevelopRequestRefusal.StaleDefectSource =>
             AppResources.Get("developExportRefusedStaleDefectSource", "Text"),
         DevelopRequestRefusal.DefectRestorePending =>

@@ -2338,11 +2338,10 @@ final class ChromabaseTests: XCTestCase {
             height: fixture.height
         )
 
-        // 기본 반전과 출력 커브 외의 룩·상시 NR이 섞이지 않는지 전체 화상으로 비교한다.
+        // 선언된 MAIN 구성(v4 반전 + 자동 밸런스 → 노출 → 톤 커브) 외의 룩·상시 NR이 섞이지
+        // 않는지 전체 화상으로 비교한다.
         let expectedMain = renderRGBA8(
-            NegativeLinearResponse.output(NegativeLinearResponse.invert(fixture.image,
-                stats: NegativeLinearResponse.stats(base: fixture.base, preset: nil, filmType: .colorNegative),
-                filmType: .colorNegative), exposure: 0, filmType: .colorNegative),
+            declaredMainComposition(fixture.image, base: fixture.base, params: params),
             width: fixture.width,
             height: fixture.height
         )
@@ -2351,7 +2350,7 @@ final class ChromabaseTests: XCTestCase {
         let expectedGreenPatch = patchPixels(expectedMain, width: fixture.width, x: 48..<72, y: 28..<42)
 
         // 1. 탈색 금지: 한두 패치의 임의 채도 하한이 아니라, MAIN 전체 프레임이 선언된
-        //    반전 reference와 동일한지 검증한다. reference 패치 자체의 색 방향도 확인해
+        //    구성 reference와 동일한지 검증한다. reference 패치 자체의 색 방향도 확인해
         //    회색 픽스처끼리 비교하는 무의미한 테스트가 되지 않게 한다.
         XCTAssertGreaterThan(meanRedDominance(expectedRedPatch), 0)
         XCTAssertGreaterThan(meanGreenDominance(expectedGreenPatch), 0)
@@ -2449,40 +2448,38 @@ final class ChromabaseTests: XCTestCase {
             height: height,
             colorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!
         )
-        var params = DevelopParameters()
-        params.filmType = .colorNegative
-        let output = ChromabaseEngine().developScanner(
-            image: image,
-            base: FilmBase(rgb: base, source: .border),
-            params: params
-        )
-        let rendered = renderLinearRGBA8(output, width: width, height: height)
-        // 얇은 네거티브도 장면별 스트레치 없이 같은 고정 반전을 사용한다.
-        let reference = renderLinearRGBA8(
-            NegativeLinearResponse.output(NegativeLinearResponse.invert(image,
-                stats: NegativeLinearResponse.stats(base: FilmBase(rgb: base, source: .border),
-                    preset: nil, filmType: .colorNegative), filmType: .colorNegative),
-                exposure: 0, filmType: .colorNegative),
-            width: width,
-            height: height
-        )
-        XCTAssertEqual(
-            meanChannelDifference(rendered, reference),
-            0,
-            accuracy: 0.001,
-            "저신호 프레임에 숨은 장면별 보정이 추가되면 안 됩니다."
-        )
+        // 자동 밸런스는 장면 범위를 읽는 스위치다. 켜면 선언된 반전(측정 범위)과, 끄면 고정 범위
+        // 반전과 같아야 하고, 어느 쪽에도 스위치 밖의 숨은 장면 보정이 끼면 안 된다.
+        for autoBalance in [true, false] {
+            var params = DevelopParameters()
+            params.filmType = .colorNegative
+            params.autoBalance = autoBalance
+            let filmBase = FilmBase(rgb: base, source: .border)
+            let output = ChromabaseEngine().developScanner(image: image, base: filmBase, params: params)
+            let rendered = renderLinearRGBA8(output, width: width, height: height)
+            let reference = renderLinearRGBA8(
+                declaredMainComposition(image, base: filmBase, params: params),
+                width: width,
+                height: height
+            )
+            XCTAssertEqual(
+                meanChannelDifference(rendered, reference),
+                0,
+                accuracy: 0.001,
+                "저신호 프레임에 자동 밸런스(\(autoBalance)) 밖의 장면 보정이 추가되면 안 됩니다."
+            )
 
-        let baseLuma = luma(rendered, x: 1, y: 1, width: width)
-        let denseLuma = luma(rendered, x: 4, y: height / 2, width: width)
-        let thinLuma = luma(rendered, x: width - 5, y: height / 2, width: width)
-        XCTAssertEqual(
-            baseLuma,
-            luma(reference, x: 1, y: 1, width: width),
-            accuracy: 2
-        )
-        XCTAssertGreaterThan(denseLuma, thinLuma,
-                             "저신호 입력에서도 네거티브 밀도 순서가 뒤집히면 안 된다.")
+            let baseLuma = luma(rendered, x: 1, y: 1, width: width)
+            let denseLuma = luma(rendered, x: 4, y: height / 2, width: width)
+            let thinLuma = luma(rendered, x: width - 5, y: height / 2, width: width)
+            XCTAssertEqual(
+                baseLuma,
+                luma(reference, x: 1, y: 1, width: width),
+                accuracy: 2
+            )
+            XCTAssertGreaterThan(denseLuma, thinLuma,
+                                 "저신호 입력에서도 네거티브 밀도 순서가 뒤집히면 안 된다(autoBalance=\(autoBalance)).")
+        }
     }
 
     /// 크롭은 측정 영역(장면 측정을 크롭 안에서)과 공간 범위만 바꾼다(2026-10-14 사용자 확정 설계 —
@@ -3341,6 +3338,18 @@ final class ChromabaseTests: XCTestCase {
                    bounds: CGRect(x: 0, y: 0, width: width, height: height),
                    format: .RGBA8, colorSpace: colorSpace)
         return rendered
+    }
+
+    /// MAIN 으로 현상한 네거티브의 선언된 구성: 반전(자동 밸런스 스위치가 범위를 정함) → 색 모델 →
+    /// 노출 → 톤 커브. 타겟 룩·NR·샤픈은 들어가지 않는다.
+    private func declaredMainComposition(_ image: CIImage, base: FilmBase,
+                                         params: DevelopParameters) -> CIImage {
+        var state = DevelopSceneMeasurements()
+        var output = NegativeAutoBalance.invert(image, base: base, preset: nil, params: params,
+                                                measurements: &state)
+        output = ColorModel.apply(to: output, params: params)
+        output = ToneMapper.applyExposure(to: output, stops: params.exposure, filmType: params.filmType)
+        return ToneMapper.applyToneCurves(to: output, params: params)
     }
 
     private func renderLinearRGBA8(

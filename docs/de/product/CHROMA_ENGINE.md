@@ -13,7 +13,7 @@ Die Chroma Engine kehrt Film um und entwickelt ihn. Der Code liegt im Modul `Chr
 | Ausgabefarbraum | sRGB, Display P3, Adobe RGB, eigenes RGB-ICC |
 
 > [!IMPORTANT]
-> Voreingestellt sind `MAIN` und Auto-Abgleich ON. Bei MAIN (einschließlich PRINT) und CS sitzt der Schalter rechts neben der Zielüberschrift. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF.
+> Voreingestellt sind `MAIN` und Auto-Abgleich ON. Der Schalter ist eine kleine Pille rechts neben der Zielüberschrift. Er erscheint nur bei Farb- und S/W-Negativen mit MAIN (einschließlich PRINT) und CS. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF.
 
 ## Was zuerst gilt
 
@@ -108,7 +108,7 @@ Manche Werte nähern Kurven aus öffentlichem Material an, manche sind bewusst k
 
 Auto-Abgleich ON stellt die MAIN/CS-Inversion aus `412bb31` wieder her. Jeder Kanal misst seinen Dichtebereich am dichtesten 0.2%-Perzentil der Szene, begrenzt ihn auf 1.8D und verwendet danach die bisherige Kurve `shoulder-print-response-v4` und die Sättigungskorrektur für gedämpfte Szenen. Filmvorgaben multiplizieren den Bereich mit relativen Kanalfaktoren. Die Grenze von 1.8D bleibt für das bisherige Rendering erhalten; sie ist kein gemessener Materialwert aller Filme und kann dichte Negative beeinflussen.
 
-OFF verwendet dieselbe v4-Kurve mit festem Nennbereich (Farbe 1.55D, Schwarzweiß 2.17D), gegebenenfalls multipliziert mit den Faktoren der Filmvorgabe. Szenenabhängige Bereichsnormierung und Sättigungskorrektur entfallen. Bei gleicher Basis und gleichen Einstellungen ergibt dieselbe Transmission in verschiedenen Bildern denselben Wert. ON kann Helligkeit und Farbe mit dem Bildinhalt ändern. Keiner der Modi belegt gemessene Filmfarbgenauigkeit.
+OFF verwendet dieselbe v4-Kurve mit festem Nennbereich (Farbe 1.55D, Schwarzweiß 2.17D), gegebenenfalls multipliziert mit den Faktoren der Filmvorgabe. Szenenabhängige Bereichsnormierung und Sättigungskorrektur entfallen. Bei Farbnegativen multipliziert OFF zusätzlich eine Kanalbereichs-Kalibrierung für Scanner und Film. Sie ist der Median von mindestens drei Bildern mit gültiger Messung aus derselben Rolle (ohne Rolle: demselben Scan-Ordner). Der einmal bestimmte Wert bleibt am jeweiligen Bild gespeichert. Bei weniger Bildern oder gemischtem Film behalten die drei Kanäle denselben Bereich. Bei gleicher Basis und gleichen Einstellungen ergibt dieselbe Transmission in den Bildern einer Rolle denselben Wert. ON kann Helligkeit und Farbe mit dem Bildinhalt ändern. Keiner der Modi belegt gemessene Filmfarbgenauigkeit.
 
 [Negativantwort](../reference/PRINT_RESPONSE.md)
 
@@ -128,7 +128,7 @@ Die Daten beschreibt [Filmprofile](FILM_PROFILES.md).
 
 ### `MAIN`
 
-Voreingestellt sind `MAIN` und Auto-Abgleich ON. Bei MAIN (einschließlich PRINT) und CS sitzt der Schalter rechts neben der Zielüberschrift. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF.
+Voreingestellt sind `MAIN` und Auto-Abgleich ON. Der Schalter ist eine kleine Pille rechts neben der Zielüberschrift. Er erscheint nur bei Farb- und S/W-Negativen mit MAIN (einschließlich PRINT) und CS. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF.
 
 ### `PRINT`
 
@@ -188,6 +188,19 @@ Sobald eine Emulsion gewählt ist, werden Korn und Halation zu Eigenschaften des
 | Lokale Korrektur | Radiale, lineare, polygonale und Pinselmasken sowie Abwedeln und Nachbelichten |
 
 Diese Werte werden als schrittweiser Bearbeitungsverlauf gespeichert. GrainMend und gewöhnliche lokale Korrektur unterscheiden sich in Zweck und Speicherform.
+
+### Automatische Korrekturen
+
+| Funktion | Verhalten |
+|---|---|
+| Automatischer Tonwert | Setzt Belichtung, Kontrast, Dichte, Lichter, Schatten, Weiß und Schwarz. Behält die Farbregler und Kurven des Benutzers bei. |
+| Automatischer Weißabgleich | Schätzt Temperatur und Tönung aus neutralen Kandidaten je Helligkeitsbereich. Schließt Proben mit einem abgeschnittenen RGB-Kanal aus und verringert die Korrektur bei wenigen Kandidaten oder engem Helligkeitsumfang. |
+| Automatische Tonwertspreizung | Misst gemeinsame Luminanzendpunkte und wendet denselben Luminanzfaktor auf RGB an. Erhält die Kanalverhältnisse, statt jeden Kanal einzeln zu strecken. |
+| Automatische Farbe | Passt verbleibende Farbstiche an neutrale Kandidaten an. Verwendet kanalweise Steigungen nur, wenn die Anpassung auch nicht zum Fit verwendete Helligkeitsbereiche vorhersagt; sonst nur Verstärkungen. Schwache Ersatzkandidaten führen zu geringerer Korrektur. |
+
+Der automatische Tonwert misst die mit dem ersten Vorschlag gerenderte Vorschau erneut. Gibt es einen weiteren Vorschlag für Belichtung oder Weißpunkt, wird auch dieser gerendert. Er wird nur übernommen, wenn sich die Bewertung von Mitteltönen, Endpunkten, Tonwertumfang und Clipping verbessert. Diese begrenzte Nachkorrektur sucht kein einziges ideales Bild. Wiederholtes Anwenden setzt Werte, statt sie zu addieren. Das Zurücksetzen behält die Farbregler bei.
+
+Die Analyse verwendet flächengewichtete Mittelwerte in linear RGB und begrenzt die lange Seite des Rasters. Tonwert und WB nutzen eine sRGB-Vorschau; Clipping meint daher Vorschaukanäle, keine Sensorsättigung. Die Schätzungen können Motivfarben nicht immer von einem Lichtfarbstich unterscheiden und belegen keine gemessene Farbtreue des Films. MAIN/CS-Autobalance und die Sättigungskorrektur für farbarme Szenen bleiben Teil der vorherigen Invertierung.
 
 ## Farbmanagement
 

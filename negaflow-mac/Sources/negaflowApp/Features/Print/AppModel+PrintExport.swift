@@ -32,7 +32,7 @@ extension AppModel {
     }
 
     func exportSelectionToFolder(for module: WorkspaceModule) {
-        if module == .print, exportFormat != .rawScanTIFF {
+        if module == .print, !exportFormat.bypassesPrintLayout {
             exportPrintSelectionToFolder(
                 settings: printCompositionSettings(dpi: exportDPI)
             )
@@ -42,7 +42,7 @@ extension AppModel {
     }
 
     func canExportSelection(for module: WorkspaceModule) -> Bool {
-        module == .print && exportFormat != .rawScanTIFF
+        module == .print && !exportFormat.bypassesPrintLayout
             ? canExportPrintSelection
             : canExportSelection
     }
@@ -65,7 +65,7 @@ extension AppModel {
 
     func exportPrintSelectionToFolder(settings: PrintCompositionSettings) {
         guard canExportPrintSelection, settings.isValid else { return }
-        if exportFormat == .rawScanTIFF {
+        if exportFormat.bypassesPrintLayout {
             exportSelectionToFolder()
             return
         }

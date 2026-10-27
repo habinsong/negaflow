@@ -6,6 +6,7 @@
 
 #include "negaflow/pipeline/gpu_accelerator.h"
 
+#include "negaflow/output/dng_linear_export.h"
 #include "negaflow/output/wic_jpeg_export.h"
 #include "negaflow/output/wic_png_export.h"
 #include "negaflow/output/wic_tiff_export.h"
@@ -72,6 +73,7 @@ DevelopExportOutcome publish_developed(
     outcome.applied_input_gamma = request.input_gamma;
     outcome.dmax_normalized = invert.developed_info.dmax_normalized;
     outcome.black_input = invert.developed_info.black_input;
+    outcome.range_shape = invert.range_shape;
     outcome.debug_metrics_present =
         invert.developed_info.kernel_status == negaflow::core::KernelStatus::ok;
     outcome.base_source = invert.base_source;
@@ -139,6 +141,39 @@ DevelopExportOutcome publish_developed(
             return fail(
                 DevelopExportStage::output,
                 negaflow::output::wic_png_export_status_name(exported.status),
+                exported.native_error_code,
+                exported.cleanup_error_code);
+        }
+        outcome.output_file_bytes = exported.info.artifact_bytes;
+        outcome.succeeded = true;
+        outcome.failure_name = "ok";
+        tracker.finish();
+        tracker.complete();
+        return outcome;
+    }
+
+    if (request.format == DevelopExportFormat::dng16) {
+        negaflow::output::DngExportLimits dng_limits{};
+        dng_limits.color_space = request.output_color_space;
+        dng_limits.output_dpi = request.output_dpi;
+        dng_limits.metadata_policy = request.metadata_policy;
+        dng_limits.metadata = request.metadata;
+        const negaflow::output::DngExportResult exported =
+            negaflow::output::export_working_to_dng16(
+                output_sharpening.image,
+                request.destination,
+                dng_limits);
+        if (exported.status != negaflow::output::DngExportStatus::ok) {
+            if (exported.status == negaflow::output::DngExportStatus::working_conversion_failed) {
+                return fail(
+                    DevelopExportStage::output,
+                    negaflow::output::working_to_srgb16_status_name(exported.conversion_status),
+                    exported.native_error_code,
+                    exported.cleanup_error_code);
+            }
+            return fail(
+                DevelopExportStage::output,
+                negaflow::output::dng_export_status_name(exported.status),
                 exported.native_error_code,
                 exported.cleanup_error_code);
         }

@@ -49,6 +49,8 @@ struct SceneMeasurementCacheKey: Equatable, Sendable {
     let scannerProfileID: String?
     var baseScale: FilmBaseScale = .identity
     var autoBalance: Bool = true
+    /// 자동 밸런스 OFF 의 고정 범위에만 쓰인다(ON 은 장면 측정이 대신한다).
+    var channelRange: SIMD3<Double>? = nil
 }
 
 // MARK: - FrameSource (프레임 raw 입력의 출처)
@@ -143,6 +145,7 @@ final class ScanFrame: ObservableObject, Identifiable {
     @Published var params: DevelopParameters {
         didSet {
             if oldValue != params { autoAdjustRevision &+= 1 }
+            if oldValue.channelRange != nil, params.channelRange == nil { rangeCalibrationSettled = false }
             if oldValue.inputGamma != params.inputGamma
                 || (ImageLoader.kind(of: rawScanURL) == .rawDng
                     && ImageLoader.RAWRendering.forDigitalSource(oldValue.isDigitalSource, filmType: oldValue.filmType)
@@ -161,6 +164,15 @@ final class ScanFrame: ObservableObject, Identifiable {
         didSet { if oldValue != imageTransform { autoAdjustRevision &+= 1 } }
     }
     @Published var baseRGB: SIMD3<Double>?
+    /// 이 프레임의 채널 밀도 범위 모양(기하평균 1). 렌더가 한 번 잰 사실이며 롤 교정의 재료다.
+    /// 사용자 조정이 아니라 `baseRGB` 와 같은 종류의 측정 캐시라서 입력 해석이 바뀌면 버린다.
+    @Published var rangeShape: SIMD3<Double>?
+    /// 렌더가 모양 측정을 이미 시도했는지. 장면이 상한에 닿는 프레임처럼 측정이 성립하지 않는 입력은
+    /// 다시 재도 같은 답이라, 시도한 프레임은 렌더마다 다시 재지 않는다. `rangeShape` 와 같이 버린다.
+    var rangeShapeAttempted = false
+    /// `params.channelRange` 가 비어 있을 때 롤 교정을 이미 시도했는지. 교정값이 params 에서
+    /// 지워지면(설정 초기화 등) 다시 시도하도록 `params` 감시자가 내린다.
+    var rangeCalibrationSettled = false
     @Published private(set) var rating: Int = 0
     @Published var pickState: FramePickState = .unflagged
     @Published var customDisplayName: String?

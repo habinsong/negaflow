@@ -1,3 +1,4 @@
+#include "negaflow/imaging/bounded_chroma_scale.h"
 #include "negaflow/imaging/color_model.h"
 #include "negaflow/imaging/white_balance.h"
 
@@ -9,6 +10,7 @@
 #include <iostream>
 #include <limits>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -183,6 +185,177 @@ void test_civibrance_goldens(const std::filesystem::path& golden_root) {
 }
 
 // 온도·틴트 법칙(macOS `WhiteBalanceGainsTests` 와 같은 계약).
+// 채도·색 깊이 끝 보호 계약입니다 — macOS `ColorModelGamutBehaviorTests` 와 같은 격자·같은 검사입니다.
+// 입력은 채널 값 6단계의 모든 조합(216색)이라 한 채널이 0 이거나 0.95 인 원색·2차색을 모두 지납니다.
+[[nodiscard]] float rec709_luma(const negaflow::core::Rgba32F pixel) noexcept {
+    return (0.2126F * pixel.red) + (0.7152F * pixel.green) + (0.0722F * pixel.blue);
+}
+
+[[nodiscard]] float chroma_norm(const negaflow::core::Rgba32F pixel) noexcept {
+    const float y = rec709_luma(pixel);
+    return std::sqrt(
+        ((pixel.red - y) * (pixel.red - y)) + ((pixel.green - y) * (pixel.green - y)) +
+        ((pixel.blue - y) * (pixel.blue - y)));
+}
+
+[[nodiscard]] std::vector<negaflow::core::Rgba32F> make_gamut_grid() {
+    constexpr std::array<float, 6> levels{0.0F, 0.05F, 0.15F, 0.4F, 0.7F, 0.95F};
+    std::vector<negaflow::core::Rgba32F> pixels;
+    for (const float red : levels) {
+        for (const float green : levels) {
+            for (const float blue : levels) {
+                pixels.push_back({red, green, blue, 1.0F});
+            }
+        }
+    }
+    return pixels;
+}
+
+// 휘도를 고정한 채 chroma 를 몇 배까지 키울 수 있는지 — 구현(`chroma_scale_headroom`)을 부르지
+// 않고 기대값을 만들도록 시험 안에 따로 적었습니다.
+[[nodiscard]] float headroom_reference(const negaflow::core::Rgba32F pixel) noexcept {
+    const float y = rec709_luma(pixel);
+    if (y <= 0.0F || y >= 1.0F) {
+        return 0.0F;
+    }
+    float limit = 1.0e9F;
+    for (const float channel : {pixel.red, pixel.green, pixel.blue}) {
+        const float chroma = channel - y;
+        if (chroma > 1.0e-5F) {
+            limit = std::min(limit, (1.0F - y) / chroma);
+        } else if (chroma < -1.0e-5F) {
+            limit = std::min(limit, -y / chroma);
+        }
+    }
+    return limit;
+}
+
+[[nodiscard]] bool apply_to(
+    std::vector<negaflow::core::Rgba32F>& pixels,
+    const negaflow::imaging::ColorModelParameters& parameters) {
+    const negaflow::core::ConstImageView input{
+        pixels.data(), pixels.size(), static_cast<std::uint32_t>(pixels.size()), 1U,
+        pixels.size()};
+    const negaflow::core::ImageView output{
+        pixels.data(), pixels.size(), static_cast<std::uint32_t>(pixels.size()), 1U,
+        pixels.size()};
+    return negaflow::imaging::apply_color_model(input, output, parameters) ==
+           negaflow::core::KernelStatus::ok;
+}
+
+void test_bounded_chroma_scale_contract() {
+    constexpr float tolerance = 2.0e-5F;
+    const std::vector<negaflow::core::Rgba32F> grid = make_gamut_grid();
+
+    // 키우는 슬라이더가 [0,1] 안의 색을 범위 밖으로 밀지 않고 휘도는 그대로입니다.
+    for (const auto& [saturation, color_depth] :
+         {std::pair{0.3F, 0.0F}, std::pair{1.0F, 0.0F}, std::pair{0.0F, 1.0F},
+          std::pair{1.0F, 1.0F}}) {
+        std::vector<negaflow::core::Rgba32F> pixels = grid;
+        negaflow::imaging::ColorModelParameters parameters{};
+        parameters.saturation = saturation;
+        parameters.color_depth = color_depth;
+        expect(apply_to(pixels, parameters), "boosting chroma controls succeed");
+        std::size_t outside = 0U;
+        std::size_t luma_changed = 0U;
+        for (std::size_t index = 0U; index < grid.size(); ++index) {
+            const auto& out = pixels[index];
+            if (out.red < -tolerance || out.red > 1.0F + tolerance || out.green < -tolerance ||
+                out.green > 1.0F + tolerance || out.blue < -tolerance ||
+                out.blue > 1.0F + tolerance) {
+                ++outside;
+            }
+            if (std::abs(rec709_luma(out) - rec709_luma(grid[index])) > tolerance) {
+                ++luma_changed;
+            }
+        }
+        expect(outside == 0U, "boosting chroma never leaves [0,1] for in-gamut colours");
+        expect(luma_changed == 0U, "boosting chroma keeps luminance");
+    }
+
+    // knee 안쪽에서는 이전 선형 법칙 그대로입니다.
+    for (const float saturation : {0.1F, 0.3F, 1.0F}) {
+        const float factor = 1.0F + (saturation * 0.6F);
+        std::vector<negaflow::core::Rgba32F> pixels = grid;
+        negaflow::imaging::ColorModelParameters parameters{};
+        parameters.saturation = saturation;
+        expect(apply_to(pixels, parameters), "saturation succeeds");
+        std::size_t checked = 0U;
+        std::size_t wrong = 0U;
+        for (std::size_t index = 0U; index < grid.size(); ++index) {
+            const float limit = std::max(headroom_reference(grid[index]), 1.0F);
+            const float knee =
+                1.0F + (negaflow::imaging::bounded_chroma_knee_fraction * (limit - 1.0F));
+            if (factor > knee) {
+                continue;
+            }
+            const float y = rec709_luma(grid[index]);
+            ++checked;
+            if (std::abs(pixels[index].red - (y + ((grid[index].red - y) * factor))) > tolerance ||
+                std::abs(pixels[index].green - (y + ((grid[index].green - y) * factor))) > tolerance ||
+                std::abs(pixels[index].blue - (y + ((grid[index].blue - y) * factor))) > tolerance) {
+                ++wrong;
+            }
+        }
+        expect(checked > 20U, "enough colours fall inside the linear range");
+        expect(wrong == 0U, "saturation inside the knee follows the linear law");
+    }
+
+    // 줄이는 쪽은 선형 법칙입니다.
+    for (const float saturation : {-0.5F, -1.0F}) {
+        const float factor = 1.0F + (saturation * 0.6F);
+        std::vector<negaflow::core::Rgba32F> pixels = grid;
+        negaflow::imaging::ColorModelParameters parameters{};
+        parameters.saturation = saturation;
+        expect(apply_to(pixels, parameters), "desaturation succeeds");
+        std::size_t wrong = 0U;
+        for (std::size_t index = 0U; index < grid.size(); ++index) {
+            const float y = rec709_luma(grid[index]);
+            if (std::abs(pixels[index].red - (y + ((grid[index].red - y) * factor))) > tolerance ||
+                std::abs(pixels[index].green - (y + ((grid[index].green - y) * factor))) > tolerance ||
+                std::abs(pixels[index].blue - (y + ((grid[index].blue - y) * factor))) > tolerance) {
+                ++wrong;
+            }
+        }
+        expect(wrong == 0U, "desaturation follows the linear law");
+    }
+
+    // 슬라이더를 올릴수록 chroma 는 줄지 않습니다(접힌 뒤에는 평평해질 뿐 뒤집히지 않습니다).
+    std::vector<float> previous(grid.size());
+    for (std::size_t index = 0U; index < grid.size(); ++index) {
+        previous[index] = chroma_norm(grid[index]);
+    }
+    std::size_t decreased = 0U;
+    for (int step = 1; step <= 10; ++step) {
+        std::vector<negaflow::core::Rgba32F> pixels = grid;
+        negaflow::imaging::ColorModelParameters parameters{};
+        parameters.saturation = static_cast<float>(step) * 0.1F;
+        expect(apply_to(pixels, parameters), "monotonic sweep succeeds");
+        for (std::size_t index = 0U; index < grid.size(); ++index) {
+            const float current = chroma_norm(pixels[index]);
+            if (current < previous[index] - tolerance) {
+                ++decreased;
+            }
+            previous[index] = current;
+        }
+    }
+    expect(decreased == 0U, "chroma never decreases while raising saturation");
+
+    // 이미 범위 밖인 화소는 더 키우지 않습니다.
+    std::vector<negaflow::core::Rgba32F> outside_range{
+        {1.2F, 0.3F, 0.1F, 1.0F}, {-0.1F, 0.5F, 0.4F, 1.0F}, {1.5F, 1.4F, 0.2F, 1.0F}};
+    const std::vector<negaflow::core::Rgba32F> outside_source = outside_range;
+    negaflow::imaging::ColorModelParameters boost{};
+    boost.saturation = 1.0F;
+    expect(apply_to(outside_range, boost), "out-of-range input succeeds");
+    for (std::size_t index = 0U; index < outside_range.size(); ++index) {
+        expect(std::abs(chroma_norm(outside_range[index]) - chroma_norm(outside_source[index])) < 1.0e-4F,
+               "colours already outside [0,1] are not amplified");
+        expect(std::abs(rec709_luma(outside_range[index]) - rec709_luma(outside_source[index])) < 1.0e-4F,
+               "out-of-range colours keep their luminance");
+    }
+}
+
 void test_white_balance_law() {
     using negaflow::imaging::white_balance_gains;
     for (const float warmth : {-1.0F, -0.5F, 0.3F, 1.0F}) {
@@ -212,6 +385,7 @@ void test_white_balance_law() {
 int main(const int argc, char** argv) {
     test_identity_and_fixed_matrix_controls();
     test_chroma_controls_and_validation();
+    test_bounded_chroma_scale_contract();
     test_white_balance_law();
     expect(argc == 1 || argc == 2, "an optional external golden directory is accepted");
     if (argc == 2) {

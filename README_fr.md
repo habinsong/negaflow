@@ -93,7 +93,7 @@ Brancher un vrai scanner demande un module à part, et pour les scanners SANE il
 - GrainMend, qui restaure les photos en retirant poussières et rayures.
 - Une photothèque avec bobines, dossiers, collections, notes, piles, copies virtuelles, et recherche par boîtier, objectif ou film
 - Des préréglages et un copier-coller qui emportent ensemble procédé, cible, tonalité, couleur, détail, recadrage et orientation
-- Export JPEG et TIFF 16 bits, profils ICC, et enregistrement dans l'EXIF des notes de boîtier, objectif, film
+- Export JPEG, PNG, TIFF 16 bits et DNG linéaire 16 bits, profils ICC, et enregistrement dans l'EXIF des notes de boîtier, objectif, film
 - Sept mises en page d'impression, aperçus de papier, formats photo et ISO, et fonction C-print.
 
 ## Chroma Engine
@@ -102,7 +102,7 @@ Brancher un vrai scanner demande un module à part, et pour les scanners SANE il
 
 Avant de développer un négatif, il mesure la base du film dans une zone non exposée. Là où la mesure automatique est décalée, il suffit de piquer à la pipette ou d'ajuster les valeurs RVB.
 
-Par défaut, `MAIN` utilise Équilibre auto sur ON. Pour MAIN (y compris PRINT) et CS, le bouton est à droite du titre Cible. Il ajuste la couleur et la luminosité à partir de la photo actuelle ; OFF saute cette étape. Tonalité auto, balance des blancs auto, niveaux auto et couleur auto restent des fonctions distinctes, désactivées par défaut.
+Par défaut, `MAIN` utilise Équilibre auto sur ON. Le bouton est une petite pastille à droite du titre Cible. Il n’apparaît que pour les négatifs couleur et noir et blanc, avec MAIN (y compris PRINT) et CS. Il ajuste la couleur et la luminosité à partir de la photo actuelle ; OFF saute cette étape. Tonalité auto, balance des blancs auto, niveaux auto et couleur auto restent des fonctions distinctes, désactivées par défaut.
 
 Les autres cibles sont `PRINT` pour la sortie via un profil ICC d'imprimante, `HS` et `SP` de la famille minilab, `F135` et `HR` de la famille des équipements de laboratoire, `EXPIRED` qui tente de rattraper les vieux films. Pour la sortie, on choisit entre sRGB, Display P3, Adobe RGB, et un profil ICC RVB à soi.
 

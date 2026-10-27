@@ -158,6 +158,127 @@ final class DevelopExportPrintWorkflowTests: XCTestCase {
         )
     }
 
+    /// DNG 로 내보낸 파일을 앱 밖의 DNG 해석기(ImageIO)로 읽으면 화면과 같은 그림이어야 한다.
+    /// 무보정본(MAIN master)도 같은 형식으로 나가고, PRINT 타깃은 거절된다.
+    func testDNGExportMatchesTheScreenAndRejectsPrintTarget() async throws {
+        let source = try Self.writeSyntheticNegativeTIFF(width: 1_600, height: 1_067)
+        defer { try? FileManager.default.removeItem(at: source) }
+        let outputDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-workflow-dng-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: outputDirectory) }
+
+        let model = AppModel(
+            libraryCatalogURL: outputDirectory.appendingPathComponent("library.json"),
+            libraryDefectDirectoryURL: outputDirectory.appendingPathComponent("defects"),
+            libraryBackupDirectoryURL: outputDirectory.appendingPathComponent("Backups")
+        )
+        await model.restoreLibraryOnLaunch()
+        model.activeWorkspaceModule = .develop
+        model.canvasDisplayTargetPixels = 1_280
+        let frame = ScanFrame(
+            scanIndex: 1, rawScanURL: source, filmType: .colorNegative, sourceKind: .scannerTIFF
+        )
+        model.frames = [frame]
+        XCTAssertTrue(model.assignNewPersistentFrames([frame]))
+        model.selectedFrameID = frame.id
+        await model.developFrame(frame)
+        try await Self.waitUntilDevelopedOnce(model, frame)
+        frame.updateParams { $0.exposure = 0.4 }
+        let revisionBefore = frame.developRevision
+        model.requestDevelop(frame)
+        try await Self.waitUntilSettled(frame, afterRevision: revisionBefore)
+        let onScreen = try XCTUnwrap(frame.cachedDevelopedBase)
+
+        let destination = outputDirectory.appendingPathComponent("frame.dng")
+        // 사이드카(렌더 기록)도 함께 쓴다 — 산출물 검사와 기록이 DNG 를 .dng 형식으로 적어야 한다.
+        let exported = await model.runExportFrameTransaction(
+            frame, to: destination, format: .dng,
+            writeSidecar: true, writeMainFlatMaster: true, writeOriginalRaw: false,
+            options: .standard, recipeIdentity: nil, reportsGlobalStatus: false
+        )
+        guard case .completed(let outputURL, _) = exported else {
+            return XCTFail("DNG 내보내기가 실패했다: \(exported)")
+        }
+        XCTAssertEqual(outputURL.pathExtension, "dng")
+        let header = try Data(contentsOf: outputURL).prefix(4)
+        XCTAssertEqual([UInt8](header), [0x49, 0x49, 42, 0])
+        let image = try XCTUnwrap(Self.loadCGImage(outputURL), "DNG 를 ImageIO 가 열지 못한다")
+        XCTAssertEqual(image.width, 1_600)
+        XCTAssertEqual(image.height, 1_067)
+        XCTAssertEqual(
+            Self.meanLuma(onScreen), Self.meanLuma(image), accuracy: 0.02,
+            "화면 평균 밝기와 DNG 를 연 평균 밝기가 갈렸다"
+        )
+        let artifacts = try FileManager.default.contentsOfDirectory(atPath: outputDirectory.path)
+        XCTAssertTrue(artifacts.contains { $0.hasSuffix(".json") || $0.hasSuffix(".xmp") },
+                      "사이드카가 나가야 한다: \(artifacts)")
+        let master = ExportPairing.mainFlatMasterURL(for: destination)
+        XCTAssertEqual(master.pathExtension, "dng")
+        XCTAssertNotNil(Self.loadCGImage(master), "무보정본도 DNG 로 나가야 한다")
+
+        // PRINT 타깃은 프린터 ICC 경계가 필요해 DNG 로는 내보낼 수 없다 — 다른 형식으로 바꾸지 않고 거절한다.
+        frame.updateParams { $0.developTarget = .print }
+        let rejected = await model.runExportFrameTransaction(
+            frame, to: outputDirectory.appendingPathComponent("print.dng"), format: .dng,
+            writeSidecar: false, writeMainFlatMaster: false, writeOriginalRaw: false,
+            options: .standard, recipeIdentity: nil, reportsGlobalStatus: false
+        )
+        if case .completed = rejected { XCTFail("PRINT 타깃 DNG 내보내기가 거절돼야 한다") }
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: outputDirectory.appendingPathComponent("print.dng").path))
+    }
+
+    /// DNG 는 무압축 입력에서만 나간다. JPEG 원본은 선택지에서 빠지고 강제로 요청해도 거절된다(파일이 남지 않는다).
+    func testDNGExportIsRefusedForJPEGSourceButOfferedForTIFF() async throws {
+        let tiff = try Self.writeSyntheticNegativeTIFF(width: 640, height: 427)
+        defer { try? FileManager.default.removeItem(at: tiff) }
+        let outputDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-workflow-dng-jpeg-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: outputDirectory) }
+        let jpeg = outputDirectory.appendingPathComponent("source.jpg")
+        let image = try XCTUnwrap(Self.loadCGImage(tiff))
+        let destination = try XCTUnwrap(
+            CGImageDestinationCreateWithURL(jpeg as CFURL, "public.jpeg" as CFString, 1, nil)
+        )
+        CGImageDestinationAddImage(destination, image, nil)
+        XCTAssertTrue(CGImageDestinationFinalize(destination))
+
+        let model = AppModel(
+            libraryCatalogURL: outputDirectory.appendingPathComponent("library.json"),
+            libraryDefectDirectoryURL: outputDirectory.appendingPathComponent("defects"),
+            libraryBackupDirectoryURL: outputDirectory.appendingPathComponent("Backups")
+        )
+        await model.restoreLibraryOnLaunch()
+        model.activeWorkspaceModule = .develop
+        model.canvasDisplayTargetPixels = 640
+        let jpegFrame = ScanFrame(
+            scanIndex: 1, rawScanURL: jpeg, filmType: .colorNegative, sourceKind: .importedFile
+        )
+        let tiffFrame = ScanFrame(
+            scanIndex: 2, rawScanURL: tiff, filmType: .colorNegative, sourceKind: .scannerTIFF
+        )
+        model.frames = [jpegFrame, tiffFrame]
+        XCTAssertTrue(model.assignNewPersistentFrames([jpegFrame, tiffFrame]))
+
+        model.selectedFrameID = jpegFrame.id
+        XCTAssertFalse(model.exportSelectionAllowsDNG, "JPEG 원본이면 DNG 를 고를 수 없어야 한다")
+        model.selectedFrameID = tiffFrame.id
+        XCTAssertTrue(model.exportSelectionAllowsDNG, "TIFF 원본이면 DNG 를 고를 수 있어야 한다")
+
+        await model.developFrame(jpegFrame)
+        try await Self.waitUntilDevelopedOnce(model, jpegFrame)
+        let target = outputDirectory.appendingPathComponent("jpeg-source.dng")
+        let result = await model.runExportFrameTransaction(
+            jpegFrame, to: target, format: .dng,
+            writeSidecar: false, writeMainFlatMaster: false, writeOriginalRaw: false,
+            options: .standard, recipeIdentity: nil, reportsGlobalStatus: false
+        )
+        if case .completed = result { XCTFail("JPEG 원본의 DNG 내보내기가 거절돼야 한다") }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: target.path))
+    }
+
     func testCameraNativeRawPreviewExportAndMainMasterAgree() async throws {
         guard NativeCameraRAW.isAvailable else {
             throw XCTSkip("Set NEGAFLOW_LIBRAW_LIBRARY to run camera RAW app workflow")
@@ -182,6 +303,11 @@ final class DevelopExportPrintWorkflowTests: XCTestCase {
         model.selectedFrameID = frame.id
         await model.developFrame(frame)
         try await Self.waitUntilDevelopedOnce(model, frame)
+        // 첫 프록시 패스가 hasDevelopedOnce 를 먼저 켜고 정착 패스가 cachedDevelopedBase 를 나중에 채운다.
+        let baseDeadline = Date().addingTimeInterval(30)
+        while frame.cachedDevelopedBase == nil, Date() < baseDeadline {
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
         let screen = try XCTUnwrap(frame.cachedDevelopedBase)
         let destination = root.appendingPathComponent("camera.tiff")
         let result = await model.runExportFrameTransaction(frame, to: destination, format: .tiff16,
