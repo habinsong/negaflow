@@ -46,7 +46,7 @@ flowchart LR
 |---|---|
 | [Scanner CLI JSON](reference/CLI_JSON.md) | Output shape of `detect --json` and `capabilities --json` |
 | [Render manifest](reference/RENDER_MANIFEST.md) | SHA-256 links between source, edit values, and output file |
-| [Print layouts and C-print preview](reference/C_PRINT.md) | Seven layouts, finished-page export, optimized rendering, proof-only ICC behavior, and accuracy limits |
+| [Print layouts and C-print preview](reference/C_PRINT.md) | Eight layouts, finished-page export, optimized rendering, proof-only ICC behavior, and accuracy limits |
 | [Fixed print response](reference/PRINT_RESPONSE.md) | The formula and anchors of `shoulder-print-response-v4` |
 | [Scanner profile quality gate](reference/PROFILE_QUALITY_GATE.md) | Release rules for REAL/TARGET pair material |
 | [Scanner noise profiles](reference/SCANNER_NOISE_PROFILES.md) | Repeat-scan measurement and when it applies automatically |

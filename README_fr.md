@@ -76,6 +76,7 @@ Il suffit de le prendre sur [GitHub Releases](https://github.com/habinsong/negaf
 | `negaflow-1.2.1-mac-universal.pkg` | macOS 14 ou ultérieur, Apple Silicon et Intel |
 | `negaflow-1.2.1-mac-arm64.pkg` | macOS 14 ou ultérieur, Apple Silicon uniquement |
 | `negaflow-1.2.1-win-x64.exe` | Windows 11 24H2 ou plus récent, x64 |
+| `negaflow-1.2.1-win-x64-setup.zip` | ZIP du programme d’installation Windows |
 
 Compatible avec macOS 14, 26 et 27.
 
@@ -94,7 +95,7 @@ Brancher un vrai scanner demande un module à part, et pour les scanners SANE il
 - Une photothèque avec bobines, dossiers, collections, notes, piles, copies virtuelles, et recherche par boîtier, objectif ou film
 - Des préréglages et un copier-coller qui emportent ensemble procédé, cible, tonalité, couleur, détail, recadrage et orientation
 - Export JPEG, PNG, TIFF 16 bits et DNG linéaire 16 bits, profils ICC, et enregistrement dans l'EXIF des notes de boîtier, objectif, film
-- Sept mises en page d'impression, aperçus de papier, formats photo et ISO, et fonction C-print.
+- Huit mises en page d'impression, aperçus de papier, formats photo et ISO, et fonction C-print.
 
 ## 1.2.1
 
@@ -102,7 +103,7 @@ Brancher un vrai scanner demande un module à part, et pour les scanners SANE il
 - Le ton automatique ne change que les réglages de ton et conserve les couleurs et les courbes. La balance des blancs, les niveaux et la couleur automatiques restent des commandes séparées.
 - Coller un préréglage remplace les groupes choisis sans ajouter une seconde fois l’ancien rendu. Un collage sur plusieurs photos s’annule en une fois ; les vignettes et l’aperçu actif sont actualisés.
 - Les sources compatibles peuvent être exportées en DNG linéaire 16 bits depuis le développement et le tirage. Le fichier est enregistré dans le dossier choisi et vérifié avant de signaler la fin.
-- Les mises en page individuelles peuvent ajouter hors de la photo l’appareil, l’objectif, un logo, les données d’exposition, un histogramme en points et un nom. Elles acceptent un fond blanc, noir ou flouté depuis la vignette, une bordure haute et des modèles de mise en page.
+- La mise en page Filigrane peut ajouter hors de la photo l’appareil, l’objectif, un logo, les données d’exposition, un histogramme en points et un nom. Elle accepte un fond blanc, noir ou flouté depuis la vignette, une bordure haute et des modèles de mise en page.
 
 ## Chroma Engine
 
@@ -110,7 +111,7 @@ Brancher un vrai scanner demande un module à part, et pour les scanners SANE il
 
 Avant de développer un négatif, il mesure la base du film dans une zone non exposée. Là où la mesure automatique est décalée, il suffit de piquer à la pipette ou d'ajuster les valeurs RVB.
 
-Par défaut, `MAIN` utilise Équilibre auto sur ON. Le bouton est une petite pastille à droite du titre Cible. Il n’apparaît que pour les négatifs couleur et noir et blanc, avec MAIN (y compris PRINT) et CS. Il ajuste la couleur et la luminosité à partir de la photo actuelle ; OFF saute cette étape. Tonalité auto, balance des blancs auto, niveaux auto et couleur auto restent des fonctions distinctes, désactivées par défaut.
+Par défaut, `MAIN` utilise Équilibre auto sur ON. Le bouton est une petite pastille à droite du titre Cible. Il n’apparaît que pour les négatifs couleur et noir et blanc, avec MAIN (y compris PRINT) et CS. Il ajuste la couleur et la luminosité à partir de la photo actuelle ; OFF saute cette étape. Tonalité auto, balance des blancs auto, niveaux auto et couleur auto restent des fonctions distinctes, désactivées par défaut. Le point apparaît seulement quand le réglage est actif, juste à gauche du texte ; le texte reste centré.
 
 Les autres cibles sont `PRINT` pour la sortie via un profil ICC d'imprimante, `HS` et `SP` de la famille minilab, `F135` et `HR` de la famille des équipements de laboratoire, `EXPIRED` qui tente de rattraper les vieux films. Pour la sortie, on choisit entre sRGB, Display P3, Adobe RGB, et un profil ICC RVB à soi.
 

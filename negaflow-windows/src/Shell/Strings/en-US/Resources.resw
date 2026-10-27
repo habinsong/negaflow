@@ -1647,13 +1647,12 @@ Load a scanner from Library to scan film.</value>
   <data name="printWatermarkAperture.Text" xml:space="preserve"><value>Aperture</value></data>
   <data name="printWatermarkShutter.Text" xml:space="preserve"><value>Shutter</value></data>
   <data name="printWatermarkIso.Text" xml:space="preserve"><value>ISO</value></data>
-  <data name="printWatermarkCaptureDate.Text" xml:space="preserve"><value>Date Taken</value></data>
+  <data name="printWatermarkCaptureDate.Text" xml:space="preserve"><value>Date</value></data>
   <data name="printWatermarkHistogram.Text" xml:space="preserve"><value>Histogram</value></data>
   <data name="printWatermarkUserName.Text" xml:space="preserve"><value>Name</value></data>
   <data name="printWatermarkPlacement.Text" xml:space="preserve"><value>Position</value></data>
-  <data name="printWatermarkBottomCenter.Text" xml:space="preserve"><value>Bottom</value></data>
+  <data name="printWatermarkBottomCenter.Text" xml:space="preserve"><value>Bottom Center</value></data>
   <data name="printWatermarkTopLeading.Text" xml:space="preserve"><value>Top Left</value></data>
   <data name="printWatermarkTopCenter.Text" xml:space="preserve"><value>Top Center</value></data>
   <data name="printWatermarkTopTrailing.Text" xml:space="preserve"><value>Top Right</value></data>
-  <data name="printWatermarkAutoFillHint.Text" xml:space="preserve"><value>Empty camera, lens and exposure fields use each photo's shot record.</value></data>
 </root>

@@ -1647,13 +1647,12 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="printWatermarkAperture.Text" xml:space="preserve"><value>Ouverture</value></data>
   <data name="printWatermarkShutter.Text" xml:space="preserve"><value>Vitesse</value></data>
   <data name="printWatermarkIso.Text" xml:space="preserve"><value>ISO</value></data>
-  <data name="printWatermarkCaptureDate.Text" xml:space="preserve"><value>Date de prise de vue</value></data>
+  <data name="printWatermarkCaptureDate.Text" xml:space="preserve"><value>Date</value></data>
   <data name="printWatermarkHistogram.Text" xml:space="preserve"><value>Histogramme</value></data>
   <data name="printWatermarkUserName.Text" xml:space="preserve"><value>Nom</value></data>
   <data name="printWatermarkPlacement.Text" xml:space="preserve"><value>Position</value></data>
-  <data name="printWatermarkBottomCenter.Text" xml:space="preserve"><value>En bas</value></data>
+  <data name="printWatermarkBottomCenter.Text" xml:space="preserve"><value>En bas au centre</value></data>
   <data name="printWatermarkTopLeading.Text" xml:space="preserve"><value>En haut à gauche</value></data>
   <data name="printWatermarkTopCenter.Text" xml:space="preserve"><value>En haut au centre</value></data>
   <data name="printWatermarkTopTrailing.Text" xml:space="preserve"><value>En haut à droite</value></data>
-  <data name="printWatermarkAutoFillHint.Text" xml:space="preserve"><value>Les champs appareil, objectif et exposition laissés vides reprennent la fiche de prise de vue de chaque photo.</value></data>
 </root>

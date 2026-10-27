@@ -281,9 +281,7 @@ public static class PrintWatermarkBandLayout
     }
 
     /// <summary>
-    /// 한 자리(아래 가운데·위 왼쪽·위 가운데·위 오른쪽)에 놓이는 히스토그램과 이름입니다. 가운데 자리에
-    /// 둘이 함께 있으면 가운데 축을 기준으로 데칼코마니처럼 놓습니다 — 히스토그램은 축 왼쪽, 이름은 축
-    /// 오른쪽에 같은 간격으로 붙습니다(macOS 와 같다).
+    /// 한 자리에 히스토그램과 이름이 함께 있으면 위아래로 놓고 각각 가운데를 맞춥니다.
     /// </summary>
     private readonly struct Slot
     {
@@ -292,7 +290,7 @@ public static class PrintWatermarkBandLayout
         private readonly double nameWidth;
         private readonly double histogramWidth;
         private readonly double histogramHeight;
-        private readonly double gap;
+        private readonly double verticalGap;
 
         public Slot(
             PrintWatermarkSettings settings,
@@ -308,11 +306,8 @@ public static class PrintWatermarkBandLayout
             nameWidth = name.Length > 0 ? measure(name, nameSize, false) : 0;
             histogramWidth = PrintWatermarkMetrics.HistogramWidth * band * scale;
             histogramHeight = PrintWatermarkMetrics.HistogramHeight * band * scale;
-            gap = PrintWatermarkMetrics.ItemGap * band * scale;
-            isCentered = placement is PrintWatermarkPlacement.BottomCenter or PrintWatermarkPlacement.TopCenter;
+            verticalGap = PrintWatermarkMetrics.LineGap * band * scale;
         }
-
-        private readonly bool isCentered;
 
         private bool HasBoth => HasHistogram && name.Length > 0;
 
@@ -320,19 +315,18 @@ public static class PrintWatermarkBandLayout
 
         public bool IsEmpty => !HasHistogram && name.Length == 0;
 
-        /// <summary>차지하는 폭입니다. 가운데 대칭 배치는 넓은 쪽이 축 양옆으로 같은 만큼 뻗는다고 봅니다.</summary>
-        public double Width => isCentered && HasBoth
-            ? (2 * Math.Max(histogramWidth, nameWidth)) + gap
-            : (HasHistogram ? histogramWidth : 0) + nameWidth + (HasBoth ? gap : 0);
+        /// <summary>세로로 쌓는 항목 가운데 더 넓은 폭입니다.</summary>
+        public double Width => Math.Max(HasHistogram ? histogramWidth : 0, nameWidth);
 
         /// <summary>가운데 축 <paramref name="centerX"/> 를 기준으로 놓습니다.</summary>
         public PrintRect? PlaceCentered(double centerX, double band, List<PrintWatermarkTextItem> texts)
         {
             if (HasBoth)
             {
+                double top = (band - histogramHeight - verticalGap - LineHeight(nameSize)) / 2;
                 PrintRect histogram = new(
-                    centerX - (gap / 2) - histogramWidth, (band - histogramHeight) / 2, histogramWidth, histogramHeight);
-                AddName(centerX + (gap / 2), band, texts);
+                    centerX - (histogramWidth / 2), top, histogramWidth, histogramHeight);
+                AddName(centerX - (nameWidth / 2), band, texts, top + histogramHeight + verticalGap);
                 return histogram;
             }
             if (HasHistogram)
@@ -343,27 +337,19 @@ public static class PrintWatermarkBandLayout
             return null;
         }
 
-        private void AddName(double x, double band, List<PrintWatermarkTextItem> texts)
+        private void AddName(double x, double band, List<PrintWatermarkTextItem> texts, double? y = null)
         {
             if (name.Length > 0)
             {
                 // 사용자 이름은 보조 줄 크기지만 색은 굵은 줄과 같은 글자색입니다(macOS 와 같다).
-                texts.Add(new(name, x, (band - LineHeight(nameSize)) / 2, nameWidth, nameSize, false, false));
+                texts.Add(new(name, x, y ?? (band - LineHeight(nameSize)) / 2, nameWidth, nameSize, false, false));
             }
         }
 
         /// <summary>놓고 히스토그램 자리를 돌려줍니다(없으면 null).</summary>
         public PrintRect? Place(double x, double band, List<PrintWatermarkTextItem> texts)
         {
-            double cursor = x;
-            PrintRect? histogram = null;
-            if (HasHistogram)
-            {
-                histogram = new PrintRect(cursor, (band - histogramHeight) / 2, histogramWidth, histogramHeight);
-                cursor += histogramWidth + gap;
-            }
-            AddName(cursor, band, texts);
-            return histogram;
+            return PlaceCentered(x + (Width / 2), band, texts);
         }
     }
 }

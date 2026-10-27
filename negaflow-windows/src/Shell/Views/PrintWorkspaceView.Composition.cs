@@ -689,13 +689,11 @@ public sealed partial class PrintWorkspaceView
         }
         printInspector.Apply(state.Current.Print);
         ApplyCprintVisibility(state.Current.Print);
-        // 워터마크는 사진 한 장씩 놓는 레이아웃에만 들어갑니다(macOS 와 같이 그때만 구획이 보입니다).
-        LayoutTab.WatermarkCard.Visibility = PrintPreferences.UsesIndividualPages(state.Current.Print.LayoutMode)
+        // 워터마크 설정은 워터마크 레이아웃을 고른 경우에만 보입니다.
+        LayoutTab.WatermarkCard.Visibility = state.Current.Print.LayoutMode == PrintLayoutMode.Watermark
             ? Visibility.Visible
             : Visibility.Collapsed;
-        LayoutTab.WatermarkCard.Apply(
-            state.Current.Print.Watermark,
-            PrintSources.Count > 0 ? PrintSources[0].AppMetadata?.FilmShot : null);
+        LayoutTab.WatermarkCard.Apply(state.Current.Print.Watermark);
         SynchronizeExportSelection();
         SeedCustomLayoutIfEmpty();
         // 셀·문구 목록은 개수가 바뀌면 통째로 다시 그립니다. 목록 안 컨트롤이 값을 바꿀

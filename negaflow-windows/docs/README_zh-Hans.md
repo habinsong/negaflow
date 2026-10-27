@@ -49,6 +49,8 @@ Arm64 机器上也能跑。只是 Arm64 的发布版没像 x64 那样确认过�
 
 在 [Releases](https://github.com/habinsong/negaflow/releases) 下载 `negaflow-1.2.1-win-x64.exe` 并运行。
 
+Windows 安装程序 ZIP: [negaflow-1.2.1-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.1/negaflow-1.2.1-win-x64-setup.zip). Windows 还提供 setup ZIP，内含相同的安装 EXE、安装说明、声明和 SHA-256 校验和。全部解压后再运行安装程序。它是安装文件压缩包，并非便携版，仍可能出现 SmartScreen 提示。
+
 不需要管理员权限。第一次运行时 SmartScreen 会提示一次，点更多信息再运行就行。
 
 卸载走开始菜单的 `卸载 negaflow`，或者设置里的应用列表。图库和照片保持原样。

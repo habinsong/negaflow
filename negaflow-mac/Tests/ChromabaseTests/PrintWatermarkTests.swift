@@ -166,7 +166,7 @@ final class PrintWatermarkTests: XCTestCase {
 
     /// 가운데 자리에 히스토그램과 이름이 함께 있으면 가운데 축을 기준으로 데칼코마니처럼 놓인다:
     /// 히스토그램 오른쪽 끝과 이름 왼쪽 끝이 축에서 같은 거리다. 위 띠의 가운데 자리도 같다.
-    func testCenterSlotMirrorsHistogramAndNameAroundTheAxis() throws {
+    func testNameStaysCenteredWhenSharingItsSlotWithTheHistogram() throws {
         let photo = gradientPhoto(width: 1_200, height: 800)
         for placement in [PrintWatermarkPlacement.bottomCenter, .topCenter] {
             let settings = PrintWatermarkSettings(
@@ -181,7 +181,8 @@ final class PrintWatermarkTests: XCTestCase {
             let framed = try XCTUnwrap(PrintWatermarkRenderer.compose(photo: photo, settings: settings, context: context))
             let rendered = try pixels(framed)
             let band = 104
-            let rows = placement == .bottomCenter ? 0..<band : (band + 800)..<(2 * band + 800)
+            let base = placement == .bottomCenter ? 0 : band + 800
+            let rows = base..<(base + 40)
             var inked = [Bool](repeating: false, count: rendered.width)
             for y in rows {
                 for x in 0..<rendered.width where rendered.rgb(x: x, y: y).allSatisfy({ $0 < 245 }) {
@@ -189,11 +190,10 @@ final class PrintWatermarkTests: XCTestCase {
                 }
             }
             let center = rendered.width / 2
-            // 축에서 왼쪽으로 처음 만나는 잉크 = 히스토그램 오른쪽 끝, 오른쪽으로 처음 = 이름 왼쪽 끝.
-            let left = try XCTUnwrap((0..<center).reversed().first { inked[$0] })
-            let right = try XCTUnwrap((center..<rendered.width).first { inked[$0] })
-            XCTAssertEqual(Double(center - left), Double(right - center), accuracy: 4, "\(placement) 축 대칭")
-            XCTAssertFalse(inked[center], "\(placement) 축 위는 비어 있다")
+            let left = try XCTUnwrap(inked.firstIndex(of: true))
+            let right = try XCTUnwrap(inked.lastIndex(of: true))
+            XCTAssertEqual(Double(left + right + 1) / 2, Double(center), accuracy: 4,
+                           "\(placement) 이름 자체가 가운데에 있어야 한다")
         }
     }
 
@@ -210,7 +210,10 @@ final class PrintWatermarkTests: XCTestCase {
 
     func testExposureLineAddsUnitsOnlyToBareNumbers() {
         var settings = PrintWatermarkSettings(focalLength: "100", aperture: "7.1", shutterSpeed: "1/125", iso: "160")
-        XCTAssertEqual(settings.exposureLine, "100mm f/7.1 1/125\" ISO160")
+        XCTAssertEqual(settings.exposureLine, "100mm f/7.1 1/125 ISO160")
+        for speed in ["1/125", "2", "0.5", "B", ""] {
+            XCTAssertEqual(PrintWatermarkFormat.shutterSpeed(" \(speed) "), speed)
+        }
         settings.focalLength = "28-75mm"
         settings.aperture = "f/2"
         settings.shutterSpeed = "B"

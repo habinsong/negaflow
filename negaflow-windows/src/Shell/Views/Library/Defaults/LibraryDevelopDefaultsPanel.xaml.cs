@@ -300,6 +300,7 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
             ? AutoBalanceAccentProbe.Foreground
             : AutoBalancePrimaryProbe.Foreground;
         AutoBalanceIcon.Fill = brush;
+        AutoBalanceIcon.Visibility = AutoBalanceToggle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         AutoBalanceText.Foreground = brush;
     }
 

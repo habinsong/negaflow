@@ -1647,7 +1647,7 @@
   <data name="printWatermarkAperture.Text" xml:space="preserve"><value>絞り</value></data>
   <data name="printWatermarkShutter.Text" xml:space="preserve"><value>シャッター</value></data>
   <data name="printWatermarkIso.Text" xml:space="preserve"><value>ISO</value></data>
-  <data name="printWatermarkCaptureDate.Text" xml:space="preserve"><value>撮影日時</value></data>
+  <data name="printWatermarkCaptureDate.Text" xml:space="preserve"><value>日付</value></data>
   <data name="printWatermarkHistogram.Text" xml:space="preserve"><value>ヒストグラム</value></data>
   <data name="printWatermarkUserName.Text" xml:space="preserve"><value>名前</value></data>
   <data name="printWatermarkPlacement.Text" xml:space="preserve"><value>位置</value></data>
@@ -1655,5 +1655,4 @@
   <data name="printWatermarkTopLeading.Text" xml:space="preserve"><value>上左</value></data>
   <data name="printWatermarkTopCenter.Text" xml:space="preserve"><value>上中央</value></data>
   <data name="printWatermarkTopTrailing.Text" xml:space="preserve"><value>上右</value></data>
-  <data name="printWatermarkAutoFillHint.Text" xml:space="preserve"><value>カメラ・レンズ・露出を空欄にすると、写真ごとの撮影記録で埋めます。</value></data>
 </root>

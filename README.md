@@ -76,6 +76,7 @@ Get it from [GitHub Releases](https://github.com/habinsong/negaflow/releases).
 | `negaflow-1.2.1-mac-universal.pkg` | macOS 14 or later, Apple Silicon and Intel |
 | `negaflow-1.2.1-mac-arm64.pkg` | macOS 14 or later, Apple Silicon only |
 | `negaflow-1.2.1-win-x64.exe` | Windows 11 24H2 or later, x64 |
+| `negaflow-1.2.1-win-x64-setup.zip` | Windows installer ZIP |
 
 Compatible with macOS 14, 26 and 27.
 
@@ -94,7 +95,7 @@ Connecting a scanner requires a separate plugin. For SANE scanners, use [`negafl
 - A library with rolls, folders, collections, ratings, stacks, virtual copies, and search by camera, lens, or film
 - Presets and copy-paste that carry the develop process, target, tone, color, detail, crop, and orientation together
 - JPEG, PNG, 16-bit TIFF, and 16-bit linear DNG export, ICC profiles, and records such as camera, lens, and film saved into EXIF
-- Seven print layouts, paper previews, photo and ISO paper sizes, and C-print features.
+- Eight print layouts, paper previews, photo and ISO paper sizes, and C-print features.
 
 ## 1.2.1
 
@@ -102,7 +103,7 @@ Connecting a scanner requires a separate plugin. For SANE scanners, use [`negafl
 - Auto Tone changes tone controls and preserves color adjustments and curves. Auto White Balance, Auto Levels and Auto Color remain separate commands.
 - Preset paste replaces the selected groups instead of adding the old look again. Multi-photo paste has one Undo, and both the thumbnail and active preview refresh.
 - Develop and Print export support 16-bit linear DNG for eligible sources, using the selected export folder and checking the final file before reporting completion.
-- Individual-photo print layouts can add camera and lens text, a logo, exposure details, a dotted histogram and a name outside the photo. White, black and thumbnail-blur borders, an optional top border and layout templates are supported.
+- The Watermark layout can add camera and lens text, a logo, exposure details, a dotted histogram and a name outside the photo. White, black and thumbnail-blur borders, an optional top border and layout templates are supported.
 
 ## Chroma Engine
 

@@ -46,7 +46,7 @@ flowchart LR
 |---|---|
 | [Scanner-CLI-JSON](reference/CLI_JSON.md) | Ausgabeform von `detect --json` und `capabilities --json` |
 | [Render-Protokoll](reference/RENDER_MANIFEST.md) | SHA-256-Verbindung von Quelle, Bearbeitungswerten und Ausgabedatei |
-| [Abzugslayouts und C-Print-Vorschau](reference/C_PRINT.md) | Sieben Layouts, Export fertiger Seiten, optimiertes Rendering, Softproof-ICC und Genauigkeitsgrenzen |
+| [Abzugslayouts und C-Print-Vorschau](reference/C_PRINT.md) | Acht Layouts, Export fertiger Seiten, optimiertes Rendering, Softproof-ICC und Genauigkeitsgrenzen |
 | [Feste Printantwort](reference/PRINT_RESPONSE.md) | Formel und Ankerpunkte von `shoulder-print-response-v4` |
 | [Qualitätsprüfung der Scannerprofile](reference/PROFILE_QUALITY_GATE.md) | Freigaberegeln für REAL/TARGET-Paarmaterial |
 | [Scanner-Rauschprofile](reference/SCANNER_NOISE_PROFILES.md) | Messung über Wiederholungsscans und automatische Anwendung |

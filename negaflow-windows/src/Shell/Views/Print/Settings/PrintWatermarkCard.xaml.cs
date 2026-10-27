@@ -4,7 +4,6 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media.Imaging;
-using Negaflow.Catalog;
 using Negaflow.Shell.Localization;
 using Negaflow.Shell.Print;
 using Negaflow.Shell.Views.Controls;
@@ -25,17 +24,30 @@ public sealed partial class PrintWatermarkCard : UserControl
 
     public PrintWatermarkCard()
     {
+        isSynchronizing = true;
         InitializeComponent();
+        isSynchronizing = false;
         foreach (NegaflowSegmentedPicker picker in new[]
                  {
-                     EnabledSelector, BackgroundSelector, TextInkSelector, TopBandSelector,
+                     BackgroundSelector, TextInkSelector, TopBandSelector,
                      LogoSelector, HistogramSelector, HistogramInkSelector,
                  })
         {
             picker.SelectionChanged += (_, _) => Commit();
         }
         HistogramPlacementSelector.SelectionChanged += (_, _) => Commit();
-        UserNamePlacementSelector.SelectionChanged += (_, _) => Commit();
+        UserNamePlacementSelector.SelectionChanged += (_, _) =>
+        {
+            if (isSynchronizing) { return; }
+            if (UserNamePlacementSelector.SelectedTag is PrintWatermarkPlacement placement &&
+                placement != PrintWatermarkPlacement.BottomCenter)
+            {
+                isSynchronizing = true;
+                try { TopBandSelector.SetSelected(true); }
+                finally { isSynchronizing = false; }
+            }
+            Commit();
+        };
         BandHeightSlider.ThumbToolTipValueConverter = new PercentSuffixThumbConverter();
     }
 
@@ -50,7 +62,6 @@ public sealed partial class PrintWatermarkCard : UserControl
     public void Localize()
     {
         SectionText.Text = Text("printWatermarkSection");
-        EnabledField.Label = Text("printWatermarkSection");
         BackgroundField.Label = Text("printWatermarkBackground");
         TextInkField.Label = Text("printWatermarkTextColor");
         TopBandField.Label = Text("printWatermarkTopBand");
@@ -67,7 +78,6 @@ public sealed partial class PrintWatermarkCard : UserControl
         ShutterField.Label = Text("printWatermarkShutter");
         IsoField.Label = Text("printWatermarkIso");
         DateField.Label = Text("printWatermarkCaptureDate");
-        AutoFillHintText.Text = Text("printWatermarkAutoFillHint");
         HistogramField.Label = Text("printWatermarkHistogram");
         HistogramInkField.Label = Text("printWatermarkHistogramColor");
         HistogramPlacementField.Label = Text("printWatermarkPlacement");
@@ -95,7 +105,6 @@ public sealed partial class PrintWatermarkCard : UserControl
         isSynchronizing = true;
         try
         {
-            EnabledSelector.SetOptions(booleans, Value.IsEnabled);
             BackgroundSelector.SetOptions(
             [
                 new(PrintWatermarkBackground.White, Text("printWatermarkWhite")),
@@ -110,7 +119,7 @@ public sealed partial class PrintWatermarkCard : UserControl
             HistogramPlacementSelector.SetOptions(placements);
             HistogramPlacementSelector.SelectByTag(Value.HistogramPlacement);
             UserNamePlacementSelector.SetOptions(placements);
-            UserNamePlacementSelector.SelectByTag(Value.UserNamePlacement);
+            UserNamePlacementSelector.SelectByTag(Value.EffectivePlacement(Value.UserNamePlacement));
         }
         finally
         {
@@ -118,18 +127,14 @@ public sealed partial class PrintWatermarkCard : UserControl
         }
     }
 
-    /// <summary>
-    /// 값을 컨트롤에 되비춥니다. 비워 둔 카메라·렌즈·노출 칸에는 그 사진의 촬영 기록을 흐린 글자로
-    /// 보여 줍니다 — 내보낼 때 그 값으로 채워집니다.
-    /// </summary>
-    public void Apply(PrintWatermarkSettings value, FilmShotMetadata? shot)
+    /// <summary>입력한 값을 컨트롤에 되비춥니다.</summary>
+    public void Apply(PrintWatermarkSettings value)
     {
         ArgumentNullException.ThrowIfNull(value);
         isSynchronizing = true;
         try
         {
             Value = value;
-            EnabledSelector.SetSelected(value.IsEnabled);
             BackgroundSelector.SetSelected(value.Background);
             TextInkSelector.SetSelected(value.BlurTextInk);
             TopBandSelector.SetSelected(value.AddsTopBand);
@@ -137,7 +142,7 @@ public sealed partial class PrintWatermarkCard : UserControl
             HistogramSelector.SetSelected(value.ShowsHistogram);
             HistogramInkSelector.SetSelected(value.BlurHistogramInk);
             HistogramPlacementSelector.SelectByTag(value.HistogramPlacement);
-            UserNamePlacementSelector.SelectByTag(value.UserNamePlacement);
+            UserNamePlacementSelector.SelectByTag(value.EffectivePlacement(value.UserNamePlacement));
             BandHeightSlider.Value = Math.Round(value.BandHeightRatio * 100);
             SetText(CameraBox, value.CameraName);
             SetText(LensBox, value.LensName);
@@ -147,13 +152,6 @@ public sealed partial class PrintWatermarkCard : UserControl
             SetText(IsoBox, value.Iso);
             SetText(DateBox, value.CaptureDate);
             SetText(UserNameBox, value.UserName);
-            PrintWatermarkSettings auto = new PrintWatermarkSettings().FillingFrom(shot);
-            CameraBox.PlaceholderText = Placeholder(auto.CameraName, Text("printWatermarkCamera"));
-            LensBox.PlaceholderText = Placeholder(auto.LensName, Text("printWatermarkLens"));
-            FocalBox.PlaceholderText = Placeholder(auto.FocalLength, "50");
-            ApertureBox.PlaceholderText = Placeholder(auto.Aperture, "2.8");
-            ShutterBox.PlaceholderText = Placeholder(auto.ShutterSpeed, "1/125");
-            IsoBox.PlaceholderText = Placeholder(auto.Iso, "400");
             _ = ShowLogoAsync(value);
             UpdateVisibility();
         }
@@ -166,14 +164,11 @@ public sealed partial class PrintWatermarkCard : UserControl
     private void UpdateVisibility()
     {
         PrintWatermarkSettings value = Value;
-        DetailPanel.Visibility = Visible(value.IsEnabled);
         bool blur = value.Background == PrintWatermarkBackground.Blur;
         TextInkField.Visibility = Visible(blur);
         HistogramInkField.Visibility = Visible(blur && value.ShowsHistogram);
         // 위 여백이 없으면 위쪽 자리는 쓸 수 없으므로(아래 가운데로 내려옴) 위치 줄을 감춥니다.
         HistogramPlacementField.Visibility = Visible(value.AddsTopBand && value.ShowsHistogram);
-        UserNamePlacementField.Visibility = Visible(
-            value.AddsTopBand && !string.IsNullOrWhiteSpace(value.UserName));
         LogoFileField.Visibility = Visible(value.ShowsLogo);
         RemoveLogoButton.Visibility = Visible(value.LogoSourcePath.Length > 0);
         // 경로가 비면 negaflow 로고입니다.
@@ -193,7 +188,7 @@ public sealed partial class PrintWatermarkCard : UserControl
         }
         Value = Value with
         {
-            IsEnabled = Chosen(EnabledSelector, Value.IsEnabled),
+            IsEnabled = true,
             Background = Chosen(BackgroundSelector, Value.Background),
             BlurTextInk = Chosen(TextInkSelector, Value.BlurTextInk),
             AddsTopBand = Chosen(TopBandSelector, Value.AddsTopBand),
@@ -219,6 +214,9 @@ public sealed partial class PrintWatermarkCard : UserControl
                 ? namePlacement
                 : Value.UserNamePlacement,
         };
+        isSynchronizing = true;
+        try { UserNamePlacementSelector.SelectByTag(Value.EffectivePlacement(Value.UserNamePlacement)); }
+        finally { isSynchronizing = false; }
         UpdateVisibility();
         _ = ShowLogoAsync(Value);
         Changed?.Invoke(this, EventArgs.Empty);
@@ -286,9 +284,6 @@ public sealed partial class PrintWatermarkCard : UserControl
             box.Text = value;
         }
     }
-
-    private static string Placeholder(string automatic, string sample) =>
-        string.IsNullOrWhiteSpace(automatic) ? sample : automatic;
 
     private static T Chosen<T>(NegaflowSegmentedPicker picker, T fallback) =>
         picker.SelectedValue is T value ? value : fallback;

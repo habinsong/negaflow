@@ -31,7 +31,6 @@ enum PrintWatermarkLocalizedText {
     case topLeading
     case topCenter
     case topTrailing
-    case autoFillHint
     case singleImageOnly
 
     func resolved(language: AppLanguage) -> String {
@@ -60,15 +59,14 @@ enum PrintWatermarkLocalizedText {
             case .aperture: "Aperture"
             case .shutter: "Shutter"
             case .iso: "ISO"
-            case .captureDate: "Date Taken"
+            case .captureDate: "Date"
             case .histogram: "Histogram"
             case .userName: "Name"
             case .placement: "Position"
-            case .bottomCenter: "Bottom"
+            case .bottomCenter: "Bottom Center"
             case .topLeading: "Top Left"
             case .topCenter: "Top Center"
             case .topTrailing: "Top Right"
-            case .autoFillHint: "Empty camera, lens and exposure fields use each photo's shot record."
             case .singleImageOnly: "Watermarks apply to layouts with one photo per page."
             }
         case .korean:
@@ -95,15 +93,14 @@ enum PrintWatermarkLocalizedText {
             case .aperture: "조리개"
             case .shutter: "셔터"
             case .iso: "ISO"
-            case .captureDate: "촬영 일시"
+            case .captureDate: "날짜"
             case .histogram: "히스토그램"
             case .userName: "이름"
             case .placement: "위치"
-            case .bottomCenter: "하단 가운데"
-            case .topLeading: "상단 왼쪽"
-            case .topCenter: "상단 가운데"
-            case .topTrailing: "상단 오른쪽"
-            case .autoFillHint: "카메라·렌즈·노출 칸을 비워 두면 사진마다 촬영 기록으로 채웁니다."
+            case .bottomCenter: "하단 중앙"
+            case .topLeading: "상단 좌측"
+            case .topCenter: "상단 중앙"
+            case .topTrailing: "상단 우측"
             case .singleImageOnly: "워터마크는 한 장에 사진 한 장을 놓는 레이아웃에만 들어갑니다."
             }
         case .japanese:
@@ -130,7 +127,7 @@ enum PrintWatermarkLocalizedText {
             case .aperture: "絞り"
             case .shutter: "シャッター"
             case .iso: "ISO"
-            case .captureDate: "撮影日時"
+            case .captureDate: "日付"
             case .histogram: "ヒストグラム"
             case .userName: "名前"
             case .placement: "位置"
@@ -138,7 +135,6 @@ enum PrintWatermarkLocalizedText {
             case .topLeading: "上左"
             case .topCenter: "上中央"
             case .topTrailing: "上右"
-            case .autoFillHint: "カメラ・レンズ・露出を空欄にすると、写真ごとの撮影記録で埋めます。"
             case .singleImageOnly: "ウォーターマークは 1 枚に写真 1 枚のレイアウトだけに入ります。"
             }
         case .simplifiedChinese:
@@ -165,7 +161,7 @@ enum PrintWatermarkLocalizedText {
             case .aperture: "光圈"
             case .shutter: "快门"
             case .iso: "ISO"
-            case .captureDate: "拍摄时间"
+            case .captureDate: "日期"
             case .histogram: "直方图"
             case .userName: "名字"
             case .placement: "位置"
@@ -173,7 +169,6 @@ enum PrintWatermarkLocalizedText {
             case .topLeading: "顶部左侧"
             case .topCenter: "顶部居中"
             case .topTrailing: "顶部右侧"
-            case .autoFillHint: "相机、镜头和曝光留空时，按每张照片的拍摄记录填写。"
             case .singleImageOnly: "水印只用于一页放一张照片的布局。"
             }
         case .french:
@@ -200,15 +195,14 @@ enum PrintWatermarkLocalizedText {
             case .aperture: "Ouverture"
             case .shutter: "Vitesse"
             case .iso: "ISO"
-            case .captureDate: "Date de prise de vue"
+            case .captureDate: "Date"
             case .histogram: "Histogramme"
             case .userName: "Nom"
             case .placement: "Position"
-            case .bottomCenter: "En bas"
+            case .bottomCenter: "En bas au centre"
             case .topLeading: "En haut à gauche"
             case .topCenter: "En haut au centre"
             case .topTrailing: "En haut à droite"
-            case .autoFillHint: "Les champs appareil, objectif et exposition laissés vides reprennent la fiche de prise de vue de chaque photo."
             case .singleImageOnly: "Le filigrane s’applique aux mises en page d’une photo par feuille."
             }
         case .german:
@@ -235,15 +229,14 @@ enum PrintWatermarkLocalizedText {
             case .aperture: "Blende"
             case .shutter: "Verschluss"
             case .iso: "ISO"
-            case .captureDate: "Aufnahmedatum"
+            case .captureDate: "Datum"
             case .histogram: "Histogramm"
             case .userName: "Name"
             case .placement: "Position"
-            case .bottomCenter: "Unten"
+            case .bottomCenter: "Unten Mitte"
             case .topLeading: "Oben links"
             case .topCenter: "Oben Mitte"
             case .topTrailing: "Oben rechts"
-            case .autoFillHint: "Leere Felder für Kamera, Objektiv und Belichtung übernehmen die Aufnahmedaten jedes Fotos."
             case .singleImageOnly: "Wasserzeichen gelten für Layouts mit einem Foto pro Seite."
             }
         }

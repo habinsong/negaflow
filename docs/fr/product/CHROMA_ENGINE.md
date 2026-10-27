@@ -13,7 +13,7 @@ Chroma Engine inverse et développe le film. Le code se trouve dans le module `C
 | Espace de sortie | sRGB, Display P3, Adobe RGB, ICC RVB personnalisé |
 
 > [!IMPORTANT]
-> Par défaut, `MAIN` utilise Équilibre auto sur ON. Le bouton est une petite pastille à droite du titre Cible. Il n’apparaît que pour les négatifs couleur et noir et blanc, avec MAIN (y compris PRINT) et CS. Il ajuste la couleur et la luminosité à partir de la photo actuelle ; OFF saute cette étape. Tonalité auto, balance des blancs auto, niveaux auto et couleur auto restent des fonctions distinctes, désactivées par défaut.
+> Par défaut, `MAIN` utilise Équilibre auto sur ON. Le bouton est une petite pastille à droite du titre Cible. Il n’apparaît que pour les négatifs couleur et noir et blanc, avec MAIN (y compris PRINT) et CS. Il ajuste la couleur et la luminosité à partir de la photo actuelle ; OFF saute cette étape. Tonalité auto, balance des blancs auto, niveaux auto et couleur auto restent des fonctions distinctes, désactivées par défaut. Le point apparaît seulement quand le réglage est actif, juste à gauche du texte ; le texte reste centré.
 
 ## Ce qui prime
 

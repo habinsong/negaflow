@@ -49,6 +49,8 @@ Auf Arm64-Rechnern läuft es ebenfalls. Arm64-Releases sind weniger geprüft als
 
 Laden Sie `negaflow-1.2.1-win-x64.exe` von [Releases](https://github.com/habinsong/negaflow/releases) und starten Sie es.
 
+Windows-Installer-ZIP: [negaflow-1.2.1-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.1/negaflow-1.2.1-win-x64-setup.zip). Für Windows gibt es auch ein Setup-ZIP mit derselben Installations-EXE, Anleitung, Hinweisen und SHA-256-Prüfsummen. Entpacken Sie alles vor dem Start. Das Archiv enthält den Installer, keine portable App; SmartScreen kann weiterhin warnen.
+
 Administratorrechte sind nicht nötig. SmartScreen warnt beim ersten Start einmal. Klicken Sie auf Weitere Informationen und führen Sie es aus.
 
 Entfernt wird es über `negaflow deinstallieren` im Startmenü oder die App-Liste in den Einstellungen. Bibliothek und Fotos bleiben unangetastet.

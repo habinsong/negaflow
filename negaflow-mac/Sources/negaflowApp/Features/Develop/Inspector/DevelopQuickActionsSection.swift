@@ -88,13 +88,17 @@ struct QuickTogglePill: View {
         Button {
             isOn.wrappedValue.toggle()
         } label: {
-            Label {
-                Text(title)
-            } icon: {
+            Group {
                 if isCompact {
-                    Circle().frame(width: 5, height: 5)
+                    Text(title)
+                        .multilineTextAlignment(.center)
+                        .overlay(alignment: .leading) {
+                            if isOn.wrappedValue {
+                                Circle().frame(width: 5, height: 5).offset(x: -5)
+                            }
+                        }
                 } else {
-                    Image(systemName: systemImage)
+                    Label(title, systemImage: systemImage)
                 }
             }
                 .font(isCompact ? .caption : nil)

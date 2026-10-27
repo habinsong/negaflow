@@ -85,6 +85,7 @@ internal sealed class PrintInspectorBinder
             Option(PrintLayoutMode.Cyanotype, "printModeCyanotype"),
             Option(PrintLayoutMode.GlassPlate, "printModeGlassPlate"),
             Option(PrintLayoutMode.Gelatin, "printModeGelatin"),
+            Option(PrintLayoutMode.Watermark, "printWatermarkSection"),
         ]);
         // macOS `paperSizeTitle` — 규격 이름은 번역하지 않지만 **사진 비율만은 번역합니다**
         // (규격이 아니라 "사진에 맞춘다"는 뜻이라서입니다). 앞 판은 "Photo" 가 그대로 나갔습니다.
@@ -221,10 +222,13 @@ internal sealed class PrintInspectorBinder
         {
             return;
         }
+        PrintLayoutMode layoutMode = Picked(surface.LayoutModeSelector, state.Current.Print.LayoutMode);
         state.UpdatePrint(current => current with
         {
-            LayoutMode = Picked(surface.LayoutModeSelector, current.LayoutMode),
-            PaperSize = Picked(surface.PaperSizeSelector, current.PaperSize),
+            LayoutMode = layoutMode,
+            PaperSize = layoutMode == PrintLayoutMode.Watermark && current.LayoutMode != layoutMode
+                ? PrintPaperSize.PhotoRatio
+                : Picked(surface.PaperSizeSelector, current.PaperSize),
             Orientation = Chosen(surface.OrientationSelector, current.Orientation),
             PaperSurface = Picked(surface.SurfaceSelector, current.PaperSurface),
             MarginMm = surface.MarginSlider.Value,

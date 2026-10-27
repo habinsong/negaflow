@@ -14,7 +14,7 @@ internal static class PrintWatermarkTests
     public static void Run()
     {
         VerifyBandsAreAddedOutsideThePhoto();
-        VerifyExposureLineAndShotRecord();
+        VerifyExposureLine();
         VerifyBandLayoutFitsAndCenters();
         VerifyTopPlacementFallsBackWithoutTopBand();
         VerifyHistogramAndBlur();
@@ -47,7 +47,7 @@ internal static class PrintWatermarkTests
             "watermark_band_ratio_outside_range_is_refused");
     }
 
-    private static void VerifyExposureLineAndShotRecord()
+    private static void VerifyExposureLine()
     {
         PrintWatermarkSettings settings = new()
         {
@@ -56,8 +56,13 @@ internal static class PrintWatermarkTests
             ShutterSpeed = "1/125",
             Iso = "160",
         };
-        Check(settings.ExposureLine == "100mm f/7.1 1/125\" ISO160", "watermark_exposure_adds_units",
+        Check(settings.ExposureLine == "100mm f/7.1 1/125 ISO160", "watermark_exposure_adds_units",
             () => settings.ExposureLine);
+        foreach (string speed in new[] { "1/125", "2", "0.5", "B", "" })
+        {
+            Check(PrintWatermarkFormat.ShutterSpeed(" " + speed + " ") == speed,
+                "watermark_shutter_has_no_added_symbol_" + speed);
+        }
         PrintWatermarkSettings typed = settings with { FocalLength = "28-75mm", Aperture = "f/2", ShutterSpeed = "B", Iso = "" };
         Check(typed.ExposureLine == "28-75mm f/2 B", "watermark_exposure_keeps_typed_units", () => typed.ExposureLine);
         Check(PrintWatermarkFormat.ExposureTime(1.0 / 125) == "1/125" &&
@@ -65,20 +70,15 @@ internal static class PrintWatermarkTests
               PrintWatermarkFormat.Number(7.10) == "7.1",
             "watermark_number_formatting_matches_macos");
 
-        FilmShotMetadata shot = new(
-            CameraMake: "Nikon",
-            CameraModel: "Nikon F3",
-            LensModel: "Nikkor 50mm f/1.4",
-            IsoSpeed: 400,
-            ExposureTimeSeconds: 1.0 / 250,
-            FNumber: 8,
-            FocalLengthMm: 50);
-        PrintWatermarkSettings filled = new PrintWatermarkSettings { Aperture = "5.6" }.FillingFrom(shot);
-        Check(filled.CameraName == "Nikon F3" && filled.LensName == "Nikkor 50mm f/1.4" &&
-              filled.ExposureLine == "50mm f/5.6 1/250\" ISO400" && filled.CaptureDate.Length == 0,
-            "watermark_blanks_fill_from_shot_record_user_values_first",
-            () => $"{filled.CameraName}|{filled.ExposureLine}");
-        Check(PrintWatermarkSettings.CameraNameOf("Leica", "M6") == "Leica M6", "watermark_camera_name_joins_make");
+        PrintWatermarkSettings blank = new() { Aperture = "5.6" };
+        PrintWatermarkSettings? prepared = new PrintPreferences
+        {
+            LayoutMode = PrintLayoutMode.Watermark,
+            Watermark = blank,
+        }.Composition().ActiveWatermark;
+        Check(prepared is not null && prepared.CameraName.Length == 0 && prepared.LensName.Length == 0 &&
+              prepared.ExposureLine == "f/5.6" && prepared.CaptureDate.Length == 0,
+            "watermark_blank_fields_stay_empty");
     }
 
     private static void VerifyBandLayoutFitsAndCenters()
@@ -102,12 +102,11 @@ internal static class PrintWatermarkTests
         double inset = PrintWatermarkMetrics.HorizontalInset * 156;
         Check(wide.Texts.All(text => text.X >= inset - 1e-6 && text.X + text.Width <= 1800 - inset + 1e-6),
             "watermark_items_stay_inside_the_band_insets");
-        // 가운데 자리의 히스토그램과 이름은 가운데 축(900)을 기준으로 데칼코마니처럼 놓입니다.
-        double histogramRight = wide.Histogram!.Value.MaxX;
+        PrintRect histogram = wide.Histogram!.Value;
         PrintWatermarkTextItem name = wide.Texts.Single(text => text.Text == "habin song");
-        Check(Near(900 - histogramRight, name.X - 900) && histogramRight < 900 && name.X > 900,
-            "watermark_center_slot_mirrors_around_the_axis",
-            () => $"{histogramRight} {name.X}");
+        Check(Near(histogram.X + (histogram.Width / 2), 900) && Near(name.X + (name.Width / 2), 900) &&
+              histogram.MaxY < name.Y,
+            "watermark_center_slot_centers_name_and_histogram_without_overlap");
         Check(!Overlaps(wide), "watermark_wide_band_has_no_overlap");
 
         // 세로 사진처럼 좁은 띠에서는 전체를 같은 비율로 줄여 겹치지 않게 합니다.
@@ -143,8 +142,20 @@ internal static class PrintWatermarkTests
         };
         PrintWatermarkBandDrawing topCenter = PrintWatermarkBandLayout.Top(centered, 1200, 100, true, FixedWidth);
         Check(topCenter.Histogram is { } centerHistogram &&
-              Near(600 - centerHistogram.MaxX, topCenter.Texts.Single().X - 600),
-            "watermark_top_center_slot_mirrors_around_the_axis");
+              Near(centerHistogram.X + (centerHistogram.Width / 2), 600) &&
+              Near(topCenter.Texts.Single().X + (topCenter.Texts.Single().Width / 2), 600) &&
+              centerHistogram.MaxY < topCenter.Texts.Single().Y,
+            "watermark_top_center_slot_centers_the_name");
+        foreach (PrintWatermarkPlacement placement in Enum.GetValues<PrintWatermarkPlacement>())
+        {
+            PrintWatermarkSettings together = settings with { HistogramPlacement = placement, UserNamePlacement = placement };
+            PrintWatermarkBandDrawing drawing = placement == PrintWatermarkPlacement.BottomCenter
+                ? PrintWatermarkBandLayout.Bottom(together, 1200, 100, null, true, FixedWidth)
+                : PrintWatermarkBandLayout.Top(together, 1200, 100, true, FixedWidth);
+            PrintWatermarkTextItem placed = drawing.Texts.Single();
+            Check(drawing.Histogram is { } bars && Near(placed.X + (placed.Width / 2), bars.X + (bars.Width / 2)) &&
+                  !Overlaps(drawing), "watermark_name_centered_at_" + placement);
+        }
 
         PrintWatermarkSettings noTop = settings with { AddsTopBand = false };
         Check(!PrintWatermarkBandLayout.HasTopItems(noTop, hasHistogram: true) &&
@@ -219,12 +230,17 @@ internal static class PrintWatermarkTests
             UserName = "Me",
             UserNamePlacement = PrintWatermarkPlacement.TopTrailing,
         };
-        PrintPreferences print = new() { Watermark = watermark };
-        Check(print.Composition().Watermark == watermark, "watermark_reaches_single_photo_layout");
+        PrintPreferences print = new() { LayoutMode = PrintLayoutMode.Watermark, Watermark = watermark };
+        Check(print.Composition().Watermark == watermark, "watermark_reaches_its_own_layout");
         Check((print with { LayoutMode = PrintLayoutMode.ContactSheet }).Composition().Watermark is null,
             "watermark_never_reaches_package_layouts");
-        Check((print with { Watermark = watermark with { IsEnabled = false } }).Composition().Watermark is null,
-            "watermark_off_is_not_carried");
+        Check((print with { Watermark = watermark with { IsEnabled = false } }).Composition().ActiveWatermark is not null,
+            "watermark_layout_is_the_enable_control");
+        foreach (PrintLayoutMode mode in Enum.GetValues<PrintLayoutMode>().Where(mode => mode != PrintLayoutMode.Watermark))
+        {
+            Check((print with { LayoutMode = mode }).Composition().Watermark is null,
+                "watermark_absent_in_" + mode);
+        }
         Check((print with { Watermark = watermark with { BandHeightRatio = 9 } }).Normalize().Watermark == new PrintWatermarkSettings(),
             "watermark_out_of_range_file_value_resets");
 
@@ -244,7 +260,7 @@ internal static class PrintWatermarkTests
             "watermark_template_keeps_every_component_but_not_logo_bytes");
         Check((watermark with { LogoPng = [9, 9] }) == watermark, "watermark_logo_bytes_do_not_change_equality");
         PrintPreferences applied = restored.ApplyTo(new PrintPreferences());
-        Check(applied.Watermark == watermark && applied.SheetBackground == PrintSheetBackground.Black,
+        Check(applied.LayoutMode == PrintLayoutMode.Watermark && applied.Watermark == watermark && applied.SheetBackground == PrintSheetBackground.Black,
             "watermark_template_apply_sets_sheet_and_watermark");
         PrintLayoutTemplateSettings legacy = template with { SheetBackground = null, Watermark = null };
         PrintPreferences current = new() { SheetBackground = PrintSheetBackground.Gray, Watermark = watermark };
@@ -273,33 +289,25 @@ internal static class PrintWatermarkTests
 
     private static bool Overlaps(PrintWatermarkBandDrawing drawing)
     {
-        List<(double Left, double Right)> spans = [.. drawing.Texts.Select(text => (text.X, text.X + text.Width))];
-        if (drawing.Logo is { } logo)
+        List<PrintRect> rectangles = [.. drawing.Texts.Select(text => new PrintRect(
+            text.X, text.Y, text.Width, text.FontSize * PrintWatermarkMetrics.LineHeightFactor))];
+        if (drawing.Logo is { } logo) { rectangles.Add(logo); }
+        if (drawing.Histogram is { } histogram) { rectangles.Add(histogram); }
+        if (drawing.Separator is { } separator) { rectangles.Add(separator); }
+        for (int first = 0; first < rectangles.Count; ++first)
         {
-            spans.Add((logo.X, logo.MaxX));
-        }
-        if (drawing.Histogram is { } histogram)
-        {
-            spans.Add((histogram.X, histogram.MaxX));
-        }
-        // 같은 열에 위아래로 쌓인 두 줄(카메라·렌즈)은 겹침이 아닙니다. 서로 다른 무리만 봅니다.
-        List<(double Left, double Right)> groups = [];
-        foreach ((double left, double right) in spans.OrderBy(span => span.Left))
-        {
-            if (groups.Count > 0 && left < groups[^1].Right && Math.Abs(left - groups[^1].Left) < 1e-6)
+            for (int second = first + 1; second < rectangles.Count; ++second)
             {
-                groups[^1] = (groups[^1].Left, Math.Max(groups[^1].Right, right));
-                continue;
-            }
-            groups.Add((left, right));
-        }
-        for (int index = 1; index < groups.Count; ++index)
-        {
-            if (groups[index].Left < groups[index - 1].Right - 1e-6)
-            {
-                return true;
+                PrintRect a = rectangles[first];
+                PrintRect b = rectangles[second];
+                if (Math.Min(a.MaxX, b.MaxX) - Math.Max(a.X, b.X) > 1e-6 &&
+                    Math.Min(a.MaxY, b.MaxY) - Math.Max(a.Y, b.Y) > 1e-6)
+                {
+                    return true;
+                }
             }
         }
         return false;
     }
+
 }

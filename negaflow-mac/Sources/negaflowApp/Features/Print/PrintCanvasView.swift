@@ -422,7 +422,7 @@ private struct PrintSingleImagePageView: View {
         let sourceSize = image.representations.first.map {
             CGSize(width: $0.pixelsWide, height: $0.pixelsHigh)
         } ?? image.size
-        let composition = settingsStore.compositionSettings(dpi: 72).fillingWatermark(from: frame)
+        let composition = settingsStore.compositionSettings(dpi: 72).resolvingWatermarkLogo()
         let unitFrame = composition.activeWatermark.flatMap {
             PrintWatermarkFrameLayout.make(imageSize: sourceSize, settings: $0)
         }

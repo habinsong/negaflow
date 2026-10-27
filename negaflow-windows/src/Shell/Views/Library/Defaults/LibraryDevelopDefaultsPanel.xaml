@@ -60,12 +60,14 @@
                                                  FontSize="11" Padding="6,0" MinHeight="22"
                                                  AutomationProperties.AutomationId="negaflow.develop.auto-balance"
                                                  Click="OnAutoBalanceClicked">
-                            <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
+                            <Grid HorizontalAlignment="Center">
                                 <Ellipse x:Name="AutoBalanceIcon" Width="5" Height="5" VerticalAlignment="Center"
+                                         HorizontalAlignment="Left" Margin="-5,0,0,0" Visibility="Collapsed"
                                          Fill="{ThemeResource TextFillColorPrimaryBrush}" />
                                 <TextBlock x:Name="AutoBalanceText" TextTrimming="CharacterEllipsis"
+                                           TextAlignment="Center"
                                            Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-                            </StackPanel>
+                            </Grid>
                         </primitives:ToggleButton>
                     </Border>
                     <TextBlock x:Name="AutoBalanceAccentProbe" Visibility="Collapsed"

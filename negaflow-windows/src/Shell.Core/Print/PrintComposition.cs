@@ -73,6 +73,7 @@ public enum PrintLayoutMode
     Cyanotype,
     GlassPlate,
     Gelatin,
+    Watermark,
 }
 
 public enum PrintPaperSurface

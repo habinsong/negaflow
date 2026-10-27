@@ -1647,13 +1647,12 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="printWatermarkAperture.Text" xml:space="preserve"><value>Blende</value></data>
   <data name="printWatermarkShutter.Text" xml:space="preserve"><value>Verschluss</value></data>
   <data name="printWatermarkIso.Text" xml:space="preserve"><value>ISO</value></data>
-  <data name="printWatermarkCaptureDate.Text" xml:space="preserve"><value>Aufnahmedatum</value></data>
+  <data name="printWatermarkCaptureDate.Text" xml:space="preserve"><value>Datum</value></data>
   <data name="printWatermarkHistogram.Text" xml:space="preserve"><value>Histogramm</value></data>
   <data name="printWatermarkUserName.Text" xml:space="preserve"><value>Name</value></data>
   <data name="printWatermarkPlacement.Text" xml:space="preserve"><value>Position</value></data>
-  <data name="printWatermarkBottomCenter.Text" xml:space="preserve"><value>Unten</value></data>
+  <data name="printWatermarkBottomCenter.Text" xml:space="preserve"><value>Unten Mitte</value></data>
   <data name="printWatermarkTopLeading.Text" xml:space="preserve"><value>Oben links</value></data>
   <data name="printWatermarkTopCenter.Text" xml:space="preserve"><value>Oben Mitte</value></data>
   <data name="printWatermarkTopTrailing.Text" xml:space="preserve"><value>Oben rechts</value></data>
-  <data name="printWatermarkAutoFillHint.Text" xml:space="preserve"><value>Leere Felder für Kamera, Objektiv und Belichtung übernehmen die Aufnahmedaten jedes Fotos.</value></data>
 </root>

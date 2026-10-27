@@ -30,7 +30,7 @@ public enum PrintWatermarkPlacement: String, CaseIterable, Codable, Sendable {
 
     public var isTop: Bool { self != .bottomCenter }
 
-    /// 가운데 자리(아래 가운데·위 가운데). 히스토그램과 이름이 함께 있으면 축 대칭으로 놓는다.
+    /// 가운데 자리(아래 가운데·위 가운데).
     public var isCenter: Bool { self == .bottomCenter || self == .topCenter }
 }
 
@@ -153,7 +153,7 @@ public struct PrintWatermarkSettings: Codable, Equatable, Sendable {
         addsTopBand ? placement : .bottomCenter
     }
 
-    /// 노출 한 줄: `100mm f/7.1 1/125" ISO160`. 숫자만 적었으면 단위를 붙이고, 단위를 적었으면 그대로 둔다.
+    /// 노출 한 줄: `100mm f/7.1 1/125 ISO160`. 셔터 속도에는 기호를 붙이지 않는다.
     public var exposureLine: String {
         [
             PrintWatermarkFormat.focalLength(focalLength),
@@ -203,7 +203,7 @@ public struct PrintWatermarkSettings: Codable, Equatable, Sendable {
     }
 }
 
-/// 노출 값 표기. 숫자만 들어오면 사진 업계 관례대로 단위를 붙인다.
+/// 초점거리·조리개·ISO에 단위를 붙이고 셔터 속도는 입력한 표기를 쓴다.
 public enum PrintWatermarkFormat {
     public static func focalLength(_ raw: String) -> String {
         let text = trimmed(raw)
@@ -215,13 +215,9 @@ public enum PrintWatermarkFormat {
         return isNumber(text) ? "f/\(text)" : text
     }
 
-    /// `1/125` · `2` · `0.5` 처럼 숫자로 된 셔터 속도에 초 기호(")를 붙인다.
+    /// 셔터 속도는 앞뒤 공백만 지우고 기호를 덧붙이지 않는다.
     public static func shutterSpeed(_ raw: String) -> String {
-        let text = trimmed(raw)
-        guard !text.isEmpty else { return text }
-        let parts = text.split(separator: "/", omittingEmptySubsequences: false)
-        let numeric = parts.count <= 2 && parts.allSatisfy { isNumber(String($0)) }
-        return numeric ? "\(text)\"" : text
+        trimmed(raw)
     }
 
     public static func iso(_ raw: String) -> String {

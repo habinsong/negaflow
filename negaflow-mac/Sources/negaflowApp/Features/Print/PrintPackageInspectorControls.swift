@@ -27,7 +27,7 @@ struct PrintPackageInspectorControls: View {
         case .layout:
             Group {
                 switch settingsStore.layoutMode {
-                case .singleImage, .cyanotype, .glassPlate, .gelatin:
+                case .singleImage, .cyanotype, .glassPlate, .gelatin, .watermark:
                     EmptyView()
                 case .contactSheet:
                     contactSheetControls

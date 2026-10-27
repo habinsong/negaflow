@@ -383,8 +383,8 @@ enum ExportFrameSnapshotBuilder {
             writeOriginalRaw: writeOriginalRaw,
             exportOptions: options,
             printerOutputProfile: printerOutputProfile,
-            // 워터마크의 빈 칸(카메라·렌즈·노출)은 장마다 그 사진의 촬영 기록으로 채운다.
-            printComposition: printComposition.map { $0.fillingWatermark(from: frame) },
+            // 입력한 워터마크 값을 유지하고 로고만 저장된 경로에서 읽는다.
+            printComposition: printComposition.map { $0.resolvingWatermarkLogo() },
             exportRecipeIdentity: exportRecipeIdentity,
             appMetadataOverlay: frame.appMetadataOverlay,
             sourceMetadataSHA256: frame.sourceMetadata?.appMetadataIdentitySHA256(),

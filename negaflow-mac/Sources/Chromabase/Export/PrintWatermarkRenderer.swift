@@ -262,15 +262,13 @@ public enum PrintWatermarkRenderer {
 
     /// 한 자리(아래 가운데·위 왼쪽·위 가운데·위 오른쪽)에 놓이는 히스토그램과 이름.
     ///
-    /// 가운데 자리에 둘이 함께 있으면 가운데 축을 기준으로 데칼코마니처럼 놓는다: 히스토그램은 축
-    /// 왼쪽, 이름은 축 오른쪽에 같은 간격으로 붙는다. 왼쪽·오른쪽 자리는 히스토그램 다음에 이름을 잇는다.
+    /// 같은 자리에 둘이 함께 있으면 히스토그램 위·이름 아래로 놓고 각각 가운데를 맞춘다.
     private struct SlotItems {
         let histogram: [Double]?
         let histogramSize: CGSize
         let name: TextLine?
-        let gap: CGFloat
+        let verticalGap: CGFloat
         let histogramColor: CGColor
-        let isCentered: Bool
 
         init(
             content: BandContent,
@@ -291,36 +289,36 @@ public enum PrintWatermarkRenderer {
                     color: content.text.primary
                 )
                 : nil
-            gap = PrintWatermarkMetrics.itemGap * band * scale
+            verticalGap = PrintWatermarkMetrics.lineGap * band * scale
             histogramColor = content.histogramColor
-            isCentered = placement.isCenter
         }
 
         var isEmpty: Bool { histogram == nil && name == nil }
 
         private var histogramWidth: CGFloat { histogram == nil ? 0 : histogramSize.width }
         private var nameWidth: CGFloat { name?.width ?? 0 }
-        private var hasBoth: Bool { histogram != nil && name != nil }
 
-        /// 차지하는 폭. 가운데 대칭 배치는 넓은 쪽이 축 양옆으로 같은 만큼 뻗는다고 보고 잰다.
+        /// 같은 자리를 쓰는 항목은 세로로 쌓으므로 더 넓은 항목의 폭을 쓴다.
         var width: CGFloat {
-            if isCentered && hasBoth {
-                return 2 * max(histogramWidth, nameWidth) + gap
-            }
-            return histogramWidth + nameWidth + (hasBoth ? gap : 0)
+            max(histogramWidth, nameWidth)
         }
 
         /// 왼쪽 끝 `x` 에서 시작해 늘어놓는다(위 왼쪽·위 오른쪽 자리).
         func draw(in context: CGContext, x: CGFloat, bandHeight: CGFloat) {
-            drawHistogram(in: context, x: x, bandHeight: bandHeight)
-            drawName(in: context, x: x + (histogram == nil ? 0 : histogramSize.width + gap), bandHeight: bandHeight)
+            drawCentered(in: context, centerX: x + width / 2, bandHeight: bandHeight)
         }
 
-        /// 가운데 축 `centerX` 를 기준으로 놓는다. 둘이면 축 양옆에 같은 간격으로 붙인다.
+        /// 이름과 히스토그램 각각의 가운데를 `centerX`에 맞춘다.
         func drawCentered(in context: CGContext, centerX: CGFloat, bandHeight: CGFloat) {
-            if hasBoth {
-                drawHistogram(in: context, x: centerX - gap / 2 - histogramWidth, bandHeight: bandHeight)
-                drawName(in: context, x: centerX + gap / 2, bandHeight: bandHeight)
+            if let histogram, let name {
+                let height = histogramSize.height + verticalGap + name.height
+                let bottom = (bandHeight - height) / 2
+                PrintWatermarkRenderer.drawHistogram(histogram, in: context, rect: CGRect(
+                    x: centerX - histogramWidth / 2,
+                    y: bottom + name.height + verticalGap,
+                    width: histogramSize.width, height: histogramSize.height
+                ), color: histogramColor)
+                name.draw(in: context, x: centerX - nameWidth / 2, baseline: bottom + name.descent)
             } else {
                 drawHistogram(in: context, x: centerX - histogramWidth / 2, bandHeight: bandHeight)
                 drawName(in: context, x: centerX - nameWidth / 2, bandHeight: bandHeight)

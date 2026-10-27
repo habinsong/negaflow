@@ -46,7 +46,7 @@ flowchart LR
 |---|---|
 | [スキャナーCLI JSON](reference/CLI_JSON.md) | `detect --json`と`capabilities --json`の出力形式 |
 | [レンダー記録](reference/RENDER_MANIFEST.md) | 原本、編集値、出力ファイルのSHA-256の関係 |
-| [プリントレイアウトとC-printプレビュー](reference/C_PRINT.md) | 7レイアウト、完成ページ出力、レンダリング最適化、プルーフ専用ICCと精度の限界 |
+| [プリントレイアウトとC-printプレビュー](reference/C_PRINT.md) | 8レイアウト、完成ページ出力、レンダリング最適化、プルーフ専用ICCと精度の限界 |
 | [固定プリント応答](reference/PRINT_RESPONSE.md) | `shoulder-print-response-v4`の式と基準点 |
 | [スキャナープロファイル品質判定](reference/PROFILE_QUALITY_GATE.md) | REAL/TARGETペア資料の出荷判定 |
 | [スキャナーノイズプロファイル](reference/SCANNER_NOISE_PROFILES.md) | 繰り返しスキャンの計測と自動適用の条件 |

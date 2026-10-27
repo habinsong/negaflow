@@ -10,10 +10,11 @@ enum PrintWorkspaceLayoutMode: String, CaseIterable, Codable, Sendable {
     case cyanotype
     case glassPlate
     case gelatin
+    case watermark
 
     var packageMode: PrintPackageLayoutMode? {
         switch self {
-        case .singleImage, .cyanotype, .glassPlate, .gelatin: nil
+        case .singleImage, .cyanotype, .glassPlate, .gelatin, .watermark: nil
         case .contactSheet: .contactSheet
         case .picturePackage: .picturePackage
         case .customPackage: .customPackage
@@ -30,7 +31,7 @@ enum PrintWorkspaceLayoutMode: String, CaseIterable, Codable, Sendable {
 
     var presentationStyle: PrintPresentationStyle {
         switch self {
-        case .singleImage, .contactSheet, .picturePackage, .customPackage:
+        case .singleImage, .contactSheet, .picturePackage, .customPackage, .watermark:
             .standard
         case .cyanotype:
             .cyanotype
@@ -290,8 +291,14 @@ final class PrintWorkspaceSettingsStore: ObservableObject {
             photoAspectRatio: photoAspectRatio,
             presentationStyle: layoutMode.presentationStyle,
             sheetBackground: sheetColor,
-            watermark: layoutMode.usesIndividualPages && watermark.isEnabled ? watermark : nil
+            watermark: layoutMode == .watermark ? enabledWatermark : nil
         )
+    }
+
+    private var enabledWatermark: PrintWatermarkSettings {
+        var settings = watermark
+        settings.isEnabled = true
+        return settings
     }
 
     func effectivePackageSettings(sourceCount: Int? = nil) -> PrintPackageSettings? {

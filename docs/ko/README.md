@@ -46,7 +46,7 @@ flowchart LR
 |---|---|
 | [CLI 스캐너 JSON](reference/CLI_JSON.md) | `detect --json`, `capabilities --json` 출력 형식 |
 | [렌더 기록](reference/RENDER_MANIFEST.md) | 원본, 편집 값, 출력 파일의 SHA-256 관계 |
-| [인화 레이아웃과 C-print 미리보기](reference/C_PRINT.md) | 7개 레이아웃, 완성 페이지 출력, 렌더 최적화, 프루프 전용 ICC와 정확도 한계 |
+| [인화 레이아웃과 C-print 미리보기](reference/C_PRINT.md) | 8개 레이아웃, 완성 페이지 출력, 렌더 최적화, 프루프 전용 ICC와 정확도 한계 |
 | [고정 인화 응답](reference/PRINT_RESPONSE.md) | `shoulder-print-response-v4`의 식과 기준점 |
 | [스캐너 프로파일 품질 검사](reference/PROFILE_QUALITY_GATE.md) | REAL/TARGET 쌍 자료의 출시 판정 규칙 |
 | [스캐너 노이즈 프로파일](reference/SCANNER_NOISE_PROFILES.md) | 반복 스캔 측정과 자동 적용 조건 |

@@ -13,7 +13,7 @@ Die Chroma Engine kehrt Film um und entwickelt ihn. Der Code liegt im Modul `Chr
 | Ausgabefarbraum | sRGB, Display P3, Adobe RGB, eigenes RGB-ICC |
 
 > [!IMPORTANT]
-> Voreingestellt sind `MAIN` und Auto-Abgleich ON. Der Schalter ist eine kleine Pille rechts neben der Zielüberschrift. Er erscheint nur bei Farb- und S/W-Negativen mit MAIN (einschließlich PRINT) und CS. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF.
+> Voreingestellt sind `MAIN` und Auto-Abgleich ON. Der Schalter ist eine kleine Pille rechts neben der Zielüberschrift. Er erscheint nur bei Farb- und S/W-Negativen mit MAIN (einschließlich PRINT) und CS. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF. Der Punkt erscheint nur im eingeschalteten Zustand direkt links am Text; der Text bleibt zentriert.
 
 ## Was zuerst gilt
 

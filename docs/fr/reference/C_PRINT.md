@@ -2,7 +2,7 @@
 
 [Accueil de la documentation](../README.md)
 
-L’espace Impression réunit la mise en page, l’export de la page et l’aperçu du procédé de sortie. Il propose l’image unique, la planche-contact, le package d’images, le package personnalisé, le cyanotype, la plaque de verre et le gélatino-argentique.
+Impression propose huit mises en page : image unique, planche-contact, package d’images, package personnalisé, cyanotype, plaque de verre, gélatino-argentique et filigrane.
 
 ## Planches-contact
 
@@ -26,7 +26,7 @@ Ces trois mises en page reprennent le papier, l’orientation, les marges, la so
 
 ## Filigrane et modèles de mise en page
 
-Les quatre mises en page individuelles peuvent ajouter une bordure sous la photo et une bordure de même hauteur au-dessus, sans recadrer la photo. Réglez le texte, le logo, l’histogramme en points et le nom dans Mise en page. Le fond peut être blanc, noir ou un flou de la vignette du film. Le logo est référencé par son chemin ; si Logo est activé sans fichier choisi, l’icône negaflow est utilisée. Un fichier choisi introuvable laisse seulement le logo absent et produit une entrée de diagnostic.
+Filigrane est une mise en page distincte, choisie dans le type de mise en page, qui ajoute des bordures hors de la photo. La sélection règle le papier sur le ratio de la photo ; vous pouvez ensuite choisir un autre format. Le menu de position du nom reste visible : en bas au centre, en haut à gauche, au centre ou à droite. Choisir une position haute active la bordure haute. La vitesse d’obturation s’affiche sans guillemet ajouté. Les champs de texte vides restent vides. Le nom est centré dans son emplacement. Si le nom et l’histogramme partagent un emplacement, l’histogramme se place au-dessus du nom et chacun est centré.
 
 Les modèles restaurent la disposition, les réglages du papier, la couleur de la feuille et le filigrane, puis actualisent l’aperçu. Le DPI et les règles ne changent pas. Les anciens modèles sans ces nouveaux champs gardent la couleur et le filigrane actuels. Les positions et les conditions de source et d’espace couleur du DNG sont décrites dans [De la bibliothèque au tirage](../product/WORKFLOW.md).
 

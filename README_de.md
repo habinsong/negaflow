@@ -76,6 +76,7 @@ Sie holen es sich bei [GitHub Releases](https://github.com/habinsong/negaflow/re
 | `negaflow-1.2.1-mac-universal.pkg` | macOS 14 oder neuer, Apple Silicon und Intel |
 | `negaflow-1.2.1-mac-arm64.pkg` | macOS 14 oder neuer, nur Apple Silicon |
 | `negaflow-1.2.1-win-x64.exe` | Windows 11 24H2 oder neuer, x64 |
+| `negaflow-1.2.1-win-x64-setup.zip` | Windows-Installer-ZIP |
 
 Kompatibel mit macOS 14, 26 und 27.
 
@@ -94,7 +95,7 @@ Um einen echten Scanner anzuschließen, braucht es ein separates Plug-in, und f�
 - Eine Bibliothek mit Filmen, Ordnern, Sammlungen, Bewertungen, Stapeln, virtuellen Kopien und Suche nach Kamera, Objektiv oder Film
 - Vorgaben und Kopieren/Einfügen, die Entwicklungsprozess, Ziel, Tonwert, Farbe, Detail, Ausschnitt und Ausrichtung gemeinsam mitnehmen
 - Export als JPEG, PNG, 16-Bit-TIFF und lineares 16-Bit-DNG, ICC-Profile, und Angaben wie Kamera, Objektiv und Film ins EXIF geschrieben
-- Sieben Abzugslayouts, Papiervorschauen, Foto- und ISO-Papiere sowie die C-Print-Funktion.
+- Acht Abzugslayouts, Papiervorschauen, Foto- und ISO-Papiere sowie die C-Print-Funktion.
 
 ## 1.2.1
 
@@ -102,7 +103,7 @@ Um einen echten Scanner anzuschließen, braucht es ein separates Plug-in, und f�
 - Die automatische Tonkorrektur ändert nur Tonwerte und erhält Farbeinstellungen und Kurven. Automatischer Weißabgleich, automatische Tonwertkorrektur und automatische Farbe bleiben getrennte Befehle.
 - Das Einfügen einer Vorgabe ersetzt die gewählten Gruppen, ohne den alten Look erneut hinzuzurechnen. Das Einfügen auf mehrere Fotos lässt sich mit einem Schritt rückgängig machen; Miniaturen und aktive Vorschau werden aktualisiert.
 - Geeignete Quelldateien lassen sich aus Entwicklung und Abzug als lineares 16-Bit-DNG exportieren. Erst wenn die Datei im gewählten Ausgabeordner gespeichert und geprüft ist, wird der Vorgang als fertig gemeldet.
-- Einzelfoto-Abzugslayouts können Kamera, Objektiv, Logo, Belichtungsdaten, Punkthistogramm und Namen außerhalb des Fotos ergänzen. Weißer, schwarzer oder aus der Miniatur weichgezeichneter Hintergrund, oberer Rand und Layoutvorlagen werden unterstützt.
+- Das Wasserzeichen-Layout kann Kamera, Objektiv, Logo, Belichtungsdaten, Punkthistogramm und Namen außerhalb des Fotos ergänzen. Weißer, schwarzer oder aus der Miniatur weichgezeichneter Hintergrund, oberer Rand und Layoutvorlagen werden unterstützt.
 
 ## Chroma Engine
 
@@ -110,7 +111,7 @@ Um einen echten Scanner anzuschließen, braucht es ein separates Plug-in, und f�
 
 Vor der Entwicklung eines Negativs misst sie die Filmbasis in einem unbelichteten Bereich. Wo die automatische Messung danebenliegt, tippen Sie einfach mit der Pipette oder passen die RGB-Werte an.
 
-Voreingestellt sind `MAIN` und Auto-Abgleich ON. Der Schalter ist eine kleine Pille rechts neben der Zielüberschrift. Er erscheint nur bei Farb- und S/W-Negativen mit MAIN (einschließlich PRINT) und CS. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF.
+Voreingestellt sind `MAIN` und Auto-Abgleich ON. Der Schalter ist eine kleine Pille rechts neben der Zielüberschrift. Er erscheint nur bei Farb- und S/W-Negativen mit MAIN (einschließlich PRINT) und CS. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF. Der Punkt erscheint nur im eingeschalteten Zustand direkt links am Text; der Text bleibt zentriert.
 
 Weitere Ziele sind `PRINT` für die Ausgabe über ein Drucker-ICC, `HS` und `SP` aus der Minilab-Familie, `F135` und `HR` aus der Familie der Laborgeräte, `EXPIRED`, das alten Film zurückzuholen versucht. Bei der Ausgabe wählen Sie zwischen sRGB, Display P3, Adobe RGB und einem eigenen RGB-ICC.
 

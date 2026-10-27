@@ -1,5 +1,3 @@
-using Negaflow.Catalog;
-
 namespace Negaflow.Shell.Print;
 
 // 인화 워터마크(촬영 정보 띠)입니다. macOS `PrintWatermark.swift` 와 같은 값·같은 규칙입니다.
@@ -135,7 +133,7 @@ public sealed record PrintWatermarkSettings
     public PrintWatermarkPlacement EffectivePlacement(PrintWatermarkPlacement placement) =>
         AddsTopBand ? placement : PrintWatermarkPlacement.BottomCenter;
 
-    /// <summary>노출 한 줄: <c>100mm f/7.1 1/125" ISO160</c>.</summary>
+    /// <summary>노출 한 줄: <c>100mm f/7.1 1/125 ISO160</c>. 셔터 속도에는 기호를 붙이지 않습니다.</summary>
     public string ExposureLine => string.Join(
         ' ',
         new[]
@@ -145,48 +143,6 @@ public sealed record PrintWatermarkSettings
             PrintWatermarkFormat.ShutterSpeed(ShutterSpeed),
             PrintWatermarkFormat.Iso(Iso),
         }.Where(part => part.Length > 0));
-
-    /// <summary>
-    /// 비워 둔 카메라·렌즈·노출 칸을 그 사진의 촬영 기록으로 채웁니다. 사용자가 적은 값이 먼저입니다.
-    /// 스캔 파일 EXIF 의 카메라는 스캐너라서 쓰지 않고, 촬영 일시는 기록에 없어 채우지 않습니다.
-    /// </summary>
-    public PrintWatermarkSettings FillingFrom(FilmShotMetadata? shot)
-    {
-        if (shot is not { } record)
-        {
-            return this;
-        }
-        return this with
-        {
-            CameraName = Blank(CameraName) && CameraNameOf(record.CameraMake, record.CameraModel) is { } camera
-                ? camera
-                : CameraName,
-            LensName = Blank(LensName) && record.LensModel is { } lens ? lens : LensName,
-            FocalLength = Blank(FocalLength) && record.FocalLengthMm is { } focal
-                ? PrintWatermarkFormat.Number(focal)
-                : FocalLength,
-            Aperture = Blank(Aperture) && record.FNumber is { } fNumber
-                ? PrintWatermarkFormat.Number(fNumber)
-                : Aperture,
-            ShutterSpeed = Blank(ShutterSpeed) && record.ExposureTimeSeconds is { } exposure
-                ? PrintWatermarkFormat.ExposureTime(exposure)
-                : ShutterSpeed,
-            Iso = Blank(Iso) && record.IsoSpeed is { } iso
-                ? iso.ToString(System.Globalization.CultureInfo.InvariantCulture)
-                : Iso,
-        };
-    }
-
-    /// <summary><c>Canon</c> + <c>Canon EOS R5</c> 처럼 모델명에 제조사가 있으면 한 번만 적습니다.</summary>
-    public static string? CameraNameOf(string? make, string? model) => (make, model) switch
-    {
-        ({ } m, { } n) => n.StartsWith(m, StringComparison.OrdinalIgnoreCase) ? n : $"{m} {n}",
-        ({ } m, null) => m,
-        (null, { } n) => n,
-        _ => null,
-    };
-
-    private static bool Blank(string? text) => string.IsNullOrWhiteSpace(text);
 
     /// <summary>
     /// 로고 그림(<see cref="LogoPng"/>)은 경로에서 다시 읽는 값이라 비교에서 뺍니다 — 기본 record 비교는
@@ -218,24 +174,15 @@ public sealed record PrintWatermarkSettings
         HashCode.Combine(IsEnabled, Background, CameraName, LensName, ExposureLine, UserName, ShowsLogo, LogoSourcePath);
 }
 
-/// <summary>노출 값 표기입니다. 숫자만 들어오면 사진 업계 관례대로 단위를 붙입니다.</summary>
+/// <summary>초점거리·조리개·ISO에 단위를 붙이고 셔터 속도는 입력한 표기를 씁니다.</summary>
 public static class PrintWatermarkFormat
 {
     public static string FocalLength(string? raw) => IsNumber(Trim(raw)) ? Trim(raw) + "mm" : Trim(raw);
 
     public static string Aperture(string? raw) => IsNumber(Trim(raw)) ? "f/" + Trim(raw) : Trim(raw);
 
-    /// <summary><c>1/125</c> · <c>2</c> · <c>0.5</c> 처럼 숫자로 된 셔터 속도에 초 기호(")를 붙입니다.</summary>
-    public static string ShutterSpeed(string? raw)
-    {
-        string text = Trim(raw);
-        if (text.Length == 0)
-        {
-            return text;
-        }
-        string[] parts = text.Split('/');
-        return parts.Length <= 2 && parts.All(IsNumber) ? text + "\"" : text;
-    }
+    /// <summary>셔터 속도는 앞뒤 공백만 지우고 기호를 덧붙이지 않습니다.</summary>
+    public static string ShutterSpeed(string? raw) => Trim(raw);
 
     public static string Iso(string? raw) => IsNumber(Trim(raw)) ? "ISO" + Trim(raw) : Trim(raw);
 

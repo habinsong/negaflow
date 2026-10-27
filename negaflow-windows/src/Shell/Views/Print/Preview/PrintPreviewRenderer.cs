@@ -203,12 +203,7 @@ internal sealed class PrintPreviewRenderer
         PrintCompositionSettings composition,
         PrintPreferences print)
     {
-        // 워터마크가 켜져 있으면 띠까지 더한 한 장으로 판을 잡습니다 — 판(`PrintSheetWriter`)과 같은
-        // 계산이며, 빈 칸(카메라·렌즈·노출)은 이 사진의 촬영 기록으로 채웁니다.
-        composition = composition with
-        {
-            Watermark = composition.Watermark?.FillingFrom(frame.AppMetadata?.FilmShot),
-        };
+        // 워터마크 띠까지 더한 한 장으로 판을 잡습니다. 입력하지 않은 값은 비워 둡니다.
         (PrintSizeMm unitSize, PrintWatermarkFrameLayout? watermarkFrame, composition) =
             composition.PlaceUnit(sourceSize);
         if (PrintCompositionLayout.Make(unitSize, composition) is not { } layout)

@@ -392,6 +392,13 @@ Upstream source download: $nsisSourceUrl
         -Value "$nsisSourceHash *$nsisSourceName`n"
     $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installerPath).Hash.ToLowerInvariant()
     Set-Content -LiteralPath ([System.IO.Path]::ChangeExtension($installerPath, '.sha256')) -Encoding ASCII -NoNewline -Value "$hash *$installerName`n"
+    $zipPath = Join-Path $OutputDirectory "negaflow-$Version-win-$artifactArchitecture-setup.zip"
+    & (Join-Path $PSScriptRoot 'package-installer-zip.ps1') -InstallerPath $installerPath `
+        -OutputPath $zipPath -Version $Version -Overwrite:$Overwrite
+    $checksums = @($installerPath, $zipPath, $nsisPublishedSource) | Sort-Object | ForEach-Object {
+        (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant() + ' *' + (Split-Path -Leaf $_)
+    }
+    Set-Content -LiteralPath (Join-Path $OutputDirectory 'SHA256SUMS.txt') -Encoding ASCII -Value $checksums
     Write-Host "Installer: $installerPath" -ForegroundColor Green
     Write-Host "SHA-256: $hash" -ForegroundColor Green
     Write-Host "NSIS source: $nsisPublishedSource" -ForegroundColor Green

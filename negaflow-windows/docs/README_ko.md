@@ -49,6 +49,8 @@ Arm64 기기에서도 동작합니다. 다만 Arm64 릴리즈는 x64만큼 확�
 
 [Releases](https://github.com/habinsong/negaflow/releases)에서 `negaflow-1.2.1-win-x64.exe`를 내려받아 실행합니다.
 
+Windows 설치 파일 ZIP: [negaflow-1.2.1-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.1/negaflow-1.2.1-win-x64-setup.zip). Windows에는 동일한 설치 EXE, 설치 안내, 고지와 SHA-256 체크섬을 담은 setup ZIP도 제공합니다. 압축을 모두 푼 뒤 설치 파일을 실행합니다. 설치 파일 압축본이며 포터블 앱이 아닙니다. SmartScreen 경고는 여전히 나올 수 있습니다.
+
 관리자 권한은 필요 없습니다. 처음 실행할 때 SmartScreen이 한 번 경고하는데, 추가 정보를 누르고 실행하면 됩니다.
 
 제거는 시작 메뉴의 `negaflow 제거`나 설정의 앱 목록에서 합니다. 라이브러리와 사진은 그대로 둡니다.

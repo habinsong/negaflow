@@ -1647,13 +1647,12 @@
   <data name="printWatermarkAperture.Text" xml:space="preserve"><value>조리개</value></data>
   <data name="printWatermarkShutter.Text" xml:space="preserve"><value>셔터</value></data>
   <data name="printWatermarkIso.Text" xml:space="preserve"><value>ISO</value></data>
-  <data name="printWatermarkCaptureDate.Text" xml:space="preserve"><value>촬영 일시</value></data>
+  <data name="printWatermarkCaptureDate.Text" xml:space="preserve"><value>날짜</value></data>
   <data name="printWatermarkHistogram.Text" xml:space="preserve"><value>히스토그램</value></data>
   <data name="printWatermarkUserName.Text" xml:space="preserve"><value>이름</value></data>
   <data name="printWatermarkPlacement.Text" xml:space="preserve"><value>위치</value></data>
-  <data name="printWatermarkBottomCenter.Text" xml:space="preserve"><value>하단 가운데</value></data>
-  <data name="printWatermarkTopLeading.Text" xml:space="preserve"><value>상단 왼쪽</value></data>
-  <data name="printWatermarkTopCenter.Text" xml:space="preserve"><value>상단 가운데</value></data>
-  <data name="printWatermarkTopTrailing.Text" xml:space="preserve"><value>상단 오른쪽</value></data>
-  <data name="printWatermarkAutoFillHint.Text" xml:space="preserve"><value>카메라·렌즈·노출 칸을 비워 두면 사진마다 촬영 기록으로 채웁니다.</value></data>
+  <data name="printWatermarkBottomCenter.Text" xml:space="preserve"><value>하단 중앙</value></data>
+  <data name="printWatermarkTopLeading.Text" xml:space="preserve"><value>상단 좌측</value></data>
+  <data name="printWatermarkTopCenter.Text" xml:space="preserve"><value>상단 중앙</value></data>
+  <data name="printWatermarkTopTrailing.Text" xml:space="preserve"><value>상단 우측</value></data>
 </root>

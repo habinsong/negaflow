@@ -3,7 +3,7 @@ import Chromabase
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// 인화 레이아웃 탭의 워터마크(촬영 정보 띠) 입력. 사진 한 장씩 놓는 레이아웃에서만 보인다.
+/// 워터마크 레이아웃의 촬영 정보 띠 설정.
 struct PrintWatermarkInspectorControls: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var settingsStore: PrintWorkspaceSettingsStore
@@ -13,20 +13,11 @@ struct PrintWatermarkInspectorControls: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PrintInspectorMetrics.verticalSpacing) {
-            PrintInspectorBooleanSegmentedField(
-                label: text(.enabled),
-                isOn: watermark.isEnabled
-            )
-            .accessibilityIdentifier("negaflow.print.watermark.enabled")
-
-            if settings.isEnabled {
-                Divider().opacity(0.4)
-                appearanceRows
-                Divider().opacity(0.4)
-                shotRows
-                Divider().opacity(0.4)
-                extraRows
-            }
+            appearanceRows
+            Divider().opacity(0.4)
+            shotRows
+            Divider().opacity(0.4)
+            extraRows
         }
     }
 
@@ -70,25 +61,22 @@ struct PrintWatermarkInspectorControls: View {
 
     @ViewBuilder
     private var shotRows: some View {
-        let auto = PrintWatermarkSettings().filling(from: model.actionableFrame?.appMetadataOverlay?.filmShot)
-
-        textRow(.camera, \.cameraName, placeholder: auto.cameraName)
-        textRow(.lens, \.lensName, placeholder: auto.lensName)
+        textRow(.camera, \.cameraName, placeholder: "")
+        textRow(.lens, \.lensName, placeholder: "")
         logoRow
         PrintInspectorPairedInlineFields(
             leadingTitle: text(.focalLength),
-            leadingControl: { field(\.focalLength, placeholder: auto.focalLength, sample: "50") },
+            leadingControl: { field(\.focalLength, placeholder: "", sample: "50") },
             trailingTitle: text(.aperture),
-            trailingControl: { field(\.aperture, placeholder: auto.aperture, sample: "2.8") }
+            trailingControl: { field(\.aperture, placeholder: "", sample: "2.8") }
         )
         PrintInspectorPairedInlineFields(
             leadingTitle: text(.shutter),
-            leadingControl: { field(\.shutterSpeed, placeholder: auto.shutterSpeed, sample: "1/125") },
+            leadingControl: { field(\.shutterSpeed, placeholder: "", sample: "1/125") },
             trailingTitle: text(.iso),
-            trailingControl: { field(\.iso, placeholder: auto.iso, sample: "400") }
+            trailingControl: { field(\.iso, placeholder: "", sample: "400") }
         )
         textRow(.captureDate, \.captureDate, placeholder: "2026/10/27 15:21")
-        PrintInspectorHelpText(text: text(.autoFillHint), systemImage: "info.circle")
     }
 
     /// 로고를 켜고 파일을 고르지 않으면 negaflow 로고가 들어간다. 고른 파일이 지워졌으면 로고만 빠지고
@@ -159,10 +147,13 @@ struct PrintWatermarkInspectorControls: View {
         }
 
         textRow(.userName, \.userName, placeholder: "")
-        if settings.addsTopBand,
-           !settings.userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            placementPicker(watermark.userNamePlacement)
-        }
+        placementPicker(Binding(
+            get: { settings.effectivePlacement(settings.userNamePlacement) },
+            set: { placement in
+                settingsStore.watermark.userNamePlacement = placement
+                if placement != .bottomCenter { settingsStore.watermark.addsTopBand = true }
+            }
+        ))
     }
 
     // MARK: - 도우미
@@ -194,6 +185,7 @@ struct PrintWatermarkInspectorControls: View {
                 }
             )
         )
+        .multilineTextAlignment(keyPath == \.userName ? .center : .leading)
     }
 
     private func inkPicker(_ selection: Binding<PrintWatermarkInk>) -> some View {

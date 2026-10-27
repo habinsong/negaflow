@@ -7,7 +7,7 @@ import XCTest
 /// 인화 워터마크 설정의 저장·템플릿·사진별 채우기.
 @MainActor
 final class PrintWatermarkSettingsTests: XCTestCase {
-    func testWatermarkPersistsAndOnlyReachesSinglePhotoLayouts() {
+    func testWatermarkLayoutAloneEnablesTheBorderAndPersists() {
         let suiteName = "PrintWatermarkSettingsTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
@@ -16,15 +16,25 @@ final class PrintWatermarkSettingsTests: XCTestCase {
         XCTAssertFalse(store.watermark.isEnabled)
         XCTAssertNil(store.compositionSettings(dpi: 300).watermark, "꺼져 있으면 판에 싣지 않는다")
 
-        store.watermark = PrintWatermarkSettings(isEnabled: true, background: .blur, cameraName: "Body")
-        XCTAssertEqual(store.compositionSettings(dpi: 300).watermark?.cameraName, "Body")
-        store.layoutMode = .contactSheet
-        XCTAssertNil(store.compositionSettings(dpi: 300).watermark, "여러 장 한 판에는 띠를 넣지 않는다")
-        store.layoutMode = .gelatin
-        XCTAssertNotNil(store.compositionSettings(dpi: 300).watermark)
+        store.watermark = PrintWatermarkSettings(background: .blur, cameraName: "Body")
+        for mode in PrintWorkspaceLayoutMode.allCases {
+            store.layoutMode = mode
+            let composed = store.compositionSettings(dpi: 300)
+            if mode == .watermark {
+                XCTAssertEqual(composed.watermark?.cameraName, "Body")
+                XCTAssertEqual(composed.watermark?.isEnabled, true)
+                XCTAssertTrue(mode.usesIndividualPages)
+                XCTAssertEqual(mode.presentationStyle, .standard)
+            } else {
+                XCTAssertNil(composed.watermark, "\(mode)에는 워터마크를 넣지 않는다")
+            }
+        }
+        store.layoutMode = .watermark
 
         let restored = PrintWorkspaceSettingsStore(defaults: defaults)
         XCTAssertEqual(restored.watermark, store.watermark)
+        XCTAssertEqual(restored.layoutMode, .watermark)
+        XCTAssertNotNil(restored.compositionSettings(dpi: 300).activeWatermark)
     }
 
     func testTemplatesCarrySheetColorAndWatermarkButOldOnesKeepCurrentValues() throws {
@@ -127,26 +137,13 @@ final class PrintWatermarkSettingsTests: XCTestCase {
         XCTAssertEqual(reported, [logoURL.path], "같은 경로는 한 번만 오류 기록에 남긴다")
     }
 
-    func testBlankFieldsAreFilledFromEachPhotosShotRecord() {
-        let shot = FilmShotMetadata(
-            cameraMake: "Nikon",
-            cameraModel: "Nikon F3",
-            lensModel: "Nikkor 50mm f/1.4",
-            isoSpeed: 400,
-            exposureTimeSeconds: 1.0 / 250,
-            fNumber: 8,
-            focalLengthMM: 50
-        )
-        var settings = PrintWatermarkSettings(isEnabled: true, aperture: "5.6")
-        let filled = settings.filling(from: shot)
-        XCTAssertEqual(filled.cameraName, "Nikon F3", "모델명에 제조사가 있으면 한 번만 적는다")
-        XCTAssertEqual(filled.lensName, "Nikkor 50mm f/1.4")
-        XCTAssertEqual(filled.exposureLine, "50mm f/5.6 1/250\" ISO400", "사용자가 적은 조리개가 먼저다")
-        XCTAssertEqual(filled.captureDate, "", "촬영 일시는 기록에 없으므로 채우지 않는다")
-
-        settings.cameraName = "Mine"
-        XCTAssertEqual(settings.filling(from: shot).cameraName, "Mine")
-        XCTAssertEqual(settings.filling(from: nil), settings)
-        XCTAssertEqual(PrintWatermarkSettings.cameraName(make: "Leica", model: "M6"), "Leica M6")
+    func testPreparingWatermarkLeavesBlankFieldsEmpty() {
+        let settings = PrintWatermarkSettings(isEnabled: true, aperture: "5.6")
+        let composition = PrintCompositionSettings(watermark: settings).resolvingWatermarkLogo()
+        XCTAssertEqual(composition.watermark, settings)
+        XCTAssertEqual(composition.watermark?.cameraName, "")
+        XCTAssertEqual(composition.watermark?.lensName, "")
+        XCTAssertEqual(composition.watermark?.exposureLine, "f/5.6")
+        XCTAssertEqual(composition.watermark?.captureDate, "")
     }
 }

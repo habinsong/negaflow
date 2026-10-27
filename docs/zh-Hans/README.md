@@ -46,7 +46,7 @@ flowchart LR
 |---|---|
 | [扫描仪 CLI JSON](reference/CLI_JSON.md) | `detect --json` 和 `capabilities --json` 的输出形式 |
 | [渲染记录](reference/RENDER_MANIFEST.md) | 原件、编辑值、输出文件之间的 SHA-256 关系 |
-| [印相布局与 C-print 预览](reference/C_PRINT.md) | 7 种布局、成品页导出、渲染优化、仅软打样 ICC 的行为和精度限制 |
+| [印相布局与 C-print 预览](reference/C_PRINT.md) | 8 种布局、成品页导出、渲染优化、仅软打样 ICC 的行为和精度限制 |
 | [固定印相响应](reference/PRINT_RESPONSE.md) | `shoulder-print-response-v4` 的公式和基准点 |
 | [扫描仪配置文件质量判定](reference/PROFILE_QUALITY_GATE.md) | REAL/TARGET 配对素材的发布判定 |
 | [扫描仪噪声配置文件](reference/SCANNER_NOISE_PROFILES.md) | 重复扫描测量与自动应用的条件 |

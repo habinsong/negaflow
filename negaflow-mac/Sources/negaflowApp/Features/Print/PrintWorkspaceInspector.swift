@@ -235,7 +235,7 @@ struct PrintWorkspaceInspector: View {
                 }
             }
 
-            if settingsStore.layoutMode.usesIndividualPages {
+            if settingsStore.layoutMode == .watermark {
                 PrintInspectorSection(
                     title: PrintWatermarkLocalizedText.section.resolved(language: model.appLanguage),
                     systemImage: "signature"
@@ -455,6 +455,7 @@ struct PrintWorkspaceInspector: View {
         case .cyanotype: "drop.fill"
         case .glassPlate: "rectangle.on.rectangle"
         case .gelatin: "circle.lefthalf.filled"
+        case .watermark: "signature"
         }
     }
 
@@ -467,6 +468,7 @@ struct PrintWorkspaceInspector: View {
         case .cyanotype: model.text(.printCyanotype)
         case .glassPlate: model.text(.printGlassPlate)
         case .gelatin: model.text(.printGelatin)
+        case .watermark: PrintWatermarkLocalizedText.section.resolved(language: model.appLanguage)
         }
     }
 
@@ -482,6 +484,9 @@ struct PrintWorkspaceInspector: View {
             get: { settingsStore.layoutMode },
             set: { mode in
                 settingsStore.layoutMode = mode
+                if mode == .watermark {
+                    settingsStore.paperSize = .photoRatio
+                }
                 if mode == .customPackage {
                     settingsStore.prepareDefaultCustomPackage(
                         sourceCount: model.actionableSelectedFrames.count

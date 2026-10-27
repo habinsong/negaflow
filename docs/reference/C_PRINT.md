@@ -2,7 +2,7 @@
 
 [Docs home](../README.md)
 
-The Print workspace combines page layout, page export, and output-process preview. It supports single image, contact sheet, picture package, custom package, cyanotype, glass plate, and gelatin silver.
+Print has eight layouts: single image, contact sheet, picture package, custom package, cyanotype, glass plate, gelatin silver and watermark.
 
 ## Contact sheets
 
@@ -26,7 +26,7 @@ These three styles use the same paper, orientation, margin, output, and inspecto
 
 ## Watermarks and layout templates
 
-The four individual-photo layouts can add a border below the photo and an equal border above it without cropping the photo. Configure the text, logo, dotted histogram and name in Layout. The background can be white, black or a blur made from the filmstrip thumbnail. Logo files are referenced by path; turning Logo on without choosing a file uses the negaflow icon. A missing chosen file leaves out only the logo and records a diagnostic.
+Watermark is a separate layout in the layout type menu. Selecting it sets the paper size to Photo Ratio. You can choose another size afterwards. It adds borders outside the photo. The name position menu is always available: Bottom Center, Top Left, Top Center or Top Right. Choosing a top position turns on the top border. Shutter speeds have no added quote mark. Empty text fields stay empty. Name text is centered within its position. When the name and histogram share a position, the histogram sits above the name and each is centered.
 
 Layout templates restore the layout, paper settings, sheet color and watermark settings, then refresh the preview. DPI and ruler settings stay as they were. Templates from before these fields were added preserve the current sheet color and watermark. See [Library to print workflow](../product/WORKFLOW.md) for field placement and DNG source and color-space rules.
 

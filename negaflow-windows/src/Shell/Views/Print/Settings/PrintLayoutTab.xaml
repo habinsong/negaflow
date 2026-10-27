@@ -259,7 +259,7 @@
             </StackPanel>
         </Border>
 
-        <!-- macOS 레이아웃 탭의 워터마크 구획 — 사진 한 장씩 놓는 레이아웃에서만 보입니다. -->
+        <!-- macOS 레이아웃 탭의 워터마크 구획 — 워터마크 레이아웃에서만 보입니다. -->
         <print:PrintWatermarkCard x:Name="WatermarkCard" x:FieldModifier="internal" Visibility="Collapsed" />
 
         <!-- macOS `PrintLayoutTemplateControls` — 템플릿 이름 칸 + 저장. -->

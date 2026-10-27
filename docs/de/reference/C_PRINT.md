@@ -2,7 +2,7 @@
 
 [Dokumentationsstart](../README.md)
 
-Der Druckbereich verbindet Seitenlayout, Seitenexport und Vorschau des Ausgabeverfahrens. Unterstützt werden Einzelbild, Kontaktbogen, Bildpaket, Benutzerpaket, Cyanotypie, Glasplatte und Gelatinesilber.
+Der Druckbereich bietet acht Layouts: Einzelbild, Kontaktbogen, Bildpaket, Benutzerpaket, Cyanotypie, Glasplatte, Silbergelatine und Wasserzeichen.
 
 ## Kontaktbögen
 
@@ -26,7 +26,7 @@ Die drei historischen Layouts verwenden Papier, Ausrichtung, Rand, Ausgabe und I
 
 ## Wasserzeichen und Layoutvorlagen
 
-Die vier Einzelfoto-Layouts können unter dem Foto einen Rand und darüber einen gleich hohen Rand ergänzen, ohne das Foto zu beschneiden. Text, Logo, Punkthistogramm und Namen stellen Sie im Layout ein. Der Hintergrund ist weiß, schwarz oder eine weichgezeichnete Filmstreifen-Miniatur. Das Logo wird über seinen Dateipfad geladen. Ist Logo eingeschaltet und keine Datei gewählt, erscheint das negaflow-Symbol. Fehlt eine gewählte Datei, entfällt nur das Logo und ein Diagnoseeintrag wird erstellt.
+Wasserzeichen ist ein eigenes Layout im Layouttyp-Menü und ergänzt Ränder außerhalb des Fotos. Bei der Auswahl wird das Papier auf das Fotoverhältnis gesetzt. Danach lässt sich ein anderes Format wählen. Die Namensposition ist immer wählbar: unten Mitte, oben links, oben Mitte oder oben rechts. Eine obere Position schaltet den oberen Rand ein. Die Verschlusszeit erhält kein zusätzliches Anführungszeichen. Leere Textfelder bleiben leer. Der Name wird innerhalb seiner Position zentriert. Teilen Name und Histogramm eine Position, steht das Histogramm über dem Namen; beide sind jeweils zentriert.
 
 Layoutvorlagen stellen Anordnung, Papiereinstellungen, Blattfarbe und Wasserzeichen wieder her und aktualisieren die Vorschau. DPI und Lineale bleiben unverändert. Ältere Vorlagen ohne die neuen Felder behalten die aktuelle Blattfarbe und das Wasserzeichen. Positionen sowie Quell- und Farbraumbedingungen für DNG stehen im [Ablauf von der Bibliothek zum Abzug](../product/WORKFLOW.md).
 
