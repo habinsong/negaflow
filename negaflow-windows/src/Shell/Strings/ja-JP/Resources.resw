@@ -1638,7 +1638,7 @@
   <data name="printWatermarkCamera.Text" xml:space="preserve"><value>カメラ</value></data>
   <data name="printWatermarkLens.Text" xml:space="preserve"><value>レンズ</value></data>
   <data name="printWatermarkLogo.Text" xml:space="preserve"><value>ロゴ</value></data>
-  <data name="printWatermarkChooseLogo.Text" xml:space="preserve"><value>画像を選択…</value></data>
+  <data name="printWatermarkChooseLogo.Text" xml:space="preserve"><value>画像を選択</value></data>
   <data name="printWatermarkRemoveLogo.Text" xml:space="preserve"><value>negaflow のロゴに戻す</value></data>
   <data name="printWatermarkLogoFile.Text" xml:space="preserve"><value>ロゴファイル</value></data>
   <data name="printWatermarkLogoMissing.Text" xml:space="preserve"><value>ロゴのファイルが見つかりません:</value></data>

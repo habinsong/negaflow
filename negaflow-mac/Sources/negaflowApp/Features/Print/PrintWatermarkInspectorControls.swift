@@ -61,22 +61,23 @@ struct PrintWatermarkInspectorControls: View {
 
     @ViewBuilder
     private var shotRows: some View {
-        textRow(.camera, \.cameraName, placeholder: "")
-        textRow(.lens, \.lensName, placeholder: "")
+        textRow(.camera, \.cameraName)
+        textRow(.lens, \.lensName)
         logoRow
+        // 노출 값(초점거리·조리개·셔터·ISO)은 오른쪽 정렬한다.
         PrintInspectorPairedInlineFields(
             leadingTitle: text(.focalLength),
-            leadingControl: { field(\.focalLength, placeholder: "", sample: "50") },
+            leadingControl: { field(\.focalLength, alignment: .trailing) },
             trailingTitle: text(.aperture),
-            trailingControl: { field(\.aperture, placeholder: "", sample: "2.8") }
+            trailingControl: { field(\.aperture, alignment: .trailing) }
         )
         PrintInspectorPairedInlineFields(
             leadingTitle: text(.shutter),
-            leadingControl: { field(\.shutterSpeed, placeholder: "", sample: "1/125") },
+            leadingControl: { field(\.shutterSpeed, alignment: .trailing) },
             trailingTitle: text(.iso),
-            trailingControl: { field(\.iso, placeholder: "", sample: "400") }
+            trailingControl: { field(\.iso, alignment: .trailing) }
         )
-        textRow(.captureDate, \.captureDate, placeholder: "2026/10/27 15:21")
+        textRow(.captureDate, \.captureDate)
     }
 
     /// 로고를 켜고 파일을 고르지 않으면 negaflow 로고가 들어간다. 고른 파일이 지워졌으면 로고만 빠지고
@@ -146,7 +147,7 @@ struct PrintWatermarkInspectorControls: View {
             }
         }
 
-        textRow(.userName, \.userName, placeholder: "")
+        textRow(.userName, \.userName, alignment: .center)
         placementPicker(Binding(
             get: { settings.effectivePlacement(settings.userNamePlacement) },
             set: { placement in
@@ -161,21 +162,20 @@ struct PrintWatermarkInspectorControls: View {
     private func textRow(
         _ title: PrintWatermarkLocalizedText,
         _ keyPath: WritableKeyPath<PrintWatermarkSettings, String>,
-        placeholder: String
+        alignment: TextAlignment = .leading
     ) -> some View {
         PrintInspectorInlineField(text(title)) {
-            field(keyPath, placeholder: placeholder, sample: text(title))
+            field(keyPath, alignment: alignment)
         }
     }
 
-    /// 자동으로 채워질 값이 있으면 그것을, 없으면 예시를 흐리게 보여 준다.
+    /// 빈 칸은 음영 칸만 보인다. 라벨이 바로 옆에 있으므로 칸 안에 이름이나 예시 값(날짜·숫자)을 넣지 않는다.
     private func field(
         _ keyPath: WritableKeyPath<PrintWatermarkSettings, String>,
-        placeholder: String,
-        sample: String
+        alignment: TextAlignment = .leading
     ) -> some View {
         PrintInspectorTextField(
-            prompt: placeholder.isEmpty ? sample : placeholder,
+            prompt: "",
             text: Binding(
                 get: { settingsStore.watermark[keyPath: keyPath] },
                 set: { value in
@@ -185,7 +185,7 @@ struct PrintWatermarkInspectorControls: View {
                 }
             )
         )
-        .multilineTextAlignment(keyPath == \.userName ? .center : .leading)
+        .multilineTextAlignment(alignment)
     }
 
     private func inkPicker(_ selection: Binding<PrintWatermarkInk>) -> some View {

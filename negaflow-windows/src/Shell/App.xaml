@@ -49,6 +49,13 @@
                     <!-- 인화 인스펙터 탭의 고른 칸입니다. macOS `accentColor.opacity(0.16)`. -->
                     <SolidColorBrush x:Key="NegaflowAccentTabBrush" Color="#29007AFF" />
                     <SolidColorBrush x:Key="NegaflowHoverFillBrush" Color="#1F000000" />
+                    <!-- 인화 인스펙터 글자 입력칸입니다. macOS `Color.primary` 평상시 0.08 · 호버 0.11 ·
+                         포커스 0.14 — 평상시에도 칸이 보여야 합니다. -->
+                    <SolidColorBrush x:Key="NegaflowFieldFillBrush" Color="#14000000" />
+                    <SolidColorBrush x:Key="NegaflowFieldHoverFillBrush" Color="#1C000000" />
+                    <SolidColorBrush x:Key="NegaflowFieldFocusFillBrush" Color="#24000000" />
+                    <SolidColorBrush x:Key="NegaflowFieldBorderBrush" Color="Transparent" />
+                    <SolidColorBrush x:Key="NegaflowFieldFocusBorderBrush" Color="Transparent" />
                     <SolidColorBrush x:Key="NegaflowSegmentTrackBrush" Color="#12000000" />
                     <SolidColorBrush x:Key="NegaflowSegmentThumbBrush" Color="#FFFFFFFF" />
                     <!--
@@ -101,6 +108,12 @@
                     <SolidColorBrush x:Key="NegaflowAccentSoftBrush" Color="#330A84FF" />
                     <SolidColorBrush x:Key="NegaflowAccentTabBrush" Color="#290A84FF" />
                     <SolidColorBrush x:Key="NegaflowHoverFillBrush" Color="#1FFFFFFF" />
+                    <!-- 어두운 카드 위에서는 같은 비율이 더 옅어 보여 NegaflowSubtleFillBrush 처럼 한 단계 올립니다. -->
+                    <SolidColorBrush x:Key="NegaflowFieldFillBrush" Color="#1AFFFFFF" />
+                    <SolidColorBrush x:Key="NegaflowFieldHoverFillBrush" Color="#22FFFFFF" />
+                    <SolidColorBrush x:Key="NegaflowFieldFocusFillBrush" Color="#2BFFFFFF" />
+                    <SolidColorBrush x:Key="NegaflowFieldBorderBrush" Color="Transparent" />
+                    <SolidColorBrush x:Key="NegaflowFieldFocusBorderBrush" Color="Transparent" />
                     <SolidColorBrush x:Key="NegaflowSegmentTrackBrush" Color="#12FFFFFF" />
                     <!--
                         macOS `SegmentedPicker` 의 고른 칸은 `.background`(창 바탕)로 채웁니다 —
@@ -148,6 +161,12 @@
                     <SolidColorBrush x:Key="NegaflowAccentSoftBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="NegaflowAccentTabBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="NegaflowHoverFillBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <!-- 고대비에서는 채움 대신 창 바탕 + 글자색 테두리로 칸을 보이고, 포커스는 강조색 테두리입니다. -->
+                    <SolidColorBrush x:Key="NegaflowFieldFillBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="NegaflowFieldHoverFillBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="NegaflowFieldFocusFillBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="NegaflowFieldBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="NegaflowFieldFocusBorderBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="NegaflowSegmentTrackBrush" Color="{ThemeResource SystemColorWindowColor}" />
                     <SolidColorBrush x:Key="NegaflowSegmentThumbBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="NegaflowGlassFillBrush" Color="{ThemeResource SystemColorWindowColor}" />

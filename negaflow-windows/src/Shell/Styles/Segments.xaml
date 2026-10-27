@@ -493,25 +493,82 @@
         </Setter>
     </Style>
     <!--
-        인화 인스펙터의 글자 입력칸입니다. macOS `PrintInspectorTextField` 그대로입니다 —
-        `.textFieldStyle(.plain)` 이라 **테두리도 상자도 없고**, 호버 0.08 · 포커스 0.10 의
-        둥근(8) 채움만 있습니다. 높이 30, 좌우 여백 10.
+        인화 탭의 글자 입력칸입니다. macOS `PrintInspectorTextField` 그대로입니다 — 테두리 없는
+        둥근(8) 채움 칸이고, 평상시에도 옅게 채워 칸이 보입니다(평상시 · 호버 · 포커스 순으로
+        진해집니다). 높이 30, 좌우 여백 10. 색은 App.xaml 의 NegaflowField* 테마 붓이라 밝은 ·
+        어두운 · 고대비 테마를 따라갑니다(고대비는 채움 대신 테두리).
 
-        WinUI 기본 `TextBox` 는 네모 테두리에 아래쪽 강조선까지 그립니다 — 맥에는 없는
-        모양이라 상태별 배경과 테두리를 모두 없앱니다.
+        WinUI 기본 `TextBox` 틀은 네모 테두리와 아래쪽 강조선을 그리고 VerticalContentAlignment 를
+        쓰지 않아 글이 칸 위로 붙습니다. 틀을 직접 두고 글과 자리표시 글을 세로 가운데에 놓습니다.
     -->
     <Style x:Key="NegaflowPrintTextFieldStyle" TargetType="TextBox">
         <Setter Property="MinHeight" Value="30" />
-        <!-- WinUI TextBox 틀은 VerticalContentAlignment 를 쓰지 않고 위쪽 안쪽 여백부터 글을 놓습니다.
-             위아래 여백이 0 이면 글자와 자리표시 글이 30 칸 위로 붙어 옆 라벨과 줄이 어긋납니다.
-             12px 글자 한 줄(약 16)을 30 칸 가운데에 두도록 위아래를 7 씩 줍니다. -->
-        <Setter Property="Padding" Value="10,7,10,7" />
+        <Setter Property="MinWidth" Value="40" />
+        <Setter Property="Padding" Value="10,0" />
         <Setter Property="CornerRadius" Value="8" />
-        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{ThemeResource NegaflowFieldBorderBrush}" />
+        <Setter Property="Background" Value="{ThemeResource NegaflowFieldFillBrush}" />
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
         <Setter Property="FontSize" Value="12" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="HorizontalAlignment" Value="Stretch" />
-        <Setter Property="Background" Value="Transparent" />
-
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Grid x:Name="PrintFieldRoot" MinHeight="{TemplateBinding MinHeight}">
+                        <Border
+                            x:Name="PrintFieldSurface"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}" />
+                        <ScrollViewer
+                            x:Name="ContentElement"
+                            Padding="{TemplateBinding Padding}"
+                            HorizontalScrollBarVisibility="Hidden"
+                            HorizontalScrollMode="Disabled"
+                            IsHorizontalRailEnabled="False"
+                            IsTabStop="False"
+                            IsVerticalRailEnabled="False"
+                            VerticalAlignment="Center"
+                            VerticalScrollBarVisibility="Hidden"
+                            VerticalScrollMode="Disabled"
+                            ZoomMode="Disabled"
+                            AutomationProperties.AccessibilityView="Raw" />
+                        <TextBlock
+                            x:Name="PlaceholderTextContentPresenter"
+                            Margin="{TemplateBinding Padding}"
+                            VerticalAlignment="Center"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            IsHitTestVisible="False"
+                            Text="{TemplateBinding PlaceholderText}"
+                            TextAlignment="{TemplateBinding TextAlignment}"
+                            TextTrimming="CharacterEllipsis" />
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="PrintFieldSurface.Background" Value="{ThemeResource NegaflowFieldHoverFillBrush}" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Focused">
+                                    <VisualState.Setters>
+                                        <Setter Target="PrintFieldSurface.Background" Value="{ThemeResource NegaflowFieldFocusFillBrush}" />
+                                        <Setter Target="PrintFieldSurface.BorderBrush" Value="{ThemeResource NegaflowFieldFocusBorderBrush}" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="PrintFieldRoot.Opacity" Value="0.4" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 </ResourceDictionary>

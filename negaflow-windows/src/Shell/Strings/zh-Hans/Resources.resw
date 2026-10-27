@@ -1638,7 +1638,7 @@
   <data name="printWatermarkCamera.Text" xml:space="preserve"><value>相机</value></data>
   <data name="printWatermarkLens.Text" xml:space="preserve"><value>镜头</value></data>
   <data name="printWatermarkLogo.Text" xml:space="preserve"><value>标志</value></data>
-  <data name="printWatermarkChooseLogo.Text" xml:space="preserve"><value>选择图像…</value></data>
+  <data name="printWatermarkChooseLogo.Text" xml:space="preserve"><value>选择图像</value></data>
   <data name="printWatermarkRemoveLogo.Text" xml:space="preserve"><value>改用 negaflow 标志</value></data>
   <data name="printWatermarkLogoFile.Text" xml:space="preserve"><value>标志文件</value></data>
   <data name="printWatermarkLogoMissing.Text" xml:space="preserve"><value>找不到标志文件：</value></data>

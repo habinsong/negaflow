@@ -25,7 +25,7 @@ public sealed record PrintWatermarkBandDrawing(
 
 /// <summary>
 /// 띠 안의 배치입니다. macOS <c>PrintWatermarkRenderer</c> 의 <c>drawBottomBand</c> ·
-/// <c>drawTopBand</c> 와 같은 규칙이며, 글이 띠 폭을 넘으면 전체를 같은 비율로 줄입니다.
+/// <c>drawTopBand</c> 와 같은 규칙이며, 글이 띠 폭을 넘으면 들어갈 때까지 전체를 같은 비율로 줄입니다.
 /// </summary>
 public static class PrintWatermarkBandLayout
 {
@@ -48,26 +48,20 @@ public static class PrintWatermarkBandLayout
             return Empty;
         }
 
-        TwoLine Leading(double scale) =>
-            new(settings.CameraName, settings.LensName, band, scale, measure);
-        Trailing TrailingAt(double scale) =>
-            new(settings, logoAspect, band, scale, measure);
-        Slot Center(double scale) =>
-            new(settings, PrintWatermarkPlacement.BottomCenter, hasHistogram, band, scale, measure);
-
-        TwoLine leading = Leading(1);
-        Trailing trailing = TrailingAt(1);
-        Slot center = Center(1);
-        double needed = center.IsEmpty
-            ? leading.Width + trailing.Width + gap
-            : (2 * Math.Max(leading.Width, trailing.Width)) + center.Width + (2 * gap);
-        double scale = FitScale(available, needed);
-        if (scale < 1)
+        if (Fit(
+                available,
+                scale => (
+                    Leading: new TwoLine(settings.CameraName, settings.LensName, band, scale, measure),
+                    Trailing: new Trailing(settings, logoAspect, band, scale, measure),
+                    Center: new Slot(settings, PrintWatermarkPlacement.BottomCenter, hasHistogram, band, scale, measure)),
+                parts => parts.Center.IsEmpty
+                    ? (parts.Leading.Width + parts.Trailing.Width, gap)
+                    : ((2 * Math.Max(parts.Leading.Width, parts.Trailing.Width)) + parts.Center.Width, 2 * gap))
+            is not { } bottomParts)
         {
-            leading = Leading(scale);
-            trailing = TrailingAt(scale);
-            center = Center(scale);
+            return Empty;
         }
+        var (leading, trailing, center) = bottomParts;
 
         List<PrintWatermarkTextItem> texts = [];
         leading.Place(inset, band, texts);
@@ -102,25 +96,20 @@ public static class PrintWatermarkBandLayout
             return Empty;
         }
         double gap = PrintWatermarkMetrics.ItemGap * band;
-        Slot LeadingAt(double scale) =>
-            new(settings, PrintWatermarkPlacement.TopLeading, hasHistogram, band, scale, measure);
-        Slot CenterAt(double scale) =>
-            new(settings, PrintWatermarkPlacement.TopCenter, hasHistogram, band, scale, measure);
-        Slot TrailingAt(double scale) =>
-            new(settings, PrintWatermarkPlacement.TopTrailing, hasHistogram, band, scale, measure);
-        Slot leading = LeadingAt(1);
-        Slot center = CenterAt(1);
-        Slot trailing = TrailingAt(1);
-        double needed = center.IsEmpty
-            ? leading.Width + trailing.Width + gap
-            : (2 * Math.Max(leading.Width, trailing.Width)) + center.Width + (2 * gap);
-        double scale = FitScale(available, needed);
-        if (scale < 1)
+        if (Fit(
+                available,
+                scale => (
+                    Leading: new Slot(settings, PrintWatermarkPlacement.TopLeading, hasHistogram, band, scale, measure),
+                    Center: new Slot(settings, PrintWatermarkPlacement.TopCenter, hasHistogram, band, scale, measure),
+                    Trailing: new Slot(settings, PrintWatermarkPlacement.TopTrailing, hasHistogram, band, scale, measure)),
+                parts => parts.Center.IsEmpty
+                    ? (parts.Leading.Width + parts.Trailing.Width, gap)
+                    : ((2 * Math.Max(parts.Leading.Width, parts.Trailing.Width)) + parts.Center.Width, 2 * gap))
+            is not { } topParts)
         {
-            leading = LeadingAt(scale);
-            center = CenterAt(scale);
-            trailing = TrailingAt(scale);
+            return Empty;
         }
+        var (leading, center, trailing) = topParts;
         List<PrintWatermarkTextItem> texts = [];
         // 히스토그램은 자리를 하나만 고르므로 세 자리 중 많아야 한 곳에서만 나옵니다.
         PrintRect? leadingHistogram = leading.Place(inset, band, texts);
@@ -143,10 +132,39 @@ public static class PrintWatermarkBandLayout
 
     private static readonly PrintWatermarkBandDrawing Empty = new([], null, null, null);
 
-    private static double FitScale(double available, double needed) =>
-        needed > available && needed > 0
-            ? Math.Max(PrintWatermarkMetrics.MinimumFitScale, available / needed)
-            : 1;
+    /// <summary>
+    /// 띠 폭에 들어가도록 전체를 같은 비율로 줄인 배치입니다. 하한은 두지 않습니다 — 글이 길거나
+    /// 세로 사진이라 띠가 좁으면 글이 작아질 뿐 띠(사진) 밖으로 나가거나 서로 겹치지 않습니다.
+    /// 글 폭은 글자 크기에 딱 비례하지 않으므로(측정 반올림, 1px 세로선) 들어갈 때까지 다시 잽니다.
+    /// 블록 사이 간격만으로 폭이 모자라면 null 입니다.
+    /// </summary>
+    private static T? Fit<T>(
+        double available,
+        Func<double, T> make,
+        Func<T, (double Content, double Gaps)> width)
+        where T : struct
+    {
+        double scale = 1;
+        T parts = make(scale);
+        for (int attempt = 0; attempt < FitAttempts; ++attempt)
+        {
+            (double content, double gaps) = width(parts);
+            if (content <= 0 || content + gaps <= available)
+            {
+                return parts;
+            }
+            double room = available - gaps;
+            if (room <= 0)
+            {
+                return null;
+            }
+            scale *= room / content;
+            parts = make(scale);
+        }
+        return parts;
+    }
+
+    private const int FitAttempts = 6;
 
     private static bool Shows(
         PrintWatermarkSettings settings,

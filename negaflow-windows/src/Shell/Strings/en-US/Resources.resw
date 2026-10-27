@@ -1638,7 +1638,7 @@ Load a scanner from Library to scan film.</value>
   <data name="printWatermarkCamera.Text" xml:space="preserve"><value>Camera</value></data>
   <data name="printWatermarkLens.Text" xml:space="preserve"><value>Lens</value></data>
   <data name="printWatermarkLogo.Text" xml:space="preserve"><value>Logo</value></data>
-  <data name="printWatermarkChooseLogo.Text" xml:space="preserve"><value>Choose Image…</value></data>
+  <data name="printWatermarkChooseLogo.Text" xml:space="preserve"><value>Choose Image</value></data>
   <data name="printWatermarkRemoveLogo.Text" xml:space="preserve"><value>Use negaflow Logo</value></data>
   <data name="printWatermarkLogoFile.Text" xml:space="preserve"><value>Logo File</value></data>
   <data name="printWatermarkLogoMissing.Text" xml:space="preserve"><value>Logo file not found:</value></data>

@@ -439,12 +439,11 @@ public enum PrintWatermarkRenderer {
                 SlotItems(content: content, placement: .bottomCenter, band: band, scale: scale)
             )
         }
-        let natural = parts(1)
-        let needed = natural.2.isEmpty
-            ? natural.0.width + natural.1.width + gap
-            : 2 * max(natural.0.width, natural.1.width) + natural.2.width + 2 * gap
-        let scale = fitScale(available: available, needed: needed)
-        let (leading, trailing, center) = scale < 1 ? parts(scale) : natural
+        guard case let (leading, trailing, center)? = fitted(available: available, make: parts, width: { parts in
+            parts.2.isEmpty
+                ? (parts.0.width + parts.1.width, gap)
+                : (2 * max(parts.0.width, parts.1.width) + parts.2.width, 2 * gap)
+        }) else { return }
 
         leading.draw(in: context, x: inset, bandHeight: band)
         if !trailing.isEmpty {
@@ -470,21 +469,39 @@ public enum PrintWatermarkRenderer {
                 SlotItems(content: content, placement: .topTrailing, band: band, scale: scale)
             )
         }
-        let natural = parts(1)
-        let needed = natural.1.isEmpty
-            ? natural.0.width + natural.2.width + gap
-            : 2 * max(natural.0.width, natural.2.width) + natural.1.width + 2 * gap
-        let scale = fitScale(available: available, needed: needed)
-        let (leading, center, trailing) = scale < 1 ? parts(scale) : natural
+        guard case let (leading, center, trailing)? = fitted(available: available, make: parts, width: { parts in
+            parts.1.isEmpty
+                ? (parts.0.width + parts.2.width, gap)
+                : (2 * max(parts.0.width, parts.2.width) + parts.1.width, 2 * gap)
+        }) else { return }
         leading.draw(in: context, x: inset, bandHeight: band)
         center.drawCentered(in: context, centerX: size.width / 2, bandHeight: band)
         trailing.draw(in: context, x: size.width - inset - trailing.width, bandHeight: band)
     }
 
-    private static func fitScale(available: CGFloat, needed: CGFloat) -> CGFloat {
-        guard needed > available, needed > 0 else { return 1 }
-        return max(PrintWatermarkMetrics.minimumFitScale, available / needed)
+    /// 띠 폭에 들어가도록 전체를 같은 비율로 줄인 배치. 하한은 두지 않는다 — 글이 길거나 세로 사진이라
+    /// 띠가 좁으면 글이 작아질 뿐 띠(사진) 밖으로 나가거나 서로 겹치지 않는다. 글 폭은 글자 크기에 딱
+    /// 비례하지 않으므로(1px 세로선 등) 들어갈 때까지 다시 잰다. 블록 사이 간격만으로 폭이 모자라면 nil.
+    /// Windows `PrintWatermarkBandLayout.Fit` 과 같은 규칙이다.
+    private static func fitted<Parts>(
+        available: CGFloat,
+        make: (CGFloat) -> Parts,
+        width: (Parts) -> (content: CGFloat, gaps: CGFloat)
+    ) -> Parts? {
+        var scale: CGFloat = 1
+        var parts = make(scale)
+        for _ in 0..<fitAttempts {
+            let (content, gaps) = width(parts)
+            guard content > 0, content + gaps > available else { return parts }
+            let room = available - gaps
+            guard room > 0 else { return nil }
+            scale *= room / content
+            parts = make(scale)
+        }
+        return parts
     }
+
+    private static let fitAttempts = 6
 
     /// 점으로 된 세로 막대: 열마다 값에 비례한 개수의 점을 아래에서부터 쌓는다. 비어 있는 자리도 옅은
     /// 점으로 찍어 격자 전체가 보이게 한다 — 분포가 한쪽에 몰린 사진에서도 그래프의 폭과 위치가 읽힌다.

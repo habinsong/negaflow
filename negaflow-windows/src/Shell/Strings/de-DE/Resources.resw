@@ -1638,7 +1638,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="printWatermarkCamera.Text" xml:space="preserve"><value>Kamera</value></data>
   <data name="printWatermarkLens.Text" xml:space="preserve"><value>Objektiv</value></data>
   <data name="printWatermarkLogo.Text" xml:space="preserve"><value>Logo</value></data>
-  <data name="printWatermarkChooseLogo.Text" xml:space="preserve"><value>Bild wählen …</value></data>
+  <data name="printWatermarkChooseLogo.Text" xml:space="preserve"><value>Bild wählen</value></data>
   <data name="printWatermarkRemoveLogo.Text" xml:space="preserve"><value>negaflow-Logo verwenden</value></data>
   <data name="printWatermarkLogoFile.Text" xml:space="preserve"><value>Logodatei</value></data>
   <data name="printWatermarkLogoMissing.Text" xml:space="preserve"><value>Logodatei nicht gefunden:</value></data>

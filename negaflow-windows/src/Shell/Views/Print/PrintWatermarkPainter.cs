@@ -55,19 +55,20 @@ internal static class PrintWatermarkPainter
     {
         double? logoAspect = await PrintWatermarkRaster.LogoAspectAsync(settings.LogoPng);
         bool hasHistogram = reference?.Histogram is not null;
+        PrintWatermarkTextWidth measure = (text, fontSize, bold) =>
+            PrintWatermarkRaster.Measure(textHost, text, fontSize, bold);
         PrintRect bottom = frame.Place(frame.BottomBand, unit);
         await PaintBandAsync(
             page, pageWidth, pageHeight, bottom, settings, reference, textHost,
             PrintWatermarkBandLayout.Bottom(
-                settings, Math.Round(bottom.Width), bottom.Height, logoAspect, hasHistogram,
-                PrintWatermarkRaster.Measure));
+                settings, Math.Round(bottom.Width), bottom.Height, logoAspect, hasHistogram, measure));
         if (frame.TopBand is { } topBand && PrintWatermarkBandLayout.HasTopItems(settings, hasHistogram))
         {
             PrintRect top = frame.Place(topBand, unit);
             await PaintBandAsync(
                 page, pageWidth, pageHeight, top, settings, reference, textHost,
                 PrintWatermarkBandLayout.Top(
-                    settings, Math.Round(top.Width), top.Height, hasHistogram, PrintWatermarkRaster.Measure));
+                    settings, Math.Round(top.Width), top.Height, hasHistogram, measure));
         }
     }
 
@@ -99,7 +100,7 @@ internal static class PrintWatermarkPainter
                     is { } rendered)
                 {
                     BlendPremultiplied(
-                        page, pageWidth, pageHeight, rendered.Pixels, rendered.Width, rendered.Height,
+                        page, pageWidth, pageHeight, band, rendered.Pixels, rendered.Width, rendered.Height,
                         (int)Math.Round(band.X + item.X), (int)Math.Round(band.Y + item.Y));
                 }
             }
@@ -119,7 +120,7 @@ internal static class PrintWatermarkPainter
             if (await PrintWatermarkRaster.DecodeLogoAsync(png, width, height) is { } pixels)
             {
                 BlendPremultiplied(
-                    page, pageWidth, pageHeight, pixels, width, height,
+                    page, pageWidth, pageHeight, band, pixels, width, height,
                     (int)Math.Round(band.X + logo.X), (int)Math.Round(band.Y + logo.Y));
             }
         }
@@ -200,28 +201,36 @@ internal static class PrintWatermarkPainter
         }
     }
 
-    /// <summary>BGRA(premultiplied) 그림을 판에 얹습니다.</summary>
+    /// <summary>
+    /// BGRA(premultiplied) 그림을 판에 얹습니다. 띠(<paramref name="band"/>) 밖으로는 그리지 않습니다 —
+    /// macOS 처럼 띠 크기의 비트맵에 그린 것과 같습니다.
+    /// </summary>
     private static void BlendPremultiplied(
         ushort[] page,
         int pageWidth,
         int pageHeight,
+        PrintRect band,
         byte[] bgra,
         int width,
         int height,
         int left,
         int top)
     {
+        int minX = Math.Max(0, (int)Math.Round(band.X));
+        int minY = Math.Max(0, (int)Math.Round(band.Y));
+        int maxX = Math.Min(pageWidth, (int)Math.Round(band.MaxX));
+        int maxY = Math.Min(pageHeight, (int)Math.Round(band.MaxY));
         for (int y = 0; y < height; ++y)
         {
             int pageY = top + y;
-            if (pageY < 0 || pageY >= pageHeight)
+            if (pageY < minY || pageY >= maxY)
             {
                 continue;
             }
             for (int x = 0; x < width; ++x)
             {
                 int pageX = left + x;
-                if (pageX < 0 || pageX >= pageWidth)
+                if (pageX < minX || pageX >= maxX)
                 {
                     continue;
                 }

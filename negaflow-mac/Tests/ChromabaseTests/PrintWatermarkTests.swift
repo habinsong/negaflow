@@ -197,6 +197,41 @@ final class PrintWatermarkTests: XCTestCase {
         }
     }
 
+    /// 세로 사진(띠가 좁다)에 긴 글을 넣어도 글은 줄어들 뿐 띠의 좌우 안쪽 여백을 넘지 않는다.
+    /// 예전에는 0.4배 아래로 줄이지 않아 글이 띠(사진) 밖으로 나가 잘렸다.
+    func testLongTextShrinksToStayInsideThePortraitBand() throws {
+        // 이 글 길이면 전체를 약 0.35배로 줄여야 들어간다(예전 하한 0.4 아래).
+        let photo = gradientPhoto(width: 800, height: 1_200)
+        let long = String(repeating: "WM", count: 20)
+        let settings = PrintWatermarkSettings(
+            isEnabled: true,
+            background: .white,
+            cameraName: long,
+            lensName: long,
+            focalLength: "100",
+            aperture: "7.1",
+            shutterSpeed: "1/125",
+            iso: "160",
+            captureDate: long,
+            showsHistogram: true,
+            userName: long
+        )
+        let framed = try XCTUnwrap(PrintWatermarkRenderer.compose(photo: photo, settings: settings, context: context))
+        let layout = try XCTUnwrap(PrintWatermarkFrameLayout.make(imageSize: photo.extent.size, settings: settings))
+        let rendered = try pixels(framed)
+        let band = Int(layout.bandHeight)
+        let inset = Int((PrintWatermarkMetrics.horizontalInset * layout.bandHeight).rounded(.down))
+        var inkedInside = 0
+        for y in 0..<band {
+            for x in 0..<rendered.width where rendered.rgb(x: x, y: y).allSatisfy({ $0 < 200 }) {
+                XCTAssertTrue(x >= inset - 1 && x <= rendered.width - inset,
+                              "띠 안쪽 여백 밖에 글자가 그려졌다 (\(x), \(y))")
+                inkedInside += 1
+            }
+        }
+        XCTAssertGreaterThan(inkedInside, 100, "줄어든 글이 실제로 그려져야 한다")
+    }
+
     func testHistogramColumnsCountDisplayBrightness() throws {
         let black = CIImage(color: CIColor(red: 0, green: 0, blue: 0)).cropped(to: CGRect(x: 0, y: 0, width: 100, height: 100))
         let white = CIImage(color: CIColor(red: 1, green: 1, blue: 1)).cropped(to: CGRect(x: 100, y: 0, width: 300, height: 100))

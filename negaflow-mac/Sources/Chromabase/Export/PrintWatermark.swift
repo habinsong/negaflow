@@ -277,8 +277,6 @@ public enum PrintWatermarkMetrics {
     public static let histogramEmptyDotAlpha: CGFloat = 0.18
     /// 한 자리에 히스토그램과 이름이 함께 놓일 때의 간격, 블록 사이 최소 간격.
     public static let itemGap: CGFloat = 0.28
-    /// 글이 띠 폭을 넘으면 전체를 줄이되 이 배율 아래로는 줄이지 않는다.
-    public static let minimumFitScale: CGFloat = 0.4
     /// 블러 바탕은 사진을 이 긴 변까지 줄여 흐린다(해상도와 무관하게 같은 모양).
     public static let blurWorkingLongEdge: CGFloat = 256
     public static let blurSigma: CGFloat = 9

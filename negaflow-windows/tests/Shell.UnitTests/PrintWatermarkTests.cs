@@ -113,6 +113,30 @@ internal static class PrintWatermarkTests
         PrintWatermarkBandDrawing narrow = PrintWatermarkBandLayout.Bottom(settings, 1000, 156, 4.0, true, FixedWidth);
         Check(narrow.Texts[0].FontSize < wide.Texts[0].FontSize && !Overlaps(narrow),
             "watermark_narrow_band_scales_down_without_overlap");
+
+        // 세로 사진(띠가 좁다)에 긴 글을 넣어도 줄어들 뿐 띠의 안쪽 여백을 넘지 않습니다. 예전에는 0.4배
+        // 아래로 줄이지 않아 글이 띠(사진) 밖으로 나갔습니다.
+        string longText = string.Concat(Enumerable.Repeat("WM", 60));
+        PrintWatermarkSettings crowded = settings with
+        {
+            CameraName = longText,
+            LensName = longText,
+            CaptureDate = longText,
+            UserName = longText,
+        };
+        PrintWatermarkBandDrawing portrait = PrintWatermarkBandLayout.Bottom(crowded, 400, 52, 1.0, true, FixedWidth);
+        Check(portrait.Texts.Count == 5 && portrait.Logo is not null &&
+              StaysInside(portrait, 400, PrintWatermarkMetrics.HorizontalInset * 52) && !Overlaps(portrait),
+            "watermark_long_text_stays_inside_a_portrait_band");
+    }
+
+    private static bool StaysInside(PrintWatermarkBandDrawing drawing, double width, double inset)
+    {
+        List<PrintRect> rectangles = [.. drawing.Texts.Select(text => new PrintRect(text.X, text.Y, text.Width, text.FontSize))];
+        if (drawing.Logo is { } logo) { rectangles.Add(logo); }
+        if (drawing.Histogram is { } histogram) { rectangles.Add(histogram); }
+        if (drawing.Separator is { } separator) { rectangles.Add(separator); }
+        return rectangles.All(rect => rect.X >= inset - 1e-6 && rect.MaxX <= width - inset + 1e-6);
     }
 
     private static void VerifyTopPlacementFallsBackWithoutTopBand()

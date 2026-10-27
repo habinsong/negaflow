@@ -232,7 +232,6 @@ public static class PrintWatermarkMetrics
     public const double HistogramDotFill = 0.7;
     public const double HistogramEmptyDotAlpha = 0.18;
     public const double ItemGap = 0.28;
-    public const double MinimumFitScale = 0.4;
     public const double BlurWorkingLongEdge = 256;
     public const double BlurSigma = 9;
 

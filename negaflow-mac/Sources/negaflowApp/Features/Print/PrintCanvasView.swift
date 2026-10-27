@@ -303,14 +303,16 @@ private struct PrintSingleImagePageView: View {
         }
     }
 
-    /// 띠까지 그린 결과가 아직이면 사진만 띠 자리를 비워 둔 채 보여 준다(판 배치는 그대로).
+    /// 띠까지 그린 결과를 보여 준다. 설정·현상본이 바뀌어 새로 그리는 동안에는 같은 사진의 직전 결과를
+    /// 그대로 둔다 — 비워 두면 글자 하나, 현상본 하나마다 띠가 사라졌다 나타나며 깜빡인다(사용자 신고).
+    /// 위 띠를 켜고 끄는 것처럼 비율이 크게 달라질 때만 사진만 띠 자리를 비워 둔 채 보여 준다.
     @ViewBuilder
     private func framedUnit(
         image: NSImage,
         page: PrintPagePlan,
         unitFrame: PrintWatermarkFrameLayout
     ) -> some View {
-        if let framedPreview, framedPreview.request == framedPreviewRequest {
+        if let framedPreview, showsFramedPreview(framedPreview, for: unitFrame) {
             Image(nsImage: framedPreview.image)
                 .resizable()
                 .interpolation(.high)
@@ -331,6 +333,15 @@ private struct PrintSingleImagePageView: View {
         }
     }
 
+    private func showsFramedPreview(_ preview: PrintFramedPreview, for unitFrame: PrintWatermarkFrameLayout) -> Bool {
+        if preview.request == framedPreviewRequest { return true }
+        guard preview.request.frameID == ObjectIdentifier(frame),
+              preview.image.size.height > 0, unitFrame.frameSize.height > 0 else { return false }
+        let shown = preview.image.size.width / preview.image.size.height
+        let wanted = unitFrame.frameSize.width / unitFrame.frameSize.height
+        return abs(shown / wanted - 1) < 0.08
+    }
+
     private var framedPreviewRequest: PrintFramedPreviewRequest? {
         guard let image = frame.developedImage ?? frame.thumbnailImage,
               let page = pagePlan(for: image),
@@ -338,6 +349,7 @@ private struct PrintSingleImagePageView: View {
             return nil
         }
         return PrintFramedPreviewRequest(
+            frameID: ObjectIdentifier(frame),
             imageID: ObjectIdentifier(image),
             referenceID: frame.thumbnailImage.map(ObjectIdentifier.init),
             settings: page.composition

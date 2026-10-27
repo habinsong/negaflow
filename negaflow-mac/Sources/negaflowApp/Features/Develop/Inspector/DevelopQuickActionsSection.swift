@@ -90,11 +90,12 @@ struct QuickTogglePill: View {
         } label: {
             Group {
                 if isCompact {
+                    // 켜짐 점은 글 앞 여백(13) 한가운데에 둔다 — 알약 가장자리와 글 양쪽에 4씩 남는다.
                     Text(title)
                         .multilineTextAlignment(.center)
                         .overlay(alignment: .leading) {
                             if isOn.wrappedValue {
-                                Circle().frame(width: 5, height: 5).offset(x: -5)
+                                Circle().frame(width: 5, height: 5).offset(x: -9)
                             }
                         }
                 } else {
@@ -105,7 +106,7 @@ struct QuickTogglePill: View {
                 .lineLimit(1)
                 .minimumScaleFactor(AppTypography.minimumScaleFactor)
                 .frame(maxWidth: isCompact ? nil : .infinity, minHeight: isCompact ? 22 : 32)
-                .padding(.horizontal, isCompact ? 6 : 8)
+                .padding(.horizontal, isCompact ? 13 : 8)
                 .foregroundStyle(isOn.wrappedValue ? Color.accentColor : Color.primary)
                 .background(
                     isOn.wrappedValue

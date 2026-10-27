@@ -280,7 +280,7 @@
                         x:Name="LayoutTemplateNameBox" x:FieldModifier="internal"
                         Grid.Column="1"
                         AutomationProperties.AutomationId="negaflow.print.template.name"
-                        Style="{StaticResource NegaflowInspectorTextBoxStyle}"
+                        Style="{StaticResource NegaflowPrintTextFieldStyle}"
                         MaxLength="80"
                         TextChanged="OnLayoutTemplateNameChanged" />
                     <Button

@@ -13,6 +13,8 @@ struct PrintPagePlan {
 
 /// 띠 포함 미리보기를 다시 그릴지 가르는 열쇠. 화면 이미지(객체)가 바뀌거나 설정이 바뀌면 다시 그린다.
 struct PrintFramedPreviewRequest: Equatable, Sendable {
+    /// 어느 사진의 미리보기인지. 새로 그리는 동안 직전 결과를 보여 줄 때 다른 사진의 것을 걸지 않는다.
+    let frameID: ObjectIdentifier
     let imageID: ObjectIdentifier
     /// 블러 바탕·히스토그램에 쓰는 필름스트립 썸네일. 바뀌면 다시 그린다.
     let referenceID: ObjectIdentifier?

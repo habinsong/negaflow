@@ -16,7 +16,11 @@ namespace Negaflow.Shell.Views;
 /// </summary>
 internal static class PrintWatermarkRaster
 {
-    private static readonly FontFamily Font = new("Segoe UI");
+    /// <summary>
+    /// 띠 글꼴입니다. macOS 는 Helvetica Neue(굵게·보통)를 씁니다. Windows 에는 그 글꼴이 없어 Helvetica 와
+    /// 글자 폭을 맞춰 만든 Arial 을 씁니다 — Segoe UI 는 글자 모양과 폭이 달라 띠가 맥과 다르게 짜였습니다.
+    /// </summary>
+    private static readonly FontFamily Font = new("Arial");
 
     /// <summary>띠 글자 색입니다. macOS 와 같은 값 — 흰 바탕은 검정·회색, 검정 바탕은 모두 흰색.</summary>
     internal static Windows.UI.Color Ink(PrintWatermarkInk ink, bool secondary) => ink == PrintWatermarkInk.Black
@@ -39,12 +43,30 @@ internal static class PrintWatermarkRaster
         IsTextScaleFactorEnabled = false,
     };
 
-    /// <summary>글 한 줄의 폭입니다. 미리보기와 판이 같은 측정을 씁니다.</summary>
-    internal static double Measure(string text, double fontSize, bool bold)
+    /// <summary>
+    /// 글 한 줄의 폭입니다. 미리보기와 판이 같은 측정을 씁니다. 글자를 그릴 화면 트리(<paramref name="host"/>)에
+    /// 잠깐 붙여 그릴 때와 같은 조건에서 잽니다 — 띠 배치는 이 폭으로 오른쪽 블록의 시작점을 정하므로
+    /// 폭이 실제보다 작으면 블록이 오른쪽으로 밀려 띠 밖으로 나갑니다.
+    /// </summary>
+    internal static double Measure(Panel? host, string text, double fontSize, bool bold)
     {
         TextBlock block = TextBlockFor(new PrintWatermarkTextItem(text, 0, 0, 0, fontSize, bold, false), Microsoft.UI.Colors.Black);
-        block.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
-        return block.DesiredSize.Width;
+        Windows.Foundation.Size unbounded = new(double.PositiveInfinity, double.PositiveInfinity);
+        if (host is null)
+        {
+            block.Measure(unbounded);
+            return block.DesiredSize.Width;
+        }
+        host.Children.Add(block);
+        try
+        {
+            block.Measure(unbounded);
+            return block.DesiredSize.Width;
+        }
+        finally
+        {
+            host.Children.Remove(block);
+        }
     }
 
     /// <summary>글 한 줄을 BGRA(premultiplied) 화소로 만듭니다. 그릴 수 없으면 null 입니다.</summary>

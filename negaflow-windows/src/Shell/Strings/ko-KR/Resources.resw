@@ -1638,7 +1638,7 @@
   <data name="printWatermarkCamera.Text" xml:space="preserve"><value>카메라</value></data>
   <data name="printWatermarkLens.Text" xml:space="preserve"><value>렌즈</value></data>
   <data name="printWatermarkLogo.Text" xml:space="preserve"><value>로고</value></data>
-  <data name="printWatermarkChooseLogo.Text" xml:space="preserve"><value>이미지 선택…</value></data>
+  <data name="printWatermarkChooseLogo.Text" xml:space="preserve"><value>이미지 선택</value></data>
   <data name="printWatermarkRemoveLogo.Text" xml:space="preserve"><value>negaflow 로고로 되돌리기</value></data>
   <data name="printWatermarkLogoFile.Text" xml:space="preserve"><value>로고 파일</value></data>
   <data name="printWatermarkLogoMissing.Text" xml:space="preserve"><value>로고 파일을 찾을 수 없습니다:</value></data>

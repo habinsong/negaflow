@@ -57,12 +57,13 @@
                         <primitives:ToggleButton x:Name="AutoBalanceToggle"
                                                  Style="{StaticResource NegaflowPillToggleStyle}"
                                                  HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                 FontSize="11" Padding="6,0" MinHeight="22"
+                                                 FontSize="11" Padding="13,0" MinHeight="22"
                                                  AutomationProperties.AutomationId="negaflow.develop.auto-balance"
                                                  Click="OnAutoBalanceClicked">
+                            <!-- 켜짐 점은 글 앞 여백(13) 한가운데에 둡니다 — 알약 가장자리와 글 양쪽에 4씩 남습니다. -->
                             <Grid HorizontalAlignment="Center">
                                 <Ellipse x:Name="AutoBalanceIcon" Width="5" Height="5" VerticalAlignment="Center"
-                                         HorizontalAlignment="Left" Margin="-5,0,0,0" Visibility="Collapsed"
+                                         HorizontalAlignment="Left" Margin="-9,0,0,0" Visibility="Collapsed"
                                          Fill="{ThemeResource TextFillColorPrimaryBrush}" />
                                 <TextBlock x:Name="AutoBalanceText" TextTrimming="CharacterEllipsis"
                                            TextAlignment="Center"

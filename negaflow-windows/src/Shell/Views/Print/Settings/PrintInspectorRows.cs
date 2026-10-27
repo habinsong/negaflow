@@ -199,10 +199,20 @@ public sealed class PrintInspectorInlineField : ContentControl
         set => SetValue(LabelProperty, value);
     }
 
+    /// <remarks>
+    /// 글자 입력칸은 라벨 옆 남는 폭을 다 씁니다(macOS <c>.frame(maxWidth: .infinity)</c>). 오른쪽
+    /// 정렬로 두면 칸이 글자 폭(최소 폭)만큼만 남아 좁아집니다. 고르기·단추는 오른쪽에 붙입니다.
+    /// </remarks>
     public new object? Content
     {
         get => control.Content;
-        set => control.Content = value;
+        set
+        {
+            control.HorizontalContentAlignment = value is TextBox
+                ? HorizontalAlignment.Stretch
+                : HorizontalAlignment.Right;
+            control.Content = value;
+        }
     }
 }
 

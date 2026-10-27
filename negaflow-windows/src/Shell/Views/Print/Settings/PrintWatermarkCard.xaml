@@ -101,12 +101,12 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <print:PrintInspectorInlineField x:Name="FocalField">
-                        <TextBox x:Name="FocalBox" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
+                        <TextBox x:Name="FocalBox" TextAlignment="Right" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
                                  AutomationProperties.AutomationId="negaflow.print.watermark.focal" TextChanged="OnTextChanged" />
                     </print:PrintInspectorInlineField>
                     <Border Grid.Column="1" Width="1" Height="30" Background="{ThemeResource NegaflowDividerBrush}" Opacity="0.45" />
                     <print:PrintInspectorInlineField x:Name="ApertureField" Grid.Column="2">
-                        <TextBox x:Name="ApertureBox" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
+                        <TextBox x:Name="ApertureBox" TextAlignment="Right" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
                                  AutomationProperties.AutomationId="negaflow.print.watermark.aperture" TextChanged="OnTextChanged" />
                     </print:PrintInspectorInlineField>
                 </Grid>
@@ -117,18 +117,17 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <print:PrintInspectorInlineField x:Name="ShutterField">
-                        <TextBox x:Name="ShutterBox" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
+                        <TextBox x:Name="ShutterBox" TextAlignment="Right" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
                                  AutomationProperties.AutomationId="negaflow.print.watermark.shutter" TextChanged="OnTextChanged" />
                     </print:PrintInspectorInlineField>
                     <Border Grid.Column="1" Width="1" Height="30" Background="{ThemeResource NegaflowDividerBrush}" Opacity="0.45" />
                     <print:PrintInspectorInlineField x:Name="IsoField" Grid.Column="2">
-                        <TextBox x:Name="IsoBox" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
+                        <TextBox x:Name="IsoBox" TextAlignment="Right" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
                                  AutomationProperties.AutomationId="negaflow.print.watermark.iso" TextChanged="OnTextChanged" />
                     </print:PrintInspectorInlineField>
                 </Grid>
                 <print:PrintInspectorInlineField x:Name="DateField">
                     <TextBox x:Name="DateBox" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
-                             PlaceholderText="2026/10/27 15:21"
                              AutomationProperties.AutomationId="negaflow.print.watermark.date" TextChanged="OnTextChanged" />
                 </print:PrintInspectorInlineField>
                 <print:PrintInspectorDivider />

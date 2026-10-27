@@ -1638,7 +1638,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="printWatermarkCamera.Text" xml:space="preserve"><value>Appareil</value></data>
   <data name="printWatermarkLens.Text" xml:space="preserve"><value>Objectif</value></data>
   <data name="printWatermarkLogo.Text" xml:space="preserve"><value>Logo</value></data>
-  <data name="printWatermarkChooseLogo.Text" xml:space="preserve"><value>Choisir une image…</value></data>
+  <data name="printWatermarkChooseLogo.Text" xml:space="preserve"><value>Choisir une image</value></data>
   <data name="printWatermarkRemoveLogo.Text" xml:space="preserve"><value>Revenir au logo negaflow</value></data>
   <data name="printWatermarkLogoFile.Text" xml:space="preserve"><value>Fichier du logo</value></data>
   <data name="printWatermarkLogoMissing.Text" xml:space="preserve"><value>Fichier du logo introuvable :</value></data>

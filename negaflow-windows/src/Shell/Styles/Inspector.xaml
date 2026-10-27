@@ -4,76 +4,10 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!--
-        인화 인스펙터의 글자 칸과 단추입니다. macOS `PrintInspectorTextField` ·
-        `PrintInspectorTransientButtonStyle`(Features/Print/PrintInspectorComponents.swift)
-        그대로입니다 — **테두리 없는 투명한 자리**이고, 마우스를 올리거나 글자를 넣을 때만
-        음영이 생깁니다. WinUI 기본 TextBox·Button 의 네모 테두리를 쓰지 않습니다.
-    -->
-
-    <Style x:Key="NegaflowInspectorTextBoxStyle" TargetType="TextBox">
-        <Setter Property="MinHeight" Value="30" />
-        <Setter Property="Padding" Value="10,0" />
-        <Setter Property="FontSize" Value="12" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="CornerRadius" Value="8" />
-        <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
-        <Setter Property="HorizontalAlignment" Value="Stretch" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="TextBox">
-                    <Grid x:Name="InspectorTextRoot" CornerRadius="{TemplateBinding CornerRadius}">
-                        <Border x:Name="InspectorTextSurface" CornerRadius="{TemplateBinding CornerRadius}" />
-                        <ScrollViewer
-                            x:Name="ContentElement"
-                            Padding="{TemplateBinding Padding}"
-                            HorizontalScrollBarVisibility="Hidden"
-                            HorizontalScrollMode="Disabled"
-                            IsHorizontalRailEnabled="False"
-                            IsTabStop="False"
-                            IsVerticalRailEnabled="False"
-                            VerticalAlignment="Center"
-                            VerticalScrollBarVisibility="Hidden"
-                            VerticalScrollMode="Disabled"
-                            ZoomMode="Disabled"
-                            AutomationProperties.AccessibilityView="Raw" />
-                        <TextBlock
-                            x:Name="PlaceholderTextContentPresenter"
-                            Margin="{TemplateBinding Padding}"
-                            VerticalAlignment="Center"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            IsHitTestVisible="False"
-                            Text="{TemplateBinding PlaceholderText}" />
-                        <VisualStateManager.VisualStateGroups>
-                            <VisualStateGroup x:Name="CommonStates">
-                                <VisualState x:Name="Normal" />
-                                <VisualState x:Name="PointerOver">
-                                    <VisualState.Setters>
-                                        <Setter Target="InspectorTextSurface.Background" Value="{ThemeResource NegaflowSubtleFillBrush}" />
-                                    </VisualState.Setters>
-                                </VisualState>
-                                <VisualState x:Name="Focused">
-                                    <VisualState.Setters>
-                                        <Setter Target="InspectorTextSurface.Background" Value="{ThemeResource NegaflowHoverFillBrush}" />
-                                    </VisualState.Setters>
-                                </VisualState>
-                                <VisualState x:Name="Disabled">
-                                    <VisualState.Setters>
-                                        <Setter Target="InspectorTextRoot.Opacity" Value="0.4" />
-                                    </VisualState.Setters>
-                                </VisualState>
-                            </VisualStateGroup>
-                        </VisualStateManager.VisualStateGroups>
-                    </Grid>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <!--
-        macOS `PrintInspectorTransientButtonStyle` — 평상시 투명, 마우스 올림 primary 8%,
-        누름 12%. 라운딩 8 · 좌우 여백 10 · 최소 높이 30.
+        인화 인스펙터의 단추입니다. macOS `PrintInspectorTransientButtonStyle`
+        (Features/Print/PrintInspectorComponents.swift) — 평상시 투명, 마우스 올림 primary 8%,
+        누름 12%. 라운딩 8 · 좌우 여백 10 · 최소 높이 30. 글자 입력칸은 Segments.xaml 의
+        NegaflowPrintTextFieldStyle 입니다.
     -->
     <Style x:Key="NegaflowInspectorButtonStyle" TargetType="Button">
         <Setter Property="MinWidth" Value="0" />
