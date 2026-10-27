@@ -89,7 +89,7 @@ internal static class AutoBalanceAndDngTests
 
         DevelopRequestResult print = DevelopRequestFactory.Create(
             Frame(FilmType.ColorNegative, DevelopTarget.Print), destination, DevelopExportFormat.Dng16, plain);
-        Check(print.Refusal == DevelopRequestRefusal.UnsupportedDngTarget, "dng_refuses_the_print_target");
+        Check(print.Request is { Format: DevelopExportFormat.Dng16, OutputIccProfile: null }, "dng_accepts_the_print_target_in_a_standard_rgb_space");
         Check(DevelopRequestFactory.Create(
                 Frame(FilmType.ColorNegative, DevelopTarget.Print), @"C:\exports\IMG_0001.tif",
                 DevelopExportFormat.Tiff16, plain).Refusal != DevelopRequestRefusal.UnsupportedDngTarget,

@@ -87,14 +87,10 @@ final class AutoAdjustShortcutParityTests: XCTestCase {
         return (model, frame)
     }
 
-    /// 자동 보정은 detached 렌더를 기다리는 Task 안에서 값을 대입한다 — 완료까지 폴링한다.
+    /// 값이 0인지로 완료를 추정하지 않고 실제 자동 보정 작업을 기다린다.
     private func settle(_ model: AppModel) async throws {
-        for _ in 0..<400 {
-            try await Task.sleep(nanoseconds: 25_000_000)
-            if let frame = model.actionableFrame,
-               frame.params.exposure != 0 || frame.params.warmth != 0 || frame.params.tint != 0 {
-                return
-            }
-        }
+        let frame = try XCTUnwrap(model.actionableFrame)
+        let task = try XCTUnwrap(frame.autoToneTail ?? frame.autoWhiteBalanceTail)
+        await task.value
     }
 }

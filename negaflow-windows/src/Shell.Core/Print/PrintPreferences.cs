@@ -102,6 +102,12 @@ public sealed record PrintPreferences
     public IReadOnlyList<PrintCustomPackageItem> CustomItems { get; init; } = PrintCustomPackageSeed.Default;
 
     /// <summary>
+    /// 촬영 정보 띠(워터마크)입니다. 사진 한 장씩 놓는 레이아웃에서만 판에 실립니다 — macOS
+    /// <c>PrintWorkspaceSettingsStore.watermark</c>.
+    /// </summary>
+    public PrintWatermarkSettings Watermark { get; init; } = new();
+
+    /// <summary>
     /// 이 값들로 만든 판 설정입니다. 레이아웃 모드가 공정을 고르면 그 겉모습이 함께 갑니다 —
     /// macOS <c>presentationStyle</c> 과 같은 대응입니다.
     /// </summary>
@@ -115,6 +121,7 @@ public sealed record PrintPreferences
         PhotoAspectRatio = photoAspectRatio,
         PresentationStyle = PresentationStyleFor(LayoutMode),
         SheetBackground = SheetBackground,
+        Watermark = UsesIndividualPages(LayoutMode) && Watermark is { IsEnabled: true } ? Watermark : null,
     };
 
     public PrintPackageSettings Package() => new()
@@ -241,5 +248,7 @@ public sealed record PrintPreferences
         // 손으로 고친 파일이 판 밖의 칸을 담고 있으면 배치가 통째로 거절됩니다. 그런 칸만
         // 버리고 나머지는 살립니다 — 배치 하나 때문에 화면이 비지 않게.
         CustomItems = [.. (CustomItems ?? []).Where(item => item.IsValid)],
+        // 손으로 고친 파일의 띠 설정이 범위를 벗어나면 띠만 기본값으로 되돌립니다.
+        Watermark = Watermark is { IsValid: true } watermark ? watermark : new PrintWatermarkSettings(),
     };
 }

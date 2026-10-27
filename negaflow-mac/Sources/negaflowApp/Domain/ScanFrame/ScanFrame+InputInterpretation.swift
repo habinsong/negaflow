@@ -52,9 +52,7 @@ extension ScanFrame {
         baseRGB = nil
         rangeShape = nil
         rangeShapeAttempted = false
-        cachedSceneMeasurementsKey = nil
-        cachedInteractiveSceneMeasurements = nil
-        cachedSettledSceneMeasurements = nil
+        sceneMeasurementCache.removeAll()
         rawPreviewImage = nil
         neutralPreviewImage = nil
         mainPreviewImage = nil

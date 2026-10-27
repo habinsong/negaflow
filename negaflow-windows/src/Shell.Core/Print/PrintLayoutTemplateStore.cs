@@ -36,6 +36,12 @@ public sealed record PrintLayoutTemplateSettings
     public PrintPicturePackageTemplate PictureTemplate { get; init; } =
         PrintPicturePackageTemplate.OneLargeTwoSmall;
 
+    /// <summary>종이(배경) 색입니다. 예전 템플릿에는 없습니다(null 이면 적용할 때 지금 값을 둡니다).</summary>
+    public PrintSheetBackground? SheetBackground { get; init; }
+
+    /// <summary>촬영 정보 띠입니다. 로고까지 함께 담습니다. 예전 템플릿에는 없습니다.</summary>
+    public PrintWatermarkSettings? Watermark { get; init; }
+
     public bool IsValid =>
         Enum.IsDefined(PaperSize) &&
         Enum.IsDefined(Orientation) &&
@@ -47,7 +53,9 @@ public sealed record PrintLayoutTemplateSettings
         ContactRows is >= 1 and <= 20 &&
         ContactColumns is >= 1 and <= 20 &&
         double.IsFinite(HorizontalSpacingMm) && HorizontalSpacingMm is >= 0 and <= 50 &&
-        double.IsFinite(VerticalSpacingMm) && VerticalSpacingMm is >= 0 and <= 50;
+        double.IsFinite(VerticalSpacingMm) && VerticalSpacingMm is >= 0 and <= 50 &&
+        (SheetBackground is not { } sheet || Enum.IsDefined(sheet)) &&
+        (Watermark?.IsValid ?? true);
 
     /// <summary>지금 인화 설정에서 템플릿에 담을 부분만 떼어냅니다.</summary>
     public static PrintLayoutTemplateSettings From(PrintPreferences print)
@@ -68,6 +76,8 @@ public sealed record PrintLayoutTemplateSettings
             RotateToFit = print.RotateToFit,
             RepeatOnePhotoPerPage = print.RepeatOnePhotoPerPage,
             PictureTemplate = print.PictureTemplate,
+            SheetBackground = print.SheetBackground,
+            Watermark = print.Watermark,
         };
     }
 
@@ -90,6 +100,8 @@ public sealed record PrintLayoutTemplateSettings
             RotateToFit = RotateToFit,
             RepeatOnePhotoPerPage = RepeatOnePhotoPerPage,
             PictureTemplate = PictureTemplate,
+            SheetBackground = SheetBackground ?? print.SheetBackground,
+            Watermark = Watermark ?? print.Watermark,
         };
     }
 }

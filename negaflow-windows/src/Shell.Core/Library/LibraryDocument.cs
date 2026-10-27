@@ -252,6 +252,9 @@ public sealed partial class LibraryDocument : IDisposable
         Func<JsonObject, LibraryFrameWriteResult> edit)
         => frameEditor.EditFrameRecord(frameId, edit);
 
+    internal LibraryFrameError ReplaceFrameRecords(IReadOnlyDictionary<string, JsonObject> records)
+        => frameEditor.ReplaceFrameRecords(records);
+
     /// <summary>
     /// 계획된 frame 을 뒤에 덧붙입니다. 메모리 안에서만 바뀌며 <see cref="Save"/> 로 디스크에
     /// 갑니다.

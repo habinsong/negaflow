@@ -24,6 +24,12 @@ Einzelbild, Cyanotypie, Glasplatte und Gelatinesilber erzeugen für jedes ausgew
 
 Die drei historischen Layouts verwenden Papier, Ausrichtung, Rand, Ausgabe und Inspektor des Einzelbilds; ihre Darstellung wird auch in Export und Schnellexport gerendert. Es sind bewusst gestaltete Darstellungen, keine messtechnische Rekonstruktion einer bestimmten historischen Chemie, Platte, eines Papiers oder einer Betrachtungsbedingung.
 
+## Wasserzeichen und Layoutvorlagen
+
+Die vier Einzelfoto-Layouts können unter dem Foto einen Rand und darüber einen gleich hohen Rand ergänzen, ohne das Foto zu beschneiden. Text, Logo, Punkthistogramm und Namen stellen Sie im Layout ein. Der Hintergrund ist weiß, schwarz oder eine weichgezeichnete Filmstreifen-Miniatur. Das Logo wird über seinen Dateipfad geladen. Ist Logo eingeschaltet und keine Datei gewählt, erscheint das negaflow-Symbol. Fehlt eine gewählte Datei, entfällt nur das Logo und ein Diagnoseeintrag wird erstellt.
+
+Layoutvorlagen stellen Anordnung, Papiereinstellungen, Blattfarbe und Wasserzeichen wieder her und aktualisieren die Vorschau. DPI und Lineale bleiben unverändert. Ältere Vorlagen ohne die neuen Felder behalten die aktuelle Blattfarbe und das Wasserzeichen. Positionen sowie Quell- und Farbraumbedingungen für DNG stehen im [Ablauf von der Bibliothek zum Abzug](../product/WORKFLOW.md).
+
 ## Abzug exportieren
 
 **Abzug exportieren** direkt unter dem Schnellexport rendert Papierformat, Ausrichtung, Rand, Layout, schwarzen, grauen oder weißen Bogen, Beschriftungen, freie Texte und Schnittmarken. Dateiformat, DPI, Ordner, Benennung und Auslieferungsfarbraum stammen aus den Exporteinstellungen. Reine Bildschirmhilfen wie Farbumfangwarnung, Softproof-Simulation und Oberflächenglanz werden nicht in die Datei eingebrannt.

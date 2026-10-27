@@ -91,6 +91,35 @@ final class AutoAdjustInputRegressionTests: XCTestCase {
         }
     }
 
+    func testAutoBalanceRoundTripReusesEachModeAndInvalidatesChangedInput() throws {
+        let (model, frame, root) = try fixture()
+        defer { model.frames = []; try? FileManager.default.removeItem(at: root) }
+        let key = FilmBaseCacheKey(filmType: frame.filmType, mode: .auto,
+                                  manualBaseRGB: nil, filmStockDminID: nil)
+        for (index, on) in [true, false, true, false].enumerated() {
+            frame.updateParams { $0.autoBalance = on }
+            let snapshot = model.makeSnapshot(for: frame, baseKey: key, needsRawPreview: false,
+                needsNeutralPreview: false, needsDebugPreviews: false, needsThumbnail: false,
+                proxyMaxDimension: 128)
+            if index >= 2 {
+                XCTAssertNotNil(snapshot.cachedSceneMeasurements.inversionStats)
+                if on { XCTAssertNotNil(snapshot.cachedSceneMeasurements.mutedVibranceAmount) }
+            }
+            let result = try DevelopFrameRenderer.render(snapshot)
+            var fresh = snapshot
+            fresh.cachedSceneMeasurements = DevelopSceneMeasurements()
+            XCTAssertEqual(pixels(result.developed), pixels(try DevelopFrameRenderer.render(fresh).developed))
+            model.applyBaseCache(result, to: frame, baseKey: key)
+            model.applySceneMeasurementCache(result, to: frame, baseKey: key, proxyMaxDimension: 128,
+                                            renderedParams: snapshot.params)
+        }
+        XCTAssertNil(model.cachedSceneMeasurements(for: frame, baseKey: key,
+            proxyMaxDimension: 256).inversionStats)
+        frame.cleanRawRevision += 1
+        XCTAssertNil(model.cachedSceneMeasurements(for: frame, baseKey: key,
+            proxyMaxDimension: 128).inversionStats)
+    }
+
     func testTargetSwitchAndComparisonPreviewKeepSelectedMeasurements() throws {
         let (model, frame, root) = try fixture()
         defer { model.frames = []; try? FileManager.default.removeItem(at: root) }

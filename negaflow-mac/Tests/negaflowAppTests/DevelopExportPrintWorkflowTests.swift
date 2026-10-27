@@ -99,6 +99,20 @@ final class DevelopExportPrintWorkflowTests: XCTestCase {
         let printedImage = try XCTUnwrap(Self.loadCGImage(printOutputURL))
         XCTAssertGreaterThan(printedImage.width, exportedImage.width / 4)
         XCTAssertGreaterThan(printedImage.height, 0)
+
+        let printDNG = outputDirectory.appendingPathComponent("print.dng")
+        let dngOutcome = await model.runExportFrameTransaction(
+            frame, to: printDNG, format: .dng,
+            writeSidecar: false, writeMainFlatMaster: false, writeOriginalRaw: false,
+            options: model.printExportOptions(.standard, dpi: composition.dpi),
+            printComposition: composition, recipeIdentity: nil, reportsGlobalStatus: false
+        )
+        guard case .completed(let dngURL, _) = dngOutcome else { return XCTFail("\(dngOutcome)") }
+        XCTAssertEqual(dngURL, printDNG)
+        let dngPage = try XCTUnwrap(Self.loadCGImage(dngURL))
+        XCTAssertEqual(dngPage.width, printedImage.width)
+        XCTAssertEqual(dngPage.height, printedImage.height)
+        XCTAssertEqual(Self.meanLuma(dngPage), Self.meanLuma(printedImage), accuracy: 0.02)
     }
 
     /// 스캐너 산출 TIFF(무프로필 16bit linear)도 같은 길을 지난다.
@@ -159,8 +173,8 @@ final class DevelopExportPrintWorkflowTests: XCTestCase {
     }
 
     /// DNG 로 내보낸 파일을 앱 밖의 DNG 해석기(ImageIO)로 읽으면 화면과 같은 그림이어야 한다.
-    /// 무보정본(MAIN master)도 같은 형식으로 나가고, PRINT 타깃은 거절된다.
-    func testDNGExportMatchesTheScreenAndRejectsPrintTarget() async throws {
+    /// 무보정본(MAIN master)과 PRINT 타깃도 같은 형식으로 나간다.
+    func testDNGExportMatchesTheScreenAndSupportsPrintTarget() async throws {
         let source = try Self.writeSyntheticNegativeTIFF(width: 1_600, height: 1_067)
         defer { try? FileManager.default.removeItem(at: source) }
         let outputDirectory = FileManager.default.temporaryDirectory
@@ -217,16 +231,16 @@ final class DevelopExportPrintWorkflowTests: XCTestCase {
         XCTAssertEqual(master.pathExtension, "dng")
         XCTAssertNotNil(Self.loadCGImage(master), "무보정본도 DNG 로 나가야 한다")
 
-        // PRINT 타깃은 프린터 ICC 경계가 필요해 DNG 로는 내보낼 수 없다 — 다른 형식으로 바꾸지 않고 거절한다.
+        // PRINT 타깃도 선택한 폴더에 표준 RGB DNG로 저장한다.
         frame.updateParams { $0.developTarget = .print }
-        let rejected = await model.runExportFrameTransaction(
+        let printed = await model.runExportFrameTransaction(
             frame, to: outputDirectory.appendingPathComponent("print.dng"), format: .dng,
             writeSidecar: false, writeMainFlatMaster: false, writeOriginalRaw: false,
             options: .standard, recipeIdentity: nil, reportsGlobalStatus: false
         )
-        if case .completed = rejected { XCTFail("PRINT 타깃 DNG 내보내기가 거절돼야 한다") }
-        XCTAssertFalse(FileManager.default.fileExists(
-            atPath: outputDirectory.appendingPathComponent("print.dng").path))
+        guard case .completed(let printURL, _) = printed else { return XCTFail("\(printed)") }
+        XCTAssertEqual(printURL, outputDirectory.appendingPathComponent("print.dng"))
+        XCTAssertNotNil(Self.loadCGImage(printURL))
     }
 
     /// DNG 는 무압축 입력에서만 나간다. JPEG 원본은 선택지에서 빠지고 강제로 요청해도 거절된다(파일이 남지 않는다).
@@ -277,6 +291,99 @@ final class DevelopExportPrintWorkflowTests: XCTestCase {
         )
         if case .completed = result { XCTFail("JPEG 원본의 DNG 내보내기가 거절돼야 한다") }
         XCTAssertFalse(FileManager.default.fileExists(atPath: target.path))
+    }
+
+    /// 인화 워터마크: 사진 아래 띠가 더해진 판이 나오고, "사진 비율" 용지는 띠까지 포함한 비율을 따른다.
+    func testPrintExportAddsTheWatermarkBandBelowThePhoto() async throws {
+        let source = try Self.writeSyntheticNegativeTIFF(width: 1_600, height: 1_067)
+        defer { try? FileManager.default.removeItem(at: source) }
+        let outputDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-print-watermark-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: outputDirectory) }
+
+        let model = AppModel(
+            libraryCatalogURL: outputDirectory.appendingPathComponent("library.json"),
+            libraryDefectDirectoryURL: outputDirectory.appendingPathComponent("defects"),
+            libraryBackupDirectoryURL: outputDirectory.appendingPathComponent("Backups")
+        )
+        await model.restoreLibraryOnLaunch()
+        model.activeWorkspaceModule = .print
+        model.canvasDisplayTargetPixels = 1_280
+        let frame = ScanFrame(
+            scanIndex: 1, rawScanURL: source, filmType: .colorNegative, sourceKind: .scannerTIFF
+        )
+        model.frames = [frame]
+        XCTAssertTrue(model.assignNewPersistentFrames([frame]))
+        model.selectedFrameID = frame.id
+        await model.developFrame(frame)
+        try await Self.waitUntilDevelopedOnce(model, frame)
+
+        let composition = PrintCompositionSettings(
+            paperSize: .photoRatio,
+            marginMM: 0,
+            dpi: 150,
+            photoAspectRatio: 1_600.0 / 1_067.0,
+            watermark: PrintWatermarkSettings(
+                isEnabled: true, background: .black, bandHeightRatio: 0.1, cameraName: "Test Camera"
+            )
+        )
+        var pixel = [UInt8](repeating: 0, count: 4)
+        let context = try XCTUnwrap(CGContext(
+            data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        // 내보내기·빠른 내보내기가 장마다 거치는 같은 경로를 형식마다 지난다.
+        for format in [ExportFormat.png, .jpeg, .tiff16, .dng] {
+            let destination = outputDirectory.appendingPathComponent("print-\(format.rawValue).\(format.fileExtension)")
+            let result = await model.runExportFrameTransaction(
+                frame, to: destination, format: format,
+                writeSidecar: false, writeMainFlatMaster: false, writeOriginalRaw: false,
+                options: model.printExportOptions(.standard, dpi: composition.dpi),
+                printComposition: composition,
+                recipeIdentity: nil, reportsGlobalStatus: false
+            )
+            guard case .completed(let outputURL, _) = result else {
+                return XCTFail("\(format) 인화 내보내기가 실패했다: \(result)")
+            }
+            let image = try XCTUnwrap(Self.loadCGImage(outputURL), "\(format)")
+            // 띠 높이 = 짧은 변 1067 × 0.1 → 107. 판은 1600 × 1174 의 비율을 따른다(사진을 자르지 않는다).
+            XCTAssertEqual(
+                Double(image.width) / Double(image.height), 1_600.0 / 1_174.0, accuracy: 0.01, "\(format)"
+            )
+            // 맨 아래 가운데(띠 안, 글이 없는 자리)는 검정 바탕이다.
+            let bottom = try XCTUnwrap(image.cropping(to: CGRect(
+                x: image.width / 2, y: image.height - 3, width: 1, height: 1
+            )))
+            context.draw(bottom, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+            XCTAssertLessThan(Int(pixel[0]) + Int(pixel[1]) + Int(pixel[2]), 15, "\(format)")
+        }
+
+        // 띠 없는 일반 인화의 검정 여백도 검정이어야 한다. 현상 결과는 extent 밖에서도 값을 내는
+        // 그래프라(실측 243 회색) 판에 얹기 전에 extent 로 묶지 않으면 여백·띠가 회색으로 덮인다.
+        let plain = PrintCompositionSettings(
+            paperSize: .a6, orientation: .landscape, marginMM: 12, dpi: 150, sheetBackground: .black
+        )
+        let plainDestination = outputDirectory.appendingPathComponent("plain.png")
+        let plainResult = await model.runExportFrameTransaction(
+            frame, to: plainDestination, format: .png,
+            writeSidecar: false, writeMainFlatMaster: false, writeOriginalRaw: false,
+            options: model.printExportOptions(.standard, dpi: plain.dpi),
+            printComposition: plain,
+            recipeIdentity: nil, reportsGlobalStatus: false
+        )
+        guard case .completed(let plainURL, _) = plainResult else {
+            return XCTFail("일반 인화 내보내기가 실패했다: \(plainResult)")
+        }
+        let plainImage = try XCTUnwrap(Self.loadCGImage(plainURL))
+        for (x, y) in [(3, 3), (plainImage.width / 2, 3), (3, plainImage.height / 2)] {
+            let corner = try XCTUnwrap(plainImage.cropping(to: CGRect(x: x, y: y, width: 1, height: 1)))
+            context.draw(corner, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+            XCTAssertLessThan(
+                Int(pixel[0]) + Int(pixel[1]) + Int(pixel[2]), 15, "검정 용지 여백 (\(x),\(y))"
+            )
+        }
     }
 
     func testCameraNativeRawPreviewExportAndMainMasterAgree() async throws {

@@ -24,7 +24,23 @@ cbuffer NegativeInvertConstants : register(b0) {
     float ResponseShape;
     float LinearOutput;
     float NormalRange;
+    float OutputTone;
+    float OutputGain;
+    float OutputBlack;
+    float Padding1;
 };
+
+// core::apply_negative_output_tone의 채널별 계산을 그대로 쓴다.
+float outputToneChannel(float value) {
+    float y = OutputGain * value;
+    if (y <= 0) { return OutputBlack; }
+    if (y < 0.045) {
+        float d = 1 - y / 0.045;
+        return y + OutputBlack * d * d;
+    }
+    if (y > 0.70) { return 0.70 + 0.30 * ((y - 0.70) / (y - 0.70 + 0.30)); }
+    return y;
+}
 
 [numthreads(8, 8, 1)]
 void NegativeInvertMain(uint3 id : SV_DispatchThreadID) {
@@ -33,6 +49,11 @@ void NegativeInvertMain(uint3 id : SV_DispatchThreadID) {
     }
     uint2 coordinate = id.xy;
     float4 source = Source[coordinate];
+    if (OutputTone > 0.5) {
+        Destination[coordinate] = float4(outputToneChannel(source.r),
+            outputToneChannel(source.g), outputToneChannel(source.b), source.a);
+        return;
+    }
 
     // CPU 판 `invert_channel` 을 채널 셋에 한꺼번에 적용합니다. 채널 사이에 의존이 없습니다.
     float3 boundedTransmission = max(source.rgb, 1e-5);

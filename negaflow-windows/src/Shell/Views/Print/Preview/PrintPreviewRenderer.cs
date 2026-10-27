@@ -38,6 +38,9 @@ internal sealed class PrintPreviewRenderer
     /// </remarks>
     private readonly PrintPreviewTileCache<ImageSource> tileImages = new();
 
+    /// <summary>워터마크 띠의 참조 그림·로고를 풀어 둔 자리입니다.</summary>
+    private readonly PrintWatermarkPreview watermarkPreview;
+
     internal PrintPreviewRenderer(
         PrintPreviewSurface surface,
         Func<IReadOnlyList<LibraryFrameSnapshot>> sources,
@@ -50,6 +53,7 @@ internal sealed class PrintPreviewRenderer
         this.thumbnails = thumbnails;
         this.state = state;
         this.drawCustomEditor = drawCustomEditor;
+        watermarkPreview = new PrintWatermarkPreview(() => Draw());
     }
 
     /// <summary>
@@ -199,7 +203,15 @@ internal sealed class PrintPreviewRenderer
         PrintCompositionSettings composition,
         PrintPreferences print)
     {
-        if (PrintCompositionLayout.Make(sourceSize, composition) is not { } layout)
+        // 워터마크가 켜져 있으면 띠까지 더한 한 장으로 판을 잡습니다 — 판(`PrintSheetWriter`)과 같은
+        // 계산이며, 빈 칸(카메라·렌즈·노출)은 이 사진의 촬영 기록으로 채웁니다.
+        composition = composition with
+        {
+            Watermark = composition.Watermark?.FillingFrom(frame.AppMetadata?.FilmShot),
+        };
+        (PrintSizeMm unitSize, PrintWatermarkFrameLayout? watermarkFrame, composition) =
+            composition.PlaceUnit(sourceSize);
+        if (PrintCompositionLayout.Make(unitSize, composition) is not { } layout)
         {
             surface.PageBorder.Visibility = Visibility.Collapsed;
             return;
@@ -216,8 +228,22 @@ internal sealed class PrintPreviewRenderer
                 scale,
                 Windows.UI.Color.FromArgb(0xEB, 0x70, 0x2B, 0x0E)));
         }
+        PrintWatermarkSettings? watermark = watermarkFrame is null ? null : composition.ActiveWatermark;
+        PrintWatermarkReference? reference = watermark is null
+            ? null
+            : watermarkPreview.Reference(frame, sourceSize, watermark, composition.PresentationStyle, thumbnails());
+        PrintRect photoRect = layout.ImageRect;
+        if (watermarkFrame is { } frameLayout && watermark is not null)
+        {
+            watermarkPreview.AddBackground(surface.PageCanvas, layout.ImageRect, watermark, reference, scale);
+            photoRect = frameLayout.Place(frameLayout.ImageRect, layout.ImageRect);
+        }
         surface.PageCanvas.Children.Add(
-            ImageTile(frame, layout.ImageRect, scale, 0, composition.PresentationStyle));
+            ImageTile(frame, photoRect, scale, 0, composition.PresentationStyle));
+        if (watermarkFrame is { } bands && watermark is not null)
+        {
+            watermarkPreview.AddContent(surface.PageCanvas, layout.ImageRect, bands, watermark, reference, scale);
+        }
         foreach (PrintRect hole in layout.PerforationRects)
         {
             surface.PageCanvas.Children.Add(Rect(
@@ -842,7 +868,12 @@ internal sealed class PrintPreviewRenderer
     /// 계속 참이라, 도착할 때마다 지우면 청하기 → 도착 → 청하기 가 끝없이 돕니다(실측 초당
     /// 230회). 크기 판정은 레시피가 바뀔 때만 다시 합니다.
     /// </remarks>
-    internal void InvalidateTiles() => tileImages.Clear();
+    internal void InvalidateTiles()
+    {
+        tileImages.Clear();
+        // 새 썸네일이면 워터마크의 블러·히스토그램 참조도 바뀝니다.
+        watermarkPreview.Invalidate();
+    }
 
     /// <summary>
     /// 현상 설정이나 프루프가 바뀌었습니다. 풀어 둔 그림도, 어느 크기까지 청했는지도 모두

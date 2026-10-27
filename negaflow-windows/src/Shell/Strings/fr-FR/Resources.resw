@@ -1626,4 +1626,34 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="inputGammaEstimated.Value" xml:space="preserve"><value>Gamma estimé {0:0.0}</value></data>
   <data name="customTarget.Text" xml:space="preserve"><value>Custom</value><comment>AppLocalizedPhrase.customTargetTitle</comment></data>
   <data name="autoBalance.Text" xml:space="preserve"><value>Équilibre auto</value></data>
+  <data name="printWatermarkSection.Text" xml:space="preserve"><value>Filigrane</value></data>
+  <data name="printWatermarkBackground.Text" xml:space="preserve"><value>Fond</value></data>
+  <data name="printWatermarkWhite.Text" xml:space="preserve"><value>Blanc</value></data>
+  <data name="printWatermarkBlack.Text" xml:space="preserve"><value>Noir</value></data>
+  <data name="printWatermarkBlur.Text" xml:space="preserve"><value>Flou</value></data>
+  <data name="printWatermarkTextColor.Text" xml:space="preserve"><value>Couleur du texte</value></data>
+  <data name="printWatermarkHistogramColor.Text" xml:space="preserve"><value>Couleur de l’histogramme</value></data>
+  <data name="printWatermarkTopBand.Text" xml:space="preserve"><value>Bordure du haut</value></data>
+  <data name="printWatermarkBandHeight.Text" xml:space="preserve"><value>Hauteur de bordure</value></data>
+  <data name="printWatermarkCamera.Text" xml:space="preserve"><value>Appareil</value></data>
+  <data name="printWatermarkLens.Text" xml:space="preserve"><value>Objectif</value></data>
+  <data name="printWatermarkLogo.Text" xml:space="preserve"><value>Logo</value></data>
+  <data name="printWatermarkChooseLogo.Text" xml:space="preserve"><value>Choisir une image…</value></data>
+  <data name="printWatermarkRemoveLogo.Text" xml:space="preserve"><value>Revenir au logo negaflow</value></data>
+  <data name="printWatermarkLogoFile.Text" xml:space="preserve"><value>Fichier du logo</value></data>
+  <data name="printWatermarkLogoMissing.Text" xml:space="preserve"><value>Fichier du logo introuvable :</value></data>
+  <data name="printWatermarkLogoUnreadable.Text" xml:space="preserve"><value>Cette image ne peut pas servir de logo.</value></data>
+  <data name="printWatermarkFocalLength.Text" xml:space="preserve"><value>Focale</value></data>
+  <data name="printWatermarkAperture.Text" xml:space="preserve"><value>Ouverture</value></data>
+  <data name="printWatermarkShutter.Text" xml:space="preserve"><value>Vitesse</value></data>
+  <data name="printWatermarkIso.Text" xml:space="preserve"><value>ISO</value></data>
+  <data name="printWatermarkCaptureDate.Text" xml:space="preserve"><value>Date de prise de vue</value></data>
+  <data name="printWatermarkHistogram.Text" xml:space="preserve"><value>Histogramme</value></data>
+  <data name="printWatermarkUserName.Text" xml:space="preserve"><value>Nom</value></data>
+  <data name="printWatermarkPlacement.Text" xml:space="preserve"><value>Position</value></data>
+  <data name="printWatermarkBottomCenter.Text" xml:space="preserve"><value>En bas</value></data>
+  <data name="printWatermarkTopLeading.Text" xml:space="preserve"><value>En haut à gauche</value></data>
+  <data name="printWatermarkTopCenter.Text" xml:space="preserve"><value>En haut au centre</value></data>
+  <data name="printWatermarkTopTrailing.Text" xml:space="preserve"><value>En haut à droite</value></data>
+  <data name="printWatermarkAutoFillHint.Text" xml:space="preserve"><value>Les champs appareil, objectif et exposition laissés vides reprennent la fiche de prise de vue de chaque photo.</value></data>
 </root>

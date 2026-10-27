@@ -18,11 +18,6 @@ enum ExportFrameWriter {
         beforeCommit: () throws -> Void
     ) throws -> ExportFrameResult {
         let fileManager = FileManager.default
-        // PRINT 타깃은 프린터 ICC 로 끝나는 출력 경계다. DNG 는 그 프로파일을 담지 못하므로 다른
-        // 출력으로 조용히 바꾸지 않고 거절한다.
-        if snapshot.format == .dng, snapshot.params.developTarget == .print {
-            throw ChromabaseError.writeFailed("DNG export does not support the PRINT target; use TIFF, PNG or JPEG")
-        }
         // DNG 는 무압축 입력(TIFF · 카메라 RAW · DNG)에서만 낸다. JPEG · PNG · HEIC 원본은 거절한다.
         if snapshot.format == .dng, ImageLoader.isExcludedFromDNGExport(snapshot.rawScanURL) {
             throw ChromabaseError.writeFailed("DNG export needs an uncompressed source (TIFF, camera RAW or DNG); use TIFF, PNG or JPEG for JPEG, PNG and HEIC sources")
@@ -183,7 +178,9 @@ enum ExportFrameWriter {
                   let composed = PrintCompositionRenderer.apply(
                     to: frameRender.developedImage,
                     settings: printComposition,
-                    filmType: snapshot.filmType
+                    filmType: snapshot.filmType,
+                    watermarkReference: snapshot.watermarkReference.map { CIImage(cgImage: $0) },
+                    context: renderContext()
                   ) else {
                 throw ChromabaseError.writeFailed("invalid print composition")
             }

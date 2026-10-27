@@ -185,6 +185,7 @@ internal static class Program
         QuitAfterFailedSaveTests.Run();
         LibraryCatalogAutoRecoveryTests.Run();
         PrintLayoutTemplateTests.Run();
+        PrintWatermarkTests.Run();
 
         return Report("shell_unit_tests");
     }

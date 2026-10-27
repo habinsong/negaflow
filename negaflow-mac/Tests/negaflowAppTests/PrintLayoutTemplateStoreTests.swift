@@ -76,7 +76,11 @@ final class PrintLayoutTemplateStoreTests: XCTestCase {
 
         workspace.apply(settings)
 
-        XCTAssertEqual(workspace.templateSettings(), settings)
+        // 종이 색·워터마크가 없는 템플릿은 그 둘을 지금 값으로 남긴다. 나머지 판 설정은 그대로 들어간다.
+        var expected = settings
+        expected.sheetColor = workspace.sheetColor
+        expected.watermark = workspace.watermark
+        XCTAssertEqual(workspace.templateSettings(), expected)
         XCTAssertEqual(workspace.effectivePackageSettings()?.mode, .picturePackage)
     }
 

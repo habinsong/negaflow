@@ -188,6 +188,8 @@ public struct PrintCompositionSettings: Codable, Equatable, Sendable {
     public var photoAspectRatio: Double?
     public var presentationStyle: PrintPresentationStyle
     public var sheetBackground: PrintContactSheetBackground
+    /// 사진 아래(위)에 덧붙이는 촬영 정보 띠. 꺼져 있거나 nil 이면 사진만 놓는다.
+    public var watermark: PrintWatermarkSettings?
 
     public init(
         paperSize: PrintPaperSize = .a4,
@@ -197,7 +199,8 @@ public struct PrintCompositionSettings: Codable, Equatable, Sendable {
         perforationStyle: PrintPerforationStyle = .none,
         photoAspectRatio: Double? = nil,
         presentationStyle: PrintPresentationStyle = .standard,
-        sheetBackground: PrintContactSheetBackground = .white
+        sheetBackground: PrintContactSheetBackground = .white,
+        watermark: PrintWatermarkSettings? = nil
     ) {
         self.paperSize = paperSize
         self.orientation = orientation
@@ -207,6 +210,7 @@ public struct PrintCompositionSettings: Codable, Equatable, Sendable {
         self.photoAspectRatio = photoAspectRatio
         self.presentationStyle = presentationStyle
         self.sheetBackground = sheetBackground
+        self.watermark = watermark
     }
 
     /// 이 설정이 쓰는 실제 용지 치수.
@@ -216,6 +220,12 @@ public struct PrintCompositionSettings: Codable, Equatable, Sendable {
 
     public var isValid: Bool {
         marginMM.isFinite && (0...50).contains(marginMM) && (72...600).contains(dpi)
+            && (watermark?.isValid ?? true)
+    }
+
+    /// 실제로 그릴 워터마크(켜져 있을 때만).
+    public var activeWatermark: PrintWatermarkSettings? {
+        watermark.flatMap { $0.isEnabled ? $0 : nil }
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -227,6 +237,7 @@ public struct PrintCompositionSettings: Codable, Equatable, Sendable {
         case photoAspectRatio
         case presentationStyle
         case sheetBackground
+        case watermark
     }
 
     public init(from decoder: Decoder) throws {
@@ -248,6 +259,7 @@ public struct PrintCompositionSettings: Codable, Equatable, Sendable {
             PrintContactSheetBackground.self,
             forKey: .sheetBackground
         ) ?? .white
+        watermark = try container.decodeIfPresent(PrintWatermarkSettings.self, forKey: .watermark)
     }
 }
 
@@ -373,13 +385,72 @@ public struct PrintCompositionLayout: Equatable, Sendable {
 }
 
 public enum PrintCompositionRenderer {
+    /// 판에 놓일 한 장: 공정 겉모습을 입힌 사진, 워터마크가 켜져 있으면 띠까지 더한 것.
+    /// 화면 미리보기도 이 결과를 그대로 보여 준다.
+    ///
+    /// - Parameter reference: 블러 바탕과 히스토그램에 쓸 작은 이미지(필름스트립 썸네일). 없으면
+    ///   사진을 줄여 쓴다. 큰 사진을 다시 줄이지 않으려는 것이며 결과 모양은 같다.
+    public static func placedUnit(
+        for image: CIImage,
+        settings: PrintCompositionSettings,
+        reference: CIImage? = nil,
+        context: CIContext = ChromabaseEngine.sharedLinearRenderContext
+    ) -> CIImage? {
+        let presented = PrintPresentationRenderer.apply(
+            to: isolated(image),
+            style: settings.presentationStyle
+        )
+        guard let watermark = settings.activeWatermark else { return presented }
+        return PrintWatermarkRenderer.compose(
+            photo: presented,
+            settings: watermark,
+            reference: reference.map {
+                PrintPresentationRenderer.apply(to: isolated($0), style: settings.presentationStyle)
+            },
+            context: context
+        )
+    }
+
+    /// 현상 결과 그래프는 extent 밖에서도 값을 낸다(실측: 검정 용지 여백이 sRGB 243 회색으로 덮였다).
+    /// extent 와 같은 크기로 `cropped` 하면 그대로 돌려받아 막지 못하므로, 가장자리로 늘린 뒤 다시
+    /// 잘라 판 위에 얹는 그림을 extent 안으로 묶는다. extent 안의 화소는 바뀌지 않는다.
+    public static func isolated(_ image: CIImage) -> CIImage {
+        let extent = image.extent
+        guard !extent.isInfinite, !extent.isEmpty else { return image }
+        return image.clampedToExtent().cropped(to: extent)
+    }
+
+    /// "사진 비율" 용지는 판에 놓일 한 장(띠 포함)의 비율을 따른다. 여러 장을 내보낼 때 장마다
+    /// 자기 비율을 쓰므로 화면(장마다 계산)과 파일이 같은 용지가 된다.
+    public static func pageSettings(
+        _ settings: PrintCompositionSettings,
+        unitSize: CGSize
+    ) -> PrintCompositionSettings {
+        guard settings.paperSize == .photoRatio,
+              unitSize.width > 0, unitSize.height > 0 else { return settings }
+        var result = settings
+        result.photoAspectRatio = Double(unitSize.width / unitSize.height)
+        return result
+    }
+
     public static func apply(
         to image: CIImage,
         settings: PrintCompositionSettings,
-        filmType: FilmType = .colorPositive
+        filmType: FilmType = .colorPositive,
+        watermarkReference: CIImage? = nil,
+        context: CIContext = ChromabaseEngine.sharedLinearRenderContext
     ) -> CIImage? {
+        guard let unit = placedUnit(
+            for: image,
+            settings: settings,
+            reference: watermarkReference,
+            context: context
+        ) else {
+            return nil
+        }
+        let settings = pageSettings(settings, unitSize: unit.extent.size)
         guard let layout = PrintCompositionLayout.make(
-            sourceSize: image.extent.size,
+            sourceSize: unit.extent.size,
             settings: settings
         ) else { return nil }
 
@@ -409,11 +480,7 @@ public enum PrintCompositionRenderer {
             result = film.composited(over: result)
         }
 
-        let presented = PrintPresentationRenderer.apply(
-            to: image,
-            style: settings.presentationStyle
-        )
-        let placed = place(presented, in: layout.imageRect)
+        let placed = place(unit, in: layout.imageRect)
         result = placed.composited(over: result)
 
         for rect in layout.perforationRects {

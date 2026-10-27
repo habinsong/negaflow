@@ -31,6 +31,7 @@ internal sealed class PrintSheetExportRunner
     private readonly Action<bool, ExportProgress> progress;
     private readonly Func<string, System.Text.Json.Nodes.JsonObject?> frameParameters;
     private readonly Func<string> engineVersion;
+    private readonly Func<LibraryFrameSnapshot, byte[]?>? thumbnailJpeg;
 
     private bool isRunning;
     private readonly OutputTaskGroup outputTasks = new();
@@ -46,7 +47,8 @@ internal sealed class PrintSheetExportRunner
         Action<string> report,
         Action<bool, ExportProgress>? progress = null,
         Func<string, System.Text.Json.Nodes.JsonObject?>? frameParameters = null,
-        Func<string>? engineVersion = null)
+        Func<string>? engineVersion = null,
+        Func<LibraryFrameSnapshot, byte[]?>? thumbnailJpeg = null)
     {
         this.sources = sources;
         this.state = state;
@@ -55,6 +57,7 @@ internal sealed class PrintSheetExportRunner
         this.progress = progress ?? ((_, _) => { });
         this.frameParameters = frameParameters ?? (_ => null);
         this.engineVersion = engineVersion ?? (() => "unknown");
+        this.thumbnailJpeg = thumbnailJpeg;
     }
 
     /// <summary>출력 탭의 "내보내기" 폴더로, 고른 형식으로 판을 씁니다.</summary>
@@ -96,10 +99,9 @@ internal sealed class PrintSheetExportRunner
 
         // 인화소 ICC 를 고릅니다. macOS `selectedPrintWorkspaceOutputProfile` 과 같은 규칙이며,
         // 있어야 하는데 없으면 **내보내지 않고** 알립니다 — 그대로 내면 랩이 받는 색이 달라집니다.
-        PrintOutputProfileChoice profile = PrintOutputProfile.For(
-            selection,
-            presentation.Current.Print,
-            presentation.Current.SoftProof);
+        PrintOutputProfileChoice profile = format == Negaflow.Interop.DevelopExportFormat.Dng16
+            ? PrintOutputProfileChoice.None
+            : PrintOutputProfile.For(selection, presentation.Current.Print, presentation.Current.SoftProof);
         if (profile.Missing)
         {
             report(AppResources.Get("printOutputProfileRequired", "Text"));
@@ -133,10 +135,10 @@ internal sealed class PrintSheetExportRunner
                 format,
                 jpegQuality,
                 profile.Profile,
-                // 장이 하나 끝날 때마다 눈금을 올립니다. 한 장짜리 판도 마지막에
-                // 1/1 로 차므로 "아무것도 안 움직인다" 가 없어집니다.
-                developed => progress(quick, new ExportProgress(developed, selection.Count)),
-                settings.TiffCompression);
+                // 원본 현상은 전체의 70%까지만 표시한다. 최종 판이 저장되기 전에 완료로 보이면 안 된다.
+                developed => progress(quick, new ExportProgress(0, 1, 0.7 * developed / selection.Count)),
+                settings.TiffCompression,
+                thumbnailJpeg);
             // 실패는 어느 단계에서 멈췄는지를 남깁니다. "쓰지 못했습니다" 만으로는 다시
             // 눌러 보는 것 말고 사용자가 할 수 있는 일이 없습니다 - 스캔 실패 줄과 같은
             // 규칙입니다.

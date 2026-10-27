@@ -299,7 +299,7 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
         Brush brush = AutoBalanceToggle.IsChecked == true
             ? AutoBalanceAccentProbe.Foreground
             : AutoBalancePrimaryProbe.Foreground;
-        AutoBalanceIcon.Foreground = brush;
+        AutoBalanceIcon.Fill = brush;
         AutoBalanceText.Foreground = brush;
     }
 

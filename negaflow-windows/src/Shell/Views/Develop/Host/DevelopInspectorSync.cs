@@ -256,7 +256,7 @@ internal sealed class DevelopInspectorSync
     /// recipe 가 통째로 바뀌었을 때 화면 전체를 다시 맞춥니다. 붙여넣기와 프리셋 적용이 같은
     /// 자리를 쓰므로 한쪽만 갱신되는 일이 없습니다.
     /// </summary>
-    private void ReloadAfterRecipeReplaced()
+    internal void ReloadAfterRecipeReplaced()
     {
         Synchronize();
         SyncBase();

@@ -181,6 +181,48 @@ void invert_matches_cpu(const GpuDevice& device, const char* const label) {
         "non-positive dmax is rejected");
 }
 
+void output_tone_matches_cpu(const GpuDevice& device, const char* const label) {
+    GpuNegativeInvert kernel{};
+    expect(GpuNegativeInvert::create(device, kernel) == GpuKernelStatus::ok, "output tone kernel");
+    auto source = make_transmission();
+    for (std::size_t index = 0; index < source.size(); ++index) {
+        const float t = static_cast<float>(index) / static_cast<float>(source.size() - 1);
+        source[index] = {-0.1F + 1.2F * t, t * 8, 0.045F + 0.655F * t, 0.8F};
+    }
+    GpuWorkingImage input{}, output{};
+    expect(GpuWorkingImage::upload(device, source.data(), width, height, width, input) == GpuImageStatus::ok,
+           "output tone upload");
+    expect(GpuWorkingImage::create(device, width, height, output) == GpuImageStatus::ok,
+           "output tone destination");
+    for (const bool mono : {false, true}) {
+        for (const float stops : {-5.0F, 0.0F, 5.0F}) {
+            auto expected = source;
+            expect(negaflow::core::apply_negative_output_tone(
+                {expected.data(), expected.size(), width, height, width}, stops, mono) ==
+                negaflow::core::KernelStatus::ok, "CPU output tone reference");
+            GpuNegativeInvertParameters parameters{};
+            parameters.output_tone = true;
+            parameters.output_gain = std::exp2(stops);
+            parameters.output_black = mono ? 0.0005F : 0.001F;
+            expect(kernel.dispatch(device, input, output, parameters) == GpuKernelStatus::ok,
+                   "GPU output tone dispatch");
+            auto actual = source;
+            expect(output.download(device, actual.data(), width) == GpuImageStatus::ok,
+                   "GPU output tone download");
+            float worst = 0;
+            for (std::size_t index = 0; index < actual.size(); ++index) {
+                worst = std::max({worst, std::abs(actual[index].red - expected[index].red),
+                    std::abs(actual[index].green - expected[index].green),
+                    std::abs(actual[index].blue - expected[index].blue),
+                    std::abs(actual[index].alpha - expected[index].alpha)});
+            }
+            std::cout << "[output-tone] " << label << " stops=" << stops << " mono=" << mono
+                      << " max-delta=" << worst << '\n';
+            expect(worst <= tolerance, "output tone matches CPU");
+        }
+    }
+}
+
 } // namespace
 
 int main() {
@@ -190,11 +232,13 @@ int main() {
         return 1;
     }
     invert_matches_cpu(warp, "warp");
+    output_tone_matches_cpu(warp, "warp");
 
     const GpuDevice hardware = GpuDevice::create(GpuDevicePreference::hardware_only);
     if (hardware.is_usable()) {
         std::cout << "[gpu] hardware: " << hardware.capability().adapter.description.data() << '\n';
         invert_matches_cpu(hardware, "hardware");
+        output_tone_matches_cpu(hardware, "hardware");
     } else {
         std::cout << "[gpu] hardware absent, WARP only\n";
     }

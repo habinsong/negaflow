@@ -1,5 +1,7 @@
 import XCTest
-import Chromabase
+@testable import Chromabase
+import ScannerKit
+import CoreGraphics
 @testable import negaflowApp
 
 @MainActor
@@ -176,6 +178,125 @@ final class DevelopSettingsTransferTests: XCTestCase {
 
         XCTAssertTrue(scope.geometry)
         XCTAssertTrue(scope.isFullDevelopScope)
+    }
+
+    func testScopedPasteReplacesEffectiveLookGroupsWithoutAccumulating() throws {
+        let source = makeFrame(index: 1, filmType: .colorNegative)
+        source.preset = try XCTUnwrap(PresetRegistry.load(named: "warm-lab"))
+        source.params.exposure = 0.4
+        source.params.warmth = 0.2
+        source.params.sharpness = 0.3
+        let copied = source.developSettingsSnapshot
+        let sourceEffective = DevelopParameters(preset: copied.preset!, overrides: copied.params)
+        for mask in 1...7 {
+            let target = makeFrame(index: 2, filmType: .colorNegative)
+            target.preset = try XCTUnwrap(PresetRegistry.load(named: "deep-slide"))
+            target.params.exposure = -0.2
+            target.params.warmth = -0.3
+            target.params.grain = 0.5
+            let before = DevelopParameters(preset: target.preset!, overrides: target.params)
+            let scope = DevelopSettingsPasteScope(base: false, tone: mask & 1 != 0,
+                color: mask & 2 != 0, detail: mask & 4 != 0, geometry: false)
+            let expected = scope.applying(source: sourceEffective, to: before)
+            for _ in 0..<3 {
+                target.applyDevelopSettingsSnapshot(copied, scope: scope)
+                let actual = target.preset.map { DevelopParameters(preset: $0, overrides: target.params) } ?? target.params
+                XCTAssertEqual(actual, expected, "mask=\(mask)")
+            }
+        }
+    }
+
+    func testBasePasteClearsThePreviousChannelCalibrationWhenSourceHasNone() {
+        let source = makeFrame(index: 1, filmType: .colorNegative)
+        let target = makeFrame(index: 2, filmType: .colorNegative)
+        target.params.channelRange = SIMD3(0.8, 1, 1.25)
+        target.applyDevelopSettingsSnapshot(source.developSettingsSnapshot,
+            scope: DevelopSettingsPasteScope(base: true, tone: false, color: false,
+                detail: false, geometry: false, inputGamma: false, baseScale: false))
+        XCTAssertNil(target.params.channelRange)
+    }
+
+    func testDefaultPasteUsesThePanelScopeAndEndsSnapshotComparison() {
+        let model = AppModel()
+        let source = makeFrame(index: 1, filmType: .colorNegative)
+        let target = makeFrame(index: 2, filmType: .colorNegative)
+        model.frames = [source, target]
+        defer { model.frames = [] }
+        model.selectedFrameID = target.id
+        source.params.exposure = 0.7
+        source.params.warmth = 0.4
+        target.params.exposure = -0.2
+        target.params.warmth = -0.3
+        let snapshot = target.makeDevelopSnapshot(name: "Before")
+        model.copyDevelopSettings(from: source)
+        model.toggleSnapshotCompare(snapshot, for: target)
+        model.developSettingsPasteScope = DevelopSettingsPasteScope(base: false, tone: true,
+            color: false, detail: false, geometry: false)
+        model.pasteDevelopSettings(to: target)
+        XCTAssertNil(model.snapshotCompareState)
+        XCTAssertEqual(target.params.exposure, 0.7)
+        XCTAssertEqual(target.params.warmth, -0.3)
+        XCTAssertNil(model.restoreSnapshotCompareState())
+        XCTAssertEqual(target.params.exposure, 0.7)
+    }
+
+    func testBulkPasteRefreshesTheRenderedPreviewAndThumbnail() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("preset-pixels-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let sourceURL = root.appendingPathComponent("negative.tiff")
+        try MockScannerBackend.writeSyntheticNegative(width: 480, height: 320, to: sourceURL)
+        let model = AppModel(libraryCatalogURL: root.appendingPathComponent("library.json"),
+            libraryDefectDirectoryURL: root.appendingPathComponent("defects"),
+            libraryBackupDirectoryURL: root.appendingPathComponent("backups"))
+        await model.restoreLibraryOnLaunch()
+        let frames = (1...3).map { ScanFrame(scanIndex: $0, rawScanURL: sourceURL,
+            filmType: .colorNegative, sourceKind: .scannerTIFF) }
+        model.frames = frames
+        defer { model.frames = [] }
+        XCTAssertTrue(model.assignNewPersistentFrames(frames))
+        model.activeWorkspaceModule = .develop
+        model.updateInteractionScope(frames.map(\.id))
+        model.selectedFrameID = frames[1].id
+        model.selectedFrameIDs = [frames[1].id, frames[2].id]
+        for frame in frames { frame.rangeShapeAttempted = true }
+        frames[0].params.exposure = 0.8
+        frames[0].params.warmth = 0.25
+        for frame in frames.dropFirst() {
+            frame.params.exposure = -0.5
+            frame.params.warmth = -0.4
+            frame.imageTransform = ImageTransform(rotation: .deg90)
+            frame.params.imageTransform = frame.imageTransform
+            await model.developFrame(frame)
+        }
+        let before = frames.dropFirst().map { $0.cachedDevelopedBase?.dataProvider?.data as Data? }
+        model.copyDevelopSettings(from: frames[0])
+        model.pasteDevelopSettings(to: frames[1])
+        await model.sequentialLibraryDevelopmentTask?.value
+        for (index, frame) in frames.dropFirst().enumerated() {
+            XCTAssertEqual(frame.params, frames[0].params)
+            let image = try XCTUnwrap(frame.cachedDevelopedBase)
+            XCTAssertNotEqual(image.dataProvider?.data as Data?, before[index])
+            XCTAssertNotNil(frame.thumbnailImage)
+            let key = FilmBaseCacheKey(filmType: frame.filmType, mode: .auto,
+                manualBaseRGB: nil, filmStockDminID: nil)
+            var fresh = model.makeSnapshot(for: frame, baseKey: key, needsRawPreview: false,
+                needsNeutralPreview: false, needsDebugPreviews: false, needsThumbnail: true,
+                proxyMaxDimension: DevelopFrameRenderer.fullMaxDimension)
+            fresh.cachedSceneMeasurements = DevelopSceneMeasurements()
+            let expected = try DevelopFrameRenderer.render(fresh)
+            XCTAssertEqual(image.dataProvider?.data as Data?, expected.developedBase.dataProvider?.data as Data?)
+        }
+        model.performUndo()
+        await model.sequentialLibraryDevelopmentTask?.value
+        for (index, frame) in frames.dropFirst().enumerated() {
+            XCTAssertEqual(frame.params.exposure, -0.5)
+            XCTAssertEqual(frame.imageTransform.rotation, .deg90)
+            XCTAssertEqual(frame.cachedDevelopedBase?.dataProvider?.data as Data?, before[index])
+        }
+        model.performRedo()
+        await model.sequentialLibraryDevelopmentTask?.value
+        for frame in frames.dropFirst() { XCTAssertEqual(frame.params, frames[0].params) }
     }
 
     private func makeFrame(index: Int, filmType: FilmType) -> ScanFrame {

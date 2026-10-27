@@ -27,6 +27,27 @@ final class PrintPackageExportWriterTests: XCTestCase {
         try await super.tearDown()
     }
 
+    func testDNGContactSheetPublishesInTheSelectedFolder() throws {
+        let sources = try [makeSource(index: 1, width: 24, height: 16, format: .dng),
+                           makeSource(index: 2, width: 16, height: 24, format: .dng)]
+        let package = PrintPackageSettings(mode: .contactSheet, contactRows: 1, contactColumns: 2)
+        let selectedFolder = root.appendingPathComponent("selected-output", isDirectory: true)
+        try FileManager.default.createDirectory(at: selectedFolder, withIntermediateDirectories: true)
+        let artifacts = try XCTUnwrap(PrintPackageArtifactLayout(folder: selectedFolder,
+            stem: "contact", pageCount: 1, format: .dng))
+        let result = try PrintPackageExportWriter.write(request(sources: sources, package: package,
+            artifacts: artifacts, format: .dng, printerOutputProfile: nil), journalDirectory: journalDirectory)
+        XCTAssertEqual(result.outputURLs, artifacts.outputURLs)
+        let url = try XCTUnwrap(result.outputURLs.first)
+        XCTAssertEqual(url.deletingLastPathComponent(), selectedFolder)
+        XCTAssertEqual(url.pathExtension, "dng")
+        let properties = try imageProperties(at: url)
+        XCTAssertEqual(properties.width, 432)
+        XCTAssertEqual(properties.height, 288)
+        let imageSource = try XCTUnwrap(CGImageSourceCreateWithURL(url as CFURL, nil))
+        XCTAssertNotNil(CGImageSourceCreateImageAtIndex(imageSource, 0, nil))
+    }
+
     func testContactSheetPublishesOneFullResolutionPageFromTwoSources() throws {
         let printerOutputProfile = try ICCOutputProfileTestFixture.snapshot()
         let sources = try [

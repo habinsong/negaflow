@@ -1,10 +1,13 @@
 #include "negaflow/output/dng_linear_export.h"
 
 #include "atomic_output_file.h"
+#include "negaflow/color/srgb_transfer.h"
+#include "negaflow/core/parallel_rows.h"
 #include "dng_tiff_block.h"
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <condition_variable>
 #include <cstdint>
@@ -357,10 +360,14 @@ private:
 
 }  // namespace
 
-DngExportResult export_working_to_dng16(
-    const negaflow::imaging::WorkingImage& working,
+namespace {
+template <typename ConvertRows>
+DngExportResult write_dng16(
+    const std::uint32_t width,
+    const std::uint32_t height,
     const std::filesystem::path& destination,
-    const DngExportLimits& requested) noexcept {
+    const DngExportLimits& requested,
+    ConvertRows&& convert_rows) noexcept {
     DngExportResult result{};
     try {
         DngExportLimits limits = requested;
@@ -372,30 +379,31 @@ DngExportResult export_working_to_dng16(
         // 줄 단위로 흘려 쓰므로 전체 인코딩 크기는 메모리 한도가 아니라 파일 크기 한도가 정합니다.
         limits.conversion.max_encoded_pixel_bytes = limits.max_artifact_bytes;
 
-        result.info.width = working.width;
-        result.info.height = working.height;
-        result.conversion_status = validate_layout(working);
-        if (result.conversion_status != WorkingToSrgb16Status::ok) {
-            result.status = DngExportStatus::working_conversion_failed;
+        result.info.width = width;
+        result.info.height = height;
+        result.conversion_status = WorkingToSrgb16Status::ok;
+
+        const std::uint64_t row_bytes = static_cast<std::uint64_t>(width) * 6U;
+        if (width == 0U || height == 0U || row_bytes > limits.max_artifact_bytes ||
+            height > limits.max_artifact_bytes / row_bytes) {
+            result.status = DngExportStatus::size_limit_exceeded;
             return result;
         }
-
-        const std::uint64_t row_bytes = static_cast<std::uint64_t>(working.width) * 6U;
-        const std::uint64_t pixel_bytes = row_bytes * working.height;
+        const std::uint64_t pixel_bytes = row_bytes * height;
         const std::uint32_t rows_per_strip = static_cast<std::uint32_t>(std::clamp<std::uint64_t>(
-            limits.strip_bytes / std::max<std::uint64_t>(row_bytes, 1U), 1U, working.height));
-        const std::uint32_t strip_count = (working.height + rows_per_strip - 1U) / rows_per_strip;
+            limits.strip_bytes / std::max<std::uint64_t>(row_bytes, 1U), 1U, height));
+        const std::uint32_t strip_count = (height + rows_per_strip - 1U) / rows_per_strip;
 
         std::vector<std::uint32_t> byte_counts{};
         byte_counts.reserve(strip_count);
         for (std::uint32_t strip = 0U; strip < strip_count; ++strip) {
-            const std::uint32_t rows = std::min(rows_per_strip, working.height - (strip * rows_per_strip));
+            const std::uint32_t rows = std::min(rows_per_strip, height - (strip * rows_per_strip));
             byte_counts.push_back(static_cast<std::uint32_t>(rows * row_bytes));
         }
         const std::vector<TiffEntry> exif = exif_entries(limits);
         // 블록 크기는 줄 오프셋 값이 아니라 항목 구성에만 달렸다. 임시 오프셋으로 한 번 만들어 크기를 잰다.
         const std::vector<std::uint8_t> sizing_block = make_tiff_header_block(
-            ifd0_entries(limits, working.width, working.height, rows_per_strip,
+            ifd0_entries(limits, width, height, rows_per_strip,
                          std::vector<std::uint32_t>(strip_count, 0U), byte_counts),
             exif);
         const std::uint64_t pixel_start = (sizing_block.size() + 15U) & ~static_cast<std::uint64_t>(15U);
@@ -410,7 +418,7 @@ DngExportResult export_working_to_dng16(
                 pixel_start + (static_cast<std::uint64_t>(strip) * rows_per_strip * row_bytes)));
         }
         std::vector<std::uint8_t> block = make_tiff_header_block(
-            ifd0_entries(limits, working.width, working.height, rows_per_strip, offsets, byte_counts), exif);
+            ifd0_entries(limits, width, height, rows_per_strip, offsets, byte_counts), exif);
         if (block.size() != sizing_block.size()) {
             result.status = DngExportStatus::structure_verification_failed;
             return result;
@@ -434,17 +442,16 @@ DngExportResult export_working_to_dng16(
 
         // 줄 묶음마다: 변환(출력 색공간의 선형 16비트, 여러 코어) → 파일에 이어 쓰기. 쓰기는 다른
         // 스레드가 하므로 변환이 다음 묶음을 만드는 동안 앞 묶음이 파일에 내려갑니다.
-        const std::size_t samples_per_strip = static_cast<std::size_t>(rows_per_strip) * working.width * 3U;
+        const std::size_t samples_per_strip = static_cast<std::size_t>(rows_per_strip) * width * 3U;
         StripWriter writer(output->stream(), samples_per_strip);
         for (std::uint32_t strip = 0U; strip < strip_count; ++strip) {
             const std::uint32_t first_row = strip * rows_per_strip;
-            const std::uint32_t rows = std::min(rows_per_strip, working.height - first_row);
+            const std::uint32_t rows = std::min(rows_per_strip, height - first_row);
             std::uint16_t* const samples = writer.acquire();
             if (samples == nullptr) {
                 break;  // 앞의 쓰기가 실패했다. 아래에서 오류를 받는다.
             }
-            const WorkingToSrgb16Status converted = convert_working_to_srgb16_rows(
-                working, first_row, rows, samples, samples_per_strip,
+            const WorkingToSrgb16Status converted = convert_rows(first_row, rows, samples, samples_per_strip,
                 result.info.clipped_color_components, limits.conversion);
             if (converted != WorkingToSrgb16Status::ok) {
                 static_cast<void>(writer.finish());  // 스트림을 놓은 뒤에 임시 파일을 버린다
@@ -487,6 +494,75 @@ DngExportResult export_working_to_dng16(
         result.status = DngExportStatus::write_failed;
         return result;
     }
+}
+
+} // namespace
+
+DngExportResult export_working_to_dng16(
+    const negaflow::imaging::WorkingImage& working,
+    const std::filesystem::path& destination,
+    const DngExportLimits& requested) noexcept {
+    const auto status = validate_layout(working);
+    if (status != WorkingToSrgb16Status::ok) {
+        DngExportResult result{};
+        result.conversion_status = status;
+        return result;
+    }
+    return write_dng16(working.width, working.height, destination, requested,
+        [&](std::uint32_t first, std::uint32_t rows, std::uint16_t* samples,
+            std::size_t capacity, std::uint64_t& clipped, const WorkingToSrgb16Limits& conversion) {
+            return convert_working_to_srgb16_rows(working, first, rows, samples, capacity, clipped, conversion);
+        });
+}
+
+DngExportResult export_srgb16_to_dng16(
+    const std::span<const std::uint16_t> page,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_samples,
+    const std::filesystem::path& destination,
+    const DngExportLimits& requested) noexcept {
+    DngExportResult invalid{};
+    if (width == 0U || height == 0U) { return invalid; }
+    if (static_cast<std::uint64_t>(width) * 3U > stride_samples) {
+        invalid.conversion_status = WorkingToSrgb16Status::invalid_stride;
+        return invalid;
+    }
+    if (static_cast<std::uint64_t>(stride_samples) * height > page.size()) {
+        invalid.conversion_status = WorkingToSrgb16Status::buffer_size_mismatch;
+        return invalid;
+    }
+    const auto decode = negaflow::color::srgb16_to_linear_table();
+    const auto matrix = negaflow::color::linear_srgb_to(requested.color_space);
+    return write_dng16(width, height, destination, requested,
+        [&](std::uint32_t first, std::uint32_t rows, std::uint16_t* samples,
+            std::size_t capacity, std::uint64_t& clipped, const WorkingToSrgb16Limits&) {
+            if (static_cast<std::uint64_t>(rows) * width * 3U > capacity) {
+                return WorkingToSrgb16Status::buffer_size_mismatch;
+            }
+            std::atomic<std::uint64_t> clipped_count{0U};
+            negaflow::core::for_each_row_block(rows, static_cast<std::uint64_t>(rows) * width * 3U,
+                [&](std::uint32_t begin, std::uint32_t count) {
+                    std::uint64_t local = 0U;
+                    for (std::uint32_t y = begin; y < begin + count; ++y) {
+                        const auto* source = page.data() + static_cast<std::size_t>(first + y) * stride_samples;
+                        auto* target = samples + static_cast<std::size_t>(y) * width * 3U;
+                        for (std::uint32_t x = 0U; x < width; ++x) {
+                            const float r = decode[source[3U * x]], g = decode[source[3U * x + 1U]],
+                                b = decode[source[3U * x + 2U]];
+                            for (std::size_t c = 0U; c < 3U; ++c) {
+                                const float v = matrix[3U * c] * r + matrix[3U * c + 1U] * g + matrix[3U * c + 2U] * b;
+                                if (v < 0.0F || v > 1.0F) { ++local; }
+                                target[3U * x + c] = static_cast<std::uint16_t>(
+                                    std::floor(std::clamp(v, 0.0F, 1.0F) * 65535.0F + 0.5F));
+                            }
+                        }
+                    }
+                    clipped_count.fetch_add(local, std::memory_order_relaxed);
+                });
+            clipped += clipped_count.load(std::memory_order_relaxed);
+            return WorkingToSrgb16Status::ok;
+        });
 }
 
 const char* dng_export_status_name(const DngExportStatus status) noexcept {

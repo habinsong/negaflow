@@ -99,10 +99,17 @@ extension AppModel {
         frame.imageTransform = snapshot.imageTransform
         frameEditBaselines[frame.id] = snapshot
 
-        if transformChanged {
+        var previousDevelop = current.params
+        var nextDevelop = snapshot.params
+        previousDevelop.imageTransform = .identity
+        nextDevelop.imageTransform = .identity
+        if transformChanged && current.filmType == snapshot.filmType,
+           current.presetID == snapshot.presetID, previousDevelop == nextDevelop {
             applyTransformFast(frame)
         } else {
-            requestDevelop(frame)
+            // 다중 Undo에서 단일 슬라이더 throttle을 쓰면 마지막 사진만 현상된다.
+            // 기하와 색 설정이 함께 바뀐 경우도 이전 색 캐시를 변형하지 않고 다시 현상한다.
+            developFramesAfterSettingsTransfer([frame])
         }
         scheduleLibrarySave()
     }

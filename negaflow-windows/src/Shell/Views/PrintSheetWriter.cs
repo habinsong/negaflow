@@ -47,7 +47,8 @@ public static partial class PrintSheetWriter
         double jpegQuality = 1.0,
         byte[]? outputIccProfile = null,
         Action<int>? onSourceDeveloped = null,
-        DevelopTiffCompression tiffCompression = DevelopTiffCompression.Lzw)
+        DevelopTiffCompression tiffCompression = DevelopTiffCompression.Lzw,
+        Func<LibraryFrameSnapshot, byte[]?>? thumbnailJpeg = null)
     {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(print);
@@ -196,21 +197,37 @@ public static partial class PrintSheetWriter
             {
                 using IDisposable _single = ExportTrace.Measure(
                     $"  compose sheet {index + 1}/{developed.Count}");
-                PrintCompositionSettings pageSettings = composition with
+                // 워터마크의 빈 칸(카메라·렌즈·노출)은 장마다 그 사진의 촬영 기록으로 채우고, 로고는
+                // 저장된 경로(비었으면 negaflow 로고)에서 읽습니다. 지워진 파일이면 로고만 빠집니다.
+                PrintWatermarkSettings? pageWatermark = composition.Watermark?.FillingFrom(sources[index].AppMetadata?.FilmShot);
+                if (pageWatermark is { IsEnabled: true })
+                {
+                    pageWatermark = pageWatermark with { LogoPng = await PrintWatermarkLogo.LoadAsync(pageWatermark) };
+                }
+                PrintCompositionSettings frameComposition = composition with
                 {
                     PhotoAspectRatio = sizes[index].Height > 0
                         ? sizes[index].Width / sizes[index].Height
                         : null,
+                    Watermark = pageWatermark,
                 };
-                if (PrintCompositionLayout.Make(sizes[index], pageSettings) is not { } layout)
+                // "사진 비율" 용지는 띠까지 더한 한 장을 따릅니다(macOS `pageSettings`).
+                (PrintSizeMm unitSize, PrintWatermarkFrameLayout? frame, PrintCompositionSettings pageSettings) =
+                    frameComposition.PlaceUnit(sizes[index]);
+                if (PrintCompositionLayout.Make(unitSize, pageSettings) is not { } layout)
                 {
                     return new PrintSheetWriteResult(PrintSheetWriteStatus.LayoutRefused, []);
                 }
+                PrintWatermarkReference? reference = frame is null || pageSettings.ActiveWatermark is not { } active
+                    ? null
+                    : await WatermarkReferenceAsync(
+                        sources[index], developed[index], sizes[index], active,
+                        pageSettings.PresentationStyle, thumbnailJpeg);
                 string path = PagePath(
                     destinationFolder, baseName, index, developed.Count, format);
                 if (!await WriteSingleAsync(
                         path, layout, pageSettings, developed[index], format, jpegQuality,
-                        outputIccProfile, tiffCompression))
+                        outputIccProfile, tiffCompression, frame, reference, textHost))
                 {
                     return new PrintSheetWriteResult(PrintSheetWriteStatus.WriteFailed, written);
                 }
@@ -313,6 +330,34 @@ public static partial class PrintSheetWriter
         return result.Succeeded;
     }
 
+    /// <summary>
+    /// 블러 바탕·히스토그램의 참조 그림입니다. 필름스트립 썸네일이 같은 비율이면 그것을 쓰고, 없거나
+    /// 오래됐으면 현상본을 긴 변 256 으로 줄여 씁니다(macOS 와 같은 순서).
+    /// </summary>
+    private static async Task<PrintWatermarkReference?> WatermarkReferenceAsync(
+        LibraryFrameSnapshot source,
+        string developedPath,
+        PrintSizeMm photoSize,
+        PrintWatermarkSettings watermark,
+        PrintPresentationStyle presentation,
+        Func<LibraryFrameSnapshot, byte[]?>? thumbnailJpeg)
+    {
+        if (watermark.Background != PrintWatermarkBackground.Blur && !watermark.ShowsHistogram)
+        {
+            return null;
+        }
+        if (thumbnailJpeg?.Invoke(source) is { Length: > 0 } jpeg &&
+            await PrintWatermarkRaster.DecodeReferenceAsync(jpeg) is { } thumbnail &&
+            PrintWatermarkReference.From(thumbnail, photoSize, watermark, presentation) is { } fromThumbnail)
+        {
+            return fromThumbnail;
+        }
+        using IRandomAccessStream stream = await PrintSheetFile.OpenAsync(developedPath, FileAccess.Read);
+        return await PrintWatermarkRaster.DecodeReferenceAsync(stream) is { } developed
+            ? PrintWatermarkReference.From(developed, photoSize, watermark, presentation)
+            : null;
+    }
+
     private static async Task<PrintSizeMm?> PixelSizeAsync(string path)
     {
         using IRandomAccessStream stream = await PrintSheetFile.OpenAsync(path, FileAccess.Read);
@@ -330,7 +375,10 @@ public static partial class PrintSheetWriter
         DevelopExportFormat format,
         double jpegQuality,
         byte[]? outputIccProfile,
-        DevelopTiffCompression tiffCompression)
+        DevelopTiffCompression tiffCompression,
+        PrintWatermarkFrameLayout? watermarkFrame = null,
+        PrintWatermarkReference? watermarkReference = null,
+        Microsoft.UI.Xaml.Controls.Panel? textHost = null)
     {
         int width = (int)layout.CanvasSize.Width;
         int height = (int)layout.CanvasSize.Height;
@@ -341,8 +389,18 @@ public static partial class PrintSheetWriter
             // 현상된 컬러 네거티브의 마스크가 남은 비노광 가장자리입니다.
             PrintPageCanvas.Fill(page, width, height, film, 0x70, 0x2B, 0x0E);
         }
+        // 워터마크가 있으면 판의 사진 자리(`ImageRect`)는 띠 포함 한 장이고, 사진은 그 안의 자리입니다.
+        PrintWatermarkSettings? watermark = watermarkFrame is null ? null : composition.ActiveWatermark;
+        PrintRect photoRect = watermarkFrame is { } frameLayout && watermark is not null
+            ? frameLayout.Place(frameLayout.ImageRect, layout.ImageRect)
+            : layout.ImageRect;
+        if (watermarkFrame is { } bands && watermark is not null)
+        {
+            PrintWatermarkPainter.PaintBackgrounds(
+                page, width, height, layout.ImageRect, bands, watermark, watermarkReference);
+        }
         if (!await PrintPageCanvas.BlitAsync(
-                page, width, height, developedPath, layout.ImageRect, 0,
+                page, width, height, developedPath, photoRect, 0,
                 composition.PresentationStyle))
         {
             return false;
@@ -350,6 +408,11 @@ public static partial class PrintSheetWriter
         foreach (PrintRect hole in layout.PerforationRects)
         {
             PrintPageCanvas.Fill(page, width, height, hole, 0xFF, 0xFF, 0xFF);
+        }
+        if (watermarkFrame is { } content && watermark is not null)
+        {
+            await PrintWatermarkPainter.PaintContentAsync(
+                page, width, height, layout.ImageRect, content, watermark, watermarkReference, textHost);
         }
         return await PrintSheetEncoder.EncodeAsync(
             destination, page, width, height, composition.Dpi, format, jpegQuality,

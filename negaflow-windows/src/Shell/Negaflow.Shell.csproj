@@ -42,6 +42,12 @@
     <ProjectReference Include="..\Shell.Core\Negaflow.Shell.Core.csproj" />
   </ItemGroup>
 
+  <!-- 인화 워터마크의 기본(negaflow) 로고. 패키지·느슨한 레이아웃·시험 어디서 돌든 같은 그림을
+       읽도록 어셈블리에 넣습니다(앱 아이콘 원본과 같은 파일). -->
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\AppIcon-1024.png" LogicalName="Negaflow.Shell.WatermarkLogo.png" />
+  </ItemGroup>
+
   <ItemGroup>
     <Content Include="..\..\assets\presets\*.json"
              Link="presets\%(Filename)%(Extension)"

@@ -24,6 +24,12 @@ Single image, cyanotype, glass plate, and gelatin silver produce one page for ea
 
 These three styles use the same paper, orientation, margin, output, and inspector controls as Single Image. They are intentional visual presentation styles and are rendered into Export and Quick Export. They are not a measured reconstruction of a particular historic chemistry, plate, paper, or viewing condition.
 
+## Watermarks and layout templates
+
+The four individual-photo layouts can add a border below the photo and an equal border above it without cropping the photo. Configure the text, logo, dotted histogram and name in Layout. The background can be white, black or a blur made from the filmstrip thumbnail. Logo files are referenced by path; turning Logo on without choosing a file uses the negaflow icon. A missing chosen file leaves out only the logo and records a diagnostic.
+
+Layout templates restore the layout, paper settings, sheet color and watermark settings, then refresh the preview. DPI and ruler settings stay as they were. Templates from before these fields were added preserve the current sheet color and watermark. See [Library to print workflow](../product/WORKFLOW.md) for field placement and DNG source and color-space rules.
+
 ## Print export
 
 **Print Export**, directly below Quick Export, renders the current page size, orientation, margins, layout, black, gray, or white sheet, captions, custom text, and crop marks. It uses the format, DPI, folder, naming, and delivery color-space settings shown in Export. Screen-only aids are not baked into the file: gamut warnings, soft-proof simulation, and paper-surface sheen.

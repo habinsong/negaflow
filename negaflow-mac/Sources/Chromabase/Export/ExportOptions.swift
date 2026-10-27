@@ -135,9 +135,9 @@ extension ExportFormat {
     }
 
     /// 인쇄 모듈의 용지 배치(페이지 합성)를 거치지 않고 프레임마다 파일 하나로 내보내는 형식.
-    /// 원본 스캔 TIFF 와 DNG 는 페이지 합성의 입력이 될 수 없다.
+    /// 원본 스캔 TIFF는 현상·페이지 합성을 건너뛴다.
     public var bypassesPrintLayout: Bool {
-        self == .rawScanTIFF || self == .dng
+        self == .rawScanTIFF
     }
 
     public var fileExtension: String {

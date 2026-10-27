@@ -220,11 +220,35 @@ public sealed record PrintCompositionSettings
 
     public PrintSheetBackground SheetBackground { get; init; } = PrintSheetBackground.White;
 
+    /// <summary>사진 아래(위)에 덧붙이는 촬영 정보 띠입니다. 꺼져 있거나 null 이면 사진만 놓습니다.</summary>
+    public PrintWatermarkSettings? Watermark { get; init; }
+
+    /// <summary>실제로 그릴 워터마크(켜져 있을 때만)입니다.</summary>
+    public PrintWatermarkSettings? ActiveWatermark => Watermark is { IsEnabled: true } watermark ? watermark : null;
+
     public PrintSizeMm PaperDimensionsMm => PrintPaper.DimensionsMm(PaperSize, PhotoAspectRatio);
 
     /// <summary>macOS 와 같은 한계입니다 — 여백 0~50mm, 해상도 72~600dpi.</summary>
     public bool IsValid =>
-        double.IsFinite(MarginMm) && MarginMm is >= 0 and <= 50 && Dpi is >= 72 and <= 600;
+        double.IsFinite(MarginMm) && MarginMm is >= 0 and <= 50 && Dpi is >= 72 and <= 600 &&
+        (Watermark?.IsValid ?? true);
+
+    /// <summary>
+    /// 판에 놓일 한 장의 크기입니다. 워터마크가 켜져 있으면 띠까지 더한 크기이며, "사진 비율"
+    /// 용지는 이 크기를 따릅니다(macOS <c>PrintCompositionRenderer.pageSettings</c>).
+    /// </summary>
+    public (PrintSizeMm UnitSize, PrintWatermarkFrameLayout? Frame, PrintCompositionSettings Page) PlaceUnit(
+        PrintSizeMm photoSize)
+    {
+        PrintWatermarkFrameLayout? frame = ActiveWatermark is { } watermark
+            ? PrintWatermarkFrameLayout.Make(photoSize, watermark)
+            : null;
+        PrintSizeMm unit = frame?.FrameSize ?? photoSize;
+        PrintCompositionSettings page = PaperSize == PrintPaperSize.PhotoRatio && unit.Height > 0
+            ? this with { PhotoAspectRatio = unit.Width / unit.Height }
+            : this;
+        return (unit, frame, page);
+    }
 }
 
 /// <summary>

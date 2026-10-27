@@ -57,19 +57,23 @@ A progress bar, percentage, completed count, and total count appear beside Apply
 
 ## Presets and copy/paste
 
-Develop settings are divided into five transferable groups.
+Develop settings have seven independently selectable groups.
 
 | Group | Values |
 |---|---|
-| Base | Film type and process, target, scanner profile, film base, Auto Levels and neutral balance |
-| Tone | Exposure, contrast, density, highlights, shadows, whites, blacks, and tone curves |
-| Color | Temperature, tint, color depth, saturation, mixer, grading, calibration, B&W toning, and film emulation |
-| Detail | Grain, sharpness, halation, clarity, vignette, noise reduction, GrainMend, and local adjustments |
-| Geometry | Crop, rotation, horizontal and vertical flips, straightening, and crop aspect |
+| Input Gamma | Source transfer interpretation |
+| Base Scale | Film-base scale |
+| Base | Film type and process, target, scanner profile, film base, channel-range calibration, Auto Balance, Auto Levels and neutral balance |
+| Tone | Exposure, contrast, density, highlights, shadows, whites, blacks and tone curves |
+| Color | Temperature, tint, color depth, vibrance, saturation, mixer, grading, calibration, B&W toning and film emulation |
+| Detail | Grain, sharpness, halation, clarity, vignette, noise reduction, GrainMend strength and local adjustments |
+| Geometry | Crop, rotation, horizontal and vertical flips, straightening and crop aspect |
 
-A full paste uses every group. A scoped paste changes only the selected groups and keeps the destination photo's other values. When several photos are selected, paste applies to the entire selection and development continues through a bounded worker queue.
+A full paste or user preset replaces the destination's develop settings. A scoped paste replaces the selected groups' effective values and preserves the others. When only part of a look is pasted, its tone, color and texture contributions are folded into the values and the look reference is cleared. This keeps an old look from being added again. Pasting the same settings repeatedly gives the same state. Menus, shortcuts and the panel use the same paste scope.
 
-User presets save the same complete develop state and geometry. Older presets or paste scopes that do not contain a Geometry field are read with Geometry included for compatibility.
+Paste and user presets apply to every selected photo. One Undo or Redo covers the whole selection; Windows validates every destination before changing any. Thumbnails and the active preview refresh from the new recipe. Original files, ratings and source-bound defect edits are not copied.
+
+User presets save the complete develop state and geometry. Older presets or paste scopes without Geometry include it for compatibility. A blank name gets the first free numbered name. Saving does not overwrite an existing preset just because its name matches.
 
 ## Without a scanner plug-in
 
@@ -84,6 +88,14 @@ Print has seven layouts: single image, contact sheet, picture package, custom pa
 Export and Quick Export count finished pages. For example, 39 photos in a 6 × 7 contact sheet become one composed file; a four-up picture package becomes 10 pages; the default custom package becomes one page; and the four individual-image layouts become 39 files in a bounded batch.
 
 Package preview reuses an existing thumbnail, developed image, or raw preview and creates only a small fast preview when none exists. Final export calculates each placement from source metadata, develops only the pixels required by that placement, prepares two to four sources concurrently, and keeps the Core Image graph connected until the final page render. A shared render context and a 512 MiB per-page source-raster budget prevent one page from expanding into an unbounded set of full-resolution intermediate images.
+
+## Print watermark
+
+Layouts that put one photo on each page (single image, cyanotype, glass plate, gelatin silver) can add a watermark border below the photo. The border is added outside the photo. Nothing is cropped. A matching border can also be added above. The paper follows the photo plus its borders when Photo is the paper size.
+
+The bottom border shows the camera with the lens below it on the left. On the right it shows a logo, then focal length, aperture, shutter speed and ISO, with the date taken below. Turn on Logo to add one. With no file chosen, the negaflow logo is used. negaflow ships no maker logos: choose your own JPEG, PNG or other image file. Settings and templates store only the file path. Drawing checks the file and reuses the cached logo while its size and modification time are unchanged. If the file has been moved or deleted, only the logo is left out; the status dot at the bottom and the diagnostics report record it. Empty camera, lens and exposure fields take the values from each photo's shot record. The date has no automatic value.
+
+The border can be white, black or a blur of the photo. On white the text is black with gray second lines. On black all text is white. On blur you choose black or white for the text and for the histogram. The histogram is drawn as columns of dots. The histogram and your name each go at the bottom center, or at the top left, center or right when the top border is on. When both sit in the same center spot they are mirrored around the center line. Blur and histogram reuse a valid filmstrip thumbnail when one is available. Otherwise they use a reduced photo image. Templates save the paper color and every watermark setting, including the text and the logo path.
 
 ## Print profiles
 
@@ -103,7 +115,7 @@ The C-print proof profile is the lab-supplied process preview. It is never silen
 
 DNG writes the developed picture as an uncompressed 16-bit linear RGB file (`PhotometricInterpretation = LinearRaw`) in the output color space you pick: sRGB, Display P3 or Adobe RGB. Tone and color are already baked in, so other apps read it as an output-referred file. The file carries copyright, scanner, software, date and film notes under the same metadata policy as TIFF. Source camera EXIF, IPTC and GPS are not copied. It takes 6 bytes per pixel, so a 24-megapixel frame is about 144 MB.
 
-DNG is offered only for uncompressed sources: TIFF, camera RAW and DNG. JPEG, PNG and HEIC sources cannot be exported to DNG. DNG is not offered in the Print module, and the `PRINT` target is refused. Both end in a printer ICC profile, which a DNG cannot carry. negaflow stops with a message instead of exporting something else. exiftool and Apple's image decoder read the file. How Lightroom or Camera Raw render it has not been measured.
+DNG is offered for uncompressed sources: TIFF, camera RAW and DNG. JPEG, PNG and HEIC sources cannot be exported to DNG. Develop, the `PRINT` target and Print layouts all support DNG. Print DNG records the composed page in standard RGB with a ColorMatrix; printer ICC conversion is skipped. DNG export uses the folder selected in Export and keeps the `.dng` extension. Completion requires the final file to be published and checked. exiftool and Apple’s image decoder read the file. Rendering in Lightroom or Camera Raw has not been measured.
 
 ## What changes the source
 

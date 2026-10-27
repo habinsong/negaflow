@@ -85,10 +85,6 @@ public static partial class DevelopRequestFactory
         {
             return DevelopRequestResult.Failure(DevelopRequestRefusal.UnsupportedAlpha);
         }
-        if (format == DevelopExportFormat.Dng16 && frame.DevelopTarget == DevelopTarget.Print)
-        {
-            return DevelopRequestResult.Failure(DevelopRequestRefusal.UnsupportedDngTarget);
-        }
         if (format == DevelopExportFormat.Dng16 && !DngExportSources.Allows(frame.SourcePath))
         {
             return DevelopRequestResult.Failure(DevelopRequestRefusal.UnsupportedDngSource);

@@ -53,6 +53,13 @@ struct SceneMeasurementCacheKey: Equatable, Sendable {
     var channelRange: SIMD3<Double>? = nil
 }
 
+struct SceneMeasurementCacheEntry {
+    let key: SceneMeasurementCacheKey
+    var interactive: DevelopSceneMeasurements?
+    var interactiveDimension: CGFloat = 0
+    var settled: DevelopSceneMeasurements?
+}
+
 // MARK: - FrameSource (프레임 raw 입력의 출처)
 //
 // 로더가 원본 파일을 어떻게 해석할지 결정한다.
@@ -245,10 +252,8 @@ final class ScanFrame: ObservableObject, Identifiable {
     // 슬라이더 값과 무관한 장면 측정(반전 밀도역·채도 게이트·스캐너 톤 앵커). 입력 raw 와
     // 베이스가 그대로면 재사용한다 — 드래그 중 프리뷰 한 장 값의 3분의 2가 이 재측정이었다.
     // 드래그용과 정착용을 따로 들고 있어야 두 패스가 서로의 측정을 밀어내지 않는다.
-    var cachedSceneMeasurementsKey: SceneMeasurementCacheKey?
-    var cachedInteractiveSceneMeasurements: DevelopSceneMeasurements?
-    var cachedInteractiveSceneMeasurementsDimension: CGFloat = 0
-    var cachedSettledSceneMeasurements: DevelopSceneMeasurements?
+    // ON/OFF를 번갈아 눌러도 직전 모드의 통계를 버리지 않는다. 화상 없이 측정값 두 묶음만 보관한다.
+    var sceneMeasurementCache: [SceneMeasurementCacheEntry] = []
 
     // 변형(회전/플립/크롭) 전 display-proxy 결과. 변형은 순수 기하 연산이라 전체 현상
     // 파이프라인을 다시 돌릴 필요 없이 이 캐시에 ImageTransformStage만 다시 적용하면 된다.

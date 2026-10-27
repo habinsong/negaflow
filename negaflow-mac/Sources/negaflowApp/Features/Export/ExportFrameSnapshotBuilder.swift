@@ -383,14 +383,16 @@ enum ExportFrameSnapshotBuilder {
             writeOriginalRaw: writeOriginalRaw,
             exportOptions: options,
             printerOutputProfile: printerOutputProfile,
-            printComposition: printComposition,
+            // 워터마크의 빈 칸(카메라·렌즈·노출)은 장마다 그 사진의 촬영 기록으로 채운다.
+            printComposition: printComposition.map { $0.fillingWatermark(from: frame) },
             exportRecipeIdentity: exportRecipeIdentity,
             appMetadataOverlay: frame.appMetadataOverlay,
             sourceMetadataSHA256: frame.sourceMetadata?.appMetadataIdentitySHA256(),
             cleanedRawFrameID: cleanedIdentity == nil ? nil : frame.id,
             cleanedRawIdentity: cleanedIdentity,
             sourceFileIdentity: sourceFileIdentity,
-            verificationLevel: verificationLevel
+            verificationLevel: verificationLevel,
+            watermarkReference: printComposition?.activeWatermark == nil ? nil : frame.watermarkReferenceImage
         )
         return ExportFrameBuildPlan(
             snapshot: snapshot,

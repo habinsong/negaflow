@@ -88,7 +88,15 @@ struct QuickTogglePill: View {
         Button {
             isOn.wrappedValue.toggle()
         } label: {
-            Label(title, systemImage: systemImage)
+            Label {
+                Text(title)
+            } icon: {
+                if isCompact {
+                    Circle().frame(width: 5, height: 5)
+                } else {
+                    Image(systemName: systemImage)
+                }
+            }
                 .font(isCompact ? .caption : nil)
                 .lineLimit(1)
                 .minimumScaleFactor(AppTypography.minimumScaleFactor)

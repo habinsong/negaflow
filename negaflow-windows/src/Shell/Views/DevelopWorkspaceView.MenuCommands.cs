@@ -118,16 +118,20 @@ public sealed partial class DevelopWorkspaceView
         RequestPreview();
     }
 
-    internal void CopyDevelopSettingsFromMenu() => _ = panel?.CopyDevelopSettings();
+    internal void CopyDevelopSettingsFromMenu()
+    {
+        if (panel?.CopyDevelopSettings() == true) { LeftPanel.PresetsPanel.Update(); }
+    }
 
     internal bool CreateVirtualCopyFromMenu() => panel?.CreateVirtualCopy() == true;
 
     /// <summary>macOS <c>pasteDevelopSettings</c> — 고른 사진이 없으면 조용히 끝납니다.</summary>
     internal void PasteDevelopSettingsFromMenu()
     {
-        if (panel is not null)
+        if (panel is not null && panel.PasteDevelopSettings() == LibraryFrameError.None)
         {
-            _ = panel.PasteDevelopSettings();
+            _ = panel.Save();
+            inspectorSync.ReloadAfterRecipeReplaced();
         }
     }
 

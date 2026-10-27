@@ -173,7 +173,11 @@ public sealed partial class PrintWorkspaceView
             // 카탈로그 항목이라 두 화면의 사이드카가 같은 값을 답니다.
             frameId => printExportHost?.FrameRecord(frameId)?["params"]
                 as System.Text.Json.Nodes.JsonObject,
-            () => printExportEngineVersion);
+            () => printExportEngineVersion,
+            // 워터마크의 블러 바탕·히스토그램은 필름스트립 썸네일로 만듭니다(화면과 같은 그림).
+            frame => printSources?.Thumbnails?.TryGet(frame.Id));
+        LayoutTab.WatermarkCard.Changed += OnWatermarkChanged;
+        LayoutTab.WatermarkCard.PickLogo = PickWatermarkLogoAsync;
         PrintExportPanel.UsesPaperLayout = true;
         // 나올 **파일 수**를 단추에 답니다. macOS `printExportOutputCount` 와 같은 계산이며,
         // 낱장 배치는 사진마다 한 판이고 콘택트 시트·사진 패키지·사용자 패키지는 한 판에
@@ -239,6 +243,53 @@ public sealed partial class PrintWorkspaceView
         printInspector?.Localize();
         LocalizeCprint();
         LocalizeLayoutTemplates();
+        LayoutTab.WatermarkCard.Localize();
+    }
+
+    /// <summary>워터마크 카드에서 값이 바뀌었습니다. 담고 판만 다시 그립니다.</summary>
+    private void OnWatermarkChanged(object? sender, EventArgs args)
+    {
+        _ = args;
+        if (workspaceState is null || sender is not Print.Settings.PrintWatermarkCard card)
+        {
+            return;
+        }
+        workspaceState.UpdatePrint(current => current with { Watermark = card.Value });
+        printPreview?.Draw();
+    }
+
+    /// <summary>
+    /// 로고로 쓸 그림 파일을 고릅니다. jpg·png 등 WIC 가 여는 범용 그림이면 되고, PNG 로 맞춰 담습니다.
+    /// 제조사 로고는 앱에 넣지 않습니다 — 사용자가 가진 파일을 받습니다.
+    /// </summary>
+    private async Task<string?> PickWatermarkLogoAsync()
+    {
+        if (printWindowId is not { } windowId)
+        {
+            return null;
+        }
+        Windows.Storage.Pickers.FileOpenPicker picker = new();
+        foreach (string extension in new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".heic", ".webp" })
+        {
+            picker.FileTypeFilter.Add(extension);
+        }
+        WinRT.Interop.InitializeWithWindow.Initialize(
+            picker,
+            Win32Interop.GetWindowFromWindowId(windowId));
+        Windows.Storage.StorageFile? file = await picker.PickSingleFileAsync();
+        if (file is null)
+        {
+            return null;
+        }
+        if (file.Path.Length > PrintWatermarkSettings.MaximumPathLength ||
+            await PrintWatermarkLogo.FromPathAsync(file.Path) is null)
+        {
+            // 열 수 없는 그림이면 고르지 않습니다. 사실은 하단 상태 점·진단에 남깁니다.
+            Diagnostics.AppErrorLog.Shared.Record(
+                AppResources.Get("printWatermarkLogoUnreadable", "Text") + " " + file.Name);
+            return null;
+        }
+        return file.Path;
     }
 
     /// <summary>
@@ -418,6 +469,10 @@ public sealed partial class PrintWorkspaceView
             return;
         }
         workspaceState.UpdatePrint(current => template.Settings.ApplyTo(current));
+        // **값만 바꾸면 화면이 그대로입니다.** 다른 설정 변경 자리와 같이 검사기와 판을 다시
+        // 맞춥니다 — 앞 판은 이 줄이 없어 템플릿을 적용해도 아무것도 바뀌지 않는 것처럼
+        // 보였습니다(사용자 신고).
+        SynchronizePrint();
     }
 
     internal void OnLayoutTemplateDeleteClicked(object sender, RoutedEventArgs args)
@@ -634,6 +689,13 @@ public sealed partial class PrintWorkspaceView
         }
         printInspector.Apply(state.Current.Print);
         ApplyCprintVisibility(state.Current.Print);
+        // 워터마크는 사진 한 장씩 놓는 레이아웃에만 들어갑니다(macOS 와 같이 그때만 구획이 보입니다).
+        LayoutTab.WatermarkCard.Visibility = PrintPreferences.UsesIndividualPages(state.Current.Print.LayoutMode)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        LayoutTab.WatermarkCard.Apply(
+            state.Current.Print.Watermark,
+            PrintSources.Count > 0 ? PrintSources[0].AppMetadata?.FilmShot : null);
         SynchronizeExportSelection();
         SeedCustomLayoutIfEmpty();
         // 셀·문구 목록은 개수가 바뀌면 통째로 다시 그립니다. 목록 안 컨트롤이 값을 바꿀

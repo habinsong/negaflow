@@ -25,14 +25,22 @@ struct alignas(16) NegativeInvertConstants final {
     float response_shape{0.0F};
     float linear_output{0.0F};
     float normal_range{1.55F};
+    float output_tone{0.0F};
+    float output_gain{1.0F};
+    float output_black{0.001F};
+    float padding{0.0F};
 };
 
-static_assert(sizeof(NegativeInvertConstants) == 64U, "four constant registers");
+static_assert(sizeof(NegativeInvertConstants) == 80U, "five constant registers");
 
 // CPU 판 `validate_parameters` 와 같은 판정입니다 — dmin·dmax 는 **양수**여야 하고
 // 응답 계수는 유한해야 합니다. 0 이나 음수 dmin 은 `log10` 에서 NaN/−inf 가 되고,
 // 그러면 화면이 통째로 죽습니다.
 [[nodiscard]] bool valid_parameters(const GpuNegativeInvertParameters& parameters) noexcept {
+    if (parameters.output_tone) {
+        return std::isfinite(parameters.output_gain) && parameters.output_gain > 0 &&
+            std::isfinite(parameters.output_black) && parameters.output_black > 0;
+    }
     for (int index = 0; index < 3; ++index) {
         if (!std::isfinite(parameters.dmin[index]) || parameters.dmin[index] <= 0.0F) {
             return false;
@@ -80,6 +88,9 @@ GpuKernelStatus GpuNegativeInvert::dispatch(
     payload.response_shape = parameters.response_shape;
     payload.linear_output = parameters.linear_output ? 1.0F : 0.0F;
     payload.normal_range = parameters.normal_range;
+    payload.output_tone = parameters.output_tone ? 1.0F : 0.0F;
+    payload.output_gain = parameters.output_gain;
+    payload.output_black = parameters.output_black;
     return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
 }
 

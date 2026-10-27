@@ -463,16 +463,17 @@ extension AppModel {
         baseKey: FilmBaseCacheKey,
         proxyMaxDimension: CGFloat
     ) -> DevelopSceneMeasurements {
-        guard frame.cachedSceneMeasurementsKey == sceneMeasurementCacheKey(for: frame, baseKey: baseKey) else {
+        let key = sceneMeasurementCacheKey(for: frame, baseKey: baseKey)
+        guard let entry = frame.sceneMeasurementCache.first(where: { $0.key == key }) else {
             return DevelopSceneMeasurements()
         }
         if proxyMaxDimension >= DevelopFrameRenderer.fullMaxDimension - 0.5 {
-            return frame.cachedSettledSceneMeasurements ?? DevelopSceneMeasurements()
+            return entry.settled ?? DevelopSceneMeasurements()
         }
-        guard abs(frame.cachedInteractiveSceneMeasurementsDimension - proxyMaxDimension) <= 0.5 else {
+        guard abs(entry.interactiveDimension - proxyMaxDimension) <= 0.5 else {
             return DevelopSceneMeasurements()
         }
-        return frame.cachedInteractiveSceneMeasurements ?? DevelopSceneMeasurements()
+        return entry.interactive ?? DevelopSceneMeasurements()
     }
 
     func applySceneMeasurementCache(
@@ -493,19 +494,20 @@ extension AppModel {
             else { return }
         }
         let key = sceneMeasurementCacheKey(for: frame, baseKey: baseKey)
-        if frame.cachedSceneMeasurementsKey != key {
-            // 입력 raw 나 베이스가 바뀌었다 — 두 슬롯 모두 옛 장면 것이다.
-            frame.cachedInteractiveSceneMeasurements = nil
-            frame.cachedInteractiveSceneMeasurementsDimension = 0
-            frame.cachedSettledSceneMeasurements = nil
-            frame.cachedSceneMeasurementsKey = key
+        var entry: SceneMeasurementCacheEntry
+        if let index = frame.sceneMeasurementCache.firstIndex(where: { $0.key == key }) {
+            entry = frame.sceneMeasurementCache.remove(at: index)
+        } else {
+            entry = SceneMeasurementCacheEntry(key: key)
         }
         if proxyMaxDimension >= DevelopFrameRenderer.fullMaxDimension - 0.5 {
-            frame.cachedSettledSceneMeasurements = result.sceneMeasurements
+            entry.settled = result.sceneMeasurements
         } else {
-            frame.cachedInteractiveSceneMeasurements = result.sceneMeasurements
-            frame.cachedInteractiveSceneMeasurementsDimension = proxyMaxDimension
+            entry.interactive = result.sceneMeasurements
+            entry.interactiveDimension = proxyMaxDimension
         }
+        frame.sceneMeasurementCache.append(entry)
+        if frame.sceneMeasurementCache.count > 2 { frame.sceneMeasurementCache.removeFirst() }
     }
 
     /// 요청 치수와 일치하는 raw 프록시 캐시. 정착 치수(fullMaxDimension) 요청은 정착 슬롯을,

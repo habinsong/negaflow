@@ -159,6 +159,8 @@ private struct PrintSingleImagePageView: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var settingsStore: PrintWorkspaceSettingsStore
     @ObservedObject var frame: ScanFrame
+    /// 워터마크 띠까지 그린 한 장. 내보내기와 같은 렌더러(`PrintCompositionRenderer.placedUnit`)로 만든다.
+    @State private var framedPreview: PrintFramedPreview?
 
     var body: some View {
         GeometryReader { proxy in
@@ -166,7 +168,8 @@ private struct PrintSingleImagePageView: View {
             // 썸네일은 현상 결과이므로 풀해상도를 기다리는 동안의 자리만 메운다.
             if let image = frame.developedImage
                 ?? frame.thumbnailImage,
-               let layout = previewLayout(for: image) {
+               let page = pagePlan(for: image) {
+                let layout = page.layout
                 let paperInset: CGFloat = settingsStore.showsRulers ? 54 : 30
                 let verticalPaperInset: CGFloat = settingsStore.showsRulers ? 42 : 24
                 let paperRect = aspectFit(
@@ -198,17 +201,31 @@ private struct PrintSingleImagePageView: View {
                             ))
                     }
 
-                    presentedImage(image)
-                        .frame(
-                            width: layout.imageRect.width * scale,
-                            height: layout.imageRect.height * scale
-                        )
-                        .position(convertedCenter(
-                            of: layout.imageRect,
-                            layout: layout,
-                            paperRect: paperRect,
-                            scale: scale
-                        ))
+                    if let unitFrame = page.unitFrame {
+                        framedUnit(image: image, page: page, unitFrame: unitFrame)
+                            .frame(
+                                width: layout.imageRect.width * scale,
+                                height: layout.imageRect.height * scale
+                            )
+                            .position(convertedCenter(
+                                of: layout.imageRect,
+                                layout: layout,
+                                paperRect: paperRect,
+                                scale: scale
+                            ))
+                    } else {
+                        presentedImage(image)
+                            .frame(
+                                width: layout.imageRect.width * scale,
+                                height: layout.imageRect.height * scale
+                            )
+                            .position(convertedCenter(
+                                of: layout.imageRect,
+                                layout: layout,
+                                paperRect: paperRect,
+                                scale: scale
+                            ))
+                    }
 
                     PrintPaperSurfaceOverlay(surface: settingsStore.paperSurface)
                         .frame(width: paperRect.width, height: paperRect.height)
@@ -223,11 +240,11 @@ private struct PrintSingleImagePageView: View {
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(
-                                width: layout.imageRect.width * scale,
-                                height: layout.imageRect.height * scale
+                                width: page.photoRect.width * scale,
+                                height: page.photoRect.height * scale
                             )
                             .position(convertedCenter(
-                                of: layout.imageRect,
+                                of: page.photoRect,
                                 layout: layout,
                                 paperRect: paperRect,
                                 scale: scale
@@ -267,6 +284,64 @@ private struct PrintSingleImagePageView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .task(id: framedPreviewRequest) {
+            guard let request = framedPreviewRequest,
+                  let source = (frame.developedImage ?? frame.thumbnailImage)?
+                    .cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+                framedPreview = nil
+                return
+            }
+            let reference = frame.watermarkReferenceImage
+            // 글자를 치는 동안 매 글자마다 다시 그리지 않도록 잠깐 모은다.
+            try? await Task.sleep(for: .milliseconds(90))
+            guard !Task.isCancelled else { return }
+            let rendered = await Task.detached(priority: .userInitiated) {
+                PrintFramedPreview.render(request, image: source, reference: reference)
+            }.value
+            guard !Task.isCancelled else { return }
+            framedPreview = rendered
+        }
+    }
+
+    /// 띠까지 그린 결과가 아직이면 사진만 띠 자리를 비워 둔 채 보여 준다(판 배치는 그대로).
+    @ViewBuilder
+    private func framedUnit(
+        image: NSImage,
+        page: PrintPagePlan,
+        unitFrame: PrintWatermarkFrameLayout
+    ) -> some View {
+        if let framedPreview, framedPreview.request == framedPreviewRequest {
+            Image(nsImage: framedPreview.image)
+                .resizable()
+                .interpolation(.high)
+        } else {
+            GeometryReader { unit in
+                let scaleX = unit.size.width / unitFrame.frameSize.width
+                let scaleY = unit.size.height / unitFrame.frameSize.height
+                presentedImage(image)
+                    .frame(
+                        width: unitFrame.imageRect.width * scaleX,
+                        height: unitFrame.imageRect.height * scaleY
+                    )
+                    .position(
+                        x: unitFrame.imageRect.midX * scaleX,
+                        y: (unitFrame.frameSize.height - unitFrame.imageRect.midY) * scaleY
+                    )
+            }
+        }
+    }
+
+    private var framedPreviewRequest: PrintFramedPreviewRequest? {
+        guard let image = frame.developedImage ?? frame.thumbnailImage,
+              let page = pagePlan(for: image),
+              page.unitFrame != nil else {
+            return nil
+        }
+        return PrintFramedPreviewRequest(
+            imageID: ObjectIdentifier(image),
+            referenceID: frame.thumbnailImage.map(ObjectIdentifier.init),
+            settings: page.composition
+        )
     }
 
     private var paperColor: Color {
@@ -342,17 +417,40 @@ private struct PrintSingleImagePageView: View {
         )
     }
 
-    private func previewLayout(for image: NSImage) -> PrintCompositionLayout? {
+    /// 이 장의 판 배치. 워터마크가 켜져 있으면 띠까지 더한 크기로 판을 잡는다(내보내기와 같은 계산).
+    private func pagePlan(for image: NSImage) -> PrintPagePlan? {
         let sourceSize = image.representations.first.map {
             CGSize(width: $0.pixelsWide, height: $0.pixelsHigh)
         } ?? image.size
-        // "사진 비율" 용지는 이 페이지의 사진을 따라간다 — 여러 장을 세로로 늘어놓아도
+        let composition = settingsStore.compositionSettings(dpi: 72).fillingWatermark(from: frame)
+        let unitFrame = composition.activeWatermark.flatMap {
+            PrintWatermarkFrameLayout.make(imageSize: sourceSize, settings: $0)
+        }
+        let unitSize = unitFrame?.frameSize ?? sourceSize
+        // "사진 비율" 용지는 이 페이지의 사진(띠 포함)을 따라간다 — 여러 장을 세로로 늘어놓아도
         // 각 장이 자기 비율의 종이 위에 놓인다.
-        var settings = settingsStore.compositionSettings(dpi: 72)
-        settings.photoAspectRatio = sourceSize.height > 0
-            ? Double(sourceSize.width / sourceSize.height)
-            : nil
-        return PrintCompositionLayout.make(sourceSize: sourceSize, settings: settings)
+        let settings = PrintCompositionRenderer.pageSettings(composition, unitSize: unitSize)
+        guard let layout = PrintCompositionLayout.make(sourceSize: unitSize, settings: settings) else {
+            return nil
+        }
+        let photoRect: CGRect
+        if let unitFrame {
+            let scale = layout.imageRect.width / unitFrame.frameSize.width
+            photoRect = CGRect(
+                x: layout.imageRect.minX + unitFrame.imageRect.minX * scale,
+                y: layout.imageRect.minY + unitFrame.imageRect.minY * scale,
+                width: unitFrame.imageRect.width * scale,
+                height: unitFrame.imageRect.height * scale
+            )
+        } else {
+            photoRect = layout.imageRect
+        }
+        return PrintPagePlan(
+            composition: composition,
+            layout: layout,
+            unitFrame: unitFrame,
+            photoRect: photoRect
+        )
     }
 
     private func aspectFit(_ size: CGSize, in bounds: CGRect) -> CGRect {

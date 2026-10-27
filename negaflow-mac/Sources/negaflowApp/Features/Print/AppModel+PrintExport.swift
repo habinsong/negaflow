@@ -70,13 +70,12 @@ extension AppModel {
             return
         }
         let options = printExportOptions(exportOptions, dpi: settings.dpi)
-        let requiresPrinterOutputProfile = exportSelection.contains {
+        let requiresPrinterOutputProfile = exportFormat.appliesPrinterOutputProfile && exportSelection.contains {
             $0.params.developTarget == .print
         }
-        let printerOutputProfile = selectedPrintWorkspaceOutputProfile(
-            requiresPrinterOutputProfile: requiresPrinterOutputProfile
-        )
-        guard !hasInvalidStoredCPrintOutputProfile else {
+        let printerOutputProfile = exportFormat.appliesPrinterOutputProfile
+            ? selectedPrintWorkspaceOutputProfile(requiresPrinterOutputProfile: requiresPrinterOutputProfile) : nil
+        guard !exportFormat.appliesPrinterOutputProfile || !hasInvalidStoredCPrintOutputProfile else {
             statusMessage = text(.printOutputProfileRequired)
             return
         }
@@ -142,13 +141,12 @@ extension AppModel {
             return
         }
         let options = printExportOptions(quickExportOptions, dpi: settings.dpi)
-        let requiresPrinterOutputProfile = exportSelection.contains {
+        let requiresPrinterOutputProfile = quickExportFormat.appliesPrinterOutputProfile && exportSelection.contains {
             $0.params.developTarget == .print
         }
-        let printerOutputProfile = selectedPrintWorkspaceOutputProfile(
-            requiresPrinterOutputProfile: requiresPrinterOutputProfile
-        )
-        guard !hasInvalidStoredCPrintOutputProfile else {
+        let printerOutputProfile = quickExportFormat.appliesPrinterOutputProfile
+            ? selectedPrintWorkspaceOutputProfile(requiresPrinterOutputProfile: requiresPrinterOutputProfile) : nil
+        guard !quickExportFormat.appliesPrinterOutputProfile || !hasInvalidStoredCPrintOutputProfile else {
             statusMessage = text(.printOutputProfileRequired)
             return
         }

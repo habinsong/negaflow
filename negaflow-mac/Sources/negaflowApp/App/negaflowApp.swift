@@ -204,6 +204,7 @@ final class AppModel: ObservableObject {
     var isApplyingPrintSettingsHistory = false
 
     @Published var copiedDevelopSettings: DevelopSettingsSnapshot?
+    @Published var developSettingsPasteScope = DevelopSettingsPasteScope.all
     @Published var snapshotCompareState: SnapshotCompareState?
     @Published var userDevelopPresets: [DevelopUserPreset] = [] {
         didSet { saveUserDevelopPresets() }
@@ -329,6 +330,7 @@ final class AppModel: ObservableObject {
         }
         .store(in: &storeCancellables)
         observePrintWorkspaceSettingsHistory()
+        observePrintWatermarkLogoProblems()
         self.printLayoutTemplateStore.objectWillChange.sink { [objectWillChange] _ in
             objectWillChange.send()
         }

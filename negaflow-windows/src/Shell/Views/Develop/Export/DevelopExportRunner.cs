@@ -82,8 +82,7 @@ internal sealed class DevelopExportRunner
     private PrintOutputProfileChoice OutputProfileFor(
         IReadOnlyList<LibraryFrameSnapshot> frames,
         DevelopExportFormat format = DevelopExportFormat.Png16) =>
-        // DNG 는 프린터 ICC 를 담지 못한다. PRINT 타깃 프레임은 요청이 거절하므로 여기서 프로파일을
-        // 찾지 않는다(찾으면 DNG 와 무관한 "프린터 프로파일 필요" 안내가 먼저 뜬다).
+        // DNG는 선택한 표준 RGB의 선형 값과 ColorMatrix를 기록한다. 프린터 ICC 변환은 적용하지 않는다.
         format == DevelopExportFormat.Dng16
             ? PrintOutputProfileChoice.None
             : view.workspaceState is { } state

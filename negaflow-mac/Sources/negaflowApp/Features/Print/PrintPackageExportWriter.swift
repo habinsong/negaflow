@@ -65,7 +65,7 @@ enum PrintPackageExportWriter {
     ) throws -> PrintPackageExportResult {
         let fileManager = FileManager.default
         let printerOutputProfile: ICCOutputProfileSnapshot?
-        if let requestedProfile = request.printerOutputProfile {
+        if request.format.appliesPrinterOutputProfile, let requestedProfile = request.printerOutputProfile {
             guard requestedProfile.validatedColorSpace() != nil else {
                 throw ChromabaseError.writeFailed("invalid print package output profile")
             }
@@ -222,6 +222,7 @@ enum PrintPackageExportWriter {
         let outputIdentities = try validateStagedPages(
             stagedURLs,
             expectedOutputProfileSHA256: expectedOutputProfileSHA256,
+            format: request.format,
             requiresExactOutputProfile: printerOutputProfile != nil,
             fileManager: fileManager
         )
@@ -230,6 +231,7 @@ enum PrintPackageExportWriter {
         guard try validateStagedPages(
             stagedURLs,
             expectedOutputProfileSHA256: expectedOutputProfileSHA256,
+            format: request.format,
             requiresExactOutputProfile: printerOutputProfile != nil,
             fileManager: fileManager
         ) == outputIdentities else {
@@ -506,15 +508,21 @@ enum PrintPackageExportWriter {
     private static func validateStagedPages(
         _ urls: [URL],
         expectedOutputProfileSHA256: String,
+        format: ExportFormat,
         requiresExactOutputProfile: Bool,
         fileManager: FileManager
     ) throws -> [RenderManifest.SourceIdentity] {
         try urls.map { url in
             let values = try url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
             let embeddedSHA256 = ICCOutputProfileSnapshot.embeddedProfileSHA256(at: url)
-            let profileIsAcceptable = requiresExactOutputProfile
-                ? embeddedSHA256 == expectedOutputProfileSHA256
-                : embeddedSHA256 != nil
+            let profileIsAcceptable: Bool
+            if format == .dng {
+                _ = try RenderManifestArtifactInspector.validate(url)
+                profileIsAcceptable = true // DNG는 ICC 대신 ColorMatrix로 색을 기록한다.
+            } else {
+                profileIsAcceptable = requiresExactOutputProfile
+                    ? embeddedSHA256 == expectedOutputProfileSHA256 : embeddedSHA256 != nil
+            }
             guard values.isRegularFile == true,
                   let fileSize = values.fileSize,
                   fileSize > 0,

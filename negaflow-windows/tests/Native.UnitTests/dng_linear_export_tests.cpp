@@ -1,6 +1,7 @@
 // DNG 내보내기 시험. 쓴 파일을 기록기와 별개로 짠 최소 TIFF 해석기로 다시 읽어 태그와 화소를 확인한다.
 // 합성 화상만 쓴다.
 #include "negaflow/output/dng_linear_export.h"
+#include "negaflow/output/print_sheet_publish.h"
 
 #include <Windows.h>
 
@@ -361,6 +362,51 @@ void test_metadata_policies(const std::filesystem::path& folder) {
     expect(copyright.exif.empty(), "copyright_only 는 EXIF IFD 가 없다");
 }
 
+void test_print_sheet_dng(const std::filesystem::path& folder) {
+    const std::uint32_t stride_samples = width * 3U + 4U;
+    std::vector<std::uint16_t> page(static_cast<std::size_t>(stride_samples) * height, 65535U);
+    std::vector<std::uint16_t> expected;
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = 0U; x < width * 3U; ++x) {
+            const auto value = static_cast<std::uint16_t>((x * 301U + y * 613U) % 65536U);
+            page[static_cast<std::size_t>(y) * stride_samples + x] = value;
+            const double encoded = static_cast<double>(value) / 65535.0;
+            const double linear = encoded <= 0.04045 ? encoded / 12.92 : std::pow((encoded + 0.055) / 1.055, 2.4);
+            expected.push_back(static_cast<std::uint16_t>(std::floor(linear * 65535.0 + 0.5)));
+        }
+    }
+    out::DngExportLimits streamed{};
+    streamed.strip_bytes = 64U;
+    const auto streamed_path = folder / L"streamed-page.dng";
+    expect(out::export_srgb16_to_dng16(page, width, height, stride_samples, streamed_path, streamed).status == out::DngExportStatus::ok,
+        "padded sRGB print rows stream into DNG");
+    const auto actual = pixels(parse(streamed_path));
+    expect(actual.size() == expected.size(), "print DNG contains the complete page");
+    for (std::size_t i = 0U; i < std::min(actual.size(), expected.size()); ++i) {
+        expect(std::abs(static_cast<int>(actual[i]) - expected[i]) <= 1, "print DNG linearization matches an independent reference");
+    }
+    out::PrintSheetPublishLimits limits{};
+    limits.output_dpi = 300U;
+    const auto path = folder / L"published-page.dng";
+    const auto published = out::publish_print_sheet(page, width, height, stride_samples * 2U, path, out::PrintSheetFormat::dng16, limits);
+    expect(published.status == out::PrintSheetPublishStatus::ok && published.info.published && std::filesystem::exists(path),
+        "print DNG is complete on disk before reporting success");
+    const auto parsed = parse(path);
+    expect(parsed.ifd0.at(262U).shorts()[0] == 34892U, "print DNG declares linear RGB");
+    expect(parsed.ifd0.at(282U).rationals()[0] == 300.0, "print DNG keeps the selected print resolution");
+    expect(pixels(parsed) == actual, "the print publisher preserves the streamed DNG pixels");
+    // 여러 row block으로 나뉘는 판도 중간 행을 빠뜨리지 않아야 한다.
+    constexpr std::uint32_t large_width = 600U, large_height = 1200U;
+    const std::vector<std::uint16_t> large_page(large_width * large_height * 3U, 32768U);
+    const auto large_path = folder / L"parallel-page.dng";
+    expect(out::export_srgb16_to_dng16(large_page, large_width, large_height, large_width * 3U,
+        large_path).status == out::DngExportStatus::ok, "large print page streams successfully");
+    const auto large_pixels = pixels(parse(large_path));
+    expect(large_pixels.size() == large_page.size() &&
+        std::ranges::all_of(large_pixels, [](const auto value) { return value >= 14027U && value <= 14029U; }),
+        "all row blocks and final strip contain the decoded grey value");
+}
+
 void test_failures_are_visible(const std::filesystem::path& folder) {
     // 이미 있는 목적지는 덮어쓰지 않고 거절한다.
     const auto existing = folder / L"existing.dng";
@@ -406,6 +452,7 @@ int main() {
     test_wide_gamut(temp.path());
     test_metadata_policies(temp.path());
     test_failures_are_visible(temp.path());
+    test_print_sheet_dng(temp.path());
     if (failures != 0) {
         std::cerr << failures << " failure(s)\n";
         return 1;

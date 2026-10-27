@@ -43,6 +43,7 @@ enum class PrintSheetFormat : std::uint8_t {
     png16 = 0,
     tiff16 = 1,
     jpeg8 = 2,
+    dng16 = 3,
 };
 
 enum class PrintSheetTiffCompression : std::uint8_t {

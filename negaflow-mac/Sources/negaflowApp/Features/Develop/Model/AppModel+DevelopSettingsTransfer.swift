@@ -55,13 +55,21 @@ extension ScanFrame {
         }
 
         let currentTransform = imageTransform
-        let scopedParams = scope.applying(source: snapshot.params, to: params)
+        let replacesLook = scope.tone && scope.color && scope.detail
+        let mixesLook = (scope.tone || scope.color || scope.detail) && !replacesLook
+        // 룩은 톤·색·질감에 걸친다. 일부만 옮기면 양쪽을 실제 적용값으로 풀고 룩 참조를 지운다.
+        let sourceParams = mixesLook
+            ? snapshot.preset.map { DevelopParameters(preset: $0, overrides: snapshot.params) } ?? snapshot.params
+            : snapshot.params
+        let destinationParams = mixesLook
+            ? preset.map { DevelopParameters(preset: $0, overrides: params) } ?? params
+            : params
+        let scopedParams = scope.applying(source: sourceParams, to: destinationParams)
         if scope.base {
             filmType = scopedParams.filmType
         }
-        if scope.tone {
-            preset = snapshot.preset
-        }
+        if replacesLook { preset = snapshot.preset }
+        else if mixesLook { preset = nil }
         let nextTransform = scope.geometry ? snapshot.imageTransform : currentTransform
         var nextParams = scopedParams
         nextParams.imageTransform = nextTransform
@@ -112,7 +120,8 @@ extension AppModel {
         statusMessage = text(AppLocalizedPhrase.developSettingsCopiedFormat, frame.displayName)
     }
 
-    func pasteDevelopSettings(to frame: ScanFrame, scope: DevelopSettingsPasteScope = .all) {
+    func pasteDevelopSettings(to frame: ScanFrame, scope requestedScope: DevelopSettingsPasteScope? = nil) {
+        let scope = requestedScope ?? developSettingsPasteScope
         guard let copiedDevelopSettings else {
             statusMessage = text(AppLocalizedPhrase.noDevelopSettingsToPaste)
             return
@@ -124,6 +133,7 @@ extension AppModel {
 
         let targetFrames = framesForContextAction(frame)
         guard !targetFrames.isEmpty else { return }
+        let restoredFrame = restoreSnapshotCompareState()
         applyTransferredSettings(to: targetFrames) { targetFrame in
             targetFrame.applyDevelopSettingsSnapshot(copiedDevelopSettings, scope: scope)
         }
@@ -139,7 +149,10 @@ extension AppModel {
             copiedDevelopSettings.sourceFrameName,
             destination
         )
-        developFramesAfterSettingsTransfer(targetFrames)
+        let targetIDs = Set(targetFrames.map(\.id))
+        let framesToDevelop = restoredFrame.map { targetIDs.contains($0.id) ? targetFrames : [$0] + targetFrames }
+            ?? targetFrames
+        developFramesAfterSettingsTransfer(framesToDevelop)
     }
 
     /// 선택한 프레임들의 recipe 교체를 기존 사진 편집 Undo의 한 단계로 묶습니다.

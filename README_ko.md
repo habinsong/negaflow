@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/ko/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="웹사이트"></a>
-  <a href="#다운로드"><img src="https://img.shields.io/badge/version-1.2.0-EF8B26" alt="버전 1.2.0"></a>
+  <a href="#다운로드"><img src="https://img.shields.io/badge/version-1.2.1-EF8B26" alt="버전 1.2.1"></a>
   <a href="negaflow-mac/docs/README_ko.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 이상"></a>
   <a href="negaflow-windows/docs/README_ko.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 이상"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 라이선스"></a>
@@ -85,9 +85,9 @@
 
 | 설치 파일 | 사용 환경 |
 |---|---|
-| `negaflow-1.2.0-mac-universal.pkg` | macOS 14 이상, Apple Silicon과 Intel |
-| `negaflow-1.2.0-mac-arm64.pkg` | macOS 14 이상, Apple Silicon 전용 |
-| `negaflow-1.2.0-win-x64.exe` | Windows 11 24H2 이상, x64 |
+| `negaflow-1.2.1-mac-universal.pkg` | macOS 14 이상, Apple Silicon과 Intel |
+| `negaflow-1.2.1-mac-arm64.pkg` | macOS 14 이상, Apple Silicon 전용 |
+| `negaflow-1.2.1-win-x64.exe` | Windows 11 24H2 이상, x64 |
 
 macOS 14, 26, 27과 호환됩니다.
 
@@ -110,6 +110,14 @@ Windows 설치는 사용자 폴더 안에서 끝나고 관리자 권한을 묻�
 - 현상 프로세스, 타깃, 톤·색·디테일, 크롭과 방향을 함께 옮기는 프리셋과 복사·붙여넣기
 - JPEG, PNG, 16비트 TIFF, 16비트 선형 DNG 내보내기, ICC 프로파일, 카메라·렌즈·필름 등 기록을 EXIF에 저장
 - 7가지 인화 레이아웃과 용지 미리보기, 사진용·ISO 용지, C-print 기능까지 다 있습니다.
+
+## 1.2.1
+
+- MAIN과 CS는 자동 밸런스 ON을 기본으로 유지하며 타깃 제목 옆의 점 토글로 끕니다. Mac은 장면 측정 캐시를, Windows는 GPU 프리뷰 경로도 재사용해 전환합니다.
+- 자동 톤은 톤 조절값만 바꾸고 색 조정과 커브는 유지합니다. 자동 화이트 밸런스·자동 레벨·자동 색상은 각각 따로 실행합니다.
+- 프리셋 붙여넣기는 선택한 범위를 교체하며 이전 룩을 다시 더하지 않습니다. 여러 사진에 붙여넣은 작업은 한 번에 실행 취소하고 썸네일과 현재 프리뷰를 함께 갱신합니다.
+- 허용된 원본은 현상과 인화에서 16비트 선형 DNG로 내보냅니다. 선택한 내보내기 폴더에 저장하고 최종 파일을 확인한 뒤 완료로 처리합니다.
+- 한 장씩 인화하는 레이아웃에는 사진 바깥으로 카메라·렌즈, 로고, 노출 정보, 점 히스토그램과 이름을 넣습니다. 흰색·검정·썸네일 블러 배경, 위쪽 여백, 레이아웃 템플릿을 지원합니다.
 
 ## Chroma Engine
 

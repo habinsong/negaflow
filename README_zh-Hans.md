@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/zh-Hans/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="网站"></a>
-  <a href="#下载"><img src="https://img.shields.io/badge/version-1.2.0-EF8B26" alt="版本 1.2.0"></a>
+  <a href="#下载"><img src="https://img.shields.io/badge/version-1.2.1-EF8B26" alt="版本 1.2.1"></a>
   <a href="negaflow-mac/docs/README_zh-Hans.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 及以上"></a>
   <a href="negaflow-windows/docs/README_zh-Hans.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 或更高"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 许可证"></a>
@@ -73,9 +73,9 @@
 
 | 安装文件 | 适用环境 |
 |---|---|
-| `negaflow-1.2.0-mac-universal.pkg` | macOS 14 及以上，Apple Silicon 和 Intel |
-| `negaflow-1.2.0-mac-arm64.pkg` | macOS 14 及以上，仅 Apple Silicon |
-| `negaflow-1.2.0-win-x64.exe` | Windows 11 24H2 或更高，x64 |
+| `negaflow-1.2.1-mac-universal.pkg` | macOS 14 及以上，Apple Silicon 和 Intel |
+| `negaflow-1.2.1-mac-arm64.pkg` | macOS 14 及以上，仅 Apple Silicon |
+| `negaflow-1.2.1-win-x64.exe` | Windows 11 24H2 或更高，x64 |
 
 兼容 macOS 14、26、27。
 
@@ -95,6 +95,14 @@ Windows 的安装在用户文件夹里就结束了，不会要管理员权限。
 - 把显影流程、目标、影调、色彩、细节、裁剪和方向一起带走的预设与复制粘贴
 - JPEG、PNG、16 位 TIFF 和 16 位线性 DNG 导出、ICC 配置文件，相机、镜头、胶片等记录保存进 EXIF
 - 七种印相版式、纸张预览、照片用与 ISO 纸张，以及 C-print 功能
+
+## 1.2.1
+
+- MAIN 和 CS 默认开启自动平衡，可用目标标题旁的圆点开关切换。Mac 复用场景测量缓存，Windows 还复用 GPU 预览路径。
+- 自动色调只更改色调调节值，保留颜色调整和曲线。自动白平衡、自动色阶和自动颜色分别执行。
+- 粘贴预设会替换所选范围，不会再次叠加旧风格。多张照片的粘贴可一次撤销，缩略图和当前预览一同更新。
+- 符合条件的原图可从显影和印相导出为 16 位线性 DNG，存入所选导出文件夹，确认最终文件后才报告完成。
+- 逐张印相布局可在照片外加入相机、镜头、徽标、曝光信息、点状直方图和姓名，支持白色、黑色或缩略图模糊背景、上边框以及布局模板。
 
 ## Chroma Engine
 

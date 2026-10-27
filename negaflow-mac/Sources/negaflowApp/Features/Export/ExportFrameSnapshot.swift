@@ -57,6 +57,8 @@ struct ExportFrameSnapshot: @unchecked Sendable {
     /// standard 검증에서 "그 뒤로 바뀌지 않았다"를 전체 재해시 없이 판정하는 기준점이다.
     var sourceFileIdentity: ExportSourceFileIdentity?
     var verificationLevel: ExportVerificationLevel = .default
+    /// 인화 워터마크의 블러 바탕·히스토그램에 쓸 필름스트립 썸네일(지금 레시피와 같을 때만).
+    var watermarkReference: CGImage?
 }
 
 struct ExportFrameResult: @unchecked Sendable {

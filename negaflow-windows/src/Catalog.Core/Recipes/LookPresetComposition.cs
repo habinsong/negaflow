@@ -16,6 +16,19 @@ namespace Negaflow.Catalog;
 /// </remarks>
 public static class LookPresetComposition
 {
+    /// <summary>룩이 적용된 수치로 풀고 룩 참조를 지운다. 같은 룩을 다시 더하지 않는다.</summary>
+    public static LibraryFrameSnapshot Materialize(LibraryFrameSnapshot frame)
+    {
+        LookPreset? preset = LookPresetLibrary.Resolve(frame.LookPresetId);
+        return frame with
+        {
+            Tone = preset is null ? frame.Tone : Compose(preset, frame.Tone),
+            ColorModel = preset is null ? frame.ColorModel : Compose(preset, frame.ColorModel),
+            Texture = preset is null ? frame.Texture : Compose(preset, frame.Texture),
+            LookPresetId = null,
+        };
+    }
+
     /// <summary>프리셋 톤에 사용자 톤을 더합니다. 커브 네 축은 프리셋이 정하지 않으므로 그대로입니다.</summary>
     public static ToneAdjustment Compose(LookPreset preset, ToneAdjustment overrides)
     {

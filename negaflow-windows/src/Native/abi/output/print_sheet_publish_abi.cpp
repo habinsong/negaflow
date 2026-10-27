@@ -25,6 +25,9 @@ namespace {
         case 2U:
             format = negaflow::output::PrintSheetFormat::jpeg8;
             return true;
+        case 3U:
+            format = negaflow::output::PrintSheetFormat::dng16;
+            return true;
         default:
             return false;
     }

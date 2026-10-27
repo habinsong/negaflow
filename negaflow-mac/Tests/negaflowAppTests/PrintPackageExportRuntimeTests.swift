@@ -30,6 +30,53 @@ final class PrintPackageExportRuntimeTests: XCTestCase {
         try await super.tearDown()
     }
 
+    func testPrintDNGAndQuickExportUseTheirSelectedFolders() async throws {
+        let exportRoot = root.appendingPathComponent("ExportSelected", isDirectory: true)
+        let quickRoot = root.appendingPathComponent("QuickSelected", isDirectory: true)
+        let disks = DiskStorageStore(defaults: defaults)
+        disks.exportPath = exportRoot.path
+        disks.quickExportPath = quickRoot.path
+        let printStore = PrintWorkspaceSettingsStore(defaults: defaults)
+        printStore.layoutMode = .contactSheet
+        printStore.paperSize = .fourBySix
+        printStore.packageSettings = PrintPackageSettings(mode: .contactSheet, contactRows: 1, contactColumns: 1)
+        let model = AppModel(exportSettingsStore: ExportSettingsStore(defaults: defaults),
+            printWorkspaceSettingsStore: printStore, diskStorageStore: disks,
+            libraryCatalogURL: root.appendingPathComponent("library.json"),
+            libraryDefectDirectoryURL: root.appendingPathComponent("defects"),
+            libraryBackupDirectoryURL: root.appendingPathComponent("Backups"))
+        await model.restoreLibraryOnLaunch()
+        let frame = try makeFrame(index: 1, width: 24, height: 16)
+        model.frames = [frame]
+        XCTAssertTrue(model.assignNewPersistentFrames([frame]))
+        frame.hasDevelopedOnce = true
+        frame.displayPixelSize = CGSize(width: 24, height: 16)
+        model.activeWorkspaceModule = .print
+        model.updateInteractionScope([frame.id])
+        model.selectedFrameIDs = [frame.id]
+        model.selectedFrameID = frame.id
+        model.exportFormat = .dng
+        model.quickExportFormat = .jpeg
+        model.exportDPI = 72
+        model.quickExportDPI = 72
+        XCTAssertTrue(model.saveLibrary(synchronous: true))
+        model.exportPrintSelectionToFolder(settings: printStore.compositionSettings(dpi: 72))
+        try await waitForPackageExport(model)
+        try await waitForBatchExport(model)
+        XCTAssertTrue(model.canQuickExportPrintSelection,
+            "selection=\(model.exportSelection.count) developing=\(frame.isDeveloping) status=\(model.statusMessage)")
+        model.quickExportPrintSelection(settings: printStore.compositionSettings(dpi: 72))
+        try await waitForPackageExport(model)
+        try await waitForBatchExport(model)
+        for (folder, ext) in [(exportRoot, "dng"), (quickRoot, "jpg")] {
+            let files = regularFiles(below: folder).filter { $0.pathExtension == ext }
+            XCTAssertEqual(files.count, 1, folder.path)
+            let file = try XCTUnwrap(files.first)
+            XCTAssertTrue(file.standardizedFileURL.path.hasPrefix(folder.standardizedFileURL.path + "/"))
+            XCTAssertGreaterThan(try file.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0, 0)
+        }
+    }
+
     func testCompositeExportCommitsUniqueContributorEventsWithoutSingleSourcePairs() async throws {
         let exportRoot = root.appendingPathComponent("Exports", isDirectory: true)
         let diskStore = DiskStorageStore(defaults: defaults)

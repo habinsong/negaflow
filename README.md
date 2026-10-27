@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="website"></a>
-  <a href="#download"><img src="https://img.shields.io/badge/version-1.2.0-EF8B26" alt="version 1.2.0"></a>
+  <a href="#download"><img src="https://img.shields.io/badge/version-1.2.1-EF8B26" alt="version 1.2.1"></a>
   <a href="negaflow-mac/docs/README.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 or later"></a>
   <a href="negaflow-windows/docs/README.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 or later"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 license"></a>
@@ -73,9 +73,9 @@ Get it from [GitHub Releases](https://github.com/habinsong/negaflow/releases).
 
 | File | Runs on |
 |---|---|
-| `negaflow-1.2.0-mac-universal.pkg` | macOS 14 or later, Apple Silicon and Intel |
-| `negaflow-1.2.0-mac-arm64.pkg` | macOS 14 or later, Apple Silicon only |
-| `negaflow-1.2.0-win-x64.exe` | Windows 11 24H2 or later, x64 |
+| `negaflow-1.2.1-mac-universal.pkg` | macOS 14 or later, Apple Silicon and Intel |
+| `negaflow-1.2.1-mac-arm64.pkg` | macOS 14 or later, Apple Silicon only |
+| `negaflow-1.2.1-win-x64.exe` | Windows 11 24H2 or later, x64 |
 
 Compatible with macOS 14, 26 and 27.
 
@@ -95,6 +95,14 @@ Connecting a scanner requires a separate plugin. For SANE scanners, use [`negafl
 - Presets and copy-paste that carry the develop process, target, tone, color, detail, crop, and orientation together
 - JPEG, PNG, 16-bit TIFF, and 16-bit linear DNG export, ICC profiles, and records such as camera, lens, and film saved into EXIF
 - Seven print layouts, paper previews, photo and ISO paper sizes, and C-print features.
+
+## 1.2.1
+
+- MAIN and CS keep Auto Balance on by default, with a dot toggle beside Target. Mac reuses scene measurements; Windows also reuses the GPU preview path when switching it.
+- Auto Tone changes tone controls and preserves color adjustments and curves. Auto White Balance, Auto Levels and Auto Color remain separate commands.
+- Preset paste replaces the selected groups instead of adding the old look again. Multi-photo paste has one Undo, and both the thumbnail and active preview refresh.
+- Develop and Print export support 16-bit linear DNG for eligible sources, using the selected export folder and checking the final file before reporting completion.
+- Individual-photo print layouts can add camera and lens text, a logo, exposure details, a dotted histogram and a name outside the photo. White, black and thumbnail-blur borders, an optional top border and layout templates are supported.
 
 ## Chroma Engine
 

@@ -79,6 +79,7 @@ final class PrintWorkspaceSettingsStore: ObservableObject {
         static let cPrintProofICCProfileName = "print.cPrint.proofICCProfileName"
         static let cPrintPreviewEnabled = "print.cPrint.previewEnabled"
         static let cPrintPaperSimulationEnabled = "print.cPrint.paperSimulationEnabled"
+        static let watermark = "print.watermark"
 
         static func sheetColor(_ layoutMode: PrintWorkspaceLayoutMode) -> String {
             "print.sheetColor.\(layoutMode.rawValue)"
@@ -198,6 +199,14 @@ final class PrintWorkspaceSettingsStore: ObservableObject {
         }
     }
 
+    /// 사진 한 장씩 놓는 레이아웃의 촬영 정보 띠. 패키지(여러 장 한 판)에는 쓰지 않는다.
+    @Published var watermark: PrintWatermarkSettings {
+        didSet {
+            guard watermark.isValid, let data = try? JSONEncoder().encode(watermark) else { return }
+            defaults.set(data, forKey: Keys.watermark)
+        }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         paperSize = defaults.string(forKey: Keys.paperSize)
@@ -260,6 +269,10 @@ final class PrintWorkspaceSettingsStore: ObservableObject {
         cPrintPaperSimulationEnabled = defaults.bool(
             forKey: Keys.cPrintPaperSimulationEnabled
         )
+        watermark = defaults.data(forKey: Keys.watermark)
+            .flatMap { try? JSONDecoder().decode(PrintWatermarkSettings.self, from: $0) }
+            .flatMap { $0.isValid ? $0 : nil }
+            ?? PrintWatermarkSettings()
         normalizeContactSheetGeometry()
     }
 
@@ -276,7 +289,8 @@ final class PrintWorkspaceSettingsStore: ObservableObject {
             perforationStyle: perforationStyle,
             photoAspectRatio: photoAspectRatio,
             presentationStyle: layoutMode.presentationStyle,
-            sheetBackground: sheetColor
+            sheetBackground: sheetColor,
+            watermark: layoutMode.usesIndividualPages && watermark.isEnabled ? watermark : nil
         )
     }
 
@@ -340,6 +354,9 @@ final class PrintWorkspaceSettingsStore: ObservableObject {
         perforationStyle = settings.perforationStyle
         layoutMode = settings.layoutMode
         packageSettings = settings.packageSettings
+        // 예전 템플릿에는 종이 색·워터마크가 없다. 그때는 지금 값을 그대로 둔다.
+        if let sheetColor = settings.sheetColor { self.sheetColor = sheetColor }
+        if let watermark = settings.watermark { self.watermark = watermark }
     }
 
     func templateSettings() -> PrintLayoutTemplateSettings {
@@ -349,7 +366,9 @@ final class PrintWorkspaceSettingsStore: ObservableObject {
             marginMM: marginMM,
             perforationStyle: perforationStyle,
             layoutMode: layoutMode,
-            packageSettings: packageSettings
+            packageSettings: packageSettings,
+            sheetColor: sheetColor,
+            watermark: watermark
         )
     }
 

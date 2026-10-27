@@ -25,7 +25,7 @@ struct DevelopDefaultsSection: View {
                     if activeFilmType.requiresInversion && activeDevelopTarget.supportsAutoBalance {
                         QuickTogglePill(
                             title: model.text(.autoBalance),
-                            systemImage: "scalemass",
+                            systemImage: "circle.fill",
                             isOn: autoBalanceBinding,
                             identifier: "negaflow.develop.auto-balance",
                             isCompact: true

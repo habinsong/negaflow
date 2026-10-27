@@ -3,6 +3,7 @@
 #include "gpu_accelerator_state.h"
 
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <ctime>
 #include <io.h>
@@ -462,10 +463,37 @@ bool GpuAccelerator::apply_negative_inversion(
     const float* const dmin,
     const float* const dmax_normalized,
     const float* const response, const bool linear_output, const float normal_range) noexcept {
-    if (!available() || pixels == nullptr || dmin == nullptr || dmax_normalized == nullptr ||
-        response == nullptr) {
-        return false;
+    if (dmin == nullptr || dmax_normalized == nullptr || response == nullptr) { return false; }
+    gpu::GpuNegativeInvertParameters parameters{};
+    for (int channel = 0; channel < 3; ++channel) {
+        parameters.dmin[channel] = dmin[channel];
+        parameters.dmax_normalized[channel] = dmax_normalized[channel];
     }
+    parameters.response_y_ceiling = response[0];
+    parameters.response_amplitude = response[1];
+    parameters.response_rate = response[2];
+    parameters.response_shape = response[3];
+    parameters.linear_output = linear_output;
+    parameters.normal_range = normal_range;
+
+    return dispatch_negative_kernel(pixels, width, height, stride_pixels, parameters);
+}
+
+bool GpuAccelerator::apply_negative_output_tone(
+    float* const pixels, const std::uint32_t width, const std::uint32_t height,
+    const std::uint32_t stride_pixels, const float stops, const bool monochrome) noexcept {
+    if (!std::isfinite(stops)) { return false; }
+    gpu::GpuNegativeInvertParameters parameters{};
+    parameters.output_tone = true;
+    parameters.output_gain = std::exp2(stops);
+    parameters.output_black = monochrome ? 0.0005F : 0.001F;
+    return dispatch_negative_kernel(pixels, width, height, stride_pixels, parameters);
+}
+
+bool GpuAccelerator::dispatch_negative_kernel(
+    float* const pixels, const std::uint32_t width, const std::uint32_t height,
+    const std::uint32_t stride_pixels, const gpu::GpuNegativeInvertParameters& parameters) noexcept {
+    if (!available() || pixels == nullptr) { return false; }
     if (width == 0U || height == 0U || stride_pixels < width) {
         return false;
     }
@@ -481,7 +509,7 @@ bool GpuAccelerator::apply_negative_inversion(
     auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
     int read_slot = 0;
     int write_slot = 1;
-    if (state_->resident_matches(pixels, width, height) && !state_->resident.host_stale) {
+    if (state_->resident_matches(pixels, width, height)) {
         read_slot = state_->resident.read_slot;
         write_slot = 1 - read_slot;
     } else if (
@@ -489,23 +517,18 @@ bool GpuAccelerator::apply_negative_inversion(
         return false;
     }
 
-    gpu::GpuNegativeInvertParameters parameters{};
-    for (int channel = 0; channel < 3; ++channel) {
-        parameters.dmin[channel] = dmin[channel];
-        parameters.dmax_normalized[channel] = dmax_normalized[channel];
-    }
-    parameters.response_y_ceiling = response[0];
-    parameters.response_amplitude = response[1];
-    parameters.response_rate = response[2];
-    parameters.response_shape = response[3];
-    parameters.linear_output = linear_output;
-    parameters.normal_range = normal_range;
-
+    bool finite = false;
+    if (parameters.output_tone && (!state_->finite_ready ||
+        state_->finite.dispatch(state_->device, pool[read_slot], finite) != gpu::GpuKernelStatus::ok ||
+        !finite)) { return false; }
     if (state_->invert.dispatch(
             state_->device, pool[read_slot], pool[write_slot], parameters) !=
         gpu::GpuKernelStatus::ok) {
         return false;
     }
+    if (parameters.output_tone &&
+        (state_->finite.dispatch(state_->device, pool[write_slot], finite) != gpu::GpuKernelStatus::ok ||
+         !finite)) { return false; }
     if (state_->resident.scope_depth > 0) {
         state_->bind_resident(pixels, width, height, stride_pixels, write_slot);
         return true;

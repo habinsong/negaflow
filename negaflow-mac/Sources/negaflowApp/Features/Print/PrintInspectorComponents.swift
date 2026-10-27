@@ -209,11 +209,14 @@ struct PrintInspectorTextField: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
+        // macOS 의 TextField 는 늘어난 높이를 받으면 글자를 위에 붙여 그린다. 제 높이로 묶어 두고
+        // 30pt 칸 안에서 가운데에 놓아야 옆 라벨과 같은 줄에 선다.
         TextField(prompt, text: $text)
             .font(.callout)
             .textFieldStyle(.plain)
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 10)
-            .frame(maxWidth: .infinity, minHeight: 30)
+            .frame(maxWidth: .infinity, minHeight: 30, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(Color.primary.opacity(isFocused ? 0.10 : (isHovered ? 0.08 : 0)))

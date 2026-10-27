@@ -235,6 +235,16 @@ struct PrintWorkspaceInspector: View {
                 }
             }
 
+            if settingsStore.layoutMode.usesIndividualPages {
+                PrintInspectorSection(
+                    title: PrintWatermarkLocalizedText.section.resolved(language: model.appLanguage),
+                    systemImage: "signature"
+                ) {
+                    PrintWatermarkInspectorControls(settingsStore: settingsStore)
+                }
+                .accessibilityIdentifier("negaflow.print.watermark")
+            }
+
             PrintInspectorSection(
                 title: model.text(.printTemplates),
                 systemImage: "square.stack.3d.up"

@@ -185,8 +185,7 @@ internal sealed class DevelopExportCopy
             : AppResources.Get("developExportCompressionNone", "Content");
 
     /// <summary>
-    /// 내보낼 형식입니다. macOS <c>DevelopExportFormat.allCases</c> 와 같은 넷입니다(DNG 는 인쇄 구성을 거치지 않는
-    /// 현상 내보내기에서만, 그리고 고른 사진이 모두 무압축 원본일 때만 고릅니다).
+    /// 내보낼 형식입니다. DNG는 현상·인화 모두 지원하며 고른 사진이 모두 무압축 원본일 때 고릅니다.
     /// </summary>
     internal static void FillFormatSelector(NegaflowPopupPicker selector, bool includesDng)
     {

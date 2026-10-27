@@ -54,7 +54,8 @@ enum AppStringCatalog {
     }
 }
 
-private enum AppLocalizationResourceBundle {
+/// 앱 리소스 번들(문자열 표·워터마크의 negaflow 로고가 함께 들어 있다).
+enum AppLocalizationResourceBundle {
     /// 복수형 문자열(`Localizable.stringsdict`)이 실제로 들어 있는 번들.
     ///
     /// SwiftPM 으로 실행하면 `.module` 이지만, Xcode 로 앱을 빌드하면 `SWIFT_PACKAGE` 가 정의되지

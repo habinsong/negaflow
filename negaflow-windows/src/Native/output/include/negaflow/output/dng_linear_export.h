@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <span>
 
 namespace negaflow::output {
 
@@ -72,6 +73,13 @@ struct DngExportResult final {
 
 [[nodiscard]] DngExportResult export_working_to_dng16(
     const negaflow::imaging::WorkingImage& working,
+    const std::filesystem::path& destination,
+    const DngExportLimits& limits = {}) noexcept;
+
+// 인화 판의 sRGB RGB16 코드값을 strip 단위로 선형화한다. 전체 float 화상을 만들지 않는다.
+[[nodiscard]] DngExportResult export_srgb16_to_dng16(
+    std::span<const std::uint16_t> page,
+    std::uint32_t width, std::uint32_t height, std::uint32_t stride_samples,
     const std::filesystem::path& destination,
     const DngExportLimits& limits = {}) noexcept;
 

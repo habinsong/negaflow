@@ -49,7 +49,7 @@ public static class DevelopSettingsTransfer
             working = routedRecord;
         }
 
-        return LibraryFrameWriter.Apply(
+        LibraryFrameWriteResult written = LibraryFrameWriter.Apply(
             working,
             new LibraryFrameEdit(
                 merged.Tone,
@@ -71,6 +71,9 @@ public static class DevelopSettingsTransfer
                 DefectRemovalStrength: merged.DefectRemovalStrength,
                 LookPreset: new LookPresetSelection(merged.LookPresetId))
             { InputGamma = merged.InputGamma, AutoBalance = merged.AutoBalance });
+        return scope.Base && written.FrameRecord is { } record
+            ? ChannelRangeWriter.Apply(record, merged.ChannelRange)
+            : written;
     }
 
     /// <summary>

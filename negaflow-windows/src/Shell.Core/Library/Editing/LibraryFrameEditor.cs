@@ -52,6 +52,14 @@ internal sealed class LibraryFrameEditor(LibraryDocumentState state)
         return Apply(frameId, edit);
     }
 
+    internal LibraryFrameError ReplaceFrameRecords(IReadOnlyDictionary<string, JsonObject> records)
+    {
+        if (records.Keys.Any(id => !state.IndexById.ContainsKey(id))) { return LibraryFrameError.MissingId; }
+        foreach (var (id, record) in records) { state.Payloads[state.IndexById[id]] = record; }
+        state.ProjectFrames();
+        return LibraryFrameError.None;
+    }
+
     private LibraryFrameError Apply(
         string frameId,
         Func<JsonObject, LibraryFrameWriteResult> edit)

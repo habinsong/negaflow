@@ -1626,4 +1626,34 @@ Load a scanner from Library to scan film.</value>
   <data name="inputGammaEstimated.Value" xml:space="preserve"><value>Estimated gamma {0:0.0}</value></data>
   <data name="customTarget.Text" xml:space="preserve"><value>Custom</value><comment>AppLocalizedPhrase.customTargetTitle</comment></data>
   <data name="autoBalance.Text" xml:space="preserve"><value>Auto Balance</value></data>
+  <data name="printWatermarkSection.Text" xml:space="preserve"><value>Watermark</value></data>
+  <data name="printWatermarkBackground.Text" xml:space="preserve"><value>Background</value></data>
+  <data name="printWatermarkWhite.Text" xml:space="preserve"><value>White</value></data>
+  <data name="printWatermarkBlack.Text" xml:space="preserve"><value>Black</value></data>
+  <data name="printWatermarkBlur.Text" xml:space="preserve"><value>Blur</value></data>
+  <data name="printWatermarkTextColor.Text" xml:space="preserve"><value>Text Color</value></data>
+  <data name="printWatermarkHistogramColor.Text" xml:space="preserve"><value>Histogram Color</value></data>
+  <data name="printWatermarkTopBand.Text" xml:space="preserve"><value>Top Border</value></data>
+  <data name="printWatermarkBandHeight.Text" xml:space="preserve"><value>Border Height</value></data>
+  <data name="printWatermarkCamera.Text" xml:space="preserve"><value>Camera</value></data>
+  <data name="printWatermarkLens.Text" xml:space="preserve"><value>Lens</value></data>
+  <data name="printWatermarkLogo.Text" xml:space="preserve"><value>Logo</value></data>
+  <data name="printWatermarkChooseLogo.Text" xml:space="preserve"><value>Choose Image…</value></data>
+  <data name="printWatermarkRemoveLogo.Text" xml:space="preserve"><value>Use negaflow Logo</value></data>
+  <data name="printWatermarkLogoFile.Text" xml:space="preserve"><value>Logo File</value></data>
+  <data name="printWatermarkLogoMissing.Text" xml:space="preserve"><value>Logo file not found:</value></data>
+  <data name="printWatermarkLogoUnreadable.Text" xml:space="preserve"><value>This image can't be used as a logo.</value></data>
+  <data name="printWatermarkFocalLength.Text" xml:space="preserve"><value>Focal Length</value></data>
+  <data name="printWatermarkAperture.Text" xml:space="preserve"><value>Aperture</value></data>
+  <data name="printWatermarkShutter.Text" xml:space="preserve"><value>Shutter</value></data>
+  <data name="printWatermarkIso.Text" xml:space="preserve"><value>ISO</value></data>
+  <data name="printWatermarkCaptureDate.Text" xml:space="preserve"><value>Date Taken</value></data>
+  <data name="printWatermarkHistogram.Text" xml:space="preserve"><value>Histogram</value></data>
+  <data name="printWatermarkUserName.Text" xml:space="preserve"><value>Name</value></data>
+  <data name="printWatermarkPlacement.Text" xml:space="preserve"><value>Position</value></data>
+  <data name="printWatermarkBottomCenter.Text" xml:space="preserve"><value>Bottom</value></data>
+  <data name="printWatermarkTopLeading.Text" xml:space="preserve"><value>Top Left</value></data>
+  <data name="printWatermarkTopCenter.Text" xml:space="preserve"><value>Top Center</value></data>
+  <data name="printWatermarkTopTrailing.Text" xml:space="preserve"><value>Top Right</value></data>
+  <data name="printWatermarkAutoFillHint.Text" xml:space="preserve"><value>Empty camera, lens and exposure fields use each photo's shot record.</value></data>
 </root>

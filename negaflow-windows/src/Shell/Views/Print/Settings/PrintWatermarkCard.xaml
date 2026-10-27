@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Print.Settings.PrintWatermarkCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls"
+    xmlns:print="using:Negaflow.Shell.Views.Print.Settings">
+
+    <!--
+        macOS `PrintWatermarkInspectorControls` 그대로입니다. 사진 한 장씩 놓는 레이아웃에서만 보입니다.
+
+        차례: 켬/끔 → 배경(흰색·검정·블러) → (블러일 때) 글자색 → 위쪽 여백 → 여백 높이 →
+        카메라 · 렌즈 · 로고 → 초점거리·조리개 / 셔터·ISO (한 줄에 둘) → 촬영 일시 → 안내 →
+        히스토그램 → (블러일 때) 히스토그램 색 → (위 여백일 때) 위치 → 이름 → (위 여백일 때) 위치.
+    -->
+    <Border Padding="14" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="9">
+        <StackPanel Spacing="10">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <FontIcon FontSize="13" Glyph="&#xE8AC;" />
+                <TextBlock x:Name="SectionText" FontSize="13" FontWeight="SemiBold" />
+            </StackPanel>
+
+            <print:PrintInspectorStackedField x:Name="EnabledField">
+                <controls:NegaflowSegmentedPicker
+                    x:Name="EnabledSelector"
+                    AutomationProperties.AutomationId="negaflow.print.watermark.enabled" />
+            </print:PrintInspectorStackedField>
+
+            <StackPanel x:Name="DetailPanel" Spacing="10" Visibility="Collapsed">
+                <print:PrintInspectorDivider />
+
+                <print:PrintInspectorStackedField x:Name="BackgroundField">
+                    <controls:NegaflowSegmentedPicker
+                        x:Name="BackgroundSelector"
+                        AutomationProperties.AutomationId="negaflow.print.watermark.background" />
+                </print:PrintInspectorStackedField>
+                <print:PrintInspectorStackedField x:Name="TextInkField" Visibility="Collapsed">
+                    <controls:NegaflowSegmentedPicker
+                        x:Name="TextInkSelector"
+                        AutomationProperties.AutomationId="negaflow.print.watermark.text-ink" />
+                </print:PrintInspectorStackedField>
+                <print:PrintInspectorStackedField x:Name="TopBandField">
+                    <controls:NegaflowSegmentedPicker
+                        x:Name="TopBandSelector"
+                        AutomationProperties.AutomationId="negaflow.print.watermark.top-band" />
+                </print:PrintInspectorStackedField>
+
+                <!-- macOS `PrintInspectorSliderRow` — 라벨 왼쪽, 값 오른쪽, 슬라이더는 아래. -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="BandHeightText" VerticalAlignment="Center" FontSize="12" />
+                    <TextBlock
+                        x:Name="BandHeightValueText"
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </Grid>
+                <Slider
+                    x:Name="BandHeightSlider"
+                    Margin="0,-6,0,0"
+                    AutomationProperties.AutomationId="negaflow.print.watermark.band-height"
+                    Maximum="25"
+                    Minimum="6"
+                    StepFrequency="1"
+                    ValueChanged="OnSliderChanged" />
+
+                <print:PrintInspectorDivider />
+
+                <print:PrintInspectorInlineField x:Name="CameraField">
+                    <TextBox x:Name="CameraBox" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
+                             AutomationProperties.AutomationId="negaflow.print.watermark.camera" TextChanged="OnTextChanged" />
+                </print:PrintInspectorInlineField>
+                <print:PrintInspectorInlineField x:Name="LensField">
+                    <TextBox x:Name="LensBox" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
+                             AutomationProperties.AutomationId="negaflow.print.watermark.lens" TextChanged="OnTextChanged" />
+                </print:PrintInspectorInlineField>
+                <!-- 로고를 켜고 파일을 고르지 않으면 negaflow 로고가 들어갑니다. 고른 파일이 지워졌으면
+                     로고만 빠지고 그 사실은 하단 상태 점·진단에 남깁니다(여기에는 띄우지 않습니다). -->
+                <print:PrintInspectorStackedField x:Name="LogoField">
+                    <controls:NegaflowSegmentedPicker
+                        x:Name="LogoSelector"
+                        AutomationProperties.AutomationId="negaflow.print.watermark.logo-enabled" />
+                </print:PrintInspectorStackedField>
+                <print:PrintInspectorInlineField x:Name="LogoFileField" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+                        <Image x:Name="LogoImage" MaxWidth="48" Height="22" Stretch="Uniform" VerticalAlignment="Center" />
+                        <TextBlock x:Name="LogoFileText" MaxWidth="96" VerticalAlignment="Center" FontSize="11"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                        <Button x:Name="ChooseLogoButton" Style="{StaticResource NegaflowInspectorButtonStyle}"
+                                AutomationProperties.AutomationId="negaflow.print.watermark.logo" Click="OnChooseLogoClicked" />
+                        <Button x:Name="RemoveLogoButton" Style="{StaticResource NegaflowInspectorButtonStyle}"
+                                Visibility="Collapsed" Click="OnRemoveLogoClicked">
+                            <FontIcon FontSize="11" Glyph="&#xE7A7;" />
+                        </Button>
+                    </StackPanel>
+                </print:PrintInspectorInlineField>
+
+                <!-- macOS `PrintInspectorPairedInlineFields` — 둘을 1:1 로 나누고 사이에 높이 30 분리선. -->
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <print:PrintInspectorInlineField x:Name="FocalField">
+                        <TextBox x:Name="FocalBox" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
+                                 AutomationProperties.AutomationId="negaflow.print.watermark.focal" TextChanged="OnTextChanged" />
+                    </print:PrintInspectorInlineField>
+                    <Border Grid.Column="1" Width="1" Height="30" Background="{ThemeResource NegaflowDividerBrush}" Opacity="0.45" />
+                    <print:PrintInspectorInlineField x:Name="ApertureField" Grid.Column="2">
+                        <TextBox x:Name="ApertureBox" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
+                                 AutomationProperties.AutomationId="negaflow.print.watermark.aperture" TextChanged="OnTextChanged" />
+                    </print:PrintInspectorInlineField>
+                </Grid>
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <print:PrintInspectorInlineField x:Name="ShutterField">
+                        <TextBox x:Name="ShutterBox" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
+                                 AutomationProperties.AutomationId="negaflow.print.watermark.shutter" TextChanged="OnTextChanged" />
+                    </print:PrintInspectorInlineField>
+                    <Border Grid.Column="1" Width="1" Height="30" Background="{ThemeResource NegaflowDividerBrush}" Opacity="0.45" />
+                    <print:PrintInspectorInlineField x:Name="IsoField" Grid.Column="2">
+                        <TextBox x:Name="IsoBox" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
+                                 AutomationProperties.AutomationId="negaflow.print.watermark.iso" TextChanged="OnTextChanged" />
+                    </print:PrintInspectorInlineField>
+                </Grid>
+                <print:PrintInspectorInlineField x:Name="DateField">
+                    <TextBox x:Name="DateBox" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
+                             PlaceholderText="2026/10/27 15:21"
+                             AutomationProperties.AutomationId="negaflow.print.watermark.date" TextChanged="OnTextChanged" />
+                </print:PrintInspectorInlineField>
+                <TextBlock
+                    x:Name="AutoFillHintText"
+                    FontSize="11"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    TextWrapping="Wrap" />
+
+                <print:PrintInspectorDivider />
+
+                <print:PrintInspectorStackedField x:Name="HistogramField">
+                    <controls:NegaflowSegmentedPicker
+                        x:Name="HistogramSelector"
+                        AutomationProperties.AutomationId="negaflow.print.watermark.histogram" />
+                </print:PrintInspectorStackedField>
+                <print:PrintInspectorStackedField x:Name="HistogramInkField" Visibility="Collapsed">
+                    <controls:NegaflowSegmentedPicker x:Name="HistogramInkSelector" />
+                </print:PrintInspectorStackedField>
+                <print:PrintInspectorInlineField x:Name="HistogramPlacementField" Visibility="Collapsed">
+                    <controls:NegaflowPopupPicker x:Name="HistogramPlacementSelector" Variant="Inline"
+                        AutomationProperties.AutomationId="negaflow.print.watermark.histogram-placement" />
+                </print:PrintInspectorInlineField>
+                <print:PrintInspectorInlineField x:Name="UserNameField">
+                    <TextBox x:Name="UserNameBox" MaxLength="120" Style="{StaticResource NegaflowPrintTextFieldStyle}"
+                             AutomationProperties.AutomationId="negaflow.print.watermark.user-name" TextChanged="OnTextChanged" />
+                </print:PrintInspectorInlineField>
+                <print:PrintInspectorInlineField x:Name="UserNamePlacementField" Visibility="Collapsed">
+                    <controls:NegaflowPopupPicker x:Name="UserNamePlacementSelector" Variant="Inline"
+                        AutomationProperties.AutomationId="negaflow.print.watermark.name-placement" />
+                </print:PrintInspectorInlineField>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

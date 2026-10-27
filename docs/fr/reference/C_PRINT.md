@@ -24,6 +24,12 @@ Image unique, cyanotype, plaque de verre et gélatino-argentique créent une pag
 
 Ces trois mises en page reprennent le papier, l’orientation, les marges, la sortie et l’inspecteur d’Image unique, et leur rendu est inclus dans Export et Exportation rapide. Ce sont des présentations visuelles assumées, pas une reconstruction mesurée d’une chimie, plaque, papier ou condition d’observation historique précise.
 
+## Filigrane et modèles de mise en page
+
+Les quatre mises en page individuelles peuvent ajouter une bordure sous la photo et une bordure de même hauteur au-dessus, sans recadrer la photo. Réglez le texte, le logo, l’histogramme en points et le nom dans Mise en page. Le fond peut être blanc, noir ou un flou de la vignette du film. Le logo est référencé par son chemin ; si Logo est activé sans fichier choisi, l’icône negaflow est utilisée. Un fichier choisi introuvable laisse seulement le logo absent et produit une entrée de diagnostic.
+
+Les modèles restaurent la disposition, les réglages du papier, la couleur de la feuille et le filigrane, puis actualisent l’aperçu. Le DPI et les règles ne changent pas. Les anciens modèles sans ces nouveaux champs gardent la couleur et le filigrane actuels. Les positions et les conditions de source et d’espace couleur du DNG sont décrites dans [De la bibliothèque au tirage](../product/WORKFLOW.md).
+
 ## Exporter le tirage
 
 **Exporter le tirage**, sous Exportation rapide, rend le format et l’orientation du papier, les marges, la mise en page, le fond noir, gris ou blanc, les légendes, les textes personnalisés et les repères de coupe. Le format de fichier, le DPI, le dossier, le nom et l’espace colorimétrique de livraison viennent des réglages d’export. Les aides d’écran ne sont pas intégrées au fichier : avertissement de gamut, simulation d’épreuvage et reflet de surface.

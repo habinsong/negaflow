@@ -4,7 +4,7 @@ import Chromabase
 struct DevelopSettingsTransferSection: View {
     @EnvironmentObject var model: AppModel
     @ObservedObject var frame: ScanFrame
-    @State private var pasteScope = DevelopSettingsPasteScope.all
+    private var pasteScope: DevelopSettingsPasteScope { model.developSettingsPasteScope }
 
     var isPasteDisabled: Bool {
         model.copiedDevelopSettings == nil || pasteScope.isEmpty
@@ -33,7 +33,7 @@ struct DevelopSettingsTransferSection: View {
             LabeledContent(model.text(AppLocalizedPhrase.pasteScope)) {
                 Menu {
                     Button {
-                        pasteScope = .all
+                        model.developSettingsPasteScope = .all
                     } label: {
                         Label(model.text(AppLocalizedPhrase.allSettings), systemImage: pasteScope.isFullDevelopScope ? "checkmark" : "circle")
                     }
@@ -61,7 +61,7 @@ struct DevelopSettingsTransferSection: View {
     func scopeBinding(_ keyPath: WritableKeyPath<DevelopSettingsPasteScope, Bool>) -> Binding<Bool> {
         Binding(
             get: { pasteScope[keyPath: keyPath] },
-            set: { pasteScope[keyPath: keyPath] = $0 }
+            set: { model.developSettingsPasteScope[keyPath: keyPath] = $0 }
         )
     }
 }

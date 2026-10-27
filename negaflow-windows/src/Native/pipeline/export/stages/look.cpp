@@ -55,16 +55,21 @@ std::optional<DevelopExportOutcome> apply_look_stages(
     if (request.film_polarity == FilmPolarity::negative &&
         (request.develop_target == DevelopTarget::main || request.develop_target == DevelopTarget::print) &&
         request.scanner_profile_id.empty()) {
-        // The fixed per-channel output curve currently runs on CPU after WB. Flush
-        // resident pixels before reading them; D3D throughput remains to be measured.
-        GpuAccelerator::shared().flush_resident();
-        const auto status = core::apply_negative_output_tone(
-            {developed_image.pixels.data(), developed_image.pixels.size(), developed_image.width,
-             developed_image.height, developed_image.stride_pixels}, tone.exposure_stops,
-            request.negative.film_type == imaging::NegativeFilmType::black_and_white);
-        if (status != core::KernelStatus::ok) {
-            return unbind_resident_and(developed_image,
-                fail(DevelopExportStage::tone_adjust, core::kernel_status_name(status)));
+        const bool accelerated = gpu_policy == GpuUsePolicy::allowed &&
+            GpuAccelerator::shared().apply_negative_output_tone(
+                reinterpret_cast<float*>(developed_image.pixels.data()), developed_image.width,
+                developed_image.height, developed_image.stride_pixels, tone.exposure_stops,
+                request.negative.film_type == imaging::NegativeFilmType::black_and_white);
+        if (!accelerated) {
+            GpuAccelerator::shared().flush_resident();
+            const auto status = core::apply_negative_output_tone(
+                {developed_image.pixels.data(), developed_image.pixels.size(), developed_image.width,
+                 developed_image.height, developed_image.stride_pixels}, tone.exposure_stops,
+                request.negative.film_type == imaging::NegativeFilmType::black_and_white);
+            if (status != core::KernelStatus::ok) {
+                return unbind_resident_and(developed_image,
+                    fail(DevelopExportStage::tone_adjust, core::kernel_status_name(status)));
+            }
         }
         tone.exposure_stops = 0;
     }

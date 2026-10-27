@@ -61,8 +61,8 @@
                                                  AutomationProperties.AutomationId="negaflow.develop.auto-balance"
                                                  Click="OnAutoBalanceClicked">
                             <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
-                                <controls:VectorIcon x:Name="AutoBalanceIcon" IconSize="11" Kind="Scale"
-                                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                <Ellipse x:Name="AutoBalanceIcon" Width="5" Height="5" VerticalAlignment="Center"
+                                         Fill="{ThemeResource TextFillColorPrimaryBrush}" />
                                 <TextBlock x:Name="AutoBalanceText" TextTrimming="CharacterEllipsis"
                                            Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                             </StackPanel>

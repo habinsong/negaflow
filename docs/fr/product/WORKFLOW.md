@@ -39,17 +39,23 @@ Toutes les photos du dossier sont recalculées, y compris celles déjà dévelop
 
 ## Préréglages et copier-coller
 
+Les réglages se répartissent en sept groupes indépendants.
+
 | Groupe | Valeurs |
 |---|---|
-| Base | Type et procédé du film, cible, profil scanner, base du film |
+| Gamma d’entrée | Interprétation de la courbe de transfert source |
+| Échelle de base | Multiplicateur de la base du film |
+| Base | Type et procédé du film, cible, profil scanner, base, correction des plages par canal, balance automatique, niveaux et balance neutre |
 | Tonalité | Exposition, contraste, densité, hautes lumières, ombres, blancs, noirs et courbes |
-| Couleur | Température, teinte, saturation, mélangeur, étalonnage, virage N&B et émulation |
-| Détails | Grain, netteté, halo, clarté, vignette, réduction du bruit, GrainMend et corrections locales |
+| Couleur | Température, teinte, profondeur de couleur, vibrance, saturation, mélangeur, étalonnage, calibration, virage N&B et émulation |
+| Détails | Grain, netteté, halo, clarté, vignette, réduction du bruit, intensité GrainMend et corrections locales |
 | Géométrie | Recadrage, rotation, retournements, redressement et format de recadrage |
 
-Un collage complet utilise les cinq groupes. Un collage partiel ne change que les groupes choisis. Avec plusieurs photos sélectionnées, il s’applique à toute la sélection. Les préréglages utilisateur conservent le même état de développement complet, géométrie comprise.
+Un collage complet ou un préréglage utilisateur remplace les réglages de développement de la destination. Un collage partiel remplace les valeurs effectives des groupes choisis et conserve les autres. Lorsqu’une partie du look est collée, ses contributions au ton, à la couleur et à la texture sont intégrées aux valeurs, puis sa référence est retirée. L’ancien look ne s’ajoute donc pas une seconde fois. Répéter le collage conserve le même état. Le panneau, les menus et les raccourcis utilisent la même portée.
 
-L’enregistrement demande d’abord un nom. Laissé vide, il prend le premier numéro libre (`Paramètre prédéfini N`) ; un nom déjà utilisé n’est pas enregistré.
+Le collage et les préréglages s’appliquent à toutes les photos sélectionnées. Une seule annulation ou restauration couvre la sélection entière. Windows valide toutes les destinations avant de les modifier. Les vignettes et l’aperçu actif sont mis à jour avec les nouveaux réglages. Les originaux, les notes et les retouches de défauts liées à la source ne sont pas copiés.
+
+Les préréglages utilisateur conservent le développement complet et la géométrie. Les anciens formats sans champ Géométrie l’incluent par compatibilité. Un nom vide reçoit le premier numéro libre. Un nom identique ne provoque pas l’écrasement d’un préréglage existant.
 
 ## Sans module scanner
 
@@ -62,6 +68,14 @@ Impression propose sept mises en page : image unique, planche-contact, package d
 L’export du tirage et l’exportation rapide comptent les pages finies. Ainsi, 39 photos sur une planche 6 × 7 donnent un fichier composé ; un package de quatre images donne 10 pages ; le package personnalisé par défaut donne une page ; les dispositions individuelles donnent un lot borné de 39 fichiers.
 
 L’aperçu réutilise toute vignette, image développée ou prévisualisation source disponible et ne crée une petite prévisualisation rapide qu’en leur absence. L’export final calcule les placements depuis les métadonnées, ne développe que les pixels nécessaires, prépare deux à quatre sources à la fois et conserve le graphe Core Image jusqu’au rendu final. Un contexte partagé et une limite de 512 Mio de rastérisation source par page évitent les intermédiaires pleine résolution non bornés.
+
+## Filigrane d’impression
+
+Les mises en page qui placent une photo par feuille (image unique, cyanotype, plaque de verre, gélatino-argentique) peuvent ajouter une bordure de filigrane sous la photo. La bordure s’ajoute à l’extérieur de la photo, rien n’est rogné. Une bordure de même hauteur peut aussi être ajoutée en haut. Avec le format Photo, le papier suit la photo avec ses bordures.
+
+La bordure du bas affiche à gauche l’appareil, avec l’objectif en dessous. À droite viennent un logo, puis la focale, l’ouverture, la vitesse et l’ISO, avec la date de prise de vue en dessous. Activez Logo pour en ajouter un. Sans fichier choisi, le logo negaflow est utilisé. negaflow ne fournit aucun logo de marque : choisissez votre propre fichier JPEG, PNG ou autre image. Les réglages et les modèles gardent seulement le chemin du fichier. Le rendu vérifie le fichier et réemploie le logo en cache tant que sa taille et sa date de modification restent les mêmes. Si le fichier a été déplacé ou supprimé, seul le logo est omis ; le point d’état en bas et le rapport de diagnostic le consignent. Les champs appareil, objectif et exposition laissés vides reprennent la fiche de prise de vue de chaque photo. La date n’a pas de valeur automatique.
+
+La bordure peut être blanche, noire ou un flou de la photo. Sur blanc, le texte est noir et les secondes lignes sont grises. Sur noir, tout le texte est blanc. Sur flou, vous choisissez noir ou blanc pour le texte et pour l’histogramme. L’histogramme est dessiné en colonnes de points. L’histogramme et votre nom se placent chacun en bas au centre, ou en haut à gauche, au centre ou à droite quand la bordure du haut est active. Quand les deux occupent le même emplacement central, ils sont disposés en miroir autour de l’axe. Le flou et l’histogramme réemploient une vignette valide de la bande de film quand elle est disponible. Sinon, ils utilisent une image réduite de la photo. Les modèles enregistrent la couleur du papier et tous les réglages du filigrane, textes et chemin du logo compris.
 
 ## Profils d’impression
 
@@ -76,7 +90,7 @@ Le profil de sortie est appliqué une fois, après la composition complète de l
 
 Le DNG écrit la photo développée en RGB linéaire 16 bits (`PhotometricInterpretation = LinearRaw`), sans compression, dans l’espace colorimétrique choisi à l’export : sRGB, Display P3 ou Adobe RGB. Le ton et la couleur sont déjà appliqués, donc les autres applications lisent un fichier référencé sortie. Le fichier porte le droit d’auteur, le scanner, le logiciel, la date et les notes de film selon la même politique de métadonnées que le TIFF. L’EXIF, l’IPTC et le GPS de l’appareil source ne sont pas copiés. Il faut 6 octets par pixel : une photo de 24 mégapixels pèse environ 144 Mo.
 
-Le DNG n’est proposé que pour les sources non compressées : TIFF, RAW d’appareil et DNG. Les sources JPEG, PNG et HEIC ne s’exportent pas en DNG. Le DNG n’est pas proposé dans le module Impression et la cible `PRINT` est refusée. Les deux se terminent par un profil ICC d’imprimante, qu’un DNG ne peut pas contenir. negaflow s’arrête avec un message au lieu d’exporter autre chose. exiftool et le décodeur d’images d’Apple lisent le fichier. Le rendu dans Lightroom ou Camera Raw n’a pas été mesuré.
+Le DNG est proposé pour les sources non compressées : TIFF, RAW d’appareil et DNG. Les sources JPEG, PNG et HEIC ne s’exportent pas en DNG. Le développement, la cible `PRINT` et les mises en page d’impression prennent en charge le DNG. Le DNG d’impression enregistre la page composée en RGB standard avec une ColorMatrix, sans conversion ICC d’imprimante. L’export DNG utilise le dossier sélectionné dans Export et l’extension `.dng`. La fin de l’export exige la publication et la vérification du fichier final. exiftool et le décodeur d’images d’Apple lisent le fichier. Le rendu dans Lightroom ou Camera Raw n’a pas été mesuré.
 
 ## Ce qui touche aux originaux
 

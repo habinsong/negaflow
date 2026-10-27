@@ -281,6 +281,8 @@ void invert_then_tone_is_one_host_round_trip() {
             cpu_in, cpu_out, invert_parameters, response) ==
             negaflow::core::KernelStatus::ok,
         "CPU invert must succeed");
+    expect(negaflow::core::apply_negative_output_tone(cpu_out, 0.7F, false) ==
+        negaflow::core::KernelStatus::ok, "CPU output tone after invert");
     WorkingToneAdjustParameters tone{};
     tone.exposure_stops = 0.30F;
     tone.basic.contrast = 0.20F;
@@ -308,6 +310,9 @@ void invert_then_tone_is_one_host_round_trip() {
                 dmax,
                 response_values),
             "GPU invert must handle the resident request");
+        expect(GpuAccelerator::shared().apply_negative_output_tone(
+            reinterpret_cast<float*>(gpu.pixels.data()), gpu.width, gpu.height, gpu.stride_pixels,
+            0.7F, false), "GPU output tone keeps the resident image");
         const auto outcome = GpuAccelerator::shared().apply_working_tone_adjustments(
             GpuUsePolicy::allowed, gpu, tone, {});
         expect(outcome.handled, "GPU tone must run on the resident image");

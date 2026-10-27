@@ -35,6 +35,7 @@
 
 namespace negaflow::gpu {
 class GpuDevice;
+struct GpuNegativeInvertParameters;
 }  // namespace negaflow::gpu
 
 namespace negaflow::pipeline {
@@ -178,6 +179,10 @@ public:
         const float* dmin,
         const float* dmax_normalized,
         const float* response, bool linear_output = false, float normal_range = 1.55F) noexcept;
+
+    [[nodiscard]] bool apply_negative_output_tone(
+        float* pixels, std::uint32_t width, std::uint32_t height,
+        std::uint32_t stride_pixels, float stops, bool monochrome) noexcept;
 
     // 디지털 필름 룩의 재료 커널 둘입니다. 필름 스캔이 아니라 **디지털 원본** 경로에서만
     // 돕니다 — 스캔본에는 이미 유제를 통과한 신호가 있어 같은 물리를 두 번 얹지 않습니다.
@@ -402,6 +407,10 @@ public:
         std::uint32_t radius) noexcept;
 
 private:
+    [[nodiscard]] bool dispatch_negative_kernel(
+        float* pixels, std::uint32_t width, std::uint32_t height,
+        std::uint32_t stride_pixels, const gpu::GpuNegativeInvertParameters& parameters) noexcept;
+
     GpuAccelerator() noexcept;
     ~GpuAccelerator();
     bool flush_unlocked() noexcept;

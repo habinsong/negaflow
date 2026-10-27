@@ -9,9 +9,34 @@ struct PrintLayoutTemplateSettings: Codable, Equatable, Sendable {
     var perforationStyle: PrintPerforationStyle
     var layoutMode: PrintWorkspaceLayoutMode
     var packageSettings: PrintPackageSettings
+    /// 종이(배경) 색. 예전 템플릿에는 없다(nil 이면 적용할 때 지금 값을 둔다).
+    var sheetColor: PrintContactSheetBackground?
+    /// 촬영 정보 띠 설정과 로고 경로. 로고 화소는 저장하지 않는다. 예전 템플릿에는 없다.
+    var watermark: PrintWatermarkSettings?
+
+    init(
+        paperSize: PrintPaperSize,
+        orientation: PrintPaperOrientation,
+        marginMM: Double,
+        perforationStyle: PrintPerforationStyle,
+        layoutMode: PrintWorkspaceLayoutMode,
+        packageSettings: PrintPackageSettings,
+        sheetColor: PrintContactSheetBackground? = nil,
+        watermark: PrintWatermarkSettings? = nil
+    ) {
+        self.paperSize = paperSize
+        self.orientation = orientation
+        self.marginMM = marginMM
+        self.perforationStyle = perforationStyle
+        self.layoutMode = layoutMode
+        self.packageSettings = packageSettings
+        self.sheetColor = sheetColor
+        self.watermark = watermark
+    }
 
     var isValid: Bool {
         packageSettings.isValid
+            && (watermark?.isValid ?? true)
             && PrintCompositionSettings(
                 paperSize: paperSize,
                 orientation: orientation,

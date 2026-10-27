@@ -107,9 +107,8 @@ internal sealed class DevelopVersionPresetController
         {
             return new(LibraryFrameError.MissingId, false);
         }
-        return EditFrameRecord(
-            destination,
-            record => DevelopSettingsTransfer.Paste(record, source, destination, PasteScope), undoable: true);
+        return EditSelectedFrames(destination,
+            (record, target) => DevelopSettingsTransfer.Paste(record, source, target, PasteScope));
     }
 
     public void OpenUserPresets(string? path)
@@ -128,8 +127,9 @@ internal sealed class DevelopVersionPresetController
         {
             return null;
         }
-        UserPresets = [.. UserPresets, preset];
-        PersistUserPresets();
+        IReadOnlyList<DevelopUserPreset> next = [.. UserPresets, preset];
+        if (!PersistUserPresets(next)) { return null; }
+        UserPresets = next;
         return preset;
     }
 
@@ -140,21 +140,30 @@ internal sealed class DevelopVersionPresetController
         {
             return new(LibraryFrameError.MissingId, false);
         }
-        return EditFrameRecord(
-            destination,
-            record => DevelopUserPresetStore.Apply(record, chosen, destination), undoable: true);
+        return EditSelectedFrames(destination,
+            (record, target) => DevelopUserPresetStore.Apply(record, chosen, target));
     }
 
     public bool DeleteUserPreset(Guid id)
     {
         int before = UserPresets.Count;
-        UserPresets = [.. UserPresets.Where(preset => preset.Id != id)];
-        if (UserPresets.Count == before)
-        {
-            return false;
-        }
-        PersistUserPresets();
+        IReadOnlyList<DevelopUserPreset> next = [.. UserPresets.Where(preset => preset.Id != id)];
+        if (next.Count == before || !PersistUserPresets(next)) { return false; }
+        UserPresets = next;
         return true;
+    }
+
+    private DevelopEditResult EditSelectedFrames(
+        LibraryFrameSnapshot active,
+        Func<System.Text.Json.Nodes.JsonObject, LibraryFrameSnapshot, LibraryFrameWriteResult> edit)
+    {
+        IReadOnlyList<LibraryFrameSnapshot> selection = host.SelectedFrameIds.Contains(active.Id)
+            ? host.SelectedFrames : [active];
+        var targets = selection.DistinctBy(frame => frame.Id).ToDictionary(frame => frame.Id);
+        LibraryFrameError error = host.EditFrameRecordsUndoable(
+            [.. targets.Keys], LibraryHostService.UndoActions.DevelopAdjustment,
+            (id, record) => edit(record, targets[id]));
+        return new(error, error == LibraryFrameError.None);
     }
 
     private DevelopEditResult EditFrameRecord(
@@ -172,11 +181,6 @@ internal sealed class DevelopVersionPresetController
         return new(error, error == LibraryFrameError.None);
     }
 
-    private void PersistUserPresets()
-    {
-        if (userPresetPath is { Length: > 0 } path)
-        {
-            _ = DevelopUserPresetStore.Save(path, UserPresets);
-        }
-    }
+    private bool PersistUserPresets(IReadOnlyList<DevelopUserPreset> presets) =>
+        userPresetPath is { Length: > 0 } path && DevelopUserPresetStore.Save(path, presets);
 }

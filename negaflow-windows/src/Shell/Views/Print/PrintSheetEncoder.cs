@@ -13,6 +13,7 @@ internal static class PrintSheetEncoder
     {
         DevelopExportFormat.Jpeg8 => ".jpg",
         DevelopExportFormat.Tiff16 => ".tif",
+        DevelopExportFormat.Dng16 => ".dng",
         _ => ".png",
     };
 
@@ -71,7 +72,16 @@ internal static class PrintSheetEncoder
                 outputIccProfile ?? []))
             .ConfigureAwait(true);
 
-        if (outcome.IsSuccess)
+        bool published = false;
+        if (outcome.IsSuccess && outcome.ArtifactBytes is > 0 and <= long.MaxValue)
+        {
+            try { published = new FileInfo(destination).Length == (long)outcome.ArtifactBytes; }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                ExportTrace.Write("print published file check failed: " + error.GetType().Name);
+            }
+        }
+        if (published)
         {
             ExportTrace.Write(
                 $"    sheet published bits={outcome.BitsPerSample} " +
@@ -82,7 +92,7 @@ internal static class PrintSheetEncoder
         // 어느 자리에서 멈췄는지 남깁니다. "쓰지 못했습니다" 만으로는 사용자가 할 수 있는 일이
         // 다시 눌러 보는 것밖에 없습니다.
         ExportTrace.Write(
-            $"    sheet publish failed status={PrintSheetPublishStatusName.For(outcome.Status)} " +
+            $"    sheet publish failed status={(outcome.IsSuccess ? "published_file_invalid" : PrintSheetPublishStatusName.For(outcome.Status))} " +
             $"native=0x{outcome.NativeErrorCode:X} path={destination}");
         return false;
     }

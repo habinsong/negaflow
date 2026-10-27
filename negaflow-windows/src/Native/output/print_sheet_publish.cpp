@@ -1,4 +1,5 @@
 #include "negaflow/output/print_sheet_publish.h"
+#include "negaflow/output/dng_linear_export.h"
 
 #include "atomic_output_file.h"
 #include "wic_srgb16_support.h"
@@ -277,7 +278,7 @@ PrintSheetPublishResult publish_print_sheet(
     const PrintSheetPublishLimits& limits) noexcept {
     PrintSheetPublishResult result{};
     if (format != PrintSheetFormat::png16 && format != PrintSheetFormat::tiff16 &&
-        format != PrintSheetFormat::jpeg8) {
+        format != PrintSheetFormat::jpeg8 && format != PrintSheetFormat::dng16) {
         result.status = PrintSheetPublishStatus::invalid_format;
         return result;
     }
@@ -307,6 +308,34 @@ PrintSheetPublishResult publish_print_sheet(
     result.info.height = height;
     result.info.bits_per_sample = format == PrintSheetFormat::jpeg8 ? 8U : 16U;
     result.info.output_dpi = limits.output_dpi;
+
+    if (format == PrintSheetFormat::dng16) {
+        // DNG 인화 판은 sRGB 코드값으로 합성하고, 파일 경계에서 선형 RGB로 변환한다.
+        if (!limits.output_icc_profile.empty()) {
+            result.status = PrintSheetPublishStatus::destination_profile_invalid;
+            return result;
+        }
+        DngExportLimits dng_limits{};
+        dng_limits.output_dpi = limits.output_dpi;
+        const auto dng = export_srgb16_to_dng16(page, width, height, stride_bytes / 2U, destination, dng_limits);
+        result.info.artifact_bytes = dng.info.artifact_bytes;
+        result.info.published = dng.info.published;
+        result.native_error_code = dng.native_error_code;
+        result.cleanup_error_code = dng.cleanup_error_code;
+        switch (dng.status) {
+            case DngExportStatus::ok: result.status = PrintSheetPublishStatus::ok; break;
+            case DngExportStatus::destination_exists: result.status = PrintSheetPublishStatus::destination_exists; break;
+            case DngExportStatus::size_limit_exceeded:
+            case DngExportStatus::allocation_failed: result.status = PrintSheetPublishStatus::memory_limit_exceeded; break;
+            case DngExportStatus::staging_create_failed: result.status = PrintSheetPublishStatus::staging_create_failed; break;
+            case DngExportStatus::flush_failed: result.status = PrintSheetPublishStatus::flush_failed; break;
+            case DngExportStatus::publish_failed: result.status = PrintSheetPublishStatus::publish_failed; break;
+            case DngExportStatus::published_file_invalid:
+            case DngExportStatus::structure_verification_failed: result.status = PrintSheetPublishStatus::published_file_invalid; break;
+            default: result.status = PrintSheetPublishStatus::encode_failed; break;
+        }
+        return result;
+    }
 
     const detail::ComApartment apartment{};
     if (apartment.status() == RPC_E_CHANGED_MODE) {

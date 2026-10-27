@@ -76,6 +76,8 @@ internal static class DevelopInputTransferTests
         VerifyEveryInputScopeCombination();
         VerifyEmptyScopeIsANoOp();
         VerifyStoredPrecisionSurvivesTransfer();
+        VerifyScopedLookReplacement();
+        VerifyChannelCalibrationReplacement();
     }
 
     /// <summary>
@@ -166,6 +168,67 @@ internal static class DevelopInputTransferTests
             () => result.FrameRecord is { } written
                 ? Read(written).InputGamma.Value?.ToString() ?? "null"
                 : "no record");
+    }
+
+    private static void VerifyScopedLookReplacement()
+    {
+        var previous = LookPresetLibrary.All;
+        var sourceLook = new LookPreset("source-look", "Source", 1, [FilmType.ColorNegative],
+            new(0.1, 0.12, 0.15, 0.2, 0.1, null), new(0.3, 0.1, 0.1, 0.2), new(0.1, 0.25, 0.04));
+        var targetLook = new LookPreset("target-look", "Target", 1, [FilmType.ColorNegative],
+            new(-0.2, 0.1, -0.1, 0.1, -0.1, null), new(-0.2, -0.1, -0.1, -0.2), new(0.4, 0.1, 0.02));
+        try
+        {
+            LookPresetLibrary.SetForTests([sourceLook, targetLook]);
+            var source = Read(Record("look-source", 1.8, 0.75)) with { LookPresetId = sourceLook.Id };
+            for (int mask = 1; mask < 8; ++mask)
+            {
+                var record = Record("look-target", 2.4, 1.25);
+                var written = LibraryFrameWriter.Apply(record, new LibraryFrameEdit(
+                    Read(record).Tone, null, LookPreset: new LookPresetSelection(targetLook.Id)));
+                record = written.FrameRecord!;
+                var before = Read(record);
+                var scope = DevelopSettingsPasteScope.Empty with
+                    { Tone = (mask & 1) != 0, Color = (mask & 2) != 0, Detail = (mask & 4) != 0 };
+                var sourceTone = LookPresetComposition.Compose(sourceLook, source.Tone);
+                var sourceColor = LookPresetComposition.Compose(sourceLook, source.ColorModel);
+                var sourceTexture = LookPresetComposition.Compose(sourceLook, source.Texture);
+                var targetTone = LookPresetComposition.Compose(targetLook, before.Tone);
+                var targetColor = LookPresetComposition.Compose(targetLook, before.ColorModel);
+                var targetTexture = LookPresetComposition.Compose(targetLook, before.Texture);
+                for (int repeat = 0; repeat < 3; ++repeat)
+                {
+                    var result = DevelopSettingsTransfer.Paste(record, source, Read(record), scope);
+                    Check(result.IsSuccess, $"look_scope_{mask}_writes");
+                    if (result.FrameRecord is not { } next) { break; }
+                    var actual = LookPresetComposition.Materialize(Read(next));
+                    Check(actual.Tone == (scope.Tone ? sourceTone : targetTone), $"look_scope_{mask}_tone_replaces");
+                    Check(actual.ColorModel == (scope.Color ? sourceColor : targetColor), $"look_scope_{mask}_color_replaces");
+                    Check(actual.Texture == (scope.Detail ? sourceTexture : targetTexture), $"look_scope_{mask}_detail_replaces");
+                    if (repeat > 0) { Check(JsonNode.DeepEquals(record, next), $"look_scope_{mask}_is_idempotent"); }
+                    record = next;
+                }
+            }
+        }
+        finally { LookPresetLibrary.SetForTests(previous); }
+    }
+
+    private static void VerifyChannelCalibrationReplacement()
+    {
+        var source = Read(Record("range-source", 1.8, 0.75));
+        var targetRecord = Record("range-target", 2.4, 1.25);
+        targetRecord["params"]!["channelRange"] = new JsonArray(0.8, 1.0, 1.25);
+        var target = Read(targetRecord);
+        foreach (var scope in new[] { DevelopSettingsPasteScope.All, DevelopSettingsPasteScope.Empty with { Base = true } })
+        {
+            var result = DevelopSettingsTransfer.Paste(targetRecord, source, target, scope);
+            Check(result.FrameRecord is { } next && Read(next).ChannelRange is null, "paste_clears_old_channel_calibration");
+        }
+        var calibrated = source with { ChannelRange = new ChannelRangeRgb(0.8, 1, 1.25) };
+        var preset = DevelopUserPresetStore.Capture(calibrated, "Range");
+        var applied = DevelopUserPresetStore.Apply(targetRecord, preset!, target);
+        Check(applied.FrameRecord is { } record && Read(record).ChannelRange == calibrated.ChannelRange,
+              "user_preset_round_trips_channel_calibration");
     }
 
     private static LibraryFrameSnapshot Read(JsonObject record) =>

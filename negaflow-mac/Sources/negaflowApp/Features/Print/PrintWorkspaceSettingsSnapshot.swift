@@ -23,6 +23,7 @@ struct PrintWorkspaceSettingsSnapshot: Equatable {
     var cPrintProofICCProfileName: String?
     var cPrintPreviewEnabled: Bool
     var cPrintPaperSimulationEnabled: Bool
+    var watermark: PrintWatermarkSettings
 }
 
 extension PrintWorkspaceSettingsStore {
@@ -44,7 +45,8 @@ extension PrintWorkspaceSettingsStore {
             cPrintProofICCProfileData: cPrintProofICCProfileData,
             cPrintProofICCProfileName: cPrintProofICCProfileName,
             cPrintPreviewEnabled: cPrintPreviewEnabled,
-            cPrintPaperSimulationEnabled: cPrintPaperSimulationEnabled
+            cPrintPaperSimulationEnabled: cPrintPaperSimulationEnabled,
+            watermark: watermark
         )
     }
 
@@ -76,5 +78,6 @@ extension PrintWorkspaceSettingsStore {
         if cPrintPaperSimulationEnabled != snapshot.cPrintPaperSimulationEnabled {
             cPrintPaperSimulationEnabled = snapshot.cPrintPaperSimulationEnabled
         }
+        if watermark != snapshot.watermark { watermark = snapshot.watermark }
     }
 }

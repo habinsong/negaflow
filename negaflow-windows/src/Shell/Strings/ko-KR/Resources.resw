@@ -1626,4 +1626,34 @@
   <data name="inputGammaEstimated.Value" xml:space="preserve"><value>추정 감마 {0:0.0}</value></data>
   <data name="customTarget.Text" xml:space="preserve"><value>Custom</value><comment>AppLocalizedPhrase.customTargetTitle</comment></data>
   <data name="autoBalance.Text" xml:space="preserve"><value>자동 밸런스</value></data>
+  <data name="printWatermarkSection.Text" xml:space="preserve"><value>워터마크</value></data>
+  <data name="printWatermarkBackground.Text" xml:space="preserve"><value>배경</value></data>
+  <data name="printWatermarkWhite.Text" xml:space="preserve"><value>흰색</value></data>
+  <data name="printWatermarkBlack.Text" xml:space="preserve"><value>검정</value></data>
+  <data name="printWatermarkBlur.Text" xml:space="preserve"><value>블러</value></data>
+  <data name="printWatermarkTextColor.Text" xml:space="preserve"><value>글자색</value></data>
+  <data name="printWatermarkHistogramColor.Text" xml:space="preserve"><value>히스토그램 색</value></data>
+  <data name="printWatermarkTopBand.Text" xml:space="preserve"><value>위쪽 여백</value></data>
+  <data name="printWatermarkBandHeight.Text" xml:space="preserve"><value>여백 높이</value></data>
+  <data name="printWatermarkCamera.Text" xml:space="preserve"><value>카메라</value></data>
+  <data name="printWatermarkLens.Text" xml:space="preserve"><value>렌즈</value></data>
+  <data name="printWatermarkLogo.Text" xml:space="preserve"><value>로고</value></data>
+  <data name="printWatermarkChooseLogo.Text" xml:space="preserve"><value>이미지 선택…</value></data>
+  <data name="printWatermarkRemoveLogo.Text" xml:space="preserve"><value>negaflow 로고로 되돌리기</value></data>
+  <data name="printWatermarkLogoFile.Text" xml:space="preserve"><value>로고 파일</value></data>
+  <data name="printWatermarkLogoMissing.Text" xml:space="preserve"><value>로고 파일을 찾을 수 없습니다:</value></data>
+  <data name="printWatermarkLogoUnreadable.Text" xml:space="preserve"><value>이 이미지는 로고로 쓸 수 없습니다.</value></data>
+  <data name="printWatermarkFocalLength.Text" xml:space="preserve"><value>초점거리</value></data>
+  <data name="printWatermarkAperture.Text" xml:space="preserve"><value>조리개</value></data>
+  <data name="printWatermarkShutter.Text" xml:space="preserve"><value>셔터</value></data>
+  <data name="printWatermarkIso.Text" xml:space="preserve"><value>ISO</value></data>
+  <data name="printWatermarkCaptureDate.Text" xml:space="preserve"><value>촬영 일시</value></data>
+  <data name="printWatermarkHistogram.Text" xml:space="preserve"><value>히스토그램</value></data>
+  <data name="printWatermarkUserName.Text" xml:space="preserve"><value>이름</value></data>
+  <data name="printWatermarkPlacement.Text" xml:space="preserve"><value>위치</value></data>
+  <data name="printWatermarkBottomCenter.Text" xml:space="preserve"><value>하단 가운데</value></data>
+  <data name="printWatermarkTopLeading.Text" xml:space="preserve"><value>상단 왼쪽</value></data>
+  <data name="printWatermarkTopCenter.Text" xml:space="preserve"><value>상단 가운데</value></data>
+  <data name="printWatermarkTopTrailing.Text" xml:space="preserve"><value>상단 오른쪽</value></data>
+  <data name="printWatermarkAutoFillHint.Text" xml:space="preserve"><value>카메라·렌즈·노출 칸을 비워 두면 사진마다 촬영 기록으로 채웁니다.</value></data>
 </root>

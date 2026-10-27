@@ -209,6 +209,35 @@ public sealed partial class LibraryHostService
         return AfterEdit(open.EditFrameRecord(frameId, _ => written));
     }
 
+    /// <summary>다중 recipe를 먼저 검증하고 전부 교체한다. 알림과 Undo는 묶음당 한 번이다.</summary>
+    public LibraryFrameError EditFrameRecordsUndoable(
+        IReadOnlyList<string> frameIds,
+        string actionName,
+        Func<string, System.Text.Json.Nodes.JsonObject, LibraryFrameWriteResult> edit)
+    {
+        ArgumentNullException.ThrowIfNull(frameIds);
+        ArgumentNullException.ThrowIfNull(edit);
+        if (document is not { } open) { return LibraryFrameError.MissingId; }
+        Dictionary<string, System.Text.Json.Nodes.JsonObject> pending = new(StringComparer.Ordinal);
+        foreach (string id in frameIds.Distinct(StringComparer.Ordinal))
+        {
+            if (open.FrameRecord(id) is not { } before) { return LibraryFrameError.MissingId; }
+            LibraryFrameWriteResult written = edit(id, before.DeepClone().AsObject());
+            if (written.FrameRecord is not { } after) { return written.Error; }
+            if (!System.Text.Json.Nodes.JsonNode.DeepEquals(before, after)) { pending.Add(id, after); }
+        }
+        if (pending.Count == 0) { return LibraryFrameError.None; }
+        open.CaptureUndo(actionName);
+        foreach (string id in pending.Keys) { frameEdits.Clear(id); }
+        LibraryFrameError error = open.ReplaceFrameRecords(pending);
+        if (error != LibraryFrameError.None)
+        {
+            _ = ApplyHistoryResult(open.UndoWithResult(), publishEdit: false);
+            return error;
+        }
+        return AfterEdit(LibraryFrameError.None);
+    }
+
     private LibraryFrameError AfterEdit(LibraryFrameError error)
     {
         if (error == LibraryFrameError.None)

@@ -502,7 +502,10 @@
     -->
     <Style x:Key="NegaflowPrintTextFieldStyle" TargetType="TextBox">
         <Setter Property="MinHeight" Value="30" />
-        <Setter Property="Padding" Value="10,0" />
+        <!-- WinUI TextBox 틀은 VerticalContentAlignment 를 쓰지 않고 위쪽 안쪽 여백부터 글을 놓습니다.
+             위아래 여백이 0 이면 글자와 자리표시 글이 30 칸 위로 붙어 옆 라벨과 줄이 어긋납니다.
+             12px 글자 한 줄(약 16)을 30 칸 가운데에 두도록 위아래를 7 씩 줍니다. -->
+        <Setter Property="Padding" Value="10,7,10,7" />
         <Setter Property="CornerRadius" Value="8" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="FontSize" Value="12" />

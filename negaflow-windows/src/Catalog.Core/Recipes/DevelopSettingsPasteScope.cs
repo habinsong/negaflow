@@ -49,6 +49,14 @@ public readonly record struct DevelopSettingsPasteScope(
             return destination;
         }
 
+        // 룩 하나가 톤·색·질감에 걸쳐 있으므로 일부만 옮길 때는 실제 적용값으로 풀어 교체한다.
+        // 원본과 대상의 룩을 함께 남기면 선택하지 않은 묶음까지 바뀌거나 두 번 더해진다.
+        if ((Tone || Color || Detail) && !(Tone && Color && Detail))
+        {
+            source = LookPresetComposition.Materialize(source);
+            destination = LookPresetComposition.Materialize(destination);
+        }
+
         LibraryFrameSnapshot next = destination;
         DevelopRouteSnapshot route = destination.Route;
 
@@ -70,6 +78,7 @@ public readonly record struct DevelopSettingsPasteScope(
                 AutoBalance = source.AutoBalance,
                 AutoNeutralBalance = source.AutoNeutralBalance,
                 DevelopTarget = source.DevelopTarget,
+                ChannelRange = source.ChannelRange,
             };
         }
 
@@ -78,8 +87,7 @@ public readonly record struct DevelopSettingsPasteScope(
 
         if (Tone)
         {
-            // 프리셋은 톤의 바탕이므로 톤과 함께 움직입니다. 델타만 옮기면 같은 값인데 다른
-            // 그림이 나옵니다.
+            // 세 룩 묶음을 모두 옮기면 원본의 프리셋과 델타를 함께 교체한다. 부분 범위는 위에서 풀었다.
             next = next with
             {
                 Tone = source.Tone,

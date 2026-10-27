@@ -110,7 +110,8 @@ public enum PrintPackageRenderer {
         item: PrintPackageItemLayout,
         pixelsPerPoint: CGFloat
     ) -> CIImage? {
-        var image = normalize(source)
+        // 칸이 사진보다 넓은 맞춤(fit) 자리에서 현상 결과가 extent 밖 값으로 빈칸을 덮지 않게 묶는다.
+        var image = normalize(PrintCompositionRenderer.isolated(source))
         // 레이아웃이 지정한 90° 회전 횟수를 적용한다.
         for _ in 0..<max(0, min(3, item.quarterTurns)) {
             let height = image.extent.height
