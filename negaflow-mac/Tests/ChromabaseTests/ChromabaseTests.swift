@@ -2588,9 +2588,10 @@ final class ChromabaseTests: XCTestCase {
             sampleColorSpace: linear
         )
 
-        XCTAssertEqual(sample?.white.x ?? 0, 0.1005, accuracy: 0.0006)
-        XCTAssertEqual(sample?.white.y ?? 0, 0.2005, accuracy: 0.0006)
-        XCTAssertEqual(sample?.white.z ?? 0, 0.3005, accuracy: 0.0006)
+        let expectedLuminance = 0.2126 * 0.1005 + 0.7152 * 0.2005 + 0.0722 * 0.3005
+        XCTAssertEqual(sample?.white.x ?? 0, expectedLuminance, accuracy: 0.0006)
+        XCTAssertEqual(sample?.white.y ?? 0, expectedLuminance, accuracy: 0.0006)
+        XCTAssertEqual(sample?.white.z ?? 0, expectedLuminance, accuracy: 0.0006)
     }
 
     func testAutoLevelsKeepsLinearScannerHighlightHeadroom() {
@@ -3215,7 +3216,8 @@ final class ChromabaseTests: XCTestCase {
         }
         let input = makeTestImage(bytes: bytes, width: width, height: height)
         let output = AutoLevels.apply(to: input)
-        let rendered = renderRGBA8(output, width: width, height: height)
+        // 자동 레벨과 엔진이 쓰는 linear 작업 공간에서 렌더한다.
+        let rendered = renderLinearRGBA8(output, width: width, height: height)
 
         var minLuma = 255
         var maxLuma = 0
