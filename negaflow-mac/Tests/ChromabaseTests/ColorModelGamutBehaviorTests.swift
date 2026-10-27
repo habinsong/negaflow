@@ -310,8 +310,13 @@ final class ColorModelGamutBehaviorTests: XCTestCase {
                            bounds: CGRect(x: 0, y: 0, width: pixels.count, height: 1),
                            format: .RGBAf, colorSpace: linear)
         }
-        return (0..<pixels.count).map {
-            SIMD4(Double(out[$0 * 4]), Double(out[$0 * 4 + 1]), Double(out[$0 * 4 + 2]), Double(out[$0 * 4 + 3]))
+        return (0..<pixels.count).map { index -> SIMD4<Double> in
+            let offset = index * 4
+            let red = Double(out[offset])
+            let green = Double(out[offset + 1])
+            let blue = Double(out[offset + 2])
+            let alpha = Double(out[offset + 3])
+            return SIMD4<Double>(red, green, blue, alpha)
         }
     }
 }
