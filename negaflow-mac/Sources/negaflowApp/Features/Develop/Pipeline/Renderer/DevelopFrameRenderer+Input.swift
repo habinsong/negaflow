@@ -176,7 +176,19 @@ extension DevelopFrameRenderer {
         }
     }
 
-    private static func materializedPreviewRaw(
+    /// 굳혀 둘 프리뷰 입력의 픽셀 포맷.
+    ///
+    /// 이 버퍼는 화면에 그대로 나가는 그림이 아니라 **현상 입력**이다. 8bit 로 내려앉으면
+    /// 그 뒤의 반전·커브가 이미 사라진 계조 위에서 돈다 — sRGB 태그가 붙은 16bit 스캔
+    /// (VueScan/SilverFast 출력이 흔히 그렇다)이 정확히 그 경우였다. sRGB 로 굳히는 8bit 원본
+    /// (JPEG 등)을 16bit 로 부풀리면 메모리만 두 배로 먹고 얻는 건 없다. 하지만 linear 로 굳힐
+    /// 때는 8bit 원본도 16bit 여야 한다. linear 8bit 는 sRGB 코드 0~50 을 9단계로 뭉개서 어두운
+    /// 면이 계단으로 깨지고, 네거티브 반전이 그 계단을 그대로 키운다(1.2.1 JPEG 깨짐).
+    static func previewRawFormat(sourceBitsPerComponent: Int, usesLinearSRGB: Bool) -> CIFormat {
+        sourceBitsPerComponent > 8 || usesLinearSRGB ? .RGBA16 : .RGBA8
+    }
+
+    static func materializedPreviewRaw(
         _ input: CIImage,
         usesLinearSRGB: Bool,
         sourceBitsPerComponent: Int,
@@ -185,11 +197,9 @@ extension DevelopFrameRenderer {
         let colorSpace = usesLinearSRGB
             ? CGColorSpace(name: CGColorSpace.linearSRGB)!
             : CGColorSpace(name: CGColorSpace.sRGB)!
-        // 이 버퍼는 화면에 그대로 나가는 그림이 아니라 **현상 입력**이다. 8bit 로 내려앉으면
-        // 그 뒤의 반전·커브가 이미 사라진 계조 위에서 돈다 — sRGB 태그가 붙은 16bit 스캔
-        // (VueScan/SilverFast 출력이 흔히 그렇다)이 정확히 그 경우였다. 반대로 원본이 애초에
-        // 8bit 인 사진(JPEG 등)을 16bit 로 부풀리면 메모리만 두 배로 먹고 얻는 건 없다.
-        let format: CIFormat = sourceBitsPerComponent > 8 ? .RGBA16 : .RGBA8
+        let format = previewRawFormat(
+            sourceBitsPerComponent: sourceBitsPerComponent, usesLinearSRGB: usesLinearSRGB
+        )
         guard let cg = context.createCGImage(input, from: input.extent.integral, format: format, colorSpace: colorSpace) else {
             return nil
         }

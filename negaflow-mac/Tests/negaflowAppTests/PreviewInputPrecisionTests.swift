@@ -1,4 +1,6 @@
+import Chromabase
 import CoreGraphics
+import CoreImage
 import ImageIO
 import UniformTypeIdentifiers
 import XCTest
@@ -79,14 +81,74 @@ final class PreviewInputPrecisionTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(cached.image.bitsPerComponent, 16)
     }
 
-    /// 원본이 애초에 8bit 면 굳혀 둘 때도 8bit 다 — 부풀려 봐야 메모리만 두 배로 먹는다.
-    func testEightBitSourceIsNotInflated() throws {
-        let url = try Self.writeEightBitJPEG(width: 1_200, height: 800)
+    /// sRGB 로 굳히는 8bit 원본(포지티브)은 굳혀 둘 때도 8bit 다 — 부풀려 봐야 메모리만 두 배로 먹는다.
+    func testEightBitSourceKeptInSRGBIsNotInflated() throws {
+        let cached = try Self.cachedPreview(filmType: .colorPositive)
+        XCTAssertEqual(cached.image.bitsPerComponent, 8)
+        XCTAssertFalse(cached.usesLinearSRGB)
+    }
+
+    /// 네거티브는 반전이 linear 도메인에서 돈다. 8bit JPEG 이라도 linear 로 굳힐 때 8bit 면
+    /// 암부 계조가 뭉개져 반전 결과가 계단으로 깨진다 — 16bit 로 굳혀야 한다.
+    func testEightBitNegativeSourceIsStoredLinearAtSixteenBits() throws {
+        let cached = try Self.cachedPreview(filmType: .colorNegative)
+        XCTAssertTrue(cached.usesLinearSRGB)
+        XCTAssertGreaterThanOrEqual(cached.image.bitsPerComponent, 16)
+    }
+
+    /// 네거티브 카메라 RAW 프리뷰 마스터 크기는 정착 프리뷰 상한과 같아야 정착 요청이 캐시를 쓴다.
+    func testNativeRAWPreviewMasterMatchesSettledProxyLimit() {
+        XCTAssertEqual(NativeCameraRAW.previewMasterLongSide, DevelopFrameRenderer.fullMaxDimension)
+    }
+
+    func testPreviewRawFormatTable() {
+        XCTAssertEqual(DevelopFrameRenderer.previewRawFormat(sourceBitsPerComponent: 8, usesLinearSRGB: false), .RGBA8)
+        XCTAssertEqual(DevelopFrameRenderer.previewRawFormat(sourceBitsPerComponent: 8, usesLinearSRGB: true), .RGBA16)
+        XCTAssertEqual(DevelopFrameRenderer.previewRawFormat(sourceBitsPerComponent: 16, usesLinearSRGB: false), .RGBA16)
+        XCTAssertEqual(DevelopFrameRenderer.previewRawFormat(sourceBitsPerComponent: 16, usesLinearSRGB: true), .RGBA16)
+    }
+
+    /// 어두운 8bit 경사를 linear 로 굳혀도 sRGB 코드 단계가 살아남는다.
+    func testDarkEightBitRampKeepsItsLevelsWhenStoredLinear() throws {
+        let width = 256
+        var pixels = [UInt8](repeating: 255, count: width * 4 * 4)
+        for y in 0..<4 {
+            for x in 0..<width {
+                let i = (y * width + x) * 4
+                let code = UInt8(min(x, 50))
+                pixels[i] = code; pixels[i + 1] = code; pixels[i + 2] = code
+            }
+        }
+        let provider = CGDataProvider(data: Data(pixels) as CFData)!
+        let source = try XCTUnwrap(CGImage(
+            width: width, height: 4, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+            provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent
+        ))
+        let stored = try XCTUnwrap(DevelopFrameRenderer.materializedPreviewRaw(
+            CIImage(cgImage: source), usesLinearSRGB: true, sourceBitsPerComponent: 8,
+            context: DevelopFrameRenderer.linearRawProxyContext
+        ))
+        // 저장한 linear 값을 다시 sRGB 코드로 읽어 서로 다른 단계가 몇 개 남는지 센다.
+        let back = CIImage(cgImage: stored.image, options: [.colorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!])
+        var out = [UInt8](repeating: 0, count: width * 4)
+        DevelopFrameRenderer.srgbRawProxyContext.render(
+            back, toBitmap: &out, rowBytes: width * 4,
+            bounds: CGRect(x: 0, y: 0, width: width, height: 1),
+            format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!
+        )
+        let levels = Set((0...50).map { out[$0 * 4 + 1] })
+        XCTAssertGreaterThanOrEqual(levels.count, 49, "sRGB 코드 0~50 이 \(levels.count)단계로 뭉개졌다")
+    }
+
+    private static func cachedPreview(filmType: FilmType) throws -> DevelopFramePreviewRaw {
+        let url = try writeEightBitJPEG(width: 1_200, height: 800)
         defer { try? FileManager.default.removeItem(at: url) }
 
         let model = AppModel()
         let frame = ScanFrame(
-            scanIndex: 1, rawScanURL: url, filmType: .colorNegative, sourceKind: .importedFile
+            scanIndex: 1, rawScanURL: url, filmType: filmType, sourceKind: .importedFile
         )
         model.frames = [frame]
         let baseKey = FilmBaseCacheKey(
@@ -102,8 +164,7 @@ final class PreviewInputPrecisionTests: XCTestCase {
             needsThumbnail: false, proxyMaxDimension: 1_024
         )
         let result = try DevelopFrameRenderer.render(snapshot)
-        let cached = try XCTUnwrap(result.previewRaw)
-        XCTAssertEqual(cached.image.bitsPerComponent, 8)
+        return try XCTUnwrap(result.previewRaw)
     }
 
     private static func writeEightBitJPEG(width: Int, height: Int) throws -> URL {
