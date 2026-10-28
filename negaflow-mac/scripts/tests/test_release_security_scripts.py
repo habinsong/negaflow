@@ -53,6 +53,14 @@ class ReleaseSecurityScriptTests(unittest.TestCase):
                 text=True,
             )
             self.assertIn("runtime", details.stderr)
+            signed = subprocess.run(
+                ["codesign", "-d", "--entitlements", "-", "--xml", str(app)],
+                check=True,
+                capture_output=True,
+            )
+            self.assertIn(
+                b"com.apple.security.cs.disable-library-validation", signed.stdout
+            )
             subprocess.run(
                 ["codesign", "--verify", "--deep", "--strict", str(app)],
                 check=True,
@@ -93,7 +101,11 @@ class ReleaseSecurityScriptTests(unittest.TestCase):
 
         with (ROOT / "Config/negaflow.entitlements").open("rb") as stream:
             entitlements = plistlib.load(stream)
-        self.assertEqual(entitlements, {})
+        # libraw.dylib 는 ad-hoc 서명이라 하드닝 런타임의 라이브러리 검증에 걸린다.
+        # 이 권한이 없으면 네거티브 카메라 RAW 를 전혀 디코드하지 못한다.
+        self.assertEqual(
+            entitlements, {"com.apple.security.cs.disable-library-validation": True}
+        )
         self.assertNotIn("com.apple.security.get-task-allow", entitlements)
 
 

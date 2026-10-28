@@ -63,7 +63,9 @@ matching -arch arm64 or -arch x86_64. No optional RawSpeed or DNG SDK is linked.
 For a replacement library in your own copy of negaflow.app, re-sign the library
 and then the app with your own signature (ad-hoc signing is supported):
   codesign --force --sign - negaflow.app/Contents/Frameworks/libraw.dylib
-  codesign --force --options runtime --sign - negaflow.app
+  codesign --force --options runtime --preserve-metadata=entitlements --sign - negaflow.app
+Keep the app's entitlements (disable-library-validation): without them macOS refuses
+to load a library signed by a different identity.
 Keep your own source/build records when distributing a modified library.
 EOF
 echo "[libraw] $OUTPUT/libraw.dylib"
