@@ -15,6 +15,7 @@ LLVM_CMAKE_SHA=3319203cfd1172bbac50f06fa68e318af84dcb5d65353310c0586354069d6634
 #   xtrans-parallel-rows: stock X-Trans parallelism races between tiles (output changed run to run);
 #     tiles stay in serial order and the rows inside each tile run in parallel.
 PATCHES=("$ROOT"/scripts/libraw/*.patch)
+PREVIEW_BRIDGE="$ROOT/scripts/libraw/native-preview-bridge.cpp"
 ARCHITECTURES="${1:-$(uname -m)}"
 OUTPUT="${2:-$ROOT/../build/libraw/$ARCHITECTURES}"
 WORK="$ROOT/../build/libraw/source"
@@ -23,7 +24,7 @@ SOURCE="$WORK/LibRaw-$COMMIT"
 LLVM="$WORK/llvm-$LLVM_VERSION"
 case "$ARCHITECTURES" in arm64|x86_64|universal) ;; *) echo 'unsupported architecture' >&2; exit 2 ;; esac
 command -v cmake >/dev/null || { echo 'cmake is required to build the OpenMP runtime' >&2; exit 1; }
-BUILD_ID="$SOURCE_SHA-native-v4-openmp-$LLVM_VERSION-$(cat "${PATCHES[@]}" | shasum -a 256 | cut -c1-16)"
+BUILD_ID="$SOURCE_SHA-native-v7-direct-preview-o3-thinlto-openmp-$LLVM_VERSION-$(cat "${PATCHES[@]}" "$PREVIEW_BRIDGE" | shasum -a 256 | cut -c1-16)"
 mkdir -p "$WORK" "$OUTPUT/licenses"
 fetch() { # url file sha
   if [ ! -f "$2" ]; then
@@ -74,10 +75,13 @@ if [ ! -f "$OUTPUT/libraw.dylib" ] || [ "$(cat "$OUTPUT/build-id" 2>/dev/null ||
     mkdir -p "$build/object" "$build/lib"
     # libraw_types.h keeps OpenMP off for reentrant builds on Apple unless it is forced.
     make -C "$build" -f Makefile.dist -j "${NEGAFLOW_LIBRAW_JOBS:-4}" lib/libraw_r.a \
-      CXX=clang++ "CFLAGS=-O2 -fPIC -I. -arch $architecture -mmacosx-version-min=14.0 -DUSE_ZLIB -DLIBRAW_FORCE_OPENMP -Xpreprocessor -fopenmp -I$omp/include"
+      CXX=clang++ "CFLAGS=-O3 -flto=thin -fPIC -I. -arch $architecture -mmacosx-version-min=14.0 -DUSE_ZLIB -DLIBRAW_FORCE_OPENMP -Xpreprocessor -fopenmp -I$omp/include"
     library="$OUTPUT/libraw-$architecture.dylib"
-    clang++ -dynamiclib -arch "$architecture" -mmacosx-version-min=14.0 \
-      "-Wl,-force_load,$build/lib/libraw_r.a" "-L$omp/lib" -Wl,-hidden-lomp -lz \
+    clang++ -O3 -flto=thin -ffp-contract=off -fPIC -I"$build" -arch "$architecture" -mmacosx-version-min=14.0 \
+      -Xpreprocessor -fopenmp -I"$omp/include" \
+      -c "$PREVIEW_BRIDGE" -o "$build/object/native-preview-bridge.o"
+    clang++ -O3 -flto=thin -dynamiclib -arch "$architecture" -mmacosx-version-min=14.0 \
+      "-Wl,-force_load,$build/lib/libraw_r.a" "$build/object/native-preview-bridge.o" "-L$omp/lib" -Wl,-hidden-lomp -lz \
       -install_name @rpath/libraw.dylib -o "$library"
     # The runtime must be inside the library and invisible from outside it. Outputs are captured
     # first: under pipefail an early `grep -q` exit fails the producer with SIGPIPE.
@@ -96,7 +100,7 @@ if [ ! -f "$OUTPUT/libraw.dylib" ] || [ "$(cat "$OUTPUT/build-id" 2>/dev/null ||
 fi
 for name in LICENSE.LGPL LICENSE.CDDL COPYRIGHT Changelog.txt; do cp "$SOURCE/$name" "$OUTPUT/licenses/$name"; done
 cp "$ARCHIVE" "$OUTPUT/licenses/"
-cp "$ROOT/scripts/build-libraw.sh" "${PATCHES[@]}" "$OUTPUT/licenses/"
+cp "$ROOT/scripts/build-libraw.sh" "${PATCHES[@]}" "$PREVIEW_BRIDGE" "$OUTPUT/licenses/"
 cp "$LLVM/openmp/LICENSE.TXT" "$OUTPUT/licenses/LLVM-OpenMP-LICENSE.TXT"
 if [ -f "$ROOT/Config/LibRaw-Third-Party-Notices.txt" ]; then
   cp "$ROOT/Config/LibRaw-Third-Party-Notices.txt" "$OUTPUT/licenses/"
@@ -115,12 +119,18 @@ Modified files (patches included here, CDDL-1.0 like the files they change):
 - src/demosaic/xtrans_demosaic.cpp (xtrans-parallel-rows.patch). Upstream runs
   the Fuji X-Trans tiles in parallel while each tile reads pixels its
   neighbours write, so the output changed from run to run. The patch keeps the
-  tiles in serial order, runs the rows inside each tile in parallel, and
+  tiles in serial order, reuses one worker team for the rows of each tile, and
   gathers two per-pixel loops a row at a time.
 - src/postprocessing/mem_image.cpp (mem-image-parallel-rows.patch). The final
   copy into the output bitmap runs its rows in parallel.
 Both keep the output equal to the unpatched serial build bit for bit. No other
 LibRaw file is changed.
+native-preview-bridge.cpp is Negaflow's CDDL-1.0 source for selecting a provisional
+preview from reported mosaic data, forwarding cancellation, and reducing linear
+camera RGB directly from the processed sensor buffer. Its area weights and float
+accumulation order match RGB16AreaReduce.swift; no full-resolution output copy is
+allocated for previews. It uses the upstream public headers. Settled previews and
+exports keep the default quality.
 
 OpenMP runtime: LLVM $LLVM_VERSION libomp, built from
 $LLVM_RELEASE/openmp-$LLVM_VERSION.src.tar.xz
@@ -131,9 +141,10 @@ The separate libraw.dylib can be replaced by a compatible C-ABI build.
 The archive, the patches and the exact Negaflow build script are included here.
 The script runs from a Negaflow source checkout; alternatively extract the
 archive, apply the patches with patch -p1, and build with upstream Makefile.dist
-(lib/libraw_r.a), then link with:
-  clang++ -dynamiclib -Wl,-force_load,lib/libraw_r.a -L<libomp>/lib -Wl,-hidden-lomp -lz -install_name @rpath/libraw.dylib -o libraw.dylib
-Compilation uses -O2 -fPIC -I. -mmacosx-version-min=14.0 -DUSE_ZLIB
+(lib/libraw_r.a), compile the supplied bridge, then link with:
+  clang++ -O3 -flto=thin -ffp-contract=off -fPIC -I. -Xpreprocessor -fopenmp -I<libomp>/include -c native-preview-bridge.cpp -o native-preview-bridge.o
+  clang++ -O3 -flto=thin -dynamiclib -Wl,-force_load,lib/libraw_r.a native-preview-bridge.o -L<libomp>/lib -Wl,-hidden-lomp -lz -install_name @rpath/libraw.dylib -o libraw.dylib
+Compilation uses -O3 -flto=thin -fPIC -I. -mmacosx-version-min=14.0 -DUSE_ZLIB
 -DLIBRAW_FORCE_OPENMP -Xpreprocessor -fopenmp -I<libomp>/include and the
 matching -arch arm64 or -arch x86_64. A build without the OpenMP flags and
 without libomp is serial and gives the same pixels. No optional RawSpeed or DNG

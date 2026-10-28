@@ -141,10 +141,13 @@ public enum ImageLoader {
     public struct DecodedImage {
         public let image: CIImage
         public let provenance: DecodeProvenance
+        /// 디코더가 이미 만든 불변 화소. 다시 렌더하지 않고 프리뷰 입력으로 보관한다.
+        public let rasterImage: CGImage?
 
-        public init(image: CIImage, provenance: DecodeProvenance) {
+        public init(image: CIImage, provenance: DecodeProvenance, rasterImage: CGImage? = nil) {
             self.image = image
             self.provenance = provenance
+            self.rasterImage = rasterImage
         }
     }
 
@@ -156,11 +159,14 @@ public enum ImageLoader {
         public let image: CIImage
         public let sourcePixelSize: CGSize
         public let usesLinearSRGB: Bool
+        public let rasterImage: CGImage?
 
-        public init(image: CIImage, sourcePixelSize: CGSize, usesLinearSRGB: Bool) {
+        public init(image: CIImage, sourcePixelSize: CGSize, usesLinearSRGB: Bool,
+                    rasterImage: CGImage? = nil) {
             self.image = image
             self.sourcePixelSize = sourcePixelSize
             self.usesLinearSRGB = usesLinearSRGB
+            self.rasterImage = rasterImage
         }
     }
 
@@ -343,10 +349,11 @@ public enum ImageLoader {
         }
         if kind(of: url) == .rawDng {
             let scale = max(0.01, min(1.0, maxDimension / max(size.width, size.height)))
-            guard let image = loadRAW(url, scaleFactor: scale, rendering: rawRendering) else {
+            guard let decoded = loadRAWDecoded(url, scaleFactor: scale, rendering: rawRendering) else {
                 return nil
             }
-            return PreviewImage(image: image, sourcePixelSize: size, usesLinearSRGB: true)
+            return PreviewImage(image: decoded.image, sourcePixelSize: size, usesLinearSRGB: true,
+                                rasterImage: decoded.rasterImage)
         }
         let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any]
         guard let cg = thumbnail(from: src, maxDimension: maxDimension, applyOrientation: true) else { return nil }

@@ -91,6 +91,7 @@ extension AppModel {
     /// 비활성 프레임의 풀해상도 발색 버퍼를 해제한다(썸네일/현상완료 플래그/base는 유지).
     /// 재진입 시 raw(또는 cleaned raw)에서 재현상해 즉시 복원한다.
     func evictDevelopBuffers(_ frame: ScanFrame) {
+        NativeCameraRAW.discardPreview(for: frame.rawScanURL)
         frame.inputGammaPreviewSource = nil
         frame.inputGammaPreviewMeasurements.clear()
         frame.developedImage = nil

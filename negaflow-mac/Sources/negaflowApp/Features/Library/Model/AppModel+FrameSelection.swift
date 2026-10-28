@@ -212,6 +212,7 @@ extension AppModel {
         // 새 현상을 시작해야 "이미 진행 중"으로 오인돼 요청이 버려지지 않는다.
         selectedFrameDevelopTask?.cancel()
         frameStore.selectedFrameID = id
+        CameraRAWSelectionTrace.begin(selectedFrame)
         handleSelectedFrameChange(from: oldValue)
         // 마지막으로 작업하던 사진은 카탈로그에 남아야 다시 켰을 때 그 사진으로 돌아간다.
         // 종료 저장만 믿으면 비정상 종료에서 잃는다.

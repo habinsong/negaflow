@@ -108,29 +108,33 @@ enum RGB16AreaReduce {
 
         func run(rows: Range<Int>) {
             var accumulated = [Float](repeating: 0, count: targetWidth * 3)
-            for row in rows {
-                let top = Double(row) * rowScale
-                let bottom = min(Double(height), Double(row + 1) * rowScale)
-                for index in accumulated.indices { accumulated[index] = 0 }
-                var sy = Int(top)
-                while Double(sy) < bottom, sy < height {
-                    let weightY = Float(min(Double(sy + 1), bottom) - max(Double(sy), top))
-                    accumulate(line: source + sy * width * channels, weightY: weightY, into: &accumulated)
-                    sy += 1
-                }
-                let rowSpan = Float(bottom - top)
-                let out = output + row * targetWidth * 4
-                for ox in 0..<targetWidth {
-                    let norm = 1 / (columnSpan[ox] * rowSpan)
-                    for c in 0..<3 {
-                        out[ox * 4 + c] = UInt16(min(65535, max(0, accumulated[ox * 3 + c] * norm + 0.5)))
+            // 행마다 배열의 쓰기 가능 여부를 다시 검사하지 않는다. 작업별로 전용 버퍼를 쓴다.
+            accumulated.withUnsafeMutableBufferPointer { buffer in
+                let acc = buffer.baseAddress!
+                for row in rows {
+                    let top = Double(row) * rowScale
+                    let bottom = min(Double(height), Double(row + 1) * rowScale)
+                    for index in 0..<(targetWidth * 3) { acc[index] = 0 }
+                    var sy = Int(top)
+                    while Double(sy) < bottom, sy < height {
+                        let weightY = Float(min(Double(sy + 1), bottom) - max(Double(sy), top))
+                        accumulate(line: source + sy * width * channels, weightY: weightY, into: acc)
+                        sy += 1
                     }
-                    out[ox * 4 + 3] = .max
+                    let rowSpan = Float(bottom - top)
+                    let out = output + row * targetWidth * 4
+                    for ox in 0..<targetWidth {
+                        let norm = 1 / (columnSpan[ox] * rowSpan)
+                        for c in 0..<3 {
+                            out[ox * 4 + c] = UInt16(min(65535, max(0, acc[ox * 3 + c] * norm + 0.5)))
+                        }
+                        out[ox * 4 + 3] = .max
+                    }
                 }
             }
         }
 
-        private func accumulate(line: UnsafePointer<UInt16>, weightY: Float, into acc: inout [Float]) {
+        private func accumulate(line: UnsafePointer<UInt16>, weightY: Float, into acc: UnsafeMutablePointer<Float>) {
             for ox in 0..<targetWidth {
                 let s = start[ox], e = end[ox]
                 var r: Float = 0, g: Float = 0, b: Float = 0

@@ -109,6 +109,11 @@ extension DevelopFrameRenderer {
             cleanedRawURL: verifiedCleanedRawURL
         ) {
             let usesLinear = snapshot.filmType.requiresInversion || preview.usesLinearSRGB
+            // LibRaw의 RGBA16은 이미 불변 버퍼다. GPU에 올렸다 읽어 오는 복사 없이 공유한다.
+            if let raster = preview.rasterImage {
+                return RenderInput(image: preview.image,
+                    generatedPreviewRaw: DevelopFramePreviewRaw(image: raster, usesLinearSRGB: usesLinear))
+            }
             let proxy = materializedPreviewRaw(
                 preview.image,
                 usesLinearSRGB: usesLinear,

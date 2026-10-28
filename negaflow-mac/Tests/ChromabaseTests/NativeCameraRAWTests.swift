@@ -162,6 +162,49 @@ final class NativeCameraRAWTests: XCTestCase {
         XCTAssertEqual(NativeCameraRAW.previewMasterLongSide, 3600)
     }
 
+    func testNativeRasterMatchesBitmapInputWithoutAnotherRender() throws {
+        guard NativeCameraRAW.isAvailable else { throw XCTSkip("NEGAFLOW_LIBRAW_LIBRARY is required") }
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "CameraNativeRaw", withExtension: "dng"))
+        for scale in [CGFloat(1), 0.43, 0.25] {
+            let decoded = try XCTUnwrap(NativeCameraRAW.decode(url, scaleFactor: scale))
+            let raster = try XCTUnwrap(decoded.rasterImage)
+            let data = try XCTUnwrap(raster.dataProvider?.data) as Data
+            XCTAssertEqual(raster.bitsPerComponent, 16)
+            let bitmap = CIImage(bitmapData: data, bytesPerRow: raster.bytesPerRow,
+                size: CGSize(width: raster.width, height: raster.height), format: .RGBA16,
+                colorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!)
+            XCTAssertEqual(decoded.image.extent, bitmap.extent)
+            XCTAssertEqual(pixels(decoded.image, width: 64, height: 64), pixels(bitmap, width: 64, height: 64))
+            XCTAssertEqual(NativeCameraRAW.matrix(in: decoded.image), decoded.provenance.cameraToWorking)
+        }
+    }
+
+    func testSettledRasterUsesOneAreaReductionForRealRAWs() throws {
+        guard NativeCameraRAW.isAvailable,
+              let list = ProcessInfo.processInfo.environment["NEGAFLOW_RAW_TIMING_FILES"] else {
+            throw XCTSkip("NEGAFLOW_RAW_TIMING_FILES and NEGAFLOW_LIBRAW_LIBRARY are required")
+        }
+        for path in list.split(separator: ":") {
+            try autoreleasepool {
+                let url = URL(fileURLWithPath: String(path))
+                NativeCameraRAW.purgePreviewCache()
+                let full = try XCTUnwrap(NativeCameraRAW.decode(url, scaleFactor: nil)?.rasterImage)
+                let size = ImageLoader.imageSource(url).flatMap(ImageLoader.sourcePixelSize)
+                    ?? CGSize(width: full.width, height: full.height)
+                guard max(size.width, size.height) > NativeCameraRAW.previewMasterLongSide else { return }
+                let scale = NativeCameraRAW.previewMasterLongSide / max(size.width, size.height)
+                let preview = try XCTUnwrap(NativeCameraRAW.decode(url, scaleFactor: scale)?.rasterImage)
+                let fullData = try XCTUnwrap(full.dataProvider?.data) as Data
+                let expected = fullData.withUnsafeBytes { raw in
+                    RGB16AreaReduce.reduceToData(raw.baseAddress!.assumingMemoryBound(to: UInt16.self),
+                        width: full.width, height: full.height, channels: 4,
+                        targetWidth: preview.width, targetHeight: preview.height)
+                }
+                XCTAssertEqual(try XCTUnwrap(preview.dataProvider?.data) as Data, try XCTUnwrap(expected))
+            }
+        }
+    }
+
     func testPrefetchKeepsPreviewPixelsAndCameraMatrixUnchanged() throws {
         guard NativeCameraRAW.isAvailable else {
             throw XCTSkip("NEGAFLOW_LIBRAW_LIBRARY is required")
@@ -175,6 +218,109 @@ final class NativeCameraRAWTests: XCTestCase {
         XCTAssertEqual(cold.image.extent, warm.image.extent)
         XCTAssertEqual(cold.provenance.cameraToWorking, warm.provenance.cameraToWorking)
         XCTAssertEqual(pixels(cold.image, width: 64, height: 64), pixels(warm.image, width: 64, height: 64))
+    }
+
+    func testProgressivePreviewKeepsCanonicalPixelsAndRecoversAfterCancellation() async throws {
+        guard NativeCameraRAW.supportsProgressivePreview else {
+            throw XCTSkip("Bundled LibRaw progressive preview support is required")
+        }
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "CameraNativeRaw", withExtension: "dng"))
+        let baseline = try XCTUnwrap(NativeCameraRAW.decode(url, scaleFactor: 0.25))
+        let expected = pixels(baseline.image, width: 64, height: 64)
+        NativeCameraRAW.purgePreviewCache()
+        let work = try XCTUnwrap(NativeCameraRAW.beginProgressivePreview(url, firstMaxDimension: 64))
+        var firstCount = 0, ready = false
+        for try await phase in work.updates {
+            switch phase {
+            case .first(let raster):
+                firstCount += 1
+                XCTAssertEqual(raster.bitsPerComponent, 16)
+                XCTAssertLessThanOrEqual(max(raster.width, raster.height), 64)
+            case .ready: ready = true
+            }
+        }
+        XCTAssertEqual(firstCount, 1)
+        XCTAssertTrue(ready)
+        let settled = try XCTUnwrap(NativeCameraRAW.decode(url, scaleFactor: 0.25))
+        XCTAssertEqual(pixels(settled.image, width: 64, height: 64), expected)
+        XCTAssertEqual(settled.provenance.cameraToWorking, baseline.provenance.cameraToWorking)
+        for _ in 0..<4 {
+            NativeCameraRAW.purgePreviewCache()
+            let cancelled = try XCTUnwrap(NativeCameraRAW.beginProgressivePreview(url, firstMaxDimension: 64))
+            cancelled.cancel()
+            do { for try await _ in cancelled.updates {} } catch { /* Cancellation may finish between stages. */ }
+        }
+        NativeCameraRAW.purgePreviewCache()
+        let recovered = try XCTUnwrap(NativeCameraRAW.decode(url, scaleFactor: 0.25))
+        XCTAssertEqual(pixels(recovered.image, width: 64, height: 64), expected)
+    }
+
+    func testProgressiveDeliverySurvivesPurgeWithoutRefillingCache() async throws {
+        guard NativeCameraRAW.supportsProgressivePreview else { throw XCTSkip("Bundled LibRaw required") }
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "CameraNativeRaw", withExtension: "dng"))
+        NativeCameraRAW.setPreviewCacheResidencyLimit(3)
+        defer { NativeCameraRAW.setPreviewCacheResidencyLimit(3); NativeCameraRAW.purgePreviewCache() }
+        NativeCameraRAW.purgePreviewCache()
+        let work = try XCTUnwrap(NativeCameraRAW.beginProgressivePreview(url, firstMaxDimension: 64))
+        var received = false
+        for try await phase in work.updates {
+            switch phase {
+            case .first:
+                NativeCameraRAW.purgePreviewCache()
+                NativeCameraRAW.setPreviewCacheResidencyLimit(1)
+            case .ready(let raster):
+                received = true
+                XCTAssertEqual(raster.bitsPerComponent, 16)
+                XCTAssertGreaterThan(raster.width, 64)
+            }
+        }
+        await work.cancelAndWait()
+        XCTAssertTrue(received)
+        XCTAssertEqual(NativeCameraRAW.previewCacheUsage.entries, 0)
+        XCTAssertEqual(NativeCameraRAW.previewCacheUsage.bytes, 0)
+        _ = try XCTUnwrap(NativeCameraRAW.decode(url, scaleFactor: 0.25))
+        XCTAssertEqual(NativeCameraRAW.previewCacheUsage.entries, 0)
+        NativeCameraRAW.setPreviewCacheResidencyLimit(2)
+        _ = try XCTUnwrap(NativeCameraRAW.decode(url, scaleFactor: 0.25))
+        XCTAssertEqual(NativeCameraRAW.previewCacheUsage.entries, 1)
+        NativeCameraRAW.discardPreview(for: url)
+        XCTAssertEqual(NativeCameraRAW.previewCacheUsage.entries, 0)
+    }
+
+    func testProgressiveRealRAWsKeepSettledPixels() async throws {
+        guard NativeCameraRAW.supportsProgressivePreview,
+              let list = ProcessInfo.processInfo.environment["NEGAFLOW_RAW_TIMING_FILES"] else {
+            throw XCTSkip("NEGAFLOW_RAW_TIMING_FILES and bundled LibRaw are required")
+        }
+        for path in list.split(separator: ":") {
+            let url = URL(fileURLWithPath: String(path))
+            NativeCameraRAW.purgePreviewCache()
+            let size = try XCTUnwrap(ImageLoader.imageSource(url).flatMap(ImageLoader.sourcePixelSize)
+                ?? NativeCameraRAW.decode(url, scaleFactor: nil)?.image.extent.size)
+            let scale = min(1, NativeCameraRAW.previewMasterLongSide / max(size.width, size.height))
+            let canonical = try XCTUnwrap(NativeCameraRAW.decode(url, scaleFactor: scale))
+            let expected = try XCTUnwrap(canonical.rasterImage?.dataProvider?.data) as Data
+            NativeCameraRAW.purgePreviewCache()
+            let start = Date()
+            let work = try XCTUnwrap(NativeCameraRAW.beginProgressivePreview(url, firstMaxDimension: 2560))
+            var received = false
+            for try await phase in work.updates {
+                switch phase {
+                case .first(let raster):
+                    XCTAssertLessThanOrEqual(max(raster.width, raster.height), 2560)
+                    print("[raw-decode] \(url.lastPathComponent) first \(Int(-start.timeIntervalSinceNow * 1000)) ms")
+                case .ready(let raster):
+                    received = true
+                    XCTAssertEqual(try XCTUnwrap(raster.dataProvider?.data) as Data, expected,
+                        "Settled pixels must match canonical processing: \(url.lastPathComponent)")
+                    print("[raw-decode] \(url.lastPathComponent) ready \(Int(-start.timeIntervalSinceNow * 1000)) ms")
+                }
+            }
+            await work.cancelAndWait()
+            XCTAssertTrue(received)
+            XCTAssertLessThanOrEqual(NativeCameraRAW.previewCacheUsage.entries, NativeCameraRAW.previewCacheUsage.limit)
+            XCTAssertLessThanOrEqual(NativeCameraRAW.previewCacheUsage.bytes, 160 * 1024 * 1024)
+        }
     }
 
     private func meanChannels(_ image: CIImage, size: Int) -> [Float] {

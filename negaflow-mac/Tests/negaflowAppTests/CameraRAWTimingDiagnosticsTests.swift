@@ -14,6 +14,33 @@ import XCTest
 /// 현상 시간을 출력한다. 파일 내용은 보지 않고 시간만 잰다.
 @MainActor
 final class CameraRAWTimingDiagnosticsTests: XCTestCase {
+    /// 기존 카탈로그에서의 첫 선택: 썸네일 시드나 이웃 선행 디코드 없이 잰다.
+    func testColdCatalogStyleSelectionTiming() async throws {
+        guard let list = ProcessInfo.processInfo.environment["NEGAFLOW_RAW_TIMING_FILES"],
+              NativeCameraRAW.isAvailable else { throw XCTSkip("RAW samples and LibRaw required") }
+        let urls = list.split(separator: ":").map { URL(fileURLWithPath: String($0)) }
+        let (model, root) = try await makeModel()
+        defer { model.cancelNeighborCameraRAWPrefetch(); try? FileManager.default.removeItem(at: root) }
+        let frames = urls.enumerated().map {
+            ScanFrame(scanIndex: $0.offset + 1, rawScanURL: $0.element,
+                filmType: .colorNegative, sourceKind: .importedFile)
+        }
+        model.frames = frames
+        XCTAssertTrue(model.assignNewPersistentFrames(frames))
+        for frame in frames {
+            NativeCameraRAW.purgePreviewCache()
+            model.interactionScopeFrameIDs = [frame.id]
+            let start = Date()
+            model.activateFrame(frame.id)
+            let first = try await wait(since: start) { frame.developedImage != nil }
+            let settled = try await wait(since: start) { frame.developedIsSettled }
+            await model.selectedFrameDevelopTask?.value
+            XCTAssertEqual(model.selectedFrameID, frame.id)
+            print(String(format: "[raw-catalog] %@ cold first %.0f ms settled %.0f ms",
+                frame.rawScanURL.lastPathComponent, first * 1000, settled * 1000))
+        }
+    }
+
     func testNeighborPrefetchTimingAndPixelAgreement() async throws {
         guard let list = ProcessInfo.processInfo.environment["NEGAFLOW_RAW_TIMING_FILES"],
               NativeCameraRAW.isAvailable else {
@@ -139,6 +166,41 @@ final class CameraRAWTimingDiagnosticsTests: XCTestCase {
         await model.developImportedFramesSequentially(frames).value
         XCTAssertTrue(frames.allSatisfy { $0.thumbnailImage != nil })
         print(String(format: "[raw-timing] thumbnails %d frames %.0f ms", frames.count, -start.timeIntervalSinceNow * 1000))
+    }
+
+    func testRapidColdSelectionsOnlyPublishCurrentFrameWithinResidencyLimit() async throws {
+        guard NativeCameraRAW.supportsProgressivePreview,
+              let list = ProcessInfo.processInfo.environment["NEGAFLOW_RAW_TIMING_FILES"] else {
+            throw XCTSkip("NEGAFLOW_RAW_TIMING_FILES and bundled LibRaw are required")
+        }
+        let urls = list.split(separator: ":").map { URL(fileURLWithPath: String($0)) }
+        guard urls.count > 1 else { throw XCTSkip("At least two RAW files are required") }
+        let (model, root) = try await makeModel()
+        defer { model.selectedFrameDevelopTask?.cancel(); try? FileManager.default.removeItem(at: root) }
+        let frames = urls.enumerated().map {
+            ScanFrame(scanIndex: $0.offset + 1, rawScanURL: $0.element,
+                filmType: .colorNegative, sourceKind: .importedFile)
+        }
+        model.frames = frames
+        XCTAssertTrue(model.assignNewPersistentFrames(frames))
+        model.applyFrameCacheLimits(FrameCacheLimits(cleanedRaw: 1, developed: 2))
+        var unsettledOnLeave: [ScanFrame] = []
+        for frame in frames {
+            NativeCameraRAW.purgePreviewCache()
+            model.interactionScopeFrameIDs = [frame.id]
+            model.activateFrame(frame.id)
+            if frame.id != frames.last?.id {
+                try await Task.sleep(nanoseconds: 100_000_000)
+                if !frame.developedIsSettled { unsettledOnLeave.append(frame) }
+            }
+        }
+        let last = try XCTUnwrap(frames.last)
+        _ = try await wait(since: Date()) { last.developedIsSettled }
+        await model.selectedFrameDevelopTask?.value
+        XCTAssertEqual(model.selectedFrameID, last.id)
+        XCTAssertTrue(unsettledOnLeave.allSatisfy { !$0.developedIsSettled })
+        XCTAssertLessThanOrEqual(model.frameCacheManager.residentDevelopedIDs.count, 2)
+        XCTAssertLessThanOrEqual(frames.filter { $0.developedImage != nil }.count, 2)
     }
 
     /// 네거티브(LibRaw)와 포지티브(CIRAWFilter) 디코드가 같은 방향을 내는지 64px 휘도 지도의 상관으로 잰다.

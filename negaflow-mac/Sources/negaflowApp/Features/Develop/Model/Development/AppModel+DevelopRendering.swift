@@ -66,86 +66,104 @@ extension AppModel {
                     language: appLanguage
                 )
                 do {
-                    let renderStarted = Date()
-                    let fast = try await renderDevelopmentSnapshot(interactive)
-                    LaunchTrace.markOnce("first interactive render end", String(format: "%.0fms", -renderStarted.timeIntervalSinceNow * 1000))
-                    // 라이브 갱신 간격을 이 기기의 실제 소요에 맞추기 위한 근거.
-                    developController.noteInteractiveDevelopDuration(-renderStarted.timeIntervalSinceNow)
-                    guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else {
-                        return
+                    var hasSettledInput = false
+                    if !waitsForSettle, selectionBoundFrameID != nil {
+                        let prepared = await prepareColdCameraRAWPreview(
+                            frame, snapshot: interactive, revision: revision,
+                            cleanRawRevision: interactiveCleanRawRevision,
+                            selectionBoundFrameID: selectionBoundFrameID)
+                        guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else {
+                            return
+                        }
+                        if !prepared.isCurrent {
+                            revision = frame.developRevision
+                            continue
+                        }
+                        hasSettledInput = prepared.hasSettledInput
                     }
-                    guard softProofRenderRequestIsCurrent(interactive) else {
-                        revision = frame.developRevision
-                        continue
-                    }
-                    // 결함 제거 세대가 뒤처진 결과는 화면에 올리지 않는다. 슬라이더 값이 한 틱
-                    // 낡은 건 곧 덮이지만, 방금 지운 먼지가 되살아나 보이는 건 다른 문제다.
-                    guard interactiveCleanRawRevision == frame.cleanRawRevision else {
-                        revision = frame.developRevision
-                        continue
-                    }
-                    if interactive.isInputGammaPreview && (frame.inputGammaPreviewOverride == nil
-                        || interactive.inputGammaPreviewSessionRevision != frame.inputGammaPreviewSessionRevision) {
-                        revision = frame.developRevision
-                        continue
-                    }
-                    // 반면 인스펙터 값이 렌더 도는 사이 또 바뀐 것뿐이라면 이 장은 화면에 올린다.
-                    // 예전에는 여기서 통째로 버리고 다시 그렸는데, 그러면 드래그가 빠를수록 버리는
-                    // 비율이 올라가 화면이 오히려 덜 갱신됐다(실측: 요청 간격을 45→16 ms 로
-                    // 줄이면 갱신이 23.4→15.9/s 로 **떨어짐**). 한 틱 낡은 장을 잠깐 보여주고
-                    // 바로 아래에서 최신 값으로 다시 도는 편이 라이브 프리뷰답다 — 루프가
-                    // 순차라 옛 결과가 새 결과를 덮을 수는 없고, 마지막 값은 항상 반영된다.
-                    if !interactive.isInputGammaPreview {
-                        applyBaseCache(fast, to: frame, baseKey: baseKey)
-                        applySceneMeasurementCache(
-                            fast, to: frame, baseKey: baseKey,
-                            proxyMaxDimension: interactive.proxyMaxDimension,
-                            renderedParams: interactive.params
+                    if !hasSettledInput {
+                        let renderStarted = Date()
+                        let fast = try await renderDevelopmentSnapshot(interactive)
+                        LaunchTrace.markOnce("first interactive render end", String(format: "%.0fms", -renderStarted.timeIntervalSinceNow * 1000))
+                        // 라이브 갱신 간격을 이 기기의 실제 소요에 맞추기 위한 근거.
+                        developController.noteInteractiveDevelopDuration(-renderStarted.timeIntervalSinceNow)
+                        guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else {
+                            return
+                        }
+                        guard softProofRenderRequestIsCurrent(interactive) else {
+                            revision = frame.developRevision
+                            continue
+                        }
+                        // 결함 제거 세대가 뒤처진 결과는 화면에 올리지 않는다. 슬라이더 값이 한 틱
+                        // 낡은 건 곧 덮이지만, 방금 지운 먼지가 되살아나 보이는 건 다른 문제다.
+                        guard interactiveCleanRawRevision == frame.cleanRawRevision else {
+                            revision = frame.developRevision
+                            continue
+                        }
+                        if interactive.isInputGammaPreview && (frame.inputGammaPreviewOverride == nil
+                            || interactive.inputGammaPreviewSessionRevision != frame.inputGammaPreviewSessionRevision) {
+                            revision = frame.developRevision
+                            continue
+                        }
+                        // 반면 인스펙터 값이 렌더 도는 사이 또 바뀐 것뿐이라면 이 장은 화면에 올린다.
+                        // 예전에는 여기서 통째로 버리고 다시 그렸는데, 그러면 드래그가 빠를수록 버리는
+                        // 비율이 올라가 화면이 오히려 덜 갱신됐다(실측: 요청 간격을 45→16 ms 로
+                        // 줄이면 갱신이 23.4→15.9/s 로 **떨어짐**). 한 틱 낡은 장을 잠깐 보여주고
+                        // 바로 아래에서 최신 값으로 다시 도는 편이 라이브 프리뷰답다 — 루프가
+                        // 순차라 옛 결과가 새 결과를 덮을 수는 없고, 마지막 값은 항상 반영된다.
+                        if !interactive.isInputGammaPreview {
+                            applyBaseCache(fast, to: frame, baseKey: baseKey)
+                            applySceneMeasurementCache(
+                                fast, to: frame, baseKey: baseKey,
+                                proxyMaxDimension: interactive.proxyMaxDimension,
+                                renderedParams: interactive.params
+                            )
+                            applyPreviewRawCache(fast, to: frame, maxDimension: interactive.proxyMaxDimension)
+                        } else if let key = interactive.inputGammaMeasurementKey,
+                                  frame.inputGammaPreviewOverride != nil {
+                            frame.inputGammaPreviewMeasurements.store(
+                                .init(base: fast.base, measurements: fast.sceneMeasurements), for: key)
+                        }
+                        frame.noteDevelopedDisplaySize(
+                            CGSize(width: fast.developed.width, height: fast.developed.height),
+                            authoritative: interactive.proxyMaxDimension >= DevelopFrameRenderer.fullMaxDimension - 0.5
                         )
-                        applyPreviewRawCache(fast, to: frame, maxDimension: interactive.proxyMaxDimension)
-                    } else if let key = interactive.inputGammaMeasurementKey,
-                              frame.inputGammaPreviewOverride != nil {
-                        frame.inputGammaPreviewMeasurements.store(
-                            .init(base: fast.base, measurements: fast.sceneMeasurements), for: key)
-                    }
-                    frame.noteDevelopedDisplaySize(
-                        CGSize(width: fast.developed.width, height: fast.developed.height),
-                        authoritative: interactive.proxyMaxDimension >= DevelopFrameRenderer.fullMaxDimension - 0.5
-                    )
-                    frame.developedImage = NSImage(
-                        cgImage: fast.developed,
-                        size: NSSize(width: fast.developed.width, height: fast.developed.height)
-                    )
-                    if interactive.isInputGammaPreview {
-                        InputGammaPreviewTrace.emit("present", frameID: frame.id,
-                            session: interactive.inputGammaPreviewSessionRevision, value: interactive.params.inputGamma.value)
-                    }
-                    frame.clippingOverlayImage = fast.clippingOverlay.map {
-                        NSImage(cgImage: $0, size: NSSize(width: $0.width, height: $0.height))
-                    }
-                    frame.destinationGamutOverlayImage = fast.destinationGamutOverlay.map {
-                        NSImage(cgImage: $0, size: NSSize(width: $0.width, height: $0.height))
-                    }
-                    frame.developedPreviewTransform = interactive.imageTransform
-                    frame.displayedSoftProofRevision = interactive.softProofRevision
-                    // 프록시 결과다 — 정착 패스가 끝나기 전에 취소되면 저화질로 남는다는 표시.
-                    frame.developedIsSettled = false
-                    if let thumbnailBase = fast.thumbnailBase {
-                        frame.cachedThumbnailBase = thumbnailBase
-                    }
-                    if let thumb = fast.thumbnail {
-                        frame.thumbnailImage = NSImage(
-                            cgImage: thumb,
-                            size: NSSize(width: thumb.width, height: thumb.height)
+                        frame.developedImage = NSImage(
+                            cgImage: fast.developed,
+                            size: NSSize(width: fast.developed.width, height: fast.developed.height)
                         )
-                        frame.thumbnailTransform = interactive.imageTransform
-                        frame.thumbnailRecipeID = frame.params == interactive.params
-                            ? frame.currentThumbnailRecipeID() : nil
+                        if interactive.isInputGammaPreview {
+                            InputGammaPreviewTrace.emit("present", frameID: frame.id,
+                                session: interactive.inputGammaPreviewSessionRevision, value: interactive.params.inputGamma.value)
+                        }
+                        frame.clippingOverlayImage = fast.clippingOverlay.map {
+                            NSImage(cgImage: $0, size: NSSize(width: $0.width, height: $0.height))
+                        }
+                        frame.destinationGamutOverlayImage = fast.destinationGamutOverlay.map {
+                            NSImage(cgImage: $0, size: NSSize(width: $0.width, height: $0.height))
+                        }
+                        frame.developedPreviewTransform = interactive.imageTransform
+                        frame.displayedSoftProofRevision = interactive.softProofRevision
+                        // 프록시 결과다 — 정착 패스가 끝나기 전에 취소되면 저화질로 남는다는 표시.
+                        frame.developedIsSettled = false
+                        CameraRAWSelectionTrace.presented(frame, settled: false)
+                        if let thumbnailBase = fast.thumbnailBase {
+                            frame.cachedThumbnailBase = thumbnailBase
+                        }
+                        if let thumb = fast.thumbnail {
+                            frame.thumbnailImage = NSImage(
+                                cgImage: thumb,
+                                size: NSSize(width: thumb.width, height: thumb.height)
+                            )
+                            frame.thumbnailTransform = interactive.imageTransform
+                            frame.thumbnailRecipeID = frame.params == interactive.params
+                                ? frame.currentThumbnailRecipeID() : nil
+                        }
+                        frame.hasDevelopedOnce = true
+                        frame.displayedCleanRawRevision = max(
+                            frame.displayedCleanRawRevision, interactiveCleanRawRevision
+                        )
                     }
-                    frame.hasDevelopedOnce = true
-                    frame.displayedCleanRawRevision = max(
-                        frame.displayedCleanRawRevision, interactiveCleanRawRevision
-                    )
                 } catch is CancellationError {
                     return
                 } catch DevelopFrameRenderError.cleanedRawPending {
@@ -283,6 +301,7 @@ extension AppModel {
                 frame.developedPreviewTransform = full.imageTransform
                 frame.displayedSoftProofRevision = full.softProofRevision
                 frame.developedIsSettled = true
+                CameraRAWSelectionTrace.presented(frame, settled: true)
                 if let thumb = result.thumbnail {
                     frame.thumbnailImage = NSImage(cgImage: thumb, size: NSSize(width: thumb.width, height: thumb.height))
                     frame.thumbnailTransform = full.imageTransform
@@ -328,7 +347,7 @@ extension AppModel {
         }
     }
 
-    private func renderDevelopmentSnapshot(
+    func renderDevelopmentSnapshot(
         _ snapshot: DevelopFrameSnapshot, settledFrame: ScanFrame? = nil
     ) async throws -> DevelopFrameRenderResult {
         let renderTask = Task.detached(priority: .userInitiated) {

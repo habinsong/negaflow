@@ -1,9 +1,11 @@
 --- a/src/demosaic/xtrans_demosaic.cpp
 +++ b/src/demosaic/xtrans_demosaic.cpp
-@@ -1,1 +1,2 @@
+@@ -1,3 +1,4 @@
 +// Modifications by the Negaflow project (2026), distributed under CDDL-1.0.
  /* -*- C++ -*-
-@@ -165,25 +165,19 @@
+  * Copyright 2019-2025 LibRaw LLC (info@libraw.org)
+  *
+@@ -165,25 +166,21 @@
  		  }
  	  }
  
@@ -24,6 +26,8 @@
 -#if defined(LIBRAW_USE_OPENMP)
 -# pragma omp parallel for schedule(dynamic) default(none) firstprivate(buffers, allhex, passes, sgrow, sgcol, ndir) shared(dir) 
 -#endif
++  try
++  {
      for (int top = 3; top < height - 19; top += LIBRAW_AHD_TILE - 16)
      {
 -#if defined(LIBRAW_USE_OPENMP)
@@ -34,72 +38,98 @@
  
          ushort(*rgb)[LIBRAW_AHD_TILE][LIBRAW_AHD_TILE][3], (*rix)[3];
          short(*lab)[LIBRAW_AHD_TILE][3], (*lix)[3];
-@@ -202,6 +196,9 @@
+@@ -200,17 +197,32 @@
+ 
+         for (int left = 3; left < width - 19; left += LIBRAW_AHD_TILE - 16)
          {
++            checkCancel();
              int mrow = MIN(top + LIBRAW_AHD_TILE, height - 3);
              int mcol = MIN(left + LIBRAW_AHD_TILE, width - 3);
 +#if defined(LIBRAW_USE_OPENMP)
-+#pragma omp parallel for schedule(dynamic, 2)
++// Reuse one team through the tile; stage barriers keep the same read/write order.
++#pragma omp parallel firstprivate(rgb, mrow, mcol) private(rix, lix)
++#endif
++            {
++#if defined(LIBRAW_USE_OPENMP)
++#pragma omp for schedule(dynamic, 2)
 +#endif
              for (int row = top; row < mrow; row++)
                  for (int col = left; col < mcol; col++)
                      memcpy(rgb[0][row - top][col - left], image[row * width + col], 6);
-@@ -211,6 +208,9 @@
+             int c;
+-            FORC3 memcpy(rgb[c + 1], rgb[0], sizeof * rgb);
++#if defined(LIBRAW_USE_OPENMP)
++#pragma omp single
++#endif
++            { FORC3 memcpy(rgb[c + 1], rgb[0], sizeof * rgb); }
+ 
              /* Interpolate green horizontally, vertically, and along both diagonals:
               */
              int color[3][8];
 +#if defined(LIBRAW_USE_OPENMP)
-+#pragma omp parallel for schedule(dynamic, 2) private(c, color)
++#pragma omp for schedule(dynamic, 2)
 +#endif
              for (int row = top; row < mrow; row++)
                  for (int col = left; col < mcol; col++)
                  {
-@@ -240,6 +240,9 @@
+@@ -235,11 +247,20 @@
+             for (int pass = 0; pass < passes; pass++)
+             {
+                 if (pass == 1)
+-                    memcpy(rgb += 4, buffer, 4 * sizeof * rgb);
++                {
++                    rgb += 4;
++#if defined(LIBRAW_USE_OPENMP)
++#pragma omp single
++#endif
++                    memcpy(rgb, buffer, 4 * sizeof * rgb);
++                }
+ 
                  /* Recalculate green from interpolated values of closer pixels:	*/
                  if (pass)
                  {
 +#if defined(LIBRAW_USE_OPENMP)
-+#pragma omp parallel for schedule(dynamic, 2) private(rix)
++#pragma omp for schedule(dynamic, 2)
 +#endif
                      for (int row = top + 2; row < mrow - 2; row++)
                          for (int col = left + 2; col < mcol - 2; col++)
                          {
-@@ -260,6 +263,9 @@
+@@ -260,6 +281,9 @@
                  }
  
                  /* Interpolate red and blue values for solitary green pixels:	*/
 +#if defined(LIBRAW_USE_OPENMP)
-+#pragma omp parallel for schedule(dynamic, 2) private(rix, color, c)
++#pragma omp for schedule(dynamic, 2)
 +#endif
                  for (int row = (top - sgrow + 4) / 3 * 3 + sgrow; row < mrow - 2; row += 3)
                      for (int col = (left - sgcol + 4) / 3 * 3 + sgcol; col < mcol - 2; col += 3)
                  {
-@@ -293,6 +299,9 @@
+@@ -293,6 +317,9 @@
                  }
  
                  /* Interpolate red for blue pixels and vice versa:		*/
 +#if defined(LIBRAW_USE_OPENMP)
-+#pragma omp parallel for schedule(dynamic, 2) private(rix, c)
++#pragma omp for schedule(dynamic, 2)
 +#endif
                  for (int row = top + 3; row < mrow - 3; row++)
                      for (int col = left + 3; col < mcol - 3; col++)
                      {
-@@ -318,6 +327,9 @@
+@@ -318,6 +345,9 @@
                      }
  
                  /* Fill in red and blue for 2x2 blocks of green:		*/
 +#if defined(LIBRAW_USE_OPENMP)
-+#pragma omp parallel for schedule(dynamic, 2) private(rix, c)
++#pragma omp for schedule(dynamic, 2)
 +#endif
                  for (int row = top + 2; row < mrow - 2; row++)
                      if ((row - sgrow) % 3)
                          for (int col = left + 2; col < mcol - 2; col++)
-@@ -351,10 +363,17 @@
+@@ -351,10 +381,17 @@
              // no effect
              for (int d = 0; d < ndir; d++)
              {
 +#if defined(LIBRAW_USE_OPENMP)
-+#pragma omp parallel for schedule(dynamic, 2)
++#pragma omp for schedule(dynamic, 2)
 +#endif
                  for (int row = 2; row < mrow - 2; row++)
                      for (int col = 2; col < mcol - 2; col++)
@@ -107,18 +137,22 @@
 -                for (int f = dir[d & 3], row = 3; row < mrow - 3; row++)
 +                int f = dir[d & 3];
 +#if defined(LIBRAW_USE_OPENMP)
-+#pragma omp parallel for schedule(dynamic, 2) private(lix)
++#pragma omp for schedule(dynamic, 2)
 +#endif
 +                for (int row = 3; row < mrow - 3; row++)
                      for (int col = 3; col < mcol - 3; col++)
                      {
                          lix = &lab[row][col];
-@@ -370,36 +389,55 @@
+@@ -369,37 +406,59 @@
+             }
  
              /* Build homogeneity maps from the derivatives:			*/
++#if defined(LIBRAW_USE_OPENMP)
++#pragma omp single
++#endif
              memset(homo, 0, ndir * LIBRAW_AHD_TILE * LIBRAW_AHD_TILE);
 +#if defined(LIBRAW_USE_OPENMP)
-+#pragma omp parallel for schedule(dynamic, 2)
++#pragma omp for schedule(dynamic, 2)
 +#endif
              for (int row = 4; row < mrow - 4; row++)
 +            {
@@ -160,7 +194,7 @@
              if (width - left < LIBRAW_AHD_TILE + 4)
                  mcol = width - left + 2;
 +#if defined(LIBRAW_USE_OPENMP)
-+#pragma omp parallel for schedule(dynamic, 2) private(c)
++#pragma omp for schedule(dynamic, 2)
 +#endif
              for (int row = MIN(top, 8); row < mrow - 8; row++)
 -                for (int col = MIN(left, 8); col < mcol - 8; col++)
@@ -185,11 +219,25 @@
                      for (int d = 0; d < ndir - 4; d++)
                          if (hm[d] < hm[d + 4])
                              hm[d] = 0;
-@@ -422,6 +460,7 @@
+@@ -422,6 +481,8 @@
                          }
                      FORC3 image[(row + top) * width + col + left][c] = avg[c] / avg[3];
                  }
 +            }
++            }
          }
      }
    
+@@ -429,6 +490,12 @@
+ #pragma omp barrier
+ #endif
+ 
++  }
++  catch (...)
++  {
++    free_omp_buffers(buffers, buffer_count);
++    throw;
++  }
+     free_omp_buffers(buffers, buffer_count);
+ 
+     border_interpolate(8);

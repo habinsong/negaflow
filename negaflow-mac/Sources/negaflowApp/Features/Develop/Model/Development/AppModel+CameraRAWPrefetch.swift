@@ -37,7 +37,7 @@ extension AppModel {
             // 취소된 LibRaw 호출이 마무리되기 전에 새 추측 디코드를 겹쳐 쌓지 않는다.
             await previous?.value
             guard !Task.isCancelled else { return }
-            NativeCameraRAW.prefetchPreviewMaster(url)
+            await NativeCameraRAW.prefetchPreviewMasterUntilCancelled(url)
         }
     }
 }

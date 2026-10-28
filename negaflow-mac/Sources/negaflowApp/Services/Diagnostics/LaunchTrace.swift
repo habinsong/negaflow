@@ -39,3 +39,26 @@ enum LaunchTrace {
         mark(text.isEmpty ? key : "\(key) \(text)")
     }
 }
+
+/// 실제 카탈로그에서 선택→표시 시간을 잰다. RAW_TRACE를 명시한 로컬 실행에서만 기록한다.
+@MainActor
+enum CameraRAWSelectionTrace {
+    private static let enabled = ProcessInfo.processInfo.environment["NEGAFLOW_RAW_TRACE"] == "1"
+    private static var selection: (id: UUID, start: UInt64, first: Bool)?
+
+    static func begin(_ frame: ScanFrame?) {
+        guard enabled else { return }
+        selection = frame.map { ($0.id, DispatchTime.now().uptimeNanoseconds, false) }
+    }
+
+    static func presented(_ frame: ScanFrame, settled: Bool) {
+        guard enabled, var current = selection, current.id == frame.id,
+              settled || !current.first else { return }
+        let elapsed = Double(DispatchTime.now().uptimeNanoseconds - current.start) / 1e6
+        let phase = settled ? "settled" : "first"
+        FileHandle.standardError.write(Data(String(format: "[raw-selection] %@ %@ %.0f ms\n",
+            frame.rawScanURL.lastPathComponent, phase, elapsed).utf8))
+        current.first = true
+        selection = settled ? nil : current
+    }
+}

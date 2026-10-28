@@ -23,6 +23,8 @@ extension AppModel {
                 self?.evictDevelopBuffers(frame)
             }
         )
+        NativeCameraRAW.setPreviewCacheResidencyLimit(
+            frameCacheManager.pressureLevel == .normal ? frameCacheManager.maxResidentDeveloped : 1)
     }
 
     func applyFrameCachePressure(_ pressure: FrameCachePressureLevel) {
@@ -42,6 +44,9 @@ extension AppModel {
                 self?.evictDevelopBuffers(frame)
             }
         )
+        // 경고 중에는 진행 중 디코드가 끝나도 별도 마스터를 다시 쌓지 않는다.
+        NativeCameraRAW.setPreviewCacheResidencyLimit(
+            pressure == .normal ? frameCacheManager.maxResidentDeveloped : 1)
     }
 
     func evictCleanedRawBuffers(_ frame: ScanFrame) {
