@@ -23,8 +23,7 @@ internal static class PrintWatermarkLogo
 {
     private static readonly Dictionary<string, (long Size, DateTime Modified, byte[]? Png)> Cache = [];
     private static readonly HashSet<string> ReportedMissing = [];
-    private static byte[]? builtIn;
-    private static bool builtInLoaded;
+    private static Task<byte[]?>? builtIn;
 
     /// <summary>설정이 쓰는 로고입니다. 꺼져 있거나 읽을 수 없으면 null 입니다.</summary>
     internal static async Task<byte[]?> LoadAsync(PrintWatermarkSettings settings)
@@ -90,13 +89,31 @@ internal static class PrintWatermarkLogo
     /// negaflow 로고(앱 아이콘 <c>Assets\AppIcon-1024.png</c>)입니다. 어셈블리에 넣어 둔 것을 읽습니다 —
     /// 실행 위치(패키지·느슨한 레이아웃)와 상관없이 같은 그림이 나옵니다.
     /// </summary>
+    /// <remarks>
+    /// 읽는 작업 자체를 담아 둡니다. "읽었는가" 깃발만 두면, 설정 카드와 미리보기가 처음에 거의 동시에
+    /// 부를 때 늦게 온 쪽이 아직 비어 있는 값(null)을 받아 갑니다. 미리보기는 그 null 을 같은 경로의
+    /// 결과로 기억해, 다른 그림을 골랐다가 되돌려야만 로고가 나타났습니다.
+    /// </remarks>
     private static async Task<byte[]?> BuiltInAsync()
     {
-        if (builtInLoaded)
+        Task<byte[]?> task = builtIn ??= ReadBuiltInAsync();
+        try
         {
-            return builtIn;
+            return await task;
         }
-        builtInLoaded = true;
+        catch
+        {
+            // 실패한 작업을 남기지 않아 다음 요청이 다시 읽습니다.
+            if (ReferenceEquals(builtIn, task))
+            {
+                builtIn = null;
+            }
+            throw;
+        }
+    }
+
+    private static async Task<byte[]?> ReadBuiltInAsync()
+    {
         using Stream? resource = typeof(PrintWatermarkLogo).Assembly
             .GetManifestResourceStream("Negaflow.Shell.WatermarkLogo.png");
         if (resource is null)
@@ -105,8 +122,7 @@ internal static class PrintWatermarkLogo
         }
         using MemoryStream bytes = new();
         await resource.CopyToAsync(bytes);
-        builtIn = await NormalizeAsync(bytes.ToArray());
-        return builtIn;
+        return await NormalizeAsync(bytes.ToArray());
     }
 
     private static async Task<byte[]?> NormalizeAsync(byte[] bytes)
