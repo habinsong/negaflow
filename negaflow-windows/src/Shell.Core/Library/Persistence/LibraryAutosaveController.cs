@@ -7,16 +7,20 @@ internal sealed class LibraryAutosaveController : IDisposable
     private static readonly TimeSpan Delay = TimeSpan.FromSeconds(1.5);
     private readonly IUiDispatcher dispatcher;
     private readonly Func<LibraryDocument?> documentAccessor;
+    private readonly Action? saved;
     private Timer? timer;
 
+    /// <param name="saved">저장이 성공한 뒤 부릅니다. 변경 후 자동 백업이 여기서 예약됩니다.</param>
     internal LibraryAutosaveController(
         IUiDispatcher dispatcher,
-        Func<LibraryDocument?> documentAccessor)
+        Func<LibraryDocument?> documentAccessor,
+        Action? saved = null)
     {
         ArgumentNullException.ThrowIfNull(dispatcher);
         ArgumentNullException.ThrowIfNull(documentAccessor);
         this.dispatcher = dispatcher;
         this.documentAccessor = documentAccessor;
+        this.saved = saved;
     }
 
     /// <summary>
@@ -83,6 +87,10 @@ internal sealed class LibraryAutosaveController : IDisposable
     private CatalogStoreError Record(CatalogStoreError error)
     {
         LastSaveError = error;
+        if (error == CatalogStoreError.None)
+        {
+            saved?.Invoke();
+        }
         return error;
     }
 }

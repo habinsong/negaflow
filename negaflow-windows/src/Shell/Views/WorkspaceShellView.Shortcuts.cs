@@ -258,7 +258,17 @@ public sealed partial class WorkspaceShellView
                 state.SelectWorkspace(WorkspaceModule.Library);
                 return LibraryWorkspace.InvokeShortcut(action);
             case WorkflowShortcutAction.QuickExport:
-                _ = DevelopWorkspace.QuickExportAsync();
+                // macOS `quickExportSelection(for:)`: 인화 화면에서는 판(배치·워터마크 포함)을 빠른 내보내기
+                // 합니다. 예전에는 어느 화면에서나 현상 사진을 내보내, 인화 화면의 빠른 내보내기에 워터마크가
+                // 빠졌습니다.
+                if (state.Current.SelectedWorkspace == WorkspaceModule.Print)
+                {
+                    PrintWorkspace.QuickExportFromMenu();
+                }
+                else
+                {
+                    _ = DevelopWorkspace.QuickExportAsync();
+                }
                 return true;
             case WorkflowShortcutAction.ExportPhoto:
                 if (state.Current.SelectedWorkspace == WorkspaceModule.Print)

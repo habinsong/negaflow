@@ -69,40 +69,118 @@ internal static class PrintWatermarkRaster
         }
     }
 
-    /// <summary>글 한 줄을 BGRA(premultiplied) 화소로 만듭니다. 그릴 수 없으면 null 입니다.</summary>
-    internal static async Task<(byte[] Pixels, int Width, int Height)?> RenderTextAsync(
+    /// <summary>
+    /// 띠 한 장의 글자를 미리보기와 같은 <see cref="TextBlock"/> 배치로 한 번에 화소로 만듭니다. 결과는
+    /// <paramref name="width"/> × <paramref name="height"/>(판 화소) BGRA(premultiplied)이며, 그릴 수 없으면 null 입니다.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="RenderTargetBitmap"/> 은 요소를 그 창의 화면 배율(<c>XamlRoot.RasterizationScale</c>)로 그립니다. 그래서
+    /// 글자와 자리를 배율로 나눠 놓아 판 화소 그대로 받고, 그래도 크기가 다르면 <see cref="PrintRasterFit"/> 로 판
+    /// 크기에 맞춥니다 — 배율이 몇이든 판에는 배치 계산 크기 그대로 찍혀 미리보기와 같습니다. 예전에는 글자 줄마다
+    /// 따로 그려 받은 크기 그대로 붙여, 150% 화면에서 모든 글자가 1.5배로 커져 띠 밖으로 나갔고 줄마다 렌더러를
+    /// 기다려 내보내기도 느렸습니다.
+    /// </remarks>
+    internal static async Task<byte[]?> RenderTextLayerAsync(
         Panel host,
-        PrintWatermarkTextItem item,
-        Windows.UI.Color color)
+        IReadOnlyList<PrintWatermarkTextItem> texts,
+        int width,
+        int height,
+        Func<PrintWatermarkTextItem, Windows.UI.Color> ink)
     {
-        int width = Math.Max(1, (int)Math.Ceiling(item.Width) + 2);
-        int height = Math.Max(1, (int)Math.Ceiling(item.FontSize * PrintWatermarkMetrics.LineHeightFactor) + 1);
-        TextBlock block = TextBlockFor(item, color);
-        block.Width = width;
-        block.Height = height;
-        host.Children.Add(block);
+        if (texts.Count == 0 || width < 1 || height < 1)
+        {
+            return null;
+        }
+        double scale = host.XamlRoot?.RasterizationScale is double rasterization && rasterization > 0
+            ? rasterization
+            : 1;
+        Canvas layer = new()
+        {
+            Width = width / scale,
+            Height = height / scale,
+            // 배경이 없으면 렌더러는 층이 아니라 글자가 있는 경계만 그립니다(실측: 1825x237 을 바랐는데
+            // 1612x128). 완전히 투명한 배경을 깔아 층 전체를 그리게 하고, 층 밖으로 나간 글자는 자릅니다.
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+            Clip = new RectangleGeometry { Rect = new Windows.Foundation.Rect(0, 0, width / scale, height / scale) },
+        };
+        foreach (PrintWatermarkTextItem item in texts)
+        {
+            TextBlock block = TextBlockFor(item with { FontSize = item.FontSize / scale }, ink(item));
+            Canvas.SetLeft(block, item.X / scale);
+            Canvas.SetTop(block, item.Y / scale);
+            layer.Children.Add(block);
+        }
+        host.Children.Add(layer);
         try
         {
-            block.Measure(new Windows.Foundation.Size(width, height));
-            block.Arrange(new Windows.Foundation.Rect(0, 0, width, height));
-            block.UpdateLayout();
+            layer.Measure(new Windows.Foundation.Size(layer.Width, layer.Height));
+            layer.Arrange(new Windows.Foundation.Rect(0, 0, layer.Width, layer.Height));
+            layer.UpdateLayout();
             RenderTargetBitmap target = new();
-            await target.RenderAsync(block, width, height);
-            IBuffer buffer = await target.GetPixelsAsync();
-            byte[] pixels = buffer.ToArray();
-            return pixels.Length >= target.PixelWidth * target.PixelHeight * 4
-                ? (pixels, target.PixelWidth, target.PixelHeight)
+            await target.RenderAsync(layer);
+            byte[] pixels = (await target.GetPixelsAsync()).ToArray();
+            if (target.PixelWidth != width || target.PixelHeight != height)
+            {
+                Negaflow.Shell.ExportTrace.Write(
+                    $"      watermark text layer rendered {target.PixelWidth}x{target.PixelHeight} for {width}x{height} (scale {scale})");
+            }
+            return target.PixelWidth > 0 && target.PixelHeight > 0 &&
+                   pixels.Length >= target.PixelWidth * target.PixelHeight * 4
+                ? PrintRasterFit.ToSize(pixels, target.PixelWidth, target.PixelHeight, width, height)
                 : null;
         }
-        catch (Exception exception) when (exception is InvalidOperationException or
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or
             System.Runtime.InteropServices.COMException)
         {
-            // 글자를 못 그리면 그 줄만 빠집니다. 사진과 띠 바탕은 그대로 나갑니다.
+            // 글자를 못 그리면 글자만 빠집니다. 사진과 띠 바탕·로고·히스토그램은 그대로 나갑니다.
             return null;
         }
         finally
         {
-            host.Children.Remove(block);
+            host.Children.Remove(layer);
+        }
+    }
+
+    /// <summary>
+    /// 로고 PNG 를 화면에 걸 그림으로 풉니다. 풀 수 없으면 null 입니다.
+    /// </summary>
+    /// <remarks>
+    /// <c>BitmapImage.SetSourceAsync</c> 는 그림을 나중에 풀 수 있어, 스트림을 바로 닫으면 로고가 보일 때도 있고 안
+    /// 보일 때도 있었습니다(사용자 신고). 판과 같은 디코더로 화소까지 풀어 <see cref="WriteableBitmap"/> 에 바로 담습니다.
+    /// </remarks>
+    internal static async Task<WriteableBitmap?> LogoBitmapAsync(byte[] png)
+    {
+        try
+        {
+            using InMemoryRandomAccessStream stream = new();
+            await stream.WriteAsync(png.AsBuffer());
+            stream.Seek(0);
+            BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
+            uint width = decoder.OrientedPixelWidth;
+            uint height = decoder.OrientedPixelHeight;
+            if (width == 0 || height == 0)
+            {
+                return null;
+            }
+            PixelDataProvider pixels = await decoder.GetPixelDataAsync(
+                BitmapPixelFormat.Bgra8,
+                BitmapAlphaMode.Premultiplied,
+                new BitmapTransform(),
+                ExifOrientationMode.RespectExifOrientation,
+                ColorManagementMode.ColorManageToSRgb);
+            byte[] bgra = pixels.DetachPixelData();
+            WriteableBitmap bitmap = new((int)width, (int)height);
+            using (Stream buffer = bitmap.PixelBuffer.AsStream())
+            {
+                buffer.Write(bgra, 0, Math.Min(bgra.Length, (int)bitmap.PixelBuffer.Capacity));
+            }
+            bitmap.Invalidate();
+            return bitmap;
+        }
+        catch (Exception exception) when (exception is ArgumentException or
+            System.Runtime.InteropServices.COMException)
+        {
+            return null;
         }
     }
 

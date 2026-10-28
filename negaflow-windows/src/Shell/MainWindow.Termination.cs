@@ -30,6 +30,9 @@ public sealed partial class MainWindow
 
         terminationInProgress = true;
         LibraryDefectTerminationResult result;
+        // 종료가 느려지면 어느 단계인지 바로 보이게 단계별 시간을 남깁니다.
+        System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
+        long drainMilliseconds = 0;
         try
         {
             // **셸이 없을 수 있습니다.** 카탈로그를 열지 못하면 셸 자리에 복구 화면만 서고
@@ -41,6 +44,7 @@ public sealed partial class MainWindow
             {
                 await shell.PrepareForTerminationAsync();
             }
+            drainMilliseconds = clock.ElapsedMilliseconds;
             string scansDirectory = new DiskStorageLocations(
                 settingsStore.Current.Disk).Scans;
             result = await libraryHost.PrepareForTerminationAsync(scansDirectory);
@@ -53,6 +57,9 @@ public sealed partial class MainWindow
                 LibraryDefectTerminationError.NativeBakeFailed,
                 NativeFailureName: error.GetType().Name);
         }
+
+        TerminationLog.Write(
+            $"quit prepare drain={drainMilliseconds}ms library={clock.ElapsedMilliseconds - drainMilliseconds}ms");
 
         // 실패했을 때만 남깁니다. 성공은 굽기 쪽이 이미 `defect bake ok …` 로 적었고,
         // 여기서 `None` 을 또 적으면 성공한 줄이 실패처럼 읽힙니다.

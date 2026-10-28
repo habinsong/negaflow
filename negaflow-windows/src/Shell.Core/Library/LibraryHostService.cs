@@ -58,7 +58,10 @@ public sealed partial class LibraryHostService : IDisposable
         selection = new LibrarySelectionState(
             () => SelectionChanged?.Invoke(this, EventArgs.Empty));
         availability = new LibraryAvailabilityController(dispatcher, () => document);
-        autosave = new LibraryAutosaveController(dispatcher, () => document);
+        autosave = new LibraryAutosaveController(
+            dispatcher,
+            () => document,
+            () => ScheduleSessionBackupAfterSave(DateTimeOffset.Now));
         importer = new LibraryImportController(
             this.sourceMetadataReader,
             SelectSingleFrame,
@@ -390,12 +393,17 @@ public sealed partial class LibraryHostService : IDisposable
     public CatalogStoreError SaveIfDirty() => autosave.SaveIfDirty();
 
     public Task<LibraryDefectTerminationResult> PrepareForTerminationAsync(
-        string scansDirectory) =>
-        document is { } open && !IsCatalogReinstallPendingRelaunch
+        string scansDirectory)
+    {
+        // 종료가 시작되면 변경 후 자동 백업을 더 예약하지 않습니다(macOS
+        // `isLibraryTerminationSaveInProgress`). 종료는 백업을 기다리지 않습니다.
+        StopSessionBackup();
+        return document is { } open && !IsCatalogReinstallPendingRelaunch
             ? new LibraryDefectTerminationService(
                 frameId => DefectLiveStrengths.Clear(frameId))
                 .PrepareAsync(open, scansDirectory)
             : Task.FromResult(LibraryDefectTerminationResult.Success());
+    }
 
     /// <summary>
     /// 고른 사진의 원본을 다른 폴더로 옮기고 카탈로그를 따라가게 합니다. 파일 이동이 실패하면
@@ -437,10 +445,11 @@ public sealed partial class LibraryHostService : IDisposable
 
     public void Dispose()
     {
+        StopSessionBackup();
         // 놓아 주기 전에 마지막으로 씁니다. 여기서 빠지면 마지막 1.5 초의 편집이 사라집니다.
+        // 종료에서는 백업하지 않습니다 — 예전에는 여기서 백업 한 세대를 UI 스레드에서 끝까지 기다려
+        // 창이 "응답 없음" 으로 멈췄습니다(macOS 도 종료 백업을 없애고 변경 후 자동 백업으로 옮겼습니다).
         _ = SaveIfDirty();
-        // 커밋이 끝난 **뒤에** 백업합니다. 실패해도 여기서 던지지 않으므로 종료를 막지 않습니다.
-        _ = RunScheduledBackupIfDue(DateTimeOffset.Now, isTerminating: true);
         folderMonitor.Dispose();
         autosave.Dispose();
         availability.Reset();

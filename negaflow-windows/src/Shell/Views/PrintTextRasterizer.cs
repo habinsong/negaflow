@@ -38,12 +38,20 @@ public static class PrintTextRasterizer
             return null;
         }
 
+        // RenderTargetBitmap 은 그 창의 화면 배율(RasterizationScale)로 그립니다. 글자와 칸을 배율로 나눠
+        // 놓아 판 화소 그대로 받고, 그래도 다르면 판 크기에 맞춥니다 — 받은 크기 그대로 붙이면 150% 화면에서
+        // 캡션이 1.5배로 커져 칸 밖으로 나갑니다(워터마크 글자와 같은 원인).
+        double scale = host.XamlRoot?.RasterizationScale is double rasterization && rasterization > 0
+            ? rasterization
+            : 1;
+        double boxWidth = width / scale;
+        double boxHeight = height / scale;
         TextBlock block = new()
         {
             Text = text,
             // 칸 높이의 3분의 2 를 글자 높이로 씁니다. 칸을 꽉 채우면 위아래가 붙어 읽기
             // 어렵고, macOS 캡션도 여백을 남깁니다.
-            FontSize = Math.Max(6, height * 2.0 / 3.0),
+            FontSize = Math.Max(6, height * 2.0 / 3.0) / scale,
             FontWeight = FontWeights.Normal,
             Foreground = new SolidColorBrush(lightForeground
                 ? Microsoft.UI.Colors.White
@@ -56,20 +64,27 @@ public static class PrintTextRasterizer
             },
             TextTrimming = TextTrimming.CharacterEllipsis,
             TextWrapping = TextWrapping.NoWrap,
-            Width = width,
-            Height = height,
             VerticalAlignment = VerticalAlignment.Center,
         };
+        // 렌더러는 배경 없는 요소의 경우 글자가 있는 경계만 그립니다. 완전히 투명한 배경의 칸에 담아 칸 전체를
+        // 그리게 합니다(워터마크 글자 층과 같은 이유).
+        Grid box = new()
+        {
+            Width = boxWidth,
+            Height = boxHeight,
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+        };
+        box.Children.Add(block);
 
-        host.Children.Add(block);
+        host.Children.Add(box);
         try
         {
-            block.Measure(new Windows.Foundation.Size(width, height));
-            block.Arrange(new Windows.Foundation.Rect(0, 0, width, height));
-            block.UpdateLayout();
+            box.Measure(new Windows.Foundation.Size(boxWidth, boxHeight));
+            box.Arrange(new Windows.Foundation.Rect(0, 0, boxWidth, boxHeight));
+            box.UpdateLayout();
 
             RenderTargetBitmap target = new();
-            await target.RenderAsync(block, width, height);
+            await target.RenderAsync(box);
             Windows.Storage.Streams.IBuffer buffer = await target.GetPixelsAsync();
             byte[] pixels = new byte[buffer.Length];
             using (Windows.Storage.Streams.DataReader reader =
@@ -77,11 +92,12 @@ public static class PrintTextRasterizer
             {
                 reader.ReadBytes(pixels);
             }
-            return pixels.Length >= target.PixelWidth * target.PixelHeight * 4
-                ? (pixels, target.PixelWidth, target.PixelHeight)
+            return target.PixelWidth > 0 && target.PixelHeight > 0 &&
+                   pixels.Length >= target.PixelWidth * target.PixelHeight * 4
+                ? (PrintRasterFit.ToSize(pixels, target.PixelWidth, target.PixelHeight, width, height), width, height)
                 : null;
         }
-        catch (Exception exception) when (exception is InvalidOperationException or
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or
             System.Runtime.InteropServices.COMException)
         {
             // 렌더러가 거절하면 캡션만 빠집니다. 사진은 그대로 나갑니다.
@@ -89,7 +105,7 @@ public static class PrintTextRasterizer
         }
         finally
         {
-            host.Children.Remove(block);
+            host.Children.Remove(box);
         }
     }
 }

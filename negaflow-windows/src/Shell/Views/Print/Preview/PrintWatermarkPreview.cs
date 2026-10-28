@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices.WindowsRuntime;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -7,7 +6,6 @@ using Microsoft.UI.Xaml.Shapes;
 using Negaflow.Catalog;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Print;
-using Windows.Storage.Streams;
 
 namespace Negaflow.Shell.Views.Print.Preview;
 
@@ -215,20 +213,23 @@ internal sealed class PrintWatermarkPreview
     {
         double? aspect = null;
         ImageSource? image = null;
-        if (await PrintWatermarkLogo.LoadAsync(settings) is { } png)
+        try
         {
-            aspect = await PrintWatermarkRaster.LogoAspectAsync(png);
-            BitmapImage bitmap = new();
-            using InMemoryRandomAccessStream stream = new();
-            await stream.WriteAsync(png.AsBuffer());
-            stream.Seek(0);
-            await bitmap.SetSourceAsync(stream);
-            image = bitmap;
+            if (await PrintWatermarkLogo.LoadAsync(settings) is { } png &&
+                await PrintWatermarkRaster.LogoBitmapAsync(png) is { } bitmap)
+            {
+                aspect = (double)bitmap.PixelWidth / bitmap.PixelHeight;
+                image = bitmap;
+            }
+        }
+        finally
+        {
+            // 읽다가 예외가 나도 "읽는 중" 을 풉니다. 남아 있으면 로고를 다시는 읽지 않습니다.
+            logoPending = false;
         }
         // 로고가 없던 것이 계속 없으면(읽을 수 없는 파일) 다시 그릴 것이 없습니다.
         bool stillNone = logo is { Image: null } && image is null;
         logo = (key, exists, aspect, image);
-        logoPending = false;
         if (!stillNone)
         {
             redraw();

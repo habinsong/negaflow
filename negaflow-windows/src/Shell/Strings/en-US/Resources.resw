@@ -1433,7 +1433,7 @@ Load a scanner from Library to scan film.</value>
   <data name="externalBackupLastSuccess.Text" xml:space="preserve"><value>Last successful backup</value><comment>ExternalBackupLocalizedText.lastSuccess</comment></data>
   <data name="backupScheduleLabel.Text" xml:space="preserve"><value>Backup Schedule</value><comment>BackupScheduleLocalizedText.schedule</comment></data>
   <data name="backupScheduleManual.Content" xml:space="preserve"><value>Manual</value><comment>BackupScheduleLocalizedText.manual</comment></data>
-  <data name="backupScheduleTermination.Content" xml:space="preserve"><value>When Quitting</value><comment>BackupScheduleLocalizedText.termination</comment></data>
+  <data name="backupScheduleTermination.Content" xml:space="preserve"><value>After Changes</value><comment>BackupScheduleLocalizedText.automatic</comment></data>
   <data name="backupScheduleDaily.Content" xml:space="preserve"><value>Daily</value><comment>BackupScheduleLocalizedText.daily</comment></data>
   <data name="backupScheduleWeekly.Content" xml:space="preserve"><value>Weekly</value><comment>BackupScheduleLocalizedText.weekly</comment></data>
   <data name="backupLastAttempt.Text" xml:space="preserve"><value>Last attempt</value><comment>BackupScheduleLocalizedText.lastAttempt</comment></data>

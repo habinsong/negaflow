@@ -1433,7 +1433,7 @@
   <data name="externalBackupLastSuccess.Text" xml:space="preserve"><value>最終成功バックアップ</value><comment>ExternalBackupLocalizedText.lastSuccess</comment></data>
   <data name="backupScheduleLabel.Text" xml:space="preserve"><value>バックアップ予定</value><comment>BackupScheduleLocalizedText.schedule</comment></data>
   <data name="backupScheduleManual.Content" xml:space="preserve"><value>手動</value><comment>BackupScheduleLocalizedText.manual</comment></data>
-  <data name="backupScheduleTermination.Content" xml:space="preserve"><value>終了時</value><comment>BackupScheduleLocalizedText.termination</comment></data>
+  <data name="backupScheduleTermination.Content" xml:space="preserve"><value>変更後に自動</value><comment>BackupScheduleLocalizedText.automatic</comment></data>
   <data name="backupScheduleDaily.Content" xml:space="preserve"><value>毎日</value><comment>BackupScheduleLocalizedText.daily</comment></data>
   <data name="backupScheduleWeekly.Content" xml:space="preserve"><value>毎週</value><comment>BackupScheduleLocalizedText.weekly</comment></data>
   <data name="backupLastAttempt.Text" xml:space="preserve"><value>最終試行</value><comment>BackupScheduleLocalizedText.lastAttempt</comment></data>

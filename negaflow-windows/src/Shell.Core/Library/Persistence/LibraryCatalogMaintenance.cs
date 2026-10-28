@@ -102,6 +102,25 @@ internal sealed class LibraryCatalogMaintenance(
         {
             return settled;
         }
+        CatalogBackupCreateResult backup = FreezeMemoryBackup()();
+        if (!backup.IsSuccess || backup.GenerationPath is not { Length: > 0 } generationPath)
+        {
+            return new(LibraryCatalogMaintenanceError.BackupFailed);
+        }
+        CatalogPendingRestoreScheduleResult scheduled = state.Session.ScheduleRestore(
+            Path.GetFileName(generationPath));
+        return scheduled.IsSuccess
+            ? new(LibraryCatalogMaintenanceError.None)
+            : new(LibraryCatalogMaintenanceError.ScheduleFailed);
+    }
+
+    /// <summary>
+    /// 지금 메모리 라이브러리를 얼려 백업 세대 한 개를 만드는 일을 돌려줍니다. 얼리기(행 깊은 복사)는
+    /// 부른 스레드(UI)에서 끝나고, 돌려준 일은 파일만 쓰므로 워커에서 불러도 됩니다 — 그 사이 편집이
+    /// 섞이지 않습니다. 미리보기 스캔은 빼고, 결함 편집을 선언한 사진의 recipe 만 담습니다.
+    /// </summary>
+    internal Func<CatalogBackupCreateResult> FreezeMemoryBackup()
+    {
         List<CatalogEntityRow> rows = [.. state.FrameRows().Where(row => !IsPreviewFrame(row.Payload))];
         Dictionary<Guid, DefectRecipeSnapshot> recipes = [];
         foreach (CatalogEntityRow row in rows)
@@ -112,18 +131,12 @@ internal sealed class LibraryCatalogMaintenance(
                 recipes[recipe.FrameId] = recipe;
             }
         }
-        CatalogBackupCreateResult backup = state.Session.CreateBackupFromMemory(
-            state.CreateSnapshot(rows),
-            recipes);
-        if (!backup.IsSuccess || backup.GenerationPath is not { Length: > 0 } generationPath)
-        {
-            return new(LibraryCatalogMaintenanceError.BackupFailed);
-        }
-        CatalogPendingRestoreScheduleResult scheduled = state.Session.ScheduleRestore(
-            Path.GetFileName(generationPath));
-        return scheduled.IsSuccess
-            ? new(LibraryCatalogMaintenanceError.None)
-            : new(LibraryCatalogMaintenanceError.ScheduleFailed);
+        Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> tables = state.RetainedRows
+            .ToDictionary(pair => pair.Key, pair => LibraryDocumentState.CloneRows(pair.Value));
+        tables[CatalogEntityTable.Frames] = LibraryDocumentState.CloneRows(rows);
+        CatalogSnapshot snapshot = new(state.ActiveRollId, tables);
+        CatalogSession session = state.Session;
+        return () => session.CreateBackupFromMemory(snapshot, recipes);
     }
 
     /// <summary>

@@ -792,6 +792,15 @@ public sealed partial class PrintWorkspaceView
         }
     }
 
+    /// <summary>메뉴·단축키의 빠른 내보내기입니다. 출력 탭의 빠른 내보내기 단추와 같은 판을 씁니다.</summary>
+    internal void QuickExportFromMenu()
+    {
+        if (printSheetExport is { } runner)
+        {
+            _ = runner.RunQuickExportAsync(PrintExportPanel.QuickSettings);
+        }
+    }
+
     /// <summary>하단바가 범위·차례를 바꿨습니다. 필름스트립을 다시 냅니다.</summary>
     internal void RefreshSources()
     {

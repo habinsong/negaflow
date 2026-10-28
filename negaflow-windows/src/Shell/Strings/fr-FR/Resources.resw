@@ -1433,7 +1433,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="externalBackupLastSuccess.Text" xml:space="preserve"><value>Dernière sauvegarde réussie</value><comment>ExternalBackupLocalizedText.lastSuccess</comment></data>
   <data name="backupScheduleLabel.Text" xml:space="preserve"><value>Planification</value><comment>BackupScheduleLocalizedText.schedule</comment></data>
   <data name="backupScheduleManual.Content" xml:space="preserve"><value>Manuelle</value><comment>BackupScheduleLocalizedText.manual</comment></data>
-  <data name="backupScheduleTermination.Content" xml:space="preserve"><value>À la fermeture</value><comment>BackupScheduleLocalizedText.termination</comment></data>
+  <data name="backupScheduleTermination.Content" xml:space="preserve"><value>Après modification</value><comment>BackupScheduleLocalizedText.automatic</comment></data>
   <data name="backupScheduleDaily.Content" xml:space="preserve"><value>Chaque jour</value><comment>BackupScheduleLocalizedText.daily</comment></data>
   <data name="backupScheduleWeekly.Content" xml:space="preserve"><value>Chaque semaine</value><comment>BackupScheduleLocalizedText.weekly</comment></data>
   <data name="backupLastAttempt.Text" xml:space="preserve"><value>Dernière tentative</value><comment>BackupScheduleLocalizedText.lastAttempt</comment></data>

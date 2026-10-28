@@ -1433,7 +1433,7 @@
   <data name="externalBackupLastSuccess.Text" xml:space="preserve"><value>上次成功备份</value><comment>ExternalBackupLocalizedText.lastSuccess</comment></data>
   <data name="backupScheduleLabel.Text" xml:space="preserve"><value>备份计划</value><comment>BackupScheduleLocalizedText.schedule</comment></data>
   <data name="backupScheduleManual.Content" xml:space="preserve"><value>手动</value><comment>BackupScheduleLocalizedText.manual</comment></data>
-  <data name="backupScheduleTermination.Content" xml:space="preserve"><value>退出时</value><comment>BackupScheduleLocalizedText.termination</comment></data>
+  <data name="backupScheduleTermination.Content" xml:space="preserve"><value>更改后自动</value><comment>BackupScheduleLocalizedText.automatic</comment></data>
   <data name="backupScheduleDaily.Content" xml:space="preserve"><value>每天</value><comment>BackupScheduleLocalizedText.daily</comment></data>
   <data name="backupScheduleWeekly.Content" xml:space="preserve"><value>每周</value><comment>BackupScheduleLocalizedText.weekly</comment></data>
   <data name="backupLastAttempt.Text" xml:space="preserve"><value>上次尝试</value><comment>BackupScheduleLocalizedText.lastAttempt</comment></data>

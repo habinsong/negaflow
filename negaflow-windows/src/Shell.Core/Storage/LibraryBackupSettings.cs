@@ -4,6 +4,11 @@ namespace Negaflow.Shell.Storage;
 public enum LibraryBackupSchedule
 {
     Manual,
+    /// <summary>
+    /// 변경 후 자동(macOS <c>.automatic</c>, 저장값은 예전 "종료할 때" 그대로)입니다. 실행 중 저장 뒤
+    /// 백그라운드로 만듭니다(<c>LibraryHostService.ScheduleSessionBackupAfterSave</c>). 예전에는 종료할 때마다
+    /// 백업을 UI 스레드에서 기다려 종료가 몇 초씩 멈추고 "응답 없음" 이 됐습니다.
+    /// </summary>
     OnTermination,
     Daily,
     Weekly,
@@ -24,7 +29,7 @@ public sealed record LibraryBackupSettings
     /// 고른 적이 없으면 <see cref="LibraryBackupSchedule.OnTermination"/> 입니다. 수동이
     /// 기본이면 설정을 한 번도 열지 않은 사용자는 백업 0 개인 채로 지내다가, 카탈로그가
     /// 어긋나는 순간 되돌릴 것이 하나도 없게 됩니다. macOS <c>LibraryBackupScheduleStore.init</c>
-    /// 이 저장된 값이 없을 때 <c>.onTermination</c> 을 쓰는 것과 같은 자리입니다.
+    /// 이 저장된 값이 없을 때 <c>.automatic</c> 을 쓰는 것과 같은 자리입니다.
     /// </summary>
     public const LibraryBackupSchedule DefaultSchedule = LibraryBackupSchedule.OnTermination;
 
@@ -90,12 +95,11 @@ public sealed record LibraryBackupSettings
     public string LastRestoreDrillGeneration { get; init; } = string.Empty;
 
     /// <summary>
-    /// 일정에 따라 지금 백업할 때인지입니다. macOS <c>LibraryBackupScheduleStore.isDue</c>.
+    /// 일정에 따라 지금 백업할 때인지입니다. macOS <c>LibraryBackupScheduleStore.isDue</c> — 수동과 자동은
+    /// 여기서 백업하지 않습니다(자동은 저장 뒤 백그라운드가 맡습니다).
     /// </summary>
-    public bool IsDue(DateTimeOffset now, bool isTerminating) => EffectiveSchedule switch
+    public bool IsDue(DateTimeOffset now) => EffectiveSchedule switch
     {
-        LibraryBackupSchedule.Manual => false,
-        LibraryBackupSchedule.OnTermination => isTerminating,
         LibraryBackupSchedule.Daily => Elapsed(now) >= TimeSpan.FromDays(1),
         LibraryBackupSchedule.Weekly => Elapsed(now) >= TimeSpan.FromDays(7),
         _ => false,

@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices.WindowsRuntime;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -7,7 +6,6 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using Negaflow.Shell.Localization;
 using Negaflow.Shell.Print;
 using Negaflow.Shell.Views.Controls;
-using Windows.Storage.Streams;
 
 namespace Negaflow.Shell.Views.Print.Settings;
 
@@ -262,19 +260,19 @@ public sealed partial class PrintWatermarkCard : UserControl
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>마지막으로 청한 로고 표시 번호입니다. 늦게 끝난 앞 요청이 나중 것을 덮지 않게 합니다.</summary>
+    private int logoRequest;
+
     private async Task ShowLogoAsync(PrintWatermarkSettings value)
     {
-        if (await PrintWatermarkLogo.LoadAsync(value) is not { Length: > 0 } png)
+        int request = ++logoRequest;
+        WriteableBitmap? image = await PrintWatermarkLogo.LoadAsync(value) is { Length: > 0 } png
+            ? await PrintWatermarkRaster.LogoBitmapAsync(png)
+            : null;
+        if (request == logoRequest)
         {
-            LogoImage.Source = null;
-            return;
+            LogoImage.Source = image;
         }
-        BitmapImage image = new();
-        using InMemoryRandomAccessStream stream = new();
-        await stream.WriteAsync(png.AsBuffer());
-        stream.Seek(0);
-        await image.SetSourceAsync(stream);
-        LogoImage.Source = image;
     }
 
     private static void SetText(TextBox box, string value)

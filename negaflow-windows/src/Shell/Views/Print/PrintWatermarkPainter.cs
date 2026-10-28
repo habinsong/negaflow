@@ -53,6 +53,7 @@ internal static class PrintWatermarkPainter
         PrintWatermarkReference? reference,
         Microsoft.UI.Xaml.Controls.Panel? textHost)
     {
+        using IDisposable _span = Negaflow.Shell.ExportTrace.Measure("      watermark bands");
         double? logoAspect = await PrintWatermarkRaster.LogoAspectAsync(settings.LogoPng);
         bool hasHistogram = reference?.Histogram is not null;
         PrintWatermarkTextWidth measure = (text, fontSize, bold) =>
@@ -93,16 +94,17 @@ internal static class PrintWatermarkPainter
     {
         if (textHost is not null)
         {
-            foreach (PrintWatermarkTextItem item in drawing.Texts)
+            // 띠의 글자를 한 장으로 그려 한 번에 얹습니다(띠 크기 그대로, 화면 배율과 무관).
+            int width = Math.Max(1, (int)Math.Round(band.Width));
+            int height = Math.Max(1, (int)Math.Round(band.Height));
+            if (await PrintWatermarkRaster.RenderTextLayerAsync(
+                    textHost, drawing.Texts, width, height,
+                    item => PrintWatermarkRaster.Ink(settings.TextInk, item.Secondary))
+                is { } text)
             {
-                if (await PrintWatermarkRaster.RenderTextAsync(
-                        textHost, item, PrintWatermarkRaster.Ink(settings.TextInk, item.Secondary))
-                    is { } rendered)
-                {
-                    BlendPremultiplied(
-                        page, pageWidth, pageHeight, band, rendered.Pixels, rendered.Width, rendered.Height,
-                        (int)Math.Round(band.X + item.X), (int)Math.Round(band.Y + item.Y));
-                }
+                BlendPremultiplied(
+                    page, pageWidth, pageHeight, band, text, width, height,
+                    (int)Math.Round(band.X), (int)Math.Round(band.Y));
             }
         }
         if (drawing.Separator is { } separator)

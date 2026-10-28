@@ -231,9 +231,7 @@ public partial class App : Application
         // 밀린 일정 백업(매일·매주)을 따라잡습니다. 파일을 복사하므로 **UI 스레드에서 하지
         // 않습니다** - 여기서 붙잡으면 첫 화면이 그만큼 늦게 그려집니다.
         LibraryHostService scheduledBackupHost = libraryHost;
-        _ = Task.Run(() => scheduledBackupHost.RunScheduledBackupIfDue(
-            DateTimeOffset.Now,
-            isTerminating: false));
+        _ = Task.Run(() => scheduledBackupHost.RunScheduledBackupIfDue(DateTimeOffset.Now));
         // 썸네일도 설정 · 디스크 탭에서 고른 자리에 둡니다. 고른 적 없으면 기본 자리이며,
         // 그 기본 자리는 OneDrive\negaflow\Thumbnails 입니다.
         string thumbnailRoot = new Negaflow.Shell.Storage.DiskStorageLocations(
@@ -292,8 +290,10 @@ public partial class App : Application
         memoryPressureMonitor?.Dispose();
         memoryPressureMonitor = null;
         // 세션을 놓아야 다음 실행이 카탈로그의 작성자가 될 수 있습니다.
+        System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
         libraryHost?.Dispose();
         libraryHost = null;
+        Negaflow.Shell.Diagnostics.TerminationLog.Write($"quit dispose library={clock.ElapsedMilliseconds}ms");
         // 대기 중인 썸네일 쓰기를 끝까지 흘려보냅니다. 캐시라 잃어도 되지만, 방금 만든 것을
         // 버리면 다음 실행이 같은 현상을 다시 합니다.
         if (thumbnails is { } service)
