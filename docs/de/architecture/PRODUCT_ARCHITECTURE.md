@@ -186,9 +186,13 @@ Jedes Bild trägt:
 
 Während des Einstellens dient eine Vorschau in niedriger Auflösung. Ein fertiges Ergebnis erreicht den Bildschirm nur, wenn Bild-ID und Bearbeitungsversion noch zur aktuellen Auswahl passen.
 
+Beim Wechsel zu einem anderen Foto beginnt die endgültige Vorschau ohne die Wartezeit für laufende Einstellungen. Unter macOS kann nach dem Rendern eines Kamera-RAW-Negativs das nächste sichtbare RAW im Hintergrund dekodiert werden. Ein Nachbarbild wird im bestehenden Master-Cache mit zwei Bildern und 160 MiB vorbereitet. Bearbeitung, eine andere Auswahl oder Speicherdruck brechen dies ab. Wird das gerade vorbereitete Foto gewählt, teilen sich beide Vorgänge dessen Dekodierung.
+
 Der Export speichert nicht die Vorschau-Bitmap vom Bildschirm. Er baut das Bild in voller Auflösung aus dem Original und den festgehaltenen Bearbeitungswerten neu auf.
 
 GrainMend führt automatisch, geführt, Pinsel, Klonstempel und IR in einer geordneten Liste. Caches sind abgeleitete Dateien. Lässt sich ein Ergebnis nicht aus Original und Verlauf neu aufbauen, scheitert der Export.
+
+Unter macOS werden bereinigte RAW-TIFFs beim Freigeben ihrer Pixelpuffer aus dem Arbeitsspeicher geschrieben, statt nach jeder Bearbeitung. Die Bereinigung behält neuere Dateien, mit einem Ziel von mindestens acht Bildern oder dem Doppelten des Speicherlimits und insgesamt 4 GiB. Dateien unter 60 Sekunden und gerade verwendete Dateien bleiben geschützt; die Ziele können deshalb vorübergehend überschritten werden. Beim nächsten Start werden Caches der vorigen Sitzung entfernt. Bearbeitungen bleiben in den Begleitdateien.
 
 Mehr dazu in [GrainMend](../product/GRAINMEND.md).
 

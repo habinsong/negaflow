@@ -124,9 +124,15 @@ extension AppModel {
                 throw ChromabaseError.loadFailed("export tracking state changed")
             }
 
-            let result = try await Task.detached(priority: .userInitiated) {
-                try ExportFrameWriter.write(plan.snapshot)
-            }.value
+            // 쓰는 동안 디스크 보정 RAW 정리가 이 스냅샷의 파일을 지우지 못하게 붙잡는다.
+            let cleanedRawLease = CleanedRawCacheFile.acquireLease(plan.snapshot.cleanedRawURL)
+            let result: ExportFrameResult
+            do {
+                defer { CleanedRawCacheFile.releaseLease(cleanedRawLease) }
+                result = try await Task.detached(priority: .userInitiated) {
+                    try ExportFrameWriter.write(plan.snapshot)
+                }.value
+            }
             let renderedSourceVerification = await ExportFrameSourceGeneration.currentVerifications(
                 for: [plan.sourceGeneration],
                 level: verificationLevel,

@@ -136,7 +136,8 @@ public sealed partial class PreviewCoordinator
         LibraryFrameSnapshot Frame,
         Action<PreviewOutcome> OnCompleted,
         int Revision,
-        bool InputGammaPreview = false);
+        bool InputGammaPreview = false,
+        bool FreshFrame = false);
 
     /// <summary>렌더 한 번의 결과와, 그 화소가 들어 있는 버퍼의 임대입니다.</summary>
     private readonly record struct LeasedOutcome(PreviewOutcome Outcome, int Lease);
@@ -299,10 +300,13 @@ public sealed partial class PreviewCoordinator
             replaceActive |= lastRequestedFrame is { } previous && PreviewRouteChanged(previous, frame, inputGammaPreview);
             replaceActive |= lastRequestWasInputGammaPreview && !inputGammaPreview;
             lastRequestWasInputGammaPreview = inputGammaPreview;
+            // 다른 사진으로 넘어온 첫 요청은 편집 중이 아닙니다. 정착 대기 없이 곧바로 정착본을
+            // 그립니다 - macOS `renderLatestDevelopment` 가 선택 직후 첫 패스에서 하는 것과 같습니다.
+            bool freshFrame = lastRequestedFrame?.Id != frame.Id;
             lastRequestedFrame = frame;
             // 요청마다 하나씩 올라가는 번호입니다. 배달된 그림이 어느 편집 상태의 것인지
             // 화면이 판정하는 유일한 근거입니다.
-            request = new PreviewRequest(frame, onCompleted, ++developRevision, inputGammaPreview);
+            request = new PreviewRequest(frame, onCompleted, ++developRevision, inputGammaPreview, freshFrame);
             if (replaceActive)
             {
                 minimumDeliveryRevision = request.Revision;

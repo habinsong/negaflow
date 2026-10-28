@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/ko/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="웹사이트"></a>
-  <a href="#다운로드"><img src="https://img.shields.io/badge/version-1.2.1-EF8B26" alt="버전 1.2.1"></a>
+  <a href="#다운로드"><img src="https://img.shields.io/badge/version-1.2.2-EF8B26" alt="버전 1.2.2"></a>
   <a href="negaflow-mac/docs/README_ko.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 이상"></a>
   <a href="negaflow-windows/docs/README_ko.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 이상"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 라이선스"></a>
@@ -85,10 +85,10 @@
 
 | 설치 파일 | 사용 환경 |
 |---|---|
-| `negaflow-1.2.1-mac-universal.pkg` | macOS 14 이상, Apple Silicon과 Intel |
-| `negaflow-1.2.1-mac-arm64.pkg` | macOS 14 이상, Apple Silicon 전용 |
-| `negaflow-1.2.1-win-x64.exe` | Windows 11 24H2 이상, x64 |
-| `negaflow-1.2.1-win-x64-setup.zip` | Windows 설치 파일 ZIP |
+| `negaflow-1.2.2-mac-universal.pkg` | macOS 14 이상, Apple Silicon과 Intel |
+| `negaflow-1.2.2-mac-arm64.pkg` | macOS 14 이상, Apple Silicon 전용 |
+| `negaflow-1.2.2-win-x64.exe` | Windows 11 24H2 이상, x64 |
+| `negaflow-1.2.2-win-x64-setup.zip` | Windows 설치 파일 ZIP |
 
 macOS 14, 26, 27과 호환됩니다.
 
@@ -111,6 +111,12 @@ Windows 설치는 사용자 폴더 안에서 끝나고 관리자 권한을 묻�
 - 현상 프로세스, 타깃, 톤·색·디테일, 크롭과 방향을 함께 옮기는 프리셋과 복사·붙여넣기
 - JPEG, PNG, 16비트 TIFF, 16비트 선형 DNG 내보내기, ICC 프로파일, 카메라·렌즈·필름 등 기록을 EXIF에 저장
 - 8가지 인화 레이아웃과 용지 미리보기, 사진용·ISO 용지, C-print 기능까지 다 있습니다.
+
+## 1.2.2
+
+- 카메라 RAW를 여는 속도를 높이고 첫 미리보기 대기를 줄였습니다.
+- Mac에서는 다음 RAW 사진을 미리 읽어 준비합니다.
+- 보정 작업 중 임시 파일이 계속 쌓이던 문제를 고쳤습니다.
 
 ## 1.2.1
 

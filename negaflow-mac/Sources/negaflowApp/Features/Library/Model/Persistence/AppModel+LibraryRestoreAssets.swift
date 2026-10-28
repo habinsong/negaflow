@@ -27,6 +27,8 @@ extension AppModel {
     }
 
     /// 유효한 카탈로그가 소유한 recipe를 보존합니다. 알 수 없는 파일도 지우지 않습니다.
+    /// 보정 RAW 캐시는 카탈로그가 경로를 남기지 않아 다음 실행에서 쓰이지 않으므로, 이 캐시가 만든
+    /// 이름의 파일과 쓰다 만 임시 파일은 모두 지웁니다.
     func sweepDefectStorageOrphans(
         catalog: LibraryCatalog,
         defectDirectory: URL = DefectSidecarFile.defaultDirectoryURL(),
@@ -42,16 +44,7 @@ extension AppModel {
                     try? DefectSidecarFile.remove(for: id, in: defectDirectory)
                 }
             }
-            if let names = try? fm.contentsOfDirectory(atPath: cleanedRawDirectory.path) {
-                for name in names {
-                    guard let id = CleanedRawCacheFile.frameID(fromFileName: name),
-                          !frameIDs.contains(id) else { continue }
-                    let url = cleanedRawDirectory.appendingPathComponent(name)
-                    guard CleanedRawCacheFile.isOwnedCacheURL(url, frameID: id,
-                                                             directory: cleanedRawDirectory) else { continue }
-                    try? fm.removeItem(at: url)
-                }
-            }
+            CleanedRawCacheFile.removeUnreferenced(in: cleanedRawDirectory, keeping: [], minimumAge: 0)
         }.value
     }
 }

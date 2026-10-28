@@ -4,7 +4,7 @@ Copyright 2026 Song Habin
 Licensed under the Apache License, Version 2.0. See LICENSE for the complete license text.
 See TRADEMARKS.md for third-party trademark and nominative-use notices, docs/legal/PROVENANCE.md for macOS LibRaw source and license material, and negaflow-windows/THIRD-PARTY-NOTICES.md for Windows third-party component notices.
 
-Negative camera RAW decoding uses the unmodified LibRaw library, Copyright LibRaw LLC and upstream contributors, under CDDL-1.0 on macOS and Windows, selected from upstream dual licensing. The macOS app contains the replaceable library and source/build/license material in Contents/Resources/licenses/libraw/. The test-only CameraNativeRaw.dng is CC0-1.0 material from raw.pixls.us entry 2204; see its adjacent .source.json.
+Negative camera RAW decoding uses the LibRaw library, Copyright LibRaw LLC and upstream contributors, under CDDL-1.0 on macOS and Windows, selected from upstream dual licensing. Both platform builds change two LibRaw files (src/demosaic/xtrans_demosaic.cpp and src/postprocessing/mem_image.cpp) and the macOS build statically links the LLVM OpenMP runtime (libomp), Copyright the LLVM Project contributors, under the Apache License v2.0 with LLVM Exceptions. The macOS app contains the replaceable library and source/patch/build/license material in Contents/Resources/licenses/libraw/. The test-only CameraNativeRaw.dng is CC0-1.0 material from raw.pixls.us entry 2204; see its adjacent .source.json.
 
 DNG export writes files that follow the DNG Specification published by Adobe Inc. The writers contain no Adobe DNG SDK code. This product includes DNG technology under license by Adobe. See docs/legal/PROVENANCE.md.
 

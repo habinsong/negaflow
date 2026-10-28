@@ -10,7 +10,7 @@ extension AppModel {
                                     fromOriginal: Bool,
                                     preloadedOriginal: CGImage? = nil,
                                     recipeSnapshot: DefectRecipeSnapshot,
-                                    persist: Bool = true, quiet: Bool = false) {
+                                    quiet: Bool = false) {
         frame.cleanRawRevision += 1
         let revision = frame.cleanRawRevision
         frame.cleanRawTask?.cancel()
@@ -244,16 +244,9 @@ extension AppModel {
             }
             await MainActor.run {
                 guard self.ownsFrame(frame), frame.cleanRawRevision == revision else { return }
-                // persist가 최신 CGImage를 먼저 캡처하고, 그 뒤 resident 정책이 메모리 압박에 따라
-                // 축출한다. develop보다 먼저 축출하면 requiresCleanedRaw 렌더가 입력을 잃는다.
-                if persist {
-                    self.scheduleCleanedRawPersist(
-                        frame,
-                        image: built.cleaned,
-                        identity: boundSnapshot.identity,
-                        revision: revision
-                    )
-                }
+                // 디스크 백킹은 여기서 쓰지 않는다. 상주 정책이 이 픽셀을 내려놓을 때
+                // (evictCleanedRawBuffers) 그때 쓴다. develop보다 먼저 축출하면
+                // requiresCleanedRaw 렌더가 입력을 잃으므로 develop 뒤에 등록한다.
                 self.cleanedRawResidentInsert(frame)
                 if frame.defectIsRemoving { self.clearRegionDefectSession(frame) }
                 if !quiet {
@@ -272,8 +265,8 @@ extension AppModel {
         frame.cleanRawTask = task
     }
 
-    /// 커밋된 cleaned raw의 재생성 가능한 cache TIFF(축출 백킹 + 종료 시 굽기 소스)를 코얼레싱해
-    /// 저장한다. 연속 편집 버스트 동안 이전 인코딩 예약을 취소하고 마지막 상태만 기록한다.
+    /// 메모리에서 내려놓는 cleaned raw 의 재생성 가능한 cache TIFF(축출 백킹)를 저장한다.
+    /// 이전 인코딩 예약은 취소하고 마지막 상태만 기록한다.
     /// 원본 raw와 제3자 XMP는 절대 수정하지 않는다. 저장 전후 currency 확인이 실패하면 조용히
     /// 버린다 — 백킹은 없어도 원본+기록으로 재빌드된다.
     func scheduleCleanedRawPersist(
@@ -318,6 +311,7 @@ extension AppModel {
                 }
                 frame.cleanedRawPersistTask = nil
                 self.scheduleLibrarySave()
+                self.scheduleCleanedRawDiskSweep()
             }
         }
     }

@@ -186,9 +186,13 @@ Each frame carries:
 
 While you adjust, a lower-resolution preview is used. A finished result reaches the screen only when its frame ID and edit version still match the current selection.
 
+Selecting a different photo starts its settled render without the editing pause. On macOS, once a camera RAW negative has settled, the next visible RAW can be decoded in the background. Only one neighbor is prepared, within the existing two-image, 160 MiB master cache. Editing, a different selection, or memory pressure cancels that work. Selecting the photo already being prepared shares its decode.
+
 Export does not save the preview bitmap on screen. It rebuilds the full-resolution image from the original and the edit values it pinned.
 
 GrainMend keeps automatic, guided, brush, clone stamp, and IR in an ordered list. Caches are derived files. If a result cannot be rebuilt from the original and the edit history, the export fails.
+
+On macOS, cleaned RAW TIFFs are written when their pixel buffers leave memory, rather than after every edit. Disk cleanup keeps recent files, targeting a count of max(8, twice the memory residency limit) and 4 GiB in total. Files under 60 seconds old and files in use are protected, so usage can temporarily exceed those targets. The next launch removes caches left by the previous session; edit recipes remain in sidecars.
 
 More detail is in [GrainMend](../product/GRAINMEND.md).
 

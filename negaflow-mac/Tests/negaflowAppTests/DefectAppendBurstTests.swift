@@ -102,8 +102,8 @@ final class DefectAppendBurstTests: XCTestCase {
         cleanupOwnedCaches(for: [frame])
     }
 
-    func testDiskPersistIsDecoupledFromBuildAndCoalesced() async throws {
-        let root = temporaryDirectory("persist-coalesce")
+    func testDiskBackingIsWrittenOnlyWhenMemoryReleasesIt() async throws {
+        let root = temporaryDirectory("persist-on-evict")
         defer { try? FileManager.default.removeItem(at: root) }
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let sourceURL = root.appendingPathComponent("scan.tiff")
@@ -113,33 +113,69 @@ final class DefectAppendBurstTests: XCTestCase {
         let frame = ScanFrame(scanIndex: 1, rawScanURL: sourceURL, filmType: .colorNegative)
         model.frames = [frame]
 
+        // 편집만으로는 디스크에 쓰지 않는다. 픽셀은 메모리에 있고 기록으로 언제든 다시 만든다.
         model.appendDefectEdit(makeEdit(x: 0.3, y: 0.4), to: frame)
         while let task = frame.cleanRawTask { await task.value }
-
-        // 빌드 종료 시점에 디스크 백킹은 아직 없다(persist 는 분리·지연) — 다음 편집이 인코딩을
-        // 기다리지 않는다는 계약 그 자체다.
-        XCTAssertNil(frame.cleanRawTask)
-        XCTAssertNotNil(frame.cleanedRawPersistTask)
-        XCTAssertNil(frame.cleanedRawDiskURL)
-
-        // 버스트 두 번째 편집이 이전 persist 예약을 취소하고 마지막 상태만 저장한다.
         model.appendDefectEdit(makeEdit(x: 0.6, y: 0.6), to: frame)
         while let task = frame.cleanRawTask { await task.value }
-        if let persist = frame.cleanedRawPersistTask { await persist.value }
+        XCTAssertNil(frame.cleanedRawPersistTask)
+        XCTAssertNil(frame.cleanedRawDiskURL)
+        XCTAssertNotNil(frame.cleanedRawImage)
 
+        // 상주 한도가 내려놓을 때 그 픽셀을 디스크에 남긴다.
+        model.evictCleanedRawBuffers(frame)
+        XCTAssertNil(frame.cleanedRawImage)
+        if let persist = frame.cleanedRawPersistTask { await persist.value }
         let identity = try XCTUnwrap(frame.defectRecipeIdentity)
         XCTAssertEqual(frame.cleanedRawDiskIdentity, identity)
         let diskURL = try XCTUnwrap(frame.cleanedRawDiskURL)
         XCTAssertTrue(CleanedRawCacheFile.isOwnedCacheURL(diskURL, frameID: frame.id))
         XCTAssertTrue(FileManager.default.fileExists(atPath: diskURL.path))
-        XCTAssertEqual(
-            ownedCacheFileCount(
-                frameID: frame.id,
-                in: diskURL.deletingLastPathComponent()
-            ),
-            1
-        )
+
+        // 다음 편집은 디스크 백킹에서 이어 가고, 다시 내려놓아도 프레임당 파일은 하나다.
+        model.appendDefectEdit(makeEdit(x: 0.5, y: 0.2), to: frame)
+        while let task = frame.cleanRawTask { await task.value }
+        model.evictCleanedRawBuffers(frame)
+        if let persist = frame.cleanedRawPersistTask { await persist.value }
+        XCTAssertEqual(frame.cleanedRawDiskIdentity, frame.defectRecipeIdentity)
+        XCTAssertEqual(ownedCacheFileCount(frameID: frame.id, in: diskURL.deletingLastPathComponent()), 1)
         cleanupOwnedCaches(for: [frame])
+    }
+
+    func testUnreferencedCleanedRawFilesAreRemovedButLiveOnesStay() throws {
+        let directory = temporaryDirectory("cleaned-raw-sweep")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let frameID = UUID()
+        func file(_ name: String, age: TimeInterval) throws -> URL {
+            let url = directory.appendingPathComponent(name)
+            try Data(count: 128).write(to: url)
+            try FileManager.default.setAttributes(
+                [.modificationDate: Date().addingTimeInterval(-age)], ofItemAtPath: url.path)
+            return url
+        }
+        let live = try file("\(frameID.uuidString)_\(UUID().uuidString)_raw-v2.tiff", age: 3_600)
+        let stale = try file("\(frameID.uuidString)_\(UUID().uuidString)_raw-v2.tiff", age: 3_600)
+        let legacy = try file("\(frameID.uuidString)_\(UUID().uuidString).tiff", age: 3_600)
+        let writing = try file("\(frameID.uuidString)_\(UUID().uuidString)_raw-v2.tiff", age: 1)
+        let leftover = try file(".\(frameID.uuidString)_\(UUID().uuidString)_raw-v2.tiff-ooZY6Z", age: 3_600)
+        let leased = try file("\(frameID.uuidString)_\(UUID().uuidString)_raw-v2.tiff", age: 3_600)
+        let foreign = try file("notes.tiff", age: 3_600)
+        let lease = CleanedRawCacheFile.acquireLease(leased)
+        defer { CleanedRawCacheFile.releaseLease(lease) }
+
+        let removed = CleanedRawCacheFile.removeUnreferenced(
+            in: directory, keeping: [live.standardizedFileURL.path], minimumAge: 60)
+
+        let exists = { (url: URL) in FileManager.default.fileExists(atPath: url.path) }
+        XCTAssertTrue(exists(live))
+        XCTAssertFalse(exists(stale), "같은 프레임의 낡은 버전")
+        XCTAssertFalse(exists(legacy), "예전 이름 규칙의 파일")
+        XCTAssertTrue(exists(writing), "방금 쓰는 중일 수 있는 파일")
+        XCTAssertFalse(exists(leftover), "강제 종료가 남긴 임시 파일")
+        XCTAssertTrue(exists(leased), "내보내기가 읽는 중인 파일")
+        XCTAssertTrue(exists(foreign), "이 캐시가 만들지 않은 파일")
+        XCTAssertEqual(removed, 3 * 128)
     }
 
     func testRegionDetectCachesSessionRawAndClearsOnSessionEnd() async throws {

@@ -239,6 +239,9 @@ extension AppModel {
                     )
                 }
             }
+            // 쓰는 동안 디스크 보정 RAW 정리가 스냅샷의 파일을 지우지 못하게 붙잡는다.
+            let cleanedRawLeases = plans.map { CleanedRawCacheFile.acquireLease($0.snapshot.cleanedRawURL) }
+            defer { cleanedRawLeases.forEach(CleanedRawCacheFile.releaseLease) }
             let result = try await Task.detached(priority: .userInitiated) {
                 try PrintPackageExportWriter.write(
                     request,

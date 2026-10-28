@@ -1,0 +1,37 @@
+--- a/src/postprocessing/mem_image.cpp
++++ b/src/postprocessing/mem_image.cpp
+@@ -1,1 +1,2 @@
++// Modifications by the Negaflow project (2026), distributed under CDDL-1.0.
+ /* -*- C++ -*-
+@@ -221,16 +221,24 @@
+ 
+   if (S.flip & 4)
+     SWAP(S.height, S.width);
+-  uchar *ppm;
+-  ushort *ppm2;
+-  int c, row, col, soff, rstep, cstep;
++  int soff0, rstep, cstep;
+ 
+-  soff = flip_index(0, 0);
+-  cstep = flip_index(0, 1) - soff;
++  soff0 = flip_index(0, 0);
++  cstep = flip_index(0, 1) - soff0;
+   rstep = flip_index(1, 0) - flip_index(0, S.width);
+-
+-  for (row = 0; row < S.height; row++, soff += rstep)
++  /* Rows are independent copies, so they run in parallel. Each row starts where the
++     serial loop would have left the source index. */
++  const INT64 rowAdvance = INT64(S.width) * cstep + rstep;
++
++#if defined(LIBRAW_USE_OPENMP)
++#pragma omp parallel for schedule(static)
++#endif
++  for (int row = 0; row < S.height; row++)
+   {
++    int c, col;
++    int soff = int(soff0 + INT64(row) * rowAdvance);
++    uchar *ppm;
++    ushort *ppm2;
+     uchar *bufp = ((uchar *)scan0) + size_t(row) * size_t(stride);
+     ppm2 = (ushort *)(ppm = bufp);
+     // keep trivial decisions in the outer loop for speed

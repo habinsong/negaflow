@@ -79,7 +79,10 @@ class AppBundleMetadataTests(unittest.TestCase):
             for required in ("LICENSE.CDDL", "COPYRIGHT", "LibRaw-Third-Party-Notices.txt", "build-libraw.sh"):
                 self.assertGreater((raw_licenses / required).stat().st_size, 0)
             self.assertEqual(len(list(raw_licenses.glob("LibRaw-*.tar.gz"))), 1)
-            self.assertIn("this macOS distribution selects CDDL-1.0", (raw_licenses / "README.txt").read_text())
+            self.assertIn("this macos distribution selects cddl-1.0", (raw_licenses / "README.txt").read_text().casefold())
+            self.assertGreater((raw_licenses / "LLVM-OpenMP-LICENSE.TXT").stat().st_size, 0)
+            for patch in (ROOT / "scripts/libraw").glob("*.patch"):
+                self.assertEqual((raw_licenses / patch.name).read_bytes(), patch.read_bytes())
             packaged_profiles = (
                 resources
                 / "negaflow_Chromabase.bundle/Contents/Resources/ScannerProfiles"

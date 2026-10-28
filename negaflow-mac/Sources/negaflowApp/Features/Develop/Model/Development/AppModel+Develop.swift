@@ -20,6 +20,7 @@ extension AppModel {
     // 현상은 한 번에 하나만 돈다 — 진행 중이면 리비전만 올라가고 그 루프가 최신 값으로 다시
     // 그린다. 마지막(정착) 호출이 풀해상도 패스까지 마무리한다.
     func requestDevelop(_ frame: ScanFrame) {
+        cancelNeighborCameraRAWPrefetch()
         // 인스펙터의 모든 조정이 여기로 모인다 — 되돌리기 기록도 여기 한 곳에서 남긴다.
         recordFrameEditIfChanged(frame)
         developController.requestDevelop(frame) { [weak self] frame in
@@ -125,7 +126,7 @@ extension AppModel {
     func developFrameAfterFastPreview(_ frame: ScanFrame) async {
         // 원본 프리뷰 시드(백그라운드 디코드)를 먼저 기다린다. 네거티브는 이 단계에서
         // thumbnailImage 를 비워 두므로 seedFastPreview 가 포지티브 썸네일을 최초로 발행한다.
-        if let seed = frame.initialThumbnailSeedTask {
+        if let seed = frame.initialThumbnailSeedTask, developSharesThumbnailSeedDecode(frame) {
             await seed.value
         }
         await seedFastPreview(frame)

@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/fr/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="site web"></a>
-  <a href="#téléchargement"><img src="https://img.shields.io/badge/version-1.2.1-EF8B26" alt="version 1.2.1"></a>
+  <a href="#téléchargement"><img src="https://img.shields.io/badge/version-1.2.2-EF8B26" alt="version 1.2.2"></a>
   <a href="negaflow-mac/docs/README_fr.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 ou ultérieur"></a>
   <a href="negaflow-windows/docs/README_fr.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 ou plus récent"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="licence Apache 2.0"></a>
@@ -73,10 +73,10 @@ Il suffit de le prendre sur [GitHub Releases](https://github.com/habinsong/negaf
 
 | Fichier | Environnement |
 |---|---|
-| `negaflow-1.2.1-mac-universal.pkg` | macOS 14 ou ultérieur, Apple Silicon et Intel |
-| `negaflow-1.2.1-mac-arm64.pkg` | macOS 14 ou ultérieur, Apple Silicon uniquement |
-| `negaflow-1.2.1-win-x64.exe` | Windows 11 24H2 ou plus récent, x64 |
-| `negaflow-1.2.1-win-x64-setup.zip` | ZIP du programme d’installation Windows |
+| `negaflow-1.2.2-mac-universal.pkg` | macOS 14 ou ultérieur, Apple Silicon et Intel |
+| `negaflow-1.2.2-mac-arm64.pkg` | macOS 14 ou ultérieur, Apple Silicon uniquement |
+| `negaflow-1.2.2-win-x64.exe` | Windows 11 24H2 ou plus récent, x64 |
+| `negaflow-1.2.2-win-x64-setup.zip` | ZIP du programme d’installation Windows |
 
 Compatible avec macOS 14, 26 et 27.
 
@@ -96,6 +96,12 @@ Brancher un vrai scanner demande un module à part, et pour les scanners SANE il
 - Des préréglages et un copier-coller qui emportent ensemble procédé, cible, tonalité, couleur, détail, recadrage et orientation
 - Export JPEG, PNG, TIFF 16 bits et DNG linéaire 16 bits, profils ICC, et enregistrement dans l'EXIF des notes de boîtier, objectif, film
 - Huit mises en page d'impression, aperçus de papier, formats photo et ISO, et fonction C-print.
+
+## 1.2.2
+
+- Les photos RAW s’ouvrent plus vite et le premier aperçu s’affiche plus tôt.
+- Sur Mac, la photo RAW suivante est préparée pendant la navigation.
+- Les fichiers temporaires ne s’accumulent plus à chaque retouche.
 
 ## 1.2.1
 

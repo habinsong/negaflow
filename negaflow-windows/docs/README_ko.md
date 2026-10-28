@@ -7,7 +7,7 @@
 <p align="center">Windows 네이티브로 만든 negaflow입니다.</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.2.1-EF8B26" alt="버전 1.2.1\"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.2.2-EF8B26" alt="버전 1.2.2\"></a>
   <a href="#"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 이상"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -47,9 +47,9 @@ Arm64 기기에서도 동작합니다. 다만 Arm64 릴리즈는 x64만큼 확�
 
 ## 설치
 
-[Releases](https://github.com/habinsong/negaflow/releases)에서 `negaflow-1.2.1-win-x64.exe`를 내려받아 실행합니다.
+[Releases](https://github.com/habinsong/negaflow/releases)에서 `negaflow-1.2.2-win-x64.exe`를 내려받아 실행합니다.
 
-Windows 설치 파일 ZIP: [negaflow-1.2.1-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.1/negaflow-1.2.1-win-x64-setup.zip). Windows에는 동일한 설치 EXE, 설치 안내, 고지와 SHA-256 체크섬을 담은 setup ZIP도 제공합니다. 압축을 모두 푼 뒤 설치 파일을 실행합니다. 설치 파일 압축본이며 포터블 앱이 아닙니다. SmartScreen 경고는 여전히 나올 수 있습니다.
+Windows 설치 파일 ZIP: [negaflow-1.2.2-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.2/negaflow-1.2.2-win-x64-setup.zip). Windows에는 동일한 설치 EXE, 설치 안내, 고지와 SHA-256 체크섬을 담은 setup ZIP도 제공합니다. 압축을 모두 푼 뒤 설치 파일을 실행합니다. 설치 파일 압축본이며 포터블 앱이 아닙니다. SmartScreen 경고는 여전히 나올 수 있습니다.
 
 관리자 권한은 필요 없습니다. 처음 실행할 때 SmartScreen이 한 번 경고하는데, 추가 정보를 누르고 실행하면 됩니다.
 

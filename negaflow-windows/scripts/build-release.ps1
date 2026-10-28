@@ -213,6 +213,13 @@ try {
         }
         Copy-Item -LiteralPath $source -Destination $librawNoticeDirectory -Force
     }
+    foreach ($librawPatch in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'libraw') -Filter '*.patch' -File) {
+        Copy-Item -LiteralPath $librawPatch.FullName -Destination $librawNoticeDirectory -Force
+    }
+    $librawModificationNotice = Join-Path $librawLicenseDirectory 'README.txt'
+    if (Test-Path -LiteralPath $librawModificationNotice -PathType Leaf) {
+        Copy-Item -LiteralPath $librawModificationNotice -Destination $librawNoticeDirectory -Force
+    }
     $additionalNotice = Join-Path $repositoryRoot 'negaflow-mac\Config\LibRaw-Third-Party-Notices.txt'
     if (Test-Path -LiteralPath $additionalNotice -PathType Leaf) {
         Copy-Item -LiteralPath $additionalNotice -Destination $librawNoticeDirectory -Force

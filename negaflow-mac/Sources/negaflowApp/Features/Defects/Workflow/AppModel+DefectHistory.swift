@@ -172,13 +172,12 @@ extension AppModel {
                                baseIdentity: frame.cleanedRawPreviousIdentity,
                                fromOriginal: false,
                                recipeSnapshot: recipeSnapshot,
-                               persist: !live, quiet: live)
+                               quiet: live)
         } else {
             invalidatePreviousBase(frame)
             rebuildCleanedRaw(
                 frame,
                 recipeSnapshot: recipeSnapshot,
-                persist: !live,
                 quiet: live
             )
         }

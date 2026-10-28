@@ -13,7 +13,7 @@
 namespace negaflow::imageio {
 namespace {
 
-// LibRaw (https://www.libraw.org, LGPL-2.1, LibRaw LLC) C ABI 호환용 공개 출력 구조체 선언입니다.
+// LibRaw (https://www.libraw.org, CDDL-1.0 선택, LibRaw LLC) C ABI 호환용 공개 출력 구조체 선언입니다.
 // `libraw.dll` 은 런타임에 `LoadLibraryExW`/`GetProcAddress` 로 동적 로드되며, 대응 소스와
 // 라이선스 고지는 `THIRD-PARTY-NOTICES.md` 및 배포본의 `licenses/libraw/` 에 함께 수록됩니다.
 // 이 구조체는 LibRaw 의 문서화된 출력 계약(`libraw_types.h`)이라 버전 사이에 바뀌지 않습니다. 반대로

@@ -27,9 +27,13 @@ extension AppModel {
             developController.releaseDevelopSlot()
         }
         var revision = frame.developRevision
+        // 막 선택한 사진의 첫 패스는 편집 중이 아니다. 정착 대기 없이 바로 풀해상도로 간다.
+        var awaitsSettle = selectionBoundFrameID == nil
 
         while true {
             guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
+            let waitsForSettle = awaitsSettle
+            awaitsSettle = true
             let baseKey = FilmBaseCacheKey(
                 filmType: frame.filmType,
                 mode: frame.params.baseEstimationMode,
@@ -162,7 +166,7 @@ extension AppModel {
                     continue
                 }
                 // 정착 감지: 추가 편집 없이 settle 윈도우가 지나야 풀해상도로 마무리한다.
-                if !(await waitForDevelopSettle(frame, revision: revision)) {
+                if waitsForSettle, !(await waitForDevelopSettle(frame, revision: revision)) {
                     guard developmentRequestIsCurrent(
                         frame,
                         selectionBoundFrameID: selectionBoundFrameID
@@ -301,6 +305,9 @@ extension AppModel {
                     frame.displayedCleanRawRevision, fullCleanRawRevision
                 )
                 markDevelopedResident(frame)   // 풀해상도 버퍼 FIFO 등록(한도 초과 시 오래된 프레임 해제)
+                if selectionBoundFrameID != nil {
+                    prefetchNeighborCameraRAW(around: frame)
+                }
                 // 결함 제거는 입력 raw(cleaned raw)에 이미 반영되어 있으므로 현상 결과에 그대로 포함된다.
                 return
             } catch is CancellationError {

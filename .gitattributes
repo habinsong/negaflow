@@ -7,6 +7,10 @@
 # Windows 전용 셸 스크립트만 작업 트리에서 CRLF로 둔다. 저장되는 blob은 여전히 LF다.
 *.ps1 text eol=crlf
 
+# 패치의 문맥과 삭제 행은 업스트림 원문의 공백을 그대로 보존한다.
+negaflow-mac/scripts/libraw/*.patch -whitespace
+negaflow-windows/scripts/libraw/*.patch -whitespace
+
 # 바이너리 페이로드는 어떤 경우에도 줄바꿈 변환 대상이 되면 안 된다.
 *.png   binary
 *.webp  binary

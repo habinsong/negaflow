@@ -77,10 +77,34 @@ Write-Host "SHA-256 확인: $actual"
 # ── 2. 푼다 ──────────────────────────────────────────────────────────────────
 # GitHub 아카이브는 커밋 이름으로 풀립니다.
 $sourceDir = Join-Path $WorkRoot "LibRaw-$LibRawCommit"
-if (-not (Test-Path $sourceDir)) {
-    & tar.exe -xzf $archive -C $WorkRoot
-    if ($LASTEXITCODE -ne 0) { throw "LibRaw 소스를 풀지 못했다 (exit $LASTEXITCODE)." }
+# 패치를 얹으므로 매번 새로 푼다. 예전 빌드가 남긴 트리에는 패치가 없거나 두 번 들어간다.
+if (Test-Path $sourceDir) { Remove-Item -Recurse -Force $sourceDir }
+& tar.exe -xzf $archive -C $WorkRoot
+if ($LASTEXITCODE -ne 0) { throw "LibRaw 소스를 풀지 못했다 (exit $LASTEXITCODE)." }
+
+# LibRaw 패치(scripts\libraw\*.patch)를 이름 순서로 얹는다. 둘 다 `/openmp` 없이 지은 것과 비트
+# 단위로 같은 출력을 낸다.
+#   mem-image-parallel-rows: 마지막 출력 복사(방향 적용 포함)를 행 단위로 나눈다.
+#   xtrans-parallel-rows: upstream 은 Fuji X-Trans 타일 행을 OpenMP 로 나누는데 겹치는 타일이
+#     서로의 화소를 덮어써 실행할 때마다 결과가 달랐다(같은 RAF, 채널값 0.085% 가 최대 1.9%
+#     차이). 타일을 직렬 순서로 두고 타일 안의 행만 나눈다.
+$libRawPatches = @(Get-ChildItem -LiteralPath (Join-Path $scriptDir 'libraw') -Filter '*.patch' | Sort-Object Name)
+if ($libRawPatches.Count -eq 0) { throw 'scripts\libraw 에 LibRaw 패치가 없다.' }
+# 작업 폴더가 저장소 안에 있어도 git 이 바깥 저장소 루트 기준으로 경로를 읽지 않게 막는다.
+$previousGitCeiling = $env:GIT_CEILING_DIRECTORIES
+try {
+    $env:GIT_CEILING_DIRECTORIES = $WorkRoot
+    foreach ($libRawPatch in $libRawPatches) {
+        & git.exe -C $sourceDir apply --whitespace=nowarn $libRawPatch.FullName
+        if ($LASTEXITCODE -ne 0) { throw "LibRaw 패치를 적용하지 못했다: $($libRawPatch.Name) (exit $LASTEXITCODE)" }
+    }
+} finally {
+    $env:GIT_CEILING_DIRECTORIES = $previousGitCeiling
 }
+$patched = Get-Content -Raw -LiteralPath (Join-Path $sourceDir 'src\demosaic\xtrans_demosaic.cpp')
+if ($patched -notmatch 'Tiles run one at a time') { throw 'X-Trans 패치가 소스에 들어가지 않았다.' }
+$patched = Get-Content -Raw -LiteralPath (Join-Path $sourceDir 'src\postprocessing\mem_image.cpp')
+if ($patched -notmatch 'Rows are independent copies') { throw '출력 복사 패치가 소스에 들어가지 않았다.' }
 
 # ── 3. MSVC 로 빌드한다 ──────────────────────────────────────────────────────
 # LibRaw 의 CMake 스크립트는 upstream 이 공식 지원하지 않는다(README.cmake). 저장소가
@@ -119,7 +143,8 @@ foreach ($sub in @('bin', 'lib', 'object')) {
 # **OpenMP 를 켠다.** LibRaw 에는 `#pragma omp` 가 44 곳 있고, 그 대부분이 디모자이크다.
 # 끄고 빌드하면 한 장을 내보내는 데 코어 하나만 쓴다 - 실측(제조사별 RAW 8 장, TIFF16,
 # 한 장씩): 50.2 초에서 30.4 초로, 가장 느린 Fujifilm X-Trans 는 14.11 초에서 4.49 초로
-# 줄었다. 출력은 같다. 대가는 `vcomp140.dll` 한 개이며, 설치본에 함께 싣는다.
+# 줄었다. X-Trans 는 위 패치가 있어야 직렬 빌드와 같은 출력이 나온다. 대가는 `vcomp140.dll`
+# 한 개이며, 설치본에 함께 싣는다.
 Write-Host "MSVC x64 로 libraw.dll 을 빌드한다 (정적 CRT · OpenMP)"
 & cmd /c "`"$vcvars`" >nul 2>&1 && cd /d `"$sourceDir`" && nmake -f Makefile.msvc COPT_OPT=`"/MT /openmp`" bin\libraw.dll"
 if ($LASTEXITCODE -ne 0) { throw "libraw.dll 빌드가 실패했다 (exit $LASTEXITCODE)." }
@@ -152,6 +177,8 @@ $openMpRuntime = Get-ChildItem -LiteralPath $redistRoot -Recurse -Filter 'vcomp1
 if ($null -eq $openMpRuntime) {
     throw "vcomp140.dll ($Architecture) 을 못 찾았다: $redistRoot. Visual Studio 의 OpenMP 재배포 구성 요소가 필요하다."
 }
+# 출력 폴더가 아직 없으면 Copy-Item 이 그 경로에 파일을 만든다. 폴더부터 만든다.
+New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 Copy-Item -LiteralPath $openMpRuntime.FullName -Destination $OutputDirectory -Force
 Write-Host "OpenMP 런타임: $($openMpRuntime.FullName)"
 
@@ -195,6 +222,20 @@ foreach ($name in @('LICENSE.LGPL', 'LICENSE.CDDL', 'COPYRIGHT', 'Changelog.txt'
 }
 Copy-Item -LiteralPath $archive -Destination $licenseDir -Force
 Copy-Item -LiteralPath $MyInvocation.MyCommand.Path -Destination (Join-Path $licenseDir 'build-libraw.ps1') -Force
+foreach ($libRawPatch in $libRawPatches) { Copy-Item -LiteralPath $libRawPatch.FullName -Destination $licenseDir -Force }
+@"
+LibRaw upstream: https://github.com/LibRaw/LibRaw/tree/$LibRawCommit
+This Windows distribution selects CDDL-1.0 from upstream dual licensing.
+Source SHA-256: $LibRawSha256
+Modified files (patches included, distributed under CDDL-1.0):
+- src/demosaic/xtrans_demosaic.cpp: xtrans-parallel-rows.patch keeps tiles in
+  serial order and processes rows inside each tile in parallel.
+- src/postprocessing/mem_image.cpp: mem-image-parallel-rows.patch copies
+  output bitmap rows in parallel.
+The patched DLL matches the unpatched serial build on the tested RAW files.
+To rebuild, use a Negaflow source checkout with the included build-libraw.ps1
+and the patches in scripts/libraw/. The exact upstream archive is included.
+"@ | Set-Content -LiteralPath (Join-Path $licenseDir 'README.txt') -Encoding UTF8
 
 $additionalNotice = Join-Path $repoRoot '..\negaflow-mac\Config\LibRaw-Third-Party-Notices.txt'
 if (Test-Path -LiteralPath $additionalNotice -PathType Leaf) {

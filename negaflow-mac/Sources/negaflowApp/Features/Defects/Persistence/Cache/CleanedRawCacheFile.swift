@@ -76,6 +76,79 @@ enum CleanedRawCacheFile {
         return UUID(uuidString: String(name[name.startIndex..<separator]))
     }
 
+    /// ImageIO 가 쓰다 만 임시 파일(`.<캐시 파일 이름>-XXXXXX`). 강제 종료로 이름 바꾸기 전에
+    /// 멈추면 남는다.
+    static func isLeftoverTemporaryFileName(_ name: String) -> Bool {
+        guard name.hasPrefix("."), let dash = name.lastIndex(of: "-") else { return false }
+        let cacheName = name[name.index(after: name.startIndex)..<dash]
+        return cacheName.lowercased().hasSuffix(".tiff") && frameID(fromFileName: String(cacheName)) != nil
+    }
+
+    // MARK: 읽는 중인 파일 보호
+
+    private final class LeaseRegistry: @unchecked Sendable {
+        let lock = NSLock()
+        var counts: [String: Int] = [:]
+    }
+    private static let leases = LeaseRegistry()
+
+    /// 내보내기처럼 파일 경로를 쥐고 오래 읽는 쪽이 정리 작업보다 먼저 잡는다. 반환한 키로 풀어 준다.
+    static func acquireLease(_ url: URL?) -> String? {
+        guard let path = url?.standardizedFileURL.path else { return nil }
+        leases.lock.withLock { leases.counts[path, default: 0] += 1 }
+        return path
+    }
+
+    static func releaseLease(_ key: String?) {
+        guard let key else { return }
+        leases.lock.withLock {
+            let remaining = (leases.counts[key] ?? 1) - 1
+            leases.counts[key] = remaining > 0 ? remaining : nil
+        }
+    }
+
+    static func leasedPaths() -> Set<String> {
+        leases.lock.withLock { Set(leases.counts.keys) }
+    }
+
+    /// `directory` 에서 이 캐시가 만든 파일 가운데 `keeping` 에 없는 것을 지운다. 방금 쓰는 중일 수
+    /// 있는 파일은 `minimumAge` 보다 오래된 것만 지운다. 지운 바이트 수를 돌려준다.
+    @discardableResult
+    static func removeUnreferenced(
+        in directory: URL,
+        keeping paths: Set<String>,
+        minimumAge: TimeInterval,
+        now: Date = Date(),
+        fileManager: FileManager = .default
+    ) -> Int64 {
+        guard let names = try? fileManager.contentsOfDirectory(atPath: directory.path) else { return 0 }
+        let keep = paths.union(leasedPaths())
+        var removed: Int64 = 0
+        for name in names {
+            let url = directory.appendingPathComponent(name)
+            if isLeftoverTemporaryFileName(name) {
+                // 임시 파일은 어느 프레임 소유든 상관없다 — 끝난 쓰기는 이 이름을 남기지 않는다.
+            } else if let frameID = frameID(fromFileName: name),
+                      isOwnedCacheURL(url, frameID: frameID, directory: directory) {
+                guard !keep.contains(url.standardizedFileURL.path) else { continue }
+            } else {
+                continue
+            }
+            guard let attributes = try? fileManager.attributesOfItem(atPath: url.path),
+                  let modified = attributes[.modificationDate] as? Date,
+                  now.timeIntervalSince(modified) >= minimumAge else { continue }
+            // 목록을 읽은 뒤 새 내보내기가 임대를 잡을 수 있다. 삭제와 임대 획득을 같은 잠금으로
+            // 직렬화해 이미 읽기 시작한 파일이 사라지지 않게 한다.
+            leases.lock.withLock {
+                guard leases.counts[url.standardizedFileURL.path] == nil else { return }
+                if (try? fileManager.removeItem(at: url)) != nil {
+                    removed += (attributes[.size] as? NSNumber)?.int64Value ?? 0
+                }
+            }
+        }
+        return removed
+    }
+
     static func isOwnedCacheURL(
         _ url: URL,
         frameID: UUID,

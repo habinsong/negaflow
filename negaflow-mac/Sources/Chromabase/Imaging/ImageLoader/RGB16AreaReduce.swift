@@ -18,22 +18,53 @@ enum RGB16AreaReduce {
         width: Int, height: Int, channels: Int,
         targetWidth: Int, targetHeight: Int
     ) -> [UInt16]? {
-        guard channels == 3 || channels == 4,
-              width > 0, height > 0, targetWidth > 0, targetHeight > 0,
-              targetWidth <= width, targetHeight <= height,
-              targetWidth <= Int.max / targetHeight / 4 else { return nil }
-        var output = [UInt16](repeating: .max, count: targetWidth * targetHeight * 4)
+        guard isValid(width: width, height: height, channels: channels,
+                      targetWidth: targetWidth, targetHeight: targetHeight) else { return nil }
+        var output = [UInt16](repeating: 0, count: targetWidth * targetHeight * 4)
         output.withUnsafeMutableBufferPointer { buffer in
-            let job = Job(
-                source: source, width: width, height: height, channels: channels,
-                targetWidth: targetWidth, targetHeight: targetHeight, output: buffer.baseAddress!
-            )
-            let bands = max(1, min(targetHeight, ProcessInfo.processInfo.activeProcessorCount * 4))
-            DispatchQueue.concurrentPerform(iterations: bands) { band in
-                job.run(rows: (band * targetHeight / bands)..<((band + 1) * targetHeight / bands))
-            }
+            run(source, width: width, height: height, channels: channels,
+                targetWidth: targetWidth, targetHeight: targetHeight, into: buffer.baseAddress!)
         }
         return output
+    }
+
+    /// `reduce` 와 같은 화소를 `Data` 에 바로 쓴다. 배열을 거쳐 한 번 더 복사하지 않는다
+    /// (3600px 마스터 72MB, 24MP 원본 크기 194MB).
+    static func reduceToData(
+        _ source: UnsafePointer<UInt16>,
+        width: Int, height: Int, channels: Int,
+        targetWidth: Int, targetHeight: Int
+    ) -> Data? {
+        guard isValid(width: width, height: height, channels: channels,
+                      targetWidth: targetWidth, targetHeight: targetHeight) else { return nil }
+        var output = Data(count: targetWidth * targetHeight * 8)
+        output.withUnsafeMutableBytes { raw in
+            run(source, width: width, height: height, channels: channels,
+                targetWidth: targetWidth, targetHeight: targetHeight,
+                into: raw.baseAddress!.assumingMemoryBound(to: UInt16.self))
+        }
+        return output
+    }
+
+    private static func isValid(width: Int, height: Int, channels: Int, targetWidth: Int, targetHeight: Int) -> Bool {
+        (channels == 3 || channels == 4)
+            && width > 0 && height > 0 && targetWidth > 0 && targetHeight > 0
+            && targetWidth <= width && targetHeight <= height
+            && targetWidth <= Int.max / targetHeight / 4
+    }
+
+    private static func run(
+        _ source: UnsafePointer<UInt16>, width: Int, height: Int, channels: Int,
+        targetWidth: Int, targetHeight: Int, into output: UnsafeMutablePointer<UInt16>
+    ) {
+        let job = Job(
+            source: source, width: width, height: height, channels: channels,
+            targetWidth: targetWidth, targetHeight: targetHeight, output: output
+        )
+        let bands = max(1, min(targetHeight, ProcessInfo.processInfo.activeProcessorCount * 4))
+        DispatchQueue.concurrentPerform(iterations: bands) { band in
+            job.run(rows: (band * targetHeight / bands)..<((band + 1) * targetHeight / bands))
+        }
     }
 
     /// 병렬 작업이 공유하는 읽기 전용 입력과, 서로 겹치지 않는 출력 행에만 쓰는 출력 포인터.
@@ -94,6 +125,7 @@ enum RGB16AreaReduce {
                     for c in 0..<3 {
                         out[ox * 4 + c] = UInt16(min(65535, max(0, accumulated[ox * 3 + c] * norm + 0.5)))
                     }
+                    out[ox * 4 + 3] = .max
                 }
             }
         }

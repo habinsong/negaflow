@@ -130,7 +130,7 @@ public sealed partial class PreviewCoordinator
             // 없습니다.
             Deliver(interactive, request.OnCompleted);
 
-            if (!await WaitForSettleAsync(revision, run).ConfigureAwait(false))
+            if (!request.FreshFrame && !await WaitForSettleAsync(revision, run).ConfigureAwait(false))
             {
                 // 이미 배달했습니다. 다시 돌려주면 같은 그림을 두 번 그립니다.
                 return new LeasedOutcome(PreviewOutcome.Cancelled(), -1);

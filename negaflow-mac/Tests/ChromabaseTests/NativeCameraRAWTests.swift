@@ -162,6 +162,21 @@ final class NativeCameraRAWTests: XCTestCase {
         XCTAssertEqual(NativeCameraRAW.previewMasterLongSide, 3600)
     }
 
+    func testPrefetchKeepsPreviewPixelsAndCameraMatrixUnchanged() throws {
+        guard NativeCameraRAW.isAvailable else {
+            throw XCTSkip("NEGAFLOW_LIBRAW_LIBRARY is required")
+        }
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "CameraNativeRaw", withExtension: "dng"))
+        NativeCameraRAW.purgePreviewCache()
+        let cold = try XCTUnwrap(NativeCameraRAW.decode(url, scaleFactor: 0.25))
+        NativeCameraRAW.purgePreviewCache()
+        NativeCameraRAW.prefetchPreviewMaster(url)
+        let warm = try XCTUnwrap(NativeCameraRAW.decode(url, scaleFactor: 0.25))
+        XCTAssertEqual(cold.image.extent, warm.image.extent)
+        XCTAssertEqual(cold.provenance.cameraToWorking, warm.provenance.cameraToWorking)
+        XCTAssertEqual(pixels(cold.image, width: 64, height: 64), pixels(warm.image, width: 64, height: 64))
+    }
+
     private func meanChannels(_ image: CIImage, size: Int) -> [Float] {
         let averaged = image.applyingFilter("CIAreaAverage", parameters: [kCIInputExtentKey: CIVector(cgRect: image.extent)])
         var value = [Float](repeating: 0, count: 4)

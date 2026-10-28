@@ -141,7 +141,6 @@ final class DefectCacheRuntimeSafetyTests: XCTestCase {
         model.rebuildCleanedRaw(
             frame,
             recipeSnapshot: snapshot,
-            persist: false,
             quiet: true
         )
         let task = try XCTUnwrap(frame.cleanRawTask)

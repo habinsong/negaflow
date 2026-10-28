@@ -103,6 +103,8 @@ final class AppModel: ObservableObject {
     var selectedFrameDevelopTask: Task<Void, Never>?
     /// 선택한 사진의 이웃 결함 기록 파일을 페이지 캐시에 올리는 작업. 선택이 바뀌면 취소한다.
     var defectRecordWarmTask: Task<Void, Never>?
+    var neighborCameraRAWPrefetchTask: Task<Void, Never>?
+    var neighborCameraRAWPrefetchFrameID: UUID?
     var sequentialLibraryDevelopmentTask: Task<Void, Never>?
     var printPackagePreviewTask: Task<Void, Never>?
 
@@ -182,6 +184,8 @@ final class AppModel: ObservableObject {
     }
     var didRestoreLibrary = false
     var librarySaveTask: Task<Void, Never>?
+    /// 디스크 보정 RAW 정리 예약(`sweepCleanedRawDisk`).
+    var cleanedRawDiskSweepTask: Task<Void, Never>?
     /// 실행 중 자동 백업 예약. 종료는 이것을 기다리지 않는다.
     var sessionBackupTask: Task<Void, Never>?
     var isAcknowledgedLibraryTransactionActive = false

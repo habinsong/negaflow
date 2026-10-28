@@ -1,3 +1,4 @@
+import Chromabase
 import Foundation
 
 extension AppModel {
@@ -25,6 +26,11 @@ extension AppModel {
     }
 
     func applyFrameCachePressure(_ pressure: FrameCachePressureLevel) {
+        // 카메라 RAW 프리뷰 마스터도 같은 압박 신호를 따른다.
+        if pressure != .normal {
+            cancelNeighborCameraRAWPrefetch()
+            NativeCameraRAW.purgePreviewCache()
+        }
         frameCacheManager.applyPressure(
             pressure,
             selectedFrameID: selectedFrameID,
@@ -39,6 +45,8 @@ extension AppModel {
     }
 
     func evictCleanedRawBuffers(_ frame: ScanFrame) {
+        // 디스크 백킹은 지금처럼 메모리에서 내려놓을 때만 만든다.
+        persistCleanedRawBeforeEviction(frame)
         frame.cleanedRawImage = nil
         frame.cleanedRawCanvas = nil
         frame.cleanedRawMemoryIdentity = nil

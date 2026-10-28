@@ -51,11 +51,13 @@ public enum NativeCameraRAW {
         typealias Make = @convention(c) (OpaquePointer?, UnsafeMutablePointer<Int32>?) -> UnsafeMutableRawPointer?
         typealias Clear = @convention(c) (UnsafeMutableRawPointer?) -> Void
         typealias Version = @convention(c) () -> UnsafePointer<CChar>?
+        typealias FunctionName = @convention(c) (OpaquePointer?) -> UnsafePointer<CChar>?
         let library: UnsafeMutableRawPointer
         let initialize: Init; let open: Open; let unpack: Process; let process: Process; let close: Close
         let outputColor: SetInt; let outputBits: SetInt; let autoBright: SetInt; let highlight: SetInt
         let maximumThreshold: SetFloat; let gamma: SetIndexed; let userMultiplier: SetIndexed
         let matrix: Matrix; let make: Make; let clear: Clear; let version: Version
+        let unpackFunctionName: FunctionName?
 
         init?(path: String) {
             guard path.hasPrefix("/"), let library = dlopen(path, RTLD_NOW | RTLD_LOCAL) else { return nil }
@@ -84,6 +86,7 @@ public enum NativeCameraRAW {
             self.autoBright = autoBright; self.highlight = highlight; self.maximumThreshold = maximumThreshold
             self.gamma = gamma; self.userMultiplier = userMultiplier; self.matrix = matrix
             self.make = make; self.clear = clear; self.version = version
+            unpackFunctionName = symbol("libraw_unpack_function_name", FunctionName.self)
         }
     }
     private static let api: API? = {
@@ -120,7 +123,35 @@ public enum NativeCameraRAW {
     /// 넘어 캐시를 못 쓰는 일을 막는다.
     private static let previewMasterHeadroom: CGFloat = 1.02
     private static let cache = Cache()
+    /// 같은 파일을 동시에 요청하면 한 번만 디코드하고 마스터를 나눠 쓴다. 키로 나눈 잠금이라 다른
+    /// 파일은 대부분 따로 돈다(LibRaw 는 OpenMP 로 이미 모든 코어를 쓰므로 겹쳐도 처리량은 같다).
+    private static let decodeGates = (0..<16).map { _ in NSLock() }
     public static var isAvailable: Bool { api != nil }
+
+    /// 앱이 메모리 압박을 받을 때 프리뷰 마스터를 내려놓는다. 다음 요청은 원본에서 다시 만든다.
+    public static func purgePreviewCache() {
+        cache.lock.withLock { cache.previews.removeAll() }
+    }
+
+    /// 다음 사진의 정착 프리뷰 마스터를 준비한다. 화면·필름 베이스·현상 설정은 바꾸지 않는다.
+    public static func prefetchPreviewMaster(_ url: URL) {
+        guard !Task.isCancelled else { return }
+        _ = decode(url, scaleFactor: 0.05)
+    }
+
+    /// `NEGAFLOW_RAW_TRACE=1` 이면 디코드 단계별 소요를 표준 오류에 남긴다(앱 실측용).
+    private static let traceEnabled = ProcessInfo.processInfo.environment["NEGAFLOW_RAW_TRACE"] == "1"
+    private static func trace(_ url: URL, _ message: @autoclosure () -> String) {
+        guard traceEnabled else { return }
+        let now = Double(DispatchTime.now().uptimeNanoseconds) / 1e6
+        FileHandle.standardError.write(Data(String(format: "[raw] t=%.0f %@ %@\n", now, url.lastPathComponent, message()).utf8))
+    }
+    private static func milliseconds(since start: UInt64) -> String {
+        milliseconds(DispatchTime.now().uptimeNanoseconds - start)
+    }
+    private static func milliseconds(_ nanoseconds: UInt64) -> String {
+        String(format: "%.0f", Double(nanoseconds) / 1e6)
+    }
 
     private static func cachedPreview(for key: Key) -> PreviewMaster? {
         cache.lock.withLock {
@@ -153,12 +184,23 @@ public enum NativeCameraRAW {
         if let scaleFactor { guard scaleFactor.isFinite, scaleFactor > 0, scaleFactor <= 1 else { return nil } }
         guard let api, let observation = try? InputGammaFileObservation.read(url) else { return nil }
         let key = Key(url: url.standardizedFileURL, observation: observation)
-        let reduceScale = scaleFactor.flatMap { $0 < 1 ? $0 : nil }
-        if let reduceScale, let master = cachedPreview(for: key),
-           let image = previewImage(derivedFrom: master, scale: reduceScale) {
+        let scale = scaleFactor ?? 1
+        let started = DispatchTime.now().uptimeNanoseconds
+        // 원본 크기 요청(scale 1)은 마스터가 줄이지 않은 원본일 때만 여기서 나간다.
+        func cached() -> ImageLoader.DecodedImage? {
+            guard let master = cachedPreview(for: key),
+                  let image = previewImage(derivedFrom: master, scale: scale) else { return nil }
+            trace(url, "scale \(scale) master hit \(milliseconds(since: started)) ms")
             return decoded(tagged(image, matrix: master.matrix), matrix: master.matrix,
-                           version: master.libRawVersion, scale: reduceScale)
+                           version: master.libRawVersion, scale: scale)
         }
+        if let hit = cached() { return hit }
+        let gate = decodeGates[Int(UInt(bitPattern: key.hashValue) % UInt(decodeGates.count))]
+        gate.lock()
+        defer { gate.unlock() }
+        guard !Task.isCancelled else { return nil }
+        // 기다리는 동안 같은 파일의 디코드가 끝났으면 그 마스터를 쓴다.
+        if let hit = cached() { return hit }
         guard let handle = api.initialize(0) else { return nil }
         defer { api.close(handle) }
         guard url.path.withCString({ api.open(handle, $0) }) == 0 else { return nil }
@@ -168,9 +210,11 @@ public enum NativeCameraRAW {
         api.autoBright(handle, 1); api.maximumThreshold(handle, 0)
         api.highlight(handle, 1)
         for channel in 0..<4 { api.userMultiplier(handle, Int32(channel), 1) }
-        guard api.unpack(handle) == 0, api.process(handle) == 0 else { return nil }
-        let matrixValues = (0..<9).map { Double(api.matrix(handle, Int32($0 / 3), Int32($0 % 3))) }
-        guard let matrix = CameraToWorkingMatrix(matrixValues) else { return nil }
+        guard api.unpack(handle) == 0, !Task.isCancelled else { return nil }
+        let unpacked = DispatchTime.now().uptimeNanoseconds
+        guard api.process(handle) == 0, !Task.isCancelled else { return nil }
+        let processed = DispatchTime.now().uptimeNanoseconds
+        guard let matrix = rgbCam(api, handle) else { return nil }
         var error: Int32 = 0
         guard let bitmap = api.make(handle, &error), error == 0 else { return nil }
         defer { api.clear(bitmap) }
@@ -183,33 +227,51 @@ public enum NativeCameraRAW {
         let byteCount = Int(bitmap.load(fromByteOffset: 12, as: UInt32.self))
         guard type == 2, width > 0, height > 0, colors == 3, bits == 16,
               byteCount == width * height * 6 else { return nil }
-        let source = bitmap.advanced(by: 16).assumingMemoryBound(to: UInt16.self)
+        let source = UnsafePointer(bitmap.advanced(by: 16).assumingMemoryBound(to: UInt16.self))
         let version = api.version().map(String.init(cString:))
+        let made = DispatchTime.now().uptimeNanoseconds
+        let masterScale = min(1, previewMasterLongSide * previewMasterHeadroom / CGFloat(max(width, height)))
+        let masterSize = reducedSize(width: width, height: height, scale: masterScale)
         var image: CIImage
-        if let reduceScale {
+        if scale < 1 || masterScale >= 1 {
+            // 프리뷰 요청과, 마스터 크기 안에 드는 작은 원본은 마스터를 거쳐 캐시한다.
             guard let reduced = reducedPreview(
-                source, width: width, height: height, scale: reduceScale,
+                source, width: width, height: height, scale: scale, masterSize: masterSize,
                 matrix: matrix, version: version, key: key
             ) else { return nil }
             image = reduced
         } else {
-            guard UInt64(width * height) * 8 <= ProcessInfo.processInfo.physicalMemory / 2 else { return nil }
-            var pixels = [UInt16](repeating: .max, count: width * height * 4)
-            for p in 0..<(width * height) {
-                pixels[p * 4] = source[p * 3]; pixels[p * 4 + 1] = source[p * 3 + 1]
-                pixels[p * 4 + 2] = source[p * 3 + 2]
-            }
-            let space = CGColorSpace(name: CGColorSpace.linearSRGB)!
-            image = CIImage(bitmapData: pixels.withUnsafeBufferPointer { Data(buffer: $0) },
-                bytesPerRow: width * 8, size: CGSize(width: width, height: height), format: .RGBA16, colorSpace: space)
+            guard UInt64(width * height) * 8 <= ProcessInfo.processInfo.physicalMemory / 2,
+                  let pixels = RGB16AreaReduce.reduceToData(source, width: width, height: height, channels: 3,
+                      targetWidth: width, targetHeight: height) else { return nil }
+            image = previewImage(pixels, width: width, height: height)
         }
         guard (try? InputGammaFileObservation.read(url)) == observation else { return nil }
+        trace(url, "scale \(scale) libraw unpack \(milliseconds(unpacked - started)) "
+            + "process \(milliseconds(processed - unpacked)) image \(milliseconds(made - processed)) "
+            + "reduce \(milliseconds(DispatchTime.now().uptimeNanoseconds - made)) "
+            + "total \(milliseconds(since: started)) ms")
         cache.lock.withLock {
             if cache.matrices.count >= 64 { cache.matrices.removeAll(keepingCapacity: true) }
             cache.matrices[key] = matrix
         }
         image = tagged(image, matrix: matrix)
-        return decoded(image, matrix: matrix, version: version, scale: scaleFactor ?? 1)
+        return decoded(image, matrix: matrix, version: version, scale: scale)
+    }
+
+    private static func rgbCam(_ api: API, _ handle: OpaquePointer) -> CameraToWorkingMatrix? {
+        CameraToWorkingMatrix((0..<9).map { Double(api.matrix(handle, Int32($0 / 3), Int32($0 % 3))) })
+    }
+
+    /// 행렬만 필요할 때. LibRaw 는 파일을 여는 단계에서 이미 rgb_cam 을 정한다(24장 실측: 처리 뒤 값과
+    /// 같다). 예외는 Canon PowerShot 600 으로, 처리 중 raw2image 가 행렬을 다시 고른다.
+    private static func openedMatrix(_ url: URL) -> CameraToWorkingMatrix? {
+        guard let api, let handle = api.initialize(0) else { return nil }
+        defer { api.close(handle) }
+        guard url.path.withCString({ api.open(handle, $0) }) == 0,
+              let name = api.unpackFunctionName?(handle).map(String.init(cString:)),
+              !name.contains("canon_600") else { return nil }
+        return rgbCam(api, handle)
     }
 
     private static func decoded(
@@ -222,23 +284,22 @@ public enum NativeCameraRAW {
     /// LibRaw 결과를 `scale` 크기로 줄인다. 정착 크기 이하 요청은 정착 크기 마스터를 거쳐 캐시한다.
     private static func reducedPreview(
         _ source: UnsafePointer<UInt16>, width: Int, height: Int, scale: CGFloat,
+        masterSize: (width: Int, height: Int),
         matrix: CameraToWorkingMatrix, version: String?, key: Key
     ) -> CIImage? {
         let target = reducedSize(width: width, height: height, scale: scale)
-        let masterScale = min(1, previewMasterLongSide * previewMasterHeadroom / CGFloat(max(width, height)))
-        let masterSize = reducedSize(width: width, height: height, scale: masterScale)
         guard target.width <= masterSize.width, target.height <= masterSize.height else {
-            guard let pixels = RGB16AreaReduce.reduce(source, width: width, height: height, channels: 3,
+            guard let pixels = RGB16AreaReduce.reduceToData(source, width: width, height: height, channels: 3,
                 targetWidth: target.width, targetHeight: target.height) else { return nil }
-            return previewImage(pixels.withUnsafeBufferPointer { Data(buffer: $0) },
-                width: target.width, height: target.height)
+            return previewImage(pixels, width: target.width, height: target.height)
         }
-        guard let masterPixels = RGB16AreaReduce.reduce(source, width: width, height: height, channels: 3,
+        guard let masterPixels = RGB16AreaReduce.reduceToData(source, width: width, height: height, channels: 3,
             targetWidth: masterSize.width, targetHeight: masterSize.height) else { return nil }
         let master = PreviewMaster(
-            data: masterPixels.withUnsafeBufferPointer { Data(buffer: $0) },
+            data: masterPixels,
             width: masterSize.width, height: masterSize.height, sourceWidth: width, sourceHeight: height,
             matrix: matrix, libRawVersion: version)
+        guard !Task.isCancelled else { return nil }
         storePreview(master, for: key)
         return previewImage(derivedFrom: master, scale: scale)
     }
@@ -250,14 +311,13 @@ public enum NativeCameraRAW {
         if target.width == master.width, target.height == master.height {
             return previewImage(master.data, width: master.width, height: master.height)
         }
-        let reduced: [UInt16]? = master.data.withUnsafeBytes { raw in
+        let reduced: Data? = master.data.withUnsafeBytes { raw in
             guard let base = raw.baseAddress?.assumingMemoryBound(to: UInt16.self) else { return nil }
-            return RGB16AreaReduce.reduce(base, width: master.width, height: master.height, channels: 4,
+            return RGB16AreaReduce.reduceToData(base, width: master.width, height: master.height, channels: 4,
                 targetWidth: target.width, targetHeight: target.height)
         }
         guard let reduced else { return nil }
-        return previewImage(reduced.withUnsafeBufferPointer { Data(buffer: $0) },
-            width: target.width, height: target.height)
+        return previewImage(reduced, width: target.width, height: target.height)
     }
 
     private static func previewImage(_ data: Data, width: Int, height: Int) -> CIImage {
@@ -285,6 +345,9 @@ public enum NativeCameraRAW {
               params.isDigitalSource != true else { measurements.cameraToWorking = nil; return }
         let key = Key(url: source.standardizedFileURL, observation: try InputGammaFileObservation.read(source))
         if let matrix = cache.lock.withLock({ cache.matrices[key] }) {
+            measurements.cameraToWorking = matrix
+        } else if let matrix = openedMatrix(source) {
+            cache.lock.withLock { cache.matrices[key] = matrix }
             measurements.cameraToWorking = matrix
         } else {
             guard let decoded = decode(source, scaleFactor: nil), let matrix = decoded.provenance.cameraToWorking else {

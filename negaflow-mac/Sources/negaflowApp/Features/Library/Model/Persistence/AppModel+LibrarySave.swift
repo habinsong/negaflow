@@ -19,6 +19,8 @@ extension AppModel {
         if markDirty {
             markLibraryCatalogDirty()
         }
+        // 프레임 제거·입력 해석 변경처럼 보정 RAW 참조가 끊기는 변경은 모두 저장을 거친다.
+        scheduleCleanedRawDiskSweep()
         if isAcknowledgedLibraryTransactionActive {
             librarySaveRequestedDuringTransaction = true
             return

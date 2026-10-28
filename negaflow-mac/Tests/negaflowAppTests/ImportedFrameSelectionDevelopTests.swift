@@ -1,4 +1,6 @@
 import CoreGraphics
+import Chromabase
+import CoreImage
 import ImageIO
 import UniformTypeIdentifiers
 import XCTest
@@ -64,6 +66,75 @@ final class ImportedFrameSelectionDevelopTests: XCTestCase {
 
         model.activeWorkspaceModule = .develop
         XCTAssertTrue(model.developmentWaitsForThumbnailSeed(frame))
+    }
+
+    func testCameraNativeNegativeDoesNotWaitForImageIOThumbnailSeed() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("raw-seed-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let url = root.appendingPathComponent("negative.dng")
+        try Data().write(to: url)
+        let model = AppModel()
+        model.activeWorkspaceModule = .develop
+        let raw = ScanFrame(scanIndex: 1, rawScanURL: url,
+                            filmType: .colorNegative, sourceKind: .importedFile)
+        raw.initialThumbnailSeedTask = Task { }
+        defer { raw.initialThumbnailSeedTask?.cancel() }
+        XCTAssertFalse(model.developSharesThumbnailSeedDecode(raw))
+        XCTAssertTrue(model.selectedFrameNeedsDevelopment(raw))
+
+        raw.params.isDigitalSource = true
+        // 입력 해석 전환은 이전 시드를 취소한다. 새 해석의 시드가 도는 상태로 다시 검사한다.
+        raw.initialThumbnailSeedTask = Task { }
+        XCTAssertTrue(model.developSharesThumbnailSeedDecode(raw))
+        XCTAssertFalse(model.selectedFrameNeedsDevelopment(raw))
+    }
+
+    func testCameraRAWPrefetchUsesOnlyTheNextVisibleEligibleFrame() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("raw-prefetch-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = AppModel()
+        let frames = try (1...3).map {
+            let url = root.appendingPathComponent("negative\($0).dng")
+            try Data().write(to: url)
+            return ScanFrame(scanIndex: $0, rawScanURL: url,
+                             filmType: .colorNegative, sourceKind: .importedFile)
+        }
+        model.frames = frames
+        // 라이브러리에서는 초기 현상·미리 읽기를 시작하지 않는다.
+        model.activeWorkspaceModule = .library
+        model.selectedFrameID = frames[0].id
+        XCTAssertTrue(model.cameraRAWPrefetchCandidate(after: frames[0]) === frames[1])
+
+        frames[1].params.isDigitalSource = true
+        XCTAssertNil(model.cameraRAWPrefetchCandidate(after: frames[0]), "부적격 사진 너머까지 찾아 읽지 않는다")
+        frames[1].params.isDigitalSource = nil
+        frames[1].defectEditsNeedRestore = true
+        XCTAssertNil(model.cameraRAWPrefetchCandidate(after: frames[0]))
+        frames[1].defectEditsNeedRestore = false
+        let image = try XCTUnwrap(CIContext().createCGImage(CIImage(color: .gray),
+            from: CGRect(x: 0, y: 0, width: 8, height: 8)))
+        frames[1].cachedSettledPreviewRaw = DevelopFramePreviewRaw(image: image, usesLinearSRGB: true)
+        XCTAssertNil(model.cameraRAWPrefetchCandidate(after: frames[0]))
+        frames[1].cachedSettledPreviewRaw = nil
+        model.interactionScopeFrameIDs = [frames[0].id, frames[2].id]
+        XCTAssertTrue(model.cameraRAWPrefetchCandidate(after: frames[0]) === frames[2])
+        model.applyFrameCachePressure(.warning)
+        XCTAssertNil(model.cameraRAWPrefetchCandidate(after: frames[0]))
+    }
+
+    func testNewSelectionCancelsUnrelatedPrefetchButSharesItsOwnDecode() {
+        let model = AppModel()
+        let id = UUID()
+        let pending = Task<Void, Never> { }
+        model.neighborCameraRAWPrefetchTask = pending
+        model.neighborCameraRAWPrefetchFrameID = id
+        model.cancelNeighborCameraRAWPrefetch(keeping: id)
+        XCTAssertFalse(pending.isCancelled)
+        model.cancelNeighborCameraRAWPrefetch(keeping: UUID())
+        XCTAssertTrue(pending.isCancelled)
+        XCTAssertNil(model.neighborCameraRAWPrefetchFrameID)
     }
 
     private static func writeSyntheticPNG(width: Int = 64, height: Int = 48) throws -> URL {

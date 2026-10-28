@@ -1,4 +1,5 @@
 import AppKit
+import Chromabase
 
 extension AppModel {
     var rolls: [LibraryRoll] { rollStore.rolls }
@@ -231,6 +232,7 @@ extension AppModel {
     var processingDetail: String { developController.processingDetail }
 
     func handleSelectedFrameChange(from oldValue: UUID?) {
+        cancelNeighborCameraRAWPrefetch(keeping: selectedFrameID)
         if let previous = frames.first(where: { $0.id == oldValue }),
            previous.defectActive || previous.defectIsDetecting {
             cancelRegionDefect(previous)
@@ -258,7 +260,7 @@ extension AppModel {
                 // 시드가 도는 동안 현상을 시작하면 같은 원본을 두 번 디코드한다 — 기다렸다가
                 // 다시 판정한다. 기다리지 않고 요청을 버리면, 자동 현상이 꺼진 상태에서 방금
                 // 가져와 선택된 사진은 아무도 현상하지 않아 시드 썸네일 해상도로 고착된다.
-                if let seed = frame.initialThumbnailSeedTask {
+                if let seed = frame.initialThumbnailSeedTask, self.developSharesThumbnailSeedDecode(frame) {
                     await seed.value
                 }
                 guard !Task.isCancelled,
@@ -280,6 +282,8 @@ extension AppModel {
                   frame.hasDevelopedOnce,
                   frame.destinationGamutOverlayImage == nil {
             requestDevelop(frame)
+        } else if frame.developedIsSettled {
+            prefetchNeighborCameraRAW(around: frame)
         }
     }
 
@@ -323,19 +327,21 @@ extension AppModel {
             return false
         }
         if frame.developedImage == nil {
-            return frame.initialThumbnailSeedTask == nil
+            return frame.initialThumbnailSeedTask == nil || !developSharesThumbnailSeedDecode(frame)
         }
         if !frame.developedIsSettled { return true }
         return frame.displayedSoftProofRevision != softProofConfigurationRevision
             && frame.hasDevelopedOnce
     }
 
-    /// 시드가 끝나면 현상해야 하는 프레임인가.
-    ///
-    /// selectedFrameNeedsDevelopment 는 같은 원본을 두 번 디코드하지 않으려고 시드가 도는 동안
-    /// false 를 돌려준다. 가져오기는 시드 태스크를 건 **직후** 그 사진을 선택하므로 선택 시점의
-    /// 판정은 항상 false 다 — 그때 요청을 그냥 버리면 시드가 끝난 뒤 아무도 현상을 다시 걸지
-    /// 않는다(자동 현상 OFF 가 기본값). 그래서 미루기만 하고 요청은 유지한다.
+    /// 원본 썸네일 시드와 현상이 같은 원본 디코드를 겹쳐 하는지. 카메라 RAW 네거티브는 시드가 ImageIO
+    /// 내장 미리보기를, 현상이 LibRaw 를 쓰므로 겹치지 않는다. 그때 시드를 기다리면 첫 화면만 늦다
+    /// (NEF 실측 173ms).
+    func developSharesThumbnailSeedDecode(_ frame: ScanFrame) -> Bool {
+        !usesCameraNativeDecode(frame)
+    }
+
+    /// 시드를 기다리는 동안에도 선택 현상 요청을 유지한다.
     func developmentWaitsForThumbnailSeed(_ frame: ScanFrame) -> Bool {
         guard frame.initialThumbnailSeedTask != nil,
               frame.isSourceAvailable,

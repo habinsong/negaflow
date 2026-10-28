@@ -6,7 +6,7 @@
 
 ## コード
 
-`negaflow-mac` の Swift・Python・シェル連携コードは本プロジェクトで書いています。ネガのカメラ RAW デコードには、変更していない固定リビジョンの LibRaw を交換可能な `libraw.dylib` として使い、CDDL-1.0 で配布します。アプリの `Contents/Resources/licenses/libraw/` にソースアーカイブ、ビルドスクリプト、著作権・ライセンス文書を含めます。Apache ソースツリーに LibRaw ソースは統合しません。Windows も同じリビジョンを使い、他の構成要素は [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md) に記録します。テスト専用 `CameraNativeRaw.dng` は raw.pixls.us 項目 2204 の CC0-1.0 資料で、出典 JSON を隣に置き、アプリからは除外します。
+`negaflow-mac` の Swift・Python・シェル連携コードは本プロジェクトで書いています。ネガのカメラ RAW デコードには、固定リビジョンの LibRaw を交換可能な `libraw.dylib` として使い、CDDL-1.0 で配布します。両プラットフォームで LibRaw のファイルを二つ変更します。`src/demosaic/xtrans_demosaic.cpp` は Fuji X-Trans のタイル順序を保ち、タイル内の行を並列処理します。`src/postprocessing/mem_image.cpp` は出力ビットマップの行を並列にコピーします。パッチは [`xtrans-parallel-rows.patch`](../../../negaflow-mac/scripts/libraw/xtrans-parallel-rows.patch) と [`mem-image-parallel-rows.patch`](../../../negaflow-mac/scripts/libraw/mem-image-parallel-rows.patch) です。試験した RAW ファイルでは、変更前の直列ビルドと画素が一致しました。以前の並列 X-Trans ビルドでは実行ごとに画素が変わる場合がありました。macOS では LLVM OpenMP ランタイム(libomp 20.1.8、Apache License v2.0 with LLVM Exceptions)を静的リンクします。アプリの `Contents/Resources/licenses/libraw/` にソースアーカイブ、パッチ、ビルドスクリプト、著作権・ライセンス文書を含めます。Apache ソースツリーに LibRaw ソースは統合しません。Windows も同じパッチとリビジョンを使い、他の構成要素は [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md) に記録します。テスト専用 `CameraNativeRaw.dng` は raw.pixls.us 項目 2204 の CC0-1.0 資料で、出典 JSON を隣に置き、アプリからは除外します。
 
 追加の告知ファイルがない場合も、警告を出してビルドとパッケージ作成を続けます。アップストリームのライセンスと対応するソースは同梱します。
 

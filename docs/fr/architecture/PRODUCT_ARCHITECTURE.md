@@ -186,9 +186,13 @@ Chaque image porte :
 
 Pendant les réglages, un aperçu en basse résolution est utilisé. Un résultat terminé n'atteint l'écran que si son identifiant d'image et sa version d'édition correspondent toujours à la sélection en cours.
 
+La sélection d’une autre photo lance son aperçu final sans attendre la pause prévue pour les réglages. Sur macOS, après le rendu d’un négatif RAW, le RAW suivant dans l’ordre affiché peut être décodé en arrière-plan. Une seule photo est préparée dans le cache existant de deux images et 160 MiB. Un réglage, une autre sélection ou une pression mémoire annule ce travail. Sélectionner la photo en cours de préparation réutilise son décodage.
+
 L'export n'enregistre pas le bitmap d'aperçu affiché. Il reconstruit l'image en pleine résolution à partir de l'original et des valeurs d'édition figées.
 
 GrainMend garde l'automatique, le guidé, la brosse, le tampon de duplication et l'IR dans une liste ordonnée. Les caches sont des fichiers dérivés. Si un résultat ne peut pas être reconstruit depuis l'original et l'historique, l'export échoue.
+
+Sur macOS, les TIFF RAW corrigés sont écrits quand leurs pixels quittent la mémoire, plutôt qu’après chaque retouche. Le nettoyage conserve les fichiers récents, avec un objectif de huit photos au minimum ou du double de la limite mémoire, et de 4 GiB au total. Les fichiers de moins de 60 secondes et ceux en cours d’utilisation sont protégés ; ces objectifs peuvent donc être dépassés temporairement. Le lancement suivant efface les caches de la session précédente. Les retouches restent dans les fichiers annexes.
 
 Plus de détail dans [GrainMend](../product/GRAINMEND.md).
 

@@ -157,3 +157,6 @@ NEGAFLOW_LIGHTROOM_EXPANSION.md
 # 윈도우 이식 작업 노트. 개발 기록이라 공개하지 않습니다. 파일은 로컬에 그대로
 # 둡니다 (2026-09-02).
 /negaflow-windows/docs/windows_docs/
+
+# WinUI/MSIX packaging output
+/negaflow-windows/src/Shell/AppPackages/

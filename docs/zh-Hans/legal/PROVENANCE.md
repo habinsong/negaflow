@@ -6,7 +6,7 @@
 
 ## 代码
 
-`negaflow-mac` 的 Swift、Python 和 Shell 集成代码由本项目编写。负片相机 RAW 解码使用未修改且固定版本的 LibRaw，以可替换的 `libraw.dylib` 按 CDDL-1.0 分发。应用的 `Contents/Resources/licenses/libraw/` 包含源码归档、构建脚本、版权与许可证文件。Apache 源码树不合并 LibRaw 源码。Windows 使用同一上游版本，其他组件记录在 [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md)。测试用 `CameraNativeRaw.dng` 来自 raw.pixls.us 条目 2204，许可为 CC0-1.0；相邻 JSON 记录来源，应用不包含该文件。
+`negaflow-mac` 的 Swift、Python 和 Shell 集成代码由本项目编写。负片相机 RAW 解码使用固定版本的 LibRaw，以可替换的 `libraw.dylib` 按 CDDL-1.0 分发。两个平台均修改了 LibRaw 的两个文件：`src/demosaic/xtrans_demosaic.cpp` 保持 Fuji X-Trans 图块的原有顺序，并行处理图块内的行；`src/postprocessing/mem_image.cpp` 并行复制输出位图的行。补丁为 [`xtrans-parallel-rows.patch`](../../../negaflow-mac/scripts/libraw/xtrans-parallel-rows.patch) 和 [`mem-image-parallel-rows.patch`](../../../negaflow-mac/scripts/libraw/mem-image-parallel-rows.patch)。在测试的 RAW 文件中，补丁构建与修改前的串行构建像素一致。此前的并行 X-Trans 构建可能在每次运行时产生不同像素。macOS 将 LLVM OpenMP 运行时（libomp 20.1.8，Apache License v2.0 with LLVM Exceptions）静态链接进库。应用的 `Contents/Resources/licenses/libraw/` 包含源码归档、补丁、构建脚本、版权与许可证文件。Apache 源码树不合并 LibRaw 源码。Windows 使用相同补丁及上游版本，其他组件记录在 [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md)。测试用 `CameraNativeRaw.dng` 来自 raw.pixls.us 条目 2204，许可为 CC0-1.0；相邻 JSON 记录来源，应用不包含该文件。
 
 补充声明文件缺失时，构建和打包会给出警告并继续。上游许可证和对应源码仍随包提供。
 

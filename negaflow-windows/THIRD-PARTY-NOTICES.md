@@ -214,14 +214,18 @@ directly so inversion precedes the camera color matrix.
   actually exported. No optional LibRaw dependency (RawSpeed, Adobe DNG SDK,
   LCMS, libjpeg) is enabled. Upstream still includes BSD and MIT portions, whose
   notices are reproduced in `licenses/libraw/LibRaw-Third-Party-Notices.txt`.
-- **Built with `/openmp`.** LibRaw's demosaic carries 44 OpenMP regions and stock
-  `Makefile.msvc` leaves them switched off, which left a Fuji X-Trans export at
-  14.1 s where the same file takes 4.5 s with them on. The only added payload is
-  Microsoft's own OpenMP runtime, `vcomp140.dll`, which the build script copies
-  from the installed Visual C++ redistributable directory; the C runtime stays
-  statically linked (`/MT`). `libraw.dll` will not load without it, so the two
-  ship and install together.
-- The source is **not modified**. We build stock LibRaw at that commit.
+- Built with `/openmp` and a static C runtime (`/MT`). Microsoft's OpenMP
+  runtime, `vcomp140.dll`, is copied from the installed Visual C++ redistributable
+  directory and shipped beside `libraw.dll`.
+- Two LibRaw files are modified under CDDL-1.0. The patches in
+  [`scripts/libraw/`](scripts/libraw/) keep X-Trans tiles in serial order while
+  parallelizing rows inside each tile (`src/demosaic/xtrans_demosaic.cpp`) and
+  parallelize the output bitmap copy (`src/postprocessing/mem_image.cpp`).
+  On four tested RAW files, the patched DLL matches the unpatched serial build
+  bit for bit. The former parallel X-Trans build differed from the serial result.
+  On the Windows validation PC, the minimum of three decode runs changed from
+  5.2 to 3.7 seconds for RAF and 1.81 to 1.50 seconds for ARW; NEF stayed at
+  1.03 seconds. These are decoder timings, not whole-app export timings.
 
 ### Runtime loading of LibRaw
 
@@ -237,11 +241,11 @@ Visual C++ Redistributable licence that permits redistribution with an
 application. It is not LibRaw code and carries no LGPL obligation of its own.
 
 This distribution selects CDDL-1.0 from upstream's dual licence. The library
-is unmodified and remains a separate, replaceable DLL. Negaflow source files
+includes the two patches above and remains a separate, replaceable DLL. Negaflow source files
 retain their Apache-2.0 licence.
 
 `scripts/build-libraw.ps1` stages the upstream `LICENSE.CDDL`, `LICENSE.LGPL`,
-`COPYRIGHT`, `Changelog.txt`, the exact source archive and build script.
+`COPYRIGHT`, `Changelog.txt`, the exact source archive, both patches, a modification notice and the build script.
 `scripts/build-release.ps1` includes them in `licenses/libraw/`, together with
 `LibRaw-Third-Party-Notices.txt` for upstream BSD and MIT portions. The LGPL
 text is retained as the upstream alternative. It is not the selected licence
