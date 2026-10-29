@@ -7,7 +7,7 @@
 <p align="center">negaflow, conçu nativement pour Windows.</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.2.2-EF8B26" alt="version 1.2.2\"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.2.3-EF8B26" alt="version 1.2.3\"></a>
   <a href="#"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 ou plus récent"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -47,9 +47,9 @@ Cela tourne aussi sur les machines Arm64. Les versions Arm64 sont moins vérifi�
 
 ## Installation
 
-Téléchargez `negaflow-1.2.2-win-x64.exe` depuis [Releases](https://github.com/habinsong/negaflow/releases) et lancez-le.
+Téléchargez `negaflow-1.2.3-win-x64.exe` depuis [Releases](https://github.com/habinsong/negaflow/releases) et lancez-le.
 
-ZIP du programme d’installation Windows: [negaflow-1.2.2-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.2/negaflow-1.2.2-win-x64-setup.zip). Windows propose aussi un setup ZIP contenant le même EXE d’installation, les instructions, les notices et les sommes SHA-256. Extrayez tous les fichiers avant de lancer l’installation. Cette archive ne constitue pas une version portable ; SmartScreen peut encore afficher un avertissement.
+ZIP du programme d’installation Windows: [negaflow-1.2.3-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.3/negaflow-1.2.3-win-x64-setup.zip). Windows propose aussi un setup ZIP contenant le même EXE d’installation, les instructions, les notices et les sommes SHA-256. Extrayez tous les fichiers avant de lancer l’installation. Cette archive ne constitue pas une version portable ; SmartScreen peut encore afficher un avertissement.
 
 Aucun droit administrateur nécessaire. SmartScreen prévient une fois au premier lancement : cliquez sur Informations complémentaires, puis exécutez.
 

@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/ja/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="ウェブサイト"></a>
-  <a href="#ダウンロード"><img src="https://img.shields.io/badge/version-1.2.2-EF8B26" alt="バージョン 1.2.2"></a>
+  <a href="#ダウンロード"><img src="https://img.shields.io/badge/version-1.2.3-EF8B26" alt="バージョン 1.2.3"></a>
   <a href="negaflow-mac/docs/README_ja.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 以降"></a>
   <a href="negaflow-windows/docs/README_ja.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 以降"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 ライセンス"></a>
@@ -73,10 +73,10 @@
 
 | インストーラー | 対象 |
 |---|---|
-| `negaflow-1.2.2-mac-universal.pkg` | macOS 14 以降、Apple Silicon と Intel |
-| `negaflow-1.2.2-mac-arm64.pkg` | macOS 14 以降、Apple Silicon のみ |
-| `negaflow-1.2.2-win-x64.exe` | Windows 11 24H2 以降、x64 |
-| `negaflow-1.2.2-win-x64-setup.zip` | WindowsインストーラーZIP |
+| `negaflow-1.2.3-mac-universal.pkg` | macOS 14 以降、Apple Silicon と Intel |
+| `negaflow-1.2.3-mac-arm64.pkg` | macOS 14 以降、Apple Silicon のみ |
+| `negaflow-1.2.3-win-x64.exe` | Windows 11 24H2 以降、x64 |
+| `negaflow-1.2.3-win-x64-setup.zip` | WindowsインストーラーZIP |
 
 macOS 14、26、27 に対応しています。
 
@@ -97,19 +97,10 @@ Windows のインストールはユーザーフォルダーの中で終わり、
 - JPEG・PNG・16bit TIFF・16bit リニア DNG の書き出し、ICC プロファイル、カメラ・レンズ・フィルムなどの記録を EXIF に保存
 - 8種類のプリントレイアウト、用紙プレビュー、写真用・ISO 用紙、C-print 機能
 
-## 1.2.2
+## 1.2.3
 
-- カメラRAWの読み込みを速くし、最初のプレビューが表示されるまでの待ち時間を短縮しました。
-- Macでは次のRAW写真を先読みします。
-- 写真の補正中に一時ファイルが増え続ける問題を修正しました。
-
-## 1.2.1
-
-- MAINとCSは自動バランスONを既定とし、ターゲット見出し横の点トグルで切り替えます。Macはシーン測定キャッシュを、WindowsはGPUプレビュー経路も再利用します。
-- 自動トーンはトーンの調整値だけを変え、色の調整とカーブを保ちます。自動ホワイトバランス・自動レベル・自動カラーは別々に実行します。
-- プリセットのペーストは選んだ範囲を置き換え、以前のルックを重ねません。複数写真へのペーストは1回で取り消せ、サムネイルと現在のプレビューを更新します。
-- 対応する元画像は現像とプリントから16bitリニアDNGに書き出せます。選択した出力フォルダーに保存し、最終ファイルを確認してから完了とします。
-- ウォーターマークレイアウトでは写真の外にカメラ・レンズ、ロゴ、露出情報、点のヒストグラム、名前を配置できます。白・黒・サムネイルのぼかし背景、上余白、レイアウトテンプレートに対応します。
+- MacでカメラRAWの最初のプレビューの待ち時間を短縮し、DNG・TIFFの重複デコードを減らしました。
+- WindowsでGPU転送バッファーとサムネイルキャッシュのメモリ管理、およびキャンセル時の競合を修正しました。
 
 ## Chroma Engine
 

@@ -7,7 +7,7 @@
 <p align="center">Windows ネイティブで作った negaflow です。</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.2.2-EF8B26" alt="バージョン 1.2.2\"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.2.3-EF8B26" alt="バージョン 1.2.3\"></a>
   <a href="#"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 以降"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -47,9 +47,9 @@ Arm64 機でも動きます。ただし Arm64 のリリースは x64 ほど確�
 
 ## インストール
 
-[Releases](https://github.com/habinsong/negaflow/releases) から `negaflow-1.2.2-win-x64.exe` を入手して実行します。
+[Releases](https://github.com/habinsong/negaflow/releases) から `negaflow-1.2.3-win-x64.exe` を入手して実行します。
 
-WindowsインストーラーZIP: [negaflow-1.2.2-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.2/negaflow-1.2.2-win-x64-setup.zip). Windowsには同じインストーラーEXE、手順、通知、SHA-256を含むsetup ZIPもあります。すべて展開してから実行してください。インストーラーの圧縮版で、ポータブル版ではありません。SmartScreenの警告が出る場合があります。
+WindowsインストーラーZIP: [negaflow-1.2.3-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.3/negaflow-1.2.3-win-x64-setup.zip). Windowsには同じインストーラーEXE、手順、通知、SHA-256を含むsetup ZIPもあります。すべて展開してから実行してください。インストーラーの圧縮版で、ポータブル版ではありません。SmartScreenの警告が出る場合があります。
 
 管理者権限は要りません。初回実行時に SmartScreen が一度警告するので、詳細情報を押して実行してください。
 
