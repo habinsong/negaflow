@@ -96,6 +96,8 @@ ctest --preset x64-release --output-on-failure
 .\scripts\local-ci.ps1
 ```
 
+インストール検証（`scripts\verify-installer.ps1`。`scripts\local-ci.ps1`からも呼び出します）は、ログイン中のデスクトップセッションで実行します。SSHのセッション0では、PLM初期化が`0x80070005`で失敗し、AppX登録を完了できない場合があります。このSSHセッションから呼び出すと、既存のインストールを変更する前に検証スクリプトを停止します。
+
 CI では外部ファイルに依存しないエンジンテストを実行します。macOS の基準ファイルは Git の外に保管します。比較を実行するには CMake の設定で `NEGAFLOW_MACOS_GOLDEN_ROOT` に基準フォルダーを指定します。その下には `task6-metadata-policy`、`task9-bw-slide`、`task7-coreimage-filters`、`task8-digital-film-look`、`vibrance` が必要です。指定したファイルがない場合や読み込めない場合は比較が失敗します。`ctest --preset x64-release -L external-golden` で比較のみを実行できます。通常の単体テストも引き続き登録されます。
 
 ## Customカラーターゲット

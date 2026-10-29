@@ -96,6 +96,8 @@ ctest --preset x64-release --output-on-failure
 .\scripts\local-ci.ps1
 ```
 
+Exécutez la vérification de l’installation (`scripts\verify-installer.ps1`, aussi appelé par `scripts\local-ci.ps1`) dans la session de bureau ouverte. Dans la session SSH 0, l’initialisation de PLM peut échouer avec `0x80070005` et empêcher l’enregistrement AppX. Le script de vérification s’arrête avant de modifier l’installation existante lorsqu’il est lancé depuis cette session SSH.
+
 La CI exécute les tests du moteur sans fichiers externes. Les références macOS sont conservées hors de Git. Pour lancer les comparaisons, définissez `NEGAFLOW_MACOS_GOLDEN_ROOT` dans la configuration CMake avec le dossier des références. Celui-ci doit contenir `task6-metadata-policy`, `task9-bw-slide`, `task7-coreimage-filters`, `task8-digital-film-look` et `vibrance`. Un fichier absent ou illisible fait échouer la comparaison sélectionnée. `ctest --preset x64-release -L external-golden` lance ces comparaisons ; les tests unitaires restent enregistrés.
 
 ## Cibles couleur Custom

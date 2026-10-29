@@ -40,6 +40,14 @@ function Restore-PriorInstallation {
 
 $script:priorInstallLocation = $null
 
+# AppX registration in an SSH session can fail while initializing PLM. Reject before
+# the installer unregisters the existing package; its rollback needs the same session.
+if ([Diagnostics.Process]::GetCurrentProcess().SessionId -eq 0 -and
+    (-not [string]::IsNullOrWhiteSpace($env:SSH_CONNECTION) -or
+     -not [string]::IsNullOrWhiteSpace($env:SSH_CLIENT))) {
+    throw 'Installer verification requires the signed-in desktop session. SSH session 0 cannot reliably register or restore AppX packages.'
+}
+
 $InstallerPath = [System.IO.Path]::GetFullPath($InstallerPath)
 if (-not (Test-Path -LiteralPath $InstallerPath)) {
     throw "Installer does not exist: $InstallerPath"
