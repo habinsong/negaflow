@@ -18,6 +18,11 @@ internal static class Program
     {
         if (args is ["--memory-regression-only"])
         {
+            if (OperatingSystem.IsWindows())
+            {
+                Check(NativeIsPresent, "memory regression mode requires the native engine on Windows");
+                if (!NativeIsPresent) { return Report("memory_regression_tests"); }
+            }
             ThumbnailMemoryTests.Run();
             ThumbnailLifecycleTests.Run();
             ThumbnailCacheRegressionTests.Run();
