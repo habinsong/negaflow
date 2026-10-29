@@ -101,6 +101,7 @@ Brancher un vrai scanner demande un module à part, et pour les scanners SANE il
 
 - Sur Mac, réduction de l’attente du premier aperçu RAW et des décodages répétés des fichiers DNG et TIFF.
 - Sous Windows, correction de la gestion mémoire des tampons de transfert GPU et du cache de vignettes, ainsi que des accès concurrents pendant l’annulation.
+- Sous Windows, les boutons d’exportation de la barre d’outils enregistrent aussi la mise en page et le filigrane lorsque la vue Tirage est ouverte.
 
 ## Chroma Engine
 

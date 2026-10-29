@@ -509,22 +509,21 @@ public sealed partial class WorkspaceShellView : UserControl
         SyncExportMenu();
     }
 
-    private async void OnToolbarQuickExportRequested(object? sender, EventArgs args)
+    private void OnToolbarQuickExportRequested(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
-        await DevelopWorkspace.QuickExportAsync();
+        _ = Invoke(WorkflowShortcutAction.QuickExport);
     }
 
     /// <summary>
-    /// 위 막대의 "내보내기" 입니다. 현상뷰 출력 탭의 내보내기 단추와 같은 동작이며, 그
-    /// 단추가 쓰는 값(형식 · 폴더 · 파일명 패턴)을 그대로 씁니다.
+    /// 위 막대의 "내보내기" 입니다. 메뉴와 같은 경로로 현재 작업 화면의 출력을 보냅니다.
     /// </summary>
-    private async void OnToolbarExportRequested(object? sender, EventArgs args)
+    private void OnToolbarExportRequested(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
-        await DevelopWorkspace.ExportPhotoAsync();
+        _ = Invoke(WorkflowShortcutAction.ExportPhoto);
     }
 
     /// <summary>

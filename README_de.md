@@ -101,6 +101,7 @@ Um einen echten Scanner anzuschließen, braucht es ein separates Plug-in, und f�
 
 - Auf dem Mac erscheinen die ersten Kamera-RAW-Vorschauen früher. DNG- und TIFF-Dateien werden seltener mehrfach dekodiert.
 - Unter Windows wurden die Speicherverwaltung der GPU-Transferpuffer und des Vorschaubild-Caches sowie konkurrierende Zugriffe beim Abbrechen korrigiert.
+- Unter Windows speichern die Export-Schaltflächen der Symbolleiste im Abzugsbereich jetzt auch das Layout und das Wasserzeichen.
 
 ## Chroma Engine
 

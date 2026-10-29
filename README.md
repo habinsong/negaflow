@@ -101,6 +101,7 @@ Connecting a scanner requires a separate plugin. For SANE scanners, use [`negafl
 
 - On Mac, reduced the wait for the first camera RAW preview and repeated decoding of DNG and TIFF files.
 - On Windows, fixed memory management for GPU transfer buffers and thumbnail caches, and races during cancellation.
+- On Windows, the toolbar export buttons now include the print layout and watermark when the Print workspace is open.
 
 ## Chroma Engine
 
