@@ -108,6 +108,20 @@ final class PreviewInputPrecisionTests: XCTestCase {
         XCTAssertEqual(DevelopFrameRenderer.previewRawFormat(sourceBitsPerComponent: 16, usesLinearSRGB: true), .RGBA16)
     }
 
+    func testLinearMaterializationDoesNotInspectTheOriginalForItsDepth() throws {
+        let image = CIImage(color: CIColor(red: 0.2, green: 0.3, blue: 0.4))
+            .cropped(to: CGRect(x: 0, y: 0, width: 32, height: 24))
+        for linear in [true, false] {
+            var sourceReads = 0
+            func inspectDepth() -> Int { sourceReads += 1; return 16 }
+            let proxy = try XCTUnwrap(DevelopFrameRenderer.materializedPreviewRaw(image,
+                usesLinearSRGB: linear, sourceBitsPerComponent: inspectDepth(),
+                context: DevelopFrameRenderer.linearRawProxyContext))
+            XCTAssertEqual(sourceReads, linear ? 0 : 1)
+            XCTAssertEqual(proxy.image.bitsPerComponent, 16)
+        }
+    }
+
     /// 어두운 8bit 경사를 linear 로 굳혀도 sRGB 코드 단계가 살아남는다.
     func testDarkEightBitRampKeepsItsLevelsWhenStoredLinear() throws {
         let width = 256

@@ -5,11 +5,18 @@ extension AppModel {
     func checkInputGammaSupport(for frame: ScanFrame) async {
         let revision = frame.sourceLocationRevision
         let url = frame.rawScanURL
-        let mayPreparePreview = !frame.isPreviewScan
+        let requestedGamma = frame.params.inputGamma
+        let mayPreparePreview = !frame.isPreviewScan && requestedGamma != .automatic
         frame.inputGammaSupportChecked = false
         frame.inputGammaSourceInfo = nil
         frame.inputGammaPreviewSource = nil
         frame.inputGammaPreviewMeasurements.clear()
+        // The selected render populates the source-info cache. Browsing an automatic
+        // TIFF must not launch a second full decode/GPU upload for a hidden slider.
+        if selectedFrameID == frame.id {
+            await selectedFrameDevelopTask?.value
+            guard !Task.isCancelled, ownsFrame(frame), frame.sourceLocationRevision == revision else { return }
+        }
         let result = await Task.detached(priority: .userInitiated) {
             Result { () -> (InputGammaSourceInfo, InputGammaPreviewSource?) in
                 let info = try ImageLoader.inputGammaSourceInfo(url)
@@ -21,8 +28,11 @@ extension AppModel {
         case .success(let (info, previewSource)):
             frame.inputGammaSourceInfo = info
             frame.inputGammaSourceError = info.manualError
-            frame.inputGammaPreviewSource = previewSource
-            if previewSource != nil { markDevelopedResident(frame) }
+            if let previewSource, frame.params.inputGamma == requestedGamma,
+               frame.inputGammaPreviewSource == nil {
+                frame.inputGammaPreviewSource = previewSource
+                markDevelopedResident(frame)
+            }
         case .failure(let error):
             frame.inputGammaSourceError = (error as? InputGammaDecodeError) ?? .decodeFailed
         }
@@ -84,6 +94,15 @@ extension AppModel {
                 frame.inputGammaSourceError = failure
                 statusMessage = text(failure == .decodeFailed ? .inputGammaLoadFailed : .inputGammaUnsupported)
                 return false
+            }
+            if frame.inputGammaPreviewSource == nil {
+                let source = await Task.detached(priority: .userInitiated) {
+                    try? InputGammaPreviewSource(url: rawURL)
+                }.value
+                guard inputGammaRequestIsCurrent(frame, requestRevision: requestRevision,
+                        sourceRevision: sourceRevision, params: params, selectedID: selectedID) else { return false }
+                frame.inputGammaPreviewSource = source
+                if source != nil { markDevelopedResident(frame) }
             }
         }
         guard inputGammaRequestIsCurrent(frame, requestRevision: requestRevision,

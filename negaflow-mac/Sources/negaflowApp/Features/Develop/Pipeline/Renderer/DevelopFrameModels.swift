@@ -46,6 +46,7 @@ struct DevelopFrameSnapshot: @unchecked Sendable {
     var cleanedRawIdentity: DefectRecipeIdentity? = nil
     var requiresCleanedRaw: Bool = false
     var inputGammaPreviewSource: InputGammaPreviewSource? = nil
+    var inputPreviewSession: ImagePreviewSession? = nil
     var isInputGammaPreview: Bool = false
     var inputGammaPreviewDefects: [DefectEditItem] = []
     var inputGammaMeasurementKey: InputGammaPreviewMeasurements.Key? = nil

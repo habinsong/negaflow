@@ -77,7 +77,7 @@ extension ImageLoader {
         return filter.outputImage
     }
 
-    private static func configureRAW(_ filter: CIRAWFilter, rendering: RAWRendering) {
+    static func configureRAW(_ filter: CIRAWFilter, rendering: RAWRendering) {
         filter.boostAmount = Float(rendering.boostAmount)
         guard rendering == .sceneLinear else { return }
         filter.exposure = 0

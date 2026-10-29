@@ -28,12 +28,13 @@ extension AppModel {
         }
         var revision = frame.developRevision
         // 막 선택한 사진의 첫 패스는 편집 중이 아니다. 정착 대기 없이 바로 풀해상도로 간다.
-        var awaitsSettle = selectionBoundFrameID == nil
+        var awaitsSettle = selectionBoundFrameID == nil && frame.developedImage != nil
 
         while true {
             guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
             let waitsForSettle = awaitsSettle
             awaitsSettle = true
+            var inputPreviewSession: ImagePreviewSession?
             let baseKey = FilmBaseCacheKey(
                 filmType: frame.filmType,
                 mode: frame.params.baseEstimationMode,
@@ -53,12 +54,29 @@ extension AppModel {
                 // 스냅샷이 소비하는 cleaned raw 세대 — 발행 시 displayedCleanRawRevision 에 기록해
                 // 결함 제거 스피너가 "제거가 보이는 시점"에 끝나게 한다.
                 let interactiveCleanRawRevision = frame.cleanRawRevision
-                let interactive = makeSnapshot(
+                var interactive = makeSnapshot(
                     for: frame, baseKey: baseKey,
                     needsRawPreview: false, needsNeutralPreview: false, needsDebugPreviews: false,
                     needsThumbnail: frame.thumbnailImage == nil,
                     proxyMaxDimension: interactiveDimension
                 )
+                let rendering = ImageLoader.RAWRendering.forDigitalSource(
+                    interactive.params.isDigitalSource, filmType: interactive.filmType)
+                let ext = interactive.rawScanURL.pathExtension.lowercased()
+                let canShareSource = interactive.cleanedRawURL != nil || ["tif", "tiff"].contains(ext)
+                    || (ImageLoader.rawExtensions.contains(ext) && rendering != .cameraNativeNegative)
+                if interactive.preloadedRaw == nil, interactive.preloadedPreviewRaw == nil,
+                   interactive.preloadedFullPreviewRaw == nil, interactive.inputGammaPreviewSource == nil,
+                   !interactive.isInputGammaPreview, canShareSource {
+                    let cleaned = interactive.cleanedRawURL
+                    inputPreviewSession = ImagePreviewSession(url: cleaned ?? interactive.rawScanURL,
+                        inputGamma: cleaned == nil ? interactive.params.inputGamma : .automatic,
+                        rawRendering: rendering,
+                        applyOrientation: cleaned == nil && interactive.sourceKind == .importedFile,
+                        interpretInputGamma: cleaned == nil)
+                    interactive.inputPreviewSession = inputPreviewSession
+                }
+                CameraRAWSelectionTrace.note(frame, "interactive \(Int(interactiveDimension)) selection=\(selectionBoundFrameID != nil) wait=\(waitsForSettle) session=\(inputPreviewSession != nil) cached=\(interactive.preloadedPreviewRaw != nil)")
                 developController.updateProcessingDetail(
                     interactive: true,
                     proxyPixels: Int(interactiveDimension),
@@ -197,7 +215,7 @@ extension AppModel {
 
             // ── 패스 2: 풀해상도 정착. 변형-전 캐시 + 비교/디버그 프리뷰 + 썸네일까지 채운다.
             let fullCleanRawRevision = frame.cleanRawRevision
-            let full = makeSnapshot(
+            var full = makeSnapshot(
                 for: frame, baseKey: baseKey,
                 needsRawPreview: frame.rawPreviewImage == nil || frame.rawPreviewTransform != frame.imageTransform,
                 needsNeutralPreview: beforeAfterCompareActive
@@ -219,6 +237,8 @@ extension AppModel {
                     || frame.thumbnailTransform != frame.imageTransform,
                 proxyMaxDimension: DevelopFrameRenderer.fullMaxDimension
             )
+            full.inputPreviewSession = inputPreviewSession
+            CameraRAWSelectionTrace.note(frame, "settled input cached=\(full.preloadedPreviewRaw != nil) session=\(inputPreviewSession != nil)")
             developController.updateProcessingDetail(
                 interactive: false,
                 proxyPixels: Int(DevelopFrameRenderer.fullMaxDimension),

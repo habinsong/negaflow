@@ -61,4 +61,11 @@ enum CameraRAWSelectionTrace {
         current.first = true
         selection = settled ? nil : current
     }
+
+    static func note(_ frame: ScanFrame, _ detail: @autoclosure () -> String) {
+        guard enabled, let current = selection, current.id == frame.id else { return }
+        let elapsed = Double(DispatchTime.now().uptimeNanoseconds - current.start) / 1e6
+        FileHandle.standardError.write(Data(String(format: "[raw-selection-stage] %@ %.0f ms %@\n",
+            frame.rawScanURL.lastPathComponent, elapsed, detail()).utf8))
+    }
 }

@@ -26,16 +26,22 @@ public final class InputGammaPreviewSource: @unchecked Sendable {
         return CIContext(options: options)
     }()
 
-    public init(url: URL) throws {
-        self.url = url.standardizedFileURL
-        observation = try InputGammaFileObservation.read(url)
+    public convenience init(url: URL) throws {
+        let before = try InputGammaFileObservation.read(url)
         let (source, profile) = try ImageLoader.gammaSource(url)
         guard let cg = ImageLoader.createFullyDecodedImage(source) else { throw InputGammaDecodeError.decodeFailed }
+        try self.init(url: url, source: source, profile: profile, image: cg)
+        guard observation == before else { throw InputGammaDecodeError.decodeFailed }
+    }
+
+    init(url: URL, source: CGImageSource, profile: Data?, image cg: CGImage) throws {
+        self.url = url.standardizedFileURL
+        observation = try InputGammaFileObservation.read(url)
         try InputGammaDecoder.validate(cg)
         self.profile = profile
         linearSpace = try profile.map(InputGammaProfile.linearized)
             ?? CGColorSpace(name: CGColorSpace.linearSRGB)!
-        let info = try ImageLoader.inputGammaSourceInfo(url)
+        let info = try ImageLoader.inputGammaSourceInfo(url, source: source, image: cg)
         estimatedGamma = info.estimatedGamma
         let automaticSpace: CGColorSpace
         if let profile, let space = CGColorSpace(iccData: profile as CFData) {

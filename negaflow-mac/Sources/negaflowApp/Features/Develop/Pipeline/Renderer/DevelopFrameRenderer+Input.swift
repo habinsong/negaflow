@@ -155,6 +155,11 @@ extension DevelopFrameRenderer {
         _ snapshot: DevelopFrameSnapshot,
         cleanedRawURL: URL?
     ) throws -> ImageLoader.PreviewImage? {
+        if let session = snapshot.inputPreviewSession,
+           session.url == (cleanedRawURL ?? snapshot.rawScanURL),
+           let preview = try session.preview(maxDimension: snapshot.proxyMaxDimension) {
+            return preview
+        }
         if let url = cleanedRawURL {
             return ImageLoader.loadScannerPreview(
                 url,
@@ -196,15 +201,16 @@ extension DevelopFrameRenderer {
     static func materializedPreviewRaw(
         _ input: CIImage,
         usesLinearSRGB: Bool,
-        sourceBitsPerComponent: Int,
+        sourceBitsPerComponent: @autoclosure () -> Int,
         context: CIContext
     ) -> DevelopFramePreviewRaw? {
         let colorSpace = usesLinearSRGB
             ? CGColorSpace(name: CGColorSpace.linearSRGB)!
             : CGColorSpace(name: CGColorSpace.sRGB)!
-        let format = previewRawFormat(
-            sourceBitsPerComponent: sourceBitsPerComponent, usesLinearSRGB: usesLinearSRGB
-        )
+        // Linear proxies always use RGBA16. Resolving the source depth here can
+        // otherwise reopen/estimate the original TIFF even when using cleaned pixels.
+        let format: CIFormat = usesLinearSRGB ? .RGBA16 : previewRawFormat(
+            sourceBitsPerComponent: sourceBitsPerComponent(), usesLinearSRGB: false)
         guard let cg = context.createCGImage(input, from: input.extent.integral, format: format, colorSpace: colorSpace) else {
             return nil
         }

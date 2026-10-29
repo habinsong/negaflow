@@ -21,9 +21,9 @@ final class InputGammaLivePreviewPerformanceTests: XCTestCase {
         model.frames = [frame]
         model.selectedFrameID = frame.id
         defer { model.frames = [] }
+        frame.params.inputGamma = try .power(2.2)
         await model.checkInputGammaSupport(for: frame)
         XCTAssertNotNil(frame.inputGammaPreviewSource)
-        frame.params.inputGamma = try .power(2.2)
         frame.params.baseScale = try FilmBaseScale(0.75)
         await model.developFrame(frame)
         let warmDeadline = CFAbsoluteTimeGetCurrent() + 30

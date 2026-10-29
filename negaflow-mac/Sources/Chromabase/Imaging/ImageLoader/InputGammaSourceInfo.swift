@@ -42,10 +42,15 @@ extension ImageLoader {
         try InputGammaSourceInfoCache.read(url) { try inspectInputGammaSource(url) }
     }
 
-    private static func inspectInputGammaSource(_ url: URL) throws -> InputGammaSourceInfo {
+    static func inputGammaSourceInfo(_ url: URL, source: CGImageSource, image: CGImage) throws -> InputGammaSourceInfo {
+        try InputGammaSourceInfoCache.read(url) { try inspectInputGammaSource(url, source: source, image: image) }
+    }
+
+    private static func inspectInputGammaSource(_ url: URL, source suppliedSource: CGImageSource? = nil,
+                                                image suppliedImage: CGImage? = nil) throws -> InputGammaSourceInfo {
         guard kind(of: url) != .rawDng else { return .init(curve: .decoder, manualError: .unsupportedSource) }
-        guard let source = imageSource(url),
-              let cg = CGImageSourceCreateImageAtIndex(source, 0,
+        guard let source = suppliedSource ?? imageSource(url),
+              let cg = suppliedImage ?? CGImageSourceCreateImageAtIndex(source, 0,
                 [kCGImageSourceShouldCache: false] as CFDictionary) else { throw InputGammaDecodeError.decodeFailed }
         let isTIFF = CGImageSourceGetType(source) as String? == "public.tiff"
         let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]

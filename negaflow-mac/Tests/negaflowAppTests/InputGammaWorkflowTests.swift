@@ -8,6 +8,19 @@ import ImageIO
 final class InputGammaWorkflowTests: XCTestCase {
     private var directory: URL!
 
+    func testAutomaticSupportInspectionDoesNotRetainFullResolutionPixels() async throws {
+        let frame = try makeFrame()
+        let model = AppModel(libraryDefectDirectoryURL: directory)
+        model.frames = [frame]
+        model.selectedFrameID = frame.id
+        await model.checkInputGammaSupport(for: frame)
+        XCTAssertTrue(frame.inputGammaSupportChecked)
+        XCTAssertNil(frame.inputGammaPreviewSource)
+        let applied = await model.setInputGamma(try .power(1.8), for: frame)
+        XCTAssertTrue(applied)
+        XCTAssertNotNil(frame.inputGammaPreviewSource)
+    }
+
     override func setUp() async throws {
         directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

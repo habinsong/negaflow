@@ -27,7 +27,9 @@ final class DefectRenderInputTests: XCTestCase {
         XCTAssertTrue(ImageLoader.saveScannerTIFF(diskCG, to: diskURL))
         defer { try? FileManager.default.removeItem(at: diskURL) }
 
-        let snapshot = makeSnapshot(preloadedRaw: memoryCG, cleanedRawURL: diskURL)
+        var snapshot = makeSnapshot(preloadedRaw: memoryCG, cleanedRawURL: diskURL)
+        snapshot.inputPreviewSession = ImagePreviewSession(url: diskURL, inputGamma: .automatic,
+            rawRendering: .sceneLinear, applyOrientation: false, interpretInputGamma: false)
         let input = try XCTUnwrap(
             DevelopFrameRenderer.resolveRenderInput(snapshot, engine: ChromabaseEngine(), context: context)
         )
@@ -52,6 +54,27 @@ final class DefectRenderInputTests: XCTestCase {
         )
         let color = sampleCenter(input.image)
         XCTAssertGreaterThan(color.g, 0.5, "메모리가 없으면 디스크 백킹(초록)을 써야 한다")
+    }
+
+    func testSharedCleanedInputKeepsLinearValuesAndCannotBypassOwnershipValidation() throws {
+        let diskURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".tiff")
+        defer { try? FileManager.default.removeItem(at: diskURL) }
+        XCTAssertTrue(ImageLoader.saveScannerTIFF(solidColorCG(red: 0, green: 0.25, blue: 0,
+            size: CGSize(width: 3800, height: 120)), to: diskURL))
+        var snapshot = makeSnapshot(preloadedRaw: nil, cleanedRawURL: diskURL)
+        snapshot.params.inputGamma = try .power(2.2)
+        snapshot.inputPreviewSession = ImagePreviewSession(url: diskURL, inputGamma: .automatic,
+            rawRendering: .sceneLinear, applyOrientation: false, interpretInputGamma: false)
+        for dimension: CGFloat in [1280, 3600] {
+            snapshot.proxyMaxDimension = dimension
+            let input = try XCTUnwrap(DevelopFrameRenderer.resolveRenderInput(snapshot,
+                engine: ChromabaseEngine(), context: context))
+            XCTAssertEqual(sampleCenter(input.image).g, 0.25, accuracy: 0.0001)
+        }
+        snapshot.requiresCleanedRaw = true
+        snapshot.cleanedRawFrameID = UUID() // The test URL is not an owned cache for this frame.
+        XCTAssertNil(try DevelopFrameRenderer.resolveRenderInput(snapshot,
+            engine: ChromabaseEngine(), context: context))
     }
 
     // MARK: helpers
