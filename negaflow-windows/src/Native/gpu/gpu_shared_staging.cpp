@@ -1,6 +1,8 @@
 #include "gpu_shared_staging.h"
 
 #include "negaflow/gpu/gpu_device.h"
+#include "negaflow/gpu/gpu_cache_budget.h"
+#include "negaflow/core/machine_memory.h"
 #include "negaflow/gpu/gpu_working_image.h"
 
 #include <wrl/client.h>
@@ -76,77 +78,122 @@ ID3D11Texture2D* make_staging(
     return texture;
 }
 
-ID3D11Texture2D* shared_staging(
+namespace {
+
+void erase_slot(const std::vector<Slot>::iterator slot) noexcept {
+    g_bytes.fetch_sub(area(slot->width, slot->height) * 16ULL, std::memory_order_relaxed);
+    g_slots.erase(slot);
+}
+
+std::uint64_t device_bytes(ID3D11Device* const owner) noexcept {
+    std::uint64_t bytes = 0;
+    for (const auto& slot : g_slots) {
+        if (slot.device == owner) { bytes += area(slot.width, slot.height) * 16ULL; }
+    }
+    return bytes;
+}
+
+void trim_locked(ID3D11Device* const owner, const std::uint64_t budget) noexcept {
+    std::uint64_t bytes = device_bytes(owner);
+    while (bytes > budget) {
+        auto oldest = g_slots.end();
+        for (auto slot = g_slots.begin(); slot != g_slots.end(); ++slot) {
+            if (slot->device == owner &&
+                (oldest == g_slots.end() || slot->last_use < oldest->last_use)) { oldest = slot; }
+        }
+        if (oldest == g_slots.end()) { break; }
+        bytes -= area(oldest->width, oldest->height) * 16ULL;
+        erase_slot(oldest);
+    }
+}
+
+std::uint64_t cache_limit(const GpuDevice& device) noexcept {
+    // 전송 버퍼는 외장 GPU에서도 시스템 RAM입니다. GPU 설정과 설치 RAM 몫 중 작은 쪽입니다.
+    struct LowMemorySignal final {
+        HANDLE handle{::CreateMemoryResourceNotification(LowMemoryResourceNotification)};
+        ~LowMemorySignal() { if (handle != nullptr) { ::CloseHandle(handle); } }
+    };
+    static const LowMemorySignal low_memory{};
+    BOOL low = FALSE;
+    if (low_memory.handle != nullptr && ::QueryMemoryResourceNotification(low_memory.handle, &low) != FALSE && low != FALSE) { return 0; }
+    const auto ram_limit = static_cast<std::uint64_t>(
+        static_cast<double>(core::installed_memory_bytes()) * GpuCacheBudget::integrated_system_fraction);
+    const auto gpu_limit = GpuCacheBudget::effective_bytes(device);
+    return gpu_limit == 0 ? ram_limit : std::min(ram_limit, gpu_limit);
+}
+
+} // namespace
+
+void trim_shared_staging(const GpuDevice& device, const std::uint64_t budget) noexcept {
+    const std::lock_guard<std::mutex> guard{g_lock};
+    const auto before = device_bytes(device.device());
+    trim_locked(device.device(), budget);
+    if (device_bytes(device.device()) != before) { (void)device.flush_released_resources(); }
+}
+
+void trim_shared_staging_to_budget(const GpuDevice& device) noexcept {
+    trim_shared_staging(device, cache_limit(device));
+}
+
+Microsoft::WRL::ComPtr<ID3D11Texture2D> shared_staging(
     const GpuDevice& device,
     const std::uint32_t width,
     const std::uint32_t height,
     const UINT cpu_access) noexcept {
     ID3D11Device* const owner = device.device();
-    if (owner == nullptr || width == 0U || height == 0U) {
-        return nullptr;
-    }
+    if (owner == nullptr || width == 0U || height == 0U) { return {}; }
     try {
         const std::lock_guard<std::mutex> guard{g_lock};
         ++g_clock;
-        const std::uint64_t wanted = area(width, height);
-        Slot* best = nullptr;
-        Slot* oversized = nullptr;
-        Slot* oldest = nullptr;
-        std::size_t same_direction = 0U;
-        for (Slot& slot : g_slots) {
-            if (slot.device != owner || slot.cpu_access != cpu_access) {
-                continue;
-            }
+        const auto wanted = area(width, height);
+        const auto budget = cache_limit(device);
+        const auto before = device_bytes(owner);
+        // 작은 슬롯이 적중해도 과대한 과거 전송 버퍼부터 회수합니다.
+        for (auto slot = g_slots.begin(); slot != g_slots.end();) {
+            if (slot->device == owner && slot->cpu_access == cpu_access &&
+                area(slot->width, slot->height) > wanted * maximum_area_ratio) {
+                g_bytes.fetch_sub(area(slot->width, slot->height) * 16ULL, std::memory_order_relaxed);
+                slot = g_slots.erase(slot);
+            } else { ++slot; }
+        }
+        trim_locked(owner, budget);
+        if (before != device_bytes(owner)) { (void)device.flush_released_resources(); }
+        auto best = g_slots.end();
+        auto oldest = g_slots.end();
+        std::size_t same_direction = 0;
+        for (auto slot = g_slots.begin(); slot != g_slots.end(); ++slot) {
+            if (slot->device != owner || slot->cpu_access != cpu_access) { continue; }
             ++same_direction;
-            const std::uint64_t held = area(slot.width, slot.height);
-            if (held > wanted * maximum_area_ratio) {
-                oversized = &slot;
-            } else if (slot.width >= width && slot.height >= height &&
-                (best == nullptr || held < area(best->width, best->height))) {
-                best = &slot;
-            }
-            if (oldest == nullptr || slot.last_use < oldest->last_use) {
-                oldest = &slot;
-            }
+            if (slot->width >= width && slot->height >= height &&
+                (best == g_slots.end() || area(slot->width, slot->height) < area(best->width, best->height))) { best = slot; }
+            if (oldest == g_slots.end() || slot->last_use < oldest->last_use) { oldest = slot; }
         }
-        if (best != nullptr) {
-            best->last_use = g_clock;
-            return best->texture.Get();
-        }
-        const std::uint32_t slot_width = rounded_edge(device, width);
-        const std::uint32_t slot_height = rounded_edge(device, height);
-        Slot* const replaced = oversized != nullptr ? oversized
-            : same_direction >= slots_per_direction ? oldest
-                                                    : nullptr;
-        if (replaced != nullptr) {
-            // 먼저 놓아야 새 것과 옛 것이 한순간이라도 같이 잡히지 않습니다. 놓은 스테이징은
-            // 제출해야 드라이버가 실제로 돌려줍니다(`gpu_image_pool.cpp`).
-            g_bytes.fetch_sub(area(replaced->width, replaced->height) * 16ULL, std::memory_order_relaxed);
-            replaced->texture.Reset();
+        if (best != g_slots.end()) { best->last_use = g_clock; return best->texture; }
+        if (same_direction >= slots_per_direction) {
+            erase_slot(oldest);
             (void)device.flush_released_resources();
         }
-        ID3D11Texture2D* const created = make_staging(device, slot_width, slot_height, cpu_access);
-        if (created == nullptr) {
-            if (replaced != nullptr) {
-                g_slots.erase(g_slots.begin() + (replaced - g_slots.data()));
+        const auto slot_width = rounded_edge(device, width);
+        const auto slot_height = rounded_edge(device, height);
+        const auto bytes = area(slot_width, slot_height) * 16ULL;
+        const auto before_reserve = device_bytes(owner);
+        trim_locked(owner, budget > bytes ? budget - bytes : 0);
+        if (device_bytes(owner) != before_reserve) { (void)device.flush_released_resources(); }
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> created;
+        created.Attach(make_staging(device, slot_width, slot_height, cpu_access));
+        if (!created) { return {}; }
+        // 예산보다 큰 전송도 작업 중에는 허용하되 캐시에 남기지 않습니다.
+        if (bytes <= budget) {
+            try {
+                g_slots.push_back(Slot{owner, cpu_access, slot_width, slot_height, g_clock, created});
+                g_bytes.fetch_add(bytes, std::memory_order_relaxed);
+            } catch (...) {
+                // 캐시 기록용 할당 실패는 현재 전송의 소유권을 잃게 하지 않습니다.
             }
-            return nullptr;
         }
-        Slot* target = replaced;
-        if (target == nullptr) {
-            g_slots.emplace_back();
-            target = &g_slots.back();
-        }
-        target->device = owner;
-        target->cpu_access = cpu_access;
-        target->width = slot_width;
-        target->height = slot_height;
-        target->last_use = g_clock;
-        target->texture.Attach(created);
-        g_bytes.fetch_add(area(slot_width, slot_height) * 16ULL, std::memory_order_relaxed);
         return created;
     } catch (...) {
-        return nullptr;
+        return {};
     }
 }
 

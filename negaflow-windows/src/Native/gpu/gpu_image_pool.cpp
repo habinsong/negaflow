@@ -146,11 +146,8 @@ void GpuImagePool::sync_resident_bytes() noexcept {
         remove_gpu_pool_resident_bytes(reported_bytes_ - total);
     }
     reported_bytes_ = total;
-    // 시스템 RAM 몫은 **스테이징**입니다(항상 CPU 접근이라 RAM 에 있습니다).
-    // 내장 그래픽이면 텍스처까지 시스템 RAM 이므로 전부 셉니다.
-    const std::uint64_t staging = gpu_staging_system_memory_bytes();
-    set_gpu_pool_system_memory_bytes(
-        system_memory_backed_ ? staging + total : staging);
+    // 스테이징은 조회 시 현재 캐시량을 합산합니다. 여기서는 텍스처의 시스템 RAM 몫만 알립니다.
+    set_gpu_pool_system_memory_bytes(system_memory_backed_ ? total : 0ULL);
 }
 
 bool GpuImagePool::ensure(

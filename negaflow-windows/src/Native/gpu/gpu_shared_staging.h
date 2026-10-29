@@ -1,6 +1,7 @@
 #pragma once
 
 #include <d3d11.h>
+#include <wrl/client.h>
 
 #include <cstdint>
 
@@ -24,14 +25,16 @@ namespace staging_detail {
 // 컨텍스트에서 차례로 돌므로 한 방향에 한 장씩이면 충분합니다. 읽기와 쓰기를 한 장에
 // 겸하지 않는 이유는 `gpu_working_image.h` 에 있습니다(READ|WRITE 는 읽기 캐시 정책을 낮춥니다).
 //
-// 돌려준 스테이징은 **요청보다 클 수 있습니다** — 왼쪽 위 `width`×`height` 만 쓰고, 텍스처와는
-// 아래 두 함수로 그 영역만 옮깁니다. 포인터는 같은 장치·방향으로 다른 크기를 두 번 더
-// 청하기 전까지 유효합니다.
-[[nodiscard]] ID3D11Texture2D* shared_staging(
+// 반환값은 전송이 끝날 때까지 버퍼를 소유합니다. 캐시 회수나 할당 예외가 수명을 끊지 않습니다.
+[[nodiscard]] Microsoft::WRL::ComPtr<ID3D11Texture2D> shared_staging(
     const GpuDevice& device,
     std::uint32_t width,
     std::uint32_t height,
     UINT cpu_access) noexcept;
+
+// 장치의 캐시만 줄입니다. 진행 중 전송은 반환된 ComPtr가 보호합니다.
+void trim_shared_staging(const GpuDevice& device, std::uint64_t budget) noexcept;
+void trim_shared_staging_to_budget(const GpuDevice& device) noexcept;
 
 // 스테이징의 왼쪽 위 `width`×`height` 를 텍스처로(또는 그 반대로) 옮깁니다.
 void copy_to_texture(

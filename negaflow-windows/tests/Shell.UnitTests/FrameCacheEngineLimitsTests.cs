@@ -61,6 +61,19 @@ internal static class FrameCacheEngineLimitsTests
                 manual is { EngineCleanedRawFrames: 5U, EngineDevelopedFrames: 9U },
                 "수동이면 고른 장수를 그대로 겁니다");
 
+            cache.ApplyMemoryPressure(FrameCachePressureLevel.Normal);
+            Check(MemoryReportBridge.TryRead() is { EngineCleanedRawFrames: 5U, EngineDevelopedFrames: 9U },
+                "startup normal memory notification keeps manual native limits");
+            cache.ApplyMemoryPressure(FrameCachePressureLevel.Critical);
+            cache.ApplyResidencySettings(new FrameCacheResidencySettings
+            {
+                Mode = FrameCacheResidencyMode.Manual, ManualCleanedRaw = 5, ManualDeveloped = 9,
+            });
+            Check(cache.DevelopedLimits().Frames == 1, "settings changes cannot lift active critical pressure");
+            cache.ApplyMemoryPressure(FrameCachePressureLevel.Normal);
+            Check(MemoryReportBridge.TryRead() is { EngineCleanedRawFrames: 5U, EngineDevelopedFrames: 9U },
+                "pressure recovery restores manual native limits");
+
             // 이웃 예열이 채워도 되는 자리입니다. 지금 걸린 한도(수동 9장)에서 보고 있는
             // 사진 한 자리를 뺀 나머지이며, 바이트 한도가 먼저 차면 그쪽을 따릅니다.
             // 넘겨 채우면 FIFO 가 앞부터 내보내 방금 예열한 것이 그대로 나갑니다.

@@ -15,6 +15,7 @@
 // 떨어집니다. 질감이 없는 노리츠 사슬보다 전송이 많지 않은지로 봅니다.
 
 #include "negaflow/gpu/gpu_cache_budget.h"
+#include "negaflow/gpu/gpu_working_image.h"
 #include "negaflow/pipeline/develop_export.h"
 #include "negaflow/pipeline/gpu_accelerator.h"
 #include "synthetic_wic_tiff.h"
@@ -167,6 +168,11 @@ int main() {
     expect(sp_difference < 3.0, "the SP GPU chain matches the CPU chain within rounding");
 
     negaflow::gpu::set_gpu_cache_limit_bytes(0U);
+    accelerator.release_transient_resources();
+    expect(negaflow::gpu::gpu_staging_system_memory_bytes() == 0,
+        "export cleanup releases staging buffers along with GPU scratch");
+    expect(negaflow::gpu::gpu_pool_system_memory_bytes() == 0,
+        "memory diagnostics reflect the released staging buffers immediately");
     std::error_code ignored{};
     std::filesystem::remove(source, ignored);
     std::cout << "gpu_resident_budget partial=" << partial_difference

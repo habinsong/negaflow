@@ -1,6 +1,7 @@
 #include "negaflow/gpu/gpu_cache_budget.h"
 
 #include "negaflow/gpu/gpu_device.h"
+#include "negaflow/gpu/gpu_working_image.h"
 
 #include <windows.h>
 
@@ -120,7 +121,7 @@ void remove_gpu_pool_resident_bytes(const std::uint64_t bytes) noexcept {
 }
 
 std::uint64_t gpu_pool_system_memory_bytes() noexcept {
-    return g_pool_system_memory_bytes.load(std::memory_order_relaxed);
+    return g_pool_system_memory_bytes.load(std::memory_order_relaxed) + gpu_staging_system_memory_bytes();
 }
 
 void set_gpu_pool_system_memory_bytes(const std::uint64_t bytes) noexcept {

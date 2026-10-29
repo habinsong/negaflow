@@ -4,6 +4,7 @@
 #include "negaflow/gpu/gpu_kernel_timing.h"
 
 #include "gpu_accelerator_state.h"
+#include "../gpu/gpu_shared_staging.h"
 
 #include "negaflow/gpu/gpu_working_image.h"
 
@@ -48,6 +49,7 @@ bool GpuAccelerator::begin_resident() noexcept {
             (void)state_->device.flush_released_resources();
         }
     }
+    gpu::staging_detail::trim_shared_staging_to_budget(state_->device);
     ++state_->resident.scope_depth;
     return true;
 }
@@ -62,6 +64,7 @@ void GpuAccelerator::end_resident() noexcept {
     if (state_->resident.scope_depth == 1) {
         flush_unlocked();
         state_->resident = State::ResidentFrame{};
+        gpu::staging_detail::trim_shared_staging_to_budget(state_->device);
     } else {
         --state_->resident.scope_depth;
     }
@@ -130,6 +133,7 @@ void GpuAccelerator::release_transient_resources() noexcept {
     flush_unlocked();
     state_->resident = State::ResidentFrame{};
     state_->pool.clear();
+    gpu::staging_detail::trim_shared_staging(state_->device, 0);
     state_->local_contrast.release_scratch();
     std::vector<core::Rgba32F>{}.swap(state_->morphology_staging);
     (void)state_->device.trim_idle();

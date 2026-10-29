@@ -16,6 +16,7 @@ internal static class ContractTestRunner
         ManagedLayoutContractTests.Verify(context);
         if (args[0] == "--managed-layout-only")
         {
+            RunStateContractTests.VerifyManaged(context);
             Console.WriteLine(JsonSerializer.Serialize(new {
                 status = context.Failures.Count == 0 ? "ok" : "failed", operation = "interop_managed_layout",
                 assertions = context.AssertionCount, failures = context.Failures,

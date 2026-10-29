@@ -4,8 +4,33 @@ namespace Negaflow.Interop.ContractTests;
 
 internal static unsafe class RunStateContractTests
 {
+    internal static void VerifyManaged(ContractTestContext context)
+    {
+        // Native 호출 없이 UI 취소/진행 조회와 워커 Dispose를 같은 객체에서 경합시킵니다.
+        Parallel.For(0, 2_000, iteration =>
+        {
+            using var cancellation = new CancellationTokenSource();
+            using var run = new DevelopRun(cancellation.Token);
+            Parallel.Invoke(
+                () => { for (int i = 0; i < 32; i++) { run.Cancel(); _ = run.ProgressPermille; _ = run.Stage; _ = run.IsCancelRequested; } },
+                () => { cancellation.Cancel(); run.Dispose(); },
+                run.Dispose);
+            if (run.IsCancelRequested || run.Stage != DevelopExportStage.None || run.ProgressPermille != 0)
+            { throw new InvalidOperationException("Disposed run state remained accessible."); }
+        });
+        context.Check(true, "run_state_cancel_reads_and_dispose_race_without_corruption_or_deadlock");
+        using var source = new CancellationTokenSource();
+        source.Cancel();
+        using var cancelled = new DevelopRun(source.Token);
+        context.Check(cancelled.IsCancelRequested, "run_state_pre_cancelled_token_is_latched");
+        cancelled.Dispose();
+        cancelled.Cancel();
+        context.Check(!cancelled.IsCancelRequested, "run_state_dispose_makes_direct_cancel_harmless");
+    }
+
     internal static void Verify(ContractTestContext context)
     {
+        VerifyManaged(context);
         string temporaryRoot = Path.Combine(
             Path.GetTempPath(),
             $"negaflow-run-state-{Guid.NewGuid():N}");

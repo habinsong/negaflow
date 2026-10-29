@@ -82,7 +82,7 @@ void set_gpu_cache_limit_bytes(std::uint64_t bytes) noexcept;
 void add_gpu_pool_resident_bytes(std::uint64_t bytes) noexcept;
 void remove_gpu_pool_resident_bytes(std::uint64_t bytes) noexcept;
 
-/// 그중 시스템 RAM 몫을 따로 알립니다. 내장이면 전부, 외장이면 0 입니다.
+/// 텍스처의 시스템 RAM 몫을 알립니다. 스테이징은 조회 시 따로 합산합니다.
 void set_gpu_pool_system_memory_bytes(std::uint64_t bytes) noexcept;
 
 }  // namespace negaflow::gpu

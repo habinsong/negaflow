@@ -55,6 +55,8 @@ jobs:
         run: ./scripts/build-libraw.ps1
       - name: Test
         run: ctest --preset x64-release --output-on-failure
+      - name: Verify managed memory policy against native engine
+        run: dotnet run --project tests/Shell.UnitTests/Negaflow.Shell.UnitTests.csproj -c Release -p:Platform=x64 -p:RestoreLockedMode=true -- --memory-regression-only
 
   managed:
     name: Managed build and tests

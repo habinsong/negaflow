@@ -7,6 +7,8 @@
 
 #include "negaflow/gpu/gpu_device.h"
 #include "negaflow/gpu/gpu_image_pool.h"
+#include "negaflow/gpu/gpu_cache_budget.h"
+#include "gpu_shared_staging.h"
 
 namespace {
 
@@ -269,6 +271,43 @@ void pool_follows_the_adapter_memory_budget(const GpuDevice& device) {
     }
 }
 
+void staging_cache_is_bounded_and_owned(const GpuDevice& device) {
+    namespace staging = negaflow::gpu::staging_detail;
+    staging::trim_shared_staging(device, 0);
+    negaflow::gpu::set_gpu_cache_limit_bytes(64ULL * 1024ULL * 1024ULL);
+    auto small = staging::shared_staging(device, 256U, 256U, D3D11_CPU_ACCESS_WRITE);
+    auto large = staging::shared_staging(device, 1024U, 1024U, D3D11_CPU_ACCESS_WRITE);
+    expect(small && large, "small and large transfer buffers are created");
+    auto reused = staging::shared_staging(device, 256U, 256U, D3D11_CPU_ACCESS_WRITE);
+    expect(reused.Get() == small.Get(), "small transfer buffer is reused");
+    expect(negaflow::gpu::gpu_staging_system_memory_bytes() <= 256ULL * 256ULL * 16ULL,
+        "a small hit releases the oversized cached buffer");
+    staging::trim_shared_staging(device, 0);
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    const bool mapped_ok = large && SUCCEEDED(device.context()->Map(large.Get(), 0U, D3D11_MAP_WRITE, 0U, &mapped));
+    expect(mapped_ok, "a transfer owner survives cache eviction");
+    if (mapped_ok) { device.context()->Unmap(large.Get(), 0U); }
+    negaflow::gpu::set_gpu_cache_limit_bytes(1);
+    auto transient = staging::shared_staging(device, 256U, 256U, D3D11_CPU_ACCESS_WRITE);
+    expect(transient && negaflow::gpu::gpu_staging_system_memory_bytes() == 0,
+        "a transfer larger than the cache limit works without becoming resident");
+    round_trip_is_lossless(device, "uncached staging");
+    expect(negaflow::gpu::gpu_staging_system_memory_bytes() == 0,
+        "repeated read/write transfers obey a tiny manual limit");
+    negaflow::gpu::set_gpu_cache_limit_bytes(0);
+}
+
+void device_reset_releases_cached_staging() {
+    const auto before = negaflow::gpu::gpu_staging_system_memory_bytes();
+    {
+        const auto device = GpuDevice::create(GpuDevicePreference::warp_only);
+        auto stage = negaflow::gpu::staging_detail::shared_staging(device, 256U, 256U, D3D11_CPU_ACCESS_WRITE);
+        expect(stage != nullptr, "device cleanup test allocates a staging buffer");
+    }
+    expect(negaflow::gpu::gpu_staging_system_memory_bytes() == before,
+        "destroying a device releases its cached COM children");
+}
+
 void unusable_device_is_reported() {
     const GpuDevice empty{};
     expect(!empty.is_usable(), "default-constructed device is unusable");
@@ -292,9 +331,11 @@ int main() {
     staging_ring_defers_the_first_frame(warp);
     same_size_upload_keeps_the_texture(warp);
     pool_follows_the_adapter_memory_budget(warp);
+    staging_cache_is_bounded_and_owned(warp);
 
     // 하드웨어가 있으면 같은 것을 하드웨어에서도 봅니다. 없으면 건너뜁니다 —
     // 이 시험은 GPU 유무가 아니라 왕복의 정확성을 봅니다.
+    negaflow::gpu::staging_detail::trim_shared_staging(warp, 0);
     const GpuDevice hardware = GpuDevice::create(GpuDevicePreference::hardware_only);
     if (hardware.is_usable()) {
         std::cout << "[gpu] also checking on: " << hardware.capability().adapter.description.data()
@@ -304,10 +345,12 @@ int main() {
         staging_ring_defers_the_first_frame(hardware);
         same_size_upload_keeps_the_texture(hardware);
         pool_follows_the_adapter_memory_budget(hardware);
+        staging_cache_is_bounded_and_owned(hardware);
     } else {
         std::cout << "[gpu] hardware absent, WARP only\n";
     }
 
+    device_reset_releases_cached_staging();
     status_names_are_stable();
     unusable_device_is_reported();
 

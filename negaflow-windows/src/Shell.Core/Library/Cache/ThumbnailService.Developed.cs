@@ -125,21 +125,43 @@ public sealed partial class ThumbnailService
     /// </remarks>
     private void SyncDisplayCacheBudget()
     {
-        Negaflow.Shell.Diagnostics.MemoryBudgetLog.Sample("developed");
-        if (Negaflow.Interop.DisplayCacheBudgetBridge.Sync(DevelopedResidentBytes())
-            is not { } budget)
+        lock (cachePolicyGate)
         {
-            return;
+            Negaflow.Shell.Diagnostics.MemoryBudgetLog.Sample("developed");
+            if (DisplayCacheBudgetBridge.Sync(DevelopedResidentBytes() + memory.ResidentBytes) is { } budget)
+            {
+                displayBudgetBytes = budget > long.MaxValue ? long.MaxValue : (long)budget;
+            }
+            ApplyDisplayBudget();
+            _ = DisplayCacheBudgetBridge.Sync(DevelopedResidentBytes() + memory.ResidentBytes);
         }
-        long allowed = budget > long.MaxValue ? long.MaxValue : (long)budget;
-        if (allowed <= 0L || allowed == developedByteLimit)
-        {
-            return;
-        }
-        developedByteLimit = allowed;
-        developedResidency.SetLimits(
-            developedResidency.Limit, developedByteLimit, EvictDeveloped);
     }
+
+    // JPEG는 managed 표시본 몫의 1/8 안에서 보관하고 나머지는 BGRA에 줍니다.
+    private void ApplyDisplayBudget()
+    {
+        long jpegBudget = currentPressure switch
+        {
+            FrameCachePressureLevel.Critical => 0L,
+            FrameCachePressureLevel.Warning => displayBudgetBytes / 32L,
+            _ => displayBudgetBytes / 8L,
+        };
+        memory.SetLimit(jpegBudget);
+        developedByteLimit = Math.Max(1L, displayBudgetBytes - memory.ResidentBytes);
+        developedResidency.SetLimits(
+            developedPolicy.LimitsFor(currentPressure).Developed, developedByteLimit, EvictDeveloped);
+    }
+
+    private void StoreThumbnailMemory(string id, ThumbnailCacheEntry entry)
+    {
+        lock (cachePolicyGate)
+        {
+            memory.Store(id, entry);
+            SyncDisplayCacheBudget();
+        }
+    }
+
+    internal long ThumbnailResidentBytes => memory.ResidentBytes;
 
     /// <summary>지금 상주 중인 현상본 화소 바이트입니다. 시험이 축출을 확인하는 자리입니다.</summary>
     public long DevelopedResidentBytes()
@@ -205,18 +227,15 @@ public sealed partial class ThumbnailService
     /// <summary>Windows 메모리 압력 알림을 실제 developed FIFO 한도에 반영합니다.</summary>
     public void ApplyMemoryPressure(FrameCachePressureLevel pressure)
     {
-        FrameCacheLimits limits = developedPolicy.LimitsFor(pressure);
-        developedResidency.SetLimits(limits.Developed, developedByteLimit, EvictDeveloped);
-        // 엔진 안의 두 캐시에도 같은 한도를 겁니다. 여기서 멈추면 설정에서 고른 값이
-        // 표시본 캐시에만 걸리고 엔진은 계속 설치 메모리만 보고 예산을 잡습니다 -
-        // macOS `FrameCacheResidencyStore.onLimitsChange` 는 둘 다 겁니다.
-        //
-        // 압력이 없을 때는 **자동이면 0** 을 겁니다(`ApplyEngineLimits` 주석 참고).
-        // 압력이 올라갔을 때만 줄인 장수를 걸어 자동값보다 낮춥니다.
-        _ = ApplyEngineLimits(
-            residencyMode,
-            limits,
-            clampedByPressure: pressure != FrameCachePressureLevel.Normal);
+        lock (cachePolicyGate)
+        {
+            currentPressure = pressure;
+            NativeResidencyLimitsApplied = ApplyEngineLimits(
+                residencyMode, developedPolicy.LimitsFor(pressure),
+                clampedByPressure: pressure != FrameCachePressureLevel.Normal);
+            displayBudgetBytes = FrameCacheBudget.DevelopedDisplayBudgetBytes(developedPolicy.NormalLimits);
+            SyncDisplayCacheBudget();
+        }
     }
 
     /// <summary>
@@ -245,9 +264,14 @@ public sealed partial class ThumbnailService
 
     private void RememberResident(string frameId, DevelopedPreview preview, DevelopedPreviewCacheIdentity? identity)
     {
-        developed[frameId] = preview with { Identity = identity, RecipeIdentity = work.Observe(frameId).Identity };
-        SyncDisplayCacheBudget();
-        developedResidency.MarkResident(frameId, preview.Pixels.LongLength, EvictDeveloped);
+        var recipeIdentity = work.Observe(frameId).Identity;
+        lock (cachePolicyGate)
+        {
+            developed[frameId] = preview with { Identity = identity, RecipeIdentity = recipeIdentity };
+            SyncDisplayCacheBudget();
+            developedResidency.MarkResident(frameId, preview.Pixels.LongLength, EvictDeveloped);
+            _ = DisplayCacheBudgetBridge.Sync(DevelopedResidentBytes() + memory.ResidentBytes);
+        }
     }
 
     private static ulong InstalledMemoryBytes()

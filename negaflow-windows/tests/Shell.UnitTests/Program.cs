@@ -16,6 +16,15 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
+        if (args is ["--memory-regression-only"])
+        {
+            ThumbnailMemoryTests.Run();
+            ThumbnailLifecycleTests.Run();
+            ThumbnailCacheRegressionTests.Run();
+            FrameResidencyTests.Run();
+            FrameCacheEngineLimitsTests.Run();
+            return Report("memory_regression_tests");
+        }
         if (args is ["--custom-targets-only"])
         {
             CustomTargetTests.Run();
@@ -126,6 +135,7 @@ internal static class Program
         PrintCompositionTests.Run();
         PrintPreviewResolutionTests.Run();
         FrameResidencyTests.Run();
+        ThumbnailMemoryTests.Run();
         GpuCacheSettingsTests.Run();
         FrameCacheEngineLimitsTests.Run();
         DevelopRequestStaleDefectSourceTests.Run();

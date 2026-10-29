@@ -23,6 +23,8 @@ namespace Negaflow.Interop;
 public sealed unsafe class DevelopRun : IDisposable
 {
     private readonly CancellationTokenRegistration registration;
+    private readonly Lock gate = new();
+    private readonly Lock disposeGate = new();
     private nint state;
 
     /// <summary>
@@ -36,12 +38,19 @@ public sealed unsafe class DevelopRun : IDisposable
         allocated->StructSize = (uint)sizeof(NativeDevelopRunStateV1);
         state = (nint)allocated;
 
-        if (cancellationToken.CanBeCanceled)
+        try
         {
-            // 이미 취소된 토큰이면 여기서 바로 래치가 서고, 첫 poll 에서 실행이 멈춥니다.
-            registration = cancellationToken.Register(
-                static handle => ((DevelopRun)handle!).Cancel(),
-                this);
+            if (cancellationToken.CanBeCanceled)
+            {
+                registration = cancellationToken.Register(
+                    static handle => ((DevelopRun)handle!).Cancel(), this);
+            }
+        }
+        catch
+        {
+            NativeMemory.Free(allocated);
+            state = 0;
+            throw;
         }
     }
 
@@ -55,10 +64,13 @@ public sealed unsafe class DevelopRun : IDisposable
     /// </remarks>
     public void Cancel()
     {
-        NativeDevelopRunStateV1* current = Current;
-        if (current is not null)
+        lock (gate)
         {
-            Volatile.Write(ref current->CancelRequested, 1U);
+            NativeDevelopRunStateV1* current = Current;
+            if (current is not null)
+            {
+                Volatile.Write(ref current->CancelRequested, 1U);
+            }
         }
     }
 
@@ -67,8 +79,11 @@ public sealed unsafe class DevelopRun : IDisposable
     {
         get
         {
-            NativeDevelopRunStateV1* current = Current;
-            return current is not null && Volatile.Read(ref current->CancelRequested) != 0U;
+            lock (gate)
+            {
+                NativeDevelopRunStateV1* current = Current;
+                return current is not null && Volatile.Read(ref current->CancelRequested) != 0U;
+            }
         }
     }
 
@@ -79,10 +94,13 @@ public sealed unsafe class DevelopRun : IDisposable
     {
         get
         {
-            NativeDevelopRunStateV1* current = Current;
-            return current is null
-                ? DevelopExportStage.None
-                : (DevelopExportStage)Volatile.Read(ref current->Stage);
+            lock (gate)
+            {
+                NativeDevelopRunStateV1* current = Current;
+                return current is null
+                    ? DevelopExportStage.None
+                    : (DevelopExportStage)Volatile.Read(ref current->Stage);
+            }
         }
     }
 
@@ -94,8 +112,11 @@ public sealed unsafe class DevelopRun : IDisposable
     {
         get
         {
-            NativeDevelopRunStateV1* current = Current;
-            return current is null ? 0 : (int)Volatile.Read(ref current->ProgressPermille);
+            lock (gate)
+            {
+                NativeDevelopRunStateV1* current = Current;
+                return current is null ? 0 : (int)Volatile.Read(ref current->ProgressPermille);
+            }
         }
     }
 
@@ -106,18 +127,26 @@ public sealed unsafe class DevelopRun : IDisposable
     {
         // 등록을 먼저 정리합니다. Dispose 가 진행 중인 콜백이 끝날 때까지 기다리므로,
         // 그 뒤에 해제하면 취소 콜백이 해제된 메모리를 건드릴 수 없습니다.
-        registration.Dispose();
-        nint previous = Interlocked.Exchange(ref state, 0);
-        if (previous != 0)
+        lock (disposeGate)
         {
-            NativeMemory.Free((void*)previous);
+            registration.Dispose();
+            // 토큰 콜백 대기는 gate 밖에서 합니다. 직접 Cancel/조회와 해제는 같은 잠금입니다.
+            lock (gate)
+            {
+                nint previous = state;
+                state = 0;
+                if (previous != 0) { NativeMemory.Free((void*)previous); }
+            }
         }
     }
 
     /// <summary>
     /// 네이티브 호출에 넘길 포인터입니다. 해제된 뒤에는 null 이므로 호출은 취소 없이 돕니다.
     /// </summary>
-    internal NativeDevelopRunStateV1* StatePointer => Current;
+    internal NativeDevelopRunStateV1* StatePointer
+    {
+        get { lock (gate) { return Current; } }
+    }
 
     private NativeDevelopRunStateV1* Current =>
         (NativeDevelopRunStateV1*)Volatile.Read(ref state);

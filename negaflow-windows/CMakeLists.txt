@@ -1369,6 +1369,7 @@ if(BUILD_TESTING)
         negaflow_gpu_working_image_tests
         PRIVATE negaflow_gpu negaflow_core negaflow_project_options
     )
+    target_include_directories(negaflow_gpu_working_image_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu")
     add_test(NAME native.gpu_working_image COMMAND negaflow_gpu_working_image_tests)
 
     add_executable(negaflow_gpu_tone_kernel_tests

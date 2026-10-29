@@ -48,7 +48,7 @@ public sealed partial class ThumbnailService : IAsyncDisposable
     /// </summary>
     private volatile string root;
     private readonly SemaphoreSlim renderSlots = new(MaximumConcurrentRenders, MaximumConcurrentRenders);
-    private readonly ConcurrentDictionary<string, ThumbnailCacheEntry> memory = new(StringComparer.Ordinal);
+    private readonly ThumbnailMemoryCache memory = new();
     private readonly ThumbnailWorkTracker work = new();
     private readonly ConcurrentDictionary<string, LibraryFrameSnapshot> observedFrames = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, DevelopedPreview> developed = new(StringComparer.Ordinal);
@@ -62,6 +62,9 @@ public sealed partial class ThumbnailService : IAsyncDisposable
     private readonly FrameResidency developedResidency;
     private FrameCachePolicy developedPolicy;
     private long developedByteLimit;
+    private readonly Lock cachePolicyGate = new();
+    private FrameCachePressureLevel currentPressure;
+    private long displayBudgetBytes;
 
     /// <summary>지금 걸린 갈래입니다. 자동이면 엔진에 0 을 겁니다.</summary>
     private FrameCacheResidencyMode residencyMode = FrameCacheResidencyMode.Automatic;
@@ -97,8 +100,10 @@ public sealed partial class ThumbnailService : IAsyncDisposable
         installedMemoryBytes = InstalledMemoryBytes();
         FrameCacheLimits limits = FrameCacheBudget.AutomaticLimits(installedMemoryBytes);
         developedByteLimit = FrameCacheBudget.DevelopedDisplayBudgetBytes(limits);
+        displayBudgetBytes = developedByteLimit;
         developedPolicy = new FrameCachePolicy(limits);
         developedResidency = new FrameResidency(limits.Developed, developedByteLimit);
+        ApplyDisplayBudget();
     }
 
     private readonly ulong installedMemoryBytes;
@@ -126,13 +131,17 @@ public sealed partial class ThumbnailService : IAsyncDisposable
     public void ApplyResidencySettings(FrameCacheResidencySettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        FrameCacheLimits limits = settings.EffectiveLimits(installedMemoryBytes);
-        developedByteLimit = FrameCacheBudget.DevelopedDisplayBudgetBytes(limits);
-        developedPolicy = new FrameCachePolicy(limits);
-        developedResidency.SetLimits(limits.Developed, developedByteLimit, EvictDeveloped);
-        // 엔진을 못 부르는 것은 캐시 상한 하나가 자동으로 남는다는 뜻뿐입니다. 그것 때문에
-        // 설정 창이나 시작을 세우지 않습니다 — 대신 걸렸는지를 남겨 진단이 볼 수 있게 합니다.
-        NativeResidencyLimitsApplied = ApplyEngineLimits(settings.Mode, limits);
+        lock (cachePolicyGate)
+        {
+            residencyMode = settings.Mode;
+            FrameCacheLimits limits = settings.EffectiveLimits(installedMemoryBytes);
+            displayBudgetBytes = FrameCacheBudget.DevelopedDisplayBudgetBytes(limits);
+            developedPolicy = new FrameCachePolicy(limits);
+            NativeResidencyLimitsApplied = ApplyEngineLimits(
+                residencyMode, developedPolicy.LimitsFor(currentPressure),
+                clampedByPressure: currentPressure != FrameCachePressureLevel.Normal);
+            ApplyDisplayBudget();
+        }
     }
 
     /// <summary>
@@ -197,7 +206,7 @@ public sealed partial class ThumbnailService : IAsyncDisposable
         var ticket = work.Observe(frameId);
         var cached = LoadEntry(frameId);
         if (cached is null) { return null; }
-        return work.Publish(ticket, () => memory[frameId] = cached) ? cached.Jpeg : null;
+        return work.Publish(ticket, () => StoreThumbnailMemory(frameId, cached)) ? cached.Jpeg : null;
     }
 
     public byte[]? TryGetOrLoad(LibraryFrameSnapshot frame)
@@ -360,6 +369,14 @@ public sealed partial class ThumbnailService : IAsyncDisposable
         await work.DrainAsync(stop: true).ConfigureAwait(false);
         await disk.DisposeAsync().ConfigureAwait(false);
         renderSlots.Dispose();
+        lock (cachePolicyGate)
+        {
+            memory.Clear();
+            observedFrames.Clear();
+            developed.Clear();
+            developedResidency.Clear();
+            _ = DisplayCacheBudgetBridge.Sync(0);
+        }
     }
 
     private async Task ProduceAsync(LibraryFrameSnapshot frame, ThumbnailWorkTracker.Ticket ticket)
@@ -369,7 +386,7 @@ public sealed partial class ThumbnailService : IAsyncDisposable
         if (!work.Matches(ticket)) { return; }
         if (LoadEntry(frame.Id) is { } cached && ticket.Identity?.Accepts(cached.Identity) == true)
         {
-            if (work.Publish(ticket, () => memory[frame.Id] = cached)) { RaiseReady(ticket); }
+            if (work.Publish(ticket, () => StoreThumbnailMemory(frame.Id, cached))) { RaiseReady(ticket, cached); }
             return;
         }
         if (!frame.CanDevelop)
@@ -455,15 +472,25 @@ public sealed partial class ThumbnailService : IAsyncDisposable
         byte[] payload = ThumbnailCachePayload.Encode(jpeg, ticket.Identity);
         if (work.Publish(ticket, () =>
             {
-                memory[ticket.FrameId] = new(jpeg, ticket.Identity);
+                StoreThumbnailMemory(ticket.FrameId, new(jpeg, ticket.Identity));
                 disk.Store(ticket.FrameId, PathFor(ticket.FrameId), payload);
-            })) { RaiseReady(ticket); return true; }
+            })) { RaiseReady(ticket, new(jpeg, ticket.Identity)); return true; }
         return false;
     }
 
-    private void RaiseReady(ThumbnailWorkTracker.Ticket ticket)
+    private void RaiseReady(ThumbnailWorkTracker.Ticket ticket, ThumbnailCacheEntry? entry = null)
     {
-        void PublishReady() { if (work.Matches(ticket)) { ThumbnailReady?.Invoke(ticket.FrameId); } }
+        void PublishReady()
+        {
+            if (entry is null)
+            {
+                if (work.Matches(ticket)) { ThumbnailReady?.Invoke(ticket.FrameId); }
+                return;
+            }
+            if (!work.Publish(ticket, () => memory.BeginDelivery(ticket.FrameId, entry))) { return; }
+            try { ThumbnailReady?.Invoke(ticket.FrameId); }
+            finally { memory.EndDelivery(ticket.FrameId); }
+        }
         if (dispatcher.HasThreadAccess) { PublishReady(); }
         else { _ = dispatcher.TryEnqueue(PublishReady); }
     }

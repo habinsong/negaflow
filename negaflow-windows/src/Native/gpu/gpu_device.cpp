@@ -1,4 +1,5 @@
 #include "negaflow/gpu/gpu_device.h"
+#include "gpu_shared_staging.h"
 
 #include <d3d11.h>
 #include <dxgi1_6.h>
@@ -315,6 +316,7 @@ GpuDevice& GpuDevice::operator=(GpuDevice&& other) noexcept {
 }
 
 void GpuDevice::reset() noexcept {
+    if (device_ != nullptr) { staging_detail::trim_shared_staging(*this, 0); }
     if (context_ != nullptr) {
         context_->ClearState();
         context_->Release();
