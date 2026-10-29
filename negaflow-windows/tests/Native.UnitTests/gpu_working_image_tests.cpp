@@ -275,18 +275,18 @@ void staging_cache_is_bounded_and_owned(const GpuDevice& device) {
     namespace staging = negaflow::gpu::staging_detail;
     staging::trim_shared_staging(device, 0);
     negaflow::gpu::set_gpu_cache_limit_bytes(64ULL * 1024ULL * 1024ULL);
-    auto small = staging::shared_staging(device, 256U, 256U, D3D11_CPU_ACCESS_WRITE);
-    auto large = staging::shared_staging(device, 1024U, 1024U, D3D11_CPU_ACCESS_WRITE);
-    expect(small && large, "small and large transfer buffers are created");
+    auto small_stage = staging::shared_staging(device, 256U, 256U, D3D11_CPU_ACCESS_WRITE);
+    auto large_stage = staging::shared_staging(device, 1024U, 1024U, D3D11_CPU_ACCESS_WRITE);
+    expect(small_stage && large_stage, "small and large transfer buffers are created");
     auto reused = staging::shared_staging(device, 256U, 256U, D3D11_CPU_ACCESS_WRITE);
-    expect(reused.Get() == small.Get(), "small transfer buffer is reused");
+    expect(reused.Get() == small_stage.Get(), "small transfer buffer is reused");
     expect(negaflow::gpu::gpu_staging_system_memory_bytes() <= 256ULL * 256ULL * 16ULL,
         "a small hit releases the oversized cached buffer");
     staging::trim_shared_staging(device, 0);
     D3D11_MAPPED_SUBRESOURCE mapped{};
-    const bool mapped_ok = large && SUCCEEDED(device.context()->Map(large.Get(), 0U, D3D11_MAP_WRITE, 0U, &mapped));
+    const bool mapped_ok = large_stage && SUCCEEDED(device.context()->Map(large_stage.Get(), 0U, D3D11_MAP_WRITE, 0U, &mapped));
     expect(mapped_ok, "a transfer owner survives cache eviction");
-    if (mapped_ok) { device.context()->Unmap(large.Get(), 0U); }
+    if (mapped_ok) { device.context()->Unmap(large_stage.Get(), 0U); }
     negaflow::gpu::set_gpu_cache_limit_bytes(1);
     auto transient = staging::shared_staging(device, 256U, 256U, D3D11_CPU_ACCESS_WRITE);
     expect(transient && negaflow::gpu::gpu_staging_system_memory_bytes() == 0,
