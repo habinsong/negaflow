@@ -101,6 +101,7 @@ Um einen echten Scanner anzuschließen, braucht es ein separates Plug-in, und f�
 
 - Auf dem Mac erscheinen die ersten Kamera-RAW-Vorschauen früher. DNG- und TIFF-Dateien werden seltener mehrfach dekodiert.
 - Unter Windows wurden die Speicherverwaltung der GPU-Transferpuffer und des Vorschaubild-Caches sowie konkurrierende Zugriffe beim Abbrechen korrigiert.
+- Ab Version 1.2.X werden hocheffiziente NEF-Dateien aufgrund von Änderungen an der RAW-Verarbeitung in der Bibliothek sowohl auf dem Mac als auch unter Windows nicht mehr unterstützt.
 
 ## Chroma Engine
 

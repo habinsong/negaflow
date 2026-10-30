@@ -101,6 +101,7 @@ Brancher un vrai scanner demande un module à part, et pour les scanners SANE il
 
 - Sur Mac, réduction de l’attente du premier aperçu RAW et des décodages répétés des fichiers DNG et TIFF.
 - Sous Windows, correction de la gestion mémoire des tampons de transfert GPU et du cache de vignettes, ainsi que des accès concurrents pendant l’annulation.
+- À partir de la version 1.2.X, les fichiers NEF haute efficacité ne sont plus pris en charge dans la bibliothèque sur Mac et Windows en raison des modifications du traitement RAW.
 
 ## Chroma Engine
 

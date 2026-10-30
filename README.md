@@ -101,6 +101,7 @@ Connecting a scanner requires a separate plugin. For SANE scanners, use [`negafl
 
 - On Mac, reduced the wait for the first camera RAW preview and repeated decoding of DNG and TIFF files.
 - On Windows, fixed memory management for GPU transfer buffers and thumbnail caches, and races during cancellation.
+- Starting with version 1.2.X, high-efficiency NEF files are not supported in the library on either Mac or Windows due to changes to RAW processing.
 
 ## Chroma Engine
 
