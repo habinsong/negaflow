@@ -20,9 +20,6 @@ public sealed partial class InspectorSlider : UserControl
     public InspectorSlider()
     {
         InitializeComponent();
-        // 값 툴팁의 자릿수입니다. XAML 의 `ThumbToolTipValueConverter` 만으로는 걸리지 않아
-        // (실측: 여전히 `0.3600`) 여기서 직접 붙입니다.
-        Slider.ThumbToolTipValueConverter = new InspectorSliderValueConverter();
         ApplyLayout();
         // 이름·도움말이 리소스에서 오므로 언어가 바뀌면 스스로 다시 겁니다.
         LocalizedElement.Track(this, SynchronizeControls);
@@ -161,8 +158,6 @@ public sealed partial class InspectorSlider : UserControl
             Slider.Minimum = -1.0;
             Slider.Maximum = 1.0;
             Slider.Value = InspectorSliderValue.PositionFromValue(value, Maximum, PositionExponent);
-            Slider.ThumbToolTipValueConverter =
-                new ScaledInspectorSliderValueConverter(Maximum, PositionExponent);
         }
         else
         {

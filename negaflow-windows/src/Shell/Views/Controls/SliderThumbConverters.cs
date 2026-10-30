@@ -1,6 +1,5 @@
 using System.Globalization;
 using Microsoft.UI.Xaml.Data;
-using Negaflow.Shell.Develop;
 
 namespace Negaflow.Shell.Views.Controls;
 
@@ -23,32 +22,6 @@ file static class ThumbToolTip
 {
     internal static object Text(object value, Func<double, string> format) =>
         value is double number && double.IsFinite(number) ? format(number) : string.Empty;
-}
-
-/// <summary>인스펙터 보정 슬라이더 — macOS <c>sliderInputText</c> 와 같은 두 자리입니다.</summary>
-public sealed partial class InspectorSliderValueConverter : IValueConverter
-{
-    public object Convert(object value, Type targetType, object parameter, string language) =>
-        value is double number ? InspectorSliderValue.InputText(number) : string.Empty;
-
-    public object ConvertBack(object value, Type targetType, object parameter, string language) =>
-        throw new NotSupportedException();
-}
-
-/// <summary>
-/// 거듭제곱 눈금 슬라이더(온도·틴트) — 손잡이 위치를 저장값으로 되돌려 두 자리로 적습니다.
-/// </summary>
-public sealed partial class ScaledInspectorSliderValueConverter(double maximum, double exponent)
-    : IValueConverter
-{
-    public object Convert(object value, Type targetType, object parameter, string language) =>
-        value is double position
-            ? InspectorSliderValue.InputText(
-                InspectorSliderValue.ValueFromPosition(position, maximum, exponent))
-            : string.Empty;
-
-    public object ConvertBack(object value, Type targetType, object parameter, string language) =>
-        throw new NotSupportedException();
 }
 
 /// <summary>

@@ -161,6 +161,12 @@ internal static class ScanRunCoordinator
             ScannerPluginLibraryScanResult result;
             try
             {
+                // **`ConfigureAwait(false)` 를 쓰면 안 됩니다.** 쓰면 둘째 장부터 게시가 워커에서
+                // 돌아 카탈로그의 `Frames` 목록을 잠금 없이 다시 짓고, 그 사이 UI 스레드가 같은
+                // 목록을 돌다가 `InvalidOperationException`(Collection was modified)으로 앱이
+                // 죽었습니다 - 실기 덤프(3장 배치)에서 열거자 버전 20515, 목록 20699 로 정확히
+                // `Clear` 한 번과 `Add` 183 번이 UI 열거 도중에 끼었습니다. 첫 장과 같은 UI
+                // 컨텍스트에서 게시합니다.
                 result = await gateway
                     .ScanAndPublishAsync(
                         plugin,
@@ -171,8 +177,7 @@ internal static class ScanRunCoordinator
                             (index == 0 ? guidedCarryover?.Transform : null),
                         false,
                         cancellationToken,
-                        onProgress: report => progress?.Report(report, DateTimeOffset.UtcNow))
-                    .ConfigureAwait(false);
+                        onProgress: report => progress?.Report(report, DateTimeOffset.UtcNow));
             }
             catch (OperationCanceledException)
             {

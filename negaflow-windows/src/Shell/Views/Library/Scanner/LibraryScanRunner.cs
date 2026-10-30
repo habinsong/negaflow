@@ -172,10 +172,11 @@ internal sealed class LibraryScanRunner
     /// <b>UI 스레드로 넘겨서</b> 새로 고칩니다.
     /// </summary>
     /// <remarks>
-    /// 본 스캔 경로는 `ConfigureAwait(false)` 로 워커에서 이어집니다. 거기서 곧바로
+    /// 본 스캔 경로가 `ConfigureAwait(false)` 로 워커에서 이어지던 동안, 거기서 곧바로
     /// <c>LibraryChanged</c> 를 올리면 그 처리기가 XAML 속성을 건드리고, WinUI 가
-    /// <c>COMException</c>(RPC_E_WRONG_THREAD)을 던져 배치가 통째로 끊깁니다 - 평판
-    /// 오버레이에서 실제로 겪은 고장입니다(§22.1).
+    /// <c>COMException</c>(RPC_E_WRONG_THREAD)을 던져 배치가 통째로 끊겼습니다 - 평판
+    /// 오버레이에서 실제로 겪은 고장입니다(§22.1). 지금은 UI 컨텍스트로 돌아오지만 넘김은
+    /// 그대로 둡니다.
     /// </remarks>
     private void RequestReloadOnUiThread()
     {

@@ -377,7 +377,9 @@ GpuDevice GpuDevice::create(const GpuDevicePreference preference) noexcept {
 const GpuDevice& GpuDevice::shared() noexcept {
     // 함수 지역 static 이라 첫 호출에서 한 번만 만듭니다(C++11 스레드 안전 초기화).
     // 실패해도 다시 시도하지 않습니다 — 장치가 없는 기계에서 매 프레임 수십 ms 를 태우지 않기 위해서입니다.
-    static GpuDevice instance = GpuDevice::create(GpuDevicePreference::automatic);
+    // 프로세스 종료 때 소멸자를 돌리지 않으려고 해제하지 않습니다(`GpuAccelerator::shared` 주석).
+    static const GpuDevice& instance =
+        *new GpuDevice(GpuDevice::create(GpuDevicePreference::automatic));
     return instance;
 }
 

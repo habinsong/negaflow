@@ -99,11 +99,14 @@
                  화살표는 모두 두 자리라 같은 칸이 길에 따라 다른 값이 됩니다. 그래서 눈금은
                  `SetControlValue` 한 곳에서 다시 겁니다.
 
-                 값 툴팁의 자릿수는 `ThumbToolTipValueConverter` 가 정하는데, 여기 XAML 로
-                 걸면 걸리지 않습니다 — 실측으로 툴팁이 그대로 `0.3600` 이었습니다. 그래서
-                 코드비하인드 생성자에서 붙입니다. -->
+                 손잡이 값 툴팁은 끕니다. macOS 인스펙터 슬라이더에는 없고 값은 오른쪽 글자가
+                 보여 줍니다. 켜 두었던 앞 판은 온도·틴트에서 값마다 변환기를 갈아 끼웠고, WinUI 는
+                 그때마다 툴팁을 새로 만들면서 열려 있던 앞 툴팁을 닫지 않아(`Slider_Partial.cpp`
+                 `OnThumbToolTipValueConverterChanged` → `SetDefaultThumbToolTip`) 글자 없는
+                 상자가 화면에 남았습니다. -->
             <Slider
                 x:Name="Slider"
+                IsThumbToolTipEnabled="False"
                 StepFrequency="0.01"
                 SmallChange="0.01"
                 LargeChange="0.10"

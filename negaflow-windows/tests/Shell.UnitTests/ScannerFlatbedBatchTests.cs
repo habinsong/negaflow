@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Negaflow.Catalog;
 using Negaflow.Shell.Library;
 using static Negaflow.Shell.UnitTests.TestAssert;
@@ -41,6 +42,190 @@ internal static class ScannerFlatbedBatchTests
         }
         VerifyPluginResolvedOncePerBatch();
         VerifyPluginErrorTextReachesTheCaller();
+        VerifyBatchPublishesOnTheUiContext();
+    }
+
+    /// <summary>
+    /// 배치의 <b>모든 장</b>이 UI 컨텍스트에서 게시돼야 합니다.
+    /// </summary>
+    /// <remarks>
+    /// 실기 덤프(GT-X900 3장 배치): 둘째 장부터 게시가 워커에서 돌며 카탈로그 <c>Frames</c>
+    /// 목록을 다시 지었고, 그 사이 UI 스레드의 <c>OnLibraryFrameEdited</c> 가 같은 목록을 돌다
+    /// <c>InvalidOperationException</c> 으로 앱이 죽었습니다. 앞 시험들은 이 길을 못 봤습니다 -
+    /// 시뮬레이터 관문이 동기로 끝나 <c>await</c> 가 스레드를 바꾸지 않았기 때문입니다. 여기서는
+    /// 실기 플러그인처럼 비동기로 끝나는 관문을 끼웁니다.
+    /// </remarks>
+    private static void VerifyBatchPublishesOnTheUiContext()
+    {
+        string parent = Path.Combine(AppContext.BaseDirectory, "scan-batch-context-tests");
+        string isolatedBase = Path.Combine(parent, $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        if (StorageRootResolver.ResolveForTests(isolatedBase).Roots is not { } roots)
+        {
+            Check(false, "flatbed_batch_context_storage_root");
+            return;
+        }
+        var dispatcher = new ImmediateUiDispatcher();
+        SynchronizationContext? previous = SynchronizationContext.Current;
+        try
+        {
+            using (CatalogSession session = CatalogSession.Open(roots).Session!)
+            {
+                Check(session.ReadOrCreate().IsSuccess, "flatbed_batch_context_catalog_create");
+            }
+            var trust = new ScannerPluginTrustStore(Path.Combine(isolatedBase, "trust.json"));
+            var session2 = new ScanSessionController(
+                new FakeScannerGateway(Path.Combine(isolatedBase, "no-plugins")),
+                trust,
+                dispatcher,
+                new SimulatedScannerGateway(ScannerWorkflowTests.ReadTiffHeaderForTests));
+            session2.SetSimulatorEnabled(true);
+            session2.RefreshDevicesAsync().GetAwaiter().GetResult();
+            session2.SelectDeviceAsync(SimulatedScannerGateway.FlatbedScannerId)
+                .GetAwaiter().GetResult();
+            using var library = new LibraryHostService(
+                dispatcher,
+                new ScannerWorkflowTests.ThrowingDevelopExporter(),
+                ScannerWorkflowTests.ReadTiffHeaderForTests);
+            Check(library.Open(roots) == LibraryHostState.Open, "flatbed_batch_context_library_open");
+            string rollDirectory = ScanStorageLayout.EnsureRollDirectory(
+                Path.Combine(roots.LibraryRoot, "Scans"),
+                FilmType.ColorNegative,
+                "UiContext",
+                DateTime.Now);
+            const int frameCount = 3;
+            for (int index = 0; index < frameCount; ++index)
+            {
+                _ = session2.AddRegion();
+            }
+
+            var context = new PumpingSynchronizationContext();
+            SynchronizationContext.SetSynchronizationContext(context);
+            int uiThread = Environment.CurrentManagedThreadId;
+            int publishes = 0;
+            int publishesOffUi = 0;
+            int notificationsOffUi = 0;
+            InstalledScannerPlugin? plugin = session2.Plugins.FirstOrDefault();
+            Task<ScanRunExecution> run = ScanRunCoordinator.RunAsync(
+                new AsynchronousScanGateway(session2.ActiveGatewayForTests, () =>
+                {
+                    ++publishes;
+                    publishesOffUi += Environment.CurrentManagedThreadId == uiThread ? 0 : 1;
+                }),
+                () => (plugin, plugin?.TrustIdentity),
+                library,
+                _ => ScanStorageLayout.NextAvailablePath(rollDirectory, "UiContext"),
+                session2.BuildRequest,
+                preview: false,
+                requested: frameCount,
+                _ => null,
+                null,
+                null,
+                _ => notificationsOffUi += Environment.CurrentManagedThreadId == uiThread ? 0 : 1,
+                CancellationToken.None);
+            context.RunUntil(run);
+            ScanRunExecution execution = run.GetAwaiter().GetResult();
+
+            Check(
+                execution.Outcome.Published == frameCount,
+                "flatbed_batch_context_publishes_every_frame",
+                () => execution.Outcome.Published.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            Check(publishes == frameCount, "flatbed_batch_context_reaches_the_gateway_for_every_frame");
+            Check(
+                publishesOffUi == 0,
+                "flatbed_batch_context_publishes_on_the_ui_context",
+                () => publishesOffUi.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            Check(notificationsOffUi == 0, "flatbed_batch_context_notifies_on_the_ui_context");
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+            try
+            {
+                if (Directory.Exists(isolatedBase) &&
+                    StoragePathPolicy.IsLexicallyContained(parent, isolatedBase))
+                {
+                    Directory.Delete(isolatedBase, recursive: true);
+                }
+            }
+            catch (IOException)
+            {
+            }
+        }
+    }
+
+    /// <summary>UI 스레드처럼 한 스레드에서 차례로 돌리는 컨텍스트입니다.</summary>
+    private sealed class PumpingSynchronizationContext : SynchronizationContext
+    {
+        private readonly BlockingCollection<(SendOrPostCallback Callback, object? State)> queue = [];
+
+        public override void Post(SendOrPostCallback d, object? state) => queue.Add((d, state));
+
+        public override void Send(SendOrPostCallback d, object? state) =>
+            throw new NotSupportedException();
+
+        internal void RunUntil(Task task)
+        {
+            while (!task.IsCompleted)
+            {
+                if (queue.TryTake(out (SendOrPostCallback Callback, object? State) item, 10))
+                {
+                    item.Callback(item.State);
+                }
+            }
+        }
+    }
+
+    /// <summary>실기 플러그인처럼 비동기로 끝난 뒤 게시하는 관문입니다.</summary>
+    private sealed class AsynchronousScanGateway(IScannerPluginGateway inner, Action published)
+        : IScannerPluginGateway
+    {
+        public IReadOnlyList<InstalledScannerPlugin> Discover() => inner.Discover();
+
+        public Task<ScannerPluginDetectResult> DetectAsync(
+            InstalledScannerPlugin plugin,
+            ScannerPluginTrustIdentity approvedIdentity,
+            CancellationToken cancellationToken) =>
+            inner.DetectAsync(plugin, approvedIdentity, cancellationToken);
+
+        public Task<ScannerPluginCapabilitiesResult> GetCapabilitiesAsync(
+            InstalledScannerPlugin plugin,
+            ScannerPluginTrustIdentity approvedIdentity,
+            ScannerPluginDevice device,
+            CancellationToken cancellationToken) =>
+            inner.GetCapabilitiesAsync(plugin, approvedIdentity, device, cancellationToken);
+
+        public async Task<ScannerPluginLibraryScanResult> ScanAndPublishAsync(
+            InstalledScannerPlugin plugin,
+            ScannerPluginTrustIdentity approvedIdentity,
+            ScannerPluginScanRequest request,
+            LibraryHostService library,
+            ImageTransformRecipe? initialTransform,
+            bool isPreviewScan,
+            CancellationToken cancellationToken,
+            Action<ScanProgressReport>? onProgress = null)
+        {
+            // 스캔 프로세스를 기다리는 자리입니다. 부른 쪽의 컨텍스트로 돌아와 게시합니다 -
+            // `ScannerScanPublisher` 와 같습니다.
+            await Task.Delay(1, cancellationToken);
+            published();
+            return await inner.ScanAndPublishAsync(
+                plugin,
+                approvedIdentity,
+                request,
+                library,
+                initialTransform,
+                isPreviewScan,
+                cancellationToken,
+                onProgress);
+        }
+
+        public Task<ScannerPluginScanResult> ScanAsync(
+            InstalledScannerPlugin plugin,
+            ScannerPluginTrustIdentity approvedIdentity,
+            ScannerPluginScanRequest request,
+            CancellationToken cancellationToken,
+            Action<ScanProgressReport>? onProgress = null) =>
+            inner.ScanAsync(plugin, approvedIdentity, request, cancellationToken, onProgress);
     }
 
     /// <summary>

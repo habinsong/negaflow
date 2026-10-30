@@ -530,6 +530,9 @@ public sealed class ScanSessionController
         activeRun = run;
         try
         {
+            // UI 컨텍스트로 돌아와야 합니다. 아래 `RemoveScannerPreviewFrames` 가 카탈로그
+            // 목록을 다시 짓는데, 워커에서 하면 같은 목록을 도는 UI 처리기와 부딪쳐 배치가
+            // 끝나는 순간 앱이 죽었습니다(`ScanRunCoordinator` 의 같은 주석).
             ScanRunExecution execution = await ScanRunCoordinator.RunAsync(
                 ActiveGateway,
                 ResolveApprovedPlugin,
@@ -543,7 +546,7 @@ public sealed class ScanSessionController
                 GuidedCarryoverPublished,
                 framePublished,
                 run.Token,
-                Progress).ConfigureAwait(false);
+                Progress);
             LastFailureName = execution.FailureName;
             LastFailureDetail = execution.FailureDetail;
             if (execution.PreviewPath is not null)

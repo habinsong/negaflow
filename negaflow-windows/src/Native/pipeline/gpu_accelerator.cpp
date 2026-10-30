@@ -184,7 +184,16 @@ GpuAccelerator::~GpuAccelerator() {
 
 GpuAccelerator& GpuAccelerator::shared() noexcept {
     // 함수 지역 정적이라 첫 사용 때 한 번만 만들어지고, 초기화가 스레드 안전합니다.
-    static GpuAccelerator accelerator{};
+    //
+    // **일부러 해제하지 않습니다.** 값으로 두면 소멸자가 프로세스 종료의 DLL 분리
+    // (`dllmain_crt_process_detach` → atexit 표)에서 돌아 `GpuDevice::reset` 의
+    // `ClearState` 로 드라이버를 부릅니다. 그 시점에는 다른 스레드가 이미 끝났거나 강제로
+    // 끝난 상태이고, NVIDIA `nvwgf2umx.dll` 이 그 안에서 `0xffffffffffffffff` 를 읽고
+    // 죽었습니다 - 2026-10-29·30 이벤트 로그의 `nvwgf2umx.dll` 크래시 9 건이 모두
+    // `termination.txt` 의 종료 기록 1~2 초 뒤였습니다. Microsoft 는 종료 중 DLL 분리에서
+    // 자원을 정리하지 말고 OS 에 맡기라고 합니다
+    // (https://learn.microsoft.com/windows/win32/dlls/dllmain).
+    static GpuAccelerator& accelerator = *new GpuAccelerator{};
     return accelerator;
 }
 

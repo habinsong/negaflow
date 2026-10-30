@@ -36,7 +36,8 @@ struct Slot final {
 };
 
 std::mutex g_lock{};
-std::vector<Slot> g_slots{};
+// 텍스처를 쥐고 있으므로 프로세스 종료 때 소멸자를 돌리지 않습니다(`GpuAccelerator::shared` 주석).
+std::vector<Slot>& g_slots = *new std::vector<Slot>{};
 std::uint64_t g_clock{0U};
 std::atomic<std::uint64_t> g_bytes{0U};
 
