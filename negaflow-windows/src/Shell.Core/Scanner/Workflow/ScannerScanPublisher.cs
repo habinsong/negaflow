@@ -29,7 +29,7 @@ internal static class ScannerScanPublisher
             return new(ScannerPluginLibraryScanStatus.ScanFailed, scan, null);
         }
 
-        ScannerFramePublishResult published = library.PublishScannerFrame(
+        ScannerFramePublishResult published = await library.PublishScannerFrameAsync(
             new ScannerFrameImport(
                 artifacts.VisiblePath,
                 // 프리뷰는 IR 을 함께 쓰지 않습니다. macOS 도 `preview ? nil : ...` 입니다.

@@ -64,6 +64,13 @@ public sealed partial class CatalogSession : IDisposable
 {
     private readonly StorageRootSet roots;
     private readonly object writeGate = new();
+
+    /// <summary>
+    /// backup 폴더(세대 만들기·지우기·읽어 복원)를 한 번에 하나만 다루게 합니다. 잡는 차례는
+    /// 언제나 <see cref="writeGate"/> 다음입니다. 메모리 백업은 이것만 쥐고 돌아, 살아 있는
+    /// 카탈로그의 저장이 백업을 기다리지 않습니다.
+    /// </summary>
+    private readonly object backupGate = new();
     private readonly DefectRecipeCatalogTransaction defectRecipes;
     private CatalogProcessLock? processLock;
     private bool mutationBlocked;
@@ -214,21 +221,48 @@ public sealed partial class CatalogSession : IDisposable
                 return CatalogBackupCreateResult.Failure(
                     CatalogBackupError.RecoveryRequired);
             }
-            return CatalogBackupStore.Create(
-                roots,
-                DateTimeOffset.UtcNow,
-                retentionCount);
+            // 살아 있는 카탈로그와 결함 기록을 읽으므로 저장과 겹치면 안 됩니다 - writeGate 를 끝까지 쥡니다.
+            lock (backupGate)
+            {
+                return CatalogBackupStore.Create(
+                    roots,
+                    DateTimeOffset.UtcNow,
+                    retentionCount);
+            }
         }
     }
 
     /// <summary>
     /// 열린 문서의 메모리 상태로 검증된 세대를 만듭니다. 디스크 기록이 어긋나 저장이 막혀
-    /// 있을 때 카탈로그 재설치가 씁니다.
+    /// 있을 때 카탈로그 재설치와 변경 후 자동 백업이 씁니다.
     /// </summary>
+    /// <remarks>
+    /// <b>상태 확인에만 <see cref="writeGate"/> 를 잡습니다.</b> 세대는 얼린 메모리 값으로만 쓰고
+    /// 살아 있는 카탈로그는 읽지도 쓰지도 않으므로, 쓰고·검증하고·오래된 세대를 지우는 동안
+    /// 저장을 막을 까닭이 없습니다. 앞 판은 이 전부를 writeGate 안에서 해서, 자동 백업 도중
+    /// 창을 닫으면 종료 저장이 백업이 끝날 때까지(실측 6 초) 기다렸습니다.
+    /// </remarks>
     public CatalogBackupCreateResult CreateBackupFromMemory(
         CatalogSnapshot snapshot,
         IReadOnlyDictionary<Guid, DefectRecipeSnapshot> recipes,
-        int retentionCount = CatalogBackupStore.DefaultRetentionCount)
+        int retentionCount = CatalogBackupStore.DefaultRetentionCount,
+        CancellationToken cancellationToken = default) =>
+        CreateBackupFromMemoryCore(snapshot, recipes, retentionCount, cancellationToken, beforeValidation: null);
+
+    internal CatalogBackupCreateResult CreateBackupFromMemoryForTesting(
+        CatalogSnapshot snapshot,
+        IReadOnlyDictionary<Guid, DefectRecipeSnapshot> recipes,
+        Action<string>? beforeValidation,
+        CancellationToken cancellationToken = default) =>
+        CreateBackupFromMemoryCore(
+            snapshot, recipes, CatalogBackupStore.DefaultRetentionCount, cancellationToken, beforeValidation);
+
+    private CatalogBackupCreateResult CreateBackupFromMemoryCore(
+        CatalogSnapshot snapshot,
+        IReadOnlyDictionary<Guid, DefectRecipeSnapshot> recipes,
+        int retentionCount,
+        CancellationToken cancellationToken,
+        Action<string>? beforeValidation)
     {
         lock (writeGate)
         {
@@ -240,12 +274,17 @@ public sealed partial class CatalogSession : IDisposable
                 return CatalogBackupCreateResult.Failure(
                     CatalogBackupError.RecoveryRequired);
             }
+        }
+        lock (backupGate)
+        {
             return CatalogBackupStore.CreateFromMemory(
                 roots,
                 snapshot,
                 recipes,
                 DateTimeOffset.UtcNow,
-                retentionCount);
+                retentionCount,
+                cancellationToken,
+                beforeValidation);
         }
     }
 
@@ -255,10 +294,14 @@ public sealed partial class CatalogSession : IDisposable
         lock (writeGate)
         {
             RequireOpen();
-            return CatalogPendingRestoreStore.Schedule(
-                roots,
-                generationId,
-                DateTimeOffset.UtcNow);
+            // 고른 세대를 읽어 옮깁니다. 그 사이 자동 백업이 오래된 세대를 지우면 안 됩니다.
+            lock (backupGate)
+            {
+                return CatalogPendingRestoreStore.Schedule(
+                    roots,
+                    generationId,
+                    DateTimeOffset.UtcNow);
+            }
         }
     }
 
@@ -278,10 +321,13 @@ public sealed partial class CatalogSession : IDisposable
         lock (writeGate)
         {
             RequireOpen();
-            return CatalogPendingRestoreStore.Schedule(
-                roots,
-                generationId,
-                scheduledAt);
+            lock (backupGate)
+            {
+                return CatalogPendingRestoreStore.Schedule(
+                    roots,
+                    generationId,
+                    scheduledAt);
+            }
         }
     }
 
@@ -300,11 +346,14 @@ public sealed partial class CatalogSession : IDisposable
                 return CatalogBackupCreateResult.Failure(
                     CatalogBackupError.RecoveryRequired);
             }
-            return CatalogBackupStore.Create(
-                roots,
-                createdAt,
-                retentionCount,
-                beforeValidation);
+            lock (backupGate)
+            {
+                return CatalogBackupStore.Create(
+                    roots,
+                    createdAt,
+                    retentionCount,
+                    beforeValidation);
+            }
         }
     }
 

@@ -46,7 +46,7 @@ internal static class CatalogBackupStore
         }
         return CreateGeneration(
             roots, snapshot, defectFrameIds, defectEntries, fromMemory: false,
-            createdAt, retentionCount, beforeValidation);
+            createdAt, retentionCount, beforeValidation, CancellationToken.None);
     }
 
     /// <summary>
@@ -55,12 +55,17 @@ internal static class CatalogBackupStore
     /// <c>makeManualBackupPayload()</c> 로 메모리 카탈로그와 recipe 를 담습니다.
     /// </summary>
     /// <param name="recipes">결함 편집을 선언한 사진마다의 recipe 입니다.</param>
+    /// <param name="cancellationToken">
+    /// 종료가 시작되면 파일 사이에서 멈추고 쓰다 만 staging 을 지웁니다.
+    /// </param>
     public static CatalogBackupCreateResult CreateFromMemory(
         StorageRootSet roots,
         CatalogSnapshot snapshot,
         IReadOnlyDictionary<Guid, DefectRecipeSnapshot> recipes,
         DateTimeOffset createdAt,
-        int retentionCount)
+        int retentionCount,
+        CancellationToken cancellationToken = default,
+        Action<string>? beforeValidation = null)
     {
         ArgumentNullException.ThrowIfNull(roots);
         ArgumentNullException.ThrowIfNull(snapshot);
@@ -95,7 +100,7 @@ internal static class CatalogBackupStore
             right.CatalogFrameId));
         return CreateGeneration(
             roots, snapshot, defectFrameIds, entries, fromMemory: true,
-            createdAt, retentionCount, beforeValidation: null);
+            createdAt, retentionCount, beforeValidation, cancellationToken);
     }
 
     /// <param name="fromMemory">
@@ -110,7 +115,8 @@ internal static class CatalogBackupStore
         bool fromMemory,
         DateTimeOffset createdAt,
         int retentionCount,
-        Action<string>? beforeValidation)
+        Action<string>? beforeValidation,
+        CancellationToken cancellationToken)
     {
         string? stagingPath = null;
         bool promoted = false;
@@ -127,6 +133,9 @@ internal static class CatalogBackupStore
                 return CatalogBackupCreateResult.Failure(
                     CatalogBackupError.InvalidStorageRoots);
             }
+            // 앞 실행이 쓰는 도중에 끝났으면 그 staging 이 남습니다. 세대 이름이 아니라 세대로
+            // 세지는 않지만 그대로 두면 디스크만 차지합니다.
+            CatalogBackupGenerations.DeleteAbandonedStaging(roots.BackupRoot);
 
             if (!CatalogBackupGenerations.TryNextSequence(roots.BackupRoot, out ulong sequence))
             {
@@ -151,6 +160,10 @@ internal static class CatalogBackupStore
             List<CatalogBackupFileRecord> fileRecords = [catalogRecord];
             foreach (DefectSidecarCatalogEntry entry in defectEntries)
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return CatalogBackupCreateResult.Failure(CatalogBackupError.Cancelled);
+                }
                 string fileName = DefectSidecarStore.FileName(entry.FrameId);
                 string destination = Path.Combine(defectsPath, fileName);
                 if (fromMemory)
@@ -191,11 +204,19 @@ internal static class CatalogBackupStore
                 CatalogBackupCodec.SerializeManifest(manifest));
 
             beforeValidation?.Invoke(stagingPath);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return CatalogBackupCreateResult.Failure(CatalogBackupError.Cancelled);
+            }
             CatalogBackupValidationResult validated = ValidateGeneration(stagingPath);
             if (!validated.IsValid || validated.Manifest?.Sequence != sequence)
             {
                 return CatalogBackupCreateResult.Failure(
                     CatalogBackupError.ValidationFailed);
+            }
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return CatalogBackupCreateResult.Failure(CatalogBackupError.Cancelled);
             }
 
             string destinationPath = Path.Combine(
@@ -219,7 +240,8 @@ internal static class CatalogBackupStore
 
             bool pruneFailed = !CatalogBackupGenerations.PruneValidatedGenerations(
                 roots.BackupRoot,
-                retentionCount);
+                retentionCount,
+                cancellationToken);
             return CatalogBackupCreateResult.Success(
                 destinationPath,
                 sequence,

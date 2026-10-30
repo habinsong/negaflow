@@ -21,6 +21,13 @@ public sealed partial class LibraryHostService
     /// </summary>
     internal static readonly TimeSpan SessionBackupMinimumInterval = TimeSpan.FromHours(1);
 
+    /// <summary>
+    /// 종료가 쓰는 중인 세대를 멈춘 뒤 그 정리(쓰다 만 staging 지우기)를 기다리는 한도입니다.
+    /// 멈춤은 파일 하나·세대 검증 하나 사이에서 일어나므로 보통 이보다 훨씬 짧습니다.
+    /// </summary>
+    internal TimeSpan SessionBackupStopGrace { get; init; } = TimeSpan.FromSeconds(3);
+
+    private readonly CancellationTokenSource sessionBackupCancellation = new();
     private Timer? sessionBackupTimer;
     private bool sessionBackupStopped;
 
@@ -123,7 +130,8 @@ public sealed partial class LibraryHostService
         StopSessionBackupTimer();
         DateTimeOffset attempt = DateTimeOffset.Now;
         binding.Update(backup => backup with { LastAttemptAt = attempt });
-        Func<CatalogBackupCreateResult> create = open.FreezeMemoryBackup();
+        Func<CatalogBackupCreateResult> create =
+            open.FreezeMemoryBackup(sessionBackupCancellation.Token);
         SessionBackupTask = Task.Run(() =>
         {
             CatalogBackupCreateResult result;
@@ -143,11 +151,27 @@ public sealed partial class LibraryHostService
         });
     }
 
-    /// <summary>종료가 시작되면 더 예약하지 않습니다. 이미 쓰는 중인 세대는 끝까지 둡니다.</summary>
+    /// <summary>
+    /// 종료가 시작되면 더 예약하지 않고, 쓰는 중인 세대도 멈춥니다. 멈춘 세대는 남기지 않으며
+    /// 이미 있던 세대는 그대로입니다 - 한 시간 간격 규칙에 따라 다음 자동 백업이 새로 만듭니다.
+    /// </summary>
     private void StopSessionBackup()
     {
         sessionBackupStopped = true;
         StopSessionBackupTimer();
+        sessionBackupCancellation.Cancel();
+    }
+
+    /// <summary>
+    /// 멈춘 백업이 쓰다 만 것을 치울 때까지 잠깐 기다립니다. 한도를 넘기면 그냥 갑니다 - 남은
+    /// staging 은 다음 백업이 지웁니다(<c>CatalogBackupGenerations.DeleteAbandonedStaging</c>).
+    /// </summary>
+    private async Task WaitForStoppedSessionBackupAsync()
+    {
+        if (SessionBackupTask is { IsCompleted: false } running)
+        {
+            _ = await Task.WhenAny(running, Task.Delay(SessionBackupStopGrace));
+        }
     }
 
     private void StopSessionBackupTimer()

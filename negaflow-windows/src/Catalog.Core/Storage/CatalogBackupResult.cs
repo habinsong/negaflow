@@ -13,6 +13,9 @@ public enum CatalogBackupError
     RecoveryRequired,
     AccessDenied,
     IoFailure,
+
+    /// <summary>종료가 시작돼 멈췄습니다. 쓰다 만 세대는 남기지 않습니다.</summary>
+    Cancelled,
 }
 
 public readonly record struct CatalogBackupCreateResult(

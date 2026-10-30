@@ -16,7 +16,79 @@ internal static class CatalogBackupRestoreTests
     public static void Run(StorageRootSet roots)
     {
         VerifyBackupGeneration(roots);
+        VerifyMemoryBackupLeavesCatalogWritesFree(roots);
         VerifyPendingRestore(roots);
+    }
+
+    /// <summary>
+    /// 메모리 백업이 도는 동안에도 카탈로그 저장은 바로 끝나야 합니다. 멈추라고 하면 세대를 남기지
+    /// 않고, 앞 실행이 쓰다 만 staging 은 다음 백업이 치웁니다.
+    /// </summary>
+    /// <remarks>
+    /// 실기: 자동 백업(81 개 파일, 50.7 MB) 도중 창을 닫자 종료 저장이 백업이 끝날 때까지 6 초를
+    /// 기다렸습니다. 백업이 세대를 쓰고 검증하고 오래된 세대를 지우는 내내 카탈로그 쓰기 잠금을
+    /// 쥐고 있었기 때문입니다.
+    /// </remarks>
+    private static void VerifyMemoryBackupLeavesCatalogWritesFree(StorageRootSet parentRoots)
+    {
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "backup-memory-concurrency")).Roots!;
+        CatalogSessionOpenResult opened = CatalogSession.Open(roots);
+        using CatalogSession? session = opened.Session;
+        Check(opened.IsSuccess, "memory_backup_session_open");
+        if (session is null)
+        {
+            return;
+        }
+        Check(session.ReadOrCreate().IsSuccess, "memory_backup_initial_create");
+        CatalogSnapshot frozen = Snapshot("memory-a", Row("frame-1", "one"));
+        Check(session.Write(frozen).IsSuccess, "memory_backup_first_write");
+        Dictionary<Guid, DefectRecipeSnapshot> noRecipes = [];
+
+        // 앞 실행이 쓰는 도중에 끝나 남긴 staging 입니다.
+        string abandoned = Path.Combine(roots.BackupRoot, $"staging-{Guid.NewGuid():N}.tmp");
+        Directory.CreateDirectory(Path.Combine(abandoned, "defects"));
+        File.WriteAllText(Path.Combine(abandoned, "library.json"), "{}");
+
+        using ManualResetEventSlim inside = new();
+        using ManualResetEventSlim release = new();
+        CatalogBackupCreateResult backup = default;
+        Thread worker = new(() => backup = session.CreateBackupFromMemoryForTesting(
+            frozen,
+            noRecipes,
+            beforeValidation: _ =>
+            {
+                inside.Set();
+                release.Wait(TimeSpan.FromSeconds(10));
+            }));
+        worker.Start();
+        Check(inside.Wait(TimeSpan.FromSeconds(10)), "memory_backup_reaches_validation");
+        Stopwatch clock = Stopwatch.StartNew();
+        bool written = session.Write(Snapshot("memory-b", Row("frame-2", "two"))).IsSuccess;
+        long writeMilliseconds = clock.ElapsedMilliseconds;
+        release.Set();
+        worker.Join();
+        Check(written, "memory_backup_concurrent_write_succeeds");
+        // 앞 판은 여기서 백업이 놓아 줄 때까지(10 초) 기다렸습니다.
+        Check(writeMilliseconds < 5000, "memory_backup_does_not_block_catalog_write",
+            () => $"{writeMilliseconds} ms");
+        Check(backup.IsSuccess, "memory_backup_completes", () => backup.Error.ToString());
+        Check(!Directory.Exists(abandoned), "memory_backup_removes_abandoned_staging");
+
+        int generations = Directory.GetDirectories(roots.BackupRoot, "backup-*").Length;
+        using CancellationTokenSource stop = new();
+        CatalogBackupCreateResult cancelled = session.CreateBackupFromMemoryForTesting(
+            frozen,
+            noRecipes,
+            beforeValidation: _ => stop.Cancel(),
+            stop.Token);
+        Check(cancelled.Error == CatalogBackupError.Cancelled, "memory_backup_cancel_reports_cancelled",
+            () => cancelled.Error.ToString());
+        Check(Directory.GetDirectories(roots.BackupRoot, "backup-*").Length == generations,
+            "memory_backup_cancel_leaves_no_generation");
+        Check(!Directory.EnumerateDirectories(roots.BackupRoot, "staging-*").Any(),
+            "memory_backup_cancel_cleans_staging");
     }
 
     private static void VerifyBackupGeneration(StorageRootSet parentRoots)

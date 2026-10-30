@@ -54,7 +54,14 @@ internal static class CatalogBackupGenerations
         }
     }
 
-    internal static bool PruneValidatedGenerations(string backupRoot, int retentionCount)
+    /// <param name="cancellationToken">
+    /// 멈추라고 하면 세대 사이에서 그만둡니다. 실패가 아니라 다음 백업으로 미루는 것이므로
+    /// 그때까지 지운 것이 모두 성공했으면 <see langword="true"/> 입니다.
+    /// </param>
+    internal static bool PruneValidatedGenerations(
+        string backupRoot,
+        int retentionCount,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -65,6 +72,10 @@ internal static class CatalogBackupGenerations
                 "backup-*",
                 SearchOption.TopDirectoryOnly))
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return succeeded;
+                }
                 CatalogBackupValidationResult validation = CatalogBackupStore.ValidateGeneration(directory);
                 if (validation.Manifest is { } manifest)
                 {
@@ -77,6 +88,10 @@ internal static class CatalogBackupGenerations
                 .ThenByDescending(item => item.Path, StringComparer.Ordinal)
                 .Skip(retentionCount))
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return succeeded;
+                }
                 if (!TryDeleteGeneration(path, backupRoot))
                 {
                     succeeded = false;
@@ -125,6 +140,28 @@ internal static class CatalogBackupGenerations
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
             return false;
+        }
+    }
+
+    /// <summary>
+    /// 끝나지 못한 앞 백업의 staging 을 지웁니다. 백업은 세션 안에서 한 번에 하나만 돌고
+    /// 카탈로그 작성자는 프로세스 하나뿐이므로, 새 세대를 시작하는 지금 남은 staging 은 모두 버려진 것입니다.
+    /// </summary>
+    internal static void DeleteAbandonedStaging(string backupRoot)
+    {
+        try
+        {
+            foreach (string path in Directory.EnumerateDirectories(
+                backupRoot,
+                "staging-*.tmp",
+                SearchOption.TopDirectoryOnly))
+            {
+                TryDeleteStaging(path, backupRoot);
+            }
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            // 치우지 못해도 새 세대는 만듭니다. 남은 것은 다음 백업이 다시 봅니다.
         }
     }
 

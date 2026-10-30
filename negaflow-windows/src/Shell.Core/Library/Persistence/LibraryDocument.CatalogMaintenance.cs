@@ -17,6 +17,7 @@ public sealed partial class LibraryDocument
     /// 지금 메모리 라이브러리를 얼린 백업 일입니다(UI 스레드에서 부르고, 돌려준 일은 워커에서 불러도 됩니다).
     /// 변경 후 자동 백업이 씁니다 — macOS <c>makeManualBackupPayload</c> 처럼 살아 있는 카탈로그를 읽지 않습니다.
     /// </summary>
-    internal Func<CatalogBackupCreateResult> FreezeMemoryBackup() =>
-        new LibraryCatalogMaintenance(state, persistence.Save).FreezeMemoryBackup();
+    internal Func<CatalogBackupCreateResult> FreezeMemoryBackup(
+        CancellationToken cancellationToken = default) =>
+        new LibraryCatalogMaintenance(state, persistence.Save).FreezeMemoryBackup(cancellationToken);
 }

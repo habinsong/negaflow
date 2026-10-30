@@ -293,7 +293,11 @@ public sealed partial class CatalogSession
         lock (writeGate)
         {
             RequireOpen();
-            return !mutationBlocked && DefectRecordRecovery.RestoreFromBackup(roots, frameId);
+            // 세대에서 읽어 옵니다. 그 사이 자동 백업이 그 세대를 지우면 안 됩니다.
+            lock (backupGate)
+            {
+                return !mutationBlocked && DefectRecordRecovery.RestoreFromBackup(roots, frameId);
+            }
         }
     }
 

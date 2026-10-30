@@ -381,6 +381,16 @@ public sealed partial class LibraryHostService : IDisposable
         DevelopRun? run = null) =>
         scannerPublisher.Publish(document, storageRoots, scan, parameters, run);
 
+    /// <summary>
+    /// <see cref="PublishScannerFrame"/> 와 같되 IR 검출을 워커에서 돌립니다. UI 스레드에서 부르고
+    /// 기다리면 카탈로그·문서 변경은 그 스레드에서 일어납니다.
+    /// </summary>
+    public Task<ScannerFramePublishResult> PublishScannerFrameAsync(
+        ScannerFrameImport scan,
+        InfraredDetectorParameters? parameters = null,
+        DevelopRun? run = null) =>
+        scannerPublisher.PublishAsync(document, storageRoots, scan, parameters, run);
+
     public CatalogStoreError Save() => autosave.Save();
 
     /// <summary>마지막 저장(자동 저장 포함)이 실패한 까닭입니다. 성공하면 None 입니다.</summary>
@@ -392,17 +402,20 @@ public sealed partial class LibraryHostService : IDisposable
     /// <summary>예약된 저장이 남아 있으면 창을 닫기 전에 즉시 씁니다.</summary>
     public CatalogStoreError SaveIfDirty() => autosave.SaveIfDirty();
 
-    public Task<LibraryDefectTerminationResult> PrepareForTerminationAsync(
+    public async Task<LibraryDefectTerminationResult> PrepareForTerminationAsync(
         string scansDirectory)
     {
-        // 종료가 시작되면 변경 후 자동 백업을 더 예약하지 않습니다(macOS
-        // `isLibraryTerminationSaveInProgress`). 종료는 백업을 기다리지 않습니다.
+        // 종료가 시작되면 변경 후 자동 백업을 더 예약하지 않고 쓰는 중인 세대도 멈춥니다(macOS
+        // `isLibraryTerminationSaveInProgress`). 종료 저장은 백업을 기다리지 않습니다 - 메모리 백업은
+        // 카탈로그 쓰기 잠금을 쥐지 않습니다(`CatalogSession.CreateBackupFromMemory`).
         StopSessionBackup();
-        return document is { } open && !IsCatalogReinstallPendingRelaunch
-            ? new LibraryDefectTerminationService(
+        LibraryDefectTerminationResult result = document is { } open && !IsCatalogReinstallPendingRelaunch
+            ? await new LibraryDefectTerminationService(
                 frameId => DefectLiveStrengths.Clear(frameId))
                 .PrepareAsync(open, scansDirectory)
-            : Task.FromResult(LibraryDefectTerminationResult.Success());
+            : LibraryDefectTerminationResult.Success();
+        await WaitForStoppedSessionBackupAsync();
+        return result;
     }
 
     /// <summary>

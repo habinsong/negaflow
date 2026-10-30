@@ -92,11 +92,75 @@ public static class InfraredDefectRecipeCoordinator
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(frame);
+        if (Refusal(frame, sourceIdentity, out Guid frameId) is { } refused)
+        {
+            return refused;
+        }
+        InfraredDefectDetectionOutcome outcome = DetectFiles(
+            visiblePath,
+            infraredPath,
+            frame.SourceKind,
+            parameters,
+            run, frame.InputGamma);
+        return outcome.Detection is { } detection && !outcome.IsFaulted
+            ? ApplyDetection(document, frame, frameId, sourceIdentity, detection)
+            : Result(InfraredDefectApplyStatus.DetectionFailed);
+    }
+
+    /// <summary>
+    /// <see cref="RunFiles"/> 와 같되 <b>검출을 워커에서</b> 돌립니다. 검출은 문서를 건드리지 않는
+    /// 계산이라 UI 스레드를 붙잡을 까닭이 없고(실측 505~869 ms), 적용은 문서와 카탈로그를 고치므로
+    /// 부른 컨텍스트(UI)로 돌아와서 합니다.
+    /// </summary>
+    /// <remarks>
+    /// 검출하는 동안 사진이 바뀌었으면 적용하지 않고 <see cref="InfraredDefectApplyStatus.Cancelled"/> 를
+    /// 돌려 예약 IR 정리가 다시 하게 합니다 - <c>CompleteScheduledInfraredClean</c> 과 같은 확인입니다.
+    /// </remarks>
+    internal static async Task<InfraredDefectApplyResult> RunFilesAsync(
+        LibraryDocument document,
+        LibraryFrameSnapshot frame,
+        DefectSourceIdentity sourceIdentity,
+        string visiblePath,
+        string infraredPath,
+        InfraredDetectorParameters? parameters = null,
+        DevelopRun? run = null)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(frame);
+        if (Refusal(frame, sourceIdentity, out Guid frameId) is { } refused)
+        {
+            return refused;
+        }
+        InfraredDefectDetectionOutcome outcome = await Task.Run(() => DetectFiles(
+            visiblePath,
+            infraredPath,
+            frame.SourceKind,
+            parameters,
+            run, frame.InputGamma));
+        if (document.Frames.FirstOrDefault(candidate => candidate.Id == frame.Id) is not { } current ||
+            current.DefectRecipeRevision != frame.DefectRecipeRevision ||
+            current.InputGamma != frame.InputGamma ||
+            !string.Equals(current.SourcePath, frame.SourcePath, StringComparison.Ordinal) ||
+            current.DefectRecipe?.Items.Any(item => item.Kind == DefectEditKind.Infrared) == true)
+        {
+            return Result(InfraredDefectApplyStatus.Cancelled);
+        }
+        return outcome.Detection is { } detection && !outcome.IsFaulted
+            ? ApplyDetection(document, frame, frameId, sourceIdentity, detection)
+            : Result(InfraredDefectApplyStatus.DetectionFailed);
+    }
+
+    private static InfraredDefectApplyResult? Refusal(
+        LibraryFrameSnapshot frame,
+        DefectSourceIdentity sourceIdentity,
+        out Guid frameId)
+    {
+        frameId = Guid.Empty;
         if (frame.Route.FilmType is not (FilmType.ColorNegative or FilmType.ColorPositive))
         {
             return Result(InfraredDefectApplyStatus.UnsupportedFilm);
         }
-        if (!Guid.TryParseExact(frame.Id, "D", out Guid frameId) || frameId == Guid.Empty)
+        if (!Guid.TryParseExact(frame.Id, "D", out frameId) || frameId == Guid.Empty)
         {
             return Result(InfraredDefectApplyStatus.InvalidFrame);
         }
@@ -109,15 +173,7 @@ public static class InfraredDefectRecipeCoordinator
         {
             return Result(InfraredDefectApplyStatus.SourceMismatch);
         }
-        InfraredDefectDetectionOutcome outcome = DetectFiles(
-            visiblePath,
-            infraredPath,
-            frame.SourceKind,
-            parameters,
-            run, frame.InputGamma);
-        return outcome.Detection is { } detection && !outcome.IsFaulted
-            ? ApplyDetection(document, frame, frameId, sourceIdentity, detection)
-            : Result(InfraredDefectApplyStatus.DetectionFailed);
+        return null;
     }
 
     internal static InfraredDefectDetectionOutcome DetectFiles(

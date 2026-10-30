@@ -119,7 +119,8 @@ internal sealed class LibraryCatalogMaintenance(
     /// 부른 스레드(UI)에서 끝나고, 돌려준 일은 파일만 쓰므로 워커에서 불러도 됩니다 — 그 사이 편집이
     /// 섞이지 않습니다. 미리보기 스캔은 빼고, 결함 편집을 선언한 사진의 recipe 만 담습니다.
     /// </summary>
-    internal Func<CatalogBackupCreateResult> FreezeMemoryBackup()
+    internal Func<CatalogBackupCreateResult> FreezeMemoryBackup(
+        CancellationToken cancellationToken = default)
     {
         List<CatalogEntityRow> rows = [.. state.FrameRows().Where(row => !IsPreviewFrame(row.Payload))];
         Dictionary<Guid, DefectRecipeSnapshot> recipes = [];
@@ -136,7 +137,8 @@ internal sealed class LibraryCatalogMaintenance(
         tables[CatalogEntityTable.Frames] = LibraryDocumentState.CloneRows(rows);
         CatalogSnapshot snapshot = new(state.ActiveRollId, tables);
         CatalogSession session = state.Session;
-        return () => session.CreateBackupFromMemory(snapshot, recipes);
+        return () => session.CreateBackupFromMemory(
+            snapshot, recipes, cancellationToken: cancellationToken);
     }
 
     /// <summary>
