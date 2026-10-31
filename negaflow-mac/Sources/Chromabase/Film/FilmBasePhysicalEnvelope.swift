@@ -25,8 +25,15 @@ import Foundation
 //  - 포화되지 않은 광원은 상대 색도(`looksLikeLight`)로 거른다. 지금 값과도, 그 아래 더 어두운
 //    면과도 견준다(베이스 = 광원 × 마스크는 색 공간과 무관한 상대 관계다).
 //  - 크롭이 있으면 사진 안만 증거로 삼으므로 띠의 광원은 증거에 끼지 않는다.
-// 남는 한계는 하나다 — 마스크가 회색이라 베이스와 광원의 색이 같고, 광원이 포화되지 않은 채 크롭
-// 없이 넓게 찍혀 있으면 색으로도 밝기로도 가를 수 없다. 흑백 탐색과 같은 한계다.
+//  - 크롭이 없으면 광원을 가를 위치 정보가 없다. 색만으로는 원리적으로 못 가른다 — "광원 × 마스크
+//    = 베이스" 와 "베이스 × 염료 = 짙은 장면" 이 같은 꼴이다(포화되지 않은 중립 백라이트 0.84 옆의
+//    베이스 0.62/0.42/0.24 는 R/G 0.165·G/B 0.240, 짙은 장면 옆의 보라 베이스는 0.118·0.208).
+//    그래서 크롭이 없을 때는 리베이트 교체와 같은 R/B 문지기를 더 건다 — 마스크 색도만큼 덜
+//    오렌지인 더 밝은 면은 올리지 않고 앞 판의 답을 둔다. 애매하면 이 확인이 없던 때로 돌아갈
+//    뿐이다.
+// 남는 한계는 둘이다 — 크롭 없이 넣은 비오렌지 베이스가 장면보다 R/B 로 마스크 색도만큼 덜
+// 오렌지면 구제하지 못한다. 마스크가 회색이라 베이스와 광원의 색이 같고, 광원이 포화되지 않은 채
+// 크롭 없이 넓게 찍혀 있으면 색으로도 밝기로도 가를 수 없다(흑백 탐색과 같은 한계).
 //
 // 검증(Windows, 같은 규칙): 카탈로그 컬러 네거티브 169 장 중 19 장이 바뀌었고, 바뀐 것은 모두
 // 어둡게 뭉개지던 값이 실제 베이스(프레임 사이 틈·리베이트) 쪽으로 온 경우였다. 오렌지 필름 옆의
@@ -158,6 +165,7 @@ extension FilmBaseEstimator {
             )
         }
         func luma(_ c: SIMD3<Double>) -> Double { (c.x + c.y + c.z) / 3 }
+        func logRB(_ c: SIMD3<Double>) -> Double { log10(max(c.x, 1e-5) / max(c.z, 1e-5)) }
         let currentLuma = luma(base.rgb)
         for index in components.indices {
             guard let measured = measurements[index] else { continue }
@@ -175,6 +183,8 @@ extension FilmBaseEstimator {
                 || filmBrighterFraction(grid: grid, base: candidate, region: region) > contradictionFraction {
                 continue
             }
+            // 크롭이 없으면 띠의 광원도 후보다(위 머리말). 리베이트 교체와 같은 R/B 문지기.
+            if region == nil, logRB(candidate) < logRB(base.rgb) - backlightMaskLogMargin { continue }
             // 광원은 그것이 비춘 필름보다 마스크 색도만큼 덜 오렌지다. 띠 강등과 같은 밝기 창
             // (0.12~0.87 배) 안에 그런 더 어두운 면이 있으면 이 면은 광원이다.
             var litFilmBelow = false

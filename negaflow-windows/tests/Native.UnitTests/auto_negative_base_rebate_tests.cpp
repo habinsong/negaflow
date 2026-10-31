@@ -299,6 +299,47 @@ void neutral_light_beside_an_orange_base_stays_light() {
     expect_near(resolved.dmin[2], 0.0763, 0.01, "orange + light: blue stays the base");
 }
 
+void dim_unclipped_backlight_without_a_crop_stays_light() {
+    // macOS `testFilmBaseEstimatorHandlesDimUnclippedBacklightBands` 와 같은 장면입니다(2026-07-14
+    // 실사용 실패 재현). 멀티 스트립 디카 스캔에서 백라이트가 포화되지 않은 중립(0.84)이라 필름처럼
+    // 보이고, 크롭이 없어 위치로도 거를 수 없습니다. 베이스에 비해 R/G 는 마스크 문턱에 못 미쳐
+    // 상대 색도 한 가지로는 광원으로 걸리지 않습니다 — R/B 문지기가 걸러야 합니다.
+    constexpr std::uint32_t scan_width = 512U;
+    constexpr std::uint32_t scan_height = 384U;
+    const auto linear = [](const int red, const int green, const int blue) {
+        return negaflow::core::Rgba32F{
+            static_cast<float>(red) / 255.0F, static_cast<float>(green) / 255.0F,
+            static_cast<float>(blue) / 255.0F, 1.0F};
+    };
+    negaflow::imaging::WorkingImage image{};
+    image.width = scan_width;
+    image.height = scan_height;
+    image.stride_pixels = scan_width;
+    image.pixels.assign(static_cast<std::size_t>(scan_width) * scan_height, linear(216, 214, 212));
+    for (std::uint32_t y = 0U; y < scan_height; ++y) {
+        const std::uint32_t in_strip = y % 128U;
+        for (std::uint32_t x = 0U; x < scan_width; ++x) {
+            negaflow::core::Rgba32F& pixel = image.pixels[static_cast<std::size_t>(y) * scan_width + x];
+            if (in_strip >= 108U) {
+                pixel = linear(4, 3, 3);  // 스트립 사이 검정 갭
+            } else if (in_strip >= 12U) {
+                pixel = linear(158, 107, 61);  // 베이스
+                if (in_strip < 24U && x % 48U < 24U) {
+                    pixel = linear(216, 214, 212);  // 퍼포레이션으로 보이는 백라이트
+                }
+                if (in_strip >= 36U && in_strip < 96U && x >= 48U && x < 464U) {
+                    pixel = linear(60, 44, 30);  // 프레임(장면)
+                }
+            }
+        }
+    }
+    const auto resolved = negaflow::imaging::resolve_auto_negative_base(
+        image, negaflow::imaging::NegativeFilmType::color, std::nullopt);
+    expect_near(resolved.dmin[0], 158.0 / 255.0, 0.06, "dim backlight: red stays the base");
+    expect_near(resolved.dmin[1], 107.0 / 255.0, 0.06, "dim backlight: green stays the base");
+    expect_near(resolved.dmin[2], 61.0 / 255.0, 0.06, "dim backlight: blue stays the base");
+}
+
 }  // namespace
 
 int main() {
@@ -311,6 +352,7 @@ int main() {
     a_base_that_is_not_orange_is_still_the_base();
     a_purple_base_is_still_the_base();
     neutral_light_beside_an_orange_base_stays_light();
+    dim_unclipped_backlight_without_a_crop_stays_light();
     if (failures != 0) {
         std::cerr << failures << " auto negative base rebate assertion(s) failed\n";
         return 1;

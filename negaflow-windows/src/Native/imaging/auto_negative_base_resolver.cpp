@@ -222,9 +222,15 @@ constexpr double contradiction_fraction = 0.02;
 // 그보다 밝은 것은 필름이 아닌 맨 광원뿐입니다. 포화 근처는 필름이 아니고(베이스도 밀도가 있어
 // 포화되지 않습니다 — `accept_rebate_base` 와 같은 문턱), 포화되지 않은 광원은 기존과 같은 상대
 // 색도(`looks_like_light`)로 거릅니다. 크롭이 있으면 사진 안만 증거로 삼으므로 광원은 증거에
-// 끼지 않습니다. 남는 한계는 하나입니다 — 마스크가 회색이라 베이스와 광원의 색이 같고, 광원이
-// 포화되지 않은 채 크롭 없이 넓게 찍혀 있으면 색으로도 밝기로도 가를 수 없습니다. 흑백 필름의
-// 탐색과 같은 한계입니다.
+// 끼지 않습니다. 크롭이 없으면 광원을 가를 위치 정보가 없고, 색만으로는 원리적으로 못 가릅니다 —
+// "광원 × 마스크 = 베이스" 와 "베이스 × 염료 = 짙은 장면" 이 같은 꼴입니다(포화되지 않은 중립
+// 백라이트 0.84 옆의 베이스 0.62/0.42/0.24 는 R/G 0.165·G/B 0.240, 짙은 장면 옆의 보라 베이스는
+// 0.118·0.208). 그래서 크롭이 없을 때는 리베이트 교체와 같은 R/B 문지기를 더 겁니다 — 마스크
+// 색도만큼 덜 오렌지인 더 밝은 면은 올리지 않고 앞의 답을 둡니다(macOS
+// `FilmBasePhysicalEnvelope.swift` 와 같습니다). 남는 한계는 둘입니다 — 크롭 없이 넣은 비오렌지
+// 베이스가 장면보다 R/B 로 마스크 색도만큼 덜 오렌지면 구제하지 못합니다. 마스크가 회색이라
+// 베이스와 광원의 색이 같고, 광원이 포화되지 않은 채 크롭 없이 넓게 찍혀 있으면 색으로도 밝기로도
+// 가를 수 없습니다(흑백 필름의 탐색과 같은 한계).
 constexpr double envelope_channel_factor = 1.15;
 constexpr double envelope_saturation = 0.985;
 
@@ -419,6 +425,16 @@ struct EnvelopeComponent final {
         if (saturated || !not_darker || looks_like_light(candidate, result.dmin) ||
             film_brighter_than(grid, candidate, region) > contradiction_fraction) {
             continue;
+        }
+        // 크롭이 없으면 띠의 광원도 후보입니다(위 머리말). 리베이트 교체와 같은 R/B 문지기입니다.
+        if (!region.has_value()) {
+            const auto log_red_blue = [](const double red, const double blue) {
+                return std::log10(std::max(red, 1.0e-5) / std::max(blue, 1.0e-5));
+            };
+            if (log_red_blue(candidate[0], candidate[2]) <
+                log_red_blue(result.dmin[0], result.dmin[2]) - ring_mask_chroma().red_blue) {
+                continue;
+            }
         }
         // 광원은 그것이 비춘 필름보다 마스크 색도만큼 덜 오렌지입니다(베이스 = 광원 × 마스크).
         // 색 공간과 무관한 **상대** 관계라, 카메라 RGB 처럼 초록이 큰 공간에서도 성립합니다. 띠
