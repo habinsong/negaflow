@@ -54,4 +54,30 @@ extension AppModel {
             frame.rawPreviewTransform = snapshot.imageTransform
         }
     }
+
+    /// 정착 패스가 미룬 원본 미리보기. 원본을 다시 읽지 않고 방금 굳힌 정착 입력에서 만든다.
+    func renderDeferredRawPreview(_ frame: ScanFrame, settled: DevelopFrameSnapshot) {
+        guard ownsFrame(frame) else { return }
+        var snapshot = settled
+        snapshot.preloadedFullPreviewRaw = cachedSettledPreviewRaw(for: frame) ?? settled.preloadedFullPreviewRaw
+        let transformRevision = frame.transformRevision
+        let cleanRawRevision = frame.cleanRawRevision
+        let transform = snapshot.imageTransform
+        let prepared = snapshot
+        Task {
+            let pair = try? await Task.detached(priority: .utility) {
+                try DevelopFrameRenderer.renderRawPreviewPair(prepared)
+            }.value
+            guard let pair, ownsFrame(frame),
+                  frame.transformRevision == transformRevision,
+                  frame.cleanRawRevision == cleanRawRevision,
+                  frame.imageTransform == transform else { return }
+            frame.cachedRawBase = pair.base
+            frame.rawPreviewImage = NSImage(
+                cgImage: pair.transformed,
+                size: NSSize(width: pair.transformed.width, height: pair.transformed.height)
+            )
+            frame.rawPreviewTransform = transform
+        }
+    }
 }

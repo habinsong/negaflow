@@ -99,7 +99,7 @@ extension ImageLoader {
         _ url: URL, gamma: InputGammaInterpretation, applyOrientation: Bool
     ) throws -> DecodedImage {
         let (source, profile) = try gammaSource(url)
-        guard let cg = createFullyDecodedImage(source) else { throw InputGammaDecodeError.decodeFailed }
+        guard let cg = createFullyDecodedImage(source, url: url) else { throw InputGammaDecodeError.decodeFailed }
         let raw = try InputGammaDecoder.decode(cg, sourceICC: profile, gamma: gamma)
         let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
         let orientation = applyOrientation ? exifOrientation(props) : 1
@@ -117,7 +117,7 @@ extension ImageLoader {
         let (source, profile) = try gammaSource(url)
         guard let size = sourcePixelSize(source),
               max(size.width, size.height) > max(highResolutionThreshold, maxDimension) else { return nil }
-        guard let cg = createFullyDecodedImage(source) else { throw InputGammaDecodeError.decodeFailed }
+        guard let cg = createFullyDecodedImage(source, url: url) else { throw InputGammaDecodeError.decodeFailed }
         let raw = try InputGammaDecoder.decode(cg, sourceICC: profile, gamma: gamma, maxDimension: maxDimension)
         let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
         let orientation = applyOrientation ? exifOrientation(props) : 1

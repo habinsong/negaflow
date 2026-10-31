@@ -12,8 +12,12 @@ OPENMP_SHA=b21c04ee9cbe56e200c5d83823765a443ee6389bbc3f64154c96e94016e6cee9
 LLVM_CMAKE_SHA=3319203cfd1172bbac50f06fa68e318af84dcb5d65353310c0586354069d6634
 # Patches in scripts/libraw, applied in name order. Each keeps the serial build's output bit for bit:
 #   mem-image-parallel-rows: the final copy (with orientation) runs its rows in parallel.
+#   raw-decoders-parallel: plain CR2 lossless JPEG and NEF scans go to the bridge's parallel Huffman
+#     decoders, and Sony ARW2 rows decode in parallel. Anything else rewinds to LibRaw's own loop.
 #   xtrans-parallel-rows: stock X-Trans parallelism races between tiles (output changed run to run);
-#     tiles stay in serial order and the rows inside each tile run in parallel.
+#     tiles stay in serial order, the rows inside each tile run in parallel, and the green-bounds
+#     pass runs in groups of rows that do not touch each other.
+# These are the same files as negaflow-windows/scripts/libraw/.
 PATCHES=("$ROOT"/scripts/libraw/*.patch)
 PREVIEW_BRIDGE="$ROOT/scripts/libraw/native-preview-bridge.cpp"
 ARCHITECTURES="${1:-$(uname -m)}"
@@ -123,14 +127,26 @@ Modified files (patches included here, CDDL-1.0 like the files they change):
   gathers two per-pixel loops a row at a time.
 - src/postprocessing/mem_image.cpp (mem-image-parallel-rows.patch). The final
   copy into the output bitmap runs its rows in parallel.
-Both keep the output equal to the unpatched serial build bit for bit. No other
-LibRaw file is changed.
+- src/decoders/decoders_dcraw.cpp (raw-decoders-parallel.patch). Plain lossless
+  JPEG (CR2) and Nikon NEF scans are handed to the bridge's parallel Huffman
+  decoders, and Sony ARW2 rows are decoded in parallel after the frame is read
+  at once. Other files, or any sign of damage, rewind and run LibRaw's own loop.
+The X-Trans patch also runs the green-bounds pass in groups of rows that do not
+touch each other. All three keep the output equal to the unpatched serial build
+bit for bit (on this Mac: 41 RAW files - CR2, CR3, NEF, ARW, RAF, ORF, RW2,
+PEF, DNG - gave the same pixel hashes). No other LibRaw file is changed.
 native-preview-bridge.cpp is Negaflow's CDDL-1.0 source for selecting a provisional
 preview from reported mosaic data, forwarding cancellation, and reducing linear
 camera RGB directly from the processed sensor buffer. Its area weights and float
 accumulation order match RGB16AreaReduce.swift; no full-resolution output copy is
-allocated for previews. It uses the upstream public headers. Settled previews and
-exports keep the default quality.
+allocated for previews. negaflow_libraw_init() creates a LibRaw subclass that runs
+three per-pixel loops (scale_colors_loop, convert_to_rgb_loop,
+lin_interpolate_loop) on every core with byte-identical output. The bridge also
+holds the parallel Huffman decoders the decoder patch calls; they follow S. T.
+Klein and Y. Wiseman, "Parallel Huffman decoding with applications to JPEG
+files" (The Computer Journal, 2003), and are an independent implementation. It
+uses the upstream public headers. Settled previews and exports keep the default
+quality.
 
 OpenMP runtime: LLVM $LLVM_VERSION libomp, built from
 $LLVM_RELEASE/openmp-$LLVM_VERSION.src.tar.xz

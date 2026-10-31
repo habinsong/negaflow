@@ -254,4 +254,4 @@ Ein gutes Ergebnis im synthetischen IT8 belegt keine absolute Genauigkeit an ech
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-Die aktuelle Produktversion ist `1.2.3`. Bearbeitungsverlauf und Profilschemata werden auch künftig erst nach einem Prüfverfahren geändert.
+Die aktuelle Produktversion ist `1.2.4`. Bearbeitungsverlauf und Profilschemata werden auch künftig erst nach einem Prüfverfahren geändert.

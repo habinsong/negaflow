@@ -213,6 +213,7 @@ extension AppModel {
         selectedFrameDevelopTask?.cancel()
         frameStore.selectedFrameID = id
         CameraRAWSelectionTrace.begin(selectedFrame)
+        startSelectionDecodeHead()
         handleSelectedFrameChange(from: oldValue)
         // 마지막으로 작업하던 사진은 카탈로그에 남아야 다시 켰을 때 그 사진으로 돌아간다.
         // 종료 저장만 믿으면 비정상 종료에서 잃는다.
@@ -254,8 +255,14 @@ extension AppModel {
             // 정리 전에 시작하면 beginFrame 이 "이미 진행 중"으로 보고 요청을 버리는데, 그 진행 중
             // 루프는 이미 취소돼 아무도 다시 렌더하지 않는다(프리뷰가 영영 갱신되지 않던 경로).
             let previousDevelopTask = selectedFrameDevelopTask
+            // 이웃으로 미리 준비하던 바로 그 사진이면(TIFF·Apple 디코드) 원본을 다시 풀지 않고 그 결과를
+            // 기다려 쓴다. 카메라 RAW 네거티브는 LibRaw 가 같은 파일 디코드를 합치므로 기다리지 않는다
+            // (기다리면 첫 화면이 정착 마스터까지 늦어진다).
+            let neighborWarm = neighborCameraRAWPrefetchFrameID == selectedID && !usesCameraNativeDecode(frame)
+                ? neighborCameraRAWPrefetchTask : nil
             selectedFrameDevelopTask = Task { [weak self, weak frame] in
                 await previousDevelopTask?.value
+                await neighborWarm?.value
                 guard let self, let frame, !Task.isCancelled,
                       self.selectedFrameID == selectedID else { return }
                 // 시드가 도는 동안 현상을 시작하면 같은 원본을 두 번 디코드한다 — 기다렸다가

@@ -69,11 +69,16 @@ extension AppModel {
                    interactive.preloadedFullPreviewRaw == nil, interactive.inputGammaPreviewSource == nil,
                    !interactive.isInputGammaPreview, canShareSource {
                     let cleaned = interactive.cleanedRawURL
-                    inputPreviewSession = ImagePreviewSession(url: cleaned ?? interactive.rawScanURL,
+                    let key = SelectionDecodeHead.SessionKey(url: cleaned ?? interactive.rawScanURL,
                         inputGamma: cleaned == nil ? interactive.params.inputGamma : .automatic,
-                        rawRendering: rendering,
+                        rendering: rendering,
                         applyOrientation: cleaned == nil && interactive.sourceKind == .importedFile,
                         interpretInputGamma: cleaned == nil)
+                    // 선택 직후 미리 시작한 디코드가 같은 조건이면 그 세션을 이어받는다.
+                    inputPreviewSession = takeSelectionPreviewSession(for: frame, key: key)
+                        ?? ImagePreviewSession(url: key.url, inputGamma: key.inputGamma, rawRendering: key.rendering,
+                                               applyOrientation: key.applyOrientation,
+                                               interpretInputGamma: key.interpretInputGamma)
                     interactive.inputPreviewSession = inputPreviewSession
                 }
                 CameraRAWSelectionTrace.note(frame, "interactive \(Int(interactiveDimension)) selection=\(selectionBoundFrameID != nil) wait=\(waitsForSettle) session=\(inputPreviewSession != nil) cached=\(interactive.preloadedPreviewRaw != nil)")
@@ -215,9 +220,12 @@ extension AppModel {
 
             // ── 패스 2: 풀해상도 정착. 변형-전 캐시 + 비교/디버그 프리뷰 + 썸네일까지 채운다.
             let fullCleanRawRevision = frame.cleanRawRevision
+            // 원본 미리보기는 정착 그림을 화면에 낸 뒤 따로 만든다(`renderDeferredRawPreview`). 정착
+            // 패스에서 함께 만들면 그 렌더(실측 60~200ms)만큼 정착 표시가 늦다.
+            let wantsRawPreview = frame.rawPreviewImage == nil || frame.rawPreviewTransform != frame.imageTransform
             var full = makeSnapshot(
                 for: frame, baseKey: baseKey,
-                needsRawPreview: frame.rawPreviewImage == nil || frame.rawPreviewTransform != frame.imageTransform,
+                needsRawPreview: false,
                 needsNeutralPreview: beforeAfterCompareActive
                     && (frame.neutralPreviewImage == nil
                         || frame.neutralPreviewTransform != frame.imageTransform
@@ -322,6 +330,8 @@ extension AppModel {
                 frame.displayedSoftProofRevision = full.softProofRevision
                 frame.developedIsSettled = true
                 CameraRAWSelectionTrace.presented(frame, settled: true)
+                releaseSelectionDecodeHead(for: frame.id)
+                if wantsRawPreview { renderDeferredRawPreview(frame, settled: full) }
                 if let thumb = result.thumbnail {
                     frame.thumbnailImage = NSImage(cgImage: thumb, size: NSSize(width: thumb.width, height: thumb.height))
                     frame.thumbnailTransform = full.imageTransform

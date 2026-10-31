@@ -7,6 +7,11 @@ import Metal
 
 extension DevelopFrameRenderer {
     static func renderRawPreview(_ snapshot: DevelopFrameSnapshot) throws -> CGImage {
+        try renderRawPreviewPair(snapshot).transformed
+    }
+
+    /// 원본(반전 전) 미리보기와 그 변형 전 그림.
+    static func renderRawPreviewPair(_ snapshot: DevelopFrameSnapshot) throws -> (transformed: CGImage, base: CGImage) {
         let engine = ChromabaseEngine()
         let context = renderContext()
         guard let input = try resolveRenderInput(snapshot, engine: engine, context: context) else {
@@ -21,7 +26,14 @@ extension DevelopFrameRenderer {
                                maxDimension: snapshot.proxyMaxDimension),
             transform: snapshot.imageTransform,
             context: context
-        ).transformed
+        )
+    }
+
+    /// 정착 패스가 굳힐 입력만 만든다(이웃 사진 미리 준비). 실제 정착 렌더와 같은 함수로 만드니 결과도 같다.
+    static func settledPreviewInput(_ snapshot: DevelopFrameSnapshot) throws -> DevelopFramePreviewRaw? {
+        try autoreleasepool {
+            try resolveRenderInput(snapshot, engine: ChromabaseEngine(), context: renderContext())?.generatedPreviewRaw
+        }
     }
 
     struct RenderInput {

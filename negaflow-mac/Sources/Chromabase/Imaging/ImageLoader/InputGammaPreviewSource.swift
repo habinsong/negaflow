@@ -29,7 +29,7 @@ public final class InputGammaPreviewSource: @unchecked Sendable {
     public convenience init(url: URL) throws {
         let before = try InputGammaFileObservation.read(url)
         let (source, profile) = try ImageLoader.gammaSource(url)
-        guard let cg = ImageLoader.createFullyDecodedImage(source) else { throw InputGammaDecodeError.decodeFailed }
+        guard let cg = ImageLoader.createFullyDecodedImage(source, url: url) else { throw InputGammaDecodeError.decodeFailed }
         try self.init(url: url, source: source, profile: profile, image: cg)
         guard observation == before else { throw InputGammaDecodeError.decodeFailed }
     }
@@ -102,7 +102,7 @@ public final class InputGammaPreviewSource: @unchecked Sendable {
                 if let source { fallback = source }
                 else {
                     let (file, _) = try ImageLoader.gammaSource(url)
-                    guard let cg = ImageLoader.createFullyDecodedImage(file) else { throw InputGammaDecodeError.decodeFailed }
+                    guard let cg = ImageLoader.createFullyDecodedImage(file, url: url) else { throw InputGammaDecodeError.decodeFailed }
                     fallback = cg
                 }
                 image = try InputGammaDecoder.decode(fallback, sourceICC: profile, gamma: resolved, maxDimension: maxDimension)

@@ -72,7 +72,9 @@ public enum NativeCameraRAW {
             func symbol<T>(_ name: String, _: T.Type) -> T? {
                 dlsym(library, name).map { unsafeBitCast($0, to: T.self) }
             }
-            guard let initialize = symbol("libraw_init", Init.self),
+            // negaflow_libraw_init 은 LibRaw 의 화소 루프 셋을 모든 코어로 도는 하위 클래스를 만든다
+            // (native-preview-bridge.cpp). 같은 결과이고, 없는 빌드면 기본 생성자를 쓴다.
+            guard let initialize = symbol("negaflow_libraw_init", Init.self) ?? symbol("libraw_init", Init.self),
                   let open = symbol("libraw_open_file", Open.self),
                   let unpack = symbol("libraw_unpack", Process.self),
                   let process = symbol("libraw_dcraw_process", Process.self),

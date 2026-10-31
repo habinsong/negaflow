@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/de/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="Website"></a>
-  <a href="#download"><img src="https://img.shields.io/badge/version-1.2.3-EF8B26" alt="Version 1.2.3"></a>
+  <a href="#download"><img src="https://img.shields.io/badge/version-1.2.4-EF8B26" alt="Version 1.2.4"></a>
   <a href="negaflow-mac/docs/README_de.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 oder neuer"></a>
   <a href="negaflow-windows/docs/README_de.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 oder neuer"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache-2.0-Lizenz"></a>
@@ -73,10 +73,10 @@ Sie holen es sich bei [GitHub Releases](https://github.com/habinsong/negaflow/re
 
 | Datei | Umgebung |
 |---|---|
-| `negaflow-1.2.3-mac-universal.pkg` | macOS 14 oder neuer, Apple Silicon und Intel |
-| `negaflow-1.2.3-mac-arm64.pkg` | macOS 14 oder neuer, nur Apple Silicon |
-| `negaflow-1.2.3-win-x64.exe` | Windows 11 24H2 oder neuer, x64 |
-| `negaflow-1.2.3-win-x64-setup.zip` | Windows-Installer-ZIP |
+| `negaflow-1.2.4-mac-universal.pkg` | macOS 14 oder neuer, Apple Silicon und Intel |
+| `negaflow-1.2.4-mac-arm64.pkg` | macOS 14 oder neuer, nur Apple Silicon |
+| `negaflow-1.2.4-win-x64.exe` | Windows 11 24H2 oder neuer, x64 |
+| `negaflow-1.2.4-win-x64-setup.zip` | Windows-Installer-ZIP |
 
 Kompatibel mit macOS 14, 26 und 27.
 
@@ -97,10 +97,10 @@ Um einen echten Scanner anzuschließen, braucht es ein separates Plug-in, und f�
 - Export als JPEG, PNG, 16-Bit-TIFF und lineares 16-Bit-DNG, ICC-Profile, und Angaben wie Kamera, Objektiv und Film ins EXIF geschrieben
 - Acht Abzugslayouts, Papiervorschauen, Foto- und ISO-Papiere sowie die C-Print-Funktion.
 
-## 1.2.3
+## 1.2.4
 
-- Auf dem Mac erscheinen die ersten Kamera-RAW-Vorschauen früher. DNG- und TIFF-Dateien werden seltener mehrfach dekodiert.
-- Unter Windows wurden die Speicherverwaltung der GPU-Transferpuffer und des Vorschaubild-Caches sowie konkurrierende Zugriffe beim Abbrechen korrigiert.
+- Die automatische Schätzung der Filmbasis wurde weiter verbessert.
+- RAW- und TIFF-Dateien laden auf Mac und Windows schneller.
 - Ab Version 1.2.X werden hocheffiziente NEF-Dateien aufgrund von Änderungen an der RAW-Verarbeitung in der Bibliothek sowohl auf dem Mac als auch unter Windows nicht mehr unterstützt.
 
 ## Chroma Engine

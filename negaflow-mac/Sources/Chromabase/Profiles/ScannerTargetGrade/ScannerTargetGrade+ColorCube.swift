@@ -200,39 +200,46 @@ extension ScannerTargetGrade {
         let reciprocal = reciprocal(prepared)
 
         var cube = [Float](repeating: 0, count: dim * dim * dim * 4)
-        for bi in 0..<dim {
-            let bInput = Double(bi) / Double(dim - 1)
-            for gi in 0..<dim {
-                let gInput = Double(gi) / Double(dim - 1)
-                for ri in 0..<dim {
-                    let rInput = Double(ri) / Double(dim - 1)
-                    let input = SIMD3(rInput, gInput, bInput)
-                    let inputLuma = 0.2126 * rInput + 0.7152 * gInput + 0.0722 * bInput
-                    let inputLab = srgbToLab(r: rInput, g: gInput, b: bInput)
-                    let candidate = transformedSRGB(
-                        input: input,
-                        inputLuma: inputLuma,
-                        inputLab: inputLab,
-                        signature: prepared
-                    )
-                    let reciprocalCandidate = transformedSRGB(
-                        input: input,
-                        inputLuma: inputLuma,
-                        inputLab: inputLab,
-                        signature: reciprocal
-                    )
-                    let scale = sharedRelativeGamutScale(
-                        input: input,
-                        candidate: candidate,
-                        reciprocalCandidate: reciprocalCandidate
-                    )
-                    let output = input + (candidate - input) * scale
-                    let offset = ((bi * dim + gi) * dim + ri) * 4
-                    // 공통 scale이 unit gamut을 보장한다. clamp는 Float 반올림 오차 방어뿐이다.
-                    cube[offset] = Float(clamp(output.x, 0.0, 1.0))
-                    cube[offset + 1] = Float(clamp(output.y, 0.0, 1.0))
-                    cube[offset + 2] = Float(clamp(output.z, 0.0, 1.0))
-                    cube[offset + 3] = 1
+        // 칸마다 독립이라 B 슬라이스로 나눠 모든 코어로 채운다(새 장면마다 26만 칸을 한 코어로 채우던
+        // 것이 정착 렌더를 붙잡았다). 칸의 계산은 그대로라 결과도 같다. Swift 동시성의 협력 스레드에서
+        // 불려도 일반 작업 스레드로 퍼지도록 GCD 전역 큐 문맥에서 돌린다(우선순위는 부른 쪽을 따른다).
+        cube.withUnsafeMutableBufferPointer { cube in
+            DispatchQueue.global(qos: DispatchQoS.QoSClass(rawValue: qos_class_self()) ?? .userInitiated).sync {
+                DispatchQueue.concurrentPerform(iterations: dim) { bi in
+                    let bInput = Double(bi) / Double(dim - 1)
+                    for gi in 0..<dim {
+                        let gInput = Double(gi) / Double(dim - 1)
+                        for ri in 0..<dim {
+                            let rInput = Double(ri) / Double(dim - 1)
+                            let input = SIMD3(rInput, gInput, bInput)
+                            let inputLuma = 0.2126 * rInput + 0.7152 * gInput + 0.0722 * bInput
+                            let inputLab = srgbToLab(r: rInput, g: gInput, b: bInput)
+                            let candidate = transformedSRGB(
+                                input: input,
+                                inputLuma: inputLuma,
+                                inputLab: inputLab,
+                                signature: prepared
+                            )
+                            let reciprocalCandidate = transformedSRGB(
+                                input: input,
+                                inputLuma: inputLuma,
+                                inputLab: inputLab,
+                                signature: reciprocal
+                            )
+                            let scale = sharedRelativeGamutScale(
+                                input: input,
+                                candidate: candidate,
+                                reciprocalCandidate: reciprocalCandidate
+                            )
+                            let output = input + (candidate - input) * scale
+                            let offset = ((bi * dim + gi) * dim + ri) * 4
+                            // 공통 scale이 unit gamut을 보장한다. clamp는 Float 반올림 오차 방어뿐이다.
+                            cube[offset] = Float(clamp(output.x, 0.0, 1.0))
+                            cube[offset + 1] = Float(clamp(output.y, 0.0, 1.0))
+                            cube[offset + 2] = Float(clamp(output.z, 0.0, 1.0))
+                            cube[offset + 3] = 1
+                        }
+                    }
                 }
             }
         }

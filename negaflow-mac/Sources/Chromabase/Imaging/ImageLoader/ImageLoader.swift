@@ -17,7 +17,11 @@ public enum ImageLoader {
     /// ImageIO의 기본 지연 디코드는 같은 CGImage를 여러 CIContext에서 읽을 때 압축 원본을
     /// context마다 다시 풀 수 있다. 풀해상도 현상/내보내기는 생성 시 한 번 디코드해 캐시한
     /// 픽셀을 공유한다. 비트 깊이·색공간·픽셀 치수는 바꾸지 않는다.
-    static func createFullyDecodedImage(_ source: CGImageSource) -> CGImage? {
+    ///
+    /// `url` 을 주면 LZW 스트립 TIFF 는 `TIFFStripDecoder` 가 모든 코어로 푼다(같은 비트, 이미 메모리
+    /// 비트맵이라 `renderReadyImage` 가 필요 없다). 맡지 못하는 파일은 아래 Image I/O 경로 그대로다.
+    static func createFullyDecodedImage(_ source: CGImageSource, url: URL? = nil) -> CGImage? {
+        if let url, let parallel = TIFFStripDecoder.decode(url, source: source) { return parallel }
         guard let decoded = CGImageSourceCreateImageAtIndex(
             source,
             0,
@@ -282,7 +286,7 @@ public enum ImageLoader {
         // RAW/DNG는 CIRAWFilter가 파일 orientation을 기본 적용하므로 여기서 재적용하지 않는다.
         if kind(of: url) == .rawDng { return loadRAWDecoded(url, rendering: rawRendering) }
         guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
-              let cg = createFullyDecodedImage(src) else {
+              let cg = createFullyDecodedImage(src, url: url) else {
             guard let image = loadStandard(url) else { return nil }
             return DecodedImage(
                 image: image,

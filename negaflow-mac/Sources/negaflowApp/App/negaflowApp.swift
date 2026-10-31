@@ -105,6 +105,7 @@ final class AppModel: ObservableObject {
     var defectRecordWarmTask: Task<Void, Never>?
     var neighborCameraRAWPrefetchTask: Task<Void, Never>?
     var neighborCameraRAWPrefetchFrameID: UUID?
+    var selectionDecodeHead: SelectionDecodeHead?
     var sequentialLibraryDevelopmentTask: Task<Void, Never>?
     var printPackagePreviewTask: Task<Void, Never>?
 

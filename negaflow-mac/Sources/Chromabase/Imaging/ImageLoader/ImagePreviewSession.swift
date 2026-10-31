@@ -57,7 +57,7 @@ public final class ImagePreviewSession: @unchecked Sendable {
                     guard let file = ImageLoader.imageSource(url),
                           CGImageSourceGetType(file) as String? == "public.tiff",
                           let dimensions = ImageLoader.sourcePixelSize(file),
-                          let cg = ImageLoader.createFullyDecodedImage(file) else { return nil }
+                          let cg = ImageLoader.createFullyDecodedImage(file, url: url) else { return nil }
                     size = dimensions
                     let info = interpretInputGamma
                         ? try ImageLoader.inputGammaSourceInfo(url, source: file, image: cg) : nil

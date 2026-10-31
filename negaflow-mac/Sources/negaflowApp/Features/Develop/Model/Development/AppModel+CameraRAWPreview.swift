@@ -16,8 +16,10 @@ extension AppModel {
               !snapshot.requiresCleanedRaw, snapshot.preloadedRaw == nil,
               snapshot.cleanedRawURL == nil, snapshot.preloadedPreviewRaw == nil,
               snapshot.preloadedFullPreviewRaw == nil,
-              let work = NativeCameraRAW.beginProgressivePreview(
-                snapshot.rawScanURL, firstMaxDimension: snapshot.proxyMaxDimension) else { return (true, false) }
+              let work = takeSelectionProgressivePreview(
+                for: frame, url: snapshot.rawScanURL, firstMaxDimension: snapshot.proxyMaxDimension)
+                ?? NativeCameraRAW.beginProgressivePreview(
+                    snapshot.rawScanURL, firstMaxDimension: snapshot.proxyMaxDimension) else { return (true, false) }
         let sourceRevision = frame.sourceLocationRevision
         defer { work.cancel() }
         do {

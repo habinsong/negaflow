@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/zh-Hans/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="网站"></a>
-  <a href="#下载"><img src="https://img.shields.io/badge/version-1.2.3-EF8B26" alt="版本 1.2.3"></a>
+  <a href="#下载"><img src="https://img.shields.io/badge/version-1.2.4-EF8B26" alt="版本 1.2.4"></a>
   <a href="negaflow-mac/docs/README_zh-Hans.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 及以上"></a>
   <a href="negaflow-windows/docs/README_zh-Hans.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 或更高"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 许可证"></a>
@@ -73,10 +73,10 @@
 
 | 安装文件 | 适用环境 |
 |---|---|
-| `negaflow-1.2.3-mac-universal.pkg` | macOS 14 及以上，Apple Silicon 和 Intel |
-| `negaflow-1.2.3-mac-arm64.pkg` | macOS 14 及以上，仅 Apple Silicon |
-| `negaflow-1.2.3-win-x64.exe` | Windows 11 24H2 或更高，x64 |
-| `negaflow-1.2.3-win-x64-setup.zip` | Windows 安装程序 ZIP |
+| `negaflow-1.2.4-mac-universal.pkg` | macOS 14 及以上，Apple Silicon 和 Intel |
+| `negaflow-1.2.4-mac-arm64.pkg` | macOS 14 及以上，仅 Apple Silicon |
+| `negaflow-1.2.4-win-x64.exe` | Windows 11 24H2 或更高，x64 |
+| `negaflow-1.2.4-win-x64-setup.zip` | Windows 安装程序 ZIP |
 
 兼容 macOS 14、26、27。
 
@@ -97,10 +97,10 @@ Windows 的安装在用户文件夹里就结束了，不会要管理员权限。
 - JPEG、PNG、16 位 TIFF 和 16 位线性 DNG 导出、ICC 配置文件，相机、镜头、胶片等记录保存进 EXIF
 - 八种印相版式、纸张预览、照片用与 ISO 纸张，以及 C-print 功能
 
-## 1.2.3
+## 1.2.4
 
-- Mac缩短了相机RAW首次预览的等待时间，并减少DNG和TIFF的重复解码。
-- Windows修复了GPU传输缓冲区和缩略图缓存的内存管理问题，以及取消任务时的竞争问题。
+- 进一步改进了片基的自动估算。
+- Mac和Windows上RAW和TIFF文件的加载都更快了。
 - 从1.2.X版本起，由于RAW处理逻辑的变更，Mac和Windows的图库均不支持高效率NEF格式。
 
 ## Chroma Engine
