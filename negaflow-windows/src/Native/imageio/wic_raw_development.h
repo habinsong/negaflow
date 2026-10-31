@@ -23,4 +23,7 @@ namespace negaflow::imageio::wic_detail {
 // 그렇다면 WIC 를 다시 열지 않고 LibRaw 로 곧장 갑니다 - 결과는 WIC 를 거쳐 실패한 뒤와 같습니다.
 [[nodiscard]] bool raw_development_known_unavailable(const std::filesystem::path& path) noexcept;
 
+// 카메라 RAW(와 DNG) 확장자인지입니다. 음화 RAW 는 WIC 를 열어 볼 필요 없이 LibRaw 로 곧장 갑니다.
+[[nodiscard]] bool has_camera_raw_extension(const std::filesystem::path& path) noexcept;
+
 }  // namespace negaflow::imageio::wic_detail

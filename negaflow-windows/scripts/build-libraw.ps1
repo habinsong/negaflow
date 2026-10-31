@@ -82,12 +82,17 @@ if (Test-Path $sourceDir) { Remove-Item -Recurse -Force $sourceDir }
 & tar.exe -xzf $archive -C $WorkRoot
 if ($LASTEXITCODE -ne 0) { throw "LibRaw 소스를 풀지 못했다 (exit $LASTEXITCODE)." }
 
-# LibRaw 패치(scripts\libraw\*.patch)를 이름 순서로 얹는다. 둘 다 `/openmp` 없이 지은 것과 비트
+# LibRaw 패치(scripts\libraw\*.patch)를 이름 순서로 얹는다. 모두 `/openmp` 없이 지은 것과 비트
 # 단위로 같은 출력을 낸다.
 #   mem-image-parallel-rows: 마지막 출력 복사(방향 적용 포함)를 행 단위로 나눈다.
+#   raw-decoders-parallel: CR2 무손실 JPEG·NEF Huffman 데이터를 브리지의 병렬 해독기로 풀고(이
+#     기계 실측 unpack: CR2 245~425 ms → 43~86 ms, 52 MP 1,020 → 181 ms, NEF 198~401 → 35~62 ms),
+#     ARW2 는 프레임을 한 번에 읽어 행을 나눠 푼다(100 → 20 ms). 해당하지 않거나 손상 기미가
+#     있으면 같은 자리로 되감아 LibRaw 의 원래 고리가 돈다.
 #   xtrans-parallel-rows: upstream 은 Fuji X-Trans 타일 행을 OpenMP 로 나누는데 겹치는 타일이
 #     서로의 화소를 덮어써 실행할 때마다 결과가 달랐다(같은 RAF, 채널값 0.085% 가 최대 1.9%
-#     차이). 타일을 직렬 순서로 두고 타일 안의 행만 나눈다.
+#     차이). 타일을 직렬 순서로 두고 타일 안의 행만 나눈다. 타일 앞의 초록 최소·최대 준비는
+#     서로 닿지 않는 행 묶음별로 나눠 돈다(RAF 107 → 9 ms).
 $libRawPatches = @(Get-ChildItem -LiteralPath (Join-Path $scriptDir 'libraw') -Filter '*.patch' | Sort-Object Name)
 if ($libRawPatches.Count -eq 0) { throw 'scripts\libraw 에 LibRaw 패치가 없다.' }
 # 작업 폴더가 저장소 안에 있어도 git 이 바깥 저장소 루트 기준으로 경로를 읽지 않게 막는다.
@@ -103,8 +108,26 @@ try {
 }
 $patched = Get-Content -Raw -LiteralPath (Join-Path $sourceDir 'src\demosaic\xtrans_demosaic.cpp')
 if ($patched -notmatch 'Tiles run one at a time') { throw 'X-Trans 패치가 소스에 들어가지 않았다.' }
+# 같은 패치가 타일 사이에 LibRaw 의 취소 확인(`checkCancel`)을 둔다. 앱이 사진을 넘기면 앞 사진의
+# X-Trans 디모자이크(RAF 한 장 1.1 초)를 끝까지 기다리지 않고 끊는다.
+if ($patched -notmatch 'a cancel request is honoured between tiles') { throw 'X-Trans 취소 지점이 소스에 들어가지 않았다.' }
+if ($patched -notmatch 'bound groups of rows') { throw 'X-Trans 준비 단계 패치가 소스에 들어가지 않았다.' }
+$patched = Get-Content -Raw -LiteralPath (Join-Path $sourceDir 'src\decoders\decoders_dcraw.cpp')
+foreach ($marker in @('negaflow_ljpeg_parallel(ifp', 'negaflow_nikon_parallel(ifp', 'decode_row(frame')) {
+    if (-not $patched.Contains($marker)) { throw "RAW 해독 병렬화 패치가 소스에 들어가지 않았다: $marker" }
+}
 $patched = Get-Content -Raw -LiteralPath (Join-Path $sourceDir 'src\postprocessing\mem_image.cpp')
 if ($patched -notmatch 'Rows are independent copies') { throw '출력 복사 패치가 소스에 들어가지 않았다.' }
+# macOS 와 같은 프리뷰 브리지(`scripts\libraw\native-preview-bridge.cpp`)를 DLL 에 함께 넣는다.
+# 반 크기 첫 화면(`negaflow_libraw_preview_mode`)이 RAF 한 장의 처리 1,207 ms 를 55 ms 로
+# 줄인다(이 기계 실측). 메이크파일 규칙은 `native-preview-bridge-msvc.patch` 가 더한다.
+$previewBridge = Join-Path $scriptDir 'libraw\native-preview-bridge.cpp'
+if (-not (Test-Path -LiteralPath $previewBridge)) { throw "프리뷰 브리지 소스가 없다: $previewBridge" }
+$bridgeDirectory = Join-Path $sourceDir 'src\negaflow'
+New-Item -ItemType Directory -Force -Path $bridgeDirectory | Out-Null
+Copy-Item -LiteralPath $previewBridge -Destination (Join-Path $bridgeDirectory 'native_preview_bridge.cpp') -Force
+$patched = Get-Content -Raw -LiteralPath (Join-Path $sourceDir 'Makefile.msvc')
+if ($patched -notmatch 'native_preview_bridge\.obj') { throw '프리뷰 브리지 메이크파일 패치가 들어가지 않았다.' }
 
 # ── 3. MSVC 로 빌드한다 ──────────────────────────────────────────────────────
 # LibRaw 의 CMake 스크립트는 upstream 이 공식 지원하지 않는다(README.cmake). 저장소가
@@ -194,6 +217,13 @@ $required = @(
 # 선택 심볼. 없어도 RAW 현상은 되고 촬영 기록만 비므로 여기서 배포를 막지 않는다 —
 # 다만 우리가 짓는 DLL 에서 빠졌다면 그것은 알아야 한다.
 $optional = @('libraw_get_imgother')
+# 우리가 함께 넣는 프리뷰 브리지와 그것이 기대는 LibRaw 함수입니다. 앱은 없으면 원본 크기 처리로
+# 물러서지만, 이 스크립트가 지은 DLL 에서 빠졌다면 빌드가 틀린 것이므로 여기서 멈춘다.
+$bridge = @('negaflow_libraw_preview_mode', 'negaflow_libraw_preview_size',
+    'negaflow_libraw_make_preview', 'negaflow_libraw_cancel', 'libraw_free_image',
+    'negaflow_libraw_linear_size', 'negaflow_libraw_make_linear_preview',
+    'negaflow_libraw_first_preview_possible', 'negaflow_libraw_linear_header',
+    'negaflow_libraw_init')
 # dumpbin 은 여러 줄을 돌려주므로 **한 문자열로 합쳐서** 본다. 배열에 `-notmatch` 를 쓰면
 # boolean 이 아니라 "안 맞는 원소들" 이 나와서 거의 항상 참이 된다 — 실제로 이 스크립트가
 # 처음에 모든 심볼을 없다고 보고한 원인이 그것이었다.
@@ -207,6 +237,9 @@ if ($missingOptional) {
 } else {
     Write-Host "선택 C API 심볼 $($optional.Count) 개 확인"
 }
+$missingBridge = @($bridge | Where-Object { $exports -notmatch "\b$([regex]::Escape($_))\b" })
+if ($missingBridge) { throw "libraw.dll 에 프리뷰 브리지 심볼이 없다: $($missingBridge -join ', ')" }
+Write-Host "프리뷰 브리지 심볼 $($bridge.Count) 개 확인"
 
 # ── 5. 출력 폴더와 LibRaw 고지 자료를 놓는다 ───────────────────────────────
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
@@ -223,15 +256,32 @@ foreach ($name in @('LICENSE.LGPL', 'LICENSE.CDDL', 'COPYRIGHT', 'Changelog.txt'
 Copy-Item -LiteralPath $archive -Destination $licenseDir -Force
 Copy-Item -LiteralPath $MyInvocation.MyCommand.Path -Destination (Join-Path $licenseDir 'build-libraw.ps1') -Force
 foreach ($libRawPatch in $libRawPatches) { Copy-Item -LiteralPath $libRawPatch.FullName -Destination $licenseDir -Force }
+Copy-Item -LiteralPath $previewBridge -Destination $licenseDir -Force
 @"
 LibRaw upstream: https://github.com/LibRaw/LibRaw/tree/$LibRawCommit
 This Windows distribution selects CDDL-1.0 from upstream dual licensing.
 Source SHA-256: $LibRawSha256
 Modified files (patches included, distributed under CDDL-1.0):
 - src/demosaic/xtrans_demosaic.cpp: xtrans-parallel-rows.patch keeps tiles in
-  serial order and processes rows inside each tile in parallel.
+  serial order and processes rows inside each tile in parallel. Between tiles
+  it calls LibRaw's own checkCancel() so a cancelled preview stops early. The
+  green bounds pass before the tiles runs groups of rows that do not touch
+  each other in parallel.
+- src/decoders/decoders_dcraw.cpp: raw-decoders-parallel.patch hands plain
+  lossless JPEG (CR2) and Nikon NEF scans to the bridge's parallel Huffman
+  decoders and decodes Sony ARW2 rows in parallel after reading the frame at
+  once. Files outside those cases, or showing any sign of damage, rewind and
+  run LibRaw's own loop.
 - src/postprocessing/mem_image.cpp: mem-image-parallel-rows.patch copies
   output bitmap rows in parallel.
+- Makefile.msvc: native-preview-bridge-msvc.patch links
+  native-preview-bridge.cpp (Negaflow contributors, CDDL-1.0) into the DLL. It
+  selects a half-size provisional preview, as on macOS, reduces
+  identity-scaled linear DNGs straight from the unpacked samples, and runs
+  LibRaw's three virtual per-pixel loops (scale_colors_loop,
+  convert_to_rgb_loop, lin_interpolate_loop) on every core in a LibRaw
+  subclass; processed images match stock LibRaw byte for byte. It also holds
+  the parallel Huffman decoders the decoders_dcraw.cpp patch calls.
 The patched DLL matches the unpatched serial build on the tested RAW files.
 To rebuild, use a Negaflow source checkout with the included build-libraw.ps1
 and the patches in scripts/libraw/. The exact upstream archive is included.

@@ -217,15 +217,42 @@ directly so inversion precedes the camera color matrix.
 - Built with `/openmp` and a static C runtime (`/MT`). Microsoft's OpenMP
   runtime, `vcomp140.dll`, is copied from the installed Visual C++ redistributable
   directory and shipped beside `libraw.dll`.
-- Two LibRaw files are modified under CDDL-1.0. The patches in
+- Three LibRaw files are modified under CDDL-1.0. The patches in
   [`scripts/libraw/`](scripts/libraw/) keep X-Trans tiles in serial order while
-  parallelizing rows inside each tile (`src/demosaic/xtrans_demosaic.cpp`) and
-  parallelize the output bitmap copy (`src/postprocessing/mem_image.cpp`).
+  parallelizing rows inside each tile, with LibRaw's own `checkCancel()` between
+  tiles so a cancelled preview stops early, and run the green-bounds pass before
+  the tiles in groups of rows that do not touch each other
+  (`src/demosaic/xtrans_demosaic.cpp`); parallelize the output bitmap copy
+  (`src/postprocessing/mem_image.cpp`); and hand plain lossless JPEG (CR2) and
+  Nikon NEF scans to the bridge's parallel Huffman decoders and decode Sony ARW2
+  rows in parallel after reading the frame at once
+  (`src/decoders/decoders_dcraw.cpp`). Files outside those cases, or showing any
+  sign of damage, rewind and run LibRaw's own loop. On the Windows validation
+  PC the unpacked sensor data matched stock LibRaw byte for byte for 23 RAF,
+  CR2, NEF and ARW files and for damaged copies of them, and unpacking took
+  43-195 ms instead of 245-1020 ms for CR2, 15-62 ms instead of 90-401 ms for
+  NEF and 20 ms instead of 100 ms for ARW.
   On four tested RAW files, the patched DLL matches the unpatched serial build
   bit for bit. The former parallel X-Trans build differed from the serial result.
   On the Windows validation PC, the minimum of three decode runs changed from
   5.2 to 3.7 seconds for RAF and 1.81 to 1.50 seconds for ARW; NEF stayed at
   1.03 seconds. These are decoder timings, not whole-app export timings.
+- `native-preview-bridge.cpp` (Negaflow contributors, CDDL-1.0) is linked into
+  `libraw.dll`, as on macOS. It is the same source as
+  `negaflow-mac/scripts/libraw/native-preview-bridge.cpp` with Windows export
+  markers added, plus Windows-only additions: one function reports whether
+  a half-size first preview is possible, three read and reduce
+  identity-scaled linear DNGs without `dcraw_process()`, and
+  `negaflow_libraw_init()` creates a LibRaw subclass that overrides LibRaw's
+  three virtual per-pixel loops (`scale_colors_loop`, `convert_to_rgb_loop`,
+  `lin_interpolate_loop`) to run them on every core. On the Windows
+  validation PC the processed images matched stock LibRaw byte for byte for
+  RAF, CR2, ARW and NEF. It also holds the parallel Huffman decoders that the
+  `decoders_dcraw.cpp` patch calls; they follow S. T. Klein and Y. Wiseman,
+  "Parallel Huffman decoding with applications to JPEG files" (The Computer
+  Journal, 2003), and are an independent implementation. It selects a
+  half-size provisional preview for camera RAW.
+  `native-preview-bridge-msvc.patch` adds it to `Makefile.msvc`.
 
 ### Runtime loading of LibRaw
 
@@ -241,11 +268,13 @@ Visual C++ Redistributable licence that permits redistribution with an
 application. It is not LibRaw code and carries no LGPL obligation of its own.
 
 This distribution selects CDDL-1.0 from upstream's dual licence. The library
-includes the two patches above and remains a separate, replaceable DLL. Negaflow source files
-retain their Apache-2.0 licence.
+includes the patches and the preview bridge above and remains a separate,
+replaceable DLL. The bridge is distributed under CDDL-1.0 with the library;
+other Negaflow source files retain their Apache-2.0 licence.
 
 `scripts/build-libraw.ps1` stages the upstream `LICENSE.CDDL`, `LICENSE.LGPL`,
-`COPYRIGHT`, `Changelog.txt`, the exact source archive, both patches, a modification notice and the build script.
+`COPYRIGHT`, `Changelog.txt`, the exact source archive, the patches,
+`native-preview-bridge.cpp`, a modification notice and the build script.
 `scripts/build-release.ps1` includes them in `licenses/libraw/`, together with
 `LibRaw-Third-Party-Notices.txt` for upstream BSD and MIT portions. The LGPL
 text is retained as the upstream alternative. It is not the selected licence

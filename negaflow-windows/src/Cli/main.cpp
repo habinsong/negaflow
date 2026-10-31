@@ -44,7 +44,7 @@ void print_help() {
                  "  negaflow-cli --develop-negative-tiff <path> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<exposure> <contrast> <curve-highlights> <curve-lights> <curve-darks> <curve-shadows>] [<film_scan> <film-emulation> <film-look-intensity>]\n"
                  "  negaflow-cli --export-developed-png16 <source> <destination> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<exposure> <contrast> <curve-highlights> <curve-lights> <curve-darks> <curve-shadows>] [<film_scan> <film-emulation> <film-look-intensity>]\n"
                  "  negaflow-cli --export-developed-tiff16 <source> <destination> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<exposure> <contrast> <curve-highlights> <curve-lights> <curve-darks> <curve-shadows>] [<film_scan> <film-emulation> <film-look-intensity>]\n"
-                 "  negaflow-cli --auto-base-probe <source> [color|bw]\n"
+                 "  negaflow-cli --auto-base-probe <source> [color|bw] [crop <x> <y> <w> <h> <rotation> <flipH> <flipV>]\n"
                  "  negaflow-cli --pick-film-base <source> <unit-x> <unit-y> [color|bw]\n"
                  "  negaflow-cli --sha256-image <path>\n"
                  "  negaflow-cli --help\n";

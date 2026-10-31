@@ -58,6 +58,13 @@ public sealed class LibraryFolderTreeView : UserControl
     /// </summary>
     private readonly HashSet<string> selectedFrameIds = new(StringComparer.Ordinal);
 
+    // 마지막으로 그린 트리의 사진 줄과 폴더 머리줄입니다. 선택만 바뀔 때는 이 줄들의 색만 고칩니다.
+    private readonly Dictionary<string, (FontIcon Icon, TextBlock Text, Button Row)> renderedRows =
+        new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (FontIcon Chevron, FontIcon Folder, TextBlock Title)> renderedHeaders =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, LibraryBrowserFolderSection> sectionOfFrame = new(StringComparer.Ordinal);
+
     public LibraryFolderTreeView()
     {
         Content = host;
@@ -167,7 +174,7 @@ public sealed class LibraryFolderTreeView : UserControl
     public IReadOnlyCollection<string> SelectedFrameIds => selectedFrameIds;
 
     /// <summary>
-    /// 활성 사진과 고른 사진들을 <b>함께</b> 겁니다. 한 번만 다시 그립니다.
+    /// 활성 사진과 고른 사진들을 <b>함께</b> 겁니다. 바뀐 줄만 한 번 다시 칠합니다.
     /// </summary>
     /// <remarks>
     /// 둘을 따로 거는 자리가 있으면 그 가운데 하나만 미는 길이 반드시 생깁니다 — 실제로
@@ -185,14 +192,84 @@ public sealed class LibraryFolderTreeView : UserControl
         {
             return;
         }
+        // 색을 다시 칠할 줄 — 예전과 지금의 활성·고른 사진 전부입니다.
+        HashSet<string> touched = new(selectedFrameIds, StringComparer.Ordinal);
+        if (selectedFrameId is not null)
+        {
+            _ = touched.Add(selectedFrameId);
+        }
         selectedFrameId = activeFrameId;
         selectedFrameIds.Clear();
         foreach (string id in frameIds)
         {
             _ = selectedFrameIds.Add(id);
+            _ = touched.Add(id);
         }
-        Render();
+        if (activeFrameId is not null)
+        {
+            _ = touched.Add(activeFrameId);
+        }
+        // 사진을 넘길 때마다 트리를 통째로 다시 지었습니다. 현상·인화 두 화면이 각각 194 장
+        // 트리를 짓느라 UI 스레드가 한 번에 약 100 ms 씩 묶였고(2026-10-31 실기 기록), 그동안 다
+        // 그린 현상 화면도 올라가지 못했습니다. 구조는 그대로이고 선택만 바뀌었으면 바뀐 줄만 칠합니다.
+        if (!RepaintSelection(touched))
+        {
+            Render();
+        }
     }
+
+    /// <summary>
+    /// 선택이 바뀐 줄과 그 폴더 머리줄의 색만 고칩니다. 그린 적이 없거나 테마가 바뀐 뒤면
+    /// false — 호출자가 통째로 다시 그립니다.
+    /// </summary>
+    private bool RepaintSelection(IReadOnlyCollection<string> touched)
+    {
+        if (host.Children.Count == 0 || renderedTheme != ActualTheme)
+        {
+            return false;
+        }
+        HashSet<string> sectionsToPaint = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string id in touched)
+        {
+            // 트리에 없는 사진이면 칠할 줄도 없습니다. 맵은 sections 와 함께 Render 가 채웁니다.
+            if (!sectionOfFrame.TryGetValue(id, out LibraryBrowserFolderSection? section))
+            {
+                continue;
+            }
+            _ = sectionsToPaint.Add(section.Id);
+            // 접힌 폴더의 사진은 줄이 없고 머리줄만 칠합니다.
+            if (renderedRows.TryGetValue(id, out var row))
+            {
+                Brush foreground = IsSelected(id) ? Accent : Primary;
+                row.Icon.Foreground = foreground;
+                row.Text.Foreground = foreground;
+                row.Row.Foreground = foreground;
+            }
+        }
+        foreach (string sectionId in sectionsToPaint)
+        {
+            if (!renderedHeaders.TryGetValue(sectionId, out var header))
+            {
+                return false;
+            }
+            LibraryBrowserFolderSection section = sections.First(candidate =>
+                string.Equals(candidate.Id, sectionId, StringComparison.OrdinalIgnoreCase));
+            Brush foreground = section.Items.Any(item => IsSelected(item.Id)) ? Accent : Primary;
+            header.Chevron.Foreground = foreground;
+            header.Folder.Foreground = foreground;
+            header.Title.Foreground = foreground;
+        }
+        if (Negaflow.Shell.PreviewTrace.IsEnabled)
+        {
+            Negaflow.Shell.PreviewTrace.Write(
+                $"files.repaint {TraceName} rows={touched.Count} sections={sectionsToPaint.Count} " +
+                $"selected={selectedFrameId ?? "-"} picked={selectedFrameIds.Count}");
+        }
+        return true;
+    }
+
+    private bool IsSelected(string id) =>
+        string.Equals(id, selectedFrameId, StringComparison.Ordinal) || selectedFrameIds.Contains(id);
 
     /// <summary>
     /// 트리에 보이는 사진의 차례입니다. Shift 로 이어 고를 때 그 사이가 곧 <b>화면에 보이는
@@ -228,8 +305,15 @@ public sealed class LibraryFolderTreeView : UserControl
         }
         renderedTheme = ActualTheme;
         host.Children.Clear();
+        renderedRows.Clear();
+        renderedHeaders.Clear();
+        sectionOfFrame.Clear();
         foreach (LibraryBrowserFolderSection section in sections)
         {
+            foreach (LibraryFrameListItem item in section.Items)
+            {
+                sectionOfFrame[item.Id] = section;
+            }
             host.Children.Add(BuildSection(section));
         }
     }
@@ -341,6 +425,7 @@ public sealed class LibraryFolderTreeView : UserControl
         };
         Grid.SetColumn(title, 3);
         row.Children.Add(title);
+        renderedHeaders[section.Id] = (chevron, folder, title);
 
         // macOS 는 접어도 장수를 그대로 답니다 — `Count` 는 접으면 0 이므로 `FrameCount` 입니다.
         TextBlock count = new()
@@ -415,7 +500,7 @@ public sealed class LibraryFolderTreeView : UserControl
             Spacing = 6,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        content.Children.Add(new FontIcon
+        FontIcon icon = new()
         {
             FontSize = 12,
             Width = 14,
@@ -423,15 +508,17 @@ public sealed class LibraryFolderTreeView : UserControl
             Glyph = item.IsSourceOffline ? "" : "",
             Foreground = foreground,
             VerticalAlignment = VerticalAlignment.Center,
-        });
-        content.Children.Add(new TextBlock
+        };
+        content.Children.Add(icon);
+        TextBlock text = new()
         {
             Text = item.DisplayName,
             FontSize = 11,
             Foreground = foreground,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,
-        });
+        };
+        content.Children.Add(text);
 
         Button row = new()
         {
@@ -443,6 +530,7 @@ public sealed class LibraryFolderTreeView : UserControl
             HorizontalContentAlignment = HorizontalAlignment.Left,
             Foreground = foreground,
         };
+        renderedRows[item.Id] = (icon, text, row);
         AutomationProperties.SetAutomationId(row, "negaflow.library.file-row");
         AutomationProperties.SetName(row, item.DisplayName);
         // 글쇠는 **누른 그 순간** 읽습니다 — macOS 도 `NSEvent.modifierFlags` 를 그 자리에서

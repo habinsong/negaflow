@@ -60,6 +60,10 @@ public sealed partial class ScanProgressOverlay : UserControl
     {
         _ = sender;
         _ = args;
+        if (MainWindow.IsClosing)
+        {
+            return;
+        }
         if (DispatcherQueue is { } queue && !queue.HasThreadAccess)
         {
             // 진행 줄은 플러그인 출력을 읽는 워커에서 옵니다. 거기서 XAML 을 건드리면
@@ -72,6 +76,11 @@ public sealed partial class ScanProgressOverlay : UserControl
 
     private void Render()
     {
+        // 창이 닫힌 뒤 큐에 남아 있던 진행 줄이 여기로 오면 정리된 XAML 을 건드립니다.
+        if (MainWindow.IsClosing)
+        {
+            return;
+        }
         if (state is not { IsScanning: true })
         {
             Visibility = Visibility.Collapsed;

@@ -142,12 +142,17 @@ internal sealed class PrintSourceController
         PreviewImageArrived?.Invoke(this, EventArgs.Empty);
         if (thumbnails?.TryGet(frameId) is { } jpeg)
         {
+            Microsoft.UI.Xaml.Media.ImageSource? decoded = LibraryWorkspaceView.DecodeThumbnail(jpeg);
             LibraryFrameListItem? item = filmstripItems.FirstOrDefault(candidate =>
                 string.Equals(candidate.Id, frameId, StringComparison.Ordinal));
             if (item is not null)
             {
-                item.Thumbnail = LibraryWorkspaceView.DecodeThumbnail(jpeg);
+                item.Thumbnail = decoded;
             }
+            // 스트립은 목록을 다시 지어도 **예전 항목 객체**를 붙들고 있습니다(현상뷰
+            // `DevelopFrameList.OnThumbnailReady` 와 같은 이유). 새 객체만 갱신하면 다른 사진으로
+            // 갔다 올 때까지 썸네일이 비어 있었습니다.
+            surface.Filmstrip.ApplyThumbnail(frameId, decoded);
         }
         redraw();
     }

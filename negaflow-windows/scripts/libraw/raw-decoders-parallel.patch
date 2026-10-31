@@ -1,0 +1,162 @@
+diff --git a/src/decoders/decoders_dcraw.cpp b/src/decoders/decoders_dcraw.cpp
+index d293c23..4373785 100644
+--- a/src/decoders/decoders_dcraw.cpp
++++ b/src/decoders/decoders_dcraw.cpp
+@@ -1,3 +1,4 @@
++// Modifications by the Negaflow project (2026), distributed under CDDL-1.0.
+ /* -*- C++ -*-
+  * Copyright 2019-2025 LibRaw LLC (info@libraw.org)
+  *
+@@ -540,6 +541,11 @@ ushort *LibRaw::ljpeg_row_unrolled(int jrow, struct jhead *jh)
+   return row[2];
+ }
+ 
++// Negaflow (scripts/libraw/native-preview-bridge.cpp): decodes a plain lossless JPEG scan on
++// every core. Returns 0 when it does not apply or sees any sign of damage.
++int negaflow_ljpeg_parallel(LibRaw_abstract_datastream *, const ushort *, int, int, int, int, int,
++                            ushort *, unsigned, unsigned, const ushort *, const ushort *);
++
+ void LibRaw::lossless_jpeg_load_raw()
+ {
+   int jwide, jhigh, jrow, jcol, val, jidx, i, j, row = 0, col = 0;
+@@ -560,6 +566,34 @@ void LibRaw::lossless_jpeg_load_raw()
+   if (jh.clrs == 4 && jwide >= raw_width * 2)
+     jhigh *= 2;
+ 
++  /* A plain scan - one Huffman table for every component, predictor 1, no restart interval,
++     no sRAW, rows in order - is decoded on every core and gives the same raw_image as the
++     loop below. For anything else, or any sign of damage, it returns 0 and the loop runs from
++     the same position as before. */
++  if (!jh.sraw && jh.psv == 1 && jh.restart == INT_MAX && !(load_flags & 1) &&
++      raw_width != 3984 && jh.clrs <= 4 && jh.huff[0] &&
++      (!dng_version || dng_version >= 0x1010000))
++  {
++    int same_table = 1;
++    for (int c = 1; c < jh.clrs; c++)
++      if (jh.huff[c] != jh.huff[0] &&
++          (!jh.huff[c] || jh.huff[c][0] != jh.huff[0][0] ||
++           memcmp(jh.huff[c], jh.huff[0], (1 + (1 << jh.huff[0][0])) * sizeof(ushort))))
++        same_table = 0;
++    if (same_table)
++    {
++      checkCancel();
++      const INT64 scan_start = ifp->tell();
++      if (negaflow_ljpeg_parallel(ifp, jh.huff[0], jh.clrs, jh.bits, jh.high, jh.wide, 1,
++                                  raw_image, raw_width, raw_height, curve, cr2_slice))
++      {
++        ljpeg_end(&jh);
++        return;
++      }
++      ifp->seek(scan_start, SEEK_SET);
++    }
++  }
++
+   
+   try
+   {
+@@ -868,6 +902,11 @@ void LibRaw::nikon_read_curve()
+     read_shorts(curve, max = csize);
+ }
+ 
++// Negaflow (scripts/libraw/native-preview-bridge.cpp): decodes compressed NEF data without a
++// split row on every core. Returns 0 when it does not apply or sees any sign of damage.
++int negaflow_nikon_parallel(LibRaw_abstract_datastream *, const ushort *, int, int, unsigned,
++                            const ushort *, int, const ushort *, ushort *);
++
+ void LibRaw::nikon_load_raw()
+ {
+   static const uchar nikon_tree[][32] = {
+@@ -913,6 +952,21 @@ void LibRaw::nikon_load_raw()
+   huff = make_decoder(nikon_tree[tree]);
+   fseek(ifp, data_offset, SEEK_SET);
+   getbits(-1);
++  /* Without a split row the whole frame uses one table and is decoded on every core, giving the
++     same raw_image as the loop below. For anything else, or any sign of damage, it returns 0
++     and the loop runs from the same position as before. */
++  if (!split)
++  {
++    checkCancel();
++    const INT64 scan_start = ifp->tell();
++    if (negaflow_nikon_parallel(ifp, huff, zero_after_ff, height, raw_width, vpred[0], max, curve,
++                                raw_image))
++    {
++      free(huff);
++      return;
++    }
++    ifp->seek(scan_start, SEEK_SET);
++  }
+   try
+   {
+     for (min = row = 0; row < height; row++)
+@@ -1385,18 +1439,15 @@ void LibRaw::sony_arw_load_raw()
+ 
+ void LibRaw::sony_arw2_load_raw()
+ {
+-  uchar *data, *dp;
+-  ushort pix[16];
+-  int row, col, val, max, min, imax, imin, sh, bit, i;
+-
+-  data = (uchar *)calloc(raw_width + 1,1);
+-  try
+-  {
+-    for (row = 0; row < height; row++)
+-    {
+-      checkCancel();
+-      fread(data, 1, raw_width, ifp);
+-      for (dp = data, col = 0; col < raw_width - 30; dp += 16)
++  uchar *data;
++  int row;
++
++  /* One row: decoded from its own raw_width bytes, written to its own row of raw_image. */
++  const auto decode_row = [&](uchar *rowdata, int row) {
++      uchar *dp;
++      ushort pix[16];
++      int col, val, max, min, imax, imin, sh, bit, i;
++      for (dp = rowdata, col = 0; col < raw_width - 30; dp += 16)
+       {
+         max = 0x7ff & (val = sget4(dp));
+         min = 0x7ff & val >> 11;
+@@ -1486,6 +1537,43 @@ void LibRaw::sony_arw2_load_raw()
+             RAW(row, col) = curve[pix[i] << 1];
+         col -= col & 1 ? 1 : 31;
+       }
++  };
++
++  /* When the whole frame can be read at once, the rows are decoded in parallel with the same
++     code and give the same raw_image. The last 16-byte block of a row also reads the byte after
++     it; with little-endian order that byte falls outside the bits taken, so a row followed by
++     the next row's data decodes as one followed by zero. Otherwise (big-endian, a short file,
++     no memory) the loop below reads row by row from the same position as before. */
++  const INT64 frame_start = ifp->tell();
++  const size_t frame_bytes = size_t(height) * raw_width;
++  if (order == 0x4949)
++    if (uchar *frame = (uchar *)calloc(frame_bytes + 1, 1))
++    {
++      if (ifp->read(frame, 1, frame_bytes) == int(frame_bytes))
++      {
++        checkCancel();
++#if defined(LIBRAW_USE_OPENMP)
++#pragma omp parallel for schedule(static)
++#endif
++        for (int r = 0; r < height; r++)
++          decode_row(frame + size_t(r) * raw_width, r);
++        free(frame);
++        if (imgdata.rawparams.specials & LIBRAW_RAWSPECIAL_SONYARW2_DELTATOVALUE)
++          maximum = 10000;
++        return;
++      }
++      free(frame);
++      ifp->seek(frame_start, SEEK_SET);
++    }
++
++  data = (uchar *)calloc(raw_width + 1,1);
++  try
++  {
++    for (row = 0; row < height; row++)
++    {
++      checkCancel();
++      fread(data, 1, raw_width, ifp);
++      decode_row(data, row);
+     }
+   }
+   catch (...)

@@ -1,9 +1,80 @@
+diff --git a/src/demosaic/xtrans_demosaic.cpp b/src/demosaic/xtrans_demosaic.cpp
+index ca98dc3..30c3b01 100644
 --- a/src/demosaic/xtrans_demosaic.cpp
 +++ b/src/demosaic/xtrans_demosaic.cpp
-@@ -1,1 +1,2 @@
+@@ -1,3 +1,4 @@
 +// Modifications by the Negaflow project (2026), distributed under CDDL-1.0.
  /* -*- C++ -*-
-@@ -165,25 +165,19 @@
+  * Copyright 2019-2025 LibRaw LLC (info@libraw.org)
+  *
+@@ -17,6 +18,8 @@
+  */
+ 
+ #include "../../internal/dcraw_defs.h"
++#include <atomic>
++#include <vector>
+ 
+ #define fcol(row, col) xtrans[(row + 6) % 6][(col + 6) % 6]
+ /*
+@@ -98,11 +101,33 @@ void LibRaw::xtrans_interpolate(int passes)
+           if (allhex[i][j][k][l] > maxh + maxv * width + 1 ||
+               allhex[i][j][k][l] < minh + minv * width - 1)
+             throw LIBRAW_EXCEPTION_IO_CORRUPT;
+-  int retrycount = 0;
+ 
+   /* Set green1 and green3 to the minimum and maximum allowed values:	*/
++  /* The walk below steps from a row whose (row - sgrow) % 3 is 1 to the next row and from a row
++     of remainder 2 back to the previous one; a row of remainder 0 stays on its own row. Rows of
++     remainder 0 therefore bound groups of rows that never touch each other's pixels (the pixels
++     read across groups are greens, which the walk never writes). Each group runs the same walk as
++     the serial loop, from its first row to its last, and the groups run in parallel. */
++  std::vector<int> group_start;
+   for (int row = 2; row < height - 2; row++)
++    if (row == 2 || (row - sgrow) % 3 == 0 || (row - 1 - sgrow) % 3 == 0)
++      group_start.push_back(row);
++  group_start.push_back(height - 2);
++  const int groups = int(group_start.size()) - 1;
++  /* The serial loop gives up once its steps back exceed width * height in total; the same total
++     is kept here (per group, added once per group). */
++  const INT64 retry_limit = INT64(width) * height;
++  std::atomic<INT64> retries(0);
++  std::atomic<int> corrupt(0);
++#if defined(LIBRAW_USE_OPENMP)
++#pragma omp parallel for schedule(dynamic, 16)
++#endif
++  for (int g = 0; g < groups; g++)
+   {
++    const int group_end = group_start[g + 1];
++    INT64 retrycount = 0;
++    for (int row = group_start[g]; row < group_end && !corrupt.load(std::memory_order_relaxed); row++)
++    {
+       int col;
+       ushort min, max;
+       for (col = 2, max = 0u, min = 0xffffu; col < int(width) - 2; col++)
+@@ -139,12 +164,20 @@ void LibRaw::xtrans_interpolate(int passes)
+               if ((min = ~(max = 0)) && (col += 2) < width - 3 && row > 2)
+               {
+                   row--;
+-                  if (retrycount++ > width * height)
+-                      throw LIBRAW_EXCEPTION_IO_CORRUPT;
++                  if (++retrycount > retry_limit + 1)
++                  {
++                      corrupt = 1;
++                      col = int(width);
++                  }
+               }
+           }
+       }
++    }
++    if (retries.fetch_add(retrycount) + retrycount > retry_limit + 1)
++      corrupt = 1;
+   }
++  if (corrupt)
++    throw LIBRAW_EXCEPTION_IO_CORRUPT;
+ 
+   for (int row = 3; row < 9 && row < height - 3; row++)
+ 	  for (int col = 3; col < 9 && col < width - 3; col++)
+@@ -165,25 +198,19 @@ void LibRaw::xtrans_interpolate(int passes)
  		  }
  	  }
  
@@ -34,8 +105,15 @@
  
          ushort(*rgb)[LIBRAW_AHD_TILE][LIBRAW_AHD_TILE][3], (*rix)[3];
          short(*lab)[LIBRAW_AHD_TILE][3], (*lix)[3];
-@@ -202,6 +196,9 @@
+@@ -200,8 +227,16 @@ void LibRaw::xtrans_interpolate(int passes)
+ 
+         for (int left = 3; left < width - 19; left += LIBRAW_AHD_TILE - 16)
          {
++            /* Tiles are serial, so a cancel request is honoured between tiles, outside
++               every OpenMP region. checkCancel() reads the flag set by setCancelFlag();
++               when nobody cancels it changes nothing, and when it throws dcraw_process()
++               recycles the handle, which also frees these buffers. */
++            checkCancel();
              int mrow = MIN(top + LIBRAW_AHD_TILE, height - 3);
              int mcol = MIN(left + LIBRAW_AHD_TILE, width - 3);
 +#if defined(LIBRAW_USE_OPENMP)
@@ -44,7 +122,7 @@
              for (int row = top; row < mrow; row++)
                  for (int col = left; col < mcol; col++)
                      memcpy(rgb[0][row - top][col - left], image[row * width + col], 6);
-@@ -211,6 +208,9 @@
+@@ -211,6 +246,9 @@ void LibRaw::xtrans_interpolate(int passes)
              /* Interpolate green horizontally, vertically, and along both diagonals:
               */
              int color[3][8];
@@ -54,7 +132,7 @@
              for (int row = top; row < mrow; row++)
                  for (int col = left; col < mcol; col++)
                  {
-@@ -240,6 +240,9 @@
+@@ -240,6 +278,9 @@ void LibRaw::xtrans_interpolate(int passes)
                  /* Recalculate green from interpolated values of closer pixels:	*/
                  if (pass)
                  {
@@ -64,7 +142,7 @@
                      for (int row = top + 2; row < mrow - 2; row++)
                          for (int col = left + 2; col < mcol - 2; col++)
                          {
-@@ -260,6 +263,9 @@
+@@ -260,6 +301,9 @@ void LibRaw::xtrans_interpolate(int passes)
                  }
  
                  /* Interpolate red and blue values for solitary green pixels:	*/
@@ -74,7 +152,7 @@
                  for (int row = (top - sgrow + 4) / 3 * 3 + sgrow; row < mrow - 2; row += 3)
                      for (int col = (left - sgcol + 4) / 3 * 3 + sgcol; col < mcol - 2; col += 3)
                  {
-@@ -293,6 +299,9 @@
+@@ -293,6 +337,9 @@ void LibRaw::xtrans_interpolate(int passes)
                  }
  
                  /* Interpolate red for blue pixels and vice versa:		*/
@@ -84,7 +162,7 @@
                  for (int row = top + 3; row < mrow - 3; row++)
                      for (int col = left + 3; col < mcol - 3; col++)
                      {
-@@ -318,6 +327,9 @@
+@@ -318,6 +365,9 @@ void LibRaw::xtrans_interpolate(int passes)
                      }
  
                  /* Fill in red and blue for 2x2 blocks of green:		*/
@@ -94,7 +172,7 @@
                  for (int row = top + 2; row < mrow - 2; row++)
                      if ((row - sgrow) % 3)
                          for (int col = left + 2; col < mcol - 2; col++)
-@@ -351,10 +363,17 @@
+@@ -351,10 +401,17 @@ void LibRaw::xtrans_interpolate(int passes)
              // no effect
              for (int d = 0; d < ndir; d++)
              {
@@ -113,7 +191,7 @@
                      for (int col = 3; col < mcol - 3; col++)
                      {
                          lix = &lab[row][col];
-@@ -370,36 +389,55 @@
+@@ -370,36 +427,55 @@ void LibRaw::xtrans_interpolate(int passes)
  
              /* Build homogeneity maps from the derivatives:			*/
              memset(homo, 0, ndir * LIBRAW_AHD_TILE * LIBRAW_AHD_TILE);
@@ -185,7 +263,7 @@
                      for (int d = 0; d < ndir - 4; d++)
                          if (hm[d] < hm[d + 4])
                              hm[d] = 0;
-@@ -422,6 +460,7 @@
+@@ -422,6 +498,7 @@ void LibRaw::xtrans_interpolate(int passes)
                          }
                      FORC3 image[(row + top) * width + col + left][c] = avg[c] / avg[3];
                  }

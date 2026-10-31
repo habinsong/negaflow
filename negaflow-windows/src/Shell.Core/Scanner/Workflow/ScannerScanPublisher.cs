@@ -18,12 +18,15 @@ internal static class ScannerScanPublisher
         Action<ScanProgressReport>? onProgress = null)
     {
         ArgumentNullException.ThrowIfNull(library);
-        ScannerPluginScanResult scan = await ScannerScanExecutor.ScanAsync(
+        // 스캔 프로세스와 출력 읽기는 워커에서 돌립니다. 부른 컨텍스트(UI)에서 돌리면 출력 한 줄마다
+        // UI 스레드가 깨고, 창이 닫힌 뒤에도 그 줄이 큐에서 돌아와 XAML 을 건드렸습니다. 게시는
+        // 이 await 가 부른 컨텍스트로 돌아온 뒤에 하므로 카탈로그 목록은 여전히 UI 에서만 바뀝니다.
+        ScannerPluginScanResult scan = await Task.Run(() => ScannerScanExecutor.ScanAsync(
             plugin,
             approvedIdentity,
             request,
             cancellationToken,
-            onProgress);
+            onProgress));
         if (scan.ArtifactCommit?.Artifacts is not { } artifacts)
         {
             return new(ScannerPluginLibraryScanStatus.ScanFailed, scan, null);

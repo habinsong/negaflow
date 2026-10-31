@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -61,6 +62,8 @@ int usage() {
                  " 필름 스캔 경로는 이 사슬을 지나지 않으므로, 그 다섯 "
                  "단계를 재려면 이것이 있어야 합니다.\n"
                  " bwlook — 디지털 원본 흑백 룩(헐레이션·유제·아큐턴스·그레인)을 켭니다.\n"
+                 " progressive — 앱처럼 인터랙티브(2560)를 먼저 그리고 정착(3600)을 잇습니다.\n"
+                 " save=<경로> — 마지막 프리뷰를 화면에 올라가는 그대로(BGRA8) BMP 로 남깁니다.\n"
                  " grain — TextureStage filmGrain 을 0.40 으로 켭니다(기본 0 이면 단계가 비어 있음).\n"
                  " eachrun — 마지막 회차만이 아니라 매 회차의 단계 표를 찍습니다(회차가 쌓일수록 느려지는지 볼 때).\n"
                  " balance — 자동 밸런스를 켭니다(장면 밀도 범위 측정과 채도 보정이 더해집니다). 기본은 끔.\n"
@@ -96,7 +99,9 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
     int repeats = 1;
     if (argument_count >= 7 && std::wstring_view{arguments[6]} != L"nocurve" &&
         std::wstring_view{arguments[6]} != L"filmlook" &&
-        std::wstring_view{arguments[6]} != L"bwlook") {
+        std::wstring_view{arguments[6]} != L"bwlook" &&
+        std::wstring_view{arguments[6]} != L"progressive" &&
+        std::wstring_view{arguments[6]}.substr(0U, 5U) != L"save=") {
         float parsed = 0.0F;
         if (!parse_float(arguments[6], parsed) || parsed < 1.0F || parsed > 20.0F) {
             return usage();
@@ -203,8 +208,18 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
         }
     }
 
+    // 앱이 사진을 고를 때처럼 인터랙티브(2560)를 먼저 그리고 정착(3600)을 잇습니다. 카메라
+    // RAW 의 임시 첫 화면과 그 unpack 을 이어 쓰는 정착 디코드가 이 순서에서만 돕니다.
+    bool progressive = false;
+    for (int index = 2; index < argument_count; ++index) {
+        if (std::wstring_view{arguments[index]} == L"progressive") {
+            progressive = true;
+        }
+    }
+
     // macOS 정착 프리뷰와 같은 한 변입니다(`fullMaxDimension`).
     constexpr std::uint32_t preview_edge = 3600U;
+    constexpr std::uint32_t interactive_edge = 2560U;
     std::vector<std::uint8_t> pixels(
         static_cast<std::size_t>(preview_edge) * preview_edge * 4U);
 
@@ -214,6 +229,16 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
     for (int run = 0; run < repeats; ++run) {
         pipeline::reset_stage_timings();
         const auto started = std::chrono::steady_clock::now();
+        long long interactive_wall = -1;
+        if (progressive) {
+            const pipeline::DevelopExportOutcome first = pipeline::develop_preview(
+                request, interactive_edge, interactive_edge, pixels.data(), pixels.size());
+            interactive_wall = first.succeeded
+                ? std::chrono::duration_cast<std::chrono::microseconds>(
+                      std::chrono::steady_clock::now() - started)
+                      .count()
+                : -1;
+        }
         const pipeline::DevelopExportOutcome outcome = pipeline::develop_preview(
             request, preview_edge, preview_edge, pixels.data(), pixels.size());
         const auto finished = std::chrono::steady_clock::now();
@@ -223,8 +248,11 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
         if (run != 0) {
             std::cout << ',';
         }
-        std::cout << "{\"succeeded\":" << (outcome.succeeded ? "true" : "false")
-                  << ",\"wall_microseconds\":" << wall
+        std::cout << "{\"succeeded\":" << (outcome.succeeded ? "true" : "false");
+        if (progressive) {
+            std::cout << ",\"interactive_microseconds\":" << interactive_wall;
+        }
+        std::cout << ",\"wall_microseconds\":" << wall
                   << ",\"pixel_fingerprint\":\"" << std::hex << fingerprint(pixels)
                   << std::dec << "\"";
         if (!outcome.succeeded) {
@@ -241,6 +269,41 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
         if (run + 1 == repeats) {
             std::cout << "]}\n";
             pipeline::dump_stage_timings();
+            // `save=<경로>` — 마지막 프리뷰를 화면에 올라가는 그대로(BGRA8) BMP 로 남깁니다.
+            // PNG 내보내기 명령은 TIFF 만 받으므로, 카메라 RAW 를 앱과 같은 길로 그려 눈으로
+            // 비교하려면 이 자리가 필요합니다.
+            for (int index = 2; index < argument_count; ++index) {
+                const std::wstring_view token{arguments[index]};
+                if (token.substr(0U, 5U) != L"save=" || !outcome.succeeded ||
+                    outcome.image_width == 0U || outcome.image_height == 0U) {
+                    continue;
+                }
+                const std::uint32_t w = outcome.image_width;
+                const std::uint32_t h = outcome.image_height;
+                const std::uint32_t row_bytes = w * 4U;
+                std::vector<std::uint8_t> header(54U, 0U);
+                const auto put32 = [&header](const std::size_t at, const std::uint32_t value) {
+                    for (std::size_t b = 0U; b < 4U; ++b) {
+                        header[at + b] = static_cast<std::uint8_t>(value >> (8U * b));
+                    }
+                };
+                header[0] = 'B';
+                header[1] = 'M';
+                put32(2U, 54U + row_bytes * h);
+                put32(10U, 54U);
+                put32(14U, 40U);
+                put32(18U, w);
+                put32(22U, static_cast<std::uint32_t>(-static_cast<std::int32_t>(h)));
+                header[26] = 1U;
+                header[28] = 32U;
+                put32(34U, row_bytes * h);
+                std::FILE* file = nullptr;
+                if (_wfopen_s(&file, std::wstring{token.substr(5U)}.c_str(), L"wb") == 0 && file != nullptr) {
+                    std::fwrite(header.data(), 1U, header.size(), file);
+                    std::fwrite(pixels.data(), 1U, static_cast<std::size_t>(row_bytes) * h, file);
+                    std::fclose(file);
+                }
+            }
             if (measure_area_average) {
                 negaflow::imageio::WicTiffDecodeControl decode_control{};
                 decode_control.rows_per_copy = 64U;

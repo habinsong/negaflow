@@ -1,5 +1,6 @@
 #include "decoded_source_store.h"
 #include "frame_cache_budget.h"
+#include "negaflow/imageio/libraw_image_decoder.h"
 #include <algorithm>
 #include <mutex>
 #include <utility>
@@ -67,6 +68,14 @@ void trim_decoded_locked() noexcept {
     for (const DecodedSourceEntry& entry : g_decoded_sources) {
         resident += decoded_bytes(entry);
     }
+    // 카메라 RAW 임시 첫 화면 뒤 정착 디코드를 기다리는 unpack 한 벌도 같은 몫으로 셉니다.
+    // 예산을 넘으면 가장 먼저 놓습니다 — 놓아도 정착 디코드가 unpack 을 다시 할 뿐입니다.
+    std::uint64_t retained = negaflow::imageio::libraw_retained_unpacked_bytes();
+    if (retained != 0ULL && resident + retained > decoded_budget_bytes()) {
+        negaflow::imageio::libraw_release_retained_unpacked();
+        retained = 0ULL;
+    }
+    resident += retained;
     // 예산을 물어보기 **전에** 알립니다. 자동 예산은 "프로세스 private 에서 캐시 몫을 뺀
     // 나머지" 를 간접비로 보므로, 내 몫을 안 알리면 그것까지 간접비로 세어 예산이 두 배로
     // 깎입니다.
@@ -176,6 +185,7 @@ void decoded_source_put(
 void decoded_source_store_reset() noexcept {
     const std::lock_guard<std::mutex> guard{g_decoded_mutex};
     g_decoded_sources.clear();
+    negaflow::imageio::libraw_release_retained_unpacked();
     report_cache_resident_bytes(FrameCacheKind::decoded_source, 0ULL);
 }
 
@@ -223,7 +233,7 @@ void encoded_source_put(const std::filesystem::path& path,
 
 std::uint64_t decoded_source_store_resident_bytes() noexcept {
     const std::lock_guard<std::mutex> guard{g_decoded_mutex};
-    std::uint64_t resident = 0ULL;
+    std::uint64_t resident = negaflow::imageio::libraw_retained_unpacked_bytes();
     for (const DecodedSourceEntry& entry : g_decoded_sources) {
         resident += decoded_bytes(entry);
     }

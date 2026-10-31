@@ -216,7 +216,8 @@ bool preview_proxy_try_take(
     const PreviewTarget& preview,
     const negaflow::imaging::WorkingImage& raw,
     negaflow::imaging::WorkingImage& image,
-    PreviewProxyHint& hint) noexcept {
+    PreviewProxyHint& hint,
+    const bool retain) noexcept {
     if (preview.maximum_width == 0U || preview.maximum_height == 0U) {
         return fail(DevelopExportStage::decode, "invalid_preview_target");
     }
@@ -263,7 +264,7 @@ bool preview_proxy_try_take(
 
     hint.image_is_proxy = true;
     hint.scene_memo = std::make_shared<SceneMeasurementMemo>();
-    if (recipe_blocks_proxy(request) || !request.retain_preview_raw) {
+    if (!retain || recipe_blocks_proxy(request) || !request.retain_preview_raw) {
         return std::nullopt;
     }
 
@@ -292,8 +293,9 @@ std::optional<DevelopExportOutcome> preview_proxy_materialize(
     const ObservedSource& observed,
     const PreviewTarget& preview,
     negaflow::imaging::WorkingImage& image,
-    PreviewProxyHint& hint) noexcept {
-    return materialize_from_raw(request, observed, preview, image, image, hint);
+    PreviewProxyHint& hint,
+    const bool retain) noexcept {
+    return materialize_from_raw(request, observed, preview, image, image, hint, retain);
 }
 
 std::optional<DevelopExportOutcome> preview_proxy_materialize_from_cleaned(
@@ -303,7 +305,7 @@ std::optional<DevelopExportOutcome> preview_proxy_materialize_from_cleaned(
     const negaflow::imaging::WorkingImage& cleaned,
     negaflow::imaging::WorkingImage& image,
     PreviewProxyHint& hint) noexcept {
-    return materialize_from_raw(request, observed, preview, cleaned, image, hint);
+    return materialize_from_raw(request, observed, preview, cleaned, image, hint, true);
 }
 
 }  // namespace negaflow::pipeline::develop_export_detail

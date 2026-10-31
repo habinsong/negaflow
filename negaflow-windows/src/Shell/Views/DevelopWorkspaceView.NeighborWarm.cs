@@ -44,7 +44,20 @@ public sealed partial class DevelopWorkspaceView
     private const int NeighborWarmDistance = 1;
 
     private DevelopRun? neighborWarmRun;
+    private NeighborWarmPass? neighborWarmPass;
     private Task neighborWarmTask = Task.CompletedTask;
+
+    /// <summary>예열 한 번의 상태입니다. 워커와 UI 가 함께 읽으므로 필드는 volatile 입니다.</summary>
+    private sealed class NeighborWarmPass
+    {
+        /// <summary>지금 현상 중인 이웃입니다. 없으면 null.</summary>
+        public volatile string? WarmingFrameId;
+
+        /// <summary>
+        /// 지금 이웃을 끝내고 멈춥니다. 미리 읽던 바로 그 사진을 사용자가 골랐을 때 섭니다.
+        /// </summary>
+        public volatile bool StopAfterCurrent;
+    }
 
     private void WarmNeighborSettledPreviews(LibraryFrameSnapshot current)
     {
@@ -77,16 +90,19 @@ public sealed partial class DevelopWorkspaceView
             PreviewTrace.Write("warm preview skip: no spare developed slot");
             return;
         }
+        // 다음 사진이 먼저입니다. 롤을 훑는 이동은 대부분 앞으로이고, macOS 는 다음 한 장만
+        // 미리 읽습니다(`cameraRAWPrefetchCandidate(after:)`). 앞 사진은 방금 보고 온 경우가
+        // 많아 대개 캐시에 있습니다.
         List<LibraryFrameSnapshot> warmOrder = [];
         for (int distance = 1; distance <= NeighborWarmDistance; ++distance)
         {
-            if (index - distance >= 0)
-            {
-                warmOrder.Add(all[index - distance]);
-            }
             if (index + distance < all.Count)
             {
                 warmOrder.Add(all[index + distance]);
+            }
+            if (index - distance >= 0)
+            {
+                warmOrder.Add(all[index - distance]);
             }
         }
         if (warmOrder.Count > spare)
@@ -100,7 +116,9 @@ public sealed partial class DevelopWorkspaceView
 
         uint edge = DevelopPreviewProxy.BufferEdge(DevelopPreviewProxy.FullMaxDimension);
         DevelopRun run = new();
+        NeighborWarmPass pass = new();
         System.Threading.Interlocked.Exchange(ref neighborWarmRun, run)?.Cancel();
+        neighborWarmPass = pass;
         Task previousWarmTask = neighborWarmTask;
         neighborWarmTask = Task.Run(() =>
         {
@@ -129,15 +147,24 @@ public sealed partial class DevelopWorkspaceView
                 byte[] pixels = new byte[pixelBytes];
                 foreach (LibraryFrameSnapshot neighbor in warmOrder)
                 {
-                    if (run.IsCancelRequested)
+                    if (run.IsCancelRequested || pass.StopAfterCurrent)
                     {
                         break;
                     }
-                    WarmSettledPreview(neighbor, edge, pixels, run);
+                    pass.WarmingFrameId = neighbor.Id;
+                    try
+                    {
+                        WarmSettledPreview(neighbor, edge, pixels, run);
+                    }
+                    finally
+                    {
+                        pass.WarmingFrameId = null;
+                    }
                 }
             }
             finally
             {
+                _ = System.Threading.Interlocked.CompareExchange(ref neighborWarmPass, null, pass);
                 if (priorityChanged)
                 {
                     try
@@ -157,8 +184,24 @@ public sealed partial class DevelopWorkspaceView
     }
 
     /// <summary>새 선택이 오면 부릅니다. 기다리지 않고 취소만 겁니다.</summary>
-    private void CancelNeighborWarm() =>
+    /// <param name="keepingFrameId">
+    /// 지금 보려는 사진입니다. 예열이 바로 그 사진을 현상하고 있으면 취소하지 않고 그 한 장만
+    /// 끝내게 둡니다 — macOS <c>cancelNeighborCameraRAWPrefetch(keeping:)</c> 의 "미리 읽던 바로
+    /// 그 사진을 선택했다면 디코드를 끝내고 선택 렌더와 공유한다". 선택 렌더는 native 의 같은
+    /// 파일 디코드 잠금에서 그 결과를 받습니다. 예전에는 여기서 취소해 반쯤 푼 RAW 를 버리고
+    /// 처음부터 다시 풀었습니다(실기 RAF 2,071 ms).
+    /// </param>
+    private void CancelNeighborWarm(string? keepingFrameId = null)
+    {
+        if (keepingFrameId is not null && neighborWarmPass is { } pass &&
+            string.Equals(pass.WarmingFrameId, keepingFrameId, StringComparison.Ordinal))
+        {
+            pass.StopAfterCurrent = true;
+            PreviewTrace.Write("warm preview keep " + keepingFrameId);
+            return;
+        }
         System.Threading.Interlocked.Exchange(ref neighborWarmRun, null)?.Cancel();
+    }
 
     private async Task CancelNeighborWarmAsync()
     {

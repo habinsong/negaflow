@@ -10,6 +10,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <optional>
@@ -202,6 +203,251 @@ constexpr double contradiction_fraction = 0.02;
     const film_base_detail::RingMaskChroma mask = ring_mask_chroma();
     return log_ratio(film[0], film[1]) - log_ratio(candidate[0], candidate[1]) >= mask.red_green &&
         log_ratio(film[1], film[2]) - log_ratio(candidate[1], candidate[2]) >= mask.green_blue;
+}
+
+// ── 유제 색과 무관한 마지막 확인 ─────────────────────────────────────────────────
+//
+// 위의 탐색은 "베이스는 스캔에서 오렌지(R ≥ G ≥ B)" 라는 가정에 기댑니다
+// (`is_component_candidate`). 그 가정은 필름에 따라 깨집니다. 2026-10-31 GT-X900 으로 스캔한
+// Kodak Vision3 250D 롤(4~11번)은 프레임 사이 틈의 베이스가 0.30/0.34/0.33 처럼 초록·파랑이
+// 빨강보다 밝아 후보에서 통째로 빠졌고, 사진 속 짙은 오렌지 면(10번: 0.13/0.08/0.08)이 베이스로
+// 골라져 반전이 어둡고 붉게 잘렸습니다. 같은 스캐너로 찍은 다른 필름은 0.34/0.28/0.22 로
+// 오렌지였습니다 — 베이스 색은 필름마다 다릅니다.
+//
+// 그래서 여기서는 색을 묻지 않고 물리를 봅니다. 필름 = 광원 × 베이스 × 장면 염료이고 염료는 빛을
+// **덜어내기만** 하므로, 베이스는 필름에서 **모든 채널이 함께** 가장 밝습니다. 고른 값보다 모든
+// 채널이 뚜렷이 밝은 필름이 넓게 있으면 그 값은 베이스가 아닙니다. 그때 모든 채널이 가장 밝은
+// 매끈한 면으로 올립니다. 오렌지든 보라든 회색이든 같습니다.
+//
+// 그보다 밝은 것은 필름이 아닌 맨 광원뿐입니다. 포화 근처는 필름이 아니고(베이스도 밀도가 있어
+// 포화되지 않습니다 — `accept_rebate_base` 와 같은 문턱), 포화되지 않은 광원은 기존과 같은 상대
+// 색도(`looks_like_light`)로 거릅니다. 크롭이 있으면 사진 안만 증거로 삼으므로 광원은 증거에
+// 끼지 않습니다. 남는 한계는 하나입니다 — 마스크가 회색이라 베이스와 광원의 색이 같고, 광원이
+// 포화되지 않은 채 크롭 없이 넓게 찍혀 있으면 색으로도 밝기로도 가를 수 없습니다. 흑백 필름의
+// 탐색과 같은 한계입니다.
+constexpr double envelope_channel_factor = 1.15;
+constexpr double envelope_saturation = 0.985;
+
+[[nodiscard]] bool plausible_film_cell(const negaflow::core::Rgba32F& pixel) noexcept {
+    if (!finite_rgb(pixel)) {
+        return false;
+    }
+    const double luma = luma_of(pixel);
+    const double peak = std::max(
+        static_cast<double>(pixel.red),
+        std::max(static_cast<double>(pixel.green), static_cast<double>(pixel.blue)));
+    return luma >= 0.012 && luma <= 0.85 && peak < envelope_saturation;
+}
+
+[[nodiscard]] bool brighter_in_every_channel(
+    const negaflow::core::Rgba32F& pixel,
+    const std::array<float, 3>& base,
+    const double factor) noexcept {
+    return static_cast<double>(pixel.red) >= static_cast<double>(base[0]) * factor &&
+        static_cast<double>(pixel.green) >= static_cast<double>(base[1]) * factor &&
+        static_cast<double>(pixel.blue) >= static_cast<double>(base[2]) * factor;
+}
+
+// 고른 베이스보다 모든 채널이 1.15 배 이상 밝은 필름 칸의 비율입니다. 크롭이 있으면 사진 안만
+// 셉니다(띠의 광원·홀더가 증거에 끼지 않게).
+[[nodiscard]] double film_brighter_than(
+    const SampleGrid& grid,
+    const std::array<float, 3>& base,
+    const std::optional<AnalysisRegion>& region) noexcept {
+    std::size_t counted = 0U;
+    std::size_t brighter = 0U;
+    for (std::uint32_t y = 0U; y < grid.height; ++y) {
+        for (std::uint32_t x = 0U; x < grid.width; ++x) {
+            if (region.has_value() && !film_base_detail::is_interior(grid, *region, x, y)) {
+                continue;
+            }
+            const negaflow::core::Rgba32F& pixel =
+                grid.pixels[static_cast<std::size_t>(y) * grid.width + x];
+            if (!finite_rgb(pixel)) {
+                continue;
+            }
+            ++counted;
+            if (plausible_film_cell(pixel) &&
+                brighter_in_every_channel(pixel, base, envelope_channel_factor)) {
+                ++brighter;
+            }
+        }
+    }
+    return counted > 0U ? static_cast<double>(brighter) / static_cast<double>(counted) : 0.0;
+}
+
+struct EnvelopeComponent final {
+    std::vector<std::size_t> cells;
+    double p75{0.0};
+};
+
+// 색을 묻지 않는 매끈한 밝은 면들입니다. 연결 성분 탐색(`connected_component_base`)과 같은 틀 —
+// 이웃 2 칸 안에 1.15 배 넘게 밝은 칸이 없는 칸만 잇고, 격자의 0.4%(최소 24 칸)보다 작은 조각은
+// 버립니다(퍼포레이션 구멍·먼지 같은 작은 광원이 여기서 빠집니다). 홀더 그늘은 밝은 필름의
+// 10% 아래로 잘라 냅니다.
+[[nodiscard]] std::vector<EnvelopeComponent> envelope_components(const SampleGrid& grid) {
+    const std::uint32_t width = grid.width;
+    const std::uint32_t height = grid.height;
+    const std::size_t count = grid.pixels.size();
+    std::vector<double> film_lumas;
+    film_lumas.reserve(count);
+    for (std::size_t index = 0U; index < count; ++index) {
+        if (plausible_film_cell(grid.pixels[index])) {
+            film_lumas.push_back(grid.lumas[index]);
+        }
+    }
+    if (film_lumas.empty()) {
+        return {};
+    }
+    const double floor = percentile(film_lumas, 0.99) * 0.10;
+    std::vector<bool> smooth(count, false);
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            const std::size_t index = static_cast<std::size_t>(y) * width + x;
+            if (!plausible_film_cell(grid.pixels[index]) || grid.lumas[index] < floor) {
+                continue;
+            }
+            const double ceiling = grid.lumas[index] * 1.15;
+            bool boundary = false;
+            for (std::uint32_t ny = y > 2U ? y - 2U : 0U; ny <= std::min(height - 1U, y + 2U) && !boundary; ++ny) {
+                for (std::uint32_t nx = x > 2U ? x - 2U : 0U; nx <= std::min(width - 1U, x + 2U); ++nx) {
+                    if (grid.lumas[static_cast<std::size_t>(ny) * width + nx] > ceiling) {
+                        boundary = true;
+                        break;
+                    }
+                }
+            }
+            smooth[index] = !boundary;
+        }
+    }
+    const std::size_t minimum_size = std::max<std::size_t>(24U, count * 4U / 1000U);
+    std::vector<std::int32_t> labels(count, -1);
+    std::vector<EnvelopeComponent> components;
+    std::vector<std::size_t> queue;
+    for (std::size_t start = 0U; start < count; ++start) {
+        if (!smooth[start] || labels[start] >= 0) {
+            continue;
+        }
+        const std::int32_t label = static_cast<std::int32_t>(components.size()) + 1;
+        std::vector<std::size_t> cells;
+        queue.clear();
+        queue.push_back(start);
+        labels[start] = label;
+        while (!queue.empty()) {
+            const std::size_t cell = queue.back();
+            queue.pop_back();
+            cells.push_back(cell);
+            const std::uint32_t x = static_cast<std::uint32_t>(cell % width);
+            const std::uint32_t y = static_cast<std::uint32_t>(cell / width);
+            const std::array<std::pair<std::uint32_t, std::uint32_t>, 4> neighbors{{
+                {x > 0U ? x - 1U : x, y}, {std::min(width - 1U, x + 1U), y},
+                {x, y > 0U ? y - 1U : y}, {x, std::min(height - 1U, y + 1U)}}};
+            for (const auto [nx, ny] : neighbors) {
+                const std::size_t next = static_cast<std::size_t>(ny) * width + nx;
+                if (next != cell && smooth[next] && labels[next] < 0) {
+                    labels[next] = label;
+                    queue.push_back(next);
+                }
+            }
+        }
+        if (cells.size() < minimum_size) {
+            continue;
+        }
+        std::vector<double> values;
+        values.reserve(cells.size());
+        for (const std::size_t cell : cells) {
+            values.push_back(grid.lumas[cell]);
+        }
+        const double p75 = percentile(values, 0.75);
+        components.push_back({std::move(cells), p75});
+    }
+    std::sort(components.begin(), components.end(), [](const EnvelopeComponent& left, const EnvelopeComponent& right) {
+        return left.p75 > right.p75;
+    });
+    return components;
+}
+
+[[nodiscard]] AutoNegativeBaseResult lifted_to_physical_envelope(
+    const SampleGrid& grid,
+    const std::optional<AnalysisRegion>& region,
+    AutoNegativeBaseResult result) {
+    if (film_brighter_than(grid, result.dmin, region) <= contradiction_fraction) {
+        return result;
+    }
+    const std::vector<EnvelopeComponent> components = envelope_components(grid);
+    // 성분마다 밝은 절반(최소 24 칸)을 잽니다 — 연결 성분 탐색이 베이스를 재는 방식과 같습니다.
+    std::vector<std::optional<FilmBaseMeasurement>> measurements;
+    measurements.reserve(components.size());
+    for (const EnvelopeComponent& component : components) {
+        std::vector<std::size_t> members = component.cells;
+        std::sort(members.begin(), members.end(), [&grid](const std::size_t left, const std::size_t right) {
+            return grid.lumas[left] > grid.lumas[right];
+        });
+        members.resize(std::max(members.size() / 2U, std::min(members.size(), std::size_t{24U})));
+        measurements.push_back(build_film_base_measurement(
+            FilmBaseMeasurementMethod::connected_component,
+            static_cast<int>(grid.pixels.size()),
+            static_cast<int>(component.cells.size()),
+            film_base_detail::samples_from_indices(grid, members),
+            static_cast<int>(grid.width),
+            static_cast<int>(grid.height)));
+    }
+    const double current_luma = luma_of_dmin(result.dmin);
+    for (std::size_t index = 0U; index < components.size(); ++index) {
+        if (!measurements[index].has_value()) {
+            continue;
+        }
+        const FilmBaseMeasurement& measured = *measurements[index];
+        const std::array<float, 3> candidate = narrow_measurement(measured.rgb);
+        // 밝은 순서이므로 지금 값보다 뚜렷이 밝지 않은 성분이 나오면 더 볼 것이 없습니다.
+        if (luma_of_dmin(candidate) < current_luma * envelope_channel_factor) {
+            break;
+        }
+        // 오렌지로 보이는 면은 위의 탐색이 이미 보고 판정했습니다(그리고 광원이면 강등했습니다).
+        // 여기서는 그 탐색이 **보지 못한** 면 — 오렌지가 아닌 밝은 필름만 구제합니다. 그래야 따뜻한
+        // 백라이트를 다시 베이스로 끌어올리지 않습니다.
+        const negaflow::core::Rgba32F candidate_pixel{candidate[0], candidate[1], candidate[2], 1.0F};
+        if (is_component_candidate(candidate_pixel, NegativeFilmType::color)) {
+            continue;
+        }
+        const bool saturated = std::any_of(candidate.begin(), candidate.end(), [](const float channel) {
+            return static_cast<double>(channel) >= envelope_saturation;
+        });
+        // 베이스는 지금 값보다 어느 채널도 어둡지 않습니다.
+        const bool not_darker = candidate[0] >= result.dmin[0] && candidate[1] >= result.dmin[1] &&
+            candidate[2] >= result.dmin[2];
+        if (saturated || !not_darker || looks_like_light(candidate, result.dmin) ||
+            film_brighter_than(grid, candidate, region) > contradiction_fraction) {
+            continue;
+        }
+        // 광원은 그것이 비춘 필름보다 마스크 색도만큼 덜 오렌지입니다(베이스 = 광원 × 마스크).
+        // 색 공간과 무관한 **상대** 관계라, 카메라 RGB 처럼 초록이 큰 공간에서도 성립합니다. 띠
+        // 강등과 같은 밝기 창(0.12~0.87 배) 안에 그런 더 어두운 면이 있으면 이 면은 광원입니다.
+        bool lit_film_below = false;
+        for (std::size_t darker = index + 1U; darker < components.size() && !lit_film_below; ++darker) {
+            const double ratio = components[darker].p75 / std::max(components[index].p75, 1.0e-9);
+            if (ratio > 0.87 || ratio < 0.12 || !measurements[darker].has_value()) {
+                continue;
+            }
+            lit_film_below = looks_like_light(candidate, narrow_measurement(measurements[darker]->rgb));
+        }
+        if (lit_film_below) {
+            continue;
+        }
+        std::size_t debug_length = 0U;
+        if (getenv_s(&debug_length, nullptr, 0U, "NEGA_DEBUG") == 0 && debug_length > 0U) {
+            std::fprintf(stderr, "[base-envelope] (%.5f,%.5f,%.5f) -> (%.5f,%.5f,%.5f) cells=%zu\n",
+                static_cast<double>(result.dmin[0]), static_cast<double>(result.dmin[1]),
+                static_cast<double>(result.dmin[2]), static_cast<double>(candidate[0]),
+                static_cast<double>(candidate[1]), static_cast<double>(candidate[2]),
+                components[index].cells.size());
+        }
+        result.dmin = candidate;
+        result.source = AutoNegativeBaseSource::connected_component;
+        result.diagnostics = measured.diagnostics;
+        return result;
+    }
+    return result;
 }
 
 // 크롭이 있을 때의 베이스(macOS `estimateAroundCrop`). 디카 스캔은 원본에 퍼포레이션·백라이트·
@@ -397,15 +643,20 @@ AutoNegativeBaseResult resolve_auto_negative_base(
     std::optional<SampleGrid> grid;
     bool from_crop = false;
     AutoNegativeBaseResult result = resolve_without_rebate(image, film_type, grid, region, from_crop);
-    if (result.status != AutoNegativeBaseStatus::ok || !grid.has_value() || from_crop ||
-        result.source == AutoNegativeBaseSource::fallback) {
+    if (result.status != AutoNegativeBaseStatus::ok || !grid.has_value()) {
         return result;
     }
     try {
-        result = rescued_with_rebate(image, *grid, film_type, result, false);
-        const std::optional<std::vector<bool>> exclusion = non_film_exclusion(*grid, film_type);
-        return lifted_to_film_envelope(
-            *grid, film_type, result, nullptr, exclusion.has_value() ? &*exclusion : nullptr);
+        if (!from_crop && result.source != AutoNegativeBaseSource::fallback) {
+            result = rescued_with_rebate(image, *grid, film_type, result, false);
+            const std::optional<std::vector<bool>> exclusion = non_film_exclusion(*grid, film_type);
+            result = lifted_to_film_envelope(
+                *grid, film_type, result, nullptr, exclusion.has_value() ? &*exclusion : nullptr);
+        }
+        // 컬러 네거티브만입니다. 흑백 탐색은 처음부터 색을 묻지 않습니다(`is_component_candidate`).
+        if (film_type == NegativeFilmType::color) {
+            result = lifted_to_physical_envelope(*grid, region, result);
+        }
     } catch (...) {
         // 구조길이 실패해도 기존 값은 그대로입니다. 고치려다 더 나쁘게 만들지 않습니다.
     }

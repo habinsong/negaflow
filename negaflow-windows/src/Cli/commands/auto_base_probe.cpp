@@ -1,6 +1,8 @@
 #include "auto_base_probe.h"
 
+#include "negaflow/imaging/analysis_region.h"
 #include "negaflow/imaging/auto_negative_base_resolver.h"
+#include "negaflow/imaging/image_transform.h"
 #include "negaflow/imaging/scanner_tiff_to_working.h"
 #include "negaflow/imaging/scanner_to_working.h"
 #include "negaflow/imageio/wic_standard_image_decoder.h"
@@ -9,6 +11,8 @@
 #include <cstddef>
 #include <filesystem>
 #include <iostream>
+#include <optional>
+#include <string>
 #include <string_view>
 
 namespace negaflow::cli {
@@ -41,11 +45,41 @@ namespace {
 }  // namespace
 
 int run_auto_base_probe(const int argument_count, const wchar_t* const arguments[]) {
-    if (argument_count < 3 || argument_count > 4) {
+    // `<path> [bw] [crop <x> <y> <w> <h> <rotation> <flipH> <flipV>]` — 크롭은 카탈로그
+    // `imageTransform` 의 `cropRect`·`rotation`·뒤집기 그대로입니다. 앱은 크롭이 있으면 그 바깥
+    // 띠와 사진 안을 따로 보므로(`resolve_around_crop`), 크롭 없이 재면 앱과 다른 길을 잽니다.
+    if (argument_count < 3) {
         return print_error("invalid_argument_count");
     }
-    const bool monochrome =
-        argument_count == 4 && std::wstring_view{arguments[3]} == L"bw";
+    bool monochrome = false;
+    std::optional<negaflow::imaging::ImageTransformParameters> transform{};
+    for (int index = 3; index < argument_count; ++index) {
+        const std::wstring_view token{arguments[index]};
+        if (token == L"bw") {
+            monochrome = true;
+        } else if (token == L"color") {
+            monochrome = false;
+        } else if (token == L"crop" && index + 7 < argument_count) {
+            try {
+                negaflow::imaging::ImageTransformParameters parsed{};
+                parsed.has_crop = true;
+                parsed.crop.x = std::stod(arguments[index + 1]);
+                parsed.crop.y = std::stod(arguments[index + 2]);
+                parsed.crop.width = std::stod(arguments[index + 3]);
+                parsed.crop.height = std::stod(arguments[index + 4]);
+                parsed.rotation = static_cast<negaflow::imaging::ImageRotation>(
+                    std::stoi(arguments[index + 5]) & 3);
+                parsed.flip_horizontal = std::stoi(arguments[index + 6]) != 0;
+                parsed.flip_vertical = std::stoi(arguments[index + 7]) != 0;
+                transform = parsed;
+            } catch (...) {
+                return print_error("invalid_crop");
+            }
+            index += 7;
+        } else {
+            return print_error("invalid_argument");
+        }
+    }
 
     negaflow::imageio::WicTiffDecodeControl decode_control{};
     decode_control.rows_per_copy = 64U;
@@ -59,9 +93,15 @@ int run_auto_base_probe(const int argument_count, const wchar_t* const arguments
         // 스캐너 TIFF 가 아닌 원본입니다. 현상 파이프라인이 그런 파일에 쓰는 길을 그대로
         // 탑니다(`stages/decode.cpp`) — RAW 는 함께 싣는 LibRaw 가 현상합니다. 진단이
         // 앱과 다른 파일만 볼 수 있으면 카메라 스캔 보고를 여기서 못 좁힙니다.
+        // 음화 RAW 는 앱처럼 선형 카메라 RGB 로 풉니다(`stages/decode.cpp` 의 `scene_linear_raw`).
+        // 상자도 프리뷰와 같은 3600 입니다.
+        negaflow::imageio::WicStandardImageDecodeControl standard_control{};
+        standard_control.scene_linear_raw = true;
+        standard_control.max_output_width = 3600U;
+        standard_control.max_output_height = 3600U;
         const negaflow::imageio::WicStandardImageDecodeResult decoded =
             negaflow::imageio::decode_standard_image_with_wic(
-                std::filesystem::path{arguments[2]}, {}, {}, {});
+                std::filesystem::path{arguments[2]}, {}, {}, standard_control);
         if (decoded.status != negaflow::imageio::WicStandardImageDecodeStatus::ok) {
             return print_error(
                 negaflow::imageio::wic_standard_image_decode_status_name(decoded.status));
@@ -75,12 +115,16 @@ int run_auto_base_probe(const int argument_count, const wchar_t* const arguments
         image = std::move(working.image);
     }
 
+    const std::optional<negaflow::imaging::AnalysisRegion> region = transform.has_value()
+        ? negaflow::imaging::analysis_region_from_transform(*transform, image.width, image.height)
+        : std::nullopt;
     const auto started = std::chrono::steady_clock::now();
     const negaflow::imaging::AutoNegativeBaseResult resolved =
         negaflow::imaging::resolve_auto_negative_base(
             image,
             monochrome ? negaflow::imaging::NegativeFilmType::black_and_white
-                       : negaflow::imaging::NegativeFilmType::color);
+                       : negaflow::imaging::NegativeFilmType::color,
+            region);
     const auto finished = std::chrono::steady_clock::now();
     if (resolved.status != negaflow::imaging::AutoNegativeBaseStatus::ok) {
         return print_error(
@@ -91,6 +135,7 @@ int run_auto_base_probe(const int argument_count, const wchar_t* const arguments
               << ",\"width\":" << image.width
               << ",\"height\":" << image.height
               << ",\"film\":\"" << (monochrome ? "bw" : "color") << '"'
+              << ",\"region\":" << (region.has_value() ? "true" : "false")
               << ",\"source\":\"" << source_name(resolved.source) << '"'
               << ",\"dmin\":[" << resolved.dmin[0] << ',' << resolved.dmin[1]
               << ',' << resolved.dmin[2] << ']'

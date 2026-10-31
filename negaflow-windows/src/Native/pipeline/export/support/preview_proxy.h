@@ -52,12 +52,16 @@ struct PreviewProxyHint final {
 
 // 필름 베이스는 원본에서 푼 뒤 (macOS 추정은 별도 통계 축소),
 // `displayProxy` 와 같이 Lanczos3 로 상자 안에 맞춥니다.
+//
+// `retain` 이 거짓이면 결과를 프리뷰 raw 캐시에 담지 않습니다. 카메라 RAW 의 임시 첫 화면이
+// 그렇습니다 — 정착 렌더가 곧 원본 처리로 바꿉니다.
 [[nodiscard]] std::optional<DevelopExportOutcome> preview_proxy_materialize(
     const DevelopExportRequest& request,
     const ObservedSource& observed,
     const PreviewTarget& preview,
     negaflow::imaging::WorkingImage& image,
-    PreviewProxyHint& hint) noexcept;
+    PreviewProxyHint& hint,
+    bool retain = true) noexcept;
 
 // full-resolution cleaned raw를 보존한 채 표시 proxy만 파생합니다.
 [[nodiscard]] std::optional<DevelopExportOutcome> preview_proxy_materialize_from_cleaned(

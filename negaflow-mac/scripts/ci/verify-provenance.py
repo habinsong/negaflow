@@ -19,7 +19,12 @@ WINDOWS_NATIVE_SOURCE_ROOTS = (
     Path("negaflow-windows/tests"),
 )
 WINDOWS_THIRD_PARTY_MANIFEST_ROOT = Path("negaflow-windows/third_party/manifest")
-LIBRAW_PREVIEW_BRIDGE = Path("negaflow-mac/scripts/libraw/native-preview-bridge.cpp")
+# LibRaw DLL 에 함께 링크하는 CDDL-1.0 브리지입니다. Windows 판은 macOS 함수에 Windows 전용 함수를
+# 더한 같은 성격의 파일이라 같은 예외를 둡니다.
+LIBRAW_PREVIEW_BRIDGES = (
+    Path("negaflow-mac/scripts/libraw/native-preview-bridge.cpp"),
+    Path("negaflow-windows/scripts/libraw/native-preview-bridge.cpp"),
+)
 
 
 def fail(message: str) -> None:
@@ -119,7 +124,7 @@ def verify_tree_policy(files: list[Path]) -> tuple[int, int]:
             relative.is_relative_to(root) for root in WINDOWS_NATIVE_SOURCE_ROOTS
         )
         if (path.suffix.lower() in compiled_source_suffixes
-                and not is_windows_native_source and relative != LIBRAW_PREVIEW_BRIDGE):
+                and not is_windows_native_source and relative not in LIBRAW_PREVIEW_BRIDGES):
             fail(f"foreign/native source is not allowed in the Apache repository: {relative}")
         is_windows_component_manifest = (
             relative.parent == WINDOWS_THIRD_PARTY_MANIFEST_ROOT
@@ -204,7 +209,7 @@ def verify_implementation_boundary() -> None:
         for marker in forbidden:
             if marker in text:
                 fail(f"external implementation marker {marker!r} found in {relative}")
-        if relative == LIBRAW_PREVIEW_BRIDGE.as_posix():
+        if relative in {bridge.as_posix() for bridge in LIBRAW_PREVIEW_BRIDGES}:
             if not text.startswith("// spdx-license-identifier: cddl-1.0\n// copyright 2026 negaflow contributors."):
                 fail("LibRaw preview bridge must retain its CDDL notice and Negaflow authorship")
             if '#include "libraw/libraw.h"' not in text:

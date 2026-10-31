@@ -40,10 +40,16 @@ public enum FilmBaseEstimator {
             cachedExclusion = .some(value)
             return value
         }
+        // 컬러 네거티브는 마지막에 유제 색과 무관한 물리 상한을 한 번 더 본다
+        // (`FilmBasePhysicalEnvelope.swift`). 흑백 탐색은 처음부터 색을 묻지 않는다.
+        func physical(_ base: FilmBase) -> FilmBase {
+            guard !neutralBase, let sampleGrid else { return base }
+            return liftedToPhysicalEnvelope(base, grid: sampleGrid, region: region)
+        }
         if let region, let sampleGrid,
            let cropped = estimateAroundCrop(image: image, grid: sampleGrid, region: region,
                                             edgeFraction: edgeFraction, neutralBase: neutralBase) {
-            return cropped
+            return physical(cropped)
         }
         guard let resolved = estimateWithoutRebate(
             from: image, grid: sampleGrid, edgeFraction: edgeFraction,
@@ -53,9 +59,9 @@ public enum FilmBaseEstimator {
         let rescued = rescuedWithRebate(image: image, grid: sampleGrid, resolved: resolved,
                                         neutralBase: neutralBase, exclusion: exclusion)
         let excluded = exclusion()
-        return liftedToFilmEnvelope(rescued, grid: sampleGrid, neutralBase: neutralBase, exclusion: excluded) {
+        return physical(liftedToFilmEnvelope(rescued, grid: sampleGrid, neutralBase: neutralBase, exclusion: excluded) {
             excluded?[$0.y * sampleGrid.width + $0.x] != true
-        }
+        })
     }
 
     /// 베이스 판정의 모순 문턱 — `FilmBaseRebate.contradictingFraction` 의 실측(정상 0~0.8%, 모순 7.1%~).

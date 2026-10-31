@@ -48,8 +48,9 @@ public sealed partial class DevelopWorkspaceView
     {
         autoAdjust.Cancel();
         // 사용자가 새 사진이나 새 보정 상태를 요청하면 이웃 예열보다 현재 화면이 먼저입니다.
-        // 실행 중 포인터는 워커가 반환 뒤 Dispose 합니다.
-        CancelNeighborWarm();
+        // 실행 중 포인터는 워커가 반환 뒤 Dispose 합니다. 다만 예열이 지금 고른 바로 그 사진을
+        // 풀고 있으면 그 한 장은 끝내게 둡니다 — 선택 렌더가 그 디코드를 이어받습니다.
+        CancelNeighborWarm(panel?.DefectLayers.PreviewFrame?.Id);
         // 레이어 강도를 끄는 동안에는 아직 저장하지 않은 값을 얹은 사본을 그립니다 — 저장은
         // 원본 파일 전체를 다시 해싱하므로 드래그 중에 하면 슬라이더가 멈춥니다.
         if (previewCoordinator is null || panel?.DefectLayers.PreviewFrame is not { } frame)

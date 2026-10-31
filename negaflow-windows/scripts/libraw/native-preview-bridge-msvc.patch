@@ -1,0 +1,24 @@
+diff --git a/Makefile.msvc b/Makefile.msvc
+--- a/Makefile.msvc
++++ b/Makefile.msvc
+@@ -111,7 +111,8 @@ DLL_OBJECTS= object\libraw_datastream.obj object\libraw_c_api.obj \
+   object\ahd_demosaic.obj object\dht_demosaic.obj \
+   object\aahd_demosaic.obj object\dcb_demosaic.obj \
+   object\file_write.obj \
+-  object\ext_preprocess.obj   object\apply_profile.obj
++  object\ext_preprocess.obj   object\apply_profile.obj \
++  object\native_preview_bridge.obj
+ 
+ 
+ CC=cl.exe
+@@ -624,6 +625,10 @@ object\apply_profile_st.obj: src\write\apply_profile.cpp
+ object\apply_profile.obj: src\write\apply_profile.cpp
+ 	$(CC) $(COPT) /DLIBRAW_BUILDLIB /Fo"object\\apply_profile.obj" /c src\write\apply_profile.cpp
+ 
++# Negaflow preview bridge (scripts/libraw/native-preview-bridge.cpp, CDDL-1.0).
++object\native_preview_bridge.obj: src\negaflow\native_preview_bridge.cpp
++	$(CC) $(COPT) /DLIBRAW_BUILDLIB /Fo"object\\native_preview_bridge.obj" /c src\negaflow\native_preview_bridge.cpp
++
+ object\file_write_st.obj: src\write\file_write.cpp
+ 	$(CC) $(COPT) /DLIBRAW_NODLL /DLIBRAW_BUILDLIB /Fo"object\\file_write_st.obj" /c src\write\file_write.cpp
+ 

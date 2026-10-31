@@ -26,6 +26,11 @@
 #include "export/support/progress.h"
 #include "export/support/stage_trace.h"
 
+#include "negaflow/imageio/libraw_image_decoder.h"
+
+#include <algorithm>
+#include <chrono>
+#include <cstdio>
 #include <new>
 #include <memory>
 #include <stop_token>
@@ -198,6 +203,39 @@ struct WhiteBalanceProbe final {
     } release_gpu{gpu_policy == GpuUsePolicy::allowed && preview == nullptr &&
                   detect == nullptr};
 
+    // 프리뷰 한 번이 큰 단계마다 쓴 시간을 `decode-trace.txt` 에 한 줄로 남깁니다(그 기록이 켜져
+    // 있을 때만). CLI 와 앱은 동시에 도는 일이 달라 같은 단계도 시간이 다릅니다 — 앱에서 잰 것만이
+    // 사용자가 기다리는 시간입니다.
+    struct PreviewPhaseClock final {
+        bool active{false};
+        std::uint32_t box{0U};
+        std::chrono::steady_clock::time_point start{std::chrono::steady_clock::now()};
+        std::chrono::steady_clock::time_point last{start};
+        double phases[8]{-1, -1, -1, -1, -1, -1, -1, -1};
+        void mark(const int index) noexcept {
+            if (!active) {
+                return;
+            }
+            const auto now = std::chrono::steady_clock::now();
+            phases[index] = std::chrono::duration<double, std::milli>(now - last).count();
+            last = now;
+        }
+        ~PreviewPhaseClock() {
+            if (!active) {
+                return;
+            }
+            char line[256]{};
+            std::snprintf(line, sizeof(line),
+                "preview box=%u decode=%.0f proxy=%.0f invert=%.0f grade=%.0f look=%.0f grain=%.0f "
+                "finish=%.0f publish=%.0f total=%.0f ms",
+                box, phases[0], phases[1], phases[2], phases[3], phases[4], phases[5], phases[6],
+                phases[7],
+                std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count());
+            negaflow::imageio::decode_trace_write(line);
+        }
+    } phase_clock{preview != nullptr && detect == nullptr && negaflow::imageio::decode_trace_enabled(),
+                  preview != nullptr ? std::max(preview->maximum_width, preview->maximum_height) : 0U};
+
     RunTracker tracker{control, plan_total_cost(request, preview != nullptr)};
     std::stop_source stop{};
     if (tracker.cancelled()) {
@@ -217,6 +255,9 @@ struct WhiteBalanceProbe final {
     const bool used_preview_proxy = preview != nullptr && detect == nullptr &&
         preview_proxy_try_take(request, observed, *preview, decoded_image, proxy_hint);
 
+    // 카메라 RAW 의 임시 첫 화면(반 크기)으로 그리는지. 그러면 그 화상과 거기서 잰 베이스를
+    // 프리뷰 raw 캐시에 담지 않습니다 — macOS "이 입력의 측정값은 정착 렌더에 넘기지 않는다".
+    bool provisional_decode = false;
     DefectRecipeStageResult defect_recipe{};
     std::shared_ptr<const negaflow::imaging::WorkingImage> cleaned_raw{};
     const bool may_retain_cleaned_raw = preview != nullptr && detect == nullptr &&
@@ -256,7 +297,8 @@ struct WhiteBalanceProbe final {
     } else if (!used_preview_proxy) {
         if (!used_cleaned_prefix) {
             if (auto failed = decode_source(request, tracker, stop, observed, decoded_image, preview,
-                    preview != nullptr && detect == nullptr && request.defect_recipe.order.empty() ? &cleaned_raw : nullptr)) {
+                    preview != nullptr && detect == nullptr && request.defect_recipe.order.empty() ? &cleaned_raw : nullptr,
+                    &provisional_decode)) {
                 return *failed;
             }
         }
@@ -291,6 +333,7 @@ struct WhiteBalanceProbe final {
         }
     }
 
+    phase_clock.mark(0);
     stage_trace_begin(request, preview, detect);
     // 결함 마스크는 원본 좌표라 결함을 지우기 전에는 줄일 수 없었습니다. 다 지운 지금
     // 줄여, 남은 단계가 판에 놓일 크기로 돌게 합니다 (macOS `prepareForPrintComposite`).
@@ -321,17 +364,24 @@ struct WhiteBalanceProbe final {
         return cancelled_outcome(DevelopExportStage::grain_mend);
     }
 
+    // 사진을 넘기면 이 렌더가 끝나야 다음 사진의 렌더가 시작됩니다. 단계마다 끝에서만 취소를 보면
+    // 프록시(정착 크기 베이스 추정·복사 약 100 ms)와 반전을 다 돌고서야 멈췄습니다 — 실기 기록
+    // (2026-10-31): 취소부터 반환까지 212 ms, 그만큼 다음 사진의 첫 화면이 늦었습니다.
+    if (preview != nullptr && tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::decode);
+    }
     if (preview != nullptr && !used_preview_proxy) {
         const auto failed = cleaned_raw != nullptr
             ? preview_proxy_materialize_from_cleaned(
                 request, observed, *preview, *cleaned_raw, decoded_image, proxy_hint)
             : preview_proxy_materialize(
-                request, observed, *preview, decoded_image, proxy_hint);
+                request, observed, *preview, decoded_image, proxy_hint, !provisional_decode);
         if (failed.has_value()) {
             return *failed;
         }
     }
 
+    phase_clock.mark(1);
     stage_trace_image("preview_proxy", decoded_image);
 
     LookWorkspaceOutput look_workspace{};
@@ -372,6 +422,7 @@ struct WhiteBalanceProbe final {
         return *failed;
     }
 
+    phase_clock.mark(2);
     stage_trace_invert(invert);
     stage_trace_image("invert", invert.image);
 
@@ -408,6 +459,7 @@ struct WhiteBalanceProbe final {
         return sampled;
     }
 
+    phase_clock.mark(3);
     stage_trace_image("grade", invert.image);
 
     // **상주 해제는 단계 안에서 합니다.** 예전에는 여기서 넘기기 직전에 무조건 내렸는데,
@@ -431,6 +483,7 @@ struct WhiteBalanceProbe final {
         return *failed;
     }
 
+    phase_clock.mark(4);
     stage_trace_image("look", look.image);
 
     if (auto failed = apply_grain_stage(
@@ -441,6 +494,7 @@ struct WhiteBalanceProbe final {
         return grain.detect_outcome;
     }
 
+    phase_clock.mark(5);
     stage_trace_image("grain", grain.applied.image);
     stage_trace_grain_mend(grain);
 
@@ -457,12 +511,13 @@ struct WhiteBalanceProbe final {
         return *failed;
     }
 
+    phase_clock.mark(6);
     stage_trace_image("finish", finish.sharpening.image);
 
     // 마무리 화소는 `finish.sharpening.image` 가 들고 있습니다. `write_preview` 가
     // 상주면 GPU 로 BGRA8 을 내리고, 아니면 스스로 `flush_resident()` 합니다 —
     // 여기서 미리 내리면 그 GPU 갈래가 영영 안 돕니다.
-    return publish_developed(
+    DevelopExportOutcome published = publish_developed(
         request,
         preview,
         tracker,
@@ -472,6 +527,8 @@ struct WhiteBalanceProbe final {
         look,
         grain,
         finish);
+    phase_clock.mark(7);
+    return published;
 }
 
 // 예외 차단막입니다. 이 파이프라인은 화소 버퍼를 통째로 들고 다니고

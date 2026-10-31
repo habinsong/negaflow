@@ -49,6 +49,9 @@ struct LibRawDecodeResult final {
     // 요청한 프리뷰 상자에 맞추느라 이미 줄여서 돌려주었는지입니다. 호출부가 뒤에서
     // 한 번 더 줄이지 않도록 알립니다 - WIC 경로의 `reduced_for_preview` 와 같은 뜻입니다.
     bool reduced_for_preview{false};
+    // macOS `beginProgressivePreview` 의 `.first` 입니다 — 반 크기(또는 X-Trans 선형 보간)로
+    // 빨리 만든 **임시 첫 화면**이라 정착 결과로 담아 두면 안 됩니다.
+    bool provisional{false};
     DecodedImage image{};
 };
 
@@ -94,5 +97,29 @@ struct LibRawShotResult final {
     const WicStandardImageDecodeControl& control = {}) noexcept;
 
 [[nodiscard]] const char* libraw_decode_status_name(LibRawDecodeStatus status) noexcept;
+
+/// 함께 배포한 `libraw.dll` 에 macOS 와 같은 프리뷰 브리지(`negaflow_libraw_preview_mode`)가
+/// 있는지입니다. 없으면 임시 첫 화면 없이 예전처럼 원본 크기로만 처리합니다.
+[[nodiscard]] bool libraw_supports_provisional_preview() noexcept;
+
+/// 이 파일에서 반 크기(X-Trans 는 선형 보간) 첫 화면을 만들 수 있는지를 **헤더만 읽고** 답합니다.
+/// 같은 파일을 이웃 예열이 풀고 있을 때, 첫 화면을 따로 빨리 만들지(가능) 그 디코드를 기다릴지
+/// (불가능 — 필름 스캐너의 선형 DNG 같은 것) 정하는 데 씁니다.
+[[nodiscard]] bool libraw_first_preview_possible(
+    const std::filesystem::path& path, std::uint32_t maximum_dimension) noexcept;
+
+/// 앱 안에서 디코드 단계별 시간을 남기는 진단 기록입니다. `%LOCALAPPDATA%\Negaflow\Logs` 에
+/// `decode-trace.on` 이 있을 때만 켜지고(개발자 모드가 다른 추적과 함께 만들고 지웁니다), 줄은
+/// 같은 폴더의 `decode-trace.txt` 에 쌓입니다. CLI 와 앱은 캐시 상태도 동시에 도는 일도 달라서,
+/// 앱에서 잰 것만이 사용자가 기다리는 시간입니다.
+[[nodiscard]] bool decode_trace_enabled() noexcept;
+void decode_trace_write(const char* line) noexcept;
+
+/// 임시 첫 화면을 만든 뒤 정착 디코드가 이어 쓰라고 남겨 둔 unpack 결과의 바이트 수입니다.
+/// 한 장만 남기며, 없으면 0 입니다. 프레임 캐시 예산이 이것까지 셉니다.
+[[nodiscard]] std::uint64_t libraw_retained_unpacked_bytes() noexcept;
+
+/// 남겨 둔 unpack 결과를 놓습니다. 메모리 예산을 넘었거나 시험이 비울 때 부릅니다.
+void libraw_release_retained_unpacked() noexcept;
 
 }  // namespace negaflow::imageio

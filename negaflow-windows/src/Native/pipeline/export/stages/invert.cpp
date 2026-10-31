@@ -167,6 +167,10 @@ std::optional<DevelopExportOutcome> invert_source(
         DevelopExportStage::develop,
         cost_of(auto_base_cost, needs_base && (hint == nullptr || !hint->has_base)) +
             cost_of(invert_cost, out.negative_source));
+    // 앞 단계 사이에 취소됐으면 베이스 추정과 반전(정착 크기 75~170 ms)을 돌지 않습니다.
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::develop);
+    }
     if (needs_base) {
         if (hint != nullptr && hint->has_base) {
             apply_resolved_base(out, *hint);

@@ -216,6 +216,12 @@ try {
     foreach ($librawPatch in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'libraw') -Filter '*.patch' -File) {
         Copy-Item -LiteralPath $librawPatch.FullName -Destination $librawNoticeDirectory -Force
     }
+    # DLL 에 함께 링크한 CDDL-1.0 프리뷰 브리지 소스입니다. 패치처럼 대응 소스로 싣습니다.
+    $librawPreviewBridge = Join-Path $PSScriptRoot 'libraw\native-preview-bridge.cpp'
+    if (-not (Test-Path -LiteralPath $librawPreviewBridge -PathType Leaf)) {
+        throw "LibRaw preview bridge source is missing: $librawPreviewBridge"
+    }
+    Copy-Item -LiteralPath $librawPreviewBridge -Destination $librawNoticeDirectory -Force
     $librawModificationNotice = Join-Path $librawLicenseDirectory 'README.txt'
     if (Test-Path -LiteralPath $librawModificationNotice -PathType Leaf) {
         Copy-Item -LiteralPath $librawModificationNotice -Destination $librawNoticeDirectory -Force

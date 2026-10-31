@@ -13,7 +13,9 @@
 #include <cstdint>
 #include <limits>
 #include <new>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace negaflow::imageio {
@@ -496,18 +498,39 @@ WicStandardImageDecodeResult decode_standard_image_with_wic(
     const WicStandardImageDecodeLimits& limits,
     const std::stop_token stop_token,
     const WicStandardImageDecodeControl& control) noexcept {
-    WicStandardImageDecodeResult wic{};
-    if (wic_detail::raw_development_known_unavailable(path)) {
-        wic.status = WicStandardImageDecodeStatus::raw_development_failed;
-    } else {
-        wic = decode_standard_image_with_wic_only(path, limits, stop_token, control);
+    // 음화 카메라 RAW 는 WIC 가 열어 봐도 결국 `raw_development_failed` 로 LibRaw 에 넘깁니다
+    // (아래 `decode_standard_image_with_wic_only` 의 scene-linear 갈래). 알려진 RAW 확장자면 그
+    // 열어 보기를 건너뛰고 LibRaw 부터 부릅니다 — 실기에서 디코드 단계의 LibRaw 밖 시간이 장당
+    // 약 45 ms 였습니다. LibRaw 가 못 열면 예전 길(WIC 먼저)로 다시 갑니다 — 사용자에게 보이는
+    // 실패 사유는 그대로 WIC 의 것입니다.
+    std::optional<LibRawDecodeResult> early{};
+    if (control.scene_linear_raw && libraw_decoder_available() && wic_detail::has_camera_raw_extension(path)) {
+        early = decode_raw_with_libraw(path, limits, stop_token, control);
+        if (early->status == LibRawDecodeStatus::cancelled) {
+            WicStandardImageDecodeResult cancelled{};
+            cancelled.status = WicStandardImageDecodeStatus::cancelled;
+            return cancelled;
+        }
+        if (early->status != LibRawDecodeStatus::ok) {
+            early.reset();
+        }
     }
-    if (wic.status == WicStandardImageDecodeStatus::ok || !missing_codec(wic.status) ||
-        !libraw_decoder_available()) {
-        return wic;
+    WicStandardImageDecodeResult wic{};
+    if (!early.has_value()) {
+        if (wic_detail::raw_development_known_unavailable(path)) {
+            wic.status = WicStandardImageDecodeStatus::raw_development_failed;
+        } else {
+            wic = decode_standard_image_with_wic_only(path, limits, stop_token, control);
+        }
+        if (wic.status == WicStandardImageDecodeStatus::ok || !missing_codec(wic.status) ||
+            !libraw_decoder_available()) {
+            return wic;
+        }
     }
 
-    const LibRawDecodeResult raw = decode_raw_with_libraw(path, limits, stop_token, control);
+    const LibRawDecodeResult raw = early.has_value()
+        ? std::move(*early)
+        : decode_raw_with_libraw(path, limits, stop_token, control);
     if (raw.status != LibRawDecodeStatus::ok) {
         // LibRaw 도 못 읽으면 **WIC 의 실패 사유를 그대로 돌려줍니다.** LibRaw 의 사유로
         // 덮으면 "codec 이 없다" 와 "파일이 깨졌다" 가 뒤섞여 사용자에게 엉뚱한 안내가
@@ -531,6 +554,7 @@ WicStandardImageDecodeResult decode_standard_image_with_wic(
     result.info.libraw_attempted = true;
     result.info.libraw_status = LibRawDecodeStatus::ok;
     result.info.libraw_native_error_code = raw.native_error_code;
+    result.info.provisional_raw = raw.provisional;
     // LibRaw 가 파일의 flip 을 이미 적용해서 돌려줍니다. WIC RAW 경로가
     // `IWICDevelopRaw` 로 as-shot 회전을 적용하고 orientation 을 1 로 두는 것과 같습니다.
     result.info.exif_orientation = 1U;

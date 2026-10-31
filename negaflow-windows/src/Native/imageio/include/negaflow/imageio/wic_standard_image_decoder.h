@@ -44,6 +44,13 @@ struct WicStandardImageDecodeControl final {
     // 프리뷰 프록시를 만드는 길입니다. 정확도보다 시간이 우선입니다.
     bool prefer_speed{false};
     bool scene_linear_raw{false}; // Negative film: camera RGB, unit WB, deferred color matrix.
+    // 카메라 RAW 음화의 임시 첫 화면(macOS `beginProgressivePreview` 의 `.first`). 0 이 아니면
+    // 긴 변의 절반이 이 값 이상일 때 반 크기로(X-Trans 는 선형 보간으로) 처리하고
+    // `provisional_raw` 를 세웁니다. 빨리 만들 길이 없으면 여느 때처럼 정착 디코드를 합니다.
+    std::uint32_t raw_first_preview_edge{0U};
+    // 임시 첫 화면을 만든 unpack 결과를 남겨 바로 뒤 정착 디코드가 이어 쓰게 합니다. 한 장만
+    // 남기고, 남기는 동안 파일은 닫습니다(macOS 는 한 작업 안에서 같은 핸들로 두 번 처리합니다).
+    bool retain_unpacked_raw{false};
 };
 
 struct WicStandardImageDecodeLimits final {
@@ -75,6 +82,9 @@ struct WicStandardImageDecodeInfo final {
     int libraw_native_error_code{0};
     // 프리뷰 크기로 줄여 풀었습니다. 캐시가 이것을 전체 해상도 결과와 섞지 않도록 남깁니다.
     bool reduced_for_preview{false};
+    // LibRaw 가 `raw_first_preview_edge` 요청대로 **임시 첫 화면**을 만들었습니다. 정착 결과로
+    // 캐시하면 안 됩니다.
+    bool provisional_raw{false};
     std::uint16_t exif_orientation{1U};
     bool orientation_applied{false};
     negaflow::color::IccProfileInfo icc{};

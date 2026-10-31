@@ -6,13 +6,20 @@
 #include "export/support/input_gamma_preview_decode.h"
 #include "export/support/outcome.h"
 
+#include "negaflow/imageio/libraw_image_decoder.h"
 #include "negaflow/imageio/wic_standard_image_decoder.h"
 #include "negaflow/imaging/scanner_tiff_to_working.h"
 #include "negaflow/imaging/working_image_resample.h"
 
+#include <algorithm>
+#include <chrono>
+#include <cstdio>
 #include <cwchar>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <stop_token>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -25,6 +32,21 @@ namespace {
            _wcsicmp(extension.c_str(), L".tiff") == 0;
 }
 
+// macOS `NativeCameraRAW.decodeGates` — 같은 카메라 RAW 를 동시에 요청하면 한 번만 풀고 나눠
+// 씁니다. 키로 나눈 잠금이라 다른 파일은 대부분 따로 돕니다. LibRaw 는 OpenMP 로 이미 모든
+// 코어를 쓰므로 같은 파일을 겹쳐 풀면 둘 다 느려질 뿐입니다 — 실기 기록: 이웃 예열이 풀던
+// RAF 를 고르자 같은 파일을 하나 더 풀기 시작해 2,071 ms 가 걸렸습니다(2026-10-31
+// `preview-trace.txt`). 프로세스 끝까지 살아 있어야 하므로 힙에 두고 풀지 않습니다.
+[[nodiscard]] std::timed_mutex& camera_raw_gate(const std::filesystem::path& path) noexcept {
+    static std::timed_mutex* const gates = new std::timed_mutex[16];
+    std::size_t hash = 0U;
+    try {
+        hash = std::filesystem::hash_value(path);
+    } catch (...) {
+    }
+    return gates[hash % 16U];
+}
+
 } // namespace
 
 std::optional<DevelopExportOutcome> decode_source(
@@ -34,7 +56,11 @@ std::optional<DevelopExportOutcome> decode_source(
     const ObservedSource& observed,
     negaflow::imaging::WorkingImage& decoded_image,
     const PreviewTarget* preview,
-    std::shared_ptr<const negaflow::imaging::WorkingImage>* const shared) noexcept {
+    std::shared_ptr<const negaflow::imaging::WorkingImage>* const shared,
+    bool* const provisional) noexcept {
+    if (provisional != nullptr) {
+        *provisional = false;
+    }
     tracker.begin(DevelopExportStage::decode, cost_of(decode_cost, true));
     const bool scene_linear_raw = request.film_polarity == FilmPolarity::negative && !is_tiff_source(request.source);
     if (request.input_gamma.mode != 0U && !is_tiff_source(request.source)) {
@@ -72,8 +98,12 @@ std::optional<DevelopExportOutcome> decode_source(
     const std::uint32_t box_height = decodes_full_resolution ? 0U : proxy_box;
     // 잠금은 참조를 꺼낼 때만 잡습니다. 277MB 복사를 잠금 안에서 하면 다른 스레드가
     // 그동안 통째로 멈춥니다 — 참조를 들고 있으므로 복사 중에 해제되지 않습니다.
-    if (const std::shared_ptr<const negaflow::imaging::WorkingImage> cached =
-            decoded_source_try_take(request.source, observed.before.observation, box_width, box_height, request.input_gamma, scene_linear_raw)) {
+    const auto take_cached = [&]() -> std::optional<std::optional<DevelopExportOutcome>> {
+        const std::shared_ptr<const negaflow::imaging::WorkingImage> cached =
+            decoded_source_try_take(request.source, observed.before.observation, box_width, box_height, request.input_gamma, scene_linear_raw);
+        if (cached == nullptr) {
+            return std::nullopt;
+        }
         try {
             if (shared != nullptr) {
                 *shared = cached;
@@ -87,7 +117,67 @@ std::optional<DevelopExportOutcome> decode_source(
         if (tracker.cancelled()) {
             return cancelled_outcome(DevelopExportStage::decode);
         }
-        return std::nullopt;
+        return std::optional<DevelopExportOutcome>{};
+    };
+    if (auto hit = take_cached()) {
+        return *hit;
+    }
+
+    // 카메라 RAW 프리뷰(macOS `prepareColdCameraRAWPreview`). macOS 는 음화에만 쓰지만 여기서는
+    // 디지털(양화) RAW 와 썸네일에도 씁니다 — LibRaw 가 푸는 원본이면 모두 같은 이득입니다. LibRaw 가
+    // 아닌 원본(JPEG 등)은 첫 화면 요청을 무시하고 여느 때처럼 풉니다.
+    //  - 정착은 같은 파일의 디코드 잠금을 기다립니다. 이웃 예열이 풀고 있던 사진을 고르면 그
+    //    디코드를 끝까지 받아 씁니다(macOS: "미리 읽던 바로 그 사진을 선택했다면 디코드를 끝내고
+    //    선택 렌더와 공유한다"). 첫 화면이 언제 기다리는지는 아래에 적었습니다.
+    //  - 인터랙티브 상자는 반 크기 **임시 첫 화면**을 먼저 내고, 그 unpack 을 정착 디코드에
+    //    남깁니다. 임시 화면은 캐시에 담지 않습니다 — "첫 입력은 임시 표시용이며 정착 마스터
+    //    캐시에는 넣지 않는다".
+    const bool camera_raw_preview = !is_tiff_source(request.source) && preview != nullptr &&
+        request.input_gamma.mode == 0U && !decodes_full_resolution && box_width != 0U &&
+        negaflow::imageio::libraw_supports_provisional_preview();
+    const std::uint32_t preview_long_edge = preview != nullptr
+        ? std::max(preview->maximum_width, preview->maximum_height)
+        : 0U;
+    const bool first_preview = camera_raw_preview && preview_long_edge != 0U &&
+        preview_long_edge < preview_full_max_dimension;
+    std::unique_lock<std::timed_mutex> source_gate{};
+    if (camera_raw_preview) {
+        std::timed_mutex& gate = camera_raw_gate(request.source);
+        source_gate = first_preview
+            ? std::unique_lock<std::timed_mutex>{gate, std::try_to_lock}
+            : std::unique_lock<std::timed_mutex>{gate, std::defer_lock};
+        // 같은 파일을 다른 쪽(이웃 예열)이 풀고 있으면:
+        //  - 반 크기 첫 화면을 만들 수 있는 원본은 기다리지 않고 첫 화면부터 따로 만듭니다. 원본
+        //    처리를 기다리면 그만큼 늦습니다(실기: 예열이 풀던 ORF·CR3 를 고르자 첫 화면 1.3 초,
+        //    렌더 자체는 0.15 초). 정착은 아래 잠금에서 예열 결과를 받습니다.
+        //  - 못 만드는 원본(필름 스캐너의 선형 DNG 같은 것)은 잠금을 기다려 예열의 디코드를
+        //    받습니다. 따로 풀면 원본 전체를 한 번 더 풀어 둘 다 느려집니다(실기: 1,631 ms).
+        //    macOS `produceProgressivePreview` 도 같은 잠금을 기다립니다.
+        const bool wait = !source_gate.owns_lock() &&
+            !(first_preview && negaflow::imageio::libraw_first_preview_possible(
+                request.source, preview_long_edge));
+        const auto wait_started = std::chrono::steady_clock::now();
+        if (wait) {
+            while (!source_gate.try_lock_for(std::chrono::milliseconds{10})) {
+                if (tracker.cancelled()) {
+                    return cancelled_outcome(DevelopExportStage::decode);
+                }
+            }
+        }
+        if (negaflow::imageio::decode_trace_enabled()) {
+            char line[160]{};
+            std::snprintf(line, sizeof(line), "gate box=%u first=%d owned=%d waited=%.0f ms",
+                preview_long_edge, first_preview ? 1 : 0, source_gate.owns_lock() ? 1 : 0,
+                std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - wait_started).count());
+            negaflow::imageio::decode_trace_write(line);
+        }
+        // 기다리는 동안 같은 파일의 정착 디코드가 끝났으면 그것을 씁니다.
+        if (source_gate.owns_lock()) {
+            if (auto hit = take_cached()) {
+                negaflow::imageio::decode_trace_write("gate cache hit after wait");
+                return *hit;
+            }
+        }
     }
 
     DecodeProgressBridge decode_progress{tracker, stop};
@@ -109,6 +199,7 @@ std::optional<DevelopExportOutcome> decode_source(
         // 게시되는 파일의 일부이므로 그 검사를 그대로 둡니다.
         decode_control.validate_compressed_streams = false;
     }
+    bool provisional_decode = false;
     if (is_tiff_source(request.source)) {
         auto prepared = preview != nullptr && request.input_gamma.mode != 0U
             ? decode_input_gamma_preview(request, observed, decode_control, box_width, box_height)
@@ -169,12 +260,38 @@ std::optional<DevelopExportOutcome> decode_source(
             standard_control.prefer_speed = true;
         }
         standard_control.scene_linear_raw = scene_linear_raw;
+        if (first_preview) {
+            standard_control.raw_first_preview_edge = preview_long_edge;
+            // 잠금을 잡은 쪽만 unpack 을 남깁니다. 썸네일처럼 캐시에 담지 않는 호출은 남기지
+            // 않습니다 — 지금 보는 사진이 남긴 것을 밀어내면 안 됩니다.
+            standard_control.retain_unpacked_raw =
+                source_gate.owns_lock() && request.retain_preview_raw;
+        }
+        // 렌더가 취소되면(사진을 넘기면) 디코드도 끊습니다. TIFF 는 행 진행 보고
+        // (`DecodeProgressBridge`)가 이 일을 하지만 WIC·LibRaw 표준 경로에는 그런 보고가 없어,
+        // 앞 사진의 RAW 를 끝까지 풀고서야 다음 사진으로 넘어갔습니다(실기: 취소부터 반환까지
+        // 0.6~1.1 초). 작은 감시자가 취소 표시를 `stop` 으로 옮기면 LibRaw 가 그것을 봅니다.
+        // 감시자를 못 띄워도(스레드 생성 실패) 디코드는 그대로 갑니다 — 끊기지 않을 뿐입니다.
+        std::optional<std::jthread> cancel_watch{};
+        try {
+            cancel_watch.emplace([&tracker, &stop](const std::stop_token finished) {
+                while (!finished.stop_requested()) {
+                    if (tracker.cancelled()) {
+                        stop.request_stop();
+                        return;
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds{10});
+                }
+            });
+        } catch (...) {
+        }
         const negaflow::imageio::WicStandardImageDecodeResult decoded =
             negaflow::imageio::decode_standard_image_with_wic(
                 request.source,
                 {},
                 stop.get_token(),
                 standard_control);
+        cancel_watch.reset();
         if (decoded.status == negaflow::imageio::WicStandardImageDecodeStatus::cancelled) {
             return cancelled_outcome(DevelopExportStage::decode);
         }
@@ -192,6 +309,7 @@ std::optional<DevelopExportOutcome> decode_source(
                 working.info.native_error_code);
         }
         decoded_image = std::move(working.image);
+        provisional_decode = decoded.info.provisional_raw;
     }
 
     // 디코더가 줄여 주지 못한 형식은 **여기서** 줄입니다.
@@ -241,8 +359,13 @@ std::optional<DevelopExportOutcome> decode_source(
     // **전체 해상도 프리뷰는 다릅니다.** 결함 편집은 ROI 가 원본 화소 좌표라 전체 해상도로
     // 풀지만, 붓질마다 같은 프레임을 다시 그립니다 — 담지 않으면 획 하나에 한 번씩 다시
     // 풉니다. 그래서 판정은 "전체 해상도냐"가 아니라 **"프리뷰냐"** 입니다.
+    // 임시 첫 화면은 이번 렌더에만 씁니다. 캐시에 담지 않고, 호출자도 프리뷰 raw 캐시에
+    // 담지 않도록 알립니다.
+    if (provisional_decode && provisional != nullptr) {
+        *provisional = true;
+    }
     try {
-        if (preview == nullptr || !request.retain_preview_raw) {
+        if (preview == nullptr || !request.retain_preview_raw || provisional_decode) {
             tracker.finish();
             if (tracker.cancelled()) {
                 return cancelled_outcome(DevelopExportStage::decode);

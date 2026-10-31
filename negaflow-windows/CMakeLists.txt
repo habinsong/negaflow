@@ -613,6 +613,7 @@ add_library(negaflow_imageio STATIC
     src/Native/imageio/wic_standard_image_decoder.cpp
     src/Native/imageio/libraw_image_decoder.cpp
     src/Native/imageio/libraw_preview_reduce.cpp
+    src/Native/imageio/linear_dng_mapped.cpp
     src/Native/imageio/wic_orientation.cpp
     src/Native/imageio/wic_raw_development.cpp
     src/Native/imageio/wic_tiff_decoder.cpp
@@ -2453,6 +2454,18 @@ if(BUILD_TESTING)
     add_test(
         NAME native.libraw_preview_reduce
         COMMAND negaflow_libraw_preview_reduce_tests
+    )
+
+    add_executable(negaflow_linear_dng_mapped_tests
+        tests/Native.UnitTests/linear_dng_mapped_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_linear_dng_mapped_tests
+        PRIVATE negaflow_imageio negaflow_project_options
+    )
+    add_test(
+        NAME native.linear_dng_mapped
+        COMMAND negaflow_linear_dng_mapped_tests
     )
 
     add_executable(negaflow_wic_tiff_decoder_tests

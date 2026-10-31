@@ -12,6 +12,12 @@ public sealed partial class MainWindow
     private bool terminationInProgress;
     private bool terminationApproved;
 
+    /// <summary>
+    /// 창이 닫히기로 정해졌습니다. 이 뒤에 큐에서 돌아오는 비동기 일(스캔 진행 등)은 XAML 을
+    /// 건드리면 안 됩니다 - 정리된 XAML 을 건드려 접근 위반으로 죽었습니다(2026-10-31 01:27 덤프).
+    /// </summary>
+    internal static volatile bool IsClosing;
+
     private async void OnAppWindowClosing(
         AppWindow sender,
         AppWindowClosingEventArgs args)
@@ -19,6 +25,7 @@ public sealed partial class MainWindow
         _ = sender;
         if (terminationApproved || libraryHost is null)
         {
+            IsClosing = true;
             return;
         }
 
@@ -96,6 +103,7 @@ public sealed partial class MainWindow
         }
         terminationApproved = true;
         terminationInProgress = false;
+        IsClosing = true;
         Close();
     }
 
