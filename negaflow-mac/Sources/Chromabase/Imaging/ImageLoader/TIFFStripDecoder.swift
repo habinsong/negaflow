@@ -38,6 +38,7 @@ enum TIFFStripDecoder {
             guard let fileBase = file.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
                 failed.set(); return
             }
+            let buffers = StripBuffers(file: fileBase, fileCount: file.count, output: base)
             let strips = header.stripOffsets.count
             let chunks = min(strips, ProcessInfo.processInfo.activeProcessorCount * 4)
             // Swift 동시성의 협력 스레드에서 바로 부르면 그 풀(코어 수 폭)의 바쁜 스레드를 나눠 쓴다.
@@ -51,10 +52,12 @@ enum TIFFStripDecoder {
                     let firstRow = strip * header.rowsPerStrip
                     let rows = min(header.rowsPerStrip, header.height - firstRow)
                     let offset = header.stripOffsets[strip], count = header.stripByteCounts[strip]
-                    guard rows > 0, offset >= 0, count > 0, offset <= file.count - count else { failed.set(); return }
-                    let destination = base + firstRow * rowBytes
+                    guard rows > 0, offset >= 0, count > 0, offset <= buffers.fileCount - count else {
+                        failed.set(); return
+                    }
+                    let destination = buffers.output + firstRow * rowBytes
                     let expected = rows * rowBytes
-                    guard table.decode(fileBase + offset, count: count, into: destination, expected: expected) else {
+                    guard table.decode(buffers.file + offset, count: count, into: destination, expected: expected) else {
                         failed.set(); return
                     }
                     finish(destination, rows: rows, header: header, rowBytes: rowBytes)
@@ -93,6 +96,13 @@ enum TIFFStripDecoder {
                 for index in channels..<rowBytes { line[index] &+= line[index - channels] }
             }
         }
+    }
+
+    /// 병렬 루프가 함께 쓰는 원본과 출력. 스트립마다 출력 행이 겹치지 않고 원본은 읽기만 한다.
+    private struct StripBuffers: @unchecked Sendable {
+        let file: UnsafePointer<UInt8>
+        let fileCount: Int
+        let output: UnsafeMutablePointer<UInt8>
     }
 
     private final class Failure: @unchecked Sendable {

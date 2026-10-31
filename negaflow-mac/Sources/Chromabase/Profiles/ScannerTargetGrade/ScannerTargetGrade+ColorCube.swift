@@ -195,6 +195,11 @@ extension ScannerTargetGrade {
         return clamp(scale, 0.0, 1.0)
     }
 
+    /// B 슬라이스마다 쓰는 칸이 겹치지 않는 출력 버퍼(병렬 채우기용).
+    private struct CubeBuffer: @unchecked Sendable {
+        let base: UnsafeMutablePointer<Float>
+    }
+
     static func makeCubeData(signature sig: Signature, dimension dim: Int) -> Data {
         let prepared = preparedSignature(sig)
         let reciprocal = reciprocal(prepared)
@@ -203,7 +208,9 @@ extension ScannerTargetGrade {
         // 칸마다 독립이라 B 슬라이스로 나눠 모든 코어로 채운다(새 장면마다 26만 칸을 한 코어로 채우던
         // 것이 정착 렌더를 붙잡았다). 칸의 계산은 그대로라 결과도 같다. Swift 동시성의 협력 스레드에서
         // 불려도 일반 작업 스레드로 퍼지도록 GCD 전역 큐 문맥에서 돌린다(우선순위는 부른 쪽을 따른다).
-        cube.withUnsafeMutableBufferPointer { cube in
+        cube.withUnsafeMutableBufferPointer { storage in
+            guard let base = storage.baseAddress else { return }
+            let cube = CubeBuffer(base: base)
             DispatchQueue.global(qos: DispatchQoS.QoSClass(rawValue: qos_class_self()) ?? .userInitiated).sync {
                 DispatchQueue.concurrentPerform(iterations: dim) { bi in
                     let bInput = Double(bi) / Double(dim - 1)
@@ -234,10 +241,10 @@ extension ScannerTargetGrade {
                             let output = input + (candidate - input) * scale
                             let offset = ((bi * dim + gi) * dim + ri) * 4
                             // 공통 scale이 unit gamut을 보장한다. clamp는 Float 반올림 오차 방어뿐이다.
-                            cube[offset] = Float(clamp(output.x, 0.0, 1.0))
-                            cube[offset + 1] = Float(clamp(output.y, 0.0, 1.0))
-                            cube[offset + 2] = Float(clamp(output.z, 0.0, 1.0))
-                            cube[offset + 3] = 1
+                            cube.base[offset] = Float(clamp(output.x, 0.0, 1.0))
+                            cube.base[offset + 1] = Float(clamp(output.y, 0.0, 1.0))
+                            cube.base[offset + 2] = Float(clamp(output.z, 0.0, 1.0))
+                            cube.base[offset + 3] = 1
                         }
                     }
                 }
