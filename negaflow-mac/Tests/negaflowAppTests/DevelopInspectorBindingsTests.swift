@@ -126,7 +126,10 @@ final class DevelopInspectorBindingsTests: XCTestCase {
 
             model.applyDevelopmentProcess(process, to: frame)
             let deadline = Date().addingTimeInterval(10)
-            while (!frame.hasDevelopedOnce || !frame.developedIsSettled), Date() < deadline {
+            // 정착 패스는 원본 미리보기를 별도 작업으로 미룬다(`renderDeferredRawPreview`).
+            // 정착만 보고 넘어가면 바쁜 CI 에서 원본 미리보기가 아직 비어 있다.
+            while (!frame.hasDevelopedOnce || !frame.developedIsSettled || frame.rawPreviewImage == nil),
+                  Date() < deadline {
                 try await Task.sleep(for: .milliseconds(25))
             }
 
