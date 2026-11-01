@@ -36,6 +36,20 @@ enum LibraryBackupOrdering {
         )
     }
 
+    static func isNewerManifest(
+        _ lhs: (url: URL, manifest: LibraryBackupManifest),
+        _ rhs: (url: URL, manifest: LibraryBackupManifest)
+    ) -> Bool {
+        isNewer(
+            leftSequence: lhs.manifest.sequence,
+            leftDate: lhs.manifest.createdAt,
+            leftID: lhs.url.lastPathComponent,
+            rightSequence: rhs.manifest.sequence,
+            rightDate: rhs.manifest.createdAt,
+            rightID: rhs.url.lastPathComponent
+        )
+    }
+
     static func isNewerGeneration(
         _ lhs: LibraryBackupGeneration,
         _ rhs: LibraryBackupGeneration

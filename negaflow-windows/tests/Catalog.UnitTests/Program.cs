@@ -22,6 +22,10 @@ internal static class Program
             InputGammaMigrationTests.Run();
             return Report("catalog_input_gamma_migration");
         }
+        if (args.Length == 2 && args[0] == CatalogBackupDrill.Argument)
+        {
+            return CatalogBackupDrill.Run(args[1]);
+        }
         if (args.Length == 2 && args[0] == CatalogProcessLockTests.LockContenderArgument)
         {
             return CatalogStorageTests.RunLockContender(args[1]);

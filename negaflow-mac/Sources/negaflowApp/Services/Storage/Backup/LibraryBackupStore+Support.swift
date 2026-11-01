@@ -7,10 +7,30 @@ extension LibraryBackupStore {
         keeping retentionCount: Int,
         fileManager: FileManager
     ) {
-        let snapshots = validSnapshots(in: backupDirectory, fileManager: fileManager)
-            .sorted(by: LibraryBackupOrdering.isNewerSnapshot)
-        for snapshot in snapshots.dropFirst(retentionCount) {
-            try? fileManager.removeItem(at: snapshot.directoryURL)
+        // 새 세대부터 훑어 온전한 세대를 `retentionCount` 개 찾을 때까지만 검증한다(체크섬은
+        // 세대 전체를 읽는다). 그보다 오래된 세대는 검증 없이 지운다 — 온전한 새 세대가 이미
+        // 그만큼 있으니 잃는 것이 없고, 깨진 옛 세대도 영영 남지 않는다. 매니페스트조차 읽히지
+        // 않는 폴더는 무엇인지 모르므로 건드리지 않는다.
+        let generations = ((try? fileManager.contentsOfDirectory(
+            at: backupDirectory,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []).compactMap { url -> (url: URL, manifest: LibraryBackupManifest)? in
+            guard url.lastPathComponent.hasPrefix("backup-"),
+                  (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true,
+                  let data = try? Data(contentsOf: manifestURL(in: url)),
+                  let manifest = try? decodeManifest(data) else { return nil }
+            return (url, manifest)
+        }.sorted(by: LibraryBackupOrdering.isNewerManifest)
+        var kept = 0
+        for generation in generations {
+            if kept >= retentionCount {
+                // 이 앱보다 새 버전이 만든 세대는 무엇이 들었는지 모르므로 남긴다.
+                guard generation.manifest.version <= LibraryBackupManifest.currentVersion else { continue }
+                try? fileManager.removeItem(at: generation.url)
+            } else if validateSnapshot(at: generation.url, fileManager: fileManager) != nil {
+                kept += 1
+            }
         }
         if let urls = try? fileManager.contentsOfDirectory(
             at: backupDirectory,

@@ -2,8 +2,13 @@ import Foundation
 import CoreGraphics
 import Chromabase
 
+/// recipe 기록 파일. v2(1.2.4 이하)는 항목을 메모리 표현 그대로 담아 적외선 마스크가 비압축이었다
+/// — 장당 수십 MB, 백업 세대마다 다시 그만큼. v3은 같은 snapshot 을 담되 비압축 마스크만 저장
+/// 때 압축하고(`storagePacked`) 읽을 때 되돌린다. 둘 다 읽고, 쓰기는 v3 만 한다.
 struct DefectSidecarV2: Codable, Sendable {
-    static let currentVersion = 2
+    static let currentVersion = 3
+    static let unpackedVersion = 2
+    static let readableVersions: ClosedRange<Int> = unpackedVersion...currentVersion
 
     var version: Int = currentVersion
     var frameID: UUID
@@ -19,15 +24,15 @@ struct DefectSidecarV2: Codable, Sendable {
         recipeRevision = snapshot.identity.revision
         recipeSHA256 = snapshot.identity.recipeSHA256
         sourceIdentity = snapshot.identity.sourceIdentity
-        // runtime fingerprint v2는 압축 표현도 포함하므로 저장 중 다시 압축하지 않습니다.
-        items = snapshot.items
+        // 지문은 메모리 표현(압축 여부 포함) 기준이다. 저장 압축은 표시를 달아 읽을 때 되돌린다.
+        items = snapshot.items.map { $0.packedForStorage() }
     }
 
     func validatedSnapshot(
         expectedFrameID: UUID,
         limits: DefectSidecarResourceLimits = .standard
     ) throws -> DefectRecipeSnapshot {
-        guard version == Self.currentVersion else {
+        guard Self.readableVersions.contains(version) else {
             throw DefectRecipeValidationError.unsupportedFingerprintVersion(version)
         }
         guard frameID == expectedFrameID else {
@@ -35,6 +40,19 @@ struct DefectSidecarV2: Codable, Sendable {
         }
         guard fingerprintVersion == DefectRecipeFingerprint.currentVersion else {
             throw DefectRecipeValidationError.unsupportedFingerprintVersion(fingerprintVersion)
+        }
+        let items: [DefectEditItemRecord]
+        if version == Self.unpackedVersion {
+            // v2 기록기는 저장 압축을 몰랐다. 표시가 있으면 손으로 만든 파일이다.
+            guard !self.items.contains(where: \.hasStoragePackedPayload) else {
+                throw DefectRecipeValidationError.invalidMask
+            }
+            items = self.items
+        } else {
+            var remainingBytes = limits.maxFileBytes
+            items = try self.items.map {
+                try $0.unpackedFromStorage(remainingBytes: &remainingBytes, limits: limits)
+            }
         }
         // 영속 파일은 세션 안에서 생성한 값과 달리 압축 스트림까지 검증합니다.
         _ = try DefectSidecarResourcePolicy.normalizedItems(items, limits: limits)

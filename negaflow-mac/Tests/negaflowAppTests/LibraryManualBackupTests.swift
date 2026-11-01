@@ -100,6 +100,41 @@ final class LibraryManualBackupTests: XCTestCase {
         ))
     }
 
+    /// 종료는 백업을 기다리지 않는다. 도중에 끝난 백업의 원본 잔해는 백업 폴더 안에 남고 다음
+    /// 백업이 치운다 — 시스템 임시 폴더에 라이브러리 크기만큼 새지 않는다.
+    func testManualBackupClearsSourceLeftOverByAnInterruptedBackup() async throws {
+        let paths = try makePaths()
+        defer { try? FileManager.default.removeItem(at: paths.root) }
+        let leftover = paths.backups.appendingPathComponent(
+            "staging-source-\(UUID().uuidString).tmp", isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: leftover.appendingPathComponent("defects", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        try Data("partial".utf8).write(to: leftover.appendingPathComponent("library.json"))
+        let model = AppModel(
+            libraryCatalogURL: paths.catalog,
+            libraryDefectDirectoryURL: paths.defects,
+            libraryBackupDirectoryURL: paths.backups
+        )
+        XCTAssertNotNil(model.createPhysicalRoll(
+            name: "Leftover roll",
+            filmType: .colorNegative,
+            activate: true
+        ))
+        model.librarySaveTask?.cancel()
+        model.librarySaveTask = nil
+        model.libraryPersistenceEnabled = true
+
+        let succeeded = await model.createLibraryBackupNow()
+
+        XCTAssertTrue(succeeded)
+        let entries = try FileManager.default.contentsOfDirectory(atPath: paths.backups.path)
+        XCTAssertEqual(entries.filter { $0.hasPrefix("staging-") }, [])
+        XCTAssertEqual(entries.filter { $0.hasPrefix("backup-") }.count, 1)
+    }
+
     func testManualBackupFailsWithoutPublishingGenerationWhenDestinationIsAFile() async throws {
         let paths = try makePaths()
         defer { try? FileManager.default.removeItem(at: paths.root) }

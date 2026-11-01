@@ -63,36 +63,46 @@ internal static class CatalogBackupGenerations
         int retentionCount,
         CancellationToken cancellationToken = default)
     {
+        // 새 세대부터 훑어 온전한 세대를 retentionCount 개 찾을 때까지만 검증합니다. 그보다
+        // 오래된 세대는 검증 없이 지웁니다 — 온전한 새 세대가 이미 그만큼 있으니 잃는 것이 없고,
+        // 깨진 옛 세대도 영영 남지 않습니다. 매니페스트의 번호조차 읽히지 않는 폴더는 무엇인지
+        // 모르므로 건드리지 않습니다. macOS `pruneSnapshots` 와 같은 규칙입니다.
         try
         {
             bool succeeded = true;
-            List<(string Path, CatalogBackupManifest Manifest)> valid = [];
+            List<(string Path, ulong Sequence)> generations = [];
             foreach (string directory in Directory.EnumerateDirectories(
                 backupRoot,
                 "backup-*",
                 SearchOption.TopDirectoryOnly))
             {
-                if (cancellationToken.IsCancellationRequested)
+                string manifestPath = Path.Combine(directory, CatalogBackupStore.ManifestFileName);
+                if (StoragePathPolicy.IsExistingReparsePoint(directory) ||
+                    !CatalogBackupFiles.IsRegularFile(manifestPath) ||
+                    !TryReadManifestSequence(manifestPath, out ulong sequence))
                 {
-                    return succeeded;
+                    continue;
                 }
-                CatalogBackupValidationResult validation = CatalogBackupStore.ValidateGeneration(directory);
-                if (validation.Manifest is { } manifest)
-                {
-                    valid.Add((directory, manifest));
-                }
+                generations.Add((directory, sequence));
             }
 
-            foreach ((string path, _) in valid
-                .OrderByDescending(item => item.Manifest.Sequence)
-                .ThenByDescending(item => item.Path, StringComparer.Ordinal)
-                .Skip(retentionCount))
+            int kept = 0;
+            foreach ((string path, _) in generations
+                .OrderByDescending(item => item.Sequence)
+                .ThenByDescending(item => item.Path, StringComparer.Ordinal))
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
                     return succeeded;
                 }
-                if (!TryDeleteGeneration(path, backupRoot))
+                if (kept < retentionCount)
+                {
+                    if (CatalogBackupStore.ValidateGeneration(path).IsValid)
+                    {
+                        kept++;
+                    }
+                }
+                else if (!TryDeleteGeneration(path, backupRoot))
                 {
                     succeeded = false;
                 }
@@ -109,10 +119,13 @@ internal static class CatalogBackupGenerations
     {
         try
         {
-            CatalogBackupValidationResult validation = CatalogBackupStore.ValidateGeneration(path);
+            // 깨진 세대도 매니페스트가 읽히면 거기 적힌 파일만 골라 지웁니다. 모르는 파일이 남으면
+            // 아래 비재귀 삭제가 실패해 폴더를 그대로 둡니다.
+            CatalogBackupManifest? manifest = CatalogBackupStore.ValidateGeneration(path).Manifest
+                ?? ReadManifestForDeletion(path);
             if (!IsDirectChild(backupRoot, path) ||
                 !Path.GetFileName(path).StartsWith("backup-", StringComparison.Ordinal) ||
-                validation.Manifest is not { } manifest ||
+                manifest is null ||
                 StoragePathPolicy.IsExistingReparsePoint(path))
             {
                 return false;
@@ -133,7 +146,10 @@ internal static class CatalogBackupGenerations
             }
             File.Delete(manifestPath);
             File.Delete(catalogPath);
-            Directory.Delete(defectsPath, recursive: false);
+            if (Directory.Exists(defectsPath))
+            {
+                Directory.Delete(defectsPath, recursive: false);
+            }
             Directory.Delete(path, recursive: false);
             return !Directory.Exists(path) && !File.Exists(path);
         }
@@ -208,6 +224,17 @@ internal static class CatalogBackupGenerations
         {
             // 실패한 staging은 valid generation 이름이 아니며 다음 정리에서 식별할 수 있습니다.
         }
+    }
+
+    private static CatalogBackupManifest? ReadManifestForDeletion(string path)
+    {
+        string manifestPath = Path.Combine(path, CatalogBackupStore.ManifestFileName);
+        return CatalogBackupFiles.IsRegularFile(manifestPath) &&
+            CatalogBackupCodec.TryDeserializeManifest(
+                File.ReadAllBytes(manifestPath),
+                out CatalogBackupManifest manifest)
+            ? manifest
+            : null;
     }
 
     internal static bool TryDeleteRegularFile(string path)

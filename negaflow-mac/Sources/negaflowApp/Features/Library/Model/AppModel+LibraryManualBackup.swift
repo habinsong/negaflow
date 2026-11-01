@@ -205,8 +205,11 @@ extension AppModel {
         verificationDate: Date
     ) -> LibraryManualBackupResult? {
         let fileManager = FileManager.default
-        let sourceRoot = fileManager.temporaryDirectory.appendingPathComponent(
-            "negaflow-manual-backup-\(UUID().uuidString)", isDirectory: true
+        // 종료는 백업을 기다리지 않는다. 시스템 임시 폴더에 두면 도중에 끝났을 때 카탈로그와
+        // 결함 기록 전체 크기의 잔해가 남는다. 백업 폴더의 `staging-` 은 다음 백업이 치운다 —
+        // 라이브러리 잠금 덕에 이 폴더를 쓰는 프로세스는 하나다.
+        let sourceRoot = backupDirectory.appendingPathComponent(
+            "staging-source-\(UUID().uuidString).tmp", isDirectory: true
         )
         defer { try? fileManager.removeItem(at: sourceRoot) }
         do {

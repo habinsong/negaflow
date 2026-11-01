@@ -25,7 +25,7 @@ extension AppModel {
         switch configuration?.libraryMaintenance {
         case .repair: await repairLibraryCatalogAndRelaunch()
         case .reinstall: await reinstallLibraryCatalogAndRelaunch()
-        case nil: break
+        case nil: startDefectStorageCompaction()
         }
     }
 

@@ -49,7 +49,7 @@ extension DefectSidecarFile {
                 rawData: data,
                 items: items
             ))
-        case DefectSidecarV2.currentVersion:
+        case DefectSidecarV2.readableVersions:
             do {
                 let sidecar = try decoder.decode(DefectSidecarV2.self, from: data)
                 return .loaded(.currentV2(

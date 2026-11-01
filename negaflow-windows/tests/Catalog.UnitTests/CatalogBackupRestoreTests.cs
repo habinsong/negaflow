@@ -240,6 +240,22 @@ internal static class CatalogBackupRestoreTests
             Check(!CatalogBackupStore.ValidateGeneration(fourth.GenerationPath).IsValid,
                 "backup_hash_damage_is_rejected");
         }
+
+        // 깨진 세대는 온전한 새 세대 셋보다 오래되면 지워집니다. 영영 쌓이지 않습니다.
+        for (int index = 0; index < 3; index++)
+        {
+            Check(session.Write(Snapshot($"backup-e{index}", Row($"frame-e{index}", "later"))).IsSuccess,
+                "backup_later_catalog_write");
+            Check(session.CreateBackupForTesting(now.AddMinutes(6 + index)).IsSuccess,
+                "backup_later_generation");
+        }
+        Check(fourth.GenerationPath is not null && !Directory.Exists(fourth.GenerationPath),
+            "backup_retention_drops_damaged_generation_older_than_window");
+        Check(Directory.Exists(future), "backup_future_generation_still_not_pruned");
+        Check(Directory.EnumerateDirectories(roots.BackupRoot, "backup-*", SearchOption.TopDirectoryOnly)
+                .Count(path => CatalogBackupStore.ValidateGeneration(path).IsValid)
+                == CatalogBackupStore.DefaultRetentionCount,
+            "backup_retention_keeps_three_valid_generations_after_damage");
     }
 
     private static void VerifyPendingRestore(StorageRootSet parentRoots)

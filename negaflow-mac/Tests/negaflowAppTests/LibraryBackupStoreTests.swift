@@ -91,6 +91,54 @@ final class LibraryBackupStoreTests: XCTestCase {
         )
     }
 
+    /// 정리가 도중에 끊겨(종료는 백업을 기다리지 않는다) 세대가 남거나 옛 세대가 깨져 있어도,
+    /// 다음 백업은 온전한 새 세대 3개만 남긴다. 깨진 세대가 영영 쌓이지 않는다.
+    func testPruneKeepsNewestValidGenerationsAndDropsOlderDamagedOnes() throws {
+        let paths = try makePaths()
+        defer { try? FileManager.default.removeItem(at: paths.root) }
+        let frameID = UUID()
+        try DefectSidecarFile.write([], for: frameID, in: paths.defects)
+        var generations: [URL] = []
+        for generation in 0..<5 {
+            try writeCatalog(
+                frameID: frameID,
+                folder: "/generation-\(generation)",
+                hasDefects: true,
+                to: paths.catalog
+            )
+            generations.append(try LibraryBackupStore.createSnapshot(
+                catalogURL: paths.catalog,
+                defectDirectory: paths.defects,
+                backupDirectory: paths.backups,
+                now: Date(timeIntervalSince1970: TimeInterval(generation)),
+                retentionCount: 10
+            ))
+        }
+        // 가장 오래된 둘은 깨뜨리고, 가장 새 세대 하나는 다음 앱 버전이 만든 것처럼 읽을 수 없게 한다.
+        for damaged in generations.prefix(2) {
+            try Data("broken".utf8).write(to: damaged.appendingPathComponent("library.json"))
+        }
+        let unknown = paths.backups.appendingPathComponent("backup-99999999999999999999-unknown")
+        try FileManager.default.createDirectory(at: unknown, withIntermediateDirectories: true)
+
+        try writeCatalog(frameID: frameID, folder: "/generation-5", hasDefects: true, to: paths.catalog)
+        let newest = try LibraryBackupStore.createSnapshot(
+            catalogURL: paths.catalog,
+            defectDirectory: paths.defects,
+            backupDirectory: paths.backups,
+            now: Date(timeIntervalSince1970: 5),
+            retentionCount: 3
+        )
+
+        let remaining = Set(try FileManager.default.contentsOfDirectory(atPath: paths.backups.path))
+        XCTAssertEqual(remaining, Set([
+            newest.lastPathComponent,
+            generations[4].lastPathComponent,
+            generations[3].lastPathComponent,
+            unknown.lastPathComponent,
+        ]))
+    }
+
     func testSnapshotFailsInsteadOfClaimingSuccessWhenRecipeIsMissing() throws {
         let paths = try makePaths()
         defer { try? FileManager.default.removeItem(at: paths.root) }
