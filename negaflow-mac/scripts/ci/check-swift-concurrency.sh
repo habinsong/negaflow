@@ -14,7 +14,8 @@ STRICT_FLAGS=(
 # 나눠 쓰면 측정 대상이 아니라 그때의 부하를 재게 되므로(2.02초 > 2.0초 같은 실패) 직렬로 돌린다.
 # GPU 정착 완료나 스캔 썸네일 발행을 제한 시간 안에 기다리는 시험도 직렬 실행합니다.
 # 병렬 Core Image 작업의 대기 시간을 앱 자체의 정착 지연으로 잘못 판정하지 않습니다.
-SERIAL_ONLY_TESTS="ExternalScannerProcessTests|testProtocolV2ViolationStopsNonExitingPluginImmediately|DevelopExportPrintWorkflowTests|testMockFlatbedFullScansLeaveLastSelectedFrameImmediatelyRenderable"
+# 현상 버퍼가 남아 있기를 기대하는 시험도 직렬입니다. 병렬 메모리 압박의 축출을 결함으로 읽지 않습니다.
+SERIAL_ONLY_TESTS="ExternalScannerProcessTests|testProtocolV2ViolationStopsNonExitingPluginImmediately|DevelopExportPrintWorkflowTests|testMockFlatbedFullScansLeaveLastSelectedFrameImmediatelyRenderable|testBulkPasteRefreshesTheRenderedPreviewAndThumbnail"
 
 swift build "${STRICT_FLAGS[@]}"
 swift test --parallel "${STRICT_FLAGS[@]}" --skip "$SERIAL_ONLY_TESTS"

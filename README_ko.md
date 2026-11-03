@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/ko/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="웹사이트"></a>
-  <a href="#다운로드"><img src="https://img.shields.io/badge/version-1.2.5-EF8B26" alt="버전 1.2.5"></a>
+  <a href="#다운로드"><img src="https://img.shields.io/badge/version-1.2.6-EF8B26" alt="버전 1.2.6"></a>
   <a href="negaflow-mac/docs/README_ko.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 이상"></a>
   <a href="negaflow-windows/docs/README_ko.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 이상"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 라이선스"></a>
@@ -85,10 +85,10 @@
 
 | 설치 파일 | 사용 환경 |
 |---|---|
-| `negaflow-1.2.5-mac-universal.pkg` | macOS 14 이상, Apple Silicon과 Intel |
-| `negaflow-1.2.5-mac-arm64.pkg` | macOS 14 이상, Apple Silicon 전용 |
-| `negaflow-1.2.5-win-x64.exe` | Windows 11 24H2 이상, x64 |
-| `negaflow-1.2.5-win-x64-setup.zip` | Windows 설치 파일 ZIP |
+| `negaflow-1.2.6-mac-universal.pkg` | macOS 14 이상, Apple Silicon과 Intel |
+| `negaflow-1.2.6-mac-arm64.pkg` | macOS 14 이상, Apple Silicon 전용 |
+| `negaflow-1.2.6-win-x64.exe` | Windows 11 24H2 이상, x64 |
+| `negaflow-1.2.6-win-x64-setup.zip` | Windows 설치 파일 ZIP |
 
 macOS 14, 26, 27과 호환됩니다.
 
@@ -112,9 +112,9 @@ Windows 설치는 사용자 폴더 안에서 끝나고 관리자 권한을 묻�
 - JPEG, PNG, 16비트 TIFF, 16비트 선형 DNG 내보내기, ICC 프로파일, 카메라·렌즈·필름 등 기록을 EXIF에 저장
 - 8가지 인화 레이아웃과 용지 미리보기, 사진용·ISO 용지, C-print 기능까지 다 있습니다.
 
-## 1.2.5
+## 1.2.6
 
-- 카탈로그 최적화 및 백업 최적화
+- HS,SP,F-135,HR 타깃의 버그를 수정하고 현실적인 색감을 구현했습니다.
 - 1.2.X 버전부터 맥과 윈도우 모두 RAW 로직 변경으로 라이브러리 NEF 고효율 포맷의 경우 미지원합니다.
 
 ## Chroma Engine

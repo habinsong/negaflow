@@ -73,9 +73,6 @@ public enum TextureStage {
 
         // 부분 대비 → 선명도 → 그레인 순서다. 그레인은 합성 질감이라 앞의 두 단계가 키우지 않게
         // 마지막에 얹는다(라이트룸도 명료도는 기본 패널, 선명도는 디테일 패널 끝).
-        if params.developTarget == .sp3000 {
-            img = DetailEnhancement.localContrast(img, clarity: ScannerTargetGrade.spLocalContrast)
-        }
         img = DetailEnhancement.localContrast(img, clarity: params.clarity)
         img = DetailEnhancement.sharpen(img, sharpness: params.sharpness)
 

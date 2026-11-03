@@ -4,9 +4,9 @@
 // + `ScannerTargetGrade+Texture.swift` (`noritsuSharpenRadius = 0.9`)
 // CPU 판 : `imaging/scanner_target_grade.cpp` `apply_noritsu_texture`
 //
-// 모양은 아큐턴스와 같습니다 — 수평 5탭 저역을 중간 텍스처에 쓰고,
-// 수직 저역과 언샤프를 한 번에 합니다. 가우시안은 호스트가 만든 5탭입니다
-// (σ ≈ 0.9). 셰이더에서 `exp` 로 다시 만들지 마십시오.
+// 모양은 아큐턴스와 같습니다 — 수평 저역을 중간 텍스처에 쓰고, 수직 저역과 언샤프를 한 번에
+// 합니다. 가우시안은 호스트가 해상도에 맞춰 만든 표본입니다(실기 3089px 에서 σ 0.9, 긴 변에
+// 비례, 최대 25탭). 셰이더에서 `exp` 로 다시 만들지 마십시오.
 //
 // 게이트 둘은 **순서까지** CPU/macOS 와 같습니다.
 // ① `lo < 0 || hi > 1` → 원본 통과 (확장값 보존)
@@ -23,19 +23,20 @@
 
 Texture2D<float4> Original : register(t1);
 
-#define NEGAFLOW_NORITSU_TAPS 5
-#define NEGAFLOW_NORITSU_SUPPORT 2
-#define NEGAFLOW_NORITSU_VECTORS 2
+#define NEGAFLOW_NORITSU_MAX_TAPS 25
+#define NEGAFLOW_NORITSU_VECTORS 7
 
 cbuffer NoritsuTextureConstants : register(b0) {
     uint2 Extent;
     float2 Padding0;
-    // 배열은 원소마다 16바이트 — `float W[5]` 로 두지 마십시오.
+    // 배열은 원소마다 16바이트 — `float W[25]` 로 두지 마십시오.
     float4 Weights[NEGAFLOW_NORITSU_VECTORS];
     float Amount;
     float FloorRatio;
     float FloorAbsolute;
     float LumaGate;
+    uint TapCount;
+    uint3 Padding1;
 };
 
 float Weight(int index) {
@@ -52,10 +53,11 @@ void NoritsuTextureHorizontalMain(uint3 id : SV_DispatchThreadID) {
         return;
     }
     int upper = int(Extent.x) - 1;
+    int support = int(TapCount >> 1);
     float3 sum = float3(0.0, 0.0, 0.0);
-    [unroll]
-    for (int index = 0; index < NEGAFLOW_NORITSU_TAPS; ++index) {
-        int column = ClampCoordinate(int(id.x), index - NEGAFLOW_NORITSU_SUPPORT, upper);
+    [loop]
+    for (int index = 0; index < int(TapCount); ++index) {
+        int column = ClampCoordinate(int(id.x), index - support, upper);
         sum += Source[uint2(uint(column), id.y)].rgb * Weight(index);
     }
     Destination[id.xy] = float4(sum, 1.0);
@@ -67,10 +69,11 @@ void NoritsuTextureVerticalMain(uint3 id : SV_DispatchThreadID) {
         return;
     }
     int upper = int(Extent.y) - 1;
+    int support = int(TapCount >> 1);
     float3 blurred = float3(0.0, 0.0, 0.0);
-    [unroll]
-    for (int index = 0; index < NEGAFLOW_NORITSU_TAPS; ++index) {
-        int row = ClampCoordinate(int(id.y), index - NEGAFLOW_NORITSU_SUPPORT, upper);
+    [loop]
+    for (int index = 0; index < int(TapCount); ++index) {
+        int row = ClampCoordinate(int(id.y), index - support, upper);
         blurred += Source[uint2(id.x, uint(row))].rgb * Weight(index);
     }
 

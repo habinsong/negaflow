@@ -50,10 +50,26 @@ final class ThumbnailDevelopmentRegressionTests: XCTestCase {
         frame.developedIsSettled = false
         await model.loadThumbnailsFromDisk(for: [frame]).value
         await model.thumbnailDiskCache.waitUntilIdle()
-        XCTAssertTrue(frame.developedIsSettled)
+        XCTAssertFalse(frame.developedIsSettled, "restoring a thumbnail must not run a settled develop")
         XCTAssertEqual(frame.thumbnailRecipeID, frame.currentThumbnailRecipeID())
         XCTAssertNotNil(ThumbnailDiskCache.load(at: model.thumbnailFileURL(for: frame),
             matchingRecipe: frame.currentThumbnailRecipeID()))
+    }
+
+    func testRestoringThumbnailOfDefectFrameSkipsCleanedRawRebuildAndSettledDevelop() async throws {
+        let (model, frame, directory) = try fixture()
+        model.libraryPersistenceEnabled = true
+        defer { model.libraryPersistenceEnabled = false; try? FileManager.default.removeItem(at: directory) }
+        frame.hasDevelopedOnce = true
+        frame.defectEditsNeedRestore = true
+        XCTAssertTrue(frame.requiresCleanedRawForActiveDefects)
+        await model.loadThumbnailsFromDisk(for: [frame]).value
+        await model.thumbnailDiskCache.waitUntilIdle()
+        XCTAssertNotNil(frame.thumbnailImage, "the filmstrip must not wait for a defect rebuild")
+        XCTAssertNil(frame.developedImage)
+        XCTAssertFalse(frame.developedIsSettled)
+        XCTAssertNil(frame.cleanRawTask)
+        XCTAssertEqual(frame.thumbnailRecipeID, frame.currentThumbnailRecipeID())
     }
 
     private func fixture() throws -> (AppModel, ScanFrame, URL) {

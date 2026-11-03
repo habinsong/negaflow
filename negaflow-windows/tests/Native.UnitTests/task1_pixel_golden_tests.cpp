@@ -93,13 +93,16 @@ constexpr int maximum_median_difference = 96;
     return state;
 }
 
-[[nodiscard]] nf_develop_export_request_v32 make_request(
+// macOS 골든은 DevelopParameters() 기본값(autoBalance = true)으로 만든다. v40 꼬리로
+// 같은 자동 밸런스를 켜야 MAIN 경로가 같은 입력을 비교한다(v32 요청은 꺼진 채 고정).
+[[nodiscard]] nf_develop_export_request_v40 make_request(
     const std::filesystem::path& source,
     const std::filesystem::path& destination,
     const Case& entry) {
-    nf_develop_export_request_v32 request;
+    nf_develop_export_request_v40 request;
     std::memset(&request, 0, sizeof(request));
-    auto& v30 = request.v31.v30;
+    auto& v32 = request.v39.v38.v37.v36.v35.v34.v33.v32;
+    auto& v30 = v32.v31.v30;
     auto& v29 = v30.v29;
     auto& v28 = v29.v28;
     auto& v27 = v28.v27;
@@ -140,8 +143,10 @@ constexpr int maximum_median_difference = 96;
     v16.scanner_profile_id = entry.scanner_profile_id;
     v17.film_polarity = NF_FILM_POLARITY_NEGATIVE;
     v30.tiff_compression = NF_TIFF_COMPRESSION_NONE;
-    request.v31.output_bit_depth = 16U;
-    request.output_color_space = entry.output_color_space;
+    v32.v31.output_bit_depth = 16U;
+    v32.output_color_space = entry.output_color_space;
+    request.v39.base_scale = 1.0;
+    request.auto_balance = 1U;
     return request;
 }
 
@@ -197,11 +202,11 @@ void run_case(
         return;
     }
 
-    const nf_develop_export_request_v32 request =
+    const nf_develop_export_request_v40 request =
         make_request(source, actual_path, entry);
     nf_develop_run_state_v1 state = make_run_state();
     nf_develop_export_result_v3 result = make_result();
-    const nf_status_t status = nf_develop_export_v32(&request, &state, &result);
+    const nf_status_t status = nf_develop_export_v39(&request.v39, &state, &result);
     expect(
         status == NF_STATUS_OK && result.succeeded == 1U,
         "Windows Task 1 Develop export completes");
@@ -256,10 +261,10 @@ void measure_task1(
     constexpr std::array<Case, 8U> cases{{
         {L"a-default-main-srgb", L"a-default-main-srgb.tif", "a3a17e736645d9ddb6340c7be5867f9f0580bd74d2cbec23ba1c9061654488e7", NF_DEVELOP_TARGET_MAIN, 0U, nullptr},
         {L"b-main-scannerprofile-portra400-srgb", L"b-main-scannerprofile-portra400-srgb.tif", "3f8f994923d77b32f97f0416f84710c7e77bfd1cc2d89e518cb2900c55945fb3", NF_DEVELOP_TARGET_MAIN, 0U, L"noritsu__color-nega__kodak-portra-400"},
-        {L"c-target-hs-srgb", L"c-target-hs-srgb.tif", "8170b2aadb07195bf2ec42c2cdd0f38cef95596bd0ac91981b713ba7c973746f", NF_DEVELOP_TARGET_NORITSU, 0U, nullptr},
-        {L"c-target-sp-srgb", L"c-target-sp-srgb.tif", "3ad84e4a4a2eb6332a15eac27d872377e39e1f749d073775aecef83cdf797689", NF_DEVELOP_TARGET_SP3000, 0U, nullptr},
-        {L"c-target-f135-srgb", L"c-target-f135-srgb.tif", "8296c4990a0731a8f1cf53e3482b907edfdfa75a1419cf40b9b8bf9d18a8f172", NF_DEVELOP_TARGET_F135, 0U, nullptr},
-        {L"c-target-hr-srgb", L"c-target-hr-srgb.tif", "ae67c78189aebd633153d1cc2ea4e13648867f8a60028cd0477b89e60e9cf877", NF_DEVELOP_TARGET_HR, 0U, nullptr},
+        {L"c-target-hs-srgb", L"c-target-hs-srgb.tif", "ac4b348ef9f52b8b76988455544d7076a52d1a780230806632ba7366d49c6cf8", NF_DEVELOP_TARGET_NORITSU, 0U, nullptr},
+        {L"c-target-sp-srgb", L"c-target-sp-srgb.tif", "f1514bf9ff19f662ad85f95b71b0bf7fd4a169c70cbc35610c4ec88d52af880e", NF_DEVELOP_TARGET_SP3000, 0U, nullptr},
+        {L"c-target-f135-srgb", L"c-target-f135-srgb.tif", "1ede6fae12190c796d626aa87e5855aecd2f761b8c50beb08ae94eaefc67735d", NF_DEVELOP_TARGET_F135, 0U, nullptr},
+        {L"c-target-hr-srgb", L"c-target-hr-srgb.tif", "c922684da00aa88ea1610e616b2bd93d2591478c13a35ad92018fb38bffd5539", NF_DEVELOP_TARGET_HR, 0U, nullptr},
         {L"d-main-displayp3", L"d-main-displayp3.tif", "230a3c85406e9f2da65476defd846f96f59b731e0f6fe6dd96366706b21414af", NF_DEVELOP_TARGET_MAIN, 1U, nullptr},
         {L"d-main-adobergb", L"d-main-adobergb.tif", "3915583c65a48e097302129afb3e310be2ecdcf56e328d1dd007fe1910c4c849", NF_DEVELOP_TARGET_MAIN, 2U, nullptr},
     }};

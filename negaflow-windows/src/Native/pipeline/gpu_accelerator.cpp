@@ -130,6 +130,10 @@ GpuAccelerator::GpuAccelerator() noexcept {
         state->target_grade_ready =
             gpu::GpuScannerTargetGrade::create(state->device, state->target_grade) ==
             gpu::GpuKernelStatus::ok;
+        gpu_init_step("scanner_rendering_ready begin");
+        state->scanner_rendering_ready =
+            gpu::GpuScannerRendering::create(state->device, state->scanner_rendering) ==
+            gpu::GpuKernelStatus::ok;
         gpu_init_step("noritsu_texture_ready begin");
         state->noritsu_texture_ready =
             gpu::GpuNoritsuTexture::create(state->device, state->noritsu_texture) ==

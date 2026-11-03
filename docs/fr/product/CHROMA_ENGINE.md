@@ -136,12 +136,15 @@ L'image de travail est celle de `MAIN`. Un ICC imprimante RVB valide est appliqu
 
 ### `HS`, `SP`
 
-Deux étapes.
+Un rendu fixe appliqué après l'inversion. Il ne mesure rien dans l'image, un pixel donne donc la même valeur dans toutes les photos. L'exposition et la couleur image par image relèvent de l'inversion et des boutons Tonalité auto, Balance des blancs auto, Niveaux auto et Couleur auto à droite.
 
-1. `documentedCharacter` : `SP` est un caractère conçu : une courbe de type film qui comprime le pied et l'épaule et redresse les tons moyens, des ombres neutres avec des hautes lumières légèrement chaudes, les couleurs chaudes mises en avant et les froides approfondies, et une densité de couleur qui assombrit un peu les couleurs saturées. `HS` construit son caractère de tonalité, de neutre et de couleur à partir d'orientations publiées et des valeurs de conception du projet.
-2. `scannerSignature` : seule la différence relative des groupes dont les noms de films et le nombre d'images concordent sur les deux machines s'ajoute. `SP` ne l'ajoute que si vous choisissez l'un de ses profils fournis.
+Le rendu se compose d'une courbe de tonalité en luminance et d'un gain de saturation qui suit la luminosité ; `HS` y ajoute une légère inclinaison de l'axe des gris. Toutes les courbes sont cubiques monotones, rien ne se casse aux nœuds.
 
-`HS` comprend une accentuation sur le canal de luminosité. Ce rayon et cette intensité n'ont pas été mesurés sur la machine réelle. `SP` ne l'inclut pas ; l'étape de texture ajoute à la place un léger contraste local avant votre propre clarté.
+- `SP` vient de quatre vues d'un même film numérisées sur un vrai SP-3000 et sur le scanner du projet, appariées pixel à pixel. La courbe de tonalité prend un quart de son poids dans les percentiles de 185 vues SP-3000. Sur ces quatre vues, la médiane CIEDE2000 par rapport au scan SP-3000 passe d'environ 7,4 pour `MAIN` à 3,9. Une vue sombre bouge à peine : le labo y a retiré une dominante rouge dans les ombres vue par vue, ce qu'un rendu fixe ne peut pas faire.
+- `HS` n'a pas de paires de pixels. Il part de `SP` et ajoute l'écart médian entre les deux machines sur trois films aux noms de film et de rouleau identiques : tons moyens un peu plus sombres, blancs un peu plus hauts, pixels colorés à 0,88× de saturation, gris qui penchent vers le vert dans la moitié claire (a* d'environ −1 à −4).
+- `HS` accentue le canal de luminosité. Le rayon vaut 0,9 px à la sortie 35 mm de la machine (grand côté 3089 px) et suit la résolution, l'aperçu et l'export se ressemblent donc. L'intensité n'a pas été mesurée.
+
+Choisir un profil fourni ajoute toujours `scannerSignature`, l'écart relatif des groupes dont les noms de rouleaux et le nombre d'images concordent sur les deux machines.
 
 Tous les profils actuels sont `realOnly`.
 
@@ -152,7 +155,7 @@ Tous les profils actuels sont `realOnly`.
 
 ### `F135`, `HR`
 
-Ce sont deux styles de minilab développés par le projet. `F135` emploie une courbe en S proche du tirage avec des tons moyens chauds ; `HR` des noirs profonds et une direction neutre et bleue plus calme. Aucune prétention à avoir validé et cloné une machine précise.
+Le projet n'a aucun scan de référence issu d'un Pakon F-135 ou d'un Kodak HR-500 ; aucune des deux cibles n'est donc comparée à sa machine. Les deux reprennent le rendu mesuré de `SP` avec le pied du papier Kodak Endura Premier (fiche E-4070) calé sur les mêmes tons moyens, d'où des noirs plus profonds. `HR` abaisse aussi la saturation à 0,92×. Pour les vérifier, il faut ce dont `SP` a disposé : les mêmes négatifs numérisés sur la vraie machine.
 
 ### `EXPIRED`
 
@@ -254,4 +257,4 @@ Un bon résultat sur IT8 synthétique ne prouve pas la justesse absolue sur des 
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-La version produit actuelle est `1.2.5`. L'historique d'édition et les schémas de profils continueront de passer par une procédure de validation avant de changer.
+La version produit actuelle est `1.2.6`. L'historique d'édition et les schémas de profils continueront de passer par une procédure de validation avant de changer.

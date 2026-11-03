@@ -136,12 +136,15 @@ Das Arbeitsbild entspricht `MAIN`. Am Ende des Exports wird einmal ein gültiges
 
 ### `HS`, `SP`
 
-Zwei Stufen.
+Ein festes Rendering nach der Umkehrung. Es misst nichts im Bild, ein Pixel ergibt also in jedem Foto denselben Wert. Belichtung und Farbe pro Bild übernehmen die Umkehrung sowie Auto-Ton, Auto-Weißabgleich, Auto-Tonwert und Auto-Farbe rechts.
 
-1. `documentedCharacter`: `SP` ist ein entworfener Charakter: eine filmartige Kurve, die Fuß und Schulter staucht und die Mitten steiler macht, neutrale Schatten mit leicht warmen Lichtern, warme Farben nach vorn und kühle Farben vertieft, dazu Farbdichte, die gesättigte Farben etwas abdunkelt. `HS` baut Ton-, Neutral- und Farbcharakter aus veröffentlichter Richtung und den Entwurfswerten des Projekts.
-2. `scannerSignature`: Hinzu kommt nur die relative Differenz jener Gruppen, deren Filmnamen und Bildzahlen auf beiden Maschinen übereinstimmen. `SP` fügt sie nur hinzu, wenn Sie eines seiner mitgelieferten Profile wählen.
+Das Rendering besteht aus einer Luminanz-Tonkurve und einer Sättigungsverstärkung, die der Helligkeit folgt; bei `HS` kommt eine kleine Neigung der Grauachse dazu. Alle Kurven sind monoton kubisch, an den Stützstellen knickt nichts.
 
-`HS` enthält eine Schärfung im Helligkeitskanal. Radius und Stärke stammen nicht aus einer Messung an der echten Maschine. `SP` enthält sie nicht; stattdessen legt die Texturstufe vor Ihrer eigenen Klarheit einen leichten lokalen Kontrast an.
+- `SP` stammt aus vier Bildern eines Films, gescannt auf einem echten SP-3000 und auf dem Scanner dieses Projekts, Pixel für Pixel abgeglichen. Die Tonkurve nimmt ein Viertel ihres Gewichts aus den Perzentilen von 185 SP-3000-Bildern. Auf diesen vier Bildern sinkt der Median-CIEDE2000 zum SP-3000-Scan von etwa 7,4 bei `MAIN` auf 3,9. Ein dunkles Bild verbessert sich kaum: Das Labor hat dort einen roten Schattenstich Bild für Bild entfernt, das kann ein festes Rendering nicht.
+- `HS` hat keine Pixelpaare. Es geht von `SP` aus und addiert den Median-Unterschied der beiden Maschinen auf drei Filmen mit gleichem Film- und Rollennamen: etwas dunklere Mitten, etwas höheres Weiß, farbige Pixel mit 0,88-facher Sättigung und Grautöne, die in der hellen Hälfte ins Grüne kippen (a* etwa −1 bis −4).
+- `HS` schärft den Helligkeitskanal. Der Radius beträgt 0,9 px bei der 35-mm-Ausgabe der Maschine (lange Kante 3089 px) und wächst mit der Auflösung, Vorschau und Export sehen also gleich aus. Die Stärke wurde nicht gemessen.
+
+Wählen Sie ein mitgeliefertes Profil, kommt weiterhin `scannerSignature` hinzu, die relative Differenz aus Gruppen, deren Rollennamen und Bildzahlen auf beiden Maschinen übereinstimmen.
 
 Alle heutigen Profile sind `realOnly`.
 
@@ -152,7 +155,7 @@ Alle heutigen Profile sind `realOnly`.
 
 ### `F135`, `HR`
 
-Das sind zwei vom Projekt entwickelte Minilab-Stile. `F135` nutzt eine printnahe S-Kurve mit warmen Mitten, `HR` tiefe Schwarztöne und eine ruhige neutrale, bläuliche Richtung. Es wird nicht behauptet, eine bestimmte Maschine geprüft und nachgebaut zu haben.
+Dieses Projekt hat keine Referenzscans von einem Pakon F-135 oder einem Kodak HR-500, daher ist keines der beiden Ziele mit seiner Maschine verglichen. Beide nutzen das gemessene `SP`-Rendering mit dem Fuß des Kodak-Endura-Premier-Papiers (Datenblatt E-4070), auf dieselben Mitten angepasst, was tiefere Schwarztöne ergibt. `HR` senkt zusätzlich die Sättigung auf das 0,92-Fache. Prüfen lassen sie sich erst mit dem, was `SP` hatte: denselben Negativen, gescannt auf der echten Maschine.
 
 ### `EXPIRED`
 
@@ -254,4 +257,4 @@ Ein gutes Ergebnis im synthetischen IT8 belegt keine absolute Genauigkeit an ech
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-Die aktuelle Produktversion ist `1.2.5`. Bearbeitungsverlauf und Profilschemata werden auch künftig erst nach einem Prüfverfahren geändert.
+Die aktuelle Produktversion ist `1.2.6`. Bearbeitungsverlauf und Profilschemata werden auch künftig erst nach einem Prüfverfahren geändert.

@@ -446,6 +446,22 @@ std::vector<std::uint8_t> make_uncompressed_rgb16_defect_tiff(
     return make_tiff(width, height, 1U, pixels);
 }
 
+std::vector<std::uint8_t> make_uncompressed_rgb16_tiff(
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::vector<std::uint16_t>& samples) {
+    if (width == 0U || height == 0U ||
+        samples.size() != static_cast<std::size_t>(width) * height * 3U) {
+        return {};
+    }
+    std::vector<std::uint8_t> pixels{};
+    pixels.reserve(samples.size() * 2U);
+    for (const std::uint16_t sample : samples) {
+        append_u16(pixels, sample);
+    }
+    return make_tiff(width, height, 1U, pixels);
+}
+
 std::vector<std::uint8_t> make_uncompressed_rgba16_defect_tiff(
     const std::uint32_t width,
     const std::uint32_t height) {

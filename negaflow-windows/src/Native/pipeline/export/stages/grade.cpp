@@ -89,10 +89,10 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
         request.develop_target == DevelopTarget::hr;
     const bool monochrome =
         negative.film_type == negaflow::imaging::NegativeFilmType::black_and_white;
-    // 스캐너 타깃은 화상이 GPU 에 머문 채로 끝납니다(장면 기준값·유한성 검사까지). 흑백 변환과
+    // 스캐너 타깃은 화상이 GPU 에 머문 채로 끝납니다(흑백 luma 붕괴도 렌더링 커널 안에서 합니다).
     // 레스큐·프로필 그레이드는 CPU 판뿐이라 그때만 화상을 내립니다. 예전에는 여기서 늘 내려,
     // 뒤따르는 노리츠·톤 단계까지 한 장에 왕복이 네 번 더 붙었습니다.
-    if (target_active && (!scanner_target || monochrome)) {
+    if (target_active && !scanner_target) {
         GpuAccelerator::shared().flush_resident();
     }
     if (scanner_target) {
@@ -125,8 +125,7 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
                 monochrome,
                 positive,
                 request.scanner_profile_id,
-                target_info,
-                invert.analysis_region);
+                target_info);
         if (target_status != negaflow::core::KernelStatus::ok) {
             return fail(
                 DevelopExportStage::target_grade,

@@ -319,6 +319,19 @@ bool accelerate_scanner_target_grade(
         pixels, width, height, stride_pixels, setup);
 }
 
+bool accelerate_scanner_rendering(
+    float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    const imaging::ScannerRenderingSetup* const setup) noexcept {
+    GpuAccelerator& accelerator = GpuAccelerator::shared();
+    if (!accelerator.available()) {
+        return false;
+    }
+    return accelerator.apply_scanner_rendering(pixels, width, height, stride_pixels, setup);
+}
+
 bool accelerate_noritsu_texture(
     float* const pixels,
     const std::uint32_t width,
@@ -506,6 +519,7 @@ const imaging::KernelAccelerator kernel_table{
     accelerate_muted_scene_vibrance,
     accelerate_color_model,
     accelerate_scanner_target_grade,
+    accelerate_scanner_rendering,
     accelerate_noritsu_texture,
     accelerate_texture_grain,
     accelerate_channel_clipping_overlay,

@@ -136,12 +136,15 @@ The working image matches `MAIN`. A valid RGB printer ICC is applied once, at th
 
 ### `HS`, `SP`
 
-Two stages.
+A fixed rendering applied after the inversion. It reads nothing from the picture, so a pixel gives the same result in every photo. Per-frame exposure and color belong to the inversion and to the Auto Tone, Auto White Balance, Auto Levels and Auto Color buttons on the right.
 
-1. `documentedCharacter`: `SP` is a designed character: a film-style curve that compresses the toe and shoulder and steepens the midtones, neutral shadows with a slight warm highlight, warm colors brought forward and cool colors deepened, and color density that darkens saturated colors slightly. `HS` builds its tone, neutral, and color character from published direction plus this project's design values.
-2. `scannerSignature`: only the relative difference from groups whose roll names and image counts match across both machines is added. `SP` adds it only when you pick one of its bundled profiles.
+The rendering is a luminance tone curve, a saturation gain that follows brightness, and for `HS` a small tilt of the gray axis. All curves are monotone cubic, so nothing bends at the knots.
 
-`HS` includes sharpening on the brightness channel. That radius and strength were not measured from the real machine. `SP` does not include it; the texture stage instead adds a mild local contrast before your own Clarity.
+- `SP` comes from four frames of one roll scanned on a real SP-3000 and on this project's own scanner, matched pixel by pixel. The tone curve takes a quarter of its weight from the percentiles of 185 SP-3000 frames. On those four frames the median CIEDE2000 to the SP-3000 scan falls from about 7.4 for `MAIN` to 3.9. One dark frame barely moves: the lab removed a red shadow cast frame by frame there, and a fixed rendering cannot.
+- `HS` has no pixel pairs. It starts from `SP` and adds the median difference between the two machines on three rolls with matching film and roll names: slightly darker midtones, whites a little higher, colored pixels at 0.88× saturation, and grays leaning green in the bright half (a* about −1 to −4).
+- `HS` sharpens the brightness channel. The radius is 0.9 px at the machine's 35 mm output (3089 px long edge) and scales with resolution, so preview and export match. The strength was not measured.
+
+Picking a bundled profile still adds `scannerSignature`, the relative difference from rolls whose names and image counts match on both machines.
 
 Every profile today is `realOnly`.
 
@@ -152,7 +155,7 @@ Every profile today is `realOnly`.
 
 ### `F135`, `HR`
 
-These are two minilab styles built by the project. `F135` uses a print-like S-curve with warm midtones; `HR` uses deep blacks and a calm neutral and blue direction. No claim is made of validating and cloning a specific machine.
+This project has no reference scans from a Pakon F-135 or a Kodak HR-500, so neither target is checked against its machine. Both use the measured `SP` rendering with the toe of Kodak Endura Premier paper (E-4070 datasheet) fitted to the same midtone, which gives deeper blacks. `HR` also lowers saturation to 0.92×. Checking them needs what `SP` had: the same negatives scanned on the real machine.
 
 ### `EXPIRED`
 
@@ -254,4 +257,4 @@ A good synthetic IT8 result does not prove absolute accuracy on real negatives. 
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-The current product version is `1.2.5`. Changes to the edit history and profile schemas will require validation in later versions.
+The current product version is `1.2.6`. Changes to the edit history and profile schemas will require validation in later versions.

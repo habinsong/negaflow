@@ -2,69 +2,8 @@
 
 namespace negaflow::imaging::scanner_target_detail {
 
-// 아래 표는 공개 자료에서 정리한 스캐너 타겟 기본 설계 캐릭터(macOS `ScannerTargetGrade+DocumentedCharacter.swift` 대응)입니다.
-// 실제 스캔 코퍼스 통계는 `ScannerProfiles/*.json` 에 따로 있습니다.
-
-constexpr std::array<double, 9U> design_tone_xs{{
-    0.099852823, 0.247800528, 0.349190213, 0.537098730, 0.735356983,
-    0.880825021, 0.954687172, 0.977691562, 0.995591277,
-}};
-
-constexpr TargetProfile noritsu_profile{
-    design_tone_xs,
-    {0.058, 0.070, 0.048, 0.022, 0.006, -0.008, -0.018, -0.018, -0.007},
-    {{{0.16, 0.0, 0.0}, {0.34, 1.6, 1.2}, {0.52, 3.0, 2.0},
-      {0.70, 2.4, 1.6}, {0.86, 0.9, 0.7}, {}}},
-    5U,
-    {{{20.0, 1.0, 0.0}, {55.0, 1.03, -4.0}, {95.0, 1.0, 0.0},
-      {135.0, 1.05, -4.0}, {200.0, 1.0, 0.0}, {265.0, 0.94, 0.0},
-      {330.0, 1.0, 0.0}}},
-    7U,
-    {{{0.165, 1.00}, {0.495, 0.98}, {0.83, 0.88}}},
-};
-
-// SP 는 측정값이 아니라 설계 캐릭터입니다(2026-10-15 개편, macOS `spDocumentedProfile`).
-// 토우·숄더를 눌러 양끝 계조를 압축하고 직선부를 세운 미드, 중립 섀도와 은은한 웜 명부,
-// 웜(레드·스킨·옐로) 앞·쿨(그린·시안) 깊게의 색 대비, 색 밀도.
-constexpr TargetProfile sp3000_profile{
-    {0.06, 0.14, 0.26, 0.38, 0.50, 0.62, 0.74, 0.86, 0.94},
-    {0.008, -0.002, -0.015, -0.018, -0.010, 0.006, 0.016, 0.010, -0.004},
-    {{{0.16, 0.0, 0.0}, {0.40, 0.0, 0.5}, {0.60, 0.2, 1.0},
-      {0.80, 0.3, 1.4}, {0.90, 0.2, 1.0}, {}}},
-    5U,
-    {{{20.0, 1.06, 0.0}, {55.0, 1.04, 3.0}, {85.0, 1.08, 0.0},
-      {135.0, 1.06, 2.0}, {200.0, 1.04, 0.0}, {265.0, 1.00, -2.0},
-      {320.0, 0.94, 0.0}}},
-    7U,
-    {{{0.165, 1.08}, {0.495, 1.20}, {0.83, 1.12}}},
-    0.06,
-};
-
-constexpr TargetProfile f135_profile{
-    design_tone_xs,
-    {-0.030, -0.020, 0.006, 0.030, 0.042, 0.022, 0.002, -0.005, -0.002},
-    {{{0.16, 0.0, 0.0}, {0.36, 0.5, 1.8}, {0.55, 0.8, 3.2},
-      {0.72, 0.8, 3.0}, {0.88, 0.5, 2.2}, {}}},
-    5U,
-    {{{20.0, 1.10, 0.0}, {55.0, 1.06, 2.2}, {95.0, 1.05, 0.0},
-      {135.0, 1.0, -2.0}, {200.0, 1.0, 0.0}, {265.0, 1.04, 0.0},
-      {330.0, 1.0, 0.0}}},
-    7U,
-    {{{0.165, 1.00}, {0.495, 1.22}, {0.83, 1.12}}},
-};
-
-constexpr TargetProfile hr_profile{
-    design_tone_xs,
-    {-0.036, -0.028, -0.008, -0.002, 0.024, 0.010, -0.004, -0.012, -0.005},
-    {{{0.16, 0.0, -1.0}, {0.40, -0.3, -1.8}, {0.62, -0.4, -1.8},
-      {0.88, -0.2, -1.0}, {}, {}}},
-    4U,
-    {{{20.0, 1.05, 0.0}, {55.0, 1.04, 1.0}, {95.0, 1.0, 0.0},
-      {135.0, 1.06, -1.0}, {200.0, 1.0, 0.0}, {265.0, 1.18, 3.0},
-      {330.0, 1.0, 0.0}}},
-    7U,
-    {{{0.165, 1.00}, {0.495, 1.12}, {0.83, 1.05}}},
-};
+// 사용자가 SP/HS 필름 프로파일을 직접 골랐을 때만 얹는 실측 상대 차분입니다. 기본 렌더링은
+// `scanner_target_rendering.cpp` 가 갖고 있습니다.
 
 // ScannerProfiles manifest v2 contains two negative-film groups with matched
 // roll-label provenance and comparable image coverage on both devices:
@@ -163,25 +102,15 @@ constexpr TargetProfile sp3000_relative_portra160{
     {{{0.165, 0.930432104}, {0.495, 1.494709349}, {0.830, 0.824063453}}},
 };
 
-[[nodiscard]] const TargetProfile& profile_for(const ScannerTargetStyle target) noexcept {
-    switch (target) {
-    case ScannerTargetStyle::noritsu: return noritsu_profile;
-    case ScannerTargetStyle::sp3000: return sp3000_profile;
-    case ScannerTargetStyle::f135: return f135_profile;
-    case ScannerTargetStyle::hr: return hr_profile;
-    }
-    return noritsu_profile;
-}
-
 [[nodiscard]] const TargetProfile* relative_profile_for(
     const ScannerTargetStyle target,
     const std::wstring_view profile_id) noexcept {
     if (target != ScannerTargetStyle::noritsu &&
         target != ScannerTargetStyle::sp3000) return nullptr;
     if (profile_id.empty()) {
-        // SP 는 설계 캐릭터가 기본입니다. 번들 실측 프로파일은 사용자가 직접 고를 때만
-        // 얹습니다 — 공통 차분을 기본으로 깔면 파랗고 과채도였습니다(macOS 와 같은 규칙).
-        return target == ScannerTargetStyle::noritsu ? &noritsu_relative_common : nullptr;
+        // 프로파일을 고르지 않으면 실측 차분을 얹지 않습니다 — 기본 정체성은 렌더링 표가
+        // 이미 실측으로 갖고 있어 공통 차분을 깔면 같은 근거가 두 번 실립니다(macOS 와 같은 규칙).
+        return nullptr;
     }
     if (target == ScannerTargetStyle::noritsu) {
         if (profile_id == L"noritsu__color-nega__kodak-ektar-100") {

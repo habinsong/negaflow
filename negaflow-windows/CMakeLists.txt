@@ -331,6 +331,13 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/scanner_rendering.hlsl"
+    ScannerRenderingMain
+    negaflow_scanner_rendering_cs
+    NEGAFLOW_SCANNER_RENDERING_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/noritsu_texture.hlsl"
     NoritsuTextureHorizontalMain
     negaflow_noritsu_texture_horizontal_cs
@@ -526,6 +533,7 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_MUTED_SCENE_VIBRANCE_HEADER}"
     "${NEGAFLOW_COLOR_MODEL_HEADER}"
     "${NEGAFLOW_SCANNER_TARGET_GRADE_HEADER}"
+    "${NEGAFLOW_SCANNER_RENDERING_HEADER}"
     "${NEGAFLOW_NORITSU_TEXTURE_H_HEADER}"
     "${NEGAFLOW_NORITSU_TEXTURE_V_HEADER}"
     "${NEGAFLOW_TEXTURE_GRAIN_HEADER}"
@@ -558,6 +566,7 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_film_look_stage.cpp
     src/Native/gpu/gpu_vibrance.cpp
     src/Native/gpu/gpu_scanner_target_grade.cpp
+    src/Native/gpu/gpu_scanner_rendering.cpp
     src/Native/gpu/gpu_noritsu_texture.cpp
     src/Native/gpu/gpu_texture_grain.cpp
     src/Native/gpu/gpu_channel_clipping_overlay.cpp
@@ -733,8 +742,8 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/scanner_profile_grade.cpp
       src/Native/imaging/scanner_target_color.cpp
       src/Native/imaging/scanner_target_grade.cpp
-      src/Native/imaging/scanner_target_measure.cpp
       src/Native/imaging/scanner_target_profile.cpp
+      src/Native/imaging/scanner_target_rendering.cpp
       src/Native/imaging/scanner_target_response.cpp
     src/Native/imaging/manual_negative_developer.cpp
     src/Native/imaging/channel_range_shape.cpp
@@ -2125,6 +2134,22 @@ if(BUILD_TESTING)
     add_test(
         NAME native.preview_scene_measurement_memo
         COMMAND negaflow_preview_scene_measurement_memo_tests
+    )
+    add_executable(negaflow_negative_output_tone_routing_tests
+        tests/Native.UnitTests/negative_output_tone_routing_tests.cpp
+        tests/fixtures/tiff/synthetic_wic_tiff.cpp
+    )
+    target_include_directories(
+        negaflow_negative_output_tone_routing_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff"
+    )
+    target_link_libraries(
+        negaflow_negative_output_tone_routing_tests
+        PRIVATE negaflow_pipeline negaflow_imageio negaflow_project_options
+    )
+    add_test(
+        NAME native.negative_output_tone_routing
+        COMMAND negaflow_negative_output_tone_routing_tests
     )
     add_executable(negaflow_decoded_source_store_tests tests/Native.UnitTests/decoded_source_store_tests.cpp)
     target_include_directories(negaflow_decoded_source_store_tests PRIVATE src/Native/pipeline)

@@ -267,5 +267,69 @@ extension ChromabaseMetalKernels {
         return float4(mix(src.rgb, graded.rgb, domainWeight), src.a);
     }
     """),
+        MetalKernelSource(name: "scannerRendering", body: """
+    // ScannerTargetGrade.renderLinear 와 같은 식(ScannerTargetGrade+Rendering.swift).
+    // 단조 3차 Hermite: 기울기는 호스트가 미리 계산해 넘기고, 범위 밖은 끝 기울기로 직선 연장한다.
+    inline float scannerHermite(float x, thread const float* xs, thread const float* ys,
+                                thread const float* ms, int n) {
+        if (x < xs[0]) { return ys[0] + ms[0] * (x - xs[0]); }
+        if (x > xs[n - 1]) { return ys[n - 1] + ms[n - 1] * (x - xs[n - 1]); }
+        int i = 0;
+        while (i < n - 2 && x > xs[i + 1]) { i++; }
+        float h = xs[i + 1] - xs[i];
+        float t = (x - xs[i]) / h;
+        float t2 = t * t;
+        float t3 = t2 * t;
+        return (2.0 * t3 - 3.0 * t2 + 1.0) * ys[i] + (t3 - 2.0 * t2 + t) * h * ms[i]
+            + (-2.0 * t3 + 3.0 * t2) * ys[i + 1] + (t3 - t2) * h * ms[i + 1];
+    }
+
+    [[stitchable]] float4 scannerRendering(
+        coreimage::sample_t src,
+        float4 toneY0, float4 toneY1, float4 toneY2, float4 toneM0, float4 toneM1, float4 toneM2,
+        float4 gainY, float4 gainM, float4 cross0, float4 cross1,
+        float4 bal0, float4 bal1, float4 bal2
+    ) {
+        const float3 w = float3(0.2126, 0.7152, 0.0722);
+        float toneX[11] = { -8.0, -6.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 1.5, 2.0, 2.5 };
+        float toneY[11] = { toneY0.x, toneY0.y, toneY0.z, toneY0.w, toneY1.x, toneY1.y,
+                            toneY1.z, toneY1.w, toneY2.x, toneY2.y, toneY2.z };
+        float toneM[11] = { toneM0.x, toneM0.y, toneM0.z, toneM0.w, toneM1.x, toneM1.y,
+                            toneM1.z, toneM1.w, toneM2.x, toneM2.y, toneM2.z };
+        float gainX[4] = { -5.0, -2.0, 0.0, 2.0 };
+        float gainYs[4] = { gainY.x, gainY.y, gainY.z, gainY.w };
+        float gainMs[4] = { gainM.x, gainM.y, gainM.z, gainM.w };
+        float balX[3] = { -4.0, -1.0, 2.0 };
+        float redY[3] = { bal0.x, bal0.y, bal0.z };
+        float redM[3] = { bal0.w, bal1.x, bal1.y };
+        float blueY[3] = { bal1.z, bal1.w, bal2.x };
+        float blueM[3] = { bal2.y, bal2.z, bal2.w };
+
+        float3 x = max(src.rgb, float3(1e-5));
+        float lumaY = max(dot(x, w), 1e-5);
+        float stops = log2(lumaY / 0.18);
+        float3 d = log2(x) - log2(lumaY);
+        float3 mixed = float3(
+            d.r + cross0.x * (d.g - d.r) + cross0.y * (d.b - d.r),
+            d.g + cross0.z * (d.r - d.g) + cross0.w * (d.b - d.g),
+            d.b + cross1.x * (d.r - d.b) + cross1.y * (d.g - d.b));
+        if (cross1.w < 0.5) {
+            float balanceStops = clamp(stops, -4.0, 2.0);
+            mixed.r += scannerHermite(balanceStops, balX, redY, redM, 3);
+            mixed.b += scannerHermite(balanceStops, balX, blueY, blueM, 3);
+        }
+        float gain = clamp(scannerHermite(clamp(stops, -5.0, 2.0), gainX, gainYs, gainMs, 4), 0.0, 2.0);
+        float outY = srgbDecodeLuma(clamp(scannerHermite(stops, toneX, toneY, toneM, 11), 0.0, 1.0));
+        float3 ratio = exp2(gain * mixed);
+        float3 o = ratio * (outY / max(dot(ratio, w), 1e-6));
+        float peak = max(o.r, max(o.g, o.b));
+        if (peak > 1.0) {
+            float t = clamp((1.0 - outY) / max(peak - outY, 1e-9), 0.0, 1.0);
+            o = float3(outY) + (o - float3(outY)) * t;
+        }
+        o = max(o, float3(0.0));
+        return float4(src.rgb + (o - src.rgb) * cross1.z, src.a);
+    }
+    """),
     ]
 }

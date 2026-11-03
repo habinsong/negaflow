@@ -360,8 +360,7 @@ public final class ChromabaseEngine: @unchecked Sendable {
                                        correction: &state.neutralBalanceCorrection)
         }
         if params.developTarget.isScannerEmulation {
-            img = ScannerTargetGrade.apply(to: img, target: params.developTarget, params: params,
-                                           region: region, anchor: &state.scannerSceneAnchor)
+            img = ScannerTargetGrade.apply(to: img, target: params.developTarget, params: params)
         }
         if params.developTarget == .rescue {
             // 본 파이프라인과 동일: 검증된 중립축 증거가 있을 때만 bounded 상대 보정.

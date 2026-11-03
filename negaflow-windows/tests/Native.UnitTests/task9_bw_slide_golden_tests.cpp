@@ -75,13 +75,16 @@ struct Case final {
     const wchar_t* scanner_profile_id;
 };
 
-[[nodiscard]] nf_develop_export_request_v32 make_request(
+// macOS 골든은 DevelopParameters() 기본값(autoBalance = true)으로 만든다. v40 꼬리로
+// 같은 자동 밸런스를 켜야 MAIN 경로가 같은 입력을 비교한다(v32 요청은 꺼진 채 고정).
+[[nodiscard]] nf_develop_export_request_v40 make_request(
     const std::filesystem::path& source,
     const std::filesystem::path& destination,
     const Case& entry) {
-    nf_develop_export_request_v32 request;
+    nf_develop_export_request_v40 request;
     std::memset(&request, 0, sizeof(request));
-    auto& v30 = request.v31.v30;
+    auto& v32 = request.v39.v38.v37.v36.v35.v34.v33.v32;
+    auto& v30 = v32.v31.v30;
     auto& v29 = v30.v29;
     auto& v28 = v29.v28;
     auto& v27 = v28.v27;
@@ -126,8 +129,10 @@ struct Case final {
     v15.develop_target = entry.target;
     v16.scanner_profile_id = entry.scanner_profile_id;
     v30.tiff_compression = NF_TIFF_COMPRESSION_NONE;
-    request.v31.output_bit_depth = 16U;
-    request.output_color_space = entry.output_color_space;
+    v32.v31.output_bit_depth = 16U;
+    v32.output_color_space = entry.output_color_space;
+    request.v39.base_scale = 1.0;
+    request.auto_balance = 1U;
     return request;
 }
 
@@ -176,10 +181,10 @@ void run_case(
         return;
     }
 
-    const nf_develop_export_request_v32 request = make_request(source, actual_path, entry);
+    const nf_develop_export_request_v40 request = make_request(source, actual_path, entry);
     nf_develop_run_state_v1 state = make_run_state();
     nf_develop_export_result_v3 result = make_result();
-    const nf_status_t status = nf_develop_export_v32(&request, &state, &result);
+    const nf_status_t status = nf_develop_export_v39(&request.v39, &state, &result);
     expect(
         status == NF_STATUS_OK && result.succeeded == 1U,
         "Windows task9 Develop export completes");

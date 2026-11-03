@@ -39,6 +39,7 @@ std::optional<DevelopExportOutcome> apply_look_stages(
     negaflow::imaging::WorkingImage developed_image,
     const GpuUsePolicy gpu_policy,
     const std::optional<negaflow::imaging::AnalysisRegion>& analysis_region,
+    const bool linear_negative_output,
     LookStageOutput& out) noexcept {
     tracker.begin(DevelopExportStage::tone_adjust, cost_of(tone_cost, true));
 
@@ -52,9 +53,11 @@ std::optional<DevelopExportOutcome> apply_look_stages(
         request.negative.film_type == negaflow::imaging::NegativeFilmType::black_and_white));
     // 커브 대역은 크롭한 사진 영역 안에서 잽니다(macOS `applyToneCurves(region:)`).
     tone.analysis_region = analysis_region;
-    if (request.film_polarity == FilmPolarity::negative &&
-        (request.develop_target == DevelopTarget::main || request.develop_target == DevelopTarget::print) &&
-        request.scanner_profile_id.empty()) {
+    // 출력 톤(macOS `NegativeLinearResponse.output`)은 반전이 선형 기준 응답을 쓴 경우에만
+    // 붙습니다(`linear_output`, macOS `NegativeLinearResponse.applies`). MAIN·PRINT·커스텀은
+    // v4 인화 응답이 이미 어깨와 토우를 가지므로 여기서 한 번 더 접으면 명부가 0.84 에서
+    // 막히고 검정이 뜹니다.
+    if (request.film_polarity == FilmPolarity::negative && linear_negative_output) {
         const bool accelerated = gpu_policy == GpuUsePolicy::allowed &&
             GpuAccelerator::shared().apply_negative_output_tone(
                 reinterpret_cast<float*>(developed_image.pixels.data()), developed_image.width,

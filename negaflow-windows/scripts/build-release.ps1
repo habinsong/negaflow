@@ -31,6 +31,13 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
     }
 }
 
+# 커밋을 모르면 엔진이 빌드 정보를 불완전하다고 거부해(NativeAbiReader) 설치한 앱이 현상과 내보내기를
+# 못 합니다. tar 로 옮긴 트리처럼 .git 이 없는 곳에서는 설치 파일을 만들지 않고 여기서 멈춥니다.
+$sourceCommit = & git -C $repositoryRoot rev-parse HEAD 2>$null
+if ($LASTEXITCODE -ne 0 -or "$sourceCommit" -notmatch '^[0-9a-fA-F]{40}$') {
+    throw "Release needs a git checkout with a commit: the native engine refuses a build without its source commit. Root: $repositoryRoot"
+}
+
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     $OutputDirectory = Join-Path $projectRoot "out\release\$runtimeIdentifier"
 }

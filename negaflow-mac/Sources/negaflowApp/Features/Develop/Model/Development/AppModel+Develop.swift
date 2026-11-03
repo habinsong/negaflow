@@ -142,12 +142,32 @@ extension AppModel {
     /// 썸네일 크기의 가벼운 현상 프리뷰 한 장만 만든다(정착 패스 없음). 인화 시트처럼 작은
     /// 셀에 여러 장을 늘어놓을 때, 장마다 풀해상도 현상을 돌리지 않기 위한 경로다.
     func seedFastPreview(_ frame: ScanFrame) async {
-        guard ownsFrame(frame), frame.thumbnailImage == nil else { return }
+        await renderLightThumbnail(frame, keepsPreviewRaw: true) { $0.thumbnailImage == nil }
+    }
+
+    /// 재시작 때 디스크에 없거나 레시피가 낡은 현상 썸네일 한 장만 다시 만든다. 화면에 없는 사진마다
+    /// 정착 현상과 결함 재구축을 돌리면 결함 기록이 있는 사진은 장당 수 초라, 수백 장이면 십수 분 동안
+    /// 프리뷰 생성이 이어지고 고른 사진까지 밀렸다. 썸네일 크기에서 안 보이는 결함 제거는 건너뛰고,
+    /// 사진을 고르면 정착 패스가 정확한 썸네일로 덮어쓴다.
+    func refreshThumbnailOnly(_ frame: ScanFrame) async {
+        await renderLightThumbnail(frame, keepsPreviewRaw: false, skipsDefectRebuild: true) { [developController] in
+            !developController.isDevelopingFrame($0)
+                && $0.thumbnailRecipeID != $0.currentThumbnailRecipeID()
+        }
+    }
+
+    private func renderLightThumbnail(
+        _ frame: ScanFrame,
+        keepsPreviewRaw: Bool,
+        skipsDefectRebuild: Bool = false,
+        isWanted: (ScanFrame) -> Bool
+    ) async {
+        guard ownsFrame(frame), isWanted(frame) else { return }
         guard await materializeDevelopSourceIfNeeded(frame) else { return }
-        guard ownsFrame(frame), frame.thumbnailImage == nil else { return }
+        guard ownsFrame(frame), isWanted(frame) else { return }
         guard await developController.acquireDevelopSlot() else { return }
         defer { developController.releaseDevelopSlot() }
-        guard ownsFrame(frame), frame.thumbnailImage == nil else { return }
+        guard ownsFrame(frame), isWanted(frame) else { return }
         let baseKey = FilmBaseCacheKey(
             filmType: frame.filmType,
             mode: frame.params.baseEstimationMode,
@@ -156,7 +176,7 @@ extension AppModel {
             lightSourceProfileID: frame.params.lightSourceProfileID,
             imageTransform: frame.imageTransform
         )
-        let snapshot = makeSnapshot(
+        var snapshot = makeSnapshot(
             for: frame,
             baseKey: baseKey,
             needsRawPreview: false,
@@ -165,12 +185,14 @@ extension AppModel {
             needsThumbnail: true,
             proxyMaxDimension: DevelopFrameRenderer.fastPreviewMaxDimension
         )
+        if skipsDefectRebuild { snapshot.requiresCleanedRaw = false }
+        let finalSnapshot = snapshot
         let inputRevision = frame.cleanRawRevision
         do {
             let preview = try await Task.detached(priority: .utility) {
-                try DevelopFrameRenderer.renderFastPreview(snapshot)
+                try DevelopFrameRenderer.renderFastPreview(finalSnapshot)
             }.value
-            guard ownsFrame(frame), frame.thumbnailImage == nil,
+            guard ownsFrame(frame), isWanted(frame),
                   frame.cleanRawRevision == inputRevision, frame.params == snapshot.params,
                   frame.filmType == snapshot.filmType, frame.preset?.id == snapshot.preset?.id,
                   frame.imageTransform == snapshot.imageTransform else { return }
@@ -182,7 +204,9 @@ extension AppModel {
             frame.thumbnailTransform = snapshot.imageTransform
             frame.thumbnailRecipeID = frame.currentThumbnailRecipeID()
             persistThumbnail(for: frame, cgImage: thumbnail)
-            applyPreviewRawCache(preview, to: frame, maxDimension: snapshot.proxyMaxDimension)
+            if keepsPreviewRaw {
+                applyPreviewRawCache(preview, to: frame, maxDimension: snapshot.proxyMaxDimension)
+            }
         } catch {
             return
         }

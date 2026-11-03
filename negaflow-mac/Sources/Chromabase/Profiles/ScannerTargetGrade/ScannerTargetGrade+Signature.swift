@@ -396,7 +396,7 @@ extension ScannerTargetGrade {
         switch target {
         case .noritsu: return "NORITSU"
         case .sp3000: return "SP-3000"
-        // F135/HR 는 번들 실측 corpus 가 없다 → 실측 상대 차분 레이어 없이 문서 개성만 적용.
+        // F135/HR 는 번들 실측 corpus 가 없다 → 실측 상대 차분 레이어 없이 렌더링 표만 적용.
         default: return nil
         }
     }
@@ -410,9 +410,7 @@ extension ScannerTargetGrade {
     ///  • FUJI(SP-3000): 하이라이트로 갈수록 강해지는 레드(a*>0) 특성은 그대로 유지된다.
     ///  • 암부 웜캐스트(빨강/노랑) 제거는 픽셀 luma 기준이라 ColorCube 적용부에서 처리한다(bin
     ///    단위로는 최저 bin 아래 암부가 미드 값을 물려받아 taper 되지 않는다).
-    ///  • (2026-07-20) 과거의 NORITSU 채도 ×1.14 부스트는 제거 — documented 레이어가 없던
-    ///    시절 "밋밋함 완화" 땜질로, 문서화된 muted 채도 개성(documentedCharacter)과 정반대로
-    ///    싸우며 상쇄됐다. 절대 개성은 documented 가, 이 레이어는 실측 상대 성분만 소유한다.
+    ///  • 절대 개성은 렌더링 표(+Targets.swift)가, 이 레이어는 실측 상대 성분만 소유한다.
     static func characterRefined(_ sig: Signature, target: DevelopTarget) -> Signature {
         var s = sig
         if target == .noritsu {
@@ -423,21 +421,18 @@ extension ScannerTargetGrade {
         return s
     }
 
-    // MARK: 프로파일 해석 (수동 > 검증된 필름 매칭 > 검증된 스캐너 공통)
+    // MARK: 프로파일 해석 (사용자가 고른 프로파일만)
 
     private static let signatureCacheLock = NSLock()
     private nonisolated(unsafe) static var signatureCache: [String: Signature] = [:]
 
     static func resolveSignature(target: DevelopTarget, params: DevelopParameters) -> Signature? {
         guard let scanner = scannerName(for: target) else { return nil }
-        // SP 는 설계 캐릭터(documentedCharacter)가 기본 정체성이다. 번들 실측 프로파일은 사용자가
-        // 네거티브에서 직접 골랐을 때만 그 필름의 실측 차분으로 얹는다. 공통 차분을 기본으로 깔면
-        // 미드 채도 ×1.5·레드 ×0.63·블루 ×1.17 이 설계 위에 겹쳐 파랗고 과채도였다(2026-10-15).
-        if target == .sp3000,
-           params.scannerProfileID == nil
-            || !(params.filmType == .colorNegative || params.filmType == .bwNegative) {
-            return nil
-        }
+        // 기본 정체성은 렌더링 표(+Targets.swift)가 실측으로 이미 갖고 있다. 번들 실측 차분은
+        // 사용자가 필름 프로파일을 직접 골랐을 때만 얹는다 — 공통 차분이나 필름 프리셋 자동
+        // 매칭을 기본으로 깔면 같은 근거를 두 번 싣는다(이전 HS 기본값: 미드 채도 ×0.67·레드
+        // ×1.58·마젠타 ×1.82 가 설계 위에 겹쳤다).
+        guard params.scannerProfileID != nil else { return nil }
         let cacheKey = "\(scanner)|\(params.scannerProfileID ?? "")|\(params.filmStockDminID ?? "")|\(params.filmType.rawValue)"
         signatureCacheLock.lock()
         if let cached = signatureCache[cacheKey] {
@@ -478,50 +473,23 @@ extension ScannerTargetGrade {
         return resolved
     }
 
-    /// 네거티브(컬러/흑백) 시그니처. 수동/자동 필름을 선택한 경우에는 그 필름의 exact
-    /// roll-label pair가 있을 때만 상대 시그니처를 반환한다. 선택 근거가 불완전하면 공통
-    /// 시그니처로 바꾸지 않고 nil(MAIN과 같은 no-op)을 반환한다.
+    /// 네거티브(컬러/흑백) 시그니처. 사용자가 고른 프로파일이 대상 스캐너 것이고 그 필름의
+    /// exact roll-label pair 가 있을 때만 상대 시그니처를 반환한다. 근거가 불완전하면 nil 이다.
     private static func negativeSignature(
         scanner: String,
-        target: DevelopTarget,
+        target _: DevelopTarget,
         params: DevelopParameters
     ) -> Signature? {
         let all = ScannerProfileRegistry.loadAll()
-
-        // 1. 수동 선택: 대상 스캐너의 선택 프로파일이 paired evidence를 가질 때만 사용.
-        if let id = params.scannerProfileID {
-            guard let profile = all.first(where: { $0.id == id && $0.scanner == scanner }) else {
-                return nil
-            }
-            return scannerSignature(
-                scanner: scanner,
-                filmType: params.filmType,
-                profiles: all,
-                filmKey: profile.filmKey
-            )
+        guard let id = params.scannerProfileID,
+              let profile = all.first(where: { $0.id == id && $0.scanner == scanner }) else {
+            return nil
         }
-
-        // 2. 자동 필름 매칭: pairedValidated 프로파일만 matcher가 반환하며, 여기서도 다시
-        // roll-label pair를 요구한다.
-        if params.filmStockDminID != nil {
-            guard let matched = ScannerProfileMatcher.preferredProfileID(
-               target: target,
-               filmType: params.filmType,
-               filmStockDminID: params.filmStockDminID,
-               currentID: nil,
-               profiles: all
-            ), let profile = all.first(where: { $0.id == matched && $0.scanner == scanner }) else {
-                return nil
-            }
-            return scannerSignature(
-                scanner: scanner,
-                filmType: params.filmType,
-                profiles: all,
-                filmKey: profile.filmKey
-            )
-        }
-
-        // 3. 스캐너 공통: 모든 roll-label matched film group의 일관된 상대 성분.
-        return scannerSignature(scanner: scanner, filmType: params.filmType, profiles: all)
+        return scannerSignature(
+            scanner: scanner,
+            filmType: params.filmType,
+            profiles: all,
+            filmKey: profile.filmKey
+        )
     }
 }

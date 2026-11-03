@@ -465,7 +465,10 @@ WicSrgb16FrameStatus verify_working_srgb16_frame(
         double horizontal_dpi = 0.0;
         double vertical_dpi = 0.0;
         status = frame->GetResolution(&horizontal_dpi, &vertical_dpi);
-        constexpr double tolerance = 0.01;
+        // PNG `pHYs` 는 정수 pixels-per-metre 이고 WIC 는 반올림 없이 잘라 씁니다. 왕복 오차가
+        // 1 ppm = 0.0254 dpi 까지 납니다(150 dpi → 5905 → 149.987). 0.01 로 재면 앱의 해상도
+        // 선택지 중 72·150·240 dpi PNG 가 늘 실패합니다.
+        constexpr double tolerance = 0.0255;
         if (FAILED(status) ||
             std::abs(horizontal_dpi - static_cast<double>(output_dpi)) > tolerance ||
             std::abs(vertical_dpi - static_cast<double>(output_dpi)) > tolerance) {

@@ -121,22 +121,4 @@ final class DetailEnhancementTests: XCTestCase {
         XCTAssertLessThan(shadow - 1, (mid - 1) / 2, "암부를 미드톤만큼 건드렸다")
     }
 
-    /// SP 타겟은 질감 단계에서 사용자 슬라이더와 별개로 약한 부분 대비를 기본으로 얹는다(쫀득한 미드).
-    /// 다른 타겟은 슬라이더가 0 이면 질감 단계가 항등이다.
-    func testSPTargetAddsBaselineLocalContrastInTextureStage() {
-        let width = 3_000
-        let image = SyntheticScan.makeImage(width: width, height: 16) { x, _ in
-            self.grey(0.50 + 0.02 * sin(Double(x) * 2 * .pi / 40))
-        }
-        func amplitude(_ target: DevelopTarget) -> Double {
-            var params = DevelopParameters()
-            params.developTarget = target
-            let row = gammaRow(TextureStage.apply(to: image, params: params))[800..<2_200]
-            return (row.max()! - row.min()!) / 2
-        }
-        let main = amplitude(.main), sp = amplitude(.sp3000)
-        XCTAssertEqual(main, 0.02, accuracy: 0.001, "MAIN 질감 단계는 항등이어야 한다")
-        XCTAssertGreaterThan(sp, main * 1.08, "SP 기본 부분 대비가 걸리지 않았다")
-        XCTAssertLessThan(sp, main * 1.35, "SP 기본 부분 대비는 약해야 한다")
-    }
 }

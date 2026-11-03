@@ -479,6 +479,7 @@ struct WhiteBalanceProbe final {
             std::move(invert.image),
             gpu_policy,
             invert.analysis_region,
+            invert.negative.linear_output,
             look)) {
         return *failed;
     }

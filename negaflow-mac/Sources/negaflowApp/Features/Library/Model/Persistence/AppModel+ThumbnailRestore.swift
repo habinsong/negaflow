@@ -61,7 +61,14 @@ extension AppModel {
             }
 
             LaunchTrace.mark("thumbnail disk pass done frames=\(jobs.count) developedMiss=\(developedIsMissing.filter { $0 }.count) rawMiss=\(rawIsMissing.filter { $0 }.count)")
-            var framesToDevelop: [ScanFrame] = []
+            // 보이는 것은 현상 썸네일이다. 큰 TIFF 의 원본 프리뷰 디코드가 끝나기를 기다리지 않는다.
+            let framesToRefresh = jobs.indices.filter { index in
+                let job = jobs[index]
+                return developedIsMissing[index] && (job.hasDevelopedOnce || job.hasNewInputSettings)
+                    && FileManager.default.fileExists(atPath: job.sourceURL.path)
+            }.map { jobs[$0].frame }
+            let refresh = framesToRefresh.isEmpty ? nil
+                : await MainActor.run { self.refreshThumbnailsInBackground(framesToRefresh) }
             for (index, job) in jobs.enumerated() {
                 guard !Task.isCancelled else { return }
                 let isCurrent = await MainActor.run {
@@ -91,15 +98,8 @@ extension AppModel {
                         cache.store(cg, for: job.frame.id, at: job.rawCacheURL)
                     }
                 }
-                if (job.hasDevelopedOnce || job.hasNewInputSettings), developedIsMissing[index],
-                   FileManager.default.fileExists(atPath: job.sourceURL.path) {
-                    framesToDevelop.append(job.frame)
-                }
             }
-            guard !Task.isCancelled, !framesToDevelop.isEmpty else { return }
-            let frames = framesToDevelop
-            let task = await MainActor.run { self.developImportedFramesSequentially(frames) }
-            await task.value
+            await refresh?.value
         }
     }
 }

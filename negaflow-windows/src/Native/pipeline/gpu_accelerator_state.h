@@ -32,6 +32,7 @@
 #include "negaflow/gpu/gpu_channel_clipping_overlay.h"
 #include "negaflow/gpu/gpu_neighborhood.h"
 #include "negaflow/gpu/gpu_noritsu_texture.h"
+#include "negaflow/gpu/gpu_scanner_rendering.h"
 #include "negaflow/gpu/gpu_scanner_target_grade.h"
 #include "negaflow/gpu/gpu_texture_grain.h"
 #include "negaflow/gpu/gpu_vibrance.h"
@@ -81,6 +82,8 @@ struct GpuAccelerator::State final {
     // 엔진에서 가장 비싼 화소별 커널입니다. 따로 만들어 이것만 실패해도 나머지가 돕니다.
     gpu::GpuScannerTargetGrade target_grade{};
     bool target_grade_ready{false};
+    gpu::GpuScannerRendering scanner_rendering{};
+    bool scanner_rendering_ready{false};
     gpu::GpuNoritsuTexture noritsu_texture{};
     bool noritsu_texture_ready{false};
     gpu::GpuTextureGrain texture_grain{};

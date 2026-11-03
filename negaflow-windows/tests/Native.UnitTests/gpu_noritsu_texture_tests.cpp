@@ -38,11 +38,12 @@ void expect(const bool condition, const char* const message) {
     }
 }
 
-// 5탭 누적은 float vs double 이라 내부 화소는 작다. 게이트 뒤집힘은 질감 진폭.
+// 탭 누적은 float vs double 이라 내부 화소는 작다. 게이트 뒤집힘은 질감 진폭.
 constexpr float accumulation_tolerance = 1.0e-4F;
 constexpr float gate_flip_tolerance = 5.0e-3F;
 constexpr double gate_flip_pixel_fraction = 0.02;
-constexpr std::uint32_t width = 97U;
+// 실기 출력 긴 변(3089px)이면 σ 0.9px(7탭)로, 반경 정규화 전의 고정 5탭과 같은 크기다.
+constexpr std::uint32_t width = 3089U;
 constexpr std::uint32_t height = 53U;
 
 [[nodiscard]] bool is_gated(const Rgba32F& pixel) noexcept {
@@ -51,7 +52,7 @@ constexpr std::uint32_t height = 53U;
     const float luma =
         (0.2126F * pixel.red) + (0.7152F * pixel.green) + (0.0722F * pixel.blue);
     const ScannerTargetTextureSetup setup =
-        negaflow::imaging::scanner_target_texture_setup();
+        negaflow::imaging::scanner_target_texture_setup(std::max(width, height));
     return low < 0.0F || high > 1.0F || luma <= setup.luma_gate;
 }
 
@@ -193,7 +194,7 @@ void warp_matches_cpu(
         return;
     }
     const ScannerTargetTextureSetup setup =
-        negaflow::imaging::scanner_target_texture_setup();
+        negaflow::imaging::scanner_target_texture_setup(std::max(width, height));
     if (kernel.dispatch(warp, uploaded, scratch, destination, setup) != GpuKernelStatus::ok) {
         expect(false, "WARP noritsu dispatch must succeed");
         return;
@@ -226,7 +227,7 @@ int main() {
 
     std::vector<Rgba32F> gpu = source;
     const ScannerTargetTextureSetup setup =
-        negaflow::imaging::scanner_target_texture_setup();
+        negaflow::imaging::scanner_target_texture_setup(std::max(width, height));
     const bool ran = GpuAccelerator::shared().apply_noritsu_texture(
         reinterpret_cast<float*>(gpu.data()), width, height, width, &setup);
     expect(ran, "GPU noritsu texture must run — fallback would make this test vacuous");

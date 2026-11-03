@@ -45,6 +45,7 @@ struct LookStageOutput final {
     negaflow::imaging::WorkingImage developed,
     GpuUsePolicy gpu_policy,
     const std::optional<negaflow::imaging::AnalysisRegion>& analysis_region,
+    bool linear_negative_output,
     LookStageOutput& out) noexcept;
 
 }  // namespace negaflow::pipeline::develop_export_detail

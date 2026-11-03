@@ -212,7 +212,19 @@ using ScannerTargetGradeFunction = bool (*)(
     std::uint32_t stride_pixels,
     const ScannerTargetGradeSetup* setup) noexcept;
 
-// NORITSU 장치 질감입니다. `setup` 은 `scanner_target_texture_setup()` 이 만든 것입니다.
+// 스캐너 렌더링(장면 무관 고정 변환)입니다. `setup` 은 `rendering_setup` 이 만든 것입니다.
+//
+// **근사한 것입니다.** CPU 는 `double`, GPU 는 float 입니다.
+struct ScannerRenderingSetup;
+
+using ScannerRenderingFunction = bool (*)(
+    float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    const ScannerRenderingSetup* setup) noexcept;
+
+// NORITSU 장치 질감입니다. `setup` 은 `scanner_target_texture_setup(long_edge)` 이 만든 것입니다.
 //
 // **근사한 것입니다.** CPU 는 두 패스를 `double` 로 누적하고, 하드 게이트가 있어
 // 경계 화소는 1ulp 로 결과가 갈립니다.
@@ -362,6 +374,7 @@ struct KernelAccelerator final {
     MutedSceneVibranceFunction muted_scene_vibrance{nullptr};
     ColorModelFunction color_model{nullptr};
     ScannerTargetGradeFunction scanner_target_grade{nullptr};
+    ScannerRenderingFunction scanner_rendering{nullptr};
     ScannerTargetTextureFunction noritsu_texture{nullptr};
     TextureGrainFunction texture_grain{nullptr};
     ChannelClippingOverlayFunction channel_clipping_overlay{nullptr};

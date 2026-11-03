@@ -18,8 +18,7 @@ extension ScannerTargetGrade {
         cubeCacheLock.unlock()
         let data = makeCubeData(signature: sig, dimension: cubeDimension)
         cubeCacheLock.lock()
-        // 노출 앵커(exposureAnchored)가 장면별로 양자화된 톤 변형을 만들므로 한도를 여유 있게
-        // 잡는다(변형 수는 0.004 양자화로 유한).
+        // 실측 상대 차분은 사용자가 고른 필름 프로파일마다 하나라 변형 수가 적다.
         if cubeCache.count >= 32 { cubeCache.removeAll(keepingCapacity: true) }
         cubeCache[sig] = data
         cubeCacheLock.unlock()
@@ -153,10 +152,8 @@ extension ScannerTargetGrade {
             // 서로 상쇄되지 않고 hue 앵커/chroma 대역이 유채색을 독립적으로 지배한다.
             let neutralChromaGate = 1.0 - smoothstep(8.0, 28.0, (inputLab.a * inputLab.a + inputLab.b * inputLab.b).squareRoot())
             let drift = neutralDrift(at: inputLuma, bins: sig.neutralBins)
-            // 암부 웜캐스트 제거(픽셀 luma 기준): 좋은 스캔의 암부는 중립이어야 한다. 저 luma 에서
-            // 웜(빨강 a*>0 / 노랑 b*>0) 드리프트를 0 에 수렴시키고, 쿨(파랑 b*<0)은 유지한다 —
-            // FUJI 의 문서화된 특성이 "파란 그림자"이므로 블루 보존, 암부의 빨강/노랑만 제거한다.
-            // 하이라이트는 warmGate=1 이라 레드 특성이 그대로 유지된다.
+            // 암부 웜캐스트 제거(픽셀 luma 기준): 저 luma 에서 웜(빨강 a*>0 / 노랑 b*>0)
+            // 드리프트를 0 에 수렴시키고 쿨(b*<0)은 유지한다. 하이라이트는 warmGate=1 이다.
             let warmGate = smoothstep(0.22, 0.52, inputLuma)
             var driftA = clamp(drift.a, -4.0, 4.0)
             var driftB = clamp(drift.b, -4.0, 4.0)

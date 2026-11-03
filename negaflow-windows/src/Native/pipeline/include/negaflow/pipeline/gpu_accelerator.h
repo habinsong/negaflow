@@ -291,6 +291,14 @@ public:
         std::uint32_t stride_pixels,
         const imaging::ScannerTargetGradeSetup* setup) noexcept;
 
+    // 스캐너 렌더링(장면 무관 고정 변환). 상주 화상이면 내려받지 않습니다.
+    [[nodiscard]] bool apply_scanner_rendering(
+        float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        const imaging::ScannerRenderingSetup* setup) noexcept;
+
     // NORITSU 장치 질감. 그레이드 뒤에 붙고, 왕복이 한 번입니다.
     [[nodiscard]] bool apply_noritsu_texture(
         float* pixels,

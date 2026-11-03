@@ -249,22 +249,26 @@ void test_jpeg_standard_image_decode(const std::filesystem::path& root) {
 }
 
 void test_dpi_metadata(const std::filesystem::path& root) {
-    negaflow::output::WicPngExportLimits limits{};
-    // 인코더가 쓴 화소가 의도한 화소와 같다는 증명은 여기서 듭니다 —
-    // 내보내기 경로는 macOS 처럼 이 대조를 하지 않습니다.
-    limits.verify_pixel_readback = true;
-    limits.output_dpi = 300U;
-    const auto result = negaflow::output::export_working_to_srgb16_png(
-        make_image(),
-        root / L"dpi.png",
-        limits);
-    report_failure(result);
-    expect(
-        result.status == negaflow::output::WicPngExportStatus::ok &&
-            result.info.output_dpi == 300U && result.info.resolution_verified &&
-            result.info.structure_verified && result.info.pixels_verified &&
-            result.info.profile_verified && result.info.published,
-        "PNG DPI metadata round trips through WIC");
+    // `pHYs` 는 정수 pixels-per-metre 이고 WIC 는 잘라 씁니다. 왕복 오차가 1 ppm(0.0254 dpi)까지
+    // 나서 허용 오차가 그보다 좁으면 그 해상도의 PNG 내보내기가 늘 실패합니다(빠른 내보내기 기본값이 150).
+    for (const std::uint32_t dpi : {72U, 96U, 150U, 240U, 300U, 350U, 600U}) {
+        negaflow::output::WicPngExportLimits limits{};
+        // 인코더가 쓴 화소가 의도한 화소와 같다는 증명은 여기서 듭니다 —
+        // 내보내기 경로는 macOS 처럼 이 대조를 하지 않습니다.
+        limits.verify_pixel_readback = true;
+        limits.output_dpi = dpi;
+        const auto result = negaflow::output::export_working_to_srgb16_png(
+            make_image(),
+            root / (L"dpi-" + std::to_wstring(dpi) + L".png"),
+            limits);
+        report_failure(result);
+        expect(
+            result.status == negaflow::output::WicPngExportStatus::ok &&
+                result.info.output_dpi == dpi && result.info.resolution_verified &&
+                result.info.structure_verified && result.info.pixels_verified &&
+                result.info.profile_verified && result.info.published,
+            "PNG DPI metadata round trips through WIC");
+    }
 }
 
 void test_existing_destination_is_preserved(const std::filesystem::path& root) {

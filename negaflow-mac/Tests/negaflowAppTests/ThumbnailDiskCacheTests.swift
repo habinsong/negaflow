@@ -101,7 +101,7 @@ final class ThumbnailDiskCacheTests: XCTestCase {
         frame.hasDevelopedOnce = true
         model.frames = [frame]
         await model.loadThumbnailsFromDisk(for: [frame]).value
-        XCTAssertTrue(frame.developedIsSettled)
+        XCTAssertFalse(frame.developedIsSettled, "restoring a thumbnail must not run a settled develop")
         XCTAssertNotNil(frame.thumbnailImage)
         XCTAssertFalse(frame.thumbnailImage === frame.rawPreviewImage)
         XCTAssertEqual(frame.params.developTarget, .hr)

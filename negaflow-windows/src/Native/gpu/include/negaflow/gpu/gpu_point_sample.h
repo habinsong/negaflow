@@ -18,7 +18,7 @@ class GpuWorkingImage;
 // GPU 에 있는 화상에서 **점 표본 격자**를 뽑아 호스트로 내립니다.
 //
 // 격자 칸 (x, y) 는 원본의 (min(w-1, x*w/dw), min(h-1, y*h/dh)) 화소 하나를 그대로 담습니다 —
-// `scanner_target_measure.cpp` 의 CPU 표본과 같은 자리·같은 값입니다. 화상 전체(8.7MP 면
+// 예전 스캐너 타깃 장면 측정이 쓰던 자리 규칙입니다(현재 소비자 없음). 화상 전체(8.7MP 면
 // 138 MB)를 내리는 대신 격자(160 칸 폭)만 내리려고 둡니다.
 class GpuPointSampleGrid final {
 public:

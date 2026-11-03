@@ -138,6 +138,8 @@ final class DevelopController: ObservableObject {
         activeFrameIDs.contains(frame.id)
     }
 
+    var isDevelopingAnyFrame: Bool { !activeFrameIDs.isEmpty }
+
     func acquireDevelopSlot() async -> Bool {
         guard !Task.isCancelled else { return false }
         guard activeDevelopSlots >= maxConcurrentDevelopments else {

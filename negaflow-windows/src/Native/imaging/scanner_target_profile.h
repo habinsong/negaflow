@@ -37,9 +37,6 @@ struct TargetProfile final {
     double color_density{0.0};
 };
 
-// 이 스캐너 룩의 절대 프로파일입니다.
-[[nodiscard]] const TargetProfile& profile_for(ScannerTargetStyle target) noexcept;
-
 // 스캐너 프로파일 ID 가 알려진 것이면 그 조합 전용 상대 프로파일을, 아니면 nullptr 을
 // 냅니다. 상대 프로파일은 이미 그 스캐너로 찍힌 원본을 다시 그 룩으로 몰지 않게 합니다.
 [[nodiscard]] const TargetProfile* relative_profile_for(

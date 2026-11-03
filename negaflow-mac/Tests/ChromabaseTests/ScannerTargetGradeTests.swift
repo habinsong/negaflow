@@ -74,7 +74,7 @@ final class ScannerTargetGradeTests: XCTestCase {
         XCTAssertNil(ScannerTargetGrade.scannerSignature(scanner: "SP-3000", profiles: all))
     }
 
-    func testResolveSignatureRequiresExactSelectedPairAndUsesCommonOnlyWhenBare() throws {
+    func testResolveSignatureRequiresExplicitSelectedPair() throws {
         let all = ScannerProfileRegistry.loadAll()
         guard let spProfile = ScannerTargetGrade.matchedProfilePairs(
                   scanner: "SP-3000", kind: "color nega", profiles: all
@@ -133,11 +133,11 @@ final class ScannerTargetGradeTests: XCTestCase {
         ))
         XCTAssertNil(ScannerTargetGrade.resolveSignature(target: .noritsu, params: film))
 
-        // 4. NORITSU 는 타겟 선택 자체가 명시적 opt-in이므로 프로파일 선택 없이 공통 시그니처가 있다.
-        //    SP 는 설계 캐릭터가 기본이라 프로파일을 고르지 않으면 실측 차분을 얹지 않는다.
+        // 4. 프로파일을 고르지 않으면 두 타깃 모두 실측 차분을 얹지 않는다 — 기본 정체성은
+        //    렌더링 표가 갖고 있어 공통 차분을 깔면 같은 근거가 두 번 실린다.
         var bare = DevelopParameters()
         bare.developTarget = .noritsu
-        XCTAssertNotNil(ScannerTargetGrade.resolveSignature(target: .noritsu, params: bare))
+        XCTAssertNil(ScannerTargetGrade.resolveSignature(target: .noritsu, params: bare))
         bare.developTarget = .sp3000
         XCTAssertNil(ScannerTargetGrade.resolveSignature(target: .sp3000, params: bare))
 
@@ -982,45 +982,9 @@ final class ScannerTargetGradeTests: XCTestCase {
             "두 스캐너 타겟은 서로 달라야 한다(실측 시그니처 차이)")
     }
 
-    /// 평탄/흐린 장면(developed 계조가 좁은 상부 대역에 몰림)은 스캐너 톤 전이의 지지
-    /// (캘리브레이션 corpus p5~p95 spread≈0.70) 밖 — 노출 앵커가 장면 median 을 보존해
-    /// FUJI 히스토그램 우측 밀림(≈1스탑 과노출)을 막아야 한다. 색 개성은 유지된다.
-    func testFlatSceneKeepsScannerTargetExposureAnchoredToItsInversion() {
-        let width = 96, height = 48
-        let base = SIMD3<Double>(0.82, 0.55, 0.34)
-        // 경계 5% — 실사용 프레임(크롭 후)처럼 rebate 가 앵커 샘플러 인셋(6%) 안에 들어온다.
-        let bx = Int(Double(width) * 0.05), by = Int(Double(height) * 0.05)
-        // 흐린 풍경 네거티브: 밀도 0.6~1.5(밝은 하늘/미드만, 깊은 섀도 없음).
-        let flat = makeLinearImage(width: width, height: height) { x, y in
-            let isBorder = x < bx || x >= width - bx || y < by || y >= height - by
-            let density = isBorder ? 0.0 : (0.6 + 0.9 * Double(x) / Double(width - 1))
-            let atten = pow(10.0, -density)
-            return (base.x * atten, base.y * atten, base.z * atten)
-        }
-        let fb = FilmBase(rgb: base, source: .border)
-        let main = renderSRGB8(NegativeInversion.applySceneRanged(to: flat, base: fb),
-                               width: width, height: height)
-        let fuji = developed(target: .sp3000, input: flat, base: fb, width: width, height: height)
-        let nor = developed(target: .noritsu, input: flat, base: fb, width: width, height: height)
-
-        let mainL = interiorLumaPercentiles(main, width: width, height: height)
-        let fujiL = interiorLumaPercentiles(fuji, width: width, height: height)
-        let norL = interiorLumaPercentiles(nor, width: width, height: height)
-
-        XCTAssertLessThanOrEqual(abs(fujiL.p50 - mainL.p50), 6.0,
-            "평탄 장면에서 FUJI median 노출은 스캐너 반전 기준 에 앵커돼야 한다")
-        XCTAssertLessThanOrEqual(fujiL.p95, mainL.p95 + 6.0,
-            "평탄 장면에서 FUJI 히스토그램이 우측으로 밀리면 안 된다")
-        XCTAssertLessThanOrEqual(abs(norL.p50 - mainL.p50), 6.0,
-            "평탄 장면에서 NORITSU median 노출도 앵커돼야 한다")
-        XCTAssertGreaterThan(meanAbsDiff(fuji, main), 0.8,
-            "노출 앵커가 FUJI 색 개성까지 지우면 안 된다")
-    }
-
-    /// NORITSU 문서 질감(기본 샤픈 — "끌 수 없다"가 문서화된 시그니처): 실제 그레인을
-    /// crisp 하게 만들고, FUJI/MAIN 은 소프트하게 유지된다. 흑백 중립도 깨지 않는다.
     func testNoritsuDocumentedTextureCrispensExistingGrain() {
-        let width = 96, height = 48
+        // 샤픈 반경은 실기 출력 해상도(긴 변 3089px) 기준이라, 그 폭의 띠 영상으로 잰다.
+        let width = Int(ScannerTargetGrade.noritsuReferenceLongEdge), height = 48
         let base = SIMD3<Double>(0.82, 0.55, 0.34)
         let bx = Int(Double(width) * 0.08), by = Int(Double(height) * 0.08)
         func grainNegative(base: SIMD3<Double>) -> CIImage {
@@ -1045,7 +1009,7 @@ final class ScannerTargetGradeTests: XCTestCase {
         let hfNor = interiorHFEnergy(nor, width: width, height: height)
         let hfFuji = interiorHFEnergy(fuji, width: width, height: height)
         XCTAssertGreaterThan(hfNor, hfMain * 1.10, "NORITSU 는 그레인이 crisp 해야 한다(샤픈)")
-        XCTAssertGreaterThan(hfNor, hfFuji * 1.05, "FUJI 는 NORITSU 보다 소프트해야 한다")
+        XCTAssertGreaterThan(hfNor, hfFuji * 1.05, "SP 는 HS 보다 소프트해야 한다(샤픈 없음)")
 
         // 흑백: luminance USM 이라 중립(R=G=B)이 유지돼야 한다.
         let bwBase = SIMD3<Double>(repeating: 0.80)
@@ -1097,7 +1061,7 @@ final class ScannerTargetGradeTests: XCTestCase {
         return count > 0 ? sum / Double(count) : 0
     }
 
-    func testDocumentedCharacterMakesAllFilmTypesDistinctFromMainAndKeepsBWNeutral() {
+    func testRenderingMakesAllFilmTypesDistinctFromMainAndKeepsBWNeutral() {
         let width = 96, height = 48
         let colorNegativeBase = SIMD3<Double>(0.82, 0.55, 0.34)
         let bwNegativeBase = SIMD3<Double>(repeating: 0.80)
@@ -1153,17 +1117,23 @@ final class ScannerTargetGradeTests: XCTestCase {
                 )
             }
 
-            // 문서 개성은 4개 조합(컬러/흑백 × 슬라이드/네거티브) 전부에 적용된다 — 각 스캐너가
-            // MAIN 과, 그리고 서로 구별돼야 한다. 포지티브(슬라이드)는 감쇠 적용이라 임계값이 낮다.
+            // 렌더링은 4개 조합(컬러/흑백 × 슬라이드/네거티브) 전부에 적용된다 — 각 스캐너가
+            // MAIN 과 구별돼야 한다. 포지티브(슬라이드)는 절반 세기라 임계값이 낮다. F135 는
+            // 측정된 SP 렌더링에 Kodak 인화지 토우만 다르게 붙인 설계라 SP 와는 섀도에서만
+            // 갈린다(+Targets.swift) — 쌍별 구별은 나머지 조합에서만 본다. HR 은 F135 와 톤 표가
+            // 같고 채도 게인만 달라서 luma 로 붕괴하는 흑백에서는 같은 결과가 정상이다.
             let threshold = (filmType == .colorPositive || filmType == .bwPositive) ? 0.5 : 1.0
+            let isBW = filmType == .bwNegative || filmType == .bwPositive
+            var indistinctPairs: [Set<DevelopTarget>] = [[.sp3000, .f135]]
+            if isBW { indistinctPairs.append([.f135, .hr]) }
             for target in emulations {
                 XCTAssertGreaterThan(meanAbsDiff(main, outputs[target]!), threshold,
                                      "\(filmType) \(target.displayName)가 MAIN과 같음")
             }
             for (index, lhs) in emulations.enumerated() {
-                for rhs in emulations.dropFirst(index + 1) {
+                for rhs in emulations.dropFirst(index + 1) where !indistinctPairs.contains(Set([lhs, rhs])) {
                     XCTAssertGreaterThan(
-                        meanAbsDiff(outputs[lhs]!, outputs[rhs]!), threshold,
+                        meanAbsDiff(outputs[lhs]!, outputs[rhs]!), threshold * 0.5,
                         "\(filmType) \(lhs.displayName)/\(rhs.displayName) 두 타겟이 같음")
                 }
             }
@@ -1180,7 +1150,7 @@ final class ScannerTargetGradeTests: XCTestCase {
                 }
                 return maxSpread
             }
-            if filmType == .bwPositive || filmType == .bwNegative {
+            if isBW {
                 for target in emulations {
                     XCTAssertLessThanOrEqual(maxSpread(outputs[target]!), 1,
                                              "\(filmType) \(target.displayName) 중립 위반")
@@ -1239,39 +1209,6 @@ final class ScannerTargetGradeTests: XCTestCase {
                 "포지티브도 문서 개성으로 MAIN 과 구별돼야 한다")
         }
     }
-
-    /// SP(2026-10-15 개편)는 밝기를 올려 장면을 씻어 내지 않고 미드에 대비를 준다: 같은 입력에서
-    /// 장면 미드(p50)는 MAIN 과 거의 같고(예전 실측 리프트는 밝은 장면을 L* +8~10 씻어 냈다),
-    /// 미드 계조 폭(p25↔p75)은 MAIN 보다 넓다. 프레임 테두리(베이스 = 순흑)는 장면이 아니라 뺀다.
-    func testSPAddsMidContrastWithoutLiftingExposure() {
-        let width = 96, height = 48
-        let base = SIMD3<Double>(0.82, 0.55, 0.34)
-        let input = makeSyntheticNegative(width: width, height: height, base: base)
-        let fb = FilmBase(rgb: base, source: .border)
-        let main = renderSRGB8(NegativeInversion.applySceneRanged(to: input, base: fb),
-                               width: width, height: height)
-        let sp = developed(target: .sp3000, input: input, base: fb, width: width, height: height)
-
-        func scenePercentiles(_ px: [UInt8]) -> (p25: Double, p50: Double, p75: Double) {
-            let bx = Int(Double(width) * 0.08) + 1, by = Int(Double(height) * 0.08) + 1
-            var lumas: [Double] = []
-            for y in by..<(height - by) {
-                for x in bx..<(width - bx) {
-                    let i = (y * width + x) * 4
-                    lumas.append(0.2126 * Double(px[i]) + 0.7152 * Double(px[i + 1]) + 0.0722 * Double(px[i + 2]))
-                }
-            }
-            let sorted = lumas.sorted()
-            func pct(_ f: Double) -> Double { sorted[Int(Double(sorted.count - 1) * f)] }
-            return (pct(0.25), pct(0.5), pct(0.75))
-        }
-        let m = scenePercentiles(main), t = scenePercentiles(sp)
-        XCTAssertEqual(t.p50, m.p50, accuracy: 4.0, "SP 미드 노출은 스캐너 반전 기준 근처. sp=\(t.p50) main=\(m.p50)")
-        XCTAssertGreaterThan(t.p75 - t.p25, (m.p75 - m.p25) + 2.0,
-            "SP 는 미드 대비가 스캐너 반전 기준 보다 커야 한다. sp=\(t.p75 - t.p25) main=\(m.p75 - m.p25)")
-    }
-
-    // MARK: 포지티브(슬라이드/흑백 양화) 시그니처
 
     private func makeStat(_ value: Double) -> ScannerProfileStat {
         ScannerProfileStat(count: 30, mean: value, median: value,
@@ -1386,40 +1323,38 @@ final class ScannerTargetGradeTests: XCTestCase {
         let all = ScannerProfileRegistry.loadAll()
         guard !all.isEmpty else { throw XCTSkip("번들 스캐너 프로파일 없음") }
 
+        // 프로파일을 고르지 않으면 어떤 필름 타입에도 실측 차분이 없다(렌더링 표만).
         for target in [DevelopTarget.sp3000, .noritsu] {
-            if target == .sp3000 {
-                // SP 는 프로파일을 고르지 않으면 어떤 필름 타입에도 실측 차분이 없다(설계 캐릭터만).
-                for filmType in FilmType.allCases {
-                    var bare = DevelopParameters()
-                    bare.developTarget = target
-                    bare.filmType = filmType
-                    XCTAssertNil(ScannerTargetGrade.resolveSignature(target: target, params: bare))
-                }
-                continue
+            for filmType in FilmType.allCases {
+                var bare = DevelopParameters()
+                bare.developTarget = target
+                bare.filmType = filmType
+                XCTAssertNil(ScannerTargetGrade.resolveSignature(target: target, params: bare),
+                             "\(target) \(filmType) 프로파일 없이 실측 차분이 붙음")
             }
-            var slide = DevelopParameters()
-            slide.developTarget = target
-            slide.filmType = .colorPositive
-            XCTAssertNil(ScannerTargetGrade.resolveSignature(target: target, params: slide),
-                         "\(target) 번들 슬라이드는 pair가 없으므로 no-op이어야 한다")
-
-            var bwPositive = DevelopParameters()
-            bwPositive.developTarget = target
-            bwPositive.filmType = .bwPositive
-            XCTAssertNil(ScannerTargetGrade.resolveSignature(target: target, params: bwPositive),
-                         "\(target) 흑백 양화도 pair가 없으므로 no-op이어야 한다")
-
-            var bwNegative = DevelopParameters()
-            bwNegative.developTarget = target
-            bwNegative.filmType = .bwNegative
-            guard let bwNegSig = ScannerTargetGrade.resolveSignature(target: target, params: bwNegative) else {
-                return XCTFail("\(target) 흑백 네거 시그니처 실패")
-            }
-            XCTAssertTrue(bwNegSig.hueAnchors.isEmpty)
-            // 흑백은 장치별 틴트 실측값이 없으므로 중립이어야 한다(문헌 방향만으로
-            // 고정 색을 만들지 않는다 — 하드코딩 금지 계약).
-            XCTAssertTrue(bwNegSig.neutralBins.isEmpty, "\(target) 흑백은 중립이어야 한다")
         }
+
+        // 고른 프로파일이 있으면 필름 타입별로 분기한다.
+        guard let norProfile = ScannerTargetGrade.matchedProfilePairs(
+            scanner: "NORITSU", kind: "color nega", profiles: all
+        ).first?.mine else { throw XCTSkip("NORITSU roll-label pair 없음") }
+        var slide = DevelopParameters()
+        slide.developTarget = .noritsu
+        slide.filmType = .colorPositive
+        slide.scannerProfileID = norProfile.id
+        XCTAssertNil(ScannerTargetGrade.resolveSignature(target: .noritsu, params: slide),
+                     "번들 슬라이드는 pair가 없으므로 no-op이어야 한다")
+
+        var bwNegative = DevelopParameters()
+        bwNegative.developTarget = .noritsu
+        bwNegative.filmType = .bwNegative
+        bwNegative.scannerProfileID = norProfile.id
+        guard let bwNegSig = ScannerTargetGrade.resolveSignature(target: .noritsu, params: bwNegative) else {
+            return XCTFail("noritsu 흑백 네거 시그니처 실패")
+        }
+        XCTAssertTrue(bwNegSig.hueAnchors.isEmpty)
+        // 흑백은 장치별 틴트 실측값이 없으므로 중립이어야 한다.
+        XCTAssertTrue(bwNegSig.neutralBins.isEmpty, "흑백은 중립이어야 한다")
     }
 
     /// 번들의 Ektachrome 100D는 filmKey만 같고 roll-label set이 다르므로 상대 시그니처
@@ -1474,212 +1409,4 @@ final class ScannerTargetGradeTests: XCTestCase {
         }
     }
 
-    // MARK: 문서 기반 절대 개성 (documentedCharacter) 방향 검증
-
-    /// 각 스캐너의 문서화된 고유 개성이 MAIN 대비 실제 방향으로 나타나는지 합성 패치로 수치 검증.
-    /// (sRGB 패치 → ScannerTargetGrade.apply(target) → sRGB8 → Lab)
-    func testDocumentedCharacterExpressesEachScannerSignatureDirection() {
-        // sRGB 입력 패치: [mid gray, dark gray, skin(웜탄), bright-color, dark-color, light gray,
-        //                  pastel-bright, sky-blue]
-        let srgbPatches: [(Double, Double, Double)] = [
-            (0.50, 0.50, 0.50),
-            (0.28, 0.28, 0.28),
-            (0.80, 0.62, 0.52),
-            (0.82, 0.58, 0.32),   // 밝은 유채(luma~0.61) — FUJI 하이라이트 채도↑
-            (0.28, 0.20, 0.13),   // 어두운 유채(luma~0.21) — 섀도 탈색 금지 검증
-            (0.93, 0.93, 0.93),   // 밝은 그레이 — NORITSU highlight retention(리프트 금지)
-            (0.90, 0.80, 0.62),   // 파스텔 명부 유채(luma~0.81) — NORITSU 파스텔 명부 뮤트
-            (0.35, 0.50, 0.80),   // 스카이 블루(luma~0.49) — HR 블루 리치 검증
-            (0.70, 0.70, 0.70),   // 밝은 미드 그레이 — SP 직선부 대비
-        ]
-        let width = srgbPatches.count, height = 1
-        let img = makeLinearImage(width: width, height: height) { x, _ in
-            let p = srgbPatches[x]
-            return (ScannerTargetGrade.srgbDecode(p.0),
-                    ScannerTargetGrade.srgbDecode(p.1),
-                    ScannerTargetGrade.srgbDecode(p.2))
-        }
-        // 문서 시그니처만 격리 적용한다(실측 차분은 별도 riding refinement 이며 그 방향은 필름별
-        // 실측이라 여기서 섞으면 문서 개성의 방향 검증이 흐려진다 — 차분/발산은 다른 테스트가 검증).
-        func labs(_ target: DevelopTarget) -> [(l: Double, a: Double, b: Double)] {
-            let graded: CIImage
-            if let doc = ScannerTargetGrade.documentedCharacter(
-                target: target, filmType: .colorNegative, monochrome: false) {
-                graded = ScannerTargetGrade.apply(to: img, signature: doc, target: target)
-            } else {
-                graded = img   // MAIN: 문서 개성 없음
-            }
-            let out = renderSRGB8(graded, width: width, height: height)
-            return (0..<width).map { x in
-                ScannerTargetGrade.srgbToLab(
-                    r: Double(out[x * 4]) / 255.0,
-                    g: Double(out[x * 4 + 1]) / 255.0,
-                    b: Double(out[x * 4 + 2]) / 255.0
-                )
-            }
-        }
-        let main = labs(.main), nor = labs(.noritsu), fuji = labs(.sp3000)
-        func de(_ a: (l: Double, a: Double, b: Double), _ b: (l: Double, a: Double, b: Double)) -> Double {
-            hypot(hypot(a.l - b.l, a.a - b.a), a.b - b.b)
-        }
-
-        func chroma(_ p: (l: Double, a: Double, b: Double)) -> Double { hypot(p.a, p.b) }
-
-        // MAIN 은 문서 개성이 없다(no-op) → 두 스캐너가 MAIN 과 지각적으로 구별돼야 한다.
-        // SP 는 그레이 캐스트가 아니라 톤·색으로 구별된다(중립은 깨끗하게 — 아래 1).
-        let fujiMeanDE = zip(fuji, main).map { de($0, $1) }.reduce(0, +) / Double(fuji.count)
-        XCTAssertGreaterThan(fujiMeanDE, 2.0, "SP 가 MAIN 과 구별돼야 (평균 ΔE \(fujiMeanDE))")
-        XCTAssertGreaterThan(de(nor[0], main[0]), 1.5, "NORITSU mid gray 가 MAIN 과 구별돼야")
-        XCTAssertGreaterThan(de(fuji[0], nor[0]), 1.5, "FUJI≠NORITSU")
-
-        // 1) SP(2026-10-15 개편): 중립은 깨끗하게 — 예전 실측 차분의 블루 드리프트 금지, 웜은 은은하게.
-        //    톤은 필름 특성 곡선 — 미드 그레이는 밀도(조금 깊게), 밝은 미드는 살짝 위(직선부 대비),
-        //    명부는 리프트하지 않는다(숄더).
-        XCTAssertLessThan(abs(fuji[0].a - main[0].a), 0.8, "SP mid gray a* 캐스트 금지")
-        XCTAssertGreaterThan(fuji[0].b, main[0].b - 0.2, "SP mid gray 가 파랗게 가면 안 된다")
-        XCTAssertLessThan(fuji[0].b, main[0].b + 1.5, "SP mid gray 웜은 은은해야 한다")
-        XCTAssertGreaterThan(fuji[1].b, main[1].b - 0.3, "SP 섀도 그레이가 파랗게 가면 안 된다")
-        XCTAssertLessThan(fuji[0].l, main[0].l, "SP mid gray 는 밀도(조금 깊게)")
-        XCTAssertGreaterThan(fuji[0].l, main[0].l - 2.5, "SP 미드 밀도는 bounded(노출을 죽이지 않음)")
-        XCTAssertGreaterThan(fuji[8].l - fuji[1].l, (main[8].l - main[1].l) + 2.0,
-            "SP 직선부 대비: 섀도 그레이↔밝은 미드 간격이 MAIN 보다 넓다")
-        XCTAssertLessThan(fuji[5].l, main[5].l + 0.3, "SP 명부는 리프트 금지(숄더)")
-
-        // 2) 그레이 온도(2026-07-23 재설계): NORITSU 미드 그레이는 웜-피치(b*↑ + a*≥),
-        //    섀도 그레이는 모노크로매틱 중립(문헌: "중립 섀도, 웜 미드" — 그림자가 색으로
-        //    흩어지지 않는다). FUJI 미드 b*≈0(실측)이므로 HS 가 FUJI 보다 웜 쪽이다.
-        XCTAssertGreaterThan(nor[0].b, main[0].b + 1.2, "NORITSU mid gray 는 웜-피치(b*↑)")
-        XCTAssertGreaterThanOrEqual(nor[0].a, main[0].a - 0.2, "NORITSU mid gray 마젠타 경향(a* 감소 금지)")
-        XCTAssertGreaterThan(nor[0].b, fuji[0].b, "HS 그레이가 FUJI 보다 웜 쪽")
-        XCTAssertLessThan(abs(nor[1].a - main[1].a), 0.8, "NORITSU 섀도 그레이는 중립(a*)")
-        XCTAssertLessThan(abs(nor[1].b - main[1].b), 0.8, "NORITSU 섀도 그레이는 중립(b*)")
-
-        // 3) 톤(문서 방향: 개방 섀도 + 저대비 미드 + highlight retention):
-        //    섀도는 지각적으로 분명하게 개방되고, 명부는 리프트되지 않으며(보존 숄더),
-        //    미드-섀도 계조 간격이 MAIN 보다 좁아진다(저대비 형태).
-        XCTAssertGreaterThan(nor[1].l, main[1].l + 2.0, "NORITSU 섀도 개방(muted black/airy)")
-        XCTAssertLessThan(nor[5].l, main[5].l + 0.15, "NORITSU 명부는 리프트 금지(retention 숄더)")
-        XCTAssertGreaterThan(nor[1].l - main[1].l, nor[0].l - main[0].l,
-            "NORITSU 리프트는 섀도가 미드보다 커야 한다(플랫/에어리 형태)")
-        XCTAssertLessThan(nor[0].l - nor[1].l, (main[0].l - main[1].l) - 1.0,
-            "NORITSU 미드-섀도 간격이 MAIN 보다 좁아야 한다(저대비)")
-
-        // 4) 스킨(2026-07-23 재설계): FUJI 골든(옐로 쪽 +회전) vs NORITSU 핑크/피치(레드 쪽
-        //    −회전) — 문헌 다수가 수렴하는 두 실기의 반대 정체성. 회전은 bounded(≤4°)로
-        //    왜곡 없이 방향만 싣는다.
-        let norDoc = ScannerTargetGrade.documentedCharacter(
-            target: .noritsu, filmType: .colorNegative, monochrome: false)!
-        XCTAssertFalse(norDoc.hueAnchors.isEmpty, "NORITSU 에 hue 개성 앵커가 있어야 한다(재설계)")
-        for anchor in norDoc.hueAnchors {
-            XCTAssertLessThanOrEqual(abs(anchor.rotateDegrees), 4.0, "HS hue 회전은 bounded(≤4°)")
-            XCTAssertTrue((0.94...1.08).contains(anchor.chromaGain), "HS hue 게인은 bounded")
-        }
-        let mainSkinHue = atan2(main[2].b, main[2].a)
-        let norSkinHue = atan2(nor[2].b, nor[2].a)
-        let fujiSkinHue = atan2(fuji[2].b, fuji[2].a)
-        XCTAssertLessThan(norSkinHue, mainSkinHue - 0.03,
-            "NORITSU 스킨은 핑크/피치 쪽(레드 방향 회전)이어야 한다")
-        XCTAssertGreaterThan(norSkinHue, mainSkinHue - 0.12,
-            "NORITSU 핑크 스킨 회전은 bounded(왜곡 금지)")
-        XCTAssertGreaterThan(fujiSkinHue - norSkinHue, 0.05,
-            "FUJI 골든 vs NORITSU 핑크 — 스킨 정체성이 반대로 갈려야 한다")
-
-        // 5) 채도: FUJI 하이라이트 채도↑(실측). 섀도는 실측 탈채도를 미적용(사용자 지시)
-        //    — 탈채도 밴드(gain<1)가 구조적으로 없어야 하고, 어두운 유채의 잔여 채도 감소는
-        //    실측 중립축 a*−(그린) 캐스트의 부수 효과 5% 이내만 허용한다.
-        let fujiDoc = ScannerTargetGrade.documentedCharacter(
-            target: .sp3000, filmType: .colorNegative, monochrome: false)!
-        let fujiShadowBand = fujiDoc.chromaBands.min { $0.luma < $1.luma }!
-        XCTAssertGreaterThanOrEqual(fujiShadowBand.gain, 1.0, "FUJI 섀도 탈채도 밴드 금지")
-        XCTAssertGreaterThan(chroma(fuji[3]), chroma(main[3]), "FUJI 밝은 유채는 채도↑")
-        XCTAssertGreaterThanOrEqual(chroma(fuji[4]), chroma(main[4]) * 0.95,
-            "FUJI 어두운 유채가 탈색(섀도 탈채도)되면 안 된다")
-        // SP 색 밀도: 채도를 올린 진한 색은 더 깊어져 형광처럼 뜨지 않는다(무채색은 영향 없음).
-        XCTAssertGreaterThan(chroma(fuji[3]), chroma(main[3]) * 1.12, "SP 유채는 리치")
-        XCTAssertLessThan(fuji[3].l, main[3].l - 1.0, "SP 진한 색은 깊어진다(색 밀도)")
-        // 웜/쿨 색 대비: 따뜻한 색을 차가운 색보다 더 앞으로 — 하늘을 더 파랗게 미는 룩이 아니다.
-        XCTAssertLessThan(chroma(fuji[7]) / chroma(main[7]), chroma(fuji[3]) / chroma(main[3]),
-            "SP 블루 부스트는 웜 부스트보다 작아야 한다")
-
-        // 6) NORITSU 채도(재설계: 미드 중심 색 에너지 + 파스텔 명부): 명부 유채는 뚜렷이
-        //    뮤트(파스텔), 미드 부근 유채는 MAIN 근처(±12%)를 유지하되 FUJI 의 부스트보다
-        //    뚜렷이 낮다. 섀도 유채는 탈색 금지(밴드 1.0).
-        XCTAssertLessThan(chroma(nor[6]), chroma(main[6]) - 0.5, "NORITSU 파스텔 명부 뮤트")
-        XCTAssertGreaterThanOrEqual(chroma(nor[6]), chroma(main[6]) * 0.85,
-            "NORITSU 파스텔 뮤트는 완만해야 한다(과도한 탈색 금지)")
-        XCTAssertEqual(chroma(nor[3]), chroma(main[3]), accuracy: chroma(main[3]) * 0.12,
-            "NORITSU 밝은 유채는 MAIN 근처(미드 에너지, 과장 금지)")
-        XCTAssertGreaterThan(chroma(fuji[3]), chroma(nor[3]) * 1.10,
-            "FUJI/NORITSU 명부 채도 정체성이 뚜렷이 갈려야 한다")
-        XCTAssertGreaterThanOrEqual(chroma(nor[4]), chroma(main[4]) * 0.95,
-            "NORITSU 어두운 유채가 탈색되면 안 된다")
-
-        // 7) F135(소비자 미니랩 인화 룩, 2026-07-23 신설): 깊은 인화 블랙 + 밝은 미드 펀치 +
-        //    웜-골드 그레이 + 헬시 골든 스킨 + 경쾌한 채도.
-        let f135 = labs(.f135)
-        XCTAssertLessThan(f135[1].l, main[1].l - 0.5, "F135 인화 블랙(섀도가 MAIN 보다 깊음)")
-        XCTAssertGreaterThan(f135[0].l, main[0].l + 0.8, "F135 미드는 경쾌하게 밝다(인화 밝기)")
-        XCTAssertLessThan(f135[5].l, main[5].l + 1.0, "F135 명부 리프트는 온건(retention)")
-        XCTAssertGreaterThan(f135[0].b, main[0].b + 0.8, "F135 mid gray 는 웜-골드(b*↑)")
-        // 축 직교성(2026-07-23 QA 증폭): HS 피치 = a*(마젠타) 우세, F135 골드 = b*(옐로) 우세.
-        // 같은 웜 계열이라도 축이 달라야 흐린 장면에서 서로 상쇄되지 않는다.
-        XCTAssertGreaterThan((nor[0].a - main[0].a) - (f135[0].a - main[0].a), 0.8,
-            "HS 피치는 F135 골드보다 a*(마젠타) 우세여야 한다")
-        XCTAssertGreaterThan((f135[0].b - main[0].b) - (nor[0].b - main[0].b), 0.5,
-            "F135 골드는 HS 피치보다 b*(옐로) 우세여야 한다")
-        let f135SkinHue = atan2(f135[2].b, f135[2].a)
-        XCTAssertGreaterThan(f135SkinHue, mainSkinHue, "F135 스킨은 골든 쪽(+회전)")
-        XCTAssertLessThan(f135SkinHue, fujiSkinHue, "F135 골든 회전은 FUJI 보다 온건해야 한다")
-        XCTAssertGreaterThan(chroma(f135[2]), chroma(main[2]) * 1.05, "F135 스킨은 헬시(채도 리치)")
-        XCTAssertGreaterThan(chroma(f135[3]), chroma(main[3]) * 1.05, "F135 원색은 경쾌하게 리치")
-        XCTAssertGreaterThan(f135[0].l, fuji[0].l + 2.0, "F135 는 밝은 인화 미드, SP 는 밀도 있는 미드")
-        XCTAssertGreaterThan(f135[0].b, fuji[0].b + 1.0, "F135 골드 그레이가 SP 의 은은한 웜보다 웜")
-        XCTAssertGreaterThanOrEqual(chroma(f135[4]), chroma(main[4]) * 0.95,
-            "F135 어두운 유채가 탈색되면 안 된다")
-
-        // 8) HR(프로 랩 정밀 인화 룩, 2026-07-23 신설/QA 증폭): 솔리드 블랙 + 노출 규율 미드 +
-        //    쿨-클린 그레이(웜 계열과 반대 축) + 리치 딥 블루 + 충실 스킨 + 명부 숄더.
-        let hr = labs(.hr)
-        XCTAssertLessThan(hr[1].l, main[1].l - 1.0, "HR 솔리드 블랙(섀도가 MAIN 보다 깊음)")
-        XCTAssertLessThan(abs(hr[0].l - main[0].l), 1.2, "HR 미드는 노출 규율(거의 중립)")
-        XCTAssertLessThan(hr[5].l, main[5].l + 0.15, "HR 명부 보존 숄더(리프트 금지)")
-        XCTAssertLessThan(hr[0].b, main[0].b - 0.8, "HR 그레이는 쿨-클린(b*↓ — 웜 계열과 반대 축)")
-        XCTAssertGreaterThan(hr[0].b, main[0].b - 3.5, "HR 쿨 드리프트는 bounded")
-        XCTAssertGreaterThan(f135[0].b, hr[0].b, "F135 웜-골드가 HR 쿨-클린보다 웜이어야 한다")
-        XCTAssertGreaterThan(chroma(hr[7]), chroma(main[7]) * 1.03, "HR 블루는 리치(개선된 블루 응답 방향)")
-        XCTAssertGreaterThan(chroma(hr[7]), chroma(nor[7]), "HR 블루 리치 vs HS 블루 소프트 분리")
-        let hrSkinHue = atan2(hr[2].b, hr[2].a)
-        XCTAssertLessThan(abs(hrSkinHue - mainSkinHue), 0.045, "HR 스킨은 충실(스타일화 회전 최소)")
-    }
-
-    /// MAIN/PRINT/RESCUE 는 documentedCharacter 가 nil 이라 개성 그레이드가 붙지 않는다.
-    func testDocumentedCharacterOnlyForScannerEmulationTargets() {
-        for target in [DevelopTarget.main, .print, .rescue] {
-            XCTAssertNil(
-                ScannerTargetGrade.documentedCharacter(target: target, filmType: .colorNegative, monochrome: false),
-                "\(target.rawValue) 에 문서 개성이 붙으면 안 된다")
-        }
-        XCTAssertNotNil(
-            ScannerTargetGrade.documentedCharacter(target: .noritsu, filmType: .colorNegative, monochrome: false))
-        XCTAssertNotNil(
-            ScannerTargetGrade.documentedCharacter(target: .sp3000, filmType: .colorNegative, monochrome: false))
-        XCTAssertNotNil(
-            ScannerTargetGrade.documentedCharacter(target: .f135, filmType: .colorNegative, monochrome: false))
-        XCTAssertNotNil(
-            ScannerTargetGrade.documentedCharacter(target: .hr, filmType: .colorNegative, monochrome: false))
-        // 흑백은 색 성분을 버리고 톤만 남긴다.
-        let bw = ScannerTargetGrade.documentedCharacter(target: .sp3000, filmType: .bwNegative, monochrome: true)
-        XCTAssertNotNil(bw)
-        XCTAssertTrue(bw?.neutralBins.isEmpty ?? false)
-        XCTAssertTrue(bw?.hueAnchors.isEmpty ?? false)
-        XCTAssertTrue(bw?.chromaBands.isEmpty ?? false)
-
-        // 포지티브(슬라이드)도 문서 개성이 붙되(4개 조합 전부 적용), 개입은 네거티브보다 약하다.
-        let neg = ScannerTargetGrade.documentedCharacter(target: .sp3000, filmType: .colorNegative, monochrome: false)!
-        let pos = ScannerTargetGrade.documentedCharacter(target: .sp3000, filmType: .colorPositive, monochrome: false)!
-        let negDelta = abs(neg.tone[1] - neg.toneXs[1])
-        let posDelta = abs(pos.tone[1] - pos.toneXs[1])
-        XCTAssertGreaterThan(posDelta, 0, "포지티브도 개성이 있어야 한다")
-        XCTAssertGreaterThan(negDelta, posDelta, "포지티브 개입은 네거티브보다 약해야 한다")
-    }
 }

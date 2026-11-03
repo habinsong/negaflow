@@ -47,6 +47,7 @@ final class ToneMapperControlsTests: XCTestCase {
                 "negativeLinear",
                 "negativeOutputTone",
                 "noritsuTexture",
+                "scannerRendering",
                 "parametricToneCurve",
                 "filmScanShrink",
                 "scannerLowSatChroma",

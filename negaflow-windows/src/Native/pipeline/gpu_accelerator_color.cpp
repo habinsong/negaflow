@@ -188,6 +188,73 @@ bool GpuAccelerator::apply_scanner_target_grade(
     return true;
 }
 
+bool GpuAccelerator::apply_scanner_rendering(
+    float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    const imaging::ScannerRenderingSetup* const setup) noexcept {
+    if (!available() || pixels == nullptr || setup == nullptr) {
+        return false;
+    }
+    if (width == 0U || height == 0U || stride_pixels < width) {
+        return false;
+    }
+    const std::lock_guard<std::recursive_mutex> guard{state_->lock};
+    if (!state_->scanner_rendering_ready) {
+        return false;
+    }
+    // 사슬이 GPU 에 머물러 있으면 그 화상을 그대로 씁니다(타깃 그레이드와 같은 규칙).
+    if (state_->resident_matches(pixels, width, height)) {
+        const int read_slot = state_->resident.read_slot;
+        if ((read_slot == 0 || read_slot == 1) &&
+            state_->pool.ensure(state_->device, width, height, 2)) {
+            gpu::GpuWorkingImage* const resident = state_->pool.images();
+            if (state_->scanner_rendering.dispatch(
+                    state_->device, resident[read_slot], resident[1 - read_slot], *setup) ==
+                gpu::GpuKernelStatus::ok) {
+                state_->bind_resident(pixels, width, height, stride_pixels, 1 - read_slot);
+                return true;
+            }
+        }
+        flush_resident();
+        return false;
+    }
+    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
+
+    // 한 장이 안 들어가면 가로 띠로 나눠 올립니다 — 점별 커널이라 결과가 같습니다.
+    std::uint32_t band = height;
+    while (band > 0U && !state_->pool.ensure(state_->device, width, band, 2)) {
+        band /= 2U;
+    }
+    if (band == 0U) {
+        return false;
+    }
+
+    for (std::uint32_t top = 0U; top < height; top += band) {
+        const std::uint32_t rows = std::min(band, height - top);
+        if (rows != state_->pool.height() &&
+            !state_->pool.ensure(state_->device, width, rows, 2)) {
+            return false;
+        }
+        gpu::GpuWorkingImage* const images = state_->pool.images();
+        core::Rgba32F* const first = rgba + (static_cast<std::size_t>(top) * stride_pixels);
+        if (images[0].upload_into(state_->device, first, stride_pixels) !=
+            gpu::GpuImageStatus::ok) {
+            return false;
+        }
+        if (state_->scanner_rendering.dispatch(state_->device, images[0], images[1], *setup) !=
+            gpu::GpuKernelStatus::ok) {
+            return false;
+        }
+        if (images[1].download(state_->device, first, stride_pixels) !=
+            gpu::GpuImageStatus::ok) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool GpuAccelerator::apply_noritsu_texture(
     float* const pixels,
     const std::uint32_t width,

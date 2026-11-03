@@ -124,6 +124,40 @@ extension AppModel {
         return task
     }
 
+    /// 복원 때 빠진 현상 썸네일을 채운다. 필름스트립에 보이는 고른 사진 근처부터, 사용자가 사진을
+    /// 현상하는 동안에는 비켜 주면서 만든다. 현상 슬롯 하나는 사용자 선택 몫으로 비워 둔다.
+    @discardableResult
+    func refreshThumbnailsInBackground(_ requestedFrames: [ScanFrame]) -> Task<Void, Never> {
+        let order = Dictionary(self.frames.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let anchor = selectedFrameID.flatMap { order[$0] } ?? 0
+        let frames = requestedFrames
+            .filter { ownsFrame($0) && !$0.isPreviewScan }
+            .sorted {
+                let left = order[$0.id] ?? .max, right = order[$1.id] ?? .max
+                let leftDistance = abs(left - anchor), rightDistance = abs(right - anchor)
+                return leftDistance == rightDistance ? left < right : leftDistance < rightDistance
+            }
+        let previousTask = sequentialLibraryDevelopmentTask
+        let task = Task { [weak self] in
+            await previousTask?.value
+            guard let self else { return }
+            let width = max(1, self.developController.maxConcurrentDevelopments - 1)
+            for start in stride(from: 0, to: frames.count, by: width) {
+                while self.developController.isDevelopingAnyFrame, !Task.isCancelled {
+                    try? await Task.sleep(for: .milliseconds(50))
+                }
+                guard !Task.isCancelled else { return }
+                await withTaskGroup(of: Void.self) { group in
+                    for frame in frames[start..<min(start + width, frames.count)] {
+                        group.addTask { await self.refreshThumbnailOnly(frame) }
+                    }
+                }
+            }
+        }
+        sequentialLibraryDevelopmentTask = task
+        return task
+    }
+
     private func waitForExistingDevelopmentToFinish(_ frame: ScanFrame) async {
         while developController.isDevelopingFrame(frame) {
             guard !Task.isCancelled, ownsFrame(frame) else { return }

@@ -20,8 +20,6 @@ public struct DevelopSceneMeasurements: Sendable, Equatable {
     var inversionStats: NegativeInversion.ChannelStats?
     /// 뮤트한 장면 채도 보정량(sceneMeanSaturation 에서 유도).
     var mutedVibranceAmount: Double?
-    /// 스캐너 타겟 그레이드의 장면 톤 앵커(sceneToneAnchor).
-    var scannerSceneAnchor: ScannerTargetGrade.SceneToneAnchor?
     /// 자동 레벨이 검출한 채널별 끝점.
     var autoLevelsPoints: AutoLevels.Points?
     /// 자동 색상이 장면 중립축에 맞춘 보정(근거가 없으면 항등).
