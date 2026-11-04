@@ -100,6 +100,33 @@ final class DiskStorageStoreTests: XCTestCase {
         XCTAssertEqual(store.scanPreviewsURL, root.appendingPathComponent("Scan Previews", isDirectory: true))
     }
 
+    /// 저장을 켠 시험이 `AppModel()` 로 현상하면 썸네일이 실제 iCloud Drive 에 쌓였다.
+    /// 테스트 프로세스의 관리 폴더는 저장 위치 모드와 상관없이 프로세스 격리 루트 안에 있어야 한다.
+    func testManagedFoldersStayInsideTheTestProcessRootInEveryLocationMode() {
+        let isolatedRoot = AppStorageRoot.applicationSupport().deletingLastPathComponent().path + "/"
+        let store = DiskStorageStore(defaults: defaults)
+        for mode in [DiskStorageLocationMode.iCloud, .desktop, .custom] {
+            store.locationMode = mode
+            for url in [
+                store.rootURL, store.thumbnailsURL, store.exportURL, store.quickExportURL, store.scansURL,
+                store.importedSourcesURL, store.cleanedRawURL, store.scanPreviewsURL,
+            ] {
+                XCTAssertTrue(url.path.hasPrefix(isolatedRoot), "\(mode.rawValue): \(url.path)")
+            }
+        }
+    }
+
+    func testDefaultModelThumbnailPathsStayInsideTheTestProcessRoot() {
+        let isolatedRoot = AppStorageRoot.applicationSupport().deletingLastPathComponent().path + "/"
+        let model = AppModel()
+        let frame = ScanFrame(
+            scanIndex: 1, rawScanURL: URL(fileURLWithPath: "/tmp/source.tiff"),
+            filmType: .colorNegative, sourceKind: .importedFile
+        )
+        XCTAssertTrue(model.thumbnailFileURL(for: frame).path.hasPrefix(isolatedRoot))
+        XCTAssertTrue(model.rawThumbnailFileURL(for: frame).path.hasPrefix(isolatedRoot))
+    }
+
     func testSpecificFolderCreatesNegaflowAndManagedSubfolders() throws {
         let parent = FileManager.default.temporaryDirectory
             .appendingPathComponent("negaflow-specific-\(UUID().uuidString)", isDirectory: true)

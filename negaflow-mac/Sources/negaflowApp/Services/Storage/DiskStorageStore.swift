@@ -156,7 +156,12 @@ final class DiskStorageStore: ObservableObject {
     }
 
     /// 기본 루트: iCloud Drive/negaflow → (iCloud Drive 없음) ~/Documents/negaflow.
+    /// 테스트 프로세스는 사용자 폴더 대신 격리 루트를 쓴다. 저장을 켠 시험이 `AppModel()` 로
+    /// 현상하면 썸네일이 실제 iCloud Drive 에 쌓였다.
     nonisolated static func defaultRootURL(fileManager: FileManager = .default) -> URL {
+        if let isolated = AppStorageRoot.isolatedBase(named: "iCloud Drive") {
+            return isolated.appendingPathComponent(FolderName.root, isDirectory: true)
+        }
         let home = fileManager.homeDirectoryForCurrentUser
         let iCloudDocs = home.appendingPathComponent(
             "Library/Mobile Documents/com~apple~CloudDocs", isDirectory: true
@@ -170,6 +175,9 @@ final class DiskStorageStore: ObservableObject {
     }
 
     nonisolated static func desktopRootURL(fileManager: FileManager = .default) -> URL {
+        if let isolated = AppStorageRoot.isolatedBase(named: "Desktop") {
+            return isolated.appendingPathComponent(FolderName.root, isDirectory: true)
+        }
         let desktop = fileManager.urls(for: .desktopDirectory, in: .userDomainMask).first
             ?? fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Desktop", isDirectory: true)
         return desktop.appendingPathComponent(FolderName.root, isDirectory: true)
@@ -216,9 +224,7 @@ final class DiskStorageStore: ObservableObject {
     }
 
     nonisolated static func defaultScanPreviewsURL(fileManager: FileManager = .default) -> URL {
-        let caches = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first
-            ?? fileManager.temporaryDirectory
-        return caches
+        AppStorageRoot.caches(fileManager: fileManager)
             .appendingPathComponent(FolderName.root, isDirectory: true)
             .appendingPathComponent(FolderName.scanPreviews, isDirectory: true)
     }

@@ -54,7 +54,8 @@ enum AppStorageRoot {
 
     private nonisolated(unsafe) static var testProcessRootPath: String?
 
-    private static func isolatedBase(named name: String) -> URL? {
+    /// 테스트 프로세스에서 `name` 자리를 대신하는 임시 폴더. 배포된 앱에서는 nil 이다.
+    static func isolatedBase(named name: String) -> URL? {
         guard let testProcessRoot else { return nil }
         let base = testProcessRoot.appendingPathComponent(name, isDirectory: true)
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
