@@ -2482,6 +2482,26 @@ final class ChromabaseTests: XCTestCase {
         }
     }
 
+    /// 내보내기 엔진은 원근 보정의 빈 곳을 불투명한 흰색으로 굽는다. 화면용 투명 채움이 파일로 새면
+    /// 알파가 없는 형식(JPEG)에서 검정이 되고, 알파를 남기는 형식에서는 구멍이 된다.
+    func testExportPipelineFillsPerspectiveEmptyAreaWithOpaqueWhite() {
+        let fixture = makeSyntheticColorNegativeFixture()
+        let engine = ChromabaseEngine()
+        var params = DevelopParameters()
+        params.filmType = .colorNegative
+        params.imageTransform.perspective = PerspectiveCorrection(mode: .off, vertical: 40)
+        let output = engine.developScanner(image: fixture.image, base: fixture.base, params: params)
+        XCTAssertEqual(output.extent.size, fixture.image.extent.size)
+        let width = Int(output.extent.width), height = Int(output.extent.height)
+        let space = CGColorSpace(name: CGColorSpace.sRGB)!
+        let pixels = renderRGBA8Pixels(output, width, height, colorSpace: space)
+        XCTAssertTrue(stride(from: 3, to: pixels.count, by: 4).allSatisfy { pixels[$0] == 255 }, "내보내기에 투명 화소가 남았습니다")
+        func pixel(_ x: Int, _ y: Int) -> [UInt8] { Array(pixels[(y * width + x) * 4..<(y * width + x) * 4 + 3]) }
+        // 위가 넓어지면 한쪽 가장자리 두 모서리가 빈다(행 순서와 무관하게 확인).
+        let corners = [pixel(0, 0), pixel(width - 1, 0), pixel(0, height - 1), pixel(width - 1, height - 1)]
+        XCTAssertEqual(corners.filter { $0.allSatisfy { $0 >= 254 } }.count, 2, "빈 모서리가 흰색이 아닙니다: \(corners)")
+    }
+
     /// 크롭은 측정 영역(장면 측정을 크롭 안에서)과 공간 범위만 바꾼다(2026-10-14 사용자 확정 설계 —
     /// 예전 계약 "크롭은 톤을 바꾸지 않는다"를 대체). 같은 영역으로 전체를 현상한 뒤 자른 것과 같아야 한다 —
     /// 크롭이 그 밖의 현상 결과를 몰래 바꾸지 않는다.
@@ -2501,7 +2521,7 @@ final class ChromabaseTests: XCTestCase {
                                               measurements: &measurements)
 
         let cropOutput = engine.developScanner(image: fixture.image, base: fixture.base, params: cropped)
-        let expected = ImageTransformStage.apply(to: developed, transform: cropped.imageTransform)
+        let expected = ImageTransformStage.apply(to: developed, transform: cropped.imageTransform, fill: .transparent)
 
         let width = Int(expected.extent.width)
         let height = Int(expected.extent.height)
@@ -3247,11 +3267,11 @@ final class ChromabaseTests: XCTestCase {
             }
         }
         let input = makeTestImage(bytes: bytes, width: width, height: height)
-        let flipped = ImageTransformStage.apply(to: input, transform: ImageTransform(flipHorizontal: true))
+        let flipped = ImageTransformStage.apply(to: input, transform: ImageTransform(flipHorizontal: true), fill: .transparent)
         let rendered = renderRGBA8(flipped, width: width, height: height)
         XCTAssertGreaterThan(rendered[2], rendered[0], "좌우 뒤집기 후 왼쪽 픽셀은 파란쪽이어야 한다.")
 
-        let rotated = ImageTransformStage.apply(to: input, transform: ImageTransform(rotation: .deg90))
+        let rotated = ImageTransformStage.apply(to: input, transform: ImageTransform(rotation: .deg90), fill: .transparent)
         XCTAssertEqual(Int(rotated.extent.width), height)
         XCTAssertEqual(Int(rotated.extent.height), width)
     }

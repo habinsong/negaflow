@@ -105,6 +105,10 @@ bool perspective_changes_geometry(const PerspectiveParameters& p) noexcept {
         std::abs(p.offset_x) > 1.0e-6 || std::abs(p.offset_y) > 1.0e-6;
 }
 
+bool perspective_leaves_uncovered_area(const PerspectiveParameters& parameters) noexcept {
+    return perspective_changes_geometry(parameters) && !parameters.constrain_crop;
+}
+
 std::optional<PerspectivePoint> apply_homography(const Matrix& m, const PerspectivePoint p) noexcept {
     const double x = (m[0] * p.x) + (m[1] * p.y) + m[2];
     const double y = (m[3] * p.x) + (m[4] * p.y) + m[5];

@@ -82,7 +82,11 @@ extension DevelopFrameRenderer {
                 snapshot.needsThumbnail ? thumbnailBase : nil
             )
         }
-        let transformedImage = ImageTransformStage.apply(to: baseImage, transform: snapshot.imageTransform)
+        // 화면용 결과는 원근 보정의 빈 곳을 투명으로 둔다. 캔버스가 사진 밑에 흰 바탕을 깔고,
+        // 히스토그램·자동 보정 통계는 알파 0 을 사진으로 세지 않는다.
+        let transformedImage = ImageTransformStage.apply(
+            to: baseImage, transform: snapshot.imageTransform, fill: .transparent
+        )
         guard let transformedCG = renderDisplayCGImage(
             transformedImage,
             context: context,
@@ -91,9 +95,11 @@ extension DevelopFrameRenderer {
         ) else {
             throw DevelopFrameRenderError.developedFailed
         }
-        let clippingOverlay = snapshot.clippingOverlayEnabled
-            ? renderClippingOverlay(transformedImage, context: context)
-            : nil
+        // 클리핑 경고는 변환 전 사진에서 잰 오버레이를 그대로 옮긴다. 변환한 사진에서 다시 재면
+        // 원본이 없는 빈 곳까지 경고 대상이 된다(색역 경고와 같은 길).
+        let clippingOverlay = clippingOverlayBase.flatMap {
+            renderOverlay($0, transform: snapshot.imageTransform, context: context)
+        }
         let destinationGamutOverlay = destinationGamutOverlayBase.flatMap {
             renderOverlay($0, transform: snapshot.imageTransform, context: context)
         }
@@ -131,7 +137,11 @@ extension DevelopFrameRenderer {
         // 썸네일은 현상 프리뷰와 같은 표시 gamut 매핑을 거쳐야 확장범위 명부가 프리뷰와
         // 동일하게 접힌다(프리뷰는 하드 클립, 썸네일은 soft-clip 되는 불일치 방지). soft-proof 는
         // 걸지 않는다(썸네일은 항상 무프루프).
-        let thumbnail = DisplayGamutMap.apply(to: displayProxy(image, maxDimension: thumbnailMaxDimension))
+        // 썸네일은 바탕 없이 보이고 파일로도 남는다 — 원근 보정의 투명한 빈 곳을 흰색으로 덮는다.
+        // 불투명한 사진에서는 그대로다.
+        let proxy = displayProxy(image, maxDimension: thumbnailMaxDimension)
+        let opaque = proxy.composited(over: CIImage(color: CIColor(red: 1, green: 1, blue: 1)).cropped(to: proxy.extent))
+        let thumbnail = DisplayGamutMap.apply(to: opaque)
         return context.createCGImage(
             OutputDither.apply(to: thumbnail),
             from: thumbnail.extent,
@@ -145,9 +155,11 @@ extension DevelopFrameRenderer {
         transform: ImageTransform,
         context: CIContext
     ) -> CGImage? {
+        // 오버레이는 사진 위에 겹친다 — 빈 곳은 투명이어야 사진이 보인다.
         let transformed = ImageTransformStage.apply(
             to: CIImage(cgImage: image),
-            transform: transform
+            transform: transform,
+            fill: .transparent
         )
         return context.createCGImage(
             transformed,
@@ -224,7 +236,8 @@ extension DevelopFrameRenderer {
             .map { frame in
                 let proxy = ImageTransformStage.apply(
                     to: displayProxy(frame.image, maxDimension: snapshot.proxyMaxDimension),
-                    transform: snapshot.imageTransform
+                    transform: snapshot.imageTransform,
+                    fill: .transparent
                 )
                 guard let cg = context.createCGImage(
                     proxy,
@@ -250,7 +263,7 @@ extension DevelopFrameRenderer {
         if transform.isIdentity {
             return (baseCG, baseCG)
         }
-        let image = ImageTransformStage.apply(to: input, transform: transform)
+        let image = ImageTransformStage.apply(to: input, transform: transform, fill: .transparent)
         guard let cg = context.createCGImage(image, from: image.extent, format: .RGBA8, colorSpace: colorSpace) else {
             throw DevelopFrameRenderError.rawPreviewFailed
         }

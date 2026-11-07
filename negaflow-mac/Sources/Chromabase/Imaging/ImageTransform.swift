@@ -189,6 +189,18 @@ public struct ImageTransform: Codable, Sendable, Equatable {
         return CGPoint(x: x, y: y)
     }
 
+    /// 화면 점이 원본 위에 있으면 원본 정규좌표를, 원근 보정의 빈 곳이면 nil 을 돌려준다. 화소 읽기·
+    /// 스포이드처럼 "그 자리의 원본 화소" 가 필요한 곳이 쓴다 — 0…1 로 잘라 쓰면 빈 곳에서 가장자리
+    /// 화소를 읽는다. 역변환 오차(1e-6) 만큼은 안으로 본다.
+    public func sourceUnit(atDisplayUnit p: CGPoint, baseSize: CGSize?) -> CGPoint? {
+        let base = displayUnitToBase(p, baseSize: baseSize)
+        let tolerance = 1e-6
+        guard base.x.isFinite, base.y.isFinite,
+              base.x >= -tolerance, base.x <= 1 + tolerance,
+              base.y >= -tolerance, base.y <= 1 + tolerance else { return nil }
+        return CGPoint(x: min(max(base.x, 0), 1), y: min(max(base.y, 0), 1))
+    }
+
     /// base 정규좌표(0..1, y-down) → 표시(변형 후) 정규좌표. displayUnitToBase 의 정역(forward).
     /// 영역 결함 제거 가 base 좌표 컴포넌트를 화면에 빨강으로 표시할 때 쓴다. 순서는 forward
     /// (flipH→flipV→rotate→straighten→crop). straighten 은 픽셀 종횡비가 필요하므로 baseSize 를 받는다.
@@ -296,8 +308,20 @@ public struct ImageTransform: Codable, Sendable, Equatable {
     }
 }
 
+/// 원근 보정 뒤 원본이 닿지 않는 자리를 무엇으로 둘지.
+///
+/// 이 자리는 "데이터 없음"이다. 흰색으로 구워 버리면 뒤의 모든 소비자가 진짜 흰 화소와 구분하지
+/// 못한다 — 투명해야 할 색역·클리핑 오버레이가 사진을 덮는 흰 판이 되고, 히스토그램·클리핑 경고·
+/// 자동 톤/화이트 밸런스가 빈 곳을 하이라이트로 셌다. 그래서 기본값을 두지 않고 부르는 쪽이 고른다.
+public enum ImageTransformFill: Sendable {
+    /// 알파 0. 화면 표시·분석·오버레이. 표시하는 쪽이 필요하면 뒤에 흰 바탕을 깐다.
+    case transparent
+    /// 불투명한 흰색. 알파를 담지 않는 결과물(내보내기 인코딩, 썸네일 파일)만 쓴다.
+    case white
+}
+
 public enum ImageTransformStage {
-    public static func apply(to image: CIImage, transform: ImageTransform) -> CIImage {
+    public static func apply(to image: CIImage, transform: ImageTransform, fill: ImageTransformFill) -> CIImage {
         // 회전/플립(crop 없이도 동작).
         var img = normalize(image)
         if transform.flipHorizontal {
@@ -341,7 +365,7 @@ public enum ImageTransformStage {
 
         // 변환(원근) — 90°/플립 정규화 후, 수평 보정 전.
         if transform.perspective.changesGeometry {
-            img = applyPerspective(img, correction: transform.perspective)
+            img = applyPerspective(img, correction: transform.perspective, fill: fill)
         }
 
         // 미세 회전(수평 보정) — 90°/플립 정규화 후, 사용자 크롭 전에 적용. 중심 기준 회전 후
@@ -366,9 +390,14 @@ public enum ImageTransformStage {
     }
 
     /// 원근 보정. 입력 extent 의 네 모서리를 호모그래피로 옮긴 자리에 두는 CIPerspectiveTransform 이
-    /// 정확히 같은 호모그래피다. 보정으로 생긴 빈 곳은 흰색으로 채운다(알파를 남기지 않는다).
+    /// 정확히 같은 호모그래피다. 보정으로 생긴 빈 곳은 `fill` 로 둔다. 어느 쪽이든 결과 extent 는
+    /// 출력 사각형 전체다 — 투명이라도 뒤 단계(수평 보정·크롭)의 좌표가 어긋나지 않는다.
     /// 그릴 수 없는 값이면 그림을 그대로 둔다.
-    static func applyPerspective(_ image: CIImage, correction: PerspectiveCorrection) -> CIImage {
+    static func applyPerspective(
+        _ image: CIImage,
+        correction: PerspectiveCorrection,
+        fill: ImageTransformFill
+    ) -> CIImage {
         let extent = image.extent
         guard extent.width > 1, extent.height > 1,
               let mapping = PerspectiveGeometry.mapping(for: correction, size: extent.size) else {
@@ -385,7 +414,11 @@ public enum ImageTransformStage {
             "inputBottomLeft": ci(corners[3]),
         ])
         let canvas = CGRect(origin: .zero, size: extent.size)
-        let background = CIImage(color: CIColor(red: 1, green: 1, blue: 1, alpha: 1)).cropped(to: canvas)
+        let backdrop = switch fill {
+        case .transparent: CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
+        case .white: CIImage(color: CIColor(red: 1, green: 1, blue: 1, alpha: 1))
+        }
+        let background = backdrop.cropped(to: canvas)
         let output = mapping.outputRect
         let ciOutput = CGRect(x: output.minX, y: height - output.maxY, width: output.width, height: output.height)
         return normalize(warped.composited(over: background).cropped(to: ciOutput))

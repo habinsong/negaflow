@@ -101,6 +101,11 @@ constexpr double auto_exposure_limit = 3.0;
 
 }  // namespace
 
+namespace {
+// 이보다 덜 덮인 칸은 원근 보정의 빈 곳이 섞인 것입니다(macOS 와 같은 값).
+constexpr double auto_adjust_minimum_coverage = 0.999;
+}  // namespace
+
 bool compute_auto_adjust_stats(
     const std::uint8_t* const pixels,
     const std::uint32_t width,
@@ -125,12 +130,14 @@ bool compute_auto_adjust_stats(
     std::vector<std::array<double, 3>> eligible;
     try { eligible.reserve(static_cast<std::size_t>(w) * h); } catch (...) { return false; }
     const auto overlap = [](double a, double b, double c, double d) { return std::max(0.0, std::min(b,d) - std::max(a,c)); };
+    std::size_t included = 0;
     for (std::uint32_t y = 0; y < h; ++y) {
         const double top = static_cast<double>(y) * height / h, bottom = static_cast<double>(y + 1U) * height / h;
         for (std::uint32_t x = 0; x < w; ++x) {
             const double left = static_cast<double>(x) * width / w, right = static_cast<double>(x + 1U) * width / w;
             std::array<double, 3> p{};
             double weight_sum = 0;
+            double coverage_sum = 0;
             for (auto sy = static_cast<std::uint32_t>(std::floor(top)); sy < std::min(height, static_cast<std::uint32_t>(std::ceil(bottom))); ++sy) {
                 const double wy = overlap(top,bottom,sy,sy+1.0);
                 for (auto sx = static_cast<std::uint32_t>(std::floor(left)); sx < std::min(width, static_cast<std::uint32_t>(std::ceil(right))); ++sx) {
@@ -138,8 +145,13 @@ bool compute_auto_adjust_stats(
                     const auto* q = pixels + static_cast<std::size_t>(sy) * stride_bytes + static_cast<std::size_t>(sx) * 4U;
                     p[0] += decode[q[2]] * weight; p[1] += decode[q[1]] * weight; p[2] += decode[q[0]] * weight;
                     weight_sum += weight;
+                    coverage_sum += (static_cast<double>(q[3]) / 255.0) * weight;
                 }
             }
+            // 원근 보정의 빈 곳(알파 0, 색은 흰색)이 섞인 칸은 사진이 아닙니다 — macOS
+            // `SceneAnalysisSampler.minimumCoverage` 와 같은 기준으로 뺍니다. 불투명한 입력은 그대로입니다.
+            if (weight_sum <= 0.0 || coverage_sum / weight_sum < auto_adjust_minimum_coverage) { continue; }
+            ++included;
             for (auto& c : p) { c /= weight_sum; }
             const std::array<double, 3> rgb{srgb_encode(p[0]),srgb_encode(p[1]),srgb_encode(p[2])};
             for (std::size_t c = 0; c < 3; ++c) { sum[c] += rgb[c]; }
@@ -161,7 +173,8 @@ bool compute_auto_adjust_stats(
             }
         }
     }
-    const double n = static_cast<double>(w) * h, nc = static_cast<double>(std::max<std::size_t>(neutral_count,1));
+    if (included == 0) { return false; }
+    const double n = static_cast<double>(included), nc = static_cast<double>(std::max<std::size_t>(neutral_count,1));
     const double ec = static_cast<double>(std::max<std::size_t>(eligible_count,1));
     const bool has_neutral = neutral_count >= std::max<std::size_t>(16U,static_cast<std::size_t>(n)/100U);
     stats.average_red=sum[0]/n; stats.average_green=sum[1]/n; stats.average_blue=sum[2]/n;

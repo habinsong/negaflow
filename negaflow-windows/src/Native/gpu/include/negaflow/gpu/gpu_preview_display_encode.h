@@ -31,8 +31,9 @@ public:
     // `destination` 은 목표 크기 × 4 BGRA8. 상자 평균 없이 1:1 일 때만 부릅니다.
     //
     // `gather` 가 있으면 회전·뒤집기·자르기를 **여기서** 처리합니다 — 화소를 옮겨 담은
-    // 호스트 버퍼를 만들지 않아도 되므로 사슬이 GPU 에 머뭅니다. 정수 자리 옮김뿐이라
-    // CPU `apply_image_transform` 과 비트 단위로 같습니다. null 이면 1:1 입니다.
+    // 호스트 버퍼를 만들지 않아도 되므로 사슬이 GPU 에 머뭅니다. 정수 자리 옮김은 CPU
+    // `apply_image_transform` 과 비트 단위로 같고, 원근은 같은 식의 이중선형을 float 로 셉니다.
+    // null 이면 1:1 입니다. `coverage_alpha` 면 알파에 커버리지를 씁니다(빈 곳 0).
     [[nodiscard]] GpuKernelStatus encode(
         const GpuDevice& device,
         const GpuWorkingImage& source,
@@ -40,7 +41,8 @@ public:
         std::uint32_t destination_stride_bytes,
         const float proof_scale[3],
         const float proof_bias[3],
-        const imaging::ImageTransformGather* gather = nullptr) const noexcept;
+        const imaging::ImageTransformGather* gather = nullptr,
+        bool coverage_alpha = false) const noexcept;
 
     [[nodiscard]] bool is_valid() const noexcept { return shader_ != nullptr; }
 

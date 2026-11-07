@@ -20,6 +20,9 @@ internal static class FirstActionLatencyDiagnostics
         "auto-levels",
         "auto-tone",
         "auto-white-balance",
+        // 기하 변환: 뒤집기는 GPU 자리 옮김으로 미루고, 변환(원근)은 CPU 와프를 탑니다.
+        "flip",
+        "perspective",
     ];
 
     private readonly record struct Sample(
@@ -44,7 +47,7 @@ internal static class FirstActionLatencyDiagnostics
         {
             Console.Error.WriteLine(
                 "usage: --first-action-latency <source> " +
-                "<process|target|auto-color|auto-levels|auto-tone|auto-white-balance> " +
+                "<process|target|auto-color|auto-levels|auto-tone|auto-white-balance|flip|perspective> " +
                 "[edge=2048] [iterations=5]");
             exitCode = 2;
             return true;
@@ -137,6 +140,14 @@ internal static class FirstActionLatencyDiagnostics
             "target" => frame with { DevelopTarget = DevelopTarget.Sp3000 },
             "auto-color" => frame with { AutoNeutralBalance = true },
             "auto-levels" => frame with { AutoLevels = true },
+            "flip" => frame with { ImageTransform = frame.ImageTransform with { FlipHorizontal = true } },
+            "perspective" => frame with
+            {
+                ImageTransform = frame.ImageTransform with
+                {
+                    Perspective = PerspectiveRecipe.Identity with { Vertical = 22 },
+                },
+            },
             _ => throw new ArgumentOutOfRangeException(nameof(action)),
         };
         return Preview(dispatcher, preview, edited);

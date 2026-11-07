@@ -46,6 +46,10 @@ struct PerspectiveMapping final {
 // 그림을 바꾸는가. 값이 모두 중립이면 false 입니다.
 [[nodiscard]] bool perspective_changes_geometry(const PerspectiveParameters& parameters) noexcept;
 
+// 원본이 닿지 않는 빈 곳이 결과에 남는가. 자르기 제한을 켜면 그림 안의 사각형만 남아 빈 곳이
+// 없습니다(macOS `PerspectiveCorrection.leavesUncoveredArea`).
+[[nodiscard]] bool perspective_leaves_uncovered_area(const PerspectiveParameters& parameters) noexcept;
+
 // macOS `PerspectiveGeometry.mapping(for:size:)` 와 같은 식입니다. 보정이 없거나 모서리가
 // 카메라 뒤로 넘어가 그릴 수 없는 값이면 nullopt(그림을 그대로 둡니다).
 [[nodiscard]] std::optional<PerspectiveMapping> make_perspective_mapping(

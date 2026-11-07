@@ -45,7 +45,7 @@ final class ImageTransformMappingTests: XCTestCase {
 
     private func check(_ t: ImageTransform, bx: Double, by: Double, file: StaticString = #filePath, line: UInt = #line) {
         let base = markerImage(bx: bx, by: by)
-        let display = ImageTransformStage.apply(to: base, transform: t)
+        let display = ImageTransformStage.apply(to: base, transform: t, fill: .transparent)
         guard let disp = findMarker(display) else { return XCTFail("marker lost", file: file, line: line) }
         let mapped = t.displayUnitToBase(disp)
         XCTAssertEqual(Double(mapped.x), bx, accuracy: 0.04, "x for \(t.displayName)", file: file, line: line)
@@ -73,7 +73,7 @@ final class ImageTransformMappingTests: XCTestCase {
     private func checkStraighten(_ t: ImageTransform, bx: Double, by: Double,
                                  file: StaticString = #filePath, line: UInt = #line) {
         let base = markerImage(bx: bx, by: by)
-        let display = ImageTransformStage.apply(to: base, transform: t)
+        let display = ImageTransformStage.apply(to: base, transform: t, fill: .transparent)
         guard let disp = findMarker(display) else { return XCTFail("marker lost \(t.displayName) θ=\(t.straightenAngle)", file: file, line: line) }
         let mapped = t.displayUnitToBase(disp, baseSize: CGSize(width: W, height: H))
         XCTAssertEqual(Double(mapped.x), bx, accuracy: 0.05, "x straighten θ=\(t.straightenAngle) \(t.displayName)", file: file, line: line)

@@ -12,12 +12,9 @@ extension AppModel {
     func updatePixelSampler(for frame: ScanFrame, displayUnitPoint: CGPoint) {
         guard pixelSamplerStore.isEnabled else { return }
         let sourceSize = sourcePixelSize(for: frame)
-        let basePoint = frame.imageTransform.displayUnitToBase(displayUnitPoint, baseSize: sourceSize)
-        let unitPoint = CGPoint(
-            x: min(max(basePoint.x, 0), 1),
-            y: min(max(basePoint.y, 0), 1)
-        )
-        guard let coordinate = PixelSampler.sourceCoordinate(
+        // 원근 보정의 빈 곳에는 원본 화소가 없다 — 가장자리 화소를 대신 읽지 않는다.
+        guard let unitPoint = frame.imageTransform.sourceUnit(atDisplayUnit: displayUnitPoint, baseSize: sourceSize),
+              let coordinate = PixelSampler.sourceCoordinate(
             at: unitPoint,
             width: Int(sourceSize.width),
             height: Int(sourceSize.height)

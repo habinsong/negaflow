@@ -265,6 +265,31 @@ void test_luminance_confidence_and_color_scope() {
 
 }  // namespace
 
+// 원근 보정의 빈 곳(흰색, 알파 0)은 통계에 들어가지 않습니다 — macOS 와 같은 기준입니다.
+void test_uncovered_area_is_not_measured() {
+    constexpr std::uint32_t width = 64U;
+    constexpr std::uint32_t height = 48U;
+    auto pixels = flat_image(width, height, 90U, 77U, 64U);
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = width / 2U; x < width; ++x) {
+            const std::size_t at = (static_cast<std::size_t>(y) * width + x) * 4U;
+            pixels[at] = 255U; pixels[at + 1U] = 255U; pixels[at + 2U] = 255U; pixels[at + 3U] = 0U;
+        }
+    }
+    const auto photo_only = stats_of(pixels, width, height);
+    expect(std::abs(photo_only.average_red - (90.0 / 255.0)) < 1.0e-6 &&
+               std::abs(photo_only.average_blue - (64.0 / 255.0)) < 1.0e-6,
+           "the uncovered white half is left out of the means");
+    expect(photo_only.clipped_fraction == 0.0, "the uncovered area is not counted as clipped highlights");
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = width / 2U; x < width; ++x) {
+            pixels[(static_cast<std::size_t>(y) * width + x) * 4U + 3U] = 255U;
+        }
+    }
+    const auto baked = stats_of(pixels, width, height);
+    expect(baked.average_red > 0.6, "control: the same white baked opaque pulls the mean up");
+}
+
 int main() {
     test_statistics_describe_the_frame();
     test_luminance_confidence_and_color_scope();
@@ -276,6 +301,7 @@ int main() {
     test_bright_midtones_are_not_darkened_by_density();
     test_results_are_deterministic();
     test_invalid_input_is_refused();
+    test_uncovered_area_is_not_measured();
 
     if (failures != 0) {
         std::cerr << failures << " auto adjust test(s) failed\n";

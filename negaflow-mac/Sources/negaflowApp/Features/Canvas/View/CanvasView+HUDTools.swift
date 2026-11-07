@@ -132,10 +132,11 @@ extension CanvasView {
     func handleBasePick(atDisplayUnit unit: CGPoint) {
         // 표시 좌표(변형 후, y-down) → 변형 전 raw 정규좌표. 픽셀 샘플러와 동일하게
         // baseSize 를 전달해 미세 회전(straighten) 역변환까지 정확히 푼다.
-        let basePoint = frame.imageTransform.displayUnitToBase(
-            unit,
+        // 원근 보정의 빈 곳을 찍으면 원본이 없으므로 아무것도 고르지 않는다(가장자리 화소를 쓰지 않는다).
+        guard let basePoint = frame.imageTransform.sourceUnit(
+            atDisplayUnit: unit,
             baseSize: model.sourcePixelSize(for: frame)
-        )
+        ) else { return }
         switch frame.eyedropperTarget {
         case .filmBase: model.pickFilmBase(at: basePoint, frame: frame)
         case .neutralWhiteBalance: model.pickNeutralWhiteBalance(at: basePoint, frame: frame)

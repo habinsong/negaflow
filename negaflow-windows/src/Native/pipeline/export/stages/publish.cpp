@@ -86,9 +86,12 @@ DevelopExportOutcome publish_developed(
             outcome.image_width = finish.deferred_transform.output_width;
             outcome.image_height = finish.deferred_transform.output_height;
         }
+        PreviewTarget target = *preview;
+        target.coverage_alpha =
+            negaflow::imaging::perspective_leaves_uncovered_area(request.image_transform.perspective);
         DevelopExportOutcome preview_outcome = write_preview(
             output_sharpening.image,
-            *preview,
+            target,
             outcome,
             finish.transform_deferred ? &finish.deferred_transform : nullptr);
         if (preview_outcome.succeeded) {

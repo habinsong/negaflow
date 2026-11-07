@@ -144,7 +144,8 @@ DevelopExportOutcome write_preview(
                 width * 4U,
                 proof.scale.data(),
                 proof.bias.data(),
-                deferred)) {
+                deferred,
+                target.coverage_alpha)) {
             outcome.image_width = width;
             outcome.image_height = height;
             outcome.output_file_bytes = required;
@@ -165,6 +166,11 @@ DevelopExportOutcome write_preview(
         parameters.flip_horizontal = deferred->flip_horizontal;
         parameters.flip_vertical = deferred->flip_vertical;
         parameters.has_crop = false;
+        // 원근도 미뤘으면 같은 매핑으로 겁니다 — 자르기 자리는 원근 출력 위에서 잡혀 있습니다.
+        if (deferred->perspective) {
+            parameters.perspective = deferred->perspective_parameters;
+            parameters.uncovered_fill = deferred->uncovered_fill;
+        }
         auto transformed = negaflow::imaging::apply_image_transform(image, parameters);
         if (transformed.status != negaflow::imaging::ImageTransformStatus::ok) {
             return fail(
@@ -216,6 +222,7 @@ DevelopExportOutcome write_preview(
             float overlay_green = 0.0F;
             float overlay_blue = 0.0F;
             float overlay_alpha = 0.0F;
+            float coverage = 0.0F;
             std::uint32_t count = 0U;
             bool finite = true;
             for (std::uint32_t sy = source_y0; sy < source_y1; ++sy) {
@@ -238,7 +245,12 @@ DevelopExportOutcome write_preview(
                         (folded.green * proof.scale[1]) + proof.bias[1]);
                     blue += negaflow::color::linear_to_srgb_encoded(
                         (folded.blue * proof.scale[2]) + proof.bias[2]);
-                    if (target.clipping_overlay) {
+                    // 원근 보정의 빈 곳(커버리지 0)은 사진이 아니므로 경고하지 않습니다.
+                    const float covered = target.coverage_alpha
+                        ? std::clamp(source.alpha, 0.0F, 1.0F)
+                        : 1.0F;
+                    coverage += covered;
+                    if (target.clipping_overlay && covered > 0.5F) {
                         const auto overlay =
                             negaflow::imaging::channel_clipping_overlay_pixel(source);
                         overlay_red += overlay.red;
@@ -271,11 +283,16 @@ DevelopExportOutcome write_preview(
 
             std::uint8_t* const destination =
                 target.pixels + ((static_cast<std::size_t>(y) * width + x) * 4U);
-            // BGRA8 with opaque alpha, which is what a XAML Image accepts.
+            // BGRA8 with opaque alpha, which is what a XAML Image accepts. 원근 보정의 빈 곳이
+            // 있으면 알파에 커버리지를 싣습니다(색은 흰색 그대로) — 표시하는 쪽이 불투명으로
+            // 올리고, 히스토그램·자동 보정은 알파 0 을 사진으로 세지 않습니다.
             destination[0] = quantise(blue, 2U);
             destination[1] = quantise(green, 1U);
             destination[2] = quantise(red, 0U);
-            destination[3] = 0xFFU;
+            destination[3] = target.coverage_alpha
+                ? static_cast<std::uint8_t>(
+                      std::clamp(coverage * inverse_count, 0.0F, 1.0F) * 255.0F + 0.5F)
+                : 0xFFU;
             if (target.clipping_overlay) {
                 const float oa = overlay_alpha * inverse_count;
                 if (oa > 0.0F) {

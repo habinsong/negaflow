@@ -341,7 +341,8 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         int written = width * height * 4;
         using (Stream buffer = previewBitmap.PixelBuffer.AsStream())
         {
-            buffer.Write(pixels, 0, written);
+            // 원근 보정의 빈 곳은 알파에 커버리지 0 이 실려 옵니다 — 화면에는 불투명 흰색으로 씁니다.
+            PreviewCoverage.WriteOpaque(buffer, pixels, written);
         }
         previewBitmap.Invalidate();
         // 자리표시자(사진을 막 바꿨을 때의 썸네일)가 걸려 있으면 여기서 되돌립니다.
@@ -373,7 +374,7 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         int written = width * height * 4;
         using (Stream buffer = compareBeforeBitmap.PixelBuffer.AsStream())
         {
-            buffer.Write(pixels, 0, written);
+            PreviewCoverage.WriteOpaque(buffer, pixels, written);
         }
 
         compareBeforeBitmap.Invalidate();

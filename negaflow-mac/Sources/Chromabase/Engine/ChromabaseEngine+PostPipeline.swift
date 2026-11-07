@@ -94,9 +94,11 @@ extension ChromabaseEngine {
         // 목적 색공간을 아는 출력 경계가 담당해야 하며, 여기서 sRGB [0,1]로 강제하면
         // MAIN의 관용도와 유채색을 비가역적으로 잃는다.
 
+        // 내보내기 인코딩은 알파를 담지 않는다 — 원근 보정의 빈 곳은 여기서 흰색으로 정한다.
         return ImageTransformStage.apply(
             to: img.cropped(to: extent),
-            transform: params.imageTransform
+            transform: params.imageTransform,
+            fill: .white
         )
     }
 

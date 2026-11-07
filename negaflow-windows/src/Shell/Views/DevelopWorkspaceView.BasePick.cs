@@ -31,7 +31,7 @@ public sealed partial class DevelopWorkspaceView
         }
         args.Handled = true;
         // macOS 도 픽셀 샘플러와 같이 baseSize 를 넘겨 미세 회전 역변환까지 정확히 풉니다.
-        if (!DevelopDisplayGeometry.TryMapDisplayToRaw(
+        if (!DevelopDisplayGeometry.TryMapDisplayToCoveredRaw(
                 frame.ImageTransform,
                 metadata.PixelWidth,
                 metadata.PixelHeight,

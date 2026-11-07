@@ -91,7 +91,7 @@ final class PerspectiveCorrectionTests: XCTestCase {
                                             vertical: 100, horizontal: 100)
         XCTAssertNil(PerspectiveGeometry.mapping(for: extreme, size: sizes[0]))
         let image = CIImage(color: .gray).cropped(to: CGRect(origin: .zero, size: sizes[0]))
-        let out = ImageTransformStage.apply(to: image, transform: ImageTransform(perspective: extreme))
+        let out = ImageTransformStage.apply(to: image, transform: ImageTransform(perspective: extreme), fill: .transparent)
         XCTAssertEqual(out.extent, image.extent)
     }
 
@@ -151,29 +151,66 @@ final class PerspectiveCorrectionTests: XCTestCase {
         }
     }
 
-    /// 렌더 결과: 빈 곳은 불투명 흰색, 자르기 제한을 켜면 빈 곳이 없다.
-    func testRenderFillsEmptyAreaWithOpaqueWhiteAndConstrainCropRemovesIt() throws {
+    /// 렌더 결과: 빈 곳은 부르는 쪽이 고른 채움(흰색·투명)이고, 어느 쪽이든 크기는 같다. 자르기 제한을
+    /// 켜면 빈 곳이 없다.
+    func testRenderFillsEmptyAreaAsRequestedAndConstrainCropRemovesIt() throws {
         let size = CGSize(width: 240, height: 160)
         let image = CIImage(color: CIColor(red: 0.2, green: 0.3, blue: 0.4)).cropped(to: CGRect(origin: .zero, size: size))
         var correction = PerspectiveCorrection(mode: .vertical, vertical: 40)
-        let open = ImageTransformStage.apply(to: image, transform: ImageTransform(perspective: correction))
-        XCTAssertEqual(open.extent.size, size)
-        let openPixels = render(open)
-        XCTAssertTrue(openPixels.indices.filter { $0 % 4 == 3 }.allSatisfy { openPixels[$0] > 0.999 })
-        // 위가 넓어지면 아래 모서리가 비어 흰색이 된다.
-        XCTAssertGreaterThan(openPixels[((Int(size.height) - 1) * Int(size.width)) * 4], 0.99)
+        // 위가 넓어지면 아래 모서리가 빈다(메모리 마지막 행 = 아래).
+        let bottomLeft = ((Int(size.height) - 1) * Int(size.width)) * 4
+        let center = ((Int(size.height) / 2) * Int(size.width) + Int(size.width) / 2) * 4
+
+        let white = render(ImageTransformStage.apply(to: image, transform: ImageTransform(perspective: correction), fill: .white))
+        XCTAssertEqual(white.count, Int(size.width * size.height) * 4)
+        XCTAssertTrue(white.indices.filter { $0 % 4 == 3 }.allSatisfy { white[$0] > 0.999 })
+        XCTAssertGreaterThan(white[bottomLeft], 0.99)
+
+        let clear = ImageTransformStage.apply(to: image, transform: ImageTransform(perspective: correction), fill: .transparent)
+        XCTAssertEqual(clear.extent.size, size, "투명 채움도 출력 사각형 전체를 유지해야 뒤 단계 좌표가 맞습니다")
+        let clearPixels = render(clear)
+        XCTAssertEqual(clearPixels[bottomLeft + 3], 0, accuracy: 1e-6, "빈 곳은 알파 0 이어야 합니다")
+        XCTAssertEqual(clearPixels[bottomLeft], 0, accuracy: 1e-6, "빈 곳에 색이 남으면 오버레이가 사진을 덮습니다")
+        XCTAssertEqual(clearPixels[center + 3], 1, accuracy: 1e-4)
+        XCTAssertEqual(clearPixels[center + 2], white[center + 2], accuracy: 1e-4, "사진 부분은 채움과 무관합니다")
 
         correction.constrainCrop = true
-        let constrained = ImageTransformStage.apply(to: image, transform: ImageTransform(perspective: correction))
-        XCTAssertLessThan(constrained.extent.width, size.width)
-        XCTAssertEqual(constrained.extent.width / constrained.extent.height, size.width / size.height, accuracy: 0.02)
-        let reference = render(image)
-        let pixels = render(constrained)
-        var worst: Float = 0
-        for i in stride(from: 0, to: pixels.count, by: 4) {
-            worst = max(worst, abs(pixels[i] - reference[0]), abs(pixels[i + 2] - reference[2]))
+        for fill in [ImageTransformFill.white, .transparent] {
+            let constrained = ImageTransformStage.apply(to: image, transform: ImageTransform(perspective: correction), fill: fill)
+            XCTAssertLessThan(constrained.extent.width, size.width)
+            XCTAssertEqual(constrained.extent.width / constrained.extent.height, size.width / size.height, accuracy: 0.02)
+            let reference = render(image)
+            let pixels = render(constrained)
+            var worst: Float = 0
+            for i in stride(from: 0, to: pixels.count, by: 4) {
+                worst = max(worst, abs(pixels[i] - reference[0]), abs(pixels[i + 2] - reference[2]),
+                            abs(pixels[i + 3] - 1))
+            }
+            XCTAssertLessThan(worst, 0.002, "자르기 제한 안에 빈 곳이 섞였습니다")
         }
-        XCTAssertLessThan(worst, 0.002, "자르기 제한 안에 흰 빈 곳이 섞였습니다")
+    }
+
+    /// 투명한 오버레이(색역·클리핑 경고)를 변환해도 사진을 덮는 판이 되지 않는다 — 1.2.6 흰 화면 회귀.
+    func testTransparentOverlayStaysTransparentThroughPerspective() throws {
+        let size = CGSize(width: 300, height: 200)
+        let overlay = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0)).cropped(to: CGRect(origin: .zero, size: size))
+        let correction = PerspectiveCorrection(mode: .off, vertical: 22)
+        let transform = ImageTransform(cropRect: SIMD4(0.2, 0, 0.6, 1), straightenAngle: -0.2, perspective: correction)
+        let pixels = render(ImageTransformStage.apply(to: overlay, transform: transform, fill: .transparent))
+        XCTAssertFalse(pixels.isEmpty)
+        XCTAssertEqual(pixels.max() ?? 1, 0, accuracy: 1e-6, "투명 오버레이가 변환 뒤 불투명해졌습니다")
+    }
+
+    /// 화소 읽기·스포이드: 빈 곳은 원본이 아니고, 사진 위 점은 원본 좌표로 풀린다.
+    func testSourceUnitRejectsTheUncoveredArea() throws {
+        let base = CGSize(width: 1500, height: 1000)
+        let transform = ImageTransform(perspective: PerspectiveCorrection(mode: .off, vertical: 40))
+        XCTAssertNil(transform.sourceUnit(atDisplayUnit: CGPoint(x: 0.01, y: 0.99), baseSize: base))
+        let center = try XCTUnwrap(transform.sourceUnit(atDisplayUnit: CGPoint(x: 0.5, y: 0.5), baseSize: base))
+        XCTAssertEqual(center.x, 0.5, accuracy: 1e-6)
+        XCTAssertTrue((0...1).contains(center.y))
+        // 원근이 없으면 화면 전체가 원본이다.
+        XCTAssertNotNil(ImageTransform(straightenAngle: 3).sourceUnit(atDisplayUnit: CGPoint(x: 0, y: 1), baseSize: base))
     }
 
     /// 마스크·브러시가 쓰는 화면 ↔ 원본 좌표 변환이 원근과 수평 보정·크롭·회전을 함께 정확히 푼다.
@@ -269,5 +306,34 @@ private struct SplitMix {
     }
     mutating func next(in range: ClosedRange<Double>) -> Double {
         range.lowerBound + Double(nextUInt() >> 11) / Double(1 << 53) * (range.upperBound - range.lowerBound)
+    }
+}
+
+/// 원근 보정의 빈 곳(알파 0)은 자동 톤·화이트 밸런스 통계에 들어가지 않는다.
+final class TransformCoverageStatisticsTests: XCTestCase {
+    func testAutoAdjustStatisticsIgnoreTheUncoveredArea() throws {
+        let width = 400, height = 300
+        let space = CGColorSpace(name: CGColorSpace.sRGB)!
+        func image(transparentRight: Bool) throws -> CGImage {
+            let context = try XCTUnwrap(CGContext(
+                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: space,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+            context.setFillColor(CGColor(srgbRed: 0.35, green: 0.30, blue: 0.25, alpha: 1))
+            context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+            if transparentRight {
+                context.clear(CGRect(x: width / 2, y: 0, width: width / 2, height: height))
+            } else {
+                // 같은 자리를 흰색으로 구우면(예전 동작) 통계가 하이라이트 쪽으로 끌려간다.
+                context.setFillColor(CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1))
+                context.fill(CGRect(x: width / 2, y: 0, width: width / 2, height: height))
+            }
+            return try XCTUnwrap(context.makeImage())
+        }
+        let photoOnly = try XCTUnwrap(AutoAdjust.imageStats(try image(transparentRight: true)))
+        XCTAssertEqual(photoOnly.avgR, 0.35, accuracy: 0.01)
+        XCTAssertEqual(photoOnly.avgB, 0.25, accuracy: 0.01)
+        XCTAssertEqual(photoOnly.lumaHist.suffix(10).reduce(0, +), 0, accuracy: 1e-9, "빈 곳이 하이라이트로 세어졌습니다")
+        let whiteBaked = try XCTUnwrap(AutoAdjust.imageStats(try image(transparentRight: false)))
+        XCTAssertGreaterThan(whiteBaked.avgR, 0.6, "대조군: 흰색으로 구우면 평균이 크게 밝아진다")
     }
 }

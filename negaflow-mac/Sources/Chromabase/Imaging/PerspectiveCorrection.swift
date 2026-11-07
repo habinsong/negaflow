@@ -125,6 +125,9 @@ public struct PerspectiveCorrection: Codable, Sendable, Equatable, Hashable {
 
     public var isIdentity: Bool { self == .identity }
 
+    /// 원본이 닿지 않는 빈 곳이 결과에 남는가. 자르기 제한을 켜면 그림 안의 사각형만 남아 빈 곳이 없다.
+    public var leavesUncoveredArea: Bool { changesGeometry && !constrainCrop }
+
     // MARK: 화면 방향이 바뀔 때 같은 보정 유지
 
     /// 화면 기준 좌우 뒤집기. 축-각 벡터는 거울에 대해 `ω' = −M·ω` 로 바뀐다.

@@ -95,11 +95,65 @@ public static class DevelopDisplayGeometry
         out double rawX,
         out double rawY)
     {
-        ArgumentNullException.ThrowIfNull(transform);
         rawX = 0.0;
         rawY = 0.0;
+        if (!TryMapDisplayToSourcePixel(
+                transform, sourceWidth, sourceHeight, displayX, displayY,
+                out double sourceX, out double sourceY, out TransformStages stages))
+        {
+            return false;
+        }
+        rawX = Math.Clamp(sourceX / (stages.Width - 1.0), 0.0, 1.0);
+        rawY = Math.Clamp(sourceY / (stages.Height - 1.0), 0.0, 1.0);
+        return true;
+    }
+
+    /// <summary>
+    /// <see cref="TryMapDisplayToRaw"/> 와 같지만, 화면 점이 원근 보정의 빈 곳이면 실패합니다.
+    /// 스포이드처럼 "그 자리의 원본 화소" 가 필요한 곳이 씁니다 — 0…1 로 잘라 쓰면 빈 곳에서
+    /// 가장자리 화소를 찍습니다(macOS <c>ImageTransform.sourceUnit(atDisplayUnit:)</c>).
+    /// 화소 중심 규약이라 가장자리 화소의 바깥 반 화소까지는 원본입니다.
+    /// </summary>
+    public static bool TryMapDisplayToCoveredRaw(
+        ImageTransformRecipe transform,
+        uint sourceWidth,
+        uint sourceHeight,
+        double displayX,
+        double displayY,
+        out double rawX,
+        out double rawY)
+    {
+        rawX = 0.0;
+        rawY = 0.0;
+        if (!TryMapDisplayToSourcePixel(
+                transform, sourceWidth, sourceHeight, displayX, displayY,
+                out double sourceX, out double sourceY, out TransformStages stages) ||
+            sourceX < -0.5 || sourceY < -0.5 ||
+            sourceX > stages.Width - 0.5 || sourceY > stages.Height - 0.5)
+        {
+            return false;
+        }
+        rawX = Math.Clamp(sourceX / (stages.Width - 1.0), 0.0, 1.0);
+        rawY = Math.Clamp(sourceY / (stages.Height - 1.0), 0.0, 1.0);
+        return true;
+    }
+
+    private static bool TryMapDisplayToSourcePixel(
+        ImageTransformRecipe transform,
+        uint sourceWidth,
+        uint sourceHeight,
+        double displayX,
+        double displayY,
+        out double sourceX,
+        out double sourceY,
+        out TransformStages stages)
+    {
+        ArgumentNullException.ThrowIfNull(transform);
+        sourceX = 0.0;
+        sourceY = 0.0;
+        stages = default;
         if (!double.IsFinite(displayX) || !double.IsFinite(displayY) ||
-            !TryStages(transform, sourceWidth, sourceHeight, out TransformStages stages))
+            !TryStages(transform, sourceWidth, sourceHeight, out stages))
         {
             return false;
         }
@@ -133,7 +187,7 @@ public static class DevelopDisplayGeometry
         }
 
         // orient 되돌리기. 네이티브와 같이 회전을 먼저 풀고 반전을 나중에 적용합니다.
-        (double sourceX, double sourceY) = transform.Rotation switch
+        (sourceX, sourceY) = transform.Rotation switch
         {
             ImageRotation.Degrees90 => (y, stages.Height - 1.0 - x),
             ImageRotation.Degrees180 => (stages.Width - 1.0 - x, stages.Height - 1.0 - y),
@@ -148,10 +202,7 @@ public static class DevelopDisplayGeometry
         {
             sourceY = stages.Height - 1.0 - sourceY;
         }
-
-        rawX = Math.Clamp(sourceX / (stages.Width - 1.0), 0.0, 1.0);
-        rawY = Math.Clamp(sourceY / (stages.Height - 1.0), 0.0, 1.0);
-        return true;
+        return double.IsFinite(sourceX) && double.IsFinite(sourceY);
     }
 
     /// <summary>

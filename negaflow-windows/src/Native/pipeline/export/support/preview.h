@@ -29,6 +29,9 @@ struct PreviewTarget final {
     negaflow::color::SoftProofTransfer proof{};
     // macOS `clippingOverlayEnabled`. 현상 결과는 안 바꾸고 표시만 얹습니다.
     bool clipping_overlay{false};
+    // 원근 보정이 빈 곳을 남길 때 켭니다. 알파에 커버리지를 쓰고(빈 곳 0, 색은 흰색), 클리핑
+    // 경고는 빈 곳을 건너뜁니다. 꺼져 있으면 알파는 언제나 0xFF 로 예전과 같습니다.
+    bool coverage_alpha{false};
 };
 
 // macOS `displayProxy` 와 같은 상자 맞춤. 종횡비를 유지하고 긴 변을 먼저 맞춘다.

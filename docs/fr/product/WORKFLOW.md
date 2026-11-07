@@ -59,7 +59,7 @@ Ouvrez Géométrie → Recadrage à droite du Développement. Maintenez ⌘ (Ctr
 
 La section Transformation se trouve entre Calibrage et Détails et effets. Désactivé laisse la photo telle quelle. Auto, Niveau, Vertical et Complet cherchent une fois les lignes droites de la photo et les corrigent. Niveau ne fait que tourner la photo, Vertical redresse aussi les verticales convergentes, Complet corrige la perspective verticale et horizontale. Auto fait comme Complet mais retient les grandes corrections. Guidé suit 2 à 4 repères que vous tracez sur la photo.
 
-Les curseurs Vertical, Horizontal, Rotation, Aspect, Échelle, Décalage X et Décalage Y s'ajoutent à ce que le mode a trouvé. Un double-clic réinitialise un curseur. Limiter le recadrage coupe le résultat au plus grand rectangle sans coin vide. La correction suit les rotations de 90° et les retournements, et Réinitialiser tous les réglages l'efface avec le recadrage et le redressement.
+Les curseurs Vertical, Horizontal, Rotation, Aspect, Échelle, Décalage X et Décalage Y s'ajoutent à ce que le mode a trouvé. Un double-clic réinitialise un curseur. Limiter le recadrage coupe le résultat au plus grand rectangle sans coin vide. Désactivé, les coins vides sont blancs à l'écran et dans les fichiers exportés. L'histogramme, l'alerte d'écrêtage, la tonalité automatique et la balance des blancs automatique ne les comptent pas comme photo. La correction suit les rotations de 90° et les retournements, et Réinitialiser tous les réglages l'efface avec le recadrage et le redressement.
 
 ## Préréglages et copier-coller
 

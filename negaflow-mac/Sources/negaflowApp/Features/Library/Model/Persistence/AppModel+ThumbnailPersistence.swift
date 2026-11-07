@@ -135,7 +135,8 @@ extension AppModel {
 
     nonisolated static func orientedThumbnail(_ cg: CGImage, transform: ImageTransform) -> CGImage {
         guard !transform.isIdentity else { return cg }
-        let transformed = ImageTransformStage.apply(to: CIImage(cgImage: cg), transform: transform)
+        // 썸네일 파일·필름스트립은 바탕 없이 그대로 보인다 — 원근 보정의 빈 곳은 흰색으로 굽는다.
+        let transformed = ImageTransformStage.apply(to: CIImage(cgImage: cg), transform: transform, fill: .white)
         let space = cg.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
         return thumbnailOrientContext.createCGImage(
             transformed, from: transformed.extent, format: .RGBA8, colorSpace: space

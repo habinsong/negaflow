@@ -125,7 +125,7 @@ extension AppModel {
         _ developed: CGImage,
         orientation: ImageTransform
     ) -> ([Float], Int, Int)? {
-        var image = ImageTransformStage.apply(to: CIImage(cgImage: developed), transform: orientation)
+        var image = ImageTransformStage.apply(to: CIImage(cgImage: developed), transform: orientation, fill: .transparent)
         let extent = image.extent
         guard extent.width >= 16, extent.height >= 16 else { return nil }
         let scale = min(1, CGFloat(PerspectiveLineDetector.analysisLongEdge) / max(extent.width, extent.height))

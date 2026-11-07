@@ -23,7 +23,7 @@ final class CameraScanMeasurementTests: XCTestCase {
         params.imageTransform = transform
         var developed = engine.developScanner(image: image, base: base, params: params)
         if !crop {
-            developed = ImageTransformStage.apply(to: developed, transform: CameraScanFrame.cropTransform)
+            developed = ImageTransformStage.apply(to: developed, transform: CameraScanFrame.cropTransform, fill: .transparent)
         }
         return (CameraScanFrame.croppedPatches(developed), base)
     }

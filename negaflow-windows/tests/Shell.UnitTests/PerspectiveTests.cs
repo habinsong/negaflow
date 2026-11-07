@@ -1,3 +1,4 @@
+using System.IO;
 using Negaflow.Catalog;
 using Negaflow.Shell.Develop.Perspective;
 using static Negaflow.Shell.UnitTests.TestAssert;
@@ -28,6 +29,68 @@ internal static class PerspectiveTests
         VerifyForwardAndInverseRoundTrip();
         VerifySolverRecoversASyntheticKeystone();
         VerifyAutoSolveIgnoresTheEmptyAreaOfAnAlreadyCorrectedPreview();
+        VerifyPreviewCoverageIsOpaqueOnScreenAndSkippedByAnalysis();
+        VerifyPickersRefuseTheUncoveredArea();
+    }
+
+    /// <summary>
+    /// 프리뷰의 빈 곳은 흰색에 알파 0 으로 옵니다. 화면에는 불투명 흰색으로 쓰고(예전과 같은 모습),
+    /// 히스토그램은 그 화소를 세지 않습니다. 불투명한 그림은 복사 없이 그대로입니다.
+    /// </summary>
+    private static void VerifyPreviewCoverageIsOpaqueOnScreenAndSkippedByAnalysis()
+    {
+        const int width = 37, height = 5;
+        byte[] pixels = new byte[width * height * 4];
+        for (int i = 0; i < pixels.Length; i += 4)
+        {
+            bool uncovered = (i / 4) % width >= 20;
+            pixels[i] = uncovered ? (byte)255 : (byte)40;
+            pixels[i + 1] = uncovered ? (byte)255 : (byte)60;
+            pixels[i + 2] = uncovered ? (byte)255 : (byte)80;
+            pixels[i + 3] = uncovered ? (byte)0 : (byte)255;
+        }
+        Check(PreviewCoverage.HasPartialCoverage(pixels), "coverage alpha is detected");
+        Check(PreviewCoverage.IsCovered(pixels, width, 3, 2) && !PreviewCoverage.IsCovered(pixels, width, 30, 2),
+            "covered and uncovered preview pixels are told apart");
+        using var screen = new MemoryStream();
+        PreviewCoverage.WriteOpaque(screen, pixels, pixels.Length);
+        byte[] written = screen.ToArray();
+        bool opaque = true, unchanged = true;
+        for (int i = 0; i < written.Length; i += 4)
+        {
+            opaque &= written[i + 3] == 255;
+            unchanged &= written[i] == pixels[i] && written[i + 1] == pixels[i + 1] && written[i + 2] == pixels[i + 2];
+        }
+        Check(opaque && unchanged, "the screen copy is opaque with the same colour (uncovered stays white)");
+        Check(pixels[(30 + width) * 4 + 3] == 0, "the analysis buffer keeps its coverage");
+        DevelopHistogramBins? bins = DevelopHistogramSampler.SampleBgra8(pixels, width, height);
+        Check(bins is not null && bins.TotalPixels == 20 * height,
+            "the histogram counts only covered pixels",
+            () => $"total={bins?.TotalPixels}");
+
+        byte[] solid = new byte[16 * 4];
+        Array.Fill(solid, (byte)255);
+        Check(!PreviewCoverage.HasPartialCoverage(solid), "an opaque preview has no coverage to handle");
+    }
+
+    /// <summary>스포이드는 빈 곳에서 가장자리 화소를 찍지 않습니다. 사진 위는 그대로 원본 좌표로 풉니다.</summary>
+    private static void VerifyPickersRefuseTheUncoveredArea()
+    {
+        ImageTransformRecipe transform = ImageTransformRecipe.Identity with
+        {
+            Perspective = PerspectiveRecipe.Identity with { Mode = PerspectiveMode.Off, Vertical = 40 },
+        };
+        Check(!DevelopDisplayGeometry.TryMapDisplayToCoveredRaw(
+                transform, 1500, 1000, 0.01, 0.99, out _, out _),
+            "an uncovered corner is not a source pixel");
+        Check(DevelopDisplayGeometry.TryMapDisplayToCoveredRaw(
+                transform, 1500, 1000, 0.5, 0.5, out double rawX, out _) && Math.Abs(rawX - 0.5) < 1e-3,
+            "the frame centre maps to the source centre");
+        Check(DevelopDisplayGeometry.TryMapDisplayToRaw(transform, 1500, 1000, 0.01, 0.99, out _, out _),
+            "the clamping mapping still answers for drawing tools");
+        Check(DevelopDisplayGeometry.TryMapDisplayToCoveredRaw(
+                ImageTransformRecipe.Identity with { StraightenAngle = 3 }, 1500, 1000, 0.0, 1.0, out _, out _),
+            "without perspective the whole frame is source");
     }
 
     /// <summary>

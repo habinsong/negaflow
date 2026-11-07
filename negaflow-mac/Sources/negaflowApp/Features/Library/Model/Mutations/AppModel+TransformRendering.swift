@@ -115,8 +115,11 @@ extension AppModel {
                     Task.isCancelled ? nil : Self.renderTransformed($0, transform: settledTransform, maxDimension: 0)
                 }
                 // 프루프 미적용 360px base에서 변형해 화면용 프루프가 영속 썸네일로 새지 않는다.
+                // 썸네일은 바탕 없이 그대로 보이고 파일로도 남으므로 빈 곳을 흰색으로 굽는다.
                 let thumbnail = settledThumbnailBase.flatMap {
-                    Task.isCancelled ? nil : Self.renderTransformed($0, transform: settledTransform, maxDimension: 0)
+                    Task.isCancelled ? nil : Self.renderTransformed(
+                        $0, transform: settledTransform, maxDimension: 0, fill: .white
+                    )
                 }
                 return TransformSettleResult(
                     developed: developed,
@@ -206,15 +209,18 @@ extension AppModel {
 
     /// 변형-전 결과에 기하 변형만 적용해 sRGB display 픽셀로 읽어온다.
     /// maxDimension > 0 이면 변형 후 그 크기로 축소해 readback을 줄인다(인터랙티브 경로).
+    /// 화면용 사진·비교본·오버레이는 원근 보정의 빈 곳을 투명으로 둔다 — 캔버스가 사진 밑에 흰 바탕을
+    /// 깔고, 히스토그램·오버레이는 빈 곳을 사진으로 세지 않는다.
     nonisolated private static func renderTransformed(
         _ source: CGImage,
         transform: ImageTransform,
-        maxDimension: CGFloat
+        maxDimension: CGFloat,
+        fill: ImageTransformFill = .transparent
     ) -> CGImage? {
         guard !Task.isCancelled else { return nil }
         let colorSpace = source.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
         let unmanaged = CIImage(cgImage: source, options: [.colorSpace: NSNull()])
-        var image = ImageTransformStage.apply(to: unmanaged, transform: transform)
+        var image = ImageTransformStage.apply(to: unmanaged, transform: transform, fill: fill)
         if maxDimension > 0 {
             image = DevelopFrameRenderer.displayProxy(image, maxDimension: maxDimension)
         }

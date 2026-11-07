@@ -25,9 +25,20 @@ struct alignas(16) PreviewDisplayEncodeConstants final {
     std::uint32_t rotation{0};
     std::uint32_t flips{0};
     std::uint32_t padding2[2]{};
+    // 원근(변환). 셰이더 `SampleDestination` 이 CPU `perspective_warp` 와 같은 식으로 읽습니다.
+    float inverse_row0[4]{};
+    float inverse_row1[4]{};
+    float inverse_row2[4]{};
+    float perspective_origin[2]{};
+    std::uint32_t oriented_width{0};
+    std::uint32_t oriented_height{0};
+    std::uint32_t perspective_enabled{0};
+    float uncovered_alpha{1.0F};
+    std::uint32_t coverage_alpha{0};
+    std::uint32_t padding3{0};
 };
 
-static_assert(sizeof(PreviewDisplayEncodeConstants) == 80U, "five constant registers");
+static_assert(sizeof(PreviewDisplayEncodeConstants) == 160U, "ten constant registers");
 
 [[nodiscard]] std::uint32_t group_count(
     const std::uint32_t extent,
@@ -159,7 +170,8 @@ GpuKernelStatus GpuPreviewDisplayEncode::encode(
     const std::uint32_t destination_stride_bytes,
     const float proof_scale[3],
     const float proof_bias[3],
-    const imaging::ImageTransformGather* const gather) const noexcept {
+    const imaging::ImageTransformGather* const gather,
+    const bool coverage_alpha) const noexcept {
     if (!device.is_usable() || shader_ == nullptr || constants_ == nullptr) {
         return GpuKernelStatus::device_unavailable;
     }
@@ -190,7 +202,23 @@ GpuKernelStatus GpuPreviewDisplayEncode::encode(
         payload.rotation = static_cast<std::uint32_t>(gather->rotation);
         payload.flips = (gather->flip_horizontal ? 1U : 0U) |
             (gather->flip_vertical ? 2U : 0U);
+        if (gather->perspective) {
+            const auto& m = gather->perspective_inverse;
+            for (int column = 0; column < 3; ++column) {
+                payload.inverse_row0[column] = static_cast<float>(m[column]);
+                payload.inverse_row1[column] = static_cast<float>(m[3 + column]);
+                payload.inverse_row2[column] = static_cast<float>(m[6 + column]);
+            }
+            payload.perspective_origin[0] = static_cast<float>(gather->perspective_left);
+            payload.perspective_origin[1] = static_cast<float>(gather->perspective_top);
+            payload.oriented_width = gather->oriented_width;
+            payload.oriented_height = gather->oriented_height;
+            payload.perspective_enabled = 1U;
+            payload.uncovered_alpha =
+                gather->uncovered_fill == imaging::UncoveredFill::opaque_white ? 1.0F : 0.0F;
+        }
     }
+    payload.coverage_alpha = coverage_alpha ? 1U : 0U;
     payload.proof_scale[0] = proof_scale[0];
     payload.proof_scale[1] = proof_scale[1];
     payload.proof_scale[2] = proof_scale[2];

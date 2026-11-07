@@ -11,6 +11,9 @@ enum SceneAnalysisSampler {
         let clippedFractions: [Double]
     }
 
+    /// 이보다 덜 덮인 칸은 원본 밖(투명)이 섞인 것이다.
+    static let minimumCoverage = 0.999
+
     static func sample(_ image: CIImage, longEdge: Int, inset: Double = 0) -> Grid? {
         let e = image.extent.integral
         guard e.width.isFinite, e.height.isFinite, e.width > 0, e.height > 0 else { return nil }
@@ -31,6 +34,9 @@ enum SceneAnalysisSampler {
         pixels.reserveCapacity((xEnd - ix) * (yEnd - iy)); clipped.reserveCapacity(pixels.capacity)
         for y in iy..<yEnd { for x in ix..<xEnd {
             let i = (y * w + x) * 4
+            // 원근 보정의 빈 곳이 섞인 칸은 사진이 아니다 — 통계에서 뺀다(불투명한 그림은 알파 1).
+            let coverage = Double(data[i + 3])
+            guard coverage >= Self.minimumCoverage else { continue }
             let p = SIMD3(Double(data[i]), Double(data[i + 1]), Double(data[i + 2]))
             guard p.x.isFinite, p.y.isFinite, p.z.isFinite else { continue }
             pixels.append(p); clipped.append(max(p.x, max(p.y, p.z)) >= 0.995 ? 1 : 0)

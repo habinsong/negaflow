@@ -353,8 +353,10 @@ extension ChromabaseMetalKernels {
     // 더한다. noise 는 [0,1] white noise. alpha 는 src 그대로 보존(LinearDodge 의 알파 합성 버그
     // 회피). banding 경계 픽셀만 인접 양자화 스텝으로 분산되고 디테일/평균 톤은 보존된다.
     [[stitchable]] float4 ditherAdd(coreimage::sample_t src, coreimage::sample_t noise) {
+        // 샘플은 premultiplied 다. 잡음에도 알파를 곱해야 투명한 곳(원근 보정의 빈 곳)에 색이 생기지
+        // 않는다. 불투명한 화소는 예전과 같다.
         float3 d = (noise.rgb - float3(0.5)) / 255.0;
-        return float4(src.rgb + d, src.a);
+        return float4(src.rgb + d * src.a, src.a);
     }
     """),
         MetalKernelSource(name: "channelClippingOverlay", body: """

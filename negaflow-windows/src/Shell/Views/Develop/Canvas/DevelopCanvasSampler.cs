@@ -83,6 +83,13 @@ internal sealed class DevelopCanvasSampler
             return;
         }
 
+        // 원근 보정의 빈 곳(커버리지 0)에는 원본 화소가 없습니다 — 흰 채움을 읽어 보이지 않습니다.
+        if (!PreviewCoverage.IsCovered(previewPixels, previewPixelWidth, preview.X, preview.Y))
+        {
+            ShowHint();
+            return;
+        }
+
         PixelColorReading? displayed = PixelSampler.Read(
             previewPixels,
             previewPixelWidth,

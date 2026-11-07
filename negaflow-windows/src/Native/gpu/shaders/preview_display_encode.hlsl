@@ -25,12 +25,24 @@ cbuffer PreviewDisplayEncodeConstants : register(b0) {
     uint Rotation;
     uint Flips;
     uint2 Padding3;
+    // ── 원근(변환) ────────────────────────────────────────────────────────────
+    // CPU `perspective_warp`: 원근 출력 화소 중심 → 역호모그래피 → 방위 적용 좌표에서
+    // 이중선형(반 화소 이동, 가장자리 고정). 원본 밖은 흰색에 `UncoveredAlpha`.
+    float4 InverseRow0;
+    float4 InverseRow1;
+    float4 InverseRow2;
+    float2 PerspectiveOrigin;
+    uint2 OrientedExtent;
+    uint PerspectiveEnabled;
+    float UncoveredAlpha;
+    // 1 이면 알파에 커버리지를 씁니다(`PreviewTarget.coverage_alpha`). 0 이면 언제나 1.
+    uint CoverageAlpha;
+    uint Padding4;
 };
 
-// 목표 화소가 읽어야 할 원본 자리입니다. CPU `orient` 은 **출력에서 원본으로** 매핑하므로
-// 여기서도 같은 방향으로 씁니다.
-uint2 SourceCoordinate(uint2 destination) {
-    uint2 oriented = destination + CropOrigin;
+// 방위를 적용한 좌표의 한 화소가 원본의 어느 화소인가. CPU `orient` 은 **출력에서 원본으로**
+// 매핑하므로 여기서도 같은 방향으로 씁니다.
+uint2 OrientedToSource(uint2 oriented) {
     uint ox = oriented.x;
     uint oy = oriented.y;
     if (Rotation == 1u) {
@@ -50,6 +62,47 @@ uint2 SourceCoordinate(uint2 destination) {
         oy = SourceExtent.y - 1u - oy;
     }
     return uint2(ox, oy);
+}
+
+uint2 SourceCoordinate(uint2 destination) {
+    return OrientedToSource(destination + CropOrigin);
+}
+
+float4 ReadOriented(uint2 oriented) {
+    return Source[OrientedToSource(oriented)];
+}
+
+// 목표 화소의 값. 원근이 없으면 자리 옮김뿐이고, 있으면 CPU `perspective_warp` 와 같은 식으로
+// 이중선형으로 읽습니다.
+float4 SampleDestination(uint2 destination) {
+    float4 result = float4(1.0, 1.0, 1.0, UncoveredAlpha);
+    if (PerspectiveEnabled == 0u) {
+        result = Source[SourceCoordinate(destination)];
+    } else {
+        float3 canvas = float3(PerspectiveOrigin + float2(destination + CropOrigin) + 0.5, 1.0);
+        float z = dot(InverseRow2.xyz, canvas);
+        float2 extent = float2(OrientedExtent);
+        float2 mapped = float2(-1.0, -1.0);
+        if (abs(z) > 1e-12) {
+            mapped = float2(dot(InverseRow0.xyz, canvas), dot(InverseRow1.xyz, canvas)) / z;
+        }
+        bool inside = !any(isnan(mapped)) && !any(isinf(mapped)) &&
+            mapped.x >= 0.0 && mapped.y >= 0.0 && mapped.x <= extent.x && mapped.y <= extent.y;
+        if (inside) {
+            float2 c = clamp(mapped - 0.5, float2(0.0, 0.0), extent - 1.0);
+            uint2 p0 = uint2(floor(c));
+            uint2 p1 = min(p0 + 1u, OrientedExtent - 1u);
+            float2 t = c - float2(p0);
+            float4 a = ReadOriented(p0);
+            float4 b = ReadOriented(uint2(p1.x, p0.y));
+            float4 d0 = ReadOriented(uint2(p0.x, p1.y));
+            float4 d1 = ReadOriented(p1);
+            float4 top = a + (b - a) * t.x;
+            float4 bottom = d0 + (d1 - d0) * t.x;
+            result = top + (bottom - top) * t.y;
+        }
+    }
+    return result;
 }
 
 float3 ToneSafeUnitRGB(float3 rgb) {
@@ -87,7 +140,7 @@ void PreviewDisplayEncodeMain(uint3 id : SV_DispatchThreadID) {
     }
     // 디더는 **목표 좌표**로 뽑습니다(`write_preview` 와 같음). 읽는 자리만 바뀌고
     // 디더 무늬는 화면 좌표에 붙어 있어야 합니다.
-    float4 source = Source[SourceCoordinate(id.xy)];
+    float4 source = SampleDestination(id.xy);
     float3 folded = ToneSafeUnitRGB(source.rgb);
     float encodedR = LinearToSrgbEncoded((folded.r * ProofScale.x) + ProofBias.x);
     float encodedG = LinearToSrgbEncoded((folded.g * ProofScale.y) + ProofBias.y);
@@ -95,6 +148,7 @@ void PreviewDisplayEncodeMain(uint3 id : SV_DispatchThreadID) {
     encodedR = saturate(encodedR + display_dither_offset(id.x, id.y, 0u));
     encodedG = saturate(encodedG + display_dither_offset(id.x, id.y, 1u));
     encodedB = saturate(encodedB + display_dither_offset(id.x, id.y, 2u));
-    // XAML / `write_preview` BGRA8.
-    DestBgra[id.xy] = float4(encodedB, encodedG, encodedR, 1.0);
+    // XAML / `write_preview` BGRA8. 커버리지를 실을 때는 `write_preview` 처럼 알파에 씁니다.
+    float alpha = CoverageAlpha != 0u ? saturate(source.a) : 1.0;
+    DestBgra[id.xy] = float4(encodedB, encodedG, encodedR, alpha);
 }

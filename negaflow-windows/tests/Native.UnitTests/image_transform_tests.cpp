@@ -229,6 +229,42 @@ void test_gather_refuses_straighten() {
     expect(
         !negaflow::imaging::plan_image_transform_gather(parameters, 64U, 48U, gather),
         "straighten is bilinear and must fall back to the CPU transform");
+    parameters.perspective.active = true;
+    parameters.perspective.vertical = 20.0;
+    expect(
+        !negaflow::imaging::plan_image_transform_gather(parameters, 64U, 48U, gather),
+        "perspective plus straighten reads twice on the CPU and must not be planned as one read");
+}
+
+// 원근만 있으면 발행 커널이 한 번 읽기로 처리합니다. 출력 크기와 자르기 자리가 CPU 와 같아야
+// 합니다(자르기 제한으로 출력 사각형이 줄어드는 경우 포함).
+void test_gather_plans_perspective_like_the_cpu() {
+    negaflow::imaging::WorkingImage image{};
+    image.width = 300U;
+    image.height = 200U;
+    image.stride_pixels = image.width;
+    image.pixels.assign(static_cast<std::size_t>(image.width) * image.height, {0.3F, 0.4F, 0.5F, 1.0F});
+    for (const bool constrain : {false, true}) {
+        negaflow::imaging::ImageTransformParameters parameters{};
+        parameters.rotation = negaflow::imaging::ImageRotation::degrees_270;
+        parameters.flip_vertical = true;
+        parameters.has_crop = true;
+        parameters.crop = {0.1, 0.05, 0.8, 0.9};
+        parameters.perspective.active = true;
+        parameters.perspective.vertical = 25.0;
+        parameters.perspective.constrain_crop = constrain;
+        negaflow::imaging::ImageTransformGather gather{};
+        const bool planned = negaflow::imaging::plan_image_transform_gather(
+            parameters, image.width, image.height, gather);
+        const auto applied = negaflow::imaging::apply_image_transform(image, parameters);
+        expect(planned && gather.perspective, "a perspective-only transform plans a gather");
+        expect(applied.status == negaflow::imaging::ImageTransformStatus::ok &&
+                   gather.output_width == applied.image.width &&
+                   gather.output_height == applied.image.height,
+               "the perspective gather agrees with the CPU extent");
+        expect(gather.oriented_width == image.height && gather.oriented_height == image.width,
+               "the perspective is solved on the oriented image");
+    }
 }
 
 // 변환(원근)을 걸어도 그림 중심은 프레임 가운데에 남고, 정·역 호모그래피가 서로의 역입니다.
@@ -267,6 +303,42 @@ void test_perspective_keeps_center_and_round_trips() {
            "identity perspective leaves the image alone");
 }
 
+// 원근 보정의 빈 곳: 내보내기는 불투명 흰색, 프리뷰는 같은 흰색에 커버리지 0 — 사진 부분은 같습니다.
+void test_perspective_uncovered_fill() {
+    negaflow::imaging::WorkingImage image{};
+    image.width = 240U;
+    image.height = 160U;
+    image.stride_pixels = image.width;
+    image.pixels.assign(static_cast<std::size_t>(image.width) * image.height, {0.2F, 0.3F, 0.4F, 1.0F});
+    negaflow::imaging::ImageTransformParameters parameters{};
+    parameters.perspective.active = true;
+    parameters.perspective.vertical = 40.0;
+    expect(negaflow::imaging::perspective_leaves_uncovered_area(parameters.perspective),
+           "an unconstrained perspective leaves an uncovered area");
+    const auto opaque = negaflow::imaging::apply_image_transform(image, parameters);
+    parameters.uncovered_fill = negaflow::imaging::UncoveredFill::white_without_coverage;
+    const auto preview = negaflow::imaging::apply_image_transform(image, parameters);
+    expect(opaque.status == negaflow::imaging::ImageTransformStatus::ok &&
+               preview.status == negaflow::imaging::ImageTransformStatus::ok &&
+               opaque.image.width == image.width && preview.image.height == image.height,
+           "both fills keep the canvas size");
+    // 위가 넓어지면 아래 모서리가 빕니다(행 0 = 위).
+    const std::size_t bottom_left = static_cast<std::size_t>(image.height - 1U) * image.width;
+    const std::size_t center = static_cast<std::size_t>(image.height / 2U) * image.width + image.width / 2U;
+    const auto& opaque_corner = opaque.image.pixels[bottom_left];
+    const auto& preview_corner = preview.image.pixels[bottom_left];
+    expect(opaque_corner.red == 1.0F && opaque_corner.alpha == 1.0F,
+           "export fill is opaque white");
+    expect(preview_corner.red == 1.0F && preview_corner.alpha == 0.0F,
+           "preview fill is white without coverage");
+    expect(std::abs(preview.image.pixels[center].blue - opaque.image.pixels[center].blue) < 1.0e-6F &&
+               preview.image.pixels[center].alpha == 1.0F,
+           "photo pixels do not depend on the fill");
+    parameters.perspective.constrain_crop = true;
+    expect(!negaflow::imaging::perspective_leaves_uncovered_area(parameters.perspective),
+           "constrain crop leaves no uncovered area");
+}
+
 } // namespace
 
 int main() {
@@ -276,7 +348,9 @@ int main() {
     test_positive_straighten_rotates_clockwise();
     test_gather_matches_apply_for_every_orientation();
     test_gather_refuses_straighten();
+    test_gather_plans_perspective_like_the_cpu();
     test_perspective_keeps_center_and_round_trips();
+    test_perspective_uncovered_fill();
     if (failures == 0) {
         std::cout << "image transform tests passed\n";
     }

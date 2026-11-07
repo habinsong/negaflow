@@ -173,7 +173,7 @@ extension DevelopFrameRenderer {
             )
             let previewImage = snapshot.imageTransform.isIdentity
                 ? baseImage
-                : ImageTransformStage.apply(to: baseImage, transform: snapshot.imageTransform)
+                : ImageTransformStage.apply(to: baseImage, transform: snapshot.imageTransform, fill: .transparent)
             guard let previewCG = renderDisplayCGImage(
                 previewImage,
                 context: context,
@@ -235,7 +235,9 @@ extension DevelopFrameRenderer {
         if snapshot.imageTransform.isIdentity {
             return (baseCG, baseCG)
         }
-        let transformedImage = ImageTransformStage.apply(to: baseImage, transform: snapshot.imageTransform)
+        let transformedImage = ImageTransformStage.apply(
+            to: baseImage, transform: snapshot.imageTransform, fill: .transparent
+        )
         guard let transformedCG = renderDisplayCGImage(
             transformedImage,
             context: context,
@@ -280,7 +282,9 @@ extension DevelopFrameRenderer {
         if snapshot.imageTransform.isIdentity {
             return (baseCG, baseCG)
         }
-        let transformedImage = ImageTransformStage.apply(to: baseImage, transform: snapshot.imageTransform)
+        let transformedImage = ImageTransformStage.apply(
+            to: baseImage, transform: snapshot.imageTransform, fill: .transparent
+        )
         guard let transformedCG = renderDisplayCGImage(
             transformedImage,
             context: context,

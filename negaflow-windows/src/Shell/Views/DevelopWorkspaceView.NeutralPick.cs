@@ -27,7 +27,7 @@ public sealed partial class DevelopWorkspaceView
         }
         args.Handled = true;
         // 베이스 스포이드와 같은 역변환입니다 — 미세 회전까지 원본 정규 좌표로 되돌립니다.
-        if (!DevelopDisplayGeometry.TryMapDisplayToRaw(
+        if (!DevelopDisplayGeometry.TryMapDisplayToCoveredRaw(
                 frame.ImageTransform,
                 metadata.PixelWidth,
                 metadata.PixelHeight,

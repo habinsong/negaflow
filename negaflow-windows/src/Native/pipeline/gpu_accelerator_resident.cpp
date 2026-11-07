@@ -158,7 +158,8 @@ bool GpuAccelerator::try_encode_preview_bgra(
     const std::uint32_t destination_stride_bytes,
     const float proof_scale[3],
     const float proof_bias[3],
-    const imaging::ImageTransformGather* const gather) noexcept {
+    const imaging::ImageTransformGather* const gather,
+    const bool coverage_alpha) noexcept {
     if (!available() || pixels == nullptr || destination == nullptr ||
         proof_scale == nullptr || proof_bias == nullptr) {
         return false;
@@ -192,7 +193,8 @@ bool GpuAccelerator::try_encode_preview_bgra(
             destination_stride_bytes,
             proof_scale,
             proof_bias,
-            gather) != gpu::GpuKernelStatus::ok) {
+            gather,
+            coverage_alpha) != gpu::GpuKernelStatus::ok) {
         return false;
     }
     // macOS `createCGImage(.RGBA8)` 가 그래프를 평가한 것과 같습니다. 호스트

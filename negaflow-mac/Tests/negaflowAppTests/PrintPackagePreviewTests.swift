@@ -261,7 +261,7 @@ final class PrintPackagePreviewTests: XCTestCase {
                 let frame = makeFrame(width: 80, height: 40, rotation: rotation, sourceKind: sourceKind)
                 frame.imageTransform.flipHorizontal = true
                 let transform = frame.imageTransform
-                let developed = ImageTransformStage.apply(to: source, transform: transform)
+                let developed = ImageTransformStage.apply(to: source, transform: transform, fill: .transparent)
                 let size = try XCTUnwrap(model.printPackageLayoutSize(for: frame))
                 XCTAssertEqual(size, developed.extent.size)
 

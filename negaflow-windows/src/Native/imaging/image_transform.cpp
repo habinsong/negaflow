@@ -172,16 +172,19 @@ namespace {
 }
 
 // 변환(원근). 출력 화소 중심을 역호모그래피로 원본에 되돌려 이중선형으로 읽고, 원본 밖이면
-// 흰색입니다 — macOS 는 CIPerspectiveTransform 결과를 흰 바탕에 겹칩니다.
+// 흰색입니다 — macOS 내보내기는 CIPerspectiveTransform 결과를 흰 바탕에 겹칩니다. 프리뷰는
+// 같은 흰색에 커버리지 0 을 싣습니다(`UncoveredFill`).
 [[nodiscard]] WorkingImage perspective_warp(
     const WorkingImage& source,
-    const PerspectiveMapping& mapping) {
+    const PerspectiveMapping& mapping,
+    const UncoveredFill fill) {
     const auto out_width = static_cast<std::uint32_t>(mapping.output_width);
     const auto out_height = static_cast<std::uint32_t>(mapping.output_height);
     WorkingImage output = packed_image(out_width, out_height);
     const double width = source.width;
     const double height = source.height;
-    const negaflow::core::Rgba32F white{1.0F, 1.0F, 1.0F, 1.0F};
+    const negaflow::core::Rgba32F white{
+        1.0F, 1.0F, 1.0F, fill == UncoveredFill::opaque_white ? 1.0F : 0.0F};
     negaflow::core::for_each_row_block(
         out_height,
         static_cast<std::uint64_t>(out_width) * out_height *
@@ -257,9 +260,8 @@ bool plan_image_transform_gather(
         source_height == 0U) {
         return false;
     }
-    // 기울이기와 원근은 이중선형이라 자리 옮김으로 적을 수 없습니다.
-    if (std::abs(parameters.straighten_angle) > 1.0e-4 ||
-        perspective_changes_geometry(parameters.perspective)) {
+    // 기울이기는 원근 뒤에 한 번 더 읽는 이중선형이라 한 번 읽기로 적을 수 없습니다.
+    if (std::abs(parameters.straighten_angle) > 1.0e-4) {
         return false;
     }
     const bool swap_dimensions =
@@ -273,15 +275,37 @@ bool plan_image_transform_gather(
     out.rotation = parameters.rotation;
     out.flip_horizontal = parameters.flip_horizontal;
     out.flip_vertical = parameters.flip_vertical;
-    out.output_width = oriented_width;
-    out.output_height = oriented_height;
+    out.oriented_width = oriented_width;
+    out.oriented_height = oriented_height;
+    out.uncovered_fill = parameters.uncovered_fill;
+    // 자르기 전 크기. 원근이 있으면 `apply_image_transform` 과 같은 매핑의 출력 크기입니다 —
+    // 그릴 수 없는 값이면(모서리가 카메라 뒤) CPU 처럼 그림을 그대로 둡니다.
+    std::uint32_t base_width = oriented_width;
+    std::uint32_t base_height = oriented_height;
+    if (perspective_changes_geometry(parameters.perspective)) {
+        if (const auto mapping = make_perspective_mapping(
+                parameters.perspective, oriented_width, oriented_height)) {
+            base_width = static_cast<std::uint32_t>(mapping->output_width);
+            base_height = static_cast<std::uint32_t>(mapping->output_height);
+            if (base_width == 0U || base_height == 0U) {
+                return false;
+            }
+            out.perspective = true;
+            out.perspective_parameters = parameters.perspective;
+            out.perspective_inverse = mapping->inverse;
+            out.perspective_left = mapping->output_left;
+            out.perspective_top = mapping->output_top;
+        }
+    }
+    out.output_width = base_width;
+    out.output_height = base_height;
     if (!parameters.has_crop) {
         return true;
     }
     // `crop_image` 와 **같은 식**이어야 합니다. 여기서 한 자리라도 다르면 프리뷰와
     // 내보내기가 다른 자리를 자릅니다.
-    const double width = oriented_width;
-    const double height = oriented_height;
+    const double width = base_width;
+    const double height = base_height;
     const auto left = static_cast<std::uint32_t>(std::floor(parameters.crop.x * width));
     const auto right = static_cast<std::uint32_t>(std::ceil(
         (parameters.crop.x + parameters.crop.width) * width));
@@ -289,12 +313,12 @@ bool plan_image_transform_gather(
         (1.0 - parameters.crop.y - parameters.crop.height) * height));
     const auto bottom = static_cast<std::uint32_t>(std::ceil(
         (1.0 - parameters.crop.y) * height));
-    const std::uint32_t clamped_left = std::min(left, oriented_width - 1U);
-    const std::uint32_t clamped_top = std::min(top, oriented_height - 1U);
+    const std::uint32_t clamped_left = std::min(left, base_width - 1U);
+    const std::uint32_t clamped_top = std::min(top, base_height - 1U);
     const std::uint32_t clamped_right =
-        std::clamp(right, clamped_left + 1U, oriented_width);
+        std::clamp(right, clamped_left + 1U, base_width);
     const std::uint32_t clamped_bottom =
-        std::clamp(bottom, clamped_top + 1U, oriented_height);
+        std::clamp(bottom, clamped_top + 1U, base_height);
     out.crop_left = clamped_left;
     out.crop_top = clamped_top;
     out.output_width = clamped_right - clamped_left;
@@ -362,7 +386,7 @@ ImageTransformResult apply_image_transform(
             // 그릴 수 없는 값이면(모서리가 카메라 뒤) 그림을 그대로 둡니다 — macOS 와 같습니다.
             if (const auto mapping = make_perspective_mapping(
                     parameters.perspective, image.width, image.height)) {
-                image = perspective_warp(image, *mapping);
+                image = perspective_warp(image, *mapping, parameters.uncovered_fill);
                 warped = true;
             }
         }

@@ -59,7 +59,7 @@ Neben Anwenden erscheinen ein Fortschrittsbalken, eine Prozentzahl, die Zahl der
 
 Der Bereich Transformieren liegt zwischen Kalibrierung und Details & Effekte. Aus lässt das Foto unverändert. Auto, Waagerecht, Vertikal und Voll suchen einmal nach geraden Linien im Foto und korrigieren sie. Waagerecht dreht nur, Vertikal richtet auch stürzende Linien auf, Voll korrigiert die vertikale und horizontale Perspektive. Auto macht dasselbe wie Voll, hält große Korrekturen aber zurück. Geführt folgt 2 bis 4 Hilfslinien, die Sie auf das Foto ziehen.
 
-Die Regler Vertikal, Horizontal, Drehen, Seitenverhältnis, Skalieren, X-Versatz und Y-Versatz kommen zu dem hinzu, was der Modus gefunden hat. Ein Doppelklick setzt einen Regler zurück. Zuschnitt begrenzen schneidet das Ergebnis auf das größte Rechteck ohne leere Ecken zu. Die Korrektur bleibt bei 90°-Drehungen und Spiegelungen erhalten, und Alle Anpassungen zurücksetzen löscht sie zusammen mit Beschnitt und Geraderichten.
+Die Regler Vertikal, Horizontal, Drehen, Seitenverhältnis, Skalieren, X-Versatz und Y-Versatz kommen zu dem hinzu, was der Modus gefunden hat. Ein Doppelklick setzt einen Regler zurück. Zuschnitt begrenzen schneidet das Ergebnis auf das größte Rechteck ohne leere Ecken zu. Ist es aus, sind die leeren Ecken am Bildschirm und in exportierten Dateien weiß. Histogramm, Clipping-Warnung, Auto-Ton und Auto-Weißabgleich zählen sie nicht zum Foto. Die Korrektur bleibt bei 90°-Drehungen und Spiegelungen erhalten, und Alle Anpassungen zurücksetzen löscht sie zusammen mit Beschnitt und Geraderichten.
 
 ## Vorgaben und Kopieren/Einfügen
 

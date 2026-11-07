@@ -112,8 +112,23 @@ extension CanvasView {
         CanvasBackgroundMenu()
     }
 
+    /// 원근 보정의 빈 곳은 화면용 그림에서 투명하다. 사진 밑에 흰 바탕을 깔아 내보내기(흰색)와 같게
+    /// 보이게 하고, 그 위에 겹치는 오버레이는 투명한 채로 둔다.
+    var showsUncoveredAreaBacking: Bool {
+        frame.imageTransform.perspective.leavesUncoveredArea
+            || (frame.developedPreviewTransform?.perspective.leavesUncoveredArea ?? false)
+            || (frame.rawPreviewTransform?.perspective.leavesUncoveredArea ?? false)
+    }
+
     @ViewBuilder
     func imageLayer(in imageFrame: CGRect) -> some View {
+        if showsUncoveredAreaBacking {
+            Color.white
+                .frame(width: imageFrame.width, height: imageFrame.height)
+                .position(x: imageFrame.midX, y: imageFrame.midY)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
         if let debugPreviewImage {
             fittedImage(debugPreviewImage, in: imageFrame)
                 .onTapGesture(count: 2) { resetViewport() }

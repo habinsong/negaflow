@@ -537,6 +537,126 @@ void deferred_transform_preview_matches_cpu() {
     }
 }
 
+// 변환(원근)도 발행 커널이 함께 처리합니다(`SampleDestination`). CPU `perspective_warp` 와 같은
+// 역호모그래피·같은 이중선형이지만 셈이 float 라 한두 단계 차이는 허용합니다. 빈 곳은 흰색에
+// 커버리지 0 이어야 하고, 그 자리가 CPU 와 어긋나면 안 됩니다(경계 화소 몇 개는 예외). 예전에는
+// 원근 하나로 상주 화상을 통째로 내려 CPU 로 와프·발행했습니다 — 내려받기가 BGRA 한 번이어야 합니다.
+void deferred_perspective_preview_stays_on_the_gpu() {
+    if (!GpuAccelerator::shared().available()) {
+        return;
+    }
+    negaflow::pipeline::install_gpu_kernel_accelerator();
+    negaflow::imaging::ImageTransformParameters parameters{};
+    parameters.rotation = negaflow::imaging::ImageRotation::degrees_90;
+    parameters.flip_horizontal = true;
+    parameters.has_crop = true;
+    parameters.crop = {0.01, 0.01, 0.98, 0.98};
+    parameters.perspective.active = true;
+    parameters.perspective.vertical = 30.0;
+    parameters.perspective.horizontal = -12.0;
+    parameters.uncovered_fill = negaflow::imaging::UncoveredFill::white_without_coverage;
+    negaflow::imaging::ImageTransformGather gather{};
+    expect(
+        negaflow::imaging::plan_image_transform_gather(parameters, width, height, gather) &&
+            gather.perspective,
+        "a perspective without straighten must plan a gather");
+
+    // CPU 기준: 반전 → 톤 → 변환 → 발행(커버리지).
+    WorkingImage source = make_image();
+    WorkingImage cpu = source;
+    const auto response = negaflow::core::color_negative_print_response();
+    const negaflow::core::NegativeInversionParameters invert_parameters{
+        {0.1910F, 0.0940F, 0.0711F}, {1.0F, 1.0F, 1.0F}};
+    const negaflow::core::ConstImageView cpu_in{
+        cpu.pixels.data(), cpu.pixels.size(), cpu.width, cpu.height, cpu.stride_pixels};
+    const negaflow::core::ImageView cpu_out{
+        cpu.pixels.data(), cpu.pixels.size(), cpu.width, cpu.height, cpu.stride_pixels};
+    expect(
+        negaflow::core::apply_negative_inversion(cpu_in, cpu_out, invert_parameters, response) ==
+            negaflow::core::KernelStatus::ok,
+        "CPU invert for the perspective preview must succeed");
+    WorkingToneAdjustParameters tone{};
+    tone.exposure_stops = 0.30F;
+    tone.basic.contrast = 0.20F;
+    auto cpu_tone = negaflow::imaging::apply_working_tone_adjustments(std::move(cpu), tone);
+    const auto cpu_applied =
+        negaflow::imaging::apply_image_transform(std::move(cpu_tone.image), parameters);
+    expect(
+        cpu_applied.status == negaflow::imaging::ImageTransformStatus::ok &&
+            cpu_applied.image.width == gather.output_width &&
+            cpu_applied.image.height == gather.output_height,
+        "the gather plan must agree with the CPU perspective extent");
+    std::vector<std::uint8_t> cpu_bgra(
+        static_cast<std::size_t>(gather.output_width) * gather.output_height * 4U, 0U);
+    negaflow::pipeline::develop_export_detail::PreviewTarget cpu_target{
+        gather.output_width, gather.output_height,
+        cpu_bgra.data(), cpu_bgra.size(), {}, false, true};
+    negaflow::pipeline::DevelopExportOutcome cpu_preview{};
+    cpu_preview = negaflow::pipeline::develop_export_detail::write_preview(
+        cpu_applied.image, cpu_target, cpu_preview);
+    expect(cpu_preview.succeeded, "the CPU perspective reference must succeed");
+
+    // GPU: 상주 반전 → 톤 → 변환을 미룬 발행.
+    WorkingImage gpu = source;
+    const float dmin[3] = {0.1910F, 0.0940F, 0.0711F};
+    const float dmax[3] = {1.0F, 1.0F, 1.0F};
+    const float response_values[4] = {
+        response.y_ceiling, response.amplitude, response.rate, response.shape};
+    std::vector<std::uint8_t> gpu_bgra(cpu_bgra.size(), 0U);
+    negaflow::pipeline::reset_gpu_host_transfer_stats();
+    {
+        negaflow::imaging::ApproximateAcceleratorScope approximate{};
+        negaflow::pipeline::GpuResidentScope resident{};
+        expect(
+            GpuAccelerator::shared().apply_negative_inversion(
+                reinterpret_cast<float*>(gpu.pixels.data()), gpu.width, gpu.height,
+                gpu.stride_pixels, dmin, dmax, response_values),
+            "GPU invert must make the perspective fixture resident");
+        const auto outcome = GpuAccelerator::shared().apply_working_tone_adjustments(
+            GpuUsePolicy::allowed, gpu, tone, {});
+        expect(outcome.handled, "GPU tone must run on the resident perspective fixture");
+        negaflow::pipeline::develop_export_detail::PreviewTarget gpu_target{
+            gather.output_width, gather.output_height,
+            gpu_bgra.data(), gpu_bgra.size(), {}, false, true};
+        negaflow::pipeline::DevelopExportOutcome gpu_preview{};
+        gpu_preview = negaflow::pipeline::develop_export_detail::write_preview(
+            gpu, gpu_target, gpu_preview, &gather);
+        expect(gpu_preview.succeeded, "the deferred perspective publish must succeed");
+    }
+    const auto stats = negaflow::pipeline::gpu_host_transfer_stats();
+    const auto output = static_cast<std::uint64_t>(gather.output_width) * gather.output_height;
+    expect(stats.downloads == 1U && stats.downloaded_bytes == output * 4ULL,
+           "a perspective preview must stay on the GPU (only the BGRA result comes down)");
+
+    int worst = 0;
+    std::size_t coverage_mismatch = 0U, uncovered = 0U;
+    for (std::size_t index = 0U; index < cpu_bgra.size(); index += 4U) {
+        const bool cpu_covered = cpu_bgra[index + 3U] != 0U;
+        const bool gpu_covered = gpu_bgra[index + 3U] != 0U;
+        uncovered += cpu_covered ? 0U : 1U;
+        if (cpu_covered != gpu_covered) {
+            ++coverage_mismatch;
+            continue;
+        }
+        for (std::size_t channel = 0U; channel < 4U; ++channel) {
+            worst = std::max(worst, std::abs(static_cast<int>(cpu_bgra[index + channel]) -
+                                             static_cast<int>(gpu_bgra[index + channel])));
+        }
+    }
+    const std::size_t pixels = cpu_bgra.size() / 4U;
+    expect(uncovered > pixels / 50U, "the fixture perspective must leave an uncovered area");
+    if (worst > 2 || coverage_mismatch > pixels / 1000U + 2U) {
+        std::cerr << "FAIL: deferred perspective BGRA max code delta " << worst
+                  << " coverage mismatches " << coverage_mismatch << " downloads=" << stats.downloads
+                  << " bytes=" << stats.downloaded_bytes << '\n';
+        ++failures;
+    } else {
+        std::cout << "[gpu] deferred perspective BGRA max code delta " << worst
+                  << " coverage mismatches " << coverage_mismatch << " of " << pixels
+                  << " uncovered " << uncovered << " downloads=" << stats.downloads << '\n';
+    }
+}
+
 void denoise_below_threshold_is_a_pass_through() {
     FilmScanDenoiseParameters parameters{};
     parameters.strength = 0.0005F; // 임계 1e-3 아래.
@@ -737,6 +857,7 @@ int main() {
     scene_corrections_match_on_hardware_and_warp();
     scene_neutral_balance_runs_on_gpu();
     deferred_transform_preview_matches_cpu();
+    deferred_perspective_preview_stays_on_the_gpu();
 
     if (failures != 0) {
         std::cerr << failures << " gpu accelerator check(s) failed\n";

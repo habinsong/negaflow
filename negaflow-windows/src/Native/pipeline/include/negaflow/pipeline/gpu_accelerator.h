@@ -131,7 +131,8 @@ public:
         std::uint32_t destination_stride_bytes,
         const float proof_scale[3],
         const float proof_bias[3],
-        const imaging::ImageTransformGather* gather = nullptr) noexcept;
+        const imaging::ImageTransformGather* gather = nullptr,
+        bool coverage_alpha = false) noexcept;
     // 어떤 장치를 잡았는지. 없으면 빈 문자열입니다. 진단·로그용입니다.
     [[nodiscard]] const char* adapter_description() const noexcept;
 

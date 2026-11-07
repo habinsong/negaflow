@@ -55,7 +55,10 @@ std::optional<DevelopExportOutcome> apply_finish_stages(
     }
     // 프리뷰에서만, 그리고 **뒤에 아무 단계도 없을 때만** 기하 변환을 발행으로 미룹니다.
     // 샤픈이나 긴 변 캡이 걸려 있으면 순서가 달라져 다른 사진이 됩니다.
-    // 기울이기는 이중선형이라 `plan_image_transform_gather` 가 거부합니다.
+    // 기울이기는 원근 뒤에 한 번 더 읽는 이중선형이라 `plan_image_transform_gather` 가 거부합니다.
+    // 원근만 있으면 미룹니다 — 예전에는 원근 하나로 상주 화상을 통째로 내려 CPU 로 와프·발행했습니다.
+    negaflow::imaging::ImageTransformParameters preview_transform = request.image_transform;
+    preview_transform.uncovered_fill = negaflow::imaging::UncoveredFill::white_without_coverage;
     const bool sharpen_identity =
         request.output_sharpening.strength <=
         negaflow::imaging::texture_stage_identity_threshold;
@@ -63,7 +66,7 @@ std::optional<DevelopExportOutcome> apply_finish_stages(
         preview != nullptr && detect == nullptr && sharpen_identity &&
         !image_transform_is_identity(request.image_transform) &&
         negaflow::imaging::plan_image_transform_gather(
-            request.image_transform,
+            preview_transform,
             grain_image.width,
             grain_image.height,
             out.deferred_transform);
@@ -255,9 +258,11 @@ std::optional<DevelopExportOutcome> apply_finish_stages(
     }
 
     tracker.begin(DevelopExportStage::image_transform, cost_of(transform_cost, true));
+    // 프리뷰는 원근 보정의 빈 곳에 커버리지 0 을 싣습니다(표시는 지금처럼 흰색). 내보내기·검출은
+    // 불투명한 흰색 그대로입니다 — 알파를 담는 형식에 구멍이 나지 않습니다.
     auto image_transform = negaflow::imaging::apply_image_transform(
         std::move(black_and_white.image),
-        request.image_transform);
+        preview != nullptr ? preview_transform : request.image_transform);
     if (image_transform.status != negaflow::imaging::ImageTransformStatus::ok) {
         return fail(
             DevelopExportStage::image_transform,

@@ -59,7 +59,7 @@ Open Geometry → Crop on the right of Develop. Hold ⌘ (Ctrl on Windows), drag
 
 The Transform section sits between Calibration and Detail & Effects. Off leaves the photo alone. Auto, Level, Vertical and Full look for straight lines in the photo once and correct them. Level only turns the photo, Vertical also straightens converging verticals, and Full corrects vertical and horizontal perspective. Auto does what Full does but holds back large corrections. Guided follows 2 to 4 guides that you draw on the photo.
 
-The Vertical, Horizontal, Rotate, Aspect, Scale, X Offset and Y Offset sliders add to what the mode found. Double-click a slider to reset it. Constrain Crop trims the result to the largest rectangle with no empty corners. The correction survives 90° turns and flips, and Reset All Adjustments clears it together with crop and straighten.
+The Vertical, Horizontal, Rotate, Aspect, Scale, X Offset and Y Offset sliders add to what the mode found. Double-click a slider to reset it. Constrain Crop trims the result to the largest rectangle with no empty corners. With it off, the empty corners are white on screen and in exported files. The histogram, clipping warnings, Auto Tone and Auto White Balance leave them out. The correction survives 90° turns and flips, and Reset All Adjustments clears it together with crop and straighten.
 
 ## Presets and copy/paste
 

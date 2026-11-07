@@ -108,11 +108,13 @@ final class TransformFastPathTests: XCTestCase {
 
         let cropped = ImageTransformStage.apply(
             to: CIImage(cgImage: source),
-            transform: ImageTransform(cropRect: crop)
+            transform: ImageTransform(cropRect: crop),
+            fill: .transparent
         )
         let expected = ImageTransformStage.apply(
             to: cropped,
-            transform: ImageTransform(flipHorizontal: true)
+            transform: ImageTransform(flipHorizontal: true),
+            fill: .transparent
         )
 
         model.flipHorizontally(frame)
@@ -120,7 +122,8 @@ final class TransformFastPathTests: XCTestCase {
 
         let actual = ImageTransformStage.apply(
             to: CIImage(cgImage: source),
-            transform: frame.imageTransform
+            transform: frame.imageTransform,
+            fill: .transparent
         )
         XCTAssertEqual(actual.extent, expected.extent)
         XCTAssertEqual(Self.rgbaBytes(actual), Self.rgbaBytes(expected))
@@ -137,11 +140,13 @@ final class TransformFastPathTests: XCTestCase {
 
         let cropped = ImageTransformStage.apply(
             to: CIImage(cgImage: source),
-            transform: ImageTransform(cropRect: crop)
+            transform: ImageTransform(cropRect: crop),
+            fill: .transparent
         )
         let expected = ImageTransformStage.apply(
             to: cropped,
-            transform: ImageTransform(flipVertical: true)
+            transform: ImageTransform(flipVertical: true),
+            fill: .transparent
         )
 
         model.flipVertically(frame)
@@ -149,7 +154,8 @@ final class TransformFastPathTests: XCTestCase {
 
         let actual = ImageTransformStage.apply(
             to: CIImage(cgImage: source),
-            transform: frame.imageTransform
+            transform: frame.imageTransform,
+            fill: .transparent
         )
         XCTAssertEqual(actual.extent, expected.extent)
         XCTAssertEqual(Self.rgbaBytes(actual), Self.rgbaBytes(expected))
@@ -223,11 +229,13 @@ final class TransformFastPathTests: XCTestCase {
 
         let cropped = ImageTransformStage.apply(
             to: CIImage(cgImage: source),
-            transform: ImageTransform(cropRect: crop)
+            transform: ImageTransform(cropRect: crop),
+            fill: .transparent
         )
         let expected = ImageTransformStage.apply(
             to: cropped,
-            transform: ImageTransform(rotation: clockwise ? .deg90 : .deg270)
+            transform: ImageTransform(rotation: clockwise ? .deg90 : .deg270),
+            fill: .transparent
         )
 
         model.rotate(frame, clockwise: clockwise)
@@ -235,7 +243,8 @@ final class TransformFastPathTests: XCTestCase {
 
         let actual = ImageTransformStage.apply(
             to: CIImage(cgImage: source),
-            transform: frame.imageTransform
+            transform: frame.imageTransform,
+            fill: .transparent
         )
         let cropAspect = try XCTUnwrap(frame.imageTransform.cropAspect)
         XCTAssertEqual(cropAspect, 3.0 / 4.0, accuracy: 1e-12, line: line)
@@ -265,13 +274,15 @@ final class TransformFastPathTests: XCTestCase {
         // 기대 = "지금 화면에 보이는 그림"을 그 축으로 뒤집은 결과.
         let onScreen = ImageTransformStage.apply(
             to: CIImage(cgImage: source),
-            transform: ImageTransform(rotation: rotation)
+            transform: ImageTransform(rotation: rotation),
+            fill: .transparent
         )
         let expected = ImageTransformStage.apply(
             to: onScreen,
             transform: horizontal
                 ? ImageTransform(flipHorizontal: true)
-                : ImageTransform(flipVertical: true)
+                : ImageTransform(flipVertical: true),
+            fill: .transparent
         )
 
         if horizontal { model.flipHorizontally(frame) } else { model.flipVertically(frame) }
@@ -279,7 +290,8 @@ final class TransformFastPathTests: XCTestCase {
 
         let actual = ImageTransformStage.apply(
             to: CIImage(cgImage: source),
-            transform: frame.imageTransform
+            transform: frame.imageTransform,
+            fill: .transparent
         )
         XCTAssertEqual(actual.extent, expected.extent, line: line)
         XCTAssertEqual(Self.rgbaBytes(actual), Self.rgbaBytes(expected),
