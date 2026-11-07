@@ -273,6 +273,11 @@ final class DevelopSettingsTransferTests: XCTestCase {
         model.copyDevelopSettings(from: frames[0])
         model.pasteDevelopSettings(to: frames[1])
         await model.sequentialLibraryDevelopmentTask?.value
+        // 붙여넣기가 부른 현상은 같은 프레임이 이미 현상 중이면 리비전만 올리고 돌아온다(코얼레싱).
+        // 순차 작업이 끝나도 먼저 돌던 현상이 최신 값으로 다시 그리는 중일 수 있으니 그것까지 기다린다.
+        try await waitUntil("붙여넣은 프레임의 현상 완료", timeout: 30) {
+            frames.allSatisfy { !model.developController.isDevelopingFrame($0) }
+        }
         for (index, frame) in frames.dropFirst().enumerated() {
             XCTAssertEqual(frame.params, frames[0].params)
             let image = try XCTUnwrap(frame.cachedDevelopedBase)
@@ -289,6 +294,11 @@ final class DevelopSettingsTransferTests: XCTestCase {
         }
         model.performUndo()
         await model.sequentialLibraryDevelopmentTask?.value
+        // 붙여넣기가 부른 현상은 같은 프레임이 이미 현상 중이면 리비전만 올리고 돌아온다(코얼레싱).
+        // 순차 작업이 끝나도 먼저 돌던 현상이 최신 값으로 다시 그리는 중일 수 있으니 그것까지 기다린다.
+        try await waitUntil("붙여넣은 프레임의 현상 완료", timeout: 30) {
+            frames.allSatisfy { !model.developController.isDevelopingFrame($0) }
+        }
         for (index, frame) in frames.dropFirst().enumerated() {
             XCTAssertEqual(frame.params.exposure, -0.5)
             XCTAssertEqual(frame.imageTransform.rotation, .deg90)
@@ -296,6 +306,11 @@ final class DevelopSettingsTransferTests: XCTestCase {
         }
         model.performRedo()
         await model.sequentialLibraryDevelopmentTask?.value
+        // 붙여넣기가 부른 현상은 같은 프레임이 이미 현상 중이면 리비전만 올리고 돌아온다(코얼레싱).
+        // 순차 작업이 끝나도 먼저 돌던 현상이 최신 값으로 다시 그리는 중일 수 있으니 그것까지 기다린다.
+        try await waitUntil("붙여넣은 프레임의 현상 완료", timeout: 30) {
+            frames.allSatisfy { !model.developController.isDevelopingFrame($0) }
+        }
         for frame in frames.dropFirst() { XCTAssertEqual(frame.params, frames[0].params) }
     }
 
