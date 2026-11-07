@@ -2,7 +2,7 @@
 
 [Docs home](../README.md)
 
-Color accuracy checks require measurements, not visual inspection alone. An IT8 image is paired with the reference file for its physical target, and numerical results are recorded for every patch.
+Color accuracy needs measurements, not visual inspection alone. An IT8 image is paired with the reference file for its physical target, and numerical results are recorded for every patch.
 
 > [!IMPORTANT]
 > Public IT8 material can confirm regressions in the checker and the color math. It cannot prove the accuracy of a real scanner or of color negative film. Judging a device needs a confirmed physical target and real measurements from that device.
@@ -15,15 +15,15 @@ Color accuracy checks require measurements, not visual inspection alone. An IT8 
 | `deviceCharacterization` | A confirmed physical target measured on a real device | Accuracy of another target or device |
 | `syntheticModel` | The mathematical round trip of an independent synthetic model | Real film or device accuracy |
 
-`deviceCharacterization` needs the manufacturer, material, serial, and batch of the physical target. If even one of them differs from the reference file header, nothing is evaluated.
+`deviceCharacterization` needs the manufacturer, material, serial and batch of the physical target. If one differs from the reference file header, nothing is evaluated.
 
-IT8.7/1 and ISO 12641-1 transmissive targets are for positive transmissive originals. These results say nothing about the orange mask of color negative, dye interaction, C-41 variation, or NORITSU/FUJI output accuracy. Those claims need paired material of the same color negative run through both paths, plus a separate validation set.
+IT8.7/1 and ISO 12641-1 transmissive targets are for positive transmissive originals. Their results say nothing about the orange mask of color negative, dye interaction, C-41 variation or HS and SP output accuracy. Those claims need paired material of the same color negative run through both paths, plus a separate validation set.
 
-The public FADGI OpenDICE image/reference pair was measured across 264 patches: median ΔE00 9.8815, p95 13.2745, maximum 15.5996. An independent LittleCMS conversion differed from the evaluator by at most 0.105 Lab units. These observations do not pass a film-accuracy gate: this is a positive IT8 scan, its physical serial is unverified, and no negative camera/light/film measurement is attached.
+The public FADGI OpenDICE image/reference pair was measured across 264 patches: median ΔE00 9.8815, p95 13.2745, maximum 15.5996. An independent LittleCMS conversion differed from the evaluator by at most 0.105 Lab units. These observations do not pass a film-accuracy gate: the scan is a positive IT8, its physical serial is unverified, and no negative camera, light and film measurement is attached.
 
-Public negative datasets were also checked. The FADGI negative references contain density only, not measured color patches. BlueNeg labels its restored references pseudo ground truth. The 2024 ARRI AQUA spectrophotometer study makes its data available on request, not as an open download. None supplies an independent scene-color reference for the current inversion.
+Public negative datasets were checked too. The FADGI negative references hold density only, not measured color patches. BlueNeg labels its restored references pseudo ground truth. The 2024 ARRI AQUA spectrophotometer study offers its data on request, not as an open download. None supplies an independent scene-color reference for the current inversion.
 
-A [public Kodak ColorPlus 200 exposure series](https://discuss.pixls.us/t/any-interest-in-a-film-negative-feature-in-rt/12569/262) supplied five Sony ILCE-7 RAW scans from −1 to +3 EV. The chart label identifies a Grey White Balance Colour Card, so X-Rite reference values were rejected. None of the 120 sampled patch regions reached zero or full scale in the decoded camera RGB. This is a decoded-signal check, not a direct sensor-mosaic measurement or a color-accuracy result. The embedded JPEG preview includes camera white balance. Without measured references for that chart and the scanning setup, output casts cannot be assigned to the input or the application. The files remain outside the repository and application because redistribution rights have not been established.
+A [public Kodak ColorPlus 200 exposure series](https://discuss.pixls.us/t/any-interest-in-a-film-negative-feature-in-rt/12569/262) (five Sony ILCE-7 RAW scans, −1 to +3 EV) was examined as well. Its chart is a Grey White Balance Colour Card, so X-Rite reference values were rejected. None of the 120 sampled patch regions reached zero or full scale in decoded camera RGB. That is a decoded-signal check, not a sensor-mosaic measurement or a color-accuracy result. Without measured references for the chart and the scanning setup, output casts cannot be assigned to the input or to the application. The files stay outside the repository because redistribution rights are not established.
 
 [FADGI](https://www.digitizationguidelines.gov/guidelines/digitize-OpenDice.html) · [BlueNeg](https://huggingface.co/datasets/ttgroup/blueneg-release) · [Plutino 2024](https://doi.org/10.1002/col.22946)
 
@@ -41,10 +41,10 @@ These two FADGI/OpenDICE files are used as a pair.
   - Patches: 264 Lab values from `A1` to `L22`
   - Column 16: density
 
-Redistribution rights are not confirmed, so the files stay out of the repository and the app. You download them yourself and point the [example manifest](IT8_FADGI_OPENDICE.example.json) at them. The grade in that example is `algorithmRegression`. Renaming it to `deviceCharacterization` gets it refused by the checker.
+Redistribution rights are not confirmed, so the files stay out of the repository and the app. Download them yourself and point the [example manifest](IT8_FADGI_OPENDICE.example.json) at them. Its grade is `algorithmRegression`, and renaming it to `deviceCharacterization` makes the checker refuse it. Run from `negaflow-mac/`:
 
 ```bash
-swift run negaflow it8-bench docs/reference/IT8_FADGI_OPENDICE.example.json \
+swift run negaflow it8-bench ../docs/reference/IT8_FADGI_OPENDICE.example.json \
   --image /path/to/IT8-7.1.tif \
   --reference /path/to/Profile_IT8-7.1.txt \
   --out /path/to/it8-report.json
@@ -52,16 +52,14 @@ swift run negaflow it8-bench docs/reference/IT8_FADGI_OPENDICE.example.json \
 
 ## Measurement rules
 
-- If the SHA-256 of the image, the reference file, or the chosen ICC differs from the manifest, it stops.
-- Report v2 also records the SHA-256 of the manifest text itself.
+- If the SHA-256 of the image, the reference file or the chosen ICC differs from the manifest, the run stops.
+- Report v2 also records the SHA-256 of the manifest text.
 - `A01` and `A1` read the same coordinates, and the original ID stays in the report.
-- The middle 60% of each patch in the 22 by 12 grid is read at source resolution in floating point.
-- Patch order is rows `A`–`L`, columns `1`–`22`.
+- The middle 60% of each patch in the 22 by 12 grid is read at source resolution in floating point, in rows `A`–`L` and columns `1`–`22`.
 - The embedded ICC is respected.
 - The math runs linear sRGB D65 to XYZ, Bradford D50 adaptation, then Lab D50/2°.
-- Each patch records its area, pixel count, RGB mean and standard deviation, clipped ratio at both ends, non-finite count, reference and measured Lab, L/a/b differences, and CIEDE2000.
-- Median, p95, and max are observations, not a pass mark.
-- No average threshold is invented without grounds, and `qualityDecision` stays `notEvaluated`.
+- Each patch records its area, pixel count, RGB mean and standard deviation, clipped ratio at both ends, non-finite count, reference and measured Lab, L/a/b differences and CIEDE2000.
+- Median, p95 and max are observations, not a pass mark. No average threshold is invented, and `qualityDecision` stays `notEvaluated`.
 - A target used to fit a profile is not reused for independent validation.
 
 ### Physical target details
@@ -89,21 +87,21 @@ For a real device measurement, the operator reads these off the target label and
 
 </details>
 
-`MANUFACTURER`, `MATERIAL`, `SERIAL`, and the batch header (one of `BATCH`, `BATCH_ID`, `PROD_DATE`) have to match the reference file character for character. The top-level `targetID` has to equal `serial`, and `batchID` has to equal `batchValue`.
+`MANUFACTURER`, `MATERIAL`, `SERIAL` and the batch header (one of `BATCH`, `BATCH_ID`, `PROD_DATE`) have to match the reference file character for character. The top-level `targetID` has to equal `serial`, and `batchID` has to equal `batchValue`.
 
-This record only shows that what the operator wrote and the reference file agree. It does not read the label from the image or independently certify the operator's input. When the details are missing, the nearest date or a generic reference file is not substituted.
+This record only shows that what the operator wrote and the reference file agree. It does not read the label from the image or certify the operator's input. When details are missing, the nearest date or a generic reference file is not substituted.
 
-If the reference file carries illuminant or observer information, it is checked against the D50/2° contract. A contradiction stops the run. `measurement.renderingIntent` cannot pin the Core Image conversion directly today, so the report says `manifestDeclarationNotControlledByEvaluator`.
+If the reference file carries illuminant or observer information, it is checked against the D50/2° contract, and a contradiction stops the run. `measurement.renderingIntent` cannot pin the Core Image conversion directly today, so the report says `manifestDeclarationNotControlledByEvaluator`.
 
 ## `PRINT` output
 
-IT8.7/1 is for input devices. Printer output needs an RGB printer ICC built from real measurements of the `printer + paper + ink/chemistry + driver/process condition` combination.
+IT8.7/1 is for input devices. Printer output needs an RGB printer ICC built from real measurements of the printer, paper, ink or chemistry, and driver or process condition together.
 
 Order of checks and use:
 
-1. Confirm the ICC size, `prtr` device class, `RGB ` data space, Lab/XYZ PCS, and the `acsp` signature.
+1. Confirm the ICC size, `prtr` device class, `RGB ` data space, Lab/XYZ PCS and the `acsp` signature.
 2. Confirm that ColorSync can convert in both directions.
-3. On selection, pin the profile name, bytes, and SHA-256.
+3. On selection, pin the profile name, bytes and SHA-256.
 4. Apply it once, to the final output, after the `MAIN` working image and page layout are done.
 5. Do not apply it to `rawScanTIFF` or `-main-flat`.
 6. A missing or wrong profile fails before any temporary output. sRGB does not stand in.
@@ -112,15 +110,15 @@ No claim is made that the current Core Image and ColorSync path pins rendering i
 
 ## `MAIN` synthetic patch regression
 
-`NegativeAutoBalanceTests` / `shoulder-print-response-v4`
+`NegativeAutoBalanceTests` and `shoulder-print-response-v4`.
 
-MAIN/CS uses the v4 curve in both switch states. The retained v6 tests check their own fixed primitive; zero frame variation in those tests is not a result for Auto Balance ON.
+MAIN/CS uses the v4 curve in both switch states. The retained v6 tests check their own fixed primitive, and zero frame variation in those tests is not a result for Auto Balance ON.
 
 [Negative response](PRINT_RESPONSE.md)
 
-## NORITSU/FUJI relative style regression
+## HS and SP relative style regression
 
-A reference file with 264 Lab D50 patches from `A1` to `L22` is pinned by SHA-256. Each patch becomes a synthetic negative, then the `MAIN`, `NORITSU`, and `FUJI` paths each run twice.
+A reference file with 264 Lab D50 patches from `A1` to `L22` is pinned by SHA-256. Each patch becomes a synthetic negative, and the `MAIN`, `HS` and `SP` paths each run twice.
 
 ```bash
 swift run negaflow scanner-relative-it8-bench \
@@ -136,18 +134,3 @@ Colors that fall outside 0...1 once converted to linear sRGB cannot be built exa
 The evidence grade is always `syntheticModel` and the decision is always `notEvaluated`. If the profile manifest or the SHA-256 of any file is off, the run stops. Real machine accuracy needs scans of the same physical negative on both machines plus separate validation material.
 
 D50/2° was not confirmed from the reference file header. It is the bench's own contract for reading Lab as D50/2°, so `colorimetryInterpretationProvenance` is `benchmarkContractNotVerifiedFromReferenceHeader`.
-
-Results from before `shoulder-print-response-v4` are not reused as results of the current algorithm.
-
-## Measurement flow
-
-```mermaid
-flowchart LR
-    A["Check hashes of image, reference file, ICC"] --> B["Measure the middle 60% of each patch"]
-    B --> C["Apply the ICC and compute Lab D50/2°"]
-    C --> D["Record CIEDE2000 per patch"]
-    D --> E{"Kind of evidence"}
-    E --> F["algorithmRegression"]
-    E --> G["deviceCharacterization"]
-    E --> H["syntheticModel"]
-```

@@ -246,6 +246,7 @@ public sealed partial class WorkspaceShellView : UserControl
         AppMenu.CommandRequested += OnAppMenuCommandRequested;
         AppMenu.CustomTargetRequested += OnCustomTargetRequested;
         state.Changed += OnStateChanged;
+        ApplyGestureModifiers(state.Current.Shortcuts);
         AppResources.LanguageChanged += OnLanguageChanged;
         LibraryWorkspace.ScannerMenuStateChanged += OnScannerMenuStateChanged;
         SyncDevelopMenu();
@@ -560,6 +561,20 @@ public sealed partial class WorkspaceShellView : UserControl
     {
         _ = sender;
         UpdateWorkspace(preferences.SelectedWorkspace);
+        ApplyGestureModifiers(preferences.Shortcuts);
+    }
+
+    /// <summary>설정에서 고른 기준선·격자 조합키를 현상 캔버스에 넘깁니다.</summary>
+    private void ApplyGestureModifiers(WorkflowShortcutMap? map)
+    {
+        WorkflowShortcutMap shortcuts = map ?? WorkflowShortcutMap.Defaults;
+        DevelopWorkspace.PreviewCanvas.StraightenLineModifier =
+            shortcuts.GestureModifier(WorkflowGestureModifierAction.StraightenWithLine);
+        DevelopWorkspace.PreviewCanvas.StraightenGridModifier =
+            shortcuts.GestureModifier(WorkflowGestureModifierAction.StraightenGrid);
+        DevelopWorkspace.GeometryCard.SetStraightenModifiers(
+            SettingsRootView.ModifierLabel(DevelopWorkspace.PreviewCanvas.StraightenLineModifier),
+            SettingsRootView.ModifierLabel(DevelopWorkspace.PreviewCanvas.StraightenGridModifier));
     }
 
     private void UpdateWorkspace(WorkspaceModule selectedWorkspace)

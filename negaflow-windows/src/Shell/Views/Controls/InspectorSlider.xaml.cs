@@ -77,6 +77,21 @@ public sealed partial class InspectorSlider : UserControl
         typeof(InspectorSlider),
         new PropertyMetadata(string.Empty, OnPropertyChanged));
 
+    /// <summary>
+    /// 값 표시 형식입니다. 기본은 소수 둘째 자리이고, −100…100 같은 정수 눈금(변환)은 정수로 둡니다.
+    /// </summary>
+    public string DisplayFormat
+    {
+        get => displayFormat;
+        set
+        {
+            displayFormat = string.IsNullOrEmpty(value) ? "+0.00;-0.00;0.00" : value;
+            SynchronizeControls();
+        }
+    }
+
+    private string displayFormat = "+0.00;-0.00;0.00";
+
     public string Label
     {
         get => (string)GetValue(LabelProperty);
@@ -165,7 +180,7 @@ public sealed partial class InspectorSlider : UserControl
             Slider.Maximum = Maximum;
             Slider.Value = value;
         }
-        ValueText.Text = value.ToString("+0.00;-0.00;0.00", System.Globalization.CultureInfo.InvariantCulture);
+        ValueText.Text = value.ToString(DisplayFormat, System.Globalization.CultureInfo.InvariantCulture);
         if (ValueEditor.Visibility == Visibility.Visible)
         {
             ValueEditor.Text = InspectorSliderValue.InputText(value);

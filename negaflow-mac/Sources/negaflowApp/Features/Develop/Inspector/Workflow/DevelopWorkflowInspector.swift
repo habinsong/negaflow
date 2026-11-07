@@ -10,6 +10,7 @@ enum InspectorPanel: CaseIterable {
     case colorGrading
     case bwToning
     case calibration
+    case transform
     case detail
     case debug
 }
@@ -208,6 +209,7 @@ struct DevelopWorkflowInspector: View {
 
     private var basicAdjustmentContent: some View {
         DevelopAdjustmentSections(
+            frame: frame,
             expandedPanel: expandedPanel,
             isBWToningAvailable: isBWToningAvailable,
             showNoiseReductionStrength: frame.params.noiseReduction > 1e-3,

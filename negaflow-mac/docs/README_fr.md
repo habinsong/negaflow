@@ -28,13 +28,13 @@
 
 ---
 
-## Ce qu'il faut
+## Prérequis
 
 Pour l'exécuter :
 
-- macOS 14.0 ou ultérieur (compatible avec macOS 14, 26 et 27)
+- macOS 14.0 ou ultérieur (macOS 14, 26 et 27 sont pris en charge)
 - Apple Silicon ou Intel
-- 8 Go de mémoire pour du 35 mm, 16 Go plus confortables en moyen format
+- 8 Go de mémoire, 16 Go recommandés en moyen format
 
 Pour le compiler :
 
@@ -50,11 +50,13 @@ Téléchargez depuis [Releases](https://github.com/habinsong/negaflow/releases).
 | `negaflow-1.2.6-mac-universal.pkg` | Apple Silicon, Intel |
 | `negaflow-1.2.6-mac-arm64.pkg` | Apple Silicon uniquement |
 
-Le PKG Universal convient à la plupart. Il installe dans `/Applications`. Pour déplacer l'application vous-même, prenez le DMG ou le ZIP de la même page.
+Le PKG Universal convient à la plupart des Mac et s'installe dans `/Applications`. La même page propose un DMG et un ZIP pour placer l'application vous-même.
 
-L'application n'est pas notariée, macOS la bloque donc au premier lancement. Autorisez-la dans Réglages Système, sous Confidentialité et sécurité, avec Ouvrir quand même.
+L'application est signée en ad hoc et n'est pas notariée, donc macOS bloque le premier lancement. Autorisez-la dans Réglages Système, Confidentialité et sécurité, avec Ouvrir quand même.
 
-La photothèque et les réglages sont dans `~/Library/Application Support/negaflow`.
+La bibliothèque et les réglages sont dans `~/Library/Application Support/negaflow`.
+
+Au lancement, l'app demande une fois à GitHub la dernière publication. Si une version plus récente existe, le bas du menu ⋯ en haut à droite affiche « Mettre à jour vers la version X.Y.Z ». Ce choix ouvre la page de publication et enregistre dans Téléchargements le PKG adapté à ce Mac, vérifié avec le `SHA256SUMS.txt` de la publication. L'installation reste à faire vous-même. Quand l'app est à jour, l'élément indique « Vous avez la dernière version. » et ouvre la page du projet. Si la vérification échoue, hors ligne par exemple, l'élément n'apparaît pas.
 
 ## Compilation
 
@@ -62,16 +64,16 @@ La photothèque et les réglages sont dans `~/Library/Application Support/negafl
 git clone https://github.com/habinsong/negaflow.git
 cd negaflow/negaflow-mac
 
-# Compiler en Release puis lancer
+# Compiler une app Release et la lancer
 bash scripts/run-app.sh
 
 # Compiler sans lancer
 bash scripts/run-app.sh build
 ```
 
-`run-app.sh` appelle `xcodebuild`, assemble le paquet et le signe localement. Pour le moteur ou la CLI seuls, `swift build` suffit.
+`run-app.sh` appelle `xcodebuild`, assemble le bundle de l'application et le signe localement. Pour le moteur ou la CLI seuls, `swift build` suffit.
 
-Pour produire les fichiers de distribution :
+Artefacts de publication :
 
 ```bash
 bash negaflow-mac/scripts/build-release.sh
@@ -84,24 +86,24 @@ bash negaflow-mac/scripts/create-release-artifacts.sh
 # Tests Swift
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 
-# Compilation Release de l'application
+# Build Release de l'application
 bash scripts/run-app.sh build
 
-# Vérification complète du dépôt
+# Toutes les vérifications du dépôt
 bash scripts/ci-gate.sh
 ```
 
-## Cibles de couleur Custom
+## Cibles de couleur personnalisées
 
-Les boutons de cible sont MAIN, HS, SP, F135, HR et CS. Sélectionnez CS, puis l’une des 18 cibles Custom dans la liste à deux colonnes du sélecteur existant en bas à gauche. Le sélecteur de rendu reste à droite. Le passage à CS choisit Emulsion ; une photo utilisant déjà une cible Custom conserve sa sélection.
+CS suit MAIN, HS, SP, F135 et HR dans les pastilles de cibles. Le choisir ouvre, dans le sélecteur en bas à gauche, une liste sur deux colonnes de 18 cibles Custom ; le sélecteur de rendu reste à droite. En entrant dans CS, Emulsion est sélectionnée, et une image qui utilise déjà une cible Custom la garde.
 
-Le menu sépare Emulsion–Dichroic, Wetzlar–Rochester et Slide Show–Point & Shoot. Custom applique aux portraits et aux paysages les courbes de tons, de densité et de chroma de custom-3. L’enregistrement, les aperçus, les vignettes et l’export utilisent l’identifiant de la cible sélectionnée. Le traitement des cibles existantes reste inchangé.
+La liste a trois groupes : d'Emulsion à Dichroic (11), de Wetzlar à Rochester (4), de Slide Show à Point & Shoot (3). Les cibles Custom appliquent la réponse custom-3 en tonalité, densité et chroma. L'enregistrement, les aperçus, les vignettes et l'export utilisent l'identifiant de la cible choisie. Les autres cibles ne changent pas.
 
-La CLI accepte les mêmes identifiants, par exemple `--target classic`, `--target dye-transfer` et `--target point-and-shoot`.
+La CLI accepte les mêmes identifiants : `--target classic`, `--target dye-transfer`, `--target point-and-shoot`.
 
 ## Ligne de commande
 
-La version macOS embarque une CLI.
+La version macOS fournit une CLI.
 
 ```bash
 swift build
@@ -117,7 +119,7 @@ swift build
 .build/debug/negaflow develop scan.tif out.jpg --defects 1
 .build/debug/negaflow defect-bench ./scans --out ./report
 
-# Liste des profils et autotest du moteur
+# Profils et autotest du moteur
 .build/debug/negaflow list-scanner-profiles
 .build/debug/negaflow selftest
 ```
@@ -126,24 +128,24 @@ Lancez `negaflow` sans argument pour la liste complète des options.
 
 ## Scanners
 
-Les commandes du scanner n'apparaissent pas tant qu'un module n'est pas installé. Les appareils SANE passent par [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), qui s'installe à part.
+Les commandes de scanner restent masquées tant qu'aucun module n'est installé. Les appareils SANE sont pris en charge par [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), à installer séparément.
 
 ## Modules
 
 | Module | Rôle |
 |---|---|
-| `Chromabase` | Chroma Engine, GrainMend, profils et export |
-| `ScannerKit` | Vérification des capacités scanner et connexion des modules |
-| `negaflowApp` | Écrans photothèque, développement, numérisation et export |
-| `negaflowCLI` | Commandes de développement, numérisation, benchmark et autotest |
+| `Chromabase` | Chroma Engine, GrainMend, profils, export |
+| `ScannerKit` | Vérification des capacités du scanner et connexion des modules |
+| `negaflowApp` | Écrans Bibliothèque, Développement, Numérisation et Exportation |
+| `negaflowCLI` | Commandes de développement, de numérisation, de benchmark et d'autotest |
 
 ## Images de référence
 
-`docs/verification/macos-golden`, à la racine du dépôt, contient les images rendues par cette compilation. Les tests du moteur Windows les lisent et comparent pixel par pixel. Ne les régénérez que lorsque la sortie macOS doit changer.
+`docs/verification/macos-golden` contient des images rendues par ce build. Git ignore ce dossier : il n'existe que sur la machine qui les a rendues. Les tests du moteur Windows en comparent des copies pixel par pixel. Ne les régénérez que si la sortie macOS doit changer.
 
 ## Documents liés
 
-- [Différences entre macOS et Windows](../../docs/fr/platform/PLATFORM_DIFFERENCES.md)
+- [Ce qui diffère entre les deux versions](../../docs/fr/platform/PLATFORM_DIFFERENCES.md)
 - [Chroma Engine](../../docs/fr/product/CHROMA_ENGINE.md)
 - [GrainMend](../../docs/fr/product/GRAINMEND.md)
 - [Architecture produit](../../docs/fr/architecture/PRODUCT_ARCHITECTURE.md)

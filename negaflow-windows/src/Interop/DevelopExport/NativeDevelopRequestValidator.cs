@@ -170,7 +170,8 @@ internal static unsafe class NativeDevelopRequestValidator
             !double.IsFinite(request.BwToningStrength) ||
             request.BwToningStrength is < 0.0 or > 1.0 ||
             !double.IsFinite(request.ImageTransform.StraightenAngle) ||
-            request.ImageTransform.StraightenAngle is < -45.0 or > 45.0)
+            request.ImageTransform.StraightenAngle is < -45.0 or > 45.0 ||
+            request.ImageTransform.Perspective is { IsValid: false })
         {
             throw new ArgumentException(
                 "B&W toning or straighten controls are outside the supported finite range.",

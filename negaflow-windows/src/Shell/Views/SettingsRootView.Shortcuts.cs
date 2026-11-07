@@ -28,6 +28,9 @@ public sealed partial class SettingsRootView
     /// <summary>방금 거절당한 줄입니다. 그 줄에만 빨간 안내가 붙습니다.</summary>
     private WorkflowShortcutAction? rejectedAction;
 
+    /// <summary>방금 거절당한 조합키 줄입니다(기준선·격자가 같은 키).</summary>
+    private WorkflowGestureModifierAction? rejectedGestureAction;
+
     /// <summary>
     /// 묶음 캡슐입니다. macOS 는 <c>Picker(.segmented)</c> 하나이고, 칸은 폭을 똑같이
     /// 나눠 가집니다 — 이름 길이에 따라 칸이 들쭉날쭉해지지 않습니다.
@@ -72,16 +75,104 @@ public sealed partial class SettingsRootView
             ShortcutRowsSection.Rows.Add(ShortcutRow(action, map));
             if (rejectedAction == action)
             {
-                Controls.SettingsFootnote note = new()
+                ShortcutRowsSection.Rows.Add(ConflictNote());
+            }
+        }
+        if (shortcutGroup == WorkflowShortcutGroup.Develop)
+        {
+            foreach (WorkflowGestureModifierAction gesture in WorkflowGestureModifierActions.All)
+            {
+                ShortcutRowsSection.Rows.Add(GestureModifierRow(gesture, map));
+                if (rejectedGestureAction == gesture)
                 {
-                    Text = AppResources.Get("shortcutInvalidOrConflict", "Text"),
-                };
-                note.Foreground = new SolidColorBrush(
-                    Windows.UI.Color.FromArgb(0xFF, 0xE5, 0x48, 0x4D));
-                ShortcutRowsSection.Rows.Add(note);
+                    ShortcutRowsSection.Rows.Add(ConflictNote());
+                }
             }
         }
         ShortcutRowsSection.Apply();
+    }
+
+    /// <summary>자판에 적힌 이름 그대로입니다. 번역하지 않습니다.</summary>
+    internal static string ModifierLabel(WorkflowShortcutModifiers modifier) => modifier switch
+    {
+        WorkflowShortcutModifiers.Control => "Ctrl",
+        WorkflowShortcutModifiers.Alt => "Alt",
+        WorkflowShortcutModifiers.Shift => "Shift",
+        _ => string.Empty,
+    };
+
+    private static Controls.SettingsFootnote ConflictNote()
+    {
+        Controls.SettingsFootnote note = new()
+        {
+            Text = AppResources.Get("shortcutInvalidOrConflict", "Text"),
+        };
+        note.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE5, 0x48, 0x4D));
+        return note;
+    }
+
+    /// <summary>
+    /// 키 없이 조합키만 거는 동작의 줄입니다. 녹화 칸 대신 고를 수 있는 조합키 목록을 둡니다 —
+    /// 조합키만 눌렀다 떼는 것은 녹화 칸이 받지 않습니다(macOS 와 같은 구성).
+    /// </summary>
+    private Controls.SettingsRow GestureModifierRow(WorkflowGestureModifierAction action, WorkflowShortcutMap map)
+    {
+        string title = AppResources.Get(
+            action == WorkflowGestureModifierAction.StraightenWithLine ? "straightenWithLine" : "straightenGrid",
+            "Text");
+        WorkflowShortcutModifiers current = map.GestureModifier(action);
+        ComboBox picker = new() { Width = 328, Height = 30, FontSize = 12 };
+        foreach (WorkflowShortcutModifiers modifier in WorkflowGestureModifierActions.Allowed)
+        {
+            picker.Items.Add(new ComboBoxItem
+            {
+                Content = ModifierLabel(modifier),
+                Tag = modifier,
+            });
+        }
+        picker.SelectedIndex = WorkflowGestureModifierActions.Allowed.ToList().IndexOf(current);
+        AutomationProperties.SetName(picker, title);
+        picker.SelectionChanged += (_, _) =>
+        {
+            if (picker.SelectedItem is not ComboBoxItem { Tag: WorkflowShortcutModifiers chosen } ||
+                chosen == (workspaceState?.Current.Shortcuts ?? WorkflowShortcutMap.Defaults).GestureModifier(action))
+            {
+                return;
+            }
+            WorkflowShortcutMap before = workspaceState?.Current.Shortcuts ?? WorkflowShortcutMap.Defaults;
+            WorkflowShortcutMap after = before.WithGesture(action, chosen);
+            rejectedGestureAction = ReferenceEquals(before, after) ? action : null;
+            if (!ReferenceEquals(before, after))
+            {
+                workspaceState?.UpdateShortcuts(_ => after);
+            }
+            BuildShortcutRows();
+        };
+        Button reset = new()
+        {
+            Content = new FontIcon { FontSize = 13, Glyph = "\uE7A7" },
+            Width = 40,
+            Height = 30,
+            Padding = new Thickness(0),
+        };
+        string resetLabel = AppResources.Get("shortcutReset", "Content");
+        ToolTipService.SetToolTip(reset, resetLabel);
+        AutomationProperties.SetName(reset, resetLabel);
+        reset.Click += (_, _) =>
+        {
+            workspaceState?.UpdateShortcuts(value => value.ResetGesture(action));
+            rejectedGestureAction = null;
+            BuildShortcutRows();
+        };
+        StackPanel right = new()
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        right.Children.Add(picker);
+        right.Children.Add(reset);
+        return new Controls.SettingsRow { Label = title, MinHeight = 51, Control = right };
     }
 
     /// <summary>

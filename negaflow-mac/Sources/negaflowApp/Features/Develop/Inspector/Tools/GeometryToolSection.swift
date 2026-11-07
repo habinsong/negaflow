@@ -16,6 +16,7 @@ struct ToolStripSection: View {
             buttonGrid
             if cropMode {
                 angleDial
+                straightenHint
             }
             angleRow
             aspectRow
@@ -161,6 +162,20 @@ struct ToolStripSection: View {
         .frame(maxWidth: .infinity, alignment: .center)
         .help(model.text(AppLocalizedPhrase.angle))
         .accessibilityLabel(model.text(AppLocalizedPhrase.angle))
+    }
+
+    /// 크롭 중에만 쓰는 조합키 동작을 알려 준다. 키는 설정에서 바꿀 수 있어 지금 값을 읽는다.
+    private var straightenHint: some View {
+        Text(model.text(
+            AppLocalizedPhrase.straightenHintFormat,
+            model.gestureModifier(for: .straightenWithLine).symbol,
+            model.gestureModifier(for: .straightenGrid).symbol
+        ))
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private func localizedAspectLabel(_ option: (label: String, ratio: Double?)) -> String {

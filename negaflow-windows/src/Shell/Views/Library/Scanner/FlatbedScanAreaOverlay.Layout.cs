@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using Negaflow.Catalog;
 using Negaflow.Shell.Localization;
 using Microsoft.UI;
 using Windows.UI;
@@ -60,14 +61,16 @@ public sealed partial class FlatbedScanAreaOverlay
             RemoveVisual(stale);
         }
 
+        bool transformed = TryPreviewTransform(out ImageTransformRecipe previewTransform, out uint sourceWidth, out uint sourceHeight);
+        session?.SetPreviewGeometry(transformed ? previewTransform : null, sourceWidth, sourceHeight);
         string? selectedId = session?.SelectedRegionId;
         for (int index = 0; index < regions.Count; ++index)
         {
             FlatbedScanRegion region = regions[index];
-            FlatbedOverlayRect rect = ScreenRect(region);
+            FlatbedRegionScreenShape shape = Shape(region);
             bool selected = string.Equals(region.Id, selectedId, StringComparison.Ordinal);
             RegionVisual visual = EnsureVisual(region.Id);
-            ApplyVisual(visual, rect, index + 1, selected);
+            ApplyVisual(visual, shape, index + 1, selected);
         }
     }
 
@@ -152,16 +155,24 @@ public sealed partial class FlatbedScanAreaOverlay
         return grip;
     }
 
+    /// <summary>
+    /// 칸을 기운 그대로 그립니다. 몸통·번호·손잡이를 같은 각도로 돌립니다 — WinUI 는 돌린 요소의
+    /// 집는 자리도 함께 돌립니다.
+    /// </summary>
     private void ApplyVisual(
         RegionVisual visual,
-        FlatbedOverlayRect rect,
+        FlatbedRegionScreenShape shape,
         int number,
         bool selected)
     {
-        visual.Body.Width = Math.Max(rect.Width, 0);
-        visual.Body.Height = Math.Max(rect.Height, 0);
-        Canvas.SetLeft(visual.Body, rect.X);
-        Canvas.SetTop(visual.Body, rect.Y);
+        double degrees = shape.Angle * 180.0 / Math.PI;
+        double width = Math.Max(shape.Width, 0);
+        double height = Math.Max(shape.Height, 0);
+        visual.Body.Width = width;
+        visual.Body.Height = height;
+        Canvas.SetLeft(visual.Body, shape.CenterX - (width / 2));
+        Canvas.SetTop(visual.Body, shape.CenterY - (height / 2));
+        visual.Body.RenderTransform = new RotateTransform { Angle = degrees, CenterX = width / 2, CenterY = height / 2 };
         visual.Body.Background = selected ? AccentBrush(0.09) : BlackBrush(0.04);
         visual.Body.BorderBrush = selected ? AccentBrush(1.0) : new SolidColorBrush(Colors.White);
         visual.Body.BorderThickness = new Thickness(selected ? 2 : 1);
@@ -172,8 +183,10 @@ public sealed partial class FlatbedScanAreaOverlay
             ? new SolidColorBrush(Colors.White)
             : (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
         visual.Badge.Background = selected ? AccentBrush(1.0) : WhiteBrush(0.82);
-        Canvas.SetLeft(visual.Badge, rect.X + BadgeInset);
-        Canvas.SetTop(visual.Badge, rect.Y + BadgeInset);
+        (double badgeX, double badgeY) = shape.ScreenPoint(BadgeInset, BadgeInset);
+        Canvas.SetLeft(visual.Badge, badgeX);
+        Canvas.SetTop(visual.Badge, badgeY);
+        visual.Badge.RenderTransform = new RotateTransform { Angle = degrees };
 
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
             visual.Body,
@@ -190,10 +203,12 @@ public sealed partial class FlatbedScanAreaOverlay
             {
                 continue;
             }
-            (double x, double y) = FlatbedOverlayGeometry.HandlePoint(
-                tag.Handle, rect.Width, rect.Height);
-            Canvas.SetLeft(grip, rect.X + x - (FlatbedOverlayGeometry.HandleHitSize / 2));
-            Canvas.SetTop(grip, rect.Y + y - (FlatbedOverlayGeometry.HandleHitSize / 2));
+            (double localX, double localY) = FlatbedOverlayGeometry.HandlePoint(tag.Handle, width, height);
+            (double x, double y) = shape.ScreenPoint(localX, localY);
+            const double half = FlatbedOverlayGeometry.HandleHitSize / 2;
+            Canvas.SetLeft(grip, x - half);
+            Canvas.SetTop(grip, y - half);
+            grip.RenderTransform = new RotateTransform { Angle = degrees, CenterX = half, CenterY = half };
         }
     }
 

@@ -94,6 +94,8 @@ struct CanvasView: View {
                             cropRect: $cropRect,
                             imageFrame: imageFrame,
                             lockedAspectRatio: cropAspectLockRatio(for: layoutSize),
+                            straightenAngle: frame.imageTransform.straightenAngle,
+                            onStraighten: { model.setStraighten(frame, angle: $0) },
                             onApply: applyCrop,
                             onReset: resetCrop,
                             onCancel: cancelCrop
@@ -123,6 +125,9 @@ struct CanvasView: View {
                     }
                     if localAdjustmentSession.isActive(for: frame) {
                         LocalAdjustmentOverlay(frame: frame, imageFrame: imageFrame)
+                    }
+                    if showsPerspectiveGuides {
+                        PerspectiveGuideOverlay(frame: frame, imageFrame: imageFrame)
                     }
                     if frame.defectMaskPreviewID != nil {
                         DefectMaskOverlay(frame: frame, imageFrame: imageFrame)
@@ -227,6 +232,14 @@ struct CanvasView: View {
         .modifier(BeforeAfterToggleRequestModifier(model: model, action: toggleDevelopedShortcut))
         // ⌘Z/⇧⌘Z 는 편집 메뉴 한 곳에서만 받는다. 캔버스가 ⌘Z 를 가로채면 사진을 지운 직후의
         // 되돌리기가 지운 사진이 아니라 지금 사진의 GrainMend 로 가 버린다.
+    }
+
+    /// 변환 도우미 모드에서만, 다른 캔버스 도구가 없을 때 안내선을 그린다.
+    var showsPerspectiveGuides: Bool {
+        frame.imageTransform.perspective.mode == .guided
+            && !frame.isPreviewScan
+            && !cropMode && !brushMode && !regionDefectMode && !cloneStampMode && !basePickerMode
+            && !localAdjustmentSession.isActive(for: frame)
     }
 
     /// 베이스는 반전 전 raw 에서 보인다(오렌지 마스크) — 베이스 스포이드는 Raw 보기로 찍는다.

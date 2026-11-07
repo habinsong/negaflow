@@ -7,7 +7,7 @@
 <p align="center">Windows ネイティブで作った negaflow です。</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.2.6-EF8B26" alt="バージョン 1.2.6\"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.2.6-EF8B26" alt="バージョン 1.2.6"></a>
   <a href="#"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 以降"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -28,32 +28,34 @@
 
 ---
 
-## 必要なもの
+## 動作環境
 
-動かすとき:
+実行に必要なもの:
 
-- Windows 11 24H2 (ビルド 26100) 以降、64ビット
-- 35mm ならメモリ 8GB、中判を扱うなら 16GB が楽です
+- Windows 11 24H2（ビルド 26100）以降、64 ビット
+- メモリ 8GB（中判は 16GB を推奨）
 
-ビルドするとき:
+ビルドに必要なもの:
 
-- Visual Studio 2022、C++ デスクトップ開発ワークロード込み
-- Windows 11 SDK (10.0.26100 以降)
-- .NET 10 SDK
-- CMake 3.28 以降
-- アイコンとリソーススクリプト用の Python 3.11 以降
+- Visual Studio 2026（C++ によるデスクトップ開発ワークロード付き。構成要素は `.vsconfig` にあります）
+- Windows 11 SDK 10.0.26100 以降
+- .NET 10 SDK（`global.json` が 10.0.302 に固定）
+- CMake 4.2 以降（`Visual Studio 18 2026` ジェネレーターが必要とします）
+- Python 3（アイコンとリソースのスクリプト用）
 
-Arm64 機でも動きます。ただし Arm64 のリリースは x64 ほど確認できていません。
+ビルドには Arm64 プリセットもあります。配布するのは x64 のみです。
 
 ## インストール
 
-[Releases](https://github.com/habinsong/negaflow/releases) から `negaflow-1.2.6-win-x64.exe` を入手して実行します。
+[Releases](https://github.com/habinsong/negaflow/releases) から `negaflow-1.2.6-win-x64.exe` を入手して実行します。既定のインストール先は `%LOCALAPPDATA%\Negaflow\App` で、管理者権限は求められません。
 
-WindowsインストーラーZIP: [negaflow-1.2.6-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.6/negaflow-1.2.6-win-x64-setup.zip). Windowsには同じインストーラーEXE、手順、通知、SHA-256を含むsetup ZIPもあります。すべて展開してから実行してください。インストーラーの圧縮版で、ポータブル版ではありません。SmartScreenの警告が出る場合があります。
+[negaflow-1.2.6-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.6/negaflow-1.2.6-win-x64-setup.zip) には、同じインストーラー EXE と、インストール手順、ライセンス表記、SHA-256 チェックサムが入っています。すべて展開してからインストーラーを実行してください。インストーラーの圧縮版で、ポータブルアプリではありません。
 
-管理者権限は要りません。初回実行時に SmartScreen が一度警告するので、詳細情報を押して実行してください。
+インストーラーに署名はありません。初回の実行で SmartScreen が一度警告します。詳細情報を押してから実行してください。
 
-削除はスタートメニューの `negaflow のアンインストール`、または設定のアプリ一覧から行います。ライブラリと写真はそのまま残ります。
+削除は、スタートメニューの `Uninstall negaflow` か、設定のアプリ一覧から行います。ライブラリと写真はそのまま残ります。
+
+アプリは起動時に一度だけ GitHub に最新リリースを問い合わせます。新しい版があれば、右上の ⋯ メニューのいちばん下に「バージョン X.Y.Z にアップデート」が出ます。選ぶとリリースページが開き、`win-x64.exe` のインストーラーをリリースの `SHA256SUMS.txt` で確かめてからダウンロードフォルダーに保存します。インストールはご自身で行います。最新のときは項目が「最新バージョンです。」になり、選ぶとプロジェクトページが開きます。オフラインなどで確認できなかったときは項目が出ません。
 
 ## ビルド
 
@@ -68,19 +70,19 @@ cd negaflow\negaflow-windows
 .\scripts\run-app.ps1 -Architecture x64 -Configuration Release
 ```
 
-`build.ps1` には `x64-debug`、`x64-release`、`arm64-debug`、`arm64-release` を渡せます。
+`build.ps1` は `x64-debug`、`x64-release`、`arm64-debug`、`arm64-release` を受け付けます。
 
-開発中にアプリを起動する方法は `run-app.ps1` だけです。アプリが MSIX パッケージとしてビルドされるため、ビルドフォルダーの exe をそのまま実行しても立ち上がりません。このスクリプトがパッケージを作り、現在のユーザーに登録して、アプリ ID で起動します。
+開発中は、`run-app.ps1` だけでアプリを起動します。アプリは MSIX パッケージとしてビルドされるため、ビルドフォルダーの exe を直接実行しても何も起きません。スクリプトがパッケージをビルドし、現在のユーザーに登録して、アプリ ID で起動します。
 
-インストーラーを作るとき:
+インストーラーのビルド:
 
 ```powershell
 .\scripts\build-release.ps1 -Architecture x64
 ```
 
-結果は `out\release\win-x64` にできます。
+出力は `out\release\win-x64` に作られます。
 
-## 点検
+## 確認
 
 ```powershell
 # C++ エンジンのテスト
@@ -92,85 +94,85 @@ ctest --preset x64-release --output-on-failure
 # エンジンとアプリの境界テスト
 .\scripts\test-interop.ps1
 
-# 以上を一度に
+# 上のすべてをまとめて実行
 .\scripts\local-ci.ps1
 ```
 
-インストール検証（`scripts\verify-installer.ps1`。`scripts\local-ci.ps1`からも呼び出します）は、ログイン中のデスクトップセッションで実行します。SSHのセッション0では、PLM初期化が`0x80070005`で失敗し、AppX登録を完了できない場合があります。このSSHセッションから呼び出すと、既存のインストールを変更する前に検証スクリプトを停止します。
+`scripts\verify-installer.ps1`（`local-ci.ps1` からも呼ばれます）は、サインイン済みのデスクトップセッションで実行してください。SSH セッションでは AppX の登録が `0x80070005` で失敗することがあるため、スクリプトは既存のインストールに触れる前に止まります。
 
-CI では外部ファイルに依存しないエンジンテストを実行します。macOS の基準ファイルは Git の外に保管します。比較を実行するには CMake の設定で `NEGAFLOW_MACOS_GOLDEN_ROOT` に基準フォルダーを指定します。その下には `task6-metadata-policy`、`task9-bw-slide`、`task7-coreimage-filters`、`task8-digital-film-look`、`vibrance` が必要です。指定したファイルがない場合や読み込めない場合は比較が失敗します。`ctest --preset x64-release -L external-golden` で比較のみを実行できます。通常の単体テストも引き続き登録されます。
+CI が実行するのは、それだけで完結するエンジンテストのみです。macOS の基準ファイルは Git の外に置いています。この比較を実行するには、CMake の構成時に `NEGAFLOW_MACOS_GOLDEN_ROOT` を基準フォルダーに設定します。フォルダーには `task6-metadata-policy`、`task9-bw-slide`、`task7-coreimage-filters`、`task8-digital-film-look`、`vibrance` が必要です。ファイルがないか読めない場合、選んだ比較は失敗します。`ctest --preset x64-release -L external-golden` がこの比較を実行し、通常の単体テストも有効なままです。
 
-## Customカラーターゲット
+## Custom カラーターゲット
 
-MAIN・HS・SP・F135・HRの右にCSがあります。CSを選ぶと、左下の選択欄から18個のCustomターゲットを2列で選べます。11・4・3項目のグループ間には区切り線があり、右側のルック選択欄はそのままです。CSへの切り替え時はEmulsionを選び、すでにCustomを使用する写真では現在の選択を維持します。
+ターゲットのカプセルは MAIN、HS、SP、F135、HR の次が CS です。CS を選ぶと、左下に Custom ターゲット18個の2列リストが開き、11個・4個・3個の組に分かれています。ルックのセレクターは右に残ります。CS に入ると Emulsion が選ばれ、すでに Custom ターゲットを使っている写真はそのターゲットのままです。
 
-CustomはmacOSと同じcustom-3係数と文字列IDを使います。写真設定とカタログに実際のターゲットを保存し、プレビューと書き出しに同じ処理を適用します。フォルダ見出しの既存の適用ボタンで、選んだターゲットをフォルダに一括適用できます。
+Custom は macOS と同じ custom-3 の係数と文字列 ID を使います。選んだターゲットは写真の設定とカタログに保存され、プレビューと書き出しは同じ段階を通ります。フォルダーの見出しでは、既存の適用ボタンで選んだターゲットをフォルダーに適用します。
 
-## コマンドラインでエンジンを確かめる
+## コマンドラインでエンジンを確認
 
-`negaflow-cli.exe` は、エンジンが一つのファイルをどう処理するかを見る道具です。サブコマンドではなくフラグを使います。
+`negaflow-cli.exe` は、1つのファイルでエンジンを動かして確かめるツールです。サブコマンドではなくフラグを受け取ります。
 
 ```powershell
 $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 
-# このビルドが何かを確認
+# ビルド情報
 & $cli --build-info
 
-# スキャンファイルの中身を見る
+# スキャンファイルの中身
 & $cli --probe-tiff scan.tif
 
 # 現像して 16bit TIFF で保存
 & $cli --export-developed-tiff16 scan.tif out.tif
 
-# 現像一回でどこに時間がかかるか確認
+# 現像1回の時間の内訳
 & $cli --develop-timing scan.tif
 
-# フィルムベースを自動で探して何を選んだか見る
+# フィルムベースの自動測定と選ばれた値
 & $cli --auto-base-probe scan.tif
 ```
 
-引数なしで実行すると全一覧が出ます。
+全一覧は、引数なしで実行すると出ます。
 
 ## スキャナー
 
-プラグインを入れるまでスキャナーの操作は出てきません。SANE 機器は [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) が担当し、別に入れる必要があります。
+プラグインを入れるまで、スキャナーのコントロールは表示されません。SANE 機器は、別に入れる [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) が担当します。
 
-プラグインは Windows がすでに用意しているドライバー経路でスキャナーとやり取りします。同じマシンで VueScan や SilverFast をそのまま使えます。
+プラグインは、Windows がすでに備えているドライバー経由でスキャナーと通信します。同じ PC に VueScan や SilverFast を入れたままにできます。
 
-## うまくいかないとき
+## 問題が起きたとき
 
-アプリは `%LOCALAPPDATA%\Negaflow\Logs` にテキストの記録を残します。
+アプリはテキストのログを `%LOCALAPPDATA%\Negaflow\Logs` に書きます。
 
-| ファイル | 残る内容 |
+| ファイル | 記録する内容 |
 |---|---|
-| `export-trace.txt` | 書き出しとクイック書き出し、失敗した場合を含む |
+| `export-trace.txt` | 書き出しとクイック書き出し（失敗を含む） |
 | `termination.txt` | アプリを閉じる間に起きたこと |
-| `settings-change.txt` | 変わった設定と変えた主体 |
+| `settings-change.txt` | 変わった設定と、変えたもの |
 
-この三つは常に有効です。特定の問題を追うときだけ有効にする記録がもう二つあります。
+この3つは常に有効です。次の2つは初期状態で無効です。
 
-- `preview-trace.txt`。同じフォルダーに `preview-trace.on` という空ファイルを作ると有効になります。
-- `stage-trace.txt`。アプリを起動する前に環境変数 `NEGAFLOW_STAGE_TRACE=1` を設定すると有効になります。現像の段階ごとに画素の統計を残します。
+- `preview-trace.txt`: 同じフォルダーに空のファイル `preview-trace.on` を作ると有効になります。
+- `stage-trace.txt`: アプリを起動する前に環境変数 `NEGAFLOW_STAGE_TRACE=1` を設定します。現像の各段階でピクセルの統計を記録します。
 
-## フォルダー構成
+## 構成
 
 ```
 negaflow-windows/
 ├── src/
-│   ├── Native/        クロマエンジン、GrainMend、デコードと書き出し (C++)
-│   ├── Interop/       エンジンとアプリをつなぐ層 (C#)
+│   ├── Native/        Chroma Engine、GrainMend、デコードと書き出し (C++)
+│   ├── Interop/       エンジンとアプリの間の層 (C#)
 │   ├── Catalog.Core/  ライブラリの保存 (C#)
 │   ├── Shell.Core/    現像、プリント、書き出しのロジック (C#)
 │   ├── Shell/         ライブラリ、現像、プリントの画面 (WinUI 3)
-│   └── Cli/           エンジン点検の道具 (C++)
-├── scripts/           ビルド、テスト、パッケージのスクリプト
+│   └── Cli/           エンジン確認ツール (C++)
+├── scripts/           ビルド、テスト、パッケージングのスクリプト
 ├── tests/             エンジン、アプリ、境界のテスト
 └── Installer/windows/ NSIS インストーラー
 ```
 
 ## 関連ドキュメント
 
-- [macOS と Windows の違い](../../docs/ja/platform/PLATFORM_DIFFERENCES.md)
-- [クロマエンジン](../../docs/ja/product/CHROMA_ENGINE.md)
+- [両バージョンの違い](../../docs/ja/platform/PLATFORM_DIFFERENCES.md)
+- [Chroma Engine](../../docs/ja/product/CHROMA_ENGINE.md)
 - [GrainMend](../../docs/ja/product/GRAINMEND.md)
-- [製品の構造](../../docs/ja/architecture/PRODUCT_ARCHITECTURE.md)
+- [製品構造](../../docs/ja/architecture/PRODUCT_ARCHITECTURE.md)

@@ -55,6 +55,27 @@ public static class CropInteraction
     public const double HandleHitRadius = 0.025;
     public const double HandleSize = 14.0;
     public const double LongHandleSize = 24.0;
+
+    /// <summary>
+    /// 화면에 그린 기준선을 수평(또는 수직)으로 만드는 회전량(도, 양수 = 시계방향)입니다. 45° 보다
+    /// 눕혀진 선은 수평선, 서 있는 선은 수직선으로 봅니다. 너무 짧은 선(손떨림)은 null 입니다.
+    /// macOS <c>CropOverlayGeometry.straightenCorrection</c> 과 같은 식입니다.
+    /// </summary>
+    public static double? StraightenCorrection(
+        double startX, double startY, double endX, double endY, double minimumLength = 8.0)
+    {
+        double dx = endX - startX, dy = endY - startY;
+        if (!double.IsFinite(dx) || !double.IsFinite(dy) || Math.Sqrt((dx * dx) + (dy * dy)) < minimumLength)
+        {
+            return null;
+        }
+        // 화면 y 는 아래로 자라므로 atan2(dy, dx) 가 양수인 선은 시계방향으로 기운 선입니다.
+        double angle = Math.Atan2(dy, dx) * 180.0 / Math.PI;
+        if (angle > 90.0) { angle -= 180.0; }
+        if (angle <= -90.0) { angle += 180.0; }
+        if (Math.Abs(angle) <= 45.0) { return -angle; }
+        return angle > 0.0 ? 90.0 - angle : -90.0 - angle;
+    }
     public const double ActionBarHalfWidth = 86.0;
     public const double ActionBarInsetY = 28.0;
     public const double ActionBarOffsetY = 30.0;

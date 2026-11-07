@@ -28,33 +28,35 @@
 
 ---
 
-## 需要什么
+## 运行环境
 
-运行时：
+运行需要：
 
-- macOS 14.0 及以上（兼容 macOS 14、26、27）
+- macOS 14.0 及以上（支持 macOS 14、26、27）
 - Apple Silicon 或 Intel
-- 处理 35mm 需要 8GB 内存，中画幅有 16GB 会舒服些
+- 8 GB 内存，中画幅建议 16 GB
 
-构建时：
+构建需要：
 
-- 应用需要 Xcode 26 及以上
-- 引擎和 CLI 需要 Swift 5.9 及以上
+- 应用：Xcode 26 及以上
+- 引擎和 CLI：Swift 5.9 及以上
 
 ## 安装
 
-在 [Releases](https://github.com/habinsong/negaflow/releases) 下载。
+从 [Releases](https://github.com/habinsong/negaflow/releases) 下载。
 
-| 安装文件 | 支持的 Mac |
+| 文件 | 支持的 Mac |
 |---|---|
 | `negaflow-1.2.6-mac-universal.pkg` | Apple Silicon、Intel |
 | `negaflow-1.2.6-mac-arm64.pkg` | 仅 Apple Silicon |
 
-多数情况用 Universal PKG 就行，它会装进 `/Applications`。想自己搬就用同一页面上的 DMG 或 ZIP。
+大多数 Mac 用 Universal PKG，会装进 `/Applications`。想自己摆放应用，可以用同一页面上的 DMG 或 ZIP。
 
-没有经过 Apple 公证，第一次运行时 macOS 会拦住。在系统设置的隐私与安全性里点「仍要打开」。
+应用是 ad hoc 签名，没有经过公证，所以 macOS 会拦截第一次启动。在系统设置的隐私与安全性里点「仍要打开」。
 
-图库和设置保存在 `~/Library/Application Support/negaflow`。
+图库和设置在 `~/Library/Application Support/negaflow`。
+
+应用在启动时向 GitHub 查询一次最新发布。有新版本时，右上角 ⋯ 菜单最下方会出现“更新到 X.Y.Z 版”。点击后会打开发布页面，并按发布附带的 `SHA256SUMS.txt` 校验适合这台 Mac 的 PKG，再保存到“下载”文件夹。安装需要你自己完成。已是最新时，该项显示“当前已是最新版本。”，点击会打开项目页面。离线等原因导致查询失败时，该项不出现。
 
 ## 构建
 
@@ -62,16 +64,16 @@
 git clone https://github.com/habinsong/negaflow.git
 cd negaflow/negaflow-mac
 
-# Release 构建后运行
+# 构建 Release 应用并启动
 bash scripts/run-app.sh
 
-# 只构建不运行
+# 只构建，不启动
 bash scripts/run-app.sh build
 ```
 
-`run-app.sh` 会调用 `xcodebuild`，组装应用包，再做本地签名。只改引擎或 CLI 的时候 `swift build` 就够了。
+`run-app.sh` 调用 `xcodebuild`，组装应用包并在本机签名。只处理引擎或 CLI 时，`swift build` 就够了。
 
-做发布文件时：
+发布文件：
 
 ```bash
 bash negaflow-mac/scripts/build-release.sh
@@ -87,26 +89,26 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 # 应用的 Release 构建
 bash scripts/run-app.sh build
 
-# 仓库整体检查
+# 仓库的全部检查
 bash scripts/ci-gate.sh
 ```
 
 ## Custom 色彩目标
 
-目标选项为 MAIN、HS、SP、F135、HR 和 CS。选择 CS 后，在原有左下方选择器打开的双列列表中选择 18 个 Custom 目标之一，右侧的风格选择器保持不变。切换到 CS 时选择 Emulsion；已使用 Custom 的照片保留当前选择。
+目标胶囊按 MAIN、HS、SP、F135、HR 的顺序排列，CS 在最后。选中 CS 后，左下角的选择器会展开 18 个 Custom 目标的两列列表，风格选择器仍在右侧。进入 CS 时选中 Emulsion，已经在用 Custom 目标的照片保持原目标。
 
-菜单在 Emulsion–Dichroic、Wetzlar–Rochester、Slide Show–Point & Shoot 之间显示分隔线。Custom 为人像和风景应用 custom-3 的色调、色彩浓度和彩度响应。保存、预览、缩略图和导出使用所选目标 ID。现有目标的处理保持不变。
+列表分三组：Emulsion 到 Dichroic 共 11 个，Wetzlar 到 Rochester 共 4 个，Slide Show 到 Point & Shoot 共 3 个。Custom 目标应用 custom-3 的影调、密度和色度响应。保存、预览、缩略图和导出都使用所选目标的 ID。其他目标不变。
 
-CLI 也接受相同的 ID，例如 `--target classic`、`--target dye-transfer` 和 `--target point-and-shoot`。
+CLI 接受同样的 ID：`--target classic`、`--target dye-transfer`、`--target point-and-shoot`。
 
 ## 命令行
 
-macOS 版里带了 CLI。
+macOS 版自带 CLI。
 
 ```bash
 swift build
 
-# 找扫描仪
+# 查找扫描仪
 .build/debug/negaflow detect
 .build/debug/negaflow capabilities <scannerID>
 
@@ -117,33 +119,33 @@ swift build
 .build/debug/negaflow develop scan.tif out.jpg --defects 1
 .build/debug/negaflow defect-bench ./scans --out ./report
 
-# 配置文件列表与引擎自检
+# 配置文件与引擎自检
 .build/debug/negaflow list-scanner-profiles
 .build/debug/negaflow selftest
 ```
 
-不带参数运行 `negaflow` 会列出全部选项。
+不带参数运行 `negaflow` 可以看到全部选项。
 
 ## 扫描仪
 
-装插件之前不会出现扫描仪的操作项。SANE 设备由 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) 负责，要另外安装。
+安装插件之前，扫描仪控件不会显示。SANE 设备由单独安装的 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) 负责。
 
-## 模块构成
+## 模块
 
-| 模块 | 职责 |
+| 模块 | 作用 |
 |---|---|
-| `Chromabase` | Chroma Engine、GrainMend、配置文件与导出 |
-| `ScannerKit` | 扫描仪能力确认与外部插件连接 |
-| `negaflowApp` | 图库、显影、扫描与导出界面 |
-| `negaflowCLI` | 显影、扫描、基准测试与自检命令 |
+| `Chromabase` | Chroma Engine、GrainMend、配置文件、导出 |
+| `ScannerKit` | 扫描仪能力检查与插件连接 |
+| `negaflowApp` | 图库、显影、扫描、导出界面 |
+| `negaflowCLI` | 显影、扫描、基准测试、自检命令 |
 
 ## 基准图像
 
-仓库最上层的 `docs/verification/macos-golden` 里放着这个构建产出的图像。Windows 的引擎测试会读这些文件，逐像素比对。只有 macOS 输出该变的时候才重新生成。
+`docs/verification/macos-golden` 存放这个构建渲染出的图像。Git 忽略这个文件夹，所以图像只存在于渲染它们的那台电脑上。Windows 引擎测试会与副本逐像素比较。只有在有意改变 macOS 输出时才重新生成。
 
 ## 相关文档
 
-- [macOS 和 Windows 的差异](../../docs/zh-Hans/platform/PLATFORM_DIFFERENCES.md)
+- [两个版本的差异](../../docs/zh-Hans/platform/PLATFORM_DIFFERENCES.md)
 - [Chroma Engine](../../docs/zh-Hans/product/CHROMA_ENGINE.md)
 - [GrainMend](../../docs/zh-Hans/product/GRAINMEND.md)
 - [产品结构](../../docs/zh-Hans/architecture/PRODUCT_ARCHITECTURE.md)

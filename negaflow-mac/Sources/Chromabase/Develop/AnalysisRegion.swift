@@ -24,10 +24,12 @@ public struct AnalysisRegion: Sendable, Equatable {
         self.unitRect = clipped
     }
 
-    /// 크롭·수평 보정이 있을 때만 영역이 생긴다. 회전·뒤집기만으로는 보이는 내용이 같다.
+    /// 크롭·수평 보정·자르기 제한이 걸린 원근 보정이 있을 때만 영역이 생긴다. 회전·뒤집기만으로는
+    /// 보이는 내용이 같고, 자르기 제한이 없는 원근 보정은 원본 전체가 화면에 남는다.
     /// `imageSize` 는 변형 전 원본의 픽셀 크기(비율만 쓴다 — 수평 보정 역변환에 필요).
     public init?(transform: ImageTransform, imageSize: CGSize) {
-        guard transform.cropRect != nil || abs(transform.straightenAngle) > 1e-4,
+        guard transform.cropRect != nil || abs(transform.straightenAngle) > 1e-4
+                || (transform.perspective.changesGeometry && transform.perspective.constrainCrop),
               imageSize.width > 0, imageSize.height > 0 else { return nil }
         let corners = [CGPoint(x: 0, y: 0), CGPoint(x: 1, y: 0), CGPoint(x: 0, y: 1), CGPoint(x: 1, y: 1)]
             .map { transform.displayUnitToBase($0, baseSize: imageSize) }
@@ -42,9 +44,13 @@ public struct AnalysisRegion: Sendable, Equatable {
     /// (cropAspect)은 편집 제약 메타데이터라 픽셀과 무관하므로 뺀다. 같은 프레임(같은 원본 비율)
     /// 에서 키가 같으면 영역도 같다.
     public static func cacheKey(for transform: ImageTransform) -> ImageTransform? {
-        guard transform.cropRect != nil || abs(transform.straightenAngle) > 1e-4 else { return nil }
+        guard transform.cropRect != nil || abs(transform.straightenAngle) > 1e-4
+            || (transform.perspective.changesGeometry && transform.perspective.constrainCrop) else { return nil }
         var key = transform
         key.cropAspect = nil
+        // 안내선·모드 이름은 그림이 아니다. 같은 보정이면 같은 측정 영역이다.
+        key.perspective.guides = []
+        key.perspective.mode = .off
         return key
     }
 

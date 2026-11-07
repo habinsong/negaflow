@@ -635,4 +635,30 @@ enum AppLocalizedPhrase: CaseIterable {
     case scanCustomFrameRatio
     case scanCustomFrameWidth
     case scanCustomFrameHeight
+    case straightenWithLine
+    case straightenGrid
+    case straightenHintFormat
+    case updateAvailableFormat
+    case updateUpToDate
+    case updateDownloadingFormat
+    case updateDownloadedFormat
+    case updateDownloadFailed
+    case transform
+    case transformModeOff
+    case transformModeAuto
+    case transformModeGuided
+    case transformModeLevel
+    case transformModeVertical
+    case transformModeFull
+    case transformVertical
+    case transformHorizontal
+    case transformRotate
+    case transformAspect
+    case transformScale
+    case transformOffsetX
+    case transformOffsetY
+    case transformConstrainCrop
+    case transformGuidedHint
+    case transformGuidedClear
+    case transformAutoNoLines
 }

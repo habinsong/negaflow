@@ -194,6 +194,30 @@ typedef struct nf_develop_export_request_v41 {
     uint32_t channel_range_reserved;
 } nf_develop_export_request_v41;
 
+/* Optional sized tail accepted by the v39 entry points, after the v41 tail. A payload that ends
+   before it applies no perspective. When `has_perspective` is 1 the macOS PerspectiveCorrection
+   values follow: solved rotations in degrees (vertical/horizontal within +-40, rotate within +-45),
+   sliders vertical/horizontal/aspect/offsets within +-100, rotate within +-10, scale 50...150, and
+   `constrain_crop` 0 or 1. When it is 0 every value must be zero except scale, which must be 100.
+   Reserved fields remain zero. */
+typedef struct nf_develop_export_request_v42 {
+    nf_develop_export_request_v41 v41;
+    uint32_t has_perspective;
+    uint32_t perspective_constrain_crop;
+    double perspective_solved_vertical;
+    double perspective_solved_horizontal;
+    double perspective_solved_rotate;
+    double perspective_vertical;
+    double perspective_horizontal;
+    double perspective_rotate;
+    double perspective_aspect;
+    double perspective_scale;
+    double perspective_offset_x;
+    double perspective_offset_y;
+    uint32_t perspective_reserved;
+    uint32_t perspective_reserved2;
+} nf_develop_export_request_v42;
+
 #ifdef __cplusplus
 }
 #endif

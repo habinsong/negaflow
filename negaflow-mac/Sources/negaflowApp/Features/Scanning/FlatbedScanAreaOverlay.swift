@@ -85,7 +85,8 @@ struct FlatbedScanAreaOverlay: View {
     let imageFrame: CGRect
     @State private var createStartPoint: CGPoint?
     @State private var createCurrentPoint: CGPoint?
-    @State private var dragStartRect: CGRect?
+    @State private var dragStartShape: FlatbedRegionScreenShape?
+    @State private var dragStartRegion: FlatbedScanRegion?
     /// 프레임 편집 단축키는 이 오버레이가 포커스를 가진 동안에만 산다. ⌘C/⌘V 가 텍스트 필드의
     /// 복사·붙여넣기를 빼앗지 않게 하는 유일하게 확실한 방법이다.
     @FocusState private var isFocused: Bool
@@ -100,7 +101,7 @@ struct FlatbedScanAreaOverlay: View {
                 .gesture(createGesture)
 
             if let start = createStartPoint, let current = createCurrentPoint {
-                let rect = screenRect(for: createdUnitRect(from: start, to: current))
+                let shape = shape(for: createdRegion(from: start, to: current))
                 Rectangle()
                     .fill(Color.accentColor.opacity(0.08))
                     .overlay {
@@ -110,8 +111,9 @@ struct FlatbedScanAreaOverlay: View {
                                 style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])
                             )
                     }
-                    .frame(width: rect.width, height: rect.height)
-                    .position(x: rect.midX, y: rect.midY)
+                    .frame(width: shape.size.width, height: shape.size.height)
+                    .rotationEffect(.radians(Double(shape.angle)))
+                    .position(shape.center)
                     .allowsHitTesting(false)
             }
 
@@ -162,7 +164,7 @@ struct FlatbedScanAreaOverlay: View {
     }
 
     private func regionView(_ region: FlatbedScanRegion, number: Int) -> some View {
-        let rect = screenRect(for: region.unitRect)
+        let shape = shape(for: region)
         let selected = model.selectedFlatbedScanRegionID == region.id
         return ZStack(alignment: .topLeading) {
             Rectangle()
@@ -190,14 +192,15 @@ struct FlatbedScanAreaOverlay: View {
                     handleView(handle)
                         .position(FlatbedScanAreaOverlayGeometry.handlePoint(
                             handle,
-                            in: rect.size
+                            in: shape.size
                         ))
                         .gesture(resizeGesture(for: region, handle: handle))
                 }
             }
         }
-        .frame(width: rect.width, height: rect.height)
-        .position(x: rect.midX, y: rect.midY)
+        .frame(width: shape.size.width, height: shape.size.height)
+        .rotationEffect(.radians(Double(shape.angle)))
+        .position(shape.center)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(model.text(AppLocalizedPhrase.flatbedFrameFormat, number))
         .accessibilityAction(named: Text(model.accessibilityText(.moveLeft))) {
@@ -243,11 +246,11 @@ struct FlatbedScanAreaOverlay: View {
                 if createStartPoint == nil {
                     guard FlatbedScanAreaOverlayGeometry.canBeginCreation(
                         at: value.startLocation,
-                        existingRects: model.flatbedScanRegions.map { screenRect(for: $0.unitRect) }
+                        existingRects: model.flatbedScanRegions.map { shape(for: $0).boundingRect }
                     ) else { return }
-                    createStartPoint = basePoint(value.startLocation)
+                    createStartPoint = clampedScreenPoint(value.startLocation)
                 }
-                createCurrentPoint = basePoint(value.location)
+                createCurrentPoint = clampedScreenPoint(value.location)
             }
             .onEnded { value in
                 defer {
@@ -255,25 +258,35 @@ struct FlatbedScanAreaOverlay: View {
                     createCurrentPoint = nil
                 }
                 guard let start = createStartPoint else { return }
+                let region = createdRegion(from: start, to: clampedScreenPoint(value.location))
                 model.addFlatbedScanRegion(
-                    unitRect: createdUnitRect(from: start, to: basePoint(value.location))
+                    unitRect: region.unitRect,
+                    straightenAngle: region.straightenAngle
                 )
                 isFocused = true
             }
     }
 
+    /// 누르기만 하면 아무것도 바꾸지 않는다. 예전에는 누르는 순간 이동 0 으로 자리를 다시 써서
+    /// 경계 상자 왕복만큼 프레임이 커지고, 검출이 잰 기울기도 0 으로 지워졌다.
     private func moveGesture(for region: FlatbedScanRegion) -> some Gesture {
         DragGesture(minimumDistance: 0, coordinateSpace: .named(canvasCoordinateSpace))
             .onChanged { value in
-                if dragStartRect == nil { dragStartRect = screenRect(for: region.unitRect) }
-                guard let start = dragStartRect else { return }
-                let moved = clampedScreenRect(start.offsetBy(
-                    dx: value.translation.width,
-                    dy: value.translation.height
-                ))
-                model.updateFlatbedScanRegion(region.id, unitRect: baseRect(from: moved))
+                if dragStartShape == nil {
+                    dragStartShape = shape(for: region)
+                    dragStartRegion = region
+                }
+                guard let start = dragStartShape,
+                      hypot(value.translation.width, value.translation.height) >= 0.5 else { return }
+                var moved = start
+                moved.center.x += value.translation.width
+                moved.center.y += value.translation.height
+                model.updateFlatbedScanRegion(region.id, unitRect: unitRect(for: moved))
             }
-            .onEnded { _ in dragStartRect = nil }
+            .onEnded { _ in
+                dragStartShape = nil
+                dragStartRegion = nil
+            }
     }
 
     private func resizeGesture(
@@ -282,73 +295,134 @@ struct FlatbedScanAreaOverlay: View {
     ) -> some Gesture {
         DragGesture(minimumDistance: 0, coordinateSpace: .named(canvasCoordinateSpace))
             .onChanged { value in
-                if dragStartRect == nil { dragStartRect = screenRect(for: region.unitRect) }
-                guard let start = dragStartRect else { return }
+                if dragStartShape == nil {
+                    dragStartShape = shape(for: region)
+                    dragStartRegion = region
+                }
+                guard let start = dragStartShape,
+                      let startRegion = dragStartRegion,
+                      hypot(value.translation.width, value.translation.height) >= 0.5 else { return }
+                let localStart = CGRect(origin: .zero, size: start.size)
                 let proposed = FlatbedScanAreaOverlayGeometry.resizedRect(
-                    from: start,
-                    toward: value.location,
+                    from: localStart,
+                    toward: start.localPoint(screen: value.location),
                     handle: handle,
-                    within: imageFrame
+                    within: localImageBounds(for: start)
                 )
+                let resized = unitRect(for: start.reshaped(localRect: proposed))
                 model.updateFlatbedScanRegion(
                     region.id,
                     unitRect: frameAspectAdjusted(
-                        baseRect(from: proposed),
-                        anchoredTo: baseRect(from: start)
+                        resized,
+                        angle: startRegion.straightenAngle,
+                        anchoredTo: FlatbedScanRegionFrameGeometry.frameLocalRect(
+                            unitRect: startRegion.unitRect,
+                            straightenAngle: startRegion.straightenAngle,
+                            localAngle: startRegion.straightenAngle,
+                            baseSize: baseSize
+                        )
                     )
                 )
             }
-            .onEnded { _ in dragStartRect = nil }
+            .onEnded { _ in
+                dragStartShape = nil
+                dragStartRegion = nil
+            }
     }
 
-    private func createdUnitRect(from start: CGPoint, to current: CGPoint) -> CGRect {
-        frameAspectAdjusted(
-            unitRect(from: start, to: current),
-            anchoredTo: CGRect(origin: start, size: .zero)
+    /// 화면에서 수평으로 그린 사각형을 프레임으로. 각도는 지금 화면 방향(`flatbedNewRegionAngle`)이다.
+    private func createdRegion(from start: CGPoint, to current: CGPoint) -> FlatbedScanRegion {
+        let angle = model.flatbedNewRegionAngle
+        let screenRect = CGRect(
+            x: min(start.x, current.x),
+            y: min(start.y, current.y),
+            width: abs(current.x - start.x),
+            height: abs(current.y - start.y)
+        )
+        let drawn = unitRect(for: FlatbedRegionScreenShape(
+            center: CGPoint(x: screenRect.midX, y: screenRect.midY),
+            size: screenRect.size,
+            angle: 0
+        ))
+        let startDisplay = CGPoint(
+            x: (start.x - imageFrame.minX) / max(imageFrame.width, 1),
+            y: (start.y - imageFrame.minY) / max(imageFrame.height, 1)
+        )
+        let startBase = frame.imageTransform.displayUnitToBase(startDisplay, baseSize: baseSize)
+        let anchor = FlatbedScanRegionFrameGeometry.frameLocalRect(
+            unitRect: CGRect(origin: startBase, size: .zero),
+            straightenAngle: 0,
+            localAngle: angle,
+            baseSize: baseSize
+        )
+        return FlatbedScanRegion(
+            unitRect: frameAspectAdjusted(drawn, angle: angle, anchoredTo: anchor),
+            straightenAngle: angle
         )
     }
 
     /// 규격 비율로 맞춘다. ⌥를 누르고 있으면 자유 비율(규격 목록에 없는 필름용 탈출구).
-    private func frameAspectAdjusted(_ rect: CGRect, anchoredTo previous: CGRect) -> CGRect {
+    /// 비율은 칸을 자기 방향으로 눕힌 좌표에서 맞춘다 — 기울어진 칸의 경계 상자는 규격 비율이 아니다.
+    private func frameAspectAdjusted(
+        _ rect: CGRect,
+        angle: Double,
+        anchoredTo previousLocal: CGRect
+    ) -> CGRect {
         guard let previewArea = model.flatbedPreviewScanArea,
-              !NSEvent.modifierFlags.contains(.option) else { return rect }
-        return clampedUnitRect(FlatbedScanRegionLayout.snappedToFrameAspect(
-            rect,
-            anchoredTo: previous,
+              !NSEvent.modifierFlags.contains(.option) else { return clampedUnitRect(rect) }
+        let local = FlatbedScanRegionFrameGeometry.frameLocalRect(
+            unitRect: rect,
+            straightenAngle: angle,
+            localAngle: angle,
+            baseSize: baseSize
+        )
+        let snapped = FlatbedScanRegionLayout.snappedToFrameAspect(
+            local,
+            anchoredTo: previousLocal,
             frameSize: model.scanFrameSize,
             previewArea: previewArea
+        )
+        return clampedUnitRect(FlatbedScanRegionFrameGeometry.unitRect(
+            fromFrameLocal: snapped,
+            localAngle: angle,
+            baseSize: baseSize
         ))
     }
 
-    private func screenRect(for baseRect: CGRect) -> CGRect {
-        let points = corners(of: baseRect).map { point -> CGPoint in
-            let display = frame.imageTransform.baseUnitToDisplay(point, baseSize: baseSize)
-            return CGPoint(
-                x: imageFrame.minX + display.x * imageFrame.width,
-                y: imageFrame.minY + display.y * imageFrame.height
-            )
-        }
-        return boundingRect(points)
-    }
-
-    private func baseRect(from screenRect: CGRect) -> CGRect {
-        let points = corners(of: screenRect).map { point -> CGPoint in
-            let display = CGPoint(
-                x: (point.x - imageFrame.minX) / max(imageFrame.width, 1),
-                y: (point.y - imageFrame.minY) / max(imageFrame.height, 1)
-            )
-            return frame.imageTransform.displayUnitToBase(display, baseSize: baseSize)
-        }
-        return clampedUnitRect(boundingRect(points))
-    }
-
-    private func basePoint(_ point: CGPoint) -> CGPoint {
-        let display = CGPoint(
-            x: min(max((point.x - imageFrame.minX) / max(imageFrame.width, 1), 0), 1),
-            y: min(max((point.y - imageFrame.minY) / max(imageFrame.height, 1), 0), 1)
+    private func shape(for region: FlatbedScanRegion) -> FlatbedRegionScreenShape {
+        FlatbedScanRegionFrameGeometry.screenShape(
+            unitRect: region.unitRect,
+            straightenAngle: region.straightenAngle,
+            transform: frame.imageTransform,
+            baseSize: baseSize,
+            imageFrame: imageFrame
         )
-        let base = frame.imageTransform.displayUnitToBase(display, baseSize: baseSize)
-        return CGPoint(x: min(max(base.x, 0), 1), y: min(max(base.y, 0), 1))
+    }
+
+    private func unitRect(for shape: FlatbedRegionScreenShape) -> CGRect {
+        FlatbedScanRegionFrameGeometry.unitRect(
+            for: shape,
+            transform: frame.imageTransform,
+            baseSize: baseSize,
+            imageFrame: imageFrame
+        )
+    }
+
+    /// 사진 자리를 프레임 자기 좌표로 옮긴 경계. 손잡이를 끌어도 사진 밖으로 나가지 않는다.
+    private func localImageBounds(for shape: FlatbedRegionScreenShape) -> CGRect {
+        FlatbedScanRegionFrameGeometry.boundingRect(of: [
+            CGPoint(x: imageFrame.minX, y: imageFrame.minY),
+            CGPoint(x: imageFrame.maxX, y: imageFrame.minY),
+            CGPoint(x: imageFrame.maxX, y: imageFrame.maxY),
+            CGPoint(x: imageFrame.minX, y: imageFrame.maxY),
+        ].map { shape.localPoint(screen: $0) })
+    }
+
+    private func clampedScreenPoint(_ point: CGPoint) -> CGPoint {
+        CGPoint(
+            x: min(max(point.x, imageFrame.minX), imageFrame.maxX),
+            y: min(max(point.y, imageFrame.minY), imageFrame.maxY)
+        )
     }
 
     private var baseSize: CGSize? {
@@ -357,34 +431,5 @@ struct FlatbedScanAreaOverlay: View {
               width > 0,
               height > 0 else { return nil }
         return CGSize(width: width, height: height)
-    }
-
-    private func clampedScreenRect(_ rect: CGRect) -> CGRect {
-        let minimum: CGFloat = 12
-        let width = min(max(rect.width, minimum), imageFrame.width)
-        let height = min(max(rect.height, minimum), imageFrame.height)
-        return CGRect(
-            x: min(max(rect.minX, imageFrame.minX), imageFrame.maxX - width),
-            y: min(max(rect.minY, imageFrame.minY), imageFrame.maxY - height),
-            width: width,
-            height: height
-        )
-    }
-
-    private func corners(of rect: CGRect) -> [CGPoint] {
-        [
-            CGPoint(x: rect.minX, y: rect.minY),
-            CGPoint(x: rect.maxX, y: rect.minY),
-            CGPoint(x: rect.maxX, y: rect.maxY),
-            CGPoint(x: rect.minX, y: rect.maxY),
-        ]
-    }
-
-    private func boundingRect(_ points: [CGPoint]) -> CGRect {
-        guard let minX = points.map(\.x).min(), let maxX = points.map(\.x).max(),
-              let minY = points.map(\.y).min(), let maxY = points.map(\.y).max() else {
-            return .zero
-        }
-        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
     }
 }

@@ -4,6 +4,7 @@ import Chromabase
 struct DevelopAdjustmentSections: View {
     @EnvironmentObject private var model: AppModel
 
+    let frame: ScanFrame
     let expandedPanel: InspectorPanel?
     let isBWToningAvailable: Bool
     let showNoiseReductionStrength: Bool
@@ -38,6 +39,7 @@ struct DevelopAdjustmentSections: View {
             bwToningSection
         }
         calibrationSection
+        transformSection
         detailSection
             if model.developerMode {
                 debugSection
@@ -152,6 +154,18 @@ struct DevelopAdjustmentSections: View {
             calibrationPrimary(model.text(AppLocalizedPhrase.greenPrimary), hue: \.greenHue, sat: \.greenSat)
             Divider().opacity(0.35)
             calibrationPrimary(model.text(AppLocalizedPhrase.bluePrimary), hue: \.blueHue, sat: \.blueSat)
+        }
+    }
+
+    private var transformSection: some View {
+        WorkflowSection(
+            title: model.text(AppLocalizedPhrase.transform),
+            systemImage: "perspective",
+            isExpanded: expandedPanel == .transform,
+            toggle: { toggle(.transform) },
+            reset: { reset(.transform) }
+        ) {
+            TransformSection(frame: frame)
         }
     }
 

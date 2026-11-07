@@ -1345,7 +1345,7 @@ Load a scanner from Library to scan film.</value>
   <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>Quick Start</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>Keyboard Shortcuts</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>Reset Photo Angle</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
-  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Reset all adjustment values, including crop and straighten. Rotation and flips are kept.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
+  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Reset all adjustment values, including crop, straighten and transform. Rotation and flips are kept.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
   <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>System display profile</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
   <data name="developAutoToneHelp.Text" xml:space="preserve"><value>Auto Tone Command-U — use the histogram to adjust exposure, contrast, highlights, shadows, whites, blacks, and vibrance.</value><comment>AppLocalizedPhrase.autoToneHelp</comment></data>
   <data name="developAutoWhiteBalanceHelp.Text" xml:space="preserve"><value>Auto White Balance Shift-Command-U — neutralize Warmth and Tint using gray-world.</value><comment>AppLocalizedPhrase.autoWhiteBalanceHelp</comment></data>
@@ -1655,4 +1655,30 @@ Load a scanner from Library to scan film.</value>
   <data name="printWatermarkTopLeading.Text" xml:space="preserve"><value>Top Left</value></data>
   <data name="printWatermarkTopCenter.Text" xml:space="preserve"><value>Top Center</value></data>
   <data name="printWatermarkTopTrailing.Text" xml:space="preserve"><value>Top Right</value></data>
+  <data name="straightenWithLine.Text" xml:space="preserve"><value>Straighten Along a Line (Drag)</value></data>
+  <data name="straightenGrid.Text" xml:space="preserve"><value>Show Grid While Straightening</value></data>
+  <data name="straightenHintFormat.Text" xml:space="preserve"><value>%@ + drag: straighten along a line · %@: grid</value></data>
+  <data name="updateAvailableFormat.Text" xml:space="preserve"><value>Update to Version %@</value></data>
+  <data name="updateUpToDate.Text" xml:space="preserve"><value>You're on the latest version.</value></data>
+  <data name="updateDownloadingFormat.Text" xml:space="preserve"><value>Downloading %@…</value></data>
+  <data name="updateDownloadedFormat.Text" xml:space="preserve"><value>Downloaded the update: %@</value></data>
+  <data name="updateDownloadFailed.Text" xml:space="preserve"><value>Couldn't download the update. Get it from the release page.</value></data>
+  <data name="developTransform.Text" xml:space="preserve"><value>Transform</value></data>
+  <data name="transformModeOff.Text" xml:space="preserve"><value>Off</value></data>
+  <data name="transformModeAuto.Text" xml:space="preserve"><value>Auto</value></data>
+  <data name="transformModeGuided.Text" xml:space="preserve"><value>Guided</value></data>
+  <data name="transformModeLevel.Text" xml:space="preserve"><value>Level</value></data>
+  <data name="transformModeVertical.Text" xml:space="preserve"><value>Vertical</value></data>
+  <data name="transformModeFull.Text" xml:space="preserve"><value>Full</value></data>
+  <data name="transformVertical.Text" xml:space="preserve"><value>Vertical</value></data>
+  <data name="transformHorizontal.Text" xml:space="preserve"><value>Horizontal</value></data>
+  <data name="transformRotate.Text" xml:space="preserve"><value>Rotate</value></data>
+  <data name="transformAspect.Text" xml:space="preserve"><value>Aspect</value></data>
+  <data name="transformScale.Text" xml:space="preserve"><value>Scale</value></data>
+  <data name="transformOffsetX.Text" xml:space="preserve"><value>X Offset</value></data>
+  <data name="transformOffsetY.Text" xml:space="preserve"><value>Y Offset</value></data>
+  <data name="transformConstrainCrop.Text" xml:space="preserve"><value>Constrain Crop</value></data>
+  <data name="transformGuidedHint.Text" xml:space="preserve"><value>Draw 2 to 4 guides along lines that should be straight.</value></data>
+  <data name="transformGuidedClear.Text" xml:space="preserve"><value>Clear Guides</value></data>
+  <data name="transformAutoNoLines.Text" xml:space="preserve"><value>No straight lines found, so the perspective was left unchanged.</value></data>
 </root>

@@ -1345,7 +1345,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>Schnellstart</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>Tastaturkurzbefehle</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>Bildwinkel zurücksetzen</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
-  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Setzt alle Anpassungen einschließlich Zuschnitt und Ausrichtung zurück. Drehung und Spiegelung bleiben erhalten.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
+  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Setzt alle Anpassungen einschließlich Zuschnitt, Ausrichtung und Transformieren zurück. Drehung und Spiegelung bleiben erhalten.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
   <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>System-Anzeigeprofil</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
   <data name="developAutoToneHelp.Text" xml:space="preserve"><value>Automatische Tonwerte Befehl-U — passt Belichtung, Kontrast, Lichter, Tiefen, Weiß, Schwarz und Dynamik anhand des Histogramms an.</value><comment>AppLocalizedPhrase.autoToneHelp</comment></data>
   <data name="developAutoWhiteBalanceHelp.Text" xml:space="preserve"><value>Automatischer Weißabgleich Umschalt-Befehl-U — neutralisiert Temperatur und Tonung nach der Grauwelt-Methode.</value><comment>AppLocalizedPhrase.autoWhiteBalanceHelp</comment></data>
@@ -1655,4 +1655,30 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="printWatermarkTopLeading.Text" xml:space="preserve"><value>Oben links</value></data>
   <data name="printWatermarkTopCenter.Text" xml:space="preserve"><value>Oben Mitte</value></data>
   <data name="printWatermarkTopTrailing.Text" xml:space="preserve"><value>Oben rechts</value></data>
+  <data name="straightenWithLine.Text" xml:space="preserve"><value>An Linie ausrichten (Ziehen)</value></data>
+  <data name="straightenGrid.Text" xml:space="preserve"><value>Raster beim Ausrichten anzeigen</value></data>
+  <data name="straightenHintFormat.Text" xml:space="preserve"><value>%@ + Ziehen: an Linie ausrichten · %@: Raster</value></data>
+  <data name="updateAvailableFormat.Text" xml:space="preserve"><value>Auf Version %@ aktualisieren</value></data>
+  <data name="updateUpToDate.Text" xml:space="preserve"><value>Sie haben die neueste Version.</value></data>
+  <data name="updateDownloadingFormat.Text" xml:space="preserve"><value>%@ wird heruntergeladen…</value></data>
+  <data name="updateDownloadedFormat.Text" xml:space="preserve"><value>Update heruntergeladen: %@</value></data>
+  <data name="updateDownloadFailed.Text" xml:space="preserve"><value>Das Update konnte nicht heruntergeladen werden. Laden Sie es von der Release-Seite.</value></data>
+  <data name="developTransform.Text" xml:space="preserve"><value>Transformieren</value></data>
+  <data name="transformModeOff.Text" xml:space="preserve"><value>Aus</value></data>
+  <data name="transformModeAuto.Text" xml:space="preserve"><value>Auto</value></data>
+  <data name="transformModeGuided.Text" xml:space="preserve"><value>Geführt</value></data>
+  <data name="transformModeLevel.Text" xml:space="preserve"><value>Waagerecht</value></data>
+  <data name="transformModeVertical.Text" xml:space="preserve"><value>Vertikal</value></data>
+  <data name="transformModeFull.Text" xml:space="preserve"><value>Voll</value></data>
+  <data name="transformVertical.Text" xml:space="preserve"><value>Vertikal</value></data>
+  <data name="transformHorizontal.Text" xml:space="preserve"><value>Horizontal</value></data>
+  <data name="transformRotate.Text" xml:space="preserve"><value>Drehen</value></data>
+  <data name="transformAspect.Text" xml:space="preserve"><value>Seitenverhältnis</value></data>
+  <data name="transformScale.Text" xml:space="preserve"><value>Skalieren</value></data>
+  <data name="transformOffsetX.Text" xml:space="preserve"><value>X-Versatz</value></data>
+  <data name="transformOffsetY.Text" xml:space="preserve"><value>Y-Versatz</value></data>
+  <data name="transformConstrainCrop.Text" xml:space="preserve"><value>Zuschnitt begrenzen</value></data>
+  <data name="transformGuidedHint.Text" xml:space="preserve"><value>Ziehen Sie 2 bis 4 Hilfslinien entlang von Linien, die gerade sein sollen.</value></data>
+  <data name="transformGuidedClear.Text" xml:space="preserve"><value>Hilfslinien löschen</value></data>
+  <data name="transformAutoNoLines.Text" xml:space="preserve"><value>Keine geraden Linien gefunden, die Perspektive bleibt unverändert.</value></data>
 </root>

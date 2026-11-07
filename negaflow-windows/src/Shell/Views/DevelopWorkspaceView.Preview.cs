@@ -101,6 +101,10 @@ public sealed partial class DevelopWorkspaceView
                     (developed.Settled ? "cache HIT frame=" : "cache PROXY frame=") + frame.Id +
                     " " + developed.Width + "x" + developed.Height +
                     " skipRequest=" + (developed.Settled ? "1" : "0"));
+                // 샘플러와 변환 자동 풀이도 화면에 올린 이 그림을 읽어야 합니다. 예전에는 캐시에서
+                // 올린 그림의 화소를 보관하지 않아 앞 사진의 화소가 남았습니다.
+                PreviewCanvas.KeepPreviewPixels(
+                    developed.Pixels, (uint)developed.Width, (uint)developed.Height, frame.ImageTransform);
                 PreviewCanvas.Present(developed.Pixels, developed.Width, developed.Height);
                 GrainMendPanel.CompleteDefectPreview(frame);
                 GrainMendPanel.TraceDevelopedPresentation(
@@ -313,7 +317,7 @@ public sealed partial class DevelopWorkspaceView
             GrainMendPanel.CancelDevelopedPresentation(requestedFrame);
             return;
         }
-        PreviewCanvas.KeepPreviewPixels(pixels, outcome.Width, outcome.Height);
+        PreviewCanvas.KeepPreviewPixels(pixels, outcome.Width, outcome.Height, requestedFrame.ImageTransform);
 
         int width = (int)outcome.Width;
         int height = (int)outcome.Height;

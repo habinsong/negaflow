@@ -53,6 +53,7 @@ final class DevelopInspectorResetterTests: XCTestCase {
             $0.straightenAngle = 2.5
             $0.rotation = .deg270
             $0.flipHorizontal = true
+            $0.perspective = PerspectiveCorrection(mode: .vertical, solvedVertical: -6, vertical: 20, scale: 90)
         }
         frame.updateParams {
             $0.exposure = 1.0
@@ -74,6 +75,7 @@ final class DevelopInspectorResetterTests: XCTestCase {
         XCTAssertNil(frame.imageTransform.cropRect)
         XCTAssertNil(frame.imageTransform.cropAspect)
         XCTAssertEqual(frame.imageTransform.straightenAngle, 0)
+        XCTAssertEqual(frame.imageTransform.perspective, .identity)
         XCTAssertEqual(frame.imageTransform.rotation, .deg270)
         XCTAssertTrue(frame.imageTransform.flipHorizontal)
     }

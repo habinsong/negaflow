@@ -7,7 +7,7 @@
 <p align="center">negaflow, conçu nativement pour Windows.</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.2.6-EF8B26" alt="version 1.2.6\"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.2.6-EF8B26" alt="version 1.2.6"></a>
   <a href="#"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 ou plus récent"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -28,32 +28,34 @@
 
 ---
 
-## Ce qu'il faut
+## Prérequis
 
 Pour l'exécuter :
 
-- Windows 11 24H2 (build 26100) ou plus récent, 64 bits
-- 8 Go de mémoire pour du 35 mm, 16 Go plus confortables en moyen format
+- Windows 11 24H2 (build 26100) ou ultérieur, 64 bits
+- 8 Go de mémoire, 16 Go recommandés en moyen format
 
 Pour le compiler :
 
-- Visual Studio 2022 avec la charge de travail Développement Desktop en C++
-- SDK Windows 11 (10.0.26100 ou plus récent)
-- SDK .NET 10
-- CMake 3.28 ou plus récent
-- Python 3.11 ou plus récent, pour les scripts d'icônes et de ressources
+- Visual Studio 2026 avec la charge de travail Développement Desktop en C++ (les composants sont listés dans `.vsconfig`)
+- Windows 11 SDK 10.0.26100 ou ultérieur
+- SDK .NET 10 (`global.json` fixe la version 10.0.302)
+- CMake 4.2 ou ultérieur (requis par le générateur `Visual Studio 18 2026`)
+- Python 3, pour les scripts d'icône et de ressources
 
-Cela tourne aussi sur les machines Arm64. Les versions Arm64 sont moins vérifiées que les x64.
+Le build propose aussi des préréglages Arm64. Les versions publiées ne contiennent que du x64.
 
 ## Installation
 
-Téléchargez `negaflow-1.2.6-win-x64.exe` depuis [Releases](https://github.com/habinsong/negaflow/releases) et lancez-le.
+Téléchargez `negaflow-1.2.6-win-x64.exe` depuis [Releases](https://github.com/habinsong/negaflow/releases) et lancez-le. Par défaut, il s'installe dans `%LOCALAPPDATA%\Negaflow\App` sans demander de droits administrateur.
 
-ZIP du programme d’installation Windows: [negaflow-1.2.6-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.6/negaflow-1.2.6-win-x64-setup.zip). Windows propose aussi un setup ZIP contenant le même EXE d’installation, les instructions, les notices et les sommes SHA-256. Extrayez tous les fichiers avant de lancer l’installation. Cette archive ne constitue pas une version portable ; SmartScreen peut encore afficher un avertissement.
+[negaflow-1.2.6-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.6/negaflow-1.2.6-win-x64-setup.zip) contient le même programme d'installation, avec les instructions, les mentions légales et les sommes de contrôle SHA-256. Extrayez tous les fichiers avant de lancer le programme d'installation. C'est une archive d'installation, pas une application portable.
 
-Aucun droit administrateur nécessaire. SmartScreen prévient une fois au premier lancement : cliquez sur Informations complémentaires, puis exécutez.
+Le programme d'installation n'est pas signé. SmartScreen avertit une fois au premier lancement : cliquez sur Informations complémentaires, puis exécutez-le.
 
-La désinstallation passe par `Désinstaller negaflow` dans le menu Démarrer, ou par la liste des applications dans Paramètres. La photothèque et les photos restent intactes.
+Pour désinstaller, utilisez `Uninstall negaflow` dans le menu Démarrer ou la liste des applications dans Paramètres. La bibliothèque et les photos ne sont pas touchées.
+
+Au lancement, l'app demande une fois à GitHub la dernière publication. Si une version plus récente existe, le bas du menu ⋯ en haut à droite affiche « Mettre à jour vers la version X.Y.Z ». Ce choix ouvre la page de publication et enregistre dans Téléchargements le programme d'installation `win-x64.exe`, vérifié avec le `SHA256SUMS.txt` de la publication. L'installation reste à faire vous-même. Quand l'app est à jour, l'élément indique « Vous avez la dernière version. » et ouvre la page du projet. Si la vérification échoue, hors ligne par exemple, l'élément n'apparaît pas.
 
 ## Compilation
 
@@ -64,21 +66,21 @@ cd negaflow\negaflow-windows
 # Compiler le moteur C++
 .\scripts\build.ps1 -Preset x64-release
 
-# Compiler l'application puis la lancer
+# Compiler l'application et la lancer
 .\scripts\run-app.ps1 -Architecture x64 -Configuration Release
 ```
 
 `build.ps1` accepte `x64-debug`, `x64-release`, `arm64-debug` et `arm64-release`.
 
-`run-app.ps1` est le seul moyen de lancer l'application pendant le développement. L'application est compilée en paquet MSIX, donc lancer l'exe du dossier de build ne donne rien. Le script fabrique le paquet, l'enregistre pour l'utilisateur courant, puis le lance par son identifiant.
+Pendant le développement, lancez l'application uniquement avec `run-app.ps1`. Elle est construite comme un paquet MSIX, donc exécuter l'exe du dossier de build ne fait rien. Le script construit le paquet, l'enregistre pour l'utilisateur courant et le démarre par son identifiant d'application.
 
-Pour fabriquer l'installateur :
+Pour compiler le programme d'installation :
 
 ```powershell
 .\scripts\build-release.ps1 -Architecture x64
 ```
 
-Le résultat arrive dans `out\release\win-x64`.
+Le résultat est dans `out\release\win-x64`.
 
 ## Vérifications
 
@@ -92,40 +94,40 @@ ctest --preset x64-release --output-on-failure
 # Tests de la frontière moteur/application
 .\scripts\test-interop.ps1
 
-# Tout cela en une fois
+# Tout cela d'un coup
 .\scripts\local-ci.ps1
 ```
 
-Exécutez la vérification de l’installation (`scripts\verify-installer.ps1`, aussi appelé par `scripts\local-ci.ps1`) dans la session de bureau ouverte. Dans la session SSH 0, l’initialisation de PLM peut échouer avec `0x80070005` et empêcher l’enregistrement AppX. Le script de vérification s’arrête avant de modifier l’installation existante lorsqu’il est lancé depuis cette session SSH.
+Lancez `scripts\verify-installer.ps1` (appelé aussi par `local-ci.ps1`) dans une session de bureau ouverte. Dans une session SSH, l'enregistrement AppX peut échouer avec `0x80070005` ; le script s'arrête alors avant de toucher à l'installation existante.
 
-La CI exécute les tests du moteur sans fichiers externes. Les références macOS sont conservées hors de Git. Pour lancer les comparaisons, définissez `NEGAFLOW_MACOS_GOLDEN_ROOT` dans la configuration CMake avec le dossier des références. Celui-ci doit contenir `task6-metadata-policy`, `task9-bw-slide`, `task7-coreimage-filters`, `task8-digital-film-look` et `vibrance`. Un fichier absent ou illisible fait échouer la comparaison sélectionnée. `ctest --preset x64-release -L external-golden` lance ces comparaisons ; les tests unitaires restent enregistrés.
+La CI n'exécute que les tests autonomes du moteur. Les fichiers de référence macOS restent hors de Git. Pour lancer ces comparaisons, indiquez le dossier de référence dans `NEGAFLOW_MACOS_GOLDEN_ROOT` lors de la configuration de CMake. Il doit contenir `task6-metadata-policy`, `task9-bw-slide`, `task7-coreimage-filters`, `task8-digital-film-look` et `vibrance`. Un fichier manquant ou illisible fait échouer les comparaisons choisies. `ctest --preset x64-release -L external-golden` les exécute, et les tests unitaires ordinaires restent actifs.
 
-## Cibles couleur Custom
+## Cibles de couleur personnalisées
 
-CS suit MAIN, HS, SP, F135 et HR. Après avoir choisi CS, sélectionnez une des 18 cibles Custom dans le sélecteur à deux colonnes en bas à gauche. Des séparateurs divisent les groupes de 11, 4 et 3 entrées ; le sélecteur Look reste à droite. Le passage à CS choisit Emulsion. Une photo utilisant déjà Custom conserve sa cible.
+CS suit MAIN, HS, SP, F135 et HR dans les pastilles de cibles. Le choisir ouvre en bas à gauche une liste sur deux colonnes de 18 cibles Custom, en groupes de 11, 4 et 3 ; le sélecteur de rendu reste à droite. En entrant dans CS, Emulsion est sélectionnée, et une photo qui utilise déjà une cible Custom la garde.
 
-Custom emploie les mêmes coefficients custom-3 et identifiants que macOS. La cible est enregistrée dans les réglages de la photo et le catalogue. L’aperçu et l’export appliquent la même étape. Le bouton d’application existant dans l’en-tête du dossier applique la cible choisie au dossier.
+Custom utilise les mêmes coefficients custom-3 et les mêmes identifiants texte que macOS. La cible choisie est enregistrée dans les réglages de la photo et dans le catalogue, et l'aperçu comme l'export passent par la même étape. L'en-tête de dossier applique la cible choisie au dossier avec le bouton Appliquer existant.
 
 ## Vérifier le moteur en ligne de commande
 
-`negaflow-cli.exe` montre comment le moteur traite un fichier. Il utilise des options plutôt que des sous-commandes.
+`negaflow-cli.exe` fait tourner le moteur sur un seul fichier. Il prend des options, pas des sous-commandes.
 
 ```powershell
 $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 
-# Voir de quelle compilation il s'agit
+# Informations de build
 & $cli --build-info
 
-# Voir ce que contient un fichier de numérisation
+# Contenu d'un fichier de numérisation
 & $cli --probe-tiff scan.tif
 
 # Développer et enregistrer en TIFF 16 bits
 & $cli --export-developed-tiff16 scan.tif out.tif
 
-# Voir où passe le temps sur une passe de développement
+# Répartition du temps dans un passage de développement
 & $cli --develop-timing scan.tif
 
-# Chercher la base du film automatiquement et voir ce qui a été retenu
+# Base du film mesurée automatiquement et valeur retenue
 & $cli --auto-base-probe scan.tif
 ```
 
@@ -133,44 +135,44 @@ Lancez-le sans argument pour la liste complète.
 
 ## Scanners
 
-Les commandes du scanner n'apparaissent pas tant qu'un module n'est pas installé. Les appareils SANE passent par [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), qui s'installe à part.
+Les commandes de scanner restent masquées tant qu'aucun module n'est installé. Les appareils SANE sont pris en charge par [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), à installer séparément.
 
-Le module dialogue avec le scanner par les chemins de pilotes que Windows fournit déjà. Vous pouvez continuer à utiliser VueScan ou SilverFast sur la même machine.
+Le module parle au scanner par les chemins de pilotes que Windows fournit déjà. VueScan ou SilverFast peuvent rester installés sur la même machine.
 
 ## En cas de problème
 
 L'application écrit des journaux texte dans `%LOCALAPPDATA%\Negaflow\Logs`.
 
-| Fichier | Ce qui est consigné |
+| Fichier | Ce qu'il enregistre |
 |---|---|
-| `export-trace.txt` | Export et export rapide, échecs compris |
-| `termination.txt` | Ce qui s'est passé pendant la fermeture |
-| `settings-change.txt` | Réglages modifiés et par quoi |
+| `export-trace.txt` | Export et exportation rapide, échecs compris |
+| `termination.txt` | Ce qui s'est passé pendant la fermeture de l'application |
+| `settings-change.txt` | Réglages modifiés et ce qui les a modifiés |
 
-Ces trois-là sont toujours actifs. Deux autres ne s'activent que pour creuser un problème précis.
+Ces trois-là sont toujours actifs. Deux autres sont désactivés par défaut :
 
-- `preview-trace.txt`. Créez un fichier vide nommé `preview-trace.on` dans le même dossier pour l'activer.
-- `stage-trace.txt`. Définissez la variable d'environnement `NEGAFLOW_STAGE_TRACE=1` avant de lancer l'application. Il consigne les statistiques de pixels à chaque étape du développement.
+- `preview-trace.txt` : créez un fichier vide nommé `preview-trace.on` dans le même dossier.
+- `stage-trace.txt` : définissez la variable d'environnement `NEGAFLOW_STAGE_TRACE=1` avant de lancer l'application. Il enregistre des statistiques de pixels à chaque étape du développement.
 
-## Composition des dossiers
+## Arborescence
 
 ```
 negaflow-windows/
 ├── src/
 │   ├── Native/        Chroma Engine, GrainMend, décodage et export (C++)
-│   ├── Interop/       Couche entre le moteur et l'application (C#)
-│   ├── Catalog.Core/  Stockage de la photothèque (C#)
-│   ├── Shell.Core/    Logique de développement, impression et export (C#)
-│   ├── Shell/         Écrans photothèque, développement et impression (WinUI 3)
-│   └── Cli/           Outil de vérification du moteur (C++)
-├── scripts/           Scripts de compilation, de test et de paquet
-├── tests/             Tests moteur, application et frontière
-└── Installer/windows/ Installateur NSIS
+│   ├── Interop/       La couche entre moteur et application (C#)
+│   ├── Catalog.Core/  Stockage de la bibliothèque (C#)
+│   ├── Shell.Core/    Logique de développement, de tirage et d'export (C#)
+│   ├── Shell/         Écrans Bibliothèque, Développement et Tirage (WinUI 3)
+│   └── Cli/           Outil d'inspection du moteur (C++)
+├── scripts/           Scripts de build, de test et de packaging
+├── tests/             Tests du moteur, de l'application et de la frontière
+└── Installer/windows/ Programme d'installation NSIS
 ```
 
 ## Documents liés
 
-- [Différences entre macOS et Windows](../../docs/fr/platform/PLATFORM_DIFFERENCES.md)
+- [Ce qui diffère entre les deux versions](../../docs/fr/platform/PLATFORM_DIFFERENCES.md)
 - [Chroma Engine](../../docs/fr/product/CHROMA_ENGINE.md)
 - [GrainMend](../../docs/fr/product/GRAINMEND.md)
 - [Architecture produit](../../docs/fr/architecture/PRODUCT_ARCHITECTURE.md)

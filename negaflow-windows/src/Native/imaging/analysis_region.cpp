@@ -61,14 +61,22 @@ NormalizedPoint display_unit_to_base(
         y = 1.0 - (transform.crop.y + (up * transform.crop.height));
     }
 
+    // 회전(90/270)은 비율을 뒤집습니다. 원근 보정은 그 크기에서 돌고, 수평 보정은 원근의 출력
+    // 크기에서 돕니다(자르기 제한이면 안쪽 사각형).
+    const bool swaps = transform.rotation == ImageRotation::degrees_90 ||
+                       transform.rotation == ImageRotation::degrees_270;
+    const double oriented_width = static_cast<double>(swaps ? source_height : source_width);
+    const double oriented_height = static_cast<double>(swaps ? source_width : source_height);
+    const std::optional<PerspectiveMapping> perspective =
+        source_width > 0U && source_height > 0U
+            ? make_perspective_mapping(transform.perspective, oriented_width, oriented_height)
+            : std::nullopt;
+
     // 2) 수평 보정을 풉니다 — 중심 기준 회전과 같은 비율 최대 내접 크롭의 역입니다.
-    //    회전(90/270)은 비율을 뒤집으므로 그 뒤의 크기를 씁니다.
     if (std::abs(transform.straighten_angle) > straighten_threshold &&
         source_width > 0U && source_height > 0U) {
-        const bool swaps = transform.rotation == ImageRotation::degrees_90 ||
-                           transform.rotation == ImageRotation::degrees_270;
-        const double sw = static_cast<double>(swaps ? source_height : source_width);
-        const double sh = static_cast<double>(swaps ? source_width : source_height);
+        const double sw = perspective.has_value() ? perspective->output_width : oriented_width;
+        const double sh = perspective.has_value() ? perspective->output_height : oriented_height;
         const double theta = transform.straighten_angle * std::numbers::pi / 180.0;
         const double ct = std::abs(std::cos(theta));
         const double st = std::abs(std::sin(theta));
@@ -88,6 +96,18 @@ NormalizedPoint display_unit_to_base(
         const double dy = (dxp * sine) + (dyp * cosine);
         x = (cx + dx) / sw;
         y = 1.0 - ((cy + dy) / sh);
+    }
+
+    // 2.5) 원근 보정을 풉니다: 출력 사각형 기준 정규좌표 → 보정 전(회전 뒤) 정규좌표.
+    if (perspective.has_value()) {
+        const auto raw = apply_homography(
+            perspective->inverse,
+            {perspective->output_left + (x * perspective->output_width),
+             perspective->output_top + (y * perspective->output_height)});
+        if (raw.has_value()) {
+            x = raw->x / oriented_width;
+            y = raw->y / oriented_height;
+        }
     }
 
     // 3) 4분 회전을 풉니다(y-down 정규 좌표).
@@ -126,7 +146,10 @@ std::optional<AnalysisRegion> analysis_region_from_transform(
     const ImageTransformParameters& transform,
     const std::uint32_t source_width,
     const std::uint32_t source_height) noexcept {
-    if ((!transform.has_crop && std::abs(transform.straighten_angle) <= straighten_threshold) ||
+    const bool constrained_perspective = transform.perspective.constrain_crop &&
+        perspective_changes_geometry(transform.perspective);
+    if ((!transform.has_crop && std::abs(transform.straighten_angle) <= straighten_threshold &&
+         !constrained_perspective) ||
         source_width == 0U || source_height == 0U) {
         return std::nullopt;
     }

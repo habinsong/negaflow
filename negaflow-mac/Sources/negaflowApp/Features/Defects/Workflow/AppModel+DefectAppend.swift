@@ -9,8 +9,13 @@ extension AppModel {
     func applyDefectStrokes(_ displayStrokes: [DefectStroke], to frame: ScanFrame) {
         guard !displayStrokes.isEmpty else { return }
         let transform = frame.imageTransform
+        // 원본 크기를 넘겨 수평 보정·원근까지 풀어야 칠한 자리에 떨어진다. 크기 없이 풀면 두 변형을
+        // 건너뛰어, 각도나 원근이 걸린 사진에서 획이 화면 중심에서 멀수록 어긋난다.
+        let baseSize = frame.sourcePixelWidth.flatMap { width in
+            frame.sourcePixelHeight.map { CGSize(width: width, height: $0) }
+        }
         let mapped = displayStrokes.map { stroke in
-            DefectStroke(points: stroke.points.map { transform.displayUnitToBase($0) },
+            DefectStroke(points: stroke.points.map { transform.displayUnitToBase($0, baseSize: baseSize) },
                          thickness: stroke.thickness)
         }
         let item = DefectEditItem(edit: .brush(mapped),

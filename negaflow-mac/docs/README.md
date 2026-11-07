@@ -32,9 +32,9 @@
 
 To run it:
 
-- macOS 14.0 or later (compatible with macOS 14, 26 and 27)
+- macOS 14.0 or later (macOS 14, 26 and 27 are supported)
 - Apple Silicon or Intel
-- 8 GB of memory for 35mm work, 16 GB is more comfortable with medium format
+- 8 GB of memory, 16 GB recommended for medium format
 
 To build it:
 
@@ -50,11 +50,13 @@ Download from [Releases](https://github.com/habinsong/negaflow/releases).
 | `negaflow-1.2.6-mac-universal.pkg` | Apple Silicon, Intel |
 | `negaflow-1.2.6-mac-arm64.pkg` | Apple Silicon only |
 
-The Universal PKG works for most people. It installs into `/Applications`. To move it yourself, use the DMG or the ZIP on the same page.
+The Universal PKG fits most Macs and installs into `/Applications`. The same page has a DMG and a ZIP if you want to place the app yourself.
 
-The app is not notarized, so macOS blocks it on the first launch. Allow it in System Settings under Privacy and Security with Open Anyway.
+The app is signed ad hoc and not notarized, so macOS blocks the first launch. Allow it in System Settings under Privacy & Security with Open Anyway.
 
-Your library and settings live under `~/Library/Application Support/negaflow`.
+The library and settings are in `~/Library/Application Support/negaflow`.
+
+At launch the app asks GitHub once for the latest release. If a newer version is out, the bottom of the ⋯ menu at the top right reads "Update to Version X.Y.Z". Choosing it opens the release page and saves the PKG for this Mac to Downloads, checked against the release's `SHA256SUMS.txt`. You install it yourself. When the app is current the item reads "You're on the latest version." and opens the project page. If the check fails, for example offline, the item does not appear.
 
 ## Building
 
@@ -69,9 +71,9 @@ bash scripts/run-app.sh
 bash scripts/run-app.sh build
 ```
 
-`run-app.sh` calls `xcodebuild`, assembles the app bundle, and signs it locally. For work on the engine or the CLI alone, `swift build` is enough.
+`run-app.sh` calls `xcodebuild`, assembles the app bundle and signs it locally. For the engine or the CLI alone, `swift build` is enough.
 
-To produce release artifacts:
+Release artifacts:
 
 ```bash
 bash negaflow-mac/scripts/build-release.sh
@@ -93,11 +95,11 @@ bash scripts/ci-gate.sh
 
 ## Custom color targets
 
-The target capsules are MAIN, HS, SP, F135, HR, and CS. Select CS, then choose one of the 18 Custom targets in the existing lower-left selector, which opens a two-column list. The look selector stays on the right. Entering CS selects Emulsion; an image already using a Custom target keeps its selection.
+CS follows MAIN, HS, SP, F135 and HR in the target capsules. Selecting it opens a two-column list of 18 Custom targets in the lower-left selector; the Look selector stays on the right. Entering CS selects Emulsion, and an image that already uses a Custom target keeps it.
 
-The menu separates Emulsion–Dichroic, Wetzlar–Rochester, and Slide Show–Point & Shoot. Custom targets apply the custom-3 tone, density, and chroma response to portraits and landscapes. Saving, previews, thumbnails, and exports use the selected target ID. Existing targets keep their processing.
+The list has three groups: Emulsion to Dichroic (11), Wetzlar to Rochester (4), Slide Show to Point & Shoot (3). Custom targets apply the custom-3 tone, density and chroma response. Saving, previews, thumbnails and export use the selected target ID. Other targets are unchanged.
 
-The CLI accepts the same IDs, for example `--target classic`, `--target dye-transfer`, and `--target point-and-shoot`.
+The CLI takes the same IDs: `--target classic`, `--target dye-transfer`, `--target point-and-shoot`.
 
 ## Command line
 
@@ -126,7 +128,7 @@ Run `negaflow` with no arguments for the full option list.
 
 ## Scanners
 
-Scanner controls stay hidden until a plugin is installed. SANE devices are handled by [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), installed separately.
+Scanner controls stay hidden until a plugin is installed. SANE devices use [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), installed separately.
 
 ## Modules
 
@@ -134,12 +136,12 @@ Scanner controls stay hidden until a plugin is installed. SANE devices are handl
 |---|---|
 | `Chromabase` | Chroma Engine, GrainMend, profiles, export |
 | `ScannerKit` | Scanner capability checks and plugin connection |
-| `negaflowApp` | Library, develop, scan, and export screens |
-| `negaflowCLI` | Develop, scan, benchmark, and self-check commands |
+| `negaflowApp` | Library, develop, scan and export screens |
+| `negaflowCLI` | Develop, scan, benchmark and self-check commands |
 
 ## Reference images
 
-`docs/verification/macos-golden` in the repository root holds images rendered by this build. The Windows engine tests read them and compare pixel for pixel. Regenerate them only when the macOS output is meant to change.
+`docs/verification/macos-golden` holds images rendered by this build. Git ignores that folder, so it exists only on the machine that rendered them. The Windows engine tests compare against copies pixel for pixel. Regenerate the images only when the macOS output is meant to change.
 
 ## Related documents
 

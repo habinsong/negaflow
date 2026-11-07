@@ -2,49 +2,49 @@
 
 [文档首页](../README.md)
 
-不会靠看屏幕来判定色彩准确度合格。 把 IT8 图像和对应其物理标板的参考文件固定成一对，逐个色块记录数值。
+色彩准确度需要测量，不能只靠目视。把 IT8 图像与其实物色标的参考文件配对，并为每个色块记录数值结果。
 
 > [!IMPORTANT]
-> 公开的 IT8 素材能确认检验器和色彩计算是否回退，但证明不了真实扫描仪或彩色负片的准确度。 判定设备需要经过确认的物理标板，以及在该设备上的实测。
+> 公开的 IT8 资料可以确认检查器和色彩计算有没有退步，但不能证明真实扫描仪或彩色负片的准确度。要评判设备，需要经过确认的实物色标和该设备的真实测量。
 
-## 证据种类
+## 证据类别
 
 | 名称 | 能确认什么 | 不能确认什么 |
 |---|---|---|
-| `algorithmRegression` | 文件解析、ICC 转换、色块区域、Lab、CIEDE2000 计算 | 真实扫描仪的准确度 |
-| `deviceCharacterization` | 经确认的物理标板与真实设备实测 | 其他标板或设备的准确度 |
+| `algorithmRegression` | 文件解析、ICC 转换、色块面积、Lab、CIEDE2000 | 真实扫描仪的准确度 |
+| `deviceCharacterization` | 用真实设备测量经过确认的实物色标 | 其他色标或设备的准确度 |
 | `syntheticModel` | 独立合成模型的数学往返 | 真实胶片或设备的准确度 |
 
-`deviceCharacterization` 需要物理标板的厂商、材质、序列号和批次信息。 只要有一项与参考文件的表头不同，就不做评估。
+`deviceCharacterization` 需要实物色标的厂商、材质、序列号和批次。只要有一项与参考文件头不同，就不做任何评估。
 
-IT8.7/1 和 ISO 12641-1 的透射标板面向正片透射原稿。 这些结果说明不了彩色负片的橙色片基、染料干扰、C-41 偏差，也说明不了 NORITSU/FUJI 的输出准确度。 那些主张需要同一张彩色负片经两条路径处理的配对素材，以及独立的验证集合。
+IT8.7/1 和 ISO 12641-1 的透射色标针对正片透射原稿。这些结果对彩色负片的橙色底、染料相互作用、C-41 的差异以及 HS 和 SP 输出的准确度什么也说明不了。这类结论需要把同一张彩色负片走两条路径得到的配对资料，外加单独的验证集。
 
-对公开 FADGI OpenDICE 图像与参考文件的 264 个色块进行了测量：ΔE00 中位数 9.8815，p95 13.2745，最大值 15.5996。独立 LittleCMS 转换与评估器的 Lab 分量差最大为 0.105。这不是胶片色准合格结果：该资料是正片 IT8 扫描，实物序列号未核实，也没有负片拍摄的相机、光源和胶片实测数据。
+公开的 FADGI OpenDICE 图像与参考文件配对，测量了 264 个色块：ΔE00 中位数 9.8815，p95 13.2745，最大值 15.5996。独立的 LittleCMS 转换与评估器的差异最大为 0.105 个 Lab 单位。这些观测通不过胶片准确度的关卡：这张扫描是正片 IT8，实物序列号未经确认，也没有附带负片的相机、光源和胶片测量。
 
-也检查了公开负片资料。FADGI 负片参考文件仅提供密度，没有实测颜色色块。BlueNeg 将其修复参考称为 pseudo ground truth。2024 年 ARRI AQUA 分光光度计研究的数据需要申请，不能公开下载。这些资料都不能为当前反转提供独立的原场景色彩基准。
+也查看了公开的负片数据集。FADGI 的负片参考只含密度，不含实测的色块。BlueNeg 把它复原的参考标注为 pseudo ground truth。2024 年 ARRI AQUA 分光测量研究的数据需要申请，不能公开下载。它们都没有为当前的反相提供独立的场景色彩参考。
 
-还检查了[公开的 Kodak ColorPlus 200 曝光对比资料](https://discuss.pixls.us/t/any-interest-in-a-film-negative-feature-in-rt/12569/262)，其中有5张 Sony ILCE-7 RAW 扫描，曝光为−1至+3 EV。图卡标签为 Grey White Balance Colour Card，因此未套用 X-Rite 参考值。解码后的相机 RGB 在120个采样色块区域内均无零值或满量程像素。这只是解码信号检查，不是传感器马赛克的直接测量或色彩准确度判定。内嵌 JPEG 预览含有相机白平衡。缺少该图卡及扫描配置的实测基准，无法将输出偏色归因于输入或应用缺陷。由于未确认再分发权利，这些文件不放入仓库或应用。
+还检查了一组[公开的 Kodak ColorPlus 200 曝光系列](https://discuss.pixls.us/t/any-interest-in-a-film-negative-feature-in-rt/12569/262)（五张 Sony ILCE-7 RAW 扫描，−1 到 +3 EV）。其色卡是 Grey White Balance Colour Card，所以拒绝使用 X-Rite 的参考值。120 个采样色块区域在解码后的相机 RGB 中都没有触到零或满量程。这只是对解码后信号的检查，不是传感器马赛克的直接测量，也不是色彩准确度的结果。没有该色卡和扫描环境的实测参考，输出的偏色就无法判定是来自输入还是来自应用。因为没有确认再分发权利，这些文件留在仓库之外。
 
 [FADGI](https://www.digitizationguidelines.gov/guidelines/digitize-OpenDice.html) · [BlueNeg](https://huggingface.co/datasets/ttgroup/blueneg-release) · [Plutino 2024](https://doi.org/10.1002/col.22946)
 
-## 公开的回归检查素材
+## 公开的回归资料
 
-FADGI/OpenDICE 的下面两个文件作为一对使用。
+下面两个 FADGI/OpenDICE 文件配对使用。
 
-- 指南：<https://www.digitizationguidelines.gov/guidelines/digitize-OpenDice.html>
-- 图像：<https://www.digitizationguidelines.gov/guidelines/OpenDICE/IT8-7.1.tif>
-  - SHA-256：`c62ee73f26390a2ad90e7e28280cbd1efb4f18834425bb7112ff1f8016832ffd`
-  - 尺寸：`6255 x 4170`
-  - 格式：16-bit RGB，内嵌 `Adobe RGB (1998)`
-- 参考文件：<https://www.digitizationguidelines.gov/guidelines/OpenDICE/Profile_IT8-7.1.txt>
-  - SHA-256：`19337b85f213eb4397e91c91298201f421ef3ca33b0ef6da3d752a0880491840`
-  - 色块：从 `A1` 到 `L22` 的 264 个 Lab 值
-  - 第 16 列：density
+- 说明: <https://www.digitizationguidelines.gov/guidelines/digitize-OpenDice.html>
+- 图像: <https://www.digitizationguidelines.gov/guidelines/OpenDICE/IT8-7.1.tif>
+  - SHA-256: `c62ee73f26390a2ad90e7e28280cbd1efb4f18834425bb7112ff1f8016832ffd`
+  - 尺寸: `6255 x 4170`
+  - 格式: 内嵌 `Adobe RGB (1998)` 的 16 位 RGB
+- 参考文件: <https://www.digitizationguidelines.gov/guidelines/OpenDICE/Profile_IT8-7.1.txt>
+  - SHA-256: `19337b85f213eb4397e91c91298201f421ef3ca33b0ef6da3d752a0880491840`
+  - 色块: 从 `A1` 到 `L22` 的 264 个 Lab 值
+  - 第 16 列：密度
 
-由于尚未确认再分发权限，这些文件不放进仓库，也不放进应用。 请自行下载，并在 [示例清单](../../reference/IT8_FADGI_OPENDICE.example.json)里指向它们。 该示例的等级是 `algorithmRegression`。只把名字改成 `deviceCharacterization`，检验器会拒绝。
+因为没有确认再分发权利，这些文件不放进仓库和应用。请自行下载，并让[示例清单](../../reference/IT8_FADGI_OPENDICE.example.json)指向它们。示例的等级是 `algorithmRegression`，改成 `deviceCharacterization` 会被检查器拒绝。在 `negaflow-mac/` 下运行：
 
 ```bash
-swift run negaflow it8-bench docs/reference/IT8_FADGI_OPENDICE.example.json \
+swift run negaflow it8-bench ../docs/reference/IT8_FADGI_OPENDICE.example.json \
   --image /path/to/IT8-7.1.tif \
   --reference /path/to/Profile_IT8-7.1.txt \
   --out /path/to/it8-report.json
@@ -52,24 +52,22 @@ swift run negaflow it8-bench docs/reference/IT8_FADGI_OPENDICE.example.json \
 
 ## 测量规则
 
-- 图像、参考文件或所选 ICC 的 SHA-256 与清单不符时中止。
-- 报告 v2 还会记录清单原文的 SHA-256。
-- `A01` 和 `A1` 按同一坐标读取，原始 ID 保留在报告里。
-- 以原分辨率的浮点读取 22 列 × 12 行色块的中央 60%。
-- 色块顺序是行 `A`–`L`、列 `1`–`22`。
-- 尊重内嵌 ICC。
-- 按 linear sRGB D65 到 XYZ、Bradford D50 适应、Lab D50/2° 的顺序计算。
-- 每个色块记录区域、像素数、RGB 均值与标准差、两端比例、非有限值数量、参考与实测 Lab、L/a/b 差值、CIEDE2000。
-- median、p95、max 只是观测值，不是合格线。
-- 不编造没有依据的平均阈值，`qualityDecision` 保持 `notEvaluated`。
-- 用来拟合配置文件的标板，不会再拿去做独立验证。
+- 图像、参考文件或所选 ICC 的 SHA-256 与清单不符时，运行停止。
+- 报告 v2 还会记录清单文本的 SHA-256。
+- `A01` 和 `A1` 读取同一坐标，原始 ID 保留在报告里。
+- 在 22 × 12 的网格中，每个色块取中间 60%，按源分辨率以浮点读取，行为 `A`–`L`，列为 `1`–`22`。
+- 遵循内嵌的 ICC。
+- 计算从线性 sRGB D65 到 XYZ，经 Bradford 适应到 D50，再到 Lab D50/2°。
+- 每个色块记录面积、像素数、RGB 均值和标准差、两端截断比例、非有限值个数、参考和实测的 Lab、L/a/b 差以及 CIEDE2000。
+- 中位数、p95 和最大值是观测值，不是合格线。不会无依据地设一个平均阈值，`qualityDecision` 保持 `notEvaluated`。
+- 用来拟合配置文件的色标，不会再用于独立验证。
 
-### 物理标板信息
+### 实物色标细节
 
-真实设备测量时，由操作者从标板标签上读取并填写下列信息。
+实际设备测量时，由操作员从色标标签上读出下列信息并记录。
 
 <details>
-<summary>测量信息示例</summary>
+<summary>测量块示例</summary>
 
 ```json
 {
@@ -89,38 +87,38 @@ swift run negaflow it8-bench docs/reference/IT8_FADGI_OPENDICE.example.json \
 
 </details>
 
-`MANUFACTURER`、`MATERIAL`、`SERIAL` 以及批次表头（`BATCH`、`BATCH_ID`、`PROD_DATE` 之一）必须与参考文件逐字一致。 顶层的 `targetID` 要等于 `serial`，`batchID` 要等于 `batchValue`。
+`MANUFACTURER`、`MATERIAL`、`SERIAL` 和批次头（`BATCH`、`BATCH_ID`、`PROD_DATE` 之一）必须与参考文件逐字一致。顶层的 `targetID` 必须等于 `serial`，`batchID` 必须等于 `batchValue`。
 
-这份记录只能说明操作者填写的值与参考文件一致。 它既不从图像里识别标签，也不对操作者的输入做独立认证。 信息缺失时，不会拿最接近的日期或通用参考文件顶替。
+这条记录只说明操作员写下的内容与参考文件一致。它不会从图像读取标签，也不为操作员的输入作担保。信息缺失时，不会用最接近的日期或通用参考文件代替。
 
-参考文件里若有光源或观察者信息，会核对是否符合 D50/2° 的约定。发生矛盾就中止。 `measurement.renderingIntent` 目前无法直接固定 Core Image 的转换，因此报告里写 `manifestDeclarationNotControlledByEvaluator`。
+参考文件若带有光源或观察者信息，会按 D50/2° 约定核对，出现矛盾就停止运行。目前 `measurement.renderingIntent` 无法直接固定 Core Image 的转换，所以报告里写 `manifestDeclarationNotControlledByEvaluator`。
 
 ## `PRINT` 输出
 
-IT8.7/1 面向输入设备。 打印输出需要用实测 `printer + paper + ink/chemistry + driver/process condition` 组合做出的 RGB printer ICC。
+IT8.7/1 针对输入设备。打印机输出需要一份 RGB 打印机 ICC，它由对打印机、纸张、墨水或药液、驱动或工艺条件这一整套组合的真实测量得到。
 
-检查与应用顺序：
+检查与使用的顺序：
 
-1. 确认 ICC 的大小、`prtr` 设备类别、`RGB ` 数据空间、Lab/XYZ PCS 以及 `acsp` 标识。
-2. 确认 ColorSync 能做双向转换。
-3. 选定时固定配置文件名、字节和 SHA-256。
-4. 在 `MAIN` 工作图像和页面排布完成之后，只对最终输出应用一次。
-5. 不对 `rawScanTIFF` 和 `-main-flat` 应用。
-6. 配置文件缺失或不对时，在生成临时输出之前失败，不用 sRGB 顶替。
+1. 确认 ICC 大小、`prtr` 设备类别、`RGB ` 数据空间、Lab/XYZ PCS 和 `acsp` 签名。
+2. 确认 ColorSync 可以双向转换。
+3. 选定时固定配置文件的名称、字节数和 SHA-256。
+4. 在 `MAIN` 工作图像和页面布局完成之后，只对最终输出应用一次。
+5. 不应用于 `rawScanTIFF` 或 `-main-flat`。
+6. 配置文件缺失或有误，会在生成任何临时输出之前失败，不会用 sRGB 代替。
 
-不主张当前的 Core Image 与 ColorSync 路径能在所有 macOS 上按位固定渲染意图和 black-point compensation。
+不声称当前的 Core Image 与 ColorSync 路径能在所有 macOS 版本上逐位固定渲染意图和黑场补偿。
 
 ## `MAIN` 合成色块回归
 
-`NegativeAutoBalanceTests` / `shoulder-print-response-v4`
+`NegativeAutoBalanceTests` 与 `shoulder-print-response-v4`。
 
-MAIN/CS 在 ON 和 OFF 下均使用 v4 曲线。保留的 v6 测试验证其固定 primitive，测试中的帧间差异 0 不代表自动平衡 ON 的结果。
+MAIN/CS 在开关的两种状态下都使用 v4 曲线。保留的 v6 测试检查的是它们自己的固定基本曲线，那些测试里零帧间差异不是自动平衡 ON 的结果。
 
 [负片反转响应](PRINT_RESPONSE.md)
 
-## NORITSU/FUJI 相对风格回归
+## HS 与 SP 的相对风格回归
 
-把含有从 `A1` 到 `L22` 共 264 个 Lab D50 色块的参考文件用 SHA-256 固定。 把每个色块转成合成负片后，`MAIN`、`NORITSU`、`FUJI` 三条路径各跑两次。
+用 SHA-256 固定一份参考文件，其中有从 `A1` 到 `L22` 的 264 个 Lab D50 色块。每个色块生成一张合成负片，`MAIN`、`HS` 和 `SP` 各路径各运行两次。
 
 ```bash
 swift run negaflow scanner-relative-it8-bench \
@@ -129,25 +127,10 @@ swift run negaflow scanner-relative-it8-bench \
   --out /path/to/scanner-relative-it8-report.json
 ```
 
-报告里包含逐色块的 RGB 与 Lab、相对参考的 `DeltaE00`、各目标之间的相对 `DeltaE00`，以及溢出和非有限值的标记。 中性灰阶的单调性看 `A16...L16` 密度列。
+报告包含每个色块的 RGB 和 Lab、相对参考的 `DeltaE00`、目标之间的相对 `DeltaE00`，以及截断和非有限值的标记。中性灰阶的单调性从 `A16...L16` 密度列读取。
 
-转到 linear sRGB 后落在 0...1 之外的颜色，无法精确做成合成负片，因此限制到可显示范围。 所以大范围的统计只是观测值，不是合格标准。
+转换为线性 sRGB 后落在 0...1 之外的颜色，无法精确地做成合成负片，所以会被限制在可显示范围内。因此宽范围的统计是观测值，不是合格线。
 
-证据等级永远是 `syntheticModel`，判定永远是 `notEvaluated`。 配置文件清单或任一文件的 SHA-256 只要不对就中止。 真实设备的准确度需要同一张物理负片在两台设备上的扫描，以及独立的验证素材。
+证据等级始终是 `syntheticModel`，判定始终是 `notEvaluated`。配置文件清单或任何文件的 SHA-256 不符时，运行停止。要评判真实设备的准确度，需要同一张实物负片在两台机器上的扫描，以及单独的验证资料。
 
-并没有从参考文件表头确认 D50/2°。 把 Lab 按 D50/2° 读取是这套基准自身的约定，因此 `colorimetryInterpretationProvenance` 是 `benchmarkContractNotVerifiedFromReferenceHeader`。
-
-`shoulder-print-response-v4` 之前的结果，不会当作当前算法的结果重复使用。
-
-## 测量流程
-
-```mermaid
-flowchart LR
-    A["核对图像・参考文件・ICC 的哈希"] --> B["测量色块中央 60%"]
-    B --> C["应用 ICC 并计算 Lab D50/2°"]
-    C --> D["逐色块记录 CIEDE2000"]
-    D --> E{"证据种类"}
-    E --> F["algorithmRegression"]
-    E --> G["deviceCharacterization"]
-    E --> H["syntheticModel"]
-```
+D50/2° 并非从参考文件头确认。这是该基准把 Lab 当作 D50/2° 来读的自身约定，所以 `colorimetryInterpretationProvenance` 为 `benchmarkContractNotVerifiedFromReferenceHeader`。

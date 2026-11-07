@@ -2,38 +2,38 @@
 
 [Dokumentationsstart](../README.md)
 
-Die mitgelieferten Scannerprofile wurden vom Autor des Projekts aus selbst aufgenommenen und sortierten Filmscans erstellt und in JSON überführt.
+Die mitgelieferten Scannerprofile entstehen aus Filmbildern, die der Projektautor fotografiert, auf Laborscannern gescannt und analysiert hat, und liegen als JSON vor.
 
-| Posten | Aktueller Wert |
+| Eintrag | Aktueller Wert |
 |---|---:|
-| Standardwerte je Filmtyp | 27 |
+| Standardwerte je Filmart | 27 |
 | Kreative Looks | 6 |
 | Scannerprofile | 15 |
-| Filmbeobachtungen | 25 |
-| Bildbeobachtungen | 928 |
-| Prüfstand | alle `realOnly` |
+| Film-Beobachtungen | 25 |
+| Bilder | 928 |
+| Prüfstatus | alle `realOnly` |
 
 > [!NOTE]
-> `928` ist die Summe der Beobachtungen je Profil. Es sind nicht 928 verschiedene Fotografien.
+> `928` ist die Zahl der Filmbilder, die der Projektautor fotografiert und auf Laborscannern gescannt hat.
 
 ## Drei getrennte Arten von Daten
 
-| Daten | Format | Wofür | Anzahl |
+| Daten | Format | Verwendung | Anzahl |
 |---|---|---|---:|
-| Filmmaterial | Swift | Dmin/Dmax und Standardwerte des Filmtyps | 27 |
-| Look-Preset | JSON | Die kreativen Looks, die Sie wählen | 6 |
+| Filmart | Swift | Dmin/Dmax und Standardwerte je Filmart | 27 |
+| Look-Vorgabe | JSON | Kreative Looks, die Sie wählen | 6 |
 | Scannerprofil | JSON | Relative Tonwert- und Farbstatistik aus echten Scans | 15 |
 
-27 Filmnamen sind nicht 27 Profile für Farbgenauigkeit. Die 6 Looks sind etwas anderes als Scannerprofile. Was folgt, betrifft nur die dritte Art.
+27 Filmnamen sind keine 27 Profile zur Farbgenauigkeit, und die 6 Looks sind etwas anderes als Scannerprofile. Im Folgenden geht es nur um die dritte Art.
 
 ## Was heute mitgeliefert wird
 
-`Sources/Chromabase/ScannerProfiles/` enthält 15 davon.
+`Sources/Chromabase/ScannerProfiles/` enthält 15 Profile.
 
 <details>
 <summary>Alle 15 Profile ansehen</summary>
 
-| Scanner | Filmtyp | Film | Filmbeobachtungen | Bildbeobachtungen | Stand |
+| Scanner | Filmart | Film | Film-Beobachtungen | Bilder | Status |
 |---|---|---|---:|---:|---|
 | NORITSU | Farbnegativ | Fuji C200 | 3 | 111 | `realOnly` |
 | NORITSU | Farbnegativ | Kodak Ektar 100 | 2 | 76 | `realOnly` |
@@ -50,66 +50,25 @@ Die mitgelieferten Scannerprofile wurden vom Autor des Projekts aus selbst aufge
 | SP-3000 | Farbnegativ | Kodak Portra 160 | 1 | 38 | `realOnly` |
 | SP-3000 | Farbnegativ | Kodak Vision3 250D | 2 | 71 | `realOnly` |
 | SP-3000 | Farbdia | Kodak Ektachrome 100D | 1 | 37 | `realOnly` |
-| **Gesamt** |  |  | **25** | **928** | **15 `realOnly`** |
+| **Summe** |  |  | **25** | **928** | **15 `realOnly`** |
 
 </details>
 
-25 und 928 sind Summen der Beobachtungen je Profilgruppe. Derselbe physische Film oder dieselbe Fotografie kann in zwei Scannergruppen landen. Es sind nicht 25 verschiedene Filme oder 928 verschiedene Fotografien.
+25 ist die Summe der Film-Beobachtungen je Profilgruppe und keine Zahl eindeutiger Filme. 928 ist die Zahl der Bilder.
 
-## Wie sie gebaut werden
+## Wie sie entstehen
 
-```mermaid
-flowchart LR
-    A["Film, für dieses Projekt fotografiert"] --> B["Nach Film, Material, Scanner sortieren"]
-    B --> C["Aufnahmen auswerten"]
-    C --> D["Statistik zu Helligkeit, Farbe, Neutralachse, Textur"]
-    D --> E["Szenen gruppieren und Vertreter wählen"]
-    E --> F["Quell-JSON je Film"]
-    F --> G["Nach Material und Scannergruppe zusammenfassen"]
-    G --> H["Auslieferungs-JSON und SHA-256"]
-```
+1. Aufnahme und Sortierung. Die Quellen werden nach Scanner, Filmart, Filmname und Filmbezeichnung getrennt. Drehung und Dateiparsing werden vor der Analyse bestätigt, leere oder nicht lesbare Dateien zählen nicht.
+2. Bildmessung. Je Bild werden Helligkeitsperzentile und Beschnitt an beiden Enden, die Kanalbeziehungen in Tiefen, Mitten und Lichtern, die Verteilung von Sättigung und Farbton, die Lab-Neutralachse schwach gesättigter Pixel sowie Gradient, Schärfe und ein Kornreferenzwert gemessen. Das sind Szenenbeobachtungen. Belichtung oder Motiv eines einzelnen Bildes werden nie zur festen Eigenschaft des Scanners erklärt.
+3. Szenengruppen. Szenen werden nach Helligkeit, Kontrast, Sättigung und Farbtonbereich gruppiert. Anzahl und Verteilung je Gruppe werden festgehalten, damit eine einzige Szenenart das Profil nicht beherrscht.
+4. Repräsentative Bilder. Das kontrastreichste Bild, das schärfste Bild, das Bild mit dem höchsten Kornreferenzwert und Bilder, die den Helligkeits- und Sättigungsbereich vertreten, werden gesondert festgehalten, damit sich ein Mensch zur Quelle zurückverfolgen kann.
+5. Aggregation nach Film und Gruppe. `scripts/compile_scanner_profiles.py` fasst die Daten je Film zu Film- und Scannergruppen zusammen. Leere Klassen werden nicht als Beobachtungen mit Wert null dargestellt, alle Werte müssen endlich sein und die Stichprobenzahlen echt.
+6. JSON und Hashes. Die fertige Datei trägt Schema, ID, Quellzahlen, Quellpfade, aggregierte Statistik, Prüfstatus und `profileHash`. Der Prüfer kontrolliert Felder, Zahlen, Endlichkeit, Dateiname gegen ID, Quellzahlen und den Hash.
 
-### 1. Aufnehmen und sortieren
-
-Die Quellen sind nach Scanner, Filmtyp, Materialname und Filmname getrennt. Drehung und Einlesen der Dateien werden vor der Auswertung bestätigt. Leere oder unlesbare Dateien zählen nicht.
-
-### 2. Aufnahmen messen
-
-Diese Werte werden an jeder Aufnahme gemessen.
-
-- Helligkeitsperzentile und Beschnitt an beiden Enden
-- Kanalverhältnisse in Schatten, Mitten und Lichtern
-- Verteilung von Sättigung und Farbton
-- Die Lab-Neutralachse gering gesättigter Pixel
-- Gradient, Schärfe und ein Bezugswert für Korn
-
-Das sind Beobachtungen an der Szene. Belichtung oder Motiv einer einzelnen Aufnahme wird nie zur festen Eigenschaft des Scanners erklärt.
-
-### 3. Szenen gruppieren
-
-Szenen werden nach Helligkeit, Kontrast, Sättigung und Farbtonbereich gruppiert. Anzahl und Verteilung je Gruppe werden festgehalten, damit eine Art von Szene nicht das ganze Profil zieht.
-
-### 4. Vertretende Aufnahmen
-
-Diese Aufnahmen werden gesondert vermerkt, damit ein Mensch zur Quelle zurückfindet.
-
-- Die Aufnahme mit dem höchsten Kontrast
-- Die schärfste Aufnahme
-- Die Aufnahme mit dem höchsten Korn-Bezugswert
-- Die Aufnahmen, die den Helligkeits- und Sättigungsbereich vertreten
-
-### 5. Zusammenfassen nach Film und Gruppe
-
-`scripts/compile_scanner_profiles.py` fasst die Daten je Film zu Material- und Scannergruppen zusammen. Leere Klassen werden nicht als null Beobachtungen hübsch gemacht. Das Skript bestätigt, dass jeder Wert endlich ist und die Stichprobenzahlen echt sind.
-
-### 6. JSON und Hashes
-
-Die endgültige Datei trägt Schema, ID, Quellzahlen, Quellpfade, zusammengefasste Statistik, Prüfstand und `profileHash`. Die Prüfung kontrolliert Felder, Zahlen, endliche Werte, Dateiname gegen ID, Quellzahlen und den Hash.
-
-## Form der JSON
+## Form des JSON
 
 <details>
-<summary>Beispiel für ein Profil-JSON</summary>
+<summary>Beispiel eines Profil-JSON</summary>
 
 ```json
 {
@@ -138,82 +97,82 @@ Die endgültige Datei trägt Schema, ID, Quellzahlen, Quellpfade, zusammengefass
 
 </details>
 
-## Wichtigste Einträge
+## Wichtige Einträge
 
-| Eintrag | Inhalt | Worauf zu achten ist |
+| Eintrag | Inhalt | Zu beachten |
 |---|---|---|
-| `tone` | Helligkeitsverteilung und Beschnitt an beiden Enden | Die Belichtung einer Aufnahme ist keine Eigenschaft der Maschine |
-| `color` | Kanäle und Sättigung in Schatten, Mitten, Lichtern | Eine beobachtete Verteilung, keine absolute Farbmatrix |
-| `neutralAxis` | Lab `a*` und `b*` gering gesättigter Pixel | Manche Szenen haben kein neutrales Objekt, darum stehen die Stichprobenzahlen dabei |
-| `hueResponse` | Sättigungsänderung und Farbtondrehung je Klasse | Relativer Vergleich nur, wenn die Daten beider Maschinen zusammenpassen |
-| `texture` | Gradient, Schärfe, Korn-Bezugswert | Nicht direkt als Schärfungswert der Maschine benutzt |
-| `sceneBuckets` | Statistik je Szene und vertretende Aufnahmen | Damit ein Mensch die Quelle zurückverfolgen kann |
+| `tone` | Helligkeitsverteilung und Beschnitt an beiden Enden | Die Belichtung eines Bildes ist keine Geräteeigenschaft |
+| `color` | Kanäle und Sättigung in Tiefen, Mitten, Lichtern | Eine beobachtete Verteilung, keine absolute Farbmatrix |
+| `neutralAxis` | Lab-`a*` und -`b*` schwach gesättigter Pixel | Manche Szenen haben kein neutrales Objekt, deshalb gehören die Stichprobenzahlen dazu |
+| `hueResponse` | Sättigungsänderung und Farbtondrehung je Farbtonklasse | Relativer Vergleich nur, wenn die Daten beider Geräte zusammenpassen |
+| `texture` | Gradient, Schärfe, Kornreferenzwert | Nicht direkt als Schärfungswert des Geräts verwendet |
+| `sceneBuckets` | Statistik je Szene und repräsentative Bilder | Erlaubt es, die Quelle wieder zu verfolgen |
 
-Die Schärfung des Helligkeitskanals im `HS`-Target ist keine aus `texture` gemessene Maschinenkonstante. Sie erzeugt auch kein neues Korn. `SP`, `MAIN` und `PRINT` enthalten diese Schärfung nicht.
+Die Schärfung des Helligkeitskanals im Ziel `HS` ist keine aus `texture` gemessene Gerätekonstante und erzeugt kein neues Korn. `SP`, `MAIN` und `PRINT` enthalten diese Schärfung nicht.
 
-## Stand der Belege
+## Belegstatus
 
-| Stand | Bedeutung | Wo er benutzt werden darf |
+| Status | Bedeutung | Wo verwendbar |
 |---|---|---|
-| `draft` | Daten oder Schema unfertig | Weder mitliefern noch automatisch benutzen |
-| `realOnly` | Echte Scans vorhanden, aber ohne getrenntes Referenzmaterial | Nur manuelle Auswahl, keine Genauigkeitsaussage |
-| `pairedSmoke` | Das Paarmaterial bestätigt nur den Verarbeitungsweg | Als Qualitätsbeleg unbrauchbar |
-| `pairedValidated` | Kalibrier- und Prüfmaterial samt Regressionsprüfungen bestanden | Automatische Auswahl erlaubt, wenn die Regeln es zulassen |
+| `draft` | Daten oder Schema unfertig | Weder für die Auslieferung noch für automatische Nutzung |
+| `realOnly` | Echte Scans liegen vor, aber kein getrenntes Referenzmaterial | Nur manuelle Auswahl, keine Genauigkeitsaussage |
+| `pairedSmoke` | Gepaartes Material bestätigt nur den Verarbeitungsweg | Als Qualitätsbeleg nicht verwendbar |
+| `pairedValidated` | Hat Kalibrier- und Validierungsmaterial sowie Regressionsprüfungen bestanden | Automatische Auswahl erlaubt, wenn die Richtlinie es zulässt |
 
-Alle 15 sind heute `realOnly`. Sie können bestätigen, dass sie aus Beobachtungen an echtem Material stammen, aber nicht, dass sie dasselbe Ergebnis liefern wie die Maschine.
+Alle 15 sind heute `realOnly`. Man kann bestätigen, dass sie aus Beobachtungen echten Materials stammen, nicht aber, dass sie dasselbe Ergebnis liefern wie die Maschine.
 
-Wer Maschinengenauigkeit behaupten will, braucht mehr Material.
+Eine Aussage zur Geräte-Genauigkeit braucht mehr Material:
 
-- Eine ID, die dieselbe physische Aufnahme bestätigt
-- Prüfmaterial, das von der Kalibrierung getrennt bleibt
-- Die Bedingungen, unter denen die Referenzbilder entstanden sind
-- Scannereinstellungen und Entscheidungen der Bedienung
-- Target-Charge, Beleuchtung, Messverfahren
+- Eine ID, die dasselbe physische Bild bestätigt
+- Von der Kalibrierung getrenntes Validierungsmaterial
+- Die Bedingungen, unter denen die Referenzbilder entstanden
+- Scannereinstellungen und Entscheidungen des Bedieners
+- Charge des Targets, Beleuchtung und Messmethode
 - Ein Bestehenskriterium je Bild
 
-## Wie die App sie benutzt
+## Wie die App sie nutzt
 
 ### Manuelle Auswahl
 
-Heute wird nichts automatisch aus einem Modellnamen oder aus Dateiangaben ausgewählt. Sie wählen das `HS`- oder `SP`-Target und das Profil selbst. Automatische Zuordnung ist nur für `pairedValidated` erlaubt und gilt damit nicht für das aktuelle Paket.
+Aus einem Modellnamen oder Dateiinformationen wird nichts automatisch ausgewählt. Das Ziel `HS` oder `SP` und das Profil wählen Sie selbst. Automatisches Zuordnen ist nur für `pairedValidated` erlaubt und gilt daher nicht für das aktuelle Paket.
 
 ### Der relative Unterschied zwischen zwei Scannern
 
-Absolute Szenenstatistik wird nicht so übernommen, wie sie ist. Benutzt wird nur der Unterschied zwischen einander entsprechenden Gruppen der beiden Maschinen, und das eingeschränkt.
+Absolute Szenenstatistik wird nicht unverändert verwendet. Es wird nur der Unterschied zwischen passenden Gruppen beider Geräte genutzt, und nur eingeschränkt:
 
-- Der bereinigte Satz der Filmnamen muss übereinstimmen.
-- Die Bildzahl darf sich um höchstens 15 % unterscheiden.
-- Eine Farbtonklasse braucht auf beiden Seiten Stichprobenzahlen über dem Schwellenwert.
-- Werte, deren Richtung kippt, werden nicht angewandt.
-- Werte zwischen gegenläufigen Verstärkungen werden im logarithmischen Bereich gerechnet.
-- Der Tonwert wird einmal auf die Rec.709-Gammahelligkeit angewandt, die Lab-Farbanteile bleiben erhalten.
+- Die bereinigte Menge der Filmnamen muss übereinstimmen.
+- Die Bildzahl darf um höchstens 15 % abweichen.
+- Eine Farbtonklasse braucht auf beiden Seiten Stichprobenzahlen über dem Schwellwert.
+- Werte, deren Richtung kippt, werden nicht angewendet.
+- Werte zwischen gegenläufigen Gewinnen werden im Logarithmusraum berechnet.
+- Der Tonwert wird einmal auf die Rec.709-Gammahelligkeit angewendet, die Lab-Farbanteile bleiben erhalten.
 
-Die Quellprofile führen kein SHA-256 je Aufnahme. Übereinstimmende Filmnamen sind kein Beleg dafür, dass genau dieselben Aufnahmen gepaart wurden.
+Die Quellprofile tragen keinen SHA-256 je Bild, und gleiche Filmnamen belegen nicht, dass dieselben Bilder gepaart wurden.
 
 ### Schwarzweiß und Positiv
 
-Bei Schwarzweiß fallen die Farbanteile weg, und nur der relative Tonwert wird benutzt. Beim Positiv wird die absolute Helligkeit eines Films nicht auf eine andere Fotografie übertragen. Allerdings wirken die Grundstile von `HS` und `SP` auch auf Positive, mit halber Stärke, sodass das Ergebnis nicht immer dasselbe ist wie `MAIN`.
+Bei Schwarzweiß entfallen die Farbanteile, nur der relative Tonwert wird genutzt. Bei Positiv wird die absolute Helligkeit eines Films nicht auf ein anderes Foto übertragen. Die Basisstile von `HS` und `SP` wirken auf Positive jedoch mit halber Stärke, das Ergebnis ist also nicht immer dasselbe wie bei `MAIN`.
 
 ### Textur
 
-Ohne Paarmaterial aus derselben Aufnahme wird `texture` nicht als maschinenspezifischer Schärfungs- oder Kornwert benutzt. Schärfe, Motiv, JPEG-Verarbeitung und die Entscheidungen der Laborbedienung stecken alle mit in diesen Zahlen.
+Ohne gepaartes Material desselben Bildes wird `texture` nicht als gerätespezifischer Schärfungs- oder Kornwert genutzt. Fokus, Motiv, JPEG-Verarbeitung und die Entscheidungen des Laborbedieners sind in diese Zahlen alle eingeflossen.
 
 ## Dateiintegrität
 
-`ScannerProfileRegistry` öffnet nie nur einen Teil der 15.
+`ScannerProfileRegistry` öffnet nie nur einen Teil der 15:
 
-1. Das Schema des Manifests lesen.
-2. Bestätigen, dass jede Datei vorhanden ist, und ihr SHA-256 prüfen.
-3. `profileHash` in jeder JSON neu berechnen.
-4. ID, Dateiname, Schema, Stand, Zahlen und endliche Werte prüfen.
-5. Stimmt irgendetwas nicht, das ganze Paket ablehnen.
-6. Nur einen schreibgeschützten Schnappschuss zwischenspeichern, bei dem alles zusammenpasste.
+1. Das Manifestschema lesen.
+2. Bestätigen, dass jede Datei existiert, und ihren SHA-256 prüfen.
+3. `profileHash` in jedem JSON neu berechnen.
+4. ID, Dateiname, Schema, Status, Zahlen und Endlichkeit prüfen.
+5. Stimmt etwas nicht, das ganze Paket ablehnen.
+6. Nur einen schreibgeschützten Schnappschuss zwischenspeichern, bei dem alles stimmte.
 
-Das Exportprotokoll behält ID und SHA-256 des tatsächlich benutzten Profils.
+Das Exportprotokoll hält die ID und den SHA-256 des tatsächlich verwendeten Profils fest.
 
-## Befehle zum Prüfen
+## Prüfbefehle
 
-Profilvertrag prüfen:
+Aus `negaflow-mac/` aufzurufen. Der erste prüft den Profilvertrag, der zweite baut die Profile neu, der dritte ist die REAL/TARGET-Qualitätsprüfung.
 
 ```bash
 python3 scripts/validate_scanner_profiles.py \
@@ -221,16 +180,12 @@ python3 scripts/validate_scanner_profiles.py \
   --profiles Sources/Chromabase/ScannerProfiles
 ```
 
-Neu bauen:
-
 ```bash
 python3 scripts/compile_scanner_profiles.py \
   --source LUT_target/SOURCE \
   --out LUT_target/PROFILES \
   --resource-out Sources/Chromabase/ScannerProfiles
 ```
-
-REAL/TARGET-Qualitätsprüfung:
 
 ```bash
 python3 scripts/evaluate_profile_quality.py \
@@ -242,14 +197,14 @@ python3 scripts/evaluate_profile_quality.py \
   --report build/profile-quality-report.json
 ```
 
-Das Repository hat derzeit weder ein REAL/TARGET-Manifest noch eine angenommene Basis, die eine Aussage zur Auslieferung stützen könnte. Die synthetischen Tests bestätigen nur die Fehlerbedingungen des Prüfcodes; sie belegen keine Profilgenauigkeit.
+Das Repository enthält kein REAL/TARGET-Manifest und keine akzeptierte Basis, die eine Freigabeaussage stützen. Die synthetischen Tests bestätigen nur die Fehlerbedingungen des Prüfcodes, nicht die Genauigkeit der Profile.
 
 ## Quellen
 
 - [Kodak Professional Portra 400 technical data](https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/e4050_portra_400.pdf)
 - [darktable negadoctor](https://docs.darktable.org/usermanual/4.6/en/module-reference/processing-modules/negadoctor/)
 
-Aus diesen Quellen stammen keine Profilzahlen. Sie wurden als Hintergrund gelesen, warum Filmbasis, Szenentonwert und Maschinenstil getrennt behandelt werden müssen. Die Werte in der JSON kommen aus dem für dieses Projekt fotografierten Material und dem Auswertungscode im Repository.
+Aus diesen Quellen wurden keine Profilzahlen übernommen. Sie dienten als Hintergrund dafür, warum Filmbasis, Szenentonwert und Gerätestil getrennt behandelt werden müssen. Die JSON-Werte stammen aus dem für dieses Projekt fotografierten Material und dem Analysecode im Repository.
 
 ## Code und verwandte Dokumente
 

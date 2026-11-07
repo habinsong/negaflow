@@ -18,6 +18,34 @@ public sealed class DevelopImageTransform
     public DevelopCropRect? Crop { get; init; }
 
     public double StraightenAngle { get; init; }
+
+    /// <summary>변환(원근) 보정입니다. null 이면 걸지 않습니다. 회전·뒤집기 뒤, 수평 보정 앞입니다.</summary>
+    public DevelopPerspective? Perspective { get; init; }
+}
+
+/// <summary>
+/// macOS <c>PerspectiveCorrection</c> 의 그림을 바꾸는 값입니다. 모드와 안내선은 앱이 풀어
+/// <c>Solved*</c> 로 넘깁니다. 범위는 native <c>valid_perspective_parameters</c> 와 같습니다.
+/// </summary>
+public sealed record DevelopPerspective(
+    double SolvedVertical,
+    double SolvedHorizontal,
+    double SolvedRotate,
+    double Vertical,
+    double Horizontal,
+    double Rotate,
+    double Aspect,
+    double Scale,
+    double OffsetX,
+    double OffsetY,
+    bool ConstrainCrop)
+{
+    public bool IsValid =>
+        InRange(SolvedVertical, 40) && InRange(SolvedHorizontal, 40) && InRange(SolvedRotate, 45) &&
+        InRange(Vertical, 100) && InRange(Horizontal, 100) && InRange(Rotate, 10) && InRange(Aspect, 100) &&
+        double.IsFinite(Scale) && Scale is >= 50 and <= 150 && InRange(OffsetX, 100) && InRange(OffsetY, 100);
+
+    private static bool InRange(double value, double limit) => double.IsFinite(value) && Math.Abs(value) <= limit;
 }
 
 /// <summary>

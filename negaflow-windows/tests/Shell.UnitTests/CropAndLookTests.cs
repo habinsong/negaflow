@@ -581,10 +581,29 @@ internal static class CropAndLookTests
         {
             ImageTransform = ImageTransformRecipe.Identity with { StraightenAngle = 10.0 },
         };
+        // 브러시도 복제 도장과 같은 자리에 떨어집니다(수평 보정을 풉니다).
         Check(DevelopDefectCoordinateMapper.TryMapBrushDisplayToRaw(
-                straightened, new DefectPoint(1.0, 0.5), out DefectPoint brushRaw) &&
-            brushRaw == new DefectPoint(1.0, 0.5),
-            "brush_coordinate_skips_straighten_without_a_macos_base_size");
+                straightened, new DefectPoint(0.8, 0.4), out DefectPoint brushRaw) &&
+            DevelopDefectCoordinateMapper.TryMapCloneDisplayToRaw(
+                straightened, new DefectPoint(0.8, 0.4), out DefectPoint sameAsClone) &&
+            brushRaw == sameAsClone && brushRaw != new DefectPoint(0.8, 0.4),
+            "brush_coordinate_follows_straighten_like_the_clone_stamp");
+        // 원근이 걸려도 화면 ↔ 원본이 정확히 왕복합니다.
+        LibraryFrameSnapshot corrected = frame with
+        {
+            ImageTransform = ImageTransformRecipe.Identity with
+            {
+                StraightenAngle = 3.0,
+                Perspective = new PerspectiveRecipe { Mode = PerspectiveMode.Vertical, SolvedVertical = 8.0, Rotate = 1.5, ConstrainCrop = true },
+            },
+        };
+        Check(DevelopDefectCoordinateMapper.TryMapCloneDisplayToRaw(
+                corrected, new DefectPoint(0.7, 0.3), out DefectPoint correctedRaw) &&
+            DevelopDefectCoordinateMapper.TryMapCloneRawToDisplay(
+                corrected, correctedRaw, out DefectPoint correctedDisplay) &&
+            Math.Abs(correctedDisplay.X - 0.7) < 1e-9 && Math.Abs(correctedDisplay.Y - 0.3) < 1e-9 &&
+            Math.Abs(correctedRaw.X - 0.7) > 1e-3,
+            "defect_coordinate_round_trips_through_perspective");
         Check(DevelopDefectCoordinateMapper.TryMapCloneDisplayToRaw(
                 straightened, new DefectPoint(0.8, 0.4), out cloneRaw) &&
             DevelopDefectCoordinateMapper.TryMapCloneRawToDisplay(

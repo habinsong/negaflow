@@ -147,6 +147,13 @@ public sealed partial class DevelopPreviewCanvas : UserControl
     /// </summary>
     public byte[]? PreviewPixels => sampler.PreviewPixels;
 
+    /// <summary>
+    /// <see cref="PreviewPixels"/> 를 그린 변형입니다. 화면 그림에서 찾은 선을 원본 좌표로 되돌릴 때
+    /// 지금 사진의 변형이 아니라 이것을 씁니다 — 슬라이더가 막 바뀌어 새 그림이 아직 오지 않았을
+    /// 때 둘이 다릅니다. 모르면 null 입니다.
+    /// </summary>
+    public Negaflow.Catalog.ImageTransformRecipe? PreviewTransform { get; private set; }
+
     public bool HasPreview => PreviewImage.Visibility == Visibility.Visible;
 
     public bool HasCompareBefore => compareBeforeBitmap is not null;
@@ -196,8 +203,15 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         sampler.Bind(isEnabled, selectedSourcePath, displayedIsProof);
     }
 
-    public void KeepPreviewPixels(byte[]? pixels, uint width, uint height) =>
+    public void KeepPreviewPixels(
+        byte[]? pixels,
+        uint width,
+        uint height,
+        Negaflow.Catalog.ImageTransformRecipe? transform = null)
+    {
         sampler.KeepPreviewPixels(pixels, width, height);
+        PreviewTransform = pixels is null ? null : transform;
+    }
 
     public void FocusHost() => _ = CanvasHost.Focus(FocusState.Programmatic);
 
@@ -562,7 +576,11 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         // 옛 프레임에 남겨 둬서, 확대하면 크롭이 사진 안쪽으로 들어가고 축소하면 사진보다
         // 넓게 잡혔습니다.
         RenderCropOverlay(refreshFrame: true);
+        ImageFrameChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>사진이 그려진 자리가 바뀌었습니다(새 미리보기·확대·이동). 변환 안내선이 따라 그립니다.</summary>
+    public event EventHandler? ImageFrameChanged;
 
     private void OnCropApplyClicked(object sender, RoutedEventArgs args)
     {

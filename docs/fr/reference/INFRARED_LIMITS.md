@@ -2,50 +2,50 @@
 
 [Accueil de la documentation](../README.md)
 
-Le nettoyage infrarouge lit l'image visible et l'image infrarouge séparément, puis les superpose pour trouver les défauts. Cette méthode ne convient pas à tous les films.
+Le nettoyage infrarouge lit séparément l'image visible et l'image infrarouge, puis les superpose pour trouver les défauts. Il ne convient pas à tous les films.
 
-- Les films couleur courants et les films noir et blanc chromogènes acceptent l'IR.
-- Les films noir et blanc ordinaires gardent leur argent, qui bloque l'IR et fausse la carte des défauts.
-- Le Kodachrome atténue l'IR autrement que les autres films couleur : la correction peut manquer ou déborder.
+- Les films couleur ordinaires et les films noir et blanc à base de colorants peuvent utiliser l'IR.
+- Le noir et blanc ordinaire garde son argent, qui bloque l'IR et peut produire une carte de défauts fausse.
+- Kodachrome atténue l'IR autrement que les autres films couleur : la correction peut être insuffisante ou excessive.
 
-Justification :
+Sources :
 
-- [Notes techniques et limites Epson](https://files.support.epson.com/pdf/pr48pr/pr48prps.pdf)
-- [Tableau des types de film Epson](https://files.support.epson.com/htmldocs/pr449p/pr449pug/projs_3.htm)
-- [SilverFast sur le noir et blanc et le Kodachrome](https://www.silverfast.com/showdocu/en.html?direct=1&docu=1300)
+- [Epson technical notes and limits](https://files.support.epson.com/pdf/pr48pr/pr48prps.pdf)
+- [Epson film type table](https://files.support.epson.com/htmldocs/pr449p/pr449pug/projs_3.htm)
+- [SilverFast on black and white and Kodachrome](https://www.silverfast.com/showdocu/en.html?direct=1&docu=1300)
 
 > [!CAUTION]
-> Quand la matière du film ne peut pas être confirmée, l'IR n'est pas appliqué automatiquement. Un masque IR erroné efface une structure réelle de l'image comme s'il s'agissait d'un défaut.
+> Si la nature du film ne peut pas être confirmée, l'IR n'est pas appliqué automatiquement. Un mauvais masque IR peut effacer comme défaut une vraie structure de l'image.
 
-## Où il s'applique automatiquement
+## Où l'application est automatique
 
-Ce qui décide ici est **ce qui forme l'image**. Le film couleur blanchit son argent au traitement et ne garde que des colorants, transparents à l'infrarouge. Le film noir et blanc est une image argentique qui bloque l'infrarouge : la correction lirait la photographie elle-même comme un immense défaut et l'effacerait.
+Ce qui décide, c'est la matière qui forme l'image. Un film couleur ne garde que les colorants après traitement, et les colorants sont transparents à l'infrarouge. Un film noir et blanc est une image d'argent et bloque l'infrarouge : la correction lirait la photo elle-même comme un grand défaut et l'effacerait.
 
-| Type de film | IR automatique | Pourquoi |
+| Type de film | IR automatique | Raison |
 |---|---|---|
-| Négatif couleur | Sous conditions | Image de colorants. Le plugin doit signaler l'IR et passer le contrôle d'alignement |
-| Positif couleur | Sous conditions | Image de colorants. Mêmes conditions que le négatif couleur |
-| Négatif et positif noir et blanc | Non | L'image argentique bloque l'infrarouge |
+| Négatif couleur | Conditionnel | Image de colorants. Le module doit signaler l'IR et le contrôle d'alignement doit réussir |
+| Positif couleur | Conditionnel | Image de colorants. Mêmes conditions que le négatif couleur |
+| Négatif et positif noir et blanc | Désactivé | L'image d'argent bloque l'infrarouge |
 
-`FilmType` ne sépare pas un noir et blanc chromogène d'un argentique et ne distingue pas un Kodachrome d'une diapositive courante : deux cas restent donc à l'appréciation de l'utilisateur.
+`FilmType` ne sépare ni le noir et blanc à colorants du noir et blanc argentique, ni Kodachrome d'une diapositive ordinaire. Deux cas sont laissés à l'utilisateur :
 
-- Un noir et blanc chromogène est numérisé comme du noir et blanc ; l'IR reste donc désactivé même si le film le permettrait. Rien n'est deviné à partir du seul type de film.
-- Kodachrome est une diapositive couleur, l'IR est donc proposé. Ses colorants atténuent l'infrarouge autrement que l'E-6, ce qui peut sous- ou sur-corriger un défaut. Désactivez le calque si le résultat semble faux.
+- Le noir et blanc à colorants est numérisé en noir et blanc : l'IR reste désactivé bien que le film le permette. Rien n'est deviné d'après le seul type de film.
+- Kodachrome est une diapositive couleur, donc l'IR est proposé. Ses colorants atténuent l'infrarouge autrement qu'en E-6, ce qui peut laisser un défaut sous- ou surcorrigé. Désactivez le calque si le résultat paraît faux.
 
 ## Contrôle d'alignement
 
-`InfraredDefectRemoval` compare la texture de fuite de l'IR au canal rouge du RVB et cherche un décalage entier. Le résultat porte `AlignmentDiagnostics`.
+`InfraredDefectRemoval` compare la texture de fuite de l'IR au canal rouge du RVB et cherche un décalage entier. Le résultat porte des `AlignmentDiagnostics`.
 
 | État | Signification |
 |---|---|
-| `notRequested` | L'appelant a indiqué que les deux plans coïncident déjà |
-| `aligned` | La corrélation passe le seuil et l'optimum est dans la plage de recherche |
-| `insufficientTexture` | L'IR manque d'indices d'alignement |
-| `weakCorrelation` | La corrélation ne passe pas le seuil |
-| `searchLimitReached` | L'optimum est sur la limite de recherche |
+| `notRequested` | L'appelant indique que les deux plans coïncident déjà |
+| `aligned` | La corrélation dépasse le seuil et le meilleur point est dans la plage de recherche |
+| `insufficientTexture` | L'IR offre trop peu de repères d'alignement |
+| `weakCorrelation` | La corrélation n'atteint pas le seuil |
+| `searchLimitReached` | Le meilleur point est sur la limite de recherche |
 
-Les trois derniers ne sont pas remplacés par `(0,0)`. Le traitement s'arrête sur une erreur `alignmentUnreliable`. Si l'optimum tombe sur la limite de recherche, c'est un échec quelle que soit l'amplitude du décalage.
+Les trois derniers s'arrêtent avec l'erreur `alignmentUnreliable` et ne sont jamais remplacés par `(0,0)`. Un meilleur point sur la limite de recherche est un échec, quelle que soit la taille du décalage.
 
-Les tests automatisés ne remplacent pas l'alignement RVB/IR sur un appareil réel ni les résultats film par film. Les contrôles sur scanner réel se font à la main, sur de la vraie pellicule.
+Les tests automatiques ne remplacent pas la vérification de l'alignement RVB/IR sur un vrai appareil, film par film. Cette vérification se fait à la main, sur de vrais films.
 
-Le pilotage des périphériques SANE et le code de capture ne vivent que dans le dépôt séparé `negaflow-scanner-sane`.
+Le code de contrôle et de capture des appareils SANE n'existe que dans le dépôt séparé `negaflow-scanner-sane`.

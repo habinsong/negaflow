@@ -199,7 +199,6 @@ class DocumentationStateTests(unittest.TestCase):
                 for token in (
                     "GrainMend",
                     "Chromabase",
-                    "realOnly",
                     "Digital ICE",
                     "iSRD",
                     "SRDx",

@@ -51,6 +51,11 @@ public sealed partial class DevelopAdjustmentStack : UserControl
             RaiseExpansion(DevelopInspectorSection.Calibration, args);
         Calibration.PreviewRequested += OnChildPreview;
         Calibration.ResetRequested += OnReset;
+        Transform.ToggleRequested += (_, _) => RaiseToggle(DevelopInspectorSection.Transform);
+        Transform.ExpansionRequested += (_, args) =>
+            RaiseExpansion(DevelopInspectorSection.Transform, args);
+        Transform.PreviewRequested += OnChildPreview;
+        Transform.ResetRequested += OnReset;
         Detail.ToggleRequested += (_, _) => RaiseToggle(DevelopInspectorSection.DetailAndEffects);
         Detail.ExpansionRequested += (_, args) =>
             RaiseExpansion(DevelopInspectorSection.DetailAndEffects, args);
@@ -128,6 +133,7 @@ public sealed partial class DevelopAdjustmentStack : UserControl
         Grading.Bind(hostPanel);
         BwToning.Bind(hostPanel);
         Calibration.Bind(hostPanel);
+        Transform.Bind(hostPanel);
         Detail.Bind(hostPanel);
     }
 
@@ -152,6 +158,7 @@ public sealed partial class DevelopAdjustmentStack : UserControl
         Grading.Localize();
         BwToning.Localize();
         Calibration.Localize();
+        Transform.Localize();
         Detail.Localize();
         Debug.Localize();
     }
@@ -165,6 +172,7 @@ public sealed partial class DevelopAdjustmentStack : UserControl
         Grading.Show(hostPanel);
         BwToning.Show(hostPanel);
         Calibration.Show(hostPanel);
+        Transform.Show(hostPanel);
         Detail.Show(hostPanel);
         QuickActions.Show(hostPanel);
     }
@@ -176,6 +184,7 @@ public sealed partial class DevelopAdjustmentStack : UserControl
         Mixer.SetEnabled(canEdit);
         Grading.SetEnabled(canEdit);
         Calibration.SetEnabled(canEdit);
+        Transform.SetEnabled(canEdit);
         Detail.SetEnabled(canEdit);
         QuickActions.SetAutoAdjustEnabled(canAutoAdjust);
     }
@@ -193,6 +202,7 @@ public sealed partial class DevelopAdjustmentStack : UserControl
         BwToning.ApplyExpanded(
             presentation.ExpandedSection == DevelopInspectorSection.BlackAndWhiteToning);
         Calibration.ApplyExpanded(presentation.ExpandedSection == DevelopInspectorSection.Calibration);
+        Transform.ApplyExpanded(presentation.ExpandedSection == DevelopInspectorSection.Transform);
         Detail.ApplyExpanded(presentation.ExpandedSection == DevelopInspectorSection.DetailAndEffects);
         Debug.SetExpanded(presentation.ExpandedSection == DevelopInspectorSection.Debug);
     }

@@ -39,6 +39,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     internal readonly DevelopWorkspaceLayout layout;
     internal readonly DevelopAutoAdjustActions autoAdjust;
     internal readonly DevelopCropSession cropSession;
+    internal readonly DevelopPerspectiveHost perspective;
     internal readonly DevelopWorkspaceCopy copy;
     internal readonly DevelopInspectorHeader inspectorHeader;
     // macOS `pickFilmBase` 가 Task 로 샘플하는 동안 피커를 먼저 끕니다. 그 사이
@@ -59,6 +60,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         layout = new DevelopWorkspaceLayout(this);
         autoAdjust = new DevelopAutoAdjustActions(this);
         cropSession = new DevelopCropSession(this);
+        perspective = new DevelopPerspectiveHost(this);
         copy = new DevelopWorkspaceCopy(this);
         inspectorHeader = new DevelopInspectorHeader(this);
         isInspectorPresentationReady = true;
@@ -68,6 +70,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         layout.Hook();
         autoAdjust.Hook();
         cropSession.Hook();
+        perspective.Hook();
         PreviewCanvas.Attach(crop);
         PreviewCanvas.BindSampler(
             () => workspaceState?.Current.PixelSamplerEnabled == true,
@@ -81,7 +84,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
             TryHandleLocalAdjustment(args, LocalPointerPhase.Pressed) ||
             TryHandleBasePick(args) ||
             TryHandleNeutralPick(args) ||
-            GrainMendPanel.TryHandlePointerPressed(args);
+            GrainMendPanel.TryHandlePointerPressed(args) ||
+            perspective.TryPressed(args);
         BaseCard.BasePickerModeChanged += (_, _) =>
         {
             if (BaseCard.IsBasePickerActive)
@@ -119,10 +123,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
         BaseCard.ManualBaseResetRequested += (_, _) => ResetManualBase();
         PreviewCanvas.TryHandlePointerMoved = args =>
             TryHandleLocalAdjustment(args, LocalPointerPhase.Moved) ||
-            GrainMendPanel.TryHandlePointerMoved(args);
+            GrainMendPanel.TryHandlePointerMoved(args) ||
+            perspective.TryMoved(args);
         PreviewCanvas.TryHandlePointerReleased = args =>
             TryHandleLocalAdjustment(args, LocalPointerPhase.Released) ||
-            GrainMendPanel.TryHandlePointerReleased(args);
+            GrainMendPanel.TryHandlePointerReleased(args) ||
+            perspective.TryReleased(args);
         PreviewCanvas.LocalAdjustmentFinishPolygonRequested += (_, _) =>
         {
             LocalAdjustmentCard.CanvasInput.FinishPolygon();

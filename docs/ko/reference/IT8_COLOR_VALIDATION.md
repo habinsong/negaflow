@@ -2,49 +2,49 @@
 
 [문서 홈](../README.md)
 
-색 정확도는 화면만 보고 판정하지 않습니다. IT8 이미지와 그 물리 타깃에 맞는 기준 파일을 한 쌍으로 고정하고 패치마다 수치를 기록합니다.
+색 정확도는 눈으로만 보지 않고 측정해야 합니다. IT8 이미지를 실물 타깃의 기준 파일과 짝지어 패치마다 수치 결과를 기록합니다.
 
 > [!IMPORTANT]
-> 공개 IT8 자료로 검사기와 색 계산의 회귀는 확인할 수 있지만, 실제 스캐너나 컬러 네거티브의 정확도까지 증명할 수는 없습니다. 장치 판정에는 확인된 물리 타깃과 그 장치의 실제 측정이 필요합니다.
+> 공개 IT8 자료로는 검사기와 색 계산의 퇴보를 확인할 수 있습니다. 실제 스캐너나 컬러 네거티브 필름의 정확도는 증명하지 못합니다. 장치를 판단하려면 확인된 실물 타깃과 그 장치의 실제 측정이 필요합니다.
 
-## 증거 종류
+## 증거의 종류
 
 | 이름 | 확인하는 것 | 확인하지 못하는 것 |
 |---|---|---|
-| `algorithmRegression` | 파일 해석, ICC 변환, 패치 영역, Lab, CIEDE2000 계산 | 실제 스캐너 정확도 |
-| `deviceCharacterization` | 확인된 물리 타깃과 실제 장치 측정 | 다른 타깃·장치의 정확도 |
-| `syntheticModel` | 독립 합성 모델의 수학적 왕복 | 실제 필름이나 장치 정확도 |
+| `algorithmRegression` | 파일 파싱, ICC 변환, 패치 면적, Lab, CIEDE2000 | 실제 스캐너의 정확도 |
+| `deviceCharacterization` | 확인된 실물 타깃을 실제 장치로 측정한 결과 | 다른 타깃이나 장치의 정확도 |
+| `syntheticModel` | 독립된 합성 모델의 수학적 왕복 | 실제 필름이나 장치의 정확도 |
 
-`deviceCharacterization`에는 물리 타깃의 제조사, 재료, 일련번호, 배치 정보가 필요합니다. 기준 파일 머리말과 하나라도 다르면 평가하지 않습니다.
+`deviceCharacterization`에는 실물 타깃의 제조사, 재질, 일련번호, 배치가 필요합니다. 하나라도 기준 파일 헤더와 다르면 아무것도 평가하지 않습니다.
 
-IT8.7/1과 ISO 12641-1 투과 타깃은 포지티브 투과 원고용입니다. 이 결과로 컬러 네거티브의 오렌지 마스크, 염료 간섭, C-41 편차, NORITSU/FUJI 출력 정확도를 말할 수 없습니다. 그 주장은 같은 컬러 네거티브를 두 경로에서 처리한 쌍 자료와 별도 검증 묶음이 필요합니다.
+IT8.7/1과 ISO 12641-1 투과 타깃은 포지티브 투과 원본용입니다. 이 결과는 컬러 네거티브의 오렌지 마스크, 염료 상호작용, C-41 편차, HS·SP 출력의 정확도에 대해 아무것도 말해 주지 않습니다. 그런 주장에는 같은 컬러 네거티브를 두 경로로 돌린 짝 자료와 별도의 검증 세트가 필요합니다.
 
-공개 FADGI OpenDICE 이미지와 기준 파일의 264개 패치를 측정했습니다. ΔE00 중앙값은 9.8815, p95는 13.2745, 최댓값은 15.5996입니다. 별도 LittleCMS 변환과 평가기의 차이는 Lab 성분 기준 최대 0.105였습니다. 필름 색 정확도 검증을 통과한 결과로 쓰지 않습니다. 이 자료는 양화 IT8 스캔이고 실물 일련번호를 확인하지 못했으며 음화 촬영의 카메라·광원·필름 실측값도 없습니다.
+공개된 FADGI OpenDICE 이미지/기준 쌍을 패치 264개로 측정했습니다. 중앙값 ΔE00 9.8815, p95 13.2745, 최댓값 15.5996입니다. 독립된 LittleCMS 변환과 평가기의 차이는 Lab 기준 최대 0.105였습니다. 이 관측은 필름 정확도 관문을 통과하지 못합니다. 이 스캔은 포지티브 IT8이고 실물 일련번호를 확인하지 못했으며 네거티브의 카메라·광원·필름 측정이 붙어 있지 않기 때문입니다.
 
-공개 음화 자료도 확인했습니다. FADGI 음화 기준 파일은 실측 색 패치가 아닌 밀도값만 제공합니다. BlueNeg의 복원 기준은 저자들이 pseudo ground truth로 명시합니다. 2024년 ARRI AQUA 분광광도계 연구는 데이터를 공개 다운로드하지 않고 요청 시 제공합니다. 어느 자료도 현재 반전의 독립적인 장면 색 기준값을 제공하지 않습니다.
+공개 네거티브 데이터셋도 살펴봤습니다. FADGI 네거티브 기준은 측정한 색 패치가 아니라 밀도만 담고 있습니다. BlueNeg는 복원한 기준을 pseudo ground truth라고 표시합니다. 2024년 ARRI AQUA 분광 측정 연구는 자료를 공개 다운로드가 아니라 요청 시 제공합니다. 어느 것도 현재의 반전을 위한 독립된 장면 색 기준을 주지 못합니다.
 
-[공개 Kodak ColorPlus 200 노출 비교 자료](https://discuss.pixls.us/t/any-interest-in-a-film-negative-feature-in-rt/12569/262)의 Sony ILCE-7 RAW 5장(−1~+3 EV)도 확인했습니다. 차트 표기는 Grey White Balance Colour Card이므로 X-Rite 기준값을 적용하지 않았습니다. 디코드한 카메라 RGB의 패치 영역 120곳에서는 0이나 최댓값에 도달한 화소가 없었습니다. 이는 디코드 신호 검사이며 센서 모자이크 직접 측정이나 색 정확도 판정은 아닙니다. 내장 JPEG 프리뷰에는 카메라 WB가 적용돼 있습니다. 해당 차트와 스캔 구성의 실측 기준이 없으므로 출력의 색 편향을 입력이나 앱의 결함으로 단정하지 않습니다. 재배포 권한을 확인하지 못해 파일은 저장소와 앱에 넣지 않습니다.
+[공개된 Kodak ColorPlus 200 노출 시리즈](https://discuss.pixls.us/t/any-interest-in-a-film-negative-feature-in-rt/12569/262)(Sony ILCE-7 RAW 스캔 다섯 장, −1에서 +3 EV)도 검토했습니다. 차트가 Grey White Balance Colour Card여서 X-Rite 기준값은 쓰지 않았습니다. 표본 패치 영역 120곳 중 디코딩된 카메라 RGB에서 0이나 최대치에 닿은 곳은 없었습니다. 이는 디코딩된 신호의 확인이지 센서 모자이크의 직접 측정이나 색 정확도 결과가 아닙니다. 그 차트와 스캔 환경의 측정된 기준이 없으면 출력의 색 치우침이 입력 탓인지 앱 탓인지 가를 수 없습니다. 재배포 권리를 확인하지 못해 파일은 저장소 밖에 둡니다.
 
 [FADGI](https://www.digitizationguidelines.gov/guidelines/digitize-OpenDice.html) · [BlueNeg](https://huggingface.co/datasets/ttgroup/blueneg-release) · [Plutino 2024](https://doi.org/10.1002/col.22946)
 
-## 공개된 회귀 검사 자료
+## 공개 회귀 자료
 
-FADGI/OpenDICE의 다음 두 파일을 한 쌍으로 씁니다.
+FADGI/OpenDICE의 두 파일을 한 쌍으로 씁니다.
 
 - 안내: <https://www.digitizationguidelines.gov/guidelines/digitize-OpenDice.html>
 - 이미지: <https://www.digitizationguidelines.gov/guidelines/OpenDICE/IT8-7.1.tif>
   - SHA-256: `c62ee73f26390a2ad90e7e28280cbd1efb4f18834425bb7112ff1f8016832ffd`
   - 크기: `6255 x 4170`
-  - 형식: 16-bit RGB, `Adobe RGB (1998)` 내장
+  - 형식: `Adobe RGB (1998)`가 내장된 16비트 RGB
 - 기준 파일: <https://www.digitizationguidelines.gov/guidelines/OpenDICE/Profile_IT8-7.1.txt>
   - SHA-256: `19337b85f213eb4397e91c91298201f421ef3ca33b0ef6da3d752a0880491840`
-  - 패치: `A1`부터 `L22`까지 Lab 264개
-  - 16열: density
+  - 패치: `A1`부터 `L22`까지 Lab 값 264개
+  - 16번째 열: 밀도
 
-재배포 권한을 확인하지 못했기 때문에 파일을 저장소나 앱에 넣지 않습니다. 사용자가 직접 받은 파일을 [예제 목록](../../reference/IT8_FADGI_OPENDICE.example.json)에 연결합니다. 이 예제의 등급은 `algorithmRegression`입니다. 이름만 `deviceCharacterization`으로 바꾸면 검사기가 거부합니다.
+재배포 권리를 확인하지 못해 파일은 저장소와 앱에 넣지 않습니다. 직접 내려받아 [예시 매니페스트](../../reference/IT8_FADGI_OPENDICE.example.json)가 가리키게 하세요. 예시의 등급은 `algorithmRegression`이며 `deviceCharacterization`으로 바꾸면 검사기가 거부합니다. `negaflow-mac/`에서 실행합니다.
 
 ```bash
-swift run negaflow it8-bench docs/reference/IT8_FADGI_OPENDICE.example.json \
+swift run negaflow it8-bench ../docs/reference/IT8_FADGI_OPENDICE.example.json \
   --image /path/to/IT8-7.1.tif \
   --reference /path/to/Profile_IT8-7.1.txt \
   --out /path/to/it8-report.json
@@ -52,24 +52,22 @@ swift run negaflow it8-bench docs/reference/IT8_FADGI_OPENDICE.example.json \
 
 ## 측정 규칙
 
-- 이미지, 기준 파일, 선택한 ICC의 SHA-256이 목록과 다르면 중단합니다.
-- 보고서 v2는 목록 원문의 SHA-256도 기록합니다.
-- `A01`과 `A1`은 같은 좌표로 읽되 원래 ID는 보고서에 남깁니다.
-- 22열 x 12행 패치의 가운데 60%를 원본 해상도 부동소수점으로 읽습니다.
-- 패치 순서는 행 `A`–`L`, 열 `1`–`22`입니다.
-- 내장 ICC를 존중합니다.
-- linear sRGB D65에서 XYZ, Bradford D50 적응, Lab D50/2° 순서로 계산합니다.
-- 각 패치에 영역, 픽셀 수, RGB 평균·표준편차, 양끝 비율, 비유한값 수, 기준·측정 Lab, L/a/b 차이, CIEDE2000을 기록합니다.
-- median, p95, max는 관측값일 뿐 합격선이 아닙니다.
-- 근거 없는 평균 임계값을 만들지 않으며 `qualityDecision`은 `notEvaluated`입니다.
-- 프로파일을 맞추는 데 쓴 타깃을 독립 검증에 다시 쓰지 않습니다.
+- 이미지, 기준 파일, 선택한 ICC 중 하나라도 SHA-256이 매니페스트와 다르면 멈춥니다.
+- 보고서 v2는 매니페스트 텍스트의 SHA-256도 기록합니다.
+- `A01`과 `A1`은 같은 좌표를 읽고 보고서에는 원래 ID가 남습니다.
+- 22 × 12 격자에서 패치마다 가운데 60%를 원본 해상도의 부동소수점으로 읽으며 행은 `A`–`L`, 열은 `1`–`22` 순서입니다.
+- 내장 ICC를 따릅니다.
+- 계산은 선형 sRGB D65에서 XYZ로, Bradford D50 적응을 거쳐 Lab D50/2°로 갑니다.
+- 패치마다 면적, 픽셀 수, RGB 평균과 표준편차, 양 끝의 클리핑 비율, 비유한 값 개수, 기준 Lab과 측정 Lab, L/a/b 차이, CIEDE2000을 기록합니다.
+- 중앙값, p95, 최댓값은 관측이지 합격선이 아닙니다. 근거 없는 평균 기준을 만들지 않으며 `qualityDecision`은 `notEvaluated`로 남습니다.
+- 프로파일을 맞추는 데 쓴 타깃은 독립 검증에 다시 쓰지 않습니다.
 
-### 물리 타깃 정보
+### 실물 타깃 세부 정보
 
-실제 장치 측정에는 다음 정보를 작업자가 타깃 라벨에서 읽어 적습니다.
+실제 장치로 측정할 때는 작업자가 타깃 라벨에서 아래 항목을 읽어 적습니다.
 
 <details>
-<summary>측정 정보 예시</summary>
+<summary>측정 블록 예시</summary>
 
 ```json
 {
@@ -89,38 +87,38 @@ swift run negaflow it8-bench docs/reference/IT8_FADGI_OPENDICE.example.json \
 
 </details>
 
-`MANUFACTURER`, `MATERIAL`, `SERIAL`, 배치 머리말(`BATCH`, `BATCH_ID`, `PROD_DATE` 중 하나)이 기준 파일과 글자까지 같아야 합니다. 최상위 `targetID`는 `serial`, `batchID`는 `batchValue`와 같아야 합니다.
+`MANUFACTURER`, `MATERIAL`, `SERIAL`, 배치 헤더(`BATCH`, `BATCH_ID`, `PROD_DATE` 중 하나)가 기준 파일과 글자 하나까지 같아야 합니다. 최상위 `targetID`는 `serial`과, `batchID`는 `batchValue`와 같아야 합니다.
 
-이 기록은 작업자가 적은 값과 기준 파일이 맞는다는 것만 보여 줍니다. 이미지에서 라벨을 알아내거나 작업자의 입력을 독립 인증하지는 않습니다. 정보가 없으면 가장 가까운 날짜나 범용 기준 파일로 대신하지 않습니다.
+이 기록은 작업자가 적은 내용과 기준 파일이 일치한다는 것만 보여 줍니다. 이미지에서 라벨을 읽거나 작업자의 입력을 보증하지는 않습니다. 세부 정보가 없을 때 가장 가까운 날짜나 일반 기준 파일로 대신하지 않습니다.
 
-기준 파일에 조명 또는 관찰자 정보가 있으면 D50/2° 계약과 맞는지 확인합니다. 모순되면 중단합니다. `measurement.renderingIntent`는 현재 Core Image 변환을 직접 고정하지 못하므로 보고서에 `manifestDeclarationNotControlledByEvaluator`라고 남깁니다.
+기준 파일에 광원이나 관측자 정보가 있으면 D50/2° 규약과 맞춰 보고, 어긋나면 멈춥니다. 지금은 `measurement.renderingIntent`로 Core Image 변환을 직접 고정할 수 없어서 보고서에 `manifestDeclarationNotControlledByEvaluator`라고 적습니다.
 
 ## `PRINT` 출력
 
-IT8.7/1은 입력 장치용입니다. 프린터 출력은 `printer + paper + ink/chemistry + driver/process condition` 조합을 실제로 측정해 만든 RGB printer ICC를 써야 합니다.
+IT8.7/1은 입력 장치용입니다. 프린터 출력에는 프린터, 용지, 잉크 또는 화학 약품, 드라이버나 공정 조건의 조합을 실제로 측정해 만든 RGB 프린터 ICC가 필요합니다.
 
-검사와 적용 순서:
+확인과 사용 순서:
 
-1. ICC의 크기, `prtr` 장치 종류, `RGB ` 자료 공간, Lab/XYZ PCS, `acsp` 표시를 확인합니다.
-2. 양방향 ColorSync 변환이 가능한지 확인합니다.
-3. 선택 시 프로파일 이름, 바이트, SHA-256을 고정합니다.
-4. `MAIN` 작업 이미지와 페이지 배치를 끝낸 뒤 최종 출력에 한 번만 적용합니다.
-5. `rawScanTIFF`와 `-main-flat`에는 적용하지 않습니다.
-6. 프로파일이 없거나 틀리면 임시 출력 전에 실패합니다. sRGB로 대신하지 않습니다.
+1. ICC 크기, `prtr` 장치 클래스, `RGB ` 데이터 공간, Lab/XYZ PCS, `acsp` 서명을 확인합니다.
+2. ColorSync가 양방향으로 변환할 수 있는지 확인합니다.
+3. 선택할 때 프로파일 이름, 바이트, SHA-256을 고정합니다.
+4. `MAIN` 작업 이미지와 페이지 레이아웃이 끝난 뒤 최종 출력에 한 번 적용합니다.
+5. `rawScanTIFF`나 `-main-flat`에는 적용하지 않습니다.
+6. 프로파일이 없거나 틀리면 임시 출력을 만들기 전에 실패합니다. sRGB로 대신하지 않습니다.
 
-현재 Core Image와 ColorSync 경로가 렌더링 의도와 black-point compensation을 모든 macOS에서 비트 단위로 고정한다고 주장하지 않습니다.
+현재의 Core Image와 ColorSync 경로가 모든 macOS 버전에서 렌더링 인텐트와 블랙 포인트 보정을 비트 단위로 고정한다고 주장하지 않습니다.
 
 ## `MAIN` 합성 패치 회귀
 
-`NegativeAutoBalanceTests` / `shoulder-print-response-v4`
+`NegativeAutoBalanceTests`와 `shoulder-print-response-v4`입니다.
 
-MAIN/CS는 토글 ON과 OFF 모두 v4 곡선을 씁니다. 남겨 둔 v6 시험은 해당 고정 primitive를 검사합니다. 이 시험의 프레임 간 편차 0을 자동 밸런스 ON의 결과로 해석하지 않습니다.
+MAIN/CS는 스위치가 켜져 있든 꺼져 있든 v4 곡선을 씁니다. 남겨 둔 v6 테스트는 자기 고정 기본 곡선을 검사하며, 그 테스트의 프레임 변동 0은 자동 밸런스 ON의 결과가 아닙니다.
 
 [네거티브 반전 응답](PRINT_RESPONSE.md)
 
-## NORITSU/FUJI 상대 스타일 회귀
+## HS와 SP의 상대 스타일 회귀
 
-`A1`부터 `L22`까지 Lab D50 패치 264개가 있는 기준 파일을 SHA-256으로 고정합니다. 각 패치를 합성 네거티브로 바꾼 뒤 `MAIN`, `NORITSU`, `FUJI` 경로를 두 번씩 실행합니다.
+`A1`부터 `L22`까지 Lab D50 패치 264개가 든 기준 파일을 SHA-256으로 고정합니다. 패치마다 합성 네거티브를 만들고 `MAIN`, `HS`, `SP` 경로를 각각 두 번 돌립니다.
 
 ```bash
 swift run negaflow scanner-relative-it8-bench \
@@ -129,25 +127,10 @@ swift run negaflow scanner-relative-it8-bench \
   --out /path/to/scanner-relative-it8-report.json
 ```
 
-보고서에는 패치별 RGB와 Lab, 기준 대비 `DeltaE00`, 타깃끼리의 상대 `DeltaE00`, 잘림과 비유한값 표시를 넣습니다. 중립 계조의 단조성은 `A16...L16` 밀도열에서 봅니다.
+보고서에는 패치별 RGB와 Lab, 기준에 대한 `DeltaE00`, 타깃 사이의 상대 `DeltaE00`, 클리핑과 비유한 값의 플래그가 들어갑니다. 중성 램프의 단조성은 `A16...L16` 밀도 열에서 읽습니다.
 
-linear sRGB로 바꿨을 때 0...1 밖인 색은 합성 네거티브로 정확히 만들 수 없어 표시 가능한 범위로 제한합니다. 따라서 넓은 범위 통계는 관측값일 뿐 합격 기준이 아닙니다.
+선형 sRGB로 바꿨을 때 0...1을 벗어나는 색은 합성 네거티브로 정확히 만들 수 없어 표시 가능한 범위로 제한합니다. 그래서 넓은 범위의 통계는 관측이지 합격선이 아닙니다.
 
-증거 등급에는 늘 `syntheticModel`이 들어갑니다. 판정은 늘 `notEvaluated`로 남습니다. 프로파일 목록과 각 파일의 SHA-256이 하나라도 틀리면 중단합니다. 실제 장비 정확도에는 같은 물리 네거티브의 양쪽 장비 스캔과 별도 검증 자료가 필요합니다.
+증거 등급은 언제나 `syntheticModel`, 판정은 언제나 `notEvaluated`입니다. 프로파일 매니페스트나 어느 파일의 SHA-256이 어긋나면 멈춥니다. 실제 장비의 정확도에는 같은 실물 네거티브를 두 기계로 스캔한 자료와 별도의 검증 자료가 필요합니다.
 
-기준 파일 머리말에서 D50/2°를 확인한 것은 아닙니다. Lab 값을 D50/2°로 읽는 벤치 자체의 계약이므로 `colorimetryInterpretationProvenance`는 `benchmarkContractNotVerifiedFromReferenceHeader`입니다.
-
-`shoulder-print-response-v4` 이전 결과는 현재 알고리즘의 결과로 재사용하지 않습니다.
-
-## 측정 흐름
-
-```mermaid
-flowchart LR
-    A["이미지·기준 파일·ICC 해시 확인"] --> B["패치 가운데 60% 측정"]
-    B --> C["ICC를 반영해 Lab D50/2° 계산"]
-    C --> D["패치별 CIEDE2000 기록"]
-    D --> E{"증거 종류"}
-    E --> F["algorithmRegression"]
-    E --> G["deviceCharacterization"]
-    E --> H["syntheticModel"]
-```
+D50/2°는 기준 파일 헤더에서 확인한 것이 아닙니다. Lab을 D50/2°로 읽는 이 벤치 자체의 규약이므로 `colorimetryInterpretationProvenance`는 `benchmarkContractNotVerifiedFromReferenceHeader`입니다.

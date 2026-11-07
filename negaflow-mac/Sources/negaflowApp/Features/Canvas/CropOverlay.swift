@@ -1,3 +1,5 @@
+import AppKit
+import Combine
 import SwiftUI
 
 enum CropHandle: CaseIterable {
@@ -16,11 +18,19 @@ struct CropOverlay: View {
     @Binding var cropRect: CGRect
     let imageFrame: CGRect
     let lockedAspectRatio: CGFloat?
+    let straightenAngle: Double
+    let onStraighten: (Double) -> Void
     let onApply: () -> Void
     let onReset: () -> Void
     let onCancel: () -> Void
     @State private var dragStartRect: CGRect?
     @State private var dragStartPoint: CGPoint?
+    /// 기준선 드래그 중이면 시작점과 지금 점(캔버스 좌표).
+    @State private var straightenLine: (start: CGPoint, end: CGPoint)?
+    /// 이번 드래그가 기준선인지는 누르는 순간 한 번만 정한다. 끄는 도중 키를 떼거나 눌러도 바뀌지
+    /// 않아야 사각형이 갑자기 움직이거나 선이 사라지지 않는다.
+    @State private var dragIsStraightenLine: Bool?
+    @StateObject private var modifierMonitor = ModifierKeyMonitor()
 
     var body: some View {
         let r = screenRect
@@ -44,14 +54,112 @@ struct CropOverlay: View {
                 }
             selectionFrame(r)
                 .allowsHitTesting(hasActiveCrop)
+            if showsStraightenGrid {
+                straightenGrid(r)
+                    .allowsHitTesting(false)
+            }
             ForEach(handlePoints(r), id: \.0) { handle, pt in
                 handleView(for: handle)
                     .position(pt)
                     .gesture(handleGesture(handle))
             }
+            if let line = straightenLine {
+                straightenLineView(line)
+                    .allowsHitTesting(false)
+            }
             cropActionBar(r)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear { modifierMonitor.start() }
+        .onDisappear { modifierMonitor.stop() }
+    }
+
+    private var showsStraightenGrid: Bool {
+        straightenLine != nil
+            || model.gestureModifier(for: .straightenGrid).isHeld(in: modifierMonitor.flags)
+    }
+
+    /// 수평을 맞출 때 쓰는 촘촘한 격자. 3분할 안내선 위에 겹친다.
+    private func straightenGrid(_ r: CGRect) -> some View {
+        Path { p in
+            let spacing: CGFloat = 24
+            let columns = max(Int((r.width / spacing).rounded()), 4)
+            let rows = max(Int((r.height / spacing).rounded()), 4)
+            for i in 1..<columns {
+                let x = r.minX + r.width * CGFloat(i) / CGFloat(columns)
+                p.move(to: CGPoint(x: x, y: r.minY))
+                p.addLine(to: CGPoint(x: x, y: r.maxY))
+            }
+            for i in 1..<rows {
+                let y = r.minY + r.height * CGFloat(i) / CGFloat(rows)
+                p.move(to: CGPoint(x: r.minX, y: y))
+                p.addLine(to: CGPoint(x: r.maxX, y: y))
+            }
+        }
+        .stroke(Color.white.opacity(0.42), lineWidth: 0.5)
+        .shadow(color: .black.opacity(0.35), radius: 0, x: 0.5, y: 0.5)
+    }
+
+    private func straightenLineView(_ line: (start: CGPoint, end: CGPoint)) -> some View {
+        let correction = CropOverlayGeometry.straightenCorrection(from: line.start, to: line.end)
+        return ZStack {
+            Path { p in
+                p.move(to: line.start)
+                p.addLine(to: line.end)
+            }
+            .stroke(Color.black.opacity(0.55), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+            Path { p in
+                p.move(to: line.start)
+                p.addLine(to: line.end)
+            }
+            .stroke(Color.yellow, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [6, 3]))
+            if let correction {
+                Text(angleText(clampedStraighten(straightenAngle + correction)))
+                    .font(.caption2.monospacedDigit().weight(.semibold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .canvasControlSurface(model.canvasBackground, cornerRadius: 6)
+                    .position(x: line.end.x, y: line.end.y - 18)
+            }
+        }
+    }
+
+    private func angleText(_ value: Double) -> String {
+        abs(value) < 0.05 ? "0.0°" : String(format: "%+.1f°", value)
+    }
+
+    private func clampedStraighten(_ value: Double) -> Double {
+        min(max(value, -45), 45)
+    }
+
+    /// 누르는 순간 기준선 조합키가 눌려 있으면 이번 드래그는 사각형이 아니라 기준선이다.
+    private func beginsStraightenLine() -> Bool {
+        if let decided = dragIsStraightenLine { return decided }
+        let decided = model.gestureModifier(for: .straightenWithLine).isHeld(in: NSEvent.modifierFlags)
+        dragIsStraightenLine = decided
+        return decided
+    }
+
+    private func updateStraightenLine(_ value: DragGesture.Value) {
+        straightenLine = (clampedToImage(value.startLocation), clampedToImage(value.location))
+    }
+
+    private func finishStraightenLine() {
+        defer {
+            straightenLine = nil
+            dragIsStraightenLine = nil
+        }
+        guard let line = straightenLine,
+              let correction = CropOverlayGeometry.straightenCorrection(from: line.start, to: line.end)
+        else { return }
+        onStraighten(clampedStraighten(straightenAngle + correction))
+    }
+
+    private func clampedToImage(_ point: CGPoint) -> CGPoint {
+        CGPoint(
+            x: min(max(point.x, imageFrame.minX), imageFrame.maxX),
+            y: min(max(point.y, imageFrame.minY), imageFrame.maxY)
+        )
     }
 
     private func selectionFrame(_ r: CGRect) -> some View {
@@ -166,6 +274,10 @@ struct CropOverlay: View {
     var createGesture: some Gesture {
         DragGesture(minimumDistance: 3, coordinateSpace: .named(canvasCoordinateSpace))
             .onChanged { value in
+                if beginsStraightenLine() {
+                    updateStraightenLine(value)
+                    return
+                }
                 if dragStartPoint == nil {
                     dragStartPoint = unitPoint(value.startLocation)
                 }
@@ -173,6 +285,11 @@ struct CropOverlay: View {
                 cropRect = cropSelectionRect(from: start, to: unitPoint(value.location))
             }
             .onEnded { _ in
+                if dragIsStraightenLine == true {
+                    finishStraightenLine()
+                    return
+                }
+                dragIsStraightenLine = nil
                 dragStartPoint = nil
             }
     }
@@ -180,6 +297,10 @@ struct CropOverlay: View {
     var moveGesture: some Gesture {
         DragGesture(minimumDistance: 0, coordinateSpace: .named(canvasCoordinateSpace))
             .onChanged { value in
+                if beginsStraightenLine() {
+                    updateStraightenLine(value)
+                    return
+                }
                 if dragStartRect == nil {
                     dragStartRect = cropRect
                 }
@@ -189,6 +310,11 @@ struct CropOverlay: View {
                 cropRect = movedRect(start.offsetBy(dx: dx, dy: dy))
             }
             .onEnded { _ in
+                if dragIsStraightenLine == true {
+                    finishStraightenLine()
+                    return
+                }
+                dragIsStraightenLine = nil
                 dragStartRect = nil
             }
     }
@@ -196,6 +322,8 @@ struct CropOverlay: View {
     private func handleGesture(_ handle: CropHandle) -> some Gesture {
         DragGesture(minimumDistance: 0, coordinateSpace: .named(canvasCoordinateSpace))
             .onChanged { value in
+                // 손잡이는 늘 크기 조절이다. 기준선은 사진이나 선택 영역 위에서 시작한다.
+                dragIsStraightenLine = false
                 if dragStartRect == nil {
                     dragStartRect = cropRect
                 }
@@ -232,6 +360,7 @@ struct CropOverlay: View {
                 cropRect = clampedUnitRect(next)
             }
             .onEnded { _ in
+                dragIsStraightenLine = nil
                 dragStartRect = nil
             }
     }
@@ -294,5 +423,30 @@ struct CropOverlay: View {
             to: end,
             unitAspectRatio: unitAspectRatio
         )
+    }
+}
+
+/// 조합키만 누르고 떼는 것은 키 이벤트가 아니라서 SwiftUI 가 알려 주지 않는다. 크롭 화면이 떠
+/// 있는 동안만 이 앱의 flagsChanged 를 듣는다.
+@MainActor
+final class ModifierKeyMonitor: ObservableObject {
+    @Published private(set) var flags: NSEvent.ModifierFlags = []
+    private var monitor: Any?
+
+    func start() {
+        flags = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard monitor == nil else { return }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { @MainActor [weak self] event in
+            self?.flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            return event
+        }
+    }
+
+    func stop() {
+        if let monitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        monitor = nil
+        flags = []
     }
 }

@@ -13,34 +13,30 @@ Chroma Engine inverts and develops film. The code sits in the `Chromabase` modul
 | Output color space | sRGB, Display P3, Adobe RGB, custom RGB ICC |
 
 > [!IMPORTANT]
-> The default is `MAIN` with Auto Balance on. The switch is a small pill at the right of the Target heading. It appears only for color and B&W negatives on MAIN (including PRINT) and CS. It adjusts color and brightness from the current picture; switching it off bypasses that step. Auto Tone, Auto White Balance, Auto Levels and Auto Color remain separate and off by default.
+> The default is `MAIN` with Auto Balance on. The switch is a small pill at the right of the Target heading. It appears only for color and B&W negatives on MAIN (including PRINT) and CS. It adjusts color and brightness from the current picture, and switching it off bypasses that step. Auto Tone, Auto White Balance, Auto Levels and Auto Color remain separate and off by default.
 
 ## What comes first
 
 1. If the film base can be measured, the measurement wins over the default picked by name.
-2. Film properties, scan light source, scanner style, and scene auto-correction are kept apart.
+2. Film properties, scan light source, scanner style and scene auto-correction are kept apart.
 3. Features like Auto Tone and Auto White Balance turn on only when you run them.
-4. The same source, edit values, and profile bundle go through the same order of steps.
+4. The same source, edit values and profile bundle go through the same order of steps.
 5. Synthetic tests and real device validation are never presented as the same evidence.
 
 ## Order of steps
 
-```mermaid
-flowchart LR
-    A["Read the file"] --> B["Fix the orientation"]
-    B --> C["Linear input / camera RGB for RAW"]
-    C --> D{"Film type"}
-    D -->|positive| E["Positive processing"]
-    D -->|negative| F["Measure the base"]
-    F --> G["Optical density and inversion"]
-    E --> H["Develop target and profiles"]
-    G --> AB["Auto Balance ON/OFF"] --> M["RAW camera matrix after inversion"] --> H
-    H --> I["Tone, color, local adjustment"]
-    I --> J["Detail and effects"]
-    J --> K["Display or output color space"]
-```
+The working image is processed in a 32-bit floating point linear color space. Only operations that need gamma convert at their fixed step, and encoding for a screen or file format happens at the end.
 
-The working image is processed in a 32-bit floating point linear color space. Only the operations that need gamma convert at their fixed step. Encoding for a screen or a file format happens at the end.
+1. Read the file and fix the orientation.
+2. Linear input (camera RGB for RAW).
+3. Film type: a positive goes to positive processing, a negative gets its base measured.
+4. Optical density and inversion, then Auto Balance ON or OFF, then the RAW camera matrix.
+5. Develop target and profiles.
+6. Tone, color and local adjustment.
+7. Detail and effects.
+8. Display or output color space.
+
+`CIContext` is not rebuilt for every render. It is reused, split by purpose: display, analysis and export. The preview computes only the size it needs and the latest edit version, and export renders again at source size.
 
 Apple's Core Image documentation:
 
@@ -49,15 +45,11 @@ Apple's Core Image documentation:
 - [workingColorSpace](https://developer.apple.com/documentation/coreimage/cicontext/workingcolorspace)
 - [Core Image performance guide](https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/CoreImaging/ci_performance/ci_performance.html)
 
-`CIContext` is not rebuilt for every render. It is reused, split by purpose: display, analysis, export. The preview computes only the size it needs and the latest edit version. Export renders again at source size.
-
 ## Film base
 
 ### Reason for measuring
 
-The unexposed part of a negative is a reference point that combines film, development, and the scan light source. The orange mask of color negative is in there too. Get the base wrong and every density and channel relationship after it goes wrong.
-
-Kodak's Portra 400 data also records minimum density, characteristic curves, and dye spectral density separately.
+The unexposed part of a negative is a reference point that combines film, development and the scan light source. The orange mask of color negative is in there too. Get the base wrong and every density and channel relationship after it goes wrong. Kodak's Portra 400 data also records minimum density, characteristic curves and dye spectral density separately:
 
 - [Kodak Professional Portra 400 technical data](https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/e4050_portra_400.pdf)
 
@@ -66,7 +58,7 @@ Kodak's Portra 400 data also records minimum density, characteristic curves, and
 `FilmBaseEstimator` evaluates the spatial distribution of bright pixels across the frame to identify the unexposed base.
 
 - A film pixel cannot be brighter than the unexposed base.
-- Anything much brighter may be backlight, perforation, or outside the film.
+- Anything much brighter may be backlight, perforation or outside the film.
 - A real base tends to run in a wide band along the frame edge.
 - With several film strips on one sheet, separated areas can be read together.
 - A boundary where holder and film mix is trusted less than the interior.
@@ -85,7 +77,7 @@ Without a manual value, or with a wrong film ID, it moves to the next safe metho
 
 ## Optical density and inversion
 
-Density comes from linear transmittance `T` and the per-channel base `Dmin`.
+Density comes from linear transmittance `T` and the per-channel base `Dmin`:
 
 ```math
 D = \log_{10}\left(\frac{D_{\min}}{T}\right)
@@ -95,20 +87,18 @@ D = \log_{10}\left(\frac{D_{\min}}{T}\right)
 
 ### Film type data
 
-The current table holds 27 film names, covering color negative, black and white, and motion picture negative.
-
-What the data is for:
+The current table holds 27 film names, covering color negative, black and white, and motion picture negative. The data is used for:
 
 - The Dmin default when the base cannot be measured
 - Fixed stock-relative density factors
 
-Some values were approximated by reading curves in public material, and some were set conservatively. 27 names do not mean 27 validated color profiles. Once the base is measured, the measurement wins.
+Some values were approximated by reading curves in public material, and some were set conservatively. 27 names do not mean 27 validated color profiles, and once the base is measured, the measurement wins.
 
 ### MAIN/PRINT and CS
 
-Auto Balance ON restores the MAIN/CS inversion from `412bb31`: each channel uses its densest 0.2% scene percentile, with a 1.8D range limit, followed by the original `shoulder-print-response-v4` curve and muted-scene vibrance. Film presets multiply that measured range by their relative channel factors. The 1.8D limit is a rendering safeguard retained for compatibility, not a measured property of every film. It can affect dense negatives.
+With Auto Balance ON, each channel uses its densest 0.2% scene percentile with a 1.8D range limit, followed by the `shoulder-print-response-v4` curve and muted-scene vibrance. OFF uses the same curve with a fixed nominal range (color 1.55D, B&W 2.17D). OFF also multiplies a scanner and film channel-range calibration for color negatives, taken from at least three frames of the same roll.
 
-OFF uses the same v4 curve with a fixed nominal range (color 1.55D, B&W 2.17D), multiplied by preset factors when selected. It skips scene range normalization and muted-scene vibrance. For color negatives, OFF also multiplies a channel range calibration for the scanner and film. It is the median of at least three frames with a valid measurement from the same roll, or from the same scan folder when no roll is set. The value, once chosen, stays on each frame. With fewer frames, or with mixed film, the three channels keep the same range. Equal transmittance with the same base and settings then gives the same result across the frames of one roll. ON can change both brightness and color with scene content. Neither mode establishes measured film color accuracy.
+ON can change both brightness and color with scene content. Neither mode establishes measured film color accuracy. The formulas, the 1.8D limit and the RAW order are in:
 
 [Negative response](../reference/PRINT_RESPONSE.md)
 
@@ -120,7 +110,7 @@ OFF uses the same v4 curve with a fixed nominal range (color 1.55D, B&W 2.17D), 
 | Light source | How did the scan light source affect each channel | Channel gain, base-driven correction |
 | Scanner target | What tone and color style does the result have | Relative statistics from scans shot for this project |
 
-Keeping these three apart avoids the mistake of letting one film name stand for emulsion properties, light source color, and a lab's output style at once. When a real base exists, the measurement wins over light source defaults. Scanner statistics are not used directly as an absolute color matrix for a scene.
+Keeping these three apart avoids letting one film name stand for emulsion properties, light source color and a lab's output style at once. When a real base exists, the measurement wins over light source defaults. Scanner statistics are not used directly as an absolute color matrix for a scene.
 
 The data is described in [film profiles](FILM_PROFILES.md).
 
@@ -128,7 +118,7 @@ The data is described in [film profiles](FILM_PROFILES.md).
 
 ### `MAIN`
 
-The default is `MAIN` with Auto Balance on. The switch is a small pill at the right of the Target heading. It appears only for color and B&W negatives on MAIN (including PRINT) and CS. It adjusts color and brightness from the current picture; switching it off bypasses that step. Auto Tone, Auto White Balance, Auto Levels and Auto Color remain separate and off by default.
+The default target, with Auto Balance on. The switch is described at the top of this page.
 
 ### `PRINT`
 
@@ -140,13 +130,11 @@ A fixed rendering applied after the inversion. It reads nothing from the picture
 
 The rendering is a luminance tone curve, a saturation gain that follows brightness, and for `HS` a small tilt of the gray axis. All curves are monotone cubic, so nothing bends at the knots.
 
-- `SP` comes from four frames of one roll scanned on a real SP-3000 and on this project's own scanner, matched pixel by pixel. The tone curve takes a quarter of its weight from the percentiles of 185 SP-3000 frames. On those four frames the median CIEDE2000 to the SP-3000 scan falls from about 7.4 for `MAIN` to 3.9. One dark frame barely moves: the lab removed a red shadow cast frame by frame there, and a fixed rendering cannot.
+- `SP` comes from four frames of one roll scanned on a real SP-3000 and on this project's own scanner, matched pixel by pixel. The tone curve takes a quarter of its weight from the percentiles of 185 SP-3000 frames. On those four frames the median CIEDE2000 to the SP-3000 scan falls from about 7.4 for `MAIN` to 3.9. One dark frame barely moves, because the lab removed a red shadow cast frame by frame there and a fixed rendering cannot.
 - `HS` has no pixel pairs. It starts from `SP` and adds the median difference between the two machines on three rolls with matching film and roll names: slightly darker midtones, whites a little higher, colored pixels at 0.88× saturation, and grays leaning green in the bright half (a* about −1 to −4).
 - `HS` sharpens the brightness channel. The radius is 0.9 px at the machine's 35 mm output (3089 px long edge) and scales with resolution, so preview and export match. The strength was not measured.
 
-Picking a bundled profile still adds `scannerSignature`, the relative difference from rolls whose names and image counts match on both machines.
-
-Every profile today is `realOnly`.
+Picking a bundled profile still adds `scannerSignature`, the relative difference from rolls whose names and image counts match on both machines. Every profile today is `realOnly`.
 
 - The relative difference is computed only when roll names and image counts match closely enough.
 - Values whose direction flips are not applied.
@@ -155,21 +143,32 @@ Every profile today is `realOnly`.
 
 ### `F135`, `HR`
 
-This project has no reference scans from a Pakon F-135 or a Kodak HR-500, so neither target is checked against its machine. Both use the measured `SP` rendering with the toe of Kodak Endura Premier paper (E-4070 datasheet) fitted to the same midtone, which gives deeper blacks. `HR` also lowers saturation to 0.92×. Checking them needs what `SP` had: the same negatives scanned on the real machine.
+This project has no reference scans from a Pakon F-135 or a Kodak HR-500, so neither target is checked against its machine. Both start from the measured `SP` rendering with Kodak Endura Premier paper (E-4070 datasheet) fitted to its midtone. From one stop below middle gray upward the two share that curve. They differ in the shadows.
+
+- `F135` follows the paper down to −2 stops. From −3 stops down it stays 0.9 stop under `SP`, the most the paper toe ever lowered it. Blacks are deeper than `SP`, yet each shadow stop still separates: local contrast there is at least 91% of `SP`.
+- `HR` keeps the measured `SP` shadows below −4 stops. The −3 and −2 stop points sit a little lower so the curve climbs into the paper midtone without a dip in contrast. Its shadows are up to 5.4 L* lighter than `F135`, and saturation is 0.92×.
+
+Checking them needs what `SP` had: the same negatives scanned on the real machine.
 
 ### `EXPIRED`
 
 A recovery target for old film. It does not blanket-desaturate or stretch the range, and stays within limited correction that the current evidence supports.
 
+### `CS`
+
+`CS` (Custom) holds 18 color styles in three groups: Emulsion, Reversal, Dye Transfer, Skip Bleach, Plate Glass, Amber Glass, Ultramarine, Terracotta, Celadon, Nacre and Dichroic (11); Wetzlar, Classic, Studio and Rochester (4); Slide Show, Cinema and Point & Shoot (3).
+
+A Custom target uses the `MAIN` inversion with Auto Balance and then applies the custom-3 tone, density and chroma response. Scanner profiles are not used with it. The CLI takes the same IDs, for example `--target classic`.
+
 ## The film look on a digital source
 
-The left Film tab offers slide and color negative stocks. For a scan these are a color transform only, because the scan already carries the film's own latitude, density response, scatter, and grain in its pixels.
+The left Film tab offers slide and color negative stocks. For a scan these are a color transform only, because the scan already carries the film's own latitude, density response, scatter and grain in its pixels.
 
 A digital photograph carries none of that. Measurement showed what a color transform alone does there: on camera-rendered input the highlight steps collapsed to 0.0031, about one fourteenth of the same steps on flat input, while saturation still rose. The result reads as a digital filter.
 
 So a source marked `Digital Color` or `Digital B&W` runs a separate chain that redoes what film does, in order:
 
-1. Undo the camera's display rendering to estimate the exposure the film would receive. Clipped detail does not come back; this is a plausible reconstruction.
+1. Undo the camera's display rendering to estimate the exposure the film would receive. Clipped detail does not come back, so this is a plausible reconstruction.
 2. Add scatter and halation while the image is still linear light, before any density exists. Returning light strikes the red layer first, producing a red-weighted glow, and redistributes light without adding energy.
 3. Virtual development. A characteristic curve builds density, DIR couplers inhibit neighbouring layers, and a negative then goes through RA-4 paper. A negative's low gamma and the paper's high gamma are two separate curves, which lets highlights roll off without clipping.
 4. The stock's color signature, since contrast already came from step 3.
@@ -199,24 +198,24 @@ These values are stored as a step-by-step edit history. GrainMend and ordinary l
 | Auto Tone | Assigns exposure, contrast, density, highlights, shadows, whites and blacks. Keeps the user's color controls and curves. |
 | Auto White Balance | Estimates temperature and tint from near-neutral luminance bands. Rejects samples with a clipped RGB channel and reduces correction when neutral evidence is sparse or covers a narrow tonal range. |
 | Auto Levels | Measures common luminance endpoints and applies the same luminance gain to RGB. Preserves channel ratios instead of stretching each channel separately. |
-| Auto Color | Fits residual casts to neutral candidates. Uses channel slopes only when a fit predicts separate, unused luminance bands; otherwise uses gains. Weak fallback evidence receives less correction. |
+| Auto Color | Fits residual casts to neutral candidates. Uses channel slopes only when a fit predicts separate, unused luminance bands, and otherwise uses gains. Weak fallback evidence receives less correction. |
 
-Auto Tone checks the first proposal on a rendered preview. If it proposes a further exposure or white-point change, it renders that candidate too and accepts it only when a score of middle tone, endpoints, tonal range and clipping improves. This is a bounded correction, not a search for a unique ideal rendering. Repeating the command assigns settings rather than accumulating them. Resetting Auto Tone keeps the user's color controls.
+Auto Tone checks the first proposal on a rendered preview. If it proposes a further exposure or white-point change, it renders that candidate too and accepts it only when a score of middle tone, endpoints, tonal range and clipping improves. This is a bounded correction, not a search for a unique ideal rendering. Repeating the command assigns settings rather than accumulating them, and resetting Auto Tone keeps the user's color controls.
 
-Analysis uses area-weighted averages in linear RGB, with a bounded long edge. Tone and WB use an sRGB preview, so clipping means preview-channel clipping, not sensor saturation. These estimates cannot distinguish every subject color from an illuminant cast or establish measured film-color accuracy. MAIN/CS Auto Balance and its muted-scene vibrance remain part of the earlier inversion stage.
+Analysis uses area-weighted averages in linear RGB, with a bounded long edge. Tone and WB use an sRGB preview, so clipping means preview-channel clipping, not sensor saturation. These estimates cannot distinguish every subject color from an illuminant cast or establish measured film color accuracy. MAIN/CS Auto Balance and its muted-scene vibrance belong to the inversion stage.
 
 ## Color management
 
-If the input carries a valid ICC, that color space is read. Internal math runs in the fixed linear working space, and the switch to an output space happens at display, soft proof, and export.
+If the input carries a valid ICC, that color space is read. Internal math runs in the fixed linear working space, and the switch to an output space happens at display, soft proof and export.
 
 Main supported outputs:
 
 - sRGB
 - Display P3
 - Adobe RGB
-- A user-selected RGB printer/output ICC
+- A user-selected RGB printer or output ICC
 
-The printer profile's name, byte count, and SHA-256 are pinned when export starts. If the file changes during the render, the run stops.
+The printer profile's name, byte count and SHA-256 are pinned when export starts. If the file changes during the render, the run stops.
 
 No claim is made that the current Core Image and ColorSync path produces bit-identical rendering intent and black-point compensation on every macOS version. That guarantee would need a separate ColorSync buffer path and memory checks for large 16-bit images first.
 
@@ -224,15 +223,13 @@ No claim is made that the current Core Image and ColorSync path produces bit-ide
 
 Format settings sit outside the color pipeline, but they decide what survives in the delivered file.
 
-JPEG stores color at a lower resolution than luminance unless the encoder is pushed past its subsampling threshold. Below that point chroma is halved both horizontally and vertically, which softens saturated edges while luminance detail stays intact. Quality at or above 95% is therefore encoded without chroma subsampling. Lower settings keep the value that was chosen, because choosing them means asking for a smaller file.
-
-PNG and TIFF are lossless and never subsample. Their only quality control is bit depth, 8 or 16 bits per channel. Dithering is applied only at 8 bits, where it hides quantization banding.
+JPEG stores color at a lower resolution than luminance unless the encoder is pushed past its subsampling threshold. Below that point chroma is halved both horizontally and vertically, which softens saturated edges while luminance detail stays intact. Quality at or above 95% is therefore encoded without chroma subsampling, and lower settings keep the value that was chosen because choosing them means asking for a smaller file. PNG and TIFF are lossless and never subsample. Their only quality control is bit depth, 8 or 16 bits per channel, and dithering is applied only at 8 bits, where it hides quantization banding.
 
 ## Performance and safety
 
 - `CIContext` is reused per purpose.
-- Adjustments use a lower-resolution preview; export rebuilds from the source.
-- Long-running tasks re-check the frame ID, edit version, and session immediately before applying a result.
+- Adjustments use a lower-resolution preview, and export rebuilds from the source.
+- Long-running tasks re-check the frame ID, edit version and session immediately before applying a result.
 - When memory runs low, caches such as thumbnails and previews are dropped.
 - Originals and edit history are kept apart from caches.
 
@@ -243,9 +240,9 @@ PNG and TIFF are lossless and never subsample. Their only quality control is bit
 3. Synthetic IT8: the mathematical round trip over 264 patches
 4. Real shooting statistics: the `realOnly` profiles
 5. REAL/TARGET pairs: a device quality gate with separate validation material
-6. Real hardware: an actual scanner, film, display, and print
+6. Real hardware: an actual scanner, film, display and print
 
-A good synthetic IT8 result does not prove absolute accuracy on real negatives. Judging scanner profile quality follows [profile quality gate](../reference/PROFILE_QUALITY_GATE.md) and [IT8 color validation](../reference/IT8_COLOR_VALIDATION.md).
+A good synthetic IT8 result does not prove absolute accuracy on real negatives. Judging scanner profile quality follows [Scanner profile quality gate](../reference/PROFILE_QUALITY_GATE.md) and [IT8 color validation](../reference/IT8_COLOR_VALIDATION.md).
 
 ## Where the code lives
 

@@ -2,76 +2,61 @@
 
 [文档首页](../README.md)
 
-negaflow 有两套。macOS 版是 Core Image 上的 Swift 和 SwiftUI，Windows 版是 Direct3D 上的 C++ 引擎加 C# 和 WinUI 3。两者不共用源码。
+negaflow 有两套，一套给 macOS，一套给 Windows。两套不共享源代码，各自按所在系统的方式编写。
 
-这一页写清楚：实际上哪些一样、哪些看起来不同、哪些只有一边有。
+## 为什么做两套
 
-## 做两套的理由
+用一套跨平台代码，就意味着选定一个工具包，并在两个系统上接受它的妥协：菜单和文件对话框行为古怪，颜色多经过一层转换，窗口与系统风格不一致。为每个系统分别原生编写，工作量大约翻倍，因为每个功能都要做两遍、测两遍。作为回报，两个版本在各自系统上的表现都符合人们的预期。
 
-用一套代码覆盖两个系统，就要挑一个跨平台工具包，然后在两边都接受它的结果。菜单位置不对， 文件对话框行为古怪，颜色多走一层转换，窗口始终不像那个系统上的应用。
+## 相同的部分
 
-按各自平台的方式写，工作量大约翻一倍，每加一个功能都要做两遍、验两遍。换来的是两个版本在各自系统上都符合用户的习惯。
+画面。同一张扫描在两边得到同样的结果。
 
-## 一样的部分
+macOS 版会把一组基准图像渲染到 `docs/verification/macos-golden`。Git 忽略这个文件夹，所以图像只存在于渲染它们的那台电脑上。Windows 引擎测试读取其副本并比较像素值，Windows 引擎一旦偏离，测试就会失败。
 
-出片。同一张扫描交给两边，得到同一张照片。
+以下内容同样一致：
 
-这不是口头承诺。macOS 版渲染出的基准图放在仓库的 `docs/verification/macos-golden` 里。 Windows 的引擎测试读回这些文件，逐像素比对。改 Windows 引擎时如果偏离了 macOS 的结果， 测试会失败。
+- 片基测量与反相
+- 所有显影目标：`MAIN`、`PRINT`、`HS`、`SP`、`F135`、`HR`、`EXPIRED`、`CS`
+- 影调、曲线、HSL、颜色分级、黑白调色
+- GrainMend 的检测与修复，包括红外路径
+- 印相版式与页面几何
+- 导出文件命名、EXIF 写入和元数据策略
+- 目录格式（`library.sqlite`）
 
-下面这些也一样：
-
-- 片基测量与反转
-- 全部冲洗目标：`MAIN`、`PRINT`、`HS`、`SP`、`F135`、`HR`、`EXPIRED`
-- 影调、曲线、HSL、调色、黑白色调
-- GrainMend 的检测与修复，包括红外通路
-- 打印布局与页面排布
-- 导出文件命名、EXIF 写入、元数据策略
-- 图库格式。一边建的图库另一边能读
-
-## 不一样的部分
+## 不同的部分
 
 ### 色彩管理
 
-macOS 用 ColorSync，Windows 用 ICM。两者接受同样的 ICC 配置文件，在舍入范围内给出相同的值。 这部分最容易悄悄跑偏，所以基准图比对专门盯着它。
+macOS 使用 ColorSync，Windows 使用 ICM。两者读取同样的 ICC 配置文件，在舍入误差内得到相同数值。这是最容易悄悄偏离的部分，所以一致性测试覆盖了它。
 
 ### 图形
 
-macOS 在 Core Image 上跑冲洗流程。Windows 跑在 Direct3D 计算着色器上，遇到用不了 GPU 的机器就退回 CPU。
-
-快慢取决于机器而不是平台。Apple Silicon 的 Mac 和装了独立显卡的 PC，处理一张 35mm 扫描都不用等。
+macOS 在 Core Image 上运行显影链。Windows 在 Direct3D 计算着色器上运行，GPU 路径不可用时退回 CPU。
 
 ### 文件位置
 
 | | macOS | Windows |
 |---|---|---|
 | 应用 | `/Applications/negaflow.app` | `%LOCALAPPDATA%\Negaflow\App` |
-| 图库与设置 | `~/Library/Application Support/negaflow` | `%LOCALAPPDATA%\Negaflow` |
-| 日志 | 控制台与应用支持目录 | `%LOCALAPPDATA%\Negaflow\Logs` |
+| 图库和设置 | `~/Library/Application Support/negaflow` | `%LOCALAPPDATA%\Negaflow` |
 
 ### 安装与卸载
 
-macOS 用 PKG 把应用装进 `/Applications`。要删除就和别的 Mac 应用一样，拖进废纸篓。
-
-Windows 不要管理员权限，装在用户目录里。卸载走开始菜单的`卸载 negaflow`或者设置，会一并清掉应用目录、开始菜单项和包注册。
+macOS 以 PKG 分发，把应用装进 `/Applications`；卸载时把应用拖进废纸篓。Windows 以安装程序分发，写入用户文件夹，不要求管理员权限；卸载通过开始菜单里的 `Uninstall negaflow` 或设置进行，会清除应用文件夹、开始菜单条目和包注册。
 
 ### 命令行
 
-macOS 带一个叫 `negaflow` 的 CLI，能找扫描仪、冲洗文件、跑 GrainMend、做性能测试，是给人日常用的。
-
-Windows 带的是 `negaflow-cli.exe`，用来看引擎怎么处理某一个文件。它接受参数标志而不是子命令，用于排查问题。
+macOS 自带完整的 CLI `negaflow`，可以检测扫描仪、显影文件、运行 GrainMend 和做基准测试。Windows 的 `negaflow-cli.exe` 是较小的诊断工具，用来检查引擎对单个文件做了什么，它接受参数标志，而不是子命令。
 
 ### 签名
 
-两边都没有用付费开发者证书签名，所以第一次启动都会有提示。macOS 在隐私与安全性里点仍要打开， Windows 在 SmartScreen 点更多信息再点仍要运行。
+两个版本都没有用付费开发者证书签名，所以两个系统在首次启动时都会警告。Mac 版是 ad hoc 签名，没有经过公证，在隐私与安全性里点「仍要打开」即可放行。Windows 安装程序没有签名，在 SmartScreen 里点「更多信息」后再运行。
 
 ## 扫描仪
 
-扫描仪插件是另一个 GPL 项目 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)，两个系统都有。 插件作为独立进程运行，用 JSON 通信，所以 negaflow 本体在两个平台上都不含 SANE 代码。
+扫描仪插件是独立的 GPL 项目 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)，两个系统都有对应版本。它作为单独进程运行，通过 JSON 通信，所以 negaflow 本体在两个平台上都不含 SANE 代码。在 Windows 上它走 Windows 自带的扫描仪驱动路径，因此同一台电脑上的 VueScan 和 SilverFast 仍然可用。
 
-在 Windows 上，插件走系统自带的扫描仪驱动通路，不替换任何东西，VueScan 和 SilverFast 在同一台机器上照常可用。
+## 如何保持一致
 
-## 怎么保持一致
-
-功能先落在 macOS，Windows 这边照着 macOS 的实际行为做。凡是能测输出的部分，由 macOS 的基准图判定 Windows 是否正确。
-
-两边对不上时，macOS 是标准答案，Windows 是 bug。
+每个功能先在 macOS 上完成，再对照 macOS 的实际行为移到 Windows。凡是能测量输出的地方，由 macOS 基准图像判定 Windows 是否正确。两边不一致时，以 macOS 为准，问题出在 Windows 一侧。

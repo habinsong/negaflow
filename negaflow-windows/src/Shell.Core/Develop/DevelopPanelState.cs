@@ -461,6 +461,15 @@ public sealed partial class DevelopPanelState
     public LibraryFrameError SetStraightenAngle(double angle) =>
         RefreshAfterEdit(transformEditor.SetStraightenAngle(SelectedFrame, angle));
 
+    /// <summary>변환(원근) 보정을 바꿉니다. 바꿀 값만 고친 레시피를 받습니다.</summary>
+    public LibraryFrameError SetPerspective(Func<PerspectiveRecipe, PerspectiveRecipe> update)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        return SelectedFrame is { } frame
+            ? RefreshAfterEdit(transformEditor.SetPerspective(frame, update(frame.ImageTransform.Perspective)))
+            : LibraryFrameError.MissingId;
+    }
+
     /// <summary>
     /// Canvas crop session의 단일 commit 지점입니다. null은 전체 프레임을 뜻하며, drag 중에는
     /// 이 메서드를 호출하지 않아 preview/export와 catalog가 중간 선택 상태를 보지 않습니다.

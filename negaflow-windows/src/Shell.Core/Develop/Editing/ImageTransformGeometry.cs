@@ -46,7 +46,14 @@ public static class ImageTransformGeometry
                 : new ImageCropRect(1.0 - box.Y - box.Height, box.X, box.Height, box.Width)
             : null;
 
-        return transform with { Rotation = rotation, CropAspect = aspect, Crop = crop };
+        // 원근 보정은 화면 방향 기준입니다. 같은 보정이 돌아간 그림에 그대로 남도록 축을 옮깁니다.
+        return transform with
+        {
+            Rotation = rotation,
+            CropAspect = aspect,
+            Crop = crop,
+            Perspective = transform.Perspective.RotatedQuarterTurn(clockwise),
+        };
     }
 
     /// <summary>
@@ -89,6 +96,9 @@ public static class ImageTransformGeometry
             // 0 을 뒤집으면 -0 이 됩니다. 카탈로그에 "-0" 이 적히지 않게 되돌립니다.
             StraightenAngle = -transform.StraightenAngle + 0.0,
             Crop = crop,
+            Perspective = displayHorizontal
+                ? transform.Perspective.MirroredHorizontally()
+                : transform.Perspective.MirroredVertically(),
         };
     }
 }

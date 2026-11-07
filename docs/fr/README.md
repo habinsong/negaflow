@@ -1,24 +1,17 @@
-# Documentation negaflow
+# Documentation de negaflow
 
 Classée par sujet pour ouvrir directement celle qu'il vous faut.
 
 [English](../README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · Français · [Deutsch](../de/README.md)
 
-```mermaid
-flowchart LR
-    A["Je veux connaître le produit"] --> P["product"]
-    B["Je veux le code et les données"] --> R["architecture"]
-    C["Je veux les formats et les valeurs"] --> S["reference"]
-```
-
 > [!NOTE]
-> negaflow 1.2.6 tourne sur macOS et sur Windows. Les deux applications sont écrites séparément pour leur plateforme et rendent la même image à partir du même fichier.
+> negaflow 1.2.6 tourne sur macOS et Windows. Les deux applications sont écrites séparément et rendent la même image à partir du même fichier.
 
 ## Plateforme
 
 | Document | À lire quand |
 |---|---|
-| [Ce qui diffère entre macOS et Windows](platform/PLATFORM_DIFFERENCES.md) | Vous voulez savoir ce qui est identique et ce qui ne l'est pas |
+| [Ce qui diffère entre les versions macOS et Windows](platform/PLATFORM_DIFFERENCES.md) | Vous voulez savoir ce qui est identique et ce qui ne l'est pas |
 | [Documentation macOS](../../negaflow-mac/docs/README_fr.md) | Vous installez, compilez ou utilisez la CLI sur macOS |
 | [Documentation Windows](../../negaflow-windows/docs/README_fr.md) | Vous installez, compilez ou vérifiez le moteur sur Windows |
 
@@ -26,46 +19,45 @@ flowchart LR
 
 | Document | À lire quand |
 |---|---|
-| [De la photothèque à l’impression](product/WORKFLOW.md) | Pour l’import, le développement par dossier, le copier-coller et l’impression |
+| [De la bibliothèque au tirage](product/WORKFLOW.md) | Vous avez besoin du comportement de l'import, du développement par dossier, du copier-coller et du tirage |
 | [Chroma Engine](product/CHROMA_ENGINE.md) | Vous voulez l'inversion du film et l'ordre de développement |
-| [GrainMend](product/GRAINMEND.md) | Vous voulez voir comment la réparation poussière et rayures fonctionne |
-| [Profils de film](product/FILM_PROFILES.md) | Vous voulez l'origine des profils fournis et leurs limites |
+| [GrainMend](product/GRAINMEND.md) | Vous voulez voir comment fonctionne la réparation des poussières et des rayures |
+| [Profils de film](product/FILM_PROFILES.md) | Vous voulez connaître l'origine et les limites des profils fournis |
 
 ## Architecture
 
-| Document | Contenu |
+| Document | À utiliser quand |
 |---|---|
 | [Architecture produit](architecture/PRODUCT_ARCHITECTURE.md) | Flux de données entre application, moteur, stockage et export |
-| [Stockage du catalogue](architecture/CATALOG_STORAGE.md) | Pourquoi SQLite, l'ancien format, les mesures |
-| [Architecture des plugins scanner](architecture/SCANNER_PLUGINS.md) | Processus externe, approbation, fichiers de scan publiés |
-| [Archive de bibliothèque](architecture/LIBRARY_ARCHIVE.md) | Comment originaux et historique d'édition sont conservés ensemble |
+| [Stockage du catalogue](architecture/CATALOG_STORAGE.md) | Catalogue SQLite, import de l'ancien catalogue JSON, mesures |
+| [Architecture des plugins scanner](architecture/SCANNER_PLUGINS.md) | Processus externe, approbation, publication des fichiers de numérisation |
+| [Archive de bibliothèque](architecture/LIBRARY_ARCHIVE.md) | Originaux et historique des retouches stockés ensemble |
 
 ## Référence
 
 | Document | Contenu |
 |---|---|
-| [JSON de la CLI scanner](reference/CLI_JSON.md) | Forme de sortie de `detect --json` et `capabilities --json` |
-| [Manifeste de rendu](reference/RENDER_MANIFEST.md) | Liens SHA-256 entre source, valeurs d'édition et fichier de sortie |
-| [Mises en page et aperçu C-print](reference/C_PRINT.md) | Huit mises en page, export par page, rendu optimisé, profil ICC d’épreuve et limites de précision |
-| [Réponse de tirage fixe](reference/PRINT_RESPONSE.md) | Formule et points d'ancrage de `shoulder-print-response-v4` |
-| [Contrôle qualité des profils scanner](reference/PROFILE_QUALITY_GATE.md) | Règles de publication du matériel REAL/TARGET |
-| [Profils de bruit des scanners](reference/SCANNER_NOISE_PROFILES.md) | Mesure par scans répétés et conditions d'application automatique |
+| [JSON de la CLI scanner](reference/CLI_JSON.md) | Sortie de `detect --json` et `capabilities --json` |
+| [Manifeste de rendu](reference/RENDER_MANIFEST.md) | Liens SHA-256 entre source, valeurs de retouche et fichier de sortie |
+| [Mises en page de tirage et aperçu C-print](reference/C_PRINT.md) | Huit mises en page, export de page finie, ICC d'épreuve seul, limites de précision |
+| [Réponse négative](reference/PRINT_RESPONSE.md) | Formule et ancrages de `shoulder-print-response-v4` |
+| [Contrôle qualité des profils scanner](reference/PROFILE_QUALITY_GATE.md) | Règles de publication pour les paires REAL/TARGET |
+| [Profils de bruit des scanners](reference/SCANNER_NOISE_PROFILES.md) | Mesure par numérisations répétées et conditions d'application |
 | [Films que GrainMend IR doit éviter](reference/INFRARED_LIMITS.md) | Noir et blanc, Kodachrome, limites d'alignement RVB/IR |
-| [Détection des vues sur scanner à plat](reference/FRAME_DETECTION.md) | Comment le film est distingué d'un porte-films vide et comment les limites de vue sont mesurées |
-| [Validation colorimétrique IT8](reference/IT8_COLOR_VALIDATION.md) | Mesure des patchs, niveaux de preuve, régression synthétique |
+| [Comment la détection des vues sur scanner à plat trouve le film](reference/FRAME_DETECTION.md) | Film ou porte-film vide, limites des vues |
+| [Validation colorimétrique IT8](reference/IT8_COLOR_VALIDATION.md) | Mesure des plages, niveaux de preuve, régression synthétique |
 
 ## Provenance et distribution
 
-| Document | À utiliser quand |
+| Document | Contenu |
 |---|---|
-| [Provenance du code et des ressources](legal/PROVENANCE.md) | Vous vérifiez la frontière Apache/GPL et les empreintes des ressources |
-| [`TRADEMARKS.md`](../../TRADEMARKS.md) | Vous vérifiez l'usage des noms de films, scanners et produits |
+| [Provenance du code et des ressources](legal/PROVENANCE.md) | Vous vérifiez la frontière Apache/GPL ou les empreintes des ressources fournies |
+| [`TRADEMARKS.md`](../../TRADEMARKS.md) | Vous vérifiez l'usage des noms de films, de scanners et de produits |
 
 ## Comment c'est écrit
 
-- Les documents produit ne décrivent que ce que l'utilisateur voit aujourd'hui.
-- Les documents d'architecture décrivent les responsabilités et le déplacement des données.
-- Les valeurs de code, noms de champs et empreintes restent tels quels.
-- Les documents de validation séparent ce qui est passé de ce qui reste à vérifier.
-- Des phrases simples. Pas d'adjectifs publicitaires, pas de paragraphe de conclusion, pas de parallélisme négatif.
+- Les documents produit décrivent ce que l'utilisateur voit aujourd'hui.
+- Les documents d'architecture décrivent les responsabilités et le flux des données.
+- Les documents de référence gardent tels quels les valeurs de code, les noms de champs et les empreintes.
+- Les documents de validation séparent ce qui a réussi de ce qui n'est pas vérifié.
 - Une section présente dans une langue l'est dans les six.

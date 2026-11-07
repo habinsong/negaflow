@@ -55,6 +55,38 @@ bool map_request_v39(const nf_develop_export_request_v39& request, bool require_
         }
         pipeline_request.measure_range_shape = tail->measure_range_shape == 1U;
     }
+    pipeline_request.image_transform.perspective = {};
+    if (bytes >= sizeof(nf_develop_export_request_v42)) {
+        const auto* tail = reinterpret_cast<const nf_develop_export_request_v42*>(&request);
+        negaflow::imaging::PerspectiveParameters perspective{
+            tail->has_perspective == 1U,
+            tail->perspective_solved_vertical,
+            tail->perspective_solved_horizontal,
+            tail->perspective_solved_rotate,
+            tail->perspective_vertical,
+            tail->perspective_horizontal,
+            tail->perspective_rotate,
+            tail->perspective_aspect,
+            tail->perspective_scale,
+            tail->perspective_offset_x,
+            tail->perspective_offset_y,
+            tail->perspective_constrain_crop == 1U,
+        };
+        const bool neutral = tail->perspective_solved_vertical == 0.0 &&
+            tail->perspective_solved_horizontal == 0.0 && tail->perspective_solved_rotate == 0.0 &&
+            tail->perspective_vertical == 0.0 && tail->perspective_horizontal == 0.0 &&
+            tail->perspective_rotate == 0.0 && tail->perspective_aspect == 0.0 &&
+            tail->perspective_scale == 100.0 && tail->perspective_offset_x == 0.0 &&
+            tail->perspective_offset_y == 0.0 && tail->perspective_constrain_crop == 0U;
+        if (tail->has_perspective > 1U || tail->perspective_constrain_crop > 1U ||
+            tail->perspective_reserved != 0U || tail->perspective_reserved2 != 0U ||
+            (tail->has_perspective == 0U && !neutral) ||
+            (tail->has_perspective == 1U && !negaflow::imaging::valid_perspective_parameters(perspective))) {
+            fail_defect_region_request(result, "invalid_perspective");
+            return false;
+        }
+        pipeline_request.image_transform.perspective = perspective;
+    }
     pipeline_request.input_gamma = gamma;
     pipeline_request.base_scale = request.base_scale;
     return true;

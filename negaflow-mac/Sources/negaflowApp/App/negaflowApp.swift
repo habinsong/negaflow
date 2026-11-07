@@ -47,6 +47,8 @@ final class AppModel: ObservableObject {
     /// 최근 오류 기록 — 상태바 빨간 점(클릭/호버)과 진단 리포트가 읽는다. statusMessage 토스트가
     /// 사라진 뒤에도 "무엇이 실패했는지"를 유지한다.
     let errorLog = AppErrorLog()
+    /// 실행할 때 한 번 물어본 업데이트 결과. 더보기 메뉴만 관찰한다.
+    let appUpdateStore = AppUpdateStore()
     /// 기존 대입 지점(150여 곳)을 유지하는 facade. @Published 가 아니므로 메시지 갱신이
     /// AppModel 전역 무효화를 일으키지 않는다(ObservationBoundaryTests 가 발화 0회를 고정).
     var statusMessage: String {

@@ -2,14 +2,14 @@
 
 [Docs home](../README.md)
 
-This document describes the JSON format used by scripts and other apps to read scanner information. It stays separate from the scanner implementation. The CLI only turns the device information and capabilities that `ScannerKit` received into JSON.
+Scripts and other apps read scanner information from this JSON. The CLI only serializes the device information and capabilities that `ScannerKit` received.
 
 | Item | Contract |
 |---|---|
-| Supported commands | `detect --json`, `capabilities <scannerID> --json` |
+| Commands | `detect --json`, `capabilities <scannerID> --json` |
 | stdout | One JSON document and a final newline |
 | stderr | Diagnostic log |
-| Current schema | `negaflow.scanner-cli`, version `1` |
+| Schema | `negaflow.scanner-cli`, version `1` |
 
 ## Commands
 
@@ -18,11 +18,11 @@ negaflow detect [--demo] --json
 negaflow capabilities <scannerID> [--demo] --json
 ```
 
-For now `--json` works only on those two read-only commands. Put it on `scan` or `develop`, which change files or report progress, and it ends with an `unsupported_json_command` error.
+`--json` works only on these two read-only commands. On `scan` or `develop` it ends with an `unsupported_json_command` error.
 
 ## Common shape
 
-Success and failure both write one JSON document to stdout, with a newline at the end.
+Success and failure each write one JSON document to stdout.
 
 <details>
 <summary>Example of a success response</summary>
@@ -40,11 +40,11 @@ Success and failure both write one JSON document to stdout, with a newline at th
 
 </details>
 
-On failure `status` is `error` and `payload` is `null`. `error` contains a stable machine-readable code and a human-readable description. Diagnostic logs go to stderr. Logs and progress never get mixed into stdout.
+On failure `status` is `error` and `payload` is `null`. `error` holds a stable machine-readable code and a description. Logs and progress go to stderr only.
 
 ## Capability information
 
-The `payload` of `capabilities` always carries all of these fields.
+The `capabilities` payload always has these fields:
 
 - `resolutionsDPI`, `modes`, `bitDepths`
 - `sourceModes`, `transparencyModes`
@@ -57,20 +57,19 @@ The `payload` of `capabilities` always carries all of these fields.
 - `minScanArea`, `maxScanArea`, `scanAreaUnit`
 - `outputFormats`, `estimatedScanSpeeds`
 
-Values the device did not report are not guessed. Depending on the value it uses `null`, an empty array, `false`, or the `disabledReasons` the plugin sent.
+A value the device did not report is not guessed. It becomes `null`, an empty array, `false`, or the plugin's `disabledReasons`.
 
-`estimatedScanSpeeds` is an array of this object, sorted by ascending DPI.
+`estimatedScanSpeeds` is an array of this object, sorted by ascending DPI:
 
 ```json
 { "dpi": 3600, "seconds": 42.0 }
 ```
 
-The app screen and the CLI read the same `ScannerCapabilities`. The consistency check confirms that the controls available on screen follow the same values as the JSON fields.
+The app and the CLI read the same `ScannerCapabilities`. A consistency check confirms that the controls on screen follow the JSON fields.
 
 ## Version rules
 
 - The meaning and type of an existing field do not change.
-- A new optional field goes in only when older programs can ignore fields they do not know.
-- Removing a field, renaming it, or changing its type raises `schemaVersion`.
-- Resolutions, modes, and bit depths keep the plugin's order.
-- Only the estimated speeds are sorted by DPI.
+- A new optional field is added only when older programs can ignore it.
+- Removing, renaming or retyping a field raises `schemaVersion`.
+- Resolutions, modes and bit depths keep the plugin's order. Only the estimated speeds are sorted.

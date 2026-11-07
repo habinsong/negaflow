@@ -25,6 +25,22 @@ extension AppModel {
         workflowShortcutStore.resetAll()
     }
 
+    func gestureModifier(for action: WorkflowGestureModifierAction) -> WorkflowShortcutModifiers {
+        workflowShortcutStore.gestureModifier(for: action)
+    }
+
+    @discardableResult
+    func setGestureModifier(
+        _ modifier: WorkflowShortcutModifiers,
+        for action: WorkflowGestureModifierAction
+    ) -> Bool {
+        workflowShortcutStore.setGestureModifier(modifier, for: action)
+    }
+
+    func resetGestureModifier(for action: WorkflowGestureModifierAction) {
+        workflowShortcutStore.resetGestureModifier(for: action)
+    }
+
     func canPerformWorkflowShortcutAction(_ action: WorkflowShortcutAction) -> Bool {
         switch action {
         case .importImages, .importFolder, .refreshLibrary, .loadScanner,

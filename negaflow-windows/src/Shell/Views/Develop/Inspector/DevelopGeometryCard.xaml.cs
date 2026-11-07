@@ -127,8 +127,16 @@ public sealed partial class DevelopGeometryCard : UserControl
         FlipVerticalButton.IsEnabled = enabled;
     }
 
-    public void SetDialVisible(bool visible) =>
+    public void SetDialVisible(bool visible)
+    {
         CropAngleDialControl.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        StraightenHintText.Visibility = CropAngleDialControl.Visibility;
+    }
+
+    /// <summary>크롭 중 안내 문구에 지금 설정된 기준선·격자 조합키를 넣습니다.</summary>
+    public void SetStraightenModifiers(string lineModifier, string gridModifier) =>
+        StraightenHintText.Text = Negaflow.Shell.Localization.AppResources.FormatText(
+            "straightenHintFormat", "Text", lineModifier, gridModifier);
 
     public void SetLockGlyph(bool locked) =>
         CropAspectLockIcon.Glyph = locked ? "" : "";

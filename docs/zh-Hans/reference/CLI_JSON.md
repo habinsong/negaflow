@@ -2,14 +2,14 @@
 
 [文档首页](../README.md)
 
-这是脚本或其他应用读取扫描仪信息用的规格，和实际的扫描仪实现分开。 CLI 只是把 `ScannerKit` 收到的设备信息和功能转成 JSON。
+脚本和其他应用通过这份 JSON 读取扫描仪信息。CLI 只是把 `ScannerKit` 收到的设备信息和能力转成 JSON。
 
 | 项目 | 约定 |
 |---|---|
-| 支持的命令 | `detect --json`、`capabilities <scannerID> --json` |
-| stdout | 一个 JSON 文档加末尾换行 |
+| 命令 | `detect --json`、`capabilities <scannerID> --json` |
+| stdout | 一份 JSON 文档加结尾换行 |
 | stderr | 诊断日志 |
-| 当前 schema | `negaflow.scanner-cli`，版本 `1` |
+| 模式 | `negaflow.scanner-cli`，版本 `1` |
 
 ## 命令
 
@@ -18,11 +18,11 @@ negaflow detect [--demo] --json
 negaflow capabilities <scannerID> [--demo] --json
 ```
 
-目前 `--json` 只能用在上面两个只读命令上。 加在会改文件或发进度的 `scan`、`develop` 上，会以 `unsupported_json_command` 错误结束。
+`--json` 只对这两个只读命令有效。加在 `scan` 或 `develop` 上，会以 `unsupported_json_command` 错误结束。
 
-## 通用格式
+## 通用结构
 
-无论成功还是失败，stdout 只写一个 JSON 文档，末尾带换行。
+成功和失败都向 stdout 写一份 JSON 文档。
 
 <details>
 <summary>成功响应示例</summary>
@@ -40,37 +40,36 @@ negaflow capabilities <scannerID> [--demo] --json
 
 </details>
 
-失败时 `status` 是 `error`，`payload` 是 `null`。`error` 里有不会变的机器码和给人看的说明。 诊断日志走 stderr，stdout 里不混日志和进度。
+失败时 `status` 为 `error`，`payload` 为 `null`。`error` 包含稳定的机器可读代码和说明。日志和进度只写到 stderr。
 
-## 功能信息
+## 能力信息
 
-`capabilities` 的 `payload` 一定包含下面全部字段。
+`capabilities` 的 payload 始终包含以下全部字段：
 
-- `resolutionsDPI`、`modes`、`bitDepths`
-- `sourceModes`、`transparencyModes`
-- `supportsPreview`、`supportsTransparency`、`supportsInfrared`
-- `supportsMultiExposure`、`supportsScanArea`、`supportsPositionedScanArea`
+- `resolutionsDPI`, `modes`, `bitDepths`
+- `sourceModes`, `transparencyModes`
+- `supportsPreview`, `supportsTransparency`, `supportsInfrared`
+- `supportsMultiExposure`, `supportsScanArea`, `supportsPositionedScanArea`
 - `supportsLampWarmupStatus`
-- `brightnessRange`、`contrastRange`、`hardwareExposureRange`
-- `scanOriginXRange`、`scanOriginYRange`、`scanWidthRange`、`scanHeightRange`
+- `brightnessRange`, `contrastRange`, `hardwareExposureRange`
+- `scanOriginXRange`, `scanOriginYRange`, `scanWidthRange`, `scanHeightRange`
 - `disabledReasons`
-- `minScanArea`、`maxScanArea`、`scanAreaUnit`
-- `outputFormats`、`estimatedScanSpeeds`
+- `minScanArea`, `maxScanArea`, `scanAreaUnit`
+- `outputFormats`, `estimatedScanSpeeds`
 
-设备没报的值不会去猜。视情况用 `null`、空数组、`false`，或者直接用插件发来的 `disabledReasons`。
+设备没有报告的值不做猜测，会成为 `null`、空数组、`false`，或插件发来的 `disabledReasons`。
 
-`estimatedScanSpeeds` 是下面这个对象的数组，按 DPI 升序。
+`estimatedScanSpeeds` 是下面这种对象的数组，按 DPI 升序排列：
 
 ```json
 { "dpi": 3600, "seconds": 42.0 }
 ```
 
-应用界面和 CLI 读的是同一份 `ScannerCapabilities`。 一致性检查会确认界面上打开的功能和 JSON 字段遵循同样的值。
+应用和 CLI 读取同一个 `ScannerCapabilities`。一致性检查确认界面上的控件遵循 JSON 字段。
 
 ## 版本规则
 
 - 已有字段的含义和类型不变。
-- 只有旧程序能忽略未知字段时，才加新的可选字段。
-- 删除字段、改名或改类型时，提升 `schemaVersion`。
-- 分辨率、模式、位深保持插件给的顺序。
-- 只有预计速度按 DPI 排序。
+- 只有旧程序可以忽略新字段时，才加入新的可选字段。
+- 删除、改名或改变类型的字段会提高 `schemaVersion`。
+- 分辨率、模式和位深保持插件给出的顺序。只有预估速度按 DPI 排序。

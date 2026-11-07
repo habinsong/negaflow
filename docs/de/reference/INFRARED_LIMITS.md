@@ -2,50 +2,50 @@
 
 [Dokumentationsstart](../README.md)
 
-Die Infrarotreinigung liest sichtbares und infrarotes Bild getrennt und legt sie übereinander, um Defekte zu finden. Das passt nicht zu jedem Film.
+Die Infrarotreinigung liest das sichtbare Bild und das Infrarotbild getrennt und legt beide übereinander, um Defekte zu finden. Sie passt nicht zu jedem Film.
 
-- Normaler Farbfilm und chromogener Schwarzweißfilm können IR nutzen.
-- Gewöhnlicher Schwarzweißfilm behält sein Silber, blockt damit IR und liefert eine falsche Defektkarte.
-- Kodachrome dämpft IR anders als andere Farbfilme, deshalb wird zu wenig oder zu stark korrigiert.
+- Normaler Farbfilm und Schwarzweißfilm auf Farbstoffbasis können IR nutzen.
+- Gewöhnlicher Schwarzweißfilm behält sein Silber, das IR blockiert und eine falsche Defektkarte erzeugen kann.
+- Kodachrome dämpft IR anders als anderer Farbfilm und kann deshalb unter- oder überkorrigiert werden.
 
 Belege:
 
-- [Technische Hinweise und Grenzen von Epson](https://files.support.epson.com/pdf/pr48pr/pr48prps.pdf)
-- [Epson-Tabelle der Filmtypen](https://files.support.epson.com/htmldocs/pr449p/pr449pug/projs_3.htm)
-- [SilverFast zu Schwarzweiß und Kodachrome](https://www.silverfast.com/showdocu/en.html?direct=1&docu=1300)
+- [Epson technical notes and limits](https://files.support.epson.com/pdf/pr48pr/pr48prps.pdf)
+- [Epson film type table](https://files.support.epson.com/htmldocs/pr449p/pr449pug/projs_3.htm)
+- [SilverFast on black and white and Kodachrome](https://www.silverfast.com/showdocu/en.html?direct=1&docu=1300)
 
 > [!CAUTION]
-> Lässt sich das Filmmaterial nicht bestimmen, wird IR nicht automatisch angewendet. Eine falsche IR-Maske löscht echte Bildstruktur als Defekt.
+> Lässt sich das Filmmaterial nicht bestätigen, wird IR nicht automatisch angewendet. Eine falsche IR-Maske kann echte Bildstruktur als Defekt löschen.
 
 ## Wo es automatisch greift
 
-Entscheidend ist, **was das Bild bildet**. Farbfilm bleicht sein Silber bei der Entwicklung heraus und behält nur Farbstoff, und Farbstoff ist für Infrarot durchlässig. Schwarzweißfilm ist ein Silberbild und blockt Infrarot ab; die Korrektur würde die Aufnahme selbst als einen einzigen großen Defekt lesen und löschen.
+Entscheidend ist, woraus das Bild besteht. Farbfilm behält nach der Entwicklung nur Farbstoff, und Farbstoff ist für Infrarot durchlässig. Schwarzweißfilm ist ein Silberbild und blockiert Infrarot, die Korrektur würde das Foto selbst als einen großen Defekt lesen und löschen.
 
-| Filmtyp | Automatisches IR | Grund |
+| Filmart | Automatisches IR | Grund |
 |---|---|---|
-| Farbnegativ | Bedingt | Farbstoffbild. Das Plugin muss IR melden und die Ausrichtungsprüfung bestehen |
-| Farbpositiv | Bedingt | Farbstoffbild. Dieselben Bedingungen wie beim Farbnegativ |
-| Schwarzweiß-Negativ und -Positiv | Aus | Das Silberbild blockt Infrarot ab |
+| Farbnegativ | Bedingt | Farbstoffbild. Das Plug-in muss IR melden und die Ausrichtungsprüfung muss bestehen |
+| Farbpositiv | Bedingt | Farbstoffbild. Gleiche Bedingungen wie beim Farbnegativ |
+| Schwarzweißnegativ und -positiv | Aus | Das Silberbild blockiert Infrarot |
 
-`FilmType` trennt chromogenes Schwarzweiß nicht von silberbasiertem und Kodachrome nicht von einem normalen Dia. Zwei Fälle bleiben deshalb beim Anwender.
+`FilmType` kann Schwarzweiß auf Farbstoffbasis nicht von Silber unterscheiden und Kodachrome nicht von einem normalen Dia. Zwei Fälle bleiben beim Nutzer:
 
-- Chromogenes Schwarzweiß wird als Schwarzweiß gescannt; IR bleibt also aus, obwohl der Film es zuließe. Aus dem Filmtyp allein wird nichts geraten.
-- Kodachrome ist ein Farbdia, IR wird also angeboten. Seine Farbstoffe schwächen Infrarot anders als E-6, ein Defekt kann dadurch unter- oder überkorrigiert werden. Schalten Sie die Ebene ab, wenn das Ergebnis falsch aussieht.
+- Schwarzweiß auf Farbstoffbasis wird als Schwarzweiß gescannt, IR bleibt also aus, obwohl der Film es zuließe. Aus der Filmart allein wird nichts geraten.
+- Kodachrome ist ein Farbdia, daher wird IR angeboten. Seine Farbstoffe dämpfen Infrarot anders als E-6, ein Defekt kann unter- oder überkorrigiert bleiben. Schalten Sie die Ebene aus, wenn das Ergebnis falsch aussieht.
 
 ## Ausrichtungsprüfung
 
-`InfraredDefectRemoval` vergleicht die Durchschlagstextur im IR mit dem Rotkanal des RGB und sucht einen ganzzahligen Versatz. Das Ergebnis trägt `AlignmentDiagnostics`.
+`InfraredDefectRemoval` vergleicht die Streutextur im IR mit dem Rotkanal des RGB-Bildes und sucht einen ganzzahligen Versatz. Das Ergebnis trägt `AlignmentDiagnostics`.
 
 | Zustand | Bedeutung |
 |---|---|
-| `notRequested` | Der Aufrufer hat angegeben, dass beide Ebenen bereits passen |
-| `aligned` | Die Korrelation liegt über der Schwelle, das Optimum im Suchbereich |
-| `insufficientTexture` | Im IR fehlen Anhaltspunkte für die Ausrichtung |
-| `weakCorrelation` | Die Korrelation bleibt unter der Schwelle |
-| `searchLimitReached` | Das Optimum liegt auf der Suchgrenze |
+| `notRequested` | Der Aufrufer gibt an, dass beide Ebenen schon übereinstimmen |
+| `aligned` | Die Korrelation erreicht den Schwellwert, der beste Punkt liegt im Suchbereich |
+| `insufficientTexture` | Das IR bietet zu wenige Ausrichtungsmerkmale |
+| `weakCorrelation` | Die Korrelation erreicht den Schwellwert nicht |
+| `searchLimitReached` | Der beste Punkt liegt auf der Suchgrenze |
 
-Die letzten drei werden nicht durch `(0,0)` ersetzt. Sie brechen mit dem Fehler `alignmentUnreliable` ab. Liegt das Optimum auf der Suchgrenze, gilt das unabhängig vom Betrag des Versatzes als Fehlschlag.
+Die letzten drei enden mit dem Fehler `alignmentUnreliable` und werden nie durch `(0,0)` ersetzt. Ein bester Punkt auf der Suchgrenze gilt als Fehlschlag, gleich wie groß der Versatz ist.
 
-Automatische Tests ersetzen weder die RGB/IR-Ausrichtung am echten Gerät noch Ergebnisse je Film. Prüfungen am echten Scanner laufen von Hand, mit echtem Film.
+Automatische Tests ersetzen nicht die Prüfung der RGB/IR-Ausrichtung an einem echten Gerät und je Film. Diese Prüfungen erfolgen von Hand an echtem Film.
 
-SANE-Gerätesteuerung und Aufnahmecode liegen nur im separaten Repository `negaflow-scanner-sane`.
+Steuerung und Aufnahmecode für SANE-Geräte liegen nur im getrennten Repository `negaflow-scanner-sane`.

@@ -35,6 +35,13 @@ struct WorkflowShortcutModifiers: OptionSet, Codable, Hashable, Sendable {
         self = result
     }
 
+    /// 이 조합키가 지금 눌려 있는가. 다른 조합키가 같이 눌려 있어도 된다 — 기준선을 그리면서
+    /// 격자 키를 함께 누를 수 있어야 한다.
+    func isHeld(in flags: NSEvent.ModifierFlags) -> Bool {
+        let held = WorkflowShortcutModifiers(eventModifierFlags: flags)
+        return !isEmpty && held.isSuperset(of: self)
+    }
+
     var symbol: String {
         let value: String
         switch self {

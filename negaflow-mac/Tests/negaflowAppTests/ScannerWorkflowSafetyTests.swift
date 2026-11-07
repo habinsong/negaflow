@@ -200,6 +200,50 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
 
     /// 평판 프리뷰는 그 위에서 필름 영역을 잡는 작업면이다. 기존 25dpi 경로로는
     /// 프레임 자동 검출이 시작조차 못 한다.
+    /// 프리뷰를 각도로 펴고 프레임을 놓으면 스캔 결과도 그 각도로 펴져야 한다. 예전에는 프리뷰의
+    /// 방향(회전·뒤집기)만 넘기고 각도는 프레임 자신의 값(손으로 놓은 프레임은 0)만 써서, 결과가
+    /// 각도를 맞추기 전으로 돌아갔다.
+    func testFramesPlacedOnAStraightenedPreviewKeepThePreviewAngleInTheScan() async throws {
+        let backend = ScannerWorkflowBackend(capabilities: ScannerCapabilities(
+            supportedResolutions: [.r3600],
+            supportedModes: [.color],
+            supportedBitDepths: [.eight, .sixteen],
+            supportsPreview: true,
+            supportsTransparency: true,
+            supportsScanArea: true,
+            supportsPositionedScanArea: true,
+            maxScanArea: ScanArea(originXMM: 1, originYMM: 2, widthMM: 200, heightMM: 100),
+            minScanArea: ScanArea(originXMM: 1, originYMM: 2, widthMM: 1, heightMM: 1)
+        ))
+        let fixture = try await makePersistentFixture(backend: backend)
+        defer { fixture.cleanup() }
+        let model = fixture.model
+        model.demoMode = true
+        model.nextScanOrientation = ImageTransform(flipHorizontal: true)
+        await model.loadCapabilities()
+
+        await model.runScan(preview: true)
+        let preview = try XCTUnwrap(model.flatbedPreviewFrame)
+        preview.updateTransform { $0.straightenAngle = 2.0 }
+        model.addFlatbedScanRegion(unitRect: CGRect(x: 0.1, y: 0.2, width: 0.2, height: 0.3))
+        model.addFlatbedScanRegion()
+        let placed = model.flatbedScanRegions
+        XCTAssertEqual(placed.map(\.straightenAngle), [-2.0, -2.0])
+
+        // 옮기지 않은 갱신(누르기)은 자리도 각도도 건드리지 않는다.
+        model.updateFlatbedScanRegion(placed[0].id, unitRect: placed[0].unitRect)
+        XCTAssertEqual(model.flatbedScanRegions, placed)
+
+        await model.scanFrames(count: 12, preview: false)
+
+        XCTAssertEqual(
+            model.scanSessions.only?.jobs.compactMap {
+                $0.framePublication?.initialTransform.straightenAngle
+            },
+            [2.0, 2.0]
+        )
+    }
+
     func testFlatbedPreviewRequestsAnExplicitWorkableResolution() async throws {
         let epsonFlatbedResolutions = [
             50, 60, 72, 75, 100, 120, 133, 144, 150, 160, 200, 300, 600,
@@ -594,7 +638,9 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
         XCTAssertFalse(panorama)
     }
 
-    func testManualFlatbedRegionEditInvalidatesDetectedStraightenAngle() {
+    /// 프레임 칸은 기운 그대로 화면에 그려지고 편집된다. 옮겨도 그 기울기를 지킨다 — 버리면
+    /// 화면에 보이던 칸과 스캔 결과가 달라진다.
+    func testManualFlatbedRegionEditKeepsTheTiltShownOnScreen() {
         let model = AppModel()
         let region = FlatbedScanRegion(
             unitRect: CGRect(x: 0.1, y: 0.2, width: 0.3, height: 0.4),
@@ -609,7 +655,7 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
             unitRect: CGRect(x: 0.2, y: 0.2, width: 0.3, height: 0.4)
         )
 
-        XCTAssertEqual(model.flatbedScanRegions.only?.straightenAngle, 0)
+        XCTAssertEqual(model.flatbedScanRegions.only?.straightenAngle, 1.5)
         XCTAssertEqual(model.flatbedScanRegions.only?.source, .manual)
         XCTAssertNotEqual(model.flatbedScanRegionRevision, revision)
     }

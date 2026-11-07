@@ -12,6 +12,13 @@ internal static unsafe class ManagedLayoutContractTests
             Marshal.OffsetOf<NativeDevelopExportRequestV41>(nameof(NativeDevelopExportRequestV41.ChannelRangeRed)).ToInt32() == 5200 &&
             Marshal.OffsetOf<NativeDevelopExportRequestV41>(nameof(NativeDevelopExportRequestV41.ChannelRangeReserved)).ToInt32() == 5212,
             "channel_range_tail_layout");
+        // native nf_develop_export_request_v42 (abi_layout.cpp) 와 같은 배치입니다.
+        context.Check(sizeof(NativeDevelopExportRequestV42) == 5312 &&
+            Marshal.OffsetOf<NativeDevelopExportRequestV42>(nameof(NativeDevelopExportRequestV42.HasPerspective)).ToInt32() == 5216 &&
+            Marshal.OffsetOf<NativeDevelopExportRequestV42>(nameof(NativeDevelopExportRequestV42.PerspectiveSolvedVertical)).ToInt32() == 5224 &&
+            Marshal.OffsetOf<NativeDevelopExportRequestV42>(nameof(NativeDevelopExportRequestV42.PerspectiveOffsetY)).ToInt32() == 5296 &&
+            Marshal.OffsetOf<NativeDevelopExportRequestV42>(nameof(NativeDevelopExportRequestV42.PerspectiveReserved)).ToInt32() == 5304,
+            "native_develop_request_v42_perspective_tail_layout");
         context.Check(sizeof(NativeDevelopExportResultV7) == sizeof(NativeDevelopExportResultV6) + 24 &&
             Marshal.OffsetOf<NativeDevelopExportResultV7>(nameof(NativeDevelopExportResultV7.RangeShapePresent)).ToInt32() == sizeof(NativeDevelopExportResultV6) &&
             Marshal.OffsetOf<NativeDevelopExportResultV7>(nameof(NativeDevelopExportResultV7.RangeShapeRed)).ToInt32() == sizeof(NativeDevelopExportResultV6) + 8,

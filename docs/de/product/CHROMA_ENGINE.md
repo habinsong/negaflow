@@ -2,250 +2,247 @@
 
 [Dokumentationsstart](../README.md)
 
-Die Chroma Engine kehrt Film um und entwickelt ihn. Der Code liegt im Modul `Chromabase`. App und CLI nutzen dasselbe Modul, gleiche Eingabe läuft also durch dieselbe Schrittfolge.
+Chroma Engine invertiert und entwickelt Film. Der Code liegt im Modul `Chromabase`. App und CLI nutzen dasselbe Modul, dieselbe Eingabe durchläuft also dieselbe Reihenfolge von Schritten.
 
-| Auf einen Blick | Inhalt |
+| Auf einen Blick | Einzelheiten |
 |---|---|
 | Standardentwicklung | `MAIN`, Auto-Abgleich ON |
-| Filmträger | Automatische Messung, Pipette, direkte RGB-Eingabe |
-| Farbe intern | Linearer Farbraum in 32-Bit-Gleitkomma |
-| Automatikfunktionen | Auto-Abgleich ON |
+| Filmbasis | Automatische Messung, Pipette, direkte RGB-Eingabe |
+| Interne Farbe | Linearer 32-Bit-Gleitkomma-Farbraum |
+| Automatische Funktionen | Auto-Abgleich ON |
 | Ausgabefarbraum | sRGB, Display P3, Adobe RGB, eigenes RGB-ICC |
 
 > [!IMPORTANT]
-> Voreingestellt sind `MAIN` und Auto-Abgleich ON. Der Schalter ist eine kleine Pille rechts neben der Zielüberschrift. Er erscheint nur bei Farb- und S/W-Negativen mit MAIN (einschließlich PRINT) und CS. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF. Der Punkt erscheint nur im eingeschalteten Zustand direkt links am Text; der Text bleibt zentriert.
+> Voreingestellt sind `MAIN` und Auto-Abgleich ON. Der Schalter ist eine kleine Pille rechts neben der Zielüberschrift. Er erscheint nur bei Farb- und S/W-Negativen mit MAIN (einschließlich PRINT) und CS. Er passt Farbe und Helligkeit an das aktuelle Bild an, bei OFF entfällt dieser Schritt. Automatische Tonwerte, Automatischer Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind eigene Funktionen und standardmäßig OFF.
 
-## Was zuerst gilt
+## Was Vorrang hat
 
-1. Lässt sich der Filmträger messen, schlägt die Messung den über den Namen gewählten Standardwert.
-2. Filmeigenschaften, Scanlichtquelle, Scannerstil und automatische Szenenkorrektur bleiben getrennt.
-3. Funktionen wie Auto Tone und Auto White Balance greifen nur, wenn Sie sie ausführen.
-4. Gleiche Quelle, gleiche Bearbeitungswerte und gleiches Profilpaket durchlaufen dieselbe Schrittfolge.
-5. Synthetische Tests und Prüfungen an echten Geräten gelten nie als derselbe Nachweis.
+1. Lässt sich die Filmbasis messen, geht die Messung dem nach Namen gewählten Standardwert vor.
+2. Filmeigenschaften, Scanlichtquelle, Scannerstil und automatische Szenenkorrektur werden getrennt gehalten.
+3. Funktionen wie Automatische Tonwerte und Automatischer Weißabgleich schalten sich nur ein, wenn Sie sie ausführen.
+4. Dieselbe Quelle, dieselben Bearbeitungswerte und dasselbe Profilpaket durchlaufen dieselbe Reihenfolge.
+5. Synthetische Tests und Prüfungen an echten Geräten werden nie als gleichwertiger Beleg ausgegeben.
 
-## Schrittfolge
+## Reihenfolge der Schritte
 
-```mermaid
-flowchart LR
-    A["Datei lesen"] --> B["Ausrichtung korrigieren"]
-    B --> C["Lineare Eingabe / Kamera-RGB bei RAW"]
-    C --> D{"Filmtyp"}
-    D -->|positiv| E["Positivverarbeitung"]
-    D -->|negativ| F["Träger messen"]
-    F --> G["Optische Dichte und Umkehr"]
-    E --> H["Entwicklungsziel und Profile"]
-    G --> AB["Auto-Abgleich ON/OFF"] --> M["RAW-Farbmatrix nach Inversion"] --> H
-    H --> I["Tonwert, Farbe, lokale Korrektur"]
-    I --> J["Detail und Effekte"]
-    J --> K["Bildschirm- oder Ausgabefarbraum"]
-```
+Das Arbeitsbild wird in einem linearen 32-Bit-Gleitkomma-Farbraum verarbeitet. Nur Operationen, die ein Gamma brauchen, rechnen an ihrer festen Stelle um, und die Kodierung für Bildschirm oder Dateiformat folgt am Ende.
 
-Das Arbeitsbild läuft in einem linearen Farbraum mit 32-Bit-Gleitkomma. Nur Rechenschritte, die Gamma brauchen, wandeln an ihrer festen Stelle um. Die Kodierung für Bildschirm oder Dateiformat kommt zuletzt.
+1. Datei lesen und Ausrichtung korrigieren.
+2. Lineare Eingabe (Kamera-RGB bei RAW).
+3. Filmart: Ein Positiv geht in die Positivverarbeitung, bei einem Negativ wird die Basis gemessen.
+4. Optische Dichte und Invertierung, dann Auto-Abgleich ON oder OFF, dann die RAW-Kameramatrix.
+5. Entwicklungsziel und Profile.
+6. Tonwert, Farbe und lokale Anpassung.
+7. Detail und Effekte.
+8. Anzeige- oder Ausgabefarbraum.
+
+Der `CIContext` wird nicht für jedes Rendern neu gebaut. Er wird wiederverwendet, nach Zweck getrennt: Anzeige, Analyse, Export. Die Vorschau berechnet nur die nötige Größe und die neueste Bearbeitungsversion, und der Export rendert erneut in Quellgröße.
 
 Apples Core-Image-Dokumentation:
 
 - [CIImage](https://developer.apple.com/documentation/coreimage/ciimage)
 - [CIContext](https://developer.apple.com/documentation/coreimage/cicontext)
 - [workingColorSpace](https://developer.apple.com/documentation/coreimage/cicontext/workingcolorspace)
-- [Core-Image-Leistungsleitfaden](https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/CoreImaging/ci_performance/ci_performance.html)
+- [Core Image performance guide](https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/CoreImaging/ci_performance/ci_performance.html)
 
-`CIContext` wird nicht für jeden Render neu gebaut, sondern nach Zweck getrennt wiederverwendet: Anzeige, Analyse, Export. Die Vorschau rechnet nur die nötige Größe und die neueste Bearbeitungsversion. Der Export rendert erneut in Quellgröße.
+## Filmbasis
 
-## Filmträger
+### Warum gemessen wird
 
-### Grund für die Messung
-
-Der unbelichtete Teil eines Negativs ist ein Bezugspunkt aus Film, Entwicklung und Scanlichtquelle. Auch die Orangemaske des Farbnegativs steckt darin. Ist der Träger falsch, verschieben sich danach alle Dichten und Kanalverhältnisse.
-
-Auch Kodaks Daten zu Portra 400 halten Mindestdichte, Kennlinien und spektrale Farbstoffdichte getrennt fest.
+Der unbelichtete Teil eines Negativs ist ein Bezugspunkt, der Film, Entwicklung und Scanlichtquelle vereint. Die orange Maske des Farbnegativs gehört dazu. Liegt die Basis falsch, stimmen alle folgenden Dichten und Kanalbeziehungen nicht mehr. Auch Kodaks Daten zur Portra 400 führen Mindestdichte, Kennlinien und spektrale Farbstoffdichte getrennt auf.
 
 - [Kodak Professional Portra 400 technical data](https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/e4050_portra_400.pdf)
 
 ### Automatische Messung
 
-`FilmBaseEstimator` analysiert die räumliche Verteilung heller Pixel, um den unbelichteten Träger zu bestimmen.
+`FilmBaseEstimator` wertet die räumliche Verteilung heller Pixel über das ganze Bild aus, um die unbelichtete Basis zu erkennen.
 
-- Ein Filmpixel kann nicht heller sein als der unbelichtete Träger.
-- Deutlich Helleres kann Hintergrundlicht, Perforation oder außerhalb des Films sein.
-- Ein echter Träger zieht sich meist als breites Band am Bildrand entlang.
-- Liegen mehrere Filmstreifen auf einem Blatt, lassen sich getrennte Bereiche zusammen lesen.
-- Einer Grenze, an der Halter und Film sich mischen, wird weniger getraut als dem Inneren.
+- Ein Filmpixel kann nicht heller sein als die unbelichtete Basis.
+- Was viel heller ist, kann Gegenlicht, Perforation oder Bereich außerhalb des Films sein.
+- Eine echte Basis bildet meist ein breites Band am Bildrand.
+- Bei mehreren Filmstreifen auf einem Blatt können getrennte Bereiche gemeinsam gelesen werden.
+- Einer Grenze, an der sich Halter und Film mischen, wird weniger getraut als dem Inneren.
 
-Auf einem verkleinerten Analysebild wird die Helligkeitsverteilung gesucht, zusammenhängende Bereiche werden gruppiert, danach fallen Kandidaten außerhalb des Films weg. Bestehen mehrere Streifen die Bedingungen, werden sie gemeinsam gerechnet. Das Ergebnis hält auch die gewählte Methode und die Konfidenz fest.
+Sie ermittelt die Helligkeitsverteilung auf einem verkleinerten Analysebild, gruppiert zusammenhängende Bereiche und entfernt dann Kandidaten außerhalb des Films. Bestehen mehrere Streifen die Bedingungen, werden sie gemeinsam berechnet. Das Ergebnis hält auch fest, welche Methode gewählt wurde und wie sicher sie ist.
 
-### Die Methode wählen
+### Methode wählen
 
 | Modus | Verhalten |
 |---|---|
-| `Manual` | Nutzt das eingegebene RGB als Dmin. Eine erfolgreiche Pipette landet ebenfalls hier. |
-| `Film` | Nutzt die Messung als Dmin; der gewählte Film liefert vor allem `dmaxNorm`. Film- und Lichtquellenvorgaben greifen nur, wenn die Messung scheitert. |
-| `Auto` | Nutzt die räumliche Analyse und fällt bei Fehlschlag auf die randbasierte Methode zurück. |
+| `Manual` | Nutzt das eingegebene RGB als Dmin. Auch eine erfolgreiche Pipettenwahl landet hier. |
+| `Film` | Nutzt die Messung als Dmin, und der gewählte Film liefert vor allem `dmaxNorm`. Standardwerte von Film und Lichtquelle kommen nur ins Spiel, wenn die Messung scheitert. |
+| `Auto` | Nutzt die räumliche Analyse und fällt bei einem Fehlschlag auf die randbasierte Methode zurück. |
 
-Ohne manuellen Wert oder mit falscher Film-ID geht es zur nächsten sicheren Methode. Das hellste Objekt der Szene wird nie direkt als Filmträger genommen.
+Ohne manuellen Wert oder mit falscher Film-ID geht es zur nächsten sicheren Methode. Das hellste Objekt der Szene wird nie unmittelbar als Filmbasis genommen.
 
-## Optische Dichte und Umkehr
+## Optische Dichte und Invertierung
 
-Die Dichte ergibt sich aus der linearen Transmission `T` und dem Träger `Dmin` je Kanal.
+Die Dichte ergibt sich aus der linearen Transmission `T` und der Basis je Kanal `Dmin`:
 
 ```math
 D = \log_{10}\left(\frac{D_{\min}}{T}\right)
 ```
 
-`D = 0` heißt, die Eingabe entspricht dem unbelichteten Träger. Perforation oder Hintergrundlicht können negativ werden. Diese Werte bleiben endlich und werden nicht sofort beschnitten.
+`D = 0` heißt, die Eingabe entspricht der unbelichteten Basis. Perforation oder Gegenlicht können negativ werden. Diese Werte bleiben endlich und werden nicht sofort beschnitten.
 
-### Daten zu Filmtypen
+### Daten je Filmart
 
-Die aktuelle Tabelle führt 27 Filmnamen, darunter Farbnegative, Schwarzweiß und Kinonegative.
+Die aktuelle Tabelle enthält 27 Filmnamen für Farbnegativ, Schwarzweiß und Kinonegativ. Die Daten dienen für:
 
-Wofür die Daten dienen:
+- Den Dmin-Standardwert, wenn die Basis nicht gemessen werden kann
+- Feste, auf die Filmart bezogene Dichtefaktoren
 
-- Der Dmin-Standardwert, wenn der Träger nicht messbar ist
-- Feste relative Dichtefaktoren je Film
-
-Manche Werte nähern Kurven aus öffentlichem Material an, manche sind bewusst konservativ gesetzt. 27 Namen bedeuten keine 27 geprüften Farbprofile. Sobald der Träger gemessen ist, gilt die Messung.
+Manche Werte wurden durch Ablesen von Kurven in öffentlichen Unterlagen angenähert, manche vorsichtig gesetzt. 27 Namen sind keine 27 geprüften Farbprofile, und ist die Basis gemessen, hat die Messung Vorrang.
 
 ### MAIN/PRINT und CS
 
-Auto-Abgleich ON stellt die MAIN/CS-Inversion aus `412bb31` wieder her. Jeder Kanal misst seinen Dichtebereich am dichtesten 0.2%-Perzentil der Szene, begrenzt ihn auf 1.8D und verwendet danach die bisherige Kurve `shoulder-print-response-v4` und die Sättigungskorrektur für gedämpfte Szenen. Filmvorgaben multiplizieren den Bereich mit relativen Kanalfaktoren. Die Grenze von 1.8D bleibt für das bisherige Rendering erhalten; sie ist kein gemessener Materialwert aller Filme und kann dichte Negative beeinflussen.
+Bei Auto-Abgleich ON nutzt jeder Kanal das dichteste 0,2-%-Perzentil der Szene mit einer Bereichsgrenze von 1,8D, danach folgen die Kurve `shoulder-print-response-v4` und die Vibrance für gedämpfte Szenen. OFF nutzt dieselbe Kurve mit festem Nennbereich (Farbe 1,55D, S/W 2,17D). Bei Farbnegativen multipliziert OFF zusätzlich eine Kanalbereichskalibrierung für Scanner und Film, gewonnen aus mindestens drei Bildern desselben Films.
 
-OFF verwendet dieselbe v4-Kurve mit festem Nennbereich (Farbe 1.55D, Schwarzweiß 2.17D), gegebenenfalls multipliziert mit den Faktoren der Filmvorgabe. Szenenabhängige Bereichsnormierung und Sättigungskorrektur entfallen. Bei Farbnegativen multipliziert OFF zusätzlich eine Kanalbereichs-Kalibrierung für Scanner und Film. Sie ist der Median von mindestens drei Bildern mit gültiger Messung aus derselben Rolle (ohne Rolle: demselben Scan-Ordner). Der einmal bestimmte Wert bleibt am jeweiligen Bild gespeichert. Bei weniger Bildern oder gemischtem Film behalten die drei Kanäle denselben Bereich. Bei gleicher Basis und gleichen Einstellungen ergibt dieselbe Transmission in den Bildern einer Rolle denselben Wert. ON kann Helligkeit und Farbe mit dem Bildinhalt ändern. Keiner der Modi belegt gemessene Filmfarbgenauigkeit.
+ON kann mit dem Szeneninhalt Helligkeit und Farbe verändern. Keiner der beiden Modi belegt eine gemessene Farbgenauigkeit des Films. Formeln, die 1,8D-Grenze und die RAW-Reihenfolge stehen in:
 
 [Negativantwort](../reference/PRINT_RESPONSE.md)
 
 ## Drei Arten von Profilen
 
-| Art | Welche Frage sie beantwortet | Werte |
+| Art | Die Frage, die sie beantwortet | Werte |
 |---|---|---|
-| Film stock | Wie sehen Träger und Dichtebereich dieses Films aus | Dmin/Dmax, Filmtyp |
-| Light source | Wie wirkte die Scanlichtquelle auf jeden Kanal | Kanal-Gain, trägerbasierte Korrektur |
-| Scanner target | Welchen Ton- und Farbstil hat das Ergebnis | Relative Statistik aus eigens erstellten Scans |
+| Filmart | Wie sind Basis und Dichtebereich des Films | Dmin/Dmax, Filmart |
+| Lichtquelle | Wie hat die Scanlichtquelle jeden Kanal beeinflusst | Kanalgewinn, basisgesteuerte Korrektur |
+| Scannerziel | Welchen Tonwert- und Farbstil hat das Ergebnis | Relative Statistik aus für dieses Projekt gemachten Scans |
 
-Diese Trennung verhindert den Fehler, einen Filmnamen zugleich für Emulsionseigenschaften, Lichtquellenfarbe und den Ausgabestil eines Labors stehen zu lassen. Liegt ein echter Träger vor, gilt die Messung vor den Vorgaben der Lichtquelle. Auch Scannerstatistiken dienen nicht direkt als absolute Farbmatrix einer Szene.
+Die Trennung verhindert, dass ein einziger Filmname Emulsionseigenschaften, Lichtquellenfarbe und den Ausgabestil eines Labors zugleich vertritt. Gibt es eine echte Basis, geht die Messung den Standardwerten der Lichtquelle vor. Scannerstatistiken werden nicht unmittelbar als absolute Farbmatrix einer Szene verwendet.
 
-Die Daten beschreibt [Filmprofile](FILM_PROFILES.md).
+Die Daten sind in [Filmprofile](FILM_PROFILES.md) beschrieben.
 
 ## Entwicklungsziele
 
 ### `MAIN`
 
-Voreingestellt sind `MAIN` und Auto-Abgleich ON. Der Schalter ist eine kleine Pille rechts neben der Zielüberschrift. Er erscheint nur bei Farb- und S/W-Negativen mit MAIN (einschließlich PRINT) und CS. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF.
+Das Standardziel mit Auto-Abgleich ON. Der Schalter ist am Anfang dieser Seite beschrieben.
 
 ### `PRINT`
 
-Das Arbeitsbild entspricht `MAIN`. Am Ende des Exports wird einmal ein gültiges RGB-Drucker-ICC angewendet. Fehlt das Profil oder ist es ungültig, scheitert der Lauf, statt auf sRGB oder beliebige Papierwerte auszuweichen.
+Das Arbeitsbild entspricht `MAIN`. Ein gültiges RGB-Drucker-ICC wird einmal am Ende des Exports angewendet. Ein fehlendes oder ungültiges Profil schlägt fehl, statt auf sRGB oder beliebige Papierwerte zurückzufallen.
 
 ### `HS`, `SP`
 
-Ein festes Rendering nach der Umkehrung. Es misst nichts im Bild, ein Pixel ergibt also in jedem Foto denselben Wert. Belichtung und Farbe pro Bild übernehmen die Umkehrung sowie Auto-Ton, Auto-Weißabgleich, Auto-Tonwert und Auto-Farbe rechts.
+Ein festes Rendering nach der Invertierung. Es liest nichts aus dem Bild, ein Pixel liefert also in jedem Foto dasselbe Ergebnis. Belichtung und Farbe je Bild gehören zur Invertierung und zu den Schaltflächen Automatische Tonwerte, Automatischer Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe rechts.
 
-Das Rendering besteht aus einer Luminanz-Tonkurve und einer Sättigungsverstärkung, die der Helligkeit folgt; bei `HS` kommt eine kleine Neigung der Grauachse dazu. Alle Kurven sind monoton kubisch, an den Stützstellen knickt nichts.
+Das Rendering besteht aus einer Luminanz-Tonwertkurve, einem helligkeitsabhängigen Sättigungsgewinn und bei `HS` einer leichten Neigung der Grauachse. Alle Kurven sind monotone kubische Kurven, an den Stützstellen knickt nichts.
 
-- `SP` stammt aus vier Bildern eines Films, gescannt auf einem echten SP-3000 und auf dem Scanner dieses Projekts, Pixel für Pixel abgeglichen. Die Tonkurve nimmt ein Viertel ihres Gewichts aus den Perzentilen von 185 SP-3000-Bildern. Auf diesen vier Bildern sinkt der Median-CIEDE2000 zum SP-3000-Scan von etwa 7,4 bei `MAIN` auf 3,9. Ein dunkles Bild verbessert sich kaum: Das Labor hat dort einen roten Schattenstich Bild für Bild entfernt, das kann ein festes Rendering nicht.
-- `HS` hat keine Pixelpaare. Es geht von `SP` aus und addiert den Median-Unterschied der beiden Maschinen auf drei Filmen mit gleichem Film- und Rollennamen: etwas dunklere Mitten, etwas höheres Weiß, farbige Pixel mit 0,88-facher Sättigung und Grautöne, die in der hellen Hälfte ins Grüne kippen (a* etwa −1 bis −4).
-- `HS` schärft den Helligkeitskanal. Der Radius beträgt 0,9 px bei der 35-mm-Ausgabe der Maschine (lange Kante 3089 px) und wächst mit der Auflösung, Vorschau und Export sehen also gleich aus. Die Stärke wurde nicht gemessen.
+- `SP` stammt aus vier Bildern eines Films, die auf einem echten SP-3000 und auf dem eigenen Scanner des Projekts gescannt und pixelgenau zugeordnet wurden. Die Tonwertkurve bezieht ein Viertel ihres Gewichts aus den Perzentilen von 185 SP-3000-Bildern. Auf diesen vier Bildern sinkt das mediane CIEDE2000 zum SP-3000-Scan von etwa 7,4 bei `MAIN` auf 3,9. Ein dunkles Bild bewegt sich kaum, weil das Labor dort bildweise einen roten Tiefenstich entfernt hat, was ein festes Rendering nicht kann.
+- `HS` hat keine Pixelpaare. Es geht von `SP` aus und addiert den medianen Unterschied beider Maschinen auf drei Filmen mit übereinstimmenden Film- und Rollennamen: etwas dunklere Mitten, etwas höhere Weißwerte, farbige Pixel mit 0,88-facher Sättigung und Grautöne mit Grünstich in der helleren Hälfte (a* etwa −1 bis −4).
+- `HS` schärft den Helligkeitskanal. Der Radius beträgt 0,9 px bei der 35-mm-Ausgabe der Maschine (3089 px lange Kante) und skaliert mit der Auflösung, sodass Vorschau und Export übereinstimmen. Die Stärke wurde nicht gemessen.
 
-Wählen Sie ein mitgeliefertes Profil, kommt weiterhin `scannerSignature` hinzu, die relative Differenz aus Gruppen, deren Rollennamen und Bildzahlen auf beiden Maschinen übereinstimmen.
+Die Wahl eines mitgelieferten Profils fügt weiterhin `scannerSignature` hinzu, den relativen Unterschied von Filmen, deren Namen und Bildzahlen auf beiden Maschinen übereinstimmen. Alle heutigen Profile sind `realOnly`.
 
-Alle heutigen Profile sind `realOnly`.
-
-- Die relative Differenz entsteht nur, wenn Filmnamen und Bildzahlen hinreichend übereinstimmen.
+- Der relative Unterschied wird nur berechnet, wenn Filmnamen und Bildzahlen nah genug beieinanderliegen.
 - Werte, deren Richtung kippt, werden nicht angewendet.
 - Bei Schwarzweiß entfallen die Farbanteile.
-- Stimmt der SHA-256 einer Datei oder eines Manifests nicht, wird das ganze Profilpaket abgelehnt.
+- Stimmt der SHA-256 einer Datei oder des Manifests nicht, wird das gesamte Profilpaket abgelehnt.
 
 ### `F135`, `HR`
 
-Dieses Projekt hat keine Referenzscans von einem Pakon F-135 oder einem Kodak HR-500, daher ist keines der beiden Ziele mit seiner Maschine verglichen. Beide nutzen das gemessene `SP`-Rendering mit dem Fuß des Kodak-Endura-Premier-Papiers (Datenblatt E-4070), auf dieselben Mitten angepasst, was tiefere Schwarztöne ergibt. `HR` senkt zusätzlich die Sättigung auf das 0,92-Fache. Prüfen lassen sie sich erst mit dem, was `SP` hatte: denselben Negativen, gescannt auf der echten Maschine.
+Dieses Projekt hat keine Referenzscans eines Pakon F-135 oder Kodak HR-500, deshalb ist keines der beiden Ziele an seiner Maschine geprüft. Beide gehen vom gemessenen `SP`-Rendering aus, dazu die Kurve des Kodak Endura Premier Papiers (Datenblatt E-4070), angepasst an dessen Mitte. Ab einer Blendenstufe unter Mittelgrau aufwärts teilen sie diese Kurve. Sie unterscheiden sich in den Schatten.
+
+- `F135` folgt dem Papier bis −2 Blendenstufen. Ab −3 Stufen abwärts bleibt es 0,9 Stufen unter `SP`, so weit hat der Papierfuß es höchstens abgesenkt. Die Schwärzen sind tiefer als bei `SP`, jede Schattenstufe bleibt aber getrennt: Der lokale Kontrast liegt dort bei mindestens 91 % von `SP`.
+- `HR` übernimmt unter −4 Stufen die gemessenen Schatten von `SP`. Die Punkte bei −3 und −2 Stufen liegen etwas tiefer, damit die Kurve ohne Kontrasteinbruch in die Papiermitte steigt. Die Schatten sind bis zu 5,4 L* heller als bei `F135`, die Sättigung ist 0,92-fach.
+
+Eine Prüfung braucht, was `SP` hatte: dieselben Negative, auf der echten Maschine gescannt.
 
 ### `EXPIRED`
 
-Ein Rettungsziel für alten Film. Es entsättigt nicht pauschal und dehnt den Bereich nicht, sondern bleibt bei begrenzten Korrekturen im Rahmen der vorhandenen Belege.
+Ein Rettungsziel für alten Film. Es entsättigt nicht pauschal und dehnt den Bereich nicht, sondern bleibt bei einer begrenzten Korrektur, die die aktuellen Belege tragen.
 
-## Der Filmlook auf digitalem Ausgangsmaterial
+### `CS`
 
-Der Film-Tab links bietet Dia- und Farbnegativmaterial an. Bei einem Scan genügt dafür eine Farbtransformation, denn Belichtungsspielraum, Dichteverlauf, Streuung und Korn des Films stecken bereits in den Pixeln.
+`CS` (Custom) fasst 18 Farbstile in drei Gruppen zusammen: Emulsion, Reversal, Dye Transfer, Skip Bleach, Plate Glass, Amber Glass, Ultramarine, Terracotta, Celadon, Nacre und Dichroic (11); Wetzlar, Classic, Studio und Rochester (4); Slide Show, Cinema und Point & Shoot (3).
 
-Einer digitalen Aufnahme fehlt das alles. Wir haben gemessen, was eine reine Farbtransformation dort anrichtet: Auf kameraseitig gerendertem Material fielen die Abstände in den Lichtern auf 0,0031, ein Vierzehntel desselben Werts bei flachem Ausgangsmaterial, während die Sättigung trotzdem stieg. Das Ergebnis liest sich als Filter, nicht als Film.
+Ein Custom-Ziel nutzt die `MAIN`-Invertierung mit Auto-Abgleich und wendet danach die Antwort von custom-3 für Tonwert, Dichte und Chroma an. Scannerprofile werden dafür nicht verwendet. Die CLI nimmt dieselben IDs, zum Beispiel `--target classic`.
 
-Material, das als `Digital Color` oder `Digital B&W` markiert ist, läuft deshalb durch eine eigene Kette, die der Reihe nach nachholt, was der Film tut.
+## Der Film-Look bei digitaler Quelle
 
-1. Das Display-Rendering der Kamera zurückrechnen, um die Belichtung zu schätzen, die der Film bekommen hätte. Beschnittene Details kommen nicht zurück; das ist eine plausible Rekonstruktion, keine Wiederherstellung.
-2. Streuung und Halation hinzufügen, solange das Bild noch lineares Licht ist und noch keine Dichte existiert. Zurückkehrendes Licht trifft zuerst die Rotschicht, das Leuchten fällt also rötlich aus, und das Licht wird umverteilt statt addiert.
-3. Virtuelle Entwicklung. Eine Schwärzungskurve baut Dichte auf, DIR-Kuppler hemmen die Nachbarschichten, und ein Negativ geht anschließend über RA-4-Papier. Das niedrige Gamma des Negativs und das hohe Gamma des Papiers sind zwei getrennte Kurven; deshalb legen sich die Lichter hin, statt abzureißen.
-4. Die Farbsignatur der Emulsion, denn der Kontrast entstand schon in Schritt 3.
-5. Korn, das der Dichte folgt, und Kantenverhalten nach der MTF des Datenblatts.
+Der Reiter Film links bietet Dia- und Farbnegativemulsionen. Bei einem Scan sind das nur eine Farbumrechnung, denn der Scan trägt Spielraum, Dichteantwort, Streuung und Korn des Films bereits in seinen Pixeln.
 
-Gescanntes Material betritt diese Kette nie. Es entscheidet allein die Kennzeichnung der Quelle, der Scan-Pfad bleibt unverändert.
+Ein digitales Foto hat nichts davon. Eine Messung zeigte, was eine bloße Farbumrechnung dort bewirkt: Bei kameragerenderter Eingabe fielen die Lichterstufen auf 0,0031, etwa ein Vierzehntel derselben Stufen bei flacher Eingabe, während die Sättigung dennoch stieg. Das Ergebnis wirkt wie ein digitaler Filter.
 
-Die Belichtung wird auf den Spielraum der jeweiligen Emulsion umskaliert. Ein Umkehrfilm ist etwa eine Blende über Mittelgrau schon weiß; schiebt man eine digitale Szene mit sechs Blenden unverändert hinein, bleibt in den Lichtern keinerlei Zeichnung. Die Umskalierung erhält die Kontrast-Rangfolge der Emulsionen, statt alle Filme auf dieselbe Kennlinie zu ziehen.
+Eine als `Digital Color` oder `Digital B&W` markierte Quelle durchläuft deshalb eine eigene Kette, die der Reihe nach nachbildet, was der Film tut:
 
-Sobald eine Emulsion gewählt ist, werden Korn und Halation zu Eigenschaften des Films. Die Textur-Regler bestimmen deshalb deren Stärke und legen keinen zweiten, eigenen Effekt darüber.
+1. Die Anzeigewiedergabe der Kamera rückgängig machen, um die Belichtung zu schätzen, die der Film erhielte. Ausgefressene Details kommen nicht zurück, es ist eine plausible Rekonstruktion.
+2. Streuung und Halation hinzufügen, solange das Bild noch linear ist und bevor es Dichte gibt. Zurückkehrendes Licht trifft zuerst die rote Schicht und erzeugt einen rot betonten Schein. Es verteilt Licht um, ohne Energie hinzuzufügen.
+3. Virtuelle Entwicklung. Eine Kennlinie baut Dichte auf, DIR-Kuppler hemmen benachbarte Schichten, und ein Negativ läuft dann durch RA-4-Papier. Das niedrige Gamma eines Negativs und das hohe Gamma des Papiers sind zwei getrennte Kurven, wodurch die Lichter ohne Beschnitt auslaufen.
+4. Die Farbsignatur der Emulsion, da der Kontrast schon aus Schritt 3 kam.
+5. Korn, das der Dichte folgt, und eine Kantenantwort aus der MTF des Datenblatts.
+
+Scanquellen betreten diese Kette nie. Der Schalter ist allein das Quellenkennzeichen, und der Scanpfad bleibt unverändert.
+
+Die Belichtung wird auf den Spielraum jeder Emulsion umskaliert. Ein Umkehrfilm wird etwa eine Blende über Mittelgrau weiß, würde man eine Digitalszene mit sechs Blenden unverändert hineinschieben, bliebe also gar kein Lichterdetail. Die Umskalierung bewahrt die Kontrastrangfolge jeder Emulsion.
+
+Korn und Halation werden zu Filmeigenschaften, sobald eine Emulsion gewählt ist. Die Texturregler stellen daher deren Stärke ein, statt einen zweiten, getrennten Effekt hinzuzufügen.
 
 ## Entwicklungsregler
 
-| Gruppe | Elemente |
+| Gruppe | Einträge |
 |---|---|
-| Tonwert | Belichtung, Kontrast, Lichter, Schatten, Weiß, Schwarz, RGB- und kanalweise Punktkurven |
-| Farbe | Temperatur, Tönung, Dynamik, Sättigung, HSL in 8 Farben, Colorgrading in drei Zonen, Kanalkorrektur, Schwarzweißumsetzung und Tonung |
-| Detail und Effekte | Schärfe, Klarheit, Dunst entfernen, Filmkorn, Vignette, Halation, Rauschminderung |
-| Lokale Korrektur | Radiale, lineare, polygonale und Pinselmasken sowie Abwedeln und Nachbelichten |
+| Tonwert | Belichtung, Kontrast, Lichter, Tiefen, Weiß, Schwarz, RGB- und kanalweise Punktkurven |
+| Farbe | Temperatur, Tönung, Dynamik, Sättigung, HSL mit 8 Farben, Farb-Grading in drei Zonen, Kanalkorrektur, Schwarzweißumwandlung und -tonung |
+| Detail und Effekte | Schärfe, Klarheit, Dunstentfernung, Filmkorn, Vignette, Halation, Rauschminderung |
+| Lokale Anpassung | Radiale, lineare, Polygon- und Pinselmasken, Abwedeln und Nachbelichten |
 
-Diese Werte werden als schrittweiser Bearbeitungsverlauf gespeichert. GrainMend und gewöhnliche lokale Korrektur unterscheiden sich in Zweck und Speicherform.
+Diese Werte werden als schrittweiser Bearbeitungsverlauf gespeichert. GrainMend und die gewöhnliche lokale Anpassung unterscheiden sich in Zweck und Speicherung.
 
 ### Automatische Korrekturen
 
-| Funktion | Verhalten |
+| Regler | Verhalten |
 |---|---|
-| Automatischer Tonwert | Setzt Belichtung, Kontrast, Dichte, Lichter, Schatten, Weiß und Schwarz. Behält die Farbregler und Kurven des Benutzers bei. |
-| Automatischer Weißabgleich | Schätzt Temperatur und Tönung aus neutralen Kandidaten je Helligkeitsbereich. Schließt Proben mit einem abgeschnittenen RGB-Kanal aus und verringert die Korrektur bei wenigen Kandidaten oder engem Helligkeitsumfang. |
-| Automatische Tonwertspreizung | Misst gemeinsame Luminanzendpunkte und wendet denselben Luminanzfaktor auf RGB an. Erhält die Kanalverhältnisse, statt jeden Kanal einzeln zu strecken. |
-| Automatische Farbe | Passt verbleibende Farbstiche an neutrale Kandidaten an. Verwendet kanalweise Steigungen nur, wenn die Anpassung auch nicht zum Fit verwendete Helligkeitsbereiche vorhersagt; sonst nur Verstärkungen. Schwache Ersatzkandidaten führen zu geringerer Korrektur. |
+| Automatische Tonwerte | Legt Belichtung, Kontrast, Dichte, Lichter, Tiefen, Weiß und Schwarz fest. Behält die Farbregler und Kurven des Nutzers. |
+| Automatischer Weißabgleich | Schätzt Temperatur und Tönung aus nahezu neutralen Helligkeitsbändern. Verwirft Proben mit beschnittenem RGB-Kanal und mindert die Korrektur, wenn Hinweise auf Neutrales spärlich sind oder nur einen engen Tonwertbereich abdecken. |
+| Auto-Tonwertkorrektur | Misst gemeinsame Helligkeitsendpunkte und wendet denselben Helligkeitsgewinn auf RGB an. Bewahrt die Kanalverhältnisse, statt jeden Kanal getrennt zu dehnen. |
+| Auto-Farbe | Passt verbleibende Farbstiche an neutrale Kandidaten an. Nutzt Kanalsteigungen nur, wenn eine Anpassung getrennte, ungenutzte Helligkeitsbänder vorhersagt, sonst Gewinne. Schwache Ersatzhinweise erhalten weniger Korrektur. |
 
-Der automatische Tonwert misst die mit dem ersten Vorschlag gerenderte Vorschau erneut. Gibt es einen weiteren Vorschlag für Belichtung oder Weißpunkt, wird auch dieser gerendert. Er wird nur übernommen, wenn sich die Bewertung von Mitteltönen, Endpunkten, Tonwertumfang und Clipping verbessert. Diese begrenzte Nachkorrektur sucht kein einziges ideales Bild. Wiederholtes Anwenden setzt Werte, statt sie zu addieren. Das Zurücksetzen behält die Farbregler bei.
+Automatische Tonwerte prüft den ersten Vorschlag an einer gerenderten Vorschau. Schlägt es eine weitere Änderung von Belichtung oder Weißpunkt vor, rendert es auch diesen Kandidaten und übernimmt ihn nur, wenn sich eine Bewertung aus Mittelton, Endpunkten, Tonwertbereich und Beschnitt verbessert. Das ist eine begrenzte Korrektur, keine Suche nach einem einzigen idealen Rendering. Ein wiederholter Befehl weist Einstellungen zu, statt sie anzuhäufen, und ein Zurücksetzen behält die Farbregler des Nutzers.
 
-Die Analyse verwendet flächengewichtete Mittelwerte in linear RGB und begrenzt die lange Seite des Rasters. Tonwert und WB nutzen eine sRGB-Vorschau; Clipping meint daher Vorschaukanäle, keine Sensorsättigung. Die Schätzungen können Motivfarben nicht immer von einem Lichtfarbstich unterscheiden und belegen keine gemessene Farbtreue des Films. MAIN/CS-Autobalance und die Sättigungskorrektur für farbarme Szenen bleiben Teil der vorherigen Invertierung.
+Die Analyse nutzt flächengewichtete Mittelwerte in linearem RGB mit begrenzter langer Kante. Tonwert und Weißabgleich nutzen eine sRGB-Vorschau, Beschnitt bedeutet also Beschnitt der Vorschaukanäle, nicht Sensorsättigung. Diese Schätzungen können nicht jede Motivfarbe von einem Lichtstich unterscheiden und belegen keine gemessene Farbgenauigkeit des Films. Der Auto-Abgleich von MAIN/CS und seine Vibrance für gedämpfte Szenen gehören zur Invertierungsstufe.
 
 ## Farbmanagement
 
-Trägt die Eingabe ein gültiges ICC, wird dieser Farbraum gelesen. Die interne Rechnung läuft im festgelegten linearen Arbeitsraum; der Wechsel in einen Ausgabefarbraum geschieht bei Anzeige, Softproof und Export.
+Trägt die Eingabe ein gültiges ICC, wird dieser Farbraum gelesen. Die interne Rechnung läuft im festen linearen Arbeitsraum, und der Wechsel in einen Ausgaberaum geschieht bei Anzeige, Softproof und Export.
 
 Wichtige unterstützte Ausgaben:
 
 - sRGB
 - Display P3
 - Adobe RGB
-- Ein vom Nutzer gewähltes RGB-Drucker-/Ausgabe-ICC
+- Ein vom Nutzer gewähltes RGB-Drucker- oder Ausgabe-ICC
 
-Name, Bytezahl und SHA-256 des Druckerprofils werden zu Beginn des Exports festgehalten. Ändert sich die Datei während des Renderns, bricht der Lauf ab.
+Name, Bytezahl und SHA-256 des Druckerprofils werden beim Start des Exports festgelegt. Ändert sich die Datei während des Renderns, bricht der Lauf ab.
 
-Es wird nicht behauptet, dass der heutige Weg über Core Image und ColorSync auf jedem macOS Rendering Intent und Black Point Compensation bitgleich erzeugt. Dafür bräuchte es zuerst einen eigenen ColorSync-Pufferweg und Speicherprüfungen für große 16-Bit-Bilder.
+Es wird nicht behauptet, dass der aktuelle Pfad über Core Image und ColorSync Rendering Intent und Schwarzpunktkompensation auf jeder macOS-Version bitgleich liefert. Diese Garantie bräuchte zuvor einen eigenen ColorSync-Pufferpfad und Speicherprüfungen für große 16-Bit-Bilder.
 
 ## Ausgabekodierung
 
-Formateinstellungen liegen außerhalb der Farbpipeline, entscheiden aber darüber, was in der ausgelieferten Datei übrig bleibt.
+Formateinstellungen liegen außerhalb der Farbpipeline, entscheiden aber, was in der gelieferten Datei erhalten bleibt.
 
-JPEG speichert Farbe mit geringerer Auflösung als Helligkeit, sofern der Encoder nicht über seine Unterabtastungsschwelle hinaus geführt wird. Darunter wird die Chrominanz horizontal und vertikal halbiert: Helligkeitsdetails bleiben erhalten, gesättigte Kanten werden weicher. Qualität ab 95 % wird deshalb ohne Chroma-Unterabtastung kodiert. Niedrigere Einstellungen behalten den gewählten Wert, denn wer sie wählt, will eine kleinere Datei.
-
-PNG und TIFF sind verlustfrei und tasten nie unter. Ihr einziger Qualitätsregler ist die Bittiefe, 8 oder 16 Bit pro Kanal. Dithering wird nur bei 8 Bit angewendet, wo es Quantisierungsbanding verdeckt.
+JPEG speichert Farbe in geringerer Auflösung als Helligkeit, sofern der Encoder nicht über seine Unterabtastungsschwelle hinaus getrieben wird. Darunter wird die Chrominanz horizontal und vertikal halbiert, was gesättigte Kanten weicher macht, während das Helligkeitsdetail erhalten bleibt. Eine Qualität ab 95 % wird deshalb ohne Chroma-Unterabtastung kodiert, niedrigere Einstellungen behalten den gewählten Wert, weil man mit ihnen eine kleinere Datei verlangt. PNG und TIFF sind verlustfrei und tasten nie unter ab. Ihre einzige Qualitätsstellschraube ist die Bittiefe, 8 oder 16 Bit je Kanal, und Dithering wird nur bei 8 Bit angewendet, wo es Quantisierungsbänder verdeckt.
 
 ## Leistung und Sicherheit
 
-- `CIContext` wird je Zweck wiederverwendet.
-- Beim Regeln läuft eine Vorschau in geringerer Auflösung; der Export baut aus der Quelle neu auf.
-- Ein Ergebnis, das lange gedauert hat, prüft kurz vor der Anwendung Bild-ID, Bearbeitungsversion und Sitzung erneut.
-- Wird der Speicher knapp, fallen Caches wie Miniaturen und Vorschauen weg.
-- Originale und Bearbeitungsverlauf bleiben von Caches getrennt.
+- Der `CIContext` wird je Zweck wiederverwendet.
+- Anpassungen nutzen eine Vorschau niedrigerer Auflösung, und der Export baut aus der Quelle neu auf.
+- Lang laufende Aufgaben prüfen Bild-ID, Bearbeitungsversion und Sitzung unmittelbar vor dem Anwenden eines Ergebnisses erneut.
+- Wird der Speicher knapp, werden Caches wie Miniaturen und Vorschauen verworfen.
+- Originale und Bearbeitungsverlauf werden von Caches getrennt gehalten.
 
 ## Prüfstufen
 
-1. Formeltests: Monotonie der Kurve, Ankerpunkte, Umkehrfunktion
-2. Synthetische Bilder: bekannte Ein- und Ausgabe, Beschnitt, Ausrichtung, Farbraum
-3. Synthetisches IT8: der mathematische Hin- und Rückweg über 264 Felder
-4. Statistik echter Aufnahmen: die `realOnly`-Profile
-5. REAL/TARGET-Paare: eine Gerätequalitätsprüfung mit eigenem Prüfmaterial
-6. Prüfung an echter Hardware: Scanner, Film, Display und Ausdruck
+1. Formeltests: Monotonie der Kurve, Anker, Umkehrfunktion
+2. Synthetische Bilder: bekannte Eingabe und Ausgabe, Beschnitt, Ausrichtung, Farbraum
+3. Synthetisches IT8: die mathematische Hin- und Rückrechnung über 264 Felder
+4. Echte Aufnahmestatistik: die `realOnly`-Profile
+5. REAL/TARGET-Paare: eine Geräte-Qualitätsprüfung mit getrenntem Validierungsmaterial
+6. Echte Hardware: ein tatsächlicher Scanner, Film, Bildschirm und Abzug
 
-Ein gutes Ergebnis im synthetischen IT8 belegt keine absolute Genauigkeit an echten Negativen. Für die Qualität von Scannerprofilen gelten [Qualitätsprüfung der Scannerprofile](../reference/PROFILE_QUALITY_GATE.md) und [IT8-Farbprüfung](../reference/IT8_COLOR_VALIDATION.md).
+Ein gutes synthetisches IT8-Ergebnis belegt keine absolute Genauigkeit bei echten Negativen. Die Beurteilung der Qualität von Scannerprofilen folgt [Qualitätsprüfung der Scannerprofile](../reference/PROFILE_QUALITY_GATE.md) und [IT8-Farbprüfung](../reference/IT8_COLOR_VALIDATION.md).
 
 ## Wo der Code liegt
 
@@ -257,4 +254,4 @@ Ein gutes Ergebnis im synthetischen IT8 belegt keine absolute Genauigkeit an ech
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-Die aktuelle Produktversion ist `1.2.6`. Bearbeitungsverlauf und Profilschemata werden auch künftig erst nach einem Prüfverfahren geändert.
+Die aktuelle Produktversion ist `1.2.6`. Änderungen an Bearbeitungsverlauf und Profilschemata müssen auch in späteren Versionen eine Prüfung durchlaufen.

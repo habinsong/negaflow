@@ -62,6 +62,11 @@ static_assert(offsetof(nf_develop_export_request_v41, channel_range_present) == 
 static_assert(offsetof(nf_develop_export_request_v41, measure_range_shape) == 5196U);
 static_assert(offsetof(nf_develop_export_request_v41, channel_range) == 5200U);
 static_assert(offsetof(nf_develop_export_request_v41, channel_range_reserved) == 5212U);
+static_assert(sizeof(nf_develop_export_request_v42) == 5312U);
+static_assert(offsetof(nf_develop_export_request_v42, has_perspective) == sizeof(nf_develop_export_request_v41));
+static_assert(offsetof(nf_develop_export_request_v42, perspective_solved_vertical) == 5224U);
+static_assert(offsetof(nf_develop_export_request_v42, perspective_offset_y) == 5296U);
+static_assert(offsetof(nf_develop_export_request_v42, perspective_reserved) == 5304U);
 static_assert(sizeof(nf_develop_export_result_v7) == sizeof(nf_develop_export_result_v6) + 24U);
 static_assert(offsetof(nf_develop_export_result_v7, range_shape_present) == sizeof(nf_develop_export_result_v6));
 static_assert(offsetof(nf_develop_export_result_v7, range_shape) == sizeof(nf_develop_export_result_v6) + 8U);

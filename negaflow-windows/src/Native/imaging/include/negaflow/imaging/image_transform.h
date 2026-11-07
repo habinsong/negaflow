@@ -1,5 +1,6 @@
 #pragma once
 
+#include "negaflow/imaging/perspective_geometry.h"
 #include "negaflow/imaging/scanner_to_working.h"
 
 #include <cstdint>
@@ -30,6 +31,8 @@ struct ImageTransformParameters final {
     bool has_crop{false};
     NormalizedCropRect crop{};
     double straighten_angle{0.0};
+    // 회전·뒤집기 뒤, 수평 보정 앞에 거는 변환(원근)입니다.
+    PerspectiveParameters perspective{};
 };
 
 enum class ImageTransformStatus : std::uint8_t {
@@ -81,7 +84,7 @@ struct ImageTransformGather final {
 [[nodiscard]] bool valid_image_transform_parameters(
     const ImageTransformParameters& parameters) noexcept;
 
-// Fixed macOS geometry order: flip H, flip V, quarter-turn rotation,
+// Fixed macOS geometry order: flip H, flip V, quarter-turn rotation, perspective,
 // straighten with an inscribed same-aspect crop, then normalized y-up crop.
 [[nodiscard]] ImageTransformResult apply_image_transform(
     WorkingImage image,

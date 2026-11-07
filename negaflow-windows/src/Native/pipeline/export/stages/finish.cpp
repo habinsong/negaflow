@@ -26,7 +26,8 @@ namespace {
     const negaflow::imaging::ImageTransformParameters& parameters) noexcept {
     return parameters.rotation == negaflow::imaging::ImageRotation::degrees_0 &&
         !parameters.flip_horizontal && !parameters.flip_vertical && !parameters.has_crop &&
-        std::abs(parameters.straighten_angle) <= 1.0e-4;
+        std::abs(parameters.straighten_angle) <= 1.0e-4 &&
+        !negaflow::imaging::perspective_changes_geometry(parameters.perspective);
 }
 
 } // namespace

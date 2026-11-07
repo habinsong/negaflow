@@ -258,6 +258,13 @@
                             x:Name="DiagnosticsItem"
                             AutomationProperties.AutomationId="negaflow.menu.diagnostics"
                             Click="OnDiagnosticsClick" />
+                        <!-- 실행할 때 한 번 확인한 업데이트. 확인 전이거나 실패했으면 보이지 않습니다. -->
+                        <MenuFlyoutSeparator x:Name="UpdateSeparator" Visibility="Collapsed" />
+                        <MenuFlyoutItem
+                            x:Name="UpdateItem"
+                            AutomationProperties.AutomationId="negaflow.menu.update"
+                            Click="OnUpdateClick"
+                            Visibility="Collapsed" />
                     </MenuFlyout>
                 </Button.Flyout>
             </Button>

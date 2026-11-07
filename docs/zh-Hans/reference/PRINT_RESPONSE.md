@@ -2,25 +2,27 @@
 
 [文档首页](../README.md)
 
-## MAIN/PRINT 和 CS
+## MAIN/PRINT 与 CS
 
-默认使用 `MAIN`，自动平衡为 ON。开关是目标标题右侧的小胶囊按钮，只在彩色和黑白负片的 MAIN（含 PRINT）和 CS 下显示。它根据当前照片调整颜色和亮度，OFF 时跳过此步骤。自动影调、自动白平衡、自动色阶和自动色彩是独立功能，默认 OFF。
+默认是 `MAIN`，自动平衡为 ON。开关的说明见 [Chroma Engine](../product/CHROMA_ENGINE.md)。
 
-自动平衡 ON 恢复 `412bb31` 的 MAIN/CS 反转。每个通道按场景最浓处 0.2% 分位数测量密度范围，限制为 1.8D，再应用原有 `shoulder-print-response-v4` 曲线和低饱和场景的饱和度补偿。胶片预设将测量范围乘以各通道相对系数。1.8D 是保留原有外观的渲染限制，并非所有胶片的实测物性，也会影响高密度负片。
+**自动平衡 ON。** 每个通道取场景中最密的 0.2% 百分位，范围限制为 1.8D，随后是 `shoulder-print-response-v4` 曲线和低饱和场景的自然饱和度。胶片预设把实测范围乘以各通道的相对系数。1.8D 限制是渲染上的保护，不是每种胶片的实测特性，可能影响密度高的负片。
 
-OFF 也使用同一 v4 曲线，范围固定为标称值（彩色 1.55D，黑白 2.17D），并乘以选定预设的系数。它跳过场景范围归一化和饱和度补偿。彩色负片的 OFF 还会乘上扫描仪与胶片的通道范围校准。同一卷（未指定卷时用同一扫描文件夹）中有至少三帧测量有效时，取这些帧的中位数；定下的值保留在各帧上。帧数不足或胶片混杂时，三个通道保持相同范围。同一片基和设置下，相同透射率在同一卷的不同画面中产生相同结果。ON 会随场景内容改变亮度和颜色。两种模式都不能证明胶片的实测色彩准确度。
+**自动平衡 OFF。** 同一条 v4 曲线，使用固定的标称范围（彩色 1.55D，黑白 2.17D），选了预设时再乘以预设系数。跳过场景范围归一化和低饱和场景的自然饱和度。彩色负片还会乘上针对扫描仪和胶片的通道范围校准。该值取自同一卷（未设卷时取同一扫描文件夹）中至少三帧有效测量的中位数，一旦选定，就保留在每一帧上。帧数不足或胶片混杂时，三个通道使用相同的范围。这样，基底和设置相同、透射率相同的输入，在同一卷的各帧里得到相同的结果。
 
-只改变手动滑块时会复用场景测量值。Windows 预览保留原有 D3D 反转和饱和度路径，导出使用 CPU。已弃用的中位数增益实现及其速度测量不适用于当前实现。RAW 仍先反转再应用相机色矩阵，独立的片基修复也保留。整个应用并未回退到 `412bb31`。
+ON 会随场景内容同时改变亮度和颜色。两种模式都不能证明胶片色彩的实测准确性。
 
-## 其他目标和 RAW
+手动滑块变动期间，场景测量会被缓存。Windows 上预览的反转和自然饱和度走 D3D，导出走 CPU。
 
-明确选择的扫描仪目标保留场景分析与旧版 `shoulder-print-response-v4`。旧固定 primitive 也保留兼容性。场景分析同样没有统一的 1.8D 上限。胶片预设使用固定相对系数，不逐帧自动归一化。
+## 其他目标与 RAW
 
-两个平台都用 LibRaw 的 `output_color=0`、线性传递函数和单位通道倍率解码负片相机 RAW。在去马赛克后的相机 RGB 中测量片基并反转，再用 `rgb_cam` 将正像转换到线性 sRGB。拍摄白平衡、自动亮度和按场景调整 maximum 均关闭。预览、缺陷修复缓存和导出保留延迟应用的矩阵。数字照片使用独立渲染路径。无法输出相机 RGB 时返回错误。这一步骤不能替代相机、光源和胶片的实测校准。Raw TIFF 和应用缺陷修复的原始 TIFF 是未反转的工作 RGB 图像，因此在该输出边界应用颜色矩阵。
+明确指定的扫描仪目标保留场景分析和固定的 `shoulder-print-response-v4` 基本曲线。场景分析没有通用的 1.8D 上限。胶片预设使用固定的相对系数，不会悄悄逐帧归一化。
 
-### 独立 CLI 的 RAW 配置
+两个平台都用 LibRaw 的 `output_color=0`、线性传递和单位通道倍率解码负片相机 RAW。片基测量和反转在去马赛克后的相机 RGB 上进行，随后 `rgb_cam` 把正片映射到线性 sRGB。拍摄白平衡、自动亮度和随场景变化的最大值调整都被关闭。预览、缺陷缓存和导出保持延后应用矩阵的状态。数码照片的渲染另行处理。不支持的原生输出会失败，而不是悄悄换成已应用矩阵的负片。这个顺序不能代替实测的相机、光源和胶片校准。Raw TIFF 和 baked-source TIFF 是未反转的工作 RGB 图像，所以色彩矩阵在该输出边界应用。
 
-应用包含解码库。在应用包之外运行 macOS CLI 或测试时，先构建相同库，并在进程启动前设置绝对路径。
+### 未打包的 CLI 的 RAW 设置
+
+应用包自带解码器。未打包的 macOS CLI 或测试，需要构建同一个库，并在启动进程前设置它的绝对路径。
 
 ```bash
 bash negaflow-mac/scripts/build-libraw.sh
@@ -29,9 +31,9 @@ export NEGAFLOW_LIBRAW_LIBRARY="$PWD/build/libraw/$(uname -m)/libraw.dylib"
 
 ## 验证与来源
 
-对附带 `Roll_Perforation.tiff` 的一个裁剪区域，使用相同片基和设置，与独立构建的 `412bb31` 引擎比较。MAIN、PRINT、Studio、Emulsion、胶片预设和黑白共6种条件下，恢复后的 ON 结果在32位 float 像素上完全一致。此比较仅涵盖一个输入，不代表所有扫描或相机 RAW。`NegativeAutoBalanceTests` 检查原有范围、曲线、饱和度组合，以及 OFF 和缓存复用。Windows 检查范围限制、预设系数、OFF 及 CPU/D3D 的 RAW 反转顺序。
+`NegativeAutoBalanceTests` 检查范围、曲线和自然饱和度的组合、OFF 以及缓存复用。Windows 测试检查范围上限、预设系数、OFF 和 CPU/D3D 的 RAW 反转顺序。
 
-`FixedNegativeResponseTests` 保留 EXPIRED 使用的 v6 模型回归。其帧间差异 0 和理想化正向模型的颜色结果不能验证恢复后的 MAIN/CS 或真实胶片色彩准确度。渲染器和缩略图标识用于区分旧缓存和恢复结果。
+`FixedNegativeResponseTests` 保留 EXPIRED 使用的 v6 模型回归。它的零帧间差异和理想化正向模型的颜色，不能验证 MAIN/CS 响应，也不能验证真实胶片的色彩准确性。渲染器和缩略图标识把当前结果与旧的缓存预览区分开。
 
 - [Kodak H-740](https://www.kodak.com/content/products-brochures/Film/Basic-Photographic-Sensitometry-Workbook.pdf)
 - [Kodak VISION3 scanning](https://www.kodak.com/content/products-brochures/Film/Scanning-Recommendations-for-Extended-Dynamic-Range-Camera-Films-EN.pdf)

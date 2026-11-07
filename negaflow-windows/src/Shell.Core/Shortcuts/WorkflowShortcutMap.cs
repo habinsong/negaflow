@@ -16,6 +16,56 @@ public sealed record WorkflowShortcutMap
 
     public static WorkflowShortcutMap Defaults { get; } = new();
 
+    /// <summary>조합키만 거는 동작(기준선·격자) 가운데 기본값과 다른 것입니다.</summary>
+    public IReadOnlyDictionary<WorkflowGestureModifierAction, WorkflowShortcutModifiers> GestureOverrides { get; init; } =
+        new Dictionary<WorkflowGestureModifierAction, WorkflowShortcutModifiers>();
+
+    public WorkflowShortcutModifiers GestureModifier(WorkflowGestureModifierAction action) =>
+        GestureOverrides.TryGetValue(action, out WorkflowShortcutModifiers modifier)
+            ? modifier
+            : WorkflowGestureModifierActions.Default(action);
+
+    /// <summary>
+    /// 조합키 동작의 키를 바꿉니다. 허용하지 않는 키이거나 다른 조합키 동작과 같으면 바꾸지 않고
+    /// 자기 자신을 돌려줍니다 — 기준선과 격자가 같은 키면 격자만 보려 해도 드래그가 기준선이 됩니다.
+    /// </summary>
+    public WorkflowShortcutMap WithGesture(WorkflowGestureModifierAction action, WorkflowShortcutModifiers modifier)
+    {
+        if (!WorkflowGestureModifierActions.Allowed.Contains(modifier) ||
+            WorkflowGestureModifierActions.All.Any(other => other != action && GestureModifier(other) == modifier))
+        {
+            return this;
+        }
+        Dictionary<WorkflowGestureModifierAction, WorkflowShortcutModifiers> updated = new(GestureOverrides);
+        if (modifier == WorkflowGestureModifierActions.Default(action))
+        {
+            updated.Remove(action);
+        }
+        else
+        {
+            updated[action] = modifier;
+        }
+        return this with { GestureOverrides = updated };
+    }
+
+    /// <summary>
+    /// 기본값으로 돌립니다. 다른 동작이 그 기본 키를 쓰고 있으면 그쪽도 기본으로 돌려 겹치지 않게 합니다.
+    /// </summary>
+    public WorkflowShortcutMap ResetGesture(WorkflowGestureModifierAction action)
+    {
+        Dictionary<WorkflowGestureModifierAction, WorkflowShortcutModifiers> updated = new(GestureOverrides);
+        updated.Remove(action);
+        WorkflowShortcutModifiers restored = WorkflowGestureModifierActions.Default(action);
+        foreach (WorkflowGestureModifierAction other in WorkflowGestureModifierActions.All)
+        {
+            if (other != action && updated.TryGetValue(other, out WorkflowShortcutModifiers value) && value == restored)
+            {
+                updated.Remove(other);
+            }
+        }
+        return this with { GestureOverrides = updated };
+    }
+
     public WorkflowShortcut For(WorkflowShortcutAction action) =>
         Overrides.TryGetValue(action, out WorkflowShortcut shortcut)
             ? shortcut
@@ -120,7 +170,28 @@ public sealed record WorkflowShortcutMap
         }
         // 덮어쓰기가 기본값 자리를 빼앗았을 수 있습니다. 남은 기본값이 그것과 부딪히면 그 명령은
         // 단축키 없이 둡니다 — 조용히 두 명령이 한 키를 갖는 것보다 낫습니다.
-        return this with { Overrides = kept };
+        //
+        // 조합키 동작은 허용한 키만 남기고, 손으로 고친 설정이 두 동작에 같은 키를 걸었으면 모두
+        // 기본값으로 돌립니다.
+        Dictionary<WorkflowGestureModifierAction, WorkflowShortcutModifiers> gestures = [];
+        foreach ((WorkflowGestureModifierAction action, WorkflowShortcutModifiers modifier) in
+                 GestureOverrides ?? new Dictionary<WorkflowGestureModifierAction, WorkflowShortcutModifiers>())
+        {
+            if (Enum.IsDefined(action) && WorkflowGestureModifierActions.Allowed.Contains(modifier) &&
+                modifier != WorkflowGestureModifierActions.Default(action))
+            {
+                gestures[action] = modifier;
+            }
+        }
+        WorkflowShortcutModifiers[] effective = [.. WorkflowGestureModifierActions.All.Select(action =>
+            gestures.TryGetValue(action, out WorkflowShortcutModifiers value)
+                ? value
+                : WorkflowGestureModifierActions.Default(action))];
+        if (effective.Distinct().Count() != effective.Length)
+        {
+            gestures.Clear();
+        }
+        return this with { Overrides = kept, GestureOverrides = gestures };
     }
 
     /// <summary>
@@ -152,9 +223,18 @@ public sealed record WorkflowShortcutMap
         {
             return true;
         }
-        if (Overrides.Count != other.Overrides.Count)
+        if (Overrides.Count != other.Overrides.Count ||
+            GestureOverrides.Count != other.GestureOverrides.Count)
         {
             return false;
+        }
+        foreach ((WorkflowGestureModifierAction action, WorkflowShortcutModifiers modifier) in GestureOverrides)
+        {
+            if (!other.GestureOverrides.TryGetValue(action, out WorkflowShortcutModifiers candidate) ||
+                candidate != modifier)
+            {
+                return false;
+            }
         }
         foreach ((WorkflowShortcutAction action, WorkflowShortcut shortcut) in Overrides)
         {
@@ -170,7 +250,11 @@ public sealed record WorkflowShortcutMap
     public override int GetHashCode()
     {
         // 차례에 기대지 않는 결합입니다 — 사전은 순서를 약속하지 않습니다.
-        int hash = Overrides.Count;
+        int hash = Overrides.Count ^ (GestureOverrides.Count << 8);
+        foreach ((WorkflowGestureModifierAction action, WorkflowShortcutModifiers modifier) in GestureOverrides)
+        {
+            hash ^= HashCode.Combine(action, modifier, 31);
+        }
         foreach ((WorkflowShortcutAction action, WorkflowShortcut shortcut) in Overrides)
         {
             hash ^= HashCode.Combine(action, shortcut.Key, shortcut.Modifiers);

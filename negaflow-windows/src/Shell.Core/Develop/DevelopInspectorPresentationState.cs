@@ -19,6 +19,7 @@ public enum DevelopInspectorSection
     ColorGrading,
     BlackAndWhiteToning,
     Calibration,
+    Transform,
     DetailAndEffects,
     Debug,
 }
@@ -49,6 +50,7 @@ public sealed class DevelopInspectorPresentationState
             DevelopInspectorSection.ColorGrading,
             DevelopInspectorSection.BlackAndWhiteToning,
             DevelopInspectorSection.Calibration,
+            DevelopInspectorSection.Transform,
             DevelopInspectorSection.DetailAndEffects,
             DevelopInspectorSection.Debug,
         });

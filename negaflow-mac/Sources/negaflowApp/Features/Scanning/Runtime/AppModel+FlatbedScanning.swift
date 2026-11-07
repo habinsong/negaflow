@@ -235,21 +235,65 @@ extension AppModel {
         }
     }
 
-    func addFlatbedScanRegion(unitRect: CGRect? = nil) {
+    /// 새로 놓는 프레임은 화면에 보이는 방향을 따른다. 프리뷰를 각도로 펴 두었으면 그 각도를 그대로
+    /// 이어받아야 화면에서 수평인 칸이 스캔 결과에서도 수평으로 나온다.
+    var flatbedNewRegionAngle: Double {
+        flatbedPreviewFrame.map {
+            FlatbedScanRegionFrameGeometry.regionAngle(matching: $0.imageTransform)
+        } ?? 0
+    }
+
+    /// 프리뷰 원본의 픽셀 크기. 칸 각도를 화면·base 사이로 옮길 때 픽셀 비율이 필요하다.
+    var flatbedPreviewBaseSize: CGSize? {
+        guard let frame = flatbedPreviewFrame,
+              let width = frame.sourcePixelWidth,
+              let height = frame.sourcePixelHeight,
+              width > 0,
+              height > 0 else { return nil }
+        return CGSize(width: width, height: height)
+    }
+
+    /// 칸을 `angle` 방향으로 눕힌 정규 사각형들. 다음 칸 제안이 이 좌표에서 돈다.
+    private func flatbedFrameLocalRects(angle: Double) -> [CGRect] {
+        let baseSize = flatbedPreviewBaseSize
+        return flatbedScanRegions.map {
+            FlatbedScanRegionFrameGeometry.frameLocalRect(
+                unitRect: $0.unitRect,
+                straightenAngle: $0.straightenAngle,
+                localAngle: angle,
+                baseSize: baseSize
+            )
+        }
+    }
+
+    func addFlatbedScanRegion(unitRect: CGRect? = nil, straightenAngle: Double? = nil) {
         guard usesFlatbedRegionWorkflow, flatbedPreviewFrame != nil else { return }
+        let angle = straightenAngle ?? flatbedNewRegionAngle
+        if let unitRect {
+            appendFlatbedScanRegion(FlatbedScanRegion(unitRect: unitRect, straightenAngle: angle))
+            return
+        }
         // 프레임 좌표는 프리뷰로 실제로 훑은 영역을 기준으로 한다(FlatbedScanRegionGeometry).
         // 최대 영역으로 계산하면 하드웨어 스캔 영역을 좁혀둔 프리뷰에서 규격 치수가 어긋난다.
         let previewArea = flatbedPreviewScanArea ?? hardwareScanAreaBounds?.maximum
-        let proposed = unitRect
-            ?? previewArea.flatMap {
-                FlatbedScanRegionLayout.proposedRect(
-                    existing: flatbedScanRegions.map(\.unitRect),
-                    frameSize: scanFrameSize,
-                    previewArea: $0
-                )
-            }
-            ?? CGRect(x: 0.25, y: 0.3, width: 0.5, height: 0.4)
-        let region = FlatbedScanRegion(unitRect: proposed)
+        let local = previewArea.flatMap {
+            FlatbedScanRegionLayout.proposedRect(
+                existing: flatbedFrameLocalRects(angle: angle),
+                frameSize: scanFrameSize,
+                previewArea: $0
+            )
+        } ?? CGRect(x: 0.25, y: 0.3, width: 0.5, height: 0.4)
+        appendFlatbedScanRegion(FlatbedScanRegion(
+            unitRect: FlatbedScanRegionFrameGeometry.unitRect(
+                fromFrameLocal: local,
+                localAngle: angle,
+                baseSize: flatbedPreviewBaseSize
+            ),
+            straightenAngle: angle
+        ))
+    }
+
+    private func appendFlatbedScanRegion(_ region: FlatbedScanRegion) {
         flatbedScanRegions.append(region)
         selectedFlatbedScanRegionID = region.id
     }
@@ -300,7 +344,12 @@ extension AppModel {
     /// 프레임의 크기만 기억한다. 자리는 붙여넣을 때 정해지므로 위치를 함께 들고 있을 이유가 없다.
     func copySelectedFlatbedScanRegion() {
         guard let region = selectedFlatbedScanRegion else { return }
-        copiedFlatbedScanRegionSize = region.unitRect.size
+        copiedFlatbedScanRegionSize = FlatbedScanRegionFrameGeometry.frameLocalRect(
+            unitRect: region.unitRect,
+            straightenAngle: region.straightenAngle,
+            localAngle: region.straightenAngle,
+            baseSize: flatbedPreviewBaseSize
+        ).size
     }
 
     /// 복사한 크기 그대로 다음 칸에 놓는다. 규격 비율로 다시 맞추지 않는다 — 손으로 맞춰 둔
@@ -309,10 +358,11 @@ extension AppModel {
         guard usesFlatbedRegionWorkflow,
               flatbedPreviewFrame != nil,
               let size = copiedFlatbedScanRegionSize else { return }
+        let angle = flatbedNewRegionAngle
         let previewArea = flatbedPreviewScanArea ?? hardwareScanAreaBounds?.maximum
-        let proposed = previewArea.flatMap {
+        let local = previewArea.flatMap {
             FlatbedScanRegionLayout.proposedRect(
-                existing: flatbedScanRegions.map(\.unitRect),
+                existing: flatbedFrameLocalRects(angle: angle),
                 frameSize: scanFrameSize,
                 previewArea: $0,
                 size: size
@@ -323,9 +373,14 @@ extension AppModel {
             width: size.width,
             height: size.height
         )
-        let region = FlatbedScanRegion(unitRect: proposed)
-        flatbedScanRegions.append(region)
-        selectedFlatbedScanRegionID = region.id
+        appendFlatbedScanRegion(FlatbedScanRegion(
+            unitRect: FlatbedScanRegionFrameGeometry.unitRect(
+                fromFrameLocal: local,
+                localAngle: angle,
+                baseSize: flatbedPreviewBaseSize
+            ),
+            straightenAngle: angle
+        ))
     }
 
     /// 선택한 프레임을 크기를 유지한 채 민다. `dx`/`dy` 는 **화면에서 누른 방향**(-1, 0, 1)이다.
@@ -378,12 +433,19 @@ extension AppModel {
         return delta.width.isFinite && delta.height.isFinite ? delta : fallback
     }
 
-    func updateFlatbedScanRegion(_ id: UUID, unitRect: CGRect) {
+    /// 프레임 자리를 바꾼다. 각도를 주지 않으면 칸의 기울기는 그대로다 — 옮기거나 크기를 바꿨다고
+    /// 검출이 잰 기울기나 프리뷰에서 맞춘 각도를 버리면, 스캔 결과가 각도를 맞추기 전으로 돌아간다.
+    func updateFlatbedScanRegion(_ id: UUID, unitRect: CGRect, straightenAngle: Double? = nil) {
         guard let index = flatbedScanRegions.firstIndex(where: { $0.id == id }) else { return }
-        flatbedScanRegions[index].unitRect = clampedUnitRect(unitRect)
-        flatbedScanRegions[index].straightenAngle = 0
-        flatbedScanRegions[index].source = .manual
+        let clamped = clampedUnitRect(unitRect)
+        let angle = straightenAngle.map { $0.isFinite ? min(max($0, -45), 45) : 0 }
+            ?? flatbedScanRegions[index].straightenAngle
         selectedFlatbedScanRegionID = id
+        guard clamped != flatbedScanRegions[index].unitRect
+            || angle != flatbedScanRegions[index].straightenAngle else { return }
+        flatbedScanRegions[index].unitRect = clamped
+        flatbedScanRegions[index].straightenAngle = angle
+        flatbedScanRegions[index].source = .manual
     }
 
     /// 지금 조작 대상이 "프레임이 그려진 프리뷰 스캔"인가. 삭제 단축키가 사진 대신 프레임을

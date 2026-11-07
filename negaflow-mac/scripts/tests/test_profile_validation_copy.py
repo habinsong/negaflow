@@ -21,7 +21,9 @@ class ProfileValidationCopyTests(unittest.TestCase):
         for name in README_NAMES:
             body = (REPO_ROOT / name).read_text(encoding="utf-8")
             with self.subTest(readme=name):
-                self.assertIn("realOnly", body)
+                # README 는 필드 값 대신 데이터 출처(개인 필름 928 컷)로 현재 상태를 말한다.
+                self.assertIn("928", body)
+                self.assertNotIn("realOnly", body)
 
         product_doc = (REPO_ROOT / "docs/product/FILM_PROFILES.md").read_text(encoding="utf-8")
         self.assertIn("realOnly", product_doc)

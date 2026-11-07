@@ -1,4 +1,5 @@
 #include "negaflow/imaging/image_transform.h"
+#include "negaflow/imaging/perspective_geometry.h"
 
 #include <cmath>
 #include <cstring>
@@ -230,6 +231,42 @@ void test_gather_refuses_straighten() {
         "straighten is bilinear and must fall back to the CPU transform");
 }
 
+// 변환(원근)을 걸어도 그림 중심은 프레임 가운데에 남고, 정·역 호모그래피가 서로의 역입니다.
+// macOS PerspectiveCorrectionTests 와 같은 값입니다.
+void test_perspective_keeps_center_and_round_trips() {
+    using negaflow::imaging::PerspectiveParameters;
+    using negaflow::imaging::PerspectivePoint;
+    PerspectiveParameters tilted{};
+    tilted.active = true;
+    tilted.solved_vertical = -15.0;
+    tilted.solved_horizontal = 5.0;
+    tilted.solved_rotate = 2.0;
+    const auto mapping = negaflow::imaging::make_perspective_mapping(tilted, 2400.0, 1600.0);
+    expect(mapping.has_value(), "perspective mapping exists for a valid tilt");
+    if (!mapping.has_value()) {
+        return;
+    }
+    const auto center = negaflow::imaging::apply_homography(mapping->forward, PerspectivePoint{1200.0, 800.0});
+    expect(center.has_value() && std::abs(center->x - 1200.0) < 1.0e-6 && std::abs(center->y - 800.0) < 1.0e-6,
+           "perspective keeps the photo center at the frame center");
+    bool round_trip = true;
+    for (const PerspectivePoint point : {PerspectivePoint{0.0, 0.0}, PerspectivePoint{2400.0, 0.0},
+                                         PerspectivePoint{2400.0, 1600.0}, PerspectivePoint{0.0, 1600.0},
+                                         PerspectivePoint{333.0, 517.0}}) {
+        const auto forward = negaflow::imaging::apply_homography(mapping->forward, point);
+        const auto back = forward.has_value()
+            ? negaflow::imaging::apply_homography(mapping->inverse, *forward)
+            : std::nullopt;
+        round_trip = round_trip && back.has_value() && std::abs(back->x - point.x) < 1.0e-6 &&
+                     std::abs(back->y - point.y) < 1.0e-6;
+    }
+    expect(round_trip, "perspective forward and inverse round trip");
+    PerspectiveParameters identity{};
+    identity.active = true;
+    expect(!negaflow::imaging::make_perspective_mapping(identity, 2400.0, 1600.0).has_value(),
+           "identity perspective leaves the image alone");
+}
+
 } // namespace
 
 int main() {
@@ -239,6 +276,7 @@ int main() {
     test_positive_straighten_rotates_clockwise();
     test_gather_matches_apply_for_every_orientation();
     test_gather_refuses_straighten();
+    test_perspective_keeps_center_and_round_trips();
     if (failures == 0) {
         std::cout << "image transform tests passed\n";
     }

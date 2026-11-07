@@ -1345,7 +1345,7 @@
   <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>クイックスタート</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>キーボードショートカット</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>写真の角度をリセット</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
-  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>切り抜きと角度補正を含むすべての補正値をリセットします。回転と反転は保持します。</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
+  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>切り抜き、角度補正、変形を含むすべての補正値をリセットします。回転と反転は保持します。</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
   <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>システムのディスプレイプロファイル</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
   <data name="developAutoToneHelp.Text" xml:space="preserve"><value>自動トーン Command-U — ヒストグラムに基づいて露光量、コントラスト、ハイライト、シャドウ、白レベル、黒レベル、自然な彩度を補正します。</value><comment>AppLocalizedPhrase.autoToneHelp</comment></data>
   <data name="developAutoWhiteBalanceHelp.Text" xml:space="preserve"><value>自動ホワイトバランス Shift-Command-U — グレーワールド法で色温度と色かぶりを中和します。</value><comment>AppLocalizedPhrase.autoWhiteBalanceHelp</comment></data>
@@ -1655,4 +1655,30 @@
   <data name="printWatermarkTopLeading.Text" xml:space="preserve"><value>上左</value></data>
   <data name="printWatermarkTopCenter.Text" xml:space="preserve"><value>上中央</value></data>
   <data name="printWatermarkTopTrailing.Text" xml:space="preserve"><value>上右</value></data>
+  <data name="straightenWithLine.Text" xml:space="preserve"><value>基準線を引いて水平補正 (ドラッグ)</value></data>
+  <data name="straightenGrid.Text" xml:space="preserve"><value>水平補正中にグリッドを表示</value></data>
+  <data name="straightenHintFormat.Text" xml:space="preserve"><value>%@ + ドラッグ: 基準線で水平補正 · %@: グリッド</value></data>
+  <data name="updateAvailableFormat.Text" xml:space="preserve"><value>バージョン %@ にアップデート</value></data>
+  <data name="updateUpToDate.Text" xml:space="preserve"><value>最新バージョンです。</value></data>
+  <data name="updateDownloadingFormat.Text" xml:space="preserve"><value>%@ をダウンロード中…</value></data>
+  <data name="updateDownloadedFormat.Text" xml:space="preserve"><value>アップデートをダウンロードしました: %@</value></data>
+  <data name="updateDownloadFailed.Text" xml:space="preserve"><value>アップデートをダウンロードできませんでした。リリースページから入手してください。</value></data>
+  <data name="developTransform.Text" xml:space="preserve"><value>変形</value></data>
+  <data name="transformModeOff.Text" xml:space="preserve"><value>オフ</value></data>
+  <data name="transformModeAuto.Text" xml:space="preserve"><value>自動</value></data>
+  <data name="transformModeGuided.Text" xml:space="preserve"><value>ガイド付き</value></data>
+  <data name="transformModeLevel.Text" xml:space="preserve"><value>水平</value></data>
+  <data name="transformModeVertical.Text" xml:space="preserve"><value>垂直</value></data>
+  <data name="transformModeFull.Text" xml:space="preserve"><value>フル</value></data>
+  <data name="transformVertical.Text" xml:space="preserve"><value>垂直方向</value></data>
+  <data name="transformHorizontal.Text" xml:space="preserve"><value>水平方向</value></data>
+  <data name="transformRotate.Text" xml:space="preserve"><value>回転</value></data>
+  <data name="transformAspect.Text" xml:space="preserve"><value>縦横比</value></data>
+  <data name="transformScale.Text" xml:space="preserve"><value>拡大・縮小</value></data>
+  <data name="transformOffsetX.Text" xml:space="preserve"><value>X オフセット</value></data>
+  <data name="transformOffsetY.Text" xml:space="preserve"><value>Y オフセット</value></data>
+  <data name="transformConstrainCrop.Text" xml:space="preserve"><value>切り抜きを制限</value></data>
+  <data name="transformGuidedHint.Text" xml:space="preserve"><value>まっすぐにしたい線に沿って、写真の上にガイドを2〜4本引きます。</value></data>
+  <data name="transformGuidedClear.Text" xml:space="preserve"><value>ガイドを消去</value></data>
+  <data name="transformAutoNoLines.Text" xml:space="preserve"><value>直線が見つからないため、遠近は変更していません。</value></data>
 </root>

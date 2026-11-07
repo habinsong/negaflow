@@ -34,6 +34,20 @@ public static partial class DevelopRequestFactory
             ? new DevelopCropRect(crop.X, crop.Y, crop.Width, crop.Height)
             : null,
         StraightenAngle = transform.StraightenAngle,
+        Perspective = transform.Perspective is { ChangesGeometry: true } perspective
+            ? new DevelopPerspective(
+                perspective.SolvedVertical,
+                perspective.SolvedHorizontal,
+                perspective.SolvedRotate,
+                perspective.Vertical,
+                perspective.Horizontal,
+                perspective.Rotate,
+                perspective.Aspect,
+                perspective.Scale,
+                perspective.OffsetX,
+                perspective.OffsetY,
+                perspective.ConstrainCrop)
+            : null,
     };
 
     private static FilmScanDenoiseFilmProfile MapNoiseReductionFilmProfile(FilmType filmType) =>

@@ -3,7 +3,7 @@ import CoreImage
 import CoreGraphics
 @testable import Chromabase
 
-// 브러시 Heal(Lightroom 모델) 검증 — 칠한 영역을 이웃 실제 픽셀로 복제 + 저주파 톤 매칭.
+// 브러시 Heal(이웃 패치 복제 모델) 검증 — 칠한 영역을 이웃 실제 픽셀로 복제 + 저주파 톤 매칭.
 // 픽셀 동일성이 아니라 "지각 동일성"이 계약이다: 결함 소멸, 텍스처 통계(채널/크로마 std) 보존,
 // 저주파 톤 연속(그라데이션 추종), 칠 밖 무변화, 교차 구조 보존(직교 변위의 자기 매핑).
 final class DefectHealBrushTests: XCTestCase {

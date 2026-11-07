@@ -3,7 +3,7 @@ import XCTest
 
 // 노출 조정 범위 계약.
 //
-// 슬라이드 필름의 노출 부족은 3스톱을 넘길 수 있어 ±5(Lightroom·Capture One 관례)로 둔다.
+// 슬라이드 필름의 노출 부족은 3스톱을 넘길 수 있어 ±5로 둔다.
 // 자동 톤이 내는 노출은 그보다 좁은 자체 한도 안에 있어야 한다 — 슬라이더 상한을 넘는 값을
 // 대입하면 UI 가 표현하지 못하는 상태가 된다.
 final class DevelopToneRangeTests: XCTestCase {

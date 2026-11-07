@@ -62,8 +62,8 @@
 >
 > **니엡스가 찍은 최초의 사진으로부터 200주년인 올해 여름을 기념하며.**
 > 2026년 7월 25일.
-## negaflow for macOS and Windows
 
+## negaflow for macOS and Windows
 
 | | macOS | Windows |
 |---|---|---|
@@ -71,17 +71,13 @@
 | 엔진 | Swift + Core Image | C++ + Direct3D |
 | 색 관리 | ColorSync | Windows ICM |
 
-두 앱은 네이티브 앱으로 각각 다른 언어와 방식으로 개발되었지만, 그럼에도 기능과 결과는 같습니다.
+두 앱은 각각 네이티브로 따로 만들었습니다. 언어와 구현 방식은 다르고 같은 파일을 넣으면 같은 결과가 나옵니다. 엔진 코드는 macOS에서는 `Chromabase`, Windows에서는 `Native` 모듈에 있습니다.
 
-엔진 코드는 macOS에서 `Chromabase`, Windows에서 `Native` 모듈에 있습니다.
-
-두가지를 동시에 만드는 방법(크로스플랫폼)이 있으나, 그렇게 하면 둘 다 느려지고, 제대로 동작하지 않습니다.
-그래서 OS 마다 고유의 언어와 방식으로 처음부터 다시 개발했습니다. 무엇이 같고 다른지는
-[여기](docs/ko/platform/PLATFORM_DIFFERENCES.md)에 적어 뒀습니다.
+크로스플랫폼 코드베이스는 속도와 안정성 때문에 택하지 않았고 OS마다 처음부터 따로 구현했습니다. 같은 부분과 다른 부분은 [플랫폼 차이](docs/ko/platform/PLATFORM_DIFFERENCES.md)에 정리했습니다.
 
 ## 다운로드
 
-[GitHub Releases](https://github.com/habinsong/negaflow/releases)에서 받으면 됩니다.
+[GitHub Releases](https://github.com/habinsong/negaflow/releases)에서 받습니다.
 
 | 설치 파일 | 사용 환경 |
 |---|---|
@@ -92,81 +88,70 @@
 
 macOS 14, 26, 27과 호환됩니다.
 
-대부분의 Mac은 Universal PKG면 됩니다. 물론, Silicon 용 파일과 DMG와 ZIP도 같은 페이지에 올려 뒀습니다.
-처음 실행할 때 설정의 개인정보 보호 및 보안에서 '그래도 열기'를 한 번 눌러야 합니다.
+대부분의 Mac에는 Universal PKG를 쓰면 됩니다. 같은 페이지에 Apple Silicon 전용 PKG, DMG, ZIP도 있습니다. Mac 빌드는 ad hoc 서명이고 Apple 공증은 받지 않았습니다. 처음 실행할 때 시스템 설정의 개인정보 보호 및 보안에서 '그래도 열기'를 한 번 눌러야 합니다.
 
-Windows 설치는 사용자 폴더 안에서 끝나고 관리자 권한을 묻지 않습니다. 서명이 없어서 SmartScreen이
-한 번 막습니다. 추가 정보를 누르고 실행하면 됩니다. 제거는 제어판에서 할 수 있습니다.
+Windows 설치 파일은 사용자 폴더에 설치하고 관리자 권한을 묻지 않습니다. 서명이 없어서 SmartScreen이 한 번 막습니다. 추가 정보를 누른 뒤 실행하세요. 제거는 제어판에서 합니다. 체크섬은 릴리스 페이지의 `SHA256SUMS.txt`에 있습니다.
 
-실제 스캐너를 붙이려면 플러그인이 따로 필요하며, SANE 스캐너는
-[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)이 있습니다. 당연히, macOS 와 Windows 둘 다 됩니다.
+스캐너를 연결하려면 플러그인이 따로 필요합니다. SANE 스캐너는 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)을 쓰며 macOS와 Windows 모두에서 동작합니다.
 
 ## 기능
-> 아날로그 필름을 완성된 사진으로 만드는 모든 기능이 들어가 있습니다.
-- 필름 베이스를 측정하고 컬러·흑백 네거티브와 포지티브를 현상하는 기능부터
-- 노출, 대비, 커브, HSL, 컬러 그레이딩 등 보정에 필요한 모든 것
-- 선명도, 노이즈 제거, 그레인, 비네팅, 할레이션 같은 부가 옵션
-- 먼지와 스크래치를 제거해서 사진을 복원하는 GrainMend.
-- 롤, 폴더, 컬렉션, 별점, 스택, 가상 사본, 카메라·렌즈·필름 검색이 가능한 라이브러리
-- 현상 프로세스, 타깃, 톤·색·디테일, 크롭과 방향을 함께 옮기는 프리셋과 복사·붙여넣기
-- JPEG, PNG, 16비트 TIFF, 16비트 선형 DNG 내보내기, ICC 프로파일, 카메라·렌즈·필름 등 기록을 EXIF에 저장
-- 8가지 인화 레이아웃과 용지 미리보기, 사진용·ISO 용지, C-print 기능까지 다 있습니다.
+
+> 아날로그 필름을 완성된 사진으로 만드는 데 필요한 기능입니다.
+
+- 필름 베이스 측정, 컬러·흑백 네거티브와 포지티브 현상
+- 노출, 대비, 커브, HSL, 컬러 그레이딩
+- 선명도, 노이즈 제거, 그레인, 비네팅, 할레이션
+- 먼지와 스크래치를 지우는 GrainMend
+- 롤, 폴더, 컬렉션, 별점, 스택, 가상 사본을 갖춘 라이브러리와 카메라·렌즈·필름 검색
+- 현상 프로세스, 타깃, 톤, 색, 디테일, 크롭, 방향을 함께 옮기는 프리셋과 복사·붙여넣기
+- JPEG, PNG, 16비트 TIFF, 16비트 선형 DNG 내보내기, ICC 프로파일, EXIF에 기록하는 카메라·렌즈·필름 정보
+- 8가지 인화 레이아웃, 용지 미리보기, 사진용·ISO 용지, C-print
 
 ## 1.2.6
 
-- HS,SP,F-135,HR 타깃의 버그를 수정하고 현실적인 색감을 구현했습니다.
-- 1.2.X 버전부터 맥과 윈도우 모두 RAW 로직 변경으로 라이브러리 NEF 고효율 포맷의 경우 미지원합니다.
+- HS, SP, F135, HR 타깃의 버그를 고치고 색 렌더링을 새로 만들었습니다.
+- 1.2부터 RAW 처리가 바뀌어 macOS와 Windows 모두 라이브러리에서 고효율 NEF 파일을 지원하지 않습니다.
 
 ## Chroma Engine
 
 **Chroma Engine**은 필름 반전과 현상을 맡습니다.
 
-네거티브를 현상하기 전에 필름 베이스를 먼저 잽니다. 빛이 한 번도 닿지 않은 영역에서 값을 읽습니다.
-자동 측정이 어긋난 자리는 스포이드로 찍거나 RGB 값을 조절하면 됩니다.
+네거티브를 현상하기 전에 필름 베이스를 먼저 측정합니다. 빛이 닿지 않은 영역에서 값을 읽습니다. 자동 측정이 어긋나면 스포이드로 찍거나 RGB 값을 직접 입력합니다.
 
-기본값은 `MAIN`과 자동 밸런스 ON입니다. 타깃 제목 오른쪽의 작은 알약 토글로 켜고 끕니다. 컬러·흑백 네거티브의 MAIN(PRINT 포함)과 CS에서만 보입니다. 현재 사진을 기준으로 색과 밝기를 맞추며 OFF에서는 이 단계를 건너뜁니다. 자동 톤·자동 화이트 밸런스·자동 레벨·자동 색상은 별도 기능이며 기본 OFF입니다. 점은 켜져 있을 때만 글자 바로 왼쪽에 표시하며 글자는 항상 가운데 정렬합니다.
+기본값은 `MAIN`과 자동 밸런스 ON입니다. 자동 밸런스는 타깃 제목 오른쪽의 작은 알약 스위치로 켜고 끕니다. 컬러·흑백 네거티브의 MAIN(PRINT 포함)과 CS에서만 보입니다. 현재 사진을 기준으로 색과 밝기를 맞추며 끄면 이 단계를 건너뜁니다. 자동 톤, 자동 화이트 밸런스, 자동 레벨, 자동 색상은 별도 기능이고 기본값은 꺼짐입니다.
 
-나머지 타깃은 이렇습니다. 프린터 ICC로 빼는 `PRINT`, 미니랩 계열인 `HS`와 `SP`, 랩 장비 계열인
-`F135`와 `HR`, 오래된 필름을 살려 보는 `EXPIRED`. 출력은 sRGB, Display P3, Adobe RGB, 그리고 직접
-쓰는 RGB ICC 중에 고르면 됩니다.
+나머지 타깃은 프린터 ICC로 출력하는 `PRINT`, 미니랩 계열인 `HS`와 `SP`, 랩 장비 계열인 `F135`와 `HR`, 오래된 필름을 살리는 `EXPIRED`, 색 스타일 18개를 모은 `CS`입니다. 출력 색공간은 sRGB, Display P3, Adobe RGB, 직접 지정한 RGB ICC 중에서 고릅니다.
 
-반전과 색 처리 순서는 [크로마 엔진 문서](docs/ko/product/CHROMA_ENGINE.md)에 있습니다.
+반전과 색 처리 순서는 [Chroma Engine 문서](docs/ko/product/CHROMA_ENGINE.md)에 있습니다.
 
 ## GrainMend
 
->**GrainMend**는 먼지, 핀홀, 스크래치, 유제 손상을 복원합니다.
+> **GrainMend**는 먼지, 핀홀, 스크래치, 유제 손상을 복원합니다.
 
 **GrainMend RGB**는 소프트웨어 방식이라 하드웨어 IR과 다릅니다. <br> <br>
-`자동`은 사진 전체를 훑습니다. 간단하지만 오검출이 있을겁니다. <br>
-`가이드`는 지정한 영역만 봅니다. 스캔하다 붙은 먼지에 제일 잘 듣습니다. <br>
-`브러시`는 자동이 놓친 자리를 직접 칠하는 도구고, 복제 도장은 고른 위치의 픽셀을 그대로 옮겨 줍니다.<br>
-`복제도장`은 사용자가 원하는 질감을 선택해서 직접 칠하는 도장 기능입니다. <br>
+`자동`은 표시 없이 사진 전체를 훑습니다. 찾아낸 것 중 일부는 오검출입니다. <br>
+`가이드`는 지정한 영역만 봅니다. 스캔하다 붙은 먼지에 가장 잘 맞습니다. <br>
+`브러시`는 자동이 놓친 자리를 직접 칠합니다. <br>
+`복제 도장`은 고른 위치의 픽셀을 복사해 원하는 질감으로 칠합니다. <br>
 
-자동과 가이드는 주변 질감을 보고 결함을 메웁니다. 메우기 전에 방향과 주변 구조를 먼저 봅니다. 사진 속
-난간이나 줄눈을 스크래치로 착각해서 지워버리면 그건 복원이 아니라 훼손이니까요.
+자동과 가이드는 방향과 주변 구조를 먼저 확인한 뒤 주변 질감으로 결함을 메웁니다. 난간이나 줄눈을 스크래치로 읽으면 사진에서 지워집니다.
 
-수정 결과는 레이어로 남습니다. 강도를 바꾸고, 마스크를 확인하고, 하나씩 끄거나 지울 수 있습니다.<br>
+수정 결과는 레이어로 남습니다. 강도를 바꾸고 마스크를 확인하고, 하나씩 끄거나 지울 수 있습니다.<br>
 **GrainMend IR**은 스캐너 플러그인이 넘겨준 적외선 채널의 검출 결과를 같은 기록에 더합니다.
 
-
-
-**GrainMend IR**은
-스캐너의 적외선 채널(IR)을 쓰지만 Digital ICE, iSRD, SRDx의 구현도 호환 모드도 아닙니다. 동작 방식과
-품질·성능 기준은 [GrainMend 문서](docs/ko/product/GRAINMEND.md)에 정리해 뒀습니다.
+**GrainMend IR**은 스캐너의 적외선 채널(IR)을 씁니다. Digital ICE, iSRD, SRDx의 구현도 호환 모드도 아닙니다. 동작 방식과 품질·성능 기준은 [GrainMend 문서](docs/ko/product/GRAINMEND.md)에 있습니다.
 
 ## 가져오기부터 인화까지
 
 1. 이미지 파일을 가져오거나 설치된 플러그인으로 스캔합니다.
-2. 현상 프로세스 종류를 고르고 스캔 타깃을 지정합니다.
-3. 크로마 엔진에서 색과 톤을 조절합니다.
+2. 현상 프로세스를 고르고 스캔 타깃을 지정합니다.
+3. Chroma Engine에서 색과 톤을 조절합니다.
 4. 필요한 사진에 GrainMend를 적용합니다.
 5. 비교 보기와 히스토그램으로 확인한 뒤 인화하거나 내보냅니다.
 
-불러오기만 해서는 현상하지 않습니다. 폴더의 프로세스와 타깃을 고르고 **적용**을 누를 때, 또는 현상
-화면에 들어갔을 때 시작합니다. 자동으로 돌리는 설정도 따로 있는데 기본값은 꺼짐입니다.
+가져오기만으로는 현상하지 않습니다. 폴더의 프로세스와 타깃을 고르고 **적용**을 누를 때, 또는 현상 화면에 들어갈 때 시작합니다. 자동으로 시작하는 설정이 따로 있고 기본값은 꺼짐입니다.
 
-각 동작이 원본 파일에 무엇을 하는지는
-[라이브러리에서 인화까지](docs/ko/product/WORKFLOW.md)에 표로 정리해 뒀습니다.
+각 동작이 원본 파일에 무엇을 하는지는 [라이브러리에서 인화까지](docs/ko/product/WORKFLOW.md)에 표로 정리했습니다.
 
 <p align="center">
   <picture>
@@ -184,42 +169,29 @@ Windows 설치는 사용자 폴더 안에서 끝나고 관리자 권한을 묻�
 
 ## 스캐너와 필름 프로파일
 
-negaflow 본체는 스캐너 모델명을 보고 기능을 열지 않습니다.<br> 플러그인이 알려 준 해상도, 비트 심도,
-스캔 영역, 노출, IR 지원만 씁니다. 이름으로 추측하면 장치에 없는 기능이 켜집니다.
+negaflow는 플러그인이 알려 준 해상도, 비트 심도, 스캔 영역, 노출, IR 지원만 씁니다. 스캐너 모델명으로 기능을 추측하지 않습니다. 추측하면 장치에 없는 기능이 켜질 수 있기 때문입니다.
 
-SANE 장치는 별도 GPL 프로젝트인
-[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)이 맡습니다. 플러그인은
-별도 프로세스로 돌고 주고받는 형식은 JSON입니다. **negaflow**에 SANE 코드는 들어 있지 않고 링크도
-하지 않습니다.
+SANE 장치는 별도 GPL 프로젝트인 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)이 맡습니다. 플러그인은 별도 프로세스로 돌고 주고받는 형식은 JSON입니다. **negaflow**에는 SANE 코드가 없고 링크도 하지 않습니다.
 
-번들에는 스캐너 프로파일 15개가 들어 있습니다. 직접 촬영한 필름으로 만들었으며 기록한 데이터 갯수는
-928개입니다.
+번들에는 스캐너 프로파일 15개가 있습니다. 랩 스캐너로 스캔한 개인 사진 928장을 바탕으로 만든 데이터로 HS와 SP 타깃을 개발했습니다.
 
-상태는 전부 `realOnly`입니다. 실제 스캔으로 만들긴 했지만 독립된 기준으로 정확도를 검증한
-단계는 아니라는 뜻입니다. 검증하지 않은 걸 검증했다고 적고 싶지는 않았습니다. 프로파일은 스캐너
-이름을 보고 자동으로 걸리지 않으니 직접 골라야 합니다.
+프로파일은 직접 고르며 스캐너 이름으로 자동 적용되지 않습니다.
 
-자세한건
-[필름 프로파일 문서](docs/ko/product/FILM_PROFILES.md)에 적었습니다.
+자세한 내용은 [필름 프로파일 문서](docs/ko/product/FILM_PROFILES.md)에 있습니다.
 
 ## 문서
 
-- [크로마 엔진](docs/ko/product/CHROMA_ENGINE.md) | 필름 베이스, 반전, 색 처리와 현상 순서
+- [Chroma Engine](docs/ko/product/CHROMA_ENGINE.md) | 필름 베이스, 반전, 색 처리와 현상 순서
 - [GrainMend](docs/ko/product/GRAINMEND.md) | 결함 검출과 복원, IR, 편집 기록
 - [필름 프로파일](docs/ko/product/FILM_PROFILES.md) | 촬영 자료 분석과 프로파일 생성
 - [라이브러리에서 인화까지](docs/ko/product/WORKFLOW.md) | 가져오기, 폴더 동기화, 일괄 현상, 인화
 - [제품 구조](docs/ko/architecture/PRODUCT_ARCHITECTURE.md) | 앱, 엔진, 저장과 내보내기 구조
-- [전체 문서](docs/ko/README.md) | 다국어(6개 언어)
+- [전체 문서](docs/ko/README.md) | 6개 언어
 
 ## 직접 빌드하기
 
-플랫폼마다 필요한 도구와 명령이 다릅니다. 전체 절차는 각 문서에 있습니다.
-[macOS](negaflow-mac/docs/README_ko.md)는 macOS 14 이상과 Xcode 26 이상,
-[Windows](negaflow-windows/docs/README_ko.md)는 Windows 11 24H2와 Visual Studio 2022, .NET 10 SDK가
-필요합니다. 저장소 작업 규칙은 [`CONTRIBUTING.md`](CONTRIBUTING.md)에 정리해 뒀습니다.
+플랫폼마다 필요한 도구와 명령이 다릅니다. 전체 절차는 각 문서에 있습니다. [macOS](negaflow-mac/docs/README_ko.md)는 macOS 14 이상과 Xcode 26 이상이 필요합니다. [Windows](negaflow-windows/docs/README_ko.md)는 Windows 11 24H2, Visual Studio 2026, .NET 10 SDK가 필요합니다. 저장소 작업 규칙은 [`CONTRIBUTING.md`](CONTRIBUTING.md)에 있습니다.
 
 ## 라이선스
 
-**negaflow**는 [Apache License 2.0](LICENSE)으로 배포됩니다. Kodak, Fujifilm, Noritsu,
-LaserSoft Imaging을 비롯한 어떤 상표권자와도 제휴하거나 후원받지 않았습니다. 제품명은 호환 대상이나
-측정 대상을 가리킬 때만 씁니다. [상표 고지](TRADEMARKS.md)에 자세히 적어 뒀습니다.
+**negaflow**는 [Apache License 2.0](LICENSE)으로 배포됩니다. Kodak, Fujifilm, Noritsu, LaserSoft Imaging을 비롯한 어떤 상표권자와도 제휴하거나 후원받지 않았습니다. 제품명은 호환 대상이나 측정 대상을 가리킬 때만 씁니다. 자세한 내용은 [상표 고지](TRADEMARKS.md)에 있습니다.

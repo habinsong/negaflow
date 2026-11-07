@@ -151,6 +151,7 @@ public static class LibraryFrameReader
     internal const string ImageTransformCropRectName = "cropRect";
     internal const string ImageTransformStraightenAngleName = "straightenAngle";
     internal const string ImageTransformCropAspectName = "cropAspect";
+    internal const string ImageTransformPerspectiveName = "perspective";
     internal const string GrainName = "grain";
     internal const string SharpnessName = "sharpness";
     internal const string HalationName = "halation";

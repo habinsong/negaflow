@@ -171,6 +171,40 @@ namespace {
     return output;
 }
 
+// 변환(원근). 출력 화소 중심을 역호모그래피로 원본에 되돌려 이중선형으로 읽고, 원본 밖이면
+// 흰색입니다 — macOS 는 CIPerspectiveTransform 결과를 흰 바탕에 겹칩니다.
+[[nodiscard]] WorkingImage perspective_warp(
+    const WorkingImage& source,
+    const PerspectiveMapping& mapping) {
+    const auto out_width = static_cast<std::uint32_t>(mapping.output_width);
+    const auto out_height = static_cast<std::uint32_t>(mapping.output_height);
+    WorkingImage output = packed_image(out_width, out_height);
+    const double width = source.width;
+    const double height = source.height;
+    const negaflow::core::Rgba32F white{1.0F, 1.0F, 1.0F, 1.0F};
+    negaflow::core::for_each_row_block(
+        out_height,
+        static_cast<std::uint64_t>(out_width) * out_height *
+            sizeof(negaflow::core::Rgba32F) * 5U,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+    for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
+        for (std::uint32_t x = 0U; x < out_width; ++x) {
+            const PerspectivePoint canvas{
+                mapping.output_left + static_cast<double>(x) + 0.5,
+                mapping.output_top + static_cast<double>(y) + 0.5};
+            const auto mapped = apply_homography(mapping.inverse, canvas);
+            negaflow::core::Rgba32F value = white;
+            if (mapped.has_value() && mapped->x >= 0.0 && mapped->y >= 0.0 &&
+                mapped->x <= width && mapped->y <= height) {
+                value = sample_bilinear_clamped(source, mapped->x - 0.5, mapped->y - 0.5);
+            }
+            output.pixels[static_cast<std::size_t>(y) * out_width + x] = value;
+        }
+    }
+        });
+    return output;
+}
+
 [[nodiscard]] WorkingImage crop_image(
     const WorkingImage& source,
     const NormalizedCropRect& crop) {
@@ -223,8 +257,9 @@ bool plan_image_transform_gather(
         source_height == 0U) {
         return false;
     }
-    // 기울이기는 이중선형이라 자리 옮김으로 적을 수 없습니다.
-    if (std::abs(parameters.straighten_angle) > 1.0e-4) {
+    // 기울이기와 원근은 이중선형이라 자리 옮김으로 적을 수 없습니다.
+    if (std::abs(parameters.straighten_angle) > 1.0e-4 ||
+        perspective_changes_geometry(parameters.perspective)) {
         return false;
     }
     const bool swap_dimensions =
@@ -279,6 +314,9 @@ bool valid_image_transform_parameters(
         parameters.straighten_angle > 45.0) {
         return false;
     }
+    if (parameters.perspective.active && !valid_perspective_parameters(parameters.perspective)) {
+        return false;
+    }
     if (!parameters.has_crop) {
         return true;
     }
@@ -309,14 +347,24 @@ ImageTransformResult apply_image_transform(
     const bool oriented = parameters.rotation != ImageRotation::degrees_0 ||
                           parameters.flip_horizontal || parameters.flip_vertical;
     const bool straightened = std::abs(parameters.straighten_angle) > 1.0e-4;
-    if (!oriented && !straightened && !parameters.has_crop) {
+    const bool corrected = perspective_changes_geometry(parameters.perspective);
+    if (!oriented && !straightened && !parameters.has_crop && !corrected) {
         result.status = ImageTransformStatus::ok;
         result.image = std::move(image);
         return result;
     }
+    bool warped = false;
     try {
         if (oriented) {
             image = orient(image, parameters);
+        }
+        if (corrected && image.width > 1U && image.height > 1U) {
+            // 그릴 수 없는 값이면(모서리가 카메라 뒤) 그림을 그대로 둡니다 — macOS 와 같습니다.
+            if (const auto mapping = make_perspective_mapping(
+                    parameters.perspective, image.width, image.height)) {
+                image = perspective_warp(image, *mapping);
+                warped = true;
+            }
         }
         if (straightened && image.width > 1U && image.height > 1U) {
             image = straighten(image, parameters.straighten_angle);
@@ -331,7 +379,7 @@ ImageTransformResult apply_image_transform(
     }
     result.status = ImageTransformStatus::ok;
     result.info.applied = true;
-    result.info.resampled = straightened;
+    result.info.resampled = straightened || warped;
     result.image = std::move(image);
     return result;
 }

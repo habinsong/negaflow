@@ -1,4 +1,5 @@
 using Negaflow.Catalog;
+using Negaflow.Shell.Develop.Perspective;
 
 namespace Negaflow.Shell;
 
@@ -38,6 +39,9 @@ public static class DevelopDisplayGeometry
         double Height,
         double OrientedWidth,
         double OrientedHeight,
+        PerspectiveMapping? Perspective,
+        double CorrectedWidth,
+        double CorrectedHeight,
         bool Straightened,
         double StraightenedWidth,
         double StraightenedHeight,
@@ -115,8 +119,17 @@ public static class DevelopDisplayGeometry
             double sin = Math.Sin(theta);
             double dx = x - ((stages.StraightenedWidth - 1.0) * 0.5);
             double dy = y - ((stages.StraightenedHeight - 1.0) * 0.5);
-            x = ((stages.OrientedWidth - 1.0) * 0.5) + (dx * cos) + (dy * sin);
-            y = ((stages.OrientedHeight - 1.0) * 0.5) - (dx * sin) + (dy * cos);
+            x = ((stages.CorrectedWidth - 1.0) * 0.5) + (dx * cos) + (dy * sin);
+            y = ((stages.CorrectedHeight - 1.0) * 0.5) - (dx * sin) + (dy * cos);
+        }
+
+        // 원근 되돌리기: native perspective_warp 처럼 출력 화소 중심을 역호모그래피로 보냅니다.
+        if (stages.Perspective is { } mapping &&
+            PerspectiveGeometry.Apply(mapping.Inverse, mapping.OutputLeft + x + 0.5, mapping.OutputTop + y + 0.5)
+                is { } oriented)
+        {
+            x = oriented.X - 0.5;
+            y = oriented.Y - 0.5;
         }
 
         // orient 되돌리기. 네이티브와 같이 회전을 먼저 풀고 반전을 나중에 적용합니다.
@@ -191,14 +204,22 @@ public static class DevelopDisplayGeometry
             _ => (sourceX, sourceY),
         };
 
+        // 원근(정방향): 회전 뒤 화소 중심을 호모그래피로 보내 출력 사각형 기준 화소로.
+        if (stages.Perspective is { } mapping &&
+            PerspectiveGeometry.Apply(mapping.Forward, x + 0.5, y + 0.5) is { } corrected)
+        {
+            x = corrected.X - mapping.OutputLeft - 0.5;
+            y = corrected.Y - mapping.OutputTop - 0.5;
+        }
+
         if (stages.Straightened)
         {
             // 역방향 행렬 [[cos, sin], [−sin, cos]] 의 역은 [[cos, −sin], [sin, cos]] 입니다.
             double theta = transform.StraightenAngle * Math.PI / 180.0;
             double cos = Math.Cos(theta);
             double sin = Math.Sin(theta);
-            double dx = x - ((stages.OrientedWidth - 1.0) * 0.5);
-            double dy = y - ((stages.OrientedHeight - 1.0) * 0.5);
+            double dx = x - ((stages.CorrectedWidth - 1.0) * 0.5);
+            double dy = y - ((stages.CorrectedHeight - 1.0) * 0.5);
             x = ((stages.StraightenedWidth - 1.0) * 0.5) + (dx * cos) - (dy * sin);
             y = ((stages.StraightenedHeight - 1.0) * 0.5) + (dx * sin) + (dy * cos);
         }
@@ -230,14 +251,19 @@ public static class DevelopDisplayGeometry
         double orientedWidth = swaps ? height : width;
         double orientedHeight = swaps ? width : height;
 
-        double straightenedWidth = orientedWidth;
-        double straightenedHeight = orientedHeight;
+        // 원근은 회전 뒤 크기에서 돌고, 수평보정은 원근의 출력(자르기 제한이면 안쪽 사각형)에서 돕니다.
+        PerspectiveMapping? perspective = PerspectiveGeometry.Mapping(transform.Perspective, orientedWidth, orientedHeight);
+        double correctedWidth = perspective?.OutputWidth ?? orientedWidth;
+        double correctedHeight = perspective?.OutputHeight ?? orientedHeight;
+
+        double straightenedWidth = correctedWidth;
+        double straightenedHeight = correctedHeight;
         bool straightened = Math.Abs(transform.StraightenAngle) > StraightenThreshold &&
-            orientedWidth > 1.0 && orientedHeight > 1.0;
+            correctedWidth > 1.0 && correctedHeight > 1.0;
         if (straightened)
         {
             (straightenedWidth, straightenedHeight) =
-                StraightenedExtent(orientedWidth, orientedHeight, transform.StraightenAngle);
+                StraightenedExtent(correctedWidth, correctedHeight, transform.StraightenAngle);
         }
 
         double cropLeft = 0.0;
@@ -269,6 +295,9 @@ public static class DevelopDisplayGeometry
             height,
             orientedWidth,
             orientedHeight,
+            perspective,
+            correctedWidth,
+            correctedHeight,
             straightened,
             straightenedWidth,
             straightenedHeight,

@@ -2,204 +2,199 @@
 
 [Accueil de la documentation](../README.md)
 
-GrainMend répare la poussière, les micro-trous, les rayures et les dégâts d'émulsion sur le film. Rien n'est figé dans l'original : le résultat est gardé comme un historique d'édition ordonné.
+GrainMend répare les poussières, micro-trous, rayures et dégâts d'émulsion du film. Rien n'est incrusté dans l'original ; le résultat est conservé sous forme d'historique de retouches ordonné.
 
-| Outil | Où il regarde | Comment il répare |
+| Outil | Ce qu'il regarde | Comment il répare |
 |---|---|---|
-| Automatique | Toute la photo | Prudent, seulement les défauts dont il est sûr |
-| Guidé | La zone que vous choisissez | Regarde de près, jusqu'aux petits points et défauts pâles |
-| Brosse | L'endroit que vous peignez | Prolonge la structure et la texture voisines |
-| Tampon de duplication | Le point source que vous choisissez | Copie de vrais pixels d'origine à décalage constant |
-| IR | Le canal infrarouge du scanner | L'IR trouve l'endroit, le RGB reconstruit les pixels |
+| Automatique | Toute la photographie | Prudent, seulement les défauts dont il est sûr |
+| Guidé | Une zone que vous choisissez | Examine de près, jusqu'aux petits points et aux défauts discrets |
+| Pinceau | L'endroit que vous peignez | Reporte la structure et la texture environnantes |
+| Tampon de clonage | Un point source que vous choisissez | Copie de vrais pixels sources à un décalage fixe |
+| IR | Le canal infrarouge du scanner | L'IR trouve l'emplacement, le RVB reconstruit les pixels |
 
-L'écran de développement propose l'automatique, le guidé, la brosse et le tampon. L'IR peut être activé à l'étape de numérisation quand le plugin déclare la fonction. Une fois le scan terminé, son résultat rejoint la même liste de calques GrainMend.
+L'écran de développement propose automatique, guidé, pinceau et tampon de clonage. L'IR peut être activé à l'étape de numérisation quand le module signale la capacité, et une fois la numérisation faite, son résultat rejoint la même liste de calques GrainMend.
 
 > [!CAUTION]
-> GrainMend RGB ne fonctionne pas comme un nettoyage IR matériel. GrainMend IR n'est pas non plus une implémentation de Digital ICE, iSRD ou SRDx, ni un mode compatible.
+> GrainMend RGB fonctionne autrement que le nettoyage IR matériel. GrainMend IR n'est ni une implémentation ni un mode de compatibilité de Digital ICE, iSRD ou SRDx.
 
-## Les points difficiles
+## Ce qui est difficile
 
-Les défauts du film et la structure de la photo occupent les mêmes pixels.
+Les défauts du film et la structure de la photographie occupent les mêmes pixels.
 
-- La poussière apparaît en petites taches irrégulières, claires ou sombres.
-- Un micro-trou peut ressembler à un point isolé et fort.
-- Les rayures sont longues et fines, mais les câbles, les cadres de fenêtre et les lettres aussi.
-- Les dégâts d'émulsion changent la couleur et la texture ensemble.
-- En haute résolution, le grain du film a la taille d'un petit défaut.
+- La poussière apparaît comme de petites taches irrégulières, claires ou sombres.
+- Un micro-trou peut ressembler à un point isolé et vif.
+- Les rayures sont longues et fines, comme les fils, les cadres de fenêtre et les inscriptions.
+- Les dégâts d'émulsion changent à la fois la couleur et la texture.
+- À haute résolution, le grain du film a la taille d'un petit défaut.
 
-Effacer les hautes fréquences en bloc emporte le grain et les contours avec la poussière. GrainMend sépare détection, classification, réparation et stockage.
+Effacer les hautes fréquences en bloc emporte le grain et les contours avec la poussière. GrainMend divise le travail en détection, classification, réparation et stockage.
 
-## Ordre du traitement
+## Ordre du travail
 
-```mermaid
-flowchart LR
-    A["Image d'entrée"] --> B["Zone et taille d'inspection"]
-    B --> C["Candidats défauts"]
-    C --> D["Nettoyage du masque"]
-    D --> E["Classification des défauts"]
-    E --> F{"Est-ce une structure de la photo ?"}
-    F -->|Oui| G["Non appliqué"]
-    F -->|Non| H["Chercher un patch source voisin"]
-    H --> I["Accorder luminosité, texture, direction"]
-    I --> J["Fondre la bordure"]
-    J --> K["Ajouter à l'historique d'édition"]
-```
+Le masque de détection et le résultat réparé sont conservés séparément, ce qui permet d'examiner le masque, de n'appliquer qu'une partie des défauts ou de reconstruire la réparation. Les étapes :
 
-Le masque de détection et le résultat réparé restent séparés. C'est ce qui permet d'inspecter le masque, de n'appliquer qu'une partie des défauts ou de refaire la réparation.
+1. Image d'entrée, zone d'inspection et taille.
+2. Candidats de défauts, puis nettoyage du masque.
+3. Classification des défauts.
+4. Contrôle de structure : si c'est une structure de la photo, rien n'est appliqué.
+5. Recherche d'une pièce source à proximité.
+6. Accord de la luminosité, de la texture et de la direction.
+7. Fondu de la limite.
+8. Ajout à l'historique des retouches.
 
 ## Outils
 
 ### Automatique
 
-Sur toute la photo, il ne trouve que les défauts dont il est sûr. Manquer un petit défaut vaut mieux qu'effacer à tort une grande structure. Il ne se glisse jamais dans le développement par défaut : vous devez le lancer pour que quoi que ce soit s'ajoute.
+Sur toute la photographie, il ne trouve que les défauts dont il est sûr. Il vaut mieux manquer un petit défaut que d'effacer à tort une grande structure. Il ne se glisse jamais dans le développement par défaut : il faut le lancer pour qu'il ajoute quoi que ce soit.
 
 ### Guidé
 
-Vous choisissez un rectangle, et seuls cet espace et ses abords sont analysés. Comme vous avez déjà désigné le défaut, il va chercher les petits points, les défauts pâles et les amas denses plus franchement que l'automatique.
+Vous choisissez un rectangle, et seuls cette zone et ses abords sont analysés. Comme vous avez déjà désigné le défaut, il poursuit plus vivement que l'automatique les petits points, les défauts discrets et les amas denses.
 
-Il lit plus large que le résultat qu'il produit, pour que les pixels voisins servant à la réparation ne soient pas coupés au bord de la zone. Le rayon de contexte maximal actuel est de 264 pixels.
+Il lit plus large que le résultat qu'il produit : les pixels environnants servant à la réparation ne sont pas coupés au bord de la zone. Le rayon de contexte maximal actuel est de 264 pixels.
 
-### Brosse
+### Pinceau
 
-Vous peignez vous-même l'endroit à réparer. Il ne recouvre pas ce que vous avez peint par une couleur. Il cherche près du masque un patch source qui convient et prolonge la structure et la texture. Quand aucun patch ne convient, il peut retomber de façon limitée sur la voie de détection.
+Vous peignez vous-même l'endroit à réparer. Il ne recouvre pas ce que vous avez peint d'une couleur : il trouve une pièce source correspondante près du masque et reporte la structure et la texture. Faute de pièce adéquate, il peut se rabattre de façon limitée sur le chemin de détection.
 
-### Tampon de duplication
+### Tampon de clonage
 
-`⌥` clic choisit le point source, puis vous dessinez sur la cible. Aucune détection automatique : il garde le décalage entre les deux points et copie les vrais pixels.
+Un clic avec `⌥` choisit le point source, puis vous dessinez sur la cible. Il n'utilise aucune détection automatique : il garde le décalage entre les deux points et copie les vrais pixels.
 
-L'historique d'édition retient le diamètre, la dureté, les coordonnées et le décalage. Cela s'applique encore aux mêmes coordonnées d'origine après une rotation, un miroir ou un recadrage. Les décalages s'alignent sur des pixels entiers, et rien hors de l'image n'est appliqué.
+L'historique des retouches conserve le diamètre, la dureté, les coordonnées et le décalage, et s'applique toujours aux mêmes coordonnées d'origine après une rotation, un retournement ou un recadrage. Les décalages sont arrondis au pixel entier, et rien en dehors de l'image n'est appliqué.
 
 ### IR
 
-Utilisé seulement quand le plugin fournit un vrai canal IR et que la taille et la zone concordent avec le RGB. L'IR est le matériau qui localise le défaut. Les pixels finaux sortent du même réparateur que pour le RGB.
+N'est utilisé que lorsque le module fournit un vrai canal IR dont la taille et la zone correspondent au RVB. L'IR est la matière qui localise le défaut. Les pixels finaux viennent du même réparateur que pour le RVB.
 
-## Trouver les défauts dans le RGB
+## Trouver les défauts en RVB
 
-### Différence avec le voisinage
+### Différence avec l'environnement
 
-La luminosité change d'une photo à l'autre, donc pas de seuil global unique. L'écart avec la luminosité voisine, la variance locale et la direction produisent les candidats poussière claire et défaut sombre.
+La luminosité varie d'une photographie à l'autre, il n'y a donc pas de seuil global unique. La différence avec la luminosité environnante, la variance locale et la direction produisent des candidats de poussière claire et de défauts sombres.
 
 ### Nettoyage du masque
 
-Le bruit isolé est retiré, les défauts interrompus sont reliés, puis les pixels qui se touchent dans l'une des 8 directions forment un même bloc. Une grande zone peut être découpée en tuiles, mais un bloc à cheval sur une bordure est refusionné en coordonnées d'image entière.
+Le bruit isolé est écarté, les défauts coupés sont reliés, et les pixels qui se touchent dans l'une des 8 directions forment une seule tache. Une grande zone peut être découpée en tuiles, mais une tache à cheval sur une limite est refusionnée dans les coordonnées de l'image entière.
 
 ### Différences de résolution
 
-Le même grain de poussière ne fait pas le même nombre de pixels à 1200 dpi et à 7200 dpi. Quand l'information de résolution est fiable, les limites suivent la taille réelle. Sans elle, le modèle de scanner n'est pas deviné et une règle prudente en pixels est utilisée.
+Un même grain de poussière occupe un nombre de pixels différent à 1200 dpi et à 7200 dpi. Quand l'information de résolution est fiable, les limites suivent la taille réelle. Sans elle, le modèle de scanner n'est pas deviné et une règle prudente en pixels s'applique.
 
 ### Classification
 
-Chaque bloc est mesuré sur :
+Chaque tache est mesurée selon :
 
-- Aire et boîte englobante
-- Rapport entre grand axe et petit axe
-- Direction horizontale, verticale, diagonale
-- Linéarité, densité, contraste avec le voisinage
-- S'il se prolonge dans un contour proche
-- Sa relation avec les autres blocs
+- La surface et le cadre englobant
+- Le rapport du grand axe au petit axe
+- La direction horizontale, verticale ou diagonale
+- La linéarité, la densité et le contraste environnant
+- Le fait qu'elle se prolonge dans un contour proche
+- Sa relation avec les autres taches
 
-Le résultat se répartit en poussière, micro-trou, rayures par direction, dégât d'émulsion et micro-particules, chacun avec une confiance.
+Le résultat est réparti en poussière, micro-trou, rayures par direction, dégâts d'émulsion et micro-points, chacun avec une confiance.
 
-### Ne pas effacer les lignes qui appartiennent à la photo
+### Ne pas effacer les lignes qui font partie de la photo
 
-Câbles, rambardes, angles de bâtiment, cadres de fenêtre et lettres ne doivent pas être lus comme des rayures. Lignes parallèles, grilles, continuité des contours et lignes rattachées à la structure de la scène ont leur propre contrôle. L'automatique bloque plus fort les faux positifs ; le guidé tient compte aussi du fait que vous avez choisi l'endroit.
+Les fils, rambardes, angles de bâtiments, cadres de fenêtre et inscriptions ne doivent pas être pris pour des rayures. Les lignes parallèles, les grilles, la continuité des contours et les lignes attachées à la structure de la scène font l'objet d'un contrôle propre. L'automatique rejette les faux positifs plus strictement ; le guidé tient aussi compte de votre choix d'emplacement.
 
 ## Réparation
 
-1. Trouver près du défaut un patch source qui ne chevauche pas le masque et dont la structure concorde.
-2. Accorder la différence basse fréquence de luminosité et de couleur entre le patch et la cible.
-3. Garder la texture haute fréquence du patch pour transporter le grain du film.
-4. Pour une longue rayure, regarder d'abord la direction qui se prolonge des deux côtés.
-5. Au bord du masque, fondre doucement l'original et le patch réparé.
+1. Trouver près du défaut une pièce source qui ne recouvre pas le masque et dont la structure correspond.
+2. Accorder la luminosité et la différence de couleur de basse fréquence entre la pièce et la cible.
+3. Garder la texture haute fréquence de la pièce pour que le grain du film se prolonge.
+4. Pour une longue rayure, regarder d'abord la direction qui se prolonge depuis les deux extrémités.
+5. Au bord du masque, fondre en douceur l'original et la pièce réparée.
 
-L'intensité est le rapport de mélange entre le patch terminé et l'original.
+L'intensité est le rapport de mélange entre la pièce terminée et l'original.
 
-Parfois une réparation automatique ne peut pas savoir ce qu'il y avait dessous. S'il n'y a pas de texture voisine utilisable, ou si le défaut couvrait une structure importante entière, il faut la brosse, le tampon ou un travail de précision à part.
+Il arrive qu'une réparation automatique ne puisse pas savoir ce qu'il y avait dessous. S'il n'y a pas de texture environnante utilisable, ou si le défaut couvrait toute une structure importante, il faut le pinceau, le tampon de clonage ou un travail précis à part.
 
-## Traitement IR
+## Traitement de l'IR
 
 ### Conditions d'entrée
 
-- Le plugin déclare explicitement la fonction IR.
-- RGB et IR appartiennent à la même session de scan.
+- Le module signale explicitement la capacité IR.
+- Le RVB et l'IR appartiennent à la même session de numérisation.
 - Les deux images ont la même taille en pixels et la même zone attendue.
-- Les fichiers sont lisibles et passent le contrôle d'identifiant de l'original.
+- Les fichiers sont lisibles et passent le contrôle d'identifiant d'origine.
 
-Même si un nom de modèle est connu pour avoir l'IR, il n'est utilisé ni à l'écran ni dans une requête tant que le plugin ne le déclare pas.
+Même si l'on sait qu'un modèle a de l'IR, il n'est pas utilisé à l'écran ni dans une requête tant que le module ne le signale pas.
 
 ### Alignement
 
-L'optique et la lecture du capteur peuvent décaler RGB et IR de quelques pixels. Une recherche large passe d'abord, puis une recherche étroite, pour fixer le décalage. La confiance du pic, et le fait qu'il ait atterri en bord de plage de recherche, sont tous deux consignés.
+L'optique et la lecture du capteur peuvent laisser le RVB et l'IR décalés de quelques pixels. Une recherche large, puis une recherche étroite, fixent le décalage. La confiance du pic et le fait qu'il tombe au bord de la plage de recherche sont tous deux consignés.
 
-Une confiance faible, ou un meilleur point collé au bout de la recherche, ne compte pas comme une réussite.
+Une confiance faible, ou un meilleur point coincé au bout de la recherche, ne compte pas comme un succès.
 
-### Soustraire le motif de la scène
+### Soustraction du motif de scène
 
-Les colorants et la densité du film peuvent transparaître dans l'IR. La luminosité logarithmique du canal rouge est répartie en 64 intervalles, et dans chacun la moyenne est prise après avoir écarté les 10 % supérieurs et inférieurs des valeurs IR. Les intervalles vides sont interpolés depuis leurs voisins et lissés par un court noyau symétrique. Soustraire cette courbe non paramétrique réduit le motif de la scène, et la poussière sombre éparse reste hors des statistiques d'intervalle.
+Les colorants et la densité du film peuvent transparaître dans l'IR. La luminosité logarithmique du canal rouge est découpée en 64 intervalles, et dans chacun on prend la moyenne après avoir écarté les 10 % les plus hauts et les plus bas des valeurs IR. Les intervalles vides sont interpolés à partir de leurs voisins et lissés par un court noyau symétrique. Soustraire cette courbe non paramétrique réduit le motif de scène, et la poussière sombre et clairsemée reste hors des statistiques des intervalles.
 
-Ce qui reste est converti en contraste relatif à la moyenne locale. Pour qu'un grand défaut ne relève pas le plancher de bruit autour de lui, l'entrée de bruit est écrêtée au contraste de détection minimal avant de calculer le seuil adaptatif. Les régions sombres connexes au passe-vues et au bord du film sont retirées du masque.
+Le reste est converti en contraste relatif à la moyenne locale. Pour qu'un grand défaut ne relève pas le plancher de bruit environnant, l'entrée de bruit est écrêtée au contraste de détection minimal avant le calcul du seuil adaptatif. Les zones sombres connexes au niveau du porte-film et du bord du film sont retirées du masque.
 
 ### Conditions de sécurité
 
 - Un masque anormalement large n'est pas appliqué.
 - Un alignement qui n'a pas pu être confirmé n'est pas appliqué.
-- Ce n'est pas appliqué automatiquement au noir et blanc argentique.
-- Les positifs couleur et les émulsions particulières ne sont pas supposés sûrs sans mesure.
+- Il n'est pas appliqué automatiquement au noir et blanc argentique.
+- Les positifs couleur et les émulsions spéciales ne sont pas supposés sûrs sans mesure.
 
-Les outils IR commerciaux posent aussi leurs propres limites sur le noir et blanc ordinaire et sur le Kodachrome.
+Les outils IR du commerce imposent aussi leurs propres limites au noir et blanc ordinaire et à Kodachrome :
 
 - [SilverFast: iSRD dust and scratch removal](https://www.silverfast.com/about-silverfast-why-scanning-basics-of-scanning/why-silverfast/silverfast-feature-highlights/isrd-dust-scratches-removal-eliminate-defects-with-infrared-channel/)
 
-GrainMend IR n'est ni une copie de ces outils commerciaux ni un mode compatible.
+GrainMend IR n'est ni une copie ni un mode de compatibilité de ces outils du commerce. Les limites de l'IR par film et les conditions d'échec de l'alignement sont dans [Films que GrainMend IR doit éviter](../reference/INFRARED_LIMITS.md).
 
-## Historique d'édition et stockage
+## Historique des retouches et stockage
 
-Automatique, guidé, brosse, tampon et IR partagent une seule liste d'édition ordonnée.
+Automatique, guidé, pinceau, tampon de clonage et IR partagent une même liste de retouches ordonnée.
 
 Ce que porte chaque entrée :
 
 - Identifiant et type
 - Ordre d'application
-- S'il est actif, et son intensité
-- Zone, masque, décalage de la source du tampon
+- Activée ou non, et son intensité
+- Zone, masque, décalage de la source de clonage
 - Classification du défaut et valeurs de diagnostic
-- Image d'origine et version d'édition
-- Le patch réparé, ou les valeurs nécessaires pour le reconstruire
+- Vue d'origine et version de la retouche
+- La pièce réparée, ou les valeurs nécessaires pour la reconstruire
 
-Une réparation antérieure change l'entrée de la suivante, donc l'ordre de la liste fait aussi partie de l'historique d'édition.
+Une réparation antérieure change l'entrée de la suivante : l'ordre de la liste fait donc aussi partie de l'historique.
 
-L'original n'est pas modifié. L'historique GrainMend est stocké dans un sidecar géré par l'application. SHA-256 de l'original, version d'édition et empreinte de l'historique lient l'entrée ensemble. Si le sidecar manque ou est cassé, le cache n'est pas traité comme un original.
+L'original n'est pas modifié. L'historique GrainMend est stocké dans un fichier annexe géré par l'application. Le SHA-256 de l'original, la version de la retouche et l'empreinte de l'historique lient l'entrée. Si le fichier annexe est absent ou abîmé, le cache n'est pas traité comme un original.
 
-Le cache GrainMend est un fichier dérivé, là pour l'affichage rapide et le rendu à nouveau. S'il manque ou échoue à son contrôle, il est reconstruit depuis l'original et l'historique d'édition. Si le résultat dont un export a besoin ne peut pas être produit, l'export échoue au lieu de substituer l'original.
+Le cache GrainMend est un fichier dérivé, destiné à l'affichage rapide et au nouveau rendu. S'il est absent ou échoue à son contrôle, il est reconstruit à partir de l'original et de l'historique. Si le résultat dont un export a besoin ne peut pas être produit, l'export échoue au lieu de lui substituer l'original.
 
-## Performance
+## Performances
 
-- Une petite retouche ne recalcule que le défaut et son contexte proche.
-- Une grande zone est découpée en tuiles qui se recouvrent, avec une marge de bordure.
-- Les résultats ne sont collectés qu'au centre non recouvert des tuiles.
-- Au plus 4 tuiles sont traitées à la fois.
+- Une petite retouche ne recalcule que le défaut et son contexte environnant.
+- Une grande zone est découpée en tuiles qui se recouvrent, avec une marge pour la limite.
+- Les résultats ne sont recueillis que dans les centres non recouvrants des tuiles.
+- Quatre tuiles au plus sont traitées à la fois.
 - `CleanedRawCanvas` ne copie que le rectangle qui a changé.
-- Les copies pour l'annulation partagent le stockage jusqu'à ce que quelque chose change vraiment.
-- Sous pression mémoire, les images reconstructibles et le cache de patchs sont libérés.
+- Les copies pour l'annulation partagent le stockage tant que rien n'a vraiment changé.
+- Sous pression mémoire, les images reconstructibles et le cache des pièces sont abandonnés.
 
-Les temps réels dépendent de la résolution, du nombre de défauts, de la taille de la zone et du Mac.
+Les durées réelles dépendent de la résolution, du nombre de défauts, de la taille de la zone et du Mac.
 
-Mesuré le 25/07/2026 sur une build Release, Mac14,3, arm64, 24 Gio de mémoire, macOS 26.5.
+Mesuré le 2026-07-25 sur un build Release, Mac14,3, arm64, 24 Gio de mémoire, macOS 26.5 :
 
 | Chemin | Entrée | Résultat |
 |---|---|---:|
-| Détection guidée | 1600×1600, 25 poussières | 0,35 s, 25 détectées |
+| Détection guidée | 1600×1600, 25 grains de poussière | 0,35 s, 25 détectés |
 | Détection ROI partielle | 1600×1600 | 0,38 s |
-| Stress guidé dense | 1280×960, 8 images × 3 passes | médiane 0,423 s, p95 0,488 s, max 0,526 s |
-| Détection IR | 6000×4000, 24 Mpx | 1,042 s, pic de mémoire +249,2 Mio |
+| Charge guidée dense | 1280×960, 8 images × 3 passages | médiane 0,423 s, p95 0,488 s, max 0,526 s |
+| Détection IR | 6000×4000, 24 MP | 1,042 s, pic de croissance mémoire 249,2 Mio |
 
-Sur 24 passes de stress dense, la couverture minimale du masque aux emplacements de défaut était de 99,80 %, et l'erreur résiduelle moyenne maximale de 2,70/255. Ce sont des mesures de régression sur entrées synthétiques. Elles ne promettent pas des temps de traitement sur un autre Mac ni sur du film réel.
+Sur 24 passages de charge dense, la couverture de masque la plus basse aux emplacements des défauts était de 99,80 % et l'erreur résiduelle moyenne la plus haute de 2,70/255. Ce sont des mesures de régression sur une entrée synthétique. Elles ne promettent aucune durée sur un autre Mac ni sur un vrai film.
 
 ## Banc d'essai
 
-`defect-bench` peut produire ces fichiers et ces valeurs.
+`defect-bench` peut produire ces fichiers et valeurs :
 
-- before, after, diff, mask
+- Avant, après, différence, masque
 - Recadrages à 100 %
 - Nombre de détections et confiance
 - Temps de traitement
@@ -211,51 +206,47 @@ swift run -c release negaflow defect-bench <input-dir> \
   --out <report-dir>
 ```
 
-La régression RGB utilise les 44 paires endommagé/restauré par un expert de FILM-R v2.
+La régression RVB utilise les 44 paires abîmé/restauré par un expert de FILM-R v2 :
 
 - Jeu de données : Authentically damaged & manually restored film scans (FILM-R v2)
 - Auteur : Daniela Ivanova
-- DOI : <https://doi.org/10.6084/m9.figshare.21803304.v2>
-- Licence : CC BY 4.0 (<https://creativecommons.org/licenses/by/4.0/>)
-- Paires : 44
-- Taille totale : 437 570 872 octets
+- DOI: <https://doi.org/10.6084/m9.figshare.21803304.v2>
+- Licence: CC BY 4.0 (<https://creativecommons.org/licenses/by/4.0/>)
+- Paires: 44
+- Taille totale: 437,570,872 bytes
 
-La voie automatique livrée le 25/07/2026 applique une sensibilité de 0,7 et une ligne de sécurité contre la surdétection. Face à la base 3.0 précédente, sur les 44 images FILM-R celles qui s'améliorent passent de 11 à 34, et celles qui se dégradent de 33 à 6. La variation moyenne de PSNR passe de -1,688 dB à +0,466 dB, et le pire cas de -18,952 dB à -1,338 dB. Les pixels dégradés pondérés tombent de 0,792 % à 0,017 %.
+Le chemin automatique applique une sensibilité de 0,7 et une ligne de sécurité contre la sur-détection. Sur les 44 paires de FILM-R, 34 images se sont améliorées et 6 se sont dégradées. La variation moyenne de PSNR est de +0,466 dB, le pire cas de −1,338 dB, et les pixels dégradés pondérés représentent 0,017 %.
 
-Quand l'automatique rencontre une forte densité de candidats, il arrête d'appliquer et vous oriente vers le guidé. Cette ligne de sécurité ne s'applique ni au guidé, où vous fixez la plage, ni à la brosse, ni au tampon, ni à l'IR. Même avec de meilleurs résultats, 6 images gardent un PSNR inférieur à la restauration experte. Rien de tout cela ne prouve que chaque photo s'améliore, que RGB et IR se valent, ni quoi que ce soit sur la qualité IR d'un scanner réel.
-
-Le tableau complet et les commandes sont dans Comparaison GrainMend sur scans réels.
-
-Les limites IR par film et les conditions d'échec de l'alignement sont réunies dans [Films que GrainMend IR doit éviter](../reference/INFRARED_LIMITS.md).
+Quand l'automatique rencontre une forte densité de candidats, il cesse d'appliquer et vous oriente vers le guidé. Cette ligne de sécurité ne s'applique pas au guidé, où vous fixez la zone, ni au pinceau, au tampon de clonage ou à l'IR. 6 images ont encore un PSNR inférieur à la restauration d'expert. Rien de tout cela ne prouve que toute photographie s'améliore, que RVB et IR sont équivalents, ni quoi que ce soit sur la qualité de l'IR sur un vrai scanner.
 
 ## Couverture des tests
 
-- Connexité 8 directions et masques
+- Connexité à 8 directions et masques
 - Opérations morphologiques
-- Détection poussière, rayures et micro-particules
+- Détection de poussières, de rayures et de micro-points
 - Rejet des lignes et des grilles comme faux positifs
-- Bordures de tuiles sur une grande zone
+- Limites de tuiles dans une grande zone
 - Réparation de rayures par direction
-- Accord de la texture et de la luminosité voisines
-- Masques de brosse
-- Décalage, dureté et composition de patch du tampon
-- Alignement IR, points d'ancrage, blocs, limites mémoire
-- Application à l'étape original et rendu de l'historique d'édition de l'application
-- Ajouts successifs et annulation
-- Propriété de l'image pendant les déplacements à l'écran
+- Accord de la texture et de la luminosité environnantes
+- Masques du pinceau
+- Décalage, dureté et composition de pièces du tampon de clonage
+- Alignement IR, ancrages, taches et limites mémoire
+- Application à l'étape de l'original et rendu de l'historique des retouches de l'application
+- Ajouts répétés et annulation
+- Propriété des vues pendant la navigation dans l'écran
 
-Certains tests de performance ne s'exécutent qu'avec une variable d'environnement activée. La présence d'un fichier de test n'est pas une affirmation qu'il a tourné dans tous les environnements.
+Certains tests de performance ne tournent que si une variable d'environnement est définie. La présence d'un fichier de test n'affirme pas qu'il a tourné dans tous les environnements.
 
 ## Noms et marques
 
 `GrainMend` est le nom de fonction propre à negaflow.
 
-- `Digital ICE` peut être une marque d'Eastman Kodak Company ou d'un ayant droit lié.
+- `Digital ICE` peut être une marque d'Eastman Kodak Company ou d'un titulaire de droits associé.
 - `iSRD`, `SRDx` et `SilverFast` sont des marques de LaserSoft Imaging.
-- Ces noms ne servent qu'à la comparaison technique et à l'identification des produits.
-- GrainMend ne revendique ni affiliation, ni compatibilité, ni équivalence avec une technologie tierce.
+- Ces noms ne servent qu'à la comparaison technique et à l'identification de produits.
+- GrainMend ne revendique aucune affiliation, compatibilité ni équivalence avec une technologie tierce.
 
-## Où est le code
+## Où se trouve le code
 
 - `Sources/Chromabase/DefectRemoval/`
 - `Sources/negaflowApp/Features/Defects/`

@@ -118,6 +118,8 @@ private extension ImageTransform {
         if let cropAspect, cropAspect > 0 {
             self.cropAspect = 1 / cropAspect
         }
+        // 원근 보정은 화면 방향 기준이다. 같은 보정이 돌아간 그림에 그대로 남도록 축을 옮긴다.
+        perspective = perspective.rotatedQuarterTurn(clockwise: clockwise)
         guard let cropRect else { return }
         self.cropRect = clockwise
             ? SIMD4(cropRect.y, 1 - cropRect.x - cropRect.z, cropRect.w, cropRect.z)
@@ -144,6 +146,9 @@ private extension ImageTransform {
         }
 
         straightenAngle = -straightenAngle
+        perspective = displayHorizontal
+            ? perspective.mirroredHorizontally()
+            : perspective.mirroredVertically()
         guard var cropRect else { return }
         // cropRect 는 회전 뒤(=화면) 좌표계라 누른 축 그대로 미러한다.
         if displayHorizontal {

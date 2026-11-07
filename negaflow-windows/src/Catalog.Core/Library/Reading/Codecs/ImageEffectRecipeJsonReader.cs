@@ -87,8 +87,80 @@ internal static class ImageEffectRecipeJsonReader
             flipVertical,
             crop,
             straightenAngle,
-            cropAspect);
+            cropAspect)
+        {
+            Perspective = ReadPerspective(element),
+        };
         return imageTransform.IsValid;
+    }
+
+    /// <summary>
+    /// 변환(원근) 보정입니다. macOS 디코더처럼 너그럽게 읽습니다 — 모르는 모드는 끔, 범위 밖은 자르고,
+    /// 망가진 안내선은 버립니다. 원근 하나가 망가졌다고 사진의 다른 편집을 잃지 않게 합니다.
+    /// </summary>
+    internal static PerspectiveRecipe ReadPerspective(JsonElement transform)
+    {
+        if (!transform.TryGetProperty(ImageTransformPerspectiveName, out JsonElement element) ||
+            element.ValueKind != JsonValueKind.Object)
+        {
+            return PerspectiveRecipe.Identity;
+        }
+        double Number(string name, double fallback) =>
+            element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.Number &&
+            value.TryGetDouble(out double number) && double.IsFinite(number) ? number : fallback;
+        PerspectiveMode mode = PerspectiveMode.Off;
+        if (element.TryGetProperty("mode", out JsonElement modeElement) &&
+            modeElement.ValueKind == JsonValueKind.String &&
+            Enum.TryParse(modeElement.GetString(), ignoreCase: true, out PerspectiveMode parsed) &&
+            Enum.IsDefined(parsed) && !int.TryParse(modeElement.GetString(), out _))
+        {
+            mode = parsed;
+        }
+        List<PerspectiveGuideRecipe> guides = [];
+        if (element.TryGetProperty("guides", out JsonElement list) && list.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement guide in list.EnumerateArray())
+            {
+                if (TryPoint(guide, "start", out double sx, out double sy) &&
+                    TryPoint(guide, "end", out double ex, out double ey))
+                {
+                    guides.Add(new PerspectiveGuideRecipe(sx, sy, ex, ey));
+                }
+            }
+        }
+        return new PerspectiveRecipe
+        {
+            Mode = mode,
+            SolvedVertical = Number("solvedVertical", 0),
+            SolvedHorizontal = Number("solvedHorizontal", 0),
+            SolvedRotate = Number("solvedRotate", 0),
+            Vertical = Number("vertical", 0),
+            Horizontal = Number("horizontal", 0),
+            Rotate = Number("rotate", 0),
+            Aspect = Number("aspect", 0),
+            Scale = Number("scale", 100),
+            OffsetX = Number("offsetX", 0),
+            OffsetY = Number("offsetY", 0),
+            ConstrainCrop = element.TryGetProperty("constrainCrop", out JsonElement constrain) &&
+                constrain.ValueKind == JsonValueKind.True,
+            Guides = guides,
+        }.Clamped();
+    }
+
+    private static bool TryPoint(JsonElement owner, string name, out double x, out double y)
+    {
+        x = 0;
+        y = 0;
+        if (owner.ValueKind != JsonValueKind.Object ||
+            !owner.TryGetProperty(name, out JsonElement point) ||
+            point.ValueKind != JsonValueKind.Array || point.GetArrayLength() != 2 ||
+            point[0].ValueKind != JsonValueKind.Number || point[1].ValueKind != JsonValueKind.Number)
+        {
+            return false;
+        }
+        x = point[0].GetDouble();
+        y = point[1].GetDouble();
+        return double.IsFinite(x) && double.IsFinite(y);
     }
 
     internal static bool TryReadOptionalRotation(JsonElement owner, out ImageRotation rotation)

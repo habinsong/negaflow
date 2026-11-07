@@ -1345,7 +1345,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>Démarrage rapide</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>Raccourcis clavier</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>Réinitialiser l’angle</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
-  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Réinitialise tous les réglages, y compris le recadrage et le redressement. La rotation et les retournements sont conservés.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
+  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Réinitialise tous les réglages, y compris le recadrage, le redressement et la transformation. La rotation et les retournements sont conservés.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
   <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>Profil d'affichage du système</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
   <data name="developAutoToneHelp.Text" xml:space="preserve"><value>Tonalité automatique Cmd-U — ajuste l'exposition, le contraste, les hautes lumières, les ombres, les blancs, les noirs et la vibrance d'après l'histogramme.</value><comment>AppLocalizedPhrase.autoToneHelp</comment></data>
   <data name="developAutoWhiteBalanceHelp.Text" xml:space="preserve"><value>Balance des blancs automatique Maj-Cmd-U — neutralise la température et la teinte selon l'hypothèse du monde gris.</value><comment>AppLocalizedPhrase.autoWhiteBalanceHelp</comment></data>
@@ -1655,4 +1655,30 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="printWatermarkTopLeading.Text" xml:space="preserve"><value>En haut à gauche</value></data>
   <data name="printWatermarkTopCenter.Text" xml:space="preserve"><value>En haut au centre</value></data>
   <data name="printWatermarkTopTrailing.Text" xml:space="preserve"><value>En haut à droite</value></data>
+  <data name="straightenWithLine.Text" xml:space="preserve"><value>Redresser selon une ligne (glisser)</value></data>
+  <data name="straightenGrid.Text" xml:space="preserve"><value>Afficher la grille pendant le redressement</value></data>
+  <data name="straightenHintFormat.Text" xml:space="preserve"><value>%@ + glisser : redresser selon une ligne · %@ : grille</value></data>
+  <data name="updateAvailableFormat.Text" xml:space="preserve"><value>Mettre à jour vers la version %@</value></data>
+  <data name="updateUpToDate.Text" xml:space="preserve"><value>Vous avez la dernière version.</value></data>
+  <data name="updateDownloadingFormat.Text" xml:space="preserve"><value>Téléchargement de %@…</value></data>
+  <data name="updateDownloadedFormat.Text" xml:space="preserve"><value>Mise à jour téléchargée : %@</value></data>
+  <data name="updateDownloadFailed.Text" xml:space="preserve"><value>Impossible de télécharger la mise à jour. Récupérez-la sur la page de publication.</value></data>
+  <data name="developTransform.Text" xml:space="preserve"><value>Transformation</value></data>
+  <data name="transformModeOff.Text" xml:space="preserve"><value>Désactivé</value></data>
+  <data name="transformModeAuto.Text" xml:space="preserve"><value>Auto</value></data>
+  <data name="transformModeGuided.Text" xml:space="preserve"><value>Guidé</value></data>
+  <data name="transformModeLevel.Text" xml:space="preserve"><value>Niveau</value></data>
+  <data name="transformModeVertical.Text" xml:space="preserve"><value>Vertical</value></data>
+  <data name="transformModeFull.Text" xml:space="preserve"><value>Complet</value></data>
+  <data name="transformVertical.Text" xml:space="preserve"><value>Vertical</value></data>
+  <data name="transformHorizontal.Text" xml:space="preserve"><value>Horizontal</value></data>
+  <data name="transformRotate.Text" xml:space="preserve"><value>Rotation</value></data>
+  <data name="transformAspect.Text" xml:space="preserve"><value>Aspect</value></data>
+  <data name="transformScale.Text" xml:space="preserve"><value>Échelle</value></data>
+  <data name="transformOffsetX.Text" xml:space="preserve"><value>Décalage X</value></data>
+  <data name="transformOffsetY.Text" xml:space="preserve"><value>Décalage Y</value></data>
+  <data name="transformConstrainCrop.Text" xml:space="preserve"><value>Limiter le recadrage</value></data>
+  <data name="transformGuidedHint.Text" xml:space="preserve"><value>Tracez 2 à 4 repères le long des lignes qui doivent être droites.</value></data>
+  <data name="transformGuidedClear.Text" xml:space="preserve"><value>Effacer les repères</value></data>
+  <data name="transformAutoNoLines.Text" xml:space="preserve"><value>Aucune ligne droite trouvée : la perspective n’a pas été modifiée.</value></data>
 </root>

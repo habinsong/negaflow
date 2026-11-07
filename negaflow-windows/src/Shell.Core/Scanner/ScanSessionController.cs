@@ -223,6 +223,13 @@ public sealed class ScanSessionController
     public string? AddRegion(FlatbedScanRegion? unitRect = null) =>
         regionEditor.Add(Capabilities, Options, unitRect);
 
+    /// <summary>
+    /// 프리뷰에 걸린 변형과 원본 크기입니다. 오버레이가 그릴 때 넣어 줍니다 — 새 프레임은 이 각도를
+    /// 따르고, 기운 칸의 크기 계산에 원본 비율이 필요합니다.
+    /// </summary>
+    public void SetPreviewGeometry(ImageTransformRecipe? transform, uint width, uint height) =>
+        regionEditor.PreviewGeometry = (transform, width, height);
+
     /// <summary>프레임 하나를 새 자리로 옮깁니다. 오버레이의 끌기가 이것으로 들어옵니다.</summary>
     public bool UpdateRegion(string regionId, FlatbedScanRegion moved) =>
         regionEditor.Update(regionId, moved);

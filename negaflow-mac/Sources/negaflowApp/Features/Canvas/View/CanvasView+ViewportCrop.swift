@@ -47,6 +47,7 @@ extension CanvasView {
                       !brushMode,
                       !regionDefectMode,
                       !basePickerMode,
+                      !showsPerspectiveGuides,
                       !localAdjustmentSession.isActive(for: frame) else { return }
                 viewport.updatePan(translation: value.translation, imageSize: imageSize, canvasSize: canvasSize)
             }

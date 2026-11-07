@@ -238,7 +238,7 @@ final class ChromabaseTests: XCTestCase {
         XCTAssertEqual(richNeutral.tint, 0, accuracy: 1e-12)
     }
 
-    /// highlightRollOff(>0=명부 보호)는 params.highlight 음수(Lightroom recovery)로 매핑돼야
+    /// highlightRollOff(>0=명부 보호)는 params.highlight 음수(명부 복구)로 매핑돼야
     /// 이름과 동작이 일치한다(과거 부호 미반전 → 양수 rollOff 가 명부를 오히려 밝히던 스멜 회귀 방지).
     func testHighlightRollOffProtectsHighlights() {
         let softPrint = PresetRegistry.load(named: "soft-print")!

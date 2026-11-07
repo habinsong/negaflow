@@ -1,6 +1,27 @@
 import CoreGraphics
 
 enum CropOverlayGeometry {
+    /// 화면에 그린 기준선을 수평(또는 수직)으로 만드는 회전량(도, 양수 = 시계방향). 선이 45° 보다
+    /// 눕혀져 있으면 수평선, 서 있으면 수직선으로 본다. 너무 짧은 선(손떨림)은 nil.
+    ///
+    /// 화면 좌표는 y 가 아래로 자라므로 atan2(dy, dx) 가 양수인 선은 시계방향으로 기운 선이다.
+    /// 수평 보정 각도(`ImageTransform.straightenAngle`)도 양수가 시계방향이라, 기운 만큼 반대로
+    /// 돌리면 된다.
+    static func straightenCorrection(
+        from start: CGPoint,
+        to end: CGPoint,
+        minimumLength: CGFloat = 8
+    ) -> Double? {
+        let dx = Double(end.x - start.x)
+        let dy = Double(end.y - start.y)
+        guard hypot(dx, dy) >= Double(minimumLength) else { return nil }
+        var angle = atan2(dy, dx) * 180 / .pi
+        if angle > 90 { angle -= 180 }
+        if angle <= -90 { angle += 180 }
+        if abs(angle) <= 45 { return -angle }
+        return angle > 0 ? 90 - angle : -90 - angle
+    }
+
     static func selectionRect(
         from start: CGPoint,
         to end: CGPoint,

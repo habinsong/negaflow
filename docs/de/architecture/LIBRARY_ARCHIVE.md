@@ -1,50 +1,38 @@
-# Bibliotheksarchiv
+# Mediatheksarchiv
 
 [Dokumentationsstart](../README.md)
 
-Eine Katalogsicherung soll die App schnell wieder zum Laufen bringen und enthält deshalb keine Originalfotos. Das Archiv `.negaflowarchive` fasst folgendes Material in einem Paket zusammen.
+Ein Katalog-Backup bringt die App wieder zum Laufen und enthält die Originalfotos nicht. Das Archiv `.negaflowarchive` fasst sie in einem Paket zusammen.
 
-| Enthalten | Weggelassen |
+| Enthalten | Nicht enthalten |
 |---|---|
-| Übertragbares Katalog-JSON | Die laufende SQLite-Datei |
+| Portables Katalog-JSON | Die laufende SQLite-Datei |
 | Referenzierte Originale und verbliebene IR-Originale | Miniaturen und Vorschauen |
-| Der noch benötigte GrainMend-Bearbeitungsverlauf | Neu erzeugbare GrainMend-Caches |
-| Die Verbindung von virtuellen Kopien und geteilten Originalen | Exportierte Dateien |
-
-Die laufende SQLite-Datei kommt nicht hinein. Alles, was sich neu erzeugen lässt, bleibt ebenfalls draußen: Miniaturen, Vorschauen, GrainMend-Caches, exportierte Dateien.
+| Der noch benötigte GrainMend-Verlauf | Wiederherstellbare GrainMend-Caches |
+| Die Verbindung zwischen virtuellen Kopien und gemeinsamen Originalen | Exportierte Dateien |
 
 > [!WARNING]
-> Scheitert der Archivlauf, wird das vorhandene Archiv nicht überschrieben. Originale, fremde XMP-Dateien und der laufende Katalog bleiben ebenfalls unangetastet.
+> Scheitert der Aufbau des Archivs, wird ein vorhandenes Archiv nicht überschrieben. Originale, fremde XMP-Dateien und der laufende Katalog bleiben unberührt.
 
 ## Paketaufbau und Prüfungen
 
-Das Paket folgt dem Ordneraufbau von [RFC 8493 BagIt](https://www.rfc-editor.org/rfc/rfc8493.html). SHA-256-Listen werden für Inhalts- und Verwaltungsdateien getrennt geschrieben. `negaflow-archive.json` verbindet Bild-IDs mit den IDs der gespeicherten Dateien. Nutzen mehrere virtuelle Kopien dasselbe Original, werden dessen Bytes einmal gespeichert.
+Das Paket folgt der Ordnerstruktur von [RFC 8493 BagIt](https://www.rfc-editor.org/rfc/rfc8493.html). SHA-256-Listen gibt es getrennt für Inhaltsdateien und Verwaltungsdateien. `negaflow-archive.json` verbindet Bild-IDs mit den gespeicherten Datei-IDs. Virtuelle Kopien desselben Originals teilen sich eine gespeicherte Kopie.
 
-Der temporäre Ordner wandert erst an seinen endgültigen Platz, wenn alles Folgende passt.
+Der temporäre Ordner wird erst an den endgültigen Pfad verschoben, wenn alle diese Prüfungen bestehen:
 
 1. Die aktuelle App kann den Katalog sicher lesen.
 2. Originale und IR-Eingaben sind reguläre Dateien, deren Größe und Änderungszeit sich beim Kopieren nicht ändern.
-3. Alle benötigten GrainMend-Einträge sind lesbar.
-4. SHA-256, Bytezahl, Dateiliste und `Payload-Oxum` stimmen.
-5. Die Verbindungen von Bildern zu Originalen, IR-Dateien und GrainMend-Einträgen stimmen mit dem Katalog überein.
+3. Jeder benötigte GrainMend-Eintrag ist lesbar.
+4. SHA-256, Bytezahlen, Dateiliste und `Payload-Oxum` stimmen überein.
+5. Die Verknüpfungen von Bildern zu Originalen, IR-Dateien und GrainMend-Einträgen passen zum Katalog.
 
-```mermaid
-flowchart LR
-    A["Temporäres BagIt-Paket bauen"] --> B["Dateien und Verbindungen prüfen"]
-    B --> C["SHA-256, Größe, Liste prüfen"]
-    C --> D{"Alles bestanden?"}
-    D -- Ja --> E["Am endgültigen Pfad veröffentlichen"]
-    D -- Nein --> F["Nur den temporären Ordner löschen"]
-    F --> G["Vorhandenes Archiv und Originale behalten"]
-```
-
-Bei einem Fehlschlag bleibt das vorhandene Archiv liegen. Gelöscht wird nur der unfertige temporäre Ordner. Originale, fremde XMP-Dateien und der laufende Katalog bleiben unberührt.
+Bei einem Fehler wird nur der halb fertige temporäre Ordner gelöscht. Das vorhandene Archiv bleibt bestehen.
 
 ## Grenzen
 
-Originalformate bleiben, wie sie sind. Nichts wird der Langzeitkompatibilität zuliebe umgewandelt. PREMIS-Erhaltungsereignisse und -Akteure sowie die Migration in empfohlene Formate liegen außerhalb von v1.
+Originalformate bleiben unverändert, es gibt keine Umwandlung für Langzeitkompatibilität. PREMIS-Erhaltungsereignisse, Agenteneinträge und die Migration in empfohlene Formate liegen außerhalb von v1.
 
-Ein Archiv ist noch keine Langzeitsicherung. Legen Sie Kopien auf andere Medien und an einen anderen Ort und prüfen Sie die Hashes regelmäßig erneut.
+Ein Archiv ist kein Erhaltungskonzept. Bewahren Sie Kopien auf anderen Medien an einem anderen Ort auf und prüfen Sie die Hashes regelmäßig.
 
 Quellen:
 

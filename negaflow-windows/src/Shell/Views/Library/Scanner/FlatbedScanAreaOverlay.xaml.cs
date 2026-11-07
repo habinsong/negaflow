@@ -232,10 +232,13 @@ public sealed partial class FlatbedScanAreaOverlay : UserControl
 
     private void NotifyChanged() => RegionsChanged?.Invoke(this, EventArgs.Empty);
 
-    private FlatbedOverlayRect ScreenRect(FlatbedScanRegion region) =>
+    private FlatbedOverlayRect ScreenRect(FlatbedScanRegion region) => Shape(region).BoundingRect;
+
+    /// <summary>원본 칸을 화면 위 회전 사각형으로 옮깁니다(macOS <c>shape(for:)</c>).</summary>
+    private FlatbedRegionScreenShape Shape(FlatbedScanRegion region) =>
         TryPreviewTransform(out ImageTransformRecipe transform, out uint width, out uint height)
-            ? FlatbedOverlayGeometry.ScreenRect(region, ImageFrame, transform, width, height)
-            : FlatbedOverlayGeometry.ScreenRect(region, ImageFrame);
+            ? FlatbedRegionFrameGeometry.ScreenShape(region, ImageFrame, transform, width, height)
+            : FlatbedRegionFrameGeometry.ScreenShape(region, ImageFrame, null, 0U, 0U);
 
     private bool TryPreviewTransform(
         out ImageTransformRecipe transform,

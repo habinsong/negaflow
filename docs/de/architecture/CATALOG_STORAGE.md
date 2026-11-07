@@ -2,18 +2,16 @@
 
 [Dokumentationsstart](../README.md)
 
-Der Hauptspeicher ist `library.sqlite`. Das alte `library.json` dient nur noch dazu, ältere Bestände zu übernehmen oder eine Diagnosedatei zu schreiben. Nichts aktualisiert beide Dateien gleichzeitig, also gibt es kein `dual-write`.
+Der Hauptspeicher ist `library.sqlite`. Das ältere `library.json` dient nur zum Import eines älteren Katalogs oder zum Schreiben einer Diagnosedatei. Nichts aktualisiert beide gleichzeitig, es gibt also kein Dual-Write. Backups und Erhaltungsarchive nutzen portables JSON und schließen die laufende SQLite-Datei aus.
 
-Sicherungen und Erhaltungsarchive verwenden ein portables JSON-Format. Die laufende SQLite-Datei ist nicht enthalten.
-
-| Art | Format | Wofür |
+| Art | Format | Verwendung |
 |---|---|---|
-| Hauptkatalog | SQLite | App-Betrieb, Suche, Speichern, Wiederherstellung |
-| Ältere Bestände | JSON | Import eines vorhandenen Katalogs |
-| Sicherung und Erhaltungsarchiv | JSON-Form | Umzug auf ein anderes Gerät, Wiederherstellung |
+| Hauptkatalog | SQLite | Betrieb der App, Suche, Speichern, Wiederherstellung |
+| Ältere Daten | JSON | Import eines vorhandenen Katalogs |
+| Backup und Erhaltungsarchiv | JSON-Form | Umzug auf einen anderen Rechner, Wiederherstellung |
 
 > [!IMPORTANT]
-> Ein fehlender oder beschädigter Katalog startet keine leere Bibliothek. Ursprünglicher Katalog und Fotodateien bleiben unangetastet, bis eine intakte Generation gefunden ist.
+> Ein fehlender oder beschädigter Katalog startet keine leere Mediathek. Der ursprüngliche Katalog und die Fotodateien bleiben unberührt, bis eine intakte Generation gefunden ist.
 
 ## Messungen
 
@@ -38,73 +36,56 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 
 </details>
 
-Gemessen am 2026-07-12: Mac14,3, arm64, 8 Kerne, 24 GiB Speicher, macOS 26.5, Swift-Release-Build. Die Zahlen sagen nichts über einen anderen Mac. Sie sind eine Basis, um Rückschritte in derselben Umgebung zu finden.
+Gemessen am 2026-07-12: Mac14,3, arm64, 8 Kerne, 24 GiB, macOS 26.5, Swift-Release-Build. Die Zahlen sind eine Regressionsbasis für diesen Aufbau, keine Vorhersage für einen anderen Mac.
 
-| Bilder | JSON-Größe | Kodieren p50 | Dekodieren p50 | Datei lesen p50 |
+| Bilder | JSON-Größe | Encode p50 | Decode p50 | File read p50 |
 |---:|---:|---:|---:|---:|
-| 1.000 | 2.192.671 Byte | 98 ms | 241 ms | 231 ms |
-| 10.000 | 21.934.841 Byte | 811 ms | 2.301 ms | 2.299 ms |
-| 50.000 | 109.721.335 Byte | 2.746 ms | 7.353 ms | 7.397 ms |
+| 1,000 | 2,192,671 bytes | 98 ms | 241 ms | 231 ms |
+| 10,000 | 21,934,841 bytes | 811 ms | 2,301 ms | 2,299 ms |
+| 50,000 | 109,721,335 bytes | 2,746 ms | 7,353 ms | 7,397 ms |
 
-Beim JSON-Kodieren von 50.000 Bildern stieg der Resident Memory um rund 191 MiB, der Max RSS um rund 107 MiB. Beim selben Material dauerte das Vorbereiten der Suche im Speicher 32,86 ms, das Sortieren aller Namen 86,01 ms und das Sortieren nach Filter 158,37 ms. Vier Filterprojektionen hintereinander: p50 von 512,80 ms.
+Das Kodieren von 50.000 Bildern nach JSON erhöhte den residenten Speicher um etwa 191 MiB und den maximalen RSS um etwa 107 MiB. Mit denselben Daten dauerte das Vorbereiten der Speichersuche 32,86 ms, das Sortieren aller Namen 86,01 ms und das Sortieren der Namen nach einem Filter 158,37 ms. Vier Filterprojektionen hintereinander hatten einen p50 von 512,80 ms.
 
-SQLite-Zeilenspeicher, 50.000 Bilder, Release-p95:
+Der SQLite-Zeilenspeicher bei 50.000 Bildern, Release p95:
 
 | Vorgang | p95 |
 |---|---:|
-| Neuer Commit | 3.714 ms |
-| Hauptdatei lesen | 7.446 ms |
-| Commit ohne Änderungen | 3.856 ms |
-| Größe je Bild | etwa 4.211 Byte |
+| Neuer Commit | 3,714 ms |
+| Hauptdatei lesen | 7,446 ms |
+| Commit ohne Änderungen | 3,856 ms |
+| Größe pro Bild | ≈ 4,211 bytes |
 
-Eine Sicherung lädt nicht die ganze Datenbank in `Data`. Sie legt eine replizierbare temporäre Kopie an und tauscht sie atomar aus. Auch die Prüfung davor dekodiert nicht jedes Bild, sondern sieht sich SQLite-Integrität und Schema an. Damit fiel der p95 eines Commits ohne Änderungen von 11.245 ms auf 3.856 ms.
+Ein Backup zieht nicht die ganze Datenbank in `Data`. Es erstellt eine temporäre, replikationsfähige Kopie und tauscht sie atomar aus. Die Prüfung vor dem Backup kontrolliert SQLite-Integrität und Schema, statt jedes Bild zu dekodieren, und senkte den p95 eines Commits ohne Änderungen von 11.245 ms auf 3.856 ms.
 
 ## Warum SQLite
 
-- Änderungen an vielen Zeilen passen in eine Transaktion.
-- Zeilen und Indizes lassen nur die nötigen Bilder lesen.
-- Die SQLite-C-API von macOS spart ein neues Paket.
-- Die aktuelle Wiederherstellungsregel bleibt: ein beschädigter Speicher gilt nie als leere Bibliothek.
+- Viele Zeilenänderungen passen in eine Transaktion.
+- Zeilen und Indizes erlauben, nur die benötigten Bilder zu lesen.
+- Die SQLite-C-API gehört zu macOS, ein neues Paket ist nicht nötig.
+- Die Wiederherstellungsregel bleibt bestehen: Ein beschädigter Speicher gilt nie als leere Mediathek.
 
-Derzeit laufen `journal_mode=DELETE` und `synchronous=FULL`. WAL hieße, Datenbank und `-wal`-Datei als Einheit zu behandeln. Die laufende Datenbank wird nicht einfach kopiert. Nur die Hauptdatei, geprüft nach dem Schließen der Verbindung, wird zur Wiederherstellungskopie.
+Es läuft mit `journal_mode=DELETE` und `synchronous=FULL`. Mit WAL müssten Datenbank und `-wal`-Datei als eine Einheit behandelt werden. Die laufende Datenbank wird nicht direkt kopiert. Nur die nach dem Schließen der Verbindung geprüfte Hauptdatei wird zur Wiederherstellungskopie.
 
-## Wer im Code was macht
+## Wer im Code was tut
 
 - `CatalogStore`: Verbindung, Transaktionen, Schemaversion, Integritätsprüfungen
-- `CatalogMigration`: nur lesender JSON-Import und Umwandlung je Version
+- `CatalogMigration`: lesender JSON-Import und Umwandlung je Version
 - Entitätstabellen: Bilder, Originale, Reihenfolge, Filme, Ordner, Sammlungen, Suche, Scanaufträge
-- `LibraryBackupStore`: übertragbare JSON-Sicherung, Prüfungen vor der Wiederherstellung, Wiederherstellungsangaben
+- `LibraryBackupStore`: portables JSON-Backup, Vorprüfungen der Wiederherstellung, Wiederherstellungsinformationen
 
-Entwicklungswerte und versionierter Bearbeitungsverlauf liegen je Entität als JSON-BLOB. Quellpixel, Miniaturen und GrainMend-Caches bleiben außerhalb der Datenbank.
-
-Für Suche und Sortierung fehlen noch Spalten und Indizes, daher lädt beim Start der ganze Katalog in den Speicher. Deshalb sieht die SQLite-Lesezeit heute aus wie bei JSON. Als Nächstes kommen Indexabfragen, die nur die genutzten Spalten und Bilder lesen.
+Entwicklungswerte und versionierter Bearbeitungsverlauf liegen als JSON-BLOB je Entität vor. Quellpixel, Miniaturen und GrainMend-Caches bleiben außerhalb der Datenbank. Für Suche und Sortierung fehlen noch Spalten und Indizes, deshalb wird der ganze Katalog beim Start in den Speicher geladen, und die SQLite-Lesezeit sieht derzeit aus wie die von JSON. Der nächste Schritt sind Indexabfragen, die nur die verwendeten Spalten und Bilder lesen.
 
 ## Älteres JSON übernehmen
 
-```mermaid
-flowchart LR
-    A["JSON-Version und LibraryCatalogHealth prüfen"] --> B["Temporäres SQLite anlegen"]
-    B --> C["Daten in einer Transaktion übernehmen"]
-    C --> D["IDs, Reihenfolge, Zugehörigkeit, Aufträge vergleichen"]
-    D --> E["integrity_check und Sicherheitsbedingungen prüfen"]
-    E --> F["JSON als Wiederherstellungsgeneration behalten"]
-    F --> G["Auf SQLite als Hauptspeicher umstellen"]
-    A -. Fehler .-> H["Vorhandenes JSON behalten"]
-    B -. Fehler .-> H
-    C -. Fehler .-> H
-    D -. Fehler .-> H
-    E -. Fehler .-> H
-```
+1. JSON-Version und `LibraryCatalogHealth` prüfen.
+2. Eine temporäre SQLite-Datenbank anlegen.
+3. Das Material in einer Transaktion übertragen.
+4. IDs, Reihenfolge, Zugehörigkeit und Aufträge vergleichen.
+5. `integrity_check` und die Sicherheitsbedingungen prüfen.
+6. Das JSON als Wiederherstellungsgeneration behalten.
+7. Auf SQLite als Hauptspeicher umschalten.
 
-Scheitert ein Schritt, bleibt das vorhandene JSON, wie es ist. Es startet nie mit leerem Katalog. Auch wenn Zwischendateien und Markierungen liegen bleiben, geht es nur weiter, wenn der Quell-SHA-256 und beide Kataloge übereinstimmen.
-
-Nach der Migration gibt es keinen automatischen Rückweg zu JSON. Damit eine ältere App das JSON nicht verändert und den Speicher teilt, werden Mindestleseversion und Migrationsmarkierung geprüft.
-
-## Was nicht gewählt wurde
-
-- Den ganzen Katalog in einer JSON-Datei: einfach, aber 50.000 Bilder zu lesen dauert rund 7,4 Sekunden, und jedes Speichern schreibt die Datei neu.
-- Eine JSON-Datei je Bild: einige Schreibvorgänge schrumpfen, aber der Code zum Speichern mehrerer Entitäten auf einmal und zum Prüfen ihrer Beziehungen müsste von Hand entstehen.
-- Jetzt zu Core Data wechseln: möglich, bedeutet aber, Codable-Umwandlung und Wiederherstellungsvertrag in einem Zug neu zu bauen. Wieder ein Thema, wenn ein echter Prototyp besser misst als reines SQLite.
+Scheitert ein Schritt, bleibt das vorhandene JSON unverändert, und ein leerer Katalog wird nie gestartet. Auch wenn Zwischendateien und Marker zurückbleiben, wird nur weitergearbeitet, wenn die Quell-SHA-256 und beide Kataloge übereinstimmen. Nach der Migration gibt es keinen automatischen Rückfall auf JSON. Mindest-Lesversion und Migrationsmarker werden geprüft, damit eine ältere App das JSON nicht bearbeitet und den Speicher in zwei Hälften spaltet.
 
 ## Quellen
 

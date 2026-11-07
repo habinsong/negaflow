@@ -2,7 +2,7 @@
 
 [Docs home](../README.md)
 
-GrainMend repairs dust, pinholes, scratches, and emulsion damage on film. Nothing is baked into the original; the result is kept as an ordered edit history.
+GrainMend repairs dust, pinholes, scratches and emulsion damage on film. Nothing is baked into the original. The result is kept as an ordered edit history.
 
 | Tool | Where it looks | How it repairs |
 |---|---|---|
@@ -12,10 +12,10 @@ GrainMend repairs dust, pinholes, scratches, and emulsion damage on film. Nothin
 | Clone stamp | A source point you choose | Copies real source pixels at a fixed offset |
 | IR | The scanner's infrared channel | IR finds the location, RGB rebuilds the pixels |
 
-The develop screen has automatic, guided, brush, and clone stamp. IR can be turned on at the scan step when the plugin reports the capability. Once the scan is done, its result joins the same GrainMend layer list.
+The develop screen has automatic, guided, brush and clone stamp. IR can be turned on at the scan step when the plugin reports the capability, and once the scan is done its result joins the same GrainMend layer list.
 
 > [!CAUTION]
-> GrainMend RGB works differently from hardware IR cleaning. GrainMend IR is not an implementation of, or a compatibility mode for, Digital ICE, iSRD, or SRDx.
+> GrainMend RGB works differently from hardware IR cleaning. GrainMend IR is not an implementation of, or a compatibility mode for, Digital ICE, iSRD or SRDx.
 
 ## The hard parts
 
@@ -23,39 +23,34 @@ Film defects and the structure of the photograph sit in the same pixels.
 
 - Dust shows up as small, irregular bright or dark blotches.
 - A pinhole can look like an isolated, strong dot.
-- Scratches are long and thin, but so are wires, window frames, and lettering.
+- Scratches are long and thin, but so are wires, window frames and lettering.
 - Emulsion damage changes color and texture together.
 - At high resolution, film grain is the same size as a small defect.
 
-Wiping out high frequency as a whole takes grain and edges along with the dust. GrainMend splits the work into detection, classification, repair, and storage.
+Wiping out high frequency as a whole takes grain and edges along with the dust. GrainMend splits the work into detection, classification, repair and storage.
 
 ## Order of work
 
-```mermaid
-flowchart LR
-    A["Input image"] --> B["Inspection area and size"]
-    B --> C["Defect candidates"]
-    C --> D["Mask cleanup"]
-    D --> E["Defect classification"]
-    E --> F{"Is it structure in the photo?"}
-    F -->|Yes| G["Not applied"]
-    F -->|No| H["Find a source patch nearby"]
-    H --> I["Match brightness, texture, direction"]
-    I --> J["Blend the boundary"]
-    J --> K["Add to the edit history"]
-```
+The detection mask and the repaired result are kept apart, which is what lets you inspect the mask, apply only some of the defects, or rebuild the repair. The steps:
 
-The detection mask and the repaired result are kept apart. That is what lets you inspect the mask, apply only some of the defects, or rebuild the repair.
+1. Input image, inspection area and size.
+2. Defect candidates, then mask cleanup.
+3. Defect classification.
+4. Structure check: if it is structure in the photo, it is not applied.
+5. Find a source patch nearby.
+6. Match brightness, texture and direction.
+7. Blend the boundary.
+8. Add to the edit history.
 
 ## Tools
 
 ### Automatic
 
-Across the whole photograph, it finds only defects it is confident about. Missing a small defect is preferred over wrongly erasing a large structure. It never slips into the default develop; you have to run it before anything is added.
+Across the whole photograph, it finds only defects it is confident about. Missing a small defect is preferred over wrongly erasing a large structure. It never slips into the default develop, and you have to run it before anything is added.
 
 ### Guided
 
-You pick a rectangle, and only that area and its surroundings are analyzed. Since you have already pointed at the defect, it goes after small specks, faint defects, and dense clusters more aggressively than automatic does.
+You pick a rectangle, and only that area and its surroundings are analyzed. Since you have already pointed at the defect, it goes after small specks, faint defects and dense clusters more aggressively than automatic does.
 
 It reads wider than the result it produces, so the surrounding pixels used for the repair are not cut off at the edge of the area. The current maximum context radius is 264 pixels.
 
@@ -65,9 +60,9 @@ You paint the spot to repair yourself. It does not cover what you painted with a
 
 ### Clone stamp
 
-`⌥` click picks the source point, then you draw on the target. It uses no automatic detection; it holds the offset between the two points and copies the real pixels.
+`⌥` click picks the source point, then you draw on the target. It uses no automatic detection. It holds the offset between the two points and copies the real pixels.
 
-The edit history keeps diameter, hardness, coordinates, and offset. It still applies to the same original coordinates after a rotation, a flip, or a crop. Offsets snap to whole pixels, and nothing outside the image is applied.
+The edit history keeps diameter, hardness, coordinates and offset, and it still applies to the same original coordinates after a rotation, a flip or a crop. Offsets snap to whole pixels, and nothing outside the image is applied.
 
 ### IR
 
@@ -77,7 +72,7 @@ Used only when the plugin hands over a real IR channel and the size and area lin
 
 ### Difference from the surroundings
 
-Brightness differs from photograph to photograph, so there is no single global threshold. The difference from surrounding brightness, local variance, and direction produce bright dust and dark defect candidates.
+Brightness differs from photograph to photograph, so there is no single global threshold. The difference from surrounding brightness, local variance and direction produce bright dust and dark defect candidates.
 
 ### Mask cleanup
 
@@ -93,16 +88,16 @@ Each blob is measured for:
 
 - Area and bounding box
 - Ratio of the long axis to the short axis
-- Horizontal, vertical, diagonal direction
-- Linearity, density, surrounding contrast
+- Horizontal, vertical and diagonal direction
+- Linearity, density and surrounding contrast
 - Whether it continues into a nearby edge
 - Its relationship with other blobs
 
-The result is split into dust, pinhole, scratches by direction, emulsion damage, and micro specks, each with a confidence.
+The result is split into dust, pinhole, scratches by direction, emulsion damage and micro specks, each with a confidence.
 
 ### Not erasing lines that belong to the photo
 
-Wires, railings, building corners, window frames, and lettering must not be read as scratches. Parallel lines, grids, continuity of edges, and lines attached to scene structure get their own check. Automatic rejects false positives more strictly; guided also accounts for your choice of location.
+Wires, railings, building corners, window frames and lettering must not be read as scratches. Parallel lines, grids, continuity of edges and lines attached to scene structure get their own check. Automatic rejects false positives more strictly, and guided also accounts for your choice of location.
 
 ## Repair
 
@@ -114,7 +109,7 @@ Wires, railings, building corners, window frames, and lettering must not be read
 
 Strength is the blend ratio between the finished patch and the original.
 
-Sometimes an automatic repair cannot know what was underneath. If there is no usable surrounding texture, or the defect covered a whole important structure, it needs the brush, the clone stamp, or separate precise work.
+Sometimes an automatic repair cannot know what was underneath. If there is no usable surrounding texture, or the defect covered a whole important structure, it needs the brush, the clone stamp or separate precise work.
 
 ## IR handling
 
@@ -146,15 +141,15 @@ What is left is converted to contrast relative to the local mean. To prevent a l
 - It is not applied automatically to silver black and white.
 - Color positive and special emulsions are not assumed safe without measurement.
 
-Commercial IR tools place their own limits on ordinary black and white and on Kodachrome.
+Commercial IR tools place their own limits on ordinary black and white and on Kodachrome:
 
 - [SilverFast: iSRD dust and scratch removal](https://www.silverfast.com/about-silverfast-why-scanning-basics-of-scanning/why-silverfast/silverfast-feature-highlights/isrd-dust-scratches-removal-eliminate-defects-with-infrared-channel/)
 
-GrainMend IR is not a copy of, or a compatibility mode for, those commercial tools.
+GrainMend IR is not a copy of, or a compatibility mode for, those commercial tools. Per-film IR limits and the conditions where alignment fails are in [Film GrainMend IR should avoid](../reference/INFRARED_LIMITS.md).
 
 ## Edit history and storage
 
-Automatic, guided, brush, clone stamp, and IR share one ordered edit list.
+Automatic, guided, brush, clone stamp and IR share one ordered edit list.
 
 What each entry carries:
 
@@ -168,7 +163,7 @@ What each entry carries:
 
 An earlier repair changes the input to a later one, so the order of the list is part of the edit history too.
 
-The original is not modified. GrainMend history is stored in a sidecar the app manages. Original SHA-256, edit version, and a history fingerprint tie the input together. If the sidecar is missing or broken, the cache is not treated as an original.
+The original is not modified. GrainMend history is stored in a sidecar the app manages. Original SHA-256, edit version and a history fingerprint tie the input together. If the sidecar is missing or broken, the cache is not treated as an original.
 
 The GrainMend cache is a derived file, there for fast display and re-rendering. If it is missing or fails its check, it is rebuilt from the original and the edit history. If the result an export needs cannot be produced, the export fails instead of substituting the original.
 
@@ -182,9 +177,9 @@ The GrainMend cache is a derived file, there for fast display and re-rendering. 
 - Copies for undo share storage until something actually changes.
 - Under memory pressure, rebuildable images and the patch cache are dropped.
 
-Real times depend on resolution, defect count, area size, and the Mac.
+Real times depend on resolution, defect count, area size and the Mac.
 
-Measured 2026-07-25 on a Release build, Mac14,3, arm64, 24 GiB of memory, macOS 26.5.
+Measured 2026-07-25 on a Release build, Mac14,3, arm64, 24 GiB of memory, macOS 26.5:
 
 | Path | Input | Result |
 |---|---|---:|
@@ -193,11 +188,11 @@ Measured 2026-07-25 on a Release build, Mac14,3, arm64, 24 GiB of memory, macOS 
 | Guided dense stress | 1280×960, 8 images × 3 runs | median 0.423 s, p95 0.488 s, max 0.526 s |
 | IR detection | 6000×4000, 24MP | 1.042 s, peak memory growth 249.2 MiB |
 
-Across 24 dense stress runs, the lowest mask coverage at defect sites was 99.80%, and the highest mean residual error was 2.70/255. These are regression measurements on synthetic input. They do not promise processing times on another Mac or on real film.
+Across 24 dense stress runs, the lowest mask coverage at defect sites was 99.80% and the highest mean residual error was 2.70/255. These are regression measurements on synthetic input. They do not promise processing times on another Mac or on real film.
 
 ## Benchmark
 
-`defect-bench` can produce these files and values.
+`defect-bench` can produce these files and values:
 
 - before, after, diff, mask
 - 100% crops
@@ -211,7 +206,7 @@ swift run -c release negaflow defect-bench <input-dir> \
   --out <report-dir>
 ```
 
-RGB regression uses the 44 damaged/expert-restored pairs from FILM-R v2.
+RGB regression uses the 44 damaged and expert-restored pairs from FILM-R v2:
 
 - Dataset: Authentically damaged & manually restored film scans (FILM-R v2)
 - Author: Daniela Ivanova
@@ -220,26 +215,22 @@ RGB regression uses the 44 damaged/expert-restored pairs from FILM-R v2.
 - Pairs: 44
 - Total size: 437,570,872 bytes
 
-The automatic path shipped on 2026-07-25 applies sensitivity 0.7 and an over-detection safety line. Against the previous 3.0 baseline, of the 44 FILM-R images the ones that improved went from 11 to 34, and the ones that got worse went from 33 to 6. Mean PSNR change moved from -1.688 dB to +0.466 dB, and the worst case from -18.952 dB to -1.338 dB. Weighted worsened pixels dropped from 0.792% to 0.017%.
+The automatic path applies sensitivity 0.7 and an over-detection safety line. On the 44 FILM-R pairs, 34 images improved and 6 got worse. The mean PSNR change is +0.466 dB, the worst case is −1.338 dB, and weighted worsened pixels are 0.017%.
 
-When automatic meets a high density of candidates it stops applying and points you at guided. That safety line does not apply to guided, where you set the range, nor to the brush, the clone stamp, or IR. Even with better results, 6 images still have lower PSNR than the expert restoration. None of this proves every photograph improves, that RGB and IR are equivalent, or anything about IR quality on a real scanner.
-
-The full table and the commands are in GrainMend real scan comparison.
-
-Per-film IR limits and the conditions where alignment fails are collected in [Film GrainMend IR should avoid](../reference/INFRARED_LIMITS.md).
+When automatic meets a high density of candidates it stops applying and points you at guided. That safety line does not apply to guided, where you set the range, nor to the brush, the clone stamp or IR. 6 images still have lower PSNR than the expert restoration. None of this proves every photograph improves, that RGB and IR are equivalent, or anything about IR quality on a real scanner.
 
 ## Test coverage
 
 - 8-direction connectivity and masks
 - Morphological operations
-- Dust, scratch, and micro speck detection
+- Dust, scratch and micro speck detection
 - Rejecting lines and grids as false positives
 - Tile boundaries in a large area
 - Scratch repair by direction
 - Matching surrounding texture and brightness
 - Brush masks
-- Clone stamp offset, hardness, patch composition
-- IR alignment, anchors, blobs, memory limits
+- Clone stamp offset, hardness and patch composition
+- IR alignment, anchors, blobs and memory limits
 - Applying at the original stage and rendering the app's edit history
 - Adding repeatedly, and undo
 - Frame ownership while moving around the screen
@@ -251,9 +242,9 @@ Some performance tests run only when an environment variable is set. The presenc
 `GrainMend` is negaflow's own feature name.
 
 - `Digital ICE` may be a trademark of Eastman Kodak Company or a related rights holder.
-- `iSRD`, `SRDx`, and `SilverFast` are trademarks of LaserSoft Imaging.
+- `iSRD`, `SRDx` and `SilverFast` are trademarks of LaserSoft Imaging.
 - These names are used only for technical comparison and product identification.
-- GrainMend claims no affiliation, compatibility, or equivalence with third-party technology.
+- GrainMend claims no affiliation, compatibility or equivalence with third-party technology.
 
 ## Where the code is
 

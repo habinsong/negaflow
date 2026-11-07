@@ -21,6 +21,10 @@ extension DevelopWorkflowInspector {
     }
 
     func reset(_ panel: InspectorPanel) {
+        if panel == .transform {
+            model.resetPerspective(frame)
+            return
+        }
         let shouldSyncBatchWB = DevelopInspectorResetter.reset(panel, frame: frame, neutralPreset: neutralPreset)
         scheduleRedevelop(frame)
         if shouldSyncBatchWB { syncBatchWBIfNeeded() }

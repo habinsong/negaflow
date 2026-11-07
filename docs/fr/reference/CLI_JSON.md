@@ -2,14 +2,14 @@
 
 [Accueil de la documentation](../README.md)
 
-C'est la forme dans laquelle un script ou une autre application lit les informations du scanner. Elle reste séparée de l'implémentation du scanner. La CLI se contente de convertir en JSON les informations et capacités reçues par `ScannerKit`.
+Les scripts et les autres applications lisent les informations du scanner dans ce JSON. La CLI se contente de sérialiser les informations d'appareil et les capacités reçues par `ScannerKit`.
 
 | Élément | Contrat |
 |---|---|
-| Commandes prises en charge | `detect --json`, `capabilities <scannerID> --json` |
+| Commandes | `detect --json`, `capabilities <scannerID> --json` |
 | stdout | Un document JSON et un saut de ligne final |
 | stderr | Journal de diagnostic |
-| Schéma actuel | `negaflow.scanner-cli`, version `1` |
+| Schéma | `negaflow.scanner-cli`, version `1` |
 
 ## Commandes
 
@@ -18,14 +18,14 @@ negaflow detect [--demo] --json
 negaflow capabilities <scannerID> [--demo] --json
 ```
 
-Pour l'instant, `--json` ne fonctionne que sur ces deux commandes en lecture seule. Ajoutez-le à `scan` ou `develop`, qui modifient des fichiers ou émettent une progression, et cela se termine par une erreur `unsupported_json_command`.
+`--json` ne fonctionne que sur ces deux commandes en lecture seule. Sur `scan` ou `develop`, il se termine par l'erreur `unsupported_json_command`.
 
 ## Forme commune
 
-Succès comme échec écrivent un seul document JSON sur stdout, avec un saut de ligne à la fin.
+Succès comme échec écrivent un document JSON sur stdout.
 
 <details>
-<summary>Exemple de réponse en cas de succès</summary>
+<summary>Exemple de réponse réussie</summary>
 
 ```json
 {
@@ -40,11 +40,11 @@ Succès comme échec écrivent un seul document JSON sur stdout, avec un saut de
 
 </details>
 
-En cas d'échec, `status` vaut `error` et `payload` vaut `null`. `error` porte un code machine qui ne change pas et une description destinée aux humains. Les journaux de diagnostic partent sur stderr. Journaux et progression ne sont jamais mêlés à stdout.
+En cas d'échec, `status` vaut `error` et `payload` vaut `null`. `error` contient un code stable lisible par machine et une description. Les journaux et la progression vont uniquement sur stderr.
 
 ## Informations de capacités
 
-Le `payload` de `capabilities` porte toujours tous ces champs.
+Le `payload` de `capabilities` contient toujours tous ces champs :
 
 - `resolutionsDPI`, `modes`, `bitDepths`
 - `sourceModes`, `transparencyModes`
@@ -57,20 +57,19 @@ Le `payload` de `capabilities` porte toujours tous ces champs.
 - `minScanArea`, `maxScanArea`, `scanAreaUnit`
 - `outputFormats`, `estimatedScanSpeeds`
 
-Les valeurs que l'appareil n'a pas signalées ne sont pas devinées. Selon le cas, on utilise `null`, un tableau vide, `false`, ou les `disabledReasons` envoyés par le plugin.
+Une valeur que l'appareil n'a pas signalée n'est pas devinée. Elle devient `null`, un tableau vide, `false` ou les `disabledReasons` envoyés par le module.
 
-`estimatedScanSpeeds` est un tableau de cet objet, trié par DPI croissants.
+`estimatedScanSpeeds` est un tableau de cet objet, trié par DPI croissant :
 
 ```json
 { "dpi": 3600, "seconds": 42.0 }
 ```
 
-L'écran de l'application et la CLI lisent les mêmes `ScannerCapabilities`. Le contrôle de cohérence confirme que les commandes ouvertes à l'écran suivent les mêmes valeurs que les champs JSON.
+L'application et la CLI lisent les mêmes `ScannerCapabilities`. Un contrôle de cohérence vérifie que les commandes affichées suivent les champs JSON.
 
 ## Règles de version
 
 - Le sens et le type d'un champ existant ne changent pas.
-- Un nouveau champ facultatif n'arrive que si les programmes plus anciens peuvent ignorer les champs inconnus.
-- Supprimer un champ, le renommer ou changer son type fait monter `schemaVersion`.
-- Résolutions, modes et profondeurs de bits gardent l'ordre du plugin.
-- Seules les vitesses estimées sont triées par DPI.
+- Un nouveau champ facultatif n'est ajouté que si les anciens programmes peuvent l'ignorer.
+- Supprimer, renommer ou changer le type d'un champ augmente `schemaVersion`.
+- Résolutions, modes et profondeurs gardent l'ordre du module. Seules les vitesses estimées sont triées.

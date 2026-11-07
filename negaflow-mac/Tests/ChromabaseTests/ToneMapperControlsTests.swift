@@ -164,7 +164,7 @@ final class ToneMapperControlsTests: XCTestCase {
     func testHighlightShadowWhiteBlackControlsTargetTheirToneRanges() {
         let baseline = renderLinearRGBA8(applyPerceptualTone(DevelopParameters()))
 
-        // Highlights는 Lightroom 규약을 따른다: +1은 명부를 밝게(올린다), 암부는 거의 불변.
+        // Highlights 규약: +1은 명부를 밝게(올린다), 암부는 거의 불변.
         var brighterHighlights = DevelopParameters()
         brighterHighlights.highlight = 1
         let brightenedHi = renderLinearRGBA8(applyPerceptualTone(brighterHighlights))

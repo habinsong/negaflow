@@ -7,6 +7,12 @@ namespace Negaflow.Interop;
 internal static unsafe partial class NativeDevelopInput
 {
     internal static bool RequiresV39(DevelopExportRequest request) =>
+        RequiresInputTail(request) || request.ImageTransform.Perspective is not null;
+
+    /// <summary>
+    /// 입력 해석 꼬리가 필요한가. 결함 굽기는 기하 이전 원본에 걸리므로 원근 보정은 따지지 않습니다.
+    /// </summary>
+    internal static bool RequiresInputTail(DevelopExportRequest request) =>
         request.AutoBalance || request.BaseScale != 1.0 || request.InputGammaMode != 0U ||
         request.ChannelRange is not null || request.MeasureRangeShape;
 
@@ -31,7 +37,7 @@ internal static unsafe partial class NativeDevelopInput
     internal static bool ValidGamma(uint mode, double value) =>
         (mode == 0U && value == 0.0) || (mode == 1U && double.IsFinite(value) && value is >= 0.10 and <= 4.0);
 
-    internal static NativeDevelopExportRequestV41 Build(
+    internal static NativeDevelopExportRequestV42 Build(
         NativeDevelopExportRequestV36 v36, DevelopExportRequest request,
         byte* outputProfile = null, uint outputProfileSize = 0U)
     {
@@ -39,14 +45,25 @@ internal static unsafe partial class NativeDevelopInput
         NativeDevelopExportRequestV38 v38 = BuildRequestV38(
             BuildRequestV37(v36, outputProfile, outputProfileSize), request.ProxyInputLongEdge);
         v38.V37.V36.V35.V34.V33.V32.V31.V30.V29.V28.V27.V26.V25.V24.V21.V20.V19.V18.V17.V16
-            .V15.V14.V13.V12.V11.V10.V9.V8.V7.StructSize = (uint)sizeof(NativeDevelopExportRequestV41);
+            .V15.V14.V13.V12.V11.V10.V9.V8.V7.StructSize = (uint)sizeof(NativeDevelopExportRequestV42);
         DevelopChannelRange range = request.ChannelRange ?? default;
-        return new() { V40 = new() { V39 = new() { V38 = v38, BaseScale = request.BaseScale,
+        NativeDevelopExportRequestV41 v41 = new() { V40 = new() { V39 = new() { V38 = v38, BaseScale = request.BaseScale,
             InputGammaMode = request.InputGammaMode, InputGammaValue = request.InputGammaValue },
             AutoBalance = request.AutoBalance ? 1U : 0U },
             ChannelRangePresent = request.ChannelRange is null ? 0U : 1U,
             MeasureRangeShape = request.MeasureRangeShape ? 1U : 0U,
             ChannelRangeRed = range.Red, ChannelRangeGreen = range.Green, ChannelRangeBlue = range.Blue };
+        // 원근이 없으면 중립값(비율 100)을 실어야 native 가 받아들입니다.
+        return request.ImageTransform.Perspective is { } p
+            ? new()
+            {
+                V41 = v41, HasPerspective = 1U, PerspectiveConstrainCrop = p.ConstrainCrop ? 1U : 0U,
+                PerspectiveSolvedVertical = p.SolvedVertical, PerspectiveSolvedHorizontal = p.SolvedHorizontal,
+                PerspectiveSolvedRotate = p.SolvedRotate, PerspectiveVertical = p.Vertical,
+                PerspectiveHorizontal = p.Horizontal, PerspectiveRotate = p.Rotate, PerspectiveAspect = p.Aspect,
+                PerspectiveScale = p.Scale, PerspectiveOffsetX = p.OffsetX, PerspectiveOffsetY = p.OffsetY,
+            }
+            : new() { V41 = v41, PerspectiveScale = 100.0 };
     }
 
     internal static NativeDevelopExportRequestV34 BuildDisplayRequest(NativeDevelopExportRequestV27 v27, DevelopExportRequest request) =>
@@ -56,34 +73,34 @@ internal static unsafe partial class NativeDevelopInput
 
     [LibraryImport(NativeMethods.LibraryName, EntryPoint = "nf_pick_film_base_v2")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial uint Pick(NativeDevelopExportRequestV41* request, double unitX, double unitY,
+    internal static partial uint Pick(NativeDevelopExportRequestV42* request, double unitX, double unitY,
         NativeDevelopRunStateV1* state, NativeDevelopExportResultV3* result, NativeFilmBasePickV1* picked);
 
     [LibraryImport(NativeMethods.LibraryName, EntryPoint = "nf_pick_neutral_white_balance_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial uint PickNeutral(NativeDevelopExportRequestV41* request, double unitX, double unitY,
+    internal static partial uint PickNeutral(NativeDevelopExportRequestV42* request, double unitX, double unitY,
         NativeDevelopRunStateV1* state, NativeDevelopExportResultV3* result, NativeNeutralWhiteBalancePickV1* picked);
 
     [LibraryImport(NativeMethods.LibraryName, EntryPoint = "nf_develop_export_v39")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial uint Export(NativeDevelopExportRequestV41* request,
+    internal static partial uint Export(NativeDevelopExportRequestV42* request,
         NativeDevelopRunStateV1* state, NativeDevelopExportResultV3* result);
 
     [LibraryImport(NativeMethods.LibraryName, EntryPoint = "nf_develop_preview_v39")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial uint Preview(NativeDevelopExportRequestV41* request,
+    internal static partial uint Preview(NativeDevelopExportRequestV42* request,
         NativeSoftProofV1* proof, uint width, uint height, byte* pixels, uint capacity,
         NativeDevelopRunStateV1* state, NativeDevelopExportResultV3* result);
 
     [LibraryImport(NativeMethods.LibraryName, EntryPoint = "nf_develop_preview_background_v2")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial uint Background(NativeDevelopExportRequestV41* request,
+    internal static partial uint Background(NativeDevelopExportRequestV42* request,
         uint width, uint height, byte* pixels, uint capacity,
         NativeDevelopRunStateV1* state, NativeDevelopExportResultV3* result);
 
     [LibraryImport(NativeMethods.LibraryName, EntryPoint = "nf_develop_detect_grain_mend_v8")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial uint Detect(NativeDevelopExportRequestV41* request,
+    internal static partial uint Detect(NativeDevelopExportRequestV42* request,
         NativeGrainMendDetectParametersV3* parameters, NativeDevelopRunStateV1* state,
         NativeGrainMendDetectionV4* detection, NativeDevelopExportResultV3* result, nint* review);
 }

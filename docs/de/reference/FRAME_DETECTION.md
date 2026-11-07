@@ -2,91 +2,87 @@
 
 [Dokumentationsstart](../README.md)
 
-Eine Flachbett-Vorschau zeigt den Halter, das Licht, das daran vorbeikommt, und den eingelegten Film, falls einer da ist. Die automatische Bilderkennung muss entscheiden, welche Teile dieses Bildes Film sind und wo ein Bild endet und das nächste beginnt, bevor sich der eigentliche Scan lohnt.
+Die Vorschau eines Flachbettscanners zeigt einen Halter, das Licht, das daran vorbeikommt, und den eingelegten Film. Bevor sich ein vollständiger Scan lohnt, entscheidet die automatische Bilderkennung, welche Teile Film sind und wo ein Bild endet und das nächste beginnt. Sie kennt die reale Größe des Vorschaubereichs in Millimetern und rechnet ein Filmformat daher exakt in Pixel um.
 
-Der Detektor kennt die tatsächliche Größe des vorgeschauten Bereichs in Millimetern und rechnet ein Filmformat deshalb exakt in Pixel um, statt es aus Seitenverhältnissen zu raten.
+## Film wird an der Textur erkannt
 
-## Film erkennt man am Korn
+Helligkeit unterscheidet Film nicht von einem leeren Halterfenster. Gemessen an einer Vorschau des Epson GT-X900:
 
-An der Helligkeit lassen sich Film und leere Fenster nicht unterscheiden. Messwerte aus einer Epson GT-X900-Vorschau:
-
-| Was in der Spalte liegt | Mittlere Helligkeit |
+| Was die Spalte enthält | Mittlere Helligkeit |
 |---|---|
-| Leeres Halterfenster, Licht geht ungehindert durch | 0,92 |
-| Film im Nachbarfenster | 0,10 |
-| Haltermaske | 0,002 |
-| Zubehörhalter mit weißem Hintergrund | 1,00 |
+| Leeres Halterfenster, Lampe scheint direkt durch | 0.92 |
+| Film im Nachbarfenster | 0.10 |
+| Halterblende | 0.002 |
+| Fremdhalter mit weißem Hintergrund | 1.00 |
 
-Wer nach Helligkeit sucht, wählt leere Fenster und verwirft den Film. Bei einem Halter mit weißem Grund kippt die Reihenfolge komplett um.
+Eine Sortierung nach Helligkeit wählt die leeren Fenster und verwirft den Film, und ein weißer Halterhintergrund kehrt die Reihenfolge um. Die Textur trennt beides, denn Korn und Bild gibt es nur auf dem Film:
 
-Das Korn trennt beides eindeutig, denn Filmkorn und Motiv gibt es nur auf dem Film:
-
-| Was in der Spalte liegt | Detail senkrecht |
+| Was die Spalte enthält | Vertikales Detail |
 |---|---|
-| Film | 0,0044 bis 0,032 |
-| Haltermaske, leeres Fenster, weißer Hintergrund | 0,00005 bis 0,001 |
+| Film | 0.0044 – 0.032 |
+| Halterblende, leeres Fenster, weißer Hintergrund | 0.00005 – 0.001 |
 
-Der Unterschied beträgt über eine Zehnerpotenz und wechselt das Vorzeichen bei keinem Filmtyp, Halter oder Positiv/Negativ. Alle folgenden Schritte bauen darauf auf.
+Der Abstand beträgt eine Größenordnung und behält sein Vorzeichen bei jeder Filmart, jedem Halter und jeder Polarität. Jede der folgenden Stufen nutzt ihn.
 
 ## Stufen
 
-1. **Spaltenkorn.** Das Detail wird spaltenweise über die Vorschau gemessen. Spalten mit Korn und Motiv werden zu Fensterkandidaten.
-2. **Fenster.** Kandidatenspalten wachsen bis zum Filmrand und werden mit der Breite des gewählten Formats abgeglichen. Fenster, die den Rand des Scanbereichs berühren, werden verworfen. Sie sind vom Scanbereich abgeschnitten, der Hauptscan würde die falsche Stelle erfassen.
-3. **Abschnitte.** Im Fenster werden die Bildzeilen von den Stegen oben und unten getrennt. Eine Zeile zählt als Film, wenn sie sich von den Stegen daneben unterscheidet **oder** Korn trägt. Helligkeit allein verliert dichte Dias, Korn allein verliert Zwischenräume und strukturlose Bilder.
-4. **Raster.** Ein Kamm aus Stegpositionen wird über die gesamte (Abstand, Phase)-Ebene eingepasst. Bewertet wird der Kontrast zwischen Bild und Steg, sodass es keine Rolle spielt, ob der Zwischenraum klarer Träger, Maximaldichte oder von einer Halterrippe verdeckt ist.
-5. **Korrektur.** Jede Grenze springt an den nächsten Zwischenraum, anschließend wird der Satz wieder auf gleichen Abstand ausgerichtet. Die Bilder eines Streifens liegen in gleichem Abstand. Zwei Scans desselben Streifens landen innerhalb von 0,2 mm an derselben Stelle.
+1. Spaltentextur. Das Detail wird an jeder Spalte der Vorschau entlang gemessen. Spalten mit Korn und Bild werden zu Fensterkandidaten.
+2. Fenster. Die Kandidatenspalten wachsen bis zum Filmrand und werden mit der Breite des gewählten Formats verglichen. Ein Fenster, das den Rand des Scanbereichs berührt, wird verworfen, weil der Scanbereich es halbiert hat und der vollständige Scan den falschen Bereich erfassen würde.
+3. Bänder. Innerhalb eines Fensters werden die Zeilen mit Film vom Halter darüber und darunter getrennt. Eine Zeile ist Film, wenn sie sich vom Halter daneben unterscheidet oder Textur trägt. Helligkeit allein verliert die dichten Bilder eines Dias, Textur allein verliert die Lücken und flache Bilder.
+4. Raster. Ein Kamm aus Lückenpositionen wird über die (Abstand, Phase)-Ebene angepasst. Der Wert ist der Kontrast zwischen dem Inneren eines Bildes und dem Inneren der Lücke, die Anpassung hängt also nicht davon ab, ob die Lücke klare Basis, maximale Dichte oder eine Halterrippe ist.
+5. Verfeinerung. Jede Grenze rastet an der nächsten Lücke ein, dann wird der ganze Satz auf gleichmäßigen Abstand neu angepasst, weil die Bilder eines Streifens gleichmäßig verteilt sind. Zweimaliges Scannen desselben Streifens landet innerhalb von 0,2 mm.
 
 ## Was abgelehnt wird
 
 | Situation | Ergebnis |
 |---|---|
-| Halter ohne Film | Nichts. Die Fenster haben kein Korn, es entsteht kein Fenster |
-| Nur ein Streifen in drei Fenstern | Nur das bestückte Fenster |
-| Vom Scanbereich halbiertes Fenster | Verworfen |
-| Bild, das über das Filmende hinausragt | Verworfen; innenliegende Bilder bleiben auch unbelichtet |
-| Streifen ohne Beleg für periodische Zwischenräume | Nichts |
+| Halter ohne Film | Nichts. Die Fenster haben keine Textur, es entsteht kein Fenster |
+| Halter mit einem Streifen in drei Fenstern | Nur das bestückte Fenster |
+| Fenster, das der Scanbereich halbiert | Verworfen |
+| Ein Bild, das über das Filmende hinausragt | Verworfen. Innere Bilder bleiben auch unbelichtet erhalten |
+| Ein Streifen ohne Hinweise auf periodische Lücken | Nichts |
 
 ## Formate
 
-Die Länge entlang des Streifens ist die Richtung des Bildabstands, die Länge quer dazu die Fensterbreite. Beide kommen aus dem gewählten Format, deshalb stimmen bei Halbformat und 645 die beiden Achsen.
+Die Länge entlang des Streifens ist die Richtung des Bildabstands, die Länge quer dazu die Fensterbreite. Beides kommt aus dem gewählten Format, deshalb haben auch Halbformat und 645 ihre Achsen richtig herum.
 
-| Format | Entlang des Streifens | Quer dazu |
+| Format | Entlang des Streifens | Quer zum Streifen |
 |---|---|---|
 | 35 mm Vollformat | 36 mm | 24 mm |
 | 35 mm quadratisch | 24 mm | 24 mm |
 | 35 mm Halbformat | 18 mm | 24 mm |
-| 120 · 6×4,5 | 41,5 mm | 56 mm |
-| 120 · 6×6 bis 6×17 | 56 bis 168 mm | 55 bis 56 mm |
+| 120 · 6×4.5 | 41.5 mm | 56 mm |
+| 120 · 6×6 – 6×17 | 56 – 168 mm | 55 – 56 mm |
 
-Der Abstand bei 35 mm wird vom Perforationstransport bestimmt und bewegt sich kaum, die Suche ist deshalb eng. Eine 120-Kamera legt ihren Abstand selbst fest, hier wird weiter geöffnet. Keiner der beiden Werte ist fest verdrahtet.
+Der Abstand bei 35 mm folgt aus dem Perforationstransport und bewegt sich kaum, die Suche ist daher eng. Eine 120er-Kamera bestimmt ihren Abstand selbst, die Suche ist weiter. Keiner der beiden ist auf einen festen Wert festgelegt.
 
-## Messergebnisse
+## Messungen
 
-Zehn echte Vorschauen eines Epson GT-X900, 1768 × 2906 bei 300 dpi über 149,86 × 246,38 mm.
+Zehn echte Epson-GT-X900-Vorschauen, 1768 × 2906 bei 300 dpi über einen Bereich von 149,86 × 246,38 mm.
 
 | Vorschau | Halter | Ergebnis |
 |---|---|---|
 | Schwarzweißnegativ, drei Streifen | Original | 3 Fenster × 6 Bilder |
-| Schwarzweißnegativ, nur ein Streifen | Original | 1 Fenster × 6 Bilder, die zwei leeren ignoriert |
+| Schwarzweißnegativ, ein Streifen eingelegt | Original | 1 Fenster × 6 Bilder, die zwei leeren Fenster ignoriert |
 | Farbnegativ, drei Streifen | Original | 3 Fenster × 6 Bilder |
-| Farbnegativ, nur ein Streifen | Original | 1 Fenster × 6 Bilder |
+| Farbnegativ, ein Streifen eingelegt | Original | 1 Fenster × 6 Bilder |
 | Farbdia, drei Streifen | Original | 3 Fenster × 6 Bilder |
-| Farbdia, nur ein Streifen | Original | 1 Fenster × 6 Bilder |
-| Farbnegativ, Zwischenräume vom Halter verdeckt | Fremd | 1 Fenster × 5 Bilder |
-| Farbnegativ, Halter breiter als der Scanbereich | Fremd | 2 ganze Fenster; die 2 halben verworfen |
+| Farbdia, ein Streifen eingelegt | Original | 1 Fenster × 6 Bilder |
+| Farbnegativ, Lücken vom Halter verdeckt | Fremdhersteller | 1 Fenster × 5 Bilder |
+| Farbnegativ, Halter breiter als der Scanbereich | Fremdhersteller | 2 ganze Fenster, die zwei halben Fenster verworfen |
 
-Angepasster Abstand über alle Streifen: 37,65 bis 38,12 mm. Die Erkennung dauert im Debug-Build 0,5 bis 0,9 s pro Vorschau.
+Angepasster Abstand über alle Streifen: 37,65 – 38,12 mm. Die Erkennung dauert im Debug-Build 0,5 – 0,9 s pro Vorschau.
 
 > [!NOTE]
-> Diese Messung umfasst nur 35 mm. Die 120-Formate sind nur durch synthetische Vorlagen abgedeckt, ihre Abstandssuche wurde noch nicht an einer echten 120-Vorschau geprüft.
+> Diese Messungen betreffen nur 35 mm. Die 120er-Formate sind durch synthetische Testdaten abgedeckt, ihre Abstandssuche wurde noch nicht an einer echten 120er-Vorschau geprüft.
 
 ## Wo der Code liegt
 
 | Datei | Aufgabe |
 |---|---|
 | `FlatbedFrameGridDetector.swift` | Einstieg, Formatgeometrie, Bildausdehnung |
-| `FlatbedFrameGridDetector+Profiles.swift` | Spalten- und Zeilenprofile, Korn, gemeinsame Statistik |
-| `FlatbedFrameGridDetector+Slots.swift` | Fenster, Filmpräsenz, Bänder |
-| `FlatbedFrameGridDetector+Grid.swift` | Zwischenraumbelege, Kammanpassung, Grenzfeinabgleich |
+| `FlatbedFrameGridDetector+Profiles.swift` | Spalten- und Zeilenprofile, Textur, gemeinsame Statistik |
+| `FlatbedFrameGridDetector+Slots.swift` | Fenster, Filmvorhandensein, Bänder |
+| `FlatbedFrameGridDetector+Grid.swift` | Lückenhinweise, Kammanpassung, Grenzverfeinerung |
 
-`FlatbedFrameDetector` bleibt der Rückfall für eine Vorschau, deren physische Größe unbekannt ist.
+`FlatbedFrameDetector` bleibt als Rückfall für eine Vorschau mit unbekannter physischer Größe.

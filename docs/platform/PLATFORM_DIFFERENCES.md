@@ -4,41 +4,35 @@
 
 negaflow exists twice, once for macOS and once for Windows. The two share no source code, and each is written the way its own system does things.
 
-This page covers what that means in practice: what is identical, what looks different, and what only one side can do.
+## Why two builds
 
-## Reasons for two builds
-
-A single cross-platform codebase would have meant picking one toolkit and accepting the result on both systems. Menus in the wrong place, file dialogs that behave oddly, color that goes through one more translation layer, and a window that never quite matches the rest of the system.
-
-Writing each side for its own platform costs roughly twice the work, and every feature has to be built and tested twice. The trade is that both versions behave the way people expect on the system they are using.
+One cross-platform codebase would mean one toolkit and its compromises on both systems: menus and file dialogs that behave oddly, an extra color translation layer, windows that do not match the system. Writing each side natively roughly doubles the work, since every feature is built and tested twice. In return each version behaves the way people expect on their system.
 
 ## What is identical
 
-The picture. Feed the same scan to both and you get the same result.
+The picture. The same scan gives the same result on both.
 
-That is not a promise on paper. The macOS build renders a set of reference images, and those files live in the repository under `docs/verification/macos-golden`. The Windows engine tests read them back and compare pixel values. If a change to the Windows engine drifts away from the macOS result, the tests fail.
+The macOS build renders a set of reference images in `docs/verification/macos-golden`. Git ignores that folder, so the images exist only where they were rendered. The Windows engine tests read copies and compare pixel values, so a drift in the Windows engine fails the tests.
 
-The same goes for:
+The same holds for:
 
 - Film base measurement and inversion
-- All develop targets: `MAIN`, `PRINT`, `HS`, `SP`, `F135`, `HR`, `EXPIRED`
+- All develop targets: `MAIN`, `PRINT`, `HS`, `SP`, `F135`, `HR`, `EXPIRED`, `CS`
 - Tone, curves, HSL, color grading, black-and-white toning
 - GrainMend detection and repair, including the infrared path
 - Print layouts and page geometry
-- Export file naming, EXIF writing, and metadata policy
-- The catalog format, so a library made on one system reads on the other
+- Export file naming, EXIF writing and metadata policy
+- The catalog format (`library.sqlite`)
 
 ## What differs
 
 ### Color management
 
-macOS uses ColorSync. Windows uses ICM. Both take the same ICC profiles and produce the same numbers within rounding. The parity tests cover this, since it is the part most likely to drift quietly.
+macOS uses ColorSync and Windows uses ICM. Both take the same ICC profiles and give the same numbers within rounding. The parity tests cover this because it is the part most likely to drift quietly.
 
 ### Graphics
 
-macOS runs the develop chain on Core Image. Windows runs it on Direct3D compute shaders with a CPU fallback for machines where the GPU path is unavailable.
-
-Speed depends on the machine rather than the platform. An Apple Silicon Mac and a PC with a discrete GPU both handle a 35mm scan without waiting.
+macOS runs the develop chain on Core Image. Windows runs it on Direct3D compute shaders, with a CPU fallback where the GPU path is unavailable.
 
 ### Where files live
 
@@ -46,32 +40,23 @@ Speed depends on the machine rather than the platform. An Apple Silicon Mac and 
 |---|---|---|
 | App | `/Applications/negaflow.app` | `%LOCALAPPDATA%\Negaflow\App` |
 | Library and settings | `~/Library/Application Support/negaflow` | `%LOCALAPPDATA%\Negaflow` |
-| Logs | Console and the app support folder | `%LOCALAPPDATA%\Negaflow\Logs` |
 
 ### Install and removal
 
-macOS ships a PKG that puts the app in `/Applications`. Removing it means dragging the app to the Trash, the way any Mac app works.
-
-Windows ships an installer that writes into your user folder without asking for administrator rights. Removal goes through `Uninstall negaflow` in the Start menu or through Settings, and takes out the app folder, the Start menu entry, and the package registration.
+macOS ships a PKG that puts the app in `/Applications`. To remove it, drag the app to the Trash. Windows ships an installer that writes into your user folder without administrator rights. Removal goes through `Uninstall negaflow` in the Start menu or through Settings, and takes out the app folder, the Start menu entry and the package registration.
 
 ### Command line
 
-macOS ships `negaflow`, a full CLI that can detect scanners, develop files, run GrainMend, and benchmark. It is meant to be used.
-
-Windows ships `negaflow-cli.exe`, which is a smaller tool for checking what the engine does with one file. It takes flags rather than subcommands and is used for diagnosis.
+macOS ships `negaflow`, a full CLI that detects scanners, develops files, runs GrainMend and benchmarks. Windows ships `negaflow-cli.exe`, a smaller diagnostic tool that checks what the engine does with one file. It takes flags, not subcommands.
 
 ### Signing
 
-Neither build is signed by a paid developer certificate, so both systems warn on first launch. macOS needs Open Anyway in Privacy and Security. Windows needs More info, then Run anyway, past SmartScreen.
+Neither build is signed with a paid developer certificate, so both systems warn on first launch. The Mac build is signed ad hoc and not notarized: allow it with Open Anyway in Privacy & Security. The Windows installer is unsigned: click More info in SmartScreen, then run it.
 
 ## Scanners
 
-The scanner plugin is a separate GPL project, [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), and it also exists for both systems. The plugin runs as its own process and talks over JSON, so negaflow itself contains no SANE code on either platform.
-
-On Windows the plugin goes through the scanner driver path Windows already provides. Nothing gets replaced, so VueScan and SilverFast keep working on the same machine.
+The scanner plugin is a separate GPL project, [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), and it exists for both systems. It runs as its own process and talks JSON, so negaflow contains no SANE code on either platform. On Windows it goes through the scanner driver path Windows already provides, so VueScan and SilverFast keep working on the same machine.
 
 ## Keeping them matched
 
-Every feature lands on macOS first, then on Windows against the actual macOS behavior. Where output can be measured, the macOS reference images decide whether the Windows side is correct.
-
-When the two disagree, macOS is the answer and the Windows side is the bug.
+Each feature lands on macOS first and then on Windows against the actual macOS behavior. Where output can be measured, the macOS reference images decide whether Windows is correct. When the two disagree, macOS is the answer and the Windows side has the bug.

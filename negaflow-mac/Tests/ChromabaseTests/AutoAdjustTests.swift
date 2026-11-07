@@ -2,7 +2,7 @@ import XCTest
 import CoreGraphics
 @testable import Chromabase
 
-// 라이트룸식 자동 보정 알고리즘(AutoAdjust)의 방향성 검증.
+// 자동 보정 알고리즘(AutoAdjust)의 방향성 검증.
 final class AutoAdjustTests: XCTestCase {
     private func stats(_ r: Double, _ g: Double, _ b: Double, _ hist: [Double], sat: Double) -> AutoAdjust.ImageStats {
         AutoAdjust.ImageStats(avgR: r, avgG: g, avgB: b, lumaHist: hist, avgSaturation: sat)

@@ -62,6 +62,15 @@ internal static class DevelopInspectorResetterTests
                     LibraryFrameError.None,
                 "reset_set_nr");
             Check(panel.SetStraightenAngle(3.5) == LibraryFrameError.None, "reset_set_angle");
+            Check(
+                panel.SetPerspective(_ => PerspectiveRecipe.Identity with
+                {
+                    Mode = PerspectiveMode.Vertical,
+                    SolvedVertical = -6.0,
+                    Vertical = 20.0,
+                    Scale = 90.0,
+                }) == LibraryFrameError.None,
+                "reset_set_perspective");
 
             Check(panel.ResetAllAdjustments() == LibraryFrameError.None, "reset_all_ok");
             Check(panel.Tone.Exposure == 0 && panel.Tone.Contrast == 0, "reset_all_clears_tone");
@@ -76,6 +85,9 @@ internal static class DevelopInspectorResetterTests
             Check(panel.SelectedFrame.ImageTransform.StraightenAngle == 0.0 &&
                     panel.SelectedFrame.ImageTransform.Crop is null,
                 "reset_all_clears_crop_and_angle");
+            Check(
+                panel.SelectedFrame.ImageTransform.Perspective.IsIdentity,
+                "reset_all_clears_perspective");
             Check(host.CanUndo, "reset_all_is_undoable");
             Check(
                 host.UndoActionName == LibraryHostService.UndoActions.ResetAdjustments,
@@ -87,6 +99,9 @@ internal static class DevelopInspectorResetterTests
             Check(panel.Color.ColorModel.Warmth == 0.8, "reset_undo_restores_warmth");
             Check(panel.NoiseReduction.Strength == 0.9, "reset_undo_restores_nr");
             Check(panel.SelectedFrame!.ImageTransform.StraightenAngle == 3.5, "reset_undo_restores_angle");
+            Check(
+                panel.SelectedFrame.ImageTransform.Perspective.Vertical == 20.0,
+                "reset_undo_restores_perspective");
             Check(host.CanRedo, "reset_undo_can_redo");
 
             Check(host.Redo() == LibraryHostService.UndoActions.ResetAdjustments, "reset_redo");

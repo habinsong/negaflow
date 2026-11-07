@@ -2,46 +2,38 @@
 
 [Dokumentationsstart](../README.md)
 
-negaflow ist eine App für macOS und Windows. Sie importieren oder scannen Filmbilder, danach folgen Umkehr, Entwicklung, GrainMend, Ausgabe und Aufbewahrung. Jede Bearbeitung wird getrennt vom Original abgelegt.
+negaflow ist eine App für macOS und Windows. Sie importieren oder scannen Filmbilder und durchlaufen dann Invertierung, Entwicklung, GrainMend, Ausgabe und Erhaltung. Jede Bearbeitung wird getrennt vom Original aufbewahrt.
 
 > [!IMPORTANT]
-> Originale, Bearbeitungsverlauf, Caches und Ausgabedateien sind verschiedenes Material. Ein verlorener Cache darf weder das Original noch den Verlauf kosten, und ein Export scheitert lieber, als ein Ergebnis auszuliefern, das er nicht neu aufbauen kann.
+> Originale, Bearbeitungsverlauf, Caches und Ausgabedateien sind verschiedenes Material. Der Verlust eines Caches darf nicht das Original oder den Bearbeitungsverlauf kosten, und ein Export schlägt fehl, wenn ein benötigtes Ergebnis nicht wiederhergestellt werden kann.
 
 ## Sicherheitsregeln, die sich nicht ändern
 
-1. Originalbilder und Sidecars Dritter werden nie automatisch überschrieben.
-2. Aus der Bibliothek entfernen und das Original in den Papierkorb legen sind zwei Dinge.
-3. Der Scanner-Bildschirm zeigt nur, was das Plugin gemeldet hat.
+1. Originalbilder und fremde Sidecar-Dateien werden nie automatisch überschrieben.
+2. Etwas aus der Mediathek zu entfernen und das Original in den Papierkorb zu legen sind getrennte Vorgänge.
+3. Die Scanneroberfläche zeigt nur, was das Plug-in gemeldet hat.
 4. Der Demo-Scanner wird nur verwendet, wenn Sie ihn ausdrücklich wählen.
-5. Lässt sich ein bearbeitetes Ergebnis nicht neu aufbauen, wird nicht das Original an seiner Stelle exportiert.
-6. Ein langer Auftrag prüft Bild, Bearbeitungsversion und Sitzung erneut, kurz bevor er sein Ergebnis anwendet.
-7. Ein Cache muss sich aus Original und Bearbeitungsverlauf neu aufbauen lassen.
-8. Ungenügend geprüfte Profile, Ausgabepakete und Archive werden nicht als fertiges Ergebnis veröffentlicht.
+5. Lässt sich ein bearbeitetes Ergebnis nicht wiederherstellen, wird nicht das Original an seiner Stelle exportiert.
+6. Eine lange Aufgabe prüft Bild, Bearbeitungsversion und Sitzung unmittelbar vor dem Anwenden ihres Ergebnisses erneut.
+7. Ein Cache muss aus dem Original und dem Bearbeitungsverlauf wiederherstellbar sein.
+8. Profile, Ausgabepakete und Archive werden erst veröffentlicht, nachdem die erforderlichen Prüfungen bestanden sind.
 
 ## Module
 
-```mermaid
-flowchart LR
-    APP["negaflowApp"] --> COLOR["Chromabase"]
-    APP --> SCAN["ScannerKit"]
-    CLI["negaflowCLI"] --> COLOR
-    CLI --> SCAN
-    COLOR --> FILES["Bilder und Metadaten"]
-    SCAN --> PLUGIN["Externes Scanner-Plugin"]
-```
+`negaflowApp` und `negaflowCLI` nutzen beide `Chromabase` und `ScannerKit`. `Chromabase` arbeitet mit Bildern und Metadaten, und `ScannerKit` spricht mit dem externen Scanner-Plug-in.
 
 ### `Chromabase`
 
 Die Chroma Engine und der Kern der Bildverarbeitung.
 
 - Bilder lesen und Ausrichtung behandeln
-- Filmbasis messen
-- Negativ- und Positiventwicklung
-- Tonwert, Farbe und lokale Korrekturen
+- Messung der Filmbasis
+- Entwicklung von Negativen und Positiven
+- Tonwert, Farbe und lokale Anpassungen
 - Film-, Look- und Scannerprofile
 - GrainMend RGB und IR
 - Histogramm und Farbmessung
-- Ausgabecodierung und Metadaten
+- Ausgabekodierung und Metadaten
 
 Mehr dazu:
 
@@ -50,91 +42,82 @@ Mehr dazu:
 
 ### `ScannerKit`
 
-Es trägt den Vertrag, der ein externes Plugin anbindet.
+Es besitzt den Vertrag, der ein externes Plug-in anbindet.
 
-- Scanner-ID und Funktionen
-- Anfrage- und Antwort-JSON
-- Externen Prozess ausführen, Zeitlimits, Abbruch
-- Besitzer, Rechte, Freigabe und Hash des Plugins
-- Temporäre Ausgabe prüfen, dann die endgültige Datei offenlegen
-- Scan-Sitzungen und Auftragsverlauf
+- Scanner-ID und Fähigkeiten
+- JSON für Anfragen und Antworten
+- Ausführen des externen Prozesses, Zeitgrenzen, Abbruch
+- Eigentümer, Rechte, Freigabe und Hash des Plug-ins
+- Prüfen der temporären Ausgabe, dann Veröffentlichen der endgültigen Datei
+- Scansitzungen und Auftragsverlauf
 - Der Demo-Scanner, den Sie selbst einschalten müssen
 
-Die SANE-Umsetzung liegt in einem eigenen GPL-Projekt, [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane). App und Plugin sprechen ausschließlich über JSON und die CLI miteinander.
+Die SANE-Implementierung liegt in einem eigenen GPL-Projekt, [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane). App und Plug-in sprechen nur über JSON und die CLI miteinander.
 
 ### `negaflowCLI`
 
 Nutzt dieselbe Engine und dasselbe `ScannerKit` wie die grafische Oberfläche.
 
-- Scanner finden, Funktionen prüfen, scannen
+- Scanner finden, Fähigkeiten prüfen, scannen
 - Mehrere Bilder entwickeln
 - Scannerprofile auflisten
-- GrainMends `defect-bench`
-- IT8 und der relative Vergleich zwischen Scannern
-- Selbstprüfungen und JSON-Automatisierung
+- GrainMend `defect-bench`
+- IT8 und scannerbezogener Vergleich
+- Selbsttests und JSON-Automatisierung
 
 ### `negaflowApp`
 
-Die App, die Menschen benutzen, gebaut mit SwiftUI und AppKit.
+Die Benutzeroberfläche, gebaut mit SwiftUI und AppKit.
 
-- Bibliothek, Entwicklung, Print, Leinwand
-- Scan, GrainMend, Export
+- Mediathek, Entwickeln, Abzug, Zeichenfläche
+- Scannen, GrainMend, Export
 - Versionen, Einstellungen, Kurzbefehle
-- Katalog, Cache, Sicherung, Aufbewahrungsarchiv
-- Lokalisierter Info-Dialog, dessen Version aus der gemeinsamen Ressource stammt
+- Katalog, Cache, Backup, Erhaltungsarchiv
+- Ein lokalisiertes Info-Fenster, dessen Produktversion aus der gemeinsamen Versionsressource stammt
 
-## Ablauf für Benutzer
+## Ablauf für Nutzer
 
-```mermaid
-flowchart LR
-    A["Importieren oder scannen"] --> B["Bibliothek ordnen"]
-    B --> C["Filmtyp und Basis"]
-    C --> D["Chroma Engine"]
-    C --> E["GrainMend"]
-    C --> F["Versionen und virtuelle Kopien"]
-    D --> G["Prüfen, drucken, exportieren"]
-    E --> G
-    F --> G
-    G --> H["Bilddateien"]
-    G --> I["Sidecars und Render-Protokolle"]
-    G --> J["Aufbewahrungsarchiv"]
-```
+1. Importieren oder scannen.
+2. Die Mediathek ordnen.
+3. Filmart und Basis festlegen.
+4. In der Chroma Engine entwickeln, mit GrainMend reparieren oder mit Versionen und virtuellen Kopien verzweigen.
+5. Prüfen, drucken oder exportieren in Bilddateien, Sidecar-Dateien und Renderprotokolle oder in ein Erhaltungsarchiv.
 
-Jeder Schritt lässt das Original unberührt und erweitert Katalog sowie Bearbeitungsverlauf.
+Jeder Schritt lässt das Original unberührt und ergänzt Katalog und Bearbeitungsverlauf.
 
 ## Eingabe und Originale
 
 ### Dateien importieren
 
-Der übliche Weg hinein. Verarbeitet werden TIFF, JPEG, PNG und die Kamera-RAWs, die macOS Image I/O lesen kann. Eingebettetes ICC und Ausrichtung werden gelesen, und die Original-ID kommt in den Katalog.
+Der Standardweg. Er verarbeitet TIFF, JPEG, PNG und das Kamera-RAW, das Image I/O unter macOS lesen kann. Das eingebettete ICC und die Ausrichtung werden gelesen, und die ID des Originals kommt in den Katalog.
 
 ### Scannen
 
-Ein installiertes Plugin kann diese Funktionen melden.
+Ein installiertes Plug-in kann diese Fähigkeiten melden:
 
 - Auflösung und Bittiefe
 - Scanbereich und Vorschau
 - Belichtung
 - IR
-- Stapel- und Halterverhalten
+- Verhalten von Stapel und Halter
 
-Die App erfindet nie eine Funktion aus einer Tabelle von Modellnamen. Nach einem Scan werden die tatsächlich angewandten Einstellungen des Plugins und die Ausgabedatei erneut geprüft.
+Die App erfindet nie eine Fähigkeit aus einer Tabelle von Modellnamen. Ist ein Scan fertig, werden die vom Plug-in tatsächlich angewendeten Einstellungen und die Ausgabedatei erneut geprüft.
 
-### Original-ID
+### ID des Originals
 
-Ein Dateipfad allein identifiziert kein Original. Aufbewahrt werden die Werte, die der aktuelle Vertrag braucht: Dateibeobachtungen, Bytezahl, Änderungszeit, SHA-256 und ein persistentes Bookmark.
+Ein Dateipfad allein identifiziert kein Original. Die Werte, die der aktuelle Vertrag braucht, werden festgehalten: Dateibeobachtungen, Bytezahl, Änderungszeit, SHA-256 und ein dauerhaftes Lesezeichen.
 
-Wurde eine Datei verschoben, ändert sich der Pfad nur, wenn Sie sie selbst neu verknüpfen oder die Bookmark-Wiederherstellung gelingt.
+Wurde eine Datei verschoben, ändert sich der Pfad nur, wenn Sie sie selbst neu verknüpfen oder die Lesezeichen-Wiederherstellung gelingt.
 
 ## Katalog
 
-Der Hauptspeicher ist `library.sqlite`. Die alte `library.json` dient nur dazu, geprüftes älteres Material herüberzuholen oder eine übertragbare Sicherung zu schreiben. Die beiden Speicher werden nie gleichzeitig aktualisiert.
+Der Hauptspeicher ist `library.sqlite`. Das ältere `library.json` dient dazu, bestätigtes älteres Material zu übernehmen oder ein Backup zu schreiben, das zwischen Rechnern wandern kann. Beide Speicher werden nie gleichzeitig aktualisiert.
 
 Was in SQLite kommt:
 
 - Bilder und Originale
 - Filme, Ordner, Sammlungen, Suchen
-- Reihenfolge und Scan-Aufträge
+- Reihenfolge und Scanaufträge
 - Entwicklungswerte und Bearbeitungsverlauf je Version
 
 Was nicht:
@@ -143,164 +126,164 @@ Was nicht:
 - Miniaturen und Vorschauen
 - GrainMend-Caches
 
-### Umstieg von JSON
+### Übernahme aus JSON
 
-1. Schema und Zustand der vorhandenen JSON prüfen.
+1. Schema und Zustand des vorhandenen JSON prüfen.
 2. Eine Wiederherstellungskopie behalten.
-3. In einer Transaktion in ein temporäres SQLite schreiben.
+3. In einer Transaktion in eine temporäre SQLite-Datenbank schreiben.
 4. Den Katalog vorher und nachher vergleichen.
 5. SQLite-Integrität und die Sicherheitsbedingungen der App prüfen.
-6. Den Hauptspeicher erst umstellen, wenn alles zusammenpasst.
+6. Den Hauptspeicher nur umstellen, wenn alles übereinstimmt.
 
-Eine gescheiterte JSON gilt nicht als leerer Katalog. Zahlen und Entscheidung stehen in [Katalogspeicherung](CATALOG_STORAGE.md).
+Ein fehlgeschlagenes JSON gilt nicht als leerer Katalog. Die Zahlen stehen in [Katalogspeicherung](CATALOG_STORAGE.md).
 
-## Bibliothek
+## Mediathek
 
-Zum Ordnen:
+Ordnen:
 
 - Ordner, Filme, manuelle Sammlungen, intelligente Sammlungen, gespeicherte Suchen, Stapel
-- Sterne, ausgewählt und abgelehnt, Farbmarkierungen
-- Raster, Vergleich, Auswahl
-- Doppelte Kandidaten durchsehen
+- Sternebewertungen, Auswählen und Ablehnen, Farbetiketten
+- Raster, Vergleich, Übersicht
+- Prüfung von Duplikatkandidaten
 
-In der Ordneransicht trägt jeder Ordner ein Band: Dreieck, Ordner, Name, Anzahl, Entwicklungsprozess, Ziel, Anwenden. Das Dreieck klappt die Miniaturen darunter ein. Eingeklappte Ordner bleiben es beim nächsten Start, getrennt vom Einklappen der Dateiliste in der Seitenleiste.
+In der Ordneransicht zeigt jeder Ordner ein Band mit Aufklappdreieck, Ordner, Name, Anzahl, Entwicklungsprozess, Ziel und Anwenden. Das Band klappt die Miniaturen darunter ein. Eingeklappte Ordner werden über Neustarts hinweg gemerkt, getrennt von der Dateiliste der Seitenleiste.
 
-Die Ordneransicht verwendet **ein** Raster. Jeder Ordner bildet eine Sektion mit seinem Band als Kopf. Diese Struktur muss erhalten bleiben: Stapelt man ein eigenes Raster pro Ordner, muss das Layout die gesamte Höhe jedes sichtbaren Ordners berechnen und alle seine Karten auf einmal erstellen. Ein gemeinsames Raster erstellt die Karten zeilenweise, sobald sie sichtbar werden. So bleibt das Scrollen bei mehreren hundert Fotos flüssig.
+Die Ordneransicht nutzt ein einziges Raster, jeder Ordner ist ein Abschnitt, sein Band die Abschnittsüberschrift. Behalten Sie diese Struktur bei. Ein eigenes Raster je Ordner zu stapeln zwingt das Layout, die volle Höhe jedes sichtbaren Ordners zu berechnen und alle seine Karten auf einmal zu erzeugen, während ein einziges Raster die Karten zeilenweise erzeugt, wenn sie ins Bild kommen. So bleibt das Scrollen bei mehreren hundert Fotos flüssig.
 
-Mehrere virtuelle Kopien können ein Original teilen. Vor dem Löschen eines Originals werden seine Verweise geprüft. Aus der Bibliothek entfernen ändert nur Verweise im Katalog. Der Papierkorb ist eine eigene Aktion.
+Mehrere virtuelle Kopien können ein Original teilen. Verweise auf ein Original werden vor dem Löschen geprüft. Etwas aus der Mediathek zu entfernen ändert nur Katalogverweise, und der Papierkorb ist ein anderer Vorgang.
 
-Bearbeitungen überleben eine getrennte externe Festplatte. Das Original wird als offline markiert, und Sie verknüpfen es je Datei oder je Ordner neu. Ist die ID nicht die erwartete, wird nichts automatisch getauscht.
+Bearbeitungen bleiben erhalten, wenn ein externer Datenträger getrennt wird. Das Original wird als offline markiert, und Sie verknüpfen es nach Datei oder Ordner neu. Ist die ID nicht die erwartete, wird nichts automatisch ausgetauscht.
 
-Jeder registrierte physische Quellordner erhält genau einen Dateisystem-Watcher. Ereignisse werden kurz zusammengefasst, danach wird nur der geänderte Ordner neu gelesen. Die erneute Verknüpfung über Bookmarks behält die Katalogordner-ID bei, wenn Finder eine Quelle verschiebt oder umbenennt. Direkt neu hinzugefügte Bilder werden ohne Polling und ohne erneuten Scan der ganzen Bibliothek importiert.
+Jeder registrierte physische Quellordner hat einen Dateisystem-Beobachter. Ereignisse werden kurz zusammengefasst, dann wird nur der geänderte Ordner neu geprüft. Die Neuverknüpfung über Lesezeichen erhält die Ordner-ID im Katalog, wenn der Finder eine Quelle verschiebt oder umbenennt, und neu hinzugekommene Bilder direkt im Ordner werden ohne Polling und ohne erneutes Durchsuchen der ganzen Mediathek importiert.
 
 ## Entwicklung und GrainMend
 
 Jedes Bild trägt:
 
-- Original-ID und Filmtyp
+- ID des Originals und Filmart
 - Filmbasis
 - Entwicklungswerte
 - GrainMend-Bearbeitungsverlauf
 - Versionsverlauf
-- Exportstatus
+- Exportzustand
 
-Während des Einstellens dient eine Vorschau in niedriger Auflösung. Ein fertiges Ergebnis erreicht den Bildschirm nur, wenn Bild-ID und Bearbeitungsversion noch zur aktuellen Auswahl passen.
+Während Sie anpassen, wird eine Vorschau niedrigerer Auflösung verwendet. Ein fertiges Ergebnis erreicht den Bildschirm nur, wenn Bild-ID und Bearbeitungsversion noch zur aktuellen Auswahl passen.
 
-Beim Wechsel zu einem anderen Foto beginnt die endgültige Vorschau ohne die Wartezeit für laufende Einstellungen. Unter macOS kann nach dem Rendern eines Kamera-RAW-Negativs das nächste sichtbare RAW im Hintergrund dekodiert werden. Ein Nachbarbild wird im bestehenden Master-Cache mit zwei Bildern und 160 MiB vorbereitet. Bearbeitung, eine andere Auswahl oder Speicherdruck brechen dies ab. Wird das gerade vorbereitete Foto gewählt, teilen sich beide Vorgänge dessen Dekodierung.
+Die Wahl eines anderen Fotos startet dessen beruhigtes Rendern ohne die Bearbeitungspause. Unter macOS:
 
-Unter macOS werden die Sensordaten bei der Auswahl einer Kamera-RAW-Datei ohne Cache einmal entpackt. Unterstützt das gemeldete Mosaik dies, erscheint vor Abschluss des normalen Demosaicing eine vorläufige Kamera-RGB-Vorschau. Die fertige RGBA16-Eingabe geht direkt in den Frame-Cache; vorläufige Messwerte werden verworfen. Bei Abbruch wird die Freigabe des Decoders vor der nächsten Auswahl abgewartet. Der Master-Cache folgt den automatischen oder manuellen Residenzgrenzen, höchstens zwei Bilder und 160 MiB, und bleibt bei Speicherdruck deaktiviert. Beim Verdrängen eines Frames wird auch sein RAW-Master freigegeben. LibRaw wird mit `-O3` und ThinLTO ohne fast-math gebaut. Jede X-Trans-Kachel verwendet ein OpenMP-Team weiter; Barrieren und Kachelreihenfolge bleiben erhalten. Die Demosaicing-Qualität der fertigen Vorschau und des Exports bleibt gleich. Der Master nutzt den angeforderten Maßstab der fertigen Vorschau und vermeidet eine zweite Flächenmittelung. Grundlage ist die [LibRaw-API für Wiederverarbeitung und Speicher](https://www.libraw.org/docs/API-CXX.html#free_image). Die Vorschaubrücke unter CDDL-1.0 verkleinert die verarbeiteten Kamera-RGB-Daten direkt mit denselben Flächengewichten und derselben Additionsreihenfolge wie Swift. Die RGB-Ausgabekopie in voller Größe entfällt.
+- Ist ein Kamera-RAW-Negativ beruhigt, kann das nächste sichtbare RAW im Hintergrund dekodiert werden. Vorbereitet wird nur ein Nachbar, innerhalb des vorhandenen Master-Caches (bis 160 MiB). Eine Bearbeitung, eine andere Auswahl oder Speicherdruck bricht diese Arbeit ab, und die Wahl des gerade vorbereiteten Fotos teilt dessen Dekodierung.
+- Eine kalte Auswahl von Kamera-RAW entpackt die Sensordaten nur einmal. Erlaubt das Mosaik es, erscheint eine vorläufige Kamera-RGB-Vorschau, bevor das kanonische Demosaicing fertig ist. Der Master-Cache bleibt bei Speicherdruck ausgeschaltet, und das Verdrängen eines Bildes wirft auch seinen RAW-Master weg.
+- Eine kalte TIFF-Auswahl teilt eine dekodierte Quelle zwischen interaktiver und beruhigter Vorschau und skaliert sie auf der GPU. Apple-RAW-Vorschauen, auch DNG, behalten einen `CIRAWFilter` für beide Durchläufe.
+- Bereinigte RAW-TIFFs werden geschrieben, wenn ihre Pixelpuffer den Speicher verlassen, nicht nach jeder Bearbeitung. Die Datenträgerbereinigung behält neuere Dateien innerhalb einer Grenze, schützt Dateien in Benutzung und löscht beim nächsten Start die Caches der vorigen Sitzung. Bearbeitungsrezepte bleiben in Sidecar-Dateien.
 
-Unter macOS teilen sich die interaktive und die fertige Vorschau eines ungepufferten TIFFs eine dekodierte Quelle und verkleinern sie auf der GPU. Apple-RAW-Vorschauen einschließlich DNG behalten einen `CIRAWFilter` für beide Durchläufe mit den bisherigen Dekodiereinstellungen und Skalierungsfaktoren. Nach dem Rendern oder dem Abschluss des Abbruchs werden diese Quellen freigegeben; gespeicherte Proxy-Puffer unterliegen dem bestehenden automatischen oder manuellen Bildbudget. Beim Erstellen linearer RGBA16-Proxys wird die Bittiefe des Originals nicht erneut geprüft, da das Speicherformat bereits feststeht. Auch das erste Rendern nach der Rekonstruktion bereinigter Eingabepixel teilt den Decoder und überspringt die Wartezeit für laufende Bearbeitungen. Die Prüfung des automatischen Eingabegammas wartet auf das Rendern des ausgewählten Bildes und legt keine Textur in voller Größe für den Regler an. Manuelles Gamma bereitet sie bei Bedarf vor. Der Export dekodiert weiterhin das Original in voller Auflösung. Siehe Apples Hinweise zur [Lebensdauer des RAW-Filters](https://developer.apple.com/forums/thread/834517) und zum [Skalierungsfaktor](https://developer.apple.com/documentation/coreimage/cirawfilter/scalefactor).
+Unter Windows nutzen JPEG-Miniaturen ein LRU-Bytebudget und BGRA-Vorschauen den Rest des verwalteten Anzeigebudgets, und kritischer Speicherdruck verwirft ungenutzte JPEGs. D3D-Staging-Puffer haben eine Cachegrenze, die Signale für wenig Speicher, das Ende eines Exports und das Zurücksetzen des Geräts freigeben.
 
-Unter Windows verwenden Abbruch, Statusabfragen und die Freigabe des Ausführungszustands dieselbe Sperre; Token-Rückrufe werden außerhalb dieser Sperre abgewartet. Der automatische oder manuelle Cachemodus bleibt bei Speicherdruck erhalten. Einstellungsänderungen beachten die aktuelle Druckbegrenzung. JPEG-Vorschaubilder nutzen höchstens ein Achtel des verwalteten Anzeigebudgets mit LRU-Verdrängung, BGRA-Vorschauen den Rest. Bei kritischem Druck werden ungenutzte JPEGs entfernt; eine laufende UI-Übergabe schützt ihr JPEG kurzzeitig. D3D-Transferpuffer geben besitzende COM-Referenzen zurück. Ihr Cachelimit ist der kleinere Wert aus GPU-Einstellung und 15% des installierten RAM. Bei einer Low-Memory-Meldung bleibt kein Transfercache erhalten. Kleine Transfers entfernen übergroße Puffer derselben Richtung. Exportabschluss oder Gerätefreigabe leert den Transfercache dieses Geräts. Puffer oberhalb des Budgets bleiben nur während ihres aktiven Transfers erhalten.
+Der Export speichert nicht die Vorschau-Bitmap auf dem Bildschirm. Er baut das Bild in voller Auflösung aus dem Original und den festgelegten Bearbeitungswerten neu auf.
 
-Der Export speichert nicht die Vorschau-Bitmap vom Bildschirm. Er baut das Bild in voller Auflösung aus dem Original und den festgehaltenen Bearbeitungswerten neu auf.
-
-GrainMend führt automatisch, geführt, Pinsel, Klonstempel und IR in einer geordneten Liste. Caches sind abgeleitete Dateien. Lässt sich ein Ergebnis nicht aus Original und Verlauf neu aufbauen, scheitert der Export.
-
-Unter macOS werden bereinigte RAW-TIFFs beim Freigeben ihrer Pixelpuffer aus dem Arbeitsspeicher geschrieben, statt nach jeder Bearbeitung. Die Bereinigung behält neuere Dateien, mit einem Ziel von mindestens acht Bildern oder dem Doppelten des Speicherlimits und insgesamt 4 GiB. Dateien unter 60 Sekunden und gerade verwendete Dateien bleiben geschützt; die Ziele können deshalb vorübergehend überschritten werden. Beim nächsten Start werden Caches der vorigen Sitzung entfernt. Bearbeitungen bleiben in den Begleitdateien.
+GrainMend hält Automatisch, Geführt, Pinsel, Klonstempel und IR in einer geordneten Liste. Caches sind abgeleitete Dateien. Lässt sich ein Ergebnis nicht aus dem Original und dem Bearbeitungsverlauf wiederherstellen, scheitert der Export.
 
 Mehr dazu in [GrainMend](../product/GRAINMEND.md).
 
 ## Versionen
 
-- History und Snapshot: Einen Entwicklungsstand selbst festhalten, dann vergleichen oder dorthin zurück.
-- Virtual Copy: Ein weiterer Bearbeitungszweig, ohne die Originaldatei zu verdoppeln.
-- Copy/Paste: Einen gewählten Bereich einfügen, etwa Tonwert, Farbe, Detail oder Geometrie. Bei Masken, die Originalkoordinaten brauchen, werden die Sicherheitsbedingungen geprüft.
+- Verlauf und Schnappschuss: einen Entwicklungszustand selbst festhalten, dann vergleichen oder dorthin zurückkehren.
+- Virtuelle Kopie: ein weiterer Zweig von Bearbeitungen, ohne die Originaldatei zu duplizieren.
+- Kopieren/Einfügen: einen gewählten Bereich wie Tonwert, Farbe, Detail oder Geometrie einfügen. Bei Masken, die Originalkoordinaten brauchen, werden die Sicherheitsbedingungen geprüft.
 
 ## Export
 
-Zu Beginn werden diese Werte als ein Paket festgehalten.
+Zu Beginn werden diese Werte zu einem Paket festgelegt:
 
-- Original-ID
-- Bearbeitungsverlauf von Entwicklung und GrainMend
+- ID des Originals
+- Entwicklungs- und GrainMend-Bearbeitungsverlauf
 - Bytes und SHA-256 des Scannerprofils
 - Ausgabeeinstellungen und Metadatenregeln
 - Dateiname und Ziel
 
-Wer einen Export anhält und fortsetzt, benutzt dasselbe Paket.
+Ein angehaltener und fortgesetzter Export nutzt dasselbe Paket.
 
 ### Mehrere Ausgabedateien
 
-Ein Export kann JPEG/TIFF, Sidecar, XMP und `-main-flat` zusammen erzeugen.
+Ein Export kann zugleich JPEG/TIFF, eine Sidecar-Datei, XMP und `-main-flat` erzeugen.
 
 1. Ziel und Namenskonflikte vorab prüfen.
 2. Alle Dateien in einen temporären Ordner schreiben.
 3. Das Bild erneut öffnen und die Pixelgröße prüfen.
-4. Bytezahl und SHA-256 berechnen.
-5. Sidecar und Render-Protokoll schreiben.
+4. Bytezahlen und SHA-256 berechnen.
+5. Sidecar-Datei und Renderprotokoll schreiben.
 6. Einen Commit-Eintrag hinterlassen.
-7. Das ganze Paket an seinen endgültigen Ort verschieben.
+7. Das ganze Paket an den endgültigen Ort verschieben.
 8. Bei einem Fehler zurückrollen oder beim nächsten Lauf aufräumen.
 
-Ein unvollständiger Satz Dateien wird nie als Erfolg vermerkt.
+Ein unvollständiger Dateisatz wird nie als Erfolg markiert.
 
-### Render-Protokoll v3
+### Renderprotokoll v3
 
-Es hält die SHA-256-Beziehungen zwischen diesen Werten fest.
+Es hält die SHA-256-Beziehungen fest zwischen:
 
-- Bytes des Originals
-- Die tatsächliche Render-Eingabe
-- Verlauf von Entwicklung und GrainMend
-- Scannerprofil
-- Versionen von Decoder und Renderer
+- Den Bytes des Originals
+- Der tatsächlich verwendeten Render-Eingabe
+- Entwicklungs- und GrainMend-Verlauf
+- Dem Scannerprofil
+- Den Versionen von Decoder und Renderer
 - Ausgabebytes, Pixelgröße, Format
 
-Es gibt weder digitale Signatur noch Zertifikat, deshalb heißt das nicht C2PA Content Credentials. Mehr dazu in [Render-Protokoll](../reference/RENDER_MANIFEST.md).
+Es gibt keine digitale Signatur und kein Zertifikat, deshalb ist es keine C2PA Content Credentials. Mehr dazu in [Render-Protokoll](../reference/RENDER_MANIFEST.md).
 
-## Print und Softproof
+## Abzug und Softproof
 
-Unterstützte Anordnungen:
+Unterstützte Layouts:
 
 - Einzelbild
 - Kontaktbogen
 - Bildpaket
-- Benutzerpaket
+- Eigenes Paket
 - Cyanotypie
 - Glasplatte
-- Gelatinesilber
+- Silbergelatine
+- Wasserzeichen
 
-Einzelbild und die drei historischen Layouts erzeugen für jedes ausgewählte Foto eine untereinander angezeigte Seite. Kontaktbogen, Bildpaket und Benutzerpaket zeigen und exportieren ihre fertige Seitenzahl. Bei 39 Fotos sind das eine 6 × 7-Kontaktbogenseite, 10 Seiten mit je vier Bildern, eine Seite des voreingestellten Benutzerpakets oder 39 Einzeldateien.
+Einzelbild und die drei historischen Layouts erzeugen je ausgewähltem Foto eine senkrecht gestapelte Seite. Kontaktbogen, Bildpaket und eigenes Paket melden und exportieren stattdessen ihre Zahl fertiger Seiten. Bei 39 Fotos ergibt das eine Kontaktbogenseite 6 × 7, 10 Seiten eines vierfachen Bildpakets, eine Seite des Standard-Pakets oder 39 einzelne Dateien.
 
-Die Paketvorschau verwendet vorhandene Miniaturen und entwickelte Bilder und erzeugt nur bei Bedarf eine kleine schnelle Vorschau. Der Export berechnet Platzierungen aus Metadaten, entwickelt nur die benötigten Pixel, bereitet gleichzeitig zwei bis vier eindeutige Quellen vor, hält den Core-Image- Graphen bis zur Seitenausgabe verbunden und begrenzt Quellraster auf 512 MiB pro Seite.
+Die Paketvorschau nutzt vorhandene Miniaturen und entwickelte Bilder wieder und erzeugt nur dann eine kleine schnelle Vorschau, wenn eine fehlt. Der endgültige Export berechnet die Platzierung aus den Metadaten, entwickelt nur die Pixel, die jede Zelle braucht, bereitet zwei bis vier verschiedene Quellen gleichzeitig vor, hält den Core-Image-Graphen bis zum Schreiben der Seite verbunden und setzt ein Budget von 512 MiB Quellraster pro Seite durch.
 
-Jede Platzierung eines Bildpakets beobachtet das ihr zugewiesene Bild. Das Drucker-Ausgabe-ICC wird nach dem Layout einmal auf die vollständige fertige Seite angewandt. Dadurch folgen Pakete mit wiederholten und mit gemischten Bildern demselben Ausgabevertrag. Bibliothek und Entwicklungsvorschau bleiben davon unberührt. Weder das ursprüngliche Scan-TIFF noch `-main-flat` bekommt ein Druckerprofil.
+Jede Platzierung im Paket beachtet das ihr zugewiesene Bild. Das Druckerausgabe-ICC wird nach Abschluss des Layouts einmal auf die vollständige fertige Seite angewendet, sodass Pakete mit wiederholten und mit gemischten Quellen denselben Ausgabevertrag nutzen. Es ändert nie die Vorschau von Mediathek oder Entwickeln, und weder das ursprüngliche Scan-TIFF noch `-main-flat` erhalten ein Druckerprofil.
 
-Ohne gültiges RGB-Druckerprofil wird kein anderes Profil untergeschoben. Bytes und SHA-256 des von Ihnen gewählten Profils kommen ins Ausgabeprotokoll.
+Ohne gültiges RGB-Drucker-ICC wird kein anderes Profil eingesetzt. Bytes und SHA-256 des gewählten Profils gehen in das Ausgabeprotokoll ein.
 
-## Aufbewahrungsarchiv
+## Erhaltungsarchiv
 
 Was in `.negaflowarchive` kommt:
 
-- Die übertragbare Katalog-JSON
+- Das portable Katalog-JSON
 - Originaldateien
 - IR-Originale
 - Der benötigte GrainMend-Verlauf
-- Die Beziehung zwischen virtuellen Kopien und dem geteilten Original
+- Die Beziehung zwischen virtuellen Kopien und dem Original, das sie teilen
 
-Miniaturen, Vorschauen, GrainMend-Caches und exportierte Dateien lassen sich neu erzeugen, also bleiben sie draußen. Verwendet wird die BagIt-Struktur nach RFC 8493 mit einer SHA-256-Liste, und jede Datei und jede Beziehung wird geprüft, bevor das Paket an seinen endgültigen Ort wandert.
+Miniaturen, Vorschauen, GrainMend-Caches und exportierte Dateien lassen sich wiederherstellen und bleiben daher draußen. Das Archiv nutzt die BagIt-Struktur nach RFC 8493 mit einer SHA-256-Liste, und jede Datei und jede Beziehung wird geprüft, bevor das Paket an den endgültigen Ort wandert.
 
-- [Bibliotheksarchiv](LIBRARY_ARCHIVE.md)
+- [Mediatheksarchiv](LIBRARY_ARCHIVE.md)
 - [RFC 8493](https://www.rfc-editor.org/info/rfc8493/)
 - [PREMIS](https://www.loc.gov/standards/premis/)
 
-Langfristige Aufbewahrung braucht zusätzlich ein anderes Medium, eine Kopie an einem anderen Ort und regelmäßige Hash-Prüfungen.
+Langzeiterhaltung braucht außerdem andere Medien, eine externe Kopie und regelmäßige Hash-Prüfungen.
 
-## Sicherheit der Scanner-Plugins
+## Sicherheit der Scanner-Plug-ins
 
-Wird ein Plugin gefunden, wird dies geprüft.
+Wird ein Plug-in gefunden, wird geprüft:
 
 - Ob es dem aktuellen Benutzer gehört
-- Ob eine Gruppe oder ein anderer Benutzer darauf schreiben kann
+- Ob eine Gruppe oder ein anderer Benutzer es beschreiben kann
 - Ob es ein symbolischer Link ist
-- ID und SHA-256 des Verzeichniseintrags und der ausführbaren Datei
-- Ob die von Ihnen freigegebene ID noch die vorliegende ID ist
+- ID und SHA-256 von Eintrag und ausführbarer Datei
+- Ob die ID, die Sie freigegeben haben, noch die ID vor Ihnen ist
 
-Hat sich die Datei geändert, wird die frühere Freigabe nicht weiterverwendet.
+Hat sich die Datei geändert, wird die frühere Freigabe nicht wiederverwendet.
 
-Protokoll v2 nutzt eine Anfrage-ID und eine Folgenummer und verlangt genau ein Endergebnis. Die Ausgabegröße hat eine Obergrenze, und nach Zeitüberschreitung oder Abbruch werden Prozess und Pipes aufgeräumt.
+Protokoll v2 nutzt eine Anfrage-ID und eine Sequenznummer und verlangt genau ein Endergebnis. Die Ausgabegröße hat eine Obergrenze, und nach einer Zeitüberschreitung oder einem Abbruch werden Prozess und Pipes aufgeräumt.
 
-Ein Plugin legt nie selbst eine Datei am endgültigen Ort offen. Die App gibt ihm einen temporären Ort, prüft Format, Größe, ID und die tatsächlich angewandten Einstellungen und verschiebt die Datei dann in den Speicher der App.
+Ein Plug-in veröffentlicht nie selbst eine Datei am endgültigen Ort. Die App gibt ihm einen temporären Ort, prüft Format, Größe, ID und die tatsächlich angewendeten Einstellungen und verschiebt die Datei dann in den Speicher der App.
 
 Der vollständige Vertrag steht in [Scanner-Plugin-Struktur](SCANNER_PLUGINS.md).
 
@@ -309,50 +292,48 @@ Der vollständige Vertrag steht in [Scanner-Plugin-Struktur](SCANNER_PLUGINS.md)
 Bilder:
 
 - Ein gemeinsamer `CIContext`
-- Ein Bildgraph, der berechnet wird, wenn er gebraucht wird
-- Einstellen in niedriger Auflösung getrennt von der Ausgabe in voller Auflösung
-- Abbruch, und veraltete Ergebnisse werden abgewiesen
-- GrainMend nach Region, Kachel und Patch verarbeitet
-- Caches werden bei Speicherdruck geleert
+- Ein Bildgraph, der bei Bedarf berechnet wird
+- Anpassung in niedriger Auflösung getrennt von der Ausgabe in voller Auflösung
+- Abbruch, und Ablehnung veralteter Ergebnisse
+- GrainMend, verarbeitet nach Bereich, Kachel und Patch
+- Caches werden bei Speicherdruck verworfen
 
 Katalog:
 
 - SQLite-Transaktionen und Zeilen je Entität
-- Sicherung über Replikation
+- Backup über Replikation
 - Integritätsprüfungen
-- Bei 50.000 Bildern gemessen
+- Gemessen bei 50.000 Bildern
 
-Heute wird beim Start der gesamte Katalog in den Speicher geladen. Auf demselben Mac dauerte das Lesen aus SQLite rund 7,4 Sekunden, nahe an JSON. Nur die benötigten Zeilen über einen Index zu lesen, ist der nächste Schritt.
+Heute wird beim Start der gesamte Katalog in den Speicher geladen. Auf demselben Mac dauerte das Lesen von SQLite etwa 7,4 Sekunden, nahe an JSON. Nur die benötigten Zeilen über einen Index zu lesen ist der nächste Schritt.
 
-Die Leistungsgrenzen im Repository sind weite Obergrenzen, um große Rückschritte zu fangen. Sie sind kein Versprechen, dass sich jeder unterstützte Mac angenehm anfühlt.
+Das Repository nutzt weite Leistungsgrenzen, um große Rückschritte zu fangen. Sie garantieren keine Reaktionsfähigkeit auf jedem unterstützten Mac.
 
-## Was geprüft ist
+## Was geprüft wird
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 bash scripts/run-app.sh build
 ```
 
-Was automatische Prüfungen nicht klären:
+Was automatische Prüfungen nicht entscheiden:
 
-- Echte Scanner und Plugins
+- Echte Scanner und Plug-ins
 - Echte RGB/IR-Ausrichtung und Filmverträglichkeit
 - GrainMend-Qualität bei 100 %
-- Die Oberfläche, samt Bildschirmgröße und Bedienungshilfen
+- Die Oberfläche, auch Bildschirmgröße und Barrierefreiheit
 - Developer ID, Notarisierung, Gatekeeper
-- Installation auf einem frischen Mac
-- Leistung auf einem anderen Mac
+- Die Installation auf einem frischen Mac
+- Die Leistung auf einem anderen Mac
 
-## Dokumentenwegweiser
+## Dokumentenführer
 
-| Was Sie suchen | Dokument |
+| Was Sie wollen | Dokument |
 |---|---|
-| Aktueller Umsetzungs- und Prüfstand | Projektstand |
-| Umkehr und Entwicklung | [Chroma Engine](../product/CHROMA_ENGINE.md) |
-| Reparatur von Defekten | [GrainMend](../product/GRAINMEND.md) |
+| Invertierung und Entwicklung | [Chroma Engine](../product/CHROMA_ENGINE.md) |
+| Defektreparatur | [GrainMend](../product/GRAINMEND.md) |
 | Filmprofile | [Filmprofile](../product/FILM_PROFILES.md) |
 | Einen Scanner anbinden | [Scanner-Plugin-Struktur](SCANNER_PLUGINS.md) |
 | Freigabekriterien für Profile | [Qualitätsprüfung der Scannerprofile](../reference/PROFILE_QUALITY_GATE.md) |
-| Echte Geräte und Bildschirme prüfen | Checkliste für echte Geräte |
-| Aufbewahrungsarchiv | [Bibliotheksarchiv](LIBRARY_ARCHIVE.md) |
+| Erhaltungsarchiv | [Mediatheksarchiv](LIBRARY_ARCHIVE.md) |
 | Hash-Beziehungen der Ausgabedateien | [Render-Protokoll](../reference/RENDER_MANIFEST.md) |

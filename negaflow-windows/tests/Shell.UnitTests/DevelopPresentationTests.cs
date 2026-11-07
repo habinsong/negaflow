@@ -46,6 +46,7 @@ internal static class DevelopPresentationTests
                     DevelopInspectorSection.ColorGrading,
                     DevelopInspectorSection.BlackAndWhiteToning,
                     DevelopInspectorSection.Calibration,
+                    DevelopInspectorSection.Transform,
                     DevelopInspectorSection.DetailAndEffects,
                     DevelopInspectorSection.Debug,
                 }),

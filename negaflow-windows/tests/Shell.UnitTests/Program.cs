@@ -103,6 +103,7 @@ internal static class Program
         ExportConfigurationTests.Run();
         PrintCustomPackageTests.Run();
         CropAndLookTests.Run();
+        PerspectiveTests.Run();
         CropOverlayZoomTests.Run();
         GrainMendRecipeTests.Run();
         CloneStampOverlayTests.Run();
@@ -189,6 +190,7 @@ internal static class Program
         ExportBatchTests.Run();
         LibraryOrganizationTests.Run();
         ScannerWorkflowTests.Run();
+        AppUpdateCheckTests.Run();
         PrintOutputTests.Run();
         FilmBaseSidecarTests.Run();
         ScanSessionTests.Run();

@@ -2,42 +2,33 @@
 
 [Dokumentationsstart](../README.md)
 
-Das `renderManifest` in der Sidecar-Datei verbindet Quelle, Bearbeitungswerte und Enddatei über SHA-256. Dateipfade werden nicht festgehalten.
-
-```mermaid
-flowchart LR
-    A["Quell-Bytes"] --> D["renderManifest v3"]
-    B["Entwicklung, GrainMend, Exporteinstellungen"] --> D
-    C["Profil-, Renderer-, Decoder-Angaben"] --> D
-    E["Fertige Ausgabedatei"] --> D
-    D --> F["Sidecar-Datei"]
-```
+Das `renderManifest` in der Sidecar-Datei verknüpft Quelle, Bearbeitungswerte und fertige Datei per SHA-256. Dateipfade werden nicht aufgezeichnet.
 
 > [!IMPORTANT]
-> Das `renderManifest` hält Hash-Beziehungen zwischen Dateien und Einstellungen fest. Es gibt keine digitale Signatur und kein Zertifikat, deshalb heißt es nicht C2PA Content Credentials.
+> Das `renderManifest` hält Hash-Beziehungen zwischen Dateien und Einstellungen fest. Es hat weder digitale Signatur noch Zertifikat und ist deshalb keine C2PA Content Credentials.
 
-Was in v3 steht:
+## Inhalt von v3
 
 - Bytezahl der Quelle, SHA-256 und der Algorithmusname `sha-256`
 - Welche Render-Eingabe tatsächlich verwendet wurde
 - Der geprüfte Umfang der GrainMend-Cachedatei oder der Speichereingabe
-- SHA-256 der Entwicklungs-, GrainMend- und Exporteinstellungen
+- SHA-256 der Einstellungen für Entwicklung, GrainMend und Export
 - SHA-256 des Scannerprofils
-- Herkunft des Decoders und Renderer-Version der Chroma-Engine
-- SHA-256, Bytezahl, Pixelmaße und Format der Enddatei
+- Herkunft des Decoders und Version des Chroma-Engine-Renderers
+- SHA-256, Bytezahl, Pixelgröße und Format der fertigen Datei
 
-Wenn der Encoder fertig geschrieben hat, wird die Datei mit ImageIO erneut geöffnet, um die Pixelmaße zu bestätigen, und die ganze Datei wird gehasht. Danach wird die Sidecar-Datei geschrieben. Fällt die v3-Prüfung durch, erscheint das Ergebnis nicht als fertiger Ausgabesatz.
+Nach dem Schreiben des Encoders wird die Datei mit ImageIO erneut geöffnet, um die Pixelgröße zu prüfen, und als Ganzes gehasht. Danach wird die Sidecar-Datei geschrieben. Schlägt die v3-Prüfung fehl, wird das Ergebnis nicht als fertiger Ausgabesatz veröffentlicht.
 
 ## GrainMend-Eingabe
 
-- `cleanedMemory`: Für Pixel im Speicher gibt es keinen Standard-Hash, daher wird der geprüfte Umfang als `sourceAndDevelopRecipe` notiert. Der SHA-256 des GrainMend-Bearbeitungsverlaufs ist immer dabei.
-- `cleanedFile`: Die gesamte GrainMend-Cachedatei und der Bearbeitungsverlauf werden gehasht.
+- `cleanedMemory`: Pixel im Speicher haben keinen Standard-Hash, deshalb wird der geprüfte Umfang als `sourceAndDevelopRecipe` vermerkt. Der SHA-256 des GrainMend-Verlaufs ist immer enthalten.
+- `cleanedFile`: Die gesamte GrainMend-Cachedatei und der Verlauf werden gehasht.
 
-Alte v1- und v2-Dateien lassen sich weiter öffnen. Ausgabe- oder Verlaufs-Hashes, die es damals nicht gab, werden nicht nachträglich geraten.
+Dateien der Versionen v1 und v2 lassen sich weiterhin öffnen. Hashes, die es damals nicht gab, werden nicht nachträglich ergänzt.
 
 ## Unterschied zu C2PA
 
-Hier gibt es keine digitale Signatur, kein Zertifikat, keine Vertrauenskette und keinen eingebetteten Claim Store. Deshalb heißt es nicht C2PA Content Credentials. Hard Binding und Verarbeitungshistorie aus C2PA sowie der Integritätsbegriff aus PREMIS dienten als Vorbild, aufgenommen werden aber nur prüfbare SHA-256-Werte.
+Es gibt keine digitale Signatur, kein Zertifikat, keine Vertrauenskette und keinen eingebetteten Claim-Speicher, nur prüfbare SHA-256-Werte. Das Hard Binding und der Verarbeitungsverlauf von C2PA sowie der Integritätsgedanke von PREMIS dienten als Vorbild.
 
 Quellen:
 

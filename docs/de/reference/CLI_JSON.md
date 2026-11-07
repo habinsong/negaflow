@@ -2,14 +2,14 @@
 
 [Dokumentationsstart](../README.md)
 
-So liest ein Skript oder ein anderes Programm die Scannerangaben. Das bleibt getrennt von der Scannerimplementierung. Die CLI wandelt nur die Geräteangaben und Fähigkeiten, die `ScannerKit` erhalten hat, in JSON um.
+Skripte und andere Apps lesen Scannerinformationen aus diesem JSON. Die CLI serialisiert nur die Geräteinformationen und Fähigkeiten, die `ScannerKit` erhalten hat.
 
-| Punkt | Vertrag |
+| Element | Vertrag |
 |---|---|
-| Unterstützte Befehle | `detect --json`, `capabilities <scannerID> --json` |
+| Befehle | `detect --json`, `capabilities <scannerID> --json` |
 | stdout | Ein JSON-Dokument und ein abschließender Zeilenumbruch |
 | stderr | Diagnoseprotokoll |
-| Aktuelles Schema | `negaflow.scanner-cli`, Version `1` |
+| Schema | `negaflow.scanner-cli`, Version `1` |
 
 ## Befehle
 
@@ -18,14 +18,14 @@ negaflow detect [--demo] --json
 negaflow capabilities <scannerID> [--demo] --json
 ```
 
-Vorerst funktioniert `--json` nur bei diesen beiden lesenden Befehlen. An `scan` oder `develop`, die Dateien ändern oder Fortschritt melden, endet es mit dem Fehler `unsupported_json_command`.
+`--json` funktioniert nur bei diesen beiden lesenden Befehlen. Bei `scan` oder `develop` endet es mit dem Fehler `unsupported_json_command`.
 
 ## Gemeinsame Form
 
-Erfolg und Fehler schreiben je ein JSON-Dokument nach stdout, mit Zeilenumbruch am Ende.
+Erfolg wie Fehler schreiben ein JSON-Dokument nach stdout.
 
 <details>
-<summary>Beispiel für eine Erfolgsantwort</summary>
+<summary>Beispiel einer erfolgreichen Antwort</summary>
 
 ```json
 {
@@ -40,11 +40,11 @@ Erfolg und Fehler schreiben je ein JSON-Dokument nach stdout, mit Zeilenumbruch 
 
 </details>
 
-Bei einem Fehler ist `status` gleich `error` und `payload` gleich `null`. In `error` stehen ein unveränderlicher Maschinencode und eine Beschreibung für Menschen. Diagnoseprotokolle gehen nach stderr. Protokolle und Fortschritt kommen nie in stdout.
+Bei einem Fehler ist `status` gleich `error` und `payload` gleich `null`. `error` enthält einen stabilen maschinenlesbaren Code und eine Beschreibung. Protokolle und Fortschritt gehen nur nach stderr.
 
-## Fähigkeitsangaben
+## Fähigkeiten
 
-Das `payload` von `capabilities` führt immer alle diese Felder.
+Der `payload` von `capabilities` enthält immer alle diese Felder:
 
 - `resolutionsDPI`, `modes`, `bitDepths`
 - `sourceModes`, `transparencyModes`
@@ -57,20 +57,19 @@ Das `payload` von `capabilities` führt immer alle diese Felder.
 - `minScanArea`, `maxScanArea`, `scanAreaUnit`
 - `outputFormats`, `estimatedScanSpeeds`
 
-Werte, die das Gerät nicht gemeldet hat, werden nicht geraten. Je nach Wert stehen dort `null`, ein leeres Array, `false` oder die vom Plugin gesendeten `disabledReasons`.
+Ein Wert, den das Gerät nicht gemeldet hat, wird nicht geraten. Er wird zu `null`, einem leeren Array, `false` oder den `disabledReasons` des Plug-ins.
 
-`estimatedScanSpeeds` ist ein Array dieses Objekts, aufsteigend nach DPI.
+`estimatedScanSpeeds` ist ein Array dieses Objekts, aufsteigend nach DPI sortiert:
 
 ```json
 { "dpi": 3600, "seconds": 42.0 }
 ```
 
-App-Oberfläche und CLI lesen dieselben `ScannerCapabilities`. Die Abgleichprüfung bestätigt, dass die auf dem Bildschirm geöffneten Bedienelemente denselben Werten folgen wie die JSON-Felder.
+App und CLI lesen dieselben `ScannerCapabilities`. Eine Konsistenzprüfung stellt sicher, dass die Bedienelemente auf dem Bildschirm den JSON-Feldern folgen.
 
 ## Versionsregeln
 
 - Bedeutung und Typ eines vorhandenen Feldes ändern sich nicht.
-- Ein neues optionales Feld kommt nur dazu, wenn ältere Programme unbekannte Felder ignorieren können.
-- Ein Feld zu entfernen, umzubenennen oder seinen Typ zu ändern hebt `schemaVersion` an.
-- Auflösungen, Modi und Bittiefen behalten die Reihenfolge des Plugins.
-- Nur die geschätzten Geschwindigkeiten werden nach DPI sortiert.
+- Ein neues optionales Feld kommt nur hinzu, wenn ältere Programme es ignorieren können.
+- Entfernen, Umbenennen oder Typwechsel eines Feldes erhöht `schemaVersion`.
+- Auflösungen, Modi und Bittiefen behalten die Reihenfolge des Plug-ins. Nur die geschätzten Geschwindigkeiten werden sortiert.

@@ -2,10 +2,10 @@
 
 [Docs home](../README.md)
 
-negaflow is a macOS and Windows app. You import or scan film images, then go through inversion, develop, GrainMend, output, and preservation. Every edit is kept apart from the original.
+negaflow is a macOS and Windows app. You import or scan film images, then go through inversion, develop, GrainMend, output and preservation. Every edit is kept apart from the original.
 
 > [!IMPORTANT]
-> Originals, edit history, caches, and output files are different material. Losing a cache must not lose the original or the edit history, and an export fails if a required result cannot be rebuilt.
+> Originals, edit history, caches and output files are different material. Losing a cache must not lose the original or the edit history, and an export fails if a required result cannot be rebuilt.
 
 ## Safety rules that do not change
 
@@ -14,21 +14,13 @@ negaflow is a macOS and Windows app. You import or scan film images, then go thr
 3. The scanner screen shows only what the plugin reported.
 4. The demo scanner is used only when you explicitly select it.
 5. If an edited result cannot be rebuilt, the original is not exported in its place.
-6. A long job re-checks the frame, edit version, and session right before it applies its result.
+6. A long job re-checks the frame, edit version and session right before it applies its result.
 7. A cache has to be rebuildable from the original and the edit history.
-8. Profiles, output bundles, and archives are published only after the required checks pass.
+8. Profiles, output bundles and archives are published only after the required checks pass.
 
 ## Modules
 
-```mermaid
-flowchart LR
-    APP["negaflowApp"] --> COLOR["Chromabase"]
-    APP --> SCAN["ScannerKit"]
-    CLI["negaflowCLI"] --> COLOR
-    CLI --> SCAN
-    COLOR --> FILES["Images and metadata"]
-    SCAN --> PLUGIN["External scanner plugin"]
-```
+`negaflowApp` and `negaflowCLI` both use `Chromabase` and `ScannerKit`. `Chromabase` works on images and metadata, and `ScannerKit` talks to the external scanner plugin.
 
 ### `Chromabase`
 
@@ -37,8 +29,8 @@ The Chroma Engine and the image processing core.
 - Reading images and handling orientation
 - Film base measurement
 - Negative and positive develop
-- Tone, color, and local adjustments
-- Film, look, and scanner profiles
+- Tone, color and local adjustments
+- Film, look and scanner profiles
 - GrainMend RGB and IR
 - Histogram and color measurement
 - Output encoding and metadata
@@ -54,8 +46,8 @@ It owns the contract that connects an external plugin.
 
 - Scanner ID and capabilities
 - Request and response JSON
-- Running the external process, timeouts, cancellation
-- Plugin owner, permissions, approval, hash
+- Running the external process, timeouts and cancellation
+- Plugin owner, permissions, approval and hash
 - Checking temporary output, then publishing the final file
 - Scan sessions and job history
 - The demo scanner you have to turn on yourself
@@ -85,20 +77,11 @@ The user interface, built with SwiftUI and AppKit.
 
 ## User flow
 
-```mermaid
-flowchart LR
-    A["Import or scan"] --> B["Organize the library"]
-    B --> C["Film type and base"]
-    C --> D["Chroma Engine"]
-    C --> E["GrainMend"]
-    C --> F["Versions and virtual copies"]
-    D --> G["Review, print, export"]
-    E --> G
-    F --> G
-    G --> H["Image files"]
-    G --> I["Sidecars and render records"]
-    G --> J["Preservation archive"]
-```
+1. Import or scan.
+2. Organize the library.
+3. Set the film type and base.
+4. Develop in Chroma Engine, repair with GrainMend, or branch with versions and virtual copies.
+5. Review, print and export to image files, sidecars and render records, or to a preservation archive.
 
 Each step leaves the original untouched and adds to the catalog and edit history.
 
@@ -106,11 +89,11 @@ Each step leaves the original untouched and adds to the catalog and edit history
 
 ### Importing files
 
-The default way in. It handles TIFF, JPEG, PNG, and the camera RAW that macOS Image I/O can read. The embedded ICC and orientation are read, and the original ID goes into the catalog.
+The default way in. It handles TIFF, JPEG, PNG and the camera RAW that macOS Image I/O can read. The embedded ICC and orientation are read, and the original ID goes into the catalog.
 
 ### Scanning
 
-An installed plugin can report these capabilities.
+An installed plugin can report these capabilities:
 
 - Resolution and bit depth
 - Scan area and preview
@@ -122,13 +105,13 @@ The app never invents a capability from a table of model names. When a scan fini
 
 ### Original ID
 
-A file path alone does not identify an original. The values the current contract needs are kept: file observations, byte count, modification time, SHA-256, and a persistent bookmark.
+A file path alone does not identify an original. The values the current contract needs are kept: file observations, byte count, modification time, SHA-256 and a persistent bookmark.
 
 If a file moved, the path changes only when you relink it yourself or bookmark recovery succeeds.
 
 ## Catalog
 
-The main store is `library.sqlite`. The old `library.json` is used to bring confirmed older material across, or to write a backup that can move between machines. The two stores are never updated at once.
+The main store is `library.sqlite`. The older `library.json` is used to bring confirmed older material across, or to write a backup that can move between machines. The two stores are never updated at once.
 
 What goes into SQLite:
 
@@ -152,7 +135,7 @@ What does not:
 5. Check SQLite integrity and the app's safety conditions.
 6. Switch the main store over only when all of it lines up.
 
-A JSON file that failed is not treated as an empty catalog. The numbers and the decision behind them are in [Catalog storage](CATALOG_STORAGE.md).
+A JSON file that failed is not treated as an empty catalog. The numbers are in [Catalog storage](CATALOG_STORAGE.md).
 
 ## Library
 
@@ -163,11 +146,11 @@ Organizing:
 - Grid, compare, survey
 - Reviewing duplicate candidates
 
-In the folder view each folder shows a band with a disclosure triangle, folder, name, count, develop process, target, and apply. The band collapses the thumbnails under it. Collapsed folders are remembered across launches, separately from the file list in the sidebar.
+In the folder view each folder shows a band with a disclosure triangle, folder, name, count, develop process, target and apply. The band collapses the thumbnails under it. Collapsed folders are remembered across launches, separately from the file list in the sidebar.
 
-The folder view uses **one** grid. Each folder is a section, with its band as the section header. Keep this structure: stacking a separate grid for each folder forces the layout to calculate the full height of every visible folder and create all its cards at once. A single grid creates cards one row at a time as they come into view. This keeps scrolling smooth across several hundred photos.
+The folder view uses one grid, with each folder as a section and its band as the section header. Keep this structure. Stacking a separate grid per folder forces the layout to calculate the full height of every visible folder and create all its cards at once, while a single grid creates cards one row at a time as they come into view. That keeps scrolling smooth across several hundred photos.
 
-Several virtual copies can share one original. References to an original are checked before deletion. Removing something from the library only changes catalog references. Moving to the Trash is a separate action.
+Several virtual copies can share one original. References to an original are checked before deletion. Removing something from the library only changes catalog references, and moving to the Trash is a separate action.
 
 Edits are preserved when an external disk is disconnected. The original is marked offline and you relink it by file or by folder. If the ID is not the one expected, nothing is swapped automatically.
 
@@ -186,19 +169,18 @@ Each frame carries:
 
 While you adjust, a lower-resolution preview is used. A finished result reaches the screen only when its frame ID and edit version still match the current selection.
 
-Selecting a different photo starts its settled render without the editing pause. On macOS, once a camera RAW negative has settled, the next visible RAW can be decoded in the background. Only one neighbor is prepared, within the existing two-image, 160 MiB master cache. Editing, a different selection, or memory pressure cancels that work. Selecting the photo already being prepared shares its decode.
+Selecting a different photo starts its settled render without the editing pause. On macOS:
 
-On macOS, cold camera RAW selection unpacks the sensor data once. When the reported mosaic supports it, a provisional camera RGB preview appears before the canonical demosaic finishes. The settled RGBA16 input goes directly into the frame cache; provisional measurements are discarded. Cancellation waits for the decoder to release its handle before another selection starts. The master cache follows automatic/manual residency limits, up to two images and 160 MiB, and stays disabled during memory pressure. Evicting a frame also drops its RAW master. LibRaw uses `-O3` and ThinLTO without fast-math. Each X-Trans tile reuses one OpenMP worker team while keeping stage barriers and serial tile order. Settled and export demosaicing quality is unchanged. The master uses the settled request’s scale, avoiding another area reduction. See the [LibRaw reprocessing and memory API](https://www.libraw.org/docs/API-CXX.html#free_image). The CDDL-1.0 preview bridge reduces processed camera RGB directly, using the same area weights and accumulation order as the Swift reducer. It avoids a full-size RGB output copy.
+- Once a camera RAW negative has settled, the next visible RAW can be decoded in the background. Only one neighbor is prepared, within the existing master cache (up to 160 MiB). Editing, a different selection or memory pressure cancels that work, and selecting the photo already being prepared shares its decode.
+- A cold camera RAW selection unpacks the sensor data once. When the mosaic supports it, a provisional camera RGB preview appears before the canonical demosaic finishes. The master cache stays disabled during memory pressure, and evicting a frame also drops its RAW master.
+- A cold TIFF selection shares one decoded source between its interactive and settled previews and scales it on the GPU. Apple RAW previews, including DNG, keep one `CIRAWFilter` for both passes.
+- Cleaned RAW TIFFs are written when their pixel buffers leave memory, not after every edit. Disk cleanup keeps recent files within a limit, files in use are protected, and the next launch removes caches left by the previous session. Edit recipes remain in sidecars.
 
-On macOS, a cold TIFF selection shares one decoded source between its interactive and settled previews and scales it on the GPU. Apple RAW previews, including DNG, keep one `CIRAWFilter` for both passes with the existing decode settings and scale factors. These selection-scoped sources are released when rendering completes or cancellation finishes; retained proxy buffers use the existing automatic/manual frame budget. Linear RGBA16 proxy materialization skips source-depth inspection because its format is already fixed. A first render requested after cleaned-input reconstruction also shares the decoder and skips the editing settle delay. Automatic input-gamma inspection waits for the selected render and does not allocate a full-size slider texture. Manual gamma prepares that texture when needed. Export continues to decode the original at full resolution. See Apple’s [RAW filter lifetime guidance](https://developer.apple.com/forums/thread/834517) and [scale factor documentation](https://developer.apple.com/documentation/coreimage/cirawfilter/scalefactor).
-
-On Windows, cancellation/status reads and run-state release share a lock; disposal waits for token callbacks outside that lock. Automatic/manual cache mode survives memory-pressure notifications and settings changes keep the current pressure clamp. JPEG thumbnails use an LRU byte budget within one eighth of the managed display budget; BGRA previews use the rest. Critical pressure drops idle JPEGs, while an active UI delivery temporarily protects its JPEG. D3D staging buffers return owning COM references and have a cache limit equal to the smaller of the GPU setting and 15% of installed RAM. Low-memory signals disable staging retention. A small transfer removes oversized buffers of the same direction, and export completion or device reset releases that device’s staging cache. Buffers larger than the cache budget remain valid only for their active transfer.
+On Windows, JPEG thumbnails use an LRU byte budget and BGRA previews use the rest of the managed display budget, and critical memory pressure drops idle JPEGs. D3D staging buffers have a cache limit, and low-memory signals, export completion and device reset release them.
 
 Export does not save the preview bitmap on screen. It rebuilds the full-resolution image from the original and the edit values it pinned.
 
-GrainMend keeps automatic, guided, brush, clone stamp, and IR in an ordered list. Caches are derived files. If a result cannot be rebuilt from the original and the edit history, the export fails.
-
-On macOS, cleaned RAW TIFFs are written when their pixel buffers leave memory, rather than after every edit. Disk cleanup keeps recent files, targeting a count of max(8, twice the memory residency limit) and 4 GiB in total. Files under 60 seconds old and files in use are protected, so usage can temporarily exceed those targets. The next launch removes caches left by the previous session; edit recipes remain in sidecars.
+GrainMend keeps automatic, guided, brush, clone stamp and IR in an ordered list. Caches are derived files. If a result cannot be rebuilt from the original and the edit history, the export fails.
 
 More detail is in [GrainMend](../product/GRAINMEND.md).
 
@@ -206,11 +188,11 @@ More detail is in [GrainMend](../product/GRAINMEND.md).
 
 - History and Snapshot: record a develop state yourself, then compare it or go back to it.
 - Virtual Copy: another branch of edits without duplicating the original file.
-- Copy/Paste: paste a chosen range such as tone, color, detail, or geometry. Masks that need original coordinates get their safety conditions checked.
+- Copy/Paste: paste a chosen range such as tone, color, detail or geometry. Masks that need original coordinates get their safety conditions checked.
 
 ## Export
 
-At the start, these values are pinned as one bundle.
+At the start, these values are pinned as one bundle:
 
 - Original ID
 - Develop and GrainMend edit history
@@ -222,7 +204,7 @@ Stopping and resuming an export uses the same bundle.
 
 ### Several output files
 
-One export can produce a JPEG/TIFF, a sidecar, XMP, and `-main-flat` together.
+One export can produce a JPEG/TIFF, a sidecar, XMP and `-main-flat` together.
 
 1. Check the destination and name conflicts up front.
 2. Write every file to a temporary folder.
@@ -246,7 +228,7 @@ It records the SHA-256 relationships between:
 - Decoder and renderer versions
 - Output bytes, pixel size, format
 
-There is no digital signature and no certificate, so this is not called C2PA Content Credentials. More detail is in [Render manifest](../reference/RENDER_MANIFEST.md).
+There is no digital signature and no certificate, so this is not C2PA Content Credentials. More detail is in [Render manifest](../reference/RENDER_MANIFEST.md).
 
 ## Print and soft proof
 
@@ -259,12 +241,13 @@ Supported layouts:
 - Cyanotype
 - Glass plate
 - Gelatin silver
+- Watermark
 
-Single image and the three historical layouts make one vertically stacked page per selected photo. Contact sheet, picture package, and custom package instead report and export their finished page count. For 39 photos that means one 6 × 7 contact-sheet page, 10 four-up picture-package pages, one default custom-package page, or 39 individual files.
+Single image and the three historical layouts make one vertically stacked page per selected photo. Contact sheet, picture package and custom package report and export their finished page count instead. For 39 photos that means one 6 × 7 contact-sheet page, 10 four-up picture-package pages, one default custom-package page, or 39 individual files.
 
-Package preview reuses available thumbnails and developed images, and only materializes a small fast preview when one is missing. Final export calculates placement from metadata, develops only the pixels needed for each cell, prepares two to four unique sources at once, keeps the Core Image graph connected until the page write, and enforces a 512 MiB per-page source-raster budget.
+Package preview reuses available thumbnails and developed images and only makes a small fast preview when one is missing. Final export calculates placement from metadata, develops only the pixels each cell needs, prepares two to four unique sources at once, keeps the Core Image graph connected until the page write, and enforces a 512 MiB per-page source-raster budget.
 
-Every package placement observes the frame assigned to it. The printer output ICC is applied once, to the complete final page, after layout is done, so repeated and mixed-source packages use the same output contract. It never changes the Library or Develop preview. Neither the original scan TIFF nor `-main-flat` gets a printer profile.
+Every package placement observes the frame assigned to it. The printer output ICC is applied once, to the complete final page, after layout is done, so repeated and mixed-source packages use the same output contract. It never changes the Library or Develop preview, and neither the original scan TIFF nor `-main-flat` gets a printer profile.
 
 Without a valid RGB printer ICC, no other profile is substituted. The bytes and SHA-256 of the profile you chose go into the output record.
 
@@ -278,17 +261,17 @@ What goes into `.negaflowarchive`:
 - The GrainMend history that is needed
 - The relationship between virtual copies and the original they share
 
-Thumbnails, previews, GrainMend caches, and exported files can be rebuilt, so they stay out. It uses the RFC 8493 BagIt structure with a SHA-256 list, and every file and relationship is checked before the bundle moves to its final location.
+Thumbnails, previews, GrainMend caches and exported files can be rebuilt, so they stay out. The archive uses the RFC 8493 BagIt structure with a SHA-256 list, and every file and relationship is checked before the bundle moves to its final location.
 
 - [Library archive](LIBRARY_ARCHIVE.md)
 - [RFC 8493](https://www.rfc-editor.org/info/rfc8493/)
 - [PREMIS](https://www.loc.gov/standards/premis/)
 
-Long-term preservation also needs other media, an off-site copy, and regular hash checks.
+Long-term preservation also needs other media, an off-site copy and regular hash checks.
 
 ## Scanner plugin safety
 
-When a plugin is found, these are checked.
+When a plugin is found, these are checked:
 
 - Whether the current user owns it
 - Whether a group or another user can write it
@@ -300,7 +283,7 @@ If the file changed, the earlier approval is not reused.
 
 Protocol v2 uses a request ID and a sequence number, and requires exactly one final result. Output size has a ceiling, and after a timeout or a cancel the process and its pipes are cleaned up.
 
-A plugin never publishes a file to the final location itself. The app hands it a temporary location, checks format, size, ID, and the settings actually applied, then moves the file into the app's storage.
+A plugin never publishes a file to the final location itself. The app hands it a temporary location, checks format, size, ID and the settings actually applied, then moves the file into the app's storage.
 
 The full contract is in [Scanner plugin architecture](SCANNER_PLUGINS.md).
 
@@ -312,7 +295,7 @@ Images:
 - An image graph computed when it is needed
 - Low-resolution adjustment kept separate from full-resolution output
 - Cancellation, and stale results refused
-- GrainMend processed by region, tile, and patch
+- GrainMend processed by region, tile and patch
 - Caches dropped under memory pressure
 
 Catalog:
@@ -347,12 +330,10 @@ What automated checks do not settle:
 
 | What you want | Document |
 |---|---|
-| Current implementation and verification state | Project status |
 | Inversion and develop | [Chroma Engine](../product/CHROMA_ENGINE.md) |
 | Defect repair | [GrainMend](../product/GRAINMEND.md) |
 | Film profiles | [Film profiles](../product/FILM_PROFILES.md) |
 | Connecting a scanner | [Scanner plugin architecture](SCANNER_PLUGINS.md) |
 | Release criteria for profiles | [Scanner profile quality gate](../reference/PROFILE_QUALITY_GATE.md) |
-| Checking real hardware and displays | Real-device QA checklist |
 | Preservation archive | [Library archive](LIBRARY_ARCHIVE.md) |
 | Hash relationships of output files | [Render manifest](../reference/RENDER_MANIFEST.md) |

@@ -20,7 +20,7 @@ enum DevelopInspectorFocusNavigation {
             }
             ids.append(contentsOf: [.grain, .sharpness, .clarity, .halation, .vignette])
             return ids
-        case .calibration, .bwToning, .colorMixer, .colorGrading, .debug, nil:
+        case .calibration, .transform, .bwToning, .colorMixer, .colorGrading, .debug, nil:
             return []
         }
     }

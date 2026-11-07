@@ -3,6 +3,7 @@ import SwiftUI
 struct WorkflowShortcutsSettingsSection: View {
     @EnvironmentObject private var model: AppModel
     @State private var rejectedAction: WorkflowShortcutAction?
+    @State private var rejectedGestureAction: WorkflowGestureModifierAction?
     @State private var recordingAction: WorkflowShortcutAction?
     @State private var selectedGroup = WorkflowShortcutGroup.library
 
@@ -22,6 +23,11 @@ struct WorkflowShortcutsSettingsSection: View {
         ) {
             ForEach(model.workflowShortcutActions.filter { $0.group == selectedGroup }) { action in
                 shortcutRow(for: action)
+            }
+            if selectedGroup == .develop {
+                ForEach(WorkflowGestureModifierAction.allCases) { action in
+                    gestureModifierRow(for: action)
+                }
             }
         }
 
@@ -43,7 +49,58 @@ struct WorkflowShortcutsSettingsSection: View {
     private func resetAllShortcuts() {
         model.resetAllWorkflowShortcuts()
         rejectedAction = nil
+        rejectedGestureAction = nil
         recordingAction = nil
+    }
+
+    /// 키 없이 조합키만 거는 동작. 녹화 칸 대신 고를 수 있는 조합키 목록을 보여 준다 — 조합키만
+    /// 눌렀다 떼는 것은 녹화 칸이 받지 않는다.
+    private func gestureModifierRow(for action: WorkflowGestureModifierAction) -> some View {
+        let current = model.gestureModifier(for: action)
+        return Group {
+            AppSettingsRow(action.title(in: model)) {
+                HStack(spacing: 8) {
+                    Picker(action.title(in: model), selection: Binding(
+                        get: { current.rawValue },
+                        set: { raw in
+                            let accepted = model.setGestureModifier(
+                                WorkflowShortcutModifiers(rawValue: raw),
+                                for: action
+                            )
+                            rejectedGestureAction = accepted ? nil : action
+                        }
+                    )) {
+                        ForEach(action.allowedModifiers, id: \.rawValue) { modifier in
+                            Text([modifier.symbol, modifier.title(in: model)].joined(separator: " "))
+                                .tag(modifier.rawValue)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .frame(maxWidth: .infinity)
+
+                    Button {
+                        model.resetGestureModifier(for: action)
+                        rejectedGestureAction = nil
+                    } label: {
+                        Label(model.text(.shortcutReset), systemImage: "arrow.uturn.backward")
+                    }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+                    .help(model.text(.shortcutReset))
+                    .accessibilityLabel(model.text(.shortcutReset))
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            if rejectedGestureAction == action {
+                AppSettingsHelpText(
+                    model.text(.shortcutInvalidOrConflict),
+                    color: .red
+                )
+            }
+        }
     }
 
     private func shortcutRow(for action: WorkflowShortcutAction) -> some View {

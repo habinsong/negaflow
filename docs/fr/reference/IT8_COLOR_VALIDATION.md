@@ -2,49 +2,49 @@
 
 [Accueil de la documentation](../README.md)
 
-La justesse des couleurs ne se valide pas à l'écran. Une image IT8 et le fichier de référence correspondant à sa mire physique sont figés en paire, et chaque patch est consigné en chiffres.
+L'exactitude des couleurs demande des mesures, pas seulement un examen à l'œil. Une image IT8 est appariée au fichier de référence de sa cible physique, et des résultats chiffrés sont consignés pour chaque plage.
 
 > [!IMPORTANT]
-> Le matériel IT8 public permet de vérifier les régressions du contrôleur et des calculs colorimétriques. Il ne prouve pas la justesse d'un scanner réel ni celle d'un négatif couleur. Juger un appareil demande une mire physique confirmée et des mesures réelles sur cet appareil.
+> Le matériel IT8 public permet de confirmer des régressions du contrôleur et du calcul colorimétrique. Il ne peut pas prouver l'exactitude d'un vrai scanner ni d'un film négatif couleur. Juger un appareil exige une cible physique confirmée et des mesures réelles de cet appareil.
 
 ## Types de preuve
 
 | Nom | Ce qu'il confirme | Ce qu'il ne confirme pas |
 |---|---|---|
-| `algorithmRegression` | Lecture des fichiers, conversion ICC, zones de patchs, Lab, CIEDE2000 | La justesse d'un scanner réel |
-| `deviceCharacterization` | Une mire physique confirmée, mesurée sur un appareil réel | La justesse d'une autre mire ou d'un autre appareil |
-| `syntheticModel` | L'aller-retour mathématique d'un modèle synthétique indépendant | La justesse d'un film ou d'un appareil réel |
+| `algorithmRegression` | Lecture des fichiers, conversion ICC, surfaces des plages, Lab, CIEDE2000 | L'exactitude d'un vrai scanner |
+| `deviceCharacterization` | Une cible physique confirmée, mesurée sur un vrai appareil | L'exactitude d'une autre cible ou d'un autre appareil |
+| `syntheticModel` | L'aller-retour mathématique d'un modèle synthétique indépendant | L'exactitude d'un vrai film ou appareil |
 
-`deviceCharacterization` demande le fabricant, la matière, le numéro de série et le lot de la mire physique. Si un seul de ces éléments diffère de l'en-tête du fichier de référence, rien n'est évalué.
+`deviceCharacterization` exige le fabricant, la matière, le numéro de série et le lot de la cible physique. Si l'un d'eux diffère de l'en-tête du fichier de référence, rien n'est évalué.
 
-Les mires transmissives IT8.7/1 et ISO 12641-1 visent les originaux transmissifs positifs. Ces résultats ne disent rien du masque orange du négatif couleur, des interactions de colorants, des écarts C-41 ou de la justesse de sortie NORITSU/FUJI. Ces affirmations demandent du matériel apparié du même négatif couleur traité par les deux chemins, plus un jeu de validation distinct.
+Les cibles IT8.7/1 et ISO 12641-1 par transmission servent aux originaux positifs par transmission. Leurs résultats ne disent rien du masque orange du négatif couleur, de l'interaction des colorants, de la variation C-41 ni de l'exactitude de sortie du HS et du SP. De telles affirmations exigent un matériel apparié du même négatif couleur passé par les deux chemins, plus un jeu de validation distinct.
 
-La paire publique FADGI OpenDICE a été mesurée sur 264 plages : ΔE00 médian 9.8815, p95 13.2745, maximum 15.5996. Une conversion indépendante LittleCMS diffère de l’évaluateur de 0.105 au plus par composante Lab. Ces mesures ne valident pas la précision sur négatif : il s’agit d’un scan IT8 positif, son numéro physique n’est pas confirmé et aucune mesure caméra/éclairage/film négatif n’est jointe.
+La paire publique image/référence FADGI OpenDICE a été mesurée sur 264 plages : ΔE00 médian 9,8815, p95 13,2745, maximum 15,5996. Une conversion LittleCMS indépendante différait de l'évaluateur de 0,105 unité Lab au plus. Ces observations ne passent pas un contrôle d'exactitude pour le film : la numérisation est un IT8 positif, son numéro de série physique n'est pas vérifié et aucune mesure caméra, lumière et film de négatif n'y est jointe.
 
-Les jeux de négatifs publics ont aussi été examinés. FADGI fournit des densités, sans plages de couleur mesurées. BlueNeg qualifie ses références restaurées de pseudo ground truth. Les données de l’étude spectrophotométrique ARRI AQUA de 2024 sont disponibles sur demande. Aucun de ces jeux ne fournit une référence indépendante des couleurs de la scène pour cette inversion.
+Des jeux de données publics de négatifs ont aussi été examinés. Les références négatives FADGI ne contiennent que la densité, pas de plages de couleur mesurées. BlueNeg qualifie ses références restaurées de pseudo ground truth. L'étude 2024 du spectrophotomètre ARRI AQUA fournit ses données sur demande, pas en téléchargement libre. Aucun ne donne de référence de couleur de scène indépendante pour l'inversion actuelle.
 
-Une [série publique Kodak ColorPlus 200](https://discuss.pixls.us/t/any-interest-in-a-film-negative-feature-in-rt/12569/262) contient cinq scans RAW Sony ILCE-7, de −1 à +3 EV. La mire porte la marque Grey White Balance Colour Card ; les références X-Rite ont donc été écartées. Aucun pixel des 120 zones échantillonnées n’atteint zéro ou le maximum dans le RGB caméra décodé. Ce contrôle du signal décodé ne mesure pas directement la mosaïque du capteur et ne juge pas la précision des couleurs. L’aperçu JPEG intégré contient la balance des blancs de l’appareil. Sans mesures de cette mire et du dispositif de numérisation, les dominantes de sortie ne peuvent pas être attribuées à l’entrée ou à l’application. Les droits de redistribution n’étant pas établis, les fichiers restent hors du dépôt et de l’application.
+Une [série d'expositions publique de Kodak ColorPlus 200](https://discuss.pixls.us/t/any-interest-in-a-film-negative-feature-in-rt/12569/262) (cinq numérisations RAW Sony ILCE-7, de −1 à +3 IL) a aussi été examinée. Sa mire est une Grey White Balance Colour Card : les valeurs de référence X-Rite ont donc été écartées. Aucune des 120 zones de plage échantillonnées n'a atteint zéro ni la pleine échelle dans le RVB d'appareil décodé. C'est un contrôle du signal décodé, pas une mesure directe de la mosaïque du capteur ni un résultat d'exactitude colorimétrique. Sans références mesurées pour cette mire et pour le dispositif de numérisation, on ne peut pas attribuer les dominantes de sortie à l'entrée ou à l'application. Les fichiers restent hors du dépôt, faute de droits de redistribution établis.
 
 [FADGI](https://www.digitizationguidelines.gov/guidelines/digitize-OpenDice.html) · [BlueNeg](https://huggingface.co/datasets/ttgroup/blueneg-release) · [Plutino 2024](https://doi.org/10.1002/col.22946)
 
-## Matériel public de régression
+## Matériel de régression public
 
-Ces deux fichiers FADGI/OpenDICE s'utilisent en paire.
+Ces deux fichiers FADGI/OpenDICE s'utilisent par paire.
 
-- Guide : <https://www.digitizationguidelines.gov/guidelines/digitize-OpenDice.html>
-- Image : <https://www.digitizationguidelines.gov/guidelines/OpenDICE/IT8-7.1.tif>
-  - SHA-256 : `c62ee73f26390a2ad90e7e28280cbd1efb4f18834425bb7112ff1f8016832ffd`
-  - Taille : `6255 x 4170`
-  - Format : RVB 16 bits, `Adobe RGB (1998)` embarqué
-- Fichier de référence : <https://www.digitizationguidelines.gov/guidelines/OpenDICE/Profile_IT8-7.1.txt>
-  - SHA-256 : `19337b85f213eb4397e91c91298201f421ef3ca33b0ef6da3d752a0880491840`
-  - Patchs : 264 valeurs Lab de `A1` à `L22`
-  - Colonne 16 : density
+- Guide: <https://www.digitizationguidelines.gov/guidelines/digitize-OpenDice.html>
+- Image: <https://www.digitizationguidelines.gov/guidelines/OpenDICE/IT8-7.1.tif>
+  - SHA-256: `c62ee73f26390a2ad90e7e28280cbd1efb4f18834425bb7112ff1f8016832ffd`
+  - Taille: `6255 x 4170`
+  - Format: RVB 16 bits avec `Adobe RGB (1998)` intégré
+- Fichier de référence: <https://www.digitizationguidelines.gov/guidelines/OpenDICE/Profile_IT8-7.1.txt>
+  - SHA-256: `19337b85f213eb4397e91c91298201f421ef3ca33b0ef6da3d752a0880491840`
+  - Plages: 264 valeurs Lab de `A1` à `L22`
+  - Colonne 16 : densité
 
-Les droits de redistribution n'étant pas confirmés, les fichiers ne sont ni dans le dépôt ni dans l'application. Vous les téléchargez vous-même et vous les reliez au [manifeste d'exemple](../../reference/IT8_FADGI_OPENDICE.example.json). Le niveau de cet exemple est `algorithmRegression`. Le renommer en `deviceCharacterization` le fait refuser par le contrôleur.
+Les droits de redistribution ne sont pas confirmés : les fichiers restent hors du dépôt et de l'application. Téléchargez-les vous-même et faites pointer le [manifeste d'exemple](../../reference/IT8_FADGI_OPENDICE.example.json) vers eux. Son niveau est `algorithmRegression`, et le renommer en `deviceCharacterization` le fait refuser par le contrôleur. À lancer depuis `negaflow-mac/` :
 
 ```bash
-swift run negaflow it8-bench docs/reference/IT8_FADGI_OPENDICE.example.json \
+swift run negaflow it8-bench ../docs/reference/IT8_FADGI_OPENDICE.example.json \
   --image /path/to/IT8-7.1.tif \
   --reference /path/to/Profile_IT8-7.1.txt \
   --out /path/to/it8-report.json
@@ -52,21 +52,19 @@ swift run negaflow it8-bench docs/reference/IT8_FADGI_OPENDICE.example.json \
 
 ## Règles de mesure
 
-- Si le SHA-256 de l'image, du fichier de référence ou de l'ICC choisi diffère du manifeste, tout s'arrête.
+- Si le SHA-256 de l'image, du fichier de référence ou de l'ICC choisi diffère du manifeste, l'exécution s'arrête.
 - Le rapport v2 consigne aussi le SHA-256 du texte du manifeste.
 - `A01` et `A1` lisent les mêmes coordonnées, et l'identifiant d'origine reste dans le rapport.
-- Les 60 % centraux de chaque patch de la grille 22 par 12 sont lus en virgule flottante à la résolution source.
-- L'ordre des patchs suit les lignes `A`–`L` et les colonnes `1`–`22`.
-- L'ICC embarqué est respecté.
-- Le calcul va du sRVB linéaire D65 vers XYZ, adaptation Bradford D50, puis Lab D50/2°.
-- Chaque patch consigne sa zone, son nombre de pixels, la moyenne et l'écart-type RVB, le taux d'écrêtage aux deux bouts, le nombre de valeurs non finies, le Lab de référence et mesuré, les écarts L/a/b et le CIEDE2000.
-- Médiane, p95 et max sont des observations, pas un seuil de réussite.
-- Aucun seuil moyen n'est inventé sans fondement, et `qualityDecision` reste `notEvaluated`.
-- Une mire ayant servi à ajuster un profil n'est pas réutilisée pour une validation indépendante.
+- Les 60 % centraux de chaque plage de la grille 22 × 12 sont lus à la résolution source en virgule flottante, par lignes `A`–`L` et colonnes `1`–`22`.
+- L'ICC intégré est respecté.
+- Le calcul va du sRGB linéaire D65 à XYZ, puis par adaptation Bradford à D50, puis à Lab D50/2°.
+- Chaque plage consigne sa surface, son nombre de pixels, la moyenne et l'écart type RVB, la proportion écrêtée aux deux extrémités, le nombre de valeurs non finies, le Lab de référence et mesuré, les écarts L/a/b et le CIEDE2000.
+- Médiane, p95 et maximum sont des observations, pas un seuil de réussite. Aucun seuil moyen n'est inventé, et `qualityDecision` reste `notEvaluated`.
+- Une cible utilisée pour ajuster un profil n'est pas réutilisée pour la validation indépendante.
 
-### Informations sur la mire physique
+### Détails de la cible physique
 
-Pour une mesure sur appareil réel, l'opérateur relève ces informations sur l'étiquette de la mire.
+Pour une mesure sur un vrai appareil, l'opérateur relève ces éléments sur l'étiquette de la cible et les note.
 
 <details>
 <summary>Exemple de bloc de mesure</summary>
@@ -89,38 +87,38 @@ Pour une mesure sur appareil réel, l'opérateur relève ces informations sur l'
 
 </details>
 
-`MANUFACTURER`, `MATERIAL`, `SERIAL` et l'en-tête de lot (`BATCH`, `BATCH_ID` ou `PROD_DATE`) doivent correspondre au fichier de référence caractère pour caractère. Le `targetID` de premier niveau doit valoir `serial`, et `batchID` doit valoir `batchValue`.
+`MANUFACTURER`, `MATERIAL`, `SERIAL` et l'en-tête de lot (l'un de `BATCH`, `BATCH_ID`, `PROD_DATE`) doivent correspondre au fichier de référence caractère pour caractère. Le `targetID` de premier niveau doit être égal à `serial`, et `batchID` à `batchValue`.
 
-Cet enregistrement montre seulement que ce qu'a écrit l'opérateur et le fichier de référence concordent. Il ne lit pas l'étiquette dans l'image et ne certifie pas la saisie de l'opérateur. Si l'information manque, ni la date la plus proche ni un fichier de référence générique ne viennent la remplacer.
+Cet enregistrement montre seulement que ce que l'opérateur a écrit et le fichier de référence concordent. Il ne lit pas l'étiquette sur l'image et ne certifie pas la saisie de l'opérateur. Quand des détails manquent, la date la plus proche ou un fichier de référence générique n'est pas substitué.
 
-Si le fichier de référence porte une information d'illuminant ou d'observateur, elle est confrontée au contrat D50/2°. Une contradiction arrête le traitement. `measurement.renderingIntent` ne peut pas figer directement la conversion Core Image aujourd'hui, donc le rapport indique `manifestDeclarationNotControlledByEvaluator`.
+Si le fichier de référence porte une information d'illuminant ou d'observateur, elle est comparée au contrat D50/2°, et une contradiction arrête l'exécution. `measurement.renderingIntent` ne peut pas figer directement la conversion Core Image aujourd'hui : le rapport indique donc `manifestDeclarationNotControlledByEvaluator`.
 
 ## Sortie `PRINT`
 
-IT8.7/1 s'adresse aux périphériques d'entrée. Une sortie imprimante demande un ICC imprimante RVB construit à partir de mesures réelles de la combinaison `printer + paper + ink/chemistry + driver/process condition`.
+L'IT8.7/1 vise les appareils d'entrée. La sortie imprimante exige un profil ICC RVB d'imprimante construit à partir de mesures réelles de la combinaison imprimante, papier, encre ou chimie, et conditions du pilote ou du procédé.
 
-Ordre des contrôles et de l'application :
+Ordre des vérifications et de l'usage :
 
-1. Confirmer la taille de l'ICC, la classe `prtr`, l'espace de données `RGB `, le PCS Lab/XYZ et la signature `acsp`.
-2. Confirmer que ColorSync convertit dans les deux sens.
-3. À la sélection, figer le nom du profil, ses octets et son SHA-256.
-4. L'appliquer une seule fois, à la sortie finale, après l'image de travail `MAIN` et la mise en page.
+1. Vérifier la taille de l'ICC, la classe d'appareil `prtr`, l'espace de données `RGB `, le PCS Lab/XYZ et la signature `acsp`.
+2. Vérifier que ColorSync peut convertir dans les deux sens.
+3. À la sélection, figer le nom, la taille en octets et le SHA-256 du profil.
+4. L'appliquer une seule fois, à la sortie finale, une fois l'image de travail `MAIN` et la mise en page terminées.
 5. Ne pas l'appliquer à `rawScanTIFF` ni à `-main-flat`.
-6. Un profil absent ou incorrect fait échouer avant toute sortie temporaire. Le sRVB ne le remplace pas.
+6. Un profil manquant ou erroné échoue avant toute sortie temporaire. Le sRGB ne le remplace pas.
 
-Rien n'affirme que le chemin actuel Core Image et ColorSync fige l'intention de rendu et la black-point compensation bit à bit sur toutes les versions de macOS.
+Rien n'affirme que le chemin Core Image et ColorSync actuel fige, bit pour bit sur toutes les versions de macOS, l'intention de rendu et la compensation du point noir.
 
-## Régression sur patchs synthétiques `MAIN`
+## Régression synthétique des plages `MAIN`
 
-`NegativeAutoBalanceTests` / `shoulder-print-response-v4`
+`NegativeAutoBalanceTests` et `shoulder-print-response-v4`.
 
-MAIN/CS utilise la courbe v4 sur ON comme sur OFF. Les tests v6 conservés vérifient leur primitive fixe. Leur variation nulle entre images ne décrit pas Équilibre auto sur ON.
+MAIN/CS utilise la courbe v4 dans les deux états de l'interrupteur. Les tests v6 conservés vérifient leur propre primitive fixe, et la variation nulle entre vues dans ces tests n'est pas un résultat pour Équilibre auto ON.
 
 [Réponse négative](PRINT_RESPONSE.md)
 
-## Régression de style relatif NORITSU/FUJI
+## Régression de style relatif HS et SP
 
-Un fichier de référence contenant 264 patchs Lab D50 de `A1` à `L22` est figé par SHA-256. Chaque patch devient un négatif synthétique, puis les chemins `MAIN`, `NORITSU` et `FUJI` tournent deux fois chacun.
+Un fichier de référence de 264 plages Lab D50, de `A1` à `L22`, est figé par SHA-256. Chaque plage devient un négatif synthétique, puis les chemins `MAIN`, `HS` et `SP` tournent chacun deux fois.
 
 ```bash
 swift run negaflow scanner-relative-it8-bench \
@@ -129,25 +127,10 @@ swift run negaflow scanner-relative-it8-bench \
   --out /path/to/scanner-relative-it8-report.json
 ```
 
-Le rapport contient le RVB et le Lab par patch, le `DeltaE00` face à la référence, le `DeltaE00` relatif entre cibles, et les indicateurs d'écrêtage et de valeurs non finies. La monotonie de la rampe neutre se lit dans la colonne de densité `A16...L16`.
+Le rapport porte le RVB et le Lab par plage, le `DeltaE00` par rapport à la référence, le `DeltaE00` relatif entre cibles, et des indicateurs d'écrêtage et de valeurs non finies. La monotonie de la rampe neutre se lit dans la colonne de densité `A16...L16`.
 
-Les couleurs qui sortent de 0...1 une fois converties en sRVB linéaire ne peuvent pas être fabriquées exactement en négatif synthétique : elles sont ramenées dans la plage affichable. Les statistiques sur une large plage sont donc des observations, pas un critère de réussite.
+Les couleurs qui sortent de 0...1 une fois converties en sRGB linéaire ne peuvent pas être construites exactement comme négatif synthétique ; elles sont donc limitées à la plage affichable. Les statistiques sur une large plage sont ainsi des observations, pas un seuil de réussite.
 
-Le niveau de preuve est toujours `syntheticModel` et la décision toujours `notEvaluated`. Si le manifeste de profil ou le SHA-256 d'un fichier ne concorde pas, tout s'arrête. La justesse d'une machine réelle demande des scans du même négatif physique sur les deux machines, plus un matériel de validation distinct.
+Le niveau de preuve est toujours `syntheticModel` et la décision toujours `notEvaluated`. Si le manifeste de profil ou le SHA-256 d'un fichier ne concorde pas, l'exécution s'arrête. L'exactitude d'une vraie machine exige des numérisations du même négatif physique sur les deux machines, plus un matériel de validation distinct.
 
-Le D50/2° n'a pas été confirmé depuis l'en-tête du fichier de référence. Lire le Lab comme D50/2° est le contrat propre du banc, donc `colorimetryInterpretationProvenance` vaut `benchmarkContractNotVerifiedFromReferenceHeader`.
-
-Les résultats antérieurs à `shoulder-print-response-v4` ne sont pas réutilisés comme résultats de l'algorithme actuel.
-
-## Déroulé de la mesure
-
-```mermaid
-flowchart LR
-    A["Vérifier les empreintes de l'image, du fichier de référence et de l'ICC"] --> B["Mesurer les 60 % centraux des patchs"]
-    B --> C["Appliquer l'ICC et calculer Lab D50/2°"]
-    C --> D["Consigner le CIEDE2000 par patch"]
-    D --> E{"Type de preuve"}
-    E --> F["algorithmRegression"]
-    E --> G["deviceCharacterization"]
-    E --> H["syntheticModel"]
-```
+Le D50/2° n'a pas été confirmé d'après l'en-tête du fichier de référence. C'est le contrat propre au banc d'essai pour lire le Lab en D50/2°, d'où `colorimetryInterpretationProvenance` valant `benchmarkContractNotVerifiedFromReferenceHeader`.

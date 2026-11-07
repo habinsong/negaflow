@@ -7,7 +7,7 @@
 <p align="center">negaflow, built natively for Windows.</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.2.6-EF8B26" alt="version 1.2.6\"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.2.6-EF8B26" alt="version 1.2.6"></a>
   <a href="#"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 or later"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -33,27 +33,29 @@
 To run it:
 
 - Windows 11 24H2 (build 26100) or later, 64-bit
-- 8 GB of memory for 35mm work, 16 GB is more comfortable with medium format
+- 8 GB of memory, 16 GB recommended for medium format
 
 To build it:
 
-- Visual Studio 2022 with the Desktop development with C++ workload
-- Windows 11 SDK (10.0.26100 or later)
-- .NET 10 SDK
-- CMake 3.28 or later
-- Python 3.11 or later, for the icon and resource scripts
+- Visual Studio 2026 with the Desktop development with C++ workload (`.vsconfig` lists the components)
+- Windows 11 SDK 10.0.26100 or later
+- .NET 10 SDK (`global.json` pins 10.0.302)
+- CMake 4.2 or later (the `Visual Studio 18 2026` generator needs it)
+- Python 3, for the icon and resource scripts
 
-It runs on Arm64 machines too. Arm64 releases are less tested than x64.
+The build also has Arm64 presets. Releases ship x64 only.
 
 ## Installing
 
-Download `negaflow-1.2.6-win-x64.exe` from [Releases](https://github.com/habinsong/negaflow/releases) and run it.
+Download `negaflow-1.2.6-win-x64.exe` from [Releases](https://github.com/habinsong/negaflow/releases) and run it. By default it installs into `%LOCALAPPDATA%\Negaflow\App` and asks for no administrator rights.
 
-Windows installer ZIP: [negaflow-1.2.6-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.6/negaflow-1.2.6-win-x64-setup.zip). Windows also provides a setup ZIP containing the same installer EXE, installation instructions, notices and SHA-256 checksums. Extract all files before running the installer. This is an installer archive, not a portable app; SmartScreen can still warn.
+[negaflow-1.2.6-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.6/negaflow-1.2.6-win-x64-setup.zip) holds the same installer EXE with installation instructions, notices and SHA-256 checksums. Extract all files before running the installer. It is an installer archive, not a portable app.
 
-No administrator rights are needed. SmartScreen warns once on the first run. Click More info, then run it.
+The installer is unsigned. SmartScreen warns once on the first run: click More info, then run it.
 
-Uninstall from `Uninstall negaflow` in the Start menu or the app list in Settings. Your library and photos are left alone.
+To uninstall, use `Uninstall negaflow` in the Start menu or the app list in Settings. Your library and photos are left alone.
+
+At launch the app asks GitHub once for the latest release. If a newer version is out, the bottom of the ⋯ menu at the top right reads "Update to Version X.Y.Z". Choosing it opens the release page and saves the `win-x64.exe` installer to Downloads, checked against the release's `SHA256SUMS.txt`. You install it yourself. When the app is current the item reads "You're on the latest version." and opens the project page. If the check fails, for example offline, the item does not appear.
 
 ## Building
 
@@ -68,9 +70,9 @@ cd negaflow\negaflow-windows
 .\scripts\run-app.ps1 -Architecture x64 -Configuration Release
 ```
 
-`build.ps1` accepts `x64-debug`, `x64-release`, `arm64-debug`, and `arm64-release`.
+`build.ps1` accepts `x64-debug`, `x64-release`, `arm64-debug` and `arm64-release`.
 
-`run-app.ps1` is the only way to launch the app during development. The app builds as an MSIX package, so running the exe in the build folder does nothing. The script builds the package, registers it for the current user, and launches it by app ID.
+During development, launch the app with `run-app.ps1` only. The app builds as an MSIX package, so running the exe in the build folder does nothing. The script builds the package, registers it for the current user and starts it by app ID.
 
 To build the installer:
 
@@ -78,7 +80,7 @@ To build the installer:
 .\scripts\build-release.ps1 -Architecture x64
 ```
 
-The output lands in `out\release\win-x64`.
+The output goes to `out\release\win-x64`.
 
 ## Checks
 
@@ -96,36 +98,36 @@ ctest --preset x64-release --output-on-failure
 .\scripts\local-ci.ps1
 ```
 
-Run installer verification (`scripts\verify-installer.ps1`, also called by `scripts\local-ci.ps1`) in the signed-in desktop session. SSH session 0 can fail AppX registration while initializing PLM with `0x80070005`. The verification script stops before changing the existing installation when invoked from that SSH session.
+Run `scripts\verify-installer.ps1` (also called by `local-ci.ps1`) in a signed-in desktop session. In an SSH session, AppX registration can fail with `0x80070005`, so the script stops before it touches the existing installation.
 
-CI runs the self-contained engine tests. External macOS reference files are kept outside Git. To run their comparisons, set `NEGAFLOW_MACOS_GOLDEN_ROOT` to the reference directory when configuring CMake. It must contain `task6-metadata-policy`, `task9-bw-slide`, `task7-coreimage-filters`, `task8-digital-film-look`, and `vibrance`. Missing or unreadable files fail the selected comparisons. `ctest --preset x64-release -L external-golden` runs those comparisons; the ordinary unit tests remain enabled.
+CI runs only the self-contained engine tests. The macOS reference files stay outside Git. To run those comparisons, set `NEGAFLOW_MACOS_GOLDEN_ROOT` to the reference directory when configuring CMake. It must contain `task6-metadata-policy`, `task9-bw-slide`, `task7-coreimage-filters`, `task8-digital-film-look` and `vibrance`. A missing or unreadable file fails the selected comparisons. `ctest --preset x64-release -L external-golden` runs them, and the ordinary unit tests stay enabled.
 
 ## Custom color targets
 
-CS follows MAIN, HS, SP, F135, and HR in the target capsules. Select CS, then choose one of 18 Custom targets in the lower-left two-column picker. Separators divide the groups of 11, 4, and 3; the Look picker stays on the right. Entering CS selects Emulsion, while a photo already using Custom keeps its current target.
+CS follows MAIN, HS, SP, F135 and HR in the target capsules. Selecting it opens a two-column list of 18 Custom targets at the lower left, in groups of 11, 4 and 3; the Look selector stays on the right. Entering CS selects Emulsion, and a photo that already uses a Custom target keeps it.
 
-Custom uses the same custom-3 coefficients and string IDs as macOS. The actual target is stored in photo settings and the catalog, and the same stage runs in preview and export. Folder headers use the existing Apply button to apply a chosen target to the folder.
+Custom uses the same custom-3 coefficients and string IDs as macOS. The chosen target is stored in the photo settings and the catalog, and preview and export run the same stage. A folder header applies the chosen target to the folder with the existing Apply button.
 
 ## Checking the engine from the command line
 
-`negaflow-cli.exe` shows how the engine handles a single file. It takes flags rather than subcommands.
+`negaflow-cli.exe` runs the engine on a single file. It takes flags, not subcommands.
 
 ```powershell
 $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 
-# See what this build is
+# Build information
 & $cli --build-info
 
-# See what is inside a scan file
+# What a scan file contains
 & $cli --probe-tiff scan.tif
 
 # Develop and save as 16-bit TIFF
 & $cli --export-developed-tiff16 scan.tif out.tif
 
-# See where the time goes in one develop pass
+# Where the time goes in one develop pass
 & $cli --develop-timing scan.tif
 
-# Find the film base automatically and see what it picked
+# Automatic film base and what it picked
 & $cli --auto-base-probe scan.tif
 ```
 
@@ -133,9 +135,9 @@ Run it with no arguments for the full list.
 
 ## Scanners
 
-Scanner controls stay hidden until a plugin is installed. SANE devices are handled by [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), installed separately.
+Scanner controls stay hidden until a plugin is installed. SANE devices use [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), installed separately.
 
-The plugin talks to the scanner through the driver paths Windows already provides. You can keep using VueScan or SilverFast on the same machine.
+The plugin reaches the scanner through the driver paths Windows already provides, so VueScan or SilverFast can stay installed on the same machine.
 
 ## When something goes wrong
 
@@ -147,10 +149,10 @@ The app writes text logs to `%LOCALAPPDATA%\Negaflow\Logs`.
 | `termination.txt` | What happened while the app was closing |
 | `settings-change.txt` | Settings that changed and what changed them |
 
-Those three are always on. Two more turn on only when you are chasing a specific problem.
+These three are always on. Two more are off by default:
 
-- `preview-trace.txt`. Create an empty file named `preview-trace.on` in the same folder to turn it on.
-- `stage-trace.txt`. Set the environment variable `NEGAFLOW_STAGE_TRACE=1` before launching the app. It records pixel statistics at each develop stage.
+- `preview-trace.txt`: create an empty file named `preview-trace.on` in the same folder.
+- `stage-trace.txt`: set the environment variable `NEGAFLOW_STAGE_TRACE=1` before launching the app. It records pixel statistics at each develop stage.
 
 ## Layout
 
@@ -160,11 +162,11 @@ negaflow-windows/
 │   ├── Native/        Chroma Engine, GrainMend, decoding and export (C++)
 │   ├── Interop/       The layer between engine and app (C#)
 │   ├── Catalog.Core/  Library storage (C#)
-│   ├── Shell.Core/    Develop, print, and export logic (C#)
-│   ├── Shell/         Library, develop, and print screens (WinUI 3)
+│   ├── Shell.Core/    Develop, print and export logic (C#)
+│   ├── Shell/         Library, develop and print screens (WinUI 3)
 │   └── Cli/           Engine inspection tool (C++)
-├── scripts/           Build, test, and packaging scripts
-├── tests/             Engine, app, and boundary tests
+├── scripts/           Build, test and packaging scripts
+├── tests/             Engine, app and boundary tests
 └── Installer/windows/ NSIS installer
 ```
 

@@ -177,6 +177,15 @@
             AutomationProperties.AutomationId="negaflow.develop.geometry.angle-dial"
             AngleCommitted="OnCropAngleDialChanged"
             Visibility="Collapsed" />
+        <!-- 크롭 중에만 쓰는 조합키 동작을 알려 줍니다. 키는 설정에서 바꿀 수 있어 지금 값을 넣습니다. -->
+        <TextBlock
+            x:Name="StraightenHintText"
+            HorizontalAlignment="Center"
+            FontSize="11"
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+            TextAlignment="Center"
+            TextWrapping="Wrap"
+            Visibility="Collapsed" />
         <controls:InspectorSlider x:Name="StraightenAngleControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.geometry.straighten-angle" ValueChanged="OnStraightenAngleChanged" />
         <!-- macOS 처럼 이름은 왼쪽, 값과 잠금은 오른쪽 끝에 붙습니다. -->
         <Grid HorizontalAlignment="Stretch">

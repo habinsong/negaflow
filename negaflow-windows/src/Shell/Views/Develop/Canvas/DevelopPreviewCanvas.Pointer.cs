@@ -24,6 +24,11 @@ public sealed partial class DevelopPreviewCanvas
         {
             return;
         }
+        // 기준선 조합키를 누른 채 누르면 크롭 사각형 대신 기준선을 그립니다.
+        if (TryBeginStraighten(args))
+        {
+            return;
+        }
         // 크롭 상태는 늘 있습니다 - 자르기 중인지는 `TryBeginDrag` 가 스스로 봅니다.
         // 여기서 `crop is not null` 만 보고 돌아서면 자르기를 켜지 않았는데도 끌기가
         // 통째로 막힙니다.
@@ -76,6 +81,10 @@ public sealed partial class DevelopPreviewCanvas
         {
             return;
         }
+        if (TryContinueStraighten(args))
+        {
+            return;
+        }
         if (crop is not null && cropInteraction.TryContinueDrag(args, crop))
         {
             return;
@@ -94,6 +103,10 @@ public sealed partial class DevelopPreviewCanvas
         {
             return;
         }
+        if (TryEndStraighten(args))
+        {
+            return;
+        }
         if (crop is not null)
         {
             cropInteraction.EndDrag(args, crop);
@@ -106,6 +119,7 @@ public sealed partial class DevelopPreviewCanvas
         _ = sender;
         EndCompareDivider(args);
         HandlePointerCancelled?.Invoke(args);
+        CancelStraighten();
         _ = pan.End(args);
         if (crop is not null)
         {
@@ -118,6 +132,7 @@ public sealed partial class DevelopPreviewCanvas
         _ = sender;
         EndCompareDivider(args);
         HandlePointerCancelled?.Invoke(args);
+        CancelStraighten();
         _ = pan.End(args);
         if (crop is not null)
         {
@@ -130,6 +145,7 @@ public sealed partial class DevelopPreviewCanvas
         Negaflow.Shell.Views.WorkspaceShellView.TraceKey(
             $"canvas keydown: key={args.Key} handled={args.Handled}");
         _ = sender;
+        RefreshStraightenGrid();
         if (TryHandleKeyDown?.Invoke(args) == true)
         {
             return;

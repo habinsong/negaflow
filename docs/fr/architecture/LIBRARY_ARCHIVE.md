@@ -2,49 +2,37 @@
 
 [Accueil de la documentation](../README.md)
 
-Une sauvegarde de catalogue sert à relancer l'application, elle ne contient donc pas les photos d'origine. L'archive `.negaflowarchive` réunit les éléments suivants dans un seul paquet.
+Une sauvegarde du catalogue remet l'application en marche et ne contient pas les photos d'origine. L'archive `.negaflowarchive` les réunit dans un seul paquet.
 
-| Inclus | Laissé de côté |
+| Inclus | Exclus |
 |---|---|
-| Catalogue JSON transférable | Le fichier SQLite en cours d'utilisation |
+| JSON de catalogue portable | Le fichier SQLite en cours d'utilisation |
 | Originaux référencés et originaux IR restants | Vignettes et aperçus |
-| L'historique d'édition GrainMend encore utile | Caches GrainMend reconstructibles |
+| L'historique de retouches GrainMend encore utile | Caches GrainMend reconstructibles |
 | Le lien entre copies virtuelles et originaux partagés | Fichiers exportés |
 
-Le fichier SQLite en cours d'utilisation n'est pas inclus. Tout ce qui peut être reconstruit est aussi écarté : vignettes, aperçus, caches GrainMend, fichiers exportés.
-
 > [!WARNING]
-> Si l'archive échoue, l'archive existante n'est pas écrasée. Les originaux, les XMP tiers et le catalogue en cours ne sont pas touchés non plus.
+> Si la création de l'archive échoue, l'archive existante n'est pas écrasée. Les originaux, les XMP tiers et le catalogue en cours ne sont pas touchés.
 
-## Structure du paquet et contrôles
+## Structure du paquet et vérifications
 
-Le paquet suit la structure de dossiers [RFC 8493 BagIt](https://www.rfc-editor.org/rfc/rfc8493.html). Les listes SHA-256 sont écrites séparément pour les fichiers de contenu et les fichiers administratifs. `negaflow-archive.json` relie les identifiants d'image aux identifiants de fichiers stockés. Si plusieurs copies virtuelles utilisent le même original, ses octets ne sont stockés qu'une fois.
+Le paquet suit l'arborescence de [RFC 8493 BagIt](https://www.rfc-editor.org/rfc/rfc8493.html). Les listes SHA-256 sont écrites séparément pour les fichiers de contenu et les fichiers d'administration. `negaflow-archive.json` relie les identifiants de vues aux identifiants de fichiers stockés. Les copies virtuelles d'un même original partagent une seule copie stockée.
 
-Le dossier temporaire rejoint son emplacement final seulement après ces contrôles.
+Le dossier temporaire n'est déplacé vers son emplacement final qu'une fois toutes ces vérifications passées :
 
-1. L'application actuelle peut lire le catalogue sans risque.
-2. Les originaux et les entrées IR sont des fichiers ordinaires, et leur taille et leur date ne changent pas pendant la copie.
-3. Tous les enregistrements GrainMend nécessaires sont lisibles.
-4. Les SHA-256, le nombre d'octets, la liste des fichiers et `Payload-Oxum` concordent.
-5. Les liens des images vers leurs originaux, fichiers IR et enregistrements GrainMend correspondent au catalogue.
+1. L'application actuelle peut lire le catalogue en sécurité.
+2. Les originaux et les entrées IR sont des fichiers ordinaires dont la taille et la date de modification ne changent pas pendant la copie.
+3. Chaque enregistrement GrainMend nécessaire est lisible.
+4. SHA-256, tailles en octets, liste de fichiers et `Payload-Oxum` concordent.
+5. Les liens entre vues, originaux, fichiers IR et enregistrements GrainMend correspondent au catalogue.
 
-```mermaid
-flowchart LR
-    A["Construire le paquet BagIt temporaire"] --> B["Contrôler fichiers et liens"]
-    B --> C["Contrôler SHA-256, taille, liste"]
-    C --> D{"Tous les contrôles passés ?"}
-    D -- Oui --> E["Publier à l'emplacement final"]
-    D -- Non --> F["Supprimer seulement le dossier temporaire"]
-    F --> G["Garder l'archive existante et les originaux"]
-```
-
-En cas d'échec, l'archive existante reste en place. Seul le dossier temporaire inachevé est supprimé. Les originaux, les XMP tiers et le catalogue en cours ne bougent pas.
+En cas d'échec, seul le dossier temporaire inachevé est supprimé. L'archive existante reste en place.
 
 ## Limites
 
-Les formats d'origine sont conservés tels quels. Rien n'est converti au nom de la compatibilité à long terme. Les événements de conservation et les agents PREMIS, ainsi que la migration vers des formats recommandés, sortent du périmètre de la v1.
+Les formats d'origine sont conservés tels quels, sans conversion pour la compatibilité à long terme. Les événements de préservation PREMIS, les enregistrements d'agents et la migration vers des formats recommandés sortent du périmètre de la v1.
 
-Une archive ne suffit pas à conserver dans la durée. Gardez des copies sur d'autres supports et dans un autre lieu, et revérifiez les empreintes régulièrement.
+Une archive n'est pas un plan de préservation. Gardez des copies sur d'autres supports et à un autre endroit, et revérifiez les hachages régulièrement.
 
 Sources :
 

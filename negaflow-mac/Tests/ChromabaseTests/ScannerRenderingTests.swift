@@ -122,11 +122,11 @@ final class ScannerRenderingTests: XCTestCase {
                 SIMD3(0.149442429, 0.149442429, 0.149442429),
             ]),
             (.f135, [
-                SIMD3(0.002978025, 0.002978025, 0.002978025),
-                SIMD3(0.002978025, 0.002978025, 0.002978025),
-                SIMD3(0.003739903, 0.003739903, 0.003739903),
-                SIMD3(0.005450417, 0.005450417, 0.005450417),
-                SIMD3(0.02433088, 0.02433088, 0.02433088),
+                SIMD3(0.0, 0.0, 0.0),
+                SIMD3(0.0, 0.0, 0.0),
+                SIMD3(0.001582971, 0.001582971, 0.001582971),
+                SIMD3(0.00528569, 0.00528569, 0.00528569),
+                SIMD3(0.024296108, 0.024296108, 0.024296108),
                 SIMD3(0.18484298, 0.18484298, 0.18484298),
                 SIMD3(0.527002073, 0.527002073, 0.527002073),
                 SIMD3(0.88962959, 0.88962959, 0.88962959),
@@ -137,17 +137,17 @@ final class ScannerRenderingTests: XCTestCase {
                 SIMD3(0.349846259, 0.218075709, 0.097206658),
                 SIMD3(0.715637034, 0.089880841, 0.040281239),
                 SIMD3(0.036818102, 0.668358195, 0.088113503),
-                SIMD3(0.012250708, 0.031765905, 0.420875517),
+                SIMD3(0.012249464, 0.03176268, 0.420832781),
                 SIMD3(1.0, 0.949530839, 0.41669206),
                 SIMD3(1.0, 0.519818167, 0.497384586),
-                SIMD3(2.692e-06, 0.195932387, 0.309858777),
-                SIMD3(0.208082007, 0.208082007, 2.452e-06),
+                SIMD3(0.000002692, 0.195932387, 0.309858777),
+                SIMD3(0.208082007, 0.208082007, 0.000002452),
             ], [
-                SIMD3(0.002978025, 0.002978025, 0.002978025),
-                SIMD3(0.002978025, 0.002978025, 0.002978025),
-                SIMD3(0.003739903, 0.003739903, 0.003739903),
-                SIMD3(0.005450417, 0.005450417, 0.005450417),
-                SIMD3(0.02433088, 0.02433088, 0.02433088),
+                SIMD3(0.0, 0.0, 0.0),
+                SIMD3(0.0, 0.0, 0.0),
+                SIMD3(0.001582971, 0.001582971, 0.001582971),
+                SIMD3(0.00528569, 0.00528569, 0.00528569),
+                SIMD3(0.024296108, 0.024296108, 0.024296108),
                 SIMD3(0.18484298, 0.18484298, 0.18484298),
                 SIMD3(0.527002073, 0.527002073, 0.527002073),
                 SIMD3(0.88962959, 0.88962959, 0.88962959),
@@ -158,56 +158,112 @@ final class ScannerRenderingTests: XCTestCase {
                 SIMD3(0.237363382, 0.237363382, 0.237363382),
                 SIMD3(0.219335516, 0.219335516, 0.219335516),
                 SIMD3(0.492199105, 0.492199105, 0.492199105),
-                SIMD3(0.055710688, 0.055710688, 0.055710688),
+                SIMD3(0.055705031, 0.055705031, 0.055705031),
                 SIMD3(0.921789623, 0.921789623, 0.921789623),
                 SIMD3(0.62028512, 0.62028512, 0.62028512),
                 SIMD3(0.147070855, 0.147070855, 0.147070855),
                 SIMD3(0.191980983, 0.191980983, 0.191980983),
             ]),
             (.hr, [
-                SIMD3(0.002978025, 0.002978025, 0.002978025),
-                SIMD3(0.002978025, 0.002978025, 0.002978025),
-                SIMD3(0.003739903, 0.003739903, 0.003739903),
-                SIMD3(0.005450417, 0.005450417, 0.005450417),
-                SIMD3(0.02433088, 0.02433088, 0.02433088),
+                SIMD3(0.0, 0.0, 0.0),
+                SIMD3(0.0, 0.0, 0.0),
+                SIMD3(0.003077398, 0.003077398, 0.003077398),
+                SIMD3(0.00988133, 0.00988133, 0.00988133),
+                SIMD3(0.033350736, 0.033350736, 0.033350736),
                 SIMD3(0.18484298, 0.18484298, 0.18484298),
                 SIMD3(0.527002073, 0.527002073, 0.527002073),
                 SIMD3(0.88962959, 0.88962959, 0.88962959),
                 SIMD3(0.948009224, 0.948009224, 0.948009224),
                 SIMD3(1.0, 1.0, 1.0),
-                SIMD3(0.137535913, 0.069506157, 0.038965752),
-                SIMD3(0.0411268, 0.098517997, 0.245808406),
+                SIMD3(0.134008042, 0.067723286, 0.037966259),
+                SIMD3(0.040098626, 0.096055037, 0.239663171),
                 SIMD3(0.34014396, 0.220202164, 0.104711758),
                 SIMD3(0.677447508, 0.100453205, 0.048006155),
                 SIMD3(0.046133951, 0.664090038, 0.10296165),
-                SIMD3(0.014660483, 0.035223989, 0.379524548),
+                SIMD3(0.015058062, 0.036179231, 0.389816905),
                 SIMD3(1.0, 0.950992111, 0.40221696),
                 SIMD3(1.0, 0.520210741, 0.49349582),
-                SIMD3(6.628e-06, 0.196907786, 0.300185068),
-                SIMD3(0.208081724, 0.208081724, 6.082e-06),
+                SIMD3(0.000006615, 0.196512917, 0.299583092),
+                SIMD3(0.208081724, 0.208081724, 0.000006082),
             ], [
-                SIMD3(0.002978025, 0.002978025, 0.002978025),
-                SIMD3(0.002978025, 0.002978025, 0.002978025),
-                SIMD3(0.003739903, 0.003739903, 0.003739903),
-                SIMD3(0.005450417, 0.005450417, 0.005450417),
-                SIMD3(0.02433088, 0.02433088, 0.02433088),
+                SIMD3(0.0, 0.0, 0.0),
+                SIMD3(0.0, 0.0, 0.0),
+                SIMD3(0.003077398, 0.003077398, 0.003077398),
+                SIMD3(0.00988133, 0.00988133, 0.00988133),
+                SIMD3(0.033350736, 0.033350736, 0.033350736),
                 SIMD3(0.18484298, 0.18484298, 0.18484298),
                 SIMD3(0.527002073, 0.527002073, 0.527002073),
                 SIMD3(0.88962959, 0.88962959, 0.88962959),
                 SIMD3(0.948009224, 0.948009224, 0.948009224),
                 SIMD3(1.0, 1.0, 1.0),
-                SIMD3(0.081764266, 0.081764266, 0.081764266),
-                SIMD3(0.096950997, 0.096950997, 0.096950997),
+                SIMD3(0.079666968, 0.079666968, 0.079666968),
+                SIMD3(0.094527211, 0.094527211, 0.094527211),
                 SIMD3(0.237363382, 0.237363382, 0.237363382),
                 SIMD3(0.219335516, 0.219335516, 0.219335516),
                 SIMD3(0.492199105, 0.492199105, 0.492199105),
-                SIMD3(0.055710688, 0.055710688, 0.055710688),
+                SIMD3(0.057221511, 0.057221511, 0.057221511),
                 SIMD3(0.921789623, 0.921789623, 0.921789623),
                 SIMD3(0.62028512, 0.62028512, 0.62028512),
-                SIMD3(0.147070855, 0.147070855, 0.147070855),
+                SIMD3(0.146232898, 0.146232898, 0.146232898),
                 SIMD3(0.191980983, 0.191980983, 0.191980983),
             ]),
     ]
+
+    /// 깊은 암부가 한 값으로 뭉치지 않는다. 예전 F135·HR 토우는 −8~−6 스탑이 거의 평평해 파란
+    /// 암부가 스탑당 8비트 0~1 코드밖에 움직이지 않았다. 측정된 SP 의 로그 기울기(출력 스탑 /
+    /// 입력 스탑)를 기준으로 삼는다.
+    func testDeepShadowsKeepSeparationLikeTheMeasuredScanner() throws {
+        func outputStops(_ target: DevelopTarget, _ rgb: SIMD3<Double>, at stop: Double) throws -> Double {
+            let rendering = try XCTUnwrap(ScannerTargetGrade.rendering(for: target))
+            let curves = ScannerTargetGrade.RenderingCurves(rendering)
+            let luma = (rgb * SIMD3(0.2126, 0.7152, 0.0722)).sum()
+            let input = rgb * (0.18 * pow(2, stop) / luma)
+            let out = ScannerTargetGrade.renderLinear(input, curves: curves, monochrome: false)
+            return log2(max(out.z, 1e-9))
+        }
+        let deepBlue = SIMD3<Double>(0.06, 0.16, 1.0)
+        for stop in stride(from: -9.0, through: -4.0, by: 1.0) {
+            let sp = try outputStops(.sp3000, deepBlue, at: stop + 1) - outputStops(.sp3000, deepBlue, at: stop)
+            for target in [DevelopTarget.f135, .hr] {
+                let step = try outputStops(target, deepBlue, at: stop + 1) - outputStops(target, deepBlue, at: stop)
+                XCTAssertGreaterThan(step, sp * 0.9, "\(target.displayName) \(stop) 스탑")
+            }
+        }
+    }
+
+    /// F135 와 HR 은 같은 렌더링이 아니다: F135 는 암부가 더 깊고, HR 은 암부를 열어 두고 채도가 낮다.
+    func testF135AndHRRenderDifferently() throws {
+        let f135 = ScannerTargetGrade.RenderingCurves(try XCTUnwrap(ScannerTargetGrade.rendering(for: .f135)))
+        let hr = ScannerTargetGrade.RenderingCurves(try XCTUnwrap(ScannerTargetGrade.rendering(for: .hr)))
+        let shadow = SIMD3<Double>(repeating: 0.18 * pow(2, -3))
+        XCTAssertLessThan(
+            ScannerTargetGrade.renderLinear(shadow, curves: f135, monochrome: false).y,
+            ScannerTargetGrade.renderLinear(shadow, curves: hr, monochrome: false).y * 0.8
+        )
+        let red = SIMD3<Double>(0.6, 0.1, 0.05)
+        let f135Red = ScannerTargetGrade.renderLinear(red, curves: f135, monochrome: false)
+        let hrRed = ScannerTargetGrade.renderLinear(red, curves: hr, monochrome: false)
+        XCTAssertGreaterThan(f135Red.x / f135Red.y, hrRed.x / hrRed.y)
+    }
+
+    /// 암부에서 중간톤으로 올라가는 동안 국부 대비(출력 스탑 / 입력 스탑)가 꺼지지 않는다 —
+    /// 특성곡선 토우는 위로 갈수록 감마가 커진다. 예전 HR 은 SP 암부와 인화지 −1 스탑 앵커를 그냥
+    /// 이어 −1.6 스탑에서 그때까지 최고치의 69% 로 꺼졌다가 튀었다. 실측 SP·HS 는 98% 이상이다.
+    func testToeContrastDoesNotDipBelowTheMidtones() throws {
+        func linear(_ v: Double) -> Double {
+            v <= 0.04045 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4)
+        }
+        for target in targets {
+            let tone = ScannerTargetGrade.RenderingCurves(try XCTUnwrap(ScannerTargetGrade.rendering(for: target))).tone
+            var peak = 0.0
+            for step in 0..<170 {
+                let x = -4.0 + Double(step) * 0.02
+                let contrast = (log2(linear(tone.value(at: x + 0.02))) - log2(linear(tone.value(at: x)))) / 0.02
+                peak = max(peak, contrast)
+                XCTAssertGreaterThanOrEqual(contrast, peak * 0.9, "\(target.displayName) \(x) 스탑")
+            }
+        }
+    }
 
     func testCPUReferenceMatchesFittingScriptGolden() throws {
         for (target, color, mono) in goldenOutputs {

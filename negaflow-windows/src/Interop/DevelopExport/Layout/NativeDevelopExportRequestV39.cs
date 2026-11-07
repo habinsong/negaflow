@@ -32,6 +32,27 @@ internal unsafe struct NativeDevelopExportRequestV41
     internal uint ChannelRangeReserved;
 }
 
+/// <summary>v41 뒤의 변환(원근) 꼬리입니다. native <c>nf_develop_export_request_v42</c> 와 같은 배치입니다.</summary>
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV42
+{
+    internal NativeDevelopExportRequestV41 V41;
+    internal uint HasPerspective;
+    internal uint PerspectiveConstrainCrop;
+    internal double PerspectiveSolvedVertical;
+    internal double PerspectiveSolvedHorizontal;
+    internal double PerspectiveSolvedRotate;
+    internal double PerspectiveVertical;
+    internal double PerspectiveHorizontal;
+    internal double PerspectiveRotate;
+    internal double PerspectiveAspect;
+    internal double PerspectiveScale;
+    internal double PerspectiveOffsetX;
+    internal double PerspectiveOffsetY;
+    internal uint PerspectiveReserved;
+    internal uint PerspectiveReserved2;
+}
+
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeDevelopExportResultV6
 {

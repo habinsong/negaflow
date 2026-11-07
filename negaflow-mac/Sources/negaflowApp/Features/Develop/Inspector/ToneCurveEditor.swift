@@ -1,7 +1,7 @@
 import SwiftUI
 import Chromabase
 
-/// 라이트룸형 포인트 톤 커브 에디터 — DR(휘도)/R/G/B 채널을 그래프에서 클릭·드래그로 조절.
+/// 포인트 톤 커브 에디터 — DR(휘도)/R/G/B 채널을 그래프에서 클릭·드래그로 조절.
 struct ToneCurveEditor: View {
     @EnvironmentObject private var model: AppModel
     @Binding var curves: PointCurves

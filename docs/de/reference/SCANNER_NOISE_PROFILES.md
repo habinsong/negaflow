@@ -2,21 +2,21 @@
 
 [Dokumentationsstart](../README.md)
 
-Aus einer gewöhnlichen Aufnahme lässt sich kein Rauschprofil bauen. Im hochfrequenten Anteil einer Aufnahme stecken Motiv und Filmkorn zugleich.
+Aus einem gewöhnlichen Foto lässt sich kein Rauschprofil bauen, weil sein hochfrequenter Anteil Motiv und Filmkorn vermischt.
 
-Scannen Sie ein flaches oder gestuftes Target mindestens dreimal mit denselben Einstellungen. Die Änderungen des Pixelwerts an derselben Stelle ergeben die Varianz je Signalhelligkeit.
+Scannen Sie ein gleichmäßiges oder gestuftes Ziel mindestens dreimal mit denselben Einstellungen. Die Änderung des Pixelwerts an derselben Stelle liefert die Varianz je Signalstufe.
 
-- [ISO 15739:2023](https://www.iso.org/standard/82233.html) regelt Messung und Angabe von Rauschen je Signal bei digitalen Bildaufnahmegeräten.
-- [ISO 21550:2004](https://www.iso.org/standard/35939.html) regelt die Messung des Dynamikumfangs von Durchlicht- und Auflichtscannern.
+- [ISO 15739:2023](https://www.iso.org/standard/82233.html) legt fest, wie das Rauschen je Signal bei digitalen Bildgeräten gemessen und berichtet wird.
+- [ISO 21550:2004](https://www.iso.org/standard/35939.html) legt fest, wie der Dynamikumfang von Durchlicht- und Auflichtscannern gemessen wird.
 
-ISO 15739 ist für Digitalkameras geschrieben. negaflow behauptet nicht, dass Scanner unter dieselbe Norm fallen. Übernommen sind nur die Gedanken der wiederholten Messung und der Varianz je Signal.
+ISO 15739 ist für Digitalkameras geschrieben. negaflow behauptet nicht, dass Scanner darunter fallen, und übernimmt nur die Ideen der Wiederholmessung und der Varianz je Signal.
 
 > [!NOTE]
-> Im aktuellen Bundle gibt es kein `holdoutValidated`-Geräterauschprofil, also wird auch keines automatisch angewendet. Texturwerte bestehender Profile dienen nicht als Sensorrauschdaten.
+> Im aktuellen Paket gibt es kein Geräte-Rauschprofil mit `holdoutValidated`, daher greift keines automatisch. Texturwerte vorhandener Profile werden nicht als Sensor-Rauschdaten verwendet.
 
 ## Was ein Profil abdeckt
 
-`ScannerNoiseProfile` gilt nur als Treffer, wenn all das gleich ist.
+`ScannerNoiseProfile` passt nur, wenn alle diese Angaben gleich sind:
 
 - Hersteller und Modell des Scanners
 - Auflösung in DPI
@@ -24,46 +24,46 @@ ISO 15739 ist für Digitalkameras geschrieben. negaflow behauptet nicht, dass Sc
 - Farbmodus
 - Mehrfachbelichtung an oder aus
 
-Werte eines ähnlichen Modells oder einer anderen Auflösung werden nicht geborgt. Passen mehrere automatische Profile exakt, schlägt der Vorgang fehl, statt eines auszuwählen.
+Werte eines ähnlichen Modells oder einer anderen Auflösung werden nicht übernommen. Passen mehrere automatische Profile genau, schlägt die Wahl fehl, statt eines auszusuchen.
 
-Aus mindestens drei linearen RGB-Scans derselben Szene wird je Kanal Folgendes angepasst.
+Aus mindestens drei linearen RGB-Scans derselben Szene wird je Kanal angepasst:
 
 ```math
 \operatorname{variance}(x) = m_{\mathrm{shot}}x + b_{\mathrm{read}}
 ```
 
-Was neben dem Profil notiert wird:
+Das Profil hält außerdem fest:
 
 - SHA-256 des Kalibriermaterials
 - Zahl der gemessenen Bilder und Stichproben
-- Der beobachtete Signalbereich
-- R² der Regression
-- Die geprüfte Stärke der Rauschminderung
+- Den beobachteten Signalbereich
+- Das R² der Regression
+- Die validierte Stärke der Rauschminderung
 
-Die Höchststärke im Code sichert nur gegen eine kaputte Berechnung ab. Sie ist keine Qualitätsgrenze.
+Die Maximalstärke im Code schützt nur vor einer fehlerhaften Berechnung. Sie ist keine Qualitätsgrenze.
 
 ## Zustände
 
 | Zustand | Bedeutung | Automatische Anwendung |
 |---|---|---|
-| `draft` | Messung oder Abstimmung nicht fertig | Nein |
-| `measured` | Wiederholte Messung am echten Gerät, keine unabhängige Prüfung | Nein |
-| `holdoutValidated` | Stärke an separatem Prüfmaterial bestätigt | Nur bei exaktem Treffer |
+| `draft` | Messung oder Abstimmung unfertig | Nein |
+| `measured` | Wiederholmessung an einem echten Gerät, keine unabhängige Validierung | Nein |
+| `holdoutValidated` | Stärke an getrenntem Validierungsmaterial geprüft | Nur bei genauer Übereinstimmung |
 
-Für die automatische Nutzung braucht es genau ein passendes `holdoutValidated`-Profil. Auch die SHA-256 von Kalibrier- und Prüfmaterial und die Strukturprüfungen der Dateien müssen bestehen. `draft` und `measured` ändern die bestehenden allgemeinen Einstellungen nicht.
+Für die automatische Nutzung braucht es genau ein passendes `holdoutValidated`-Profil, und die SHA-256 von Kalibrier- und Validierungsmaterial sowie die Prüfungen der Dateistruktur müssen bestehen. `draft` und `measured` können die vorhandenen allgemeinen Einstellungen nicht ändern.
 
-## Wo es steht
+## Stand
 
-Die NORITSU- und SP-3000-Farbprofile im Repository tragen `texture`-Werte aus echten Szenen. Darin stecken Motiv, Schärfe und Filmkorn, also taugen sie nicht als Sensorrauschdaten.
+Die Farbprofile NORITSU und SP-3000 im Repository tragen `texture`-Werte aus echten Szenen. Sie mischen Motiv, Fokus und Filmkorn und taugen nicht als Sensor-Rauschdaten.
 
-Wiederholte Flat-Targets und separates Prüfmaterial gibt es noch nicht. Ein geprüftes Geräterauschprofil liegt nicht bei, und der automatische Pfad nutzt die bestehenden allgemeinen Einstellungen.
+Wiederholt aufgenommene gleichmäßige Ziele und getrenntes Validierungsmaterial gibt es noch nicht. Es ist kein validiertes Geräte-Rauschprofil gebündelt, und der automatische Pfad nutzt die vorhandenen allgemeinen Einstellungen.
 
-Für ein echtes Profil braucht es all das.
+Ein echtes Profil braucht alles Folgende:
 
-1. Mindestens drei lineare Scans mit gleichem Gerät, gleicher Auflösung, Bittiefe, Farbmodus und Mehrfachbelichtung
+1. Drei oder mehr lineare Scans mit demselben Gerät, derselben Auflösung, Bittiefe, demselben Farbmodus und derselben Mehrfachbelichtung
 2. Dateiliste und SHA-256 des Kalibriermaterials
-3. Eine Prüfszene, die nicht zur Kalibrierung diente, samt SHA-256
-4. Ein Vergleich von Rauschminderung gegen Detail- und Filmkornerhalt
-5. Eine Kontrolle bei 100 % Zoom durch echte Nutzung
+3. Eine nicht zur Kalibrierung verwendete Validierungsszene samt SHA-256
+4. Einen Vergleich von Rauschminderung gegen Erhalt von Detail und Filmkorn
+5. Eine Prüfung bei 100 % Vergrößerung durch einen echten Nutzer
 
-Die Aufnahme an echter Hardware übernimmt das Plugin `negaflow-scanner-sane`. SANE-Optionen und Gerätesteuerungscode kommen nicht in dieses Repository.
+Die Aufnahme an echter Hardware übernimmt das Plug-in `negaflow-scanner-sane`. SANE-Optionen und Gerätesteuerungscode kommen nicht in dieses Repository.

@@ -409,6 +409,37 @@ internal static class ScannerWorkflowTests
             Math.Abs(defaultTransform.StraightenAngle - 1.25) < 1e-12,
             "flatbed_initial_transform_uses_default_rotation_without_preview_orientation");
 
+        // 각도가 들어간 프리뷰에서 화면 칸 → 원본 → 화면 칸을 여러 번 오가도 크기가 그대로입니다.
+        // 예전에는 경계 상자를 오가서 누를 때마다 커졌습니다(QA: Epson V750, 중형 필름).
+        foreach (ImageTransformRecipe preview in new[]
+                 {
+                     ImageTransformRecipe.Identity with { StraightenAngle = 2.5 },
+                     ImageTransformRecipe.Identity with { FlipHorizontal = true, StraightenAngle = -3.7 },
+                     ImageTransformRecipe.Identity with { Rotation = ImageRotation.Degrees90, StraightenAngle = 1.2 },
+                 })
+        {
+            // 화면의 사진 자리는 변형 뒤 비율을 따릅니다(수평 보정은 같은 비율로 내접 크롭).
+            FlatbedOverlayRect frameOnScreen = preview.Rotation == ImageRotation.Degrees90
+                ? new(40.0, 30.0, 780.0, 520.0)
+                : new(40.0, 30.0, 520.0, 780.0);
+            FlatbedRegionScreenShape drawn = new(280.0, 400.0, 160.0, 110.0, 0.0);
+            double angle = FlatbedRegionFrameGeometry.RegionAngle(preview);
+            (double rx, double ry, double rw, double rh) = FlatbedRegionFrameGeometry.UnitRect(
+                drawn, frameOnScreen, preview, 2400U, 3600U);
+            bool stable = true;
+            for (int round = 0; round < 25; ++round)
+            {
+                FlatbedRegionScreenShape shown = FlatbedRegionFrameGeometry.ScreenShape(
+                    new FlatbedScanRegion("r", rx, ry, rw, rh, angle), frameOnScreen, preview, 2400U, 3600U);
+                stable &= Math.Abs(shown.Width - drawn.Width) < 1e-6 &&
+                    Math.Abs(shown.Height - drawn.Height) < 1e-6 &&
+                    Math.Abs(shown.CenterX - drawn.CenterX) < 1e-6 &&
+                    Math.Abs(shown.Angle) < 1e-9;
+                (rx, ry, rw, rh) = FlatbedRegionFrameGeometry.UnitRect(shown, frameOnScreen, preview, 2400U, 3600U);
+            }
+            Check(stable, "flatbed_straightened_preview_round_trip_does_not_grow");
+        }
+
         FlatbedOverlayRect imageFrame = new(10.0, 20.0, 200.0, 300.0);
         FlatbedScanRegion rawRegion = FlatbedScanRegion.Create(0.1, 0.2, 0.3, 0.4);
         ImageTransformRecipe quarterTurn = ImageTransformRecipe.Identity with
@@ -542,10 +573,12 @@ internal static class ScannerWorkflowTests
             UnitX = session.Regions[0].UnitX + 0.001,
             StraightenAngle = 2.0,
         };
+        // 칸은 기운 그대로 화면에 그려지고 편집됩니다. 옮겨도 그 기울기를 지킵니다 — 버리면 화면의
+        // 칸과 스캔 결과가 달라집니다(macOS testManualFlatbedRegionEditKeepsTheTiltShownOnScreen).
         Check(
             session.UpdateRegion(session.Regions[0].Id, manuallyMoved) &&
-            session.Regions[0].StraightenAngle == 0.0,
-            "flatbed_manual_edit_clears_automatic_straighten");
+            session.Regions[0].StraightenAngle == 2.0,
+            "flatbed_manual_edit_keeps_the_frame_tilt");
 
         Check(session.CopySelectedRegion() && session.PasteRegion(), "flatbed_copy_paste");
         Check(session.Regions.Count == 3, "flatbed_paste_adds_a_frame");

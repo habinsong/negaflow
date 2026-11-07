@@ -2,69 +2,61 @@
 
 [Dokumentationsstart](../README.md)
 
-Der Druckbereich bietet acht Layouts: Einzelbild, Kontaktbogen, Bildpaket, Benutzerpaket, Cyanotypie, Glasplatte, Silbergelatine und Wasserzeichen.
+Der Abzug hat acht Layouts: Einzelbild, Kontaktbogen, Bildpaket, eigenes Paket, Cyanotypie, Glasplatte, Silbergelatine und Wasserzeichen.
 
 ## Kontaktbögen
 
-Ein neuer Kontaktbogen startet mit schwarzem Hintergrund, 6 Spalten × 7 Zeilen und horizontalen sowie vertikalen Abständen von 2 mm. Alle anderen Layouts starten mit Weiß. Jedes Layout kann unabhängig Schwarz, Grau oder Weiß wählen. Beschriftungen, freie Texte, Schnittmarken und Seitenkonturen wechseln automatisch zu einer kontrastierenden Farbe.
+- Ein neuer Kontaktbogen beginnt mit einem schwarzen Bogen, 6 Spalten × 7 Zeilen und 2 mm Abstand. Alle anderen Layouts beginnen mit einem weißen Bogen. Jedes Layout kann seinen Bogen zwischen Schwarz, Grau und Weiß wechseln, und Beschriftungen, eigener Text, Schnittmarken und Seitenränder nehmen von selbst eine Kontrastfarbe an.
+- Ränder, Zeilen- und Spaltenzahl und Abstände folgen einem einzigen physischen Layoutvertrag. Eine unmögliche Kombination wird auf den größten gültigen Abstand verkleinert, statt die Vorschau zu zerstören. Die automatische Ausrichtung folgt dem Raster. **Einpassen** lässt das ganze Foto sichtbar und kann Platz in der Zelle lassen. **Zelle füllen** beschneidet jedes Foto auf die gemeinsame Zelle und gleicht die Zwischenräume an.
+- Beschriftungen können Dateiname, ursprüngliche Bildnummer, Laufnummer (ab 1 in der aktuellen Bildreihenfolge), Bewertung oder eigener Text sein. Jede installierte Mac-Schrift ist wählbar, Vorschau und Export verwenden dieselbe. Beschriftungen pro Bild lassen sich links, mittig oder rechts ausrichten. Der eigene Text unterstützt mehrere unabhängige Felder mit je eigenem Text, eigener Ausrichtung, Position, Breite und Höhe.
 
-Rand, Zeilen, Spalten und beide Abstände verwenden dieselbe physische Berechnung. Zu große Kombinationen werden auf den größten gültigen Abstand begrenzt, statt die Vorschau zu beschädigen. Die automatische Ausrichtung richtet sich nach dem Raster. **Einpassen** zeigt das ganze Bild und kann freien Raum in der Zelle lassen; **Zelle füllen** beschneidet auf eine einheitliche Zelle und erzeugt gleichmäßige sichtbare Zwischenräume.
+## Papiereinstellungen und Lineale
 
-Beschriftungen unterstützen Dateiname, ursprüngliche Bildnummer, eine bei 1 beginnende Reihenfolgennummer, Bewertung und benutzerdefinierten Text. Bildbeschriftungen lassen sich links, mittig oder rechts ausrichten. Mehrere freie Textfelder können mit eigenem Text, eigener Ausrichtung, Position, Breite und Höhe beliebig auf dem Bogen platziert werden.
+Alle Layouts nutzen dieselben Papiereinstellungen. Der Katalog enthält gängige fotografische Zollformate von 3,5 × 5 bis 24 × 36, Letter, Tabloid, A3+, ISO A1–A6 und ISO B1–B6. Die Oberfläche steht unter der Bogenfarbe und bietet Matt (Standard), Glänzend, Lustre und Seide.
 
-## Papier und Lineale
+Die Lineale sind standardmäßig aus. Eingeschaltet erscheint unter dem Schalter eine Auswahl Zoll/cm, über der Seite ein waagerechtes und links davon ein senkrechtes Lineal. Ganze Zoll oder Zentimeter sind beziffert, dazwischen liegen feinere Teilstriche.
 
-Alle Layouts verwenden dieselben Papierregler. Verfügbar sind Fotoformate in Zoll von 3.5 × 5 bis 24 × 36, Letter, Tabloid, A3+, ISO A1–A6 und ISO B1–B6. Oberfläche steht direkt unter Bogenfarbe und bietet Matt, Glänzend, Lustre und Seide; Matt ist die Voreinstellung.
+## Einzel- und historische Layouts
 
-Lineale sind standardmäßig aus. Nach dem Einschalten erscheint direkt darunter die Wahl in/cm, außerdem ein horizontales Lineal über und ein vertikales Lineal links vom Papier. Ganze Zoll oder Zentimeter werden klein beschriftet und durch kürzere Teilstriche unterteilt.
+Einzelbild, Cyanotypie, Glasplatte und Silbergelatine erzeugen je ausgewähltem Foto eine Seite. Mehrere ausgewählte Fotos erscheinen als senkrechter Stapel. Cyanotypie bildet die Luminanz auf ein blaues Einfarbbild ab, Glasplatte zeigt ein einfarbiges Negativ, Silbergelatine ein neutrales einfarbiges Positiv.
 
-## Einzelne und historische Abzugslayouts
-
-Einzelbild, Cyanotypie, Glasplatte und Gelatinesilber erzeugen für jedes ausgewählte Foto eine Seite. Bei mehreren Fotos erscheinen die Seiten untereinander und werden durch Scrollen gewechselt, statt auf einen Bogen gezwungen zu werden. Cyanotypie bildet die Helligkeit monochrom in Blau ab, Glasplatte zeigt ein Schwarzweißnegativ und Gelatinesilber ein neutrales Schwarzweißpositiv.
-
-Die drei historischen Layouts verwenden Papier, Ausrichtung, Rand, Ausgabe und Inspektor des Einzelbilds; ihre Darstellung wird auch in Export und Schnellexport gerendert. Es sind bewusst gestaltete Darstellungen, keine messtechnische Rekonstruktion einer bestimmten historischen Chemie, Platte, eines Papiers oder einer Betrachtungsbedingung.
+Diese drei Stile nutzen dieselben Einstellungen für Papier, Ausrichtung, Ränder, Ausgabe und Inspektor wie das Einzelbild und werden in Export und Schnellexport mit ausgegeben. Es sind bewusst gestaltete Bildstile, keine gemessene Nachbildung einer bestimmten historischen Chemie, Platte, eines Papiers oder einer Betrachtungsbedingung.
 
 ## Wasserzeichen und Layoutvorlagen
 
-Wasserzeichen ist ein eigenes Layout im Layouttyp-Menü und ergänzt Ränder außerhalb des Fotos. Bei der Auswahl wird das Papier auf das Fotoverhältnis gesetzt. Danach lässt sich ein anderes Format wählen. Die Namensposition ist immer wählbar: unten Mitte, oben links, oben Mitte oder oben rechts. Eine obere Position schaltet den oberen Rand ein. Die Verschlusszeit erhält kein zusätzliches Anführungszeichen. Leere Textfelder bleiben leer. Der Name wird innerhalb seiner Position zentriert. Teilen Name und Histogramm eine Position, steht das Histogramm über dem Namen; beide sind jeweils zentriert.
+Das Wasserzeichen ist ein eigener Layouttyp im Menü. Seine Wahl setzt das Papierformat auf Fotoverhältnis (danach ist ein anderes Format wählbar) und fügt Rahmen außerhalb des Fotos hinzu. Das Menü für die Namensposition ist immer verfügbar: unten mittig, oben links, oben mittig oder oben rechts, und eine obere Position schaltet den oberen Rahmen ein. Belichtungszeiten bekommen kein zusätzliches Anführungszeichen, leere Textfelder bleiben leer. Der Namenstext ist in seiner Position zentriert. Teilen sich Name und Histogramm eine Position, liegt das Histogramm über dem Namen und beide sind zentriert.
 
-Layoutvorlagen stellen Anordnung, Papiereinstellungen, Blattfarbe und Wasserzeichen wieder her und aktualisieren die Vorschau. DPI und Lineale bleiben unverändert. Ältere Vorlagen ohne die neuen Felder behalten die aktuelle Blattfarbe und das Wasserzeichen. Positionen sowie Quell- und Farbraumbedingungen für DNG stehen im [Ablauf von der Bibliothek zum Abzug](../product/WORKFLOW.md).
+Eine Layoutvorlage stellt Layout, Papiereinstellungen, Bogenfarbe und Wasserzeichen-Einstellungen wieder her und aktualisiert dann die Vorschau. DPI- und Linealeinstellungen bleiben, wie sie waren. Vorlagen, die vor diesen Feldern gespeichert wurden, behalten die aktuelle Bogenfarbe und das aktuelle Wasserzeichen. Die Anordnung der Felder und die Regeln für DNG-Quelle und Farbraum stehen in [Von der Mediathek zum Abzug](../product/WORKFLOW.md).
 
-## Abzug exportieren
+## Abzugsexport
 
-**Abzug exportieren** direkt unter dem Schnellexport rendert Papierformat, Ausrichtung, Rand, Layout, schwarzen, grauen oder weißen Bogen, Beschriftungen, freie Texte und Schnittmarken. Dateiformat, DPI, Ordner, Benennung und Auslieferungsfarbraum stammen aus den Exporteinstellungen. Reine Bildschirmhilfen wie Farbumfangwarnung, Softproof-Simulation und Oberflächenglanz werden nicht in die Datei eingebrannt.
+**Abzugsexport**, direkt unter Schnellexport, rendert die aktuelle Seitengröße, Ausrichtung, Ränder, das Layout, die Bogenfarbe, Beschriftungen, den eigenen Text und die Schnittmarken mit Format, DPI, Ordner, Benennung und Auslieferungsfarbraum aus Export. Hilfen, die nur auf dem Bildschirm gelten, werden nicht in die Datei eingebrannt: Gamut-Warnungen, Softproof-Simulation und Papieroberflächenglanz. Während einer der beiden Abzugsexport-Wege läuft, zeigt das Exportfeld die Zahl fertiger Seiten, einen linearen Fortschrittsbalken und eine Prozentangabe statt eines endlosen Drehkreises.
 
-Während Abzugsexport oder Schnellexport laufen, zeigt der Exportbereich fertige Seiten, einen linearen Fortschrittsbalken und Prozent statt eines unbestimmten Kreisindikators.
+### Seitenzahl und Rendering
 
-### Seitenzahlen und Rendering
+Gezählt werden fertige Seiten. Ein Kontaktbogen 6 × 7 mit 39 Fotos exportiert eine zusammengesetzte Seite, ein vierfaches Bildpaket 10 Seiten, das Standard-Paket eine Seite, und jedes Einzelbild-Layout 39 Dateien über denselben begrenzten Stapelplaner wie der Schnellexport.
 
-Die Ausgabezahl meint fertige Seiten. Ein 6 × 7-Kontaktbogen mit 39 Fotos ergibt eine zusammengesetzte Seite, ein Bildpaket mit vier Fotos pro Seite 10 Seiten, das voreingestellte Benutzerpaket eine Seite und jedes Einzelbildlayout 39 Dateien über denselben begrenzten Batch-Scheduler wie der Schnellexport.
+Die Paketvorschau erzeugt nicht für jedes Foto eine interaktive und eine beruhigte Vorschau in voller Auflösung. Sie nutzt vorhandene Bilder und erzeugt nur für ein fehlendes Element eine schnelle Vorschau in Miniaturgröße. Der endgültige Export leitet das Layout aus den Quellmetadaten ab, entwickelt nur die Pixel, die jede Platzierung braucht, bereitet zwei bis vier verschiedene Quellen gleichzeitig vor und hält den Core-Image-Graphen bis zum Schreiben der Seite verbunden. Der gemeinsame Render-Kontext und ein Budget von 512 MiB Quellraster pro Seite begrenzen den Speicher, ohne das sichtbare Layout oder den Ausgabevertrag zu ändern.
 
-Die Paketvorschau erzeugt nicht für jedes Foto eine interaktive und eine stabilisierte Vollauflösungsvorschau. Sie verwendet vorhandene Bilder und erstellt nur für fehlende Elemente eine schnelle Vorschau in Thumbnailgröße. Der endgültige Export berechnet das Layout aus Quellmetadaten, entwickelt nur die für jede Platzierung benötigten Pixel und bereitet gleichzeitig zwei bis vier eindeutige Quellen vor. Ein gemeinsamer Core-Image-Kontext, der bis zur Seitenausgabe verbundene Graph und ein Rasterbudget von 512 MiB pro Seite begrenzen den Speicher, ohne Layout oder Ausgabevertrag zu ändern.
+### Druckerausgabeprofil
 
-### Drucker-Ausgabeprofil
-
-Das im Print-Arbeitsbereich gewählte Drucker-Ausgabeprofil wird auf den tatsächlichen Export angewendet. negaflow setzt zuerst die ganze Seite zusammen und wendet das Profil anschließend einmal auf die fertige Seite an. Damit werden alle Platzierungen eines Bildpakets verarbeitet, unabhängig davon, ob dasselbe Foto wiederholt oder mehrere Fotos gemischt werden.
-
-Das Profil beeinflusst weder die Bibliothek noch die Vorschau in Entwicklung. Es gilt nur für die Print-Vorschau und den Print-Export.
+Das im Abzug-Arbeitsbereich gewählte Druckerausgabeprofil gehört zum exportierten Ergebnis. negaflow setzt zuerst die ganze Seite zusammen und wendet das Profil einmal auf die fertige Seite an. Das umfasst jede Platzierung in einem Bildpaket oder eigenen Paket, ob ein Foto wiederholt oder mehrere gemischt werden. Das Profil wirkt nicht auf die Vorschau von Mediathek oder Entwickeln, nur auf Abzugsvorschau und Abzugsexport.
 
 ## C-Print verwenden
 
-Das Ausgabeverfahren kann Standard oder C-Print sein. C-Print speichert Labor und Papier und verwendet das vom Labor bereitgestellte RGB-ICC-Profil für einen Bildschirm-Softproof. Die gemeinsame Oberflächeneinstellung bleibt für alle Verfahren und Layouts im Layout-Tab. Ohne gemessenes Profil wendet negaflow keinen pauschalen „C-Print-Look“ an.
+Der Ausgabeprozess ist Standard oder C-Print. C-Print hält das Ziellabor und das Papier fest und nutzt ein vom Labor gelieferte RGB-ICC-Profil für einen Softproof am Bildschirm. Die Oberflächenwahl bleibt für jeden Prozess und jedes Layout unter Layout. Ohne gemessenes Profil wendet negaflow keinen allgemeinen „C-Print-Look“ an.
 
-1. Wählen Sie im Druckbereich unter Ausgabeverfahren **C-Print**.
-2. Tragen Sie Labor und Papier ein. Wählen Sie die Oberfläche bei Bedarf im Layout-Tab.
-3. Wählen Sie das RGB-ICC-Profil für genau dieses Labor, Papier und Gerät.
-4. Aktivieren Sie die Abzugsvorschau. Papier- und Schwarzpunktsimulation sowie Farbumfangwarnung befinden sich unter Erweitert.
+1. Öffnen Sie den Abzug-Arbeitsbereich und wählen Sie unter Ausgabeprozess **C-Print**.
+2. Geben Sie Labor und Papier ein. Wählen Sie bei Bedarf unter Layout die Oberfläche.
+3. Wählen Sie das für dieses Labor, Papier und diese Maschine gelieferte RGB-ICC-Profil.
+4. Schalten Sie die Abzugsvorschau ein. Papier- und Schwarztinten-Simulation und Gamut-Warnung stehen unter Erweitert.
 
-Ohne gültiges RGB-ICC-Profil werden die Zielangaben weiterhin gespeichert, die Abzugsvorschau bleibt jedoch nicht verfügbar. CMYK- und Device-Link-Profile werden in diesem RGB-Vorschaupfad nicht akzeptiert.
+Ohne gültiges RGB-ICC-Profil werden die Zieleinstellungen trotzdem gespeichert, die Abzugsvorschau bleibt aber nicht verfügbar. CMYK- und Device-Link-Profile nimmt dieser RGB-Vorschauweg nicht an.
 
 ## Farbvertrag
 
-Das C-Print-Proof-ICC dient nur dem Softproof. Es verändert weder Pixel noch eingebettetes Profil der exportierten Datei. Wenn kein separates Drucker-Ausgabeprofil gewählt ist, verwendet der Abzugsexport den in den Exporteinstellungen angezeigten Auslieferungsfarbraum. Ein vom Labor nur zum Softproof verteiltes Profil wird dadurch nicht unbemerkt zum Lieferprofil.
-
-Das ältere Entwicklungs-target `PRINT` bleibt getrennt. Dieser Pfad verlangt weiterhin ein gültiges RGB-ICC-Profil der Druckerklasse und konvertiert die Ausgabe durch dieses Profil.
+Das C-Print-Proof-ICC dient nur der Probe. Es ändert die Bildschirmvorschau, nicht die Pixel oder das eingebettete Profil einer exportierten Datei. Der Abzugsexport nutzt den in den Exporteinstellungen gewählten Auslieferungsfarbraum, sofern nicht ein Druckerausgabeprofil gewählt ist, ein Softproof-Profil des Labors wird also nie stillschweigend als Auslieferungsprofil benutzt. Das Entwicklungsziel `PRINT` ist davon getrennt: Es verlangt ein gültiges RGB-ICC-Profil der Druckerklasse und wandelt die Ausgabe damit um.
 
 ## Genauigkeitsgrenzen
 
-Die Vorschau verwendet die ICC-Transformation und kann Papierweiß, Schwarzpunkt und Farben außerhalb des Farbumfangs anzeigen. Ihre Genauigkeit hängt von einem kalibrierten Display und einem aktuellen Profil für den exakten Laborprozess ab. Betrachtungslicht, Chemiedrift, Gerätekalibrierung und Papierchargen kann sie nicht vorhersagen. negaflow liefert keine Laborprofile mit und erfindet keine.
+Die Vorschau enthält die ICC-Umrechnung und kann auf Wunsch Papierweiß, Schwarzpunkt und Farben außerhalb des Gamuts simulieren. Ihre Genauigkeit hängt von einem kalibrierten Display und einem aktuellen Profil für den genauen Laborprozess ab. Sie kann Betrachtungslicht, Chemiedrift, Maschinenkalibrierung und Papierchargenschwankungen nicht vorhersagen. negaflow liefert kein Laborprofil mit und erfindet keines.

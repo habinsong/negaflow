@@ -271,6 +271,8 @@ struct WorkspaceToolbar: View {
             } label: {
                 Label(model.text(.commandDiagnostics), systemImage: "waveform.path.ecg")
             }
+
+            AppUpdateMenuItem(store: model.appUpdateStore, model: model)
         } label: {
             Image(systemName: "ellipsis.circle")
                 .font(.system(size: 14, weight: .semibold))

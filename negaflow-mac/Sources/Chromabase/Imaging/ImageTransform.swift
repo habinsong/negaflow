@@ -38,6 +38,8 @@ public struct ImageTransform: Codable, Sendable, Equatable {
     public var straightenAngle: Double
     /// 크롭 종횡비 고정 값(가로/세로). nil = 자유. 픽셀에는 영향 없고 크롭 편집 제약용 메타데이터.
     public var cropAspect: Double?
+    /// 변환(원근) 보정. 회전·뒤집기 뒤, 수평 보정 앞에 적용한다.
+    public var perspective: PerspectiveCorrection
 
     public init(
         rotation: ImageRotation = .deg0,
@@ -45,7 +47,8 @@ public struct ImageTransform: Codable, Sendable, Equatable {
         flipVertical: Bool = false,
         cropRect: SIMD4<Double>? = nil,
         straightenAngle: Double = 0,
-        cropAspect: Double? = nil
+        cropAspect: Double? = nil,
+        perspective: PerspectiveCorrection = .identity
     ) {
         self.rotation = rotation
         self.flipHorizontal = flipHorizontal
@@ -53,10 +56,25 @@ public struct ImageTransform: Codable, Sendable, Equatable {
         self.cropRect = cropRect
         self.straightenAngle = straightenAngle
         self.cropAspect = cropAspect
+        self.perspective = perspective
     }
 
     enum CodingKeys: String, CodingKey {
-        case rotation, flipHorizontal, flipVertical, cropRect, straightenAngle, cropAspect
+        case rotation, flipHorizontal, flipVertical, cropRect, straightenAngle, cropAspect, perspective
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(rotation, forKey: .rotation)
+        try c.encode(flipHorizontal, forKey: .flipHorizontal)
+        try c.encode(flipVertical, forKey: .flipVertical)
+        try c.encodeIfPresent(cropRect, forKey: .cropRect)
+        try c.encode(straightenAngle, forKey: .straightenAngle)
+        try c.encodeIfPresent(cropAspect, forKey: .cropAspect)
+        // 원근 보정이 없으면 쓰지 않는다 — 기존 카탈로그·사이드카와 바이트가 같게 남는다.
+        if !perspective.isIdentity {
+            try c.encode(perspective, forKey: .perspective)
+        }
     }
 
     public init(from decoder: Decoder) throws {
@@ -67,6 +85,7 @@ public struct ImageTransform: Codable, Sendable, Equatable {
         cropRect = try c.decodeIfPresent(SIMD4<Double>.self, forKey: .cropRect)
         straightenAngle = try c.decodeIfPresent(Double.self, forKey: .straightenAngle) ?? 0
         cropAspect = try c.decodeIfPresent(Double.self, forKey: .cropAspect)
+        perspective = (try? c.decodeIfPresent(PerspectiveCorrection.self, forKey: .perspective)) ?? .identity
     }
 
     public static let identity = ImageTransform()
@@ -81,7 +100,26 @@ public struct ImageTransform: Codable, Sendable, Equatable {
 
     public var isIdentity: Bool {
         rotation == .deg0 && !flipHorizontal && !flipVertical && cropRect == nil
-            && abs(straightenAngle) < 1e-4
+            && abs(straightenAngle) < 1e-4 && perspective.isIdentity
+    }
+
+    /// 회전(90° 단위)이 끝난 그림의 픽셀 크기 — 원근 보정의 입력 크기다.
+    public func orientedSize(baseSize: CGSize) -> CGSize {
+        switch rotation {
+        case .deg90, .deg270: return CGSize(width: baseSize.height, height: baseSize.width)
+        default: return baseSize
+        }
+    }
+
+    /// 원근 보정의 매핑(입력 = 회전 뒤 크기). 보정이 없거나 그릴 수 없으면 nil.
+    public func perspectiveMapping(baseSize: CGSize) -> PerspectiveGeometry.Mapping? {
+        guard perspective.changesGeometry, baseSize.width > 0, baseSize.height > 0 else { return nil }
+        return PerspectiveGeometry.mapping(for: perspective, size: orientedSize(baseSize: baseSize))
+    }
+
+    /// 수평 보정의 입력 크기 = 원근 보정의 출력 크기.
+    func straightenInputSize(baseSize: CGSize) -> CGSize {
+        perspectiveMapping(baseSize: baseSize)?.outputRect.size ?? orientedSize(baseSize: baseSize)
     }
 
     /// 변형된(표시) 이미지의 정규좌표(0..1, y 위→아래)를 **변형 전 base** 정규좌표로 역매핑한다.
@@ -107,12 +145,9 @@ public struct ImageTransform: Codable, Sendable, Equatable {
         //    픽셀 크기(sw,sh)가 있어야 정규좌표 회전을 비왜곡으로 풀 수 있다. ImageTransformStage의
         //    applyStraighten(중심 -θ 회전, 같은 종횡비 최대 내접 사각형 크롭)을 정확히 역으로 적용한다.
         if abs(straightenAngle) > 1e-4, let baseSize, baseSize.width > 0, baseSize.height > 0 {
-            // rotate(90/270)는 종횡비를 뒤집는다 — straighten은 rotate 다음이므로 swap 후 크기를 쓴다.
-            let sw: Double, sh: Double
-            switch rotation {
-            case .deg90, .deg270: sw = Double(baseSize.height); sh = Double(baseSize.width)
-            default:              sw = Double(baseSize.width);  sh = Double(baseSize.height)
-            }
+            // rotate(90/270)는 종횡비를 뒤집는다 — straighten은 rotate·원근 다음이므로 그 출력 크기를 쓴다.
+            let inputSize = straightenInputSize(baseSize: baseSize)
+            let sw = Double(inputSize.width), sh = Double(inputSize.height)
             let theta = straightenAngle * .pi / 180.0
             let ct = abs(cos(theta)), st = abs(sin(theta))
             // applyStraighten 의 내접 사각형 크기(wp,hp). (w=sw, h=sh)
@@ -130,6 +165,13 @@ public struct ImageTransform: Codable, Sendable, Equatable {
             let dy = dxp * sinT + dyp * cosT
             x = (cx + dx) / sw
             y = 1.0 - (cy + dy) / sh
+        }
+
+        // 2.5) un-perspective: 출력 사각형 기준 정규좌표 → 원근 보정 전(회전 뒤) 정규좌표.
+        if let baseSize, let mapping = perspectiveMapping(baseSize: baseSize),
+           let oriented = mapping.inverseUnit(CGPoint(x: x, y: y)) {
+            x = Double(oriented.x)
+            y = Double(oriented.y)
         }
 
         // 3) un-rotate (y-down normalized).
@@ -165,13 +207,17 @@ public struct ImageTransform: Codable, Sendable, Equatable {
         case .deg270: (x, y) = (y, 1.0 - x)       // (bx,by) -> (by, 1-bx)
         }
 
-        // 4) straighten (forward): rotate 출력 → 내접 크롭된 회전 출력. displayUnitToBase 의 un-straighten 역.
+        // 3.5) perspective (forward): 회전 뒤 정규좌표 → 원근 출력 사각형 기준 정규좌표.
+        if let baseSize, let mapping = perspectiveMapping(baseSize: baseSize),
+           let corrected = mapping.forwardUnit(CGPoint(x: x, y: y)) {
+            x = Double(corrected.x)
+            y = Double(corrected.y)
+        }
+
+        // 4) straighten (forward): 원근 출력 → 내접 크롭된 회전 출력. displayUnitToBase 의 un-straighten 역.
         if abs(straightenAngle) > 1e-4, let baseSize, baseSize.width > 0, baseSize.height > 0 {
-            let sw: Double, sh: Double
-            switch rotation {
-            case .deg90, .deg270: sw = Double(baseSize.height); sh = Double(baseSize.width)
-            default:              sw = Double(baseSize.width);  sh = Double(baseSize.height)
-            }
+            let inputSize = straightenInputSize(baseSize: baseSize)
+            let sw = Double(inputSize.width), sh = Double(inputSize.height)
             let theta = straightenAngle * .pi / 180.0
             let ct = abs(cos(theta)), st = abs(sin(theta))
             let hp = min(sw * sh / (sw * ct + sh * st), sh * sh / (sw * st + sh * ct))
@@ -200,12 +246,51 @@ public struct ImageTransform: Codable, Sendable, Equatable {
         return CGPoint(x: x, y: y)
     }
 
+    /// 회전·뒤집기만 건 그림(원근 보정 입력)의 정규좌표 ↔ 원본 정규좌표. 크기가 필요 없다.
+    public func orientedUnitToBase(_ p: CGPoint) -> CGPoint {
+        var x = Double(p.x), y = Double(p.y)
+        switch rotation {
+        case .deg0:   break
+        case .deg90:  (x, y) = (y, 1.0 - x)
+        case .deg180: (x, y) = (1.0 - x, 1.0 - y)
+        case .deg270: (x, y) = (1.0 - y, x)
+        }
+        if flipVertical { y = 1.0 - y }
+        if flipHorizontal { x = 1.0 - x }
+        return CGPoint(x: x, y: y)
+    }
+
+    public func baseUnitToOriented(_ p: CGPoint) -> CGPoint {
+        var x = Double(p.x), y = Double(p.y)
+        if flipHorizontal { x = 1.0 - x }
+        if flipVertical { y = 1.0 - y }
+        switch rotation {
+        case .deg0:   break
+        case .deg90:  (x, y) = (1.0 - y, x)
+        case .deg180: (x, y) = (1.0 - x, 1.0 - y)
+        case .deg270: (x, y) = (y, 1.0 - x)
+        }
+        return CGPoint(x: x, y: y)
+    }
+
+    /// 원근 보정 입력 좌표 ↔ 화면 좌표. 도우미 안내선이 이 좌표에 저장된다.
+    public func orientedUnitToDisplay(_ p: CGPoint, baseSize: CGSize?) -> CGPoint {
+        baseUnitToDisplay(orientedUnitToBase(p), baseSize: baseSize)
+    }
+
+    public func displayUnitToOriented(_ p: CGPoint, baseSize: CGSize?) -> CGPoint {
+        baseUnitToOriented(displayUnitToBase(p, baseSize: baseSize))
+    }
+
     public var displayName: String {
         var parts = [rotation.displayName]
         if flipHorizontal { parts.append("H") }
         if flipVertical { parts.append("V") }
         if let c = cropRect {
             parts.append(String(format: "crop%.0f×%.0f", c.z * 100, c.w * 100))
+        }
+        if perspective.changesGeometry {
+            parts.append("T")
         }
         return parts.joined(separator: " ")
     }
@@ -254,6 +339,11 @@ public enum ImageTransformStage {
         }
         img = normalize(img)
 
+        // 변환(원근) — 90°/플립 정규화 후, 수평 보정 전.
+        if transform.perspective.changesGeometry {
+            img = applyPerspective(img, correction: transform.perspective)
+        }
+
         // 미세 회전(수평 보정) — 90°/플립 정규화 후, 사용자 크롭 전에 적용. 중심 기준 회전 후
         // 같은 종횡비의 최대 내접 사각형으로 자동 크롭해 빈 모서리를 없앤다.
         if abs(transform.straightenAngle) > 1e-4 {
@@ -273,6 +363,32 @@ public enum ImageTransformStage {
             img = normalize(img)
         }
         return img
+    }
+
+    /// 원근 보정. 입력 extent 의 네 모서리를 호모그래피로 옮긴 자리에 두는 CIPerspectiveTransform 이
+    /// 정확히 같은 호모그래피다. 보정으로 생긴 빈 곳은 흰색으로 채운다(알파를 남기지 않는다).
+    /// 그릴 수 없는 값이면 그림을 그대로 둔다.
+    static func applyPerspective(_ image: CIImage, correction: PerspectiveCorrection) -> CIImage {
+        let extent = image.extent
+        guard extent.width > 1, extent.height > 1,
+              let mapping = PerspectiveGeometry.mapping(for: correction, size: extent.size) else {
+            return image
+        }
+        let height = extent.height
+        // y 아래 픽셀 → CI(y 위).
+        func ci(_ p: CGPoint) -> CIVector { CIVector(x: p.x, y: height - p.y) }
+        let corners = mapping.corners
+        let warped = image.applyingFilter("CIPerspectiveTransform", parameters: [
+            "inputTopLeft": ci(corners[0]),
+            "inputTopRight": ci(corners[1]),
+            "inputBottomRight": ci(corners[2]),
+            "inputBottomLeft": ci(corners[3]),
+        ])
+        let canvas = CGRect(origin: .zero, size: extent.size)
+        let background = CIImage(color: CIColor(red: 1, green: 1, blue: 1, alpha: 1)).cropped(to: canvas)
+        let output = mapping.outputRect
+        let ciOutput = CGRect(x: output.minX, y: height - output.maxY, width: output.width, height: output.height)
+        return normalize(warped.composited(over: background).cropped(to: ciOutput))
     }
 
     private static func applyAffine(_ image: CIImage, _ transform: CGAffineTransform) -> CIImage {

@@ -32,6 +32,9 @@ public sealed record ImageTransformRecipe(
     double StraightenAngle,
     double? CropAspect)
 {
+    /// <summary>변환(원근) 보정입니다. 회전·뒤집기 뒤, 수평 보정 앞에 걸립니다(macOS 와 같은 차례).</summary>
+    public PerspectiveRecipe Perspective { get; init; } = PerspectiveRecipe.Identity;
+
     public static ImageTransformRecipe Identity { get; } = new(
         ImageRotation.Degrees0,
         false,
@@ -44,7 +47,8 @@ public sealed record ImageTransformRecipe(
         Enum.IsDefined(Rotation) &&
         (Crop is null || Crop.Value.IsValid) &&
         double.IsFinite(StraightenAngle) && StraightenAngle is >= -45.0 and <= 45.0 &&
-        (CropAspect is null || (double.IsFinite(CropAspect.Value) && CropAspect.Value > 0.0));
+        (CropAspect is null || (double.IsFinite(CropAspect.Value) && CropAspect.Value > 0.0)) &&
+        Perspective is not null && Perspective.IsValid;
 
     /// <summary>
     /// macOS <c>ImageTransform.displayName</c> — 편집 카드 머리줄 오른쪽에 적는 값입니다.
@@ -68,6 +72,10 @@ public sealed record ImageTransformRecipe(
             if (FlipVertical)
             {
                 text += " V";
+            }
+            if (Perspective.ChangesGeometry)
+            {
+                text += " T";
             }
             return text;
         }

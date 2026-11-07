@@ -730,6 +730,7 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/icm_icc_converter.cpp
       src/Native/imaging/icm_rgb16_parallel.cpp
       src/Native/imaging/image_transform.cpp
+      src/Native/imaging/perspective_geometry.cpp
       src/Native/imaging/working_image_resample.cpp
     src/Native/imaging/linear_scanner_converter.cpp
       src/Native/imaging/local_dodge_burn.cpp

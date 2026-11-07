@@ -25,6 +25,7 @@ public sealed partial class WorkspaceToolbarView : UserControl
         MenuBar.SizeChanged += OnMenuLayoutMeasureChanged;
         Loaded += OnLoaded;
         LocalizeControls();
+        Services.AppUpdateService.Shared.Changed += OnUpdateChanged;
     }
 
     public event EventHandler? SettingsRequested;
@@ -72,6 +73,9 @@ public sealed partial class WorkspaceToolbarView : UserControl
         _ = sender;
         _ = args;
         QueueMenuLayoutUpdate();
+        ApplyUpdateItem();
+        // 실행할 때 한 번만 묻습니다. 서비스가 두 번째 부름을 무시합니다.
+        Services.AppUpdateService.Shared.CheckOnce();
     }
 
     private void OnMenuLayoutMeasureChanged(object sender, RoutedEventArgs args)
@@ -377,6 +381,39 @@ public sealed partial class WorkspaceToolbarView : UserControl
         _ = sender;
         _ = args;
         DiagnosticsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnUpdateClick(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        Services.AppUpdateService.Shared.PerformMenuAction();
+    }
+
+    /// <summary>업데이트 확인 결과를 메뉴 항목에 옮깁니다. 결과는 백그라운드에서 오므로 UI 스레드로 넘깁니다.</summary>
+    private void OnUpdateChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        _ = DispatcherQueue.TryEnqueue(ApplyUpdateItem);
+    }
+
+    private void ApplyUpdateItem()
+    {
+        Services.AppUpdateService service = Services.AppUpdateService.Shared;
+        Update.AppUpdateCheckResult? result = service.Result;
+        Visibility visibility = result is null ? Visibility.Collapsed : Visibility.Visible;
+        UpdateSeparator.Visibility = visibility;
+        UpdateItem.Visibility = visibility;
+        if (result is null)
+        {
+            return;
+        }
+        UpdateItem.Text = result.Release is { } release
+            ? Localization.AppResources.FormatText("updateAvailableFormat", "Text", release.Version)
+            : Localization.AppResources.Get("updateUpToDate", "Text");
+        UpdateItem.IsEnabled = !service.IsDownloading;
+        UpdateItem.Icon = new FontIcon { Glyph = result.Release is null ? "\uE73E" : "\uE896" };
     }
 
     private void OnSettingsClick(object sender, RoutedEventArgs args)

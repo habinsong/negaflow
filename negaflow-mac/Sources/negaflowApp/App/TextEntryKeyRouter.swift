@@ -14,7 +14,10 @@ enum TextEntryKeyRouter {
     static func install() {
         guard monitor == nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            let delivered = MainActor.assumeIsolated { deliverToTextEntry(event) }
+            // 입력칸이 먼저 받고, 아니면 한글 입력 상태의 단일 키를 라틴 단축키로 한 번 더 찾는다.
+            let delivered = MainActor.assumeIsolated {
+                deliverToTextEntry(event) || LatinShortcutKeyRouter.performLatinEquivalent(event)
+            }
             return delivered ? nil : event
         }
     }

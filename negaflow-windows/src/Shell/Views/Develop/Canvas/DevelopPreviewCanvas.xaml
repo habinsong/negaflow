@@ -15,6 +15,7 @@
         AutomationProperties.AutomationId="negaflow.canvas"
     IsTabStop="True"
     KeyDown="OnCanvasKeyDown"
+    KeyUp="OnCanvasKeyUp"
     PointerCanceled="OnCanvasPointerCancelled"
     PointerCaptureLost="OnCanvasPointerCaptureLost"
     PointerMoved="OnCanvasPointerMoved"
@@ -217,6 +218,9 @@
             StrokeThickness="1.5" />
     </Canvas>
 
+    <!-- 변환 도우미 안내선입니다. 그리기·끌기는 캔버스 포인터가 맡고, 이 층은 보여 주기만 합니다. -->
+    <Canvas x:Name="PerspectiveGuideLayer" x:FieldModifier="internal" IsHitTestVisible="False" Visibility="Collapsed" />
+
     <Canvas x:Name="CropOverlay" x:FieldModifier="internal" Visibility="Collapsed">
         <Rectangle x:Name="CropDimTop" x:FieldModifier="internal" Fill="#73000000" />
         <Rectangle x:Name="CropDimBottom" x:FieldModifier="internal" Fill="#73000000" />
@@ -234,6 +238,10 @@
         <Line x:Name="CropThirdVerticalSecond" x:FieldModifier="internal" Stroke="#57FFFFFF" StrokeThickness="0.5" />
         <Line x:Name="CropThirdHorizontalFirst" x:FieldModifier="internal" Stroke="#57FFFFFF" StrokeThickness="0.5" />
         <Line x:Name="CropThirdHorizontalSecond" x:FieldModifier="internal" Stroke="#57FFFFFF" StrokeThickness="0.5" />
+        <!-- 수평을 맞출 때의 촘촘한 격자와 조합키 + 드래그로 그리는 기준선입니다. 집지 않습니다. -->
+        <Path x:Name="CropFineGrid" x:FieldModifier="internal" IsHitTestVisible="False" Stroke="#6BFFFFFF" StrokeThickness="0.5" Visibility="Collapsed" />
+        <Line x:Name="CropStraightenLineShadow" x:FieldModifier="internal" IsHitTestVisible="False" Stroke="#8C000000" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed" />
+        <Line x:Name="CropStraightenLine" x:FieldModifier="internal" IsHitTestVisible="False" Stroke="#FFFFD84A" StrokeThickness="1.5" StrokeDashArray="4,2" Visibility="Collapsed" />
         <Rectangle x:Name="CropHandleTopLeft" x:FieldModifier="internal" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
         <Rectangle x:Name="CropHandleTop" x:FieldModifier="internal" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
         <Rectangle x:Name="CropHandleTopRight" x:FieldModifier="internal" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />

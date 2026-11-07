@@ -19,6 +19,7 @@ extension AppModel {
             selectedFrameIDs = Set(frameIDs)
         }
         if configuration == nil {
+            checkForAppUpdateOnLaunch()
             await runScheduledBackupIfDue()
             LaunchTrace.mark("scheduled backup checked")
         }

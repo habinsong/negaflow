@@ -28,33 +28,35 @@
 
 ---
 
-## 필요한 것
+## 필요한 환경
 
-실행할 때:
+실행:
 
-- macOS 14.0 이상 (macOS 14, 26, 27 호환)
+- macOS 14.0 이상 (macOS 14, 26, 27 지원)
 - Apple Silicon 또는 Intel
-- 35mm 작업은 메모리 8GB, 중형 필름을 다루면 16GB가 편합니다
+- 메모리 8GB, 중형 필름은 16GB 권장
 
-빌드할 때:
+빌드:
 
-- 앱은 Xcode 26 이상
-- 엔진과 CLI는 Swift 5.9 이상
+- 앱: Xcode 26 이상
+- 엔진과 CLI: Swift 5.9 이상
 
 ## 설치
 
-[Releases](https://github.com/habinsong/negaflow/releases)에서 내려받습니다.
+[Releases](https://github.com/habinsong/negaflow/releases)에서 받습니다.
 
-| 설치 파일 | 지원하는 Mac |
+| 파일 | 지원하는 Mac |
 |---|---|
 | `negaflow-1.2.6-mac-universal.pkg` | Apple Silicon, Intel |
 | `negaflow-1.2.6-mac-arm64.pkg` | Apple Silicon 전용 |
 
-대부분은 Universal PKG를 쓰면 됩니다. `/Applications`에 설치됩니다. 직접 옮기려면 같은 페이지의 DMG나 ZIP을 쓰십시오.
+대부분의 Mac에는 Universal PKG를 쓰면 되고 `/Applications`에 설치됩니다. 앱을 직접 옮기려면 같은 페이지의 DMG나 ZIP을 받으세요.
 
-애플 공증을 받지 않아서 처음 실행할 때 macOS가 막습니다. 시스템 설정의 개인정보 보호 및 보안에서 '그래도 열기'를 누르면 됩니다.
+앱은 ad hoc 서명이고 공증을 받지 않아서 첫 실행을 macOS가 막습니다. 시스템 설정의 개인정보 보호 및 보안에서 '그래도 열기'를 누르세요.
 
-라이브러리와 설정은 `~/Library/Application Support/negaflow`에 저장됩니다.
+라이브러리와 설정은 `~/Library/Application Support/negaflow`에 있습니다.
+
+앱은 실행할 때 한 번 GitHub에 최신 릴리스를 묻습니다. 새 버전이 있으면 오른쪽 위 ⋯ 메뉴 맨 아래에 "X.Y.Z 버전 업데이트"가 나옵니다. 누르면 릴리스 페이지가 열리고, 이 Mac에 맞는 PKG를 릴리스의 `SHA256SUMS.txt`로 확인한 뒤 다운로드 폴더에 받습니다. 설치는 직접 합니다. 최신이면 항목이 "현재 최신 버전입니다."로 바뀌고 누르면 프로젝트 페이지로 갑니다. 오프라인처럼 확인에 실패하면 항목이 보이지 않습니다.
 
 ## 빌드
 
@@ -62,16 +64,16 @@
 git clone https://github.com/habinsong/negaflow.git
 cd negaflow/negaflow-mac
 
-# Release 빌드 후 실행
+# Release 앱을 빌드하고 실행
 bash scripts/run-app.sh
 
-# 실행하지 않고 빌드만
+# 실행 없이 빌드만
 bash scripts/run-app.sh build
 ```
 
-`run-app.sh`가 `xcodebuild`를 부르고 앱 번들을 조립한 뒤 로컬 서명까지 합니다. 엔진이나 CLI만 손볼 때는 `swift build`로 충분합니다.
+`run-app.sh`는 `xcodebuild`를 부르고 앱 번들을 조립해 로컬 서명합니다. 엔진이나 CLI만 다룰 때는 `swift build`로 충분합니다.
 
-배포 파일을 만들 때:
+배포 파일:
 
 ```bash
 bash negaflow-mac/scripts/build-release.sh
@@ -87,21 +89,21 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 # 앱 Release 빌드
 bash scripts/run-app.sh build
 
-# 저장소 전체 점검
+# 저장소의 전체 검사
 bash scripts/ci-gate.sh
 ```
 
-## Custom 컬러 타깃
+## Custom 색 타깃
 
-타깃 캡슐은 MAIN, HS, SP, F135, HR, CS입니다. CS를 선택한 뒤 기존 하단 왼쪽 선택기에서 2열로 표시되는 Custom 18개를 고릅니다. 오른쪽 룩 선택기는 유지합니다. CS 진입 시 Emulsion을 선택하며 이미 Custom을 사용하는 사진은 현재 선택을 유지합니다.
+타깃 캡슐은 MAIN, HS, SP, F135, HR 다음에 CS가 옵니다. CS를 고르면 왼쪽 아래 선택기가 Custom 타깃 18개를 2열 목록으로 보여 주고, 룩 선택기는 오른쪽에 그대로 있습니다. CS에 들어가면 Emulsion이 선택되며, 이미 Custom 타깃을 쓰는 사진은 그 타깃을 유지합니다.
 
-메뉴는 Emulsion~Dichroic, Wetzlar~Rochester, Slide Show~Point & Shoot 사이에 구분선을 둡니다. Custom은 인물과 풍경에 custom-3의 톤·농도·채도 응답을 적용합니다. 저장·미리보기·썸네일·내보내기는 선택된 타깃 ID를 사용합니다. 기존 타깃의 처리는 유지합니다.
+목록은 세 묶음입니다. Emulsion부터 Dichroic까지 11개, Wetzlar부터 Rochester까지 4개, Slide Show부터 Point & Shoot까지 3개입니다. Custom 타깃은 custom-3 톤·농도·채도 응답을 적용합니다. 저장, 미리보기, 썸네일, 내보내기는 선택한 타깃 ID를 씁니다. 다른 타깃은 그대로입니다.
 
-CLI에서도 같은 ID를 사용합니다. 예: `--target classic`, `--target dye-transfer`, `--target point-and-shoot`.
+CLI도 같은 ID를 받습니다: `--target classic`, `--target dye-transfer`, `--target point-and-shoot`.
 
 ## 명령줄
 
-macOS 버전에는 CLI가 들어 있습니다.
+macOS 빌드에는 CLI가 들어 있습니다.
 
 ```bash
 swift build
@@ -117,33 +119,33 @@ swift build
 .build/debug/negaflow develop scan.tif out.jpg --defects 1
 .build/debug/negaflow defect-bench ./scans --out ./report
 
-# 프로파일 목록과 엔진 자체 점검
+# 프로파일과 엔진 자체 점검
 .build/debug/negaflow list-scanner-profiles
 .build/debug/negaflow selftest
 ```
 
-`negaflow`를 인자 없이 실행하면 전체 옵션이 나옵니다.
+전체 옵션은 인수 없이 `negaflow`를 실행하면 나옵니다.
 
 ## 스캐너
 
-플러그인을 설치하기 전까지 스캐너 조작은 나타나지 않습니다. SANE 장치는 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)이 담당하며 따로 설치해야 합니다.
+플러그인을 설치하기 전에는 스캐너 컨트롤이 보이지 않습니다. SANE 장치는 따로 설치하는 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)이 맡습니다.
 
-## 모듈 구성
+## 모듈
 
 | 모듈 | 역할 |
 |---|---|
-| `Chromabase` | 크로마 엔진, GrainMend, 프로파일과 내보내기 |
-| `ScannerKit` | 스캐너 기능 확인과 외부 플러그인 연결 |
-| `negaflowApp` | 라이브러리, 현상, 스캔과 내보내기 화면 |
-| `negaflowCLI` | 현상, 스캔, 벤치마크와 자체 점검 명령 |
+| `Chromabase` | Chroma Engine, GrainMend, 프로파일, 내보내기 |
+| `ScannerKit` | 스캐너 기능 확인과 플러그인 연결 |
+| `negaflowApp` | 라이브러리, 현상, 스캔, 내보내기 화면 |
+| `negaflowCLI` | 현상, 스캔, 벤치마크, 자체 점검 명령 |
 
 ## 기준 이미지
 
-저장소 최상위의 `docs/verification/macos-golden`에는 이 빌드가 만든 이미지가 들어 있습니다. Windows 엔진 테스트가 이 파일들을 읽어 화소 단위로 비교합니다. macOS 출력이 바뀌어야 할 때만 다시 만들면 됩니다.
+`docs/verification/macos-golden`에는 이 빌드가 만든 이미지가 있습니다. 이 폴더는 Git이 무시하므로 이미지를 만든 컴퓨터에만 있습니다. Windows 엔진 테스트가 복사본과 픽셀 단위로 비교합니다. macOS 출력을 일부러 바꿀 때만 다시 만드세요.
 
 ## 관련 문서
 
-- [macOS와 Windows의 차이](../../docs/ko/platform/PLATFORM_DIFFERENCES.md)
-- [크로마 엔진](../../docs/ko/product/CHROMA_ENGINE.md)
+- [두 버전의 차이](../../docs/ko/platform/PLATFORM_DIFFERENCES.md)
+- [Chroma Engine](../../docs/ko/product/CHROMA_ENGINE.md)
 - [GrainMend](../../docs/ko/product/GRAINMEND.md)
 - [제품 구조](../../docs/ko/architecture/PRODUCT_ARCHITECTURE.md)

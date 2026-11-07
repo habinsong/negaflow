@@ -17,6 +17,19 @@ internal sealed class DevelopCropSession
         view.PreviewCanvas.CropApplyRequested += OnApplyClicked;
         view.PreviewCanvas.CropCancelRequested += OnCancelClicked;
         view.PreviewCanvas.CropFullRequested += OnFullClicked;
+        view.PreviewCanvas.StraightenCorrectionRequested += OnStraightenCorrection;
+    }
+
+    /// <summary>기준선을 놓으면 지금 각도에 회전량을 더합니다(±45° 안).</summary>
+    private void OnStraightenCorrection(object? sender, double correction)
+    {
+        _ = sender;
+        if (!view.crop.IsActive || view.panel is not { } panel)
+        {
+            return;
+        }
+        double angle = Math.Clamp(panel.ImageTransform.StraightenAngle + correction, -45.0, 45.0);
+        view.UpdateImageTransform(state => state.SetStraightenAngle(angle));
     }
 
     internal void Cancel()

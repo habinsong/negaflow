@@ -25,7 +25,9 @@ namespace Negaflow.Shell.Views.Library.Scanner;
 /// </remarks>
 public sealed partial class FlatbedScanAreaOverlay
 {
-    private FlatbedOverlayRect dragStartRect;
+    private FlatbedRegionScreenShape dragStartShape;
+
+    private FlatbedScanRegion? dragStartRegion;
 
     private Point dragStartPoint;
 
@@ -37,7 +39,7 @@ public sealed partial class FlatbedScanAreaOverlay
     /// 끌기 기준을 새 사진 자리로 옮깁니다. 끌고 있지 않으면 아무것도 하지 않습니다.
     /// </summary>
     /// <remarks>
-    /// 기준(<see cref="dragStartRect"/>, <see cref="dragStartPoint"/>)은 누른 순간의 화면
+    /// 기준(<see cref="dragStartShape"/>, <see cref="dragStartPoint"/>)은 누른 순간의 화면
     /// 좌표입니다. 그 사이 휠 확대·축소나 창 크기 변경으로 사진 자리가 움직이면 기준만 옛
     /// 자리에 남아, 다음 이동에서 옛 좌표를 새 자리에 대고 재게 됩니다 — 스캔 영역이 줌
     /// 배율만큼 함께 커지거나 작아집니다. 사진 위에서의 비율은 그대로 두고 화면 좌표만
@@ -51,7 +53,16 @@ public sealed partial class FlatbedScanAreaOverlay
         {
             return;
         }
-        dragStartRect = FlatbedOverlayGeometry.Rebased(dragStartRect, previousFrame, ImageFrame);
+        (double centerX, double centerY) = FlatbedOverlayGeometry.RebasedPoint(
+            dragStartShape.CenterX, dragStartShape.CenterY, previousFrame, ImageFrame);
+        double scale = ImageFrame.Width / previousFrame.Width;
+        dragStartShape = dragStartShape with
+        {
+            CenterX = centerX,
+            CenterY = centerY,
+            Width = dragStartShape.Width * scale,
+            Height = dragStartShape.Height * scale,
+        };
         (double x, double y) = FlatbedOverlayGeometry.RebasedPoint(
             dragStartPoint.X, dragStartPoint.Y, previousFrame, ImageFrame);
         dragStartPoint = new Point(x, y);
@@ -72,7 +83,8 @@ public sealed partial class FlatbedScanAreaOverlay
             return;
         }
         draggingRegionId = regionId;
-        dragStartRect = ScreenRect(region);
+        dragStartShape = Shape(region);
+        dragStartRegion = region;
         dragStartPoint = e.GetCurrentPoint(Host).Position;
         _ = body.CapturePointer(e.Pointer);
         e.Handled = true;
@@ -85,10 +97,18 @@ public sealed partial class FlatbedScanAreaOverlay
             return;
         }
         Point point = e.GetCurrentPoint(Host).Position;
-        FlatbedOverlayRect moved = FlatbedOverlayGeometry.ClampedScreenRect(
-            dragStartRect.OffsetBy(point.X - dragStartPoint.X, point.Y - dragStartPoint.Y),
-            ImageFrame);
-        ApplyScreenRect(regionId, moved);
+        double dx = point.X - dragStartPoint.X, dy = point.Y - dragStartPoint.Y;
+        // 누르기만 하면 아무것도 바꾸지 않습니다. 이동 0 으로 다시 쓰면 경계 상자 왕복만큼 커졌습니다.
+        if (Math.Sqrt((dx * dx) + (dy * dy)) < 0.5 || dragStartRegion is not { } startRegion)
+        {
+            return;
+        }
+        FlatbedRegionScreenShape moved = dragStartShape with
+        {
+            CenterX = dragStartShape.CenterX + dx,
+            CenterY = dragStartShape.CenterY + dy,
+        };
+        ApplyShape(regionId, moved, startRegion.StraightenAngle);
         e.Handled = true;
     }
 
@@ -119,7 +139,9 @@ public sealed partial class FlatbedScanAreaOverlay
         }
         _ = Focus(FocusState.Pointer);
         resizingHandle = tag;
-        dragStartRect = ScreenRect(region);
+        dragStartShape = Shape(region);
+        dragStartRegion = region;
+        dragStartPoint = e.GetCurrentPoint(Host).Position;
         _ = grip.CapturePointer(e.Pointer);
         e.Handled = true;
     }
@@ -131,9 +153,17 @@ public sealed partial class FlatbedScanAreaOverlay
             return;
         }
         Point point = e.GetCurrentPoint(Host).Position;
+        double dx = point.X - dragStartPoint.X, dy = point.Y - dragStartPoint.Y;
+        if (Math.Sqrt((dx * dx) + (dy * dy)) < 0.5 || dragStartRegion is not { } startRegion)
+        {
+            return;
+        }
+        // 기운 칸은 자기 좌표에서 크기를 바꿉니다. 사진 경계도 그 좌표로 옮겨 씁니다.
+        (double localX, double localY) = dragStartShape.LocalPoint(point.X, point.Y);
         FlatbedOverlayRect proposed = FlatbedOverlayGeometry.ResizedRect(
-            dragStartRect, point.X, point.Y, tag.Handle, ImageFrame);
-        ApplyScreenRect(tag.RegionId, proposed, anchoredTo: dragStartRect);
+            new FlatbedOverlayRect(0, 0, dragStartShape.Width, dragStartShape.Height),
+            localX, localY, tag.Handle, LocalImageBounds(dragStartShape));
+        ApplyShape(tag.RegionId, dragStartShape.Reshaped(proposed), startRegion.StraightenAngle, startRegion);
         e.Handled = true;
     }
 
@@ -221,26 +251,35 @@ public sealed partial class FlatbedScanAreaOverlay
     }
 
     /// <summary>
-    /// 화면 사각형을 프레임 비율로 되돌려 기록합니다. 크기를 바꾼 조작이면 규격 비율로
-    /// 맞춥니다 - Alt 를 누르고 있으면 자유 비율입니다(규격에 없는 필름용 탈출구).
+    /// 화면 칸을 프레임으로 되돌려 기록합니다. 크기를 바꾼 조작이면 규격 비율로 맞춥니다 — Alt 를
+    /// 누르고 있으면 자유 비율입니다(규격에 없는 필름용 탈출구). 비율은 칸을 자기 방향으로 눕힌
+    /// 좌표에서 맞춥니다. 기운 칸의 경계 상자는 규격 비율이 아닙니다.
     /// </summary>
-    private void ApplyScreenRect(
+    private void ApplyShape(
         string regionId,
-        FlatbedOverlayRect screenRect,
-        FlatbedOverlayRect? anchoredTo = null)
+        FlatbedRegionScreenShape shape,
+        double angle,
+        FlatbedScanRegion? anchoredTo = null)
     {
         if (session is null)
         {
             return;
         }
-        FlatbedScanRegion moved = ToRegion(regionId, screenRect);
+        bool transformed = TryPreviewTransform(out ImageTransformRecipe transform, out uint sourceWidth,
+            out uint sourceHeight);
+        (double x, double y, double width, double height) = FlatbedRegionFrameGeometry.UnitRect(
+            shape, ImageFrame, transformed ? transform : null, sourceWidth, sourceHeight);
+        FlatbedScanRegion moved = new FlatbedScanRegion(regionId, x, y, width, height, angle).Clamped();
         if (anchoredTo is { } anchor && !IsDown(VirtualKey.Menu))
         {
-            moved = FlatbedScanRegionLayout.SnappedToFrameAspect(
-                moved,
-                ToRegion(regionId, anchor),
-                session.FrameSize,
-                session.PreviewArea);
+            FlatbedScanRegion local = LocalRegion(moved, angle, sourceWidth, sourceHeight);
+            FlatbedScanRegion anchorLocal = LocalRegion(anchor, angle, sourceWidth, sourceHeight);
+            FlatbedScanRegion snapped = FlatbedScanRegionLayout.SnappedToFrameAspect(
+                local, anchorLocal, session.FrameSize, session.PreviewArea);
+            (x, y, width, height) = FlatbedRegionFrameGeometry.UnitRectFromFrameLocal(
+                (snapped.UnitX, snapped.UnitY, snapped.UnitWidth, snapped.UnitHeight),
+                angle, sourceWidth, sourceHeight);
+            moved = new FlatbedScanRegion(regionId, x, y, width, height, angle).Clamped();
         }
         if (session.UpdateRegion(regionId, moved))
         {
@@ -248,15 +287,28 @@ public sealed partial class FlatbedScanAreaOverlay
         }
     }
 
-    private FlatbedScanRegion ToRegion(string regionId, FlatbedOverlayRect screenRect)
+    private static FlatbedScanRegion LocalRegion(
+        FlatbedScanRegion region, double angle, uint sourceWidth, uint sourceHeight)
     {
-        (double x, double y, double width, double height) =
-            TryPreviewTransform(out ImageTransformRecipe transform, out uint sourceWidth,
-                out uint sourceHeight)
-                ? FlatbedOverlayGeometry.UnitRect(
-                    screenRect, ImageFrame, transform, sourceWidth, sourceHeight)
-                : FlatbedOverlayGeometry.UnitRect(screenRect, ImageFrame);
-        return new FlatbedScanRegion(regionId, x, y, width, height).Clamped();
+        (double x, double y, double width, double height) = FlatbedRegionFrameGeometry.FrameLocalRect(
+            region.UnitX, region.UnitY, region.UnitWidth, region.UnitHeight,
+            region.StraightenAngle, angle, sourceWidth, sourceHeight);
+        return region with { UnitX = x, UnitY = y, UnitWidth = width, UnitHeight = height, StraightenAngle = 0.0 };
+    }
+
+    /// <summary>사진 자리를 칸 자기 좌표로 옮긴 경계입니다. 손잡이를 끌어도 사진 밖으로 나가지 않습니다.</summary>
+    private FlatbedOverlayRect LocalImageBounds(FlatbedRegionScreenShape shape)
+    {
+        (double X, double Y)[] corners =
+        [
+            shape.LocalPoint(ImageFrame.X, ImageFrame.Y),
+            shape.LocalPoint(ImageFrame.MaxX, ImageFrame.Y),
+            shape.LocalPoint(ImageFrame.MaxX, ImageFrame.MaxY),
+            shape.LocalPoint(ImageFrame.X, ImageFrame.MaxY),
+        ];
+        double minX = corners.Min(point => point.X), maxX = corners.Max(point => point.X);
+        double minY = corners.Min(point => point.Y), maxY = corners.Max(point => point.Y);
+        return new FlatbedOverlayRect(minX, minY, maxX - minX, maxY - minY);
     }
 
     private static bool IsDown(VirtualKey key) =>

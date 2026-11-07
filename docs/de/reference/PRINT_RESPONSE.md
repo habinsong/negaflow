@@ -4,23 +4,25 @@
 
 ## MAIN/PRINT und CS
 
-Voreingestellt sind `MAIN` und Auto-Abgleich ON. Der Schalter ist eine kleine Pille rechts neben der Zielüberschrift. Er erscheint nur bei Farb- und S/W-Negativen mit MAIN (einschließlich PRINT) und CS. Er passt Farbe und Helligkeit an das aktuelle Bild an; OFF überspringt diesen Schritt. Auto-Tonwert, Auto-Weißabgleich, Auto-Tonwertkorrektur und Auto-Farbe sind getrennte Funktionen und bleiben standardmäßig OFF.
+Voreingestellt sind `MAIN` und Auto-Abgleich ON. Der Schalter ist in [Chroma Engine](../product/CHROMA_ENGINE.md) beschrieben.
 
-Auto-Abgleich ON stellt die MAIN/CS-Inversion aus `412bb31` wieder her. Jeder Kanal misst seinen Dichtebereich am dichtesten 0.2%-Perzentil der Szene, begrenzt ihn auf 1.8D und verwendet danach die bisherige Kurve `shoulder-print-response-v4` und die Sättigungskorrektur für gedämpfte Szenen. Filmvorgaben multiplizieren den Bereich mit relativen Kanalfaktoren. Die Grenze von 1.8D bleibt für das bisherige Rendering erhalten; sie ist kein gemessener Materialwert aller Filme und kann dichte Negative beeinflussen.
+**Auto-Abgleich ON.** Jeder Kanal nutzt das dichteste 0,2-%-Perzentil der Szene mit einer Bereichsgrenze von 1,8D, danach folgen die Kurve `shoulder-print-response-v4` und die Vibrance für gedämpfte Szenen. Filmvorgaben multiplizieren den gemessenen Bereich mit ihren relativen Kanalfaktoren. Die 1,8D-Grenze ist eine Absicherung des Renderings, keine gemessene Eigenschaft jedes Films, und sie kann dichte Negative beeinflussen.
 
-OFF verwendet dieselbe v4-Kurve mit festem Nennbereich (Farbe 1.55D, Schwarzweiß 2.17D), gegebenenfalls multipliziert mit den Faktoren der Filmvorgabe. Szenenabhängige Bereichsnormierung und Sättigungskorrektur entfallen. Bei Farbnegativen multipliziert OFF zusätzlich eine Kanalbereichs-Kalibrierung für Scanner und Film. Sie ist der Median von mindestens drei Bildern mit gültiger Messung aus derselben Rolle (ohne Rolle: demselben Scan-Ordner). Der einmal bestimmte Wert bleibt am jeweiligen Bild gespeichert. Bei weniger Bildern oder gemischtem Film behalten die drei Kanäle denselben Bereich. Bei gleicher Basis und gleichen Einstellungen ergibt dieselbe Transmission in den Bildern einer Rolle denselben Wert. ON kann Helligkeit und Farbe mit dem Bildinhalt ändern. Keiner der Modi belegt gemessene Filmfarbgenauigkeit.
+**Auto-Abgleich OFF.** Dieselbe v4-Kurve mit festem Nennbereich (Farbe 1,55D, S/W 2,17D), bei gewählter Vorgabe mit deren Faktoren multipliziert. Die Normalisierung des Szenenbereichs und die Vibrance für gedämpfte Szenen entfallen. Bei Farbnegativen kommt außerdem eine Kanalbereichskalibrierung für Scanner und Film hinzu. Sie ist der Median von mindestens drei Bildern mit gültiger Messung aus demselben Film oder, ohne Filmangabe, aus demselben Scanordner, und bleibt nach der Wahl auf jedem Bild. Bei weniger Bildern oder gemischtem Film behalten die drei Kanäle denselben Bereich. Gleiche Transmission mit derselben Basis und denselben Einstellungen ergibt dann in allen Bildern eines Films dasselbe Ergebnis.
 
-Bei Änderungen manueller Regler werden Szenenmessungen wiederverwendet. Windows behält die bisherige D3D-Inversion und Sättigungskorrektur für die Vorschau; der Export nutzt die CPU. Der verworfene Median-Gain-Prototyp und seine Laufzeiten beschreiben diese Implementierung nicht. RAW wird weiterhin vor der Kamerafarbmatrix invertiert; die getrennten Filmbasiskorrekturen bleiben erhalten. Die Anwendung wurde nicht vollständig auf `412bb31` zurückgesetzt.
+ON kann mit dem Szeneninhalt Helligkeit und Farbe verändern. Keiner der beiden Modi belegt eine gemessene Farbgenauigkeit des Films.
+
+Szenenmessungen werden zwischengespeichert, während manuelle Regler bewegt werden. Unter Windows laufen Invertierung und Vibrance der Vorschau über D3D, der Export über die CPU.
 
 ## Andere Ziele und RAW
 
-Explizite Scannerziele behalten Szenenanalyse und `shoulder-print-response-v4`. Das feste Primitive bleibt verfügbar. Auch die Szenenanalyse hat keine allgemeine 1.8D-Obergrenze. Filmvorgaben verwenden feste relative Faktoren ohne automatische Einzelbildnormalisierung.
+Ausdrückliche Scannerziele behalten die Szenenanalyse und das feste Primitiv `shoulder-print-response-v4`. Die Szenenanalyse hat keine allgemeine 1,8D-Grenze. Eine Filmvorgabe nutzt feste relative Faktoren und normalisiert nicht stillschweigend jedes Bild.
 
-Beide Plattformen dekodieren Kamera-RAW von Negativen mit LibRaw `output_color=0`, linearer Übertragung und Kanalverstärkung 1. Filmbasismessung und Inversion laufen im demosaizierten Kamera-RGB. Erst danach wandelt `rgb_cam` das Positiv in lineares sRGB um. Aufnahme-WB, automatische Helligkeit und szenenabhängige Maximum-Anpassung sind deaktiviert. Vorschau, Defektcache und Export behalten die aufgeschobene Matrix. Digitalfotos nutzen einen getrennten Renderpfad. Nicht unterstützte Kamera-RGB-Ausgabe führt zu einem Fehler. Diese Reihenfolge ersetzt keine gemessene Kamera/Licht/Film-Kalibrierung. Raw-TIFF und TIFF mit eingerechneten Defektkorrekturen sind nicht invertierte Arbeits-RGB-Bilder; die Matrix wird an dieser Ausgabegrenze angewendet.
+Beide Plattformen dekodieren Kamera-RAW von Negativen mit LibRaw `output_color=0`, linearer Übertragung und Kanalmultiplikatoren von 1. Filmbasismessung und Invertierung laufen auf dem entmosaikten Kamera-RGB, danach bildet `rgb_cam` das Positiv in lineares sRGB ab. Aufnahme-Weißabgleich, automatische Helligkeit und szenenabhängige Maximalanpassung sind abgeschaltet. Vorschau, Defekt-Caches und Export behalten die aufgeschobene Matrix. Die Wiedergabe digitaler Fotos ist getrennt. Eine nicht unterstützte native Ausgabe schlägt fehl, statt stillschweigend ein matrixverarbeitetes Negativ zu nehmen. Diese Reihenfolge ersetzt keine gemessene Kalibrierung von Kamera, Licht und Film. Raw-TIFF und Baked-Source-TIFF sind nicht invertierte Arbeits-RGB-Bilder, ihre Farbmatrix wird an dieser Ausgabegrenze angewendet.
 
-### RAW in der CLI außerhalb des Bundles
+### RAW-Einrichtung für die CLI ohne Bundle
 
-Das App-Paket enthält den Decoder. Für die macOS-CLI oder Tests außerhalb des Pakets wird dieselbe Bibliothek gebaut und ihr absoluter Pfad vor Prozessstart gesetzt.
+Das App-Bundle bringt seinen Decoder mit. Für eine macOS-CLI ohne Bundle oder für Tests bauen Sie dieselbe Bibliothek und setzen vor dem Start des Prozesses ihren absoluten Pfad.
 
 ```bash
 bash negaflow-mac/scripts/build-libraw.sh
@@ -29,9 +31,9 @@ export NEGAFLOW_LIBRAW_LIBRARY="$PWD/build/libraw/$(uname -m)/libraw.dylib"
 
 ## Prüfung und Quellen
 
-Ein Ausschnitt aus dem mitgelieferten `Roll_Perforation.tiff` wurde bei gleicher Basis und gleichen Einstellungen mit einem separat gebauten `412bb31`-Engine verglichen. Bei MAIN, PRINT, Studio, Emulsion, einer Filmvorgabe und Schwarzweiß waren die 32-Bit-Float-Pixel des wiederhergestellten ON-Pfads exakt gleich. Der Vergleich betrifft eine Eingabe, nicht jeden Scan oder Kamera-RAW. `NegativeAutoBalanceTests` prüft die bisherige Kombination aus Bereich, Kurve und Sättigung sowie OFF und Cache-Wiederverwendung. Windows prüft Bereichsgrenze, Vorgabefaktoren, OFF und die RAW-Inversionsreihenfolge auf CPU/D3D.
+`NegativeAutoBalanceTests` prüft die Kombination aus Bereich, Kurve und Vibrance, OFF und die Wiederverwendung des Caches. Die Windows-Tests prüfen die Bereichsgrenze, die Vorgabefaktoren, OFF und die Reihenfolge der CPU/D3D-RAW-Invertierung.
 
-`FixedNegativeResponseTests` behält die v6-Modellregressionen für EXPIRED. Deren Bildabweichung von 0 und die Farbergebnisse des idealisierten Vorwärtsmodells validieren weder das wiederhergestellte MAIN/CS noch reale Filmfarbgenauigkeit. Renderer- und Vorschaubildkennungen trennen das neue Ergebnis von alten Caches.
+`FixedNegativeResponseTests` behält die v6-Modellregressionen, die EXPIRED verwendet. Die Nullabweichung zwischen Bildern und die Farben eines idealisierten Vorwärtsmodells belegen weder die MAIN/CS-Antwort noch die Farbgenauigkeit echten Films. Renderer- und Miniaturkennungen halten aktuelle Ergebnisse von älteren Cache-Vorschauen getrennt.
 
 - [Kodak H-740](https://www.kodak.com/content/products-brochures/Film/Basic-Photographic-Sensitometry-Workbook.pdf)
 - [Kodak VISION3 scanning](https://www.kodak.com/content/products-brochures/Film/Scanning-Recommendations-for-Extended-Dynamic-Range-Camera-Films-EN.pdf)

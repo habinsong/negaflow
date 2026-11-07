@@ -46,7 +46,7 @@ internal static unsafe class NativeDevelopExportCommand
             throw new ArgumentException("A defect bake requires a non-empty recipe.", nameof(request));
         }
 
-        if (bakeDefects && NativeDevelopInput.RequiresV39(request))
+        if (bakeDefects && NativeDevelopInput.RequiresInputTail(request))
         {
             throw new NotSupportedException("Input interpretation must be preserved with a non-destructive recipe.");
         }
@@ -156,7 +156,7 @@ internal static unsafe class NativeDevelopExportCommand
                 // 있기 때문입니다.
                 if (NativeDevelopInput.RequiresV39(request) && !bakeDefects)
                 {
-                    NativeDevelopExportRequestV41 v39 = NativeDevelopInput.Build(
+                    NativeDevelopExportRequestV42 v39 = NativeDevelopInput.Build(
                         BuildRequestV36(BuildRequestV35(v34, defectRecipeDigest, checked((uint)defectRecipeSha256.Length)), null, 0U, 0U),
                         request, outputIccProfile, checked((uint)outputIcc.Length));
                     status = NativeDevelopInput.Export(&v39, runState, (NativeDevelopExportResultV3*)&raw);

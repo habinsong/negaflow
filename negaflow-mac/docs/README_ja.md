@@ -28,33 +28,35 @@
 
 ---
 
-## 必要なもの
+## 動作環境
 
-動かすとき:
+実行に必要なもの:
 
 - macOS 14.0 以降（macOS 14、26、27 に対応）
 - Apple Silicon または Intel
-- 35mm ならメモリ 8GB、中判を扱うなら 16GB が楽です
+- メモリ 8GB（中判は 16GB を推奨）
 
-ビルドするとき:
+ビルドに必要なもの:
 
-- アプリは Xcode 26 以降
-- エンジンと CLI は Swift 5.9 以降
+- アプリ: Xcode 26 以降
+- エンジンと CLI: Swift 5.9 以降
 
 ## インストール
 
 [Releases](https://github.com/habinsong/negaflow/releases) から入手します。
 
-| インストーラー | 対応する Mac |
+| ファイル | 対応する Mac |
 |---|---|
 | `negaflow-1.2.6-mac-universal.pkg` | Apple Silicon、Intel |
 | `negaflow-1.2.6-mac-arm64.pkg` | Apple Silicon のみ |
 
-たいていは Universal PKG で足ります。`/Applications` に入ります。自分で移すなら同じページの DMG か ZIP を使ってください。
+ほとんどの Mac では Universal PKG を使います。`/Applications` に入ります。アプリを自分で置きたいときは、同じページの DMG か ZIP を使ってください。
 
-Apple の公証を受けていないので、初回起動で macOS が止めます。システム設定のプライバシーとセキュリティで「このまま開く」を押してください。
+アプリは ad hoc 署名で公証を受けていないため、初回起動は macOS に止められます。システム設定のプライバシーとセキュリティで「このまま開く」を選んでください。
 
-ライブラリと設定は `~/Library/Application Support/negaflow` に保存されます。
+ライブラリと設定は `~/Library/Application Support/negaflow` にあります。
+
+アプリは起動時に一度だけ GitHub に最新リリースを問い合わせます。新しい版があれば、右上の ⋯ メニューのいちばん下に「バージョン X.Y.Z にアップデート」が出ます。選ぶとリリースページが開き、この Mac に合う PKG をリリースの `SHA256SUMS.txt` で確かめてからダウンロードフォルダーに保存します。インストールはご自身で行います。最新のときは項目が「最新バージョンです。」になり、選ぶとプロジェクトページが開きます。オフラインなどで確認できなかったときは項目が出ません。
 
 ## ビルド
 
@@ -65,43 +67,43 @@ cd negaflow/negaflow-mac
 # Release ビルドして起動
 bash scripts/run-app.sh
 
-# 起動せずビルドだけ
+# 起動せずにビルドだけ
 bash scripts/run-app.sh build
 ```
 
-`run-app.sh` が `xcodebuild` を呼び、アプリバンドルを組み立て、ローカル署名まで行います。エンジンや CLI だけなら `swift build` で足ります。
+`run-app.sh` は `xcodebuild` を呼び、アプリバンドルを組み立ててローカルで署名します。エンジンや CLI だけなら `swift build` で足ります。
 
-配布用ファイルを作るとき:
+配布ファイル:
 
 ```bash
 bash negaflow-mac/scripts/build-release.sh
 bash negaflow-mac/scripts/create-release-artifacts.sh
 ```
 
-## 点検
+## 確認
 
 ```bash
-# Swift テスト
+# Swift のテスト
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 
 # アプリの Release ビルド
 bash scripts/run-app.sh build
 
-# リポジトリ全体の点検
+# リポジトリの全チェック
 bash scripts/ci-gate.sh
 ```
 
 ## Custom カラーターゲット
 
-ターゲットの選択肢は MAIN、HS、SP、F135、HR、CS です。CS を選ぶと、既存の左下のセレクターから開く 2 列のリストで、18 個の Custom ターゲットを選べます。右側のルック選択はそのままです。CS に切り替えると Emulsion が選ばれ、すでに Custom を使っている写真では現在の選択を維持します。
+ターゲットのカプセルは MAIN、HS、SP、F135、HR の次が CS です。CS を選ぶと、左下のセレクターに Custom ターゲット18個の2列リストが開き、ルックのセレクターは右に残ります。CS に入ると Emulsion が選ばれ、すでに Custom ターゲットを使っている写真はそのターゲットのままです。
 
-メニューは Emulsion〜Dichroic、Wetzlar〜Rochester、Slide Show〜Point & Shoot の間に区切り線を表示します。Custom は人物と風景に custom-3 の階調・色濃度・彩度応答を適用します。保存、プレビュー、サムネイル、書き出しは選択したターゲット ID を使います。既存ターゲットの処理は変わりません。
+リストは3つの組に分かれます。Emulsion から Dichroic までの11個、Wetzlar から Rochester までの4個、Slide Show から Point & Shoot までの3個です。Custom ターゲットは custom-3 のトーン・濃度・彩度の応答を適用します。保存、プレビュー、サムネイル、書き出しは選んだターゲット ID を使います。ほかのターゲットは変わりません。
 
-CLI でも同じ ID を使えます。例: `--target classic`、`--target dye-transfer`、`--target point-and-shoot`。
+CLI も同じ ID を受け取ります: `--target classic`、`--target dye-transfer`、`--target point-and-shoot`。
 
 ## コマンドライン
 
-macOS 版には CLI が入っています。
+macOS 版には CLI が付いています。
 
 ```bash
 swift build
@@ -117,33 +119,33 @@ swift build
 .build/debug/negaflow develop scan.tif out.jpg --defects 1
 .build/debug/negaflow defect-bench ./scans --out ./report
 
-# プロファイル一覧とエンジンの自己点検
+# プロファイルとエンジンの自己確認
 .build/debug/negaflow list-scanner-profiles
 .build/debug/negaflow selftest
 ```
 
-`negaflow` を引数なしで実行すると全オプションが出ます。
+全オプションは、引数なしで `negaflow` を実行すると出ます。
 
 ## スキャナー
 
-プラグインを入れるまでスキャナーの操作は出てきません。SANE 機器は [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) が担当し、別に入れる必要があります。
+プラグインを入れるまで、スキャナーのコントロールは表示されません。SANE 機器は、別に入れる [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) が担当します。
 
-## モジュール構成
+## モジュール
 
 | モジュール | 役割 |
 |---|---|
-| `Chromabase` | クロマエンジン、GrainMend、プロファイルと書き出し |
-| `ScannerKit` | スキャナー機能の確認と外部プラグイン接続 |
-| `negaflowApp` | ライブラリ、現像、スキャンと書き出しの画面 |
-| `negaflowCLI` | 現像、スキャン、ベンチマークと自己点検のコマンド |
+| `Chromabase` | Chroma Engine、GrainMend、プロファイル、書き出し |
+| `ScannerKit` | スキャナー機能の確認とプラグイン接続 |
+| `negaflowApp` | ライブラリ、現像、スキャン、書き出しの画面 |
+| `negaflowCLI` | 現像、スキャン、ベンチマーク、自己確認のコマンド |
 
 ## 基準画像
 
-リポジトリ最上位の `docs/verification/macos-golden` には、このビルドが作った画像が入っています。Windows のエンジンテストがこのファイルを読んで画素単位で比べます。macOS の出力が変わるべきときだけ作り直してください。
+`docs/verification/macos-golden` に、このビルドで描画した画像があります。このフォルダーは Git が無視するため、画像を作ったマシンにしかありません。Windows のエンジンテストが、そのコピーとピクセル単位で比べます。macOS の出力をあえて変えるときだけ作り直してください。
 
 ## 関連ドキュメント
 
-- [macOS と Windows の違い](../../docs/ja/platform/PLATFORM_DIFFERENCES.md)
-- [クロマエンジン](../../docs/ja/product/CHROMA_ENGINE.md)
+- [両バージョンの違い](../../docs/ja/platform/PLATFORM_DIFFERENCES.md)
+- [Chroma Engine](../../docs/ja/product/CHROMA_ENGINE.md)
 - [GrainMend](../../docs/ja/product/GRAINMEND.md)
-- [製品の構造](../../docs/ja/architecture/PRODUCT_ARCHITECTURE.md)
+- [製品構造](../../docs/ja/architecture/PRODUCT_ARCHITECTURE.md)

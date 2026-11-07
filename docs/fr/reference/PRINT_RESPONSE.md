@@ -4,23 +4,25 @@
 
 ## MAIN/PRINT et CS
 
-Par défaut, `MAIN` utilise Équilibre auto sur ON. Le bouton est une petite pastille à droite du titre Cible. Il n’apparaît que pour les négatifs couleur et noir et blanc, avec MAIN (y compris PRINT) et CS. Il ajuste la couleur et la luminosité à partir de la photo actuelle ; OFF saute cette étape. Tonalité auto, balance des blancs auto, niveaux auto et couleur auto restent des fonctions distinctes, désactivées par défaut.
+Par défaut, la cible est `MAIN` avec Équilibre auto sur ON. L'interrupteur est décrit dans [Chroma Engine](../product/CHROMA_ENGINE.md).
 
-Équilibre auto sur ON rétablit l’inversion MAIN/CS de `412bb31`. Chaque canal mesure sa plage de densité au percentile des 0.2% les plus denses, la limite à 1.8D, puis applique la courbe d’origine `shoulder-print-response-v4` et la correction de saturation des scènes ternes. Les préréglages de film multiplient cette plage par leurs facteurs relatifs par canal. La limite de 1.8D conserve le rendu précédent ; ce n’est pas une propriété mesurée de tous les films. Elle peut affecter les négatifs denses.
+**Équilibre auto ON.** Chaque canal utilise le centile de 0,2 % le plus dense de la scène, avec une limite de plage de 1,8D, suivi de la courbe `shoulder-print-response-v4` et de la vibrance pour scènes ternes. Les préréglages de film multiplient la plage mesurée par leurs facteurs relatifs par canal. La limite de 1,8D est une protection du rendu, pas une propriété mesurée de tous les films, et elle peut jouer sur les négatifs denses.
 
-OFF utilise la même courbe v4 avec une plage nominale fixe (couleur 1.55D, noir et blanc 2.17D), multipliée par les facteurs du préréglage sélectionné. La normalisation par scène et la correction de saturation sont omises. Pour un négatif couleur, OFF multiplie aussi par une calibration de plage par canal propre au scanner et au film. Elle prend la médiane d'au moins trois images à mesure valide dans le même rouleau (ou, sans rouleau, le même dossier de scan). La valeur choisie reste enregistrée sur chaque image. Avec moins d'images, ou avec des films mélangés, les trois canaux gardent la même plage. À base et réglages identiques, une même transmittance produit le même résultat dans les images d'un même rouleau. ON peut modifier couleur et luminosité selon la scène. Aucun mode ne démontre une précision colorimétrique mesurée du film.
+**Équilibre auto OFF.** La même courbe v4 avec une plage nominale fixe (couleur 1,55D, N&B 2,17D), multipliée par les facteurs du préréglage quand il y en a un. La normalisation de plage par scène et la vibrance pour scènes ternes sont sautées. Pour les négatifs couleur, OFF multiplie aussi par un étalonnage de plage par canal propre au scanner et au film. C'est la médiane d'au moins trois vues à mesure valide, de la même bobine ou, sans bobine, du même dossier de numérisation, et une fois choisie elle reste sur chaque vue. Avec moins de vues, ou avec des films mélangés, les trois canaux gardent la même plage. À transmittance égale, avec la même base et les mêmes réglages, les vues d'une bobine donnent alors le même résultat.
 
-Les mesures de scène sont réutilisées quand seuls les curseurs manuels changent. Windows conserve l’inversion et la saturation D3D pour l’aperçu ; l’export utilise le CPU. Le prototype abandonné à gains médians et ses mesures de vitesse ne décrivent pas cette implémentation. L’inversion RAW précède toujours la matrice couleur de la caméra et les corrections séparées de base du film sont conservées. L’application entière n’a pas été ramenée à `412bb31`.
+ON peut modifier la luminosité et la couleur selon le contenu de la scène. Aucun des deux modes n'établit une exactitude mesurée des couleurs du film.
+
+Les mesures de scène sont mises en cache pendant que les curseurs manuels bougent. Sous Windows, l'inversion et la vibrance de l'aperçu passent par D3D, l'export par le CPU.
 
 ## Autres cibles et RAW
 
-Les cibles scanner choisies explicitement conservent l’analyse de scène et `shoulder-print-response-v4`. La primitive fixe reste disponible. L’analyse n’utilise plus de plafond universel de 1.8D. Les préréglages de film utilisent des facteurs relatifs fixes sans normaliser chaque image.
+Les cibles de scanner explicites gardent l'analyse de scène et la primitive fixe `shoulder-print-response-v4`. L'analyse de scène n'a pas de plafond de 1,8D universel. Un préréglage de film utilise des facteurs relatifs fixes et ne normalise pas discrètement chaque vue.
 
-Les deux plateformes décodent les RAW de négatifs avec LibRaw, `output_color=0`, un transfert linéaire et des multiplicateurs de canal égaux à 1. La mesure du support et l’inversion utilisent le RGB caméra dématricé ; `rgb_cam` convertit ensuite le positif en sRGB linéaire. La WB de prise de vue, la luminosité automatique et l’ajustement du maximum selon la scène sont désactivés. Aperçus, caches de défauts et exports conservent la matrice différée. Le rendu photo numérique reste séparé. Une sortie caméra non prise en charge produit une erreur. Cet ordre ne remplace pas un étalonnage mesuré caméra/éclairage/film. Le Raw TIFF et le TIFF source avec défauts corrigés sont des images de travail non inversées : la matrice est appliquée à cette sortie.
+Les deux plateformes décodent le RAW d'un négatif avec LibRaw `output_color=0`, transfert linéaire et multiplicateurs de canal unitaires. La mesure de la base et l'inversion se font sur le RVB d'appareil dématricé, puis `rgb_cam` fait passer le positif en sRGB linéaire. La balance des blancs de prise de vue, la luminosité automatique et l'ajustement du maximum selon la scène sont désactivés. L'aperçu, les caches de défauts et l'export gardent la matrice différée. Le rendu des photos numériques est séparé. Une sortie native non prise en charge échoue, au lieu de se rabattre en silence sur un négatif traité par matrice. Cet ordre ne remplace pas un étalonnage mesuré de l'appareil, de la lumière et du film. Les TIFF bruts et les TIFF à source figée sont des images RVB de travail non inversées : leur matrice de couleur est appliquée à cette frontière de sortie.
 
-### RAW avec la CLI hors bundle
+### Préparer le RAW pour la CLI hors bundle
 
-L’application inclut le décodeur. Pour la CLI macOS ou les tests hors bundle, compilez la même bibliothèque et fixez son chemin absolu avant le lancement.
+Le bundle de l'application contient son décodeur. Pour une CLI macOS hors bundle ou pour les tests, compilez la même bibliothèque et indiquez son chemin absolu avant de lancer le processus.
 
 ```bash
 bash negaflow-mac/scripts/build-libraw.sh
@@ -29,9 +31,9 @@ export NEGAFLOW_LIBRAW_LIBRARY="$PWD/build/libraw/$(uname -m)/libraw.dylib"
 
 ## Validation et sources
 
-Un recadrage du `Roll_Perforation.tiff` fourni a été comparé au moteur `412bb31` compilé séparément, avec la même base et les mêmes réglages. Les pixels float 32 bits du chemin ON restauré étaient identiques pour MAIN, PRINT, Studio, Emulsion, un préréglage de film et le noir et blanc. Cette comparaison couvre une entrée, pas tous les scans ni les RAW de caméra. `NegativeAutoBalanceTests` vérifie la combinaison d’origine plage/courbe/saturation, OFF et la réutilisation du cache. Windows vérifie le plafond de plage, les facteurs du préréglage, OFF et l’ordre d’inversion RAW sur CPU/D3D.
+`NegativeAutoBalanceTests` vérifie la combinaison plage, courbe et vibrance, OFF et la réutilisation du cache. Les tests Windows vérifient le plafond de plage, les facteurs de préréglage, OFF et l'ordre d'inversion RAW CPU/D3D.
 
-`FixedNegativeResponseTests` conserve les régressions du modèle v6 utilisé par EXPIRED. Leur variation nulle entre images et leurs résultats avec un modèle direct idéalisé ne valident ni MAIN/CS restauré ni la précision des couleurs d’un film réel. Les identifiants de rendu et de vignette distinguent le résultat restauré des anciens caches.
+`FixedNegativeResponseTests` conserve les régressions du modèle v6 utilisées par EXPIRED. Sa variation nulle entre vues et les couleurs d'un modèle direct idéalisé ne valident ni la réponse MAIN/CS ni l'exactitude des couleurs d'un vrai film. Les identifiants du moteur de rendu et des vignettes séparent les résultats actuels des anciens aperçus en cache.
 
 - [Kodak H-740](https://www.kodak.com/content/products-brochures/Film/Basic-Photographic-Sensitometry-Workbook.pdf)
 - [Kodak VISION3 scanning](https://www.kodak.com/content/products-brochures/Film/Scanning-Recommendations-for-Extended-Dynamic-Range-Camera-Films-EN.pdf)

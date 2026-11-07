@@ -1,4 +1,5 @@
 using Negaflow.Catalog;
+using Negaflow.Shell.Develop.Perspective;
 
 namespace Negaflow.Shell.Develop;
 
@@ -7,11 +8,15 @@ internal static class DevelopDefectCoordinateMapper
 {
     private const double StraightenThreshold = 1.0e-4;
 
+    /// <summary>
+    /// 브러시도 복제 도장처럼 수평 보정·원근을 풉니다(macOS 가 원본 크기를 넘기도록 함께 고침). 예전에는
+    /// 둘을 건너뛰어 각도가 걸린 사진에서 획이 화면 중심에서 멀수록 어긋났습니다.
+    /// </summary>
     internal static bool TryMapBrushDisplayToRaw(
         LibraryFrameSnapshot frame,
         DefectPoint display,
         out DefectPoint raw) =>
-        TryMapDisplayToRaw(frame, display, includeStraighten: false, out raw);
+        TryMapDisplayToRaw(frame, display, includeStraighten: true, out raw);
 
     internal static bool TryMapCloneDisplayToRaw(
         LibraryFrameSnapshot frame,
@@ -50,6 +55,7 @@ internal static class DevelopDefectCoordinateMapper
             _ => (x, y),
         };
 
+        ApplyPerspectiveForward(transform, metadata.PixelWidth, metadata.PixelHeight, ref x, ref y);
         ApplyStraightenForward(
             transform,
             metadata.PixelWidth,
@@ -99,6 +105,7 @@ internal static class DevelopDefectCoordinateMapper
                 metadata.PixelHeight,
                 ref x,
                 ref y);
+            ApplyPerspectiveInverse(transform, metadata.PixelWidth, metadata.PixelHeight, ref x, ref y);
         }
         (x, y) = transform.Rotation switch
         {
@@ -123,6 +130,49 @@ internal static class DevelopDefectCoordinateMapper
         return true;
     }
 
+    /// <summary>원근 출력 사각형 기준 정규좌표 → 원근 보정 전(회전 뒤) 정규좌표. macOS <c>inverseUnit</c>.</summary>
+    private static void ApplyPerspectiveInverse(
+        ImageTransformRecipe transform, uint width, uint height, ref double x, ref double y)
+    {
+        Dimensions(transform.Rotation, width, height, out double sw, out double sh);
+        if (PerspectiveGeometry.Mapping(transform.Perspective, sw, sh) is not { } mapping ||
+            PerspectiveGeometry.Apply(
+                mapping.Inverse,
+                mapping.OutputLeft + (x * mapping.OutputWidth),
+                mapping.OutputTop + (y * mapping.OutputHeight)) is not { } oriented)
+        {
+            return;
+        }
+        x = oriented.X / sw;
+        y = oriented.Y / sh;
+    }
+
+    /// <summary>회전 뒤 정규좌표 → 원근 출력 사각형 기준 정규좌표. macOS <c>forwardUnit</c>.</summary>
+    private static void ApplyPerspectiveForward(
+        ImageTransformRecipe transform, uint width, uint height, ref double x, ref double y)
+    {
+        Dimensions(transform.Rotation, width, height, out double sw, out double sh);
+        if (PerspectiveGeometry.Mapping(transform.Perspective, sw, sh) is not { } mapping ||
+            PerspectiveGeometry.Apply(mapping.Forward, x * sw, y * sh) is not { } corrected)
+        {
+            return;
+        }
+        x = (corrected.X - mapping.OutputLeft) / mapping.OutputWidth;
+        y = (corrected.Y - mapping.OutputTop) / mapping.OutputHeight;
+    }
+
+    /// <summary>수평 보정의 입력 크기 = 원근 보정의 출력 크기(없으면 회전 뒤 크기).</summary>
+    private static void StraightenInput(
+        ImageTransformRecipe transform, uint width, uint height, out double sw, out double sh)
+    {
+        Dimensions(transform.Rotation, width, height, out sw, out sh);
+        if (PerspectiveGeometry.Mapping(transform.Perspective, sw, sh) is { } mapping)
+        {
+            sw = mapping.OutputWidth;
+            sh = mapping.OutputHeight;
+        }
+    }
+
     private static void ApplyStraightenInverse(
         ImageTransformRecipe transform,
         uint width,
@@ -134,7 +184,7 @@ internal static class DevelopDefectCoordinateMapper
         {
             return;
         }
-        Dimensions(transform.Rotation, width, height, out double sw, out double sh);
+        StraightenInput(transform, width, height, out double sw, out double sh);
         StraightenedExtent(sw, sh, transform.StraightenAngle, out double wp, out double hp);
         double cx = sw / 2.0;
         double cy = sh / 2.0;
@@ -160,7 +210,7 @@ internal static class DevelopDefectCoordinateMapper
         {
             return;
         }
-        Dimensions(transform.Rotation, width, height, out double sw, out double sh);
+        StraightenInput(transform, width, height, out double sw, out double sh);
         StraightenedExtent(sw, sh, transform.StraightenAngle, out double wp, out double hp);
         double cx = sw / 2.0;
         double cy = sh / 2.0;

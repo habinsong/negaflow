@@ -34,6 +34,35 @@ internal sealed class FlatbedRegionEditor
     internal string? PreviewFrameId { get; private set; }
 
     /// <summary>
+    /// 프리뷰에 걸린 변형과 원본 픽셀 크기입니다. 오버레이가 그릴 때마다 넣어 줍니다. 새로 놓는
+    /// 프레임은 이 변형의 각도를 따라야 화면에서 수평인 칸이 스캔 결과에서도 수평입니다.
+    /// </summary>
+    internal (ImageTransformRecipe? Transform, uint Width, uint Height) PreviewGeometry { get; set; }
+
+    /// <summary>새로 놓는 프레임의 각도입니다(macOS <c>flatbedNewRegionAngle</c>).</summary>
+    internal double NewRegionAngle => FlatbedRegionFrameGeometry.RegionAngle(PreviewGeometry.Transform);
+
+    /// <summary>칸을 <paramref name="angle"/> 방향으로 눕힌 사각형들입니다. 다음 칸 제안이 이 좌표에서 돕니다.</summary>
+    private IReadOnlyList<FlatbedScanRegion> FrameLocalRegions(double angle) =>
+        [.. Regions.Select(region =>
+        {
+            (double x, double y, double width, double height) = FlatbedRegionFrameGeometry.FrameLocalRect(
+                region.UnitX, region.UnitY, region.UnitWidth, region.UnitHeight,
+                region.StraightenAngle, angle, PreviewGeometry.Width, PreviewGeometry.Height);
+            return region with { UnitX = x, UnitY = y, UnitWidth = width, UnitHeight = height, StraightenAngle = 0.0 };
+        })];
+
+    /// <summary>눕힌 좌표의 제안을 원본 경계 상자와 각도로 되돌립니다.</summary>
+    private FlatbedScanRegion FromFrameLocal(FlatbedScanRegion local, double angle)
+    {
+        (double x, double y, double width, double height) = FlatbedRegionFrameGeometry.UnitRectFromFrameLocal(
+            (local.UnitX, local.UnitY, local.UnitWidth, local.UnitHeight),
+            angle, PreviewGeometry.Width, PreviewGeometry.Height);
+        return (local with { UnitX = x, UnitY = y, UnitWidth = width, UnitHeight = height, StraightenAngle = angle })
+            .Clamped();
+    }
+
+    /// <summary>
     /// 새 프리뷰를 받았습니다. macOS <c>prepareFlatbedPreview(_:scanArea:)</c> 와 같이 지난
     /// 프레임을 비우고 이 프리뷰의 영역을 자로 삼습니다.
     /// </summary>
@@ -106,7 +135,8 @@ internal sealed class FlatbedRegionEditor
     internal string? Add(
         ScannerPluginCapabilities? capabilities,
         ScanOptions options,
-        FlatbedScanRegion? unitRect = null)
+        FlatbedScanRegion? unitRect = null,
+        double? straightenAngle = null)
     {
         if (!ScanOptionPolicy.UsesFlatbedRegionWorkflow(capabilities) || capabilities is null)
         {
@@ -118,10 +148,13 @@ internal sealed class FlatbedRegionEditor
             return null;
         }
 
+        double angle = straightenAngle ?? NewRegionAngle;
         FlatbedScanRegion? proposed = unitRect is { } drawn
-            ? (drawn with { StraightenAngle = 0.0 }).Clamped()
+            ? (drawn with { StraightenAngle = angle }).Clamped()
             : FlatbedScanRegionLayout.ProposedRect(
-                Regions, ScanFrameSizing.Current(options), area);
+                FrameLocalRegions(angle), ScanFrameSizing.Current(options), area) is { } local
+                ? FromFrameLocal(local, angle)
+                : null;
         if (proposed is not { } created || !created.IsValid)
         {
             return null;
@@ -163,7 +196,11 @@ internal sealed class FlatbedRegionEditor
             return false;
         }
 
-        CopiedRegion = selected;
+        // 크기만 기억합니다. 기운 칸이면 경계 상자가 아니라 칸 자체의 크기입니다.
+        (double x, double y, double width, double height) = FlatbedRegionFrameGeometry.FrameLocalRect(
+            selected.UnitX, selected.UnitY, selected.UnitWidth, selected.UnitHeight,
+            selected.StraightenAngle, selected.StraightenAngle, PreviewGeometry.Width, PreviewGeometry.Height);
+        CopiedRegion = selected with { UnitX = x, UnitY = y, UnitWidth = width, UnitHeight = height };
         changed();
         return true;
     }
@@ -177,14 +214,16 @@ internal sealed class FlatbedRegionEditor
             return false;
         }
         FlatbedPreviewArea area = ResolvePreviewArea(capabilities);
+        double angle = NewRegionAngle;
         if (FlatbedScanRegionLayout.ProposedRect(
-                Regions,
+                FrameLocalRegions(angle),
                 ScanFrameSizing.Current(options),
                 area,
-                (copied.UnitWidth, copied.UnitHeight)) is not { } pasted)
+                (copied.UnitWidth, copied.UnitHeight)) is not { } local)
         {
             return false;
         }
+        FlatbedScanRegion pasted = FromFrameLocal(local, angle);
 
         Regions = [.. Regions, pasted];
         SelectedRegionId = pasted.Id;
@@ -192,7 +231,11 @@ internal sealed class FlatbedRegionEditor
         return true;
     }
 
-    /// <summary>프레임 하나를 새 자리로 옮깁니다. 그리기와 끌기가 이것으로 들어옵니다.</summary>
+    /// <summary>
+    /// 프레임 하나를 새 자리로 옮깁니다. 끌기와 방향키가 이것으로 들어옵니다. 각도는
+    /// <paramref name="moved"/> 의 것을 그대로 씁니다 — 옮겼다고 검출이 잰 기울기나 프리뷰에서 맞춘
+    /// 각도를 버리면 스캔 결과가 각도를 맞추기 전으로 돌아갑니다.
+    /// </summary>
     internal bool Update(string regionId, FlatbedScanRegion moved)
     {
         ArgumentNullException.ThrowIfNull(moved);
@@ -201,7 +244,7 @@ internal sealed class FlatbedRegionEditor
         {
             return false;
         }
-        FlatbedScanRegion clamped = (moved with { StraightenAngle = 0.0 }).Clamped() with
+        FlatbedScanRegion clamped = moved.Clamped() with
         {
             Id = Regions[index].Id,
         };

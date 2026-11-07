@@ -38,6 +38,12 @@ internal sealed class DevelopTransformEditor
                     StraightenAngle = Math.Clamp(angle, -45.0, 45.0),
                 });
 
+    /// <summary>변환(원근) 보정을 통째로 바꿉니다. 범위 밖 값은 잘라 넣습니다.</summary>
+    public DevelopEditResult SetPerspective(LibraryFrameSnapshot? frame, PerspectiveRecipe perspective) =>
+        frame is null
+            ? Missing()
+            : Set(frame, frame.ImageTransform with { Perspective = perspective.Clamped() });
+
     /// <summary>
     /// macOS <c>AppModel.resetPhotoAngle</c> — 회전과 수평 보정만 0 으로 돌리고 크롭·뒤집기는
     /// 그대로 둡니다(<c>AppModel+TransformControls.swift:42-47</c>).

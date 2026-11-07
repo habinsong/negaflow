@@ -38,9 +38,9 @@
   </picture>
 </p>
 
-**negaflow** develops film scans and camera copies, whether color or black and white, negative or positive. You can organize, develop, and print your photos in one app. Adjustments are saved separately, leaving the original file unchanged.
+**negaflow** develops film scans and camera copies, whether color or black and white, negative or positive. Library, develop and print are in one app. Adjustments are saved apart from the original file, which stays unchanged.
 
-The develop engine is **Chroma Engine**. **GrainMend** repairs dust and scratches. You can import, develop, and export image files without a scanner. Connecting a scanner requires a separate plugin.
+The develop engine is **Chroma Engine**. **GrainMend** repairs dust and scratches. Image files can be imported, developed and exported without a scanner. Scanner support needs a separate plugin.
 
 > Unlike the way the analog revival keeps growing, the analog photography process itself is at a standstill. Unless you print it the analog way, film has to go through a conversion into digital before it finally reaches our eyes.
 >
@@ -52,8 +52,8 @@ The develop engine is **Chroma Engine**. **GrainMend** repairs dust and scratche
 >
 >
 > **Celebrating this summer, the bicentennial of Niépce's first-ever photograph.** 25 July 2026.
-## negaflow for macOS and Windows
 
+## negaflow for macOS and Windows
 
 | | macOS | Windows |
 |---|---|---|
@@ -61,11 +61,9 @@ The develop engine is **Chroma Engine**. **GrainMend** repairs dust and scratche
 | Engine | Swift + Core Image | C++ + Direct3D |
 | Color management | ColorSync | Windows ICM |
 
-The two native apps use different languages and implementations but have the same features and produce the same results.
+The two apps are native and separate. They differ in language and implementation, and the same file gives the same picture in both. The engine is the `Chromabase` module on macOS and the `Native` module on Windows.
 
-The engine code lives in the `Chromabase` module on macOS and the `Native` module on Windows.
-
-There is a way to build both at once (cross-platform), but doing that makes both of them slow and they don't work properly. So I wrote the code again from scratch, in the way that is native to each OS. What is the same and what is not is written [here](docs/platform/PLATFORM_DIFFERENCES.md).
+A shared cross-platform codebase was ruled out for speed and stability, so each OS has its own implementation written from scratch. [Platform differences](docs/platform/PLATFORM_DIFFERENCES.md) lists what is shared and what is not.
 
 ## Download
 
@@ -78,60 +76,60 @@ Get it from [GitHub Releases](https://github.com/habinsong/negaflow/releases).
 | `negaflow-1.2.6-win-x64.exe` | Windows 11 24H2 or later, x64 |
 | `negaflow-1.2.6-win-x64-setup.zip` | Windows installer ZIP |
 
-Compatible with macOS 14, 26 and 27.
+macOS 14, 26 and 27 are supported.
 
-The Universal PKG works on most Macs. The same page also has the Silicon build, a DMG, and a ZIP. On the first launch you have to open System Settings, go to Privacy and Security, and click Open Anyway once.
+Most Macs need the Universal PKG. The same page has the Apple Silicon PKG, a DMG and a ZIP. The Mac build is signed ad hoc and is not notarized, so on first launch open System Settings, go to Privacy & Security and click Open Anyway.
 
-The Windows installer installs into your user folder without asking for administrator rights. It isn't signed, so SmartScreen blocks it once. Click More info, then run it. You can uninstall it from Control Panel.
+The Windows installer installs into your user folder and does not ask for administrator rights. It is unsigned, so SmartScreen blocks it once; click More info, then run it. Uninstall from Control Panel. Checksums are in `SHA256SUMS.txt` on the release page.
 
-Connecting a scanner requires a separate plugin. For SANE scanners, use [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane). It works on both macOS and Windows.
+A scanner needs a separate plugin. For SANE scanners that is [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), which runs on both macOS and Windows.
 
 ## Features
-> Everything for turning analog film into a finished photograph is in here.
-- Film-base measurement and development of color and black-and-white negatives and positives
-- Exposure, contrast, curves, HSL, and color grading
-- Extra options like sharpening, noise reduction, grain, vignette, and halation
-- GrainMend, which restores photos by removing dust and scratches.
-- A library with rolls, folders, collections, ratings, stacks, virtual copies, and search by camera, lens, or film
-- Presets and copy-paste that carry the develop process, target, tone, color, detail, crop, and orientation together
-- JPEG, PNG, 16-bit TIFF, and 16-bit linear DNG export, ICC profiles, and records such as camera, lens, and film saved into EXIF
-- Eight print layouts, paper previews, photo and ISO paper sizes, and C-print features.
+
+> The functions that turn a film frame into a finished photograph.
+
+- Film base measurement, and development of color and black-and-white negatives and positives
+- Exposure, contrast, curves, HSL and color grading
+- Sharpening, noise reduction, grain, vignette and halation
+- GrainMend, for removing dust and scratches
+- A library with rolls, folders, collections, ratings, stacks, virtual copies, and search by camera, lens or film
+- Presets, and copy and paste, that carry the develop process, target, tone, color, detail, crop and orientation together
+- Export to JPEG, PNG, 16-bit TIFF and 16-bit linear DNG, with ICC profiles and camera, lens and film records written to EXIF
+- Print with eight layouts, paper preview, photo and ISO paper sizes, and C-print
 
 ## 1.2.6
 
-- Fixed bugs in the HS, SP, F-135 and HR targets and gave them more realistic color.
-- Starting with version 1.2.X, high-efficiency NEF files are not supported in the library on either Mac or Windows due to changes to RAW processing.
+- Fixed bugs in the HS, SP, F135 and HR targets and reworked their color rendering.
+- From 1.2, high-efficiency NEF files are not supported in the library on macOS or Windows, because RAW processing changed.
 
 ## Chroma Engine
 
-**Chroma Engine** handles film inversion and development.
+**Chroma Engine** inverts and develops film.
 
-Before developing a negative, it measures the film base in an unexposed area. If the automatic measurement is off, use the eyedropper or adjust the RGB values.
+Before it develops a negative, it measures the film base in an area the light never reached. If the automatic reading is off, pick the base with the eyedropper or enter RGB values.
 
-The default is `MAIN` with Auto Balance on. The switch is a small pill at the right of the Target heading. It appears only for color and B&W negatives on MAIN (including PRINT) and CS. It adjusts color and brightness from the current picture; switching it off bypasses that step. Auto Tone, Auto White Balance, Auto Levels and Auto Color remain separate and off by default.
+The default is `MAIN` with Auto Balance on. Auto Balance is a small pill switch at the right of the Target heading. It shows only for color and black-and-white negatives on MAIN (PRINT included) and CS. It matches color and brightness to the current picture, and switching it off skips that step. Auto Tone, Auto White Balance, Auto Levels and Auto Color are separate and off by default.
 
-Other targets are `PRINT` for output through a printer ICC profile, `HS` and `SP` in the minilab family, `F135` and `HR` in the lab-equipment family, and `EXPIRED` for restoring old film. For output you can pick sRGB, Display P3, Adobe RGB, or an RGB ICC profile of your own.
+The other targets: `PRINT` outputs through a printer ICC profile, `HS` and `SP` follow minilab output, `F135` and `HR` follow lab equipment, `EXPIRED` rescues old film, and `CS` holds 18 custom color styles. The output color space is sRGB, Display P3, Adobe RGB or an RGB ICC profile of your own.
 
 The order of inversion and color processing is in the [Chroma Engine doc](docs/product/CHROMA_ENGINE.md).
 
 ## GrainMend
 
-> **GrainMend** repairs dust, pinholes, scratches, and emulsion damage.
+> **GrainMend** repairs dust, pinholes, scratches and emulsion damage.
 
-**GrainMend RGB** is a software approach, so it differs from hardware IR. <br> <br>
-`Auto` sweeps the whole photo. Simple, but there will be false detections. <br>
+**GrainMend RGB** works in software, so it is not hardware IR. <br> <br>
+`Auto` scans the whole photo without any marking. Some of what it finds is false. <br>
 `Guided` looks only inside the area you mark. It works best on dust picked up during scanning. <br>
-`Brush` is the tool for painting over spots Auto missed, and clone stamp copies pixels from a position you choose.<br>
-`Clone stamp` is a stamping feature where you pick the texture you want and paint it on yourself. <br>
+`Brush` paints over spots that Auto missed. <br>
+`Clone stamp` copies pixels from a position you choose, so you pick the texture and paint it on. <br>
 
-Auto and Guided fill defects using the surrounding texture, checking its direction and structure first. Mistaking a railing or a tile joint for a scratch and erasing it damages the photo.
+Auto and Guided fill a defect from the surrounding texture after checking its direction and structure. A railing or a tile joint read as a scratch would be erased from the photo.
 
 Edits stay as layers. You can change the strength, check the mask, and switch each one off or delete it.<br>
-**GrainMend IR** adds detection results from the infrared channel a scanner plugin hands over into the same record.
+**GrainMend IR** adds the detection result from the infrared channel that a scanner plugin supplies to the same record.
 
-
-
-**GrainMend IR** uses the scanner's infrared channel (IR), but it is neither an implementation of nor a compatibility mode for Digital ICE, iSRD, or SRDx. How it works and the quality and performance standards are in the [GrainMend doc](docs/product/GRAINMEND.md).
+**GrainMend IR** uses the scanner's infrared channel (IR). It is neither an implementation of Digital ICE, iSRD or SRDx nor a compatibility mode for them. How it works, and its quality and speed criteria, are in the [GrainMend doc](docs/product/GRAINMEND.md).
 
 ## From import to print
 
@@ -141,9 +139,9 @@ Edits stay as layers. You can change the strength, check the mask, and switch ea
 4. Apply GrainMend to the photos that need it.
 5. Check with the before-and-after view and the histogram, then print or export.
 
-Importing alone does not develop anything. It starts when you pick a process and target for a folder and press **Apply**, or when you enter the Develop view. There is a separate setting to make it automatic, and the default is off.
+Importing does not develop anything. Development starts when you pick a process and target for a folder and press **Apply**, or when you open the Develop view. A setting can start it automatically, and it is off by default.
 
-What each action does to your original files is laid out as a table in [From library to print](docs/product/WORKFLOW.md).
+[From library to print](docs/product/WORKFLOW.md) has a table of what each action does to your original files.
 
 <p align="center">
   <picture>
@@ -161,15 +159,15 @@ What each action does to your original files is laid out as a table in [From lib
 
 ## Scanners and film profiles
 
-negaflow uses only the resolution, bit depth, scan area, exposure, and IR support reported by the plugin. It does not infer features from a scanner model name, which could enable controls the device does not support.
+negaflow uses only the resolution, bit depth, scan area, exposure and IR support that the plugin reports. It does not infer features from a scanner model name, which could switch on controls the device lacks.
 
 SANE devices are handled by [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane), a separate GPL project. The plugin runs as its own process and the exchange format is JSON. **negaflow** contains no SANE code and links none.
 
-The bundle includes 15 scanner profiles, built from film I shot myself, with 928 recorded data points.
+The bundle has 15 scanner profiles. The HS and SP targets were developed from data built on 928 personal photos scanned on lab scanners.
 
-All of them are `realOnly`: they were built from real scans, but their accuracy has not been verified against an independent reference. I did not want to write up something unverified as verified. Profiles are selected manually; they are not applied automatically based on a scanner name.
+Profiles are chosen by hand and are never applied from a scanner name.
 
-The details are in [the film profiles doc](docs/product/FILM_PROFILES.md).
+Details are in the [film profiles doc](docs/product/FILM_PROFILES.md).
 
 ## Documentation
 
@@ -182,8 +180,8 @@ The details are in [the film profiles doc](docs/product/FILM_PROFILES.md).
 
 ## Building
 
-The tools and commands differ per platform. The full procedure is in each doc. [macOS](negaflow-mac/docs/README.md) needs macOS 14 or later and Xcode 26 or later, [Windows](negaflow-windows/docs/README.md) needs Windows 11 24H2, Visual Studio 2022, and the .NET 10 SDK. The working rules for the repository are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Tools and commands differ per platform, and each platform doc has the full procedure. [macOS](negaflow-mac/docs/README.md) needs macOS 14 or later and Xcode 26 or later. [Windows](negaflow-windows/docs/README.md) needs Windows 11 24H2, Visual Studio 2026 and the .NET 10 SDK. Repository rules are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
-**negaflow** is released under the [Apache License 2.0](LICENSE). It is not affiliated with or sponsored by Kodak, Fujifilm, Noritsu, LaserSoft Imaging, or any other trademark holder. Product names identify compatibility or measurement references. The [trademark notice](TRADEMARKS.md) has the detail.
+**negaflow** is released under the [Apache License 2.0](LICENSE). It is not affiliated with or sponsored by Kodak, Fujifilm, Noritsu, LaserSoft Imaging or any other trademark holder. Product names identify compatibility or measurement references. The [trademark notice](TRADEMARKS.md) has the detail.
