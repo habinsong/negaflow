@@ -253,7 +253,8 @@ extension AppModel {
 
     func printPackageDisplayImage(for frame: ScanFrame) -> NSImage? {
         PrintPackagePreviewResolution.bestImage(
-            developed: frame.developedImage,
+            // 종이 위에 얹으므로 원근 보정의 빈 곳을 흰색으로 덮은 그림을 쓴다(내보낸 인화와 같다).
+            developed: frame.developedImage == nil ? nil : frame.printPresentationImage,
             packagePreview: validPrintPackagePreviewImage(for: frame),
             thumbnail: frame.thumbnailImage,
             raw: frame.rawPreviewImage

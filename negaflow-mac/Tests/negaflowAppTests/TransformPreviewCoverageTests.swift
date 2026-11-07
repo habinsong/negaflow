@@ -1,6 +1,7 @@
 import Chromabase
 import CoreGraphics
 import CoreImage
+import AppKit
 import XCTest
 @testable import negaflowApp
 
@@ -41,6 +42,38 @@ final class TransformPreviewCoverageTests: XCTestCase {
         let thumbnailPixels = rgba(thumbnail)
         let corner = ((thumbnail.height - 1) * thumbnail.width) * 4
         XCTAssertEqual(Array(thumbnailPixels[corner..<corner + 4]), [255, 255, 255, 255])
+    }
+
+    /// 인화 화면은 사진을 시트 위에 바로 놓는다. 빈 곳이 투명한 화면용 사진을 그대로 쓰면 빈 곳이 시트 색(검정)
+    /// 으로 보여 흰색인 내보낸 인화와 달랐다. 인화용 그림은 빈 곳을 흰색으로 덮고, 빈 곳이 없으면 그대로 쓴다.
+    @MainActor
+    func testPrintPresentationFillsTheUncoveredAreaWithWhite() throws {
+        let frame = ScanFrame(scanIndex: 1, rawScanURL: URL(fileURLWithPath: "/tmp/negaflow-print-presentation-\(UUID().uuidString).tiff"),
+                              filmType: .colorNegative)
+        let width = 40, height = 30
+        let context = try XCTUnwrap(CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.setFillColor(CGColor(srgbRed: 0.2, green: 0.3, blue: 0.4, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        context.clear(CGRect(x: 0, y: 0, width: 6, height: 6))   // 빈 곳(아래 왼쪽)
+        let developed = NSImage(cgImage: try XCTUnwrap(context.makeImage()), size: NSSize(width: width, height: height))
+        frame.developedImage = developed
+
+        XCTAssertTrue(frame.printPresentationImage === developed, "빈 곳 없는 변환이면 그대로 쓴다")
+
+        var transform = ImageTransform()
+        transform.perspective = PerspectiveCorrection(mode: .off, vertical: 22)
+        frame.imageTransform = transform
+        frame.developedPreviewTransform = transform
+        let printed = try XCTUnwrap(frame.printPresentationImage?.cgImage(forProposedRect: nil, context: nil, hints: nil))
+        let pixels = rgba(printed)
+        let corner = ((height - 1) * width) * 4   // 메모리 마지막 행 = 아래
+        XCTAssertEqual(Array(pixels[corner..<corner + 4]), [255, 255, 255, 255])
+        let center = ((height / 2) * width + width / 2) * 4
+        XCTAssertEqual(pixels[center + 3], 255)
+        XCTAssertLessThan(pixels[center], 100, "사진 부분은 그대로다")
+        XCTAssertTrue(frame.printPresentationImage === frame.printPresentationImage, "같은 그림이면 다시 만들지 않는다")
     }
 
     private func makeSnapshot(

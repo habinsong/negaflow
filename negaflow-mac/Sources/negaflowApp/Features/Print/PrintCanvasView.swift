@@ -166,8 +166,7 @@ private struct PrintSingleImagePageView: View {
         GeometryReader { proxy in
             // 인화 지면에도 반전 전 원본을 올리지 않는다(캔버스와 같은 규칙) — 네거티브의
             // 썸네일은 현상 결과이므로 풀해상도를 기다리는 동안의 자리만 메운다.
-            if let image = frame.developedImage
-                ?? frame.thumbnailImage,
+            if let image = frame.printPresentationImage,
                let page = pagePlan(for: image) {
                 let layout = page.layout
                 let paperInset: CGFloat = settingsStore.showsRulers ? 54 : 30
@@ -286,7 +285,7 @@ private struct PrintSingleImagePageView: View {
         }
         .task(id: framedPreviewRequest) {
             guard let request = framedPreviewRequest,
-                  let source = (frame.developedImage ?? frame.thumbnailImage)?
+                  let source = frame.printPresentationImage?
                     .cgImage(forProposedRect: nil, context: nil, hints: nil) else {
                 framedPreview = nil
                 return
@@ -343,7 +342,7 @@ private struct PrintSingleImagePageView: View {
     }
 
     private var framedPreviewRequest: PrintFramedPreviewRequest? {
-        guard let image = frame.developedImage ?? frame.thumbnailImage,
+        guard let image = frame.printPresentationImage,
               let page = pagePlan(for: image),
               page.unitFrame != nil else {
             return nil

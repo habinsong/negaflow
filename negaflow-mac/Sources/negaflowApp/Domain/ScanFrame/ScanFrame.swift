@@ -238,6 +238,8 @@ final class ScanFrame: ObservableObject, Identifiable {
     @Published var debugMetrics: [DevelopDebugStage: DevelopDebugMetrics] = [:]
 
     var developedPreviewTransform: ImageTransform?
+    /// 인화 화면용으로 빈 곳을 흰색으로 덮은 사진 캐시(`printPresentationImage`). 원본 그림이 바뀌면 다시 만든다.
+    var printPresentationCache: (source: ObjectIdentifier, image: NSImage)?
     var rawPreviewTransform: ImageTransform?
     // 무보정 프리뷰 캐시 무효화 키. transform/baseKey가 바뀔 때만 재현상한다(슬라이더 조정엔 불변).
     var neutralPreviewTransform: ImageTransform?

@@ -22,6 +22,7 @@ internal static class ShellDiagnostics
             CatalogInspectionDiagnostics.TryRun(args, out exitCode) ||
             DevelopPipelineDiagnostics.TryRun(args, out exitCode) ||
             FirstActionLatencyDiagnostics.TryRun(args, out exitCode) ||
+            TransformFormatSweepDiagnostics.TryRun(args, out exitCode) ||
             LiveScannerEndToEndDiagnostics.TryRun(args, out exitCode) ||
             SliderDragDiagnostics.TryRun(args, out exitCode) ||
             DefectRoundTripDiagnostics.TryRun(args, out exitCode) ||
