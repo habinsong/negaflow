@@ -25,7 +25,7 @@ final class NeutralBalanceCoverageTests: XCTestCase {
         }
         let correction = NeutralBalance.measure(image, sampleColorSpace: linear, insetFraction: 0, strength: 1)
         // 이 증거로는 감마 항이 쓰인다 — 시험이 경계 처리를 실제로 건드린다.
-        XCTAssertGreaterThan((0..<3).map { abs(correction.slope[$0] - 1) }.max() ?? 0, 0.01)
+        XCTAssertGreaterThan(Self.largestSlopeDeparture(correction.slope), 0.01)
         XCTAssertGreaterThan(log(deepGray), correction.support.lowerBound - 4)
         XCTAssertLessThan(log(deepGray), correction.support.lowerBound - 1, "회색이 증거 범위 밖에 있어야 한다")
 
@@ -62,7 +62,7 @@ final class NeutralBalanceCoverageTests: XCTestCase {
             return SIMD3(luma / green, luma * green, luma / green)
         }
         let correction = NeutralBalance.measure(image, sampleColorSpace: linear, insetFraction: 0, strength: 1)
-        XCTAssertGreaterThan((0..<3).map { abs(correction.slope[$0] - 1) }.max() ?? 0, 0.01)
+        XCTAssertGreaterThan(Self.largestSlopeDeparture(correction.slope), 0.01)
         var cached: NeutralBalance.Correction? = correction
         let output = NeutralBalance.apply(to: image, sampleColorSpace: linear, strength: 1, correction: &cached)
         let x = width / 2
@@ -88,5 +88,12 @@ final class NeutralBalanceCoverageTests: XCTestCase {
         context.render(image, toBitmap: &px, rowBytes: 16,
                        bounds: CGRect(x: x, y: flippedY, width: 1, height: 1), format: .RGBAf, colorSpace: linear)
         return SIMD3(Double(px[0]), Double(px[1]), Double(px[2]))
+    }
+
+    /// 세 채널 기울기 가운데 1 에서 가장 먼 거리.
+    private static func largestSlopeDeparture(_ slope: SIMD3<Double>) -> Double {
+        var largest = 0.0
+        for channel in 0..<3 { largest = max(largest, abs(slope[channel] - 1)) }
+        return largest
     }
 }

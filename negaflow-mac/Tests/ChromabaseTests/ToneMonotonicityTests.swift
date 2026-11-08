@@ -16,7 +16,7 @@ final class ToneMonotonicityTests: XCTestCase {
         }
     }
 
-    private let grid = (0...2048).map { Double($0) / 2048 }
+    private let grid: [Double] = (0...2048).map { (step: Int) -> Double in Double(step) / 2048 }
 
     private func assertMonotone(_ f: (Double) -> Double, _ label: String, file: StaticString = #filePath, line: UInt = #line) {
         var previous = -Double.infinity
@@ -34,12 +34,15 @@ final class ToneMonotonicityTests: XCTestCase {
         // 장면: 무작위 백분위 + 극단(전부 같은 값, 거의 검정, 거의 흰색, 측정 실패).
         var scenes: [[Double]?] = [nil, [0.5, 0.5, 0.5, 0.5], [0, 0, 0.0001, 0.0002], [0.97, 0.98, 0.99, 1]]
         for _ in 0..<40 {
-            let p = (0..<4).map { _ in pow(rng.next(), 2.2) }.sorted()
+            var p: [Double] = []
+            for _ in 0..<4 { p.append(pow(rng.next(), 2.2)) }
+            p.sort()
             scenes.append(p)
         }
         for scene in scenes {
             for _ in 0..<30 {
-                let a = (0..<4).map { _ in rng.uniform(-1...1) }
+                var a: [Double] = []
+                for _ in 0..<4 { a.append(rng.uniform(-1...1)) }
                 let curve = ParametricToneCurve(percentiles: scene, highlights: a[0], lights: a[1], darks: a[2], shadows: a[3])
                 assertMonotone(curve.value, "커브 \(a) 장면 \(String(describing: scene))")
                 XCTAssertEqual(curve.value(0), 0, accuracy: 1e-12, "검정은 고정")
@@ -120,7 +123,7 @@ final class ToneMonotonicityTests: XCTestCase {
     // MARK: 도우미
 
     /// 인코딩 0~1 을 고르게 덮는 회색 램프(선형 값).
-    private var rampValues: [Double] { (0..<256).map { AutoAdjust.srgbDecode(Double($0) / 255) } }
+    private var rampValues: [Double] { (0..<256).map { (code: Int) -> Double in AutoAdjust.srgbDecode(Double(code) / 255) } }
 
     private func ramp() -> CIImage {
         let values = rampValues
@@ -135,6 +138,11 @@ final class ToneMonotonicityTests: XCTestCase {
         ChromabaseEngine.sharedLinearRenderContext.render(
             image, toBitmap: &px, rowBytes: width * 16, bounds: CGRect(x: 0, y: 8, width: width, height: 1),
             format: .RGBAf, colorSpace: linear)
-        return (0..<width).map { Double(px[$0 * 4]) * 0.2126 + Double(px[$0 * 4 + 1]) * 0.7152 + Double(px[$0 * 4 + 2]) * 0.0722 }
+        var luma = [Double](repeating: 0, count: width)
+        for x in 0..<width {
+            let r = Double(px[x * 4]), g = Double(px[x * 4 + 1]), b = Double(px[x * 4 + 2])
+            luma[x] = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        }
+        return luma
     }
 }

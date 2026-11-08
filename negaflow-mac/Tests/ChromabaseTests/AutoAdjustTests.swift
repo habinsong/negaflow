@@ -218,7 +218,7 @@ final class AutoAdjustTests: XCTestCase {
         var h = [Double](repeating: 0, count: 256)
         for i in 30...190 { h[i] = 1 }                       // 대비·노출·흰색이 모두 움직이는 장면
         let total = h.reduce(0, +)
-        h = h.map { $0 / total }
+        h = h.map { (v: Double) -> Double in v / total }
         let s = stats(0.3, 0.3, 0.3, h, sat: 0.2)
         let d = AutoAdjust.autoTone(s)
         XCTAssertGreaterThan(abs(d.contrast), 0.05, "시험이 대비 단계를 실제로 거친다")

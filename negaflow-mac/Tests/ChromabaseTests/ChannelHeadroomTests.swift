@@ -192,7 +192,9 @@ final class ChannelHeadroomTests: XCTestCase {
         samples += Array(repeating: SIMD2(decode(230), 0.86), count: 10)
         var hist = [Double](repeating: 0, count: 256)
         for sample in samples {
-            hist[min(255, Int((AutoAdjust.srgbEncode(sample.x) * 255).rounded()))] += 1.0 / Double(samples.count)
+            let code: Double = AutoAdjust.srgbEncode(sample.x) * 255
+            let weight: Double = 1 / Double(samples.count)
+            hist[min(255, Int(code.rounded()))] += weight
         }
         var stats = AutoAdjust.ImageStats(avgR: 0.3, avgG: 0.3, avgB: 0.3, lumaHist: hist, avgSaturation: 0.3)
         stats.peakSamples = samples
@@ -220,7 +222,7 @@ final class ChannelHeadroomTests: XCTestCase {
         hist[30] = 0.686; hist[100] = 0.30; hist[150] = 0.004; hist[255] = 0.01
         var stats = AutoAdjust.ImageStats(avgR: 0.2, avgG: 0.2, avgB: 0.2, lumaHist: hist, avgSaturation: 0.3)
         func d(_ code: Double) -> Double { AutoAdjust.srgbDecode(code / 255) }
-        stats.peakSamples = Array(repeating: SIMD2(d(30), d(30)), count: 686)
+        stats.peakSamples = Array(repeating: SIMD2<Double>(d(30), d(30)), count: 686)
             + Array(repeating: SIMD2(d(100), 0.70), count: 300) + Array(repeating: SIMD2(d(150), 0.90), count: 4)
             + Array(repeating: SIMD2(1.0, 1.0), count: 10)
         stats.clippedFraction = 0.01
@@ -243,7 +245,9 @@ final class ChannelHeadroomTests: XCTestCase {
             }
             var hist = [Double](repeating: 0, count: 256)
             for sample in samples {
-                hist[min(255, Int((AutoAdjust.srgbEncode(sample.x) * 255).rounded()))] += 1 / Double(samples.count)
+                let code: Double = AutoAdjust.srgbEncode(sample.x) * 255
+                let weight: Double = 1 / Double(samples.count)
+                hist[min(255, Int(code.rounded()))] += weight
             }
             var rendered = AutoAdjust.ImageStats(avgR: 0.2, avgG: 0.2, avgB: 0.2, lumaHist: hist, avgSaturation: 0.3)
             rendered.peakSamples = samples
@@ -264,7 +268,9 @@ final class ChannelHeadroomTests: XCTestCase {
         func stats(_ samples: [SIMD2<Double>]) -> AutoAdjust.ImageStats {
             var hist = [Double](repeating: 0, count: 256)
             for sample in samples {
-                hist[min(255, Int((AutoAdjust.srgbEncode(min(sample.x, 1)) * 255).rounded()))] += 1 / Double(samples.count)
+                let code: Double = AutoAdjust.srgbEncode(min(sample.x, 1)) * 255
+                let weight: Double = 1 / Double(samples.count)
+                hist[min(255, Int(code.rounded()))] += weight
             }
             var result = AutoAdjust.ImageStats(avgR: 0.3, avgG: 0.3, avgB: 0.3, lumaHist: hist, avgSaturation: 0.3)
             result.peakSamples = samples
@@ -308,7 +314,9 @@ final class ChannelHeadroomTests: XCTestCase {
         func stats(_ samples: [SIMD2<Double>]) -> AutoAdjust.ImageStats {
             var hist = [Double](repeating: 0, count: 256)
             for sample in samples {
-                hist[min(255, Int((AutoAdjust.srgbEncode(min(sample.x, 1)) * 255).rounded()))] += 1 / Double(samples.count)
+                let code: Double = AutoAdjust.srgbEncode(min(sample.x, 1)) * 255
+                let weight: Double = 1 / Double(samples.count)
+                hist[min(255, Int(code.rounded()))] += weight
             }
             var result = AutoAdjust.ImageStats(avgR: 0.3, avgG: 0.3, avgB: 0.3, lumaHist: hist, avgSaturation: 0.3)
             result.peakSamples = samples

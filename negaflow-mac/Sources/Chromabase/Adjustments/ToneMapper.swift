@@ -79,7 +79,9 @@ public enum ToneMapper {
             percentiles: sampleLumaPercentiles(from: AnalysisRegion.measurementImage(image, region: region)),
             highlights: params.curveHighlights, lights: params.curveLights,
             darks: params.curveDarks, shadows: params.curveShadows)
-        let x = curve.x.map { CGFloat($0) }, y = curve.y.map { CGFloat($0) }, m = curve.tangent.map { CGFloat($0) }
+        let x: [CGFloat] = curve.x.map { (v: Double) -> CGFloat in CGFloat(v) }
+        let y: [CGFloat] = curve.y.map { (v: Double) -> CGFloat in CGFloat(v) }
+        let m: [CGFloat] = curve.tangent.map { (v: Double) -> CGFloat in CGFloat(v) }
         return kernel.apply(extent: image.extent, arguments: [
             image,
             CIVector(x: x[1], y: x[2], z: x[3], w: x[4]),

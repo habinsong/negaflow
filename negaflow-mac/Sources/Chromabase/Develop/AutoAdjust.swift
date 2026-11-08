@@ -696,7 +696,7 @@ public enum AutoAdjust {
     /// 새로 날아간 채널이 한도를 넘는 양(넘지 않으면 0). 두 그림이 맞지 않으면 nil.
     public static func channelExcess(neutral: ImageStats, measured: ImageStats) -> Double? {
         ChannelHeadroom.measuredInducedClipping(neutral: neutral, measured: measured)
-            .map { max(0, $0 - ChannelHeadroom.allowance) }
+            .map { (induced: Double) -> Double in max(0, induced - ChannelHeadroom.allowance) }
     }
 
     // MARK: 수치 유틸

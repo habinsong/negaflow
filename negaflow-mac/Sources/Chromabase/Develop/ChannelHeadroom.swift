@@ -56,12 +56,14 @@ enum ChannelHeadroom {
     /// 리프트로 잡은 값이 상한이다.
     static func candidates(_ samples: [SIMD2<Double>], maxStops: Double, maxLift: Double) -> [SIMD2<Double>] {
         let gain = pow(2, maxStops)
-        return samples.filter { s in
-            guard s.y < clipLevel else { return false }
-            let y = min(s.x * gain, 1)
-            let lifted = AutoAdjust.srgbDecode(min(AutoAdjust.srgbEncode(y) + maxLift, 1))
-            return min(min(s.y * gain, 1) + lifted - y, 1) >= safeLevel
+        var kept: [SIMD2<Double>] = []
+        for s in samples where s.y < clipLevel {
+            let y: Double = min(s.x * gain, 1)
+            let lifted: Double = AutoAdjust.srgbDecode(min(AutoAdjust.srgbEncode(y) + maxLift, 1))
+            let bound: Double = min(min(s.y * gain, 1) + lifted - y, 1)
+            if bound >= safeLevel { kept.append(s) }
         }
+        return kept
     }
 
     /// 표본 하나의 노출·기본 톤 뒤 최대 채널.
@@ -163,7 +165,8 @@ enum ChannelHeadroom {
             return true
         }
         guard drawn else { return ([], []) }
-        let decode = (0..<256).map { AutoAdjust.srgbDecode(Double($0) / 255) }
+        var decode = [Double](repeating: 0, count: 256)
+        for code in 0..<256 { decode[code] = AutoAdjust.srgbDecode(Double(code) / 255) }
         var peaks = [UInt8](repeating: 0, count: width * height)
         var luma = [UInt8](repeating: 0, count: width * height)
         for i in 0..<(width * height) {

@@ -38,7 +38,8 @@ public struct ParametricToneCurve: Sendable, Equatable {
         for (i, amount) in [shadows, darks, lights, highlights].enumerated() {
             let k = i + 1
             let a = min(max(amount.isFinite ? amount : 0, -1), 1)
-            ys[k] = xs[k] + (a > 0 ? a * Self.reach * (xs[k + 1] - xs[k]) : a * Self.reach * (xs[k] - xs[k - 1]))
+            let span: Double = a > 0 ? xs[k + 1] - xs[k] : xs[k] - xs[k - 1]
+            ys[k] = xs[k] + a * Self.reach * span
         }
         x = xs
         y = ys
@@ -48,7 +49,7 @@ public struct ParametricToneCurve: Sendable, Equatable {
     /// 안쪽 매듭 네 개. 백분위를 인코딩해 양 끝에서 `edgeMargin`, 서로 `minimumGap` 이상 떨어뜨린다.
     static func knots(percentiles: [Double]?) -> [Double] {
         guard let p = percentiles, p.count == 4, p.allSatisfy(\.isFinite) else { return fallbackKnots }
-        let q = p.map { AutoAdjust.srgbEncode(min(max($0, 0), 1)) }
+        let q: [Double] = p.map { (value: Double) -> Double in AutoAdjust.srgbEncode(min(max(value, 0), 1)) }
         let low = edgeMargin, high = 1 - edgeMargin
         var k = [Double](repeating: 0, count: 4)
         k[0] = min(max(q[0], low), high - 3 * minimumGap)
@@ -62,18 +63,29 @@ public struct ParametricToneCurve: Sendable, Equatable {
 
     static func monotoneTangents(_ xs: [Double], _ ys: [Double]) -> [Double] {
         let n = xs.count
-        let d = (0..<(n - 1)).map { (ys[$0 + 1] - ys[$0]) / (xs[$0 + 1] - xs[$0]) }
+        var d = [Double](repeating: 0, count: n - 1)
+        for k in 0..<(n - 1) {
+            let rise: Double = ys[k + 1] - ys[k]
+            let run: Double = xs[k + 1] - xs[k]
+            d[k] = rise / run
+        }
         var m = [Double](repeating: 0, count: n)
         m[0] = d[0]
         m[n - 1] = d[n - 2]
-        for i in 1..<(n - 1) { m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2 }
+        for i in 1..<(n - 1) {
+            let left: Double = d[i - 1], right: Double = d[i]
+            m[i] = left * right <= 0 ? 0 : (left + right) / 2
+        }
         for i in 0..<(n - 1) {
-            guard d[i] > 0 else { m[i] = 0; m[i + 1] = 0; continue }
-            let a = m[i] / d[i], b = m[i + 1] / d[i], s = a * a + b * b
+            let slope: Double = d[i]
+            guard slope > 0 else { m[i] = 0; m[i + 1] = 0; continue }
+            let a: Double = m[i] / slope
+            let b: Double = m[i + 1] / slope
+            let s: Double = a * a + b * b
             if s > 9 {
-                let t = 3 / s.squareRoot()
-                m[i] = t * a * d[i]
-                m[i + 1] = t * b * d[i]
+                let t: Double = 3 / s.squareRoot()
+                m[i] = t * a * slope
+                m[i + 1] = t * b * slope
             }
         }
         return m
@@ -84,8 +96,10 @@ public struct ParametricToneCurve: Sendable, Equatable {
         var i = 0
         while i < x.count - 2, g >= x[i + 1] { i += 1 }
         let h = x[i + 1] - x[i]
-        let t = min(max((g - x[i]) / h, 0), 1), t2 = t * t, t3 = t2 * t
-        return (2 * t3 - 3 * t2 + 1) * y[i] + (t3 - 2 * t2 + t) * h * tangent[i]
-            + (-2 * t3 + 3 * t2) * y[i + 1] + (t3 - t2) * h * tangent[i + 1]
+        let t: Double = min(max((g - x[i]) / h, 0), 1)
+        let t2: Double = t * t, t3: Double = t2 * t
+        let h00: Double = 2 * t3 - 3 * t2 + 1, h10: Double = t3 - 2 * t2 + t
+        let h01: Double = -2 * t3 + 3 * t2, h11: Double = t3 - t2
+        return h00 * y[i] + h10 * h * tangent[i] + h01 * y[i + 1] + h11 * h * tangent[i + 1]
     }
 }

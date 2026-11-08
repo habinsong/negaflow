@@ -295,7 +295,9 @@ final class ScannerRenderingTests: XCTestCase {
         let names = rendered.keys.sorted()
         for (i, a) in names.enumerated() {
             for b in names[(i + 1)...] {
-                let mean = zip(rendered[a]!, rendered[b]!).map { simd_length($0 - $1) }.reduce(0, +) / Double(chart.count)
+                var total = 0.0
+                for (left, right) in zip(rendered[a]!, rendered[b]!) { total += Double(simd_length(left - right)) }
+                let mean = total / Double(chart.count)
                 XCTAssertGreaterThan(mean, 4.0, "\(a)↔\(b) 평균 ΔE76 \(mean)")
             }
         }
