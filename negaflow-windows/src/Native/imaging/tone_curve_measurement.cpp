@@ -101,22 +101,14 @@ void set_fallback(ToneCurveMeasurementResult& result) noexcept {
     return std::clamp(sorted_luma[index], 0.0, 1.0);
 }
 
+// macOS `ToneMapper.sampleLumaPercentiles` → `ParametricToneCurve.knots` 와 같습니다.
 [[nodiscard]] ParametricToneCurveBands derive_bands(
     const std::vector<double>& sorted_luma) noexcept {
-    const double p10 = percentile(sorted_luma, 0.10);
-    const double p35 = std::max(percentile(sorted_luma, 0.35), p10 + 0.025);
-    const double p65 = std::max(percentile(sorted_luma, 0.65), p35 + 0.025);
-    const double p90 = std::max(percentile(sorted_luma, 0.90), p65 + 0.025);
-    return {
-        static_cast<float>(std::max(0.0, p10 - 0.020)),
-        static_cast<float>(p35),
-        static_cast<float>(p35),
-        static_cast<float>(p65),
-        static_cast<float>(p65),
-        static_cast<float>(p90),
-        static_cast<float>(p65),
-        static_cast<float>(std::min(1.0, p90 + 0.030)),
-    };
+    return parametric_tone_curve_bands_from_percentiles(
+        percentile(sorted_luma, 0.10),
+        percentile(sorted_luma, 0.35),
+        percentile(sorted_luma, 0.65),
+        percentile(sorted_luma, 0.90));
 }
 
 } // namespace

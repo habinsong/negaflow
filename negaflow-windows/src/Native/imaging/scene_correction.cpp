@@ -18,7 +18,16 @@ namespace {
 
 constexpr double minimum_range = 0.04;
 constexpr double negative_output_black = 0.003;
-constexpr double negative_output_white = 0.95;
+// 네거티브 자동 레벨의 흰색은 반전 응답이 장면 흰색에 쓰는 앵커입니다(컬러 0.70·흑백 0.85,
+// 노출 숄더의 무릎과 같은 값, macOS `AutoLevels.applyNegative`). 예전 목표 0.95 는 반전 천장
+// (0.90)보다 높아, 켜기만 해도 장면이 +0.44 스톱 밝아지고 스캐너 타깃에서는 화면의 26~43% 가
+// 흰색에 붙었습니다(2026-11-07 실측).
+constexpr double negative_output_white_color = 0.70;
+constexpr double negative_output_white_monochrome = 0.85;
+static_assert(negaflow::core::color_negative_print_response().white_output > 0.6999F &&
+              negaflow::core::color_negative_print_response().white_output < 0.7001F);
+static_assert(negaflow::core::black_and_white_negative_print_response().white_output > 0.8499F &&
+              negaflow::core::black_and_white_negative_print_response().white_output < 0.8501F);
 constexpr double positive_output_black = 0.014;
 constexpr double positive_output_white = 0.86;
 
@@ -196,13 +205,15 @@ constexpr double positive_output_white = 0.86;
     return true;
 }
 
+// c' = c · gain · t^(exponent−1), t = clamp(c, low, high). 범위 안은 gain·c^exponent 와 같습니다.
 [[nodiscard]] float power_gain(
     const float value,
-    const double exponent,
-    const double gain) noexcept {
-    return value > 0.0F
-        ? static_cast<float>(gain * std::pow(static_cast<double>(value), exponent))
-        : value;
+    const SceneNeutralBalancePlan& plan,
+    const std::size_t channel) noexcept {
+    if (value <= 0.0F) { return value; }
+    const double c = static_cast<double>(value);
+    const double t = std::clamp(c, plan.low[channel], plan.high[channel]);
+    return static_cast<float>(c * plan.gain[channel] * std::pow(t, plan.exponent[channel] - 1.0));
 }
 
 [[nodiscard]] bool apply_neutral_balance(
@@ -230,9 +241,9 @@ constexpr double positive_output_white = 0.86;
                 const std::size_t row = static_cast<std::size_t>(y) * image.stride_pixels;
                 for (std::uint32_t x = 0U; x < image.width; ++x) {
                     negaflow::core::Rgba32F& pixel = image.pixels[row + x];
-                    pixel.red = power_gain(pixel.red, plan.exponent[0], plan.gain[0]);
-                    pixel.green = power_gain(pixel.green, plan.exponent[1], plan.gain[1]);
-                    pixel.blue = power_gain(pixel.blue, plan.exponent[2], plan.gain[2]);
+                    pixel.red = power_gain(pixel.red, plan, 0U);
+                    pixel.green = power_gain(pixel.green, plan, 1U);
+                    pixel.blue = power_gain(pixel.blue, plan, 2U);
                 }
             }
         });
@@ -280,6 +291,8 @@ SceneAutoLevelsPlan plan_scene_auto_levels(
     const double output_black = negative_source
         ? (linear_negative_output ? core::negative_output_tone_input(negative_output_black, monochrome) : negative_output_black)
         : positive_output_black;
+    const double negative_output_white =
+        monochrome ? negative_output_white_monochrome : negative_output_white_color;
     const double output_white = negative_source
         ? (linear_negative_output ? core::negative_output_tone_input(negative_output_white, monochrome) : negative_output_white)
         : positive_output_white;
@@ -336,6 +349,10 @@ constexpr double maximum_slope = 1.25;
 // 감마까지 맞추는 최소 근거: 대역 셋, 휘도 폭 2 스톱입니다.
 constexpr std::size_t minimum_bands_for_slope = 3U;
 const double minimum_span_for_slope = std::log(4.0);
+// 기울기(감마) 항은 증거보다 어두운 쪽으로 외삽하지 않습니다(`SceneNeutralBalancePlan::low/high`).
+// 멱함수의 채널 비는 ln Ȳ → −∞ 에서 끝없이 벌어집니다. 화소 비율로 기울기를 켜고 끄던 조건(90% 포함)은
+// 꼬리 10% 를 그대로 외삽해 깊은 암부 캐스트를 못 막았습니다. 밝은 쪽은 흰색(Ȳ = 1)까지 거리가 유한해
+// 기울기를 흰색까지 잇습니다(macOS `NeutralBalance.Correction.support`, 2026-11-08 실측).
 // 이보다 작은 보정은 항등으로 봅니다.
 constexpr double identity_tolerance = 0.003;
 
@@ -389,6 +406,11 @@ SceneNeutralBalancePlan plan_scene_neutral_balance(SceneSampleGrid& samples) noe
         }
         const double n = static_cast<double>(bands.size());
         mean_x /= n;
+        // 감마 항을 쓰는 ln Ȳ 범위 — 가장 낮은 대역 칸의 아래 끝부터, 가장 높은 대역 칸의 위 끝과 흰색(0) 중
+        // 높은 쪽까지입니다(macOS `NeutralBalance.support`).
+        const double support_low = std::floor(minimum_x / neutral_axis_band_width) * neutral_axis_band_width;
+        const double support_high = std::max(
+            (std::floor(maximum_x / neutral_axis_band_width) + 1.0) * neutral_axis_band_width, 0.0);
         const bool use_slope =
             bands.size() >= minimum_bands_for_slope && maximum_x - minimum_x >= minimum_span_for_slope &&
             slope_improves_holdout(bands);
@@ -414,9 +436,11 @@ SceneNeutralBalancePlan plan_scene_neutral_balance(SceneSampleGrid& samples) noe
             const double beta = std::clamp(1.0 + (slope * strength), minimum_slope, maximum_slope);
             identity = identity && std::abs(offset) < identity_tolerance &&
                        std::abs(beta - 1.0) < identity_tolerance;
-            // c' = exp((ln c − α)/β) = exp(−α/β) · c^(1/β)
+            // c' = exp((ln c − α)/β) = exp(−α/β) · c^(1/β), 증거 범위 밖은 경계 배율입니다.
             plan.exponent[channel] = 1.0 / beta;
             plan.gain[channel] = std::exp(-offset * plan.exponent[channel]);
+            plan.low[channel] = std::exp(offset + (beta * support_low));
+            plan.high[channel] = std::exp(offset + (beta * support_high));
         }
         if (identity) {
             return SceneNeutralBalancePlan{};

@@ -42,8 +42,10 @@ public sealed record AutoAdjustOutcome(
 /// <para>
 /// 자동 톤은 <b>폐루프</b>입니다(macOS <c>AppModel.autoTone</c>). 첫 계산은 슬라이더 전달함수를
 /// 모형으로 거꾸로 풀지만 사용자 커브·색 깊이·스캐너 타깃과의 상호작용은 모형 밖입니다. 그래서
-/// 계산값을 frame의 나머지 설정과 함께 다시 그려 노출과 화이트 후보를 구합니다.
-/// 후보도 렌더해 톤 점수가 좋아질 때만 채택합니다. 색 조정은 유지합니다.
+/// 계산값을 frame의 나머지 설정과 함께 다시 그려 노출과 화이트 후보를 구합니다. 확인 렌더는 중립
+/// 현상본과 칸마다 맞대어 새로 날아간 채널을 셉니다. 후보도 렌더해, 채널 한도를 넘는 양이 적은 쪽을
+/// 먼저 고르고 같으면 톤 점수가 좋아질 때만 채택합니다. 고른 결과에서도 한도를 넘으면 밝히는 몫을
+/// 실제로 그려 이분합니다(최대 3 회). 색 조정은 유지합니다.
 /// 결정적이라 같은 frame 이면 같은 답입니다.
 /// </para>
 /// </remarks>
@@ -53,8 +55,11 @@ public sealed class AutoAdjustCoordinator
     private readonly IUiDispatcher dispatcher;
     private readonly uint sampleExtent;
     private readonly Func<byte[], uint, uint, bool, AutoAdjustSettings> compute;
-    private readonly Func<byte[], uint, uint, bool, AutoAdjustSettings, AutoAdjustSettings> refine;
+    private readonly Func<ToneBitmap, ToneBitmap, bool, AutoAdjustSettings, AutoAdjustSettings> refine;
     private readonly Func<byte[], uint, uint, bool, double> quality;
+    private readonly Func<ToneBitmap, ToneBitmap, double?> channelExcess;
+    private readonly Func<ToneBitmap, bool, AutoAdjustSettings, (double ExposureFloor, double KeyBudgetStops)> channelLimits;
+    private readonly Func<ToneBitmap, double> sceneKey;
     // 요청 종류마다 따로 셉니다. 같은 종류의 새 요청만 앞 요청을 대체합니다 — 자동 톤을 누른 뒤
     // 자동 화이트밸런스를 누르면 둘 다 반영돼야 합니다(예전: 공유 리비전이라 톤 결과가 버려졌다).
     // 다른 종류는 앞 요청이 반영된 뒤 그 값 위에서 잽니다 — 자동 WB 의 측정은 톤에 따라 달라지므로
@@ -75,9 +80,15 @@ public sealed class AutoAdjustCoordinator
         uint sampleExtent = 512U)
         : this(exporter, dispatcher, sampleExtent,
             (pixels, width, height, monochrome) => NativeAutoAdjust.Compute(pixels, width, height, monochrome),
-            (pixels, width, height, monochrome, first) =>
-                NativeAutoAdjust.Refine(pixels, width, height, monochrome, first),
-            (pixels, width, height, adjustMid) => NativeAutoAdjust.ToneScore(pixels, width, height, adjustMid)) { }
+            (neutral, measured, monochrome, first) => NativeAutoAdjust.Refine(
+                neutral.Pixels, neutral.Width, neutral.Height, measured.Pixels, measured.Width, measured.Height,
+                monochrome, first),
+            (pixels, width, height, adjustMid) => NativeAutoAdjust.ToneScore(pixels, width, height, adjustMid),
+            (neutral, measured) => NativeAutoAdjust.ChannelExcess(
+                neutral.Pixels, neutral.Width, neutral.Height, measured.Pixels, measured.Width, measured.Height),
+            (neutral, monochrome, first) => NativeAutoAdjust.ChannelLimits(
+                neutral.Pixels, neutral.Width, neutral.Height, monochrome, first.Exposure),
+            bitmap => NativeAutoAdjust.SceneKey(bitmap.Pixels, bitmap.Width, bitmap.Height)) { }
 
     /// <summary>계산만 바꿔 끼우는 시험용입니다. 폐루프 보정은 첫 값을 그대로 돌려줍니다.</summary>
     internal AutoAdjustCoordinator(
@@ -87,25 +98,61 @@ public sealed class AutoAdjustCoordinator
             (pixels, width, height, _) => compute(pixels, width, height),
             (_, _, _, _, first) => first) { }
 
+    /// <summary>폐루프 보정이 확인 렌더만 보는 시험용입니다. 채널 한도는 걸지 않습니다.</summary>
     internal AutoAdjustCoordinator(
         IDevelopExporter exporter, IUiDispatcher dispatcher, uint sampleExtent,
         Func<byte[], uint, uint, bool, AutoAdjustSettings> compute,
         Func<byte[], uint, uint, bool, AutoAdjustSettings, AutoAdjustSettings> refine,
         Func<byte[], uint, uint, bool, double>? quality = null)
+        : this(exporter, dispatcher, sampleExtent, compute,
+            (_, measured, monochrome, first) => refine(measured.Pixels, measured.Width, measured.Height, monochrome, first),
+            quality ?? ((_, _, _, _) => 0),
+            (_, _) => null) { }
+
+    internal AutoAdjustCoordinator(
+        IDevelopExporter exporter, IUiDispatcher dispatcher, uint sampleExtent,
+        Func<byte[], uint, uint, bool, AutoAdjustSettings> compute,
+        Func<ToneBitmap, ToneBitmap, bool, AutoAdjustSettings, AutoAdjustSettings> refine,
+        Func<byte[], uint, uint, bool, double> quality,
+        Func<ToneBitmap, ToneBitmap, double?> channelExcess)
+        : this(exporter, dispatcher, sampleExtent, compute, refine, quality, channelExcess,
+            (_, _, _) => (double.NegativeInfinity, double.PositiveInfinity), _ => 1.0) { }
+
+    internal AutoAdjustCoordinator(
+        IDevelopExporter exporter, IUiDispatcher dispatcher, uint sampleExtent,
+        Func<byte[], uint, uint, bool, AutoAdjustSettings> compute,
+        Func<ToneBitmap, ToneBitmap, bool, AutoAdjustSettings, AutoAdjustSettings> refine,
+        Func<byte[], uint, uint, bool, double> quality,
+        Func<ToneBitmap, ToneBitmap, double?> channelExcess,
+        Func<ToneBitmap, bool, AutoAdjustSettings, (double ExposureFloor, double KeyBudgetStops)> channelLimits,
+        Func<ToneBitmap, double> sceneKey)
     {
         ArgumentNullException.ThrowIfNull(exporter);
         ArgumentNullException.ThrowIfNull(dispatcher);
         ArgumentOutOfRangeException.ThrowIfZero(sampleExtent);
         ArgumentNullException.ThrowIfNull(compute);
         ArgumentNullException.ThrowIfNull(refine);
+        ArgumentNullException.ThrowIfNull(quality);
+        ArgumentNullException.ThrowIfNull(channelExcess);
+        ArgumentNullException.ThrowIfNull(channelLimits);
+        ArgumentNullException.ThrowIfNull(sceneKey);
 
         this.exporter = exporter;
         this.dispatcher = dispatcher;
         this.sampleExtent = sampleExtent;
         this.compute = compute;
         this.refine = refine;
-        this.quality = quality ?? ((_, _, _, _) => 0);
+        this.quality = quality;
+        this.channelExcess = channelExcess;
+        this.channelLimits = channelLimits;
+        this.sceneKey = sceneKey;
     }
+
+    /// <summary>측정 렌더 한 장(BGRA8)입니다.</summary>
+    internal readonly record struct ToneBitmap(byte[] Pixels, uint Width, uint Height);
+
+    // 채널 한도가 폐루프 뒤에도 넘칠 때 더 그려 보는 최대 횟수(macOS `AutoAdjust.channelRefinementLimit`).
+    private const int ChannelRefinementLimit = 3;
 
     /// <summary>
     /// 톤과 화이트밸런스를 0 으로 되돌린 사본입니다. 자동 보정이 재야 하는 것은 이 그림입니다.
@@ -293,27 +340,74 @@ public sealed class AutoAdjustCoordinator
         {
             // 폐루프: 계산값을 frame 의 나머지 설정과 함께 실제로 그려 다시 재고 한 번 바로잡습니다.
             // 이 렌더가 실패하면 첫 값을 씁니다(macOS 와 같습니다) — 첫 값도 유효한 답입니다.
-            LibraryFrameSnapshot verify = operation == AutoAdjustOperation.Tone
-                ? ApplyTone(frame, settings)
-                : Apply(frame, settings);
+            LibraryFrameSnapshot Applied(AutoAdjustSettings proposal) => operation == AutoAdjustOperation.Tone
+                ? ApplyTone(frame, proposal)
+                : Apply(frame, proposal);
+            LibraryFrameSnapshot verify = Applied(settings);
             Rendered verified = await RenderAsync(verify, frame.SourcePath, isCurrent).ConfigureAwait(false);
             if (verified.Pixels is not null)
             {
-                AutoAdjustSettings candidate = refine(verified.Pixels, verified.Width, verified.Height, monochrome, settings);
-                double before = RefinementDistance(settings, candidate);
-                if (before > 0.02)
+                // 중립 현상본과 칸마다 맞대어 새로 날아간 채널을 실제 결과(타깃·커브 포함)로 셉니다(macOS
+                // `AutoAdjust.closedLoopTone` 과 같은 순서).
+                ToneBitmap neutralBitmap = new(first.Pixels, first.Width, first.Height);
+                ToneBitmap chosenBitmap = new(verified.Pixels, verified.Width, verified.Height);
+                AutoAdjustSettings chosen = settings;
+                ToneBitmap measuredBitmap = chosenBitmap;
+                // 채널을 지키느라 어두워지는 몫의 바닥: 확인 렌더의 장면 키에서 남은 예산(1 스톱 − 첫 계산이 이미 내준
+                // 노출)만큼 아래. 노출이 아니라 잰 키로 거는 것은 스캐너 타깃의 톤 곡선이 노출 변화를 키워서입니다.
+                (double exposureFloor, double keyBudget) = channelLimits(neutralBitmap, monochrome, settings);
+                double keyFloor = sceneKey(measuredBitmap) * Math.Pow(2, -keyBudget);
+                AutoAdjustSettings candidate = refine(neutralBitmap, chosenBitmap, monochrome, settings);
+                if (RefinementDistance(settings, candidate) > 0.02)
                 {
-                    LibraryFrameSnapshot candidateFrame = operation == AutoAdjustOperation.Tone
-                        ? ApplyTone(frame, candidate) : Apply(frame, candidate);
-                    Rendered checkedRender = await RenderAsync(candidateFrame, frame.SourcePath, isCurrent).ConfigureAwait(false);
+                    Rendered checkedRender = await RenderAsync(Applied(candidate), frame.SourcePath, isCurrent).ConfigureAwait(false);
                     if (checkedRender.Pixels is not null)
                     {
-                        double originalScore = quality(verified.Pixels, verified.Width, verified.Height, settings.Exposure > 0);
-                        double candidateScore = quality(checkedRender.Pixels, checkedRender.Width, checkedRender.Height, settings.Exposure > 0);
-                        if (candidateScore < originalScore) { settings = candidate; }
+                        ToneBitmap checkedBitmap = new(checkedRender.Pixels, checkedRender.Width, checkedRender.Height);
+                        if (channelExcess(neutralBitmap, measuredBitmap) is 0.0 &&
+                            channelExcess(neutralBitmap, checkedBitmap) is > 0)
+                        {
+                            // 더 밝힌 후보가 한도를 넘었습니다 — 첫 제안(맞음)과 후보 사이를 그려 맞는 가장 밝은 점을 찾고,
+                            // 그 점을 점수로 첫 제안과 견줍니다.
+                            Bisection? raised = await BisectChannelsAsync(
+                                settings, candidate, checkedBitmap, neutralBitmap, keyFloor, Applied, frame.SourcePath,
+                                isCurrent).ConfigureAwait(false);
+                            if (raised is null) { return null; }
+                            if (raised.Value.Fit is { } inside &&
+                                quality(inside.Bitmap.Pixels, inside.Bitmap.Width, inside.Bitmap.Height, true) <
+                                quality(measuredBitmap.Pixels, measuredBitmap.Width, measuredBitmap.Height, true))
+                            {
+                                chosen = inside.Settings;
+                                chosenBitmap = inside.Bitmap;
+                            }
+                        }
+                        else if (sceneKey(checkedBitmap) >= keyFloor && Prefers(neutralBitmap, checkedBitmap, chosenBitmap))
+                        {
+                            chosen = candidate;
+                            chosenBitmap = checkedBitmap;
+                        }
                     }
                     else if (checkedRender.Outcome is null) { return null; }
                 }
+                // 고른 결과에서도 새로 날아간 채널이 한도를 넘으면, 고른 제안과 그 바닥(흰색의 밝히는 몫을 빼고 노출은
+                // 채널 한도의 바닥까지) 사이를 그려 이분해 맞는 가장 밝은 점을 씁니다. 맞는 점이 없으면 초과가 가장 적은
+                // 점입니다.
+                if (channelExcess(neutralBitmap, chosenBitmap) is > 0)
+                {
+                    // 노출은 채널 한도의 바닥(채널을 보지 않고 푼 노출 − 1 스톱)까지만 내립니다 — 그 아래는 클리핑을
+                    // 받아들입니다(macOS `AutoAdjust.channelExposureBudget`).
+                    double floor = Math.Min(chosen.Exposure, Math.Max(Math.Min(chosen.Exposure, 0), exposureFloor));
+                    AutoAdjustSettings bottom = WithExposureAndWhites(chosen, floor, Math.Min(chosen.Whites, 0));
+                    if (RefinementDistance(chosen, bottom) > 0.005)
+                    {
+                        Bisection? lowered = await BisectChannelsAsync(
+                            bottom, chosen, chosenBitmap, neutralBitmap, keyFloor, Applied, frame.SourcePath, isCurrent)
+                            .ConfigureAwait(false);
+                        if (lowered is null) { return null; }
+                        chosen = lowered.Value.Fit?.Settings ?? lowered.Value.Least.Settings;
+                    }
+                }
+                settings = chosen;
             }
             else if (verified.Outcome is null)
             {
@@ -333,6 +427,75 @@ public sealed class AutoAdjustCoordinator
             DevelopRequestRefusal.None,
             null);
     }
+
+    private readonly record struct Measured(AutoAdjustSettings Settings, ToneBitmap Bitmap);
+
+    private readonly record struct Bisection(Measured? Fit, Measured Least);
+
+    /// <summary>
+    /// <paramref name="fitting"/>(맞는다고 보는 끝)에서 <paramref name="exceeding"/>(넘친다고 잰 끝)으로 가는 노출·흰색
+    /// 선분을 그려 이분합니다(최대 3 회). 장면 키가 <paramref name="keyFloor"/> 보다 어두운 점은 너무 어두운 것으로 보고 더
+    /// 밝은 쪽을 찾습니다. <c>Fit</c> 은 맞는 가장 밝은 점, <c>Least</c> 는 키 바닥을 지킨 잰 점 가운데 가장 나은 점입니다
+    /// (macOS <c>AutoAdjust.bisectChannels</c>). 더 새 요청에 밀렸으면 <see langword="null"/> 입니다.
+    /// </summary>
+    private async Task<Bisection?> BisectChannelsAsync(
+        AutoAdjustSettings fitting, AutoAdjustSettings exceeding, ToneBitmap exceedingBitmap, ToneBitmap neutral,
+        double keyFloor, Func<AutoAdjustSettings, LibraryFrameSnapshot> applied, string sourcePath, Func<bool> isCurrent)
+    {
+        double low = 0, high = 1;
+        Measured? fit = null;
+        Measured least = new(exceeding, exceedingBitmap);
+        for (int round = 0; round < ChannelRefinementLimit; ++round)
+        {
+            double t = 0.5 * (low + high);
+            AutoAdjustSettings trial = WithExposureAndWhites(
+                exceeding,
+                fitting.Exposure + ((exceeding.Exposure - fitting.Exposure) * t),
+                fitting.Whites + ((exceeding.Whites - fitting.Whites) * t));
+            Rendered render = await RenderAsync(applied(trial), sourcePath, isCurrent).ConfigureAwait(false);
+            if (render.Pixels is null)
+            {
+                if (render.Outcome is null) { return null; }
+                break;
+            }
+            ToneBitmap bitmap = new(render.Pixels, render.Width, render.Height);
+            if (sceneKey(bitmap) < keyFloor)
+            {
+                low = t;   // 장면 키가 바닥보다 어둡습니다 — 더 밝은 쪽을 찾습니다.
+            }
+            else if (channelExcess(neutral, bitmap) is 0.0)
+            {
+                low = t;
+                fit = new Measured(trial, bitmap);
+            }
+            else
+            {
+                high = t;
+                if (Prefers(neutral, bitmap, least.Bitmap)) { least = new Measured(trial, bitmap); }
+            }
+        }
+        return new Bisection(fit, least);
+    }
+
+    /// <summary>
+    /// 확인 렌더 둘 중 후보를 받을지입니다. 새로 날아간 채널이 한도를 넘는 양이 적은 쪽이 낫고, 같으면 톤 점수가
+    /// 정합니다(macOS <c>AutoAdjust.prefersCandidate</c>). 노출은 양방향으로 장면 키를 맞추므로 중간(로그 평균)
+    /// 오차를 늘 봅니다.
+    /// </summary>
+    private bool Prefers(ToneBitmap neutral, ToneBitmap candidate, ToneBitmap current)
+    {
+        if (channelExcess(neutral, current) is { } excessNow && channelExcess(neutral, candidate) is { } excessCandidate &&
+            Math.Abs(excessNow - excessCandidate) > 1e-9)
+        {
+            return excessCandidate < excessNow;
+        }
+        return quality(candidate.Pixels, candidate.Width, candidate.Height, true) <
+               quality(current.Pixels, current.Width, current.Height, true);
+    }
+
+    private static AutoAdjustSettings WithExposureAndWhites(AutoAdjustSettings source, double exposure, double whites) =>
+        new(exposure, source.Contrast, source.Highlights, source.Shadows, whites, source.Blacks, source.Density,
+            source.Vibrance, source.Warmth, source.Tint);
 
     private static double RefinementDistance(AutoAdjustSettings first, AutoAdjustSettings second) =>
         Math.Abs(first.Exposure - second.Exposure) + 0.5 * Math.Abs(first.Whites - second.Whites);

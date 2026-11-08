@@ -1,4 +1,6 @@
 #include "negaflow/imaging/auto_adjust.h"
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include "develop_export_abi_test_support.h"
 
@@ -110,6 +112,45 @@ void test_auto_adjust_on_a_real_scan(const std::filesystem::path& source) {
             pixels.data(), result.image_width, result.image_height, stride, 0U, nullptr,
             &refined) == NF_STATUS_INVALID_ARGUMENT,
         "refinement without a first answer is refused");
+
+    // 0.55: 중립 현상본을 같이 넘기는 폐루프와 채널 초과량. 같은 그림이면 새로 날아간 채널이 없습니다.
+    nf_auto_adjust_result_v1 refined_v2{};
+    refined_v2.struct_size = static_cast<std::uint32_t>(sizeof(refined_v2));
+    expect(
+        nf_auto_tone_refine_v2(
+            pixels.data(), result.image_width, result.image_height, stride,
+            pixels.data(), result.image_width, result.image_height, stride, 0U, &v2, &refined_v2) == NF_STATUS_OK,
+        "the neutral-aware refinement accepts the neutral and rendered previews");
+    expect(
+        refined_v2.contrast == v2.contrast && refined_v2.density == v2.density &&
+            refined_v2.warmth == v2.warmth && refined_v2.tint == v2.tint,
+        "the neutral-aware refinement only moves exposure and whites");
+    double excess = -2.0;
+    expect(
+        nf_auto_tone_channel_excess_v1(
+            pixels.data(), result.image_width, result.image_height, stride,
+            pixels.data(), result.image_width, result.image_height, stride, &excess) == NF_STATUS_OK &&
+            excess == 0.0,
+        "an unchanged render has no channel excess");
+    expect(
+        nf_auto_tone_channel_excess_v1(
+            nullptr, result.image_width, result.image_height, stride,
+            pixels.data(), result.image_width, result.image_height, stride, &excess) == NF_STATUS_INVALID_ARGUMENT,
+        "channel excess without the neutral render is refused");
+    double floor = 99.0;
+    double budget = -1.0;
+    expect(
+        nf_auto_tone_channel_limits_v1(
+            pixels.data(), result.image_width, result.image_height, stride, 0U, v2.exposure, &floor, &budget) ==
+                NF_STATUS_OK &&
+            std::isfinite(floor) && floor <= std::max(v2.exposure, 0.0) + 1e-9 && budget >= 0.0 && budget <= 1.0,
+        "the channel limits are reported within their ranges");
+    double key = -1.0;
+    expect(
+        nf_auto_tone_scene_key_v1(pixels.data(), result.image_width, result.image_height, stride, &key) ==
+                NF_STATUS_OK &&
+            key > 0.0 && key <= 1.0,
+        "the scene key of a rendered preview is a positive luminance");
 }
 
 }  // namespace negaflow::develop_export_abi_tests

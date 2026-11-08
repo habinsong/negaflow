@@ -16,6 +16,9 @@ namespace negaflow::imaging {
 // 캐스트 주위로 두 번 좁혀 고릅니다. 그리고 휘도대(1 스톱)마다 중앙값을 따로 냅니다 — 한
 // 휘도대를 차지한 따뜻한 조명 면이 전체를 끌고 가지 못하게 합니다(2026-10-14 실측: 화면 15% 의
 // 웜 영역 때문에 자동 WB 가 진짜 중립을 R/B 0.90 으로 식혔습니다).
+// 대역 하나의 폭(ln 2, 1 스톱)입니다. 대역은 ln Ȳ 를 이 폭의 칸으로 나눠 만듭니다.
+inline constexpr double neutral_axis_band_width = 0.69314718055994530942;
+
 struct NeutralAxisBand final {
     // 대역 화소의 ln(기하평균 휘도) 중앙값입니다.
     double log_luminance{0.0};

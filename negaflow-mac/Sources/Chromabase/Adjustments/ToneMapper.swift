@@ -75,65 +75,21 @@ public enum ToneMapper {
         }
 
         guard let kernel = ChromabaseMetalKernels.colorKernel(named: "parametricToneCurve") else { return image }
-        let bands = parametricCurveBands(for: AnalysisRegion.measurementImage(image, region: region))
+        let curve = ParametricToneCurve(
+            percentiles: sampleLumaPercentiles(from: AnalysisRegion.measurementImage(image, region: region)),
+            highlights: params.curveHighlights, lights: params.curveLights,
+            darks: params.curveDarks, shadows: params.curveShadows)
+        let x = curve.x.map { CGFloat($0) }, y = curve.y.map { CGFloat($0) }, m = curve.tangent.map { CGFloat($0) }
         return kernel.apply(extent: image.extent, arguments: [
             image,
-            Float(params.curveHighlights),
-            Float(params.curveLights),
-            Float(params.curveDarks),
-            Float(params.curveShadows),
-            Float(bands.shadowLow),
-            Float(bands.shadowHigh),
-            Float(bands.darkLow),
-            Float(bands.darkHigh),
-            Float(bands.lightLow),
-            Float(bands.lightHigh),
-            Float(bands.highlightLow),
-            Float(bands.highlightHigh),
+            CIVector(x: x[1], y: x[2], z: x[3], w: x[4]),
+            CIVector(x: y[1], y: y[2], z: y[3], w: y[4]),
+            CIVector(x: m[0], y: m[1], z: m[2]),
+            CIVector(x: m[3], y: m[4], z: m[5]),
         ])?.cropped(to: image.extent) ?? image
     }
 
-    private struct ParametricCurveBands {
-        let shadowLow: Double
-        let shadowHigh: Double
-        let darkLow: Double
-        let darkHigh: Double
-        let lightLow: Double
-        let lightHigh: Double
-        let highlightLow: Double
-        let highlightHigh: Double
-    }
-
-    private static func parametricCurveBands(for image: CIImage) -> ParametricCurveBands {
-        guard let sampled = sampleLumaPercentiles(from: image) else {
-            return ParametricCurveBands(
-                shadowLow: 0.05,
-                shadowHigh: 0.24,
-                darkLow: 0.18,
-                darkHigh: 0.36,
-                lightLow: 0.34,
-                lightHigh: 0.68,
-                highlightLow: 0.36,
-                highlightHigh: 0.50
-            )
-        }
-        let p10 = sampled[0]
-        let p35 = max(sampled[1], p10 + 0.025)
-        let p65 = max(sampled[2], p35 + 0.025)
-        let p90 = max(sampled[3], p65 + 0.025)
-        return ParametricCurveBands(
-            shadowLow: max(0.0, p10 - 0.020),
-            shadowHigh: p35,
-            darkLow: p35,
-            darkHigh: p65,
-            lightLow: p65,
-            lightHigh: p90,
-            highlightLow: p65,
-            highlightHigh: min(1.0, p90 + 0.030)
-        )
-    }
-
-    private static func sampleLumaPercentiles(from image: CIImage) -> [Double]? {
+    static func sampleLumaPercentiles(from image: CIImage) -> [Double]? {
         let extent = image.extent.integral
         guard extent.width > 8, extent.height > 8,
               let linear = CGColorSpace(name: CGColorSpace.linearSRGB) else { return nil }

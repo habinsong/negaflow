@@ -173,15 +173,23 @@ void test_refinement_absorbs_a_user_curve() {
     }
 }
 
-// 노출이 밝히지 않았으면 폐루프도 미드를 건드리지 않습니다("밝히는 방향만").
-void test_refinement_keeps_exposure_when_it_did_not_brighten() {
+// 폐루프도 장면 키로 양방향입니다(macOS `refineTone`): 잰 결과가 어두우면 노출을 올리고, 밝으면
+// 내립니다. 예전 "밝히는 방향만" 규칙에서는 노출 0 이 그대로 0 이었습니다.
+void test_refinement_moves_exposure_toward_the_scene_key() {
     negaflow::imaging::AutoToneResult first{};
     first.exposure = 0.0;
     const WorkingImage dark = make_image(64U, 64U, [](std::uint32_t, std::uint32_t) {
         return std::array<double, 3>{0.02, 0.02, 0.02};
     });
-    const auto refined = negaflow::imaging::refine_auto_tone(first, stats_of(dark));
-    expect(refined.exposure == 0.0, "a zero exposure stays zero after refinement");
+    expect(negaflow::imaging::refine_auto_tone(first, stats_of(dark)).exposure > 0.0,
+           "a dark measured frame is brightened by refinement");
+    // 대부분 선형 0.5, 위 3% 가 0.95 — 장면 키보다 밝고 백점이 회복 바닥보다 높습니다.
+    const WorkingImage bright = make_image(64U, 64U, [](std::uint32_t, const std::uint32_t y) {
+        const double v = y < 2U ? 0.95 : 0.5;
+        return std::array<double, 3>{v, v, v};
+    });
+    expect(negaflow::imaging::refine_auto_tone(first, stats_of(bright)).exposure < 0.0,
+           "a bright measured frame is darkened by refinement");
 }
 
 // 노출 뒤 백분위 예측은 엔진과 같은 숄더 연산자를 씁니다 — 흑백 네거티브(헤드룸 0.234 스톱)는
@@ -197,12 +205,31 @@ void test_exposure_prediction_follows_the_film_shoulder() {
            "a tighter shoulder predicts a lower white point and asks for more whites");
 }
 
+// 첫 제안이 실질 채널 클리핑(≥5%)을 만들었으면 폐루프가 흰색 리프트를 거둡니다. 그보다 적은 클리핑은
+// 흰색 규칙을 바꾸지 않습니다(macOS `testRefineToneWithdrawsWhitesThatClipChannels`).
+void test_refinement_withdraws_whites_that_clip_channels() {
+    negaflow::imaging::AutoAdjustStats measured{};
+    measured.luma_histogram[120] = 0.80;
+    measured.luma_histogram[235] = 0.195;
+    measured.luma_histogram[244] = 0.005;
+    negaflow::imaging::AutoToneResult first{};
+    first.exposure = 0.3;
+    first.whites = 0.4;
+    measured.clipped_fraction = 0.08;
+    expect(negaflow::imaging::refine_auto_tone(first, measured).whites == 0.0,
+           "whites that clip channels are withdrawn");
+    measured.clipped_fraction = 0.02;
+    expect(std::abs(negaflow::imaging::refine_auto_tone(first, measured).whites - first.whites) < 1.0e-12,
+           "minor clipping leaves the whites rule alone");
+}
+
 }  // namespace
 
 int main() {
+    test_refinement_withdraws_whites_that_clip_channels();
     test_white_balance_ignores_a_warm_lit_region();
     test_refinement_absorbs_a_user_curve();
-    test_refinement_keeps_exposure_when_it_did_not_brighten();
+    test_refinement_moves_exposure_toward_the_scene_key();
     test_exposure_prediction_follows_the_film_shoulder();
     if (failures != 0) {
         std::cerr << failures << " auto tone closed-loop check(s) failed\n";

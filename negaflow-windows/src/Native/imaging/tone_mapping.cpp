@@ -100,11 +100,35 @@ using negaflow::core::apply_pointwise;
            std::isfinite(parameters.darks) && std::isfinite(parameters.shadows);
 }
 
+// 매듭은 유한하고 (0,1) 안에서 증가해야 합니다. 그래야 구간 폭이 양수입니다.
 [[nodiscard]] bool finite_bands(const ParametricToneCurveBands& bands) noexcept {
-    return std::isfinite(bands.shadow_low) && std::isfinite(bands.shadow_high) &&
-           std::isfinite(bands.dark_low) && std::isfinite(bands.dark_high) &&
-           std::isfinite(bands.light_low) && std::isfinite(bands.light_high) &&
-           std::isfinite(bands.highlight_low) && std::isfinite(bands.highlight_high);
+    double previous = 0.0;
+    for (const double knot : bands.knots) {
+        if (!std::isfinite(knot) || knot <= previous || knot >= 1.0) {
+            return false;
+        }
+        previous = knot;
+    }
+    return true;
+}
+
+// 매듭이 양 끝과 떨어져야 하는 최소 거리 = 매듭끼리의 최소 간격(인코딩)입니다. 그래서 어떤 장면에서도
+// ±1 이 매듭을 적어도 reach × 0.10 = 0.045 움직입니다(macOS `ParametricToneCurve`).
+constexpr double curve_minimum_gap = 0.10;
+constexpr double curve_reach = 0.45;
+
+[[nodiscard]] double encode_srgb(const double linear) noexcept {
+    return linear <= 0.0031308 ? linear * 12.92 : (1.055 * std::pow(linear, 1.0 / 2.4)) - 0.055;
+}
+
+// 블렌드 커널(`basic_tone.hlsl`)과 같은 연산 순서의 검정 한 단계(|amount| ≤ 1)입니다. 올리는 쪽은
+// smoothstep 0~0.03 상승, 내리는 쪽은 t − c·min(1, t/0.03)·fall 이고 0 아래는 0 에 붙습니다.
+[[nodiscard]] float basic_tone_blacks(const float t, const float amount) noexcept {
+    const float fall = 1.0F - smoothstep(0.14F, 0.30F, t);
+    if (amount >= 0.0F) {
+        return t + (amount * 0.06F * smoothstep(0.0F, 0.03F, t) * fall);
+    }
+    return std::max(t + (amount * 0.06F * std::min(1.0F, std::max(t, 0.0F) / 0.03F) * fall), 0.0F);
 }
 
 }  // namespace
@@ -160,32 +184,123 @@ negaflow::core::KernelStatus apply_basic_tone(
             target += (curved - target) * blend;
         }
 
-        const float mid_mask = smoothstep(0.18F, 0.36F, encoded_luma) *
-                               (1.0F - smoothstep(0.58F, 0.76F, encoded_luma));
-        target -= parameters.density * 0.10F * mid_mask;
+        // 단계마다 앞 단계의 출력에 차례로 겁니다(macOS `basicTone`, `basic_tone_model.h`). 각 단계가
+        // 그 자체로 단조라 합성도 단조이고, 어떤 슬라이더 조합에서도 톤이 뒤집히지 않습니다. 예전에는
+        // 마스크를 모두 원래 휘도에서 재서 더했는데, 마스크 경계 기울기 × 계수가 1 을 넘는 곳에서
+        // 뒤집혔습니다(암부 −1·흰색 −2·조합, 2026-11-08 실측).
+        const float density = std::clamp(parameters.density, -1.0F, 1.0F);
+        target -= density * 0.10F * smoothstep(0.18F, 0.36F, target) *
+                  (1.0F - smoothstep(0.58F, 0.76F, target));
 
-        const float highlight_mask = smoothstep(0.55F, 0.80F, encoded_luma);
-        target += parameters.highlights * 0.10F * highlight_mask;
+        const float highlights = std::clamp(parameters.highlights, -1.0F, 1.0F);
+        target += highlights * 0.10F * smoothstep(0.55F, 0.80F, target);
 
-        const float shadow_mask = smoothstep(0.02F, 0.08F, encoded_luma) *
-                                  (1.0F - smoothstep(0.32F, 0.46F, encoded_luma));
-        target += parameters.shadows * 0.10F * shadow_mask;
+        // 암부: 올리는 쪽은 0.02~0.08 에서 오르고(절대 검정 앵커), 내리는 쪽은 검정에서부터 0~0.20 에
+        // 걸쳐 오릅니다. 위쪽 경계는 0.30~0.46 입니다(+1 에서 기울기 0.94).
+        const float shadows = std::clamp(parameters.shadows, -1.0F, 1.0F);
+        const float shadow_rise = shadows > 0.0F ? smoothstep(0.02F, 0.08F, target)
+                                                 : smoothstep(0.0F, 0.20F, target);
+        target += shadows * 0.10F * shadow_rise * (1.0F - smoothstep(0.30F, 0.46F, target));
 
-        // macOS `basicTone` 은 커널 안에서 `clamp(whitesAmount, -2.0, 2.0)` 을 겁니다
-        // (`ChromabaseMetalKernels.swift:231,235`). 범위는 `DevelopToneRange.whites`·`blacks`
-        // 의 `-2...2` 이고, 계수(0.12/0.06)와 마스크는 그대로 둡니다.
-        // 2026-08-18 이전에는 이 clamp 가 없어 범위를 넘는 값이 그대로 곱해졌습니다.
-        const float white_mask = smoothstep(0.68F, 0.92F, encoded_luma);
-        target += std::clamp(parameters.whites, -2.0F, 2.0F) * 0.12F * white_mask;
+        // 백점·흑점은 `DevelopToneRange` 의 ±2 입니다. ±1 을 넘는 몫은 같은 단계를 한 번 더 겁니다
+        // (단계 하나의 기울기가 1 을 넘지 않습니다).
+        const float whites = std::clamp(parameters.whites, -2.0F, 2.0F);
+        const float whites_first = std::clamp(whites, -1.0F, 1.0F);
+        target += whites_first * 0.12F * smoothstep(0.68F, 0.92F, target);
+        target += (whites - whites_first) * 0.12F * smoothstep(0.68F, 0.92F, target);
 
-        const float black_mask = smoothstep(0.0F, 0.03F, encoded_luma) *
-                                 (1.0F - smoothstep(0.14F, 0.30F, encoded_luma));
-        target += std::clamp(parameters.blacks, -2.0F, 2.0F) * 0.06F * black_mask;
+        const float blacks = std::clamp(parameters.blacks, -2.0F, 2.0F);
+        const float blacks_first = std::clamp(blacks, -1.0F, 1.0F);
+        target = basic_tone_blacks(target, blacks_first);
+        target = basic_tone_blacks(target, blacks - blacks_first);
 
         const float new_luma = negaflow::color::srgb_encoded_to_linear(
             clamp_unit(target));
         return with_luma(safe, source_luma, new_luma, source.alpha);
     });
+}
+
+ParametricToneCurveBands parametric_tone_curve_bands_from_percentiles(
+    const double p10,
+    const double p35,
+    const double p65,
+    const double p90) noexcept {
+    const double percentiles[4]{p10, p35, p65, p90};
+    for (const double value : percentiles) {
+        if (!std::isfinite(value)) {
+            return fallback_parametric_tone_curve_bands();
+        }
+    }
+    constexpr double low = curve_minimum_gap;
+    constexpr double high = 1.0 - curve_minimum_gap;
+    ParametricToneCurveBands bands{};
+    bands.knots[0] = std::clamp(encode_srgb(std::clamp(p10, 0.0, 1.0)), low, high - (3.0 * curve_minimum_gap));
+    for (std::size_t i = 1U; i < 4U; ++i) {
+        bands.knots[i] = std::max(encode_srgb(std::clamp(percentiles[i], 0.0, 1.0)),
+                                  bands.knots[i - 1U] + curve_minimum_gap);
+    }
+    if (bands.knots[3] > high) {
+        bands.knots[3] = high;
+        for (std::size_t i = 3U; i-- > 0U;) {
+            bands.knots[i] = std::min(bands.knots[i], bands.knots[i + 1U] - curve_minimum_gap);
+        }
+    }
+    return bands;
+}
+
+ParametricToneCurveShape parametric_tone_curve_shape(
+    const ParametricToneCurveParameters& parameters,
+    const ParametricToneCurveBands& bands) noexcept {
+    ParametricToneCurveShape shape{};
+    shape.x[0] = 0.0;
+    shape.x[5] = 1.0;
+    for (std::size_t i = 0U; i < 4U; ++i) { shape.x[i + 1U] = bands.knots[i]; }
+    for (std::size_t i = 0U; i < 6U; ++i) { shape.y[i] = shape.x[i]; }
+    const float amounts[4]{parameters.shadows, parameters.darks, parameters.lights, parameters.highlights};
+    for (std::size_t i = 0U; i < 4U; ++i) {
+        const std::size_t k = i + 1U;
+        const double raw = static_cast<double>(amounts[i]);
+        const double a = std::clamp(std::isfinite(raw) ? raw : 0.0, -1.0, 1.0);
+        shape.y[k] = shape.x[k] + (a > 0.0 ? a * curve_reach * (shape.x[k + 1U] - shape.x[k])
+                                           : a * curve_reach * (shape.x[k] - shape.x[k - 1U]));
+    }
+    // Fritsch–Carlson 기울기입니다.
+    double d[5]{};
+    for (std::size_t i = 0U; i < 5U; ++i) {
+        d[i] = (shape.y[i + 1U] - shape.y[i]) / (shape.x[i + 1U] - shape.x[i]);
+    }
+    shape.tangent[0] = d[0];
+    shape.tangent[5] = d[4];
+    for (std::size_t i = 1U; i < 5U; ++i) {
+        shape.tangent[i] = d[i - 1U] * d[i] <= 0.0 ? 0.0 : (d[i - 1U] + d[i]) / 2.0;
+    }
+    for (std::size_t i = 0U; i < 5U; ++i) {
+        if (!(d[i] > 0.0)) {
+            shape.tangent[i] = 0.0;
+            shape.tangent[i + 1U] = 0.0;
+            continue;
+        }
+        const double a = shape.tangent[i] / d[i];
+        const double b = shape.tangent[i + 1U] / d[i];
+        const double sum = (a * a) + (b * b);
+        if (sum > 9.0) {
+            const double t = 3.0 / std::sqrt(sum);
+            shape.tangent[i] = t * a * d[i];
+            shape.tangent[i + 1U] = t * b * d[i];
+        }
+    }
+    return shape;
+}
+
+double evaluate_parametric_tone_curve(const ParametricToneCurveShape& shape, const double encoded) noexcept {
+    std::size_t i = 0U;
+    while (i < 4U && encoded >= shape.x[i + 1U]) { ++i; }
+    const double h = shape.x[i + 1U] - shape.x[i];
+    const double t = std::clamp((encoded - shape.x[i]) / h, 0.0, 1.0);
+    const double t2 = t * t;
+    const double t3 = t2 * t;
+    return (((2.0 * t3) - (3.0 * t2) + 1.0) * shape.y[i]) + ((t3 - (2.0 * t2) + t) * h * shape.tangent[i]) +
+           (((-2.0 * t3) + (3.0 * t2)) * shape.y[i + 1U]) + ((t3 - t2) * h * shape.tangent[i + 1U]);
 }
 
 negaflow::core::KernelStatus apply_parametric_tone_curve(
@@ -196,30 +311,34 @@ negaflow::core::KernelStatus apply_parametric_tone_curve(
     if (!finite_curve_parameters(parameters) || !finite_bands(bands)) {
         return negaflow::core::KernelStatus::non_finite_parameter;
     }
+    // 매듭은 한 번만 풉니다. 화소마다는 GPU(`parametric_tone_curve.hlsl`)와 같은 float 식입니다.
+    const ParametricToneCurveShape shape = parametric_tone_curve_shape(parameters, bands);
+    float x[6]{};
+    float y[6]{};
+    float m[6]{};
+    for (std::size_t i = 0U; i < 6U; ++i) {
+        x[i] = static_cast<float>(shape.x[i]);
+        y[i] = static_cast<float>(shape.y[i]);
+        m[i] = static_cast<float>(shape.tangent[i]);
+    }
 
-    return apply_pointwise(input, output, [&parameters, &bands](
+    return apply_pointwise(input, output, [&x, &y, &m](
         const negaflow::core::Rgba32F source) noexcept {
         const negaflow::core::Rgba32F safe =
             negaflow::imaging::tone_safe_unit_rgb(source);
         const float source_luma = luma(safe);
-        const float shadow_mask =
-            (1.0F - smoothstep(bands.shadow_low, bands.shadow_high, source_luma)) *
-            smoothstep(0.0F, 0.045F, source_luma);
-        const float dark_mask =
-            smoothstep(bands.shadow_low, bands.shadow_high, source_luma) *
-            (1.0F - smoothstep(bands.dark_low, bands.dark_high, source_luma));
-        const float light_mask =
-            smoothstep(bands.dark_low, bands.dark_high, source_luma) *
-            (1.0F - smoothstep(bands.light_low, bands.light_high, source_luma));
-        const float highlight_mask =
-            smoothstep(bands.highlight_low, bands.highlight_high, source_luma);
-
-        const float delta =
-            (parameters.shadows * 0.160F * shadow_mask) +
-            (parameters.darks * 0.155F * dark_mask) +
-            (parameters.lights * 0.165F * light_mask) +
-            (parameters.highlights * 0.150F * highlight_mask);
-        const float target = clamp_unit(source_luma + delta);
+        const float g = negaflow::color::linear_to_srgb_encoded(clamp_unit(source_luma));
+        std::size_t i = 0U;
+        while (i < 4U && g >= x[i + 1U]) { ++i; }
+        const float h = x[i + 1U] - x[i];
+        const float t = clamp_unit((g - x[i]) / h);
+        const float t2 = t * t;
+        const float t3 = t2 * t;
+        const float curved = (((2.0F * t3) - (3.0F * t2) + 1.0F) * y[i]) +
+                             ((t3 - (2.0F * t2) + t) * h * m[i]) +
+                             (((-2.0F * t3) + (3.0F * t2)) * y[i + 1U]) +
+                             ((t3 - t2) * h * m[i + 1U]);
+        const float target = negaflow::color::srgb_encoded_to_linear(clamp_unit(curved));
         return with_luma(safe, source_luma, target, source.alpha);
     });
 }

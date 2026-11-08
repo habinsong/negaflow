@@ -43,9 +43,13 @@ extension ScanFrame {
         return sha256
     }
 
+    /// 접두사는 같은 설정의 렌더 결과가 바뀔 때 올린다. 맞지 않는 썸네일은 그대로 보이다가 가벼운 경로
+    /// (`refreshThumbnailOnly`)가 백그라운드에서 다시 만든다. Windows 는 엔진 DLL 지문이 식별자에 들어 있어
+    /// 따로 올리지 않는다. input2: 1.1.5 입력 감마. tone3: 2026-11-08 기본 톤 단계 합성·단조 파라메트릭 커브·
+    /// 자동 색상 감마 범위.
     func currentThumbnailRecipeID() -> String? {
         currentLibraryDevelopRecipeSHA256().map {
-            "input2-" + $0 + "-" + (boundDefectRecipeIdentity?.recipeSHA256 ?? "none")
+            "tone3-" + $0 + "-" + (boundDefectRecipeIdentity?.recipeSHA256 ?? "none")
         }
     }
 

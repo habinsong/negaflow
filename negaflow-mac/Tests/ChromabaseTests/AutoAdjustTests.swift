@@ -32,11 +32,23 @@ final class AutoAdjustTests: XCTestCase {
             "흰색 이상치는 노출을 포기하기보다 Highlights 복구 쪽으로 처리해야 합니다."
         )
     }
-    func testAutoToneDoesNotDarkenBrightNonClippedImage() {
-        // 하이라이트 여유가 있는 밝은 이미지(p99≈0.85)는 어둡게 만들면 안 된다(밝은 씬 보호).
-        var h = [Double](repeating: 0, count: 256); h[217] = 1
-        let d = AutoAdjust.autoTone(stats(0.85, 0.85, 0.85, h, sat: 0.3))
-        XCTAssertGreaterThan(d.exposure, -0.15, "밝은(비클리핑) 이미지를 과하게 어둡게 하면 안 된다")
+    private func highlight(of s: AutoAdjust.ImageStats, _ fraction: Double = 0.99) -> Double {
+        var acc = 0.0
+        for i in 0..<256 { acc += s.lumaHist[i]; if acc >= fraction { return AutoAdjust.srgbDecode(Double(i) / 255) } }
+        return 1
+    }
+
+    /// 밝은(비클리핑) 이미지도 그 장면의 키(sceneKey)까지 내린다 — 예전의 "밝히는 방향만" 규칙은 사용자
+    /// 카탈로그 398장 중 49%(컬러 네거티브 85%)에서 노출을 늘 0 으로 묶었다(2026-11-08).
+    func testAutoToneDarkensBrightImageToSceneKey() {
+        var h = [Double](repeating: 0, count: 256); h[217] = 0.98; h[250] = 0.02   // 대부분 linear ≈ 0.69
+        let s = stats(0.85, 0.85, 0.85, h, sat: 0.3)
+        let d = AutoAdjust.autoTone(s)
+        // 장면 키까지 내리되, 백점(p995)이 회복 바닥 아래로 내려가지 않는 데서 멈춘다.
+        let expected = max(AutoAdjust.sceneKeyExposure(logAverage: s.logAverageLuminance, highlight: highlight(of: s)),
+                           log2(AutoAdjust.whiteRecoveryFloor / highlight(of: s, 0.995)))
+        XCTAssertEqual(d.exposure, expected, accuracy: 1e-9)
+        XCTAssertLessThan(d.exposure, -0.5, "밝은 이미지는 노출을 내려야 한다")
     }
     func testAutoToneDoesNotBrightenClippedImage() {
         // 하이라이트가 클리핑된 과노출 이미지(p99≈1.0)는 노출을 더 올리면 안 된다.
@@ -170,14 +182,94 @@ final class AutoAdjustTests: XCTestCase {
         XCTAssertEqual(t, 0, accuracy: 0.15, "지배 빨강이 Tint 를 끌고 가면 안 된다. t=\(t)")
     }
 
-    /// 미드가 photometric 앵커(linear 0.18)보다 밝은 이미지: 노출은 밝히는 방향만이므로 0이고,
-    /// density 로도 미드를 어둡게 하지 않는다(2026-10-14 — 예전에는 density(+)가 하이키·설경을
-    /// 회색으로 끌어내려 노출의 "밝히는 방향만" 원칙을 우회했다). 클리핑 복구만 어둡게 한다.
-    func testAutoToneDoesNotDarkenBrightMidtones() {
-        // p50 sRGB ≈ 0.62 (linear ≈ 0.34) — 미드가 앵커보다 +0.9 스탑 밝은 중간톤 이미지.
-        let d = AutoAdjust.autoTone(stats(0.62, 0.62, 0.62, spike(158), sat: 0.3))
-        XCTAssertEqual(d.exposure, 0, accuracy: 1e-9, "밝히는 방향이 아니면 노출은 0")
-        XCTAssertLessThanOrEqual(d.density, 0, "밝은 미드를 density(+)로 어둡게 하면 안 된다")
+    /// 미드가 키보다 밝은 이미지: 노출이 내려서 맞추고, 농도는 쓰지 않는다(농도는 노출이 막힌 만큼만).
+    func testAutoToneDarkensBrightMidtonesWithExposureNotDensity() {
+        // 대부분 sRGB 0.62(linear 0.34), 명부 3% 가 linear 0.9.
+        var h = [Double](repeating: 0, count: 256); h[158] = 0.97; h[243] = 0.03
+        let s = stats(0.62, 0.62, 0.62, h, sat: 0.3)
+        let d = AutoAdjust.autoTone(s)
+        XCTAssertEqual(d.exposure, AutoAdjust.sceneKeyExposure(logAverage: s.logAverageLuminance,
+                                                                highlight: highlight(of: s)), accuracy: 1e-9)
+        XCTAssertLessThan(d.exposure, -0.2, "장면 키(r 0.08·s 8)에서 약 −0.26 스톱")
+        XCTAssertEqual(d.density, 0, accuracy: 1e-12)
+    }
+
+    /// whiteRecoveryFloor 는 basicTone 의 대비(피벗 0.46, 지수 2^(c·0.9))·흰색 계열(0.12·smoothstep(0.68,
+    /// 0.92)) 식으로, 자동 톤의 대비 최대(+0.55)와 흰색 계열 +1 이 확산 화이트(0.90)까지 되돌릴 수 있는 가장
+    /// 낮은 백점이다. 커널 계수가 바뀌면 이 시험이 상수를 다시 맞추라고 알린다.
+    func testWhiteRecoveryFloorMatchesBasicToneReach() {
+        func contrast(_ x: Double, _ c: Double) -> Double {
+            let pivot = 0.46, e = pow(2, c * 0.9)
+            return x < pivot ? pivot * pow(x / pivot, e) : 1 - (1 - pivot) * pow((1 - x) / (1 - pivot), e)
+        }
+        let target = AutoAdjust.srgbEncode(AutoAdjust.diffuseWhiteLinear)
+        var lo = 0.46, hi = target
+        for _ in 0..<60 {
+            let mid = 0.5 * (lo + hi)
+            let y = contrast(mid, 0.55)
+            if y + 0.12 * AutoAdjust.smoothstep(0.68, 0.92, y) < target { lo = mid } else { hi = mid }
+        }
+        XCTAssertEqual(AutoAdjust.whiteRecoveryFloor, AutoAdjust.srgbDecode(hi), accuracy: 0.001)
+    }
+
+    /// 자동 톤은 기본 톤 커널의 합성 순서(대비 → 농도 → 명부 → 암부 → 흰색 → 검정)대로 역산한다. 흰색이
+    /// 한도(±1)에 걸리지 않으면 대비·명부가 옮긴 뒤의 백점(p995)이 정확히 확산 화이트에 닿는다.
+    func testAutoToneWhitesLandOnDiffuseWhiteThroughTheComposedKernel() {
+        var h = [Double](repeating: 0, count: 256)
+        for i in 30...190 { h[i] = 1 }                       // 대비·노출·흰색이 모두 움직이는 장면
+        let total = h.reduce(0, +)
+        h = h.map { $0 / total }
+        let s = stats(0.3, 0.3, 0.3, h, sat: 0.2)
+        let d = AutoAdjust.autoTone(s)
+        XCTAssertGreaterThan(abs(d.contrast), 0.05, "시험이 대비 단계를 실제로 거친다")
+        XCTAssertLessThan(abs(d.whites), 0.999, "흰색이 한도에 걸리지 않는 장면이어야 한다")
+        var acc = 0.0, p995s = 1.0
+        for i in 0..<256 { acc += h[i]; if acc >= 0.995 { p995s = Double(i) / 255; break } }
+        let p995a = AutoAdjust.srgbEncode(min(ExposureShoulder.exposedLuminance(
+            AutoAdjust.srgbDecode(p995s), stops: d.exposure, filmType: .colorNegative), 1))
+        let white = BasicToneModel.apply(p995a, contrast: d.contrast, density: d.density, highlight: d.highlight,
+                                         shadow: d.shadow, whites: d.whites, blacks: d.blacks)
+        // 흰색 단계의 마스크는 그 단계의 입력에서 재고 검정 단계는 0.30 위를 건드리지 않으므로 정확하다.
+        XCTAssertEqual(white, AutoAdjust.srgbEncode(AutoAdjust.diffuseWhiteLinear), accuracy: 1e-9)
+    }
+
+    /// 어둡힐 때 백점이 회복 바닥 아래로 내려가지 않는다.
+    func testAutoToneDoesNotDarkenWhitesBelowRecoveryFloor() {
+        var h = [Double](repeating: 0, count: 256); h[200] = 0.97; h[218] = 0.03   // 대부분 0.58, 백점 0.70
+        let s = stats(0.8, 0.8, 0.8, h, sat: 0.2)
+        let d = AutoAdjust.autoTone(s)
+        XCTAssertLessThan(d.exposure, 0)
+        XCTAssertGreaterThanOrEqual(0.70 * pow(2, d.exposure), AutoAdjust.whiteRecoveryFloor - 0.01)
+    }
+
+    /// 장면 키는 하이키를 높게, 로우키를 낮게 잡는다(Reinhard k = r·s^z). 같은 명부에서 로그 평균이 명부
+    /// 쪽에 몰릴수록 키가 커지고, 키는 r/s ~ r·s 범위 안이다.
+    func testSceneKeyFollowsSceneKey() {
+        let low = AutoAdjust.sceneKey(logAverage: 0.02, highlight: 0.9)
+        let normal = AutoAdjust.sceneKey(logAverage: 0.12, highlight: 0.9)
+        let high = AutoAdjust.sceneKey(logAverage: 0.6, highlight: 0.9)
+        XCTAssertLessThan(low, normal); XCTAssertLessThan(normal, high)
+        for k in [low, normal, high] {
+            XCTAssertGreaterThanOrEqual(k, AutoAdjust.sceneKeyCenter / AutoAdjust.sceneKeySpread - 1e-12)
+            XCTAssertLessThanOrEqual(k, AutoAdjust.sceneKeyCenter * AutoAdjust.sceneKeySpread + 1e-12)
+        }
+        // 고정점: 그 노출을 준 뒤의 로그 평균이 그 장면의 키와 같다.
+        let ev = AutoAdjust.sceneKeyExposure(logAverage: 0.3, highlight: 0.7)
+        let g = pow(2, ev)
+        XCTAssertEqual(log2(0.3 * g), log2(AutoAdjust.sceneKey(logAverage: 0.3 * g, highlight: 0.7 * g)), accuracy: 1e-3)
+    }
+
+    /// 장면 키 노출은 명부가 1 에 닿아 키가 노출에 빠르게 따라오는 영역에서도 정확한 근이다. 예전 고정점
+    /// 반복(6 회)은 이 영역에서 최대 1 스톱 넘게 남았다.
+    func testSceneKeyExposureIsExactWhereTheHighlightSaturates() {
+        for logAverage in [0.002, 0.01, 0.05, 0.12, 0.3, 0.6] {
+            for highlight in [0.02, 0.2, 0.6, 0.95, 1.0] where highlight >= logAverage {
+                let ev = AutoAdjust.sceneKeyExposure(logAverage: logAverage, highlight: highlight)
+                let g = pow(2, ev)
+                let key = AutoAdjust.sceneKey(logAverage: logAverage * g, highlight: min(highlight * g, 1))
+                XCTAssertEqual(log2(key / (logAverage * g)), 0, accuracy: 1e-9, "Lav \(logAverage) p99 \(highlight)")
+            }
+        }
     }
 
     /// 어두운 미드(노출 상한 이내): 노출이 미드 앵커를 채우면 density 잔차는 작아야 한다.
@@ -198,12 +290,25 @@ final class AutoAdjustTests: XCTestCase {
         XCTAssertLessThan(d.density, -0.1, "남은 잔차는 density(미드 리프트)가 담당")
     }
 
-    /// 하이키(밝은 비클리핑) 보호: 감광은 실질 클리핑(≥5%)에서만 — 설경/하이키를
-    /// 회색으로 끌어내리지 않는다.
-    func testAutoToneNeverDarkensHighKeyWithoutClipping() {
-        var h = [Double](repeating: 0, count: 256); h[230] = 0.97; h[252] = 0.03
-        let d = AutoAdjust.autoTone(stats(0.9, 0.9, 0.9, h, sat: 0.2))
-        XCTAssertGreaterThanOrEqual(d.exposure, 0, "비클리핑 하이키를 어둡게 하면 안 된다")
+    /// 실질 클리핑(≥5%)이면 장면 키와 무관하게 적어도 p995 를 0.92 로 내릴 만큼 어둡게 한다.
+    func testAutoToneClippingDarkensAtLeastToRecoverHighlights() {
+        var h = [Double](repeating: 0, count: 256); h[40] = 0.90; h[255] = 0.10
+        let s = stats(0.3, 0.3, 0.3, h, sat: 0.2)
+        let d = AutoAdjust.autoTone(s)
+        XCTAssertLessThanOrEqual(d.exposure, log2(0.92 / 1.0) + 1e-9, "클리핑을 두고 밝히면 안 된다")
+    }
+
+    /// 보정 단계도 양방향이다: 잰 장면 키가 밝으면 노출을 더 내린다.
+    func testRefineToneLowersExposureWhenMeasuredKeyIsBright() {
+        var h = [Double](repeating: 0, count: 256); h[180] = 0.98; h[245] = 0.02   // 대부분 linear ≈ 0.46
+        var first = AutoAdjust.ToneDelta(); first.exposure = -0.5
+        let measured = stats(0.7, 0.7, 0.7, h, sat: 0.2)
+        let refined = AutoAdjust.refineTone(first, measured: measured)
+        let residual = log2(AutoAdjust.sceneKey(logAverage: measured.logAverageLuminance, highlight: highlight(of: measured))
+                            / measured.logAverageLuminance)
+        XCTAssertLessThan(residual, -0.1)
+        let floorLimit = log2(AutoAdjust.whiteRecoveryFloor / highlight(of: measured, 0.995))
+        XCTAssertEqual(refined.exposure, first.exposure + max(residual, floorLimit), accuracy: 1e-9)
     }
 
     private func makeDominantRedWithNeutralStrip(width: Int = 64, height: Int = 32) throws -> CGImage {

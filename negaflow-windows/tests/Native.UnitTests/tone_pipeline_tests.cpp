@@ -1,3 +1,5 @@
+#include "negaflow/color/srgb_transfer.h"
+#include "negaflow/imaging/basic_tone_model.h"
 #include "negaflow/imaging/tone_curve_measurement.h"
 #include "negaflow/imaging/tone_mapping.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
@@ -7,6 +9,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <iostream>
 #include <limits>
 #include <utility>
@@ -272,16 +275,13 @@ void test_curve_measurement_contract() {
            "measurement excludes the four-percent border");
     expect(measured.info.peak_temporary_bytes == 3'600U * sizeof(double),
            "measurement reports bounded temporary storage");
+    // 안쪽은 전부 0.25(인코딩 0.5371)라 네 백분위가 같고, 매듭은 그 위로 0.10 씩 벌어집니다
+    // (macOS `ParametricToneCurve.knots`).
     const auto bands = measured.info.bands;
-    expect(nearly_equal(bands.shadow_low, 0.230F), "p10 shadow lower margin");
-    expect(nearly_equal(bands.shadow_high, 0.275F), "p35 minimum spacing");
-    expect(nearly_equal(bands.dark_low, 0.275F) && nearly_equal(bands.dark_high, 0.300F),
-           "dark band derives from p35 and p65");
-    expect(nearly_equal(bands.light_low, 0.300F) && nearly_equal(bands.light_high, 0.325F),
-           "light band derives from p65 and p90");
-    expect(nearly_equal(bands.highlight_low, 0.300F) &&
-               nearly_equal(bands.highlight_high, 0.355F),
-           "highlight band includes the upper margin");
+    expect(std::abs(bands.knots[0] - 0.53710) < 1.0e-4, "p10 knot is the encoded percentile");
+    expect(std::abs(bands.knots[1] - 0.63710) < 1.0e-4 && std::abs(bands.knots[2] - 0.73710) < 1.0e-4 &&
+               std::abs(bands.knots[3] - 0.83710) < 1.0e-4,
+           "coincident percentiles spread to the minimum knot gap");
 
     std::array<negaflow::core::Rgba32F, 64> small{};
     const auto fallback = negaflow::imaging::measure_parametric_tone_curve_bands(
@@ -342,6 +342,116 @@ void test_curve_black_anchor_and_measurement_failure() {
 
 }  // namespace
 
+// 기본 톤과 파라메트릭 커브는 전역 톤 곡선이라 어떤 슬라이더 조합에서도 단조여야 합니다(macOS
+// `ToneMonotonicityTests`). 두 곡선 모두 예전 마스크 × 고정 덧셈 구조에서 ±1 에 뒤집혔습니다.
+struct Lcg final {
+    std::uint64_t state;
+    double next() noexcept {
+        state = (state * 6364136223846793005ULL) + 1442695040888963407ULL;
+        return static_cast<double>(state >> 11U) / static_cast<double>(1ULL << 53U);
+    }
+    double uniform(const double low, const double high) noexcept { return low + (next() * (high - low)); }
+};
+
+void test_parametric_curve_is_monotone_for_every_combination() {
+    Lcg rng{7U};
+    std::vector<negaflow::imaging::ParametricToneCurveBands> scenes{
+        negaflow::imaging::fallback_parametric_tone_curve_bands(),
+        negaflow::imaging::parametric_tone_curve_bands_from_percentiles(0.5, 0.5, 0.5, 0.5),
+        negaflow::imaging::parametric_tone_curve_bands_from_percentiles(0.0, 0.0, 0.0001, 0.0002),
+        negaflow::imaging::parametric_tone_curve_bands_from_percentiles(0.97, 0.98, 0.99, 1.0),
+    };
+    for (int i = 0; i < 40; ++i) {
+        std::array<double, 4> p{};
+        for (double& value : p) { value = std::pow(rng.next(), 2.2); }
+        std::sort(p.begin(), p.end());
+        scenes.push_back(negaflow::imaging::parametric_tone_curve_bands_from_percentiles(p[0], p[1], p[2], p[3]));
+    }
+    bool monotone = true;
+    bool anchored = true;
+    for (const auto& scene : scenes) {
+        for (int combo = 0; combo < 30; ++combo) {
+            const negaflow::imaging::ParametricToneCurveParameters parameters{
+                static_cast<float>(rng.uniform(-1.0, 1.0)), static_cast<float>(rng.uniform(-1.0, 1.0)),
+                static_cast<float>(rng.uniform(-1.0, 1.0)), static_cast<float>(rng.uniform(-1.0, 1.0))};
+            const auto shape = negaflow::imaging::parametric_tone_curve_shape(parameters, scene);
+            double previous = -1.0;
+            for (int step = 0; step <= 2048; ++step) {
+                const double value = negaflow::imaging::evaluate_parametric_tone_curve(shape, step / 2048.0);
+                monotone = monotone && value >= previous - 1.0e-12;
+                previous = std::max(previous, value);
+            }
+            anchored = anchored &&
+                       std::abs(negaflow::imaging::evaluate_parametric_tone_curve(shape, 0.0)) < 1.0e-12 &&
+                       std::abs(negaflow::imaging::evaluate_parametric_tone_curve(shape, 1.0) - 1.0) < 1.0e-12;
+        }
+    }
+    expect(monotone, "parametric curve never reverses tone for any slider combination or scene");
+    expect(anchored, "parametric curve keeps black and white fixed");
+
+    // 매듭은 양 끝·서로 0.10 이상 떨어지므로 ±1 은 자기 매듭을 0.045 이상 움직입니다.
+    bool floor_held = true;
+    for (const auto& scene : scenes) {
+        for (std::size_t k = 0U; k < 4U; ++k) {
+            for (const float sign : {-1.0F, 1.0F}) {
+                float amounts[4]{0.0F, 0.0F, 0.0F, 0.0F};  // shadows, darks, lights, highlights
+                amounts[k] = sign;
+                const negaflow::imaging::ParametricToneCurveParameters parameters{
+                    amounts[3], amounts[2], amounts[1], amounts[0]};
+                const auto shape = negaflow::imaging::parametric_tone_curve_shape(parameters, scene);
+                floor_held = floor_held && (shape.y[k + 1U] - shape.x[k + 1U]) * sign >= 0.045 - 1.0e-9;
+            }
+        }
+    }
+    expect(floor_held, "every curve slider moves its knot by at least 0.045 at +/-1");
+}
+
+// CPU 커널을 회색 램프에 걸어 출력 휘도가 단조이고 `basic_tone_model.h`(자동 톤이 역산하는 식)와
+// 같은지 봅니다.
+void test_basic_tone_is_monotone_and_matches_the_model() {
+    namespace model = negaflow::imaging::basic_tone_model;
+    constexpr std::uint32_t count = 1024U;
+    std::vector<negaflow::core::Rgba32F> ramp(count);
+    for (std::uint32_t i = 0U; i < count; ++i) {
+        const float value = negaflow::color::srgb_encoded_to_linear(static_cast<float>(i) / (count - 1U));
+        ramp[i] = {value, value, value, 1.0F};
+    }
+    Lcg rng{11U};
+    bool monotone = true;
+    float worst = 0.0F;
+    for (int combo = 0; combo < 300; ++combo) {
+        negaflow::imaging::BasicToneParameters parameters{
+            static_cast<float>(rng.uniform(-1.0, 1.0)), static_cast<float>(rng.uniform(-1.0, 1.0)),
+            static_cast<float>(rng.uniform(-1.0, 1.0)), static_cast<float>(rng.uniform(-1.0, 1.0)),
+            static_cast<float>(rng.uniform(-2.0, 2.0)), static_cast<float>(rng.uniform(-2.0, 2.0))};
+        if (combo == 0) { parameters = {0.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F}; }
+        if (combo == 1) { parameters = {0.0F, 0.0F, 0.0F, 0.0F, -2.0F, 0.0F}; }
+        if (combo == 2) { parameters = {0.0F, -1.0F, -1.0F, 0.0F, 0.0F, 0.0F}; }
+        std::vector<negaflow::core::Rgba32F> output(count);
+        const auto status = negaflow::imaging::apply_basic_tone(
+            {ramp.data(), ramp.size(), count, 1U, count}, {output.data(), output.size(), count, 1U, count},
+            parameters);
+        expect(status == negaflow::core::KernelStatus::ok, "basic tone succeeds on the ramp");
+        float previous = -1.0F;
+        for (std::uint32_t i = 0U; i < count; ++i) {
+            const float luma = output[i].green;
+            monotone = monotone && luma >= previous - 1.0e-7F;
+            previous = std::max(previous, luma);
+            double t = static_cast<double>(i) / (count - 1U);
+            t = model::contrast(t, parameters.contrast);
+            t = model::density(t, parameters.density);
+            t = model::highlight(t, parameters.highlights);
+            t = model::shadow(t, parameters.shadows);
+            t = model::whites(t, parameters.whites);
+            t = model::blacks(t, parameters.blacks);
+            const float expected = negaflow::color::srgb_encoded_to_linear(static_cast<float>(std::clamp(t, 0.0, 1.0)));
+            worst = std::max(worst, std::abs(luma - expected));
+        }
+    }
+    expect(monotone, "basic tone never reverses tone for any slider combination");
+    expect(worst < 2.0e-4F, "basic tone CPU kernel matches the stepwise model auto tone inverts");
+}
+
 int main() {
     test_fixed_scalar_pipeline_fixture();
     test_thresholds_noop_and_user_bounds();
@@ -349,6 +459,8 @@ int main() {
     test_basic_tone_lift_folds_chroma_instead_of_clipping();
     test_curve_measurement_contract();
     test_curve_black_anchor_and_measurement_failure();
+    test_parametric_curve_is_monotone_for_every_combination();
+    test_basic_tone_is_monotone_and_matches_the_model();
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"tone_pipeline\",\"failures\":"

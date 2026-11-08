@@ -35,8 +35,9 @@ struct alignas(16) SampleGridConstants final {
 
 static_assert(sizeof(SampleGridConstants) == 32U, "two constant registers");
 
-// 셰이더의 `Cube[24]` 와 같은 모양입니다. 자동 색상은 앞 두 칸만 씁니다 — `Cube[0]` 이
-// 채널별 지수, `Cube[1]` 이 채널별 게인입니다(c' = gain·c^exponent).
+// 셰이더의 `Cube[24]` 와 같은 모양입니다. 자동 색상은 앞 네 칸만 씁니다 — `Cube[0]` 이
+// 채널별 지수, `Cube[1]` 이 채널별 게인, `Cube[2]`·`Cube[3]` 이 증거 범위의 채널 하한·상한입니다
+// (c' = c·gain·t^(exponent−1), t = clamp(c, 하한, 상한)).
 struct alignas(16) SceneCorrectionConstants final {
     GpuPointwiseExtent extent{};
     float level_scale[4]{1.0F, 1.0F, 1.0F, 1.0F};
@@ -317,6 +318,8 @@ GpuKernelStatus GpuSceneCorrection::apply_neutral_balance(
     for (std::size_t channel = 0U; channel < 3U; ++channel) {
         payload.cube[0][channel] = static_cast<float>(plan.exponent[channel]);
         payload.cube[1][channel] = static_cast<float>(plan.gain[channel]);
+        payload.cube[2][channel] = static_cast<float>(std::clamp(plan.low[channel], 1.0e-12, 1.0e30));
+        payload.cube[3][channel] = static_cast<float>(std::clamp(plan.high[channel], 1.0e-12, 1.0e30));
     }
     return balance_.dispatch(device, source, destination, &payload, sizeof(payload));
 }

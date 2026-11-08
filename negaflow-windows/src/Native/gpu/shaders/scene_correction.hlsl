@@ -23,8 +23,9 @@ cbuffer SceneCorrectionConstants : register(b0) {
     // 자동 레벨 계수입니다.
     float4 LevelScale;
     float4 LevelBias;
-    // 자동 색상 계수입니다. Cube[0].rgb = 채널별 지수, Cube[1].rgb = 채널별 게인. 나머지는
-    // 쓰지 않습니다(배치를 바꾸지 않으려고 크기를 그대로 둡니다).
+    // 자동 색상 계수입니다. Cube[0].rgb = 채널별 지수, Cube[1].rgb = 채널별 게인, Cube[2].rgb·
+    // Cube[3].rgb = 증거 범위의 채널 하한·상한. 나머지는 쓰지 않습니다(배치를 바꾸지 않으려고 크기를
+    // 그대로 둡니다).
     float4 Cube[24];
 };
 
@@ -42,11 +43,13 @@ void SceneAutoLevelsMain(uint3 id : SV_DispatchThreadID) {
     Destination[coordinate] = float4(color, source.a);
 }
 
-// CPU `power_gain` 그대로 — c' = gain·c^exponent. 0 이하 값은 그대로 둡니다.
-// `abs` 는 여기서 **항등**입니다 — 이 가지는 `value > 0` 일 때만 돕니다. fxc 가 `pow` 의 밑을
-// 정적으로 양수라고 증명하지 못해 경고(X3571, `/WX` 라 오류)를 내므로 답니다.
-float PowerGain(float value, float exponent, float gain) {
-    return value > 0.0 ? gain * pow(abs(value), exponent) : value;
+// CPU `power_gain` 그대로 — c' = c·gain·t^(exponent−1), t = clamp(c, low, high). 범위 안은
+// gain·c^exponent 와 같고, 범위 밖은 경계 배율입니다(감마 항을 외삽하지 않습니다). 0 이하 값은
+// 그대로 둡니다. `abs` 는 여기서 **항등**입니다 — low 가 양수라 t 는 항상 양수입니다. fxc 가 `pow`
+// 의 밑을 정적으로 양수라고 증명하지 못해 경고(X3571, `/WX` 라 오류)를 내므로 답니다.
+float PowerGain(float value, float exponent, float gain, float low, float high) {
+    float t = clamp(value, low, high);
+    return value > 0.0 ? value * gain * pow(abs(t), exponent - 1.0) : value;
 }
 
 [numthreads(8, 8, 1)]
@@ -57,8 +60,8 @@ void SceneNeutralBalanceMain(uint3 id : SV_DispatchThreadID) {
     uint2 coordinate = id.xy;
     float4 source = Source[coordinate];
     float3 color;
-    color.r = PowerGain(source.r, Cube[0].r, Cube[1].r);
-    color.g = PowerGain(source.g, Cube[0].g, Cube[1].g);
-    color.b = PowerGain(source.b, Cube[0].b, Cube[1].b);
+    color.r = PowerGain(source.r, Cube[0].r, Cube[1].r, Cube[2].r, Cube[3].r);
+    color.g = PowerGain(source.g, Cube[0].g, Cube[1].g, Cube[2].g, Cube[3].g);
+    color.b = PowerGain(source.b, Cube[0].b, Cube[1].b, Cube[2].b, Cube[3].b);
     Destination[coordinate] = float4(color, source.a);
 }

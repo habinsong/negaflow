@@ -24,6 +24,16 @@ cbuffer BasicToneConstants : register(b0) {
     float2 Padding1;
 };
 
+// 검정 한 단계(|amount| ≤ 1). CPU `basic_tone_blacks` 와 같은 식입니다. 올리는 쪽은 smoothstep
+// 0~0.03 상승, 내리는 쪽은 t − c·min(1, t/0.03)·fall 이고 0 아래는 0 에 붙습니다.
+float BasicToneBlacks(float t, float amount) {
+    float fall = 1.0 - smoothstep(0.14, 0.30, t);
+    if (amount >= 0.0) {
+        return t + (amount * 0.06 * smoothstep(0.0, 0.03, t) * fall);
+    }
+    return max(t + (amount * 0.06 * min(1.0, max(t, 0.0) / 0.03) * fall), 0.0);
+}
+
 [numthreads(8, 8, 1)]
 void BasicToneMain(uint3 id : SV_DispatchThreadID) {
     if (id.x >= Extent.x || id.y >= Extent.y) {
@@ -60,26 +70,33 @@ void BasicToneMain(uint3 id : SV_DispatchThreadID) {
         target += (curved - target) * blend;
     }
 
+    // 단계마다 앞 단계의 출력에 차례로 겁니다(macOS `basicTone`, CPU `apply_basic_tone`). 각 단계가
+    // 그 자체로 단조라 합성도 단조입니다 — 어떤 슬라이더 조합에서도 톤이 뒤집히지 않습니다.
     // 농도: 미드톤(+ 가 어둡게). 미드(0.46) 중심 대역.
-    float midMask = smoothstep(0.18, 0.36, encodedLuma) * (1.0 - smoothstep(0.58, 0.76, encodedLuma));
-    target -= DensityAmount * 0.10 * midMask;
+    float density = clamp(DensityAmount, -1.0, 1.0);
+    target -= density * 0.10 * smoothstep(0.18, 0.36, target) * (1.0 - smoothstep(0.58, 0.76, target));
 
     // 명부: 올리면 밝아집니다(내리면 recovery).
-    float highlightMask = smoothstep(0.55, 0.80, encodedLuma);
-    target += HighlightAmount * 0.10 * highlightMask;
+    float highlights = clamp(HighlightAmount, -1.0, 1.0);
+    target += highlights * 0.10 * smoothstep(0.55, 0.80, target);
 
-    // 암부: 가시 암부를 들어올리되 절대 검정(<0.02)은 앵커, 미드(0.46) 전에 0 으로 테이퍼.
-    float shadowMask = smoothstep(0.02, 0.08, encodedLuma) * (1.0 - smoothstep(0.32, 0.46, encodedLuma));
-    target += ShadowAmount * 0.10 * shadowMask;
+    // 암부: 올리는 쪽은 0.02~0.08 상승(절대 검정 앵커), 내리는 쪽은 검정에서부터 0~0.20 상승.
+    // 위쪽 경계 0.30~0.46(미드 전에 0).
+    float shadows = clamp(ShadowAmount, -1.0, 1.0);
+    float shadowRise = shadows > 0.0 ? smoothstep(0.02, 0.08, target) : smoothstep(0.0, 0.20, target);
+    target += shadows * 0.10 * shadowRise * (1.0 - smoothstep(0.30, 0.46, target));
 
-    // 백점. macOS 는 커널 안에서 ±2 로 clamp 합니다(`ChromabaseMetalKernels.swift:231`).
-    // 범위는 `DevelopToneRange.whites` 의 `-2...2` 이고 계수 0.12 와 마스크는 그대로 둡니다.
-    float whiteMask = smoothstep(0.68, 0.92, encodedLuma);
-    target += clamp(WhitesAmount, -2.0, 2.0) * 0.12 * whiteMask;
+    // 백점. 범위는 `DevelopToneRange.whites` 의 ±2 이고 ±1 을 넘는 몫은 같은 단계를 한 번 더 겁니다.
+    float whites = clamp(WhitesAmount, -2.0, 2.0);
+    float whitesFirst = clamp(whites, -1.0, 1.0);
+    target += whitesFirst * 0.12 * smoothstep(0.68, 0.92, target);
+    target += (whites - whitesFirst) * 0.12 * smoothstep(0.68, 0.92, target);
 
-    // 흑점: 순검정 바로 위 띠, y=0 앵커. 같은 이유로 ±2 clamp(`:235`).
-    float blackMask = smoothstep(0.0, 0.03, encodedLuma) * (1.0 - smoothstep(0.14, 0.30, encodedLuma));
-    target += clamp(BlacksAmount, -2.0, 2.0) * 0.06 * blackMask;
+    // 흑점: 순검정 바로 위 띠, y=0 앵커. 같은 이유로 ±1 씩 두 단계입니다.
+    float blacks = clamp(BlacksAmount, -2.0, 2.0);
+    float blacksFirst = clamp(blacks, -1.0, 1.0);
+    target = BasicToneBlacks(target, blacksFirst);
+    target = BasicToneBlacks(target, blacks - blacksFirst);
 
     float newLuma = SrgbEncodedToLinear(clamp(target, 0.0, 1.0));
     Destination[coordinate] = float4(WithLuma(safeRgb, sourceLuma, newLuma), source.a);

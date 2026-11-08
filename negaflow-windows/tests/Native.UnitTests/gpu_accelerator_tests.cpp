@@ -180,16 +180,14 @@ void tone_path_runs_on_gpu() {
         "primary gate agrees");
     // 측정 밴드는 **정확히 같을 수 없습니다.** 측정은 기본 톤까지 끝난 이미지의 백분위인데,
     // 그 이미지가 이미 1e-06 급으로 다르므로 정렬 순서가 한 칸 밀릴 수 있습니다.
-    // 밴드가 크게 벌어지면 커브가 다른 자리에서 걸린 것이니 그것만 봅니다.
+    // 매듭이 크게 벌어지면 커브가 다른 자리에서 걸린 것이니 그것만 봅니다.
     const auto& gpu_bands = outcome.info.measurement.info.bands;
     const auto& cpu_bands = cpu.info.measurement.info.bands;
-    const float band_delta = std::max(
-        std::abs(gpu_bands.shadow_low - cpu_bands.shadow_low),
-        std::max(
-            std::abs(gpu_bands.dark_high - cpu_bands.dark_high),
-            std::max(
-                std::abs(gpu_bands.light_high - cpu_bands.light_high),
-                std::abs(gpu_bands.highlight_high - cpu_bands.highlight_high))));
+    double knot_delta = 0.0;
+    for (std::size_t i = 0U; i < 4U; ++i) {
+        knot_delta = std::max(knot_delta, std::abs(gpu_bands.knots[i] - cpu_bands.knots[i]));
+    }
+    const float band_delta = static_cast<float>(knot_delta);
     if (band_delta > 1.0e-3F) {
         std::cerr << "FAIL: measured band delta " << band_delta << '\n';
         ++failures;

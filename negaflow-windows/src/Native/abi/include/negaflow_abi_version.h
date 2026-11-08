@@ -36,5 +36,7 @@
 // 0.53 adds the Custom 18 develop-target vocabulary without changing request layouts.
 // 0.54 appends the 56x24 and 65x24 flatbed frame formats and the dimension-sized flatbed
 // detectors nf_detect_flatbed_frame_grid_dimensions_v1 / nf_detect_flatbed_frame_edges_dimensions_v1.
-#define NF_ABI_VERSION_MINOR 54U
+// 0.55 adds the neutral-aware automatic tone refinement nf_auto_tone_refine_v2, nf_auto_tone_channel_excess_v1,
+// nf_auto_tone_channel_limits_v1 and nf_auto_tone_scene_key_v1.
+#define NF_ABI_VERSION_MINOR 55U
 #define NF_ABI_VERSION ((NF_ABI_VERSION_MAJOR << 16U) | NF_ABI_VERSION_MINOR)

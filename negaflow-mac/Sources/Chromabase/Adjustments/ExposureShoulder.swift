@@ -25,11 +25,16 @@ enum ExposureShoulder {
 
     /// CPU 참조 — 휘도 하나의 노출 결과(커널과 같은 식). 자동 톤의 순방향 모델이 공유한다.
     static func exposedLuminance(_ y: Double, stops: Double, filmType: FilmType) -> Double {
-        let u = y * pow(2.0, stops)
-        guard stops > 0, u > knee else { return u }
+        exposedLuminance(y, gain: pow(2.0, stops), blend: stops > 0 ? blend(stops: stops, filmType: filmType) : 0)
+    }
+
+    /// 같은 노출로 여러 화소를 풀 때 — 이득(2^EV)과 혼합비를 한 번만 계산해 넘긴다. 혼합비 0 은 EV ≤ 0(선형 곱)이다.
+    static func exposedLuminance(_ y: Double, gain: Double, blend: Double) -> Double {
+        let u = y * gain
+        guard blend > 0, u > knee else { return u }
         let room = 1.0 - knee
         let shoulder = 1.0 - room * exp(-(u - knee) / room)
-        return u + (shoulder - u) * blend(stops: stops, filmType: filmType)
+        return u + (shoulder - u) * blend
     }
 
     /// exposedLuminance 의 역 — 잰 휘도(숄더에 이미 접힌 값)를 노출 전 휘도로 되돌린다. 숄더는 단조

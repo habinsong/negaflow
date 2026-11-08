@@ -15,7 +15,7 @@ extension ChromabaseEngine {
         img = ColorModel.apply(to: img, params: params)
         img = ToneMapper.applyExposure(to: img, stops: params.exposure, filmType: params.filmType)
         img = ToneMapper.applyToneCurves(to: img, params: params, region: region)
-        return img
+        return ScannerTargetGrade.applyAfterSceneAdjustments(to: img, params: params)
     }
 
     /// 포지티브 입력부터 화이트밸런스(ColorModel) 직전까지 — 중립 스포이드가 이 단계의 값을 잰다.
@@ -58,13 +58,12 @@ extension ChromabaseEngine {
                                     filmType: params.filmType, recoverRange: false,
                                     region: region, recovery: &recovery)
         }
-        // 스캐너 타겟이면 렌더링을 항상 적용한다(포지티브는 절반 세기). applyBaseGrade(위)만
-        // 보수적으로 실측 차분 증거에 게이팅해 독자 포지티브 베이스 중복을 막는다.
-        if params.developTarget.isScannerEmulation {
-            img = ScannerTargetGrade.apply(to: img, target: params.developTarget, params: params)
-        } else if !params.developTarget.isScannerEmulation,
-                  params.developTarget != .rescue,
-                  let profile = scannerProfile(for: params) {
+        // 스캐너 타겟 렌더링은 화이트 밸런스·노출·기본 톤 뒤에 건다(applyAfterSceneAdjustments,
+        // 포지티브는 절반 세기). applyBaseGrade(위)만 보수적으로 실측 차분 증거에 게이팅해 독자
+        // 포지티브 베이스 중복을 막는다.
+        if !params.developTarget.isScannerEmulation,
+           params.developTarget != .rescue,
+           let profile = scannerProfile(for: params) {
             img = ScannerProfileGrade.apply(to: img, profile: profile)
         }
         return img

@@ -346,11 +346,8 @@ public final class ChromabaseEngine: @unchecked Sendable {
         // 측정 도메인은 본 파이프라인과 동일하게 입력 태그 무관 linear 고정.
         let measureSpace = CGColorSpace(name: CGColorSpace.linearSRGB) ?? sampleColorSpace
         if params.autoLevels {
-            let fixed = NegativeLinearResponse.applies(params)
-            img = AutoLevels.apply(to: img, sampleColorSpace: measureSpace,
-                                   outputWhite: fixed ? NegativeLinearResponse.inputLuminance(forOutput: 0.95, filmType: params.filmType) : 0.95,
-                                   outputBlack: fixed ? NegativeLinearResponse.inputLuminance(forOutput: NegativeInversion.toeFloor, filmType: params.filmType) : NegativeInversion.toeFloor,
-                                   region: region, sceneLinearOutput: fixed, points: &state.autoLevelsPoints)
+            img = AutoLevels.applyNegative(to: img, params: params, sampleColorSpace: measureSpace,
+                                           region: region, points: &state.autoLevelsPoints)
         }
         frames.append(DevelopDebugFrame(stage: .afterAutoLevels, image: img.cropped(to: extent), metrics: stats))
 
@@ -358,9 +355,6 @@ public final class ChromabaseEngine: @unchecked Sendable {
             img = NeutralBalance.apply(to: img, sampleColorSpace: measureSpace,
                                        region: region,
                                        correction: &state.neutralBalanceCorrection)
-        }
-        if params.developTarget.isScannerEmulation {
-            img = ScannerTargetGrade.apply(to: img, target: params.developTarget, params: params)
         }
         if params.developTarget == .rescue {
             // 본 파이프라인과 동일: 검증된 중립축 증거가 있을 때만 bounded 상대 보정.
@@ -384,6 +378,7 @@ public final class ChromabaseEngine: @unchecked Sendable {
             img = ToneMapper.applyExposure(to: img, stops: params.exposure, filmType: params.filmType)
         }
         img = ToneMapper.applyToneCurves(to: img, params: params, region: region)
+        img = ScannerTargetGrade.applyAfterSceneAdjustments(to: img, params: params)
         frames.append(DevelopDebugFrame(stage: .finalTone, image: img.cropped(to: extent), metrics: stats))
         return frames
     }

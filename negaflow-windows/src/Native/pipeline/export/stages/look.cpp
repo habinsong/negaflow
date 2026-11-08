@@ -5,9 +5,11 @@
 #include "negaflow/core/pixel.h"
 #include "negaflow/core/negative_inversion.h"
 #include "negaflow/imaging/custom_color_target.h"
+#include "negaflow/imaging/scanner_target_grade.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
 #include "negaflow/pipeline/gpu_accelerator.h"
 
+#include <optional>
 #include <utility>
 
 namespace negaflow::pipeline::develop_export_detail {
@@ -76,39 +78,115 @@ std::optional<DevelopExportOutcome> apply_look_stages(
         }
         tone.exposure_stops = 0;
     }
-    negaflow::imaging::WorkingToneAdjustResult adjusted{};
-    const GpuToneOutcome accelerated =
-        GpuAccelerator::shared().apply_working_tone_adjustments(
-            gpu_policy, developed_image, tone, {});
-    if (accelerated.handled) {
-        adjusted.status = negaflow::imaging::WorkingToneAdjustStatus::ok;
-        adjusted.info = accelerated.info;
-        adjusted.image = std::move(developed_image);
-    } else {
-        GpuAccelerator::shared().flush_resident();
-        adjusted = negaflow::imaging::apply_working_tone_adjustments(
-            std::move(developed_image),
-            tone);
-    }
-    if (adjusted.status != negaflow::imaging::WorkingToneAdjustStatus::ok) {
-        // 여기서 돌아가면 `adjusted.image` 는 반환 뒤 사라집니다. 상주로 묶여 있으면
-        // 지금 풀어야 합니다 — 이유는 `outcome.h` 의 `unbind_resident_and` 설명.
-        if (adjusted.status ==
-            negaflow::imaging::WorkingToneAdjustStatus::kernel_failed) {
-            return unbind_resident_and(adjusted.image, fail(
-                DevelopExportStage::tone_adjust,
-                negaflow::core::kernel_status_name(adjusted.info.kernel_status)));
+    // 톤 조정 한 번(GPU 먼저, 못 하면 CPU). 실패하면 그 단계 이름으로 돌려줍니다.
+    const auto run_tone = [gpu_policy](
+        negaflow::imaging::WorkingImage image,
+        const negaflow::imaging::WorkingToneAdjustParameters& parameters)
+        -> negaflow::imaging::WorkingToneAdjustResult {
+        negaflow::imaging::WorkingToneAdjustResult result{};
+        const GpuToneOutcome accelerated =
+            GpuAccelerator::shared().apply_working_tone_adjustments(
+                gpu_policy, image, parameters, {});
+        if (accelerated.handled) {
+            result.status = negaflow::imaging::WorkingToneAdjustStatus::ok;
+            result.info = accelerated.info;
+            result.image = std::move(image);
+            return result;
         }
-        if (adjusted.status ==
+        GpuAccelerator::shared().flush_resident();
+        return negaflow::imaging::apply_working_tone_adjustments(std::move(image), parameters);
+    };
+    const auto tone_failure = [](negaflow::imaging::WorkingToneAdjustResult& failed)
+        -> std::optional<DevelopExportOutcome> {
+        // 여기서 돌아가면 `failed.image` 는 반환 뒤 사라집니다. 상주로 묶여 있으면
+        // 지금 풀어야 합니다 — 이유는 `outcome.h` 의 `unbind_resident_and` 설명.
+        if (failed.status ==
+            negaflow::imaging::WorkingToneAdjustStatus::kernel_failed) {
+            return unbind_resident_and(failed.image, fail(
+                DevelopExportStage::tone_adjust,
+                negaflow::core::kernel_status_name(failed.info.kernel_status)));
+        }
+        if (failed.status ==
             negaflow::imaging::WorkingToneAdjustStatus::measurement_failed) {
-            return unbind_resident_and(adjusted.image, fail(
+            return unbind_resident_and(failed.image, fail(
                 DevelopExportStage::tone_adjust,
                 negaflow::imaging::tone_curve_measurement_status_name(
-                    adjusted.info.measurement.status)));
+                    failed.info.measurement.status)));
         }
-        return unbind_resident_and(adjusted.image, fail(
+        return unbind_resident_and(failed.image, fail(
             DevelopExportStage::tone_adjust,
-            negaflow::imaging::working_tone_adjust_status_name(adjusted.status)));
+            negaflow::imaging::working_tone_adjust_status_name(failed.status)));
+    };
+
+    // 스캐너 타깃(SP·HS·F135·HR)의 고정 렌더링은 화이트 밸런스·노출·기본 톤·파라메트릭 커브 뒤,
+    // 포인트 커브·믹서·그레이딩·캘리브레이션 앞입니다(macOS
+    // `ScannerTargetGrade.applyAfterSceneAdjustments`). 예전에는 반전 직후에 걸어, 흰색을 0.95
+    // 근처까지 그린 인화 출력 위에서 MAIN 의 여유(흰색 0.70)를 전제로 만든 슬라이더가 다시
+    // 돌았습니다 — 같은 사진에서 노출 +0.5 의 클리핑이 MAIN 0.1%·SP 28.6%(2026-11-07 실측).
+    // 슬라이더가 모두 0 이면 앞 단계가 항등이라 결과는 예전과 같습니다.
+    std::optional<negaflow::imaging::ScannerTargetStyle> scanner_target{};
+    switch (request.develop_target) {
+        case DevelopTarget::noritsu:
+            scanner_target = negaflow::imaging::ScannerTargetStyle::noritsu;
+            break;
+        case DevelopTarget::sp3000:
+            scanner_target = negaflow::imaging::ScannerTargetStyle::sp3000;
+            break;
+        case DevelopTarget::f135:
+            scanner_target = negaflow::imaging::ScannerTargetStyle::f135;
+            break;
+        case DevelopTarget::hr:
+            scanner_target = negaflow::imaging::ScannerTargetStyle::hr;
+            break;
+        default:
+            break;
+    }
+
+    negaflow::imaging::WorkingToneAdjustResult adjusted{};
+    if (!scanner_target.has_value()) {
+        adjusted = run_tone(std::move(developed_image), tone);
+        if (adjusted.status != negaflow::imaging::WorkingToneAdjustStatus::ok) {
+            return tone_failure(adjusted);
+        }
+    } else {
+        negaflow::imaging::WorkingToneAdjustParameters scene = tone;
+        scene.point_curves = {};
+        scene.color_mixer = {};
+        scene.color_grading = {};
+        scene.primary_calibration = {};
+        adjusted = run_tone(std::move(developed_image), scene);
+        if (adjusted.status != negaflow::imaging::WorkingToneAdjustStatus::ok) {
+            return tone_failure(adjusted);
+        }
+        // 화상은 GPU 에 머문 채로 렌더링합니다(흑백 luma 붕괴도 커널 안에서 합니다).
+        negaflow::imaging::ScannerTargetGradeInfo target_info{};
+        const negaflow::core::KernelStatus target_status =
+            negaflow::imaging::apply_scanner_target_grade(
+                {
+                    adjusted.image.pixels.data(),
+                    adjusted.image.pixels.size(),
+                    adjusted.image.width,
+                    adjusted.image.height,
+                    adjusted.image.stride_pixels,
+                },
+                *scanner_target,
+                request.negative.film_type == negaflow::imaging::NegativeFilmType::black_and_white,
+                request.film_polarity == FilmPolarity::positive,
+                request.scanner_profile_id,
+                target_info);
+        if (target_status != negaflow::core::KernelStatus::ok) {
+            return unbind_resident_and(adjusted.image, fail(
+                DevelopExportStage::target_grade,
+                negaflow::core::kernel_status_name(target_status)));
+        }
+        negaflow::imaging::WorkingToneAdjustParameters output = tone;
+        output.exposure_stops = 0.0F;
+        output.basic = {};
+        output.curve = {};
+        adjusted = run_tone(std::move(adjusted.image), output);
+        if (adjusted.status != negaflow::imaging::WorkingToneAdjustStatus::ok) {
+            return tone_failure(adjusted);
+        }
     }
 
     tracker.finish();

@@ -3,6 +3,18 @@ import CoreImage
 extension ScannerTargetGrade {
     // MARK: 적용
 
+    /// 파이프라인의 타깃 자리. 화이트 밸런스·노출·기본 톤·파라메트릭 커브 **뒤**, 포인트 커브·HSL·
+    /// 그레이딩 **앞**이다. 랩 스캐너도 오퍼레이터의 농도·색 보정을 스캔 데이터에 먼저 걸고 고정 인화
+    /// 곡선으로 출력한다. 예전에는 반전 직후(화이트 밸런스 앞)에 걸어, 흰색을 0.95 근처까지 그린
+    /// 인화 출력 위에서 MAIN 의 여유(흰색 0.70, 숄더 무릎 0.70)를 전제로 만든 슬라이더가 다시
+    /// 돌았다 — 같은 사진에서 노출 +0.5 의 클리핑이 MAIN 0.1%·SP 28.6%, 흰색 계열 +0.5 는 0%·20.7%
+    /// (2026-11-07 실측). 슬라이더가 모두 0 이면 앞 단계가 항등이라 결과는 예전과 같다.
+    public static func applyAfterSceneAdjustments(to image: CIImage,
+                                                  params: DevelopParameters) -> CIImage {
+        guard params.developTarget.isScannerEmulation else { return image }
+        return apply(to: image, target: params.developTarget, params: params)
+    }
+
     /// 스캐너 타깃 렌더링. 순서: 고정 렌더링 → 사용자가 고른 필름 프로파일의 실측 상대 차분
     /// (있을 때만) → 장치 질감. 장면을 읽지 않으므로 같은 입력 화소는 사진과 무관하게 같은
     /// 값이 된다 — 프레임별 노출·색 맞춤은 반전과 우측 패널의 자동 레벨·색상·톤·WB 몫이다.

@@ -2,7 +2,10 @@
 
 #include "negaflow/core/pointwise.h"
 #include "negaflow/imaging/auto_adjust.h"
+#include "negaflow/imaging/channel_headroom.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 
@@ -86,14 +89,17 @@ nf_status_t NF_CALL nf_auto_adjust_v2(
         pixels, width, height, stride_bytes, headroom_for(black_and_white_negative), result);
 }
 
-nf_status_t NF_CALL nf_auto_tone_refine_v1(
+namespace {
+
+[[nodiscard]] nf_status_t refine(
+    const negaflow::imaging::AutoAdjustStats* const neutral,
     const uint8_t* const pixels,
     const uint32_t width,
     const uint32_t height,
     const uint32_t stride_bytes,
     const uint32_t black_and_white_negative,
     const nf_auto_adjust_result_v1* const first,
-    nf_auto_adjust_result_v1* const refined) {
+    nf_auto_adjust_result_v1* const refined) noexcept {
     if (pixels == nullptr || first == nullptr || refined == nullptr) {
         return NF_STATUS_INVALID_ARGUMENT;
     }
@@ -123,9 +129,79 @@ nf_status_t NF_CALL nf_auto_tone_refine_v1(
     tone.vibrance = first->vibrance;
     const negaflow::imaging::AutoWhiteBalanceResult balance{first->warmth, first->tint};
     write_result(
-        negaflow::imaging::refine_auto_tone(tone, measured, headroom_for(black_and_white_negative)),
+        negaflow::imaging::refine_auto_tone(tone, measured, headroom_for(black_and_white_negative), neutral),
         balance,
         *refined);
+    return NF_STATUS_OK;
+}
+
+}  // namespace
+
+nf_status_t NF_CALL nf_auto_tone_refine_v1(
+    const uint8_t* const pixels,
+    const uint32_t width,
+    const uint32_t height,
+    const uint32_t stride_bytes,
+    const uint32_t black_and_white_negative,
+    const nf_auto_adjust_result_v1* const first,
+    nf_auto_adjust_result_v1* const refined) {
+    return refine(nullptr, pixels, width, height, stride_bytes, black_and_white_negative, first, refined);
+}
+
+nf_status_t NF_CALL nf_auto_tone_refine_v2(
+    const uint8_t* const neutral_pixels,
+    const uint32_t neutral_width,
+    const uint32_t neutral_height,
+    const uint32_t neutral_stride_bytes,
+    const uint8_t* const pixels,
+    const uint32_t width,
+    const uint32_t height,
+    const uint32_t stride_bytes,
+    const uint32_t black_and_white_negative,
+    const nf_auto_adjust_result_v1* const first,
+    nf_auto_adjust_result_v1* const refined) {
+    if (neutral_pixels == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    negaflow::imaging::AutoAdjustStats neutral{};
+    if (!negaflow::imaging::compute_auto_adjust_stats(
+            neutral_pixels, neutral_width, neutral_height, static_cast<std::size_t>(neutral_stride_bytes), neutral)) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    return refine(&neutral, pixels, width, height, stride_bytes, black_and_white_negative, first, refined);
+}
+
+nf_status_t NF_CALL nf_auto_tone_channel_excess_v1(
+    const uint8_t* const neutral_pixels,
+    const uint32_t neutral_width,
+    const uint32_t neutral_height,
+    const uint32_t neutral_stride_bytes,
+    const uint8_t* const pixels,
+    const uint32_t width,
+    const uint32_t height,
+    const uint32_t stride_bytes,
+    double* const excess) {
+    if (neutral_pixels == nullptr || pixels == nullptr || excess == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    // 같은 크기면 화소만 맞대면 됩니다 — 통계 전체(칸 표본·중립축)를 두 번 만들던 것이 폐루프 한 번에 수십 ms 였습니다.
+    if (neutral_width == width && neutral_height == height) {
+        const double induced = negaflow::imaging::induced_pixel_clipping(
+            neutral_pixels, static_cast<std::size_t>(neutral_stride_bytes), pixels,
+            static_cast<std::size_t>(stride_bytes), width, height);
+        if (induced < 0.0) { return NF_STATUS_INVALID_ARGUMENT; }
+        *excess = std::max(0.0, induced - negaflow::imaging::channel_headroom::allowance);
+        return NF_STATUS_OK;
+    }
+    negaflow::imaging::AutoAdjustStats neutral{};
+    negaflow::imaging::AutoAdjustStats measured{};
+    if (!negaflow::imaging::compute_auto_adjust_stats(
+            neutral_pixels, neutral_width, neutral_height, static_cast<std::size_t>(neutral_stride_bytes), neutral) ||
+        !negaflow::imaging::compute_auto_adjust_stats(
+            pixels, width, height, static_cast<std::size_t>(stride_bytes), measured)) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    *excess = negaflow::imaging::auto_tone_channel_excess(neutral, measured);
     return NF_STATUS_OK;
 }
 
@@ -144,5 +220,47 @@ nf_status_t NF_CALL nf_auto_tone_score_v1(
         return NF_STATUS_INVALID_ARGUMENT;
     }
     *score = negaflow::imaging::auto_tone_score(stats, adjust_mid != 0U);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_auto_tone_channel_limits_v1(
+    const uint8_t* const neutral_pixels,
+    const uint32_t neutral_width,
+    const uint32_t neutral_height,
+    const uint32_t neutral_stride_bytes,
+    const uint32_t black_and_white_negative,
+    const double first_exposure,
+    double* const exposure_floor,
+    double* const key_budget_stops) {
+    if (neutral_pixels == nullptr || exposure_floor == nullptr || key_budget_stops == nullptr ||
+        !std::isfinite(first_exposure)) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    negaflow::imaging::AutoAdjustStats neutral{};
+    if (!negaflow::imaging::compute_auto_adjust_luminance_stats(
+            neutral_pixels, neutral_width, neutral_height, static_cast<std::size_t>(neutral_stride_bytes), neutral)) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    const double headroom = headroom_for(black_and_white_negative);
+    *exposure_floor = negaflow::imaging::auto_tone_channel_exposure_floor(neutral, headroom);
+    *key_budget_stops = negaflow::imaging::auto_tone_remaining_key_budget(neutral, first_exposure, headroom);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_auto_tone_scene_key_v1(
+    const uint8_t* const pixels,
+    const uint32_t width,
+    const uint32_t height,
+    const uint32_t stride_bytes,
+    double* const key) {
+    if (pixels == nullptr || key == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    negaflow::imaging::AutoAdjustStats stats{};
+    if (!negaflow::imaging::compute_auto_adjust_luminance_stats(
+            pixels, width, height, static_cast<std::size_t>(stride_bytes), stats)) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    *key = negaflow::imaging::auto_tone_scene_key(stats);
     return NF_STATUS_OK;
 }

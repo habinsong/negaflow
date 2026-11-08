@@ -126,7 +126,7 @@ The working image matches `MAIN`. A valid RGB printer ICC is applied once, at th
 
 ### `HS`, `SP`
 
-A fixed rendering applied after the inversion. It reads nothing from the picture, so a pixel gives the same result in every photo. Per-frame exposure and color belong to the inversion and to the Auto Tone, Auto White Balance, Auto Levels and Auto Color buttons on the right.
+A fixed rendering. It comes after white balance, exposure, the basic tone sliders and the parametric curve, and before the point curve, color mixer, color grading and calibration. A lab works the same way: the operator's density and color corrections go into the scan, and the print curve stays fixed. It reads nothing from the picture, so a pixel gives the same result in every photo. Per-frame exposure and color belong to the inversion and to the Auto Tone, Auto White Balance, Auto Levels and Auto Color buttons on the right. The neutral eyedropper reads the picture before the rendering, so the gray-axis tilt of `HS` stays after a pick.
 
 The rendering is a luminance tone curve, a saturation gain that follows brightness, and for `HS` a small tilt of the gray axis. All curves are monotone cubic, so nothing bends at the knots.
 
@@ -143,12 +143,12 @@ Picking a bundled profile still adds `scannerSignature`, the relative difference
 
 ### `F135`, `HR`
 
-This project has no reference scans from a Pakon F-135 or a Kodak HR-500, so neither target is checked against its machine. Both start from the measured `SP` rendering with Kodak Endura Premier paper (E-4070 datasheet) fitted to its midtone. From one stop below middle gray upward the two share that curve. They differ in the shadows.
+This project has no reference scans from a Pakon F-135 or a Kodak HR-500, so neither target is checked against its machine. Each has its own table, built from what labs and users report about that machine, and neither starts from the `SP` numbers. Both keep the gray axis neutral. Pakon users report yellow, green and blue tints, which points to scene balance that changed from frame to frame.
 
-- `F135` follows the paper down to −2 stops. From −3 stops down it stays 0.9 stop under `SP`, the most the paper toe ever lowered it. Blacks are deeper than `SP`, yet each shadow stop still separates: local contrast there is at least 91% of `SP`.
-- `HR` keeps the measured `SP` shadows below −4 stops. The −3 and −2 stop points sit a little lower so the curve climbs into the paper midtone without a dip in contrast. Its shadows are up to 5.4 L* lighter than `F135`, and saturation is 0.92×.
+- `F135` (Kodak Pakon F-135, the consumer TLX/PSI scanner). Users say it is less saturated than a Noritsu, gets white balance right more often, keeps detail in highlights and shadows, and that some scans look flat; one user found its B&W output bright. Middle gray sits 0.3 stop brighter, like a consumer print. Midtone local contrast is 0.8–1.0, against 1.2–1.35 for `SP`. The toe is lifted (−6 stops at 0.101, `SP` 0.073) and the highlights roll off over a long range, so the scene white that the inversion places at linear 0.70 lands at sRGB 231. Saturation gain is 0.68–0.74, below `HS` everywhere.
+- `HR` (Kodak Professional HR 500). A lab describes its output as close to a raw scan that you finish later, users say it handles color well, and its shadow detail is reported clean. Middle gray sits 0.1 stop dense and midtone local contrast is 1.15–1.2. Shadows run at 1.2–1.3, darker and cleaner than the linear shadows of `MAIN` (−6 stops at 0.018), and each shadow stop separates 1.6 times as much as in `SP`. Highlights do not fold as they do in `SP`; they climb at 1.2–1.35, and the scene white lands at sRGB 242. Saturation stays at 1.0 and drops to 0.88 in the highlights, where `SP` raises it.
 
-Checking them needs what `SP` had: the same negatives scanned on the real machine.
+Each rendering was applied to seven real negatives developed up to the stage where the targets start (two rolls, diagnostic use only). Averaged per photo, every pair among `MAIN` and the four targets differs by at least 2.9 CIEDE2000. The measured `SP`–`HS` pair differs by 4.3. Within single photos, high-key and midtone-heavy scenes bring `MAIN`–`HR` and `F135`–`HR` down to 2.0–2.6. Checking either target against its machine needs what `SP` had: the same negatives scanned on the real machine.
 
 ### `EXPIRED`
 
@@ -189,18 +189,20 @@ Grain and halation become film properties once a stock is selected, so the textu
 | Detail and effects | Sharpness, clarity, dehaze, film grain, vignette, halation, noise reduction |
 | Local adjustment | Radial, linear, polygon, brush masks, dodge and burn |
 
+No combination of the basic tone sliders or the parametric curve reverses tones. Basic tone applies contrast, density, highlights, shadows, whites and blacks in that order, each on the result of the step before, and each step is monotone on its own. The four parametric curve sliders each move one knot placed at the 10, 35, 65 and 90% points of the photo's luminance, and a monotone cubic joins the knots. The knots sit at least 0.10 sRGB from each other and from black and white, so a slider pushed to its end moves its knot by at least 0.045 sRGB on any photo.
+
 These values are stored as a step-by-step edit history. GrainMend and ordinary local adjustment differ in purpose and in how they are stored.
 
 ### Automatic corrections
 
 | Control | Behavior |
 |---|---|
-| Auto Tone | Assigns exposure, contrast, density, highlights, shadows, whites and blacks. Keeps the user's color controls and curves. |
+| Auto Tone | Assigns exposure, contrast, density, highlights, shadows, whites and blacks. Exposure moves the scene's log-average luminance to a scene key: bright photos go down, dark ones go up, and a brighter scene gets a higher key. The other sliders are solved in the order basic tone applies them, each from the values the earlier steps leave. Pixels below diffuse white whose brightest channel newly reaches full scale are held to 0.5%; specular highlights and light sources brighter than diffuse white may clip. When a saturated color would clip, whites give way first, then exposure, then density and contrast lifts; density fills the midtones a held-back exposure leaves dark. Exposure and the measured scene key give way by at most one stop for this; if protecting the color would take more, the clipping is accepted. Keeps the user's color controls and curves. |
 | Auto White Balance | Estimates temperature and tint from near-neutral luminance bands. Rejects samples with a clipped RGB channel and reduces correction when neutral evidence is sparse or covers a narrow tonal range. |
-| Auto Levels | Measures common luminance endpoints and applies the same luminance gain to RGB. Preserves channel ratios instead of stretching each channel separately. |
-| Auto Color | Fits residual casts to neutral candidates. Uses channel slopes only when a fit predicts separate, unused luminance bands, and otherwise uses gains. Weak fallback evidence receives less correction. |
+| Auto Levels | Measures common luminance endpoints and applies one luminance gain to RGB, so channel ratios stay. On negatives the endpoints go to the inversion's own black and white: linear 0.70 for color and 0.85 for B&W, the same white where the exposure shoulder starts. |
+| Auto Color | Fits residual casts to neutral candidates. Uses channel slopes only when a fit predicts separate, unused luminance bands, and otherwise uses gains. Weak fallback evidence receives less correction. Channel slopes apply from the darkest evidence band up to white; darker tones keep the correction at the bottom edge of the evidence. |
 
-Auto Tone checks the first proposal on a rendered preview. If it proposes a further exposure or white-point change, it renders that candidate too and accepts it only when a score of middle tone, endpoints, tonal range and clipping improves. This is a bounded correction, not a search for a unique ideal rendering. Repeating the command assigns settings rather than accumulating them, and resetting Auto Tone keeps the user's color controls.
+Auto Tone checks the first proposal on a rendered preview. If it proposes a further exposure or white-point change, it renders that candidate too and accepts it only when a score of middle tone, endpoints, tonal range and clipping improves. A further brightening obeys the same channel limit. If the check, compared pixel by pixel with the neutral render, shows more than 0.5% of such pixels newly clipping, with the scanner target and curves included, Auto Tone lowers whites and then exposure, rendering up to three more previews to find the brightest setting inside the limit. When it picks between two renders, the one that clips less wins before the score is compared. This is a bounded correction, not a search for a unique ideal rendering. Repeating the command assigns settings rather than accumulating them, and resetting Auto Tone keeps the user's color controls.
 
 Analysis uses area-weighted averages in linear RGB, with a bounded long edge. Tone and WB use an sRGB preview, so clipping means preview-channel clipping, not sensor saturation. These estimates cannot distinguish every subject color from an illuminant cast or establish measured film color accuracy. MAIN/CS Auto Balance and its muted-scene vibrance belong to the inversion stage.
 

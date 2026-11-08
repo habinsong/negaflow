@@ -34,20 +34,7 @@ using negaflow::imaging::WorkingToneAdjustStatus;
 [[nodiscard]] GpuParametricToneCurveParameters to_gpu(
     const imaging::ParametricToneCurveParameters& parameters,
     const imaging::ParametricToneCurveBands& bands) noexcept {
-    GpuParametricToneCurveParameters gpu{};
-    gpu.highlights = parameters.highlights;
-    gpu.lights = parameters.lights;
-    gpu.darks = parameters.darks;
-    gpu.shadows = parameters.shadows;
-    gpu.shadow_low = bands.shadow_low;
-    gpu.shadow_high = bands.shadow_high;
-    gpu.dark_low = bands.dark_low;
-    gpu.dark_high = bands.dark_high;
-    gpu.light_low = bands.light_low;
-    gpu.light_high = bands.light_high;
-    gpu.highlight_low = bands.highlight_low;
-    gpu.highlight_high = bands.highlight_high;
-    return gpu;
+    return make_gpu_parametric_tone_curve(parameters, bands);
 }
 
 [[nodiscard]] GpuColorMixerParameters to_gpu(

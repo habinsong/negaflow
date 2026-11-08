@@ -14,7 +14,7 @@ constexpr double refined_window = 0.17;
 // 그 아래는 양자화·잡음이 비율을 지배합니다). 위쪽은 클리핑 근처를 뺍니다.
 constexpr double minimum_channel = 0.004;
 constexpr double maximum_luminance = 0.90;
-const double band_width = std::log(2.0);
+constexpr double band_width = neutral_axis_band_width;
 
 struct LogSample final {
     double luminance{0.0};

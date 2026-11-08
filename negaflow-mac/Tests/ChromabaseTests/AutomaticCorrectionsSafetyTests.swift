@@ -18,10 +18,16 @@ final class AutomaticCorrectionsSafetyTests: XCTestCase {
             bounds: CGRect(x: x, y: y, width: 1, height: 1), format: .RGBAf, colorSpace: linear)
         return SIMD3(Double(p[0]), Double(p[1]), Double(p[2]))
     }
+    /// 휘도가 같으면 휘도 모형은 같은 노출을 낸다. 채도 높은 빨강 단색은 R 을 지키려면 1.6 스톱을 내려야 해서 채널
+    /// 한도가 노출에서 거둘 수 있는 몫(1 스톱)만 내준다(2026-11-08).
     func testEqualLuminanceColorsReceiveTheSameExposure() throws {
-        let gray = AutoAdjust.autoTone(try XCTUnwrap(AutoAdjust.imageStats(flat([118,118,118]))))
-        let red = AutoAdjust.autoTone(try XCTUnwrap(AutoAdjust.imageStats(flat([237,0,0]))))
-        XCTAssertEqual(gray.exposure, red.exposure, accuracy: 0.03)
+        let grayStats = try XCTUnwrap(AutoAdjust.imageStats(flat([118,118,118])))
+        let redStats = try XCTUnwrap(AutoAdjust.imageStats(flat([237,0,0])))
+        var redLuminanceOnly = redStats
+        redLuminanceOnly.peakSamples = []
+        let gray = AutoAdjust.autoTone(grayStats), red = AutoAdjust.autoTone(redStats)
+        XCTAssertEqual(gray.exposure, AutoAdjust.autoTone(redLuminanceOnly).exposure, accuracy: 0.03)
+        XCTAssertEqual(red.exposure, gray.exposure - AutoAdjust.channelExposureBudget, accuracy: 0.03)
         XCTAssertEqual(gray.vibrance, 0)
         XCTAssertEqual(red.vibrance, 0)
     }

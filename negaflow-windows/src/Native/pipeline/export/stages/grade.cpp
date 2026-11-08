@@ -6,7 +6,6 @@
 #include "negaflow/imaging/color_model.h"
 #include "negaflow/imaging/rescue_grade.h"
 #include "negaflow/imaging/scanner_profile_grade.h"
-#include "negaflow/imaging/scanner_target_grade.h"
 #include "negaflow/imaging/scene_correction.h"
 #include "negaflow/pipeline/gpu_accelerator.h"
 
@@ -20,7 +19,6 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
     const bool stop_before_color_model) noexcept {
     negaflow::imaging::WorkingImage& developed_image = invert.image;
     const bool negative_source = invert.negative_source;
-    const bool positive = invert.positive;
     const auto& negative = invert.negative;
 
     tracker.begin(
@@ -74,63 +72,16 @@ std::optional<DevelopExportOutcome> apply_grade_stages(
             target_grade_cost,
             request.develop_target != DevelopTarget::main ||
                 !request.scanner_profile_id.empty()));
+    // 스캐너 타깃(SP·HS·F135·HR)은 여기가 아니라 톤 단계 안, 노출·기본 톤·파라메트릭 커브 뒤에
+    // 겁니다(`look.cpp`, macOS `ScannerTargetGrade.applyAfterSceneAdjustments`). 레스큐·프로필
+    // 그레이드는 CPU 판뿐이라 그때만 화상을 내립니다.
     const bool target_active =
-        request.develop_target == DevelopTarget::noritsu ||
-        request.develop_target == DevelopTarget::sp3000 ||
-        request.develop_target == DevelopTarget::f135 ||
-        request.develop_target == DevelopTarget::hr ||
         request.develop_target == DevelopTarget::rescue ||
         ((request.develop_target == DevelopTarget::main ||
           request.develop_target == DevelopTarget::print) &&
          !request.scanner_profile_id.empty());
-    const bool scanner_target = request.develop_target == DevelopTarget::noritsu ||
-        request.develop_target == DevelopTarget::sp3000 ||
-        request.develop_target == DevelopTarget::f135 ||
-        request.develop_target == DevelopTarget::hr;
-    const bool monochrome =
-        negative.film_type == negaflow::imaging::NegativeFilmType::black_and_white;
-    // 스캐너 타깃은 화상이 GPU 에 머문 채로 끝납니다(흑백 luma 붕괴도 렌더링 커널 안에서 합니다).
-    // 레스큐·프로필 그레이드는 CPU 판뿐이라 그때만 화상을 내립니다. 예전에는 여기서 늘 내려,
-    // 뒤따르는 노리츠·톤 단계까지 한 장에 왕복이 네 번 더 붙었습니다.
-    if (target_active && !scanner_target) {
+    if (target_active) {
         GpuAccelerator::shared().flush_resident();
-    }
-    if (scanner_target) {
-        negaflow::imaging::ScannerTargetStyle target_style =
-            negaflow::imaging::ScannerTargetStyle::noritsu;
-        switch (request.develop_target) {
-            case DevelopTarget::sp3000:
-                target_style = negaflow::imaging::ScannerTargetStyle::sp3000;
-                break;
-            case DevelopTarget::f135:
-                target_style = negaflow::imaging::ScannerTargetStyle::f135;
-                break;
-            case DevelopTarget::hr:
-                target_style = negaflow::imaging::ScannerTargetStyle::hr;
-                break;
-            default:
-                break;
-        }
-        negaflow::imaging::ScannerTargetGradeInfo target_info{};
-        const negaflow::core::KernelStatus target_status =
-            negaflow::imaging::apply_scanner_target_grade(
-                {
-                    developed_image.pixels.data(),
-                    developed_image.pixels.size(),
-                    developed_image.width,
-                    developed_image.height,
-                    developed_image.stride_pixels,
-                },
-                target_style,
-                monochrome,
-                positive,
-                request.scanner_profile_id,
-                target_info);
-        if (target_status != negaflow::core::KernelStatus::ok) {
-            return fail(
-                DevelopExportStage::target_grade,
-                negaflow::core::kernel_status_name(target_status));
-        }
     }
     if (request.develop_target == DevelopTarget::rescue) {
         negaflow::imaging::RescueGradeInfo rescue_info{};

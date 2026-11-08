@@ -22,7 +22,7 @@ extension ChromabaseEngine {
             img = ToneMapper.applyExposure(to: img, stops: params.exposure, filmType: params.filmType)
         }
         img = ToneMapper.applyToneCurves(to: img, params: params, region: measurements.analysisRegion)
-        return img
+        return ScannerTargetGrade.applyAfterSceneAdjustments(to: img, params: params)
     }
 
     /// 반전부터 화이트밸런스(ColorModel) 직전까지 — 중립 스포이드가 이 단계의 값을 잰다.
@@ -75,14 +75,8 @@ extension ChromabaseEngine {
         let measureSpace = CGColorSpace(name: CGColorSpace.linearSRGB) ?? sampleColorSpace
         let region = measurements.analysisRegion
         if params.autoLevels {
-            // Fixed-model output targets are specified after the output curve; map them back
-            // to scene-linear values before applying the requested level stretch.
-            let fixed = NegativeLinearResponse.applies(params)
-            img = AutoLevels.apply(to: img, sampleColorSpace: measureSpace,
-                                   outputWhite: fixed ? NegativeLinearResponse.inputLuminance(forOutput: 0.95, filmType: params.filmType) : 0.95,
-                                   outputBlack: fixed ? NegativeLinearResponse.inputLuminance(forOutput: NegativeInversion.toeFloor, filmType: params.filmType) : NegativeInversion.toeFloor,
-                                   region: region, sceneLinearOutput: fixed,
-                                   points: &measurements.autoLevelsPoints)
+            img = AutoLevels.applyNegative(to: img, params: params, sampleColorSpace: measureSpace,
+                                           region: region, points: &measurements.autoLevelsPoints)
         }
         if params.autoNeutralBalance {
             img = NeutralBalance.apply(to: img, sampleColorSpace: measureSpace,
@@ -92,15 +86,14 @@ extension ChromabaseEngine {
         // 타겟별 베이스 분기:
         //   main/print          — 기존 v4 반전. 자동 밸런스로 밀도 정규화·채도 처리를 켜고 끈다.
         //                         별도의 타깃 룩(채도 감쇠/커브/샤픈)은 추가하지 않는다.
-        //   SP / HS / F135 / HR — 스캐너 렌더링(ScannerTargetGrade, 장면 무관 고정 변환).
-        //                         수동 프로파일 얹기(ScannerProfileGrade)도 ScannerTargetGrade 가
-        //                         흡수하므로 중복 적용하지 않는다.
+        //   SP / HS / F135 / HR — 스캐너 렌더링(ScannerTargetGrade, 장면 무관 고정 변환). 여기가
+        //                         아니라 화이트 밸런스·노출·기본 톤 뒤에 건다
+        //                         (ScannerTargetGrade.applyAfterSceneAdjustments). 수동 프로파일
+        //                         얹기(ScannerProfileGrade)도 ScannerTargetGrade 가 흡수하므로 중복
+        //                         적용하지 않는다.
         //   RESCUE              — 열화(유통기한/방사선 포그) 필름 복구 베이스(RescueGrade).
         //                         반전이 흡수 못 하는 채널별 계조 압축·크로스오버 캐스트·컨페티
         //                         노이즈를 scene-측정으로 보정한다.
-        if params.developTarget.isScannerEmulation {
-            img = ScannerTargetGrade.apply(to: img, target: params.developTarget, params: params)
-        }
         if params.developTarget == .rescue {
             // EXPIRED 자체는 엔드포인트 스트레치/고정 커브/NR을 소유하지 않는다. 여러 휘도대와
             // 공간에서 holdout까지 통과한 중립축 증거가 있을 때만 bounded 상대 보정을 적용한다.

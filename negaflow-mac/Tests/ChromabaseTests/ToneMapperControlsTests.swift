@@ -229,14 +229,16 @@ final class ToneMapperControlsTests: XCTestCase {
             let targetBase = meanLuma(baseline, indexes: masks[targetBand] ?? [])
             let guardBase = meanLuma(baseline, indexes: masks[guardBand] ?? [])
 
+            // 커브는 매듭을 적어도 0.045(인코딩, 약 11 코드) 움직이고 매듭에서 멀수록 줄어든다
+            // (ParametricToneCurve). 이 선형 램프는 명부가 몰려 밝은 쪽 매듭이 그 하한에 걸린다.
             XCTAssertLessThan(
                 meanLuma(lowered, indexes: masks[targetBand] ?? []),
-                targetBase - 12,
+                targetBase - 8,
                 "\(name) -1은 자기 톤 밴드를 확실히 내려야 합니다."
             )
             XCTAssertGreaterThan(
                 meanLuma(raised, indexes: masks[targetBand] ?? []),
-                targetBase + 12,
+                targetBase + 8,
                 "\(name) +1은 자기 톤 밴드를 확실히 올려야 합니다."
             )
             XCTAssertLessThan(

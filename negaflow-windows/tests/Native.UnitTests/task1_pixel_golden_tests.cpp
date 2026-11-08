@@ -263,8 +263,8 @@ void measure_task1(
         {L"b-main-scannerprofile-portra400-srgb", L"b-main-scannerprofile-portra400-srgb.tif", "3f8f994923d77b32f97f0416f84710c7e77bfd1cc2d89e518cb2900c55945fb3", NF_DEVELOP_TARGET_MAIN, 0U, L"noritsu__color-nega__kodak-portra-400"},
         {L"c-target-hs-srgb", L"c-target-hs-srgb.tif", "ac4b348ef9f52b8b76988455544d7076a52d1a780230806632ba7366d49c6cf8", NF_DEVELOP_TARGET_NORITSU, 0U, nullptr},
         {L"c-target-sp-srgb", L"c-target-sp-srgb.tif", "f1514bf9ff19f662ad85f95b71b0bf7fd4a169c70cbc35610c4ec88d52af880e", NF_DEVELOP_TARGET_SP3000, 0U, nullptr},
-        {L"c-target-f135-srgb", L"c-target-f135-srgb.tif", "8225e8a0406a5d158b1577331ab802ae7f35cc6bbdf71659bf637d037e784a4f", NF_DEVELOP_TARGET_F135, 0U, nullptr},
-        {L"c-target-hr-srgb", L"c-target-hr-srgb.tif", "0319e0d78ae74fffc27b8e939f516fb6506a9787365d42a09149683a4e41bc04", NF_DEVELOP_TARGET_HR, 0U, nullptr},
+        {L"c-target-f135-srgb", L"c-target-f135-srgb.tif", "2ed07b8a648451573e439663dd564bdd70156242f411c972a02f32725a104669", NF_DEVELOP_TARGET_F135, 0U, nullptr},
+        {L"c-target-hr-srgb", L"c-target-hr-srgb.tif", "788b260d1d6f30ab2552cdcc0c55e512b9f0971834880a6749bb01ad6995d9b2", NF_DEVELOP_TARGET_HR, 0U, nullptr},
         {L"d-main-displayp3", L"d-main-displayp3.tif", "230a3c85406e9f2da65476defd846f96f59b731e0f6fe6dd96366706b21414af", NF_DEVELOP_TARGET_MAIN, 1U, nullptr},
         {L"d-main-adobergb", L"d-main-adobergb.tif", "3915583c65a48e097302129afb3e310be2ecdcf56e328d1dd007fe1910c4c849", NF_DEVELOP_TARGET_MAIN, 2U, nullptr},
     }};

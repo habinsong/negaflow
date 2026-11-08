@@ -15,6 +15,7 @@ internal static class AutoAdjustInputTests
         VerifyQueuedCancellationAndInputMatrix().GetAwaiter().GetResult();
         VerifyFailureBoundaries().GetAwaiter().GetResult();
         VerifyClosedLoop().GetAwaiter().GetResult();
+        VerifyChannelBisection().GetAwaiter().GetResult();
         VerifyNeutralPickUserValues();
     }
 
@@ -118,6 +119,95 @@ internal static class AutoAdjustInputTests
         Check(requests.Count == 2 && outcomes is [{ Kind: DevelopExportOutcomeKind.Completed }] &&
             outcomes[0].Frame!.Tone.Exposure == 0.5 && !coordinator.IsRunning,
             "auto_tone_falls_back_to_the_first_answer_when_verification_fails");
+    }
+
+    // 채널 한도(macOS `AutoAdjust.closedLoopTone`): 고른 결과에서도 새로 날아간 채널이 한도를 넘으면 고른 제안과
+    // 그 바닥(흰색·노출의 밝히는 몫을 뺀 값) 사이를 실제로 그려 이분해 맞는 가장 밝은 점을 씁니다. 가짜 렌더는
+    // 흰색이 0.25 를 넘으면 한도를 넘는다고 답합니다.
+    private static async Task VerifyChannelBisection()
+    {
+        var requests = new List<DevelopExportRequest>();
+        var exporter = new PixelExporter((request, pixels) =>
+        {
+            lock (requests) { requests.Add(request); }
+            pixels[1] = (byte)Math.Round(request.Whites * 100);
+            return OkResult();
+        });
+        var first = new AutoAdjustSettings(0.5, 0.1, -0.2, 0.1, 0.6, -0.05, 0.0, 0.0, 0.0, 0.0);
+        var coordinator = new AutoAdjustCoordinator(exporter, new FakeDispatcher(true), 128,
+            (_, _, _, _) => first,
+            (_, _, _, given) => given,
+            (_, _, _, _) => 0,
+            (_, measured) => measured.Pixels[1] > 25 ? 0.01 : 0);
+        LibraryFrameSnapshot frame = Frame(new ManualBaseRgb(0.7, 0.3, 0.2)) with
+        {
+            SourcePath = Path.Combine(Path.GetTempPath(), "auto-channel.tif"),
+        };
+        var outcomes = new List<AutoAdjustOutcome>();
+        await coordinator.RunToneAsync(frame, outcomes.Add);
+        Check(requests.Count == 5, $"auto_tone_bisects_channel_clipping_within_three_renders ({requests.Count})");
+        AutoAdjustSettings settled = outcomes[0].Settings!;
+        // t = 0.5(흰색 0.30, 넘침) → 0.25(0.15, 맞음) → 0.375(0.225, 맞음).
+        Check(Math.Abs(settled.Whites - 0.225) < 1e-9 && Math.Abs(settled.Exposure - 0.1875) < 1e-9,
+            $"auto_tone_keeps_the_brightest_fitting_point (whites {settled.Whites}, ev {settled.Exposure})");
+        Check(settled.Contrast == first.Contrast && settled.Density == first.Density,
+            "auto_tone_channel_bisection_moves_only_exposure_and_whites");
+
+        // 노출은 채널 한도의 바닥까지만 내립니다(바닥 0.3): t = 0.375 에서 노출 0.3 + 0.375 × 0.2.
+        requests.Clear();
+        outcomes.Clear();
+        var floored = new AutoAdjustCoordinator(exporter, new FakeDispatcher(true), 128,
+            (_, _, _, _) => first,
+            (_, _, _, given) => given,
+            (_, _, _, _) => 0,
+            (_, measured) => measured.Pixels[1] > 25 ? 0.01 : 0,
+            (_, _, _) => (0.3, double.PositiveInfinity),
+            _ => 1.0);
+        await floored.RunToneAsync(frame, outcomes.Add);
+        Check(Math.Abs(outcomes[0].Settings!.Exposure - 0.375) < 1e-9 && Math.Abs(outcomes[0].Settings!.Whites - 0.225) < 1e-9,
+            $"auto_tone_channel_bisection_stops_at_the_exposure_floor (ev {outcomes[0].Settings!.Exposure})");
+
+        // 장면 키 바닥(macOS `testClosedLoopDarkensTheMeasuredKeyByAtMostTheBudget`): 가짜 렌더의 키는 흰색 × 100 이고 남은
+        // 예산 0.5 스톱이면 바닥은 60 / √2 ≈ 42.4 입니다. t = 0.5(흰색 0.30, 키 30 — 너무 어두움) → 0.75(0.45, 넘침) →
+        // 0.625(0.375, 키 37.5 — 너무 어두움) 이라 맞는 점이 없고, 키 바닥을 지킨 점 중 가장 나은 점(첫 제안)을 씁니다.
+        requests.Clear();
+        outcomes.Clear();
+        var keyed = new AutoAdjustCoordinator(exporter, new FakeDispatcher(true), 128,
+            (_, _, _, _) => first,
+            (_, _, _, given) => given,
+            (_, _, _, _) => 0,
+            (_, measured) => measured.Pixels[1] > 25 ? 0.01 : 0,
+            (_, _, _) => (double.NegativeInfinity, 0.5),
+            bitmap => bitmap.Pixels[1]);
+        await keyed.RunToneAsync(frame, outcomes.Add);
+        Check(requests.Count == 5 && Math.Abs(outcomes[0].Settings!.Whites - first.Whites) < 1e-9,
+            $"auto_tone_channel_bisection_keeps_the_scene_key_floor (whites {outcomes[0].Settings!.Whites})");
+
+        // 한도 안이면 더 그리지 않습니다.
+        requests.Clear();
+        outcomes.Clear();
+        var fitting = new AutoAdjustCoordinator(exporter, new FakeDispatcher(true), 128,
+            (_, _, _, _) => new AutoAdjustSettings(0.5, 0, 0, 0, 0.2, 0, 0, 0, 0, 0),
+            (_, _, _, given) => given,
+            (_, _, _, _) => 0,
+            (_, measured) => measured.Pixels[1] > 25 ? 0.01 : 0);
+        await fitting.RunToneAsync(frame, outcomes.Add);
+        Check(requests.Count == 2 && outcomes[0].Settings!.Whites == 0.2,
+            "auto_tone_adds_no_render_when_channels_fit");
+
+        // 더 밝힌 후보가 넘치면 첫 제안(맞음)과 후보 사이를 이분하고, 맞는 가장 밝은 점을 점수로 견줍니다.
+        requests.Clear();
+        outcomes.Clear();
+        var raising = new AutoAdjustCoordinator(exporter, new FakeDispatcher(true), 128,
+            (_, _, _, _) => new AutoAdjustSettings(0.5, 0, 0, 0, 0.1, 0, 0, 0, 0, 0),
+            (_, _, _, given) => new AutoAdjustSettings(given.Exposure, given.Contrast, given.Highlights, given.Shadows,
+                0.6, given.Blacks, given.Density, given.Vibrance, given.Warmth, given.Tint),
+            (pixels, _, _, _) => 1.0 - (pixels[1] / 100.0),
+            (_, measured) => measured.Pixels[1] > 35 ? 0.01 : 0);
+        await raising.RunToneAsync(frame, outcomes.Add);
+        // t = 0.5(흰색 0.35, 맞음) → 0.75(0.475, 넘침) → 0.625(0.4125, 넘침).
+        Check(requests.Count == 6 && Math.Abs(outcomes[0].Settings!.Whites - 0.35) < 1e-9,
+            $"auto_tone_bisects_a_raise_that_clips ({requests.Count}, whites {outcomes[0].Settings!.Whites})");
     }
 
     private static async Task VerifyFailureBoundaries()

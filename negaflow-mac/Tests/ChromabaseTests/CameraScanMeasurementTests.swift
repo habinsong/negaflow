@@ -179,11 +179,15 @@ final class CameraScanMeasurementTests: XCTestCase {
         }
     }
 
-    /// 자동 레벨도 크롭 안에서 잰다 — 홀더·백라이트를 화이트/블랙포인트로 잡지 않는다.
+    /// 자동 레벨도 크롭 안에서 잰다 — 홀더·백라이트를 화이트/블랙포인트로 잡지 않는다. 사진의
+    /// 흰 패치는 반전 응답의 흰색 앵커(선형 0.70 = sRGB 218)에 온다. 백라이트를 흰색으로 잡았다면
+    /// 그보다 훨씬 어둡다.
     func testAutoLevelsMeasuresInsideCrop() {
         let result = develop(CameraScanFrame(), crop: true, autoLevels: true)
         assertNeutral(result.patches)
-        XCTAssertGreaterThanOrEqual(SyntheticScan.code(SyntheticScan.luma(result.patches[20])), 245)
+        let white = SyntheticScan.code(SyntheticScan.luma(result.patches[20]))
+        XCTAssertGreaterThanOrEqual(white, 214)
+        XCTAssertLessThanOrEqual(white, 222)
     }
 
     /// 측정 영역 = 크롭을 원본 좌표로 되돌린 사각형. 회전·뒤집기만으로는 영역이 생기지 않는다.

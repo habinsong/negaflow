@@ -1,4 +1,5 @@
 import CoreImage
+import simd
 import XCTest
 @testable import Chromabase
 
@@ -122,90 +123,90 @@ final class ScannerRenderingTests: XCTestCase {
                 SIMD3(0.149442429, 0.149442429, 0.149442429),
             ]),
             (.f135, [
-                SIMD3(0.0, 0.0, 0.0),
-                SIMD3(0.0, 0.0, 0.0),
-                SIMD3(0.001582971, 0.001582971, 0.001582971),
-                SIMD3(0.00528569, 0.00528569, 0.00528569),
-                SIMD3(0.024296108, 0.024296108, 0.024296108),
-                SIMD3(0.18484298, 0.18484298, 0.18484298),
-                SIMD3(0.527002073, 0.527002073, 0.527002073),
-                SIMD3(0.88962959, 0.88962959, 0.88962959),
-                SIMD3(0.948009224, 0.948009224, 0.948009224),
-                SIMD3(1.0, 1.0, 1.0),
-                SIMD3(0.143060362, 0.068131079, 0.036319735),
-                SIMD3(0.037794049, 0.097682386, 0.263899432),
-                SIMD3(0.349846259, 0.218075709, 0.097206658),
-                SIMD3(0.715637034, 0.089880841, 0.040281239),
-                SIMD3(0.036818102, 0.668358195, 0.088113503),
-                SIMD3(0.012249464, 0.03176268, 0.420832781),
-                SIMD3(1.0, 0.949530839, 0.41669206),
-                SIMD3(1.0, 0.519818167, 0.497384586),
-                SIMD3(0.000002692, 0.195932387, 0.309858777),
-                SIMD3(0.208082007, 0.208082007, 0.000002452),
+                SIMD3(0.000000000, 0.000000000, 0.000000000),
+                SIMD3(0.000000000, 0.000000000, 0.000000000),
+                SIMD3(0.004128337, 0.004128337, 0.004128337),
+                SIMD3(0.020259671, 0.020259671, 0.020259671),
+                SIMD3(0.067278092, 0.067278092, 0.067278092),
+                SIMD3(0.221615107, 0.221615107, 0.221615107),
+                SIMD3(0.490740495, 0.490740495, 0.490740495),
+                SIMD3(0.801720967, 0.801720967, 0.801720967),
+                SIMD3(0.897270032, 0.897270032, 0.897270032),
+                SIMD3(1.000000000, 1.000000000, 1.000000000),
+                SIMD3(0.199688675, 0.119930677, 0.077833066),
+                SIMD3(0.080097545, 0.152703461, 0.300016617),
+                SIMD3(0.339945212, 0.251886263, 0.150875427),
+                SIMD3(0.601786255, 0.159892776, 0.095752732),
+                SIMD3(0.110141331, 0.593859747, 0.182904366),
+                SIMD3(0.043106262, 0.084258222, 0.518771253),
+                SIMD3(0.919589137, 0.882512472, 0.311372908),
+                SIMD3(1.000000000, 0.462743308, 0.398867826),
+                SIMD3(0.000164514, 0.250221456, 0.337758183),
+                SIMD3(0.246031487, 0.246031487, 0.000161551),
             ], [
-                SIMD3(0.0, 0.0, 0.0),
-                SIMD3(0.0, 0.0, 0.0),
-                SIMD3(0.001582971, 0.001582971, 0.001582971),
-                SIMD3(0.00528569, 0.00528569, 0.00528569),
-                SIMD3(0.024296108, 0.024296108, 0.024296108),
-                SIMD3(0.18484298, 0.18484298, 0.18484298),
-                SIMD3(0.527002073, 0.527002073, 0.527002073),
-                SIMD3(0.88962959, 0.88962959, 0.88962959),
-                SIMD3(0.948009224, 0.948009224, 0.948009224),
-                SIMD3(1.0, 1.0, 1.0),
-                SIMD3(0.081764266, 0.081764266, 0.081764266),
-                SIMD3(0.096950997, 0.096950997, 0.096950997),
-                SIMD3(0.237363382, 0.237363382, 0.237363382),
-                SIMD3(0.219335516, 0.219335516, 0.219335516),
-                SIMD3(0.492199105, 0.492199105, 0.492199105),
-                SIMD3(0.055705031, 0.055705031, 0.055705031),
-                SIMD3(0.921789623, 0.921789623, 0.921789623),
-                SIMD3(0.62028512, 0.62028512, 0.62028512),
-                SIMD3(0.147070855, 0.147070855, 0.147070855),
-                SIMD3(0.191980983, 0.191980983, 0.191980983),
+                SIMD3(0.000000000, 0.000000000, 0.000000000),
+                SIMD3(0.000000000, 0.000000000, 0.000000000),
+                SIMD3(0.004128337, 0.004128337, 0.004128337),
+                SIMD3(0.020259671, 0.020259671, 0.020259671),
+                SIMD3(0.067278092, 0.067278092, 0.067278092),
+                SIMD3(0.221615107, 0.221615107, 0.221615107),
+                SIMD3(0.490740495, 0.490740495, 0.490740495),
+                SIMD3(0.801720967, 0.801720967, 0.801720967),
+                SIMD3(0.897270032, 0.897270032, 0.897270032),
+                SIMD3(1.000000000, 1.000000000, 1.000000000),
+                SIMD3(0.133847780, 0.133847780, 0.133847780),
+                SIMD3(0.147903454, 0.147903454, 0.147903454),
+                SIMD3(0.263314613, 0.263314613, 0.263314613),
+                SIMD3(0.249208419, 0.249208419, 0.249208419),
+                SIMD3(0.461350233, 0.461350233, 0.461350233),
+                SIMD3(0.106881157, 0.106881157, 0.106881157),
+                SIMD3(0.849158695, 0.849158695, 0.849158695),
+                SIMD3(0.572352271, 0.572352271, 0.572352271),
+                SIMD3(0.190701948, 0.190701948, 0.190701948),
+                SIMD3(0.227409299, 0.227409299, 0.227409299),
             ]),
             (.hr, [
-                SIMD3(0.0, 0.0, 0.0),
-                SIMD3(0.0, 0.0, 0.0),
-                SIMD3(0.003077398, 0.003077398, 0.003077398),
-                SIMD3(0.00988133, 0.00988133, 0.00988133),
-                SIMD3(0.033350736, 0.033350736, 0.033350736),
-                SIMD3(0.18484298, 0.18484298, 0.18484298),
-                SIMD3(0.527002073, 0.527002073, 0.527002073),
-                SIMD3(0.88962959, 0.88962959, 0.88962959),
-                SIMD3(0.948009224, 0.948009224, 0.948009224),
-                SIMD3(1.0, 1.0, 1.0),
-                SIMD3(0.134008042, 0.067723286, 0.037966259),
-                SIMD3(0.040098626, 0.096055037, 0.239663171),
-                SIMD3(0.34014396, 0.220202164, 0.104711758),
-                SIMD3(0.677447508, 0.100453205, 0.048006155),
-                SIMD3(0.046133951, 0.664090038, 0.10296165),
-                SIMD3(0.015058062, 0.036179231, 0.389816905),
-                SIMD3(1.0, 0.950992111, 0.40221696),
-                SIMD3(1.0, 0.520210741, 0.49349582),
-                SIMD3(0.000006615, 0.196512917, 0.299583092),
-                SIMD3(0.208081724, 0.208081724, 0.000006082),
+                SIMD3(0.000000000, 0.000000000, 0.000000000),
+                SIMD3(0.000000000, 0.000000000, 0.000000000),
+                SIMD3(0.000318965, 0.000318965, 0.000318965),
+                SIMD3(0.004687174, 0.004687174, 0.004687174),
+                SIMD3(0.035101933, 0.035101933, 0.035101933),
+                SIMD3(0.167980914, 0.167980914, 0.167980914),
+                SIMD3(0.427686654, 0.427686654, 0.427686654),
+                SIMD3(0.891841170, 0.891841170, 0.891841170),
+                SIMD3(0.947571835, 0.947571835, 0.947571835),
+                SIMD3(1.000000000, 1.000000000, 1.000000000),
+                SIMD3(0.151496780, 0.075748390, 0.042082439),
+                SIMD3(0.043048622, 0.103316692, 0.258291731),
+                SIMD3(0.286646784, 0.191370208, 0.095918348),
+                SIMD3(0.569169147, 0.095148321, 0.047629751),
+                SIMD3(0.058359736, 0.520612675, 0.112774952),
+                SIMD3(0.015971491, 0.039928728, 0.479144736),
+                SIMD3(1.000000000, 0.957736026, 0.367770850),
+                SIMD3(1.000000000, 0.413040618, 0.362046037),
+                SIMD3(0.000009192, 0.183843111, 0.275764666),
+                SIMD3(0.187548448, 0.187548448, 0.000009388),
             ], [
-                SIMD3(0.0, 0.0, 0.0),
-                SIMD3(0.0, 0.0, 0.0),
-                SIMD3(0.003077398, 0.003077398, 0.003077398),
-                SIMD3(0.00988133, 0.00988133, 0.00988133),
-                SIMD3(0.033350736, 0.033350736, 0.033350736),
-                SIMD3(0.18484298, 0.18484298, 0.18484298),
-                SIMD3(0.527002073, 0.527002073, 0.527002073),
-                SIMD3(0.88962959, 0.88962959, 0.88962959),
-                SIMD3(0.948009224, 0.948009224, 0.948009224),
-                SIMD3(1.0, 1.0, 1.0),
-                SIMD3(0.079666968, 0.079666968, 0.079666968),
-                SIMD3(0.094527211, 0.094527211, 0.094527211),
-                SIMD3(0.237363382, 0.237363382, 0.237363382),
-                SIMD3(0.219335516, 0.219335516, 0.219335516),
-                SIMD3(0.492199105, 0.492199105, 0.492199105),
-                SIMD3(0.057221511, 0.057221511, 0.057221511),
-                SIMD3(0.921789623, 0.921789623, 0.921789623),
-                SIMD3(0.62028512, 0.62028512, 0.62028512),
-                SIMD3(0.146232898, 0.146232898, 0.146232898),
-                SIMD3(0.191980983, 0.191980983, 0.191980983),
+                SIMD3(0.000000000, 0.000000000, 0.000000000),
+                SIMD3(0.000000000, 0.000000000, 0.000000000),
+                SIMD3(0.000318965, 0.000318965, 0.000318965),
+                SIMD3(0.004687174, 0.004687174, 0.004687174),
+                SIMD3(0.035101933, 0.035101933, 0.035101933),
+                SIMD3(0.167980914, 0.167980914, 0.167980914),
+                SIMD3(0.427686654, 0.427686654, 0.427686654),
+                SIMD3(0.891841170, 0.891841170, 0.891841170),
+                SIMD3(0.947571835, 0.947571835, 0.947571835),
+                SIMD3(1.000000000, 1.000000000, 1.000000000),
+                SIMD3(0.089421816, 0.089421816, 0.089421816),
+                SIMD3(0.101692898, 0.101692898, 0.101692898),
+                SIMD3(0.204734384, 0.204734384, 0.204734384),
+                SIMD3(0.192494308, 0.192494308, 0.192494308),
+                SIMD3(0.392891817, 0.392891817, 0.392891817),
+                SIMD3(0.066546815, 0.066546815, 0.066546815),
+                SIMD3(0.924125861, 0.924125861, 0.924125861),
+                SIMD3(0.534146374, 0.534146374, 0.534146374),
+                SIMD3(0.139917462, 0.139917462, 0.139917462),
+                SIMD3(0.173225865, 0.173225865, 0.173225865),
             ]),
     ]
 
@@ -231,19 +232,73 @@ final class ScannerRenderingTests: XCTestCase {
         }
     }
 
-    /// F135 와 HR 은 같은 렌더링이 아니다: F135 는 암부가 더 깊고, HR 은 암부를 열어 두고 채도가 낮다.
-    func testF135AndHRRenderDifferently() throws {
-        let f135 = ScannerTargetGrade.RenderingCurves(try XCTUnwrap(ScannerTargetGrade.rendering(for: .f135)))
-        let hr = ScannerTargetGrade.RenderingCurves(try XCTUnwrap(ScannerTargetGrade.rendering(for: .hr)))
-        let shadow = SIMD3<Double>(repeating: 0.18 * pow(2, -3))
-        XCTAssertLessThan(
-            ScannerTargetGrade.renderLinear(shadow, curves: f135, monochrome: false).y,
-            ScannerTargetGrade.renderLinear(shadow, curves: hr, monochrome: false).y * 0.8
-        )
-        let red = SIMD3<Double>(0.6, 0.1, 0.05)
-        let f135Red = ScannerTargetGrade.renderLinear(red, curves: f135, monochrome: false)
-        let hrRed = ScannerTargetGrade.renderLinear(red, curves: hr, monochrome: false)
-        XCTAssertGreaterThan(f135Red.x / f135Red.y, hrRed.x / hrRed.y)
+    /// F135·HR 은 SP 숫자의 변형이 아니라 각 기종의 문서화된 특성으로 따로 만든 표다(+Targets.swift).
+    /// 그 특성을 고정한다. F135: 중간톤이 밝고 평탄하며 암부가 들려 있고 채도가 Noritsu(HS)보다 낮다.
+    /// HR: 검정이 가장 깊고, 명부가 SP 처럼 접히지 않고 가파르게 서며, 명부 채도를 올리지 않는다.
+    func testF135AndHRCarryTheirDocumentedCharacter() throws {
+        func curves(_ target: DevelopTarget) throws -> ScannerTargetGrade.RenderingCurves {
+            ScannerTargetGrade.RenderingCurves(try XCTUnwrap(ScannerTargetGrade.rendering(for: target)))
+        }
+        func localContrast(_ c: ScannerTargetGrade.RenderingCurves, _ a: Double, _ b: Double) -> Double {
+            (log2(ScannerTargetGrade.srgbDecode(c.tone.value(at: b)))
+                - log2(ScannerTargetGrade.srgbDecode(c.tone.value(at: a)))) / (b - a)
+        }
+        let sp = try curves(.sp3000), hs = try curves(.noritsu), f135 = try curves(.f135), hr = try curves(.hr)
+
+        XCTAssertLessThan(localContrast(f135, -1, 1), localContrast(sp, -1, 1) * 0.85, "F135 중간톤이 SP 만큼 가파르다")
+        XCTAssertLessThan(localContrast(f135, -1, 1), localContrast(hr, -1, 1), "F135 중간톤이 HR 보다 가파르다")
+        XCTAssertGreaterThan(f135.tone.value(at: -6), sp.tone.value(at: -6) + 0.01, "F135 암부가 들리지 않았다")
+        XCTAssertGreaterThan(ScannerTargetGrade.srgbDecode(f135.tone.value(at: 0)) / 0.18, pow(2, 0.2),
+                             "F135 중간톤이 소비자 인화처럼 밝지 않다")
+        for stop in stride(from: -5.0, through: 2.0, by: 0.5) {
+            XCTAssertLessThan(f135.chromaGain.value(at: stop), hs.chromaGain.value(at: stop),
+                              "F135 채도가 HS 보다 높다 at \(stop)")
+        }
+
+        for other in [sp, hs, f135] {
+            XCTAssertLessThan(hr.tone.value(at: -8), other.tone.value(at: -8) - 0.015, "HR 검정이 가장 깊지 않다")
+        }
+        XCTAssertGreaterThan(localContrast(hr, 1, 2), localContrast(sp, 1, 2) * 1.2, "HR 명부가 SP 처럼 접힌다")
+        XCTAssertLessThanOrEqual(hr.chromaGain.value(at: 2), 1.0, "HR 이 명부 채도를 올린다")
+    }
+
+    /// 네 타깃(과 MAIN)은 서로 눈에 띄게 다르다. 합성 차트(ColorChecker 18색 × 5 노출)에서 쌍마다
+    /// 평균 ΔE76 를 잰다 — 실측으로 만든 SP↔HS 가 6.3, 가장 가까운 쌍은 HS↔HR 4.5 다(2026-11-07).
+    /// 예전 F135·HR 은 SP 숫자에서 출발해 SP 와 1.7 안팎이었다.
+    func testFourTargetsAreMutuallyDistinct() throws {
+        let checker: [(Double, Double, Double)] = [
+            (115, 82, 68), (194, 150, 130), (98, 122, 157), (87, 108, 67), (133, 128, 177), (103, 189, 170),
+            (214, 126, 44), (80, 91, 166), (193, 90, 99), (94, 60, 108), (157, 188, 64), (224, 163, 46),
+            (56, 61, 150), (70, 148, 73), (175, 54, 60), (231, 199, 31), (187, 86, 149), (8, 133, 161),
+        ]
+        var chart: [SIMD3<Double>] = []
+        for (r, g, b) in checker {
+            let linear = SIMD3(ScannerTargetGrade.srgbDecode(r / 255), ScannerTargetGrade.srgbDecode(g / 255),
+                               ScannerTargetGrade.srgbDecode(b / 255))
+            let luma = (linear * SIMD3(0.2126, 0.7152, 0.0722)).sum()
+            for stop in [-3.0, -1.5, 0, 1, 1.8] { chart.append(linear * (0.18 * pow(2, stop) / luma)) }
+        }
+        func lab(_ v: SIMD3<Double>) -> SIMD3<Double> {
+            let c = SIMD3(min(max(v.x, 0), 1), min(max(v.y, 0), 1), min(max(v.z, 0), 1))
+            let l = ScannerTargetGrade.srgbToLab(r: ScannerTargetGrade.srgbEncode(c.x),
+                                                 g: ScannerTargetGrade.srgbEncode(c.y),
+                                                 b: ScannerTargetGrade.srgbEncode(c.z))
+            return SIMD3(l.l, l.a, l.b)
+        }
+        var rendered: [String: [SIMD3<Double>]] = ["MAIN": chart.map(lab)]
+        for target in targets {
+            let curves = ScannerTargetGrade.RenderingCurves(try XCTUnwrap(ScannerTargetGrade.rendering(for: target)))
+            rendered[target.displayName] = chart.map {
+                lab(ScannerTargetGrade.renderLinear($0, curves: curves, monochrome: false))
+            }
+        }
+        let names = rendered.keys.sorted()
+        for (i, a) in names.enumerated() {
+            for b in names[(i + 1)...] {
+                let mean = zip(rendered[a]!, rendered[b]!).map { simd_length($0 - $1) }.reduce(0, +) / Double(chart.count)
+                XCTAssertGreaterThan(mean, 4.0, "\(a)↔\(b) 평균 ΔE76 \(mean)")
+            }
+        }
     }
 
     /// 암부에서 중간톤으로 올라가는 동안 국부 대비(출력 스탑 / 입력 스탑)가 꺼지지 않는다 —
@@ -262,6 +317,42 @@ final class ScannerRenderingTests: XCTestCase {
                 peak = max(peak, contrast)
                 XCTAssertGreaterThanOrEqual(contrast, peak * 0.9, "\(target.displayName) \(x) 스탑")
             }
+        }
+    }
+
+    /// 타깃 렌더링은 화이트 밸런스·노출·기본 톤 **뒤**에 걸린다 — 같은 슬라이더를 준 MAIN 결과에
+    /// 렌더링만 얹은 값과 같다. 예전에는 렌더링이 반전 직후에 있어, 흰색을 0.95 근처까지 그린 출력
+    /// 위에서 MAIN 의 여유(흰색 0.70)를 전제로 만든 슬라이더가 돌았다(흰색 계열 +0.5 의 클리핑이
+    /// MAIN 0%·SP 20.7%, 2026-11-07 실측). 슬라이더가 모두 0 이면 앞 단계가 항등이라 이 순서는
+    /// 기본 그림을 바꾸지 않는다(골든이 지킨다).
+    func testSceneSlidersActBeforeTheScannerRendering() throws {
+        let wedge = SyntheticScan.negativeWedge()
+        func patches(_ target: DevelopTarget) -> [SIMD3<Double>] {
+            var params = DevelopParameters()
+            params.baseEstimationMode = .manual
+            params.manualBaseRGB = SyntheticScan.colorBase
+            params.developTarget = target
+            params.exposure = 0.4
+            params.whites = 0.5
+            params.highlight = 0.3
+            params.warmth = 0.3
+            let developed = ChromabaseEngine().developScanner(
+                image: wedge.image, base: FilmBase(rgb: SyntheticScan.colorBase, source: .manual), params: params
+            )
+            return SyntheticScan.patchMeans(developed, wedge: wedge)
+        }
+        let main = patches(.main)
+        for target in [DevelopTarget.sp3000, .f135, .hr] {
+            let curves = ScannerTargetGrade.RenderingCurves(try XCTUnwrap(ScannerTargetGrade.rendering(for: target)))
+            let rendered = patches(target)
+            for (index, (m, r)) in zip(main, rendered).enumerated() {
+                let expected = ScannerTargetGrade.renderLinear(m, curves: curves, monochrome: false)
+                for c in 0..<3 {
+                    XCTAssertEqual(r[c], expected[c], accuracy: 2e-3, "\(target.displayName) 패치 \(index) 채널 \(c)")
+                }
+            }
+            // 장면 흰색(가장 짙은 패치)은 슬라이더를 올려도 순백에 붙지 않는다.
+            XCTAssertLessThan(SyntheticScan.code(SyntheticScan.luma(rendered.last!)), 252, "\(target.displayName)")
         }
     }
 

@@ -1,6 +1,7 @@
 #include "negaflow/imaging/scene_correction.h"
 #include "negaflow/core/negative_inversion.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -69,7 +70,16 @@ void test_negative_auto_correction_changes_cast_range() {
         "negative auto correction succeeds");
     expect(info.auto_levels_applied, "Auto Levels applies to a narrow-range scan");
     expect(pixels.front().alpha == 1.0F, "scene correction preserves alpha");
-    expect(pixels.back().red > 0.8F, "Auto Levels expands the visible range");
+    // 끝점은 가장자리 6% 를 뺀 안쪽에서 재고, 반전 응답의 흰색 앵커(0.70)와 토우 바닥(0.003)으로
+    // 벌립니다(macOS `AutoLevels.applyNegative`). 가장자리 열은 측정 밖이라 앵커보다 조금 밝게
+    // 나옵니다. 예전 목표(0.95)였다면 마지막 열이 1.0 을 넘습니다.
+    const auto luma = [](const negaflow::core::Rgba32F& p) {
+        return 0.2126F * p.red + 0.7152F * p.green + 0.0722F * p.blue;
+    };
+    constexpr float original_range = 0.5848F;  // 0.6845 − 0.0997
+    expect(luma(pixels.back()) - luma(pixels.front()) > original_range * 1.1F &&
+               luma(pixels.back()) > 0.70F && luma(pixels.back()) < 0.85F,
+        "Auto Levels expands the visible range to the response white");
 
     for (std::uint32_t y = 0U; y < height; ++y) {
         for (std::uint32_t x = 0U; x < width; ++x) {
@@ -113,7 +123,10 @@ void test_linear_negative_levels_reach_output_targets() {
                 negaflow::core::KernelStatus::ok, "linear levels pass through the output curve");
             expect(std::abs(pixels[height / 2U * width + 16U].red - 0.003F) < 1e-5F,
                 "auto levels black target survives the output curve");
-            expect(std::abs(pixels[height / 2U * width + 80U].red - 0.95F) < 1e-5F,
+            // 흰색 목표는 반전 응답의 흰색 앵커입니다(컬러 0.70·흑백 0.85, macOS
+            // `AutoLevels.applyNegative`).
+            const float white = monochrome ? 0.85F : 0.70F;
+            expect(std::abs(pixels[height / 2U * width + 80U].red - white) < 1e-5F,
                 "auto levels white target survives the output curve");
         }
     }
@@ -350,6 +363,58 @@ void test_levels_preserve_neutrals_and_hue() {
 
 }  // namespace
 
+// 기울기(감마) 항은 증거가 덮는 휘도에만 씁니다. 외삽하면 깊은 암부에서 채널별 감마 차이가 스톱 단위
+// 캐스트가 됩니다(2026-11-08 실측). 밝은 절반에만 중립 증거(밝기에 따라 초록 캐스트가 커짐)가 있고, 아래 절반에는 증거보다 훨씬 어두운
+// 회색 두 단(0.0006·0.0003)이 있습니다. 감마 항을 외삽하지 않으면 증거 아래의 보정은 경계 배율 하나라
+// 두 단이 같은 채널 배율을 받습니다(macOS `NeutralBalanceCoverageTests`).
+void test_slope_is_held_at_the_evidence_edge() {
+    constexpr std::uint32_t width = 256U;
+    constexpr std::uint32_t height = 128U;
+    std::vector<negaflow::core::Rgba32F> pixels(static_cast<std::size_t>(width) * height);
+    negaflow::imaging::SceneSampleGrid samples{};
+    samples.width = width;
+    samples.height = height;
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            double r = x < width / 2U ? 0.0006 : 0.0003;
+            double g = r;
+            double b = r;
+            if (y < height / 2U) {
+                const double t = static_cast<double>(x) / static_cast<double>(width - 1U);
+                const double luma = 0.06 * std::pow(10.0, t);
+                const double green = 1.0 + (0.10 * t);
+                r = luma / green; g = luma * green; b = luma / green;
+            }
+            pixels[static_cast<std::size_t>(y) * width + x] = {
+                static_cast<float>(r), static_cast<float>(g), static_cast<float>(b), 1.0F};
+            samples.red.push_back(r); samples.green.push_back(g); samples.blue.push_back(b);
+        }
+    }
+    const auto plan = negaflow::imaging::plan_scene_neutral_balance(samples);
+    double tilt = 0.0;
+    for (std::size_t c = 0U; c < 3U; ++c) { tilt = std::max(tilt, std::abs(plan.exponent[c] - 1.0)); }
+    expect(plan.apply && tilt > 0.01, "the evidence uses a channel gamma, so the edge rule is exercised");
+    expect(plan.low[1] > 0.0006, "the deep grey lies below the evidence");
+
+    const auto before = pixels;
+    negaflow::imaging::SceneCorrectionInfo info{};
+    const negaflow::imaging::SceneCorrectionParameters parameters{false, true, true};
+    expect(negaflow::imaging::apply_scene_correction(view(pixels, width, height), parameters, info) ==
+               negaflow::core::KernelStatus::ok && info.neutral_balance_applied,
+           "neutral balance succeeds");
+    const std::size_t brighter = static_cast<std::size_t>(height - 4U) * width + (width / 4U);
+    const std::size_t darker = static_cast<std::size_t>(height - 4U) * width + (3U * width / 4U);
+    const double gains[2][3] = {
+        {pixels[brighter].red / before[brighter].red, pixels[brighter].green / before[brighter].green,
+         pixels[brighter].blue / before[brighter].blue},
+        {pixels[darker].red / before[darker].red, pixels[darker].green / before[darker].green,
+         pixels[darker].blue / before[darker].blue}};
+    for (std::size_t c = 0U; c < 3U; ++c) {
+        expect(std::abs(gains[0][c] / gains[1][c] - 1.0) < 1.0e-4,
+               "below the evidence every level gets the same channel gain (no extrapolated gamma)");
+    }
+}
+
 int main() {
     try {
         test_disabled_is_identity();
@@ -361,6 +426,7 @@ int main() {
         test_uniform_cast_is_removed_at_every_tone();
         test_midtone_bow_is_removed_without_breaking_white();
         test_neutral_scene_is_untouched();
+        test_slope_is_held_at_the_evidence_edge();
         test_dominant_foliage_does_not_pull_the_neutral_axis();
         test_auto_levels_ignores_frame_border_and_measures_inside_region();
         test_auto_levels_keeps_values_above_the_white_point();

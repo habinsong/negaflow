@@ -190,16 +190,10 @@ void print_pipeline_report_suffix(const DevelopedExportPipelineReport& context) 
               << ",\"curve_sampled_luma_count\":"
               << measurement.sampled_luma_count;
     if (context.adjusted.info.parametric_curve_applied) {
-        std::cout << ",\"curve_bands\":{\"shadow_low\":"
-                  << measurement.bands.shadow_low
-                  << ",\"shadow_high\":" << measurement.bands.shadow_high
-                  << ",\"dark_low\":" << measurement.bands.dark_low
-                  << ",\"dark_high\":" << measurement.bands.dark_high
-                  << ",\"light_low\":" << measurement.bands.light_low
-                  << ",\"light_high\":" << measurement.bands.light_high
-                  << ",\"highlight_low\":" << measurement.bands.highlight_low
-                  << ",\"highlight_high\":" << measurement.bands.highlight_high
-                  << '}';
+        // 파라메트릭 커브의 안쪽 매듭 네 개(인코딩 휘도)입니다.
+        std::cout << ",\"curve_bands\":{\"knots\":["
+                  << measurement.bands.knots[0] << ',' << measurement.bands.knots[1] << ','
+                  << measurement.bands.knots[2] << ',' << measurement.bands.knots[3] << "]}";
     } else {
         std::cout << ",\"curve_bands\":null";
     }

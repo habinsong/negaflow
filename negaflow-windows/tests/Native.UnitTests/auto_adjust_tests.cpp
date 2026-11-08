@@ -1,6 +1,11 @@
 #include "negaflow/imaging/auto_adjust.h"
+#include "negaflow/imaging/channel_headroom.h"
+#include "negaflow/imaging/basic_tone_model.h"
+#include "negaflow/core/pointwise.h"
 
+#include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <vector>
@@ -75,9 +80,27 @@ void test_statistics_describe_the_frame() {
         "every pixel of a mid grey frame counts as near-neutral");
 }
 
-// The rule that separates this from a grey-world auto: a bright scene must not be hauled
-// down to mid grey. Only real clipping pulls exposure negative.
-void test_exposure_only_brightens_unless_clipping() {
+// 두 톤 그림: 위쪽 `top_rows` 줄은 `top`, 나머지는 `body`(회색).
+[[nodiscard]] std::vector<std::uint8_t> two_tone_image(
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint8_t body,
+    const std::uint8_t top,
+    const std::uint32_t top_rows) {
+    auto pixels = flat_image(width, height, body, body, body);
+    for (std::uint32_t y = 0U; y < top_rows; ++y) {
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            const std::size_t at = (static_cast<std::size_t>(y) * width + x) * 4U;
+            pixels[at] = top; pixels[at + 1U] = top; pixels[at + 2U] = top;
+        }
+    }
+    return pixels;
+}
+
+// 노출은 장면 키(Reinhard 자동 키, macOS `AutoAdjust.sceneKey`)로 양방향입니다. 어두운 장면은 올리고
+// 밝은 장면은 내립니다. 예전에는 밝히는 쪽만 허용해 중립 현상본이 18% 보다 밝은 사진(macOS 사용자
+// 카탈로그 398장 중 49%)에서 노출이 늘 0 이었습니다(2026-11-08).
+void test_exposure_moves_both_ways_to_the_scene_key() {
     constexpr std::uint32_t width = 40U;
     constexpr std::uint32_t height = 40U;
 
@@ -85,26 +108,20 @@ void test_exposure_only_brightens_unless_clipping() {
     const auto dark_tone = negaflow::imaging::auto_tone(stats_of(dark, width, height));
     expect(dark_tone.exposure > 0.0, "a dark frame is brightened");
 
-    const auto bright = flat_image(width, height, 230U, 230U, 230U);
+    // 대부분 sRGB 200(선형 0.58), 위 4줄(10%)이 252 — 명부가 있는 밝은 장면입니다.
+    const auto bright = two_tone_image(width, height, 200U, 252U, 4U);
     const auto bright_tone = negaflow::imaging::auto_tone(stats_of(bright, width, height));
-    expect(
-        bright_tone.exposure >= 0.0,
-        "a bright but unclipped frame is never darkened");
+    // 장면 키 r 0.08·s 8 에서 −0.50 스톱입니다(백점 회복 바닥은 −0.74).
+    expect(bright_tone.exposure < -0.3, "a bright frame is pulled down toward its scene key");
 
-    // Pure white everywhere is unambiguous clipping, which is the one case that darkens.
     const auto clipped = flat_image(width, height, 255U, 255U, 255U);
     const auto clipped_tone =
         negaflow::imaging::auto_tone(stats_of(clipped, width, height));
     expect(
         clipped_tone.exposure < 0.0,
         "a genuinely clipped frame is pulled down");
-    expect(
-        clipped_tone.exposure >= -3.0,
-        "exposure recovery stays inside the automatic limit");
 }
 
-// Highlights and shadows are recovery only. Letting either run both ways would fight the
-// endpoint sliders.
 void test_recovery_sliders_move_one_way_only() {
     constexpr std::uint32_t width = 32U;
     constexpr std::uint32_t height = 32U;
@@ -193,16 +210,16 @@ void test_white_balance_cools_a_warm_cast_partially() {
     expect(after < before, "the correction reduces the measured cast");
 }
 
-// 미드가 photometric 앵커(linear 0.18)보다 밝으면 노출은 0 이고, 농도로도 미드를 어둡게 하지
-// 않습니다. 예전에는 농도(+)가 하이키·설경을 회색으로 끌어내려 "밝히는 방향만" 원칙을
-// 우회했습니다(2026-10-14 macOS 실측: 미드 127 → 116). 클리핑 복구만 어둡게 합니다.
-void test_bright_midtones_are_not_darkened_by_density() {
+// 미드가 키보다 밝으면 노출이 내려서 맞추고, 농도는 쓰지 않습니다(농도는 노출이 명부 여유나 한도에
+// 막혀 못 밝힌 만큼만 밝힙니다, macOS `testAutoToneDarkensBrightMidtonesWithExposureNotDensity`).
+void test_bright_midtones_use_exposure_not_density() {
     constexpr std::uint32_t width = 32U;
     constexpr std::uint32_t height = 32U;
-    const auto bright = flat_image(width, height, 158U, 158U, 158U);
+    // 대부분 sRGB 158(선형 0.34), 위 1줄(3%)이 243(선형 0.9).
+    const auto bright = two_tone_image(width, height, 158U, 243U, 1U);
     const auto tone = negaflow::imaging::auto_tone(stats_of(bright, width, height));
-    expect(tone.exposure == 0.0, "a bright midtone is not exposed further");
-    expect(tone.density <= 0.0, "density does not darken a bright midtone");
+    expect(tone.exposure < -0.2, "a bright midtone is pulled down by exposure (about -0.26 at r 0.08, s 8)");
+    expect(tone.density == 0.0, "density is not used when exposure reaches the key");
 }
 
 // Pressing auto twice must give the same answer as pressing it once: the values are
@@ -249,8 +266,15 @@ void test_invalid_input_is_refused() {
 void test_luminance_confidence_and_color_scope() {
     const auto gray=stats_of(flat_image(64,64,118,118,118),64,64);
     const auto red=stats_of(flat_image(64,64,237,0,0),64,64);
+    // 휘도가 같으면 휘도 모형은 같은 노출을 냅니다(2026-11-08 macOS `testEqualLuminanceColorsReceiveTheSameExposure`).
     const auto gray_tone=negaflow::imaging::auto_tone(gray), red_tone=negaflow::imaging::auto_tone(red);
-    expect(std::abs(gray_tone.exposure-red_tone.exposure)<0.03,"equal luminance colors receive the same exposure");
+    auto red_luminance_only=red;
+    red_luminance_only.peak_samples.clear();
+    expect(std::abs(gray_tone.exposure-negaflow::imaging::auto_tone(red_luminance_only).exposure)<0.03,
+           "equal luminance colors receive the same luminance-model exposure");
+    // R 을 지키려면 1.6 스톱을 내려야 해서 채널 한도가 노출에서 거둘 수 있는 몫(1 스톱)만 내줍니다.
+    expect(std::abs(red_tone.exposure-(gray_tone.exposure-negaflow::imaging::auto_tone_channel_exposure_budget))<0.03,
+           "the saturated red gives up exactly the channel exposure budget");
     expect(gray_tone.vibrance==0 && red_tone.vibrance==0,"tone does not propose color edits");
     const auto warm=negaflow::imaging::auto_white_balance(stats_of(flat_image(64,64,180,120,75),64,64));
     expect(std::abs(warm.warmth)<0.4,"unsupported warm subject is not pushed to the WB limit");
@@ -290,18 +314,52 @@ void test_uncovered_area_is_not_measured() {
     expect(baked.average_red > 0.6, "control: the same white baked opaque pulls the mean up");
 }
 
+// 자동 톤은 기본 톤 커널의 합성 순서(대비 → 농도 → 명부 → 암부 → 흰색 → 검정)대로 역산합니다. 흰색이
+// 한도(±1)에 걸리지 않으면 대비·명부가 옮긴 뒤의 백점(p995)이 정확히 확산 화이트에 닿습니다(macOS
+// `testAutoToneWhitesLandOnDiffuseWhiteThroughTheComposedKernel`).
+void test_auto_tone_whites_land_on_diffuse_white_through_the_composed_kernel() {
+    namespace model = negaflow::imaging::basic_tone_model;
+    negaflow::imaging::AutoAdjustStats stats{};
+    for (std::size_t i = 30U; i <= 190U; ++i) { stats.luma_histogram[i] = 1.0 / 161.0; }
+    stats.average_red = stats.average_green = stats.average_blue = 0.3;
+    const auto result = negaflow::imaging::auto_tone(stats);
+    expect(std::abs(result.contrast) > 0.05, "the scene exercises the contrast step");
+    expect(std::abs(result.whites) < 0.999, "whites stay inside their auto limit");
+    double accumulated = 0.0;
+    double p995 = 1.0;
+    for (std::size_t i = 0U; i < stats.luma_histogram.size(); ++i) {
+        accumulated += stats.luma_histogram[i];
+        if (accumulated >= 0.995) { p995 = static_cast<double>(i) / 255.0; break; }
+    }
+    const auto decode = [](const double v) { return v <= 0.04045 ? v / 12.92 : std::pow((v + 0.055) / 1.055, 2.4); };
+    const auto encode = [](const double v) {
+        return v <= 0.0031308 ? v * 12.92 : (1.055 * std::pow(v, 1.0 / 2.4)) - 0.055;
+    };
+    double t = encode(std::min(negaflow::core::exposed_luminance(
+        decode(p995), result.exposure,
+        static_cast<double>(negaflow::core::color_exposure_headroom_stops)), 1.0));
+    t = model::contrast(t, result.contrast);
+    t = model::density(t, result.density);
+    t = model::highlight(t, result.highlights);
+    t = model::shadow(t, result.shadows);
+    t = model::whites(t, result.whites);
+    t = model::blacks(t, result.blacks);
+    expect(std::abs(t - encode(0.90)) < 1.0e-9, "the white point lands exactly on diffuse white");
+}
+
 int main() {
     test_statistics_describe_the_frame();
     test_luminance_confidence_and_color_scope();
-    test_exposure_only_brightens_unless_clipping();
+    test_exposure_moves_both_ways_to_the_scene_key();
     test_recovery_sliders_move_one_way_only();
     test_print_like_monochrome_keeps_blacks_and_contrast();
     test_white_balance_leaves_neutral_alone();
     test_white_balance_cools_a_warm_cast_partially();
-    test_bright_midtones_are_not_darkened_by_density();
+    test_bright_midtones_use_exposure_not_density();
     test_results_are_deterministic();
     test_invalid_input_is_refused();
     test_uncovered_area_is_not_measured();
+    test_auto_tone_whites_land_on_diffuse_white_through_the_composed_kernel();
 
     if (failures != 0) {
         std::cerr << failures << " auto adjust test(s) failed\n";

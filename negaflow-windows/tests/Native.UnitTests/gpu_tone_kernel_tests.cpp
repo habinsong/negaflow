@@ -189,9 +189,9 @@ const CurveCase curve_cases[] = {
     {"curve_lights", {0.0F, 0.7F, 0.0F, 0.0F}, {}},
     {"curve_highlights", {-0.85F, 0.0F, 0.0F, 0.0F}, {}},
     {"curve_all", {0.5F, -0.4F, 0.35F, -0.6F}, {}},
-    // 밴드를 기본값과 다르게 줘서 상수로 박히지 않았는지 확인합니다.
+    // 매듭을 기본값과 다르게 줘서 상수로 박히지 않았는지 확인합니다.
     {"curve_custom_bands", {0.4F, 0.4F, -0.4F, 0.4F},
-     {0.02F, 0.19F, 0.15F, 0.42F, 0.30F, 0.74F, 0.40F, 0.60F}},
+     negaflow::imaging::parametric_tone_curve_bands_from_percentiles(0.02, 0.09, 0.30, 0.62)},
 };
 
 void curve_matches_cpu(const GpuDevice& device, const char* const label) {
@@ -215,13 +215,8 @@ void curve_matches_cpu(const GpuDevice& device, const char* const label) {
     }
 
     for (const CurveCase& scenario : curve_cases) {
-        const GpuParametricToneCurveParameters gpu_parameters{
-            scenario.parameters.highlights, scenario.parameters.lights,
-            scenario.parameters.darks,      scenario.parameters.shadows,
-            scenario.bands.shadow_low,      scenario.bands.shadow_high,
-            scenario.bands.dark_low,        scenario.bands.dark_high,
-            scenario.bands.light_low,       scenario.bands.light_high,
-            scenario.bands.highlight_low,   scenario.bands.highlight_high};
+        const GpuParametricToneCurveParameters gpu_parameters =
+            negaflow::gpu::make_gpu_parametric_tone_curve(scenario.parameters, scenario.bands);
         if (kernel.dispatch(device, input, output, gpu_parameters) != GpuKernelStatus::ok) {
             expect(false, "curve dispatch must succeed");
             continue;
@@ -255,12 +250,12 @@ void curve_matches_cpu(const GpuDevice& device, const char* const label) {
         }
     }
 
-    // 밴드에 NaN 이 들어오면 CPU 판처럼 거절해야 합니다 — 마스크가 통째로 죽습니다.
+    // 매듭에 NaN 이 들어오면 CPU 판처럼 거절해야 합니다 — 구간 선택이 통째로 죽습니다.
     GpuParametricToneCurveParameters bad_bands{};
-    bad_bands.dark_high = std::numeric_limits<float>::quiet_NaN();
+    bad_bands.knot_x[1] = std::numeric_limits<float>::quiet_NaN();
     expect(
         kernel.dispatch(device, input, output, bad_bands) == GpuKernelStatus::non_finite_parameter,
-        "NaN band edge is rejected like the CPU path");
+        "NaN knot is rejected like the CPU path");
 }
 
 void rejects_bad_arguments(const GpuDevice& device) {

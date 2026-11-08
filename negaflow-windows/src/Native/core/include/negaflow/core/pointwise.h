@@ -160,6 +160,13 @@ inline constexpr float color_exposure_headroom_stops = 0.514573173F;
     double stops,
     double headroom_stops) noexcept;
 
+// 같은 노출로 여러 화소를 풀 때 — 이득(2^EV)과 혼합비를 한 번만 계산해 넘깁니다. 혼합비 0 은 EV ≤ 0
+// (선형 곱)입니다(macOS `ExposureShoulder.exposedLuminance(_:gain:blend:)`).
+[[nodiscard]] double exposed_luminance_at_gain(
+    double luminance,
+    double gain,
+    double blend) noexcept;
+
 [[nodiscard]] KernelStatus apply_exposure(
     ConstImageView input,
     ImageView output,

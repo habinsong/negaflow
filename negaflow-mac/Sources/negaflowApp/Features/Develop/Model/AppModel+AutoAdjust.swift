@@ -116,27 +116,28 @@ extension AppModel {
             let snapshot = neutralSnapshot(frame, clearTone: true)
             // 폐루프: 계산값을 사용자의 나머지 파라미터(커브·색 깊이·타겟)와 함께 실제로 그려 다시
             // 재고 한 번 바로잡는다 — 모형 밖 상호작용을 흡수한다.
-            guard let first = await Task.detached(priority: .userInitiated, operation: { () -> AutoAdjust.ToneDelta? in
-                guard let cg = try? DevelopFrameRenderer.render(snapshot).developed,
-                      let stats = AutoAdjust.imageStats(cg) else { return nil }
-                return AutoAdjust.autoTone(stats, filmType: snapshot.filmType)
-            }).value else {
+            guard let (first, neutralStats) = await Task.detached(
+                priority: .userInitiated,
+                operation: { () -> (AutoAdjust.ToneDelta, AutoAdjust.ImageStats)? in
+                    guard let cg = try? DevelopFrameRenderer.render(snapshot).developed,
+                          let stats = AutoAdjust.imageStats(cg) else { return nil }
+                    return (AutoAdjust.autoTone(stats, filmType: snapshot.filmType), stats)
+                }).value else {
                 return AutoAdjustTrace.stopped("autoTone", source: source, at: .renderOrStatsFailed)
             }
             let verify = autoAdjustSnapshot(frame, params: Self.applying(first, to: frame.params))
             let adjustment = await Task.detached(priority: .userInitiated, operation: { () -> AutoAdjust.ToneDelta in
                 guard let result = try? DevelopFrameRenderer.render(verify),
                       let measured = AutoAdjust.imageStats(result.developed) else { return first }
-                let candidate = AutoAdjust.refineTone(first, measured: measured, filmType: verify.filmType)
-                let before = AutoAdjust.refinementDistance(first, candidate)
-                guard before > 0.02 else { return first }
-                var candidateSnapshot = verify
-                candidateSnapshot.params = Self.applying(candidate, to: verify.params)
-                candidateSnapshot.cachedSceneMeasurements = result.sceneMeasurements
-                guard let rendered = try? DevelopFrameRenderer.render(candidateSnapshot).developed,
-                      let checked = AutoAdjust.imageStats(rendered) else { return first }
-                return AutoAdjust.toneScore(checked, adjustMid: first.exposure > 0) <
-                    AutoAdjust.toneScore(measured, adjustMid: first.exposure > 0) ? candidate : first
+                func measure(_ delta: AutoAdjust.ToneDelta) -> AutoAdjust.ImageStats? {
+                    var candidateSnapshot = verify
+                    candidateSnapshot.params = Self.applying(delta, to: verify.params)
+                    candidateSnapshot.cachedSceneMeasurements = result.sceneMeasurements
+                    return (try? DevelopFrameRenderer.render(candidateSnapshot).developed).flatMap { AutoAdjust.imageStats($0) }
+                }
+                // 중립 현상본과 칸마다 맞대어 새로 날아간 채널을 실제 결과(타깃·커브 포함)로 센다.
+                return AutoAdjust.closedLoopTone(first, measured: measured, neutral: neutralStats,
+                                                 filmType: verify.filmType, measure: measure)
             }).value
             guard ownsFrame(frame) else {
                 return AutoAdjustTrace.stopped("autoTone", source: source, at: .frameNotOwned)

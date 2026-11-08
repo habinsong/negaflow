@@ -132,9 +132,13 @@ extension ChromabaseMetalKernels {
         MetalKernelSource(name: "channelPowerGain", body: """
     // 채널별 거듭제곱·게인(자동 색상). c' = gain·c^exponent — 중립축 적합(ln c = α + β·ln Ȳ)을
     // 정확히 뒤집는다. 0 이하 값은 그대로 둔다(거듭제곱이 정의되지 않는다).
-    [[stitchable]] float4 channelPowerGain(coreimage::sample_t src, float3 exponent, float3 gain) {
-        float3 c = max(src.rgb, float3(0.0));
-        float3 corrected = gain * pow(c, exponent);
+    // 증거가 덮는 채널 범위 [low, high] 밖은 경계에서의 보정 배율을 그대로 곱한다 — 감마 항을
+    // 외삽하지 않는다(c' = c · gain · t^(exponent−1), t = clamp(c, low, high)). 범위 안은 위 식과 같다.
+    [[stitchable]] float4 channelPowerGain(coreimage::sample_t src, float3 exponent, float3 gain,
+                                           float3 low, float3 high) {
+        float3 c = max(src.rgb, float3(1e-12));
+        float3 t = clamp(c, low, high);
+        float3 corrected = c * gain * pow(t, exponent - 1.0);
         return float4(select(src.rgb, corrected, src.rgb > float3(0.0)), src.a);
     }
     """),
@@ -188,7 +192,24 @@ extension ChromabaseMetalKernels {
     // 2026-07-18 재캘리브레이션: 과거 마스크는 옛 로그-직결 렌더(미드 linear 0.5~0.6)의
     // linear 좌표라, photometric 미드(0.18)에서 Shadows 마스크 = 1.0, Blacks = 0.65 로
     // 미드를 통째로 침범하고 Contrast 피벗(linear 0.5 = sRGB 0.74)이 미드를 일방적으로
-    // 눌렀다. AutoAdjust.autoTone 의 역산은 이 마스크·계수와 반드시 동기 유지.
+    // 눌렀다. AutoAdjust.autoTone 의 역산은 이 마스크·계수와 반드시 동기 유지(BasicToneModel).
+    //
+    // 2026-11-08 단조 합성: 단계마다 앞 단계의 출력에 차례로 건다(대비 → 농도 → 명부 → 암부 → 흰색 →
+    // 검정). 각 단계는 그 자체로 단조인 사상이라 합성도 단조이고, 어떤 슬라이더 조합에서도 톤이
+    // 뒤집히지 않는다. 예전에는 마스크를 모두 원래 휘도에서 재서 더했는데, 마스크 경계 기울기 × 계수가
+    // 1 을 넘는 곳에서 뒤집혔다 — 암부 −1(인코딩 0.023), 흰색 −2(0.046), 무작위 조합 400개 중 158개가
+    // 1 코드값 넘게 역전(최대 0.11). 단조 조건(|계수 × 마스크 기울기| < 1)을 지키려고:
+    //   · 암부 상단 경계 0.32→0.30(+1 에서 기울기 1.07 → 0.94)
+    //   · 암부를 내리는 쪽은 검정에서부터 넓게 오르는 마스크(smoothstep 0~0.20)
+    //   · 흰색·검정 ±1 을 넘는 몫은 같은 단계를 한 번 더 건다(단계 하나는 |값| ≤ 1)
+    //   · 검정을 내리는 쪽은 0~0.03 을 선형으로 오르는 마스크와 0 바닥(뭉개지되 뒤집히지 않는다)
+    // 검정 한 단계(|amount| ≤ 1). 올리는 쪽은 smoothstep 0~0.03 상승(기울기가 양수라 단조), 내리는 쪽은
+    // t − c·min(1, t/0.03)·fall: 0~0.03 기울기 1 − c/0.03 이 음수가 되는 만큼은 0 에 붙는다.
+    inline float basicToneBlacks(float t, float amount) {
+        float fall = 1.0 - smoothstep(0.14, 0.30, t);
+        if (amount >= 0.0) { return t + amount * 0.06 * smoothstep(0.0, 0.03, t) * fall; }
+        return max(t + amount * 0.06 * min(1.0, max(t, 0.0) / 0.03) * fall, 0.0);
+    }
     [[stitchable]] float4 basicTone(
         coreimage::sample_t src,
         float contrastAmount,
@@ -201,8 +222,7 @@ extension ChromabaseMetalKernels {
         float3 ycoef = float3(0.2126, 0.7152, 0.0722);
         float3 sourceRGB = toneSafeUnitRGB(src.rgb);
         float y = dot(sourceRGB, ycoef);
-        float gy = srgbEncodeLuma(clamp(y, 0.0, 1.0));
-        float target = gy;
+        float target = srgbEncodeLuma(clamp(y, 0.0, 1.0));
 
         // Contrast: photometric 미드(sRGB 0.46) 피벗의 파워 대비 — 끝점(0/1)·피벗 고정.
         // 양수 지수 2^(c·0.9)(최대 1.87), 음수 2^(c·0.7)(최소 0.62 — 소프트). 음수는 지수<1 이
@@ -219,27 +239,32 @@ extension ChromabaseMetalKernels {
             target = mix(target, curved, blend);
         }
 
-        // Density: 미드톤 농도(+ 가 어둡게) — 미드(0.46) 중심 대역(full 0.36~0.58).
-        float midMask = smoothstep(0.18, 0.36, gy) * (1.0 - smoothstep(0.58, 0.76, gy));
-        target -= densityAmount * 0.10 * midMask;
+        // Density: 미드톤 농도(+ 가 어둡게) — 미드(0.46) 중심 대역(full 0.36~0.58). 기울기 0.83.
+        float density = clamp(densityAmount, -1.0, 1.0);
+        target -= density * 0.10 * smoothstep(0.18, 0.36, target) * (1.0 - smoothstep(0.58, 0.76, target));
 
-        // Highlights: 일반 현상 도구 규약 — 값을 올리면 명부가 밝아진다(내리면 recovery).
-        float highlightMask = smoothstep(0.55, 0.80, gy);
-        target += highlightAmount * 0.10 * highlightMask;
+        // Highlights: 일반 현상 도구 규약 — 값을 올리면 명부가 밝아진다(내리면 recovery). 기울기 0.6.
+        float highlight = clamp(highlightAmount, -1.0, 1.0);
+        target += highlight * 0.10 * smoothstep(0.55, 0.80, target);
 
-        // Shadows: 가시 암부(sRGB 0.08~0.32 full)를 들어올리되 절대 검정(<0.02)은 앵커,
-        // 미드(0.46)에는 도달 전에 0 으로 테이퍼 — 미드 침범 금지.
-        float shadowMask = smoothstep(0.02, 0.08, gy) * (1.0 - smoothstep(0.32, 0.46, gy));
-        target += shadowAmount * 0.10 * shadowMask;
+        // Shadows: 가시 암부(sRGB 0.08~0.30 full)를 들어올리되 절대 검정(<0.02)은 앵커,
+        // 미드(0.46)에는 도달 전에 0 으로 테이퍼 — 미드 침범 금지. 내리는 쪽은 검정에서부터 오른다.
+        float shadow = clamp(shadowAmount, -1.0, 1.0);
+        float shadowRise = shadow > 0.0 ? smoothstep(0.02, 0.08, target) : smoothstep(0.0, 0.20, target);
+        target += shadow * 0.10 * shadowRise * (1.0 - smoothstep(0.30, 0.46, target));
 
-        // Whites: 최상단 백점 영역. 범위는 DevelopToneRange.whites(±2) — 계수/마스크는 그대로라
-        // ±1 구간 결과가 이전과 동일하고, 확장 구간만 같은 기울기로 이어진다.
-        float whiteMask = smoothstep(0.68, 0.92, gy);
-        target += clamp(whitesAmount, -2.0, 2.0) * 0.12 * whiteMask;
+        // Whites: 최상단 백점 영역. 범위는 DevelopToneRange.whites(±2) — ±1 을 넘는 몫은 같은 단계를
+        // 한 번 더 건다(단계 하나의 기울기 0.75).
+        float whites = clamp(whitesAmount, -2.0, 2.0);
+        float whitesFirst = clamp(whites, -1.0, 1.0);
+        target += whitesFirst * 0.12 * smoothstep(0.68, 0.92, target);
+        target += (whites - whitesFirst) * 0.12 * smoothstep(0.68, 0.92, target);
 
-        // Blacks: 흑점 제어 — 순검정 바로 위 띠(full 0.03~0.14), y=0 앵커. 범위 ±2.
-        float blackMask = smoothstep(0.0, 0.03, gy) * (1.0 - smoothstep(0.14, 0.30, gy));
-        target += clamp(blacksAmount, -2.0, 2.0) * 0.06 * blackMask;
+        // Blacks: 흑점 제어 — 순검정 바로 위 띠(full 0.03~0.14), y=0 앵커. 범위 ±2(±1 씩 두 단계).
+        float blacks = clamp(blacksAmount, -2.0, 2.0);
+        float blacksFirst = clamp(blacks, -1.0, 1.0);
+        target = basicToneBlacks(target, blacksFirst);
+        target = basicToneBlacks(target, blacks - blacksFirst);
 
         float newY = srgbDecodeLuma(clamp(target, 0.0, 1.0));
         float3 rgb = withLuma(sourceRGB, y, newY);
@@ -247,38 +272,32 @@ extension ChromabaseMetalKernels {
     }
     """),
         MetalKernelSource(name: "parametricToneCurve", body: """
+    // 파라메트릭 톤 커브 — 인코딩 휘도 위의 단조 3차 Hermite(ParametricToneCurve.value 와 같은 식).
+    // 매듭 x0=0·x5=1 은 고정이고 안쪽 네 개(knotX, knotY)와 여섯 기울기(tangentLow = m0..m2,
+    // tangentHigh = m3..m5)는 CPU 가 장면 백분위와 슬라이더로 한 번 계산해 넘긴다.
     [[stitchable]] float4 parametricToneCurve(
         coreimage::sample_t src,
-        float highlightsAmount,
-        float lightsAmount,
-        float darksAmount,
-        float shadowsAmount,
-        float shadowLow,
-        float shadowHigh,
-        float darkLow,
-        float darkHigh,
-        float lightLow,
-        float lightHigh,
-        float highlightLow,
-        float highlightHigh
+        float4 knotX,
+        float4 knotY,
+        float3 tangentLow,
+        float3 tangentHigh
     ) {
         float3 ycoef = float3(0.2126, 0.7152, 0.0722);
         float3 sourceRGB = toneSafeUnitRGB(src.rgb);
         float y = dot(sourceRGB, ycoef);
+        float g = srgbEncodeLuma(clamp(y, 0.0, 1.0));
 
-        // 절대 검정(y≈0)은 앵커로 고정해, Shadows를 올릴 때 바닥 전체가 회색으로 뜨는("붕 뜸")
-        // 현상을 막는다. 가시 암부(y>0.045)에만 작용.
-        float shadowMask = (1.0 - smoothstep(shadowLow, shadowHigh, y)) * smoothstep(0.0, 0.045, y);
-        float darkMask = smoothstep(shadowLow, shadowHigh, y) * (1.0 - smoothstep(darkLow, darkHigh, y));
-        float lightMask = smoothstep(darkLow, darkHigh, y) * (1.0 - smoothstep(lightLow, lightHigh, y));
-        float highlightMask = smoothstep(highlightLow, highlightHigh, y);
-
-        float delta =
-            shadowsAmount * 0.160 * shadowMask +
-            darksAmount * 0.155 * darkMask +
-            lightsAmount * 0.165 * lightMask +
-            highlightsAmount * 0.150 * highlightMask;
-        float target = clamp(y + delta, 0.0, 1.0);
+        float x0 = 0.0, x1 = knotX.x, y0 = 0.0, y1 = knotY.x, m0 = tangentLow.x, m1 = tangentLow.y;
+        if (g >= knotX.x) { x0 = knotX.x; x1 = knotX.y; y0 = knotY.x; y1 = knotY.y; m0 = tangentLow.y; m1 = tangentLow.z; }
+        if (g >= knotX.y) { x0 = knotX.y; x1 = knotX.z; y0 = knotY.y; y1 = knotY.z; m0 = tangentLow.z; m1 = tangentHigh.x; }
+        if (g >= knotX.z) { x0 = knotX.z; x1 = knotX.w; y0 = knotY.z; y1 = knotY.w; m0 = tangentHigh.x; m1 = tangentHigh.y; }
+        if (g >= knotX.w) { x0 = knotX.w; x1 = 1.0; y0 = knotY.w; y1 = 1.0; m0 = tangentHigh.y; m1 = tangentHigh.z; }
+        float h = x1 - x0;
+        float t = clamp((g - x0) / h, 0.0, 1.0);
+        float t2 = t * t, t3 = t2 * t;
+        float curved = (2.0 * t3 - 3.0 * t2 + 1.0) * y0 + (t3 - 2.0 * t2 + t) * h * m0
+            + (-2.0 * t3 + 3.0 * t2) * y1 + (t3 - t2) * h * m1;
+        float target = srgbDecodeLuma(clamp(curved, 0.0, 1.0));
         float3 rgb = withLuma(sourceRGB, y, target);
         return float4(clamp(rgb, float3(0.0), float3(1.0)), src.a);
     }

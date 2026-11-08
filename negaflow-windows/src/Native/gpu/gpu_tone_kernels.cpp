@@ -4,6 +4,7 @@
 #include <windows.h>
 
 #include <cmath>
+#include <cstddef>
 
 #include "negaflow/gpu/gpu_device.h"
 #include "negaflow/gpu/gpu_working_image.h"
@@ -28,26 +29,18 @@ struct alignas(16) BasicToneConstants final {
 static_assert(sizeof(BasicToneConstants) % 16U == 0U, "constant buffers are 16-byte aligned");
 
 // HLSL `cbuffer ParametricToneCurveConstants` 와 같은 배치여야 합니다.
-// 밴드 경계 8개까지 상수 버퍼로 넘깁니다 — macOS 도 인자로 받습니다.
+// 매듭 자리·값(float4 둘)과 기울기 여섯(float4 둘, 마지막 칸은 비움)입니다.
 struct alignas(16) ParametricToneCurveConstants final {
     GpuPointwiseExtent extent{};
-    float highlights{0.0F};
-    float lights{0.0F};
-    float darks{0.0F};
-    float shadows{0.0F};
-    float shadow_low{0.0F};
-    float shadow_high{0.0F};
-    float dark_low{0.0F};
-    float dark_high{0.0F};
-    float light_low{0.0F};
-    float light_high{0.0F};
-    float highlight_low{0.0F};
-    float highlight_high{0.0F};
+    float knot_x[4]{};
+    float knot_y[4]{};
+    float tangent_low[4]{};
+    float tangent_high[4]{};
 };
 
 static_assert(
-    sizeof(ParametricToneCurveConstants) % 16U == 0U,
-    "constant buffers are 16-byte aligned");
+    sizeof(ParametricToneCurveConstants) == 80U,
+    "extent + four float4 registers, same as the HLSL cbuffer");
 
 [[nodiscard]] bool finite_basic(const GpuBasicToneParameters& parameters) noexcept {
     return std::isfinite(parameters.contrast) && std::isfinite(parameters.density) &&
@@ -55,15 +48,24 @@ static_assert(
         std::isfinite(parameters.whites) && std::isfinite(parameters.blacks);
 }
 
-// CPU 판은 매개변수와 밴드를 **따로** 검사합니다(`finite_curve_parameters`·`finite_bands`).
-// 둘 중 하나만 검사하면 밴드에 NaN 이 들어와 마스크가 통째로 죽습니다.
+// CPU 판은 매개변수와 매듭을 **따로** 검사합니다(`finite_curve_parameters`·`finite_bands`).
+// 여기서는 풀린 매듭이 유한하고 자리가 (0,1) 안에서 증가하는지 봅니다 — 구간 폭이 0 이면 나눗셈이
+// 터집니다.
 [[nodiscard]] bool finite_curve(const GpuParametricToneCurveParameters& parameters) noexcept {
-    return std::isfinite(parameters.highlights) && std::isfinite(parameters.lights) &&
-        std::isfinite(parameters.darks) && std::isfinite(parameters.shadows) &&
-        std::isfinite(parameters.shadow_low) && std::isfinite(parameters.shadow_high) &&
-        std::isfinite(parameters.dark_low) && std::isfinite(parameters.dark_high) &&
-        std::isfinite(parameters.light_low) && std::isfinite(parameters.light_high) &&
-        std::isfinite(parameters.highlight_low) && std::isfinite(parameters.highlight_high);
+    float previous = 0.0F;
+    for (std::size_t i = 0U; i < 4U; ++i) {
+        if (!std::isfinite(parameters.knot_x[i]) || !std::isfinite(parameters.knot_y[i]) ||
+            parameters.knot_x[i] <= previous || parameters.knot_x[i] >= 1.0F) {
+            return false;
+        }
+        previous = parameters.knot_x[i];
+    }
+    for (const float tangent : parameters.tangent) {
+        if (!std::isfinite(tangent)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 }  // namespace
@@ -116,19 +118,30 @@ GpuKernelStatus GpuParametricToneCurve::dispatch(
         return GpuKernelStatus::non_finite_parameter;
     }
     ParametricToneCurveConstants payload{};
-    payload.highlights = parameters.highlights;
-    payload.lights = parameters.lights;
-    payload.darks = parameters.darks;
-    payload.shadows = parameters.shadows;
-    payload.shadow_low = parameters.shadow_low;
-    payload.shadow_high = parameters.shadow_high;
-    payload.dark_low = parameters.dark_low;
-    payload.dark_high = parameters.dark_high;
-    payload.light_low = parameters.light_low;
-    payload.light_high = parameters.light_high;
-    payload.highlight_low = parameters.highlight_low;
-    payload.highlight_high = parameters.highlight_high;
+    for (std::size_t i = 0U; i < 4U; ++i) {
+        payload.knot_x[i] = parameters.knot_x[i];
+        payload.knot_y[i] = parameters.knot_y[i];
+    }
+    for (std::size_t i = 0U; i < 3U; ++i) {
+        payload.tangent_low[i] = parameters.tangent[i];
+        payload.tangent_high[i] = parameters.tangent[i + 3U];
+    }
     return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
+}
+
+GpuParametricToneCurveParameters make_gpu_parametric_tone_curve(
+    const imaging::ParametricToneCurveParameters& parameters,
+    const imaging::ParametricToneCurveBands& bands) noexcept {
+    const imaging::ParametricToneCurveShape shape = imaging::parametric_tone_curve_shape(parameters, bands);
+    GpuParametricToneCurveParameters gpu{};
+    for (std::size_t i = 0U; i < 4U; ++i) {
+        gpu.knot_x[i] = static_cast<float>(shape.x[i + 1U]);
+        gpu.knot_y[i] = static_cast<float>(shape.y[i + 1U]);
+    }
+    for (std::size_t i = 0U; i < 6U; ++i) {
+        gpu.tangent[i] = static_cast<float>(shape.tangent[i]);
+    }
+    return gpu;
 }
 
 }  // namespace negaflow::gpu

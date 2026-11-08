@@ -9,14 +9,23 @@ double exposed_luminance(
     const double luminance,
     const double stops,
     const double headroom_stops) noexcept {
-    const double exposed = luminance * std::exp2(stops);
+    const double blend =
+        stops > 0.0 && headroom_stops > 0.0 ? std::clamp(stops / headroom_stops, 0.0, 1.0) : 0.0;
+    return exposed_luminance_at_gain(luminance, std::exp2(stops), blend);
+}
+
+double exposed_luminance_at_gain(
+    const double luminance,
+    const double gain,
+    const double blend) noexcept {
+    const double exposed = luminance * gain;
     const double knee = static_cast<double>(exposure_shoulder_knee());
-    if (!(stops > 0.0) || exposed <= knee || !(headroom_stops > 0.0)) {
+    if (!(blend > 0.0) || exposed <= knee) {
         return exposed;
     }
     const double room = 1.0 - knee;
     const double shoulder = 1.0 - (room * std::exp(-(exposed - knee) / room));
-    return exposed + ((shoulder - exposed) * std::clamp(stops / headroom_stops, 0.0, 1.0));
+    return exposed + ((shoulder - exposed) * blend);
 }
 
 KernelStatus apply_exposure(

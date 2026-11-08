@@ -1,5 +1,7 @@
 #pragma once
 
+#include "negaflow/imaging/tone_mapping.h"
+
 // 톤 커널 두 개의 GPU 판입니다. 둘 다 `stages/look.cpp` 의
 // `apply_working_tone_adjustments` 경로에 있고, 우측 인스펙터 슬라이더가 직접 미는 곳입니다.
 //
@@ -29,22 +31,19 @@ struct GpuBasicToneParameters final {
     float blacks{0.0F};
 };
 
-// `imaging::ParametricToneCurveParameters` + `ParametricToneCurveBands` 를 합친 것입니다.
-// macOS 커널이 밴드 경계 8개를 인자로 받으므로 여기서도 인자입니다 — 상수로 박지 마십시오.
+// `imaging::parametric_tone_curve_shape` 가 푼 매듭입니다(macOS `parametricToneCurve` 의 인자).
+// 안쪽 매듭 네 개의 자리·값과 여섯 기울기입니다. 기본값은 항등 곡선입니다.
 struct GpuParametricToneCurveParameters final {
-    float highlights{0.0F};
-    float lights{0.0F};
-    float darks{0.0F};
-    float shadows{0.0F};
-    float shadow_low{0.05F};
-    float shadow_high{0.24F};
-    float dark_low{0.18F};
-    float dark_high{0.36F};
-    float light_low{0.34F};
-    float light_high{0.68F};
-    float highlight_low{0.36F};
-    float highlight_high{0.50F};
+    float knot_x[4]{0.125F, 0.375F, 0.625F, 0.875F};
+    float knot_y[4]{0.125F, 0.375F, 0.625F, 0.875F};
+    float tangent[6]{1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F};
 };
+
+// 슬라이더와 매듭 자리에서 GPU 매개변수를 만듭니다. CPU 판과 같은 `parametric_tone_curve_shape` 를
+// 거치므로 두 경로가 같은 곡선을 씁니다.
+[[nodiscard]] GpuParametricToneCurveParameters make_gpu_parametric_tone_curve(
+    const imaging::ParametricToneCurveParameters& parameters,
+    const imaging::ParametricToneCurveBands& bands) noexcept;
 
 class GpuBasicTone final {
 public:

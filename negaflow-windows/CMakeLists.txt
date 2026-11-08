@@ -645,6 +645,7 @@ add_library(negaflow_imaging STATIC
     src/Native/imaging/custom_color_target.cpp
     src/Native/imaging/custom_color_target_profiles.cpp
     src/Native/imaging/auto_adjust.cpp
+    src/Native/imaging/channel_headroom.cpp
     src/Native/imaging/auto_negative_base_candidates.cpp
     src/Native/imaging/auto_negative_base_exclusion.cpp
     src/Native/imaging/auto_negative_base_fallback.cpp
@@ -2229,6 +2230,23 @@ if(BUILD_TESTING)
         COMMAND negaflow_gpu_resident_budget_tests
     )
 
+    add_executable(negaflow_scanner_target_slider_order_tests
+        tests/Native.UnitTests/scanner_target_slider_order_tests.cpp
+        tests/fixtures/tiff/synthetic_wic_tiff.cpp
+    )
+    target_include_directories(
+        negaflow_scanner_target_slider_order_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff"
+    )
+    target_link_libraries(
+        negaflow_scanner_target_slider_order_tests
+        PRIVATE negaflow_pipeline negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.scanner_target_slider_order
+        COMMAND negaflow_scanner_target_slider_order_tests
+    )
+
     add_executable(negaflow_preview_auto_levels_stress_tests
         tests/Native.UnitTests/preview_auto_levels_stress_tests.cpp
         tests/fixtures/tiff/synthetic_wic_tiff.cpp
@@ -2306,6 +2324,15 @@ if(BUILD_TESTING)
         PRIVATE negaflow_imaging negaflow_project_options
     )
     add_test(NAME native.auto_tone_closed_loop COMMAND negaflow_auto_tone_closed_loop_tests)
+
+    add_executable(negaflow_channel_headroom_tests
+        tests/Native.UnitTests/channel_headroom_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_channel_headroom_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.channel_headroom COMMAND negaflow_channel_headroom_tests)
 
     add_executable(negaflow_display_gamut_map_tests
         tests/Native.UnitTests/display_gamut_map_tests.cpp

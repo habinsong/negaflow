@@ -154,6 +154,105 @@ public static unsafe class NativeAutoAdjust
         return ToSettings(raw);
     }
 
+    /// <summary>
+    /// <see cref="Refine(ReadOnlySpan{byte}, uint, uint, bool, AutoAdjustSettings)"/> 와 같되 중립 현상본(첫 계산에
+    /// 넘긴 비트맵)도 받습니다. 두 비트맵을 칸마다 맞대어 실제로 새로 날아간 채널을 세고, 채널 한도를 넘으면 흰색 →
+    /// 노출 순서로 밝히는 몫을 거둡니다(macOS <c>refineTone(_:measured:neutral:)</c>).
+    /// </summary>
+    public static AutoAdjustSettings Refine(
+        ReadOnlySpan<byte> neutralPixels,
+        uint neutralWidth,
+        uint neutralHeight,
+        ReadOnlySpan<byte> pixels,
+        uint width,
+        uint height,
+        bool blackAndWhiteNegative,
+        AutoAdjustSettings first)
+    {
+        ArgumentNullException.ThrowIfNull(first);
+        uint neutralStride = CheckBitmap(neutralPixels, neutralWidth, neutralHeight);
+        uint strideBytes = CheckBitmap(pixels, width, height);
+        NativeAutoAdjustResultV1 given = Empty();
+        given.Exposure = first.Exposure;
+        given.Contrast = first.Contrast;
+        given.Highlights = first.Highlights;
+        given.Shadows = first.Shadows;
+        given.Whites = first.Whites;
+        given.Blacks = first.Blacks;
+        given.Density = first.Density;
+        given.Vibrance = first.Vibrance;
+        given.Warmth = first.Warmth;
+        given.Tint = first.Tint;
+        NativeAutoAdjustResultV1 raw = Empty();
+        uint status;
+        fixed (byte* neutral = neutralPixels)
+        fixed (byte* buffer = pixels)
+        {
+            status = NativeAutoAdjustEntry.nf_auto_tone_refine_v2(
+                neutral, neutralWidth, neutralHeight, neutralStride,
+                buffer, width, height, strideBytes, blackAndWhiteNegative ? 1U : 0U, &given, &raw);
+        }
+        ThrowOnFailure(status, "nf_auto_tone_refine_v2");
+        return ToSettings(raw);
+    }
+
+    /// <summary>
+    /// 렌더한 비트맵에서 중립 현상본에 없던 채널 클리핑이 자동 톤의 한도를 넘는 양입니다(넘지 않으면 0). 두 비트맵의
+    /// 칸이 맞지 않으면 <see langword="null"/> 입니다.
+    /// </summary>
+    public static double? ChannelExcess(
+        ReadOnlySpan<byte> neutralPixels, uint neutralWidth, uint neutralHeight,
+        ReadOnlySpan<byte> pixels, uint width, uint height)
+    {
+        uint neutralStride = CheckBitmap(neutralPixels, neutralWidth, neutralHeight);
+        uint strideBytes = CheckBitmap(pixels, width, height);
+        double result = 0;
+        uint status;
+        fixed (byte* neutral = neutralPixels)
+        fixed (byte* buffer = pixels)
+        {
+            status = NativeAutoAdjustEntry.nf_auto_tone_channel_excess_v1(
+                neutral, neutralWidth, neutralHeight, neutralStride, buffer, width, height, strideBytes, &result);
+        }
+        ThrowOnFailure(status, "nf_auto_tone_channel_excess_v1");
+        return result < 0 ? null : result;
+    }
+
+    /// <summary>
+    /// 채널 한도가 폐루프에서 쓰는 두 바닥입니다(macOS <c>AutoAdjust.channelExposureFloor</c>·<c>remainingKeyBudget</c>).
+    /// <c>ExposureFloor</c> 는 노출의 아래 끝, <c>KeyBudgetStops</c> 는 확인 렌더의 장면 키에서 더 어둡게 해도 되는 몫입니다.
+    /// </summary>
+    public static (double ExposureFloor, double KeyBudgetStops) ChannelLimits(
+        ReadOnlySpan<byte> neutralPixels, uint neutralWidth, uint neutralHeight, bool blackAndWhiteNegative,
+        double firstExposure)
+    {
+        uint neutralStride = CheckBitmap(neutralPixels, neutralWidth, neutralHeight);
+        double floor = 0, budget = 0;
+        uint status;
+        fixed (byte* neutral = neutralPixels)
+        {
+            status = NativeAutoAdjustEntry.nf_auto_tone_channel_limits_v1(
+                neutral, neutralWidth, neutralHeight, neutralStride, blackAndWhiteNegative ? 1U : 0U, firstExposure,
+                &floor, &budget);
+        }
+        ThrowOnFailure(status, "nf_auto_tone_channel_limits_v1");
+        return (floor, budget);
+    }
+
+    /// <summary>렌더한 비트맵의 장면 키(선형 휘도의 로그 평균)입니다.</summary>
+    public static double SceneKey(ReadOnlySpan<byte> pixels, uint width, uint height)
+    {
+        uint stride = CheckBitmap(pixels, width, height);
+        double result = 0;
+        uint status;
+        fixed (byte* buffer = pixels)
+        {
+            status = NativeAutoAdjustEntry.nf_auto_tone_scene_key_v1(buffer, width, height, stride, &result);
+        }
+        ThrowOnFailure(status, "nf_auto_tone_scene_key_v1");
+        return result;
+    }
+
     public static double ToneScore(ReadOnlySpan<byte> pixels, uint width, uint height, bool adjustMid)
     {
         uint stride = CheckBitmap(pixels, width, height);

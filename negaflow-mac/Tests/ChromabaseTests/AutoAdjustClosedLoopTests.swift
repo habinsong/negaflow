@@ -60,7 +60,14 @@ final class AutoAdjustClosedLoopTests: XCTestCase {
         let missBefore = abs(try p995(withCurve) - target), missAfter = abs(afterWhite - target)
         XCTAssertLessThanOrEqual(missAfter, 4, "폐루프 후 백점 \(afterWhite) / 목표 \(target)")
         XCTAssertLessThanOrEqual(missAfter, missBefore)
-        XCTAssertEqual(refined.exposure, first.exposure, accuracy: 1e-9, "노출이 밝히지 않았으면 미드는 그대로")
+        // 장면 키(양방향): 보정 뒤 렌더의 키 오차가 보정 전보다 커지지 않는다.
+        func keyError(_ cg: CGImage) throws -> Double {
+            let s = try XCTUnwrap(AutoAdjust.imageStats(cg))
+            var acc = 0.0, p99 = 1.0
+            for i in 0..<256 { acc += s.lumaHist[i]; if acc >= 0.99 { p99 = AutoAdjust.srgbDecode(Double(i) / 255); break } }
+            return abs(log2(s.logAverageLuminance / AutoAdjust.sceneKey(logAverage: s.logAverageLuminance, highlight: p99)))
+        }
+        XCTAssertLessThanOrEqual(try keyError(after), try keyError(withCurve) + 0.05)
     }
 
     /// 폐루프가 노출을 더 올릴 때 백점 예측은 숄더를 한 번만 거친다. 잰 백점이 이미 목표(확산 화이트)
@@ -68,7 +75,7 @@ final class AutoAdjustClosedLoopTests: XCTestCase {
     /// 두 번 접어 백점을 목표 아래로 예측했고, 화이트를 그대로 두거나 올렸다(Windows 실측 247 → 250).
     func testRefineToneDoesNotDoubleFoldTheShoulder() {
         var hist = [Double](repeating: 0, count: 256)
-        hist[60] = 0.60     // 어두운 미드 — 노출을 더 올린다
+        hist[50] = 0.60     // 어두운 미드 — 장면 키(r 0.08·s 8)보다 0.06 스톱 어두워 노출을 더 올린다
         hist[240] = 0.385   // p98 — 헤드룸이 조금 남아 노출이 조금만 오른다
         hist[247] = 0.015   // p995 — 목표(243) 위
         let measured = AutoAdjust.ImageStats(avgR: 0.4, avgG: 0.4, avgB: 0.4, lumaHist: hist, avgSaturation: 0.2)
@@ -78,6 +85,22 @@ final class AutoAdjustClosedLoopTests: XCTestCase {
         let refined = AutoAdjust.refineTone(first, measured: measured)
         XCTAssertGreaterThan(refined.exposure, first.exposure + 0.02, "픽스처가 노출을 바꾸지 않는다")
         XCTAssertLessThan(refined.whites, first.whites, "목표 위 백점에서 노출을 올리며 화이트를 내리지 않았다")
+    }
+
+    /// 첫 제안이 실질 채널 클리핑(≥5%)을 만들었으면 폐루프가 흰색 리프트를 거둔다. 그보다 적은 클리핑은
+    /// 흰색 규칙을 바꾸지 않는다(소수 스펙큘러는 명부 복구의 몫).
+    func testRefineToneWithdrawsWhitesThatClipChannels() {
+        var hist = [Double](repeating: 0, count: 256)
+        hist[120] = 0.80; hist[235] = 0.195; hist[244] = 0.005   // 백점이 목표(243) 근처
+        var first = AutoAdjust.ToneDelta()
+        first.exposure = 0.3
+        first.whites = 0.4
+        var clipped = AutoAdjust.ImageStats(avgR: 0.4, avgG: 0.4, avgB: 0.4, lumaHist: hist, avgSaturation: 0.4)
+        clipped.clippedFraction = 0.08
+        XCTAssertEqual(AutoAdjust.refineTone(first, measured: clipped).whites, 0)
+        var mild = clipped
+        mild.clippedFraction = 0.02
+        XCTAssertEqual(AutoAdjust.refineTone(first, measured: mild).whites, first.whites, accuracy: 1e-12)
     }
 
     /// 숄더 역함수는 순방향의 정확한 역이다.

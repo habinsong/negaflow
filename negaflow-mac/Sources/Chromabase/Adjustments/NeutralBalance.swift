@@ -21,7 +21,20 @@ public enum NeutralBalance {
     public struct Correction: Sendable, Equatable {
         public var offset: SIMD3<Double>
         public var slope: SIMD3<Double>
+        /// 감마 항을 쓰는 ln Ȳ 범위. 아래 끝은 가장 낮은 증거 대역 칸의 아래 끝, 위 끝은 가장 높은 대역 칸의
+        /// 위 끝과 흰색(ln Ȳ = 0) 중 높은 쪽이다. 이 밖은 경계의 보정 배율을 그대로 쓴다. 기울기가 1 이면
+        /// 쓰이지 않는다.
+        public var support: ClosedRange<Double> = -Double.infinity...Double.infinity
         public static let identity = Correction(offset: .zero, slope: SIMD3(repeating: 1))
+
+        /// 채널 값 범위 [exp(α + β·x_lo), exp(α + β·x_hi)] — 커널의 low/high.
+        var channelBounds: (low: SIMD3<Double>, high: SIMD3<Double>) {
+            func bound(_ x: Double) -> SIMD3<Double> {
+                guard x.isFinite else { return SIMD3(repeating: x < 0 ? 0 : .greatestFiniteMagnitude) }
+                return SIMD3(exp(offset.x + slope.x * x), exp(offset.y + slope.y * x), exp(offset.z + slope.z * x))
+            }
+            return (bound(support.lowerBound), bound(support.upperBound))
+        }
 
         var isIdentity: Bool {
             let s = slope - SIMD3(repeating: 1)
@@ -35,6 +48,13 @@ public enum NeutralBalance {
     /// 기울기 후보의 최소 범위. 별도 대역 검증도 통과해야 한다.
     static let minimumBandsForSlope = 3
     static let minimumSpanForSlope = log(4.0)
+    // 기울기(감마) 항은 증거보다 어두운 쪽으로 외삽하지 않는다(Correction.support). 멱함수의 채널 비는
+    // ln Ȳ → −∞ 에서 끝없이 벌어져, 채널별 감마 차이가 깊은 암부에서 스톱 단위 캐스트가 된다(2026-11-08
+    // 사용자 카탈로그 OpticFilm8100_frame_4: 대역 ln −2.2~−0.5, 화소 1% 지점 ln −4.6, 기울기 R 0.95·G 1.08·
+    // B 0.97 → 암부 G +0.9 스톱). 화소 비율로 기울기를 켜고 끄던 조건(90% 포함)은 꼬리 10% 를 그대로
+    // 외삽해 이 사진을 못 막았다. 밝은 쪽은 흰색(Ȳ = 1)까지 거리가 유한해 기울기를 흰색까지 잇는다 —
+    // 위에서도 끊으면, 중앙 캐스트에서 먼 흰색 표본이 중립 창에서 빠진 장면(끝점 중립·미드만 휜 캐스트)
+    // 에서 흰색이 미드의 보정을 받아 중립이 깨진다(testMidtoneBowIsRemovedWithoutBreakingWhite).
 
     public static func apply(to image: CIImage,
                              sampleColorSpace: CGColorSpace? = nil,
@@ -60,15 +80,23 @@ public enum NeutralBalance {
         cachedCorrection = correction
         guard !correction.isIdentity,
               let kernel = ChromabaseMetalKernels.colorKernel(named: "channelPowerGain") else { return image }
-        // c' = exp((ln c − α)/β) = exp(−α/β) · c^(1/β)
+        // c' = exp((ln c − α)/β) = exp(−α/β) · c^(1/β), 증거 범위 밖은 경계 배율(커널 low/high).
         let exponent = SIMD3<Double>(repeating: 1) / correction.slope
         let gain = SIMD3(exp(-correction.offset.x * exponent.x),
                          exp(-correction.offset.y * exponent.y),
                          exp(-correction.offset.z * exponent.z))
+        let bounds = correction.channelBounds
+        // Float 범위로 묶는다(무한대·0 은 커널에서 clamp 가 항등이 되도록 큰 값·아주 작은 값으로).
+        func vector(_ v: SIMD3<Double>) -> CIVector {
+            func f(_ x: Double) -> CGFloat { CGFloat(min(max(x, 1e-12), 1e30)) }
+            return CIVector(x: f(v.x), y: f(v.y), z: f(v.z))
+        }
         return kernel.apply(extent: image.extent, arguments: [
             image,
             CIVector(x: CGFloat(exponent.x), y: CGFloat(exponent.y), z: CGFloat(exponent.z)),
             CIVector(x: CGFloat(gain.x), y: CGFloat(gain.y), z: CGFloat(gain.z)),
+            vector(bounds.low),
+            vector(bounds.high),
         ])?.cropped(to: image.extent) ?? image
     }
 
@@ -80,12 +108,22 @@ public enum NeutralBalance {
         return fit(evidence, strength: applied)
     }
 
+    /// 감마 항을 쓰는 ln Ȳ 범위 — 가장 낮은 대역 칸의 아래 끝부터, 가장 높은 대역 칸의 위 끝과 흰색(0) 중
+    /// 높은 쪽까지(NeutralAxisEstimator 는 ln Ȳ 를 1 스톱 칸으로 나눠 대역을 만든다).
+    static func support(of evidence: NeutralAxisEvidence) -> ClosedRange<Double> {
+        let width = NeutralAxisEstimator.bandWidth
+        let xs = evidence.bands.map(\.logLuminance)
+        guard let low = xs.min(), let high = xs.max() else { return -Double.infinity...Double.infinity }
+        return (low / width).rounded(.down) * width...max(((high / width).rounded(.down) + 1) * width, 0)
+    }
+
     /// 대역 중앙 캐스트에 채널별 직선(cast = a + b·ln Ȳ)을 맞춘다 — 대역마다 같은 무게.
     static func fit(_ evidence: NeutralAxisEvidence, strength: Double) -> Correction {
         let bands = evidence.bands
         let xs = bands.map(\.logLuminance)
         let span = (xs.max() ?? 0) - (xs.min() ?? 0)
-        let useSlope = bands.count >= minimumBandsForSlope && span >= minimumSpanForSlope && slopeImprovesHoldout(bands)
+        let useSlope = bands.count >= minimumBandsForSlope && span >= minimumSpanForSlope
+            && slopeImprovesHoldout(bands)
         func line(_ ys: [Double]) -> (a: Double, b: Double) {
             let n = Double(ys.count)
             let mx = xs.reduce(0, +) / n, my = ys.reduce(0, +) / n
@@ -101,7 +139,8 @@ public enum NeutralBalance {
             min(max(1 + v * strength, slopeRange.lowerBound), slopeRange.upperBound)
         }
         return Correction(offset: SIMD3(clampOffset(r.a), clampOffset(g.a), clampOffset(b.a)),
-                          slope: SIMD3(clampSlope(r.b), clampSlope(g.b), clampSlope(b.b)))
+                          slope: SIMD3(clampSlope(r.b), clampSlope(g.b), clampSlope(b.b)),
+                          support: support(of: evidence))
     }
 
     /// Fit even bands and validate odd bands before adding channel-dependent slopes.

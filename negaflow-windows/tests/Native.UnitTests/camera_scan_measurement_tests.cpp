@@ -292,9 +292,12 @@ void test_frame_without_visible_base_does_not_settle_on_smooth_midtone() {
 void test_auto_levels_measures_inside_crop() {
     const Developed developed = develop(CameraScanFrame{}, true, true);
     expect_neutral(developed, 0.02, "auto levels");
+    // 사진의 흰 패치는 반전 응답의 흰색 앵커(선형 0.70)에 옵니다(macOS
+    // `testAutoLevelsMeasuresInsideCrop`). 백라이트를 흰색으로 잡았다면 그보다 훨씬 어둡습니다.
     const auto& brightest = developed.patches[20];
-    expect(0.2126 * brightest[0] + 0.7152 * brightest[1] + 0.0722 * brightest[2] > 0.85,
-           "auto levels stretches the photo area to the output white");
+    const double white = 0.2126 * brightest[0] + 0.7152 * brightest[1] + 0.0722 * brightest[2];
+    expect(white > 0.66 && white < 0.74,
+           "auto levels stretches the photo area to the response white");
 }
 
 // 가장자리 띠 제외는 두께 있는 비필름 영역에만 겁니다. 흩어진 단일 점(그레인·양자화로 게이트를
