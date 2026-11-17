@@ -256,4 +256,4 @@ A good synthetic IT8 result does not prove absolute accuracy on real negatives. 
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-The current product version is `1.2.6`. Changes to the edit history and profile schemas will require validation in later versions.
+The current product version is `1.2.7`. Changes to the edit history and profile schemas will require validation in later versions.

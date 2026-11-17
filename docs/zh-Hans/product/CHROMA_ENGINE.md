@@ -256,4 +256,4 @@ Custom 目标使用带自动平衡的 `MAIN` 反相，然后应用 custom-3 的�
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-当前产品版本是 `1.2.6`。编辑历史和配置文件架构的改动，在后续版本中同样要经过验证。
+当前产品版本是 `1.2.7`。编辑历史和配置文件架构的改动，在后续版本中同样要经过验证。

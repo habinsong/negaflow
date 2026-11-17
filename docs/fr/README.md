@@ -5,7 +5,7 @@ Classée par sujet pour ouvrir directement celle qu'il vous faut.
 [English](../README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · Français · [Deutsch](../de/README.md)
 
 > [!NOTE]
-> negaflow 1.2.6 tourne sur macOS et Windows. Les deux applications sont écrites séparément et rendent la même image à partir du même fichier.
+> negaflow 1.2.7 tourne sur macOS et Windows. Les deux applications sont écrites séparément et rendent la même image à partir du même fichier.
 
 ## Plateforme
 

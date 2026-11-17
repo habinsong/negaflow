@@ -7,7 +7,7 @@
 <p align="center">negaflow, built natively for Windows.</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.2.6-EF8B26" alt="version 1.2.6"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.2.7-EF8B26" alt="version 1.2.7"></a>
   <a href="#"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 or later"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -47,9 +47,9 @@ The build also has Arm64 presets. Releases ship x64 only.
 
 ## Installing
 
-Download `negaflow-1.2.6-win-x64.exe` from [Releases](https://github.com/habinsong/negaflow/releases) and run it. By default it installs into `%LOCALAPPDATA%\Negaflow\App` and asks for no administrator rights.
+Download `negaflow-1.2.7-win-x64.exe` from [Releases](https://github.com/habinsong/negaflow/releases) and run it. By default it installs into `%LOCALAPPDATA%\Negaflow\App` and asks for no administrator rights.
 
-[negaflow-1.2.6-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.6/negaflow-1.2.6-win-x64-setup.zip) holds the same installer EXE with installation instructions, notices and SHA-256 checksums. Extract all files before running the installer. It is an installer archive, not a portable app.
+[negaflow-1.2.7-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.7/negaflow-1.2.7-win-x64-setup.zip) holds the same installer EXE with installation instructions, notices and SHA-256 checksums. Extract all files before running the installer. It is an installer archive, not a portable app.
 
 The installer is unsigned. SmartScreen warns once on the first run: click More info, then run it.
 

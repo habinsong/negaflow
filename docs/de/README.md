@@ -5,7 +5,7 @@ Nach Themen getrennt, damit Sie direkt das passende Dokument öffnen.
 [English](../README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [Français](../fr/README.md) · Deutsch
 
 > [!NOTE]
-> negaflow 1.2.6 läuft auf macOS und Windows. Beide Apps sind getrennt geschrieben und liefern aus derselben Datei dasselbe Bild.
+> negaflow 1.2.7 läuft auf macOS und Windows. Beide Apps sind getrennt geschrieben und liefern aus derselben Datei dasselbe Bild.
 
 ## Plattform
 

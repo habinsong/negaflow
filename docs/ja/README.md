@@ -5,7 +5,7 @@
 [English](../README.md) · [한국어](../ko/README.md) · 日本語 · [简体中文](../zh-Hans/README.md) · [Français](../fr/README.md) · [Deutsch](../de/README.md)
 
 > [!NOTE]
-> negaflow 1.2.6 は macOS と Windows で動きます。二つのアプリは別々に作られていて、同じファイルからは同じ絵になります。
+> negaflow 1.2.7 は macOS と Windows で動きます。二つのアプリは別々に作られていて、同じファイルからは同じ絵になります。
 
 ## プラットフォーム
 

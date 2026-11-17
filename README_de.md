@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/de/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="Website"></a>
-  <a href="#download"><img src="https://img.shields.io/badge/version-1.2.6-EF8B26" alt="Version 1.2.6"></a>
+  <a href="#download"><img src="https://img.shields.io/badge/version-1.2.7-EF8B26" alt="Version 1.2.7"></a>
   <a href="negaflow-mac/docs/README_de.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 oder neuer"></a>
   <a href="negaflow-windows/docs/README_de.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 oder neuer"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache-2.0-Lizenz"></a>
@@ -71,10 +71,10 @@ Die Dateien liegen bei [GitHub Releases](https://github.com/habinsong/negaflow/r
 
 | Datei | Umgebung |
 |---|---|
-| `negaflow-1.2.6-mac-universal.pkg` | macOS 14 oder neuer, Apple Silicon und Intel |
-| `negaflow-1.2.6-mac-arm64.pkg` | macOS 14 oder neuer, nur Apple Silicon |
-| `negaflow-1.2.6-win-x64.exe` | Windows 11 24H2 oder neuer, x64 |
-| `negaflow-1.2.6-win-x64-setup.zip` | Windows-Installer-ZIP |
+| `negaflow-1.2.7-mac-universal.pkg` | macOS 14 oder neuer, Apple Silicon und Intel |
+| `negaflow-1.2.7-mac-arm64.pkg` | macOS 14 oder neuer, nur Apple Silicon |
+| `negaflow-1.2.7-win-x64.exe` | Windows 11 24H2 oder neuer, x64 |
+| `negaflow-1.2.7-win-x64-setup.zip` | Windows-Installer-ZIP |
 
 Kompatibel mit macOS 14, 26 und 27.
 
@@ -97,9 +97,9 @@ Für einen Scanner brauchen Sie ein separates Plug-in. Für SANE-Scanner ist das
 - Export als JPEG, PNG, 16-Bit-TIFF und lineares 16-Bit-DNG, mit ICC-Profilen und Kamera-, Objektiv- und Filmangaben im EXIF
 - Acht Abzugslayouts, Papiervorschau, Foto- und ISO-Papiergrößen und C-Print
 
-## 1.2.6
+## 1.2.7
 
-- Fehler in den Zielen HS, SP, F135 und HR wurden behoben und ihre Farbwiedergabe neu aufgebaut.
+- Die automatische Korrektur wurde optimiert. Neu sind Transformieren, Horizontal und Update-Hinweise.
 - Ab 1.2 unterstützt die Mediathek unter macOS und Windows keine hocheffizienten NEF-Dateien, weil sich die RAW-Verarbeitung geändert hat.
 
 ## Chroma Engine

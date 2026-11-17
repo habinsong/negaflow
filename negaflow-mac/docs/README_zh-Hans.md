@@ -7,7 +7,7 @@
 <p align="center">用 macOS 原生方式做的 negaflow。</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.2.6-EF8B26" alt="版本 1.2.6"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.2.7-EF8B26" alt="版本 1.2.7"></a>
   <a href="#"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 及以上"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -47,8 +47,8 @@
 
 | 文件 | 支持的 Mac |
 |---|---|
-| `negaflow-1.2.6-mac-universal.pkg` | Apple Silicon、Intel |
-| `negaflow-1.2.6-mac-arm64.pkg` | 仅 Apple Silicon |
+| `negaflow-1.2.7-mac-universal.pkg` | Apple Silicon、Intel |
+| `negaflow-1.2.7-mac-arm64.pkg` | 仅 Apple Silicon |
 
 大多数 Mac 用 Universal PKG，会装进 `/Applications`。想自己摆放应用，可以用同一页面上的 DMG 或 ZIP。
 

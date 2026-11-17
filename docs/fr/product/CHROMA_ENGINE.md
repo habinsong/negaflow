@@ -256,4 +256,4 @@ Un bon résultat IT8 synthétique ne prouve pas l'exactitude absolue sur de vrai
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-La version actuelle du produit est `1.2.6`. Les changements de l'historique des retouches et des schémas de profils devront eux aussi passer par une validation dans les versions suivantes.
+La version actuelle du produit est `1.2.7`. Les changements de l'historique des retouches et des schémas de profils devront eux aussi passer par une validation dans les versions suivantes.

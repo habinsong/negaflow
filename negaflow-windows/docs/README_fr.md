@@ -7,7 +7,7 @@
 <p align="center">negaflow, conçu nativement pour Windows.</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.2.6-EF8B26" alt="version 1.2.6"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.2.7-EF8B26" alt="version 1.2.7"></a>
   <a href="#"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 ou plus récent"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -47,9 +47,9 @@ Le build propose aussi des préréglages Arm64. Les versions publiées ne contie
 
 ## Installation
 
-Téléchargez `negaflow-1.2.6-win-x64.exe` depuis [Releases](https://github.com/habinsong/negaflow/releases) et lancez-le. Par défaut, il s'installe dans `%LOCALAPPDATA%\Negaflow\App` sans demander de droits administrateur.
+Téléchargez `negaflow-1.2.7-win-x64.exe` depuis [Releases](https://github.com/habinsong/negaflow/releases) et lancez-le. Par défaut, il s'installe dans `%LOCALAPPDATA%\Negaflow\App` sans demander de droits administrateur.
 
-[negaflow-1.2.6-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.6/negaflow-1.2.6-win-x64-setup.zip) contient le même programme d'installation, avec les instructions, les mentions légales et les sommes de contrôle SHA-256. Extrayez tous les fichiers avant de lancer le programme d'installation. C'est une archive d'installation, pas une application portable.
+[negaflow-1.2.7-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.7/negaflow-1.2.7-win-x64-setup.zip) contient le même programme d'installation, avec les instructions, les mentions légales et les sommes de contrôle SHA-256. Extrayez tous les fichiers avant de lancer le programme d'installation. C'est une archive d'installation, pas une application portable.
 
 Le programme d'installation n'est pas signé. SmartScreen avertit une fois au premier lancement : cliquez sur Informations complémentaires, puis exécutez-le.
 

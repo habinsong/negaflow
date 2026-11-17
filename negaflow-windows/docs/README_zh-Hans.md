@@ -7,7 +7,7 @@
 <p align="center">用 Windows 原生方式做的 negaflow。</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.2.6-EF8B26" alt="版本 1.2.6"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.2.7-EF8B26" alt="版本 1.2.7"></a>
   <a href="#"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 或更高"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -47,9 +47,9 @@
 
 ## 安装
 
-从 [Releases](https://github.com/habinsong/negaflow/releases) 下载 `negaflow-1.2.6-win-x64.exe` 并运行。默认安装到 `%LOCALAPPDATA%\Negaflow\App`，不要求管理员权限。
+从 [Releases](https://github.com/habinsong/negaflow/releases) 下载 `negaflow-1.2.7-win-x64.exe` 并运行。默认安装到 `%LOCALAPPDATA%\Negaflow\App`，不要求管理员权限。
 
-[negaflow-1.2.6-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.6/negaflow-1.2.6-win-x64-setup.zip) 内含同一个安装程序 EXE，以及安装说明、许可证声明和 SHA-256 校验和。请先解压全部文件再运行安装程序。它是安装程序压缩包，不是便携应用。
+[negaflow-1.2.7-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.7/negaflow-1.2.7-win-x64-setup.zip) 内含同一个安装程序 EXE，以及安装说明、许可证声明和 SHA-256 校验和。请先解压全部文件再运行安装程序。它是安装程序压缩包，不是便携应用。
 
 安装程序没有签名。第一次运行时 SmartScreen 会警告一次，点「更多信息」后再运行。
 

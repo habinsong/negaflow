@@ -7,7 +7,7 @@
 <p align="center">Windows 네이티브로 만든 negaflow입니다.</p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/version-1.2.6-EF8B26" alt="버전 1.2.6"></a>
+  <a href="#"><img src="https://img.shields.io/badge/version-1.2.7-EF8B26" alt="버전 1.2.7"></a>
   <a href="#"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 이상"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0"></a>
 </p>
@@ -47,9 +47,9 @@
 
 ## 설치
 
-[Releases](https://github.com/habinsong/negaflow/releases)에서 `negaflow-1.2.6-win-x64.exe`를 받아 실행합니다. 기본 설치 위치는 `%LOCALAPPDATA%\Negaflow\App`이고 관리자 권한을 묻지 않습니다.
+[Releases](https://github.com/habinsong/negaflow/releases)에서 `negaflow-1.2.7-win-x64.exe`를 받아 실행합니다. 기본 설치 위치는 `%LOCALAPPDATA%\Negaflow\App`이고 관리자 권한을 묻지 않습니다.
 
-[negaflow-1.2.6-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.6/negaflow-1.2.6-win-x64-setup.zip)에는 같은 설치 EXE와 설치 안내, 고지, SHA-256 체크섬이 들어 있습니다. 압축을 모두 푼 뒤 설치 파일을 실행하세요. 설치 파일 압축본이며 포터블 앱이 아닙니다.
+[negaflow-1.2.7-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.7/negaflow-1.2.7-win-x64-setup.zip)에는 같은 설치 EXE와 설치 안내, 고지, SHA-256 체크섬이 들어 있습니다. 압축을 모두 푼 뒤 설치 파일을 실행하세요. 설치 파일 압축본이며 포터블 앱이 아닙니다.
 
 설치 파일은 서명이 없습니다. 처음 실행하면 SmartScreen이 한 번 경고합니다. 추가 정보를 누른 뒤 실행하세요.
 

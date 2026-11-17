@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/ja/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="ウェブサイト"></a>
-  <a href="#ダウンロード"><img src="https://img.shields.io/badge/version-1.2.6-EF8B26" alt="バージョン 1.2.6"></a>
+  <a href="#ダウンロード"><img src="https://img.shields.io/badge/version-1.2.7-EF8B26" alt="バージョン 1.2.7"></a>
   <a href="negaflow-mac/docs/README_ja.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 以降"></a>
   <a href="negaflow-windows/docs/README_ja.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 以降"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 ライセンス"></a>
@@ -71,10 +71,10 @@
 
 | インストーラー | 対象 |
 |---|---|
-| `negaflow-1.2.6-mac-universal.pkg` | macOS 14 以降、Apple Silicon と Intel |
-| `negaflow-1.2.6-mac-arm64.pkg` | macOS 14 以降、Apple Silicon のみ |
-| `negaflow-1.2.6-win-x64.exe` | Windows 11 24H2 以降、x64 |
-| `negaflow-1.2.6-win-x64-setup.zip` | Windows インストーラー ZIP |
+| `negaflow-1.2.7-mac-universal.pkg` | macOS 14 以降、Apple Silicon と Intel |
+| `negaflow-1.2.7-mac-arm64.pkg` | macOS 14 以降、Apple Silicon のみ |
+| `negaflow-1.2.7-win-x64.exe` | Windows 11 24H2 以降、x64 |
+| `negaflow-1.2.7-win-x64-setup.zip` | Windows インストーラー ZIP |
 
 macOS 14、26、27 に対応しています。
 
@@ -97,9 +97,9 @@ Windows のインストーラーはユーザーフォルダーに入り、管理
 - JPEG、PNG、16bit TIFF、16bit リニア DNG の書き出し、ICC プロファイル、EXIF に書き込むカメラ・レンズ・フィルムの記録
 - 8種類のプリントレイアウト、用紙プレビュー、写真用・ISO 用紙、C-print
 
-## 1.2.6
+## 1.2.7
 
-- HS、SP、F135、HR ターゲットのバグを修正し、色の描画を作り直しました。
+- 自動補正を最適化し、変形、水平、アップデート通知を追加しました。
 - 1.2 から RAW 処理が変わったため、macOS・Windows ともにライブラリでは高効率 NEF をサポートしません。
 
 ## Chroma Engine

@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/fr/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="site web"></a>
-  <a href="#téléchargement"><img src="https://img.shields.io/badge/version-1.2.6-EF8B26" alt="version 1.2.6"></a>
+  <a href="#téléchargement"><img src="https://img.shields.io/badge/version-1.2.7-EF8B26" alt="version 1.2.7"></a>
   <a href="negaflow-mac/docs/README_fr.md"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 ou ultérieur"></a>
   <a href="negaflow-windows/docs/README_fr.md"><img src="https://img.shields.io/badge/Windows-11%2024H2+-0078D4?logo=windows&logoColor=white" alt="Windows 11 24H2 ou plus récent"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="licence Apache 2.0"></a>
@@ -71,10 +71,10 @@ Les fichiers sont sur [GitHub Releases](https://github.com/habinsong/negaflow/re
 
 | Fichier | Environnement |
 |---|---|
-| `negaflow-1.2.6-mac-universal.pkg` | macOS 14 ou ultérieur, Apple Silicon et Intel |
-| `negaflow-1.2.6-mac-arm64.pkg` | macOS 14 ou ultérieur, Apple Silicon uniquement |
-| `negaflow-1.2.6-win-x64.exe` | Windows 11 24H2 ou plus récent, x64 |
-| `negaflow-1.2.6-win-x64-setup.zip` | ZIP du programme d’installation Windows |
+| `negaflow-1.2.7-mac-universal.pkg` | macOS 14 ou ultérieur, Apple Silicon et Intel |
+| `negaflow-1.2.7-mac-arm64.pkg` | macOS 14 ou ultérieur, Apple Silicon uniquement |
+| `negaflow-1.2.7-win-x64.exe` | Windows 11 24H2 ou plus récent, x64 |
+| `negaflow-1.2.7-win-x64-setup.zip` | ZIP du programme d’installation Windows |
 
 Compatible avec macOS 14, 26 et 27.
 
@@ -97,9 +97,9 @@ Un scanner demande un module séparé. Pour les scanners SANE, c'est [`negaflow-
 - Export JPEG, PNG, TIFF 16 bits et DNG linéaire 16 bits, profils ICC, et boîtier, objectif et film inscrits dans l'EXIF
 - Huit mises en page d'impression, aperçus de papier, formats photo et ISO, et C-print
 
-## 1.2.6
+## 1.2.7
 
-- Les cibles HS, SP, F135 et HR ont été corrigées et leur rendu des couleurs refait.
+- La correction automatique a été optimisée. La transformation, l'horizontalité et les notifications de mise à jour sont nouvelles.
 - Depuis la version 1.2, la bibliothèque ne prend pas en charge les fichiers NEF haute efficacité, sur Mac comme sur Windows, car le traitement RAW a changé.
 
 ## Chroma Engine
