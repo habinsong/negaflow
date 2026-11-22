@@ -259,14 +259,14 @@ void measure_task1(
     const std::filesystem::path& golden_root,
     const std::string_view selected_case) {
     constexpr std::array<Case, 8U> cases{{
-        {L"a-default-main-srgb", L"a-default-main-srgb.tif", "a3a17e736645d9ddb6340c7be5867f9f0580bd74d2cbec23ba1c9061654488e7", NF_DEVELOP_TARGET_MAIN, 0U, nullptr},
-        {L"b-main-scannerprofile-portra400-srgb", L"b-main-scannerprofile-portra400-srgb.tif", "3f8f994923d77b32f97f0416f84710c7e77bfd1cc2d89e518cb2900c55945fb3", NF_DEVELOP_TARGET_MAIN, 0U, L"noritsu__color-nega__kodak-portra-400"},
-        {L"c-target-hs-srgb", L"c-target-hs-srgb.tif", "ac4b348ef9f52b8b76988455544d7076a52d1a780230806632ba7366d49c6cf8", NF_DEVELOP_TARGET_NORITSU, 0U, nullptr},
-        {L"c-target-sp-srgb", L"c-target-sp-srgb.tif", "f1514bf9ff19f662ad85f95b71b0bf7fd4a169c70cbc35610c4ec88d52af880e", NF_DEVELOP_TARGET_SP3000, 0U, nullptr},
-        {L"c-target-f135-srgb", L"c-target-f135-srgb.tif", "2ed07b8a648451573e439663dd564bdd70156242f411c972a02f32725a104669", NF_DEVELOP_TARGET_F135, 0U, nullptr},
-        {L"c-target-hr-srgb", L"c-target-hr-srgb.tif", "788b260d1d6f30ab2552cdcc0c55e512b9f0971834880a6749bb01ad6995d9b2", NF_DEVELOP_TARGET_HR, 0U, nullptr},
-        {L"d-main-displayp3", L"d-main-displayp3.tif", "230a3c85406e9f2da65476defd846f96f59b731e0f6fe6dd96366706b21414af", NF_DEVELOP_TARGET_MAIN, 1U, nullptr},
-        {L"d-main-adobergb", L"d-main-adobergb.tif", "3915583c65a48e097302129afb3e310be2ecdcf56e328d1dd007fe1910c4c849", NF_DEVELOP_TARGET_MAIN, 2U, nullptr},
+        {L"a-default-main-srgb", L"a-default-main-srgb.tif", "6bbe155859ceaff1b32efa9eb179b5bfaea72c6cbe2d4a979ada4efa616a4633", NF_DEVELOP_TARGET_MAIN, 0U, nullptr},
+        {L"b-main-scannerprofile-portra400-srgb", L"b-main-scannerprofile-portra400-srgb.tif", "166c5fd76375c93f99cec9fb5adcac480ecfb16f81f2c4366fde2b513a49c34c", NF_DEVELOP_TARGET_MAIN, 0U, L"noritsu__color-nega__kodak-portra-400"},
+        {L"c-target-hs-srgb", L"c-target-hs-srgb.tif", "9b1aba809323cce145a46f09ee2919f1eabdafbabb443a53f3d4ffe586315584", NF_DEVELOP_TARGET_NORITSU, 0U, nullptr},
+        {L"c-target-sp-srgb", L"c-target-sp-srgb.tif", "e30185e1242052179f94054b8caa8782dd4c54b60e9c60079bb5da700656dbd9", NF_DEVELOP_TARGET_SP3000, 0U, nullptr},
+        {L"c-target-f135-srgb", L"c-target-f135-srgb.tif", "08c294a4aa8caae61645cfc7f291d0616433f2caa6b873e1b90493093c199466", NF_DEVELOP_TARGET_F135, 0U, nullptr},
+        {L"c-target-hr-srgb", L"c-target-hr-srgb.tif", "c26f6201da1c1e2d8845e0abd0682fbe05e158bea678ba07109cdbf29a04f4e1", NF_DEVELOP_TARGET_HR, 0U, nullptr},
+        {L"d-main-displayp3", L"d-main-displayp3.tif", "1a68a48a24b54208ceec4c76f4dfc99c78d295249f805f8b320e1102f2c42387", NF_DEVELOP_TARGET_MAIN, 1U, nullptr},
+        {L"d-main-adobergb", L"d-main-adobergb.tif", "846735037735046cb5f1668ecd8038354f0f380c604e18482f436e39029c59a3", NF_DEVELOP_TARGET_MAIN, 2U, nullptr},
     }};
     const TempDirectory temporary{};
     const std::wstring selected_case_wide{selected_case.begin(), selected_case.end()};

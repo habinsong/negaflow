@@ -48,6 +48,16 @@ final class ImageLoaderLinearRawColorSpaceTests: XCTestCase {
         XCTAssertNotEqual(image.colorSpace?.name, CGColorSpace.linearGray)
     }
 
+    /// eXIf 청크가 있는 PNG 도 ImageIO 가 TIFF 사전을 채운다. PNG 는 무태그면 sRGB 라 선형으로
+    /// 다시 읽으면 하얗게 뜬다(윈도우는 sRGB 로 읽음).
+    func testUntaggedPNGWithExifIsNotReadAsLinear() throws {
+        let rgb = try makeSynthetic16BitCGImage(monochrome: false)
+        var properties = untaggedTIFFProperties
+        properties[kCGImagePropertyPNGDictionary] = [CFString: Any]() as CFDictionary
+        XCTAssertFalse(ImageLoader.shouldInterpretAsLinearRaw(rgb, properties: properties))
+        XCTAssertTrue(ImageLoader.shouldInterpretAsLinearRaw(rgb, properties: untaggedTIFFProperties))
+    }
+
     private var untaggedTIFFProperties: [CFString: Any] {
         [kCGImagePropertyTIFFDictionary: [CFString: Any]() as CFDictionary]
     }

@@ -302,13 +302,15 @@ internal static class PrintCustomPackageTests
             black: [0.0217, 0.0222, 0.0178]);
         (double[] White, double[] Black)? media = PrintIccProfile.ReadMedia(icc);
         Check(media is not null, "proof_media_reads_lut_profiles");
-        // macOS: `clamp(XYZ / D50, 0, 1.2)` — D50 = (0.9642, 1, 0.8249).
-        // s15Fixed16 로 담았다 꺼내므로 1/65536 만큼의 반올림이 남습니다.
-        Check(Math.Abs(media!.Value.White[0] - (0.8593 / 0.9642)) < 1e-4 &&
-            Math.Abs(media.Value.White[1] - 0.8916) < 1e-4 &&
-            Math.Abs(media.Value.White[2] - (0.7114 / 0.8249)) < 1e-4,
+        // 용지·잉크 XYZ(D50)는 행렬로 선형 sRGB 가 됩니다(macOS `SoftProof.xyzD50ToLinearSRGB`).
+        // 상수를 베끼지 않고 물리량으로 봅니다: D50 에 맞춘 sRGB 색소의 Y 행으로 다시 합치면 원래
+        // Y 가 나와야 하고, Z 가 낮은 따뜻한 용지는 파랑이 빨강보다 낮아야 합니다.
+        static double Luminance(double[] rgb) =>
+            (0.2225 * rgb[0]) + (0.7169 * rgb[1]) + (0.0606 * rgb[2]);
+        Check(Math.Abs(Luminance(media!.Value.White) - 0.8916) < 2e-3 &&
+            media.Value.White[2] < media.Value.White[0],
             "proof_media_paper_white_matches_mac");
-        Check(Math.Abs(media.Value.Black[1] - 0.0222) < 1e-4,
+        Check(Math.Abs(Luminance(media.Value.Black) - 0.0222) < 2e-3,
             "proof_media_black_ink_matches_mac");
         Check(PrintIccProfile.ReadMedia(new byte[64]) is null, "proof_media_rejects_a_stub");
 
@@ -325,6 +327,11 @@ internal static class PrintCustomPackageTests
         PrintSoftProofFilter.Apply(pixels, proof);
         Check(pixels[0] < 250 && pixels[1] < 250 && pixels[2] < 250,
             "proof_filter_pulls_white_down");
+        // 계수는 선형 배율입니다. 흰색은 용지 흰색을 sRGB 로 인코딩한 값이어야 하고, 화면
+        // 여백도 같은 값으로 칠합니다 — 바이트에 그대로 곱하면 여백이 사진 흰색보다 어둡습니다.
+        Check(pixels[1] == PrintSoftProofFilter.EncodeSrgbByte(media.Value.White[1]) &&
+            pixels[1] > (byte)Math.Round(media.Value.White[1] * 255.0),
+            "proof_filter_scales_in_linear_light");
         byte[] shadow = [0, 0, 0, 255];
         PrintSoftProofFilter.Apply(shadow, proof);
         Check(shadow[0] > 2 && shadow[1] > 2 && shadow[2] > 2,
@@ -336,6 +343,46 @@ internal static class PrintCustomPackageTests
             Negaflow.Interop.SoftProofRgb.White,
             Negaflow.Interop.SoftProofRgb.Black);
         Check(!PrintSoftProofFilter.Transforms(neutral), "proof_filter_skips_a_neutral_profile");
+
+        // v2 행렬/TRC 프로파일이 `wtpt` 에 D65 를 적어 두면 흰색은 색소 합(PCS 흰색)입니다.
+        // 그대로 D50 으로 나누면 파랑 1.2·빨강 0.986 으로 프루프가 파랗게 물듭니다.
+        (double[] White, double[] Black)? display = PrintIccProfile.ReadMedia(
+            BuildMatrixProfile(wtpt: [0.9505, 1.0, 1.0891]));
+        Check(display is { } shown && shown.White.All(channel => channel == 1.0),
+            "proof_media_matrix_profile_uses_the_colorant_white");
+    }
+
+    /// <summary>sRGB D50 색소와 TRC 태그를 가진 v2 화면 프로파일입니다.</summary>
+    private static byte[] BuildMatrixProfile(double[] wtpt)
+    {
+        const int header = 128;
+        const int tableStart = header + 4;
+        const int entries = 7;
+        int dataStart = tableStart + (entries * 12);
+        byte[] icc = new byte[dataStart + (4 * 20) + 12];
+        System.Text.Encoding.ASCII.GetBytes("mntr").CopyTo(icc, 12);
+        System.Text.Encoding.ASCII.GetBytes("RGB ").CopyTo(icc, 16);
+        WriteUInt32(icc, header, entries);
+        (string Name, double[] Xyz)[] tags =
+        [
+            ("wtpt", wtpt),
+            ("rXYZ", [0.4361, 0.2225, 0.0139]),
+            ("gXYZ", [0.3851, 0.7169, 0.0971]),
+            ("bXYZ", [0.1431, 0.0606, 0.7139]),
+        ];
+        for (int index = 0; index < tags.Length; ++index)
+        {
+            WriteTag(icc, tableStart + (index * 12), tags[index].Name, dataStart + (index * 20), 20);
+            WriteXyz(icc, dataStart + (index * 20), tags[index].Xyz);
+        }
+        int curve = dataStart + (tags.Length * 20);
+        System.Text.Encoding.ASCII.GetBytes("curv").CopyTo(icc, curve);
+        string[] curves = ["rTRC", "gTRC", "bTRC"];
+        for (int index = 0; index < curves.Length; ++index)
+        {
+            WriteTag(icc, tableStart + ((tags.Length + index) * 12), curves[index], curve, 12);
+        }
+        return icc;
     }
 
     /// <summary>

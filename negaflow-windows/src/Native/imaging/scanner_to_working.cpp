@@ -116,7 +116,9 @@ constexpr std::uint32_t color_space_profile_signature = 0x73706163U;
     output.stride_pixels = width;
     output.pixels.resize(
         static_cast<std::size_t>(width) * static_cast<std::size_t>(height));
-    const auto linear = negaflow::color::srgb16_to_linear_table();
+    // 표본은 내부 중간 공간(Rec.2020, sRGB 곡선)의 값입니다. sRGB 밖 색이 음수·1 초과로
+    // 남습니다.
+    const detail::IntermediateToWorking decode{};
     negaflow::core::for_each_row_block(
         height,
         static_cast<std::uint64_t>(width) * height,
@@ -125,9 +127,8 @@ constexpr std::uint32_t color_space_profile_signature = 0x73706163U;
             const std::size_t last = static_cast<std::size_t>(first_row + row_count) * width;
             for (std::size_t index = first; index < last; ++index) {
                 const std::size_t source = index * 3U;
-                output.pixels[index] = {
-                    linear[encoded[source]], linear[encoded[source + 1U]],
-                    linear[encoded[source + 2U]], 1.0F};
+                output.pixels[index] = decode(
+                    encoded[source], encoded[source + 1U], encoded[source + 2U], 1.0F);
             }
         });
     return ScannerToWorkingStatus::ok;
@@ -192,7 +193,11 @@ ScannerToWorkingStatus detail::validate_scanner_icc_profile(
     if (icc.status != negaflow::color::IccProfileStatus::ok) {
         return ScannerToWorkingStatus::invalid_icc_profile;
     }
-    if (icc.info.data_color_space != rgb_color_space_signature) {
+    // Gray ICC(흑백 스캔)는 같은 회색 축의 RGB 프로파일로 옮겨 읽습니다
+    // (`color::rgb_profile_for_gray_profile`). 앞 판은 데이터 공간이 RGB 가 아니면 거절해
+    // Gray Gamma 2.2·Dot Gain 프로파일이 붙은 흑백 TIFF 를 열지 못했습니다.
+    if (icc.info.data_color_space != rgb_color_space_signature &&
+        icc.info.data_color_space != 0x47524159U) {  // 'GRAY'
         return ScannerToWorkingStatus::unsupported_icc_color_space;
     }
     if (!is_supported_source_profile_class(icc.info.device_class)) {

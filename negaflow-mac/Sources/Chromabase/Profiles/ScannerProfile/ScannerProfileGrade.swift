@@ -106,14 +106,7 @@ public enum ScannerProfileGrade {
             green: parameters.greenGain,
             blue: parameters.blueGain
         )
-        out = out
-            .applyingFilter("CIToneCurve", parameters: [
-                "inputPoint0": CIVector(x: 0.00, y: 0.00),
-                "inputPoint1": CIVector(x: 0.23, y: parameters.shadowPoint),
-                "inputPoint2": CIVector(x: 0.50, y: parameters.midPoint),
-                "inputPoint3": CIVector(x: 0.82, y: parameters.highlightPoint),
-                "inputPoint4": CIVector(x: 1.00, y: 1.00),
-            ])
+        out = applyToneSpline(to: out, parameters: parameters)
         if parameters.unsharp > 0 {
             out = out.applyingFilter("CIUnsharpMask", parameters: [
                 "inputRadius": 1.8,
@@ -166,6 +159,24 @@ public enum ScannerProfileGrade {
             kCIInputBackgroundImageKey: tinted,
             "inputMaskImage": highlightMask,
         ])?.outputImage?.cropped(to: extent) ?? tinted
+    }
+
+    /// 매듭 (0.23 → shadowPoint), (0.50 → midPoint), (0.82 → highlightPoint) 는 sRGB 표시값이다.
+    /// 예전에 쓰던 `CIToneCurve` 는 받은 값의 제곱근 위에서 스플라인을 계산해, sRGB 입력에 걸면
+    /// 감마가 두 번 걸렸다(매듭이 sRGB 13·64·172 에 놓여 sRGB 64~118 을 들어 올림).
+    /// `NaturalToneSpline` 으로 sRGB 값에 직접 건다. 윈도우 `tone_curve` 와 같은 식이다.
+    static let toneKnots: [Double] = [0.0, 0.23, 0.50, 0.82, 1.0]
+
+    static func toneSecondDerivatives(_ y: [Double]) -> [Double] {
+        NaturalToneSpline.secondDerivatives(x: toneKnots, y: y)
+    }
+
+    private static func applyToneSpline(to image: CIImage, parameters: Parameters) -> CIImage {
+        NaturalToneSpline.apply(
+            to: image,
+            x: toneKnots,
+            y: [0.0, parameters.shadowPoint, parameters.midPoint, parameters.highlightPoint, 1.0]
+        )
     }
 
     private static func clamp(_ value: Double, _ low: Double, _ high: Double) -> Double {

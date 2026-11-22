@@ -113,6 +113,8 @@ Les commandes ICC du Tirage ont des rôles différents.
 | Profil d'épreuve C-print | Épreuve écran du procédé du laboratoire et du papier | Non incrusté dans le fichier de livraison | Jamais appliqué |
 | Épreuve écran générale | Utilisée dans sa portée d'affichage configurée | Simple aide d'affichage | Suit son propre réglage |
 
+Le profil de sortie d’imprimante se choisit dans **Réglages → Exporter → Gestion des couleurs**.
+
 Un profil de sortie imprimante n'est pas appliqué à une source avant que cette source soit dupliquée. La planche-contact, le package d'images ou le package personnalisé est d'abord composé, puis le profil est appliqué une seule fois à la page entière. Les emplacements répétés d'une même source et les mises en page à sources mêlées reçoivent donc la même conversion de sortie.
 
 Le profil d'épreuve C-print est l'aperçu du procédé fourni par le laboratoire. Il n'est jamais substitué en silence au profil de sortie. Les exigences sur les profils et la limite de précision sont dans [Mises en page de tirage et aperçu C-print](../reference/C_PRINT.md).

@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <span>
+#include <vector>
 
 namespace negaflow::imaging::detail {
 
@@ -17,17 +18,25 @@ public:
     IcmRgb16Transform& operator=(const IcmRgb16Transform&) = delete;
     ~IcmRgb16Transform() noexcept;
 
-    /// 원본에 박힌 ICC 에서 표준 sRGB 로 옮깁니다. 스캐너 입력이 지나는 길입니다.
+    /// 원본에 박힌 ICC 에서 표준 sRGB(또는 `destination_profile_bytes`)로 옮깁니다. 스캐너
+    /// 입력이 지나는 길이며, 입력 경로는 sRGB 밖 색을 남기려고 내부 중간 공간
+    /// (`color::build_working_intermediate_icc_profile`)을 목적지로 넘깁니다.
     [[nodiscard]] ScannerToWorkingStatus initialize(
         std::span<const std::uint8_t> source_profile_bytes,
-        std::uint32_t& native_error_code);
+        std::uint32_t& native_error_code,
+        std::span<const std::uint8_t> destination_profile_bytes = {});
 
-    /// 표준 sRGB 에서 <b>주어진 프로파일</b>로 옮깁니다. 내보내기가 인화소 ICC 로 나갈 때
-    /// 지나는 길이며, macOS 가 `ExportEngine.write(outputProfile:)` 에서 출력 색공간을
-    /// 그 프로파일로 바꾸는 자리와 같습니다.
+    /// 화소가 인코딩된 공간에서 <b>주어진 프로파일</b>로 옮깁니다. 내보내기가 인화소 ICC 로
+    /// 나갈 때 지나는 길이며, macOS 가 `ExportEngine.write(outputProfile:)` 에서 출력
+    /// 색공간을 그 프로파일로 바꾸는 자리와 같습니다.
+    ///
+    /// `source_profile_bytes` 가 비어 있으면 화소는 표준 sRGB 입니다. Display P3·Adobe RGB 로
+    /// 인코딩한 화소는 그 공간의 프로파일을 넘겨야 합니다 — sRGB 로 읽으면 채도와 원색이
+    /// 틀어진 채 프린터 공간으로 갑니다.
     [[nodiscard]] ScannerToWorkingStatus initialize_to_profile(
         std::span<const std::uint8_t> destination_profile_bytes,
-        std::uint32_t& native_error_code);
+        std::uint32_t& native_error_code,
+        std::span<const std::uint8_t> source_profile_bytes = {});
 
     /// 8 비트 RGB 를 옮깁니다. 인화소 ICC 로 나가는 JPEG·8bit TIFF 가 지나는 길입니다.
     [[nodiscard]] ScannerToWorkingStatus translate8(
@@ -56,6 +65,9 @@ private:
     /// 두 프로파일을 이어 변환을 만듭니다. 두 initialize 가 같이 씁니다.
     [[nodiscard]] ScannerToWorkingStatus link(std::uint32_t& native_error_code);
 
+    // 메모리 프로파일은 변환이 사는 동안 그대로 둡니다.
+    std::vector<std::uint8_t> source_profile_storage_{};
+    std::vector<std::uint8_t> destination_profile_storage_{};
     HPROFILE source_profile_{nullptr};
     HPROFILE destination_profile_{nullptr};
     HTRANSFORM transform_{nullptr};

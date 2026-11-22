@@ -78,6 +78,7 @@ public sealed partial class PreviewCoordinator
     // Set from the UI thread, read on a worker, so it goes under the same lock as
     // everything else here rather than acquiring its own rule.
     private SoftProofSettings? softProof;
+    private Func<LibraryFrameSnapshot, SoftProofSettings?>? softProofResolver;
     private bool clippingOverlayEnabled;
     private bool uninvertedSource;
 
@@ -192,6 +193,32 @@ public sealed partial class PreviewCoordinator
             lock (gate)
             {
                 softProof = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 사진마다 프루프를 정하는 함수입니다. 있으면 <see cref="SoftProof"/> 대신 이것을 씁니다.
+    /// </summary>
+    /// <remarks>
+    /// macOS 는 렌더마다 그 사진의 현상 대상으로 프루프 목적지를 정합니다. 값 하나를 들고
+    /// 있던 앞 판은 앱을 켤 때(코디네이터가 생기기 전에 걸려 버려짐)·사진을 넘길 때·MAIN 과
+    /// PRINT 를 오갈 때 프루프가 따라오지 않았습니다.
+    /// </remarks>
+    public Func<LibraryFrameSnapshot, SoftProofSettings?>? SoftProofResolver
+    {
+        get
+        {
+            lock (gate)
+            {
+                return softProofResolver;
+            }
+        }
+        set
+        {
+            lock (gate)
+            {
+                softProofResolver = value;
             }
         }
     }

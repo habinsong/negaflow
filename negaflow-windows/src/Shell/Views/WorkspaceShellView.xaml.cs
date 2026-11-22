@@ -163,6 +163,11 @@ public sealed partial class WorkspaceShellView : UserControl
         this.libraryHost = libraryHost;
         this.thumbnails = thumbnails;
         hostWindowId = windowId;
+        if (windowId is { } displayWindow)
+        {
+            // 미리보기 캔버스가 그리기 직전에 모니터 ICC 로 옮길 표를 이 창의 모니터로 정합니다.
+            Negaflow.Shell.Services.DisplayColorManagement.AttachWindow(displayWindow);
+        }
         if (libraryHost is not null)
         {
             libraryHost.RestoreActiveFrame(state.Current.ActiveFrameId);
@@ -510,22 +515,21 @@ public sealed partial class WorkspaceShellView : UserControl
         SyncExportMenu();
     }
 
-    private async void OnToolbarQuickExportRequested(object? sender, EventArgs args)
+    private void OnToolbarQuickExportRequested(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
-        await DevelopWorkspace.QuickExportAsync();
+        Invoke(WorkflowShortcutAction.QuickExport);
     }
 
     /// <summary>
-    /// 위 막대의 "내보내기" 입니다. 현상뷰 출력 탭의 내보내기 단추와 같은 동작이며, 그
-    /// 단추가 쓰는 값(형식 · 폴더 · 파일명 패턴)을 그대로 씁니다.
+    /// 위 막대의 내보내기도 메뉴와 같이 현재 작업공간의 출력 경로를 씁니다.
     /// </summary>
-    private async void OnToolbarExportRequested(object? sender, EventArgs args)
+    private void OnToolbarExportRequested(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
-        await DevelopWorkspace.ExportPhotoAsync();
+        Invoke(WorkflowShortcutAction.ExportPhoto);
     }
 
     /// <summary>

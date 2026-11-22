@@ -147,7 +147,10 @@ struct PrintCanvasView: View {
         ) else {
             return .white
         }
+        // 용지 흰색은 선형 작업 공간의 배율이다(`SoftProof.apply` 의 CIColorMatrix). sRGB
+        // 코드값으로 쓰면 사진 속 흰색보다 어두운 여백이 된다(L95 용지 224 대 241).
         return Color(
+            .sRGBLinear,
             red: min(max(rgb.x, 0), 1),
             green: min(max(rgb.y, 0), 1),
             blue: min(max(rgb.z, 0), 1)
@@ -159,7 +162,7 @@ private struct PrintSingleImagePageView: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var settingsStore: PrintWorkspaceSettingsStore
     @ObservedObject var frame: ScanFrame
-    /// 워터마크 띠까지 그린 한 장. 내보내기와 같은 렌더러(`PrintCompositionRenderer.placedUnit`)로 만든다.
+    /// 내보내기와 같은 렌더러로 그린 인화 효과 또는 워터마크 띠.
     @State private var framedPreview: PrintFramedPreview?
 
     var body: some View {
@@ -290,9 +293,14 @@ private struct PrintSingleImagePageView: View {
                 framedPreview = nil
                 return
             }
-            let reference = frame.watermarkReferenceImage
-            // 글자를 치는 동안 매 글자마다 다시 그리지 않도록 잠깐 모은다.
-            try? await Task.sleep(for: .milliseconds(90))
+            let reference: CGImage?
+            if case .framed = request.content {
+                reference = frame.watermarkReferenceImage
+                // 글자를 치는 동안 매 글자마다 다시 그리지 않도록 잠깐 모은다.
+                try? await Task.sleep(for: .milliseconds(90))
+            } else {
+                reference = nil
+            }
             guard !Task.isCancelled else { return }
             let rendered = await Task.detached(priority: .userInitiated) {
                 PrintFramedPreview.render(request, image: source, reference: reference)
@@ -319,7 +327,7 @@ private struct PrintSingleImagePageView: View {
             GeometryReader { unit in
                 let scaleX = unit.size.width / unitFrame.frameSize.width
                 let scaleY = unit.size.height / unitFrame.frameSize.height
-                presentedImage(image)
+                sourceImage(image)
                     .frame(
                         width: unitFrame.imageRect.width * scaleX,
                         height: unitFrame.imageRect.height * scaleY
@@ -334,7 +342,8 @@ private struct PrintSingleImagePageView: View {
 
     private func showsFramedPreview(_ preview: PrintFramedPreview, for unitFrame: PrintWatermarkFrameLayout) -> Bool {
         if preview.request == framedPreviewRequest { return true }
-        guard preview.request.frameID == ObjectIdentifier(frame),
+        guard case .framed = preview.request.content,
+              preview.request.frameID == ObjectIdentifier(frame),
               preview.image.size.height > 0, unitFrame.frameSize.height > 0 else { return false }
         let shown = preview.image.size.width / preview.image.size.height
         let wanted = unitFrame.frameSize.width / unitFrame.frameSize.height
@@ -342,16 +351,23 @@ private struct PrintSingleImagePageView: View {
     }
 
     private var framedPreviewRequest: PrintFramedPreviewRequest? {
-        guard let image = frame.printPresentationImage,
-              let page = pagePlan(for: image),
-              page.unitFrame != nil else {
-            return nil
+        guard let image = frame.printPresentationImage, let page = pagePlan(for: image) else { return nil }
+        let content: PrintFramedPreviewRequest.Content
+        let referenceID: ObjectIdentifier?
+        if page.unitFrame != nil {
+            content = .framed(page.composition)
+            referenceID = frame.thumbnailImage.map(ObjectIdentifier.init)
+        } else {
+            let style = settingsStore.layoutMode.presentationStyle
+            guard style != .standard else { return nil }
+            content = .presentation(style)
+            referenceID = nil
         }
         return PrintFramedPreviewRequest(
             frameID: ObjectIdentifier(frame),
             imageID: ObjectIdentifier(image),
-            referenceID: frame.thumbnailImage.map(ObjectIdentifier.init),
-            settings: page.composition
+            referenceID: referenceID,
+            content: content
         )
     }
 
@@ -369,7 +385,10 @@ private struct PrintSingleImagePageView: View {
         ) else {
             return .white
         }
+        // 용지 흰색은 선형 작업 공간의 배율이다(`SoftProof.apply` 의 CIColorMatrix). sRGB
+        // 코드값으로 쓰면 사진 속 흰색보다 어두운 여백이 된다(L95 용지 224 대 241).
         return Color(
+            .sRGBLinear,
             red: min(max(rgb.x, 0), 1),
             green: min(max(rgb.y, 0), 1),
             blue: min(max(rgb.z, 0), 1)
@@ -388,28 +407,13 @@ private struct PrintSingleImagePageView: View {
 
     @ViewBuilder
     private func presentedImage(_ image: NSImage) -> some View {
-        switch settingsStore.layoutMode.presentationStyle {
-        case .standard:
+        let content = PrintFramedPreviewRequest.Content.presentation(settingsStore.layoutMode.presentationStyle)
+        if let framedPreview,
+           framedPreview.request.frameID == ObjectIdentifier(frame),
+           framedPreview.request.content == content {
+            sourceImage(framedPreview.image)
+        } else {
             sourceImage(image)
-        case .cyanotype:
-            let appearance = PrintPresentationAppearance(style: .cyanotype)
-            ZStack {
-                color(appearance.highlightRGBA)
-                color(appearance.shadowRGBA)
-                    .mask {
-                        sourceImage(image)
-                            .grayscale(1)
-                            .colorInvert()
-                            .luminanceToAlpha()
-                    }
-            }
-        case .glassPlate:
-            sourceImage(image)
-                .grayscale(1)
-                .colorInvert()
-        case .gelatinSilver:
-            sourceImage(image)
-                .grayscale(1)
         }
     }
 
@@ -417,15 +421,6 @@ private struct PrintSingleImagePageView: View {
         Image(nsImage: image)
             .resizable()
             .aspectRatio(contentMode: .fit)
-    }
-
-    private func color(_ rgba: SIMD4<Double>) -> Color {
-        Color(
-            red: rgba.x,
-            green: rgba.y,
-            blue: rgba.z,
-            opacity: rgba.w
-        )
     }
 
     /// 이 장의 판 배치. 워터마크가 켜져 있으면 띠까지 더한 크기로 판을 잡는다(내보내기와 같은 계산).

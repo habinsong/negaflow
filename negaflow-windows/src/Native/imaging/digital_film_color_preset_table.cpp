@@ -44,7 +44,14 @@ public:
             blue_hue, blue_saturation};
     }
     [[nodiscard]] DigitalFilmColorPreset build() const noexcept {
-        return preset_;
+        // 룩은 선형 동작의 Color Mixer·Color Grading 에 맞춰 설계된 값입니다. 사용자 슬라이더가
+        // sRGB 인코딩 영역으로 옮겨 가도 룩의 그림은 그대로 둡니다(macOS
+        // `DigitalFilmColorPresetStage` 의 `perceptual: false`).
+        DigitalFilmColorPreset preset = preset_;
+        preset.mixer.perceptual = false;
+        preset.grading.perceptual = false;
+        preset.calibration.perceptual = false;
+        return preset;
     }
 
 private:

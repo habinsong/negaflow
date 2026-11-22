@@ -7,8 +7,8 @@
 #include <filesystem>
 #include <span>
 
-// 완성된 인화 판을 파일로 게시합니다. 화소는 이미 게시할 색공간의 코드값이므로 여기서
-// 옮기지 않고, 같은 프로파일을 파일에 답니다.
+// 완성된 인화 판을 파일로 게시합니다. 판은 sRGB 코드값으로 합성되어 들어오고, 게시할
+// 색공간(인화소 ICC 또는 고른 Delivery 색공간)으로 한 번 옮겨 그 프로파일을 답니다.
 
 namespace {
 
@@ -63,8 +63,12 @@ nf_status_t NF_CALL nf_publish_print_sheet_v1(
         result->struct_size < static_cast<std::uint32_t>(sizeof(*result))) {
         return NF_STATUS_STRUCT_TOO_SMALL;
     }
-    if (request->reserved != 0U) {
-        return NF_STATUS_INVALID_ARGUMENT;
+    negaflow::color::OutputColorSpace output_color_space{};
+    switch (request->output_color_space) {
+        case 0U: output_color_space = negaflow::color::OutputColorSpace::srgb; break;
+        case 1U: output_color_space = negaflow::color::OutputColorSpace::display_p3; break;
+        case 2U: output_color_space = negaflow::color::OutputColorSpace::adobe_rgb; break;
+        default: return NF_STATUS_INVALID_ARGUMENT;
     }
     if (request->destination_path == nullptr || request->samples == nullptr) {
         return NF_STATUS_INVALID_ARGUMENT;
@@ -86,11 +90,13 @@ nf_status_t NF_CALL nf_publish_print_sheet_v1(
     if (!map_compression(request->tiff_compression, compression)) {
         return NF_STATUS_INVALID_ARGUMENT;
     }
+    // JPEG 도 고른 색공간으로 냅니다(현상 내보내기·macOS 와 같음).
 
     negaflow::output::PrintSheetPublishLimits limits{};
     limits.output_dpi = request->output_dpi;
     limits.jpeg_quality = request->jpeg_quality;
     limits.tiff_compression = compression;
+    limits.output_color_space = output_color_space;
     if (request->output_icc_profile_size != 0U) {
         limits.output_icc_profile = std::span<const std::uint8_t>(
             request->output_icc_profile,

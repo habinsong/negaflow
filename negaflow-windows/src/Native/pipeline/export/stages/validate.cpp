@@ -52,12 +52,8 @@ std::optional<DevelopExportOutcome> validate_request(
             static_cast<std::uint32_t>(request.metadata_policy))) {
         return fail(DevelopExportStage::request_validation, "invalid_metadata_policy");
     }
-    // JPEG 은 아직 sRGB 만 게시합니다. 고른 것과 다른 공간의 파일을 조용히 내보내느니
-    // 거부합니다 — 잘못 이름 붙은 색은 나중에 되돌릴 수 없습니다.
-    if (request.format == DevelopExportFormat::jpeg8 &&
-        request.output_color_space != negaflow::color::OutputColorSpace::srgb) {
-        return fail(DevelopExportStage::request_validation, "jpeg_requires_srgb");
-    }
+    // JPEG 도 고른 색공간으로 게시합니다(macOS 와 같음). 화소를 그 공간으로 옮기고 그 공간의
+    // 프로파일을 박으므로 이름과 색이 어긋나지 않습니다.
     if (request.format == DevelopExportFormat::jpeg8 && request.preserve_alpha) {
         return fail(DevelopExportStage::request_validation, "jpeg_does_not_support_alpha");
     }

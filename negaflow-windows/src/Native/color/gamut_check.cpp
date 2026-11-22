@@ -50,12 +50,17 @@ public:
         DWORD intents[]{INTENT_PERCEPTUAL, INTENT_PERCEPTUAL};
         // ENABLE_GAMUT_CHECKING 이 이 변환의 전부입니다. 이것 없이는 CheckBitmapBits 가
         // 무엇을 판정해야 하는지 모릅니다.
+        //
+        // BEST_MODE: 기본(NORMAL) 표는 성겨서 sRGB→sRGB 에서도 경계와 먼 진한 빨강·초록·
+        // 어두운 색을 밖으로 판정했습니다(2026-11-22 검증 PC 실측). BEST_MODE 는 같은 시간
+        // (1600x1067 판정 85ms 대 91ms)에 그 거짓 경고를 없앱니다. WCS_ALWAYS 까지 켜면 수식과
+        // 정확히 맞지만 60배 느려(5.5초) 미리보기에 쓸 수 없습니다.
         handle_ = CreateMultiProfileTransform(
             profiles,
             2U,
             intents,
             2U,
-            ENABLE_GAMUT_CHECKING | USE_RELATIVE_COLORIMETRIC,
+            ENABLE_GAMUT_CHECKING | USE_RELATIVE_COLORIMETRIC | BEST_MODE,
             INDEX_DONT_CARE);
         if (handle_ == nullptr) {
             error_ = static_cast<std::uint32_t>(GetLastError());
@@ -172,11 +177,14 @@ namespace {
     // 인화소 프로파일): 한 번에 넘기면 341행까지만 표시되고 그 아래는 한 점도 없는데,
     // 한 줄씩 넘기면 602행 전부에 표시가 납니다(61,685 대 146,226). 그래서 "사진 윗부분만
     // 빨갛다" 로 보였습니다. 변환은 한 번만 만들어 두고 줄만 돌립니다.
+    // 판정 사본은 B,G,R 순서입니다. BMFORMAT 표대로 그 메모리 순서는 `BM_RGBTRIPLETS` 입니다
+    // (`BM_BGRTRIPLETS` 는 R,G,B — 이름이 거꾸로 붙어 있습니다). 앞 판은 `BM_BGRTRIPLETS` 를
+    // 써서 R 과 B 를 바꾼 색을 판정했습니다(2026-11-22 검증 PC 실측으로 확인).
     for (std::uint32_t y = 0U; y < height; ++y) {
         if (CheckBitmapBits(
                 transform.get(),
                 probe.data() + (static_cast<std::size_t>(y) * probe_stride),
-                BM_BGRTRIPLETS,
+                BM_RGBTRIPLETS,
                 width,
                 1U,
                 probe_stride,
@@ -285,20 +293,22 @@ bool soft_proof_convert_bgra_icc(
         INTENT_RELATIVE_COLORIMETRIC,
         INTENT_RELATIVE_COLORIMETRIC,
         INTENT_RELATIVE_COLORIMETRIC};
+    // 판정과 같은 BEST_MODE 표를 씁니다(위 `Transform` 주석).
     HTRANSFORM transform = CreateMultiProfileTransform(
-        profiles, 3U, intents, 3U, USE_RELATIVE_COLORIMETRIC, INDEX_DONT_CARE);
+        profiles, 3U, intents, 3U, USE_RELATIVE_COLORIMETRIC | BEST_MODE, INDEX_DONT_CARE);
     if (transform == nullptr) {
         return false;
     }
+    // B,G,R 메모리 순서 = `BM_RGBTRIPLETS`(판정 경로의 주석 참고).
     const BOOL translated = TranslateBitmapBits(
         transform,
         bgr.data(),
-        BM_BGRTRIPLETS,
+        BM_RGBTRIPLETS,
         width,
         height,
         packed_stride,
         bgr.data(),
-        BM_BGRTRIPLETS,
+        BM_RGBTRIPLETS,
         packed_stride,
         nullptr,
         0);

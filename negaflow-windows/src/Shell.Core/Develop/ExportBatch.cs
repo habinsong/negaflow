@@ -150,12 +150,23 @@ public sealed class ExportBatchCoordinator
         return candidate;
     }
 
-    public async Task<ExportBatchSummary> RunAsync(
+    public Task<ExportBatchSummary> RunAsync(
         IReadOnlyList<ExportBatchPlan> plans,
         ExportEncodingOptions encoding,
+        CancellationToken cancellationToken = default) =>
+        RunAsync(plans, _ => encoding, cancellationToken);
+
+    /// <summary>
+    /// 장마다 인코딩이 다를 수 있는 배치입니다. 섞어 고른 묶음에서 PRINT 사진만 프린터
+    /// 프로파일을 받아야 해서 생겼습니다 — macOS 도 계획마다 프로파일 적용 여부를 따로 정합니다.
+    /// </summary>
+    public async Task<ExportBatchSummary> RunAsync(
+        IReadOnlyList<ExportBatchPlan> plans,
+        Func<LibraryFrameSnapshot, ExportEncodingOptions> encodingFor,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(plans);
+        ArgumentNullException.ThrowIfNull(encodingFor);
         if (IsRunning || plans.Count == 0)
         {
             return new ExportBatchSummary(plans.Count, 0, 0, plans.Count);
@@ -210,7 +221,7 @@ public sealed class ExportBatchCoordinator
                         plan.DestinationPath,
                         plan.Format,
                         completed => outcome = completed,
-                        encoding,
+                        encodingFor(snapshot),
                         DevelopExportCoordinator.MaximumConcurrentExports).ConfigureAwait(true);
                     if (!delivered)
                     {

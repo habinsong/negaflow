@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI;
 using Negaflow.Interop;
+using Negaflow.Shell.Develop;
 using Negaflow.Shell.Print;
 using Negaflow.Shell.Localization;
 using Negaflow.Shell.Views.Layout;
@@ -17,6 +18,7 @@ public sealed partial class PrintWorkspaceView : UserControl
 
     private readonly ThreePaneResizeController resizeController = new();
     private WorkspacePresentationState? workspaceState;
+    private SoftProofPreferences observedSoftProof = new();
 
     /// <summary>숨어 있는 동안 현상 설정이 바뀌었습니다. 다시 보일 때 판을 새로 그립니다.</summary>
     private bool printPageIsStale;
@@ -43,6 +45,7 @@ public sealed partial class PrintWorkspaceView : UserControl
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(nativeEngineStatus);
         workspaceState = state;
+        observedSoftProof = state.Current.SoftProof;
         PrintFilesSourceTree.AttachPresentation(state);
         state.Changed += OnStateChanged;
         // macOS 인화 사이드바도 현상과 **같은** `ExportSection` 이므로 같은 설정을 봅니다.
@@ -76,6 +79,11 @@ public sealed partial class PrintWorkspaceView : UserControl
     public void NotifyFrameEdited()
     {
         printPreview?.InvalidateForRecipeChange();
+        RedrawPrintPage();
+    }
+
+    private void RedrawPrintPage()
+    {
         if (Visibility == Visibility.Visible)
         {
             printPreview?.Draw();
@@ -150,6 +158,24 @@ public sealed partial class PrintWorkspaceView : UserControl
     {
         _ = sender;
         UpdateState(preferences);
+        SoftProofPreferences previous = observedSoftProof;
+        SoftProofPreferences current = preferences.SoftProof;
+        if (previous == current)
+        {
+            return;
+        }
+        observedSoftProof = current;
+        var destination = PrintSoftProofFilter.Destination(preferences.Print, current);
+        bool destinationChanged = destination != PrintSoftProofFilter.Destination(preferences.Print, previous);
+        if (destinationChanged && UpdatePrintTileProof(preferences))
+        {
+            printPreview?.InvalidateForRecipeChange();
+        }
+        if (destinationChanged ||
+            (destination is not null && previous.GamutWarningEnabled != current.GamutWarningEnabled))
+        {
+            RedrawPrintPage();
+        }
     }
 
     private void UpdateState(ShellPreferences preferences)

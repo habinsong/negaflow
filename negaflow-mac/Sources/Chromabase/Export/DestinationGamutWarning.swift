@@ -17,7 +17,9 @@ public struct DestinationGamutWarningResult: @unchecked Sendable {
 /// 반환하지 않는다.
 public enum DestinationGamutWarning {
     private static let checkCache = DestinationGamutCheckCache()
-    private static let sourceColorSpace = CGColorSpace(name: CGColorSpace.linearSRGB)!
+    /// 판정은 표시용 **sRGB 8비트** 값으로 한다(윈도우 `mark_out_of_gamut` 과 같은 데이터).
+    /// 선형 8비트로 자르던 앞 판은 암부가 12단계뿐이라 어두운 색의 판정이 계단졌다.
+    private static let sourceColorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
     private static let overlayColorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
 
     public static func isSupported(for settings: SoftProofSettings) -> Bool {
@@ -60,7 +62,11 @@ public enum DestinationGamutWarning {
         // ColorSync는 같은 RGB gamut의 수학적 경계(정확한 0/255)를 반올림 때문에 바깥으로
         // 판정할 수 있다. 판정 전용 버퍼만 1 LSB 안쪽으로 넣어 동일-profile 거짓 경고를 막는다.
         // 표시·현상·내보내기 픽셀은 변경하지 않는다.
+        // 투명 화소(원근 보정의 빈 곳)는 사진이 아니라 판정하지 않는다. 알파를 기억해 두고
+        // 판정 버퍼는 불투명으로 넘긴다.
+        var transparent = [Bool](repeating: false, count: width * height)
         for offset in stride(from: 0, to: sourcePixels.count, by: 4) {
+            transparent[offset / 4] = sourcePixels[offset + 3] == 0
             sourcePixels[offset] = min(max(sourcePixels[offset], 1), 254)
             sourcePixels[offset + 1] = min(max(sourcePixels[offset + 1], 1), 254)
             sourcePixels[offset + 2] = min(max(sourcePixels[offset + 2], 1), 254)
@@ -76,7 +82,7 @@ public enum DestinationGamutWarning {
 
         var warningCount = 0
         var overlayPixels = [UInt8](repeating: 0, count: sourceBytesPerRow * height)
-        for index in 0..<(width * height) where outOfGamut[index] != 0 {
+        for index in 0..<(width * height) where outOfGamut[index] != 0 && !transparent[index] {
             warningCount += 1
             overlayPixels[index * 4] = 255
             overlayPixels[index * 4 + 3] = 166

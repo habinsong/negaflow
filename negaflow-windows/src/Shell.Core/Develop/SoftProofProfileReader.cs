@@ -15,16 +15,25 @@ public static class SoftProofProfileReader
     private static string cachedPath = string.Empty;
     private static DateTime cachedWriteTime;
     private static SoftProofMedia? cached;
+    private static byte[]? cachedProfile;
 
     /// <summary>
     /// 이 프로파일의 매체입니다. 읽을 수 없거나 RGB 출력 프로파일이 아니면 null 이며, 그때는
     /// 프루프가 용지·잉크를 흉내 내지 않습니다 — 없는 값을 지어내지 않습니다.
     /// </summary>
-    public static SoftProofMedia? Read(string? profilePath)
+    public static SoftProofMedia? Read(string? profilePath) => Load(profilePath).Media;
+
+    /// <summary>
+    /// 이 프로파일의 바이트입니다. 프루프 왕복과 색역 판정에 씁니다. <see cref="Read"/> 와
+    /// 같은 관문을 지나므로 RGB 출력 프로파일이 아니면 null 입니다.
+    /// </summary>
+    public static byte[]? ReadProfile(string? profilePath) => Load(profilePath).Profile;
+
+    private static (SoftProofMedia? Media, byte[]? Profile) Load(string? profilePath)
     {
         if (string.IsNullOrWhiteSpace(profilePath) || !File.Exists(profilePath))
         {
-            return null;
+            return (null, null);
         }
         DateTime writeTime;
         try
@@ -34,7 +43,7 @@ public static class SoftProofProfileReader
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException)
         {
-            return null;
+            return (null, null);
         }
 
         lock (Gate)
@@ -43,24 +52,26 @@ public static class SoftProofProfileReader
                 string.Equals(cachedPath, profilePath, StringComparison.OrdinalIgnoreCase) &&
                 cachedWriteTime == writeTime)
             {
-                return cached;
+                return (cached, cachedProfile);
             }
         }
 
         SoftProofMedia? media;
+        byte[] profile;
         try
         {
-            media = NativeSoftProof.ReadMedia(File.ReadAllBytes(profilePath));
+            profile = File.ReadAllBytes(profilePath);
+            media = NativeSoftProof.ReadMedia(profile);
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or NativeBootstrapException)
         {
-            return null;
+            return (null, null);
         }
         // 입력 전용이나 CMYK 프로파일은 프루프 목적지가 될 수 없습니다.
         if (media is not { IsRgbOutputProfile: true })
         {
-            return null;
+            return (null, null);
         }
 
         lock (Gate)
@@ -68,7 +79,8 @@ public static class SoftProofProfileReader
             cachedPath = profilePath;
             cachedWriteTime = writeTime;
             cached = media;
+            cachedProfile = profile;
         }
-        return media;
+        return (media, profile);
     }
 }

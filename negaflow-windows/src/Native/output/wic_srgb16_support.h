@@ -75,6 +75,14 @@ enum class WicSrgb16FrameStatus : std::uint8_t {
     std::uint32_t output_dpi,
     std::uint32_t& native_error_code) noexcept;
 
+// 인화소 ICC 가 걸려 있으면 다 만든 16비트 화소 전체를 그 프로파일로 옮깁니다. 프로파일이
+// 없으면 아무 일도 하지 않고 true 입니다. 화소는 `conversion_limits.color_space` 로 인코딩돼
+// 있어야 합니다 — 띠 쓰기를 하지 않는 JPEG 가 지나는 길입니다.
+[[nodiscard]] bool translate_to_output_icc(
+    Srgb16Image& image,
+    const WorkingToSrgb16Limits& conversion_limits,
+    std::uint32_t& native_error_code) noexcept;
+
 [[nodiscard]] WicSrgb16FrameStatus write_working_srgb16_pixels(
     IWICBitmapFrameEncode* frame,
     const negaflow::imaging::WorkingImage& working,

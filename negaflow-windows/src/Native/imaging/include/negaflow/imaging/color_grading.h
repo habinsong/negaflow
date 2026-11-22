@@ -19,6 +19,9 @@ struct ColorGradingParameters final {
     ColorGradeRegion highlights{};
     float blending{0.5F};
     float balance{0.0F};
+    // 사용자 슬라이더는 sRGB 인코딩 값에서 영역을 가르고 색을 더합니다(macOS `colorGrade` 의
+    // perceptual). 디지털 필름 룩 프리셋은 선형 동작에 맞춰 설계된 값이라 false 로 둡니다.
+    bool perceptual{true};
 };
 
 // 화소마다 같은 값이라 한 번만 계산합니다. GPU 경로가 이것을 상수 버퍼로 올립니다 —
@@ -32,6 +35,8 @@ struct ColorGradingSetup final {
     float pivot{0.5F};
     // `0.10 * (1 - blending) + 0.50 * blending` — 항상 0.10 이상입니다.
     float width{0.30F};
+    // `ColorGradingParameters::perceptual` 그대로입니다.
+    bool perceptual{true};
 };
 
 [[nodiscard]] ColorGradingSetup prepare_color_grading(

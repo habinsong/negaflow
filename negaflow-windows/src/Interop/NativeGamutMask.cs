@@ -41,6 +41,25 @@ public static unsafe class NativeGamutMask
         {
             return false;
         }
+        // **프로파일마다 한 번 만든 왕복표**로 옮깁니다. 프레임마다 ICM 을 부르면 슬라이더를 끄는
+        // 동안 미리보기 한 장에 수십 ms 가 더 듭니다. 표를 못 만들면 아래 ICM 직접 변환으로
+        // 물러납니다.
+        // 표를 고르는 일과 **쓰는 일을 같은 잠금 안에서** 합니다. 잠금 밖에서 쓰면 다른 프로파일로
+        // 들어온 스레드(현상 미리보기와 인화 미리보기)가 표를 바꾸며 이전 표를 해제하는 동안 그
+        // 네이티브 표를 읽게 됩니다(해제 후 사용). 적용은 네이티브 안에서 행 블록 병렬이라 두
+        // 미리보기가 잠깐 줄을 서는 비용뿐입니다.
+        lock (ProofGate)
+        {
+            if (ProofTableLocked(destinationIcc, out bool identity) is { } table)
+            {
+                Span<byte> region = pixels[..(width * height * 4)];
+                return table.Apply(region, region, width, height);
+            }
+            if (identity)
+            {
+                return true;
+            }
+        }
         fixed (byte* pixelBytes = pixels)
         fixed (byte* iccBytes = destinationIcc)
         {
@@ -54,6 +73,28 @@ public static unsafe class NativeGamutMask
         }
     }
 
+    private static readonly Lock ProofGate = new();
+    private static string proofKey = string.Empty;
+    private static DisplayColorTransform? proofTable;
+    private static bool proofIdentity;
+
+    /// <summary>
+    /// 마지막으로 쓴 프로파일의 왕복표입니다. 프로파일이 바뀌면 다시 만듭니다.
+    /// <see cref="ProofGate"/> 를 쥔 채로만 부르고, 돌려받은 표도 그 안에서만 씁니다.
+    /// </summary>
+    private static DisplayColorTransform? ProofTableLocked(ReadOnlySpan<byte> icc, out bool identity)
+    {
+        string key = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(icc));
+        if (!string.Equals(key, proofKey, StringComparison.Ordinal))
+        {
+            proofTable?.Dispose();
+            proofTable = DisplayColorTransform.TryCreateProof(icc, out proofIdentity);
+            proofKey = key;
+        }
+        identity = proofIdentity;
+        return proofTable;
+    }
+
     /// <summary>
     /// BGRA8 화소에서 색역 밖 화소를 골라 그 자리를 macOS 와 같은 빨강으로 덮습니다.
     /// 표시한 화소 수를 내며, 판정할 수 없으면 <see langword="null"/> 입니다.
@@ -62,17 +103,31 @@ public static unsafe class NativeGamutMask
         Span<byte> pixels,
         int width,
         int height,
+        ReadOnlySpan<byte> destinationIcc) =>
+        Mark(pixels, pixels, width, height, destinationIcc);
+
+    /// <summary>
+    /// <paramref name="judged"/> 화소로 판정하고 표시는 <paramref name="pixels"/> 에 칠합니다.
+    /// 프루프 왕복을 거친 화소는 이미 목적지 색역 안으로 눌려 있어 판정할 것이 남지 않으므로,
+    /// 판정은 왕복 <b>전</b> 화소로 해야 합니다(macOS 도 프루프 전 그림으로 판정합니다).
+    /// </summary>
+    public static long? Mark(
+        Span<byte> pixels,
+        ReadOnlySpan<byte> judged,
+        int width,
+        int height,
         ReadOnlySpan<byte> destinationIcc)
     {
         if (width <= 0 || height <= 0 ||
             destinationIcc.Length == 0 ||
-            pixels.Length < (long)width * height * 4)
+            pixels.Length < (long)width * height * 4 ||
+            judged.Length < (long)width * height * 4)
         {
             return null;
         }
         byte[] mask = new byte[(long)width * height];
         uint status;
-        fixed (byte* pixelBytes = pixels)
+        fixed (byte* pixelBytes = judged)
         fixed (byte* iccBytes = destinationIcc)
         fixed (byte* maskBytes = mask)
         {
@@ -98,7 +153,8 @@ public static unsafe class NativeGamutMask
         LastMarkedRow = -1;
         for (int index = 0; index < mask.Length; ++index)
         {
-            if (mask[index] == 0)
+            // 투명 화소(원근 보정의 빈 곳)는 사진이 아니라 표시하지 않습니다(macOS 와 같음).
+            if (mask[index] == 0 || judged[(index * 4) + 3] == 0)
             {
                 continue;
             }

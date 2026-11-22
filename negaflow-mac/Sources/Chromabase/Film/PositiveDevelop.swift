@@ -16,7 +16,11 @@ public enum PositiveDevelop {
     public static func applyBaseGrade(to image: CIImage, filmType: FilmType) -> CIImage {
         // 입력 extent를 미리 캡처 — 필터 체인이 무한 extent로 확장되는 것을 막는다.
         let extent = image.extent
-        var img = image
+        // 대비 피벗 0.5 와 톤 커브 점은 표시(sRGB 감마) 도메인 값이다. 선형 값에 그대로 걸면
+        // 대비 1.04 가 선형 0.0192(sRGB 37) 아래를 전부 음수로 만들고 톤 커브가 0 으로 잘라
+        // sRGB 0~37 이 한 값으로 뭉갰다(Gemini 보고, 2026-11-22 확인). ScannerProfileGrade 와
+        // 같이 인코딩한 위에서 걸고 선형으로 돌린다.
+        var img = image.applyingFilter("CILinearToSRGBToneCurve").cropped(to: extent)
 
         // 미드톤 대비(밀도)는 아주 약하게만. 과거 contrast 1.10 + bias -0.03은 피벗 아래
         // (암부)를 강하게 눌러 "어두운 곳은 전부 검정"으로 뭉갰다. Raw에선 보이던 암부가
@@ -29,13 +33,13 @@ public enum PositiveDevelop {
 
         // 톤 커브: 암부 계조를 살리고(0 근처를 0으로 뭉개지 않음) 하이라이트는 숄더로
         // 1.0 직전에서 굴려 클리핑을 막는다. 슬라이드의 딥 블랙은 유지하되 디테일을 남긴다.
-        img = img.applyingFilter("CIToneCurve", parameters: [
-            "inputPoint0": CIVector(x: 0.00, y: 0.010),
-            "inputPoint1": CIVector(x: 0.22, y: 0.205),
-            "inputPoint2": CIVector(x: 0.50, y: 0.510),
-            "inputPoint3": CIVector(x: 0.80, y: 0.815),
-            "inputPoint4": CIVector(x: 1.00, y: 0.965),
-        ])
+        // 매듭은 표시값이다. 이미 sRGB 로 인코딩했으므로 `CIToneCurve`(제곱근 위에서 계산해
+        // 감마가 두 번 걸림) 대신 같은 자연 스플라인을 값에 직접 건다(`ScannerProfileGrade` 와 같음).
+        img = NaturalToneSpline.apply(
+            to: img,
+            x: [0.00, 0.22, 0.50, 0.80, 1.00],
+            y: [0.010, 0.205, 0.510, 0.815, 0.965]
+        )
 
         // B&W 포지티브면 채도 제거.
         if filmType == .bwPositive {
@@ -47,6 +51,6 @@ public enum PositiveDevelop {
         }
 
         // 입력 영역으로 명시적으로 crop — 유한 extent 보장.
-        return img.cropped(to: extent)
+        return img.cropped(to: extent).applyingFilter("CISRGBToneCurveToLinear").cropped(to: extent)
     }
 }

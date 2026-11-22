@@ -124,7 +124,7 @@ internal sealed class PrintSheetExportRunner
         {
             ExportTrace.Write(
                 $"print sheet press frames={selection.Count} format={format} " +
-                $"icc={(profile.Profile is { } bytes ? bytes.Length : 0)}");
+                $"icc={(profile.Profile is { } bytes ? bytes.Length : 0)} space={settings.EffectiveColorSpace}");
             using IDisposable _pressed = ExportTrace.Measure("print sheet total");
             PrintSheetWriteResult result = await PrintSheetWriter.WriteAsync(
                 selection,
@@ -138,7 +138,10 @@ internal sealed class PrintSheetExportRunner
                 // 원본 현상은 전체의 70%까지만 표시한다. 최종 판이 저장되기 전에 완료로 보이면 안 된다.
                 developed => progress(quick, new ExportProgress(0, 1, 0.7 * developed / selection.Count)),
                 settings.TiffCompression,
-                thumbnailJpeg);
+                thumbnailJpeg,
+                // 출력 탭의 Delivery 줄에 보이는 값과 같은 것입니다(JPEG 은 sRGB). 인화소 ICC 가
+                // 있으면 엔진이 그것을 먼저 씁니다.
+                settings.EffectiveColorSpace);
             // 실패는 어느 단계에서 멈췄는지를 남깁니다. "쓰지 못했습니다" 만으로는 다시
             // 눌러 보는 것 말고 사용자가 할 수 있는 일이 없습니다 - 스캔 실패 줄과 같은
             // 규칙입니다.

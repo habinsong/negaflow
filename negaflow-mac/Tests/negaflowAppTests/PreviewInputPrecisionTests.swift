@@ -122,6 +122,54 @@ final class PreviewInputPrecisionTests: XCTestCase {
         }
     }
 
+    /// 디지털 원본의 선형 프록시는 [0,1] 밖 값을 남긴다(RAW 의 1.0 넘는 하이라이트, 광색역 음수).
+    /// RGBA16 으로 굳히던 앞 판은 프리뷰에서만 그 값이 잘렸다. 필름 경로(extendedRange 없음)는
+    /// 그대로 RGBA16 이다.
+    func testDigitalLinearProxyKeepsValuesOutsideTheUnitRange() throws {
+        let linear = CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!
+        let image = CIImage(color: CIColor(red: 1.6, green: 0.5, blue: -0.1, alpha: 1, colorSpace: linear)!)
+            .cropped(to: CGRect(x: 0, y: 0, width: 8, height: 8))
+        let digital = try XCTUnwrap(DevelopFrameRenderer.materializedPreviewRaw(
+            image, usesLinearSRGB: true, sourceBitsPerComponent: 16,
+            context: DevelopFrameRenderer.linearRawProxyContext, extendedRange: true))
+        var out = [Float](repeating: 0, count: 4)
+        DevelopFrameRenderer.linearRawProxyContext.render(
+            CIImage(cgImage: digital.image), toBitmap: &out, rowBytes: 16,
+            bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBAf, colorSpace: linear)
+        XCTAssertEqual(out[0], 1.6, accuracy: 0.01)
+        XCTAssertEqual(out[2], -0.1, accuracy: 0.01)
+
+        let film = try XCTUnwrap(DevelopFrameRenderer.materializedPreviewRaw(
+            image, usesLinearSRGB: true, sourceBitsPerComponent: 16,
+            context: DevelopFrameRenderer.linearRawProxyContext))
+        XCTAssertEqual(film.image.bitsPerComponent, 16)
+        XCTAssertFalse(film.image.bitmapInfo.contains(.floatComponents))
+    }
+
+    /// Display P3 원본(감마 인코딩)의 sRGB 밖 원색도 디지털 원본이면 프리뷰에서 남는다. P3 의
+    /// 순수 초록은 선형 sRGB 로 R 이 음수다. sRGB 로 굳히던 앞 판은 0 으로 잘랐다.
+    func testDigitalDisplayP3ProxyKeepsColorsOutsideSRGB() throws {
+        let p3 = CGColorSpace(name: CGColorSpace.displayP3)!
+        let p3Green = try XCTUnwrap(CIColor(red: 0, green: 1, blue: 0, alpha: 1, colorSpace: p3))
+        let source = try XCTUnwrap(CIContext().createCGImage(
+            CIImage(color: p3Green).cropped(to: CGRect(x: 0, y: 0, width: 8, height: 8)),
+            from: CGRect(x: 0, y: 0, width: 8, height: 8), format: .RGBA8, colorSpace: p3))
+        let image = CIImage(cgImage: source)
+        XCTAssertTrue(DevelopFrameRenderer.isWideGamutSource(image))
+        let proxy = try XCTUnwrap(DevelopFrameRenderer.materializedPreviewRaw(
+            image, usesLinearSRGB: false, sourceBitsPerComponent: 8,
+            context: DevelopFrameRenderer.linearRawProxyContext,
+            extendedRange: true, wideGamutSource: true))
+        let linear = CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!
+        var out = [Float](repeating: 0, count: 4)
+        DevelopFrameRenderer.linearRawProxyContext.render(
+            CIImage(cgImage: proxy.image), toBitmap: &out, rowBytes: 16,
+            bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBAf, colorSpace: linear)
+        XCTAssertLessThan(out[0], -0.05, "P3 초록의 sRGB 밖 몫(음수 R)이 프리뷰에서 잘렸다")
+        XCTAssertFalse(DevelopFrameRenderer.isWideGamutSource(
+            CIImage(color: .red).cropped(to: CGRect(x: 0, y: 0, width: 1, height: 1))))
+    }
+
     /// 어두운 8bit 경사를 linear 로 굳혀도 sRGB 코드 단계가 살아남는다.
     func testDarkEightBitRampKeepsItsLevelsWhenStoredLinear() throws {
         let width = 256

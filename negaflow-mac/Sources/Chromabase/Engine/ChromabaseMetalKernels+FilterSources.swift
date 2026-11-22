@@ -247,6 +247,13 @@ extension ChromabaseMetalKernels {
         return float4(outRGB, src.a);
     }
     """),
+        MetalKernelSource(name: "restoreOutOfRange", body: """
+    // 큐브(CIColorCube)는 [0,1] 안에서만 정의돼 밖의 값을 경계로 잘라 낸다. 잘린 몫(광색역 음수,
+    // 1.0 넘는 하이라이트)을 결과에 다시 더해, 범위 안 화소는 그대로 두고 밖의 값을 지킨다.
+    [[stitchable]] float4 restoreOutOfRange(coreimage::sample_t src, coreimage::sample_t graded) {
+        return float4(graded.rgb + (src.rgb - clamp(src.rgb, 0.0, 1.0)), graded.a);
+    }
+    """),
         MetalKernelSource(name: "boundedRelativeGrade", body: """
     [[stitchable]] float4 boundedRelativeGrade(
         coreimage::sample_t src,

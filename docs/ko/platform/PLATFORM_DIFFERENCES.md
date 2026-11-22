@@ -30,6 +30,8 @@ macOS 빌드는 `docs/verification/macos-golden`에 기준 이미지를 렌더�
 
 macOS는 ColorSync, Windows는 ICM을 씁니다. 둘 다 같은 ICC 프로파일을 받아 반올림 범위 안에서 같은 수치를 냅니다. 조용히 어긋나기 가장 쉬운 부분이라 동등성 테스트가 다룹니다.
 
+화면 표시는 macOS가 디스플레이의 ColorSync 프로파일로 그립니다. Windows는 Advanced Color가 켜져 있을 때만 그렇게 합니다. 꺼져 있으면 앱 화소를 sRGB로 보고 그대로 화면에 보내므로, negaflow가 현상 캔버스와 인화 미리보기를 그리기 직전에 모니터 ICC 프로파일로 옮깁니다. 썸네일과 나머지 화면 요소는 sRGB로 그립니다.
+
 ### 그래픽
 
 macOS는 현상 체인을 Core Image에서 돌립니다. Windows는 Direct3D 컴퓨트 셰이더에서 돌리고, GPU 경로를 쓸 수 없으면 CPU로 대체합니다.

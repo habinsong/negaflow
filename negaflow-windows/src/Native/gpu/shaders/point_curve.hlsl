@@ -39,7 +39,9 @@ float SampleCurve(float4 lut[NEGAFLOW_POINT_CURVE_VECTORS], float encoded) {
 float ApplyCurve(float4 lut[NEGAFLOW_POINT_CURVE_VECTORS], float linearValue) {
     float encoded = LinearToSrgbEncoded(linearValue);
     float mapped = SampleCurve(lut, encoded);
-    return SrgbEncodedToLinear(mapped);
+    // 표는 [0,1] 안에서만 정의돼 밖의 값을 잘라 냅니다. 잘린 몫을 다시 더해 광색역·1.0 넘는
+    // 값을 지킵니다(CPU `apply_lut_component`, macOS `restoreOutOfRange`).
+    return SrgbEncodedToLinear(mapped) + (linearValue - saturate(linearValue));
 }
 
 [numthreads(8, 8, 1)]

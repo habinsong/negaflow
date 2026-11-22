@@ -23,6 +23,9 @@ inline constexpr negaflow::imaging::PrimaryCalibrationParameters
         -0.35F,
         0.25F,
         0.75F,
+        // 선형 동작(필름 룩 프리셋 경로)의 고정값입니다. 사용자 슬라이더의 sRGB 인코딩 영역과
+        // 범위 밖 몫 복원은 `primary_calibration_tests.cpp` 가 따로 봅니다.
+        false,
     };
 
 inline constexpr std::array<negaflow::core::Rgba32F, 12>

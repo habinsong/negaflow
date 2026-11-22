@@ -113,6 +113,8 @@ The ICC controls in Print have different jobs.
 | C-print proof profile | Soft-proofs the lab and paper process | Not baked into the delivery file | Never applied |
 | General soft proof | Used in its configured display scope | Display aid only | Follows its own setting |
 
+Choose the printer output profile under **Settings → Export → Color Management**.
+
 A printer output profile is not applied to one source before that source is duplicated. The contact sheet, picture package or custom package is composed first, then the profile is applied once to the whole page. Repeated placements of one source and mixed-source layouts therefore receive the same output conversion.
 
 The C-print proof profile is the lab-supplied process preview. It is never silently substituted as the output profile. Profile requirements and the accuracy boundary are in [Print layouts and C-print preview](../reference/C_PRINT.md).

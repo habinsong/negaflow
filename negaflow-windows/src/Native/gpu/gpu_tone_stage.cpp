@@ -45,6 +45,7 @@ using negaflow::imaging::WorkingToneAdjustStatus;
         gpu.saturation[band] = parameters.saturation[band];
         gpu.luminance[band] = parameters.luminance[band];
     }
+    gpu.perceptual = parameters.perceptual;
     return gpu;
 }
 
@@ -57,6 +58,7 @@ using negaflow::imaging::WorkingToneAdjustStatus;
     }
     gpu.pivot = setup.pivot;
     gpu.width = setup.width;
+    gpu.perceptual = setup.perceptual;
     return gpu;
 }
 
@@ -68,7 +70,8 @@ using negaflow::imaging::WorkingToneAdjustStatus;
         parameters.green_hue,
         parameters.green_saturation,
         parameters.blue_hue,
-        parameters.blue_saturation};
+        parameters.blue_saturation,
+        parameters.perceptual};
 }
 
 [[nodiscard]] GpuPointCurveLuts to_gpu(const imaging::PointCurveLuts& luts) noexcept {

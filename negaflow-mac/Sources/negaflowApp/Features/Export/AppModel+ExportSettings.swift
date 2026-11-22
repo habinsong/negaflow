@@ -353,7 +353,16 @@ extension AppModel {
             return resolved
         }
         if workspaceModule == .print {
-            return cPrintSoftProofSettings
+            // C-print 미리보기가 켜져 있으면 랩 프루프. 아니면 인화 내보내기가 실제로 굽는 프린터
+            // 출력 프로파일을 보여 준다(C_PRINT 문서: 이 프로파일은 인화 미리보기와 인화
+            // 내보내기에 영향을 준다). 앞 판은 표준 공정에서 PRINT 대상도 프루프가 꺼졌다.
+            let cPrint = cPrintSoftProofSettings
+            if cPrint.isEnabled || printerOutputICCProfileData == nil {
+                return cPrint
+            }
+            var printer = printerSoftProofSettings
+            printer.isEnabled = true
+            return printer
         }
         if frame?.params.developTarget == .print {
             return printerSoftProofSettings

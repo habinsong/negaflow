@@ -4,8 +4,13 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ColorManagementSettingsSection: View {
+    private enum ProfileDestination: Equatable {
+        case softProof
+        case printerOutput
+    }
+
     @EnvironmentObject private var model: AppModel
-    @State private var profileSelectionFailed = false
+    @State private var failedProfileSelection: ProfileDestination?
 
     var body: some View {
         AppSettingsSection(
@@ -34,21 +39,21 @@ struct ColorManagementSettingsSection: View {
                         )
 
                         Button(model.text(.exportChangeFolder)) {
-                            chooseSoftProofProfile()
+                            chooseProfile(for: .softProof)
                         }
                         .buttonStyle(.bordered)
 
                         if model.softProofICCProfileData != nil {
                             Button(model.text(AppLocalizedPhrase.reset)) {
                                 model.clearSoftProofICCProfile()
-                                profileSelectionFailed = false
+                                failedProfileSelection = nil
                             }
                             .buttonStyle(.bordered)
                         }
                     }
                 }
 
-                if profileSelectionFailed {
+                if failedProfileSelection == .softProof {
                     AppSettingsHelpText(
                         model.text(AppLocalizedPhrase.softProofInvalidICC),
                         color: .red
@@ -73,6 +78,31 @@ struct ColorManagementSettingsSection: View {
                 if !model.destinationGamutWarningAvailable {
                     AppSettingsHelpText(model.text(.colorGamutUnavailableReason))
                 }
+            }
+
+            AppSettingsRow(model.text(.printOutputProfile)) {
+                HStack(spacing: 6) {
+                    AppSettingsPathText(
+                        text: model.printerOutputICCProfileName ?? model.text(.colorUnassigned)
+                    )
+
+                    Button(model.text(.exportChangeFolder)) {
+                        chooseProfile(for: .printerOutput)
+                    }
+                    .buttonStyle(.bordered)
+
+                    if model.printerOutputICCProfileData != nil {
+                        Button(model.text(AppLocalizedPhrase.reset)) {
+                            model.clearPrinterOutputICCProfile()
+                            failedProfileSelection = nil
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+            }
+
+            if failedProfileSelection == .printerOutput {
+                AppSettingsHelpText(model.text(AppLocalizedPhrase.softProofInvalidICC), color: .red)
             }
 
             AppSettingsValueRow(
@@ -135,7 +165,7 @@ struct ColorManagementSettingsSection: View {
         }
     }
 
-    private func chooseSoftProofProfile() {
+    private func chooseProfile(for destination: ProfileDestination) {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
@@ -150,16 +180,17 @@ struct ColorManagementSettingsSection: View {
             Task { @MainActor in
                 guard let data = try? Data(contentsOf: url),
                       let colorSpace = SoftProof.rgbOutputColorSpace(fromICCData: data) else {
-                    profileSelectionFailed = true
+                    failedProfileSelection = destination
                     return
                 }
                 let localizedName = NSColorSpace(cgColorSpace: colorSpace)?.localizedName
                 let name = localizedName.flatMap { $0.isEmpty ? nil : $0 }
                     ?? url.deletingPathExtension().lastPathComponent
-                profileSelectionFailed = !model.setSoftProofICCProfile(
-                    data: data,
-                    name: name
-                )
+                let accepted = switch destination {
+                case .softProof: model.setSoftProofICCProfile(data: data, name: name)
+                case .printerOutput: model.setPrinterOutputICCProfile(data: data, name: name)
+                }
+                failedProfileSelection = accepted ? nil : destination
             }
         }
     }

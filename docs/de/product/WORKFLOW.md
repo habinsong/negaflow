@@ -113,6 +113,8 @@ Die ICC-Bedienelemente im Abzug haben unterschiedliche Aufgaben.
 | C-Print-Proof-Profil | Softproof des Labor- und Papierprozesses | Nicht in die Auslieferungsdatei eingebrannt | Nie angewendet |
 | Allgemeiner Softproof | Im eingestellten Anzeigebereich verwendet | Nur Anzeigehilfe | Folgt der eigenen Einstellung |
 
+Das Drucker-Ausgabeprofil wird unter **Einstellungen → Export → Farbverwaltung** ausgewählt.
+
 Ein Druckerausgabeprofil wird nicht auf eine Quelle angewendet, bevor diese Quelle dupliziert wird. Kontaktbogen, Bildpaket oder eigenes Paket werden zuerst zusammengesetzt, dann wird das Profil einmal auf die ganze Seite angewendet. Wiederholte Platzierungen einer Quelle und Layouts mit gemischten Quellen erhalten daher dieselbe Ausgabeumrechnung.
 
 Das C-Print-Proof-Profil ist die vom Labor gelieferte Prozessvorschau. Es wird nie stillschweigend als Ausgabeprofil eingesetzt. Anforderungen an Profile und die Genauigkeitsgrenze stehen in [Abzugslayouts und C-Print-Vorschau](../reference/C_PRINT.md).

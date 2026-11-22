@@ -18,7 +18,15 @@ class ParallelIcmRgb16Transform final {
 public:
     [[nodiscard]] ScannerToWorkingStatus initialize(
         std::span<const std::uint8_t> source_profile_bytes,
-        std::uint32_t& native_error_code);
+        std::uint32_t& native_error_code,
+        std::span<const std::uint8_t> destination_profile_bytes = {});
+
+    /// `IcmRgb16Transform::initialize_to_profile` 의 갈래판입니다. 내보내기가 인화소 ICC 로
+    /// 나갈 때 화소 전체를 코어마다 나눠 옮깁니다. `source_profile_bytes` 가 비면 sRGB 입니다.
+    [[nodiscard]] ScannerToWorkingStatus initialize_to_profile(
+        std::span<const std::uint8_t> destination_profile_bytes,
+        std::uint32_t& native_error_code,
+        std::span<const std::uint8_t> source_profile_bytes = {});
 
     [[nodiscard]] ScannerToWorkingStatus translate(
         const std::uint16_t* source,
@@ -32,7 +40,13 @@ public:
         LPARAM callback_data = 0) noexcept;
 
 private:
+    [[nodiscard]] ScannerToWorkingStatus create(
+        IcmRgb16Transform& transform,
+        std::uint32_t& native_error_code);
+
     std::vector<std::uint8_t> profile_{};
+    std::vector<std::uint8_t> source_{};
+    bool to_profile_{false};
     std::vector<std::unique_ptr<IcmRgb16Transform>> transforms_{};
 };
 

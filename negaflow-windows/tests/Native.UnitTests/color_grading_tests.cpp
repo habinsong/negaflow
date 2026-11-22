@@ -53,6 +53,34 @@ void expect_pixel_near(
     }
 }
 
+// 사용자 슬라이더는 영역 가중치를 sRGB 인코딩 휘도로 가릅니다. 중간 회색(선형 0.18, sRGB
+// 118)은 Midtones 에 걸려야 합니다. 선형 휘도로 가르던 앞 판(프리셋 경로)은 같은 화소를
+// Shadows 100%·Midtones 0% 로 잡았습니다.
+void test_perceptual_midtone_range() {
+    const negaflow::core::Rgba32F gray{0.18F, 0.18F, 0.18F, 1.0F};
+    negaflow::imaging::ColorGradingParameters parameters{};
+    parameters.midtones = {30.0F, 0.6F, 0.0F};
+    std::array<negaflow::core::Rgba32F, 1U> output{};
+    expect(
+        negaflow::imaging::apply_color_grading(
+            {&gray, 1U, 1U, 1U, 1U}, {output.data(), 1U, 1U, 1U, 1U}, parameters) ==
+            negaflow::core::KernelStatus::ok,
+        "perceptual grading applies");
+    expect(
+        output[0].red - output[0].blue > 0.05F,
+        "a midtone tint reaches middle grey");
+
+    parameters.perceptual = false;
+    expect(
+        negaflow::imaging::apply_color_grading(
+            {&gray, 1U, 1U, 1U, 1U}, {output.data(), 1U, 1U, 1U, 1U}, parameters) ==
+            negaflow::core::KernelStatus::ok,
+        "linear preset grading applies");
+    expect(
+        std::abs(output[0].red - 0.18F) < 1.0e-4F && std::abs(output[0].blue - 0.18F) < 1.0e-4F,
+        "the preset path keeps middle grey in its shadow zone");
+}
+
 void test_fixed_fixture_and_in_place_parity() {
     std::array<negaflow::core::Rgba32F,
                negaflow::fixtures::color_grading_input.size()> output{};
@@ -146,17 +174,32 @@ void test_region_controls_and_active_unit_domain() {
             dark_gray.alpha == 0.3F,
         "orange shadow wheel adds chroma to dark neutral pixels");
 
+    // 사용자 슬라이더 경로는 [0,1] 밖 몫(−1, +1)을 보정 뒤 다시 더합니다(macOS `colorGrade`).
     negaflow::core::Rgba32F extended{-1.0F, 0.5F, 2.0F, 0.7F};
     expect(
         negaflow::imaging::apply_color_grading(
             {&extended, 1U, 1U, 1U, 1U},
             {&extended, 1U, 1U, 1U, 1U},
             shadow_orange) == negaflow::core::KernelStatus::ok &&
-            extended.red >= 0.0F && extended.red <= 1.0F &&
+            extended.red <= 0.0F && extended.red >= -1.0F &&
             extended.green >= 0.0F && extended.green <= 1.0F &&
-            extended.blue >= 0.0F && extended.blue <= 1.0F &&
+            extended.blue >= 1.0F && extended.blue <= 2.0F &&
             extended.alpha == 0.7F,
-        "active grading clamps the bounded working RGB output");
+        "active slider grading keeps the part outside the unit cube");
+
+    // 프리셋 경로는 설계된 대로 [0,1] 로 자릅니다.
+    negaflow::imaging::ColorGradingParameters preset = shadow_orange;
+    preset.perceptual = false;
+    negaflow::core::Rgba32F bounded{-1.0F, 0.5F, 2.0F, 0.7F};
+    expect(
+        negaflow::imaging::apply_color_grading(
+            {&bounded, 1U, 1U, 1U, 1U}, {&bounded, 1U, 1U, 1U, 1U}, preset) ==
+                negaflow::core::KernelStatus::ok &&
+            bounded.red >= 0.0F && bounded.red <= 1.0F &&
+            bounded.green >= 0.0F && bounded.green <= 1.0F &&
+            bounded.blue >= 0.0F && bounded.blue <= 1.0F &&
+            bounded.alpha == 0.7F,
+        "preset grading clamps the bounded working RGB output");
 
     negaflow::imaging::ColorGradingParameters red_zero{};
     red_zero.midtones.hue_degrees = 0.0F;
@@ -321,6 +364,7 @@ int main() {
     test_region_controls_and_active_unit_domain();
     test_parameter_and_view_failures();
     test_pipeline_order_and_failure_publication();
+    test_perceptual_midtone_range();
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"color_grading\",\"failures\":"

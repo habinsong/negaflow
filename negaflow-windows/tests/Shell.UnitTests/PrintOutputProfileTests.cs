@@ -33,9 +33,9 @@ internal static class PrintOutputProfileTests
             LibraryFrameSnapshot main = Frame(null) with { DevelopTarget = DevelopTarget.Main };
             LibraryFrameSnapshot print = Frame(null) with { DevelopTarget = DevelopTarget.Print };
 
-            // 대상이 PRINT 가 아니고 C-print 도 아니면 프로파일을 걸지 않습니다.
+            // 프린터 출력 프로파일이 없고 대상이 PRINT 가 아니면 전달 색공간으로 나갑니다.
             Check(
-                PrintOutputProfile.For([main], new PrintPreferences(), Proof(valid))
+                PrintOutputProfile.For([main], new PrintPreferences(), Proof(string.Empty))
                     is { Profile: null, Missing: false },
                 "a MAIN frame publishes into the named colour space");
 
@@ -57,7 +57,7 @@ internal static class PrintOutputProfileTests
                     is { Profile: null, Missing: true },
                 "a file too short to be an ICC profile refuses");
 
-            // C-print 공정은 대상과 무관하게 그 프로파일을 씁니다.
+            // C-print 프루프 ICC 는 화면 프루프 전용입니다 — 파일에 굽지 않습니다(C_PRINT 문서).
             PrintPreferences cPrint = new()
             {
                 OutputProcess = PrintOutputProcess.CPrint,
@@ -65,14 +65,14 @@ internal static class PrintOutputProfileTests
             };
             Check(
                 PrintOutputProfile.For([main], cPrint, Proof(string.Empty))
-                    is { Profile.Length: 200, Missing: false },
-                "the C-print process uses its own profile for any target");
+                    is { Profile: null, Missing: false },
+                "the C-print proof profile is never baked into the export");
 
-            // C-print 를 골라 놓고 프로파일이 없으면 멈춥니다.
+            // 프린터 출력 프로파일을 골랐으면 인화 판은 대상과 무관하게 그것으로 나갑니다.
             Check(
-                PrintOutputProfile.For([main], cPrint with { CPrintProofProfilePath = "" }, Proof(valid))
-                    is { Profile: null, Missing: true },
-                "the C-print process without its profile refuses");
+                PrintOutputProfile.For([main], cPrint, Proof(valid))
+                    is { Profile.Length: 200, Missing: false },
+                "a chosen printer output profile is the print sheet's published space");
 
             // 인화 미리보기와 용지 시뮬레이션은 화면 전용입니다 — 고르는 데 끼지 않습니다.
             PrintPreferences proofing = new()
@@ -81,9 +81,24 @@ internal static class PrintOutputProfileTests
                 CPrintPaperSimulationEnabled = true,
             };
             Check(
-                PrintOutputProfile.For([main], proofing, Proof(valid))
+                PrintOutputProfile.For([main], proofing, Proof(string.Empty))
                     is { Profile: null, Missing: false },
                 "screen proofing does not change what the file is published in");
+
+            // 현상 탭 내보내기는 인화 탭의 C-print 공정을 보지 않습니다 — macOS
+            // `selectedPrinterOutputProfile` 은 PRINT 사진에만 프린터 프로파일을 겁니다.
+            Check(
+                PrintOutputProfile.ForDevelop([main], Proof(valid))
+                    is { Profile: null, Missing: false },
+                "a develop export of a MAIN frame ignores the printer profile");
+            Check(
+                PrintOutputProfile.ForDevelop([main, print], Proof(valid))
+                    is { Profile.Length: 200, Missing: false },
+                "a develop export with a PRINT frame reads the printer profile");
+            Check(
+                PrintOutputProfile.ForDevelop([print], Proof(string.Empty))
+                    is { Profile: null, Missing: true },
+                "a develop export of a PRINT frame without a printer profile refuses");
         }
         finally
         {

@@ -65,7 +65,7 @@ public sealed record SoftProofPreferences
     /// 미리보기에 넘길 값입니다. 꺼져 있으면 <see cref="SoftProofSettings.Disabled"/> 이며,
     /// 그 결과는 프루프를 도입하기 전과 바이트 단위로 같습니다.
     /// </summary>
-    public SoftProofSettings ToSettings(SoftProofMedia? media) =>
+    public SoftProofSettings ToSettings(SoftProofMedia? media, byte[]? proofProfile = null) =>
         !IsEnabled
             ? SoftProofSettings.Disabled
             : media is null
@@ -82,5 +82,19 @@ public sealed record SoftProofPreferences
                     Simulation,
                     media.PaperWhite,
                     media.BlackInk,
-                    GamutWarningEnabled);
+                    GamutWarningEnabled,
+                    proofProfile);
+
+    /// <summary>
+    /// 이 사진에 걸 프루프입니다. 목적지는 사진의 현상 대상이 정합니다(PRINT 면 프린터 출력
+    /// 프로파일). macOS 는 렌더마다 <c>displaySoftProofSettings(_:developTarget:)</c> 로 이 값을
+    /// 정하므로, 앱을 켤 때·사진을 넘길 때·MAIN 과 PRINT 를 오갈 때 따로 다시 걸 일이 없습니다.
+    /// </summary>
+    public SoftProofSettings ForFrame(Catalog.DevelopTarget target)
+    {
+        string path = DestinationProfilePath(target);
+        return ToSettings(
+            SoftProofProfileReader.Read(path),
+            SoftProofProfileReader.ReadProfile(path));
+    }
 }

@@ -1,4 +1,5 @@
 import CoreImage
+import CryptoKit
 
 // MARK: - SamplingContextPool
 //
@@ -26,7 +27,18 @@ enum SamplingContextPool {
     /// 이걸 쓰다 ICC 태그된 가져오기 파일에서 감마 값이 새어 들어갔다). 그 외엔 working/output
     /// 모두 해당 색공간으로 설정한다.
     static func context(workingColorSpace cs: CGColorSpace?, fullPrecision: Bool = false) -> CIContext {
-        let key = ((cs?.name as String?) ?? "__unmanaged__") + (fullPrecision ? "_f32" : "")
+        // 이름 없는 ICC 색공간이 nil(색 관리 끔)과 같은 키에 걸리지 않게 ICC 내용으로 키를 만든다.
+        // 앞 판은 둘이 "__unmanaged__" 를 공유해, 이름 없는 색공간을 넘기면 색 관리가 꺼진
+        // 컨텍스트를 받았다.
+        let spaceKey: String
+        if let cs {
+            spaceKey = (cs.name as String?)
+                ?? "icc:" + SHA256.hash(data: (cs.copyICCData() as Data?) ?? Data())
+                    .map { String(format: "%02x", $0) }.joined()
+        } else {
+            spaceKey = "__unmanaged__"
+        }
+        let key = spaceKey + (fullPrecision ? "_f32" : "")
         state.lock.lock()
         defer { state.lock.unlock() }
         if let ctx = state.contexts[key] {

@@ -45,10 +45,11 @@ void mark_out_of_gamut(
     constexpr float alpha = 166.0F / 255.0F;
     constexpr float keep = 1.0F - alpha;
     for (std::size_t index = 0U; index < judged.out_of_gamut.size(); ++index) {
-        if (judged.out_of_gamut[index] == 0U) {
+        std::uint8_t* const pixel = pixels + (index * 4U);
+        // 투명 화소(원근 보정의 빈 곳)는 사진이 아니라 표시하지 않습니다(macOS 와 같음).
+        if (judged.out_of_gamut[index] == 0U || pixel[3] == 0U) {
             continue;
         }
-        std::uint8_t* const pixel = pixels + (index * 4U);
         pixel[0] = static_cast<std::uint8_t>(static_cast<float>(pixel[0]) * keep);
         pixel[1] = static_cast<std::uint8_t>(static_cast<float>(pixel[1]) * keep);
         pixel[2] = static_cast<std::uint8_t>(

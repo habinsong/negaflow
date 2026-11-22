@@ -216,8 +216,14 @@ public sealed partial class PrintWorkspaceView
     private IReadOnlyList<LibraryFrameSnapshot> PrintSources =>
         printSources?.Sources ?? [];
 
-    public void AttachThumbnails(Negaflow.Shell.Library.ThumbnailService service) =>
+    public void AttachThumbnails(Negaflow.Shell.Library.ThumbnailService service)
+    {
         printSources?.AttachThumbnails(service);
+        if (workspaceState is { } state)
+        {
+            UpdatePrintTileProof(state.Current);
+        }
+    }
 
     public void ShowLibrary(LibraryHostService host) => printSources?.ShowLibrary(host);
 
@@ -506,13 +512,10 @@ public sealed partial class PrintWorkspaceView
         {
             return;
         }
-        Windows.Storage.Pickers.FileOpenPicker picker = new();
+        Microsoft.Windows.Storage.Pickers.FileOpenPicker picker = new(windowId);
         picker.FileTypeFilter.Add(".icc");
         picker.FileTypeFilter.Add(".icm");
-        WinRT.Interop.InitializeWithWindow.Initialize(
-            picker,
-            Win32Interop.GetWindowFromWindowId(windowId));
-        Windows.Storage.StorageFile? file = await picker.PickSingleFileAsync();
+        Microsoft.Windows.Storage.Pickers.PickFileResult? file = await picker.PickSingleFileAsync();
         PreviewTrace.Write("proof.picked " + (file?.Path ?? "<none>"));
         if (file is null)
         {
@@ -544,14 +547,17 @@ public sealed partial class PrintWorkspaceView
     }
 
     /// <summary>
-    /// C-print 프루프를 실제 화면 색에 겁니다. macOS
+    /// 인화 화면 프루프를 실제 화면 색에 겁니다. macOS
     /// <c>advanceSoftProofConfiguration()</c> 자리입니다 — 값만 담아 두면 프로파일을 골라도
-    /// 화면과 인화물의 색이 하나도 바뀌지 않습니다.
+    /// 화면 색이 하나도 바뀌지 않습니다.
     /// </summary>
     /// <remarks>
-    /// 목적지는 <see cref="Negaflow.Shell.Develop.SoftProofPreferences.PrinterProfilePath"/>
-    /// 입니다. 인화 대상으로 현상할 때 프루프가 그 종이를 향하게 하는 자리이며, 화면을 보는
-    /// 프루프 프로파일과 따로 둡니다 — macOS 도 둘을 나눠 둡니다.
+    /// 목적지는 <see cref="PrintSoftProofFilter.Destination"/> 가 정합니다(C-print 미리보기가
+    /// 켜져 있으면 랩 프루프, 아니면 프린터 출력 프로파일). 앞 판은 C-print 경로를
+    /// <see cref="Negaflow.Shell.Develop.SoftProofPreferences.PrinterProfilePath"/> 에 써 넣고
+    /// C-print 가 꺼지면 빈 값으로 지워서, 인화 화면을 열기만 해도 사용자가 설정에서 고른 프린터
+    /// 출력 프로파일이 사라지거나 랩 프루프 ICC 로 바뀌었습니다 — PRINT 대상 내보내기가 그
+    /// 프루프 ICC 로 구워졌습니다. 이제 프린터 출력 프로파일은 설정 화면만 씁니다.
     /// </remarks>
     private void ApplyCprintSoftProof()
     {
@@ -559,47 +565,34 @@ public sealed partial class PrintWorkspaceView
         {
             return;
         }
-        PrintPreferences print = state.Current.Print;
-        bool active = print.OutputProcess == PrintOutputProcess.CPrint &&
-            print.CPrintPreviewEnabled &&
-            print.CPrintProofProfilePath.Length > 0;
-        string wanted = active ? print.CPrintProofProfilePath : string.Empty;
-        Negaflow.Interop.SoftProofSimulation simulation =
-            active && print.CPrintPaperSimulationEnabled
-                ? Negaflow.Interop.SoftProofSimulation.PaperAndBlackInk
-                : state.Current.SoftProof.Simulation;
-        // 우리가 켠 것만 우리가 끕니다. 설정에서 사용자가 켜 둔 프루프는 건드리지 않습니다.
-        bool enabled = active || (state.Current.SoftProof.IsEnabled && !printTurnedProofOn);
-        printTurnedProofOn = active;
         // 색영역 경고는 맥에서도 프루프와 별개의 스위치입니다
         // (`model.destinationGamutWarningEnabled`). 사람이 만졌을 때 그대로 담습니다.
         bool gamut = OutputTab.GamutWarningSelector.SelectedValue as bool? ??
             state.Current.SoftProof.GamutWarningEnabled;
-        // <b>달라질 때만</b> 씁니다. 값이 같은데도 쓰면 설정 변경 알림이 다시 동기화를 부르고,
-        // 그 동기화가 또 여기로 들어와 UI 스레드가 멈춥니다.
-        if (string.Equals(state.Current.SoftProof.PrinterProfilePath, wanted, StringComparison.Ordinal) &&
-            state.Current.SoftProof.Simulation == simulation &&
-            state.Current.SoftProof.IsEnabled == enabled &&
-            state.Current.SoftProof.GamutWarningEnabled == gamut)
-        {
-            return;
-        }
-        // 현상본이 이 프로파일로 나오게 합니다 — 사진에 프로파일이 걸리는 자리이고,
-        // 색영역 경고도 여기서 ICM 이 판정합니다.
-        if (printSources?.Thumbnails is { } cache &&
-            cache.SetPrintProof(PrintSoftProofFilter.Preview(print, gamut)))
+        // 현상본이 이 프로파일로 나오게 합니다 — 사진에 용지·잉크가 걸리는 자리입니다.
+        // `SetPrintProof` 는 값이 달라질 때만 true 라 되먹임이 없습니다.
+        if (UpdatePrintTileProof(state.Current))
         {
             printPreview?.InvalidateForRecipeChange();
             printPreview?.Draw();
         }
-        state.UpdateSoftProof(value => value with
+        // <b>달라질 때만</b> 씁니다. 값이 같은데도 쓰면 설정 변경 알림이 다시 동기화를 부르고,
+        // 그 동기화가 또 여기로 들어와 UI 스레드가 멈춥니다.
+        if (state.Current.SoftProof.GamutWarningEnabled != gamut)
         {
-            PrinterProfilePath = wanted,
-            IsEnabled = enabled,
-            // 용지·잉크까지 흉내 낼지는 인화 설정이 정합니다(macOS `cPrintPaperSimulationEnabled`).
-            Simulation = simulation,
-            GamutWarningEnabled = gamut,
-        });
+            state.UpdateSoftProof(value => value with { GamutWarningEnabled = gamut });
+        }
+    }
+
+    private bool UpdatePrintTileProof(ShellPreferences preferences)
+    {
+        // ICC 왕복·색역 경고는 타일에서 처리합니다. 현상본은 용지와 잉크가 바뀔 때만 다시 만듭니다.
+        var destination = PrintSoftProofFilter.Destination(preferences.Print, preferences.SoftProof);
+        var paperProof = destination is { PaperSimulation: true }
+            ? PrintSoftProofFilter.Preview(
+                preferences.Print, preferences.SoftProof.GamutWarningEnabled, preferences.SoftProof)
+            : null;
+        return printSources?.Thumbnails?.SetPrintProof(paperProof) == true;
     }
 
     /// <summary>macOS <c>clearCPrintProofICCProfile</c> — 지우면 미리보기도 함께 꺼집니다.</summary>
@@ -658,9 +651,6 @@ public sealed partial class PrintWorkspaceView
     /// 넣기를 불러 화면이 멈춥니다.
     /// </summary>
     private bool suppressPrintCommit;
-
-    /// <summary>인화 미리보기 때문에 소프트 프루프를 켠 것인지입니다.</summary>
-    private bool printTurnedProofOn;
 
     private void CommitPrintSettings()
     {

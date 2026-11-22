@@ -136,22 +136,19 @@ public sealed partial class DevelopWorkspaceView
     }
 
     /// <summary>
-    /// 고른 프로파일의 용지 흰색과 잉크 검정을 미리보기에 겁니다.
+    /// 바뀐 프루프 설정으로 미리보기를 다시 그립니다.
     /// </summary>
     /// <remarks>
-    /// 목적지는 현상 대상이 정합니다 — PRINT 로 현상할 때는 프린터 출력 프로파일이 목적지이며,
-    /// 그래야 프루프가 화면이 아니라 인화될 종이를 보여 줍니다. 프로파일을 읽지 못하면 용지·
-    /// 잉크를 흉내 내지 않습니다: 없는 값을 지어내느니 프로파일만 보는 쪽이 정직합니다.
+    /// 목적지는 렌더마다 사진의 현상 대상이 정합니다(<c>PreviewCoordinator.SoftProofResolver</c>)
+    /// — PRINT 로 현상할 때는 프린터 출력 프로파일이 목적지이며, 그래야 프루프가 화면이 아니라
+    /// 인화될 종이를 보여 줍니다. 프로파일을 읽지 못하면 용지·잉크를 흉내 내지 않습니다.
     /// </remarks>
     internal void ApplySoftProof()
     {
-        if (previewCoordinator is not { } coordinator)
+        if (previewCoordinator is null)
         {
             return;
         }
-        DevelopTarget target = panel?.SelectedFrame?.DevelopTarget ?? DevelopTarget.Main;
-        coordinator.SoftProof = softProofPreferences.ToSettings(
-            SoftProofProfileReader.Read(softProofPreferences.DestinationProfilePath(target)));
         RequestPreview();
     }
 }

@@ -30,6 +30,8 @@ macOS ビルドは `docs/verification/macos-golden` に基準画像を描画し�
 
 macOS は ColorSync、Windows は ICM を使います。どちらも同じ ICC プロファイルを受け取り、丸めの範囲で同じ数値を出します。黙ってずれやすい部分なので、整合性テストが対象にしています。
 
+画面表示では、macOS はディスプレイの ColorSync プロファイルを通して描きます。Windows がそうするのは Advanced Color がオンのときだけです。オフのときはアプリの画素を sRGB とみなしてそのまま送るので、negaflow が現像キャンバスと印刷プレビューを描く直前にモニターの ICC プロファイルへ変換します。サムネイルとほかの画面要素は sRGB のまま描きます。
+
 ### グラフィックス
 
 macOS は現像チェーンを Core Image で動かします。Windows は Direct3D のコンピュートシェーダーで動かし、GPU の経路が使えないときは CPU に切り替えます。

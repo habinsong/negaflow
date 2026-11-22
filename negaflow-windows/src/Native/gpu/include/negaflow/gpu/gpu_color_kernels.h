@@ -30,6 +30,8 @@ struct GpuColorGradeSetup final {
     float highlight_offset[3]{0.0F, 0.0F, 0.0F};
     float pivot{0.5F};
     float width{0.30F};
+    // `imaging::ColorGradingSetup::perceptual` 그대로입니다.
+    bool perceptual{true};
 };
 
 // `imaging::ColorMixerParameters` 와 같은 값입니다. 밴드 8개(빨강·주황·노랑·초록·하늘·파랑·
@@ -39,6 +41,8 @@ struct GpuColorMixerParameters final {
     float hue[band_count]{};
     float saturation[band_count]{};
     float luminance[band_count]{};
+    // `imaging::ColorMixerParameters::perceptual` 그대로입니다.
+    bool perceptual{true};
 };
 
 class GpuColorMixer final {
@@ -68,6 +72,8 @@ struct GpuPrimaryCalibrationParameters final {
     float green_saturation{0.0F};
     float blue_hue{0.0F};
     float blue_saturation{0.0F};
+    // `imaging::PrimaryCalibrationParameters::perceptual` 그대로입니다.
+    bool perceptual{true};
 };
 
 class GpuPrimaryCalibration final {

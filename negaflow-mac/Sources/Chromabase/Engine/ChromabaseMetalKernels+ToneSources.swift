@@ -29,11 +29,20 @@ extension ChromabaseMetalKernels {
     """),
         MetalKernelSource(name: "colorMixerHSL", body: """
     // Color Mixer (HSL) — 8색 각각 hue/sat/lum. hueA/B = 빨강~자홍 8밴드를 float4 2개로 묶음.
+    // perceptual(사용자 슬라이더)이면 HSL 을 **sRGB 인코딩 값**에서 계산한다. 선형 값의 HSL 은
+    // 색상환이 비틀려(sRGB 주황 30° 가 13°) 밴드가 엉뚱한 색에 걸리고, 광도 ±0.16 이 암부를
+    // 검정으로 뭉갰다. 필름 룩 프리셋은 이미 감마로 바꾼 값을 넘기므로 perceptual 0 이다.
     [[stitchable]] float4 colorMixerHSL(
         coreimage::sample_t src,
-        float4 hueA, float4 hueB, float4 satA, float4 satB, float4 lumA, float4 lumB
+        float4 hueA, float4 hueB, float4 satA, float4 satB, float4 lumA, float4 lumB,
+        float perceptual
     ) {
-        float3 hsl = rgb2hsl(clamp(src.rgb, 0.0, 1.0));
+        bool encode = perceptual > 0.5;
+        float3 bounded = clamp(src.rgb, 0.0, 1.0);
+        // [0,1] 밖으로 나간 몫(광색역 음수, 1.0 넘는 하이라이트)은 보정 뒤 다시 더한다. 범위 안
+        // 화소는 앞 판과 같고, 밖의 값을 잘라 버리지 않는다(사용자 슬라이더만).
+        float3 excess = encode ? src.rgb - bounded : float3(0.0);
+        float3 hsl = rgb2hsl(encode ? digitalLinearToSRGB(bounded) : bounded);
         float centers[8] = {0.0, 0.083333, 0.166667, 0.333333, 0.5, 0.666667, 0.75, 0.833333};
         float hueAdj[8] = {hueA.x, hueA.y, hueA.z, hueA.w, hueB.x, hueB.y, hueB.z, hueB.w};
         float satAdj[8] = {satA.x, satA.y, satA.z, satA.w, satB.x, satB.y, satB.z, satB.w};
@@ -51,18 +60,26 @@ extension ChromabaseMetalKernels {
         hsl.x = fract(hsl.x + hueShift * 0.0833 * gate + 1.0);  // ±30°
         hsl.y = clamp(hsl.y * (1.0 + satF * gate), 0.0, 1.0);
         hsl.z = clamp(hsl.z + lumF * 0.16 * gate, 0.0, 1.0);
-        return float4(clamp(hsl2rgb(hsl), 0.0, 1.0), src.a);
+        float3 mixed = clamp(hsl2rgb(hsl), 0.0, 1.0);
+        return float4((encode ? digitalSRGBToLinear(mixed) : mixed) + excess, src.a);
     }
     """),
         MetalKernelSource(name: "colorGrade", body: """
     // Color Grading — 어두운/중간/밝은 영역에 색조(chroma 주입)+광도. shadow.rgb=hueColor*sat,
     // shadow.a=lum. bb=(blending, balance).
+    // perceptual(사용자 슬라이더)이면 영역 가중치와 색 더하기를 **sRGB 인코딩 값**에서 한다.
+    // 선형 휘도로 가르면 중간 회색(sRGB 118)이 Shadows 100%·Midtones 0% 로 잡히고, 같은 광도
+    // 값이 암부를 크게 들어 올렸다. 필름 룩 프리셋은 이미 감마로 바꾼 값을 넘기므로 0 이다.
     [[stitchable]] float4 colorGrade(
         coreimage::sample_t src,
-        float4 shadow, float4 mid, float4 high, float2 bb
+        float4 shadow, float4 mid, float4 high, float2 bb, float perceptual
     ) {
         float3 ycoef = float3(0.2126, 0.7152, 0.0722);
-        float y = dot(src.rgb, ycoef);
+        bool encode = perceptual > 0.5;
+        float3 inRange = clamp(src.rgb, 0.0, 1.0);
+        float3 excess = encode ? src.rgb - inRange : float3(0.0);   // colorMixerHSL 과 같은 이유
+        float3 encoded = encode ? digitalLinearToSRGB(inRange) : src.rgb;
+        float y = dot(encoded, ycoef);
         float blending = bb.x, balance = bb.y;
         float pivot = clamp(0.5 + balance * 0.30, 0.15, 0.85);
         float wdt = mix(0.10, 0.50, blending);
@@ -72,11 +89,12 @@ extension ChromabaseMetalKernels {
         float3 shc = shadow.rgb - dot(shadow.rgb, ycoef);
         float3 mdc = mid.rgb - dot(mid.rgb, ycoef);
         float3 hic = high.rgb - dot(high.rgb, ycoef);
-        float3 rgb = src.rgb;
+        float3 rgb = encoded;
         rgb += sh * (shc * 0.75 + shadow.a * 0.22);
         rgb += md * (mdc * 0.75 + mid.a * 0.22);
         rgb += hi * (hic * 0.75 + high.a * 0.22);
-        return float4(clamp(rgb, 0.0, 1.0), src.a);
+        float3 bounded = clamp(rgb, 0.0, 1.0);
+        return float4((encode ? digitalSRGBToLinear(bounded) : bounded) + excess, src.a);
     }
     """),
         MetalKernelSource(name: "bwToning", body: """
@@ -109,8 +127,13 @@ extension ChromabaseMetalKernels {
     """),
         MetalKernelSource(name: "calibrationPrimaries", body: """
     // Calibration — R(0°)/G(120°)/B(240°) primary 의 hue 회전 + saturation 스케일(넓은 밴드).
-    [[stitchable]] float4 calibrationPrimaries(coreimage::sample_t src, float3 hue, float3 sat) {
-        float3 hsl = rgb2hsl(clamp(src.rgb, 0.0, 1.0));
+    // perceptual(사용자 슬라이더)이면 HSL 을 sRGB 인코딩 값에서 계산하고 [0,1] 밖 몫은 다시
+    // 더한다(colorMixerHSL 과 같은 이유). 필름 룩 프리셋은 감마 값을 넘기므로 0 이다.
+    [[stitchable]] float4 calibrationPrimaries(coreimage::sample_t src, float3 hue, float3 sat, float perceptual) {
+        bool encode = perceptual > 0.5;
+        float3 bounded = clamp(src.rgb, 0.0, 1.0);
+        float3 excess = encode ? src.rgb - bounded : float3(0.0);
+        float3 hsl = rgb2hsl(encode ? digitalLinearToSRGB(bounded) : bounded);
         float centers[3] = {0.0, 0.333333, 0.666667};
         float hueAdj[3] = {hue.x, hue.y, hue.z};
         float satAdj[3] = {sat.x, sat.y, sat.z};
@@ -126,7 +149,8 @@ extension ChromabaseMetalKernels {
         float gate = smoothstep(0.03, 0.16, hsl.y);
         hsl.x = fract(hsl.x + hs * 0.08 * gate + 1.0);
         hsl.y = clamp(hsl.y * (1.0 + sf * gate), 0.0, 1.0);
-        return float4(clamp(hsl2rgb(hsl), 0.0, 1.0), src.a);
+        float3 calibrated = clamp(hsl2rgb(hsl), 0.0, 1.0);
+        return float4((encode ? digitalSRGBToLinear(calibrated) : calibrated) + excess, src.a);
     }
     """),
         MetalKernelSource(name: "channelPowerGain", body: """
@@ -320,6 +344,46 @@ extension ChromabaseMetalKernels {
     // 대신 luma는 보존한 채 chroma만 줄여(중립으로 desaturate) gamut 안으로 들인다.
     [[stitchable]] float4 gamutSoftClip(coreimage::sample_t src) {
         return float4(toneSafeUnitRGB(src.rgb), src.a);
+    }
+    """),
+        MetalKernelSource(name: "naturalToneSpline5", body: """
+    // 5 매듭 자연 3차 스플라인 톤 커브를 **받은 값에 직접** 건다. 매듭 x = (0, xs.xyz, 1),
+    // y = (xs.w, ys.xyz, ys.w), 2차 미분 = (0, ms.xyz, 0). CIToneCurve 처럼 제곱근 위에서
+    // 계산하지 않는다 — sRGB 인코딩 값에 CIToneCurve 를 걸면 감마가 두 번 걸린다.
+    // [0,1] 밖은 끝값으로 고정한다(윈도우 `scanner_profile_grade.cpp` `tone_curve`).
+    inline float naturalToneSplineChannel(float v, float4 xs, float4 ys, float4 ms) {
+        if (v <= 0.0) { return xs.w; }
+        if (v >= 1.0) { return ys.w; }
+        float x[5] = {0.0, xs.x, xs.y, xs.z, 1.0};
+        float y[5] = {xs.w, ys.x, ys.y, ys.z, ys.w};
+        float m[5] = {0.0, ms.x, ms.y, ms.z, 0.0};
+        int s = 0;
+        while (s + 1 < 4 && v > x[s + 1]) { s += 1; }
+        float w = x[s + 1] - x[s];
+        float a = (x[s + 1] - v) / w;
+        float b = 1.0 - a;
+        return a * y[s] + b * y[s + 1] + ((a * a * a - a) * m[s] + (b * b * b - b) * m[s + 1]) * w * w / 6.0;
+    }
+    [[stitchable]] float4 naturalToneSpline5(coreimage::sample_t src, float4 xs, float4 ys, float4 ms) {
+        return float4(
+            naturalToneSplineChannel(src.r, xs, ys, ms),
+            naturalToneSplineChannel(src.g, xs, ys, ms),
+            naturalToneSplineChannel(src.b, xs, ys, ms),
+            src.a);
+    }
+    """),
+        MetalKernelSource(name: "targetGamutSoftClip", body: """
+    // 같은 접기를 **목적 색공간의 선형 기본색**에서 한다. 선형 sRGB → 목적 공간(m0~m2) →
+    // toneSafeUnitRGB → 선형 sRGB(i0~i2). 한 커널 안에서 float 로 오가므로 중간 정밀도를 잃지
+    // 않는다. Display P3·Adobe RGB 로 내보낼 때 sRGB 밖이지만 그 공간 안인 색은 그대로 남는다.
+    [[stitchable]] float4 targetGamutSoftClip(
+        coreimage::sample_t src,
+        float4 m0, float4 m1, float4 m2,
+        float4 i0, float4 i1, float4 i2
+    ) {
+        float3 target = float3(dot(m0.xyz, src.rgb), dot(m1.xyz, src.rgb), dot(m2.xyz, src.rgb));
+        float3 folded = toneSafeUnitRGB(target);
+        return float4(dot(i0.xyz, folded), dot(i1.xyz, folded), dot(i2.xyz, folded), src.a);
     }
     """),
         MetalKernelSource(name: "negativeInvert", body: """

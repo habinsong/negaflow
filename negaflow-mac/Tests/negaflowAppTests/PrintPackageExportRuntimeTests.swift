@@ -316,7 +316,9 @@ final class PrintPackageExportRuntimeTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: exportRoot.path))
     }
 
-    func testCPrintProfileIsAppliedToCompositeExport() async throws {
+    /// C-print 프루프 ICC 는 화면 프루프 전용이다(C_PRINT 문서). 인화 내보내기는 프린터 출력
+    /// 프로파일을 고르지 않았으면 전달 색공간으로 나가고, 랩 프루프 프로파일을 박지 않는다.
+    func testCPrintProofProfileIsNotBakedIntoCompositeExport() async throws {
         let exportRoot = root.appendingPathComponent("Exports", isDirectory: true)
         let diskStore = DiskStorageStore(defaults: defaults)
         diskStore.exportPath = exportRoot.path
@@ -367,7 +369,7 @@ final class PrintPackageExportRuntimeTests: XCTestCase {
         let outputs = regularFiles(below: exportRoot).filter { $0.pathExtension == "png" }
         let output = try XCTUnwrap(outputs.first)
         XCTAssertEqual(outputs.count, 1)
-        XCTAssertEqual(
+        XCTAssertNotEqual(
             ICCOutputProfileSnapshot.embeddedProfileSHA256(at: output),
             profile.profileSHA256
         )

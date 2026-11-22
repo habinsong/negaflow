@@ -170,17 +170,45 @@ void test_primary_controls_gray_gate_and_active_domain() {
             gray.alpha == 0.6F,
         "the saturation gate preserves neutral gray");
 
+    // 프리셋 경로(perceptual false)는 HSL 작업 영역을 [0,1] 로 자릅니다.
+    negaflow::imaging::PrimaryCalibrationParameters preset_hue = red_hue;
+    preset_hue.perceptual = false;
     negaflow::core::Rgba32F extended{-1.0F, 0.5F, 2.0F, 0.7F};
     expect(
         negaflow::imaging::apply_primary_calibration(
             {&extended, 1U, 1U, 1U, 1U},
             {&extended, 1U, 1U, 1U, 1U},
-            red_hue) == negaflow::core::KernelStatus::ok &&
+            preset_hue) == negaflow::core::KernelStatus::ok &&
             extended.red >= 0.0F && extended.red <= 1.0F &&
             extended.green >= 0.0F && extended.green <= 1.0F &&
             extended.blue >= 0.0F && extended.blue <= 1.0F &&
             extended.alpha == 0.7F,
-        "active primary calibration clamps the HSL working domain");
+        "the preset path clamps the HSL working domain");
+
+    // 사용자 슬라이더 경로는 [0,1] 안을 보정하고 밖의 몫을 다시 더합니다(macOS `calibrationPrimaries`).
+    negaflow::core::Rgba32F in_range{0.0F, 0.5F, 1.0F, 0.7F};
+    negaflow::core::Rgba32F wide{-1.0F, 0.5F, 2.0F, 0.7F};
+    expect(
+        negaflow::imaging::apply_primary_calibration(
+            {&in_range, 1U, 1U, 1U, 1U}, {&in_range, 1U, 1U, 1U, 1U}, red_hue) ==
+                negaflow::core::KernelStatus::ok &&
+            negaflow::imaging::apply_primary_calibration(
+                {&wide, 1U, 1U, 1U, 1U}, {&wide, 1U, 1U, 1U, 1U}, red_hue) ==
+                negaflow::core::KernelStatus::ok &&
+            std::abs(wide.red - (in_range.red - 1.0F)) < 1.0e-5F &&
+            std::abs(wide.green - in_range.green) < 1.0e-5F &&
+            std::abs(wide.blue - (in_range.blue + 1.0F)) < 1.0e-5F,
+        "the slider path keeps what lay outside [0, 1]");
+
+    // 사용자 슬라이더는 sRGB 인코딩 값의 색상환을 씁니다. sRGB (255, 128, 0) 주황(표시 30°)은 빨강
+    // 원색 밴드 안이라 색상 회전이 걸립니다.
+    negaflow::core::Rgba32F orange{1.0F, 0.21404114F, 0.0F, 1.0F};
+    expect(
+        negaflow::imaging::apply_primary_calibration(
+            {&orange, 1U, 1U, 1U, 1U}, {&orange, 1U, 1U, 1U, 1U}, red_hue) ==
+                negaflow::core::KernelStatus::ok &&
+            orange.green > 0.21404114F + 0.05F,
+        "the slider path rotates the display hue of a 30-degree orange");
 }
 
 void test_parameter_and_view_failures() {

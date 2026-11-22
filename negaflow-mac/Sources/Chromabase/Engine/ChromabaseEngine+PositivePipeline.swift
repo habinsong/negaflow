@@ -37,6 +37,10 @@ extension ChromabaseEngine {
                 outputWhite: 0.86,
                 outputBlack: 0.014,
                 region: region,
+                // 포지티브(디지털 원본·슬라이드 스캔)는 검정 들어 올리기를 무채색으로 더한다. 비율로
+                // 곱하면 거의 검은 노이즈 화소가 bias/y 배 색 반점이 된다(2026-11-22 사용자 결정으로
+                // 슬라이드까지 넓힘). 네거티브는 이 경로를 타지 않는다.
+                neutralLift: true,
                 points: &points
             )
         }

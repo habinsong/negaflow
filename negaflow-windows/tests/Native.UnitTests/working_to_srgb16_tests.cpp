@@ -1,5 +1,9 @@
 #include "negaflow/output/working_to_srgb16.h"
 
+#include "negaflow/color/srgb_transfer.h"
+#include "negaflow/imaging/display_gamut_map.h"
+
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <iostream>
@@ -29,6 +33,16 @@ negaflow::imaging::WorkingImage make_image() {
     return image;
 }
 
+std::uint16_t quantize_encoded(const float linear) {
+    const float encoded = negaflow::color::linear_to_srgb_encoded(std::clamp(linear, 0.0F, 1.0F));
+    return static_cast<std::uint16_t>(std::floor(encoded * 65'535.0F + 0.5F));
+}
+
+std::array<std::uint16_t, 3U> expected_folded(const negaflow::core::Rgba32F pixel) {
+    const negaflow::core::Rgba32F folded = negaflow::imaging::tone_safe_unit_rgb(pixel);
+    return {quantize_encoded(folded.red), quantize_encoded(folded.green), quantize_encoded(folded.blue)};
+}
+
 void test_quantization() {
     const auto result = negaflow::output::convert_working_to_srgb16(make_image());
     expect(
@@ -43,9 +57,16 @@ void test_quantization() {
         expect(result.image.samples[0] == 0U, "black quantizes to zero");
         expect(result.image.samples[1] == 2'651U, "sRGB breakpoint quantizes exactly");
         expect(result.image.samples[2] == 32'768U, "linear midpoint maps to encoded half");
-        expect(result.image.samples[3] == 65'535U, "white quantizes to maximum");
-        expect(result.image.samples[4] == 0U, "negative output clips at final boundary");
-        expect(result.image.samples[5] == 65'535U, "extended output clips at final boundary");
+        // 범위 밖 화소는 프리뷰와 같은 hue-safe 접기를 거칩니다(macOS
+        // `DisplayGamutMap.apply(to:encodedIn:)`). 채널마다 자르면 (65535, 0, 65535) 로
+        // 색상이 틀어집니다.
+        const std::array<std::uint16_t, 3U> folded = expected_folded({1.0F, -0.1F, 1.1F, 1.0F});
+        expect(result.image.samples[3] == folded[0], "extended red folds like the preview");
+        expect(result.image.samples[4] == 0U, "the negative channel lands on zero after folding");
+        expect(result.image.samples[5] == folded[2], "extended blue folds like the preview");
+        expect(
+            result.image.samples[3] < 65'535U && result.image.samples[5] < 65'535U,
+            "folding keeps the hue instead of clipping each channel");
     }
     expect(result.info.encoded_pixel_bytes == 12U, "encoded byte count is exact");
     expect(result.info.clipped_color_components == 2U, "clipped component count is exact");
@@ -141,10 +162,11 @@ void test_inspection_and_bounded_rows() {
         samples.data(),
         samples.size(),
         clipped_components);
+    const std::array<std::uint16_t, 3U> folded = expected_folded({1.0F, -0.1F, 1.1F, 1.0F});
     expect(
         status == negaflow::output::WorkingToSrgb16Status::ok &&
             samples[0] == 0U && samples[1] == 2'651U && samples[2] == 32'768U &&
-            samples[3] == 65'535U && samples[4] == 0U && samples[5] == 65'535U &&
+            samples[3] == folded[0] && samples[4] == 0U && samples[5] == folded[2] &&
             clipped_components == 2U,
         "bounded row conversion matches the full-image quantization");
 }

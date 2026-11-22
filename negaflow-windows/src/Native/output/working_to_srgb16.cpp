@@ -2,6 +2,7 @@
 
 #include "negaflow/color/srgb_transfer.h"
 #include "negaflow/core/parallel_rows.h"
+#include "negaflow/imaging/display_gamut_map.h"
 
 #include <algorithm>
 #include <atomic>
@@ -111,6 +112,23 @@ void count_clipped_component(
     if (linear < 0.0F || linear > 1.0F) {
         ++clipped_components;
     }
+}
+
+// 표시 파일은 프리뷰와 같은 hue-safe 접기를 거칩니다. 앞 판은 프리뷰만 접고 파일은 채널마다
+// 잘라서, 선형 (1.3, 0.9, 0.5) 화소가 프리뷰 (255, 249, 243), 파일 (255, 243, 188) 로
+// 갈렸습니다. 접기는 **파일이 인코딩되는 공간**의 선형 기본색에서 하므로 P3·Adobe RGB 로 낼
+// 때 sRGB 밖이지만 그 공간 안인 색은 그대로 남습니다. macOS
+// `DisplayGamutMap.apply(to:encodedIn:)` 와 같은 식입니다. 잘린 성분 수는 접기 전 값으로
+// 셉니다 - "목적 공간 밖의 색" 이라는 뜻을 지킵니다.
+[[nodiscard]] OutputPixel fold_into_target(
+    const OutputPixel& output,
+    std::uint64_t& clipped_components) noexcept {
+    count_clipped_component(output.red, clipped_components);
+    count_clipped_component(output.green, clipped_components);
+    count_clipped_component(output.blue, clipped_components);
+    const negaflow::core::Rgba32F folded = negaflow::imaging::tone_safe_unit_rgb(
+        negaflow::core::Rgba32F{output.red, output.green, output.blue, 1.0F});
+    return {folded.red, folded.green, folded.blue};
 }
 
 [[nodiscard]] WorkingToSrgb16Result describe_working_as_srgb16(
@@ -317,7 +335,11 @@ WorkingToSrgb16Status convert_working_to_srgb_rows(
                         clipped_total.fetch_add(block_clipped, std::memory_order_relaxed);
                         return;
                     }
-                    const OutputPixel output = to_output_primaries(pixel, matrix);
+                    // 선형 값을 그대로 싣는 결함 굽기·DNG 산출물(`encode_transfer` false)은
+                    // 접지 않습니다 - 값 자체가 산출물입니다.
+                    const OutputPixel output = limits.encode_transfer
+                        ? fold_into_target(to_output_primaries(pixel, matrix), block_clipped)
+                        : to_output_primaries(pixel, matrix);
                     const std::size_t destination =
                         destination_row +
                         static_cast<std::size_t>(column) * description.image.channels;
@@ -358,6 +380,45 @@ WorkingToSrgb16Status convert_working_to_srgb_rows(
     }
     clipped_color_components = clipped_total.load(std::memory_order_relaxed);
     return WorkingToSrgb16Status::ok;
+}
+
+void dither_encoded16_rows_to_8(
+    const std::uint16_t* const source,
+    const std::uint32_t width,
+    const std::uint32_t first_row,
+    const std::uint32_t row_count,
+    const std::uint32_t channels,
+    std::uint8_t* const destination) noexcept {
+    if (source == nullptr || destination == nullptr || width == 0U || row_count == 0U ||
+        (channels != 3U && channels != 4U)) {
+        return;
+    }
+    negaflow::core::for_each_row_block(
+        row_count,
+        static_cast<std::uint64_t>(width) * row_count * channels,
+        [&](const std::uint32_t block_first, const std::uint32_t block_rows) noexcept {
+            for (std::uint32_t row = block_first; row < block_first + block_rows; ++row) {
+                const std::uint32_t image_row = first_row + row;
+                const std::size_t offset = static_cast<std::size_t>(row) * width * channels;
+                for (std::uint32_t column = 0U; column < width; ++column) {
+                    const std::size_t at = offset + static_cast<std::size_t>(column) * channels;
+                    for (std::uint32_t channel = 0U; channel < 3U; ++channel) {
+                        const float encoded = static_cast<float>(source[at + channel]) / 65'535.0F;
+                        const float noise =
+                            static_cast<float>(dither_hash(column, image_row, channel) >> 8U) /
+                                16777215.0F -
+                            0.5F;
+                        const float dithered = std::clamp(encoded + noise / 255.0F, 0.0F, 1.0F);
+                        destination[at + channel] =
+                            static_cast<std::uint8_t>(std::floor(dithered * 255.0F + 0.5F));
+                    }
+                    if (channels == 4U) {
+                        destination[at + 3U] = static_cast<std::uint8_t>(
+                            (static_cast<std::uint32_t>(source[at + 3U]) + 128U) / 257U);
+                    }
+                }
+            }
+        });
 }
 
 WorkingToSrgb16Result convert_working_to_srgb16(
@@ -408,7 +469,11 @@ WorkingToSrgb16Result convert_working_to_srgb16(
                             block_clipped, std::memory_order_relaxed);
                         return;
                     }
-                    const OutputPixel output = to_output_primaries(pixel, matrix);
+                    // 선형 값을 그대로 싣는 결함 굽기·DNG 산출물(`encode_transfer` false)은
+                    // 접지 않습니다 - 값 자체가 산출물입니다.
+                    const OutputPixel output = limits.encode_transfer
+                        ? fold_into_target(to_output_primaries(pixel, matrix), block_clipped)
+                        : to_output_primaries(pixel, matrix);
                     const std::size_t destination =
                         destination_row + static_cast<std::size_t>(column) * result.image.channels;
                     result.image.samples[destination] =

@@ -151,8 +151,10 @@ void test_sorting_endpoint_extension_and_single_point_composition() {
                 negaflow::core::KernelStatus::ok &&
             unsorted_luts.red == sorted_luts.red,
         "unordered persisted points are sorted deterministically");
-    expect(nearly_equal(sorted_luts.red.front(), 6.0F / 63.0F) &&
-               nearly_equal(sorted_luts.red.back(), 57.0F / 63.0F),
+    // 채널 커브가 항등이므로 선형 보간 합성은 끝점 연장값(0.1·0.9)을 그대로 냅니다. 칸으로
+    // 반올림하던 앞 판은 6/63·57/63 이었습니다.
+    expect(nearly_equal(sorted_luts.red.front(), 0.1F) &&
+               nearly_equal(sorted_luts.red.back(), 0.9F),
            "missing endpoints extend values before the macOS 64-sample composition");
 
     negaflow::imaging::PointCurves one_point_channel = sorted;

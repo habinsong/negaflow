@@ -58,7 +58,7 @@ public sealed partial class PreviewCoordinator
 
         // Read once, here, so the whole render uses one proof state even if the property
         // changes while it is inside the engine. That render is superseded anyway.
-        SoftProofSettings? proof = SoftProof;
+        SoftProofSettings? proof = SoftProofResolver is { } resolve ? resolve(frame) : SoftProof;
         if (PreviewTrace.IsEnabled)
         {
             PreviewTrace.Write(
@@ -325,6 +325,11 @@ public sealed partial class PreviewCoordinator
                 PreviewOutcome.Faulted(result.FailureName ?? "preview_failed", revision) with { FrameId = frameId },
                 -1);
         }
+        ApplyProofProfile(
+            pixels,
+            (int)Math.Min(result.ImageWidth, int.MaxValue),
+            (int)Math.Min(result.ImageHeight, int.MaxValue),
+            proof);
 
         return new LeasedOutcome(
             new PreviewOutcome(
@@ -340,6 +345,33 @@ public sealed partial class PreviewCoordinator
                 frameId,
                 cacheIdentity),
             lease);
+    }
+
+    /// <summary>
+    /// 프루프 목적지 ICC 로 화소를 갔다가 되돌립니다 — macOS 가 프루프 색공간으로 렌더하는
+    /// 자리입니다. 앞 판은 이 단계가 없어 "프로파일만" 프루프가 화면을 바꾸지 않았습니다.
+    /// 색역 경고는 왕복 <b>전</b> 화소로 판정해 왕복 뒤 화소에 칠합니다.
+    /// </summary>
+    private static void ApplyProofProfile(
+        byte[] pixels,
+        int width,
+        int height,
+        SoftProofSettings? proof)
+    {
+        if (proof is not { IsEnabled: true, ProofProfile: { } icc } ||
+            width <= 0 || height <= 0 ||
+            pixels.Length < (long)width * height * 4)
+        {
+            return;
+        }
+        int bytes = checked(width * height * 4);
+        byte[]? judged = proof.WarnOutOfGamut ? pixels[..bytes] : null;
+        bool proofed = NativeGamutMask.Proof(pixels.AsSpan(0, bytes), width, height, icc);
+        long? marked = judged is null
+            ? null
+            : NativeGamutMask.Mark(pixels.AsSpan(0, bytes), judged, width, height, icc);
+        PreviewTrace.Write(
+            $"preview.proof icc={icc.Length} proofed={proofed} gamut_marked={marked?.ToString() ?? "-"}");
     }
 
     private void ReleaseLease(int lease)

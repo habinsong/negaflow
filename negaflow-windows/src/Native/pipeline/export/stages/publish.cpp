@@ -193,6 +193,7 @@ DevelopExportOutcome publish_developed(
         jpeg_limits.metadata_policy = request.metadata_policy;
         jpeg_limits.metadata = request.metadata;
         jpeg_limits.conversion.output_icc_profile = request.output_icc_profile;
+        jpeg_limits.conversion.color_space = request.output_color_space;
         const negaflow::output::WicJpegExportResult exported =
             negaflow::output::export_working_to_srgb8_jpeg(
                 output_sharpening.image,

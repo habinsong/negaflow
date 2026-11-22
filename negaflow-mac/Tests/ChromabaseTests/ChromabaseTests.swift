@@ -3285,6 +3285,40 @@ final class ChromabaseTests: XCTestCase {
         XCTAssertEqual(out.extent.width, 8, accuracy: 0.001)
     }
 
+    /// 대비·톤 커브를 표시 도메인에서 걸어 sRGB 0~37 암부가 한 값으로 뭉개지지 않는다. 선형에 대비 1.04 를
+    /// 걸던 앞 판은 sRGB 0·10·20·35 가 모두 같은 값이었다(2026-11-22).
+    func testPositiveBaseGradeKeepsDistinctDeepShadows() {
+        let levels: [UInt8] = [0, 10, 20, 35]
+        var bytes = [UInt8]()
+        for value in levels { bytes += [value, value, value, 255] }
+        let input = makeTestImage(bytes: bytes, width: 4, height: 1)
+        // 선형 작업 공간으로 렌더해야 앱과 같은 값이 PositiveDevelop 에 들어간다.
+        var out = [UInt8](repeating: 0, count: 16)
+        ChromabaseEngine.sharedLinearRenderContext.render(
+            PositiveDevelop.applyBaseGrade(to: input, filmType: .colorPositive), toBitmap: &out, rowBytes: 16,
+            bounds: CGRect(x: 0, y: 0, width: 4, height: 1), format: .RGBA8,
+            colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+        let values = (0..<4).map { Int(out[$0 * 4 + 1]) }
+        XCTAssertTrue(zip(values, values.dropFirst()).allSatisfy { $0 < $1 }, "deep shadows stay distinct: \(values)")
+    }
+
+    /// 톤 커브 매듭(0.22→0.205, 0.80→0.815)은 sRGB 표시값이다. `CIToneCurve` 는 받은 값의 제곱근 위에서
+    /// 계산해 sRGB 입력에 걸면 매듭이 어긋났다(sRGB 59 → 58, 201 → 200 으로 거의 항등). 대비 1.04 를 거친
+    /// 뒤 매듭에 닿는 입력이 설계한 출력(52·208)에 놓여야 한다(2026-11-22).
+    func testPositiveBaseGradeKnotsSitOnDisplayValues() {
+        let levels: [UInt8] = [59, 201]
+        var bytes = [UInt8]()
+        for value in levels { bytes += [value, value, value, 255] }
+        let input = makeTestImage(bytes: bytes, width: 2, height: 1)
+        var out = [UInt8](repeating: 0, count: 8)
+        ChromabaseEngine.sharedLinearRenderContext.render(
+            PositiveDevelop.applyBaseGrade(to: input, filmType: .colorPositive), toBitmap: &out, rowBytes: 8,
+            bounds: CGRect(x: 0, y: 0, width: 2, height: 1), format: .RGBA8,
+            colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+        XCTAssertEqual(Int(out[1]), 52, accuracy: 2, "shadow knot 0.22 → 0.205 in sRGB")
+        XCTAssertEqual(Int(out[5]), 208, accuracy: 2, "highlight knot 0.80 → 0.815 in sRGB")
+    }
+
     func testColorPositiveDeepSlideKeepsVisibleContrast() {
         let width = 32
         let height = 16

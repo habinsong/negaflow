@@ -260,6 +260,13 @@ constexpr const wchar_t* exif_query_roots[] = {
         negaflow::color::validate_icc_profile(result.image.icc_profile, limits.icc);
     result.icc_status = validation.status;
     result.info.icc = validation.info;
+    // 임베드한 쪽이 2·4바이트 경계로 채운 꼬리(3바이트 이하)는 검증이 떼어 보고 통과시킵니다.
+    // 하류(ICM `OpenColorProfileW`·Gray 변환·출력 태그)는 바이트 수를 그대로 프로파일 크기로
+    // 넘기므로 여기서 머리말이 선언한 크기로 잘라 둡니다.
+    if (validation.status == negaflow::color::IccProfileStatus::ok &&
+        validation.info.declared_bytes < result.image.icc_profile.size()) {
+        result.image.icc_profile.resize(validation.info.declared_bytes);
+    }
     return validation.status == negaflow::color::IccProfileStatus::ok
         ? WicStandardImageDecodeStatus::ok
         : WicStandardImageDecodeStatus::invalid_icc_profile;

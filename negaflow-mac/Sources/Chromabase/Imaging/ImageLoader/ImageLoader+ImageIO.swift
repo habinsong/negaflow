@@ -49,12 +49,20 @@ extension ImageLoader {
         shouldInterpretAsLinearRaw(cg, properties: properties) ? requestedRole : nil
     }
 
+    /// TIFF 사전만으로는 TIFF 라고 할 수 없다. eXIf 청크가 있는 PNG 도 ImageIO 가 TIFF 사전을
+    /// 채워 준다 — 그래서 무태그 16bit PNG 가 선형으로 읽혀 하얗게 떴다(윈도우는 sRGB 로 읽음).
+    /// PNG·JPEG 사전이 있으면 제외하고, 선형 해석이 정의되는 RGB·단색 모델만 받는다(무태그
+    /// CMYK·Lab TIFF 를 선형 RGB 로 읽지 않는다).
     static func shouldInterpretAsLinearRaw(
         _ cg: CGImage,
         properties: [CFString: Any]?
     ) -> Bool {
         guard properties?[kCGImagePropertyTIFFDictionary] != nil,
+              properties?[kCGImagePropertyPNGDictionary] == nil,
+              properties?[kCGImagePropertyJFIFDictionary] == nil,
               properties?[kCGImagePropertyProfileName] == nil else { return false }
+        let model = cg.colorSpace?.model
+        guard model == nil || model == .rgb || model == .monochrome else { return false }
         return sourceBitDepth(cg, properties: properties) >= 16
     }
 

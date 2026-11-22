@@ -30,6 +30,8 @@ macOS 版会把一组基准图像渲染到 `docs/verification/macos-golden`。Gi
 
 macOS 使用 ColorSync，Windows 使用 ICM。两者读取同样的 ICC 配置文件，在舍入误差内得到相同数值。这是最容易悄悄偏离的部分，所以一致性测试覆盖了它。
 
+屏幕显示方面，macOS 通过显示器的 ColorSync 配置文件绘制。Windows 只有在开启 Advanced Color 时才这样做。关闭时，Windows 把应用像素当作 sRGB 直接送到显示器，所以 negaflow 在绘制前把冲洗画布和打印预览转换到显示器的 ICC 配置文件。缩略图和界面其余部分按 sRGB 绘制。
+
 ### 图形
 
 macOS 在 Core Image 上运行显影链。Windows 在 Direct3D 计算着色器上运行，GPU 路径不可用时退回 CPU。

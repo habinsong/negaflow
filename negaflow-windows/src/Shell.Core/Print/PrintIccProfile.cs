@@ -65,10 +65,30 @@ public static class PrintIccProfile
 
     private static string Signature(ReadOnlySpan<byte> header, int offset) =>
         System.Text.Encoding.ASCII.GetString(header.Slice(offset, 4));
-    /// <summary>D50 기준 백색점입니다. macOS <c>SoftProof.referenceD50</c>.</summary>
-    private const double D50X = 0.9642;
-    private const double D50Y = 1.0;
-    private const double D50Z = 0.8249;
+    /// <summary>
+    /// PCS XYZ(D50) → 선형 sRGB. ICC sRGB 색소(Bradford 로 D50 에 맞춘 값)의 역행렬입니다(macOS
+    /// <c>SoftProof.xyzD50ToLinearSRGB</c>, 네이티브 <c>xyz_d50_to_linear_srgb</c> 와 같은 값). XYZ/D50
+    /// 비율을 그대로 RGB 배율로 쓰던 앞 판은 따뜻한 용지의 색조를 노랑 쪽으로 틀었습니다.
+    /// </summary>
+    private static readonly double[,] XyzD50ToLinearSrgb =
+    {
+        { 3.133856368, -1.61686677, -0.490614773 },
+        { -0.978768563, 1.916141553, 0.033454116 },
+        { 0.071945168, -0.228991277, 1.405242674 },
+    };
+
+    private static double[] LinearSrgb(double[] xyz, double ceiling)
+    {
+        double[] rgb = new double[3];
+        for (int row = 0; row < 3; ++row)
+        {
+            double value = (XyzD50ToLinearSrgb[row, 0] * xyz[0]) +
+                (XyzD50ToLinearSrgb[row, 1] * xyz[1]) +
+                (XyzD50ToLinearSrgb[row, 2] * xyz[2]);
+            rgb[row] = Math.Clamp(value, 0, ceiling);
+        }
+        return rgb;
+    }
 
     /// <summary>
     /// 프로파일의 매체 흰색과 잉크 검정입니다. macOS
@@ -112,13 +132,22 @@ public static class PrintIccProfile
         }
         double[]? white = null;
         double[]? black = null;
+        double[]? red = null;
+        double[]? green = null;
+        double[]? blue = null;
+        var signatures = new HashSet<string>(StringComparer.Ordinal);
         for (int index = 0; index < count; ++index)
         {
             int entry = 132 + (index * 12);
             string signature = System.Text.Encoding.ASCII.GetString(data.Slice(entry, 4));
             long offset = ReadUInt32(data, entry + 4);
             long size = ReadUInt32(data, entry + 8);
-            if (size < 20 || offset + size > data.Length)
+            if (size <= 0 || offset + size > data.Length)
+            {
+                continue;
+            }
+            signatures.Add(signature);
+            if (size < 20)
             {
                 continue;
             }
@@ -130,31 +159,48 @@ public static class PrintIccProfile
                 case "bkpt":
                     black = ReadXyz(data, (int)offset);
                     break;
+                case "rXYZ":
+                    red = ReadXyz(data, (int)offset);
+                    break;
+                case "gXYZ":
+                    green = ReadXyz(data, (int)offset);
+                    break;
+                case "bXYZ":
+                    blue = ReadXyz(data, (int)offset);
+                    break;
                 default:
                     continue;
             }
+        }
+        // ICC v2 행렬/TRC 프로파일은 `wtpt` 에 적응하지 않은 흰색(D65)을 적어도 됩니다. 그대로
+        // D50 으로 나누면 프루프가 파랗게 물듭니다. 행렬/TRC RGB 프로파일은 색소 합, 곧 정의상
+        // PCS 흰색을 씁니다 — 네이티브 `color::read_soft_proof_media`, macOS
+        // `SoftProof.mediaTags` 와 같은 규칙입니다. 인화소 LUT 프로파일은 그대로 `wtpt` 입니다.
+        bool matrixTrc =
+            System.Text.Encoding.ASCII.GetString(data.Slice(16, 4)) == "RGB " &&
+            signatures.IsSupersetOf(["rXYZ", "gXYZ", "bXYZ", "rTRC", "gTRC", "bTRC"]);
+        if (matrixTrc && red is not null && green is not null && blue is not null)
+        {
+            white = [red[0] + green[0] + blue[0], red[1] + green[1] + blue[1], red[2] + green[2] + blue[2]];
         }
         if (white is null && black is null)
         {
             return null;
         }
         return (
-            // macOS: `clamp(white / D50, 0, 1.2)` · `clamp(black / D50, 0, 0.3)`.
-            white is null
-                ? [1, 1, 1]
-                : [
-                    Math.Clamp(white[0] / D50X, 0, 1.2),
-                    Math.Clamp(white[1] / D50Y, 0, 1.2),
-                    Math.Clamp(white[2] / D50Z, 0, 1.2),
-                ],
-            black is null
-                ? [0, 0, 0]
-                : [
-                    Math.Clamp(black[0] / D50X, 0, 0.3),
-                    Math.Clamp(black[1] / D50Y, 0, 0.3),
-                    Math.Clamp(black[2] / D50Z, 0, 0.3),
-                ]);
+            // macOS: 흰색은 [0, 1.2], 검정은 [0, 0.3] 으로 묶고 1e-3 안이면 맞춤.
+            white is null ? [1, 1, 1] : Snap(LinearSrgb(white, 1.2), 1),
+            black is null ? [0, 0, 0] : Snap(LinearSrgb(black, 0.3), 0));
     }
+
+    /// <summary>
+    /// 색소 합은 s15Fixed16 반올림 때문에 D50 에서 2e-4 안쪽으로 어긋납니다. 세 채널이 모두
+    /// 1e-3 안이면 정확한 값으로 맞춥니다(네이티브 `soft_proof_neutral_tolerance`).
+    /// </summary>
+    private static double[] Snap(double[] channels, double reference) =>
+        channels.All(channel => Math.Abs(channel - reference) <= 1.0e-3)
+            ? [reference, reference, reference]
+            : channels;
 
     private static double[]? ReadXyz(ReadOnlySpan<byte> data, int offset)
     {

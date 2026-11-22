@@ -23,10 +23,16 @@ extension ChromabaseMetalKernels {
     }
     """),
         MetalKernelSource(name: "luminanceLevels", body: """
-    [[stitchable]] float4 luminanceLevels(coreimage::sample_t src, float scale, float bias) {
+    // neutralLift(디지털 원본)이면 검정 들어 올리기(bias > 0)를 **무채색으로 더한다.** 비율로
+    // 곱하면 y 가 0 에 가까운 화소의 채널비가 bias/y 만큼 커져 8bit (0,0,1) 이 (0,0,106) 파란
+    // 점이 된다. 검정 자르기(bias ≤ 0)는 비율 그대로이고, 휘도 결과는 둘 다 y·scale + bias 다.
+    // 필름 스캔(neutralLift 0)은 앞 판 식 그대로다.
+    [[stitchable]] float4 luminanceLevels(coreimage::sample_t src, float scale, float bias, float neutralLift) {
         float y = dot(src.rgb, float3(0.2126, 0.7152, 0.0722));
         float mapped = clamp(y * scale + bias, 0.0, 10000.0);
-        float3 color = y > 1e-8 ? src.rgb * (mapped / y) : float3(max(bias, 0.0));
+        float fill = max(bias, 0.0);
+        float lift = neutralLift > 0.5 ? fill : 0.0;
+        float3 color = y > 1e-8 ? src.rgb * (max(mapped - lift, 0.0) / y) + float3(lift) : float3(fill);
         return float4(color, src.a);
     }
     """)

@@ -51,6 +51,63 @@ void expect_pixel_near(
     }
 }
 
+// sRGB 인코딩 값의 색상(도)입니다. 사용자 슬라이더 시험이 "눈에 보이는 색상환" 위치를 봅니다.
+[[nodiscard]] float encoded_hue_degrees(const negaflow::core::Rgba32F pixel) noexcept {
+    const auto encode = [](const float linear) {
+        const float value = std::clamp(linear, 0.0F, 1.0F);
+        return value <= 0.0031308F ? value * 12.92F
+                                   : (1.055F * std::pow(value, 1.0F / 2.4F)) - 0.055F;
+    };
+    const float red = encode(pixel.red);
+    const float green = encode(pixel.green);
+    const float blue = encode(pixel.blue);
+    const float maximum = std::max(red, std::max(green, blue));
+    const float minimum = std::min(red, std::min(green, blue));
+    const float difference = maximum - minimum;
+    if (difference <= 1.0e-5F) {
+        return 0.0F;
+    }
+    float hue = 0.0F;
+    if (maximum == red) {
+        hue = (green - blue) / difference;
+        if (green < blue) {
+            hue += 6.0F;
+        }
+    } else if (maximum == green) {
+        hue = ((blue - red) / difference) + 2.0F;
+    } else {
+        hue = ((red - green) / difference) + 4.0F;
+    }
+    return hue * 60.0F;
+}
+
+// 사용자 슬라이더는 sRGB 인코딩 값에서 HSL 을 계산합니다. sRGB 주황(1, 0.5, 0)은 30° 에
+// 있고, Orange 밴드 색상 +1 은 이웃 밴드와의 가중 평균만큼(약 16.6°) 밉니다. 선형 값에서
+// 계산하던 앞 판은 같은 화소를 12.8° 로 읽어 빨강 쪽에 걸었습니다.
+void test_perceptual_hue_wheel() {
+    const negaflow::core::Rgba32F orange{1.0F, 0.21404114F, 0.0F, 1.0F};
+    negaflow::imaging::ColorMixerParameters parameters{};
+    parameters.hue[1] = 1.0F;  // Orange
+    std::array<negaflow::core::Rgba32F, 1U> output{};
+    expect(
+        negaflow::imaging::apply_color_mixer(
+            {&orange, 1U, 1U, 1U, 1U}, {output.data(), 1U, 1U, 1U, 1U}, parameters) ==
+            negaflow::core::KernelStatus::ok,
+        "perceptual mixer applies");
+    const float hue = encoded_hue_degrees(output[0]);
+    expect(hue > 44.0F && hue < 49.0F, "orange band moves sRGB orange from 30 to about 46.6 degrees");
+
+    parameters.perceptual = false;
+    expect(
+        negaflow::imaging::apply_color_mixer(
+            {&orange, 1U, 1U, 1U, 1U}, {output.data(), 1U, 1U, 1U, 1U}, parameters) ==
+            negaflow::core::KernelStatus::ok,
+        "linear preset mixer applies");
+    expect(
+        std::abs(encoded_hue_degrees(output[0]) - hue) > 2.0F,
+        "the preset path keeps its designed linear behaviour");
+}
+
 void test_fixed_fixture_and_in_place_parity() {
     std::array<negaflow::core::Rgba32F,
                negaflow::fixtures::color_mixer_input.size()> output{};
@@ -139,11 +196,27 @@ void test_gray_gate_and_active_unit_domain() {
     expect(pixels[0].red == 0.4F && pixels[0].green == 0.4F &&
                pixels[0].blue == 0.4F && pixels[0].alpha == 0.3F,
            "achromatic gate protects neutral gray and alpha");
-    expect(pixels[1].red >= 0.0F && pixels[1].red <= 1.0F &&
+    // 사용자 슬라이더 경로는 [0,1] 안에서 보정하고 밖으로 나간 몫(−1, +1)을 다시 더합니다 —
+    // 광색역 음수와 1.0 넘는 하이라이트를 버리지 않습니다(macOS `colorMixerHSL`).
+    expect(pixels[1].red <= 0.0F && pixels[1].red >= -1.0F &&
                pixels[1].green >= 0.0F && pixels[1].green <= 1.0F &&
-               pixels[1].blue >= 0.0F && pixels[1].blue <= 1.0F &&
+               pixels[1].blue >= 1.0F && pixels[1].blue <= 2.0F &&
                pixels[1].alpha == 0.7F,
-           "active mixer uses the bounded working RGB domain");
+           "active slider mixer keeps the part outside the unit cube");
+
+    // 프리셋 경로는 설계된 대로 [0,1] 안에서만 답합니다.
+    negaflow::imaging::ColorMixerParameters preset = active;
+    preset.perceptual = false;
+    negaflow::core::Rgba32F extended{-1.0F, 0.5F, 2.0F, 0.7F};
+    expect(
+        negaflow::imaging::apply_color_mixer(
+            {&extended, 1U, 1U, 1U, 1U}, {&extended, 1U, 1U, 1U, 1U}, preset) ==
+                negaflow::core::KernelStatus::ok &&
+            extended.red >= 0.0F && extended.red <= 1.0F &&
+            extended.green >= 0.0F && extended.green <= 1.0F &&
+            extended.blue >= 0.0F && extended.blue <= 1.0F &&
+            extended.alpha == 0.7F,
+        "preset mixer uses the bounded working RGB domain");
 
     negaflow::imaging::ColorMixerParameters red_saturation{};
     red_saturation.saturation[static_cast<std::size_t>(
@@ -267,6 +340,7 @@ int main() {
     test_gray_gate_and_active_unit_domain();
     test_parameter_and_view_failures();
     test_pipeline_order_and_failure_publication();
+    test_perceptual_hue_wheel();
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"color_mixer\",\"failures\":"

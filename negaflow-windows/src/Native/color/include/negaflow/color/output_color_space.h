@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <span>
 #include <vector>
 
 namespace negaflow::color {
@@ -41,6 +42,23 @@ using ColorMatrix = std::array<float, 9>;
 [[nodiscard]] std::vector<std::uint8_t> build_icc_profile(
     OutputColorSpace space,
     bool linear_transfer = false);
+
+// 임베디드 ICC 가 있는 입력을 옮길 **내부 중간 공간**입니다(Rec.2020 기본색, sRGB 곡선,
+// 16비트). macOS 는 원본 색공간에서 선형 확장 작업 공간으로 곧장 옮겨 sRGB 밖 색을 남기는데,
+// 16비트 sRGB 를 중간 공간으로 쓰던 앞 판은 Display P3·Adobe RGB 원본과 넓은 스캐너
+// 프로파일의 색을 sRGB 에서 잘랐습니다. 게시 색공간이 아니므로 파일에 박지 않습니다.
+[[nodiscard]] std::vector<std::uint8_t> build_working_intermediate_icc_profile();
+
+// 위 중간 공간의 선형 값 → 선형 sRGB 기본색(행 우선). 결과는 음수·1 초과를 그대로 둡니다.
+[[nodiscard]] ColorMatrix working_intermediate_to_linear_srgb() noexcept;
+
+// Gray ICC(데이터 공간 'GRAY', `kTRC`)를 같은 회색 축을 갖는 RGB 행렬/TRC 프로파일로 옮깁니다.
+// R=G=B 로 편 흑백 화소를 이 프로파일로 읽으면 Gray 프로파일로 읽은 것과 같은 XYZ 가 나옵니다
+// (색소 합이 D50, 세 TRC 가 `kTRC`). Windows ICM 의 RGB 16비트 경로를 그대로 쓰려는 것입니다 —
+// macOS 는 Core Image 가 Gray 프로파일을 그대로 받습니다. `para` 곡선은 1024 점 `curv` 로
+// 펼칩니다. Gray 프로파일이 아니거나 곡선을 읽지 못하면 빈 벡터입니다.
+[[nodiscard]] std::vector<std::uint8_t> rgb_profile_for_gray_profile(
+    std::span<const std::uint8_t> gray_profile);
 
 [[nodiscard]] const char* output_color_space_name(OutputColorSpace space) noexcept;
 

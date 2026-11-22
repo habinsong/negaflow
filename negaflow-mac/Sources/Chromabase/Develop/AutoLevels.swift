@@ -36,6 +36,7 @@ public enum AutoLevels {
                       outputBlack: Double = 0.0,
                       region: AnalysisRegion? = nil,
                       sceneLinearOutput: Bool = false,
+                      neutralLift: Bool = false,
                       points cachedPoints: inout Points?) -> CIImage {
         // 샘플링을 위해 작은 영역으로 축소(CIAreaAverage 로는 히스토그램이 안 나옴).
         // 대신 작은 축소본을 렌더링해서 픽셀을 직접 읽는다.
@@ -62,7 +63,9 @@ public enum AutoLevels {
         let outputWhite = outputWhiteOverride ?? (sampleColorSpace?.name == linear?.name ? 0.70 : 0.88)
         let scale = (outputWhite - outputBlack) / (white - black)
         guard let kernel = ChromabaseMetalKernels.colorKernel(named: "luminanceLevels") else { return image }
-        return kernel.apply(extent: image.extent, arguments: [image, scale, outputBlack - black * scale]) ?? image
+        return kernel.apply(extent: image.extent, arguments: [
+            image, scale, outputBlack - black * scale, neutralLift ? Float(1) : Float(0),
+        ]) ?? image
     }
 
     /// 네거티브 반전 뒤의 자동 레벨. 끝점을 반전 응답이 장면 흰색·검정에 쓰는 앵커(컬러 흰색

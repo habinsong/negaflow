@@ -70,7 +70,6 @@ public struct SoftProofXYZ: Sendable, Equatable {
 }
 
 public enum SoftProof {
-    private static let referenceD50 = SoftProofXYZ(x: 0.9642, y: 1.0, z: 0.8249)
 
     public static func profile(for colorSpace: ExportColorSpace) -> SoftProofProfile? {
         let cgColorSpace = colorSpace.cgColorSpace
@@ -136,27 +135,47 @@ public enum SoftProof {
         return paperWhiteRGB(from: media.white)
     }
 
+    /// 프로파일의 용지 흰색과 잉크 검정을 읽는다.
+    ///
+    /// ICC v2 행렬/TRC 프로파일은 `wtpt` 에 적응하지 않은 매체 흰색을 적어도 된다. 이 맥의
+    /// 시스템 sRGB·Adobe RGB 프로파일이 그렇다 — `wtpt` 가 D65(0.9505, 1.0, 1.0891)라
+    /// 그대로 D50 으로 나누면 파랑이 1.32(상한 1.2)·빨강이 0.986 이 되어 프루프가 파랗게
+    /// 물든다(회색 200 → (199, 200, 218)). 그래서 행렬/TRC RGB 프로파일은 rXYZ+gXYZ+bXYZ,
+    /// 곧 정의상 PCS 흰색을 흰색으로 쓴다. 실제 프린터·인화지 프로파일은 전부 LUT 형이라
+    /// 지금처럼 `wtpt` 를 읽으므로 측정된 용지 흰색은 그대로 남는다. 윈도우
+    /// `color::read_soft_proof_media` 와 같은 규칙이다.
     public static func mediaTags(fromICCData data: Data) -> SoftProofMedia? {
         guard data.count >= 132 else { return nil }
         let tagCount = Int(readUInt32(data, at: 128))
         guard tagCount >= 0, data.count >= 132 + tagCount * 12 else { return nil }
-        var white: SoftProofXYZ?
-        var black: SoftProofXYZ?
+        var tags: [String: SoftProofXYZ] = [:]
+        var signatures = Set<String>()
         for index in 0..<tagCount {
             let entry = 132 + index * 12
-            let signature = String(data: data[entry..<(entry + 4)], encoding: .ascii)
-            let offset = Int(readUInt32(data, at: entry + 4))
-            let size = Int(readUInt32(data, at: entry + 8))
-            guard offset >= 0, size >= 20, offset + size <= data.count else { continue }
-            switch signature {
-            case "wtpt":
-                white = readXYZType(data, at: offset)
-            case "bkpt":
-                black = readXYZType(data, at: offset)
-            default:
+            guard let signature = String(data: data[entry..<(entry + 4)], encoding: .ascii) else {
                 continue
             }
+            let offset = Int(readUInt32(data, at: entry + 4))
+            let size = Int(readUInt32(data, at: entry + 8))
+            guard offset >= 0, size > 0, offset + size <= data.count else { continue }
+            signatures.insert(signature)
+            guard size >= 20,
+                  ["wtpt", "bkpt", "rXYZ", "gXYZ", "bXYZ"].contains(signature),
+                  let xyz = readXYZType(data, at: offset) else { continue }
+            tags[signature] = xyz
         }
+        let rgbDataSpace = String(data: data[16..<20], encoding: .ascii) == "RGB "
+        let matrixTRC = rgbDataSpace
+            && ["rXYZ", "gXYZ", "bXYZ", "rTRC", "gTRC", "bTRC"].allSatisfy(signatures.contains)
+        var white = tags["wtpt"]
+        if matrixTRC, let red = tags["rXYZ"], let green = tags["gXYZ"], let blue = tags["bXYZ"] {
+            white = SoftProofXYZ(
+                x: red.x + green.x + blue.x,
+                y: red.y + green.y + blue.y,
+                z: red.z + green.z + blue.z
+            )
+        }
+        let black = tags["bkpt"]
         guard white != nil || black != nil else { return nil }
         return SoftProofMedia(white: white, black: black)
     }
@@ -173,22 +192,52 @@ public enum SoftProof {
         )
     }
 
+    /// 색소 합은 s15Fixed16 반올림 때문에 D50 에서 2e-4 안쪽으로 어긋난다. 그대로 두면 배율
+    /// 1.000006 이 8비트 경계의 화소 하나를 한 단계 넘기므로, 세 채널이 모두 이 안이면 정확한
+    /// 값으로 맞춘다. 실제 용지는 이보다 두 자릿수 멀다(윈도우 `soft_proof_neutral_tolerance`).
+    private static let neutralTolerance = 1.0e-3
+
+    /// PCS XYZ(D50) → 선형 sRGB. ICC sRGB 색소(Bradford 로 D50 에 맞춘 값)의 역행렬이다. 용지 흰색·
+    /// 잉크 검정을 XYZ/D50 비율 그대로 RGB 배율로 쓰던 앞 판은 따뜻한 용지(X·Y 0.97, Z 0.92)를
+    /// (0.970, 0.970, 0.920) 으로 그렸지만 이 행렬로는 (0.990, 0.969, 0.912) 다(Gemini 보고, 2026-11-22).
+    /// 윈도우 `soft_proof.cpp` `xyz_d50_to_linear_srgb` 와 같은 값.
+    private static let xyzD50ToLinearSRGB: [SIMD3<Double>] = [
+        SIMD3(3.133856368, -1.61686677, -0.490614773),
+        SIMD3(-0.978768563, 1.916141553, 0.033454116),
+        SIMD3(0.071945168, -0.228991277, 1.405242674),
+    ]
+
+    private static func linearSRGB(from xyz: SoftProofXYZ) -> SIMD3<Double> {
+        let v = SIMD3(xyz.x, xyz.y, xyz.z)
+        return SIMD3((xyzD50ToLinearSRGB[0] * v).sum(), (xyzD50ToLinearSRGB[1] * v).sum(), (xyzD50ToLinearSRGB[2] * v).sum())
+    }
+
     private static func paperWhiteRGB(from white: SoftProofXYZ?) -> SIMD3<Double> {
         guard let white else { return SIMD3<Double>(1, 1, 1) }
-        return SIMD3<Double>(
-            clamp(white.x / referenceD50.x, min: 0, max: 1.2),
-            clamp(white.y / referenceD50.y, min: 0, max: 1.2),
-            clamp(white.z / referenceD50.z, min: 0, max: 1.2)
-        )
+        let rgb = linearSRGB(from: white)
+        return snapped(SIMD3<Double>(
+            clamp(rgb.x, min: 0, max: 1.2),
+            clamp(rgb.y, min: 0, max: 1.2),
+            clamp(rgb.z, min: 0, max: 1.2)
+        ), to: 1)
     }
 
     private static func blackInkRGB(from black: SoftProofXYZ?) -> SIMD3<Double> {
         guard let black else { return SIMD3<Double>(0, 0, 0) }
-        return SIMD3<Double>(
-            clamp(black.x / referenceD50.x, min: 0, max: 0.3),
-            clamp(black.y / referenceD50.y, min: 0, max: 0.3),
-            clamp(black.z / referenceD50.z, min: 0, max: 0.3)
-        )
+        let rgb = linearSRGB(from: black)
+        return snapped(SIMD3<Double>(
+            clamp(rgb.x, min: 0, max: 0.3),
+            clamp(rgb.y, min: 0, max: 0.3),
+            clamp(rgb.z, min: 0, max: 0.3)
+        ), to: 0)
+    }
+
+    /// 세 채널을 한 묶음으로 맞춘다. 두 채널만 중립이고 한 채널이 물든 용지는 진짜 용지다.
+    private static func snapped(_ channels: SIMD3<Double>, to reference: Double) -> SIMD3<Double> {
+        let near = abs(channels.x - reference) <= neutralTolerance
+            && abs(channels.y - reference) <= neutralTolerance
+            && abs(channels.z - reference) <= neutralTolerance
+        return near ? SIMD3<Double>(repeating: reference) : channels
     }
 
     private static func readUInt32(_ data: Data, at offset: Int) -> UInt32 {

@@ -6,6 +6,7 @@
 #include <wrl/client.h>
 
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <string>
@@ -232,6 +233,55 @@ void verify_output_profile_is_attached(const TempDirectory& temp) {
     }
 }
 
+// Delivery 색공간이 P3 면 판(sRGB 코드값) 전체가 P3 코드값으로 옮겨지고 P3 프로파일이
+// 붙습니다. 앞 판은 이 선택을 무시하고 늘 sRGB 로 냈습니다(macOS 는 `options.colorSpace`).
+// 기대값은 엔진과 따로 계산한 값입니다: sRGB 빨강 = P3 선형 (0.8225, 0.0332, 0.0171).
+void verify_delivery_color_space(const TempDirectory& temp) {
+    std::vector<std::uint16_t> page(static_cast<std::size_t>(kWidth) * kHeight * 3U, 32768U);
+    page[0] = 65535U;
+    page[1] = 0U;
+    page[2] = 0U;
+    const std::filesystem::path destination = temp.path() / L"delivery-p3.png";
+    negaflow::output::PrintSheetPublishLimits limits{};
+    limits.output_color_space = negaflow::color::OutputColorSpace::display_p3;
+    const negaflow::output::PrintSheetPublishResult result =
+        negaflow::output::publish_print_sheet(
+            page, kWidth, kHeight, kWidth * 3U * 2U, destination,
+            negaflow::output::PrintSheetFormat::png16, limits);
+    if (result.status != negaflow::output::PrintSheetPublishStatus::ok) {
+        report(result, "P3 delivery sheet");
+    }
+    expect(result.status == negaflow::output::PrintSheetPublishStatus::ok,
+           "the sheet publishes in the Display P3 delivery space");
+    const ReadBack read = read_back(destination, true);
+    expect(read.profile ==
+               negaflow::color::build_icc_profile(negaflow::color::OutputColorSpace::display_p3),
+           "the P3 delivery sheet carries the P3 profile");
+    if (read.samples.size() == page.size()) {
+        const auto close_code = [](const std::uint16_t actual, const int expected) {
+            return std::abs(static_cast<int>(actual) - expected) <= 3;
+        };
+        expect(close_code(read.samples[0], 60128) && close_code(read.samples[1], 13126) &&
+                   close_code(read.samples[2], 9081),
+               "sRGB red becomes P3-encoded red");
+        expect(std::abs(static_cast<int>(read.samples[3]) - 32768) <= 1 &&
+                   read.samples[3] == read.samples[4] && read.samples[4] == read.samples[5],
+               "a neutral grey keeps its code in P3 (same white and curve)");
+    } else {
+        expect(false, "the P3 delivery sheet returns every sample");
+    }
+
+    // JPEG 도 P3 로 냅니다(macOS 와 같음) — 화소를 옮기고 P3 프로파일을 박습니다.
+    negaflow::output::PrintSheetPublishLimits jpeg = limits;
+    const negaflow::output::PrintSheetPublishResult published_jpeg =
+        negaflow::output::publish_print_sheet(
+            page, kWidth, kHeight, kWidth * 3U * 2U, temp.path() / L"delivery-p3.jpg",
+            negaflow::output::PrintSheetFormat::jpeg8, jpeg);
+    expect(published_jpeg.status == negaflow::output::PrintSheetPublishStatus::ok &&
+               std::filesystem::exists(temp.path() / L"delivery-p3.jpg"),
+           "JPEG publishes a P3 delivery sheet");
+}
+
 void verify_refusals(const TempDirectory& temp) {
     const std::vector<std::uint16_t> page = make_page();
     const std::filesystem::path destination = temp.path() / L"refusals.png";
@@ -304,6 +354,7 @@ int main() {
         verify_sixteen_bit_round_trip(
             temp, negaflow::output::PrintSheetFormat::tiff16, L".tif", "a 16-bit TIFF sheet publishes");
         verify_output_profile_is_attached(temp);
+        verify_delivery_color_space(temp);
         verify_refusals(temp);
     }
     CoUninitialize();

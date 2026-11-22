@@ -125,9 +125,36 @@ public:
                 if (result_.status != ScannerToWorkingStatus::ok) {
                     return false;
                 }
+                // 목적지는 내부 중간 공간입니다(Rec.2020, sRGB 곡선) — 16비트 sRGB 로 옮기면
+                // 넓은 스캐너 프로파일의 색이 sRGB 에서 잘립니다. macOS 는 선형 확장 작업
+                // 공간으로 곧장 옮깁니다.
+                const std::span<const std::uint8_t> intermediate =
+                    detail::working_intermediate_profile();
+                if (intermediate.empty()) {
+                    result_.status = ScannerToWorkingStatus::allocation_failed;
+                    return false;
+                }
+                std::span<const std::uint8_t> source_profile = gamma_profile_.empty()
+                    ? std::span<const std::uint8_t>(frame.icc_profile)
+                    : std::span<const std::uint8_t>(gamma_profile_);
+                // Gray 프로파일(흑백 스캔)은 같은 회색 축의 RGB 프로파일로 옮겨 읽습니다.
+                // 흑백 표본은 띠마다 세 채널로 펴서 넘깁니다.
+                if (detail::icc_is_gray(source_profile)) {
+                    if (frame.layout != negaflow::imageio::DecodedPixelLayout::gray16) {
+                        result_.status = ScannerToWorkingStatus::unsupported_icc_color_space;
+                        return false;
+                    }
+                    gray_as_rgb_profile_ =
+                        negaflow::color::rgb_profile_for_gray_profile(source_profile);
+                    if (gray_as_rgb_profile_.empty()) {
+                        result_.status = ScannerToWorkingStatus::unsupported_icc_color_space;
+                        return false;
+                    }
+                    source_profile = gray_as_rgb_profile_;
+                }
                 result_.status =
-                    transform_.initialize(gamma_profile_.empty() ? frame.icc_profile
-                        : std::span<const std::uint8_t>(gamma_profile_), result_.info.native_error_code);
+                    transform_.initialize(source_profile, result_.info.native_error_code,
+                        intermediate);
                 if (result_.status != ScannerToWorkingStatus::ok) {
                     return false;
                 }
@@ -392,7 +419,7 @@ private:
 
         constexpr float u16_scale = 1.0F / 65'535.0F;
         const std::size_t encoded_stride = static_cast<std::size_t>(width_) * 3U;
-        const auto linear_samples = negaflow::color::srgb16_to_linear_table();
+        const detail::IntermediateToWorking decode{};
         const std::size_t channels = negaflow::imageio::channel_count(layout_);
         const std::size_t input_stride = source_stride_bytes_ / sizeof(std::uint16_t);
         const bool has_alpha =
@@ -418,14 +445,13 @@ private:
                         const std::size_t offset = static_cast<std::size_t>(column) * 3U;
                         const std::size_t input_offset =
                             static_cast<std::size_t>(column) * channels;
-                        destination[column] = {
-                            linear_samples[source_row[offset]],
-                            linear_samples[source_row[offset + 1U]],
-                            linear_samples[source_row[offset + 2U]],
+                        destination[column] = decode(
+                            source_row[offset],
+                            source_row[offset + 1U],
+                            source_row[offset + 2U],
                             has_alpha
                                 ? static_cast<float>(input_row[input_offset + 3U]) * u16_scale
-                                : 1.0F,
-                        };
+                                : 1.0F);
                     }
                 }
             });
@@ -441,6 +467,7 @@ private:
     std::vector<float> gamma_samples_{};
     std::vector<std::uint16_t> gamma_encoded_samples_{};
     std::vector<std::uint8_t> gamma_profile_{};
+    std::vector<std::uint8_t> gray_as_rgb_profile_{};
     detail::ParallelIcmRgb16Transform transform_{};
     std::vector<std::uint16_t> packed_rgb_{};
     std::vector<std::uint16_t> encoded_srgb_{};

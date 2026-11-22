@@ -24,9 +24,10 @@ enum DigitalFilmColorPresetStage {
             return image
         }
 
-        img = ColorMixerStage.apply(to: img, mixer: preset.mixer)
-        img = ColorGradingStage.apply(to: img, grading: preset.grading)
-        img = CalibrationStage.apply(to: img, calibration: preset.calibration)
+        // 이미 감마로 바꾼 값이므로 단계가 다시 인코딩하지 않게 한다.
+        img = ColorMixerStage.apply(to: img, mixer: preset.mixer, perceptual: false)
+        img = ColorGradingStage.apply(to: img, grading: preset.grading, perceptual: false)
+        img = CalibrationStage.apply(to: img, calibration: preset.calibration, perceptual: false)
 
         guard let rendered = toLinear.apply(extent: extent, arguments: [img])?.cropped(to: extent) else {
             return image

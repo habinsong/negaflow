@@ -26,7 +26,8 @@ struct alignas(16) ColorGradeConstants final {
     float midtone_offset[3]{0.0F, 0.0F, 0.0F};
     float width{0.0F};
     float highlight_offset[3]{0.0F, 0.0F, 0.0F};
-    float padding{0.0F};
+    // 1 이면 sRGB 인코딩 영역(사용자 슬라이더), 0 이면 선형(필름 룩 프리셋)입니다. HLSL `Perceptual`.
+    float perceptual{1.0F};
 };
 
 static_assert(sizeof(ColorGradeConstants) == 64U, "four constant registers");
@@ -255,6 +256,8 @@ GpuKernelStatus GpuPrimaryCalibration::dispatch(
     payload.saturation[0][0] = parameters.red_saturation;
     payload.saturation[1][0] = parameters.green_saturation;
     payload.saturation[2][0] = parameters.blue_saturation;
+    // 셰이더는 `HueControls[0].y` 를 perceptual 플래그로 읽습니다(컬러 믹서와 같은 자리).
+    payload.hue[0][1] = parameters.perceptual ? 1.0F : 0.0F;
     return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
 }
 
@@ -290,6 +293,8 @@ GpuKernelStatus GpuColorMixer::dispatch(
         payload.saturation[index][0] = parameters.saturation[index];
         payload.luminance[index][0] = parameters.luminance[index];
     }
+    // 머리 16바이트는 디스패치가 범위로 덮어쓰므로 빈 `.y` 자리에 싣습니다(HLSL `HueControls[0].y`).
+    payload.hue[0][1] = parameters.perceptual ? 1.0F : 0.0F;
     return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
 }
 
@@ -324,6 +329,7 @@ GpuKernelStatus GpuColorGrade::dispatch(
     }
     payload.pivot = setup.pivot;
     payload.width = setup.width;
+    payload.perceptual = setup.perceptual ? 1.0F : 0.0F;
     return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
 }
 

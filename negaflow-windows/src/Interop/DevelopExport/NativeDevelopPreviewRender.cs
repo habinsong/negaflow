@@ -106,6 +106,11 @@ internal static unsafe class NativeDevelopPreviewRender
             nativeProof.Enabled = softProof is { IsEnabled: true } ? 1U : 0U;
             nativeProof.SimulatePaperAndBlackInk =
                 softProof?.Simulation == SoftProofSimulation.PaperAndBlackInk ? 1U : 0U;
+            // 색역 경고입니다. 앞 판은 이 자리를 채우지 않아 현상 화면에서 경고가 한 번도
+            // 뜨지 않았습니다. ICC 목적지가 있으면 판정은 그 프로파일로 미리보기 쪽이 하고
+            // (`PreviewCoordinator`), 없을 때만 엔진이 내보내기 색공간으로 판정합니다.
+            nativeProof.WarnOutOfGamut =
+                softProof is { IsEnabled: true, WarnOutOfGamut: true, ProofProfile: null } ? 1U : 0U;
             if (softProof is not null)
             {
                 nativeProof.PaperWhiteRgb[0] = (float)softProof.PaperWhite.Red;

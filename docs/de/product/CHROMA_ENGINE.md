@@ -8,7 +8,7 @@ Chroma Engine invertiert und entwickelt Film. Der Code liegt im Modul `Chromabas
 |---|---|
 | Standardentwicklung | `MAIN`, Auto-Abgleich ON |
 | Filmbasis | Automatische Messung, Pipette, direkte RGB-Eingabe |
-| Interne Farbe | Linearer 32-Bit-Gleitkomma-Farbraum |
+| Interne Farbe | Linearer Gleitkomma-Farbraum (16-Bit-Half-Float unter macOS, 32-Bit-Float unter Windows) |
 | Automatische Funktionen | Auto-Abgleich ON |
 | Ausgabefarbraum | sRGB, Display P3, Adobe RGB, eigenes RGB-ICC |
 
@@ -25,7 +25,7 @@ Chroma Engine invertiert und entwickelt Film. Der Code liegt im Modul `Chromabas
 
 ## Reihenfolge der Schritte
 
-Das Arbeitsbild wird in einem linearen 32-Bit-Gleitkomma-Farbraum verarbeitet. Nur Operationen, die ein Gamma brauchen, rechnen an ihrer festen Stelle um, und die Kodierung für Bildschirm oder Dateiformat folgt am Ende.
+Das Arbeitsbild wird in einem linearen Gleitkomma-Farbraum verarbeitet: 16-Bit-Half-Float in Core Image unter macOS, 32-Bit-Float in der Windows-Engine. Beide behalten Werte unter 0 und über 1. Nur Operationen, die ein Gamma brauchen, rechnen an ihrer festen Stelle um, und die Kodierung für Bildschirm oder Dateiformat folgt am Ende.
 
 1. Datei lesen und Ausrichtung korrigieren.
 2. Lineare Eingabe (Kamera-RGB bei RAW).

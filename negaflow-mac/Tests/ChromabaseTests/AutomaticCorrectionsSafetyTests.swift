@@ -45,6 +45,26 @@ final class AutomaticCorrectionsSafetyTests: XCTestCase {
         XCTAssertEqual(before.x / before.z, after.x / after.z, accuracy: 1e-5)
         XCTAssertEqual(before.y / before.z, after.y / after.z, accuracy: 1e-5)
     }
+    /// 디지털 원본은 검정 들어 올리기를 무채색으로 더한다. 비율로 곱하면 거의 검은 파란 화소가 파란 점이 된다
+    /// (8bit (0,0,1) → (0,0,106)). 필름 스캔(neutralLift false)은 앞 판 식 그대로이고 휘도는 둘이 같다.
+    func testDigitalBlackLiftIsAddedNeutrally() {
+        let dark = SIMD3<Double>(0, 0, 0.0003)
+        let image = SyntheticScan.makeImage(width: 256, height: 128) { x, _ in
+            x < 8 ? dark : SIMD3(repeating: Double(x) / 255 * 0.8)
+        }
+        func levels(neutralLift: Bool) -> CIImage {
+            var points: AutoLevels.Points? = AutoLevels.Points(black: .zero, white: SIMD3(repeating: 0.8))
+            return AutoLevels.apply(to: image, sampleColorSpace: linear, outputWhite: 0.86, outputBlack: 0.014,
+                                    neutralLift: neutralLift, points: &points)
+        }
+        let digital = pixel(levels(neutralLift: true), x: 2), film = pixel(levels(neutralLift: false), x: 2)
+        let weights = SIMD3<Double>(0.2126, 0.7152, 0.0722)
+        let scale = (0.86 - 0.014) / 0.8, y = (dark * weights).sum()
+        XCTAssertEqual((digital * weights).sum(), (film * weights).sum(), accuracy: 1e-4)
+        XCTAssertEqual(digital.x, 0.014, accuracy: 2e-4)
+        XCTAssertEqual(digital.z, dark.z * scale + 0.014, accuracy: 2e-4)
+        XCTAssertEqual(film.z, dark.z * (y * scale + 0.014) / y, accuracy: 0.01 * film.z)
+    }
     func testWeakWhiteBalanceEvidenceIsDampedAndClippedChannelsAreExcluded() throws {
         let warm = AutoAdjust.autoWhiteBalance(try XCTUnwrap(AutoAdjust.imageStats(flat([180,120,75]))))
         XCTAssertLessThan(abs(warm.warmth), 0.4)

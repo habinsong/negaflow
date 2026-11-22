@@ -70,6 +70,8 @@ struct SceneAutoLevelsPlan final {
     bool apply{false};
     double scale[3]{1.0, 1.0, 1.0};
     double bias[3]{0.0, 0.0, 0.0};
+    // 검정 들어 올리기(bias > 0)를 무채색으로 더할지입니다. 디지털 원본 양화에서만 켭니다.
+    bool neutral_lift{false};
 };
 
 // 자동 색상(중성 균형)입니다. 채널마다 c' = gain·c^exponent — 장면의 중립축 증거에 맞춘

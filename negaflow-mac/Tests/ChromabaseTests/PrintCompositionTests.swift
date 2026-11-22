@@ -171,6 +171,28 @@ final class PrintCompositionTests: XCTestCase {
         XCTAssertEqual(glassPlate.y, glassPlate.z, accuracy: 0.001)
     }
 
+    /// 파일·워터마크 미리보기도 화면(SwiftUI `.grayscale(1).colorInvert()`)과 윈도우
+    /// `PrintPresentationFilter` 처럼 **표시값**의 Rec.709 밝기로 계산해야 한다. 선형에서
+    /// 반전하던 앞 판은 sRGB 118 을 234 로 냈다(화면 137).
+    func testPresentationStylesComputeOnDisplayValuesLikeTheScreen() throws {
+        let gray = CIImage(color: CIColor(red: 118 / 255, green: 118 / 255, blue: 118 / 255))
+            .cropped(to: CGRect(x: 0, y: 0, width: 1, height: 1))
+        let glassPlate = try rgba(PrintPresentationRenderer.apply(to: gray, style: .glassPlate))
+        XCTAssertEqual(glassPlate.x * 255, 137, accuracy: 0.5)
+
+        let color = CIImage(color: CIColor(red: 0.2, green: 0.45, blue: 0.8))
+            .cropped(to: CGRect(x: 0, y: 0, width: 1, height: 1))
+        let luminance: Float = 0.2126 * 0.2 + 0.7152 * 0.45 + 0.0722 * 0.8
+        let gelatin = try rgba(PrintPresentationRenderer.apply(to: color, style: .gelatinSilver))
+        XCTAssertEqual(gelatin.y, luminance, accuracy: 0.002)
+
+        let palette = PrintPresentationAppearance(style: .cyanotype)
+        let cyanotype = try rgba(PrintPresentationRenderer.apply(to: color, style: .cyanotype))
+        let expectedBlue = Float(palette.shadowRGBA.z)
+            + (Float(palette.highlightRGBA.z) - Float(palette.shadowRGBA.z)) * luminance
+        XCTAssertEqual(cyanotype.z, expectedBlue, accuracy: 0.002)
+    }
+
     func testLegacyCompositionWithoutPresentationStyleDecodesAsStandard() throws {
         let encoded = try JSONEncoder().encode(PrintCompositionSettings())
         var object = try XCTUnwrap(

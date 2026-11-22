@@ -18,7 +18,8 @@ cbuffer ColorGradeConstants : register(b0) {
     float3 MidtoneOffset;
     float Width;
     float3 HighlightOffset;
-    float Padding1;
+    // 1 이면 sRGB 인코딩 영역(사용자 슬라이더), 0 이면 선형(필름 룩 프리셋)입니다.
+    float Perceptual;
 };
 
 [numthreads(8, 8, 1)]
@@ -29,7 +30,16 @@ void ColorGradeMain(uint3 id : SV_DispatchThreadID) {
     uint2 coordinate = id.xy;
     float4 source = Source[coordinate];
 
-    float sourceLuma = dot(source.rgb, LumaCoefficients);
+    // 사용자 슬라이더는 영역 가중치와 색 더하기를 sRGB 인코딩 값에서 합니다(CPU
+    // `apply_color_grading_pixel`). 프리셋은 설계된 선형 동작입니다.
+    bool perceptual = Perceptual > 0.5;
+    float3 encoded = perceptual
+        ? float3(
+              LinearToSrgbEncoded(saturate(source.r)),
+              LinearToSrgbEncoded(saturate(source.g)),
+              LinearToSrgbEncoded(saturate(source.b)))
+        : source.rgb;
+    float sourceLuma = dot(encoded, LumaCoefficients);
     float transition = smoothstep(Pivot - Width, Pivot + Width, sourceLuma);
     float shadowWeight = 1.0 - transition;
     float highlightWeight = transition;
@@ -38,10 +48,16 @@ void ColorGradeMain(uint3 id : SV_DispatchThreadID) {
     float midtoneWeight = clamp(1.0 - (abs(sourceLuma - Pivot) / Width), 0.0, 1.0);
 
     // CPU 판과 같은 순서로 더합니다 — 그림자 → 미드톤 → 명부.
-    float3 rgb = source.rgb;
+    float3 rgb = encoded;
     rgb += shadowWeight * ShadowOffset;
     rgb += midtoneWeight * MidtoneOffset;
     rgb += highlightWeight * HighlightOffset;
 
-    Destination[coordinate] = float4(clamp(rgb, 0.0, 1.0), source.a);
+    rgb = clamp(rgb, 0.0, 1.0);
+    if (perceptual) {
+        // [0,1] 밖 몫은 보정 뒤 다시 더합니다(CPU `apply_color_grading_pixel`).
+        rgb = float3(SrgbEncodedToLinear(rgb.r), SrgbEncodedToLinear(rgb.g), SrgbEncodedToLinear(rgb.b)) +
+            (source.rgb - saturate(source.rgb));
+    }
+    Destination[coordinate] = float4(rgb, source.a);
 }

@@ -1,5 +1,6 @@
 #include "negaflow/imaging/color_mixer.h"
 
+#include "negaflow/color/srgb_transfer.h"
 #include "negaflow/core/pointwise.h"
 
 #include <algorithm>
@@ -136,11 +137,21 @@ struct Hsl final {
 [[nodiscard]] Rgb apply_color_mixer_pixel(
     const Rgb source,
     const ColorMixerParameters& parameters) noexcept {
-    Hsl hsl = rgb_to_hsl({
+    // 사용자 슬라이더는 HSL 을 sRGB 인코딩 값에서 계산합니다(macOS `colorMixerHSL`). 선형 값의
+    // 색상환은 비틀려 있어 sRGB 주황(30°)이 13° 에 놓입니다. 프리셋은 설계된 선형 동작입니다.
+    const bool perceptual = parameters.perceptual;
+    const Rgb bounded_source{
         std::clamp(source.red, 0.0F, 1.0F),
         std::clamp(source.green, 0.0F, 1.0F),
         std::clamp(source.blue, 0.0F, 1.0F),
-    });
+    };
+    Hsl hsl = rgb_to_hsl(perceptual
+        ? Rgb{
+              negaflow::color::linear_to_srgb_encoded(bounded_source.red),
+              negaflow::color::linear_to_srgb_encoded(bounded_source.green),
+              negaflow::color::linear_to_srgb_encoded(bounded_source.blue),
+          }
+        : bounded_source);
 
     float weight_sum = 0.0F;
     float hue_shift = 0.0F;
@@ -175,10 +186,20 @@ struct Hsl final {
         1.0F);
 
     const Rgb result = hsl_to_rgb(hsl);
-    return {
+    const Rgb bounded{
         std::clamp(result.red, 0.0F, 1.0F),
         std::clamp(result.green, 0.0F, 1.0F),
         std::clamp(result.blue, 0.0F, 1.0F),
+    };
+    if (!perceptual) {
+        return bounded;
+    }
+    // [0,1] 밖으로 나간 몫(광색역 음수, 1.0 넘는 하이라이트)은 보정 뒤 다시 더합니다. 범위 안
+    // 화소는 앞 판과 같습니다(macOS `colorMixerHSL`).
+    return {
+        negaflow::color::srgb_encoded_to_linear(bounded.red) + (source.red - bounded_source.red),
+        negaflow::color::srgb_encoded_to_linear(bounded.green) + (source.green - bounded_source.green),
+        negaflow::color::srgb_encoded_to_linear(bounded.blue) + (source.blue - bounded_source.blue),
     };
 }
 

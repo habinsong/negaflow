@@ -27,6 +27,9 @@ struct ColorMixerParameters final {
     std::array<float, color_mixer_band_count> hue{};
     std::array<float, color_mixer_band_count> saturation{};
     std::array<float, color_mixer_band_count> luminance{};
+    // 사용자 슬라이더는 sRGB 인코딩 값에서 HSL 을 계산합니다(macOS `colorMixerHSL` 의
+    // perceptual). 디지털 필름 룩 프리셋은 선형 동작에 맞춰 설계된 값이라 false 로 둡니다.
+    bool perceptual{true};
 };
 
 [[nodiscard]] bool has_color_mixer_change(

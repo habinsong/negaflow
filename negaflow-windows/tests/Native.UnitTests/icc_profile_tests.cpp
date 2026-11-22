@@ -58,6 +58,16 @@ int main() {
             negaflow::color::IccProfileStatus::declared_size_mismatch,
         "declared size mismatch is rejected");
 
+    // 2·4바이트 경계로 채운 꼬리(3바이트 이하)는 떼어 내고 받습니다.
+    auto padded = valid;
+    padded.push_back(0U);
+    padded.push_back(0U);
+    const auto padded_result = negaflow::color::validate_icc_profile(padded);
+    expect(
+        padded_result.status == negaflow::color::IccProfileStatus::ok &&
+            padded_result.info.declared_bytes == valid.size(),
+        "alignment padding after the declared profile is accepted");
+
     auto wrong_signature = valid;
     write_be_u32(wrong_signature, 36U, 0U);
     expect(

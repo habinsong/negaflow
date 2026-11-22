@@ -87,7 +87,7 @@ public static unsafe partial class NativePrintSheetPublisher
         internal uint TiffCompression;
         internal byte* OutputIccProfile;
         internal uint OutputIccProfileSize;
-        internal uint Reserved;
+        internal uint OutputColorSpace;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -110,7 +110,10 @@ public static unsafe partial class NativePrintSheetPublisher
 
     /// <summary>
     /// 3 채널 RGB16 판을 고른 형식으로 씁니다. <paramref name="page"/> 는 행마다
-    /// <c>width * 3</c> 개씩 놓인 코드값이며 이미 게시할 색공간 안에 있습니다.
+    /// <c>width * 3</c> 개씩 놓인 <b>sRGB 코드값</b>입니다. 엔진이 판 전체를 인화소 ICC 로,
+    /// 그것이 없으면 <paramref name="colorSpace"/>(Delivery 색공간)로 한 번 옮깁니다. JPEG 도
+    /// 같은 색공간을 받습니다(macOS 와 같음). 부르는 쪽은 <c>ExportSettings.EffectiveColorSpace</c>
+    /// 를 넘깁니다.
     /// </summary>
     public static PrintSheetPublishOutcome Publish(
         string destination,
@@ -121,7 +124,8 @@ public static unsafe partial class NativePrintSheetPublisher
         int dpi,
         double jpegQuality = 1.0,
         DevelopTiffCompression tiffCompression = DevelopTiffCompression.Lzw,
-        ReadOnlySpan<byte> outputIccProfile = default)
+        ReadOnlySpan<byte> outputIccProfile = default,
+        ExportColorSpace colorSpace = ExportColorSpace.Srgb)
     {
         ArgumentException.ThrowIfNullOrEmpty(destination);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
@@ -148,7 +152,7 @@ public static unsafe partial class NativePrintSheetPublisher
                 OutputIccProfileSize = outputIccProfile.Length >= 128
                     ? (uint)outputIccProfile.Length
                     : 0U,
-                Reserved = 0U,
+                OutputColorSpace = (uint)colorSpace,
             };
             uint status = nf_publish_print_sheet_v1(&request, &result);
             if (status != 0U)

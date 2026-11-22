@@ -39,7 +39,11 @@ void SceneAutoLevelsMain(uint3 id : SV_DispatchThreadID) {
     // 아래만 0 으로 묶고 위는 확장값으로 남깁니다 — CPU `scene_auto_levels_upper_clamp`.
     float y = dot(source.rgb, float3(0.2126,0.7152,0.0722));
     float mapped = clamp(y * LevelScale.r + LevelBias.r, 0.0, 10000.0);
-    float3 color = y > 1e-8 ? source.rgb * (mapped / y) : float3(max(LevelBias.r,0.0),max(LevelBias.r,0.0),max(LevelBias.r,0.0));
+    // 디지털 원본(LevelScale.a = 1)은 검정 들어 올리기를 무채색으로 더합니다(CPU
+    // `scene_correction.cpp`, macOS `luminanceLevels`). 필름 스캔은 앞 판 식 그대로입니다.
+    float fill = max(LevelBias.r, 0.0);
+    float lift = LevelScale.a > 0.5 ? fill : 0.0;
+    float3 color = y > 1e-8 ? source.rgb * (max(mapped - lift, 0.0) / y) + lift : float3(fill, fill, fill);
     Destination[coordinate] = float4(color, source.a);
 }
 

@@ -48,7 +48,8 @@ public static partial class PrintSheetWriter
         byte[]? outputIccProfile = null,
         Action<int>? onSourceDeveloped = null,
         DevelopTiffCompression tiffCompression = DevelopTiffCompression.Lzw,
-        Func<LibraryFrameSnapshot, byte[]?>? thumbnailJpeg = null)
+        Func<LibraryFrameSnapshot, byte[]?>? thumbnailJpeg = null,
+        ExportColorSpace colorSpace = ExportColorSpace.Srgb)
     {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(print);
@@ -108,8 +109,7 @@ public static partial class PrintSheetWriter
                                 source,
                                 path,
                                 scratchLongEdges[index],
-                                proxyInputLongEdges[index],
-                                outputIccProfile))
+                                proxyInputLongEdges[index]))
                         .ConfigureAwait(true))
                     {
                         developedPaths[index] = path;
@@ -183,7 +183,8 @@ public static partial class PrintSheetWriter
                             format,
                             jpegQuality,
                             outputIccProfile,
-                            tiffCompression))
+                            tiffCompression,
+                            colorSpace))
                     {
                         return new PrintSheetWriteResult(PrintSheetWriteStatus.WriteFailed, written);
                     }
@@ -226,7 +227,7 @@ public static partial class PrintSheetWriter
                     destinationFolder, baseName, index, developed.Count, format);
                 if (!await WriteSingleAsync(
                         path, layout, pageSettings, developed[index], format, jpegQuality,
-                        outputIccProfile, tiffCompression, frame, reference, textHost))
+                        outputIccProfile, tiffCompression, frame, reference, textHost, colorSpace))
                 {
                     return new PrintSheetWriteResult(PrintSheetWriteStatus.WriteFailed, written);
                 }
@@ -278,8 +279,7 @@ public static partial class PrintSheetWriter
         LibraryFrameSnapshot frame,
         string destination,
         int longEdge,
-        int proxyInputLongEdge,
-        byte[]? outputIccProfile)
+        int proxyInputLongEdge)
     {
         // 중간 파일은 **압축 없는 16-bit TIFF** 입니다. 판에 얹으려고 한 번 쓰고 한 번
         // 읽을 뿐인데 16-bit PNG 는 deflate 로 굽느라 쓰기도 읽기도 몇 배 느립니다
@@ -290,12 +290,10 @@ public static partial class PrintSheetWriter
             TiffCompression = DevelopTiffCompression.None,
             LongEdge = longEdge,
         };
-        ExportEncodingOptions encoding = settings.ToEncodingOptions() with
-        {
-            // 인화소 ICC 는 **판에 얹는 임시 현상본**에 겁니다. 판 자체는 그 화소를 그대로
-            // 옮겨 담으므로, 여기서 한 번 걸면 나오는 판이 그 프로파일 안에 있게 됩니다.
-            OutputIccProfile = outputIccProfile,
-        };
+        // 임시 현상본은 **sRGB** 로 냅니다. 인화소 ICC 는 판을 다 합성한 뒤 게시할 때
+        // (`publish_print_sheet`) 판 전체에 한 번 겁니다 — 여기서 사진에만 걸면 그 위에 칠하는
+        // 바탕·필름 띠·캡션이 sRGB 값 그대로 프린터 공간에 들어갑니다.
+        ExportEncodingOptions encoding = settings.ToEncodingOptions();
         DevelopRequestResult built = DevelopRequestFactory.Create(
             frame,
             destination,
@@ -377,7 +375,8 @@ public static partial class PrintSheetWriter
         DevelopTiffCompression tiffCompression,
         PrintWatermarkFrameLayout? watermarkFrame = null,
         PrintWatermarkReference? watermarkReference = null,
-        Microsoft.UI.Xaml.Controls.Panel? textHost = null)
+        Microsoft.UI.Xaml.Controls.Panel? textHost = null,
+        ExportColorSpace colorSpace = ExportColorSpace.Srgb)
     {
         int width = (int)layout.CanvasSize.Width;
         int height = (int)layout.CanvasSize.Height;
@@ -415,7 +414,7 @@ public static partial class PrintSheetWriter
         }
         return await PrintSheetEncoder.EncodeAsync(
             destination, page, width, height, composition.Dpi, format, jpegQuality,
-            outputIccProfile, tiffCompression);
+            outputIccProfile, tiffCompression, colorSpace);
     }
 
     private static async Task<bool> WritePageAsync(
@@ -430,7 +429,8 @@ public static partial class PrintSheetWriter
         DevelopExportFormat format,
         double jpegQuality,
         byte[]? outputIccProfile,
-        DevelopTiffCompression tiffCompression)
+        DevelopTiffCompression tiffCompression,
+        ExportColorSpace colorSpace)
     {
         int width = (int)layout.CanvasSize.Width;
         int height = (int)layout.CanvasSize.Height;
@@ -487,7 +487,7 @@ public static partial class PrintSheetWriter
         }
         return await PrintSheetEncoder.EncodeAsync(
             destination, page, width, height, composition.Dpi, format, jpegQuality,
-            outputIccProfile, tiffCompression);
+            outputIccProfile, tiffCompression, colorSpace);
     }
 
 }

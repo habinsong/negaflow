@@ -5,6 +5,7 @@
 
 #include <Windows.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -304,17 +305,29 @@ void test_embedded_icc_path(const std::filesystem::path& path) {
         result.image.pixels.size() ==
             static_cast<std::size_t>(decoded.image.width) * decoded.image.height,
         "ICC transform produces one working pixel per source pixel");
+    // 입력은 sRGB 프로파일입니다. 넓은 중간 공간(Rec.2020 기본색, 16비트)을 거치므로 결과는
+    // [0, 1] 에서 양자화만큼 벗어날 수 있습니다. 16비트 한 칸을 행렬로 옮긴 오차는 1e-4 아래입니다.
+    // 그보다 크면 채널 순서나 중간 공간 해석이 틀린 것입니다.
+    constexpr float quantization = 1.0e-4F;
+    float lowest = 1.0F;
+    float highest = 0.0F;
     for (const auto& pixel : result.image.pixels) {
+        lowest = std::min({lowest, pixel.red, pixel.green, pixel.blue});
+        highest = std::max({highest, pixel.red, pixel.green, pixel.blue});
         expect(
             std::isfinite(pixel.red) && std::isfinite(pixel.green) &&
-                std::isfinite(pixel.blue) && pixel.red >= 0.0F && pixel.red <= 1.0F &&
-                pixel.green >= 0.0F && pixel.green <= 1.0F && pixel.blue >= 0.0F &&
-                pixel.blue <= 1.0F && pixel.alpha == 1.0F,
-            "ICC output is finite normalized linear RGB with opaque alpha");
+                std::isfinite(pixel.blue) && pixel.red >= -quantization &&
+                pixel.red <= 1.0F + quantization && pixel.green >= -quantization &&
+                pixel.green <= 1.0F + quantization && pixel.blue >= -quantization &&
+                pixel.blue <= 1.0F + quantization && pixel.alpha == 1.0F,
+            "ICC output of an sRGB source is finite linear RGB within quantization of [0, 1]");
         if (failures != 0) {
+            std::cerr << "  pixel " << pixel.red << ',' << pixel.green << ',' << pixel.blue << ','
+                      << pixel.alpha << '\n';
             break;
         }
     }
+    std::cout << "ICC sRGB source linear range " << lowest << " .. " << highest << '\n';
     expect(decoded.image.samples == samples_before, "ICM color transform does not mutate samples");
     expect(decoded.image.icc_profile == profile_before, "ICM color transform does not mutate ICC");
     if (negaflow::imaging::is_input_gamma_source_supported(path)) {

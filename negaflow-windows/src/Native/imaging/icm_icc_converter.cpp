@@ -10,6 +10,7 @@
 #include <limits>
 #include <new>
 #include <span>
+#include <utility>
 #include <vector>
 
 namespace negaflow::imaging::detail {
@@ -55,6 +56,50 @@ namespace {
     return profile;
 }
 
+// ICM 의 16비트 3채널 형식 `BM_16b_RGB` 는 BMFORMAT 문서 표(R,G,B)와 달리 메모리를 **B,G,R
+// 순서**로 읽고 씁니다. 2026-11-22 검증 PC 실측: sRGB→Display P3 변환에 [65535,0,0] 을 넣으면
+// 파랑으로 옮겨져 [62888,89,0](= P3 파랑을 B,G,R 로 쓴 값)이 나오고, 같은 변환의
+// `TranslateColors` 는 빨강을 [60126,13144,9070] 으로 맞게 옮깁니다. R,G,B 순서 16비트 형식은
+// 없으므로 변환 앞뒤로 R 과 B 를 맞바꿉니다. 같은 프로파일끼리는 티가 나지 않고, 기본색이
+// 다른 변환(P3·Adobe RGB·넓은 스캐너 프로파일·인화소 프로파일)에만 R/B 가 뒤바뀐 행렬이
+// 걸렸습니다.
+void swap_red_blue_rows(
+    std::uint16_t* const rows,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_bytes) noexcept {
+    auto* const base = reinterpret_cast<std::uint8_t*>(rows);
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        auto* const row = reinterpret_cast<std::uint16_t*>(
+            base + (static_cast<std::size_t>(y) * stride_bytes));
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            std::swap(row[x * 3U], row[(x * 3U) + 2U]);
+        }
+    }
+}
+
+void copy_rows_swapping_red_blue(
+    const std::uint16_t* const source,
+    const std::uint32_t source_stride_bytes,
+    std::uint16_t* const destination,
+    const std::uint32_t destination_stride_bytes,
+    const std::uint32_t width,
+    const std::uint32_t height) noexcept {
+    const auto* const from = reinterpret_cast<const std::uint8_t*>(source);
+    auto* const to = reinterpret_cast<std::uint8_t*>(destination);
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        const auto* const in = reinterpret_cast<const std::uint16_t*>(
+            from + (static_cast<std::size_t>(y) * source_stride_bytes));
+        auto* const out = reinterpret_cast<std::uint16_t*>(
+            to + (static_cast<std::size_t>(y) * destination_stride_bytes));
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            out[x * 3U] = in[(x * 3U) + 2U];
+            out[(x * 3U) + 1U] = in[(x * 3U) + 1U];
+            out[(x * 3U) + 2U] = in[x * 3U];
+        }
+    }
+}
+
 }  // namespace
 
 IcmRgb16Transform::~IcmRgb16Transform() noexcept {
@@ -74,11 +119,14 @@ void IcmRgb16Transform::reset() noexcept {
         CloseColorProfile(source_profile_);
         source_profile_ = nullptr;
     }
+    std::vector<std::uint8_t>{}.swap(source_profile_storage_);
+    std::vector<std::uint8_t>{}.swap(destination_profile_storage_);
 }
 
 ScannerToWorkingStatus IcmRgb16Transform::initialize(
     const std::span<const std::uint8_t> source_profile_bytes,
-    std::uint32_t& native_error_code) {
+    std::uint32_t& native_error_code,
+    const std::span<const std::uint8_t> destination_profile_bytes) {
     reset();
     native_error_code = 0U;
     if (source_profile_bytes.empty() ||
@@ -98,7 +146,32 @@ ScannerToWorkingStatus IcmRgb16Transform::initialize(
         return ScannerToWorkingStatus::color_profile_open_failed;
     }
 
-    destination_profile_ = open_standard_srgb_profile(native_error_code);
+    if (destination_profile_bytes.empty()) {
+        destination_profile_ = open_standard_srgb_profile(native_error_code);
+    } else {
+        if (destination_profile_bytes.size() > std::numeric_limits<DWORD>::max()) {
+            reset();
+            return ScannerToWorkingStatus::invalid_icc_profile;
+        }
+        try {
+            destination_profile_storage_.assign(
+                destination_profile_bytes.begin(), destination_profile_bytes.end());
+        } catch (const std::bad_alloc&) {
+            reset();
+            return ScannerToWorkingStatus::allocation_failed;
+        }
+        PROFILE destination_description{};
+        destination_description.dwType = PROFILE_MEMBUFFER;
+        destination_description.pProfileData = destination_profile_storage_.data();
+        destination_description.cbDataSize =
+            static_cast<DWORD>(destination_profile_storage_.size());
+        SetLastError(ERROR_SUCCESS);
+        destination_profile_ =
+            OpenColorProfileW(&destination_description, PROFILE_READ, 0U, OPEN_EXISTING);
+        if (destination_profile_ == nullptr) {
+            native_error_code = GetLastError();
+        }
+    }
     if (destination_profile_ == nullptr) {
         reset();
         return ScannerToWorkingStatus::color_profile_open_failed;
@@ -109,25 +182,53 @@ ScannerToWorkingStatus IcmRgb16Transform::initialize(
 
 ScannerToWorkingStatus IcmRgb16Transform::initialize_to_profile(
     const std::span<const std::uint8_t> destination_profile_bytes,
-    std::uint32_t& native_error_code) {
+    std::uint32_t& native_error_code,
+    const std::span<const std::uint8_t> source_profile_bytes) {
     reset();
     native_error_code = 0U;
     if (destination_profile_bytes.empty() ||
-        destination_profile_bytes.size() > std::numeric_limits<DWORD>::max()) {
+        destination_profile_bytes.size() > std::numeric_limits<DWORD>::max() ||
+        source_profile_bytes.size() > std::numeric_limits<DWORD>::max()) {
         return ScannerToWorkingStatus::invalid_icc_profile;
     }
 
-    source_profile_ = open_standard_srgb_profile(native_error_code);
+    if (source_profile_bytes.empty()) {
+        source_profile_ = open_standard_srgb_profile(native_error_code);
+    } else {
+        try {
+            source_profile_storage_.assign(
+                source_profile_bytes.begin(), source_profile_bytes.end());
+        } catch (const std::bad_alloc&) {
+            return ScannerToWorkingStatus::allocation_failed;
+        }
+        PROFILE source_description{};
+        source_description.dwType = PROFILE_MEMBUFFER;
+        source_description.pProfileData = source_profile_storage_.data();
+        source_description.cbDataSize = static_cast<DWORD>(source_profile_storage_.size());
+        SetLastError(ERROR_SUCCESS);
+        source_profile_ =
+            OpenColorProfileW(&source_description, PROFILE_READ, 0U, OPEN_EXISTING);
+        if (source_profile_ == nullptr) {
+            native_error_code = GetLastError();
+        }
+    }
     if (source_profile_ == nullptr) {
+        reset();
         return ScannerToWorkingStatus::color_profile_open_failed;
     }
 
+    try {
+        destination_profile_storage_.assign(
+            destination_profile_bytes.begin(), destination_profile_bytes.end());
+    } catch (const std::bad_alloc&) {
+        reset();
+        return ScannerToWorkingStatus::allocation_failed;
+    }
     PROFILE destination_description{};
     destination_description.dwType = PROFILE_MEMBUFFER;
-    destination_description.pProfileData =
-        const_cast<std::uint8_t*>(destination_profile_bytes.data());
+    destination_description.pProfileData = destination_profile_storage_.data();
     destination_description.cbDataSize =
-        static_cast<DWORD>(destination_profile_bytes.size());
+        static_cast<DWORD>(destination_profile_storage_.size());
     SetLastError(ERROR_SUCCESS);
     destination_profile_ =
         OpenColorProfileW(&destination_description, PROFILE_READ, 0U, OPEN_EXISTING);
@@ -171,16 +272,18 @@ ScannerToWorkingStatus IcmRgb16Transform::translate8(
         height == 0U || source_stride_bytes == 0U || destination_stride_bytes == 0U) {
         return ScannerToWorkingStatus::invalid_argument;
     }
+    // 화소는 R,G,B 순서입니다. BMFORMAT 표대로 그 메모리 순서는 `BM_BGRTRIPLETS` 이고
+    // `BM_RGBTRIPLETS` 는 B,G,R 입니다(이름이 거꾸로 붙어 있습니다, 2026-11-22 실측 확인).
     SetLastError(ERROR_SUCCESS);
     const BOOL converted = TranslateBitmapBits(
         transform_,
         const_cast<std::uint8_t*>(source),
-        BM_RGBTRIPLETS,
+        BM_BGRTRIPLETS,
         width,
         height,
         source_stride_bytes,
         destination,
-        BM_RGBTRIPLETS,
+        BM_BGRTRIPLETS,
         destination_stride_bytes,
         nullptr,
         0);
@@ -207,24 +310,45 @@ ScannerToWorkingStatus IcmRgb16Transform::translate(
         return ScannerToWorkingStatus::invalid_argument;
     }
 
+    // ICM 이 B,G,R 로 읽으므로(위 `swap_red_blue_rows` 주석) 목적지에 R/B 를 맞바꾼 사본을
+    // 두고 제자리에서 옮긴 뒤 되돌립니다. 원본은 건드리지 않습니다 — 원본과 목적지가 같은
+    // 버퍼(제자리 변환)일 때만 그 버퍼가 바뀝니다.
+    if (source == destination && source_stride_bytes == destination_stride_bytes) {
+        swap_red_blue_rows(destination, width, height, destination_stride_bytes);
+    } else {
+        copy_rows_swapping_red_blue(
+            source, source_stride_bytes, destination, destination_stride_bytes, width, height);
+    }
     SetLastError(ERROR_SUCCESS);
     const BOOL converted = TranslateBitmapBits(
         transform_,
-        const_cast<std::uint16_t*>(source),
+        destination,
         BM_16b_RGB,
         width,
         height,
-        source_stride_bytes,
+        destination_stride_bytes,
         destination,
         BM_16b_RGB,
         destination_stride_bytes,
         progress_callback,
         callback_data);
+    swap_red_blue_rows(destination, width, height, destination_stride_bytes);
     if (converted == FALSE) {
         native_error_code = GetLastError();
         return ScannerToWorkingStatus::color_transform_failed;
     }
     return ScannerToWorkingStatus::ok;
+}
+
+std::span<const std::uint8_t> working_intermediate_profile() noexcept {
+    static const std::vector<std::uint8_t> profile = []() noexcept {
+        try {
+            return negaflow::color::build_working_intermediate_icc_profile();
+        } catch (...) {
+            return std::vector<std::uint8_t>{};
+        }
+    }();
+    return profile;
 }
 
 EncodedSrgb16Result convert_embedded_icc_to_srgb16(
@@ -307,10 +431,33 @@ EncodedSrgb16Result convert_embedded_icc_to_srgb16(
             source_stride_bytes = static_cast<std::uint32_t>(rgb_stride_bytes);
         }
 
+        const std::span<const std::uint8_t> intermediate = working_intermediate_profile();
+        if (intermediate.empty()) {
+            result.status = ScannerToWorkingStatus::allocation_failed;
+            return result;
+        }
+        std::span<const std::uint8_t> source_profile = profile_override.empty()
+            ? std::span<const std::uint8_t>(decoded.icc_profile) : profile_override;
+        // Gray 프로파일은 같은 회색 축의 RGB 프로파일로 옮겨 읽습니다. 흑백 화소는 위에서 세
+        // 채널로 폈습니다.
+        std::vector<std::uint8_t> gray_as_rgb{};
+        if (icc_is_gray(source_profile)) {
+            if (decoded.layout != negaflow::imageio::DecodedPixelLayout::gray16) {
+                result.status = ScannerToWorkingStatus::unsupported_icc_color_space;
+                return result;
+            }
+            gray_as_rgb = negaflow::color::rgb_profile_for_gray_profile(source_profile);
+            if (gray_as_rgb.empty()) {
+                result.status = ScannerToWorkingStatus::unsupported_icc_color_space;
+                return result;
+            }
+            source_profile = gray_as_rgb;
+        }
         ParallelIcmRgb16Transform transform{};
-        result.status = transform.initialize(profile_override.empty()
-            ? std::span<const std::uint8_t>(decoded.icc_profile) : profile_override,
-            result.native_error_code);
+        result.status = transform.initialize(
+            source_profile,
+            result.native_error_code,
+            intermediate);
         if (result.status != ScannerToWorkingStatus::ok) {
             return result;
         }

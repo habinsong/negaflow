@@ -142,6 +142,17 @@ public sealed partial class DevelopWorkspaceView : UserControl
         PreviewCanvas.HandlePointerCancelled = GrainMendPanel.HandlePointerCancelled;
         PreviewCanvas.TryHandleKeyDown = GrainMendPanel.TryHandleKeyDown;
         PreviewCanvas.HostSizeChanged += (_, _) => GrainMendPanel.RenderGuidedSelection();
+        // 모니터·화면 프로파일이 바뀌면 새 표로 다시 그립니다. 임대 버퍼를 다시 쓰지 않고 새로
+        // 렌더합니다(캔버스 `DisplayColorRedrawRequested` 주석). 대조 그림도 같이 다시 받습니다.
+        PreviewCanvas.DisplayColorRedrawRequested += (_, _) =>
+        {
+            if (panel?.Compare.IsSplitRequested == true)
+            {
+                compareBeforeNeeded = true;
+                RequestCompareBefore();
+            }
+            RequestPreview();
+        };
         inspectorChrome.Apply();
         copy.Localize();
     }
@@ -293,6 +304,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 DisplayTargetPixels);
             previewCoordinator.ClippingOverlayEnabled =
                 workspaceState?.Current.ClippingOverlayEnabled == true;
+            // 프루프는 렌더마다 그 사진의 현상 대상으로 정합니다(macOS
+            // `displaySoftProofSettings(_:developTarget:)`). 저장된 설정이 시작부터 걸리고,
+            // 사진을 넘기거나 MAIN·PRINT 를 바꿔도 따라옵니다.
+            previewCoordinator.SoftProofResolver =
+                frame => softProofPreferences.ForFrame(frame.DevelopTarget);
             GrainMendPanel.SetDetectCoordinator(new GrainMendDetectCoordinator(
                 new NativeDevelopExporterAdapter(),
                 uiDispatcher));

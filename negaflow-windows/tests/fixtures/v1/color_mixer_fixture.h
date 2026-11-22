@@ -19,6 +19,9 @@ inline constexpr negaflow::imaging::ColorMixerParameters color_mixer_parameters{
     {0.4F, -0.25F, 0.15F, -0.5F, 0.3F, 0.55F, -0.35F, 0.2F},
     {0.7F, -0.3F, 0.45F, -0.65F, 0.35F, 0.8F, -0.55F, 0.25F},
     {-0.25F, 0.35F, 0.5F, -0.4F, 0.2F, -0.3F, 0.6F, -0.15F},
+    // 선형 동작(필름 룩 프리셋 경로)의 고정값입니다. 사용자 슬라이더의 sRGB 인코딩 영역은
+    // `color_mixer_tests.cpp` 의 perceptual 시험이 따로 봅니다.
+    false,
 };
 
 inline constexpr std::array<negaflow::core::Rgba32F, 12> color_mixer_input{{

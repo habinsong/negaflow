@@ -75,10 +75,6 @@ extension AppModel {
         }
         let printerOutputProfile = exportFormat.appliesPrinterOutputProfile
             ? selectedPrintWorkspaceOutputProfile(requiresPrinterOutputProfile: requiresPrinterOutputProfile) : nil
-        guard !exportFormat.appliesPrinterOutputProfile || !hasInvalidStoredCPrintOutputProfile else {
-            statusMessage = text(.printOutputProfileRequired)
-            return
-        }
         guard !requiresPrinterOutputProfile || printerOutputProfile != nil else {
             statusMessage = text(.printOutputProfileRequired)
             return
@@ -146,10 +142,6 @@ extension AppModel {
         }
         let printerOutputProfile = quickExportFormat.appliesPrinterOutputProfile
             ? selectedPrintWorkspaceOutputProfile(requiresPrinterOutputProfile: requiresPrinterOutputProfile) : nil
-        guard !quickExportFormat.appliesPrinterOutputProfile || !hasInvalidStoredCPrintOutputProfile else {
-            statusMessage = text(.printOutputProfileRequired)
-            return
-        }
         guard !requiresPrinterOutputProfile || printerOutputProfile != nil else {
             statusMessage = text(.printOutputProfileRequired)
             return
@@ -270,19 +262,14 @@ extension AppModel {
         )
     }
 
+    /// 인화 내보내기의 출력 프로파일. 프린터 출력 프로파일을 골랐으면 그것이고, 아니면 전달
+    /// 색공간으로 나간다(PRINT 대상이 섞여 있으면 프로파일이 필요하다 — 부르는 쪽이 막는다).
+    /// C-print 프루프 ICC 는 화면 프루프 전용이라 파일에 굽지 않는다(C_PRINT 문서 "C-print 프루프
+    /// ICC 는 프루프 전용"). 앞 판은 C-print 공정이면 랩의 프루프 프로파일을 전달 프로파일로
+    /// 조용히 썼다. 윈도우 `PrintOutputProfile.For` 와 같은 규칙이다.
     private func selectedPrintWorkspaceOutputProfile(
-        requiresPrinterOutputProfile: Bool
+        requiresPrinterOutputProfile _: Bool
     ) -> ICCOutputProfileSnapshot? {
-        if printWorkspaceSettingsStore.outputProcess == .cPrint,
-           let cPrintProfile = selectedCPrintOutputProfile {
-            return cPrintProfile
-        }
-        return requiresPrinterOutputProfile ? selectedPrinterOutputProfile : nil
-    }
-
-    private var hasInvalidStoredCPrintOutputProfile: Bool {
-        printWorkspaceSettingsStore.outputProcess == .cPrint
-            && cPrintProofICCProfileData != nil
-            && selectedCPrintOutputProfile == nil
+        selectedPrinterOutputProfile
     }
 }

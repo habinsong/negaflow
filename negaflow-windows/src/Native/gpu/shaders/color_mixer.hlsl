@@ -43,7 +43,16 @@ void ColorMixerMain(uint3 id : SV_DispatchThreadID) {
     uint2 coordinate = id.xy;
     float4 source = Source[coordinate];
 
-    float3 hsl = NegaflowRgbToHsl(clamp(source.rgb, 0.0, 1.0));
+    // 사용자 슬라이더는 HSL 을 sRGB 인코딩 값에서 계산합니다(CPU `apply_color_mixer_pixel`).
+    // 플래그는 `HueControls[0].y` 에 실립니다 — 머리 16바이트는 디스패치가 범위로 덮어씁니다.
+    bool perceptual = HueControls[0].y > 0.5;
+    float3 bounded = clamp(source.rgb, 0.0, 1.0);
+    float3 hsl = NegaflowRgbToHsl(perceptual
+        ? float3(
+              LinearToSrgbEncoded(bounded.r),
+              LinearToSrgbEncoded(bounded.g),
+              LinearToSrgbEncoded(bounded.b))
+        : bounded);
 
     float weightSum = 0.0;
     float hueShift = 0.0;
@@ -73,6 +82,11 @@ void ColorMixerMain(uint3 id : SV_DispatchThreadID) {
     hsl.y = clamp(hsl.y * (1.0 + (saturationFactor * gate)), 0.0, 1.0);
     hsl.z = clamp(hsl.z + (luminanceFactor * NegaflowLuminanceShiftScale * gate), 0.0, 1.0);
 
-    float3 rgb = NegaflowHslToRgb(hsl);
-    Destination[coordinate] = float4(clamp(rgb, 0.0, 1.0), source.a);
+    float3 rgb = clamp(NegaflowHslToRgb(hsl), 0.0, 1.0);
+    if (perceptual) {
+        // [0,1] 밖 몫은 보정 뒤 다시 더합니다(CPU `apply_color_mixer_pixel`).
+        rgb = float3(SrgbEncodedToLinear(rgb.r), SrgbEncodedToLinear(rgb.g), SrgbEncodedToLinear(rgb.b)) +
+            (source.rgb - bounded);
+    }
+    Destination[coordinate] = float4(rgb, source.a);
 }

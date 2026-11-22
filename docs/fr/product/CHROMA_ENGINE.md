@@ -8,7 +8,7 @@ Chroma Engine inverse et développe le film. Le code se trouve dans le module `C
 |---|---|
 | Développement par défaut | `MAIN`, Équilibre auto ON |
 | Base du film | Mesure automatique, pipette, saisie directe RVB |
-| Couleur interne | Espace colorimétrique linéaire en virgule flottante 32 bits |
+| Couleur interne | Espace colorimétrique linéaire en virgule flottante (demi-précision 16 bits sur macOS, 32 bits sur Windows) |
 | Fonctions automatiques | Équilibre auto ON |
 | Espace colorimétrique de sortie | sRGB, Display P3, Adobe RGB, ICC RVB personnalisé |
 
@@ -25,7 +25,7 @@ Chroma Engine inverse et développe le film. Le code se trouve dans le module `C
 
 ## Ordre des étapes
 
-L'image de travail est traitée dans un espace colorimétrique linéaire en virgule flottante 32 bits. Seules les opérations qui exigent un gamma se convertissent à leur étape fixe, et l'encodage pour un écran ou un format de fichier vient à la fin.
+L'image de travail est traitée dans un espace colorimétrique linéaire en virgule flottante : demi-précision 16 bits dans Core Image sur macOS, 32 bits dans le moteur Windows. Les deux gardent les valeurs sous 0 et au-dessus de 1. Seules les opérations qui exigent un gamma se convertissent à leur étape fixe, et l'encodage pour un écran ou un format de fichier vient à la fin.
 
 1. Lire le fichier et corriger l'orientation.
 2. Entrée linéaire (RVB d'appareil pour le RAW).

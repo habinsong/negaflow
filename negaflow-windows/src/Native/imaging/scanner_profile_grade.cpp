@@ -116,22 +116,21 @@ struct ToneCurve final {
     if (value <= 0.0F) return 0.0F;
     if (value >= 1.0F) return 1.0F;
 
-    // CIToneCurve applies its spline in the gamma-2 perceptual version of the
-    // working color space. The profile control points are therefore not a
-    // linear-light curve.
-    const float perceptual_value = std::sqrt(value);
+    // 매듭은 sRGB 표시값입니다. 예전 판은 macOS `CIToneCurve` 를 본떠 제곱근 위에서 스플라인을
+    // 계산하고 제곱했는데, 입력이 이미 sRGB 라 감마가 두 번 걸려 매듭이 설계한 sRGB 59·128·209
+    // 대신 13·64·172 에 놓였습니다. 이제 두 앱 모두 sRGB 값에 직접 겁니다(macOS
+    // `scannerProfileToneSpline`).
     std::size_t segment = 0U;
     while (segment + 1U < tone_curve_x.size() &&
-           perceptual_value > tone_curve_x[segment + 1U]) ++segment;
+           value > tone_curve_x[segment + 1U]) ++segment;
     const float width = tone_curve_width[segment];
-    const float a = (tone_curve_x[segment + 1U] - perceptual_value) / width;
+    const float a = (tone_curve_x[segment + 1U] - value) / width;
     const float b = 1.0F - a;
-    const float perceptual_output = (a * curve.y[segment]) +
+    return (a * curve.y[segment]) +
         (b * curve.y[segment + 1U]) +
         (((a * a * a - a) * curve.second[segment]) +
          ((b * b * b - b) * curve.second[segment + 1U])) *
             width * width / 6.0F;
-    return perceptual_output * perceptual_output;
 }
 
 [[nodiscard]] Rgb point_grade(

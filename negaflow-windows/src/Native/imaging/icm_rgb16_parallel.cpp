@@ -10,12 +10,41 @@ namespace negaflow::imaging::detail {
 
 ScannerToWorkingStatus ParallelIcmRgb16Transform::initialize(
     const std::span<const std::uint8_t> source_profile_bytes,
-    std::uint32_t& native_error_code) {
+    std::uint32_t& native_error_code,
+    const std::span<const std::uint8_t> destination_profile_bytes) {
+    // 입력 갈래에서는 `profile_` 이 원본, `source_` 가 목적지(비면 sRGB)입니다.
     profile_.assign(source_profile_bytes.begin(), source_profile_bytes.end());
+    source_.assign(destination_profile_bytes.begin(), destination_profile_bytes.end());
+    to_profile_ = false;
     transforms_.clear();
     transforms_.resize(negaflow::core::physical_cores());
     transforms_[0] = std::make_unique<IcmRgb16Transform>();
-    return transforms_[0]->initialize(profile_, native_error_code);
+    return create(*transforms_[0], native_error_code);
+}
+
+ScannerToWorkingStatus ParallelIcmRgb16Transform::initialize_to_profile(
+    const std::span<const std::uint8_t> destination_profile_bytes,
+    std::uint32_t& native_error_code,
+    const std::span<const std::uint8_t> source_profile_bytes) {
+    try {
+        profile_.assign(destination_profile_bytes.begin(), destination_profile_bytes.end());
+        source_.assign(source_profile_bytes.begin(), source_profile_bytes.end());
+        transforms_.clear();
+        transforms_.resize(negaflow::core::physical_cores());
+        transforms_[0] = std::make_unique<IcmRgb16Transform>();
+    } catch (...) {
+        return ScannerToWorkingStatus::allocation_failed;
+    }
+    to_profile_ = true;
+    return create(*transforms_[0], native_error_code);
+}
+
+ScannerToWorkingStatus ParallelIcmRgb16Transform::create(
+    IcmRgb16Transform& transform,
+    std::uint32_t& native_error_code) {
+    return to_profile_
+        ? transform.initialize_to_profile(profile_, native_error_code, source_)
+        : transform.initialize(profile_, native_error_code, source_);
 }
 
 ScannerToWorkingStatus ParallelIcmRgb16Transform::translate(
@@ -56,7 +85,7 @@ ScannerToWorkingStatus ParallelIcmRgb16Transform::translate(
                 try {
                     if (!transforms_[part]) {
                         auto created = std::make_unique<IcmRgb16Transform>();
-                        status = created->initialize(profile_, code);
+                        status = create(*created, code);
                         transforms_[part] = std::move(created);
                     }
                 } catch (...) {

@@ -145,10 +145,14 @@ internal static class PrintPageCanvas
                 // 내려서 섞으면 글자 한 줄 때문에 판 전체 계조를 잃습니다.
                 for (int channel = 0; channel < Channels; ++channel)
                 {
-                    // rendered 는 BGRA 이므로 R·G·B 를 거꾸로 읽습니다.
+                    // rendered 는 BGRA 이므로 R·G·B 를 거꾸로 읽습니다. `RenderTargetBitmap` 의
+                    // 화소는 **premultiplied** 라 색에 이미 α 가 곱해져 있습니다 — 결과 = 원본 +
+                    // 바탕 × (1 − α). 앞 판은 straight 식으로 α 를 한 번 더 곱해 밝은 글자의
+                    // 가장자리가 어둡게 번졌습니다(워터마크 `BlendPremultiplied` 와 같은 식).
                     ushort source = Widen(rendered.Pixels[from + (2 - channel)]);
-                    page[to + channel] = (ushort)(
-                        ((source * alpha) + (page[to + channel] * (255 - alpha))) / 255);
+                    page[to + channel] = (ushort)Math.Min(
+                        65535,
+                        source + ((page[to + channel] * (255 - alpha)) / 255));
                 }
             }
         }

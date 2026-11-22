@@ -1,10 +1,12 @@
 #include "negaflow/color/output_color_space.h"
 
+#include "negaflow/color/icc_profile.h"
 #include "negaflow/color/srgb_transfer.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <optional>
 
 namespace negaflow::color {
 namespace {
@@ -272,6 +274,18 @@ float encode_output_component(const float linear, const OutputColorSpace space) 
     return linear_to_srgb_encoded(linear);
 }
 
+namespace {
+
+// Rec.2020 기본색입니다. 입력 ICC 를 옮길 내부 중간 공간에만 씁니다 — 게시 색공간이 아닙니다.
+constexpr Primaries kRec2020Primaries{0.708, 0.292, 0.170, 0.797, 0.131, 0.046};
+
+[[nodiscard]] std::vector<std::uint8_t> build_matrix_trc_profile(
+    const Primaries& primaries,
+    const char* description,
+    const std::vector<std::uint8_t>& curve);
+
+}  // namespace
+
 std::vector<std::uint8_t> build_icc_profile(
     const OutputColorSpace space,
     const bool linear_transfer) {
@@ -282,7 +296,35 @@ std::vector<std::uint8_t> build_icc_profile(
     if (description == nullptr) {
         return {};
     }
-    const Matrix3 to_xyz_d65 = rgb_to_xyz(primaries_of(space), kD65X, kD65Y);
+    return build_matrix_trc_profile(
+        primaries_of(space), description, curve_element(space, linear_transfer));
+}
+
+std::vector<std::uint8_t> build_working_intermediate_icc_profile() {
+    return build_matrix_trc_profile(
+        kRec2020Primaries,
+        "Negaflow Working Intermediate (Rec.2020, sRGB curve)",
+        curve_element(OutputColorSpace::srgb, false));
+}
+
+ColorMatrix working_intermediate_to_linear_srgb() noexcept {
+    const Matrix3 source = rgb_to_xyz(kRec2020Primaries, kD65X, kD65Y);
+    const Matrix3 destination = rgb_to_xyz(primaries_of(OutputColorSpace::srgb), kD65X, kD65Y);
+    const Matrix3 combined = multiply(invert(destination), source);
+    ColorMatrix result{};
+    for (std::size_t index = 0U; index < 9U; ++index) {
+        result[index] = static_cast<float>(combined[index]);
+    }
+    return result;
+}
+
+namespace {
+
+std::vector<std::uint8_t> build_matrix_trc_profile(
+    const Primaries& primaries,
+    const char* const description,
+    const std::vector<std::uint8_t>& curve) {
+    const Matrix3 to_xyz_d65 = rgb_to_xyz(primaries, kD65X, kD65Y);
     const Matrix3 to_d50 = multiply(bradford_d65_to_d50(), to_xyz_d65);
 
     struct TagEntry final {
@@ -298,7 +340,6 @@ std::vector<std::uint8_t> build_icc_profile(
     tags.push_back({"rXYZ", xyz_element(to_d50[0], to_d50[3], to_d50[6])});
     tags.push_back({"gXYZ", xyz_element(to_d50[1], to_d50[4], to_d50[7])});
     tags.push_back({"bXYZ", xyz_element(to_d50[2], to_d50[5], to_d50[8])});
-    const std::vector<std::uint8_t> curve = curve_element(space, linear_transfer);
     tags.push_back({"rTRC", curve});
     tags.push_back({"gTRC", curve});
     tags.push_back({"bTRC", curve});
@@ -340,6 +381,125 @@ std::vector<std::uint8_t> build_icc_profile(
     write_u32(profile, 76U,
         static_cast<std::uint32_t>(to_s15fixed16((1.0 - kD50X - kD50Y) / kD50Y)));
     return profile;
+}
+
+}  // namespace
+
+namespace {
+
+[[nodiscard]] std::uint32_t read_u32(std::span<const std::uint8_t> bytes, std::size_t at) noexcept {
+    return (static_cast<std::uint32_t>(bytes[at]) << 24U) |
+           (static_cast<std::uint32_t>(bytes[at + 1U]) << 16U) |
+           (static_cast<std::uint32_t>(bytes[at + 2U]) << 8U) |
+           static_cast<std::uint32_t>(bytes[at + 3U]);
+}
+
+[[nodiscard]] double read_s15(std::span<const std::uint8_t> bytes, std::size_t at) noexcept {
+    return static_cast<double>(static_cast<std::int32_t>(read_u32(bytes, at))) / 65536.0;
+}
+
+// ICC `curv`·`para` 곡선을 [0,1] 입력에서 계산합니다. 못 읽으면 빈 값입니다.
+[[nodiscard]] std::optional<double> evaluate_gray_trc(
+    std::span<const std::uint8_t> element,
+    const double x) noexcept {
+    const std::uint32_t type = read_u32(element, 0U);
+    if (type == 0x63757276U) {  // 'curv'
+        const std::uint32_t count = read_u32(element, 8U);
+        if (count == 0U) {
+            return x;
+        }
+        if (count == 1U) {
+            if (element.size() < 14U) {
+                return std::nullopt;
+            }
+            const double gamma = static_cast<double>(
+                (static_cast<std::uint32_t>(element[12U]) << 8U) | element[13U]) / 256.0;
+            return std::pow(x, gamma);
+        }
+        if (element.size() < 12U + static_cast<std::size_t>(count) * 2U) {
+            return std::nullopt;
+        }
+        const double position = x * static_cast<double>(count - 1U);
+        const std::size_t lower = std::min<std::size_t>(
+            static_cast<std::size_t>(position), count - 1U);
+        const std::size_t upper = std::min<std::size_t>(lower + 1U, count - 1U);
+        const double fraction = position - static_cast<double>(lower);
+        const auto sample = [&](const std::size_t index) {
+            return static_cast<double>(
+                (static_cast<std::uint32_t>(element[12U + index * 2U]) << 8U) |
+                element[13U + index * 2U]) / 65535.0;
+        };
+        return sample(lower) + ((sample(upper) - sample(lower)) * fraction);
+    }
+    if (type == 0x70617261U && element.size() >= 16U) {  // 'para'
+        const std::uint32_t function = (static_cast<std::uint32_t>(element[8U]) << 8U) | element[9U];
+        constexpr std::array<std::size_t, 5U> parameter_counts{1U, 3U, 4U, 5U, 7U};
+        if (function >= parameter_counts.size() ||
+            element.size() < 12U + parameter_counts[function] * 4U) {
+            return std::nullopt;
+        }
+        std::array<double, 7U> p{};
+        for (std::size_t index = 0U; index < parameter_counts[function]; ++index) {
+            p[index] = read_s15(element, 12U + index * 4U);
+        }
+        const double g = p[0];
+        // 함수 1~4 는 a·x + b 위에 감마를 겁니다. a 가 0 이하면 경계 -b/a 가 0 으로 나누기거나
+        // 뒤집혀 곡선이 아니므로 거절합니다. 경계 위라도 저장 반올림으로 a·x + b 가 아주 조금
+        // 음수가 될 수 있어 0 으로 받친 뒤 거듭제곱합니다(음수의 비정수 거듭제곱은 NaN).
+        if (!(g > 0.0) || (function >= 1U && !(p[1] > 0.0))) {
+            return std::nullopt;
+        }
+        const auto power = [&](const double value) {
+            return std::pow(std::max((p[1] * value) + p[2], 0.0), g);
+        };
+        switch (function) {
+            case 0U: return std::pow(x, g);
+            case 1U: return x >= -p[2] / p[1] ? power(x) : 0.0;
+            case 2U: return x >= -p[2] / p[1] ? power(x) + p[3] : p[3];
+            case 3U: return x >= p[4] ? power(x) : p[3] * x;
+            default: return x >= p[4] ? power(x) + p[5] : (p[3] * x) + p[6];
+        }
+    }
+    return std::nullopt;
+}
+
+}  // namespace
+
+std::vector<std::uint8_t> rgb_profile_for_gray_profile(
+    const std::span<const std::uint8_t> gray_profile) {
+    const IccProfileValidationResult validation = validate_icc_profile(gray_profile);
+    if (validation.status != IccProfileStatus::ok ||
+        validation.info.data_color_space != 0x47524159U) {  // 'GRAY'
+        return {};
+    }
+    std::span<const std::uint8_t> trc{};
+    for (std::uint32_t index = 0U; index < validation.info.tag_count; ++index) {
+        const std::size_t record = 132U + static_cast<std::size_t>(index) * 12U;
+        if (read_u32(gray_profile, record) == 0x6B545243U) {  // 'kTRC'
+            trc = gray_profile.subspan(
+                read_u32(gray_profile, record + 4U), read_u32(gray_profile, record + 8U));
+            break;
+        }
+    }
+    if (trc.size() < 12U) {
+        return {};
+    }
+    constexpr std::uint32_t points = 1024U;
+    std::vector<std::uint8_t> curve{};
+    append_tag(curve, "curv");
+    append_u32(curve, 0U);
+    append_u32(curve, points);
+    for (std::uint32_t index = 0U; index < points; ++index) {
+        const std::optional<double> value = evaluate_gray_trc(
+            trc, static_cast<double>(index) / static_cast<double>(points - 1U));
+        if (!value.has_value() || !std::isfinite(*value)) {
+            return {};
+        }
+        append_u16(curve, static_cast<std::uint16_t>(
+            std::lround(std::clamp(*value, 0.0, 1.0) * 65535.0)));
+    }
+    return build_matrix_trc_profile(
+        primaries_of(OutputColorSpace::srgb), "Negaflow Gray (as RGB)", curve);
 }
 
 const char* output_color_space_name(const OutputColorSpace space) noexcept {

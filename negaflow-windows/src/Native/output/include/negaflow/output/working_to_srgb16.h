@@ -110,6 +110,18 @@ struct WorkingToSrgb16Result final {
     std::uint64_t& clipped_color_components,
     const WorkingToSrgb16Limits& limits = {}) noexcept;
 
+// 이미 인코딩된 16비트 표본 띠를 8비트로 내립니다. 색 성분은 `convert_working_to_srgb_rows`
+// 의 8비트 갈래와 같은 디더(절대 좌표 해시, ±반 단계)를 더하고, 알파는 반올림만 합니다.
+// 인화소 ICC 로 나가는 8비트 파일이 16비트에서 프로파일을 옮긴 뒤 한 번만 양자화하려고
+// 씁니다 — 8비트로 먼저 접고 8→8 로 옮기면 양자화가 두 번 일어납니다.
+void dither_encoded16_rows_to_8(
+    const std::uint16_t* source,
+    std::uint32_t width,
+    std::uint32_t first_row,
+    std::uint32_t row_count,
+    std::uint32_t channels,
+    std::uint8_t* destination) noexcept;
+
 [[nodiscard]] const char* working_to_srgb16_status_name(
     WorkingToSrgb16Status status) noexcept;
 

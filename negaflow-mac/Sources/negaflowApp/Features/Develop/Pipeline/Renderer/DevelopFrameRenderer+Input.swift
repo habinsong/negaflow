@@ -80,7 +80,8 @@ extension DevelopFrameRenderer {
                 displayProxy(fullImage, maxDimension: snapshot.proxyMaxDimension),
                 usesLinearSRGB: full.usesLinearSRGB,
                 sourceBitsPerComponent: sourceBitsPerComponent(snapshot, cleanedRawURL: verifiedCleanedRawURL),
-                context: rawProxyContext(usesLinearSRGB: full.usesLinearSRGB)
+                context: rawProxyContext(usesLinearSRGB: full.usesLinearSRGB),
+                extendedRange: snapshot.params.isDigitalSource == true
             ) {
                 return RenderInput(image: ciImage(from: proxy), generatedPreviewRaw: proxy)
             }
@@ -111,7 +112,8 @@ extension DevelopFrameRenderer {
                 displayProxy(fullImage, maxDimension: snapshot.proxyMaxDimension),
                 usesLinearSRGB: true,
                 sourceBitsPerComponent: sourceBitsPerComponent(snapshot, cleanedRawURL: verifiedCleanedRawURL),
-                context: rawProxyContext(usesLinearSRGB: true)
+                context: rawProxyContext(usesLinearSRGB: true),
+                extendedRange: snapshot.params.isDigitalSource == true
             ) {
                 return RenderInput(image: ciImage(from: proxy), generatedPreviewRaw: proxy)
             }
@@ -126,11 +128,14 @@ extension DevelopFrameRenderer {
                 return RenderInput(image: preview.image,
                     generatedPreviewRaw: DevelopFramePreviewRaw(image: raster, usesLinearSRGB: usesLinear))
             }
+            let wide = snapshot.params.isDigitalSource == true && isWideGamutSource(preview.image)
             let proxy = materializedPreviewRaw(
                 preview.image,
                 usesLinearSRGB: usesLinear,
                 sourceBitsPerComponent: sourceBitsPerComponent(snapshot, cleanedRawURL: verifiedCleanedRawURL),
-                context: rawProxyContext(usesLinearSRGB: usesLinear)
+                context: rawProxyContext(usesLinearSRGB: usesLinear || wide),
+                extendedRange: snapshot.params.isDigitalSource == true,
+                wideGamutSource: wide
             )
             return RenderInput(
                 image: proxy.map(ciImage(from:)) ?? preview.image,
@@ -151,11 +156,14 @@ extension DevelopFrameRenderer {
             || snapshot.preloadedRaw != nil
             || verifiedCleanedRawURL != nil
             || rawInput.colorSpace?.name == CGColorSpace(name: CGColorSpace.linearSRGB)?.name
+        let wide = snapshot.params.isDigitalSource == true && isWideGamutSource(rawInput)
         let proxy = materializedPreviewRaw(
             displayProxy(rawInput, maxDimension: snapshot.proxyMaxDimension),
             usesLinearSRGB: usesLinear,
             sourceBitsPerComponent: sourceBitsPerComponent(snapshot, cleanedRawURL: verifiedCleanedRawURL),
-            context: rawProxyContext(usesLinearSRGB: usesLinear)
+            context: rawProxyContext(usesLinearSRGB: usesLinear || wide),
+            extendedRange: snapshot.params.isDigitalSource == true,
+            wideGamutSource: wide
         )
         return RenderInput(
             image: proxy.map(ciImage(from:)) ?? rawInput,
@@ -210,23 +218,47 @@ extension DevelopFrameRenderer {
         sourceBitsPerComponent > 8 || usesLinearSRGB ? .RGBA16 : .RGBA8
     }
 
+    /// 디지털 원본이 sRGB 가 아닌 RGB 색공간(Display P3·Adobe RGB·이름 없는 ICC)인지. 그런 원본은
+    /// 감마 인코딩이어도 sRGB 로 굳히면 원색이 프리뷰에서만 잘린다.
+    static func isWideGamutSource(_ image: CIImage) -> Bool {
+        guard let space = image.colorSpace, space.model == .rgb else { return false }
+        guard let name = space.name else { return true }
+        let srgbFamily: [CFString] = [
+            CGColorSpace.sRGB, CGColorSpace.extendedSRGB,
+            CGColorSpace.linearSRGB, CGColorSpace.extendedLinearSRGB,
+        ]
+        return !srgbFamily.contains { $0 == name }
+    }
+
+    /// `extendedRange` 는 디지털 원본이다. 선형 입력(RAW)과 광색역 입력(P3·Adobe RGB)을
+    /// RGBA16·sRGB 로 굳히면 1.0 넘는 하이라이트와 sRGB 밖 원색이 **프리뷰에서만** 잘렸다
+    /// (내보내기는 원본에서 다시 현상해 남는다). 확장 선형 half-float 로 굳힌다. 필름 스캔은
+    /// 지침상 경로를 바꾸지 않으므로 그대로다.
     static func materializedPreviewRaw(
         _ input: CIImage,
         usesLinearSRGB: Bool,
         sourceBitsPerComponent: @autoclosure () -> Int,
-        context: CIContext
+        context: CIContext,
+        extendedRange: Bool = false,
+        wideGamutSource: Bool = false
     ) -> DevelopFramePreviewRaw? {
-        let colorSpace = usesLinearSRGB
+        // 디지털 원본의 선형 입력과 광색역 입력은 확장 선형 half-float 로 굳힌다. sRGB 원본
+        // (대부분의 JPEG)은 잘릴 색이 없으므로 메모리를 아끼려고 그대로 둔다.
+        let extended = extendedRange && (usesLinearSRGB || wideGamutSource)
+        let colorSpace = extended
+            ? CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!
+            : usesLinearSRGB
             ? CGColorSpace(name: CGColorSpace.linearSRGB)!
             : CGColorSpace(name: CGColorSpace.sRGB)!
         // Linear proxies always use RGBA16. Resolving the source depth here can
         // otherwise reopen/estimate the original TIFF even when using cleaned pixels.
-        let format: CIFormat = usesLinearSRGB ? .RGBA16 : previewRawFormat(
+        let format: CIFormat = extended ? .RGBAh : usesLinearSRGB ? .RGBA16 : previewRawFormat(
             sourceBitsPerComponent: sourceBitsPerComponent(), usesLinearSRGB: false)
         guard let cg = context.createCGImage(input, from: input.extent.integral, format: format, colorSpace: colorSpace) else {
             return nil
         }
-        return DevelopFramePreviewRaw(image: cg, usesLinearSRGB: usesLinearSRGB)
+        // 확장 프록시는 감마 원본이었어도 값이 선형이다.
+        return DevelopFramePreviewRaw(image: cg, usesLinearSRGB: usesLinearSRGB || extended)
     }
 
     /// 원본이 채널당 몇 비트인지. 못 읽으면 16 으로 본다 — 굳히는 쪽에서 계조를 깎는 것보다
@@ -244,6 +276,11 @@ extension DevelopFrameRenderer {
     }
 
     private static func ciImage(from preview: DevelopFramePreviewRaw) -> CIImage {
+        // 확장 범위 half-float 프록시는 제 색공간(extendedLinearSRGB)을 그대로 쓴다 — linearSRGB 로
+        // 덮으면 [0,1] 밖 값이 다시 잘린다.
+        if preview.image.bitmapInfo.contains(.floatComponents) {
+            return CIImage(cgImage: preview.image)
+        }
         if preview.usesLinearSRGB {
             return CIImage(cgImage: preview.image, options: [.colorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!])
         }

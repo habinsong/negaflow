@@ -19,7 +19,19 @@ internal static class MonitorColorProfile
     private const uint MonitorDefaultToPrimary = 1;
 
     /// <summary>프로파일 이름입니다. 못 읽으면 null 입니다.</summary>
-    internal static string? Name(nint windowHandle)
+    internal static string? Name(nint windowHandle) =>
+        Path(windowHandle) is { } file ? System.IO.Path.GetFileNameWithoutExtension(file) : null;
+
+    /// <summary>창이 놓인 모니터입니다. 화면 색관리가 모니터가 바뀌었는지 볼 때 씁니다.</summary>
+    internal static nint Monitor(nint windowHandle) =>
+        MonitorFromWindow(windowHandle, MonitorDefaultToPrimary);
+
+    /// <summary>
+    /// 창이 놓인 모니터에 걸린 ICC 프로파일 파일의 전체 경로입니다. 못 읽으면 null 입니다.
+    /// Advanced Color 가 켜져 있으면 시스템은 sRGB 프로파일을 돌려줍니다(Microsoft Learn
+    /// "ICC profile behavior with Advanced Color").
+    /// </summary>
+    internal static string? Path(nint windowHandle)
     {
         nint monitor = MonitorFromWindow(windowHandle, MonitorDefaultToPrimary);
         MonitorInfoEx info = new() { Size = Marshal.SizeOf<MonitorInfoEx>() };
@@ -49,9 +61,7 @@ internal static class MonitorColorProfile
                 return null;
             }
             string file = path.ToString();
-            return string.IsNullOrWhiteSpace(file)
-                ? null
-                : Path.GetFileNameWithoutExtension(file);
+            return string.IsNullOrWhiteSpace(file) ? null : file;
         }
         finally
         {

@@ -189,16 +189,16 @@ internal static class ExportConfigurationTests
             "export_settings_color_space_reaches_the_request");
         Check(request.PreserveAlpha, "export_settings_preserve_alpha_reaches_the_request");
 
-        // JPEG 은 sRGB 만 냅니다. 고른 값이 요청에 그대로 실리면 엔진이 거절하므로, 화면에
-        // 보이는 요약과 실제 파일이 어긋나지 않도록 여기서 sRGB 로 되돌립니다.
+        // JPEG 도 고른 색공간으로 냅니다(macOS 와 같음) — 엔진이 화소를 옮기고 그 프로파일을
+        // 박으므로 고른 값이 요청에 그대로 실립니다.
         DevelopRequestResult jpeg = DevelopRequestFactory.Create(
             Frame(new ManualBaseRgb(0.21, 0.22, 0.23)),
             @"C:\exports\IMG_0001.jpg",
             DevelopExportFormat.Jpeg8,
             (settings with { Format = DevelopExportFormat.Jpeg8, PreserveAlpha = false }).ToEncodingOptions());
         Check(
-            jpeg.Request is { OutputColorSpace: ExportColorSpace.Srgb },
-            "export_settings_jpeg_publishes_srgb");
+            jpeg.Request is { } jpegRequest && jpegRequest.OutputColorSpace == settings.ColorSpace,
+            "export_settings_jpeg_publishes_the_chosen_space");
         DevelopRequestResult alphaJpeg = DevelopRequestFactory.Create(
             Frame(new ManualBaseRgb(0.21, 0.22, 0.23)),
             @"C:\exports\IMG_0001.jpg",

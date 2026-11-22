@@ -1,5 +1,6 @@
 #pragma once
 
+#include "negaflow/color/output_color_space.h"
 #include "negaflow/core/machine_memory.h"
 
 #include <cstdint>
@@ -10,9 +11,12 @@ namespace negaflow::output {
 
 // 이미 합성이 끝난 인화 판 한 장을 파일로 게시합니다.
 //
-// **화소를 건드리지 않습니다.** 들어오는 RGB16 은 이미 게시할 색공간의 코드값이며(판에 얹은
-// 임시 현상본이 그 프로파일로 나왔기 때문입니다), 여기서는 그 값을 그대로 쓰고 같은 프로파일을
-// 파일에 박습니다. 한 번 더 변환하면 랩이 받는 색이 화면과 달라집니다.
+// 들어오는 RGB16 은 **sRGB 코드값**입니다 — 사진·바탕·필름 띠·캡션·워터마크 모두. 인화소
+// ICC 가 있으면 판 전체를 그 프로파일로 한 번 옮기고 그 프로파일을 박습니다. 없으면 고른
+// Delivery 색공간(`output_color_space`)으로 옮기고 그 공간의 프로파일을 박습니다. sRGB 면
+// 값을 그대로 쓰고 시스템 sRGB 프로파일을 박습니다(macOS `PrintPackageExportWriter` 가
+// `options.colorSpace` 를 쓰는 자리). 판에 얹는 임시 현상본에 프로파일을 미리
+// 걸면 사진만 프린터 공간에 있고 나머지는 sRGB 값으로 남아 회색 바탕·필름 띠 색이 틀어집니다.
 //
 // 현상 내보내기(`export_working_to_srgb16_*`)와 다른 진입점인 이유: 저쪽은 선형 working 이미지를
 // 받아 색공간으로 옮기며 내고, 이쪽은 옮길 것이 없는 완성된 판을 받습니다.
@@ -64,6 +68,9 @@ struct PrintSheetPublishLimits final {
     // 비어 있으면 시스템 sRGB 프로파일을 박습니다. 비어 있지 않으면 그 바이트를 그대로
     // 박습니다 - 랩이 준 프로파일과 파일에 박힌 것이 한 바이트도 달라서는 안 됩니다.
     std::span<const std::uint8_t> output_icc_profile{};
+    // 인화소 ICC 가 없을 때 게시할 색공간입니다. JPEG 은 sRGB 만, DNG 는 이 값을 쓰지
+    // 않습니다(선형 RGB 로 씁니다).
+    negaflow::color::OutputColorSpace output_color_space{negaflow::color::OutputColorSpace::srgb};
 };
 
 struct PrintSheetPublishInfo final {

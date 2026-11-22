@@ -4,7 +4,9 @@ import CoreImage
 // MARK: - 고급 색 조정 단계 (Color Mixer / Color Grading / Calibration / Point Curves)
 
 public enum ColorMixerStage {
-    public static func apply(to image: CIImage, mixer: ColorMixer) -> CIImage {
+    /// `perceptual` 은 사용자 슬라이더(선형 입력을 sRGB 인코딩 값에서 계산)다. 필름 룩 프리셋은
+    /// 이미 감마로 바꾼 값을 넘기므로 false 로 부른다. 윈도우 `ColorMixerParameters::perceptual`.
+    public static func apply(to image: CIImage, mixer: ColorMixer, perceptual: Bool = true) -> CIImage {
         guard !mixer.isIdentity,
               let kernel = ChromabaseMetalKernels.colorKernel(named: "colorMixerHSL") else { return image }
         func v4(_ a: [Double], _ base: Int) -> CIVector {
@@ -16,12 +18,15 @@ public enum ColorMixerStage {
             v4(mixer.hue, 0), v4(mixer.hue, 4),
             v4(mixer.saturation, 0), v4(mixer.saturation, 4),
             v4(mixer.luminance, 0), v4(mixer.luminance, 4),
+            perceptual ? Float(1) : Float(0),
         ])?.cropped(to: image.extent) ?? image
     }
 }
 
 public enum ColorGradingStage {
-    public static func apply(to image: CIImage, grading: ColorGrading) -> CIImage {
+    /// `perceptual` 은 사용자 슬라이더다. 필름 룩 프리셋은 false 로 부른다(윈도우
+    /// `ColorGradingParameters::perceptual`).
+    public static func apply(to image: CIImage, grading: ColorGrading, perceptual: Bool = true) -> CIImage {
         guard !grading.isIdentity,
               let kernel = ChromabaseMetalKernels.colorKernel(named: "colorGrade") else { return image }
         func region(_ r: ColorGradeRegion) -> CIVector {
@@ -36,18 +41,22 @@ public enum ColorGradingStage {
             region(grading.midtones),
             region(grading.highlights),
             CIVector(x: CGFloat(grading.blending), y: CGFloat(grading.balance)),
+            perceptual ? Float(1) : Float(0),
         ])?.cropped(to: image.extent) ?? image
     }
 }
 
 public enum CalibrationStage {
-    public static func apply(to image: CIImage, calibration c: CalibrationAdjust) -> CIImage {
+    /// `perceptual` 은 사용자 슬라이더다(선형 입력을 sRGB 인코딩 값에서 계산). 필름 룩 프리셋은
+    /// 이미 감마로 바꾼 값을 넘기므로 false 로 부른다. 윈도우 `PrimaryCalibration::perceptual`.
+    public static func apply(to image: CIImage, calibration c: CalibrationAdjust, perceptual: Bool = true) -> CIImage {
         guard !c.isIdentity,
               let kernel = ChromabaseMetalKernels.colorKernel(named: "calibrationPrimaries") else { return image }
         return kernel.apply(extent: image.extent, arguments: [
             image,
             CIVector(x: CGFloat(c.redHue), y: CGFloat(c.greenHue), z: CGFloat(c.blueHue)),
             CIVector(x: CGFloat(c.redSat), y: CGFloat(c.greenSat), z: CGFloat(c.blueSat)),
+            perceptual ? Float(1) : Float(0),
         ])?.cropped(to: image.extent) ?? image
     }
 }
@@ -77,18 +86,29 @@ public enum PointCurveStage {
             }
         }
         let data = Data(bytes: cube, count: cube.count * MemoryLayout<Float>.size)
-        return image.applyingFilter("CIColorCubeWithColorSpace", parameters: [
+        let graded = image.applyingFilter("CIColorCubeWithColorSpace", parameters: [
             "inputCubeDimension": dim,
             "inputCubeData": data,
             "inputColorSpace": CGColorSpace(name: CGColorSpace.sRGB) as Any,
         ]).cropped(to: image.extent)
+        // 큐브는 [0,1] 밖 값을 잘라 낸다. 그 몫을 다시 더해 광색역·1.0 넘는 값을 지킨다(윈도우
+        // `apply_point_curves` 와 같은 식).
+        guard let restore = ChromabaseMetalKernels.colorKernel(named: "restoreOutOfRange") else { return graded }
+        return restore.apply(extent: image.extent, arguments: [image, graded])?.cropped(to: image.extent) ?? graded
     }
 
-    /// outer(inner(i)) — inner LUT 출력을 outer LUT의 인덱스로 다시 조회.
-    private static func compose(_ inner: [Float], _ outer: [Float]) -> [Float] {
-        inner.map { v in
-            let idx = Int((v * Float(outer.count - 1)).rounded())
-            return outer[min(max(idx, 0), outer.count - 1)]
+    /// outer(inner(i)) — inner LUT 출력 위치에서 outer LUT 를 **선형 보간**한다.
+    /// 가장 가까운 칸으로 반올림하던 앞 판은 마스터 커브만 건드려도 값이 1/63 단위로 계단져
+    /// 기울기가 0~2 로 들쭉날쭉했다(±2 레벨 띠). 채널 커브가 항등이면 이제 오차가 없다.
+    /// 윈도우 `compose_luts` 와 같은 식이다.
+    static func compose(_ inner: [Float], _ outer: [Float]) -> [Float] {
+        let last = outer.count - 1
+        return inner.map { v in
+            let position = min(max(v, 0), 1) * Float(last)
+            let lower = min(Int(position), last)
+            let upper = min(lower + 1, last)
+            let fraction = position - Float(lower)
+            return outer[lower] + (outer[upper] - outer[lower]) * fraction
         }
     }
 }

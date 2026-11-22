@@ -113,14 +113,28 @@ struct TagLocation final {
     };
 }
 
-[[nodiscard]] double clamp_ratio(
-    const double value,
-    const double reference,
+// PCS XYZ(D50) → 선형 sRGB. ICC sRGB 색소(Bradford 로 D50 에 맞춘 값)의 역행렬입니다(macOS
+// `SoftProof.xyzD50ToLinearSRGB` 와 같은 값). 용지 흰색·잉크 검정을 XYZ/D50 비율 그대로 RGB 배율로
+// 쓰던 앞 판은 따뜻한 용지(X·Y 0.97, Z 0.92 배)를 (0.970, 0.970, 0.920) 으로 그렸지만 행렬로는
+// (0.990, 0.969, 0.912) 입니다(2026-11-22).
+constexpr double xyz_d50_to_linear_srgb[3][3]{
+    {3.133856368, -1.61686677, -0.490614773},
+    {-0.978768563, 1.916141553, 0.033454116},
+    {0.071945168, -0.228991277, 1.405242674},
+};
+
+[[nodiscard]] std::array<double, 3> media_to_linear_srgb(
+    const SoftProofXyz& xyz,
     const double ceiling) noexcept {
-    if (!(reference > 0.0)) {
-        return 0.0;
+    const double v[3]{xyz.x, xyz.y, xyz.z};
+    double out[3]{};
+    for (std::size_t row = 0U; row < 3U; ++row) {
+        const double value = (xyz_d50_to_linear_srgb[row][0] * v[0]) +
+                             (xyz_d50_to_linear_srgb[row][1] * v[1]) +
+                             (xyz_d50_to_linear_srgb[row][2] * v[2]);
+        out[row] = std::clamp(value, 0.0, ceiling);
     }
-    return std::clamp(value / reference, 0.0, ceiling);
+    return {out[0], out[1], out[2]};
 }
 
 // Snapped as a triple rather than per channel: a paper that is neutral in two channels and
@@ -184,25 +198,11 @@ bool is_rgb_output_profile(const std::span<const std::uint8_t> bytes) noexcept {
 SoftProofPaper soft_proof_paper(const SoftProofMedia& media) noexcept {
     SoftProofPaper paper{};
     if (media.has_white) {
-        paper.white = {
-            clamp_ratio(media.white.x, soft_proof_reference_d50.x,
-                        soft_proof_paper_white_ceiling),
-            clamp_ratio(media.white.y, soft_proof_reference_d50.y,
-                        soft_proof_paper_white_ceiling),
-            clamp_ratio(media.white.z, soft_proof_reference_d50.z,
-                        soft_proof_paper_white_ceiling),
-        };
+        paper.white = media_to_linear_srgb(media.white, soft_proof_paper_white_ceiling);
         snap_to_reference(paper.white, 1.0);
     }
     if (media.has_black) {
-        paper.black = {
-            clamp_ratio(media.black.x, soft_proof_reference_d50.x,
-                        soft_proof_black_ink_ceiling),
-            clamp_ratio(media.black.y, soft_proof_reference_d50.y,
-                        soft_proof_black_ink_ceiling),
-            clamp_ratio(media.black.z, soft_proof_reference_d50.z,
-                        soft_proof_black_ink_ceiling),
-        };
+        paper.black = media_to_linear_srgb(media.black, soft_proof_black_ink_ceiling);
         snap_to_reference(paper.black, 0.0);
     }
     return paper;

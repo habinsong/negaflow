@@ -37,6 +37,7 @@ internal sealed class PrintPreviewRenderer
     /// 새 썸네일이나 현상본이 도착하면 <see cref="InvalidateTiles"/> 로 비웁니다.
     /// </remarks>
     private readonly PrintPreviewTileCache<ImageSource> tileImages = new();
+    private (string Lab, string Printer) cachedProofPaths;
 
     /// <summary>워터마크 띠의 참조 그림·로고를 풀어 둔 자리입니다.</summary>
     private readonly PrintWatermarkPreview watermarkPreview;
@@ -54,6 +55,13 @@ internal sealed class PrintPreviewRenderer
         this.state = state;
         this.drawCustomEditor = drawCustomEditor;
         watermarkPreview = new PrintWatermarkPreview(() => Draw());
+        // 창이 다른 모니터로 가면 화면 색관리 표가 바뀝니다. 담아 둔 타일은 앞 표로 옮긴
+        // 화소라 버리고 다시 그립니다. 인화 화면은 앱이 사는 동안 하나뿐입니다.
+        Negaflow.Shell.Services.DisplayColorManagement.Changed += (_, _) =>
+        {
+            tileImages.Clear();
+            Draw();
+        };
     }
 
     /// <summary>
@@ -107,6 +115,10 @@ internal sealed class PrintPreviewRenderer
 
     /// <summary>사진마다 마지막으로 청한 현상본의 긴 변입니다.</summary>
     private readonly Dictionary<string, int> requestedEdges = [];
+
+    // 캐시 화소를 화면 색관리로 옮겨 담는 버퍼입니다. 캐시는 다른 화면도 보므로 제자리에서
+    // 바꾸지 않습니다.
+    private byte[]? displayScratch;
 
     /// <summary>
     /// 판을 다시 그립니다. 같은 프레임 안에서 여러 번 불려도 <b>한 번만</b> 그립니다.
@@ -185,6 +197,12 @@ internal sealed class PrintPreviewRenderer
         surface.PageBorder.Visibility = Visibility.Visible;
 
         PrintPreferences print = workspace.Current.Print;
+        var proofPaths = (print.CPrintProofProfilePath, workspace.Current.SoftProof.PrinterProfilePath);
+        if (proofPaths != cachedProofPaths)
+        {
+            cachedProofPaths = proofPaths;
+            tileImages.Clear();
+        }
         PrintSizeMm firstSource = SourcePixelSize(currentSources[0]);
         PrintCompositionSettings composition = print.Composition(
             firstSource.Height > 0 ? firstSource.Width / firstSource.Height : null);
@@ -408,21 +426,19 @@ internal sealed class PrintPreviewRenderer
     private Windows.UI.Color PaperWhite()
     {
         if (state() is { } workspace &&
-            PrintPaperTint.For(workspace.Current.Print) is { } tint)
+            PrintPaperTint.For(workspace.Current.Print, workspace.Current.SoftProof) is { } tint)
         {
             PreviewTrace.Write(System.FormattableString.Invariant(
                 $"print.paper tint=({tint.Red:F3},{tint.Green:F3},{tint.Blue:F3})"));
+            // 용지 흰색은 선형 배율입니다. sRGB 로 인코딩해야 사진 속 흰색과 같은 밝기입니다.
             return Windows.UI.Color.FromArgb(
                 0xFF,
-                Channel(tint.Red),
-                Channel(tint.Green),
-                Channel(tint.Blue));
+                PrintSoftProofFilter.EncodeSrgbByte(tint.Red),
+                PrintSoftProofFilter.EncodeSrgbByte(tint.Green),
+                PrintSoftProofFilter.EncodeSrgbByte(tint.Blue));
         }
         return Windows.UI.Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF);
     }
-
-    private static byte Channel(double value) =>
-        (byte)Math.Clamp(Math.Round(value * 255.0), 0, 255);
 
     private void WritePageSummary(PrintSizeMm canvas, PrintCompositionSettings composition)
     {
@@ -528,83 +544,53 @@ internal sealed class PrintPreviewRenderer
         surface.PageCanvas.Children.Add(overlay);
     }
 
-    /// <summary>
-    /// 색역 밖 화소를 표시합니다. 판정은 ICM 이 하고, 색은 macOS 와 같은 빨강(알파 166)
-    /// 입니다. 목적지는 인화소가 준 프로파일이며 — 없으면 아무것도 표시하지 않습니다.
-    /// </summary>
-    /// <summary>
-    /// 지금 사진에 걸 인화 프로파일입니다. 미리보기를 켰고 프로파일이 있을 때만 나옵니다.
-    /// </summary>
-    private string? ProofProfilePath()
+    private static byte[]? ReadProofProfile(string? path)
     {
-        if (state() is not { } workspace)
+        if (path is null)
         {
             return null;
         }
-        PrintPreferences print = workspace.Current.Print;
-        return print.OutputProcess == PrintOutputProcess.CPrint &&
-            print.CPrintPreviewEnabled &&
-            print.CPrintProofProfilePath.Length > 0
-            ? print.CPrintProofProfilePath
-            : null;
-    }
-
-    /// <summary>
-    /// 사진을 인화지 프로파일로 갔다가 되돌립니다. 인화지가 못 내는 색이 눌려 보입니다 —
-    /// macOS 가 `profileOnly` 에서 그리는 색 공간을 바꾸는 것과 같은 결과입니다.
-    /// </summary>
-    private void ApplyProofProfile(Span<byte> pixels, int width, int height)
-    {
-        if (ProofProfilePath() is not { } path)
-        {
-            return;
-        }
-        byte[] icc;
         try
         {
-            icc = File.ReadAllBytes(path);
+            return File.ReadAllBytes(path);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or
             ArgumentException or NotSupportedException)
         {
-            return;
+            return null;
         }
-        bool applied = Negaflow.Interop.NativeGamutMask.Proof(pixels, width, height, icc);
-        PreviewTrace.Write(System.FormattableString.Invariant($"print.proof applied={applied}"));
     }
 
-    /// <summary>지금 색역 경고를 표시해야 하는지입니다.</summary>
-    private bool GamutWarningActive()
+    private static void ApplyTileColor(
+        byte[] pixels,
+        int width,
+        int height,
+        PrintPresentationStyle presentation,
+        Negaflow.Interop.SoftProofSettings? proof,
+        string? profilePath,
+        bool warnGamut)
     {
-        if (state() is not { } workspace)
+        PrintPresentationFilter.Apply(pixels, presentation);
+        byte[]? icc = ReadProofProfile(profilePath);
+        // 색역 판정에는 프루프 왕복 전의 색을 씁니다.
+        byte[]? judged = warnGamut && icc is not null ? (byte[])pixels.Clone() : null;
+        if (icc is not null)
         {
-            return false;
+            bool applied = Negaflow.Interop.NativeGamutMask.Proof(pixels, width, height, icc);
+            PreviewTrace.Write(System.FormattableString.Invariant($"print.proof applied={applied}"));
         }
-        PrintPreferences print = workspace.Current.Print;
-        return workspace.Current.SoftProof.GamutWarningEnabled &&
-            print.OutputProcess == PrintOutputProcess.CPrint &&
-            print.CPrintPreviewEnabled &&
-            print.CPrintProofProfilePath.Length > 0;
+        PrintSoftProofFilter.Apply(pixels, proof);
+        if (judged is not null && icc is not null)
+        {
+            MarkOutOfGamut(pixels, judged, width, height, icc);
+        }
+        Negaflow.Shell.Services.DisplayColorManagement.ApplyInPlace(pixels, width, height);
     }
 
-    private void MarkOutOfGamut(Span<byte> pixels, int width, int height)
+    private static void MarkOutOfGamut(
+        Span<byte> pixels, ReadOnlySpan<byte> judged, int width, int height, ReadOnlySpan<byte> icc)
     {
-        if (state() is not { } workspace || !GamutWarningActive())
-        {
-            return;
-        }
-        PrintPreferences print = workspace.Current.Print;
-        byte[] icc;
-        try
-        {
-            icc = File.ReadAllBytes(print.CPrintProofProfilePath);
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
-            ArgumentException or NotSupportedException)
-        {
-            return;
-        }
-        long? marked = Negaflow.Interop.NativeGamutMask.Mark(pixels, width, height, icc);
+        long? marked = Negaflow.Interop.NativeGamutMask.Mark(pixels, judged, width, height, icc);
         int firstRow = Negaflow.Interop.NativeGamutMask.FirstMarkedRow;
         int lastRow = Negaflow.Interop.NativeGamutMask.LastMarkedRow;
         int bufferPixels = pixels.Length / 4;
@@ -620,9 +606,15 @@ internal sealed class PrintPreviewRenderer
     {
         // 인화 화면의 프루프입니다. macOS `displaySoftProofSettings(for:in: .print)` 이
         // 전역이 아니라 C-print 설정을 쓰는 자리와 같습니다.
-        Negaflow.Interop.SoftProofSettings? proof = state() is { } proofState
-            ? PrintSoftProofFilter.Settings(proofState.Current.Print)
+        ShellPreferences? preferences = state()?.Current;
+        var destination = preferences is not null
+            ? PrintSoftProofFilter.Destination(preferences.Print, preferences.SoftProof)
             : null;
+        Negaflow.Interop.SoftProofSettings? proof = preferences is not null && destination is { PaperSimulation: true }
+            ? PrintSoftProofFilter.Settings(preferences.Print, preferences.SoftProof)
+            : null;
+        string? profilePath = destination?.Path;
+        bool warnGamut = profilePath is not null && preferences?.SoftProof.GamutWarningEnabled == true;
         // macOS `packageImage(_:)` — 홀수 번 돌면 그리는 상자의 가로세로가 바뀝니다.
         // `ImageRect` 는 이미 <b>돌린 뒤</b>의 자리이므로, 돌리기 전 상자는 가로세로를 맞바꾼
         // 크기여야 합니다. 그러지 않으면 세로 사진이 가로 상자에 눌려 들어갑니다.
@@ -652,8 +644,8 @@ internal sealed class PrintPreviewRenderer
             (PrintSoftProofFilter.Transforms(proof)
                 ? System.FormattableString.Invariant(
                     $"{proof!.PaperWhite.Red:F3}/{proof.PaperWhite.Green:F3}/{proof.PaperWhite.Blue:F3}/{proof.BlackInk.Red:F3}")
-                : string.Empty) + (GamutWarningActive() ? "|gamut" : string.Empty) +
-            (ProofProfilePath() ?? string.Empty));
+                : string.Empty) + (warnGamut ? "|gamut" : string.Empty) +
+            (profilePath ?? string.Empty));
         if (tileImages.TryGetValue(key, out ImageSource? cached) && cached is not null)
         {
             image.Source = cached;
@@ -668,9 +660,8 @@ internal sealed class PrintPreviewRenderer
                     Negaflow.Shell.Develop.PreviewPixelStats.Describe(
                         developed.Pixels, developed.Width, developed.Height));
             }
-            // 현상본은 이미 프루프를 통과해서 옵니다(`ThumbnailService.PrintProof`).
-            // 여기서 또 걸면 두 번 눌립니다.
-            WriteableBitmap bitmap = BgraBitmap(developed, presentation, null);
+            // 현상본에는 용지·잉크가 이미 적용됐습니다. ICC 왕복과 색역 경고는 여기서 그립니다.
+            WriteableBitmap bitmap = BgraBitmap(developed, presentation, profilePath, warnGamut);
             tileImages.Store(key, bitmap);
             image.Source = bitmap;
         }
@@ -678,16 +669,21 @@ internal sealed class PrintPreviewRenderer
         {
             PreviewTrace.Write(
                 $"shown.print {frame.Id} THUMBNAIL-FALLBACK jpeg={jpeg.Length} style={presentation}");
-            BitmapImage? decoded = LibraryWorkspaceView.DecodeThumbnail(jpeg);
+            var plainKey = (frame.Id, PrintPresentationStyle.Standard, false, string.Empty);
+            if (!tileImages.TryGetValue(plainKey, out ImageSource? decoded))
+            {
+                decoded = LibraryWorkspaceView.DecodeThumbnail(jpeg);
+                if (decoded is not null) { tileImages.Store(plainKey, decoded); }
+            }
             image.Source = decoded;
             // 시아노타입 · 유리건판 · 젤라틴 실버는 **화면에서도** 보여야 합니다. 썸네일은
             // JPEG 이라 화소를 바로 만질 수 없으므로 풀어서 다시 겁니다 — 내보내기가 지나는
             // `PrintPresentationFilter` 와 같은 계산입니다.
-            if (PrintPresentationFilter.Transforms(presentation) ||
+            if (PrintPresentationFilter.Transforms(presentation) || profilePath is not null ||
                 PrintSoftProofFilter.Transforms(proof))
             {
                 long revision = tileImages.Revision;
-                _ = ApplyPresentationAsync(jpeg, presentation, proof, source =>
+                _ = ApplyPresentationAsync(jpeg, presentation, proof, profilePath, warnGamut, source =>
                 {
                     if (tileImages.TryStore(revision, key, source)) { image.Source = source; }
                 });
@@ -776,28 +772,18 @@ internal sealed class PrintPreviewRenderer
     private WriteableBitmap BgraBitmap(
         ThumbnailService.DevelopedPreview preview,
         PrintPresentationStyle presentation,
-        Negaflow.Interop.SoftProofSettings? proof)
+        string? profilePath,
+        bool warnGamut)
     {
         WriteableBitmap bitmap = new(preview.Width, preview.Height);
         int written = preview.Width * preview.Height * 4;
-        // 색역 경고도 화소를 바꿉니다 — 이 조건에 없으면 아래 복사 분기를 타지 않아
-        // 표시가 한 번도 걸리지 않습니다.
-        if (PrintPresentationFilter.Transforms(presentation) ||
-            PrintSoftProofFilter.Transforms(proof) ||
-            ProofProfilePath() is not null ||
-            GamutWarningActive())
+        if (PrintPresentationFilter.Transforms(presentation) || profilePath is not null)
         {
             // 캐시의 화소는 다른 화면도 함께 봅니다. 그 자리에서 바꾸면 현상 미리보기까지
             // 파랗게 물들므로 여기서 한 벌 떠서 바꿉니다.
             byte[] tinted = new byte[written];
             Array.Copy(preview.Pixels, tinted, written);
-            PrintPresentationFilter.Apply(tinted, presentation);
-            // 미리보기를 켜면 <b>사진</b>이 인화지 프로파일을 지나 옵니다. 용지 시뮬레이션과
-            // 별개의 단계입니다 — macOS 의 `profileOnly` 가 하는 일입니다.
-            ApplyProofProfile(tinted, preview.Width, preview.Height);
-            // 용지 시뮬레이션을 켜면 그 위에 용지 흰색·잉크 검정까지 얹습니다.
-            PrintSoftProofFilter.Apply(tinted, proof);
-            MarkOutOfGamut(tinted, preview.Width, preview.Height);
+            ApplyTileColor(tinted, preview.Width, preview.Height, presentation, null, profilePath, warnGamut);
             using (Stream buffer = bitmap.PixelBuffer.AsStream())
             {
                 buffer.Write(tinted, 0, written);
@@ -805,9 +791,11 @@ internal sealed class PrintPreviewRenderer
             bitmap.Invalidate();
             return bitmap;
         }
+        byte[] shown = Negaflow.Shell.Services.DisplayColorManagement.ForDisplay(
+            preview.Pixels, preview.Width, preview.Height, ref displayScratch);
         using (Stream buffer = bitmap.PixelBuffer.AsStream())
         {
-            buffer.Write(preview.Pixels, 0, written);
+            buffer.Write(shown, 0, written);
         }
         bitmap.Invalidate();
         return bitmap;
@@ -822,6 +810,8 @@ internal sealed class PrintPreviewRenderer
         byte[] jpeg,
         PrintPresentationStyle presentation,
         Negaflow.Interop.SoftProofSettings? proof,
+        string? profilePath,
+        bool warnGamut,
         Action<ImageSource> keep)
     {
         try
@@ -837,8 +827,8 @@ internal sealed class PrintPreviewRenderer
                 ExifOrientationMode.IgnoreExifOrientation,
                 ColorManagementMode.DoNotColorManage);
             byte[] pixels = provider.DetachPixelData();
-            PrintPresentationFilter.Apply(pixels, presentation);
-            PrintSoftProofFilter.Apply(pixels, proof);
+            ApplyTileColor(pixels, (int)decoder.PixelWidth, (int)decoder.PixelHeight,
+                presentation, proof, profilePath, warnGamut);
             WriteableBitmap bitmap = new((int)decoder.PixelWidth, (int)decoder.PixelHeight);
             using (Stream buffer = bitmap.PixelBuffer.AsStream())
             {

@@ -30,6 +30,8 @@ The same holds for:
 
 macOS uses ColorSync and Windows uses ICM. Both take the same ICC profiles and give the same numbers within rounding. The parity tests cover this because it is the part most likely to drift quietly.
 
+On screen, macOS draws through the display's ColorSync profile. Windows does that only when Advanced Color is on. With it off, Windows sends application pixels to the display as sRGB, so negaflow converts the develop canvas and the print preview to the monitor's ICC profile just before drawing. Thumbnails and the rest of the interface are drawn as sRGB.
+
 ### Graphics
 
 macOS runs the develop chain on Core Image. Windows runs it on Direct3D compute shaders, with a CPU fallback where the GPU path is unavailable.

@@ -20,7 +20,7 @@ public static class PrintPaperTint
     /// <summary>
     /// 지금 설정으로 물든 용지 흰색입니다. 물들지 않으면 <see langword="null"/> 입니다.
     /// </summary>
-    public static SoftProofRgb? For(PrintPreferences print)
+    public static SoftProofRgb? For(PrintPreferences print, SoftProofPreferences? softProof = null)
     {
         ArgumentNullException.ThrowIfNull(print);
         // macOS 는 흰 종이일 때만 프루프가 계산한 종이 흰색을 씁니다. 그리고 인화 화면은
@@ -28,9 +28,11 @@ public static class PrintPaperTint
         // (`displaySoftProofSettings(for:in: .print)` → `cPrintSoftProofSettings`).
         // 용지는 <b>인화용지 시뮬레이션</b>을 켰을 때만 물듭니다 — 미리보기만 켜면 사진에만
         // 걸립니다(macOS `simulatedPaperWhiteRGB` 가 `.paperAndBlackInk` 를 요구합니다).
+        // 목적지(C-print 랩 프루프 또는 프린터 출력 프로파일)와 그 용지 시뮬레이션 스위치는
+        // `PrintSoftProofFilter.Destination` 한 곳이 정합니다.
         if (print.SheetBackground != PrintSheetBackground.White ||
-            !print.CPrintPaperSimulationEnabled ||
-            PrintSoftProofFilter.Settings(print) is not { } proof)
+            PrintSoftProofFilter.Destination(print, softProof) is not { PaperSimulation: true } ||
+            PrintSoftProofFilter.Settings(print, softProof) is not { } proof)
         {
             return null;
         }

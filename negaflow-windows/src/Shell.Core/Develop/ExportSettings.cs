@@ -69,9 +69,11 @@ public sealed record ExportSettings
     /// </summary>
     public ExportMetadataPolicy MetadataPolicy { get; init; } = ExportMetadataPolicy.Minimal;
 
-    /// <summary>형식이 실제로 낼 수 있는 색공간입니다.</summary>
-    public ExportColorSpace EffectiveColorSpace =>
-        Format == DevelopExportFormat.Jpeg8 ? ExportColorSpace.Srgb : ColorSpace;
+    /// <summary>
+    /// 형식이 실제로 낼 수 있는 색공간입니다. JPEG 도 P3·Adobe RGB 를 냅니다(macOS 와 같음) —
+    /// 앞 판은 JPEG 를 sRGB 로 묶어 같은 설정의 맥 파일과 색공간이 달랐습니다.
+    /// </summary>
+    public ExportColorSpace EffectiveColorSpace => ColorSpace;
 
     /// <summary>고른 형식이 실제로 게시할 채널당 비트입니다. JPEG 은 정의상 8 입니다.</summary>
     public int EffectiveBitDepth => Format switch

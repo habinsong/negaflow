@@ -1,5 +1,6 @@
 #include "negaflow/imaging/color_grading.h"
 
+#include "negaflow/color/srgb_transfer.h"
 #include "negaflow/core/pointwise.h"
 
 #include <algorithm>
@@ -109,8 +110,19 @@ struct PreparedRegion final {
     const PreparedRegion& midtones,
     const PreparedRegion& highlights,
     const float pivot,
-    const float width) noexcept {
-    const float source_luma = luma(source);
+    const float width,
+    const bool perceptual) noexcept {
+    // 사용자 슬라이더는 영역 가중치와 색 더하기를 sRGB 인코딩 값에서 합니다(macOS
+    // `colorGrade`). 선형 휘도로 가르면 중간 회색이 Shadows 100%·Midtones 0% 로 잡힙니다.
+    // 프리셋(perceptual false)은 설계된 선형 동작 그대로입니다.
+    const Rgb encoded = perceptual
+        ? Rgb{
+              negaflow::color::linear_to_srgb_encoded(std::clamp(source.red, 0.0F, 1.0F)),
+              negaflow::color::linear_to_srgb_encoded(std::clamp(source.green, 0.0F, 1.0F)),
+              negaflow::color::linear_to_srgb_encoded(std::clamp(source.blue, 0.0F, 1.0F)),
+          }
+        : source;
+    const float source_luma = luma(encoded);
     const float transition = smoothstep(
         pivot - width,
         pivot + width,
@@ -122,7 +134,7 @@ struct PreparedRegion final {
         0.0F,
         1.0F);
 
-    Rgb result = source;
+    Rgb result = encoded;
     result.red = apply_region_channel(
         result.red,
         shadow_weight,
@@ -161,10 +173,22 @@ struct PreparedRegion final {
         result.blue,
         highlight_weight,
         highlights.offset.blue);
-    return {
+    const Rgb bounded{
         std::clamp(result.red, 0.0F, 1.0F),
         std::clamp(result.green, 0.0F, 1.0F),
         std::clamp(result.blue, 0.0F, 1.0F),
+    };
+    if (!perceptual) {
+        return bounded;
+    }
+    // [0,1] 밖 몫은 보정 뒤 다시 더합니다(macOS `colorGrade`, `color_mixer.cpp` 와 같은 이유).
+    return {
+        negaflow::color::srgb_encoded_to_linear(bounded.red) +
+            (source.red - std::clamp(source.red, 0.0F, 1.0F)),
+        negaflow::color::srgb_encoded_to_linear(bounded.green) +
+            (source.green - std::clamp(source.green, 0.0F, 1.0F)),
+        negaflow::color::srgb_encoded_to_linear(bounded.blue) +
+            (source.blue - std::clamp(source.blue, 0.0F, 1.0F)),
     };
 }
 
@@ -222,6 +246,7 @@ ColorGradingSetup prepare_color_grading(
     setup.pivot = std::clamp(0.5F + (parameters.balance * 0.30F), 0.15F, 0.85F);
     setup.width =
         (0.10F * (1.0F - parameters.blending)) + (0.50F * parameters.blending);
+    setup.perceptual = parameters.perceptual;
     return setup;
 }
 
@@ -272,10 +297,11 @@ negaflow::core::KernelStatus apply_color_grading(
         {setup.highlight_offset[0], setup.highlight_offset[1], setup.highlight_offset[2]}};
     const float pivot = setup.pivot;
     const float width = setup.width;
+    const bool perceptual = setup.perceptual;
     return negaflow::core::transform_validated_pointwise(
         input,
         output,
-        [shadows, midtones, highlights, pivot, width](
+        [shadows, midtones, highlights, pivot, width, perceptual](
             const negaflow::core::Rgba32F source) noexcept {
             const Rgb result = apply_color_grading_pixel(
                 {source.red, source.green, source.blue},
@@ -283,7 +309,8 @@ negaflow::core::KernelStatus apply_color_grading(
                 midtones,
                 highlights,
                 pivot,
-                width);
+                width,
+                perceptual);
             return negaflow::core::Rgba32F{
                 result.red,
                 result.green,

@@ -1,5 +1,6 @@
 #include "negaflow/imaging/primary_calibration.h"
 
+#include "negaflow/color/srgb_transfer.h"
 #include "negaflow/core/pointwise.h"
 
 #include <algorithm>
@@ -38,6 +39,7 @@ struct Hsl final {
 struct PreparedControls final {
     std::array<float, 3> hue;
     std::array<float, 3> saturation;
+    bool perceptual;
 };
 
 [[nodiscard]] float smoothstep(
@@ -123,6 +125,7 @@ struct PreparedControls final {
             parameters.green_saturation,
             parameters.blue_saturation,
         },
+        parameters.perceptual,
     };
 }
 
@@ -149,11 +152,20 @@ struct PreparedControls final {
 [[nodiscard]] Rgb apply_primary_calibration_pixel(
     const Rgb source,
     const PreparedControls& controls) noexcept {
-    Hsl hsl = rgb_to_hsl({
+    // 사용자 슬라이더는 HSL 을 sRGB 인코딩 값에서 계산합니다(macOS `calibrationPrimaries`,
+    // `color_mixer.cpp` 와 같은 이유). 프리셋은 감마 값을 넘기므로 그대로입니다.
+    const Rgb bounded_source{
         std::clamp(source.red, 0.0F, 1.0F),
         std::clamp(source.green, 0.0F, 1.0F),
         std::clamp(source.blue, 0.0F, 1.0F),
-    });
+    };
+    Hsl hsl = rgb_to_hsl(controls.perceptual
+        ? Rgb{
+              negaflow::color::linear_to_srgb_encoded(bounded_source.red),
+              negaflow::color::linear_to_srgb_encoded(bounded_source.green),
+              negaflow::color::linear_to_srgb_encoded(bounded_source.blue),
+          }
+        : bounded_source);
 
     float weight_sum = 0.0F;
     float hue_shift = 0.0F;
@@ -181,10 +193,19 @@ struct PreparedControls final {
         1.0F);
 
     const Rgb result = hsl_to_rgb(hsl);
-    return {
+    const Rgb bounded{
         std::clamp(result.red, 0.0F, 1.0F),
         std::clamp(result.green, 0.0F, 1.0F),
         std::clamp(result.blue, 0.0F, 1.0F),
+    };
+    if (!controls.perceptual) {
+        return bounded;
+    }
+    // [0,1] 밖 몫은 보정 뒤 다시 더합니다.
+    return {
+        negaflow::color::srgb_encoded_to_linear(bounded.red) + (source.red - bounded_source.red),
+        negaflow::color::srgb_encoded_to_linear(bounded.green) + (source.green - bounded_source.green),
+        negaflow::color::srgb_encoded_to_linear(bounded.blue) + (source.blue - bounded_source.blue),
     };
 }
 

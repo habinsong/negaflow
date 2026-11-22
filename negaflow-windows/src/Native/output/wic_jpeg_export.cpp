@@ -59,6 +59,15 @@ WicJpegExportResult export_working_to_srgb8_jpeg(
             result.conversion_status = WorkingToSrgb16Status::size_overflow;
             return result;
         }
+        // 인화소 ICC 가 걸려 있으면 화소를 그 프로파일로 옮깁니다. 앞 판은 sRGB 화소에 프린터
+        // 프로파일 태그만 붙여, 색관리 하는 프로그램이 sRGB 값을 프린터 RGB 로 읽었습니다.
+        // 16비트에서 옮기고 8비트 디더는 인코더가 그 뒤에 합니다 — 8비트로 먼저 접으면
+        // 양자화가 두 번 일어납니다.
+        if (!detail::translate_to_output_icc(
+                converted.image, limits.conversion, result.native_error_code)) {
+            result.status = WicJpegExportStatus::destination_profile_invalid;
+            return result;
+        }
         const detail::ComApartment apartment{};
         if (apartment.status() == RPC_E_CHANGED_MODE) {
             result.status = WicJpegExportStatus::com_apartment_mismatch;
@@ -79,7 +88,7 @@ WicJpegExportResult export_working_to_srgb8_jpeg(
         std::vector<std::uint8_t> profile_bytes{};
         switch (detail::load_output_color_context(
             factory.Get(),
-            negaflow::color::OutputColorSpace::srgb,
+            limits.conversion.color_space,
             limits.max_color_profile_bytes,
             color_context,
             profile_bytes,

@@ -410,6 +410,13 @@ negaflow::core::KernelStatus apply_scanner_target_grade(
             monochrome,
             positive ? rendering_positive_strength : 1.0);
         // 2. 사용자가 고른 필름 프로파일의 실측 상대 차분(네거티브만).
+        //
+        // 포지티브는 macOS 도 지금 번들로는 걸지 않습니다. macOS `positiveSignature` 는 롤 라벨
+        // 출처가 맞는 컬러 슬라이드 쌍에서만 시그니처를 만들고, 기본 그레이드
+        // (`PositiveDevelop.applyBaseGrade`)도 그 시그니처가 있을 때만 겁니다. 번들 슬라이드
+        // 프로파일은 어느 쌍도 출처가 맞지 않아(2026-11-22 확인) 둘 다 걸리지 않습니다. macOS
+        // `ScannerTargetPositiveSignatureTests` 가 이를 지키며, 짝이 생기면 그 시험이 실패합니다 —
+        // 그때 포지티브 상대 표와 기본 그레이드를 여기에 이식합니다.
         if (!positive) {
             if (const TargetProfile* const relative =
                     relative_profile_for(target, scanner_profile_id)) {

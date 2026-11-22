@@ -124,7 +124,8 @@ final class DestinationGamutCheck: @unchecked Sendable {
 
 extension DestinationGamutCheck {
     static func make(destinationICC: Data) -> DestinationGamutCheck? {
-        guard let sourceICC = CGColorSpace(name: CGColorSpace.linearSRGB)?.copyICCData(),
+        // 판정 버퍼는 표시용 sRGB 8비트 값이다(`DestinationGamutWarning.sourceColorSpace`).
+        guard let sourceICC = CGColorSpace(name: CGColorSpace.sRGB)?.copyICCData(),
               let sourceProfile = ColorSyncProfileCreate(sourceICC, nil)?.takeRetainedValue(),
               let destinationProfile = ColorSyncProfileCreate(destinationICC as CFData, nil)?.takeRetainedValue()
         else { return nil }

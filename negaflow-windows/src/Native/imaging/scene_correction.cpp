@@ -177,7 +177,9 @@ constexpr double positive_output_white = 0.86;
         return false;
     }
     info.sampled_pixels += samples.red.size();
-    const SceneAutoLevelsPlan plan = plan_scene_auto_levels(samples, negative_source, linear_negative_output, monochrome);
+    SceneAutoLevelsPlan plan = plan_scene_auto_levels(samples, negative_source, linear_negative_output, monochrome);
+    // 포지티브(디지털·슬라이드)는 무채색으로 들어 올립니다(2026-11-22, macOS 와 같음).
+    plan.neutral_lift = !negative_source;
     if (!plan.apply) {
         return false;
     }
@@ -194,11 +196,16 @@ constexpr double positive_output_white = 0.86;
                     negaflow::core::Rgba32F& pixel = image.pixels[row + x];
                     const double luminance=0.2126*pixel.red+0.7152*pixel.green+0.0722*pixel.blue;
                     const double mapped=std::clamp(luminance*plan.scale[0]+plan.bias[0],0.0,scene_auto_levels_upper_clamp);
+                    // 디지털 원본은 검정 들어 올리기를 무채색으로 더합니다(macOS `luminanceLevels`).
+                    // 비율로 곱하면 거의 검은 화소의 채널비가 bias/y 만큼 커져 색 점이 됩니다.
+                    // 네거티브(neutral_lift false)는 앞 판 식 그대로입니다.
+                    const double fill=std::max(plan.bias[0],0.0);
+                    const double lift=plan.neutral_lift?fill:0.0;
                     if (luminance>1e-8) {
-                        const double gain=mapped/luminance;
-                        pixel.red=static_cast<float>(pixel.red*gain); pixel.green=static_cast<float>(pixel.green*gain);
-                        pixel.blue=static_cast<float>(pixel.blue*gain);
-                    } else { pixel.red=pixel.green=pixel.blue=static_cast<float>(std::max(plan.bias[0],0.0)); }
+                        const double gain=std::max(mapped-lift,0.0)/luminance;
+                        pixel.red=static_cast<float>(pixel.red*gain+lift); pixel.green=static_cast<float>(pixel.green*gain+lift);
+                        pixel.blue=static_cast<float>(pixel.blue*gain+lift);
+                    } else { pixel.red=pixel.green=pixel.blue=static_cast<float>(fill); }
                 }
             }
         });
@@ -369,11 +376,14 @@ bool slope_improves_holdout(const std::vector<NeutralAxisBand>& bands) noexcept 
         for(std::size_t c=0;c<3;++c){sxy[c]+=dx*(bands[i].cast[c]-my[c]);}}
     if(sxx<=1e-12){return false;}
     for(std::size_t c=0;c<3;++c){b[c]=sxy[c]/sxx;a[c]=my[c]-b[c]*mx;}
-    double before=0,after=0;
+    // 기울기 근거는 "오프셋만 맞춘 모형(학습 밴드 평균 캐스트)보다" 홀드아웃을 잘 맞히는 것입니다.
+    // 무보정(0)과 비교하면 균일한 캐스트만 있어도 기울기가 붙었습니다(macOS `slopeImprovesHoldout`).
+    double offset_only=0,after=0;
     for(std::size_t i=1;i<bands.size();i+=2U){for(std::size_t c=0;c<3;++c){
         const double residual=bands[i].cast[c]-a[c]-b[c]*bands[i].log_luminance;
-        before+=bands[i].cast[c]*bands[i].cast[c];after+=residual*residual;}}
-    return before>1e-8 && after<before*0.8;
+        const double offset_residual=bands[i].cast[c]-my[c];
+        offset_only+=offset_residual*offset_residual;after+=residual*residual;}}
+    return offset_only>1e-8 && after<offset_only*0.8;
 }
 }
 
@@ -472,7 +482,8 @@ negaflow::core::KernelStatus apply_scene_correction(
     try {
         if (parameters.auto_levels) {
             info.auto_levels_applied = apply_auto_levels(
-                image, parameters.negative_source, parameters.linear_negative_output, parameters.monochrome, parameters.analysis_region, info);
+                image, parameters.negative_source, parameters.linear_negative_output, parameters.monochrome,
+                parameters.analysis_region, info);
         }
         if (parameters.auto_neutral_balance && parameters.negative_source) {
             info.neutral_balance_applied =

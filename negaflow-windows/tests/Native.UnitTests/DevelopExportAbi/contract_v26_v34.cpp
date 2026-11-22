@@ -157,15 +157,14 @@ void test_v32_contract() {
             result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
         "v32 wide-gamut TIFF request reaches source observation");
 
-    // JPEG carries no colour context here, so a wide-gamut JPEG would be pixels in one
-    // space labelled as another. Refusing beats publishing a file that reads wrong.
+    // JPEG now publishes the chosen space too (pixels converted, that space's profile
+    // embedded), matching macOS. A wide-gamut JPEG request passes validation.
     base.output_format = NF_EXPORT_FORMAT_JPEG8;
     result = make_result_v3();
     expect(
         nf_develop_export_v32(&request, nullptr, &result) == NF_STATUS_OK &&
-            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
-            std::strcmp(result.failure_name, "jpeg_requires_srgb") == 0,
-        "v32 refuses a wide-gamut JPEG rather than mislabelling it");
+            result.failed_stage != NF_DEVELOP_STAGE_REQUEST_VALIDATION,
+        "v32 accepts a wide-gamut JPEG request");
 
     request.output_color_space = 0U;
     result = make_result_v3();

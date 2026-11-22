@@ -46,7 +46,8 @@ internal static class PrintSheetEncoder
         DevelopExportFormat format = DevelopExportFormat.Png16,
         double jpegQuality = 1.0,
         byte[]? outputIccProfile = null,
-        DevelopTiffCompression tiffCompression = DevelopTiffCompression.Lzw)
+        DevelopTiffCompression tiffCompression = DevelopTiffCompression.Lzw,
+        ExportColorSpace colorSpace = ExportColorSpace.Srgb)
     {
         try
         {
@@ -69,7 +70,8 @@ internal static class PrintSheetEncoder
                 dpi,
                 jpegQuality,
                 tiffCompression,
-                outputIccProfile ?? []))
+                outputIccProfile ?? [],
+                colorSpace))
             .ConfigureAwait(true);
 
         bool published = false;

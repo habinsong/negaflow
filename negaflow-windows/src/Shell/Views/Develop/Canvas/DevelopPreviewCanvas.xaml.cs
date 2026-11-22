@@ -36,6 +36,18 @@ public sealed partial class DevelopPreviewCanvas : UserControl
 
     /// <summary>직전 치수의 비트맵입니다. 인터랙티브↔정착이 번갈아 올 때 다시 씁니다.</summary>
     private WriteableBitmap? spareBitmap;
+
+    // 화면 색관리(`DisplayColorManagement`)로 옮긴 화소를 담는 버퍼입니다. 옮긴 값은 화면에만
+    // 쓰고, 스포이드·비교·원근이 읽는 `PreviewPixels` 는 sRGB 그대로입니다.
+    private byte[]? displayScratch;
+
+    /// <summary>
+    /// 화면 색 표가 바뀌었으니(창이 다른 모니터로 갔거나 프로파일이 바뀜) 지금 그림을 다시
+    /// 그려 달라는 요청입니다. 캔버스가 받은 화소는 미리보기 코디네이터의 <b>임대 버퍼</b>라,
+    /// 보관해 두었다 다시 그리면 다음 렌더가 덮어쓰는 중인 버퍼를 읽을 수 있습니다 — 그래서
+    /// 직접 다시 그리지 않고 호스트가 새로 렌더하게 합니다.
+    /// </summary>
+    public event EventHandler? DisplayColorRedrawRequested;
     private readonly DevelopCanvasSampler sampler;
     private readonly DevelopCropOverlayPresenter cropOverlay;
     private readonly DevelopCanvasGuidedOverlay guided;
@@ -56,6 +68,9 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         guided = new DevelopCanvasGuidedOverlay(this);
         defects = new DevelopCanvasDefectOverlay(this);
         cropInteraction = new DevelopCanvasCropInteraction(this);
+        // 창이 다른 모니터로 가거나 프로파일이 바뀌면 지금 그림을 새 표로 다시 그립니다.
+        Loaded += (_, _) => Negaflow.Shell.Services.DisplayColorManagement.Changed += OnDisplayColorChanged;
+        Unloaded += (_, _) => Negaflow.Shell.Services.DisplayColorManagement.Changed -= OnDisplayColorChanged;
         pan = new DevelopCanvasPanInteraction(
             CanvasHost,
             () => viewport,
@@ -339,10 +354,12 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         }
 
         int written = width * height * 4;
+        byte[] shown = Negaflow.Shell.Services.DisplayColorManagement.ForDisplay(
+            pixels, width, height, ref displayScratch);
         using (Stream buffer = previewBitmap.PixelBuffer.AsStream())
         {
             // 원근 보정의 빈 곳은 알파에 커버리지 0 이 실려 옵니다 — 화면에는 불투명 흰색으로 씁니다.
-            PreviewCoverage.WriteOpaque(buffer, pixels, written);
+            PreviewCoverage.WriteOpaque(buffer, shown, written);
         }
         previewBitmap.Invalidate();
         // 자리표시자(사진을 막 바꿨을 때의 썸네일)가 걸려 있으면 여기서 되돌립니다.
@@ -372,9 +389,11 @@ public sealed partial class DevelopPreviewCanvas : UserControl
         }
 
         int written = width * height * 4;
+        byte[] shown = Negaflow.Shell.Services.DisplayColorManagement.ForDisplay(
+            pixels, width, height, ref displayScratch);
         using (Stream buffer = compareBeforeBitmap.PixelBuffer.AsStream())
         {
-            PreviewCoverage.WriteOpaque(buffer, pixels, written);
+            PreviewCoverage.WriteOpaque(buffer, shown, written);
         }
 
         compareBeforeBitmap.Invalidate();
@@ -385,6 +404,16 @@ public sealed partial class DevelopPreviewCanvas : UserControl
 
         ApplyImageFrame();
         CompareHud.Refresh();
+    }
+
+    private void OnDisplayColorChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        if (previewBitmap is not null && PreviewImage.Visibility == Visibility.Visible)
+        {
+            DisplayColorRedrawRequested?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     public void HideCompareBefore()

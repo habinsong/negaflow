@@ -1,5 +1,6 @@
 #include "wic_srgb16_support.h"
 
+#include "../imaging/icm_rgb16_parallel.h"
 #include "../imaging/icm_rgb16_transform.h"
 
 #include "negaflow/color/icc_profile.h"
@@ -276,11 +277,30 @@ class OutputIccBandTransform final {
 public:
     [[nodiscard]] bool ready() const noexcept { return ready_; }
 
+    // `encoded_space` 는 화소가 인코딩된 공간입니다. P3·Adobe RGB 로 인코딩한 화소를 sRGB 로
+    // 읽고 옮기면 채도와 원색이 틀어지므로, 변환의 원본도 그 공간의 프로파일이어야 합니다.
     [[nodiscard]] negaflow::imaging::ScannerToWorkingStatus initialize(
         const std::span<const std::uint8_t> profile,
+        const negaflow::color::OutputColorSpace encoded_space,
         std::uint32_t& native_error_code) {
-        const negaflow::imaging::ScannerToWorkingStatus status =
-            transform_.initialize_to_profile(profile, native_error_code);
+        std::vector<std::uint8_t> source{};
+        if (encoded_space != negaflow::color::OutputColorSpace::srgb) {
+            try {
+                source = negaflow::color::build_icc_profile(encoded_space);
+            } catch (const std::bad_alloc&) {
+                return negaflow::imaging::ScannerToWorkingStatus::allocation_failed;
+            }
+            if (source.empty()) {
+                return negaflow::imaging::ScannerToWorkingStatus::invalid_icc_profile;
+            }
+        }
+        // 16비트는 코어마다 나눠 옮깁니다(24 MP 를 한 스레드로 옮기면 내보내기가 눈에 띄게
+        // 늘어집니다). 8비트는 드문 조합이라 한 갈래로 둡니다.
+        negaflow::imaging::ScannerToWorkingStatus status =
+            transform_.initialize_to_profile(profile, native_error_code, source);
+        if (status == negaflow::imaging::ScannerToWorkingStatus::ok) {
+            status = parallel_.initialize_to_profile(profile, native_error_code, source);
+        }
         ready_ = status == negaflow::imaging::ScannerToWorkingStatus::ok;
         return status;
     }
@@ -322,7 +342,7 @@ public:
         const negaflow::imaging::ScannerToWorkingStatus status = bits_per_sample == 8U
             ? transform_.translate8(
                   rgb, width, rows, rgb_stride_bytes, rgb, rgb_stride_bytes, native_error_code)
-            : transform_.translate(
+            : parallel_.translate(
                   reinterpret_cast<const std::uint16_t*>(rgb),
                   width,
                   rows,
@@ -346,11 +366,44 @@ public:
 
 private:
     negaflow::imaging::detail::IcmRgb16Transform transform_{};
+    negaflow::imaging::detail::ParallelIcmRgb16Transform parallel_{};
     std::vector<std::uint8_t> packed_{};
     bool ready_{false};
 };
 
 }  // namespace
+
+bool translate_to_output_icc(
+    Srgb16Image& image,
+    const WorkingToSrgb16Limits& conversion_limits,
+    std::uint32_t& native_error_code) noexcept {
+    if (conversion_limits.output_icc_profile.empty()) {
+        return true;
+    }
+    if (image.width == 0U || image.height == 0U || image.bits_per_sample != 16U ||
+        image.samples.size() <
+            static_cast<std::size_t>(image.width) * image.height * image.channels) {
+        return false;
+    }
+    try {
+        OutputIccBandTransform icc{};
+        if (icc.initialize(
+                conversion_limits.output_icc_profile,
+                conversion_limits.color_space,
+                native_error_code) != negaflow::imaging::ScannerToWorkingStatus::ok) {
+            return false;
+        }
+        return icc.translate(
+            reinterpret_cast<std::uint8_t*>(image.samples.data()),
+            image.width,
+            image.height,
+            image.channels,
+            image.bits_per_sample,
+            native_error_code);
+    } catch (const std::bad_alloc&) {
+        return false;
+    }
+}
 
 WicSrgb16FrameStatus write_working_srgb16_pixels(
     IWICBitmapFrameEncode* const frame,
@@ -378,24 +431,33 @@ WicSrgb16FrameStatus write_working_srgb16_pixels(
     // 프로파일이 걸린 줄 알고 sRGB 파일을 받아 가면 인화 결과가 달라집니다.
     OutputIccBandTransform icc{};
     if (!conversion_limits.output_icc_profile.empty()) {
-        if (icc.initialize(conversion_limits.output_icc_profile, native_error_code) !=
-            negaflow::imaging::ScannerToWorkingStatus::ok) {
+        if (icc.initialize(
+                conversion_limits.output_icc_profile,
+                conversion_limits.color_space,
+                native_error_code) != negaflow::imaging::ScannerToWorkingStatus::ok) {
             return WicSrgb16FrameStatus::write_failed;
         }
     }
     try {
         std::vector<std::uint8_t> buffer(static_cast<std::size_t>(buffer_bytes_64));
+        // 8비트 + 인화소 ICC 는 16비트로 만들어 옮긴 뒤 한 번만 8비트로 내립니다. 8비트로 먼저
+        // 접고 8→8 로 옮기던 앞 판은 양자화가 두 번 일어나 매끈한 하늘에 띠가 졌습니다.
+        const bool icc_via_16 = icc.ready() && image.bits_per_sample == 8U;
+        std::vector<std::uint16_t> wide{};
+        if (icc_via_16) {
+            wide.resize(static_cast<std::size_t>(allocated_rows) * image.width * image.channels);
+        }
         for (std::uint32_t row = 0U; row < image.height;) {
             const std::uint32_t row_count = static_cast<std::uint32_t>(
                 std::min<std::uint64_t>(rows_per_write, image.height - row));
             std::uint64_t ignored_clipped_components = 0U;
             conversion_status = convert_working_to_srgb_rows(
                 working,
-                image.bits_per_sample,
+                icc_via_16 ? 16U : image.bits_per_sample,
                 row,
                 row_count,
-                buffer.data(),
-                buffer.size(),
+                icc_via_16 ? reinterpret_cast<std::uint8_t*>(wide.data()) : buffer.data(),
+                icc_via_16 ? wide.size() * sizeof(std::uint16_t) : buffer.size(),
                 ignored_clipped_components,
                 conversion_limits);
             if (conversion_status != WorkingToSrgb16Status::ok) {
@@ -403,13 +465,17 @@ WicSrgb16FrameStatus write_working_srgb16_pixels(
             }
             if (icc.ready() &&
                 !icc.translate(
-                    buffer.data(),
+                    icc_via_16 ? reinterpret_cast<std::uint8_t*>(wide.data()) : buffer.data(),
                     image.width,
                     row_count,
                     image.channels,
-                    image.bits_per_sample,
+                    icc_via_16 ? 16U : image.bits_per_sample,
                     native_error_code)) {
                 return WicSrgb16FrameStatus::write_failed;
+            }
+            if (icc_via_16) {
+                dither_encoded16_rows_to_8(
+                    wide.data(), image.width, row, row_count, image.channels, buffer.data());
             }
             const UINT buffer_bytes = row_count * image.stride_bytes;
             if (image.bits_per_sample == 8U) {

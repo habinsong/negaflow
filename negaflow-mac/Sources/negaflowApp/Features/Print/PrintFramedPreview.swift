@@ -11,35 +11,50 @@ struct PrintPagePlan {
     let photoRect: CGRect
 }
 
-/// 띠 포함 미리보기를 다시 그릴지 가르는 열쇠. 화면 이미지(객체)가 바뀌거나 설정이 바뀌면 다시 그린다.
+/// 화면 이미지나 출력 방식이 바뀌면 미리보기를 다시 그린다.
 struct PrintFramedPreviewRequest: Equatable, Sendable {
+    enum Content: Equatable, Sendable {
+        case presentation(PrintPresentationStyle)
+        case framed(PrintCompositionSettings)
+    }
+
     /// 어느 사진의 미리보기인지. 새로 그리는 동안 직전 결과를 보여 줄 때 다른 사진의 것을 걸지 않는다.
     let frameID: ObjectIdentifier
     let imageID: ObjectIdentifier
     /// 블러 바탕·히스토그램에 쓰는 필름스트립 썸네일. 바뀌면 다시 그린다.
     let referenceID: ObjectIdentifier?
-    let settings: PrintCompositionSettings
+    let content: Content
 }
 
 struct PrintFramedPreview: @unchecked Sendable {
     let request: PrintFramedPreviewRequest
     let image: NSImage
 
-    /// 내보내기와 같은 `PrintCompositionRenderer.placedUnit` 으로 그린다. 화면 이미지는 이미 화면
-    /// 해상도이므로 원본을 다시 풀지 않는다.
+    /// 내보내기와 같은 렌더러에 화면 해상도의 이미지를 넘긴다.
     static func render(
         _ request: PrintFramedPreviewRequest,
         image: CGImage,
         reference: CGImage?
     ) -> PrintFramedPreview? {
         let context = ChromabaseEngine.sharedLinearRenderContext
-        guard let unit = PrintCompositionRenderer.placedUnit(
-            for: CIImage(cgImage: image),
-            settings: request.settings,
-            reference: reference.map { CIImage(cgImage: $0) },
-            context: context
-        ) else { return nil }
-        let space = image.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
+        let source = CIImage(cgImage: image)
+        let unit: CIImage
+        let space: CGColorSpace
+        let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
+        switch request.content {
+        case let .presentation(style):
+            unit = PrintPresentationRenderer.apply(to: source, style: style)
+            space = srgb
+        case let .framed(settings):
+            guard let placed = PrintCompositionRenderer.placedUnit(
+                for: source,
+                settings: settings,
+                reference: reference.map { CIImage(cgImage: $0) },
+                context: context
+            ) else { return nil }
+            unit = placed
+            space = image.colorSpace ?? srgb
+        }
         guard let output = context.createCGImage(
             unit,
             from: unit.extent,

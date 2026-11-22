@@ -306,6 +306,8 @@ GpuKernelStatus GpuSceneCorrection::apply_auto_levels(
         payload.level_scale[channel] = static_cast<float>(plan.scale[channel]);
         payload.level_bias[channel] = static_cast<float>(plan.bias[channel]);
     }
+    // 네 번째 성분은 쓰지 않던 자리입니다. 무채색 들어 올리기 표시로 씁니다(HLSL `LevelScale.a`).
+    payload.level_scale[3] = plan.neutral_lift ? 1.0F : 0.0F;
     return levels_.dispatch(device, source, destination, &payload, sizeof(payload));
 }
 

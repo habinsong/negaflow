@@ -55,6 +55,15 @@ IccProfileValidationResult validate_icc_profile(
         result.info.tag_count = read_be_u32(bytes, icc_header_bytes);
 
         if (result.info.declared_bytes != bytes.size()) {
+            // 임베드한 쪽이 프로파일을 2·4바이트 경계로 채워 넣는 경우가 있습니다(TIFF·PNG
+            // 청크 정렬). 머리말이 선언한 크기까지가 프로파일이므로 3바이트 이하의 꼬리는
+            // 떼어 내고 봅니다. 앞 판은 이런 파일을 통째로 거절해 원본 색공간을 잃었습니다.
+            if (result.info.declared_bytes >= icc_header_bytes + icc_tag_count_bytes &&
+                result.info.declared_bytes < bytes.size() &&
+                bytes.size() - result.info.declared_bytes <= 3U) {
+                return validate_icc_profile(
+                    bytes.first(static_cast<std::size_t>(result.info.declared_bytes)), limits);
+            }
             result.status = IccProfileStatus::declared_size_mismatch;
             return result;
         }

@@ -105,11 +105,23 @@ public sealed partial class DevelopHistogram : UserControl
         UpdateActiveRegion(activeRegion, ActiveValueText.Visibility == Visibility.Visible);
     }
 
+    /// <remarks>
+    /// <b>그 자리에서 셉니다.</b> 미리보기 버퍼는 두 장을 번갈아 쓰므로, 뒤에서 세던 앞 판은
+    /// 다음 렌더가 같은 버퍼를 덮어쓰는 도중에 읽어 히스토그램이 두 그림의 반반으로 섞일 수
+    /// 있었습니다. 표본은 최대 256k 라 UI 스레드에서 세도 1ms 안쪽입니다.
+    /// </remarks>
     public void UpdatePixels(byte[] pixels, int width, int height)
     {
         ArgumentNullException.ThrowIfNull(pixels);
-        int request = Interlocked.Increment(ref generation);
-        _ = CalculateAndDisplayAsync(request, pixels, width, height);
+        Interlocked.Increment(ref generation);
+        DevelopHistogramBins? computed = DevelopHistogramSampler.SampleBgra8(pixels, width, height);
+        if (computed is null)
+        {
+            return;
+        }
+        bins = computed;
+        RenderHistogram();
+        UpdateClippingText();
     }
 
     public void Clear()
@@ -122,27 +134,6 @@ public sealed partial class DevelopHistogram : UserControl
         GreenLine.Points.Clear();
         BlueLine.Points.Clear();
         ClippingText.Visibility = Visibility.Collapsed;
-    }
-
-    private async Task CalculateAndDisplayAsync(int request, byte[] pixels, int width, int height)
-    {
-        DevelopHistogramBins? computed = await Task.Run(
-            () => DevelopHistogramSampler.SampleBgra8(pixels, width, height));
-        if (computed is null || request != Volatile.Read(ref generation))
-        {
-            return;
-        }
-
-        _ = DispatcherQueue.TryEnqueue(() =>
-        {
-            if (request != Volatile.Read(ref generation))
-            {
-                return;
-            }
-            bins = computed;
-            RenderHistogram();
-            UpdateClippingText();
-        });
     }
 
     private void OnHistogramCanvasSizeChanged(object sender, SizeChangedEventArgs args)

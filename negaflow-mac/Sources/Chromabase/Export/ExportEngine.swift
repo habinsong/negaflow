@@ -56,12 +56,22 @@ public enum ExportEngine {
             outputColorSpace = options.colorSpace.cgColorSpace
         }
         let sized = resized(image, longEdge: options.longEdge)
-        let sharpened = OutputSharpening.apply(
+        let sharpenedWorking = OutputSharpening.apply(
             to: sized,
             strength: options.outputSharpening,
             medium: options.outputSharpeningMedium,
             dpi: options.dpi
         )
+        // 표시 파일은 프리뷰와 같은 hue-safe 접기를 거친다. 프린터 ICC 로 나갈 때도 고른
+        // 내보내기 색공간에서 접은 뒤 ColorSync 가 옮긴다 — 윈도우가 그 공간을 중간 공간으로
+        // 쓰는 것과 같다. 선형 DNG·원본 스캔 TIFF 는 값을 그대로 둔다.
+        let sharpened: CIImage
+        switch format {
+        case .jpeg, .png, .tiff16:
+            sharpened = DisplayGamutMap.apply(to: sharpenedWorking, encodedIn: options.colorSpace)
+        case .rawScanTIFF, .dng:
+            sharpened = sharpenedWorking
+        }
         switch format {
         case .jpeg:
             try writeJPEG(

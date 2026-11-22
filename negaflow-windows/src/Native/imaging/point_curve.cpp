@@ -200,12 +200,18 @@ struct NormalizedCurve final {
 [[nodiscard]] CurveLut compose_luts(
     const CurveLut& inner,
     const CurveLut& outer) noexcept {
+    // inner 출력 위치에서 outer 를 선형 보간합니다(macOS `PointCurveStage.compose`). 가장
+    // 가까운 칸으로 반올림하던 앞 판은 마스터 커브만 건드려도 1/63 계단이 져 ±2 레벨 띠가
+    // 났습니다. 채널 커브가 항등이면 오차가 없습니다.
     CurveLut composed{};
+    const std::size_t last = outer.size() - 1U;
     for (std::size_t index = 0U; index < composed.size(); ++index) {
-        const float scaled = inner[index] *
-                             static_cast<float>(outer.size() - 1U);
-        const auto rounded = static_cast<std::size_t>(std::round(scaled));
-        composed[index] = outer[std::min(rounded, outer.size() - 1U)];
+        const float position =
+            std::clamp(inner[index], 0.0F, 1.0F) * static_cast<float>(last);
+        const std::size_t lower = std::min(static_cast<std::size_t>(position), last);
+        const std::size_t upper = std::min(lower + 1U, last);
+        const float fraction = position - static_cast<float>(lower);
+        composed[index] = outer[lower] + ((outer[upper] - outer[lower]) * fraction);
     }
     return composed;
 }
@@ -226,7 +232,9 @@ struct NormalizedCurve final {
     const CurveLut& lut) noexcept {
     const float encoded = negaflow::color::linear_to_srgb_encoded(linear);
     const float mapped = sample_lut(lut, encoded);
-    return negaflow::color::srgb_encoded_to_linear(mapped);
+    // 표는 [0,1] 안에서만 정의돼 밖의 값을 잘라 냅니다. 잘린 몫을 다시 더해 광색역·1.0 넘는
+    // 값을 지킵니다(macOS `restoreOutOfRange`).
+    return negaflow::color::srgb_encoded_to_linear(mapped) + (linear - std::clamp(linear, 0.0F, 1.0F));
 }
 
 }  // namespace

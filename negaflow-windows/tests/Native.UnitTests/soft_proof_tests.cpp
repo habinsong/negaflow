@@ -188,9 +188,10 @@ void check_a_barely_tinted_paper_survives() {
         negaflow::color::soft_proof_reference_d50.z * (1.0 - (tolerance * 4.0)),
     };
     const auto paper = negaflow::color::soft_proof_paper(media);
+    // 행렬로 옮기므로 Z 만 줄인 용지는 파랑이 내려가고 빨강이 조금 오릅니다(1.0017, 0.9999, 0.9949).
     expect(
-        paper.white[2] < 1.0 && paper.white[0] == 1.0,
-        "a paper just past the tolerance keeps its tint on the channel that has one");
+        paper.white[2] < 1.0 - tolerance && paper.white[0] > 1.0,
+        "a paper just past the tolerance keeps its tint");
     expect(
         !negaflow::color::soft_proof_transfer(paper).is_identity(),
         "and it does not collapse to an identity");
@@ -214,9 +215,10 @@ void check_press_profile_simulates_paper() {
     expect_near(media.white.x, 0.84552, 0.0001, "paper white keeps its measured X");
 
     const auto paper = negaflow::color::soft_proof_paper(media);
-    expect_near(paper.white[0], 0.876706, 0.001, "paper red is dimmed");
-    expect_near(paper.white[1], 0.876831, 0.001, "paper green is dimmed");
-    expect_near(paper.white[2], 0.905761, 0.001, "paper blue is dimmed least");
+    // XYZ(D50) → 선형 sRGB 행렬로 옮긴 값입니다(XYZ/D50 비율이던 앞 판은 0.8767·0.8768·0.9058).
+    expect_near(paper.white[0], 0.865451, 0.001, "paper red is dimmed");
+    expect_near(paper.white[1], 0.877560, 0.001, "paper green is dimmed");
+    expect_near(paper.white[2], 0.909988, 0.001, "paper blue is dimmed least");
     expect(
         paper.white[2] > paper.white[0],
         "a warm paper reads as less blue absorption, which is the visible point");

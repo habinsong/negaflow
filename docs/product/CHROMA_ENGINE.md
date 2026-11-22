@@ -8,7 +8,7 @@ Chroma Engine inverts and develops film. The code sits in the `Chromabase` modul
 |---|---|
 | Default develop | `MAIN`, Auto Balance ON |
 | Film base | Automatic measurement, eyedropper, direct RGB entry |
-| Internal color | 32-bit floating point linear color space |
+| Internal color | Floating point linear color space (16-bit half float on macOS, 32-bit float on Windows) |
 | Automatic features | Auto Balance ON |
 | Output color space | sRGB, Display P3, Adobe RGB, custom RGB ICC |
 
@@ -25,7 +25,7 @@ Chroma Engine inverts and develops film. The code sits in the `Chromabase` modul
 
 ## Order of steps
 
-The working image is processed in a 32-bit floating point linear color space. Only operations that need gamma convert at their fixed step, and encoding for a screen or file format happens at the end.
+The working image is processed in a floating point linear color space: 16-bit half float in Core Image on macOS, 32-bit float in the Windows engine. Both keep values below 0 and above 1. Only operations that need gamma convert at their fixed step, and encoding for a screen or file format happens at the end.
 
 1. Read the file and fix the orientation.
 2. Linear input (camera RGB for RAW).

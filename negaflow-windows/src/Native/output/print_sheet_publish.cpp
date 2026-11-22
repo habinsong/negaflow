@@ -3,6 +3,10 @@
 
 #include "atomic_output_file.h"
 #include "wic_srgb16_support.h"
+#include "../imaging/icm_rgb16_parallel.h"
+#include "negaflow/color/output_color_space.h"
+#include "negaflow/color/srgb_transfer.h"
+#include "negaflow/core/parallel_rows.h"
 
 #include <Windows.h>
 #include <Shlwapi.h>
@@ -10,6 +14,9 @@
 #include <wrl/client.h>
 
 #include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <memory>
@@ -21,6 +28,56 @@ namespace negaflow::output {
 namespace {
 
 using Microsoft::WRL::ComPtr;
+
+// sRGB 코드값으로 합성한 판을 고른 Delivery 색공간의 코드값으로 옮깁니다. 판의 색은 모두
+// sRGB 안이고 Display P3·Adobe RGB 는 sRGB 를 품으므로 자를 것이 없습니다. 그래서 ICM 표
+// 보간 없이 행렬과 전달 곡선으로 정확히 옮깁니다(macOS ColorSync 의 행렬 변환과 같은 값).
+// 16비트 sRGB 해독은 65536 칸 표로 하고, 행 블록마다 나눠 옮깁니다.
+[[nodiscard]] bool convert_srgb_page_to_space(
+    const std::span<const std::uint16_t> page,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_bytes,
+    const negaflow::color::OutputColorSpace space,
+    std::vector<std::uint16_t>& converted) noexcept {
+    std::vector<float> decode{};
+    try {
+        decode.resize(65536U);
+        converted.resize(static_cast<std::size_t>(width) * 3U * height);
+    } catch (const std::bad_alloc&) {
+        return false;
+    }
+    for (std::size_t code = 0U; code < decode.size(); ++code) {
+        decode[code] = negaflow::color::srgb_encoded_to_linear(
+            static_cast<float>(code) / 65535.0F);
+    }
+    const negaflow::color::ColorMatrix matrix = negaflow::color::linear_srgb_to(space);
+    const std::size_t source_row_samples = stride_bytes / 2U;
+    const std::size_t target_row_samples = static_cast<std::size_t>(width) * 3U;
+    negaflow::core::for_each_row_block(
+        height,
+        static_cast<std::uint64_t>(width) * height * 3U,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
+                const std::uint16_t* const in = page.data() + (y * source_row_samples);
+                std::uint16_t* const out = converted.data() + (y * target_row_samples);
+                for (std::uint32_t x = 0U; x < width; ++x) {
+                    const std::array<float, 3> linear{
+                        decode[in[x * 3U]], decode[in[(x * 3U) + 1U]], decode[in[(x * 3U) + 2U]]};
+                    for (std::size_t row = 0U; row < 3U; ++row) {
+                        const float value = (matrix[row * 3U] * linear[0]) +
+                                            (matrix[(row * 3U) + 1U] * linear[1]) +
+                                            (matrix[(row * 3U) + 2U] * linear[2]);
+                        const float encoded = negaflow::color::encode_output_component(
+                            std::clamp(value, 0.0F, 1.0F), space);
+                        out[(x * 3U) + row] = static_cast<std::uint16_t>(
+                            std::lround(std::clamp(encoded, 0.0F, 1.0F) * 65535.0F));
+                    }
+                }
+            }
+        });
+    return true;
+}
 
 [[nodiscard]] PrintSheetPublishStatus map_atomic_status(
     const detail::AtomicOutputStatus status) noexcept {
@@ -155,6 +212,17 @@ using Microsoft::WRL::ComPtr;
         quality.vt = VT_R4;
         quality.fltVal = std::clamp(limits.jpeg_quality, 0.0F, 1.0F);
         if (!write_option(options.Get(), L"ImageQuality", quality, native_error_code)) {
+            return PrintSheetPublishStatus::encoder_initialization_failed;
+        }
+        // 크로마 서브샘플링은 현상 JPEG 와 같은 규칙입니다 — 품질 0.95 이상이면 4:4:4, 아래는
+        // 4:2:0(macOS `ExportEngine.encodedJPEGQuality`). 앞 판은 인화 판에만 이 값을 주지 않아
+        // 고품질 판의 채도 높은 캡션·필름 띠 가장자리가 반 해상도 색으로 번졌습니다.
+        VARIANT subsampling{};
+        subsampling.vt = VT_UI1;
+        subsampling.bVal = quality.fltVal >= 0.95F
+            ? static_cast<BYTE>(WICJpegYCrCbSubsampling444)
+            : static_cast<BYTE>(WICJpegYCrCbSubsampling420);
+        if (!write_option(options.Get(), L"JpegYCrCbSubsampling", subsampling, native_error_code)) {
             return PrintSheetPublishStatus::encoder_initialization_failed;
         }
     } else if (format == PrintSheetFormat::tiff16) {
@@ -356,9 +424,11 @@ PrintSheetPublishResult publish_print_sheet(
 
     ComPtr<IWICColorContext> color_context{};
     std::vector<std::uint8_t> profile_bytes{};
+    // 인화소 ICC 가 있으면 그것이 이기고(`load_output_color_context` 가 그 바이트를 박습니다),
+    // 없으면 고른 Delivery 색공간의 프로파일을 박습니다.
     switch (detail::load_output_color_context(
         factory.Get(),
-        negaflow::color::OutputColorSpace::srgb,
+        limits.output_color_space,
         limits.max_color_profile_bytes,
         color_context,
         profile_bytes,
@@ -376,6 +446,50 @@ PrintSheetPublishResult publish_print_sheet(
     }
     result.info.color_profile_bytes = static_cast<std::uint32_t>(profile_bytes.size());
 
+    // **인화소 ICC 는 다 합성한 판 전체에 한 번 겁니다.** 판은 sRGB 코드값으로 합성됩니다 —
+    // 사진도, 바탕·필름 띠·캡션·워터마크도. 앞 판은 사진만 먼저 프린터 RGB 로 옮긴 뒤 나머지를
+    // sRGB 값 그대로 그 위에 칠해서, 회색 바탕과 필름 띠가 프린터 공간에서 다른 색으로
+    // 읽혔습니다. macOS 도 판을 한 장으로 합성한 뒤 그 결과를 출력 공간으로 렌더합니다.
+    std::span<const std::uint16_t> published_page = page;
+    std::uint32_t published_stride = stride_bytes;
+    std::vector<std::uint16_t> translated{};
+    if (!limits.output_icc_profile.empty()) {
+        const std::uint64_t packed_stride = row_bytes;
+        try {
+            translated.resize(static_cast<std::size_t>(packed_stride / 2U) * height);
+        } catch (const std::bad_alloc&) {
+            result.status = PrintSheetPublishStatus::memory_limit_exceeded;
+            return result;
+        }
+        // 판 한 장이 수십 MP 라 코어마다 나눠 옮깁니다.
+        negaflow::imaging::detail::ParallelIcmRgb16Transform icc{};
+        if (icc.initialize_to_profile(limits.output_icc_profile, result.native_error_code) !=
+                negaflow::imaging::ScannerToWorkingStatus::ok ||
+            icc.translate(
+                page.data(),
+                width,
+                height,
+                stride_bytes,
+                translated.data(),
+                static_cast<std::uint32_t>(packed_stride),
+                result.native_error_code) != negaflow::imaging::ScannerToWorkingStatus::ok) {
+            result.status = PrintSheetPublishStatus::destination_profile_invalid;
+            return result;
+        }
+        published_page = translated;
+        published_stride = static_cast<std::uint32_t>(packed_stride);
+    } else if (limits.output_color_space != negaflow::color::OutputColorSpace::srgb) {
+        // Delivery 가 P3·Adobe RGB 면 판 전체를 그 공간으로 옮깁니다(JPEG 포함). 앞 판은 이
+        // 값을 무시하고 늘 sRGB 로 냈습니다.
+        if (!convert_srgb_page_to_space(
+                page, width, height, stride_bytes, limits.output_color_space, translated)) {
+            result.status = PrintSheetPublishStatus::memory_limit_exceeded;
+            return result;
+        }
+        published_page = translated;
+        published_stride = static_cast<std::uint32_t>(row_bytes);
+    }
+
     std::unique_ptr<detail::AtomicOutputFile> output{};
     const detail::AtomicOutputStatus create_status = detail::AtomicOutputFile::create(
         destination,
@@ -389,10 +503,10 @@ PrintSheetPublishResult publish_print_sheet(
     result.status = encode_sheet(
         factory.Get(),
         output->stream(),
-        page,
+        published_page,
         width,
         height,
-        stride_bytes,
+        published_stride,
         color_context.Get(),
         format,
         limits,

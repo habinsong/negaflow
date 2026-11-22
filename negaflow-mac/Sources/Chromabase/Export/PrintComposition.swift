@@ -532,42 +532,60 @@ public enum PrintCompositionRenderer {
 public enum PrintPresentationRenderer {
     /// 필터 그래프만 연결하고 여기서는 픽셀을 렌더하지 않는다. 최종 export의 공유 `CIContext`가
     /// 한 번에 평가하므로 중간 비트맵과 추가 디코드를 만들지 않는다.
+    ///
+    /// 인화 화면과 내보내기는 표시값(sRGB 감마)의 Rec.709 밝기를 쓴다.
+    /// 윈도우 `PrintPresentationFilter` 와 같은 식이다.
     public static func apply(
         to image: CIImage,
         style: PrintPresentationStyle
     ) -> CIImage {
+        guard style != .standard else { return image }
+        let luminance = displayLuminance(image)
+        let mapped: CIImage
         switch style {
         case .standard:
             return image
         case .cyanotype:
+            // 밝기 0 은 그림자색, 1 은 하이라이트색인 두 색 사이 보간(표시값).
             let palette = PrintPresentationAppearance(style: style)
-            return monochrome(image).applyingFilter(
-                "CIFalseColor",
-                parameters: [
-                    "inputColor0": ciColor(palette.shadowRGBA),
-                    "inputColor1": ciColor(palette.highlightRGBA),
-                ]
-            )
+            let shadow = palette.shadowRGBA
+            let highlight = palette.highlightRGBA
+            mapped = luminance.applyingFilter("CIColorMatrix", parameters: [
+                "inputRVector": CIVector(x: highlight.x - shadow.x, y: 0, z: 0, w: 0),
+                "inputGVector": CIVector(x: 0, y: highlight.y - shadow.y, z: 0, w: 0),
+                "inputBVector": CIVector(x: 0, y: 0, z: highlight.z - shadow.z, w: 0),
+                "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+                "inputBiasVector": CIVector(x: shadow.x, y: shadow.y, z: shadow.z, w: 0),
+            ])
         case .glassPlate:
-            return monochrome(image).applyingFilter("CIColorInvert")
+            mapped = luminance.applyingFilter("CIColorMatrix", parameters: [
+                "inputRVector": CIVector(x: -1, y: 0, z: 0, w: 0),
+                "inputGVector": CIVector(x: 0, y: -1, z: 0, w: 0),
+                "inputBVector": CIVector(x: 0, y: 0, z: -1, w: 0),
+                "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+                "inputBiasVector": CIVector(x: 1, y: 1, z: 1, w: 0),
+            ])
         case .gelatinSilver:
-            return monochrome(image)
+            mapped = luminance
         }
+        return mapped.applyingFilter("CISRGBToneCurveToLinear")
     }
 
-    private static func monochrome(_ image: CIImage) -> CIImage {
-        image.applyingFilter(
-            "CIColorControls",
-            parameters: [kCIInputSaturationKey: 0]
-        )
-    }
-
-    private static func ciColor(_ rgba: SIMD4<Double>) -> CIColor {
-        CIColor(
-            red: CGFloat(rgba.x),
-            green: CGFloat(rgba.y),
-            blue: CGFloat(rgba.z),
-            alpha: CGFloat(rgba.w)
-        )
+    /// 표시값(sRGB 감마, 0…1 로 자름)의 Rec.709 밝기를 세 채널에 담는다.
+    private static func displayLuminance(_ image: CIImage) -> CIImage {
+        let weights = CIVector(x: 0.2126, y: 0.7152, z: 0.0722, w: 0)
+        return image
+            .applyingFilter("CILinearToSRGBToneCurve")
+            .applyingFilter("CIColorClamp", parameters: [
+                "inputMinComponents": CIVector(x: 0, y: 0, z: 0, w: 0),
+                "inputMaxComponents": CIVector(x: 1, y: 1, z: 1, w: 1),
+            ])
+            .applyingFilter("CIColorMatrix", parameters: [
+                "inputRVector": weights,
+                "inputGVector": weights,
+                "inputBVector": weights,
+                "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+                "inputBiasVector": CIVector(x: 0, y: 0, z: 0, w: 0),
+            ])
     }
 }

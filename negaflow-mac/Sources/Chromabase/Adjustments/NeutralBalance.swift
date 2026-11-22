@@ -154,13 +154,18 @@ public enum NeutralBalance {
         for p in train { sxx += pow(p.logLuminance - mx, 2); sxy += (p.logLuminance - mx) * (p.cast - my) }
         guard sxx > 1e-12 else { return false }
         let b = sxy / sxx, a = my - b * mx
-        var before = 0.0, after = 0.0
+        // 기울기를 붙일 근거는 "오프셋만 맞춘 모형보다" 홀드아웃을 잘 맞히는 것이다. 무보정(0)과
+        // 비교하면 균일한 캐스트만 있어도 기울기 모형이 쉽게 이겨, 잡음으로 맞춘 기울기가 채널별
+        // 감마로 붙었다(Gemini 보고, 2026-11-22 확인). 오프셋 모형은 학습 밴드의 평균 캐스트다.
+        var offsetOnly = 0.0, after = 0.0
         for p in holdout {
             let residual = p.cast - a - b * p.logLuminance
-            before += p.cast.x * p.cast.x + p.cast.y * p.cast.y + p.cast.z * p.cast.z
+            let offsetResidual = p.cast - my
+            offsetOnly += offsetResidual.x * offsetResidual.x + offsetResidual.y * offsetResidual.y
+                + offsetResidual.z * offsetResidual.z
             after += residual.x * residual.x + residual.y * residual.y + residual.z * residual.z
         }
-        return before > 1e-8 && after < before * 0.8
+        return offsetOnly > 1e-8 && after < offsetOnly * 0.8
     }
 
     /// 긴 변이 최대 192인 linear 표본(가장자리 인셋 제외).

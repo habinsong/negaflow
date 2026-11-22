@@ -71,13 +71,14 @@ internal sealed class DevelopExportRunner
     }
 
     /// <summary>
-    /// 이 사진들을 게시할 때 쓸 인화소 ICC 입니다.
+    /// 이 사진들을 게시할 때 쓸 프린터 ICC 입니다.
     /// </summary>
     /// <remarks>
-    /// macOS <c>selectedPrintWorkspaceOutputProfile</c> 과 같은 규칙입니다 — 출력 공정이
-    /// C-print 이면 그 프로파일, 아니면 <b>현상 대상이 PRINT 인 사진이 하나라도 있으면</b>
-    /// 프린터 출력 프로파일. 있어야 하는데 없으면 <see cref="PrintOutputProfileChoice.Missing"/>
-    /// 이며 부르는 쪽이 멈춥니다.
+    /// macOS <c>selectedPrinterOutputProfile</c> 과 같은 규칙입니다 — <b>현상 대상이 PRINT 인
+    /// 사진이 하나라도 있으면</b> 프린터 출력 프로파일을 읽고, 있어야 하는데 없으면
+    /// <see cref="PrintOutputProfileChoice.Missing"/> 이며 부르는 쪽이 멈춥니다. 인화 탭의
+    /// C-print 프로파일은 인화 판 내보내기에만 쓰므로 여기서 읽지 않습니다. 읽은 프로파일은
+    /// <see cref="ForFrame"/> 로 PRINT 사진에만 실립니다.
     /// </remarks>
     private PrintOutputProfileChoice OutputProfileFor(
         IReadOnlyList<LibraryFrameSnapshot> frames,
@@ -86,7 +87,7 @@ internal sealed class DevelopExportRunner
         format == DevelopExportFormat.Dng16
             ? PrintOutputProfileChoice.None
             : view.workspaceState is { } state
-                ? PrintOutputProfile.For(frames, state.Current.Print, state.Current.SoftProof)
+                ? PrintOutputProfile.ForDevelop(frames, state.Current.SoftProof)
                 : PrintOutputProfileChoice.None;
 
     /// <summary>고른 프로파일을 인코딩 값에 실어 줍니다.</summary>
@@ -94,6 +95,26 @@ internal sealed class DevelopExportRunner
         ExportEncodingOptions encoding,
         PrintOutputProfileChoice profile) =>
         profile.Profile is { } bytes ? encoding with { OutputIccProfile = bytes } : encoding;
+
+    /// <summary>
+    /// 한 장의 인코딩입니다. PRINT 사진만 프린터 프로파일을 받고 MAIN 사진은 이름 있는
+    /// 색공간으로 나갑니다 — macOS <c>ExportFramePipeline</c> 의
+    /// <c>requiresPrinterOutputProfile</c> 입니다. 섞어 고른 묶음에서 MAIN 사진까지 프린터
+    /// 색으로 나가던 자리입니다.
+    /// </summary>
+    private static ExportEncodingOptions ForFrame(
+        LibraryFrameSnapshot frame,
+        ExportEncodingOptions encoding) =>
+        frame.DevelopTarget == DevelopTarget.Print
+            ? encoding
+            : encoding with { OutputIccProfile = null };
+
+    /// <summary>
+    /// 무보정본은 언제나 MAIN 이라 프린터 프로파일을 싣지 않습니다(macOS
+    /// <c>writePaired</c> 의 <c>outputProfile: nil</c>).
+    /// </summary>
+    private static ExportEncodingOptions WithoutProfile(ExportEncodingOptions encoding) =>
+        encoding with { OutputIccProfile = null };
 
     /// <summary>
     /// 출력 패널의 내보내기입니다. 빠른 내보내기와 같은 경로를 쓰되 목적지와 형식을 사용자가
@@ -195,7 +216,7 @@ internal sealed class DevelopExportRunner
             // 두 번 돕니다 — 걸린 시간이 갑절로 보이는 이유가 여기라면 이 줄이 말해 줍니다.
             using (ExportTrace.Measure("  flat master (두 번째 현상)"))
             {
-                await WriteMainFlatMasterAsync(frame, published, settings, With(settings.ToEncodingOptions(), profile));
+                await WriteMainFlatMasterAsync(frame, published, settings, WithoutProfile(settings.ToEncodingOptions()));
             }
         }
     }
@@ -350,7 +371,7 @@ internal sealed class DevelopExportRunner
             settings,
             frame => view.libraryHost.RollFor(frame.Id));
         var artifacts = plans.ToDictionary(plan => plan.DestinationPath,
-            plan => CaptureArtifacts(plan.Snapshot!, plan.DestinationPath, settings, encoding),
+            plan => CaptureArtifacts(plan.Snapshot!, plan.DestinationPath, settings, ForFrame(plan.Snapshot!, encoding)),
             StringComparer.OrdinalIgnoreCase);
         List<ExportBatchItem> completed = [];
         var coordinator = new ExportBatchCoordinator(view.libraryHost);
@@ -376,14 +397,14 @@ internal sealed class DevelopExportRunner
             ExportTrace.Write(
                 $"  batch start frames={plans.Count} slots={DevelopExportCoordinator.MaximumConcurrentExports}");
             using IDisposable _batch = ExportTrace.Measure("  batch");
-            ExportBatchSummary summary = await coordinator.RunAsync(plans, encoding);
+            ExportBatchSummary summary = await coordinator.RunAsync(plans, frame => ForFrame(frame, encoding));
             int artifactFailures = 0;
             foreach (var item in completed)
             {
                 bool success = await WriteExportArtifactsAsync(artifacts[item.Plan.DestinationPath], item.Result);
                 if (success && settings.WriteMainFlatMaster)
                 {
-                    success = await WriteMainFlatMasterAsync(item.Plan.Snapshot!, item.Plan.DestinationPath, settings, encoding);
+                    success = await WriteMainFlatMasterAsync(item.Plan.Snapshot!, item.Plan.DestinationPath, settings, WithoutProfile(encoding));
                 }
                 if (!success) { artifactFailures++; }
             }

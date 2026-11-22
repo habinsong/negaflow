@@ -730,6 +730,7 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/infrared_planes.cpp
       src/Native/imaging/icm_icc_converter.cpp
       src/Native/imaging/icm_rgb16_parallel.cpp
+      src/Native/imaging/display_color_lut.cpp
       src/Native/imaging/image_transform.cpp
       src/Native/imaging/perspective_geometry.cpp
       src/Native/imaging/working_image_resample.cpp
@@ -883,6 +884,7 @@ add_library(negaflow_native SHARED
     src/Native/abi/pick/film_base_pick_v2.cpp
     src/Native/abi/pick/neutral_white_balance_pick_v1.cpp
     src/Native/abi/proof/gamut_check_abi.cpp
+    src/Native/abi/proof/display_color_abi.cpp
     src/Native/abi/proof/soft_proof_abi.cpp
     src/Native/abi/request/develop_request_enums.cpp
     src/Native/abi/request/develop_request_shared.cpp
@@ -2407,6 +2409,30 @@ if(BUILD_TESTING)
     else()
         add_test(NAME native.scanner_to_working COMMAND negaflow_scanner_to_working_tests)
     endif()
+
+    add_executable(negaflow_output_icc_transform_tests
+        tests/Native.UnitTests/output_icc_transform_tests.cpp
+    )
+    target_include_directories(
+        negaflow_output_icc_transform_tests
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/imaging"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/output"
+    )
+    target_link_libraries(
+        negaflow_output_icc_transform_tests
+        PRIVATE negaflow_output negaflow_imaging negaflow_color negaflow_project_options
+    )
+    add_test(NAME native.output_icc_transform COMMAND negaflow_output_icc_transform_tests)
+
+    add_executable(negaflow_display_color_lut_tests
+        tests/Native.UnitTests/display_color_lut_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_display_color_lut_tests
+        PRIVATE negaflow_imaging negaflow_color negaflow_project_options
+    )
+    add_test(NAME native.display_color_lut COMMAND negaflow_display_color_lut_tests)
 
     add_executable(negaflow_colorsync_icm_parity_tests
         tests/Native.UnitTests/colorsync_icm_parity_tests.cpp

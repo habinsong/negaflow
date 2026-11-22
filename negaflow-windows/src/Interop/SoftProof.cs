@@ -81,13 +81,15 @@ public sealed class SoftProofSettings
         SoftProofSimulation simulation,
         SoftProofRgb paperWhite,
         SoftProofRgb blackInk,
-        bool warnOutOfGamut = false)
+        bool warnOutOfGamut = false,
+        byte[]? proofProfile = null)
     {
         IsEnabled = isEnabled;
         Simulation = simulation;
         PaperWhite = paperWhite;
         BlackInk = blackInk;
         WarnOutOfGamut = warnOutOfGamut;
+        ProofProfile = proofProfile is { Length: >= 128 } ? proofProfile : null;
     }
 
     /// <summary>프로파일에서 읽은 용지와 잉크로 프루프를 켭니다.</summary>
@@ -110,6 +112,13 @@ public sealed class SoftProofSettings
     /// 하지 못하면 아무것도 표시하지 않습니다 — 근사하면 macOS 와 다른 화소가 표시됩니다.
     /// </summary>
     public bool WarnOutOfGamut { get; }
+
+    /// <summary>
+    /// 프루프 목적지 ICC 입니다. 있으면 미리보기 화소를 이 프로파일로 갔다가 되돌리고
+    /// (macOS 가 프루프 색공간으로 렌더하는 자리), 색역 판정도 이 프로파일로 합니다. 없으면
+    /// 내보내기 색공간이 목적지이며 sRGB 화면 화소는 그 왕복에서 바뀌지 않습니다.
+    /// </summary>
+    public byte[]? ProofProfile { get; }
 }
 
 /// <summary>
