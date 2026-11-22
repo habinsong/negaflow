@@ -58,6 +58,6 @@ Classée par sujet pour ouvrir directement celle qu'il vous faut.
 
 - Les documents produit décrivent ce que l'utilisateur voit aujourd'hui.
 - Les documents d'architecture décrivent les responsabilités et le flux des données.
-- Les documents de référence gardent tels quels les valeurs de code, les noms de champs et les empreintes.
+- Chaque document de référence garde tels quels les valeurs de code, les noms de champs et les empreintes.
 - Les documents de validation séparent ce qui a réussi de ce qui n'est pas vérifié.
 - Une section présente dans une langue l'est dans les six.

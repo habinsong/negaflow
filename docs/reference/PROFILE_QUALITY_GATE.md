@@ -13,7 +13,7 @@ This repository has no REAL/TARGET image pair today (`LUT_target/REAL` and `LUT_
 
 ## How far the app uses the current profiles
 
-When you pick the `HS` or `SP` target yourself, a limited relative difference from the bundled `realOnly` group can be used.
+`HS` and `SP` apply their fixed target rendering tables by default. When you also pick a matching scanner profile (`scannerProfileID`) for `HS` or `SP`, a limited relative difference from the bundled `realOnly` group can be layered on.
 
 Conditions:
 
@@ -28,7 +28,7 @@ Rules for applying it:
 - Values that point in opposite directions across the two groups are not applied.
 - For black and white, all color components are dropped and only the relative tone stays.
 - The relative correction is not applied to a slide profile with no matching roll.
-- Without paired material from the same position, scanner texture and sharpening are not applied.
+- The `HS` target applies a fixed, resolution-scaled luminance sharpening pass (`noritsuTexture`) without synthesizing grain, and manual `ScannerProfileGrade` applies bounded unsharp masking derived from `texture_sharpness_p95`; `SP` adds no sharpening, and neither path adds synthetic scanner grain.
 - Tone is applied once to Rec.709 gamma brightness, and Lab `a*` and `b*` are preserved.
 - Color gain is interpolated in the log domain so the relationship between opposing anchors holds.
 - If the SHA-256 of any file or manifest is off, the whole profile bundle is refused.

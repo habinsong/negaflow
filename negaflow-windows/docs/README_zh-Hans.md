@@ -37,7 +37,7 @@
 
 构建需要：
 
-- Visual Studio 2026，含 C++ 桌面开发工作负载（组件见 `.vsconfig`）
+- Visual Studio 2026，含 C++ 桌面、.NET 桌面与 WinUI/Windows 应用开发工作负载（具体组件见 `.vsconfig`）
 - Windows 11 SDK 10.0.26100 及以上
 - .NET 10 SDK（`global.json` 固定为 10.0.302）
 - CMake 4.2 及以上（`Visual Studio 18 2026` 生成器需要）
@@ -47,7 +47,7 @@
 
 ## 安装
 
-从 [Releases](https://github.com/habinsong/negaflow/releases) 下载 `negaflow-1.2.7-win-x64.exe` 并运行。默认安装到 `%LOCALAPPDATA%\Negaflow\App`，不要求管理员权限。
+从 [Releases](https://github.com/habinsong/negaflow/releases) 下载 `negaflow-1.2.7-win-x64.exe` 并运行。默认安装到 `%LOCALAPPDATA%\Negaflow\App`，仅当 Windows 尚未启用无签名散包应用注册（`AllowDevelopmentWithoutDevLicense`）时才需要一次管理员确认。
 
 [negaflow-1.2.7-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.7/negaflow-1.2.7-win-x64-setup.zip) 内含同一个安装程序 EXE，以及安装说明、许可证声明和 SHA-256 校验和。请先解压全部文件再运行安装程序。它是安装程序压缩包，不是便携应用。
 
@@ -91,10 +91,10 @@ ctest --preset x64-release --output-on-failure
 # 应用和目录测试
 .\scripts\test-managed.ps1
 
-# 引擎与应用的边界测试
+# 引擎与应用的边界测试（单独运行）
 .\scripts\test-interop.ps1
 
-# 以上全部一次运行
+# CI 门控（本地化键、滑块范围、CTest、托管测试）、发布构建与安装程序校验
 .\scripts\local-ci.ps1
 ```
 
@@ -121,8 +121,8 @@ $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 # 扫描文件里有什么
 & $cli --probe-tiff scan.tif
 
-# 显影并存为 16 位 TIFF
-& $cli --export-developed-tiff16 scan.tif out.tif
+# 显影并存为 16 位 TIFF (<dmin-r> <dmin-g> <dmin-b> <color|bw>)
+& $cli --export-developed-tiff16 scan.tif out.tif 0.85 0.55 0.35 color
 
 # 一次显影的耗时分布
 & $cli --develop-timing scan.tif
@@ -131,7 +131,7 @@ $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 & $cli --auto-base-probe scan.tif
 ```
 
-不带参数运行可以看到完整列表。
+不带参数运行会输出构建信息 JSON；用 `--help` 查看选项列表。
 
 ## 扫描仪
 
@@ -148,11 +148,13 @@ $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 | `export-trace.txt` | 导出和快速导出，包括失败 |
 | `termination.txt` | 应用关闭期间发生的事 |
 | `settings-change.txt` | 改动的设置，以及改动来源 |
+| `startup-trace.txt` | 启动与外壳初始化阶段 |
+| `crop-trace.txt` | 裁切几何与交互更新 |
 
-这三个始终开启。另外两个默认关闭：
+以上始终开启（发生错误时也会写入 `native-crash.txt`、`scanner-failure.txt` 等故障日志）。可选追踪日志默认关闭：
 
-- `preview-trace.txt`：在同一文件夹里新建空文件 `preview-trace.on` 即可开启。
-- `stage-trace.txt`：启动应用之前设置环境变量 `NEGAFLOW_STAGE_TRACE=1`。它记录显影每个阶段的像素统计。
+- `preview-trace.txt`、`thumbnail-trace.txt`、`shortcut-trace.txt`、`decode-trace.txt` 和 `memory-budget.txt`：在同一文件夹里新建对应的 `.on` 标记文件（`preview-trace.on`、`thumbnail-trace.on`、`shortcut-trace.on`、`decode-trace.on`、`memory-trace.on`），或在设置中打开开发者模式。
+- `stage-trace.txt` 和 `stage-timing.txt`：启动应用前设置环境变量 `NEGAFLOW_STAGE_TRACE=1`（各阶段像素统计）或 `NEGA_TIMING=1`（各阶段耗时）。
 
 ## 目录结构
 
@@ -162,8 +164,8 @@ negaflow-windows/
 │   ├── Native/        Chroma Engine、GrainMend、解码与导出 (C++)
 │   ├── Interop/       引擎与应用之间的层 (C#)
 │   ├── Catalog.Core/  图库存储 (C#)
-│   ├── Shell.Core/    显影、印相、导出逻辑 (C#)
-│   ├── Shell/         图库、显影、印相界面 (WinUI 3)
+│   ├── Shell.Core/    显影、印相、扫描、导出逻辑 (C#)
+│   ├── Shell/         图库、显影、印相、扫描界面 (WinUI 3)
 │   └── Cli/           引擎检查工具 (C++)
 ├── scripts/           构建、测试、打包脚本
 ├── tests/             引擎、应用、边界测试

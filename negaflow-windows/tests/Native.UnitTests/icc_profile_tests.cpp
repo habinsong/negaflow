@@ -67,6 +67,12 @@ int main() {
         padded_result.status == negaflow::color::IccProfileStatus::ok &&
             padded_result.info.declared_bytes == valid.size(),
         "alignment padding after the declared profile is accepted");
+    expect(
+        negaflow::color::trim_icc_padding(padded).size() == valid.size(),
+        "trim_icc_padding strips trailing alignment padding to declared_bytes");
+    expect(
+        negaflow::color::trim_icc_padding(wrong_size).size() == wrong_size.size(),
+        "trim_icc_padding leaves invalid profiles untouched");
 
     auto wrong_signature = valid;
     write_be_u32(wrong_signature, 36U, 0U);

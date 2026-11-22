@@ -2,7 +2,7 @@
 
 [Docs home](../README.md)
 
-`renderManifest` in the sidecar links the source, the edit values and the final file with SHA-256. File paths are not recorded.
+`renderManifest` in the macOS sidecar links the source, the edit values and the final file with SHA-256. File paths are not recorded. Windows export sidecars do not emit `renderManifest`.
 
 > [!IMPORTANT]
 > `renderManifest` records hash relationships between files and settings. It has no digital signature or certificate, so it is not C2PA Content Credentials.
@@ -13,7 +13,7 @@
 - Which render input was actually used
 - The checked scope of the GrainMend cache file or memory input
 - SHA-256 of the develop, GrainMend and export settings
-- SHA-256 of the scanner profile
+- SHA-256 of the scanner profile and, when a printer output profile is applied, `outputProfileSHA256`
 - Decoder origin and Chroma Engine renderer version
 - SHA-256, byte count, pixel size and format of the final file
 

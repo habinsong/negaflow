@@ -56,7 +56,7 @@ Automatic use needs exactly one matching `holdoutValidated` profile, and the SHA
 
 The NORITSU and SP-3000 color profiles in the repository carry `texture` values from real scenes. Those values mix subject, focus and film grain, so they are no use as sensor noise data.
 
-Repeated flat targets and separate validation material do not exist yet. No validated device noise profile is bundled, and the automatic path uses the existing general settings.
+Repeated flat targets and separate validation material do not exist yet. No validated device noise profile is bundled, and no automatic scanner noise reduction runs in the develop pipeline (`ScannerNoiseReduction` falls back to generic `1.0` scales in library code and tests, while user noise reduction is opt-in via `FilmScanDenoise`).
 
 A real profile needs all of this:
 

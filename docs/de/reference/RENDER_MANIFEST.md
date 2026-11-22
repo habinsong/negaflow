@@ -2,7 +2,7 @@
 
 [Dokumentationsstart](../README.md)
 
-Das `renderManifest` in der Sidecar-Datei verknüpft Quelle, Bearbeitungswerte und fertige Datei per SHA-256. Dateipfade werden nicht aufgezeichnet.
+Das `renderManifest` in der macOS-Sidecar-Datei verknüpft Quelle, Bearbeitungswerte und fertige Datei per SHA-256. Dateipfade werden nicht aufgezeichnet, und Windows-Export-Sidecars schreiben kein `renderManifest`.
 
 > [!IMPORTANT]
 > Das `renderManifest` hält Hash-Beziehungen zwischen Dateien und Einstellungen fest. Es hat weder digitale Signatur noch Zertifikat und ist deshalb keine C2PA Content Credentials.
@@ -13,7 +13,7 @@ Das `renderManifest` in der Sidecar-Datei verknüpft Quelle, Bearbeitungswerte u
 - Welche Render-Eingabe tatsächlich verwendet wurde
 - Der geprüfte Umfang der GrainMend-Cachedatei oder der Speichereingabe
 - SHA-256 der Einstellungen für Entwicklung, GrainMend und Export
-- SHA-256 des Scannerprofils
+- SHA-256 des Scannerprofils sowie `outputProfileSHA256`, wenn ein Druckerausgabeprofil angewendet wird
 - Herkunft des Decoders und Version des Chroma-Engine-Renderers
 - SHA-256, Bytezahl, Pixelgröße und Format der fertigen Datei
 

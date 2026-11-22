@@ -2,7 +2,7 @@
 
 [文档首页](../README.md)
 
-旁注文件里的 `renderManifest` 用 SHA-256 把源文件、编辑值和最终文件连在一起。不记录文件路径。
+macOS 旁注文件里的 `renderManifest` 用 SHA-256 把源文件、编辑值和最终文件连在一起。不记录文件路径，Windows 导出旁注文件不生成 `renderManifest`。
 
 > [!IMPORTANT]
 > `renderManifest` 记录的是文件与设置之间的哈希关系。它没有数字签名和证书，所以不是 C2PA Content Credentials。
@@ -13,7 +13,7 @@
 - 实际使用的渲染输入
 - GrainMend 缓存文件或内存输入的校验范围
 - 显影、GrainMend 和导出设置的 SHA-256
-- 扫描仪配置文件的 SHA-256
+- 扫描仪配置文件的 SHA-256，以及应用打印机输出配置文件时的 `outputProfileSHA256`
 - 解码器来源和 Chroma Engine 渲染器版本
 - 最终文件的 SHA-256、字节数、像素尺寸和格式
 

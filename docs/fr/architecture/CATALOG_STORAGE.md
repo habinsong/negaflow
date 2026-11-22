@@ -2,25 +2,27 @@
 
 [Accueil de la documentation](../README.md)
 
-Le stockage principal est `library.sqlite`. L'ancien `library.json` ne sert qu'à importer un ancien catalogue ou à écrire un fichier de diagnostic. Rien ne met à jour les deux à la fois : il n'y a donc pas de dual-write. Les sauvegardes et archives de conservation utilisent du JSON portable et excluent le fichier SQLite en cours d'utilisation.
+Le stockage principal est `library.sqlite`. L'ancien `library.json` ne sert qu'à importer un ancien catalogue ; le diagnostic écrit des paquets de support expurgés, pas `library.json`. Rien ne met à jour les deux à la fois : il n'y a donc pas de dual-write. Sur macOS, les sauvegardes et archives BagIt utilisent du JSON portable (`version 7`) et excluent le fichier SQLite en cours d'utilisation. Sur Windows, le catalogue emploie son propre schéma (`version 2`) et emballe `library.sqlite` dans un `.negaflowarchive` au format ZIP ; les sauvegardes se déplacent donc entre machines de la même plateforme.
 
 | Type | Format | Usage |
 |---|---|---|
 | Catalogue principal | SQLite | Exécution de l'application, recherche, enregistrement, récupération |
 | Anciennes données | JSON | Importer un catalogue existant |
-| Sauvegarde et archive de conservation | Forme JSON | Déplacement vers une autre machine, restauration |
+| Sauvegarde et archive de conservation | JSON portable (`version 7`, macOS) / ZIP avec `library.sqlite` (`version 2`, Windows) | Déplacement entre machines de la même plateforme, restauration |
 
 > [!IMPORTANT]
 > Un catalogue manquant ou endommagé ne déclenche pas le démarrage d'une bibliothèque vide. Le catalogue d'origine et les fichiers photo restent intacts tant qu'aucune génération saine n'est trouvée.
 
 ## Mesures
 
-JSON et SQLite ont été comparés sur le même Mac avec ces commandes.
+JSON et SQLite ont été comparés sur le même Mac avec ces commandes, lancées depuis `negaflow-mac/`.
 
 <details>
 <summary>Commandes de mesure</summary>
 
 ```bash
+cd negaflow-mac
+
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   NEGAFLOW_CATALOG_PERF_REPORT="$PWD/build/performance/catalog.json" \
   bash scripts/performance/run-catalog.sh
@@ -61,23 +63,23 @@ Une sauvegarde ne charge pas toute la base dans `Data`. Elle crée une copie tem
 
 - De nombreux changements de lignes tiennent dans une transaction.
 - Les lignes et les index permettent de ne lire que les vues nécessaires.
-- L'API C de SQLite est fournie avec macOS : aucun nouveau paquet n'est nécessaire.
+- Sur macOS, l'API C de SQLite est fournie avec le système, donc aucun nouveau paquet n'est nécessaire ; Windows emploie `Microsoft.Data.Sqlite`.
 - La règle de récupération est conservée : un stockage endommagé n'est jamais traité comme une bibliothèque vide.
 
 Il fonctionne avec `journal_mode=DELETE` et `synchronous=FULL`. Avec WAL, la base et le fichier `-wal` devraient être traités comme un seul bloc. La base en cours d'utilisation n'est pas copiée directement. Seul le fichier principal, vérifié après la fermeture de la connexion, devient une copie de récupération.
 
 ## Qui fait quoi dans le code
 
-- `CatalogStore` : connexion, transactions, version du schéma, contrôles d'intégrité
-- `CatalogMigration` : import JSON en lecture seule et conversion par version
-- Tables d'entités : vues, originaux, ordre, bobines, dossiers, collections, recherche, tâches de numérisation
-- `LibraryBackupStore` : sauvegarde JSON portable, vérifications avant restauration, informations de récupération
+- `LibraryCatalogSQLiteStore` (Windows : `SqliteCatalogStore` et `SqliteCatalogSchema`) : connexion, transactions, version du schéma, contrôles d'intégrité
+- `LibraryCatalogSQLiteMigration` et `LibraryCatalogFile` (Windows : `CatalogVersionMigration`) : import JSON hérité en lecture seule et mises à niveau par version
+- Tables d'entités : `catalog_metadata` plus 9 tables d'entités (`folders`, `frames` avec références aux originaux intégrées, `rolls`, `scan_sessions`, `scan_roll_assignments`, `manual_collections`, `smart_collections`, `saved_searches`, `stacks`), ordonnées par la colonne `position` de chaque table
+- `LibraryBackupStore` (Windows : `CatalogBackupStore`) : sauvegardes et restaurations
 
 Les valeurs de développement et l'historique de retouches versionné sont stockés en BLOB JSON par entité. Les pixels sources, les vignettes et les caches GrainMend restent hors de la base. Il manque encore des colonnes et des index pour la recherche et le tri : tout le catalogue est chargé en mémoire au démarrage, et le temps de lecture SQLite ressemble donc à celui du JSON. L'étape suivante est une recherche par index qui ne lit que les colonnes et les vues utilisées.
 
 ## Reprendre l'ancien JSON
 
-1. Vérifier la version du JSON et `LibraryCatalogHealth`.
+1. Vérifier la version du JSON et `LibraryCatalogHealthInspector`.
 2. Créer un SQLite temporaire.
 3. Déplacer les données en une seule transaction.
 4. Comparer les identifiants, l'ordre, l'appartenance et les tâches.
@@ -85,7 +87,7 @@ Les valeurs de développement et l'historique de retouches versionné sont stock
 6. Garder le JSON comme génération de récupération.
 7. Basculer sur SQLite comme stockage principal.
 
-Si une étape échoue, le JSON existant reste tel quel et un catalogue vide n'est jamais démarré. Même si des fichiers et marqueurs intermédiaires subsistent, le travail ne reprend que si le SHA-256 de la source et les deux catalogues concordent. Après la migration, il n'y a pas de repli automatique sur le JSON. La version minimale de lecture et le marqueur de migration sont contrôlés pour qu'une application plus ancienne ne modifie pas le JSON et ne scinde pas le stockage en deux.
+Si une étape échoue, le JSON existant reste tel quel et un catalogue vide n'est jamais démarré. Le fichier `library.sqlite-migration.json` n'existe que pendant la migration pour reprendre un transfert interrompu lorsque le SHA-256 de la source et les deux catalogues concordent, puis il est supprimé une fois l'opération terminée. À la fin, `library.json` est déplacé vers `library.pre-sqlite-<sha12>.json` et il n'y a pas de repli automatique sur le JSON. Le champ `minimumReaderVersion` empêche les versions plus anciennes d'ouvrir un catalogue plus récent.
 
 ## Sources
 

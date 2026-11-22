@@ -21,7 +21,7 @@ Durchlicht-Targets nach IT8.7/1 und ISO 12641-1 sind für positive Durchsichtsvo
 
 Das öffentliche FADGI-OpenDICE-Paar aus Bild und Referenz wurde an 264 Feldern gemessen: Median ΔE00 9,8815, p95 13,2745, Maximum 15,5996. Eine unabhängige LittleCMS-Umrechnung wich höchstens um 0,105 Lab-Einheiten vom Auswerter ab. Diese Beobachtungen bestehen keine Prüfung der Filmgenauigkeit: Der Scan ist ein positives IT8, seine physische Seriennummer ist ungeprüft, und es hängt keine Messung von Kamera, Licht und Film eines Negativs daran.
 
-Auch öffentliche Negativ-Datensätze wurden geprüft. Die FADGI-Negativreferenzen enthalten nur Dichte, keine gemessenen Farbfelder. BlueNeg nennt seine restaurierten Referenzen Pseudo Ground Truth. Die ARRI-AQUA-Spektralstudie von 2024 gibt ihre Daten auf Anfrage heraus, nicht als freien Download. Keine liefert eine unabhängige Szenenfarbreferenz für die aktuelle Invertierung.
+Auch öffentliche Negativ-Datensätze wurden geprüft. Dabei enthalten die FADGI-Negativreferenzen nur Dichte, keine gemessenen Farbfelder, und BlueNeg nennt seine restaurierten Referenzen Pseudo Ground Truth. Zudem gibt die ARRI-AQUA-Spektralstudie von 2024 ihre Daten nur auf Anfrage heraus, nicht als freien Download. Deshalb liefert keine dieser Quellen eine unabhängige Szenenfarbreferenz für die aktuelle Invertierung.
 
 Eine [öffentliche Belichtungsreihe mit Kodak ColorPlus 200](https://discuss.pixls.us/t/any-interest-in-a-film-negative-feature-in-rt/12569/262) (fünf Sony-ILCE-7-RAW-Scans, −1 bis +3 EV) wurde ebenfalls untersucht. Ihre Karte ist eine Grey White Balance Colour Card, deshalb wurden X-Rite-Referenzwerte verworfen. Keines der 120 abgetasteten Feldgebiete erreichte im decodierten Kamera-RGB Null oder Vollaussteuerung. Das ist eine Prüfung des decodierten Signals, keine direkte Messung des Sensormosaiks und kein Ergebnis zur Farbgenauigkeit. Ohne gemessene Referenzen für diese Karte und den Scanaufbau lassen sich Farbstiche der Ausgabe nicht der Eingabe oder der Anwendung zuordnen. Die Dateien bleiben außerhalb des Repositorys, weil die Weitergaberechte nicht geklärt sind.
 
@@ -103,7 +103,7 @@ Reihenfolge von Prüfung und Verwendung:
 2. Bestätigen, dass ColorSync in beide Richtungen umrechnen kann.
 3. Bei der Auswahl Profilname, Bytes und SHA-256 festlegen.
 4. Einmal auf die endgültige Ausgabe anwenden, nachdem das `MAIN`-Arbeitsbild und das Seitenlayout fertig sind.
-5. Nicht auf `rawScanTIFF` oder `-main-flat` anwenden.
+5. Nicht auf `rawScanTIFF`, `dng` oder `-main-flat` anwenden.
 6. Ein fehlendes oder falsches Profil scheitert, bevor eine temporäre Ausgabe entsteht. sRGB springt nicht ein.
 
 Es wird nicht behauptet, dass der aktuelle Pfad über Core Image und ColorSync Rendering Intent und Schwarzpunktkompensation auf jeder macOS-Version bitgenau festlegt.

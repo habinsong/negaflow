@@ -23,7 +23,7 @@ Ce qui décide, c'est la matière qui forme l'image. Un film couleur ne garde qu
 
 | Type de film | IR automatique | Raison |
 |---|---|---|
-| Négatif couleur | Conditionnel | Image de colorants. Le module doit signaler l'IR et le contrôle d'alignement doit réussir |
+| Négatif couleur | Conditionnel | Image de colorants. Le module doit signaler l'IR et la confirmation locale dans le canal rouge (`>= 4σ`) ainsi que le plafond de couverture (`<= 5 %`) doivent réussir |
 | Positif couleur | Conditionnel | Image de colorants. Mêmes conditions que le négatif couleur |
 | Négatif et positif noir et blanc | Désactivé | L'image d'argent bloque l'infrarouge |
 
@@ -34,7 +34,7 @@ Ce qui décide, c'est la matière qui forme l'image. Un film couleur ne garde qu
 
 ## Contrôle d'alignement
 
-`InfraredDefectRemoval` compare la texture de fuite de l'IR au canal rouge du RVB et cherche un décalage entier. Le résultat porte des `AlignmentDiagnostics`.
+`InfraredDefectRemoval` associe d'abord les points de défaut IR aux zones sombres locales du canal rouge RVB, et ne recourt à la corrélation entre la texture de fuite IR passe-haut et le canal rouge que lorsque les indices de défaut manquent. Le résultat global porte des `AlignmentDiagnostics` et sert de point de départ avant l'affinage local du décalage de chaque défaut dans le canal rouge.
 
 | État | Signification |
 |---|---|
@@ -44,7 +44,7 @@ Ce qui décide, c'est la matière qui forme l'image. Un film couleur ne garde qu
 | `weakCorrelation` | La corrélation n'atteint pas le seuil |
 | `searchLimitReached` | Le meilleur point est sur la limite de recherche |
 
-Les trois derniers s'arrêtent avec l'erreur `alignmentUnreliable` et ne sont jamais remplacés par `(0,0)`. Un meilleur point sur la limite de recherche est un échec, quelle que soit la taille du décalage.
+Lorsque le point de départ global renvoie l'un des trois derniers états, la détection ne s'arrête pas aussitôt : elle part de `(0,0)`, vote un décalage grossier consensuel à partir des candidats IR marqués, et exige que chaque défaut candidat passe la confirmation locale dans le canal rouge visible (`>= 4σ`) et le plafond de couverture (`5 %` par défaut), en s'arrêtant avec `noDefects` ou `coverageTooHigh` en cas d'échec.
 
 Les tests automatiques ne remplacent pas la vérification de l'alignement RVB/IR sur un vrai appareil, film par film. Cette vérification se fait à la main, sur de vrais films.
 

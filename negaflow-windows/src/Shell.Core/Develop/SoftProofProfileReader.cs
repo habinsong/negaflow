@@ -29,6 +29,51 @@ public static class SoftProofProfileReader
     /// </summary>
     public static byte[]? ReadProfile(string? profilePath) => Load(profilePath).Profile;
 
+    /// <summary>
+    /// 소프트 프루프·C-print 목적지로 실제로 쓸 수 있는지 봅니다. 구조 검사에 더해 Windows
+    /// ICM 이 왕복 표(sRGB → 프로파일 → sRGB)를 만들 수 있는지까지 확인합니다 — 매체 태그만
+    /// 읽히고 ICM 이 2011 로 거절하는 프로파일을 선택 시점에 막습니다.
+    /// </summary>
+    public static bool CanUseAsProof(string? profilePath)
+    {
+        if (ReadProfile(profilePath) is not { } profile)
+        {
+            return false;
+        }
+        try
+        {
+            using DisplayColorTransform? transform = DisplayColorTransform.TryCreateProof(
+                profile, out bool identity);
+            return transform is not null || identity;
+        }
+        catch (NativeBootstrapException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 프린터 출력 프로파일로 실제로 쓸 수 있는지 봅니다. 구조 검사에 더해 Windows ICM 이
+    /// 출력 변환(sRGB → 프로파일)을 만들 수 있는지까지 확인합니다.
+    /// </summary>
+    public static bool CanUseAsPrinterOutput(string? profilePath)
+    {
+        if (ReadProfile(profilePath) is not { } profile)
+        {
+            return false;
+        }
+        try
+        {
+            using DisplayColorTransform? transform = DisplayColorTransform.TryCreate(
+                profile, out bool identity);
+            return transform is not null || identity;
+        }
+        catch (NativeBootstrapException)
+        {
+            return false;
+        }
+    }
+
     private static (SoftProofMedia? Media, byte[]? Profile) Load(string? profilePath)
     {
         if (string.IsNullOrWhiteSpace(profilePath) || !File.Exists(profilePath))

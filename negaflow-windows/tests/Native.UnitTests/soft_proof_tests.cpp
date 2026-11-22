@@ -233,6 +233,21 @@ void check_output_gate() {
         negaflow::color::is_rgb_output_profile(lut_rgb),
         "an RGB LUT profile with B2A0 can be rendered into");
 
+    auto lut_rgb_b2a1 = make_profile(
+        signature_of("RGB "),
+        {{signature_of("wtpt"), 0.9642, 1.0, 0.8249}},
+        {signature_of("A2B1"), signature_of("B2A1")});
+    write_be_u32(lut_rgb_b2a1, 12U, signature_of("prtr"));
+    expect(
+        negaflow::color::is_rgb_output_profile(lut_rgb_b2a1),
+        "an RGB printer LUT profile with B2A1 can be rendered into");
+
+    auto scanner_matrix = make_v2_display_profile_declaring_d65();
+    write_be_u32(scanner_matrix, 12U, signature_of("scnr"));
+    expect(
+        !negaflow::color::is_rgb_output_profile(scanner_matrix),
+        "a scanner-class RGB matrix/TRC profile cannot be used as an output destination");
+
     const auto scanner = make_profile(
         signature_of("RGB "),
         {{signature_of("wtpt"), 0.9642, 1.0, 0.8249}},

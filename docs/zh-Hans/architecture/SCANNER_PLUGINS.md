@@ -22,30 +22,33 @@ negaflow 的默认输入是导入图像。只有存在外部插件时，才会�
 
 ## 连接方式
 
-界面与 `ScannerKit` 通信，`ScannerKit` 把请求交给三个后端之一：
+在 macOS 上，界面与 `ScannerKit` 通信，`ScannerKit` 把请求交给三个 `ScannerBackend` 实现之一：
 
 1. `ExternalScannerBackend`：运行已安装的外部插件。
 2. `MockScannerBackend`：生成开发用的合成图像。
 3. `InactiveImageCaptureBackend`：目前未启用。
 
-界面只看到 `ScannerBackend`。插件的设备 ID 在应用里显示为 `plugin:<pluginId>:<deviceId>`。
+在 Windows 上，外壳把请求交给用于外部插件的 `ScannerPluginGateway`，或在选择演示模式时交给 `SimulatedScannerGateway`。
+
+插件的设备 ID 在应用里显示为 `plugin:<pluginId>:<deviceId>`。
 
 运行插件时，会去掉 `plugin:<pluginId>:`，只发送插件自己的设备 ID。
 
 ## 查找插件
 
-默认文件夹是 `~/Library/Application Support/negaflow/Plugins/<id>/manifest.json`。测试和本地开发时，用 `NEGAFLOW_PLUGINS_DIR` 指向其他文件夹。
+默认清单路径在 macOS 上是 `~/Library/Application Support/negaflow/Plugins/<id>/manifest.json`，在 Windows 上是 `%LOCALAPPDATA%\Negaflow\Plugins\<id>\manifest.json`。在 macOS 的测试和本地开发中，可以用 `NEGAFLOW_PLUGINS_DIR` 指向其他文件夹。
 
 | 字段 | 规则 |
 |---|---|
 | `schemaVersion` | 目前恰好是 `1` |
-| `protocolVersion` | 省略时为 `1`，支持 `1` 和 `2` |
+| `protocolVersion` | 省略时为 `1`（支持 `1` 和 `2`；Windows 扫描时要求 `2`） |
 | `id` | 唯一的插件 ID |
 | `name` | 界面上显示的名称 |
-| `kind` | 插件类型 |
+| `pluginVersion` | 可选的插件版本字符串 |
+| `kind` | 省略时默认为 `"scanner"`；其他值均被拒绝 |
 | `license` | 分发许可证 |
 | `homepage` | 项目地址 |
-| `executable` | 可执行文件路径 |
+| `executable` | 限制在插件目录内的相对路径（不允许 `.`、`..`、前导 `/`、符号链接或重解析点） |
 
 `id` 是 1 到 64 个 ASCII 字符。第一个是字母或数字，其余是字母、数字、`.`、`_` 或 `-`。`:` 是设备 ID 的分隔符，所以不允许使用。
 
@@ -54,15 +57,14 @@ negaflow 的默认输入是导入图像。只有存在外部插件时，才会�
 ### 文件安全检查
 
 > [!WARNING]
-> 清单或可执行文件的字节一旦变化，之前的批准就作废。所有者、权限、是否为符号链接以及 SHA-256，会在运行前再次检查。
+> 清单或可执行文件的字节一旦变化，之前的批准就作废。文件安全条件和 SHA-256 哈希会在运行前再次检查。
 
-- 插件文件夹、清单和可执行文件必须归当前用户所有。
-- 组或其他用户可写时拒绝。
-- 拒绝符号链接。
-- 记录清单和可执行文件的 SHA-256。
+- 在 macOS 上，插件文件夹、清单和可执行文件必须归当前用户所有，拒绝组或其他用户可写权限，也拒绝符号链接。
+- 在 Windows 上，拒绝插件文件夹、清单和可执行文件上的重解析点，且可执行文件路径必须留在插件目录内。
+- 两个平台都会记录清单和可执行文件的 SHA-256。
 - 首次使用时由用户批准。
 - 文件字节变化会使批准失效。
-- ID 在运行前重新计算。
+- 哈希与 ID 在运行前重新计算。
 
 ## 命令
 
@@ -72,7 +74,7 @@ negaflow 的默认输入是导入图像。只有存在外部插件时，才会�
 |---|---|
 | `detect` | JSON 设备列表 |
 | `capabilities <deviceId>` | JSON 能力列表。可通过 stdin 接收 `detect` 报告的设备 ID、厂商和型号 JSON |
-| `scan` | stdin 接收设置 JSON；stdout 输出进度 NDJSON 和最终结果 |
+| `scan`（macOS） / `scan <deviceId>`（Windows） | stdin 接收设置 JSON；stdout 输出进度 NDJSON 和最终结果 |
 
 ## 扫描协议
 
@@ -82,7 +84,7 @@ negaflow 的默认输入是导入图像。只有存在外部插件时，才会�
 
 ### 版本 2
 
-仅当清单带有 `"protocolVersion": 2` 时使用。
+仅当清单带有 `"protocolVersion": 2` 时使用。在 Windows 上执行扫描时，必须使用协议 v2。
 
 请求包含：
 
@@ -105,14 +107,14 @@ negaflow 的默认输入是导入图像。只有存在外部插件时，才会�
 - 最终事件之后的多余输出
 - 无效的 UTF-8
 
-违反 v2 规范时，插件会被立即结束，不再等待通常的超时。
+在 macOS 上，流传输中途违反 v2 规范会立即结束插件，不再等待通常的超时。在 Windows 上，进程退出后再验证 v2 事件流。
 
 ### 实际应用的设置
 
 v2 的 `result` 必须带有 `appliedOptions`：
 
 - `deviceID`、`resolutionDPI`、`bitDepth`、`colorMode`、`filmType`
-- `scanArea`：`originXMM`、`originYMM`、`widthMM`、`heightMM`，即插件实际发给后端的区域。为绕开算错扫描尺寸的后端，插件可以做小于 1 mm 的调整。应用会用这个区域核对返回的像素尺寸，所以照抄请求会使检查失去意义。
+- `scanArea`：`originXMM`、`originYMM`、`widthMM`、`heightMM`，即插件实际发给后端的区域。`originXMM`、`originYMM` 和 `widthMM` 必须与请求完全一致，只有为绕开算错扫描高度的后端时，`heightMM` 才允许有小于 1 mm 的差异。应用会用这个区域核对返回的像素尺寸，所以照抄请求会使检查失去意义。
 - `infrared`、`multiExposure`
 - `hardwareExposureTime`、`brightnessAdjustment`、`contrastAdjustment`
 - `outputRawTIFF`
@@ -132,16 +134,17 @@ v2 的 `result` 必须带有 `appliedOptions`：
 只有插件报告以下全部内容时，才会启用指定位置的平板扫描：
 
 - 预览
-- `supportsPositionedScanArea`
-- 以 mm 计的 `scanOriginXRange` 和 `scanOriginYRange`
-- 以 mm 计的 `scanWidthRange` 和 `scanHeightRange`
+- `supportsScanArea: true` 与 `supportsPositionedScanArea: true`
+- 物理扫描区域单位（`scanAreaUnit != "pixel"`）
+- 原点非负且边界有效的、以 mm 计的 `scanOriginXRange` 和 `scanOriginYRange`
+- 最小与最大边界为正数的、以 mm 计的 `scanWidthRange` 和 `scanHeightRange`
 
 应用把选定的区域向外扩展到插件的步长，并为每个区域生成一个正式扫描任务。不会凭型号猜测。没有这些可选字段的旧插件保持固定画幅的流程。
 
 ## 进程限制与取消
 
-- stdout 上限：4 MiB
-- stderr 上限：1 MiB
+- macOS 上限：stdout 4 MiB，stderr 1 MiB；超时时间为 `detect` 90 秒、`capabilities` 180 秒、`scan` 2 小时，流传输中途违反 v2 规范时立即终止。
+- Windows 上限：`detect` 与 `capabilities` 的 stdout 为 4 MiB，`scan` 为 8 MiB（单行上限 256 KiB），stderr 512 KiB；超时时间为 `detect` 15 秒、`capabilities` 180 秒、`scan` 2 小时，进程退出后验证 v2 事件流。
 
 超过上限会结束进程并判定失败。清理时只读取已经到达的字节。即使子进程继承了管道，也不会等待 EOF。
 
@@ -149,20 +152,20 @@ v2 的 `result` 必须带有 `appliedOptions`：
 
 ## 发布扫描文件
 
-插件把源图像写到应用给出的 `outputPath`，并在结果中返回同一路径。该路径是与最终文件夹同一磁盘上的临时位置。流程如下：
+插件把源图像写到应用给出的 `outputPath`，并在结果的 `path` 字段中返回同一路径。该路径是与最终文件夹同一磁盘上的临时位置。流程如下：
 
 1. 应用把设置 JSON 和 `outputPath` 发给插件。
 2. 插件把扫描文件写入临时文件夹。
-3. 插件返回带有相同 `outputPath` 的结果。
+3. 插件返回 `path` 与请求的 `outputPath` 一致的结果。
 4. 应用检查格式、尺寸和路径。
 5. 检查通过后，应用以原子方式发布到最终的扫描文件夹。取消、失败或输出有误时，则删除临时材料。
 
 应用会确认：
 
 - 非空的普通文件
-- ImageIO 能读取的图像
+- macOS 上 ImageIO 能读取的图像（v2 强制为 TIFF），或 Windows 上元数据通过 `NativeTiffSourceProbe` 检查的 TIFF
 - 预期的格式和像素尺寸
-- 请求与结果中的路径相同
+- 请求的 `outputPath` 与结果的 `path` 中的路径相同
 
 取消、超时、输出有误或插件失败时，会删除临时文件夹，不发布不完整的扫描。
 

@@ -37,7 +37,7 @@
 
 ビルドに必要なもの:
 
-- Visual Studio 2026（C++ によるデスクトップ開発ワークロード付き。構成要素は `.vsconfig` にあります）
+- Visual Studio 2026（C++ デスクトップ、.NET デスクトップ、WinUI/Windows アプリ開発ワークロード付き。正確な構成要素は `.vsconfig` にあります）
 - Windows 11 SDK 10.0.26100 以降
 - .NET 10 SDK（`global.json` が 10.0.302 に固定）
 - CMake 4.2 以降（`Visual Studio 18 2026` ジェネレーターが必要とします）
@@ -47,7 +47,7 @@
 
 ## インストール
 
-[Releases](https://github.com/habinsong/negaflow/releases) から `negaflow-1.2.7-win-x64.exe` を入手して実行します。既定のインストール先は `%LOCALAPPDATA%\Negaflow\App` で、管理者権限は求められません。
+[Releases](https://github.com/habinsong/negaflow/releases) から `negaflow-1.2.7-win-x64.exe` を入手して実行します。既定のインストール先は `%LOCALAPPDATA%\Negaflow\App` で、未署名のルーズアプリパッケージ登録（`AllowDevelopmentWithoutDevLicense`）がまだ有効になっていない PC に限り、最初に一度だけ管理者の確認を求めます。
 
 [negaflow-1.2.7-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.7/negaflow-1.2.7-win-x64-setup.zip) には、同じインストーラー EXE と、インストール手順、ライセンス表記、SHA-256 チェックサムが入っています。すべて展開してからインストーラーを実行してください。インストーラーの圧縮版で、ポータブルアプリではありません。
 
@@ -55,7 +55,7 @@
 
 削除は、スタートメニューの `Uninstall negaflow` か、設定のアプリ一覧から行います。ライブラリと写真はそのまま残ります。
 
-アプリは起動時に一度だけ GitHub に最新リリースを問い合わせます。新しい版があれば、右上の ⋯ メニューのいちばん下に「バージョン X.Y.Z にアップデート」が出ます。選ぶとリリースページが開き、`win-x64.exe` のインストーラーをリリースの `SHA256SUMS.txt` で確かめてからダウンロードフォルダーに保存します。インストールはご自身で行います。最新のときは項目が「最新バージョンです。」になり、選ぶとプロジェクトページが開きます。オフラインなどで確認できなかったときは項目が出ません。
+アプリは起動時に一度だけ GitHub に最新リリースを問い合わせます。その際、新しい版があれば、右上の ⋯ メニューのいちばん下に「バージョン X.Y.Z にアップデート」が出ます。これを選ぶとリリースページが開き、`win-x64.exe` のインストーラーをリリースの `SHA256SUMS.txt` で確かめてからダウンロードフォルダーに保存します。その後、インストールはご自身で行います。一方、最新のときは項目が「最新バージョンです。」になり、選ぶとプロジェクトページが開きます。なお、オフラインなどで確認できなかったときは項目が出ません。
 
 ## ビルド
 
@@ -91,10 +91,10 @@ ctest --preset x64-release --output-on-failure
 # アプリとカタログのテスト
 .\scripts\test-managed.ps1
 
-# エンジンとアプリの境界テスト
+# エンジンとアプリの境界テスト（個別に実行）
 .\scripts\test-interop.ps1
 
-# 上のすべてをまとめて実行
+# CI ゲート（翻訳キー、スライダー範囲、CTest、マネージドテスト）、リリースビルド、インストーラー検証
 .\scripts\local-ci.ps1
 ```
 
@@ -121,8 +121,8 @@ $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 # スキャンファイルの中身
 & $cli --probe-tiff scan.tif
 
-# 現像して 16bit TIFF で保存
-& $cli --export-developed-tiff16 scan.tif out.tif
+# 現像して 16bit TIFF で保存 (<dmin-r> <dmin-g> <dmin-b> <color|bw>)
+& $cli --export-developed-tiff16 scan.tif out.tif 0.85 0.55 0.35 color
 
 # 現像1回の時間の内訳
 & $cli --develop-timing scan.tif
@@ -131,7 +131,7 @@ $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 & $cli --auto-base-probe scan.tif
 ```
 
-全一覧は、引数なしで実行すると出ます。
+引数なしで実行するとビルド情報 JSON を出力し、オプション一覧は `--help` で表示します。
 
 ## スキャナー
 
@@ -148,11 +148,13 @@ $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 | `export-trace.txt` | 書き出しとクイック書き出し（失敗を含む） |
 | `termination.txt` | アプリを閉じる間に起きたこと |
 | `settings-change.txt` | 変わった設定と、変えたもの |
+| `startup-trace.txt` | 起動とシェル初期化の段階 |
+| `crop-trace.txt` | クロップの幾何と操作の更新 |
 
-この3つは常に有効です。次の2つは初期状態で無効です。
+これらは常に有効です（エラー時には `native-crash.txt` や `scanner-failure.txt` などの障害ログも書かれます）。追加トレースは初期状態で無効です。
 
-- `preview-trace.txt`: 同じフォルダーに空のファイル `preview-trace.on` を作ると有効になります。
-- `stage-trace.txt`: アプリを起動する前に環境変数 `NEGAFLOW_STAGE_TRACE=1` を設定します。現像の各段階でピクセルの統計を記録します。
+- `preview-trace.txt`、`thumbnail-trace.txt`、`shortcut-trace.txt`、`decode-trace.txt`、`memory-budget.txt`: 同じフォルダーに対応する `.on` ファイル（`preview-trace.on`、`thumbnail-trace.on`、`shortcut-trace.on`、`decode-trace.on`、`memory-trace.on`）を作るか、設定で開発者モードを有効にします。
+- `stage-trace.txt`、`stage-timing.txt`: アプリを起動する前に環境変数 `NEGAFLOW_STAGE_TRACE=1`（各段階のピクセル統計）または `NEGA_TIMING=1`（各段階の所要時間）を設定します。
 
 ## 構成
 
@@ -162,8 +164,8 @@ negaflow-windows/
 │   ├── Native/        Chroma Engine、GrainMend、デコードと書き出し (C++)
 │   ├── Interop/       エンジンとアプリの間の層 (C#)
 │   ├── Catalog.Core/  ライブラリの保存 (C#)
-│   ├── Shell.Core/    現像、プリント、書き出しのロジック (C#)
-│   ├── Shell/         ライブラリ、現像、プリントの画面 (WinUI 3)
+│   ├── Shell.Core/    現像、プリント、スキャン、書き出しのロジック (C#)
+│   ├── Shell/         ライブラリ、現像、プリント、スキャンの画面 (WinUI 3)
 │   └── Cli/           エンジン確認ツール (C++)
 ├── scripts/           ビルド、テスト、パッケージングのスクリプト
 ├── tests/             エンジン、アプリ、境界のテスト

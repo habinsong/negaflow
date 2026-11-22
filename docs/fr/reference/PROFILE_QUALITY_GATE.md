@@ -11,9 +11,9 @@ Ce dépôt ne contient aujourd'hui aucune paire d'images REAL/TARGET (`LUT_targe
 > [!WARNING]
 > L'exactitude des couleurs d'un scanner ne peut pas être approuvée à partir de ce seul dépôt. Une décision de publication exige des paires REAL/TARGET figées, des cas de validation non utilisés pour le réglage et des tolérances fixées par une personne.
 
-## Jusqu'où l'application utilise les profils actuels
+## Jusqu'où l'application emploie les profils actuels
 
-Quand vous choisissez vous-même la cible `HS` ou `SP`, une différence relative limitée issue du groupe `realOnly` fourni peut être utilisée.
+`HS` et `SP` appliquent par défaut leur table fixe de rendu cible. Lorsqu'un profil de scanner correspondant (`scannerProfileID`) est aussi sélectionné pour `HS` ou `SP`, une différence relative limitée issue du groupe `realOnly` fourni peut s'y ajouter.
 
 Conditions :
 
@@ -28,7 +28,7 @@ Règles d'application :
 - Les valeurs de sens opposé entre les deux groupes ne sont pas appliquées.
 - En noir et blanc, toutes les composantes de couleur sont écartées et seule la tonalité relative reste.
 - La correction relative n'est pas appliquée à un profil de diapositive sans bobine correspondante.
-- Sans matériel apparié à la même position, la texture et l'accentuation du scanner ne sont pas appliquées.
+- La cible `HS` applique une passe fixe d'accentuation de luminance mise à l'échelle selon la résolution (`noritsuTexture`) sans synthétiser de grain, et `ScannerProfileGrade` manuel applique un masque flou borné dérivé de `texture_sharpness_p95` ; `SP` n'ajoute pas d'accentuation et aucun des deux chemins ne synthétise de grain de scanner.
 - La tonalité est appliquée une fois à la luminosité gamma Rec.709, et les `a*` et `b*` de Lab sont préservés.
 - Le gain de couleur est interpolé dans le domaine logarithmique pour que la relation entre ancrages opposés tienne.
 - Si le SHA-256 d'un fichier ou du manifeste ne concorde pas, tout le lot de profils est refusé.

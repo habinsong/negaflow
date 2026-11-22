@@ -2,7 +2,7 @@
 
 [Docs home](../README.md)
 
-GrainMend repairs dust, pinholes, scratches and emulsion damage on film. Nothing is baked into the original. The result is kept as an ordered edit history.
+GrainMend repairs dust, pinholes, scratches and emulsion damage on film. Nothing is written into the original. The result is kept as an ordered edit history.
 
 | Tool | Where it looks | How it repairs |
 |---|---|---|
@@ -10,7 +10,7 @@ GrainMend repairs dust, pinholes, scratches and emulsion damage on film. Nothing
 | Guided | An area you choose | Looks closely, down to small specks and faint defects |
 | Brush | The spot you paint | Carries surrounding structure and texture across |
 | Clone stamp | A source point you choose | Copies real source pixels at a fixed offset |
-| IR | The scanner's infrared channel | IR finds the location, RGB rebuilds the pixels |
+| IR | The scanner's infrared channel | Divides out partial attenuation directly (`raw ÷ (1 − attenuation)`, up to 2× gain); opaque cores (`>= 50%`) go to the RGB patch repairer |
 
 The develop screen has automatic, guided, brush and clone stamp. IR can be turned on at the scan step when the plugin reports the capability, and once the scan is done its result joins the same GrainMend layer list.
 
@@ -60,19 +60,19 @@ You paint the spot to repair yourself. It does not cover what you painted with a
 
 ### Clone stamp
 
-`⌥` click picks the source point, then you draw on the target. It uses no automatic detection. It holds the offset between the two points and copies the real pixels.
+`⌥`-click on Mac (`Alt`-click on Windows) picks the source point, then you draw on the target. It uses no automatic detection. It holds the offset between the two points and copies the real pixels.
 
 The edit history keeps diameter, hardness, coordinates and offset, and it still applies to the same original coordinates after a rotation, a flip or a crop. Offsets snap to whole pixels, and nothing outside the image is applied.
 
 ### IR
 
-Used only when the plugin hands over a real IR channel and the size and area line up with the RGB. IR is the material that locates the defect. The final pixels come from the same repairer as RGB.
+Used only when the plugin hands over a real IR channel and the size and area line up with the RGB. For partially occluded pixels, GrainMend IR divides out optical attenuation directly (`raw ÷ (1 − attenuation)`, capped at 2× gain) so underlying detail and grain stay intact. Only heavily occluded opaque cores (`>= 50%` attenuation) go to the RGB patch repairer.
 
 ## Finding defects in RGB
 
 ### Difference from the surroundings
 
-Brightness differs from photograph to photograph, so there is no single global threshold. The difference from surrounding brightness, local variance and direction produce bright dust and dark defect candidates.
+Brightness differs from photograph to photograph, so there is no single global threshold. It compares each pixel with surrounding pixels, checks how much brightness varies nearby and follows the local angle to find bright dust and dark defect candidates.
 
 ### Mask cleanup
 
@@ -88,8 +88,8 @@ Each blob is measured for:
 
 - Area and bounding box
 - Ratio of the long axis to the short axis
-- Horizontal, vertical and diagonal direction
-- Linearity, density and surrounding contrast
+- Horizontal, vertical and diagonal angle
+- How straight and dense the mark is, plus its contrast against surrounding pixels
 - Whether it continues into a nearby edge
 - Its relationship with other blobs
 
@@ -124,22 +124,25 @@ Even when a model name is known to have IR, it is not used on screen or in a req
 
 ### Alignment
 
-Optics and sensor readout can leave RGB and IR a few pixels apart. A wide search runs first, then a narrow one, to settle the offset. The confidence of the peak, and whether it landed on the edge of the search range, are both recorded.
+Optics and sensor readout can leave RGB and IR a few pixels apart. Global alignment first matches IR defect points against local darkness in the red channel, and falls back to IR leakage texture correlation when needed. The peak confidence and whether it landed at the edge of the search range are both recorded.
 
-Low confidence, or a best point stuck at the end of the search, does not count as success.
+That global offset is an advisory starting seed rather than a hard failure gate. When global alignment has low confidence or hits the search limit, detection starts from `(0, 0)`, votes a coarse consensus offset from strong candidates, and aligns and confirms each defect individually against the visible red channel (`>= 4σ`). Any candidate that cannot be confirmed against the red channel is discarded.
 
 ### Subtracting the scene pattern
 
-Film dye and density can show through into IR. The log brightness of the red channel is split into 64 bins, and in each bin the mean is taken after dropping the top and bottom 10% of IR values. Empty bins are interpolated from their neighbors and smoothed with a short symmetric kernel. Subtracting this non-parametric curve reduces the scene pattern, and sparse dark dust is kept out of the bin statistics.
+Film dye and density can show through into IR. GrainMend IR separates defects from the scene in four steps:
 
-What is left is converted to contrast relative to the local mean. To prevent a large defect from raising the surrounding noise floor, the noise input is clipped at the minimum detection contrast before the adaptive threshold is computed. Connected dark regions at the holder and the film edge are removed from the mask.
+1. Flood-fill and exclude dark film-holder and rebate regions connected to the image border first.
+2. Build a local morphological grayscale closing baseline (`localBaseline`). Narrow defects are bridged over, while broad cyan-dye scene ghosting stays inside the baseline.
+3. Convert IR values to optical density `log(baseline / value)`.
+4. Estimate the clean-film floor and `σ` from the scan's median and interquartile range (IQR), gather candidates whose area-scaled significance meets `Σ(density − floor) ≥ mσ·√area`, confirm each locally against the visible red channel (`>= 4σ`), and expand confirmed masks via hysteresis.
 
 ### Safety conditions
 
 - An abnormally wide mask is not applied.
-- An alignment that could not be confirmed is not applied.
-- It is not applied automatically to silver black and white.
-- Color positive and special emulsions are not assumed safe without measurement.
+- Any candidate that cannot be locally aligned and confirmed against the visible red channel (`>= 4σ`) is discarded.
+- Automatic IR is enabled for dye-image color films (both color negative and color slide/positive) and blocked for silver-image black-and-white films.
+- Kodachrome and special emulsions cannot be detected from `FilmType` alone, so disable IR manually when needed.
 
 Commercial IR tools place their own limits on ordinary black and white and on Kodachrome:
 
@@ -149,7 +152,7 @@ GrainMend IR is not a copy of, or a compatibility mode for, those commercial too
 
 ## Edit history and storage
 
-Automatic, guided, brush, clone stamp and IR share one ordered edit list.
+Automatic and guided repairs, brush and clone stamp edits, and IR share one ordered edit list.
 
 What each entry carries:
 
@@ -177,24 +180,24 @@ The GrainMend cache is a derived file, there for fast display and re-rendering. 
 - Copies for undo share storage until something actually changes.
 - Under memory pressure, rebuildable images and the patch cache are dropped.
 
-Real times depend on resolution, defect count, area size and the Mac.
+Real times depend on resolution, defect count, area size and hardware.
 
-Measured 2026-07-25 on a Release build, Mac14,3, arm64, 24 GiB of memory, macOS 26.5:
+Measured 2026-07-25 on a macOS Release build (Mac14,3 arm64 with 24 GiB of memory on macOS 26.5):
 
 | Path | Input | Result |
 |---|---|---:|
 | Guided detection | 1600×1600, 25 specks of dust | 0.35 s, 25 detected |
 | Partial ROI detection | 1600×1600 | 0.38 s |
 | Guided dense stress | 1280×960, 8 images × 3 runs | median 0.423 s, p95 0.488 s, max 0.526 s |
-| IR detection | 6000×4000, 24MP | 1.042 s, peak memory growth 249.2 MiB |
+| IR detection (before August 2026 rewrite) | 6000×4000, 24MP | 1.042 s, peak memory growth 249.2 MiB |
 
-Across 24 dense stress runs, the lowest mask coverage at defect sites was 99.80% and the highest mean residual error was 2.70/255. These are regression measurements on synthetic input. They do not promise processing times on another Mac or on real film.
+The IR detection row above was measured before the August 2026 closing-baseline and attenuation-recovery rewrite. Across 24 dense stress runs, the lowest mask coverage at defect sites was 99.80% and the highest mean residual error was 2.70/255. These are macOS regression measurements on synthetic input; Windows runs the matching GrainMend RGB and IR pipeline in C++ (`negaflow-windows/src/Native/imaging/`). None of these numbers promise processing times on another machine or on real film.
 
 ## Benchmark
 
 `defect-bench` can produce these files and values:
 
-- before, after, diff, mask
+- before and after images, diff and mask
 - 100% crops
 - Detection count and confidence
 - Processing time
@@ -229,7 +232,7 @@ When automatic meets a high density of candidates it stops applying and points y
 - Scratch repair by direction
 - Matching surrounding texture and brightness
 - Brush masks
-- Clone stamp offset, hardness and patch composition
+- Clone stamp offset, brush edge softness and patch blending
 - IR alignment, anchors, blobs and memory limits
 - Applying at the original stage and rendering the app's edit history
 - Adding repeatedly, and undo
@@ -244,15 +247,17 @@ Some performance tests run only when an environment variable is set. The presenc
 - `Digital ICE` may be a trademark of Eastman Kodak Company or a related rights holder.
 - `iSRD`, `SRDx` and `SilverFast` are trademarks of LaserSoft Imaging.
 - These names are used only for technical comparison and product identification.
-- GrainMend claims no affiliation, compatibility or equivalence with third-party technology.
+- GrainMend is not affiliated with third-party tools and does not claim to be compatible or equivalent with them.
 
 ## Where the code is
 
-- `Sources/Chromabase/DefectRemoval/`
-- `Sources/negaflowApp/Features/Defects/`
-- `Sources/negaflowApp/Features/Develop/Inspector/Tools/DefectControlsSection.swift`
-- `Sources/negaflowCLI/Commands/CLI+DefectBenchCommand.swift`
-- `Tests/ChromabaseTests/Defect*.swift`
-- `Tests/negaflowAppTests/Defect*.swift`
-- `Config/defect-corpus-film-r-v2.json`
-- `scripts/defect-corpus/`
+- `negaflow-mac/Sources/Chromabase/DefectRemoval/`
+- `negaflow-mac/Sources/negaflowApp/Features/Defects/`
+- `negaflow-mac/Sources/negaflowApp/Features/Develop/Inspector/Tools/DefectControlsSection.swift`
+- `negaflow-mac/Sources/negaflowCLI/Commands/CLI+DefectBenchCommand.swift`
+- `negaflow-mac/Tests/ChromabaseTests/Defect*.swift`
+- `negaflow-mac/Tests/negaflowAppTests/Defect*.swift`
+- `negaflow-mac/Config/defect-corpus-film-r-v2.json`
+- `negaflow-mac/scripts/defect-corpus/`
+- `negaflow-windows/src/Native/imaging/defect_*.cpp`
+- `negaflow-windows/src/Native/imaging/infrared_*.cpp`

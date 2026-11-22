@@ -145,6 +145,17 @@ IccProfileValidationResult validate_icc_profile(
     }
 }
 
+std::span<const std::uint8_t> trim_icc_padding(
+    const std::span<const std::uint8_t> bytes,
+    const IccProfileLimits& limits) noexcept {
+    const IccProfileValidationResult validation = validate_icc_profile(bytes, limits);
+    if (validation.status == IccProfileStatus::ok &&
+        validation.info.declared_bytes < bytes.size()) {
+        return bytes.first(static_cast<std::size_t>(validation.info.declared_bytes));
+    }
+    return bytes;
+}
+
 const char* icc_profile_status_name(const IccProfileStatus status) noexcept {
     switch (status) {
         case IccProfileStatus::not_present:

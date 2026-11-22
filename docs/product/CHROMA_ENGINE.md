@@ -10,7 +10,7 @@ Chroma Engine inverts and develops film. The code sits in the `Chromabase` modul
 | Film base | Automatic measurement, eyedropper, direct RGB entry |
 | Internal color | Floating point linear color space (16-bit half float on macOS, 32-bit float on Windows) |
 | Automatic features | Auto Balance ON |
-| Output color space | sRGB, Display P3, Adobe RGB, custom RGB ICC |
+| Output color space | sRGB, Display P3, Adobe RGB, RGB printer ICC (`prtr`) for export (`prtr`/`mntr`/`spac` for soft proof) |
 
 > [!IMPORTANT]
 > The default is `MAIN` with Auto Balance on. The switch is a small pill at the right of the Target heading. It appears only for color and B&W negatives on MAIN (including PRINT) and CS. It adjusts color and brightness from the current picture, and switching it off bypasses that step. Auto Tone, Auto White Balance, Auto Levels and Auto Color remain separate and off by default.
@@ -25,16 +25,19 @@ Chroma Engine inverts and develops film. The code sits in the `Chromabase` modul
 
 ## Order of steps
 
-The working image is processed in a floating point linear color space: 16-bit half float in Core Image on macOS, 32-bit float in the Windows engine. Both keep values below 0 and above 1. Only operations that need gamma convert at their fixed step, and encoding for a screen or file format happens at the end.
+The working image is processed in a floating point linear color space: 16-bit half float in Core Image on macOS, 32-bit float in the Windows engine. Both keep values below 0 and above 1. Color Mixer, Color Grading, Calibration and Point Curves operate in perceptual sRGB encoding on `[0, 1]` while preserving out-of-range (`< 0` or `> 1`) values. Before final screen or file encoding, `DisplayGamutMap` maps out-of-gamut colors into the target export color space's linear primaries without shifting hue.
 
 1. Read the file and fix the orientation.
 2. Linear input (camera RGB for RAW).
 3. Film type: a positive goes to positive processing, a negative gets its base measured.
 4. Optical density and inversion, then Auto Balance ON or OFF, then the RAW camera matrix.
-5. Develop target and profiles.
-6. Tone, color and local adjustment.
-7. Detail and effects.
-8. Display or output color space.
+5. `EXPIRED` rescue grade (when selected), then white balance, exposure, basic tone and the parametric curve.
+6. Scanner target (`HS`, `SP`, `F135`, `HR`) and bundled scanner profile.
+7. Point curves, Color Mixer, Color Grading and Calibration.
+8. `CS` custom target and, for digital sources, the digital film look.
+9. Software defect removal and noise reduction.
+10. Local dodge and burn, detail and texture, and geometry transform.
+11. `DisplayGamutMap` and display or output color space encoding.
 
 `CIContext` is not rebuilt for every render. It is reused, split by purpose: display, analysis and export. The preview computes only the size it needs and the latest edit version, and export renders again at source size.
 
@@ -70,7 +73,7 @@ It finds the brightness distribution on a downscaled analysis image, groups conn
 | Mode | Behavior |
 |---|---|
 | `Manual` | Uses the RGB you entered as Dmin. A successful eyedropper pick lands here too. |
-| `Film` | Uses the measurement as Dmin, and the chosen film mainly supplies `dmaxNorm`. Film and light source defaults come in only when the measurement fails. |
+| `Film` | Uses the measured `Dmin` when available and falls back to the stock's `Dmin` only on failure. Supplies the stock's relative density-range factor (`relativeRangeFactor`), and applies any non-neutral light-source gain to the resolved `Dmin` on color negatives (both measured and fallback). |
 | `Auto` | Uses spatial analysis, and falls back to the edge-based method on failure. |
 
 Without a manual value, or with a wrong film ID, it moves to the next safe method. The brightest object in the scene is never taken straight as the film base.
@@ -87,7 +90,7 @@ D = \log_{10}\left(\frac{D_{\min}}{T}\right)
 
 ### Film type data
 
-The current table holds 27 film names, covering color negative, black and white, and motion picture negative. The data is used for:
+The current table holds 27 film names: 23 C-41 color negatives and 4 ECN-2 motion picture negatives. The data is used for:
 
 - The Dmin default when the base cannot be measured
 - Fixed stock-relative density factors
@@ -110,7 +113,7 @@ ON can change both brightness and color with scene content. Neither mode establi
 | Light source | How did the scan light source affect each channel | Channel gain, base-driven correction |
 | Scanner target | What tone and color style does the result have | Relative statistics from scans shot for this project |
 
-Keeping these three apart avoids letting one film name stand for emulsion properties, light source color and a lab's output style at once. When a real base exists, the measurement wins over light source defaults. Scanner statistics are not used directly as an absolute color matrix for a scene.
+Keeping these three apart avoids letting one film name stand for emulsion properties, light source color and a lab's output style at once. When a real base is measured, that measurement wins over the stock's default `Dmin`, while any non-neutral light-source gain still applies to the resolved `Dmin` on color negatives (both measured and fallback). Scanner statistics are not used directly as an absolute color matrix for a scene.
 
 The data is described in [film profiles](FILM_PROFILES.md).
 
@@ -156,40 +159,38 @@ A recovery target for old film. It does not blanket-desaturate or stretch the ra
 
 ### `CS`
 
-`CS` (Custom) holds 18 color styles in three groups: Emulsion, Reversal, Dye Transfer, Skip Bleach, Plate Glass, Amber Glass, Ultramarine, Terracotta, Celadon, Nacre and Dichroic (11); Wetzlar, Classic, Studio and Rochester (4); Slide Show, Cinema and Point & Shoot (3).
+`CS` (Custom) holds 18 color styles in three groups: Emulsion and Reversal, Dye Transfer and Skip Bleach, Plate Glass and Amber Glass, Ultramarine and Terracotta, plus Celadon, Nacre and Dichroic (11); Wetzlar and Classic, plus Studio and Rochester (4); Slide Show, Cinema and Point & Shoot (3).
 
 A Custom target uses the `MAIN` inversion with Auto Balance and then applies the custom-3 tone, density and chroma response. Scanner profiles are not used with it. The CLI takes the same IDs, for example `--target classic`.
 
 ## The film look on a digital source
 
-The left Film tab offers slide and color negative stocks. For a scan these are a color transform only, because the scan already carries the film's own latitude, density response, scatter and grain in its pixels.
+The Film tab holds 42 stocks across five kinds: 7 slide, 16 color negative, 4 ECN-2 motion picture, 13 B&W negative and 2 B&W reversal.
 
-A digital photograph carries none of that. Measurement showed what a color transform alone does there: on camera-rendered input the highlight steps collapsed to 0.0031, about one fourteenth of the same steps on flat input, while saturation still rose. The result reads as a digital filter.
+This stage applies only to `Digital Color` and `Digital B&W` sources. Film scans skip it completely because they already carry emulsion response.
 
-So a source marked `Digital Color` or `Digital B&W` runs a separate chain that redoes what film does, in order:
+`Digital Color` runs four steps in order:
 
-1. Undo the camera's display rendering to estimate the exposure the film would receive. Clipped detail does not come back, so this is a plausible reconstruction.
-2. Add scatter and halation while the image is still linear light, before any density exists. Returning light strikes the red layer first, producing a red-weighted glow, and redistributes light without adding energy.
-3. Virtual development. A characteristic curve builds density, DIR couplers inhibit neighbouring layers, and a negative then goes through RA-4 paper. A negative's low gamma and the paper's high gamma are two separate curves, which lets highlights roll off without clipping.
-4. The stock's color signature, since contrast already came from step 3.
-5. Grain that follows density, and edge response from the datasheet MTF.
+1. Linear scatter and red-weighted halation (`DigitalHalation`).
+2. Positive-domain 33³ 3D LUT with channel curves, spectral matrix, shadow and highlight tints, saturation and datasheet MTF acutance (`FilmEmulationStage`).
+3. Auxiliary stock color preset at half intensity (`DigitalFilmColorPresetStage`).
+4. Density-dependent film grain (`DigitalFilmGrain`).
 
-Scan sources never enter this chain. The switch is the source flag alone, and the scan path is unchanged.
-
-Exposure is rescaled to the latitude of each emulsion. A reversal stock is white about a stop above mid grey, so pushing a six-stop digital scene into it unchanged leaves no highlight detail at all. The rescale preserves each stock's contrast ranking.
-
-Grain and halation become film properties once a stock is selected, so the texture sliders set their strength instead of adding a second, separate effect.
+`Digital B&W` runs achromatic halation, spectral RGB-to-gray conversion with the emulsion tone curve (`digitalBWFilm`), MTF acutance, and achromatic density-dependent grain.
 
 ## Develop controls
 
 | Group | Items |
 |---|---|
-| Tone | Exposure, contrast, highlights, shadows, whites, blacks, RGB and per-channel point curves |
-| Color | Temperature, tint, vibrance, saturation, 8-color HSL, three-zone color grading, channel correction, black and white conversion and toning |
-| Detail and effects | Sharpness, clarity, dehaze, film grain, vignette, halation, noise reduction |
-| Local adjustment | Radial, linear, polygon, brush masks, dodge and burn |
+| Tone | Exposure and contrast, density, highlights and shadows, whites and blacks, plus the parametric curve and RGB or per-channel point curves |
+| Color | Temperature and tint, vibrance and saturation, color depth and 8-color HSL, three-zone color grading and channel correction, plus black and white conversion and toning |
+| Detail and effects | Sharpness and clarity, film grain and vignette, plus halation and noise reduction |
+| Local adjustment | Radial and linear masks, polygon and brush masks, plus dodge and burn |
+| Transform / Geometry | Perspective and straighten |
 
-No combination of the basic tone sliders or the parametric curve reverses tones. Basic tone applies contrast, density, highlights, shadows, whites and blacks in that order, each on the result of the step before, and each step is monotone on its own. The four parametric curve sliders each move one knot placed at the 10, 35, 65 and 90% points of the photo's luminance, and a monotone cubic joins the knots. The knots sit at least 0.10 sRGB from each other and from black and white, so a slider pushed to its end moves its knot by at least 0.045 sRGB on any photo.
+No combination of the basic tone sliders or the parametric curve reverses tones. Basic tone applies contrast and density, then highlights and shadows, and finally whites and blacks in that order; each step runs on the result of the step before and is monotone on its own. The four parametric curve sliders each move one knot placed at the 10, 35, 65 and 90% points of the photo's luminance, and a monotone cubic joins the knots. The knots sit at least 0.10 sRGB from each other and from black and white, so a slider pushed to its end moves its knot by at least 0.045 sRGB on any photo.
+
+Color Mixer, Color Grading, Calibration and Point Curves work in perceptual sRGB encoding on `[0, 1]` while preserving values below 0 or above 1. Before output encoding, `DisplayGamutMap` brings out-of-gamut colors into the target export color space's linear primaries without shifting hue.
 
 These values are stored as a step-by-step edit history. GrainMend and ordinary local adjustment differ in purpose and in how they are stored.
 
@@ -197,9 +198,9 @@ These values are stored as a step-by-step edit history. GrainMend and ordinary l
 
 | Control | Behavior |
 |---|---|
-| Auto Tone | Assigns exposure, contrast, density, highlights, shadows, whites and blacks. Exposure moves the scene's log-average luminance to a scene key: bright photos go down, dark ones go up, and a brighter scene gets a higher key. The other sliders are solved in the order basic tone applies them, each from the values the earlier steps leave. Pixels below diffuse white whose brightest channel newly reaches full scale are held to 0.5%; specular highlights and light sources brighter than diffuse white may clip. When a saturated color would clip, whites give way first, then exposure, then density and contrast lifts; density fills the midtones a held-back exposure leaves dark. Exposure and the measured scene key give way by at most one stop for this; if protecting the color would take more, the clipping is accepted. Keeps the user's color controls and curves. |
+| Auto Tone | Assigns exposure and contrast, density, highlights and shadows, plus whites and blacks. Exposure moves the scene's log-average luminance to a scene key: bright photos go down, dark ones go up, and a brighter scene gets a higher key. The other sliders are solved in the order basic tone applies them, each from the values the earlier steps leave. Pixels below diffuse white whose brightest channel newly reaches full scale are held to 0.5%; specular highlights and light sources brighter than diffuse white may clip. When a saturated color would clip, whites give way first, then exposure, then density and contrast lifts; density fills the midtones a held-back exposure leaves dark. Exposure and the measured scene key give way by at most one stop for this; if protecting the color would take more, the clipping is accepted. Keeps the user's color controls and curves. |
 | Auto White Balance | Estimates temperature and tint from near-neutral luminance bands. Rejects samples with a clipped RGB channel and reduces correction when neutral evidence is sparse or covers a narrow tonal range. |
-| Auto Levels | Measures common luminance endpoints and applies one luminance gain to RGB, so channel ratios stay. On negatives the endpoints go to the inversion's own black and white: linear 0.70 for color and 0.85 for B&W, the same white where the exposure shoulder starts. |
+| Auto Levels | Measures common luminance endpoints and applies one luminance gain to RGB, so channel ratios stay. On negatives the endpoints go to the inversion's black and diffuse-white anchors: linear 0.70 for color and 0.85 for B&W. The exposure shoulder knee itself is fixed at linear 0.70 for both while headroom scales to each film type's white anchor. |
 | Auto Color | Fits residual casts to neutral candidates. Uses channel slopes only when a fit predicts separate, unused luminance bands, and otherwise uses gains. Weak fallback evidence receives less correction. Channel slopes apply from the darkest evidence band up to white; darker tones keep the correction at the bottom edge of the evidence. |
 
 Auto Tone checks the first proposal on a rendered preview. If it proposes a further exposure or white-point change, it renders that candidate too and accepts it only when a score of middle tone, endpoints, tonal range and clipping improves. A further brightening obeys the same channel limit. If the check, compared pixel by pixel with the neutral render, shows more than 0.5% of such pixels newly clipping, with the scanner target and curves included, Auto Tone lowers whites and then exposure, rendering up to three more previews to find the brightest setting inside the limit. When it picks between two renders, the one that clips less wins before the score is compared. This is a bounded correction, not a search for a unique ideal rendering. Repeating the command assigns settings rather than accumulating them, and resetting Auto Tone keeps the user's color controls.
@@ -208,16 +209,16 @@ Analysis uses area-weighted averages in linear RGB, with a bounded long edge. To
 
 ## Color management
 
-If the input carries a valid ICC, that color space is read. Internal math runs in the fixed linear working space, and the switch to an output space happens at display, soft proof and export.
+If the input carries a valid ICC, that color space is read. On Windows, embedded wide-gamut ICC inputs convert through an internal Rec.2020 intermediate profile, and Gray ICC monochrome scans are supported too. Internal math runs in the fixed linear working space, and the switch to an output space happens at display, soft proof and export.
 
 Main supported outputs:
 
 - sRGB
 - Display P3
 - Adobe RGB
-- A user-selected RGB printer or output ICC
+- User-selected RGB ICC: export printer output requires an ICC printer-class (`prtr`) RGB profile, while soft proof accepts output-capable RGB profiles (`prtr`, `mntr` or `spac`)
 
-The printer profile's name, byte count and SHA-256 are pinned when export starts. If the file changes during the render, the run stops.
+The printer profile's name, byte count and SHA-256 are pinned when export starts. If the file changes during the render, the run stops. On Windows, when legacy ICM rejects Relative Colorimetric for a LUT printer ICC, conversion falls back to Perceptual or WCS v4 paths.
 
 No claim is made that the current Core Image and ColorSync path produces bit-identical rendering intent and black-point compensation on every macOS version. That guarantee would need a separate ColorSync buffer path and memory checks for large 16-bit images first.
 
@@ -238,7 +239,7 @@ JPEG stores color at a lower resolution than luminance unless the encoder is pus
 ## Levels of validation
 
 1. Formula tests: monotonicity of the curve, the anchors, the inverse
-2. Synthetic images: known input and output, clipping, orientation, color space
+2. Synthetic images: known input and output, clipping, orientation and color space
 3. Synthetic IT8: the mathematical round trip over 264 patches
 4. Real shooting statistics: the `realOnly` profiles
 5. REAL/TARGET pairs: a device quality gate with separate validation material
@@ -248,12 +249,14 @@ A good synthetic IT8 result does not prove absolute accuracy on real negatives. 
 
 ## Where the code lives
 
-- `Sources/Chromabase/Engine/`
-- `Sources/Chromabase/Film/`
-- `Sources/Chromabase/Develop/`
-- `Sources/Chromabase/Adjustments/`
-- `Sources/Chromabase/Profiles/`
-- `Sources/Chromabase/Imaging/`
-- `Sources/Chromabase/Export/`
+- `negaflow-mac/Sources/Chromabase/Engine/`
+- `negaflow-mac/Sources/Chromabase/Film/`
+- `negaflow-mac/Sources/Chromabase/Digital/` (digital film looks)
+- `negaflow-mac/Sources/Chromabase/Develop/`
+- `negaflow-mac/Sources/Chromabase/Adjustments/`
+- `negaflow-mac/Sources/Chromabase/Profiles/`
+- `negaflow-mac/Sources/Chromabase/Imaging/`
+- `negaflow-mac/Sources/Chromabase/Export/`
+- `negaflow-windows/src/Native/` (matching Windows C++/Direct3D 11 engine)
 
 The current product version is `1.2.7`. Changes to the edit history and profile schemas will require validation in later versions.

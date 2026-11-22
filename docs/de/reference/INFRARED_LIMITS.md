@@ -23,7 +23,7 @@ Entscheidend ist, woraus das Bild besteht. Farbfilm behält nach der Entwicklung
 
 | Filmart | Automatisches IR | Grund |
 |---|---|---|
-| Farbnegativ | Bedingt | Farbstoffbild. Das Plug-in muss IR melden und die Ausrichtungsprüfung muss bestehen |
+| Farbnegativ | Bedingt | Farbstoffbild. Das Plug-in muss IR melden, und die lokale Bestätigung im Rotkanal je Defekt (`>= 4σ`) sowie die Flächenschwelle (`<= 5 %`) müssen bestehen |
 | Farbpositiv | Bedingt | Farbstoffbild. Gleiche Bedingungen wie beim Farbnegativ |
 | Schwarzweißnegativ und -positiv | Aus | Das Silberbild blockiert Infrarot |
 
@@ -34,7 +34,7 @@ Entscheidend ist, woraus das Bild besteht. Farbfilm behält nach der Entwicklung
 
 ## Ausrichtungsprüfung
 
-`InfraredDefectRemoval` vergleicht die Streutextur im IR mit dem Rotkanal des RGB-Bildes und sucht einen ganzzahligen Versatz. Das Ergebnis trägt `AlignmentDiagnostics`.
+`InfraredDefectRemoval` gleicht zuerst IR-Defektpunkte mit lokalen dunklen Stellen im Rotkanal des RGB-Bildes ab und greift nur bei zu wenigen Defektmerkmalen auf die Korrelation zwischen hochpassgefilterter IR-Streutextur und Rotkanal zurück. Das globale Ergebnis trägt `AlignmentDiagnostics` und dient als Startwert, bevor der Versatz jedes Defekts lokal im Rotkanal verfeinert wird.
 
 | Zustand | Bedeutung |
 |---|---|
@@ -44,7 +44,7 @@ Entscheidend ist, woraus das Bild besteht. Farbfilm behält nach der Entwicklung
 | `weakCorrelation` | Die Korrelation erreicht den Schwellwert nicht |
 | `searchLimitReached` | Der beste Punkt liegt auf der Suchgrenze |
 
-Die letzten drei enden mit dem Fehler `alignmentUnreliable` und werden nie durch `(0,0)` ersetzt. Ein bester Punkt auf der Suchgrenze gilt als Fehlschlag, gleich wie groß der Versatz ist.
+Meldet der globale Startwert einen der letzten drei Zustände, bricht die Erkennung nicht sofort ab: Sie startet bei `(0,0)`, bestimmt über starke IR-Kandidaten per Abstimmung einen groben gemeinsamen Versatz und verlangt für jeden Kandidaten die lokale Bestätigung im sichtbaren Rotkanal (`>= 4σ`) sowie die maximale Flächenabdeckung (Standard `5 %`), andernfalls endet sie mit `noDefects` oder `coverageTooHigh`.
 
 Automatische Tests ersetzen nicht die Prüfung der RGB/IR-Ausrichtung an einem echten Gerät und je Film. Diese Prüfungen erfolgen von Hand an echtem Film.
 

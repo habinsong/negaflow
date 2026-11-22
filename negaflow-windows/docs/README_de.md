@@ -37,7 +37,7 @@ Zum Ausführen:
 
 Zum Bauen:
 
-- Visual Studio 2026 mit der Workload Desktopentwicklung mit C++ (die Komponenten stehen in `.vsconfig`)
+- Visual Studio 2026 mit den Workloads für C++-Desktop-, .NET-Desktop- und WinUI-/Windows-App-Entwicklung (die genauen Komponenten stehen in `.vsconfig`)
 - Windows 11 SDK 10.0.26100 oder neuer
 - .NET 10 SDK (`global.json` legt 10.0.302 fest)
 - CMake 4.2 oder neuer (der Generator `Visual Studio 18 2026` verlangt es)
@@ -47,7 +47,7 @@ Der Build hat auch Arm64-Presets. Veröffentlicht wird nur x64.
 
 ## Installation
 
-Laden Sie `negaflow-1.2.7-win-x64.exe` von [Releases](https://github.com/habinsong/negaflow/releases) herunter und starten Sie die Datei. Standardmäßig installiert sie nach `%LOCALAPPDATA%\Negaflow\App` und verlangt keine Administratorrechte.
+Laden Sie `negaflow-1.2.7-win-x64.exe` von [Releases](https://github.com/habinsong/negaflow/releases) herunter und starten Sie die Datei. Standardmäßig installiert sie nach `%LOCALAPPDATA%\Negaflow\App` und fragt nur einmal nach einer Administratorbestätigung, falls Windows die Registrierung unsignierter loser App-Pakete (`AllowDevelopmentWithoutDevLicense`) noch nicht erlaubt.
 
 [negaflow-1.2.7-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.7/negaflow-1.2.7-win-x64-setup.zip) enthält dasselbe Installationsprogramm samt Anleitung, Lizenzhinweisen und SHA-256-Prüfsummen. Entpacken Sie alle Dateien, bevor Sie das Installationsprogramm starten. Es ist ein Installationsarchiv, keine portable App.
 
@@ -91,16 +91,16 @@ ctest --preset x64-release --output-on-failure
 # App- und Katalogtests
 .\scripts\test-managed.ps1
 
-# Tests der Grenze zwischen Engine und App
+# Tests der Grenze zwischen Engine und App (separat ausführen)
 .\scripts\test-interop.ps1
 
-# Alles davon auf einmal
+# CI-Gate (Schlüssel, Reglerbereiche, CTest, Managed-Tests), Release-Build und Installer-Prüfung
 .\scripts\local-ci.ps1
 ```
 
 Führen Sie `scripts\verify-installer.ps1` (auch von `local-ci.ps1` aufgerufen) in einer angemeldeten Desktop-Sitzung aus. In einer SSH-Sitzung kann die AppX-Registrierung mit `0x80070005` scheitern; das Skript hält dann an, bevor es die bestehende Installation anfasst.
 
-Die CI führt nur die in sich geschlossenen Engine-Tests aus. Die macOS-Referenzdateien liegen außerhalb von Git. Für diese Vergleiche setzen Sie beim Konfigurieren von CMake `NEGAFLOW_MACOS_GOLDEN_ROOT` auf den Referenzordner. Er muss `task6-metadata-policy`, `task9-bw-slide`, `task7-coreimage-filters`, `task8-digital-film-look` und `vibrance` enthalten. Fehlende oder unlesbare Dateien lassen die gewählten Vergleiche scheitern. `ctest --preset x64-release -L external-golden` führt sie aus, die gewöhnlichen Unit-Tests bleiben aktiv.
+Die CI führt nur die in sich geschlossenen Engine-Tests aus, während die macOS-Referenzdateien außerhalb von Git liegen. Für diese Vergleiche setzen Sie beim Konfigurieren von CMake `NEGAFLOW_MACOS_GOLDEN_ROOT` auf den Referenzordner. Dieser Ordner muss `task6-metadata-policy` und `task9-bw-slide` sowie `task7-coreimage-filters`, `task8-digital-film-look` und `vibrance` enthalten. Außerdem lassen fehlende oder unlesbare Dateien die gewählten Vergleiche scheitern. Danach führt `ctest --preset x64-release -L external-golden` diese Vergleiche aus, und die gewöhnlichen Unit-Tests bleiben aktiv.
 
 ## Eigene Farbziele
 
@@ -121,8 +121,8 @@ $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 # Inhalt einer Scandatei
 & $cli --probe-tiff scan.tif
 
-# Entwickeln und als 16-Bit-TIFF speichern
-& $cli --export-developed-tiff16 scan.tif out.tif
+# Entwickeln und als 16-Bit-TIFF speichern (<dmin-r> <dmin-g> <dmin-b> <color|bw>)
+& $cli --export-developed-tiff16 scan.tif out.tif 0.85 0.55 0.35 color
 
 # Zeitverteilung eines Entwicklungsdurchlaufs
 & $cli --develop-timing scan.tif
@@ -131,7 +131,7 @@ $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 & $cli --auto-base-probe scan.tif
 ```
 
-Ohne Argumente zeigt es die vollständige Liste.
+Ein Aufruf ohne Argumente gibt die Build-Informationen als JSON aus; `--help` zeigt die Optionsliste.
 
 ## Scanner
 
@@ -148,11 +148,13 @@ Die App schreibt Textprotokolle nach `%LOCALAPPDATA%\Negaflow\Logs`.
 | `export-trace.txt` | Export und Schnellexport, auch Fehler |
 | `termination.txt` | Was beim Beenden der App geschah |
 | `settings-change.txt` | Geänderte Einstellungen und wer sie geändert hat |
+| `startup-trace.txt` | Start- und Shell-Initialisierungsschritte |
+| `crop-trace.txt` | Zuschnittgeometrie und Bedienungsänderungen |
 
-Diese drei sind immer aktiv. Zwei weitere sind standardmäßig aus:
+Diese Protokolle sind immer aktiv (bei Fehlern werden außerdem Absturz- und Fehlerprotokolle wie `native-crash.txt` und `scanner-failure.txt` geschrieben). Optionale Traces sind standardmäßig aus:
 
-- `preview-trace.txt`: Legen Sie im selben Ordner eine leere Datei `preview-trace.on` an.
-- `stage-trace.txt`: Setzen Sie vor dem Start der App die Umgebungsvariable `NEGAFLOW_STAGE_TRACE=1`. Sie hält Pixelstatistiken nach jeder Entwicklungsstufe fest.
+- `preview-trace.txt`, `thumbnail-trace.txt`, `shortcut-trace.txt`, `decode-trace.txt` und `memory-budget.txt`: Legen Sie im selben Ordner die passende `.on`-Markierungsdatei (`preview-trace.on`, `thumbnail-trace.on`, `shortcut-trace.on`, `decode-trace.on`, `memory-trace.on`) an oder schalten Sie in den Einstellungen den Entwicklermodus ein.
+- `stage-trace.txt` und `stage-timing.txt`: Setzen Sie vor dem Start der App `NEGAFLOW_STAGE_TRACE=1` (Pixelstatistiken je Stufe) oder `NEGA_TIMING=1` (Laufzeiten je Stufe).
 
 ## Aufbau
 
@@ -162,8 +164,8 @@ negaflow-windows/
 │   ├── Native/        Chroma Engine, GrainMend, Decodierung und Export (C++)
 │   ├── Interop/       Die Schicht zwischen Engine und App (C#)
 │   ├── Catalog.Core/  Mediathek-Speicherung (C#)
-│   ├── Shell.Core/    Logik für Entwickeln, Abzug und Export (C#)
-│   ├── Shell/         Ansichten für Mediathek, Entwickeln und Abzug (WinUI 3)
+│   ├── Shell.Core/    Logik für Entwickeln, Abzug, Scannen und Export (C#)
+│   ├── Shell/         Ansichten für Mediathek, Entwickeln, Abzug und Scannen (WinUI 3)
 │   └── Cli/           Prüfwerkzeug für die Engine (C++)
 ├── scripts/           Skripte für Build, Test und Paketierung
 ├── tests/             Tests für Engine, App und Grenzschicht

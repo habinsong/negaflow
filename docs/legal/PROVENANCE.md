@@ -8,7 +8,7 @@ This document records the Apache-2.0 distribution scope of the negaflow app. It 
 
 The Swift, Python and shell integration in `negaflow-mac` is written for negaflow.
 
-Negative camera RAW decoding uses a pinned LibRaw revision, built as a replaceable `libraw.dylib` under CDDL-1.0. Both platforms apply the same three patches:
+Negative camera RAW decoding uses a pinned LibRaw revision, built under CDDL-1.0 as a replaceable `libraw.dylib` on macOS and `libraw.dll` (with Microsoft `vcomp140.dll`) on Windows. Both platforms apply the same three parallel patches:
 
 - [`xtrans-parallel-rows.patch`](../../negaflow-mac/scripts/libraw/xtrans-parallel-rows.patch): in `src/demosaic/xtrans_demosaic.cpp`, keeps Fuji X-Trans tiles in serial order, processes the rows inside each tile in parallel and runs the green-bounds pass in groups of rows that do not touch each other
 - [`mem-image-parallel-rows.patch`](../../negaflow-mac/scripts/libraw/mem-image-parallel-rows.patch): in `src/postprocessing/mem_image.cpp`, copies output bitmap rows in parallel
@@ -18,7 +18,7 @@ The patched builds match the unpatched serial build on the tested RAW files.
 
 On macOS, LLVM OpenMP (libomp 20.1.8, Apache License v2.0 with LLVM Exceptions) is linked statically into the library. The app includes the source archive, patches, build script, copyright and license files in `Contents/Resources/licenses/libraw/`. `native-preview-bridge.cpp` (Negaflow contributors, CDDL-1.0) holds a LibRaw subclass that runs three per-pixel loops in parallel with byte-identical output, and the parallel Huffman decoders that the decoder patch calls. No LibRaw source is merged into the Apache source tree.
 
-Windows uses the same upstream revision and patches. Its `native-preview-bridge.cpp` (CDDL-1.0) adds Windows-only functions for linear DNGs, and its other components are recorded in [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../negaflow-windows/THIRD-PARTY-NOTICES.md). The test-only `CameraNativeRaw.dng` is CC0-1.0 material from raw.pixls.us entry 2204, identified by its adjacent source JSON, and is excluded from the application. If the supplemental notice file is absent, the build and packaging steps warn and continue. Upstream license files and corresponding source stay included.
+Windows uses the same upstream revision and three shared patches, plus `native-preview-bridge-msvc.patch` on `Makefile.msvc`. It also uses `libraw.dll` as a fallback for non-negative camera RAWs when Microsoft's optional WIC Raw Image Extension is absent. Its `native-preview-bridge.cpp` (CDDL-1.0) adds Windows-only functions for linear DNGs, and its other components are recorded in [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../negaflow-windows/THIRD-PARTY-NOTICES.md). The test-only `CameraNativeRaw.dng` is CC0-1.0 material from raw.pixls.us entry 2204, identified by its adjacent source JSON, and is excluded from the application. If the supplemental notice file is absent, the build and packaging steps warn and continue. Upstream license files and corresponding source stay included.
 
 Film inversion uses the published sensitometry ideas of density, toe, straight line and shoulder. The curves and coefficients come from negaflow's four photometric anchors, not from a third-party program's formulas or constants. The equations and the derivation are in [Negative response](../reference/PRINT_RESPONSE.md).
 
@@ -26,10 +26,11 @@ Published manufacturer datasheets inform three groups of shipped film constants:
 
 GrainMend IR runs in this order:
 
-1. Estimate the integer offset between RGB and IR on its own.
-2. Interpolate trimmed IR means per `log(red)` bin to build a non-parametric scene leakage curve.
-3. Subtract the scene leakage, then compute relative contrast against the local mean.
-4. Build the defect mask from a trimmed local noise threshold, connected components and orientation.
+1. Estimate a global integer RGB↔IR offset as a starting seed (falling back to a coarse consensus offset from strong candidates if untrusted).
+2. Exclude border-connected dark film-holder and rebate margins.
+3. Build a local morphological closing baseline and compute optical density `log(baseline / value)` so broad dye ghosting cancels out.
+4. Extract candidates from the scan's median/quartile (IQR) density distribution with area-weighted significance, confirm each defect locally against the visible red channel (`>= 4σ`), and estimate per-defect attenuation.
+5. Restore partially occluded pixels by transmission division (`raw ÷ (1 - attenuation)`) and reserve the RGB patch repairer for opaque cores (`>= 50%` attenuation).
 
 This code does not link or port SANE's IR correction. Published papers and product pages are background for confirming the physical limits of film and infrared. Taking a method or a principle is one thing and copying the expression of code is another. The U.S. Copyright Office draws the same line between methods and systems and their concrete expression.
 
@@ -61,7 +62,7 @@ The release check confirms again that no plugin, SANE executable or SANE library
 
 The camera and color space metadata visible in the TIFF files is container information from shooting and encoding. `sourceProfiles` in a scanner profile is the logical path of local measurement material at build time, and those source photographs do not ship.
 
-FILM-R v2 material is downloaded only during quality measurement. The images never enter the repository or the app. The DOI version, CC BY 4.0, file sizes and hashes are pinned in [`Config/defect-corpus-film-r-v2.json`](../../negaflow-mac/Config/defect-corpus-film-r-v2.json).
+FILM-R v2 material is downloaded only during quality measurement. The images never enter the repository or the app. [`Config/defect-corpus-film-r-v2.json`](../../negaflow-mac/Config/defect-corpus-film-r-v2.json) pins the article version, DOI, CC BY 4.0 license, pair count and total byte count, while `fetch-film-r.py` checks per-file sizes and MD5 digests from Figshare metadata at download time.
 
 ## DNG export
 
@@ -90,16 +91,16 @@ Whether a claim covers a given implementation is a legal question, and this reco
 
 ## Names and interoperability
 
-Film, scanner, color space, XMP namespace and product names identify targets and keep files interoperable. Output ICC profiles synthesized by the Windows engine use descriptive labels (`"Negaflow Compatible P3"`, `"Compatible with Adobe RGB (1998)"`) and a `CC0 1.0 Universal` dedication, so exported user images carry no profile copyright restrictions. No trademark ownership or affiliation is claimed. The full scope is in [`TRADEMARKS.md`](../../TRADEMARKS.md).
+Film, scanner, color space, XMP namespace and product names identify targets and keep files interoperable. Output ICC profiles synthesized by the Windows engine use descriptive labels (`"Negaflow Compatible P3"`, `"Compatible with Adobe RGB (1998)"`, `"Linear sRGB"`) and a `CC0 1.0 Universal` dedication, so exported user images carry no profile copyright restrictions. No trademark ownership or affiliation is claimed. The full scope is in [`TRADEMARKS.md`](../../TRADEMARKS.md).
 
 ## Automated checks and what they miss
 
-`python3 scripts/ci/verify-provenance.py` (from `negaflow-mac/`) fails on any of these:
+`python3 scripts/ci/verify-provenance.py` (from `negaflow-mac/`) checks the working tree and reachable git history, and fails on any of these:
 
 - A bundled resource that is not registered, or whose hash changed
-- C/C++/Objective-C, external packages, binary archives or a vendor tree in the app
+- C/C++/Objective-C, external packages, binary archives or a vendor tree outside the exempt paths (the documented Windows native source, test and manifest paths, plus the two CDDL `native-preview-bridge.cpp` bridges)
 - SANE-only names or traces of a checked external implementation in the app code
 - A change that makes the release script put the SANE plugin in the app
 - FILM-R image material in the repository
 
-The check stops obvious regressions in the current tree. It does not prove similarity against the whole internet, rights to photographic or profile inputs, patents, trademarks or legal outcomes in any country. When an origin changes, review the declaration together with the hash. When it is unclear, take the resource out of the release and ask the rights holder or a specialist.
+The check stops obvious regressions in the current tree and reachable git history. It does not prove similarity against the whole internet, rights to photographic or profile inputs, patents, trademarks or legal outcomes in any country. When an origin changes, review the declaration together with the hash. When it is unclear, take the resource out of the release and ask the rights holder or a specialist.

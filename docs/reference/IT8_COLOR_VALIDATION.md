@@ -2,7 +2,7 @@
 
 [Docs home](../README.md)
 
-Color accuracy needs measurements, not visual inspection alone. An IT8 image is paired with the reference file for its physical target, and numerical results are recorded for every patch.
+Color accuracy needs measurements, not visual inspection alone. An IT8 image is matched against the reference file for its physical target, and numerical results are recorded for every patch.
 
 > [!IMPORTANT]
 > Public IT8 material can confirm regressions in the checker and the color math. It cannot prove the accuracy of a real scanner or of color negative film. Judging a device needs a confirmed physical target and real measurements from that device.
@@ -103,7 +103,7 @@ Order of checks and use:
 2. Confirm that ColorSync can convert in both directions.
 3. On selection, pin the profile name, bytes and SHA-256.
 4. Apply it once, to the final output, after the `MAIN` working image and page layout are done.
-5. Do not apply it to `rawScanTIFF` or `-main-flat`.
+5. Do not apply it to `rawScanTIFF`, `dng` or `-main-flat`.
 6. A missing or wrong profile fails before any temporary output. sRGB does not stand in.
 
 No claim is made that the current Core Image and ColorSync path pins rendering intent and black-point compensation bit for bit across every macOS version.

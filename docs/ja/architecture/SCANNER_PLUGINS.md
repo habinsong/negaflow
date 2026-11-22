@@ -22,30 +22,33 @@ negaflow の基本の入力は画像の読み込みです。実際のスキャ�
 
 ## 接続のしくみ
 
-画面は `ScannerKit` と通信し、`ScannerKit` は3つのバックエンドのどれかに振り分けます。
+macOS では、画面は `ScannerKit` と通信し、`ScannerKit` は3つの `ScannerBackend` 実装のどれかに振り分けます。
 
 1. `ExternalScannerBackend`: インストール済みの外部プラグインを実行します。
 2. `MockScannerBackend`: 開発用の合成画像を作ります。
 3. `InactiveImageCaptureBackend`: 今は無効です。
 
-画面が見るのは `ScannerBackend` だけです。プラグインの機器 ID は、アプリでは `plugin:<pluginId>:<deviceId>` として現れます。
+Windows では、シェルは外部プラグイン向けの `ScannerPluginGateway` か、デモモードを選んだときの `SimulatedScannerGateway` に振り分けます。
+
+プラグインの機器 ID は、アプリでは `plugin:<pluginId>:<deviceId>` として現れます。
 
 プラグインを実行するときは、`plugin:<pluginId>:` を取り除き、プラグイン自身の機器 ID だけを送ります。
 
 ## プラグインを探す
 
-既定のフォルダーは `~/Library/Application Support/negaflow/Plugins/<id>/manifest.json` です。テストやローカルでの開発では、`NEGAFLOW_PLUGINS_DIR` で別のフォルダーを指します。
+既定のマニフェストのパスは、macOS が `~/Library/Application Support/negaflow/Plugins/<id>/manifest.json`、Windows が `%LOCALAPPDATA%\Negaflow\Plugins\<id>\manifest.json` です。macOS のテストやローカルでの開発では、`NEGAFLOW_PLUGINS_DIR` で別のフォルダーを指せます。
 
 | フィールド | 規則 |
 |---|---|
 | `schemaVersion` | 現在はちょうど `1` |
-| `protocolVersion` | 省略時は `1`。`1` と `2` に対応 |
+| `protocolVersion` | 省略時は `1`（`1` と `2` に対応。Windows でスキャンするときは `2` が必須） |
 | `id` | 一意のプラグイン ID |
 | `name` | 画面に表示する名前 |
-| `kind` | プラグインの種類 |
+| `pluginVersion` | 任意のプラグインバージョン文字列 |
+| `kind` | 省略時は既定の `"scanner"`。それ以外の値は拒否 |
 | `license` | 配布ライセンス |
 | `homepage` | プロジェクトのアドレス |
-| `executable` | 実行ファイルのパス |
+| `executable` | プラグインフォルダー内の相対パス（`.`、`..`、先頭の `/`、シンボリックリンク、リパースポイントは不可） |
 
 `id` は ASCII 文字で1〜64文字です。先頭は英字か数字で、残りは英字、数字、`.`、`_`、`-` です。`:` は機器 ID の区切りなので使えません。
 
@@ -54,15 +57,14 @@ negaflow の基本の入力は画像の読み込みです。実際のスキャ�
 ### ファイルの安全確認
 
 > [!WARNING]
-> マニフェストや実行ファイルのバイト列が変わると、以前の承認は破棄されます。所有者、権限、シンボリックリンクかどうか、SHA-256 は、実行の直前にもう一度確かめます。
+> マニフェストや実行ファイルのバイト列が変わると、以前の承認は破棄されます。ファイルの安全条件と SHA-256 ハッシュは、実行の直前にもう一度確かめます。
 
-- プラグインのフォルダー、マニフェスト、実行ファイルの所有者が現在のユーザーでなければなりません。
-- グループやその他のユーザーが書き込める場合は拒否します。
-- シンボリックリンクは拒否します。
-- マニフェストと実行ファイルの SHA-256 を記録します。
+- macOS では、プラグインのフォルダー、マニフェスト、実行ファイルの所有者が現在のユーザーでなければならず、グループやその他のユーザーの書き込み権限とシンボリックリンクは拒否します。
+- Windows では、プラグインのフォルダー、マニフェスト、実行ファイルのリパースポイントを拒否し、実行ファイルのパスがプラグインのディレクトリ内に収まっていなければなりません。
+- どちらのプラットフォームでも、マニフェストと実行ファイルの SHA-256 を記録します。
 - 初めて使うときに、ユーザーが承認します。
 - ファイルのバイト列が変わると、承認は無効になります。
-- ID は実行の直前に計算し直します。
+- ハッシュと ID は実行の直前に計算し直します。
 
 ## コマンド
 
@@ -72,7 +74,7 @@ negaflow の基本の入力は画像の読み込みです。実際のスキャ�
 |---|---|
 | `detect` | JSON の機器リスト |
 | `capabilities <deviceId>` | JSON の機能リスト。`detect` が報告した機器 ID、ベンダー、モデルの JSON を stdin で受け取れる |
-| `scan` | stdin で設定 JSON を受け取り、stdout に進行状況の NDJSON と最終結果を出す |
+| `scan`（macOS） / `scan <deviceId>`（Windows） | stdin で設定 JSON を受け取り、stdout に進行状況の NDJSON と最終結果を出す |
 
 ## スキャンのプロトコル
 
@@ -82,7 +84,7 @@ negaflow の基本の入力は画像の読み込みです。実際のスキャ�
 
 ### バージョン 2
 
-マニフェストに `"protocolVersion": 2` があるときだけ使います。
+マニフェストに `"protocolVersion": 2` があるときだけ使います。Windows でスキャンを実行するときは、プロトコル v2 が必須です。
 
 要求には次が入ります。
 
@@ -105,14 +107,14 @@ NDJSON のイベントはどれも同じバージョンとリクエスト ID を
 - 最終イベントの後の余分な出力
 - 不正な UTF-8
 
-v2 の仕様に違反すると、通常のタイムアウトを待たずにプラグインをすぐ終了させます。
+macOS では、ストリームの途中で v2 の仕様に違反すると、通常のタイムアウトを待たずにプラグインをすぐ終了させます。Windows では、プロセスが終了した後に v2 のイベントストリームを検証します。
 
 ### 実際に適用された設定
 
 v2 の `result` には `appliedOptions` が必要です。
 
 - `deviceID`、`resolutionDPI`、`bitDepth`、`colorMode`、`filmType`
-- `scanArea`: `originXMM`、`originYMM`、`widthMM`、`heightMM`。プラグインがバックエンドに実際に送った領域です。スキャンサイズを誤って計算するバックエンドを避けるため、1mm 未満の調整が許されます。アプリは返ってきたピクセルサイズをこの領域と照合するので、要求をそのまま写すと検査の意味がなくなります。
+- `scanArea`: `originXMM`、`originYMM`、`widthMM`、`heightMM`。プラグインがバックエンドに実際に送った領域です。`originXMM`、`originYMM`、`widthMM` は要求と一致しなければならず、スキャンの高さを誤って計算するバックエンドを避けるときにだけ、`heightMM` に1mm 未満の差が許されます。アプリは返ってきたピクセルサイズをこの領域と照合するので、要求をそのまま写すと検査の意味がなくなります。
 - `infrared`、`multiExposure`
 - `hardwareExposureTime`、`brightnessAdjustment`、`contrastAdjustment`
 - `outputRawTIFF`
@@ -132,16 +134,17 @@ v1 では、`ScanResult.resolution` と `bitDepth` が要求値に置き換わ�
 位置を選んだフラットベッドのスキャンは、プラグインが次のすべてを報告したときだけ有効になります。
 
 - プレビュー
-- `supportsPositionedScanArea`
-- mm 単位の `scanOriginXRange` と `scanOriginYRange`
-- mm 単位の `scanWidthRange` と `scanHeightRange`
+- `supportsScanArea: true` と `supportsPositionedScanArea: true`
+- 物理的なスキャン領域の単位（`scanAreaUnit != "pixel"`）
+- 負でない原点を持ち有効な範囲を備えた、mm 単位の `scanOriginXRange` と `scanOriginYRange`
+- 正の最小値・最大値の範囲を備えた、mm 単位の `scanWidthRange` と `scanHeightRange`
 
 アプリは、選んだ領域をプラグインのステップ幅まで外側に広げ、領域ごとに本スキャンのジョブを1つ作ります。機種名から推測することはありません。任意のフィールドがない古いプラグインは、固定フレームの流れのままです。
 
 ## プロセスの制限とキャンセル
 
-- stdout の上限: 4MiB
-- stderr の上限: 1MiB
+- macOS の上限: stdout 4MiB、stderr 1MiB。タイムアウトは `detect` が90秒、`capabilities` が180秒、`scan` が2時間で、ストリーム途中で v2 の仕様に違反すると即座に終了します。
+- Windows の上限: stdout は `detect` と `capabilities` が4MiB、`scan` が8MiB（1行あたり256KiB）、stderr 512KiB。タイムアウトは `detect` が15秒、`capabilities` が180秒、`scan` が2時間で、プロセス終了後に v2 のストリームを検証します。
 
 上限を超えるとプロセスを終了して失敗にします。後始末では、すでに届いたバイトだけを読みます。子プロセスがパイプを引き継いでいても、EOF を待ちません。
 
@@ -149,20 +152,20 @@ v1 では、`ScanResult.resolution` と `bitDepth` が要求値に置き換わ�
 
 ## スキャンファイルの公開
 
-プラグインは、アプリが渡した `outputPath` にぴったり元画像を書き、結果にも同じパスを返します。このパスは、最終フォルダーと同じディスク上の一時的な場所です。流れは次のとおりです。
+プラグインは、アプリが渡した `outputPath` にぴったり元画像を書き、結果の `path` フィールドに同じパスを返します。このパスは、最終フォルダーと同じディスク上の一時的な場所です。流れは次のとおりです。
 
 1. アプリが設定 JSON と `outputPath` をプラグインに送る。
 2. プラグインがスキャンファイルを一時フォルダーに書く。
-3. プラグインが同じ `outputPath` を含む結果を返す。
+3. プラグインが、要求の `outputPath` と一致する `path` を含む結果を返す。
 4. アプリが形式、サイズ、パスを確かめる。
 5. 通ればアプリは最終のスキャンフォルダーにアトミックに公開する。キャンセル、失敗、誤った出力のときは、一時的な資料を削除する。
 
 アプリが確かめること:
 
 - 空でない通常のファイル
-- ImageIO が読める画像
+- macOS では ImageIO が読める画像（v2 では TIFF を強制）、Windows では `NativeTiffSourceProbe` のメタデータ検査に通る TIFF
 - 期待した形式とピクセルサイズ
-- 要求と結果で同じパス
+- 要求の `outputPath` と結果の `path` で同じパス
 
 キャンセル、タイムアウト、誤った出力、プラグインの失敗があれば、一時フォルダーを削除し、不完全なスキャンは公開しません。
 

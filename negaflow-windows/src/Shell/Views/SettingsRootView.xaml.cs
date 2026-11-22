@@ -52,6 +52,7 @@ public sealed partial class SettingsRootView : UserControl
         ShortcutGroupPicker.SelectionChanged += OnShortcutGroupChanged;
         state.Changed += OnStateChanged;
         AppResources.LanguageChanged += OnLanguageResourcesChanged;
+        Negaflow.Shell.Services.DisplayColorManagement.Changed += OnDisplayColorChanged;
         LocalizeControls();
         UpdateState(state.Current);
         BuildShortcutGroups();
@@ -144,11 +145,9 @@ public sealed partial class SettingsRootView : UserControl
                 return;
             }
 
-            // 프로파일을 **고를 때 한 번만** 읽습니다. RGB 프루프에 쓸 수 없는 프로파일이면
-            // 고른 것을 반영하지 않고 이유를 보여줍니다 — 쓸 수 없는 것을 고른 채로 두면
-            // 프루프가 조용히 다른 값을 씁니다.
-            // 읽어 보는 것이 곧 검사입니다. RGB 출력 프로파일이 아니면 null 이 돌아옵니다.
-            bool usable = SoftProofProfileReader.Read(file.Path) is not null;
+            // 프로파일을 **고를 때 한 번만** 읽고 ICM 왕복 가능 여부까지 확인합니다. 쓸 수 없는
+            // 프로파일이면 반영하지 않고 오류를 보여줍니다.
+            bool usable = SoftProofProfileReader.CanUseAsProof(file.Path);
             ExportPage.SoftProofProfileError.Visibility = usable ? Visibility.Collapsed : Visibility.Visible;
             if (usable)
             {
@@ -201,7 +200,7 @@ public sealed partial class SettingsRootView : UserControl
             {
                 return;
             }
-            bool usable = SoftProofProfileReader.Read(file.Path) is not null;
+            bool usable = SoftProofProfileReader.CanUseAsPrinterOutput(file.Path);
             ExportPage.PrinterProfileError.Visibility = usable ? Visibility.Collapsed : Visibility.Visible;
             if (usable)
             {
@@ -401,10 +400,19 @@ public sealed partial class SettingsRootView : UserControl
         toggle.OnContent = AppResources.Get("on", "OnContent");
     }
 
+    private void OnDisplayColorChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ExportPage.ColorMonitorRow.ValueText = MonitorProfileName();
+        ExportPage.ColorManagementSection.Apply();
+    }
+
     private void OnUnloaded(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
+        Negaflow.Shell.Services.DisplayColorManagement.Changed -= OnDisplayColorChanged;
         AppResources.LanguageChanged -= OnLanguageResourcesChanged;
         if (workspaceState is not null)
         {

@@ -103,7 +103,7 @@ IT8.7/1 针对输入设备。打印机输出需要一份 RGB 打印机 ICC，它
 2. 确认 ColorSync 可以双向转换。
 3. 选定时固定配置文件的名称、字节数和 SHA-256。
 4. 在 `MAIN` 工作图像和页面布局完成之后，只对最终输出应用一次。
-5. 不应用于 `rawScanTIFF` 或 `-main-flat`。
+5. 不应用于 `rawScanTIFF`、`dng` 或 `-main-flat`。
 6. 配置文件缺失或有误，会在生成任何临时输出之前失败，不会用 sRGB 代替。
 
 不声称当前的 Core Image 与 ColorSync 路径能在所有 macOS 版本上逐位固定渲染意图和黑场补偿。

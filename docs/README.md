@@ -28,7 +28,7 @@ English · [한국어](ko/README.md) · [日本語](ja/README.md) · [简体中�
 
 | Document | What it covers |
 |---|---|
-| [Product architecture](architecture/PRODUCT_ARCHITECTURE.md) | Data flow between app, engine, storage and export |
+| [Architecture overview](architecture/PRODUCT_ARCHITECTURE.md) | Data flow between app, engine, storage and export |
 | [Catalog storage](architecture/CATALOG_STORAGE.md) | SQLite catalog, import of the older JSON catalog, measurements |
 | [Scanner plugin architecture](architecture/SCANNER_PLUGINS.md) | External process, approval, scan file publication |
 | [Library archive](architecture/LIBRARY_ARCHIVE.md) | Originals and edit history stored together |

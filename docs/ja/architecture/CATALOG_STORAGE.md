@@ -2,25 +2,27 @@
 
 [ドキュメントホーム](../README.md)
 
-主な保存先は `library.sqlite` です。旧来の `library.json` は、古いカタログの取り込みと診断ファイルの書き出しにだけ使います。両方を同時に更新する箇所はないので、dual-write もありません。バックアップと保存アーカイブは持ち運べる JSON を使い、実行中の SQLite ファイルは含みません。
+主な保存先は `library.sqlite` です。旧来の `library.json` は古いカタログの取り込みにだけ使います。また、診断機能は `library.json` ではなく、機密情報を伏せたサポートバンドルを書き出します。さらに、両方を同時に更新する箇所はないので、dual-write もありません。macOS のバックアップと BagIt アーカイブは持ち運べる JSON（`version 7`）を使い、実行中の SQLite ファイルは含みません。一方、Windows は独自のスキーマ（`version 2`）を使い、`library.sqlite` を ZIP 形式の `.negaflowarchive` にまとめるため、バックアップは同じプラットフォームのマシン間で移行します。
 
 | 種類 | 形式 | 用途 |
 |---|---|---|
 | 主カタログ | SQLite | アプリの実行、検索、保存、復旧 |
 | 旧来の資料 | JSON | 既存カタログの取り込み |
-| バックアップと保存アーカイブ | JSON 形式 | 別のマシンへの移行、復元 |
+| バックアップと保存アーカイブ | 持ち運べる JSON（`version 7`、macOS）/ `library.sqlite` を含む ZIP（`version 2`、Windows） | 同じプラットフォームの別マシンへの移行、復元 |
 
 > [!IMPORTANT]
 > カタログがない、または壊れているからといって、空のライブラリで始めることはありません。正常な世代が見つかるまで、元のカタログと写真ファイルには触れません。
 
 ## 実測
 
-同じ Mac で、次のコマンドを使って JSON と SQLite を比べました。
+同じ Mac で、`negaflow-mac/` から次のコマンドを実行して JSON と SQLite を比べました。
 
 <details>
 <summary>測定コマンド</summary>
 
 ```bash
+cd negaflow-mac
+
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   NEGAFLOW_CATALOG_PERF_REPORT="$PWD/build/performance/catalog.json" \
   bash scripts/performance/run-catalog.sh
@@ -61,23 +63,23 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 
 - 多くの行の変更を1つのトランザクションに収められます。
 - 行とインデックスで、必要なフレームだけを読めます。
-- SQLite の C API は macOS に含まれるため、新しいパッケージが要りません。
+- macOS では SQLite の C API が OS に含まれるため新しいパッケージは不要で、Windows では `Microsoft.Data.Sqlite` を使います。
 - 復旧の規則がそのまま保たれます。壊れた保存先を空のライブラリとして扱うことはありません。
 
 `journal_mode=DELETE` と `synchronous=FULL` で動いています。WAL にすると、データベースと `-wal` ファイルを1つの単位として扱う必要があります。実行中のデータベースは直接コピーしません。接続を閉じた後に検査を通った主ファイルだけが復旧用のコピーになります。
 
 ## コードの役割分担
 
-- `CatalogStore`: 接続、トランザクション、スキーマのバージョン、整合性検査
-- `CatalogMigration`: 読み取り専用の JSON 取り込みとバージョンごとの変換
-- エンティティのテーブル: フレーム、元ファイル、並び順、ロール、フォルダー、コレクション、検索、スキャンジョブ
-- `LibraryBackupStore`: 持ち運べる JSON バックアップ、復元前の検査、復旧情報
+- `LibraryCatalogSQLiteStore`（Windows: `SqliteCatalogStore`、`SqliteCatalogSchema`）: 接続、トランザクション、スキーマのバージョン、整合性検査
+- `LibraryCatalogSQLiteMigration`、`LibraryCatalogFile`（Windows: `CatalogVersionMigration`）: 読み取り専用の旧 JSON 取り込みとバージョンごとのアップグレード
+- エンティティのテーブル: `catalog_metadata` と 9 つのエンティティテーブル（`folders`、元ファイル参照を埋め込んだ `frames`、`rolls`、`scan_sessions`、`scan_roll_assignments`、`manual_collections`、`smart_collections`、`saved_searches`、`stacks`）。各テーブルの `position` 列で並び替え
+- `LibraryBackupStore`（Windows: `CatalogBackupStore`）: バックアップと復元
 
 現像値とバージョン付きの編集履歴は、エンティティごとに JSON BLOB として保存します。元のピクセル、サムネイル、GrainMend キャッシュはデータベースに入れません。検索と並べ替えに使う列とインデックスがまだ足りないため、起動時にカタログ全体をメモリに読み込み、そのため SQLite の読み込み時間は今のところ JSON と同程度です。次の段階は、使う列とフレームだけを読むインデックス検索です。
 
 ## 旧来の JSON を移す
 
-1. JSON のバージョンと `LibraryCatalogHealth` を確かめます。
+1. JSON のバージョンと `LibraryCatalogHealthInspector` を確かめます。
 2. 一時的な SQLite を作ります。
 3. 資料を1つのトランザクションで移します。
 4. ID、順序、所属、ジョブを比べます。
@@ -85,7 +87,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 6. JSON を復旧用の世代として残します。
 7. SQLite を主な保存先に切り替えます。
 
-どの段階で失敗しても、既存の JSON はそのまま残り、空のカタログで始めることはありません。途中のファイルやマーカーが残っていても、元の SHA-256 と両方のカタログが一致したときだけ作業を続けます。移行後に JSON へ自動で戻ることはありません。古いアプリが JSON を書き換えて保存先が2つに割れないよう、最小の読み取りバージョンと移行マーカーを確かめます。
+どの段階で失敗しても、既存の JSON はそのまま残り、空のカタログで始めることはありません。また、`library.sqlite-migration.json` は移行の実行中に中断から再開するためだけに存在し、完了すると削除されます。その再開も元の SHA-256 と両方のカタログが一致したときに限られます。その後、完了すると `library.json` は `library.pre-sqlite-<sha12>.json` に移動され、JSON へ自動で戻ることはありません。さらに、`minimumReaderVersion` により、古いビルドが新しいカタログを開くのを防ぎます。
 
 ## 出典
 

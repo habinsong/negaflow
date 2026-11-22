@@ -1,9 +1,13 @@
 ﻿#include "negaflow/color/gamut_check.h"
 
+#include "negaflow/color/icc_profile.h"
+#include "negaflow/color/icm_transform.h"
+
 #include <Windows.h>
 #include <icm.h>
 
 #include <new>
+#include <span>
 
 namespace negaflow::color {
 namespace {
@@ -64,6 +68,19 @@ public:
             INDEX_DONT_CARE);
         if (handle_ == nullptr) {
             error_ = static_cast<std::uint32_t>(GetLastError());
+            // B2A1/A2B1 없는 지각 전용 LUT 프로파일이 USE_RELATIVE_COLORIMETRIC 을 거절하면
+            // 같은 고속 ICM 경로에서 해당 플래그만 빼고 한 번 더 시도합니다.
+            SetLastError(ERROR_SUCCESS);
+            handle_ = CreateMultiProfileTransform(
+                profiles,
+                2U,
+                intents,
+                2U,
+                ENABLE_GAMUT_CHECKING | BEST_MODE,
+                INDEX_DONT_CARE);
+            if (handle_ != nullptr) {
+                error_ = 0U;
+            }
         }
     }
 
@@ -237,9 +254,10 @@ GamutCheckResult check_gamut_bgr8_icc(
         result.status = GamutCheckStatus::profile_unavailable;
         return result;
     }
+    const std::span<const std::uint8_t> trimmed = trim_icc_padding(
+        std::span<const std::uint8_t>(destination_icc, destination_icc_size));
     try {
-        std::vector<std::uint8_t> bytes(
-            destination_icc, destination_icc + destination_icc_size);
+        std::vector<std::uint8_t> bytes(trimmed.begin(), trimmed.end());
         return check_with_destination(pixels, width, height, stride_bytes, std::move(bytes));
     } catch (const std::bad_alloc&) {
         result.status = GamutCheckStatus::invalid_input;
@@ -259,6 +277,8 @@ bool soft_proof_convert_bgra_icc(
         stride_bytes < static_cast<std::uint64_t>(width) * 4ULL) {
         return false;
     }
+    const std::span<const std::uint8_t> trimmed = trim_icc_padding(
+        std::span<const std::uint8_t>(destination_icc, destination_icc_size));
     std::vector<std::uint8_t> source_bytes;
     std::vector<std::uint8_t> destination_bytes;
     std::vector<std::uint8_t> bgr;
@@ -266,7 +286,7 @@ bool soft_proof_convert_bgra_icc(
     const std::uint32_t packed_stride = ((width * 3U) + 3U) & ~3U;
     try {
         source_bytes = source_profile_bytes();
-        destination_bytes.assign(destination_icc, destination_icc + destination_icc_size);
+        destination_bytes.assign(trimmed.begin(), trimmed.end());
         bgr.resize(static_cast<std::size_t>(packed_stride) * height);
     } catch (const std::bad_alloc&) {
         return false;
@@ -289,13 +309,8 @@ bool soft_proof_convert_bgra_icc(
     }
     // 화면 -> 인화지 -> 화면. 가운데가 인화지라 그 색역 밖의 색이 눌립니다.
     HPROFILE profiles[]{display.get(), paper.get(), display.get()};
-    DWORD intents[]{
-        INTENT_RELATIVE_COLORIMETRIC,
-        INTENT_RELATIVE_COLORIMETRIC,
-        INTENT_RELATIVE_COLORIMETRIC};
-    // 판정과 같은 BEST_MODE 표를 씁니다(위 `Transform` 주석).
-    HTRANSFORM transform = CreateMultiProfileTransform(
-        profiles, 3U, intents, 3U, USE_RELATIVE_COLORIMETRIC | BEST_MODE, INDEX_DONT_CARE);
+    std::uint32_t transform_error = 0U;
+    HTRANSFORM transform = create_icm_transform(profiles, 3U, true, transform_error);
     if (transform == nullptr) {
         return false;
     }

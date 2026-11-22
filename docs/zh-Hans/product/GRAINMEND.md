@@ -10,7 +10,7 @@ GrainMend 修复胶片上的灰尘、针孔、划痕和乳剂损伤。原始文�
 | 引导 | 你选定的区域 | 仔细查看，直到小斑点和淡淡的缺陷 |
 | 画笔 | 你涂抹的位置 | 把周围的结构和纹理带过来 |
 | 克隆图章 | 你选定的源点 | 按固定偏移复制真实的源像素 |
-| IR | 扫描仪的红外通道 | IR 找位置，RGB 重建像素 |
+| IR | 扫描仪的红外通道 | 部分遮挡直接按光学衰减做除法（`raw ÷ (1 − attenuation)`，最高 2 倍增益）恢复；不透明中心（`>= 50%`）交由 RGB 图块修复器处理 |
 
 显影界面里有自动、引导、画笔和克隆图章。插件报告了相应能力时，可以在扫描步骤打开 IR，扫描完成后其结果会加入同一份 GrainMend 图层列表。
 
@@ -60,13 +60,13 @@ GrainMend 修复胶片上的灰尘、针孔、划痕和乳剂损伤。原始文�
 
 ### 克隆图章
 
-`⌥` 点击选定源点，然后在目标上绘制。它不用自动检测，而是保持两点之间的偏移并复制真实像素。
+在 Mac 上按住 `⌥` 点击（在 Windows 上按住 `Alt` 点击）选定源点，然后在目标上绘制。它不用自动检测，而是保持两点之间的偏移并复制真实像素。
 
 编辑历史保留直径、硬度、坐标和偏移，旋转、翻转或裁剪之后，仍然作用于同一组原始坐标。偏移取整到整像素，图像之外的部分不应用。
 
 ### IR
 
-只有当插件交来真实的 IR 通道，且尺寸和区域与 RGB 对得上时才使用。IR 是用来定位缺陷的材料，最终的像素由与 RGB 相同的修复器生成。
+只有当插件交来真实的 IR 通道，且尺寸和区域与 RGB 对得上时才使用。对于部分被遮挡的像素，GrainMend IR 直接按光学衰减做除法（`raw ÷ (1 − attenuation)`，上限为 2 倍增益）还原，保留底层的细节与胶片颗粒。只有严重遮挡的不透明核心（衰减 `>= 50%`）才交给 RGB 图块修复器。
 
 ## 在 RGB 中寻找缺陷
 
@@ -124,22 +124,25 @@ GrainMend 修复胶片上的灰尘、针孔、划痕和乳剂损伤。原始文�
 
 ### 对位
 
-光学系统和传感器读出可能让 RGB 和 IR 相差几个像素。先做宽范围搜索，再做窄范围搜索，来确定偏移。峰值的置信度，以及是否落在搜索范围边缘，都会被记录。
+光学系统和传感器读出可能让 RGB 和 IR 相差几个像素。全局对位先把 IR 缺陷点与红通道的局部暗区比对，必要时回退到 IR 串扰纹理相关性。峰值的置信度，以及是否落在搜索范围边缘，都会被记录。
 
-置信度低，或最佳点卡在搜索范围末端，都不算成功。
+该全局偏移只作为参考起始种子，而不是硬性失败门槛。全局对位置信度较低或触及搜索上限时，检测从 `(0, 0)` 起步，由强候选投票得出粗略共识偏移，并将每个缺陷与可见光红通道逐个对位和确认（`>= 4σ`）。凡是无法在红通道中确认的候选一律丢弃。
 
 ### 减去场景图案
 
-胶片染料和密度会透进 IR。把红通道的对数亮度分成 64 个分箱，每个分箱去掉 IR 值最高和最低的 10% 后取平均。空的分箱由相邻分箱插值，并用短的对称核平滑。减去这条非参数曲线能降低场景图案，稀疏的暗灰尘则不进入分箱统计。
+胶片染料和密度会透进 IR。GrainMend IR 分四步把缺陷与场景分开：
 
-剩下的部分换算成相对局部均值的对比度。为避免大缺陷抬高周围的噪声底，在计算自适应阈值之前，先把噪声输入截断在最小检测对比度。片夹和胶片边缘处相连的暗区会从蒙版中去除。
+1. 先用漫水填充排除与图像边缘相连的片夹暗区和片边余白（rebate）。
+2. 构建局部形态学灰度闭运算基线（`localBaseline`），跨过窄小缺陷，把宽广的青色染料场景残影留在基线内。
+3. 把 IR 值换算成光学密度 `log(baseline / value)`。
+4. 由扫描的中位数与四分位距（IQR）估计干净片基的底值和 `σ`，收集面积加权显著性满足 `Σ(density − floor) ≥ mσ·√area` 的候选，逐个在可见光红通道中做局部确认（`>= 4σ`），再经滞后阈值扩展已确认的蒙版。
 
 ### 安全条件
 
 - 异常宽的蒙版不应用。
-- 无法确认的对位不应用。
-- 不会自动应用于银盐黑白。
-- 彩色正片和特殊乳剂，未经测量不假定安全。
+- 无法与可见光红通道局部对位并确认（`>= 4σ`）的候选一律丢弃。
+- 染料成像的彩色胶片（彩色负片与彩色反转片／正片）开启自动 IR，银盐成像的黑白胶片禁止自动 IR。
+- Kodachrome 和特殊乳剂无法单靠 `FilmType` 识别，需要时请手动关闭 IR。
 
 商业 IR 工具对普通黑白和 Kodachrome 也设有自己的限制：
 
@@ -177,18 +180,18 @@ GrainMend 缓存是派生文件，用于快速显示和重新渲染。缺失或�
 - 用于撤销的副本在真正发生变化之前共享存储。
 - 内存吃紧时，丢弃可重建的图像和图块缓存。
 
-实际耗时取决于分辨率、缺陷数量、区域大小和 Mac。
+实际耗时取决于分辨率、缺陷数量、区域大小和硬件。
 
-2026-07-25 在 Release 构建、Mac14,3、arm64、24 GiB 内存、macOS 26.5 上测得：
+2026-07-25 在 macOS Release 构建、Mac14,3、arm64、24 GiB 内存、macOS 26.5 上测得：
 
 | 路径 | 输入 | 结果 |
 |---|---|---:|
 | 引导检测 | 1600×1600，25 粒灰尘 | 0.35 秒，检测到 25 个 |
 | 局部 ROI 检测 | 1600×1600 | 0.38 秒 |
 | 引导密集压力 | 1280×960，8 张 × 3 次 | 中位数 0.423 秒，p95 0.488 秒，最大 0.526 秒 |
-| IR 检测 | 6000×4000，24MP | 1.042 秒，内存增长峰值 249.2 MiB |
+| IR 检测（2026 年 8 月重写前） | 6000×4000，24MP | 1.042 秒，内存增长峰值 249.2 MiB |
 
-在 24 次密集压力运行中，缺陷位置的最低蒙版覆盖率为 99.80%，平均残差误差最高为 2.70/255。这些是针对合成输入的回归测量，不保证在其他 Mac 或真实胶片上的处理时间。
+上表中的 IR 检测行测于 2026 年 8 月闭运算基线与衰减恢复重写之前。在 24 次密集压力运行中，缺陷位置的最低蒙版覆盖率为 99.80%，平均残差误差最高为 2.70/255。这些是针对合成输入的 macOS 回归测量；Windows 在 C++（`negaflow-windows/src/Native/imaging/`）中运行对应的 GrainMend RGB 与 IR 管线。这些数值不保证在其他机器或真实胶片上的处理时间。
 
 ## 基准测试
 
@@ -248,11 +251,13 @@ RGB 回归使用 FILM-R v2 中 44 对受损图像与专家修复图像：
 
 ## 代码位置
 
-- `Sources/Chromabase/DefectRemoval/`
-- `Sources/negaflowApp/Features/Defects/`
-- `Sources/negaflowApp/Features/Develop/Inspector/Tools/DefectControlsSection.swift`
-- `Sources/negaflowCLI/Commands/CLI+DefectBenchCommand.swift`
-- `Tests/ChromabaseTests/Defect*.swift`
-- `Tests/negaflowAppTests/Defect*.swift`
-- `Config/defect-corpus-film-r-v2.json`
-- `scripts/defect-corpus/`
+- `negaflow-mac/Sources/Chromabase/DefectRemoval/`
+- `negaflow-mac/Sources/negaflowApp/Features/Defects/`
+- `negaflow-mac/Sources/negaflowApp/Features/Develop/Inspector/Tools/DefectControlsSection.swift`
+- `negaflow-mac/Sources/negaflowCLI/Commands/CLI+DefectBenchCommand.swift`
+- `negaflow-mac/Tests/ChromabaseTests/Defect*.swift`
+- `negaflow-mac/Tests/negaflowAppTests/Defect*.swift`
+- `negaflow-mac/Config/defect-corpus-film-r-v2.json`
+- `negaflow-mac/scripts/defect-corpus/`
+- `negaflow-windows/src/Native/imaging/defect_*.cpp`
+- `negaflow-windows/src/Native/imaging/infrared_*.cpp`

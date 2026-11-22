@@ -2,7 +2,7 @@
 
 [Accueil de la documentation](../README.md)
 
-L'aperçu d'un scanner à plat montre un porte-film, la lumière qui passe à côté et le film chargé. Avant qu'une numérisation complète vaille la peine d'être lancée, la détection automatique des vues décide quelles parties sont du film et où une vue finit et la suivante commence. Elle connaît la taille réelle de la zone d'aperçu en millimètres : elle convertit donc un format de film en pixels de façon exacte.
+L'aperçu d'un scanner à plat montre un porte-film, la lumière qui passe à côté et le film chargé. Avant qu'une numérisation complète vaille la peine d'être lancée, la détection automatique des vues décide quelles parties sont du film et où une vue finit et la suivante démarre. Elle connaît la taille réelle de la zone d'aperçu en millimètres : elle convertit donc un format de film en pixels de façon exacte.
 
 ## Le film se repère par sa texture
 
@@ -30,7 +30,7 @@ L'écart est d'un ordre de grandeur et garde son sens quels que soient le type d
 2. Fenêtres. Les colonnes candidates sont étendues jusqu'au bord du film et comparées à la largeur du format choisi. Une fenêtre qui touche le bord de la zone numérisée est écartée : la zone l'a coupée en deux et la numérisation complète capturerait la mauvaise région.
 3. Bandes. Dans une fenêtre, les lignes qui portent du film sont séparées du porte-film au-dessus et au-dessous. Une ligne est du film si elle diffère du porte-film voisin ou porte de la texture. La luminosité seule perd les vues denses d'une diapositive, la texture seule perd les interstices et les vues plates.
 4. Grille. Un peigne de positions d'interstices est ajusté sur le plan (pas, phase). Le score est le contraste entre l'intérieur d'une vue et l'intérieur de l'interstice, donc l'ajustement ne dépend pas de savoir si l'interstice est de la base claire, une densité maximale ou une nervure du porte-film.
-5. Affinage. Chaque limite se cale sur l'interstice le plus proche, puis l'ensemble est réajusté à un espacement régulier, car les vues d'une bande sont régulièrement espacées. Numériser deux fois la même bande donne un écart de 0,2 mm au plus.
+5. Affinage. Chaque limite se cale sur l'interstice le plus proche, et un ajustement linéaire sur la bande détermine l'espacement régulier pour écarter les calages aberrants : les limites cohérentes gardent leur position locale d'interstice, tandis que les valeurs aberrantes et les bords extérieurs non mesurés prennent l'espacement ajusté. Numériser deux fois la même bande donne un écart de 0,2 mm au plus.
 
 ## Ce qu'elle refuse
 
@@ -49,6 +49,8 @@ La longueur le long de la bande est la direction du pas des vues et la longueur 
 | Format | Le long de la bande | En travers |
 |---|---|---|
 | 35 mm plein format | 36 mm | 24 mm |
+| 35 mm panoramique (56×24) | 56 mm | 24 mm |
+| 35 mm panoramique (65×24) | 65 mm | 24 mm |
 | 35 mm carré | 24 mm | 24 mm |
 | 35 mm demi-format | 18 mm | 24 mm |
 | 120 · 6×4.5 | 41.5 mm | 56 mm |
@@ -85,4 +87,4 @@ Pas ajusté sur toutes les bandes : 37,65 – 38,12 mm. La détection prend 0,5 
 | `FlatbedFrameGridDetector+Slots.swift` | Fenêtres, présence de film, bandes |
 | `FlatbedFrameGridDetector+Grid.swift` | Indices d'interstices, ajustement du peigne, affinage des limites |
 
-`FlatbedFrameDetector` reste le repli pour un aperçu dont la taille physique est inconnue.
+`FlatbedFrameDetector` reste le repli lorsqu'un aperçu a une taille physique inconnue ou que `FlatbedFrameGridDetector` ne renvoie aucune vue.

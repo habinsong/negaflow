@@ -2,7 +2,7 @@
 
 [Dokumentationsstart](../README.md)
 
-negaflow ist eine App für macOS und Windows. Sie importieren oder scannen Filmbilder und durchlaufen dann Invertierung, Entwicklung, GrainMend, Ausgabe und Erhaltung. Jede Bearbeitung wird getrennt vom Original aufbewahrt.
+negaflow ist eine App für macOS und Windows. Sie importieren oder scannen Filmbilder und durchlaufen dann Invertierung und Entwicklung, GrainMend, Ausgabe und Erhaltung. Jede Bearbeitung wird getrennt vom Original aufbewahrt.
 
 > [!IMPORTANT]
 > Originale, Bearbeitungsverlauf, Caches und Ausgabedateien sind verschiedenes Material. Der Verlust eines Caches darf nicht das Original oder den Bearbeitungsverlauf kosten, und ein Export schlägt fehl, wenn ein benötigtes Ergebnis nicht wiederhergestellt werden kann.
@@ -20,11 +20,13 @@ negaflow ist eine App für macOS und Windows. Sie importieren oder scannen Filmb
 
 ## Module
 
-`negaflowApp` und `negaflowCLI` nutzen beide `Chromabase` und `ScannerKit`. `Chromabase` arbeitet mit Bildern und Metadaten, und `ScannerKit` spricht mit dem externen Scanner-Plug-in.
+Unter macOS (`negaflow-mac/`) nutzen `negaflowApp` und `negaflowCLI` beide `Chromabase` und `ScannerKit`. `Chromabase` arbeitet mit Bildern und Metadaten, und `ScannerKit` spricht mit dem externen Scanner-Plug-in.
+
+Unter Windows in `negaflow-windows/src/` teilt sich die App in sechs Module. `Native` umfasst die C++ Chroma Engine, GrainMend und den Export, während `Interop` die native Engine mit der verwalteten App verbindet. `Catalog.Core` übernimmt den Mediatheksspeicher, und `Shell.Core` enthält die Logik für Entwickeln und Abzug, Scanner und Export. `Shell` stellt die WinUI-3-Ansichten für Mediathek, Entwickeln und Abzug bereit, und `Cli` ist das Kommandozeilenwerkzeug.
 
 ### `Chromabase`
 
-Die Chroma Engine und der Kern der Bildverarbeitung.
+Die Chroma Engine und der Kern der Bildverarbeitung unter macOS.
 
 - Bilder lesen und Ausrichtung behandeln
 - Messung der Filmbasis
@@ -42,7 +44,7 @@ Mehr dazu:
 
 ### `ScannerKit`
 
-Es besitzt den Vertrag, der ein externes Plug-in anbindet.
+Hält den macOS-Vertrag, der ein externes Plug-in anbindet.
 
 - Scanner-ID und Fähigkeiten
 - JSON für Anfragen und Antworten
@@ -56,10 +58,10 @@ Die SANE-Implementierung liegt in einem eigenen GPL-Projekt, [`negaflow-scanner-
 
 ### `negaflowCLI`
 
-Nutzt dieselbe Engine und dasselbe `ScannerKit` wie die grafische Oberfläche.
+Die macOS-CLI, die dieselbe Engine und dasselbe `ScannerKit` wie die grafische Oberfläche nutzt.
 
 - Scanner finden, Fähigkeiten prüfen, scannen
-- Mehrere Bilder entwickeln
+- Ein einzelnes Bild je Aufruf nach JPEG, TIFF, PNG oder linearem DNG entwickeln
 - Scannerprofile auflisten
 - GrainMend `defect-bench`
 - IT8 und scannerbezogener Vergleich
@@ -67,12 +69,12 @@ Nutzt dieselbe Engine und dasselbe `ScannerKit` wie die grafische Oberfläche.
 
 ### `negaflowApp`
 
-Die Benutzeroberfläche, gebaut mit SwiftUI und AppKit.
+Die macOS-Benutzeroberfläche, gebaut mit SwiftUI und AppKit.
 
-- Mediathek, Entwickeln, Abzug, Zeichenfläche
+- Mediathek und Entwickeln, Abzug und Zeichenfläche
 - Scannen, GrainMend, Export
 - Versionen, Einstellungen, Kurzbefehle
-- Katalog, Cache, Backup, Erhaltungsarchiv
+- Katalog und Cache, Backup und Erhaltungsarchiv
 - Ein lokalisiertes Info-Fenster, dessen Produktversion aus der gemeinsamen Versionsressource stammt
 
 ## Ablauf für Nutzer
@@ -89,7 +91,7 @@ Jeder Schritt lässt das Original unberührt und ergänzt Katalog und Bearbeitun
 
 ### Dateien importieren
 
-Der Standardweg. Er verarbeitet TIFF, JPEG, PNG und das Kamera-RAW, das Image I/O unter macOS lesen kann. Das eingebettete ICC und die Ausrichtung werden gelesen, und die ID des Originals kommt in den Katalog.
+Der Standardweg. Er verarbeitet TIFF, JPEG und PNG sowie HEIC/HEIF, BMP und Kamera-RAW. Unter macOS werden negative Kamera-RAWs mit LibRaw dekodiert, während positive und digitale RAWs sowie Standardformate über Image I/O und `CIRAWFilter` laufen. Unter Windows nutzen Standardformate WIC und die native TIFF-Dekodierung, und Kamera-RAWs nutzen die mitgelieferte `libraw.dll`. Das eingebettete ICC und die Ausrichtung werden gelesen, und die ID des Originals kommt in den Katalog.
 
 ### Scannen
 
@@ -111,12 +113,12 @@ Wurde eine Datei verschoben, ändert sich der Pfad nur, wenn Sie sie selbst neu 
 
 ## Katalog
 
-Der Hauptspeicher ist `library.sqlite`. Das ältere `library.json` dient dazu, bestätigtes älteres Material zu übernehmen oder ein Backup zu schreiben, das zwischen Rechnern wandern kann. Beide Speicher werden nie gleichzeitig aktualisiert.
+Der Hauptspeicher ist `library.sqlite`. Das ältere `library.json` dient dazu, bestätigtes älteres Material zu übernehmen oder ein Backup zu schreiben, das zwischen Rechnern derselben Plattform wandern kann (macOS Schema v7, Windows Schema v2). Beide Speicher werden nie gleichzeitig aktualisiert.
 
 Was in SQLite kommt:
 
 - Bilder und Originale
-- Filme, Ordner, Sammlungen, Suchen
+- Filme und Ordner, Sammlungen, Suchen und Stapel
 - Reihenfolge und Scanaufträge
 - Entwicklungswerte und Bearbeitungsverlauf je Version
 
@@ -142,11 +144,11 @@ Ein fehlgeschlagenes JSON gilt nicht als leerer Katalog. Die Zahlen stehen in [K
 Ordnen:
 
 - Ordner, Filme, manuelle Sammlungen, intelligente Sammlungen, gespeicherte Suchen, Stapel
-- Sternebewertungen, Auswählen und Ablehnen, Farbetiketten
+- Sternebewertungen, Auswählen und Ablehnen
 - Raster, Vergleich, Übersicht
 - Prüfung von Duplikatkandidaten
 
-In der Ordneransicht zeigt jeder Ordner ein Band mit Aufklappdreieck, Ordner, Name, Anzahl, Entwicklungsprozess, Ziel und Anwenden. Das Band klappt die Miniaturen darunter ein. Eingeklappte Ordner werden über Neustarts hinweg gemerkt, getrennt von der Dateiliste der Seitenleiste.
+In der Ordneransicht zeigt jeder Ordner ein Band mit Aufklappdreieck und Ordnername, der Bildanzahl sowie Entwicklungsprozess, Ziel und Anwenden. Das Band klappt die Miniaturen darunter ein. Eingeklappte Ordner werden über Neustarts hinweg gemerkt, getrennt von der Dateiliste der Seitenleiste.
 
 Die Ordneransicht nutzt ein einziges Raster, jeder Ordner ist ein Abschnitt, sein Band die Abschnittsüberschrift. Behalten Sie diese Struktur bei. Ein eigenes Raster je Ordner zu stapeln zwingt das Layout, die volle Höhe jedes sichtbaren Ordners zu berechnen und alle seine Karten auf einmal zu erzeugen, während ein einziges Raster die Karten zeilenweise erzeugt, wenn sie ins Bild kommen. So bleibt das Scrollen bei mehreren hundert Fotos flüssig.
 
@@ -172,7 +174,7 @@ Während Sie anpassen, wird eine Vorschau niedrigerer Auflösung verwendet. Ein 
 Die Wahl eines anderen Fotos startet dessen beruhigtes Rendern ohne die Bearbeitungspause. Unter macOS:
 
 - Ist ein Kamera-RAW-Negativ beruhigt, kann das nächste sichtbare RAW im Hintergrund dekodiert werden. Vorbereitet wird nur ein Nachbar, innerhalb des vorhandenen Master-Caches (bis 160 MiB). Eine Bearbeitung, eine andere Auswahl oder Speicherdruck bricht diese Arbeit ab, und die Wahl des gerade vorbereiteten Fotos teilt dessen Dekodierung.
-- Eine kalte Auswahl von Kamera-RAW entpackt die Sensordaten nur einmal. Erlaubt das Mosaik es, erscheint eine vorläufige Kamera-RGB-Vorschau, bevor das kanonische Demosaicing fertig ist. Der Master-Cache bleibt bei Speicherdruck ausgeschaltet, und das Verdrängen eines Bildes wirft auch seinen RAW-Master weg.
+- Eine kalte Auswahl von Kamera-RAW entpackt die Sensordaten nur einmal. Erlaubt das Mosaik es, erscheint eine vorläufige Kamera-RGB-Vorschau, bevor das kanonische Demosaicing fertig ist. Der Master-Cache bleibt bei Speicherdruck ausgeschaltet, und das Verdrängen eines Bildes aus dem Cache wirft auch seinen RAW-Master weg.
 - Eine kalte TIFF-Auswahl teilt eine dekodierte Quelle zwischen interaktiver und beruhigter Vorschau und skaliert sie auf der GPU. Apple-RAW-Vorschauen, auch DNG, behalten einen `CIRAWFilter` für beide Durchläufe.
 - Bereinigte RAW-TIFFs werden geschrieben, wenn ihre Pixelpuffer den Speicher verlassen, nicht nach jeder Bearbeitung. Die Datenträgerbereinigung behält neuere Dateien innerhalb einer Grenze, schützt Dateien in Benutzung und löscht beim nächsten Start die Caches der vorigen Sitzung. Bearbeitungsrezepte bleiben in Sidecar-Dateien.
 
@@ -204,7 +206,7 @@ Ein angehaltener und fortgesetzter Export nutzt dasselbe Paket.
 
 ### Mehrere Ausgabedateien
 
-Ein Export kann zugleich JPEG/TIFF, eine Sidecar-Datei, XMP und `-main-flat` erzeugen.
+Ein Export kann zugleich JPEG/TIFF/PNG/DNG (lineares DNG für unkomprimierte Quellen), eine Sidecar-Datei, XMP und `-main-flat` erzeugen.
 
 1. Ziel und Namenskonflikte vorab prüfen.
 2. Alle Dateien in einen temporären Ordner schreiben.
@@ -243,7 +245,7 @@ Unterstützte Layouts:
 - Silbergelatine
 - Wasserzeichen
 
-Einzelbild und die drei historischen Layouts erzeugen je ausgewähltem Foto eine senkrecht gestapelte Seite. Kontaktbogen, Bildpaket und eigenes Paket melden und exportieren stattdessen ihre Zahl fertiger Seiten. Bei 39 Fotos ergibt das eine Kontaktbogenseite 6 × 7, 10 Seiten eines vierfachen Bildpakets, eine Seite des Standard-Pakets oder 39 einzelne Dateien.
+Einzelbild, die drei historischen Layouts und Wasserzeichen erzeugen je ausgewähltem Foto eine senkrecht gestapelte Seite. Kontaktbogen, Bildpaket und eigenes Paket melden und exportieren stattdessen ihre Zahl fertiger Seiten. Bei 39 Fotos ergibt das eine Kontaktbogenseite 6 × 7, 10 Seiten eines vierfachen Bildpakets, eine Seite des Standard-Pakets oder 39 einzelne Dateien.
 
 Die Paketvorschau nutzt vorhandene Miniaturen und entwickelte Bilder wieder und erzeugt nur dann eine kleine schnelle Vorschau, wenn eine fehlt. Der endgültige Export berechnet die Platzierung aus den Metadaten, entwickelt nur die Pixel, die jede Zelle braucht, bereitet zwei bis vier verschiedene Quellen gleichzeitig vor, hält den Core-Image-Graphen bis zum Schreiben der Seite verbunden und setzt ein Budget von 512 MiB Quellraster pro Seite durch.
 
@@ -253,15 +255,16 @@ Ohne gültiges RGB-Drucker-ICC wird kein anderes Profil eingesetzt. Bytes und SH
 
 ## Erhaltungsarchiv
 
-Was in `.negaflowarchive` kommt:
+Unter macOS ist `.negaflowarchive` ein BagIt-Ordner nach RFC 8493 mit SHA-256-Manifesten (`manifest-sha256.txt` und `tagmanifest-sha256.txt`) und `negaflow-archive.json`:
 
 - Das portable Katalog-JSON
-- Originaldateien
-- IR-Originale
-- Der benötigte GrainMend-Verlauf
+- Originaldateien und verbleibende IR-Originale
+- Die benötigten GrainMend-Defektrezepte
 - Die Beziehung zwischen virtuellen Kopien und dem Original, das sie teilen
 
-Miniaturen, Vorschauen, GrainMend-Caches und exportierte Dateien lassen sich wiederherstellen und bleiben daher draußen. Das Archiv nutzt die BagIt-Struktur nach RFC 8493 mit einer SHA-256-Liste, und jede Datei und jede Beziehung wird geprüft, bevor das Paket an den endgültigen Ort wandert.
+Unter Windows ist `.negaflowarchive` ein ZIP-Archiv mit `library.sqlite`, den Defektrezepten unter `defects/*` und `archive.json` (Bytezahlen und SHA-256-Hashes je Eintrag), ohne die ursprünglichen Fotodateien zu kopieren.
+
+Miniaturen, Vorschauen, wiederherstellbare GrainMend-Caches und exportierte Dateien bleiben auf beiden Plattformen draußen. Jede Datei, jeder Hash und jede Beziehung wird an einem temporären Ort geprüft, bevor das Archiv an den endgültigen Pfad wandert.
 
 - [Mediatheksarchiv](LIBRARY_ARCHIVE.md)
 - [RFC 8493](https://www.rfc-editor.org/info/rfc8493/)
@@ -291,7 +294,7 @@ Der vollständige Vertrag steht in [Scanner-Plugin-Struktur](SCANNER_PLUGINS.md)
 
 Bilder:
 
-- Ein gemeinsamer `CIContext`
+- Wiederverwendete und gepoolte `CIContext`-Instanzen unter macOS sowie Direct3D-11-Gerät und Staging-Pools unter Windows
 - Ein Bildgraph, der bei Bedarf berechnet wird
 - Anpassung in niedriger Auflösung getrennt von der Ausgabe in voller Auflösung
 - Abbruch, und Ablehnung veralteter Ergebnisse
@@ -311,10 +314,14 @@ Das Repository nutzt weite Leistungsgrenzen, um große Rückschritte zu fangen. 
 
 ## Was geprüft wird
 
+Unter macOS (`negaflow-mac/`):
+
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 bash scripts/run-app.sh build
 ```
+
+Unter Windows (`negaflow-windows/scripts/`): `build.ps1`, `test.ps1`, `test-managed.ps1`, `test-interop.ps1` und `build-release.ps1`.
 
 Was automatische Prüfungen nicht entscheiden:
 

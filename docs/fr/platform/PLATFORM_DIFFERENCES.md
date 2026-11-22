@@ -21,35 +21,36 @@ Il en va de même pour :
 - Tonalité, courbes, TSL, étalonnage, virage en noir et blanc
 - La détection et la réparation GrainMend, y compris le chemin infrarouge
 - Les mises en page de tirage et la géométrie des pages
-- Le nommage des fichiers exportés, l'écriture EXIF et la politique des métadonnées
+- Le nommage des fichiers exportés pour tous les formats, ainsi que l'écriture EXIF et la politique des métadonnées en JPEG, TIFF et DNG (sous Windows, l'export PNG conserve le DPI et le profil ICC sans métadonnées EXIF)
 - Le format du catalogue (`library.sqlite`)
 
 ## Ce qui diffère
 
 ### Gestion des couleurs
 
-macOS utilise ColorSync, Windows utilise ICM. Les deux prennent les mêmes profils ICC et donnent les mêmes valeurs à l'arrondi près. Les tests de parité couvrent ce point, car c'est celui qui dérive le plus facilement sans bruit.
+macOS passe par ColorSync, Windows passe par ICM. Les deux prennent les mêmes profils ICC et donnent les mêmes valeurs à l'arrondi près. Les tests de parité couvrent ce point, car c'est celui qui dérive le plus facilement sans bruit.
 
-À l'écran, macOS dessine à travers le profil ColorSync de l'affichage. Windows ne le fait que lorsque Advanced Color est activé. Sinon, Windows envoie les pixels de l'application à l'écran comme du sRGB : negaflow convertit donc le canevas de développement et l'aperçu d'impression vers le profil ICC du moniteur juste avant de les dessiner. Les vignettes et le reste de l'interface sont dessinés en sRGB.
+À l'écran, macOS dessine à travers le profil ColorSync de l'affichage. Windows ne le fait que lorsque Advanced Color est activé. Sinon, Windows envoie les pixels de l'application à l'écran comme du sRGB : negaflow applique donc la LUT 33³ du profil ICC du moniteur au canevas de développement et à l'aperçu d'impression (y compris les petites vignettes des planches-contacts) juste avant le tracé, et l'actualise automatiquement lors d'un changement d'écran ou au retour dans la fenêtre après modification des réglages d'affichage. Les vignettes et le reste de l'interface sont dessinés en sRGB.
 
 ### Graphismes
 
-macOS exécute la chaîne de développement sur Core Image. Windows l'exécute sur des shaders de calcul Direct3D, avec un repli sur le CPU quand le chemin GPU n'est pas disponible.
+macOS exécute la chaîne de développement sur Core Image par défaut en virgule flottante demi-précision 16 bits linéaire (`RGBAh`). Windows l'exécute sur des shaders de calcul Direct3D 11, avec un repli sur le CPU quand le chemin GPU n'est pas disponible, en virgule flottante 32 bits (`RGBA32F`) sur les deux chemins.
 
 ### Où se trouvent les fichiers
 
 | | macOS | Windows |
 |---|---|---|
 | Application | `/Applications/negaflow.app` | `%LOCALAPPDATA%\Negaflow\App` |
-| Bibliothèque et réglages | `~/Library/Application Support/negaflow` | `%LOCALAPPDATA%\Negaflow` |
+| Catalogue, fichiers sidecar de défauts, recettes, modèles de tirage | `~/Library/Application Support/negaflow` | `%LOCALAPPDATA%\Negaflow` |
+| Préférences de l'application | `UserDefaults` (`~/Library/Preferences/com.songhabin.negaflow.plist`) | `%LOCALAPPDATA%\Negaflow` |
 
 ### Installation et désinstallation
 
-macOS fournit un PKG qui place l'application dans `/Applications` ; pour la supprimer, glissez-la dans la corbeille. Windows fournit un programme d'installation qui écrit dans votre dossier utilisateur sans droits administrateur. La désinstallation passe par `Uninstall negaflow` dans le menu Démarrer ou par Paramètres, et retire le dossier de l'application, l'entrée du menu Démarrer et l'enregistrement du paquet.
+macOS fournit un PKG qui place l'application dans `/Applications` ; pour la supprimer, glissez-la dans la corbeille. Le programme d'installation Windows écrit dans `%LOCALAPPDATA%\Negaflow\App` et ne demande une confirmation administrateur ponctuelle que si Windows n'autorise pas déjà l'enregistrement de paquets d'application non signés en fichiers libres (`AllowDevelopmentWithoutDevLicense`). La désinstallation passe par `Uninstall negaflow` dans le menu Démarrer ou par Paramètres, et retire le dossier de l'application, l'entrée du menu Démarrer et l'enregistrement du paquet.
 
 ### Ligne de commande
 
-macOS fournit `negaflow`, une CLI complète qui détecte les scanners, développe des fichiers, lance GrainMend et mesure les performances. Windows fournit `negaflow-cli.exe`, un outil de diagnostic plus petit qui vérifie ce que le moteur fait d'un seul fichier. Il prend des options, pas des sous-commandes.
+Les programmes d'installation de l'interface graphique n'incluent pas d'outil en ligne de commande ; la compilation depuis les sources fournit la CLI de chaque plateforme. Sur macOS, `swift build` produit `negaflow`, une CLI qui détecte les scanners, développe des fichiers, lance GrainMend et mesure les performances. Sous Windows, la compilation CMake produit `negaflow-cli.exe`, un outil de diagnostic plus petit qui vérifie ce que le moteur fait d'un seul fichier et prend des options plutôt que des sous-commandes.
 
 ### Signature
 

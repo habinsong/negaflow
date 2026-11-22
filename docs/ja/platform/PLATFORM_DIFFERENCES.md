@@ -21,7 +21,7 @@ macOS ビルドは `docs/verification/macos-golden` に基準画像を描画し�
 - トーン、カーブ、HSL、カラーグレーディング、白黒のトーニング
 - 赤外線の経路を含む GrainMend の検出と修復
 - プリントレイアウトとページの幾何
-- 書き出しのファイル名、EXIF の書き込み、メタデータの方針
+- 各形式での書き出しファイル名と、JPEG・TIFF・DNG における EXIF・メタデータの方針（Windows の PNG 書き出しは EXIF メタデータを含めず、DPI と ICC プロファイルのみを保持）
 - カタログの形式(`library.sqlite`)
 
 ## 違うもの
@@ -30,26 +30,27 @@ macOS ビルドは `docs/verification/macos-golden` に基準画像を描画し�
 
 macOS は ColorSync、Windows は ICM を使います。どちらも同じ ICC プロファイルを受け取り、丸めの範囲で同じ数値を出します。黙ってずれやすい部分なので、整合性テストが対象にしています。
 
-画面表示では、macOS はディスプレイの ColorSync プロファイルを通して描きます。Windows がそうするのは Advanced Color がオンのときだけです。オフのときはアプリの画素を sRGB とみなしてそのまま送るので、negaflow が現像キャンバスと印刷プレビューを描く直前にモニターの ICC プロファイルへ変換します。サムネイルとほかの画面要素は sRGB のまま描きます。
+画面表示では、macOS はディスプレイの ColorSync プロファイルを通して描きます。Windows がそうするのは Advanced Color がオンのときだけです。オフのときはアプリの画素を sRGB とみなしてそのまま送るので、negaflow が現像キャンバスと印刷プレビュー（小さなコンタクトシートのタイルを含む）を描く直前に、モニター ICC の 33³ LUT を適用します。モニターを切り替えたときや、ディスプレイ設定を変更してウィンドウへ戻ったときは自動で更新します。サムネイルとほかの画面要素は sRGB のまま描きます。
 
 ### グラフィックス
 
-macOS は現像チェーンを Core Image で動かします。Windows は Direct3D のコンピュートシェーダーで動かし、GPU の経路が使えないときは CPU に切り替えます。
+macOS は現像チェーンを Core Image 上で既定の 16 ビット半精度浮動小数点リニア（`RGBAh`）で処理します。Windows は Direct3D 11 のコンピュートシェーダーで動かし、GPU の経路が使えないときは CPU に切り替え、どちらの経路でも 32 ビット浮動小数点（`RGBA32F`）を使います。
 
 ### ファイルの場所
 
 | | macOS | Windows |
 |---|---|---|
 | アプリ | `/Applications/negaflow.app` | `%LOCALAPPDATA%\Negaflow\App` |
-| ライブラリと設定 | `~/Library/Application Support/negaflow` | `%LOCALAPPDATA%\Negaflow` |
+| カタログ、欠陥サイドカー、レシピ、プリントテンプレート | `~/Library/Application Support/negaflow` | `%LOCALAPPDATA%\Negaflow` |
+| アプリ環境設定 | `UserDefaults`（`~/Library/Preferences/com.songhabin.negaflow.plist`） | `%LOCALAPPDATA%\Negaflow` |
 
 ### インストールと削除
 
-macOS は、アプリを `/Applications` に入れる PKG で配布します。削除はアプリをゴミ箱へ移します。Windows は、管理者権限なしでユーザーフォルダーに書き込むインストーラーで配布します。削除はスタートメニューの `Uninstall negaflow` か設定から行い、アプリのフォルダー、スタートメニューの項目、パッケージの登録が消えます。
+macOS は、アプリを `/Applications` に入れる PKG で配布します。削除はアプリをゴミ箱へ移します。Windows のインストーラーは `%LOCALAPPDATA%\Negaflow\App` に書き込み、署名のない展開済みアプリパッケージの登録（`AllowDevelopmentWithoutDevLicense`）がまだ許可されていない場合にだけ、初回に管理者確認を求めます。削除はスタートメニューの `Uninstall negaflow` か設定から行い、アプリのフォルダー、スタートメニューの項目、パッケージの登録が消えます。
 
 ### コマンドライン
 
-macOS には、スキャナーの検出、ファイルの現像、GrainMend の実行、ベンチマークができる完全な CLI `negaflow` が付いています。Windows の `negaflow-cli.exe` は、1つのファイルでエンジンが何をするかを確かめる小さな診断ツールで、サブコマンドではなくフラグを受け取ります。
+GUI リリースのインストーラーには CLI バイナリは含まれず、各プラットフォームのソースビルドから用意します。macOS では `swift build` でビルドすると、スキャナーの検出、ファイルの現像、GrainMend の実行、ベンチマークができる `negaflow` が作られます。Windows では CMake でビルドすると、1つのファイルでエンジンが何をするかを確かめる小さな診断ツール `negaflow-cli.exe` が作られ、サブコマンドではなくフラグを受け取ります。
 
 ### 署名
 

@@ -8,7 +8,7 @@
 
 `negaflow-mac` の Swift、Python、シェルの連携は、negaflow のために書いたものです。
 
-ネガのカメラ RAW のデコードには、固定した LibRaw のリビジョンを、差し替え可能な `libraw.dylib` としてビルドして使い、CDDL-1.0 で配布します。両プラットフォームとも同じ3つのパッチを当てます。
+ネガのカメラ RAW のデコードには、固定した LibRaw のリビジョンを CDDL-1.0 でビルドして使い、macOS では差し替え可能な `libraw.dylib`、Windows では `libraw.dll`（Microsoft の `vcomp140.dll` を含む）を使います。両プラットフォームとも同じ3つの並列パッチを当てます。
 
 - [`xtrans-parallel-rows.patch`](../../../negaflow-mac/scripts/libraw/xtrans-parallel-rows.patch): `src/demosaic/xtrans_demosaic.cpp` で、Fuji X-Trans のタイルを順番どおりに処理し、タイル内の行を並列に処理し、互いに触れない行のまとまりごとに緑の境界パスを実行します
 - [`mem-image-parallel-rows.patch`](../../../negaflow-mac/scripts/libraw/mem-image-parallel-rows.patch): `src/postprocessing/mem_image.cpp` で、出力ビットマップの行を並列にコピーします
@@ -18,7 +18,7 @@
 
 macOS では、LLVM OpenMP(libomp 20.1.8、Apache License v2.0 with LLVM Exceptions)をライブラリに静的にリンクします。アプリには、ソースアーカイブ、パッチ、ビルドスクリプト、著作権とライセンスのファイルが `Contents/Resources/licenses/libraw/` に入っています。`native-preview-bridge.cpp`(Negaflow contributors、CDDL-1.0)には、ピクセル単位の3つのループを並列に動かしながら出力がバイト単位で同一になる LibRaw のサブクラスと、デコーダーのパッチが呼ぶ並列ハフマンデコーダーがあります。LibRaw のソースは Apache のソースツリーに混ぜません。
 
-Windows も同じ上流のリビジョンとパッチを使います。Windows の `native-preview-bridge.cpp`(CDDL-1.0)は、リニア DNG 向けの Windows 専用の関数を加え、そのほかの構成要素は [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md) に記録しています。テスト専用の `CameraNativeRaw.dng` は raw.pixls.us の2204番のエントリーにある CC0-1.0 の資料で、隣にある出どころの JSON で特定でき、アプリからは除外します。補足の告知ファイルがなければ、ビルドとパッケージングの段階は警告して続行し、上流のライセンスファイルと対応するソースは含めたままにします。
+Windows も同じ上流のリビジョンと共通の3つのパッチを使い、さらに `Makefile.msvc` に `native-preview-bridge-msvc.patch` を当てます。Microsoft のオプションの WIC Raw Image Extension が入っていないときは、ネガではない通常のカメラ RAW のフォールバックにも `libraw.dll` を使います。Windows の `native-preview-bridge.cpp`(CDDL-1.0)は、リニア DNG 向けの Windows 専用の関数を加え、そのほかの構成要素は [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md) に記録しています。テスト専用の `CameraNativeRaw.dng` は raw.pixls.us の2204番のエントリーにある CC0-1.0 の資料で、隣にある出どころの JSON で特定でき、アプリからは除外します。補足の告知ファイルがなければ、ビルドとパッケージングの段階は警告して続行し、上流のライセンスファイルと対応するソースは含めたままにします。
 
 フィルムの反転には、濃度、トウ、直線部、ショルダーという公表された感光測定の考え方を使います。カーブと係数は、第三者のプログラムの式や定数ではなく、negaflow の4つの測光アンカーから出したものです。式と導出は[ネガ反転応答](../reference/PRINT_RESPONSE.md)にあります。
 
@@ -26,10 +26,11 @@ Windows も同じ上流のリビジョンとパッチを使います。Windows �
 
 GrainMend IR は次の順で動きます。
 
-1. RGB と IR の間の整数のずれを自前で推定する。
-2. `log(red)` のビンごとに IR の刈り込み平均を補間して、ノンパラメトリックなシーンの漏れ曲線を作る。
-3. シーンの漏れを引き、局所平均に対する相対コントラストを計算する。
-4. 刈り込んだ局所ノイズのしきい値、連結成分、方向から欠陥マスクを作る。
+1. 全体の整数 RGB↔IR オフセットを開始シードとして推定する（信頼できない場合は強い候補から得た粗い合意オフセットへ切り替える）。
+2. 外周につながる暗いフィルムホルダーと余白の縁を除外する。
+3. 局所のモルフォロジー閉処理ベースラインを作り、光学濃度 `log(baseline / value)` を計算して広域の色素ゴーストを打ち消す。
+4. スキャンの中央値・四分位範囲（IQR）の濃度分布から面積重み付きの有意度で候補を取り出し、各欠陥を可視赤チャンネル（`>= 4σ`）で局所確認して欠陥ごとの減衰を推定する。
+5. 部分的に遮られた画素は透過率の割り算（`raw ÷ (1 - attenuation)`）で復元し、不透明な核（減衰 `>= 50%`）だけを RGB パッチ修復に回す。
 
 このコードは、SANE の IR 補正をリンクも移植もしていません。公表された論文や製品ページは、フィルムと赤外線の物理的な限界を確かめるための背景資料です。方法や原理を取り入れることと、コードの表現を写すことは別です。米国著作権局も、方法・システムとその具体的な表現との間に同じ線を引いています。
 
@@ -61,7 +62,7 @@ GrainMend IR は次の順で動きます。
 
 TIFF ファイルから見えるカメラと色空間のメタデータは、撮影とエンコードで生じたコンテナの情報です。スキャナープロファイルの `sourceProfiles` は、ビルド時に使ったローカルの測定資料の論理パスで、その元の写真は配布しません。
 
-FILM-R v2 の資料は、品質測定のときだけダウンロードします。画像がリポジトリやアプリに入ることはありません。DOI のバージョン、CC BY 4.0、ファイルサイズ、ハッシュは [`Config/defect-corpus-film-r-v2.json`](../../../negaflow-mac/Config/defect-corpus-film-r-v2.json) に固定されています。
+FILM-R v2 の資料は、品質測定のときだけダウンロードします。画像がリポジトリやアプリに入ることはありません。[`Config/defect-corpus-film-r-v2.json`](../../../negaflow-mac/Config/defect-corpus-film-r-v2.json) は記事のバージョン、DOI、CC BY 4.0 ライセンス、ペア数、総バイト数を固定し、`fetch-film-r.py` はダウンロード時に Figshare のメタデータにある各ファイルサイズと MD5 ダイジェストを照合します。
 
 ## DNG の書き出し
 
@@ -90,16 +91,16 @@ Adobe は写真の遠近の自動補正に関する米国特許を 2 件、有�
 
 ## 名前と相互運用性
 
-フィルム、スキャナー、色空間、XMP の名前空間、製品名は、対象を指し、ファイルの相互運用性を保つために使います。Windows のエンジンが合成する出力 ICC プロファイルは、説明的な名前(`"Negaflow Compatible P3"`、`"Compatible with Adobe RGB (1998)"`)と `CC0 1.0 Universal` の宣言を使うので、書き出したユーザーの画像にプロファイルの著作権の制約は付きません。商標の所有や提携は主張しません。全体の範囲は [`TRADEMARKS.md`](../../../TRADEMARKS.md) にあります。
+フィルム、スキャナー、色空間、XMP の名前空間、製品名は、対象を指し、ファイルの相互運用性を保つために使います。Windows のエンジンが合成する出力 ICC プロファイルは、説明的な名前(`"Negaflow Compatible P3"`、`"Compatible with Adobe RGB (1998)"`、`"Linear sRGB"`)と `CC0 1.0 Universal` の宣言を使うので、書き出したユーザーの画像にプロファイルの著作権の制約は付きません。商標の所有や提携は主張しません。全体の範囲は [`TRADEMARKS.md`](../../../TRADEMARKS.md) にあります。
 
 ## 自動検査と、見落とすもの
 
-`python3 scripts/ci/verify-provenance.py`(`negaflow-mac/` で実行)は、次のどれかがあると失敗します。
+`python3 scripts/ci/verify-provenance.py`(`negaflow-mac/` で実行)は作業ツリーと到達可能な git 履歴の両方を調べ、次のどれかがあると失敗します。
 
 - 登録されていない、またはハッシュが変わった同梱リソース
-- アプリの中の C/C++/Objective-C、外部パッケージ、バイナリのアーカイブ、ベンダーのツリー
+- 例外パス（文書化された Windows のネイティブソース・テスト・マニフェストのパスと、2つの CDDL `native-preview-bridge.cpp` ブリッジ）の外にある C/C++/Objective-C、外部パッケージ、バイナリのアーカイブ、ベンダーのツリー
 - アプリのコードの中の SANE 専用の名前や、確認済みの外部実装の痕跡
 - リリーススクリプトが SANE プラグインをアプリに入れるようになる変更
 - リポジトリの中の FILM-R の画像資料
 
-この検査は、現在のツリーにある明らかな退行を止めます。インターネット全体との類似、写真やプロファイルの入力の権利、特許、商標、どこかの国での法的な結論は証明しません。出どころが変わったら、申告をハッシュと併せて見直してください。不明なときは、そのリソースをリリースから外し、権利者か専門家に尋ねてください。
+この検査は、現在のツリーと到達可能な git 履歴にある明らかな退行を止めます。インターネット全体との類似、写真やプロファイルの入力の権利、特許、商標、どこかの国での法的な結論は証明しません。出どころが変わったら、申告をハッシュと併せて見直してください。不明なときは、そのリソースをリリースから外し、権利者か専門家に尋ねてください。

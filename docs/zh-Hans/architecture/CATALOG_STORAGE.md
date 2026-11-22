@@ -2,25 +2,27 @@
 
 [文档首页](../README.md)
 
-主存储是 `library.sqlite`。旧的 `library.json` 只用来导入旧目录或写诊断文件。没有任何地方同时更新两者，所以也没有 dual-write。备份和保存归档使用可移植的 JSON，不包含正在运行的 SQLite 文件。
+主存储是 `library.sqlite`。旧的 `library.json` 只用来导入旧目录；此外，诊断功能写的是脱敏后的支持包，不是 `library.json`。同时，没有任何地方同时更新两者，所以也没有 dual-write。其中，macOS 的备份和 BagIt 归档使用可移植 JSON（`version 7`），不包含正在运行的 SQLite 文件。而 Windows 使用自己的架构版本（`version 2`），把 `library.sqlite` 打包进 ZIP 格式的 `.negaflowarchive`，因此备份在同一平台的机器之间迁移。
 
 | 类别 | 格式 | 用途 |
 |---|---|---|
 | 主目录 | SQLite | 运行应用、搜索、保存、恢复 |
 | 旧资料 | JSON | 导入已有目录 |
-| 备份和保存归档 | JSON 形式 | 迁移到另一台电脑、恢复 |
+| 备份和保存归档 | 可移植 JSON（`version 7`，macOS）/ 含 `library.sqlite` 的 ZIP（`version 2`，Windows） | 同平台跨机迁移、恢复 |
 
 > [!IMPORTANT]
 > 目录缺失或损坏时，不会以空图库启动。在找到完好的世代之前，原目录和照片文件都不会被改动。
 
 ## 实测
 
-在同一台 Mac 上用下面的命令比较了 JSON 和 SQLite。
+在同一台 Mac 上，在 `negaflow-mac/` 目录下用下面的命令比较了 JSON 和 SQLite。
 
 <details>
 <summary>测量命令</summary>
 
 ```bash
+cd negaflow-mac
+
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   NEGAFLOW_CATALOG_PERF_REPORT="$PWD/build/performance/catalog.json" \
   bash scripts/performance/run-catalog.sh
@@ -61,23 +63,23 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 
 - 大量行的改动可以放进一个事务。
 - 借助行和索引，只读需要的画幅。
-- SQLite C API 随 macOS 提供，无需新增软件包。
+- macOS 自带 SQLite C API，无需新增软件包；Windows 使用 `Microsoft.Data.Sqlite`。
 - 恢复规则保持不变：损坏的存储不会被当作空图库。
 
 当前使用 `journal_mode=DELETE` 和 `synchronous=FULL`。改用 WAL，就要把数据库和 `-wal` 文件当作一个整体处理。运行中的数据库不会被直接复制，只有连接关闭后通过检查的主文件才会成为恢复副本。
 
 ## 代码中的分工
 
-- `CatalogStore`：连接、事务、架构版本、完整性检查
-- `CatalogMigration`：只读的 JSON 导入和按版本转换
-- 实体表：画幅、原始文件、排序、卷、文件夹、收藏集、搜索、扫描任务
-- `LibraryBackupStore`：可移植的 JSON 备份、恢复前检查、恢复信息
+- `LibraryCatalogSQLiteStore`（Windows：`SqliteCatalogStore` 和 `SqliteCatalogSchema`）：连接、事务、架构版本、完整性检查
+- `LibraryCatalogSQLiteMigration` 和 `LibraryCatalogFile`（Windows：`CatalogVersionMigration`）：只读的旧版 JSON 导入和按版本升级
+- 实体表：`catalog_metadata` 加上 9 张实体表（`folders`、内嵌原始文件引用的 `frames`、`rolls`、`scan_sessions`、`scan_roll_assignments`、`manual_collections`、`smart_collections`、`saved_searches`、`stacks`），按各表的 `position` 列排序
+- `LibraryBackupStore`（Windows：`CatalogBackupStore`）：备份和恢复
 
 显影值和带版本的编辑历史按实体存为 JSON BLOB。源像素、缩略图和 GrainMend 缓存不放进数据库。用于搜索和排序的列与索引还不够，所以启动时会把整个目录加载进内存，因此目前 SQLite 的读取时间和 JSON 相近。下一步是用索引查找，只读用到的列和画幅。
 
 ## 迁移旧 JSON
 
-1. 检查 JSON 版本和 `LibraryCatalogHealth`。
+1. 检查 JSON 版本和 `LibraryCatalogHealthInspector`。
 2. 创建临时 SQLite。
 3. 在一个事务里迁移资料。
 4. 对比 ID、顺序、归属和任务。
@@ -85,7 +87,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 6. 把 JSON 保留为恢复世代。
 7. 切换到 SQLite 作为主存储。
 
-任何一步失败，现有 JSON 都保持原样，也不会以空目录启动。即使中间文件和标记被遗留，也只有在源文件 SHA-256 与两个目录都一致时才继续工作。迁移后不会自动回退到 JSON。为了防止旧版应用修改 JSON 而把存储分成两份，会检查最低读取版本和迁移标记。
+任何一步失败，现有 JSON 都保持原样，也不会以空目录启动。`library.sqlite-migration.json` 只在迁移进行时存在，用于在中断后继续迁移，且只在源文件 SHA-256 与两个目录都一致时才恢复，迁移完成后即删除。完成后，`library.json` 会移至 `library.pre-sqlite-<sha12>.json`，且不会自动回退到 JSON。`minimumReaderVersion` 用于阻止旧版本构建打开更新的目录。
 
 ## 来源
 

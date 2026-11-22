@@ -10,7 +10,7 @@ GrainMend répare les poussières, micro-trous, rayures et dégâts d'émulsion 
 | Guidé | Une zone que vous choisissez | Examine de près, jusqu'aux petits points et aux défauts discrets |
 | Pinceau | L'endroit que vous peignez | Reporte la structure et la texture environnantes |
 | Tampon de clonage | Un point source que vous choisissez | Copie de vrais pixels sources à un décalage fixe |
-| IR | Le canal infrarouge du scanner | L'IR trouve l'emplacement, le RVB reconstruit les pixels |
+| IR | Le canal infrarouge du scanner | Divise directement l'atténuation partielle (`raw ÷ (1 − attenuation)`, gain plafonné à 2×) ; les cœurs opaques (`>= 50%`) passent au réparateur de pièces RVB |
 
 L'écran de développement propose automatique, guidé, pinceau et tampon de clonage. L'IR peut être activé à l'étape de numérisation quand le module signale la capacité, et une fois la numérisation faite, son résultat rejoint la même liste de calques GrainMend.
 
@@ -60,13 +60,13 @@ Vous peignez vous-même l'endroit à réparer. Il ne recouvre pas ce que vous av
 
 ### Tampon de clonage
 
-Un clic avec `⌥` choisit le point source, puis vous dessinez sur la cible. Il n'utilise aucune détection automatique : il garde le décalage entre les deux points et copie les vrais pixels.
+Un clic avec `⌥` sur Mac (`Alt`-clic sous Windows) choisit le point source, puis vous dessinez sur la cible. Il n'emploie aucune détection automatique : il garde le décalage entre les deux points et copie les vrais pixels.
 
 L'historique des retouches conserve le diamètre, la dureté, les coordonnées et le décalage, et s'applique toujours aux mêmes coordonnées d'origine après une rotation, un retournement ou un recadrage. Les décalages sont arrondis au pixel entier, et rien en dehors de l'image n'est appliqué.
 
 ### IR
 
-N'est utilisé que lorsque le module fournit un vrai canal IR dont la taille et la zone correspondent au RVB. L'IR est la matière qui localise le défaut. Les pixels finaux viennent du même réparateur que pour le RVB.
+N'est utilisé que lorsque le module fournit un vrai canal IR dont la taille et la zone correspondent au RVB. Pour les pixels partiellement occultés, GrainMend IR divise directement l'atténuation optique (`raw ÷ (1 − attenuation)`, gain plafonné à 2×) afin de préserver les détails et le grain sous-jacents. Seuls les cœurs opaques fortement occultés (`>= 50%` d'atténuation) sont confiés au réparateur de pièces RVB.
 
 ## Trouver les défauts en RVB
 
@@ -124,22 +124,25 @@ Même si l'on sait qu'un modèle a de l'IR, il n'est pas utilisé à l'écran ni
 
 ### Alignement
 
-L'optique et la lecture du capteur peuvent laisser le RVB et l'IR décalés de quelques pixels. Une recherche large, puis une recherche étroite, fixent le décalage. La confiance du pic et le fait qu'il tombe au bord de la plage de recherche sont tous deux consignés.
+L'optique et la lecture du capteur peuvent laisser le RVB et l'IR décalés de quelques pixels. L'alignement global met d'abord en correspondance les points de défaut IR avec les zones sombres locales du canal rouge, et se rabat au besoin sur la corrélation de texture de fuite IR. La confiance du pic et le fait qu'il tombe au bord de la plage de recherche sont tous deux consignés.
 
-Une confiance faible, ou un meilleur point coincé au bout de la recherche, ne compte pas comme un succès.
+Ce décalage global sert de graine initiale indicative plutôt que de barrière d'échec bloquante. Quand l'alignement global a une confiance faible ou atteint la limite de recherche, la détection part de `(0, 0)`, vote un décalage de consensus grossier à partir des candidats forts, puis aligne et confirme chaque défaut individuellement contre le canal rouge visible (`>= 4σ`). Tout candidat qui ne peut pas être confirmé contre le canal rouge est écarté.
 
 ### Soustraction du motif de scène
 
-Les colorants et la densité du film peuvent transparaître dans l'IR. La luminosité logarithmique du canal rouge est découpée en 64 intervalles, et dans chacun on prend la moyenne après avoir écarté les 10 % les plus hauts et les plus bas des valeurs IR. Les intervalles vides sont interpolés à partir de leurs voisins et lissés par un court noyau symétrique. Soustraire cette courbe non paramétrique réduit le motif de scène, et la poussière sombre et clairsemée reste hors des statistiques des intervalles.
+Les colorants et la densité du film peuvent transparaître dans l'IR. GrainMend IR sépare les défauts de la scène en quatre étapes :
 
-Le reste est converti en contraste relatif à la moyenne locale. Pour qu'un grand défaut ne relève pas le plancher de bruit environnant, l'entrée de bruit est écrêtée au contraste de détection minimal avant le calcul du seuil adaptatif. Les zones sombres connexes au niveau du porte-film et du bord du film sont retirées du masque.
+1. Exclure d'abord par remplissage (flood-fill) les régions sombres du porte-film et des bordures (rebate) reliées au bord de l'image.
+2. Construire une ligne de base locale par fermeture morphologique en niveaux de gris (`localBaseline`). Les défauts étroits sont franchis, tandis que le fantôme de scène large dû au colorant cyan reste dans la ligne de base.
+3. Convertir les valeurs IR en densité optique `log(baseline / value)`.
+4. Estimer le plancher du film propre et `σ` à partir de la médiane et de l'écart interquartile (IQR) de la numérisation, rassembler les candidats dont la significativité pondérée par la surface vérifie `Σ(density − floor) ≥ mσ·√area`, confirmer chacun localement contre le canal rouge visible (`>= 4σ`), puis étendre les masques confirmés par hystérésis.
 
 ### Conditions de sécurité
 
 - Un masque anormalement large n'est pas appliqué.
-- Un alignement qui n'a pas pu être confirmé n'est pas appliqué.
-- Il n'est pas appliqué automatiquement au noir et blanc argentique.
-- Les positifs couleur et les émulsions spéciales ne sont pas supposés sûrs sans mesure.
+- Tout candidat qui ne peut pas être aligné et confirmé localement contre le canal rouge visible (`>= 4σ`) est écarté.
+- L'IR automatique est activé pour les films couleur à colorants (négatif couleur et diapositive/positif couleur) et bloqué pour les films noir et blanc argentiques.
+- Kodachrome et les émulsions spéciales ne pouvant pas être détectés à partir du seul `FilmType`, désactivez l'IR manuellement au besoin.
 
 Les outils IR du commerce imposent aussi leurs propres limites au noir et blanc ordinaire et à Kodachrome :
 
@@ -177,18 +180,18 @@ Le cache GrainMend est un fichier dérivé, destiné à l'affichage rapide et au
 - Les copies pour l'annulation partagent le stockage tant que rien n'a vraiment changé.
 - Sous pression mémoire, les images reconstructibles et le cache des pièces sont abandonnés.
 
-Les durées réelles dépendent de la résolution, du nombre de défauts, de la taille de la zone et du Mac.
+Les durées réelles dépendent de la résolution, du nombre de défauts, de la taille de la zone et du matériel.
 
-Mesuré le 2026-07-25 sur un build Release, Mac14,3, arm64, 24 Gio de mémoire, macOS 26.5 :
+Mesuré le 2026-07-25 sur un build Release macOS, Mac14,3, arm64, 24 Gio de mémoire, macOS 26.5 :
 
 | Chemin | Entrée | Résultat |
 |---|---|---:|
 | Détection guidée | 1600×1600, 25 grains de poussière | 0,35 s, 25 détectés |
 | Détection ROI partielle | 1600×1600 | 0,38 s |
 | Charge guidée dense | 1280×960, 8 images × 3 passages | médiane 0,423 s, p95 0,488 s, max 0,526 s |
-| Détection IR | 6000×4000, 24 MP | 1,042 s, pic de croissance mémoire 249,2 Mio |
+| Détection IR (avant la réécriture d'août 2026) | 6000×4000, 24 MP | 1,042 s, pic de croissance mémoire 249,2 Mio |
 
-Sur 24 passages de charge dense, la couverture de masque la plus basse aux emplacements des défauts était de 99,80 % et l'erreur résiduelle moyenne la plus haute de 2,70/255. Ce sont des mesures de régression sur une entrée synthétique. Elles ne promettent aucune durée sur un autre Mac ni sur un vrai film.
+La ligne de détection IR ci-dessus a été mesurée avant la réécriture d'août 2026 introduisant la ligne de base par fermeture et la récupération d'atténuation. Sur 24 passages de charge dense, la couverture de masque la plus basse aux emplacements des défauts était de 99,80 % et l'erreur résiduelle moyenne la plus haute de 2,70/255. Ce sont des mesures de régression macOS sur une entrée synthétique ; Windows exécute le même pipeline GrainMend RVB et IR en C++ (`negaflow-windows/src/Native/imaging/`). Aucun de ces chiffres ne promet une durée sur une autre machine ni sur un vrai film.
 
 ## Banc d'essai
 
@@ -206,7 +209,7 @@ swift run -c release negaflow defect-bench <input-dir> \
   --out <report-dir>
 ```
 
-La régression RVB utilise les 44 paires abîmé/restauré par un expert de FILM-R v2 :
+La régression RVB emploie les 44 paires abîmé/restauré par un expert de FILM-R v2 :
 
 - Jeu de données : Authentically damaged & manually restored film scans (FILM-R v2)
 - Auteur : Daniela Ivanova
@@ -248,11 +251,13 @@ Certains tests de performance ne tournent que si une variable d'environnement es
 
 ## Où se trouve le code
 
-- `Sources/Chromabase/DefectRemoval/`
-- `Sources/negaflowApp/Features/Defects/`
-- `Sources/negaflowApp/Features/Develop/Inspector/Tools/DefectControlsSection.swift`
-- `Sources/negaflowCLI/Commands/CLI+DefectBenchCommand.swift`
-- `Tests/ChromabaseTests/Defect*.swift`
-- `Tests/negaflowAppTests/Defect*.swift`
-- `Config/defect-corpus-film-r-v2.json`
-- `scripts/defect-corpus/`
+- `negaflow-mac/Sources/Chromabase/DefectRemoval/`
+- `negaflow-mac/Sources/negaflowApp/Features/Defects/`
+- `negaflow-mac/Sources/negaflowApp/Features/Develop/Inspector/Tools/DefectControlsSection.swift`
+- `negaflow-mac/Sources/negaflowCLI/Commands/CLI+DefectBenchCommand.swift`
+- `negaflow-mac/Tests/ChromabaseTests/Defect*.swift`
+- `negaflow-mac/Tests/negaflowAppTests/Defect*.swift`
+- `negaflow-mac/Config/defect-corpus-film-r-v2.json`
+- `negaflow-mac/scripts/defect-corpus/`
+- `negaflow-windows/src/Native/imaging/defect_*.cpp`
+- `negaflow-windows/src/Native/imaging/infrared_*.cpp`

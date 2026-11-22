@@ -2,25 +2,27 @@
 
 [Docs home](../README.md)
 
-The main store is `library.sqlite`. The older `library.json` is used only to import an older catalog or to write a diagnostic file. Nothing updates both at once, so there is no dual-write. Backups and preservation archives use portable JSON and exclude the running SQLite file.
+The main store is `library.sqlite`. The older `library.json` is used only to import an older catalog; diagnostics write redacted support bundles rather than `library.json`. Nothing updates both at once, so there is no dual-write. On macOS, backups and BagIt archives use portable JSON (`version 7`) and exclude the running SQLite file. On Windows, the catalog uses schema `version 2` and packs `library.sqlite` into a ZIP `.negaflowarchive`, so backups move between machines on the same platform.
 
 | Kind | Format | Used for |
 |---|---|---|
 | Main catalog | SQLite | Running the app, search, save, recovery |
 | Older material | JSON | Importing an existing catalog |
-| Backup and preservation archive | JSON form | Moving to another machine, restoring |
+| Backup and preservation archive | Portable JSON (`version 7`, macOS) or ZIP with `library.sqlite` (`version 2`, Windows) | Moving between machines on the same platform, restoring |
 
 > [!IMPORTANT]
 > A missing or damaged catalog does not start an empty library. The original catalog and the photo files stay untouched until a healthy generation is found.
 
 ## Measurements
 
-JSON and SQLite were compared on the same Mac with these commands.
+JSON and SQLite were compared on the same Mac with these commands, run from `negaflow-mac/`.
 
 <details>
 <summary>Measurement commands</summary>
 
 ```bash
+cd negaflow-mac
+
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   NEGAFLOW_CATALOG_PERF_REPORT="$PWD/build/performance/catalog.json" \
   bash scripts/performance/run-catalog.sh
@@ -61,23 +63,23 @@ A backup does not pull the whole database into `Data`. It makes a temporary repl
 
 - Many row changes fit in one transaction.
 - Rows and indexes let it read only the frames it needs.
-- The SQLite C API ships with macOS, so no new package is needed.
+- On macOS, the SQLite C API ships with the OS, so no new package is needed; Windows uses `Microsoft.Data.Sqlite`.
 - The recovery rule survives: a damaged store is never treated as an empty library.
 
 It runs with `journal_mode=DELETE` and `synchronous=FULL`. WAL would mean handling the database and the `-wal` file as one unit. The running database is not copied directly. Only the main file, checked after the connection closes, becomes a recovery copy.
 
 ## Who does what in the code
 
-- `CatalogStore`: connection, transactions, schema version, integrity checks
-- `CatalogMigration`: read-only JSON import and per-version conversion
-- Entity tables: frames, originals, ordering, rolls, folders, collections, search, scan jobs
-- `LibraryBackupStore`: portable JSON backup, restore pre-checks, recovery information
+- `LibraryCatalogSQLiteStore` (Windows: `SqliteCatalogStore` and `SqliteCatalogSchema`): connection, transactions, schema version, integrity checks
+- `LibraryCatalogSQLiteMigration` and `LibraryCatalogFile` (Windows: `CatalogVersionMigration`): read-only legacy JSON import and per-version upgrades
+- Entity tables: `catalog_metadata` plus 9 entity tables (`folders`, `frames` with embedded original references, `rolls`, `scan_sessions`, `scan_roll_assignments`, `manual_collections`, `smart_collections`, `saved_searches`, `stacks`), ordered by each table's `position` column
+- `LibraryBackupStore` (Windows: `CatalogBackupStore`): backups and restores
 
 Develop values and versioned edit history are stored as a JSON BLOB per entity. Source pixels, thumbnails and GrainMend caches stay out of the database. Search and sorting still lack columns and indexes, so the whole catalog loads into memory at startup, and SQLite read time therefore looks like JSON. The next step is index lookups that read only the columns and frames in use.
 
 ## Moving older JSON across
 
-1. Check the JSON version and `LibraryCatalogHealth`.
+1. Check the JSON version and `LibraryCatalogHealthInspector`.
 2. Create a temporary SQLite.
 3. Move the material in one transaction.
 4. Compare IDs, order, membership and jobs.
@@ -85,7 +87,7 @@ Develop values and versioned edit history are stored as a JSON BLOB per entity. 
 6. Keep the JSON as a recovery generation.
 7. Switch to SQLite as the main store.
 
-If any step fails, the existing JSON stays as it is and an empty catalog is never started. Even when intermediate files and markers are left behind, work continues only when the source SHA-256 and both catalogs agree. After migration there is no automatic fallback to JSON. The minimum read version and the migration marker are checked so that an older app cannot edit the JSON and split the store in two.
+If any step fails, the existing JSON stays as it is and an empty catalog is never started. The marker `library.sqlite-migration.json` exists only while migration is running so an interrupted move can resume when the source SHA-256 and both catalogs agree, and it is deleted on completion. Once finished, `library.json` is moved to `library.pre-sqlite-<sha12>.json` and there is no automatic fallback to JSON. Checking `minimumReaderVersion` prevents older builds from opening newer catalogs.
 
 ## Sources
 

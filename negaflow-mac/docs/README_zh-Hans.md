@@ -32,7 +32,7 @@
 
 运行需要：
 
-- macOS 14.0 及以上（支持 macOS 14、26、27）
+- macOS 14.0 及以上（支持 macOS 14、15、26、27）
 - Apple Silicon 或 Intel
 - 8 GB 内存，中画幅建议 16 GB
 
@@ -54,7 +54,7 @@
 
 应用是 ad hoc 签名，没有经过公证，所以 macOS 会拦截第一次启动。在系统设置的隐私与安全性里点「仍要打开」。
 
-图库和设置在 `~/Library/Application Support/negaflow`。
+图库目录、缺陷旁注文件、配方和印相模板存放在 `~/Library/Application Support/negaflow`，应用偏好设置保存在 `UserDefaults`（`~/Library/Preferences/com.songhabin.negaflow.plist`）。
 
 应用在启动时向 GitHub 查询一次最新发布。有新版本时，右上角 ⋯ 菜单最下方会出现“更新到 X.Y.Z 版”。点击后会打开发布页面，并按发布附带的 `SHA256SUMS.txt` 校验适合这台 Mac 的 PKG，再保存到“下载”文件夹。安装需要你自己完成。已是最新时，该项显示“当前已是最新版本。”，点击会打开项目页面。离线等原因导致查询失败时，该项不出现。
 
@@ -73,11 +73,10 @@ bash scripts/run-app.sh build
 
 `run-app.sh` 调用 `xcodebuild`，组装应用包并在本机签名。只处理引擎或 CLI 时，`swift build` 就够了。
 
-发布文件：
+发布文件（构建 `arm64` 和 `universal` 应用包，并调用 `create-release-artifacts.sh` 生成 PKG、DMG、ZIP、dSYM 和 `SHA256SUMS.txt`）：
 
 ```bash
-bash negaflow-mac/scripts/build-release.sh
-bash negaflow-mac/scripts/create-release-artifacts.sh
+bash scripts/build-release.sh
 ```
 
 ## 检查
@@ -89,7 +88,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 # 应用的 Release 构建
 bash scripts/run-app.sh build
 
-# 仓库的全部检查
+# 静态检查与 Swift CI 检查（构建 GUI 测试设 NEGAFLOW_CI_GUI=1，运行设 NEGAFLOW_CI_GUI_RUN=1）
 bash scripts/ci-gate.sh
 ```
 
@@ -103,7 +102,7 @@ CLI 接受同样的 ID：`--target classic`、`--target dye-transfer`、`--targe
 
 ## 命令行
 
-macOS 版自带 CLI。
+macOS Swift 包内置通过 `swift build` 构建的 CLI 目标。
 
 ```bash
 swift build
@@ -136,7 +135,7 @@ swift build
 |---|---|
 | `Chromabase` | Chroma Engine、GrainMend、配置文件、导出 |
 | `ScannerKit` | 扫描仪能力检查与插件连接 |
-| `negaflowApp` | 图库、显影、扫描、导出界面 |
+| `negaflowApp` | 图库、显影、印相、扫描、导出界面 |
 | `negaflowCLI` | 显影、扫描、基准测试、自检命令 |
 
 ## 基准图像

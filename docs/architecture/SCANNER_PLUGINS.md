@@ -22,30 +22,33 @@ There is no SANE implementation in this repository. That code lives in a separat
 
 ## How it connects
 
-The screen talks to `ScannerKit`, which routes to one of three backends:
+On macOS, the screen talks to `ScannerKit`, which routes to one of three `ScannerBackend` implementations:
 
 1. `ExternalScannerBackend`, which runs the installed external plugin.
 2. `MockScannerBackend`, which makes synthetic images for development.
 3. `InactiveImageCaptureBackend`, which is inactive for now.
 
-The screen sees only `ScannerBackend`. A plugin device ID appears in the app as `plugin:<pluginId>:<deviceId>`.
+On Windows, the shell routes to `ScannerPluginGateway` for external plugins or `SimulatedScannerGateway` when demo mode is selected.
+
+A plugin device ID appears in the app as `plugin:<pluginId>:<deviceId>`.
 
 When the plugin runs, `plugin:<pluginId>:` is stripped and only the plugin's own device ID is sent.
 
 ## Finding plugins
 
-The default folder is `~/Library/Application Support/negaflow/Plugins/<id>/manifest.json`. For tests and local development, `NEGAFLOW_PLUGINS_DIR` points at another folder.
+The default manifest path is `~/Library/Application Support/negaflow/Plugins/<id>/manifest.json` on macOS and `%LOCALAPPDATA%\Negaflow\Plugins\<id>\manifest.json` on Windows. On macOS, `NEGAFLOW_PLUGINS_DIR` can point at another folder for tests and local development.
 
 | Field | Rule |
 |---|---|
 | `schemaVersion` | Exactly `1` today |
-| `protocolVersion` | `1` if omitted; `1` and `2` are supported |
+| `protocolVersion` | `1` if omitted (`1` and `2` supported; Windows requires `2` when scanning) |
 | `id` | Unique plugin ID |
 | `name` | Name shown on screen |
-| `kind` | Plugin kind |
+| `pluginVersion` | Optional plugin version string |
+| `kind` | Defaults to `"scanner"` if omitted; other values are refused |
 | `license` | Distribution license |
 | `homepage` | Project address |
-| `executable` | Path to the executable |
+| `executable` | Relative path inside the plugin directory (no `.`, `..`, leading `/`, symlinks or reparse points) |
 
 `id` is 1 to 64 ASCII characters. The first is a letter or digit and the rest are letters, digits, `.`, `_` or `-`. `:` is the device ID separator, so it is not allowed.
 
@@ -54,15 +57,14 @@ A plugin opens only when the manifest and the executable both check out. Older o
 ### File safety checks
 
 > [!WARNING]
-> If the bytes of the manifest or the executable change, the earlier approval is discarded. Ownership, permissions, symlink status and SHA-256 are checked again right before running.
+> If the bytes of the manifest or the executable change, the earlier approval is discarded. File safety and SHA-256 hashes are checked again right before running.
 
-- The plugin folder, manifest and executable have to be owned by the current user.
-- Writable by group or others is refused.
-- Symlinks are refused.
-- The SHA-256 of the manifest and the executable is recorded.
+- On macOS, the plugin folder, manifest and executable must be owned by the current user, group or other write permissions are refused, and symlinks are refused.
+- On Windows, reparse points are refused on the plugin folder, manifest and executable, and the executable path must stay inside the plugin directory.
+- The SHA-256 of the manifest and the executable is recorded on both platforms.
 - The user approves it the first time it is used.
 - Changed file bytes void the approval.
-- The IDs are recomputed right before running.
+- The hashes and IDs are recomputed right before running.
 
 ## Commands
 
@@ -72,7 +74,7 @@ The plugin runs as its own process.
 |---|---|
 | `detect` | JSON device list |
 | `capabilities <deviceId>` | JSON capability list. Can take the device ID, vendor and model JSON reported by `detect` on stdin |
-| `scan` | Settings JSON on stdin; progress NDJSON and a final result on stdout |
+| `scan` (macOS) / `scan <deviceId>` (Windows) | Settings JSON on stdin; progress NDJSON and a final result on stdout |
 
 ## Scan protocol
 
@@ -82,7 +84,7 @@ The older compatibility spec. Requests and NDJSON have no `protocolVersion`, `re
 
 ### Version 2
 
-Used only when the manifest carries `"protocolVersion": 2`.
+Used only when the manifest carries `"protocolVersion": 2`. Windows requires protocol v2 when running a scan.
 
 A request contains:
 
@@ -105,14 +107,14 @@ All of these fail closed:
 - Extra output after the final event
 - Invalid UTF-8
 
-A v2 spec violation ends the plugin immediately instead of waiting for the usual time limit.
+On macOS, a mid-stream v2 spec violation ends the plugin immediately instead of waiting for the usual time limit. On Windows, the v2 event stream is validated after the process exits.
 
 ### Settings that were actually applied
 
 A v2 `result` must carry `appliedOptions`:
 
 - `deviceID`, `resolutionDPI`, `bitDepth`, `colorMode`, `filmType`
-- `scanArea`: `originXMM`, `originYMM`, `widthMM`, `heightMM`, the area the plugin actually sent to the backend. A plugin may adjust it by less than 1 mm to work around a backend that miscomputes the scan size. The app checks the returned pixel size against this area, so copying the request would defeat the check.
+- `scanArea`: `originXMM`, `originYMM`, `widthMM`, `heightMM`, the area the plugin actually sent to the backend. `originXMM`, `originYMM` and `widthMM` must match the request, and only `heightMM` may differ by less than 1 mm to work around a backend that miscomputes the scan height. The app checks the returned pixel size against this area, so copying the request would defeat the check.
 - `infrared`, `multiExposure`
 - `hardwareExposureTime`, `brightnessAdjustment`, `contrastAdjustment`
 - `outputRawTIFF`
@@ -132,16 +134,17 @@ The preview for this workflow asks for an explicit resolution, the closest suppo
 A flatbed scan with a chosen position turns on only when the plugin reports all of these:
 
 - Preview
-- `supportsPositionedScanArea`
-- `scanOriginXRange` and `scanOriginYRange` in mm
-- `scanWidthRange` and `scanHeightRange` in mm
+- `supportsScanArea: true` and `supportsPositionedScanArea: true`
+- Physical scan area units (`scanAreaUnit != "pixel"`)
+- `scanOriginXRange` and `scanOriginYRange` in mm with non-negative origins and valid bounds
+- `scanWidthRange` and `scanHeightRange` in mm with positive minimum and maximum bounds
 
 The app expands the chosen area outward to the plugin's step size and makes one full scan job per area. It never guesses this from a model name. Older plugins without the optional fields keep the fixed frame flow.
 
 ## Process limits and cancellation
 
-- stdout cap: 4 MiB
-- stderr cap: 1 MiB
+- macOS caps: stdout 4 MiB, stderr 1 MiB; timeouts are 90 s for `detect`, 180 s for `capabilities` and 2 hours for `scan`, with immediate termination on a mid-stream v2 spec violation.
+- Windows caps: stdout 4 MiB for `detect` and `capabilities`, 8 MiB for `scan` (256 KiB per stdout line), stderr 512 KiB; timeouts are 15 s for `detect`, 180 s for `capabilities` and 2 hours for `scan`, with v2 stream validation after process exit.
 
 Going over the cap ends the process and fails. During cleanup, only the bytes that already arrived are read. Even if a child process inherited the pipe, nothing waits for EOF.
 
@@ -149,20 +152,20 @@ Going over the cap ends the process and fails. During cleanup, only the bytes th
 
 ## Publishing the scan file
 
-The plugin writes the source image to exactly the `outputPath` the app gave it, and returns the same path in the result. That path is a temporary location on the same disk as the final folder. The flow:
+The plugin writes the source image to exactly the `outputPath` the app gave it, and returns that path in the result's `path` field. That path is a temporary location on the same disk as the final folder. The flow:
 
 1. The app sends the settings JSON and `outputPath` to the plugin.
 2. The plugin writes the scan file to the temporary folder.
-3. The plugin returns a result with the same `outputPath`.
+3. The plugin returns a result whose `path` matches the requested `outputPath`.
 4. The app checks format, size and path.
 5. If the checks pass, the app publishes the file atomically to the final scan folder. On cancel, failure or wrong output, it deletes the temporary material.
 
 The app confirms:
 
 - A regular file that is not empty
-- An image ImageIO can read
+- An image that ImageIO can decode on macOS (enforcing TIFF in v2), or a TIFF whose metadata passes `NativeTiffSourceProbe` on Windows
 - The expected format and pixel size
-- The same path in the request and the result
+- The same path in the request's `outputPath` and the result's `path`
 
 On cancel, timeout, wrong output or plugin failure, the temporary folder is deleted and no partial scan is published.
 

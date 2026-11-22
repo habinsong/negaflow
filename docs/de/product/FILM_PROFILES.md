@@ -18,13 +18,13 @@ Die mitgelieferten Scannerprofile entstehen aus Filmbildern, die der Projektauto
 
 ## Drei getrennte Arten von Daten
 
-| Daten | Format | Verwendung | Anzahl |
+| Daten | Format (macOS-Paket) | Verwendung | Anzahl |
 |---|---|---|---:|
 | Filmart | Swift | Dmin/Dmax und Standardwerte je Filmart | 27 |
 | Look-Vorgabe | JSON | Kreative Looks, die Sie wählen | 6 |
 | Scannerprofil | JSON | Relative Tonwert- und Farbstatistik aus echten Scans | 15 |
 
-27 Filmnamen sind keine 27 Profile zur Farbgenauigkeit, und die 6 Looks sind etwas anderes als Scannerprofile. Im Folgenden geht es nur um die dritte Art.
+Unter Windows sind dieselben 27 Filme, 6 Look-Vorgaben und 15 Scannerprofile in C++ und C# einkompiliert. 27 Filmnamen sind keine 27 Profile zur Farbgenauigkeit, und die 6 Looks sind etwas anderes als Scannerprofile. Im Folgenden geht es nur um die dritte Art.
 
 ## Was heute mitgeliefert wird
 
@@ -105,10 +105,10 @@ Die mitgelieferten Scannerprofile entstehen aus Filmbildern, die der Projektauto
 | `color` | Kanäle und Sättigung in Tiefen, Mitten, Lichtern | Eine beobachtete Verteilung, keine absolute Farbmatrix |
 | `neutralAxis` | Lab-`a*` und -`b*` schwach gesättigter Pixel | Manche Szenen haben kein neutrales Objekt, deshalb gehören die Stichprobenzahlen dazu |
 | `hueResponse` | Sättigungsänderung und Farbtondrehung je Farbtonklasse | Relativer Vergleich nur, wenn die Daten beider Geräte zusammenpassen |
-| `texture` | Gradient, Schärfe, Kornreferenzwert | Nicht direkt als Schärfungswert des Geräts verwendet |
+| `texture` | Gradient, Schärfe, Kornreferenzwert | In `HS`/`SP` (`ScannerTargetGrade`) nicht als Schärfungswert des Geräts verwendet; steuert im eigenständigen `ScannerProfileGrade` eine begrenzte Unscharfmaskierung aus `texture_sharpness_p95` (ohne synthetisches Korn) |
 | `sceneBuckets` | Statistik je Szene und repräsentative Bilder | Erlaubt es, die Quelle wieder zu verfolgen |
 
-Die Schärfung des Helligkeitskanals im Ziel `HS` ist keine aus `texture` gemessene Gerätekonstante und erzeugt kein neues Korn. `SP`, `MAIN` und `PRINT` enthalten diese Schärfung nicht.
+In `ScannerTargetGrade` wendet `HS` einen festen, mit der Auflösung skalierten Luminanz-Schärfungspass an, der nicht aus `texture` abgeleitet ist, während `SP`, `F135`, `HR`, `MAIN`, `PRINT`, `EXPIRED` und `CS` keine Zielschärfung hinzufügen. Wird ein einzelnes Scannerprofil manuell außerhalb der Scannerziele angewendet (`ScannerProfileGrade`), leitet es begrenzte Tonwert- und Farbanpassungen (`NaturalToneSpline`) sowie eine begrenzte Unscharfmaskierung aus `texture_sharpness_p95` ab, ohne synthetisches Korn.
 
 ## Belegstatus
 
@@ -138,7 +138,7 @@ Aus einem Modellnamen oder Dateiinformationen wird nichts automatisch ausgewähl
 
 ### Der relative Unterschied zwischen zwei Scannern
 
-Absolute Szenenstatistik wird nicht unverändert verwendet. Es wird nur der Unterschied zwischen passenden Gruppen beider Geräte genutzt, und nur eingeschränkt:
+In `HS` und `SP` (`ScannerTargetGrade`) wird die absolute Szenenstatistik eines einzelnen Profils nicht unverändert verwendet (während das manuelle Anwenden eines einzelnen Scannerprofils außerhalb der Scannerziele über `ScannerProfileGrade` begrenzte Tonwert- und Farbanpassungen mit `NaturalToneSpline` ableitet). In `HS` und `SP` wird nur der Unterschied zwischen passenden Gruppen beider Geräte genutzt, und nur eingeschränkt:
 
 - Die bereinigte Menge der Filmnamen muss übereinstimmen.
 - Die Bildzahl darf um höchstens 15 % abweichen.
@@ -151,22 +151,23 @@ Die Quellprofile tragen keinen SHA-256 je Bild, und gleiche Filmnamen belegen ni
 
 ### Schwarzweiß und Positiv
 
-Bei Schwarzweiß entfallen die Farbanteile, nur der relative Tonwert wird genutzt. Bei Positiv wird die absolute Helligkeit eines Films nicht auf ein anderes Foto übertragen. Die Basisstile von `HS` und `SP` wirken auf Positive jedoch mit halber Stärke, das Ergebnis ist also nicht immer dasselbe wie bei `MAIN`.
+Bei Schwarzweiß entfallen die Farbanteile, nur der relative Tonwert wird genutzt. Bei Positiv wird die absolute Helligkeit eines Films nicht auf ein anderes Foto übertragen. Die Basisstile aller vier Scannerziele (`HS`, `SP`, `F135` und `HR`) wirken auf Positive mit halber Stärke, das Ergebnis ist also nicht immer dasselbe wie bei `MAIN`.
 
 ### Textur
 
-Ohne gepaartes Material desselben Bildes wird `texture` nicht als gerätespezifischer Schärfungs- oder Kornwert genutzt. Fokus, Motiv, JPEG-Verarbeitung und die Entscheidungen des Laborbedieners sind in diese Zahlen alle eingeflossen.
+Ohne gepaartes Material desselben Bildes nutzen `HS` und `SP` (`ScannerTargetGrade`) `texture` nicht als gerätespezifischen Schärfungs- oder Kornwert, weil Fokus, Motiv, JPEG-Verarbeitung und die Entscheidungen des Laborbedieners alle in diese Zahlen eingeflossen sind. Das manuelle Anwenden eines einzelnen Scannerprofils außerhalb der Scannerziele (`ScannerProfileGrade`) leitet nur eine begrenzte Unscharfmaskierung aus `texture_sharpness_p95` ab und fügt kein synthetisches Korn hinzu.
 
 ## Dateiintegrität
 
-`ScannerProfileRegistry` öffnet nie nur einen Teil der 15:
+`ScannerProfileRegistry` öffnet zur Laufzeit nie nur einen Teil der 15:
 
-1. Das Manifestschema lesen.
-2. Bestätigen, dass jede Datei existiert, und ihren SHA-256 prüfen.
-3. `profileHash` in jedem JSON neu berechnen.
-4. ID, Dateiname, Schema, Status, Zahlen und Endlichkeit prüfen.
-5. Stimmt etwas nicht, das ganze Paket ablehnen.
-6. Nur einen schreibgeschützten Schnappschuss zwischenspeichern, bei dem alles stimmte.
+1. Das Manifestschema (`schemaVersion == 2`), die Profilanzahl und eindeutige IDs prüfen.
+2. Bestätigen, dass jede Datei existiert, den SHA-256 der Rohdatei prüfen und die Stabilität des Dateizustands vor und nach dem Lesen kontrollieren.
+3. Jedes JSON dekodieren und `schemaVersion == 2`, die ID sowie den im Manifest verzeichneten `profileHash` prüfen.
+4. Schlägt eine Prüfung fehl, das ganze Paket ablehnen.
+5. Nur einen schreibgeschützten Schnappschuss zwischenspeichern, bei dem alles stimmte.
+
+Die Offline-Validierung in `negaflow-mac/scripts/validate_scanner_profiles.py` berechnet `profileHash` aus dem JSON-Inhalt neu und prüft Anzahlen, Prüfstatus und endliche Werte.
 
 Das Exportprotokoll hält die ID und den SHA-256 des tatsächlich verwendeten Profils fest.
 

@@ -23,7 +23,7 @@ The deciding factor is what forms the image. Color film keeps only dye after pro
 
 | Film type | Automatic IR | Why |
 |---|---|---|
-| Color negative | Conditional | Dye image. The plugin must report IR and the alignment check must pass |
+| Color negative | Conditional | Dye image. The plugin must report IR and per-defect visible confirmation (`>= 4σ`) and coverage checks (`<= 5%`) must pass |
 | Color positive | Conditional | Dye image. Same conditions as color negative |
 | Black and white negative and positive | Off | Silver image blocks infrared |
 
@@ -34,7 +34,7 @@ The deciding factor is what forms the image. Color film keeps only dye after pro
 
 ## Alignment check
 
-`InfraredDefectRemoval` compares the leakage texture in IR with the red channel of RGB and looks for an integer offset. The result carries `AlignmentDiagnostics`.
+`InfraredDefectRemoval` first matches IR defect points against local darkness in the red channel of RGB, falling back to high-pass IR leakage texture vs red-channel correlation when defect cues are scarce. The global result carries `AlignmentDiagnostics` and is a starting seed before each defect's offset is refined locally in the red channel.
 
 | State | Meaning |
 |---|---|
@@ -44,7 +44,7 @@ The deciding factor is what forms the image. Color film keeps only dye after pro
 | `weakCorrelation` | Correlation did not pass the threshold |
 | `searchLimitReached` | The best point sits on the search boundary |
 
-The last three stop with an `alignmentUnreliable` error and are never replaced with `(0,0)`. A best point on the search boundary counts as a failure whatever the offset size.
+When the global seed reports one of the last three states, detection does not stop immediately: it starts from `(0,0)`, votes a coarse consensus offset from strong IR candidates, and requires every candidate defect to pass local visible red-channel confirmation (`>= 4σ`) and the maximum coverage gate (`5%` default), stopping with `noDefects` or `coverageTooHigh` if those fail.
 
 Automated tests do not replace checks of RGB/IR alignment on a real device or per film. Those checks are done by hand on real film.
 

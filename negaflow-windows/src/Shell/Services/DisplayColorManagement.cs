@@ -50,6 +50,12 @@ internal static class DisplayColorManagement
         Refresh(force: true);
     }
 
+    /// <summary>
+    /// 모니터 프로파일이나 Advanced Color(ACM·HDR) 전환 직후 창이 다시 활성화되었을 때 즉시
+    /// 프로파일 변경 여부를 확인합니다. 바뀌지 않았으면 표를 다시 만들지 않습니다.
+    /// </summary>
+    internal static void RefreshNow() => Refresh(force: false);
+
     /// <summary>지금 그릴 화소에 걸 표입니다. null 이면 그대로 그립니다.</summary>
     internal static DisplayColorTransform? Current
     {

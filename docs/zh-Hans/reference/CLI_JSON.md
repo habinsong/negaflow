@@ -33,7 +33,11 @@ negaflow capabilities <scannerID> [--demo] --json
   "schemaVersion": 1,
   "command": "capabilities",
   "status": "ok",
-  "payload": {},
+  "payload": {
+    "scannerID": "<scannerID>",
+    "backend": "<backend>",
+    "capabilities": {}
+  },
   "error": null
 }
 ```
@@ -42,9 +46,11 @@ negaflow capabilities <scannerID> [--demo] --json
 
 失败时 `status` 为 `error`，`payload` 为 `null`。`error` 包含稳定的机器可读代码和说明。日志和进度只写到 stderr。
 
+`detect` 的 `payload` 包含 `backends` 数组，每项由 `{ backend, devices }` 组成。
+
 ## 能力信息
 
-`capabilities` 的 payload 始终包含以下全部字段：
+`capabilities` 的 `payload` 是包含 `scannerID`、`backend` 和 `capabilities` 的对象。以下 25 个字段始终全部位于 `payload.capabilities` 内：
 
 - `resolutionsDPI`, `modes`, `bitDepths`
 - `sourceModes`, `transparencyModes`

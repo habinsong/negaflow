@@ -56,7 +56,7 @@ Für die automatische Nutzung braucht es genau ein passendes `holdoutValidated`-
 
 Die Farbprofile NORITSU und SP-3000 im Repository tragen `texture`-Werte aus echten Szenen. Sie mischen Motiv, Fokus und Filmkorn und taugen nicht als Sensor-Rauschdaten.
 
-Wiederholt aufgenommene gleichmäßige Ziele und getrenntes Validierungsmaterial gibt es noch nicht. Es ist kein validiertes Geräte-Rauschprofil gebündelt, und der automatische Pfad nutzt die vorhandenen allgemeinen Einstellungen.
+Wiederholt aufgenommene gleichmäßige Ziele und getrenntes Validierungsmaterial gibt es noch nicht. Es ist kein validiertes Geräte-Rauschprofil gebündelt, und in der Entwicklungspipeline läuft keine automatische Scanner-Rauschminderung (`ScannerNoiseReduction` fällt in Bibliothekscode und Tests auf allgemeine `1.0`-Skalen zurück, während die Rauschminderung durch den Nutzer per `FilmScanDenoise` ausdrücklich zugeschaltet wird).
 
 Ein echtes Profil braucht alles Folgende:
 

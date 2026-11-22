@@ -30,7 +30,7 @@ The gap is an order of magnitude and keeps its sign across film type, holder and
 2. Slots. Candidate columns grow out to the film edge and are matched against the width of the selected format. A slot that touches the edge of the scanned area is dropped, because the scan area cut that window in half and the full scan would capture the wrong region.
 3. Bands. Inside a slot, the rows with film are separated from the holder above and below. A row is film when it differs from the holder beside it or carries texture. Brightness alone loses the dense frames of a slide, and texture alone loses the gaps and flat frames.
 4. Grid. A comb of gap positions is fitted over the (pitch, phase) plane. The score is the contrast between what sits inside a cut and what sits in the gap, so the fit does not depend on whether the gap is clear base, maximum density or a holder rib.
-5. Refinement. Each boundary snaps to the nearest gap, then the whole set is re-fitted to an even spacing, since frames on a strip are evenly spaced. Scanning the same strip twice lands within 0.2 mm.
+5. Refinement. Each boundary snaps to the nearest gap, and a line fit across the strip derives its even spacing to reject outlier snaps: inlier boundaries keep their locally snapped gap positions, while outliers and unmeasured outer boundaries use the fitted even spacing. Scanning the same strip twice lands within 0.2 mm.
 
 ## What it refuses
 
@@ -49,6 +49,8 @@ The along-strip length is the frame pitch direction and the across-strip length 
 | Format | Along strip | Across strip |
 |---|---|---|
 | 35 mm full frame | 36 mm | 24 mm |
+| 35 mm panoramic (56×24) | 56 mm | 24 mm |
+| 35 mm panoramic (65×24) | 65 mm | 24 mm |
 | 35 mm square | 24 mm | 24 mm |
 | 35 mm half frame | 18 mm | 24 mm |
 | 120 · 6×4.5 | 41.5 mm | 56 mm |
@@ -85,4 +87,4 @@ Fitted pitch across every strip: 37.65 – 38.12 mm. Detection takes 0.5 – 0.9
 | `FlatbedFrameGridDetector+Slots.swift` | Slots, film presence, bands |
 | `FlatbedFrameGridDetector+Grid.swift` | Gap evidence, comb fit, boundary refinement |
 
-`FlatbedFrameDetector` remains as the fallback for a preview whose physical size is unknown.
+`FlatbedFrameDetector` remains as the fallback when a preview's physical size is unknown or `FlatbedFrameGridDetector` returns no frames.

@@ -32,7 +32,7 @@
 
 To run it:
 
-- macOS 14.0 or later (macOS 14, 26 and 27 are supported)
+- macOS 14.0 or later (macOS 14, 15, 26 and 27 are supported)
 - Apple Silicon or Intel
 - 8 GB of memory, 16 GB recommended for medium format
 
@@ -54,7 +54,7 @@ The Universal PKG fits most Macs and installs into `/Applications`. The same pag
 
 The app is signed ad hoc and not notarized, so macOS blocks the first launch. Allow it in System Settings under Privacy & Security with Open Anyway.
 
-The library and settings are in `~/Library/Application Support/negaflow`.
+The library catalog, defect sidecars, recipes and print templates live in `~/Library/Application Support/negaflow`, and app preferences are stored in `UserDefaults` (`~/Library/Preferences/com.songhabin.negaflow.plist`).
 
 At launch the app asks GitHub once for the latest release. If a newer version is out, the bottom of the ⋯ menu at the top right reads "Update to Version X.Y.Z". Choosing it opens the release page and saves the PKG for this Mac to Downloads, checked against the release's `SHA256SUMS.txt`. You install it yourself. When the app is current the item reads "You're on the latest version." and opens the project page. If the check fails, for example offline, the item does not appear.
 
@@ -73,11 +73,10 @@ bash scripts/run-app.sh build
 
 `run-app.sh` calls `xcodebuild`, assembles the app bundle and signs it locally. For the engine or the CLI alone, `swift build` is enough.
 
-Release artifacts:
+Release artifacts (builds `arm64` and `universal` bundles and calls `create-release-artifacts.sh` to produce PKG and DMG installers, ZIP and dSYM archives, and `SHA256SUMS.txt`):
 
 ```bash
-bash negaflow-mac/scripts/build-release.sh
-bash negaflow-mac/scripts/create-release-artifacts.sh
+bash scripts/build-release.sh
 ```
 
 ## Checks
@@ -89,13 +88,13 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 # Release build of the app
 bash scripts/run-app.sh build
 
-# Everything the repository checks
+# Static and Swift CI checks (set NEGAFLOW_CI_GUI=1 to build GUI tests, NEGAFLOW_CI_GUI_RUN=1 to run them)
 bash scripts/ci-gate.sh
 ```
 
 ## Custom color targets
 
-CS follows MAIN, HS, SP, F135 and HR in the target capsules. Selecting it opens a two-column list of 18 Custom targets in the lower-left selector; the Look selector stays on the right. Entering CS selects Emulsion, and an image that already uses a Custom target keeps it.
+CS follows MAIN and HS, plus SP, F135 and HR in the target capsules. Selecting it opens a two-column list of 18 Custom targets in the lower-left selector; the Look selector stays on the right. Entering CS selects Emulsion, and an image that already uses a Custom target keeps it.
 
 The list has three groups: Emulsion to Dichroic (11), Wetzlar to Rochester (4), Slide Show to Point & Shoot (3). Custom targets apply the custom-3 tone, density and chroma response. Saving, previews, thumbnails and export use the selected target ID. Other targets are unchanged.
 
@@ -103,7 +102,7 @@ The CLI takes the same IDs: `--target classic`, `--target dye-transfer`, `--targ
 
 ## Command line
 
-The macOS build ships a CLI.
+The macOS Swift package includes a CLI target built with `swift build`.
 
 ```bash
 swift build
@@ -134,9 +133,9 @@ Scanner controls stay hidden until a plugin is installed. SANE devices use [`neg
 
 | Module | Role |
 |---|---|
-| `Chromabase` | Chroma Engine, GrainMend, profiles, export |
+| `Chromabase` | Chroma Engine and GrainMend, profiles and export |
 | `ScannerKit` | Scanner capability checks and plugin connection |
-| `negaflowApp` | Library, develop, scan and export screens |
+| `negaflowApp` | Library and develop, print, scan and export screens |
 | `negaflowCLI` | Develop, scan, benchmark and self-check commands |
 
 ## Reference images
@@ -148,4 +147,4 @@ Scanner controls stay hidden until a plugin is installed. SANE devices use [`neg
 - [How the two differ](../../docs/platform/PLATFORM_DIFFERENCES.md)
 - [Chroma Engine](../../docs/product/CHROMA_ENGINE.md)
 - [GrainMend](../../docs/product/GRAINMEND.md)
-- [Product architecture](../../docs/architecture/PRODUCT_ARCHITECTURE.md)
+- [Architecture overview](../../docs/architecture/PRODUCT_ARCHITECTURE.md)

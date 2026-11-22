@@ -2,25 +2,27 @@
 
 [Dokumentationsstart](../README.md)
 
-Der Hauptspeicher ist `library.sqlite`. Das ältere `library.json` dient nur zum Import eines älteren Katalogs oder zum Schreiben einer Diagnosedatei. Nichts aktualisiert beide gleichzeitig, es gibt also kein Dual-Write. Backups und Erhaltungsarchive nutzen portables JSON und schließen die laufende SQLite-Datei aus.
+Der Hauptspeicher ist `library.sqlite`. Das ältere `library.json` dient nur zum Import eines älteren Katalogs; die Diagnose schreibt bereinigte Support-Pakete statt `library.json`. Nichts aktualisiert beide gleichzeitig, es gibt also kein Dual-Write. Auf macOS nutzen Backups und BagIt-Archive portables JSON (`version 7`) und schließen die laufende SQLite-Datei aus. Windows nutzt eine eigene Schemaversion (`version 2`) und packt `library.sqlite` in ein ZIP-`.negaflowarchive`, sodass Backups zwischen Rechnern derselben Plattform umziehen.
 
 | Art | Format | Verwendung |
 |---|---|---|
-| Hauptkatalog | SQLite | Betrieb der App, Suche, Speichern, Wiederherstellung |
+| Hauptkatalog | SQLite | Betrieb der App und Suche, Speichern und Wiederherstellung |
 | Ältere Daten | JSON | Import eines vorhandenen Katalogs |
-| Backup und Erhaltungsarchiv | JSON-Form | Umzug auf einen anderen Rechner, Wiederherstellung |
+| Backup und Erhaltungsarchiv | Portables JSON (`version 7`, macOS) / ZIP mit `library.sqlite` (`version 2`, Windows) | Umzug zwischen Rechnern derselben Plattform, Wiederherstellung |
 
 > [!IMPORTANT]
 > Ein fehlender oder beschädigter Katalog startet keine leere Mediathek. Der ursprüngliche Katalog und die Fotodateien bleiben unberührt, bis eine intakte Generation gefunden ist.
 
 ## Messungen
 
-JSON und SQLite wurden auf demselben Mac mit diesen Befehlen verglichen.
+JSON und SQLite wurden auf demselben Mac mit diesen Befehlen aus `negaflow-mac/` verglichen.
 
 <details>
 <summary>Messbefehle</summary>
 
 ```bash
+cd negaflow-mac
+
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   NEGAFLOW_CATALOG_PERF_REPORT="$PWD/build/performance/catalog.json" \
   bash scripts/performance/run-catalog.sh
@@ -36,7 +38,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 
 </details>
 
-Gemessen am 2026-07-12: Mac14,3, arm64, 8 Kerne, 24 GiB, macOS 26.5, Swift-Release-Build. Die Zahlen sind eine Regressionsbasis für diesen Aufbau, keine Vorhersage für einen anderen Mac.
+Gemessen am 2026-07-12 auf einem Mac14,3 (arm64 mit 8 Kernen und 24 GiB unter macOS 26.5 im Swift-Release-Build). Die Zahlen sind eine Regressionsbasis für diesen Aufbau, keine Vorhersage für einen anderen Mac.
 
 | Bilder | JSON-Größe | Encode p50 | Decode p50 | File read p50 |
 |---:|---:|---:|---:|---:|
@@ -61,23 +63,23 @@ Ein Backup zieht nicht die ganze Datenbank in `Data`. Es erstellt eine temporär
 
 - Viele Zeilenänderungen passen in eine Transaktion.
 - Zeilen und Indizes erlauben, nur die benötigten Bilder zu lesen.
-- Die SQLite-C-API gehört zu macOS, ein neues Paket ist nicht nötig.
+- Auf macOS gehört die SQLite-C-API zum System, sodass kein neues Paket nötig ist; Windows nutzt `Microsoft.Data.Sqlite`.
 - Die Wiederherstellungsregel bleibt bestehen: Ein beschädigter Speicher gilt nie als leere Mediathek.
 
 Es läuft mit `journal_mode=DELETE` und `synchronous=FULL`. Mit WAL müssten Datenbank und `-wal`-Datei als eine Einheit behandelt werden. Die laufende Datenbank wird nicht direkt kopiert. Nur die nach dem Schließen der Verbindung geprüfte Hauptdatei wird zur Wiederherstellungskopie.
 
 ## Wer im Code was tut
 
-- `CatalogStore`: Verbindung, Transaktionen, Schemaversion, Integritätsprüfungen
-- `CatalogMigration`: lesender JSON-Import und Umwandlung je Version
-- Entitätstabellen: Bilder, Originale, Reihenfolge, Filme, Ordner, Sammlungen, Suche, Scanaufträge
-- `LibraryBackupStore`: portables JSON-Backup, Vorprüfungen der Wiederherstellung, Wiederherstellungsinformationen
+- `LibraryCatalogSQLiteStore` (Windows: `SqliteCatalogStore` und `SqliteCatalogSchema`): Verbindung und Transaktionen, Schemaversion und Integritätsprüfungen
+- `LibraryCatalogSQLiteMigration` und `LibraryCatalogFile` (Windows: `CatalogVersionMigration`): lesender Import älterer JSON-Dateien und Upgrades je Version
+- Entitätstabellen: `catalog_metadata` plus 9 Entitätstabellen (`folders`, `frames` mit eingebetteten Originalverweisen, `rolls`, `scan_sessions`, `scan_roll_assignments`, `manual_collections`, `smart_collections`, `saved_searches`, `stacks`), geordnet über die Spalte `position` jeder Tabelle
+- `LibraryBackupStore` (Windows: `CatalogBackupStore`): Backups und Wiederherstellungen
 
 Entwicklungswerte und versionierter Bearbeitungsverlauf liegen als JSON-BLOB je Entität vor. Quellpixel, Miniaturen und GrainMend-Caches bleiben außerhalb der Datenbank. Für Suche und Sortierung fehlen noch Spalten und Indizes, deshalb wird der ganze Katalog beim Start in den Speicher geladen, und die SQLite-Lesezeit sieht derzeit aus wie die von JSON. Der nächste Schritt sind Indexabfragen, die nur die verwendeten Spalten und Bilder lesen.
 
 ## Älteres JSON übernehmen
 
-1. JSON-Version und `LibraryCatalogHealth` prüfen.
+1. JSON-Version und `LibraryCatalogHealthInspector` prüfen.
 2. Eine temporäre SQLite-Datenbank anlegen.
 3. Das Material in einer Transaktion übertragen.
 4. IDs, Reihenfolge, Zugehörigkeit und Aufträge vergleichen.
@@ -85,7 +87,7 @@ Entwicklungswerte und versionierter Bearbeitungsverlauf liegen als JSON-BLOB je 
 6. Das JSON als Wiederherstellungsgeneration behalten.
 7. Auf SQLite als Hauptspeicher umschalten.
 
-Scheitert ein Schritt, bleibt das vorhandene JSON unverändert, und ein leerer Katalog wird nie gestartet. Auch wenn Zwischendateien und Marker zurückbleiben, wird nur weitergearbeitet, wenn die Quell-SHA-256 und beide Kataloge übereinstimmen. Nach der Migration gibt es keinen automatischen Rückfall auf JSON. Mindest-Lesversion und Migrationsmarker werden geprüft, damit eine ältere App das JSON nicht bearbeitet und den Speicher in zwei Hälften spaltet.
+Scheitert ein Schritt, bleibt das vorhandene JSON unverändert, und ein leerer Katalog wird nie gestartet. `library.sqlite-migration.json` existiert nur während der laufenden Migration, um einen unterbrochenen Umzug fortzusetzen, wenn Quell-SHA-256 und beide Kataloge übereinstimmen, und wird nach Abschluss gelöscht. Danach wird `library.json` nach `library.pre-sqlite-<sha12>.json` verschoben, und es gibt keinen automatischen Rückfall auf JSON. `minimumReaderVersion` verhindert, dass ältere Builds neuere Kataloge öffnen.
 
 ## Quellen
 

@@ -119,6 +119,18 @@ void test_p3_monitor_moves_srgb_into_p3() {
     expect(same, "in-place conversion matches the separate-buffer result");
 }
 
+void test_padded_profile_builds() {
+    std::vector<std::uint8_t> profile =
+        negaflow::color::build_icc_profile(negaflow::color::OutputColorSpace::display_p3);
+    // 2바이트 패딩 꼬리가 붙은 프로파일도 선언 크기로 잘라 열어야 합니다.
+    profile.push_back(0U);
+    profile.push_back(0U);
+    negaflow::imaging::DisplayColorLut lut{};
+    std::uint32_t code = 0U;
+    expect(lut.build(profile, code), "a 2-byte padded P3 monitor profile builds");
+    expect(!lut.identity(), "the padded P3 profile still maps colors");
+}
+
 void test_invalid_profile_is_refused() {
     std::vector<std::uint8_t> junk(256U, 0x11U);
     negaflow::imaging::DisplayColorLut lut{};
@@ -133,6 +145,7 @@ void test_invalid_profile_is_refused() {
 int main() {
     test_srgb_monitor_is_identity();
     test_p3_monitor_moves_srgb_into_p3();
+    test_padded_profile_builds();
     test_invalid_profile_is_refused();
     if (failures != 0) {
         std::cerr << failures << " display colour LUT test(s) failed\n";

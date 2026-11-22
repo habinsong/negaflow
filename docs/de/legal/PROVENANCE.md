@@ -8,7 +8,7 @@ Dieses Dokument hält den Umfang der Apache-2.0-Verbreitung der negaflow-App fes
 
 Die Swift-, Python- und Shell-Integration in `negaflow-mac` ist für negaflow geschrieben.
 
-Die Dekodierung von Negativ-Kamera-RAW nutzt eine festgelegte LibRaw-Revision, gebaut als austauschbare `libraw.dylib` unter CDDL-1.0. Beide Plattformen wenden dieselben drei Patches an:
+Die Dekodierung von Negativ-Kamera-RAW nutzt eine festgelegte LibRaw-Revision, gebaut unter CDDL-1.0 als austauschbare `libraw.dylib` unter macOS und `libraw.dll` (mit Microsoft `vcomp140.dll`) unter Windows. Beide Plattformen wenden dieselben drei parallelen Patches an:
 
 - [`xtrans-parallel-rows.patch`](../../../negaflow-mac/scripts/libraw/xtrans-parallel-rows.patch): in `src/demosaic/xtrans_demosaic.cpp` hält Fuji-X-Trans-Kacheln in serieller Reihenfolge, verarbeitet die Zeilen innerhalb jeder Kachel parallel und führt den Grün-Grenzen-Durchlauf in Zeilengruppen aus, die sich nicht berühren
 - [`mem-image-parallel-rows.patch`](../../../negaflow-mac/scripts/libraw/mem-image-parallel-rows.patch): in `src/postprocessing/mem_image.cpp` kopiert die Zeilen der Ausgabe-Bitmap parallel
@@ -18,7 +18,7 @@ Die gepatchten Builds stimmen bei den getesteten RAW-Dateien mit dem ungepatchte
 
 Unter macOS ist LLVM OpenMP (libomp 20.1.8, Apache License v2.0 with LLVM Exceptions) statisch in die Bibliothek gelinkt. Die App enthält Quellarchiv, Patches, Build-Skript sowie Urheberrechts- und Lizenzdateien in `Contents/Resources/licenses/libraw/`. `native-preview-bridge.cpp` (Negaflow contributors, CDDL-1.0) enthält eine LibRaw-Unterklasse, die drei Pixelschleifen parallel mit byteidentischer Ausgabe ausführt, und die parallelen Huffman-Decoder, die der Decoder-Patch aufruft. Es wird kein LibRaw-Quelltext in den Apache-Quellbaum übernommen.
 
-Windows verwendet dieselbe Upstream-Revision und dieselben Patches. Seine `native-preview-bridge.cpp` (CDDL-1.0) ergänzt Windows-spezifische Funktionen für lineare DNGs, seine übrigen Komponenten stehen in [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md). Die nur für Tests gedachte `CameraNativeRaw.dng` ist CC0-1.0-Material aus Eintrag 2204 von raw.pixls.us, durch die danebenliegende Quell-JSON erkennbar, und aus der Anwendung ausgeschlossen. Fehlt die ergänzende Hinweisdatei, warnen Build und Paketierung und laufen weiter. Die Upstream-Lizenzdateien und der zugehörige Quelltext bleiben enthalten.
+Windows verwendet dieselbe Upstream-Revision und die drei gemeinsamen Patches und wendet zusätzlich `native-preview-bridge-msvc.patch` auf `Makefile.msvc` an. Außerdem nutzt Windows `libraw.dll` als Rückfallpfad für nicht-negative Kamera-RAWs, wenn Microsofts optionale WIC Raw Image Extension fehlt. Seine `native-preview-bridge.cpp` (CDDL-1.0) ergänzt Windows-spezifische Funktionen für lineare DNGs, seine übrigen Komponenten stehen in [`negaflow-windows/THIRD-PARTY-NOTICES.md`](../../../negaflow-windows/THIRD-PARTY-NOTICES.md). Die nur für Tests gedachte `CameraNativeRaw.dng` ist CC0-1.0-Material aus Eintrag 2204 von raw.pixls.us, durch die danebenliegende Quell-JSON erkennbar, und aus der Anwendung ausgeschlossen. Fehlt die ergänzende Hinweisdatei, warnen Build und Paketierung und laufen weiter. Die Upstream-Lizenzdateien und der zugehörige Quelltext bleiben enthalten.
 
 Die Filminvertierung nutzt die veröffentlichten sensitometrischen Begriffe Dichte, Fuß, gerader Teil und Schulter. Die Kurven und Koeffizienten stammen aus negaflows vier photometrischen Ankern, nicht aus Formeln oder Konstanten eines fremden Programms. Gleichungen und Herleitung stehen in [Negativantwort](../reference/PRINT_RESPONSE.md).
 
@@ -26,10 +26,11 @@ Veröffentlichte Herstellerdatenblätter liegen drei Gruppen ausgelieferter Film
 
 GrainMend IR läuft in dieser Reihenfolge:
 
-1. Den ganzzahligen Versatz zwischen RGB und IR selbst schätzen.
-2. Beschnittene IR-Mittelwerte je `log(red)`-Klasse interpolieren und daraus eine nichtparametrische Szenen-Streulichtkurve bilden.
-3. Das Szenen-Streulicht abziehen, dann den relativen Kontrast zum lokalen Mittel berechnen.
-4. Die Defektmaske aus einem beschnittenen lokalen Rauschschwellwert, zusammenhängenden Komponenten und der Ausrichtung bilden.
+1. Einen globalen ganzzahligen RGB↔IR-Versatz als Startwert schätzen (bei geringer Zuverlässigkeit Rückfall auf einen groben Konsensversatz aus starken Kandidaten).
+2. Dunkle, mit dem Bildrand verbundene Filmhalter- und Stegränder ausschließen.
+3. Eine lokale morphologische Schließungs-Basislinie erstellen und die optische Dichte `log(baseline / value)` berechnen, damit großflächiges Farbstoff-Ghosting herausfällt.
+4. Kandidaten aus der Median-/Interquartilsabstands-Verteilung (IQR) der Scan-Dichte mit flächengewichteter Signifikanz extrahieren, jeden Defekt lokal im sichtbaren Rotkanal bestätigen (`>= 4σ`) und die Dämpfung je Defekt schätzen.
+5. Teilweise verdeckte Pixel durch Transmissionsdivision (`raw ÷ (1 - attenuation)`) wiederherstellen und die RGB-Patch-Reparatur auf undurchsichtige Kerne (`>= 50%` Dämpfung) beschränken.
 
 Dieser Code bindet die IR-Korrektur von SANE weder ein noch portiert er sie. Veröffentlichte Arbeiten und Produktseiten sind Hintergrund, um die physikalischen Grenzen von Film und Infrarot zu bestätigen. Eine Methode oder ein Prinzip zu übernehmen ist etwas anderes, als den Ausdruck von Code zu kopieren. Das U.S. Copyright Office zieht dieselbe Linie zwischen Methoden und Systemen und ihrem konkreten Ausdruck.
 
@@ -61,7 +62,7 @@ Die Release-Prüfung bestätigt erneut, dass sich kein Plug-in, keine SANE-Progr
 
 Die in den TIFF-Dateien sichtbaren Kamera- und Farbraum-Metadaten sind Containerangaben aus Aufnahme und Kodierung. `sourceProfiles` in einem Scannerprofil ist der logische Pfad des lokalen Messmaterials zur Build-Zeit, und diese Quellfotos werden nicht ausgeliefert.
 
-FILM-R-v2-Material wird nur während der Qualitätsmessung heruntergeladen. Die Bilder gelangen nie in das Repository oder die App. DOI-Version, CC BY 4.0, Dateigrößen und Hashes sind in [`Config/defect-corpus-film-r-v2.json`](../../../negaflow-mac/Config/defect-corpus-film-r-v2.json) festgelegt.
+FILM-R-v2-Material wird nur während der Qualitätsmessung heruntergeladen. Die Bilder gelangen nie in das Repository oder die App. [`Config/defect-corpus-film-r-v2.json`](../../../negaflow-mac/Config/defect-corpus-film-r-v2.json) legt Artikelversion, DOI, CC-BY-4.0-Lizenz, Paaranzahl und Gesamtbytezahl fest, während `fetch-film-r.py` beim Herunterladen die einzelnen Dateigrößen und MD5-Prüfsummen anhand der Figshare-Metadaten prüft.
 
 ## DNG-Export
 
@@ -90,16 +91,16 @@ Ob ein Anspruch eine bestimmte Umsetzung erfasst, ist eine Rechtsfrage, die dies
 
 ## Namen und Interoperabilität
 
-Film-, Scanner-, Farbraum-, XMP-Namensraum- und Produktnamen bezeichnen Ziele und halten Dateien interoperabel. Die von der Windows-Engine erzeugten Ausgabe-ICC-Profile tragen beschreibende Bezeichnungen (`"Negaflow Compatible P3"`, `"Compatible with Adobe RGB (1998)"`) und eine `CC0 1.0 Universal`-Widmung, sodass exportierte Nutzerbilder keine Urheberrechtsbeschränkung des Profils tragen. Es wird weder Markeninhaberschaft noch eine Verbindung beansprucht. Der vollständige Umfang steht in [`TRADEMARKS.md`](../../../TRADEMARKS.md).
+Film-, Scanner-, Farbraum-, XMP-Namensraum- und Produktnamen bezeichnen Ziele und halten Dateien interoperabel. Die von der Windows-Engine erzeugten Ausgabe-ICC-Profile tragen beschreibende Bezeichnungen (`"Negaflow Compatible P3"`, `"Compatible with Adobe RGB (1998)"`, `"Linear sRGB"`) und eine `CC0 1.0 Universal`-Widmung, sodass exportierte Nutzerbilder keine Urheberrechtsbeschränkung des Profils tragen. Es wird weder Markeninhaberschaft noch eine Verbindung beansprucht. Der vollständige Umfang steht in [`TRADEMARKS.md`](../../../TRADEMARKS.md).
 
 ## Automatische Prüfungen und was sie übersehen
 
-`python3 scripts/ci/verify-provenance.py` (aus `negaflow-mac/` aufzurufen) schlägt in jedem dieser Fälle fehl:
+`python3 scripts/ci/verify-provenance.py` (aus `negaflow-mac/` aufzurufen) prüft den Arbeitsbaum samt erreichbarer Git-Historie und schlägt in jedem dieser Fälle fehl:
 
 - Eine mitgelieferte Ressource, die nicht eingetragen ist oder deren Hash sich geändert hat
-- C/C++/Objective-C, externe Pakete, Binärarchive oder ein Vendor-Baum in der App
+- C/C++/Objective-C, externe Pakete, Binärarchive oder ein Vendor-Baum außerhalb der ausgenommenen Pfade (die dokumentierten nativen Windows-Quell-, Test- und Manifestpfade sowie die beiden CDDL-Brücken `native-preview-bridge.cpp`)
 - Nur bei SANE vorkommende Namen oder Spuren einer geprüften externen Implementierung im App-Code
 - Eine Änderung, durch die das Release-Skript das SANE-Plug-in in die App legt
 - FILM-R-Bildmaterial im Repository
 
-Die Prüfung stoppt offensichtliche Rückschritte im aktuellen Baum. Sie belegt weder Ähnlichkeit mit dem gesamten Internet noch Rechte an Foto- oder Profileingaben, noch Patente, Marken oder rechtliche Ergebnisse in irgendeinem Land. Ändert sich eine Herkunft, prüfen Sie die Erklärung zusammen mit dem Hash. Ist sie unklar, nehmen Sie die Ressource aus dem Release und fragen den Rechteinhaber oder einen Fachmann.
+Die Prüfung stoppt offensichtliche Rückschritte im aktuellen Baum und in der erreichbaren Git-Historie. Sie belegt weder Ähnlichkeit mit dem gesamten Internet noch Rechte an Foto- oder Profileingaben, noch Patente, Marken oder rechtliche Ergebnisse in irgendeinem Land. Ändert sich eine Herkunft, prüfen Sie die Erklärung zusammen mit dem Hash. Ist sie unklar, nehmen Sie die Ressource aus dem Release und fragen den Rechteinhaber oder einen Fachmann.

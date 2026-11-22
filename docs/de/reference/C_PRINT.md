@@ -2,17 +2,17 @@
 
 [Dokumentationsstart](../README.md)
 
-Der Abzug hat acht Layouts: Einzelbild, Kontaktbogen, Bildpaket, eigenes Paket, Cyanotypie, Glasplatte, Silbergelatine und Wasserzeichen.
+Der Abzug hat acht Layouts: Einzelbild und Kontaktbogen, Bildpaket und eigenes Paket, Cyanotypie und Glasplatte sowie Silbergelatine und Wasserzeichen.
 
 ## Kontaktbögen
 
 - Ein neuer Kontaktbogen beginnt mit einem schwarzen Bogen, 6 Spalten × 7 Zeilen und 2 mm Abstand. Alle anderen Layouts beginnen mit einem weißen Bogen. Jedes Layout kann seinen Bogen zwischen Schwarz, Grau und Weiß wechseln, und Beschriftungen, eigener Text, Schnittmarken und Seitenränder nehmen von selbst eine Kontrastfarbe an.
 - Ränder, Zeilen- und Spaltenzahl und Abstände folgen einem einzigen physischen Layoutvertrag. Eine unmögliche Kombination wird auf den größten gültigen Abstand verkleinert, statt die Vorschau zu zerstören. Die automatische Ausrichtung folgt dem Raster. **Einpassen** lässt das ganze Foto sichtbar und kann Platz in der Zelle lassen. **Zelle füllen** beschneidet jedes Foto auf die gemeinsame Zelle und gleicht die Zwischenräume an.
-- Beschriftungen können Dateiname, ursprüngliche Bildnummer, Laufnummer (ab 1 in der aktuellen Bildreihenfolge), Bewertung oder eigener Text sein. Jede installierte Mac-Schrift ist wählbar, Vorschau und Export verwenden dieselbe. Beschriftungen pro Bild lassen sich links, mittig oder rechts ausrichten. Der eigene Text unterstützt mehrere unabhängige Felder mit je eigenem Text, eigener Ausrichtung, Position, Breite und Höhe.
+- Beschriftungen können Dateiname, ursprüngliche Bildnummer, Laufnummer (ab 1 in der aktuellen Bildreihenfolge), Bewertung oder eigener Text sein. Jede installierte Systemschrift ist wählbar, Vorschau und Export verwenden dieselbe. Beschriftungen pro Bild lassen sich links, mittig oder rechts ausrichten. Der eigene Text unterstützt mehrere unabhängige Felder mit je eigenem Text, eigener Ausrichtung, Position, Breite und Höhe.
 
 ## Papiereinstellungen und Lineale
 
-Alle Layouts nutzen dieselben Papiereinstellungen. Der Katalog enthält gängige fotografische Zollformate von 3,5 × 5 bis 24 × 36, Letter, Tabloid, A3+, ISO A1–A6 und ISO B1–B6. Die Oberfläche steht unter der Bogenfarbe und bietet Matt (Standard), Glänzend, Lustre und Seide.
+Alle Layouts nutzen dieselben Papiereinstellungen. Der Katalog enthält gängige fotografische Zollformate von 3,5 × 5 bis 24 × 36 sowie Letter, Tabloid und A3+ und außerdem ISO A1–A6 und ISO B1–B6. Die Oberfläche steht unter der Bogenfarbe und bietet Matt (Standard), Glänzend, Lustre und Seide.
 
 Die Lineale sind standardmäßig aus. Eingeschaltet erscheint unter dem Schalter eine Auswahl Zoll/cm, über der Seite ein waagerechtes und links davon ein senkrechtes Lineal. Ganze Zoll oder Zentimeter sind beziffert, dazwischen liegen feinere Teilstriche.
 
@@ -30,7 +30,7 @@ Eine Layoutvorlage stellt Layout, Papiereinstellungen, Bogenfarbe und Wasserzeic
 
 ## Abzugsexport
 
-**Abzugsexport**, direkt unter Schnellexport, rendert die aktuelle Seitengröße, Ausrichtung, Ränder, das Layout, die Bogenfarbe, Beschriftungen, den eigenen Text und die Schnittmarken mit Format, DPI, Ordner, Benennung und Auslieferungsfarbraum aus Export. Hilfen, die nur auf dem Bildschirm gelten, werden nicht in die Datei eingebrannt: Gamut-Warnungen, Softproof-Simulation und Papieroberflächenglanz. Während einer der beiden Abzugsexport-Wege läuft, zeigt das Exportfeld die Zahl fertiger Seiten, einen linearen Fortschrittsbalken und eine Prozentangabe statt eines endlosen Drehkreises.
+Im Export-Reiter der Seitenleiste von Abzug rendern sowohl **Export** (über **Schnellexport**) als auch **Schnellexport** für Formate außer Raw-TIFF die aktuelle Seitengröße und Ausrichtung, die Ränder und das Layout sowie die Bogenfarbe, Beschriftungen, den eigenen Text und die Schnittmarken. Beide nutzen Format, DPI, Ordner und Benennung aus Export sowie den Auslieferungsfarbraum aus den Einstellungen (Farbmanagement unter macOS; Export unter Windows, schreibgeschützt angezeigt unter Abzug > Ausgabe > C-Print > Erweitert). Hilfen, die nur auf dem Bildschirm gelten, werden nicht in die Datei eingebrannt: Gamut-Warnungen, Softproof-Simulation und Papieroberflächenglanz. Während einer der beiden Abzugsexport-Wege läuft, zeigt das Exportfeld die Zahl fertiger Seiten, einen linearen Fortschrittsbalken und eine Prozentangabe.
 
 ### Seitenzahl und Rendering
 
@@ -40,7 +40,7 @@ Die Paketvorschau erzeugt nicht für jedes Foto eine interaktive und eine beruhi
 
 ### Druckerausgabeprofil
 
-Das im Abzug-Arbeitsbereich gewählte Druckerausgabeprofil gehört zum exportierten Ergebnis. negaflow setzt zuerst die ganze Seite zusammen und wendet das Profil einmal auf die fertige Seite an. Das umfasst jede Platzierung in einem Bildpaket oder eigenen Paket, ob ein Foto wiederholt oder mehrere gemischt werden. Das Profil wirkt nicht auf die Vorschau von Mediathek oder Entwickeln, nur auf Abzugsvorschau und Abzugsexport.
+Das Druckerausgabeprofil wird in den Einstellungen gewählt (Farbmanagement unter macOS; Export unter Windows), nicht in Abzug. In Abzugsvorschau und Abzugsexport (für Formate außer Raw und DNG) setzt negaflow zuerst die ganze Seite zusammen und wendet das Profil einmal auf die fertige Seite an. Das umfasst jede Platzierung in einem Bildpaket oder eigenen Paket, ob ein Foto wiederholt oder mehrere gemischt werden. Dasselbe Profil gilt auch für Bilder mit Ziel `PRINT` in der Softproof-Vorschau von Entwickeln und im Entwickeln-Export. Auf die Mediathek-Vorschau und auf `MAIN`-Bilder in Entwickeln wirkt es nicht.
 
 ## C-Print verwenden
 
@@ -55,7 +55,7 @@ Ohne gültiges RGB-ICC-Profil werden die Zieleinstellungen trotzdem gespeichert,
 
 ## Farbvertrag
 
-Das C-Print-Proof-ICC dient nur der Probe. Es ändert die Bildschirmvorschau, nicht die Pixel oder das eingebettete Profil einer exportierten Datei. Der Abzugsexport nutzt den in den Exporteinstellungen gewählten Auslieferungsfarbraum, sofern nicht ein Druckerausgabeprofil gewählt ist, ein Softproof-Profil des Labors wird also nie stillschweigend als Auslieferungsprofil benutzt. Das Entwicklungsziel `PRINT` ist davon getrennt: Es verlangt ein gültiges RGB-ICC-Profil der Druckerklasse und wandelt die Ausgabe damit um.
+Das C-Print-Proof-ICC dient nur der Probe. Es ändert die Bildschirmvorschau, nicht die Pixel oder das eingebettete Profil einer exportierten Datei. Der Abzugsexport nutzt den in den Einstellungen gewählten Auslieferungsfarbraum (Farbmanagement unter macOS; Export unter Windows, schreibgeschützt angezeigt unter Abzug > Ausgabe > C-Print > Erweitert), sofern kein Druckerausgabeprofil gewählt ist, ein Softproof-Profil des Labors wird also nie stillschweigend als Auslieferungsprofil benutzt. Das Entwicklungsziel `PRINT` ist davon getrennt: Es verlangt ein gültiges RGB-ICC-Profil der Druckerklasse und wandelt die Ausgabe damit um.
 
 ## Genauigkeitsgrenzen
 

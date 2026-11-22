@@ -10,7 +10,7 @@ GrainMend repariert Staub, Pinholes, Kratzer und Emulsionsschäden am Film. Nich
 | Geführt | Ein von Ihnen gewählter Bereich | Sieht genau hin, bis zu kleinen Flecken und schwachen Defekten |
 | Pinsel | Die Stelle, die Sie übermalen | Überträgt umgebende Struktur und Textur |
 | Klonstempel | Ein von Ihnen gewählter Quellpunkt | Kopiert echte Quellpixel mit festem Versatz |
-| IR | Der Infrarotkanal des Scanners | IR findet die Stelle, RGB baut die Pixel neu auf |
+| IR | Der Infrarotkanal des Scanners | Teilt teilweise Abschattung direkt heraus (`raw ÷ (1 − attenuation)`, bis zu 2× Verstärkung); undurchsichtige Kerne (`>= 50%`) gehen an den RGB-Kachelreparierer |
 
 Die Entwicklungsansicht bietet Automatisch, Geführt, Pinsel und Klonstempel. IR lässt sich beim Scannen einschalten, wenn das Plug-in die Fähigkeit meldet, und nach dem Scan kommt sein Ergebnis in dieselbe GrainMend-Ebenenliste.
 
@@ -60,13 +60,13 @@ Sie übermalen die zu reparierende Stelle selbst. Das Übermalte wird nicht mit 
 
 ### Klonstempel
 
-Ein Klick mit `⌥` wählt den Quellpunkt, dann zeichnen Sie auf das Ziel. Es nutzt keine automatische Erkennung, sondern hält den Versatz zwischen den beiden Punkten und kopiert die echten Pixel.
+Ein Klick mit `⌥` auf dem Mac (`Alt`-Klick unter Windows) wählt den Quellpunkt, dann zeichnen Sie auf das Ziel. Es nutzt keine automatische Erkennung, sondern hält den Versatz zwischen den beiden Punkten und kopiert die echten Pixel.
 
 Der Bearbeitungsverlauf hält Durchmesser, Härte, Koordinaten und Versatz fest und wirkt auch nach einer Drehung, Spiegelung oder einem Beschnitt auf dieselben Originalkoordinaten. Versätze rasten auf ganze Pixel ein, und nichts außerhalb des Bildes wird angewendet.
 
 ### IR
 
-Wird nur genutzt, wenn das Plug-in einen echten IR-Kanal liefert, dessen Größe und Bereich zum RGB passen. IR ist das Material, das den Defekt lokalisiert. Die endgültigen Pixel kommen vom selben Reparierer wie bei RGB.
+Wird nur genutzt, wenn das Plug-in einen echten IR-Kanal liefert, dessen Größe und Bereich zum RGB passen. Bei teilweise verdeckten Pixeln teilt GrainMend IR die optische Abschwächung direkt heraus (`raw ÷ (1 − attenuation)`, begrenzt auf 2× Verstärkung), sodass darunterliegende Details und Filmkorn erhalten bleiben. Nur stark verdeckte, undurchsichtige Kerne (`>= 50%` Abschwächung) gehen an den RGB-Kachelreparierer.
 
 ## Defekte in RGB finden
 
@@ -124,22 +124,25 @@ Auch wenn bekannt ist, dass ein Modell IR hat, wird es auf dem Bildschirm oder i
 
 ### Ausrichtung
 
-Optik und Sensorauslesung können RGB und IR um einige Pixel versetzt lassen. Eine weite, dann eine enge Suche legt den Versatz fest. Die Sicherheit des Maximums und ob es am Rand des Suchbereichs landete, werden beide festgehalten.
+Optik und Sensorauslesung können RGB und IR um einige Pixel versetzt lassen. Die globale Ausrichtung gleicht zunächst IR-Defektpunkte mit lokalen dunklen Stellen im Rotkanal ab und greift bei Bedarf auf die Texturkorrelation des IR-Übersprechens zurück. Die Sicherheit des Maximums und ob es am Rand des Suchbereichs landete, werden beide festgehalten.
 
-Geringe Sicherheit oder ein bester Punkt am Ende der Suche gilt nicht als Erfolg.
+Dieser globale Versatz dient als orientierender Startwert statt als starre Ausschlussschranke. Hat die globale Ausrichtung geringe Sicherheit oder stößt sie an die Suchgrenze, beginnt die Erkennung bei `(0, 0)`, stimmt aus starken Kandidaten einen groben Konsensversatz ab und richtet jeden Defekt einzeln am sichtbaren Rotkanal aus und bestätigt ihn (`>= 4σ`). Jeder Kandidat, der sich am Rotkanal nicht bestätigen lässt, wird verworfen.
 
 ### Szenenmuster abziehen
 
-Filmfarbstoff und Dichte können im IR durchscheinen. Die logarithmische Helligkeit des Rotkanals wird in 64 Klassen geteilt, und in jeder Klasse wird der Mittelwert gebildet, nachdem die obersten und untersten 10 % der IR-Werte verworfen wurden. Leere Klassen werden aus den Nachbarn interpoliert und mit einem kurzen symmetrischen Kern geglättet. Das Abziehen dieser nichtparametrischen Kurve verringert das Szenenmuster, und spärlicher dunkler Staub bleibt aus der Klassenstatistik heraus.
+Filmfarbstoff und Dichte können im IR durchscheinen. GrainMend IR trennt Defekte und Szene in vier Schritten:
 
-Der Rest wird in Kontrast relativ zum lokalen Mittel umgerechnet. Damit ein großer Defekt den umgebenden Rauschboden nicht anhebt, wird die Rauscheingabe vor der Berechnung des adaptiven Schwellwerts auf den minimalen Erkennungskontrast beschnitten. Zusammenhängende dunkle Bereiche am Halter und am Filmrand werden aus der Maske entfernt.
+1. Dunkle Filmhalter- und Randbereiche (Rebate), die mit dem Bildrand verbunden sind, zuerst per Flood-Fill ausschließen.
+2. Eine lokale morphologische Graustufen-Closing-Grundlinie (`localBaseline`) aufbauen: Schmale Defekte werden überbrückt, während breite Cyan-Farbstoff-Geisterbilder der Szene in der Grundlinie bleiben.
+3. IR-Werte in optische Dichte `log(baseline / value)` umrechnen.
+4. Den Boden des sauberen Films und `σ` aus Median und Interquartilsabstand (IQR) des Scans schätzen, Kandidaten sammeln, deren flächenskalierte Signifikanz `Σ(density − floor) ≥ mσ·√area` erfüllt, jeden lokal am sichtbaren Rotkanal bestätigen (`>= 4σ`) und bestätigte Masken per Hysterese erweitern.
 
 ### Sicherheitsbedingungen
 
 - Eine ungewöhnlich breite Maske wird nicht angewendet.
-- Eine nicht bestätigte Ausrichtung wird nicht angewendet.
-- Auf Silber-Schwarzweiß wird nicht automatisch angewendet.
-- Farbpositive und Spezialemulsionen gelten ohne Messung nicht als sicher.
+- Jeder Kandidat, der sich am sichtbaren Rotkanal nicht lokal ausrichten und bestätigen lässt (`>= 4σ`), wird verworfen.
+- Automatisches IR ist für farbstoffbasierte Farbfilme (Farbnegativ sowie Farbdia/Positiv) aktiviert und für silberbasierte Schwarzweißfilme gesperrt.
+- Kodachrome und Spezialemulsionen lassen sich nicht allein am `FilmType` erkennen; schalten Sie IR dort bei Bedarf manuell aus.
 
 Auch kommerzielle IR-Werkzeuge setzen bei gewöhnlichem Schwarzweiß und bei Kodachrome eigene Grenzen:
 
@@ -177,18 +180,18 @@ Der GrainMend-Cache ist eine abgeleitete Datei für schnelle Anzeige und erneute
 - Kopien für Rückgängig teilen sich den Speicher, bis sich wirklich etwas ändert.
 - Unter Speicherdruck werden wiederherstellbare Bilder und der Kachel-Cache verworfen.
 
-Die tatsächlichen Zeiten hängen von Auflösung, Defektzahl, Bereichsgröße und Mac ab.
+Die tatsächlichen Zeiten hängen von Auflösung, Defektzahl, Bereichsgröße und Hardware ab.
 
-Gemessen am 2026-07-25 mit einem Release-Build, Mac14,3, arm64, 24 GiB Speicher, macOS 26.5:
+Gemessen am 2026-07-25 mit einem macOS-Release-Build, Mac14,3, arm64, 24 GiB Speicher, macOS 26.5:
 
 | Pfad | Eingabe | Ergebnis |
 |---|---|---:|
 | Geführte Erkennung | 1600×1600, 25 Staubkörner | 0,35 s, 25 erkannt |
 | Teilweise ROI-Erkennung | 1600×1600 | 0,38 s |
 | Geführter Dichtetest | 1280×960, 8 Bilder × 3 Läufe | Median 0,423 s, p95 0,488 s, Max. 0,526 s |
-| IR-Erkennung | 6000×4000, 24 MP | 1,042 s, Spitzenzuwachs beim Speicher 249,2 MiB |
+| IR-Erkennung (vor dem Umbau im August 2026) | 6000×4000, 24 MP | 1,042 s, Spitzenzuwachs beim Speicher 249,2 MiB |
 
-In 24 Läufen des Dichtetests lag die niedrigste Maskenabdeckung an Defektstellen bei 99,80 % und der höchste mittlere Restfehler bei 2,70/255. Das sind Regressionsmessungen an synthetischer Eingabe. Sie versprechen keine Verarbeitungszeiten auf einem anderen Mac oder bei echtem Film.
+Die Zeile zur IR-Erkennung oben wurde vor dem Umbau auf Closing-Grundlinie und Abschwächungswiederherstellung im August 2026 gemessen. In 24 Läufen des Dichtetests lag die niedrigste Maskenabdeckung an Defektstellen bei 99,80 % und der höchste mittlere Restfehler bei 2,70/255. Das sind macOS-Regressionsmessungen an synthetischer Eingabe; Windows führt die entsprechende GrainMend-RGB- und -IR-Pipeline in C++ aus (`negaflow-windows/src/Native/imaging/`). Keine dieser Zahlen verspricht Verarbeitungszeiten auf einem anderen Rechner oder bei echtem Film.
 
 ## Benchmark
 
@@ -248,11 +251,13 @@ Manche Leistungstests laufen nur, wenn eine Umgebungsvariable gesetzt ist. Eine 
 
 ## Wo der Code liegt
 
-- `Sources/Chromabase/DefectRemoval/`
-- `Sources/negaflowApp/Features/Defects/`
-- `Sources/negaflowApp/Features/Develop/Inspector/Tools/DefectControlsSection.swift`
-- `Sources/negaflowCLI/Commands/CLI+DefectBenchCommand.swift`
-- `Tests/ChromabaseTests/Defect*.swift`
-- `Tests/negaflowAppTests/Defect*.swift`
-- `Config/defect-corpus-film-r-v2.json`
-- `scripts/defect-corpus/`
+- `negaflow-mac/Sources/Chromabase/DefectRemoval/`
+- `negaflow-mac/Sources/negaflowApp/Features/Defects/`
+- `negaflow-mac/Sources/negaflowApp/Features/Develop/Inspector/Tools/DefectControlsSection.swift`
+- `negaflow-mac/Sources/negaflowCLI/Commands/CLI+DefectBenchCommand.swift`
+- `negaflow-mac/Tests/ChromabaseTests/Defect*.swift`
+- `negaflow-mac/Tests/negaflowAppTests/Defect*.swift`
+- `negaflow-mac/Config/defect-corpus-film-r-v2.json`
+- `negaflow-mac/scripts/defect-corpus/`
+- `negaflow-windows/src/Native/imaging/defect_*.cpp`
+- `negaflow-windows/src/Native/imaging/infrared_*.cpp`

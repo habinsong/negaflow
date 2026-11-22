@@ -2,7 +2,7 @@
 
 [Docs home](../README.md)
 
-negaflow is a macOS and Windows app. You import or scan film images, then go through inversion, develop, GrainMend, output and preservation. Every edit is kept apart from the original.
+negaflow is a macOS and Windows app. You import or scan film images, then go through inversion and develop, GrainMend, output and preservation. Every edit is kept apart from the original.
 
 > [!IMPORTANT]
 > Originals, edit history, caches and output files are different material. Losing a cache must not lose the original or the edit history, and an export fails if a required result cannot be rebuilt.
@@ -20,11 +20,13 @@ negaflow is a macOS and Windows app. You import or scan film images, then go thr
 
 ## Modules
 
-`negaflowApp` and `negaflowCLI` both use `Chromabase` and `ScannerKit`. `Chromabase` works on images and metadata, and `ScannerKit` talks to the external scanner plugin.
+On macOS (`negaflow-mac/`), `negaflowApp` and `negaflowCLI` both use `Chromabase` and `ScannerKit`. `Chromabase` works on images and metadata, and `ScannerKit` talks to the external scanner plugin.
+
+On Windows in `negaflow-windows/src/`, the app is split into six modules. `Native` holds the C++ Chroma Engine, GrainMend and export, while `Interop` bridges the native engine and the managed app. `Catalog.Core` handles library storage, and `Shell.Core` holds develop and print, scanner and export logic. `Shell` provides the WinUI 3 library, develop and print screens, and `Cli` is the command-line tool.
 
 ### `Chromabase`
 
-The Chroma Engine and the image processing core.
+The macOS Chroma Engine and image processing core.
 
 - Reading images and handling orientation
 - Film base measurement
@@ -42,7 +44,7 @@ More detail:
 
 ### `ScannerKit`
 
-It owns the contract that connects an external plugin.
+Owns the macOS contract that connects an external plugin.
 
 - Scanner ID and capabilities
 - Request and response JSON
@@ -56,10 +58,10 @@ The SANE implementation lives in a separate GPL project, [`negaflow-scanner-sane
 
 ### `negaflowCLI`
 
-Uses the same engine and `ScannerKit` as the GUI.
+macOS command-line tool that uses the same engine and `ScannerKit` as the GUI.
 
 - Finding scanners, checking capabilities, scanning
-- Developing several images
+- Developing a single image per invocation to JPEG, TIFF, PNG or linear DNG
 - Listing scanner profiles
 - GrainMend `defect-bench`
 - IT8 and scanner-relative comparison
@@ -67,12 +69,12 @@ Uses the same engine and `ScannerKit` as the GUI.
 
 ### `negaflowApp`
 
-The user interface, built with SwiftUI and AppKit.
+The macOS user interface, built with SwiftUI and AppKit.
 
-- Library, develop, print, canvas
+- Library and develop, print and canvas
 - Scan, GrainMend, export
 - Versions, settings, shortcuts
-- Catalog, cache, backup, preservation archive
+- Catalog and cache, backup and preservation archive
 - A localized About window whose product version comes from the shared version resource
 
 ## User flow
@@ -89,7 +91,7 @@ Each step leaves the original untouched and adds to the catalog and edit history
 
 ### Importing files
 
-The default way in. It handles TIFF, JPEG, PNG and the camera RAW that macOS Image I/O can read. The embedded ICC and orientation are read, and the original ID goes into the catalog.
+The default way in. It handles TIFF, JPEG and PNG, plus HEIC/HEIF, BMP and camera RAW. On macOS, negative camera RAW is decoded with LibRaw while positive and digital RAW and standard formats go through Image I/O and `CIRAWFilter`. On Windows, standard formats use WIC and native TIFF decoding, and camera RAW uses the bundled `libraw.dll`. The embedded ICC and orientation are read, and the original ID goes into the catalog.
 
 ### Scanning
 
@@ -111,12 +113,12 @@ If a file moved, the path changes only when you relink it yourself or bookmark r
 
 ## Catalog
 
-The main store is `library.sqlite`. The older `library.json` is used to bring confirmed older material across, or to write a backup that can move between machines. The two stores are never updated at once.
+The main store is `library.sqlite`. The older `library.json` is used to bring confirmed older material across, or to write a backup that can move between machines on the same platform (macOS schema v7, Windows schema v2). The two stores are never updated at once.
 
 What goes into SQLite:
 
 - Frames and originals
-- Rolls, folders, collections, searches
+- Rolls and folders, collections, searches and stacks
 - Ordering and scan jobs
 - Develop values and per-version edit history
 
@@ -142,11 +144,11 @@ A JSON file that failed is not treated as an empty catalog. The numbers are in [
 Organizing:
 
 - Folders, rolls, manual collections, smart collections, saved searches, stacks
-- Star ratings, pick and reject, color labels
+- Star ratings, pick and reject
 - Grid, compare, survey
 - Reviewing duplicate candidates
 
-In the folder view each folder shows a band with a disclosure triangle, folder, name, count, develop process, target and apply. The band collapses the thumbnails under it. Collapsed folders are remembered across launches, separately from the file list in the sidebar.
+In the folder view each folder shows a band with a disclosure triangle and folder name, the photo count, and the develop process, target and apply controls. The band collapses the thumbnails under it. Collapsed folders are remembered across launches, separately from the file list in the sidebar.
 
 The folder view uses one grid, with each folder as a section and its band as the section header. Keep this structure. Stacking a separate grid per folder forces the layout to calculate the full height of every visible folder and create all its cards at once, while a single grid creates cards one row at a time as they come into view. That keeps scrolling smooth across several hundred photos.
 
@@ -180,7 +182,7 @@ On Windows, JPEG thumbnails use an LRU byte budget and BGRA previews use the res
 
 Export does not save the preview bitmap on screen. It rebuilds the full-resolution image from the original and the edit values it pinned.
 
-GrainMend keeps automatic, guided, brush, clone stamp and IR in an ordered list. Caches are derived files. If a result cannot be rebuilt from the original and the edit history, the export fails.
+GrainMend keeps automatic and guided repairs, brush and clone stamp edits, and IR in an ordered list. Caches are derived files. If a result cannot be rebuilt from the original and the edit history, the export fails.
 
 More detail is in [GrainMend](../product/GRAINMEND.md).
 
@@ -204,7 +206,7 @@ Stopping and resuming an export uses the same bundle.
 
 ### Several output files
 
-One export can produce a JPEG/TIFF, a sidecar, XMP and `-main-flat` together.
+One export can produce a JPEG/TIFF/PNG/DNG (linear DNG for uncompressed sources), a sidecar, XMP and `-main-flat` together.
 
 1. Check the destination and name conflicts up front.
 2. Write every file to a temporary folder.
@@ -243,7 +245,7 @@ Supported layouts:
 - Gelatin silver
 - Watermark
 
-Single image and the three historical layouts make one vertically stacked page per selected photo. Contact sheet, picture package and custom package report and export their finished page count instead. For 39 photos that means one 6 × 7 contact-sheet page, 10 four-up picture-package pages, one default custom-package page, or 39 individual files.
+Single image, the three historical layouts and watermark make one vertically stacked page per selected photo. Contact sheet, picture package and custom package report and export their finished page count instead. For 39 photos that means one 6 × 7 contact-sheet page, 10 four-up picture-package pages, one default custom-package page, or 39 individual files.
 
 Package preview reuses available thumbnails and developed images and only makes a small fast preview when one is missing. Final export calculates placement from metadata, develops only the pixels each cell needs, prepares two to four unique sources at once, keeps the Core Image graph connected until the page write, and enforces a 512 MiB per-page source-raster budget.
 
@@ -253,15 +255,16 @@ Without a valid RGB printer ICC, no other profile is substituted. The bytes and 
 
 ## Preservation archive
 
-What goes into `.negaflowarchive`:
+On macOS, `.negaflowarchive` is an RFC 8493 BagIt folder with SHA-256 manifests (`manifest-sha256.txt` and `tagmanifest-sha256.txt`) and `negaflow-archive.json`:
 
 - The portable catalog JSON
-- Original files
-- IR originals
-- The GrainMend history that is needed
+- Original files and remaining IR originals
+- The GrainMend defect recipes that are needed
 - The relationship between virtual copies and the original they share
 
-Thumbnails, previews, GrainMend caches and exported files can be rebuilt, so they stay out. The archive uses the RFC 8493 BagIt structure with a SHA-256 list, and every file and relationship is checked before the bundle moves to its final location.
+On Windows, `.negaflowarchive` is a ZIP archive containing `library.sqlite`, `defects/*` defect recipes and `archive.json` (per-entry byte counts and SHA-256 hashes), without copying original photo files.
+
+Thumbnails, previews, rebuildable GrainMend caches and exported files stay out on both platforms. Every file, hash and relationship is checked in a temporary location before the archive moves to its final path.
 
 - [Library archive](LIBRARY_ARCHIVE.md)
 - [RFC 8493](https://www.rfc-editor.org/info/rfc8493/)
@@ -291,7 +294,7 @@ The full contract is in [Scanner plugin architecture](SCANNER_PLUGINS.md).
 
 Images:
 
-- One shared `CIContext`
+- Reused and pooled `CIContext` instances on macOS, and Direct3D 11 device and staging pools on Windows
 - An image graph computed when it is needed
 - Low-resolution adjustment kept separate from full-resolution output
 - Cancellation, and stale results refused
@@ -311,10 +314,14 @@ The repository uses broad performance limits to catch large regressions. They do
 
 ## What is verified
 
+On macOS (`negaflow-mac/`):
+
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 bash scripts/run-app.sh build
 ```
+
+On Windows (`negaflow-windows/scripts/`): `build.ps1`, `test.ps1`, `test-managed.ps1`, `test-interop.ps1` and `build-release.ps1`.
 
 What automated checks do not settle:
 

@@ -32,7 +32,7 @@
 
 実行に必要なもの:
 
-- macOS 14.0 以降（macOS 14、26、27 に対応）
+- macOS 14.0 以降（macOS 14、15、26、27 に対応）
 - Apple Silicon または Intel
 - メモリ 8GB（中判は 16GB を推奨）
 
@@ -54,9 +54,9 @@
 
 アプリは ad hoc 署名で公証を受けていないため、初回起動は macOS に止められます。システム設定のプライバシーとセキュリティで「このまま開く」を選んでください。
 
-ライブラリと設定は `~/Library/Application Support/negaflow` にあります。
+ライブラリカタログ、欠陥サイドカー、レシピ、プリントテンプレートは `~/Library/Application Support/negaflow` にあり、アプリの環境設定は `UserDefaults`（`~/Library/Preferences/com.songhabin.negaflow.plist`）に保存されます。
 
-アプリは起動時に一度だけ GitHub に最新リリースを問い合わせます。新しい版があれば、右上の ⋯ メニューのいちばん下に「バージョン X.Y.Z にアップデート」が出ます。選ぶとリリースページが開き、この Mac に合う PKG をリリースの `SHA256SUMS.txt` で確かめてからダウンロードフォルダーに保存します。インストールはご自身で行います。最新のときは項目が「最新バージョンです。」になり、選ぶとプロジェクトページが開きます。オフラインなどで確認できなかったときは項目が出ません。
+アプリは起動時に一度だけ GitHub に最新リリースを問い合わせます。その際、新しい版があれば、右上の ⋯ メニューのいちばん下に「バージョン X.Y.Z にアップデート」が出ます。これを選ぶとリリースページが開き、この Mac に合う PKG をリリースの `SHA256SUMS.txt` で確かめてからダウンロードフォルダーに保存します。その後、インストールはご自身で行います。一方、最新のときは項目が「最新バージョンです。」になり、選ぶとプロジェクトページが開きます。なお、オフラインなどで確認できなかったときは項目が出ません。
 
 ## ビルド
 
@@ -73,11 +73,10 @@ bash scripts/run-app.sh build
 
 `run-app.sh` は `xcodebuild` を呼び、アプリバンドルを組み立ててローカルで署名します。エンジンや CLI だけなら `swift build` で足ります。
 
-配布ファイル:
+配布ファイル（`arm64` と `universal` のバンドルをビルドし、`create-release-artifacts.sh` を呼んで PKG、DMG、ZIP、dSYM、`SHA256SUMS.txt` を出力）:
 
 ```bash
-bash negaflow-mac/scripts/build-release.sh
-bash negaflow-mac/scripts/create-release-artifacts.sh
+bash scripts/build-release.sh
 ```
 
 ## 確認
@@ -89,7 +88,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 # アプリの Release ビルド
 bash scripts/run-app.sh build
 
-# リポジトリの全チェック
+# 静的検査と Swift CI チェック（GUI テストのビルドは NEGAFLOW_CI_GUI=1、実行は NEGAFLOW_CI_GUI_RUN=1）
 bash scripts/ci-gate.sh
 ```
 
@@ -103,7 +102,7 @@ CLI も同じ ID を受け取ります: `--target classic`、`--target dye-trans
 
 ## コマンドライン
 
-macOS 版には CLI が付いています。
+macOS の Swift パッケージには、`swift build` でビルドする CLI ターゲットが含まれています。
 
 ```bash
 swift build
@@ -136,7 +135,7 @@ swift build
 |---|---|
 | `Chromabase` | Chroma Engine、GrainMend、プロファイル、書き出し |
 | `ScannerKit` | スキャナー機能の確認とプラグイン接続 |
-| `negaflowApp` | ライブラリ、現像、スキャン、書き出しの画面 |
+| `negaflowApp` | ライブラリ、現像、プリント、スキャン、書き出しの画面 |
 | `negaflowCLI` | 現像、スキャン、ベンチマーク、自己確認のコマンド |
 
 ## 基準画像

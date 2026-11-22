@@ -2,7 +2,7 @@
 
 [ドキュメントホーム](../README.md)
 
-サイドカーの `renderManifest` は、元ファイル、編集値、最終ファイルを SHA-256 でつなぎます。ファイルのパスは記録しません。
+macOS のサイドカーの `renderManifest` は、元ファイル、編集値、最終ファイルを SHA-256 でつなぎます。ファイルのパスは記録せず、Windows の書き出しサイドカーは `renderManifest` を出力しません。
 
 > [!IMPORTANT]
 > `renderManifest` は、ファイルと設定の間のハッシュの関係を書いた記録です。電子署名や証明書がないので、C2PA Content Credentials ではありません。
@@ -13,7 +13,7 @@
 - 実際に使ったレンダー入力
 - GrainMend キャッシュファイルまたはメモリ入力の検証範囲
 - 現像、GrainMend、書き出し設定の SHA-256
-- スキャナープロファイルの SHA-256
+- スキャナープロファイルの SHA-256 と、プリンター出力プロファイル適用時の `outputProfileSHA256`
 - デコーダーの出どころと Chroma Engine のレンダラーのバージョン
 - 最終ファイルの SHA-256、バイト数、ピクセルサイズ、形式
 

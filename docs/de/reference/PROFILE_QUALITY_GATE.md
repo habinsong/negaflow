@@ -13,7 +13,7 @@ Dieses Repository enthält derzeit kein REAL/TARGET-Bildpaar (`LUT_target/REAL` 
 
 ## Wie weit die App die aktuellen Profile nutzt
 
-Wählen Sie das Ziel `HS` oder `SP` selbst, kann ein begrenzter relativer Unterschied aus der mitgelieferten `realOnly`-Gruppe verwendet werden.
+`HS` und `SP` wenden standardmäßig ihre feste Ziel-Renderingtabelle an. Wird zusätzlich ein passendes Scannerprofil (`scannerProfileID`) für `HS` oder `SP` gewählt, kann ein begrenzter relativer Unterschied aus der mitgelieferten `realOnly`-Gruppe darübergelegt werden.
 
 Bedingungen:
 
@@ -28,7 +28,7 @@ Regeln für die Anwendung:
 - Werte, die in den beiden Gruppen in entgegengesetzte Richtungen zeigen, werden nicht angewendet.
 - Bei Schwarzweiß entfallen alle Farbanteile, nur der relative Tonwert bleibt.
 - Die relative Korrektur wird nicht auf ein Diaprofil ohne passenden Film angewendet.
-- Ohne gepaartes Material an derselben Stelle werden Scannertextur und Schärfung nicht angewendet.
+- Das Ziel `HS` wendet eine feste, auflösungsskalierte Luminanzschärfung (`noritsuTexture`) ohne Kornsynthese an, und manuelles `ScannerProfileGrade` nutzt eine aus `texture_sharpness_p95` abgeleitete begrenzte Unscharfmaskierung; `SP` schärft nicht nach, und keiner der beiden Pfade erzeugt künstliches Scannerkorn.
 - Der Tonwert wird einmal auf die Rec.709-Gammahelligkeit angewendet, Lab-`a*` und -`b*` bleiben erhalten.
 - Der Farbgewinn wird im Logarithmusraum interpoliert, damit die Beziehung zwischen gegenüberliegenden Ankern erhalten bleibt.
 - Stimmt der SHA-256 einer Datei oder des Manifests nicht, wird das gesamte Profilpaket abgelehnt.

@@ -9,7 +9,7 @@ Diese Anleitung behandelt Import, Ordnerentwicklung, Übertragung von Einstellun
 
 ## Import
 
-Der Import zeigt unter den Importbedienelementen einen Fortschrittsbalken, eine Prozentzahl, die Zahl der fertigen und die Gesamtzahl der Dateien. Metadaten werden außerhalb des Hauptthreads gelesen, dann werden die neuen Bilder gemeinsam registriert, sodass ein großer Ordner den Mediatheksindex nicht immer wieder neu aufbaut.
+Der Import zeigt unter den Importbedienelementen einen Fortschrittsbalken, eine Prozentzahl, die Zahl der fertigen und die Gesamtzahl der Dateien. Metadaten werden außerhalb des Hauptthreads gelesen, dann werden die neuen Bilder gemeinsam registriert, sodass ein großer Ordner den Mediatheksindex nicht immer wieder neu aufbaut. Der Import akzeptiert TIFF-, PNG- und JPEG-Dateien sowie HEIC/HEIF-, BMP-, DNG- und Kamera-RAW-Dateien, berücksichtigt eingebettete Gray- und RGB-ICC-Profile und paart passende `_ir`- / `-ir`- / `.ir`-Infrarotbegleitdateien automatisch, wenn die Abmessungen übereinstimmen.
 
 Die automatische Entwicklung importierter Fotos ist **standardmäßig aus**. Ein Import läuft so ab:
 
@@ -17,7 +17,7 @@ Die automatische Entwicklung importierter Fotos ist **standardmäßig aus**. Ein
 2. Ihre Originalminiatur und der Ordner erscheinen zuerst.
 3. Die Entwicklung beginnt, wenn Sie einen Prozess und ein Ziel auf den Ordner anwenden oder die Ansicht Entwickeln öffnen.
 
-Um jeden Import automatisch zu entwickeln, schalten Sie **Einstellungen → Arbeitsablauf → Neue Importe automatisch entwickeln** ein. Die Wahl bleibt über Neustarts erhalten. Sie gilt nur für die Bilder, die dieser Import registriert hat, und ersetzt nie einen vorhandenen entwickelten Zustand. Entwickelte Fotos werden nur durch ein ausdrückliches **Anwenden** auf den Ordner oder ein Einfügen von Einstellungen neu verarbeitet.
+Um jeden Import automatisch zu entwickeln, schalten Sie **Einstellungen > Arbeitsablauf > Neue Importe automatisch entwickeln** ein. Die Wahl bleibt über Neustarts erhalten. Sie gilt nur für die Bilder, die dieser Import registriert hat, und ersetzt nie einen vorhandenen entwickelten Zustand. Entwickelte Fotos werden nur durch ein ausdrückliches **Anwenden** auf den Ordner oder ein Einfügen von Einstellungen neu verarbeitet.
 
 Scanner-Aufnahmen sind anders: Filmart, Prozess und Ziel werden beim Scannen gewählt, deshalb beginnt die Entwicklung, sobald das Scanergebnis veröffentlicht ist. Die Filmstreifen von Entwickeln und Abzug zeigen für Farbnegativ-, Dia-, Schwarzweißnegativ- und Schwarzweißpositiv-Quellen eine entwickelte Miniatur. Die Mediathek behält die Quellminiatur zur Prüfung der Quelle.
 
@@ -26,6 +26,7 @@ Scanner-Aufnahmen sind anders: Filmart, Prozess und Ziel werden beim Scannen gew
 - Eingeklappter und ausgeklappter Zustand bleiben erhalten. Einen Ordner anzulegen oder die App neu zu öffnen klappt die anderen Ordner nicht auf.
 - Jede Ordnerzeile hat dasselbe Bedienelement `×`. Es entfernt diesen Ordner und seine Fotos **nur aus der Mediathek**. Die Quelldateien bleiben im Finder.
 - Die Fotoliste eines Ordners in Entwickeln hat einen eigenen Scrollbereich mit begrenzter Höhe, eine lange Liste oder ein kleines Fenster schiebt den Rest der Seitenleiste daher nicht weg.
+- In der Mediathek und im Filmstreifen unterstützen Bilder außerdem Sternebewertungen (`1`–`5`) und Auswahl-/Ablehnungsmarkierungen (Pick/Reject), virtuelle Kopien und Stapel, Sammlungen, Schnappschüsse und Bearbeitungsverlauf sowie Katalogsicherungen und portable `.negaflowarchive`-Archive.
 
 ### Fotos in einen anderen Ordner verschieben
 
@@ -41,7 +42,7 @@ negaflow überwacht die registrierten physischen Quellordner. Nach einer kurzen 
 - Das Verschieben oder Umbenennen eines registrierten Ordners
 - Ein neues Bild direkt in einem registrierten Ordner
 
-Findet das dauerhafte Lesezeichen der Quelle den neuen Ort, wird das vorhandene Bild neu verknüpft. Ein verschobener Ordner behält seine Ordner-ID und sein Hinzufügedatum. Eine neu hinzugekommene Datei wird importiert, ohne Duplikate bereits bekannter Dateien zu erzeugen.
+Findet unter macOS das dauerhafte Lesezeichen der Quelle den neuen Ort, wird das vorhandene Bild neu verknüpft. Unter Windows überwacht `FileSystemWatcher` jeden registrierten Ordner und gleicht verschobene, umbenannte und neu hinzugekommene Bilder mit dem Katalog ab. Ein verschobener Ordner behält seine Ordner-ID und sein Hinzufügedatum. Eine neu hinzugekommene Datei wird importiert, ohne Duplikate bereits bekannter Dateien zu erzeugen.
 
 Das ist eine ereignisgesteuerte Ordnerüberwachung, kein regelmäßiger Durchlauf der ganzen Mediathek. Bilder mit demselben physischen Elternordner teilen sich eine Überwachung, und nur Ordner, die eine Änderung melden, werden geprüft.
 
@@ -55,11 +56,11 @@ Neben Anwenden erscheinen ein Fortschrittsbalken, eine Prozentzahl, die Zahl der
 
 ## Geraderichten und Transformieren
 
-Öffnen Sie rechts in Entwickeln Geometrie → Beschnitt. Halten Sie ⌘ (unter Windows Strg), ziehen Sie entlang einer Kante, die waagerecht sein soll, und lassen Sie los: Das Foto dreht sich, bis die Linie waagerecht steht. Eine eher senkrecht gezogene Linie wird senkrecht ausgerichtet. Solange Sie ⌥ (unter Windows Alt) halten, liegt ein feines Raster über dem Beschnitt. Beide Tasten lassen sich unter Einstellungen → Kurzbefehle ändern, dürfen aber nicht gleich sein. Auf dem Mac steht ⌃ für die Linie nicht zur Wahl, weil ⌃-Klick dort ein Rechtsklick ist.
+Öffnen Sie rechts in Entwickeln Geometrie > Beschnitt. Halten Sie ⌘ (unter Windows Strg), ziehen Sie entlang einer Kante, die waagerecht sein soll, und lassen Sie los: Das Foto dreht sich, bis die Linie waagerecht steht. Eine eher senkrecht gezogene Linie wird senkrecht ausgerichtet. Solange Sie ⌥ (unter Windows Alt) halten, liegt ein feines Raster über dem Beschnitt. Beide Tasten lassen sich zusammen mit den Kurzbefehlen für Arbeitsbereich, Entwickeln, Bewertung und Defektwerkzeuge unter Einstellungen > Kurzbefehle anpassen, und die beiden Beschnitttasten dürfen nicht gleich sein. Auf dem Mac steht ⌃ für die Linie nicht zur Wahl, weil ⌃-Klick dort ein Rechtsklick ist.
 
-Der Bereich Transformieren liegt zwischen Kalibrierung und Details & Effekte. Aus lässt das Foto unverändert. Auto, Waagerecht, Vertikal und Voll suchen einmal nach geraden Linien im Foto und korrigieren sie. Waagerecht dreht nur, Vertikal richtet auch stürzende Linien auf, Voll korrigiert die vertikale und horizontale Perspektive. Auto macht dasselbe wie Voll, hält große Korrekturen aber zurück. Geführt folgt 2 bis 4 Hilfslinien, die Sie auf das Foto ziehen.
+Der Bereich Transformieren liegt zwischen Kalibrierung und Details & Effekte. Aus lässt das Foto unverändert, während Auto, Waagerecht, Vertikal und Voll einmal nach geraden Linien im Foto suchen und sie korrigieren. Dabei dreht Waagerecht das Foto nur, Vertikal richtet außerdem stürzende Linien auf, und Voll korrigiert die vertikale und horizontale Perspektive. Auto macht dasselbe wie Voll, hält große Korrekturen aber zurück. Zudem folgt Geführt 2 bis 4 Hilfslinien, die Sie auf das Foto ziehen.
 
-Die Regler Vertikal, Horizontal, Drehen, Seitenverhältnis, Skalieren, X-Versatz und Y-Versatz kommen zu dem hinzu, was der Modus gefunden hat. Ein Doppelklick setzt einen Regler zurück. Zuschnitt begrenzen schneidet das Ergebnis auf das größte Rechteck ohne leere Ecken zu. Ist es aus, sind die leeren Ecken am Bildschirm und in exportierten Dateien weiß. Histogramm, Clipping-Warnung, Auto-Ton und Auto-Weißabgleich zählen sie nicht zum Foto. Die Korrektur bleibt bei 90°-Drehungen und Spiegelungen erhalten, und Alle Anpassungen zurücksetzen löscht sie zusammen mit Beschnitt und Geraderichten.
+Die Regler Vertikal und Horizontal, Drehen und Seitenverhältnis sowie Skalieren, X-Versatz und Y-Versatz kommen zu dem hinzu, was der Modus gefunden hat. Ein Doppelklick setzt einen Regler zurück. Zuschnitt begrenzen schneidet das Ergebnis auf das größte Rechteck ohne leere Ecken zu. Ist es aus, sind die leeren Ecken am Bildschirm und in exportierten Dateien weiß. Histogramm, Clipping-Warnung, Auto-Ton und Auto-Weißabgleich zählen sie nicht zum Foto. Die Korrektur bleibt bei 90°-Drehungen und Spiegelungen erhalten, und Alle Anpassungen zurücksetzen löscht sie zusammen mit Beschnitt und Geraderichten.
 
 ## Vorgaben und Kopieren/Einfügen
 
@@ -69,10 +70,10 @@ Die Entwicklungseinstellungen haben sieben getrennt wählbare Gruppen.
 |---|---|
 | Eingangsgamma | Deutung der Übertragungskennlinie der Quelle |
 | Basisskalierung | Skalierung der Filmbasis |
-| Basis | Filmart und Prozess, Ziel, Scannerprofil, Filmbasis, Kanalbereichskalibrierung, Auto-Abgleich, Auto-Tonwertkorrektur und neutraler Abgleich |
-| Tonwert | Belichtung, Kontrast, Dichte, Lichter, Tiefen, Weiß, Schwarz und Tonwertkurven |
-| Farbe | Temperatur, Tönung, Farbtiefe, Dynamik, Sättigung, Mixer, Grading, Kalibrierung, Schwarzweißtonung und Filmemulation |
-| Detail | Korn, Schärfe, Halation, Klarheit, Vignette, Rauschminderung, GrainMend-Stärke und lokale Anpassungen |
+| Basis | Filmart und Prozess, Ziel und Scannerprofil, Filmbasis und Kanalbereichskalibrierung sowie Auto-Abgleich, Auto-Tonwertkorrektur und neutraler Abgleich |
+| Tonwert | Belichtung und Kontrast, Dichte, Lichter und Tiefen sowie Weiß, Schwarz und Tonwertkurven |
+| Farbe | Temperatur und Tönung, Farbtiefe, Dynamik und Sättigung, Mixer und Grading sowie Kalibrierung, Schwarzweißtonung und Filmemulation |
+| Detail | Korn und Schärfe, Halation und Klarheit, Vignette und Rauschminderung sowie GrainMend-Stärke und lokale Anpassungen |
 | Geometrie | Beschnitt, Drehung, horizontale und vertikale Spiegelung, Geraderichten, Beschnittverhältnis und Transformieren |
 
 Ein vollständiges Einfügen oder eine Nutzervorgabe ersetzt die Entwicklungseinstellungen des Ziels. Ein eingegrenztes Einfügen ersetzt die wirksamen Werte der gewählten Gruppen und behält die anderen. Wird nur ein Teil eines Looks eingefügt, werden dessen Beiträge zu Tonwert, Farbe und Textur in die Werte eingerechnet und der Verweis auf den Look gelöscht, damit ein alter Look nicht ein zweites Mal hinzukommt. Wiederholtes Einfügen derselben Einstellungen ergibt denselben Zustand. Menüs, Kurzbefehle und das Feld nutzen denselben Einfügebereich.
@@ -89,7 +90,7 @@ Erneutes Suchen nach Scannern und die Simulatorunterstützung sind weiterhin vor
 
 ## Abzugslayouts und Ausgabezahlen
 
-Der Abzug hat acht Layouts: Einzelbild, Kontaktbogen, Bildpaket, eigenes Paket, Cyanotypie, Glasplatte, Silbergelatine und Wasserzeichen. Die fünf Einzelbild-Layouts zeigen je ausgewähltem Foto eine fertige Seite in senkrechter Folge. Das Wasserzeichen ist ein eigenes Layout, die anderen behalten ihre bisherigen Bedienelemente.
+Der Abzug hat acht Layouts: Einzelbild und Kontaktbogen, Bildpaket und eigenes Paket, Cyanotypie und Glasplatte sowie Silbergelatine und Wasserzeichen. Die fünf Einzelbild-Layouts zeigen je ausgewähltem Foto eine fertige Seite in senkrechter Folge. Das Wasserzeichen ist ein eigenes Layout, die anderen behalten ihre bisherigen Bedienelemente.
 
 Export und Schnellexport zählen fertige Seiten. Beispielsweise werden aus 39 Fotos in einem Kontaktbogen 6 × 7 eine zusammengesetzte Datei, aus einem vierfachen Bildpaket 10 Seiten, aus dem Standard-Paket eine Seite und aus den fünf Einzelbild-Layouts 39 Dateien in einem begrenzten Stapel.
 
@@ -109,11 +110,11 @@ Die ICC-Bedienelemente im Abzug haben unterschiedliche Aufgaben.
 
 | Einstellung | Bildschirmvorschau | Abzugsexport | Entwicklungsvorschau |
 |---|---|---|---|
-| Druckerausgabeprofil | Zeigt das Abzugsergebnis | Auf die fertige Seite angewendet | Nie angewendet |
+| Druckerausgabeprofil | Zeigt das Abzugsergebnis, wenn die C-Print-Vorschau aus ist | Auf die fertige Seite angewendet (für Nicht-Raw-/Nicht-DNG-Formate) | Verwendet, wenn Softproof aktiv ist und das Ziel des Bildes `PRINT` lautet |
 | C-Print-Proof-Profil | Softproof des Labor- und Papierprozesses | Nicht in die Auslieferungsdatei eingebrannt | Nie angewendet |
-| Allgemeiner Softproof | Im eingestellten Anzeigebereich verwendet | Nur Anzeigehilfe | Folgt der eigenen Einstellung |
+| Allgemeiner Softproof | Sein ICC-Profil wird im Abzug nicht angewendet (außer bei Proof-Kopien unter macOS); sein Simulationsmodus `Profil` oder `Papier + Schwarz` gilt bei der Vorschau des Druckerausgabeprofils | Nur Anzeigehilfe | Folgt der eigenen Einstellung (wechselt bei `PRINT`-Zielen auf das Druckerausgabeprofil) |
 
-Das Drucker-Ausgabeprofil wird unter **Einstellungen → Export → Farbverwaltung** ausgewählt.
+Das Drucker-Ausgabeprofil wird unter **Einstellungen > Export > Farbverwaltung** ausgewählt. Entwickeln und Abzug unterstützen beide Softproof und Gamut-Warnung; unter Windows wendet die Vorschau das aktive Monitor-ICC-Profil an, wenn Windows Advanced Color ausgeschaltet ist.
 
 Ein Druckerausgabeprofil wird nicht auf eine Quelle angewendet, bevor diese Quelle dupliziert wird. Kontaktbogen, Bildpaket oder eigenes Paket werden zuerst zusammengesetzt, dann wird das Profil einmal auf die ganze Seite angewendet. Wiederholte Platzierungen einer Quelle und Layouts mit gemischten Quellen erhalten daher dieselbe Ausgabeumrechnung.
 
@@ -121,9 +122,9 @@ Das C-Print-Proof-Profil ist die vom Labor gelieferte Prozessvorschau. Es wird n
 
 ## DNG-Export
 
-DNG schreibt das entwickelte Bild als unkomprimierte lineare 16-Bit-RGB-Datei (`PhotometricInterpretation = LinearRaw`) im gewählten Ausgabefarbraum: sRGB, Display P3 oder Adobe RGB. Tonwert und Farbe sind bereits eingebrannt, andere Apps lesen die Datei daher als ausgabebezogen. Die Datei trägt Urheberrecht, Scanner, Software, Datum und Filmnotizen nach denselben Metadatenregeln wie TIFF. EXIF, IPTC und GPS der Quellkamera werden nicht kopiert. Sie braucht 6 Byte pro Pixel, ein Bild mit 24 Megapixeln hat also rund 144 MB.
+DNG schreibt das entwickelte Bild als unkomprimierte lineare 16-Bit-RGB-Datei (`PhotometricInterpretation = LinearRaw`) im gewählten Ausgabefarbraum: sRGB, Display P3 oder Adobe RGB. Tonwert und Farbe sind bereits eingebrannt, andere Apps lesen die Datei daher als ausgabebezogen. Die Datei trägt Urheberrecht und Scanner sowie Software, Datum und Filmnotizen nach denselben Metadatenregeln wie TIFF. EXIF, IPTC und GPS der Quellkamera werden nicht kopiert. Sie braucht 6 Byte pro Pixel, ein Bild mit 24 Megapixeln hat also rund 144 MB.
 
-DNG wird für unkomprimierte Quellen angeboten: TIFF, Kamera-RAW und DNG. JPEG-, PNG- und HEIC-Quellen lassen sich nicht als DNG exportieren. Entwickeln, das Ziel `PRINT` und die Abzugslayouts unterstützen alle DNG. Das Abzug-DNG hält die zusammengesetzte Seite in Standard-RGB mit einer ColorMatrix fest, die ICC-Umrechnung des Druckers entfällt. Der DNG-Export nutzt den in Export gewählten Ordner und behält die Endung `.dng`. Abgeschlossen ist er erst, wenn die endgültige Datei veröffentlicht und geprüft ist. exiftool und der Bilddecoder von Apple lesen die Datei. Die Darstellung in anderen RAW-Editoren wurde nicht gemessen.
+Neben JPEG, PNG, 8-Bit-/16-Bit-TIFF und Raw TIFF wird DNG für unkomprimierte Quellen angeboten: TIFF, BMP, Kamera-RAW und DNG. Alle Bilder der aktuellen Auswahl müssen geeignet sein, damit DNG angeboten wird; JPEG-, PNG- und HEIC/HEIF-Quellen sowie WebP-, AVIF- und GIF-Quellen lassen sich nicht als DNG exportieren. Entwickeln, das Ziel `PRINT` und die Abzugslayouts unterstützen alle DNG. Das Abzug-DNG hält die zusammengesetzte Seite in Standard-RGB mit einer ColorMatrix fest, die ICC-Umrechnung des Druckers entfällt. Der DNG-Export nutzt den in Export gewählten Ordner und behält die Endung `.dng`. Abgeschlossen ist er erst, wenn die endgültige Datei veröffentlicht und geprüft ist. exiftool und der Bilddecoder von Apple lesen die Datei. Die Darstellung in anderen RAW-Editoren wurde nicht gemessen.
 
 ## Was die Quelle verändert
 

@@ -8,11 +8,11 @@ Print has eight layouts: single image, contact sheet, picture package, custom pa
 
 - A new contact sheet starts black, with 6 columns × 7 rows and 2 mm gaps. Every other layout starts white. Each layout can switch its sheet among black, gray and white, and captions, custom text, crop marks and page outlines change to a contrasting color on their own.
 - Margins, row and column counts and gaps share one physical layout contract. An impossible combination is reduced to the largest valid spacing instead of breaking the preview. Automatic orientation follows the grid. **Fit** keeps the whole photo visible and may leave space inside its cell. **Fill Cell** crops each photo to the common cell and evens the gutters.
-- Captions can be the file name, original frame number, sequence number (from 1 in the current image order), rating or custom text. Any installed Mac font can be chosen, and preview and export use the same font. Per-image captions align left, center or right. Custom text supports several independent boxes, each with its own text, alignment, position, width and height.
+- Captions can be the file name, original frame number, sequence number (from 1 in the current image order), rating or custom text. Any installed system font can be chosen, and preview and export use the same font. Per-image captions align left, center or right. Custom text supports several independent boxes, each with its own text and alignment, plus position, width and height.
 
 ## Paper controls and rulers
 
-Every layout uses the same paper controls. The catalog has common photographic inch sizes from 3.5 × 5 to 24 × 36, Letter, Tabloid, A3+, ISO A1–A6 and ISO B1–B6. Surface sits below Sheet Color and offers Matte (default), Glossy, Lustre and Silk.
+Every layout uses the same paper controls. The catalog has common photographic inch sizes from 3.5 × 5 to 24 × 36, along with Letter, Tabloid and A3+, plus ISO A1–A6 and ISO B1–B6. Surface sits below Sheet Color and offers Matte (default), Glossy, Lustre and Silk.
 
 Rulers are off by default. Turning them on adds an in/cm selector below the switch, a horizontal ruler above the page and a vertical ruler at its left. Whole inches or centimeters are numbered, with subdivision ticks between them.
 
@@ -20,7 +20,7 @@ Rulers are off by default. Turning them on adds an in/cm selector below the swit
 
 Single image, cyanotype, glass plate and gelatin silver produce one page per selected photo. Several selected photos appear as a vertical stack. Cyanotype maps luminance to a blue monochrome image, glass plate shows a monochrome negative, and gelatin silver shows a neutral monochrome positive.
 
-These three styles use the same paper, orientation, margin, output and inspector controls as Single Image, and they are rendered into Export and Quick Export. They are deliberate visual styles, not a measured reconstruction of any historic chemistry, plate, paper or viewing condition.
+These three styles use the same paper and orientation, plus margin, output and inspector controls as Single Image, and they are rendered into Export and Quick Export. They are deliberate visual styles, not a measured reconstruction of any historic chemistry, plate, paper or viewing condition.
 
 ## Watermarks and layout templates
 
@@ -30,7 +30,7 @@ A layout template restores the layout, paper settings, sheet color and watermark
 
 ## Print export
 
-**Print Export**, directly below Quick Export, renders the current page size, orientation, margins, layout, sheet color, captions, custom text and crop marks, using the format, DPI, folder, naming and delivery color space shown in Export. Screen-only aids are not baked in: gamut warnings, soft-proof simulation and paper-surface sheen. While either Print Export path runs, the Export panel shows the completed-page count, a linear progress bar and a percentage.
+In Print's Export sidebar tab, **Export** (above **Quick Export**) and **Quick Export** both render the current page size and orientation, margins and layout, plus sheet color, captions, custom text and crop marks for formats other than Raw TIFF. Both use the format, DPI, folder and naming from Export and the Delivery Color Space chosen in Settings (Color Management on macOS; Export on Windows, shown read-only under Print > Output > C-print > Advanced). Screen-only aids are not baked in: gamut warnings, soft-proof simulation and paper-surface sheen. While either print export path runs, the Export panel shows the completed-page count, a linear progress bar and a percentage.
 
 ### Page counts and rendering
 
@@ -40,7 +40,7 @@ The package preview does not build interactive and settled full-resolution previ
 
 ### Printer output profile
 
-The Printer Output Profile chosen in Print is part of the exported result. negaflow composes the whole page first and applies the profile once to the finished page, which covers every placement in a picture package or custom package, whether it repeats one photo or mixes several. The profile does not affect the Library or Develop preview, only Print preview and Print Export.
+Printer Output Profile is chosen in Settings (Color Management on macOS; Export on Windows), not in Print. In Print preview and Print Export (for non-Raw and non-DNG formats), negaflow composes the whole page first and applies the profile once to the finished page. That covers every placement in a picture package or custom package, whether it repeats one photo or mixes several. The same profile is also used for `PRINT`-target frames in Develop soft-proof preview and Develop export. It does not affect Library preview or `MAIN` frames in Develop.
 
 ## C-print use
 
@@ -55,7 +55,7 @@ Without a valid RGB ICC profile the destination settings are still saved, but Pr
 
 ## Color contract
 
-The C-print proof ICC is proof-only. It changes the on-screen preview, not the pixels or the embedded profile of an exported file. Print Export uses the Delivery Color Space chosen in Export unless a Printer Output Profile is selected, so a lab soft-proof profile is never silently used as a delivery profile. The `PRINT` develop target is separate. It requires a valid RGB printer-class ICC profile and converts output through it.
+The C-print proof ICC is proof-only. It changes the on-screen preview, not the pixels or the embedded profile of an exported file. Print export uses the Delivery Color Space chosen in Settings (Color Management on macOS; Export on Windows, shown read-only under Print > Output > C-print > Advanced) unless a Printer Output Profile is selected, so a lab soft-proof profile is never silently used as a delivery profile. The `PRINT` develop target is separate. It requires a valid RGB printer-class ICC profile and converts output through it.
 
 ## Accuracy limits
 

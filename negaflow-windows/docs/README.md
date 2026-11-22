@@ -37,7 +37,7 @@ To run it:
 
 To build it:
 
-- Visual Studio 2026 with the Desktop development with C++ workload (`.vsconfig` lists the components)
+- Visual Studio 2026 with C++ desktop, .NET desktop and WinUI/Windows app development workloads (`.vsconfig` lists the exact components)
 - Windows 11 SDK 10.0.26100 or later
 - .NET 10 SDK (`global.json` pins 10.0.302)
 - CMake 4.2 or later (the `Visual Studio 18 2026` generator needs it)
@@ -47,7 +47,7 @@ The build also has Arm64 presets. Releases ship x64 only.
 
 ## Installing
 
-Download `negaflow-1.2.7-win-x64.exe` from [Releases](https://github.com/habinsong/negaflow/releases) and run it. By default it installs into `%LOCALAPPDATA%\Negaflow\App` and asks for no administrator rights.
+Download `negaflow-1.2.7-win-x64.exe` from [Releases](https://github.com/habinsong/negaflow/releases) and run it. By default it installs into `%LOCALAPPDATA%\Negaflow\App` and asks for a one-time administrator confirmation only if Windows does not already allow registering unsigned loose application packages (`AllowDevelopmentWithoutDevLicense`).
 
 [negaflow-1.2.7-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.7/negaflow-1.2.7-win-x64-setup.zip) holds the same installer EXE with installation instructions, notices and SHA-256 checksums. Extract all files before running the installer. It is an installer archive, not a portable app.
 
@@ -91,16 +91,16 @@ ctest --preset x64-release --output-on-failure
 # App and catalog tests
 .\scripts\test-managed.ps1
 
-# Engine and app boundary tests
+# Engine and app boundary tests (run separately)
 .\scripts\test-interop.ps1
 
-# All of the above at once
+# CI gate (keys, slider ranges, CTest, managed tests), release build and installer check
 .\scripts\local-ci.ps1
 ```
 
 Run `scripts\verify-installer.ps1` (also called by `local-ci.ps1`) in a signed-in desktop session. In an SSH session, AppX registration can fail with `0x80070005`, so the script stops before it touches the existing installation.
 
-CI runs only the self-contained engine tests. The macOS reference files stay outside Git. To run those comparisons, set `NEGAFLOW_MACOS_GOLDEN_ROOT` to the reference directory when configuring CMake. It must contain `task6-metadata-policy`, `task9-bw-slide`, `task7-coreimage-filters`, `task8-digital-film-look` and `vibrance`. A missing or unreadable file fails the selected comparisons. `ctest --preset x64-release -L external-golden` runs them, and the ordinary unit tests stay enabled.
+CI runs only the self-contained engine tests, while the macOS reference files stay outside Git. To run those comparisons, set `NEGAFLOW_MACOS_GOLDEN_ROOT` to the reference directory when configuring CMake. That directory must contain `task6-metadata-policy` and `task9-bw-slide`, plus `task7-coreimage-filters`, `task8-digital-film-look` and `vibrance`. If a file is missing or unreadable, the selected comparisons fail. Then `ctest --preset x64-release -L external-golden` runs those comparisons, and the ordinary unit tests stay enabled.
 
 ## Custom color targets
 
@@ -121,8 +121,8 @@ $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 # What a scan file contains
 & $cli --probe-tiff scan.tif
 
-# Develop and save as 16-bit TIFF
-& $cli --export-developed-tiff16 scan.tif out.tif
+# Develop and save as 16-bit TIFF (<dmin-r> <dmin-g> <dmin-b> <color|bw>)
+& $cli --export-developed-tiff16 scan.tif out.tif 0.85 0.55 0.35 color
 
 # Where the time goes in one develop pass
 & $cli --develop-timing scan.tif
@@ -131,7 +131,7 @@ $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 & $cli --auto-base-probe scan.tif
 ```
 
-Run it with no arguments for the full list.
+Running with no arguments prints build information JSON; pass `--help` for the option list.
 
 ## Scanners
 
@@ -148,11 +148,13 @@ The app writes text logs to `%LOCALAPPDATA%\Negaflow\Logs`.
 | `export-trace.txt` | Export and quick export, including failures |
 | `termination.txt` | What happened while the app was closing |
 | `settings-change.txt` | Settings that changed and what changed them |
+| `startup-trace.txt` | Launch and shell initialization milestones |
+| `crop-trace.txt` | Crop geometry and interaction updates |
 
-These three are always on. Two more are off by default:
+These are always on (fault logs such as `native-crash.txt` and `scanner-failure.txt` are also written when an error occurs). Optional traces are off by default:
 
-- `preview-trace.txt`: create an empty file named `preview-trace.on` in the same folder.
-- `stage-trace.txt`: set the environment variable `NEGAFLOW_STAGE_TRACE=1` before launching the app. It records pixel statistics at each develop stage.
+- `preview-trace.txt`, `thumbnail-trace.txt`, `shortcut-trace.txt`, `decode-trace.txt` and `memory-budget.txt`: create the matching `.on` marker file (`preview-trace.on`, `thumbnail-trace.on`, `shortcut-trace.on`, `decode-trace.on`, `memory-trace.on`) in the same folder, or turn on Developer Mode in Settings.
+- `stage-trace.txt` and `stage-timing.txt`: set `NEGAFLOW_STAGE_TRACE=1` (pixel statistics per stage) or `NEGA_TIMING=1` (per-stage timings) before launching the app.
 
 ## Layout
 
@@ -162,8 +164,8 @@ negaflow-windows/
 │   ├── Native/        Chroma Engine, GrainMend, decoding and export (C++)
 │   ├── Interop/       The layer between engine and app (C#)
 │   ├── Catalog.Core/  Library storage (C#)
-│   ├── Shell.Core/    Develop, print and export logic (C#)
-│   ├── Shell/         Library, develop and print screens (WinUI 3)
+│   ├── Shell.Core/    Develop, print, scan and export logic (C#)
+│   ├── Shell/         Library, develop, print and scan screens (WinUI 3)
 │   └── Cli/           Engine inspection tool (C++)
 ├── scripts/           Build, test and packaging scripts
 ├── tests/             Engine, app and boundary tests
@@ -175,4 +177,4 @@ negaflow-windows/
 - [How the two differ](../../docs/platform/PLATFORM_DIFFERENCES.md)
 - [Chroma Engine](../../docs/product/CHROMA_ENGINE.md)
 - [GrainMend](../../docs/product/GRAINMEND.md)
-- [Product architecture](../../docs/architecture/PRODUCT_ARCHITECTURE.md)
+- [Architecture overview](../../docs/architecture/PRODUCT_ARCHITECTURE.md)

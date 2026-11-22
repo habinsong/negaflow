@@ -33,7 +33,11 @@ negaflow capabilities <scannerID> [--demo] --json
   "schemaVersion": 1,
   "command": "capabilities",
   "status": "ok",
-  "payload": {},
+  "payload": {
+    "scannerID": "<scannerID>",
+    "backend": "<backend>",
+    "capabilities": {}
+  },
   "error": null
 }
 ```
@@ -42,9 +46,11 @@ negaflow capabilities <scannerID> [--demo] --json
 
 失敗すると `status` は `error`、`payload` は `null` になります。`error` には、変わらない機械向けコードと説明が入ります。ログと進行状況は stderr にだけ出ます。
 
+`detect` の `payload` には、`{ backend, devices }` の要素を持つ `backends` 配列が入ります。
+
 ## 機能情報
 
-`capabilities` の payload には、次のフィールドが必ずすべて入ります。
+`capabilities` の `payload` は `scannerID`、`backend`、`capabilities` を持つオブジェクトです。`payload.capabilities` には次の25個のフィールドが必ずすべて入ります。
 
 - `resolutionsDPI`, `modes`, `bitDepths`
 - `sourceModes`, `transparencyModes`

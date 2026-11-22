@@ -23,27 +23,37 @@ public sealed unsafe partial class DisplayColorTransform : IDisposable
     /// 모니터 프로파일로 표를 만듭니다. 항등이거나 만들 수 없으면 null 입니다 — 둘 다 화소를
     /// 그대로 그리면 됩니다.
     /// </summary>
-    public static DisplayColorTransform? TryCreate(ReadOnlySpan<byte> monitorProfile)
+    public static DisplayColorTransform? TryCreate(ReadOnlySpan<byte> monitorProfile) =>
+        TryCreate(monitorProfile, out _);
+
+    /// <summary>
+    /// sRGB → <paramref name="destinationProfile"/> 2-프로파일 표를 만듭니다.
+    /// <paramref name="identity"/> 가 true 면 변환이 항등이고, 둘 다 null·false 면 ICM 이 이
+    /// 프로파일로 변환을 만들지 못한 것입니다.
+    /// </summary>
+    public static DisplayColorTransform? TryCreate(ReadOnlySpan<byte> destinationProfile, out bool identity)
     {
-        if (monitorProfile.Length < 128)
+        identity = false;
+        if (destinationProfile.Length < 128)
         {
             return null;
         }
         nint created = 0;
-        uint identity = 0U;
+        uint isIdentity = 0U;
         uint nativeError = 0U;
         uint status;
-        fixed (byte* profile = monitorProfile)
+        fixed (byte* profile = destinationProfile)
         {
             status = nf_display_color_transform_create_v1(
-                profile, (uint)monitorProfile.Length, &created, &identity, &nativeError);
+                profile, (uint)destinationProfile.Length, &created, &isIdentity, &nativeError);
         }
         if (status != 0U || created == 0)
         {
             return null;
         }
-        if (identity != 0U)
+        if (isIdentity != 0U)
         {
+            identity = true;
             nf_display_color_transform_destroy_v1(created);
             return null;
         }

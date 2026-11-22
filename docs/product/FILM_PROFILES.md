@@ -18,13 +18,13 @@ The bundled scanner profiles are built from film frames shot by the project auth
 
 ## Three separate kinds of data
 
-| Data | Format | Used for | Count |
+| Data | Format (macOS bundle) | Used for | Count |
 |---|---|---|---:|
 | Film stock | Swift | Dmin/Dmax and film type defaults | 27 |
 | Look preset | JSON | Creative looks you pick | 6 |
 | Scanner profile | JSON | Relative tone and color statistics seen in real scans | 15 |
 
-27 film names are not 27 color accuracy profiles, and the 6 looks are a different thing from scanner profiles. What follows is about the third kind only.
+On Windows, the same 27 film stocks, 6 look presets and 15 scanner profiles are compiled into C++ and C#. 27 film names are not 27 color accuracy profiles, and the 6 looks are a different thing from scanner profiles. What follows is about the third kind only.
 
 ## What is bundled today
 
@@ -105,10 +105,10 @@ The bundled scanner profiles are built from film frames shot by the project auth
 | `color` | Channels and saturation in shadows, midtones, highlights | An observed distribution, not an absolute color matrix |
 | `neutralAxis` | Lab `a*` and `b*` of low-saturation pixels | Some scenes have no neutral object, so sample counts go with it |
 | `hueResponse` | Saturation change and hue rotation per hue bin | Relative comparison only when both machines' data lines up |
-| `texture` | Gradient, sharpness, grain reference value | Not used directly as a machine sharpening value |
+| `texture` | Gradient, sharpness, grain reference value | Not used as a machine sharpening value in `HS`/`SP` (`ScannerTargetGrade`); drives bounded unsharp masking from `texture_sharpness_p95` (with no synthetic grain) in standalone `ScannerProfileGrade` |
 | `sceneBuckets` | Per-scene statistics and representative frames | Lets a person trace the source again |
 
-The brightness-channel sharpening in the `HS` target is not a machine constant measured from `texture`, and it does not synthesize new grain. `SP`, `MAIN` and `PRINT` do not include that sharpening.
+In `ScannerTargetGrade`, `HS` applies a fixed resolution-scaled luminance sharpening pass that is not derived from `texture`, while `SP`, `F135`, `HR`, `MAIN`, `PRINT`, `EXPIRED` and `CS` add no target sharpening. When a single scanner profile is manually applied outside the scanner targets (`ScannerProfileGrade`), it derives bounded tone and color (`NaturalToneSpline`) and bounded unsharp masking from `texture_sharpness_p95`, with no synthetic grain.
 
 ## Evidence status
 
@@ -138,7 +138,7 @@ Nothing is selected automatically from a model name or file information. You pic
 
 ### The relative difference between two scanners
 
-Absolute scene statistics are not used as they are. Only the difference between matching groups from the two machines is used, and in a limited way:
+In `HS` and `SP` (`ScannerTargetGrade`), single-profile absolute scene statistics are not used as they are (whereas manually applying a single scanner profile outside the scanner targets via `ScannerProfileGrade` derives bounded tone and color with `NaturalToneSpline`). In `HS` and `SP`, only the difference between matching groups from the two machines is used, and in a limited way:
 
 - The tidied set of roll names has to match.
 - The image count has to differ by 15% or less.
@@ -151,22 +151,23 @@ The source profiles carry no per-frame SHA-256, and matching roll names are not 
 
 ### Black and white, and positive
 
-For black and white, the color components are dropped and only relative tone is used. For positive, the absolute brightness of one roll is not carried onto another photograph. The base styles of `HS` and `SP` do apply to positives at half strength, so the result is not always the same as `MAIN`.
+For black and white, the color components are dropped and only relative tone is used. For positive, the absolute brightness of one roll is not carried onto another photograph. The base styles of all four scanner targets (`HS`, `SP`, `F135` and `HR`) apply to positives at half strength, so the result is not always the same as `MAIN`.
 
 ### Texture
 
-Without paired material from the same frame, `texture` is not used as a machine-specific sharpening or grain value. Focus, subject, JPEG processing and the lab operator's choices are all mixed into those numbers.
+Without paired material from the same frame, `HS` and `SP` (`ScannerTargetGrade`) do not use `texture` as a machine-specific sharpening or grain value because focus, subject, JPEG processing and the lab operator's choices are all mixed into those numbers. Manually applying a single scanner profile outside the scanner targets (`ScannerProfileGrade`) derives only bounded unsharp masking from `texture_sharpness_p95` and adds no synthetic grain.
 
 ## File integrity
 
-`ScannerProfileRegistry` never opens just some of the 15:
+`ScannerProfileRegistry` never opens just some of the 15 at runtime:
 
-1. Read the manifest schema.
-2. Confirm that every file exists and check its SHA-256.
-3. Recompute `profileHash` in each JSON.
-4. Check the ID, file name, schema, status, counts and finite values.
-5. If any of it is off, refuse the whole bundle.
-6. Cache only a read-only snapshot where everything matched.
+1. Verify the manifest schema (`schemaVersion == 2`), profile count and unique IDs.
+2. Confirm that every file exists, check its raw file SHA-256, and verify file-state stability before and after reading.
+3. Decode each JSON and check `schemaVersion == 2`, the ID and the manifest-recorded `profileHash`.
+4. If any check fails, refuse the whole bundle.
+5. Cache only a read-only snapshot where everything matched.
+
+Offline validation in `negaflow-mac/scripts/validate_scanner_profiles.py` recomputes `profileHash` from the JSON content and checks counts, validation status and finite values.
 
 The export record keeps the profile ID and SHA-256 that were actually used.
 

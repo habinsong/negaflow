@@ -15,6 +15,9 @@ constexpr std::size_t icc_tag_record_bytes = 12U;
 constexpr std::size_t icc_xyz_type_bytes = 20U;
 
 constexpr std::uint32_t rgb_data_space = 0x52474220U;  // 'RGB '
+constexpr std::uint32_t class_prtr = 0x70727472U;      // 'prtr'
+constexpr std::uint32_t class_mntr = 0x6D6E7472U;      // 'mntr'
+constexpr std::uint32_t class_spac = 0x73706163U;      // 'spac'
 constexpr std::uint32_t xyz_type_signature = 0x58595A20U;  // 'XYZ '
 constexpr std::uint32_t tag_wtpt = 0x77747074U;
 constexpr std::uint32_t tag_bkpt = 0x626B7074U;
@@ -25,6 +28,7 @@ constexpr std::uint32_t tag_r_trc = 0x72545243U;
 constexpr std::uint32_t tag_g_trc = 0x67545243U;
 constexpr std::uint32_t tag_b_trc = 0x62545243U;
 constexpr std::uint32_t tag_b2a0 = 0x42324130U;
+constexpr std::uint32_t tag_b2a1 = 0x42324131U;
 
 [[nodiscard]] std::uint32_t read_be_u32(
     const std::span<const std::uint8_t> bytes,
@@ -188,11 +192,18 @@ bool is_rgb_output_profile(const std::span<const std::uint8_t> bytes) noexcept {
         validation.info.data_color_space != rgb_data_space) {
         return false;
     }
+    const std::uint32_t device_class = validation.info.device_class;
+    if (device_class != class_prtr && device_class != class_mntr &&
+        device_class != class_spac) {
+        return false;
+    }
     const std::uint32_t tag_count = validation.info.tag_count;
-    // Either an invertible matrix/TRC profile or a LUT profile carrying the PCS-to-device
-    // table. A scanner profile with only A2B0 fails here, which is the point.
+    // Either an invertible matrix/TRC profile or a LUT profile carrying a PCS-to-device
+    // table (Perceptual B2A0 or Relative Colorimetric B2A1). Scanner (`scnr`) and
+    // non-output classes are rejected above.
     return has_matrix_trc_tags(bytes, tag_count) ||
-           find_tag(bytes, tag_count, tag_b2a0).has_value();
+           find_tag(bytes, tag_count, tag_b2a0).has_value() ||
+           find_tag(bytes, tag_count, tag_b2a1).has_value();
 }
 
 SoftProofPaper soft_proof_paper(const SoftProofMedia& media) noexcept {

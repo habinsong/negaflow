@@ -2,7 +2,7 @@
 
 [Accueil de la documentation](../README.md)
 
-Le `renderManifest` du fichier annexe relie la source, les valeurs de retouche et le fichier final par SHA-256. Les chemins de fichiers ne sont pas enregistrés.
+Le `renderManifest` du fichier annexe macOS relie la source, les valeurs de retouche et le fichier final par SHA-256. Les chemins de fichiers ne sont pas enregistrés, et les fichiers annexes d'export Windows n'émettent pas de `renderManifest`.
 
 > [!IMPORTANT]
 > Le `renderManifest` consigne des liens de hachage entre fichiers et réglages. Il n'a ni signature numérique ni certificat : ce n'est pas du C2PA Content Credentials.
@@ -13,7 +13,7 @@ Le `renderManifest` du fichier annexe relie la source, les valeurs de retouche e
 - L'entrée de rendu réellement utilisée
 - La portée vérifiée du fichier de cache GrainMend ou de l'entrée en mémoire
 - SHA-256 des réglages de développement, de GrainMend et d'export
-- SHA-256 du profil de scanner
+- SHA-256 du profil de scanner et, lorsqu'un profil de sortie imprimante est appliqué, `outputProfileSHA256`
 - Origine du décodeur et version du moteur de rendu Chroma Engine
 - SHA-256, taille en octets, dimensions en pixels et format du fichier final
 

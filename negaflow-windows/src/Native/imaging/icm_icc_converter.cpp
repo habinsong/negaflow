@@ -1,6 +1,9 @@
 #include "icm_rgb16_parallel.h"
 #include "scanner_to_working_detail.h"
 
+#include "negaflow/color/icc_profile.h"
+#include "negaflow/color/icm_transform.h"
+
 #include <Windows.h>
 #include <icm.h>
 
@@ -133,11 +136,17 @@ ScannerToWorkingStatus IcmRgb16Transform::initialize(
         source_profile_bytes.size() > std::numeric_limits<DWORD>::max()) {
         return ScannerToWorkingStatus::invalid_icc_profile;
     }
+    const std::span<const std::uint8_t> source_trimmed =
+        negaflow::color::trim_icc_padding(source_profile_bytes);
+    const std::span<const std::uint8_t> destination_trimmed =
+        destination_profile_bytes.empty()
+            ? destination_profile_bytes
+            : negaflow::color::trim_icc_padding(destination_profile_bytes);
 
     PROFILE source_description{};
     source_description.dwType = PROFILE_MEMBUFFER;
-    source_description.pProfileData = const_cast<std::uint8_t*>(source_profile_bytes.data());
-    source_description.cbDataSize = static_cast<DWORD>(source_profile_bytes.size());
+    source_description.pProfileData = const_cast<std::uint8_t*>(source_trimmed.data());
+    source_description.cbDataSize = static_cast<DWORD>(source_trimmed.size());
     SetLastError(ERROR_SUCCESS);
     source_profile_ =
         OpenColorProfileW(&source_description, PROFILE_READ, 0U, OPEN_EXISTING);
@@ -146,16 +155,16 @@ ScannerToWorkingStatus IcmRgb16Transform::initialize(
         return ScannerToWorkingStatus::color_profile_open_failed;
     }
 
-    if (destination_profile_bytes.empty()) {
+    if (destination_trimmed.empty()) {
         destination_profile_ = open_standard_srgb_profile(native_error_code);
     } else {
-        if (destination_profile_bytes.size() > std::numeric_limits<DWORD>::max()) {
+        if (destination_trimmed.size() > std::numeric_limits<DWORD>::max()) {
             reset();
             return ScannerToWorkingStatus::invalid_icc_profile;
         }
         try {
             destination_profile_storage_.assign(
-                destination_profile_bytes.begin(), destination_profile_bytes.end());
+                destination_trimmed.begin(), destination_trimmed.end());
         } catch (const std::bad_alloc&) {
             reset();
             return ScannerToWorkingStatus::allocation_failed;
@@ -191,13 +200,19 @@ ScannerToWorkingStatus IcmRgb16Transform::initialize_to_profile(
         source_profile_bytes.size() > std::numeric_limits<DWORD>::max()) {
         return ScannerToWorkingStatus::invalid_icc_profile;
     }
+    const std::span<const std::uint8_t> destination_trimmed =
+        negaflow::color::trim_icc_padding(destination_profile_bytes);
+    const std::span<const std::uint8_t> source_trimmed =
+        source_profile_bytes.empty()
+            ? source_profile_bytes
+            : negaflow::color::trim_icc_padding(source_profile_bytes);
 
-    if (source_profile_bytes.empty()) {
+    if (source_trimmed.empty()) {
         source_profile_ = open_standard_srgb_profile(native_error_code);
     } else {
         try {
             source_profile_storage_.assign(
-                source_profile_bytes.begin(), source_profile_bytes.end());
+                source_trimmed.begin(), source_trimmed.end());
         } catch (const std::bad_alloc&) {
             return ScannerToWorkingStatus::allocation_failed;
         }
@@ -219,7 +234,7 @@ ScannerToWorkingStatus IcmRgb16Transform::initialize_to_profile(
 
     try {
         destination_profile_storage_.assign(
-            destination_profile_bytes.begin(), destination_profile_bytes.end());
+            destination_trimmed.begin(), destination_trimmed.end());
     } catch (const std::bad_alloc&) {
         reset();
         return ScannerToWorkingStatus::allocation_failed;
@@ -242,17 +257,8 @@ ScannerToWorkingStatus IcmRgb16Transform::initialize_to_profile(
 
 ScannerToWorkingStatus IcmRgb16Transform::link(std::uint32_t& native_error_code) {
     HPROFILE profiles[2]{source_profile_, destination_profile_};
-    DWORD intent = INTENT_RELATIVE_COLORIMETRIC;
-    SetLastError(ERROR_SUCCESS);
-    transform_ = CreateMultiProfileTransform(
-        profiles,
-        2U,
-        &intent,
-        1U,
-        BEST_MODE,
-        INDEX_DONT_CARE);
+    transform_ = negaflow::color::create_icm_transform(profiles, 2U, false, native_error_code);
     if (transform_ == nullptr) {
-        native_error_code = GetLastError();
         reset();
         return ScannerToWorkingStatus::color_transform_initialization_failed;
     }

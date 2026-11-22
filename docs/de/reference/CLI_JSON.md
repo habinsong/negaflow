@@ -33,7 +33,11 @@ Erfolg wie Fehler schreiben ein JSON-Dokument nach stdout.
   "schemaVersion": 1,
   "command": "capabilities",
   "status": "ok",
-  "payload": {},
+  "payload": {
+    "scannerID": "<scannerID>",
+    "backend": "<backend>",
+    "capabilities": {}
+  },
   "error": null
 }
 ```
@@ -42,9 +46,11 @@ Erfolg wie Fehler schreiben ein JSON-Dokument nach stdout.
 
 Bei einem Fehler ist `status` gleich `error` und `payload` gleich `null`. `error` enthält einen stabilen maschinenlesbaren Code und eine Beschreibung. Protokolle und Fortschritt gehen nur nach stderr.
 
+Bei `detect` enthält `payload` ein `backends`-Array aus `{ backend, devices }`-Einträgen.
+
 ## Fähigkeiten
 
-Der `payload` von `capabilities` enthält immer alle diese Felder:
+Der `payload` von `capabilities` ist ein Objekt mit `scannerID`, `backend` und `capabilities`. Alle 25 folgenden Felder stehen immer in `payload.capabilities`:
 
 - `resolutionsDPI`, `modes`, `bitDepths`
 - `sourceModes`, `transparencyModes`

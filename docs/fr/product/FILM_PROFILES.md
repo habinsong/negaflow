@@ -18,13 +18,13 @@ Les profils de scanner fournis sont construits à partir de vues de film photogr
 
 ## Trois sortes de données distinctes
 
-| Données | Format | Usage | Nombre |
+| Données | Format (lot macOS) | Usage | Nombre |
 |---|---|---|---:|
 | Type de film | Swift | Dmin/Dmax et valeurs par défaut par type de film | 27 |
 | Préréglage de rendu | JSON | Rendus créatifs que vous choisissez | 6 |
 | Profil de scanner | JSON | Statistiques relatives de tonalité et de couleur observées sur de vraies numérisations | 15 |
 
-27 noms de film ne font pas 27 profils d'exactitude colorimétrique, et les 6 rendus n'ont rien à voir avec les profils de scanner. La suite ne traite que de la troisième sorte.
+Sur Windows, les mêmes 27 émulsions, 6 préréglages de rendu et 15 profils de scanner sont compilés en C++ et C#. 27 noms de film ne font pas 27 profils d'exactitude colorimétrique, et les 6 rendus n'ont rien à voir avec les profils de scanner. La suite ne traite que de la troisième sorte.
 
 ## Ce qui est fourni aujourd'hui
 
@@ -104,18 +104,18 @@ Les profils de scanner fournis sont construits à partir de vues de film photogr
 | `tone` | Distribution de luminosité et écrêtage aux deux extrémités | L'exposition d'une vue n'est pas une propriété de la machine |
 | `color` | Canaux et saturation dans les ombres, tons moyens et hautes lumières | Une distribution observée, pas une matrice de couleur absolue |
 | `neutralAxis` | Lab `a*` et `b*` des pixels peu saturés | Certaines scènes n'ont pas d'objet neutre : les nombres d'échantillons accompagnent la valeur |
-| `hueResponse` | Variation de saturation et rotation de teinte par intervalle de teinte | Comparaison relative seulement quand les données des deux machines s'alignent |
-| `texture` | Gradient, netteté, valeur de référence du grain | Pas utilisé directement comme valeur d'accentuation de la machine |
+| `hueResponse` | Écart de chroma et décalage de teinte par intervalle de teinte | Comparaison relative seulement quand les données des deux machines s'alignent |
+| `texture` | Gradient, netteté, valeur de référence du grain | Pas utilisé comme valeur d'accentuation de la machine dans `HS`/`SP` (`ScannerTargetGrade`) ; pilote un masque flou borné tiré de `texture_sharpness_p95` (sans grain synthétique) dans `ScannerProfileGrade` autonome |
 | `sceneBuckets` | Statistiques par scène et vues représentatives | Permet de retrouver la source |
 
-L'accentuation du canal de luminosité de la cible `HS` n'est pas une constante de machine mesurée à partir de `texture`, et elle ne synthétise pas de nouveau grain. `SP`, `MAIN` et `PRINT` n'ont pas cette accentuation.
+Dans `ScannerTargetGrade`, `HS` applique une passe fixe d'accentuation de la luminance mise à l'échelle selon la résolution qui n'est pas dérivée de `texture`, tandis que `SP`, `F135`, `HR`, `MAIN`, `PRINT`, `EXPIRED` et `CS` n'ajoutent aucune accentuation de cible. Lorsqu'un seul profil de scanner est appliqué manuellement hors des cibles de scanner (`ScannerProfileGrade`), il dérive une tonalité et une couleur bornées (`NaturalToneSpline`) ainsi qu'un masque flou borné tiré de `texture_sharpness_p95`, sans grain synthétique.
 
 ## État des preuves
 
 | État | Signification | Où l'utiliser |
 |---|---|---|
 | `draft` | Données ou schéma inachevés | Ni pour la livraison ni pour un usage automatique |
-| `realOnly` | De vraies numérisations existent, mais pas de matériel de référence distinct | Sélection manuelle seulement, sans affirmation d'exactitude |
+| `realOnly` | De vraies numérisations existent, mais pas de matériel de référence distinct | Choix manuel seulement, sans promesse d'exactitude |
 | `pairedSmoke` | Un matériel apparié confirme seulement le chemin de traitement | Inutilisable comme preuve de qualité |
 | `pairedValidated` | A passé l'étalonnage, le matériel de validation et les contrôles de régression | Sélection automatique permise si la politique l'autorise |
 
@@ -130,7 +130,7 @@ Affirmer l'exactitude d'une machine demande davantage de matériel :
 - Le lot de la cible, l'éclairage et la méthode de mesure
 - Un critère de réussite par image
 
-## Comment l'application les utilise
+## Comment l'application s'en sert
 
 ### Sélection manuelle
 
@@ -138,7 +138,7 @@ Rien n'est sélectionné automatiquement d'après un nom de modèle ou des infor
 
 ### La différence relative entre deux scanners
 
-Les statistiques absolues de scène ne sont pas utilisées telles quelles. Seule la différence entre les groupes correspondants des deux machines est utilisée, de façon limitée :
+Dans `HS` et `SP` (`ScannerTargetGrade`), les statistiques absolues de scène d'un profil unique ne sont pas utilisées telles quelles (tandis que l'application manuelle d'un seul profil de scanner hors des cibles de scanner via `ScannerProfileGrade` dérive une tonalité et une couleur bornées avec `NaturalToneSpline`). Dans `HS` et `SP`, seule la différence entre les groupes correspondants des deux machines est utilisée, de façon limitée :
 
 - L'ensemble épuré des noms de bobines doit concorder.
 - Le nombre d'images doit différer de 15 % ou moins.
@@ -151,22 +151,23 @@ Les profils sources ne portent pas de SHA-256 par vue, et des noms de bobines id
 
 ### Noir et blanc, et positif
 
-En noir et blanc, les composantes de couleur sont écartées et seule la tonalité relative est utilisée. Pour le positif, la luminosité absolue d'une bobine n'est pas reportée sur une autre photographie. Les styles de base de `HS` et `SP` s'appliquent toutefois aux positifs à demi-intensité : le résultat n'est donc pas toujours identique à `MAIN`.
+En noir et blanc, les composantes de couleur sont écartées et seule la tonalité relative est utilisée. Pour le positif, la luminosité absolue d'une bobine n'est pas reportée sur une autre photographie. Les styles de base des quatre cibles de scanner (`HS`, `SP`, `F135` et `HR`) s'appliquent aux positifs à demi-intensité : le résultat n'est donc pas toujours identique à `MAIN`.
 
 ### Texture
 
-Sans matériel apparié sur la même vue, `texture` n'est pas utilisée comme valeur d'accentuation ou de grain propre à une machine. La mise au point, le sujet, le traitement JPEG et les choix de l'opérateur du laboratoire sont tous mêlés à ces chiffres.
+Sans matériel apparié sur la même vue, `HS` et `SP` (`ScannerTargetGrade`) n'utilisent pas `texture` comme valeur d'accentuation ou de grain propre à une machine, car la mise au point, le sujet, le traitement JPEG et les choix de l'opérateur du laboratoire sont tous mêlés à ces chiffres. L'application manuelle d'un seul profil de scanner hors des cibles de scanner (`ScannerProfileGrade`) dérive uniquement un masque flou borné tiré de `texture_sharpness_p95` et n'ajoute aucun grain synthétique.
 
 ## Intégrité des fichiers
 
-`ScannerProfileRegistry` n'ouvre jamais seulement une partie des 15 :
+`ScannerProfileRegistry` n'ouvre jamais seulement une partie des 15 à l'exécution :
 
-1. Lire le schéma du manifeste.
-2. Confirmer que chaque fichier existe et vérifier son SHA-256.
-3. Recalculer `profileHash` dans chaque JSON.
-4. Vérifier l'identifiant, le nom de fichier, le schéma, l'état, les nombres et le caractère fini des valeurs.
-5. Si un seul point diffère, refuser tout le lot.
-6. Ne mettre en cache qu'un instantané en lecture seule dont tout concorde.
+1. Vérifier le schéma du manifeste (`schemaVersion == 2`), le nombre de profils et l'unicité des identifiants.
+2. Confirmer que chaque fichier existe, vérifier le SHA-256 du fichier brut et contrôler la stabilité de l'état du fichier avant et après la lecture.
+3. Décoder chaque JSON et vérifier `schemaVersion == 2`, l'identifiant et le `profileHash` consigné dans le manifeste.
+4. Si une seule vérification échoue, refuser tout le lot.
+5. Ne mettre en cache qu'un instantané en lecture seule dont tout concorde.
+
+La validation hors ligne dans `negaflow-mac/scripts/validate_scanner_profiles.py` recalcule `profileHash` à partir du contenu JSON et vérifie les nombres, l'état de validation et le caractère fini des valeurs.
 
 Le relevé d'export garde l'identifiant et le SHA-256 du profil réellement utilisé.
 

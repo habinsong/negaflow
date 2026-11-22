@@ -9,7 +9,7 @@ This guide covers import, folder development, settings transfer, scanner thumbna
 
 ## Import
 
-Import shows a progress bar, percentage, completed count and total count below the import controls. Metadata is read off the main thread, then the new frames are registered together, so a large folder does not repeatedly rebuild the library index.
+Import shows a progress bar, percentage, completed count and total count below the import controls. Metadata is read off the main thread, then the new frames are registered together, so a large folder does not repeatedly rebuild the library index. Import accepts TIFF, PNG and JPEG, plus HEIC/HEIF, BMP, DNG and camera RAW files; it honors embedded Gray and RGB ICC profiles and pairs matching `_ir` / `-ir` / `.ir` infrared companion files automatically when the frame dimensions match.
 
 Automatic development of imported photos is **off by default**. An import goes like this:
 
@@ -17,7 +17,7 @@ Automatic development of imported photos is **off by default**. An import goes l
 2. Its original thumbnail and folder appear first.
 3. Development starts when you apply a process and target to the folder or enter Develop.
 
-To develop every import automatically, turn on **Settings → Workflow → Develop new imports automatically**. The choice persists between launches. It applies only to frames registered by that import and never replaces an existing developed state. Developed photos are reprocessed only by an explicit folder **Apply** or a settings paste.
+To develop every import automatically, turn on **Settings > Workflow > Develop new imports automatically**. The choice persists between launches. It applies only to frames registered by that import and never replaces an existing developed state. Developed photos are reprocessed only by an explicit folder **Apply** or a settings paste.
 
 Scanner captures differ: film type, process and target are chosen during the scan, so development starts once the scan result is published. Develop and Print filmstrips show a developed thumbnail for color negative, slide, black-and-white negative and black-and-white positive sources. Library keeps the source thumbnail for source review.
 
@@ -26,6 +26,7 @@ Scanner captures differ: film type, process and target are chosen during the sca
 - Collapsed and expanded states persist. Creating a folder or reopening the app does not expand the other folders.
 - Every folder row has the same `×` control. It removes that folder and its photos from the **library only**. Source files remain in Finder.
 - The photo list inside a folder in Develop has its own height-limited scroll area, so a long list or a small window does not push the rest of the sidebar away.
+- In the library and filmstrip, frames also support star ratings (`1`–`5`) and Pick/Reject flags, Virtual Copies and Stacks, Collections, Snapshots and edit History, plus catalog backups and portable `.negaflowarchive` archives.
 
 ### Moving photos to another folder
 
@@ -41,7 +42,7 @@ negaflow watches the registered physical source folders. After a short debounce,
 - A registered folder move or rename
 - A new image directly inside a registered folder
 
-When the source's persistent bookmark resolves the new location, the existing frame is relinked. A moved folder keeps its folder ID and added date. A newly added file is imported without creating duplicates for files that are already known.
+On macOS, when the source's persistent bookmark resolves the new location, the existing frame is relinked. On Windows, `FileSystemWatcher` monitors each registered folder and reconciles file moves, renames and new images against the catalog. A moved folder keeps its folder ID and added date. A newly added file is imported without creating duplicates for files that are already known.
 
 This is event-driven folder monitoring, not a periodic full-library scan. Frames with the same physical parent share one watch, and only folders that report a change are inspected.
 
@@ -55,11 +56,11 @@ A progress bar, percentage, completed count and total count appear beside Apply.
 
 ## Straighten and transform
 
-Open Geometry → Crop on the right of Develop. Hold ⌘ (Ctrl on Windows), drag along an edge that should be level and let go: the photo turns so the line is horizontal. A line drawn closer to vertical is made vertical instead. Hold ⌥ (Alt on Windows) to show a fine grid over the crop. Both keys can be changed in Settings → Shortcuts, and they cannot be the same key. The Mac does not offer ⌃ for the line because ⌃-click is a right-click there.
+Open Geometry > Crop on the right of Develop. Hold ⌘ (Ctrl on Windows), drag along an edge that should be level and let go: the photo turns so the line is horizontal. A line drawn closer to vertical is made vertical instead. Hold ⌥ (Alt on Windows) to show a fine grid over the crop. Both keys, along with workspace, develop, rating and defect-tool shortcuts, can be customized in Settings > Shortcuts, and the two crop keys cannot be the same key. The Mac does not offer ⌃ for the line because ⌃-click is a right-click there.
 
-The Transform section sits between Calibration and Detail & Effects. Off leaves the photo alone. Auto, Level, Vertical and Full look for straight lines in the photo once and correct them. Level only turns the photo, Vertical also straightens converging verticals, and Full corrects vertical and horizontal perspective. Auto does what Full does but holds back large corrections. Guided follows 2 to 4 guides that you draw on the photo.
+The Transform section sits between Calibration and Detail & Effects. Off leaves the photo alone, whereas Auto, Level, Vertical and Full look for straight lines in the photo once and correct them. Specifically, Level only turns the photo, Vertical also straightens converging verticals, and Full corrects vertical and horizontal perspective. Auto does what Full does, but it holds back large corrections. In addition, Guided follows 2 to 4 guides that you draw on the photo.
 
-The Vertical, Horizontal, Rotate, Aspect, Scale, X Offset and Y Offset sliders add to what the mode found. Double-click a slider to reset it. Constrain Crop trims the result to the largest rectangle with no empty corners. With it off, the empty corners are white on screen and in exported files. The histogram, clipping warnings, Auto Tone and Auto White Balance leave them out. The correction survives 90° turns and flips, and Reset All Adjustments clears it together with crop and straighten.
+The Vertical and Horizontal sliders, Rotate and Aspect, plus Scale, X Offset and Y Offset add to what the mode found. Double-click a slider to reset it. Constrain Crop trims the result to the largest rectangle with no empty corners. With it off, the empty corners are white on screen and in exported files. The histogram, clipping warnings, Auto Tone and Auto White Balance leave them out. The correction survives 90° turns and flips, and Reset All Adjustments clears it together with crop and straighten.
 
 ## Presets and copy/paste
 
@@ -70,9 +71,9 @@ Develop settings have seven independently selectable groups.
 | Input Gamma | Source transfer interpretation |
 | Base Scale | Film-base scale |
 | Base | Film type and process, target, scanner profile, film base, channel-range calibration, Auto Balance, Auto Levels and neutral balance |
-| Tone | Exposure, contrast, density, highlights, shadows, whites, blacks and tone curves |
-| Color | Temperature, tint, color depth, vibrance, saturation, mixer, grading, calibration, B&W toning and film emulation |
-| Detail | Grain, sharpness, halation, clarity, vignette, noise reduction, GrainMend strength and local adjustments |
+| Tone | Exposure and contrast, density, highlights and shadows, plus whites, blacks and tone curves |
+| Color | Temperature and tint, color depth, vibrance and saturation, mixer and grading, plus calibration, B&W toning and film emulation |
+| Detail | Grain and sharpness, vignette and halation, clarity and noise reduction, plus GrainMend strength and local adjustments |
 | Geometry | Crop, rotation, horizontal and vertical flips, straightening, crop aspect and Transform |
 
 A full paste or user preset replaces the destination's develop settings. A scoped paste replaces the selected groups' effective values and keeps the others. When only part of a look is pasted, its tone, color and texture contributions are folded into the values and the look reference is cleared, so an old look is not added again. Pasting the same settings repeatedly gives the same state. Menus, shortcuts and the panel use the same paste scope.
@@ -109,11 +110,11 @@ The ICC controls in Print have different jobs.
 
 | Setting | On-screen preview | Print Export | Develop preview |
 |---|---|---|---|
-| Printer output profile | Shows the print result | Applied to the completed page | Never applied |
-| C-print proof profile | Soft-proofs the lab and paper process | Not baked into the delivery file | Never applied |
-| General soft proof | Used in its configured display scope | Display aid only | Follows its own setting |
+| Printer output profile | Shows the print result when C-print preview is off | Applied to the completed page (for non-Raw/non-DNG formats) | Used when Soft Proof is on and the frame's target is `PRINT` |
+| C-print proof profile | Soft-proofs the lab and paper process | Not written into the delivery file | Never applied |
+| General soft proof | Its ICC profile is not applied in Print (except Proof Copies on macOS); its `Profile` vs `Paper + Black` simulation mode applies when previewing the Printer output profile | Display aid only | Follows its own setting (switches to Printer output profile for `PRINT` targets) |
 
-Choose the printer output profile under **Settings → Export → Color Management**.
+Choose the printer output profile under **Settings > Export > Color Management**. Develop and Print both support Soft Proof and Gamut Warning. On Windows, the preview applies the active monitor ICC profile when Windows Advanced Color is off.
 
 A printer output profile is not applied to one source before that source is duplicated. The contact sheet, picture package or custom package is composed first, then the profile is applied once to the whole page. Repeated placements of one source and mixed-source layouts therefore receive the same output conversion.
 
@@ -121,9 +122,9 @@ The C-print proof profile is the lab-supplied process preview. It is never silen
 
 ## DNG export
 
-DNG writes the developed picture as an uncompressed 16-bit linear RGB file (`PhotometricInterpretation = LinearRaw`) in the output color space you pick: sRGB, Display P3 or Adobe RGB. Tone and color are already baked in, so other apps read it as an output-referred file. The file carries copyright, scanner, software, date and film notes under the same metadata policy as TIFF. Source camera EXIF, IPTC and GPS are not copied. It takes 6 bytes per pixel, so a 24-megapixel frame is about 144 MB.
+DNG writes the developed picture as an uncompressed 16-bit linear RGB file (`PhotometricInterpretation = LinearRaw`) in the output color space you pick: sRGB, Display P3 or Adobe RGB. Tone and color are already baked in, so other apps read it as an output-referred file. The file carries copyright and scanner data, plus software, date and film notes under the same metadata policy as TIFF. Source camera EXIF, IPTC and GPS are not copied. It takes 6 bytes per pixel, so a 24-megapixel frame is about 144 MB.
 
-DNG is offered for uncompressed sources: TIFF, camera RAW and DNG. JPEG, PNG and HEIC sources cannot be exported to DNG. Develop, the `PRINT` target and Print layouts all support DNG. Print DNG records the composed page in standard RGB with a ColorMatrix, and printer ICC conversion is skipped. DNG export uses the folder selected in Export and keeps the `.dng` extension. Completion requires the final file to be published and checked. exiftool and Apple’s image decoder read the file. Rendering in other raw editors has not been measured.
+Aside from JPEG, PNG, 8-bit/16-bit TIFF and Raw TIFF, negaflow offers DNG export for uncompressed sources: TIFF, BMP, camera RAW and DNG. All frames in the current selection must be eligible for DNG to be offered; JPEG, PNG and HEIC/HEIF, as well as WebP, AVIF and GIF sources, cannot be exported to DNG. Develop, the `PRINT` target and Print layouts all support DNG. Print DNG records the composed page in standard RGB with a ColorMatrix, and printer ICC conversion is skipped. DNG export uses the folder selected in Export and keeps the `.dng` extension. Completion requires the final file to be published and checked. exiftool and Apple’s image decoder read the file. Rendering in other raw editors has not been measured.
 
 ## What changes the source
 

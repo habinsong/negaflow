@@ -20,11 +20,13 @@ negaflow 是 macOS 和 Windows 上的应用。你导入或扫描胶片图像，�
 
 ## 模块
 
-`negaflowApp` 和 `negaflowCLI` 都使用 `Chromabase` 和 `ScannerKit`。`Chromabase` 处理图像和元数据，`ScannerKit` 与外部扫描仪插件通信。
+在 macOS（`negaflow-mac/`）上，`negaflowApp` 和 `negaflowCLI` 都使用 `Chromabase` 和 `ScannerKit`。`Chromabase` 处理图像和元数据，`ScannerKit` 与外部扫描仪插件通信。
+
+在 Windows（`negaflow-windows/src/`）上，应用分为六个模块：`Native`（C++ Chroma Engine、GrainMend 与导出）、`Interop`（原生引擎与受管应用之间的桥梁）、`Catalog.Core`（图库存储）、`Shell.Core`（显影、印相、扫描仪与导出逻辑）、`Shell`（WinUI 3 图库、显影与印相界面）以及 `Cli`（命令行工具）。
 
 ### `Chromabase`
 
-Chroma Engine 与图像处理核心。
+macOS 的 Chroma Engine 与图像处理核心。
 
 - 读取图像与处理方向
 - 片基测量
@@ -42,7 +44,7 @@ Chroma Engine 与图像处理核心。
 
 ### `ScannerKit`
 
-负责连接外部插件的约定。
+负责连接外部插件的 macOS 约定。
 
 - 扫描仪 ID 与能力
 - 请求与响应 JSON
@@ -56,10 +58,10 @@ SANE 的实现在单独的 GPL 项目 [`negaflow-scanner-sane`](https://github.c
 
 ### `negaflowCLI`
 
-使用与 GUI 相同的引擎和 `ScannerKit`。
+使用与 GUI 相同的引擎和 `ScannerKit` 的 macOS CLI。
 
 - 查找扫描仪、检查能力、扫描
-- 批量显影多张图像
+- 每次调用将单张图像显影为 JPEG、TIFF、PNG 或线性 DNG
 - 列出扫描仪配置文件
 - GrainMend 的 `defect-bench`
 - IT8 与扫描仪之间的相对比较
@@ -67,7 +69,7 @@ SANE 的实现在单独的 GPL 项目 [`negaflow-scanner-sane`](https://github.c
 
 ### `negaflowApp`
 
-用 SwiftUI 和 AppKit 构建的用户界面。
+用 SwiftUI 和 AppKit 构建的 macOS 用户界面。
 
 - 图库、显影、印相、画布
 - 扫描、GrainMend、导出
@@ -89,7 +91,7 @@ SANE 的实现在单独的 GPL 项目 [`negaflow-scanner-sane`](https://github.c
 
 ### 导入文件
 
-默认的入口。支持 TIFF、JPEG、PNG 以及 macOS Image I/O 能读取的相机 RAW。读取内嵌的 ICC 和方向，并把原始文件 ID 写入目录。
+默认的入口。支持 TIFF、JPEG、PNG、HEIC/HEIF、BMP 和相机 RAW。在 macOS 上，负片相机 RAW 用 LibRaw 解码，正片与数码 RAW 以及常规格式通过 Image I/O 和 `CIRAWFilter` 读取。在 Windows 上，常规格式使用 WIC 与原生 TIFF 解码，相机 RAW 使用随附的 `libraw.dll`。读取内嵌的 ICC 和方向，并把原始文件 ID 写入目录。
 
 ### 扫描
 
@@ -111,12 +113,12 @@ SANE 的实现在单独的 GPL 项目 [`negaflow-scanner-sane`](https://github.c
 
 ## 目录
 
-主存储是 `library.sqlite`。旧的 `library.json` 用来导入已确认的旧资料，或写出可以在不同电脑之间移动的备份。两个存储不会同时更新。
+主存储是 `library.sqlite`。旧的 `library.json` 用来导入已确认的旧资料，或写出可在同一平台的不同电脑之间移动的备份（macOS 架构 v7，Windows 架构 v2）。两个存储不会同时更新。
 
 放进 SQLite 的内容：
 
 - 画幅与原始文件
-- 卷、文件夹、收藏集、搜索
+- 卷、文件夹、收藏集、搜索、堆叠
 - 排序与扫描任务
 - 显影值与各版本的编辑历史
 
@@ -142,7 +144,7 @@ SANE 的实现在单独的 GPL 项目 [`negaflow-scanner-sane`](https://github.c
 整理方式：
 
 - 文件夹、卷、手动收藏集、智能收藏集、已保存的搜索、堆叠
-- 星级、留用与排除、颜色标签
+- 星级、留用与排除
 - 网格、对比、总览
 - 查看重复候选
 
@@ -172,7 +174,7 @@ SANE 的实现在单独的 GPL 项目 [`negaflow-scanner-sane`](https://github.c
 选择另一张照片会直接开始其稳定后的渲染，没有编辑时的停顿。在 macOS 上：
 
 - 相机 RAW 负片稳定后，可以在后台解码下一张可见的 RAW。只准备相邻的一张，且在现有的主缓存（最多 160 MiB）之内。编辑、改选其他照片或内存紧张都会取消这项工作，选中正在准备的那张照片则共用它的解码。
-- 冷启动选择相机 RAW 时，只解包一次传感器数据。马赛克允许时，在标准去马赛克完成之前会先显示临时的相机 RGB 预览。主缓存在内存紧张时保持关闭，淘汰某个画幅也会丢弃它的 RAW 主数据。
+- 冷启动选择相机 RAW 时，只解包一次传感器数据。马赛克允许时，在标准去马赛克完成之前会先显示临时的相机 RGB 预览。主缓存在内存紧张时保持关闭，从缓存淘汰某个画幅也会丢弃它的 RAW 主数据。
 - 冷启动选择 TIFF 时，交互预览和稳定预览共用一份解码的源数据，并在 GPU 上缩小。包括 DNG 在内的 Apple RAW 预览，在两个阶段都保持同一个 `CIRAWFilter`。
 - 清理过的 RAW TIFF 在其像素缓冲离开内存时写入，而不是每次编辑后写入。磁盘清理会在限额内保留较新的文件，保护正在使用的文件，并在下次启动时删除上次会话遗留的缓存。编辑配方保存在旁注文件里。
 
@@ -204,7 +206,7 @@ GrainMend 把自动、引导、画笔、克隆图章和 IR 放在一个有顺序
 
 ### 多个输出文件
 
-一次导出可以同时生成 JPEG/TIFF、旁注文件、XMP 和 `-main-flat`。
+一次导出可以同时生成 JPEG/TIFF/PNG/DNG（未压缩源文件的线性 DNG）、旁注文件、XMP 和 `-main-flat`。
 
 1. 预先检查目的地和名称冲突。
 2. 把所有文件写入临时文件夹。
@@ -243,7 +245,7 @@ GrainMend 把自动、引导、画笔、克隆图章和 IR 放在一个有顺序
 - 明胶银盐
 - 水印
 
-单张图像和三种历史版式，为每张选中的照片生成纵向堆叠的一页。接触印相表、照片套版和自定义套版则按成品页数报告和导出。对于 39 张照片，就是一页 6 × 7 的接触印相表、10 页四联照片套版、一页默认的自定义套版，或 39 个单独的文件。
+单张图像、三种历史版式和水印，为每张选中的照片生成纵向堆叠的一页。接触印相表、照片套版和自定义套版则按成品页数报告和导出。对于 39 张照片，就是一页 6 × 7 的接触印相表、10 页四联照片套版、一页默认的自定义套版，或 39 个单独的文件。
 
 套版预览复用已有的缩略图和已显影图像，只在缺失时才生成小的快速预览。最终导出根据元数据计算位置，只显影每个格子所需的像素，同时准备两到四个不同的源文件，在页面写入之前保持 Core Image 图形连接，并遵守每页 512 MiB 的源光栅预算。
 
@@ -253,15 +255,16 @@ GrainMend 把自动、引导、画笔、克隆图章和 IR 放在一个有顺序
 
 ## 保存归档
 
-`.negaflowarchive` 包含：
+在 macOS 上，`.negaflowarchive` 是带有 SHA-256 清单（`manifest-sha256.txt` 和 `tagmanifest-sha256.txt`）与 `negaflow-archive.json` 的 RFC 8493 BagIt 文件夹：
 
 - 可移植的目录 JSON
-- 原始文件
-- IR 原始文件
-- 需要的 GrainMend 历史
+- 原始文件与留存的 IR 原始文件
+- 需要的 GrainMend 缺陷配方
 - 虚拟副本与它们共用的原始文件之间的关系
 
-缩略图、预览、GrainMend 缓存和导出的文件都可以重建，所以不放进去。归档采用带 SHA-256 清单的 RFC 8493 BagIt 结构，在整体移到最终位置之前，会检查每个文件和每一项关系。
+在 Windows 上，`.negaflowarchive` 是包含 `library.sqlite`、`defects/*` 缺陷配方和 `archive.json`（各条目的字节数与 SHA-256 哈希）的 ZIP 归档，不复制原始照片文件。
+
+缩略图、预览、可重建的 GrainMend 缓存和导出的文件在两个平台上都不放进去。归档移到最终路径之前，会先在临时位置检查每个文件、哈希和每一项关系。
 
 - [图库保存归档](LIBRARY_ARCHIVE.md)
 - [RFC 8493](https://www.rfc-editor.org/info/rfc8493/)
@@ -291,7 +294,7 @@ GrainMend 把自动、引导、画笔、克隆图章和 IR 放在一个有顺序
 
 图像：
 
-- 共用一个 `CIContext`
+- macOS 上复用与池化的 `CIContext` 实例，以及 Windows 上的 Direct3D 11 设备与暂存池
 - 需要时才计算的图像图
 - 低分辨率调整与全分辨率输出分开
 - 取消，以及拒绝过期的结果
@@ -311,10 +314,14 @@ GrainMend 把自动、引导、画笔、克隆图章和 IR 放在一个有顺序
 
 ## 验证了什么
 
+macOS（`negaflow-mac/`）：
+
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 bash scripts/run-app.sh build
 ```
+
+Windows（`negaflow-windows/scripts/`）：`build.ps1`、`test.ps1`、`test-managed.ps1`、`test-interop.ps1` 和 `build-release.ps1`。
 
 自动检查无法判定的内容：
 

@@ -33,7 +33,11 @@ Succès comme échec écrivent un document JSON sur stdout.
   "schemaVersion": 1,
   "command": "capabilities",
   "status": "ok",
-  "payload": {},
+  "payload": {
+    "scannerID": "<scannerID>",
+    "backend": "<backend>",
+    "capabilities": {}
+  },
   "error": null
 }
 ```
@@ -42,9 +46,11 @@ Succès comme échec écrivent un document JSON sur stdout.
 
 En cas d'échec, `status` vaut `error` et `payload` vaut `null`. `error` contient un code stable lisible par machine et une description. Les journaux et la progression vont uniquement sur stderr.
 
+Pour `detect`, `payload` contient `backends`, un tableau d'objets `{ backend, devices }`.
+
 ## Informations de capacités
 
-Le `payload` de `capabilities` contient toujours tous ces champs :
+Le `payload` de `capabilities` est un objet contenant `scannerID`, `backend` et `capabilities`. Les 25 champs suivants sont toujours tous présents dans `payload.capabilities` :
 
 - `resolutionsDPI`, `modes`, `bitDepths`
 - `sourceModes`, `transparencyModes`

@@ -2,35 +2,49 @@
 
 [Dokumentationsstart](../README.md)
 
-Ein Katalog-Backup bringt die App wieder zum Laufen und enthält die Originalfotos nicht. Das Archiv `.negaflowarchive` fasst sie in einem Paket zusammen.
+Ein Katalog-Backup bringt die App wieder zum Laufen und enthält die Originalfotos nicht. Beide Plattformen schreiben `.negaflowarchive`, nutzen auf macOS und Windows aber unterschiedliche Paketformate und Inhalte.
+
+> [!WARNING]
+> Scheitert der Aufbau eines Archivs, bleiben Originale, fremde XMP-Dateien, der laufende Katalog und jedes vorhandene Archiv unberührt.
+
+## macOS-Archiv (BagIt-Ordner)
+
+Auf macOS ist `.negaflowarchive` ein Ordner nach [RFC 8493 BagIt](https://www.rfc-editor.org/rfc/rfc8493.html), der den Katalogzustand mit den referenzierten Fotos bündelt.
 
 | Enthalten | Nicht enthalten |
 |---|---|
 | Portables Katalog-JSON | Die laufende SQLite-Datei |
 | Referenzierte Originale und verbliebene IR-Originale | Miniaturen und Vorschauen |
-| Der noch benötigte GrainMend-Verlauf | Wiederherstellbare GrainMend-Caches |
-| Die Verbindung zwischen virtuellen Kopien und gemeinsamen Originalen | Exportierte Dateien |
+| GrainMend-Fehlerrezepte | Wiederherstellbare GrainMend-Caches |
+| Verknüpfungen virtueller Kopien zu gemeinsamen Originalen | Exportierte Dateien |
 
-> [!WARNING]
-> Scheitert der Aufbau des Archivs, wird ein vorhandenes Archiv nicht überschrieben. Originale, fremde XMP-Dateien und der laufende Katalog bleiben unberührt.
+Inhaltsdateien und Tag-Dateien erhalten getrennte SHA-256-Manifeste (`manifest-sha256.txt` und `tagmanifest-sha256.txt`). `negaflow-archive.json` verbindet Bild-IDs mit den gespeicherten Datei-IDs. Virtuelle Kopien desselben Originals teilen sich eine gespeicherte Kopie.
 
-## Paketaufbau und Prüfungen
-
-Das Paket folgt der Ordnerstruktur von [RFC 8493 BagIt](https://www.rfc-editor.org/rfc/rfc8493.html). SHA-256-Listen gibt es getrennt für Inhaltsdateien und Verwaltungsdateien. `negaflow-archive.json` verbindet Bild-IDs mit den gespeicherten Datei-IDs. Virtuelle Kopien desselben Originals teilen sich eine gespeicherte Kopie.
-
-Der temporäre Ordner wird erst an den endgültigen Pfad verschoben, wenn alle diese Prüfungen bestehen:
+Das Schreiben lehnt es ab, ein vorhandenes Ziel zu überschreiben. Der temporäre Ordner wird erst an den endgültigen Pfad verschoben, wenn alle diese Prüfungen bestehen:
 
 1. Die aktuelle App kann den Katalog sicher lesen.
 2. Originale und IR-Eingaben sind reguläre Dateien, deren Größe und Änderungszeit sich beim Kopieren nicht ändern.
-3. Jeder benötigte GrainMend-Eintrag ist lesbar.
-4. SHA-256, Bytezahlen, Dateiliste und `Payload-Oxum` stimmen überein.
-5. Die Verknüpfungen von Bildern zu Originalen, IR-Dateien und GrainMend-Einträgen passen zum Katalog.
+3. Jedes benötigte GrainMend-Fehlerrezept ist lesbar.
+4. SHA-256-Hashes (`manifest-sha256.txt`, `tagmanifest-sha256.txt`), Bytezahlen, Dateiliste und `Payload-Oxum` stimmen überein.
+5. Die Verknüpfungen von Bildern zu Originalen, IR-Dateien und GrainMend-Rezepten passen zum Katalog.
 
-Bei einem Fehler wird nur der halb fertige temporäre Ordner gelöscht. Das vorhandene Archiv bleibt bestehen.
+Bei einem Fehler wird nur der halb fertige temporäre Ordner gelöscht.
+
+## Windows-Archiv (ZIP-Datei)
+
+Auf Windows ist `.negaflowarchive` ein ZIP-Archiv mit Katalog- und Fehlerdaten. Originalfotodateien werden nicht kopiert.
+
+| Enthalten | Nicht enthalten |
+|---|---|
+| `library.sqlite` | Originalfotodateien und IR-Originale |
+| Fehlerrezepte unter `defects/*` | Miniaturen, Vorschauen und wiederherstellbare Caches |
+| `archive.json` (Bytezahlen und SHA-256-Hashes je Eintrag) | Exportierte Dateien |
+
+Windows schreibt das Archiv in eine temporäre Datei und ersetzt das Ziel bei Erfolg atomar. Scheitert der Aufbau, wird die temporäre Datei entfernt und ein vorhandenes Archiv am Ziel bleibt unberührt.
 
 ## Grenzen
 
-Originalformate bleiben unverändert, es gibt keine Umwandlung für Langzeitkompatibilität. PREMIS-Erhaltungsereignisse, Agenteneinträge und die Migration in empfohlene Formate liegen außerhalb von v1.
+macOS- und Windows-`.negaflowarchive`-Pakete nutzen verschiedene Formate und Katalogschemata; ein Archiv zieht deshalb zwischen Rechnern derselben Plattform um. Originalformate bleiben unverändert, es gibt keine Umwandlung für Langzeitkompatibilität. PREMIS-Erhaltungsereignisse, Agenteneinträge und die Migration in empfohlene Formate liegen außerhalb von v1.
 
 Ein Archiv ist kein Erhaltungskonzept. Bewahren Sie Kopien auf anderen Medien an einem anderen Ort auf und prüfen Sie die Hashes regelmäßig.
 

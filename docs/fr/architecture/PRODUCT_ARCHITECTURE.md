@@ -20,11 +20,13 @@ negaflow est une application macOS et Windows. Vous importez ou numérisez des i
 
 ## Modules
 
-`negaflowApp` et `negaflowCLI` utilisent tous deux `Chromabase` et `ScannerKit`. `Chromabase` travaille sur les images et les métadonnées, et `ScannerKit` dialogue avec le module scanner externe.
+Sous macOS (`negaflow-mac/`), `negaflowApp` et `negaflowCLI` utilisent tous deux `Chromabase` et `ScannerKit`. `Chromabase` travaille sur les images et les métadonnées, et `ScannerKit` dialogue avec le module scanner externe.
+
+Sous Windows (`negaflow-windows/src/`), l'application est découpée en six modules : `Native` (Chroma Engine C++, GrainMend et export), `Interop` (pont entre le moteur natif et l'application gérée), `Catalog.Core` (stockage de la bibliothèque), `Shell.Core` (logique de développement, de tirage, de scanner et d'export), `Shell` (écrans WinUI 3 de bibliothèque, de développement et de tirage) et `Cli` (outil en ligne de commande).
 
 ### `Chromabase`
 
-Le Chroma Engine et le cœur du traitement d'image.
+Le Chroma Engine et le cœur du traitement d'image sous macOS.
 
 - Lecture des images et gestion de l'orientation
 - Mesure de la base du film
@@ -42,7 +44,7 @@ Plus de détails :
 
 ### `ScannerKit`
 
-Il détient le contrat qui relie un module externe.
+Il détient le contrat macOS qui relie un module externe.
 
 - Identifiant et capacités du scanner
 - JSON des requêtes et des réponses
@@ -56,10 +58,10 @@ L'implémentation SANE se trouve dans un projet GPL séparé, [`negaflow-scanner
 
 ### `negaflowCLI`
 
-Utilise le même moteur et le même `ScannerKit` que l'interface graphique.
+La CLI macOS, qui emploie le même moteur et le même `ScannerKit` que l'interface graphique.
 
 - Recherche des scanners, contrôle des capacités, numérisation
-- Développement de plusieurs images
+- Développement d'une seule image par appel en JPEG, TIFF, PNG ou DNG linéaire
 - Liste des profils de scanner
 - `defect-bench` de GrainMend
 - Comparaison IT8 et relative entre scanners
@@ -67,12 +69,12 @@ Utilise le même moteur et le même `ScannerKit` que l'interface graphique.
 
 ### `negaflowApp`
 
-L'interface utilisateur, construite avec SwiftUI et AppKit.
+L'interface utilisateur macOS, construite avec SwiftUI et AppKit.
 
-- Bibliothèque, développement, tirage, canevas
+- Bibliothèque et développement, tirage et canevas
 - Numérisation, GrainMend, export
 - Versions, réglages, raccourcis
-- Catalogue, cache, sauvegarde, archive de conservation
+- Catalogue et cache, sauvegarde et archive de conservation
 - Une fenêtre À propos localisée dont la version du produit vient de la ressource de version commune
 
 ## Parcours de l'utilisateur
@@ -89,7 +91,7 @@ Chaque étape laisse l'original intact et ajoute au catalogue et à l'historique
 
 ### Importer des fichiers
 
-La voie d'entrée par défaut. Elle prend en charge TIFF, JPEG, PNG et les RAW d'appareil que l'Image I/O de macOS sait lire. L'ICC intégré et l'orientation sont lus, et l'identifiant d'origine entre dans le catalogue.
+La voie d'entrée par défaut. Elle prend en charge TIFF, JPEG et PNG, ainsi que HEIC/HEIF, BMP et les RAW d'appareil. Sous macOS, les négatifs RAW d'appareil sont décodés avec LibRaw tandis que les RAW positifs ou numériques et les formats standards passent par Image I/O et `CIRAWFilter`. Sous Windows, les formats standards utilisent WIC et le décodage TIFF natif, et les RAW d'appareil utilisent la bibliothèque `libraw.dll` embarquée. L'ICC intégré et l'orientation sont lus, et l'identifiant d'origine entre dans le catalogue.
 
 ### Numérisation
 
@@ -111,12 +113,12 @@ Si un fichier a été déplacé, le chemin ne change que si vous le rattachez vo
 
 ## Catalogue
 
-Le stockage principal est `library.sqlite`. L'ancien `library.json` sert à reprendre des données anciennes confirmées, ou à écrire une sauvegarde déplaçable d'une machine à l'autre. Les deux stockages ne sont jamais mis à jour en même temps.
+Le stockage principal est `library.sqlite`. L'ancien `library.json` sert à reprendre des données anciennes confirmées, ou à écrire une sauvegarde déplaçable d'une machine à l'autre sur la même plateforme (schéma v7 sous macOS, schéma v2 sous Windows). Les deux stockages ne sont jamais mis à jour en même temps.
 
 Ce qui entre dans SQLite :
 
 - Vues et originaux
-- Bobines, dossiers, collections, recherches
+- Bobines et dossiers, collections, recherches et piles
 - Ordre et tâches de numérisation
 - Valeurs de développement et historique des retouches par version
 
@@ -142,13 +144,13 @@ Un JSON en échec n'est pas traité comme un catalogue vide. Les chiffres sont d
 Organisation :
 
 - Dossiers, bobines, collections manuelles, collections intelligentes, recherches enregistrées, piles
-- Notes par étoiles, retenue et rejet, étiquettes de couleur
+- Notes par étoiles, retenue et rejet
 - Grille, comparaison, vue d'ensemble
 - Examen des candidats en double
 
 Dans la vue par dossiers, chaque dossier affiche un bandeau avec un triangle de dépliage, le dossier, le nom, le nombre, le procédé de développement, la cible et appliquer. Le bandeau replie les vignettes en dessous. Les dossiers repliés sont mémorisés d'un lancement à l'autre, séparément de la liste de fichiers de la barre latérale.
 
-La vue par dossiers utilise une seule grille, chaque dossier étant une section dont le bandeau est l'en-tête. Gardez cette structure. Empiler une grille distincte par dossier obligerait la mise en page à calculer la hauteur totale de chaque dossier visible et à créer toutes ses cartes d'un coup, alors qu'une grille unique crée les cartes ligne par ligne à mesure qu'elles entrent dans la vue. C'est ce qui garde le défilement fluide sur plusieurs centaines de photos.
+La vue par dossiers emploie une seule grille, chaque dossier étant une section dont le bandeau est l'en-tête. Gardez cette structure. Empiler une grille distincte par dossier obligerait la mise en page à calculer la hauteur totale de chaque dossier visible et à créer toutes ses cartes d'un coup, alors qu'une grille unique crée les cartes ligne par ligne à mesure qu'elles entrent dans la vue. C'est ce qui garde le défilement fluide sur plusieurs centaines de photos.
 
 Plusieurs copies virtuelles peuvent partager un original. Les références à un original sont vérifiées avant suppression. Retirer quelque chose de la bibliothèque ne modifie que des références du catalogue, et mettre à la corbeille est une autre action.
 
@@ -172,7 +174,7 @@ Pendant que vous ajustez, un aperçu de résolution plus basse est utilisé. Un 
 Choisir une autre photo lance son rendu stabilisé sans la pause de retouche. Sous macOS :
 
 - Une fois un négatif RAW d'appareil stabilisé, le RAW visible suivant peut être décodé en arrière-plan. Un seul voisin est préparé, dans le cache maître existant (jusqu'à 160 Mio). Une retouche, une autre sélection ou une pression mémoire annule ce travail, et choisir la photo déjà en préparation partage son décodage.
-- Une sélection à froid de RAW d'appareil déballe les données du capteur une seule fois. Quand la mosaïque le permet, un aperçu RVB d'appareil provisoire apparaît avant la fin du dématriçage canonique. Le cache maître reste désactivé sous pression mémoire, et évincer une vue abandonne aussi son maître RAW.
+- Une sélection à froid de RAW d'appareil déballe les données du capteur une seule fois. Quand la mosaïque le permet, un aperçu RVB d'appareil provisoire apparaît avant la fin du dématriçage canonique. Le cache maître reste désactivé sous pression mémoire, et évincer une vue du cache abandonne aussi son maître RAW.
 - Une sélection à froid de TIFF partage une même source décodée entre l'aperçu interactif et l'aperçu stabilisé et la réduit sur le GPU. Les aperçus RAW Apple, DNG compris, gardent un seul `CIRAWFilter` pour les deux passes.
 - Les TIFF RAW corrigés sont écrits quand leurs tampons de pixels quittent la mémoire, et non après chaque retouche. Le nettoyage du disque garde les fichiers récents dans une limite, protège les fichiers en cours d'usage et supprime au lancement suivant les caches laissés par la session précédente. Les recettes de retouche restent dans les fichiers annexes.
 
@@ -200,11 +202,11 @@ Au départ, ces valeurs sont figées en un seul lot :
 - Réglages de sortie et politique des métadonnées
 - Nom de fichier et destination
 
-Arrêter puis reprendre un export utilise le même lot.
+Arrêter puis reprendre un export emploie le même lot.
 
 ### Plusieurs fichiers de sortie
 
-Un export peut produire ensemble un JPEG/TIFF, un fichier annexe, un XMP et `-main-flat`.
+Un export peut produire ensemble un JPEG/TIFF/PNG/DNG (DNG linéaire pour les sources non compressées), un fichier annexe, un XMP et `-main-flat`.
 
 1. Vérifier d'avance la destination et les conflits de noms.
 2. Écrire tous les fichiers dans un dossier temporaire.
@@ -243,7 +245,7 @@ Mises en page prises en charge :
 - Gélatino-argentique
 - Filigrane
 
-L'image seule et les trois mises en page historiques produisent une page empilée verticalement par photo sélectionnée. La planche-contact, le package d'images et le package personnalisé comptent et exportent plutôt leur nombre de pages terminées. Pour 39 photos, cela donne une page de planche-contact 6 × 7, 10 pages de package d'images à quatre, une page de package personnalisé par défaut, ou 39 fichiers individuels.
+L'image seule, les trois mises en page historiques et le filigrane produisent une page empilée verticalement par photo sélectionnée. La planche-contact, le package d'images et le package personnalisé comptent et exportent plutôt leur nombre de pages terminées. Pour 39 photos, cela donne une page de planche-contact 6 × 7, 10 pages de package d'images à quatre, une page de package personnalisé par défaut, ou 39 fichiers individuels.
 
 L'aperçu du package réutilise les vignettes et les images développées disponibles et ne fabrique un petit aperçu rapide que s'il en manque un. L'export final calcule les emplacements d'après les métadonnées, ne développe que les pixels dont chaque cellule a besoin, prépare deux à quatre sources distinctes à la fois, garde le graphe Core Image connecté jusqu'à l'écriture de la page et applique un budget de 512 Mio de trame source par page.
 
@@ -253,15 +255,16 @@ Sans ICC RVB d'imprimante valide, aucun autre profil n'est substitué. Les octet
 
 ## Archive de conservation
 
-Ce qui entre dans `.negaflowarchive` :
+Sous macOS, `.negaflowarchive` est un dossier BagIt conforme à la RFC 8493 avec des manifestes SHA-256 (`manifest-sha256.txt` et `tagmanifest-sha256.txt`) et `negaflow-archive.json` :
 
 - Le JSON de catalogue portable
-- Les fichiers originaux
-- Les originaux IR
-- L'historique GrainMend nécessaire
+- Les fichiers originaux et les originaux IR restants
+- Les recettes de défauts GrainMend nécessaires
 - La relation entre les copies virtuelles et l'original qu'elles partagent
 
-Les vignettes, aperçus, caches GrainMend et fichiers exportés peuvent être reconstruits, ils restent donc dehors. L'archive suit la structure BagIt de la RFC 8493 avec une liste SHA-256, et chaque fichier et chaque relation sont vérifiés avant que le lot soit déplacé vers son emplacement final.
+Sous Windows, `.negaflowarchive` est une archive ZIP contenant `library.sqlite`, les recettes de défauts `defects/*` et `archive.json` (tailles en octets et empreintes SHA-256 par entrée), sans copier les fichiers photo originaux.
+
+Les vignettes, aperçus, caches GrainMend reconstructibles et fichiers exportés restent dehors sur les deux plateformes. Chaque fichier, empreinte et relation est vérifié dans un emplacement temporaire avant que l'archive rejoigne son chemin final.
 
 - [Archive de bibliothèque](LIBRARY_ARCHIVE.md)
 - [RFC 8493](https://www.rfc-editor.org/info/rfc8493/)
@@ -281,7 +284,7 @@ Quand un module est trouvé, on vérifie :
 
 Si le fichier a changé, l'approbation précédente n'est pas réutilisée.
 
-Le protocole v2 utilise un identifiant de requête et un numéro de séquence, et exige exactement un résultat final. La taille de sortie a un plafond, et après un dépassement de délai ou une annulation, le processus et ses tubes sont nettoyés.
+Le protocole v2 emploie un identifiant de requête et un numéro de séquence, et exige exactement un résultat final. La taille de sortie a un plafond, et après un dépassement de délai ou une annulation, le processus et ses tubes sont nettoyés.
 
 Un module ne publie jamais lui-même un fichier à l'emplacement final. L'application lui remet un emplacement temporaire, vérifie le format, la taille, l'identifiant et les réglages réellement appliqués, puis déplace le fichier dans le stockage de l'application.
 
@@ -291,7 +294,7 @@ Le contrat complet est dans [Architecture des plugins scanner](SCANNER_PLUGINS.m
 
 Images :
 
-- Un seul `CIContext` partagé
+- Des instances `CIContext` réutilisées et mutualisées sous macOS, et un périphérique Direct3D 11 avec pools de transit sous Windows
 - Un graphe d'image calculé quand il le faut
 - Réglage en basse résolution séparé de la sortie en pleine résolution
 - Annulation, et refus des résultats périmés
@@ -307,14 +310,18 @@ Catalogue :
 
 Aujourd'hui, tout le catalogue est chargé en mémoire au démarrage. Sur le même Mac, la lecture de SQLite a pris environ 7,4 secondes, proche du JSON. Lire seulement les lignes nécessaires, via un index, est l'étape suivante.
 
-Le dépôt utilise de larges limites de performance pour détecter les grosses régressions. Elles ne garantissent pas la réactivité sur tous les Mac pris en charge.
+Le dépôt applique de larges limites de performance pour détecter les grosses régressions. Elles ne garantissent pas la réactivité sur tous les Mac pris en charge.
 
 ## Ce qui est vérifié
+
+Sous macOS (`negaflow-mac/`) :
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 bash scripts/run-app.sh build
 ```
+
+Sous Windows (`negaflow-windows/scripts/`) : `build.ps1`, `test.ps1`, `test-managed.ps1`, `test-interop.ps1` et `build-release.ps1`.
 
 Ce que les contrôles automatiques ne tranchent pas :
 

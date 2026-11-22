@@ -1,5 +1,7 @@
 #include "negaflow/imaging/display_color_lut.h"
 
+#include "negaflow/color/icc_profile.h"
+#include "negaflow/color/icm_transform.h"
 #include "negaflow/color/output_color_space.h"
 #include "negaflow/core/parallel_rows.h"
 
@@ -142,6 +144,8 @@ bool DisplayColorLut::build(
         monitor_icc.size() > static_cast<std::size_t>(std::numeric_limits<DWORD>::max())) {
         return false;
     }
+    const std::span<const std::uint8_t> normalized_icc =
+        negaflow::color::trim_icc_padding(monitor_icc);
     std::vector<std::uint8_t> source_bytes{};
     std::vector<std::uint8_t> destination_bytes{};
     std::vector<COLOR> input{};
@@ -149,7 +153,7 @@ bool DisplayColorLut::build(
     std::vector<float> table{};
     try {
         source_bytes = negaflow::color::build_icc_profile(negaflow::color::OutputColorSpace::srgb);
-        destination_bytes.assign(monitor_icc.begin(), monitor_icc.end());
+        destination_bytes.assign(normalized_icc.begin(), normalized_icc.end());
         input.resize(static_cast<std::size_t>(kGrid) * kGrid * kGrid);
         output.resize(input.size());
         table.resize(input.size() * 3U);
@@ -163,20 +167,10 @@ bool DisplayColorLut::build(
         return false;
     }
     HPROFILE profiles[]{source.get(), destination.get(), source.get()};
-    DWORD intents[]{
-        INTENT_RELATIVE_COLORIMETRIC, INTENT_RELATIVE_COLORIMETRIC, INTENT_RELATIVE_COLORIMETRIC};
     const DWORD profile_count = round_trip ? 3U : 2U;
-    SetLastError(ERROR_SUCCESS);
-    // 왕복 프루프는 `soft_proof_convert_bgra_icc` 와 같은 플래그(상대 색도 + BEST_MODE)입니다.
-    HTRANSFORM transform = CreateMultiProfileTransform(
-        profiles,
-        profile_count,
-        intents,
-        profile_count,
-        round_trip ? (USE_RELATIVE_COLORIMETRIC | BEST_MODE) : BEST_MODE,
-        INDEX_DONT_CARE);
+    HTRANSFORM transform = negaflow::color::create_icm_transform(
+        profiles, profile_count, round_trip, native_error_code);
     if (transform == nullptr) {
-        native_error_code = static_cast<std::uint32_t>(GetLastError());
         return false;
     }
     // `TranslateColors` 의 COLOR_RGB 는 red·green·blue 이름 그대로 읽힙니다. 비트맵 형식

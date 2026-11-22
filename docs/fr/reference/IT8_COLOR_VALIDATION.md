@@ -103,7 +103,7 @@ Ordre des vérifications et de l'usage :
 2. Vérifier que ColorSync peut convertir dans les deux sens.
 3. À la sélection, figer le nom, la taille en octets et le SHA-256 du profil.
 4. L'appliquer une seule fois, à la sortie finale, une fois l'image de travail `MAIN` et la mise en page terminées.
-5. Ne pas l'appliquer à `rawScanTIFF` ni à `-main-flat`.
+5. Ne pas l'appliquer à `rawScanTIFF`, à `dng` ni à `-main-flat`.
 6. Un profil manquant ou erroné échoue avant toute sortie temporaire. Le sRGB ne le remplace pas.
 
 Rien n'affirme que le chemin Core Image et ColorSync actuel fige, bit pour bit sur toutes les versions de macOS, l'intention de rendu et la compensation du point noir.
@@ -112,7 +112,7 @@ Rien n'affirme que le chemin Core Image et ColorSync actuel fige, bit pour bit s
 
 `NegativeAutoBalanceTests` et `shoulder-print-response-v4`.
 
-MAIN/CS utilise la courbe v4 dans les deux états de l'interrupteur. Les tests v6 conservés vérifient leur propre primitive fixe, et la variation nulle entre vues dans ces tests n'est pas un résultat pour Équilibre auto ON.
+MAIN/CS applique la courbe v4 dans les deux états de l'interrupteur. Les tests v6 conservés vérifient leur propre primitive fixe, et la variation nulle entre vues dans ces tests n'est pas un résultat pour Équilibre auto ON.
 
 [Réponse négative](PRINT_RESPONSE.md)
 

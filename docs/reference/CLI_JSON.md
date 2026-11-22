@@ -33,18 +33,24 @@ Success and failure each write one JSON document to stdout.
   "schemaVersion": 1,
   "command": "capabilities",
   "status": "ok",
-  "payload": {},
+  "payload": {
+    "scannerID": "<scannerID>",
+    "backend": "<backend>",
+    "capabilities": {}
+  },
   "error": null
 }
 ```
 
 </details>
 
-On failure `status` is `error` and `payload` is `null`. `error` holds a stable machine-readable code and a description. Logs and progress go to stderr only.
+On failure `status` is `error` and `payload` is `null`, while `error` holds a stable machine-readable code and a description, and logs and progress go to stderr only.
+
+For `detect`, `payload` holds `backends`, an array of `{ backend, devices }` entries.
 
 ## Capability information
 
-The `capabilities` payload always has these fields:
+The `capabilities` command returns `payload` as an object with `scannerID`, `backend`, and `capabilities`. Inside `payload.capabilities`, all 25 of these fields are always present:
 
 - `resolutionsDPI`, `modes`, `bitDepths`
 - `sourceModes`, `transparencyModes`

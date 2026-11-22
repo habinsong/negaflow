@@ -32,7 +32,7 @@
 
 Zum Ausführen:
 
-- macOS 14.0 oder neuer (macOS 14, 26 und 27 werden unterstützt)
+- macOS 14.0 oder neuer (macOS 14, 15, 26 und 27 werden unterstützt)
 - Apple Silicon oder Intel
 - 8 GB Arbeitsspeicher, für Mittelformat 16 GB empfohlen
 
@@ -54,7 +54,7 @@ Das Universal-PKG passt für die meisten Macs und installiert nach `/Application
 
 Die App ist ad hoc signiert und nicht notarisiert, deshalb blockiert macOS den ersten Start. Erlauben Sie sie in den Systemeinstellungen unter Datenschutz & Sicherheit mit Trotzdem öffnen.
 
-Mediathek und Einstellungen liegen in `~/Library/Application Support/negaflow`.
+Mediathekskatalog, Defekt-Sidecars, Rezepte und Abzugsvorlagen liegen in `~/Library/Application Support/negaflow`, während die App-Einstellungen in `UserDefaults` (`~/Library/Preferences/com.songhabin.negaflow.plist`) gespeichert werden.
 
 Beim Start fragt die App GitHub einmal nach der neuesten Veröffentlichung. Gibt es eine neuere Version, steht unten im ⋯-Menü oben rechts „Auf Version X.Y.Z aktualisieren“. Ein Klick öffnet die Release-Seite und lädt das passende PKG für diesen Mac in den Ordner „Downloads“, geprüft gegen die `SHA256SUMS.txt` des Releases. Installieren Sie es selbst. Ist die App aktuell, lautet der Eintrag „Sie haben die neueste Version.“ und öffnet die Projektseite. Schlägt die Prüfung fehl, etwa offline, erscheint der Eintrag nicht.
 
@@ -73,11 +73,10 @@ bash scripts/run-app.sh build
 
 `run-app.sh` ruft `xcodebuild` auf, setzt das App-Bundle zusammen und signiert es lokal. Für Engine oder CLI allein genügt `swift build`.
 
-Release-Artefakte:
+Release-Artefakte (baut die Bundles `arm64` und `universal` und erzeugt über `create-release-artifacts.sh` PKG und DMG, ZIP und dSYM sowie `SHA256SUMS.txt`):
 
 ```bash
-bash negaflow-mac/scripts/build-release.sh
-bash negaflow-mac/scripts/create-release-artifacts.sh
+bash scripts/build-release.sh
 ```
 
 ## Prüfungen
@@ -89,13 +88,13 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 # Release-Build der App
 bash scripts/run-app.sh build
 
-# Alle Prüfungen des Repositorys
+# Statische Prüfungen und Swift-CI (NEGAFLOW_CI_GUI=1 baut die GUI-Tests, NEGAFLOW_CI_GUI_RUN=1 führt sie aus)
 bash scripts/ci-gate.sh
 ```
 
 ## Eigene Farbziele
 
-CS steht nach MAIN, HS, SP, F135 und HR in den Zielkapseln. Die Auswahl öffnet im Auswahlfeld unten links eine zweispaltige Liste mit 18 Custom-Zielen; die Look-Auswahl bleibt rechts. Beim Wechsel zu CS wird Emulsion gewählt, ein Bild mit Custom-Ziel behält sein Ziel.
+CS steht nach MAIN und HS sowie SP, F135 und HR in den Zielkapseln. Die Auswahl öffnet im Auswahlfeld unten links eine zweispaltige Liste mit 18 Custom-Zielen; die Look-Auswahl bleibt rechts. Beim Wechsel zu CS wird Emulsion gewählt, ein Bild mit Custom-Ziel behält sein Ziel.
 
 Die Liste hat drei Gruppen: Emulsion bis Dichroic (11), Wetzlar bis Rochester (4), Slide Show bis Point & Shoot (3). Custom-Ziele wenden die Antwort von custom-3 für Tonwert, Dichte und Chroma an. Speichern, Vorschauen, Miniaturen und Export verwenden die ID des gewählten Ziels. Die übrigen Ziele bleiben unverändert.
 
@@ -103,7 +102,7 @@ Die CLI nimmt dieselben IDs: `--target classic`, `--target dye-transfer`, `--tar
 
 ## Befehlszeile
 
-Die macOS-Version enthält eine CLI.
+Das macOS-Swift-Paket enthält ein CLI-Target, das mit `swift build` gebaut wird.
 
 ```bash
 swift build
@@ -134,9 +133,9 @@ Scanner-Bedienelemente bleiben verborgen, bis ein Plug-in installiert ist. SANE-
 
 | Modul | Aufgabe |
 |---|---|
-| `Chromabase` | Chroma Engine, GrainMend, Profile, Export |
+| `Chromabase` | Chroma Engine und GrainMend, Profile und Export |
 | `ScannerKit` | Prüfung der Scanner-Fähigkeiten und Plug-in-Anbindung |
-| `negaflowApp` | Ansichten für Mediathek, Entwickeln, Scannen und Exportieren |
+| `negaflowApp` | Ansichten für Mediathek und Entwickeln, Abzug, Scannen und Exportieren |
 | `negaflowCLI` | Befehle zum Entwickeln, Scannen, Benchmarken und für den Selbsttest |
 
 ## Referenzbilder

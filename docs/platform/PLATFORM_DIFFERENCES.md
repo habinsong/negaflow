@@ -21,7 +21,7 @@ The same holds for:
 - Tone, curves, HSL, color grading, black-and-white toning
 - GrainMend detection and repair, including the infrared path
 - Print layouts and page geometry
-- Export file naming, EXIF writing and metadata policy
+- Export file naming across formats, and EXIF/metadata policy on JPEG, TIFF, and DNG (on Windows, PNG export carries DPI and ICC profile without EXIF metadata)
 - The catalog format (`library.sqlite`)
 
 ## What differs
@@ -30,26 +30,27 @@ The same holds for:
 
 macOS uses ColorSync and Windows uses ICM. Both take the same ICC profiles and give the same numbers within rounding. The parity tests cover this because it is the part most likely to drift quietly.
 
-On screen, macOS draws through the display's ColorSync profile. Windows does that only when Advanced Color is on. With it off, Windows sends application pixels to the display as sRGB, so negaflow converts the develop canvas and the print preview to the monitor's ICC profile just before drawing. Thumbnails and the rest of the interface are drawn as sRGB.
+On screen, macOS draws through the display's ColorSync profile. Windows does that only when Advanced Color is on. With it off, Windows sends application pixels to the display as sRGB, so negaflow applies the monitor's ICC profile through a 33³ LUT to both the develop canvas and the print preview (including small contact-sheet tiles) just before drawing, and refreshes it automatically when switching monitors or returning to the window after changing display settings. Thumbnails and the rest of the interface are drawn as sRGB.
 
 ### Graphics
 
-macOS runs the develop chain on Core Image. Windows runs it on Direct3D compute shaders, with a CPU fallback where the GPU path is unavailable.
+macOS runs the develop chain on Core Image in 16-bit half-float linear precision (`RGBAh`) by default. Windows runs it on Direct3D 11 compute shaders, with a CPU fallback where the GPU path is unavailable, and uses 32-bit float precision (`RGBA32F`) on both paths.
 
 ### Where files live
 
 | | macOS | Windows |
 |---|---|---|
 | App | `/Applications/negaflow.app` | `%LOCALAPPDATA%\Negaflow\App` |
-| Library and settings | `~/Library/Application Support/negaflow` | `%LOCALAPPDATA%\Negaflow` |
+| Catalog, defect sidecars, recipes, print templates | `~/Library/Application Support/negaflow` | `%LOCALAPPDATA%\Negaflow` |
+| App preferences | `UserDefaults` (`~/Library/Preferences/com.songhabin.negaflow.plist`) | `%LOCALAPPDATA%\Negaflow` |
 
 ### Install and removal
 
-macOS ships a PKG that puts the app in `/Applications`. To remove it, drag the app to the Trash. Windows ships an installer that writes into your user folder without administrator rights. Removal goes through `Uninstall negaflow` in the Start menu or through Settings, and takes out the app folder, the Start menu entry and the package registration.
+macOS ships a PKG that puts the app in `/Applications`. To remove it, drag the app to the Trash. Windows ships an installer that writes into `%LOCALAPPDATA%\Negaflow\App` and asks for a one-time administrator confirmation only if Windows does not already allow registering unsigned loose application packages (`AllowDevelopmentWithoutDevLicense`). Removal goes through `Uninstall negaflow` in the Start menu or through Settings, and takes out the app folder, the Start menu entry and the package registration.
 
 ### Command line
 
-macOS ships `negaflow`, a full CLI that detects scanners, develops files, runs GrainMend and benchmarks. Windows ships `negaflow-cli.exe`, a smaller diagnostic tool that checks what the engine does with one file. It takes flags, not subcommands.
+The GUI release installers do not ship a command-line binary; each platform's source build provides its own CLI. Building macOS from source with `swift build` produces `negaflow`, a CLI that detects scanners, develops files, runs GrainMend and benchmarks. Building Windows from source with CMake produces `negaflow-cli.exe`, a smaller diagnostic tool that checks what the engine does with one file and takes flags rather than subcommands.
 
 ### Signing
 

@@ -37,7 +37,7 @@ Pour l'exécuter :
 
 Pour le compiler :
 
-- Visual Studio 2026 avec la charge de travail Développement Desktop en C++ (les composants sont listés dans `.vsconfig`)
+- Visual Studio 2026 avec les charges de travail Développement Desktop en C++, développement Desktop .NET et développement d'applications WinUI/Windows (les composants exacts sont listés dans `.vsconfig`)
 - Windows 11 SDK 10.0.26100 ou ultérieur
 - SDK .NET 10 (`global.json` fixe la version 10.0.302)
 - CMake 4.2 ou ultérieur (requis par le générateur `Visual Studio 18 2026`)
@@ -47,7 +47,7 @@ Le build propose aussi des préréglages Arm64. Les versions publiées ne contie
 
 ## Installation
 
-Téléchargez `negaflow-1.2.7-win-x64.exe` depuis [Releases](https://github.com/habinsong/negaflow/releases) et lancez-le. Par défaut, il s'installe dans `%LOCALAPPDATA%\Negaflow\App` sans demander de droits administrateur.
+Téléchargez `negaflow-1.2.7-win-x64.exe` depuis [Releases](https://github.com/habinsong/negaflow/releases) et lancez-le. Par défaut, il s'installe dans `%LOCALAPPDATA%\Negaflow\App` et ne demande une confirmation administrateur unique que si Windows n'autorise pas encore l'enregistrement de paquets applicatifs non signés (`AllowDevelopmentWithoutDevLicense`).
 
 [negaflow-1.2.7-win-x64-setup.zip](https://github.com/habinsong/negaflow/releases/download/v1.2.7/negaflow-1.2.7-win-x64-setup.zip) contient le même programme d'installation, avec les instructions, les mentions légales et les sommes de contrôle SHA-256. Extrayez tous les fichiers avant de lancer le programme d'installation. C'est une archive d'installation, pas une application portable.
 
@@ -91,22 +91,22 @@ ctest --preset x64-release --output-on-failure
 # Tests de l'application et du catalogue
 .\scripts\test-managed.ps1
 
-# Tests de la frontière moteur/application
+# Tests de la frontière moteur/application (à lancer séparément)
 .\scripts\test-interop.ps1
 
-# Tout cela d'un coup
+# Porte CI (clés, plages de curseurs, CTest, tests managés), build Release et contrôle de l'installateur
 .\scripts\local-ci.ps1
 ```
 
 Lancez `scripts\verify-installer.ps1` (appelé aussi par `local-ci.ps1`) dans une session de bureau ouverte. Dans une session SSH, l'enregistrement AppX peut échouer avec `0x80070005` ; le script s'arrête alors avant de toucher à l'installation existante.
 
-La CI n'exécute que les tests autonomes du moteur. Les fichiers de référence macOS restent hors de Git. Pour lancer ces comparaisons, indiquez le dossier de référence dans `NEGAFLOW_MACOS_GOLDEN_ROOT` lors de la configuration de CMake. Il doit contenir `task6-metadata-policy`, `task9-bw-slide`, `task7-coreimage-filters`, `task8-digital-film-look` et `vibrance`. Un fichier manquant ou illisible fait échouer les comparaisons choisies. `ctest --preset x64-release -L external-golden` les exécute, et les tests unitaires ordinaires restent actifs.
+La CI n'exécute que les tests autonomes du moteur, tandis que les fichiers de référence macOS restent hors de Git. Pour lancer ces comparaisons, indiquez le dossier de référence dans `NEGAFLOW_MACOS_GOLDEN_ROOT` lors de la configuration de CMake. Ce dossier doit contenir `task6-metadata-policy` et `task9-bw-slide`, ainsi que `task7-coreimage-filters`, `task8-digital-film-look` et `vibrance`. De plus, un fichier manquant ou illisible fait échouer les comparaisons choisies. Ensuite, `ctest --preset x64-release -L external-golden` exécute ces comparaisons, et les tests unitaires ordinaires restent actifs.
 
 ## Cibles de couleur personnalisées
 
-CS suit MAIN, HS, SP, F135 et HR dans les pastilles de cibles. Le choisir ouvre en bas à gauche une liste sur deux colonnes de 18 cibles Custom, en groupes de 11, 4 et 3 ; le sélecteur de rendu reste à droite. En entrant dans CS, Emulsion est sélectionnée, et une photo qui utilise déjà une cible Custom la garde.
+CS suit MAIN et HS, ainsi que SP, F135 et HR dans les pastilles de cibles. Le choisir ouvre en bas à gauche une liste sur deux colonnes de 18 cibles Custom, en groupes de 11, 4 et 3 ; le sélecteur de rendu reste à droite. En entrant dans CS, Emulsion est sélectionnée, et une photo qui emploie déjà une cible Custom la garde.
 
-Custom utilise les mêmes coefficients custom-3 et les mêmes identifiants texte que macOS. La cible choisie est enregistrée dans les réglages de la photo et dans le catalogue, et l'aperçu comme l'export passent par la même étape. L'en-tête de dossier applique la cible choisie au dossier avec le bouton Appliquer existant.
+Custom applique les mêmes coefficients custom-3 et les mêmes identifiants texte que macOS. La cible choisie est enregistrée dans les réglages de la photo et dans le catalogue, et l'aperçu comme l'export passent par la même étape. L'en-tête de dossier applique la cible choisie au dossier avec le bouton Appliquer existant.
 
 ## Vérifier le moteur en ligne de commande
 
@@ -121,8 +121,8 @@ $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 # Contenu d'un fichier de numérisation
 & $cli --probe-tiff scan.tif
 
-# Développer et enregistrer en TIFF 16 bits
-& $cli --export-developed-tiff16 scan.tif out.tif
+# Développer et enregistrer en TIFF 16 bits (<dmin-r> <dmin-g> <dmin-b> <color|bw>)
+& $cli --export-developed-tiff16 scan.tif out.tif 0.85 0.55 0.35 color
 
 # Répartition du temps dans un passage de développement
 & $cli --develop-timing scan.tif
@@ -131,7 +131,7 @@ $cli = "out\build\native\x64-release\Release\negaflow-cli.exe"
 & $cli --auto-base-probe scan.tif
 ```
 
-Lancez-le sans argument pour la liste complète.
+Un lancement sans argument affiche le JSON d'information de build ; passez `--help` pour la liste des options.
 
 ## Scanners
 
@@ -148,11 +148,13 @@ L'application écrit des journaux texte dans `%LOCALAPPDATA%\Negaflow\Logs`.
 | `export-trace.txt` | Export et exportation rapide, échecs compris |
 | `termination.txt` | Ce qui s'est passé pendant la fermeture de l'application |
 | `settings-change.txt` | Réglages modifiés et ce qui les a modifiés |
+| `startup-trace.txt` | Étapes de lancement et d'initialisation du shell |
+| `crop-trace.txt` | Géométrie de recadrage et mises à jour d'interaction |
 
-Ces trois-là sont toujours actifs. Deux autres sont désactivés par défaut :
+Ces journaux sont toujours actifs (des journaux de panne tels que `native-crash.txt` et `scanner-failure.txt` sont aussi écrits en cas d'erreur). Les traces optionnelles sont désactivées par défaut :
 
-- `preview-trace.txt` : créez un fichier vide nommé `preview-trace.on` dans le même dossier.
-- `stage-trace.txt` : définissez la variable d'environnement `NEGAFLOW_STAGE_TRACE=1` avant de lancer l'application. Il enregistre des statistiques de pixels à chaque étape du développement.
+- `preview-trace.txt`, `thumbnail-trace.txt`, `shortcut-trace.txt`, `decode-trace.txt` et `memory-budget.txt` : créez le fichier témoin `.on` correspondant (`preview-trace.on`, `thumbnail-trace.on`, `shortcut-trace.on`, `decode-trace.on`, `memory-trace.on`) dans le même dossier, ou activez le mode développeur dans les paramètres.
+- `stage-trace.txt` et `stage-timing.txt` : définissez `NEGAFLOW_STAGE_TRACE=1` (statistiques de pixels par étape) ou `NEGA_TIMING=1` (durée de chaque étape) avant de lancer l'application.
 
 ## Arborescence
 
@@ -162,8 +164,8 @@ negaflow-windows/
 │   ├── Native/        Chroma Engine, GrainMend, décodage et export (C++)
 │   ├── Interop/       La couche entre moteur et application (C#)
 │   ├── Catalog.Core/  Stockage de la bibliothèque (C#)
-│   ├── Shell.Core/    Logique de développement, de tirage et d'export (C#)
-│   ├── Shell/         Écrans Bibliothèque, Développement et Tirage (WinUI 3)
+│   ├── Shell.Core/    Logique de développement, de tirage, de numérisation et d'export (C#)
+│   ├── Shell/         Écrans Bibliothèque, Développement, Tirage et Numérisation (WinUI 3)
 │   └── Cli/           Outil d'inspection du moteur (C++)
 ├── scripts/           Scripts de build, de test et de packaging
 ├── tests/             Tests du moteur, de l'application et de la frontière

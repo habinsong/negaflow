@@ -603,6 +603,7 @@ add_library(negaflow_color STATIC
     src/Native/color/input_gamma_estimator.cpp
     src/Native/color/input_gamma_profile.cpp
     src/Native/color/icc_profile.cpp
+    src/Native/color/icm_transform.cpp
     src/Native/color/soft_proof.cpp
     src/Native/color/gamut_check.cpp
     src/Native/color/output_color_space.cpp

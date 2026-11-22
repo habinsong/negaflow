@@ -22,30 +22,33 @@ In diesem Repository gibt es keine SANE-Implementierung. Dieser Code liegt in ei
 
 ## Wie die Anbindung läuft
 
-Die Oberfläche spricht mit `ScannerKit`, das auf eines von drei Backends verteilt:
+Unter macOS spricht die Oberfläche mit `ScannerKit`, das auf eine von drei `ScannerBackend`-Implementierungen verteilt:
 
 1. `ExternalScannerBackend`, das das installierte externe Plug-in ausführt.
 2. `MockScannerBackend`, das synthetische Bilder für die Entwicklung erzeugt.
 3. `InactiveImageCaptureBackend`, derzeit inaktiv.
 
-Die Oberfläche sieht nur `ScannerBackend`. Die Geräte-ID eines Plug-ins erscheint in der App als `plugin:<pluginId>:<deviceId>`.
+Unter Windows verteilt die Shell auf `ScannerPluginGateway` für externe Plug-ins oder auf `SimulatedScannerGateway`, wenn der Demomodus gewählt ist.
+
+Die Geräte-ID eines Plug-ins erscheint in der App als `plugin:<pluginId>:<deviceId>`.
 
 Beim Ausführen des Plug-ins wird `plugin:<pluginId>:` entfernt und nur die eigene Geräte-ID des Plug-ins gesendet.
 
 ## Plug-ins finden
 
-Der Standardordner ist `~/Library/Application Support/negaflow/Plugins/<id>/manifest.json`. Für Tests und lokale Entwicklung verweist `NEGAFLOW_PLUGINS_DIR` auf einen anderen Ordner.
+Der Standardpfad zum Manifest ist `~/Library/Application Support/negaflow/Plugins/<id>/manifest.json` unter macOS und `%LOCALAPPDATA%\Negaflow\Plugins\<id>\manifest.json` unter Windows. Unter macOS kann `NEGAFLOW_PLUGINS_DIR` für Tests und lokale Entwicklung auf einen anderen Ordner verweisen.
 
 | Feld | Regel |
 |---|---|
 | `schemaVersion` | Derzeit genau `1` |
-| `protocolVersion` | `1`, wenn weggelassen; `1` und `2` werden unterstützt |
+| `protocolVersion` | `1`, wenn weggelassen (`1` und `2` unterstützt; Windows verlangt `2` beim Scannen) |
 | `id` | Eindeutige Plug-in-ID |
 | `name` | Auf dem Bildschirm gezeigter Name |
-| `kind` | Art des Plug-ins |
+| `pluginVersion` | Optionale Versionszeichenkette des Plug-ins |
+| `kind` | Standardmäßig `"scanner"`, wenn weggelassen; andere Werte werden abgelehnt |
 | `license` | Verbreitungslizenz |
 | `homepage` | Projektadresse |
-| `executable` | Pfad zur ausführbaren Datei |
+| `executable` | Relativer Pfad innerhalb des Plug-in-Verzeichnisses (kein `.`, `..`, führendes `/`, Symlink oder Reparse Point) |
 
 `id` hat 1 bis 64 ASCII-Zeichen. Das erste ist ein Buchstabe oder eine Ziffer, die übrigen sind Buchstaben, Ziffern, `.`, `_` oder `-`. `:` trennt die Geräte-ID und ist daher nicht erlaubt.
 
@@ -54,15 +57,14 @@ Ein Plug-in öffnet sich nur, wenn Manifest und ausführbare Datei beide stimmen
 ### Dateisicherheitsprüfungen
 
 > [!WARNING]
-> Ändern sich die Bytes von Manifest oder ausführbarer Datei, verfällt die frühere Freigabe. Eigentümer, Rechte, Symlink-Status und SHA-256 werden unmittelbar vor der Ausführung erneut geprüft.
+> Ändern sich die Bytes von Manifest oder ausführbarer Datei, verfällt die frühere Freigabe. Dateisicherheit und SHA-256-Hashes werden unmittelbar vor der Ausführung erneut geprüft.
 
-- Plug-in-Ordner, Manifest und ausführbare Datei müssen dem aktuellen Benutzer gehören.
-- Für Gruppe oder andere beschreibbar wird abgelehnt.
-- Symlinks werden abgelehnt.
-- Der SHA-256 von Manifest und ausführbarer Datei wird festgehalten.
+- Unter macOS müssen Plug-in-Ordner, Manifest und ausführbare Datei dem aktuellen Benutzer gehören, Schreibrechte für Gruppe oder andere werden abgelehnt, und Symlinks werden abgelehnt.
+- Unter Windows werden Reparse Points auf Plug-in-Ordner, Manifest und ausführbarer Datei abgelehnt, und der Pfad der ausführbaren Datei muss innerhalb des Plug-in-Verzeichnisses bleiben.
+- Der SHA-256 von Manifest und ausführbarer Datei wird auf beiden Plattformen festgehalten.
 - Der Benutzer gibt das Plug-in bei der ersten Verwendung frei.
 - Geänderte Dateibytes heben die Freigabe auf.
-- Die IDs werden unmittelbar vor der Ausführung neu berechnet.
+- Hashes und IDs werden unmittelbar vor der Ausführung neu berechnet.
 
 ## Befehle
 
@@ -72,7 +74,7 @@ Das Plug-in läuft als eigener Prozess.
 |---|---|
 | `detect` | JSON-Geräteliste |
 | `capabilities <deviceId>` | JSON-Liste der Fähigkeiten. Kann über stdin das von `detect` gemeldete JSON mit Geräte-ID, Hersteller und Modell annehmen |
-| `scan` | Einstellungs-JSON über stdin; Fortschritts-NDJSON und Endergebnis über stdout |
+| `scan` (macOS) / `scan <deviceId>` (Windows) | Einstellungs-JSON über stdin; Fortschritts-NDJSON und Endergebnis über stdout |
 
 ## Scanprotokoll
 
@@ -82,7 +84,7 @@ Die ältere Kompatibilitätsspezifikation. Anfragen und NDJSON haben weder `prot
 
 ### Version 2
 
-Wird nur verwendet, wenn das Manifest `"protocolVersion": 2` trägt.
+Wird nur verwendet, wenn das Manifest `"protocolVersion": 2` trägt. Unter Windows ist Protokoll v2 beim Ausführen eines Scans erforderlich.
 
 Eine Anfrage enthält:
 
@@ -105,14 +107,14 @@ All das scheitert geschlossen:
 - Zusätzliche Ausgabe nach dem Endereignis
 - Ungültiges UTF-8
 
-Eine Verletzung der v2-Spezifikation beendet das Plug-in sofort, ohne die übliche Zeitgrenze abzuwarten.
+Unter macOS beendet eine Verletzung der v2-Spezifikation mitten im Datenstrom das Plug-in sofort, ohne die übliche Zeitgrenze abzuwarten. Unter Windows wird der v2-Ereignisstrom nach dem Ende des Prozesses geprüft.
 
 ### Tatsächlich angewendete Einstellungen
 
 Ein v2-`result` muss `appliedOptions` tragen:
 
 - `deviceID`, `resolutionDPI`, `bitDepth`, `colorMode`, `filmType`
-- `scanArea`: `originXMM`, `originYMM`, `widthMM`, `heightMM`, der Bereich, den das Plug-in tatsächlich an das Backend gesendet hat. Ein Plug-in darf ihn um weniger als 1 mm anpassen, um ein Backend zu umgehen, das die Scangröße falsch berechnet. Die App prüft die zurückgegebene Pixelgröße gegen diesen Bereich, ein Abschreiben der Anfrage würde die Prüfung aushebeln.
+- `scanArea`: `originXMM`, `originYMM`, `widthMM`, `heightMM`, der Bereich, den das Plug-in tatsächlich an das Backend gesendet hat. `originXMM`, `originYMM` und `widthMM` müssen genau mit der Anfrage übereinstimmen, und nur `heightMM` darf um weniger als 1 mm abweichen, um ein Backend zu umgehen, das die Scanhöhe falsch berechnet. Die App prüft die zurückgegebene Pixelgröße gegen diesen Bereich, ein Abschreiben der Anfrage würde die Prüfung aushebeln.
 - `infrared`, `multiExposure`
 - `hardwareExposureTime`, `brightnessAdjustment`, `contrastAdjustment`
 - `outputRawTIFF`
@@ -132,16 +134,17 @@ Die Vorschau dieses Ablaufs fordert eine ausdrückliche Auflösung an, den unter
 Ein Flachbettscan mit gewählter Position wird nur aktiv, wenn das Plug-in all dies meldet:
 
 - Vorschau
-- `supportsPositionedScanArea`
-- `scanOriginXRange` und `scanOriginYRange` in mm
-- `scanWidthRange` und `scanHeightRange` in mm
+- `supportsScanArea: true` und `supportsPositionedScanArea: true`
+- Physische Einheiten für den Scanbereich (`scanAreaUnit != "pixel"`)
+- `scanOriginXRange` und `scanOriginYRange` in mm mit nichtnegativen Ursprüngen und gültigen Grenzen
+- `scanWidthRange` und `scanHeightRange` in mm mit positiven Mindest- und Höchstgrenzen
 
 Die App erweitert den gewählten Bereich nach außen auf die Schrittweite des Plug-ins und erzeugt je Bereich einen vollständigen Scanauftrag. Das wird nie aus einem Modellnamen geraten. Ältere Plug-ins ohne die optionalen Felder behalten den Ablauf mit festen Bildern.
 
 ## Prozessgrenzen und Abbruch
 
-- Obergrenze für stdout: 4 MiB
-- Obergrenze für stderr: 1 MiB
+- Obergrenzen unter macOS: stdout 4 MiB, stderr 1 MiB; Zeitgrenzen sind 90 s für `detect`, 180 s für `capabilities` und 2 Stunden für `scan`, mit sofortigem Abbruch bei einer v2-Verletzung mitten im Datenstrom.
+- Obergrenzen unter Windows: stdout 4 MiB für `detect` und `capabilities`, 8 MiB für `scan` (256 KiB je stdout-Zeile), stderr 512 KiB; Zeitgrenzen sind 15 s für `detect`, 180 s für `capabilities` und 2 Stunden für `scan`, mit Prüfung des v2-Datenstroms nach Prozessende.
 
 Wird die Grenze überschritten, endet der Prozess mit einem Fehler. Beim Aufräumen werden nur die bereits eingetroffenen Bytes gelesen. Auch wenn ein Kindprozess die Pipe geerbt hat, wartet nichts auf EOF.
 
@@ -149,20 +152,20 @@ Wird die Grenze überschritten, endet der Prozess mit einem Fehler. Beim Aufräu
 
 ## Scandatei veröffentlichen
 
-Das Plug-in schreibt das Quellbild genau in den `outputPath`, den die App vorgegeben hat, und liefert denselben Pfad im Ergebnis zurück. Dieser Pfad liegt an einem temporären Ort auf demselben Datenträger wie der Zielordner. Der Ablauf:
+Das Plug-in schreibt das Quellbild genau in den `outputPath`, den die App vorgegeben hat, und liefert diesen Pfad im Feld `path` des Ergebnisses zurück. Dieser Pfad liegt an einem temporären Ort auf demselben Datenträger wie der Zielordner. Der Ablauf:
 
 1. Die App sendet das Einstellungs-JSON und den `outputPath` an das Plug-in.
 2. Das Plug-in schreibt die Scandatei in den temporären Ordner.
-3. Das Plug-in liefert ein Ergebnis mit demselben `outputPath`.
+3. Das Plug-in liefert ein Ergebnis, dessen Feld `path` mit dem angeforderten `outputPath` übereinstimmt.
 4. Die App prüft Format, Größe und Pfad.
 5. Bestehen die Prüfungen, veröffentlicht die App die Datei atomar im endgültigen Scanordner. Bei Abbruch, Fehler oder falscher Ausgabe löscht sie das temporäre Material.
 
 Die App bestätigt:
 
 - Eine reguläre Datei, die nicht leer ist
-- Ein Bild, das ImageIO lesen kann
+- Ein Bild, das ImageIO unter macOS lesen kann (in v2 wird TIFF erzwungen), oder ein TIFF, dessen Metadaten unter Windows `NativeTiffSourceProbe` bestehen
 - Das erwartete Format und die erwartete Pixelgröße
-- Denselben Pfad in Anfrage und Ergebnis
+- Denselben Pfad im `outputPath` der Anfrage und im `path` des Ergebnisses
 
 Bei Abbruch, Zeitüberschreitung, falscher Ausgabe oder Plug-in-Fehler wird der temporäre Ordner gelöscht, und es wird kein unvollständiger Scan veröffentlicht.
 

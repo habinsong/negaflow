@@ -56,7 +56,7 @@ L'usage automatique exige exactement un profil `holdoutValidated` correspondant,
 
 Les profils couleur NORITSU et SP-3000 du dépôt portent des valeurs `texture` issues de scènes réelles. Elles mélangent sujet, mise au point et grain du film : elles ne servent pas de données de bruit de capteur.
 
-Il n'existe pas encore de cibles uniformes répétées ni de matériel de validation distinct. Aucun profil de bruit d'appareil validé n'est fourni, et le chemin automatique utilise les réglages généraux existants.
+Il n'existe pas encore de cibles uniformes répétées ni de matériel de validation distinct. Aucun profil de bruit d'appareil validé n'est fourni, et aucune réduction automatique du bruit de scanner ne tourne dans la chaîne de développement (`ScannerNoiseReduction` revient aux facteurs génériques `1.0` dans le code de bibliothèque et les tests, tandis que la réduction du bruit utilisateur s'active à la demande via `FilmScanDenoise`).
 
 Un vrai profil demande tout ceci :
 

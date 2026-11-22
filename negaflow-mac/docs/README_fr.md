@@ -32,7 +32,7 @@
 
 Pour l'exécuter :
 
-- macOS 14.0 ou ultérieur (macOS 14, 26 et 27 sont pris en charge)
+- macOS 14.0 ou ultérieur (macOS 14, 15, 26 et 27 sont pris en charge)
 - Apple Silicon ou Intel
 - 8 Go de mémoire, 16 Go recommandés en moyen format
 
@@ -54,7 +54,7 @@ Le PKG Universal convient à la plupart des Mac et s'installe dans `/Application
 
 L'application est signée en ad hoc et n'est pas notariée, donc macOS bloque le premier lancement. Autorisez-la dans Réglages Système, Confidentialité et sécurité, avec Ouvrir quand même.
 
-La bibliothèque et les réglages sont dans `~/Library/Application Support/negaflow`.
+Le catalogue de la bibliothèque, les fichiers annexes de défauts, les recettes et les modèles de tirage se trouvent dans `~/Library/Application Support/negaflow`, et les préférences de l'application sont enregistrées dans `UserDefaults` (`~/Library/Preferences/com.songhabin.negaflow.plist`).
 
 Au lancement, l'app demande une fois à GitHub la dernière publication. Si une version plus récente existe, le bas du menu ⋯ en haut à droite affiche « Mettre à jour vers la version X.Y.Z ». Ce choix ouvre la page de publication et enregistre dans Téléchargements le PKG adapté à ce Mac, vérifié avec le `SHA256SUMS.txt` de la publication. L'installation reste à faire vous-même. Quand l'app est à jour, l'élément indique « Vous avez la dernière version. » et ouvre la page du projet. Si la vérification échoue, hors ligne par exemple, l'élément n'apparaît pas.
 
@@ -73,11 +73,10 @@ bash scripts/run-app.sh build
 
 `run-app.sh` appelle `xcodebuild`, assemble le bundle de l'application et le signe localement. Pour le moteur ou la CLI seuls, `swift build` suffit.
 
-Artefacts de publication :
+Artefacts de publication (compile les bundles `arm64` et `universal` et appelle `create-release-artifacts.sh` pour produire PKG et DMG, ZIP et dSYM, ainsi que `SHA256SUMS.txt`) :
 
 ```bash
-bash negaflow-mac/scripts/build-release.sh
-bash negaflow-mac/scripts/create-release-artifacts.sh
+bash scripts/build-release.sh
 ```
 
 ## Vérifications
@@ -89,13 +88,13 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 # Build Release de l'application
 bash scripts/run-app.sh build
 
-# Toutes les vérifications du dépôt
+# Vérifications statiques et CI Swift (NEGAFLOW_CI_GUI=1 pour compiler les tests GUI, NEGAFLOW_CI_GUI_RUN=1 pour les lancer)
 bash scripts/ci-gate.sh
 ```
 
 ## Cibles de couleur personnalisées
 
-CS suit MAIN, HS, SP, F135 et HR dans les pastilles de cibles. Le choisir ouvre, dans le sélecteur en bas à gauche, une liste sur deux colonnes de 18 cibles Custom ; le sélecteur de rendu reste à droite. En entrant dans CS, Emulsion est sélectionnée, et une image qui utilise déjà une cible Custom la garde.
+CS suit MAIN et HS, ainsi que SP, F135 et HR dans les pastilles de cibles. Le choisir ouvre, dans le sélecteur en bas à gauche, une liste sur deux colonnes de 18 cibles Custom ; le sélecteur de rendu reste à droite. En entrant dans CS, Emulsion est sélectionnée, et une image qui emploie déjà une cible Custom la garde.
 
 La liste a trois groupes : d'Emulsion à Dichroic (11), de Wetzlar à Rochester (4), de Slide Show à Point & Shoot (3). Les cibles Custom appliquent la réponse custom-3 en tonalité, densité et chroma. L'enregistrement, les aperçus, les vignettes et l'export utilisent l'identifiant de la cible choisie. Les autres cibles ne changent pas.
 
@@ -103,7 +102,7 @@ La CLI accepte les mêmes identifiants : `--target classic`, `--target dye-trans
 
 ## Ligne de commande
 
-La version macOS fournit une CLI.
+Le paquet Swift macOS comprend une cible CLI compilée avec `swift build`.
 
 ```bash
 swift build
@@ -134,9 +133,9 @@ Les commandes de scanner restent masquées tant qu'aucun module n'est installé.
 
 | Module | Rôle |
 |---|---|
-| `Chromabase` | Chroma Engine, GrainMend, profils, export |
+| `Chromabase` | Chroma Engine et GrainMend, profils et export |
 | `ScannerKit` | Vérification des capacités du scanner et connexion des modules |
-| `negaflowApp` | Écrans Bibliothèque, Développement, Numérisation et Exportation |
+| `negaflowApp` | Écrans Bibliothèque et Développement, Tirage, Numérisation et Exportation |
 | `negaflowCLI` | Commandes de développement, de numérisation, de benchmark et d'autotest |
 
 ## Images de référence

@@ -9,7 +9,7 @@ Ce guide couvre l'import, le développement par dossier, le transfert de réglag
 
 ## Import
 
-L'import affiche une barre de progression, un pourcentage, le nombre de fichiers terminés et le total sous les commandes d'import. Les métadonnées sont lues hors du fil principal, puis les nouvelles vues sont enregistrées ensemble : un gros dossier ne reconstruit pas l'index de la bibliothèque à répétition.
+L'import affiche une barre de progression, un pourcentage, le nombre de fichiers terminés et le total sous les commandes d'import. Les métadonnées sont lues hors du fil principal, puis les nouvelles vues sont enregistrées ensemble : un gros dossier ne reconstruit pas l'index de la bibliothèque à répétition. L'import accepte les fichiers TIFF, PNG et JPEG, ainsi que HEIC/HEIF, BMP, DNG et RAW d'appareil, respecte les profils ICC Gray et RVB intégrés, et associe automatiquement les fichiers compagnons infrarouges `_ir` / `-ir` / `.ir` lorsque les dimensions correspondent.
 
 Le développement automatique des photos importées est **désactivé par défaut**. Un import se déroule ainsi :
 
@@ -17,7 +17,7 @@ Le développement automatique des photos importées est **désactivé par défau
 2. Sa vignette d'origine et son dossier apparaissent d'abord.
 3. Le développement démarre quand vous appliquez un procédé et une cible au dossier ou que vous entrez dans la vue Développement.
 
-Pour développer automatiquement chaque import, activez **Réglages → Flux de travail → Développer automatiquement les nouvelles importations**. Ce choix persiste d'un lancement à l'autre. Il ne concerne que les vues enregistrées par cet import et ne remplace jamais un état déjà développé. Les photos développées ne sont retraitées que par un **Appliquer** explicite sur le dossier ou par un collage de réglages.
+Pour développer automatiquement chaque import, activez **Réglages > Flux de travail > Développer automatiquement les nouvelles importations**. Ce choix persiste d'un lancement à l'autre. Il ne concerne que les vues enregistrées par cet import et ne remplace jamais un état déjà développé. Les photos développées ne sont retraitées que par un **Appliquer** explicite sur le dossier ou par un collage de réglages.
 
 Les captures de scanner sont différentes : type de film, procédé et cible sont choisis pendant la numérisation, donc le développement démarre une fois le résultat publié. Les pellicules des vues Développement et Tirage affichent une vignette développée pour les sources négatif couleur, diapositive, négatif noir et blanc et positif noir et blanc. La Bibliothèque garde la vignette source pour contrôler la source.
 
@@ -26,6 +26,7 @@ Les captures de scanner sont différentes : type de film, procédé et cible son
 - Les états replié et déplié persistent. Créer un dossier ou rouvrir l'application ne déplie pas les autres dossiers.
 - Chaque ligne de dossier a la même commande `×`. Elle retire ce dossier et ses photos **de la bibliothèque seulement**. Les fichiers sources restent dans le Finder.
 - La liste des photos d'un dossier dans Développement a sa propre zone de défilement à hauteur limitée : une longue liste ou une petite fenêtre ne repousse pas le reste de la barre latérale.
+- Dans la bibliothèque et la pellicule, les vues prennent aussi en charge les notes par étoiles (`1`–`5`), les drapeaux Retenue/Rejetée (Pick/Reject), les copies virtuelles, les piles, les collections, les instantanés et l'historique des retouches, les sauvegardes du catalogue et les archives portables `.negaflowarchive`.
 
 ### Déplacer des photos vers un autre dossier
 
@@ -41,7 +42,7 @@ negaflow surveille les dossiers sources physiques enregistrés. Après un court 
 - Le déplacement ou le renommage d'un dossier enregistré
 - Une nouvelle image directement dans un dossier enregistré
 
-Quand le signet persistant de la source retrouve le nouvel emplacement, la vue existante est rattachée de nouveau. Un dossier déplacé garde son identifiant et sa date d'ajout. Un fichier nouvellement ajouté est importé sans créer de doublon pour les fichiers déjà connus.
+Sur macOS, quand le signet persistant de la source retrouve le nouvel emplacement, la vue existante est rattachée de nouveau. Sous Windows, `FileSystemWatcher` surveille chaque dossier enregistré et réconcilie les déplacements, renommages et nouvelles images avec le catalogue. Un dossier déplacé garde son identifiant et sa date d'ajout. Un fichier nouvellement ajouté est importé sans créer de doublon pour les fichiers déjà connus.
 
 C'est une surveillance de dossiers pilotée par les événements, pas un balayage périodique de toute la bibliothèque. Les vues qui ont le même parent physique partagent une seule surveillance, et seuls les dossiers qui signalent un changement sont examinés.
 
@@ -55,11 +56,11 @@ Une barre de progression, un pourcentage, le nombre de photos terminées et le t
 
 ## Redressement et transformation
 
-Ouvrez Géométrie → Recadrage à droite du Développement. Maintenez ⌘ (Ctrl sous Windows), faites glisser le long d'un bord qui doit être horizontal, puis relâchez : la photo tourne pour que la ligne devienne horizontale. Une ligne tracée plus près de la verticale est rendue verticale. Maintenez ⌥ (Alt sous Windows) pour afficher une grille fine sur le recadrage. Les deux touches se changent dans Réglages → Raccourcis et ne peuvent pas être identiques. Sur Mac, ⌃ n'est pas proposé pour la ligne, car ⌃-clic y vaut un clic droit.
+Ouvrez Géométrie > Recadrage à droite du Développement. Maintenez ⌘ (Ctrl sous Windows), faites glisser le long d'un bord qui doit être horizontal, puis relâchez : la photo tourne pour que la ligne devienne horizontale. Une ligne tracée plus près de la verticale est rendue verticale. Maintenez ⌥ (Alt sous Windows) pour afficher une grille fine sur le recadrage. Les deux touches, ainsi que les raccourcis d'espace de travail, de développement, de notation et d'outils de défauts, se personnalisent dans Réglages > Raccourcis, et les deux touches de recadrage ne peuvent pas être identiques. Sur Mac, ⌃ n'est pas proposé pour la ligne, car ⌃-clic y vaut un clic droit.
 
-La section Transformation se trouve entre Calibrage et Détails et effets. Désactivé laisse la photo telle quelle. Auto, Niveau, Vertical et Complet cherchent une fois les lignes droites de la photo et les corrigent. Niveau ne fait que tourner la photo, Vertical redresse aussi les verticales convergentes, Complet corrige la perspective verticale et horizontale. Auto fait comme Complet mais retient les grandes corrections. Guidé suit 2 à 4 repères que vous tracez sur la photo.
+La section Transformation se trouve entre Calibrage et Détails et effets. Désactivé laisse la photo telle quelle, tandis qu'Auto, Niveau, Vertical et Complet cherchent une fois les lignes droites de la photo et les corrigent. Plus précisément, Niveau ne fait que tourner la photo, Vertical redresse aussi les verticales convergentes, et Complet corrige la perspective verticale et horizontale. Auto agit comme Complet, mais il retient les grandes corrections. De plus, Guidé suit 2 à 4 repères que vous tracez sur la photo.
 
-Les curseurs Vertical, Horizontal, Rotation, Aspect, Échelle, Décalage X et Décalage Y s'ajoutent à ce que le mode a trouvé. Un double-clic réinitialise un curseur. Limiter le recadrage coupe le résultat au plus grand rectangle sans coin vide. Désactivé, les coins vides sont blancs à l'écran et dans les fichiers exportés. L'histogramme, l'alerte d'écrêtage, la tonalité automatique et la balance des blancs automatique ne les comptent pas comme photo. La correction suit les rotations de 90° et les retournements, et Réinitialiser tous les réglages l'efface avec le recadrage et le redressement.
+Les curseurs Vertical et Horizontal, Rotation et Aspect, ainsi qu'Échelle, Décalage X et Décalage Y s'ajoutent à ce que le mode a trouvé. Un double-clic réinitialise un curseur. Limiter le recadrage coupe le résultat au plus grand rectangle sans coin vide. Désactivé, les coins vides sont blancs à l'écran et dans les fichiers exportés. L'histogramme, l'alerte d'écrêtage, la tonalité automatique et la balance des blancs automatique ne les comptent pas comme photo. La correction suit les rotations de 90° et les retournements, et Réinitialiser tous les réglages l'efface avec le recadrage et le redressement.
 
 ## Préréglages et copier-coller
 
@@ -70,16 +71,16 @@ Les réglages de développement comptent sept groupes sélectionnables séparém
 | Gamma d'entrée | Interprétation du transfert de la source |
 | Échelle de base | Échelle de la base du film |
 | Base | Type de film et procédé, cible, profil de scanner, base du film, étalonnage de plage par canal, Équilibre auto, Niveaux auto et équilibre neutre |
-| Tonalité | Exposition, contraste, densité, hautes lumières, ombres, blancs, noirs et courbes de tonalité |
-| Couleur | Température, teinte, profondeur de couleur, vibrance, saturation, mélangeur, étalonnage, calibrage, virage noir et blanc et émulation de film |
-| Détail | Grain, netteté, halation, clarté, vignetage, réduction du bruit, intensité GrainMend et réglages locaux |
+| Tonalité | Exposition et contraste, densité, hautes lumières et ombres, ainsi que blancs, noirs et courbes de tonalité |
+| Couleur | Température et teinte, profondeur de couleur, vibrance et saturation, mélangeur et étalonnage, ainsi que calibrage, virage noir et blanc et émulation de film |
+| Détail | Grain et netteté, halation et clarté, vignetage et réduction du bruit, ainsi qu'intensité GrainMend et réglages locaux |
 | Géométrie | Recadrage, rotation, retournements horizontal et vertical, redressement, proportions du recadrage et transformation |
 
 Un collage complet ou un préréglage utilisateur remplace les réglages de développement de la destination. Un collage ciblé remplace les valeurs effectives des groupes choisis et garde les autres. Quand une partie seulement d'un rendu est collée, ses apports de tonalité, de couleur et de texture sont intégrés aux valeurs et la référence au rendu est effacée, pour qu'un ancien rendu ne soit pas ajouté une seconde fois. Coller plusieurs fois les mêmes réglages donne le même état. Les menus, raccourcis et le panneau utilisent la même portée de collage.
 
 Le collage et les préréglages utilisateur s'appliquent à toutes les photos sélectionnées. Une seule annulation ou un seul rétablissement couvre toute la sélection, et Windows valide chaque destination avant d'en modifier une. Les vignettes et l'aperçu actif se rafraîchissent d'après la nouvelle recette. Les fichiers d'origine, les notes et les retouches de défauts liées à la source ne sont pas copiés.
 
-Les préréglages utilisateur enregistrent l'état de développement complet et la géométrie. Les préréglages plus anciens ou les portées de collage sans Géométrie l'incluent par compatibilité. Un nom vide reçoit le premier nom numéroté libre, et l'enregistrement n'écrase jamais un préréglage existant du seul fait que le nom est identique.
+Chaque préréglage utilisateur enregistre l'état de développement complet et la géométrie. Les préréglages plus anciens ou les portées de collage sans Géométrie l'incluent par compatibilité. Un nom vide reçoit le premier nom numéroté libre, et l'enregistrement n'écrase jamais un préréglage existant du seul fait que le nom est identique.
 
 ## Sans module scanner
 
@@ -109,11 +110,11 @@ Les commandes ICC du Tirage ont des rôles différents.
 
 | Réglage | Aperçu à l'écran | Exportation de tirage | Aperçu de développement |
 |---|---|---|---|
-| Profil de sortie imprimante | Montre le résultat du tirage | Appliqué à la page terminée | Jamais appliqué |
+| Profil de sortie imprimante | Montre le résultat du tirage quand l'aperçu C-print est désactivé | Appliqué à la page terminée (formats hors Raw/DNG) | Utilisé quand l'épreuve écran est activée et que la cible de la vue est `PRINT` |
 | Profil d'épreuve C-print | Épreuve écran du procédé du laboratoire et du papier | Non incrusté dans le fichier de livraison | Jamais appliqué |
-| Épreuve écran générale | Utilisée dans sa portée d'affichage configurée | Simple aide d'affichage | Suit son propre réglage |
+| Épreuve écran générale | Son profil ICC n'est pas appliqué dans Tirage (sauf copies d'épreuve sur macOS) ; son mode de simulation `Profil` ou `Papier + Noir` s'applique lors de l'aperçu du profil de sortie imprimante | Simple aide d'affichage | Suit son propre réglage (bascule sur le profil de sortie imprimante pour les cibles `PRINT`) |
 
-Le profil de sortie d’imprimante se choisit dans **Réglages → Exporter → Gestion des couleurs**.
+Le profil de sortie d’imprimante se choisit dans **Réglages > Exporter > Gestion des couleurs**. Développement et Tirage prennent tous deux en charge l'épreuve écran et l'alerte de gamut ; sous Windows, l'aperçu applique le profil ICC du moniteur actif lorsque Windows Advanced Color est désactivé.
 
 Un profil de sortie imprimante n'est pas appliqué à une source avant que cette source soit dupliquée. La planche-contact, le package d'images ou le package personnalisé est d'abord composé, puis le profil est appliqué une seule fois à la page entière. Les emplacements répétés d'une même source et les mises en page à sources mêlées reçoivent donc la même conversion de sortie.
 
@@ -123,7 +124,7 @@ Le profil d'épreuve C-print est l'aperçu du procédé fourni par le laboratoir
 
 Le DNG écrit l'image développée en fichier RVB linéaire 16 bits non compressé (`PhotometricInterpretation = LinearRaw`) dans l'espace colorimétrique de sortie que vous choisissez : sRGB, Display P3 ou Adobe RGB. La tonalité et la couleur sont déjà incrustées, donc les autres applications le lisent comme un fichier référencé en sortie. Le fichier porte le copyright, le scanner, le logiciel, la date et les notes de film selon la même politique de métadonnées que le TIFF. L'EXIF, l'IPTC et le GPS de l'appareil source ne sont pas copiés. Il faut 6 octets par pixel : une vue de 24 mégapixels fait environ 144 Mo.
 
-Le DNG est proposé pour les sources non compressées : TIFF, RAW d'appareil et DNG. Les sources JPEG, PNG et HEIC ne peuvent pas être exportées en DNG. Le développement, la cible `PRINT` et les mises en page de tirage prennent tous en charge le DNG. Le DNG de tirage enregistre la page composée en RVB standard avec une ColorMatrix, et la conversion ICC imprimante est sautée. L'export DNG utilise le dossier choisi dans Exportation et garde l'extension `.dng`. L'opération n'est terminée que lorsque le fichier final est publié et vérifié. exiftool et le décodeur d'images d'Apple lisent le fichier. Le rendu dans d'autres éditeurs RAW n'a pas été mesuré.
+Outre les formats JPEG, PNG, TIFF 8 bits/16 bits et Raw TIFF, le DNG est proposé pour les sources non compressées : TIFF, BMP, RAW d'appareil et DNG. Toutes les vues de la sélection doivent être éligibles pour que le DNG soit proposé ; les sources JPEG, PNG et HEIC/HEIF, ainsi que WebP, AVIF et GIF, ne peuvent pas être exportées en DNG. Le développement, la cible `PRINT` et les mises en page de tirage prennent tous en charge le DNG. Le DNG de tirage enregistre la page composée en RVB standard avec une ColorMatrix, et la conversion ICC imprimante est sautée. L'export DNG emploie le dossier choisi dans Exportation et garde l'extension `.dng`. L'opération n'est terminée que lorsque le fichier final est publié et vérifié. exiftool et le décodeur d'images d'Apple lisent le fichier. Le rendu dans d'autres éditeurs RAW n'a pas été mesuré.
 
 ## Ce qui modifie la source
 

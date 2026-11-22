@@ -21,7 +21,7 @@ Dasselbe gilt für:
 - Tonwerte, Kurven, HSL, Farb-Grading, Schwarzweißtonung
 - GrainMend-Erkennung und -Reparatur, einschließlich des Infrarotpfads
 - Abzugslayouts und Seitengeometrie
-- Benennung der Exportdateien, EXIF-Schreiben und Metadatenregeln
+- Benennung der Exportdateien über alle Formate hinweg sowie EXIF-Schreiben und Metadatenregeln bei JPEG, TIFF und DNG (unter Windows enthält der PNG-Export DPI und ICC-Profil ohne EXIF-Metadaten)
 - Das Katalogformat (`library.sqlite`)
 
 ## Was sich unterscheidet
@@ -30,26 +30,27 @@ Dasselbe gilt für:
 
 macOS nutzt ColorSync, Windows nutzt ICM. Beide übernehmen dieselben ICC-Profile und liefern im Rahmen der Rundung dieselben Zahlen. Die Paritätstests decken das ab, weil sich gerade dieser Teil am leichtesten unbemerkt verschiebt.
 
-Auf dem Bildschirm zeichnet macOS über das ColorSync-Profil des Displays. Windows tut das nur, wenn Advanced Color eingeschaltet ist. Ist es aus, schickt Windows die Pixel der App als sRGB an das Display. Deshalb wandelt negaflow die Entwicklungsfläche und die Druckvorschau unmittelbar vor dem Zeichnen in das ICC-Profil des Monitors um. Miniaturen und die übrige Oberfläche werden als sRGB gezeichnet.
+Auf dem Bildschirm zeichnet macOS über das ColorSync-Profil des Displays. Windows tut das nur, wenn Advanced Color eingeschaltet ist. Ist es aus, schickt Windows die Pixel der App als sRGB an das Display. Deshalb wendet negaflow unmittelbar vor dem Zeichnen die 33³-LUT des Monitor-ICC-Profils auf die Entwicklungsfläche und die Druckvorschau (einschließlich kleiner Kontaktbogen-Kacheln) an und aktualisiert sie automatisch beim Monitorwechsel oder bei der Rückkehr ins Fenster nach geänderten Anzeigeeinstellungen. Miniaturen und die übrige Oberfläche werden als sRGB gezeichnet.
 
 ### Grafik
 
-macOS führt die Entwicklungskette auf Core Image aus. Windows führt sie auf Direct3D-Compute-Shadern aus, mit CPU-Rückfall, wo der GPU-Pfad nicht verfügbar ist.
+macOS führt die Entwicklungskette auf Core Image standardmäßig in 16-Bit-Half-Float-Linearpräzision (`RGBAh`) aus. Windows führt sie auf Direct3D-11-Compute-Shadern aus, mit CPU-Rückfall, wo der GPU-Pfad nicht verfügbar ist, und arbeitet auf beiden Pfaden mit 32-Bit-Gleitkommazahlen (`RGBA32F`).
 
 ### Wo Dateien liegen
 
 | | macOS | Windows |
 |---|---|---|
 | App | `/Applications/negaflow.app` | `%LOCALAPPDATA%\Negaflow\App` |
-| Mediathek und Einstellungen | `~/Library/Application Support/negaflow` | `%LOCALAPPDATA%\Negaflow` |
+| Katalog, Defekt-Sidecars, Rezepte, Druckvorlagen | `~/Library/Application Support/negaflow` | `%LOCALAPPDATA%\Negaflow` |
+| App-Einstellungen | `UserDefaults` (`~/Library/Preferences/com.songhabin.negaflow.plist`) | `%LOCALAPPDATA%\Negaflow` |
 
 ### Installation und Entfernen
 
-macOS liefert ein PKG, das die App nach `/Applications` legt; zum Entfernen ziehen Sie die App in den Papierkorb. Windows liefert ein Installationsprogramm, das ohne Administratorrechte in Ihren Benutzerordner schreibt. Entfernt wird über `Uninstall negaflow` im Startmenü oder über die Einstellungen, dabei verschwinden App-Ordner, Startmenüeintrag und Paketregistrierung.
+macOS liefert ein PKG, das die App nach `/Applications` legt; zum Entfernen ziehen Sie die App in den Papierkorb. Das Windows-Installationsprogramm schreibt nach `%LOCALAPPDATA%\Negaflow\App` und fragt nur dann einmalig nach einer Administratorbestätigung, wenn Windows die Registrierung unsignierter loser Anwendungspakete (`AllowDevelopmentWithoutDevLicense`) noch nicht erlaubt. Entfernt wird über `Uninstall negaflow` im Startmenü oder über die Einstellungen, dabei verschwinden App-Ordner, Startmenüeintrag und Paketregistrierung.
 
 ### Befehlszeile
 
-macOS liefert `negaflow`, eine vollständige CLI, die Scanner erkennt, Dateien entwickelt, GrainMend ausführt und Benchmarks fährt. Windows liefert `negaflow-cli.exe`, ein kleineres Diagnosewerkzeug, das prüft, was die Engine mit einer einzelnen Datei macht. Es nimmt Optionen, keine Unterbefehle.
+Die GUI-Release-Installationspakete enthalten kein Befehlszeilenprogramm; stattdessen stellt der jeweilige Quellcode-Build eine CLI bereit. Auf macOS erzeugt `swift build` das Werkzeug `negaflow`, das Scanner erkennt, Dateien entwickelt, GrainMend ausführt und Benchmarks fährt. Unter Windows erzeugt der CMake-Build `negaflow-cli.exe`, ein kleineres Diagnosewerkzeug, das prüft, was die Engine mit einer einzelnen Datei macht und Optionen statt Unterbefehlen entgegennimmt.
 
 ### Signierung
 

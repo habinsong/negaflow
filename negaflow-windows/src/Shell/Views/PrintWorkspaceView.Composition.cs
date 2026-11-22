@@ -521,10 +521,9 @@ public sealed partial class PrintWorkspaceView
         {
             return;
         }
-        // macOS `SoftProof.rgbOutputColorSpace(fromICCData:)` 와 같은 판정입니다 — 데이터
-        // 공간이 RGB 이고 목적지로 쓸 수 있는 종류인가만 봅니다. 매체 흰색·검정을 읽어 보는
-        // 것으로 대신하면 인화소가 주는 표 기반 프로파일이 통째로 거절됩니다.
-        bool usable = PrintIccProfile.IsRgbOutput(file.Path);
+        // macOS `SoftProof.rgbOutputColorSpace(fromICCData:)` 와 같이 데이터 공간·출력 클래스·
+        // 태그 구조에 더해 Windows ICM 이 실제로 왕복 표를 만들 수 있는지까지 확인합니다.
+        bool usable = Negaflow.Shell.Develop.SoftProofProfileReader.CanUseAsProof(file.Path);
         PreviewTrace.Write(System.FormattableString.Invariant($"proof.usable {usable}"));
         if (!usable)
         {

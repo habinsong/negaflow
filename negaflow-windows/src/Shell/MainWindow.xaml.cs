@@ -208,6 +208,7 @@ public sealed partial class MainWindow : Window
         AppWindow.TitleBar.ButtonInactiveBackgroundColor = Microsoft.UI.Colors.Transparent;
         ApplyAppearance(settingsStore.Current.Appearance);
         settingsStore.Changed += OnSettingsChanged;
+        Activated += OnWindowActivated;
         AppWindow.Closing += OnAppWindowClosing;
         Closed += OnClosed;
     }
@@ -463,10 +464,22 @@ public sealed partial class MainWindow : Window
         };
     }
 
+    private void OnWindowActivated(object sender, WindowActivatedEventArgs args)
+    {
+        _ = sender;
+        // Windows 설정에서 모니터 ICC 나 Advanced Color(ACM·HDR)를 바꾸고 돌아왔을 때
+        // 슬라이더나 창 이동을 기다리지 않고 바로 화면 색관리 표를 갱신합니다.
+        if (args.WindowActivationState != WindowActivationState.Deactivated)
+        {
+            Services.DisplayColorManagement.RefreshNow();
+        }
+    }
+
     private void OnClosed(object sender, WindowEventArgs args)
     {
         _ = sender;
         _ = args;
+        Activated -= OnWindowActivated;
         // 곁창이 남으면 프로세스가 끝나지 않아 재실행 헬퍼가 기다리기만 합니다.
         diagnosticsWindow?.Close();
         diagnosticsWindow = null;

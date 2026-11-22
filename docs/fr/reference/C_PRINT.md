@@ -8,7 +8,7 @@ Le tirage propose huit mises en page : image seule, planche-contact, package d'i
 
 - Une nouvelle planche-contact démarre sur une feuille noire, en 6 colonnes × 7 lignes avec des espaces de 2 mm. Toutes les autres mises en page démarrent sur une feuille blanche. Chaque mise en page peut passer sa feuille entre noir, gris et blanc, et les légendes, textes personnalisés, repères de coupe et contours de page prennent d'eux-mêmes une couleur contrastée.
 - Les marges, le nombre de lignes et de colonnes et les espaces suivent un seul contrat de mise en page physique. Une combinaison impossible est ramenée au plus grand espacement valide plutôt que de casser l'aperçu. L'orientation automatique suit la grille. **Ajuster** garde la photo entière visible et peut laisser du vide dans sa cellule. **Remplir la cellule** recadre chaque photo à la cellule commune et uniformise les gouttières.
-- Les légendes peuvent être le nom de fichier, le numéro de vue d'origine, un numéro d'ordre (à partir de 1 dans l'ordre d'image actuel), la note ou un texte personnalisé. Toute police Mac installée peut être choisie, et l'aperçu comme l'export utilisent la même. Les légendes par image s'alignent à gauche, au centre ou à droite. Le texte personnalisé accepte plusieurs zones indépendantes, chacune avec son texte, son alignement, sa position, sa largeur et sa hauteur.
+- Les légendes peuvent être le nom de fichier, le numéro de vue d'origine, un numéro d'ordre (à partir de 1 dans l'ordre d'image actuel), la note ou un texte personnalisé. Toute police système installée peut être choisie, et l'aperçu comme l'export utilisent la même. Les légendes par image s'alignent à gauche, au centre ou à droite. Le texte personnalisé accepte plusieurs zones indépendantes, chacune avec son texte, son alignement, sa position, sa largeur et sa hauteur.
 
 ## Réglages du papier et règles
 
@@ -30,7 +30,7 @@ Un modèle de mise en page rétablit la mise en page, les réglages de papier, l
 
 ## Exportation de tirage
 
-**Exportation de tirage**, juste sous Exportation rapide, rend le format de page, l'orientation, les marges, la mise en page, la couleur de feuille, les légendes, le texte personnalisé et les repères de coupe actuels, avec le format, le DPI, le dossier, le nommage et l'espace colorimétrique de livraison affichés dans Exportation. Les aides réservées à l'écran ne sont pas incrustées dans le fichier : avertissements de gamut, simulation d'épreuve écran et brillance de surface du papier. Pendant que l'une ou l'autre voie d'exportation de tirage s'exécute, le panneau Exportation affiche le nombre de pages terminées, une barre de progression linéaire et un pourcentage au lieu d'un indicateur sans fin.
+Dans l'onglet Exporter de la barre latérale de Tirage, **Exporter** (au-dessus d'**Exportation rapide**) et **Exportation rapide** rendent tous deux, pour les formats autres que Raw TIFF, le format de page et l'orientation, les marges et la mise en page, ainsi que la couleur de feuille, les légendes, le texte personnalisé et les repères de coupe actuels. Les deux utilisent le format, le DPI, le dossier et le nommage définis dans Exportation ainsi que l'espace colorimétrique de livraison choisi dans Réglages (Gestion des couleurs sous macOS ; Exporter sous Windows, affiché en lecture seule sous Tirage > Sortie > C-print > Avancé). Les aides réservées à l'écran ne sont pas incrustées dans le fichier : avertissements de gamut, simulation d'épreuve écran et brillance de surface du papier. Pendant que l'une ou l'autre voie d'exportation de tirage s'exécute, le panneau Exportation affiche le nombre de pages terminées, une barre de progression linéaire et un pourcentage.
 
 ### Nombre de pages et rendu
 
@@ -40,11 +40,11 @@ L'aperçu du package ne construit pas, pour chaque photo, d'aperçu interactif n
 
 ### Profil de sortie imprimante
 
-Le profil de sortie imprimante choisi dans Tirage fait partie du résultat exporté. negaflow compose d'abord la page entière, puis applique le profil une seule fois à la page terminée, ce qui couvre chaque emplacement d'un package d'images ou d'un package personnalisé, qu'il répète une photo ou en mélange plusieurs. Le profil n'agit pas sur l'aperçu de la Bibliothèque ou du Développement, seulement sur l'aperçu de tirage et l'exportation de tirage.
+Le profil de sortie imprimante se choisit dans Réglages (Gestion des couleurs sous macOS ; Exporter sous Windows), et non dans Tirage. Pour l'aperçu de tirage et l'exportation de tirage (pour les formats autres que Raw et DNG), negaflow compose d'abord la page entière, puis applique le profil une seule fois à la page terminée. Cela couvre chaque emplacement d'un package d'images ou d'un package personnalisé, qu'il répète une photo ou en mélange plusieurs. Ce profil est aussi utilisé pour les vues à cible `PRINT` dans l'aperçu d'épreuve écran et l'exportation de Développement ; il n'agit pas sur l'aperçu de la Bibliothèque ni sur les vues `MAIN` dans Développement.
 
 ## Utilisation de C-print
 
-Le procédé de sortie est Standard ou C-print. C-print enregistre le laboratoire et le papier de destination et utilise un profil ICC RVB fourni par ce laboratoire pour une épreuve écran. Le contrôle de surface reste dans Mise en page pour tous les procédés et toutes les mises en page. Sans profil mesuré, negaflow n'applique aucun « look C-print » générique.
+Le procédé de sortie est Standard ou C-print. C-print enregistre le laboratoire et le papier de destination et emploie un profil ICC RVB fourni par ce laboratoire pour une épreuve écran. Le contrôle de surface reste dans Mise en page pour tous les procédés et toutes les mises en page. Sans profil mesuré, negaflow n'applique aucun « look C-print » générique.
 
 1. Ouvrez l'espace Tirage et choisissez **C-print** sous Procédé de sortie.
 2. Saisissez le laboratoire et le papier. Choisissez la surface sous Mise en page si besoin.
@@ -55,7 +55,7 @@ Sans profil ICC RVB valide, les réglages de destination sont quand même enregi
 
 ## Contrat colorimétrique
 
-Le profil ICC d'épreuve C-print sert uniquement à l'épreuve. Il modifie l'aperçu à l'écran, pas les pixels ni le profil intégré d'un fichier exporté. L'exportation de tirage utilise l'espace colorimétrique de livraison choisi dans les réglages d'export, sauf si un profil de sortie imprimante est sélectionné ; un profil d'épreuve de laboratoire n'est donc jamais utilisé en silence comme profil de livraison. La cible de développement `PRINT` est distincte : elle exige un profil ICC RVB de classe imprimante valide et convertit la sortie par ce profil.
+Le profil ICC d'épreuve C-print sert uniquement à l'épreuve. Il modifie l'aperçu à l'écran, pas les pixels ni le profil intégré d'un fichier exporté. L'exportation de tirage applique l'espace colorimétrique de livraison choisi dans Réglages (Gestion des couleurs sous macOS ; Exporter sous Windows, affiché en lecture seule sous Tirage > Sortie > C-print > Avancé), sauf si un profil de sortie imprimante est sélectionné ; un profil d'épreuve de laboratoire n'est donc jamais utilisé en silence comme profil de livraison. La cible de développement `PRINT` est distincte : elle exige un profil ICC RVB de classe imprimante valide et convertit la sortie par ce profil.
 
 ## Limites de précision
 

@@ -30,7 +30,7 @@ Der Abstand beträgt eine Größenordnung und behält sein Vorzeichen bei jeder 
 2. Fenster. Die Kandidatenspalten wachsen bis zum Filmrand und werden mit der Breite des gewählten Formats verglichen. Ein Fenster, das den Rand des Scanbereichs berührt, wird verworfen, weil der Scanbereich es halbiert hat und der vollständige Scan den falschen Bereich erfassen würde.
 3. Bänder. Innerhalb eines Fensters werden die Zeilen mit Film vom Halter darüber und darunter getrennt. Eine Zeile ist Film, wenn sie sich vom Halter daneben unterscheidet oder Textur trägt. Helligkeit allein verliert die dichten Bilder eines Dias, Textur allein verliert die Lücken und flache Bilder.
 4. Raster. Ein Kamm aus Lückenpositionen wird über die (Abstand, Phase)-Ebene angepasst. Der Wert ist der Kontrast zwischen dem Inneren eines Bildes und dem Inneren der Lücke, die Anpassung hängt also nicht davon ab, ob die Lücke klare Basis, maximale Dichte oder eine Halterrippe ist.
-5. Verfeinerung. Jede Grenze rastet an der nächsten Lücke ein, dann wird der ganze Satz auf gleichmäßigen Abstand neu angepasst, weil die Bilder eines Streifens gleichmäßig verteilt sind. Zweimaliges Scannen desselben Streifens landet innerhalb von 0,2 mm.
+5. Verfeinerung. Jede Grenze rastet an der nächsten Lücke ein, und eine Geradenanpassung über den Streifen bestimmt den gleichmäßigen Abstand, um Ausreißer zu verwerfen: Grenzen innerhalb der Toleranz behalten ihre lokal eingerastete Lückenposition, während Ausreißer und nicht gemessene Außenränder den angepassten Abstand nutzen. Zweimaliges Scannen desselben Streifens landet innerhalb von 0,2 mm.
 
 ## Was abgelehnt wird
 
@@ -49,6 +49,8 @@ Die Länge entlang des Streifens ist die Richtung des Bildabstands, die Länge q
 | Format | Entlang des Streifens | Quer zum Streifen |
 |---|---|---|
 | 35 mm Vollformat | 36 mm | 24 mm |
+| 35 mm Panorama (56×24) | 56 mm | 24 mm |
+| 35 mm Panorama (65×24) | 65 mm | 24 mm |
 | 35 mm quadratisch | 24 mm | 24 mm |
 | 35 mm Halbformat | 18 mm | 24 mm |
 | 120 · 6×4.5 | 41.5 mm | 56 mm |
@@ -85,4 +87,4 @@ Angepasster Abstand über alle Streifen: 37,65 – 38,12 mm. Die Erkennung dauer
 | `FlatbedFrameGridDetector+Slots.swift` | Fenster, Filmvorhandensein, Bänder |
 | `FlatbedFrameGridDetector+Grid.swift` | Lückenhinweise, Kammanpassung, Grenzverfeinerung |
 
-`FlatbedFrameDetector` bleibt als Rückfall für eine Vorschau mit unbekannter physischer Größe.
+`FlatbedFrameDetector` bleibt als Rückfall für eine Vorschau mit unbekannter physischer Größe oder wenn `FlatbedFrameGridDetector` keine Bilder zurückgibt.
