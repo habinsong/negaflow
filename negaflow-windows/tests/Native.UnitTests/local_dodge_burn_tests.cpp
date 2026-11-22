@@ -66,6 +66,10 @@ void expect(const bool condition, const char* const message) {
             ++count;
         }
     }
+    if (count == 0U) {
+        expect(false, "mean luminance requires at least one pixel");
+        return 0.0F;
+    }
     return sum / static_cast<float>(count);
 }
 

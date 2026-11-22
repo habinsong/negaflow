@@ -32,7 +32,9 @@ jobs:
   native:
     name: Native build and tests
     runs-on: windows-2025
-    timeout-minutes: 15
+    # 새 러너의 C++ 빌드, LibRaw 빌드, ctest까지 약 15분이 걸렸다.
+    # 뒤의 관리 메모리 검증까지 끝낼 시간을 둔다.
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: negaflow-windows
