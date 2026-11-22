@@ -636,7 +636,8 @@ internal sealed class PrintPreviewRenderer
         // 현상본이 있으면 그것을 쓰고, 칸이 더 크면 표시 크기로 올립니다.
         ThumbnailService.DevelopedPreview developed = default;
         bool hasDeveloped = cache?.TryGetPrintDeveloped(frame, out developed) == true;
-        // 프루프가 바뀌면 풀어 둔 그림도 달라집니다 — 열쇠에 함께 넣습니다.
+        bool displayManaged = Negaflow.Shell.Services.DisplayColorManagement.Current is not null;
+        // 프루프·화면 색관리가 바뀌면 풀어 둔 그림도 달라집니다 — 열쇠에 함께 넣습니다.
         (string, PrintPresentationStyle, bool, string) key = (
             frame.Id,
             presentation,
@@ -645,6 +646,7 @@ internal sealed class PrintPreviewRenderer
                 ? System.FormattableString.Invariant(
                     $"{proof!.PaperWhite.Red:F3}/{proof.PaperWhite.Green:F3}/{proof.PaperWhite.Blue:F3}/{proof.BlackInk.Red:F3}")
                 : string.Empty) + (warnGamut ? "|gamut" : string.Empty) +
+            (displayManaged ? "|display" : string.Empty) +
             (profilePath ?? string.Empty));
         if (tileImages.TryGetValue(key, out ImageSource? cached) && cached is not null)
         {
@@ -676,11 +678,12 @@ internal sealed class PrintPreviewRenderer
                 if (decoded is not null) { tileImages.Store(plainKey, decoded); }
             }
             image.Source = decoded;
-            // 시아노타입 · 유리건판 · 젤라틴 실버는 **화면에서도** 보여야 합니다. 썸네일은
-            // JPEG 이라 화소를 바로 만질 수 없으므로 풀어서 다시 겁니다 — 내보내기가 지나는
-            // `PrintPresentationFilter` 와 같은 계산입니다.
+            // 시아노타입 · 유리건판 · 젤라틴 실버, 프루프, 광색역 화면 색관리는 **작은
+            // 썸네일 칸에서도** 적용되어야 합니다. 썸네일은 JPEG 이라 화소를 바로 만질 수
+            // 없으므로 풀어서 다시 겁니다 — 내보내기가 지나는 `PrintPresentationFilter` 와 같은
+            // 계산입니다.
             if (PrintPresentationFilter.Transforms(presentation) || profilePath is not null ||
-                PrintSoftProofFilter.Transforms(proof))
+                PrintSoftProofFilter.Transforms(proof) || displayManaged)
             {
                 long revision = tileImages.Revision;
                 _ = ApplyPresentationAsync(jpeg, presentation, proof, profilePath, warnGamut, source =>

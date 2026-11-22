@@ -39,12 +39,11 @@ struct PrintFramedPreview: @unchecked Sendable {
         let context = ChromabaseEngine.sharedLinearRenderContext
         let source = CIImage(cgImage: image)
         let unit: CIImage
-        let space: CGColorSpace
         let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
+        let space = image.colorSpace.flatMap { $0.model == .rgb && $0.supportsOutput ? $0 : nil } ?? srgb
         switch request.content {
         case let .presentation(style):
             unit = PrintPresentationRenderer.apply(to: source, style: style)
-            space = srgb
         case let .framed(settings):
             guard let placed = PrintCompositionRenderer.placedUnit(
                 for: source,
@@ -53,7 +52,6 @@ struct PrintFramedPreview: @unchecked Sendable {
                 context: context
             ) else { return nil }
             unit = placed
-            space = image.colorSpace ?? srgb
         }
         guard let output = context.createCGImage(
             unit,
