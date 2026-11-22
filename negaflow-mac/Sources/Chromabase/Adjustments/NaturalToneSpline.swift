@@ -11,11 +11,17 @@ public enum NaturalToneSpline {
     static func secondDerivatives(x: [Double], y: [Double]) -> [Double] {
         precondition(x.count == 5 && y.count == 5)
         let h = (0..<4).map { x[$0 + 1] - x[$0] }
-        let rhs = (1...3).map { i in 6 * ((y[i + 1] - y[i]) / h[i] - (y[i] - y[i - 1]) / h[i - 1]) }
+        let rhs = (1...3).map { i -> Double in
+            let rightSlope = (y[i + 1] - y[i]) / h[i]
+            let leftSlope = (y[i] - y[i - 1]) / h[i - 1]
+            return 6 * (rightSlope - leftSlope)
+        }
         let d1 = 2 * (h[0] + h[1])
         let d2 = 2 * (h[1] + h[2]) - h[1] * h[1] / d1
         let d3 = 2 * (h[2] + h[3]) - h[2] * h[2] / d2
-        let m3 = (rhs[2] - (h[2] / d2) * rhs[1] + (h[2] * h[1] / (d2 * d1)) * rhs[0]) / d3
+        let precedingTerm = (h[2] / d2) * rhs[1]
+        let firstTerm = (h[2] * h[1] / (d2 * d1)) * rhs[0]
+        let m3 = (rhs[2] - precedingTerm + firstTerm) / d3
         let m2 = (rhs[1] - h[2] * m3 - (h[1] / d1) * rhs[0]) / d2
         let m1 = (rhs[0] - h[1] * m2) / d1
         return [0, m1, m2, m3, 0]
