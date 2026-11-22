@@ -269,7 +269,15 @@ final class DevelopSettingsTransferTests: XCTestCase {
             frame.params.imageTransform = frame.imageTransform
             await model.developFrame(frame)
         }
-        let before = frames.dropFirst().map { $0.cachedDevelopedBase?.dataProvider?.data as Data? }
+        // 선택 시 시작된 현상이 있으면 위 요청이 합쳐져 먼저 돌아올 수 있다.
+        try await waitUntil("붙여넣기 전 기준 프레임의 현상 완료", timeout: 30) {
+            frames.dropFirst().allSatisfy {
+                !model.developController.isDevelopingFrame($0) && $0.cachedDevelopedBase != nil
+            }
+        }
+        let before = try frames.dropFirst().map {
+            try XCTUnwrap($0.cachedDevelopedBase?.dataProvider?.data as Data?)
+        }
         model.copyDevelopSettings(from: frames[0])
         model.pasteDevelopSettings(to: frames[1])
         await model.sequentialLibraryDevelopmentTask?.value
